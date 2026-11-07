@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8fb69b21b979ffa2
+// source-sha256: 8e0d8d54c29a2e7f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99703,6 +99703,133 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
     note: 'カード部屋(デュラハン)と広場の散歩。さみしそうな助手のそばへ行く'
   }
 });
+const ASSISTANT_LIFE_RHYTHM = Object.freeze({
+  mua: {
+    label: '夜ふかし気味',
+    bed: 1,
+    wake: 9,
+    slot: {
+      late: {
+        sleep: 2
+      },
+      morning: {
+        sleep: 4,
+        idle: 2,
+        walk: 0.4
+      },
+      night: {
+        sleep: 0.4,
+        snack: 1.5,
+        walk: 1.5
+      }
+    }
+  },
+  kiki: {
+    label: '早寝早起き',
+    bed: 22,
+    wake: 5,
+    slot: {
+      night: {
+        sleep: 6,
+        idle: 2,
+        walk: 0.2,
+        snack: 0.3,
+        practice: 0.2,
+        training: 0.2,
+        cards: 0.3
+      },
+      morning: {
+        walk: 2,
+        sleep: 0.2
+      }
+    }
+  },
+  momosuke: {
+    label: '夜ふかし(夜の練習)',
+    bed: 3,
+    wake: 10,
+    slot: {
+      late: {
+        practice: 10,
+        sleep: 0.4
+      },
+      morning: {
+        sleep: 5
+      }
+    }
+  },
+  dra: {
+    label: 'よく寝る・昼寝',
+    bed: 21,
+    wake: 10,
+    slot: {
+      night: {
+        sleep: 3
+      },
+      morning: {
+        sleep: 5
+      }
+    }
+  },
+  atsu: {
+    label: '朝型(朝の育成)',
+    bed: 23,
+    wake: 6,
+    slot: {
+      night: {
+        sleep: 3,
+        idle: 2,
+        practice: 0.5
+      },
+      morning: {
+        training: 2,
+        sleep: 0.2
+      }
+    }
+  },
+  kyuko: {
+    label: '夜ふかし(夜の読書)',
+    bed: 2,
+    wake: 9,
+    slot: {
+      late: {
+        idle: 4,
+        sleep: 0.5
+      },
+      night: {
+        idle: 2
+      },
+      morning: {
+        sleep: 4
+      }
+    }
+  },
+  sorashido: {
+    label: '夜ふかし(夜のカード研究)',
+    bed: 3,
+    wake: 10,
+    slot: {
+      late: {
+        cards: 10,
+        sleep: 0.4
+      },
+      morning: {
+        sleep: 4
+      }
+    }
+  },
+  erubin: {
+    label: '規則正しい',
+    bed: 23,
+    wake: 6,
+    slot: {
+      night: {
+        sleep: 3,
+        idle: 2
+      }
+    }
+  }
+});
 const ASSISTANT_LIFE_SLOT_MOD = Object.freeze({
   late: {
     sleep: 8,
@@ -99732,7 +99859,10 @@ const ASSISTANT_LIFE_SLOT_MOD = Object.freeze({
     cards: 1.5,
     idle: 1.5,
     sleep: 2,
-    walk: 0.5
+    walk: 0.5,
+    practice: 0.6,
+    training: 0.5,
+    snack: 0.7
   }
 });
 const ASSISTANT_LIFE_MOOD_MOD = Object.freeze({
@@ -99968,6 +100098,8 @@ const assistantLifeDecide = ({
     const w = {};
     for (const [d, v] of Object.entries(p.w)) {
       let x = v * ((ASSISTANT_LIFE_SLOT_MOD[slot.id] || {})[d] || 1) * (((p.slot || {})[slot.id] || {})[d] || 1);
+      const rh = ASSISTANT_LIFE_RHYTHM[id];
+      x *= (rh && rh.slot[slot.id] || {})[d] || 1;
       x *= ASSISTANT_LIFE_MOOD_MOD[moods[id]].w[d] || 1;
       w[d] = x;
     }
@@ -101927,8 +102059,13 @@ function AssistantLifeRoom({
     "aria-hidden": "true"
   }, L.furn), React.createElement("div", {
     className: "fl"
-  }), ppl && (look === 'night' || look === 'evening') && React.createElement("div", {
+  }), ppl && !state.sleep && (look === 'night' || look === 'evening') && React.createElement("div", {
     className: "lamp"
+  }), ppl && state.sleep && React.createElement("div", {
+    className: "off",
+    style: {
+      background: night ? 'rgba(3,5,16,.6)' : 'rgba(30,27,75,.35)'
+    }
   }), !ppl && met && React.createElement("div", {
     className: "off",
     style: night ? {
@@ -102101,7 +102238,8 @@ const assistantLifeRoomsOf = (life, metIds) => {
         rooms[id] = {
           in: [host, ...ids.filter(x => x !== host)],
           lonely,
-          bub: w.doing === 'sleep' ? '💤' : lonely ? '💭 だれか来ないかな…' : ids.length > 1 ? `${ASSISTANT_LIFE_PLACE_ICON.home} ${ids.length}人で${doing.label}` : doing.label
+          sleep: w.doing === 'sleep',
+          bub: w.doing === 'sleep' ? '💤 おやすみ中' : lonely ? '💭 だれか来ないかな…' : ids.length > 1 ? `${ASSISTANT_LIFE_PLACE_ICON.home} ${ids.length}人で${doing.label}` : doing.label
         };
       } else rooms[id] = {
         tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, doing.label]

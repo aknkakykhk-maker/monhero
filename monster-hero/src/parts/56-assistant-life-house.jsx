@@ -222,7 +222,8 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx }) {
       <span className="pl">{met ? assistantLifeName(id) : '？'}</span>
       {met && sess && sess.level > 1 && <span className="lv" data-assistant-life-room-session={sess.level}>🎵Lv{sess.level}</span>}
       <span className="fu" aria-hidden="true">{L.furn}</span><div className="fl"/>
-      {ppl && (look === 'night' || look === 'evening') && <div className="lamp"/>}
+      {ppl && !state.sleep && (look === 'night' || look === 'evening') && <div className="lamp"/>}
+      {ppl && state.sleep && <div className="off" style={{ background: night ? 'rgba(3,5,16,.6)' : 'rgba(30,27,75,.35)' }}/>}
       {!ppl && met && <div className="off" style={night ? { background: 'rgba(3,5,16,.72)' } : undefined}/>}
       {ppl && <div className="pp">{ppl.map(pid => { const who = assistantById(pid); return who ? (
         <span key={pid} className={state.lonely && pid === id ? 'lonely' : state.after ? 'after' : ''} data-assistant-life-room-face={pid}><AssistantFace who={who} size={Math.round(Math.min(40, h * .44))} accent={who.accent}/></span>) : null; })}</div>}
@@ -280,7 +281,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
       const host = w.group ? assistantLifeHostOf(ids) : id;
       if (host === id) {
         const lonely = w.reason === 'lonely';
-        rooms[id] = { in: [host, ...ids.filter(x => x !== host)], lonely, bub: w.doing === 'sleep' ? '💤' : lonely ? '💭 だれか来ないかな…' : ids.length > 1 ? `${ASSISTANT_LIFE_PLACE_ICON.home} ${ids.length}人で${doing.label}` : doing.label };
+        rooms[id] = { in: [host, ...ids.filter(x => x !== host)], lonely, sleep: w.doing === 'sleep', bub: w.doing === 'sleep' ? '💤 おやすみ中' : lonely ? '💭 だれか来ないかな…' : ids.length > 1 ? `${ASSISTANT_LIFE_PLACE_ICON.home} ${ids.length}人で${doing.label}` : doing.label };
       } else rooms[id] = { tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, doing.label] };
       continue;
     }

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a6dc2cc4b1894575
+// generated-sha256: 2cb5889977fa20d2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -59642,14 +59642,26 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
   erubin:    { social: 0.7,  fav: 'cardroom',   w: { snack: 2, practice: 1, training: 2, cards: 3, walk: 3, idle: 1, sleep: 1, read: 1 },
                slot: { morning: { walk: 1.3 }, evening: { cards: 1.3 } }, caring: true, note: 'カード部屋(デュラハン)と広場の散歩。さみしそうな助手のそばへ行く' },
 });
-// 時間ごとにみんなの重みへ掛ける数
+// 1人ずつの生活のリズム(2026-11-07 社長「夜は家に帰る人が増えたり夜ふかしとか性格によって変えてもいい」)。
+//   時間ごとに、したいことの重みへ掛ける数。夜ふかしの助手は深夜もモンヒロビートで練習したり部屋で起きていたりする。表は docs/progress/assistant-peer/LIFE-HOUSE-PLAN.md の 11
+const ASSISTANT_LIFE_RHYTHM = Object.freeze({
+  mua:       { label: '夜ふかし気味', bed: 1, wake: 9,  slot: { late: { sleep: 2 }, morning: { sleep: 4, idle: 2, walk: 0.4 }, night: { sleep: 0.4, snack: 1.5, walk: 1.5 } } },
+  kiki:      { label: '早寝早起き',   bed: 22, wake: 5, slot: { night: { sleep: 6, idle: 2, walk: 0.2, snack: 0.3, practice: 0.2, training: 0.2, cards: 0.3 }, morning: { walk: 2, sleep: 0.2 } } },
+  momosuke:  { label: '夜ふかし(夜の練習)', bed: 3, wake: 10, slot: { late: { practice: 10, sleep: 0.4 }, morning: { sleep: 5 } } },
+  dra:       { label: 'よく寝る・昼寝', bed: 21, wake: 10, slot: { night: { sleep: 3 }, morning: { sleep: 5 } } },
+  atsu:      { label: '朝型(朝の育成)', bed: 23, wake: 6, slot: { night: { sleep: 3, idle: 2, practice: 0.5 }, morning: { training: 2, sleep: 0.2 } } },
+  kyuko:     { label: '夜ふかし(夜の読書)', bed: 2, wake: 9, slot: { late: { idle: 4, sleep: 0.5 }, night: { idle: 2 }, morning: { sleep: 4 } } },
+  sorashido: { label: '夜ふかし(夜のカード研究)', bed: 3, wake: 10, slot: { late: { cards: 10, sleep: 0.4 }, morning: { sleep: 4 } } },
+  erubin:    { label: '規則正しい',   bed: 23, wake: 6, slot: { night: { sleep: 3, idle: 2 } } },
+});
+// 時間ごとにみんなの重みへ掛ける数(夜は家に帰る助手が増える)
 const ASSISTANT_LIFE_SLOT_MOD = Object.freeze({
   late:      { sleep: 8, idle: 1.5, snack: 0.3, practice: 0.2, training: 0.2, walk: 0.2 },
   morning:   { walk: 2, sleep: 1.2, snack: 0.8 },
   noon:      { snack: 2 },
   afternoon: { practice: 1.5, training: 1.5 },
   evening:   { snack: 1.3, cards: 1.3 },
-  night:     { cards: 1.5, idle: 1.5, sleep: 2, walk: 0.5 },
+  night:     { cards: 1.5, idle: 1.5, sleep: 2, walk: 0.5, practice: 0.6, training: 0.5, snack: 0.7 },
 });
 // 気分ごとにしたいことへ掛ける数・だれかといたい気持ちへ掛ける数
 const ASSISTANT_LIFE_MOOD_MOD = Object.freeze({
@@ -59777,6 +59789,8 @@ const assistantLifeDecide = ({ abs, members, bond = {}, prev = null, recent = []
     const w = {};
     for (const [d, v] of Object.entries(p.w)) {
       let x = v * ((ASSISTANT_LIFE_SLOT_MOD[slot.id] || {})[d] || 1) * (((p.slot || {})[slot.id] || {})[d] || 1);
+      const rh = ASSISTANT_LIFE_RHYTHM[id];
+      x *= (((rh && rh.slot[slot.id]) || {})[d] || 1); // 生活のリズム(夜ふかし・早寝 など)
       x *= (ASSISTANT_LIFE_MOOD_MOD[moods[id]].w[d] || 1);
       w[d] = x;
     }
@@ -60930,7 +60944,8 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx }) {
       <span className="pl">{met ? assistantLifeName(id) : '？'}</span>
       {met && sess && sess.level > 1 && <span className="lv" data-assistant-life-room-session={sess.level}>🎵Lv{sess.level}</span>}
       <span className="fu" aria-hidden="true">{L.furn}</span><div className="fl"/>
-      {ppl && (look === 'night' || look === 'evening') && <div className="lamp"/>}
+      {ppl && !state.sleep && (look === 'night' || look === 'evening') && <div className="lamp"/>}
+      {ppl && state.sleep && <div className="off" style={{ background: night ? 'rgba(3,5,16,.6)' : 'rgba(30,27,75,.35)' }}/>}
       {!ppl && met && <div className="off" style={night ? { background: 'rgba(3,5,16,.72)' } : undefined}/>}
       {ppl && <div className="pp">{ppl.map(pid => { const who = assistantById(pid); return who ? (
         <span key={pid} className={state.lonely && pid === id ? 'lonely' : state.after ? 'after' : ''} data-assistant-life-room-face={pid}><AssistantFace who={who} size={Math.round(Math.min(40, h * .44))} accent={who.accent}/></span>) : null; })}</div>}
@@ -60988,7 +61003,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
       const host = w.group ? assistantLifeHostOf(ids) : id;
       if (host === id) {
         const lonely = w.reason === 'lonely';
-        rooms[id] = { in: [host, ...ids.filter(x => x !== host)], lonely, bub: w.doing === 'sleep' ? '💤' : lonely ? '💭 だれか来ないかな…' : ids.length > 1 ? `${ASSISTANT_LIFE_PLACE_ICON.home} ${ids.length}人で${doing.label}` : doing.label };
+        rooms[id] = { in: [host, ...ids.filter(x => x !== host)], lonely, sleep: w.doing === 'sleep', bub: w.doing === 'sleep' ? '💤 おやすみ中' : lonely ? '💭 だれか来ないかな…' : ids.length > 1 ? `${ASSISTANT_LIFE_PLACE_ICON.home} ${ids.length}人で${doing.label}` : doing.label };
       } else rooms[id] = { tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, doing.label] };
       continue;
     }
