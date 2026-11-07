@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 41415770e1d5ccf7
+// generated-sha256: 2cbd02e7dc8009a8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -59507,11 +59507,18 @@ const normalizeQuickNudge = (v) => {
 // 今日の誘導を出してよいか(1日1回・合計3回まで)
 const quickNudgeAllowed = (nudge, today) => { const s = normalizeQuickNudge(nudge); return s.n < QUICK_GUIDE_NUDGE_MAX && s.day !== today; };
 const quickNudgeAfter = (nudge, today) => { const s = normalizeQuickNudge(nudge); return { v: 1, n: s.n + 1, day: today }; };
-// いまの画面で出す案内。ctx … { gameState, busy, seen, quickUnlocked, quickEverCleared, quickSelect, quickRun, autoRepeat, battleTutorial, raidJack, backgroundRun, nudgeOk }
+// クイックの∞では、WAVE とWAVE のあいだに画面が一瞬だけ次の状態を通る(1 WAVE が3秒ほどなので、3秒ごと)。
+//   ここで案内を消すと作り直されて1ページ目へ戻り、「あとで」も取り消される(2026-11-07 レフェリーくんの止め絵)。
+//   出している ∞ の案内(g3a)は、このあいだも出したままにし、「あとで」もバトルの画面と同じに扱う
+const QUICK_GUIDE_RUN_BETWEEN = Object.freeze(['WAVE_RESULT', 'QUICK_GROWTH', 'PICK_ALLY', 'QUICK_JOIN']);
+const quickGuideScreenKey = (gameState, quickRun, autoRepeat) => (quickRun === true && autoRepeat === true && QUICK_GUIDE_RUN_BETWEEN.includes(gameState) ? 'BATTLE' : gameState);
+// いまの画面で出す案内。ctx … { gameState, busy, seen, quickUnlocked, quickEverCleared, quickSelect, quickRun, autoRepeat, battleTutorial, raidJack, backgroundRun, nudgeOk, showing }
+//   showing … いま出している案内(WAVE のあいだも ∞ の案内を出したままにするため)
 const quickGuidePick = (ctx) => {
   const c = ctx || {};
   if (c.busy || !Array.isArray(c.seen)) return null;
   const not = (id) => !c.seen.includes(id);
+  if (c.showing === 'g3a' && c.quickRun === true && c.autoRepeat === true && QUICK_GUIDE_RUN_BETWEEN.includes(c.gameState) && not('g3a')) return 'g3a';
   const nudge = c.nudgeOk === true && c.quickUnlocked === true && c.quickEverCleared !== true;
   switch (c.gameState) {
     case 'BATTLE_SYSTEM_SELECT':
@@ -59635,7 +59642,9 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
     if (!atTop && roomBottom < panelH) { const bottom = vh - panelH - gap - pad - 10; ring = { ...rect, height: Math.max(0, Math.min(rect.bottom, bottom) - rect.top) }; }
   }
   const face = assistant && typeof assistantFaceImage === 'function' ? assistantFaceImage(assistant, line.e || 'normal') : null;
-  return (
+  // 画面のいちばん外(document.body)へ出す。バトルの技の名前の札なども body へ出ているので、画面の中に描くと、
+  //   重なり順の数字が大きくても札の下になる(横画面で窓の題に重なった・2026-11-07 レフェリーくんの止め絵)
+  const overlay = (
     <div data-quick-guide={guideId} data-quick-guide-page={page.id} className="fixed inset-0 z-[100050]" style={{ pointerEvents: 'auto' }}>
       {/* 案内のあいだは、画面にもとからある助手の吹き出しを隠す(光らせた所と窓のすきまからのぞいて、ごちゃつく) */}
       <style>{'[data-assistant-bubble]{visibility:hidden !important}'}</style>
@@ -59666,6 +59675,7 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
       </div>
     </div>
   );
+  return typeof document !== 'undefined' && document.body && typeof ReactDOM === 'object' && ReactDOM.createPortal ? ReactDOM.createPortal(overlay, document.body) : overlay;
 };
 
 // ---- part: 56-assistant-life.jsx ----
@@ -86029,6 +86039,8 @@ function MonsterHeroGame() {
   const [quickGuideSeen, setQuickGuideSeen] = useState(null);
   const [quickNudge, setQuickNudge] = useState(null);
   const [quickGuideReplay, setQuickGuideReplay] = useState(null);
+  // いま出している案内(前の描画の分)。クイックの∞の WAVE のあいだも案内を出したままにするため(56 の quickGuidePick の showing)
+  const quickGuideShowingRef = useRef(null);
   const quickGuideOpenedDetailRef = useRef(false);   // 案内が曲えらびの周回の帯を開いたか(閉じるときに元へ戻す)
   const QUICK_RHYTHM_INTRO_KEY = 'mh_quick_rhythm_intro_seen_v1';
   const QUICK_RHYTHM_BACKGROUND_KEY = 'mh_quick_rhythm_bg_seen_v1';
@@ -92327,13 +92339,15 @@ function MonsterHeroGame() {
     gameState, busy: quickGuideBusy, seen: quickGuideSeen, quickUnlocked: quickGuideQuickUnlocked, quickEverCleared: quickGuideEverCleared,
     quickSelect: isQuickMode(battleMode), quickRun: isQuickMode(runMode), autoRepeat: autoRepeat === true,
     battleTutorial: battleTutorialStep != null || !!battleScenarioRef.current, raidJack: isRaidJackMode(runMode), backgroundRun: !!rhythmBackgroundRun,
-    nudgeOk: !!quickNudge && quickNudgeAllowed(quickNudge, quickGuideToday),
+    nudgeOk: !!quickNudge && quickNudgeAllowed(quickNudge, quickGuideToday), showing: quickGuideShowingRef.current,
   }) : null;
   // 「あとで」を押した案内は、その画面を出ているあいだは出し直さない(画面を開き直したら、また最初から)
   const [quickGuideLater, setQuickGuideLater] = useState(null);
   // 出している誘導(数えたあとも、閉じるまで出しておく)
   const [quickNudgeShowing, setQuickNudgeShowing] = useState(null);
-  useEffect(() => { setQuickGuideLater(null); setQuickNudgeShowing(null); }, [gameState]);
+  //   クイックの∞の WAVE のあいだ(一瞬だけ通る画面)はバトルの画面と同じに数える(56 の quickGuideScreenKey)
+  const quickGuideScreen = typeof quickGuideScreenKey === 'function' ? quickGuideScreenKey(gameState, isQuickMode(runMode), autoRepeat) : gameState;
+  useEffect(() => { setQuickGuideLater(null); setQuickNudgeShowing(null); }, [quickGuideScreen]);
   // 誘導は出すと決めたときに数える(閉じる・読み込み直しでも同じ日に繰り返さない)
   useEffect(() => {
     if (quickGuidePicked !== 'nudgeHome' && quickGuidePicked !== 'nudgeBattle') return;
@@ -92346,6 +92360,7 @@ function MonsterHeroGame() {
   const quickGuideActive = quickGuideReplay ? `replay:${quickGuideReplay}`
     : quickNudgeShowing && !quickGuideBusy ? quickNudgeShowing
     : quickGuidePicked && quickGuidePicked !== quickGuideLater && quickGuidePicked !== 'nudgeHome' && quickGuidePicked !== 'nudgeBattle' ? quickGuidePicked : null;
+  quickGuideShowingRef.current = quickGuideActive;
   // 案内を閉じる。done … 最後まで見た(見た印を付ける)。誘導とヘルプからの見返しは印を付けない
   const finishQuickGuide = (guideId, done) => {
     if (quickGuideReplay) { setQuickGuideReplay(null); return; }
@@ -92891,13 +92906,18 @@ function MonsterHeroGame() {
     if (saved && grant.granted) setGifts(grant.gifts);
     return saved;
   };
-  const claimGiftIds = async (ids, { baseGifts = null, title = 'ギフトを受け取りました' } = {}) => {
+  // ★ギフトの受け取りも、ほかのギフトの書き足し(仲良し度のごほうび・おみやげなど)と同じ列で順番に走らせる(runGiftWrite)。
+  //   2026-11-07: 「すべて受け取る」で仲良し度が上がると、ごほうびの書き足しが受け取る前の一覧を読み、受け取ったあとで書き戻していた。
+  //   ダイヤは入ったのにギフトが受け取り待ちへ戻り、もう一度受け取れた(二重取り)。inGiftWrite … すでに列の中から呼ぶとき(ミッションの受け取り)
+  const claimGiftIds = async (ids, { baseGifts = null, title = 'ギフトを受け取りました', inGiftWrite = false } = {}) => {
     // ミッションの受け取り中は動かない(古いギフト一覧で保存し直さないため)。ミッションの中から呼ぶときは baseGifts を渡す
     if (giftClaimingRef.current || (!baseGifts && missionClaimingRef.current)) return null;
     giftClaimingRef.current = true;
-    try {
+    const run = async () => { try {
       const wanted = new Set(ids);
-      const sourceGifts = Array.isArray(baseGifts) ? baseGifts : gifts;
+      // 列の順番が来てから、保存から読み直す(画面の控えは、ほかの書き足しのぶんが入る前の古い一覧のことがある)
+      const storedGifts = Array.isArray(baseGifts) ? null : await storeGet('mh_gifts', null, false);
+      const sourceGifts = Array.isArray(baseGifts) ? baseGifts : Array.isArray(storedGifts) ? storedGifts : gifts;
       const claimedGifts = [];
       // ブリーダー経験値の報酬もあるので、経験値も一緒に持って回る。
       // プロフィールフレームの報酬(2026-10-20・ハロウィン・妖)もあるので、持っている枠も一緒に持って回る(保存から読み直した値)
@@ -92961,7 +92981,8 @@ function MonsterHeroGame() {
       setRewardReceipt({ title, rewards, count:claimedCount });
       try { Audio_.se.levelUp(); } catch {}
       return { count:claimedCount, rewards };
-    } finally { giftClaimingRef.current = false; }
+    } finally { giftClaimingRef.current = false; } };
+    return inGiftWrite ? run() : runGiftWrite(run);
   };
   // タブに出す赤い丸バッジ。0件なら何も出さない。
   // Tailwindの動的クラス生成に頼らず色と形はinline styleで指定する(生成に失敗して透明になるのを避ける)
@@ -93038,7 +93059,9 @@ function MonsterHeroGame() {
   const sendMissionGroupsToGiftBox = async (groups) => {
     {
       const state=normalizeMissions(missionsRef.current);
-      let nextGifts=Array.isArray(gifts)?[...gifts]:[];
+      // ギフト一覧は保存から読み直す(画面の控えは、ほかの書き足しのぶんが入る前の古い一覧のことがある。runGiftWrite の列の中で呼ぶ)
+      const storedGifts=await storeGet('mh_gifts',null,false);
+      let nextGifts=Array.isArray(storedGifts)?[...storedGifts]:Array.isArray(gifts)?[...gifts]:[];
       const giftIds=[];
       let count=0;
       ['daily','weekly','monthly'].forEach(type=>{
@@ -93083,15 +93106,19 @@ function MonsterHeroGame() {
     if (missionClaimingRef.current || giftClaimingRef.current) return null;
     missionClaimingRef.current = true;
     try {
-      const sent = await sendMissionGroupsToGiftBox(groups);
-      const baseGifts = sent ? sent.gifts : (Array.isArray(gifts) ? gifts : []);
-      const ids = sent ? [...sent.giftIds] : [];
-      if (includeBacklog) {
-        const now = Date.now();
-        baseGifts.forEach(g => { if (g?.source === 'mission' && !g.claimedAt && giftIsClaimable(g, now) && !ids.includes(g.id)) ids.push(g.id); });
-      }
-      if (!ids.length) return null;
-      return await claimGiftIds(ids, { baseGifts, title:'ミッション報酬を受け取りました' });
+      // 送る → 受け取るを、ほかのギフトの書き足しと同じ列で1つの順番として走らせる(あいだに書き戻されない)
+      return await runGiftWrite(async () => {
+        const sent = await sendMissionGroupsToGiftBox(groups);
+        const stored = sent ? null : await storeGet('mh_gifts', null, false);
+        const baseGifts = sent ? sent.gifts : (Array.isArray(stored) ? stored : Array.isArray(gifts) ? gifts : []);
+        const ids = sent ? [...sent.giftIds] : [];
+        if (includeBacklog) {
+          const now = Date.now();
+          baseGifts.forEach(g => { if (g?.source === 'mission' && !g.claimedAt && giftIsClaimable(g, now) && !ids.includes(g.id)) ids.push(g.id); });
+        }
+        if (!ids.length) return null;
+        return await claimGiftIds(ids, { baseGifts, title:'ミッション報酬を受け取りました', inGiftWrite:true });
+      });
     } finally { missionClaimingRef.current = false; }
   };
   const claimMission = (type,mission) => claimMissionRewards({ [type]:[mission] });

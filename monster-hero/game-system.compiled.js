@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3f83fcee9367aaec
+// source-sha256: 5f246247195f0de7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99286,10 +99286,13 @@ const quickNudgeAfter = (nudge, today) => {
     day: today
   };
 };
+const QUICK_GUIDE_RUN_BETWEEN = Object.freeze(['WAVE_RESULT', 'QUICK_GROWTH', 'PICK_ALLY', 'QUICK_JOIN']);
+const quickGuideScreenKey = (gameState, quickRun, autoRepeat) => quickRun === true && autoRepeat === true && QUICK_GUIDE_RUN_BETWEEN.includes(gameState) ? 'BATTLE' : gameState;
 const quickGuidePick = ctx => {
   const c = ctx || {};
   if (c.busy || !Array.isArray(c.seen)) return null;
   const not = id => !c.seen.includes(id);
+  if (c.showing === 'g3a' && c.quickRun === true && c.autoRepeat === true && QUICK_GUIDE_RUN_BETWEEN.includes(c.gameState) && not('g3a')) return 'g3a';
   const nudge = c.nudgeOk === true && c.quickUnlocked === true && c.quickEverCleared !== true;
   switch (c.gameState) {
     case 'BATTLE_SYSTEM_SELECT':
@@ -99449,7 +99452,7 @@ const QuickGuideOverlay = ({
     }
   }
   const face = assistant && typeof assistantFaceImage === 'function' ? assistantFaceImage(assistant, line.e || 'normal') : null;
-  return React.createElement("div", {
+  const overlay = React.createElement("div", {
     "data-quick-guide": guideId,
     "data-quick-guide-page": page.id,
     className: "fixed inset-0 z-[100050]",
@@ -99528,6 +99531,7 @@ const QuickGuideOverlay = ({
     onClick: () => last ? onDone(true) : setStep(step + 1),
     className: "min-h-[40px] min-w-[84px] rounded-xl border border-fuchsia-300/70 bg-fuchsia-700/80 px-3 text-[12px] font-black text-white active:scale-[.97]"
   }, last ? pages.length > 1 ? 'わかった！' : 'OK' : '次へ'))));
+  return typeof document !== 'undefined' && document.body && typeof ReactDOM === 'object' && ReactDOM.createPortal ? ReactDOM.createPortal(overlay, document.body) : overlay;
 };
 const ASSISTANT_LIFE_STORE_KEY = 'mh_assistant_life_v1';
 const ASSISTANT_LIFE_PLAY_KEY = 'mh_assistant_life_play_v1';
@@ -143792,6 +143796,7 @@ function MonsterHeroGame() {
   const [quickGuideSeen, setQuickGuideSeen] = useState(null);
   const [quickNudge, setQuickNudge] = useState(null);
   const [quickGuideReplay, setQuickGuideReplay] = useState(null);
+  const quickGuideShowingRef = useRef(null);
   const quickGuideOpenedDetailRef = useRef(false);
   const QUICK_RHYTHM_INTRO_KEY = 'mh_quick_rhythm_intro_seen_v1';
   const QUICK_RHYTHM_BACKGROUND_KEY = 'mh_quick_rhythm_bg_seen_v1';
@@ -151503,14 +151508,16 @@ function MonsterHeroGame() {
     battleTutorial: battleTutorialStep != null || !!battleScenarioRef.current,
     raidJack: isRaidJackMode(runMode),
     backgroundRun: !!rhythmBackgroundRun,
-    nudgeOk: !!quickNudge && quickNudgeAllowed(quickNudge, quickGuideToday)
+    nudgeOk: !!quickNudge && quickNudgeAllowed(quickNudge, quickGuideToday),
+    showing: quickGuideShowingRef.current
   }) : null;
   const [quickGuideLater, setQuickGuideLater] = useState(null);
   const [quickNudgeShowing, setQuickNudgeShowing] = useState(null);
+  const quickGuideScreen = typeof quickGuideScreenKey === 'function' ? quickGuideScreenKey(gameState, isQuickMode(runMode), autoRepeat) : gameState;
   useEffect(() => {
     setQuickGuideLater(null);
     setQuickNudgeShowing(null);
-  }, [gameState]);
+  }, [quickGuideScreen]);
   useEffect(() => {
     if (quickGuidePicked !== 'nudgeHome' && quickGuidePicked !== 'nudgeBattle') return;
     const next = quickNudgeAfter(quickNudge, quickGuideToday);
@@ -151519,6 +151526,7 @@ function MonsterHeroGame() {
     storeSet(QUICK_GUIDE_NUDGE_KEY, next, false);
   }, [quickGuidePicked]);
   const quickGuideActive = quickGuideReplay ? `replay:${quickGuideReplay}` : quickNudgeShowing && !quickGuideBusy ? quickNudgeShowing : quickGuidePicked && quickGuidePicked !== quickGuideLater && quickGuidePicked !== 'nudgeHome' && quickGuidePicked !== 'nudgeBattle' ? quickGuidePicked : null;
+  quickGuideShowingRef.current = quickGuideActive;
   const finishQuickGuide = (guideId, done) => {
     if (quickGuideReplay) {
       setQuickGuideReplay(null);
@@ -152212,121 +152220,126 @@ function MonsterHeroGame() {
   };
   const claimGiftIds = async (ids, {
     baseGifts = null,
-    title = 'ギフトを受け取りました'
+    title = 'ギフトを受け取りました',
+    inGiftWrite = false
   } = {}) => {
     if (giftClaimingRef.current || !baseGifts && missionClaimingRef.current) return null;
     giftClaimingRef.current = true;
-    try {
-      const wanted = new Set(ids);
-      const sourceGifts = Array.isArray(baseGifts) ? baseGifts : gifts;
-      const claimedGifts = [];
-      const storedFramesBefore = normalizeOwnedProfileFrames(await storeGet(PROFILE_FRAME_OWNED_KEY, [], false));
-      const storedBeatBefore = await storeGet(RHYTHM_EVENT_POINTS_KEY, 0, false);
-      const beatBefore = normalizeRhythmEventPoints(storedBeatBefore);
-      let balances = {
-        gold,
-        breederPoints,
-        ownedItems,
-        breederXp,
-        ownedProfileFrames: normalizeOwnedProfileFrames([...storedFramesBefore, ...ownedProfileFramesRef.current]),
-        beatPoints: beatBefore
-      };
-      let claimedCount = 0;
-      const now = Date.now();
-      const nextGifts = sourceGifts.map(gift => {
-        if (!wanted.has(gift?.id)) return gift;
-        const result = buildGiftClaim(gift, balances, now);
-        if (!result.ok) return gift;
-        balances = result.balances;
-        claimedCount++;
-        claimedGifts.push(result.gift);
-        return result.gift;
-      });
-      if (!claimedCount) return null;
-      for (let i = 0; i < claimedCount; i++) addAssistantBond('gift');
-      const entries = [];
-      if (balances.breederXp !== breederXp) {
-        const after = levelInfo(balances.breederXp);
-        const gainedLevels = Math.max(0, after.level - levelInfo(breederXp).level);
-        if (gainedLevels > 0) {
-          balances.breederPoints += gainedLevels;
-          const beforeGranted = await storeGet('mh_breeder_points_granted', null, false);
+    const run = async () => {
+      try {
+        const wanted = new Set(ids);
+        const storedGifts = Array.isArray(baseGifts) ? null : await storeGet('mh_gifts', null, false);
+        const sourceGifts = Array.isArray(baseGifts) ? baseGifts : Array.isArray(storedGifts) ? storedGifts : gifts;
+        const claimedGifts = [];
+        const storedFramesBefore = normalizeOwnedProfileFrames(await storeGet(PROFILE_FRAME_OWNED_KEY, [], false));
+        const storedBeatBefore = await storeGet(RHYTHM_EVENT_POINTS_KEY, 0, false);
+        const beatBefore = normalizeRhythmEventPoints(storedBeatBefore);
+        let balances = {
+          gold,
+          breederPoints,
+          ownedItems,
+          breederXp,
+          ownedProfileFrames: normalizeOwnedProfileFrames([...storedFramesBefore, ...ownedProfileFramesRef.current]),
+          beatPoints: beatBefore
+        };
+        let claimedCount = 0;
+        const now = Date.now();
+        const nextGifts = sourceGifts.map(gift => {
+          if (!wanted.has(gift?.id)) return gift;
+          const result = buildGiftClaim(gift, balances, now);
+          if (!result.ok) return gift;
+          balances = result.balances;
+          claimedCount++;
+          claimedGifts.push(result.gift);
+          return result.gift;
+        });
+        if (!claimedCount) return null;
+        for (let i = 0; i < claimedCount; i++) addAssistantBond('gift');
+        const entries = [];
+        if (balances.breederXp !== breederXp) {
+          const after = levelInfo(balances.breederXp);
+          const gainedLevels = Math.max(0, after.level - levelInfo(breederXp).level);
+          if (gainedLevels > 0) {
+            balances.breederPoints += gainedLevels;
+            const beforeGranted = await storeGet('mh_breeder_points_granted', null, false);
+            entries.push({
+              key: 'mh_breeder_points_granted',
+              before: beforeGranted,
+              next: Math.max(0, after.level - 1)
+            });
+          }
           entries.push({
-            key: 'mh_breeder_points_granted',
-            before: beforeGranted,
-            next: Math.max(0, after.level - 1)
+            key: 'mh_breeder_xp',
+            before: breederXp,
+            next: balances.breederXp
           });
         }
         entries.push({
-          key: 'mh_breeder_xp',
-          before: breederXp,
-          next: balances.breederXp
+          key: 'mh_gold',
+          before: gold,
+          next: balances.gold
         });
+        entries.push({
+          key: 'mh_breeder_points',
+          before: breederPoints,
+          next: balances.breederPoints
+        });
+        entries.push({
+          key: 'mh_owned_items',
+          before: ownedItems,
+          next: balances.ownedItems
+        });
+        const framesAfter = normalizeOwnedProfileFrames(balances.ownedProfileFrames);
+        if (framesAfter.length !== storedFramesBefore.length) entries.push({
+          key: PROFILE_FRAME_OWNED_KEY,
+          before: storedFramesBefore,
+          next: framesAfter
+        });
+        const beatAfter = normalizeRhythmEventPoints(balances.beatPoints);
+        if (beatAfter !== beatBefore) entries.push({
+          key: RHYTHM_EVENT_POINTS_KEY,
+          before: storedBeatBefore,
+          next: beatAfter
+        });
+        const keptGifts = pruneGiftHistory(nextGifts);
+        entries.push({
+          key: 'mh_gifts',
+          before: sourceGifts,
+          next: keptGifts
+        });
+        const saved = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
+        if (!saved) {
+          console.error('[gift] claim persistence failed');
+          return null;
+        }
+        if (balances.breederXp !== breederXp) setBreederXp(balances.breederXp);
+        setGold(balances.gold);
+        setBreederPoints(balances.breederPoints);
+        setOwnedItems(balances.ownedItems);
+        setGifts(keptGifts);
+        if (framesAfter.length !== ownedProfileFramesRef.current.length) {
+          ownedProfileFramesRef.current = framesAfter;
+          setOwnedProfileFrames(framesAfter);
+        }
+        if (beatAfter !== beatBefore) setRhythmEventPoints(beatAfter);
+        const rewards = summarizeClaimedGiftRewards(claimedGifts);
+        setRewardReceipt({
+          title,
+          rewards,
+          count: claimedCount
+        });
+        try {
+          Audio_.se.levelUp();
+        } catch {}
+        return {
+          count: claimedCount,
+          rewards
+        };
+      } finally {
+        giftClaimingRef.current = false;
       }
-      entries.push({
-        key: 'mh_gold',
-        before: gold,
-        next: balances.gold
-      });
-      entries.push({
-        key: 'mh_breeder_points',
-        before: breederPoints,
-        next: balances.breederPoints
-      });
-      entries.push({
-        key: 'mh_owned_items',
-        before: ownedItems,
-        next: balances.ownedItems
-      });
-      const framesAfter = normalizeOwnedProfileFrames(balances.ownedProfileFrames);
-      if (framesAfter.length !== storedFramesBefore.length) entries.push({
-        key: PROFILE_FRAME_OWNED_KEY,
-        before: storedFramesBefore,
-        next: framesAfter
-      });
-      const beatAfter = normalizeRhythmEventPoints(balances.beatPoints);
-      if (beatAfter !== beatBefore) entries.push({
-        key: RHYTHM_EVENT_POINTS_KEY,
-        before: storedBeatBefore,
-        next: beatAfter
-      });
-      const keptGifts = pruneGiftHistory(nextGifts);
-      entries.push({
-        key: 'mh_gifts',
-        before: sourceGifts,
-        next: keptGifts
-      });
-      const saved = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
-      if (!saved) {
-        console.error('[gift] claim persistence failed');
-        return null;
-      }
-      if (balances.breederXp !== breederXp) setBreederXp(balances.breederXp);
-      setGold(balances.gold);
-      setBreederPoints(balances.breederPoints);
-      setOwnedItems(balances.ownedItems);
-      setGifts(keptGifts);
-      if (framesAfter.length !== ownedProfileFramesRef.current.length) {
-        ownedProfileFramesRef.current = framesAfter;
-        setOwnedProfileFrames(framesAfter);
-      }
-      if (beatAfter !== beatBefore) setRhythmEventPoints(beatAfter);
-      const rewards = summarizeClaimedGiftRewards(claimedGifts);
-      setRewardReceipt({
-        title,
-        rewards,
-        count: claimedCount
-      });
-      try {
-        Audio_.se.levelUp();
-      } catch {}
-      return {
-        count: claimedCount,
-        rewards
-      };
-    } finally {
-      giftClaimingRef.current = false;
-    }
+    };
+    return inGiftWrite ? run() : runGiftWrite(run);
   };
   const loginBonusTodayDay = (() => {
     const state = normalizeLoginBonus(loginBonusState);
@@ -152470,7 +152483,8 @@ function MonsterHeroGame() {
   const sendMissionGroupsToGiftBox = async groups => {
     {
       const state = normalizeMissions(missionsRef.current);
-      let nextGifts = Array.isArray(gifts) ? [...gifts] : [];
+      const storedGifts = await storeGet('mh_gifts', null, false);
+      let nextGifts = Array.isArray(storedGifts) ? [...storedGifts] : Array.isArray(gifts) ? [...gifts] : [];
       const giftIds = [];
       let count = 0;
       ['daily', 'weekly', 'monthly'].forEach(type => {
@@ -152513,19 +152527,23 @@ function MonsterHeroGame() {
     if (missionClaimingRef.current || giftClaimingRef.current) return null;
     missionClaimingRef.current = true;
     try {
-      const sent = await sendMissionGroupsToGiftBox(groups);
-      const baseGifts = sent ? sent.gifts : Array.isArray(gifts) ? gifts : [];
-      const ids = sent ? [...sent.giftIds] : [];
-      if (includeBacklog) {
-        const now = Date.now();
-        baseGifts.forEach(g => {
-          if (g?.source === 'mission' && !g.claimedAt && giftIsClaimable(g, now) && !ids.includes(g.id)) ids.push(g.id);
+      return await runGiftWrite(async () => {
+        const sent = await sendMissionGroupsToGiftBox(groups);
+        const stored = sent ? null : await storeGet('mh_gifts', null, false);
+        const baseGifts = sent ? sent.gifts : Array.isArray(stored) ? stored : Array.isArray(gifts) ? gifts : [];
+        const ids = sent ? [...sent.giftIds] : [];
+        if (includeBacklog) {
+          const now = Date.now();
+          baseGifts.forEach(g => {
+            if (g?.source === 'mission' && !g.claimedAt && giftIsClaimable(g, now) && !ids.includes(g.id)) ids.push(g.id);
+          });
+        }
+        if (!ids.length) return null;
+        return await claimGiftIds(ids, {
+          baseGifts,
+          title: 'ミッション報酬を受け取りました',
+          inGiftWrite: true
         });
-      }
-      if (!ids.length) return null;
-      return await claimGiftIds(ids, {
-        baseGifts,
-        title: 'ミッション報酬を受け取りました'
       });
     } finally {
       missionClaimingRef.current = false;

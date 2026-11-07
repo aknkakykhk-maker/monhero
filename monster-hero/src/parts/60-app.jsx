@@ -5219,6 +5219,8 @@ function MonsterHeroGame() {
   const [quickGuideSeen, setQuickGuideSeen] = useState(null);
   const [quickNudge, setQuickNudge] = useState(null);
   const [quickGuideReplay, setQuickGuideReplay] = useState(null);
+  // いま出している案内(前の描画の分)。クイックの∞の WAVE のあいだも案内を出したままにするため(56 の quickGuidePick の showing)
+  const quickGuideShowingRef = useRef(null);
   const quickGuideOpenedDetailRef = useRef(false);   // 案内が曲えらびの周回の帯を開いたか(閉じるときに元へ戻す)
   const QUICK_RHYTHM_INTRO_KEY = 'mh_quick_rhythm_intro_seen_v1';
   const QUICK_RHYTHM_BACKGROUND_KEY = 'mh_quick_rhythm_bg_seen_v1';
@@ -11517,13 +11519,15 @@ function MonsterHeroGame() {
     gameState, busy: quickGuideBusy, seen: quickGuideSeen, quickUnlocked: quickGuideQuickUnlocked, quickEverCleared: quickGuideEverCleared,
     quickSelect: isQuickMode(battleMode), quickRun: isQuickMode(runMode), autoRepeat: autoRepeat === true,
     battleTutorial: battleTutorialStep != null || !!battleScenarioRef.current, raidJack: isRaidJackMode(runMode), backgroundRun: !!rhythmBackgroundRun,
-    nudgeOk: !!quickNudge && quickNudgeAllowed(quickNudge, quickGuideToday),
+    nudgeOk: !!quickNudge && quickNudgeAllowed(quickNudge, quickGuideToday), showing: quickGuideShowingRef.current,
   }) : null;
   // 「あとで」を押した案内は、その画面を出ているあいだは出し直さない(画面を開き直したら、また最初から)
   const [quickGuideLater, setQuickGuideLater] = useState(null);
   // 出している誘導(数えたあとも、閉じるまで出しておく)
   const [quickNudgeShowing, setQuickNudgeShowing] = useState(null);
-  useEffect(() => { setQuickGuideLater(null); setQuickNudgeShowing(null); }, [gameState]);
+  //   クイックの∞の WAVE のあいだ(一瞬だけ通る画面)はバトルの画面と同じに数える(56 の quickGuideScreenKey)
+  const quickGuideScreen = typeof quickGuideScreenKey === 'function' ? quickGuideScreenKey(gameState, isQuickMode(runMode), autoRepeat) : gameState;
+  useEffect(() => { setQuickGuideLater(null); setQuickNudgeShowing(null); }, [quickGuideScreen]);
   // 誘導は出すと決めたときに数える(閉じる・読み込み直しでも同じ日に繰り返さない)
   useEffect(() => {
     if (quickGuidePicked !== 'nudgeHome' && quickGuidePicked !== 'nudgeBattle') return;
@@ -11536,6 +11540,7 @@ function MonsterHeroGame() {
   const quickGuideActive = quickGuideReplay ? `replay:${quickGuideReplay}`
     : quickNudgeShowing && !quickGuideBusy ? quickNudgeShowing
     : quickGuidePicked && quickGuidePicked !== quickGuideLater && quickGuidePicked !== 'nudgeHome' && quickGuidePicked !== 'nudgeBattle' ? quickGuidePicked : null;
+  quickGuideShowingRef.current = quickGuideActive;
   // 案内を閉じる。done … 最後まで見た(見た印を付ける)。誘導とヘルプからの見返しは印を付けない
   const finishQuickGuide = (guideId, done) => {
     if (quickGuideReplay) { setQuickGuideReplay(null); return; }
@@ -12081,13 +12086,18 @@ function MonsterHeroGame() {
     if (saved && grant.granted) setGifts(grant.gifts);
     return saved;
   };
-  const claimGiftIds = async (ids, { baseGifts = null, title = 'ギフトを受け取りました' } = {}) => {
+  // ★ギフトの受け取りも、ほかのギフトの書き足し(仲良し度のごほうび・おみやげなど)と同じ列で順番に走らせる(runGiftWrite)。
+  //   2026-11-07: 「すべて受け取る」で仲良し度が上がると、ごほうびの書き足しが受け取る前の一覧を読み、受け取ったあとで書き戻していた。
+  //   ダイヤは入ったのにギフトが受け取り待ちへ戻り、もう一度受け取れた(二重取り)。inGiftWrite … すでに列の中から呼ぶとき(ミッションの受け取り)
+  const claimGiftIds = async (ids, { baseGifts = null, title = 'ギフトを受け取りました', inGiftWrite = false } = {}) => {
     // ミッションの受け取り中は動かない(古いギフト一覧で保存し直さないため)。ミッションの中から呼ぶときは baseGifts を渡す
     if (giftClaimingRef.current || (!baseGifts && missionClaimingRef.current)) return null;
     giftClaimingRef.current = true;
-    try {
+    const run = async () => { try {
       const wanted = new Set(ids);
-      const sourceGifts = Array.isArray(baseGifts) ? baseGifts : gifts;
+      // 列の順番が来てから、保存から読み直す(画面の控えは、ほかの書き足しのぶんが入る前の古い一覧のことがある)
+      const storedGifts = Array.isArray(baseGifts) ? null : await storeGet('mh_gifts', null, false);
+      const sourceGifts = Array.isArray(baseGifts) ? baseGifts : Array.isArray(storedGifts) ? storedGifts : gifts;
       const claimedGifts = [];
       // ブリーダー経験値の報酬もあるので、経験値も一緒に持って回る。
       // プロフィールフレームの報酬(2026-10-20・ハロウィン・妖)もあるので、持っている枠も一緒に持って回る(保存から読み直した値)
@@ -12151,7 +12161,8 @@ function MonsterHeroGame() {
       setRewardReceipt({ title, rewards, count:claimedCount });
       try { Audio_.se.levelUp(); } catch {}
       return { count:claimedCount, rewards };
-    } finally { giftClaimingRef.current = false; }
+    } finally { giftClaimingRef.current = false; } };
+    return inGiftWrite ? run() : runGiftWrite(run);
   };
   // タブに出す赤い丸バッジ。0件なら何も出さない。
   // Tailwindの動的クラス生成に頼らず色と形はinline styleで指定する(生成に失敗して透明になるのを避ける)
@@ -12228,7 +12239,9 @@ function MonsterHeroGame() {
   const sendMissionGroupsToGiftBox = async (groups) => {
     {
       const state=normalizeMissions(missionsRef.current);
-      let nextGifts=Array.isArray(gifts)?[...gifts]:[];
+      // ギフト一覧は保存から読み直す(画面の控えは、ほかの書き足しのぶんが入る前の古い一覧のことがある。runGiftWrite の列の中で呼ぶ)
+      const storedGifts=await storeGet('mh_gifts',null,false);
+      let nextGifts=Array.isArray(storedGifts)?[...storedGifts]:Array.isArray(gifts)?[...gifts]:[];
       const giftIds=[];
       let count=0;
       ['daily','weekly','monthly'].forEach(type=>{
@@ -12273,15 +12286,19 @@ function MonsterHeroGame() {
     if (missionClaimingRef.current || giftClaimingRef.current) return null;
     missionClaimingRef.current = true;
     try {
-      const sent = await sendMissionGroupsToGiftBox(groups);
-      const baseGifts = sent ? sent.gifts : (Array.isArray(gifts) ? gifts : []);
-      const ids = sent ? [...sent.giftIds] : [];
-      if (includeBacklog) {
-        const now = Date.now();
-        baseGifts.forEach(g => { if (g?.source === 'mission' && !g.claimedAt && giftIsClaimable(g, now) && !ids.includes(g.id)) ids.push(g.id); });
-      }
-      if (!ids.length) return null;
-      return await claimGiftIds(ids, { baseGifts, title:'ミッション報酬を受け取りました' });
+      // 送る → 受け取るを、ほかのギフトの書き足しと同じ列で1つの順番として走らせる(あいだに書き戻されない)
+      return await runGiftWrite(async () => {
+        const sent = await sendMissionGroupsToGiftBox(groups);
+        const stored = sent ? null : await storeGet('mh_gifts', null, false);
+        const baseGifts = sent ? sent.gifts : (Array.isArray(stored) ? stored : Array.isArray(gifts) ? gifts : []);
+        const ids = sent ? [...sent.giftIds] : [];
+        if (includeBacklog) {
+          const now = Date.now();
+          baseGifts.forEach(g => { if (g?.source === 'mission' && !g.claimedAt && giftIsClaimable(g, now) && !ids.includes(g.id)) ids.push(g.id); });
+        }
+        if (!ids.length) return null;
+        return await claimGiftIds(ids, { baseGifts, title:'ミッション報酬を受け取りました', inGiftWrite:true });
+      });
     } finally { missionClaimingRef.current = false; }
   };
   const claimMission = (type,mission) => claimMissionRewards({ [type]:[mission] });
