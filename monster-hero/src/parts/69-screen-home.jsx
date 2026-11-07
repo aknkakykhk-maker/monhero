@@ -356,10 +356,30 @@ function HomeScreen({
   React.useEffect(()=>{
     const scene=homeSceneRef.current;const box=scene&&scene.querySelector('.mh-home-assistant');
     if(!scene||!box)return undefined;
-    const measure=()=>{const b=box.offsetTop+box.offsetHeight;if(b>0)scene.style.setProperty('--mh-home-assistant-bottom',`${Math.ceil(b)}px`);};
+    // 横(背の低い横画面)では、モンヒロビートの札を M/B管理の右隣に並べる。その位置に使う M/B管理の右端も渡す(2026-11-07 横 667×375 で
+    // 吹き出しが1行伸びると、M/B管理とモンヒロビートの札が重なった。左の列は縦に積む余白がない)
+    // 左の列は上から 吹き出し → M/B管理 → 助手ライフ → モンヒロビート。上の札が下がったら、下の札もその下端(+顔の列の分)より下へ押す
+    // (2026-11-07 長い台詞で M/B管理が下がり、縦では助手ライフ、横ではモンヒロビートの札に重なった)。ふだんの位置は CSS の % のまま
+    const offTop=el=>{let y=0;for(let e=el;e&&e!==scene;e=e.offsetParent)y+=e.offsetTop;return y;};
+    const offLeft=el=>{let x=0;for(let e=el;e&&e!==scene;e=e.offsetParent)x+=e.offsetLeft;return x;};
+    const measure=()=>{const b=offTop(box)+box.offsetHeight;if(b>0)scene.style.setProperty('--mh-home-assistant-bottom',`${Math.ceil(b)}px`);
+      // 横(背の低い横画面)では、モンヒロビートの札を M/B管理の右隣に並べる(左の列は縦に積む余白がない)。その位置に使う M/B管理の右端
+      const mg=scene.querySelector('.mh-home-facility.management');
+      if(mg&&mg.offsetParent){scene.style.setProperty('--mh-home-management-right',`${Math.ceil(offLeft(mg)+mg.offsetWidth)}px`);scene.style.setProperty('--mh-home-management-bottom',`${Math.ceil(offTop(mg)+mg.offsetHeight)}px`);}
+      const lf=scene.querySelector('.mh-home-facility.life');
+      if(lf&&lf.offsetParent)scene.style.setProperty('--mh-home-life-bottom',`${Math.ceil(offTop(lf)+lf.offsetHeight)}px`);
+      // モンヒロビートが押し下げられて、その下(イベントの札・公式杯・MFバトルカード)にかかるときだけ、下の札をまとめて下げる。
+      // 下の札は下から位置を決めているので、translate で動かす(offsetTop は translate を含まないので、測り直しても積み上がらない)
+      const rh=scene.querySelector('.mh-home-facility.rhythm');let push=0;
+      if(rh&&rh.offsetParent){const rb=offTop(rh)+rh.offsetHeight+22,rr=offLeft(rh)+rh.offsetWidth;
+        for(const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle')){if(!el.offsetParent)continue;const t=offTop(el);if(t>offTop(rh)&&offLeft(el)<rr)push=Math.max(push,rb-t);}}
+      scene.style.setProperty('--mh-home-left-push',`${Math.max(0,Math.ceil(push))}px`);};
     measure();
     if(typeof ResizeObserver==='undefined'){const id=setInterval(measure,1000);return()=>clearInterval(id);}
-    const ro=new ResizeObserver(measure);ro.observe(box);ro.observe(scene);return()=>ro.disconnect();
+    const ro=new ResizeObserver(measure);ro.observe(box);ro.observe(scene);
+    // 札は後から出る(助手ライフは公開の印・読み込みのあと)。ときどき測り直す
+    const id=setInterval(measure,1000);
+    return()=>{ro.disconnect();clearInterval(id);};
   },[]);
   const homeBackgroundSrc=homeArtSrc(homeArt,homeSceneWide);
   const homeBackgroundWide=homeArtIsWide(homeArt,homeSceneWide);

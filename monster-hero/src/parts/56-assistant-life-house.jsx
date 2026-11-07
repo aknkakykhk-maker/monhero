@@ -830,15 +830,20 @@ function AssistantLifeHomeFaces({ metIds }) {
     if (!assistantLifeEnabled()) return undefined;
     const measure = () => {
       const o = {};
-      const obs = [...document.querySelectorAll(ASSISTANT_LIFE_HOME_OBSTACLES)].filter(el => el.offsetParent).map(el => ({ el, r: el.getBoundingClientRect() }));
+      // 🔄横(端末は縦のまま、器を90度回して描く)では、画面の座標ではなく器の中の座標で測る。顔の列も器の中に置かれるため
+      //   (2026-11-07 本番で、🔄横の顔が札と関係ない所に出ていた)
+      const rot = typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.active();
+      const rectOf = (el) => (rot ? RHYTHM_VIEW_ROTATION.rectOf(el) : el.getBoundingClientRect());
+      const vw = rot ? window.innerHeight : window.innerWidth, vh = rot ? window.innerWidth : window.innerHeight;
+      const obs = [...document.querySelectorAll(ASSISTANT_LIFE_HOME_OBSTACLES)].filter(el => el.offsetParent).map(el => ({ el, r: rectOf(el) }));
       for (const [k, sel] of Object.entries(ASSISTANT_LIFE_FACILITY_SEL)) {
         const el = document.querySelector(sel);
         if (!el || !el.offsetParent) continue;
-        const r = el.getBoundingClientRect();
+        const r = rectOf(el);
         // 札の下にある、横に重なるものまでのすき間(顔の列は札の幅+140px まで伸びうるので、その幅で見る)
-        const right = r.left + r.width / 2 > window.innerWidth / 2;
+        const right = r.left + r.width / 2 > vw / 2;
         const x0 = right ? r.right - Math.max(r.width, 140) : r.left, x1 = right ? r.right : r.left + Math.max(r.width, 140);
-        let gap = window.innerHeight - r.bottom;
+        let gap = vh - r.bottom;
         for (const b of obs) { if (b.el === el || b.el.contains(el) || el.contains(b.el)) continue; if (b.r.top >= r.bottom - 2 && b.r.right > x0 && b.r.left < x1) gap = Math.min(gap, b.r.top - r.bottom); }
         o[k] = { x: r.left, y: r.top, w: r.width, h: r.height, gap: Math.round(gap), right };
       }
