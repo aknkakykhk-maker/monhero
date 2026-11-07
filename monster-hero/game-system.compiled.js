@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f8b8750cd79173a5
+// source-sha256: 596eff85048058a3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -90547,11 +90547,12 @@ function RhythmMultiScreen({
   const [roster, setRoster] = React.useState(null);
   const [friendInvites, setFriendInvites] = React.useState([]);
   const [invitePanel, setInvitePanel] = React.useState(false);
+  const [inviteSheet, setInviteSheet] = React.useState(false);
   const [invitedIds, setInvitedIds] = React.useState({});
   const [inviteMessage, setInviteMessage] = React.useState('');
   const [presence, setPresence] = React.useState({});
   React.useEffect(() => {
-    if (!invitePanel || !roster || !roster.length || typeof friendsPresenceFor !== 'function') return undefined;
+    if (!(invitePanel || inviteSheet) || !roster || !roster.length || typeof friendsPresenceFor !== 'function') return undefined;
     let alive = true;
     const load = () => {
       void friendsPresenceFor(roster.map(f => f.otherId)).then(p => {
@@ -90564,7 +90565,7 @@ function RhythmMultiScreen({
       alive = false;
       clearInterval(t);
     };
-  }, [invitePanel, roster]);
+  }, [invitePanel, inviteSheet, roster]);
   const loadRoster = React.useCallback(async id => {
     try {
       setRoster(await sbFetchFriendRoster(id));
@@ -91043,7 +91044,6 @@ function RhythmMultiScreen({
   }, inviteMessage), React.createElement("p", {
     className: "text-[10px] font-bold leading-relaxed text-slate-400"
   }, "招待は3分のあいだ届きます。相手がマルチの入口をひらくと「参加する」が出ます。"));
-  const [inviteSheet, setInviteSheet] = React.useState(false);
   const openInviteSheet = () => {
     setInviteMessage('');
     setChatOpen(false);

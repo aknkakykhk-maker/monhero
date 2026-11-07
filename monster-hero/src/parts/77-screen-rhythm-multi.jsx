@@ -2220,18 +2220,21 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   const [roster, setRoster] = React.useState(null);        // フレンド名簿(承認済みのみ)。null=まだ読んでいない
   const [friendInvites, setFriendInvites] = React.useState([]);
   const [invitePanel, setInvitePanel] = React.useState(false);
+  // 💌 のシート(2026-11-07)。フレンドの今(居場所)は、待合いの欄と同じく、このシートを開いているあいだも読む
+  const [inviteSheet, setInviteSheet] = React.useState(false);
   const [invitedIds, setInvitedIds] = React.useState({});
   const [inviteMessage, setInviteMessage] = React.useState('');
   // 招待の行に出すフレンドの今(34 の friendsPresenceFor・75 の FriendPresenceTag。2026-10-29 社長「相手がいま何をしているかが見えると誘いやすい」)
   const [presence, setPresence] = React.useState({});
   React.useEffect(() => {
-    if (!invitePanel || !roster || !roster.length || typeof friendsPresenceFor !== 'function') return undefined;
+    // ★2026-11-07 まで 💌 のシートでは読んでいなかった(社長「招待の画面でフレンドがなにをしてるかわからない」。「◯分前に開きました」だけが出ていた)
+    if (!(invitePanel || inviteSheet) || !roster || !roster.length || typeof friendsPresenceFor !== 'function') return undefined;
     let alive = true;
     const load = () => { void friendsPresenceFor(roster.map((f) => f.otherId)).then((p) => { if (alive) setPresence(p || {}); }); };
     load();
     const t = setInterval(load, 60000);
     return () => { alive = false; clearInterval(t); };
-  }, [invitePanel, roster]);
+  }, [invitePanel, inviteSheet, roster]);
   const loadRoster = React.useCallback(async (id) => {
     try { setRoster(await sbFetchFriendRoster(id)); } catch (_) { setRoster([]); }
   }, []);
@@ -2594,7 +2597,6 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                     </div>
   );
   // 💌 フレンドを招待する(2026-11-07 社長「フリーマッチでも招待できる」「あとから誘えるように」)。部屋にいるあいだはいつでも開ける
-  const [inviteSheet, setInviteSheet] = React.useState(false);
   const openInviteSheet = () => {
     setInviteMessage('');
     setChatOpen(false);
