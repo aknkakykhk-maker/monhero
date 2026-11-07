@@ -264,3 +264,13 @@
 - [ ] 台詞の見直し(ナカヨシ(4)・呼び方と距離感): 待ち
 - [ ] 止め絵(縦横)・台詞の抜粋・更新履歴とヘルプの文 → 窓口(モンヒロくん)。公開の印は社長の「この文で」まで偽
 - 試し方: ゲームを開き HOME で `RELEASE_FLAGS.rhythmAssistantSession = true` にしてからモンヒロビートへ。デュオを試すときは `await ASSISTANT_PEER_STORE.load()` のあとで `ASSISTANT_PEER_STORE.set({ bond: { 'kiki-mua': 99999 }, special: ['kiki-mua'] })`(読み込む前に入れると消える)。サビが早い曲は「風がそよぐ場所」(約36秒)
+
+### 公開のあと(2026-11-07 マモリ)
+
+- [x] #4797 呼ぶシートの複数選択(タブをまたぐ・空き席で止める・無料と券の内訳・券が足りないと押せない・デュオの印)・ヘッダーの「呼ぶ」+小さい顔・結果では演奏中の顔を消す・友情Lvだけの組は1行にまとめる
+- [x] 助手ライフとのつなぎ(ナカヨシ5と決めた窓口。`80-screen-rhythm-assistant-session.jsx`)
+  - `rhythmAssistSessionOnLive(fn)` … 1曲遊んで育ちを保存したあと1回。`{ assistantId, partnerIds, songId, round, gain, levelUp, level, likeUp, duo, at }`
+  - `rhythmAssistSessionInvite(id, { onResult })` … 自分だけのプライベートの部屋を作り、入れたら呼ぶ(払い方は呼ぶシートと同じ)。払えなければ部屋へ行かず `{ ok:false, reason:'no_ticket' }`。誘いは5分で消える
+  - 結果の友情Lv に段の名前「+3(Lv4 いい友だち)」
+- [ ] 🔄横の土台の直し(テンポ)が main に入ったら、曲えらびの席の吹き出し・チーム結果のチップを撮り直して残りだけ直す。「助手の表示が重ならない・切れない」の検査(縦・横・🔄横)を足す
+- [ ] 券なしセッション(社長の A/B/C 待ち)。決まったら、呼ぶ時点で `assistantLifeAtBeat(id)` を見て控えに `paid:'visit'` を付ける。部屋が続くあいだは無料

@@ -262,5 +262,20 @@ check('助手のスコアをランキングへ送らない(助手の計算の部
   check('{name} は話す助手の呼び方に置きかえる(rhythmAssistSessionSpeak → assistantSpeakText)', /return \[hit\[0\], rhythmAssistSessionSpeak\(assistantId, hit\[1\]\)\];/.test(SCREEN) && /rhythmAssistSessionSpeak\(who, String\(text\)/.test(SCREEN) && /assistantSpeakText\(text, c\.name, lv, style, assistantId\)/.test(SCREEN));
   check('本体が名前・仲良し度・呼び方を渡す', /rhythmAssistSessionSetCall\(\{ name: breederName, levelOf:/.test(P('60-app.jsx')));
 }
+// ---- 呼ぶシートの複数選択(2026-11-07 社長「1人ずつじゃなくて複数選択がほしい」) ----
+{
+  check('マスモンと助手をタブをまたいで選び、まとめて呼ぶ(picks・callAll)', /const \[picks, setPicks\] = React\.useState\(\[\]\);/.test(SHEET) && /const callAll = async \(\) => \{/.test(SHEET) && /picked=\{pickedAssistantIds\} onToggle=\{\(id\) => togglePick\('assistant', id\)\}/.test(SHEET));
+  check('部屋の空き席より多くは選べない(空き席は部屋が渡す)', /if \(picks\.length >= freeSeats\) \{ setPickNote/.test(SHEET) && /freeSeats=\{view \? Math\.max\(0, RHYTHM_MULTI_ROOM_MAX - \(view\.members \|\| \[\]\)\.length\) : 0\}/.test(MULTI));
+  check('使う回数は1人1回のまま(無料から先・足りないぶんは券)。券が足りないときは押せない', /const useFree = Math\.min\(freeLeft, picks\.length\);/.test(SHEET) && /const shortTickets = Math\.max\(0, useTickets - tickets\);/.test(SHEET) && /disabled=\{busy \|\| !picks\.length \|\| shortTickets > 0\}/.test(SHEET));
+  check('デュオになる組み合わせを選んでいるあいだに出す', /data-rhythm-buddy-multi-duo/.test(SHEET));
+}
+check('部屋の入口のボタンは「呼ぶ」+マスモンと助手の小さな顔(社長 2026-11-07)', /data-rhythm-buddy-header-faces/.test(MULTI) && /<span className="mt-0\.5 text-\[10px\] font-black">呼ぶ<\/span>/.test(MULTI));
+check('演奏の結果が出たら、演奏中の顔とひとことは消す(結果のボーナスの枠に重ねない)', /const done = !!document\.querySelector\('\[data-rhythm-result\]'\);/.test(SCREEN) && /if \(!ids\.length \|\| ended\) return null;/.test(SCREEN));
+// 助手ライフとのつなぎ(2026-11-07 ナカヨシ5と決めた窓口)
+check('助手ライフへ「1曲一緒に遊んだ」を知らせる窓口 rhythmAssistSessionOnLive がある(育ちを保存したあとに1回)', /const rhythmAssistSessionOnLive = \(fn\)/.test(SCREEN) && /rhythmAssistSessionEmitLive\(\{\s*assistantId, partnerIds:/.test(SCREEN) && /gain: outcome\.gain \|\| 0, levelUp: outcome\.levelUp \|\| 0, level, likeUp: outcome\.likeUp \|\| 0,\s*duo:/.test(SCREEN));
+check('「モンビーへ誘う」は払えないとき部屋へ行かずに知らせる(no_ticket)', /if \(!rhythmAssistSessionCanPayNow\(\)\) return rhythmAssistSessionInviteDone\(onResult, \{ ok: false, reason: 'no_ticket' \}\);/.test(SCREEN));
+check('誘いは5分で消える・1回だけ使う(部屋に入る前にやめたら何もしない)', /RHYTHM_ASSIST_SESSION_INVITE_TTL_MS = 5 \* 60 \* 1000/.test(SCREEN) && /const rhythmAssistSessionTakeInvite = /.test(SCREEN));
+check('誘いで開いたら自分だけの部屋を作り、入れてから呼ぶ(払うのは呼ぶシートと同じ callAssistant)', /rhythmAssistSessionPeekInvite\(\) \|\| RHYTHM_MULTI\.view\(\)\) return;\s*createPrivate\(\);/.test(MULTI) && /void callAssistant\(who\)\.then\(\(r\) => done\(/.test(MULTI));
+check('友情Lv の上がり方に段の名前を添える「+3(Lv4 いい友だち)」', /const rhythmAssistSessionPeerGainText = /.test(SCREEN) && /ASSISTANT_PEER_BOND_LEVELS\.find\(\(x\) => x\.level === level\)/.test(SCREEN) && /gains\[rhythmAssistSessionPairKey\(ids\[i\], ids\[j\]\)\] = \{ gained: r\.gained, level: r\.levelAfter \}/.test(SCREEN));
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
