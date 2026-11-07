@@ -526,3 +526,70 @@ pair atsu sorashido lv=4-6 air=after | sorashido angry 今のは俺の勝ちだ�
 pair atsu sorashido lv=4-6 air=makeup | atsu happy {c}、さっきのはどっちの勝ちでもいいよ笑 | sorashido troubled ……いや、ちゃんと数え直した。{c}の勝ちだった | atsu wink 正直じゃん！ 次の勝負いこ！
 pair atsu sorashido lv=7-10 air=makeup | sorashido normal 数え方、2人で決めといたぜ・・・！ | atsu happy いいね笑 これでもうもめないね！ | sorashido happy ……たぶんな笑
 pair atsu sorashido doing=practice lv=1-3 | sorashido excited {c}の打ち方、録画して研究してもいいか？ | atsu surprise いいけど、恥ずかしいって笑 | sorashido happy 分析したら、俺も同じくらいになれるはずだ
+
+## 2人 きき × ソラシド(21本)
+pair kiki sorashido doing=snack lv=1-3 | sorashido normal {c}、ここのお茶、何種類あるか知ってる？ | kiki happy いいえ。数えてみたんですか？ | sorashido happy 12種類だった笑 全部の味も表にしたぜ・・・！
+pair kiki sorashido doing=snack lv=4-6 | kiki normal {c}、おやつのときくらい、計算はお休みしましょう | sorashido troubled ……ばれてた？ 頭の中でちょっとだけ | kiki wink ちょっとだけ、ですよ？ ふふっと笑ってしまいまつ
+pair kiki sorashido doing=snack lv=7-10 | sorashido happy {c}がいれてくれるお茶、いちばん落ち着くんだよな | kiki happy うれしいです。おかわりもありますよ | sorashido wink じゃあ、表を作るのはそのあとにする笑
+pair kiki sorashido doing=practice lv=1-3 | kiki normal {c}、この曲の速いところ、どう数えていますか？ | sorashido excited 4つずつ区切ると、計算上いちばん楽なんだ！ | kiki happy なるほど。今度ためしてみます
+pair kiki sorashido doing=practice lv=4-6 | sorashido surprise {c}、今の連打、記録より速かったぞ！ | kiki wink 押し切りました ( ˘ω˘)9グッ! | sorashido happy 記録、書きかえとく笑
+pair kiki sorashido doing=practice lv=7-10 | kiki troubled 最後のところで、いつもつまずいてしまいます | sorashido normal 表を見たら、つまずくのは疲れたあとだけなんだ。最初にやれば大丈夫 | kiki happy …本当ですね。{c}の表は、私の地図みたいです
+pair kiki sorashido doing=training lv=1-3 | sorashido excited ゴーレムのちから、また上がってるな！ | kiki happy 今日も全部、ちからに振りました | sorashido troubled ……ほかの数字、ほぼ動いてないんだけど笑
+pair kiki sorashido doing=training lv=4-6 | kiki normal 守りも少し上げたほうがいいでしょうか | sorashido surprise なに！？ {c}から守りの話が出るなんて！ | kiki wink …やっぱり、ちからにしまつ
+pair kiki sorashido doing=training lv=7-10 | sorashido normal {c}の育て方、まねしてみたらニャーも強くなった笑 | kiki surprise 全部ちからに？ | sorashido happy 半分だけな笑 半分でもでーじ効いた
+pair kiki sorashido doing=cards lv=1-3 | kiki normal 攻撃のカードは、何枚入れるのがいいんでしょう | sorashido excited 計算だと14枚だぜ・・・！ | kiki happy では、20枚にします
+pair kiki sorashido doing=cards lv=4-6 | sorashido troubled {c}、20枚はさすがに多くないか？ | kiki happy 勝てたので、正解です♪ | sorashido surprise ……勝率、上がってる。計算がまちがってたのか！？
+pair kiki sorashido doing=cards lv=7-10 | kiki happy {c}のおかげで、守りのカードも1枚だけ入れるようになりました | sorashido excited 1枚でも大きな進歩だぜ・・・！ | kiki wink 1枚だけ、ですけどね
+pair kiki sorashido doing=walk lv=1-3 | sorashido normal {place}、散歩するとちょうど1,000歩なんだ | kiki surprise 数えていたんですか？ | sorashido happy 数えちゃうんだよ笑
+pair kiki sorashido doing=walk lv=4-6 | kiki normal 今日は、数えないで歩いてみませんか | sorashido troubled ……むずかしいな。でもやってみる | kiki happy 景色のほうを見てくださいね♪
+pair kiki sorashido doing=walk lv=7-10 | sorashido happy {c}と歩くと、数えるの忘れるんだよな | kiki happy それは、よかったです | sorashido normal 景色を見る楽しさ、{c}に教わったわ
+pair kiki sorashido lv=1-3 | kiki happy {c}の表、きのうのも読みました | sorashido excited ほんとか！ どうだった？ | kiki normal 字が小さかったです。でも、とても分かりやすかったですよ
+pair kiki sorashido lv=4-6 | sorashido normal {c}って、静かなのに大胆だよな | kiki wink よく言われまつ | sorashido happy その差を表にしたいくらいだ笑
+pair kiki sorashido lv=7-10 | kiki normal {c}が作る表、いつか全部集めて本にしたいです | sorashido surprise 本に！？ | kiki happy はい。いちばん前の席に置いておきたいので
+pair kiki sorashido lv=4-6 air=after | kiki normal …表に「守りが弱い」と書かれていました | sorashido troubled いや、事実を書いただけで…… | kiki normal 事実でも、少し傷つきました
+pair kiki sorashido lv=4-6 air=makeup | sorashido normal {c}、表を書き直したぜ。「攻撃がとても強い」にした | kiki happy …ありがとうございます。そちらのほうが好きです | sorashido happy 事実だしな笑
+pair kiki sorashido lv=7-10 air=makeup | kiki happy 仲直りのお茶、いれました | sorashido happy ありがとう。……これ、何杯目か数えないでおくわ | kiki wink 今日だけは、ですね
+
+## 2人 えるびん × ソラシド(20本)
+pair erubin sorashido doing=snack lv=1-3 | sorashido excited {c}、新作の数、もう数えたぜ・・・！ | erubin happy さすがだね。どれがおすすめかな？ | sorashido happy 甘さの表だと、これがまん中だな笑
+pair erubin sorashido doing=snack lv=4-6 | erubin normal {c}、食べながら表を見ると、こぼれちゃうよ | sorashido troubled ……もうこぼした笑 | erubin happy 拭くものあるよ。ちょっと待ってね
+pair erubin sorashido doing=snack lv=7-10 | sorashido normal {c}といると、なんかゆっくりできるんだよな | erubin happy そう言ってもらえると、うれしいな☺️ | sorashido happy 計算しないで食べるおやつ、意外とうまい笑
+pair erubin sorashido doing=practice lv=1-3 | erubin surprise 譜面を見ながら、そんなに速く指が動くんだね | sorashido excited 数字で覚えてるからな笑 | erubin happy おけ！ 俺は見て覚えるほうにするよ
+pair erubin sorashido doing=practice lv=4-6 | sorashido normal {c}、今のとこ、拍がひとつずれてた | erubin troubled そうなんだ…💦 どこかな？ | sorashido happy ここ。ゆっくり一緒にやろう
+pair erubin sorashido doing=practice lv=7-10 | erubin happy {c}に教わって、ちゃんと最後まで通せたよ | sorashido excited うぉぉぉ！ 記録に残しとく！ | erubin wink {c}の表に載るの、ちょっと誇らしいね笑
+pair erubin sorashido doing=training lv=1-3 | sorashido normal アークの数字、見せてもらってもいいか？ | erubin happy いいよ。何か分かるかな？ | sorashido excited 守りがでーじ高い！ {c}らしいな
+pair erubin sorashido doing=training lv=4-6 | erubin normal {c}、ニャーの育て方って、どうしてるの？ | sorashido happy 素早さ全振り笑 計算でそれがいちばんだった | erubin wink 俺はいろいろ試したいかな。それもいいよね
+pair erubin sorashido doing=training lv=7-10 | sorashido normal {c}の「いろいろ試す」、表にしたら全部ちゃんと強かった | erubin surprise 本当？ | sorashido happy 数字にしにくい強さってあるんだな。勉強になったわ
+pair erubin sorashido doing=cards lv=1-3 | erubin normal デュラハンの使われ方、また調べてくれたの？ | sorashido excited おう！ 今週は人気が上がってたぜ・・・！ | erubin happy うれしいね。ありがとう、{c}
+pair erubin sorashido doing=cards lv=4-6 | sorashido surprise {c}の今の組み方、どの表にも載ってないぞ！ | erubin wink さっき思いついたんだ笑 | sorashido excited 新しい列を作らないと！
+pair erubin sorashido doing=cards lv=7-10 | erubin normal {c}の表があるから、安心して新しい形を試せるんだよね | sorashido happy 俺も、{c}が試してくれるから表が増えるんだ笑 | erubin happy いい組み合わせだね
+pair erubin sorashido doing=walk lv=1-3 | sorashido normal {place}の花、何本あるか数えてもいいか？ | erubin happy いいよ笑 俺はゆっくり見てるね | sorashido excited ……多すぎて途中でやめた笑
+pair erubin sorashido doing=walk lv=4-6 | erubin happy {c}、この世界のこと、まだ知らないことだらけなんだ | sorashido excited じゃあ、案内の表を作ってやる！ | erubin wink 表もいいけど、いっしょに歩いてくれるとうれしいな
+pair erubin sorashido doing=walk lv=7-10 | sorashido normal {c}とこうやって歩くの、けっこう好きなんだよな笑 | erubin happy 俺もだよ。{c}は話してて飽きないしね | sorashido happy 数字の話しかしてないけどな笑
+pair erubin sorashido lv=1-3 | erubin normal {c}、ちゃんと寝てる？ | sorashido troubled ……3時間くらい | erubin troubled それは心配だな💦 今日は早めに休もうね
+pair erubin sorashido lv=4-6 | sorashido excited {c}、新しい表見てくれ！ | erubin happy うん。……文字、ちょっと小さいかな笑 | sorashido surprise また言われた！ 次は大きくする！
+pair erubin sorashido lv=7-10 | erubin happy {c}の表、こっちに来たとき最初に読んだ本みたいなものなんだ | sorashido surprise そんなにか！？ | erubin wink うん。だから、これからもいっぱい読ませてね
+pair erubin sorashido lv=4-6 air=after | erubin troubled {c}、表の文字、本当に読めなくて… | sorashido troubled ……そんなに小さいか？ 気にしてたんだけどな | erubin normal ごめんね。言い方がよくなかったかな
+pair erubin sorashido lv=4-6 air=makeup | sorashido happy 文字、2倍にしたぜ・・・！ | erubin happy 読みやすい！ ありがとう、{c} | sorashido wink {c}専用の大きい表だ笑
+
+## 2人 きき × もも(20本)
+pair kiki momosuke doing=snack lv=1-3 | momosuke excited {c}！ いちごのケーキ、半分こしよ！！ | kiki happy はい。いちごは、{c}のほうへ | momosuke wink やった！！ {c}、やさしい♡
+pair kiki momosuke doing=snack lv=4-6 | kiki normal {c}、口のはしにクリームがついていますよ | momosuke surprise え、うそ！？ アイドルなのに！！ | kiki happy 取ってあげまつね。……はい、もう大丈夫です
+pair kiki momosuke doing=snack lv=7-10 | momosuke happy {c}とおやつ食べると、なんか落ち着くんだよね | kiki happy 私もです。にぎやかなのに、ほっとします | momosuke excited それって、ももがえらいってこと！？w
+pair kiki momosuke doing=practice lv=1-3 | kiki surprise {c}の歌、遠くまで聞こえていましたよ | momosuke excited ほんと！？ もっと大きい声出せるよ！！ | kiki happy 図書室まで届かない程度で、お願いします
+pair kiki momosuke doing=practice lv=4-6 | momosuke troubled {c}、さっきの振り、どうだった？ | kiki normal 最後のポーズが、少しだけ早かったです | momosuke excited ほんとだ！！ さすが{c}、よく見てる！！
+pair kiki momosuke doing=practice lv=7-10 | kiki normal {c}が練習している音、聞こえると安心するんです | momosuke surprise え、うるさくないの？ | kiki happy 元気な音ですから。今日も聞こえてよかったです
+pair kiki momosuke doing=training lv=1-3 | momosuke normal ゴーレムって、ピカピカにしないの？ | kiki happy みがくより、ちからを上げたいでつ | momosuke wink {c}らしいw でもピカピカもいいよ♡
+pair kiki momosuke doing=training lv=4-6 | kiki normal {c}、メタルナーのみがき方、教えてくれますか？ | momosuke excited もちろん！！ ゴーレムもピカピカにしよ！！ | kiki happy ……光ると、少し強そうに見えますね
+pair kiki momosuke doing=training lv=7-10 | momosuke happy {c}のゴーレム、ももが毎日みがいてあげる！！ | kiki surprise 毎日ですか？ | momosuke wink ゴーレムも、{c}も、ピカピカにしたいの♡
+pair kiki momosuke doing=cards lv=1-3 | kiki normal {c}は、どんなカードが好きですか？ | momosuke excited キラキラのやつ！！ 強さはあとで考える！！ | kiki happy 私は、強いものからでつ
+pair kiki momosuke doing=cards lv=4-6 | momosuke troubled {c}のデッキ、攻撃ばっかでこわいw | kiki wink 倒されなければ、こわくありませんよ | momosuke surprise 言ってることもこわいw
+pair kiki momosuke doing=cards lv=7-10 | kiki happy {c}が選んだキラキラのカード、入れてみました | momosuke excited えっ！！ 使ってくれるの！？ | kiki normal 強かったです。見た目も、大事ですね
+pair kiki momosuke doing=walk lv=1-3 | momosuke excited {c}、並んで歩こ！！ | kiki happy はい。{place}まで、ゆっくり行きましょう | momosuke wink ももが前を歩くね！！
+pair kiki momosuke doing=walk lv=4-6 | kiki normal {c}、さっきから何回も振り返っていますね | momosuke troubled {c}がちゃんとついてきてるか、気になるんだもん | kiki happy 大丈夫ですよ。ちゃんと後ろにいまつ
+pair kiki momosuke doing=walk lv=7-10 | momosuke normal ねぇ{c}、今日はももが静かにしてみる | kiki surprise …どうしたんですか？ | momosuke wink {c}がいつも見てる景色、ももも見てみたいの
+pair kiki momosuke lv=1-3 | momosuke excited {c}、聞いて！！ 今日ね、ほめられたの！！ | kiki happy あれま、よかったですね | momosuke wink {c}にもほめてほしいな〜♡
+pair kiki momosuke lv=4-6 | kiki normal {c}、今日は少し元気がないですね | momosuke surprise え、なんで分かったの！？ | kiki happy 声が、いつもより半音低いので
+pair kiki momosuke lv=7-10 | momosuke happy {c}のとなりって、なんか落ち着くんだよね！！ | kiki happy 私も、{c}のとなりはにぎやかで楽しいですよ | momosuke excited じゃあ、おたがいさまだ！！w
+pair kiki momosuke lv=4-6 air=after | kiki troubled 本のしおり、ちがうページにはさまっていました | momosuke troubled ……ごめん。もも、さわっちゃった | kiki normal …少しだけ、時間をください
+pair kiki momosuke lv=4-6 air=makeup | momosuke normal {c}、新しいしおり作ってきた！！ ピカピカのやつ！！ | kiki happy …きれいですね。大事に使います | momosuke excited ゆるしてくれる！？ やったー！！
