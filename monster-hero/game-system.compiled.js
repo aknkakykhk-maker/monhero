@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 787ae6c1bffc21fb
+// source-sha256: 8cc287c1f22e2184
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -38780,7 +38780,7 @@ const RhythmMonsterSlotsPanel = ({
     className: "mt-1 text-center text-[10px] font-bold text-slate-400"
   }, "曲の約", Math.round((ratios[target] || 0) * 100), "%あたりで出ます", targetMasu ? `（いまは ${targetMasu.name}）` : ''), React.createElement("ul", {
     "data-rhythm-monster-picker": true,
-    className: "mh-scroll mt-3 max-h-[55vh] space-y-1.5 overflow-y-auto"
+    className: "mh-scroll mt-3 max-h-[55vh] [[data-mh-view-rotation=true]_&]:max-h-[55vw] space-y-1.5 overflow-y-auto"
   }, candidates.map(masu => {
     const base = ALL_PLAYER_MONSTERS[masu.baseId],
       issue = rhythmMonsterSlotReplaceIssue(rhythmMonsterSlotIdsInUse, target, masu.id, masuMons);

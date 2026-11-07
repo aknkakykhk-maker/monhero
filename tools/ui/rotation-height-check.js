@@ -31,7 +31,6 @@ const REVIEWED = {
   // ② vh で高さを決めている窓
   '21-assistant.jsx|88vh|1': 'todo:助手部 仲良し度のシート(助手の吹き出しから。モンヒロビートの中でも開ける)',
   '24-sorashido-copy-view.jsx|94dvh|1': 'outside ソラシドのAIコピー(バトルの中だけ)',
-  '30-rhythm-play.jsx|55vh|1': 'todo:ビート部 演奏のマスモンえらび',
   '56-assistant-chat.jsx|85vh|1': 'todo:助手部 おしゃべり(助手の吹き出しから。モンヒロビートの中でも開ける)',
   '56-assistant-peer.jsx|85vh|1': 'todo:助手部 助手たちの今の窓',
   '56-screen-profile.jsx|58vh|1': 'outside プロフィールの仲良し度のごほうびの一覧(gameState が PROFILE のときだけ。モンヒロビートの外)',
@@ -53,7 +52,7 @@ const REVIEWED = {
   '71-screen-battle.jsx|portal|4': 'outside バトル', '71-screen-battle.jsx|portal|5': 'outside バトル', '71-screen-battle.jsx|portal|6': 'outside バトル',
   '71-screen-battle.jsx|portal|7': 'outside バトル', '71-screen-battle.jsx|portal|8': 'outside バトル',
   ...Object.fromEntries([9, 10, 11, 12, 13, 14].map((i) => [`71-screen-battle.jsx|portal|${i}`, 'outside バトル'])),
-  '77-screen-rhythm-multi.jsx|portal|1': 'todo:ビート部 フリーマッチの窓(テンポくんの rhythm-multi-layout-check が見ている)',
+  '77-screen-rhythm-multi.jsx|portal|1': 'outside HOME の招待の帯(RhythmInviteHomeBar。gameState が HOME のときだけ出す。回すのはモンヒロビートの中だけ・2026-11-07 テンポが確かめた)',
   '84-screen-card-battle.jsx|portal|1': 'outside MFバトルカード', '84-screen-card-battle.jsx|portal|2': 'outside MFバトルカード', '84-screen-card-battle.jsx|portal|3': 'outside MFバトルカード',
 };
 
