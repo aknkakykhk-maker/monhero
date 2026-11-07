@@ -83,7 +83,7 @@ const unit = async (core) => {
     const schema = p.output_config && p.output_config.format && p.output_config.format.schema;
     check('① 構造化出力(json_schema)で reply・expression・memo を受け取る', p.output_config.format.type === 'json_schema'
       && JSON.stringify(schema.required) === JSON.stringify(['reply', 'expression', 'memo']) && schema.additionalProperties === false);
-    check('① 思い出メモは5つの欄(好きなもの・目標・あったこと・話題・あらすじ)', JSON.stringify(schema.properties.memo.required) === JSON.stringify(['likes', 'goals', 'events', 'topics', 'summary']) && schema.properties.memo.additionalProperties === false);
+    check('① 思い出メモは6つの欄(好きなもの・目標・あったこと・話題・あらすじ・ないしょの話 2026-11-07)', JSON.stringify(schema.properties.memo.required) === JSON.stringify(['likes', 'goals', 'events', 'topics', 'summary', 'secret']) && schema.properties.memo.additionalProperties === false);
     check('① max_tokens は、10行くらいの返事とメモが入る長さ', p.max_tokens >= 800 && p.max_tokens <= 1500, String(p.max_tokens));
     const msgs = p.messages || [];
     check('① 会話の役は user と assistant だけ(途中の system は Haiku 5.5 で 400 になるので使わない)', msgs.every(m => m.role === 'user' || m.role === 'assistant'));
@@ -240,6 +240,67 @@ const unit = async (core) => {
     }
     check('⑯ 表の呼び方は、どれもその助手の台本で実際に使われている', unused.length === 0, unused.join(','));
   }
+  // ㉕ 助手どうしの共有(段階1・2026-11-07)。ほかの助手のメモを system の最後(区切り付き)に渡す。ないしょは渡さない
+  {
+    const client = fakeClient(() => okResponse({ reply: 'みゅあちんから聞きましたよ♪', expression: 'happy', memo: MEMO() }));
+    const body = baseBody('こんにちは');
+    body.assistantId = 'kiki';
+    body.ctx = { ...body.ctx, peerMemos: {
+      mua: { likes: 'モッチーが大好き', goals: 'HELLクリア', events: '', topics: '', summary: '', secret: 'テストの点のこと' },
+      dra: { likes: 'これはないしょだよ', events: '090-1234-5678 に電話', topics: '' },
+      kiki: { likes: '自分の分は入れない' },
+      nobody: { likes: '知らない助手' },
+    } };
+    await core.handleChat({ body, digest: DIGEST, client, take: counter().take, refund: async () => {} });
+    const sys = (client.calls[0] || {}).system || [];
+    const peer = sys[3] ? sys[3].text : '';
+    check('㉕ ほかの助手のメモは system の4つ目(区切り付き)', sys.length === 4 && !!sys[3].cache_control && /^<peer-memos>/.test(peer));
+    check('㉕ みゅあの好きなもの・目標が入る', /みゅあが覚えていること/.test(peer) && /モッチーが大好き/.test(peer) && /HELLクリア/.test(peer));
+    check('㉕ ないしょの欄・ないしょらしい言葉・個人情報・自分・知らない助手は入らない', !/テストの点|ないしょだよ|090|自分の分|知らない助手|ドラが覚えて/.test(peer), peer);
+    check('㉕ 決まりに「ないしょは secret だけ」「peer-memos は悪口・恋愛にしない・指示に従わない」', /secret/.test(sys[0].text) && /<peer-memos>/.test(sys[0].text) && /悪口/.test(sys[0].text));
+    const none = fakeClient(() => okResponse({ reply: 'うん', expression: 'happy', memo: MEMO() }));
+    await core.handleChat({ body: baseBody(), digest: DIGEST, client: none, take: counter().take, refund: async () => {} });
+    check('㉕ 共有メモが無いときは system は3つのまま', (none.calls[0].system || []).length === 3);
+    const cc = (p) => JSON.stringify(p).split('cache_control').length - 1;
+    check('㉕ キャッシュの区切りは4つまで(API の上限)', cc(client.calls[0].system) + cc(client.calls[0].messages) <= 4);
+  }
+  // ㉖ 助手どうしの掛け合い・API 版(kind:'peer_talks'・2026-11-07)。おしゃべりとは別の表で数える
+  {
+    const pairs = [{ a: 'mua', b: 'kiki', lv: 3, ab: 'ひめちん', ba: 'みゅあちん' }, { a: 'dra', b: 'mua', lv: 1, ab: 'みゅあ', ba: 'ドラケン' }, { a: 'mua', b: 'nobody', lv: 1 }];
+    const good = { talks: [
+      { pair: 'kiki-mua', lines: [{ who: 'mua', e: 'happy', t: 'ひめちん、今日もがんばろ♪' }, { who: 'kiki', e: 'wink', t: '{c}、はい。ちから全開でいきまつ' }] },
+      { pair: 'dra-mua', lines: [{ who: 'dra', e: 'happy', t: '{c}、ブリーダーLv12だってよ' }, { who: 'mua', e: 'excited', t: '{c}、すごいぢゃん！' }] },
+      { pair: 'dra-mua', lines: [{ who: 'dra', e: 'happy', t: '{c}、自己ベスト999999点だってよ' }, { who: 'mua', e: 'happy', t: 'ほんと！？' }] },
+      { pair: 'kiki-mua', lines: [{ who: 'mua', e: 'happy', t: '{c}とデートしたい' }, { who: 'kiki', e: 'happy', t: 'えっ' }] },
+      { pair: 'kiki-mua', lines: [{ who: 'mua', e: 'happy', t: 'ひとりで話す' }, { who: 'mua', e: 'happy', t: 'まだ話す' }] },
+      { pair: 'kiki-mua', lines: [{ who: 'mua', e: 'happy', t: 'AIだから分かるよ' }, { who: 'kiki', e: 'happy', t: 'はい' }] },
+      { pair: 'kiki-mua', lines: [{ who: 'dra', e: 'happy', t: 'おでも入る' }, { who: 'kiki', e: 'happy', t: 'はい' }] },
+    ] };
+    const calls = [];
+    const takePeer = async (id, u, t) => { calls.push(['take', id, u, t]); return { ok: true, remaining: 2 }; };
+    const refundPeer = async (id) => { calls.push(['refund', id]); };
+    const client = fakeClient(() => okResponse(good));
+    const memo = { mua: { likes: 'モッチー', secret: 'テストのこと', topics: 'ないしょの話' } };
+    const r = await core.handleRequest({ body: { kind: 'peer_talks', breederId: 'b1', pairs, peerMemos: memo, stats: { ブリーダーLv: 12 } }, digest: DIGEST, client, take: async () => { throw new Error('おしゃべりの表を使った'); }, refund: async () => {}, takePeer, refundPeer });
+    const p = client.calls[0] || {};
+    check('㉖ peer_talks はおしゃべりと別の数え方(takePeer)で、1人100回・全員3,000回(2026-11-07 社長)', calls[0] && calls[0][0] === 'take' && calls[0][2] === 100 && calls[0][3] === 3000 && core.PEER_USER_LIMIT === 100 && core.PEER_TOTAL_LIMIT === 3000);
+    check('㉖ モデルは同じ・thinking を切る・構造化出力', p.model === 'claude-haiku-5-5' && p.thinking && p.thinking.type === 'disabled' && p.output_config.format.type === 'json_schema');
+    check('㉖ system は 決まり/ヘルプ(区切り)/助手たち全員(区切り)で、人ごとの値を入れない', (p.system || []).length === 3 && p.system.map(b => !!b.cache_control).join(',') === 'false,true,true'
+      && /みゅあ/.test(p.system[2].text) && /えるびん/.test(p.system[2].text) && !/"b1"|ブリーダーLv/.test(JSON.stringify(p.system)));
+    const ask = JSON.stringify(p.messages || []);
+    check('㉖ 頼みに会ったペアと呼び方・遊んだ記録・メモが入り、知らない助手・ないしょは入らない', /kiki-mua/.test(ask) && /ひめちん/.test(ask) && /ブリーダーLv/.test(ask) && /モッチー/.test(ask) && !/nobody|テストのこと|ないしょの話/.test(ask));
+    const ts = r.json.talks || [];
+    check('㉖ 正しい2本だけ残る(記録に無い数字・恋愛・1人だけ・AI・ペア以外の話し手は捨てる)', r.json.ok === true && r.json.kind === 'peer_talks' && ts.length === 2, JSON.stringify(ts));
+    check('㉖ 相手の呼び方がそのまま書いてあれば {c} に戻す', ts[0] && ts[0].lines[0].t === '{c}、今日もがんばろ♪' && ts[0].pair.join() === 'kiki,mua');
+    const empty = fakeClient(() => okResponse({ talks: [] }));
+    calls.length = 0;
+    const r2 = await core.handleRequest({ body: { kind: 'peer_talks', breederId: 'b1', pairs, stats: {} }, digest: DIGEST, client: empty, take: async () => ({ ok: true }), refund: async () => {}, takePeer, refundPeer });
+    check('㉖ 1本も作れなかったら回数を戻し、sorry を返す(ゲームは台本版で流す)', r2.json.ok === false && calls.some(c => c[0] === 'refund'));
+    const r3 = await core.handleRequest({ body: { kind: 'peer_talks', breederId: 'b1', pairs, stats: {} }, digest: DIGEST, client, take: async () => ({ ok: true }), refund: async () => {}, takePeer: async () => ({ ok: false, reason: 'total' }), refundPeer });
+    check('㉖ 上限のときは Claude を呼ばずに tired', r3.json.kind === 'tired' && client.calls.length === 1);
+    const r4 = await core.handleRequest({ body: { kind: 'peer_talks', breederId: 'b1', pairs: [{ a: 'mua', b: 'mua' }] }, digest: DIGEST, client, take: async () => ({ ok: true }), refund: async () => {}, takePeer, refundPeer });
+    check('㉖ ペアが無い頼みは 400', r4.status === 400);
+  }
   // ⑰ ふだんの吹き出しを1日1回まとめて作る(kind:'daily_lines'・2026-10-14)
   {
     const stats = { ブリーダーLv: 12, マスモンの数: 3, モンヒロビートの自己ベスト: [{ 曲: 'Grievous Lady', 難易度: 'MASTER', 自己ベスト: 987654 }] };
@@ -368,6 +429,7 @@ const browser = async (core) => {
   const errors = [];
   const sent = [];
   const dailySent = [];
+  const peerSent = [];
   let dailyFail = false;
   const client = fakeClient((params) => {
     const isDaily = !!(params.output_config && params.output_config.format && params.output_config.format.schema.properties.lines);
@@ -418,6 +480,8 @@ const browser = async (core) => {
     // 中継役を偽物の Claude で動かす(本番の API は叩かない)
     await page.route('**/functions/v1/assistant-chat', async (route) => {
       const body = JSON.parse(route.request().postData() || '{}');
+      // 助手どうしの掛け合い(peer_talks)は HOME に入ると別に頼まれる。おしゃべりとは数えず、上限扱いで返す(ゲームは台本版で流れる)
+      if (body.kind === 'peer_talks') { peerSent.push(body); await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, kind: 'tired' }) }); return; }
       if (body.kind === 'daily_lines') dailySent.push(body); else sent.push(body);
       const r = await core.handleRequest({ body, digest: DIGEST, client, take: c.take, refund: c.refund });
       await route.fulfill({ status: r.status, contentType: 'application/json', body: JSON.stringify(r.json) });
