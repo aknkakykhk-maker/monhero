@@ -34,7 +34,32 @@
 | --- | --- | --- |
 | ① | 今日のペア(3回見て達成・ペア+10・2人の親密度+20、連続ログインでペア+2)/返事を選ぶ掛け合い(28本・ペア+3・2人の親密度+5)/その日の出来事(9種類×4本=36本)/思い出アルバム(写真 Lv3・5・8・10、見た掛け合いの見返し)/仲良し度 Lv10・ペアの1日の上限20/プレイヤーの親密度の行動 peerTalk・peerChoice・peerDaily | できた(この枝) |
 | ② | 差し入れ(ビートP交換所 200P・ペア+15・2人の親密度+30)・友情のしるし(500P・ペア+30・2人の親密度+25)。どちらも全体で1日1回、思い出アルバムの「2人にしてあげる」から渡す/遊びに連れていくペア(ビート・バトル・カードを遊び終えるとペア+4・2人の親密度+6、次の画面で2人がひとこと) | できた(この枝) |
-| ③ | ミニイベント・3人の掛け合い(決まった8組)・けんか→仲直り・Lv10 の2本目の特別なお話・Lv6〜9 の掛け合い | これから |
+| ③ | ミニイベント・3人の掛け合い(決まった8組)・けんか→仲直り・Lv10 の2本目の特別なお話・Lv7/9 の掛け合い | これから(下の「引き継ぎ」) |
 
 止め絵(①): `shots/4-map-daily.jpg`(関係図と今日のペア)・`shots/5-album.jpg`(思い出アルバム)・`shots/6-choice.jpg`(返事を選ぶ)・`shots/7-reply.jpg`(選んだあとの反応)
 止め絵(②): `shots/8-album-actions.jpg`(2人にしてあげる)・`shots/9-gift-thanks.jpg`(差し入れのあとの2人のひとこと)
+
+## 引き継ぎ(2026-11-07 ナカヨシの1つ目の会話から)
+
+### いまの状態
+- 枝 `claude/assistant-peer`・PR #4657(マージしない。全部そろってから窓口が社長に更新履歴の文を確かめ、窓口のオッケーでマージ)
+- ①②はできて、社長「これで続ける」。止め絵 `shots/`
+- 別件の PR #4675(今ある親密度の行動を2倍)はマージ済み。この枝にも main を取り込み済み
+- 「今日」は `assistantPeerDayKey`(56-assistant-chat.jsx。いまは `loginBonusPeriodKey`=朝4時区切り)。セコンドの `jstDayKey4` が main に入ったら、この1行を差しかえる(窓口の指示)
+- サーバ(assistant-chat の peerMemos・secret 欄・peer_talks)と SQL `supabase/migrations/202611070001_assistant_peer_talk_usage.sql` は窓口が配る。配ったら `RELEASE_FLAGS.assistantPeerApi` を真に
+
+### ③でやること(分担: 窓口 2026-11-07)
+- ナカヨシ(この続き)が作る: 仕組みと、ミニイベント・3人の掛け合い・けんか→仲直りの台本
+  - プレイヤーの親密度の行動: 3人の掛け合いを見る +3/6(3人それぞれ)・ミニイベント +8/16・仲直り +8/8(bond-plan.png の直した数字。`ASSISTANT_BOND_ACTIONS` に peerTrio・peerEvent・peerMakeup として足し、`tools/assistant-bond-check.js` の表にも足す)
+  - ペアへの増え方: ミニイベント +5(1日5)・仲直り +5(1回きり)。3人の掛け合いは3組のペアにそれぞれ +2(掛け合いと同じ扱い)
+  - ミニイベント: 料理対決・おつかい・ビート勝負など 6〜8行×12本ほど。最後にプレイヤーが判定(返事を選ぶ仕組み `choice` を使える)。Lv6 から増える
+  - 3人の掛け合い: 決まった8組(みゅあ・きき・もも/ドラ・あつ・えるびん/きゅうこ・ソラシド・みゅあ など)×2本。3人とも Lv2 以上のペアなら出る。帯に3人の顔。{c} は2人用なので、3人用に `{c:kiki}`(話し手が kiki を呼ぶ呼び方)を足すとよい
+  - けんか→仲直り: Lv2〜3 のペアでたまに軽い言い合い(おやつ・順番の取り合い程度、悪口なし)→ 次に HOME を開いたとき仲直りの掛け合い。8組
+  - Lv10 の特別なお話2: 選び方で `special` を Lv5 用と Lv10 用(`lv:10`)で分ける(いまは special を Lv5 で1本だけ見る作り。`st.special` はペアの記録なので、Lv10 用は別のキーか `pair:sp2` の形で持つ)
+  - 写真 Lv8・Lv10 はもう出る(ASSISTANT_PEER_PHOTOS)
+- コトバ(session_0113GBaB9YGcrBJ9rzgiBJgR)が書く: Lv7・Lv9 の掛け合い(28ペア×各1本)と Lv10 の2本目の特別なお話(28本・6行)
+  - 基準 `VOICE.md`。テキストを別の枝 `claude/assistant-peer-lines` の `docs/progress/assistant-peer/lines/kotoba.txt` に出す
+  - 取り込み: `node tools/assistant/peer-talks-import.js docs/progress/assistant-peer/lines/kotoba.txt`(id は ペア-7・ペア-9・ペア-sp2)→ `node tools/assistant/assistant-peer-check.js`
+
+### 終わったら
+- 止め絵(3人の帯・ミニイベント・仲直り)・台本の抜粋・更新履歴の文を窓口へ。⑥の検査(`run-checks.js --changed`)を通す
