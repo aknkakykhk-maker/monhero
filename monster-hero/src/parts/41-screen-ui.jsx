@@ -199,6 +199,14 @@ const ScreenSectionLabel = ({ children, note = '' }) => (
 //   ConfirmSheet     … 「本当に〜しますか」の確認。本体の askConfirm から出す
 // ★窓の重なり順(z-index)は MODAL_Z の段から選ぶ。値をその場で書かない
 const MODAL_Z = Object.freeze({ dialog:42000, confirm:43000 });
+// body へ直に出す窓の出し先。ふだんは body。モンヒロビートの「🔄 横」で絵を回しているときは、回した器の中へ出す
+//   (body のままだと、その窓だけ回らず字が横倒しになる。--mh-vh も器の中でしか効かない)。2026-11-07 レフェリーくん
+//   検査: tools/ui/rotation-height-check.js
+const rotationAwarePortalTarget = () => {
+  if (typeof document === 'undefined') return null;
+  const rotated = typeof RHYTHM_VIEW_ROTATION === 'object' && !!RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.active === 'function' && RHYTHM_VIEW_ROTATION.active();
+  return (rotated && document.querySelector('[data-mh-view-rotation="true"]')) || document.body;
+};
 const ModalFrame = ({ label, border='border-amber-400/70', onClose, children, narrow=false, zIndex=MODAL_Z.dialog }) => (
   <div onClick={onClose||undefined} className="fixed inset-0 flex items-center justify-center overflow-y-auto px-4" style={{position:'fixed',inset:0,paddingTop:'max(16px, env(safe-area-inset-top))',paddingBottom:'max(16px, env(safe-area-inset-bottom))',backgroundColor:'rgba(2,6,23,0.94)',zIndex}} role="dialog" aria-modal="true" aria-label={label}>
     <div onClick={e=>e.stopPropagation()} className={`w-full ${narrow?'max-w-[280px]':'max-w-sm'} rounded-3xl border-2 ${border} bg-slate-950 p-4 shadow-2xl`}>{children}</div>

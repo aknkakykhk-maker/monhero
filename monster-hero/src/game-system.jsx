@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4354f40429ccf3da
+// generated-sha256: b2474c5c4a44ae92
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -36426,6 +36426,14 @@ const ScreenSectionLabel = ({ children, note = '' }) => (
 //   ConfirmSheet     … 「本当に〜しますか」の確認。本体の askConfirm から出す
 // ★窓の重なり順(z-index)は MODAL_Z の段から選ぶ。値をその場で書かない
 const MODAL_Z = Object.freeze({ dialog:42000, confirm:43000 });
+// body へ直に出す窓の出し先。ふだんは body。モンヒロビートの「🔄 横」で絵を回しているときは、回した器の中へ出す
+//   (body のままだと、その窓だけ回らず字が横倒しになる。--mh-vh も器の中でしか効かない)。2026-11-07 レフェリーくん
+//   検査: tools/ui/rotation-height-check.js
+const rotationAwarePortalTarget = () => {
+  if (typeof document === 'undefined') return null;
+  const rotated = typeof RHYTHM_VIEW_ROTATION === 'object' && !!RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.active === 'function' && RHYTHM_VIEW_ROTATION.active();
+  return (rotated && document.querySelector('[data-mh-view-rotation="true"]')) || document.body;
+};
 const ModalFrame = ({ label, border='border-amber-400/70', onClose, children, narrow=false, zIndex=MODAL_Z.dialog }) => (
   <div onClick={onClose||undefined} className="fixed inset-0 flex items-center justify-center overflow-y-auto px-4" style={{position:'fixed',inset:0,paddingTop:'max(16px, env(safe-area-inset-top))',paddingBottom:'max(16px, env(safe-area-inset-bottom))',backgroundColor:'rgba(2,6,23,0.94)',zIndex}} role="dialog" aria-modal="true" aria-label={label}>
     <div onClick={e=>e.stopPropagation()} className={`w-full ${narrow?'max-w-[280px]':'max-w-sm'} rounded-3xl border-2 ${border} bg-slate-950 p-4 shadow-2xl`}>{children}</div>
@@ -60475,11 +60483,7 @@ const quickGuideView = () => {
   return quickGuideRotated() ? { w: window.innerHeight || 0, h: window.innerWidth || 0 } : { w: window.innerWidth || 0, h: window.innerHeight || 0 };
 };
 // 案内を出す先。ふだんは body(バトルの技の札など body へ出る物より上に重ねるため)。回しているときは回した器
-const quickGuidePortalTarget = () => {
-  if (typeof document === 'undefined') return null;
-  if (quickGuideRotated()) return document.querySelector('[data-mh-view-rotation="true"]') || document.body;
-  return document.body;
-};
+const quickGuidePortalTarget = () => (typeof rotationAwarePortalTarget === 'function' ? rotationAwarePortalTarget() : (typeof document !== 'undefined' ? document.body : null));
 
 // 光らせる所。見えている最初の1つの位置(画面の座標)。無ければ null
 const quickGuideSpotRect = (selector) => {
@@ -101468,7 +101472,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           className="shrink-0 w-11 min-h-[44px] flex items-center justify-center rounded-xl bg-red-800 text-red-50 font-black">×</button>
       </div>
     </div>,
-    document.body
+    rotationAwarePortalTarget()
   ) : null;
   // お話や大事な窓が出ているあいだは出さずに待ち、閉じてから出す(WaitForOverlayClose・41-screen-ui.jsx)
   const updateNotice = (updateNoticeVisible && updateNoticeMode !== 'OFF' && !updateNoticeOnPlay) ? ReactDOM.createPortal(<WaitForOverlayClose>{
@@ -101487,7 +101491,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       </div>
     )
   }</WaitForOverlayClose>,
-    document.body
+    rotationAwarePortalTarget()
   ) : null;
   const titleModal = showChangelog ? (
     <div className="mh-title-modal" {...settingsBackdropProps(closeChangelog)}>
