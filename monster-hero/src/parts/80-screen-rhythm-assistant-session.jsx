@@ -102,12 +102,23 @@ const rhythmAssistSessionTalk = ({ assistantId, kind, songId = '', score = 0, di
     const v = typeof RHYTHM_MULTI !== 'undefined' ? RHYTHM_MULTI.view() : null;
     return (v && v.room && v.room.songId) || '';
   };
-  if (kind === 'join') return say('join');
+  // セッションLv.50・80・100 で開く特別な台詞の束。部屋に来たとき・呼んだ人の結果のときに、ときどき(3割)
+  const special = () => {
+    const lv = rhythmAssistSessionLevel(RHYTHM_ASSIST_SESSION_STORE.get(), assistantId);
+    const open = [[100, 'sp100'], [80, 'sp80'], [50, 'sp50']].filter(([n]) => lv >= n).map(([, sc]) => sc);
+    return open.length && rand() < 0.3 ? say(open[Math.floor(rand() * open.length)]) : '';
+  };
+  if (kind === 'join') return special() || say('join');
   if (kind === 'combo' || kind === 'miss' || kind === 'climax' || kind === 'last') return say(kind);
   if (kind === 'lvUp') return say('levelup');
   if (kind === 'likeUp') return say('likeup');
   if (kind === 'pick' || kind === 'song') {
     if (!songId) return '';
+    // 曲が決まったとき(song)、セッションLv.75 からは聞きどころを話す
+    if (kind === 'song' && rhythmAssistSessionLevel(RHYTHM_ASSIST_SESSION_STORE.get(), assistantId) >= RHYTHM_ASSIST_SESSION_LISTEN_LEVEL && rand() < 0.7) {
+      const listen = say(`listen:${rhythmAssistSessionListenBase(songId)}`);
+      if (listen) return listen;
+    }
     const taste = rhythmAssistSessionTaste(assistantId, songId);
     if (taste === 'like') return say('like');
     if (taste === 'dislike') return say('dislike');
@@ -117,6 +128,8 @@ const rhythmAssistSessionTalk = ({ assistantId, kind, songId = '', score = 0, di
   if (kind === 'result') return mvp ? say('mvp') : '';
   if (kind === 'reactResult') {
     if (quit) return '';
+    const sp = mode === 'few' ? '' : special();
+    if (sp) return sp;
     const sid = songId || roomSong();
     const special = rhythmAssistSessionSongScene(assistantId, sid);
     if (special && rand() < 0.5) return say(special);
@@ -524,5 +537,33 @@ function RhythmAssistSessionCardBack({ m }) {
   return (
     <b data-rhythm-assist-card-back aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-1 z-0 select-none truncate text-center text-[15px] font-black italic tracking-widest opacity-25"
       style={{ color: who.accent || '#f472b6' }}>{who.name}</b>
+  );
+}
+
+// プロフィールの欄「助手とのセッション」(Lv.50 の札・Lv.100 の称号)
+function RhythmAssistSessionProfileBadges() {
+  const state = useRhythmAssistSessionState();
+  if (!rhythmAssistSessionEnabled()) return null;
+  const list = rhythmAssistSessionBadges(state);
+  if (!list.length) return null;
+  const master = list.some((x) => x.master);
+  return (
+    <section data-profile-assist-session className="mb-4 rounded-2xl border border-pink-300/40 bg-pink-950/40 p-2.5">
+      <b className="mb-1.5 flex items-center gap-1.5 text-[13px] font-black text-pink-100">🎤 助手とのセッション
+        {master && <span data-profile-assist-master className="rounded-full bg-gradient-to-r from-amber-300 to-pink-300 px-2 py-0.5 text-[10px] font-black text-slate-950">称号 セッションマスター</span>}
+      </b>
+      <div className="flex flex-wrap gap-1.5">
+        {list.map((x) => {
+          const who = rhythmAssistSessionWho(x.assistantId);
+          return (
+            <span key={x.assistantId} data-profile-assist-badge={x.assistantId} className="flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-black text-white"
+              style={{ borderColor: (who && who.accent) || '#f472b6' }}>
+              {who && <span className="block h-5 w-5 overflow-hidden rounded-full"><img src={assistantFaceSrc(who, x.master ? 'excited' : 'happy')} alt="" className="h-full w-full object-cover" draggable={false} /></span>}
+              {rhythmAssistSessionName(x.assistantId)}とセッション Lv.{x.master ? RHYTHM_ASSIST_SESSION_MASTER_LEVEL : RHYTHM_ASSIST_SESSION_BADGE_LEVEL}
+            </span>
+          );
+        })}
+      </div>
+    </section>
   );
 }

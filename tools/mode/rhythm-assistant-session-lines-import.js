@@ -17,7 +17,7 @@ const DIR = path.join(ROOT, 'docs/progress/beat-assistant-session/lines');
 const OUT = path.join(ROOT, 'monster-hero/src/parts/33-rhythm-assistant-session-lines.jsx');
 const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'];
 const EXPR = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];
-const SOLO_SCENES = ['join', 'first', 'like', 'dislike', 'combo', 'miss', 'climax', 'last', 'mvp', 'high', 'mid', 'low', 'fc', 'levelup', 'likeup', 'overcome'];
+const SOLO_SCENES = ['join', 'first', 'like', 'dislike', 'combo', 'miss', 'climax', 'last', 'mvp', 'high', 'mid', 'low', 'fc', 'levelup', 'likeup', 'overcome', 'sp50', 'sp80', 'sp100'];
 const PAIR_SCENES = ['play', 'result', 'gattai'];
 
 const errors = [];
@@ -40,10 +40,10 @@ const solo = {};
     if (!line || line.startsWith('#') && !line.startsWith('## ')) return;
     const head = /^## ([a-z]+)$/.exec(line);
     if (head) { who = head[1]; if (!IDS.includes(who)) errors.push(`${where}: 知らない助手 ${who}`); solo[who] = solo[who] || {}; return; }
-    const m = /^([a-z]+(?::[a-z0-9_]+)?) \| (.+)$/.exec(line);
+    const m = /^([a-z][a-z0-9]*(?::[a-z0-9_]+)?) \| (.+)$/.exec(line);
     if (!m || !who) { errors.push(`${where}: 読めない行 — ${line}`); return; }
     const [, scene, rest] = m;
-    if (!SOLO_SCENES.includes(scene) && !scene.startsWith('song:')) errors.push(`${where}: 知らない場面 ${scene}`);
+    if (!SOLO_SCENES.includes(scene) && !scene.startsWith('song:') && !scene.startsWith('listen:')) errors.push(`${where}: 知らない場面 ${scene}`);
     const row = parseLine(rest, where);
     if (!row) return;
     if (row[0] !== who) errors.push(`${where}: 見出しの助手(${who})と話す人(${row[0]})が違う`);
@@ -76,6 +76,21 @@ const pairs = {};
     (pairs[key][scene] = pairs[key][scene] || []).push(rows);
   });
 }
+// 曲の聞きどころ(Lv.75・2026-11-07 社長「全部の曲」): lines/listen-*.txt。「listen:<曲id> | 話す人 表情 セリフ」(見出しなし)
+fs.readdirSync(DIR).filter((f) => /^listen-.+\.txt$/.test(f)).sort().forEach((file) => {
+  fs.readFileSync(path.join(DIR, file), 'utf8').split('\n').forEach((raw, i) => {
+    const line = raw.trim();
+    const where = `${file}:${i + 1}`;
+    if (!line || line.startsWith('#')) return;
+    const m = /^listen:([a-z0-9_]+) \| (.+)$/.exec(line);
+    if (!m) { errors.push(`${where}: 読めない行 — ${line}`); return; }
+    const row = parseLine(m[2], where);
+    if (!row) return;
+    const key = `listen:${m[1]}`;
+    if (!solo[row[0]]) solo[row[0]] = {};
+    (solo[row[0]][key] = solo[row[0]][key] || []).push([row[1], row[2]]);
+  });
+});
 IDS.forEach((id) => { if (!solo[id]) errors.push(`solo-draft.txt: ${id} がいない`); else SOLO_SCENES.forEach((sc) => { if (!(solo[id][sc] || []).length) errors.push(`solo-draft.txt: ${id} の ${sc} が無い`); }); });
 for (let i = 0; i < IDS.length; i += 1) for (let j = i + 1; j < IDS.length; j += 1) {
   const key = [IDS[i], IDS[j]].sort().join('-');

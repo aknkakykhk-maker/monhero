@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f762b1ceb186ac99
+// generated-sha256: 9c50cf0115d297b3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -30994,6 +30994,25 @@ const rhythmAssistSessionCheer = (assistantId, { level = 1, fc = false, marvRate
   }
 };
 
+// ---- 曲の聞きどころ(セッションLv.75 から・社長 2026-11-07「全部の曲」) ----
+// 曲が決まったとき(待機の画面)に、その曲の聞きどころを話す。台詞は場面 'listen:<曲id>'(別の版は元の曲の id にまとめる)
+const RHYTHM_ASSIST_SESSION_LISTEN_LEVEL = 75;
+const rhythmAssistSessionListenBase = (songId, songs = (typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [])) => {
+  const id = String(songId || '');
+  const base = id.replace(/_(short|full)$/, '');
+  return base !== id && Array.isArray(songs) && songs.some((s) => s && s.songId === base) ? base : id;
+};
+
+// ---- プロフィールの札(Lv.50)と称号(Lv.100「セッションマスター」) ----
+const RHYTHM_ASSIST_SESSION_BADGE_LEVEL = 50;
+const RHYTHM_ASSIST_SESSION_MASTER_LEVEL = 100;
+// [{ assistantId, level, master }](Lv.50 以上の助手だけ。Lv の高い順)
+const rhythmAssistSessionBadges = (state) => RHYTHM_ASSIST_SESSION_IDS
+  .map((id) => ({ assistantId: id, level: rhythmAssistSessionLevel(state, id) }))
+  .filter((x) => x.level >= RHYTHM_ASSIST_SESSION_BADGE_LEVEL)
+  .map((x) => ({ ...x, master: x.level >= RHYTHM_ASSIST_SESSION_MASTER_LEVEL }))
+  .sort((a, b) => b.level - a.level);
+
 // ---- part: 33-rhythm-assistant-session-lines.jsx ----
 // ===== 助手とのセッションの台詞(生成物。手で直さない) =====
 // 正本は docs/progress/beat-assistant-session/lines/solo-draft.txt・pair-draft.txt。
@@ -31022,6 +31041,9 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'song:haruka': [['happy', 'ハルカ、聞くたびにキュンとしちゃう♪']],
     'song:crazy_party_night': [['happy', 'パーティーの曲って、それだけで楽しいぢゃん♪']],
     'song:grievous_lady': [['happy', 'Grievous Lady、最後までついていけた！あたしえらいｗ']],
+    'sp50': [['happy', 'あたしたち、もうセッションLv.50ぢゃん！まぢ最強コンビかも♪'], ['wink', 'ブリーダーとならどんな曲でも楽しいの、ほんとだよ♪']],
+    'sp80': [['excited', 'Lv.80！ここまで来たら、もう息ぴったりぢゃん♪'], ['happy', 'あたしの一番のセッション相手は、ブリーダーだよｗ']],
+    'sp100': [['excited', 'セッションLv.100！あたしたち、セッションマスターぢゃん！'], ['happy', 'ここまで一緒に叩いてくれて、まぢありがと♪']],
   },
   kiki: {
     join: [['happy', 'ブリーダーさん、よろしくお願いしまつ♪'], ['happy', '今日も一緒に演奏できてうれしいです♪']],
@@ -31044,6 +31066,9 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'song:tsuki_ga_michiru_mae_ni': [['happy', '月が満ちる前に、しっとりしていて落ち着きます♪']],
     'song:kaze_ga_soyogu': [['happy', '風がそよぐ場所、気持ちがすっと軽くなりますね']],
     'song:black_shout': [['happy', 'BLACK SHOUT、こわかったけど、最後までがんばれました']],
+    'sp50': [['happy', 'ブリーダーさんとのセッション、Lv.50になりました♪'], ['wink', '指が覚えてくれている気がしまつ♪']],
+    'sp80': [['happy', 'Lv.80でつ。目を閉じても合わせられそうです♪'], ['normal', 'ブリーダーさんの音、ちゃんと聞こえていますよ']],
+    'sp100': [['excited', 'Lv.100でつ！セッションマスターですね♪'], ['happy', 'たくさん一緒に演奏してくれて、ありがとうございまつ♪']],
   },
   momosuke: {
     join: [['happy', 'ももが来たからには盛り上げるよ！！'], ['happy', 'ブリーダー、ももとセッションできるなんてラッキーだよw']],
@@ -31066,6 +31091,9 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'song:only_my_railgun': [['happy', 'only my railgun、テンション上がりっぱなしw']],
     'song:rose': [['happy', 'ROSE はかっこいいももも見せられる曲なんだよ♡']],
     'song:dullahan_clockwork': [['happy', 'チクタクに負けなかった！！ブリーダーもえらい♡']],
+    'sp50': [['excited', 'Lv.50！！ももとブリーダー、もう名コンビだね♡'], ['wink', 'ここまで来たら、ももの専属だよw']],
+    'sp80': [['excited', 'Lv.80！！ステージの上で一番息が合うの、ブリーダーかも♡'], ['happy', 'ももについてこれるの、ブリーダーくらいだよ！！']],
+    'sp100': [['excited', 'Lv.100！！セッションマスターはもものおかげだよね♡'], ['happy', 'ずっと一緒にステージ立ってくれて、ありがと！！']],
   },
   dra: {
     join: [['happy', 'おでも混ぜてくれよな、えへへ'], ['happy', 'ブリーダー、今日もよろしくな']],
@@ -31088,6 +31116,9 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'song:big_bridge_no_shitou': [['happy', 'ビッグブリッヂの死闘、橋を渡りきった気分だな']],
     'song:senjou_no_shippuu': [['happy', '戦場の疾風、風みたいに駆け抜けたな']],
     'song:stay_with_me': [['happy', 'Stay With Me、しんみりしたけど、悪くなかったんだな']],
+    'sp50': [['happy', 'セッションLv.50だな。おで、うれしいくさ'], ['normal', 'ここまで来たの、ちょっとした冒険だったな']],
+    'sp80': [['happy', 'Lv.80だな。もう目をつぶっても合わせられるからな'], ['happy', 'ブリーダーと叩くの、おで好きなんだな、えへへ']],
+    'sp100': [['excited', 'Lv.100だな！セッションマスターだからな！'], ['happy', '長い冒険だったな。ありがとうな、えへへ']],
   },
   atsu: {
     join: [['happy', 'とりあえず一曲いくか笑'], ['happy', '来たぞ。今日もやるか！']],
@@ -31110,6 +31141,9 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'song:sad_song': [['happy', 'SAD SONG、しっかり聞かせたな！']],
     'song:rebellion': [['happy', 'Rebellion、最後まで攻めきったな笑']],
     'song:mf_ichika_mix': [['happy', '自分の大会の曲、やりきったぞ笑']],
+    'sp50': [['happy', 'とりあえずLv.50だな笑'], ['wink', 'てか、だいぶ息合ってきたな！']],
+    'sp80': [['happy', 'Lv.80か。普通にいいコンビだろ笑'], ['normal', 'ここまで来たら、締めも任せていいよな！']],
+    'sp100': [['excited', 'Lv.100！セッションマスターだな笑'], ['happy', 'ここまで付き合ってくれて、ありがとな！']],
   },
   kyuko: {
     join: [['happy', 'ほい！俺も入るね〜'], ['happy', 'よろしく〜、今日は何いく？']],
@@ -31132,6 +31166,9 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'song:six_eternel_beat': [['happy', 'SIX ÉTERNEL、展開がきれいでいいよね〜']],
     'song:evans': [['happy', 'Evans は、音の重ね方が気持ちいいんだよね〜']],
     'song:toriko': [['happy', 'トリコ、最後までノリについていけた〜！']],
+    'sp50': [['happy', 'Lv.50だね〜。合わせ方が分かってきたよ'], ['wink', 'ブリーダーの癖、だいたい読めるようになったよ〜笑']],
+    'sp80': [['happy', 'Lv.80〜。構成を読まなくても合うね〜'], ['normal', 'ここまでの記録、きれいに積み上がってるよ〜']],
+    'sp100': [['excited', 'Lv.100〜！セッションマスターだね、ありがとん笑'], ['happy', 'ここまでの全部、いい流れだったよ〜']],
   },
   sorashido: {
     join: [['happy', 'うぉぉぉ！俺も参戦するぜ・・・！'], ['happy', '今日も計算どおりにいくぜ笑']],
@@ -31154,6 +31191,9 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'song:freedom_dive': [['happy', 'FREEDOM DiVE↓、速さも計算のうちだぜ笑']],
     'song:humanoid': [['happy', 'ヒューマノイド、ノーツの多さがたまらないぜ！']],
     'song:kaze_ga_soyogu': [['happy', '風がそよぐ場所、ゆっくりでも合わせきったぜ笑']],
+    'sp50': [['excited', 'セッションLv.50だぜ！表に太字で書いとくぜ笑'], ['happy', 'ここまでの演奏回数、ちゃんと数えてあるぜ・・・！']],
+    'sp80': [['excited', 'Lv.80！誤差がほとんど無くなってきたぜ！'], ['happy', 'この伸び方、グラフにしたらきれいだぜ笑']],
+    'sp100': [['excited', 'うぉぉぉ！Lv.100、セッションマスターだぜ・・・！'], ['happy', 'ここまでの記録、全部宝物だぜ笑']],
   },
   erubin: {
     join: [['happy', '俺も一緒にいいかな？よろしくね'], ['happy', '今日もセッション、楽しみにしてたよ']],
@@ -31176,6 +31216,9 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'song:altar_world_tree': [['happy', 'Altar of the World Tree、静かで落ち着くんだよね']],
     'song:dullahan': [['happy', 'デュラハンのテーマ、重たいけど好きなんだよね']],
     'song:crazy_party_night': [['happy', 'Crazy Party Night、最後までついていけたね']],
+    'sp50': [['happy', 'セッションLv.50になったね。ありがとね'], ['normal', '一緒に演奏する時間、落ち着くんだよね']],
+    'sp80': [['happy', 'Lv.80か。ずいぶん合うようになったね'], ['normal', '無理しないで、これからもゆっくりいこうね']],
+    'sp100': [['excited', 'Lv.100だね。セッションマスター、すごいよ'], ['happy', 'ここまで一緒にいてくれて、ありがとね']],
   },
 });
 const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
@@ -39597,6 +39640,8 @@ function ProfileScreen({
             <ChevronRight size={16} className="shrink-0 text-amber-400"/>
           </button>
         )}
+        {/* 助手とのセッション(2026-11-07 ビート部マモリ): セッションLv.50 の札・Lv.100 の称号「セッションマスター」。公開の印が偽・まだだれも Lv.50 でないあいだは出さない */}
+        {onboarded&&!onboardingPreview&&typeof RhythmAssistSessionProfileBadges==='function'&&<RhythmAssistSessionProfileBadges/>}
         {/* イベント回想: 見たことのある会話イベントを、あとから何度でも見返せる。
             見るだけで、初回閲覧フラグ・助手選択・仲良し度・通常のアップデート通知には一切影響しない */}
         {onboarded&&!onboardingPreview&&(()=>{
@@ -55886,12 +55931,23 @@ const rhythmAssistSessionTalk = ({ assistantId, kind, songId = '', score = 0, di
     const v = typeof RHYTHM_MULTI !== 'undefined' ? RHYTHM_MULTI.view() : null;
     return (v && v.room && v.room.songId) || '';
   };
-  if (kind === 'join') return say('join');
+  // セッションLv.50・80・100 で開く特別な台詞の束。部屋に来たとき・呼んだ人の結果のときに、ときどき(3割)
+  const special = () => {
+    const lv = rhythmAssistSessionLevel(RHYTHM_ASSIST_SESSION_STORE.get(), assistantId);
+    const open = [[100, 'sp100'], [80, 'sp80'], [50, 'sp50']].filter(([n]) => lv >= n).map(([, sc]) => sc);
+    return open.length && rand() < 0.3 ? say(open[Math.floor(rand() * open.length)]) : '';
+  };
+  if (kind === 'join') return special() || say('join');
   if (kind === 'combo' || kind === 'miss' || kind === 'climax' || kind === 'last') return say(kind);
   if (kind === 'lvUp') return say('levelup');
   if (kind === 'likeUp') return say('likeup');
   if (kind === 'pick' || kind === 'song') {
     if (!songId) return '';
+    // 曲が決まったとき(song)、セッションLv.75 からは聞きどころを話す
+    if (kind === 'song' && rhythmAssistSessionLevel(RHYTHM_ASSIST_SESSION_STORE.get(), assistantId) >= RHYTHM_ASSIST_SESSION_LISTEN_LEVEL && rand() < 0.7) {
+      const listen = say(`listen:${rhythmAssistSessionListenBase(songId)}`);
+      if (listen) return listen;
+    }
     const taste = rhythmAssistSessionTaste(assistantId, songId);
     if (taste === 'like') return say('like');
     if (taste === 'dislike') return say('dislike');
@@ -55901,6 +55957,8 @@ const rhythmAssistSessionTalk = ({ assistantId, kind, songId = '', score = 0, di
   if (kind === 'result') return mvp ? say('mvp') : '';
   if (kind === 'reactResult') {
     if (quit) return '';
+    const sp = mode === 'few' ? '' : special();
+    if (sp) return sp;
     const sid = songId || roomSong();
     const special = rhythmAssistSessionSongScene(assistantId, sid);
     if (special && rand() < 0.5) return say(special);
@@ -56308,6 +56366,34 @@ function RhythmAssistSessionCardBack({ m }) {
   return (
     <b data-rhythm-assist-card-back aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-1 z-0 select-none truncate text-center text-[15px] font-black italic tracking-widest opacity-25"
       style={{ color: who.accent || '#f472b6' }}>{who.name}</b>
+  );
+}
+
+// プロフィールの欄「助手とのセッション」(Lv.50 の札・Lv.100 の称号)
+function RhythmAssistSessionProfileBadges() {
+  const state = useRhythmAssistSessionState();
+  if (!rhythmAssistSessionEnabled()) return null;
+  const list = rhythmAssistSessionBadges(state);
+  if (!list.length) return null;
+  const master = list.some((x) => x.master);
+  return (
+    <section data-profile-assist-session className="mb-4 rounded-2xl border border-pink-300/40 bg-pink-950/40 p-2.5">
+      <b className="mb-1.5 flex items-center gap-1.5 text-[13px] font-black text-pink-100">🎤 助手とのセッション
+        {master && <span data-profile-assist-master className="rounded-full bg-gradient-to-r from-amber-300 to-pink-300 px-2 py-0.5 text-[10px] font-black text-slate-950">称号 セッションマスター</span>}
+      </b>
+      <div className="flex flex-wrap gap-1.5">
+        {list.map((x) => {
+          const who = rhythmAssistSessionWho(x.assistantId);
+          return (
+            <span key={x.assistantId} data-profile-assist-badge={x.assistantId} className="flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-black text-white"
+              style={{ borderColor: (who && who.accent) || '#f472b6' }}>
+              {who && <span className="block h-5 w-5 overflow-hidden rounded-full"><img src={assistantFaceSrc(who, x.master ? 'excited' : 'happy')} alt="" className="h-full w-full object-cover" draggable={false} /></span>}
+              {rhythmAssistSessionName(x.assistantId)}とセッション Lv.{x.master ? RHYTHM_ASSIST_SESSION_MASTER_LEVEL : RHYTHM_ASSIST_SESSION_BADGE_LEVEL}
+            </span>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

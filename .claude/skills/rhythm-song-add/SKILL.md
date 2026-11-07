@@ -461,6 +461,21 @@ assistantNotice: { id:'update_notice_<slug>_v1', type:'content' },
 
 ---
 
+## 9-2. 助手の聞きどころ(8行)を足す(2026-11-07 社長「全部の曲」・助手とのセッション Lv.75)
+
+新曲には、助手8人ぶんの「曲の聞きどころ」を1行ずつ足す。**抜けると `tools/mode/rhythm-assistant-session-check.js` が止める**
+(公開中の曲の一覧=譜面の控えに入った時点で見張る。短い版・フル版は元の曲の行を使うので足さなくてよい)。
+
+1. 曲の特徴を出す: `node tools/mode/rhythm-assistant-session-listen-facts.js <曲id>`(テンポ・盛り上がりの流れ・音の性格・サビの時刻)。
+   一覧も書き直す: `node tools/mode/rhythm-assistant-session-listen-facts.js`
+2. `docs/progress/beat-assistant-session/lines/listen-<曲id>.txt` に8行書く。形は `listen:<曲id> | <助手id> <表情> <セリフ>`
+   (書き方の決まり: `docs/progress/beat-assistant-session/lines/LISTEN-GUIDE.md`)。
+   **出した特徴だけで書く**(作り話の歌詞・作曲者や歌い手の話は書かない)。口調は `docs/progress/assistant-peer/VOICE.md`
+3. 取り込む: `node tools/mode/rhythm-assistant-session-lines-import.js`(部品 `33-rhythm-assistant-session-lines.jsx` は手で直さない)
+4. `listen-pending.json` には足さない(新曲は8行を書いてから入れる)
+
+---
+
 ## 10. 検査
 
 ```bash

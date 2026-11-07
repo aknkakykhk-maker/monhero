@@ -222,5 +222,37 @@ check('助手のスコアをランキングへ送らない(助手の計算の部
   check('経験値の上乗せは足すだけ(上限 +20%)', up === Math.round(plain * 1.1) && capped === Math.round(plain * 1.2), `${plain}→${up}・${capped}`);
   check('ビートP は育ちが数えた回だけ(同じ回は2度足さない)', /if \(outcome && outcome\.cheer && outcome\.cheer\.points > 0 && typeof addRhythmEventPoints === 'function'\)/.test(SCREEN));
 }
+// ---- 曲の聞きどころ(Lv.75・社長「全部の曲」) ----
+{
+  const sb6 = { Math, Date, Object, Number, String, Array, JSON, console };
+  vm.createContext(sb6);
+  vm.runInContext(`${BUDDY}\n${SESSION}\n${LINES}\n;globalThis.__l={SOLO:RHYTHM_ASSIST_SESSION_SOLO_LINES,ids:RHYTHM_ASSIST_SESSION_IDS,base:rhythmAssistSessionListenBase};`, sb6);
+  const l = sb6.__l;
+  const lock = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/mode/rhythm-released-chart-lock.json'), 'utf8'));
+  const released = [...new Set(Object.keys(lock.charts).map((k) => k.split(/[:|@/]/)[0]))];
+  const songsLike = released.map((id) => ({ songId: id }));
+  const families = [...new Set(released.map((id) => l.base(id, songsLike)))];
+  const pending = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs/progress/beat-assistant-session/lines/listen-pending.json'), 'utf8')).songs || [];
+  const covered = (id) => l.ids.every((a) => l.SOLO[a] && Array.isArray(l.SOLO[a][`listen:${id}`]) && l.SOLO[a][`listen:${id}`].length > 0);
+  const missing = families.filter((id) => !covered(id) && !pending.includes(id));
+  check('公開中の曲は、8人ぶんの聞きどころがある(まだの曲は listen-pending.json に載っている。新曲は8人ぶん書いてから入れる)', missing.length === 0, missing.join(' '));
+  const stale = pending.filter((id) => covered(id) || !families.includes(id));
+  check('listen-pending.json に、もう書き終えた曲・公開していない曲が残っていない', stale.length === 0, stale.join(' '));
+  check('別の版(短い版・フル版)は元の曲の聞きどころを使う', l.base('rose_short', [{ songId: 'rose' }, { songId: 'rose_short' }]) === 'rose' && l.base('toward_the_stars_short', [{ songId: 'toward_the_stars_short' }]) === 'toward_the_stars_short');
+  check('聞きどころはセッションLv.75 から・曲が決まったとき', /const RHYTHM_ASSIST_SESSION_LISTEN_LEVEL = 75;/.test(SESSION) && /kind === 'song' && rhythmAssistSessionLevel\(RHYTHM_ASSIST_SESSION_STORE\.get\(\), assistantId\) >= RHYTHM_ASSIST_SESSION_LISTEN_LEVEL/.test(SCREEN));
+}
+// ---- プロフィールの札・称号・特別な台詞の束 ----
+{
+  const sb7 = { Math, Date, Object, Number, String, Array, JSON, console };
+  vm.createContext(sb7);
+  vm.runInContext(`${BUDDY}\n${SESSION}\n${LINES}\n;globalThis.__p={badges:rhythmAssistSessionBadges,apply:rhythmAssistSessionApplyLive,SOLO:RHYTHM_ASSIST_SESSION_SOLO_LINES,ids:RHYTHM_ASSIST_SESSION_IDS};`, sb7);
+  const p2 = sb7.__p;
+  let st = null; for (let i = 0; i < 400; i += 1) { const r = p2.apply(st, 'kiki', { round: `b${i}`, songId: 'evans', diffId: 'MASTER', durationMs: 1, teamRank: 'S', dayKey: 'd', nowMs: 1, score: 1, maxScore: 1000000 }); st = r.next || st; }
+  const b = p2.badges(st);
+  check('プロフィールの札は Lv.50 から・Lv.100 で称号「セッションマスター」', b.length === 1 && b[0].assistantId === 'kiki' && b[0].master === true && p2.badges(null).length === 0);
+  const PROFILE = P('56-screen-profile.jsx');
+  check('プロフィールの欄は印が偽ならなにも出さない(RhythmAssistSessionProfileBadges)', /typeof RhythmAssistSessionProfileBadges==='function'&&<RhythmAssistSessionProfileBadges\/>/.test(PROFILE) && /function RhythmAssistSessionProfileBadges\(\) \{\n  const state = useRhythmAssistSessionState\(\);\n  if \(!rhythmAssistSessionEnabled\(\)\) return null;/.test(SCREEN));
+  check('特別な台詞の束(Lv.50・80・100)が8人ぶんある', p2.ids.every((id) => ['sp50', 'sp80', 'sp100'].every((sc) => p2.SOLO[id] && p2.SOLO[id][sc] && p2.SOLO[id][sc].length)));
+}
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
