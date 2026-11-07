@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e77804de5fc6d928
+// source-sha256: ac6aa07902c6a597
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13717,8 +13717,9 @@ const RAID_JACK_RHYTHM_PUBLIC_RELEASE = true;
 const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = true;
 const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = true;
 const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
-const RHYTHM_GRAND_OPEN_RELEASE = false;
-const RHYTHM_GRAND_OPEN_TEASER_RELEASE = false;
+const RHYTHM_GRAND_OPEN_RELEASE = true;
+const RHYTHM_GRAND_OPEN_START_AT = '2026-11-09T10:00:00+09:00';
+const RHYTHM_GRAND_OPEN_TEASER_RELEASE = true;
 const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   tactics: TACTICS_MODE_PUBLIC_RELEASE,
@@ -13742,7 +13743,13 @@ const RELEASE_FLAGS = {
   tacticsHate: true,
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE,
   rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE,
-  rhythmGrandOpen: RHYTHM_GRAND_OPEN_RELEASE,
+  get rhythmGrandOpen() {
+    try {
+      return RHYTHM_GRAND_OPEN_RELEASE === true && Date.now() >= Date.parse(RHYTHM_GRAND_OPEN_START_AT);
+    } catch (e) {
+      return false;
+    }
+  },
   rhythmGrandOpenTeaser: RHYTHM_GRAND_OPEN_TEASER_RELEASE,
   rhythmMulti: RHYTHM_MULTI_PUBLIC_RELEASE,
   friends: FRIENDS_PUBLIC_RELEASE,
@@ -14587,7 +14594,13 @@ const NEW_PLAYER_CAMPAIGN_GIFT_GRAND = Object.freeze({
     amount: 3
   }]
 });
-const rhythmGrandOpenReleased = () => typeof RHYTHM_GRAND_OPEN_RELEASE !== 'undefined' && RHYTHM_GRAND_OPEN_RELEASE === true;
+const rhythmGrandOpenReleased = (now = Date.now()) => {
+  try {
+    return typeof RHYTHM_GRAND_OPEN_RELEASE !== 'undefined' && RHYTHM_GRAND_OPEN_RELEASE === true && typeof RHYTHM_GRAND_OPEN_START_AT !== 'undefined' && Number(now) >= Date.parse(RHYTHM_GRAND_OPEN_START_AT);
+  } catch (e) {
+    return false;
+  }
+};
 const newPlayerCampaignGiftDef = () => rhythmGrandOpenReleased() ? NEW_PLAYER_CAMPAIGN_GIFT_GRAND : NEW_PLAYER_CAMPAIGN_GIFT;
 const grantNewPlayerCampaignGift = (gifts, now = Date.now(), extraRewards = []) => {
   const list = Array.isArray(gifts) ? gifts : [];
@@ -19495,7 +19508,7 @@ const HELP_DATA_TITLES = {
   rhythmDifficultyRanks: 'モンヒロビートの難易度別の満点と上限ランク',
   rhythmHellEntry: 'はじめての HELL の目安',
   rhythmHellSongs: 'HELL がある曲',
-  rhythmDemoSongLevels: '体験版で遊べる難易度とレベル',
+  rhythmDemoSongLevels: '遊べる難易度とレベル',
   rhythmDemoSongList: '先行公開している曲',
   rhythmDifficultySpread: '同じ難易度でも曲でどれだけ違うか',
   rhythmSongArtwork: '曲えらびに絵が出る曲',
@@ -34836,8 +34849,9 @@ const RhythmOptions = ({
       "data-rhythm-option-stepper-label": key,
       className: "flex items-baseline justify-between gap-2 px-0.5 pb-0.5 leading-none"
     }, React.createElement("small", {
-      className: "text-[10px] font-black text-cyan-200"
-    }, label), React.createElement("small", {
+      className: "min-w-0 text-[10px] font-black text-cyan-200",
+      style: JA_WRAP_STYLE
+    }, jaWrap(label)), React.createElement("small", {
       className: "text-[10px] font-bold tabular-nums text-slate-400"
     }, decimals > 0 ? min.toFixed(decimals) : min, "〜", decimals > 0 ? max.toFixed(decimals) : max, suffix)), React.createElement("div", {
       className: "grid grid-cols-[1fr_1fr_minmax(52px,1.3fr)_1fr_1fr] items-center gap-1"
@@ -66944,7 +66958,7 @@ function RhythmSongSelectScreen({
     className: "flex items-center gap-1.5 text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
   }, React.createElement("span", {
     className: "max-[359px]:hidden"
-  }, "MONBEAT"), React.createElement("span", {
+  }, "MONBEAT"), (debugAll || !(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmGrandOpen === true)) && React.createElement("span", {
     "data-rhythm-demo-badge": true,
     "data-rhythm-debug-select-badge": debugAll ? true : undefined,
     className: "rounded-full border border-amber-300/60 bg-amber-500/15 px-1.5 py-px text-[8px] tracking-normal text-amber-200"
@@ -163270,7 +163284,7 @@ function MonsterHeroGame() {
             setGifts(grant.gifts);
           }
           await storeSet(NEW_PLAYER_CAMPAIGN_KEY, true, false);
-          if (RHYTHM_GRAND_OPEN_RELEASE) await storeSet(GRAND_OPEN_ALL_GIFT_KEY, true, false);
+          if (rhythmGrandOpenReleased()) await storeSet(GRAND_OPEN_ALL_GIFT_KEY, true, false);
         }
       } catch {}
     }
