@@ -446,3 +446,83 @@ solo erubin mood=restless line=scene | erubin surprise あそこ、人が集ま�
 solo erubin mood=restless line=feel | erubin happy ちょっとのぞいてみようか
 solo erubin mood=sulky line=scene | erubin troubled 「石油王」って呼ばれるの、まだ慣れないなぁ笑
 solo erubin mood=sulky line=feel | erubin normal まあ、みんな楽しそうだからいいかな
+
+## 2人 えるびん × もも(29本)
+pair erubin momosuke doing=snack lv=1-3 | momosuke excited ここのいちごタルト、絶対おいしいやつ！！ | erubin happy 本当だ、きれいだね。{c}はどれにする？ | momosuke wink 全部！！…はさすがにうそw 2つにする♡
+pair erubin momosuke doing=snack lv=4-6 | erubin normal 今日もいちごは、最後に食べるのかな？ | momosuke surprise え、なんで知ってるの！？ | erubin happy 毎回見てるからね笑 楽しみはあとに取っておく派だよね
+pair erubin momosuke doing=snack lv=7-10 | momosuke happy {c}と食べると、おやつが2倍おいしい気がする！！ | erubin happy 俺もだよ。{c}がしゃべってくれるから、つい長居しちゃうね | momosuke excited じゃあ今日も、あと1時間しゃべろ！！
+pair erubin momosuke doing=practice lv=1-3 | momosuke normal {c}、ちょっとだけ練習見ててくれる？ | erubin happy もちろん。俺でよければ、最後まで見てるよ | momosuke excited やった！！ じゃあ本気モードでいくね♡
+pair erubin momosuke doing=practice lv=4-6 | erubin surprise 今のステップ、前より速くなってるね | momosuke wink 気づいた！？ {c}、見るとこ見てるじゃんw | erubin happy 毎日見てたら、さすがに分かるよ笑
+pair erubin momosuke doing=practice lv=7-10 | momosuke troubled 今日ちょっと、声が出ないかも… | erubin normal 無理しなくていいよ。今日は振り付けだけにしようか | momosuke happy …うん。{c}がそう言ってくれると、安心する
+pair erubin momosuke doing=training lv=1-3 | erubin normal メタルナーって、こうやってみがくのかな？ | momosuke excited ちがうちがう！！ もっとやさしく、くるくるって！！ | erubin happy なるほど…{c}は先生だね笑
+pair erubin momosuke doing=training lv=4-6 | momosuke wink 見て、メタルナーに{c}の顔が映ってる！！ | erubin surprise 本当だ。ぴかぴかすぎて、俺のほうがまぶしいよw | momosuke excited でしょ！！ 今日も100点♡
+pair erubin momosuke doing=training lv=7-10 | erubin happy {c}のメタルナー、前より落ち着いた顔になったね | momosuke surprise え、そう？ ももは気づかなかった | erubin wink 毎日いっしょにいると、分からないものだよね☺️
+pair erubin momosuke doing=cards lv=1-3 | momosuke normal {c}、デュラハンのどこがいいの？ | erubin happy 守りながら、じっくり戦えるところかな。見てて落ち着くんだよね | momosuke wink ももはピカピカしてるカードのほうがいいなw
+pair erubin momosuke doing=cards lv=4-6 | erubin normal この組み方、どう思う？ | momosuke excited 名前がかっこいい！！ それだけで強そう！！ | erubin happy 名前で選ぶの、意外と大事かもね笑
+pair erubin momosuke doing=cards lv=7-10 | momosuke happy ねえ、ももにもデュラハンの組み方教えて！！ | erubin surprise {c}が？ うれしいな。じゃあ、いちばんやさしい形からね | momosuke excited うん！！ {c}の得意なやつ、ももも使いたい♡
+pair erubin momosuke doing=walk lv=1-3 | erubin happy {place}、今日は風が気持ちいいね | momosuke excited ほんとだ！！ 髪がなびいて、ちょっとアイドルっぽくない？ | erubin happy うん、とっても似合ってるよ
+pair erubin momosuke doing=walk lv=4-6 | momosuke excited 今日はね、とっておきの話があるの！！ | erubin wink じゃあ、ゆっくり歩きながら聞こうか | momosuke happy やった！！ えっとね、まずは朝の話から！！
+pair erubin momosuke doing=walk lv=7-10 | erubin normal {c}と歩くと、いつも知らない道を見つけるね | momosuke wink ももが勝手に曲がるからでしょw | erubin happy そのおかげで、この世界にくわしくなれたよ。ありがとう
+pair erubin momosuke doing=snack lv=1-3 | erubin happy おやつ屋さんの新作、{c}はもう食べたかな？ | momosuke excited まだ！！ いっしょに行こ！！ | erubin wink おけ！ 席、取っておくね
+pair erubin momosuke doing=snack lv=4-6 | momosuke wink 石油王のおごり〜♡ …なんちゃってw | erubin troubled それ、まだ言われるんだね笑 | momosuke happy うそうそ！ 今日はももが選んであげる！！
+pair erubin momosuke doing=snack lv=7-10 | erubin normal {c}の好きなもの、だいたい分かってきたよ | momosuke surprise ほんと！？ じゃあ当ててみて！！ | erubin happy いちご、ピカピカのもの、それから…ほめ言葉、かな
+pair erubin momosuke doing=practice lv=1-3 | erubin surprise 歌っているときの{c}、本当に楽しそうだね | momosuke excited だって楽しいもん！！ 聞いてくれる人がいると、もっと！！ | erubin happy じゃあ、いつでも聞きに来るよ☺️
+pair erubin momosuke doing=practice lv=4-6 | momosuke troubled 振り付け、ここだけどうしても合わないの… | erubin normal 鏡じゃなくて、俺のほうを見て踊ってみたら？ | momosuke excited …あ、できた！！ {c}、天才！！
+pair erubin momosuke doing=practice lv=7-10 | erubin happy 今日のステージ、いちばん前で見てたよ | momosuke wink 知ってる！！ 手をふってくれたの、ちゃんと見えたもん♡ | erubin wink それなら、またふりに行かないとね
+pair erubin momosuke doing=training lv=4-6 | erubin normal アークにも、みがき方を教えてくれる？ | momosuke excited 任せて！！ アークもピカピカにしちゃう！！ | erubin happy {c}に任せたら、アークもアイドルになりそうだね笑
+pair erubin momosuke doing=cards lv=4-6 | momosuke wink デュラハンばっかり使ってるの、知ってるよw | erubin troubled ばれちゃったかな…好きなんだよね笑 | momosuke happy いいと思う！！ ももはメタルナーで勝負するから！！
+pair erubin momosuke doing=walk lv=1-3 | momosuke excited {c}！ この道、まだ通ったことないでしょ！！ | erubin surprise 本当だ。どこにつながってるのかな | momosuke wink 行ってみよ！！ ももが案内してあげる♡
+pair erubin momosuke doing=walk lv=7-10 | erubin happy {c}といると、毎日がにぎやかだね | momosuke surprise え、うるさかった！？ | erubin wink ちがうよ。それが、とってもうれしいんだ
+pair erubin momosuke lv=4-6 air=after | momosuke troubled ……話のとちゅうで、うとうとしてたでしょ | erubin troubled ごめん、昨日あまり寝てなくて…💦 | momosuke normal べつにいいけど。…ちょっとだけ、さみしかった
+pair erubin momosuke lv=4-6 air=makeup | erubin normal さっきはごめんね。今日は最後まで、ちゃんと聞くよ | momosuke happy ほんと！？ じゃあ、さっきの続きからね！！ | erubin happy おけ！ 今度は寝ないよ笑
+pair erubin momosuke lv=7-10 air=makeup | momosuke happy もう怒ってないよ！！ ももも言いすぎたし | erubin happy ありがとう。{c}がそう言ってくれると、ほっとするね | momosuke wink じゃあ仲直りのしるしに、いちごひとつあげる♡
+pair erubin momosuke lv=1-3 | momosuke normal {c}って、怒ったことある？ | erubin surprise うーん、あんまりないかな | momosuke wink じゃあ、ももが初めて怒らせちゃうかもw
+
+## 2人 ドラ × みゅあ(23本)
+pair dra mua doing=snack lv=1-3 | mua happy {c}、そのせんべい、ひとつちょうだい！ | dra normal ひとつだけだぞ。……ほら、いちばん大きいのな | mua excited やさしいぢゃん！ ありがと♪
+pair dra mua doing=snack lv=4-6 | dra wink プリンの食べ方、知ってるか？ 下から食べると膝にいいんだ | mua troubled ぜったいうそでしょｗ | dra happy えへへ、ばれたか
+pair dra mua doing=snack lv=7-10 | mua normal {c}って、あたしがおやつ持ってくると、いつもお茶いれてくれるよね | dra surprise そうか？ 気づかなかったな | mua happy そういうとこ、ちょっとだけかっこいいかもｗ
+pair dra mua doing=practice lv=1-3 | mua excited 見て見て、新しいステップ！ | dra surprise おお、すごいな。おでがやったら膝がもげるわ | mua wink もげないでｗ ゆっくりなら{c}もできるって！
+pair dra mua doing=practice lv=4-6 | dra normal {c}、そのリズムな、裏で数えると楽になるぞ | mua surprise え、ほんとだ！ 説明はまぢでわかりやすいよね | dra wink 「は」が余計だな。えへへ
+pair dra mua doing=practice lv=7-10 | mua troubled 今日なんか、うまくいかないんだよね… | dra normal そういう日もある。ひと休みしてから、おでと一回だけやろう | mua happy …うん。{c}とやると、なんか落ち着く
+pair dra mua doing=training lv=1-3 | dra happy モッチー、元気そうだな | mua excited でしょ！ 毎日なでてるもん♪ | dra normal なでると伸びる能力があったら、いちばん強いだろうな
+pair dra mua doing=training lv=4-6 | mua surprise グジラって、近くで見ると迫力すごいね！ | dra wink だろ？ おでに似て、たくましいんだよ | mua happy 似てるのは、よく寝るとこだけでしょｗ
+pair dra mua doing=training lv=7-10 | dra normal {c}のモッチー、最初のころより目つきがいいな | mua surprise ほんと！？ どのへんが？ | dra happy 自信がついた顔だ。{c}に似てきたんだよ
+pair dra mua doing=cards lv=1-3 | mua troubled カードの説明、ぜんぜん頭に入らない〜 | dra normal なるほど。じゃあ、3つだけ覚えればいい形にしてやる | mua excited 3つならいける！ {c}、先生みたい！
+pair dra mua doing=cards lv=4-6 | dra wink 今日のギャグは、カードにちなんだやつだ。……ドローっとした話な | mua angry ……10点中2点ｗ | dra crying 前より下がってる！
+pair dra mua doing=cards lv=7-10 | mua happy {c}に教わったデッキで、きのう勝ったよ！ | dra excited ほんとか！ やったな、みゅあ | mua wink 説明もギャグも、両方あったから勝てたのかもｗ
+pair dra mua doing=walk lv=1-3 | dra troubled ちょっと待ってくれ、膝が休けいを求めてる | mua wink はいはい、ベンチまであと少しだよ！ | dra happy えへへ、助かるわ
+pair dra mua doing=walk lv=4-6 | mua excited {place}、空気おいしいね！ | dra normal 膝にもやさしい道だな。いいところ見つけたな | mua happy でしょ！ {c}のために選んだんだよ♪
+pair dra mua doing=walk lv=7-10 | dra normal なあ、{c}。たまにおでの家に寄ってくれて、ありがとな | mua surprise え、急にどしたの？ | dra happy 言いたくなっただけだ。……えへへ
+pair dra mua lv=1-3 | mua surprise {c}、なんでいつも眠そうなの？ | dra normal おでは省エネなんだよ。動くときは動く | mua wink 動いてるとこ、あんま見たことないけどｗ
+pair dra mua lv=4-6 | dra happy さっきのギャグ、もう1回聞くか？ | mua angry もういい！ 3回聞いた！ | dra wink 4回目がいちばんおもしろいんだぞ
+pair dra mua lv=7-10 | mua normal {c}がいないと、広場がちょっと静かなんだよね | dra surprise おでのギャグがないからか？ | mua happy それもあるけど、{c}がいるだけで安心するのｗ
+pair dra mua lv=4-6 air=after | mua angry ギャグ、しつこいってば！ | dra troubled ……そんなに怒らなくてもいいだろ | mua normal 今日はもう聞かないから
+pair dra mua lv=4-6 air=makeup | dra normal みゅあ、さっきは調子に乗りすぎた。すまんな | mua happy …あたしも言いすぎた。ギャグ、1個だけなら聞く！ | dra excited よし、とっておきのやつだ！
+pair dra mua lv=7-10 air=makeup | mua happy {c}、おせんべい持ってきた！ 仲直りのしるし♪ | dra happy おでのいちばん好きなやつだ。わかってるな | mua wink 何年いっしょにいると思ってんのｗ
+pair dra mua doing=snack lv=4-6 | mua excited {place}の新作、2人で半分こしよ！ | dra normal 半分こか。……おで、大きいほうでいいか？ | mua angry だめ！ あみだくじで決めるの！
+pair dra mua doing=cards lv=1-3 | dra happy {c}、この1枚の使い方だけ覚えとけ。それで勝てる | mua surprise え、1枚だけでいいの？ | dra wink おでの説明は、短いほど効くんだよ
+
+## 2人 あつ × ソラシド(22本)
+pair atsu sorashido doing=snack lv=1-3 | sorashido excited おやつ屋さんの新作、全部で7種類あったぜ・・・！ | atsu surprise 数えたの？笑 | sorashido happy 数えるだろ笑 で、{c}はどれにする？
+pair atsu sorashido doing=snack lv=4-6 | atsu happy {c}、今日のおやつ、勝ったほうのおごりね笑 | sorashido excited のった！ 勝率は五分五分だから、計算上はいける！ | atsu wink 計算どおりにいけばね！
+pair atsu sorashido doing=snack lv=7-10 | sorashido normal {c}とおやつ食べるとき、なんでいつも勝負の話になるんだろうな笑 | atsu happy それね笑 たまには休もうよ！ | sorashido happy ……で、次の勝負なんだけどな
+pair atsu sorashido doing=practice lv=1-3 | atsu excited HELL、いっしょにいこ！ | sorashido surprise なに！？ 俺、まだ譜面の分析終わってないんだけど！ | atsu wink やりながら覚えればいいじゃん笑
+pair atsu sorashido doing=practice lv=4-6 | sorashido excited 今の、{c}より2点高かったぜ・・・！ | atsu surprise まじ？ じゃあもう1回！ | sorashido happy 何回でもこい笑
+pair atsu sorashido doing=practice lv=7-10 | atsu normal {c}ってさ、負けても笑ってるの、すごいと思うよ！ | sorashido surprise お、急になんだよ | atsu happy 悔しいのに笑えるの、いちばん強いやつじゃん笑
+pair atsu sorashido doing=training lv=1-3 | sorashido normal ドラゴンの伸び方、表にしてもいいか？ | atsu happy いいよ笑 てか、もう作ってるでしょ！ | sorashido wink ばれたか笑
+pair atsu sorashido doing=training lv=4-6 | atsu happy {c}のニャー、前より速くなってない？ | sorashido excited 気づいたか！ 素早さに振って、でーじ伸びたんだよ | atsu wink いいね、次の勝負が楽しみ笑
+pair atsu sorashido doing=training lv=7-10 | sorashido normal {c}、育成の順番まちがえた。助けてくれ… | atsu happy まぁ〜、しゃあない笑 いっしょに組み直そ！ | sorashido happy ありがとな。やっぱ頼りになるわ笑
+pair atsu sorashido doing=cards lv=1-3 | atsu normal カードの勝ち数、今どっちが上？ | sorashido excited 俺が1勝リードだぜ・・・！ | atsu happy じゃあ今日で並ぶね笑
+pair atsu sorashido doing=cards lv=4-6 | sorashido troubled {c}の山札、読めない…計算が追いつかない | atsu wink それが作戦だから笑 | sorashido excited くっそー、次は読みきってやる！
+pair atsu sorashido doing=cards lv=7-10 | atsu happy {c}と組んで大会出たら、優勝いけそうじゃない？笑 | sorashido excited うぉぉぉ！ 計算してみたら、かなりいけるぞ！ | atsu wink じゃあ出よ！ 作戦は任せた！
+pair atsu sorashido doing=walk lv=1-3 | sorashido normal {place}まで、何歩だと思う？ | atsu surprise え、数えてるの？笑 | sorashido happy 今のとこ1,284歩だ笑
+pair atsu sorashido doing=walk lv=4-6 | atsu happy たまには勝負なしで歩こ笑 | sorashido troubled ……むずかしいな。気づくと競争してる | atsu wink それ、俺もだわ笑
+pair atsu sorashido doing=walk lv=7-10 | sorashido normal なあ{c}、俺らって、なんでこんなに勝負ばっかしてるんだろうな | atsu happy 楽しいからでしょ！ | sorashido happy ……だな笑 ほかに理由いらないわ
+pair atsu sorashido lv=1-3 | atsu happy {c}、今日も勝負する？笑 | sorashido excited 当たり前だろ！ 準備はできてる！ | atsu wink いいね、上等！
+pair atsu sorashido lv=4-6 | sorashido crying また2点差…これで3回目だぞ… | atsu happy 毎回ほぼ同じじゃん笑 もう実力いっしょだよ！ | sorashido normal ……なんくるないさ〜。次は1点差にする
+pair atsu sorashido lv=7-10 | atsu normal {c}が全部記録してくれてるから、あとで見返せるのいいよね！ | sorashido happy だろ？ 俺らの勝負、もう本1冊分あるぜ笑 | atsu wink じゃあ2冊目もいこ笑
+pair atsu sorashido lv=4-6 air=after | sorashido angry 今のは俺の勝ちだろ！ | atsu troubled いや、数え方が違うって… | sorashido normal ……ちょっと頭冷やしてくる
+pair atsu sorashido lv=4-6 air=makeup | atsu happy {c}、さっきのはどっちの勝ちでもいいよ笑 | sorashido troubled ……いや、ちゃんと数え直した。{c}の勝ちだった | atsu wink 正直じゃん！ 次の勝負いこ！
+pair atsu sorashido lv=7-10 air=makeup | sorashido normal 数え方、2人で決めといたぜ・・・！ | atsu happy いいね笑 これでもうもめないね！ | sorashido happy ……たぶんな笑
+pair atsu sorashido doing=practice lv=1-3 | sorashido excited {c}の打ち方、録画して研究してもいいか？ | atsu surprise いいけど、恥ずかしいって笑 | sorashido happy 分析したら、俺も同じくらいになれるはずだ
