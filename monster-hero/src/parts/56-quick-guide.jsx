@@ -219,13 +219,21 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
   // 窓は光らせた所と重ならない側へ。上に入るなら上・下に入るなら下・どちらにも入らなければ、下に置いて光らせる所を切り詰める
   const roomTop = rect ? rect.top - pad - gap : 0, roomBottom = rect ? vh - rect.bottom - pad - gap : 0;
   //   どちらにも入らないときは下に置く(大きな所は先頭へ寄せてあるので、見出しが窓の上に見える)
-  const atTop = !!rect && vh > 0 && roomBottom < panelH && roomTop >= panelH;
+  //   窓を上・下に置いたときに、光らせる所がどれだけ残るか(どちらも細い線しか残らないなら、下の squeeze で片側へ置く)
+  const keepIfBottom = rect ? Math.min(rect.bottom, vh - panelH - gap - pad - 10) - rect.top : 0;
+  const keepIfTop = rect ? rect.bottom - Math.max(rect.top, panelH + gap + pad + 10) : 0;
+  //   左右にも空きが無く、上下どちらに置いても光らせる所が細い線しか残らないとき(横に長い所)は、窓を片側へ細く重ねて置く(下の squeeze)。
+  //   光らせる所の一部に重なるが、切り詰めて見えなくするよりよい(🔄横の曲えらびの帯の中・2026-11-07 レフェリーくん)
+  const vw0 = quickGuideView().w;
+  const squeeze = !!rect && vh > 0 && vw0 > vh && roomBottom < panelH && roomTop < panelH
+    && Math.max(rect.left - pad - gap, vw0 - (rect.left + rect.width) - pad - gap) < 170 && Math.max(keepIfTop, keepIfBottom) < 40;
+  const atTop = !!rect && vh > 0 && !squeeze && roomBottom < panelH && roomTop >= panelH;
   // 横画面で上下どちらにも入らないときは、左右の空きが十分なら窓を細くして横に置く(横画面の難易度の札など。切り詰めずに済む)
   const vw = quickGuideView().w;
   const roomLeft = rect ? rect.left - pad - gap : 0, roomRight = rect ? vw - (rect.left + rect.width) - pad - gap : 0;
   const side = !!rect && vh > 0 && vw > vh && !atTop && roomBottom < panelH && Math.max(roomLeft, roomRight) >= 170
-    ? (roomRight >= roomLeft ? 'right' : 'left') : null;
-  const sideWidth = side ? Math.min(300, Math.max(roomLeft, roomRight) - 4) : 0;
+    ? (roomRight >= roomLeft ? 'right' : 'left') : squeeze ? 'left' : null;
+  const sideWidth = side ? (squeeze ? Math.min(300, Math.round(vw * 0.38)) : Math.min(300, Math.max(roomLeft, roomRight) - 4)) : 0;
   const sideTop = side ? Math.max(8, Math.min(vh - panelH - 8, rect.top + rect.height / 2 - panelH / 2)) : 0;
   let ring = rect;
   if (rect && vh > 0 && !side) {

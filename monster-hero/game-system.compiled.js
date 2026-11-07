@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a11acc1d1f729750
+// source-sha256: a871baf751295e66
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -100912,12 +100912,16 @@ const QuickGuideOverlay = ({
     gap = 12;
   const roomTop = rect ? rect.top - pad - gap : 0,
     roomBottom = rect ? vh - rect.bottom - pad - gap : 0;
-  const atTop = !!rect && vh > 0 && roomBottom < panelH && roomTop >= panelH;
+  const keepIfBottom = rect ? Math.min(rect.bottom, vh - panelH - gap - pad - 10) - rect.top : 0;
+  const keepIfTop = rect ? rect.bottom - Math.max(rect.top, panelH + gap + pad + 10) : 0;
+  const vw0 = quickGuideView().w;
+  const squeeze = !!rect && vh > 0 && vw0 > vh && roomBottom < panelH && roomTop < panelH && Math.max(rect.left - pad - gap, vw0 - (rect.left + rect.width) - pad - gap) < 170 && Math.max(keepIfTop, keepIfBottom) < 40;
+  const atTop = !!rect && vh > 0 && !squeeze && roomBottom < panelH && roomTop >= panelH;
   const vw = quickGuideView().w;
   const roomLeft = rect ? rect.left - pad - gap : 0,
     roomRight = rect ? vw - (rect.left + rect.width) - pad - gap : 0;
-  const side = !!rect && vh > 0 && vw > vh && !atTop && roomBottom < panelH && Math.max(roomLeft, roomRight) >= 170 ? roomRight >= roomLeft ? 'right' : 'left' : null;
-  const sideWidth = side ? Math.min(300, Math.max(roomLeft, roomRight) - 4) : 0;
+  const side = !!rect && vh > 0 && vw > vh && !atTop && roomBottom < panelH && Math.max(roomLeft, roomRight) >= 170 ? roomRight >= roomLeft ? 'right' : 'left' : squeeze ? 'left' : null;
+  const sideWidth = side ? squeeze ? Math.min(300, Math.round(vw * 0.38)) : Math.min(300, Math.max(roomLeft, roomRight) - 4) : 0;
   const sideTop = side ? Math.max(8, Math.min(vh - panelH - 8, rect.top + rect.height / 2 - panelH / 2)) : 0;
   let ring = rect;
   if (rect && vh > 0 && !side) {
