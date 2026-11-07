@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f1bd33d9338cedb8
+// source-sha256: b8bf8678dcc9e193
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13717,7 +13717,8 @@ const RAID_JACK_RHYTHM_PUBLIC_RELEASE = true;
 const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = true;
 const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = true;
 const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
-const RHYTHM_GRAND_OPEN_RELEASE = false;
+const RHYTHM_GRAND_OPEN_RELEASE = true;
+const RHYTHM_GRAND_OPEN_START_AT = '2026-11-09T10:00:00+09:00';
 const RHYTHM_GRAND_OPEN_TEASER_RELEASE = false;
 const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
@@ -13742,7 +13743,13 @@ const RELEASE_FLAGS = {
   tacticsHate: true,
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE,
   rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE,
-  rhythmGrandOpen: RHYTHM_GRAND_OPEN_RELEASE,
+  get rhythmGrandOpen() {
+    try {
+      return RHYTHM_GRAND_OPEN_RELEASE === true && Date.now() >= Date.parse(RHYTHM_GRAND_OPEN_START_AT);
+    } catch (e) {
+      return false;
+    }
+  },
   rhythmGrandOpenTeaser: RHYTHM_GRAND_OPEN_TEASER_RELEASE,
   rhythmMulti: RHYTHM_MULTI_PUBLIC_RELEASE,
   friends: FRIENDS_PUBLIC_RELEASE,
@@ -14587,7 +14594,13 @@ const NEW_PLAYER_CAMPAIGN_GIFT_GRAND = Object.freeze({
     amount: 3
   }]
 });
-const rhythmGrandOpenReleased = () => typeof RHYTHM_GRAND_OPEN_RELEASE !== 'undefined' && RHYTHM_GRAND_OPEN_RELEASE === true;
+const rhythmGrandOpenReleased = (now = Date.now()) => {
+  try {
+    return typeof RHYTHM_GRAND_OPEN_RELEASE !== 'undefined' && RHYTHM_GRAND_OPEN_RELEASE === true && typeof RHYTHM_GRAND_OPEN_START_AT !== 'undefined' && Number(now) >= Date.parse(RHYTHM_GRAND_OPEN_START_AT);
+  } catch (e) {
+    return false;
+  }
+};
 const newPlayerCampaignGiftDef = () => rhythmGrandOpenReleased() ? NEW_PLAYER_CAMPAIGN_GIFT_GRAND : NEW_PLAYER_CAMPAIGN_GIFT;
 const grantNewPlayerCampaignGift = (gifts, now = Date.now(), extraRewards = []) => {
   const list = Array.isArray(gifts) ? gifts : [];
@@ -151315,7 +151328,7 @@ function MonsterHeroGame() {
             setGifts(grant.gifts);
           }
           await storeSet(NEW_PLAYER_CAMPAIGN_KEY, true, false);
-          if (RHYTHM_GRAND_OPEN_RELEASE) await storeSet(GRAND_OPEN_ALL_GIFT_KEY, true, false);
+          if (rhythmGrandOpenReleased()) await storeSet(GRAND_OPEN_ALL_GIFT_KEY, true, false);
         }
       } catch {}
     }

@@ -7918,7 +7918,7 @@ function MonsterHeroGame() {
           if (grant.granted) { await storeSet('mh_gifts', grant.gifts, false); setGifts(grant.gifts); }
           await storeSet(NEW_PLAYER_CAMPAIGN_KEY, true, false);
           // 本オープン記念の新規プレゼントを配った人には、全員向けの本オープン記念ギフトは配らない(大盛りを重ねない)
-          if (RHYTHM_GRAND_OPEN_RELEASE) await storeSet(GRAND_OPEN_ALL_GIFT_KEY, true, false);
+          if (rhythmGrandOpenReleased()) await storeSet(GRAND_OPEN_ALL_GIFT_KEY, true, false);
         }
       } catch {}
     }
