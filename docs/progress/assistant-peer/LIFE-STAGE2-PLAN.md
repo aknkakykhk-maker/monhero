@@ -36,3 +36,10 @@
 
 - assistant-life-browser-check: 遊び場の札・HOME の顔の施設・会いに行くボタン(つなぎ口があるときだけ)
 - assistant-life-check: 新しいしていることの重み・夜に帰りやすいこと
+
+## 6. カード部とのつなぎ(2026-11-07 社長「バトルカードをやってる助手がいて、その助手と戦った場合、報酬が上がるとかもいれたいね」・カード部ルールくん/ソランドと話し中)
+
+- 読むだけの口を足す: `assistantLifeAtCard(id)`・`assistantLifeCardIds()`(モンビーの `assistantLifeAtBeat` と同じ形。印が偽・いまの時間の様子でなければ false/[])。中身は doing==='cards' かつ place==='cardroom'。組の全員がいる扱い
+- カード部は `assistantLifeNow` を呼ばない(様子を決め直して保存するため。対戦中は書き換えない決まり)
+- ごほうびアップは「対戦を始めた時点でカード部屋にいたか」で決める(カード部の案)
+- 対戦したことを知らせる口 `assistantLifeOnCardMatch({ assistantId, won, at })` を足す → 今日あったこと・生活のリズムの「誘って遊んだ」に数える。入ったらルールくんへ知らせる
