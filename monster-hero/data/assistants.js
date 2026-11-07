@@ -19630,5 +19630,155 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'kiki', e:'happy', t:'はい。今度は、並んで座りましょう' },
     { who:'erubin', e:'happy', t:'うん、それがいちばんだね' },
   ] },
+  { id:'life-trio-erubin-momosuke-any-001', kind:'trio', pair:['erubin', 'momosuke'], trio:null, any:true, keys:{ doing:'snack' }, lines:[
+    { who:'momosuke', e:'excited', t:'3人で食べると、おやつってなんでこんなにおいしいの！！' },
+    { who:'erubin', e:'happy', t:'にぎやかだからかな。みんなの顔を見てると、つい食べすぎちゃうね' },
+    { who:'momosuke', e:'wink', t:'じゃあ、もう1個ずつ食べよ！！ 3人分ね♡' },
+  ] },
+  { id:'life-trio-erubin-momosuke-any-002', kind:'trio', pair:['erubin', 'momosuke'], trio:null, any:true, keys:{ doing:'walk' }, lines:[
+    { who:'erubin', e:'normal', t:'みんなで歩くと、いつもより道が短く感じるね' },
+    { who:'momosuke', e:'excited', t:'わかる！！ おしゃべりしてたら、もう着いちゃった！！' },
+    { who:'erubin', e:'happy', t:'帰りは遠回りしようか。もう少し話していたいしね' },
+  ] },
+  { id:'life-trio-mua-sorashido-any-001', kind:'trio', pair:['mua', 'sorashido'], trio:null, any:true, keys:{ doing:'practice' }, lines:[
+    { who:'mua', e:'excited', t:'3人いると、拍手が3倍で気持ちいいぢゃん♪' },
+    { who:'sorashido', e:'happy', t:'計算だと3倍だが、うれしさは5倍くらいだな笑' },
+    { who:'mua', e:'wink', t:'数字はてきとうでいいのｗ もう1曲いこ！' },
+  ] },
+  { id:'life-trio-mua-sorashido-any-002', kind:'trio', pair:['mua', 'sorashido'], trio:null, any:true, keys:{ doing:'cards' }, lines:[
+    { who:'sorashido', e:'normal', t:'3人だと、総当たりで3試合できるな。表にしておくぞ笑' },
+    { who:'mua', e:'troubled', t:'表はいいから、早く始めよ〜ｗ' },
+    { who:'sorashido', e:'excited', t:'よし、1試合目は{c:mua}からだ！' },
+  ] },
+  { id:'life-trio-dra-erubin-any-001', kind:'trio', pair:['dra', 'erubin'], trio:null, any:true, keys:{ doing:'cards' }, lines:[
+    { who:'dra', e:'normal', t:'3人いるなら、おでは解説係をやるか' },
+    { who:'erubin', e:'happy', t:'{c:dra}の解説を聞きながら対戦すると、勉強になるんだよね' },
+    { who:'dra', e:'wink', t:'膝が痛くならないうちに、早く始めるぞ' },
+  ] },
+  { id:'life-trio-dra-erubin-any-002', kind:'trio', pair:['dra', 'erubin'], trio:null, any:true, keys:{ doing:'snack' }, lines:[
+    { who:'erubin', e:'happy', t:'みんなの分、おやつを3つに分けたよ' },
+    { who:'dra', e:'surprise', t:'おっ、きっちり同じ大きさだな。{c:erubin}は細かいなぁ' },
+    { who:'erubin', e:'wink', t:'分けるのは得意なんだ笑 さあ、食べようか' },
+  ] },
+  { id:'life-trio-atsu-mua-any-001', kind:'trio', pair:['atsu', 'mua'], trio:null, any:true, keys:{ doing:'practice' }, lines:[
+    { who:'atsu', e:'excited', t:'3人いるし、順番に一曲ずつ回そ笑' },
+    { who:'mua', e:'happy', t:'いいね！ あたし2番目ね♪' },
+    { who:'atsu', e:'wink', t:'じゃあ俺はトリ！ 盛り上げて待ってて笑' },
+  ] },
+  { id:'life-trio-atsu-mua-any-002', kind:'trio', pair:['atsu', 'mua'], trio:null, any:true, keys:{ doing:'walk' }, lines:[
+    { who:'mua', e:'excited', t:'3人で並んで歩くと、なんかチームっぽくない？' },
+    { who:'atsu', e:'happy', t:'それな！ 次のイベントもこのメンバーでいこ笑' },
+    { who:'mua', e:'wink', t:'決まりね！ 作戦はあとでみんなで考えよ♪' },
+  ] },
+  { id:'life-trio-dra-mua-any-003', kind:'trio', pair:['dra', 'mua'], trio:null, any:true, keys:{ doing:'snack' }, lines:[
+    { who:'mua', e:'happy', t:'みんなでおやつって、それだけで楽しいぢゃん♪' },
+    { who:'dra', e:'happy', t:'おでのせんべいも分けてやるぞ。膝にはやさしくないけどな' },
+    { who:'mua', e:'troubled', t:'せんべいと膝、関係あるの？ｗ' },
+  ] },
+  { id:'life-trio-dra-mua-any-004', kind:'trio', pair:['dra', 'mua'], trio:null, any:true, keys:{ doing:'training' }, lines:[
+    { who:'dra', e:'normal', t:'3人で育てると、マスモンも目移りしそうだな' },
+    { who:'mua', e:'happy', t:'モッチーはぜったい、あたしのとこに来るもん！' },
+    { who:'dra', e:'wink', t:'それはどうかな。おでのとこはおやつがあるからな' },
+  ] },
+  { id:'life-trio-atsu-sorashido-any-003', kind:'trio', pair:['atsu', 'sorashido'], trio:null, any:true, keys:{ doing:'practice' }, lines:[
+    { who:'sorashido', e:'excited', t:'3人の自己ベスト、並べたら全部2点差以内だったぜ・・・！' },
+    { who:'atsu', e:'surprise', t:'まじ！？ じゃあ今日で差がつくね笑' },
+    { who:'sorashido', e:'happy', t:'記録はちゃんと取るからな。全員本気で頼む笑' },
+  ] },
+  { id:'life-trio-atsu-sorashido-any-004', kind:'trio', pair:['atsu', 'sorashido'], trio:null, any:true, keys:{ doing:'cards' }, lines:[
+    { who:'atsu', e:'happy', t:'3人で勝ち抜き戦しよ！ 負けた人が次の審判ね笑' },
+    { who:'sorashido', e:'normal', t:'いいな。勝ち数の表は俺が作る' },
+    { who:'atsu', e:'wink', t:'審判しながら表作るの、忙しすぎでしょ笑' },
+  ] },
+  { id:'life-trio-momosuke-sorashido-any-001', kind:'trio', pair:['momosuke', 'sorashido'], trio:null, any:true, keys:{ doing:'practice' }, lines:[
+    { who:'momosuke', e:'excited', t:'3人で踊ったら、ステージみたいじゃない！？' },
+    { who:'sorashido', e:'happy', t:'たしかに。立ち位置、計算しておこうか笑' },
+    { who:'momosuke', e:'wink', t:'真ん中はもも！！ そこだけは決まってるの♡' },
+  ] },
+  { id:'life-trio-momosuke-sorashido-any-002', kind:'trio', pair:['momosuke', 'sorashido'], trio:null, any:true, keys:{ doing:'snack' }, lines:[
+    { who:'sorashido', e:'normal', t:'ちんすこう、3人分持ってきたぞ' },
+    { who:'momosuke', e:'excited', t:'やったー！！ {c:sorashido}のふるさとのやつ！！' },
+    { who:'sorashido', e:'happy', t:'みんなで食べると、いつもよりうまく感じるな笑' },
+  ] },
+  { id:'life-trio-kiki-sorashido-any-001', kind:'trio', pair:['kiki', 'sorashido'], trio:null, any:true, keys:{ doing:'training' }, lines:[
+    { who:'kiki', e:'normal', t:'3人で育成するなら、全員ちから全振りでいきましょう' },
+    { who:'sorashido', e:'surprise', t:'全員！？ 計算したら、守りがゼロになるぞ笑' },
+    { who:'kiki', e:'wink', t:'先に倒せば、ゼロでも困りませんよ♪' },
+  ] },
+  { id:'life-trio-kiki-sorashido-any-002', kind:'trio', pair:['kiki', 'sorashido'], trio:null, any:true, keys:{ doing:'cards' }, lines:[
+    { who:'sorashido', e:'excited', t:'3人分のデッキ、強さを表にして比べてみたぜ・・・！' },
+    { who:'kiki', e:'happy', t:'見せてください。…あれま、私のが一番とがってまつね' },
+    { who:'sorashido', e:'happy', t:'とがりすぎて、表の外にはみ出してるぞ笑' },
+  ] },
+  { id:'life-trio-atsu-kiki-any-005', kind:'trio', pair:['atsu', 'kiki'], trio:null, any:true, keys:{ doing:'training' }, lines:[
+    { who:'atsu', e:'happy', t:'3人で育成すると、それぞれ育て方ちがっておもしろいね笑' },
+    { who:'kiki', e:'normal', t:'私は攻撃、{c:atsu}は勢い、もう1人は…何でしょうね' },
+    { who:'atsu', e:'wink', t:'それ、あとで本人に聞こ笑' },
+  ] },
+  { id:'life-trio-atsu-kiki-any-006', kind:'trio', pair:['atsu', 'kiki'], trio:null, any:true, keys:{ doing:'practice' }, lines:[
+    { who:'kiki', e:'happy', t:'3人で叩くと、音が厚くなって楽しいでつ♪' },
+    { who:'atsu', e:'excited', t:'わかる！ {c:kiki}の音、一番強いけど笑' },
+    { who:'kiki', e:'wink', t:'力いっぱい、が私の取りえでつから' },
+  ] },
+  { id:'life-trio-erubin-sorashido-any-003', kind:'trio', pair:['erubin', 'sorashido'], trio:null, any:true, keys:{ doing:'cards' }, lines:[
+    { who:'sorashido', e:'normal', t:'3人いると、デュラハン対策の話がはかどるな' },
+    { who:'erubin', e:'happy', t:'うん。みんなの意見を聞くと、新しい組み方が見えてくるね' },
+    { who:'sorashido', e:'excited', t:'よし、今日の結論は表にまとめておくぜ・・・！' },
+  ] },
+  { id:'life-trio-erubin-sorashido-any-004', kind:'trio', pair:['erubin', 'sorashido'], trio:null, any:true, keys:{ doing:'walk' }, lines:[
+    { who:'erubin', e:'normal', t:'3人で散歩すると、{c:sorashido}は歩数を数えるのかな？' },
+    { who:'sorashido', e:'happy', t:'もちろんだ。3人分ちゃんと数えてるぞ笑' },
+    { who:'erubin', e:'wink', t:'それは大変そうだね笑 たまには景色も見ようね' },
+  ] },
+  { id:'life-trio-dra-kiki-any-005', kind:'trio', pair:['dra', 'kiki'], trio:null, any:true, keys:{ doing:'snack' }, lines:[
+    { who:'kiki', e:'happy', t:'みなさんの分も、お茶をいれましたよ' },
+    { who:'dra', e:'happy', t:'助かるな。おやつは、おでが3人分持ってきたぞ' },
+    { who:'kiki', e:'wink', t:'では、ゆっくり3人のお茶会にしましょう♪' },
+  ] },
+  { id:'life-trio-dra-kiki-any-006', kind:'trio', pair:['dra', 'kiki'], trio:null, any:true, keys:{ doing:'walk' }, lines:[
+    { who:'dra', e:'troubled', t:'3人で歩くと、おでがいつも最後になるな' },
+    { who:'kiki', e:'normal', t:'では、私たちが歩くのをゆっくりにしまつ' },
+    { who:'dra', e:'happy', t:'……そういうとこ、優しいよな' },
+  ] },
+  { id:'life-trio-kiki-momosuke-any-003', kind:'trio', pair:['kiki', 'momosuke'], trio:null, any:true, keys:{ doing:'snack' }, lines:[
+    { who:'momosuke', e:'excited', t:'ケーキ、3人分選んできた！！ どれがいい！？' },
+    { who:'kiki', e:'happy', t:'では、残ったものをいただきまつね♪' },
+    { who:'momosuke', e:'wink', t:'{c:kiki}、いつも最後に選ぶよね！！ 優しいんだから♡' },
+  ] },
+  { id:'life-trio-kiki-momosuke-any-004', kind:'trio', pair:['kiki', 'momosuke'], trio:null, any:true, keys:{ doing:'practice' }, lines:[
+    { who:'kiki', e:'normal', t:'3人で練習すると、{c:momosuke}が一番楽しそうですね' },
+    { who:'momosuke', e:'excited', t:'だって、見てくれる人が2人もいるんだもん！！' },
+    { who:'kiki', e:'happy', t:'では、二人でしっかり見てまつね♪' },
+  ] },
+  { id:'life-trio-momosuke-mua-any-003', kind:'trio', pair:['momosuke', 'mua'], trio:null, any:true, keys:{ doing:'practice' }, lines:[
+    { who:'mua', e:'excited', t:'3人そろったし、おそろいポーズ撮ろ！' },
+    { who:'momosuke', e:'happy', t:'いいね！！ もう1人にもポーズ教えてあげよ！！' },
+    { who:'mua', e:'wink', t:'せーので決めるよ！ はい、チーズ♪' },
+  ] },
+  { id:'life-trio-momosuke-mua-any-004', kind:'trio', pair:['momosuke', 'mua'], trio:null, any:true, keys:{ doing:'walk' }, lines:[
+    { who:'momosuke', e:'excited', t:'3人で歩いてたら、みんなに見られてる気がする！！' },
+    { who:'mua', e:'happy', t:'あたしたち、目立つもんねｗ' },
+    { who:'momosuke', e:'wink', t:'もっと目立っちゃお！！' },
+  ] },
+  { id:'life-trio-kyuko-mua-any-001', kind:'trio', pair:['kyuko', 'mua'], trio:null, any:true, keys:{ doing:'cards' }, lines:[
+    { who:'kyuko', e:'normal', t:'3人で作戦会議すると、意見が3つ出ていいねぇ' },
+    { who:'mua', e:'happy', t:'あたしのは「なんかいい」だけどね！ｗ' },
+    { who:'kyuko', e:'happy', t:'それがいちばん当たるんだよぉ笑' },
+  ] },
+  { id:'life-trio-kyuko-mua-any-002', kind:'trio', pair:['kyuko', 'mua'], trio:null, any:true, keys:{ doing:'snack' }, lines:[
+    { who:'mua', e:'excited', t:'3人でおやつ、どれから食べる？' },
+    { who:'kyuko', e:'wink', t:'好きなのは最後に取っておく派だよぉ' },
+    { who:'mua', e:'surprise', t:'え、あたし最初に食べる派！ もう1人はどっちかな？ｗ' },
+  ] },
+  { id:'life-trio-atsu-kyuko-any-007', kind:'trio', pair:['atsu', 'kyuko'], trio:null, any:true, keys:{ doing:'training' }, lines:[
+    { who:'atsu', e:'excited', t:'3人のマスモン、並べてランキングつけよ笑' },
+    { who:'kyuko', e:'troubled', t:'えぇ、それ絶対もめるやつだよぉ' },
+    { who:'atsu', e:'wink', t:'じゃあ全員1位ってことで笑' },
+  ] },
+  { id:'life-trio-atsu-kyuko-any-008', kind:'trio', pair:['atsu', 'kyuko'], trio:null, any:true, keys:{ doing:'cards' }, lines:[
+    { who:'kyuko', e:'normal', t:'3人だと、いろんな組み合わせで試せるねぇ' },
+    { who:'atsu', e:'happy', t:'いいね！ 俺は全部攻めで出るから笑' },
+    { who:'kyuko', e:'wink', t:'ほい！ じゃあ守りは、もう1人に任せよっか笑' },
+  ] },
 ]);
 // ===== ASSISTANT_LIFE_TALKS ここまで =====
