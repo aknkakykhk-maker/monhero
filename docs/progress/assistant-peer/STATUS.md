@@ -230,3 +230,12 @@
 - 段階2(一歩目)は枝 claude/assistant-life-stage2-step1(未公開)。止め絵 shots/stage2/・文案 LIFE-STAGE2-RELEASE.md を窓口へ送った。窓口の「この文で」待ち
 - 🔄横(rotation-height-check #4874 の助手部3件): 仲良し度のシート・おしゃべり・助手たちの今のアルバムに、回したとき用の上限(vw)を足した。回した器の中で 331/343px(回した画面 390px に収まる)
 - ミハリの小さい残り2件: 横の部屋の吹き出しが切れる → 狭い部屋は「💭 さみしいな…」(1行・名札に重ならない)/夕方に「朝の散歩で」→ 台本に言える時間帯(`assistantLifeTalkTods`: 朝の・寝る前・夕方にな・昼寝)。検査 assistant-life-check ⑧・browser ⑫
+
+## キズナ(2026-11-08〜・人間らしい出来事/育つ・相談・マスモンの案)
+
+- 枝 `claude/assistant-life-rel`(未公開)。窓口の「この文で」待ち。文案 `REL-RELEASE.md`・止め絵 `shots/rel-*.png`
+- 仕組み `56-assistant-life-rel.jsx`(新しい部品)。台本 396本は `tools/assistant/life-rel-talks-import.js` が kotoba-house.txt・tsumugi-house.txt から書く(fight・mend・mend3・jealous・secret・consult・tease・rival・awkward。trio・quad・home・rhythm・owl はナカヨシ7の取り込み)
+- 差し込み口(typeof で呼ぶだけ): 56-assistant-life.jsx(仲直りの形・2日はけんかしない・2人/3人の出来事・アルバム・朝4時の自分たちの仲直り)/56-assistant-peer.jsx(仲直りのあと・差し入れで仲直り・HOME でも2日はけんかしない)/56-assistant-life-house.jsx(扉・居間・シートの1行と「🤝 取り持つ」)/data/assistants.js(友情Lv の行動 mediate +3)
+- 検査: `life-rel-check.js`(決まり)・`life-rel-browser-check.js`(縦・横・🔄横 × 朝昼夕夜。文字の切れ・名前の折れ・重なり・話し手・寝ている/出かけている・色の差)
+- 間に入るの台本は28組のうち21組(残り7組は謝る・けんか自身の仲直りに戻る)。足すならツムギへ7本
+- 育つ・相談・マスモンの案: `GROW-PLAN.md`・見本 `ux/grow-mock.png`(社長に選んでもらう ❶〜❺)

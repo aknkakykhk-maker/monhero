@@ -437,7 +437,9 @@ const assistantPeerUseItem = async (kind, pair) => {
   // 助手たちの今: もらった2人はしばらくごきげんで、一緒に過ごしやすい
   if (typeof assistantLifeNote === 'function') void assistantLifeNote('gift', { pair: assistantPeerPairKey(pair[0], pair[1]) });
   if (typeof assistantLifeAddPlay === 'function') void assistantLifeAddPlay('peer');
-  return assistantPeerReactionTalk(kind, pair);
+  // けんか中の2人に差し入れ → その場で仲直り(56-assistant-life-rel.jsx)
+  const mend = typeof assistantLifeRelOnGift === 'function' ? await assistantLifeRelOnGift(kind, pair) : null;
+  return mend || assistantPeerReactionTalk(kind, pair);
 };
 // 遊びに連れていくペアを決める(null でやめる)
 const assistantPeerSetPlayPair = (pair) => {
@@ -518,7 +520,7 @@ const assistantPeerPickTalk = (st, { scene, metIds, selectedId, now = Date.now()
     if (lifeOn && (t.similar || t.kind === 'quarrel')) return false;
     if (t.kind === 'trio') return pairLvs(t).every(lv => lv >= trioLv);
     if (t.kind === 'makeup') return false;
-    if (t.kind === 'quarrel') { const lv = lvOf(t); return isHome && lv >= qLv.min && lv <= qLv.max && !quarrel.pending && !quarrel.done.includes(t.id); }
+    if (t.kind === 'quarrel') { const lv = lvOf(t); return isHome && lv >= qLv.min && lv <= qLv.max && !quarrel.pending && !quarrel.done.includes(t.id) && !(typeof assistantLifeRelCooling === 'function' && assistantLifeRelCooling(assistantPeerPairKey(t.pair[0], t.pair[1]))); }
     return lvOf(t) >= (t.lv || 1);
   };
   const cand = [...all, ...extra.events.filter(ok), ...extra.quarrels.filter(ok), ...extra.trios.filter(ok)];
@@ -597,6 +599,7 @@ const assistantPeerMakeupDone = (talk) => {
   ASSISTANT_PEER_STORE.set({ quarrel });
   try { storeSet(ASSISTANT_PEER_QUARREL_KEY, quarrel, false); } catch {}
   if (typeof assistantLifeNote === 'function' && Array.isArray(talk.pair)) void assistantLifeNote('makeup', { pair: assistantPeerPairKey(talk.pair[0], talk.pair[1]) });
+  if (typeof assistantLifeRelOnMakeup === 'function') { try { assistantLifeRelOnMakeup(talk); } catch {} } // 仲直りの記録・間に入った助手(56-assistant-life-rel.jsx)
   return true;
 };
 // 台本の {c} を、話している助手が相手を呼ぶ呼び方へ置きかえる(呼び方は仲良し度では変えない・2026-11-07 社長)

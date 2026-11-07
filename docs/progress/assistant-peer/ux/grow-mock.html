@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<title>助手が育つ・相談・マスモン 見本</title>
+<style>
+:root{--bg:#0b1020;--card:#1e1b4b;--ink:#f8fafc;--sub:#cbd5e1}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f172a;font-family:"Hiragino Maru Gothic ProN","M PLUS Rounded 1c","Noto Sans JP",sans-serif;color:var(--ink);padding:18px;width:1290px}
+h1{font-size:22px;font-weight:900;margin-bottom:4px}
+.lead{font-size:13px;color:var(--sub);margin-bottom:14px}
+.row{display:flex;gap:18px;align-items:flex-start}
+.ph{width:390px;height:780px;border-radius:26px;overflow:hidden;position:relative;background:linear-gradient(#1e1b4b,#0b1020 60%);border:3px solid #334155;flex:none}
+.cap{width:390px;margin-top:8px;font-size:12.5px;line-height:1.5;color:#e2e8f0}
+.cap b{color:#fde68a}
+.top{padding:14px 16px 6px}
+.en{font-size:10px;letter-spacing:.2em;color:#f9a8d4;font-weight:900}
+.t{font-size:20px;font-weight:900}
+.room{margin:6px 14px;height:150px;border-radius:6px;position:relative;overflow:hidden;background:linear-gradient(#fbcfe8,#f9a8d4)}
+.room .fl{position:absolute;left:0;right:0;bottom:0;height:16px;background:repeating-linear-gradient(90deg,#b07a4a 0 22px,#9a6a3e 22px 24px)}
+.room .pl{position:absolute;left:8px;top:8px;font-size:12px;font-weight:900;padding:0 8px;border-radius:7px;background:#fffbeb;color:#422006;border:1px solid #d6b37a}
+.shelf{position:absolute;left:10px;top:52px;width:150px;height:62px;border-radius:4px;background:linear-gradient(#92400e,#78350f);box-shadow:inset 0 -6px 0 #451a03;display:flex;gap:6px;align-items:flex-end;padding:0 8px 8px;font-size:22px}
+.shelf small{position:absolute;left:6px;top:-15px;font-size:9.5px;font-weight:900;color:#422006;background:#fef3c7;border-radius:5px;padding:0 5px;border:1px solid #b45309}
+.face{width:58px;height:58px;border-radius:50%;overflow:hidden;border:3px solid #fff;box-shadow:0 2px 8px #0008;background:#fff;position:absolute}
+.face img{width:190%;margin-left:-45%;margin-top:-6%}
+.q{position:absolute;right:16px;top:12px;width:30px;height:30px;border-radius:50%;background:#facc15;color:#422006;font-weight:900;display:grid;place-items:center;font-size:18px;box-shadow:0 0 0 3px #fff,0 0 14px #facc15;animation:none}
+.sheet{position:absolute;left:0;right:0;bottom:0;border-radius:22px 22px 0 0;background:#1e1b4b;border-top:2px solid #f9a8d4;padding:14px 16px 18px}
+.bubble{background:#fff;color:#1e293b;border-radius:14px;padding:10px 12px;font-size:13.5px;font-weight:800;line-height:1.5;position:relative;margin-left:70px}
+.bubble:before{content:"";position:absolute;left:-8px;top:16px;border:8px solid transparent;border-right-color:#fff;border-left:0}
+.ch{display:block;width:100%;margin-top:8px;border-radius:14px;padding:10px 12px;font-size:13px;font-weight:900;text-align:left;border:0;color:#fff}
+.ch small{display:block;font-size:10.5px;font-weight:700;opacity:.92;margin-top:2px}
+.c1{background:linear-gradient(90deg,#f472b6,#fb923c)}.c2{background:linear-gradient(90deg,#38bdf8,#6366f1)}.c3{background:linear-gradient(90deg,#34d399,#059669)}
+.meter{display:flex;justify-content:space-between;font-size:11.5px;font-weight:900;padding:6px 0;border-bottom:1px dashed #475569}
+.meter b{color:#fde68a}
+.note{font-size:11px;color:#94a3b8;margin-top:8px;line-height:1.5}
+.diary{margin:8px 14px;border-radius:8px;background:#fef3c7;color:#422006;padding:8px 10px;font-size:12px;font-weight:800;line-height:1.6;border:2px solid #92400e}
+.diary p:before{content:"📌 ";}
+.vs{margin:8px 14px;border-radius:14px;background:linear-gradient(135deg,#7c3aed,#db2777);padding:10px 12px}
+.vs p{font-size:12px;font-weight:900}
+.vs .dn{font-size:16px;margin-top:2px}
+.vs .tag{display:inline-block;margin-top:6px;font-size:10.5px;background:#0006;border-radius:8px;padding:2px 8px}
+.garden{margin:6px 14px;height:220px;border-radius:8px;position:relative;overflow:hidden;background:url(../../../../monster-hero/images/story-bg/forest_morning.jpg) center/cover}
+.garden .mon{position:absolute;bottom:6px;left:150px;height:120px}
+.garden .lab{position:absolute;left:8px;top:8px;font-size:11px;font-weight:900;background:#fffbeb;color:#422006;border-radius:7px;padding:1px 8px;border:1px solid #d6b37a}
+.garden .bb{position:absolute;left:58px;top:58px;background:#fff;color:#1e293b;font-size:12px;font-weight:900;border-radius:10px;padding:3px 8px;box-shadow:0 2px 5px #0007}
+.inv{position:absolute;left:12px;right:12px;bottom:14px;border-radius:18px;background:#1e1b4b;border:2px solid #fde68a;padding:12px 14px}
+.inv .h{font-size:11px;font-weight:900;color:#fde68a;letter-spacing:.1em}
+.inv .b{display:flex;gap:8px;margin-top:10px}
+.inv .b span{flex:1;text-align:center;border-radius:12px;padding:9px 0;font-weight:900;font-size:13px}
+.ab{display:inline-block;font-size:10px;font-weight:900;border-radius:6px;padding:0 6px;margin-left:4px;background:#f472b6;color:#fff;vertical-align:1px}
+.ab.ab2{background:#64748b}
+</style></head>
+<body>
+<h1>助手が育つ・相談してくる・自分のマスモン(案の見本)</h1>
+<p class="lead">見本の絵です(まだ作っていません)。<span class="ab">A</span>はおすすめ、<span class="ab ab2">B</span>は選べるもう一つの形。プレイヤーのスコア・ランキング・セーブ・マスモンには効きません。</p>
+<div class="row">
+  <div>
+    <div class="ph">
+      <div class="top"><p class="en">ROOM · MOMOSUKE</p><p class="t">ももすけの部屋</p></div>
+      <div class="room"><span class="pl">ももすけ</span>
+        <div class="shelf"><small>🏆 たな</small>🏆🎧📀</div>
+        <div class="face" style="right:60px;bottom:18px"><img src="../../../../monster-hero/images/assistant/momosuke_troubled.PNG" alt=""></div>
+        <span class="q">？</span><div class="fl"></div></div>
+      <div class="sheet" style="top:250px">
+        <p style="font-size:11px;font-weight:900;color:#facc15">❓ ももすけが相談してきた(1日1回)</p>
+        <div style="position:relative;margin-top:8px">
+          <div class="face" style="left:0;top:0;width:56px;height:56px"><img src="../../../../monster-hero/images/assistant/momosuke_troubled.PNG" alt=""></div>
+          <p class="bubble">テストっち、この曲のサビ、どうしても指がもつれるの！！ どうしたらいい？</p>
+        </div>
+        <button class="ch c1">「指を交互にして、リズムで覚えよう」<small>→ 正確さが伸びる(🎯 ひたすら合わせる練習)</small></button>
+        <button class="ch c2">「まず速さに慣れよう。速い曲から！」<small>→ 速い曲が得意になる(⚡ HELL の練習)</small></button>
+        <button class="ch c3">「今日は休んで、明日またやろう」<small>→ 仲良し度が上がる(ゆっくり伸びる)</small></button>
+        <div class="meter" style="margin-top:10px"><span>🎵 ビートの腕前 <span class="ab">A</span></span><b>★★★☆☆ 正確さタイプ</b></div>
+        <p class="note">答えで「育ち方の向き」が変わり、部屋の棚・掛け合い・セッションで見せる腕前が変わります。<span class="ab ab2">B</span>は答えても向きは変わらず、仲良し度だけ</p>
+      </div>
+    </div>
+    <p class="cap"><b>① 相談してくる</b>: 部屋に「？」が出たら相談。ビート(曲の叩き方)・カード(デッキの組み方)・マスモン(編成)の3種類。答えで育ち方の向きが変わる</p>
+  </div>
+  <div>
+    <div class="ph">
+      <div class="top"><p class="en">ROOM · SORASHIDO</p><p class="t">ソラシドの部屋</p></div>
+      <div class="room" style="background:linear-gradient(#bfdbfe,#93c5fd)"><span class="pl">ソラシド</span>
+        <div class="shelf"><small>🃏 デッキ箱</small>🗃️🃏🏅</div>
+        <div class="face" style="right:40px;bottom:18px"><img src="../../../../monster-hero/images/assistant/sorashido_happy.PNG" alt=""></div><div class="fl"></div></div>
+      <div class="diary"><p>ソラシドが、守りの固いデッキに組みかえた</p><p>ももすけが練習で、はじめて HELL を最後まで叩けた</p><p>ききとももすけが、ビートで勝負(ききの勝ち)</p></div>
+      <div class="vs"><p>MFバトルカード ・ 対戦の相手</p><p class="dn">ソラシド「鉄壁ガーディアン」</p><span class="tag">きのう組みかえた ・ 強さの段はそのまま <span class="ab">A</span></span></div>
+      <div style="margin:10px 14px">
+        <div class="meter"><span>🎵 ビートの腕前</span><b>★★☆☆☆ → ★★★☆☆</b></div>
+        <div class="meter"><span>🃏 デッキ</span><b>攻め ▮▮▯▯▮▮ 守り</b></div>
+        <div class="meter"><span>🐾 マスモン</span><b>ドラゴン Lv.12</b></div>
+      </div>
+      <p class="note" style="margin:0 14px">育つのは日々の過ごし方(練習・カード研究に行った回数)と相談の答え。<span class="ab">A</span> 対戦で出てくるデッキの中身も変わる/<span class="ab ab2">B</span> デッキの名前と見た目だけ</p>
+    </div>
+    <p class="cap"><b>② 育った姿が見える</b>: 部屋の棚(トロフィー・デッキ箱)・掲示板・カード対戦の相手のデッキ名。数字は★で見せる</p>
+  </div>
+  <div>
+    <div class="ph">
+      <div class="top"><p class="en">GARDEN · ERUBIN</p><p class="t">中庭</p></div>
+      <div class="garden"><span class="lab">🌳 中庭</span>
+        <div class="face" style="left:20px;bottom:30px"><img src="../../../../monster-hero/images/assistant/erubin_happy.PNG" alt=""></div>
+        <span class="bb">よーし、取ってこーい！</span>
+        <img class="mon" src="../../../../monster-hero/images/monsters/centaur.png" alt=""></div>
+      <div style="margin:10px 14px">
+        <div class="meter"><span>🐾 えるびんのマスモン <span class="ab">A</span></span><b>ケンタウロス Lv.18</b></div>
+        <div class="meter"><span>🔁 再生</span><b>次の再生で入れかわる(助手の中だけ)</b></div>
+      </div>
+      <div class="inv">
+        <p class="h">✉ えるびんからのおさそい</p>
+        <p style="font-size:13.5px;font-weight:800;margin-top:4px;line-height:1.5">テストさん、今日いっしょに神殿に行かない？ ケンタウロスも、行きたがってるんだ</p>
+        <div class="b"><span style="background:linear-gradient(90deg,#fbbf24,#f97316);color:#422006">⛩ 一緒に行く</span><span style="background:#334155">また今度</span></div>
+        <p class="note" style="margin-top:8px"><span class="ab">A</span> 神殿のバトルで横から応援(見た目とひとこと・数字は変えない)/<span class="ab ab2">B</span> えるびんのマスモンが一緒に戦う(バトル部の調整が要る)</p>
+      </div>
+    </div>
+    <p class="cap"><b>③ 助手のマスモン</b>: 助手ごとに1体。ときどき中庭や部屋で遊んでいる。編成の相談・「一緒に神殿に行こう」のおさそい</p>
+  </div>
+</div>
+</body></html>

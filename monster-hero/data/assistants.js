@@ -13028,6 +13028,8 @@ const ASSISTANT_PEER_BOND_ACTIONS = Object.freeze({
   // ③ ミニイベント(1日5まで)・仲直り(1回の仲直りにつき1回・1日20の上限の外)(2026-11-07 社長)
   event:  { amount:5, dailyMax:5, label:'2人のミニイベントを見た' },
   makeup: { amount:5, dailyMax:5, label:'けんかのあと仲直りした', uncapped:true },
+  // 助手ライフ: けんかの間に入った助手と、けんかした2人それぞれ(2026-11-08 社長の決まり「間に入る+3」・助手部キズナ)
+  mediate: { amount:3, dailyMax:6, label:'けんかの間に入った' },
 });
 const ASSISTANT_PEER_BOND_DAILY_MAX = 20;
 // 思い出アルバムのツーショット写真(段ごとに1枚。2人の立ち絵を並べて作る)。e … 左・右の表情
