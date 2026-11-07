@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3abbef71aa7d50c7
+// source-sha256: 954073239d7c7015
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -34272,7 +34272,7 @@ const RhythmOptions = ({
       "data-rhythm-option-nudge": `${key}${sign(amount)}`,
       disabled: amount < 0 ? value <= min : value >= max,
       onClick: () => nudge(amount),
-      className: `${wide ? 'min-h-[38px]' : 'min-h-[46px]'} rounded-xl border ${dim ? 'border-white/25 bg-slate-300 text-slate-900' : 'border-white/40 bg-slate-100 text-slate-900'} px-0.5 text-[11px] font-black tabular-nums shadow-[0_2px_0_rgba(2,6,23,.55)] active:translate-y-[1px] active:shadow-none disabled:opacity-35`
+      className: `${wide ? 'min-h-[38px]' : 'min-h-[46px]'} rounded-xl border ${dim ? 'border-white/25 bg-slate-300 text-slate-900' : 'border-white/40 bg-slate-100 text-slate-900'} min-w-0 whitespace-nowrap px-0.5 text-[11px] font-black tabular-nums tracking-tight shadow-[0_2px_0_rgba(2,6,23,.55)] active:translate-y-[1px] active:shadow-none disabled:opacity-35`
     }, sign(amount));
     return React.createElement("div", {
       "data-rhythm-option-stepper": key,
@@ -34354,10 +34354,11 @@ const RhythmOptions = ({
     className: `border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide ? 'min-h-[38px]' : 'min-h-[44px]'} ${hellDraft[name] === id ? 'bg-cyan-600 text-white' : 'bg-slate-900 text-slate-300'}`
   }, text)));
   const field = (title, control, description = null, {
-    full = false
+    full = false,
+    wideFull = false
   } = {}) => React.createElement("div", {
     "data-rhythm-option-field": true,
-    className: `${full && !wide ? 'col-span-2' : ''} rounded-xl border border-cyan-400/20 bg-slate-950/55 ${wide ? 'p-1.5' : 'p-2.5'}`
+    className: `${full && !wide ? 'col-span-2' : ''}${wideFull && wide ? 'col-span-3' : ''} rounded-xl border border-cyan-400/20 bg-slate-950/55 ${wide ? 'p-1.5' : 'p-2.5'}`
   }, React.createElement("p", {
     className: `rounded-lg bg-cyan-700/70 px-2 text-center ${label} ${wide ? 'mb-1 py-0.5 text-[11px]' : 'mb-2 py-1'}`,
     style: JA_WRAP_STYLE
@@ -34370,7 +34371,7 @@ const RhythmOptions = ({
     className: `mt-1 ${note}`,
     style: JA_WRAP_STYLE
   }, typeof description === 'string' ? jaWrap(description) : description)));
-  const grid = `grid gap-2.5 ${wide ? 'grid-cols-3 gap-2' : 'grid-cols-2'}`;
+  const grid = `grid gap-2.5 ${wide ? 'grid-cols-3 items-start gap-2' : 'grid-cols-2'}`;
   const [fxGroup, setFxGroup] = useState(null);
   const fxGroupNow = fxGroup || 'stage';
   const fxGroupShown = id => !wide || fxGroupNow === id;
@@ -34379,7 +34380,7 @@ const RhythmOptions = ({
     const n = rhythmFxChangedCount(draft, RHYTHM_FX_ITEMS.filter(item => item.group === id).map(item => item.key));
     return n ? `${n}つ変更` : 'おまかせ';
   };
-  const fxGrid = `grid gap-2.5 ${wide ? 'grid-cols-2 gap-2' : 'grid-cols-2'}`;
+  const fxGrid = `grid gap-2.5 ${wide ? 'grid-cols-2 items-start gap-2' : 'grid-cols-2'}`;
   const FX_WEIGHT = {
     l: ['軽', 'bg-emerald-500/25 text-emerald-200'],
     m: ['中', 'bg-amber-500/25 text-amber-200'],
@@ -34575,6 +34576,9 @@ const RhythmOptions = ({
     const pct = v => `${(Math.max(0, Math.min(1, v)) * 100).toFixed(2)}%`;
     return React.createElement("div", {
       "data-rhythm-line-position": true,
+      className: wide ? 'grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-start gap-3' : 'space-y-2'
+    }, React.createElement("div", {
+      "data-rhythm-line-position-side": true,
       className: "space-y-2"
     }, React.createElement("div", {
       "data-rhythm-line-preview": true,
@@ -34642,7 +34646,10 @@ const RhythmOptions = ({
       "data-rhythm-line-adjust-open": true,
       onClick: goLineAdjust,
       className: "min-h-[46px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-[12px] font-black text-cyan-100"
-    }, "🎯 実際の画面で合わせる"), stepper('judgmentLineHeight', RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, {
+    }, "🎯 実際の画面で合わせる")), React.createElement("div", {
+      "data-rhythm-line-position-steppers": true,
+      className: wide ? 'grid grid-cols-2 gap-x-3 gap-y-2' : 'space-y-2'
+    }, stepper('judgmentLineHeight', RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, {
       fine: RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,
       coarse: RHYTHM_JUDGMENT_LINE_HEIGHT_STEP * 4,
       suffix: '%',
@@ -34693,9 +34700,10 @@ const RhythmOptions = ({
         skyTop: rhythmNormalizeSkyAcceptTop(v)
       })),
       slider: true
-    }));
+    })));
   })(), 'タップする判定ラインを、画面の下から何％の高さに置くかです。大きくするほど上へ上がり、指が届きやすくなります（12％が2026-09-13より前の位置です）。ノーツも弾ける光も判定文字も一緒に上がります。判定の幅（秒数）・スコア・譜面は変わりません。ただしレーンは奥へ行くほど狭くなるので、上げすぎると横の幅が狭く感じられます。' + (hellReleased ? '\n空中の判定ライン(HELL)は、地上の判定ラインからの高さを上下にずらします。空中の線・空中のノーツ・空中を受け付ける範囲が一緒に動きます(地上を受け付ける範囲は変わりません)。上へずらしすぎると、空中を受け付ける範囲が地上の範囲に届いたところで止まります。空中を受け付けるのは、空中の線から上へ一定の幅(画面の高さの20%×「上の端」の値)までです。それより上を押しても空中のノーツは取れません。「実際の画面で合わせる」を押すと、演奏画面に切り替わり、本番と同じ大きさのレーン・判定ライン・受け付ける範囲を見ながら、時間を気にせず合わせられます(合わせているあいだはノーツは流れません)。「保存して試す」で保存すると、ノーツがくり返し流れる画面になり、ふつうに叩いて試せます。右上の「位置を直す」でまた合わせ直せて、「終わる」でこの画面へ戻ります。「受け付ける範囲の広さ」は、地上と空中の境目の側だけを狭めます(空中は線より下へのはみ出し、地上は線より上へのはみ出し。100%が今の広さで、50%まで)。狭めると、境目のあたりを押したときにもう一方のノーツを取り違えにくくなりますが、線から離れた所を押すと空振りになります。地上の判定ラインを動かすと、空中の線も一緒に動きます。押す時刻(判定の幅)とスコアは変わりません。' : ''), {
-    full: true
+    full: true,
+    wideFull: true
   }), field('ノーツの出る位置', stepper('noteStartPosition', -100, 100, 5, {
     fine: 5,
     coarse: 25
