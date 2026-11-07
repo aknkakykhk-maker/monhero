@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b053d7cef72440da
+// source-sha256: ac6aa07902c6a597
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99806,7 +99806,8 @@ const assistantPeerUseItem = async (kind, pair) => {
     pair: assistantPeerPairKey(pair[0], pair[1])
   });
   if (typeof assistantLifeAddPlay === 'function') void assistantLifeAddPlay('peer');
-  return assistantPeerReactionTalk(kind, pair);
+  const mend = typeof assistantLifeRelOnGift === 'function' ? await assistantLifeRelOnGift(kind, pair) : null;
+  return mend || assistantPeerReactionTalk(kind, pair);
 };
 const assistantPeerSetPlayPair = pair => {
   const play = {
@@ -99924,7 +99925,7 @@ const assistantPeerPickTalk = (st, {
     if (t.kind === 'makeup') return false;
     if (t.kind === 'quarrel') {
       const lv = lvOf(t);
-      return isHome && lv >= qLv.min && lv <= qLv.max && !quarrel.pending && !quarrel.done.includes(t.id);
+      return isHome && lv >= qLv.min && lv <= qLv.max && !quarrel.pending && !quarrel.done.includes(t.id) && !(typeof assistantLifeRelCooling === 'function' && assistantLifeRelCooling(assistantPeerPairKey(t.pair[0], t.pair[1])));
     }
     return lvOf(t) >= (t.lv || 1);
   };
@@ -100047,6 +100048,11 @@ const assistantPeerMakeupDone = talk => {
   if (typeof assistantLifeNote === 'function' && Array.isArray(talk.pair)) void assistantLifeNote('makeup', {
     pair: assistantPeerPairKey(talk.pair[0], talk.pair[1])
   });
+  if (typeof assistantLifeRelOnMakeup === 'function') {
+    try {
+      assistantLifeRelOnMakeup(talk);
+    } catch {}
+  }
   return true;
 };
 const assistantPeerLineText = (line, talk) => {
@@ -102230,6 +102236,11 @@ const assistantLifeNow = async ({
       assistantLifeDiaryOnSlot(life, slot, now);
     } catch {}
   }
+  if (typeof assistantLifeRelTick === 'function') {
+    try {
+      void assistantLifeRelTick(now);
+    } catch {}
+  }
   return life;
 };
 const assistantLifeNote = async (kind, {
@@ -102462,10 +102473,10 @@ const assistantLifeTalkSet = () => {
   assistantLifeTalkCache = out;
   return out;
 };
-const assistantLifeQuarrelTalks = () => assistantLifeTalkSet().quarrel;
+const assistantLifeQuarrelTalks = () => [...assistantLifeTalkSet().quarrel, ...(typeof assistantLifeRelQuarrelTalks === 'function' ? assistantLifeRelQuarrelTalks() : [])];
 const assistantLifeAlbumTalks = () => {
   const x = assistantLifeTalkSet();
-  return [...x.pair, ...x.anyTrio, ...x.trio];
+  return [...x.pair, ...x.anyTrio, ...x.trio, ...(typeof assistantLifeRelAlbumTalks === 'function' ? assistantLifeRelAlbumTalks() : [])];
 };
 const assistantLifeFillHoles = (text, talk) => {
   const c = talk && talk.ctx || {};
@@ -102539,15 +102550,23 @@ const assistantLifePickPairTalk = (pair, group, peerSt, life, seen, rand = Math.
     done: []
   };
   if (q.pending && q.pending.pair === key) {
+    const rm = typeof assistantLifeRelPickMend === 'function' ? assistantLifeRelPickMend({
+      ...q.pending,
+      ids: [a, b]
+    }, group, peerSt, seen, rand) : null;
+    if (rm) return assistantLifeWithCtx(rm, ctx);
     const mk = quarrels.find(t => t.kind === 'makeup' && t.quarrelId === q.pending.id);
     if (mk) return assistantLifeWithCtx(mk, ctx);
   }
   const moods = life && life.moods || {};
   const grumpy = [a, b].some(id => moods[id] === 'sulky' || moods[id] === 'restless');
-  if (!q.pending && lv >= 2 && rand() < (grumpy ? 0.3 : 0.05)) {
+  const cooling = typeof assistantLifeRelCooling === 'function' && assistantLifeRelCooling(key);
+  if (!q.pending && !cooling && lv >= 2 && rand() < (grumpy ? 0.3 : 0.05)) {
     const qs = quarrels.filter(t => t.kind === 'quarrel' && assistantLifePairKey(t.pair[0], t.pair[1]) === key && !(seen && seen[t.id]));
     if (qs.length) return assistantLifeWithCtx(qs[Math.floor(rand() * qs.length)], ctx);
   }
+  const rp = typeof assistantLifeRelPickPair === 'function' ? assistantLifeRelPickPair([a, b], group, peerSt, life, seen, rand) : null;
+  if (rp) return assistantLifeWithCtx(rp, ctx);
   const band = assistantLifeLvBand(lv);
   const air = assistantLifeAirOf(life, a, b);
   const okBand = x => x == null || (ASSISTANT_LIFE_BAND_RANK[x] ?? 0) <= ASSISTANT_LIFE_BAND_RANK[band];
@@ -102575,6 +102594,11 @@ const assistantLifePickGroupTalk = (group, peerSt, life = ASSISTANT_LIFE_STORE.s
     doing: group.doing
   };
   if (ids.length === 2) return assistantLifePickPairTalk(ids, group, peerSt, life, seen, rand);
+  const rg = typeof assistantLifeRelPickGroup === 'function' ? assistantLifeRelPickGroup(group, peerSt, life, seen, rand) : null;
+  if (rg) return assistantLifeWithCtx(rg.trio ? rg : {
+    ...rg,
+    trio: [...ids]
+  }, ctx);
   const trioLv = typeof ASSISTANT_PEER_TRIO_LV !== 'undefined' ? ASSISTANT_PEER_TRIO_LV : 2;
   const pairsOk = m => {
     for (let i = 0; i < m.length; i++) for (let j = i + 1; j < m.length; j++) if (assistantLifeLevelOf(peerSt, m[i], m[j]) < trioLv) return false;
@@ -103632,6 +103656,12 @@ const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({
   hill: '🌄',
   garden: '🌷'
 });
+const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({
+  studio: 'モンヒロビート',
+  cardroom: 'MFバトルカード',
+  ranch: 'M/B管理'
+});
+const assistantLifePlaceShow = place => ASSISTANT_LIFE_PLACE_SHOW[place] || ASSISTANT_LIFE_PLACES[place] || '';
 const assistantLifeFacilityOf = entry => {
   if (!entry) return 'life';
   if (entry.doing === 'practice') return 'rhythm';
@@ -104601,10 +104631,15 @@ const assistantLifePickSleepTalk = (id, {
 };
 const assistantLifeOnlyPresent = (talk, ids) => {
   if (!talk || !Array.isArray(talk.lines)) return talk;
-  if (talk.lines.every(l => ids.includes(l.who))) return talk;
+  const pair = Array.isArray(talk.pair) && talk.pair.some(x => !ids.includes(x)) ? talk.pair.filter(x => ids.includes(x)) : talk.pair;
+  const narrowed = pair !== talk.pair ? {
+    ...talk,
+    pair: pair.length ? pair : [...ids]
+  } : talk;
+  if (talk.lines.every(l => ids.includes(l.who))) return narrowed;
   const lines = talk.lines.filter(l => ids.includes(l.who));
   return lines.length ? {
-    ...talk,
+    ...narrowed,
     lines
   } : null;
 };
@@ -104916,7 +104951,7 @@ function AssistantLifeChunks({
   String(text || '').split(' ').forEach((tok, i) => {
     if (i) out.push(' ');
     const m = tok.match(/^(.+?で)(.+)$/);
-    const subs = tok.includes('・') ? tok.split('・').map((x, k, a) => k < a.length - 1 ? `${x}・` : x) : m && Object.values(ASSISTANT_LIFE_PLACES).includes(m[1].slice(0, -1)) ? [m[1], m[2]] : [tok];
+    const subs = tok.includes('・') ? tok.split('・').map((x, k, a) => k < a.length - 1 ? `${x}・` : x) : m && [...Object.values(ASSISTANT_LIFE_PLACES), ...Object.values(ASSISTANT_LIFE_PLACE_SHOW)].includes(m[1].slice(0, -1)) ? [m[1], m[2]] : [tok];
     subs.forEach((x, k) => {
       if (k) out.push(React.createElement("wbr", {
         key: `w${i}-${k}`
@@ -105027,7 +105062,10 @@ function AssistantLifeRoom({
   }, i ? React.createElement("wbr", null) : null, React.createElement("span", {
     className: "whitespace-nowrap",
     "data-assistant-life-chunk": true
-  }, x)))), state && state.tag && React.createElement("span", {
+  }, x)))), typeof AssistantLifeRelRoomLayer === 'function' && React.createElement(AssistantLifeRelRoomLayer, {
+    state: state,
+    h: h
+  }), state && state.tag && React.createElement("span", {
     className: "tag",
     "data-assistant-life-room-away": id
   }, React.createElement("b", null, state.tag[0]), React.createElement("small", null, state.tag[1]), state.tag[2] && React.createElement("small", {
@@ -105047,7 +105085,9 @@ function AssistantLifeHouseArt({
   onOpen,
   diary,
   pop,
-  onBoard
+  onBoard,
+  life = null,
+  peerSt = null
 }) {
   const wall = 6,
     cols = land ? 4 : 2,
@@ -105153,7 +105193,13 @@ function AssistantLifeHouseArt({
       bottom: 6
     },
     "aria-hidden": "true"
-  }, "🔥"))));
+  }, "🔥"), typeof AssistantLifeRelLiving === 'function' && React.createElement(AssistantLifeRelLiving, {
+    life: life,
+    peerSt: peerSt,
+    width: width,
+    lh: lh,
+    land: land
+  }))));
 }
 const assistantLifeRoomsOf = (life, metIds) => {
   const rooms = {};
@@ -105192,7 +105238,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
     }
     const sub = w.group ? `${w.group.ids.length}人で ${doing.label}` : `ひとりで ${doing.label}`;
     rooms[id] = {
-      tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${ASSISTANT_LIFE_PLACES[w.place]}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null]
+      tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null]
     };
   }
   const q = peer && peer.quarrel && peer.quarrel.pending;
@@ -105212,6 +105258,11 @@ const assistantLifeRoomsOf = (life, metIds) => {
       };
     }
   }
+  if (typeof assistantLifeRelDecorateRooms === 'function') {
+    try {
+      assistantLifeRelDecorateRooms(rooms, life, peer);
+    } catch {}
+  }
   return rooms;
 };
 function AssistantLifeRoomSheet({
@@ -105229,7 +105280,9 @@ function AssistantLifeRoomSheet({
   onCard,
   canGive,
   slot,
-  land = false
+  land = false,
+  onMediate = null,
+  roomState = null
 }) {
   const who = assistantById(id);
   if (!who) return null;
@@ -105250,11 +105303,18 @@ function AssistantLifeRoomSheet({
   const groupKey = w && w.group ? assistantLifeGroupKey(w.group) : null;
   const canWatch = groupKey ? !watched.includes(groupKey) : !watched.includes(`solo:${id}`);
   const atBeat = w && w.doing === 'practice';
+  const beatFree = !!atBeat && typeof rhythmAssistSessionVisitFree === 'function' && (() => {
+    try {
+      return rhythmAssistSessionVisitFree(id) === true;
+    } catch (_) {
+      return false;
+    }
+  })();
   const asleep = !!(w && w.doing === 'sleep');
   const slotDef = ASSISTANT_LIFE_SLOTS[slot.i];
   const groupNames = w && w.group ? assistantLifeGroupNames(w.group.ids, 8) : null;
   const groupText = w && w.group ? '' : ' ・ ひとり';
-  const where = !w ? '🏡 部屋で過ごしている' : home ? `🏡 部屋で${doing}${groupText}` : `${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${ASSISTANT_LIFE_PLACES[w.place]}で${doing}${groupText}`;
+  const where = !w ? '🏡 部屋で過ごしている' : home ? `🏡 部屋で${doing}${groupText}` : `${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}で${doing}${groupText}`;
   return React.createElement("div", {
     className: "absolute inset-0",
     style: {
@@ -105307,7 +105367,12 @@ function AssistantLifeRoomSheet({
     className: "text-[11px] font-bold text-amber-200"
   }, "💭 さみしそう(だれか来てほしい)") : mood ? React.createElement("p", {
     className: "text-[11px] font-bold text-pink-200"
-  }, "気分: ", mood) : null, React.createElement("div", {
+  }, "気分: ", mood) : null, typeof AssistantLifeRelSheetRow === 'function' && React.createElement(AssistantLifeRelSheetRow, {
+    id: id,
+    state: roomState,
+    peerSt: peerSt,
+    onMediate: onMediate
+  }), React.createElement("div", {
     className: land ? 'mt-2' : 'mt-8'
   }, lv != null && React.createElement("div", {
     className: "mhl-row"
@@ -105374,7 +105439,10 @@ function AssistantLifeRoomSheet({
     className: "mhl-btn mhl-beat col-span-2",
     "data-assistant-life-room-act": "beat",
     onClick: () => onBeat(id)
-  }, asleep ? '🎵 起こしてモンヒロビートに誘う' : `🎵 一緒にモンヒロビート${atBeat ? '(いまモンヒロビートにいる)' : ''}`), typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id) && React.createElement("button", {
+  }, asleep ? '🎵 起こしてモンヒロビートに誘う' : atBeat && beatFree ? React.createElement(React.Fragment, null, "🎵 会いに行く", React.createElement("em", {
+    className: "ml-1 rounded-full bg-amber-300 px-1.5 text-[10px] not-italic text-amber-950",
+    "data-assistant-life-room-free": true
+  }, "券なし")) : '🎵 一緒にモンヒロビート'), typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id) && React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-card col-span-2",
     "data-assistant-life-room-act": "card",
@@ -105441,7 +105509,7 @@ function AssistantLifeScene({
   const room = host ? ASSISTANT_LIFE_ROOM_LOOK[host] : null;
   const hint = ids.length >= 2 && typeof assistantLifePairHint === 'function' && peer ? assistantLifePairHint(peer, ASSISTANT_LIFE_STORE.state.life, ids[0], ids[1]) : null;
   const stage = hint && typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' ? ASSISTANT_PEER_BOND_LEVELS.find(s => s.level === hint.lv) : null;
-  const placeName = scene.place === 'home' ? `${assistantLifeName(host)}の部屋` : ASSISTANT_LIFE_PLACES[scene.place] || '';
+  const placeName = scene.place === 'home' ? `${assistantLifeName(host)}の部屋` : assistantLifePlaceShow(scene.place);
   return React.createElement("div", {
     className: "mhl-scene",
     "data-assistant-life-scene": scene.place || 'home'
@@ -105632,6 +105700,18 @@ function AssistantLifeHouse({
     };
   }, []);
   React.useEffect(() => {
+    if (typeof assistantLifeRelTick === 'function') {
+      try {
+        void assistantLifeRelTick();
+      } catch {}
+    }
+    if (typeof ASSISTANT_LIFE_REL_STORE !== 'undefined') void ASSISTANT_LIFE_REL_STORE.load().then(() => {
+      try {
+        ASSISTANT_LIFE_STORE.emit();
+      } catch {}
+    });
+  }, []);
+  React.useEffect(() => {
     if (roomId) setNote('');
   }, [roomId]);
   React.useEffect(() => {
@@ -105693,10 +105773,11 @@ function AssistantLifeHouse({
     if ((life.watched || []).includes(key)) return;
     const w = assistantLifeWhereOf(life, id);
     const sleeping = !!(w && w.doing === 'sleep');
+    const relSolo = !sleeping && typeof assistantLifeRelSoloTalk === 'function' ? assistantLifeRelSoloTalk(id, rooms[id]) : null;
     const talk = sleeping ? assistantLifePickSleepTalk(id, {
       wake: false,
       place: w.place
-    }) : assistantLifeOnlyPresent(assistantLifePickSoloTalk(id, life), [id]);
+    }) : relSolo || assistantLifeOnlyPresent(assistantLifePickSoloTalk(id, life), [id]);
     if (!talk) {
       setNote(`${nameOf(id)}は、いまは静かに過ごしています`);
       return;
@@ -105718,11 +105799,12 @@ function AssistantLifeHouse({
   const invite = async id => {
     const w = assistantLifeWhereOf(life, id);
     const sleeping = !!(w && w.doing === 'sleep');
+    const relSolo = !sleeping && typeof assistantLifeRelSoloTalk === 'function' ? assistantLifeRelSoloTalk(id, rooms[id]) : null;
     const talk = sleeping ? assistantLifePickSleepTalk(id, {
       wake: true,
       bondLv: typeof bondLevelOf === 'function' ? bondLevelOf(id) : 1,
       place: w.place
-    }) : assistantLifePickCallTalk(id, life);
+    }) : relSolo || assistantLifePickCallTalk(id, life);
     if (!(await assistantLifeNudge('invite', id))) return;
     if (talk) {
       if (!sleeping) assistantLifeMarkSeen(talk);
@@ -105733,6 +105815,18 @@ function AssistantLifeHouse({
       });
     }
     setNote(sleeping ? `${nameOf(id)}は寝ています。次の時間に、起きてだれかのところへ行きます` : `${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
+  };
+  const mediate = async id => {
+    const talk = typeof assistantLifeRelMediate === 'function' ? await assistantLifeRelMediate(id) : null;
+    if (!talk) {
+      setNote('いまは取り持てません');
+      return;
+    }
+    const g = (life.groups || []).find(x => talk.pair.every(p => x.ids.includes(p)));
+    playTalk(talk, {
+      ids: talk.pair,
+      place: g ? g.place : 'home'
+    });
   };
   const canGive = !!(peerItems && onUseItem);
   const itemInfos = ASSISTANT_LIFE_ITEM_KINDS.map(k => assistantLifeItemInfo(k.kind));
@@ -105835,7 +105929,7 @@ function AssistantLifeHouse({
       if (beatIds[0]) setRoomId(beatIds[0]);
     },
     disabled: !beatIds.length
-  }, React.createElement("i", null, "🎵"), React.createElement("b", null, "モンヒロビート"), React.createElement("small", null, beatIds.length ? `${beatIds.length}人が練習中` : 'いまはだれも')));
+  }, React.createElement("i", null, "🎵"), React.createElement("b", null, "モンヒロビート"), React.createElement("small", null, beatIds.length ? `${beatIds.length}人 ・ 券なし` : 'いまはだれも')));
   const icons = React.createElement("div", {
     className: "mhl-icons",
     role: "tablist",
@@ -105927,7 +106021,9 @@ function AssistantLifeHouse({
     onOpen: setRoomId,
     diary: diary,
     pop: !!intro,
-    onBoard: () => setBoardOpen(true)
+    onBoard: () => setBoardOpen(true),
+    life: life,
+    peerSt: peerSt
   }));
   const tabBody = tab === 'house' ? houseView : tab === 'where' ? React.createElement("div", {
     className: "px-3 pb-3",
@@ -105988,7 +106084,7 @@ function AssistantLifeHouse({
     "data-assistant-life-screen": true,
     "data-assistant-life-look": look,
     "data-assistant-life-land": land ? '1' : '0'
-  }, React.createElement(AssistantLifeHouseStyle, null), React.createElement("div", {
+  }, React.createElement(AssistantLifeHouseStyle, null), typeof AssistantLifeRelStyle === 'function' && React.createElement(AssistantLifeRelStyle, null), React.createElement("div", {
     className: "mhl-page",
     style: {
       maxWidth: land ? 'none' : 480
@@ -106047,7 +106143,9 @@ function AssistantLifeHouse({
     onWatch: watch,
     onGive: g => openGive(g.ids),
     onBeat: beat,
-    onCard: card
+    onCard: card,
+    onMediate: mediate,
+    roomState: rooms[roomId]
   }), boardOpen && React.createElement("div", {
     className: "absolute inset-0",
     style: {
@@ -106258,7 +106356,7 @@ function AssistantLifeTownMap({
       })) : null;
     })), React.createElement("span", {
       className: `mt-0.5 whitespace-nowrap rounded-md border px-1.5 text-[9.5px] font-black ${who.length ? 'border-amber-300 bg-amber-950/90 text-amber-50' : 'border-slate-500/60 bg-slate-950/70 text-slate-300'}`
-    }, ASSISTANT_LIFE_PLACE_ICON[place], " ", place === 'home' ? '助手の家' : ASSISTANT_LIFE_PLACES[place]));
+    }, ASSISTANT_LIFE_PLACE_ICON[place], " ", place === 'home' ? '助手の家' : assistantLifePlaceShow(place)));
   }));
 }
 const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({
@@ -106396,6 +106494,11863 @@ function AssistantLifeHomeFaces({
       }
     }, "UP")));
   }));
+}
+const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
+  id: 'rel-fight-erubin-momosuke-1',
+  kind: 'fight',
+  ppl: ['erubin', 'momosuke'],
+  keys: {
+    cause: 'song'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'excited',
+    t: '{c}、次はHELLの曲いこ！！ ずっとこれがいい！！'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: 'ごめん、今日はゆっくりした曲がいいかな'
+  }, {
+    who: 'momosuke',
+    e: 'angry',
+    t: 'えー！！ それじゃ練習にならないじゃん！！ もう、ひとりでやる！！'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: 'そっか…じゃあ、また今度ね'
+  }],
+  distance: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '……ちょっと言いすぎたかも'
+  }, {
+    who: 'erubin',
+    e: 'normal',
+    t: '曲の好みがちがうのは、当たり前なんだけどね'
+  }],
+  makeup: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '{c}…さっきはごめん。ゆっくりの曲、1回やってみる'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'ありがとう。じゃあ次は、{c}の好きなHELLね'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: 'ほんと！？ じゃあ交互にしよ！！♡'
+  }]
+}, {
+  id: 'rel-fight-erubin-momosuke-2',
+  kind: 'fight',
+  ppl: ['erubin', 'momosuke'],
+  keys: {
+    cause: 'late'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c}、10時の約束だったよね'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: 'ご、ごめん！！ 夜ずっと練習してて、起きたら11時だった…'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '待ってるあいだ、ちょっと心配したんだよ'
+  }, {
+    who: 'momosuke',
+    e: 'angry',
+    t: 'だって夜のほうが集中できるんだもん！！'
+  }],
+  distance: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '責めたいわけじゃなかったんだけどな…'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: 'もも、謝る前に言い返しちゃった…'
+  }],
+  makeup: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '待たせてごめん。次は目ざまし3つかける！！'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '3つは多いよ笑 俺も、朝はゆっくりでいいって言えばよかった'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: 'じゃあ次はお昼の約束ね♡'
+  }]
+}, {
+  id: 'rel-fight-erubin-momosuke-3',
+  kind: 'fight',
+  ppl: ['erubin', 'momosuke'],
+  keys: {
+    cause: 'promise'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'angry',
+    t: '{c}、昨日の練習見にくるって言ったのに！！'
+  }, {
+    who: 'erubin',
+    e: 'surprise',
+    t: 'あっ…ごめん、カード部屋で対戦してて、すっかり'
+  }, {
+    who: 'momosuke',
+    e: 'angry',
+    t: 'もも、ずっと入り口見てたんだからね！！'
+  }],
+  distance: [{
+    who: 'erubin',
+    e: 'troubled',
+    t: '楽しみにしてくれてたのにな…'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: 'べつに、ひとりでもできるし……'
+  }],
+  makeup: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c}、今日の練習、最初から最後まで見てもいい？'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: '…最後までだよ？ 途中で帰ったらゆるさないからw'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'うん、いちばん前で見るね'
+  }]
+}, {
+  id: 'rel-fight-dra-mua-1',
+  kind: 'fight',
+  ppl: ['dra', 'mua'],
+  keys: {
+    cause: 'snack'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'angry',
+    t: 'ちょっと！ あたしのプリン、なんでないの！？'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: 'えへへ…名前が書いてなかったからな'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: '冷蔵庫のいちばん奥、あたしの場所ぢゃん！'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: 'そ、そうだったのか…'
+  }],
+  distance: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '…プリンくらいで怒りすぎたかな'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: 'おで、悪いことしたな'
+  }],
+  makeup: [{
+    who: 'dra',
+    e: 'normal',
+    t: '{c}、プリン2つ買ってきた。1つ多めだ'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '…2つ！？ もう、ゆるすしかないぢゃん♪'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '次からは名前を書いてくれよな'
+  }]
+}, {
+  id: 'rel-fight-dra-mua-2',
+  kind: 'fight',
+  ppl: ['dra', 'mua'],
+  keys: {
+    cause: 'tidy'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '{c}、居間にカードの箱、出しっぱなしだよ〜'
+  }, {
+    who: 'dra',
+    e: 'normal',
+    t: 'あとで片づけるからな。いま、いいところなんだ'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: 'それ、昨日も言ってたぢゃん！ あたし、つまずいたんだけど！'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: 'う…すまん'
+  }],
+  distance: [{
+    who: 'dra',
+    e: 'troubled',
+    t: 'おで、片づけは苦手なんだよな…'
+  }, {
+    who: 'mua',
+    e: 'normal',
+    t: '言い方、ちょっときつかったかも'
+  }],
+  makeup: [{
+    who: 'dra',
+    e: 'happy',
+    t: '{c}、箱、ぜんぶ部屋にしまったぞ。見てくれ'
+  }, {
+    who: 'mua',
+    e: 'excited',
+    t: 'わ、ほんとだ！ ありがと！ あたしもいっしょに棚ふくね'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '2人だと早いな、えへへ'
+  }]
+}, {
+  id: 'rel-fight-dra-mua-3',
+  kind: 'fight',
+  ppl: ['dra', 'mua'],
+  keys: {
+    cause: 'promise'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'angry',
+    t: '{c}、昨日いっしょに広場いくって言ったのに、寝てたぢゃん！'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '昼寝のつもりが…起きたら夜だったんだ'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: 'あたし、ずっと待ってたんだからね！'
+  }],
+  distance: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '…ひとりでおしゃべりしても、つまんなかったな'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: 'おで、またやっちまった…'
+  }],
+  makeup: [{
+    who: 'dra',
+    e: 'normal',
+    t: '{c}、今日は寝ないで広場いくぞ。ほら、もう靴はいた'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '…目、半分閉じてるけど？ｗ'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '広場に着いたら開くからな'
+  }]
+}, {
+  id: 'rel-fight-atsu-sorashido-1',
+  kind: 'fight',
+  ppl: ['atsu', 'sorashido'],
+  keys: {
+    cause: 'win'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'excited',
+    t: 'うぉぉぉ！ これで俺の51勝50敗だぜ・・・！'
+  }, {
+    who: 'atsu',
+    e: 'angry',
+    t: '待て待て、今のはノーカンだろ笑'
+  }, {
+    who: 'sorashido',
+    e: 'angry',
+    t: '表にちゃんと書いてあるんだぜ！ 数字はうそつかないさ'
+  }, {
+    who: 'atsu',
+    e: 'angry',
+    t: '表を書いてるのがそっちなんだよな！？'
+  }],
+  distance: [{
+    who: 'atsu',
+    e: 'troubled',
+    t: '…1勝くらいで熱くなりすぎたか…'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '数え方、先に決めておけばよかったな'
+  }],
+  makeup: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '{c}、数え方の決まり、2人で書こうぜ'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'おう、じゃあ今日のは引き分けってことで笑'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '引き分けか…しょうがない、なんくるないさ〜'
+  }]
+}, {
+  id: 'rel-fight-atsu-sorashido-2',
+  kind: 'fight',
+  ppl: ['atsu', 'sorashido'],
+  keys: {
+    cause: 'late'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '{c}、朝6時に育成って約束したよな？ もう8時だぞ…'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: 'ご、ごめんだぜ… 3時まで表を作ってたら、寝坊したさ'
+  }, {
+    who: 'atsu',
+    e: 'angry',
+    t: 'ドラゴンも待ってたんだけど！？'
+  }, {
+    who: 'sorashido',
+    e: 'angry',
+    t: '夜のほうが計算がはかどるんだって！'
+  }],
+  distance: [{
+    who: 'atsu',
+    e: 'troubled',
+    t: '…朝に合わせろってのも、勝手だったか…'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '俺、約束したのに言い返しちまったな'
+  }],
+  makeup: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '{c}、明日は寝ないで行く…のは無理だから、9時でどうだ？'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '9時な笑 じゃあ俺は先に軽く走っとく！'
+  }, {
+    who: 'sorashido',
+    e: 'excited',
+    t: '決まりだぜ！ ちばりよー！'
+  }]
+}, {
+  id: 'rel-fight-atsu-sorashido-3',
+  kind: 'fight',
+  ppl: ['atsu', 'sorashido'],
+  keys: {
+    cause: 'tidy'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'troubled',
+    t: '{c}、カード部屋の机、表の紙で埋まってるんだけど！？'
+  }, {
+    who: 'sorashido',
+    e: 'normal',
+    t: '全部、大事な表なんだぜ。並べ方にも意味があるさ'
+  }, {
+    who: 'atsu',
+    e: 'angry',
+    t: 'デッキ広げる場所がないって笑 ちょっとどけるぞ！'
+  }, {
+    who: 'sorashido',
+    e: 'angry',
+    t: 'あっ！ 順番がくずれる！'
+  }],
+  distance: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '…並べ方、俺にしか分からないもんな'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '勝手にさわったのは、俺が悪かったな…'
+  }],
+  makeup: [{
+    who: 'atsu',
+    e: 'normal',
+    t: 'さっきはごめんな！ 紙、どこに戻せばいい？'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '俺もごめんだぜ。いっそ、表を1冊にまとめるさ'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'それなら机も広いな笑'
+  }]
+}, {
+  id: 'rel-fight-kiki-sorashido-1',
+  kind: 'fight',
+  ppl: ['kiki', 'sorashido'],
+  keys: {
+    cause: 'tidy'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'troubled',
+    t: '{c}、図書室の机に、表の紙が広がったままでつ'
+  }, {
+    who: 'sorashido',
+    e: 'normal',
+    t: 'あとで続きをやるから、そのままにしといたんだぜ'
+  }, {
+    who: 'kiki',
+    e: 'angry',
+    t: '図書室は、みんなの机なんです。少しお片づけをお願いします'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: 'う…分かってはいるんだけどさ'
+  }],
+  distance: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '言われたとおりだよな…'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: '少しきつく聞こえたでしょうか…'
+  }],
+  makeup: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '{c}、紙は全部ファイルに入れたぜ。机、ぴかぴかさ'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'ありがとうございまつ。私も、続きの場所をとっておきまつね♪'
+  }, {
+    who: 'sorashido',
+    e: 'excited',
+    t: 'それは助かるぜ・・・！'
+  }]
+}, {
+  id: 'rel-fight-kiki-sorashido-2',
+  kind: 'fight',
+  ppl: ['kiki', 'sorashido'],
+  keys: {
+    cause: 'late'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c}、朝の散歩、5時半の約束でしたよね'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '……いま、何時さ？'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '7時でつ。お日さま、もうすっかり昇りました'
+  }, {
+    who: 'sorashido',
+    e: 'angry',
+    t: '5時半は、俺にとっては真夜中なんだぜ！'
+  }],
+  distance: [{
+    who: 'kiki',
+    e: 'troubled',
+    t: '朝が苦手なのを、知っていたのに…'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '寝ぼけて、きつく言っちまったな'
+  }],
+  makeup: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '{c}、さっきはごめん。夕方の散歩なら、絶対起きてるさ'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'では夕焼けの散歩にしましょう。私も、少し夜ふかししてみまつ♪'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '{c}の夜ふかし、何時までもつか計算しとくぜ笑'
+  }]
+}, {
+  id: 'rel-fight-kiki-sorashido-3',
+  kind: 'fight',
+  ppl: ['kiki', 'sorashido'],
+  keys: {
+    cause: 'win'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'excited',
+    t: '今のカード勝負、計算どおり俺の勝ちだぜ！'
+  }, {
+    who: 'kiki',
+    e: 'angry',
+    t: '…もう一回お願いします。今のは、火力が足りませんでした'
+  }, {
+    who: 'sorashido',
+    e: 'normal',
+    t: '何回やっても、表の上では俺が有利さ'
+  }, {
+    who: 'kiki',
+    e: 'angry',
+    t: 'では、表をこえる火力を出しまつ'
+  }],
+  distance: [{
+    who: 'kiki',
+    e: 'troubled',
+    t: '少しむきになってしまいました…'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '有利とか、言わなきゃよかったな'
+  }],
+  makeup: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '{c}、さっきの一言はなしだぜ。次は真剣勝負、受けて立つさ'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'はい。ちから全開で、いきまつね♪'
+  }, {
+    who: 'sorashido',
+    e: 'excited',
+    t: 'うぉぉぉ！ そう来なくちゃ！'
+  }]
+}, {
+  id: 'rel-fight-erubin-sorashido-1',
+  kind: 'fight',
+  ppl: ['erubin', 'sorashido'],
+  keys: {
+    cause: 'promise'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '{c}、今日カードの研究会って言ってたよな？'
+  }, {
+    who: 'erubin',
+    e: 'surprise',
+    t: 'あ…ごめん、明日だと思ってた'
+  }, {
+    who: 'sorashido',
+    e: 'angry',
+    t: '表、2人ぶん作って待ってたんだぜ！'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: 'ほんとにごめん。でも、そんなに怒らなくても…'
+  }],
+  distance: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '言いすぎた…楽しみにしてただけなんだよな'
+  }, {
+    who: 'erubin',
+    e: 'normal',
+    t: '待たせたのは、俺のほうなのにね'
+  }],
+  makeup: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c}、いまからでも研究会、まだ間に合う？'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: 'もちろんだぜ！ 表は消えないさ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'よかった。今度は、カレンダーに書いとくね'
+  }]
+}, {
+  id: 'rel-fight-erubin-sorashido-2',
+  kind: 'fight',
+  ppl: ['erubin', 'sorashido'],
+  keys: {
+    cause: 'snack'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'troubled',
+    t: '{c}、さっきのクッキー、最後の1枚食べた？'
+  }, {
+    who: 'sorashido',
+    e: 'surprise',
+    t: 'あれ、だれのでもないと思って…計算中は手が止まらないんだぜ'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: 'みんなで分けようと思って、残しておいたんだけどな'
+  }, {
+    who: 'sorashido',
+    e: 'angry',
+    t: 'だったら、書いといてくれよな！'
+  }],
+  distance: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '言わなかった俺も、悪かったかな'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '言い返すことじゃなかったさ…'
+  }],
+  makeup: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '{c}、クッキー焼いてみたぜ。形はちょっと計算外だけどさ笑'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'わ、手作りだ。いいね、みんなで食べよう'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '今度は、ちゃんと人数ぶんあるぜ'
+  }]
+}, {
+  id: 'rel-fight-erubin-sorashido-3',
+  kind: 'fight',
+  ppl: ['erubin', 'sorashido'],
+  keys: {
+    cause: 'song'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'excited',
+    t: '練習の曲、ぜんぶアップテンポにしようぜ！'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '俺、落ち着いた曲も入れたいな'
+  }, {
+    who: 'sorashido',
+    e: 'normal',
+    t: 'でも速い曲のほうが、スコアが伸びるって表に出てるさ'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: 'スコアだけで選ぶのは、ちょっとさみしいかな'
+  }],
+  distance: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '…たしかに、楽しいかどうかは表に入れてなかったな'
+  }, {
+    who: 'erubin',
+    e: 'normal',
+    t: '言い方、もう少し考えればよかった'
+  }],
+  makeup: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c}、速い曲と落ち着いた曲、半分ずつにしない？'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: 'いいぜ！ 半分ずつなら計算も楽さ笑'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'さすが{c}。じゃあ1曲目、選んでいいよ'
+  }]
+}, {
+  id: 'rel-fight-kiki-momosuke-1',
+  kind: 'fight',
+  ppl: ['kiki', 'momosuke'],
+  keys: {
+    cause: 'song'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'troubled',
+    t: '{c}、夜の練習の音、少しだけ小さくしていただけますか'
+  }, {
+    who: 'momosuke',
+    e: 'angry',
+    t: 'えー！！ 小さくしたらリズムが聞こえないじゃん！！'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '私、22時には休みたいんでつ…'
+  }, {
+    who: 'momosuke',
+    e: 'angry',
+    t: 'もも、夜しか集中できないんだもん！！'
+  }],
+  distance: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '…ずっと、がまんさせてたのかな'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '練習のじゃまをしたかったわけでは、ないのですけれど'
+  }],
+  makeup: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '{c}、ヘッドホン買った！！ これなら音もれしないよ♡'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'まあ、ありがとうございまつ。今夜はぐっすりでつね♪'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: 'そのかわり、朝の散歩でももを起こさないでねw'
+  }]
+}, {
+  id: 'rel-fight-kiki-momosuke-2',
+  kind: 'fight',
+  ppl: ['kiki', 'momosuke'],
+  keys: {
+    cause: 'tidy'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'troubled',
+    t: '{c}、私の本のしおり、ちがうページに挟まっていまつ'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: 'あ、それもも！！ 読みかけっぽかったから、挟みなおしてあげたの'
+  }, {
+    who: 'kiki',
+    e: 'angry',
+    t: '挟んであったのを、抜いてしまったのでつね…'
+  }, {
+    who: 'momosuke',
+    e: 'angry',
+    t: 'よかれと思ったのに！！'
+  }],
+  distance: [{
+    who: 'kiki',
+    e: 'troubled',
+    t: '親切のつもりだったのに、強く言ってしまいました'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: '勝手にさわったの、ももが悪いよね…'
+  }],
+  makeup: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '{c}、しおり、ももが作ったの！！ かわりに使って♡'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'かわいいでつね。大事にしまつ'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: '次はさわる前に聞くね！！'
+  }]
+}, {
+  id: 'rel-fight-kiki-momosuke-3',
+  kind: 'fight',
+  ppl: ['kiki', 'momosuke'],
+  keys: {
+    cause: 'snack'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'angry',
+    t: '{c}！！ ももが残しておいたシュークリーム、食べた！？'
+  }, {
+    who: 'kiki',
+    e: 'surprise',
+    t: 'まあ…2つあったので、1つは私のぶんかと'
+  }, {
+    who: 'momosuke',
+    e: 'angry',
+    t: '2つとも、もものなの！！'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: 'それは失礼しました。でも、名前がなかったので…'
+  }],
+  distance: [{
+    who: 'kiki',
+    e: 'troubled',
+    t: 'おやつのことで、悲しい顔をさせてしまいました'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: '言い方、きつかったかも…'
+  }],
+  makeup: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c}、駅前のシュークリームでつ。3つ買ってきました♪'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: '3つ！？ じゃあ1つは{c}のぶんね！！'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'では、いっしょにいただきまつ'
+  }]
+}, {
+  id: 'rel-fight-kyuko-mua-1',
+  kind: 'fight',
+  ppl: ['kyuko', 'mua'],
+  keys: {
+    cause: 'late'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c}、9時集合って言ってたよねぇ。もう10時半だよぉ'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: 'ご、ごめん！ 朝、まぢで起きれなくて…'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '作戦の紙、もう3回読み直しちゃったよ笑'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: '朝は苦手って言ったぢゃん！ 9時に決めたの{c}だし！'
+  }],
+  distance: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: 'ぐぬぬぬ…時間、決める前に聞けばよかったかぁ'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: '遅れたの、あたしなのにね…'
+  }],
+  makeup: [{
+    who: 'mua',
+    e: 'normal',
+    t: '{c}、遅れてごめん。おわびに、作戦会議のお茶はあたしがいれる！'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'ありがとん笑 次はお昼集合にしよっか'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'それなら絶対起きてる！ たぶん！ｗ'
+  }]
+}, {
+  id: 'rel-fight-kyuko-mua-2',
+  kind: 'fight',
+  ppl: ['kyuko', 'mua'],
+  keys: {
+    cause: 'promise'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'angry',
+    t: '{c}、イルミネ見せてくれるって言ったのに〜！'
+  }, {
+    who: 'kyuko',
+    e: 'surprise',
+    t: 'あ…ごめん、今日だったっけぇ'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: '昨日！ あたし、広場でずっと待ってたんだよ！'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '本読んでたら、時間忘れちゃってさ…'
+  }],
+  distance: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '…言ってくれたら、図書室まで迎えにいったのに'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '約束を本に挟んだまま、忘れてたなぁ'
+  }],
+  makeup: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c}、今からイルミネ呼んでくるよ。ちゃんと光ってるうちに'
+  }, {
+    who: 'mua',
+    e: 'excited',
+    t: 'ほんと！？ わぁ、きれい…！ もうゆるしたｗ'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'よかったぁ。次はメモしとくね笑'
+  }]
+}, {
+  id: 'rel-fight-kyuko-mua-3',
+  kind: 'fight',
+  ppl: ['kyuko', 'mua'],
+  keys: {
+    cause: 'song'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'excited',
+    t: '次の曲、これにしよ！ なんかいいから！'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: 'えぇ、それ譜面がむずいやつだよぉ。こっちのほうがスコア出るって'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: 'スコアより、楽しいほうがいいぢゃん！'
+  }, {
+    who: 'kyuko',
+    e: 'angry',
+    t: '楽しいのも大事だけど、勝ちたいって言ったの{c}でしょ笑'
+  }],
+  distance: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '…勝ちたいって、言ったかも'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '理屈でつめすぎたなぁ…'
+  }],
+  makeup: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c}、1曲目は{c}の「なんかいい」曲で、2曲目は俺のね'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'それ、いい！ なんかいいｗ'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'ほい、決まり〜'
+  }]
+}, {
+  id: 'rel-fight-dra-momosuke-1',
+  kind: 'fight',
+  ppl: ['dra', 'momosuke'],
+  keys: {
+    cause: 'win'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'excited',
+    t: 'やった！！ ギャグ対決、ももの勝ち〜w'
+  }, {
+    who: 'dra',
+    e: 'angry',
+    t: '待ってくれ、今のはおでのギャグを先に言ったからだろ'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: '先に言ったもん勝ちだもんw'
+  }, {
+    who: 'dra',
+    e: 'angry',
+    t: 'それはずるいぞ！ おでが3日あたためてたやつなんだ'
+  }],
+  distance: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '…ギャグくらいで、むきになっちまったな'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: '人のネタ、とっちゃったのかも…'
+  }],
+  makeup: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '{c}、さっきのギャグ、やっぱり{c}が言ったほうがおもしろいよ！！'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'そ、そうか？ じゃあもう一回やるぞ'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: 'うん！！ ももが一番に笑ってあげる♡'
+  }]
+}, {
+  id: 'rel-fight-dra-momosuke-2',
+  kind: 'fight',
+  ppl: ['dra', 'momosuke'],
+  keys: {
+    cause: 'snack'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '{c}、おでのたいやき、しっぽだけないんだが…'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: 'しっぽ、カリカリでおいしいんだもんw'
+  }, {
+    who: 'dra',
+    e: 'angry',
+    t: 'しっぽは最後の楽しみだったんだぞ！'
+  }, {
+    who: 'momosuke',
+    e: 'angry',
+    t: 'ひと口くらい、いいじゃん！！'
+  }],
+  distance: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '…ひと口でも、勝手はダメだったかな'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: 'しっぽで怒るのも、おとなげなかったか'
+  }],
+  makeup: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '{c}、たいやき買ってきた！！ ちゃんとしっぽつき！！'
+  }, {
+    who: 'dra',
+    e: 'surprise',
+    t: 'しっぽつき…って、まるごと2つか！ えへへ'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '今度は半分こしよ♡'
+  }]
+}, {
+  id: 'rel-fight-dra-momosuke-3',
+  kind: 'fight',
+  ppl: ['dra', 'momosuke'],
+  keys: {
+    cause: 'late'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'angry',
+    t: '{c}、お笑いの練習、1時間も遅刻！！'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '昼寝してたら、ついな…'
+  }, {
+    who: 'momosuke',
+    e: 'angry',
+    t: 'もも、ネタ帳ぜんぶ覚えちゃったよ！！'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: 'それは…すごいな'
+  }],
+  distance: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '寝てばっかりで、おではだめだな…'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: '怒りすぎちゃったかも。昼寝が好きなの、知ってるのに'
+  }],
+  makeup: [{
+    who: 'dra',
+    e: 'normal',
+    t: '{c}、待たせてすまん。おわびに、新ネタ持ってきたぞ'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: 'え、新ネタ！？ 聞かせて！！'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '笑ったら、遅刻はなしってことでな'
+  }]
+}, {
+  id: 'rel-fight-kiki-kyuko-1',
+  kind: 'fight',
+  ppl: ['kiki', 'kyuko'],
+  keys: {
+    cause: 'late'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c}、朝の図書室、6時に開けましょうと言いましたよね'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: 'ごめぇ…2時まで読んでたら、起きたら9時だったぁ'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '鍵を持っていたのは{c}でつ。私、扉の前で待っていました'
+  }, {
+    who: 'kyuko',
+    e: 'angry',
+    t: '6時は俺には早すぎるんだってぇ…'
+  }],
+  distance: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '鍵、俺が持ってたもんなぁ…'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '時間を決めたのは、私のほうでしたね'
+  }],
+  makeup: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c}、鍵、もう1本作ってきたよ。これで先に入れるっしょ'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'まあ、ありがとうございまつ。では私が朝に開けておきまつ♪'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'ありがとん笑 俺は昼に行くね'
+  }]
+}, {
+  id: 'rel-fight-kiki-kyuko-2',
+  kind: 'fight',
+  ppl: ['kiki', 'kyuko'],
+  keys: {
+    cause: 'tidy'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'troubled',
+    t: '{c}、本が机に10冊、積まれたままでつ'
+  }, {
+    who: 'kyuko',
+    e: 'normal',
+    t: 'あ、それ全部、作戦に使うんだよねぇ'
+  }, {
+    who: 'kiki',
+    e: 'angry',
+    t: '使い終わったら、棚に戻してほしいんでつ'
+  }, {
+    who: 'kyuko',
+    e: 'angry',
+    t: 'まだ使い終わってないんだってばぁ'
+  }],
+  distance: [{
+    who: 'kiki',
+    e: 'troubled',
+    t: '少し言いすぎたでしょうか…'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '10冊は、さすがに積みすぎかぁ笑'
+  }],
+  makeup: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c}、本、9冊は棚に戻したよ。1冊だけ借りてくね'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'ありがとうございまつ。その1冊、しおりも付けておきまつね♪'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'ほい！ ありがとん'
+  }]
+}, {
+  id: 'rel-fight-kiki-kyuko-3',
+  kind: 'fight',
+  ppl: ['kiki', 'kyuko'],
+  keys: {
+    cause: 'win'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'happy',
+    t: '今の対戦、私の勝ちでつね♪ 火力で押し切りました'
+  }, {
+    who: 'kyuko',
+    e: 'angry',
+    t: 'ぐぬぬぬ…でもそれ、俺の作戦の穴をついただけでしょぉ'
+  }, {
+    who: 'kiki',
+    e: 'angry',
+    t: '穴があったのは、作戦のほうでは？'
+  }, {
+    who: 'kyuko',
+    e: 'angry',
+    t: 'う…言い返せないのが、くやしいなぁ'
+  }],
+  distance: [{
+    who: 'kiki',
+    e: 'troubled',
+    t: '勝ったからといって、言いすぎました'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '負けてすねるの、かっこわるいなぁ笑'
+  }],
+  makeup: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c}、穴、埋めてきた。もう1戦いい？'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'もちろんでつ。ちから全開で、お相手しまつ'
+  }, {
+    who: 'kyuko',
+    e: 'excited',
+    t: 'ほい！ 次は勝つ〜'
+  }]
+}, {
+  id: 'rel-fight-kiki-mua-1',
+  kind: 'fight',
+  ppl: ['kiki', 'mua'],
+  keys: {
+    cause: 'snack'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '{c}、あたしのマカロン、ピンクのだけないんだけど…'
+  }, {
+    who: 'kiki',
+    e: 'surprise',
+    t: 'まあ、あれは私のぶんかと思って…'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: 'ピンクがいちばん好きなの、知ってるぢゃん！'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: 'それは…存じていました'
+  }],
+  distance: [{
+    who: 'kiki',
+    e: 'troubled',
+    t: '好きな色を知っていたのに、うっかりでつ…'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: 'マカロン1個で、怒りすぎたかな…'
+  }],
+  makeup: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c}、ピンクのマカロン、箱でいただいてきました♪'
+  }, {
+    who: 'mua',
+    e: 'excited',
+    t: '箱！？ まぢで！？ 全部ピンクぢゃん！'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'では、いっしょにお茶にしまつ'
+  }]
+}, {
+  id: 'rel-fight-kiki-mua-2',
+  kind: 'fight',
+  ppl: ['kiki', 'mua'],
+  keys: {
+    cause: 'late'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c}、朝のお散歩、今日も来ませんでしたね'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: 'ご、ごめん…起きたら9時で…'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '3日続けて、ひとりで歩きました'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: 'だって朝5時は、まぢで夜ぢゃん！'
+  }],
+  distance: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '…3日も、ひとりで歩かせちゃった'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '私の時間に、合わせてもらうばかりでしたね'
+  }],
+  makeup: [{
+    who: 'mua',
+    e: 'normal',
+    t: '{c}、明日は9時のお散歩でもいい？ あたし、絶対行く！'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'もちろんでつ。9時のお散歩も、きっと気持ちいいでつよ♪'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'やった！ 迎えにいくね♪'
+  }]
+}, {
+  id: 'rel-fight-kiki-mua-3',
+  kind: 'fight',
+  ppl: ['kiki', 'mua'],
+  keys: {
+    cause: 'tidy'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'troubled',
+    t: '{c}、居間のクッション、またぜんぶ床にありまつ'
+  }, {
+    who: 'mua',
+    e: 'normal',
+    t: 'あれ、あたしの寝ころび用だもん'
+  }, {
+    who: 'kiki',
+    e: 'angry',
+    t: 'みんなが座るところなんです。戻していただけますか'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: 'いま、ちょうどいい形になってたのに〜！'
+  }],
+  distance: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '…みんなのクッションだもんね'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '言い方が、少しかたかったでしょうか'
+  }],
+  makeup: [{
+    who: 'mua',
+    e: 'normal',
+    t: '{c}、クッション戻した！ あたし用のは1個だけにする'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'ありがとうございまつ。その1個は、{c}の特等席でつね♪'
+  }, {
+    who: 'mua',
+    e: 'excited',
+    t: 'うん！ 特等席ｗ'
+  }]
+}, {
+  id: 'rel-fight-erubin-kyuko-1',
+  kind: 'fight',
+  ppl: ['erubin', 'kyuko'],
+  keys: {
+    cause: 'late'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'troubled',
+    t: '{c}、また3時まで起きてたでしょ。目が赤いよ'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: 'えぇ、いいとこだったんだもん、あの本'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '毎日だと、体が心配なんだよ'
+  }, {
+    who: 'kyuko',
+    e: 'angry',
+    t: '心配しすぎだってぇ。俺、夜のほうが元気なんだから'
+  }],
+  distance: [{
+    who: 'erubin',
+    e: 'troubled',
+    t: '…言いすぎたかな。おせっかいだったね'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '心配してくれてたのに、きつく返しちゃったなぁ'
+  }],
+  makeup: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c}、さっきはごめん。今日は1時に寝るよ。1時ね笑'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'ありがとう。1時なら、俺も安心かな'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'おやすみの前に、おすすめの本1冊わたすね'
+  }]
+}, {
+  id: 'rel-fight-erubin-kyuko-2',
+  kind: 'fight',
+  ppl: ['erubin', 'kyuko'],
+  keys: {
+    cause: 'promise'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '{c}、お気に入りの丘、案内してくれるって言ってたよねぇ'
+  }, {
+    who: 'erubin',
+    e: 'surprise',
+    t: 'あ…ごめん、カードの大会と重なっちゃって'
+  }, {
+    who: 'kyuko',
+    e: 'angry',
+    t: '俺、お弁当まで用意してたんだよぉ'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: 'ほんとにごめん。言うのが遅かったね'
+  }],
+  distance: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '…お弁当、ひとりで食べちゃった'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '楽しみにしてくれてたのにな…'
+  }],
+  makeup: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c}、今日こそ丘に行こう。お弁当は俺が作ってきたよ'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'えぇ、ほんとに！？ ありがとん笑'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '景色のいい場所、とっておきのを教えるね'
+  }]
+}, {
+  id: 'rel-fight-erubin-kyuko-3',
+  kind: 'fight',
+  ppl: ['erubin', 'kyuko'],
+  keys: {
+    cause: 'tidy'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'troubled',
+    t: '{c}、居間に本が積まれて、通れなくなってるよ'
+  }, {
+    who: 'kyuko',
+    e: 'normal',
+    t: 'あ、それ順番に読むやつ。動かさないでぇ'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: 'でも、みんなつまずいちゃうからさ'
+  }, {
+    who: 'kyuko',
+    e: 'angry',
+    t: '順番、くずしたら分からなくなるんだってぇ'
+  }],
+  distance: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '大事な並びだったんだね'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '居間は、みんなの場所なのになぁ…'
+  }],
+  makeup: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c}、本、部屋に運んだよ。順番そのままで笑'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'ありがとう。運ぶの手伝えばよかったね'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'じゃあ次は、いっしょに運んでぇ'
+  }]
+}, {
+  id: 'rel-fight-dra-sorashido-1',
+  kind: 'fight',
+  ppl: ['dra', 'sorashido'],
+  keys: {
+    cause: 'win'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'excited',
+    t: '今のカード勝負、表で見ても俺の作戦勝ちだぜ！'
+  }, {
+    who: 'dra',
+    e: 'angry',
+    t: 'いや、おでの引きが悪かっただけだぞ'
+  }, {
+    who: 'sorashido',
+    e: 'normal',
+    t: '引きも計算のうちさ。確率の表、見るか？'
+  }, {
+    who: 'dra',
+    e: 'angry',
+    t: '表はいい！ もう1回だ！'
+  }],
+  distance: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '負けると、ついむきになるな…'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '勝ったあとに表は、ちょっと意地悪だったな'
+  }],
+  makeup: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '{c}、さっきはごめんだぜ。もう1回、表なしでやろう'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'おう。今度はおでの読みを見せてやるからな'
+  }, {
+    who: 'sorashido',
+    e: 'excited',
+    t: '望むところだぜ！'
+  }]
+}, {
+  id: 'rel-fight-dra-sorashido-2',
+  kind: 'fight',
+  ppl: ['dra', 'sorashido'],
+  keys: {
+    cause: 'tidy'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '{c}、おでの部屋の前まで、表の紙が並んでるんだが'
+  }, {
+    who: 'sorashido',
+    e: 'normal',
+    t: '廊下がいちばん長いから、つなげて並べたんだぜ'
+  }, {
+    who: 'dra',
+    e: 'angry',
+    t: '寝ぼけて踏んだら、破れちまうだろ'
+  }, {
+    who: 'sorashido',
+    e: 'angry',
+    t: '踏まないように歩いてくれよ！'
+  }],
+  distance: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '…廊下は、みんなの通り道だよな'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '寝ぼけるおでも、悪いんだがな…'
+  }],
+  makeup: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '{c}、表は巻物にしてまとめたぜ。廊下、すっきりさ'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'おお、巻物か。広げるのはおでが手伝うぞ'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: 'それなら、いっしょに読もうぜ'
+  }]
+}, {
+  id: 'rel-fight-dra-sorashido-3',
+  kind: 'fight',
+  ppl: ['dra', 'sorashido'],
+  keys: {
+    cause: 'promise'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '{c}、攻略本の説明、今日いっしょに書くって言ってたよな'
+  }, {
+    who: 'sorashido',
+    e: 'surprise',
+    t: 'あっ…表の計算に夢中で、すっかりだぜ'
+  }, {
+    who: 'dra',
+    e: 'angry',
+    t: 'おで、説明の下書き、3ページ書いて待ってたんだぞ'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '3ページも…！？'
+  }],
+  distance: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '…言いすぎたな。待つのは苦手でな'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '約束より、表を選んじまった…'
+  }],
+  makeup: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '{c}、下書き読んだぜ。わかりやすくて、でーじいいさ！'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'そ、そうか？ えへへ'
+  }, {
+    who: 'sorashido',
+    e: 'excited',
+    t: '今日は表より先に、説明を仕上げるぜ'
+  }]
+}, {
+  id: 'rel-fight-kyuko-sorashido-1',
+  kind: 'fight',
+  ppl: ['kyuko', 'sorashido'],
+  keys: {
+    cause: 'win'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'excited',
+    t: '今のスコア、俺が12点上だぜ・・・！'
+  }, {
+    who: 'kyuko',
+    e: 'angry',
+    t: 'ぐぬぬぬ…でも俺のほうが、ミスは少なかったよ'
+  }, {
+    who: 'sorashido',
+    e: 'normal',
+    t: '勝ち負けは点で決めるって表にあるさ'
+  }, {
+    who: 'kyuko',
+    e: 'angry',
+    t: 'その表、だれが作ったのぉ笑'
+  }],
+  distance: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '12点で、すねすぎたかなぁ'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '表をたてに、言いすぎたな'
+  }],
+  makeup: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '{c}、ミスの少なさ部門も表に足したぜ。そっちは{c}の勝ちさ'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'えぇ、ありがとん笑 じゃあ1勝1敗だね'
+  }, {
+    who: 'sorashido',
+    e: 'excited',
+    t: '決着は次の1曲だぜ！'
+  }]
+}, {
+  id: 'rel-fight-kyuko-sorashido-2',
+  kind: 'fight',
+  ppl: ['kyuko', 'sorashido'],
+  keys: {
+    cause: 'song'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c}、練習の曲、たまには落ち着いたのにしない？'
+  }, {
+    who: 'sorashido',
+    e: 'normal',
+    t: 'いや、速い曲のほうが計算しがいがあるんだぜ'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '毎回それだと、俺の指がもたないってぇ'
+  }, {
+    who: 'sorashido',
+    e: 'angry',
+    t: '指も鍛えれば、速くなるさ！'
+  }],
+  distance: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '…自分の好みばっかり押しつけたな'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '言い方、もうちょっとあったなぁ'
+  }],
+  makeup: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '{c}、ゆっくりの曲、1曲選んでくれよ。その次は俺の'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'ほい！ じゃあ、とっておきの1曲ね'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '交代ばんこ、表に書いとくぜ'
+  }]
+}, {
+  id: 'rel-fight-kyuko-sorashido-3',
+  kind: 'fight',
+  ppl: ['kyuko', 'sorashido'],
+  keys: {
+    cause: 'snack'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '{c}、俺のポテチ、最後の1袋あけた？'
+  }, {
+    who: 'sorashido',
+    e: 'surprise',
+    t: '計算してたら、つい手がのびたんだぜ…'
+  }, {
+    who: 'kyuko',
+    e: 'angry',
+    t: '作戦会議用に、とっといたのにぃ'
+  }, {
+    who: 'sorashido',
+    e: 'angry',
+    t: '言ってくれたら、食べなかったさ！'
+  }],
+  distance: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: 'ポテチで怒るの、ちょっとはずかしいなぁ'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '言い返しちまったけど、食べたのは俺だよな'
+  }],
+  makeup: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '{c}、ポテチ、3袋買ってきたぜ！ 味もちがうのにしたさ'
+  }, {
+    who: 'kyuko',
+    e: 'excited',
+    t: 'えぇ、3袋も！？ ありがとん笑'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: 'どの味が勝つか、表にしようぜ'
+  }]
+}, {
+  id: 'rel-fight-dra-kyuko-1',
+  kind: 'fight',
+  ppl: ['dra', 'kyuko'],
+  keys: {
+    cause: 'snack'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '{c}、冷蔵庫のケーキ、半分なくなってるんだけどぉ'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '半分は、おでの分かと思ってな'
+  }, {
+    who: 'kyuko',
+    e: 'angry',
+    t: 'あれ、みんなの分なんだってぇ'
+  }, {
+    who: 'dra',
+    e: 'angry',
+    t: '書いてなかったぞ！'
+  }],
+  distance: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '…半分は、さすがに食べすぎたか'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '書いておけば、よかったなぁ'
+  }],
+  makeup: [{
+    who: 'dra',
+    e: 'normal',
+    t: '{c}、ケーキ、まるごと1つ買ってきたぞ'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'えぇ、まるごと！？ ありがとん笑'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'みんなで分けような。今度はおでが切るぞ'
+  }]
+}, {
+  id: 'rel-fight-dra-kyuko-2',
+  kind: 'fight',
+  ppl: ['dra', 'kyuko'],
+  keys: {
+    cause: 'late'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '{c}、昼の作戦会議、もう2時だぞ…'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: 'ごめぇ…夜ふかしして、起きたらお昼すぎてたぁ'
+  }, {
+    who: 'dra',
+    e: 'angry',
+    t: 'おで、昼寝もしないで待ってたんだからな'
+  }, {
+    who: 'kyuko',
+    e: 'angry',
+    t: '{c}だって、よく昼寝で遅れるっしょぉ'
+  }],
+  distance: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '…言い返すことじゃなかったなぁ'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: 'おでも、人のこと言えないな'
+  }],
+  makeup: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c}、さっきはごめん。おわびに、山札チェックは俺がやるよ'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'おう、助かるぞ。じゃあおでは説明係だな'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'ほい、役割分担〜'
+  }]
+}, {
+  id: 'rel-fight-dra-kyuko-3',
+  kind: 'fight',
+  ppl: ['dra', 'kyuko'],
+  keys: {
+    cause: 'promise'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '{c}、新しいデッキ、見てくれるって言ってたよな'
+  }, {
+    who: 'kyuko',
+    e: 'surprise',
+    t: 'あ…ごめん、本のつづきが気になって忘れてたぁ'
+  }, {
+    who: 'dra',
+    e: 'angry',
+    t: 'おで、1枚決まらないままで待ってたんだぞ'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: 'ぐぬぬぬ…それは悪いことしたなぁ'
+  }],
+  distance: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '1枚くらい、自分で決めればよかったか'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '約束、本に負けちゃったなぁ'
+  }],
+  makeup: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c}、いまから見るよ。その1枚、いっしょに決めよ'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'おう！ 助かるな'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '理由もちゃんと書いとくね笑'
+  }]
+}, {
+  id: 'rel-mend-erubin-momosuke-1',
+  kind: 'mend',
+  ppl: ['erubin', 'momosuke'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '……{c}、ちょっといい？'
+  }, {
+    who: 'erubin',
+    e: 'normal',
+    t: 'うん、どうしたの？'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: '昨日、もも、言いすぎた。……ごめんね'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '言いにきてくれて、ありがとう。俺もごめんね'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '…よかった！！ 仲直り♡'
+  }]
+}, {
+  id: 'rel-mend-erubin-momosuke-2',
+  kind: 'mend',
+  ppl: ['erubin', 'momosuke'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c}、{name}がいちごタルトくれたんだ。半分こしない？'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: '…もも、まだ怒ってるもん'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'じゃあ、怒ったまま食べてもいいよ笑'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: '…おいしいからゆるすw もももごめんね'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'うん。{name}にお礼言いにいこっか'
+  }]
+}, {
+  id: 'rel-mend-erubin-momosuke-3',
+  kind: 'mend',
+  ppl: ['erubin', 'momosuke'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '{name}に「仲直りしなよ」って言われちゃった…'
+  }, {
+    who: 'erubin',
+    e: 'normal',
+    t: '俺も言われたよ。{name}には、かなわないね'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: 'しょうがないなぁ…{c}、ごめんね'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'こちらこそ。また練習、見に行くね'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: '約束だよ！！'
+  }]
+}, {
+  id: 'rel-mend-dra-mua-1',
+  kind: 'mend',
+  ppl: ['dra', 'mua'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '{c}…その、なんだ'
+  }, {
+    who: 'mua',
+    e: 'normal',
+    t: 'ん？ なに〜？'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '昨日は、おでが悪かった。すまん'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'もう、言うのおそいぢゃん！ でも、ありがと♪'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'ほっとしたぞ'
+  }]
+}, {
+  id: 'rel-mend-dra-mua-2',
+  kind: 'mend',
+  ppl: ['dra', 'mua'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'normal',
+    t: '{c}、{name}からドーナツ届いたよ。2個ある'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '…おで、もらっていいのか？'
+  }, {
+    who: 'mua',
+    e: 'wink',
+    t: 'いっしょに食べたら仲直りってことで！ｗ'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'おう。昨日はすまんかったな'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'あたしも、言いすぎてごめん！'
+  }]
+}, {
+  id: 'rel-mend-dra-mua-3',
+  kind: 'mend',
+  ppl: ['dra', 'mua'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '{name}に「ちゃんと話しな」って言われた…'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: 'おでもだ。{name}に言われたら、しょうがないな'
+  }, {
+    who: 'mua',
+    e: 'normal',
+    t: '…じゃあ、せーので謝ろ。せーの、ごめん！'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'ごめん！ …声がそろったな、えへへ'
+  }]
+}, {
+  id: 'rel-mend-atsu-sorashido-1',
+  kind: 'mend',
+  ppl: ['atsu', 'sorashido'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '{c}、ちょっといいか？'
+  }, {
+    who: 'sorashido',
+    e: 'normal',
+    t: 'お、どうしたんだぜ？'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '昨日はムキになって悪かった！ ごめん！'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '俺もだぜ。言いすぎたって、ずっと思ってたさ'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'だよな笑 じゃあ1戦いくか！'
+  }]
+}, {
+  id: 'rel-mend-atsu-sorashido-2',
+  kind: 'mend',
+  ppl: ['atsu', 'sorashido'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '{c}、{name}から差し入れのおにぎりだぜ'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '…お、おう！ ありがと…'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '腹がへってると言い合いになるって、表にも出てるさ笑'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'そんな表あるのかよ笑 昨日はごめんな！'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '俺もごめんだぜ。食べたら協力プレイな'
+  }]
+}, {
+  id: 'rel-mend-atsu-sorashido-3',
+  kind: 'mend',
+  ppl: ['atsu', 'sorashido'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'troubled',
+    t: '{name}に、ちゃんと話せって言われちまった…'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '俺もさ。{name}に言われたら、しょうがないさ'
+  }, {
+    who: 'atsu',
+    e: 'normal',
+    t: 'じゃあ…昨日のは、おあいこってことで！'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: 'おあいこ、表に書いとくぜ！'
+  }]
+}, {
+  id: 'rel-mend-kiki-sorashido-1',
+  kind: 'mend',
+  ppl: ['kiki', 'sorashido'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '{c}、昨日の…あれ、俺が悪かったんだぜ'
+  }, {
+    who: 'kiki',
+    e: 'surprise',
+    t: 'まあ、わざわざ言いにきてくださったんでつね'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '言わないと、表の計算も手につかなくてさ'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '私も言いすぎました。仲直りでつ♪'
+  }, {
+    who: 'sorashido',
+    e: 'excited',
+    t: 'うぉぉぉ、ほっとしたぜ！'
+  }]
+}, {
+  id: 'rel-mend-kiki-sorashido-2',
+  kind: 'mend',
+  ppl: ['kiki', 'sorashido'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c}、{name}から、お茶とお団子をいただきました'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '…俺、もらっていいのか？'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'もちろんでつ。いっしょにいただきましょう'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '昨日はごめんだぜ。お団子、ちょうど2人ぶんさ'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '私もごめんなさい。{name}に感謝でつね'
+  }]
+}, {
+  id: 'rel-mend-kiki-sorashido-3',
+  kind: 'mend',
+  ppl: ['kiki', 'sorashido'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'troubled',
+    t: '{name}に、話してきてくださいと言われました'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '俺もさ。{name}に言われたら、断れないぜ'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: 'では…昨日のことは、なかったことにしまつか？'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: 'いや、仲直りしたことを表に残すぜ！'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'ふふ、それはいいでつね♪'
+  }]
+}, {
+  id: 'rel-mend-erubin-sorashido-1',
+  kind: 'mend',
+  ppl: ['erubin', 'sorashido'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c}、昨日はごめんね。ちゃんと謝りたくて'
+  }, {
+    who: 'sorashido',
+    e: 'surprise',
+    t: 'お、俺から言おうと思ってたのに、先をこされたぜ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'じゃあ、おあいこだね笑'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: 'おあいこだぜ！ カード、1戦やろうさ'
+  }]
+}, {
+  id: 'rel-mend-erubin-sorashido-2',
+  kind: 'mend',
+  ppl: ['erubin', 'sorashido'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '{c}、{name}がクッキーくれたぜ。人数ぶん、ぴったりさ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'ほんとだ。{name}、気がきくね'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '昨日は、言い返してごめんだぜ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '俺も言いすぎたよ。食べながら研究会しよっか'
+  }]
+}, {
+  id: 'rel-mend-erubin-sorashido-3',
+  kind: 'mend',
+  ppl: ['erubin', 'sorashido'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'troubled',
+    t: '{name}に、もう仲直りしなよって言われちゃった'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '俺も言われたさ。{name}には、かなわないぜ'
+  }, {
+    who: 'erubin',
+    e: 'normal',
+    t: 'しょうがないね。ごめんね、{c}'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '俺もごめんだぜ。これで元どおりさ'
+  }]
+}, {
+  id: 'rel-mend-kiki-momosuke-1',
+  kind: 'mend',
+  ppl: ['kiki', 'momosuke'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '{c}…あの、昨日の……'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: 'はい、どうしましたか？'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: '……ごめんなさい！！ もも、言いすぎた！！'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '私もでつ。言いにきてくれて、うれしいでつ♪'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: 'よかったぁ…！！'
+  }]
+}, {
+  id: 'rel-mend-kiki-momosuke-2',
+  kind: 'mend',
+  ppl: ['kiki', 'momosuke'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c}、{name}から、いちごのパフェが届きました'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: '…ももの分も、あるの？'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'ありまつよ。いっしょに食べたら、仲直りでつ'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: 'うん！！ 昨日はごめんね、{c}♡'
+  }]
+}, {
+  id: 'rel-mend-kiki-momosuke-3',
+  kind: 'mend',
+  ppl: ['kiki', 'momosuke'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '{name}に「話しておいで」って言われた…'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: '私もでつ。{name}に言われたら、しょうがありませんね'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: 'じゃあ…ごめんね'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'はい、私もごめんなさい。これでおしまいでつ♪'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: 'おしまい！！ 練習いこ！！'
+  }]
+}, {
+  id: 'rel-mend-kyuko-mua-1',
+  kind: 'mend',
+  ppl: ['kyuko', 'mua'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '{c}〜…いま、ちょっといい？'
+  }, {
+    who: 'kyuko',
+    e: 'normal',
+    t: 'ほい、どしたの？'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: '昨日、あたし言いすぎた。ごめん！'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '俺もごめぇ。ちゃんと聞けばよかったなぁ'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'ふぅ、言えてよかった〜♪'
+  }]
+}, {
+  id: 'rel-mend-kyuko-mua-2',
+  kind: 'mend',
+  ppl: ['kyuko', 'mua'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c}、{name}がシュークリームくれたよぉ。2つある'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: '…あたしにも？'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'うん。食べたら、昨日のはなしってことで笑'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'それ、まぢでいい！ ごめんね、{c}！'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'ありがとん。俺もごめん'
+  }]
+}, {
+  id: 'rel-mend-kyuko-mua-3',
+  kind: 'mend',
+  ppl: ['kyuko', 'mua'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '{name}に「作戦会議、2人でしなよ」って言われちゃった'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: 'あたしも…{name}に言われたら、しょうがないよね'
+  }, {
+    who: 'kyuko',
+    e: 'normal',
+    t: 'じゃあ、仲直りの作戦から立てよっか笑'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '作戦いらないぢゃん！ もう仲直りｗ'
+  }]
+}, {
+  id: 'rel-mend-dra-momosuke-1',
+  kind: 'mend',
+  ppl: ['dra', 'momosuke'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '{c}、昨日はすまんかった。むきになっちまって'
+  }, {
+    who: 'momosuke',
+    e: 'surprise',
+    t: 'えっ、そっちから言いにきたの！？'
+  }, {
+    who: 'dra',
+    e: 'normal',
+    t: 'おで、仲直りは早いほうがいいと思ってな'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: 'もももごめんね！！ 次のギャグ、聞かせて♡'
+  }]
+}, {
+  id: 'rel-mend-dra-momosuke-2',
+  kind: 'mend',
+  ppl: ['dra', 'momosuke'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '{c}、{name}からたいやき届いたよ！！'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '…おで、昨日のこと、まだ謝ってないぞ'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: 'じゃあ、頭のほうくれたらゆるすw'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '頭も、しっぽもやるぞ。すまんかったな'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: 'ももも、ごめんね♡'
+  }]
+}, {
+  id: 'rel-mend-dra-momosuke-3',
+  kind: 'mend',
+  ppl: ['dra', 'momosuke'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '{name}に、ちゃんと話しなって言われた…'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: 'おでも言われたぞ。{name}の頼みじゃ、断れないな'
+  }, {
+    who: 'momosuke',
+    e: 'normal',
+    t: 'じゃあ…お笑いの練習、またいっしょにやる？'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'おう。仲直りのネタから始めるか'
+  }]
+}, {
+  id: 'rel-mend-kiki-kyuko-1',
+  kind: 'mend',
+  ppl: ['kiki', 'kyuko'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '{c}、昨日はごめぇ。言い返しちゃって'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: 'いえ、私も言いすぎました'
+  }, {
+    who: 'kyuko',
+    e: 'normal',
+    t: 'じゃあ、おたがいさまってことで笑'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'はい。図書室、いつもの席で待っていまつ♪'
+  }]
+}, {
+  id: 'rel-mend-kiki-kyuko-2',
+  kind: 'mend',
+  ppl: ['kiki', 'kyuko'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c}、{name}から、ハーブティーをいただきました'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '…俺、まだ謝ってないのにいいのぉ？'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'お茶を飲みながら、謝ってくださればいいでつよ♪'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'ありがとん笑 昨日はごめんね'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '私もごめんなさい。いい香りでつね'
+  }]
+}, {
+  id: 'rel-mend-kiki-kyuko-3',
+  kind: 'mend',
+  ppl: ['kiki', 'kyuko'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'troubled',
+    t: '{name}に、仲直りしてきてくださいと言われてしまいました'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '俺もぉ。{name}に言われたら、しょうがないよねぇ'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: 'では…昨日のことは、ごめんなさい'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '俺もごめん。図書室、いっしょに行こ'
+  }]
+}, {
+  id: 'rel-mend-kiki-mua-1',
+  kind: 'mend',
+  ppl: ['kiki', 'mua'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c}、少しお時間いいでしょうか'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: '…うん'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '昨日は、言い方がきつかったでつ。ごめんなさい'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'あたしこそ、ごめん！ 先に言われちゃったｗ'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'では、半分こで仲直りでつね♪'
+  }]
+}, {
+  id: 'rel-mend-kiki-mua-2',
+  kind: 'mend',
+  ppl: ['kiki', 'mua'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'normal',
+    t: '{c}、{name}からマカロンきたよ。ピンク2つ！'
+  }, {
+    who: 'kiki',
+    e: 'surprise',
+    t: 'まあ、2つとも同じ色でつね'
+  }, {
+    who: 'mua',
+    e: 'wink',
+    t: 'ケンカしないように、だって！ｗ ごめんね、{c}'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '私もごめんなさい。{name}は、よく見ていまつね'
+  }]
+}, {
+  id: 'rel-mend-kiki-mua-3',
+  kind: 'mend',
+  ppl: ['kiki', 'mua'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '{name}に、ちゃんと話しておいでって…'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: '私も言われました。{name}にお願いされては、しかたありませんね'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: '…ごめんね、{c}'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'こちらこそ。明日、いっしょにおやつにしまつか？'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'うん！ 約束ね！'
+  }]
+}, {
+  id: 'rel-mend-erubin-kyuko-1',
+  kind: 'mend',
+  ppl: ['erubin', 'kyuko'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c}、昨日はごめんね。言い方、きつかったよね'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: 'ううん、俺もきつく返しちゃったぁ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'それなら、おたがいさまだね'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'うん。また夜のおすすめ、教えるね笑'
+  }]
+}, {
+  id: 'rel-mend-erubin-kyuko-2',
+  kind: 'mend',
+  ppl: ['erubin', 'kyuko'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c}、{name}がお弁当くれたよぉ。2つ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'ほんとだ。丘で食べよっか'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '…昨日はごめんね'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'こちらこそ。景色、いっしょに見よう'
+  }]
+}, {
+  id: 'rel-mend-erubin-kyuko-3',
+  kind: 'mend',
+  ppl: ['erubin', 'kyuko'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'troubled',
+    t: '{name}に、もう話しておいでって言われたよ'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '俺もぉ…{name}に言われたら、しょうがないなぁ'
+  }, {
+    who: 'erubin',
+    e: 'normal',
+    t: '俺から言うね。ごめんね、{c}'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'ほい、俺もごめん。これで元どおり〜'
+  }]
+}, {
+  id: 'rel-mend-dra-sorashido-1',
+  kind: 'mend',
+  ppl: ['dra', 'sorashido'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '{c}、昨日のこと…俺が悪かったんだぜ'
+  }, {
+    who: 'dra',
+    e: 'normal',
+    t: 'いや、おでもむきになりすぎた'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: 'じゃあ、仲直りの記録をつけとくさ'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '記録するのか。まあ、いいけどな'
+  }]
+}, {
+  id: 'rel-mend-dra-sorashido-2',
+  kind: 'mend',
+  ppl: ['dra', 'sorashido'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '{c}、{name}がサーターアンダギーくれたぞ'
+  }, {
+    who: 'sorashido',
+    e: 'excited',
+    t: 'うぉぉぉ、でーじうれしいぜ！'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '…昨日は、すまんかったな'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '俺もごめんだぜ。半分ずつ食べようさ'
+  }]
+}, {
+  id: 'rel-mend-dra-sorashido-3',
+  kind: 'mend',
+  ppl: ['dra', 'sorashido'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '{name}に、もう仲直りしろって言われちまった'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '俺もさ。{name}にそう言われたら、しょうがないぜ'
+  }, {
+    who: 'dra',
+    e: 'normal',
+    t: 'じゃあ、攻略本のつづきを書くか'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: 'おう！ 説明は{c}、表は俺だぜ'
+  }]
+}, {
+  id: 'rel-mend-kyuko-sorashido-1',
+  kind: 'mend',
+  ppl: ['kyuko', 'sorashido'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c}、昨日はすねちゃってごめぇ'
+  }, {
+    who: 'sorashido',
+    e: 'surprise',
+    t: '俺のほうこそ、言いすぎてごめんだぜ'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'じゃあ、次の勝負で決着ね笑'
+  }, {
+    who: 'sorashido',
+    e: 'excited',
+    t: '望むところだぜ・・・！'
+  }]
+}, {
+  id: 'rel-mend-kyuko-sorashido-2',
+  kind: 'mend',
+  ppl: ['kyuko', 'sorashido'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '{c}、{name}からポテチの差し入れだぜ。3つの味さ'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'えぇ、ちょうど食べたかったやつぅ'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '昨日は、ごめんだぜ'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '俺もごめん。どれから食べるか、作戦会議ね'
+  }]
+}, {
+  id: 'rel-mend-kyuko-sorashido-3',
+  kind: 'mend',
+  ppl: ['kyuko', 'sorashido'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '{name}に、2人で話しなよって言われちゃったぁ'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '俺も言われたぜ。{name}の言うことなら、聞くしかないさ'
+  }, {
+    who: 'kyuko',
+    e: 'normal',
+    t: 'じゃあ…ごめんね'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '俺もごめんだぜ。攻略メモ、また見せてくれよ'
+  }]
+}, {
+  id: 'rel-mend-dra-kyuko-1',
+  kind: 'mend',
+  ppl: ['dra', 'kyuko'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '{c}、昨日のこと、すまんかったな'
+  }, {
+    who: 'kyuko',
+    e: 'surprise',
+    t: 'えぇ、先に言われちゃったぁ。俺もごめん'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'じゃあ、これでいつもどおりだな'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'ほい！ 山札チェック、いこっか'
+  }]
+}, {
+  id: 'rel-mend-dra-kyuko-2',
+  kind: 'mend',
+  ppl: ['dra', 'kyuko'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c}、{name}からケーキ届いたよぉ'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '…おで、昨日のこと、まだ言えてないんだが'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '食べながらでいいよぉ笑'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'すまんかったな。今度はおでが切るぞ'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'ありがとん。俺もごめんね'
+  }]
+}, {
+  id: 'rel-mend-dra-kyuko-3',
+  kind: 'mend',
+  ppl: ['dra', 'kyuko'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '{name}に、ちゃんと話しなって言われたぁ'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: 'おでもだ。{name}にああ言われちゃ、しょうがないな'
+  }, {
+    who: 'kyuko',
+    e: 'normal',
+    t: '……ごめんね'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'おう、おでもすまん。作戦会議、いっしょにやろうな'
+  }]
+}, {
+  id: 'rel-secret-kiki-mua-1',
+  kind: 'secret',
+  ppl: ['kiki', 'mua'],
+  keys: {},
+  lines: [{
+    who: 'mua',
+    e: 'normal',
+    t: '（ひそひそ）{c}、例のやつ、どうなった？'
+  }, {
+    who: 'kiki',
+    e: 'wink',
+    t: '（ひそひそ）順調でつ。あとは、リボンを結ぶだけでつ'
+  }, {
+    who: 'mua',
+    e: 'excited',
+    t: 'まぢ！？ ぜったい喜ぶぢゃん…！'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'あら、{name}。…いえ、なんでもありませんよ♪'
+  }]
+}, {
+  id: 'rel-secret-momosuke-mua-1',
+  kind: 'secret',
+  ppl: ['momosuke', 'mua'],
+  keys: {},
+  lines: [{
+    who: 'momosuke',
+    e: 'wink',
+    t: '（ごにょごにょ）…ってポーズ、どう？'
+  }, {
+    who: 'mua',
+    e: 'excited',
+    t: 'それ、まぢでかわいい！ 次のライブで出そ！'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: 'まだだれにも見せちゃダメだからね！！'
+  }, {
+    who: 'mua',
+    e: 'wink',
+    t: 'うん、本番まで2人だけのやつ♪'
+  }]
+}, {
+  id: 'rel-secret-dra-mua-1',
+  kind: 'secret',
+  ppl: ['dra', 'mua'],
+  keys: {},
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '（小声で）{c}、新ネタなんだが…（ごにょごにょ）'
+  }, {
+    who: 'mua',
+    e: 'surprise',
+    t: '…ぷっ！ 今のはずるいｗ'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'まだ早いか？ 本番は明日だぞ'
+  }, {
+    who: 'mua',
+    e: 'wink',
+    t: '明日まで、あたし笑うのがまんする！'
+  }]
+}, {
+  id: 'rel-secret-atsu-mua-1',
+  kind: 'secret',
+  ppl: ['atsu', 'mua'],
+  keys: {},
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '（ひそひそ）{c}、例の作戦、明日いけるか？'
+  }, {
+    who: 'mua',
+    e: 'wink',
+    t: '（ひそひそ）ばっちり！ 合図は手をたたく、でいい？'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'それでいこう笑'
+  }, {
+    who: 'mua',
+    e: 'surprise',
+    t: 'あっ、{name}…！ な、なんの話もしてないよ？ｗ'
+  }]
+}, {
+  id: 'rel-secret-kyuko-mua-1',
+  kind: 'secret',
+  ppl: ['kyuko', 'mua'],
+  keys: {},
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '（ひそひそ）…でさ、計算すると、ここが一番きれいに見えるんだよねぇ'
+  }, {
+    who: 'mua',
+    e: 'excited',
+    t: 'まぢで！？ 夜、そこ行こ！'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'うん。でも、着くまでは何するか言わないでね笑'
+  }, {
+    who: 'mua',
+    e: 'wink',
+    t: 'わかった！ びっくりさせよ♪'
+  }]
+}, {
+  id: 'rel-secret-mua-sorashido-1',
+  kind: 'secret',
+  ppl: ['mua', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '（ひそひそ）{c}、記録の表、こっそり3年ぶん作ったんだぜ'
+  }, {
+    who: 'mua',
+    e: 'surprise',
+    t: 'え、3年！？ だれの？'
+  }, {
+    who: 'sorashido',
+    e: 'wink',
+    t: 'それは、渡すときのお楽しみさ'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '気になるぅ！ でも待ってる♪'
+  }]
+}, {
+  id: 'rel-secret-erubin-mua-1',
+  kind: 'secret',
+  ppl: ['erubin', 'mua'],
+  keys: {},
+  lines: [{
+    who: 'mua',
+    e: 'normal',
+    t: '（ひそひそ）{c}、あれ、ちゃんと選んできた？'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '（ひそひそ）うん。色は、{c}が言ってたほうにしたよ'
+  }, {
+    who: 'mua',
+    e: 'excited',
+    t: 'さすが！ 渡すの、いつにする？'
+  }, {
+    who: 'erubin',
+    e: 'surprise',
+    t: '…あ、{name}が来た。この話は、またあとでね'
+  }]
+}, {
+  id: 'rel-secret-kiki-momosuke-1',
+  kind: 'secret',
+  ppl: ['kiki', 'momosuke'],
+  keys: {},
+  lines: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '（ひそひそ）{c}、あの曲のサビ、どうだった？'
+  }, {
+    who: 'kiki',
+    e: 'wink',
+    t: '（ひそひそ）とても上手でつ。本番で、みんなびっくりしまつね'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: 'ほんと！？ じゃあ、もうちょっとだけ練習する！！'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'あら、{name}。いま、お茶の話をしていたんでつよ♪'
+  }]
+}, {
+  id: 'rel-secret-dra-kiki-1',
+  kind: 'secret',
+  ppl: ['dra', 'kiki'],
+  keys: {},
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '（小声で）{c}、教えたギャグ、覚えたか？'
+  }, {
+    who: 'kiki',
+    e: 'wink',
+    t: '（小声で）はい。ここぞというときに使いまつ'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'おでより先に言うなよ'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'もちろんでつ。…{name}、いまの、聞こえていましたか？'
+  }]
+}, {
+  id: 'rel-secret-atsu-kiki-1',
+  kind: 'secret',
+  ppl: ['atsu', 'kiki'],
+  keys: {},
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '（ひそひそ）{c}、明日のボス、2人で先に行くぞ…'
+  }, {
+    who: 'kiki',
+    e: 'wink',
+    t: '（ひそひそ）ちから全開で、まいりましょう'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '決まりだな笑'
+  }, {
+    who: 'kiki',
+    e: 'surprise',
+    t: '…あら、{name}。聞こえてしまいましたか？'
+  }]
+}, {
+  id: 'rel-secret-kiki-kyuko-1',
+  kind: 'secret',
+  ppl: ['kiki', 'kyuko'],
+  keys: {},
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '（ひそひそ）{c}、図書室の奥の棚、見つけちゃった'
+  }, {
+    who: 'kiki',
+    e: 'surprise',
+    t: '（ひそひそ）まあ、あの古い地図の棚でつか？'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'うん。明日、2人で行こ'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '…ふふ。{name}にも、いつか教えてあげましょうね'
+  }]
+}, {
+  id: 'rel-secret-kiki-sorashido-1',
+  kind: 'secret',
+  ppl: ['kiki', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '（ひそひそ）{c}、例の数字、出たぜ・・・！'
+  }, {
+    who: 'kiki',
+    e: 'surprise',
+    t: '（ひそひそ）まあ…そんなに大きく？'
+  }, {
+    who: 'sorashido',
+    e: 'excited',
+    t: 'ああ、表の新記録さ'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '発表の日まで、静かにしておきまつね♪'
+  }]
+}, {
+  id: 'rel-secret-erubin-kiki-1',
+  kind: 'secret',
+  ppl: ['erubin', 'kiki'],
+  keys: {},
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '（小声で）{c}、明日の朝、いつものベンチで'
+  }, {
+    who: 'kiki',
+    e: 'wink',
+    t: '（小声で）はい。お茶は私が持っていきまつ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '6時でいいかな'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '6時でつね。…あら、{name}。朝のお茶の相談でつよ♪'
+  }]
+}, {
+  id: 'rel-secret-dra-momosuke-1',
+  kind: 'secret',
+  ppl: ['dra', 'momosuke'],
+  keys: {},
+  lines: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '（ひそひそ）{c}、2人のお笑いの名前、決めた？'
+  }, {
+    who: 'dra',
+    e: 'normal',
+    t: '（ひそひそ）おでは、これがいいと思うんだ…（ごにょごにょ）'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: 'それ、ありかも！！'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '発表は、ライブの日だぞ'
+  }]
+}, {
+  id: 'rel-secret-atsu-momosuke-1',
+  kind: 'secret',
+  ppl: ['atsu', 'momosuke'],
+  keys: {},
+  lines: [{
+    who: 'momosuke',
+    e: 'wink',
+    t: '（ひそひそ）{c}、明日の勝負、あの曲でいこ'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '（ひそひそ）おう、HELLのやつな笑'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: 'みんなには、当日まで言わないでねw'
+  }, {
+    who: 'atsu',
+    e: 'wink',
+    t: 'わかってる！ …って、{name}いたのかよ笑'
+  }]
+}, {
+  id: 'rel-secret-kyuko-momosuke-1',
+  kind: 'secret',
+  ppl: ['kyuko', 'momosuke'],
+  keys: {},
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '（ひそひそ）{c}、ドリーミィの新しい技、見たい？'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: '（ひそひそ）見たい見たい！！'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'じゃあ夜、図書室の裏でね笑'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: 'もも、絶対行く♡'
+  }]
+}, {
+  id: 'rel-secret-momosuke-sorashido-1',
+  kind: 'secret',
+  ppl: ['momosuke', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '（ひそひそ）{c}、ミスの数、先週の半分になってたぜ'
+  }, {
+    who: 'momosuke',
+    e: 'surprise',
+    t: 'ほんと！？ まだ言わないで！！'
+  }, {
+    who: 'sorashido',
+    e: 'wink',
+    t: 'ゼロになったら、みんなの前で発表さ'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: 'それまで、2人で数えよ！！'
+  }]
+}, {
+  id: 'rel-secret-erubin-momosuke-1',
+  kind: 'secret',
+  ppl: ['erubin', 'momosuke'],
+  keys: {},
+  lines: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '（ひそひそ）{c}、ライブの日、一番前に来てくれる？'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '（ひそひそ）もちろん。手作りのうちわも用意してるよ'
+  }, {
+    who: 'momosuke',
+    e: 'surprise',
+    t: 'え、うちわ！？ 見たい！！'
+  }, {
+    who: 'erubin',
+    e: 'wink',
+    t: 'それは、当日のお楽しみね'
+  }]
+}, {
+  id: 'rel-secret-atsu-dra-1',
+  kind: 'secret',
+  ppl: ['atsu', 'dra'],
+  keys: {},
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '（ひそひそ）{c}、今夜の作戦会議、いつもの場所な…'
+  }, {
+    who: 'dra',
+    e: 'normal',
+    t: '（ひそひそ）おう。決勝のときの作戦、持っていくぞ'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'あれか笑'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '寝ないで行くからな。…たぶん'
+  }]
+}, {
+  id: 'rel-secret-dra-kyuko-1',
+  kind: 'secret',
+  ppl: ['dra', 'kyuko'],
+  keys: {},
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '（ひそひそ）{c}、山札の最後の1枚、決まったよ'
+  }, {
+    who: 'dra',
+    e: 'surprise',
+    t: '（ひそひそ）ほんとか。どれにした？'
+  }, {
+    who: 'kyuko',
+    e: 'wink',
+    t: 'それは、対戦で見せるねぇ笑'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '楽しみにしとくぞ'
+  }]
+}, {
+  id: 'rel-secret-dra-sorashido-1',
+  kind: 'secret',
+  ppl: ['dra', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '（ひそひそ）{c}、攻略本の表紙、こんな感じでどうだ？'
+  }, {
+    who: 'dra',
+    e: 'surprise',
+    t: '（ひそひそ）おお…いいな、それ'
+  }, {
+    who: 'sorashido',
+    e: 'excited',
+    t: '完成するまで、だれにも見せないぜ'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'おでも、説明の最後のページ、がんばるぞ'
+  }]
+}, {
+  id: 'rel-secret-dra-erubin-1',
+  kind: 'secret',
+  ppl: ['dra', 'erubin'],
+  keys: {},
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '（小声で）{c}、デュラハンの新しい組み方、思いついたんだ'
+  }, {
+    who: 'dra',
+    e: 'surprise',
+    t: '（小声で）お、聞かせてくれ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '…（ごにょごにょ）…って感じ'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '対戦で、まんまとやられそうだな、えへへ'
+  }]
+}, {
+  id: 'rel-secret-atsu-kyuko-1',
+  kind: 'secret',
+  ppl: ['atsu', 'kyuko'],
+  keys: {},
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '（ひそひそ）{c}、ランキングの作戦、例のやつでいくか？'
+  }, {
+    who: 'kyuko',
+    e: 'wink',
+    t: '（ひそひそ）ほい。理由は、あとで紙で渡すね'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '頼んだ笑'
+  }, {
+    who: 'kyuko',
+    e: 'surprise',
+    t: '…あ、{name}。いまのは、ただの雑談〜'
+  }]
+}, {
+  id: 'rel-secret-atsu-sorashido-1',
+  kind: 'secret',
+  ppl: ['atsu', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '（ひそひそ）{c}、協力プレイの合図、決めようぜ'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '（ひそひそ）指2本で「いけ」、な笑'
+  }, {
+    who: 'sorashido',
+    e: 'excited',
+    t: 'それだぜ！ 見ても分からないさ'
+  }, {
+    who: 'atsu',
+    e: 'wink',
+    t: '本番まで、だれにも言うなよ笑'
+  }]
+}, {
+  id: 'rel-secret-atsu-erubin-1',
+  kind: 'secret',
+  ppl: ['atsu', 'erubin'],
+  keys: {},
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '（小声で）{c}、明日、みんなに差し入れ持っていこうと思うんだ'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '（小声で）いいな笑 俺も半分出す！'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'ありがとう。何がいいかな'
+  }, {
+    who: 'atsu',
+    e: 'normal',
+    t: 'おにぎりだろ！ …あ、{name}、聞こえた？笑'
+  }]
+}, {
+  id: 'rel-secret-kyuko-sorashido-1',
+  kind: 'secret',
+  ppl: ['kyuko', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '（ひそひそ）{c}、たまには攻略じゃない話してもいい？'
+  }, {
+    who: 'sorashido',
+    e: 'surprise',
+    t: '（ひそひそ）お、なんだぜ？'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '…（ごにょごにょ）…ってことがあってさぁ'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: 'それは、表にしないでおくさ'
+  }]
+}, {
+  id: 'rel-secret-erubin-kyuko-1',
+  kind: 'secret',
+  ppl: ['erubin', 'kyuko'],
+  keys: {},
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '（ひそひそ）{c}、夜の図書室、星が見える窓があるんだよぉ'
+  }, {
+    who: 'erubin',
+    e: 'surprise',
+    t: '（ひそひそ）へえ、そんなところが'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '今度、23時より前に見に行こ笑'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'うん。俺が寝る前に、ね'
+  }]
+}, {
+  id: 'rel-secret-erubin-sorashido-1',
+  kind: 'secret',
+  ppl: ['erubin', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '（ひそひそ）{c}、次の大会のデッキ、2人で組まないか？'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '（ひそひそ）いいね。デュラハンも入れていい？'
+  }, {
+    who: 'sorashido',
+    e: 'excited',
+    t: 'もちろんだぜ。でーじ強くなるさ'
+  }, {
+    who: 'erubin',
+    e: 'wink',
+    t: '当日まで、2人で研究だね'
+  }]
+}, {
+  id: 'rel-consult-mua-kiki-1',
+  kind: 'consult',
+  ppl: ['mua', 'kiki'],
+  keys: {
+    mood: 'lonely'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '{c}…今日、広場にだれもいなくてさ'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: 'それは、さみしかったでつね'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: 'うん。あたし、ひとりだとしゃべる相手いないし…'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'では、今からお茶にしましょう。私でよければ、聞きまつよ♪'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '…うん！ {c}、ありがと♪'
+  }]
+}, {
+  id: 'rel-consult-momosuke-mua-1',
+  kind: 'consult',
+  ppl: ['momosuke', 'mua'],
+  keys: {
+    mood: 'restless'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '{c}、なんか今日、そわそわして練習に集中できない…'
+  }, {
+    who: 'mua',
+    e: 'normal',
+    t: 'あるある！ そういう日は、外で思いっきり踊ろ！'
+  }, {
+    who: 'momosuke',
+    e: 'surprise',
+    t: '練習しないで？'
+  }, {
+    who: 'mua',
+    e: 'wink',
+    t: '体動かすと、すっきりするって！ あたしもいっしょに行く♪'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '…うん、行く！！'
+  }]
+}, {
+  id: 'rel-consult-dra-mua-1',
+  kind: 'consult',
+  ppl: ['dra', 'mua'],
+  keys: {
+    mood: 'lonely'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '{c}…みんな出かけてて、家がしーんとしてるんだ'
+  }, {
+    who: 'mua',
+    e: 'surprise',
+    t: 'え、ずっとひとりだったの？'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '昼寝しても、起きたらまだしーんとしててな'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'じゃあ今から、あたしと広場いこ！ ギャグも聞いてあげる！'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '…おう。ありがとな'
+  }]
+}, {
+  id: 'rel-consult-mua-atsu-1',
+  kind: 'consult',
+  ppl: ['mua', 'atsu'],
+  keys: {
+    mood: 'sulky'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'angry',
+    t: '{c}、聞いて！ 今日のビート、3回ともフルコン逃したの！'
+  }, {
+    who: 'atsu',
+    e: 'normal',
+    t: 'そりゃくやしいな…'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: 'あたし、むいてないのかも…'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '3回とも最後まで行けたなら、むいてるだろ笑 明日いっしょにやるぞ！'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '…うん！ 一曲だけね！ｗ'
+  }]
+}, {
+  id: 'rel-consult-kyuko-mua-1',
+  kind: 'consult',
+  ppl: ['kyuko', 'mua'],
+  keys: {
+    mood: 'restless'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '{c}、作戦がまとまらなくて、頭がぐるぐるしてるんだよねぇ'
+  }, {
+    who: 'mua',
+    e: 'normal',
+    t: 'そういうときは、考えるのやめちゃお！'
+  }, {
+    who: 'kyuko',
+    e: 'surprise',
+    t: 'えぇ、やめるの？'
+  }, {
+    who: 'mua',
+    e: 'wink',
+    t: 'うん、なんかいい感じのほう選べば、だいたい当たるって！ｗ'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '…たしかに、{c}の勘って当たるんだよなぁ笑'
+  }]
+}, {
+  id: 'rel-consult-sorashido-mua-1',
+  kind: 'consult',
+  ppl: ['sorashido', 'mua'],
+  keys: {
+    mood: 'sulky'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '{c}、俺の表、だれも最後まで読んでくれないんだぜ…'
+  }, {
+    who: 'mua',
+    e: 'surprise',
+    t: 'え、そうなの？ あたし見たい！'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '長すぎるって、言われちまってさ'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'じゃあ、あたしが見出し付けたげる！ そしたら読みやすいぢゃん♪'
+  }, {
+    who: 'sorashido',
+    e: 'excited',
+    t: '…うぉぉぉ、それだぜ！'
+  }]
+}, {
+  id: 'rel-consult-erubin-mua-1',
+  kind: 'consult',
+  ppl: ['erubin', 'mua'],
+  keys: {
+    mood: 'lonely'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'troubled',
+    t: '{c}、この町にもだいぶ慣れたけど、ときどき、まだかなって思うんだ'
+  }, {
+    who: 'mua',
+    e: 'normal',
+    t: 'うんうん'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: 'ちょっとだけ、さみしくなる日があってさ'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'じゃあ、明日いっしょにコーデ選ぼ！ あたし、毎日でも誘いにいくから！'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '…ありがとう。{c}の元気に、いつも助けられてるよ'
+  }]
+}, {
+  id: 'rel-consult-momosuke-kiki-1',
+  kind: 'consult',
+  ppl: ['momosuke', 'kiki'],
+  keys: {
+    mood: 'sulky'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'angry',
+    t: '{c}、聞いて！！ 今日の練習、ぜんぶうまくいかなかった！！'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: 'まあ、それはくやしかったでつね'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: 'もも、むいてないのかなぁ…'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'うまくいかない日も、練習した日でつ。明日の{c}は、きっと強いでつよ♪'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '…うん！！ 明日、見ててね！！'
+  }]
+}, {
+  id: 'rel-consult-kiki-dra-1',
+  kind: 'consult',
+  ppl: ['kiki', 'dra'],
+  keys: {
+    mood: 'restless'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'troubled',
+    t: '{c}、少しよろしいですか。今日はなんだか、落ち着かなくて'
+  }, {
+    who: 'dra',
+    e: 'normal',
+    t: 'おう、どうした？'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '理由は分からないのでつけれど…胸がそわそわするんでつ'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'そういう日は、ギャグを1つ聞くといいぞ。…アルミ缶の上にあるみかん'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '……ふふ。少しだけ、落ち着きました'
+  }]
+}, {
+  id: 'rel-consult-atsu-kiki-1',
+  kind: 'consult',
+  ppl: ['atsu', 'kiki'],
+  keys: {
+    mood: 'restless'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'troubled',
+    t: '{c}、なんか今日、じっとしてられないんだよな…'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: 'では、ボスにでも挑みまつか？'
+  }, {
+    who: 'atsu',
+    e: 'surprise',
+    t: 'いきなりボスかよ笑'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'ちから全開で動けば、そわそわも消えまつよ♪'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'たしかに！ 行くか笑'
+  }]
+}, {
+  id: 'rel-consult-kyuko-kiki-1',
+  kind: 'consult',
+  ppl: ['kyuko', 'kiki'],
+  keys: {
+    mood: 'lonely'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '{c}、図書室で読んでたら、急にさみしくなっちゃってさぁ'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: 'ひとりの時間が、長かったのでつね'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: 'うん…本はおもしろいんだけどねぇ'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'では、となりの席で私も読みまつ。話さなくても、いっしょでつよ'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '…ありがとん。それがいちばんいいかも笑'
+  }]
+}, {
+  id: 'rel-consult-sorashido-kiki-1',
+  kind: 'consult',
+  ppl: ['sorashido', 'kiki'],
+  keys: {
+    mood: 'restless'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '{c}、計算が合わなくて、ずっと落ち着かないんだぜ…'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: 'どこが合わないのでつか？'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '火力の数字が、思ったより高く出るんだ'
+  }, {
+    who: 'kiki',
+    e: 'wink',
+    t: 'それは、私が強いからでつ♪ 計算は合っていまつよ'
+  }, {
+    who: 'sorashido',
+    e: 'surprise',
+    t: '…そういうことか！ 笑うしかないぜ笑'
+  }]
+}, {
+  id: 'rel-consult-kiki-erubin-1',
+  kind: 'consult',
+  ppl: ['kiki', 'erubin'],
+  keys: {
+    mood: 'lonely'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'troubled',
+    t: '{c}…今日は、みんな出かけているみたいでつね'
+  }, {
+    who: 'erubin',
+    e: 'normal',
+    t: 'うん。さみしい？'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '少しだけ。見守る相手がいないと、手持ちぶさたでつ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'じゃあ、今日は俺が{c}を見守るね。お茶、いれてくるよ'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '…まあ。では、お言葉に甘えまつ♪'
+  }]
+}, {
+  id: 'rel-consult-momosuke-dra-1',
+  kind: 'consult',
+  ppl: ['momosuke', 'dra'],
+  keys: {
+    mood: 'lonely'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '{c}…みんな、ももの練習見にきてくれない…'
+  }, {
+    who: 'dra',
+    e: 'normal',
+    t: 'おでが見るぞ。いちばん前でな'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: 'ほんと？ 寝ない？'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '寝ないぞ。…たぶんな。ほら、行くぞ'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '…うん！！ ちゃんと起きててね♡'
+  }]
+}, {
+  id: 'rel-consult-atsu-momosuke-1',
+  kind: 'consult',
+  ppl: ['atsu', 'momosuke'],
+  keys: {
+    mood: 'sulky'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'troubled',
+    t: '{c}、今日の勝負、ぜんぶ負けた…'
+  }, {
+    who: 'momosuke',
+    e: 'surprise',
+    t: 'えー！！ めずらしいじゃん！！'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '調子出ない日もあるよな…'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: '負けた日の{c}、ちょっとかわいいw でも明日はリベンジだよ！！'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'かわいいって言うな笑 でも、ありがと！'
+  }]
+}, {
+  id: 'rel-consult-momosuke-kyuko-1',
+  kind: 'consult',
+  ppl: ['momosuke', 'kyuko'],
+  keys: {
+    mood: 'restless'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '{c}、新しい編成の名前、決まらなくてそわそわする！！'
+  }, {
+    who: 'kyuko',
+    e: 'normal',
+    t: 'えぇ、それでそわそわしてたの笑'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: 'だって大事じゃん！！'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'じゃあ候補、3つ出して。俺が理由つけて選ぶよ'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: 'それいい！！ ちょっと待ってて！！'
+  }]
+}, {
+  id: 'rel-consult-momosuke-sorashido-1',
+  kind: 'consult',
+  ppl: ['momosuke', 'sorashido'],
+  keys: {
+    mood: 'sulky'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '{c}…ミスの数、また増えてた…'
+  }, {
+    who: 'sorashido',
+    e: 'normal',
+    t: '増えた日もあるさ。表で見ると、ぐっと減ってるんだぜ'
+  }, {
+    who: 'momosuke',
+    e: 'surprise',
+    t: 'ほんと！？ 見せて！！'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: 'ほら、先月の半分さ。ちばりよー！'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '…ほんとだ！！ 元気出た♡'
+  }]
+}, {
+  id: 'rel-consult-momosuke-erubin-1',
+  kind: 'consult',
+  ppl: ['momosuke', 'erubin'],
+  keys: {
+    mood: 'lonely'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '{c}、夜の練習って、ひとりだと静かすぎるんだよね…'
+  }, {
+    who: 'erubin',
+    e: 'normal',
+    t: 'そっか。夜は、みんな寝ちゃうもんね'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: 'うん、ちょっとさみしい…'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '俺が起きてる時間なら、聞きにいくよ。23時までだけどね笑'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: 'じゃあ、23時までにいちばんいい曲やる！！'
+  }]
+}, {
+  id: 'rel-consult-atsu-dra-1',
+  kind: 'consult',
+  ppl: ['atsu', 'dra'],
+  keys: {
+    mood: 'lonely'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'troubled',
+    t: '{c}、みんな忙しそうで、勝負の相手がいないんだよな…'
+  }, {
+    who: 'dra',
+    e: 'normal',
+    t: 'おでがいるぞ'
+  }, {
+    who: 'atsu',
+    e: 'surprise',
+    t: 'いいのかよ笑'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '決勝のつづき、まだ終わってないからな'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '…だな！ 今日こそ決着つけるぞ！'
+  }]
+}, {
+  id: 'rel-consult-dra-kyuko-1',
+  kind: 'consult',
+  ppl: ['dra', 'kyuko'],
+  keys: {
+    mood: 'restless'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '{c}、デッキの1枚が決まらなくて、落ち着かないんだ'
+  }, {
+    who: 'kyuko',
+    e: 'normal',
+    t: '候補、何枚あるのぉ？'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '3枚だ。どれもいいんだよな'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'じゃあ、相手のデッキで分けよっか。理由があれば、決めやすいっしょ'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'おお、なるほどな。さすがだぞ'
+  }]
+}, {
+  id: 'rel-consult-sorashido-dra-1',
+  kind: 'consult',
+  ppl: ['sorashido', 'dra'],
+  keys: {
+    mood: 'lonely'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '{c}、カード部屋、今日はだれも来ないんだぜ…'
+  }, {
+    who: 'dra',
+    e: 'normal',
+    t: 'おでが来たぞ'
+  }, {
+    who: 'sorashido',
+    e: 'surprise',
+    t: 'お、ほんとだぜ！'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '長い表、最後まで読んでやるからな'
+  }, {
+    who: 'sorashido',
+    e: 'excited',
+    t: 'うぉぉぉ、でーじうれしいさ！'
+  }]
+}, {
+  id: 'rel-consult-erubin-dra-1',
+  kind: 'consult',
+  ppl: ['erubin', 'dra'],
+  keys: {
+    mood: 'restless'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'troubled',
+    t: '{c}、次の対戦のこと考えると、そわそわしちゃって'
+  }, {
+    who: 'dra',
+    e: 'normal',
+    t: '緊張してるのか'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: 'うん、少し。負けたくないなって'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'おでが教えたことを思い出せばいいぞ。{c}はもう強いからな'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '…ありがとう、先生。がんばるね'
+  }]
+}, {
+  id: 'rel-consult-kyuko-atsu-1',
+  kind: 'consult',
+  ppl: ['kyuko', 'atsu'],
+  keys: {
+    mood: 'sulky'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '{c}…作戦立てたのに、だれも聞いてくれなかったんだよねぇ'
+  }, {
+    who: 'atsu',
+    e: 'surprise',
+    t: 'まじか！ 俺に聞かせろよ！'
+  }, {
+    who: 'kyuko',
+    e: 'normal',
+    t: 'えぇ、いいのぉ？'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '{c}の作戦なら、全力で走るだけだ笑'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '…ありがとん。じゃあ、最初からね'
+  }]
+}, {
+  id: 'rel-consult-atsu-sorashido-1',
+  kind: 'consult',
+  ppl: ['atsu', 'sorashido'],
+  keys: {
+    mood: 'sulky'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'troubled',
+    t: '{c}、最近、2点差で負けてばっかだよな…'
+  }, {
+    who: 'sorashido',
+    e: 'normal',
+    t: '表で見ると、3回に1回は勝ってるさ'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: 'それ、なぐさめになってるか？笑'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '前は5回に1回だったんだぜ。伸びてるさ！'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '…まじか！ じゃあもう1戦だ！'
+  }]
+}, {
+  id: 'rel-consult-atsu-erubin-1',
+  kind: 'consult',
+  ppl: ['atsu', 'erubin'],
+  keys: {
+    mood: 'lonely'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'troubled',
+    t: '{c}、ちょっといいか… 今日、なんか疲れたんだよな…'
+  }, {
+    who: 'erubin',
+    e: 'normal',
+    t: 'うん。顔に出てたよ'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: 'みんなの前だと、弱いとこ見せたくなくてさ…'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '俺の前なら、いいよ。今日はゆっくり休もう'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '…助かる！ ありがとな笑'
+  }]
+}, {
+  id: 'rel-consult-sorashido-kyuko-1',
+  kind: 'consult',
+  ppl: ['sorashido', 'kyuko'],
+  keys: {
+    mood: 'restless'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '{c}、表が1行ずれてて、気になって眠れないんだぜ…'
+  }, {
+    who: 'kyuko',
+    e: 'normal',
+    t: 'それ、明日でもよくない？'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: 'いや、ずれてると落ち着かないのさ'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'じゃあ俺が読むから、直してこ。2人なら5分っしょ笑'
+  }, {
+    who: 'sorashido',
+    e: 'excited',
+    t: '助かるぜ・・・！'
+  }]
+}, {
+  id: 'rel-consult-kyuko-erubin-1',
+  kind: 'consult',
+  ppl: ['kyuko', 'erubin'],
+  keys: {
+    mood: 'lonely'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '{c}、夜ふかししてると、ときどきさみしくなるんだよねぇ'
+  }, {
+    who: 'erubin',
+    e: 'normal',
+    t: 'みんな寝ちゃってるもんね'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: 'うん。起きてるのが、俺だけみたいでさぁ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '寝る前に、おやすみって言いに行くね。それなら少しは、ね'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '…ありがとん。それ、うれしいなぁ'
+  }]
+}, {
+  id: 'rel-consult-erubin-sorashido-1',
+  kind: 'consult',
+  ppl: ['erubin', 'sorashido'],
+  keys: {
+    mood: 'sulky'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'troubled',
+    t: '{c}、今日の対戦、デュラハンが全然活躍できなくて…'
+  }, {
+    who: 'sorashido',
+    e: 'normal',
+    t: '表で見ると、相手との相性が悪かったんだぜ'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: 'そっか…ちょっと落ちこんだよ'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '相性のいい相手の表、作っといたさ。次はここで出すんだぜ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '…さすが。ありがとう、元気出た'
+  }]
+}, {
+  id: 'rel-tease-mua-kiki-1',
+  kind: 'tease',
+  ppl: ['mua', 'kiki'],
+  keys: {},
+  lines: [{
+    who: 'mua',
+    e: 'wink',
+    t: '{c}、今日のリボン、かわいすぎぢゃない？'
+  }, {
+    who: 'kiki',
+    e: 'surprise',
+    t: 'ま、まあ…そんなに見られると、照れまつ'
+  }, {
+    who: 'mua',
+    e: 'excited',
+    t: '照れてる{c}、レアだ〜！ｗ'
+  }]
+}, {
+  id: 'rel-tease-kiki-mua-1',
+  kind: 'tease',
+  ppl: ['kiki', 'mua'],
+  keys: {},
+  lines: [{
+    who: 'kiki',
+    e: 'wink',
+    t: '{c}、さっき転びそうになったところ、見ていましたよ♪'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: 'えっ、見てたの！？ わすれて〜！'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '立て直したのは、見事でつ♪'
+  }]
+}, {
+  id: 'rel-tease-mua-momosuke-1',
+  kind: 'tease',
+  ppl: ['mua', 'momosuke'],
+  keys: {},
+  lines: [{
+    who: 'mua',
+    e: 'wink',
+    t: '{c}、今日のメイク、あたしが教えたやつぢゃん？'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: 'ち、ちがうもん！！ 自分で考えたの！！'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'はいはい、そういうことにしとこｗ 似合ってる♪'
+  }]
+}, {
+  id: 'rel-tease-momosuke-mua-1',
+  kind: 'tease',
+  ppl: ['momosuke', 'mua'],
+  keys: {},
+  lines: [{
+    who: 'momosuke',
+    e: 'wink',
+    t: '{c}、さっき鏡の前で3回ポーズしてたでしょw'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: '…見てたの！？ 3回もしてないし！'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '4回だったw でも、かわいかったよ♡'
+  }]
+}, {
+  id: 'rel-tease-mua-dra-1',
+  kind: 'tease',
+  ppl: ['mua', 'dra'],
+  keys: {},
+  lines: [{
+    who: 'mua',
+    e: 'wink',
+    t: '{c}、さっきのギャグ、ちょっとだけ笑っちゃったｗ'
+  }, {
+    who: 'dra',
+    e: 'surprise',
+    t: 'ほ、ほんとか！？'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'ほんのちょっとね！ ほんのちょっと！ｗ'
+  }]
+}, {
+  id: 'rel-tease-dra-mua-1',
+  kind: 'tease',
+  ppl: ['dra', 'mua'],
+  keys: {},
+  lines: [{
+    who: 'dra',
+    e: 'happy',
+    t: '{c}の説明、わかりやすかったな。先生みたいだったぞ'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: 'え、やめてよ〜、照れるぢゃん！'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '先生、もう1回頼むぞ'
+  }]
+}, {
+  id: 'rel-tease-mua-atsu-1',
+  kind: 'tease',
+  ppl: ['mua', 'atsu'],
+  keys: {},
+  lines: [{
+    who: 'mua',
+    e: 'wink',
+    t: '{c}、さっきのフルコン、ガッツポーズ大きすぎｗ'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '見てたのかよ笑'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'ちゃんと、かっこよかったよ♪'
+  }]
+}, {
+  id: 'rel-tease-atsu-mua-1',
+  kind: 'tease',
+  ppl: ['atsu', 'mua'],
+  keys: {},
+  lines: [{
+    who: 'atsu',
+    e: 'wink',
+    t: '{c}、また「一曲だけ」って言って5曲やってたな笑'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: 'う…だって楽しかったんだもん！'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'まあ、5曲とも上手かったけどな笑'
+  }]
+}, {
+  id: 'rel-tease-mua-kyuko-1',
+  kind: 'tease',
+  ppl: ['mua', 'kyuko'],
+  keys: {},
+  lines: [{
+    who: 'mua',
+    e: 'wink',
+    t: '{c}、作戦の説明してるとき、目がきらきらしてたよ！'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: 'えぇ、そんなことないってぇ…'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'あるある！ ああいうときの{c}、いいなって思う♪'
+  }]
+}, {
+  id: 'rel-tease-kyuko-mua-1',
+  kind: 'tease',
+  ppl: ['kyuko', 'mua'],
+  keys: {},
+  lines: [{
+    who: 'kyuko',
+    e: 'wink',
+    t: '{c}の「なんかいい」、今日も当たってたねぇ笑'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: 'えっ…そんなにほめられると、照れるぢゃん！'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '照れてる{c}、めずらしいねぇ笑'
+  }]
+}, {
+  id: 'rel-tease-mua-sorashido-1',
+  kind: 'tease',
+  ppl: ['mua', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'mua',
+    e: 'wink',
+    t: '{c}、表を作ってるときの顔、まぢ真剣ぢゃん！'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: 'そ、そんなに見てたのか…照れるぜ'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'かっこいいってことだよ♪'
+  }]
+}, {
+  id: 'rel-tease-sorashido-mua-1',
+  kind: 'tease',
+  ppl: ['sorashido', 'mua'],
+  keys: {},
+  lines: [{
+    who: 'sorashido',
+    e: 'wink',
+    t: '{c}の今月の勝ち数、表でいちばん伸びてるぜ・・・！'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: 'えっ、ほんと！？ …なんか照れるｗ'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '数字は、うそつかないさ'
+  }]
+}, {
+  id: 'rel-tease-mua-erubin-1',
+  kind: 'tease',
+  ppl: ['mua', 'erubin'],
+  keys: {},
+  lines: [{
+    who: 'mua',
+    e: 'wink',
+    t: '{c}、今日のコーデ、あたしが選んだのより似合ってるかもｗ'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: 'え、そうかな…照れるね'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'ちょっとくやしいけど、ほめてる♪'
+  }]
+}, {
+  id: 'rel-tease-erubin-mua-1',
+  kind: 'tease',
+  ppl: ['erubin', 'mua'],
+  keys: {},
+  lines: [{
+    who: 'erubin',
+    e: 'happy',
+    t: '{c}が選んでくれた服、みんなにほめられたよ'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: 'え、ほんと！？ …なんか、照れるぢゃん'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '{c}のおかげだね。ありがとう'
+  }]
+}, {
+  id: 'rel-tease-kiki-momosuke-1',
+  kind: 'tease',
+  ppl: ['kiki', 'momosuke'],
+  keys: {},
+  lines: [{
+    who: 'kiki',
+    e: 'wink',
+    t: '{c}、さっきのサビ、とても輝いていましたよ♪'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: 'え、えっ…きゅ、急にほめないで！！'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '照れている{c}も、かわいいでつね♪'
+  }]
+}, {
+  id: 'rel-tease-momosuke-kiki-1',
+  kind: 'tease',
+  ppl: ['momosuke', 'kiki'],
+  keys: {},
+  lines: [{
+    who: 'momosuke',
+    e: 'wink',
+    t: '{c}って、本読みながら寝ちゃうときあるよねw'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '…見られていましたか。少しはずかしいでつ'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '寝顔、おだやかだったよ♡'
+  }]
+}, {
+  id: 'rel-tease-kiki-dra-1',
+  kind: 'tease',
+  ppl: ['kiki', 'dra'],
+  keys: {},
+  lines: [{
+    who: 'kiki',
+    e: 'wink',
+    t: '{c}のギャグ、今日はまだ2回でつね。あと1回でつよ♪'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '数えてたのか…'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'はい。3回目、少しだけ楽しみにしていまつ'
+  }]
+}, {
+  id: 'rel-tease-dra-kiki-1',
+  kind: 'tease',
+  ppl: ['dra', 'kiki'],
+  keys: {},
+  lines: [{
+    who: 'dra',
+    e: 'happy',
+    t: '{c}、さっき小さく笑ってたろ。おで、見てたぞ'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '…気のせいでつ'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'そうか、気のせいか。じゃあもう1つ言うか'
+  }]
+}, {
+  id: 'rel-tease-kiki-atsu-1',
+  kind: 'tease',
+  ppl: ['kiki', 'atsu'],
+  keys: {},
+  lines: [{
+    who: 'kiki',
+    e: 'wink',
+    t: '{c}、さっきボスの前で、少し足が震えていましたね♪'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '武者震いだって笑'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'そういうことにしておきまつ'
+  }]
+}, {
+  id: 'rel-tease-atsu-kiki-1',
+  kind: 'tease',
+  ppl: ['atsu', 'kiki'],
+  keys: {},
+  lines: [{
+    who: 'atsu',
+    e: 'wink',
+    t: '{c}、ボスの前だと目つき変わるよな笑'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '…そんなに変わりまつか？'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '変わる変わる！ 頼もしすぎるって笑'
+  }]
+}, {
+  id: 'rel-tease-kiki-kyuko-1',
+  kind: 'tease',
+  ppl: ['kiki', 'kyuko'],
+  keys: {},
+  lines: [{
+    who: 'kiki',
+    e: 'wink',
+    t: '{c}、本を読むとき、口が少し動いていまつね♪'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: 'えぇ、うそぉ… 声出てた？'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '出ていませんよ。とても楽しそうでした'
+  }]
+}, {
+  id: 'rel-tease-kyuko-kiki-1',
+  kind: 'tease',
+  ppl: ['kyuko', 'kiki'],
+  keys: {},
+  lines: [{
+    who: 'kyuko',
+    e: 'wink',
+    t: '{c}、火力の話になると、声がちょっと大きくなるよねぇ笑'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '…気づかれていましたか'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'わかりやすくて、いいと思うよ笑'
+  }]
+}, {
+  id: 'rel-tease-kiki-sorashido-1',
+  kind: 'tease',
+  ppl: ['kiki', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'kiki',
+    e: 'wink',
+    t: '{c}の表、今日は誤字がひとつもありませんでした♪'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: 'そ、そんなに細かく読んでくれてたのか…'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'はい。1行目から最後まででつ'
+  }]
+}, {
+  id: 'rel-tease-sorashido-kiki-1',
+  kind: 'tease',
+  ppl: ['sorashido', 'kiki'],
+  keys: {},
+  lines: [{
+    who: 'sorashido',
+    e: 'wink',
+    t: '{c}、さっきの一撃、表の数字をこえてたぜ・・・！'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: 'まあ…そんなに言われると、照れてしまいまつ'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '次の表は、{c}のために1列ふやすさ'
+  }]
+}, {
+  id: 'rel-tease-kiki-erubin-1',
+  kind: 'tease',
+  ppl: ['kiki', 'erubin'],
+  keys: {},
+  lines: [{
+    who: 'kiki',
+    e: 'wink',
+    t: '{c}、ベンチで寝ていたの、私は見ていましたよ♪'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: 'あ…起こしてくれればよかったのに'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '気持ちよさそうだったので、見守っていました'
+  }]
+}, {
+  id: 'rel-tease-erubin-kiki-1',
+  kind: 'tease',
+  ppl: ['erubin', 'kiki'],
+  keys: {},
+  lines: [{
+    who: 'erubin',
+    e: 'happy',
+    t: '{c}のいれるお茶、やっぱりいちばんおいしいね'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: 'まあ…そんな、ふつうのお茶でつよ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'ふつうでも、いちばんだよ'
+  }]
+}, {
+  id: 'rel-tease-momosuke-dra-1',
+  kind: 'tease',
+  ppl: ['momosuke', 'dra'],
+  keys: {},
+  lines: [{
+    who: 'momosuke',
+    e: 'wink',
+    t: '{c}、昼寝のいびき、リズムぴったりだったよw'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: 'ほ、ほんとか…はずかしいな'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: 'ももの練習のメトロノームにしたい♡'
+  }]
+}, {
+  id: 'rel-tease-dra-momosuke-1',
+  kind: 'tease',
+  ppl: ['dra', 'momosuke'],
+  keys: {},
+  lines: [{
+    who: 'dra',
+    e: 'happy',
+    t: '{c}、さっきの前説、おでより上手かったぞ'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: 'え…ほんと？ も、ももは天才だから当然！！'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '照れかくし、ばればれだぞ'
+  }]
+}, {
+  id: 'rel-tease-momosuke-atsu-1',
+  kind: 'tease',
+  ppl: ['momosuke', 'atsu'],
+  keys: {},
+  lines: [{
+    who: 'momosuke',
+    e: 'wink',
+    t: '{c}、さっきのライブ、いちばん前でノリノリだったねw'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '見えてたのかよ笑'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: 'うれしかったよ♡ また来てね！！'
+  }]
+}, {
+  id: 'rel-tease-atsu-momosuke-1',
+  kind: 'tease',
+  ppl: ['atsu', 'momosuke'],
+  keys: {},
+  lines: [{
+    who: 'atsu',
+    e: 'wink',
+    t: '{c}、HELLのフルコン、ほんとにすげえよ！'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: '……え、なに、急に！！'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '照れてんの？笑 珍しいな！'
+  }]
+}, {
+  id: 'rel-tease-momosuke-kyuko-1',
+  kind: 'tease',
+  ppl: ['momosuke', 'kyuko'],
+  keys: {},
+  lines: [{
+    who: 'momosuke',
+    e: 'wink',
+    t: '{c}、ドリーミィ見せるとき、すごい自慢げだよねw'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: 'えぇ、そう見えるぅ？'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '自慢していいよ♡ ほんとにかわいいもん！！'
+  }]
+}, {
+  id: 'rel-tease-kyuko-momosuke-1',
+  kind: 'tease',
+  ppl: ['kyuko', 'momosuke'],
+  keys: {},
+  lines: [{
+    who: 'kyuko',
+    e: 'wink',
+    t: '{c}が決めた編成の名前、みんなに好評だったよぉ'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: 'え、ほんと！？ …もも、照れちゃう…'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '次の名前も、頼むね笑'
+  }]
+}, {
+  id: 'rel-tease-momosuke-sorashido-1',
+  kind: 'tease',
+  ppl: ['momosuke', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'momosuke',
+    e: 'wink',
+    t: '{c}、ミス数えるとき、ちょっと楽しそうだよねw'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: 'ば、ばれてたか…記録するのが好きなんだぜ'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: 'じゃあ、減ってくところも楽しんでね♡'
+  }]
+}, {
+  id: 'rel-tease-sorashido-momosuke-1',
+  kind: 'tease',
+  ppl: ['sorashido', 'momosuke'],
+  keys: {},
+  lines: [{
+    who: 'sorashido',
+    e: 'wink',
+    t: '{c}、今日はミスが2つだけだったぜ。新記録さ！'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: 'え、数えてたの！？ …うれしいけど、はずかしい！！'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: 'ちゃんと表に残しとくさ'
+  }]
+}, {
+  id: 'rel-tease-momosuke-erubin-1',
+  kind: 'tease',
+  ppl: ['momosuke', 'erubin'],
+  keys: {},
+  lines: [{
+    who: 'momosuke',
+    e: 'wink',
+    t: '{c}、うちわ振るの、すっごい一生けんめいだったw'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '見えてた？ ちょっとはずかしいな'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: 'うれしかったから、また振ってね♡'
+  }]
+}, {
+  id: 'rel-tease-erubin-momosuke-1',
+  kind: 'tease',
+  ppl: ['erubin', 'momosuke'],
+  keys: {},
+  lines: [{
+    who: 'erubin',
+    e: 'happy',
+    t: '{c}のステージ、今日もきらきらしてたね'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: 'そ、そう？ …えっと、ありがと…'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '照れてるのも、いいね笑'
+  }]
+}, {
+  id: 'rel-tease-dra-atsu-1',
+  kind: 'tease',
+  ppl: ['dra', 'atsu'],
+  keys: {},
+  lines: [{
+    who: 'dra',
+    e: 'happy',
+    t: '{c}、決勝のときの顔、今でも覚えてるぞ'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: 'それ、もう言うなって笑'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'かっこよかったからな'
+  }]
+}, {
+  id: 'rel-tease-atsu-dra-1',
+  kind: 'tease',
+  ppl: ['atsu', 'dra'],
+  keys: {},
+  lines: [{
+    who: 'atsu',
+    e: 'wink',
+    t: '{c}、さっきの読み、完全にやられたわ笑'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: 'そ、そうか？ 照れるな…'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '次は負けないけどな！'
+  }]
+}, {
+  id: 'rel-tease-dra-kyuko-1',
+  kind: 'tease',
+  ppl: ['dra', 'kyuko'],
+  keys: {},
+  lines: [{
+    who: 'dra',
+    e: 'happy',
+    t: '{c}、今日も寝ぐせ、ぴょんってなってるぞ'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: 'えぇ、うそぉ…さっき直したのにぃ'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '似合ってるから、いいと思うぞ'
+  }]
+}, {
+  id: 'rel-tease-kyuko-dra-1',
+  kind: 'tease',
+  ppl: ['kyuko', 'dra'],
+  keys: {},
+  lines: [{
+    who: 'kyuko',
+    e: 'wink',
+    t: '{c}の説明、俺のメモよりわかりやすいんだよねぇ笑'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: 'ほ、ほめても何も出ないぞ'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'ほい、じゃあもう1回説明して笑'
+  }]
+}, {
+  id: 'rel-tease-dra-sorashido-1',
+  kind: 'tease',
+  ppl: ['dra', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'dra',
+    e: 'happy',
+    t: '{c}の表、今日は最後まで読んだぞ。いい表だったな'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '……でーじ照れるぜ'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '誤字もなかったぞ'
+  }]
+}, {
+  id: 'rel-tease-sorashido-dra-1',
+  kind: 'tease',
+  ppl: ['sorashido', 'dra'],
+  keys: {},
+  lines: [{
+    who: 'sorashido',
+    e: 'wink',
+    t: '{c}の説明を表に入れたら、見やすさ倍増だぜ・・・！'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: 'そ、そんなにか…'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '攻略本の主役は、{c}の説明さ'
+  }]
+}, {
+  id: 'rel-tease-dra-erubin-1',
+  kind: 'tease',
+  ppl: ['dra', 'erubin'],
+  keys: {},
+  lines: [{
+    who: 'dra',
+    e: 'wink',
+    t: '{c}、今日も石油王みたいな服だな'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: 'そんなことないよ笑 ふつうの服だって'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'えへへ、似合ってるってことだぞ'
+  }]
+}, {
+  id: 'rel-tease-erubin-dra-1',
+  kind: 'tease',
+  ppl: ['erubin', 'dra'],
+  keys: {},
+  lines: [{
+    who: 'erubin',
+    e: 'happy',
+    t: '{c}に教わったカード、今日も勝てたよ。先生のおかげだね'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: 'せ、先生はやめてくれ…照れるだろ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'じゃあ、照れてる先生だね笑'
+  }]
+}, {
+  id: 'rel-tease-atsu-kyuko-1',
+  kind: 'tease',
+  ppl: ['atsu', 'kyuko'],
+  keys: {},
+  lines: [{
+    who: 'atsu',
+    e: 'wink',
+    t: '{c}、無課金でその順位、ほんとにすげえよな笑'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: 'えぇ、たまたまだってぇ'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'たまたまで毎回上位は無理だろ！'
+  }]
+}, {
+  id: 'rel-tease-kyuko-atsu-1',
+  kind: 'tease',
+  ppl: ['kyuko', 'atsu'],
+  keys: {},
+  lines: [{
+    who: 'kyuko',
+    e: 'wink',
+    t: '{c}、さっき転びそうになって、何もなかった顔してたよねぇ笑'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '…見てたのかよ！'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'ほい、見てた〜。かっこよく立て直してたよ笑'
+  }]
+}, {
+  id: 'rel-tease-atsu-sorashido-1',
+  kind: 'tease',
+  ppl: ['atsu', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'atsu',
+    e: 'wink',
+    t: '{c}、2点差で勝ったとき、表より先に叫んでたな笑'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: 'う…つい、うれしくてさ'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '俺もうれしかったけどな！'
+  }]
+}, {
+  id: 'rel-tease-sorashido-atsu-1',
+  kind: 'tease',
+  ppl: ['sorashido', 'atsu'],
+  keys: {},
+  lines: [{
+    who: 'sorashido',
+    e: 'wink',
+    t: '{c}、今日の勝率、俺の表でいちばん高いぜ・・・！'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: 'そ、そうか…なんか照れるな笑'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '次は俺が上をいくさ'
+  }]
+}, {
+  id: 'rel-tease-atsu-erubin-1',
+  kind: 'tease',
+  ppl: ['atsu', 'erubin'],
+  keys: {},
+  lines: [{
+    who: 'atsu',
+    e: 'wink',
+    t: '{c}、また俺より先に、俺の疲れに気づいてたな笑'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '…ばれてた？'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '助かってるって意味だぞ！'
+  }]
+}, {
+  id: 'rel-tease-erubin-atsu-1',
+  kind: 'tease',
+  ppl: ['erubin', 'atsu'],
+  keys: {},
+  lines: [{
+    who: 'erubin',
+    e: 'happy',
+    t: '{c}が前にいると、安心するんだよね'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '…急になんだよ、照れるだろ笑'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'ほんとのことだよ'
+  }]
+}, {
+  id: 'rel-tease-kyuko-sorashido-1',
+  kind: 'tease',
+  ppl: ['kyuko', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'kyuko',
+    e: 'wink',
+    t: '{c}、俺のメモ、こっそりきれいな表にしてくれてたんだねぇ笑'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '……見つかったか'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'ありがとん。うれしいよ'
+  }]
+}, {
+  id: 'rel-tease-sorashido-kyuko-1',
+  kind: 'tease',
+  ppl: ['sorashido', 'kyuko'],
+  keys: {},
+  lines: [{
+    who: 'sorashido',
+    e: 'wink',
+    t: '{c}の「だいたい」、計算したら97点だったぜ・・・！'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: 'えぇ、そんなに？ なんか照れるなぁ'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: 'だいたいで97点は、才能さ'
+  }]
+}, {
+  id: 'rel-tease-kyuko-erubin-1',
+  kind: 'tease',
+  ppl: ['kyuko', 'erubin'],
+  keys: {},
+  lines: [{
+    who: 'kyuko',
+    e: 'wink',
+    t: '{c}、カード部屋で寝ちゃってたでしょ笑'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '…23時すぎてたからね'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '寝顔、デュラハンみたいにりりしかったよ笑'
+  }]
+}, {
+  id: 'rel-tease-erubin-kyuko-1',
+  kind: 'tease',
+  ppl: ['erubin', 'kyuko'],
+  keys: {},
+  lines: [{
+    who: 'erubin',
+    e: 'happy',
+    t: '{c}に教わった場所、ほんとにきれいだったよ'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: 'えぇ、そう？ よかったぁ…照れる'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'また教えてね'
+  }]
+}, {
+  id: 'rel-tease-sorashido-erubin-1',
+  kind: 'tease',
+  ppl: ['sorashido', 'erubin'],
+  keys: {},
+  lines: [{
+    who: 'sorashido',
+    e: 'wink',
+    t: '{c}、カードを引くとき、ちょっと祈ってるだろ笑'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: 'ばれてた？ 癖なんだよね'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '祈ったときの勝率、表にしとくぜ'
+  }]
+}, {
+  id: 'rel-tease-erubin-sorashido-1',
+  kind: 'tease',
+  ppl: ['erubin', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'erubin',
+    e: 'happy',
+    t: '{c}の表のおかげで、今日は勝てたよ'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: 'お、おう…照れるぜ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'さすが{c}だね'
+  }]
+}, {
+  id: 'rel-fight-mua-sorashido-1',
+  kind: 'fight',
+  ppl: ['mua', 'sorashido'],
+  keys: {
+    cause: 'tidy'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '……あれ、ここに置いてた表がない'
+  }, {
+    who: 'mua',
+    e: 'normal',
+    t: '散らかってたから、まとめて棚に入れといたよ♪'
+  }, {
+    who: 'sorashido',
+    e: 'angry',
+    t: '順番どおりに並べてたんだよ！ 全部ばらばらだ…'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: 'えー！ 片づけてあげたのに！'
+  }],
+  distance: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '……よかれと思ったんだけどな'
+  }, {
+    who: 'sorashido',
+    e: 'normal',
+    t: '……並べ直すか'
+  }],
+  makeup: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: 'さっきは大きい声出して悪かった。片づけてくれたのは助かったよ'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'あたしも、勝手にさわってごめん'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: 'じゃあ、一緒に並べ直そう。順番を教えるよ笑'
+  }, {
+    who: 'mua',
+    e: 'excited',
+    t: '覚えたら、次からはちゃんと並べるね♪'
+  }]
+}, {
+  id: 'rel-fight-mua-sorashido-2',
+  kind: 'fight',
+  ppl: ['mua', 'sorashido'],
+  keys: {
+    cause: 'snack'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'excited',
+    t: 'あーっ、最後のちんすこう食べたでしょ！'
+  }, {
+    who: 'sorashido',
+    e: 'surprise',
+    t: 'え、残ってたから、いらないのかと思って…'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: 'あたし、最後に食べようと思って取っといたの！'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: 'それなら、先に言ってくれよ！'
+  }],
+  distance: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '……数えておけばよかったな'
+  }, {
+    who: 'mua',
+    e: 'normal',
+    t: '……べつにー'
+  }],
+  makeup: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '{c}、新しいの買ってきた。さっきはごめんな'
+  }, {
+    who: 'mua',
+    e: 'surprise',
+    t: 'え、わざわざ？'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '……あたしこそ、大きい声出してごめん。一緒に食べよ♪'
+  }]
+}, {
+  id: 'rel-fight-mua-sorashido-3',
+  kind: 'fight',
+  ppl: ['mua', 'sorashido'],
+  keys: {
+    cause: 'win'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'excited',
+    t: 'よし、今のは俺の勝ちだな！ 表に書いとくぜ・・・！'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: '今のはなし！ 指がすべったの！'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: 'すべっても、勝ちは勝ちだぞ'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: 'もう一回！ もう一回やったら勝つもん！'
+  }],
+  distance: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '……くやしいー'
+  }, {
+    who: 'sorashido',
+    e: 'normal',
+    t: '……ちょっと言いすぎたか'
+  }],
+  makeup: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '{c}、もう一回やろう。さっきのは、表に書かないでおく'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'ほんと！？ ……あたしも、ムキになってごめんね'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '次は勝っても負けても、2人で笑おうな笑'
+  }, {
+    who: 'mua',
+    e: 'excited',
+    t: 'のった！ｗ'
+  }]
+}, {
+  id: 'rel-fight-atsu-mua-1',
+  kind: 'fight',
+  ppl: ['atsu', 'mua'],
+  keys: {
+    cause: 'late'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'troubled',
+    t: '{c}、朝の育成、一緒にやるって言ったじゃん！'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: 'ごめん、起きたら9時だった…'
+  }, {
+    who: 'atsu',
+    e: 'angry',
+    t: '6時から待ってたんだけど！'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: 'だって朝はまぢで無理なんだもん！'
+  }],
+  distance: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '……ひとりでやるか笑'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: '……せっかく誘ってくれたのにな'
+  }],
+  makeup: [{
+    who: 'mua',
+    e: 'normal',
+    t: '{c}、さっきはごめん。明日は目覚まし3つかける！'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '俺もごめん笑 てか、朝じゃなくて昼にしよ！'
+  }, {
+    who: 'mua',
+    e: 'excited',
+    t: '昼なら、ぜったい起きてる♪'
+  }]
+}, {
+  id: 'rel-fight-atsu-mua-2',
+  kind: 'fight',
+  ppl: ['atsu', 'mua'],
+  keys: {
+    cause: 'win'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'wink',
+    t: '今のスコア、俺の勝ち笑'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: '今のは{c}が横で笑わせたからだもん！'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: 'えー、それ関係ある！？'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: 'ある！ もう一回！'
+  }],
+  distance: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '……あたしだって勝ちたいのに'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '……ちょっと、からかいすぎたかな…'
+  }],
+  makeup: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '{c}、さっきはごめん！ もう一回、今度は静かにやる笑'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '……うん！ あたしもムキになってごめん'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '勝ったら、ほんとにすごいって言うから！'
+  }, {
+    who: 'mua',
+    e: 'excited',
+    t: 'ぜったい言わせるかんね！ｗ'
+  }]
+}, {
+  id: 'rel-fight-atsu-mua-3',
+  kind: 'fight',
+  ppl: ['atsu', 'mua'],
+  keys: {
+    cause: 'promise'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '{c}、今日いっしょにマーケット行くって言ったよね？'
+  }, {
+    who: 'atsu',
+    e: 'surprise',
+    t: 'え、あっ…！ 練習に夢中で忘れてた！'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: 'ずっと待ってたんだけど！'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: 'ごめん、ほんとに頭から抜けてた…'
+  }],
+  distance: [{
+    who: 'mua',
+    e: 'normal',
+    t: '……べつにー。ひとりで見てくるし'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '……やらかした…'
+  }],
+  makeup: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '{c}、今から行こ！ 荷物は全部俺が持つ！'
+  }, {
+    who: 'mua',
+    e: 'surprise',
+    t: '……全部？'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'しょうがないなぁ！ ぢゃあ、ゆるしてあげる♪'
+  }]
+}, {
+  id: 'rel-fight-dra-erubin-1',
+  kind: 'fight',
+  ppl: ['dra', 'erubin'],
+  keys: {
+    cause: 'late'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'troubled',
+    t: '{c}、カードの約束の時間、1時間すぎてるよ'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: 'すまん…昼寝したら、起きられなくてな'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: 'ずっと待ってたんだけどな…'
+  }, {
+    who: 'dra',
+    e: 'angry',
+    t: '昼寝は、おでの大事な時間なんだぞ'
+  }],
+  distance: [{
+    who: 'erubin',
+    e: 'troubled',
+    t: '……そっかぁ。待ちすぎちゃったかな'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '……言いすぎたな、おで'
+  }],
+  makeup: [{
+    who: 'dra',
+    e: 'normal',
+    t: '{c}、さっきは悪かった。目覚まし、かけてから寝るようにする'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'ううん、俺も責めるみたいになってごめんね'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'じゃあ、遅れたぶん、今から長めにやるか'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'うん、いいね'
+  }]
+}, {
+  id: 'rel-fight-dra-erubin-2',
+  kind: 'fight',
+  ppl: ['dra', 'erubin'],
+  keys: {
+    cause: 'tidy'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '{c}、そのカード、机に出しっぱなしだぞ'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: 'あとで片づけるつもりだったんだよ'
+  }, {
+    who: 'dra',
+    e: 'angry',
+    t: 'おでがよけて置いたら、どこにあるか分からないって言うだろ'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '勝手に動かされると、困るんだよね…'
+  }],
+  distance: [{
+    who: 'dra',
+    e: 'normal',
+    t: '……膝でもさすっとくか'
+  }, {
+    who: 'erubin',
+    e: 'normal',
+    t: '……少し言い方がきつかったかな'
+  }],
+  makeup: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c}、さっきはごめんね。今、全部片づけたよ'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'おう、おでも口うるさかったな。悪い'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '置き場所、二人で決めておこうか'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'それがいいな。箱に名前を書いとこう'
+  }]
+}, {
+  id: 'rel-fight-dra-erubin-3',
+  kind: 'fight',
+  ppl: ['dra', 'erubin'],
+  keys: {
+    cause: 'promise'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'surprise',
+    t: '{c}、デュラハンの組み方、教えてくれる約束だったよな？'
+  }, {
+    who: 'erubin',
+    e: 'surprise',
+    t: 'あっ…ごめん、すっかり忘れてた'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: 'おで、楽しみにしてたんだけどな'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: 'ほんとにごめん…いろいろ重なっちゃって'
+  }],
+  distance: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '……どうせ、おでとの約束なんて後回しだよな'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '……そんなつもりじゃなかったのに'
+  }],
+  makeup: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c}、今からでもいいかな？ 一番いい組み方、用意したんだ'
+  }, {
+    who: 'dra',
+    e: 'surprise',
+    t: '……ほんとか？'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'じゃあ、しょうがないな。聞いてやるか。……えへへ'
+  }]
+}, {
+  id: 'rel-fight-atsu-kiki-1',
+  kind: 'fight',
+  ppl: ['atsu', 'kiki'],
+  keys: {
+    cause: 'win'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'excited',
+    t: '今の、俺の勝ちだよね笑'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: 'いえ、あと少しで私が倒していました'
+  }, {
+    who: 'atsu',
+    e: 'angry',
+    t: '倒してないなら負けじゃん！'
+  }, {
+    who: 'kiki',
+    e: 'angry',
+    t: '負けてません。引き分けでつ'
+  }],
+  distance: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '……ちょっと頭冷やそ笑'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: '……そうですか。わかりました'
+  }],
+  makeup: [{
+    who: 'kiki',
+    e: 'troubled',
+    t: '{c}、さっきは意地をはってごめんなさい'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '俺こそ！ {c}が強いから、ムキになっちゃった笑'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'では、決着は次の勝負でつね♪'
+  }, {
+    who: 'atsu',
+    e: 'excited',
+    t: '望むところ！'
+  }]
+}, {
+  id: 'rel-fight-atsu-kiki-2',
+  kind: 'fight',
+  ppl: ['atsu', 'kiki'],
+  keys: {
+    cause: 'snack'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c}、そのおまんじゅう、私のでつよ'
+  }, {
+    who: 'atsu',
+    e: 'surprise',
+    t: 'え、机の上にあったから、みんなのかと…'
+  }, {
+    who: 'kiki',
+    e: 'angry',
+    t: '楽しみにしてたんでつ'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: 'ごめん！ でも、もう食べちゃった…'
+  }],
+  distance: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '……もう、いいでつ'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '……どうしよ笑'
+  }],
+  makeup: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '{c}、新しいの買ってきた！ 2つ！'
+  }, {
+    who: 'kiki',
+    e: 'surprise',
+    t: '2つも、でつか？'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '……では、一つずつ食べましょう。私も言いすぎました'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'よかった〜笑'
+  }]
+}, {
+  id: 'rel-fight-atsu-kiki-3',
+  kind: 'fight',
+  ppl: ['atsu', 'kiki'],
+  keys: {
+    cause: 'promise'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'troubled',
+    t: '{c}、朝の散歩、一緒に行くって言ってたよね？'
+  }, {
+    who: 'kiki',
+    e: 'surprise',
+    t: 'あっ…私、先に一人で行ってしまいました'
+  }, {
+    who: 'atsu',
+    e: 'angry',
+    t: '6時に待ってたのに！'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '5時に目が覚めて、つい…ごめんなさい'
+  }],
+  distance: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '……ひとりで育成しとこ笑'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '……早起きしすぎるのも、考えものでつね'
+  }],
+  makeup: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c}、明日は5時半に、扉の前で待ってまつ'
+  }, {
+    who: 'atsu',
+    e: 'surprise',
+    t: 'え、迎えに来てくれるの！？'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'それなら絶対行く！ ありがと笑'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'はい。今度は約束どおりに♪'
+  }]
+}, {
+  id: 'rel-fight-momosuke-sorashido-1',
+  kind: 'fight',
+  ppl: ['momosuke', 'sorashido'],
+  keys: {
+    cause: 'song'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'excited',
+    t: '{c}、次は歌える曲にしよ！！'
+  }, {
+    who: 'sorashido',
+    e: 'normal',
+    t: 'いや、今日は速い曲で計算したいんだ'
+  }, {
+    who: 'momosuke',
+    e: 'angry',
+    t: 'えー！！ 練習なんだから、ももの好きな曲がいい！！'
+  }, {
+    who: 'sorashido',
+    e: 'angry',
+    t: '練習だからこそ、速い曲なんだぞ'
+  }],
+  distance: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '……ももは、ひとりで歌うもん'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '……くっそー、言い方まずかったか'
+  }],
+  makeup: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '{c}、交代にしよう。1曲目は、{c}の好きな曲だ'
+  }, {
+    who: 'momosuke',
+    e: 'surprise',
+    t: 'ほんと！？'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: 'じゃあ2曲目は、{c}の速いのね！！ ももも一緒にやる♡'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '了解だ笑'
+  }]
+}, {
+  id: 'rel-fight-momosuke-sorashido-2',
+  kind: 'fight',
+  ppl: ['momosuke', 'sorashido'],
+  keys: {
+    cause: 'win'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'excited',
+    t: '今日のスコア、俺が3点上だぜ・・・！'
+  }, {
+    who: 'momosuke',
+    e: 'angry',
+    t: '3点なんて、ほぼ同じじゃん！！'
+  }, {
+    who: 'sorashido',
+    e: 'normal',
+    t: '数字は数字だ。勝ちは勝ちだぞ'
+  }, {
+    who: 'momosuke',
+    e: 'angry',
+    t: 'もう、{c}きびしすぎ！！'
+  }],
+  distance: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '……くやしい……'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '……3点くらい、言わなくてもよかったな'
+  }],
+  makeup: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '{c}、さっきのは、ほんとはほぼ引き分けだ。ごめんな'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '……ももも、ムキになってごめんね'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '次は2人で合わせて、最高点を出そう笑'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: 'それならぜったい勝てる！！'
+  }]
+}, {
+  id: 'rel-fight-momosuke-sorashido-3',
+  kind: 'fight',
+  ppl: ['momosuke', 'sorashido'],
+  keys: {
+    cause: 'late'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '{c}、合わせ練習の時間、とっくにすぎてるぞ'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: 'ごめん…夜の練習が長引いて、起きられなかった'
+  }, {
+    who: 'sorashido',
+    e: 'angry',
+    t: '待ってるあいだに、表が3枚できたぞ'
+  }, {
+    who: 'momosuke',
+    e: 'angry',
+    t: '表を作ってたなら、いいじゃん！！'
+  }],
+  distance: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '……計算どおりにいかないな'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: '……言い返さなきゃよかった'
+  }],
+  makeup: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '{c}、さっきはごめん！！ 寝坊したの、ももなのに'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: 'いいさ。夜も練習してたんだもんな'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '明日は、ももが先に待ってるからね！！'
+  }]
+}, {
+  id: 'rel-fight-dra-kiki-1',
+  kind: 'fight',
+  ppl: ['dra', 'kiki'],
+  keys: {
+    cause: 'late'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c}、お茶の時間、もう1時間すぎてまつ'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '昼寝してたら、つい…な'
+  }, {
+    who: 'kiki',
+    e: 'angry',
+    t: 'お茶、冷めてしまいましたよ'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '冷めたお茶も、おでは嫌いじゃないぞ…？'
+  }],
+  distance: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '……そうでつか。では、ひとりで飲みまつ'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '……冗談を言う場面じゃなかったな'
+  }],
+  makeup: [{
+    who: 'dra',
+    e: 'normal',
+    t: '{c}、さっきは悪かった。今度のお茶は、おでがいれるからな'
+  }, {
+    who: 'kiki',
+    e: 'surprise',
+    t: '{c}が、でつか？'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '……では、楽しみにしてまつ♪'
+  }]
+}, {
+  id: 'rel-fight-dra-kiki-2',
+  kind: 'fight',
+  ppl: ['dra', 'kiki'],
+  keys: {
+    cause: 'snack'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'happy',
+    t: 'このせんべい、全部おでがもらってもいいか？'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '半分は、私が買ってきたものでつよ'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: 'え、そうだったのか？ もう半分食べちゃったぞ'
+  }, {
+    who: 'kiki',
+    e: 'angry',
+    t: '残りは、私がいただきます'
+  }],
+  distance: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '……おで、食い意地はりすぎたな'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: '……少し、言い方がきつかったでしょうか'
+  }],
+  makeup: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c}、残りのせんべい、半分こしましょう'
+  }, {
+    who: 'dra',
+    e: 'surprise',
+    t: 'いいのか？'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '{c}、ありがとな。次はおでが買ってくる'
+  }, {
+    who: 'kiki',
+    e: 'wink',
+    t: 'では、そのときは私が全部いただきまつ♪'
+  }]
+}, {
+  id: 'rel-fight-dra-kiki-3',
+  kind: 'fight',
+  ppl: ['dra', 'kiki'],
+  keys: {
+    cause: 'tidy'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c}、お部屋に毛布が出しっぱなしでつよ'
+  }, {
+    who: 'dra',
+    e: 'normal',
+    t: '昼寝のあと、すぐ使うからいいんだよ'
+  }, {
+    who: 'kiki',
+    e: 'angry',
+    t: '毎回そう言って、たたまないじゃないですか'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '毎回は言いすぎだろ…'
+  }],
+  distance: [{
+    who: 'dra',
+    e: 'normal',
+    t: '……たたむくらい、できるんだけどな'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '……言い方が、きつかったでしょうか'
+  }],
+  makeup: [{
+    who: 'dra',
+    e: 'normal',
+    t: '{c}、毛布、たたんだぞ。……角がちょっとずれてるけど'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'ふふ、十分でつ。さっきは、すみませんでした'
+  }, {
+    who: 'kiki',
+    e: 'wink',
+    t: '次は、私が角のそろえ方を教えまつね♪'
+  }]
+}, {
+  id: 'rel-fight-atsu-kyuko-1',
+  kind: 'fight',
+  ppl: ['atsu', 'kyuko'],
+  keys: {
+    cause: 'song'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'excited',
+    t: '次、HELLの速い曲いこ！'
+  }, {
+    who: 'kyuko',
+    e: 'normal',
+    t: '今日は落ち着いた曲がいいなぁ。考えごとしたいし'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '練習なのに、落ち着いた曲！？'
+  }, {
+    who: 'kyuko',
+    e: 'angry',
+    t: 'ぐぬぬぬ…たまには俺にも選ばせてよぉ'
+  }],
+  distance: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '……ひとりで一曲いっとこ笑'
+  }, {
+    who: 'kyuko',
+    e: 'normal',
+    t: '……ちょっと言い方、強かったかなぁ'
+  }],
+  makeup: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '{c}、さっきはごめん！ 1曲ずつ選ぼ！'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'ほい！ 俺も、ムキになってごめんねぇ'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'じゃあ、{c}の曲から笑'
+  }]
+}, {
+  id: 'rel-fight-atsu-kyuko-2',
+  kind: 'fight',
+  ppl: ['atsu', 'kyuko'],
+  keys: {
+    cause: 'win'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'wink',
+    t: '今の対戦、作戦どおりに俺の勝ちだねぇ'
+  }, {
+    who: 'atsu',
+    e: 'angry',
+    t: '今のはたまたま！ もう一回！'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: 'たまたまじゃないよぉ。ちゃんと理由があるんだって'
+  }, {
+    who: 'atsu',
+    e: 'angry',
+    t: '理由とかいいから、もう一回！'
+  }],
+  distance: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '……まあ、なんとかなるっしょ'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '……ちょっと熱くなりすぎた…'
+  }],
+  makeup: [{
+    who: 'atsu',
+    e: 'normal',
+    t: 'さっきはごめん！ 理由、ちゃんと聞かせて！'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'ほい！ じゃあ説明するねぇ。……長いよ？笑'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '全部聞く笑'
+  }]
+}, {
+  id: 'rel-fight-atsu-kyuko-3',
+  kind: 'fight',
+  ppl: ['atsu', 'kyuko'],
+  keys: {
+    cause: 'promise'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '{c}、昨日の夜、ランキング一緒に見るって言ったよねぇ'
+  }, {
+    who: 'atsu',
+    e: 'surprise',
+    t: 'あっ…ごめん、23時に寝ちゃった！'
+  }, {
+    who: 'kyuko',
+    e: 'angry',
+    t: '2時まで待ってたんだけどぉ'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '2時は、俺には遅すぎるって！'
+  }],
+  distance: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '……ひとりで見たから、いいけどねぇ'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '……寝落ちとか、ありえない…'
+  }],
+  makeup: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '昨日はごめん！ 今から一緒に見よ！'
+  }, {
+    who: 'kyuko',
+    e: 'surprise',
+    t: '昼に？ ……まあ、それもいいかぁ笑'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '結果、全部教えて！'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'ほい！ ありがとん笑'
+  }]
+}, {
+  id: 'rel-fight-momosuke-mua-1',
+  kind: 'fight',
+  ppl: ['momosuke', 'mua'],
+  keys: {
+    cause: 'song'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'excited',
+    t: '{c}、次のダンス、この曲にしよ！！'
+  }, {
+    who: 'mua',
+    e: 'normal',
+    t: 'えー、あたしはこっちの曲がいい♪'
+  }, {
+    who: 'momosuke',
+    e: 'angry',
+    t: 'ももの振り付け、この曲用なの！！'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: 'あたしだって、この曲でポーズ考えてたもん！'
+  }],
+  distance: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '……もういいもん'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: '……べつにー'
+  }],
+  makeup: [{
+    who: 'mua',
+    e: 'normal',
+    t: '{c}、さっきはごめん。2曲つなげて踊ろ！'
+  }, {
+    who: 'momosuke',
+    e: 'surprise',
+    t: '2曲つなげる！？'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: 'それ、最強のステージじゃん！！'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'でしょ♪'
+  }]
+}, {
+  id: 'rel-fight-momosuke-mua-2',
+  kind: 'fight',
+  ppl: ['momosuke', 'mua'],
+  keys: {
+    cause: 'snack'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'excited',
+    t: 'あっ、{c}！ あたしのいちご、食べたでしょ！'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: 'えへへ、おいしそうだったから♡'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: 'えへへぢゃないの！ 最後に食べようと思ってたのに！'
+  }, {
+    who: 'momosuke',
+    e: 'angry',
+    t: 'ひと粒だけだもん！！'
+  }],
+  distance: [{
+    who: 'mua',
+    e: 'normal',
+    t: '……ひと粒でも、だめなんだから'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: '……やっぱり、だめだったかな'
+  }],
+  makeup: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '{c}、ごめんね。いちご、ひとパック買ってきた！！'
+  }, {
+    who: 'mua',
+    e: 'surprise',
+    t: 'ひとパック！？'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '……ぢゃあ、一緒に食べよ。さっきはあたしも言いすぎた♪'
+  }]
+}, {
+  id: 'rel-fight-momosuke-mua-3',
+  kind: 'fight',
+  ppl: ['momosuke', 'mua'],
+  keys: {
+    cause: 'tidy'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '{c}、鏡の前、服でいっぱいだよ！！'
+  }, {
+    who: 'mua',
+    e: 'normal',
+    t: 'あとで片づけるってばー'
+  }, {
+    who: 'momosuke',
+    e: 'angry',
+    t: '昨日も言ってた！！ ももの衣装が置けない！！'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: 'ちょっとくらいいいぢゃん！'
+  }],
+  distance: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '……たしかに、昨日も言ったかも'
+  }, {
+    who: 'momosuke',
+    e: 'normal',
+    t: '……言いすぎたかな'
+  }],
+  makeup: [{
+    who: 'mua',
+    e: 'normal',
+    t: '{c}、さっきはごめん。服、ぜんぶたたんだ！'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: 'ほんとだ！！ すっきりしてる！！'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: 'ももも、怒りすぎてごめんね。衣装、となりに置かせて♡'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'もちろん♪'
+  }]
+}, {
+  id: 'rel-fight-kyuko-momosuke-1',
+  kind: 'fight',
+  ppl: ['kyuko', 'momosuke'],
+  keys: {
+    cause: 'tidy'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '{c}、俺の本、どこに置いた？'
+  }, {
+    who: 'momosuke',
+    e: 'normal',
+    t: '床にあったから、棚に入れといたよ！！'
+  }, {
+    who: 'kyuko',
+    e: 'angry',
+    t: '読みかけのとこ、開いて置いてたんだよぉ'
+  }, {
+    who: 'momosuke',
+    e: 'angry',
+    t: '床に置いとくほうが悪いもん！！'
+  }],
+  distance: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '……まあ、なんとかなるっしょ'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: '……しおり、はさんであげればよかった'
+  }],
+  makeup: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '{c}、ごめんね。これ、しおり作ったの！！'
+  }, {
+    who: 'kyuko',
+    e: 'surprise',
+    t: 'え、手作り？'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'ありがとん笑 俺も床に置かないようにするよぉ'
+  }]
+}, {
+  id: 'rel-fight-kyuko-momosuke-2',
+  kind: 'fight',
+  ppl: ['kyuko', 'momosuke'],
+  keys: {
+    cause: 'late'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '{c}、朝ごはん一緒に食べるって言ったのに！！'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: 'ごめん…夜中まで本読んでて、起きられなかったぁ'
+  }, {
+    who: 'momosuke',
+    e: 'angry',
+    t: 'もも、10時から待ってたんだよ！！'
+  }, {
+    who: 'kyuko',
+    e: 'angry',
+    t: '{c}も、いつも10時起きじゃん…'
+  }],
+  distance: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '……それは、そうだけど'
+  }, {
+    who: 'kyuko',
+    e: 'normal',
+    t: '……言い返さなきゃよかったなぁ'
+  }],
+  makeup: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c}、さっきはごめんねぇ。昼ごはん、一緒に行こ'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '……うん！！ ももも、言いすぎた'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'じゃあ、お昼はドリーミィも一緒だよぉ笑'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: 'やったー！！'
+  }]
+}, {
+  id: 'rel-fight-kyuko-momosuke-3',
+  kind: 'fight',
+  ppl: ['kyuko', 'momosuke'],
+  keys: {
+    cause: 'song'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'excited',
+    t: '{c}、練習の曲、元気なのにしよ！！'
+  }, {
+    who: 'kyuko',
+    e: 'normal',
+    t: '今日はしっとりした曲の気分なんだよねぇ'
+  }, {
+    who: 'momosuke',
+    e: 'angry',
+    t: 'しっとりじゃ、踊れないもん！！'
+  }, {
+    who: 'kyuko',
+    e: 'angry',
+    t: 'ぐぬぬぬ…たまには、聞く曲も選ばせてよぉ'
+  }],
+  distance: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '……ももは、ひとりで踊るもん'
+  }, {
+    who: 'kyuko',
+    e: 'normal',
+    t: '……ちょっとゆずればよかったかぁ'
+  }],
+  makeup: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c}、しっとりの曲でも踊れる振り付け、考えてみない？'
+  }, {
+    who: 'momosuke',
+    e: 'surprise',
+    t: 'え、そんなのできる？'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: 'やってみる！！ さっきはごめんね、{c}♡'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'ほい！ 俺も、ごめんねぇ笑'
+  }]
+}, {
+  id: 'rel-fight-atsu-momosuke-1',
+  kind: 'fight',
+  ppl: ['atsu', 'momosuke'],
+  keys: {
+    cause: 'win'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'excited',
+    t: '見た！？ ももの勝ち！！'
+  }, {
+    who: 'atsu',
+    e: 'angry',
+    t: '今のは途中で音がずれたから、ノーカン！'
+  }, {
+    who: 'momosuke',
+    e: 'angry',
+    t: '言い訳だー！！'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '言い訳じゃないって！'
+  }],
+  distance: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '……ちょっと頭冷やしてくる笑'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: '……言い訳って、言いすぎたかな'
+  }],
+  makeup: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '{c}、さっきはごめん！ ふつうにくやしかっただけ笑'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: 'ももも、言いすぎた！！ もう一回やろ！！'
+  }, {
+    who: 'atsu',
+    e: 'excited',
+    t: '次は俺が勝つ！'
+  }]
+}, {
+  id: 'rel-fight-atsu-momosuke-2',
+  kind: 'fight',
+  ppl: ['atsu', 'momosuke'],
+  keys: {
+    cause: 'song'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'excited',
+    t: '{c}、次はHELLの速いやつ！'
+  }, {
+    who: 'momosuke',
+    e: 'normal',
+    t: 'えー、次はライブで歌う曲の練習がいい！！'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '歌う曲、ゆっくりじゃん！'
+  }, {
+    who: 'momosuke',
+    e: 'angry',
+    t: 'ゆっくりでも、大事なの！！'
+  }],
+  distance: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '……{c}は、ももの練習なんか見ないんだ'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '……言い方、まずったかも…'
+  }],
+  makeup: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '{c}、さっきはごめん！ ライブの曲、俺も手拍子で入る！'
+  }, {
+    who: 'momosuke',
+    e: 'surprise',
+    t: 'ほんと！？'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: 'じゃあ、そのあと速いのもやろ！！ やってあげる♡'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '決まり笑'
+  }]
+}, {
+  id: 'rel-fight-atsu-momosuke-3',
+  kind: 'fight',
+  ppl: ['atsu', 'momosuke'],
+  keys: {
+    cause: 'late'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'troubled',
+    t: '{c}、昼の合わせ練習、30分遅刻だよ！'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: 'ごめん！！ 夜の練習で、寝るのが3時になっちゃって…'
+  }, {
+    who: 'atsu',
+    e: 'angry',
+    t: '3時！？ それは起きられないって！'
+  }, {
+    who: 'momosuke',
+    e: 'angry',
+    t: 'だって、もっとうまくなりたいんだもん！！'
+  }],
+  distance: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '……わかるけど笑'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: '……怒られたいわけじゃなかったのに'
+  }],
+  makeup: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '{c}、さっきはきつく言ってごめん！ がんばってるの、知ってるから笑'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '……{c}、ありがと！！ 次は1時に寝る！！'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '2時間早くなった笑 えらい！'
+  }]
+}, {
+  id: 'rel-fight-erubin-mua-1',
+  kind: 'fight',
+  ppl: ['erubin', 'mua'],
+  keys: {
+    cause: 'promise'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '{c}、今日いっしょに服を見に行くって言ったよね？'
+  }, {
+    who: 'erubin',
+    e: 'surprise',
+    t: 'あっ…ごめんね。カード部屋で、時間を忘れてた'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: '楽しみにしてたのに！'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: 'ほんとにごめん…'
+  }],
+  distance: [{
+    who: 'mua',
+    e: 'normal',
+    t: '……べつにー。ひとりで見てきたし'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '……どう謝ればいいかな'
+  }],
+  makeup: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c}、今から行かないかな？ 選ぶのは全部任せるよ'
+  }, {
+    who: 'mua',
+    e: 'surprise',
+    t: 'ほんと？ 着せかえ人形にしちゃうよ？ｗ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'うん、いいよ笑'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'ぢゃあ、今日のことはなしにしたげる♪'
+  }]
+}, {
+  id: 'rel-fight-erubin-mua-2',
+  kind: 'fight',
+  ppl: ['erubin', 'mua'],
+  keys: {
+    cause: 'tidy'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c}、この服、部屋の前に置きっぱなしだったよ'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: 'あとで取りに来るつもりだったの！'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: 'みんな通るから、少し困るかな…'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: '少しくらい、いいぢゃん！'
+  }],
+  distance: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '……言い方、きつかったかな'
+  }, {
+    who: 'erubin',
+    e: 'normal',
+    t: '……俺も、もっとやわらかく言えばよかったね'
+  }],
+  makeup: [{
+    who: 'mua',
+    e: 'normal',
+    t: '{c}、さっきはごめん。服、ちゃんと部屋に入れた！'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'ありがとう。俺も、急に言ってごめんね'
+  }, {
+    who: 'mua',
+    e: 'excited',
+    t: 'おわびに、{c}にも一着選んであげる♪'
+  }]
+}, {
+  id: 'rel-fight-erubin-mua-3',
+  kind: 'fight',
+  ppl: ['erubin', 'mua'],
+  keys: {
+    cause: 'late'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '{c}、朝の散歩、あたし寝坊しちゃった…'
+  }, {
+    who: 'erubin',
+    e: 'normal',
+    t: '6時の約束だったから、一人で行ってきたよ'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: '起こしてくれればよかったのに！'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '気持ちよさそうに寝てたから、起こせなかったんだよ'
+  }],
+  distance: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '……あたしが悪いのは、分かってるもん'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '……起こしてあげればよかったかな'
+  }],
+  makeup: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c}、明日は9時の散歩にしようか'
+  }, {
+    who: 'mua',
+    e: 'surprise',
+    t: 'え、合わせてくれるの？'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '……さっきは、八つ当たりしてごめんね。9時なら起きる♪'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'うん、楽しみにしてるね'
+  }]
+}, {
+  id: 'rel-fight-atsu-dra-1',
+  kind: 'fight',
+  ppl: ['atsu', 'dra'],
+  keys: {
+    cause: 'win'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'angry',
+    t: '今のはノーカンだ。膝が鳴って、手が止まったんだ'
+  }, {
+    who: 'atsu',
+    e: 'angry',
+    t: '膝は関係ないって！ 俺の勝ち！'
+  }, {
+    who: 'dra',
+    e: 'angry',
+    t: '関係ある！ おでの膝は大事なんだぞ'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: 'それ、毎回言うよね！？笑'
+  }],
+  distance: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '……おで、負けず嫌いすぎるか'
+  }, {
+    who: 'atsu',
+    e: 'normal',
+    t: '……ちょっと言いすぎたかも…'
+  }],
+  makeup: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '{c}、さっきはごめん！ もう一回、膝が元気なうちにやろ笑'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '……おでも悪かった。勝ちは勝ちだな'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'じゃあ次で、きっちり決着ね！'
+  }, {
+    who: 'dra',
+    e: 'excited',
+    t: 'おう、負けないからな'
+  }]
+}, {
+  id: 'rel-fight-atsu-dra-2',
+  kind: 'fight',
+  ppl: ['atsu', 'dra'],
+  keys: {
+    cause: 'late'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'troubled',
+    t: '{c}、6時の対戦の約束、また寝坊！？'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: 'すまん…朝は膝が起きないんだ'
+  }, {
+    who: 'atsu',
+    e: 'angry',
+    t: '膝のせいにしないでよ笑'
+  }, {
+    who: 'dra',
+    e: 'angry',
+    t: 'ほんとに起きないんだぞ'
+  }],
+  distance: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '……先にデッキ組んどくか笑'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '……おで、言い訳ばっかりだな'
+  }],
+  makeup: [{
+    who: 'dra',
+    e: 'normal',
+    t: '{c}、さっきは悪かった。明日は昼の対戦にしてくれないか'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'いいよ！ 俺も、朝に決めつけてごめん笑'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '昼なら、おでの膝も全力だからな'
+  }]
+}, {
+  id: 'rel-fight-atsu-dra-3',
+  kind: 'fight',
+  ppl: ['atsu', 'dra'],
+  keys: {
+    cause: 'snack'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'happy',
+    t: '{c}、そのおやつ、半分もらうぞ'
+  }, {
+    who: 'atsu',
+    e: 'angry',
+    t: 'ちょ、半分って言って、3分の2持ってったじゃん！'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: 'おでの半分は、ちょっと大きいんだよ'
+  }, {
+    who: 'atsu',
+    e: 'angry',
+    t: 'そんな半分ある！？'
+  }],
+  distance: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '……もういいや笑'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '……さすがに食べすぎたか'
+  }],
+  makeup: [{
+    who: 'dra',
+    e: 'normal',
+    t: '{c}、さっきの分、新しいの買ってきた。全部やる'
+  }, {
+    who: 'atsu',
+    e: 'surprise',
+    t: 'え、全部！？'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'じゃあ半分こしよ笑 ほんとの半分ね！'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'おう、ほんとの半分な。えへへ'
+  }]
+}, {
+  id: 'rel-fight-erubin-kiki-1',
+  kind: 'fight',
+  ppl: ['erubin', 'kiki'],
+  keys: {
+    cause: 'promise'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c}、朝のお茶、一緒に飲む約束でしたよね'
+  }, {
+    who: 'erubin',
+    e: 'surprise',
+    t: 'あっ…ごめんね。今日は寝坊しちゃった'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '5時から、お湯をわかしてたんでつ'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '5時は、さすがに早いかな…'
+  }],
+  distance: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '……はい。もう、大丈夫でつ'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '……言い方をまちがえたね'
+  }],
+  makeup: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c}、さっきはごめんね。明日は、5時に起きてみるよ'
+  }, {
+    who: 'kiki',
+    e: 'surprise',
+    t: '……ほんとですか？'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'では、6時に。私も少し遅くしまつね♪'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'うん、間を取ろうね'
+  }]
+}, {
+  id: 'rel-fight-erubin-kiki-2',
+  kind: 'fight',
+  ppl: ['erubin', 'kiki'],
+  keys: {
+    cause: 'tidy'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c}、ベンチに本を置きっぱなしだったよ'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: 'あとで読むつもりだったんでつ'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '雨が降りそうだったから、しまっておいたんだけど…'
+  }, {
+    who: 'kiki',
+    e: 'angry',
+    t: '大事な本なので、勝手にしまわないでほしいでつ'
+  }],
+  distance: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '……少し、きつく言ってしまいましたね'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '……先に聞けばよかったかな'
+  }],
+  makeup: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c}、本、ここにあるよ。勝手にさわってごめんね'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'いえ、雨から守ってくれて、ありがとうございまつ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '次からは、声をかけてからにするね'
+  }]
+}, {
+  id: 'rel-fight-erubin-kiki-3',
+  kind: 'fight',
+  ppl: ['erubin', 'kiki'],
+  keys: {
+    cause: 'snack'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c}、お茶うけの最後の一つ、食べましたか？'
+  }, {
+    who: 'erubin',
+    e: 'surprise',
+    t: 'え、{c}のだったの？ ごめんね、知らなくて'
+  }, {
+    who: 'kiki',
+    e: 'angry',
+    t: '楽しみにしてたんでつ'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: 'みんなのだと思ってたんだ…'
+  }],
+  distance: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '……そうですか'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '……ちゃんと聞けばよかった'
+  }],
+  makeup: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c}、おわびに、新しいお茶うけを買ってきたよ'
+  }, {
+    who: 'kiki',
+    e: 'surprise',
+    t: '2種類も…ですか？'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'では、一緒にいただきまつ。私も、少し言いすぎました♪'
+  }]
+}, {
+  id: 'rel-fight-atsu-erubin-1',
+  kind: 'fight',
+  ppl: ['atsu', 'erubin'],
+  keys: {
+    cause: 'promise'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'troubled',
+    t: '{c}、今日はみんなでお昼の約束だったよね'
+  }, {
+    who: 'atsu',
+    e: 'surprise',
+    t: 'あっ！ 練習してたら、時間すぎてた！'
+  }, {
+    who: 'erubin',
+    e: 'angry',
+    t: 'みんな、ずっと待ってたんだよ'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: 'ごめん！ ほんとに忘れてた！'
+  }],
+  distance: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '……完全に忘れてた…'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '……少し強く言いすぎたかな'
+  }],
+  makeup: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '{c}、みんなにも謝ってきた！ ごめん！'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'うん、えらいね。みんなも笑ってたよ'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '次は俺が、全員の分の席取っとく笑'
+  }]
+}, {
+  id: 'rel-fight-atsu-erubin-2',
+  kind: 'fight',
+  ppl: ['atsu', 'erubin'],
+  keys: {
+    cause: 'late'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'troubled',
+    t: '{c}、6時の育成、めずらしく遅刻じゃん！'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: 'ごめんね…夜に本を読んでたら、寝坊しちゃって'
+  }, {
+    who: 'atsu',
+    e: 'angry',
+    t: 'めっちゃ待ったんだけど！'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '少し遅れただけだよ…'
+  }],
+  distance: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '……言いすぎたかな…'
+  }, {
+    who: 'erubin',
+    e: 'normal',
+    t: '……俺が悪かったのに'
+  }],
+  makeup: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c}、さっきはごめんね。言い訳しちゃった'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '俺こそ！ {c}がいつも時間守るから、びっくりしただけ笑'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '明日は、5分前に行くね'
+  }, {
+    who: 'atsu',
+    e: 'excited',
+    t: 'じゃあ俺は10分前！'
+  }]
+}, {
+  id: 'rel-fight-atsu-erubin-3',
+  kind: 'fight',
+  ppl: ['atsu', 'erubin'],
+  keys: {
+    cause: 'win'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'excited',
+    t: '今の対戦、俺の勝ち笑'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '最後の一手、待ってって言ったよね？'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '言ってた！？ 聞こえなかった！'
+  }, {
+    who: 'erubin',
+    e: 'angry',
+    t: 'ちゃんと言ったよ…'
+  }],
+  distance: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '……少し、悔しかったのかも'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '……勝ち急ぎすぎたかな…'
+  }],
+  makeup: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '{c}、さっきはごめん！ もう一回、ゆっくりやろ！'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'うん。俺も、ムキになってごめんね'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '今度は、待ってって言われたら待つ笑'
+  }]
+}, {
+  id: 'rel-mend-mua-sorashido-1',
+  kind: 'mend',
+  ppl: ['mua', 'sorashido'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '……{c}、その、さっきは……'
+  }, {
+    who: 'mua',
+    e: 'normal',
+    t: 'なに？'
+  }, {
+    who: 'sorashido',
+    e: 'normal',
+    t: '……ごめん。言いすぎた'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '……もう！ あたしも、ごめんね♪'
+  }]
+}, {
+  id: 'rel-mend-mua-sorashido-2',
+  kind: 'mend',
+  ppl: ['mua', 'sorashido'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'normal',
+    t: '{name}から差し入れもらったの。……一緒に食べる？'
+  }, {
+    who: 'sorashido',
+    e: 'surprise',
+    t: 'いいのか？'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: 'ありがとな。……さっきは悪かった'
+  }, {
+    who: 'mua',
+    e: 'wink',
+    t: 'おいしいから、ゆるすｗ'
+  }]
+}, {
+  id: 'rel-mend-mua-sorashido-3',
+  kind: 'mend',
+  ppl: ['mua', 'sorashido'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '{name}に「仲直りしなよ」って言われちゃった'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '……{name}に言われたら、しょうがないな'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'ぢゃあ、仲直りの一曲いこ♪'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: 'おう。記録は、なしでな笑'
+  }]
+}, {
+  id: 'rel-mend-atsu-mua-1',
+  kind: 'mend',
+  ppl: ['atsu', 'mua'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '{c}、さっきはごめん！'
+  }, {
+    who: 'mua',
+    e: 'normal',
+    t: '……ほんとに思ってる？'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '思ってる！ だから、今日のおやつおごる笑'
+  }, {
+    who: 'mua',
+    e: 'excited',
+    t: 'それなら、ゆるす♪'
+  }]
+}, {
+  id: 'rel-mend-atsu-mua-2',
+  kind: 'mend',
+  ppl: ['atsu', 'mua'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'happy',
+    t: '{name}から差し入れだって！ {c}の好きないちごのやつ！'
+  }, {
+    who: 'mua',
+    e: 'surprise',
+    t: 'え、ほんとだ！'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '……一緒に食べよ。さっきはごめんね'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '俺も笑 半分こね！'
+  }]
+}, {
+  id: 'rel-mend-atsu-mua-3',
+  kind: 'mend',
+  ppl: ['atsu', 'mua'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '{name}に「もういいでしょ」って言われちゃった'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '言われた笑 じゃあ、もういいってことで！'
+  }, {
+    who: 'mua',
+    e: 'wink',
+    t: '……しょうがないなぁ。{name}に免じて、ゆるす♪'
+  }]
+}, {
+  id: 'rel-mend-dra-erubin-1',
+  kind: 'mend',
+  ppl: ['dra', 'erubin'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c}、さっきはごめんね'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '……おでのほうこそ。ちょっと、意地はってたな'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'おたがいさまだね'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '……えへへ。じゃあ、一戦やるか'
+  }]
+}, {
+  id: 'rel-mend-dra-erubin-2',
+  kind: 'mend',
+  ppl: ['dra', 'erubin'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '{c}、{name}が差し入れくれたぞ。おかき、2袋だ'
+  }, {
+    who: 'erubin',
+    e: 'surprise',
+    t: '2袋も？'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '……1袋、やる。さっきの、悪かったな'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'ありがとう。俺もごめんね。一緒に食べようか'
+  }]
+}, {
+  id: 'rel-mend-dra-erubin-3',
+  kind: 'mend',
+  ppl: ['dra', 'erubin'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'troubled',
+    t: '{name}に「二人とも、もう許してるでしょ」って言われちゃった'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '……ばれてたか'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '{name}に言われたら、しょうがないな'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'うん。じゃあ、仲直りの一戦だね'
+  }]
+}, {
+  id: 'rel-mend-atsu-kiki-1',
+  kind: 'mend',
+  ppl: ['atsu', 'kiki'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c}、少しいいですか'
+  }, {
+    who: 'atsu',
+    e: 'surprise',
+    t: 'え、なに？'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '……さっきは、意地をはってしまいました。ごめんなさい'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '俺も！ {c}が謝る前に言おうと思ってたのに笑'
+  }]
+}, {
+  id: 'rel-mend-atsu-kiki-2',
+  kind: 'mend',
+  ppl: ['atsu', 'kiki'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'happy',
+    t: '{c}、{name}から差し入れのお茶うけだって！'
+  }, {
+    who: 'kiki',
+    e: 'surprise',
+    t: 'あれま。私の好きなものでつ'
+  }, {
+    who: 'atsu',
+    e: 'normal',
+    t: '……一緒に食べよ！ さっきはごめん！'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'はい。私も、ごめんなさいでつ♪'
+  }]
+}, {
+  id: 'rel-mend-atsu-kiki-3',
+  kind: 'mend',
+  ppl: ['atsu', 'kiki'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'troubled',
+    t: '{name}に「早く仲直りしなよ笑」って言われた笑'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: '私も、言われました'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '{name}に言われたら、断れませんね'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'じゃ、仲直りの一戦ね笑'
+  }]
+}, {
+  id: 'rel-mend-momosuke-sorashido-1',
+  kind: 'mend',
+  ppl: ['momosuke', 'sorashido'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '{c}、さっきは悪かった'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: '……ほんとに悪いと思ってる？'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '思ってる。表にも書いた。「俺が悪い」って笑'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: 'なにそれw ……ももも、ごめんね！！'
+  }]
+}, {
+  id: 'rel-mend-momosuke-sorashido-2',
+  kind: 'mend',
+  ppl: ['momosuke', 'sorashido'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'excited',
+    t: '{c}、{name}から差し入れのドーナツ！！'
+  }, {
+    who: 'sorashido',
+    e: 'surprise',
+    t: 'お、2つあるな'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: '1つ、あげる。……さっきはごめんね♡'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: 'ありがとな。俺もごめん。数えずに食べるよ笑'
+  }]
+}, {
+  id: 'rel-mend-momosuke-sorashido-3',
+  kind: 'mend',
+  ppl: ['momosuke', 'sorashido'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '{name}に「計算より先に謝りな」って言われたぜ・・・'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '{name}、いいこと言う！！'
+  }, {
+    who: 'sorashido',
+    e: 'normal',
+    t: '……{c}、ごめん'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: 'うん！！ ももも、ごめんね♡'
+  }]
+}, {
+  id: 'rel-mend-dra-kiki-1',
+  kind: 'mend',
+  ppl: ['dra', 'kiki'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '{c}、その…さっきのことなんだが'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: 'はい'
+  }, {
+    who: 'dra',
+    e: 'normal',
+    t: '……悪かった。ギャグでごまかさずに言うぞ'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '……ちゃんと伝わりました。私も、ごめんなさいでつ'
+  }]
+}, {
+  id: 'rel-mend-dra-kiki-2',
+  kind: 'mend',
+  ppl: ['dra', 'kiki'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c}、{name}から差し入れのおせんべいです'
+  }, {
+    who: 'dra',
+    e: 'surprise',
+    t: 'お、おでの好きなやつだ'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '半分こしましょう。さっきは、すみませんでした'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'おでも悪かった。……うまいな、これ'
+  }]
+}, {
+  id: 'rel-mend-dra-kiki-3',
+  kind: 'mend',
+  ppl: ['dra', 'kiki'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '{name}に「いいかげん仲直りしな」って言われたぞ'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: '私もです'
+  }, {
+    who: 'kiki',
+    e: 'wink',
+    t: '{name}に言われたら、しょうがないでつね♪'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'じゃあ、仲直りだな。えへへ'
+  }]
+}, {
+  id: 'rel-mend-atsu-kyuko-1',
+  kind: 'mend',
+  ppl: ['atsu', 'kyuko'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c}、さっきはごめんねぇ'
+  }, {
+    who: 'atsu',
+    e: 'surprise',
+    t: 'え、先に言われた！ 俺もごめん！'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'じゃあ、おあいこってことで笑'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'それ！'
+  }]
+}, {
+  id: 'rel-mend-atsu-kyuko-2',
+  kind: 'mend',
+  ppl: ['atsu', 'kyuko'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'happy',
+    t: '{c}、{name}から差し入れだよぉ。ジュース2本'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'まじ！？ ありがと！'
+  }, {
+    who: 'kyuko',
+    e: 'normal',
+    t: '……1本どうぞ。さっきは、ごめんねぇ'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '俺も！ 乾杯しよ笑'
+  }]
+}, {
+  id: 'rel-mend-atsu-kyuko-3',
+  kind: 'mend',
+  ppl: ['atsu', 'kyuko'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'troubled',
+    t: '{name}に「二人とも頑固すぎ笑」って言われた！'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '俺も言われたぁ'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '{name}に言われたら、しょうがないなぁ笑'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'じゃ、仲直りの作戦会議ね！'
+  }]
+}, {
+  id: 'rel-mend-momosuke-mua-1',
+  kind: 'mend',
+  ppl: ['momosuke', 'mua'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '{c}、さっきのこと…'
+  }, {
+    who: 'mua',
+    e: 'normal',
+    t: 'うん'
+  }, {
+    who: 'momosuke',
+    e: 'normal',
+    t: '……ごめんね。ももが、わがまま言った'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '……ううん、あたしも。ぎゅってしよ♪'
+  }]
+}, {
+  id: 'rel-mend-momosuke-mua-2',
+  kind: 'mend',
+  ppl: ['momosuke', 'mua'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'excited',
+    t: '{c}、{name}から差し入れのクレープ！ 2つ！'
+  }, {
+    who: 'momosuke',
+    e: 'surprise',
+    t: 'ほんと！？'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '一緒に食べよ。さっきはごめんね♪'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: 'ももも、ごめん！！ いちごのほう、あげる♡'
+  }]
+}, {
+  id: 'rel-mend-momosuke-mua-3',
+  kind: 'mend',
+  ppl: ['momosuke', 'mua'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '{name}に「2人とも、顔に仲直りしたいって書いてある」って言われた！！'
+  }, {
+    who: 'mua',
+    e: 'surprise',
+    t: '……あたしも言われたｗ'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '{name}に言われたら、しょうがないぢゃん♪'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: '仲直りのポーズ、しよ！！'
+  }]
+}, {
+  id: 'rel-mend-kyuko-momosuke-1',
+  kind: 'mend',
+  ppl: ['kyuko', 'momosuke'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '{c}、さっきはごめんね！！'
+  }, {
+    who: 'kyuko',
+    e: 'surprise',
+    t: 'え、もう謝ってくれるの？'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '俺も、ごめんねぇ。{c}、えらいなぁ'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: 'でしょ♡'
+  }]
+}, {
+  id: 'rel-mend-kyuko-momosuke-2',
+  kind: 'mend',
+  ppl: ['kyuko', 'momosuke'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c}、{name}から差し入れのマシュマロだよぉ'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: 'ふわふわ！！ ドリーミィみたい！！'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '一緒に食べよ。さっきは、ごめんねぇ'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: 'ももも、ごめん！！'
+  }]
+}, {
+  id: 'rel-mend-kyuko-momosuke-3',
+  kind: 'mend',
+  ppl: ['kyuko', 'momosuke'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '{name}に「どっちも悪くないよ」って言われたぁ'
+  }, {
+    who: 'momosuke',
+    e: 'normal',
+    t: 'もも、それ言われると弱いの…'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '{name}に言われたら、しょうがないなぁ！！'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'ほい、仲直り笑'
+  }]
+}, {
+  id: 'rel-mend-atsu-momosuke-1',
+  kind: 'mend',
+  ppl: ['atsu', 'momosuke'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '{c}、さっきはごめん！ 俺が大人げなかった笑'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: 'ほんとだよ〜w'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '……ももも、ごめんね。また一緒にやろ！！'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'もちろん！'
+  }]
+}, {
+  id: 'rel-mend-atsu-momosuke-2',
+  kind: 'mend',
+  ppl: ['atsu', 'momosuke'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'excited',
+    t: '{c}、{name}から差し入れのアイス！！'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'まじ！？ 2本ある笑'
+  }, {
+    who: 'momosuke',
+    e: 'normal',
+    t: '……1本どうぞ。さっきはごめん！！'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'ありがと！ 俺もごめん笑 溶ける前に食べよ！'
+  }]
+}, {
+  id: 'rel-mend-atsu-momosuke-3',
+  kind: 'mend',
+  ppl: ['atsu', 'momosuke'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'troubled',
+    t: '{name}に「言い合いも仲良しの証拠」って言われた笑'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: '{name}、分かってるぅ〜'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: 'じゃあ、{name}に免じて、仲直り！！'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '決まり笑'
+  }]
+}, {
+  id: 'rel-mend-erubin-mua-1',
+  kind: 'mend',
+  ppl: ['erubin', 'mua'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c}、さっきはごめんね'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: '……べつに、怒ってないし'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'ほんと？ じゃあ、また服を選んでくれるかな'
+  }, {
+    who: 'mua',
+    e: 'excited',
+    t: '……しょうがないなぁ！ ぜったい似合うの選ぶ♪'
+  }]
+}, {
+  id: 'rel-mend-erubin-mua-2',
+  kind: 'mend',
+  ppl: ['erubin', 'mua'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'normal',
+    t: '{c}、{name}から差し入れの紅茶もらったの'
+  }, {
+    who: 'erubin',
+    e: 'surprise',
+    t: 'いい香りだね'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '……一緒に飲も。さっきはごめんね'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'うん。俺もごめんね。いれるのは俺がするよ'
+  }]
+}, {
+  id: 'rel-mend-erubin-mua-3',
+  kind: 'mend',
+  ppl: ['erubin', 'mua'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'troubled',
+    t: '{name}に「早く仲直りしてあげて」って言われちゃった'
+  }, {
+    who: 'mua',
+    e: 'surprise',
+    t: 'え、あたしも同じこと言われた！ｗ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '{name}に言われたら、しょうがないね'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'ぢゃあ、仲直り♪'
+  }]
+}, {
+  id: 'rel-mend-atsu-dra-1',
+  kind: 'mend',
+  ppl: ['atsu', 'dra'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '{c}、……さっきは、すまなかった'
+  }, {
+    who: 'atsu',
+    e: 'surprise',
+    t: '{c}が先に謝るの、めずらしい！'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '俺もごめん！ 熱くなりすぎた笑'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'じゃあ、仲直りの一戦だな'
+  }]
+}, {
+  id: 'rel-mend-atsu-dra-2',
+  kind: 'mend',
+  ppl: ['atsu', 'dra'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'happy',
+    t: '{c}、{name}から差し入れのおかき！'
+  }, {
+    who: 'dra',
+    e: 'excited',
+    t: 'お、おでの好きなやつだな'
+  }, {
+    who: 'atsu',
+    e: 'normal',
+    t: '半分こしよ！ さっきはごめん笑'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'おう。おでも悪かった。ほんとの半分な'
+  }]
+}, {
+  id: 'rel-mend-atsu-dra-3',
+  kind: 'mend',
+  ppl: ['atsu', 'dra'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '{name}に「勝負より仲直りが先」って言われたぞ'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '俺も言われた笑'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '{name}に言われたら、しょうがないね！'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'おう。仲直りしてから、勝負だな'
+  }]
+}, {
+  id: 'rel-mend-erubin-kiki-1',
+  kind: 'mend',
+  ppl: ['erubin', 'kiki'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c}、さっきはすみませんでした'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'ううん、俺こそごめんね'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'では、いつものベンチで、お茶にしましょう♪'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'うん、行こうか'
+  }]
+}, {
+  id: 'rel-mend-erubin-kiki-2',
+  kind: 'mend',
+  ppl: ['erubin', 'kiki'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c}、{name}から差し入れのお茶葉をもらったよ'
+  }, {
+    who: 'kiki',
+    e: 'surprise',
+    t: 'あれま。いい香りでつね'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '一緒に飲もうか。さっきはごめんね'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'はい。私も、ごめんなさいでつ'
+  }]
+}, {
+  id: 'rel-mend-erubin-kiki-3',
+  kind: 'mend',
+  ppl: ['erubin', 'kiki'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'troubled',
+    t: '{name}に、「二人とも静かにけんかしてる」と言われました'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: 'ばれてたんだね笑'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '{name}に言われたら、しょうがないかな'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'では、静かに仲直りしましょう♪'
+  }]
+}, {
+  id: 'rel-mend-atsu-erubin-1',
+  kind: 'mend',
+  ppl: ['atsu', 'erubin'],
+  keys: {
+    how: 'apology'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '{c}、さっきはごめん！'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'うん。分かってるよ'
+  }, {
+    who: 'atsu',
+    e: 'surprise',
+    t: 'え、怒ってないの！？'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '{c}が謝りに来てくれたから、もう大丈夫だよ'
+  }]
+}, {
+  id: 'rel-mend-atsu-erubin-2',
+  kind: 'mend',
+  ppl: ['atsu', 'erubin'],
+  keys: {
+    how: 'gift'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c}、{name}から差し入れのおにぎりだよ'
+  }, {
+    who: 'atsu',
+    e: 'excited',
+    t: 'まじ！？ 腹へってた！'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '一緒に食べよう。さっきはごめんね'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '俺こそ！ ありがと笑'
+  }]
+}, {
+  id: 'rel-mend-atsu-erubin-3',
+  kind: 'mend',
+  ppl: ['atsu', 'erubin'],
+  keys: {
+    how: 'player'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'troubled',
+    t: '{name}に「{c}に早く謝りな」って言われた笑'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '俺も「{c}を許してあげて」って言われたよ'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '{name}に言われたら、しょうがない！ ごめん！'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'うん、仲直りだね'
+  }]
+}, {
+  id: 'rel-mend3-erubin-mua-sorashido-1',
+  kind: 'mend3',
+  ppl: ['erubin', 'mua', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c:mua}、{c:sorashido}、まだ口をきいてないのかな？'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: '……だって'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '……きっかけがなくてな'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'じゃあ、俺がお茶をいれるから、3人で飲もうか。それがきっかけだね'
+  }]
+}, {
+  id: 'rel-mend3-erubin-atsu-dra-1',
+  kind: 'mend3',
+  ppl: ['erubin', 'atsu', 'dra'],
+  keys: {},
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '二人とも、背中合わせで座ってるね笑'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '……ちょっと気まずくて…'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '……おでもだ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'じゃあ、俺が審判で一戦やろうか。終わったら握手ね'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '……のった笑'
+  }]
+}, {
+  id: 'rel-mend3-erubin-momosuke-kyuko-1',
+  kind: 'mend3',
+  ppl: ['erubin', 'momosuke', 'kyuko'],
+  keys: {},
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c:momosuke}、{c:kyuko}、二人とも相手のほうをちらちら見てるよ'
+  }, {
+    who: 'momosuke',
+    e: 'surprise',
+    t: 'え、見てないもん！！'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '……見てたかもぉ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '二人とも、本当はもう仲直りしたいんだよね'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '……うん。{c:kyuko}、ごめんね！！'
+  }]
+}, {
+  id: 'rel-mend3-erubin-atsu-mua-1',
+  kind: 'mend3',
+  ppl: ['erubin', 'atsu', 'mua'],
+  keys: {},
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c:atsu}、{c:mua}、一曲だけ一緒にやってみない？'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: '……一曲だけなら'
+  }, {
+    who: 'atsu',
+    e: 'normal',
+    t: '俺も、一曲だけ！'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '終わるころには、いつもの二人に戻ってると思うな'
+  }]
+}, {
+  id: 'rel-mend3-kiki-mua-momosuke-1',
+  kind: 'mend3',
+  ppl: ['kiki', 'mua', 'momosuke'],
+  keys: {},
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c:mua}、{c:momosuke}、お茶が入りましたよ'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: '……いまは、いい'
+  }, {
+    who: 'kiki',
+    e: 'wink',
+    t: '三人分いれてしまったので、飲んでもらわないと困りまつ♪'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '……{c:kiki}がそう言うなら'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '……しょうがないなぁ。{c:momosuke}、さっきはごめん'
+  }]
+}, {
+  id: 'rel-mend3-kiki-atsu-kyuko-1',
+  kind: 'mend3',
+  ppl: ['kiki', 'atsu', 'kyuko'],
+  keys: {},
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c:atsu}、{c:kyuko}。作戦会議の続き、私も入っていいですか'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '……{c:kiki}が入るなら'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '俺も、{c:kiki}の意見聞きたい！'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'では、攻撃は全部私が考えまつね♪'
+  }, {
+    who: 'kyuko',
+    e: 'surprise',
+    t: 'そこは相談させてよぉ笑'
+  }]
+}, {
+  id: 'rel-mend3-kiki-dra-sorashido-1',
+  kind: 'mend3',
+  ppl: ['kiki', 'dra', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c:dra}、{c:sorashido}。二人とも、さっきから同じ本を読んでますね'
+  }, {
+    who: 'dra',
+    e: 'surprise',
+    t: '……ばれたか'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '……話しかけるきっかけを探してたんだ'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'では、私が読み上げましょう。二人で聞いてくださいね'
+  }]
+}, {
+  id: 'rel-mend3-kiki-atsu-momosuke-1',
+  kind: 'mend3',
+  ppl: ['kiki', 'atsu', 'momosuke'],
+  keys: {},
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c:momosuke}、{c:atsu}。二人の勝負、私が見届けてもいいですか'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: '……{c:kiki}が見てるなら、ちゃんとやる！！'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '俺も！ 文句なしの一回勝負ね笑'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '終わったら、勝っても負けても握手でつよ♪'
+  }]
+}, {
+  id: 'rel-mend3-momosuke-mua-kiki-1',
+  kind: 'mend3',
+  ppl: ['momosuke', 'mua', 'kiki'],
+  keys: {},
+  lines: [{
+    who: 'momosuke',
+    e: 'excited',
+    t: '{c:mua}、{c:kiki}、ももの新しいダンス見て！！'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: '……いまは…'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '……少しだけなら'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '二人が並んで見てくれないと、踊れないの！！ ほら、もっとくっついて♡'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '……もう、{c:momosuke}ってば。{c:kiki}、さっきはごめんね'
+  }]
+}, {
+  id: 'rel-mend3-momosuke-dra-atsu-1',
+  kind: 'mend3',
+  ppl: ['momosuke', 'dra', 'atsu'],
+  keys: {},
+  lines: [{
+    who: 'momosuke',
+    e: 'excited',
+    t: '{c:dra}、{c:atsu}、ももが審判やるから勝負して！！'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '……いま、ちょっと気まずくてな'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '……俺も笑'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: 'だから勝負するの！！ 終わったら、ぜったい笑ってるから♡'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '……{c:momosuke}に言われたら、やるしかないね笑'
+  }]
+}, {
+  id: 'rel-mend3-momosuke-sorashido-kyuko-1',
+  kind: 'mend3',
+  ppl: ['momosuke', 'sorashido', 'kyuko'],
+  keys: {},
+  lines: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '{c:sorashido}、{c:kyuko}、なんで黙ってるの？'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '……ちょっと、言い合いになってな'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '……ムキになっちゃったぁ'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: 'じゃあ、今日は数字禁止！！ 3人でおやつ食べよ♡'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '……それは、いい案だな笑'
+  }]
+}, {
+  id: 'rel-mend3-momosuke-erubin-dra-1',
+  kind: 'mend3',
+  ppl: ['momosuke', 'erubin', 'dra'],
+  keys: {},
+  lines: [{
+    who: 'momosuke',
+    e: 'excited',
+    t: '{c:erubin}、{c:dra}、ももがおやつ持ってきたよ！！'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '……ありがとう、{c:momosuke}'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '……おう'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: '二人とも元気ない！！ はい、ちゃんと半分こして食べてね♡'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '……{c:erubin}、半分どうぞ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'ありがとう、{c:dra}。さっきはごめんね'
+  }]
+}, {
+  id: 'rel-mend3-mua-atsu-sorashido-1',
+  kind: 'mend3',
+  ppl: ['mua', 'atsu', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'mua',
+    e: 'excited',
+    t: '{c:atsu}、{c:sorashido}、3人で写真撮ろ！'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '……いま？笑'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '……ちょっと、気まずいんだが'
+  }, {
+    who: 'mua',
+    e: 'wink',
+    t: 'だから撮るの！ はい、2人とも笑って〜♪'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '……笑っちゃった笑 {c:sorashido}、ごめん！'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '俺もだ。……いい写真になったな'
+  }]
+}, {
+  id: 'rel-mend3-mua-kiki-dra-1',
+  kind: 'mend3',
+  ppl: ['mua', 'kiki', 'dra'],
+  keys: {},
+  lines: [{
+    who: 'mua',
+    e: 'happy',
+    t: '{c:kiki}、{c:dra}、まだ仲直りしてないの？'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '……タイミングがな'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '……私もです'
+  }, {
+    who: 'mua',
+    e: 'excited',
+    t: 'ぢゃあ、あたしが「せーの」って言うから、一緒にごめんって言お！ せーの！'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '……ごめんなさい'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '……すまん。……えへへ、同時だったな'
+  }]
+}, {
+  id: 'rel-mend3-mua-kyuko-momosuke-1',
+  kind: 'mend3',
+  ppl: ['mua', 'kyuko', 'momosuke'],
+  keys: {},
+  lines: [{
+    who: 'mua',
+    e: 'normal',
+    t: '{c:kyuko}、{c:momosuke}、ずっと離れて座ってるぢゃん'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '……ちょっと、ねぇ'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: '……うん'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'ほら、真ん中にあたしが座るから、2人とも寄って！'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '……{c:mua}には、かなわないなぁ笑 {c:momosuke}、ごめんねぇ'
+  }]
+}, {
+  id: 'rel-mend3-atsu-dra-sorashido-1',
+  kind: 'mend3',
+  ppl: ['atsu', 'dra', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'atsu',
+    e: 'happy',
+    t: '{c:dra}、{c:sorashido}、3人で対戦しよ笑'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '……{c:sorashido}とは、いま、ちょっとな'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '……ああ'
+  }, {
+    who: 'atsu',
+    e: 'wink',
+    t: 'じゃあ、2人で組んで俺と勝負して！ 組めば話すでしょ笑'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '……{c:dra}、作戦、聞いてもいいか'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'おう。……さっきは悪かったな'
+  }]
+}, {
+  id: 'rel-mend3-atsu-mua-kyuko-1',
+  kind: 'mend3',
+  ppl: ['atsu', 'mua', 'kyuko'],
+  keys: {},
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '{c:mua}、{c:kyuko}、なんか空気重くない？笑'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: '……ちょっとね'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '……うん'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'とりあえず、3人で一曲いこ！ 終わったら、きっと話せる！'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '……一曲だけね。{c:kyuko}、さっきはごめん'
+  }]
+}, {
+  id: 'rel-mend3-atsu-kiki-erubin-1',
+  kind: 'mend3',
+  ppl: ['atsu', 'kiki', 'erubin'],
+  keys: {},
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '{c:kiki}、{c:erubin}、2人がけんかとか、めずらしいね！'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '……譲り合っていたら、こじれてしまって'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '……そうなんだ'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'じゃあ、俺が決める！ 2人とも同時に謝って笑'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '……ごめんなさい'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '……ごめんね。{c:atsu}、ありがとう'
+  }]
+}, {
+  id: 'rel-mend3-dra-momosuke-mua-1',
+  kind: 'mend3',
+  ppl: ['dra', 'momosuke', 'mua'],
+  keys: {},
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '{c:momosuke}、{c:mua}、おでのギャグを聞け'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: '……いまそれ？'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: '……ほんとに、いま？'
+  }, {
+    who: 'dra',
+    e: 'wink',
+    t: '「仲直りは、なかなかおりあえない」'
+  }, {
+    who: 'mua',
+    e: 'surprise',
+    t: '……さむっｗ'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '……でも笑っちゃった。{c:mua}、ごめんね！！'
+  }]
+}, {
+  id: 'rel-mend3-dra-kyuko-atsu-1',
+  kind: 'mend3',
+  ppl: ['dra', 'kyuko', 'atsu'],
+  keys: {},
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '{c:kyuko}、{c:atsu}、二人とも、おでの部屋で昼寝していけ'
+  }, {
+    who: 'kyuko',
+    e: 'surprise',
+    t: '昼寝？'
+  }, {
+    who: 'atsu',
+    e: 'surprise',
+    t: 'え、いま！？笑'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '寝て起きたら、たいていのことは忘れてるからな'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '……{c:dra}らしいなぁ笑 {c:atsu}、ごめんねぇ'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '俺も笑'
+  }]
+}, {
+  id: 'rel-mend3-kyuko-atsu-sorashido-1',
+  kind: 'mend3',
+  ppl: ['kyuko', 'atsu', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c:atsu}、{c:sorashido}、二人のけんか、理由を整理してみたんだぁ'
+  }, {
+    who: 'atsu',
+    e: 'surprise',
+    t: 'え、整理したの！？'
+  }, {
+    who: 'sorashido',
+    e: 'surprise',
+    t: '……表まであるのか'
+  }, {
+    who: 'kyuko',
+    e: 'wink',
+    t: '結論。「どっちも勝ちたかっただけ」笑'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '……それな笑 {c:sorashido}、ごめん！'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '俺もだ。ごめんな'
+  }]
+}, {
+  id: 'rel-mend3-kyuko-mua-erubin-1',
+  kind: 'mend3',
+  ppl: ['kyuko', 'mua', 'erubin'],
+  keys: {},
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c:mua}、{c:erubin}、ちょっと聞いてほしい曲があるんだぁ'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: '……いま？'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '……うん'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '静かな曲だから、二人並んで聞いてねぇ'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '……いい曲。{c:erubin}、さっきはごめんね'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'ううん。俺もごめんね'
+  }]
+}, {
+  id: 'rel-mend3-sorashido-atsu-kiki-1',
+  kind: 'mend3',
+  ppl: ['sorashido', 'atsu', 'kiki'],
+  keys: {},
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '{c:atsu}、{c:kiki}。計算したら、二人が仲直りする確率は100%だった'
+  }, {
+    who: 'atsu',
+    e: 'surprise',
+    t: '計算したの！？笑'
+  }, {
+    who: 'kiki',
+    e: 'surprise',
+    t: 'あれま'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: 'だから、早めに済ませたほうが得だぞ笑'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '……では。{c:atsu}、ごめんなさい'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '俺も！ {c:sorashido}、ありがと笑'
+  }]
+}, {
+  id: 'rel-mend3-sorashido-momosuke-dra-1',
+  kind: 'mend3',
+  ppl: ['sorashido', 'momosuke', 'dra'],
+  keys: {},
+  lines: [{
+    who: 'sorashido',
+    e: 'excited',
+    t: '{c:momosuke}、{c:dra}、3人でスコア勝負しないか'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: '……{c:dra}と一緒に？'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '……おでもか'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '2人の点を足して、俺と勝負だ。チームなら話すしかないぜ・・・！'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '……{c:dra}、やろ！！ さっきはごめん！！'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'おう。{c:momosuke}、おでも悪かった'
+  }]
+}, {
+  id: 'rel-mend3-erubin-kiki-kyuko-1',
+  kind: 'mend3',
+  ppl: ['erubin', 'kiki', 'kyuko'],
+  keys: {},
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c:kiki}、{c:kyuko}、図書室がいつもより静かだね'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '……少し、気まずくて'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '……うん'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'じゃあ、二人の好きな本を一冊ずつ紹介してほしいな'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '……{c:kiki}のから聞きたいなぁ'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '……では。{c:kyuko}、さっきはすみませんでした'
+  }]
+}, {
+  id: 'rel-mend3-kiki-erubin-sorashido-1',
+  kind: 'mend3',
+  ppl: ['kiki', 'erubin', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c:erubin}、{c:sorashido}。お茶を三つ、いれました'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '……ありがとう'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '……ありがとう、{c:kiki}'
+  }, {
+    who: 'kiki',
+    e: 'wink',
+    t: '熱いうちに。冷めたら、二人のせいにしまつよ♪'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '……それは困るな笑 {c:erubin}、さっきは悪かった'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'ううん。俺もごめんね、{c:sorashido}'
+  }]
+}, {
+  id: 'rel-mend3-momosuke-atsu-erubin-1',
+  kind: 'mend3',
+  ppl: ['momosuke', 'atsu', 'erubin'],
+  keys: {},
+  lines: [{
+    who: 'momosuke',
+    e: 'excited',
+    t: '{c:atsu}、{c:erubin}、ももの新曲の振り付け、2人で見て！！'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '……2人で？'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '……そうだね'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: 'ラストのポーズ、2人で手を合わせてやってほしいの♡'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '……{c:erubin}、手、出して笑 さっきはごめん！'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'うん。ごめんね、{c:atsu}'
+  }]
+}, {
+  id: 'rel-mend3-dra-kiki-mua-1',
+  kind: 'mend3',
+  ppl: ['dra', 'kiki', 'mua'],
+  keys: {},
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '{c:kiki}、{c:mua}、おで、今日はギャグを封印する'
+  }, {
+    who: 'kiki',
+    e: 'surprise',
+    t: '……どうしたんですか'
+  }, {
+    who: 'mua',
+    e: 'surprise',
+    t: 'え、{c:dra}が！？'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '二人が仲直りするまでな。……おで、つらいんだぞ'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '……もう、ずるいｗ {c:kiki}、ごめんね'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'はい。私も、ごめんなさいでつ'
+  }]
+}, {
+  id: 'rel-jealous-dra-momosuke-erubin-1',
+  kind: 'jealous',
+  ppl: ['dra', 'momosuke', 'erubin'],
+  keys: {
+    lv: '4-6'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '……{c:momosuke}と{c:erubin}、最近ずっと一緒だな。べつに、いいけどな'
+  }, {
+    who: 'momosuke',
+    e: 'surprise',
+    t: '{c:dra}、すねてる！？'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '{c:dra}も一緒に散歩しようよ。膝にやさしい道にするね'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '……しょうがないな。行ってやるか。えへへ'
+  }]
+}, {
+  id: 'rel-jealous-dra-momosuke-erubin-2',
+  kind: 'jealous',
+  ppl: ['dra', 'momosuke', 'erubin'],
+  keys: {
+    lv: '7-10'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '二人の話、おでには入れないくらい楽しそうだな'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: '{c:dra}、聞いてたの？w じゃあ入って！！'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'ちょうど、{c:dra}の話をしてたんだよ'
+  }, {
+    who: 'dra',
+    e: 'surprise',
+    t: '……おでの？ ……なら、聞かないわけにいかないな'
+  }]
+}, {
+  id: 'rel-jealous-mua-kiki-erubin-1',
+  kind: 'jealous',
+  ppl: ['mua', 'kiki', 'erubin'],
+  keys: {
+    lv: '4-6'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '{c:kiki}と{c:erubin}、ベンチで仲良しぢゃん……'
+  }, {
+    who: 'kiki',
+    e: 'surprise',
+    t: '{c:mua}、どうしました？'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '{c:mua}も座らない？ 真ん中、空いてるよ'
+  }, {
+    who: 'mua',
+    e: 'excited',
+    t: '……真ん中！？ 座る座る♪'
+  }]
+}, {
+  id: 'rel-jealous-mua-kiki-erubin-2',
+  kind: 'jealous',
+  ppl: ['mua', 'kiki', 'erubin'],
+  keys: {
+    lv: '7-10'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'normal',
+    t: '二人って、なんにも言わなくても通じてるよね。ちょっとうらやましいかも'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '{c:mua}とも、もう通じてまつよ'
+  }, {
+    who: 'erubin',
+    e: 'wink',
+    t: '今、三人とも同じこと考えてるんじゃないかな。おやつのこと'
+  }, {
+    who: 'mua',
+    e: 'excited',
+    t: '……当たりｗ 3人で行こ♪'
+  }]
+}, {
+  id: 'rel-jealous-momosuke-mua-sorashido-1',
+  kind: 'jealous',
+  ppl: ['momosuke', 'mua', 'sorashido'],
+  keys: {
+    lv: '4-6'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '{c:mua}と{c:sorashido}、また二人で表見てる……'
+  }, {
+    who: 'mua',
+    e: 'surprise',
+    t: '{c:momosuke}？ どしたの？'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '{c:momosuke}の欄も作ったんだ。見てくれ'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: 'え、ももの欄！？ 見る見る！！'
+  }]
+}, {
+  id: 'rel-jealous-momosuke-mua-sorashido-2',
+  kind: 'jealous',
+  ppl: ['momosuke', 'mua', 'sorashido'],
+  keys: {
+    lv: '7-10'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '……二人とも、ももがいなくても楽しそうだね'
+  }, {
+    who: 'sorashido',
+    e: 'surprise',
+    t: 'そんなことないぞ。さっきから「{c:momosuke}がいたら」って話してた'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'ほんとだよ！ ほら、3人でポーズ撮ろ♪'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '……えへへ、じゃあ真ん中ね♡'
+  }]
+}, {
+  id: 'rel-jealous-kyuko-kiki-atsu-1',
+  kind: 'jealous',
+  ppl: ['kyuko', 'kiki', 'atsu'],
+  keys: {
+    lv: '4-6'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c:kiki}と{c:atsu}、また二人で突っこむ作戦かぁ……'
+  }, {
+    who: 'atsu',
+    e: 'surprise',
+    t: '{c:kyuko}、どしたの笑'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '{c:kyuko}がいないと、作戦が雑になるんでつ。来てください'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '……ほい！ しょうがないなぁ笑'
+  }]
+}, {
+  id: 'rel-jealous-kyuko-kiki-atsu-2',
+  kind: 'jealous',
+  ppl: ['kyuko', 'kiki', 'atsu'],
+  keys: {
+    lv: '7-10'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '二人の息、ぴったりすぎて、俺いらないかもねぇ'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'いや、ぜんぜんいる！ {c:kyuko}がいないと勝てない笑'
+  }, {
+    who: 'kiki',
+    e: 'wink',
+    t: '考えるのは、{c:kyuko}の役目でつ♪'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '……そっかぁ。ありがとん笑'
+  }]
+}, {
+  id: 'rel-jealous-kiki-mua-kyuko-1',
+  kind: 'jealous',
+  ppl: ['kiki', 'mua', 'kyuko'],
+  keys: {
+    lv: '4-6'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c:mua}と{c:kyuko}、楽しそうでつね……'
+  }, {
+    who: 'mua',
+    e: 'surprise',
+    t: '{c:kiki}、元気ない？'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '{c:kiki}も、作戦会議に入ってよぉ。攻撃の担当がいないんだぁ'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '……では、攻撃は全部、私が♪'
+  }]
+}, {
+  id: 'rel-jealous-kiki-mua-kyuko-2',
+  kind: 'jealous',
+  ppl: ['kiki', 'mua', 'kyuko'],
+  keys: {
+    lv: '7-10'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'troubled',
+    t: '二人の話、早くてついていけないでつ'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '{c:kiki}のペースでいいの！ ゆっくり話そ♪'
+  }, {
+    who: 'kyuko',
+    e: 'wink',
+    t: '俺もゆっくりのほうが落ち着くよぉ'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '……ありがとうございまつ。では、お茶をいれますね'
+  }]
+}, {
+  id: 'rel-jealous-atsu-dra-sorashido-1',
+  kind: 'jealous',
+  ppl: ['atsu', 'dra', 'sorashido'],
+  keys: {
+    lv: '4-6'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'troubled',
+    t: '{c:dra}と{c:sorashido}、俺ぬきで対戦してる…笑'
+  }, {
+    who: 'dra',
+    e: 'surprise',
+    t: 'お、{c:atsu}。見てたのか'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: 'ちょうどいい。3人で総当たりにしようぜ・・・！'
+  }, {
+    who: 'atsu',
+    e: 'excited',
+    t: 'のった！ 全勝する笑'
+  }]
+}, {
+  id: 'rel-jealous-atsu-dra-sorashido-2',
+  kind: 'jealous',
+  ppl: ['atsu', 'dra', 'sorashido'],
+  keys: {
+    lv: '7-10'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '二人の勝負、俺のときより楽しそうじゃない？笑'
+  }, {
+    who: 'sorashido',
+    e: 'surprise',
+    t: 'そんなことないぞ。{c:atsu}との勝負が一番燃える'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'おでもだ。だから、早く入れ'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '……そう言われたら、入るしかないじゃん笑'
+  }]
+}, {
+  id: 'rel-jealous-sorashido-kyuko-atsu-1',
+  kind: 'jealous',
+  ppl: ['sorashido', 'kyuko', 'atsu'],
+  keys: {
+    lv: '4-6'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '{c:kyuko}と{c:atsu}、二人でランキングの話か……'
+  }, {
+    who: 'kyuko',
+    e: 'surprise',
+    t: '{c:sorashido}、どしたのぉ'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'ちょうど、{c:sorashido}に数字を出してほしかったの！'
+  }, {
+    who: 'sorashido',
+    e: 'excited',
+    t: '……任せろ！ すぐ表にするぜ・・・！'
+  }]
+}, {
+  id: 'rel-jealous-sorashido-kyuko-atsu-2',
+  kind: 'jealous',
+  ppl: ['sorashido', 'kyuko', 'atsu'],
+  keys: {
+    lv: '7-10'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '二人の作戦、俺の表がなくても勝てそうだな'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '表があるから、安心して考えられるんだよぉ'
+  }, {
+    who: 'atsu',
+    e: 'wink',
+    t: '{c:sorashido}いないと、俺ら数字見ないし笑'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '……なんくるないさ〜。じゃあ、一緒にやるか笑'
+  }]
+}, {
+  id: 'rel-jealous-erubin-atsu-dra-1',
+  kind: 'jealous',
+  ppl: ['erubin', 'atsu', 'dra'],
+  keys: {
+    lv: '4-6'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c:atsu}と{c:dra}、今日も熱い勝負だね……'
+  }, {
+    who: 'atsu',
+    e: 'surprise',
+    t: '{c:erubin}、ちょっとさみしそう？'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '{c:erubin}、次はおでと組め。{c:atsu}に二人で挑むぞ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '……うん。それ、楽しそうだね'
+  }]
+}, {
+  id: 'rel-jealous-erubin-atsu-dra-2',
+  kind: 'jealous',
+  ppl: ['erubin', 'atsu', 'dra'],
+  keys: {
+    lv: '7-10'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'troubled',
+    t: '二人の話、昔の大会のことばかりで、少し入りにくいかな'
+  }, {
+    who: 'dra',
+    e: 'surprise',
+    t: '……そうか、悪かった'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'じゃあ今日は、{c:erubin}との初めての対戦の話しよ！'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '……覚えててくれたんだね。うれしいな'
+  }]
+}, {
+  id: 'rel-jealous-mua-momosuke-atsu-1',
+  kind: 'jealous',
+  ppl: ['mua', 'momosuke', 'atsu'],
+  keys: {
+    lv: '4-6'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '{c:momosuke}と{c:atsu}、また煽り合ってる…あたしもまぜてよ〜'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: '{c:mua}も来て！！ 3人で勝負！！'
+  }, {
+    who: 'atsu',
+    e: 'wink',
+    t: '{c:mua}が入ると、2対1になりそう笑'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'ぢゃあ、{c:momosuke}側につく♪'
+  }]
+}, {
+  id: 'rel-jealous-mua-momosuke-atsu-2',
+  kind: 'jealous',
+  ppl: ['mua', 'momosuke', 'atsu'],
+  keys: {
+    lv: '7-10'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'normal',
+    t: '二人って、言い合ってても楽しそうでいいなぁ'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '{c:mua}ともやってるじゃん笑'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: '{c:mua}が一番にぎやかだもんw'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: 'ちょっと！ｗ ……でも、うれしいかも'
+  }]
+}, {
+  id: 'rel-jealous-momosuke-kyuko-erubin-1',
+  kind: 'jealous',
+  ppl: ['momosuke', 'kyuko', 'erubin'],
+  keys: {
+    lv: '4-6'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '{c:kyuko}と{c:erubin}、静かに楽しそう……'
+  }, {
+    who: 'erubin',
+    e: 'surprise',
+    t: '{c:momosuke}、どうしたの？'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '{c:momosuke}、ドリーミィ見に来る？ ちょうど起きたとこだよぉ'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: '行く！！'
+  }]
+}, {
+  id: 'rel-jealous-momosuke-kyuko-erubin-2',
+  kind: 'jealous',
+  ppl: ['momosuke', 'kyuko', 'erubin'],
+  keys: {
+    lv: '7-10'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '……二人とも、ももより落ち着いてて、大人っぽいなぁ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '{c:momosuke}がいると、明るくなるから助かってるんだよ'
+  }, {
+    who: 'kyuko',
+    e: 'wink',
+    t: '俺らだけだと、ずっと黙ってるしねぇ笑'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '……じゃあ、いっぱいしゃべってあげる♡'
+  }]
+}, {
+  id: 'rel-jealous-dra-atsu-sorashido-1',
+  kind: 'jealous',
+  ppl: ['dra', 'atsu', 'sorashido'],
+  keys: {
+    lv: '4-6'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '{c:atsu}と{c:sorashido}、また二人で勝負か。おでは、膝でもさするか'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '{c:dra}、解説して笑 {c:dra}の解説ないと盛り上がらない！'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: 'そうだ。{c:dra}の解説、表にも書いてるんだ'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '……そうか？ じゃあ、本気で解説してやるか'
+  }]
+}, {
+  id: 'rel-jealous-dra-atsu-sorashido-2',
+  kind: 'jealous',
+  ppl: ['dra', 'atsu', 'sorashido'],
+  keys: {
+    lv: '7-10'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '二人とも強くなったな。おでの出番、もうないんじゃないか'
+  }, {
+    who: 'sorashido',
+    e: 'surprise',
+    t: 'そんなことない。{c:dra}の説明で、俺は強くなったんだ'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '俺も笑 {c:dra}がいないと、つまんない！'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '……えへへ。おで、照れるだろ'
+  }]
+}, {
+  id: 'rel-jealous-kyuko-mua-sorashido-1',
+  kind: 'jealous',
+  ppl: ['kyuko', 'mua', 'sorashido'],
+  keys: {
+    lv: '4-6'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c:mua}と{c:sorashido}、盛り上がってるねぇ…'
+  }, {
+    who: 'mua',
+    e: 'surprise',
+    t: '{c:kyuko}！ 来て来て♪'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '{c:kyuko}の組み方、表にしたかったんだ'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '……ほい。じゃあ、ちょっとだけねぇ笑'
+  }]
+}, {
+  id: 'rel-jealous-kyuko-mua-sorashido-2',
+  kind: 'jealous',
+  ppl: ['kyuko', 'mua', 'sorashido'],
+  keys: {
+    lv: '7-10'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '二人の声、大きくて楽しそう。俺は静かすぎるかなぁ'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '{c:kyuko}が静かだから、あたしたち落ち着けるの♪'
+  }, {
+    who: 'sorashido',
+    e: 'normal',
+    t: '{c:kyuko}がいると、話がまとまるんだぞ'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '……そっかぁ。ありがとん笑'
+  }]
+}, {
+  id: 'rel-jealous-kiki-erubin-sorashido-1',
+  kind: 'jealous',
+  ppl: ['kiki', 'erubin', 'sorashido'],
+  keys: {
+    lv: '4-6'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c:erubin}と{c:sorashido}、カードの話でつか……'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '{c:kiki}、ちょうど攻撃のカードで迷ってたんだ'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '{c:kiki}の意見、聞きたいぞ'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '……では、攻撃に全部振りましょう♪'
+  }]
+}, {
+  id: 'rel-jealous-kiki-erubin-sorashido-2',
+  kind: 'jealous',
+  ppl: ['kiki', 'erubin', 'sorashido'],
+  keys: {
+    lv: '7-10'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'troubled',
+    t: 'お二人とも、私よりカードにくわしくて、少しさみしいでつ'
+  }, {
+    who: 'sorashido',
+    e: 'surprise',
+    t: '{c:kiki}の攻め方、表でも一番強いんだぞ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '俺たち、{c:kiki}の攻め方を勉強してたんだよ'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '……そうでしたか。では、教えてあげまつ♪'
+  }]
+}, {
+  id: 'rel-jealous-atsu-mua-momosuke-1',
+  kind: 'jealous',
+  ppl: ['atsu', 'mua', 'momosuke'],
+  keys: {
+    lv: '4-6'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'troubled',
+    t: '{c:mua}とも、二人でダンスしてる笑 俺、踊れないんだけど！'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: '{c:atsu}は手拍子係ね！！'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '{c:atsu}のリズム、いちばん正確だもん♪'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '……それならやる笑'
+  }]
+}, {
+  id: 'rel-jealous-atsu-mua-momosuke-2',
+  kind: 'jealous',
+  ppl: ['atsu', 'mua', 'momosuke'],
+  keys: {
+    lv: '7-10'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '二人、ほんと仲いいよね笑 ちょっとうらやましい笑'
+  }, {
+    who: 'mua',
+    e: 'surprise',
+    t: '{c:atsu}が？ めずらしい！'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: '{c:atsu}も、もうこっち側だよw'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '……そっか笑 ありがと！'
+  }]
+}, {
+  id: 'rel-jealous-sorashido-dra-erubin-1',
+  kind: 'jealous',
+  ppl: ['sorashido', 'dra', 'erubin'],
+  keys: {
+    lv: '4-6'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '{c:dra}と{c:erubin}、二人でデュラハンの研究か…'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '{c:sorashido}、ちょうど数字がほしかったんだ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '{c:sorashido}の表があると、話が早いんだよね'
+  }, {
+    who: 'sorashido',
+    e: 'excited',
+    t: '……まかせろ！ うぉぉぉ！'
+  }]
+}, {
+  id: 'rel-jealous-sorashido-dra-erubin-2',
+  kind: 'jealous',
+  ppl: ['sorashido', 'dra', 'erubin'],
+  keys: {
+    lv: '7-10'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '二人の組み方、もう俺の計算はいらないかもな'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'そんなことないよ。{c:sorashido}の表で、最後に確かめてるんだ'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'おでたちの答え合わせは、{c:sorashido}の係だぞ'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '……でーじうれしいな笑'
+  }]
+}, {
+  id: 'rel-jealous-erubin-kiki-kyuko-1',
+  kind: 'jealous',
+  ppl: ['erubin', 'kiki', 'kyuko'],
+  keys: {
+    lv: '4-6'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c:kiki}と{c:kyuko}、図書室で楽しそうだね'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '{c:erubin}も、どうぞ。静かに座れる席がありまつよ'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '3人なら、もっと静かに楽しめるよぉ笑'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '……うん。じゃあ、お邪魔しようかな'
+  }]
+}, {
+  id: 'rel-jealous-erubin-kiki-kyuko-2',
+  kind: 'jealous',
+  ppl: ['erubin', 'kiki', 'kyuko'],
+  keys: {
+    lv: '7-10'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'troubled',
+    t: '二人の静かな時間、じゃましないほうがいいかな'
+  }, {
+    who: 'kyuko',
+    e: 'surprise',
+    t: '{c:erubin}がいたほうが、落ち着くんだけどなぁ'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '見守り係がいないと、さみしいでつ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '……そっか。じゃあ、ここにいるね'
+  }]
+}, {
+  id: 'rel-jealous-mua-dra-momosuke-1',
+  kind: 'jealous',
+  ppl: ['mua', 'dra', 'momosuke'],
+  keys: {
+    lv: '4-6'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '{c:dra}と{c:momosuke}で、ギャグの採点してる…あたしも採点したい！'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: '{c:mua}も審査員ね！！'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '審査員が増えたら、おでのギャグも本気だな'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'ぢゃあ、きびしめでいくよｗ'
+  }]
+}, {
+  id: 'rel-jealous-mua-dra-momosuke-2',
+  kind: 'jealous',
+  ppl: ['mua', 'dra', 'momosuke'],
+  keys: {
+    lv: '7-10'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'normal',
+    t: '二人のやりとり、まぢで息ぴったり。ちょっと妬けるかもｗ'
+  }, {
+    who: 'dra',
+    e: 'surprise',
+    t: '{c:mua}が？ ……照れるな'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: '{c:mua}のツッコミがないと、オチがつかないの！！'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '……ぢゃあ、ツッコミ担当で入る♪'
+  }]
+}, {
+  id: 'rel-jealous-momosuke-atsu-kiki-1',
+  kind: 'jealous',
+  ppl: ['momosuke', 'atsu', 'kiki'],
+  keys: {
+    lv: '4-6'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '{c:atsu}と{c:kiki}、また二人で全力勝負……'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '{c:momosuke}も入りませんか。三人で前に出ましょう'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '{c:momosuke}がいると、勢い3倍じゃん笑'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: '……じゃあ、ももが一番前ね！！'
+  }]
+}, {
+  id: 'rel-jealous-momosuke-atsu-kiki-2',
+  kind: 'jealous',
+  ppl: ['momosuke', 'atsu', 'kiki'],
+  keys: {
+    lv: '7-10'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '二人とも強すぎて、ももがついていけないかも…'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '{c:momosuke}の応援があると、俺ら強くなるんだって笑'
+  }, {
+    who: 'kiki',
+    e: 'wink',
+    t: '{c:momosuke}がいると、火力が上がりまつ♪'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '……ほんと！？ じゃあ、全力で応援する♡'
+  }]
+}, {
+  id: 'rel-jealous-kyuko-dra-kiki-1',
+  kind: 'jealous',
+  ppl: ['kyuko', 'dra', 'kiki'],
+  keys: {
+    lv: '4-6'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c:dra}と{c:kiki}、お茶しながら何の話だろぉ'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '{c:kyuko}、ちょうど昼寝の話をしてたんだ。来るか？'
+  }, {
+    who: 'kiki',
+    e: 'wink',
+    t: 'お茶もありまつよ'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '……ほい。お茶だけもらうねぇ笑'
+  }]
+}, {
+  id: 'rel-jealous-kyuko-dra-kiki-2',
+  kind: 'jealous',
+  ppl: ['kyuko', 'dra', 'kiki'],
+  keys: {
+    lv: '7-10'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '二人のゆっくりした時間に、俺だけ速すぎるかなぁ'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '{c:kyuko}の話は、ゆっくり聞きたいんだよ'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '私もでつ。座ってくださいな'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '……ありがとん。じゃあ、ちょっと休むねぇ'
+  }]
+}, {
+  id: 'rel-jealous-dra-mua-atsu-1',
+  kind: 'jealous',
+  ppl: ['dra', 'mua', 'atsu'],
+  keys: {
+    lv: '4-6'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '{c:mua}と{c:atsu}、二人で一曲だけって、もう五曲目だな……'
+  }, {
+    who: 'mua',
+    e: 'surprise',
+    t: '{c:dra}、見てたの！？'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '{c:dra}も一曲いこ笑 HARDでいいから！'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '……膝にやさしいやつな'
+  }]
+}, {
+  id: 'rel-jealous-dra-mua-atsu-2',
+  kind: 'jealous',
+  ppl: ['dra', 'mua', 'atsu'],
+  keys: {
+    lv: '7-10'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '二人の勢いには、おではついていけないな'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '{c:dra}の説明があるから、あたしたち勢いでいけるの♪'
+  }, {
+    who: 'atsu',
+    e: 'wink',
+    t: '{c:dra}がいないと、俺ら止まらないし笑'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '……おでは、ブレーキ役か。まあ、悪くないな'
+  }]
+}, {
+  id: 'rel-rival-atsu-sorashido-1',
+  kind: 'rival',
+  ppl: ['atsu', 'sorashido'],
+  keys: {
+    game: 'beat'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'excited',
+    t: 'よし、今日は2点差で俺の勝ちだぜ・・・！'
+  }, {
+    who: 'atsu',
+    e: 'angry',
+    t: 'くっそ〜！ 2点って一番くやしいやつ笑'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '次も2点差で勝つ'
+  }, {
+    who: 'atsu',
+    e: 'excited',
+    t: '次は俺が2点差で勝つ！ 明日の同じ時間ね！'
+  }]
+}, {
+  id: 'rel-rival-atsu-sorashido-2',
+  kind: 'rival',
+  ppl: ['atsu', 'sorashido'],
+  keys: {
+    game: 'card'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'wink',
+    t: '今日は俺の勝ち笑'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '……くっそー！ 計算では勝ってたのに'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '計算より、勢い笑'
+  }, {
+    who: 'sorashido',
+    e: 'excited',
+    t: '次までに、勢いも計算に入れてくる！'
+  }]
+}, {
+  id: 'rel-rival-atsu-dra-1',
+  kind: 'rival',
+  ppl: ['atsu', 'dra'],
+  keys: {
+    game: 'card'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'happy',
+    t: '今日はおでの勝ちだな'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: 'うわ〜、最後の一枚、読まれてた！'
+  }, {
+    who: 'dra',
+    e: 'wink',
+    t: '何回おまえと勝負してると思ってるんだ'
+  }, {
+    who: 'atsu',
+    e: 'excited',
+    t: 'じゃあ次は、読まれない手で行く！ 今夜な！'
+  }]
+}, {
+  id: 'rel-rival-atsu-dra-2',
+  kind: 'rival',
+  ppl: ['atsu', 'dra'],
+  keys: {
+    game: 'beat'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'happy',
+    t: '今日のスコア、俺の勝ち笑'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '……膝が、あと少しもってくれたらな'
+  }, {
+    who: 'atsu',
+    e: 'wink',
+    t: '膝のせいにしない笑'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '次は膝を温めてくる。覚悟しとけよ'
+  }]
+}, {
+  id: 'rel-rival-atsu-momosuke-1',
+  kind: 'rival',
+  ppl: ['atsu', 'momosuke'],
+  keys: {
+    game: 'beat'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'excited',
+    t: '{c}に勝った！！ 初めて勝った！！'
+  }, {
+    who: 'atsu',
+    e: 'surprise',
+    t: 'まじか！ くやしいけど、うれしい笑'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: '次も勝っちゃうかもね〜w'
+  }, {
+    who: 'atsu',
+    e: 'excited',
+    t: '次は負けない！ 明日、もう一回！'
+  }]
+}, {
+  id: 'rel-rival-atsu-momosuke-2',
+  kind: 'rival',
+  ppl: ['atsu', 'momosuke'],
+  keys: {
+    game: 'card'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'happy',
+    t: '今日のカード、俺の勝ち笑'
+  }, {
+    who: 'momosuke',
+    e: 'angry',
+    t: 'くやしい〜！！ キラキラのカードで勝ちたかったのに！！'
+  }, {
+    who: 'atsu',
+    e: 'wink',
+    t: 'キラキラでも勝てるように、教えよっか？'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: '教わってから、ぜったいリベンジする！！'
+  }]
+}, {
+  id: 'rel-rival-mua-sorashido-1',
+  kind: 'rival',
+  ppl: ['mua', 'sorashido'],
+  keys: {
+    game: 'beat'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'excited',
+    t: 'やった！ 今日はあたしの勝ち♪'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '……くっそー！ 表に「負け」って書くのは久しぶりだ笑'
+  }, {
+    who: 'mua',
+    e: 'wink',
+    t: '次も書かせてあげる♪'
+  }, {
+    who: 'sorashido',
+    e: 'excited',
+    t: '次は勝ちの欄だ！ 明日、もう一回な'
+  }]
+}, {
+  id: 'rel-rival-mua-sorashido-2',
+  kind: 'rival',
+  ppl: ['mua', 'sorashido'],
+  keys: {
+    game: 'card'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'happy',
+    t: '今日のカードは俺の勝ちだな'
+  }, {
+    who: 'mua',
+    e: 'angry',
+    t: 'えー！ 直感で選んだのに！'
+  }, {
+    who: 'sorashido',
+    e: 'normal',
+    t: '{c}の直感、半分は当たってたぞ'
+  }, {
+    who: 'mua',
+    e: 'excited',
+    t: 'ぢゃあ次は、残りの半分も当てる！ 明日ね！'
+  }]
+}, {
+  id: 'rel-rival-dra-erubin-1',
+  kind: 'rival',
+  ppl: ['dra', 'erubin'],
+  keys: {
+    game: 'card'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'happy',
+    t: '{c}、今日は俺の勝ちだね'
+  }, {
+    who: 'dra',
+    e: 'surprise',
+    t: '……教えた相手に負けるとはな'
+  }, {
+    who: 'erubin',
+    e: 'wink',
+    t: '先生がよかったからだよ笑'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '言ったな。次は本気の先生で行くぞ'
+  }]
+}, {
+  id: 'rel-rival-dra-erubin-2',
+  kind: 'rival',
+  ppl: ['dra', 'erubin'],
+  keys: {
+    game: 'beat'
+  },
+  lines: [{
+    who: 'dra',
+    e: 'happy',
+    t: '{c}、今日のスコア、おでの勝ちだ'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '最後の連打、取りこぼしちゃったかな'
+  }, {
+    who: 'dra',
+    e: 'wink',
+    t: 'まだまだだな。えへへ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '次は、連打を練習してから挑むね'
+  }]
+}, {
+  id: 'rel-rival-atsu-kyuko-1',
+  kind: 'rival',
+  ppl: ['atsu', 'kyuko'],
+  keys: {
+    game: 'card'
+  },
+  lines: [{
+    who: 'kyuko',
+    e: 'wink',
+    t: '作戦どおり、今日は俺の勝ちだねぇ'
+  }, {
+    who: 'atsu',
+    e: 'angry',
+    t: 'くそ〜！ また読まれた笑'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '{c}、突っこむ前に一瞬止まるくせがあるんだよぉ'
+  }, {
+    who: 'atsu',
+    e: 'excited',
+    t: 'それ、次までに直す！ 明日もやろ！'
+  }]
+}, {
+  id: 'rel-rival-atsu-kyuko-2',
+  kind: 'rival',
+  ppl: ['atsu', 'kyuko'],
+  keys: {
+    game: 'beat'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'happy',
+    t: '今日のスコア、俺の勝ち笑'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: 'ぐぬぬぬ…最後の速いとこで崩れたぁ'
+  }, {
+    who: 'atsu',
+    e: 'wink',
+    t: '理屈で直せる？笑'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'ほい、手の順番、考えてくるよぉ。次は勝つ'
+  }]
+}, {
+  id: 'rel-rival-atsu-kiki-1',
+  kind: 'rival',
+  ppl: ['atsu', 'kiki'],
+  keys: {
+    game: 'card'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'happy',
+    t: '{c}、今日は私の勝ちでつ'
+  }, {
+    who: 'atsu',
+    e: 'surprise',
+    t: '最初の一手から全部攻め！？ 止められなかった笑'
+  }, {
+    who: 'kiki',
+    e: 'wink',
+    t: '先手必勝でつ♪'
+  }, {
+    who: 'atsu',
+    e: 'excited',
+    t: '次は先に攻める！ 明日、勝負ね！'
+  }]
+}, {
+  id: 'rel-rival-atsu-kiki-2',
+  kind: 'rival',
+  ppl: ['atsu', 'kiki'],
+  keys: {
+    game: 'beat'
+  },
+  lines: [{
+    who: 'atsu',
+    e: 'happy',
+    t: '{c}、今日は俺の勝ち笑'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '……くやしいでつ。押しの強さでは負けてないのに'
+  }, {
+    who: 'atsu',
+    e: 'wink',
+    t: '押しすぎて、ちょっとずれてたかも笑'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'では、次はまっすぐ押しまつ。もう一度お願いします'
+  }]
+}, {
+  id: 'rel-rival-momosuke-sorashido-1',
+  kind: 'rival',
+  ppl: ['momosuke', 'sorashido'],
+  keys: {
+    game: 'beat'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'excited',
+    t: '{c}、今日はももの勝ち！！'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '……ミスの数は、俺のほうが少ないのにな'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: 'スコアはももが上だもん♡'
+  }, {
+    who: 'sorashido',
+    e: 'excited',
+    t: '次は、ミスもスコアも勝つぞ。もう一回だ！'
+  }]
+}, {
+  id: 'rel-rival-kyuko-sorashido-1',
+  kind: 'rival',
+  ppl: ['kyuko', 'sorashido'],
+  keys: {
+    game: 'card'
+  },
+  lines: [{
+    who: 'sorashido',
+    e: 'excited',
+    t: '今日のカード、俺の勝ちだな！ 計算どおりだ'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: 'ぐぬぬぬ…{c}の計算、こわいなぁ'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '{c}の組み方も、表で読めるようになったんだ笑'
+  }, {
+    who: 'kyuko',
+    e: 'wink',
+    t: 'じゃあ次は、表にのらない組み方を考えてくるねぇ'
+  }]
+}, {
+  id: 'rel-rival-erubin-sorashido-1',
+  kind: 'rival',
+  ppl: ['erubin', 'sorashido'],
+  keys: {
+    game: 'card'
+  },
+  lines: [{
+    who: 'erubin',
+    e: 'happy',
+    t: '{c}、今日は俺の勝ちだね'
+  }, {
+    who: 'sorashido',
+    e: 'surprise',
+    t: 'デュラハンの守り、計算より固かったぞ…'
+  }, {
+    who: 'erubin',
+    e: 'wink',
+    t: '数字にならない守りかな笑'
+  }, {
+    who: 'sorashido',
+    e: 'excited',
+    t: '次までに、数字にしてくる！ もう一回だ！'
+  }]
+}, {
+  id: 'rel-rival-dra-kiki-1',
+  kind: 'rival',
+  ppl: ['dra', 'kiki'],
+  keys: {
+    game: 'card'
+  },
+  lines: [{
+    who: 'kiki',
+    e: 'happy',
+    t: '{c}、今日は私の勝ちでつ'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '……{c}、攻めしかしないのに、なんで勝てるんだ'
+  }, {
+    who: 'kiki',
+    e: 'wink',
+    t: '攻めしかしないからでつ♪'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '言ったな。次は守りで受けきってやるからな'
+  }]
+}, {
+  id: 'rel-rival-atsu-mua-1',
+  kind: 'rival',
+  ppl: ['atsu', 'mua'],
+  keys: {
+    game: 'beat'
+  },
+  lines: [{
+    who: 'mua',
+    e: 'excited',
+    t: '{c}に勝った！ 一曲目で！'
+  }, {
+    who: 'atsu',
+    e: 'surprise',
+    t: 'まじで！？ くやしい笑'
+  }, {
+    who: 'mua',
+    e: 'wink',
+    t: 'もう一曲いこ？ｗ'
+  }, {
+    who: 'atsu',
+    e: 'excited',
+    t: 'いく！ 次は俺が勝つ！'
+  }]
+}, {
+  id: 'rel-rival-momosuke-mua-1',
+  kind: 'rival',
+  ppl: ['momosuke', 'mua'],
+  keys: {
+    game: 'beat'
+  },
+  lines: [{
+    who: 'momosuke',
+    e: 'excited',
+    t: '{c}、今日のスコア、ももの勝ち！！'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: 'くやし〜！ 最後のポーズ、決まってたのに！'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: 'ポーズは点数に入らないんだよw'
+  }, {
+    who: 'mua',
+    e: 'excited',
+    t: 'ぢゃあ次は、点数でも勝つ！ 明日ね♪'
+  }]
+}, {
+  id: 'rel-awkward-mua-kiki-1',
+  kind: 'awkward',
+  ppl: ['mua', 'kiki'],
+  keys: {},
+  lines: [{
+    who: 'mua',
+    e: 'normal',
+    t: '……あ、{c}。なんか、会うの久しぶり、かも'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: '……はい。お元気でしたか'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: 'なんか、敬語がいつもより固くない？ｗ'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '……少し緊張してました。いつもの{c}で、安心しまつ'
+  }]
+}, {
+  id: 'rel-awkward-mua-momosuke-1',
+  kind: 'awkward',
+  ppl: ['mua', 'momosuke'],
+  keys: {},
+  lines: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '……{c}、なんか会うの久しぶりだね'
+  }, {
+    who: 'mua',
+    e: 'normal',
+    t: '……うん。何日ぶりだろ'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: '……なんか、何話せばいいか分かんない'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'ぢゃあ、とりあえずおそろいポーズ！ ……ほら、いつもどおりぢゃんｗ'
+  }]
+}, {
+  id: 'rel-awkward-mua-dra-1',
+  kind: 'awkward',
+  ppl: ['mua', 'dra'],
+  keys: {},
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '……お、{c}。元気だったか'
+  }, {
+    who: 'mua',
+    e: 'normal',
+    t: '……うん。{c}も？'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '……膝は、あいかわらずだ'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: 'それ聞いたら、安心したｗ いつもの{c}だ♪'
+  }]
+}, {
+  id: 'rel-awkward-mua-atsu-1',
+  kind: 'awkward',
+  ppl: ['mua', 'atsu'],
+  keys: {},
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '……あ、{c}！ 会うの、けっこう空いたね笑'
+  }, {
+    who: 'mua',
+    e: 'normal',
+    t: '……うん。ちょっと会わなかったね'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: 'なんか、緊張するね笑'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '……一曲だけ、やろっか♪'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'それ！ 一曲だけね笑'
+  }]
+}, {
+  id: 'rel-awkward-mua-kyuko-1',
+  kind: 'awkward',
+  ppl: ['mua', 'kyuko'],
+  keys: {},
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '……おっと、{c}だぁ'
+  }, {
+    who: 'mua',
+    e: 'normal',
+    t: '……う、うん。久しぶり'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '……話が飛ばない{c}、めずらしいなぁ'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '……あはは！ ぢゃあ、飛ばすよ？ 昨日見た夢の話なんだけどｗ'
+  }]
+}, {
+  id: 'rel-awkward-mua-sorashido-1',
+  kind: 'awkward',
+  ppl: ['mua', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '……{c}、元気だったか'
+  }, {
+    who: 'mua',
+    e: 'normal',
+    t: '……うん。何日ぶりだっけ'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '5日ぶりだ。ちゃんと数えてた笑'
+  }, {
+    who: 'mua',
+    e: 'excited',
+    t: '数えてたの！？ ……いつもの{c}ぢゃんｗ'
+  }]
+}, {
+  id: 'rel-awkward-mua-erubin-1',
+  kind: 'awkward',
+  ppl: ['mua', 'erubin'],
+  keys: {},
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '……{c}、少し会わなかったね'
+  }, {
+    who: 'mua',
+    e: 'normal',
+    t: '……うん。{c}、元気だった？'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '少しさみしかったかな'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '……ぢゃあ、今日はいっぱいしゃべろ♪'
+  }]
+}, {
+  id: 'rel-awkward-kiki-momosuke-1',
+  kind: 'awkward',
+  ppl: ['kiki', 'momosuke'],
+  keys: {},
+  lines: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '……{c}だ。会うの、久しぶり'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: '……そうでつね、{c}'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: 'なんか、静かすぎて落ち着かない…！！'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'では、いつもみたいに、にぎやかにしてくださいな♪'
+  }]
+}, {
+  id: 'rel-awkward-kiki-dra-1',
+  kind: 'awkward',
+  ppl: ['kiki', 'dra'],
+  keys: {},
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '……お、{c}か。何日ぶりだ'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: '……{c}も、お変わりなく'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '……ギャグ、言っていいのか分からなくなった'
+  }, {
+    who: 'kiki',
+    e: 'wink',
+    t: '今日は、5回まで聞きまつよ♪'
+  }]
+}, {
+  id: 'rel-awkward-kiki-atsu-1',
+  kind: 'awkward',
+  ppl: ['kiki', 'atsu'],
+  keys: {},
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '……{c}！ なんか会うの、久しぶりじゃない？笑'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: '……はい、少しぶりでつね'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: 'なんか、ちょっと遠慮しちゃうね笑'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'では、遠慮なく一戦。全力でいきまつ♪'
+  }]
+}, {
+  id: 'rel-awkward-kiki-kyuko-1',
+  kind: 'awkward',
+  ppl: ['kiki', 'kyuko'],
+  keys: {},
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '……あ、{c}。図書室で会うの、久しぶりだねぇ'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: '……はい'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '……沈黙、いつもより長くない？笑'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'いつもの静かさに戻っただけでつよ。安心しました'
+  }]
+}, {
+  id: 'rel-awkward-kiki-sorashido-1',
+  kind: 'awkward',
+  ppl: ['kiki', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '……{c}。何日ぶりか、数えてなかったな'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: '……めずらしいでつね、{c}'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '……何を話そうか、表にしてくればよかったな'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'では、新しい表の話を聞かせてください♪'
+  }]
+}, {
+  id: 'rel-awkward-kiki-erubin-1',
+  kind: 'awkward',
+  ppl: ['kiki', 'erubin'],
+  keys: {},
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '……{c}。ここで会うの、少しぶりだね'
+  }, {
+    who: 'kiki',
+    e: 'normal',
+    t: '……はい。ベンチ、空いてまつよ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '……ありがとう。座るとすぐ、いつもどおりだね'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'はい。ここに来ると、落ち着きまつ'
+  }]
+}, {
+  id: 'rel-awkward-momosuke-dra-1',
+  kind: 'awkward',
+  ppl: ['momosuke', 'dra'],
+  keys: {},
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '……お、{c}。しばらくだな'
+  }, {
+    who: 'momosuke',
+    e: 'normal',
+    t: '……{c}、元気だった？'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '……なんか、ちょっと照れるな'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: '{c}が照れてるw ……いつもの{c}だ！！'
+  }]
+}, {
+  id: 'rel-awkward-momosuke-atsu-1',
+  kind: 'awkward',
+  ppl: ['momosuke', 'atsu'],
+  keys: {},
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '……{c}！ 会うの、ちょっと空いたね笑'
+  }, {
+    who: 'momosuke',
+    e: 'normal',
+    t: '……うん、{c}も元気そう'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: '煽り方、忘れたかも笑'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: 'じゃあ、ももから煽るね！！ まだフルコンできてないの〜？w'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '……それそれ笑 いつもの{c}！'
+  }]
+}, {
+  id: 'rel-awkward-momosuke-kyuko-1',
+  kind: 'awkward',
+  ppl: ['momosuke', 'kyuko'],
+  keys: {},
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '……{c}、なんか久しぶりだねぇ'
+  }, {
+    who: 'momosuke',
+    e: 'normal',
+    t: '……{c}、だ'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '……なんか、ちょっと間があいちゃったねぇ'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: '……ドリーミィ、元気！？'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: 'ほい、元気だよぉ。……やっぱり、そこから聞くんだねぇ笑'
+  }]
+}, {
+  id: 'rel-awkward-momosuke-sorashido-1',
+  kind: 'awkward',
+  ppl: ['momosuke', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '……{c}、少し会わなかったな'
+  }, {
+    who: 'momosuke',
+    e: 'normal',
+    t: '……{c}、元気そう'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '……会ってないあいだのミスの数、聞いてもいいか'
+  }, {
+    who: 'momosuke',
+    e: 'wink',
+    t: '……いつもの{c}だw 3つ！！'
+  }]
+}, {
+  id: 'rel-awkward-momosuke-erubin-1',
+  kind: 'awkward',
+  ppl: ['momosuke', 'erubin'],
+  keys: {},
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '……{c}、なんだか久しぶりな気がするね'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: '……{c}、話したいこと、たまりすぎて何から言えばいいか…'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'じゃあ、ひとつ目から、ゆっくり聞くよ'
+  }, {
+    who: 'momosuke',
+    e: 'excited',
+    t: 'うん！！ えっとね、まずは…！！'
+  }]
+}, {
+  id: 'rel-awkward-dra-atsu-1',
+  kind: 'awkward',
+  ppl: ['dra', 'atsu'],
+  keys: {},
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '……{c}、元気だった？笑'
+  }, {
+    who: 'dra',
+    e: 'normal',
+    t: '……まあな、{c}'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: 'なんか、勝負しないで話すの、変な感じ笑'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'じゃあ、一戦やるか。そのほうが、おでたちらしいな'
+  }]
+}, {
+  id: 'rel-awkward-dra-kyuko-1',
+  kind: 'awkward',
+  ppl: ['dra', 'kyuko'],
+  keys: {},
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '……あ、{c}だぁ'
+  }, {
+    who: 'dra',
+    e: 'normal',
+    t: '……お、{c}か'
+  }, {
+    who: 'kyuko',
+    e: 'wink',
+    t: '……寝ぐせ、ひさしぶりに見たぁ笑'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '……そこからか。でも、なんか安心したな'
+  }]
+}, {
+  id: 'rel-awkward-dra-sorashido-1',
+  kind: 'awkward',
+  ppl: ['dra', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '……{c}、会うのは5日ぶりだな'
+  }, {
+    who: 'dra',
+    e: 'normal',
+    t: '……数えてたのか、{c}'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '会ってないあいだに、表が30ページたまったんだが…'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '……全部、読んでやる。座れ'
+  }]
+}, {
+  id: 'rel-awkward-dra-erubin-1',
+  kind: 'awkward',
+  ppl: ['dra', 'erubin'],
+  keys: {},
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '……{c}、元気にしてたかな'
+  }, {
+    who: 'dra',
+    e: 'normal',
+    t: '……おう。{c}もな'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: 'なんだか、少し緊張しちゃうね'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: '……おでもだ。カード、持ってきたか？ じゃあ、いつもどおりだな'
+  }]
+}, {
+  id: 'rel-awkward-atsu-kyuko-1',
+  kind: 'awkward',
+  ppl: ['atsu', 'kyuko'],
+  keys: {},
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '……{c}！ なんか久しぶり笑'
+  }, {
+    who: 'kyuko',
+    e: 'normal',
+    t: '……{c}、だぁ'
+  }, {
+    who: 'atsu',
+    e: 'troubled',
+    t: 'ランキング見てなかったから、話のきっかけないかも笑'
+  }, {
+    who: 'kyuko',
+    e: 'wink',
+    t: 'じゃあ、今から一緒に見よぉ。きっかけ、できたねぇ'
+  }]
+}, {
+  id: 'rel-awkward-atsu-sorashido-1',
+  kind: 'awkward',
+  ppl: ['atsu', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '……{c}、しばらくぶりだな'
+  }, {
+    who: 'atsu',
+    e: 'normal',
+    t: '……{c}、元気？笑'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '勝ち負けの数、どっちが上だったか忘れたな'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: 'じゃあ、今日からまた数えよ笑'
+  }]
+}, {
+  id: 'rel-awkward-atsu-erubin-1',
+  kind: 'awkward',
+  ppl: ['atsu', 'erubin'],
+  keys: {},
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '……{c}、少しぶりだね'
+  }, {
+    who: 'atsu',
+    e: 'normal',
+    t: '……{c}！'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '少し、ぎこちないかな笑'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '俺が前、{c}が後ろ！ ……ほら、もういつもどおり笑'
+  }]
+}, {
+  id: 'rel-awkward-kyuko-sorashido-1',
+  kind: 'awkward',
+  ppl: ['kyuko', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '……{c}、元気だったぁ？'
+  }, {
+    who: 'sorashido',
+    e: 'normal',
+    t: '……ああ。{c}も'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '……メモ、たまっちゃったぁ'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '……全部、表にしよう。久しぶりの共同作業だな笑'
+  }]
+}, {
+  id: 'rel-awkward-kyuko-erubin-1',
+  kind: 'awkward',
+  ppl: ['kyuko', 'erubin'],
+  keys: {},
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '……{c}、会うの久しぶりだね'
+  }, {
+    who: 'kyuko',
+    e: 'normal',
+    t: '……{c}、だぁ'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '夜ふかし、してなかったかな？'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '……してたぁ笑 ……なんか、そう聞かれると落ち着くなぁ'
+  }]
+}, {
+  id: 'rel-awkward-sorashido-erubin-1',
+  kind: 'awkward',
+  ppl: ['sorashido', 'erubin'],
+  keys: {},
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '……{c}、少し会わなかったな'
+  }, {
+    who: 'erubin',
+    e: 'normal',
+    t: '……そうだね、{c}'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '……何から話せばいいか、計算できない'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'じゃあ、デュラハンの話からにしようか。それなら、すぐだよね'
+  }]
+}]);
+const ASSISTANT_LIFE_REL_CAUSES = Object.freeze({
+  tidy: '片づけ',
+  snack: 'おやつ',
+  song: '曲の好み',
+  win: '負けず嫌い',
+  late: '寝坊・遅刻',
+  promise: '約束を忘れた'
+});
+const ASSISTANT_LIFE_REL_KEY = 'mh_assistant_life_rel_v1';
+const ASSISTANT_LIFE_REL_COOL_DAYS = 2;
+const ASSISTANT_LIFE_REL_CHANCE = 0.3;
+const ASSISTANT_LIFE_REL_JEALOUS_CHANCE = 0.35;
+const assistantLifeRelDayOk = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+const normalizeAssistantLifeRel = v => {
+  const o = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  const src = o.mended && typeof o.mended === 'object' && !Array.isArray(o.mended) ? o.mended : {};
+  const mended = {};
+  for (const [k, x] of Object.entries(src)) {
+    if (!/^[a-z]+-[a-z]+$/.test(k) || !x || typeof x !== 'object' || !assistantLifeRelDayOk(x.day)) continue;
+    mended[k] = {
+      day: x.day,
+      abs: Number.isFinite(x.abs) ? x.abs : null
+    };
+  }
+  return {
+    mended
+  };
+};
+const ASSISTANT_LIFE_REL_STORE = {
+  state: {
+    loaded: false,
+    mended: {}
+  },
+  loading: null,
+  load() {
+    if (this.state.loaded) return Promise.resolve(this.state);
+    if (this.loading) return this.loading;
+    this.loading = (async () => {
+      let v = null;
+      try {
+        v = await storeGet(ASSISTANT_LIFE_REL_KEY, null, false);
+      } catch {}
+      this.state = {
+        ...normalizeAssistantLifeRel(v),
+        loaded: true
+      };
+      return this.state;
+    })();
+    return this.loading;
+  },
+  save() {
+    try {
+      storeSet(ASSISTANT_LIFE_REL_KEY, {
+        mended: this.state.mended
+      }, false);
+    } catch {}
+  }
+};
+const assistantLifeRelDayDiff = (a, b) => {
+  if (!assistantLifeRelDayOk(a) || !assistantLifeRelDayOk(b)) return Infinity;
+  return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86400000);
+};
+const assistantLifeRelCooling = (pairKey, now = Date.now()) => {
+  const m = ASSISTANT_LIFE_REL_STORE.state.mended[pairKey];
+  if (!m) return false;
+  const d = assistantLifeRelDayDiff(m.day, assistantLifeDayKey(now));
+  return d >= 0 && d <= ASSISTANT_LIFE_REL_COOL_DAYS;
+};
+let assistantLifeRelCache = null;
+const assistantLifeRelSet = () => {
+  if (assistantLifeRelCache) return assistantLifeRelCache;
+  const raw = typeof ASSISTANT_LIFE_REL_TALKS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_REL_TALKS) ? ASSISTANT_LIFE_REL_TALKS : [];
+  const by = {};
+  for (const t of raw) (by[t.kind] = by[t.kind] || []).push(t);
+  const key2 = t => assistantLifePairKey(t.ppl[0], t.ppl[1]);
+  const base = (t, extra) => ({
+    id: t.id,
+    keys: t.keys || {},
+    lines: t.lines,
+    lv: 1,
+    scene: 'any',
+    life: true,
+    rel: t.kind,
+    ...extra
+  });
+  const out = {
+    quarrel: [],
+    mend: [],
+    mend3: [],
+    jealous: [],
+    pair: [],
+    byId: {}
+  };
+  for (const t of by.fight || []) {
+    const pair = [...t.ppl].sort();
+    out.quarrel.push(base(t, {
+      pair,
+      kind: 'quarrel',
+      lv: 2,
+      scene: 'home',
+      makeupId: `${t.id}m`,
+      distance: t.distance || [],
+      cause: t.keys.cause
+    }));
+    out.quarrel.push(base(t, {
+      id: `${t.id}m`,
+      pair,
+      kind: 'makeup',
+      lv: 2,
+      scene: 'home',
+      quarrelId: t.id,
+      lines: t.makeup,
+      cause: t.keys.cause
+    }));
+  }
+  for (const t of by.mend || []) out.mend.push(base(t, {
+    pair: [...t.ppl].sort(),
+    pk: key2(t),
+    how: t.keys.how
+  }));
+  for (const t of by.mend3 || []) out.mend3.push(base(t, {
+    mediator: t.ppl[0],
+    pair: [t.ppl[1], t.ppl[2]].sort(),
+    pk: assistantLifePairKey(t.ppl[1], t.ppl[2])
+  }));
+  for (const t of by.jealous || []) out.jealous.push(base(t, {
+    kind: 'trio',
+    trio: [...t.ppl].sort(),
+    watcher: t.ppl[0],
+    pk: assistantLifePairKey(t.ppl[1], t.ppl[2])
+  }));
+  for (const k of ['secret', 'consult', 'tease', 'rival', 'awkward']) for (const t of by[k] || []) out.pair.push(base(t, {
+    pair: [...t.ppl].sort(),
+    pk: key2(t),
+    from: t.ppl[0],
+    to: t.ppl[1]
+  }));
+  for (const list of [out.quarrel, out.mend, out.mend3, out.jealous, out.pair]) for (const t of list) out.byId[t.id] = t;
+  assistantLifeRelCache = out;
+  return out;
+};
+const assistantLifeRelQuarrelTalks = () => assistantLifeRelSet().quarrel;
+const assistantLifeRelAlbumTalks = () => {
+  const x = assistantLifeRelSet();
+  return [...x.mend.map(t => ({
+    ...t,
+    kind: 'makeup'
+  })), ...x.mend3.map(t => ({
+    ...t,
+    kind: 'makeup'
+  })), ...x.jealous, ...x.pair];
+};
+const assistantLifeRelCauseOf = quarrelId => {
+  const t = assistantLifeRelSet().byId[quarrelId];
+  return t && t.cause ? ASSISTANT_LIFE_REL_CAUSES[t.cause] || null : null;
+};
+const assistantLifeRelGiftName = () => {
+  try {
+    const x = typeof assistantLifeItemInfo === 'function' ? assistantLifeItemInfo('gift') : null;
+    return x && x.name || '差し入れ';
+  } catch (_) {
+    return '差し入れ';
+  }
+};
+const assistantLifeRelPending = (peerSt = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null) => {
+  const q = peerSt && peerSt.quarrel && peerSt.quarrel.pending;
+  return q && q.pair ? {
+    ...q,
+    ids: String(q.pair).split('-')
+  } : null;
+};
+const assistantLifeRelFresh = (list, seen, rand) => {
+  if (!list.length) return null;
+  const fresh = list.filter(t => !(seen && seen[t.id]));
+  const pool = fresh.length ? fresh : list;
+  return pool[Math.floor(rand() * pool.length)];
+};
+const assistantLifeRelAsMakeup = (t, pending, extra = {}) => t ? {
+  ...t,
+  kind: 'makeup',
+  quarrelId: pending.id,
+  pair: [...pending.ids].sort(),
+  ...extra
+} : null;
+const assistantLifeRelOwnMakeup = pending => {
+  const qs = typeof assistantPeerExtraTalks === 'function' ? assistantPeerExtraTalks().quarrels : assistantLifeRelSet().quarrel;
+  return qs.find(t => t.kind === 'makeup' && t.quarrelId === pending.id) || null;
+};
+const assistantLifeRelPickMend = (pending, group, peerSt, seen = {}, rand = Math.random) => {
+  if (!pending || !assistantLifeEnabled()) return null;
+  const X = assistantLifeRelSet();
+  const ids = group && group.ids || pending.ids;
+  if (!pending.ids.every(id => ids.includes(id))) return null;
+  const others = ids.filter(id => !pending.ids.includes(id));
+  if (others.length) {
+    const m3 = X.mend3.filter(t => t.pk === pending.pair && others.includes(t.mediator));
+    const t = assistantLifeRelFresh(m3, seen, rand);
+    if (t) return assistantLifeRelAsMakeup(t, pending, {
+      mediator: t.mediator,
+      trio: [...new Set([t.mediator, ...pending.ids])].sort()
+    });
+  }
+  if (rand() < 0.5) {
+    const t = assistantLifeRelFresh(X.mend.filter(m => m.pk === pending.pair && m.how === 'apology'), seen, rand);
+    if (t) return assistantLifeRelAsMakeup(t, pending);
+  }
+  return null;
+};
+const assistantLifeRelOnMakeup = (talk, {
+  now = Date.now()
+} = {}) => {
+  const how = talk && talk.how || null;
+  if (!talk || !Array.isArray(talk.pair) || !assistantLifeEnabled()) return;
+  const pk = assistantLifePairKey(talk.pair[0], talk.pair[1]);
+  void (async () => {
+    await ASSISTANT_LIFE_REL_STORE.load();
+    const abs = assistantLifeSlotAt(now).abs;
+    ASSISTANT_LIFE_REL_STORE.state = {
+      ...ASSISTANT_LIFE_REL_STORE.state,
+      mended: {
+        ...ASSISTANT_LIFE_REL_STORE.state.mended,
+        [pk]: {
+          day: assistantLifeDayKey(now),
+          abs
+        }
+      }
+    };
+    ASSISTANT_LIFE_REL_STORE.save();
+    try {
+      ASSISTANT_LIFE_STORE.emit();
+    } catch {}
+    const [a, b] = talk.pair.map(assistantLifeName);
+    const by = talk.mediator ? `(${assistantLifeName(talk.mediator)}が間に)` : how === 'gift' ? `(${assistantLifeRelGiftName()}で)` : '';
+    if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`🤝 ${a}・${b}が仲直り${by}`, [...talk.pair, ...(talk.mediator ? [talk.mediator] : [])], {
+      kind: 'makeup',
+      now
+    });
+    if (talk.mediator && typeof assistantPeerGain === 'function') for (const id of talk.pair) await assistantPeerGain(talk.mediator, id, 'mediate');
+  })();
+};
+const assistantLifeRelMediate = async (id, now = Date.now()) => {
+  if (!assistantLifeEnabled() || typeof ASSISTANT_PEER_STORE === 'undefined') return null;
+  await ASSISTANT_PEER_STORE.load();
+  await ASSISTANT_LIFE_REL_STORE.load();
+  const pending = assistantLifeRelPending(ASSISTANT_PEER_STORE.state);
+  if (!pending || !pending.ids.includes(id)) return null;
+  const seen = ASSISTANT_LIFE_STORE.state && ASSISTANT_LIFE_STORE.state.seen || {};
+  const pick = assistantLifeRelFresh(assistantLifeRelSet().mend.filter(m => m.pk === pending.pair && m.how === 'player'), seen, Math.random);
+  const talk = pick ? assistantLifeRelAsMakeup(pick, pending, {
+    how: 'player'
+  }) : assistantLifeRelOwnMakeup(pending);
+  if (!talk) return null;
+  return assistantLifeRelFinishMakeup(talk, 'player', now);
+};
+const assistantLifeRelOnGift = async (kind, pair, now = Date.now()) => {
+  if (kind !== 'gift' || !assistantLifeEnabled() || !Array.isArray(pair) || pair.length !== 2) return null;
+  const pending = assistantLifeRelPending(ASSISTANT_PEER_STORE.state);
+  if (!pending || pending.pair !== assistantLifePairKey(pair[0], pair[1])) return null;
+  await ASSISTANT_LIFE_REL_STORE.load();
+  const seen = ASSISTANT_LIFE_STORE.state && ASSISTANT_LIFE_STORE.state.seen || {};
+  const pick = assistantLifeRelFresh(assistantLifeRelSet().mend.filter(m => m.pk === pending.pair && m.how === 'gift'), seen, Math.random);
+  const talk = pick ? assistantLifeRelAsMakeup(pick, pending, {
+    how: 'gift'
+  }) : assistantLifeRelOwnMakeup(pending);
+  return talk ? assistantLifeRelFinishMakeup(talk, 'gift', now) : null;
+};
+const assistantLifeRelFinishMakeup = async (talk, how, now = Date.now()) => {
+  if (!assistantPeerMakeupDone({
+    ...talk,
+    how
+  })) return null;
+  await assistantPeerGain(talk.pair[0], talk.pair[1], 'makeup');
+  if (how !== 'self') {
+    try {
+      assistantPeerAddPlayerBond(talk.pair, 'peerMakeup');
+    } catch {}
+  }
+  if (how !== 'self') {
+    try {
+      assistantPeerMarkShown(talk, {
+        scene: 'life',
+        special: false,
+        now
+      });
+    } catch {}
+  }
+  try {
+    assistantPeerAlbumAdd(talk);
+  } catch {}
+  return talk;
+};
+const assistantLifeRelTick = async (now = Date.now()) => {
+  if (!assistantLifeEnabled() || typeof ASSISTANT_PEER_STORE === 'undefined') return false;
+  await ASSISTANT_PEER_STORE.load();
+  const pending = assistantLifeRelPending(ASSISTANT_PEER_STORE.state);
+  if (!pending || !Number.isFinite(pending.at) || assistantLifeDayKey(pending.at) === assistantLifeDayKey(now)) return false;
+  await ASSISTANT_LIFE_REL_STORE.load();
+  const talk = assistantLifeRelOwnMakeup(pending) || {
+    id: `${pending.id}m`,
+    kind: 'makeup',
+    quarrelId: pending.id,
+    pair: [...pending.ids].sort(),
+    lines: []
+  };
+  return !!(await assistantLifeRelFinishMakeup(talk, 'self', now));
+};
+const assistantLifeRelPickPair = (pair, group, peerSt, life, seen = {}, rand = Math.random) => {
+  if (!assistantLifeEnabled() || !Array.isArray(pair) || pair.length !== 2) return null;
+  const [a, b] = [...pair].sort();
+  const pk = assistantLifePairKey(a, b);
+  if (assistantLifeAirOf(life, a, b) === 'after') return null;
+  const lv = assistantLifeLevelOf(peerSt, a, b);
+  const moods = life && life.moods || {};
+  const look = assistantLifeLookNow();
+  const night = look === 'night' || life && assistantLifeSlotAt().i === 0;
+  const doing = group && group.doing;
+  const seenRecent = (life && life.recent || []).some(r => r && r.pair === pk);
+  const ok = t => {
+    if (t.pk !== pk || seen && seen[t.id]) return false;
+    if (t.rel === 'secret') return lv >= 5 && night;
+    if (t.rel === 'consult') return lv >= 3 && moods[t.from] === t.keys.mood;
+    if (t.rel === 'tease') return lv >= 3;
+    if (t.rel === 'rival') return lv >= 2 && (t.keys.game === 'beat' && doing === 'practice' || t.keys.game === 'card' && doing === 'cards');
+    if (t.rel === 'awkward') return lv >= 2 && !seenRecent;
+    return false;
+  };
+  const cands = assistantLifeRelSet().pair.filter(ok);
+  if (!cands.length) return null;
+  const strong = cands.filter(t => t.rel === 'consult' || t.rel === 'rival');
+  if (rand() >= (strong.length ? ASSISTANT_LIFE_REL_CHANCE * 2 : ASSISTANT_LIFE_REL_CHANCE)) return null;
+  const t = (strong.length ? strong : cands)[Math.floor(rand() * (strong.length || cands.length))];
+  return {
+    ...t,
+    pair: [a, b]
+  };
+};
+const assistantLifeRelPickGroup = (group, peerSt, life, seen = {}, rand = Math.random) => {
+  if (!assistantLifeEnabled() || !group || !Array.isArray(group.ids) || group.ids.length < 3) return null;
+  const ids = group.ids;
+  const pending = assistantLifeRelPending(peerSt);
+  if (pending && pending.ids.every(id => ids.includes(id))) {
+    return assistantLifeRelPickMend(pending, group, peerSt, seen, rand) || assistantLifeRelOwnMakeup(pending);
+  }
+  if (ids.length !== 3) return null;
+  const band = lv => lv >= 7 ? '7-10' : lv >= 4 ? '4-6' : null;
+  const cands = assistantLifeRelSet().jealous.filter(t => t.trio.every(id => ids.includes(id)) && !(seen && seen[t.id]) && (() => {
+    const [x, y] = t.pk.split('-');
+    const bd = band(assistantLifeLevelOf(peerSt, x, y));
+    return bd && (!t.keys.lv || t.keys.lv === bd);
+  })());
+  if (!cands.length || rand() >= ASSISTANT_LIFE_REL_JEALOUS_CHANCE) return null;
+  return cands[Math.floor(rand() * cands.length)];
+};
+const assistantLifeRelDecorateRooms = (rooms, life, peerSt) => {
+  if (!assistantLifeEnabled() || !rooms || !life) return rooms;
+  const pending = assistantLifeRelPending(peerSt);
+  const nm = assistantLifeName;
+  if (pending) {
+    const [a, b] = pending.ids;
+    const living = assistantLifeRelLivingPair(life, peerSt);
+    for (const id of pending.ids) {
+      const other = id === a ? b : a;
+      const r = rooms[id];
+      if (!r) continue;
+      const w = assistantLifeWhereOf(life, id);
+      if (living) {
+        rooms[id] = {
+          tag: ['🛋️ みんなの居間に', `💢 ${nm(other)}とけんか中`, null],
+          rel: 'living'
+        };
+        continue;
+      }
+      if (r.in && w && w.place === 'home' && !w.group && w.doing !== 'sleep') rooms[id] = {
+        ...r,
+        after: true,
+        door: true,
+        bub: ['🚪 そっとして', 'おいて'],
+        rel: 'door'
+      };else if (r.in && !r.sleep) rooms[id] = {
+        ...r,
+        after: true,
+        bub: [`💢 ${nm(other)}と`, 'けんか中'],
+        rel: 'quarrel'
+      };else if (r.tag) rooms[id] = {
+        ...r,
+        tag: [r.tag[0], `💢 ${nm(other)}とけんか中`, r.tag[2] || null],
+        rel: 'quarrel'
+      };
+    }
+  }
+  const cur = life && Number.isFinite(life.abs) ? life.abs : assistantLifeSlotAt().abs;
+  for (const [pk, m] of Object.entries(ASSISTANT_LIFE_REL_STORE.state.mended || {})) {
+    if (m.abs !== cur || pending && pending.pair === pk) continue;
+    const [a, b] = pk.split('-');
+    for (const id of [a, b]) {
+      const r = rooms[id];
+      if (!r || r.rel) continue;
+      const other = id === a ? b : a;
+      if (r.in) rooms[id] = {
+        ...r,
+        after: false,
+        mend: other,
+        bub: r.sleep ? r.bub : ['🤝 仲直り！'],
+        rel: 'mend'
+      };else if (r.tag) rooms[id] = {
+        ...r,
+        mend: other,
+        tag: [r.tag[0], `🤝 ${nm(other)}と仲直り`, r.tag[2] || null],
+        rel: 'mend'
+      };
+    }
+  }
+  const groups = life && life.groups || [];
+  for (const t of assistantLifeRelSet().jealous) {
+    const r = rooms[t.watcher];
+    if (!r || !r.in || r.sleep || r.rel || r.door) continue;
+    const w = assistantLifeWhereOf(life, t.watcher);
+    if (!w || w.group || w.place !== 'home') continue;
+    const [x, y] = t.pk.split('-');
+    if (!rooms[x] || !rooms[y] || !groups.some(g => g.ids.includes(x) && g.ids.includes(y))) continue;
+    if (assistantLifeLevelOf(peerSt, x, y) < 4) continue;
+    rooms[t.watcher] = {
+      ...r,
+      lonely: false,
+      bub: ['💭 …いいなぁ'],
+      jealous: [x, y],
+      rel: 'jealous'
+    };
+  }
+  return rooms;
+};
+const assistantLifeRelSoloTalk = (id, roomState) => {
+  if (!assistantLifeEnabled() || !roomState || !Array.isArray(roomState.jealous)) return null;
+  const pk = assistantLifePairKey(roomState.jealous[0], roomState.jealous[1]);
+  const t = assistantLifeRelSet().jealous.find(x => x.watcher === id && x.pk === pk);
+  if (!t) return null;
+  const lines = t.lines.filter(l => l.who === id).slice(0, 1);
+  return lines.length ? {
+    id: `${t.id}-solo`,
+    kind: 'life-solo',
+    pair: [id],
+    trio: undefined,
+    lines,
+    lv: 1,
+    scene: 'any',
+    life: true,
+    rel: 'jealous-solo'
+  } : null;
+};
+const assistantLifeRelLivingPair = (life, peerSt) => {
+  const pending = assistantLifeRelPending(peerSt);
+  if (!pending || !life) return null;
+  const g = (life.groups || []).find(x => x.place === 'home' && x.ids.length === 2 && pending.ids.every(id => x.ids.includes(id)));
+  return g && g.doing !== 'sleep' ? [...pending.ids] : null;
+};
+function AssistantLifeRelLiving({
+  life,
+  peerSt,
+  width,
+  lh,
+  land
+}) {
+  const pair = assistantLifeRelLivingPair(life, peerSt);
+  if (!pair) return null;
+  const size = land ? 28 : 32;
+  const boardW = Math.min(width * (land ? .42 : .52), 240);
+  return React.createElement(React.Fragment, null, pair.map((id, i) => {
+    const who = assistantById(id);
+    return who ? React.createElement("span", {
+      key: id,
+      className: "mhl-rel-sit",
+      "data-assistant-life-rel-sit": id,
+      style: i === 0 ? {
+        left: boardW + 16,
+        bottom: 5
+      } : {
+        right: 8,
+        bottom: 5
+      }
+    }, React.createElement(AssistantFace, {
+      who: who,
+      size: size,
+      accent: who.accent
+    }), React.createElement("i", {
+      "aria-hidden": "true"
+    }, i === 0 ? '💢' : '…')) : null;
+  }));
+}
+function AssistantLifeRelRoomLayer({
+  state,
+  h
+}) {
+  if (!state) return null;
+  return React.createElement(React.Fragment, null, state.door && React.createElement("div", {
+    className: "mhl-rel-shut",
+    "data-assistant-life-rel-door": true,
+    style: {
+      height: Math.max(30, Math.min(64, h - 13 - 26))
+    }
+  }), state.mend && state.in && React.createElement("span", {
+    className: "mhl-rel-mend",
+    "data-assistant-life-rel-mend": true,
+    "aria-hidden": "true"
+  }, [[18, 30, 0], [46, 18, .2], [70, 34, .4], [30, 60, .6], [62, 58, .3]].map(([x, y, d], i) => React.createElement("i", {
+    key: i,
+    style: {
+      left: `${x}%`,
+      top: `${y}%`,
+      animationDelay: `${d}s`
+    }
+  }, "✦"))));
+}
+const ASSISTANT_LIFE_REL_CSS = `
+.mhl-rel-shut{position:absolute;left:40%;bottom:13px;width:26%;min-width:34px;max-width:56px;z-index:4;border-radius:14px 14px 0 0;background:linear-gradient(90deg,#7a4b22,#a0703c 45%,#7a4b22);border:2px solid #3b2412;box-shadow:inset 0 0 0 3px #6b4423,0 2px 6px #0007}
+.mhl-rel-shut:after{content:"";position:absolute;right:5px;top:55%;width:5px;height:5px;border-radius:50%;background:#fde68a;box-shadow:0 0 3px #fde68a}
+.mhl-room:has(.mhl-rel-shut) .pp{visibility:hidden}
+.mhl-rel-mend{position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden}
+.mhl-rel-mend i{position:absolute;font-style:normal;font-size:11px;color:#fdba74;text-shadow:0 0 6px #fb923c;opacity:0;animation:mhlRelSpark 1.4s ease-out both}
+@keyframes mhlRelSpark{0%{opacity:0;transform:translateY(6px) scale(.4)}30%{opacity:1;transform:translateY(-4px) scale(1.2)}100%{opacity:0;transform:translateY(-14px) scale(.8)}}
+.mhl-room:has(.mhl-rel-mend) .bb{background:linear-gradient(#fff7ed,#fed7aa);color:#7c2d12;box-shadow:inset 0 0 0 1.5px #ea580c,0 0 10px #fb923c;animation:mhlRelMend .9s ease-out both}
+@keyframes mhlRelMend{0%{transform:scale(.5);opacity:0}45%{transform:scale(1.15);opacity:1}100%{transform:scale(1)}}
+.mhl-rel-sit{position:absolute;z-index:3;border-radius:50%;box-shadow:0 0 0 2.5px #7dd3fc,0 2px 6px #0008}
+.mhl-rel-sit i{position:absolute;top:-8px;right:-8px;font-style:normal;font-size:12px;line-height:1;background:#fff;color:#334155;border-radius:8px;padding:1px 3px;box-shadow:0 1px 3px #0006;font-weight:900}
+@media (prefers-reduced-motion:reduce){.mhl-rel-mend i,.mhl-room:has(.mhl-rel-mend) .bb{animation:none}.mhl-rel-mend{display:none}}
+`;
+function AssistantLifeRelStyle() {
+  return React.createElement("style", null, ASSISTANT_LIFE_REL_CSS);
+}
+function AssistantLifeRelSheetRow({
+  id,
+  state,
+  peerSt,
+  onMediate
+}) {
+  const pending = assistantLifeRelPending(peerSt);
+  const nm = assistantLifeName;
+  if (pending && pending.ids.includes(id)) {
+    const other = pending.ids.find(x => x !== id);
+    const cause = assistantLifeRelCauseOf(pending.id);
+    return React.createElement("div", {
+      className: "mt-1 rounded-xl border border-sky-300/50 bg-sky-950/60 px-2.5 py-1.5",
+      "data-assistant-life-rel-row": "quarrel"
+    }, React.createElement("p", {
+      className: "text-[11.5px] font-black text-sky-100"
+    }, "💢 いま ", nm(other), "とけんか中", cause ? React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "(原因: ", cause, ")") : null), React.createElement("p", {
+      className: "text-[10px] font-bold leading-snug text-sky-200"
+    }, ['朝4時までには、', '自分たちで', '仲直りします。', '取り持つか、', `2人に${assistantLifeRelGiftName()}を`, '渡すと、', 'すぐ仲直り'].map((x, i) => React.createElement(React.Fragment, {
+      key: i
+    }, i ? React.createElement("wbr", null) : null, React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, x)))), onMediate && React.createElement("button", {
+      type: "button",
+      className: "mhl-btn mt-1.5 w-full",
+      "data-assistant-life-room-act": "mediate",
+      style: {
+        background: 'linear-gradient(90deg,#fb923c,#f472b6)'
+      },
+      onClick: () => onMediate(id)
+    }, "🤝 取り持つ(無料)"));
+  }
+  if (state && state.mend) return React.createElement("p", {
+    className: "mt-1 text-[11px] font-black text-orange-200",
+    "data-assistant-life-rel-row": "mend"
+  }, "🤝 ", nm(state.mend), "と仲直りしたところ");
+  if (state && state.jealous) return React.createElement("p", {
+    className: "mt-1 text-[11px] font-black text-amber-200",
+    "data-assistant-life-rel-row": "jealous"
+  }, "💭 ", state.jealous.map(nm).join('と'), "が一緒なのが、ちょっと気になる");
+  return null;
 }
 const CARD_BATTLE_HAND_MAX = 5;
 const CARD_BATTLE_DECK_SIZE = 50;
