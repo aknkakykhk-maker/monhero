@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4354f40429ccf3da
+// generated-sha256: fe92713ae8ac8a72
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -24109,7 +24109,7 @@ const RhythmMonsterSlotsPanel=({rhythmMonsterSlots,rhythmMonsterSlotIdsInUse,rhy
               {rhythmMonsterPickerOpen&&<ModalFrame label="モンスターノーツにするマスモンを選ぶ" border="border-fuchsia-400/70" onClose={()=>setRhythmMonsterPickerOpen(false)}>
                 <h3 className="text-center text-base font-black text-fuchsia-100">{target+1}番目に出すマスモン</h3>
                 <p className="mt-1 text-center text-[10px] font-bold text-slate-400">曲の約{Math.round((ratios[target]||0)*100)}%あたりで出ます{targetMasu?`（いまは ${targetMasu.name}）`:''}</p>
-                <ul data-rhythm-monster-picker className="mh-scroll mt-3 max-h-[55vh] space-y-1.5 overflow-y-auto">
+                <ul data-rhythm-monster-picker className="mh-scroll mt-3 max-h-[55vh] [[data-mh-view-rotation=true]_&]:max-h-[calc(var(--mh-vh)*0.55)] space-y-1.5 overflow-y-auto">
                 {candidates.map(masu=>{
                   const base=ALL_PLAYER_MONSTERS[masu.baseId],issue=rhythmMonsterSlotReplaceIssue(rhythmMonsterSlotIdsInUse,target,masu.id,masuMons);
                   const ability=rhythmSlotAbility(masu),at=slotOf(masu);
