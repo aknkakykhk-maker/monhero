@@ -336,7 +336,7 @@ const sheetOut=`<div class="sheet" style="height:470px;padding:12px 14px">
   <div class="srow"><span class="k">🎵 セッション</span><b>セッションLv15</b><small style="font-size:9.5px;color:#cbd5e1;margin-left:auto">一緒に 21回</small></div>
   <div class="tl" style="padding:6px 0 4px"><div style="font-size:10px;color:#cbd5e1;font-weight:900">今日あったこと</div><p><b>朝</b>ドラと広場を散歩</p><p><b>13:40</b>セッションで あつとデュオ → 🎵Lv15 に上がった</p></div>
  </div>
- <div style="margin-top:6px;border-radius:14px;padding:11px 0;text-align:center;font-size:14px;font-weight:900;background:linear-gradient(135deg,#a855f7,#ec4899);box-shadow:0 0 18px #ec489988">🎵 会いに行く(セッション券なし)<small style="display:block;font-size:9.5px;font-weight:800;opacity:.9">モンビーにいるあいだ ・ ももすけと今日あと1回</small></div>
+ <div style="margin-top:6px;border-radius:14px;padding:11px 0;text-align:center;font-size:14px;font-weight:900;background:linear-gradient(135deg,#a855f7,#ec4899);box-shadow:0 0 18px #ec489988">🎵 会いに行く(セッション券なし)<small style="display:block;font-size:9.5px;font-weight:800;opacity:.9">モンビーにいるあいだ(14時まで)は回数を使わない</small></div>
  <div class="btn4" style="margin-top:6px"><span style="background:linear-gradient(135deg,#38bdf8,#6366f1)">👀 見守りに行く</span><span style="background:linear-gradient(135deg,#34d399,#16a34a)">🧺 渡す</span></div>
 </div>`;
 H+=`<div><p class="cap">③ 部屋を押す(いるとき)<small>その助手の いまどこで誰と・気持ち・仲良し度・友情Lv・セッションLv・今日あったこと。部屋にいるので その場で 話す/ようすを見る/渡す/一緒にモンビー</small></p><div class="ph">
@@ -422,7 +422,7 @@ H+=`<section id="ab"><p class="cap w" style="font-size:18px;width:1300px">社長
 <div><p class="cap">❸ 入場の演出<small>A: 毎回。その日の最初は 家の正面→壁が開く→顔(1.2秒)、2回目からは 壁→顔 だけ(0.4秒)。タップで飛ばせる<br>B: その日の最初だけ。2回目からはすぐ家</small></p>
  ${mini(entB,'A/B どちらも この動き')}</div>
 <div><p class="cap">❹ 助手ライフの曲<small>A: 今ある「風がそよぐ場所」(モンヒロビートにもある 1分40秒の穏やかな曲)<br>B: 新しく1曲(社長が用意。届くまでは HOME の曲)</small></p>
- <p class="cap" style="margin-top:14px">❺ モンビーにいる助手と、券なしでセッションできる線引き<small>A: 助手が自分でモンヒロビートに出かけているあいだに、その助手と 1日1回だけ券なし(2回目からは今までどおり)<br>B: 出かけているあいだ(その時間帯の3〜5時間)は何回でも券なし<br>どちらも: 出かけているのは「練習」している時間帯。ランキング・スコアには効かせない</small></p></div>
+ <p class="cap" style="margin-top:14px">❺ モンビーにいる助手と、券なしでセッションできる線引き<small>A: 助手が自分でモンヒロビートに出かけているあいだ(その時間帯の3〜5時間)は、その助手と何回でも券なし。帰ったら今までどおり<br>B: 出かけているあいだに、その助手と1日1回だけ券なし<br>C: その日に一度モンビーで会えたら、その助手とはその日ずっと券なし<br>どちらも: 出かけているのは「練習」している時間帯。ランキング・スコアには効かせない</small></p></div>
 </div></section>`;
 document.getElementById('root').innerHTML=H;
 
