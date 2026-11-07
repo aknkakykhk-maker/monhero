@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a0b7af77da86269c
+// generated-sha256: 2c2f60cc5457beb6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -37955,6 +37955,14 @@ const TimeOfDayClock = ({ home = false }) => {
   }, [home]);
   if (st.settings.clock !== 'on') return null;
   return <span ref={ref} className="mh-tod-clock" data-time-of-day-clock={st.slot.id} aria-label={`いまの時刻 ${st.minute}(${st.slot.label})`}><i aria-hidden="true">{st.slot.icon}</i>{st.minute}</span>;
+};
+
+// 時刻の文字だけ(札の枠なし)。ほかの札の中に時刻を並べたいとき用(例: 助手ライフの家の「🌙 夜」の札に「21:34」を足す)。
+//   設定の「いまの時刻を出す」が切なら何も出さない。見出しに別の札を足すと題が切れる(2026-11-07 家の見出しで「助手ライ」まで切れた)ので、同じ所に時間帯の札があるときはこちらを使う
+const TimeOfDayClockText = ({ prefix = ' ' }) => {
+  const st = useTimeOfDay();
+  if (st.settings.clock !== 'on') return null;
+  return <span data-time-of-day-clock-text={st.slot.id} style={{ fontVariantNumeric: 'tabular-nums' }}>{prefix}{st.minute}</span>;
 };
 
 // 設定の欄(設定画面の「画面テーマ」の下)
