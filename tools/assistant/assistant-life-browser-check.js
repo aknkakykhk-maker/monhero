@@ -1,7 +1,9 @@
-// 助手たちの今(段階2)の画面と HOME の帯を、実際に開いて確かめる。公開の印 assistantLife はページの中でだけ立てる(本体の印は偽のまま)。
+// 助手ライフ(助手たちの家・段階1 2026-11-07)の画面と HOME の施設の顔を、実際に開いて確かめる。公開の印 assistantLife はページの中でだけ立てる(本体の印は偽のまま)。
 //   node tools/assistant/assistant-life-browser-check.js            検査
 //   node tools/assistant/assistant-life-browser-check.js --shots    止め絵も撮る(docs/progress/assistant-peer/shots/life-*.png)
-//   ① HOME に帯が出る(会った助手の様子・にぎわい)/ 押すと画面が開く / 縦 390・横 844×390 ではみ出さない
+//   ① HOME の施設の横に、会った助手の顔が全部出る(帯は出ない)/ 施設「🏡 助手ライフ」を押すと家が開く / 縦 390・横 844×390 ではみ出さない
+//   ⑩ 家: 8人の部屋・いる部屋は顔・出かけた部屋は行き先の札・部屋を押すとその助手のこと・場面・みんなの居場所(地図と一覧)・入場の演出
+//   一覧(組・ひとり・誘う・引き合わせる・見守る・渡す)は家の「📋 居場所」の中。掛け合いは家を閉じずに場面で流れる
 //   ② 見守る: 掛け合いが流れ、見守った数・にぎわい・友情Lv が増える / 同じ時間に同じ組は2度見守れない
 //   ③ 誘う・引き合わせる: 次の時間の声かけとして残る
 //   ④ 関係とアルバム: 名前は「友情Lv」「友だち」。今日のペアは出ない
@@ -67,7 +69,13 @@ const toHome = async (page) => {
   for (let i = 0; i < 12; i++) { const c = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.offsetParent && /^(受け取る|閉じる|OK|わかった！?|とじる)$/.test((x.innerText || '').trim())); if (b) { b.click(); return true; } return false; }); if (!c) break; await page.waitForTimeout(400); }
 };
 const finishTalk = async (page) => { for (let i = 0; i < 24; i++) { const n = await page.locator('[data-assistant-peer-talk]').count(); if (!n) break; await page.locator('[data-assistant-peer-talk]').first().click({ timeout: 800 }).catch(() => {}); await page.waitForTimeout(250); } };
-const reopen = async (page) => { await page.locator('[data-assistant-life-open]').click({ timeout: 20000 }).catch(() => {}); await page.locator('[data-assistant-life-screen]').waitFor({ timeout: 5000 }).catch(() => {}); };
+// 家を開く(施設「🏡 助手ライフ」)→ 入場の演出が終わるのを待つ → 「📋 居場所」の一覧へ
+const openHouse = async (page) => { await page.locator('[data-home-assistant-life]').click({ timeout: 20000 }).catch(() => {}); await page.locator('[data-assistant-life-screen]').waitFor({ timeout: 5000 }).catch(() => {}); await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 4000 }).catch(() => {}); };
+const toWhere = async (page) => { await page.locator('[data-assistant-life-icon="where"]').click({ timeout: 5000 }).catch(() => {}); await page.waitForTimeout(250); };
+const reopen = async (page) => { if (!(await page.locator('[data-assistant-life-screen]').count())) await openHouse(page); await toWhere(page); };
+// 場面の掛け合いを最後まで進めて、家へ戻る
+const endScene = async (page) => { await finishTalk(page); await page.locator('[data-assistant-life-scene-back]').click({ timeout: 2000 }).catch(() => {}); await page.waitForTimeout(250); };
+const waitFaces = async (page) => { for (let i = 0; i < 60 && !(await page.locator('[data-assistant-life-home-face]').count()); i++) { await finishTalk(page); await page.waitForTimeout(500); } };
 const talkInfo = (page) => page.evaluate(() => { const el = document.querySelector('[data-assistant-peer-talk]'); if (!el) return null; return { id: el.getAttribute('data-assistant-peer-talk'), faces: [...el.querySelectorAll('[data-assistant-peer-face]')].map(x => x.getAttribute('data-assistant-peer-face')), line: (el.querySelector('[data-assistant-peer-line]') || {}).innerText || '' }; });
 const ls = (page, k) => page.evaluate((key) => { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } }, k);
 const overflowX = (page, sel) => page.evaluate((s) => { const el = document.querySelector(s); if (!el) return null; const r = el.getBoundingClientRect(); return r.left < -1 || r.right > window.innerWidth + 1; }, sel);
@@ -98,20 +106,40 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
   try {
     // 縦 390
     const { page, errors } = await open({ w: 390, h: 844 });
-    // 流れてくる掛け合いが終わるのを待ってから帯を見る(掛け合いのあいだ帯は隠れる)
-    await page.locator('[data-assistant-life-band]').waitFor({ timeout: 40000 }).catch(() => {});
-    const band = await page.locator('[data-assistant-life-band]').count();
-    check('① HOME に助手たちの今の帯が出る', band === 1);
-    check('① 帯ははみ出さない(縦 390)', (await overflowX(page, '[data-assistant-life-band] > div')) === false);
-    if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-1-home-band.png') });
-    await page.locator('[data-assistant-life-open]').click();
+    // 流れてくる掛け合いが終わるのを待ってから顔を見る(掛け合いのあいだは出ない)
+    await waitFaces(page);
+    const faceIds = await page.locator('[data-assistant-life-home-face]').evaluateAll(els => els.map(e => e.getAttribute('data-assistant-life-home-face')));
+    check('① HOME の施設の横に、会った助手8人の顔が全部出る(上限で切らない)', faceIds.length === 8 && new Set(faceIds).size === 8, faceIds.join(','));
+    check('① 練習中の助手はモンヒロビート、カード研究の組は MFバトルカードの横', (await page.locator('[data-assistant-life-home-faces="rhythm"] [data-assistant-life-home-face="momosuke"]').count()) === 1 && (await page.locator('[data-assistant-life-home-faces="card"] [data-assistant-life-home-face]').count()) === 3);
+    check('① 家と町にいる助手は施設「🏡 助手ライフ」の横(5人目からは2段)', (await page.locator('[data-assistant-life-home-faces="life"] [data-assistant-life-home-face]').count()) === 4);
+    check('① 帯は出ない', (await page.locator('[data-assistant-life-band]').count()) === 0);
+    check('① 顔ははみ出さない(縦 390)', await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-home-faces]')].every(el => { const r = el.getBoundingClientRect(); return r.left >= -1 && r.right <= window.innerWidth + 1; })));
+    if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-1-home-faces.png') });
+    // 入場の演出(その日の最初は長い)・家
+    await page.locator('[data-home-assistant-life]').click();
     await page.locator('[data-assistant-life-screen]').waitFor({ timeout: 5000 });
+    check('⑩ 入場の演出が出る(その日の最初は長い)', (await page.locator('[data-assistant-life-intro="long"]').count()) === 1);
+    check('⑩ 入場を見た日を新しいキーに残す', /^\d{4}-\d{2}-\d{2}$/.test(String(await ls(page, 'mh_assistant_life_intro_v1'))));
+    await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 4000 }).catch(() => {});
+    check('⑩ 家に8人の部屋が出る', (await page.locator('[data-assistant-life-room]').count()) === 8);
+    check('⑩ 家にいる助手は部屋に顔(あつ・さみしそう)', (await page.locator('[data-assistant-life-room="atsu"] [data-assistant-life-room-face="atsu"]').count()) === 1);
+    check('⑩ 出かけている助手の部屋には行き先の札(みゅあ → おやつ屋さん)', /おやつ屋さんへ/.test(await page.locator('[data-assistant-life-room-away="mua"]').innerText().catch(() => '')));
+    check('⑩ 居間に「今日あったこと」の掲示板', (await page.locator('[data-assistant-life-board]').count()) === 1);
+    check('⑩ 家ははみ出さない(縦 390)', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
+    if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-12-house.png') });
+    await page.locator('[data-assistant-life-room="atsu"]').click(); await page.waitForTimeout(300);
+    const sheetText = await page.locator('[data-assistant-life-room-sheet="atsu"]').innerText().catch(() => '');
+    check('⑩ 部屋を押すと、その助手のこと(いまどこ・仲良し度・友情Lv・セッション・今日あったこと)', ['あつの部屋', '仲良し度', '友情Lv', 'セッション', '今日あったこと'].every(w => sheetText.includes(w)), sheetText.replace(/\s+/g, ' ').slice(0, 80));
+    if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-13-room.png') });
+    await page.locator('[data-assistant-life-room-sheet="atsu"] > button').first().click({ position: { x: 10, y: 10 } }).catch(() => {});
+    await toWhere(page);
+    check('⑩ みんなの居場所に町の地図(場所に顔)', (await page.locator('[data-assistant-life-map] [data-assistant-life-map-place="cafe"] button').count()) === 2);
     const groups = await page.locator('[data-assistant-life-group]').count();
     const solos = await page.locator('[data-assistant-life-solo]').count();
     check('① 画面が開き、組とひとりの助手が出る(8人ぶん)', groups + solos >= 3, `組 ${groups}・ひとり ${solos}`);
     check('① にぎわいは「にぎやか」(×1.5・上限45)', /にぎやか/.test(await page.locator('[data-assistant-life-tier]').innerText()) && /×1\.5/.test(await page.locator('[data-assistant-life-tier]').innerText()));
     check('① 画面ははみ出さない(縦 390)', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
-    if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-2-screen.png') });
+    if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-2-where.png') });
     // ③ 誘う
     const inv = page.locator('[data-assistant-life-invite]:not([disabled])').first();
     if (await inv.count()) {
@@ -119,8 +147,8 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
       await inv.click(); await page.waitForTimeout(300);
       const life = await ls(page, 'mh_assistant_life_v1');
       check('③ 誘うと、次の時間の声かけとして残る', life && life.nudges && life.nudges.invite.some(n => n.id === who && n.abs === life.abs + 1));
-      // 声をかけに行く台本があれば流れて画面が閉じる → 最後まで進めて開き直す
-      if (!(await page.locator('[data-assistant-life-screen]').count())) { await finishTalk(page); await reopen(page); }
+      // 声をかけに行く台本があれば場面で流れる → 最後まで進めて家へ戻る
+      if (await page.locator('[data-assistant-life-scene]').count()) await endScene(page);
     } else check('③ 誘えるひとりの助手がいる', false);
     // 引き合わせる
     await page.locator('[data-assistant-life-pick="kyuko"]').click(); await page.locator('[data-assistant-life-pick="dra"]').click();
@@ -137,7 +165,7 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
       await wbtn.click();
       await page.waitForTimeout(800);
       const talking = await page.locator('[data-assistant-peer-talk], [data-assistant-peer-line]').count();
-      check('② 見守ると画面が閉じて、その組の掛け合いが流れる', (await page.locator('[data-assistant-life-screen]').count()) === 0 && talking > 0, `${talking}`);
+      check('② 見守ると、家を閉じずに場面でその組の掛け合いが流れる', (await page.locator('[data-assistant-life-screen]').count()) === 1 && (await page.locator('[data-assistant-life-scene]').count()) === 1 && talking > 0, `${talking}`);
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-3-watch.png') });
       const info = await talkInfo(page);
       check('⑦ 見守ると、その組の中の人だけが話す台本が流れる(穴が残らない)', info && info.faces.every(id => watched.split('+').includes(id)) && !/[{}]/.test(info.line), info ? `${info.id}・${info.faces.join(',')}` : 'なし');
@@ -148,8 +176,8 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
       check('② 見守った数・にぎわいが増え、組の友情Lv の点が上がる', playAfter.counts.watch === 1 && playAfter.points > playBefore.points && up, JSON.stringify(playAfter.counts));
       // 掛け合いを最後まで進める
       for (let i = 0; i < 20; i++) { const n = await page.locator('[data-assistant-peer-talk], [data-assistant-peer-line]').count(); if (!n) break; await page.locator('[data-assistant-peer-talk], [data-assistant-peer-line]').first().click({ timeout: 800 }).catch(() => {}); await page.waitForTimeout(250); }
-      await page.locator('[data-assistant-life-open]').click({ timeout: 20000 }).catch(() => {});
-      await page.locator('[data-assistant-life-screen]').waitFor({ timeout: 5000 }).catch(() => {});
+      await page.locator('[data-assistant-life-scene-back]').click({ timeout: 2000 }).catch(() => {});
+      await reopen(page);
       check('② 同じ時間に同じ組は2度見守れない', await page.locator(`[data-assistant-life-watch="${watched}"]`).isDisabled().catch(() => false));
     } else check('② 見守れる組がある', false);
     // ⑦ ひとりの助手の様子を見る
@@ -160,12 +188,14 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
       const info = await talkInfo(page);
       check('⑦ ようすを見ると、その助手のひとりごとが流れる(顔はその助手だけ・穴が残らない)', info && (/^life-solo/.test(info.id) ? info.faces.join() === who : info.faces.includes(who)) && !/[{}]/.test(info.line), info ? `${info.id}・${info.faces.join(',')}・${info.line.slice(0, 30)}` : 'なし');
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-7-solo.png') });
-      await finishTalk(page); await reopen(page);
+      await endScene(page); await reopen(page);
       check('⑦ 同じ時間に同じ助手は1回だけ', await page.locator(`[data-assistant-life-peek="${who}"]`).isDisabled().catch(() => false));
     } else check('⑦ ようすを見られるひとりの助手がいる', false);
-    // ⑧ 2人にあげる道具
+    // ⑧ 2人にあげる道具(家の「🎒 道具」)
+    await page.locator('[data-assistant-life-icon="items"]').click().catch(() => {}); await page.waitForTimeout(250);
     const itemsText = await page.locator('[data-assistant-life-items]').innerText().catch(() => '');
     check('⑧ 道具の欄に、持っている数・起きること・手に入れる所が出る', /持っている 2個/.test(itemsText) && /友情Lv \+15/.test(itemsText) && /仲良し度 \+\d+/.test(itemsText) && /ビートP交換所/.test(itemsText), itemsText.replace(/\s+/g, ' ').slice(0, 80));
+    await toWhere(page);
     const giveBtn = page.locator('[data-assistant-life-give]').first();
     if (await giveBtn.count()) {
       await giveBtn.click(); await page.waitForTimeout(300);
@@ -185,7 +215,7 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
       const fxText = await page.locator('[data-growth-fx-sheet="item"]').innerText().catch(() => '');
       check('⑨ 品物の演出の数字が、渡した量と合う(友情Lv +15・仲良し度 +30)', /\+15/.test(fxText) && /\+30/.test(fxText), fxText.replace(/\s+/g, ' ').slice(0, 90));
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-10-item-fx.png') });
-      await finishTalk(page);
+      await endScene(page);
       for (let i = 0; i < 10 && (await page.locator('[data-growth-fx-sheet]').count()); i++) { await page.locator('[data-growth-fx-sheet]').first().click({ timeout: 800 }).catch(() => {}); await page.waitForTimeout(600); }
       await reopen(page);
       await page.locator('[data-assistant-life-give]').first().click(); await page.waitForTimeout(300);
@@ -195,7 +225,7 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
       await page.locator('[data-assistant-life-give-cancel]').click();
     } else check('⑧ 渡せる組がある', false);
     // ④ 関係とアルバム
-    await page.locator('[data-assistant-life-tab="map"]').click(); await page.waitForTimeout(300);
+    await page.locator('[data-assistant-life-icon="friends"]').click(); await page.waitForTimeout(300);
     const mapText = await page.locator('[data-assistant-peer-map]').innerText().catch(() => '');
     check('④ 関係図の名前は「友情Lv」で、Lv3 は「友だち」・Lv4 は「いい友だち」', /友情Lv3/.test(mapText) && /友だち/.test(mapText) && /いい友だち/.test(mapText) && !/仲良し度 Lv/.test(mapText) && !/なかよし/.test(mapText));
     check('④ 今日のペアは出ない', (await page.locator('[data-assistant-peer-daily]').count()) === 0);
@@ -210,7 +240,7 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     await page.getByRole('button', { name: /モンヒロビート/ }).first().click({ timeout: 5000 }).catch(() => {});
     await page.waitForTimeout(1500);
     const gs = await page.evaluate(() => document.querySelector('.mh-home-player') ? 'HOME' : 'other');
-    check('⑤ HOME を離れると帯は出ない', gs === 'HOME' || (await page.locator('[data-assistant-life-band]').count()) === 0, gs);
+    check('⑤ HOME を離れると顔は出ない', gs === 'HOME' || (await page.locator('[data-assistant-life-home-face]').count()) === 0, gs);
     await page.waitForTimeout(2000);
     check('⑤ HOME の外にいるあいだは、様子を書き換えない', (await page.evaluate(() => localStorage.getItem('mh_assistant_life_v1'))) === lifeBefore);
     check('① 画面の出し入れでエラーが出ない', errors.length === 0, errors.slice(0, 2).join(' / '));
@@ -218,13 +248,16 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
 
     // 横 844×390
     const L = await open({ w: 844, h: 390 });
-    await L.page.locator('[data-assistant-life-band]').waitFor({ timeout: 40000 }).catch(() => {});
-    check('① 横 844×390 でも帯がはみ出さない', (await overflowX(L.page, '[data-assistant-life-band] > div')) === false);
-    if (SHOTS) await L.page.screenshot({ path: path.join(shotDir, 'life-5-home-band-land.png') });
-    await L.page.locator('[data-assistant-life-open]').click().catch(() => {});
-    await L.page.locator('[data-assistant-life-screen]').waitFor({ timeout: 5000 }).catch(() => {});
-    check('① 横 844×390 でも画面がはみ出さない', await L.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1) && (await L.page.locator('[data-assistant-life-screen]').count()) === 1);
-    if (SHOTS) await L.page.screenshot({ path: path.join(shotDir, 'life-6-screen-land.png') });
+    await waitFaces(L.page);
+    check('① 横 844×390 でも顔が全部出て、はみ出さない', (await L.page.locator('[data-assistant-life-home-face]').count()) === 8 && await L.page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-home-faces]')].every(el => { const r = el.getBoundingClientRect(); return r.left >= -1 && r.right <= window.innerWidth + 1; })));
+    check('① 横: 施設「🏡 助手ライフ」は右の列(画面の右半分・ほかの施設に重ならない)', await L.page.evaluate(() => { const el = document.querySelector('[data-home-assistant-life]'); if (!el) return false; const r = el.getBoundingClientRect(); const others = [...document.querySelectorAll('.mh-home-facility:not(.life),.mh-home-mission,.mh-home-gift')].map(x => x.getBoundingClientRect()); return r.left > window.innerWidth / 2 && r.width < 200 && others.every(o => o.right <= r.left || o.left >= r.right || o.bottom <= r.top || o.top >= r.bottom); }));
+    if (SHOTS) await L.page.screenshot({ path: path.join(shotDir, 'life-5-home-faces-land.png') });
+    await openHouse(L.page);
+    check('① 横 844×390 でも画面がはみ出さない(家は左・右の列に今日やれること)', await L.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1) && (await L.page.locator('[data-assistant-life-screen][data-assistant-life-land="1"]').count()) === 1 && (await L.page.locator('[data-assistant-life-room]').count()) === 8);
+    if (SHOTS) await L.page.screenshot({ path: path.join(shotDir, 'life-6-house-land.png') });
+    await L.page.locator('[data-assistant-life-room="atsu"]').click().catch(() => {}); await L.page.waitForTimeout(300);
+    check('⑩ 横: 部屋を押すと右にその助手のこと(はみ出さない)', await L.page.evaluate(() => { const el = document.querySelector('[data-assistant-life-room-sheet] .mhl-sheet'); const r = el && el.getBoundingClientRect(); return !!r && r.left > window.innerWidth / 2 - 1 && r.right <= window.innerWidth + 1; }));
+    if (SHOTS) await L.page.screenshot({ path: path.join(shotDir, 'life-14-room-land.png') });
     await L.page.close();
 
     // ⑨ 友情Lv が上がった演出: みんなの友情Lv を Lv3 の手前(118)にして見守る → 上がると画面いっぱいの祝い(トーストは出さない)
@@ -233,7 +266,7 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
       let V = null, wb = null;
       for (let tries = 0; tries < 4; tries++) {
         V = await open({ w: 390, h: 844, bondAll: 118 });
-        for (let i = 0; i < 40 && !(await V.page.locator('[data-assistant-life-band]').count()); i++) { await finishTalk(V.page); await V.page.waitForTimeout(500); }
+        await waitFaces(V.page);
         await reopen(V.page);
         wb = V.page.locator('[data-assistant-life-watch]:not([disabled])').first();
         if (await wb.count()) break;
@@ -259,13 +292,13 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     if (SHOTS) await I.page.screenshot({ path: path.join(shotDir, 'life-9-intro.png') });
     await I.page.locator('[data-assistant-life-item-intro-open]').click().catch(() => {});
     await I.page.waitForTimeout(400);
-    check('⑧ 案内から「助手たちの今」が開き、案内は2度出ない', (await I.page.locator('[data-assistant-life-screen]').count()) === 1 && (await ls(I.page, 'mh_assistant_life_item_intro_v1')) === true);
+    check('⑧ 案内から「助手ライフ」が開き、案内は2度出ない', (await I.page.locator('[data-assistant-life-screen]').count()) === 1 && (await ls(I.page, 'mh_assistant_life_item_intro_v1')) === true);
     await I.page.close();
 
     // ⑥ 印が偽
     const F = await open({ w: 390, h: 844, life: false });
     await F.page.waitForTimeout(3000);
-    check('⑥ 印が偽なら帯は出ない', (await F.page.locator('[data-assistant-life-band]').count()) === 0);
+    check('⑥ 印が偽なら顔も施設「🏡 助手ライフ」も出ない', (await F.page.locator('[data-assistant-life-home-face]').count()) === 0 && (await F.page.locator('[data-home-assistant-life]').count()) === 0);
     check('⑥ 印が偽なら様子を保存しない', (await ls(F.page, 'mh_assistant_life_v1')) === null);
     await F.page.close();
   } finally {
