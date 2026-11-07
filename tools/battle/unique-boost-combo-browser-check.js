@@ -165,6 +165,14 @@ const runOnce = async (browser, label, boosts) => {
     console.log('強化なし', JSON.stringify(plain.result));
     console.log('連撃数3本', JSON.stringify(boosted.result));
     check('どちらもバトル(WAVE 1)まで進み、固有技を撃てた', plain.reached && boosted.reached && !!plain.result && !!boosted.result);
+    // 固有技を撃ったターンの記録(技の名前の行から後ろ)を数に直す
+    const hitsOf = (r) => { if (!r) return []; const i = r.lines.map((l) => /連撃ザンの (?!連撃)/.test(l)).lastIndexOf(true); return r.lines.slice(Math.max(0, i)).map((l) => Number((l.match(/敵に ([\d,]+) ダメージ/) || [0, '0'])[1].replace(/,/g, ''))); };
+    const a = hitsOf(plain.result), b = hitsOf(boosted.result);
+    const sum = (x) => x.reduce((p, q) => p + q, 0);
+    check('① 強化なし: 予測「攻N」と実際の記録の合計が同じ', plain.result && plain.result.pv === sum(a), `予測${plain.result && plain.result.pv} 実際${sum(a)}(${a.join('+')})`);
+    check('① 連撃数+3本: 予測「攻N」と実際の記録の合計が同じ', boosted.result && boosted.result.pv === sum(b), `予測${boosted.result && boosted.result.pv} 実際${sum(b)}(${b.join('+')})`);
+    const extra = b.slice(a.length), ten = Math.floor((a[0] || 0) * 0.1);
+    check('② 連撃数+3本: 元のダメージの10%の連撃がちょうど3本増える', b.length === a.length + 3 && a[0] === b[0] && extra.every((x) => x === ten) && ten > 0, `本数 ${a.length}→${b.length} 増えた分 ${extra.join(',')}(10%=${ten})`);
     check('実行時エラーが出ない', plain.errors.length === 0 && boosted.errors.length === 0, [...plain.errors, ...boosted.errors].slice(0, 2).join(' / '));
   } finally {
     if (browser) await browser.close();
