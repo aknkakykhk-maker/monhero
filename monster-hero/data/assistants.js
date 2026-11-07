@@ -13143,7 +13143,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   ] },
   { id:'kyuko-mua-2', pair:['kyuko', 'mua'], lv:1, scene:'market', lines:[
     { who:'mua', e:'troubled', t:'{c}、ダイヤ足りないかも…' },
-    { who:'kyuko', e:'normal', t:'急がないなら、ビートP交換所で替えるほうがお得だと思う。俺もそうしてる笑' },
+    { who:'kyuko', e:'normal', t:'急がないなら、ビートP交換所で替えるのがお得かな。俺もそうしてる笑' },
     { who:'mua', e:'excited', t:'さすが無課金ランカー！ まぢ天才ぢゃん！' },
   ] },
   { id:'kyuko-mua-3', pair:['kyuko', 'mua'], lv:2, scene:'any', lines:[
@@ -14217,7 +14217,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
     ] },
     { label:'一緒に使う', reply:[
       { who:'erubin', e:'happy', t:'それ、いい考えだね' },
-      { who:'dra', e:'excited', t:'ふたりでデュラハンデッキだな！' },
+      { who:'dra', e:'excited', t:'ふたりのデッキは、デュラハンで決まりだな！' },
     ] },
   ] },
   { id:'atsu-kyuko-c1', pair:['atsu', 'kyuko'], lv:1, scene:'any', lines:[
