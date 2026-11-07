@@ -1,0 +1,91 @@
+# 道具・家具のプレゼント — ツムギの台詞(2026-11-08)。注文書 lines/ORDER-GIFT.md・好みは注文書の表のとおり
+# ツムギの分: atsu kyuko sorashido erubin。gift(80)を先に出す。furn・furnuse・visitfurn はこのあと足す
+# 苦手な物でも嫌がらない・突き返さない(「気持ちはうれしい」まで)。{name}・{c} の決まり・VOICE.md のくせを守る
+
+## gift あつ(好き misanga onigiri earphone/苦手 tea flower)
+gift atsu item=basket like=mid | happy おやつバスケットだ！ {c}、一緒に食べよ笑
+gift atsu item=basket like=mid | normal バスケットいっぱいじゃん！ {name}、ありがと笑
+gift atsu item=misanga like=like | excited おそろいのミサンガ！？ {c}、今すぐつけよ笑
+gift atsu item=misanga like=like | happy これ、勝負のお守りにする！ {name}、まじでありがと笑
+gift atsu item=cake like=mid | happy はんぶんこケーキね笑 {c}、半分ずつね！
+gift atsu item=cake like=mid | normal ケーキだ！ 練習のあとに食べよ笑
+gift atsu item=onigiri like=like | excited ほかほかおにぎり！ 腹へってたんだよね笑
+gift atsu item=onigiri like=like | happy {name}、わかってる！ {c}、具はどっちにする？笑
+gift atsu item=tea like=bad | troubled ティーセットか…俺、飲み方わかんないかも笑 {c}、教えて！
+gift atsu item=tea like=bad | normal 気持ちはうれしい！ {c}にいれてもらお笑
+gift atsu item=earphone like=like | excited かたみみイヤホン！ {c}と同じ曲、聞きながら練習しよ笑
+gift atsu item=earphone like=like | happy これいい！ {name}、ありがと( *'ω'*)ノ
+gift atsu item=puzzle like=mid | normal パズルか笑 {c}、どっちが早く解けるか勝負ね！
+gift atsu item=puzzle like=mid | happy ふたりで解くパズル…勢いでいけるかな笑
+gift atsu item=sleeve like=mid | happy おそろいのスリーブ！ {c}、次の対戦これで出よ笑
+gift atsu item=sleeve like=mid | normal スリーブね！ デッキが引きしまる感じする笑
+gift atsu item=cheki like=mid | happy チェキだ！ {c}、一枚撮ろ笑
+gift atsu item=cheki like=mid | normal 思い出チェキね笑 勝ったときに撮ろ！
+gift atsu item=flower like=bad | troubled 花束…俺、枯らさないか心配笑 {c}、水やり手伝って！
+gift atsu item=flower like=bad | normal ちいさな花束かぁ！ 気持ちはうれしい、ありがと笑
+
+## gift きゅうこ(好き tea earphone puzzle/苦手 basket cheki)
+gift kyuko item=basket like=bad | troubled おやつバスケット…いっぱいで迷っちゃうなぁ。{c}、先に選んでよぉ
+gift kyuko item=basket like=bad | normal 気持ちはうれしいよぉ。{c}と分けたら、ちょうどいいかもねぇ
+gift kyuko item=misanga like=mid | happy おそろいのミサンガかぁ。{c}、つけてみよっか笑
+gift kyuko item=misanga like=mid | normal ほい、ミサンガ。切れたら願いがかなうんだっけぇ
+gift kyuko item=cake like=mid | happy はんぶんこケーキだぁ。{c}、きっちり半分ねぇ笑
+gift kyuko item=cake like=mid | normal ケーキ、ありがとん笑 甘いの食べると頭が回るんだよねぇ
+gift kyuko item=onigiri like=mid | normal ほかほかおにぎり、ありがとん笑
+gift kyuko item=onigiri like=mid | happy {c}、具は何かなぁ。当てっこしよ笑
+gift kyuko item=tea like=like | excited ティーセット！ {name}、わかってるぅ笑 {c}、本を読みながら飲も
+gift kyuko item=tea like=like | happy これ、ほしかったやつだぁ。ありがとん、{name}🥺
+gift kyuko item=earphone like=like | excited かたみみイヤホン！ {c}、俺のおすすめの曲、聞いてよぉ
+gift kyuko item=earphone like=like | happy 音楽、ふたりで聞けるのいいねぇ。ありがとん笑
+gift kyuko item=puzzle like=like | excited ふたりで解くパズル！ {c}、作戦立ててから始めよぉ
+gift kyuko item=puzzle like=like | happy パズル、たまらないんだよねぇ。{name}、さすがだぁ笑
+gift kyuko item=sleeve like=mid | normal おそろいスリーブ、いいねぇ。{c}、デッキ見せ合お笑
+gift kyuko item=sleeve like=mid | happy ほい。カードが長持ちしそうだぁ
+gift kyuko item=cheki like=bad | troubled チェキかぁ…写るの、ちょっと照れるんだよねぇ
+gift kyuko item=cheki like=bad | normal 気持ちはうれしいよぉ。{c}が撮ってくれるなら、写ってもいいかなぁ
+gift kyuko item=flower like=mid | happy ちいさな花束、かわいいねぇ。{c}、どこに飾ろっか
+gift kyuko item=flower like=mid | normal ほい、花束。本の横に置くと、いい感じだねぇ
+
+## gift ソラシド(好き onigiri puzzle sleeve/苦手 tea flower)
+gift sorashido item=basket like=mid | happy おやつバスケット！ 中身、数えてもいいか？笑
+gift sorashido item=basket like=mid | normal {c}、バスケットの中、半分ずつ分けよう
+gift sorashido item=misanga like=mid | happy おそろいのミサンガか。{c}、勝負の日につけよう
+gift sorashido item=misanga like=mid | normal ミサンガ、ありがとう。結び目の数、ちょうど7つだな笑
+gift sorashido item=cake like=mid | happy はんぶんこケーキ！ 半分の角度は計算済みだぞ笑
+gift sorashido item=cake like=mid | normal {c}、ケーキはちょうど半分にしよう
+gift sorashido item=onigiri like=like | excited ほかほかおにぎり！ うぉぉぉ、ありがとう！
+gift sorashido item=onigiri like=like | happy {name}、腹ぺこなのを計算されてたな笑 {c}、一緒に食べよう
+gift sorashido item=tea like=bad | troubled ティーセットか…ゆっくり飲むの、そわそわしちゃうんだよな笑
+gift sorashido item=tea like=bad | normal 気持ちはうれしいぞ。{c}、いれ方を教えてくれるか？
+gift sorashido item=earphone like=mid | normal かたみみイヤホン！ {c}、同じ曲のBPM、当てっこしよう
+gift sorashido item=earphone like=mid | happy イヤホン、ありがとう。曲を聞きながら表を作れるな
+gift sorashido item=puzzle like=like | excited ふたりで解くパズル！ これは燃えるぜ・・・！
+gift sorashido item=puzzle like=like | happy {c}、解く順番を表にしてから始めよう笑
+gift sorashido item=sleeve like=like | excited おそろいスリーブ！ デッキがでーじかっこよくなるぜ・・・！
+gift sorashido item=sleeve like=like | happy {name}、ありがとな！ {c}、次の対戦はこれで出よう
+gift sorashido item=cheki like=mid | happy 思い出チェキか。{c}、勝った記念に一枚撮ろう
+gift sorashido item=cheki like=mid | normal チェキ、ありがとう。表に貼っておくぞ笑
+gift sorashido item=flower like=bad | troubled 花束か…どう飾ればいいか、計算が出ないな笑
+gift sorashido item=flower like=bad | normal 気持ちはうれしいぞ。{c}、飾り方を教えてくれないか
+
+## gift えるびん(好き tea sleeve flower/苦手 cake earphone)
+gift erubin item=basket like=mid | happy おやつバスケット、ありがとう。{c}、一緒に選ぼうか
+gift erubin item=basket like=mid | normal いろいろ入ってるね。みんなの分もありそうだね
+gift erubin item=misanga like=mid | happy おそろいのミサンガ、うれしいね。{c}、つけてみようか
+gift erubin item=misanga like=mid | normal ミサンガ、ありがとう。大事にするね
+gift erubin item=cake like=bad | troubled はんぶんこケーキか…甘いのは少しだけでいいかな。{c}、多めに食べてくれる？
+gift erubin item=cake like=bad | normal 気持ちはうれしいよ。{c}と分ければ、ちょうどいいかな
+gift erubin item=onigiri like=mid | happy ほかほかおにぎり、ありがとう。{c}、あたたかいうちに食べよう
+gift erubin item=onigiri like=mid | normal おにぎり、うれしいね。ベンチで食べようか
+gift erubin item=tea like=like | excited ティーセット！ {name}、ありがとう。{c}、さっそくいれてみようか
+gift erubin item=tea like=like | happy いい香りだね。こういうのが一番うれしいんだ☺️
+gift erubin item=earphone like=bad | troubled かたみみイヤホンか…まだ慣れてないけど、{c}が教えてくれるかな
+gift erubin item=earphone like=bad | normal 気持ちはうれしいよ。{c}のおすすめの曲、聞いてみようかな
+gift erubin item=puzzle like=mid | normal ふたりで解くパズル、いいね。{c}、ゆっくり解こうか
+gift erubin item=puzzle like=mid | happy パズルか。のんびり考えるのも楽しいね
+gift erubin item=sleeve like=like | excited おそろいスリーブ！ デュラハンのカードに使おうかな
+gift erubin item=sleeve like=like | happy {name}、ありがとう。{c}、次の対戦で一緒に使おうね😊
+gift erubin item=cheki like=mid | happy 思い出チェキ、いいね。{c}、一枚撮ろうか
+gift erubin item=cheki like=mid | normal チェキ、ありがとう。いい思い出になるね
+gift erubin item=flower like=like | excited ちいさな花束！ {name}、ありがとう。部屋に飾るね
+gift erubin item=flower like=like | happy きれいだね。{c}も、一本どうかな？☺️
