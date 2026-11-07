@@ -460,7 +460,7 @@ if (process.argv.includes('--stats')) {
     const off = G("assistantLifeItemDesc(BREEDER_MARKET_ITEMS.find(x => x.id === 'peer_gift'))");
     flags.assistantLife = true;
     const on = G("assistantLifeItemDesc(BREEDER_MARKET_ITEMS.find(x => x.id === 'peer_gift'))");
-    check('⑧ 持ち物・交換所の説明は、印が真のときだけ「何が起きるか」中心の文', off === G("BREEDER_MARKET_ITEMS.find(x => x.id === 'peer_gift').desc") && /友情Lv \+15/.test(on) && /助手たちの今/.test(on) && /1日1回/.test(on));
+    check('⑧ 持ち物・交換所の説明は、印が真のときだけ「何が起きるか」中心の文', off === G("BREEDER_MARKET_ITEMS.find(x => x.id === 'peer_gift').desc") && /友情Lv \+15/.test(on) && /助手ライフ/.test(on) && /1日1回/.test(on)); // 2026-11-07 名前を「助手ライフ」にそろえた
   }
   // ⑦ のために入れ物を読み込む前へ戻す
   lstore.loading = null;
