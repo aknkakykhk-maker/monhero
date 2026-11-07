@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 810658137c2b8243
+// source-sha256: 4fe3e073939059d4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13237,7 +13237,7 @@ const RELEASE_FLAGS = {
   assistantPeer: true,
   assistantPeerApi: true,
   assistantLife: true,
-  rhythmAssistantSession: false,
+  rhythmAssistantSession: true,
   assistantSorashido: true,
   assistantErubin: true,
   cardBattle: true,
@@ -50447,7 +50447,7 @@ const rhythmAssistSessionBadges = state => RHYTHM_ASSIST_SESSION_IDS.map(id => (
 })).sort((a, b) => b.level - a.level);
 const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
   mua: {
-    join: [['happy', 'やっほ〜！あたしも一緒に叩くね♪'], ['happy', 'ブリーダー、今日もセッションしよ！']],
+    join: [['happy', 'やっほ〜！あたしも一緒に叩くね♪'], ['happy', '{name}、今日もセッションしよ！']],
     first: [['excited', 'この曲はじめてかも！ワクワクするぢゃん♪'], ['excited', '知らない曲って、なんか燃えるよね♪']],
     like: [['happy', 'この曲あたし大好きなの♪']],
     dislike: [['troubled', 'えっ、この曲！？速すぎて目が回るんだけどｗ']],
@@ -50459,7 +50459,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     high: [['happy', 'まぢいい感じぢゃん！楽しかったぁ♪'], ['happy', '今の、めっちゃそろってたよね♪']],
     mid: [['happy', 'いい感じだったよ！次はもっといけるかも♪'], ['happy', '楽しかったぁ♪ もう一曲いこ！']],
     low: [['troubled', '次はもっと合わせよ！あたしもがんばる♪'], ['troubled', '大丈夫！何回でも付き合うよ♪']],
-    fc: [['surprise', 'フルコンぢゃん！ブリーダー天才かもｗ'], ['surprise', '全部つながった〜！まぢ感動♪']],
+    fc: [['surprise', 'フルコンぢゃん！{name}天才かもｗ'], ['surprise', '全部つながった〜！まぢ感動♪']],
     levelup: [['happy', 'セッションLvが上がった♪ あたしも上手になってるかも！'], ['happy', 'もっと一緒に叩きたくなってきた♪']],
     likeup: [['wink', 'この曲、ちょっと好きになってきたかも♪']],
     overcome: [['happy', '苦手な曲だったけど、乗りこえたよ！'], ['happy', '目は回ったけど、楽しかったかもｗ']],
@@ -50467,8 +50467,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'song:haruka': [['happy', 'ハルカ、聞くたびにキュンとしちゃう♪']],
     'song:crazy_party_night': [['happy', 'パーティーの曲って、それだけで楽しいぢゃん♪']],
     'song:grievous_lady': [['happy', 'Grievous Lady、最後までついていけた！あたしえらいｗ']],
-    'sp50': [['happy', 'あたしたち、もうセッションLv.50ぢゃん！まぢ最強コンビかも♪'], ['wink', 'ブリーダーとならどんな曲でも楽しいの、ほんとだよ♪']],
-    'sp80': [['excited', 'Lv.80！ここまで来たら、もう息ぴったりぢゃん♪'], ['happy', 'あたしの一番のセッション相手は、ブリーダーだよｗ']],
+    'sp50': [['happy', 'あたしたち、もうセッションLv.50ぢゃん！まぢ最強コンビかも♪'], ['wink', '{name}とならどんな曲でも楽しいの、ほんとだよ♪']],
+    'sp80': [['excited', 'Lv.80！ここまで来たら、もう息ぴったりぢゃん♪'], ['happy', 'あたしの一番のセッション相手は、{name}だよｗ']],
     'sp100': [['excited', 'セッションLv.100！あたしたち、セッションマスターぢゃん！'], ['happy', 'ここまで一緒に叩いてくれて、まぢありがと♪']],
     'listen:mf_ichika_mix': [['excited', 'サビは1:48から！ そこからテンションまぢ上がるやつ♪']],
     'listen:monster_hero': [['excited', '1:50からずーっといちばん強いの！ 最後までアゲてこ♪']],
@@ -50518,11 +50518,11 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:humanoid': [['excited', '0:57から30秒、ずっとサビなの！ ここまぢでアガる♪']]
   },
   kiki: {
-    join: [['happy', 'ブリーダーさん、よろしくお願いしまつ♪'], ['happy', '今日も一緒に演奏できてうれしいです♪']],
-    first: [['excited', 'はじめての曲ですね。どきどきしまつ♪'], ['excited', '知らない曲も、ブリーダーさんとなら平気です']],
+    join: [['happy', '{name}、よろしくお願いしまつ♪'], ['happy', '今日も一緒に演奏できてうれしいです♪']],
+    first: [['excited', 'はじめての曲ですね。どきどきしまつ♪'], ['excited', '知らない曲も、{name}となら平気です']],
     like: [['happy', 'この曲、私とても好きなんです♪']],
     dislike: [['troubled', 'この曲は大きい音でどなられるので、少しびっくりしちゃいます']],
-    combo: [['excited', 'いい流れでつね♪ このまま全部いけそうです'], ['excited', 'とってもきれいにつながっていますよ♪'], ['excited', 'ブリーダーさん、さすがでつ']],
+    combo: [['excited', 'いい流れでつね♪ このまま全部いけそうです'], ['excited', 'とってもきれいにつながっていますよ♪'], ['excited', '{name}、さすがでつ']],
     miss: [['normal', '大丈夫でつ、落ち着いていきましょう♪'], ['normal', 'ひと呼吸おけば、また合わせられまつよ']],
     climax: [['excited', 'ここが一番きれいなところでつ♪'], ['excited', 'ここは押し切りまつ ( ˘ω˘)9グッ!'], ['excited', '雪が舞うみたいな気持ちになりまつ♪']],
     last: [['normal', 'あと少しでつ。最後までていねいに♪'], ['normal', '最後のひと押しでつ']],
@@ -50530,7 +50530,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     high: [['happy', 'とってもいい演奏でした♪'], ['happy', '息がぴったりでしたね♪']],
     mid: [['happy', 'いい演奏でした。次はもっと合わせられそうです'], ['happy', '楽しかったです♪ もう一曲いかがですか？']],
     low: [['troubled', '次はきっと、もっと合わせられますよ♪'], ['troubled', '何度でもお付き合いしまつ♪']],
-    fc: [['surprise', 'フルコンボでつ！ブリーダーさん、すごいです♪'], ['surprise', '最後まで一つも落とさないなんて、見とれちゃいました']],
+    fc: [['surprise', 'フルコンボでつ！{name}、すごいです♪'], ['surprise', '最後まで一つも落とさないなんて、見とれちゃいました']],
     levelup: [['happy', 'セッションLvが上がりました♪ うれしいでつ'], ['happy', '少しずつ、上手になれている気がします♪']],
     likeup: [['wink', 'この曲、だんだん好きになってきました♪']],
     overcome: [['happy', '苦手な曲でしたけど、最後までいけました♪'], ['happy', 'びっくりしましたけど、楽しかったです']],
@@ -50538,8 +50538,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'song:tsuki_ga_michiru_mae_ni': [['happy', '月が満ちる前に、しっとりしていて落ち着きます♪']],
     'song:kaze_ga_soyogu': [['happy', '風がそよぐ場所、気持ちがすっと軽くなりますね']],
     'song:black_shout': [['happy', 'BLACK SHOUT、こわかったけど、最後までがんばれました']],
-    'sp50': [['happy', 'ブリーダーさんとのセッション、Lv.50になりました♪'], ['wink', '指が覚えてくれている気がしまつ♪']],
-    'sp80': [['happy', 'Lv.80でつ。目を閉じても合わせられそうです♪'], ['normal', 'ブリーダーさんの音、ちゃんと聞こえていますよ']],
+    'sp50': [['happy', '{name}とのセッション、Lv.50になりました♪'], ['wink', '指が覚えてくれている気がしまつ♪']],
+    'sp80': [['happy', 'Lv.80でつ。目を閉じても合わせられそうです♪'], ['normal', '{name}の音、ちゃんと聞こえていますよ']],
     'sp100': [['excited', 'Lv.100でつ！セッションマスターですね♪'], ['happy', 'たくさん一緒に演奏してくれて、ありがとうございまつ♪']],
     'listen:mf_ichika_mix': [['normal', '2分25秒の曲でつ。終わりの手前の盛り上がりまで、ていねいにいきましょう']],
     'listen:monster_hero': [['normal', '最初の45秒くらいは静かなんでつ。そこから少しずつ強くなっていきます']],
@@ -50589,7 +50589,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:humanoid': [['normal', '0:25で一度静かになるところ、すっとした感じが好きでつ']]
   },
   momosuke: {
-    join: [['happy', 'ももが来たからには盛り上げるよ！！'], ['happy', 'ブリーダー、ももとセッションできるなんてラッキーだよw']],
+    join: [['happy', 'ももが来たからには盛り上げるよ！！'], ['happy', '{name}、ももとセッションできるなんてラッキーだよw']],
     first: [['excited', 'はじめての曲！！ももが一番に覚えちゃうもんね'], ['excited', '新曲でもももは完璧にこなすよ♡']],
     like: [['happy', 'この曲ももの推し曲！！']],
     dislike: [['troubled', 'チクタクがずっと鳴っててもも眠くなる〜♡']],
@@ -50601,16 +50601,16 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     high: [['happy', 'ももと合わせたらこんなもんでしょw さすが♡'], ['happy', '今のステージ、拍手もらえるやつだよ！！']],
     mid: [['happy', 'まあまあかな！！次はもっと盛り上げよ♡'], ['happy', '楽しかった！！アンコールいく？w']],
     low: [['troubled', 'ドンマイ！次はもも、もっと見ててあげる♡'], ['troubled', '練習あるのみ！！ももも付き合うからw']],
-    fc: [['surprise', 'フルコン！？ブリーダー、もものファン一号にしてあげる♡'], ['surprise', '全部つながった！！最高のステージだったよ！！']],
-    levelup: [['happy', 'セッションLvアップ！！もも、また一段とかわいくなっちゃったw'], ['happy', '上達してるのはももだけじゃないよ、ブリーダーもね♡']],
+    fc: [['surprise', 'フルコン！？{name}、もものファン一号にしてあげる♡'], ['surprise', '全部つながった！！最高のステージだったよ！！']],
+    levelup: [['happy', 'セッションLvアップ！！もも、また一段とかわいくなっちゃったw'], ['happy', '上達してるのはももだけじゃないよ、{name}もね♡']],
     likeup: [['wink', 'この曲、ちょっとだけ好きになったかも…ちょっとだけね！！']],
     overcome: [['happy', '眠くならずに最後までいけた！！もも、えらい♡'], ['happy', '苦手でもちゃんと決めるのがアイドルだよw']],
     'song:crossing_field': [['happy', 'crossing field は、ももが一番かわいく踊れる曲！！']],
     'song:only_my_railgun': [['happy', 'only my railgun、テンション上がりっぱなしw']],
     'song:rose': [['happy', 'ROSE はかっこいいももも見せられる曲なんだよ♡']],
-    'song:dullahan_clockwork': [['happy', 'チクタクに負けなかった！！ブリーダーもえらい♡']],
-    'sp50': [['excited', 'Lv.50！！ももとブリーダー、もう名コンビだね♡'], ['wink', 'ここまで来たら、ももの専属だよw']],
-    'sp80': [['excited', 'Lv.80！！ステージの上で一番息が合うの、ブリーダーかも♡'], ['happy', 'ももについてこれるの、ブリーダーくらいだよ！！']],
+    'song:dullahan_clockwork': [['happy', 'チクタクに負けなかった！！{name}もえらい♡']],
+    'sp50': [['excited', 'Lv.50！！ももと{name}、もう名コンビだね♡'], ['wink', 'ここまで来たら、ももの専属だよw']],
+    'sp80': [['excited', 'Lv.80！！ステージの上で一番息が合うの、{name}かも♡'], ['happy', 'ももについてこれるの、{name}くらいだよ！！']],
     'sp100': [['excited', 'Lv.100！！セッションマスターはもものおかげだよね♡'], ['happy', 'ずっと一緒にステージ立ってくれて、ありがと！！']],
     'listen:mf_ichika_mix': [['excited', '1:48からがいちばん盛り上がるとこ！！ そこでももが決めるね♡']],
     'listen:monster_hero': [['excited', '1:50からいちばん強いとこが続くの！！ 最高に盛り上がるやつ♡']],
@@ -50660,7 +50660,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:humanoid': [['excited', '0:57からのサビで、もう最高潮！！ 一緒に盛り上がろ♡']]
   },
   dra: {
-    join: [['happy', 'おでも混ぜてくれよな、えへへ'], ['happy', 'ブリーダー、今日もよろしくな']],
+    join: [['happy', 'おでも混ぜてくれよな、えへへ'], ['happy', '{name}、今日もよろしくな']],
     first: [['excited', 'はじめての曲か。冒険って感じでいいな'], ['excited', '知らない道を行くのは、わくわくするからな']],
     like: [['happy', 'この曲、おで好きなんだよ']],
     dislike: [['troubled', 'しんみりした曲は、おで照れくさいんだな、えへへ']],
@@ -50672,7 +50672,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     high: [['happy', 'いい演奏だったな。おで楽しかったよ'], ['happy', 'ぴったりだったな、えへへ']],
     mid: [['happy', 'なかなかよかったな。次も行くからな'], ['happy', '楽しかったな。もう一回いいか？']],
     low: [['troubled', 'どんまいだな、次でとりかえすからな'], ['troubled', 'おでも練習するからな。一緒にがんばろう']],
-    fc: [['surprise', '全部つながったな！？すごいな、ブリーダー'], ['surprise', 'フルコンだな、おで鼻が高いからな']],
+    fc: [['surprise', '全部つながったな！？すごいな、{name}'], ['surprise', 'フルコンだな、おで鼻が高いからな']],
     levelup: [['happy', 'セッションLvが上がったな、えへへ'], ['happy', 'おでも少しは上手になってきたかな']],
     likeup: [['wink', 'この曲、だんだん好きになってきたわ']],
     overcome: [['happy', '苦手な曲だったけど、最後まで行けたな'], ['happy', '照れくさかったけど、いい曲だったな']],
@@ -50681,7 +50681,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'song:senjou_no_shippuu': [['happy', '戦場の疾風、風みたいに駆け抜けたな']],
     'song:stay_with_me': [['happy', 'Stay With Me、しんみりしたけど、悪くなかったよ']],
     'sp50': [['happy', 'セッションLv.50だな。おで、うれしいくさ'], ['normal', 'ここまで来たの、ちょっとした冒険だったな']],
-    'sp80': [['happy', 'Lv.80だな。もう目をつぶっても合わせられるからな'], ['happy', 'ブリーダーと叩くの、おで好きなんだな、えへへ']],
+    'sp80': [['happy', 'Lv.80だな。もう目をつぶっても合わせられるからな'], ['happy', '{name}と叩くの、おで好きなんだな、えへへ']],
     'sp100': [['excited', 'Lv.100だな！セッションマスターだからな！'], ['happy', '長い冒険だったな。ありがとうな、えへへ']],
     'listen:mf_ichika_mix': [['happy', 'サビは1:48から2:14までだな。そこまでは体力をとっとけよ']],
     'listen:monster_hero': [['happy', '静かに始まって、だんだん強くなる。冒険の始まりみたいな曲だな']],
@@ -50822,7 +50822,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'song:six_eternel_beat': [['happy', 'SIX ÉTERNEL、展開がきれいでいいよね〜']],
     'song:evans': [['happy', 'Evans は、音の重ね方が気持ちいいんだよね〜']],
     'song:toriko': [['happy', 'トリコ、最後までノリについていけた〜！']],
-    'sp50': [['happy', 'Lv.50だね〜。合わせ方が分かってきたよ'], ['wink', 'ブリーダーの癖、だいたい読めるようになったよ〜笑']],
+    'sp50': [['happy', 'Lv.50だね〜。合わせ方が分かってきたよ'], ['wink', '{name}の癖、だいたい読めるようになったよ〜笑']],
     'sp80': [['happy', 'Lv.80〜。構成を読まなくても合うね〜'], ['normal', 'ここまでの記録、きれいに積み上がってるよ〜']],
     'sp100': [['excited', 'Lv.100〜！セッションマスターだね、ありがとん笑'], ['happy', 'ここまでの全部、いい流れだったよ〜']],
     'listen:mf_ichika_mix': [['normal', 'サビは1:48から2:14。終わりの近くに山があるから、前半はためていこ']],
@@ -51052,7 +51052,7 @@ const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
     gattai: [[['atsu', 'excited', '{c}、いくぞ！'], ['sorashido', 'excited', 'うぉぉぉ！ここだぜ！']]]
   },
   'dra-erubin': {
-    play: [[['erubin', 'happy', '{c}、無理しないでね'], ['dra', 'happy', '大丈夫だな、楽しいからな']], [['dra', 'happy', '{c}、カードと同じで、リズムも慣れだからな'], ['erubin', 'happy', 'ありがとね、先生']]],
+    play: [[['erubin', 'happy', '{c}、無理しないでね'], ['dra', 'happy', '大丈夫だぞ、楽しいからな']], [['dra', 'happy', '{c}、カードと同じで、リズムも慣れだからな'], ['erubin', 'happy', 'ありがとね、先生']]],
     result: [[['erubin', 'happy', 'いい演奏だったね'], ['dra', 'wink', 'えへへ、またやろうな']]],
     gattai: [[['dra', 'excited', '{c}、いくからな'], ['erubin', 'excited', 'うん、一緒に']]]
   },
@@ -51092,7 +51092,7 @@ const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
     gattai: [[['kyuko', 'excited', '{c}、せーので〜'], ['erubin', 'excited', 'うん、せーの']]]
   },
   'erubin-momosuke': {
-    play: [[['erubin', 'happy', '{c}、元気だね'], ['momosuke', 'happy', '{c}ももっと盛り上がって！！']], [['momosuke', 'happy', '{c}、ペース大丈夫？'], ['erubin', 'happy', 'うん、いいペースだよ']]],
+    play: [[['erubin', 'happy', '{c}、元気だね'], ['momosuke', 'happy', '{c}も、もっと盛り上がって！！']], [['momosuke', 'happy', '{c}、ペース大丈夫？'], ['erubin', 'happy', 'うん、いいペースだよ']]],
     result: [[['erubin', 'happy', 'にぎやかで楽しかったよ'], ['momosuke', 'wink', '{c}もいい感じだったよ♡']]],
     gattai: [[['momosuke', 'excited', '{c}、見せ場だよ！！'], ['erubin', 'excited', 'うん、いこうか']]]
   },
@@ -51107,7 +51107,7 @@ const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
     gattai: [[['sorashido', 'excited', 'うぉぉぉ！{c}、合わせるぜ！'], ['erubin', 'excited', 'うん、一緒にいこう']]]
   },
   'kiki-kyuko': {
-    play: [[['kyuko', 'happy', '{c}、ここから盛り上がるよ〜'], ['kiki', 'happy', 'ありがとうございまつ、気をつけますね']], [['kiki', 'happy', '叩くのは私、読むのは{c}でつ♪'], ['kyuko', 'happy', 'おけ〜、次はサビ前だよ〜']]],
+    play: [[['kyuko', 'happy', '{c}、ここから盛り上がるよ〜'], ['kiki', 'happy', 'はい、ついていきまつ♪']], [['kiki', 'happy', '叩くのは私、読むのは{c}でつ♪'], ['kyuko', 'happy', 'おけ〜、次はサビ前だよ〜']]],
     result: [[['kyuko', 'happy', '構成どおりきれいにいけたね〜'], ['kiki', 'wink', '{c}のおかげでつ♪']]],
     gattai: [[['kyuko', 'excited', '{c}、せーので〜'], ['kiki', 'excited', 'はい、せーの♪']]]
   },
@@ -51118,7 +51118,7 @@ const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
   },
   'kiki-mua': {
     play: [[['mua', 'happy', '{c}、サビ前そろえよ！'], ['kiki', 'happy', 'はい、合わせまつ♪']], [['kiki', 'happy', '{c}、いい流れでつね♪'], ['mua', 'happy', 'でしょ！このままいこ♪']]],
-    result: [[['mua', 'happy', '今日のあたしたち、まぢぴったりぢゃん♪'], ['kiki', 'wink', 'ふふ、また一緒に演奏しましょうね♪']]],
+    result: [[['mua', 'happy', '今日のあたしたち、まぢぴったりぢゃん♪'], ['kiki', 'wink', 'はい、また一緒に演奏しましょうね♪']]],
     gattai: [[['mua', 'excited', '{c}、いくよ！'], ['kiki', 'excited', 'せーの、でつ♪']]]
   },
   'kiki-sorashido': {
@@ -90212,7 +90212,8 @@ function RhythmMultiScreen({
   onRefundBuddyTicket = null,
   onOpenMasuBeat = null,
   onStepAway = null,
-  sessionAssistants = []
+  sessionAssistants = [],
+  guideAssistantId = ''
 }) {
   const view = useRhythmMultiView();
   useModeSelectStageCss();
@@ -90449,6 +90450,7 @@ function RhythmMultiScreen({
     masuPicker: masuPicker,
     assistants: sessionAssistants,
     pickAssistant: callAssistant,
+    guideAssistantId: guideAssistantId,
     breederName: profile && profile.name,
     songName: buddySongName,
     tickets: buddyTickets,
@@ -93640,7 +93642,8 @@ function RhythmBuddySheet({
   calledIds = [],
   breederName = '',
   assistants = [],
-  pickAssistant = null
+  pickAssistant = null,
+  guideAssistantId = ''
 }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
@@ -93726,7 +93729,8 @@ function RhythmBuddySheet({
     calledIds: calledIds,
     canPay: canPay,
     busy: busy,
-    onPick: chooseAssistant
+    onPick: chooseAssistant,
+    guideAssistantId: guideAssistantId
   }), !canPay && React.createElement("p", {
     "data-rhythm-buddy-empty": true,
     className: "mt-2 text-[11px] font-black text-rose-300"
@@ -94298,6 +94302,30 @@ const rhythmAssistSessionName = assistantId => {
   const who = rhythmAssistSessionWho(assistantId);
   return String(who && who.name || '助手').slice(0, 12);
 };
+const RHYTHM_ASSIST_SESSION_CALL = {
+  name: '',
+  levelOf: null,
+  styleOf: null
+};
+const rhythmAssistSessionSetCall = c => {
+  Object.assign(RHYTHM_ASSIST_SESSION_CALL, c || {});
+};
+const rhythmAssistSessionSpeak = (assistantId, text) => {
+  const c = RHYTHM_ASSIST_SESSION_CALL;
+  let lv;
+  try {
+    lv = typeof c.levelOf === 'function' ? c.levelOf(assistantId) : undefined;
+  } catch (_) {
+    lv = undefined;
+  }
+  let style = null;
+  try {
+    style = typeof c.styleOf === 'function' ? c.styleOf(assistantId) : null;
+  } catch (_) {
+    style = null;
+  }
+  return typeof assistantSpeakText === 'function' ? assistantSpeakText(text, c.name, lv, style, assistantId) : String(text || '').replace(/\{name\}/g, c.name || 'キミ');
+};
 const RHYTHM_ASSIST_SESSION_RECENT = new Map();
 const RHYTHM_ASSIST_SESSION_RECENT_KEEP = 12;
 const rhythmAssistSessionPickLine = (assistantId, scene, rand = Math.random) => {
@@ -94309,7 +94337,7 @@ const rhythmAssistSessionPickLine = (assistantId, scene, rand = Math.random) => 
   const pool = fresh.length ? fresh : list;
   const hit = pool[Math.floor(rand() * pool.length)];
   RHYTHM_ASSIST_SESSION_RECENT.set(assistantId, [hit[1], ...recent.filter(t => t !== hit[1])].slice(0, RHYTHM_ASSIST_SESSION_RECENT_KEEP));
-  return hit;
+  return [hit[0], rhythmAssistSessionSpeak(assistantId, hit[1])];
 };
 const rhythmAssistSessionSongScene = (assistantId, songId) => {
   const table = typeof RHYTHM_ASSIST_SESSION_SOLO_LINES !== 'undefined' ? RHYTHM_ASSIST_SESSION_SOLO_LINES[assistantId] : null;
@@ -94442,7 +94470,8 @@ function RhythmAssistSessionPicker({
   calledIds = [],
   canPay = true,
   busy = false,
-  onPick
+  onPick,
+  guideAssistantId = ''
 }) {
   const state = useRhythmAssistSessionState();
   const [selId, setSelId] = React.useState('');
@@ -94452,7 +94481,9 @@ function RhythmAssistSessionPicker({
   return React.createElement("div", {
     "data-rhythm-assist-picker": true,
     className: "flex min-h-0 flex-1 flex-col"
-  }, React.createElement("div", {
+  }, React.createElement(RhythmAssistSessionGuide, {
+    assistantId: guideAssistantId
+  }), React.createElement("div", {
     "data-rhythm-assist-talk-option": true,
     className: "mb-2 flex shrink-0 items-center gap-1.5"
   }, React.createElement("span", {
@@ -94678,7 +94709,7 @@ const rhythmAssistSessionPickPair = (duo, scene, used, rand = Math.random) => {
   const rows = fresh[Math.floor(rand() * fresh.length)];
   used.add(rows);
   const callOf = (who, to) => typeof assistantPeerCall === 'function' ? assistantPeerCall(who, to) : rhythmAssistSessionName(to);
-  return rows.map(([who, expr, text]) => [who, expr, String(text).replace(/\{c\}/g, callOf(who, who === duo.a ? duo.b : duo.a))]);
+  return rows.map(([who, expr, text]) => [who, expr, rhythmAssistSessionSpeak(who, String(text).replace(/\{c\}/g, callOf(who, who === duo.a ? duo.b : duo.a)))]);
 };
 const RHYTHM_ASSIST_SESSION_BUBBLE_MS = 1600;
 const RHYTHM_ASSIST_SESSION_COMBO_STEPS = Object.freeze([50, 100, 300]);
@@ -95052,6 +95083,60 @@ function RhythmAssistSessionProfileBadges() {
       draggable: false
     })), rhythmAssistSessionName(x.assistantId), "とセッション Lv.", x.master ? RHYTHM_ASSIST_SESSION_MASTER_LEVEL : RHYTHM_ASSIST_SESSION_BADGE_LEVEL);
   })));
+}
+const RHYTHM_ASSIST_SESSION_SEEN_KEY = 'mh_rhythm_assistant_session_seen_v1';
+const RHYTHM_ASSIST_SESSION_GUIDE_LINES = Object.freeze({
+  mua: 'あたしたち助手も、ここから呼べるようになったよ！{name}、一緒に演奏しよ♪',
+  kiki: '{name}、私たち助手も、ここから呼べるようになりました♪ 一緒に演奏しまつ',
+  momosuke: 'ももたち助手も呼べるようになったよ！！{name}、ステージ一緒に立と♡',
+  dra: 'おでたち助手も、ここから呼べるようになったんだ。{name}、一緒に叩こうな',
+  atsu: 'てか、俺たち助手もここから呼べるようになったぞ！{name}、一曲いくか笑',
+  kyuko: 'ほい！俺たち助手も、ここから呼べるようになったよぉ。{name}、一緒にやろぉ',
+  sorashido: 'うぉぉぉ！俺たち助手も呼べるようになったぜ！{name}、一緒に演奏だぜ笑',
+  erubin: '俺たち助手も、ここから呼べるようになったんだ。{name}、よかったら一緒にね'
+});
+function RhythmAssistSessionGuide({
+  assistantId = ''
+}) {
+  const [show, setShow] = React.useState(false);
+  React.useEffect(() => {
+    if (!rhythmAssistSessionEnabled()) return undefined;
+    let alive = true;
+    (async () => {
+      try {
+        const seen = await storeGet(RHYTHM_ASSIST_SESSION_SEEN_KEY, false);
+        if (alive && seen !== true) setShow(true);
+      } catch (_) {}
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const id = RHYTHM_ASSIST_SESSION_GUIDE_LINES[assistantId] ? assistantId : 'mua';
+  const who = rhythmAssistSessionWho(id);
+  if (!show || !who) return null;
+  const close = () => {
+    setShow(false);
+    void storeSet(RHYTHM_ASSIST_SESSION_SEEN_KEY, true).catch(() => {});
+  };
+  return React.createElement("div", {
+    "data-rhythm-assist-guide": true,
+    className: "mb-2 flex shrink-0 items-start gap-2 rounded-2xl border border-pink-300/50 bg-pink-950/60 p-2"
+  }, React.createElement(AssistantFace, {
+    who: who,
+    size: 40,
+    accent: who.accent,
+    expression: "happy"
+  }), React.createElement("p", {
+    className: "min-w-0 flex-1 text-[11px] font-bold leading-snug text-pink-50",
+    style: JA_WRAP_STYLE
+  }, jaWrap(rhythmAssistSessionSpeak(id, RHYTHM_ASSIST_SESSION_GUIDE_LINES[id]))), React.createElement("button", {
+    type: "button",
+    "data-rhythm-assist-guide-close": true,
+    "aria-label": "閉じる",
+    onClick: close,
+    className: "min-h-[36px] shrink-0 rounded-lg bg-slate-800 px-2 text-[11px] font-black"
+  }, "わかった"));
 }
 const RAID_JACK_DEBUG_NOW_CHOICES = Object.freeze([{
   id: 'real',
@@ -146756,6 +146841,14 @@ function MonsterHeroGame() {
     });
   };
   const assistantBondLevelNow = assistantBondLevelOf(assistantBond.points);
+  useEffect(() => {
+    if (typeof rhythmAssistSessionSetCall !== 'function') return;
+    rhythmAssistSessionSetCall({
+      name: breederName,
+      levelOf: id => assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points),
+      styleOf: id => assistantCallStyles && assistantCallStyles[id] || null
+    });
+  }, [breederName, assistantBonds, assistantCallStyles]);
   const activeAssistant = assistantById(selectedAssistantId);
   const requestAssistantDailyLines = async (force = false) => {
     const a = activeAssistant;
@@ -165871,6 +165964,7 @@ function MonsterHeroGame() {
       onUseBuddyTicket: consumeBuddyTicket,
       onRefundBuddyTicket: refundBuddyTicket,
       onOpenMasuBeat: () => openMasuBeat(gameState),
+      guideAssistantId: selectedAssistantId,
       sessionAssistants: rhythmAssistSessionEnabled() && typeof assistantsUnlockedFrom === 'function' ? assistantsUnlockedFrom(rhythmEventStorySeen).filter(who => who.id !== 'momosuke' || momosukeIntroSeenFlag) : [],
       songs: rhythmDemoSongs(RHYTHM_SONGS),
       difficultiesOf: song => rhythmDemoDifficulties(song, RHYTHM_PLAY_DIFFICULTIES),

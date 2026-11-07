@@ -120,7 +120,8 @@ check('部屋の中の印は as:<助手id>(マスモンの id と混ざらない
   check('1曲も始まらずに部屋を出たら、無料1回を返す(マスモンと同じ1本)', back && back.refund === 'free' && back.next.used === 0 && back.next.calls.length === 0);
 }
 // ---- 公開の印・つなぎ ----
-check('公開の印 rhythmAssistantSession は偽(全部そろうまで隠す)', /\n  rhythmAssistantSession: false,\n/.test(FLAGS));
+check('公開の印 rhythmAssistantSession は真(2026-11-07 社長「この文で公開」)', /\n  rhythmAssistantSession: true,/.test(FLAGS));
+check('一度きりの案内は新しいキー mh_rhythm_assistant_session_seen_v1・8人ぶんの台詞はプレイヤーを {name} で呼ぶ', /const RHYTHM_ASSIST_SESSION_SEEN_KEY = 'mh_rhythm_assistant_session_seen_v1';/.test(SCREEN) && (SCREEN.match(/^  [a-z]+: '[^']*\{name\}[^']*',$/gm) || []).length >= 8);
 check('印は RELEASE_FLAGS.rhythmAssistantSession === true のときだけ真', /RELEASE_FLAGS\.rhythmAssistantSession === true/.test(SESSION));
 check('呼ぶシートの助手のタブは、印が偽のあいだは出さない', /const assistOn = rhythmAssistSessionEnabled\(\) && /.test(SHEET) && /const tabNow = assistOn \? tab : 'masu';/.test(SHEET));
 check('部屋で助手を呼ぶのも、印が偽のあいだはしない', /if \(!who \|\| !rhythmAssistSessionEnabled\(\) \|\| !RHYTHM_MULTI\.canSummon\(\)\)/.test(MULTI));
@@ -253,6 +254,13 @@ check('助手のスコアをランキングへ送らない(助手の計算の部
   const PROFILE = P('56-screen-profile.jsx');
   check('プロフィールの欄は印が偽ならなにも出さない(RhythmAssistSessionProfileBadges)', /typeof RhythmAssistSessionProfileBadges==='function'&&<RhythmAssistSessionProfileBadges\/>/.test(PROFILE) && /function RhythmAssistSessionProfileBadges\(\) \{\n  const state = useRhythmAssistSessionState\(\);\n  if \(!rhythmAssistSessionEnabled\(\)\) return null;/.test(SCREEN));
   check('特別な台詞の束(Lv.50・80・100)が8人ぶんある', p2.ids.every((id) => ['sp50', 'sp80', 'sp100'].every((sc) => p2.SOLO[id] && p2.SOLO[id][sc] && p2.SOLO[id][sc].length)));
+}
+// ---- プレイヤーの呼び方(docs/rules/CALL_NAMES.md・2026-11-07 社長) ----
+{
+  const bare = (LINES.match(/'[^']*ブリーダー(?!Lv|P|経験値)[^']*'/g) || []);
+  check('台詞でプレイヤーを「ブリーダー」と直に呼ばない({name} と書く)', bare.length === 0, bare.slice(0, 3).join(' / '));
+  check('{name} は話す助手の呼び方に置きかえる(rhythmAssistSessionSpeak → assistantSpeakText)', /return \[hit\[0\], rhythmAssistSessionSpeak\(assistantId, hit\[1\]\)\];/.test(SCREEN) && /rhythmAssistSessionSpeak\(who, String\(text\)/.test(SCREEN) && /assistantSpeakText\(text, c\.name, lv, style, assistantId\)/.test(SCREEN));
+  check('本体が名前・仲良し度・呼び方を渡す', /rhythmAssistSessionSetCall\(\{ name: breederName, levelOf:/.test(P('60-app.jsx')));
 }
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
