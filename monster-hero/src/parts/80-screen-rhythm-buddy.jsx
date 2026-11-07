@@ -816,7 +816,7 @@ function RhythmBuddyList({ masuMons, state, dayKey, onOpen, onPick = null, busy 
 }
 
 // 部屋の中の「マスモンを呼ぶ」(下から出る選択の画面)
-function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [], breederName = '', assistants = [], pickAssistant = null, guideAssistantId = '' }) {
+function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [], breederName = '', assistants = [], pickAssistant = null, guideAssistantId = '', freeSeats = 4 }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
   const [detailId, setDetailId] = React.useState('');
@@ -826,21 +826,80 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
   const canPay = freeLeft > 0 || tickets > 0;
   const listControls = useRhythmBuddyListControls();
   // M/B管理の「マスモン一覧(バトル)」と同じ並べ替え・カードで選ぶ(2026-10-07・ユーザー指示「マスモン呼び出しも管理画面と同じものに」)
-  const [selId, setSelId] = React.useState('');
+  // 何人かに印を付けて、まとめて呼ぶ(2026-11-07 社長「1人ずつじゃなくて複数選択がほしい」)。タブ(マスモン/助手)をまたいで選べる。
+  // picks = [{ kind:'masu'|'assistant', id }](選んだ順)。部屋の空き席(freeSeats)より多くは選べない
+  const [picks, setPicks] = React.useState([]);
+  const [pickNote, setPickNote] = React.useState('');
+  const isPicked = (kind, id) => picks.some((p) => p.kind === kind && p.id === id);
+  const togglePick = (kind, id) => {
+    const key = kind === 'assistant' ? rhythmAssistSessionKey(id) : id;
+    if (calledIds.includes(key)) return;
+    if (isPicked(kind, id)) { setPicks(picks.filter((p) => !(p.kind === kind && p.id === id))); setPickNote(''); return; }
+    if (picks.length >= freeSeats) { setPickNote(`部屋の空き席は ${freeSeats} つです。ほかを外してから選んでください`); return; }
+    setPicks([...picks, { kind, id }]); setPickNote('');
+  };
   // 助手のタブ(2026-11-07 助手とのセッション・80-screen-rhythm-assistant-session.jsx)。公開の印が偽のあいだは出さない
   const assistOn = rhythmAssistSessionEnabled() && typeof pickAssistant === 'function' && (assistants || []).length > 0;
   const [tab, setTab] = React.useState(() => ((masuMons || []).length ? 'masu' : 'assistant'));
   const tabNow = assistOn ? tab : 'masu';
-  const chooseAssistant = async (who) => {
-    if (busy || !canPay) return;
+  const masuPicks = picks.filter((p) => p.kind === 'masu');
+  const singleMasu = masuPicks.length === 1 && picks.length === 1 ? (masuMons || []).find((x) => x && x.id === masuPicks[0].id) : null;
+  // 使う回数: 無料の残りから先に使い、足りないぶんをセッション券で。券が足りないときは押せない(呼べる分だけ呼ぶ、はしない)
+  const useFree = Math.min(freeLeft, picks.length);
+  const useTickets = picks.length - useFree;
+  const shortTickets = Math.max(0, useTickets - tickets);
+  // デュオになる組み合わせ(呼んでいる助手と、選んでいる助手を合わせて見る)
+  const pickedAssistantIds = picks.filter((p) => p.kind === 'assistant').map((p) => p.id);
+  const duoNow = assistOn && pickedAssistantIds.length && typeof rhythmAssistSessionDuosNow === 'function'
+    ? rhythmAssistSessionDuosNow([...calledIds.map((c) => rhythmAssistSessionIdOf(c)).filter(Boolean), ...pickedAssistantIds]).filter((d) => pickedAssistantIds.includes(d.a) || pickedAssistantIds.includes(d.b))
+    : [];
+  const callAll = async () => {
+    if (busy || !picks.length || shortTickets > 0) return;
     setBusy(true);
-    try { await pickAssistant(who); } finally { setBusy(false); }
+    const list = picks.slice();
+    try {
+      for (const p of list) {
+        if (p.kind === 'masu') { const masu = (masuMons || []).find((x) => x && x.id === p.id); if (masu) await pick(masu); }
+        else { const who = (assistants || []).find((x) => x && x.id === p.id); if (who && pickAssistant) await pickAssistant(who); }
+      }
+    } finally { setBusy(false); setPicks([]); }
   };
   const choose = async (masu) => {
     if (busy || !canPay) return;
     setBusy(true);
     try { await pick(masu); } finally { setBusy(false); }
   };
+  // まとめて呼ぶ帯(選んだ数・空き席・使う回数・デュオ)。タブをまたいで1つ
+  const showMultiBar = !!(masuPicker || assistOn) && !detail;
+  const multiBar = (
+          <div data-rhythm-buddy-multi className="mt-2 shrink-0 rounded-2xl border border-lime-300/40 bg-slate-950/85 p-2">
+            {picks.length === 0
+              ? <p className="text-center text-[11px] font-bold text-slate-400">{helpWrap('呼びたい相手をタップしてください(何人でも選べます)')}</p>
+              : (
+                <>
+                  <div className="mb-1 flex flex-wrap items-center gap-1">
+                    {picks.map((p) => {
+                      const masu = p.kind === 'masu' ? (masuMons || []).find((x) => x && x.id === p.id) : null;
+                      const who = p.kind === 'assistant' && typeof rhythmAssistSessionWho === 'function' ? rhythmAssistSessionWho(p.id) : null;
+                      const name = masu ? rhythmBuddyMasuName(masu) : who ? who.name : '';
+                      return <button key={`${p.kind}:${p.id}`} type="button" data-rhythm-buddy-picked={p.id} onClick={() => togglePick(p.kind, p.id)} className="rounded-full border border-white/20 bg-slate-800 px-2 py-0.5 text-[10px] font-black">{name} ✕</button>;
+                    })}
+                  </div>
+                  <p data-rhythm-buddy-multi-cost className="text-[10px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>
+                    {jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います`)}
+                  </p>
+                  {shortTickets > 0 && <p data-rhythm-buddy-multi-short className="text-[10px] font-black text-rose-300" style={JA_WRAP_STYLE}>{jaWrap(`セッション券が ${shortTickets}枚 足りません。選ぶ数を減らすと呼べます`)}</p>}
+                  {duoNow.length > 0 && <p data-rhythm-buddy-multi-duo className="text-[10px] font-black text-pink-200">🎤 デュオ: {duoNow.map((d) => `${rhythmAssistSessionName(d.a)}×${rhythmAssistSessionName(d.b)}`).join('・')}</p>}
+                </>
+              )}
+            {pickNote && <p data-rhythm-buddy-multi-note className="text-[10px] font-black text-amber-200">{pickNote}</p>}
+            <div className="mt-1 flex gap-1.5">
+              {singleMasu && <button type="button" onClick={() => setDetailId(singleMasu.id)} className="min-h-[44px] shrink-0 rounded-xl bg-slate-700 px-2 text-[11px] font-black">くわしく</button>}
+              <button data-rhythm-buddy-call-all type="button" disabled={busy || !picks.length || shortTickets > 0} onClick={callAll}
+                className="min-h-[44px] flex-1 rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-3 text-sm font-black text-slate-950 disabled:opacity-40">{picks.length > 1 ? `まとめて呼ぶ(${picks.length}人)` : '呼ぶ'}</button>
+            </div>
+          </div>
+  );
   return (
     <div className="absolute inset-0 z-[86000] flex items-end justify-center landscape:items-center">
       <button type="button" aria-label="閉じる" className="absolute inset-0 bg-slate-950/75" onClick={onClose} />
@@ -862,16 +921,16 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
         <RhythmBuddyAllowance freeLeft={freeLeft} tickets={tickets} className="mb-1 text-slate-200" />
         {/* 言葉の切れ目で折る(320幅で「呼べま／す」「あ／と」と折れていた・2026-10-26) */}
         {tabNow === 'assistant'
-          ? <p data-rhythm-assist-note className="mb-2 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('助手をえらんで、CPUとしてこの部屋に呼べます。回数はマスモンと同じです(1日3回までは無料、そのあとはセッション券を1枚使います)。')}</p>
-          : <p className="mb-2 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>
+          ? <p data-rhythm-assist-note className={`mb-2 text-[10px] font-bold leading-relaxed text-slate-400 ${picks.length ? 'landscape:hidden' : ''}`} style={JA_WRAP_STYLE}>{jaWrap('助手をえらんで、CPUとしてこの部屋に呼べます。回数はマスモンと同じです(1日3回までは無料、そのあとはセッション券を1枚使います)。')}</p>
+          : <p className={`mb-2 text-[10px] font-bold leading-relaxed text-slate-400 ${picks.length ? 'landscape:hidden' : ''}`} style={JA_WRAP_STYLE}>
           {jaWrap(`マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日${RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。`)}
         </p>}
+        {showMultiBar && <div className="hidden landscape:block">{multiBar}</div>}
         </div>
         {tabNow === 'assistant'
           ? (
             <div className="flex min-h-0 flex-1 flex-col">
-              <RhythmAssistSessionPicker assistants={assistants} calledIds={calledIds} canPay={canPay} busy={busy} onPick={chooseAssistant} guideAssistantId={guideAssistantId} />
-              {!canPay && <p data-rhythm-buddy-empty className="mt-2 text-[11px] font-black text-rose-300">今日の無料ぶんを使い切りました。セッション券があれば呼べます</p>}
+              <RhythmAssistSessionPicker assistants={assistants} calledIds={calledIds} guideAssistantId={guideAssistantId} picked={pickedAssistantIds} onToggle={(id) => togglePick('assistant', id)} />
             </div>
           )
           : (
@@ -886,8 +945,9 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
                   ? <p className="py-6 text-center text-[12px] font-bold text-slate-400">{helpWrap((masuMons || []).length ? '表示設定に当てはまるマスモンがいません' : 'マスモンがまだいません。モンヒロバトルのランを終えて、勇者モンをマスモンに登録すると、ここに並びます')}</p>
                   : <div className="grid grid-cols-3 gap-2.5 pb-4">
                     {masuPicker.entries.map((e) => (
-                      <button key={e.key} type="button" data-rhythm-buddy-card onClick={() => setSelId(e.masu.id)} style={masuPicker.cardStyle}
-                        className={`${masuPicker.cardClass} ${selId === e.masu.id ? 'border-lime-300 bg-slate-800' : 'border-white/10 bg-slate-900'}`}>
+                      <button key={e.key} type="button" data-rhythm-buddy-card data-picked={isPicked('masu', e.masu.id) ? '1' : undefined} onClick={() => togglePick('masu', e.masu.id)} style={masuPicker.cardStyle}
+                        className={`relative ${masuPicker.cardClass} ${isPicked('masu', e.masu.id) ? 'border-lime-300 bg-slate-800' : 'border-white/10 bg-slate-900'}`}>
+                        {isPicked('masu', e.masu.id) && <b className="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-lime-400 text-[12px] font-black text-slate-950">{picks.findIndex((p) => p.kind === 'masu' && p.id === e.masu.id) + 1}</b>}
                         {masuPicker.renderCardBody({
                           masu: e.masu, base: e.base, nameBand: true,
                           status: calledIds.includes(e.masu.id) ? <span className="rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950">呼んでいる</span> : null,
@@ -898,31 +958,12 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
               </div>
               : <div className="space-y-2">{listControls.bar}<RhythmBuddyList masuMons={masuMons} state={state} dayKey={dayKey} onOpen={setDetailId} onPick={choose} busy={busy} canPay={canPay} calledIds={calledIds} settings={listControls.settings} /></div>}
         </div>
-        {masuPicker && !detail && (() => {
-          const masu = selId ? (masuMons || []).find((x) => x && x.id === selId) : null;
-          if (!masu) return <p className="mt-2 text-center text-[11px] font-bold text-slate-400">呼びたいマスモンをタップしてください</p>;
-          const mon = state.mons[masu.id];
-          const mood = rhythmBuddyMood(masu.id, dayKey, mon);
-          const called = calledIds.includes(masu.id);
-          return (
-            <div data-rhythm-buddy-confirm className="mt-2 flex shrink-0 items-center gap-2 rounded-2xl border border-lime-300/40 bg-slate-950/80 p-2">
-              <RhythmBuddyFace masu={masu} sizeClass="h-11 w-11" />
-              <span className="min-w-0 flex-1">
-                <b className="block truncate text-[13px] font-black">{rhythmBuddyMasuName(masu)}</b>
-                <small className="flex items-center gap-1 text-[10px] font-bold text-slate-300"><RhythmBuddyMoodFace moodId={mood.id} size={16} />{mon ? `ビートLv.${rhythmBuddyLevelInfo(mon.exp).level}` : 'まだ一緒に遊んでいない'}</small>
-              </span>
-              <button type="button" onClick={() => setDetailId(masu.id)} className="min-h-[44px] shrink-0 rounded-xl bg-slate-700 px-2 text-[11px] font-black">くわしく</button>
-              {called
-                ? <span data-rhythm-buddy-called className="shrink-0 rounded-xl border border-lime-300/50 px-2 py-3 text-[10px] font-black text-lime-200">呼んでいる</span>
-                : <button data-rhythm-buddy-call type="button" disabled={busy || !canPay} onClick={() => choose(masu)}
-                  className="min-h-[44px] shrink-0 rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-4 text-sm font-black text-slate-950 disabled:opacity-40">呼ぶ</button>}
-            </div>
-          );
-        })()}
         {listControls.sheet}
-        {!canPay && <p data-rhythm-buddy-empty className="mt-2 text-[11px] font-black text-rose-300">今日の無料ぶんを使い切りました。セッション券があれば呼べます</p>}
+        {!masuPicker && !canPay && <p data-rhythm-buddy-empty className="mt-2 text-[11px] font-black text-rose-300">今日の無料ぶんを使い切りました。セッション券があれば呼べます</p>}
         </div>
           )}
+        {/* まとめて呼ぶ帯(縦画面は下。横画面は左の列の中・上の multiBar) */}
+        {showMultiBar && <div className="landscape:hidden">{multiBar}</div>}
       </section>
     </div>
   );

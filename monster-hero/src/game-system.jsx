@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 15ac65f034f2914f
+// generated-sha256: c32f5741bcc44786
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -54027,7 +54027,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   const buddyInfoPhase = view && view.room ? view.room.phase : '';
   React.useEffect(() => { if (buddyInfoPhase === 'playing') setBuddyInfoId(''); }, [buddyInfoPhase]);
   const buddySheetLayer = buddySheet === 'pick' ? (
-    <RhythmBuddySheet masuMons={masuMons} masuPicker={masuPicker} assistants={sessionAssistants} pickAssistant={callAssistant} guideAssistantId={guideAssistantId} breederName={profile && profile.name} songName={buddySongName} tickets={buddyTickets} pick={callBuddy} onClose={() => setBuddySheet('')}
+    <RhythmBuddySheet masuMons={masuMons} masuPicker={masuPicker} assistants={sessionAssistants} pickAssistant={callAssistant} guideAssistantId={guideAssistantId} freeSeats={view ? Math.max(0, RHYTHM_MULTI_ROOM_MAX - (view.members || []).length) : 0} breederName={profile && profile.name} songName={buddySongName} tickets={buddyTickets} pick={callBuddy} onClose={() => setBuddySheet('')}
       calledIds={(view && view.myCpus ? view.myCpus : []).map((c) => c.masuId)} />
   ) : null;
   const buddyCallButton = (extra = '') => (view && RHYTHM_MULTI.canSummon() && (masuMons.length > 0 || sessionAssistantsOn) ? (
@@ -54274,10 +54274,24 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
       className={`min-h-[40px] shrink-0 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 text-[11px] font-black leading-tight text-amber-100 ${extra}`}>選曲<br />{rhythmMultiSelectSecLabel(room.selectSec)}</button>
   );
   const buddyHeaderButton = (extra = '') => (view && RHYTHM_MULTI.canSummon() && (masuMons.length > 0 || sessionAssistantsOn) ? (
-    <button data-rhythm-buddy-open data-rhythm-buddy-header type="button" aria-label="マスモンを呼ぶ" onClick={() => setBuddySheet('pick')}
+    <button data-rhythm-buddy-open data-rhythm-buddy-header type="button" aria-label={sessionAssistantsOn ? 'マスモン・助手を呼ぶ' : 'マスモンを呼ぶ'} onClick={() => setBuddySheet('pick')}
       className={`relative flex min-h-[44px] min-w-[52px] max-[480px]:min-w-[46px] max-[380px]:min-w-[42px] shrink-0 flex-col items-center justify-center rounded-xl border border-lime-300/70 bg-gradient-to-b from-lime-400 to-emerald-600 px-1.5 max-[480px]:px-1 leading-none text-slate-950 ${extra}`}>
-      <span aria-hidden="true" className="text-base">🎵</span>
-      <span className="text-[10px] font-black">マスモン</span>
+      {/* 2026-11-07 社長「表示を変えたい」: 文字は「呼ぶ」、絵はマスモンと助手の小さな顔を重ねる(どちらも呼べると分かるように) */}
+      {(() => {
+        const masu = (masuMons || [])[0] || null;
+        const base = masu && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
+        const masuSrc = base && typeof masuDisplayImageUrl === 'function' ? masuDisplayImageUrl(base) : '';
+        const who = sessionAssistantsOn && typeof assistantById === 'function' ? (assistantById(guideAssistantId) || (sessionAssistants || [])[0] || null) : null;
+        const whoSrc = who && typeof assistantFaceSrc === 'function' ? assistantFaceSrc(who, 'happy') : '';
+        if (!masuSrc && !whoSrc) return <span aria-hidden="true" className="text-base">🎵</span>;
+        return (
+          <span data-rhythm-buddy-header-faces aria-hidden="true" className="relative flex h-[18px] items-center">
+            {masuSrc && <span className="block h-[18px] w-[18px] overflow-hidden rounded-full border border-white/80 bg-slate-800"><img src={masuSrc} alt="" draggable={false} className="h-full w-full object-contain" /></span>}
+            {whoSrc && <span className={`block h-[18px] w-[18px] overflow-hidden rounded-full border border-white/80 bg-slate-800 ${masuSrc ? '-ml-1.5' : ''}`}><img src={whoSrc} alt="" draggable={false} className="h-full w-full object-cover" /></span>}
+          </span>
+        );
+      })()}
+      <span className="mt-0.5 text-[10px] font-black">呼ぶ</span>
       {view.myCpus && view.myCpus.length > 0 && <b className="absolute -right-1.5 -top-1.5 min-w-[18px] rounded-full bg-slate-950 px-1 text-[10px] font-black leading-[18px] text-lime-200">{view.myCpus.length}</b>}
     </button>
   ) : null);
@@ -55885,7 +55899,7 @@ function RhythmBuddyList({ masuMons, state, dayKey, onOpen, onPick = null, busy 
 }
 
 // 部屋の中の「マスモンを呼ぶ」(下から出る選択の画面)
-function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [], breederName = '', assistants = [], pickAssistant = null, guideAssistantId = '' }) {
+function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [], breederName = '', assistants = [], pickAssistant = null, guideAssistantId = '', freeSeats = 4 }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
   const [detailId, setDetailId] = React.useState('');
@@ -55895,21 +55909,80 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
   const canPay = freeLeft > 0 || tickets > 0;
   const listControls = useRhythmBuddyListControls();
   // M/B管理の「マスモン一覧(バトル)」と同じ並べ替え・カードで選ぶ(2026-10-07・ユーザー指示「マスモン呼び出しも管理画面と同じものに」)
-  const [selId, setSelId] = React.useState('');
+  // 何人かに印を付けて、まとめて呼ぶ(2026-11-07 社長「1人ずつじゃなくて複数選択がほしい」)。タブ(マスモン/助手)をまたいで選べる。
+  // picks = [{ kind:'masu'|'assistant', id }](選んだ順)。部屋の空き席(freeSeats)より多くは選べない
+  const [picks, setPicks] = React.useState([]);
+  const [pickNote, setPickNote] = React.useState('');
+  const isPicked = (kind, id) => picks.some((p) => p.kind === kind && p.id === id);
+  const togglePick = (kind, id) => {
+    const key = kind === 'assistant' ? rhythmAssistSessionKey(id) : id;
+    if (calledIds.includes(key)) return;
+    if (isPicked(kind, id)) { setPicks(picks.filter((p) => !(p.kind === kind && p.id === id))); setPickNote(''); return; }
+    if (picks.length >= freeSeats) { setPickNote(`部屋の空き席は ${freeSeats} つです。ほかを外してから選んでください`); return; }
+    setPicks([...picks, { kind, id }]); setPickNote('');
+  };
   // 助手のタブ(2026-11-07 助手とのセッション・80-screen-rhythm-assistant-session.jsx)。公開の印が偽のあいだは出さない
   const assistOn = rhythmAssistSessionEnabled() && typeof pickAssistant === 'function' && (assistants || []).length > 0;
   const [tab, setTab] = React.useState(() => ((masuMons || []).length ? 'masu' : 'assistant'));
   const tabNow = assistOn ? tab : 'masu';
-  const chooseAssistant = async (who) => {
-    if (busy || !canPay) return;
+  const masuPicks = picks.filter((p) => p.kind === 'masu');
+  const singleMasu = masuPicks.length === 1 && picks.length === 1 ? (masuMons || []).find((x) => x && x.id === masuPicks[0].id) : null;
+  // 使う回数: 無料の残りから先に使い、足りないぶんをセッション券で。券が足りないときは押せない(呼べる分だけ呼ぶ、はしない)
+  const useFree = Math.min(freeLeft, picks.length);
+  const useTickets = picks.length - useFree;
+  const shortTickets = Math.max(0, useTickets - tickets);
+  // デュオになる組み合わせ(呼んでいる助手と、選んでいる助手を合わせて見る)
+  const pickedAssistantIds = picks.filter((p) => p.kind === 'assistant').map((p) => p.id);
+  const duoNow = assistOn && pickedAssistantIds.length && typeof rhythmAssistSessionDuosNow === 'function'
+    ? rhythmAssistSessionDuosNow([...calledIds.map((c) => rhythmAssistSessionIdOf(c)).filter(Boolean), ...pickedAssistantIds]).filter((d) => pickedAssistantIds.includes(d.a) || pickedAssistantIds.includes(d.b))
+    : [];
+  const callAll = async () => {
+    if (busy || !picks.length || shortTickets > 0) return;
     setBusy(true);
-    try { await pickAssistant(who); } finally { setBusy(false); }
+    const list = picks.slice();
+    try {
+      for (const p of list) {
+        if (p.kind === 'masu') { const masu = (masuMons || []).find((x) => x && x.id === p.id); if (masu) await pick(masu); }
+        else { const who = (assistants || []).find((x) => x && x.id === p.id); if (who && pickAssistant) await pickAssistant(who); }
+      }
+    } finally { setBusy(false); setPicks([]); }
   };
   const choose = async (masu) => {
     if (busy || !canPay) return;
     setBusy(true);
     try { await pick(masu); } finally { setBusy(false); }
   };
+  // まとめて呼ぶ帯(選んだ数・空き席・使う回数・デュオ)。タブをまたいで1つ
+  const showMultiBar = !!(masuPicker || assistOn) && !detail;
+  const multiBar = (
+          <div data-rhythm-buddy-multi className="mt-2 shrink-0 rounded-2xl border border-lime-300/40 bg-slate-950/85 p-2">
+            {picks.length === 0
+              ? <p className="text-center text-[11px] font-bold text-slate-400">{helpWrap('呼びたい相手をタップしてください(何人でも選べます)')}</p>
+              : (
+                <>
+                  <div className="mb-1 flex flex-wrap items-center gap-1">
+                    {picks.map((p) => {
+                      const masu = p.kind === 'masu' ? (masuMons || []).find((x) => x && x.id === p.id) : null;
+                      const who = p.kind === 'assistant' && typeof rhythmAssistSessionWho === 'function' ? rhythmAssistSessionWho(p.id) : null;
+                      const name = masu ? rhythmBuddyMasuName(masu) : who ? who.name : '';
+                      return <button key={`${p.kind}:${p.id}`} type="button" data-rhythm-buddy-picked={p.id} onClick={() => togglePick(p.kind, p.id)} className="rounded-full border border-white/20 bg-slate-800 px-2 py-0.5 text-[10px] font-black">{name} ✕</button>;
+                    })}
+                  </div>
+                  <p data-rhythm-buddy-multi-cost className="text-[10px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>
+                    {jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います`)}
+                  </p>
+                  {shortTickets > 0 && <p data-rhythm-buddy-multi-short className="text-[10px] font-black text-rose-300" style={JA_WRAP_STYLE}>{jaWrap(`セッション券が ${shortTickets}枚 足りません。選ぶ数を減らすと呼べます`)}</p>}
+                  {duoNow.length > 0 && <p data-rhythm-buddy-multi-duo className="text-[10px] font-black text-pink-200">🎤 デュオ: {duoNow.map((d) => `${rhythmAssistSessionName(d.a)}×${rhythmAssistSessionName(d.b)}`).join('・')}</p>}
+                </>
+              )}
+            {pickNote && <p data-rhythm-buddy-multi-note className="text-[10px] font-black text-amber-200">{pickNote}</p>}
+            <div className="mt-1 flex gap-1.5">
+              {singleMasu && <button type="button" onClick={() => setDetailId(singleMasu.id)} className="min-h-[44px] shrink-0 rounded-xl bg-slate-700 px-2 text-[11px] font-black">くわしく</button>}
+              <button data-rhythm-buddy-call-all type="button" disabled={busy || !picks.length || shortTickets > 0} onClick={callAll}
+                className="min-h-[44px] flex-1 rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-3 text-sm font-black text-slate-950 disabled:opacity-40">{picks.length > 1 ? `まとめて呼ぶ(${picks.length}人)` : '呼ぶ'}</button>
+            </div>
+          </div>
+  );
   return (
     <div className="absolute inset-0 z-[86000] flex items-end justify-center landscape:items-center">
       <button type="button" aria-label="閉じる" className="absolute inset-0 bg-slate-950/75" onClick={onClose} />
@@ -55931,16 +56004,16 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
         <RhythmBuddyAllowance freeLeft={freeLeft} tickets={tickets} className="mb-1 text-slate-200" />
         {/* 言葉の切れ目で折る(320幅で「呼べま／す」「あ／と」と折れていた・2026-10-26) */}
         {tabNow === 'assistant'
-          ? <p data-rhythm-assist-note className="mb-2 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('助手をえらんで、CPUとしてこの部屋に呼べます。回数はマスモンと同じです(1日3回までは無料、そのあとはセッション券を1枚使います)。')}</p>
-          : <p className="mb-2 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>
+          ? <p data-rhythm-assist-note className={`mb-2 text-[10px] font-bold leading-relaxed text-slate-400 ${picks.length ? 'landscape:hidden' : ''}`} style={JA_WRAP_STYLE}>{jaWrap('助手をえらんで、CPUとしてこの部屋に呼べます。回数はマスモンと同じです(1日3回までは無料、そのあとはセッション券を1枚使います)。')}</p>
+          : <p className={`mb-2 text-[10px] font-bold leading-relaxed text-slate-400 ${picks.length ? 'landscape:hidden' : ''}`} style={JA_WRAP_STYLE}>
           {jaWrap(`マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日${RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。`)}
         </p>}
+        {showMultiBar && <div className="hidden landscape:block">{multiBar}</div>}
         </div>
         {tabNow === 'assistant'
           ? (
             <div className="flex min-h-0 flex-1 flex-col">
-              <RhythmAssistSessionPicker assistants={assistants} calledIds={calledIds} canPay={canPay} busy={busy} onPick={chooseAssistant} guideAssistantId={guideAssistantId} />
-              {!canPay && <p data-rhythm-buddy-empty className="mt-2 text-[11px] font-black text-rose-300">今日の無料ぶんを使い切りました。セッション券があれば呼べます</p>}
+              <RhythmAssistSessionPicker assistants={assistants} calledIds={calledIds} guideAssistantId={guideAssistantId} picked={pickedAssistantIds} onToggle={(id) => togglePick('assistant', id)} />
             </div>
           )
           : (
@@ -55955,8 +56028,9 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
                   ? <p className="py-6 text-center text-[12px] font-bold text-slate-400">{helpWrap((masuMons || []).length ? '表示設定に当てはまるマスモンがいません' : 'マスモンがまだいません。モンヒロバトルのランを終えて、勇者モンをマスモンに登録すると、ここに並びます')}</p>
                   : <div className="grid grid-cols-3 gap-2.5 pb-4">
                     {masuPicker.entries.map((e) => (
-                      <button key={e.key} type="button" data-rhythm-buddy-card onClick={() => setSelId(e.masu.id)} style={masuPicker.cardStyle}
-                        className={`${masuPicker.cardClass} ${selId === e.masu.id ? 'border-lime-300 bg-slate-800' : 'border-white/10 bg-slate-900'}`}>
+                      <button key={e.key} type="button" data-rhythm-buddy-card data-picked={isPicked('masu', e.masu.id) ? '1' : undefined} onClick={() => togglePick('masu', e.masu.id)} style={masuPicker.cardStyle}
+                        className={`relative ${masuPicker.cardClass} ${isPicked('masu', e.masu.id) ? 'border-lime-300 bg-slate-800' : 'border-white/10 bg-slate-900'}`}>
+                        {isPicked('masu', e.masu.id) && <b className="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-lime-400 text-[12px] font-black text-slate-950">{picks.findIndex((p) => p.kind === 'masu' && p.id === e.masu.id) + 1}</b>}
                         {masuPicker.renderCardBody({
                           masu: e.masu, base: e.base, nameBand: true,
                           status: calledIds.includes(e.masu.id) ? <span className="rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950">呼んでいる</span> : null,
@@ -55967,31 +56041,12 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
               </div>
               : <div className="space-y-2">{listControls.bar}<RhythmBuddyList masuMons={masuMons} state={state} dayKey={dayKey} onOpen={setDetailId} onPick={choose} busy={busy} canPay={canPay} calledIds={calledIds} settings={listControls.settings} /></div>}
         </div>
-        {masuPicker && !detail && (() => {
-          const masu = selId ? (masuMons || []).find((x) => x && x.id === selId) : null;
-          if (!masu) return <p className="mt-2 text-center text-[11px] font-bold text-slate-400">呼びたいマスモンをタップしてください</p>;
-          const mon = state.mons[masu.id];
-          const mood = rhythmBuddyMood(masu.id, dayKey, mon);
-          const called = calledIds.includes(masu.id);
-          return (
-            <div data-rhythm-buddy-confirm className="mt-2 flex shrink-0 items-center gap-2 rounded-2xl border border-lime-300/40 bg-slate-950/80 p-2">
-              <RhythmBuddyFace masu={masu} sizeClass="h-11 w-11" />
-              <span className="min-w-0 flex-1">
-                <b className="block truncate text-[13px] font-black">{rhythmBuddyMasuName(masu)}</b>
-                <small className="flex items-center gap-1 text-[10px] font-bold text-slate-300"><RhythmBuddyMoodFace moodId={mood.id} size={16} />{mon ? `ビートLv.${rhythmBuddyLevelInfo(mon.exp).level}` : 'まだ一緒に遊んでいない'}</small>
-              </span>
-              <button type="button" onClick={() => setDetailId(masu.id)} className="min-h-[44px] shrink-0 rounded-xl bg-slate-700 px-2 text-[11px] font-black">くわしく</button>
-              {called
-                ? <span data-rhythm-buddy-called className="shrink-0 rounded-xl border border-lime-300/50 px-2 py-3 text-[10px] font-black text-lime-200">呼んでいる</span>
-                : <button data-rhythm-buddy-call type="button" disabled={busy || !canPay} onClick={() => choose(masu)}
-                  className="min-h-[44px] shrink-0 rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-4 text-sm font-black text-slate-950 disabled:opacity-40">呼ぶ</button>}
-            </div>
-          );
-        })()}
         {listControls.sheet}
-        {!canPay && <p data-rhythm-buddy-empty className="mt-2 text-[11px] font-black text-rose-300">今日の無料ぶんを使い切りました。セッション券があれば呼べます</p>}
+        {!masuPicker && !canPay && <p data-rhythm-buddy-empty className="mt-2 text-[11px] font-black text-rose-300">今日の無料ぶんを使い切りました。セッション券があれば呼べます</p>}
         </div>
           )}
+        {/* まとめて呼ぶ帯(縦画面は下。横画面は左の列の中・上の multiBar) */}
+        {showMultiBar && <div className="landscape:hidden">{multiBar}</div>}
       </section>
     </div>
   );
@@ -56387,11 +56442,10 @@ const rhythmAssistSessionWrapBrain = (brain, songs) => ({
 });
 
 // 呼ぶシートの「助手」のタブの中身。カードを押して選び、下の帯の「呼ぶ」で呼ぶ(マスモンのタブと同じ流れ)
-function RhythmAssistSessionPicker({ assistants = [], calledIds = [], canPay = true, busy = false, onPick, guideAssistantId = '' }) {
+// 2026-11-07 社長「複数選択がほしい」: 選んだ印(picked)は呼ぶシートが持ち、まとめて呼ぶ帯もシートが出す
+function RhythmAssistSessionPicker({ assistants = [], calledIds = [], guideAssistantId = '', picked = [], onToggle = null }) {
   const state = useRhythmAssistSessionState();
-  const [selId, setSelId] = React.useState('');
   const list = (assistants || []).filter((who) => who && RHYTHM_ASSIST_SESSION_IDS.includes(who.id));
-  const sel = list.find((who) => who.id === selId) || null;
   const calledOf = (id) => calledIds.includes(rhythmAssistSessionKey(id));
   return (
     <div data-rhythm-assist-picker className="flex min-h-0 flex-1 flex-col">
@@ -56411,35 +56465,19 @@ function RhythmAssistSessionPicker({ assistants = [], calledIds = [], canPay = t
             {list.map((who) => {
               const lv = rhythmAssistSessionLevel(state, who.id);
               return (
-                <button key={who.id} type="button" data-rhythm-assist-card={who.id} onClick={() => setSelId(who.id)}
-                  className={`flex min-h-[112px] w-full flex-col items-center gap-1 rounded-2xl border-2 p-2 active:scale-95 ${selId === who.id ? 'border-pink-300 bg-slate-800' : 'border-white/10 bg-slate-900'}`}>
-                  <AssistantFace who={who} size={48} accent={who.accent} expression={selId === who.id ? 'happy' : null} />
+                <button key={who.id} type="button" data-rhythm-assist-card={who.id} data-picked={picked.includes(who.id) ? '1' : undefined} onClick={() => onToggle && onToggle(who.id)}
+                  className={`relative flex min-h-[112px] w-full flex-col items-center gap-1 rounded-2xl border-2 p-2 active:scale-95 ${picked.includes(who.id) ? 'border-pink-300 bg-slate-800' : 'border-white/10 bg-slate-900'}`}>
+                  <AssistantFace who={who} size={48} accent={who.accent} expression={picked.includes(who.id) ? 'happy' : null} />
+                  {picked.includes(who.id) && <b className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-pink-400 text-[12px] font-black text-slate-950">✓</b>}
                   <span className="w-full truncate rounded-lg border border-white/10 bg-slate-950/70 px-1 py-0.5 text-center text-[11px] font-black">{who.name}</span>
                   <span className="whitespace-nowrap text-[10px] font-black text-pink-200">セッションLv.{lv}</span>
+                  {lv >= RHYTHM_ASSIST_SESSION_TASTE_LEVEL && <span data-rhythm-assist-taste className="w-full truncate text-center text-[9px] font-bold text-slate-300">♡ {rhythmAssistSessionLikedNames(who.id).join('・')}</span>}
                   {calledOf(who.id) && <span className="rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950">呼んでいる</span>}
                 </button>
               );
             })}
           </div>}
       </div>
-      {sel
-        ? (
-          <div data-rhythm-assist-confirm className="mt-2 flex shrink-0 items-center gap-2 rounded-2xl border border-pink-300/40 bg-slate-950/80 p-2">
-            <AssistantFace who={sel} size={44} accent={sel.accent} expression="happy" />
-            <span className="min-w-0 flex-1">
-              <b className="block truncate text-[13px] font-black">{sel.name}</b>
-              <small className="block whitespace-nowrap text-[10px] font-bold text-pink-200">セッションLv.{rhythmAssistSessionLevel(state, sel.id)}</small>
-              <small data-rhythm-assist-taste className="block truncate text-[10px] font-bold text-slate-300">{rhythmAssistSessionLevel(state, sel.id) >= RHYTHM_ASSIST_SESSION_TASTE_LEVEL
-                ? `♡ ${rhythmAssistSessionLikedNames(sel.id).join('・')}`
-                : `Lv.${RHYTHM_ASSIST_SESSION_TASTE_LEVEL} で好きな曲が分かります`}</small>
-            </span>
-            {calledOf(sel.id)
-              ? <span data-rhythm-assist-called className="shrink-0 rounded-xl border border-lime-300/50 px-2 py-3 text-[10px] font-black text-lime-200">呼んでいる</span>
-              : <button data-rhythm-assist-call type="button" disabled={busy || !canPay} onClick={() => onPick && onPick(sel)}
-                className="min-h-[44px] shrink-0 rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-4 text-sm font-black text-slate-950 disabled:opacity-40">呼ぶ</button>}
-          </div>
-        )
-        : <p className="mt-2 text-center text-[11px] font-bold text-slate-400">呼びたい助手をタップしてください</p>}
     </div>
   );
 }
@@ -56561,6 +56599,8 @@ function RhythmAssistSessionPlayFace({ songId }) {
   const [say, setSay] = React.useState(null); // { aid, text, expr }
   const [glow, setGlow] = React.useState(false);
   const [gattai, setGattai] = React.useState(null); // { a, b }
+  // 演奏が終わって結果(data-rhythm-result)が出たら、顔とひとことは消す(2026-11-07 社長「切れてるとこが多い」: 結果のボーナスの枠に顔が重なっていた)
+  const [ended, setEnded] = React.useState(false);
   const ids = rhythmAssistSessionCalledIds().slice(0, 4);
   const idsKey = ids.join(',');
   React.useEffect(() => {
@@ -56623,6 +56663,9 @@ function RhythmAssistSessionPlayFace({ songId }) {
       setPos((q) => (q && q.top === next.top && q.left === next.left ? q : next));
     };
     const tick = () => {
+      const done = !!document.querySelector('[data-rhythm-result]');
+      setEnded((e) => (e === done ? e : done));
+      if (done) return;
       place();
       const watch = typeof RHYTHM_PLAY_WATCH !== 'undefined' ? RHYTHM_PLAY_WATCH : null;
       const h = watch && watch.hud ? watch.hud.get() : null;
@@ -56653,7 +56696,7 @@ function RhythmAssistSessionPlayFace({ songId }) {
     tick();
     return () => clearInterval(t);
   }, [idsKey, songId]);
-  if (!ids.length) return null;
+  if (!ids.length || ended) return null;
   const whoA = gattai ? rhythmAssistSessionWho(gattai.a) : null;
   const whoB = gattai ? rhythmAssistSessionWho(gattai.b) : null;
   return (
@@ -56726,15 +56769,24 @@ function RhythmAssistSessionDuoResult({ ids = [], round }) {
     return () => { alive = false; };
   }, [key]);
   if (!shown.length) return null;
+  // ひとことのあるデュオは1組1行。ひとことの無いペアの友情Lv は1行にまとめる(4人呼ぶと6組並んで窮屈だった・2026-11-07 社長「切れてるとこが多い」)
+  const withLines = shown.filter((x) => x.rows);
+  const onlyGain = shown.filter((x) => !x.rows && x.gained > 0);
   return (
     <>
-      {shown.map(({ key: k, d, rows, gained }) => (
-        <p key={k} data-rhythm-assist-duo-result={k} className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/50 bg-violet-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100">
+      {withLines.map(({ key: k, d, rows, gained }) => (
+        <p key={k} data-rhythm-assist-duo-result={k} className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/50 bg-violet-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100 landscape:col-span-2 [[data-mh-view-rotation=true]_&]:col-span-2">
           <span className="shrink-0">🎤 {rhythmAssistSessionName(d.a)}・{rhythmAssistSessionName(d.b)}</span>
-          {rows && rows.map(([who, , text], i) => <span key={i} className="min-w-0">{rhythmAssistSessionName(who)}「{text}」</span>)}
+          {rows.map(([who, , text], i) => <span key={i} className="min-w-0">{rhythmAssistSessionName(who)}「{text}」</span>)}
           {gained > 0 && <span data-rhythm-assist-peer-gain className="text-amber-200">友情Lv +{gained}</span>}
         </p>
       ))}
+      {onlyGain.length > 0 && (
+        <p data-rhythm-assist-peer-gains className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/40 bg-violet-950/50 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100 landscape:col-span-2 [[data-mh-view-rotation=true]_&]:col-span-2">
+          <span className="shrink-0">🎤 友情Lv</span>
+          {onlyGain.map(({ key: k, d, gained }) => <span key={k} data-rhythm-assist-peer-gain className="whitespace-nowrap text-amber-200">{rhythmAssistSessionName(d.a)}・{rhythmAssistSessionName(d.b)} +{gained}</span>)}
+        </p>
+      )}
     </>
   );
 }
