@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b2df827bcd1d8d5a
+// source-sha256: a3a19328dbe20646
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -102270,6 +102270,13 @@ const assistantLifeMarkSeen = (talk, now = Date.now()) => {
   } catch {}
 };
 let assistantLifeTalkCache = null;
+const ASSISTANT_LIFE_TALK_PLACE_WORDS = Object.freeze([['練習スタジオ', 'studio'], ['おやつ屋', 'cafe'], ['カード部屋', 'cardroom'], ['育成場', 'ranch'], ['図書室', 'library'], ['マーケット', 'market'], ['ひなたの丘', 'hill'], ['中庭', 'garden'], ['広場', 'plaza']]);
+const assistantLifeTalkAt = (t, keys = t && t.keys || {}) => {
+  if (keys.place && ASSISTANT_LIFE_PLACES[keys.place]) return keys.place;
+  const txt = (t && t.lines || []).map(l => l && l.t || '').join('\n');
+  for (const [w, place] of ASSISTANT_LIFE_TALK_PLACE_WORDS) if (txt.includes(w)) return place;
+  return null;
+};
 const assistantLifeTalkSet = () => {
   if (assistantLifeTalkCache) return assistantLifeTalkCache;
   const raw = typeof ASSISTANT_LIFE_TALKS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_TALKS) ? ASSISTANT_LIFE_TALKS : [];
@@ -102292,7 +102299,8 @@ const assistantLifeTalkSet = () => {
       lines: t.lines,
       lv: 1,
       scene: 'any',
-      life: true
+      life: true,
+      at: assistantLifeTalkAt(t, keys)
     };
     if (t.kind === 'solo') out.solo.push({
       ...base,
@@ -102563,7 +102571,8 @@ const assistantLifePickSoloTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, p
     doing: s.doing
   };
   const T = assistantLifeTalkSet();
-  const br = T.breeder.filter(t => t.who === id).map(t => ({
+  const here = t => t.at == null || t.at === s.place;
+  const br = T.breeder.filter(t => t.who === id && here(t)).map(t => ({
     talk: t,
     keys: keysOf(t)
   }));
@@ -102571,7 +102580,7 @@ const assistantLifePickSoloTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, p
     const t = assistantLifeChoose(br, want, ['doing', 'why', 'mood', 'pt'], seen, rand);
     if (t && !seen[t.id]) return assistantLifeWithCtx(t, ctx);
   }
-  const mine = T.solo.filter(t => t.who === id);
+  const mine = T.solo.filter(t => t.who === id && here(t));
   const ok = c => c.keys.pt == null || c.keys.pt === want.pt;
   const scene = assistantLifeChoose(mine.filter(t => t.line === 'scene').map(t => ({
     talk: t,
@@ -102620,7 +102629,7 @@ const assistantLifePickCallTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, r
     why: s.reason && s.reason !== 'distance' ? s.reason : null,
     doing: s.doing
   };
-  const cands = assistantLifeTalkSet().breeder.filter(t => t.who === id && (t.lines || []).every(l => l.who === id)).map(t => ({
+  const cands = assistantLifeTalkSet().breeder.filter(t => t.who === id && (t.at == null || t.at === s.place) && (t.lines || []).every(l => l.who === id)).map(t => ({
     talk: t,
     keys: keysOf(t)
   }));
@@ -104531,6 +104540,15 @@ const assistantLifeAsleep = id => {
   }
 };
 const assistantLifeBeatIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLifeAtBeat);
+const assistantLifeAtCard = id => {
+  try {
+    const w = assistantLifeWhereOf(assistantLifeCurrent(), id);
+    return !!(w && w.doing === 'cards' && w.place === 'cardroom');
+  } catch (_) {
+    return false;
+  }
+};
+const assistantLifeCardIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLifeAtCard);
 const assistantLifeHostOf = ids => ids.find(id => ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav === 'home') || [...ids].sort((a, b) => ASSISTANT_LIFE_HOUSE_ORDER.indexOf(a) - ASSISTANT_LIFE_HOUSE_ORDER.indexOf(b))[0];
 const ASSISTANT_LIFE_DIARY_KEY = 'mh_assistant_life_diary_v1';
 const ASSISTANT_LIFE_DIARY_MAX = 40;
@@ -104644,6 +104662,14 @@ const assistantLifeOnWoken = ev => {
     kind: 'woken'
   });
 };
+const assistantLifeOnCardMatch = ev => {
+  if (!ev || !ev.assistantId || !ASSISTANT_LIFE_PREFS[ev.assistantId]) return;
+  assistantLifeRhythmPlay(ev.assistantId, ev.at || Date.now());
+  void assistantLifeDiaryAdd(`${assistantLifeName(ev.assistantId)}とカード部屋で対戦して${ev.won ? '勝った' : '負けた'}`, [ev.assistantId], {
+    kind: 'card',
+    now: ev.at || Date.now()
+  });
+};
 const assistantLifeOnSessionLive = ev => {
   if (!ev || !ev.assistantId) return;
   const ids = [ev.assistantId, ...(ev.partnerIds || []).filter(x => x !== ev.assistantId)];
@@ -104700,7 +104726,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-roof{position:absolute;left:-8px;right:-8px;top:0;clip-path:polygon(50% 0,100% 100%,0 100%);background:repeating-linear-gradient(0deg,#7a2e1e 0 7px,#5e2216 7px 9px);box-shadow:inset 0 -6px 0 #3b140c}
 .mhl-chim{position:absolute;width:20px;background:#6b4a3a;border:2px solid #3b2a20}
 .mhl-attic{position:absolute;left:50%;transform:translateX(-50%);width:40px;height:40px;border-radius:50%;border:4px solid #e8c37a;background:#1e293b;display:grid;place-items:center;font-size:14px}
-.mhl-hname{position:absolute;left:50%;transform:translateX(-50%);font-size:11px;font-weight:900;padding:1px 10px;border-radius:8px;background:linear-gradient(#5b3a1e,#3b2412);border:1.5px solid #e8c37a;color:#fff3d6;white-space:nowrap}
+.mhl-hname{position:absolute;z-index:3;left:50%;transform:translateX(-50%);font-size:11px;font-weight:900;padding:1px 10px;border-radius:8px;background:linear-gradient(#5b3a1e,#3b2412);border:1.5px solid #e8c37a;color:#fff3d6;white-space:nowrap}
 .mhl-frame{position:absolute;left:0;right:0;background:#6b4423;border-radius:4px;box-shadow:0 10px 24px #0008}
 .mhl-room{position:absolute;overflow:hidden;border-radius:3px;padding:0;border:0;text-align:left;cursor:pointer}
 .mhl-room:active{filter:brightness(1.12)}
@@ -104766,6 +104792,31 @@ function AssistantLifeNames({
     className: "whitespace-nowrap"
   }, n), i < parts.length - 1 ? React.createElement("wbr", null) : null)));
 }
+function AssistantLifeChunks({
+  text
+}) {
+  const out = [];
+  String(text || '').split(' ').forEach((tok, i) => {
+    if (i) out.push(' ');
+    const m = tok.match(/^(.+?で)(.+)$/);
+    const subs = tok.includes('・') ? tok.split('・').map((x, k, a) => k < a.length - 1 ? `${x}・` : x) : m && Object.values(ASSISTANT_LIFE_PLACES).includes(m[1].slice(0, -1)) ? [m[1], m[2]] : [tok];
+    subs.forEach((x, k) => {
+      if (k) out.push(React.createElement("wbr", {
+        key: `w${i}-${k}`
+      }));
+      out.push(React.createElement("span", {
+        key: `c${i}-${k}`,
+        "data-assistant-life-chunk": true,
+        className: "whitespace-nowrap"
+      }, x));
+    });
+  });
+  return React.createElement(React.Fragment, null, out);
+}
+const assistantLifeBoardShort = (text, max = 2) => {
+  const ps = String(text || '').split(' / ');
+  return ps.length > max ? `${ps.slice(0, max).join(' / ')} ほか${ps.length - max}組` : String(text || '');
+};
 function AssistantLifeRoom({
   id,
   met,
@@ -104906,8 +104957,9 @@ function AssistantLifeHouseArt({
     }
   }), React.createElement("span", {
     className: "mhl-hname",
+    "data-assistant-life-hname": true,
     style: {
-      top: roofH - (land ? 22 : 14)
+      top: roofH - 22
     }
   }, "🏡 助手の家"), React.createElement("div", {
     className: "mhl-frame",
@@ -104953,7 +105005,9 @@ function AssistantLifeHouseArt({
   }, React.createElement("b", null, "📌 今日あったこと", items.length ? ' ›' : ''), items.length ? items.slice(0, land ? 1 : 2).map((x, i) => React.createElement("p", {
     key: i,
     "data-assistant-life-board-item": true
-  }, x.t, " ", x.text)) : React.createElement("p", null, "まだ何もありません")), React.createElement("div", {
+  }, React.createElement(AssistantLifeChunks, {
+    text: `${x.t} ${assistantLifeBoardShort(x.text, land ? 2 : 1)}`
+  }))) : React.createElement("p", null, "まだ何もありません")), React.createElement("div", {
     className: "mhl-door",
     style: {
       left: width * (land ? .62 : .66),
@@ -105160,7 +105214,9 @@ function AssistantLifeRoomSheet({
     className: "text-[11px] font-bold text-slate-100"
   }, React.createElement("b", {
     className: "mr-1.5 text-amber-200"
-  }, x.t), x.text)) : React.createElement("p", {
+  }, x.t), React.createElement(AssistantLifeChunks, {
+    text: x.text
+  }))) : React.createElement("p", {
     className: "text-[11px] text-slate-400"
   }, "まだありません"))), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-1.5"
@@ -105621,7 +105677,9 @@ function AssistantLifeHouse({
       const id = lonely ? lonely[0] : Object.keys(life.solo || {})[0];
       if (id) setRoomId(id);
     }
-  }, React.createElement("em", null, "無料"), React.createElement("i", null, "💬"), React.createElement("b", null, "声をかける"), React.createElement("small", null, lonely ? `${nameOf(lonely[0])}がさみしそう` : 'ひとりの助手に')), React.createElement("button", {
+  }, React.createElement("em", null, "無料"), React.createElement("i", null, "💬"), React.createElement("b", null, "声をかける"), React.createElement("small", {
+    "data-assistant-life-today-sub": true
+  }, lonely ? `💭 ${nameOf(lonely[0])}` : 'ひとりの助手に')), React.createElement("button", {
     type: "button",
     className: "mhl-tile mhl-give flex-1",
     "data-assistant-life-today-act": "give",
@@ -105878,7 +105936,9 @@ function AssistantLifeHouse({
     className: "mt-1.5 text-[12px] font-bold leading-snug text-slate-100"
   }, React.createElement("b", {
     className: "mr-1.5 text-amber-200"
-  }, x.t), x.text)) : React.createElement("p", {
+  }, x.t), React.createElement(AssistantLifeChunks, {
+    text: x.text
+  }))) : React.createElement("p", {
     className: "mt-2 text-[12px] text-slate-400"
   }, "まだ何もありません"), React.createElement("button", {
     type: "button",
@@ -105978,6 +106038,31 @@ function AssistantLifeTownMap({
         const dx = r.left < mr.left + 3 ? mr.left + 3 - r.left : r.right > mr.right - 3 ? mr.right - 3 - r.right : 0;
         const dy = r.top < mr.top + 3 ? mr.top + 3 - r.top : r.bottom > mr.bottom - 3 ? mr.bottom - 3 - r.bottom : 0;
         if (dx || dy) el.style.translate = `${dx}px ${dy}px`;
+      }
+      const els = [...m.querySelectorAll('[data-assistant-life-map-place]')];
+      const hit = (r, q) => Math.min(r.right, q.right) - Math.max(r.left, q.left) > 1 && Math.min(r.bottom, q.bottom) - Math.max(r.top, q.top) > 1;
+      const tr = el => (el.style.translate || '0px 0px').split(' ').map(v => parseFloat(v) || 0).concat([0]).slice(0, 2);
+      for (const a of els) {
+        if (!a.querySelector('button')) continue;
+        for (const b of els) {
+          if (a === b || b.querySelector('button')) continue;
+          const ra = a.getBoundingClientRect(),
+            rb = b.getBoundingClientRect();
+          if (!hit(ra, rb)) continue;
+          const [x0, y0] = tr(b);
+          const cands = [[0, ra.top - rb.bottom - 2], [0, ra.bottom - rb.top + 2], [ra.left - rb.right - 2, 0], [ra.right - rb.left + 2, 0]].sort((p, q) => Math.abs(p[0]) + Math.abs(p[1]) - Math.abs(q[0]) - Math.abs(q[1]));
+          const free = cands.find(([dx, dy]) => {
+            const q = {
+              left: rb.left + dx,
+              right: rb.right + dx,
+              top: rb.top + dy,
+              bottom: rb.bottom + dy
+            };
+            if (q.left < mr.left + 3 || q.right > mr.right - 3 || q.top < mr.top + 3 || q.bottom > mr.bottom - 3) return false;
+            return els.every(o => o === b || !hit(q, o.getBoundingClientRect()));
+          }) || cands[0];
+          b.style.translate = `${x0 + free[0]}px ${y0 + free[1]}px`;
+        }
       }
     };
     fit();

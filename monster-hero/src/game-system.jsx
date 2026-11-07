@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e35fe556fff2b077
+// generated-sha256: a93567a2e7fe625e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -61174,6 +61174,15 @@ const assistantLifeMarkSeen = (talk, now = Date.now()) => {
 //   ひとりごと … kind 'life-solo'/声かけ … kind 'life-invite'(pair は [誘う人, 誘われる人])/ブリーダーへ … kind 'life-breeder'/
 //   言い合い … kind 'quarrel' と 'makeup'(今の仲直りの流れにそのまま乗る)・distance(距離をおく)
 let assistantLifeTalkCache = null;
+// 台本が「どこで言う台詞か」(2026-11-07 ミハリ L 残り④: 練習スタジオのソラシドが「広場、だれもいないな笑」)。
+//   鍵の place があればそれ。無ければ台詞に出てくる場所の名前(家は「家に帰ろ」のように出先でも言うので見ない)。どこでも言えるなら null
+const ASSISTANT_LIFE_TALK_PLACE_WORDS = Object.freeze([['練習スタジオ', 'studio'], ['おやつ屋', 'cafe'], ['カード部屋', 'cardroom'], ['育成場', 'ranch'], ['図書室', 'library'], ['マーケット', 'market'], ['ひなたの丘', 'hill'], ['中庭', 'garden'], ['広場', 'plaza']]);
+const assistantLifeTalkAt = (t, keys = (t && t.keys) || {}) => {
+  if (keys.place && ASSISTANT_LIFE_PLACES[keys.place]) return keys.place;
+  const txt = ((t && t.lines) || []).map(l => (l && l.t) || '').join('\n');
+  for (const [w, place] of ASSISTANT_LIFE_TALK_PLACE_WORDS) if (txt.includes(w)) return place;
+  return null;
+};
 const assistantLifeTalkSet = () => {
   if (assistantLifeTalkCache) return assistantLifeTalkCache;
   const raw = (typeof ASSISTANT_LIFE_TALKS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_TALKS)) ? ASSISTANT_LIFE_TALKS : [];
@@ -61182,7 +61191,7 @@ const assistantLifeTalkSet = () => {
   for (const t of raw) {
     if (!t || typeof t.id !== 'string' || !okLines(t.lines)) continue;
     const keys = t.keys && typeof t.keys === 'object' ? t.keys : {};
-    const base = { id: t.id, keys, lines: t.lines, lv: 1, scene: 'any', life: true };
+    const base = { id: t.id, keys, lines: t.lines, lv: 1, scene: 'any', life: true, at: assistantLifeTalkAt(t, keys) };
     if (t.kind === 'solo') out.solo.push({ ...base, kind: 'life-solo', who: t.who, pair: [t.who], line: t.line === 'feel' ? 'feel' : 'scene' });
     else if (t.kind === 'breeder') out.breeder.push({ ...base, kind: 'life-breeder', who: t.who, pair: [t.who] });
     else if (t.kind === 'invite' && t.from) out.invite.push({ ...base, kind: 'life-invite', who: t.who, from: t.from, pair: [t.from, t.who] });
@@ -61335,9 +61344,10 @@ const assistantLifePickSoloTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, p
   const keysOf = (t) => ({ pt: t.keys.place ? assistantLifePlaceType(id, t.keys.place) : null, mood: t.keys.mood || null, why: t.keys.why || null, doing: t.keys.doing || null });
   const want = { pt: assistantLifePlaceType(id, s.place), mood, why: s.reason === 'distance' ? null : s.reason, doing: s.doing };
   const T = assistantLifeTalkSet();
-  const br = T.breeder.filter(t => t.who === id).map(t => ({ talk: t, keys: keysOf(t) }));
+  const here = (t) => t.at == null || t.at === s.place; // 台詞の場所といまの場所を合わせる
+  const br = T.breeder.filter(t => t.who === id && here(t)).map(t => ({ talk: t, keys: keysOf(t) }));
   if (br.length && rand() < 0.3) { const t = assistantLifeChoose(br, want, ['doing', 'why', 'mood', 'pt'], seen, rand); if (t && !seen[t.id]) return assistantLifeWithCtx(t, ctx); }
-  const mine = T.solo.filter(t => t.who === id);
+  const mine = T.solo.filter(t => t.who === id && here(t));
   const ok = (c) => c.keys.pt == null || c.keys.pt === want.pt;
   const scene = assistantLifeChoose(mine.filter(t => t.line === 'scene').map(t => ({ talk: t, keys: keysOf(t) })).filter(ok), want, ['doing', 'why', 'mood'], seen, rand);
   const feel = assistantLifeChoose(mine.filter(t => t.line === 'feel').map(t => ({ talk: t, keys: keysOf(t) })).filter(ok), want, ['doing', 'why', 'mood'], seen, rand);
@@ -61354,7 +61364,7 @@ const assistantLifePickCallTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, r
   const ctx = { place: s.place, doing: s.doing };
   const keysOf = (t) => ({ pt: t.keys && t.keys.place ? assistantLifePlaceType(id, t.keys.place) : null, mood: (t.keys && t.keys.mood) || null, why: (t.keys && t.keys.why) || null, doing: (t.keys && t.keys.doing) || null });
   const want = { pt: assistantLifePlaceType(id, s.place), mood: ((life && life.moods) || {})[id] || null, why: s.reason && s.reason !== 'distance' ? s.reason : null, doing: s.doing };
-  const cands = assistantLifeTalkSet().breeder.filter(t => t.who === id && (t.lines || []).every(l => l.who === id)).map(t => ({ talk: t, keys: keysOf(t) }));
+  const cands = assistantLifeTalkSet().breeder.filter(t => t.who === id && (t.at == null || t.at === s.place) && (t.lines || []).every(l => l.who === id)).map(t => ({ talk: t, keys: keysOf(t) }));
   if (!cands.length) return null;
   const t = assistantLifeChoose(cands, want, ['doing', 'why', 'mood', 'pt'], seen, rand);
   return t ? assistantLifeWithCtx({ ...t, pair: Array.isArray(t.pair) && t.pair.length ? t.pair : [id] }, ctx) : null;
@@ -62005,6 +62015,11 @@ const assistantLifeAtBeat = (id) => { const w = assistantLifeWhereOf(assistantLi
 // いま寝ているか(読むだけ。ビート部の「寝ている助手を呼ぶ」・カード部が使う。2026-11-07 マモリと決めた)
 const assistantLifeAsleep = (id) => { try { const w = assistantLifeWhereOf(assistantLifeCurrent(), id); return !!(w && w.doing === 'sleep'); } catch (_) { return false; } };
 const assistantLifeBeatIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLifeAtBeat);
+// いまカード部屋でカード研究をしている助手(カード部とのつなぎ口。読むだけ。2026-11-07 社長「カード部屋にいる助手と対戦すると、ごほうび1.5倍」)。
+//   印が偽・いまの時間の様子がまだ無いときは false/[]。図書室でのカード研究は入れない。組で来ていれば全員。
+//   カード部は assistantLifeNow を呼ばない(様子を決め直して保存するため)。ごほうびは「対戦を始めた時点でいたか」で決める(カード部の案)
+const assistantLifeAtCard = (id) => { try { const w = assistantLifeWhereOf(assistantLifeCurrent(), id); return !!(w && w.doing === 'cards' && w.place === 'cardroom'); } catch (_) { return false; } };
+const assistantLifeCardIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLifeAtCard);
 // 家にいる組は、だれかひとりの部屋に集まる(家が好きな助手 → 並びの先)
 const assistantLifeHostOf = (ids) => ids.find(id => ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav === 'home') || [...ids].sort((a, b) => ASSISTANT_LIFE_HOUSE_ORDER.indexOf(a) - ASSISTANT_LIFE_HOUSE_ORDER.indexOf(b))[0];
 
@@ -62068,6 +62083,13 @@ const assistantLifeOnWoken = (ev) => {
   assistantLifeRhythmPlay(ev.assistantId, ev.at || Date.now());
   void assistantLifeDiaryAdd(`${assistantLifeName(ev.assistantId)} 起こされてモンヒロビートへ`, [ev.assistantId], { kind: 'woken' });
 };
+// カード部屋の助手と対戦した(カード部が typeof で確かめて、対戦が終わったら呼ぶ)。ev = { assistantId, won, at }
+//   今日あったことに1件・生活のリズムの「誘って遊んだ」に数える。勝ち負けで文を変える
+const assistantLifeOnCardMatch = (ev) => {
+  if (!ev || !ev.assistantId || !ASSISTANT_LIFE_PREFS[ev.assistantId]) return;
+  assistantLifeRhythmPlay(ev.assistantId, ev.at || Date.now());
+  void assistantLifeDiaryAdd(`${assistantLifeName(ev.assistantId)}とカード部屋で対戦して${ev.won ? '勝った' : '負けた'}`, [ev.assistantId], { kind: 'card', now: ev.at || Date.now() });
+};
 const assistantLifeOnSessionLive = (ev) => {
   if (!ev || !ev.assistantId) return;
   const ids = [ev.assistantId, ...((ev.partnerIds || []).filter(x => x !== ev.assistantId))];
@@ -62113,7 +62135,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-roof{position:absolute;left:-8px;right:-8px;top:0;clip-path:polygon(50% 0,100% 100%,0 100%);background:repeating-linear-gradient(0deg,#7a2e1e 0 7px,#5e2216 7px 9px);box-shadow:inset 0 -6px 0 #3b140c}
 .mhl-chim{position:absolute;width:20px;background:#6b4a3a;border:2px solid #3b2a20}
 .mhl-attic{position:absolute;left:50%;transform:translateX(-50%);width:40px;height:40px;border-radius:50%;border:4px solid #e8c37a;background:#1e293b;display:grid;place-items:center;font-size:14px}
-.mhl-hname{position:absolute;left:50%;transform:translateX(-50%);font-size:11px;font-weight:900;padding:1px 10px;border-radius:8px;background:linear-gradient(#5b3a1e,#3b2412);border:1.5px solid #e8c37a;color:#fff3d6;white-space:nowrap}
+.mhl-hname{position:absolute;z-index:3;left:50%;transform:translateX(-50%);font-size:11px;font-weight:900;padding:1px 10px;border-radius:8px;background:linear-gradient(#5b3a1e,#3b2412);border:1.5px solid #e8c37a;color:#fff3d6;white-space:nowrap}
 .mhl-frame{position:absolute;left:0;right:0;background:#6b4423;border-radius:4px;box-shadow:0 10px 24px #0008}
 .mhl-room{position:absolute;overflow:hidden;border-radius:3px;padding:0;border:0;text-align:left;cursor:pointer}
 .mhl-room:active{filter:brightness(1.12)}
@@ -62173,6 +62195,21 @@ function AssistantLifeNames({ text }) {
   return <>{parts.map((n, i) => <React.Fragment key={i}>{i ? '・' : ''}<span data-assistant-life-name className="whitespace-nowrap">{n}</span>{i < parts.length - 1 ? <wbr/> : null}</React.Fragment>)}</>;
 }
 
+// 掲示板の1行(「07:30 朝: あつ・ソラシド 図書室でカード研究 / …」)。まとまりの途中で折らない(2026-11-07 ミハリ 残り①「カード研/究」「ド/ラ」)。
+//   空白で区切ったまとまりを nowrap にし、名前は「・」、場所としていることは「〇〇で」のあとで折れてよい
+function AssistantLifeChunks({ text }) {
+  const out = [];
+  String(text || '').split(' ').forEach((tok, i) => {
+    if (i) out.push(' ');
+    const m = tok.match(/^(.+?で)(.+)$/);
+    const subs = tok.includes('・') ? tok.split('・').map((x, k, a) => (k < a.length - 1 ? `${x}・` : x)) : (m && Object.values(ASSISTANT_LIFE_PLACES).includes(m[1].slice(0, -1)) ? [m[1], m[2]] : [tok]);
+    subs.forEach((x, k) => { if (k) out.push(<wbr key={`w${i}-${k}`}/>); out.push(<span key={`c${i}-${k}`} data-assistant-life-chunk className="whitespace-nowrap">{x}</span>); });
+  });
+  return <>{out}</>;
+}
+
+// 掲示板は2行まで: 縦は1組・横は2組までと「ほか◯組」(全部は押した先の一覧で読む)
+const assistantLifeBoardShort = (text, max = 2) => { const ps = String(text || '').split(' / '); return ps.length > max ? `${ps.slice(0, max).join(' / ')} ほか${ps.length - max}組` : String(text || ''); };
 // 部屋1つ
 function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx }) {
   const L = ASSISTANT_LIFE_ROOM_LOOK[id];
@@ -62213,7 +62250,7 @@ function AssistantLifeHouseArt({ width, land, look, rooms, metSet, onOpen, diary
       <div className="mhl-chim" style={{ left: width * .72, top: roofH * .05, height: roofH * .6 }}/>
       <div className="mhl-roof" style={{ height: roofH }}/>
       {/* 屋根裏の🔒は、何か分からないので出さない(屋根裏ができたら出す。2026-11-07 ミハリ L11) */}
-      <span className="mhl-hname" style={{ top: roofH - (land ? 22 : 14) }}>🏡 助手の家</span>
+      <span className="mhl-hname" data-assistant-life-hname style={{ top: roofH - 22 }}>🏡 助手の家</span>
       <div className="mhl-frame" style={{ top: roofH, height: bodyH }}>
         {ASSISTANT_LIFE_HOUSE_ORDER.map((id, i) => {
           const r = Math.floor(i / cols), c = i % cols;
@@ -62222,7 +62259,7 @@ function AssistantLifeHouseArt({ width, land, look, rooms, metSet, onOpen, diary
         <div className="mhl-liv" data-assistant-life-living style={{ left: wall, top: ly, width: width - 2 * wall, height: lh, filter: night ? 'brightness(.62)' : undefined }}>
           <button type="button" className="mhl-board text-left" data-assistant-life-board onClick={onBoard} style={{ width: Math.min(width * (land ? .42 : .52), 240) }} aria-label="今日あったことを全部見る">
             <b>📌 今日あったこと{items.length ? ' ›' : ''}</b>
-            {items.length ? items.slice(0, land ? 1 : 2).map((x, i) => <p key={i} data-assistant-life-board-item>{x.t} {x.text}</p>) : <p>まだ何もありません</p>}
+            {items.length ? items.slice(0, land ? 1 : 2).map((x, i) => <p key={i} data-assistant-life-board-item><AssistantLifeChunks text={`${x.t} ${assistantLifeBoardShort(x.text, land ? 2 : 1)}`}/></p>) : <p>まだ何もありません</p>}
           </button>
           <div className="mhl-door" style={{ left: width * (land ? .62 : .66), height: lh - 14 }}/>
           <span className="absolute text-[24px]" style={{ left: width * (land ? .62 : .66) + 46, bottom: 6 }} aria-hidden="true">🛋️</span>
@@ -62307,7 +62344,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
           <div className="mhl-row"><span className="k">🤝 友情Lv</span><span className="flex flex-wrap gap-x-3 text-[11px]">{friends.map(f => <span key={f.id}>{assistantLifeName(f.id)} <b className={f.lv >= 5 ? 'text-pink-300' : f.lv >= 3 ? 'text-amber-300' : ''}>Lv{f.lv}</b></span>)}</span></div>
           {sess && <div className="mhl-row" data-assistant-life-room-session-row><span className="k">🎵 セッション</span><b>セッションLv{sess.level}</b><span className="ml-auto text-[10px] text-slate-300">一緒に {sess.lives}回</span></div>}
           <div className="py-1.5"><p className="text-[10.5px] font-black text-slate-300">今日あったこと</p>
-            {items.length ? items.map((x, i) => <p key={i} className="text-[11px] font-bold text-slate-100"><b className="mr-1.5 text-amber-200">{x.t}</b>{x.text}</p>) : <p className="text-[11px] text-slate-400">まだありません</p>}
+            {items.length ? items.map((x, i) => <p key={i} className="text-[11px] font-bold text-slate-100"><b className="mr-1.5 text-amber-200">{x.t}</b><AssistantLifeChunks text={x.text}/></p>) : <p className="text-[11px] text-slate-400">まだありません</p>}
           </div>
         </div>
         <div className="mt-2 grid grid-cols-2 gap-1.5">
@@ -62506,7 +62543,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       <button type="button" className="mhl-tile mhl-watch flex-1" data-assistant-life-today-act="watch" disabled={watchLeft <= 0 || !unwatched.length} onClick={() => unwatched[0] && watch(unwatched[0])}>
         <em>あと{watchLeft}</em><i>👀</i><b>見守る</b><small>{unwatched.length ? `${unwatched.length}か所` : 'いまは無し'}</small></button>
       <button type="button" className="mhl-tile mhl-call flex-1" data-assistant-life-today-act="call" disabled={!Object.keys(life.solo || {}).length} onClick={() => { const id = lonely ? lonely[0] : Object.keys(life.solo || {})[0]; if (id) setRoomId(id); }}>
-        <em>無料</em><i>💬</i><b>声をかける</b><small>{lonely ? `${nameOf(lonely[0])}がさみしそう` : 'ひとりの助手に'}</small></button>
+        <em>無料</em><i>💬</i><b>声をかける</b><small data-assistant-life-today-sub>{lonely ? `💭 ${nameOf(lonely[0])}` : 'ひとりの助手に'}</small></button>
       <button type="button" className="mhl-tile mhl-give flex-1" data-assistant-life-today-act="give" disabled={!canGive || !giveGroup} onClick={() => { if (itemsLeft > 0 && giveGroup) openGive(giveGroup.ids); else setTab('items'); }}>
         <em>{itemsLeft}回</em><i>🧺</i><b>渡す</b><small>{itemInfos.map(x => `${x.emoji}${haveOf(x.kind)}`).join(' ')}</small></button>
       <button type="button" className="mhl-tile mhl-beat flex-1" data-assistant-life-today-act="beat" onClick={() => { if (beatIds[0]) setRoomId(beatIds[0]); }} disabled={!beatIds.length}>
@@ -62594,7 +62631,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
             <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/60" onClick={() => setBoardOpen(false)}/>
             <div className="mhl-sheet" style={land ? { left: 'auto', width: '42%', top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px' } : undefined}>
               <p className="mhl-en">TODAY</p><p className="text-[18px] font-black">📌 今日あったこと</p>
-              {(diary.items || []).length ? [...diary.items].reverse().map((x, i) => <p key={i} className="mt-1.5 text-[12px] font-bold leading-snug text-slate-100"><b className="mr-1.5 text-amber-200">{x.t}</b>{x.text}</p>) : <p className="mt-2 text-[12px] text-slate-400">まだ何もありません</p>}
+              {(diary.items || []).length ? [...diary.items].reverse().map((x, i) => <p key={i} className="mt-1.5 text-[12px] font-bold leading-snug text-slate-100"><b className="mr-1.5 text-amber-200">{x.t}</b><AssistantLifeChunks text={x.text}/></p>) : <p className="mt-2 text-[12px] text-slate-400">まだ何もありません</p>}
               <button type="button" className="mhl-btn mt-3 w-full bg-slate-700" onClick={() => setBoardOpen(false)}>閉じる</button>
             </div>
           </div>)}
@@ -62635,6 +62672,27 @@ function AssistantLifeTownMap({ life, ids, look, onPick }) {
         const dx = r.left < mr.left + 3 ? mr.left + 3 - r.left : r.right > mr.right - 3 ? mr.right - 3 - r.right : 0;
         const dy = r.top < mr.top + 3 ? mr.top + 3 - r.top : r.bottom > mr.bottom - 3 ? mr.bottom - 3 - r.bottom : 0;
         if (dx || dy) el.style.translate = `${dx}px ${dy}px`;
+      }
+      // 顔の丸が、となりの場所の札に重なるとき(中庭の顔と練習スタジオの札。2026-11-07 ミハリ 残り②): 顔のいない側(札だけ)を、
+      //   上・下・左・右のうちほかの札にも地図のふちにもかからない、いちばん近い所へ逃がす
+      const els = [...m.querySelectorAll('[data-assistant-life-map-place]')];
+      const hit = (r, q) => Math.min(r.right, q.right) - Math.max(r.left, q.left) > 1 && Math.min(r.bottom, q.bottom) - Math.max(r.top, q.top) > 1;
+      const tr = (el) => (el.style.translate || '0px 0px').split(' ').map(v => parseFloat(v) || 0).concat([0]).slice(0, 2);
+      for (const a of els) {
+        if (!a.querySelector('button')) continue;
+        for (const b of els) {
+          if (a === b || b.querySelector('button')) continue;
+          const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+          if (!hit(ra, rb)) continue;
+          const [x0, y0] = tr(b);
+          const cands = [[0, ra.top - rb.bottom - 2], [0, ra.bottom - rb.top + 2], [ra.left - rb.right - 2, 0], [ra.right - rb.left + 2, 0]].sort((p, q) => Math.abs(p[0]) + Math.abs(p[1]) - Math.abs(q[0]) - Math.abs(q[1]));
+          const free = cands.find(([dx, dy]) => {
+            const q = { left: rb.left + dx, right: rb.right + dx, top: rb.top + dy, bottom: rb.bottom + dy };
+            if (q.left < mr.left + 3 || q.right > mr.right - 3 || q.top < mr.top + 3 || q.bottom > mr.bottom - 3) return false;
+            return els.every(o => o === b || !hit(q, o.getBoundingClientRect()));
+          }) || cands[0];
+          b.style.translate = `${x0 + free[0]}px ${y0 + free[1]}px`;
+        }
       }
     };
     fit();

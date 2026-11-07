@@ -454,6 +454,27 @@ if (process.argv.includes('--stats')) {
     let brN = 0;
     for (let k = 0; k < 300; k++) { const t = G('assistantLifePickSoloTalk')('mua', { ...lifeBase, moods: { mua: 'happy' }, solo: { mua: { doing: 'walk', place: 'plaza', reason: 'mypace' } } }, peer(1), Math.random); if (t && t.kind === 'life-breeder') brN++; }
     check('⑧ ようすを見ると、ときどきブリーダーへのひとこと', T.breeder.length === 0 || (brN > 30 && brN < 150), `${brN}/300`);
+    // ⑧ 台詞の場所といまの場所(2026-11-07 ミハリ 残り④: 練習スタジオのソラシドが「広場、だれもいないな笑」)。8人 × 場所 × 気分・理由で、ようすを見る・声をかけるの台詞が別の場所の名前を言わない
+    {
+      const ids = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'];
+      const D = G('ASSISTANT_LIFE_DOINGS'), W = G('ASSISTANT_LIFE_TALK_PLACE_WORDS'), at = G('assistantLifeTalkAt');
+      const ng = [];
+      let n = 0;
+      for (const id of ids) for (const [doing, d] of Object.entries(D)) for (const place of d.places) for (const mood of [null, 'happy', 'lonely', 'restless', 'sulky', 'sleepy', 'eager']) for (const reason of ['lonely', 'mypace']) for (let k = 0; k < 4; k++) {
+        const life = { ...lifeBase, moods: mood ? { [id]: mood } : {}, solo: { [id]: { doing, place, reason } } };
+        for (const t of [G('assistantLifePickSoloTalk')(id, life, peer(1), Math.random), G('assistantLifePickCallTalk')(id, life, Math.random)]) {
+          if (!t) continue; n++;
+          // 台本ごとに: 別の場所の名前を言うなら、その台本は鍵の place がいまの場所(家の窓から広場が見える、など)
+          for (const pid of (t.parts || [t.id])) {
+            const o = G('ASSISTANT_LIFE_TALKS').find(x => x.id === pid); if (!o) continue;
+            const txt = o.lines.map(l => l.t).join('/');
+            const hit = W.find(([w]) => txt.includes(w));
+            if (hit && hit[1] !== place && at(o) !== place) ng.push(`${id}@${place}: ${txt.slice(0, 24)}`);
+          }
+        }
+      }
+      check('⑧ ようすを見る・声をかけるの台詞は、いまの場所とちがう場所の名前を言わない(8人×場所×気分)', n > 1000 && ng.length === 0, `${n}本 ${[...new Set(ng)].slice(0, 3).join(' / ')}`);
+    }
     lstore.set({ seen: {} });
   }
   // 2人にあげる道具: 数字は表から読む/渡すとよさそうな印
