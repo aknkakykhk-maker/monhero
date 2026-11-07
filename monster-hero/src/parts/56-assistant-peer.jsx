@@ -718,7 +718,8 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
   React.useEffect(() => { if (!toast) return undefined; const t = setTimeout(() => setToast(null), 3200); return () => clearTimeout(t); }, [toast]);
 
   const wrap = (children, attrs = {}) => (
-    <div className="fixed inset-x-0 flex justify-center px-2 pointer-events-none" style={{ zIndex: 8500, bottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }} {...attrs}>
+    // 助手ライフの画面(z 9000)を開いているときは、その上の場面で流す
+    <div className="fixed inset-x-0 flex justify-center px-2 pointer-events-none" style={{ zIndex: (typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.open) ? 9150 : 8500, bottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }} {...attrs}>
       <div className="pointer-events-auto w-full max-w-md">{children}</div>
     </div>
   );
