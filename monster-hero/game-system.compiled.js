@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fdd733b6f1e4a49c
+// source-sha256: c2b9a0dcec748f3a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -96612,6 +96612,15 @@ const assistantPeerGain = async (a, b, action) => {
     ASSISTANT_PEER_STORE.set(r.st);
     assistantPeerSaveBond();
   }
+  if (r.gained > 0 && r.levelAfter > r.levelBefore && action !== 'gift' && action !== 'token' && assistantPeerLifeOn() && typeof growthFxPeerLevel === 'function') {
+    try {
+      growthFxPeerLevel({
+        pair: [a, b],
+        levelBefore: r.levelBefore,
+        levelAfter: r.levelAfter
+      });
+    } catch {}
+  }
   return r;
 };
 const assistantPeerGainStory = ids => {
@@ -96817,8 +96826,25 @@ const assistantPeerUseItem = async (kind, pair) => {
   try {
     storeSet(ASSISTANT_PEER_GIFT_KEY, next, false);
   } catch {}
-  await assistantPeerGain(pair[0], pair[1], kind);
+  const pointsBefore = assistantPeerPoints(ASSISTANT_PEER_STORE.state, pair[0], pair[1]);
+  const r = await assistantPeerGain(pair[0], pair[1], kind);
   assistantPeerAddPlayerBond(pair, kind === 'gift' ? 'peerGift' : 'peerToken');
+  if (assistantPeerLifeOn() && typeof growthFxPeerItem === 'function') {
+    const pa = typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS[kind === 'gift' ? 'peerGift' : 'peerToken'];
+    const after = pointsBefore + (r && r.gained || 0);
+    try {
+      growthFxPeerItem({
+        pair: [...pair],
+        itemId: ASSISTANT_PEER_ITEM_IDS[kind],
+        pointsBefore,
+        pointsAfter: after,
+        levelBefore: assistantPeerLevelOf(pointsBefore),
+        levelAfter: assistantPeerLevelOf(after),
+        reaction: null,
+        playerGain: pa ? pa.amount : 0
+      });
+    } catch {}
+  }
   if (typeof assistantLifeNote === 'function') void assistantLifeNote('gift', {
     pair: assistantPeerPairKey(pair[0], pair[1])
   });
