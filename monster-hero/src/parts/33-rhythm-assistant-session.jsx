@@ -213,3 +213,12 @@ const rhythmAssistSessionCheer = (assistantId, { level = 1, fc = false, marvRate
     default: return null;
   }
 };
+
+// ---- 曲の聞きどころ(セッションLv.75 から・社長 2026-11-07「全部の曲」) ----
+// 曲が決まったとき(待機の画面)に、その曲の聞きどころを話す。台詞は場面 'listen:<曲id>'(別の版は元の曲の id にまとめる)
+const RHYTHM_ASSIST_SESSION_LISTEN_LEVEL = 75;
+const rhythmAssistSessionListenBase = (songId, songs = (typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [])) => {
+  const id = String(songId || '');
+  const base = id.replace(/_(short|full)$/, '');
+  return base !== id && Array.isArray(songs) && songs.some((s) => s && s.songId === base) ? base : id;
+};

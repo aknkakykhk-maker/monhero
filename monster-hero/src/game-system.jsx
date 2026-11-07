@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c83660b48ffe9a26
+// generated-sha256: 4e17003345d5dbce
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -30994,6 +30994,15 @@ const rhythmAssistSessionCheer = (assistantId, { level = 1, fc = false, marvRate
   }
 };
 
+// ---- 曲の聞きどころ(セッションLv.75 から・社長 2026-11-07「全部の曲」) ----
+// 曲が決まったとき(待機の画面)に、その曲の聞きどころを話す。台詞は場面 'listen:<曲id>'(別の版は元の曲の id にまとめる)
+const RHYTHM_ASSIST_SESSION_LISTEN_LEVEL = 75;
+const rhythmAssistSessionListenBase = (songId, songs = (typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [])) => {
+  const id = String(songId || '');
+  const base = id.replace(/_(short|full)$/, '');
+  return base !== id && Array.isArray(songs) && songs.some((s) => s && s.songId === base) ? base : id;
+};
+
 // ---- part: 33-rhythm-assistant-session-lines.jsx ----
 // ===== 助手とのセッションの台詞(生成物。手で直さない) =====
 // 正本は docs/progress/beat-assistant-session/lines/solo-draft.txt・pair-draft.txt。
@@ -55892,6 +55901,11 @@ const rhythmAssistSessionTalk = ({ assistantId, kind, songId = '', score = 0, di
   if (kind === 'likeUp') return say('likeup');
   if (kind === 'pick' || kind === 'song') {
     if (!songId) return '';
+    // 曲が決まったとき(song)、セッションLv.75 からは聞きどころを話す
+    if (kind === 'song' && rhythmAssistSessionLevel(RHYTHM_ASSIST_SESSION_STORE.get(), assistantId) >= RHYTHM_ASSIST_SESSION_LISTEN_LEVEL && rand() < 0.7) {
+      const listen = say(`listen:${rhythmAssistSessionListenBase(songId)}`);
+      if (listen) return listen;
+    }
     const taste = rhythmAssistSessionTaste(assistantId, songId);
     if (taste === 'like') return say('like');
     if (taste === 'dislike') return say('dislike');

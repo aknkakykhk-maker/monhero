@@ -108,6 +108,11 @@ const rhythmAssistSessionTalk = ({ assistantId, kind, songId = '', score = 0, di
   if (kind === 'likeUp') return say('likeup');
   if (kind === 'pick' || kind === 'song') {
     if (!songId) return '';
+    // 曲が決まったとき(song)、セッションLv.75 からは聞きどころを話す
+    if (kind === 'song' && rhythmAssistSessionLevel(RHYTHM_ASSIST_SESSION_STORE.get(), assistantId) >= RHYTHM_ASSIST_SESSION_LISTEN_LEVEL && rand() < 0.7) {
+      const listen = say(`listen:${rhythmAssistSessionListenBase(songId)}`);
+      if (listen) return listen;
+    }
     const taste = rhythmAssistSessionTaste(assistantId, songId);
     if (taste === 'like') return say('like');
     if (taste === 'dislike') return say('dislike');
