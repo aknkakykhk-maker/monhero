@@ -262,5 +262,14 @@ check('助手のスコアをランキングへ送らない(助手の計算の部
   check('{name} は話す助手の呼び方に置きかえる(rhythmAssistSessionSpeak → assistantSpeakText)', /return \[hit\[0\], rhythmAssistSessionSpeak\(assistantId, hit\[1\]\)\];/.test(SCREEN) && /rhythmAssistSessionSpeak\(who, String\(text\)/.test(SCREEN) && /assistantSpeakText\(text, c\.name, lv, style, assistantId\)/.test(SCREEN));
   check('本体が名前・仲良し度・呼び方を渡す', /rhythmAssistSessionSetCall\(\{ name: breederName, levelOf:/.test(P('60-app.jsx')));
 }
+// ---- 呼ぶシートの複数選択(2026-11-07 社長「1人ずつじゃなくて複数選択がほしい」) ----
+{
+  check('マスモンと助手をタブをまたいで選び、まとめて呼ぶ(picks・callAll)', /const \[picks, setPicks\] = React\.useState\(\[\]\);/.test(SHEET) && /const callAll = async \(\) => \{/.test(SHEET) && /picked=\{pickedAssistantIds\} onToggle=\{\(id\) => togglePick\('assistant', id\)\}/.test(SHEET));
+  check('部屋の空き席より多くは選べない(空き席は部屋が渡す)', /if \(picks\.length >= freeSeats\) \{ setPickNote/.test(SHEET) && /freeSeats=\{view \? Math\.max\(0, RHYTHM_MULTI_ROOM_MAX - \(view\.members \|\| \[\]\)\.length\) : 0\}/.test(MULTI));
+  check('使う回数は1人1回のまま(無料から先・足りないぶんは券)。券が足りないときは押せない', /const useFree = Math\.min\(freeLeft, picks\.length\);/.test(SHEET) && /const shortTickets = Math\.max\(0, useTickets - tickets\);/.test(SHEET) && /disabled=\{busy \|\| !picks\.length \|\| shortTickets > 0\}/.test(SHEET));
+  check('デュオになる組み合わせを選んでいるあいだに出す', /data-rhythm-buddy-multi-duo/.test(SHEET));
+}
+check('部屋の入口のボタンは「呼ぶ」+マスモンと助手の小さな顔(社長 2026-11-07)', /data-rhythm-buddy-header-faces/.test(MULTI) && /<span className="mt-0\.5 text-\[10px\] font-black">呼ぶ<\/span>/.test(MULTI));
+check('演奏の結果が出たら、演奏中の顔とひとことは消す(結果のボーナスの枠に重ねない)', /const done = !!document\.querySelector\('\[data-rhythm-result\]'\);/.test(SCREEN) && /if \(!ids\.length \|\| ended\) return null;/.test(SCREEN));
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

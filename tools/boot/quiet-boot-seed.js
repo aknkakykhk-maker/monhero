@@ -99,6 +99,8 @@ const ONE_TIME_NOTICE_SCRIPT = `(() => { try {
   put('mh_inherited_unique_level_compensation_v1', true);
   put('mh_inherited_unique_level_compensation_pending_v1', false);
   put('mh_daily_masu_advice_date_v1', new Date(Date.now() + 5 * 3600 * 1000).toISOString().slice(0, 10));
+  // 2026-11-07 の一度きりの戻し(17-release の DAY_RESET_20261107_FLAG)は、その日のうちに上の日付を前の日へ書き戻すので、助言が出てしまう。検査では済んだことにする
+  put('mh_day_reset_20261107_v1', true);
   if (localStorage.getItem('mh_quick_guide_seen_v1') === null) put('mh_quick_guide_seen_v1', { v: 1, seen: ${JSON.stringify(quickGuideIds())} });
   if (localStorage.getItem('mh_quick_nudge_v1') === null) put('mh_quick_nudge_v1', { v: 1, n: 3, day: '' });
   if (localStorage.getItem('mh_card_auto_intro_seen_v1') === null) put('mh_card_auto_intro_seen_v1', true);
