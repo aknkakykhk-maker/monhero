@@ -3333,6 +3333,16 @@ function MonsterHeroGame() {
   const [extremeDifficulty, setExtremeDifficulty] = useState('EXTREME');
   // 冥界チャレンジのタブを開いたか(一度きりの NEW の札に使う・2026-11-01 の新しいキー)。読み込むまでは見たことにして、札を出しっぱなしにしない
   const UNDERWORLD_TAB_SEEN_KEY = 'mh_underworld_tab_seen_v1';
+  // 演奏の設定を、起動時に一度読む(2026-11-07 社長「オプションの判定ラインの位置の設定が、ゲームとちゃんとリンクできているか」)。
+  // これまではモンヒロビートの入口(openRhythmDemo / openRhythmDebug)でしか読まず、レイドジャックのように別の画面から
+  // 演奏を始めると、初期値(既定)のまま遊んでいた(判定ラインの高さ・ノーツの速さ・タイミングの調整などが既定に戻る)。
+  // 入口ではこれまでどおり読み直す。読み終わる前に設定を保存していたら、そちらを優先する(初期値のままのときだけ置き換える)
+  useEffect(() => { let alive = true; (async () => {
+    try {
+      const settings = normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false)));
+      if (alive) setRhythmSettings(prev => prev === DEFAULT_RHYTHM_SETTINGS ? settings : prev);
+    } catch (e) {}
+  })(); return () => { alive = false; }; }, []);
   const [underworldTabSeen, setUnderworldTabSeen] = useState(true);
   useEffect(() => { (async () => {
     try { setUnderworldTabSeen((await storeGet(UNDERWORLD_TAB_SEEN_KEY, false, false)) === true); } catch (e) { setUnderworldTabSeen(true); }
@@ -20622,7 +20632,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         <RhythmMultiAwayBar hidden={gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT'||!!rhythmPlay}
           busy={['BATTLE','WAVE_RESULT','CHAMPION','BATTLE_TUTORIAL','CARD_BATTLE','RPG_DEBUG_BATTLE','DEBUG_BATTLE_SETUP'].includes(gameState)}
           onReturn={()=>{void openRhythmDemo({to:'RHYTHM_MULTI'});}} />
-        {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} masuMons={masuMons} masuPicker={{entries:unifiedMonsterEntriesSingleType.filter(e=>e.type==='masu'),renderSortFilterBar:renderMonsterSortFilterBar,renderCardBody:renderMonsterCardBody,cardClass:MONSTER_CARD_CLASS,cardStyle:MONSTER_CARD_STYLE}} buddyTickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseBuddyTicket={consumeBuddyTicket} onRefundBuddyTicket={refundBuddyTicket} onOpenMasuBeat={()=>openMasuBeat(gameState)} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_PLAY_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
+        {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} masuMons={masuMons} masuPicker={{entries:unifiedMonsterEntriesSingleType.filter(e=>e.type==='masu'),renderSortFilterBar:renderMonsterSortFilterBar,renderCardBody:renderMonsterCardBody,cardClass:MONSTER_CARD_CLASS,cardStyle:MONSTER_CARD_STYLE}} buddyTickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseBuddyTicket={consumeBuddyTicket} onRefundBuddyTicket={refundBuddyTicket} onOpenMasuBeat={()=>openMasuBeat(gameState)} sessionAssistants={rhythmAssistSessionEnabled()&&typeof assistantsUnlockedFrom==='function'?assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag):[]} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_PLAY_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
           onUserGesture={()=>{/* 全画面と画面ロック防止は、指で押した直後しか許されない。準備完了を押したこの場で頼んでおく(ひとりのときの「決定」と同じ) */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();}}
           multiLook={rhythmSettings.multiLook||'LIGHT'}
           onChangeMultiLook={async(id)=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLook:id,multiLightLook:id!=='OWN'});setRhythmSettings(saved);}}

@@ -141,6 +141,11 @@
       "pure": true
     },
     {
+      "file": "33-rhythm-assistant-session.jsx",
+      "role": "助手とのセッション(モンヒロビートのマルチに助手を CPU として呼ぶ)の計算。セッションLv・好きな曲と苦手な曲・好み度・助手のスコア(マスモンの作りを使い、調子の代わりに好み)。保存は mh_rhythm_assistant_session_v1。公開の印 rhythmAssistantSession",
+      "pure": true
+    },
+    {
       "file": "33-rhythm-buddy-talk.jsx",
       "role": "呼んだマスモンのおしゃべり(部屋のチャットへ一言)。場面×性格×調子のセリフ集と、選び方・人のチャットへの返事の振り分け。AIは使わず用意したセリフから選ぶ",
       "pure": true
@@ -312,6 +317,10 @@
     {
       "file": "80-screen-rhythm-buddy.jsx",
       "role": "相棒(モンヒロビートのマルチに呼ぶ自分のマスモン)の保存の窓口・呼ぶ画面・一覧と詳しい画面・結果画面での育ち"
+    },
+    {
+      "file": "80-screen-rhythm-assistant-session.jsx",
+      "role": "助手とのセッションの保存の窓口・呼ぶシートの助手のタブ・結果画面での育ち・部屋の中の頭の振り分け(masuId が as:… なら助手)。計算は 33-rhythm-assistant-session.jsx"
     },
     {
       "file": "78-screen-raid-jack-debug.jsx",

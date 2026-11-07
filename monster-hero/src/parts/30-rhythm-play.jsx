@@ -1154,7 +1154,9 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const settingsBase=useMemo(()=>lineHeightOverride===null||!settingsIn?settingsIn:{...settingsIn,judgmentLineHeight:lineHeightOverride},[settingsIn,lineHeightOverride]);
   const settings=useMemo(()=>settingsBase&&settingsBase.autoEffectDown!==false?rhythmCapEffects(settingsBase,effectCap):settingsBase,[settingsBase,effectCap]);
   // ノーツの色の組(B5・2026-11-07)。演奏画面を開いた最初の1回だけ当てる(描き先を取り付けるより前。演奏中は作り直さない)
-  useState(()=>{try{if(typeof rhythmApplyNotePalette==='function')rhythmApplyNotePalette(settingsIn?.notePalette);}catch(e){}return 0;});
+  useState(()=>{try{if(typeof rhythmApplyNotePalette==='function')rhythmApplyNotePalette(settingsIn?.notePalette);}catch(e){}
+    // ノーツの形(2026-11-07)も同じ時に当てる
+    try{if(typeof rhythmApplyNoteShape==='function')rhythmApplyNoteShape(settingsIn?.noteShape);}catch(e){}return 0;});
   // 演奏の途中で段が下がっても、作り直されない処理(毎フレームの処理・判定の処理)が最新の設定を読めるように
   const settingsLiveRef=useRef(settings);settingsLiveRef.current=settings;
   // タップ音を作り置きしておく(1回だけ。作り終わる前に叩いた音はクラシックで鳴る)
