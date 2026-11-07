@@ -11673,7 +11673,7 @@ const ASSISTANT_RHYTHM_GRAND_OPEN_STORY = [
   { who:'mua',       e:'excited',  bg:'monhero_plaza', fxText:'広場いっぱいに、風船と旗が飾られている', t:'みんな、準備できた〜！？ 今日はまぢで特別な日ぢゃん！' },
   { who:'kiki',      e:'happy',    t:'はいでつ！ 今日は、モンヒロビートの本オープンの日でつ♪♪' },
   { who:'dra',       e:'happy',    t:'えへへ、おで、ちょっと早起きしたからな。飾りつけ、がんばったぞ' },
-  { who:'erubin',    e:'happy',    t:'ドラちゃん、朝からずっと風船ふくらませてたもんね笑 さすがだよー' },
+  { who:'erubin',    e:'happy',    t:'ドラちゃん、朝からずっと、風船ふくらませてたもんね笑 さすがだよー' },
   { who:'sorashido', e:'excited',  t:'うぉぉぉ、風船ぜんぶで88個！ 俺、ちゃんと数えたぜ・・・！' },
   { who:'kyuko',     e:'troubled', t:'ばこちゃん、数えるとこそこぉ？ 笑 ほい、はやく始めよ〜' },
   // ---- ② ふりかえり ----
@@ -11693,7 +11693,7 @@ const ASSISTANT_RHYTHM_GRAND_OPEN_STORY = [
   { who:'dra',       e:'excited',  t:'おめでとうだ！ おで、ケーキも用意したからな' },
   { who:'kyuko',     e:'surprise', t:'えっ、ケーキぃ！？ ドラちゃん、それ先に言ってよぉ〜笑' },
   { who:'atsu',      e:'happy',    atsu:'with', t:'ケーキあるなら、もう勝ち確じゃん 笑' },
-  { who:'sorashido', e:'excited',  t:'切り分けなら任せてくれだぜ・・・！ 角度まで、きっちり計算するからよ笑' },
+  { who:'sorashido', e:'excited',  t:'切り分けなら俺だぜ・・・！ 角度まで、きっちり計算するからよ笑' },
   { who:'erubin',    e:'happy',    t:'さすがソラくん笑 じゃあ俺、みんなの飲みもの用意してくるねー' },
   // ---- ④ ギフト案内 ----
   { who:'kiki',      e:'normal',   t:'それから、みなさんに大事なお知らせがありまつ' },
