@@ -153,7 +153,7 @@ pair kyuko momosuke doing=cards lv=1-3 | kyuko normal ももすけ、このデ�
 pair kyuko momosuke doing=cards lv=4-6 | momosuke troubled きゅうちゃん、カードの説明、むずかしすぎるよ〜 | kyuko troubled ごめんごめん。じゃあ、イルミネが光ったら攻める、だけでいいよぉ | momosuke happy それなら分かる！！
 pair kyuko momosuke doing=cards lv=7-10 | momosuke excited きゅうちゃん、もも、ひとりで勝てたよ！！ | kyuko surprise おお、すごいじゃん！ | kyuko happy ちゃんと作戦どおりに動けてたねぇ。ももすけ、うまくなったなぁ | momosuke wink きゅうちゃんの教え方がいいからだよ♡
 pair kyuko momosuke doing=walk lv=1-3 | momosuke excited {place}で、きゅうちゃんの好きな音楽、教えて！！ | kyuko happy ほい！ 歩きながら聞くと、いい感じなんだぁ | momosuke wink ももの歌も入れてくれていいよ♡
-pair kyuko momosuke doing=walk lv=4-6 | kyuko normal ももすけ、歩くの速いよぉ | momosuke wink きゅうちゃんが遅いんだよw | kyuko happy 考えごとしてると、足が止まるんだよねぇ笑
+pair kyuko momosuke doing=walk lv=4-6 | kyuko normal ももすけ、歩くの速いよぉ | momosuke wink きゅうちゃんが遅いんだよw | kyuko happy 考えごとしてると、つい足が止まっちゃうんだよねぇ笑
 pair kyuko momosuke doing=walk lv=7-10 | momosuke normal きゅうちゃんってさ、最初はクールな人かと思ってた | kyuko surprise えっ、そうなのぉ！？ | momosuke happy でも、ほんとはいちばん優しいって知ってる♡ | kyuko happy ……ありがとん笑
 
 ## あつ × もも
@@ -250,7 +250,7 @@ pair mua sorashido doing=snack lv=7-10 air=makeup | sorashido happy 仲直りの
 pair mua sorashido doing=practice lv=1-3 | sorashido normal みゅあさん、今の曲、後半でテンポが速くなってた | mua surprise え、あたし走ってた！？ | sorashido happy 気持ちが乗ってた証拠だ。悪いことばかりじゃないぞ笑
 pair mua sorashido doing=practice lv=4-6 | mua excited 見てた！？ 今日いちばんのスコア出た！ | sorashido excited うぉぉぉ！ 自己ベスト更新だ！ 表に星をつけるぜ・・・！ | mua happy 星、大きめでね♪
 pair mua sorashido doing=practice lv=7-10 air=makeup | mua normal さっきはごめんね。ミスの数の表、ほんとは役に立ってた | sorashido happy 俺もごめん。次からは「伸びた数」の表にする笑 | mua excited それ最高ぢゃん！ いっしょに作ろ♪
-pair mua sorashido doing=cards lv=1-3 | mua troubled ねぇ、このカードとこのカード、どっちが強いの？ | sorashido normal 場合による。でも{c}が好きなほうでいいと思うぞ | mua happy ぢゃあモッチーっぽいほう！ｗ
+pair mua sorashido doing=cards lv=1-3 | mua troubled ねぇ、このカードとこのカード、どっちが強いの？ | sorashido normal 場合による。でも{c}が好きなほうでいいと思うぞ | mua happy ぢゃあ、モッチーに似てるほう！ｗ
 pair mua sorashido doing=cards lv=4-6 | sorashido excited 勝率の表、みゅあさんの欄だけ右肩上がりなんだ | mua surprise え、まぢ！？ どこどこ！？ | sorashido happy ここだ。最近ぐんと伸びてる笑
 pair mua sorashido doing=cards lv=7-10 | mua normal 今日の対戦、作戦は任せる。あたしは応援する！ | sorashido surprise 応援だけでいいのか？ | mua wink {c}が勝つと、あたしもうれしいからいいの♪
 pair mua sorashido doing=walk lv=4-6 | mua happy {place}の夕焼け、きれいぢゃない？ | sorashido normal ……ほんとだ。数えるの忘れて見てた笑 | mua wink それでいいの！ｗ
@@ -270,7 +270,7 @@ pair dra erubin doing=training lv=4-6 | dra normal ビンビン、アークの�
 pair atsu mua doing=practice lv=1-3 | mua troubled あつくん、一曲だけって言ったよね？ もう三曲目だよ！ | atsu wink え、まだ一曲目の気分だった笑 | mua angry ぜったいうそ！ｗ
 pair atsu mua doing=practice lv=4-6 | atsu happy みゅあ、今の最後の連打よかった！ | mua excited でしょ！ 練習したもん♪ | atsu excited じゃあもう一曲いこ笑 | mua troubled またそれぢゃんｗ
 pair atsu mua doing=practice lv=4-6 air=after | atsu troubled ……みゅあ、まだ怒ってる？ | mua normal ……べつにー | atsu normal じゃあ、横で静かに叩いとく… | mua troubled それはそれでさみしいんだけどｗ
-pair atsu mua doing=practice lv=7-10 air=makeup | atsu normal この前はからかいすぎた！ ごめん笑 | mua happy いいよ。あたしもすねすぎた | atsu happy じゃあ仲直りの一曲いこ！ | mua excited 一曲だけね！ｗ
+pair atsu mua doing=practice lv=7-10 air=makeup | atsu normal この前は、からかいすぎた！ ごめん笑 | mua happy いいよ。あたしもすねすぎた | atsu happy じゃあ仲直りの一曲いこ！ | mua excited 一曲だけね！ｗ
 pair atsu mua doing=cards lv=4-6 | mua excited あつくん、今日こそ勝つかんね！ | atsu happy いいよ笑 顔に出さないでね！ | mua angry 出さないもん！ …今出てた？ｗ
 pair atsu mua doing=snack lv=1-3 | mua happy あつくん、このおやつ、あたしのおすすめ！ | atsu surprise うまっ！ みゅあ、おやつ選びのセンスある！ | mua wink でしょ〜♪
 pair atsu mua doing=training lv=4-6 | atsu normal モッチー、前よりジャンプ高くない？笑 | mua excited 気づいた！？ 毎日いっしょに跳んでるの！ | atsu happy みゅあも跳んでるの！？ 見たい笑
@@ -325,7 +325,7 @@ pair atsu kyuko doing=practice lv=4-6 | kyuko normal あつニキ、ランキン
 
 ## えるびん × みゅあ(+3・計18)
 pair erubin mua doing=walk lv=4-6 air=after | mua normal ……るびちん、今日もその服なんだ | erubin troubled ……うん。ごめんね、選んでもらったのを着てこなくて | mua troubled ……べつにいいけど
-pair erubin mua doing=walk lv=7-10 air=makeup | erubin happy 今日は、みゅあちゃんの選んだ服で来たよ | mua excited ほんとだ！ やっぱり似合うぢゃん♪ | erubin happy この前はごめんね。これ、すごく気に入ってるんだ
+pair erubin mua doing=walk lv=7-10 air=makeup | erubin happy 今日は、みゅあちゃんの選んだ服で来たよ | mua excited ほんとだ！ やっぱり似合うぢゃん♪ | erubin happy この前はごめんね。この服、すごく気に入ってるんだ
 pair erubin mua doing=snack lv=4-6 | mua happy るびちん、口にクリームついてるｗ | erubin surprise え、どこかな？💦 | mua wink 右！ …って、あたしもついてたｗ
 
 ## あつ × ドラ(+3・計18)
