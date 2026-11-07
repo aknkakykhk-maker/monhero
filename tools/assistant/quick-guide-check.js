@@ -29,7 +29,7 @@ const linesEnd = assistantsSrc.indexOf('\n};', linesStart);
 check('台詞のまとまり ASSISTANT_QUICK_GUIDE_LINES がある', linesStart > 0 && linesEnd > linesStart);
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(`${assistantsSrc.slice(linesStart, linesEnd + 3)}\n${pure}\nthis.E = { ASSISTANT_QUICK_GUIDE_LINES, QUICK_GUIDE_IDS, QUICK_GUIDE_PAGES, QUICK_GUIDE_REPLAYS, QUICK_GUIDE_SEEN_KEY, QUICK_GUIDE_NUDGE_KEY, CARD_AUTO_INTRO_SEEN_KEY, quickGuideReplayPages, quickGuideLine, normalizeQuickGuideSeen, quickGuideSeenAfter, normalizeQuickNudge, quickNudgeAllowed, quickNudgeAfter, quickGuidePick };`, ctx);
+vm.runInContext(`${assistantsSrc.slice(linesStart, linesEnd + 3)}\n${pure}\nthis.E = { ASSISTANT_QUICK_GUIDE_LINES, QUICK_GUIDE_IDS, QUICK_GUIDE_PAGES, QUICK_GUIDE_REPLAYS, QUICK_GUIDE_SEEN_KEY, QUICK_GUIDE_NUDGE_KEY, CARD_AUTO_INTRO_SEEN_KEY, quickGuideReplayPages, quickGuideLine, normalizeQuickGuideSeen, quickGuideSeenAfter, normalizeQuickNudge, quickNudgeAllowed, quickNudgeAfter, quickGuidePick, QUICK_GUIDE_RUN_BETWEEN, quickGuideScreenKey };`, ctx);
 const E = ctx.E;
 check('保存は新しいキーだけ', E.QUICK_GUIDE_SEEN_KEY === 'mh_quick_guide_seen_v1' && E.QUICK_GUIDE_NUDGE_KEY === 'mh_quick_nudge_v1' && E.CARD_AUTO_INTRO_SEEN_KEY === 'mh_card_auto_intro_seen_v1');
 const base = { busy: false, seen: [], quickUnlocked: true, quickEverCleared: false, nudgeOk: true };
@@ -47,6 +47,15 @@ check('裏周回のままの曲えらびで g3b・モードえらびで g3c(裏�
   && pick({ gameState: 'RHYTHM_DEMO_HOME', backgroundRun: false }) === null && pick({ gameState: 'RHYTHM_MODE_SELECT', backgroundRun: false }) === null);
 check('演奏中(RHYTHM_PLAY)・マルチの部屋(RHYTHM_MULTI)では出さない', pick({ gameState: 'RHYTHM_PLAY', backgroundRun: true }) === null && pick({ gameState: 'RHYTHM_MULTI', backgroundRun: true }) === null);
 check('お話・おしゃべりなど(busy)のあいだはどこでも出さない', ['BATTLE_SYSTEM_SELECT', 'AUTO_SETTINGS', 'BATTLE', 'RHYTHM_DEMO_HOME', 'HOME'].every((g) => pick({ gameState: g, busy: true, backgroundRun: true, quickRun: true, autoRepeat: true }) === null));
+// クイックの∞の WAVE のあいだ(一瞬だけ通る画面)も、出している ∞ の案内は出したまま(作り直すと1ページ目へ戻る・2026-11-07)
+check('∞の案内を出しているあいだは、WAVE のあいだの画面(WAVE_RESULT・QUICK_GROWTH・PICK_ALLY・QUICK_JOIN)でも出したまま',
+  E.QUICK_GUIDE_RUN_BETWEEN.every((g) => pick({ gameState: g, quickRun: true, autoRepeat: true, showing: 'g3a' }) === 'g3a'));
+check('出していなければ、WAVE のあいだの画面では出さない・∞でなければ出さない・見たあとは出さない',
+  E.QUICK_GUIDE_RUN_BETWEEN.every((g) => pick({ gameState: g, quickRun: true, autoRepeat: true }) === null && pick({ gameState: g, quickRun: true, autoRepeat: false, showing: 'g3a' }) === null && pick({ gameState: g, quickRun: true, autoRepeat: true, showing: 'g3a', seen: ['g3a'] }) === null));
+check('「あとで」の取り消しは、∞の WAVE のあいだをバトルの画面と同じに数える(3秒ごとに案内が出直さない)',
+  E.QUICK_GUIDE_RUN_BETWEEN.every((g) => E.quickGuideScreenKey(g, true, true) === 'BATTLE' && E.quickGuideScreenKey(g, false, true) === g)
+  && /const quickGuideScreen = [^\n]*quickGuideScreenKey\(gameState, isQuickMode\(runMode\), autoRepeat\)/.test(app) && /setQuickGuideLater\(null\); setQuickNudgeShowing\(null\); \}, \[quickGuideScreen\]\)/.test(app)
+  && /showing: quickGuideShowingRef\.current/.test(app) && /quickGuideShowingRef\.current = quickGuideActive;/.test(app));
 check('保存の読み込み前(seen が null)は出さない', E.quickGuidePick({ ...base, gameState: 'AUTO_SETTINGS', seen: null }) === null);
 check('一度見た案内は出さない', pick({ gameState: 'AUTO_SETTINGS', seen: ['g2'] }) === null && pick({ gameState: 'BATTLE', seen: ['auto'] }) === null);
 check('HOME の誘導: クイックが開いて未クリアの人だけ', pick({ gameState: 'HOME' }) === 'nudgeHome' && pick({ gameState: 'HOME', quickEverCleared: true }) === null && pick({ gameState: 'HOME', quickUnlocked: false }) === null && pick({ gameState: 'HOME', nudgeOk: false }) === null);
@@ -119,6 +128,8 @@ check('g3.5(負けたとき)は曲えらびの周回の帯を開いて、中の�
   && /p\.openDetail&&!quickRunDetailOpen\)\{ quickGuideOpenedDetailRef\.current=true; setQuickRunDetailOpen\(true\);/.test(app) && /quickGuideOpenedDetailRef\.current=false; setQuickRunDetailOpen\(false\);/.test(app));
 check('文で言う中身(must)を、光らせる所のあるページに決めてある', Object.values(E.QUICK_GUIDE_PAGES).flat().filter((p) => p.spot && !p.must).length === 0,
   Object.values(E.QUICK_GUIDE_PAGES).flat().filter((p) => p.spot && !p.must).map((p) => p.id).join(' '));
+check('案内は document.body へ出す(技の名前の札など body へ出る物より上に重ねる)', /ReactDOM\.createPortal\(overlay, document\.body\)/.test(guideSrc) && /z-\[100050\]/.test(guideSrc)
+  && (() => { const b = read('monster-hero/src/parts/71-screen-battle.jsx'); const m = b.match(/slotSkill&&ReactDOM\.createPortal[\s\S]{0,400}?zIndex:(\d+)/); return !!m && Number(m[1]) < 100050; })());
 check('光らせる目印が画面にある', ['data-auto-settings-section="policy"', 'data-auto-settings-section="ally"', 'data-auto-settings-section="quickRun"', 'data-auto-settings-section="breakthrough"', 'data-quick-reward-policy', 'data-battle-system-card={sys.id}', 'data-difficulty-carousel', 'aria-label="周回を続けたままモンヒロビートへ"'].every((m) => app.includes(m))
   && read('monster-hero/src/parts/71-screen-battle.jsx').includes('data-battle-auto-button') && read('monster-hero/src/parts/58-screen-rhythm.jsx').includes('data-quick-run-band') && read('monster-hero/src/parts/77-screen-rhythm-multi.jsx').includes('data-rhythm-back'));
 
@@ -272,6 +283,48 @@ const browser = async () => {
     check(`${T}AUTO設定の各欄を光らせ、文で言う中身(「開いたら自動で始める」のスイッチなど)が画面に入り、窓で隠れない`, g2Bad.length === 0, g2Bad.join(' / '));
     await click('[data-quick-guide-next]'); await page.waitForTimeout(400);
     check(`${T}AUTO設定の案内を最後まで見たら出ない`, !(await guide()) && (await store('mh_quick_guide_seen_v1')).seen.includes('g2'));
+    // クイックで∞にしたバトル(g3a): WAVE をまたいでもページが戻らない・「あとで」が取り消されない・技の札などが窓に重ならない
+    await boot();
+    await click('button[aria-label="モンヒロバトル"]'); await page.waitForTimeout(1200);
+    await click('[data-battle-system="systemQuick"]'); await page.waitForTimeout(1500);
+    for (let k = 0; k < 12; k++) { const moved = await page.evaluate(() => { const b = [...document.querySelectorAll('button[aria-label="前の難易度"]')].find((x) => x.offsetParent && !x.disabled); if (b) { b.click(); return true; } return false; }); if (!moved) break; await page.waitForTimeout(300); }
+    const tap = (re, sel = 'button') => page.evaluate(([s, q]) => { const b = [...document.querySelectorAll(q)].find((x) => x.offsetParent && !x.disabled && new RegExp(s).test((x.innerText || '').replace(/\s+/g, ' ').trim())); if (b) b.click(); return !!b; }, [re, sel]);
+    await tap('^この難易度で挑戦'); await page.waitForTimeout(1500);
+    await page.evaluate(() => { [...document.querySelectorAll('article,button')].find((x) => /スエゾー/.test(x.textContent))?.click(); }); await page.waitForTimeout(800);
+    await tap('^勇者モンに選ぶ$'); await page.waitForTimeout(800);
+    await tap('近距離|中距離|零距離|遠距離'); await page.waitForTimeout(1200);
+    await tap('新規習得'); await page.waitForTimeout(800);
+    await tap('^習得する$'); await page.waitForTimeout(3500);
+    for (let k = 0; k < 10; k++) { const g0 = await guide(); if (g0 && g0.id === 'auto') { await click('[data-quick-guide-next]'); break; } await page.waitForTimeout(500); }
+    await page.waitForTimeout(500);
+    for (let k = 0; k < 2; k++) { await page.evaluate(() => document.querySelector('[data-battle-auto-button]')?.click()); await page.waitForTimeout(800); }
+    const waveNo = () => page.evaluate(() => { const m = document.body.innerText.match(/WAVE\s*(\d+)\s*\/\s*\d+/); return m ? Number(m[1]) : null; });
+    let g3 = null;
+    for (let k = 0; k < 20 && !(g3 && g3.id === 'g3a'); k++) { await page.waitForTimeout(500); g3 = await guide(); }
+    check(`${T}クイックで∞にしたバトルで g3a が出る`, g3 && g3.id === 'g3a', JSON.stringify(g3));
+    if (g3 && g3.id === 'g3a') {
+      await click('[data-quick-guide-next]'); await page.waitForTimeout(400);
+      const w0 = await waveNo();
+      // WAVE が変わるまで見張り、そのあいだ窓の題と本文の上に何も重なっていないか(技の名前の札など)を見る
+      const covered = [];
+      let w1 = w0, gap = null;
+      for (let k = 0; k < 60 && w1 === w0; k++) {
+        await page.waitForTimeout(250);
+        w1 = await waveNo();
+        const c = await page.evaluate(() => { const p = document.querySelector('[data-quick-guide-panel]'); if (!p) return 'no-panel'; const r = p.getBoundingClientRect(); const pts = [[r.left + r.width * 0.3, r.top + 18], [r.left + r.width * 0.5, r.top + r.height * 0.45], [r.left + r.width * 0.8, r.top + 18]]; const bad = pts.map(([x, y]) => document.elementFromPoint(x, y)).filter((e) => e && !e.closest('[data-quick-guide]')); return bad.length ? bad.map((e) => (e.innerText || e.className || e.tagName).toString().slice(0, 20)).join(',') : null; });
+        if (c) covered.push(c);
+        const gg = await guide(); if (!gg || gg.page !== 'g3.2') { gap = gg; break; }
+      }
+      await page.waitForTimeout(1500);
+      const gAfter = await guide();
+      check(`${T}WAVE が変わっても(${w0}→${w1})2ページ目のまま・消えない`, w1 !== w0 && !gap && gAfter && gAfter.page === 'g3.2', JSON.stringify({ gap, gAfter }));
+      check(`${T}∞の案内の窓の上に、技の名前の札など ほかの物が重ならない`, covered.length === 0, covered.slice(0, 3).join(' / '));
+      await click('[data-quick-guide-later]'); await page.waitForTimeout(300);
+      const w2 = await waveNo(); let w3 = w2;
+      for (let k = 0; k < 60 && (w3 === w2 || w3 == null); k++) { await page.waitForTimeout(250); w3 = await waveNo(); }
+      await page.waitForTimeout(1500);
+      check(`${T}「あとで」を押したら、WAVE が変わっても(${w2}→${w3})出直さない`, w3 !== w2 && w3 != null && !(await guide()), JSON.stringify(await guide()));
+    }
     check(`${T}画面のエラーが無い`, errors.length === 0, errors.slice(0, 3).join(' / '));
     await page.close();
   }
