@@ -237,9 +237,9 @@ const runMulti = async (browser, W, H) => {
       await P.locator('[data-rhythm-multi-free-list-open]').click();
       await P.waitForSelector('[data-rhythm-multi-room-list-empty],[data-rhythm-multi-room-row]', { timeout: 10000 });
       await scan('フリーマッチ(部屋の一覧)', P);
+      // 一覧の「もどる」はシートの3つの選択肢へ戻る
       await P.locator('[data-rhythm-multi-room-list-back]').click();
-      await P.locator('[data-rhythm-multi-free]').click();
-      await P.waitForSelector('[data-rhythm-mode-free-sheet]', { timeout: 5000 });
+      await P.waitForSelector('[data-rhythm-multi-free-auto]', { timeout: 5000 });
       await P.locator('[data-rhythm-multi-free-auto]').click();
       await P.waitForFunction(() => !!document.querySelector('[data-rhythm-multi]'), null, { timeout: 20000 });
       await scan('フリーマッチの待ち', P); await P.close(); }
