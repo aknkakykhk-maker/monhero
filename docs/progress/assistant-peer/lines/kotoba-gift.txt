@@ -1,5 +1,5 @@
 # 道具・家具のプレゼントの台本(コトバ 2026-11-08)。注文: lines/ORDER-GIFT.md(オクリモノ)
-# gift: みゅあ・きき・ももすけ・ドラ × 道具10種類 × 2本。hint: 8人 × 好きなもの6つ(道具3+家具3)。furn はあとで足す
+# gift: みゅあ・きき・ももすけ・ドラ × 道具10種類 × 2本。hint: 8人 × 好きなもの6つ(道具3+家具3)。furn: 同じ4人 × 家具12種類
 # 書き方は注文書の見本どおり。gift・hint・furn の行は「表情 セリフ」(話すのは見出しの人)。苦手な物でも嫌がらない・{name} を責めない
 
 ## gift(2人に道具を贈ったときの、その人の1行。相手は {c})
@@ -135,3 +135,54 @@ hint erubin item=flower | happy お花があると、部屋が明るくなるよ
 hint erubin item=plant | normal 部屋に植物があると、落ち着くと思うんだ
 hint erubin item=lantern | happy やさしい灯りのランタン、すてきだよね
 hint erubin item=windbell | happy 風鈴の音って、いいよね
+
+## furn(家具を自分の部屋にもらったときの1〜2行)
+
+furn mua item=sofa like=mid | happy ふかふかソファ！ ごろごろしながらおしゃべりできるぢゃん♪
+furn mua item=bear like=like | excited くまのぬいぐるみ！？ まぢかわいい…！ | happy 今日から、ぎゅってして寝る〜♪
+furn mua item=plant like=mid | normal 観葉植物、部屋がおしゃれになるね！ 水やり、がんばる♪
+furn mua item=record like=mid | happy レコードプレーヤー！ なんか大人っぽいぢゃん♪
+furn mua item=nyacushion like=mid | happy ニャーのクッション、もちもちしてる〜！
+furn mua item=starpic like=mid | normal 星空の絵、きれい…！ 部屋がちょっと落ち着くかも
+furn mua item=trophy like=mid | wink トロフィー棚！ あたしの記録、ここに並べよっかな♪
+furn mua item=bookshelf like=bad | troubled 本棚…！ あたし、本あんまり読まないけど… | normal {name}の気持ちはうれしい！ コーデの雑誌、並べてみる♪
+furn mua item=heartmirror like=like | excited ハートの鏡！？ まぢで理想のやつぢゃん！ | happy 毎日コーデ見るの、もっと楽しくなる♪
+furn mua item=lantern like=mid | happy 星のランタン、光るとかわいい〜！
+furn mua item=mirrorball like=like | excited ミラーボール！！ 部屋がライブ会場になるぢゃん！ｗ | happy {name}、ありがと♪ いっしょに踊ろ！
+furn mua item=windbell like=mid | normal 風鈴、ちりんって鳴るの、いいね〜♪
+furn kiki item=sofa like=mid | happy ふかふかでつね。本を読むのに、ちょうどよさそうでつ
+furn kiki item=bear like=mid | happy まあ、くまのぬいぐるみ。棚の上に、座っていただきましょう
+furn kiki item=plant like=like | excited まあ、観葉植物…！ 部屋に緑があるのは、うれしいでつ | happy 毎日、お水をあげまつね♪
+furn kiki item=record like=mid | normal レコードプレーヤーでつか。静かな曲を、かけてみまつね
+furn kiki item=nyacushion like=mid | happy ニャーさんのクッション、やわらかいでつね
+furn kiki item=starpic like=mid | happy 星空の絵…静かな気持ちになりますね
+furn kiki item=trophy like=mid | wink トロフィー棚でつか。火力の記録を、並べましょう♪
+furn kiki item=bookshelf like=like | excited 小さな本棚…！ ちょうど本の置き場所に困っていたんでつ | happy {name}、ありがとうございまつ。大切に使いまつ
+furn kiki item=heartmirror like=mid | normal ハートの鏡でつか。身だしなみを整えるのに、よさそうでつ
+furn kiki item=lantern like=mid | happy 星のランタン…やさしい灯りでつね
+furn kiki item=mirrorball like=bad | troubled まあ、ミラーボール…。私の部屋が、にぎやかになりまつね | normal {name}のお気持ち、うれしいでつ。たまに回してみまつね
+furn kiki item=windbell like=like | excited 風鈴…！ 涼しい音でつね♪ | happy 窓辺に下げて、毎日聞きまつ
+furn momosuke item=sofa like=mid | happy ふかふかソファ！！ ライブのあとはここで休むね♡
+furn momosuke item=bear like=mid | happy くまのぬいぐるみ！！ ももの部屋のマスコットにする！！
+furn momosuke item=plant like=bad | troubled 観葉植物…！！ もも、お世話できるかなw | normal {name}の気持ちはうれしい！！ がんばって水あげる！！
+furn momosuke item=record like=like | excited レコードプレーヤー！！ ももの曲、いい音で聞ける！！♡ | wink {name}、さすがすぎw
+furn momosuke item=nyacushion like=mid | happy ニャーのクッション、もふもふ〜！！
+furn momosuke item=starpic like=mid | normal 星空の絵！！ ステージの照明みたいできれい♡
+furn momosuke item=trophy like=mid | excited トロフィー棚！！ ももの優勝カップ、ここに並べる！！
+furn momosuke item=bookshelf like=mid | normal 本棚！！ ももの楽譜、ここにしまおっと
+furn momosuke item=heartmirror like=like | excited ハートの鏡！！ もものためにあるような鏡じゃん♡ | happy 毎日ここでポーズの練習する！！
+furn momosuke item=lantern like=mid | happy 星のランタン、きらきらでかわいい♡
+furn momosuke item=mirrorball like=like | excited ミラーボール！！ 部屋がステージになっちゃう！！ | wink {name}、いちばん前で見ててねw
+furn momosuke item=windbell like=mid | normal 風鈴！！ ちりんって鳴るの、リズムっぽいw
+furn dra item=sofa like=like | excited おお、ソファ！ ふかふかだな… | happy {name}、ありがとな。ここが、おでの特等席だ
+furn dra item=bear like=like | excited でっかいくまか！ | happy おで、こういうの好きなんだよな、えへへ。大事にするぞ
+furn dra item=plant like=mid | normal 観葉植物か。水やり、忘れないようにしないとな
+furn dra item=record like=mid | happy レコードプレーヤーか。おでの好きな曲、かけてみるか
+furn dra item=nyacushion like=like | excited ニャーのクッション！ もふもふだぞ… | happy {name}、わかってるな。ずっと抱えていられるぞ
+furn dra item=starpic like=mid | normal 星空の絵か。見てると、眠くなってくるな
+furn dra item=trophy like=bad | troubled トロフィー棚か…。おで、飾るものあったかな | normal {name}の気持ちはうれしいぞ。決勝のメダルでも並べるか
+furn dra item=bookshelf like=mid | normal 本棚か。攻略の本を並べておくか
+furn dra item=heartmirror like=mid | surprise ハートの鏡か。…おでの顔、ちょっとかわいく見えるな
+furn dra item=lantern like=mid | happy 星のランタンか。部屋があったかくなるな
+furn dra item=mirrorball like=mid | surprise ミラーボールか！ おでの部屋、ずいぶん派手になるな
+furn dra item=windbell like=mid | happy 風鈴か。ちりんって、いい音だな
