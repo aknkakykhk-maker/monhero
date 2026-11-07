@@ -148,6 +148,23 @@ const problems = (page) => page.evaluate(() => {
       if (s1.sleep) check(`${T}寝ている助手は扉にしない`, (await page.locator(`[data-assistant-life-room="${s1.sleep}"] [data-assistant-life-rel-door]`).count()) === 0);
       { const ng = await problems(page); check(`${T}けんかの家: 文字の切れ・名前の折れ・重なり・読みにくさが無い`, !ng.length, ng.slice(0, 5).join(' / ')); }
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, `rel-1-quarrel-${v.id}-${tm.id}.jpg`), type: 'jpeg', quality: 80 });
+      // ようすを見る: けんか中の助手は、その場にいない相手の顔を出さない/やきもち中の助手は、やきもちの一言(2026-11-08 ミハリ 1・3)
+      if (tm.id === 'night' || SHOTS) {
+        const peekFaces = async (id) => {
+          await page.locator(`[data-assistant-life-room="${id}"]`).click();
+          await page.locator('[data-assistant-life-room-act="peek"]').click({ timeout: 3000 }).catch(() => {});
+          await page.locator('[data-assistant-peer-talk]').first().waitFor({ timeout: 4000 }).catch(() => {});
+          const r = await page.evaluate(() => { const el = document.querySelector('[data-assistant-peer-talk]'); return el ? { id: el.getAttribute('data-assistant-peer-talk'), faces: [...el.querySelectorAll('[data-assistant-peer-face]')].map(x => x.getAttribute('data-assistant-peer-face')) } : null; });
+          await finishTalk(page); await page.locator('[data-assistant-life-scene-back]').click({ timeout: 3000 }).catch(() => {}); await page.waitForTimeout(300);
+          return r;
+        };
+        const p1 = await peekFaces(s1.door);
+        check(`${T}けんか中の助手のようすを見る: その場にいない相手の顔を出さない`, !!p1 && p1.faces.length > 0 && p1.faces.every(f => f === s1.door), p1 ? `${p1.id} ${p1.faces.join(',')}` : 'なし');
+        const p2 = await peekFaces(s1.jealous);
+        check(`${T}やきもち中の助手のようすを見る: やきもちの一言`, !!p2 && /^rel-jealous-/.test(p2.id || ''), p2 ? p2.id : 'なし');
+        const diary = await page.evaluate(() => (ASSISTANT_LIFE_DIARY.state.items || []).map(x => x.text).join(' / '));
+        check(`${T}ようすを見たのを「◯◯と◯◯の様子を見守った」と残さない`, !/あつ・みゅあの様子/.test(diary), diary.slice(0, 60));
+      }
       // 部屋のシート(原因と取り持つ)
       await page.locator(`[data-assistant-life-room="${s1.door}"]`).click();
       await page.locator('[data-assistant-life-rel-row="quarrel"]').waitFor({ timeout: 3000 }).catch(() => {});

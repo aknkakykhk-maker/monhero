@@ -688,6 +688,15 @@ const assistantLifeRelDecorateRooms = (rooms, life, peerSt) => {
   }
   return rooms;
 };
+// やきもち中の助手に「ようすを見る」「声をかける」と、その気持ちの一言(やきもちの台本の、本人の行だけ)。2026-11-08 ミハリ
+const assistantLifeRelSoloTalk = (id, roomState) => {
+  if (!assistantLifeEnabled() || !roomState || !Array.isArray(roomState.jealous)) return null;
+  const pk = assistantLifePairKey(roomState.jealous[0], roomState.jealous[1]);
+  const t = assistantLifeRelSet().jealous.find(x => x.watcher === id && x.pk === pk);
+  if (!t) return null;
+  const lines = t.lines.filter(l => l.who === id).slice(0, 1);
+  return lines.length ? { id: `${t.id}-solo`, kind: 'life-solo', pair: [id], trio: undefined, lines, lv: 1, scene: 'any', life: true, rel: 'jealous-solo' } : null;
+};
 // けんか中の2人が、家で同じ組(2人だけ)になっているとき → 居間で離れて座る
 const assistantLifeRelLivingPair = (life, peerSt) => {
   const pending = assistantLifeRelPending(peerSt);

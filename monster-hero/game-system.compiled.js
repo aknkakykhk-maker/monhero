@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 62bb3821141a1fab
+// source-sha256: e77804de5fc6d928
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -104617,10 +104617,15 @@ const assistantLifePickSleepTalk = (id, {
 };
 const assistantLifeOnlyPresent = (talk, ids) => {
   if (!talk || !Array.isArray(talk.lines)) return talk;
-  if (talk.lines.every(l => ids.includes(l.who))) return talk;
+  const pair = Array.isArray(talk.pair) && talk.pair.some(x => !ids.includes(x)) ? talk.pair.filter(x => ids.includes(x)) : talk.pair;
+  const narrowed = pair !== talk.pair ? {
+    ...talk,
+    pair: pair.length ? pair : [...ids]
+  } : talk;
+  if (talk.lines.every(l => ids.includes(l.who))) return narrowed;
   const lines = talk.lines.filter(l => ids.includes(l.who));
   return lines.length ? {
-    ...talk,
+    ...narrowed,
     lines
   } : null;
 };
@@ -105754,10 +105759,11 @@ function AssistantLifeHouse({
     if ((life.watched || []).includes(key)) return;
     const w = assistantLifeWhereOf(life, id);
     const sleeping = !!(w && w.doing === 'sleep');
+    const relSolo = !sleeping && typeof assistantLifeRelSoloTalk === 'function' ? assistantLifeRelSoloTalk(id, rooms[id]) : null;
     const talk = sleeping ? assistantLifePickSleepTalk(id, {
       wake: false,
       place: w.place
-    }) : assistantLifeOnlyPresent(assistantLifePickSoloTalk(id, life), [id]);
+    }) : relSolo || assistantLifeOnlyPresent(assistantLifePickSoloTalk(id, life), [id]);
     if (!talk) {
       setNote(`${nameOf(id)}は、いまは静かに過ごしています`);
       return;
@@ -105779,11 +105785,12 @@ function AssistantLifeHouse({
   const invite = async id => {
     const w = assistantLifeWhereOf(life, id);
     const sleeping = !!(w && w.doing === 'sleep');
+    const relSolo = !sleeping && typeof assistantLifeRelSoloTalk === 'function' ? assistantLifeRelSoloTalk(id, rooms[id]) : null;
     const talk = sleeping ? assistantLifePickSleepTalk(id, {
       wake: true,
       bondLv: typeof bondLevelOf === 'function' ? bondLevelOf(id) : 1,
       place: w.place
-    }) : assistantLifePickCallTalk(id, life);
+    }) : relSolo || assistantLifePickCallTalk(id, life);
     if (!(await assistantLifeNudge('invite', id))) return;
     if (talk) {
       if (!sleeping) assistantLifeMarkSeen(talk);
@@ -118189,6 +118196,24 @@ const assistantLifeRelDecorateRooms = (rooms, life, peerSt) => {
     };
   }
   return rooms;
+};
+const assistantLifeRelSoloTalk = (id, roomState) => {
+  if (!assistantLifeEnabled() || !roomState || !Array.isArray(roomState.jealous)) return null;
+  const pk = assistantLifePairKey(roomState.jealous[0], roomState.jealous[1]);
+  const t = assistantLifeRelSet().jealous.find(x => x.watcher === id && x.pk === pk);
+  if (!t) return null;
+  const lines = t.lines.filter(l => l.who === id).slice(0, 1);
+  return lines.length ? {
+    id: `${t.id}-solo`,
+    kind: 'life-solo',
+    pair: [id],
+    trio: undefined,
+    lines,
+    lv: 1,
+    scene: 'any',
+    life: true,
+    rel: 'jealous-solo'
+  } : null;
 };
 const assistantLifeRelLivingPair = (life, peerSt) => {
   const pending = assistantLifeRelPending(peerSt);

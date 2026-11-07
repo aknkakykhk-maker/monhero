@@ -16492,7 +16492,7 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'atsu', e:'troubled', t:'今日はちょっとうまくいかないなー笑' },
   ] },
   { id:'life-solo-atsu-053', kind:'solo', who:'atsu', keys:{ mood:'sulky' }, line:'feel', lines:[
-    { who:'atsu', e:'normal', t:'ちなみに、悔しいのは本気だかららしい笑' },
+    { who:'atsu', e:'normal', t:'ちなみに、悔しいのは本気だからだよ笑' },
   ] },
   { id:'life-solo-kyuko-001', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'happy', why:'mypace' }, line:'scene', lines:[
     { who:'kyuko', e:'normal', t:'図書室、今日は俺ひとりだぁ。貸し切りっしょ笑' },

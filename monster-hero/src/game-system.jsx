@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1dc3a538cc73d9a1
+// generated-sha256: ebcc9d53e95811f9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -62065,9 +62065,12 @@ const assistantLifePickSleepTalk = (id, { wake = true, bondLv = 1, place = 'home
 // 場面に流す台本は、その場にいる助手が話すものだけ(いない助手の行は外す。残らなければ流さない)
 const assistantLifeOnlyPresent = (talk, ids) => {
   if (!talk || !Array.isArray(talk.lines)) return talk;
-  if (talk.lines.every(l => ids.includes(l.who))) return talk;
+  // 顔の並び(pair)も、その場にいる人だけにする(けんか中の「距離をおく」で、いない相手の顔と名前が出ていた・2026-11-08 ミハリ)
+  const pair = Array.isArray(talk.pair) && talk.pair.some(x => !ids.includes(x)) ? talk.pair.filter(x => ids.includes(x)) : talk.pair;
+  const narrowed = pair !== talk.pair ? { ...talk, pair: pair.length ? pair : [...ids] } : talk;
+  if (talk.lines.every(l => ids.includes(l.who))) return narrowed;
   const lines = talk.lines.filter(l => ids.includes(l.who));
-  return lines.length ? { ...talk, lines } : null;
+  return lines.length ? { ...narrowed, lines } : null;
 };
 
 // いま、その助手がどこで誰と何をしているか(様子がその時間のものでなければ null)
@@ -62580,7 +62583,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
     const w = assistantLifeWhereOf(life, id);
     const sleeping = !!(w && w.doing === 'sleep');
     // 寝ているときは寝言(起こさない)。起きているときは、その助手だけが話す台本(距離をおく行も、いない相手の行は外す)
-    const talk = sleeping ? assistantLifePickSleepTalk(id, { wake: false, place: w.place }) : assistantLifeOnlyPresent(assistantLifePickSoloTalk(id, life), [id]);
+    const relSolo = !sleeping && typeof assistantLifeRelSoloTalk === 'function' ? assistantLifeRelSoloTalk(id, rooms[id]) : null; // やきもち中なら、その気持ちの一言(rel.jsx)
+    const talk = sleeping ? assistantLifePickSleepTalk(id, { wake: false, place: w.place }) : (relSolo || assistantLifeOnlyPresent(assistantLifePickSoloTalk(id, life), [id]));
     if (!talk) { setNote(`${nameOf(id)}は、いまは静かに過ごしています`); return; }
     ASSISTANT_LIFE_STORE.set({ life: { ...life, watched: [...(life.watched || []), key] } });
     assistantLifeSaveLife(); if (!sleeping) assistantLifeMarkSeen(talk);
@@ -62590,7 +62594,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
     // その助手が {name} に話す台本だけ(ほかの助手が出る台本は使わない・2026-11-07 社長の指摘)。寝ていれば寝言か起こされた反応
     const w = assistantLifeWhereOf(life, id);
     const sleeping = !!(w && w.doing === 'sleep');
-    const talk = sleeping ? assistantLifePickSleepTalk(id, { wake: true, bondLv: typeof bondLevelOf === 'function' ? bondLevelOf(id) : 1, place: w.place }) : assistantLifePickCallTalk(id, life);
+    const relSolo = !sleeping && typeof assistantLifeRelSoloTalk === 'function' ? assistantLifeRelSoloTalk(id, rooms[id]) : null; // やきもち中なら、その気持ちの一言(rel.jsx)
+    const talk = sleeping ? assistantLifePickSleepTalk(id, { wake: true, bondLv: typeof bondLevelOf === 'function' ? bondLevelOf(id) : 1, place: w.place }) : (relSolo || assistantLifePickCallTalk(id, life));
     if (!(await assistantLifeNudge('invite', id))) return;
     if (talk) { if (!sleeping) assistantLifeMarkSeen(talk); playTalk(talk, { ids: [id], place: w ? w.place : 'home', sleep: sleeping }); }
     setNote(sleeping ? `${nameOf(id)}は寝ています。次の時間に、起きてだれかのところへ行きます` : `${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
@@ -63584,6 +63589,15 @@ const assistantLifeRelDecorateRooms = (rooms, life, peerSt) => {
     rooms[t.watcher] = { ...r, lonely: false, bub: ['💭 …いいなぁ'], jealous: [x, y], rel: 'jealous' }; // 狭い部屋の「さみしいな…」に置きかえない
   }
   return rooms;
+};
+// やきもち中の助手に「ようすを見る」「声をかける」と、その気持ちの一言(やきもちの台本の、本人の行だけ)。2026-11-08 ミハリ
+const assistantLifeRelSoloTalk = (id, roomState) => {
+  if (!assistantLifeEnabled() || !roomState || !Array.isArray(roomState.jealous)) return null;
+  const pk = assistantLifePairKey(roomState.jealous[0], roomState.jealous[1]);
+  const t = assistantLifeRelSet().jealous.find(x => x.watcher === id && x.pk === pk);
+  if (!t) return null;
+  const lines = t.lines.filter(l => l.who === id).slice(0, 1);
+  return lines.length ? { id: `${t.id}-solo`, kind: 'life-solo', pair: [id], trio: undefined, lines, lv: 1, scene: 'any', life: true, rel: 'jealous-solo' } : null;
 };
 // けんか中の2人が、家で同じ組(2人だけ)になっているとき → 居間で離れて座る
 const assistantLifeRelLivingPair = (life, peerSt) => {
