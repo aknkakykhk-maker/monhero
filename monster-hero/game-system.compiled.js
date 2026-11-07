@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1704779c9440cd02
+// source-sha256: 2a0bee79bf4232fe
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -101348,7 +101348,8 @@ const assistantLifePickGroupTalk = (group, peerSt, life = ASSISTANT_LIFE_STORE.s
     return true;
   };
   const oldTrios = typeof assistantPeerExtraTalks === 'function' ? assistantPeerExtraTalks().trios : [];
-  const fixed = [...assistantLifeTalkSet().trio, ...oldTrios.filter(t => !t.similar)].filter(t => Array.isArray(t.trio) && t.trio.every(id => ids.includes(id)) && pairsOk(t.trio)).map(t => ({
+  const fitsSize = t => ids.length <= 3 || !(t.lines || []).some(l => /3人|三人/.test(l.t || ''));
+  const fixed = [...assistantLifeTalkSet().trio, ...oldTrios.filter(t => !t.similar)].filter(t => Array.isArray(t.trio) && t.trio.every(id => ids.includes(id)) && pairsOk(t.trio) && fitsSize(t)).map(t => ({
     talk: t,
     keys: {
       doing: t.keys && t.keys.doing || t.lifeDoing || null
@@ -101358,7 +101359,7 @@ const assistantLifePickGroupTalk = (group, peerSt, life = ASSISTANT_LIFE_STORE.s
   if (freshFixed.length) return assistantLifeWithCtx(assistantLifeChoose(freshFixed, {
     doing: group.doing
   }, ['doing'], seen, rand), ctx);
-  const any = assistantLifeTalkSet().anyTrio.filter(t => t.pair.every(id => ids.includes(id))).map(t => ({
+  const any = assistantLifeTalkSet().anyTrio.filter(t => t.pair.every(id => ids.includes(id)) && fitsSize(t)).map(t => ({
     talk: t,
     keys: {
       doing: t.keys.doing || null
@@ -102479,6 +102480,10 @@ const assistantLifeDiaryAdd = async (text, ids = [], {
   } catch {}
 };
 const assistantLifeName = id => typeof assistantById === 'function' && assistantById(id) ? assistantById(id).name : id;
+const assistantLifeGroupNames = (ids, max = 4) => {
+  const list = [...ids].sort((a, b) => ASSISTANT_LIFE_HOUSE_ORDER.indexOf(a) - ASSISTANT_LIFE_HOUSE_ORDER.indexOf(b)).map(assistantLifeName);
+  return list.length > max ? `${list.slice(0, max - 1).join('・')} ほか${list.length - max + 1}人` : list.join('・');
+};
 const assistantLifeDiaryOnSlot = (life, slot, now = Date.now()) => {
   const gs = (life.groups || []).slice(0, 3);
   if (!gs.length) return;
@@ -102568,7 +102573,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-room .off{position:absolute;inset:0;z-index:3;background:rgba(6,9,24,.5)}
 .mhl-room .lamp{position:absolute;inset:0;z-index:3;background:radial-gradient(circle at 60% 40%,rgba(255,214,140,.45),transparent 70%);mix-blend-mode:screen;pointer-events:none}
 .mhl-room .tag{position:absolute;left:50%;top:50%;z-index:6;transform:translate(-50%,-38%) rotate(-3deg);max-width:92%;text-align:center;padding:3px 8px 4px;border-radius:7px;background:linear-gradient(#fef3c7,#fde68a);color:#422006;border:1.5px solid #b45309;box-shadow:0 3px 6px #0009}
-.mhl-room .tag b{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mhl-room .tag small{display:block;font-size:9px;font-weight:800;color:#7c2d12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mhl-room .tag b{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mhl-room .tag small[data-assistant-life-room-with]{white-space:normal;line-height:1.15}.mhl-room .tag small{display:block;font-size:9px;font-weight:800;color:#7c2d12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mhl-room .lock{position:absolute;inset:0;z-index:6;display:grid;place-items:center;background:rgba(15,23,42,.78);font-size:11px;font-weight:900;color:#cbd5e1}
 .mhl-liv{position:absolute;overflow:hidden;border-radius:3px;background:linear-gradient(#f3e3c4,#e7cfa2)}
 .mhl-board{position:absolute;left:8px;top:6px;bottom:6px;border-radius:5px;background:#c08a52;border:3px solid #7c4a22;padding:3px 6px;overflow:hidden}
@@ -102692,7 +102697,9 @@ function AssistantLifeRoom({
   }, state.bub), state && state.tag && React.createElement("span", {
     className: "tag",
     "data-assistant-life-room-away": id
-  }, React.createElement("b", null, state.tag[0]), React.createElement("small", null, state.tag[1])), !met && React.createElement("span", {
+  }, React.createElement("b", null, state.tag[0]), React.createElement("small", null, state.tag[1]), state.tag[2] && React.createElement("small", {
+    "data-assistant-life-room-with": true
+  }, state.tag[2])), !met && React.createElement("span", {
     className: "lock"
   }, "まだ会っていない"));
 }
@@ -102842,13 +102849,13 @@ const assistantLifeRoomsOf = (life, metIds) => {
           bub: w.doing === 'sleep' ? '💤 おやすみ中' : lonely ? '💭 だれか来ないかな…' : ids.length > 1 ? `${ASSISTANT_LIFE_PLACE_ICON.home} ${ids.length}人で${doing.label}` : doing.label
         };
       } else rooms[id] = {
-        tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, doing.label]
+        tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)]
       };
       continue;
     }
-    const withText = w.with.length ? `${w.with.map(assistantLifeName).join('・')}と` : 'ひとりで';
+    const sub = w.group ? `${w.group.ids.length}人で ${doing.label}` : `ひとりで ${doing.label}`;
     rooms[id] = {
-      tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${ASSISTANT_LIFE_PLACES[w.place]}へ`, `${withText} ・ ${doing.label}`]
+      tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${ASSISTANT_LIFE_PLACES[w.place]}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null]
     };
   }
   const q = peer && peer.quarrel && peer.quarrel.pending;
@@ -102864,7 +102871,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
         bub: mark
       } : {
         ...rooms[id],
-        tag: [rooms[id].tag[0], mark]
+        tag: [rooms[id].tag[0], mark, rooms[id].tag[2] || null]
       };
     }
   }
@@ -102906,7 +102913,8 @@ function AssistantLifeRoomSheet({
   const canWatch = groupKey ? !watched.includes(groupKey) : !watched.includes(`solo:${id}`);
   const atBeat = w && w.doing === 'practice';
   const slotDef = ASSISTANT_LIFE_SLOTS[slot.i];
-  const where = !w ? '🏡 部屋で過ごしている' : home ? `🏡 ${w.group ? `${w.with.map(assistantLifeName).join('・')}と ` : ''}${doing}` : `${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${ASSISTANT_LIFE_PLACES[w.place]}で${doing}${w.with.length ? ` ・ ${w.with.map(assistantLifeName).join('・')}と` : ''}`;
+  const groupText = w && w.group ? ` ・ ${w.group.ids.length}人(${assistantLifeGroupNames(w.group.ids, 8)})` : ' ・ ひとり';
+  const where = !w ? '🏡 部屋で過ごしている' : home ? `🏡 ${doing}${groupText}` : `${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${ASSISTANT_LIFE_PLACES[w.place]}で${doing}${groupText}`;
   return React.createElement("div", {
     className: "absolute inset-0",
     style: {
@@ -103066,7 +103074,7 @@ function AssistantLifeScene({
     if (peer && peer.talking) setStarted(true);
   }, [peer && peer.talking]);
   const done = started && peer && !peer.talking;
-  const ids = (scene.ids || []).slice(0, 3);
+  const ids = (scene.ids || []).slice(0, 4);
   const bg = scene.place === 'home' || !scene.place ? null : assistantLifeSceneBg(scene.place, look);
   const host = scene.place === 'home' ? assistantLifeHostOf(ids) : null;
   const room = host ? ASSISTANT_LIFE_ROOM_LOOK[host] : null;
@@ -103122,7 +103130,7 @@ function AssistantLifeScene({
     const who = assistantById(pid);
     if (!who) return null;
     const n = ids.length;
-    const cx = n === 1 ? 50 : n === 2 ? i ? 66 : 34 : [22, 50, 78][i];
+    const cx = n === 1 ? 50 : n === 2 ? i ? 66 : 34 : n === 3 ? [22, 50, 78][i] : [16, 38, 62, 84][i];
     return React.createElement("img", {
       key: pid,
       className: "st",
@@ -103131,8 +103139,8 @@ function AssistantLifeScene({
       style: {
         left: `${cx}%`,
         transform: 'translateX(-50%)',
-        height: '58%',
-        width: n === 1 ? '90%' : '70%',
+        height: n >= 4 ? '50%' : '58%',
+        width: n === 1 ? '90%' : n >= 4 ? '46%' : '70%',
         bottom: '22%'
       }
     });
@@ -103158,7 +103166,13 @@ function AssistantLifeScene({
     style: {
       fontSize: 19
     }
-  }, ASSISTANT_LIFE_PLACE_ICON[scene.place] || '🏡', " ", placeName))), hint && React.createElement("p", {
+  }, ASSISTANT_LIFE_PLACE_ICON[scene.place] || '🏡', " ", placeName))), ids.length >= 3 && React.createElement("p", {
+    "data-assistant-life-scene-group": true,
+    className: "mt-1 w-fit rounded-full px-2 py-0.5 text-[10px] font-black",
+    style: {
+      background: 'linear-gradient(90deg,#0ea5e9,#a855f7)'
+    }
+  }, "👥 ", ids.length, "人で ・ ", assistantLifeGroupNames(ids, 8)), hint && ids.length === 2 && React.createElement("p", {
     className: "mt-1 w-fit rounded-full px-2 py-0.5 text-[10px] font-black",
     style: {
       background: 'linear-gradient(90deg,#db2777,#a855f7)'

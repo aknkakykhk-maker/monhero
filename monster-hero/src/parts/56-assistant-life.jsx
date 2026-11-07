@@ -679,11 +679,13 @@ const assistantLifePickGroupTalk = (group, peerSt, life = ASSISTANT_LIFE_STORE.s
   const trioLv = typeof ASSISTANT_PEER_TRIO_LV !== 'undefined' ? ASSISTANT_PEER_TRIO_LV : 2;
   const pairsOk = (m) => { for (let i = 0; i < m.length; i++) for (let j = i + 1; j < m.length; j++) if (assistantLifeLevelOf(peerSt, m[i], m[j]) < trioLv) return false; return true; };
   const oldTrios = typeof assistantPeerExtraTalks === 'function' ? assistantPeerExtraTalks().trios : [];
-  const fixed = [...assistantLifeTalkSet().trio, ...oldTrios.filter(t => !t.similar)].filter(t => Array.isArray(t.trio) && t.trio.every(id => ids.includes(id)) && pairsOk(t.trio))
+  // 4人の組では「3人」と言う台本は使わない(2026-11-07 社長「3人でも4人でも同時に遊んでるならそう書く」)
+  const fitsSize = (t) => ids.length <= 3 || !(t.lines || []).some(l => /3人|三人/.test(l.t || ''));
+  const fixed = [...assistantLifeTalkSet().trio, ...oldTrios.filter(t => !t.similar)].filter(t => Array.isArray(t.trio) && t.trio.every(id => ids.includes(id)) && pairsOk(t.trio) && fitsSize(t))
     .map(t => ({ talk: t, keys: { doing: (t.keys && t.keys.doing) || t.lifeDoing || null } }));
   const freshFixed = fixed.filter(c => !seen[c.talk.id]);
   if (freshFixed.length) return assistantLifeWithCtx(assistantLifeChoose(freshFixed, { doing: group.doing }, ['doing'], seen, rand), ctx);
-  const any = assistantLifeTalkSet().anyTrio.filter(t => t.pair.every(id => ids.includes(id))).map(t => ({ talk: t, keys: { doing: t.keys.doing || null } }));
+  const any = assistantLifeTalkSet().anyTrio.filter(t => t.pair.every(id => ids.includes(id)) && fitsSize(t)).map(t => ({ talk: t, keys: { doing: t.keys.doing || null } }));
   const freshAny = any.filter(c => !seen[c.talk.id]);
   // どの3人でも: 話すのは pair の2人。顔は組の全員を並べる(3人の掛け合いとして見る・上がり方も3人の掛け合いと同じ)
   if (freshAny.length) return assistantLifeWithCtx({ ...assistantLifeChoose(freshAny, { doing: group.doing }, ['doing'], seen, rand), kind: 'trio', trio: [...ids] }, ctx);
