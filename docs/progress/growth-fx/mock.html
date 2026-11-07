@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>上がる演出の見本</title>
+<!-- 演出担当ハナビの見本(2026-11-07)。ゲームには入らない。?scene=…&t=秒 でその瞬間に止める -->
+<style>
+:root{--bond:#f472b6;--friend:#fb923c;--star:#facc15;--session:#c084fc;--beat:#a3e635;--breeder:#60a5fa}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;font-family:"Hiragino Sans","Noto Sans JP",sans-serif;color:#fff;background:#0b1026;overflow:hidden}
+.bg{position:fixed;inset:0;background:radial-gradient(120% 80% at 50% 0%,#334155 0%,#111827 60%,#0b1026 100%)}
+.bg:after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,#ffffff06 0 2px,transparent 2px 48px)}
+.homeui{position:fixed;left:12px;right:12px;top:12px;display:flex;justify-content:space-between;opacity:.5;font-size:12px;font-weight:900}
+.homeui span{background:#0006;border:1px solid #fff2;border-radius:10px;padding:6px 10px}
+.homeassist{position:fixed;left:50%;bottom:0;transform:translateX(-50%);height:62vh;opacity:.35;filter:saturate(.6)}
+.caption{position:fixed;left:8px;bottom:8px;font-size:11px;font-weight:900;color:#cbd5e1;background:#000a;padding:4px 8px;border-radius:8px;z-index:99}
+
+/* ===== 小: 行動で少し上がる(上のチップ) ===== */
+.chip{position:fixed;top:56px;right:12px;display:flex;align-items:center;gap:8px;padding:7px 12px 7px 8px;border-radius:999px;
+  background:linear-gradient(90deg,#1e1b2ecc,#0f172acc);border:1.5px solid var(--c);box-shadow:0 0 18px color-mix(in srgb,var(--c) 45%,transparent);
+  animation:chipIn .35s cubic-bezier(.2,1.6,.4,1) both, chipOut .3s ease-in 1.9s forwards;font-weight:900;font-size:12px}
+.chip .ico{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 30%,#0000);font-size:15px;animation:icoBeat .5s .3s ease-out}
+.chip .who{font-size:10px;color:#cbd5e1}
+.chip .num{color:var(--c);font-size:15px;margin-left:2px;animation:numPop .4s .35s cubic-bezier(.2,1.8,.4,1) both}
+.chip .bar{width:62px;height:6px;border-radius:9px;background:#334155;overflow:hidden;position:relative}
+.chip .bar i{position:absolute;inset:0 auto 0 0;background:var(--c);width:var(--from);animation:barGrow .7s .35s ease-out forwards}
+.chip .bar b{position:absolute;inset:0 auto 0 0;width:var(--to);background:#fff8;animation:ghost .5s .3s ease-out both}
+.chip.stack{position:relative;top:auto;right:auto;margin:6px 0}
+.p{position:fixed;font-size:14px;pointer-events:none;animation:floatUp 1.1s ease-out both;color:var(--c);text-shadow:0 0 8px var(--c)}
+@keyframes chipIn{from{transform:translateX(30px) scale(.6);opacity:0}to{transform:none;opacity:1}}
+@keyframes chipOut{to{transform:translateY(-14px);opacity:0}}
+@keyframes icoBeat{40%{transform:scale(1.45)}}
+@keyframes numPop{from{transform:scale(.2);opacity:0}to{transform:none;opacity:1}}
+@keyframes barGrow{to{width:var(--to)}}
+@keyframes ghost{from{opacity:0}to{opacity:1}}
+@keyframes floatUp{0%{transform:translate(0,0) scale(.4);opacity:0}20%{opacity:1;transform:translate(calc(var(--dx)*.3),-10px) scale(1.1)}100%{transform:translate(var(--dx),-70px) scale(.7);opacity:0}}
+
+/* ===== 中: アイテム(中央のカード) ===== */
+.card{position:fixed;left:50%;top:50%;width:min(340px,86vw);transform:translate(-50%,-50%);border-radius:22px;padding:14px 16px 16px;
+  background:linear-gradient(180deg,#1f1633f2,#0f172af2);border:2px solid var(--c);box-shadow:0 0 40px color-mix(in srgb,var(--c) 40%,transparent),0 12px 40px #0009;
+  animation:cardIn .45s cubic-bezier(.2,1.5,.4,1) both, cardOut .35s ease-in 3.1s forwards;text-align:center}
+.card .faces{display:flex;justify-content:center;gap:4px;height:110px;margin-top:-56px}
+.card .faces img{height:130px;margin-top:-20px;filter:drop-shadow(0 6px 10px #0008);animation:hop .5s .45s ease-out both}
+.card .faces img+img{animation-delay:.6s}
+.card .title{font-weight:900;font-size:14px;margin-top:2px}
+.card .item{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:900;color:#e2e8f0;background:#ffffff12;border-radius:999px;padding:3px 10px;margin:6px 0 4px;
+  animation:itemFly .55s .1s ease-out both}
+.card .tag{display:inline-block;font-size:11px;font-weight:900;padding:2px 9px;border-radius:999px;margin-left:4px;animation:numPop .35s 1.1s cubic-bezier(.2,1.8,.4,1) both}
+.tag.like{background:#f472b6;color:#3b0a24}.tag.dis{background:#64748b;color:#fff}.tag.norm{background:#ffffff22}
+.card .row{display:flex;align-items:center;gap:8px;margin-top:10px;text-align:left}
+.card .row .ico{font-size:20px;width:30px;text-align:center}
+.card .row .lab{font-size:11px;font-weight:900;color:#cbd5e1}
+.card .row .lab em{font-style:normal;color:var(--rc)}
+.card .gauge{flex:1;height:10px;border-radius:9px;background:#334155;position:relative;overflow:hidden;border:1px solid #fff2}
+.card .gauge i{position:absolute;inset:0 auto 0 0;width:var(--from);background:linear-gradient(90deg,color-mix(in srgb,var(--rc) 70%,#000),var(--rc));animation:barGrow 1.1s .7s cubic-bezier(.3,0,.2,1) forwards}
+.card .gauge i:after{content:"";position:absolute;right:0;top:-3px;bottom:-3px;width:8px;background:#fff;filter:blur(3px);opacity:.9}
+.card .val{font-weight:900;font-size:18px;color:var(--rc);min-width:64px;text-align:right;font-variant-numeric:tabular-nums}
+.card .val small{font-size:10px;color:#94a3b8;display:block}
+.card .hint{font-size:10px;color:#94a3b8;margin-top:10px}
+.burst{position:fixed;left:50%;top:50%;width:0;height:0;z-index:5}
+.burst span{position:absolute;font-size:var(--s,16px);color:var(--c);text-shadow:0 0 10px var(--c);animation:burst 1.2s var(--d,.7s) cubic-bezier(.1,.8,.3,1) both}
+@keyframes burst{0%{transform:translate(-50%,-50%) scale(.2);opacity:0}15%{opacity:1}100%{transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(1) rotate(var(--r));opacity:0}}
+@keyframes cardIn{from{transform:translate(-50%,-40%) scale(.7);opacity:0}to{transform:translate(-50%,-50%);opacity:1}}
+@keyframes cardOut{to{transform:translate(-50%,-56%);opacity:0}}
+@keyframes hop{0%{transform:translateY(16px);opacity:0}60%{transform:translateY(-10px);opacity:1}100%{transform:none}}
+@keyframes itemFly{from{transform:translateY(30px) scale(.5);opacity:0}to{transform:none;opacity:1}}
+.sweat span{position:absolute;font-size:16px;animation:drip 1s var(--d,.9s) ease-in both}
+@keyframes drip{0%{opacity:0;transform:translate(var(--x),-10px)}30%{opacity:1}100%{opacity:0;transform:translate(var(--x),30px)}}
+
+/* ===== 大: Lvアップ(画面いっぱい) ===== */
+.lv{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;gap:22px;background:radial-gradient(circle at 50% 42%,color-mix(in srgb,var(--c) 38%,#0000) 0%,#0b1026ee 62%);
+  animation:fade .3s both}
+.lv .rays{position:absolute;left:50%;top:42%;width:170vmax;height:170vmax;transform:translate(-50%,-50%);
+  background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--c) 14%,#0000) 0 8deg,#0000 8deg 22deg);animation:spin 9s linear infinite, fade .6s .2s both;
+  mask:radial-gradient(circle,#000 0 20%,#0000 60%)}
+.lv .core{position:relative;display:flex;flex-direction:column;align-items:center;margin-top:-18vh;z-index:2}
+.lv .emblem{position:relative;width:150px;height:150px;display:grid;place-items:center;animation:emIn .7s .15s cubic-bezier(.2,1.6,.4,1) both}
+.lv .emblem svg{position:absolute;inset:0;width:150px;height:150px;filter:drop-shadow(0 0 22px var(--c))}
+.lv .emblem .n{position:absolute;inset:0;display:grid;place-items:center;font-weight:900;font-size:40px;padding-top:8px;text-shadow:0 2px 0 #9d174d,0 0 12px #fff}
+.lv .emblem .n small{display:block;font-size:13px;margin-bottom:-12px;text-align:center}
+.lv .ring{position:absolute;left:50%;top:50%;width:150px;height:150px;border-radius:50%;border:4px solid #fff;transform:translate(-50%,-50%);animation:ring .9s .55s ease-out both}
+.lv .face{position:absolute;height:34vh;left:50%;margin-left:-22vh;bottom:0;opacity:.95;animation:slideR .6s .9s cubic-bezier(.2,1.4,.4,1) both;filter:drop-shadow(0 0 20px #000a)}
+.lv .ttl{font-weight:900;font-size:26px;letter-spacing:.06em;margin-top:6px;color:#fff;text-shadow:0 0 14px var(--c),0 3px 0 #0006;animation:numPop .45s .65s cubic-bezier(.2,1.8,.4,1) both}
+.lv .sub{font-size:12px;font-weight:900;color:#fbcfe8;animation:fade .4s .8s both}
+.lv .gains{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;width:min(300px,82vw)}
+.lv .gains li{display:flex;align-items:center;gap:8px;background:#0f172acc;border:1px solid color-mix(in srgb,var(--c) 60%,#0000);border-radius:12px;padding:6px 10px;font-size:12px;font-weight:900;
+  animation:gainIn .4s var(--d) cubic-bezier(.2,1.5,.4,1) both}
+.lv .gains li small{display:block;font-size:10px;color:#94a3b8;font-weight:700}
+.lv .gains li .new{margin-left:auto;font-size:9px;background:var(--c);color:#3b0a24;border-radius:6px;padding:1px 5px}
+.lv .hint{font-size:10px;color:#94a3b8;margin-top:10px;animation:fade .3s 2.4s both}
+.conf{position:absolute;left:50%;top:42%;width:8px;height:12px;animation:conf 1.8s var(--d) cubic-bezier(.1,.7,.3,1) both}
+@keyframes conf{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}10%{opacity:1}100%{transform:translate(var(--x),var(--y)) rotate(var(--r));opacity:0}}
+@keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes emIn{0%{transform:scale(.1) rotate(-30deg);opacity:0}100%{transform:none;opacity:1}}
+@keyframes ring{0%{transform:translate(-50%,-50%) scale(.6);opacity:1}100%{transform:translate(-50%,-50%) scale(2.6);opacity:0}}
+@keyframes slideR{from{transform:translateY(60px);opacity:0}to{transform:none;opacity:1}}
+@keyframes gainIn{from{transform:translateY(14px) scale(.9);opacity:0}to{transform:none;opacity:1}}
+/* 横向き: 紋章と一覧を左右に */
+@media (orientation:landscape){
+  .lv .core{flex-direction:row;gap:26px;align-items:center}
+  .lv .left{display:flex;flex-direction:column;align-items:center}
+  .lv .face{left:0;margin-left:0;height:72vh}
+  .lv .core{margin-top:0;margin-left:34vw}
+  .lv .gains{margin-top:0;width:300px}
+  .card{top:54%}
+}
+
+/* ===== 最小(演出量「最小」・軽量) ===== */
+.mini .p,.mini .burst,.mini .rays,.mini .conf,.mini .ring{display:none}
+.band{position:fixed;left:0;right:0;top:40%;padding:12px 16px;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:900;
+  background:linear-gradient(90deg,#0000,color-mix(in srgb,var(--c) 45%,#0f172a) 20% 80%,#0000);border-block:1.5px solid var(--c);animation:fade .2s both}
+.band{flex-direction:column;gap:2px}.band .big{font-size:22px;white-space:nowrap}
+.palette{position:fixed;inset:60px 12px auto 12px;display:flex;flex-direction:column;align-items:flex-start}
+.palette h3{font-size:12px;margin:0 0 4px;color:#cbd5e1}
+@media (orientation:landscape){.palette{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;inset:48px 16px auto 16px}.palette h3{grid-column:1/-1}}
+</style></head>
+<body>
+<div class="bg"></div>
+<div class="homeui"><span>💎 12,340</span><span>HOME</span><span>🎁 3</span></div>
+<div id="root"></div>
+<div class="caption" id="cap"></div>
+<script>
+const IMG='../../../monster-hero/images/';
+const q=new URLSearchParams(location.search);const scene=q.get('scene')||'small';const T=q.get('t');
+const root=document.getElementById('root');
+const KIND={
+  bond:{c:'var(--bond)',ico:'💗',name:'仲良し度',p:'♥'},
+  friend:{c:'var(--friend)',ico:'🤝',name:'友情Lv',p:'✦'},
+  star:{c:'var(--star)',ico:'★',name:'絆Lv',p:'★'},
+  session:{c:'var(--session)',ico:'🎤',name:'セッションLv',p:'♪'},
+  beat:{c:'var(--beat)',ico:'🎵',name:'ビートLv',p:'♪'},
+  breeder:{c:'var(--breeder)',ico:'🛡️',name:'ブリーダーLv',p:'◆'},
+};
+const chip=(k,who,num,from,to,cls='')=>`<div class="chip ${cls}" style="--c:${KIND[k].c};--from:${from}%;--to:${to}%"><span class="ico">${KIND[k].ico}</span><span><div class="who">${who}・${KIND[k].name}</div><div class="bar"><b></b><i></i></div></span><span class="num">+${num}</span></div>`;
+const parts=(k,n,x,y,spread=40)=>Array.from({length:n},(_,i)=>`<span class="p" style="--c:${KIND[k].c};left:${x+((i*37)%spread)-spread/2}px;top:${y}px;--dx:${((i*53)%60)-30}px;animation-delay:${.3+i*.09}s">${KIND[k].p}</span>`).join('');
+const burst=(k,n,d=.7,size=18)=>`<div class="burst">${Array.from({length:n},(_,i)=>{const a=i/n*Math.PI*2,r=150+(i%3)*40;return `<span style="--c:${KIND[k].c};--x:${Math.cos(a)*r}px;--y:${Math.sin(a)*r-30}px;--r:${(i*47)%90-45}deg;--d:${d+(i%4)*.04}s;--s:${size-(i%3)*4}px">${KIND[k].p}</span>`}).join('')}</div>`;
+const countUp=(el,from,to,delay,dur)=>{el.dataset.from=from;el.dataset.to=to;el.dataset.delay=delay;el.dataset.dur=dur;};
+let cap='';
+if(scene==='small'){
+  root.innerHTML=`<img class="homeassist" src="${IMG}assistant/myua_normal.PNG">`+chip('bond','みゅあ',4,42,46)+parts('bond',5,window.innerWidth-60,70);
+  cap='小: 行動でちょっと上がった(バトル・おしゃべり など) … 右上に1.9秒だけ';
+}else if(scene==='palette'){
+  root.innerHTML=`<div class="palette"><h3>種類ごとの色と形(どの値が上がったか一目で)</h3>`+
+   chip('bond','みゅあ',4,40,44,'stack')+chip('friend','みゅあ×きき',3,30,33,'stack')+chip('star','アーク',180,55,70,'stack')+
+   chip('session','きき',42,20,28,'stack')+chip('beat','アーク',36,60,66,'stack')+chip('breeder','あなた',120,70,76,'stack')+`</div>`;
+  cap='種類の見分け: 仲良し度=ピンクのハート/友情Lv=オレンジの手/絆Lv=金の星/セッションLv=紫のマイク/ビートLv=黄緑の音符/ブリーダーLv=青の盾';
+}else if(scene==='item'||scene==='like'||scene==='dislike'){
+  const pref=scene==='like'?'like':scene==='dislike'?'dis':'norm';
+  const faces=pref==='dis'?['myua_troubled','kiki_surprise']:pref==='like'?['myua_excited','kiki_happy']:['myua_happy','kiki_happy'];
+  const tag=pref==='like'?'<span class="tag like">大好き！</span>':pref==='dis'?'<span class="tag dis">ちょっと苦手…</span>':'';
+  const fTo=pref==='like'?72:pref==='dis'?38:58, fFrom=30, fNum=pref==='like'?60:pref==='dis'?12:38;
+  root.innerHTML=`<img class="homeassist" src="${IMG}assistant/myua_normal.PNG">
+  <div class="card" style="--c:var(--friend)">
+    <div class="faces"><img src="${IMG}assistant/${faces[0]}.PNG"><img src="${IMG}assistant/${faces[1]}.PNG"></div>
+    <div class="title">みゅあ と きき に 差し入れ！${tag}</div>
+    <div class="item">🧺 差し入れ ×1</div>
+    <div class="row" style="--rc:var(--friend)"><span class="ico">🤝</span><div style="flex:1"><div class="lab">2人の <em>友情Lv.4</em></div><div class="gauge" style="--from:${fFrom}%;--to:${fTo}%"><i></i></div></div><div class="val"><span class="cu" data-from="0" data-to="${fNum}" data-delay=".7" data-dur="1.1" data-pre="+">+0</span><small>次のLvまで あと${Math.round((100-fTo)*2.5)}</small></div></div>
+    <div class="row" style="--rc:var(--bond)"><span class="ico">💗</span><div style="flex:1"><div class="lab">あなたとの <em>仲良し度</em>(2人とも)</div><div class="gauge" style="--from:52%;--to:${pref==='dis'?55:60}%"><i style="animation-delay:1.2s"></i></div></div><div class="val"><span class="cu" data-from="0" data-to="30" data-delay="1.2" data-dur=".8" data-pre="+">+0</span><small>&nbsp;</small></div></div>
+    <div class="hint">押すと閉じる</div>
+  </div>
+  ${pref==='dis'?'<div class="burst sweat" style="top:calc(50% - 150px)"><span style="--x:-60px">💧</span><span style="--x:70px;--d:1.1s">💧</span></div>':burst('friend',pref==='like'?18:10)+burst('bond',pref==='like'?12:6,1.2,14)}`;
+  cap={item:'中: アイテム(ふつう) … 2人が喜ぶ顔・ゲージがぐんと伸びて数字が数え上がる',like:'中: 好きな品物(あとで入る好き嫌い) … 顔と粒が増え「大好き！」の札',dislike:'中: 苦手な品物 … 困り顔・汗・伸びは小さめ(値の計算は好き嫌いが入るときに決める)'}[scene];
+}else if(scene==='ticket'){
+  root.innerHTML=`<div class="card" style="--c:var(--star)">
+    <div class="faces"><img src="${IMG}monster-thumbs/ark.png" style="height:120px;border-radius:20px;margin-top:-6px"></div>
+    <div class="title">アーク に トレーニングチケット！</div>
+    <div class="item">🎟️ 重トレーニングチケット ×3</div>
+    <div class="row" style="--rc:var(--star)"><span class="ico">★</span><div style="flex:1"><div class="lab"><em>絆Lv.<span class="cu" data-from="41" data-to="43" data-delay=".9" data-dur="1.0">41</span></em> <span class="tag norm" style="animation-delay:1.9s">Lv +2</span></div><div class="gauge" style="--from:70%;--to:35%"><i class="wrap"></i></div></div><div class="val"><span class="cu" data-from="0" data-to="450" data-delay=".7" data-dur="1.2" data-pre="+">+0</span><small>絆経験値</small></div></div>
+    <div class="hint">押すと閉じる</div></div>${burst('star',14)}`;
+  cap='中: マスモンにアイテム … 金の星。Lvをまたぐときはゲージが満タン→0から伸び直す(今の結果画面と同じ動き)';
+}else if(scene==='levelup'||scene==='levelup-mini'){
+  const conf=Array.from({length:26},(_,i)=>`<span class="conf" style="background:${['#f472b6','#fde047','#fff','#f9a8d4','#c084fc'][i%5]};--x:${((i*71)%340)-170}px;--y:${((i*43)%300)-200}px;--r:${i*57}deg;--d:${.5+(i%6)*.05}s"></span>`).join('');
+  if(scene==='levelup-mini'){
+    root.className='mini';
+    root.innerHTML=`<img class="homeassist" src="${IMG}assistant/myua_normal.PNG"><div class="band" style="--c:var(--bond)"><span class="big">💗 仲良し度 Lv.12</span><span style="font-size:11px">みゅあ ・ ごほうび3つ(ギフトボックスへ)</span></div>`;
+    cap='演出量「最小」・軽量: 粒・光の輪・紙吹雪なし。帯1本と数字だけ(押せばすぐ閉じる)';
+  }else{
+  root.innerHTML=`<div class="lv" style="--c:var(--bond)"><div class="rays"></div>${conf}<img class="face" src="${IMG}assistant/myua_excited.PNG">
+   <div class="core"><div class="left"><div class="emblem"><svg viewBox="0 0 100 100"><path d="M50 88 C20 66 6 50 6 32 C6 18 17 8 30 8 C40 8 46 14 50 21 C54 14 60 8 70 8 C83 8 94 18 94 32 C94 50 80 66 50 88Z" fill="#f472b6" stroke="#fff" stroke-width="3"/></svg><span class="n"><span><small>Lv.</small>12</span></span><div class="ring"></div></div>
+   <div class="ttl">仲良し度 UP!</div><div class="sub">みゅあ との仲良し度が Lv.12 になった</div></div>
+   <ul class="gains">
+    <li style="--d:1.3s">🎁 <span>ごほうび<small>ダイヤ ×300 をギフトボックスへ</small></span></li>
+    <li style="--d:1.6s">🖼️ <span>みゅあの飾り枠<small>プロフィールで使える</small></span><span class="new">NEW</span></li>
+    <li style="--d:1.9s">💬 <span>新しいおしゃべり<small>HOMEで みゅあ が話してくれる</small></span><span class="new">NEW</span></li>
+   </ul></div><div class="hint" style="position:absolute;bottom:14px">押すと閉じる</div></div>`;
+  cap='大: Lvアップ … 画面いっぱい。光の輪・紙吹雪・助手の喜ぶ顔・新しく開いたものの紹介';
+  }
+}
+document.getElementById('cap').textContent=cap+(T?`  (t=${T}秒)`:'');
+// 数え上げ
+const t0=performance.now();
+const cus=[...document.querySelectorAll('.cu')];
+const ease=x=>1-Math.pow(1-x,3);
+const drawCu=(sec)=>cus.forEach(el=>{const f=+el.dataset.from,to=+el.dataset.to,d=+el.dataset.delay,du=+el.dataset.dur;const x=Math.max(0,Math.min(1,(sec-d)/du));el.textContent=(el.dataset.pre||'')+Math.round(f+(to-f)*ease(x)).toLocaleString();});
+// Lvをまたぐゲージ(満タン→0→伸びる)
+const wraps=[...document.querySelectorAll('.gauge i.wrap')];
+const drawWrap=(sec)=>wraps.forEach(el=>{el.style.animation='none';const x=Math.max(0,(sec-.7)/1.2);let w;if(x<.33)w=70+(100-70)*(x/.33);else if(x<.66)w=((x-.33)/.33)*100;else w=Math.min(35,((x-.66)/.34)*35);el.style.width=w+'%';});
+if(T!==null){const s=+T;document.getAnimations().forEach(a=>{a.pause();a.currentTime=s*1000;});drawCu(s);drawWrap(s);}
+else{const loop=()=>{const s=(performance.now()-t0)/1000;drawCu(s);drawWrap(s);requestAnimationFrame(loop)};loop();}
+</script>
+</body></html>

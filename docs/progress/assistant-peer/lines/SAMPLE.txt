@@ -1,0 +1,62 @@
+# 助手たちの今 — 台本のお手本(コトバ 2026-11-07)。書き手はこれと同じ形で書く
+# 読むもの: VOICE.md(口調)・lines/FEELINGS.md(気持ち)・lines/RELATIONS.md(ペア・3人)・LIFE-WORDS.md(鍵と穴の言葉)
+#
+# 1行 = 1本。「種類 人 鍵=値 … | 話す人 表情 セリフ | …」。鍵を書かないところは「どれでもよい」
+#   solo <人>                 ひとりごと。line=scene(様子)/feel(気持ち)。つなぐときは scene → feel の順
+#   invite <誘われる人> <誘う人> answer=glad(喜ぶ)/decline(断る)/shy(すねる・照れる)
+#   pair <人> <人>            2人。doing=snack/practice/training/cards/walk・lv=1-3/4-6/7-10・air=normal/after/makeup
+#   trio <人> <人> <人>        3人。相手は {c:id} で呼ぶ
+#   quarrel <人> <人> seed=snack/order/look/plan/late/noise/peek/score  言い合い || 距離をおく || 仲直り(「||」で3つに分ける)
+#   breeder <人>              ブリーダーが見に来たときのひとこと
+# 鍵: place=home/plaza/cafe/studio/ranch/cardroom/library/market/hill/garden・mood=happy/lonely/restless/sulky/sleepy/eager・why=lonely/mypace/distance
+# 穴: {c}(相手の呼び方。2人のとき)・{c:id}(3人のとき)・{place}・{doing}・{doing_te}(穴は1本に1つまで)
+# 表情: normal happy wink surprise troubled angry crying excited。1行60字まで
+# 守り: 2人きりの place=home・doing=sleep は書かない(仕組みで出ない)/恋愛・悪口・ないしょの話なし/モンスターを「子」と呼ばない
+# 書き方: 「{c}、」で始める行は3割まで。締めを「これからも〜」にしない。同じ台詞を3本以上で使わない
+
+## ひとりごと
+solo dra place=home mood=lonely why=lonely line=scene | dra troubled ……今日は、まだだれにも呼ばれてないな
+solo dra place=home mood=lonely why=lonely line=scene | dra normal 窓から広場が見えるわ。みんな楽しそうだな
+solo dra place=home mood=lonely why=lonely line=feel | dra normal 膝でもさすって待つか。……べつに待ってないけどな
+solo dra place=home mood=lonely why=lonely line=feel | dra troubled おでのギャグ、だれか聞いてくれないかな……えへへ
+solo dra place=home mood=sleepy line=scene | dra happy ふぁ〜……昼寝、2回目いくか
+solo kyuko place=library mood=happy why=mypace line=scene | kyuko normal 図書室、今日は俺ひとりだぁ。貸し切りっしょ笑
+solo kyuko place=library mood=happy why=mypace line=feel | kyuko happy 静かだと、編成の答えがすぐ見えるんだよねぇ
+solo mua place=plaza mood=lonely why=lonely line=scene | mua troubled あれ、広場だれもいないぢゃん…
+solo mua place=plaza mood=lonely why=lonely line=feel | mua normal まいっか！ だれか来るまで新しいポーズ考えとこｗ
+solo sorashido place=cardroom mood=eager line=scene | sorashido excited 新しい表、あと3列で完成だ笑
+solo sorashido place=cardroom mood=eager line=feel | sorashido happy 終わったら、だれかに見せたいな。まずはきゅうこちゃんかな笑
+
+## 声をかける → こたえる
+invite dra mua answer=glad | mua happy {c}〜、{place}でおやつしよ！ | dra surprise お、おでもいいのか？ | dra happy しょうがないな、行ってやるか。……えへへ
+invite kyuko mua answer=decline | mua excited {c}、いっしょにマーケット行こ！ | kyuko troubled ごめんねぇ、今いいとこなんだぁ。あとで行くよ笑 | mua wink おけ！ じゃあ、おみやげ見つけとく♪
+invite momosuke erubin answer=shy | erubin normal 練習のあと、いっしょに散歩しない？ | momosuke surprise え、ももと！？ | momosuke wink …しょ、しょうがないなぁ。ちょっとだけだよ♡
+invite atsu dra answer=glad | dra normal {c}、暇なら一戦どうだ | atsu excited いいね、待ってた！ 今日は勝つから笑
+
+## 2人(えるびん × もも:5つのしていること × 友情Lvの段3)
+pair erubin momosuke doing=snack lv=1-3 | momosuke excited ここのいちごタルト、絶対おいしいやつ！！ | erubin happy 本当だ、きれいだね。{c}はどれにする？ | momosuke wink 全部！！…はさすがにうそw 2つにする♡
+pair erubin momosuke doing=snack lv=4-6 | erubin normal 今日もいちごは、最後に食べるのかな？ | momosuke surprise え、なんで知ってるの！？ | erubin happy 毎回見てるからね笑 楽しみはあとに取っておく派だよね
+pair erubin momosuke doing=snack lv=7-10 | momosuke happy {c}と食べると、おやつが2倍おいしい気がする！！ | erubin happy 俺もだよ。{c}がしゃべってくれるから、つい長居しちゃうね | momosuke excited じゃあ今日も、あと1時間しゃべろ！！
+pair erubin momosuke doing=practice lv=1-3 | momosuke normal {c}、ちょっとだけ練習見ててくれる？ | erubin happy もちろん。俺でよければ、最後まで見てるよ | momosuke excited やった！！ じゃあ本気モードでいくね♡
+pair erubin momosuke doing=practice lv=4-6 | erubin surprise 今のステップ、前より速くなってるね | momosuke wink 気づいた！？ {c}、見るとこ見てるじゃんw | erubin happy 毎日見てたら、さすがに分かるよ笑
+pair erubin momosuke doing=practice lv=7-10 | momosuke troubled 今日ちょっと、声が出ないかも… | erubin normal 無理しなくていいよ。今日は振り付けだけにしようか | momosuke happy …うん。{c}がそう言ってくれると、安心する
+pair erubin momosuke doing=training lv=1-3 | erubin normal メタルナーって、こうやってみがくのかな？ | momosuke excited ちがうちがう！！ もっとやさしく、くるくるって！！ | erubin happy なるほど…{c}は先生だね笑
+pair erubin momosuke doing=training lv=4-6 | momosuke wink 見て、メタルナーに{c}の顔が映ってる！！ | erubin surprise 本当だ。ぴかぴかすぎて、俺のほうがまぶしいよw | momosuke excited でしょ！！ 今日も100点♡
+pair erubin momosuke doing=training lv=7-10 | erubin happy {c}のメタルナー、前より落ち着いた顔になったね | momosuke surprise え、そう？ ももは気づかなかった | erubin wink 毎日いっしょにいると、分からないものだよね☺️
+pair erubin momosuke doing=cards lv=1-3 | momosuke normal {c}、デュラハンのどこがいいの？ | erubin happy 守りながら、じっくり戦えるところかな。見てて落ち着くんだよね | momosuke wink ももはピカピカしてるカードのほうがいいなw
+pair erubin momosuke doing=cards lv=4-6 | erubin normal この組み方、どう思う？ | momosuke excited 名前がかっこいい！！ それだけで強そう！！ | erubin happy 名前で選ぶの、意外と大事かもね笑
+pair erubin momosuke doing=cards lv=7-10 | momosuke happy ねえ、ももにもデュラハンの組み方教えて！！ | erubin surprise {c}が？ うれしいな。じゃあ、いちばんやさしい形からね | momosuke excited うん！！ {c}の得意なやつ、ももも使いたい♡
+pair erubin momosuke doing=walk lv=1-3 | erubin happy {place}、今日は風が気持ちいいね | momosuke excited ほんとだ！！ 髪がなびいて、ちょっとアイドルっぽくない？ | erubin happy うん、とっても似合ってるよ
+pair erubin momosuke doing=walk lv=4-6 | momosuke excited 今日はね、とっておきの話があるの！！ | erubin wink じゃあ、ゆっくり歩きながら聞こうか | momosuke happy やった！！ えっとね、まずは朝の話から！！
+pair erubin momosuke doing=walk lv=7-10 | erubin normal {c}と歩くと、いつも知らない道を見つけるね | momosuke wink ももが勝手に曲がるからでしょw | erubin happy そのおかげで、この世界にくわしくなれたよ。ありがとう
+
+## 3人
+trio atsu mua sorashido doing=practice | atsu happy 今日はHELLいこ笑 | mua excited のった！ {c:sorashido}、記録お願い！ | sorashido excited まかせろ、全部数えるぜ・・・！
+trio dra erubin momosuke doing=walk | momosuke happy {c:dra}、膝だいじょぶ？ ゆっくり歩こ！！ | dra happy おう、ありがとな。おでの膝は今日も元気だ。……たぶん | erubin happy 疲れたら、あそこのベンチで休もうね
+
+## 言い合い → 距離をおく → 仲直り
+quarrel momosuke mua seed=order | momosuke angry {c}、鏡の前ずっと使ってる！！ | mua angry だってまだ前髪決まってないもん！ || momosuke troubled ……ふーん、べつにいいもん || mua happy さっきはごめんね。いっしょに鏡使お！ | momosuke wink …しょうがないなぁ。前髪、ももがやってあげる♡
+
+## ブリーダーへのひとこと
+breeder dra place=home | dra surprise お、ブリーダーか。……べつに、さみしくなんてなかったぞ。えへへ
+breeder kiki place=library | kiki happy ブリーダーさん、静かにどうぞ。今いいところなんでつ♪♪

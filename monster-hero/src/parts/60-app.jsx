@@ -3333,6 +3333,16 @@ function MonsterHeroGame() {
   const [extremeDifficulty, setExtremeDifficulty] = useState('EXTREME');
   // 冥界チャレンジのタブを開いたか(一度きりの NEW の札に使う・2026-11-01 の新しいキー)。読み込むまでは見たことにして、札を出しっぱなしにしない
   const UNDERWORLD_TAB_SEEN_KEY = 'mh_underworld_tab_seen_v1';
+  // 演奏の設定を、起動時に一度読む(2026-11-07 社長「オプションの判定ラインの位置の設定が、ゲームとちゃんとリンクできているか」)。
+  // これまではモンヒロビートの入口(openRhythmDemo / openRhythmDebug)でしか読まず、レイドジャックのように別の画面から
+  // 演奏を始めると、初期値(既定)のまま遊んでいた(判定ラインの高さ・ノーツの速さ・タイミングの調整などが既定に戻る)。
+  // 入口ではこれまでどおり読み直す。読み終わる前に設定を保存していたら、そちらを優先する(初期値のままのときだけ置き換える)
+  useEffect(() => { let alive = true; (async () => {
+    try {
+      const settings = normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false)));
+      if (alive) setRhythmSettings(prev => prev === DEFAULT_RHYTHM_SETTINGS ? settings : prev);
+    } catch (e) {}
+  })(); return () => { alive = false; }; }, []);
   const [underworldTabSeen, setUnderworldTabSeen] = useState(true);
   useEffect(() => { (async () => {
     try { setUnderworldTabSeen((await storeGet(UNDERWORLD_TAB_SEEN_KEY, false, false)) === true); } catch (e) { setUnderworldTabSeen(true); }
