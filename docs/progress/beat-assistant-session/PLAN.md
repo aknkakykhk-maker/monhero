@@ -264,3 +264,11 @@
 - [ ] 台詞の見直し(ナカヨシ(4)・呼び方と距離感): 待ち
 - [ ] 止め絵(縦横)・台詞の抜粋・更新履歴とヘルプの文 → 窓口(モンヒロくん)。公開の印は社長の「この文で」まで偽
 - 試し方: ゲームを開き HOME で `RELEASE_FLAGS.rhythmAssistantSession = true` にしてからモンヒロビートへ。デュオを試すときは `await ASSISTANT_PEER_STORE.load()` のあとで `ASSISTANT_PEER_STORE.set({ bond: { 'kiki-mua': 99999 }, special: ['kiki-mua'] })`(読み込む前に入れると消える)。サビが早い曲は「風がそよぐ場所」(約36秒)
+
+## 公開後(2026-11-07 #4770 で公開)
+
+- [x] 公開: 更新履歴・ヘルプ・一度きりの案内(`mh_rhythm_assistant_session_seen_v1`)・公開の印を真。更新履歴の「判定」は見張り(player-words-check)に合わせて外した
+- [x] 台詞の見直し: コトバ・ナカヨシ(4)とも完了。プレイヤーの呼び方は `{name}`(docs/rules/CALL_NAMES.md・player-call-check.js が必ず止める)
+- [ ] 助手ライフ(助手たちの家)とのつなぎ(社長「繋げたいね」・統括 11/7)。担当ナカヨシ5(session_0113GBaFJSugNXVQ5WBRBKNA)とすり合わせ中。
+      こちらから出した案: 読める値(セッションLv・回数・好み度・subscribe)/ 1曲ごとの知らせ `rhythmAssistSessionOnLive(fn)` / 家から誘う `rhythmAssistSessionInvite(id)` /
+      結果の「友情Lv +3」に段の名前を並べる / 暮らしでモンビーへ出かけるぶんの経験値(入れるかは相手が決める)。返事を待って、要るものから作る
