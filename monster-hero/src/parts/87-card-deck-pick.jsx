@@ -94,6 +94,7 @@ const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', 
                 <span className="min-w-0 flex-1" style={JA_WRAP_STYLE}>{jaWrap('⏩ 結果だけ見る(対戦の画面を出さずに、一瞬で最後まで戦う)')}</span>
               </button>
             )}
+            {auto.on && <CardAutoIntro/>}
             {auto.on && <p data-card-deck-pick-auto-note className="rounded-xl bg-slate-900/80 px-2.5 py-2 text-[11px] font-bold leading-snug text-slate-200" style={JA_WRAP_STYLE}>
               {jaWrap('選んだデッキの戦術カードで、あなたの側も自動で戦います。試合の途中で「自分で」に切り替えられます')}
               <span data-card-deck-pick-auto-left={auto.left === null ? '' : auto.left} className={`mt-1 block ${auto.left ? 'text-emerald-200' : 'text-amber-200'}`}>
@@ -165,6 +166,38 @@ const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', 
         <button type="button" data-card-deck-pick-go disabled={!chosen || busy} onClick={() => { void go(); }}
           className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40">対戦へ</button>
       </div>
+    </div>
+  );
+};
+
+// 🤖オートを初めて選んだときの助手の吹き出し(2026-11-07 社長「オート設定やクイックの誘導やチュートリアル」)。
+//   文は ASSISTANT_QUICK_GUIDE_LINES の card.auto(56-quick-guide.jsx の quickGuideLine。無い助手はみゅあの文)。
+//   「OK」を押したら二度と出さない。新しいキー mh_card_auto_intro_seen_v1(真偽値)だけを使う(CLAUDE.md ⑦)
+const CardAutoIntro = () => {
+  const bond = typeof useAssistantBond === 'function' ? useAssistantBond() : null;
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (typeof CARD_AUTO_INTRO_SEEN_KEY !== 'string') return undefined;
+    let cancelled = false;
+    (async () => {
+      let seen = false;
+      try { seen = await storeGet(CARD_AUTO_INTRO_SEEN_KEY, false, false); } catch (_) { seen = false; }
+      if (!cancelled && seen !== true) setShow(true);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  if (!show || typeof quickGuideLine !== 'function') return null;
+  const id = bond && bond.assistantId ? bond.assistantId : 'mua';
+  const line = quickGuideLine(id, 'card.auto');
+  if (!line) return null;
+  const who = typeof assistantById === 'function' ? assistantById(id) : null;
+  const face = who && typeof assistantFaceImage === 'function' ? assistantFaceImage(who, line.e || 'normal') : null;
+  return (
+    <div data-card-auto-intro className="flex items-start gap-2 rounded-xl border-2 border-fuchsia-300/70 bg-slate-950/90 px-2.5 py-2">
+      {face && <img src={face} alt="" aria-hidden="true" className="h-10 w-10 shrink-0 rounded-full border border-fuchsia-300/60 bg-slate-900 object-cover object-top"/>}
+      <p className="min-w-0 flex-1 text-[11px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE}>{typeof quickGuideNoBreak === 'function' ? quickGuideNoBreak(line.t) : line.t}</p>
+      <button type="button" data-card-auto-intro-ok onClick={() => { setShow(false); storeSet(CARD_AUTO_INTRO_SEEN_KEY, true, false); }}
+        className="min-h-[36px] shrink-0 self-center rounded-lg border border-fuchsia-300/70 bg-fuchsia-700/80 px-2.5 text-[11px] font-black text-white active:scale-[.97]">OK</button>
     </div>
   );
 };

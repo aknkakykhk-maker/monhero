@@ -313,6 +313,9 @@
 | `mh_screen_note_open_v1` | object / `{}` | 画面ごとの「詳しく」を開いているか(画面idごとの真偽値) |
 | `mh_ranking_debug` | `'1'` のとき有効 | ランキングの詳細ログ(手で `localStorage` に入れるデバッグ用。ゲームは書かない) |
 | `mh_masu_auto_enhance_intro_seen_v1` | boolean / `true` | マスモンの自動強化の案内を見たか。**既定値は `true`**(保存が無いときに「見た」扱いにすると案内が誰にも出ないため、読み込み側で未保存を判別してから出す) |
+| `mh_quick_guide_seen_v1` | `{ v:1, seen:[案内id] }` | クイック・AUTO設定・裏周回の案内(56-quick-guide.jsx)で、最後まで見た案内の id(g1a g1b g2 g3a g3b g3c auto)。無い・壊れているときは「どれもまだ見ていない」。知らない id ははぶく(2026-11-07 追加) |
+| `mh_quick_nudge_v1` | `{ v:1, n:回数, day:'YYYY-MM-DD' }` | クイックをまだクリアしていない人への誘導を出した回数と最後の日(日本時間・朝4時区切り)。1日1回・合計3回まで。無い・壊れているときは0回(2026-11-07 追加) |
+| `mh_card_auto_intro_seen_v1` | boolean | MFバトルカードの🤖オートを初めて選んだときの助手の吹き出しを「OK」で閉じたか。無いときは false(まだ見ていない)(2026-11-07 追加) |
 | `mh_profile_frame_owned_v1` | string[] / `[]` | 手に入れたプロフィールフレームのid。**一度もらったら外さない**(条件を変えても取り上げにならないよう、「いまのLv」ではなく「もらった記録」を持つ)。`normalizeOwnedProfileFrames` を通す |
 | `mh_assistant_costume_owned_v1` | string[] / `[]` | 買った助手の着替え(服)のid。**一度買ったら外さない**。`normalizeOwnedAssistantCostumes` を通す。マーケット(ダイヤショップ・ビートP交換所)で買うたびに、保存を読み直して足す |
 | `mh_assistant_costume_worn_v1` | object / `{}` | 助手ごとに今着ている服 `{ 助手id: 服id }`。無い助手は元の服。`normalizeWornAssistantCostumes` を通し、持っていない服・その助手の服ではないもの・消えた服は読み捨てて元の服へ戻す |
