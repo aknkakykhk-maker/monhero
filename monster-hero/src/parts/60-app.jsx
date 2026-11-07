@@ -20548,7 +20548,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 周回の報酬・自己ベスト・全国ランキングへも入れる(2026-10-02・ユーザー指示「ランキングにも反映」)。
           // 周回の報酬とビートPは、ライブに参加した人数ぶん多くなる(1人ふえるごとに+50%)。
           // 同じメンバーで続けると、さらに1曲ごとに+10%(上限+100%・2026-10-03)
-          const multiScale=rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1;
+          // 呼んだ助手のセッションLv.20/40/60/80 で +2/4/6/8%(助手とのセッション・2026-11-07。人数ボーナスと同じ所にだけ足す。スコアには入れない)
+          const assistBonus=rhythmPlay.from==='multi'&&rhythmAssistSessionEnabled()?rhythmAssistSessionRewardBonus(RHYTHM_ASSIST_SESSION_STORE.get(),((RHYTHM_MULTI.view()||{}).myCpus||[]).map(c=>rhythmAssistSessionIdOf(c.masuId))):0;
+          const multiScale=rhythmPlay.from==='multi'?Math.round(rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus)*(1+assistBonus)*100)/100:1;
           if(rhythmPlay.from==='multi')RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,result,false,{diffId:rhythmPlay.difficulty.id});
           // ===== 演奏1曲ぶんを、裏の∞周回の周回クリアとして反映する(2026-09-07・ユーザー提案) =====
           // 最後まで演奏したこの場でだけ行う。途中でやめたときは onComplete を通らないので何も入らない
@@ -20634,6 +20636,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }
           setRhythmPlay(null);setGameState('RHYTHM_OPTIONS');
         }}/>}
+        {/* 助手とのセッション: 演奏中の助手の顔とひとこと(演奏画面の外から重ねる。演奏の仕組みには触れない) */}
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='multi'&&rhythmAssistSessionEnabled()&&<RhythmAssistSessionPlayFace songId={rhythmPlay.song&&rhythmPlay.song.songId}/>}
 
         {/* モードえらび(RHYTHM_MODE_SELECT)と対戦(RHYTHM_MULTI)は同じ部品で描く。部屋に入る処理(フリーマッチ・
             ルーム作成・入室・フレンドの招待)はモードえらびの画面に並べ、入れたら RHYTHM_MULTI へ移る。
