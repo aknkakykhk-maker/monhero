@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b9f63a3326a9c2e9
+// generated-sha256: 162ff2963861f3b9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -30849,7 +30849,9 @@ const rhythmAssistSessionNormalize = (raw) => {
     const rewarded = (Array.isArray(src[id].rewarded) ? src[id].rewarded : []).map((n) => rhythmBuddyInt(n, 100)).filter((n, i, arr) => n > 0 && arr.indexOf(n) === i);
     mons[id] = { ...mon, likes, rewarded };
   });
-  return { mons };
+  // オプション「助手のひとこと」(2026-11-07)。'all' 全部 / 'few' 少なめ / 'off' 切る。無い人は全部
+  const talk = ['all', 'few', 'off'].includes(o.talk) ? o.talk : 'all';
+  return { mons, talk };
 };
 const rhythmAssistSessionMon = (state, assistantId) => {
   const st = rhythmAssistSessionNormalize(state);
@@ -30917,6 +30919,9 @@ const rhythmAssistSessionChooseSong = (state, assistantId, catalog, rand = Math.
 
 // ---- セッションLv で開くもの(PLAN.md 2章。スコア・判定には効かない) ----
 // 演奏中のひとことは Lv.1 から。サビで顔が光るのは Lv.15 から。ビートP の上乗せは Lv.20/40/60/80 で +2/4/6/8%
+// 結果のカードの枠が助手の色になるのは Lv.45 から・名前入りの背景は Lv.90 から
+const RHYTHM_ASSIST_SESSION_FRAME_LEVEL = 45;
+const RHYTHM_ASSIST_SESSION_BACK_LEVEL = 90;
 // 好きな曲(好み度)が見えるのは Lv.10 から
 const RHYTHM_ASSIST_SESSION_TASTE_LEVEL = 10;
 const RHYTHM_ASSIST_SESSION_GLOW_LEVEL = 15;
@@ -54350,7 +54355,9 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             const isMvp = r.m.id === team.mvpId && !team.waiting;
             const lv = r.res ? drawnLevel(r.res.diffId) : 0;
             return (
-              <li key={r.m.id} data-rhythm-multi-result-row role={r.m.id !== view.selfId ? 'button' : undefined} onClick={r.m.id !== view.selfId ? () => (r.m.cpu ? setBuddyInfoId(r.m.id) : setMemberSheetId(r.m.id)) : undefined} className={`relative flex ${r.m.id !== view.selfId ? 'cursor-pointer active:brightness-125' : ''} min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden rounded-xl px-0.5 pb-1.5 text-center ${isMvp ? 'mhmv-mvp z-10 border-2 border-amber-300 bg-gradient-to-b from-amber-500/35 via-pink-600/25 to-slate-900 pt-4 [@media(max-height:440px)]:pt-3.5 [[data-mh-view-rotation=true]_&]:pt-3.5' : 'border border-white/10 bg-slate-900/80 pt-3 [@media(max-height:440px)]:pt-1.5 [[data-mh-view-rotation=true]_&]:pt-1.5'}`}>
+              <li key={r.m.id} data-rhythm-multi-result-row style={rhythmAssistSessionCardStyle(r.m, isMvp)} role={r.m.id !== view.selfId ? 'button' : undefined} onClick={r.m.id !== view.selfId ? () => (r.m.cpu ? setBuddyInfoId(r.m.id) : setMemberSheetId(r.m.id)) : undefined} className={`relative flex ${r.m.id !== view.selfId ? 'cursor-pointer active:brightness-125' : ''} min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden rounded-xl px-0.5 pb-1.5 text-center ${isMvp ? 'mhmv-mvp z-10 border-2 border-amber-300 bg-gradient-to-b from-amber-500/35 via-pink-600/25 to-slate-900 pt-4 [@media(max-height:440px)]:pt-3.5 [[data-mh-view-rotation=true]_&]:pt-3.5' : 'border border-white/10 bg-slate-900/80 pt-3 [@media(max-height:440px)]:pt-1.5 [[data-mh-view-rotation=true]_&]:pt-1.5'}`}>
+                {/* 助手のセッションLv.90 からは、カードの下に助手の名前を薄く入れる(2026-11-07 助手とのセッション) */}
+                <RhythmAssistSessionCardBack m={r.m} />
                 {/* MVP は札をアイコンより前に出し、王冠・金色の光で目立たせる(2026-10-03・ユーザー指摘「MVPが裏に回ってる / もっと強調して」) */}
                 {isMvp && <b data-rhythm-multi-mvp className="mhmv-badge absolute left-1/2 top-1 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-to-r from-amber-300 via-yellow-100 to-amber-400 px-2.5 py-0.5 text-[11px] font-black tracking-wider text-slate-950 shadow-[0_0_12px_rgba(252,211,77,.9)] landscape:text-[13px]">👑 MVP</b>}
                 <span className={`relative z-10 shrink-0 rounded-full ${isMvp ? 'mhmv-ring' : ''}`}>
@@ -55845,7 +55852,12 @@ const rhythmAssistSessionRatio = (score, diffId) => {
 // 部屋のチャットで話すひとこと(cpuBrain.talk の助手の分)。kind は部屋(77)が渡す場面の名前
 //   join … 部屋に来た / pick・song … 曲が決まった(はじめて・好き・苦手) / result … 自分の結果(MVP のときだけ話す)
 //   reactResult … 呼んだ人の結果(フル コン・高い・ふつう・低い・好きな曲の専用・苦手を乗りこえた) / lvUp・likeUp … 育った
+// オプション「助手のひとこと」: 切る … 何も言わない / 少なめ … 来たとき・MVP・フルコン・演奏中のサビだけ
+const RHYTHM_ASSIST_SESSION_FEW_KINDS = Object.freeze(['join', 'climax']);
 const rhythmAssistSessionTalk = ({ assistantId, kind, songId = '', score = 0, diffId = '', mvp = false, fc = 0, quit = false, rand = Math.random }) => {
+  const mode = RHYTHM_ASSIST_SESSION_STORE.get().talk;
+  if (mode === 'off') return '';
+  if (mode === 'few' && !RHYTHM_ASSIST_SESSION_FEW_KINDS.includes(kind) && !(kind === 'result' && mvp) && !(kind === 'reactResult' && Number(fc) > 0)) return '';
   const say = (scene) => { const hit = rhythmAssistSessionPickLine(assistantId, scene, rand); return hit ? hit[1] : ''; };
   const roomSong = () => {
     const v = typeof RHYTHM_MULTI !== 'undefined' ? RHYTHM_MULTI.view() : null;
@@ -55916,6 +55928,14 @@ function RhythmAssistSessionPicker({ assistants = [], calledIds = [], canPay = t
   const calledOf = (id) => calledIds.includes(rhythmAssistSessionKey(id));
   return (
     <div data-rhythm-assist-picker className="flex min-h-0 flex-1 flex-col">
+      <div data-rhythm-assist-talk-option className="mb-2 flex shrink-0 items-center gap-1.5">
+        <span className="shrink-0 text-[11px] font-black text-slate-300">助手のひとこと</span>
+        {[['all', '全部'], ['few', '少なめ'], ['off', '切る']].map(([id, label]) => (
+          <button key={id} type="button" data-rhythm-assist-talk={id} aria-pressed={state.talk === id}
+            onClick={() => { void RHYTHM_ASSIST_SESSION_STORE.update((st) => (st.talk === id ? null : { ...st, talk: id })); }}
+            className={`min-h-[36px] flex-1 rounded-lg text-[11px] font-black ${state.talk === id ? 'border-2 border-pink-300 bg-pink-500/25 text-pink-100' : 'border border-white/10 bg-slate-800 text-slate-300'}`}>{label}</button>
+        ))}
+      </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {list.length === 0
           ? <p className="py-6 text-center text-[12px] font-bold text-slate-400">まだ呼べる助手がいません</p>
@@ -56085,8 +56105,10 @@ function RhythmAssistSessionPlayFace({ songId }) {
       }
       return false;
     };
+    const mode = RHYTHM_ASSIST_SESSION_STORE.get().talk;
     const speak = (kind) => {
-      if (queue.length || hideAt) return;
+      if (queue.length || hideAt || mode === 'off') return;
+      if (mode === 'few' && !RHYTHM_ASSIST_SESSION_FEW_KINDS.includes(kind)) return;
       // デュオがいれば、コンボ・サビのときは掛け合い(1曲3回まで)
       if ((kind === 'combo' || kind === 'climax') && duos.length && duoTalks < RHYTHM_ASSIST_SESSION_DUO_TALK_MAX && speakDuo('play')) { duoTalks += 1; return; }
       const order = ids.slice(turn).concat(ids.slice(0, turn));
@@ -56138,7 +56160,7 @@ function RhythmAssistSessionPlayFace({ songId }) {
           if (g) {
             // 合体(1曲1回): 2人の顔が重なり、画面のふちに2人の色の光。掛け合いは gattai の台詞
             gattaiDone = true; gattaiUntil = Date.now() + RHYTHM_ASSIST_SESSION_GATTAI_MS; setGattai({ a: g.a, b: g.b });
-            const rows = rhythmAssistSessionPickPair(g, 'gattai', usedPair);
+            const rows = mode === 'off' ? null : rhythmAssistSessionPickPair(g, 'gattai', usedPair);
             if (rows) { queue.length = 0; hideAt = 0; enqueue(rows); }
           } else speak('climax');
         }
@@ -56233,6 +56255,23 @@ function RhythmAssistSessionDuoResult({ ids = [], round }) {
         </p>
       ))}
     </>
+  );
+}
+
+// 結果のカードの見た目(Lv.45 で枠が助手の色・Lv.90 で名前入りの背景)。m.level は呼んだときのセッションLv(部屋の知らせに載る)
+const rhythmAssistSessionCardStyle = (m, isMvp = false) => {
+  const who = m && m.cpu && m.as ? rhythmAssistSessionWho(m.as) : null;
+  if (!who || isMvp) return undefined;
+  const lv = Number(m.level) || 0;
+  if (lv < RHYTHM_ASSIST_SESSION_FRAME_LEVEL) return undefined;
+  return { borderColor: who.accent || '#f472b6', borderWidth: 2, boxShadow: `inset 0 0 12px ${who.accent || '#f472b6'}55` };
+};
+function RhythmAssistSessionCardBack({ m }) {
+  const who = m && m.cpu && m.as ? rhythmAssistSessionWho(m.as) : null;
+  if (!who || (Number(m.level) || 0) < RHYTHM_ASSIST_SESSION_BACK_LEVEL) return null;
+  return (
+    <b data-rhythm-assist-card-back aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-1 z-0 select-none truncate text-center text-[15px] font-black italic tracking-widest opacity-25"
+      style={{ color: who.accent || '#f472b6' }}>{who.name}</b>
   );
 }
 

@@ -69,7 +69,9 @@ const rhythmAssistSessionNormalize = (raw) => {
     const rewarded = (Array.isArray(src[id].rewarded) ? src[id].rewarded : []).map((n) => rhythmBuddyInt(n, 100)).filter((n, i, arr) => n > 0 && arr.indexOf(n) === i);
     mons[id] = { ...mon, likes, rewarded };
   });
-  return { mons };
+  // オプション「助手のひとこと」(2026-11-07)。'all' 全部 / 'few' 少なめ / 'off' 切る。無い人は全部
+  const talk = ['all', 'few', 'off'].includes(o.talk) ? o.talk : 'all';
+  return { mons, talk };
 };
 const rhythmAssistSessionMon = (state, assistantId) => {
   const st = rhythmAssistSessionNormalize(state);
@@ -137,6 +139,9 @@ const rhythmAssistSessionChooseSong = (state, assistantId, catalog, rand = Math.
 
 // ---- セッションLv で開くもの(PLAN.md 2章。スコア・判定には効かない) ----
 // 演奏中のひとことは Lv.1 から。サビで顔が光るのは Lv.15 から。ビートP の上乗せは Lv.20/40/60/80 で +2/4/6/8%
+// 結果のカードの枠が助手の色になるのは Lv.45 から・名前入りの背景は Lv.90 から
+const RHYTHM_ASSIST_SESSION_FRAME_LEVEL = 45;
+const RHYTHM_ASSIST_SESSION_BACK_LEVEL = 90;
 // 好きな曲(好み度)が見えるのは Lv.10 から
 const RHYTHM_ASSIST_SESSION_TASTE_LEVEL = 10;
 const RHYTHM_ASSIST_SESSION_GLOW_LEVEL = 15;

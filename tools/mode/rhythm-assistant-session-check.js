@@ -192,5 +192,15 @@ check('助手のスコアをランキングへ送らない(助手の計算の部
   const DATA = fs.readFileSync(path.join(ROOT, 'monster-hero/data/assistants.js'), 'utf8');
   check('友情Lv の行動 session は +3・1日12(ペアの1日の上限の中・uncapped なし)', /\n  session: \{ amount:3, dailyMax:12, label:'2人でセッションをした' \},/.test(DATA));
 }
+// ---- 見た目・オプション ----
+{
+  const sb4 = { Math, Date, Object, Number, String, Array, JSON, console };
+  vm.createContext(sb4);
+  vm.runInContext(`${BUDDY}\n${SESSION}\n;globalThis.__o={norm:rhythmAssistSessionNormalize};`, sb4);
+  const o = sb4.__o;
+  check('オプション「助手のひとこと」は 全部/少なめ/切る。無い人・壊れた値は「全部」', o.norm(null).talk === 'all' && o.norm({ talk: 'few' }).talk === 'few' && o.norm({ talk: 'off' }).talk === 'off' && o.norm({ talk: 'zzz' }).talk === 'all');
+  check('「切る」なら部屋のチャットも演奏中のふきだしも出さない(合体の光は出す)', /if \(mode === 'off'\) return '';/.test(SCREEN) && /if \(queue\.length \|\| hideAt \|\| mode === 'off'\) return;/.test(SCREEN) && /const rows = mode === 'off' \? null : rhythmAssistSessionPickPair\(g, 'gattai', usedPair\);/.test(SCREEN));
+  check('結果のカード: Lv.45 で枠が助手の色・Lv.90 で名前入りの背景(MVP のカードは今のまま)', /const RHYTHM_ASSIST_SESSION_FRAME_LEVEL = 45;/.test(SESSION) && /const RHYTHM_ASSIST_SESSION_BACK_LEVEL = 90;/.test(SESSION) && /if \(!who \|\| isMvp\) return undefined;/.test(SCREEN) && /style=\{rhythmAssistSessionCardStyle\(r\.m, isMvp\)\}/.test(MULTI));
+}
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
