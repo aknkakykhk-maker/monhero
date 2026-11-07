@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 47dc0ed536bdf4ed
+// source-sha256: 8fb69b21b979ffa2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -101618,7 +101618,20 @@ const assistantLifeFacilityOf = entry => {
   if (entry.place === 'market') return 'market';
   return 'life';
 };
-const assistantLifeTimeLook = slotId => slotId === 'morning' ? 'morning' : slotId === 'evening' ? 'evening' : slotId === 'night' || slotId === 'late' ? 'night' : 'noon';
+const ASSISTANT_LIFE_TOD_LOOK = Object.freeze({
+  morning: 'morning',
+  day: 'noon',
+  evening: 'evening',
+  night: 'night'
+});
+const assistantLifeTimeLook = (now = Date.now()) => {
+  try {
+    const tod = typeof document !== 'undefined' && document.documentElement && document.documentElement.getAttribute('data-mh-tod');
+    if (tod && ASSISTANT_LIFE_TOD_LOOK[tod]) return ASSISTANT_LIFE_TOD_LOOK[tod];
+  } catch {}
+  const h = new Date(Number(now) + 9 * 3600000).getUTCHours();
+  return h >= 5 && h < 10 ? 'morning' : h >= 10 && h < 16 ? 'noon' : h >= 16 && h < 19 ? 'evening' : 'night';
+};
 const ASSISTANT_LIFE_VIEW = Object.freeze({
   morning: ['images/story-bg/monhero_plaza.jpg', 'images/story-bg/forest_morning.jpg'],
   noon: ['images/story-bg/monhero_plaza.jpg', 'images/story-bg/forest_deep.jpg'],
@@ -102101,10 +102114,22 @@ const assistantLifeRoomsOf = (life, metIds) => {
     };
   }
   const q = peer && peer.quarrel && peer.quarrel.pending;
-  if (q && q.pair) for (const id of String(q.pair).split('-')) if (rooms[id] && rooms[id].in) rooms[id] = {
-    ...rooms[id],
-    after: true
-  };
+  if (q && q.pair) {
+    const pair = String(q.pair).split('-');
+    for (const id of pair) {
+      const other = pair.find(x => x !== id);
+      if (!rooms[id] || !other) continue;
+      const mark = `💢 ${assistantLifeName(other)}と言い合いのあと`;
+      rooms[id] = rooms[id].in ? {
+        ...rooms[id],
+        after: true,
+        bub: mark
+      } : {
+        ...rooms[id],
+        tag: [rooms[id].tag[0], mark]
+      };
+    }
+  }
   return rooms;
 };
 function AssistantLifeRoomSheet({
@@ -102484,7 +102509,7 @@ function AssistantLifeHouse({
   const ids = (metIds || []).filter(id => ASSISTANT_LIFE_PREFS[id]);
   const metSet = new Set(ids);
   const slot = assistantLifeSlotAt();
-  const look = assistantLifeTimeLook(slot.id);
+  const look = assistantLifeTimeLook();
   const day = assistantLifeDayKey();
   const play = assistantLifePlayForDay(st.play, day);
   const tier = assistantLifeTierOf(play.points);

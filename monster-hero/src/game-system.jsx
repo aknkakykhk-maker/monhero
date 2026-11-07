@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 16776bc09c15dcd0
+// generated-sha256: a6dc2cc4b1894575
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -60735,8 +60735,15 @@ const assistantLifeFacilityOf = (entry) => {
   if (entry.place === 'market') return 'market';
   return 'life';
 };
-// 時間帯の見た目(朝・昼・夕・夜)
-const assistantLifeTimeLook = (slotId) => (slotId === 'morning' ? 'morning' : slotId === 'evening' ? 'evening' : (slotId === 'night' || slotId === 'late') ? 'night' : 'noon');
+// 時間帯の見た目(朝・昼・夕・夜)。ゲーム全体の「時間帯で雰囲気を変える」(ハナビの 44-time-of-day.jsx)とそろえる(2026-11-07 統括の決定)
+//   区切りは社長の決定: 朝 5:00〜/昼 10:00〜/夕 16:00〜/夜 19:00〜4:59(日本時間)。助手の居場所が入れかわる6つの区切りとは別
+//   <html data-mh-tod="morning|day|evening|night"> の印があればそれに従い、無ければ同じ区切りでここで決める
+const ASSISTANT_LIFE_TOD_LOOK = Object.freeze({ morning: 'morning', day: 'noon', evening: 'evening', night: 'night' });
+const assistantLifeTimeLook = (now = Date.now()) => {
+  try { const tod = typeof document !== 'undefined' && document.documentElement && document.documentElement.getAttribute('data-mh-tod'); if (tod && ASSISTANT_LIFE_TOD_LOOK[tod]) return ASSISTANT_LIFE_TOD_LOOK[tod]; } catch {}
+  const h = new Date(Number(now) + 9 * 3600000).getUTCHours();
+  return h >= 5 && h < 10 ? 'morning' : h >= 10 && h < 16 ? 'noon' : h >= 16 && h < 19 ? 'evening' : 'night';
+};
 // 窓の外・場面の背景(お話の背景の絵。広場と森は時間帯の絵がある)
 const ASSISTANT_LIFE_VIEW = Object.freeze({
   morning: ['images/story-bg/monhero_plaza.jpg', 'images/story-bg/forest_morning.jpg'],
@@ -60988,9 +60995,17 @@ const assistantLifeRoomsOf = (life, metIds) => {
     const withText = w.with.length ? `${w.with.map(assistantLifeName).join('・')}と` : 'ひとりで';
     rooms[id] = { tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${ASSISTANT_LIFE_PLACES[w.place]}へ`, `${withText} ・ ${doing.label}`] };
   }
-  // 言い合いのあとの2人(水色の縁)
+  // 言い合いのあとの2人(水色の縁と「💢 ◯◯と言い合いのあと」。2026-11-07 社長「喧嘩とか仲直りとか人間じみたのもどんどん」)
   const q = peer && peer.quarrel && peer.quarrel.pending;
-  if (q && q.pair) for (const id of String(q.pair).split('-')) if (rooms[id] && rooms[id].in) rooms[id] = { ...rooms[id], after: true };
+  if (q && q.pair) {
+    const pair = String(q.pair).split('-');
+    for (const id of pair) {
+      const other = pair.find(x => x !== id);
+      if (!rooms[id] || !other) continue;
+      const mark = `💢 ${assistantLifeName(other)}と言い合いのあと`;
+      rooms[id] = rooms[id].in ? { ...rooms[id], after: true, bub: mark } : { ...rooms[id], tag: [rooms[id].tag[0], mark] };
+    }
+  }
   return rooms;
 };
 
@@ -61137,7 +61152,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const ids = (metIds || []).filter(id => ASSISTANT_LIFE_PREFS[id]);
   const metSet = new Set(ids);
   const slot = assistantLifeSlotAt();
-  const look = assistantLifeTimeLook(slot.id);
+  const look = assistantLifeTimeLook();
   const day = assistantLifeDayKey();
   const play = assistantLifePlayForDay(st.play, day);
   const tier = assistantLifeTierOf(play.points);
