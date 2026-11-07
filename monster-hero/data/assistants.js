@@ -11634,6 +11634,69 @@ const ASSISTANT_CARD_CUP_STORY = [
 ];
 const ASSISTANT_CARD_CUP_STORY_CALLS = { mua: 'ひめちん／もも／あつくん', kiki: 'みゅあちん／ももさん／あっくん', momosuke: 'みゅあねぇ／きゅうちゃん', dra: 'あっくん／ソラシド', kyuko: 'ももすけ／きゅうこちゃん', sorashido: 'きゅうこちゃん', atsu: 'きゅうこちゃん' };
 
+// ---------- モンヒロビート本オープン(2026-11-07 社長「本オープン用のストーリーも必要」) ----------
+// 予告のお話(短い)と、本オープンのお話(ふりかえり → お祝い → ギフト案内)。助手8人全員が出る。
+// 予告は RELEASE_FLAGS.rhythmGrandOpenTeaser、本編は RELEASE_FLAGS.rhythmGrandOpen で出る(どちらも社長が決めるまで偽)。
+// あつの行は atsu:'with'(あつを解放した人だけ)。ほかの7人は公開ずみなので印なし。
+// ギフトの中身を変えたら、本編の④の行も直す(GRAND_OPEN_ALL_GIFT・17-release-changelog-login-missions.jsx)
+const ASSISTANT_RHYTHM_GRAND_OPEN_TEASER = [
+  { who:'mua',       e:'excited',  bg:'monhero_plaza', t:'みんなー！ まぢでビッグニュースあるんだけど！' },
+  { who:'kiki',      e:'surprise', t:'あれま、みゅあちん。そんなに慌てて、どうしたんでつか？' },
+  { who:'mua',       e:'happy',    t:'モンビーがね、もうすぐ本オープンするんだって！ｗ' },
+  { who:'dra',       e:'surprise', t:'本オープン……？ ふむ。おでたち、もうずっと遊んでるぞ' },
+  { who:'kiki',      e:'happy',    t:'今まではプレオープンだったんでつ。モンヒロビートが、いよいよ本番になるんでつよ♪♪' },
+  { who:'momosuke',  e:'excited',  t:'えー！！ モンビート、本番になったらもっとすごくなるってこと！？♡' },
+  { who:'atsu',      e:'excited',  atsu:'with', t:'まじで！？ てか、それお祝いするしかなくない？ 笑' },
+  { who:'kyuko',     e:'happy',    t:'ほい、お祝いならお菓子いるよねぇ〜。だれのおごりぃ？ 笑' },
+  { who:'sorashido', e:'excited',  t:'うぉぉぉ、本オープン！ 飾りつけの数の計算なら任せてくれだぜ・・・！' },
+  { who:'erubin',    e:'happy',    t:'いいねー！ 俺も手伝うよ。何から始めよっか' },
+  { who:'mua',       e:'wink',     t:'それは当日までのひみつ〜。ぜったい楽しみにしててね！' },
+  { who:'kiki',      e:'happy',    t:'くわしいことは、更新情報でお知らせしまつ。みなさん、お楽しみに〜♪♪' },
+];
+const ASSISTANT_RHYTHM_GRAND_OPEN_TEASER_CALLS = { kiki: 'みゅあちん' };
+const ASSISTANT_RHYTHM_GRAND_OPEN_STORY = [
+  // ---- ① 本オープンの朝。広場の飾りつけ ----
+  { who:'mua',       e:'excited',  bg:'monhero_plaza', fxText:'広場いっぱいに、風船と旗が飾られている', t:'みんな、準備できた〜！？ 今日はまぢで特別な日ぢゃん！' },
+  { who:'kiki',      e:'happy',    t:'はいでつ！ 今日は、モンヒロビートの本オープンの日でつ♪♪' },
+  { who:'dra',       e:'happy',    t:'えへへ、おで、ちょっと早起きしたからな。飾りつけ、がんばったぞ' },
+  { who:'erubin',    e:'happy',    t:'ドラちゃん、朝からずっと風船ふくらませてたもんね笑 さすがだよー' },
+  { who:'sorashido', e:'excited',  t:'うぉぉぉ、風船ぜんぶで88個！ 俺、ちゃんと数えたぜ・・・！' },
+  { who:'kyuko',     e:'troubled', t:'ばこちゃん、数えるとこそこぉ？ 笑 ほい、はやく始めよ〜' },
+  // ---- ② ふりかえり ----
+  { who:'mua',       e:'normal',   t:'でもさ、プレオープンから、いろんなことあったよね〜' },
+  { who:'kiki',      e:'happy',    t:'はじめは、曲も難易度も今よりずっと少なかったんでつよね。なつかしいでつ (*´ω`*)' },
+  { who:'momosuke',  e:'excited',  t:'ももは、モンビートの大会がいちばんの思い出！！ みんなで順位を見て、ドキドキしたよね♡' },
+  { who:'dra',       e:'normal',   t:'ふむ。おでは、難易度HELLだな。……指がつるかと思ったからな' },
+  { who:'mua',       e:'happy',    t:'あとさー、みんなで対戦できるようになったのも、まぢアツかったｗ' },
+  { who:'kyuko',     e:'happy',    t:'ハロウィンの夜もさぁ、みんなでジャックに挑んだよねぇ笑' },
+  { who:'atsu',      e:'excited',  atsu:'with', t:'てか、マスモンと一緒にセッションできるの、まじでエモくない？ 笑' },
+  { who:'sorashido', e:'happy',    t:'俺は途中から来たけど、みんなの記録を見てるだけで楽しいよなー☺️' },
+  { who:'erubin',    e:'happy',    t:'俺なんて、来たのはついこのあいだだからね。これから、いっぱい教えてね' },
+  { who:'kiki',      e:'happy',    t:'それもこれも、遊んでくれたみなさんのおかげでつ。ほんとうに、ありがとうございまつ♪♪' },
+  // ---- ③ お祝い ----
+  { who:'mua',       e:'excited',  fx:'transform', fxText:'パーン！ クラッカーの音が、広場にひびいた', t:'せーのっ……モンヒロビート、本オープン、おめでとーーー！！' },
+  { who:'momosuke',  e:'excited',  t:'おめでとう！！ もも、今日からもっともっと叩くよ〜♡' },
+  { who:'dra',       e:'excited',  t:'おめでとうだ！ おで、ケーキも用意したからな' },
+  { who:'kyuko',     e:'surprise', t:'えっ、ケーキぃ！？ ドラちゃん、それ先に言ってよぉ〜笑' },
+  { who:'atsu',      e:'happy',    atsu:'with', t:'ケーキあるなら、もう勝ち確じゃん 笑' },
+  { who:'sorashido', e:'excited',  t:'切り分けなら任せてくれだぜ・・・！ 角度まで、きっちり計算するからよ笑' },
+  { who:'erubin',    e:'happy',    t:'さすがソラくん笑 じゃあ俺、みんなの飲みもの用意してくるねー' },
+  // ---- ④ ギフト案内 ----
+  { who:'kiki',      e:'normal',   t:'それから、みなさんに大事なお知らせがありまつ' },
+  { who:'kiki',      e:'happy',    t:'本オープンを記念して、ギフトボックスにプレゼントを入れておきまちた♪♪' },
+  { who:'mua',       e:'excited',  t:'しかもさ、ダイヤ1,000万個！ まぢでやばくない！？ｗ' },
+  { who:'dra',       e:'surprise', t:'いっせんまん……。おで、指が足りないぞ' },
+  { who:'sorashido', e:'excited',  t:'うぉぉぉ、1日1,000個ずつ使っても、27年以上かかるぜ・・・！' },
+  { who:'erubin',    e:'happy',    t:'計算はやいね笑 ほかにも、虹のプシュケーやスキップチケットも入ってるよ' },
+  { who:'momosuke',  e:'excited',  t:'セッション券と性格のたねもある！！ もも、マスモンの性格えらび、がんばっちゃお〜♡' },
+  { who:'kyuko',     e:'happy',    t:'ほい、受け取りの期限はないってさぁ。でも、早めにもらっとこ〜笑' },
+  { who:'kiki',      e:'happy',    t:'おひとりさま1回、ギフトボックスから受け取れまつ。これから始めるみなさんにも、記念のプレゼントがありまつよ♪♪' },
+  { who:'atsu',      e:'wink',     atsu:'with', t:'みんな、まじでありがと！ これからもよろしくね 笑' },
+  { who:'mua',       e:'wink',     t:'これからもモンビー、いっぱい遊んでね！ あたしたち、まぢで待ってるから！' },
+  { who:'kiki',      e:'happy',    t:'モンヒロビートを、これからもよろしくお願いしまつ♪♪' },
+];
+const ASSISTANT_RHYTHM_GRAND_OPEN_STORY_CALLS = { erubin: 'ドラちゃん／ソラくん', kyuko: 'ばこちゃん／ドラちゃん' };
+
 // ===== イベント「鍵の向こう側へ ～パンドラとふたつの翼～」(2026-11-02〜11-09)のお話 =====
 // 第1話「鎖の箱」(社長の「この文で」2026-11-02)。開始の 11/2 12:00 に開幕のお話として HOME で1回流れ、そのあとは回想から見返せる。
 // 出る時刻・話の一覧は data/rhythm-event.js の PANDORA_WINGS_STORIES。BGM は Rebellion(13-bgm の pandoraWingsStoryEvent)。
@@ -12042,6 +12105,10 @@ const EVENT_REPLAYS = [
   { id: 'pandora_wings_2026_ep7', date: '2026-11-08 04:00', title: '鍵の向こう側へ 第7話 ～私と私で～', script: PANDORA_WINGS_EP7, calls: PANDORA_WINGS_EP7_CALLS, unlockedKey: 'pandoraWingsEp7Seen', group: 'pandora_wings' },
   // 終章(2026-11-09 4:00)。閉幕のお話として流れる(60-app.jsx の RHYTHM_EVENT_THANKS_STORY_BY_EVENT)
   { id: 'pandora_wings_2026_ep8', date: '2026-11-09 04:00', title: '鍵の向こう側へ 第8話・終章 ～鍵の向こう側へ～', script: PANDORA_WINGS_EP8, calls: PANDORA_WINGS_EP8_CALLS, unlockedKey: 'pandoraWingsEp8Seen', group: 'pandora_wings' },
+  // モンヒロビート本オープン(2026-11-07)。予告は rhythmGrandOpenTeaser、本編は rhythmGrandOpen の印が真になるまで回想にも出さない。
+  //   date は公開の日が決まったら合わせる。見たかは mh_rhythm_event_story_v1 の id
+  { id: 'rhythm_grand_open_teaser', date: '2026-11-07 12:00', title: 'もうすぐ本オープン！ ～モンヒロビート～', script: ASSISTANT_RHYTHM_GRAND_OPEN_TEASER, calls: ASSISTANT_RHYTHM_GRAND_OPEN_TEASER_CALLS, unlockedKey: 'rhythmGrandOpenTeaserSeen', releaseFlag: 'rhythmGrandOpenTeaser', group: 'update' },
+  { id: 'rhythm_grand_open', date: '2026-11-07 12:01', title: 'モンヒロビート、本オープン！ ～8人のお祝い～', script: ASSISTANT_RHYTHM_GRAND_OPEN_STORY, calls: ASSISTANT_RHYTHM_GRAND_OPEN_STORY_CALLS, unlockedKey: 'rhythmGrandOpenSeen', releaseFlag: 'rhythmGrandOpen', group: 'update' },
   { id: 'card_cup_2026_10_31', date: '2026-10-31 12:00', title: 'みゅあ杯、はじまるよ！ ～個人杯～', script: ASSISTANT_CARD_CUP_STORY, calls: ASSISTANT_CARD_CUP_STORY_CALLS, unlockedKey: 'cardCupStorySeen', releaseFlag: 'cardCup', hideUntilFirstLine: ['atsu'], group: 'update' },
   { id: 'raid_jack_howto_2026_10_04', date: '2026-10-04 08:02', title: 'カボチャの大王ジャック ～レイドの遊び方～', script: ASSISTANT_RAID_JACK_HOWTO, calls: ASSISTANT_RAID_JACK_HOWTO_CALLS, unlockedKey: 'raidJackHowtoSeen', releaseFlag: 'raidJack', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, group: 'halloween' },
 ];
