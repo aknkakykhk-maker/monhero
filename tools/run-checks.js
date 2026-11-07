@@ -202,6 +202,14 @@ const FORCE_CHECKS = [
     checks: ['mode/rhythm-overlap-reach-check.js', 'mode/rhythm-note-reach-check.js', 'mode/rhythm-released-chart-lock-check.js',
       'mode/rhythm-monster-four-check.js', 'mode/rhythm-slide-start-lane-check.js', 'mode/rhythm-expert-master-order-check.js', 'mode/rhythm-chart-hand-rules-check.js'],
     why: '公開中の譜面の中身(押せない配置・取れないノーツ・指紋・モンスターノーツ4個・スライドの始まり・EXPERT と MASTER の順・手の決まり)' },
+  // データ以外の所で公開中の曲の遊んだ感じが変わらないかの見張り(2026-11-07 社長「既存曲ちょこちょこ勝手に変わる」)。
+  // 組み立て後のノーツ列(rhythm-mode.js・ミラーとアシスト・makeRuntimeNotes)、判定の決まり、音源の頭の無音・オフセット・長さ
+  { re: /^(monster-hero\/(data\/rhythm-mode\.js|src\/parts\/(13-bgm-and-rhythm-settings|30-rhythm-play)\.jsx)|tools\/mode\/rhythm-(play-lock-lib|released-play-notes-lock-check|judgment-rules-lock-check)\.js|tools\/mode\/rhythm-(released-play-notes|judgment-rules)-lock\.json)$/,
+    checks: ['mode/rhythm-released-play-notes-lock-check.js', 'mode/rhythm-judgment-rules-lock-check.js'],
+    why: '公開中の譜面の組み立て後のノーツ列・判定の決まり(控えと同じか)' },
+  { re: /^(monster-hero\/(audio\/.*\.mp3|src\/parts\/13-bgm-and-rhythm-settings\.jsx|data\/rhythm-mode\.js)|tools\/mode\/rhythm-released-audio-lock(-check\.js|\.json))$/,
+    checks: ['mode/rhythm-released-audio-lock-check.js'],
+    why: '公開中の曲の音源(頭の無音・オフセット・長さ)が控えと同じか' },
 ];
 
 function tokensOf(file) {

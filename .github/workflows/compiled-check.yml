@@ -93,6 +93,9 @@ jobs:
           node tools/mode/rhythm-monster-notes-check.js
           node tools/mode/rhythm-monster-four-check.js
           node tools/mode/rhythm-released-chart-lock-check.js
+          node tools/mode/rhythm-released-play-notes-lock-check.js
+          node tools/mode/rhythm-judgment-rules-lock-check.js
+          node tools/mode/rhythm-released-audio-lock-check.js
           node tools/mode/rhythm-chart-authoring-ui-check.js
           node tools/mode/rhythm-invalid-placement-check.js
           node tools/mode/rhythm-review-mode-check.js
