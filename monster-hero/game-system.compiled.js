@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 19b7063ebd976dca
+// source-sha256: fc40de6629db9230
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -90387,10 +90387,10 @@ function RhythmMultiScreen({
   const callAssistant = async who => {
     if (!who || !rhythmAssistSessionEnabled() || !RHYTHM_MULTI.canSummon()) {
       setBuddySheet('');
-      return;
+      return 'full';
     }
     const key = rhythmAssistSessionKey(who.id);
-    if ((view && view.myCpus ? view.myCpus : []).some(c => c.masuId === key)) return;
+    if ((view && view.myCpus ? view.myCpus : []).some(c => c.masuId === key)) return 'already';
     const day = rhythmBuddyDayKey(Date.now());
     const call = {
       id: rhythmBuddyCallId(),
@@ -90413,7 +90413,7 @@ function RhythmMultiScreen({
         day
       }));
     }
-    if (!paid) return;
+    if (!paid) return 'no_ticket';
     setBuddyBumped(false);
     const joined = RHYTHM_MULTI.summon({
       masuId: key,
@@ -90426,7 +90426,25 @@ function RhythmMultiScreen({
     });
     if (!joined) endBuddy(key, call.id);
     setBuddySheet('');
+    return joined ? 'ok' : 'full';
   };
+  const [inviteTick, setInviteTick] = React.useState(0);
+  React.useEffect(() => typeof rhythmAssistSessionOnInvite === 'function' ? rhythmAssistSessionOnInvite(() => setInviteTick(n => n + 1)) : undefined, []);
+  const inviteRoomReady = !!(view && view.status === 'open' && view.selfId);
+  React.useEffect(() => {
+    if (!inviteRoomReady || typeof rhythmAssistSessionTakeInvite !== 'function' || !rhythmAssistSessionPeekInvite()) return;
+    const p = rhythmAssistSessionTakeInvite();
+    const who = (sessionAssistants || []).find(x => x && x.id === p.id);
+    const done = (ok, reason) => rhythmAssistSessionInviteDone(p.onResult, {
+      ok,
+      reason
+    });
+    if (!who) {
+      done(false, 'locked');
+      return;
+    }
+    void callAssistant(who).then(r => done(r === 'ok' || r === 'already', r || 'full'));
+  }, [inviteRoomReady, inviteTick]);
   const sessionAssistantsOn = rhythmAssistSessionEnabled() && (sessionAssistants || []).length > 0;
   const buddySongName = id => {
     const song = songs.find(x => x.songId === id);
@@ -90648,6 +90666,10 @@ function RhythmMultiScreen({
     rhythmMultiPendingInvite = null;
     if (!RHYTHM_MULTI.view()) joinFromInvite(pending);
   }, []);
+  React.useEffect(() => {
+    if (typeof rhythmAssistSessionPeekInvite !== 'function' || !rhythmAssistSessionPeekInvite() || RHYTHM_MULTI.view()) return;
+    createPrivate();
+  }, [inviteTick]);
   const joinPrivate = () => {
     const code = rhythmMultiNormalizeCode(codeInput);
     if (!code) {
@@ -94630,6 +94652,108 @@ const rhythmAssistSessionQueueFx = item => {
     } catch (_) {}
   }, 500);
 };
+const RHYTHM_ASSIST_SESSION_LIVE_LISTENERS = new Set();
+const rhythmAssistSessionOnLive = fn => {
+  if (typeof fn !== 'function') return () => {};
+  RHYTHM_ASSIST_SESSION_LIVE_LISTENERS.add(fn);
+  return () => {
+    RHYTHM_ASSIST_SESSION_LIVE_LISTENERS.delete(fn);
+  };
+};
+const rhythmAssistSessionEmitLive = payload => {
+  RHYTHM_ASSIST_SESSION_LIVE_LISTENERS.forEach(fn => {
+    try {
+      fn(payload);
+    } catch (_) {}
+  });
+};
+const RHYTHM_ASSIST_SESSION_INVITE = {
+  pending: null,
+  app: null,
+  listeners: new Set()
+};
+const rhythmAssistSessionOnInvite = fn => {
+  RHYTHM_ASSIST_SESSION_INVITE.listeners.add(fn);
+  return () => {
+    RHYTHM_ASSIST_SESSION_INVITE.listeners.delete(fn);
+  };
+};
+const RHYTHM_ASSIST_SESSION_INVITE_TTL_MS = 5 * 60 * 1000;
+const rhythmAssistSessionSetApp = app => {
+  RHYTHM_ASSIST_SESSION_INVITE.app = app && typeof app === 'object' ? app : null;
+};
+const rhythmAssistSessionCanPayNow = () => {
+  const app = RHYTHM_ASSIST_SESSION_INVITE.app;
+  const free = typeof RHYTHM_BUDDY_STORE !== 'undefined' ? rhythmBuddyFreeLeft(RHYTHM_BUDDY_STORE.get(), rhythmBuddyDayKey(Date.now())) : 0;
+  const tickets = app && typeof app.tickets === 'function' ? Number(app.tickets()) || 0 : 0;
+  return free > 0 || tickets > 0;
+};
+const rhythmAssistSessionInviteDone = (onResult, r) => {
+  if (typeof onResult === 'function') {
+    try {
+      onResult(r);
+    } catch (_) {}
+  }
+  return r;
+};
+const rhythmAssistSessionInvite = (id, opts = {}) => {
+  const onResult = opts && opts.onResult;
+  const app = RHYTHM_ASSIST_SESSION_INVITE.app;
+  if (!rhythmAssistSessionEnabled() || !app || typeof app.open !== 'function') return rhythmAssistSessionInviteDone(onResult, {
+    ok: false,
+    reason: 'off'
+  });
+  if (!rhythmAssistSessionWho(id)) return rhythmAssistSessionInviteDone(onResult, {
+    ok: false,
+    reason: 'unknown'
+  });
+  if (!rhythmAssistSessionCanPayNow()) return rhythmAssistSessionInviteDone(onResult, {
+    ok: false,
+    reason: 'no_ticket'
+  });
+  const inRoom = typeof RHYTHM_MULTI !== 'undefined' && !!RHYTHM_MULTI.view();
+  RHYTHM_ASSIST_SESSION_INVITE.pending = {
+    id,
+    at: Date.now(),
+    onResult: typeof onResult === 'function' ? onResult : null
+  };
+  RHYTHM_ASSIST_SESSION_INVITE.listeners.forEach(fn => {
+    try {
+      fn();
+    } catch (_) {}
+  });
+  try {
+    void app.open(inRoom ? 'RHYTHM_MULTI' : 'RHYTHM_MODE_SELECT');
+  } catch (_) {
+    RHYTHM_ASSIST_SESSION_INVITE.pending = null;
+    return rhythmAssistSessionInviteDone(onResult, {
+      ok: false,
+      reason: 'off'
+    });
+  }
+  return {
+    ok: true,
+    reason: 'opening'
+  };
+};
+const rhythmAssistSessionPeekInvite = () => {
+  const p = RHYTHM_ASSIST_SESSION_INVITE.pending;
+  if (p && Date.now() - p.at > RHYTHM_ASSIST_SESSION_INVITE_TTL_MS) {
+    RHYTHM_ASSIST_SESSION_INVITE.pending = null;
+    return null;
+  }
+  return p;
+};
+const rhythmAssistSessionTakeInvite = () => {
+  const p = rhythmAssistSessionPeekInvite();
+  RHYTHM_ASSIST_SESSION_INVITE.pending = null;
+  return p;
+};
+const rhythmAssistSessionPeerGainText = (gained, level) => {
+  const stage = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' && Number.isFinite(level) ? ASSISTANT_PEER_BOND_LEVELS.find(x => x.level === level) : null;
+  const name = stage && typeof assistantPeerStageName === 'function' ? assistantPeerStageName(stage) : '';
+  return `+${gained}${name ? `(Lv${level} ${name})` : ''}`;
+};
 function RhythmAssistSessionGrowth({
   assistantId,
   round,
@@ -94712,6 +94836,22 @@ function RhythmAssistSessionGrowth({
         });
       }
       if (alive && outcome) setShown(outcome);
+      if (outcome && rhythmAssistSessionEnabled()) {
+        const called = rhythmAssistSessionCalledIds();
+        const level = rhythmBuddyLevelInfo((outcome.next.mons[assistantId] || {}).exp).level;
+        rhythmAssistSessionEmitLive({
+          assistantId,
+          partnerIds: called.filter(x => x !== assistantId),
+          songId,
+          round,
+          gain: outcome.gain || 0,
+          levelUp: outcome.levelUp || 0,
+          level,
+          likeUp: outcome.likeUp || 0,
+          duo: rhythmAssistSessionDuosNow(called).some(d => d.a === assistantId || d.b === assistantId),
+          at: Date.now()
+        });
+      }
     });
     return () => {
       alive = false;
@@ -95033,7 +95173,10 @@ function RhythmAssistSessionDuoResult({
         RHYTHM_ASSIST_SESSION_PEER_DONE.add(pk);
         try {
           const r = await assistantPeerGain(ids[i], ids[j], 'session');
-          if (r && r.gained > 0) gains[rhythmAssistSessionPairKey(ids[i], ids[j])] = r.gained;
+          if (r && r.gained > 0) gains[rhythmAssistSessionPairKey(ids[i], ids[j])] = {
+            gained: r.gained,
+            level: r.levelAfter
+          };
         } catch (_) {}
       }
       if (!alive) return;
@@ -95044,7 +95187,8 @@ function RhythmAssistSessionDuoResult({
         key: d.key,
         d,
         rows,
-        gained: gains[d.key] || 0
+        gained: gains[d.key] ? gains[d.key].gained : 0,
+        level: gains[d.key] ? gains[d.key].level : 0
       }));
       Object.keys(gains).filter(k => !out.some(x => x.key === k)).forEach(k => {
         const [a, b] = k.split('-');
@@ -95055,7 +95199,8 @@ function RhythmAssistSessionDuoResult({
             b
           },
           rows: null,
-          gained: gains[k]
+          gained: gains[k].gained,
+          level: gains[k].level
         });
       });
       setShown(out);
@@ -95071,7 +95216,8 @@ function RhythmAssistSessionDuoResult({
     key: k,
     d,
     rows,
-    gained
+    gained,
+    level
   }) => React.createElement("p", {
     key: k,
     "data-rhythm-assist-duo-result": k,
@@ -95084,7 +95230,7 @@ function RhythmAssistSessionDuoResult({
   }, rhythmAssistSessionName(who), "「", text, "」")), gained > 0 && React.createElement("span", {
     "data-rhythm-assist-peer-gain": true,
     className: "text-amber-200"
-  }, "友情Lv +", gained))), onlyGain.length > 0 && React.createElement("p", {
+  }, "友情Lv ", rhythmAssistSessionPeerGainText(gained, level)))), onlyGain.length > 0 && React.createElement("p", {
     "data-rhythm-assist-peer-gains": true,
     className: "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/40 bg-violet-950/50 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100 landscape:col-span-2 [[data-mh-view-rotation=true]_&]:col-span-2"
   }, React.createElement("span", {
@@ -95092,12 +95238,13 @@ function RhythmAssistSessionDuoResult({
   }, "🎤 友情Lv"), onlyGain.map(({
     key: k,
     d,
-    gained
+    gained,
+    level
   }) => React.createElement("span", {
     key: k,
     "data-rhythm-assist-peer-gain": true,
     className: "whitespace-nowrap text-amber-200"
-  }, rhythmAssistSessionName(d.a), "・", rhythmAssistSessionName(d.b), " +", gained))));
+  }, rhythmAssistSessionName(d.a), "・", rhythmAssistSessionName(d.b), " ", rhythmAssistSessionPeerGainText(gained, level)))));
 }
 const rhythmAssistSessionCardStyle = (m, isMvp = false) => {
   const who = m && m.cpu && m.as ? rhythmAssistSessionWho(m.as) : null;
@@ -146924,6 +147071,17 @@ function MonsterHeroGame() {
       styleOf: id => assistantCallStyles && assistantCallStyles[id] || null
     });
   }, [breederName, assistantBonds, assistantCallStyles]);
+  const rhythmAssistSessionTicketsRef = useRef(0);
+  rhythmAssistSessionTicketsRef.current = ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID);
+  useEffect(() => {
+    if (typeof rhythmAssistSessionSetApp !== 'function') return;
+    rhythmAssistSessionSetApp({
+      open: to => openRhythmDemo({
+        to
+      }),
+      tickets: () => rhythmAssistSessionTicketsRef.current
+    });
+  });
   const activeAssistant = assistantById(selectedAssistantId);
   const requestAssistantDailyLines = async (force = false) => {
     const a = activeAssistant;

@@ -8506,6 +8506,13 @@ function MonsterHeroGame() {
     if (typeof rhythmAssistSessionSetCall !== 'function') return;
     rhythmAssistSessionSetCall({ name: breederName, levelOf: (id) => assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points), styleOf: (id) => (assistantCallStyles && assistantCallStyles[id]) || null });
   }, [breederName, assistantBonds, assistantCallStyles]);
+  // 助手ライフから「モンビーへ誘う」(rhythmAssistSessionInvite・2026-11-07)が使う、モンヒロビートを開く道とセッション券の数
+  const rhythmAssistSessionTicketsRef = useRef(0);
+  rhythmAssistSessionTicketsRef.current = ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID);
+  useEffect(() => {
+    if (typeof rhythmAssistSessionSetApp !== 'function') return;
+    rhythmAssistSessionSetApp({ open: (to) => openRhythmDemo({ to }), tickets: () => rhythmAssistSessionTicketsRef.current });
+  });
   // いま選んでいる助手そのもの。画面はこれを見て顔・名前・色を出す
   const activeAssistant = assistantById(selectedAssistantId);
   // ふだんの吹き出しを、その日最初に HOME を開いたとき1回だけまとめて頼む(2026-10-14)。

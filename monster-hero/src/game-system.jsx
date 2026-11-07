@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c32f5741bcc44786
+// generated-sha256: 5b4b02cff93ec8c7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -53996,9 +53996,9 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   };
   // 助手を呼ぶ(2026-11-07 助手とのセッション)。払い方・控え・返し方はマスモンと同じ1本(控えに kind・assistantId を足す)
   const callAssistant = async (who) => {
-    if (!who || !rhythmAssistSessionEnabled() || !RHYTHM_MULTI.canSummon()) { setBuddySheet(''); return; }
+    if (!who || !rhythmAssistSessionEnabled() || !RHYTHM_MULTI.canSummon()) { setBuddySheet(''); return 'full'; }
     const key = rhythmAssistSessionKey(who.id);
-    if ((view && view.myCpus ? view.myCpus : []).some((c) => c.masuId === key)) return; // 同じ助手は2人呼べない
+    if ((view && view.myCpus ? view.myCpus : []).some((c) => c.masuId === key)) return 'already'; // 同じ助手は2人呼べない
     const day = rhythmBuddyDayKey(Date.now());
     const call = { id: rhythmBuddyCallId(), masuId: key, at: Date.now(), load: RHYTHM_BUDDY_LOAD_ID, kind: 'assistant', assistantId: who.id };
     let paid = (await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
@@ -54006,12 +54006,27 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
       try { paid = (await onUseBuddyTicket()) === true ? 'ticket' : ''; } catch (_) { paid = ''; }
       if (paid) await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyAddCall(st, { ...call, paid: 'ticket', day }));
     }
-    if (!paid) return;
+    if (!paid) return 'no_ticket';
     setBuddyBumped(false);
     const joined = RHYTHM_MULTI.summon({ masuId: key, callId: call.id, name: rhythmAssistSessionName(who.id), level: rhythmAssistSessionLevel(RHYTHM_ASSIST_SESSION_STORE.get(), who.id), baseId: '', colors: [], assistantId: who.id });
     if (!joined) endBuddy(key, call.id);
     setBuddySheet('');
+    return joined ? 'ok' : 'full';
   };
+  // 助手ライフから「モンビーへ誘う」で来たとき(rhythmAssistSessionInvite・2026-11-07)。部屋が無ければ自分だけの部屋を作り、
+  //   入れたらその助手を呼ぶ。払えなかった・満員だったら onResult で知らせて呼ばない。誘いは1回だけ使う
+  //   画面がもう開いているときに誘われても気づけるよう、誘いの知らせ(rhythmAssistSessionOnInvite)でも見直す
+  const [inviteTick, setInviteTick] = React.useState(0);
+  React.useEffect(() => (typeof rhythmAssistSessionOnInvite === 'function' ? rhythmAssistSessionOnInvite(() => setInviteTick((n) => n + 1)) : undefined), []);
+  const inviteRoomReady = !!(view && view.status === 'open' && view.selfId);
+  React.useEffect(() => {
+    if (!inviteRoomReady || typeof rhythmAssistSessionTakeInvite !== 'function' || !rhythmAssistSessionPeekInvite()) return;
+    const p = rhythmAssistSessionTakeInvite();
+    const who = (sessionAssistants || []).find((x) => x && x.id === p.id);
+    const done = (ok, reason) => rhythmAssistSessionInviteDone(p.onResult, { ok, reason });
+    if (!who) { done(false, 'locked'); return; }
+    void callAssistant(who).then((r) => done(r === 'ok' || r === 'already', r || 'full'));
+  }, [inviteRoomReady, inviteTick]);
   const sessionAssistantsOn = rhythmAssistSessionEnabled() && (sessionAssistants || []).length > 0;
   const buddySongName = (id) => { const song = songs.find((x) => x.songId === id); return song ? rhythmSongFullName(song) : '(曲)'; };
   // 部屋の中で相棒の札を押したときの窓。開いているのは札の id(呼んだ子が帰ったら自然に消える)
@@ -54183,6 +54198,11 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     rhythmMultiPendingInvite = null;
     if (!RHYTHM_MULTI.view()) joinFromInvite(pending);
   }, []);
+  // 助手ライフから「モンビーへ誘う」で開いたとき。部屋に入っていなければ、自分だけのプライベートの部屋を作る(呼ぶのは入れてから)
+  React.useEffect(() => {
+    if (typeof rhythmAssistSessionPeekInvite !== 'function' || !rhythmAssistSessionPeekInvite() || RHYTHM_MULTI.view()) return;
+    createPrivate();
+  }, [inviteTick]);
   const joinPrivate = () => {
     const code = rhythmMultiNormalizeCode(codeInput);
     if (!code) { setMessage(`部屋コードは${RHYTHM_MULTI_CODE_LENGTH}文字です`); return; }
@@ -56495,6 +56515,59 @@ const rhythmAssistSessionQueueFx = (item) => {
     try { growthFxSessionLevel(list); } catch (_) { /* 祝いが出せなくても続ける */ }
   }, 500);
 };
+// 助手ライフ(ナカヨシ5・56-assistant-life.jsx)へ「1曲一緒に遊んだ」を知らせる窓口(2026-11-07 社長「助手ライフと助手とのセッションは繋げたいね」)。
+//   rhythmAssistSessionOnLive(fn) … fn({ assistantId, partnerIds, songId, round, gain, levelUp, level, likeUp, duo, at })。戻り値で外せる
+//   知らせるのは育ちを保存したあと1回だけ(同じ回は2度数えないのと同じ)。受け手が失敗しても演奏の結果は止めない
+const RHYTHM_ASSIST_SESSION_LIVE_LISTENERS = new Set();
+const rhythmAssistSessionOnLive = (fn) => {
+  if (typeof fn !== 'function') return () => {};
+  RHYTHM_ASSIST_SESSION_LIVE_LISTENERS.add(fn);
+  return () => { RHYTHM_ASSIST_SESSION_LIVE_LISTENERS.delete(fn); };
+};
+const rhythmAssistSessionEmitLive = (payload) => {
+  RHYTHM_ASSIST_SESSION_LIVE_LISTENERS.forEach((fn) => { try { fn(payload); } catch (_) { /* 受け手の失敗で止めない */ } });
+};
+// 助手ライフから「モンビーへ誘う」入口。rhythmAssistSessionInvite(id, { onResult })
+//   ・自分だけのプライベートの部屋を作り、入れたらその助手を呼ぶ(払い方は呼ぶシートと同じ。今日の無料 → セッション券1枚)
+//   ・払えないときは部屋へ行かず { ok:false, reason:'no_ticket' } を返す(呼び出し側が知らせる)。部屋の中で払えなかったときも onResult で知らせる
+//   ・部屋に入る前にやめたら何もしない(誘いは5分で消える。払うのは部屋の中で呼ぶときだけ)
+//   ・画面を開く道(60-app の openRhythmDemo)と券の数は 60-app が rhythmAssistSessionSetApp で渡す
+const RHYTHM_ASSIST_SESSION_INVITE = { pending: null, app: null, listeners: new Set() };
+const rhythmAssistSessionOnInvite = (fn) => { RHYTHM_ASSIST_SESSION_INVITE.listeners.add(fn); return () => { RHYTHM_ASSIST_SESSION_INVITE.listeners.delete(fn); }; };
+const RHYTHM_ASSIST_SESSION_INVITE_TTL_MS = 5 * 60 * 1000;
+const rhythmAssistSessionSetApp = (app) => { RHYTHM_ASSIST_SESSION_INVITE.app = app && typeof app === 'object' ? app : null; };
+const rhythmAssistSessionCanPayNow = () => {
+  const app = RHYTHM_ASSIST_SESSION_INVITE.app;
+  const free = typeof RHYTHM_BUDDY_STORE !== 'undefined' ? rhythmBuddyFreeLeft(RHYTHM_BUDDY_STORE.get(), rhythmBuddyDayKey(Date.now())) : 0;
+  const tickets = app && typeof app.tickets === 'function' ? Number(app.tickets()) || 0 : 0;
+  return free > 0 || tickets > 0;
+};
+const rhythmAssistSessionInviteDone = (onResult, r) => { if (typeof onResult === 'function') { try { onResult(r); } catch (_) { /* 受け手の失敗で止めない */ } } return r; };
+const rhythmAssistSessionInvite = (id, opts = {}) => {
+  const onResult = opts && opts.onResult;
+  const app = RHYTHM_ASSIST_SESSION_INVITE.app;
+  if (!rhythmAssistSessionEnabled() || !app || typeof app.open !== 'function') return rhythmAssistSessionInviteDone(onResult, { ok: false, reason: 'off' });
+  if (!rhythmAssistSessionWho(id)) return rhythmAssistSessionInviteDone(onResult, { ok: false, reason: 'unknown' });
+  if (!rhythmAssistSessionCanPayNow()) return rhythmAssistSessionInviteDone(onResult, { ok: false, reason: 'no_ticket' });
+  const inRoom = typeof RHYTHM_MULTI !== 'undefined' && !!RHYTHM_MULTI.view();
+  RHYTHM_ASSIST_SESSION_INVITE.pending = { id, at: Date.now(), onResult: typeof onResult === 'function' ? onResult : null };
+  RHYTHM_ASSIST_SESSION_INVITE.listeners.forEach((fn) => { try { fn(); } catch (_) { /* 画面の失敗で止めない */ } });
+  try { void app.open(inRoom ? 'RHYTHM_MULTI' : 'RHYTHM_MODE_SELECT'); } catch (_) { RHYTHM_ASSIST_SESSION_INVITE.pending = null; return rhythmAssistSessionInviteDone(onResult, { ok: false, reason: 'off' }); }
+  return { ok: true, reason: 'opening' };
+};
+// 77-screen-rhythm-multi が読む。peek は見るだけ・take は1回だけ取り出す(古い誘いは捨てる)
+const rhythmAssistSessionPeekInvite = () => {
+  const p = RHYTHM_ASSIST_SESSION_INVITE.pending;
+  if (p && Date.now() - p.at > RHYTHM_ASSIST_SESSION_INVITE_TTL_MS) { RHYTHM_ASSIST_SESSION_INVITE.pending = null; return null; }
+  return p;
+};
+const rhythmAssistSessionTakeInvite = () => { const p = rhythmAssistSessionPeekInvite(); RHYTHM_ASSIST_SESSION_INVITE.pending = null; return p; };
+// 友情Lv が上がった表示(2026-11-07 ナカヨシ5と決めた形「友情Lv +3(Lv4 いい友だち)」)。段の名前が引けなければ数だけ
+const rhythmAssistSessionPeerGainText = (gained, level) => {
+  const stage = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' && Number.isFinite(level) ? ASSISTANT_PEER_BOND_LEVELS.find((x) => x.level === level) : null;
+  const name = stage && typeof assistantPeerStageName === 'function' ? assistantPeerStageName(stage) : '';
+  return `+${gained}${name ? `(Lv${level} ${name})` : ''}`;
+};
 // 結果画面で、呼んだ助手を育てる(1ライブ1回。同じ回は2度数えない)。マスモンの RhythmBuddyGrowth と同じ作り
 function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, durationMs, teamRank, score = 0, maxScore = 0, chartLevel = 0, humans = 1, onTickets = null, ownerRes = null }) {
   const [shown, setShown] = React.useState(null);
@@ -56533,6 +56606,16 @@ function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, duratio
         if (outcome.levelUp > 0 || likeUp > 0) RHYTHM_MULTI.noteBuddyGrowth(rhythmAssistSessionKey(assistantId), { levelUp: outcome.levelUp, likeUp });
       }
       if (alive && outcome) setShown(outcome);
+      // 助手ライフへ知らせる(育ちを保存したあと1回だけ)
+      if (outcome && rhythmAssistSessionEnabled()) {
+        const called = rhythmAssistSessionCalledIds();
+        const level = rhythmBuddyLevelInfo((outcome.next.mons[assistantId] || {}).exp).level;
+        rhythmAssistSessionEmitLive({
+          assistantId, partnerIds: called.filter((x) => x !== assistantId), songId, round,
+          gain: outcome.gain || 0, levelUp: outcome.levelUp || 0, level, likeUp: outcome.likeUp || 0,
+          duo: rhythmAssistSessionDuosNow(called).some((d) => d.a === assistantId || d.b === assistantId), at: Date.now(),
+        });
+      }
     });
     return () => { alive = false; };
   }, [assistantId, round]);
@@ -56759,11 +56842,11 @@ function RhythmAssistSessionDuoResult({ ids = [], round }) {
         const pk = `${round}:${rhythmAssistSessionPairKey(ids[i], ids[j])}`;
         if (RHYTHM_ASSIST_SESSION_PEER_DONE.has(pk) || typeof assistantPeerGain !== 'function') continue;
         RHYTHM_ASSIST_SESSION_PEER_DONE.add(pk);
-        try { const r = await assistantPeerGain(ids[i], ids[j], 'session'); if (r && r.gained > 0) gains[rhythmAssistSessionPairKey(ids[i], ids[j])] = r.gained; } catch (_) { /* 足せなくても続ける */ }
+        try { const r = await assistantPeerGain(ids[i], ids[j], 'session'); if (r && r.gained > 0) gains[rhythmAssistSessionPairKey(ids[i], ids[j])] = { gained: r.gained, level: r.levelAfter }; } catch (_) { /* 足せなくても続ける */ }
       }
       if (!alive) return;
-      const out = lines.map(({ d, rows }) => ({ key: d.key, d, rows, gained: gains[d.key] || 0 }));
-      Object.keys(gains).filter((k) => !out.some((x) => x.key === k)).forEach((k) => { const [a, b] = k.split('-'); out.push({ key: k, d: { a, b }, rows: null, gained: gains[k] }); });
+      const out = lines.map(({ d, rows }) => ({ key: d.key, d, rows, gained: gains[d.key] ? gains[d.key].gained : 0, level: gains[d.key] ? gains[d.key].level : 0 }));
+      Object.keys(gains).filter((k) => !out.some((x) => x.key === k)).forEach((k) => { const [a, b] = k.split('-'); out.push({ key: k, d: { a, b }, rows: null, gained: gains[k].gained, level: gains[k].level }); });
       setShown(out);
     })();
     return () => { alive = false; };
@@ -56774,17 +56857,17 @@ function RhythmAssistSessionDuoResult({ ids = [], round }) {
   const onlyGain = shown.filter((x) => !x.rows && x.gained > 0);
   return (
     <>
-      {withLines.map(({ key: k, d, rows, gained }) => (
+      {withLines.map(({ key: k, d, rows, gained, level }) => (
         <p key={k} data-rhythm-assist-duo-result={k} className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/50 bg-violet-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100 landscape:col-span-2 [[data-mh-view-rotation=true]_&]:col-span-2">
           <span className="shrink-0">🎤 {rhythmAssistSessionName(d.a)}・{rhythmAssistSessionName(d.b)}</span>
           {rows.map(([who, , text], i) => <span key={i} className="min-w-0">{rhythmAssistSessionName(who)}「{text}」</span>)}
-          {gained > 0 && <span data-rhythm-assist-peer-gain className="text-amber-200">友情Lv +{gained}</span>}
+          {gained > 0 && <span data-rhythm-assist-peer-gain className="text-amber-200">友情Lv {rhythmAssistSessionPeerGainText(gained, level)}</span>}
         </p>
       ))}
       {onlyGain.length > 0 && (
         <p data-rhythm-assist-peer-gains className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/40 bg-violet-950/50 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100 landscape:col-span-2 [[data-mh-view-rotation=true]_&]:col-span-2">
           <span className="shrink-0">🎤 友情Lv</span>
-          {onlyGain.map(({ key: k, d, gained }) => <span key={k} data-rhythm-assist-peer-gain className="whitespace-nowrap text-amber-200">{rhythmAssistSessionName(d.a)}・{rhythmAssistSessionName(d.b)} +{gained}</span>)}
+          {onlyGain.map(({ key: k, d, gained, level }) => <span key={k} data-rhythm-assist-peer-gain className="whitespace-nowrap text-amber-200">{rhythmAssistSessionName(d.a)}・{rhythmAssistSessionName(d.b)} {rhythmAssistSessionPeerGainText(gained, level)}</span>)}
         </p>
       )}
     </>
@@ -89275,6 +89358,13 @@ function MonsterHeroGame() {
     if (typeof rhythmAssistSessionSetCall !== 'function') return;
     rhythmAssistSessionSetCall({ name: breederName, levelOf: (id) => assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points), styleOf: (id) => (assistantCallStyles && assistantCallStyles[id]) || null });
   }, [breederName, assistantBonds, assistantCallStyles]);
+  // 助手ライフから「モンビーへ誘う」(rhythmAssistSessionInvite・2026-11-07)が使う、モンヒロビートを開く道とセッション券の数
+  const rhythmAssistSessionTicketsRef = useRef(0);
+  rhythmAssistSessionTicketsRef.current = ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID);
+  useEffect(() => {
+    if (typeof rhythmAssistSessionSetApp !== 'function') return;
+    rhythmAssistSessionSetApp({ open: (to) => openRhythmDemo({ to }), tickets: () => rhythmAssistSessionTicketsRef.current });
+  });
   // いま選んでいる助手そのもの。画面はこれを見て顔・名前・色を出す
   const activeAssistant = assistantById(selectedAssistantId);
   // ふだんの吹き出しを、その日最初に HOME を開いたとき1回だけまとめて頼む(2026-10-14)。

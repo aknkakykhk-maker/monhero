@@ -2129,9 +2129,9 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   };
   // 助手を呼ぶ(2026-11-07 助手とのセッション)。払い方・控え・返し方はマスモンと同じ1本(控えに kind・assistantId を足す)
   const callAssistant = async (who) => {
-    if (!who || !rhythmAssistSessionEnabled() || !RHYTHM_MULTI.canSummon()) { setBuddySheet(''); return; }
+    if (!who || !rhythmAssistSessionEnabled() || !RHYTHM_MULTI.canSummon()) { setBuddySheet(''); return 'full'; }
     const key = rhythmAssistSessionKey(who.id);
-    if ((view && view.myCpus ? view.myCpus : []).some((c) => c.masuId === key)) return; // 同じ助手は2人呼べない
+    if ((view && view.myCpus ? view.myCpus : []).some((c) => c.masuId === key)) return 'already'; // 同じ助手は2人呼べない
     const day = rhythmBuddyDayKey(Date.now());
     const call = { id: rhythmBuddyCallId(), masuId: key, at: Date.now(), load: RHYTHM_BUDDY_LOAD_ID, kind: 'assistant', assistantId: who.id };
     let paid = (await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
@@ -2139,12 +2139,27 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
       try { paid = (await onUseBuddyTicket()) === true ? 'ticket' : ''; } catch (_) { paid = ''; }
       if (paid) await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyAddCall(st, { ...call, paid: 'ticket', day }));
     }
-    if (!paid) return;
+    if (!paid) return 'no_ticket';
     setBuddyBumped(false);
     const joined = RHYTHM_MULTI.summon({ masuId: key, callId: call.id, name: rhythmAssistSessionName(who.id), level: rhythmAssistSessionLevel(RHYTHM_ASSIST_SESSION_STORE.get(), who.id), baseId: '', colors: [], assistantId: who.id });
     if (!joined) endBuddy(key, call.id);
     setBuddySheet('');
+    return joined ? 'ok' : 'full';
   };
+  // 助手ライフから「モンビーへ誘う」で来たとき(rhythmAssistSessionInvite・2026-11-07)。部屋が無ければ自分だけの部屋を作り、
+  //   入れたらその助手を呼ぶ。払えなかった・満員だったら onResult で知らせて呼ばない。誘いは1回だけ使う
+  //   画面がもう開いているときに誘われても気づけるよう、誘いの知らせ(rhythmAssistSessionOnInvite)でも見直す
+  const [inviteTick, setInviteTick] = React.useState(0);
+  React.useEffect(() => (typeof rhythmAssistSessionOnInvite === 'function' ? rhythmAssistSessionOnInvite(() => setInviteTick((n) => n + 1)) : undefined), []);
+  const inviteRoomReady = !!(view && view.status === 'open' && view.selfId);
+  React.useEffect(() => {
+    if (!inviteRoomReady || typeof rhythmAssistSessionTakeInvite !== 'function' || !rhythmAssistSessionPeekInvite()) return;
+    const p = rhythmAssistSessionTakeInvite();
+    const who = (sessionAssistants || []).find((x) => x && x.id === p.id);
+    const done = (ok, reason) => rhythmAssistSessionInviteDone(p.onResult, { ok, reason });
+    if (!who) { done(false, 'locked'); return; }
+    void callAssistant(who).then((r) => done(r === 'ok' || r === 'already', r || 'full'));
+  }, [inviteRoomReady, inviteTick]);
   const sessionAssistantsOn = rhythmAssistSessionEnabled() && (sessionAssistants || []).length > 0;
   const buddySongName = (id) => { const song = songs.find((x) => x.songId === id); return song ? rhythmSongFullName(song) : '(曲)'; };
   // 部屋の中で相棒の札を押したときの窓。開いているのは札の id(呼んだ子が帰ったら自然に消える)
@@ -2316,6 +2331,11 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     rhythmMultiPendingInvite = null;
     if (!RHYTHM_MULTI.view()) joinFromInvite(pending);
   }, []);
+  // 助手ライフから「モンビーへ誘う」で開いたとき。部屋に入っていなければ、自分だけのプライベートの部屋を作る(呼ぶのは入れてから)
+  React.useEffect(() => {
+    if (typeof rhythmAssistSessionPeekInvite !== 'function' || !rhythmAssistSessionPeekInvite() || RHYTHM_MULTI.view()) return;
+    createPrivate();
+  }, [inviteTick]);
   const joinPrivate = () => {
     const code = rhythmMultiNormalizeCode(codeInput);
     if (!code) { setMessage(`部屋コードは${RHYTHM_MULTI_CODE_LENGTH}文字です`); return; }
