@@ -75,19 +75,14 @@ const useTimeOfDay = () => {
 
 // ---------- 見た目 ----------
 // 色の層: 絵の背景は ::after(色)と ::before(夜の星と灯り)。塗りだけの画面は内側の影(背景の上・中身の下に描かれる)で寄せる
+// ★1つの決まりは1行に書く(tools/home-layout-check.js が `.mh-home-` を含む行だけを抜き出して HOME を組むため。複数行にまたがると後ろを巻き込む)
 const TIME_OF_DAY_CSS = `
 .mh-home-background::after,.mh-home-background::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity 2.4s ease}
 .mh-home-background::after{z-index:3}.mh-home-background::before{z-index:4}
 html[data-mh-tod="morning"] .mh-home-background::after{opacity:1;background:linear-gradient(180deg,rgba(186,214,255,.30) 0%,rgba(214,236,255,.16) 50%,rgba(255,236,214,.10) 100%)}
 html[data-mh-tod="evening"] .mh-home-background::after{opacity:1;background:linear-gradient(180deg,rgba(255,128,48,.34) 0%,rgba(255,110,64,.24) 45%,rgba(120,40,30,.34) 100%)}
 html[data-mh-tod="night"] .mh-home-background::after{opacity:1;background:linear-gradient(180deg,rgba(5,8,34,.84) 0%,rgba(10,16,52,.70) 50%,rgba(6,10,34,.76) 100%)}
-html[data-mh-tod="night"] .mh-home-background::before{opacity:1;background:
-  radial-gradient(2.2px 2.2px at 12% 8%,#fff 60%,transparent),radial-gradient(1.6px 1.6px at 24% 15%,#fff 60%,transparent),radial-gradient(2.2px 2.2px at 41% 6%,#fff 60%,transparent),
-  radial-gradient(1.6px 1.6px at 57% 12%,#fff 60%,transparent),radial-gradient(2.2px 2.2px at 69% 4%,#fff 60%,transparent),radial-gradient(1.6px 1.6px at 83% 14%,#fff 60%,transparent),
-  radial-gradient(1.6px 1.6px at 92% 7%,#fff 60%,transparent),radial-gradient(1.6px 1.6px at 33% 20%,#fffbe8 60%,transparent),radial-gradient(2.2px 2.2px at 76% 21%,#fffbe8 60%,transparent),
-  radial-gradient(40% 18% at 50% 100%,rgba(255,190,100,.38),transparent 70%),
-  radial-gradient(14% 8% at 20% 62%,rgba(255,196,110,.50),transparent 70%),radial-gradient(14% 8% at 80% 58%,rgba(255,196,110,.50),transparent 70%),
-  radial-gradient(10% 6% at 50% 46%,rgba(140,200,255,.42),transparent 70%)}
+html[data-mh-tod="night"] .mh-home-background::before{opacity:1;background: radial-gradient(2.2px 2.2px at 12% 8%,#fff 60%,transparent),radial-gradient(1.6px 1.6px at 24% 15%,#fff 60%,transparent),radial-gradient(2.2px 2.2px at 41% 6%,#fff 60%,transparent), radial-gradient(1.6px 1.6px at 57% 12%,#fff 60%,transparent),radial-gradient(2.2px 2.2px at 69% 4%,#fff 60%,transparent),radial-gradient(1.6px 1.6px at 83% 14%,#fff 60%,transparent), radial-gradient(1.6px 1.6px at 92% 7%,#fff 60%,transparent),radial-gradient(1.6px 1.6px at 33% 20%,#fffbe8 60%,transparent),radial-gradient(2.2px 2.2px at 76% 21%,#fffbe8 60%,transparent), radial-gradient(40% 18% at 50% 100%,rgba(255,190,100,.38),transparent 70%), radial-gradient(14% 8% at 20% 62%,rgba(255,196,110,.50),transparent 70%),radial-gradient(14% 8% at 80% 58%,rgba(255,196,110,.50),transparent 70%), radial-gradient(10% 6% at 50% 46%,rgba(140,200,255,.42),transparent 70%)}
 .mh-title-gate img.mh-title-visual,.mh-title-gate img.mh-title-backdrop{transition:filter 2.4s ease}
 html[data-mh-tod="morning"] .mh-title-gate img.mh-title-visual{filter:brightness(1.04) saturate(.92) hue-rotate(-6deg)}
 html[data-mh-tod="evening"] .mh-title-gate img.mh-title-visual{filter:sepia(.32) saturate(1.2) brightness(.92)}

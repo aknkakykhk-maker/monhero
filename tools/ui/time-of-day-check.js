@@ -35,6 +35,7 @@ for (const sel of ['data-rhythm-stage', 'data-rhythm-play', 'data-rhythm-result'
   if (css.includes(sel)) ng(`遊ぶ画面(${sel})に色を重ねている`);
 }
 for (const cat of ['"battle"', '"rhythm"']) if (css.includes(`data-mh-theme-category=${cat}`)) ng(`塗りを寄せる画面に ${cat} が入っている`);
+css.split('\n').filter(l => l.includes('.mh-home-')).forEach(l => { if ((l.match(/\{/g) || []).length !== (l.match(/\}/g) || []).length) ng(`.mh-home- を含む CSS の行が1行で閉じていない(home-layout-check の組み立てを壊す): ${l.trim().slice(0, 60)}`); });
 if (/mix-blend-mode|backdrop-filter|filter:\s*blur/.test(css)) ng('混ぜ方・ぼかしを使っている(古い端末で重い)');
 
 // 3) 保存・画面の切り替え
