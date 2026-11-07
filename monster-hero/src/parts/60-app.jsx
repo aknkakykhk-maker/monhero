@@ -20550,8 +20550,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 周回の報酬・自己ベスト・全国ランキングへも入れる(2026-10-02・ユーザー指示「ランキングにも反映」)。
           // 周回の報酬とビートPは、ライブに参加した人数ぶん多くなる(1人ふえるごとに+50%)。
           // 同じメンバーで続けると、さらに1曲ごとに+10%(上限+100%・2026-10-03)
-          // 呼んだ助手のセッションLv.20/40/60/80 で +2/4/6/8%(助手とのセッション・2026-11-07。人数ボーナスと同じ所にだけ足す。スコアには入れない)
-          const assistBonus=rhythmPlay.from==='multi'&&rhythmAssistSessionEnabled()?rhythmAssistSessionRewardBonus(RHYTHM_ASSIST_SESSION_STORE.get(),((RHYTHM_MULTI.view()||{}).myCpus||[]).map(c=>rhythmAssistSessionIdOf(c.masuId))):0;
+          // 呼んだ助手のセッションLv.20/40/60/80 で +2/4/6/8%・仲良し度 Lv4 以上のデュオ1組 +5%(助手とのセッション・2026-11-07。人数ボーナスと同じ所にだけ足す。スコアには入れない)
+          const assistBonus=rhythmPlay.from==='multi'&&rhythmAssistSessionEnabled()?rhythmAssistSessionRewardBonusNow():0;
           const multiScale=rhythmPlay.from==='multi'?Math.round(rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus)*(1+assistBonus)*100)/100:1;
           if(rhythmPlay.from==='multi')RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,result,false,{diffId:rhythmPlay.difficulty.id});
           // ===== 演奏1曲ぶんを、裏の∞周回の周回クリアとして反映する(2026-09-07・ユーザー提案) =====
