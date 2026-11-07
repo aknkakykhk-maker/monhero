@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0655f0f4c2be89b2
+// source-sha256: fde58095f88a5d2d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -61212,6 +61212,18 @@ const TimeOfDayClock = ({
   }, React.createElement("i", {
     "aria-hidden": "true"
   }, st.slot.icon), st.minute);
+};
+const TimeOfDayClockText = ({
+  prefix = ' '
+}) => {
+  const st = useTimeOfDay();
+  if (st.settings.clock !== 'on') return null;
+  return React.createElement("span", {
+    "data-time-of-day-clock-text": st.slot.id,
+    style: {
+      fontVariantNumeric: 'tabular-nums'
+    }
+  }, prefix, st.minute);
 };
 const TimeOfDaySettingsPanel = () => {
   const st = useTimeOfDay();
