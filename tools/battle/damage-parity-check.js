@@ -32,7 +32,8 @@ const slice = (from, to, fromIndex = 0) => {
 };
 
 // --- 予測: useCallback の中の関数だけを取り出す ---
-const pred = slice('const getAttackPredictedDmg = useCallback(', ', [mainHero, turnBuffs, permaBuffs, enemyIntent]);');
+// 終わりの目印は依存の並びの頭だけ(後ろに runMode などが足されても切り出せるように。2026-11-07 runMode が足されて切り出せなくなった)
+const pred = slice('const getAttackPredictedDmg = useCallback(', ', [mainHero, turnBuffs, permaBuffs, enemyIntent');
 const predictedArrow = pred.text.slice('const getAttackPredictedDmg = useCallback('.length);
 // 運命のコイン・運命の輪(ゴースト・スプーキー)で積んだ「この子の連撃+10%」も、予測と実処理へ同じ本数が渡る。
 // 決めごと(withFateCombo ほか)は本体から取り出して、両方へ同じものを入れる
@@ -51,6 +52,9 @@ const laterSrc = (source.match(/const withBlackNoteCombo = \(exCombos, combo(, e
   + '\nconst hoshiaiComboAt = () => null;'
   + '\nconst gainKyubiCard = () => {};'
   + '\nconst noteOrihimeCard = () => {};'
+  // 2026-11-07 えるびんの見守り③「一閃の構え」(そのターンの固有技は必ず会心)。見守りが無ければ効かない
+  + '\nconst erubinIsshenOn = () => false;'
+  + '\nconst erubinIsshenCritDmg = () => 0;'
   // タクティクス専用(ほかのモードでは何もしない)
   + '\nconst aquaStackFromCard = () => null;'
   + '\nconst fireTacticsExCross = () => null;';
