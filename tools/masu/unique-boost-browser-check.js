@@ -127,7 +127,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('② ザンの技では連撃ダメージ・連撃数が押せる', !(await gray('comboDamage')) && !(await gray('comboCount')));
     await page.locator('[data-unique-boost-row="comboCount"] button[aria-label="連撃数を上げられるだけ上げる"]').dispatchEvent('click');
     const comboText = await page.locator('[data-unique-boost-row="comboCount"]').innerText();
-    check('連撃数は MAX で +2本まで', /\+0本 → \+2本/.test(comboText.replace(/\s+/g, ' ')), comboText.replace(/\s+/g, ' '));
+    check('連撃数は MAX で +2本(P 28,800 で買えるぶん。上限は+3本)', /\+0本 → \+2本/.test(comboText.replace(/\s+/g, ' ')), comboText.replace(/\s+/g, ' '));
     for (const [w, h, name] of [[844, 390, '横'], [320, 568, '縦-小']]) {
       await page.setViewportSize({ width: w, height: h }); await page.waitForTimeout(400);
       const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

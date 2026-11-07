@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0c158ba5b4a2eab2
+// source-sha256: 51a6582f44f26c98
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -1914,7 +1914,7 @@ const UNIQUE_BOOST_DEFINITIONS = Object.freeze([Object.freeze({
   unit: '本',
   perStep: 1,
   stepCost: 10000,
-  maxValue: 2,
+  maxValue: 3,
   only: UNIQUE_BOOST_COMBO_IDS,
   desc: 'この技で攻撃するたびに、元のダメージの10%の連撃が1本増えます。'
 }), Object.freeze({

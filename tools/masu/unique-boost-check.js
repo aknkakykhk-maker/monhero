@@ -25,7 +25,7 @@ check('特攻: ムー特攻・イベボス特攻・溜めくずし・動けな�
   tabs.slayer.join(',') === 'ムー特攻,イベボス特攻,溜めくずし,動けない敵へ,とどめ,間合いの極意,勇者の誇り,極限への挑戦', tabs.slayer.join(','));
 check('補助: 省気・効果の強さ・回復の量・効果の長さ・効果の確率・見切り', tabs.support.join(',') === '省気,効果の強さ,回復の量,効果の長さ,効果の確率,見切り', tabs.support.join(','));
 check('威力は100Pで+0.1%(社長の物差し)', D.power.stepCost === 100 && D.power.perStep === 0.1);
-check('連撃数は10,000Pで+1本・+2本まで', D.comboCount.stepCost === 10000 && D.comboCount.perStep === 1 && X.uniqueBoostMaxSteps(D.comboCount) === 2);
+check('連撃数は10,000Pで+1本・+3本まで(社長)', D.comboCount.stepCost === 10000 && D.comboCount.perStep === 1 && X.uniqueBoostMaxSteps(D.comboCount) === 3);
 check('効果の長さは5,000Pで+1ターン・+1ターンまで', D.effectDuration.stepCost === 5000 && X.uniqueBoostMaxSteps(D.effectDuration) === 1);
 check('上限: 会心率+50pt・省気−50%・効果の強さ/回復の量+100%・効果の確率+25pt・見切り+20pt',
   X.uniqueBoostMaxSteps(D.critRate) === 500 && X.uniqueBoostMaxSteps(D.gutsSave) === 1250 && X.uniqueBoostMaxSteps(D.effectPower) === 1000

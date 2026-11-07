@@ -876,7 +876,7 @@ const UNIQUE_BOOST_DEFINITIONS = Object.freeze([
   Object.freeze({ id:'critDamage', tab:'attack', name:'会心ダメージ', unit:'%', perStep:0.13, stepCost:100, maxValue:null, desc:'この技が会心になったときのダメージが上がります。' }),
   Object.freeze({ id:'critRate', tab:'attack', name:'会心率', unit:'pt', perStep:0.1, stepCost:100, maxValue:50, desc:'この技の会心率が上がります。' }),
   Object.freeze({ id:'comboDamage', tab:'attack', name:'連撃ダメージ', unit:'%', perStep:0.1, stepCost:100, maxValue:null, only:UNIQUE_BOOST_COMBO_IDS, desc:'この技で出る連撃1本1本のダメージが上がります。' }),
-  Object.freeze({ id:'comboCount', tab:'attack', name:'連撃数', unit:'本', perStep:1, stepCost:10000, maxValue:2, only:UNIQUE_BOOST_COMBO_IDS, desc:'この技で攻撃するたびに、元のダメージの10%の連撃が1本増えます。' }),
+  Object.freeze({ id:'comboCount', tab:'attack', name:'連撃数', unit:'本', perStep:1, stepCost:10000, maxValue:3, only:UNIQUE_BOOST_COMBO_IDS, desc:'この技で攻撃するたびに、元のダメージの10%の連撃が1本増えます。' }),
   Object.freeze({ id:'mooSlayer', tab:'slayer', name:'ムー特攻', unit:'%', perStep:0.2, stepCost:100, maxValue:null, desc:'相手がムー・覚醒ムーのとき、この技のダメージが上がります。' }),
   Object.freeze({ id:'eventBossSlayer', tab:'slayer', name:'イベボス特攻', unit:'%', perStep:0.2, stepCost:100, maxValue:null, desc:'相手が期間イベントのボス(ジャックなど)のとき、この技のダメージが上がります。' }),
   Object.freeze({ id:'chargeBreak', tab:'slayer', name:'溜めくずし', unit:'%', perStep:0.2, stepCost:100, maxValue:null, desc:'相手が必殺技を溜めているとき、この技のダメージが上がります。' }),
