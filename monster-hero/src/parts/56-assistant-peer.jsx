@@ -201,7 +201,8 @@ const assistantPeerLevel = (st, a, b) => assistantPeerLevelOf(assistantPeerPoint
 
 // ---------- 仲良し度を上げる ----------
 // 渡された状態から次の状態を作るだけ(保存しない)。検査からも呼べるように分けてある
-const assistantPeerGainState = (st, a, b, action, day) => {
+// opts … 助手たちの今のにぎわい(56-assistant-life.jsx の assistantLifeGainOpts)。{ mult, cap } で1回の量と1日の上限が変わる。無ければ今のまま
+const assistantPeerGainState = (st, a, b, action, day, opts = null) => {
   const actions = (typeof ASSISTANT_PEER_BOND_ACTIONS !== 'undefined' && ASSISTANT_PEER_BOND_ACTIONS) || {};
   const act = actions[action];
   if (!act || !a || !b || a === b) return { st, gained: 0 };
@@ -209,10 +210,14 @@ const assistantPeerGainState = (st, a, b, action, day) => {
   const bondDay = st.bondDay && st.bondDay.day === day ? st.bondDay : { day, got: {} };
   const got = { ...(bondDay.got[pair] || {}) };
   const usedAct = got[action] || 0;
-  const pairMax = (typeof ASSISTANT_PEER_BOND_DAILY_MAX !== 'undefined' && ASSISTANT_PEER_BOND_DAILY_MAX) || 20;
+  const pairMax = (opts && Number.isFinite(opts.cap)) ? opts.cap : ((typeof ASSISTANT_PEER_BOND_DAILY_MAX !== 'undefined' && ASSISTANT_PEER_BOND_DAILY_MAX) || 20);
+  // にぎわいの倍率は、ふだんの行動だけに掛ける(差し入れ・しるし・今日のペアなど決まった量のものはそのまま)
+  const mult = (opts && Number.isFinite(opts.mult) && !act.uncapped) ? opts.mult : 1;
+  const amount = Math.round(act.amount * mult);
+  const actMax = Math.round(act.dailyMax * mult);
   // uncapped の行動(今日のペア・続けてログイン)はペアごとの1日の合計に数えず、合計の上限でも止めない
   const usedCapped = Object.entries(got).filter(([k]) => !(actions[k] && actions[k].uncapped)).reduce((s, [, v]) => s + v, 0);
-  const gain = Math.max(0, Math.min(act.amount, act.dailyMax - usedAct, act.uncapped ? Infinity : pairMax - usedCapped));
+  const gain = Math.max(0, Math.min(amount, actMax - usedAct, act.uncapped ? Infinity : pairMax - usedCapped));
   if (gain <= 0) return { st, gained: 0 };
   got[action] = usedAct + gain;
   const before = st.bond[pair] || 0;
@@ -229,7 +234,10 @@ const assistantPeerSaveBond = () => {
 const assistantPeerGain = async (a, b, action) => {
   if (!assistantPeerEnabled()) return { gained: 0 };
   await ASSISTANT_PEER_STORE.load();
-  const r = assistantPeerGainState(ASSISTANT_PEER_STORE.state, a, b, action, assistantPeerDayKey());
+  // 助手たちの今(公開の印 assistantLife)が真なら、その日のにぎわいの段で仲良くなり方が変わる
+  if (typeof assistantLifeEnabled === 'function' && assistantLifeEnabled()) { try { await ASSISTANT_LIFE_STORE.load(); } catch {} }
+  const opts = typeof assistantLifeGainOptsNow === 'function' ? assistantLifeGainOptsNow() : null;
+  const r = assistantPeerGainState(ASSISTANT_PEER_STORE.state, a, b, action, assistantPeerDayKey(), opts);
   if (r.gained > 0) { ASSISTANT_PEER_STORE.set(r.st); assistantPeerSaveBond(); }
   return r;
 };
@@ -367,6 +375,9 @@ const assistantPeerUseItem = async (kind, pair) => {
   try { storeSet(ASSISTANT_PEER_GIFT_KEY, next, false); } catch {}
   await assistantPeerGain(pair[0], pair[1], kind);
   assistantPeerAddPlayerBond(pair, kind === 'gift' ? 'peerGift' : 'peerToken');
+  // 助手たちの今: もらった2人はしばらくごきげんで、一緒に過ごしやすい
+  if (typeof assistantLifeNote === 'function') void assistantLifeNote('gift', { pair: assistantPeerPairKey(pair[0], pair[1]) });
+  if (typeof assistantLifeAddPlay === 'function') void assistantLifeAddPlay('peer');
   return assistantPeerReactionTalk(kind, pair);
 };
 // 遊びに連れていくペアを決める(null でやめる)
@@ -379,6 +390,8 @@ const assistantPeerSetPlayPair = (pair) => {
 // 次に掛け合いを出せる画面で2人がひとこと言う
 const assistantPeerOnPlay = async (kind) => {
   if (!assistantPeerEnabled()) return;
+  // 助手たちの今: 遊んだ量でにぎわいがたまる(印が偽なら何もしない)
+  if (typeof assistantLifeAddPlay === 'function') void assistantLifeAddPlay(kind);
   await ASSISTANT_PEER_STORE.load();
   const pk = ASSISTANT_PEER_STORE.state.play && ASSISTANT_PEER_STORE.state.play.pair;
   if (!pk) return;
@@ -499,6 +512,9 @@ const assistantPeerMarkShown = (talk, { scene, special, now = Date.now() }) => {
     try { storeSet(ASSISTANT_PEER_QUARREL_KEY, quarrel, false); } catch {}
   }
   ASSISTANT_PEER_STORE.set(patch);
+  // 助手たちの今: 見守った分のにぎわい・言い合いのあとは2人が距離をおく(公開の印 assistantLife の後ろ)
+  if (typeof assistantLifeAddPlay === 'function') void assistantLifeAddPlay('peer', now);
+  if (talk.kind === 'quarrel' && typeof assistantLifeNote === 'function') void assistantLifeNote('quarrel', { pair: assistantPeerPairKey(talk.pair[0], talk.pair[1]), now });
 };
 // 仲直りを最後まで見た(または閉じた)。待っていた仲直りを消す
 const assistantPeerMakeupDone = (talk) => {
@@ -507,6 +523,7 @@ const assistantPeerMakeupDone = (talk) => {
   const quarrel = { pending: null, done: q.done };
   ASSISTANT_PEER_STORE.set({ quarrel });
   try { storeSet(ASSISTANT_PEER_QUARREL_KEY, quarrel, false); } catch {}
+  if (typeof assistantLifeNote === 'function' && Array.isArray(talk.pair)) void assistantLifeNote('makeup', { pair: assistantPeerPairKey(talk.pair[0], talk.pair[1]) });
   return true;
 };
 // 台本の {c} を、話している助手が相手を呼ぶ呼び方へ置きかえる(呼び方は仲良し度では変えない・2026-11-07 社長)
