@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 41273a730856427f
+// generated-sha256: c41c3410d64bb917
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4821,6 +4821,8 @@ const RHYTHM_MULTI_LOOK_LEVELS = Object.freeze(['LIGHT', 'STANDARD', 'VIVID', 'O
 const rhythmLookPresetOf = settings => (RHYTHM_LOOK_PRESETS.find(preset=>Object.entries(preset.values).every(([key,value])=>settings&&settings[key]===value))||{id:''}).id;
 // ノーツの色の組(B5・2026-11-07)。並びは画面のボタンの順。id は data/rhythm-mode.js の RHYTHM_NOTE_PALETTES と同じ
 const RHYTHM_NOTE_PALETTE_CHOICES = Object.freeze([['STANDARD','標準'],['PASTEL','パステル'],['NEON','ネオン'],['CLEAR','見分けやすい']]);
+// ノーツの形(2026-11-07 社長「ノーツの形も何種類か作って選べるようにしたい」)。id は data/rhythm-mode.js の RHYTHM_NOTE_SHAPE_IDS と同じ
+const RHYTHM_NOTE_SHAPE_CHOICES = Object.freeze([['STANDARD','標準'],['ROUND','まる'],['DIAMOND','ひし形'],['CHEVRON','Vの字'],['HOLLOW','中抜き'],['PIXEL','ドット'],['GEM','宝石'],['PAW','肉球']]);
 // 記念ステージ(B5)。本オープンの印(rhythmGrandOpen)が立つまで、選ぶところを出さず、選んであっても描かない
 const RHYTHM_STAGE_THEME_CHOICES = Object.freeze([['NONE','いつもの背景'],['GRAND_OPEN','本オープン記念']]);
 const rhythmStageThemeActive = (settings) => settings?.stageTheme === 'GRAND_OPEN'
@@ -4962,6 +4964,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // ノーツの色の組と記念ステージ(2026-11-07 本オープンの目玉 B5・社長「4つとも入れる」)。新しい項目なので、保存値に無い人はいまの見た目で補う。
   //   notePalette … RHYTHM_NOTE_PALETTES(data/rhythm-mode.js)の id / stageTheme … NONE(いまの背景)か GRAND_OPEN(本オープン記念ステージ)
   notePalette:'STANDARD', stageTheme:'NONE',
+  // ノーツの形(2026-11-07)。新しい項目なので、保存値に無い人はいまの形(STANDARD)で補う
+  noteShape:'STANDARD',
   // みんなで対戦のライブでは、演出を「軽さ優先」にそろえる(2026-10-03・ユーザー指示「マルチは演出量をデフォで下げたほうがいい」)。
   // ふだんの見た目の設定は書き換えない。対戦のあいだだけ上から重ねる
   multiLightLook:true,
@@ -5242,6 +5246,7 @@ const normalizeRhythmSettings = value => {
     fx:normalizeRhythmFx(source.fx),
     notePalette:RHYTHM_NOTE_PALETTE_CHOICES.some(([id])=>id===source.notePalette)?source.notePalette:DEFAULT_RHYTHM_SETTINGS.notePalette,
     stageTheme:RHYTHM_STAGE_THEME_CHOICES.some(([id])=>id===source.stageTheme)?source.stageTheme:DEFAULT_RHYTHM_SETTINGS.stageTheme,
+    noteShape:RHYTHM_NOTE_SHAPE_CHOICES.some(([id])=>id===source.noteShape)?source.noteShape:DEFAULT_RHYTHM_SETTINGS.noteShape,
   };
 };
 const emptyRhythmBestRecord = () => ({bestScore:0,maxCombo:0,played:false,clear:false,fullCombo:false,allExcellent:false,allMarvelous:false,judgments:Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0]))});
@@ -21545,7 +21550,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
   </div>;
   // onPick … 選んだ直後に呼ぶ(タップ音の種類は、選んだその場で鳴らして聞き比べられるようにする)
   // 6つ(タップ音のセット)は3つずつ2段。5つ並べると1つだけ次の段へこぼれる
-  const segments=(key,items,onPick=null)=><div className={`grid ${items.length===4&&items.some(([,text])=>String(text).length>=4)?'grid-cols-2 [&>button:nth-child(2n)]:border-r-0 [&>button:nth-child(-n+2)]:border-b [&>button:nth-child(-n+2)]:border-b-white/10':items.length===6?'grid-cols-3 [&>button:nth-child(3n)]:border-r-0 [&>button:nth-child(-n+3)]:border-b [&>button:nth-child(-n+3)]:border-b-white/10':items.length>=5?'grid-cols-5':items.length>=4?'grid-cols-4':items.length===2?'grid-cols-2':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} data-rhythm-option-choice={`${key}:${id}`} aria-pressed={draft[key]===id} onClick={()=>{set(key,id);if(onPick)onPick(id);}} className={`break-keep border-r border-white/10 ${items.length>=5?'px-0 tracking-tight':'px-1'} text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
+  const segments=(key,items,onPick=null)=><div className={`grid ${items.length===4&&items.some(([,text])=>String(text).length>=4)?'grid-cols-2 [&>button:nth-child(2n)]:border-r-0 [&>button:nth-child(-n+2)]:border-b [&>button:nth-child(-n+2)]:border-b-white/10':items.length===6?'grid-cols-3 [&>button:nth-child(3n)]:border-r-0 [&>button:nth-child(-n+3)]:border-b [&>button:nth-child(-n+3)]:border-b-white/10':items.length===8?'grid-cols-4 [&>button:nth-child(4n)]:border-r-0 [&>button:nth-child(-n+4)]:border-b [&>button:nth-child(-n+4)]:border-b-white/10':items.length>=5?'grid-cols-5':items.length>=4?'grid-cols-4':items.length===2?'grid-cols-2':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} data-rhythm-option-choice={`${key}:${id}`} aria-pressed={draft[key]===id} onClick={()=>{set(key,id);if(onPick)onPick(id);}} className={`break-keep border-r border-white/10 ${items.length>=5?'px-0 tracking-tight':'px-1'} text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
   // HELL の設定の選び方(segments と同じ見た目で、下書き hellDraft を書き換える)
   const hellSegments=(name,items)=><div className={`grid ${items.length===2?'grid-cols-2':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} data-rhythm-option-choice={`hell-${name}:${id}`} aria-pressed={hellDraft[name]===id} onClick={()=>{setHellDraft(cur=>({...cur,[name]:id}));setMessage('');}} className={`border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${hellDraft[name]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
   // 1項目=1枠。頭に帯のラベルを置く(参考にした画面と同じ形)。
@@ -21900,14 +21905,17 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 {!wide&&<button type="button" data-rhythm-fx-group-head="note" aria-expanded={fxGroup==='note'} onClick={()=>setFxGroup(cur=>cur==='note'?null:'note')} className={`flex w-full items-center gap-2 text-left ${head}`}><span aria-hidden="true" className="text-cyan-300/80">{fxGroup==='note'?'▼':'▶'}</span>🎵 ノーツ<span data-rhythm-fx-group-badge className="rounded-full bg-fuchsia-500/25 px-2 py-0.5 text-[10px] font-black text-fuchsia-100">{fxGroupSummary('note')}</span><small className="ml-auto text-[10px] font-bold text-slate-400">{fxGroupCount('note')}項目</small></button>}
 {(wide||fxGroup==='note')&&<div className={wide?`mt-1 ${fxGrid}`:`mt-3 ${fxGrid}`}>
 {/* ノーツの色の組(B5・2026-11-07 社長「4つとも入れる」)。種類ごとの色分けはそのままで、色味だけ替える */}
-{field('ノーツの色',<>{segments('notePalette',RHYTHM_NOTE_PALETTE_CHOICES)}
-  {/* 選んでいる色で、ノーツの種類ごとの見本を並べる(2026-11-07 社長「各ノーツごとにどうかわるか」)。描き手はゲームと同じ。選びかえるとその場で描き直す */}
-  <div data-rhythm-note-look-preview={draft.notePalette||'STANDARD'} className="mt-1 grid grid-cols-3 gap-1 rounded-lg bg-slate-950/70 p-1">
+{field('ノーツの色',segments('notePalette',RHYTHM_NOTE_PALETTE_CHOICES),
+              'ノーツの色の組み合わせです。既定は「標準」（これまでの色）です。判定・スコアは変わりません。\n「パステル」＝やわらかい色。「ネオン」＝くっきり光る色。「見分けやすい」＝色の見え方に左右されにくい組み合わせで、ノーツのまわりの光を出しません。\nTAP・HOLD・SLIDE・FLICK などの種類ごとに色が分かれているのは、どれを選んでも同じです。次に演奏を始めたときから変わります。',{full:true})}
+{/* ノーツの形(2026-11-07 社長「ノーツの形も何種類か作って選べるようにしたい」→ 8つ全部)。下の見本は、いま選んでいる色と形で描く(色と形の見本はここに1つ) */}
+{field('ノーツの形',<>{segments('noteShape',RHYTHM_NOTE_SHAPE_CHOICES)}
+  {/* 選んでいる色と形で、ノーツの種類ごとの見本を並べる(2026-11-07 社長「各ノーツごとにどうかわるか」)。描き手はゲームと同じ。選びかえるとその場で描き直す */}
+  <div data-rhythm-note-look-preview={(draft.notePalette||'STANDARD')+':'+(draft.noteShape||'STANDARD')} className={`mt-1 grid ${wide?'grid-cols-3':'grid-cols-6'} gap-1 rounded-lg bg-slate-950/70 p-1`}>
     {[['TAP','TAP'],['HOLD','HOLD'],['SLIDE','SLIDE'],['FLICK','FLICK'],['FLICK_LEFT','横(左)'],['FLICK_RIGHT','横(右)']].map(([kind,label])=><div key={kind} className="flex min-w-0 flex-col items-center">
-      <RhythmNoteSwatch kind={kind} width={46} height={30} look={{palette:draft.notePalette||'STANDARD'}}/>
+      <RhythmNoteSwatch kind={kind} width={46} height={30} look={{palette:draft.notePalette||'STANDARD',shape:draft.noteShape||'STANDARD'}}/>
       <small className="truncate text-[8px] font-bold leading-tight text-slate-400">{label}</small></div>)}
   </div></>,
-              'ノーツの色の組み合わせです。既定は「標準」（これまでの色）です。判定・スコアは変わりません。\n「パステル」＝やわらかい色。「ネオン」＝くっきり光る色。「見分けやすい」＝色の見え方に左右されにくい組み合わせで、ノーツのまわりの光を出しません。\nTAP・HOLD・SLIDE・FLICK などの種類ごとに色が分かれているのは、どれを選んでも同じです。次に演奏を始めたときから変わります。')}
+              'ノーツの形です。既定は「標準」（これまでの形）です。判定・スコア・叩く位置は変わりません。\n「まる」＝両はしが丸い。「ひし形」＝まん中が厚いひし形。「Vの字」＝下向きに折れた形。「中抜き」＝太い枠だけ。「ドット」＝四角を並べた形。「宝石」＝面を切った宝石。「肉球」＝まん中に肉球のメダル。\nノーツの左右のはしとまん中の位置は、どの形でも同じです。ひし形・Vの字・宝石は、上下に少しはみ出して見えます。\nTAP・HOLD・SLIDE・FLICK などの種類ごとの色分けと、フリックの矢印は、どの形でも同じです。マスモンのノーツは形が変わりません。次に演奏を始めたときから変わります。',{full:true})}
 {field('ノーツの動き',toggle('noteMotionFx'),
               'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。')}
 {/* にじむ光(2026-09-26・ユーザー指示「見た目の向上＋軽量化」の3。既定は OFF)。WebGL で描いているときだけ効く */}
@@ -24135,7 +24143,9 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const settingsBase=useMemo(()=>lineHeightOverride===null||!settingsIn?settingsIn:{...settingsIn,judgmentLineHeight:lineHeightOverride},[settingsIn,lineHeightOverride]);
   const settings=useMemo(()=>settingsBase&&settingsBase.autoEffectDown!==false?rhythmCapEffects(settingsBase,effectCap):settingsBase,[settingsBase,effectCap]);
   // ノーツの色の組(B5・2026-11-07)。演奏画面を開いた最初の1回だけ当てる(描き先を取り付けるより前。演奏中は作り直さない)
-  useState(()=>{try{if(typeof rhythmApplyNotePalette==='function')rhythmApplyNotePalette(settingsIn?.notePalette);}catch(e){}return 0;});
+  useState(()=>{try{if(typeof rhythmApplyNotePalette==='function')rhythmApplyNotePalette(settingsIn?.notePalette);}catch(e){}
+    // ノーツの形(2026-11-07)も同じ時に当てる
+    try{if(typeof rhythmApplyNoteShape==='function')rhythmApplyNoteShape(settingsIn?.noteShape);}catch(e){}return 0;});
   // 演奏の途中で段が下がっても、作り直されない処理(毎フレームの処理・判定の処理)が最新の設定を読めるように
   const settingsLiveRef=useRef(settings);settingsLiveRef.current=settings;
   // タップ音を作り置きしておく(1回だけ。作り終わる前に叩いた音はクラシックで鳴る)
