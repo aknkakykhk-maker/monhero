@@ -11512,7 +11512,7 @@ const ASSISTANT_ERUBIN_JOIN_STORY = [
   { who:'erubin',   e:'happy',    outfit:'sekiyuou', t:'持ってないよ笑 ……それ、絶対これからも聞かれるやつだよね' },
   { who:'dra',      e:'happy',    atsu:'with',    t:'ビンビン、ラクダは？ ラクダは何頭いるんだ？' },
   { who:'erubin',   e:'troubled', outfit:'sekiyuou', atsu:'with', t:'ドラちゃんまでw さっき追いかけられたばっかりだって' },
-  { who:'kyuko',    e:'happy',    t:'ほい、えるニキ、はじめまして〜。あとでおごってくれるんでしょぉ？ 笑' },
+  { who:'kyuko',    e:'happy',    t:'ほい、えるニキ、はじめまして〜。もう呼び名決めちゃったけど、いいよねぇ？ 笑' },
   { who:'erubin',   e:'troubled', outfit:'sekiyuou', t:'きゅうこちゃん、まだ会って1分だよね？ 笑' },
   { who:'sorashido', e:'excited', t:'うぉぉぉ、本物の石油王はじめて見た！ えるさん、写真いい！？' },
   { who:'erubin',   e:'happy',    outfit:'sekiyuou', t:'だから本物じゃないって笑 ……まぁ、写真くらいならいいよ、ソラくん' },
@@ -11638,6 +11638,7 @@ const ASSISTANT_CARD_CUP_STORY_CALLS = { mua: 'ひめちん／もも／あつく
 // 予告のお話(短い)と、本オープンのお話(ふりかえり → お祝い → ギフト案内)。助手8人全員が出る。
 // 予告は RELEASE_FLAGS.rhythmGrandOpenTeaser、本編は RELEASE_FLAGS.rhythmGrandOpen で出る(どちらも社長が決めるまで偽)。
 // あつの行は atsu:'with'(あつを解放した人だけ)。ほかの7人は公開ずみなので印なし。
+// BGM は2本とも「風がそよぐ場所」(EVENT_BGM_SCENES の rhythmGrandOpenEvent)。本編は③のクラッカーから Rising Hope へ替える(2026-11-07 社長「切り替え案」)
 // ギフトの中身を変えたら、本編の④の行も直す(GRAND_OPEN_ALL_GIFT・17-release-changelog-login-missions.jsx)
 const ASSISTANT_RHYTHM_GRAND_OPEN_TEASER = [
   { who:'mua',       e:'excited',  bg:'monhero_plaza', t:'みんなー！ まぢでビッグニュースあるんだけど！' },
@@ -11647,7 +11648,7 @@ const ASSISTANT_RHYTHM_GRAND_OPEN_TEASER = [
   { who:'kiki',      e:'happy',    t:'今まではプレオープンだったんでつ。モンヒロビートが、いよいよ本番になるんでつよ♪♪' },
   { who:'momosuke',  e:'excited',  t:'えー！！ モンビート、本番になったらもっとすごくなるってこと！？♡' },
   { who:'atsu',      e:'excited',  atsu:'with', t:'まじで！？ てか、それお祝いするしかなくない？ 笑' },
-  { who:'kyuko',     e:'happy',    t:'ほい、お祝いならお菓子いるよねぇ〜。だれのおごりぃ？ 笑' },
+  { who:'kyuko',     e:'happy',    t:'ほい、お祝いいいねぇ〜。俺、当日の段取り考えとくよぉ笑' },
   { who:'sorashido', e:'excited',  t:'うぉぉぉ、本オープン！ 飾りつけの数の計算なら任せてくれだぜ・・・！' },
   { who:'erubin',    e:'happy',    t:'いいねー！ 俺も手伝うよ。何から始めよっか' },
   { who:'mua',       e:'wink',     t:'それは当日までのひみつ〜。ぜったい楽しみにしててね！' },
@@ -11674,7 +11675,7 @@ const ASSISTANT_RHYTHM_GRAND_OPEN_STORY = [
   { who:'erubin',    e:'happy',    t:'俺なんて、来たのはついこのあいだだからね。これから、いっぱい教えてね' },
   { who:'kiki',      e:'happy',    t:'それもこれも、遊んでくれたみなさんのおかげでつ。ほんとうに、ありがとうございまつ♪♪' },
   // ---- ③ お祝い ----
-  { who:'mua',       e:'excited',  fx:'transform', fxText:'パーン！ クラッカーの音が、広場にひびいた', t:'せーのっ……モンヒロビート、本オープン、おめでとーーー！！' },
+  { who:'mua',       e:'excited',  fx:'transform', bgm:'melo_rising_hope', fxText:'パーン！ クラッカーの音が、広場にひびいた', t:'せーのっ……モンヒロビート、本オープン、おめでとーーー！！' },
   { who:'momosuke',  e:'excited',  t:'おめでとう！！ もも、今日からもっともっと叩くよ〜♡' },
   { who:'dra',       e:'excited',  t:'おめでとうだ！ おで、ケーキも用意したからな' },
   { who:'kyuko',     e:'surprise', t:'えっ、ケーキぃ！？ ドラちゃん、それ先に言ってよぉ〜笑' },
@@ -11689,7 +11690,7 @@ const ASSISTANT_RHYTHM_GRAND_OPEN_STORY = [
   { who:'sorashido', e:'excited',  t:'うぉぉぉ、1日1,000個ずつ使っても、27年以上かかるぜ・・・！' },
   { who:'erubin',    e:'happy',    t:'計算はやいね笑 ほかにも、虹のプシュケーやスキップチケットも入ってるよ' },
   { who:'momosuke',  e:'excited',  t:'セッション券と性格のたねもある！！ もも、マスモンの性格えらび、がんばっちゃお〜♡' },
-  { who:'kyuko',     e:'happy',    t:'ほい、受け取りの期限はないってさぁ。でも、早めにもらっとこ〜笑' },
+  { who:'kyuko',     e:'happy',    t:'ほい、受け取りの期限はないってさぁ。あわてなくて大丈夫だよぉ笑' },
   { who:'kiki',      e:'happy',    t:'おひとりさま1回、ギフトボックスから受け取れまつ。これから始めるみなさんにも、記念のプレゼントがありまつよ♪♪' },
   { who:'atsu',      e:'wink',     atsu:'with', t:'みんな、まじでありがと！ これからもよろしくね 笑' },
   { who:'mua',       e:'wink',     t:'これからもモンビー、いっぱい遊んでね！ あたしたち、まぢで待ってるから！' },
