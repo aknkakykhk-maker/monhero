@@ -109,6 +109,16 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 6人目の助手きゅうこ(2026-10-22 社長の決定)。新モンスターのイルミネ・ドリーミィも出る加入のお話を社長が全文読んで OK を出したら、3つ同時に真にする。
   //   偽のあいだは、助手の一覧・加入のお話・回想・マーケットのカード「きゅうこ」に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS・data/breeder.js の kyukoCardOnSale)
   assistantKyuko: true,
+  // 助手どうしのつながり(2026-11-07 社長「ガッツリ作りこんで」)。ペアの仲良し度・台本版の掛け合い・プロフィールの関係図(56-assistant-peer.jsx)。
+  //   偽にすると、仲良し度は上がらず、掛け合いも関係図も出ない(おしゃべりで渡すほかの助手のメモ=段階1 はこの印に関係なく送る)
+  assistantPeer: true,
+  // 助手どうしの掛け合いの API 版(kind:'peer_talks')。中継役(assistant-chat)を窓口が配り、表 assistant_peer_talk_usage を作ってから
+  //   マージする(2026-11-07 社長「この文で公開」・窓口の段取り)。偽にすると頼まず、台本版(ASSISTANT_PEER_TALKS)だけで流れる
+  assistantPeerApi: true,
+  // 助手どうしの作り直し「助手たちの今」(2026-11-07 社長。設計 docs/progress/assistant-peer/LIFE-PLAN.md)。1人ずつが気分としたいことで
+  //   だれと過ごすかを決める仕組み・にぎわい(遊んだ量で4段)・専用の画面。全部そろって社長が「この文で公開」と言ったら真にする。
+  //   偽のあいだは、にぎわいを数えず、助手どうしの仲良くなり方も今のまま(56-assistant-life.jsx)
+  assistantLife: false,
   // 7人目の助手ソラシド(2026-10-27 社長の決定)。絵・お話・お知らせがそろって、社長が「公開」と言ったら真にする。
   //   偽のあいだは、助手の一覧・おしゃべり・選ぶ画面に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS)。
   //   MFバトルカードの相手えらび・マルチ・観戦・記録・曲の並びにも出ない(82 の cardFoeReleased)
@@ -412,6 +422,34 @@ const jstDayCarry = (saved, today) => {
   if (typeof saved !== 'string' || typeof today !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(saved)) return today;
   const t = Date.parse(`${today}T00:00:00Z`);
   return Number.isFinite(t) && saved === new Date(t + 86400000).toISOString().slice(0, 10) ? saved : today;
+};
+// ---------- 2026-11-07 の一度きりの戻し(社長「今日の分は全員リセット」) ----------
+//   4時そろえの切り替えの夜に0時区切りで書いた「11/7」が、4:00 を過ぎても今日の分として残ったので、11/7 のあいだに1回だけ前の日の日付へ戻す。
+//   items … [キー, その値の中で日付を持つ所]。'' は値そのものが日付の文字列(マス助言)。日付だけを '2026-11-06' にし、ほかは触らない
+const DAY_RESET_20261107_FLAG = 'mh_day_reset_20261107_v1';
+const DAY_RESET_20261107_ITEMS = Object.freeze([
+  ['mh_card_daily_v1', 'day'],        // バトルカードの毎日の分(助手と対戦のごほうび・その日のポイント)
+  ['mh_card_level_v1', 'day'],        // バトルカードのレベルの「その日はじめての勝ち」
+  ['mh_rhythm_rank_v1', 'day'],       // モンヒロビートのランクの「その日はじめての1曲」
+  ['mh_daily_masu_advice_date_v1', ''], // 毎日のマス助言
+]);
+const dayReset20261107Value = (v, field) => {
+  if (field === '') return v === '2026-11-07' ? '2026-11-06' : null;
+  if (!v || typeof v !== 'object' || Array.isArray(v) || v[field] !== '2026-11-07') return null;
+  return { ...v, [field]: '2026-11-06' };
+};
+const runDayReset20261107 = async ({ storeGet, storeSet, now = Date.now() }) => {
+  try {
+    if (jstDayKey4(now) !== '2026-11-07') return 0;
+    if (await storeGet(DAY_RESET_20261107_FLAG, false, false)) return 0;
+    await storeSet(DAY_RESET_20261107_FLAG, true, false);   // 先に立てる(途中で止まっても二重に戻さない)
+    let n = 0;
+    for (const [key, field] of DAY_RESET_20261107_ITEMS) {
+      const next = dayReset20261107Value(await storeGet(key, null, false), field);
+      if (next !== null) { await storeSet(key, next, false); n += 1; }
+    }
+    return n;
+  } catch (_) { return 0; }
 };
 // ---------- どの助手と一緒に遊ぶか ----------
 // 助手は「みゅあ」「きき」から選ぶ。どちらも最初から解放されていて、解放条件は無い。

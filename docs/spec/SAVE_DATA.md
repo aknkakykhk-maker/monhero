@@ -49,7 +49,23 @@
 | `mh_breeder_id_v1` | string or null | 端末ごとに1回だけ作るブリーダーID。全国ランキングで同名の別人を見分けるために送る(名前を変えても変わらない。`docs/spec/RHYTHM_RANKING.md` §4) |
 | `mh_assistant_chat_log_v1` | object | 助手とおしゃべりの会話。`{ [助手id]: [{ role:'user'\|'assistant', text, e? }] }`、助手ごとに最後の60件。端末にだけ置き、サーバーには残さない(`docs/spec/ASSISTANT_CHAT.md`) |
 | `mh_assistant_chat_memo_v1` | object | 助手とおしゃべりの思い出メモ(前の形)。`{ [助手id]: 120字までの文 }`。2026-10-14 からは**読むだけ**で書かない。新しいキーに無い助手のぶんは「前に話した話題」として引き継ぐ |
-| `mh_assistant_chat_memo_v2` | object | 助手とおしゃべりの思い出メモ(2026-10-14〜)。`{ [助手id]: { likes, goals, events, topics, summary } }`(各100字・summary 160字まで)。次の会話で中継役へ渡す |
+| `mh_assistant_chat_memo_v2` | object | 助手とおしゃべりの思い出メモ(2026-10-14〜)。`{ [助手id]: { likes, goals, events, topics, summary, secret } }`(各100字・summary 160字まで)。次の会話で中継役へ渡す。secret(ないしょの話)は 2026-11-07 に足した欄で、ほかの助手には渡さない。無い人は空として読む |
+| `mh_assistant_chat_last_v1` | object | 助手ごとに最後におしゃべりの返事が来た日(2026-11-07)。`{ [助手id]: 'YYYY-MM-DD' }`。30日以内に話した助手の思い出メモだけを、ほかの助手とのおしゃべりで共有する |
+| `mh_assistant_peer_bond_v1` | object | 助手どうしの仲良し度(2026-11-07)。`{ "kiki-mua"(助手idの名前順): 点数 }`。Lv1〜10 は data/assistants.js の ASSISTANT_PEER_BOND_LEVELS |
+| `mh_assistant_peer_bond_day_v1` | object | 助手どうしの仲良し度の、その日に上がった量(1日の上限を数える)。`{ day, got: { [ペア]: { story, switch, talk, choice, daily, streak, gift, token, play } } }`。日付が変われば数え直す |
+| `mh_assistant_peer_talk_log_v1` | array | 最近見た助手どうしの掛け合い(30件まで)。`[{ id, at }]`。同じ掛け合いが続かないようにする |
+| `mh_assistant_peer_talk_day_v1` | object | その日に流した掛け合いの数。`{ day, home, other }`(HOME は1日5回・ほかの画面は3回まで) |
+| `mh_assistant_peer_special_seen_v1` | array | 仲良し度 Lv5 の「2人の特別なお話」を見たペア。`[ペア]`。プロフィールの関係図から見返せる |
+| `mh_assistant_peer_talk_gen_v1` | object | API 版で作ったその日の助手どうしの掛け合い(2026-11-07)。`{ day, asked, talks: [{ id, pair, lines: [{ who, e, t }] }] }`。日付が変われば使わない。asked はその日に頼んだ回数(100回まで) |
+| `mh_assistant_peer_daily_v1` | object | 助手どうしの「今日のペア」(2026-11-07)。`{ day, pair, seen, done, lastDay, streak }`。seen はその日に見たそのペアの掛け合いの数(3で達成)、streak は続けてログインした日数 |
+| `mh_assistant_peer_choice_v1` | object | 助手どうしの掛け合いで選んだ返事。`{ [掛け合いid]: 0〜2 }` |
+| `mh_assistant_peer_album_v1` | object | 助手どうしの思い出アルバム。`{ [ペア]: [見た掛け合いid] }`(台本だけ。API 版で作ったものは入れない) |
+| `mh_assistant_peer_gift_v1` | object | その日に差し入れ・友情のしるしを渡したペア(2026-11-07)。`{ day, gift, token }`(どちらも全体で1日1回)。品物そのものは `mh_owned_items` の `peer_gift`・`peer_token` |
+| `mh_assistant_peer_play_v1` | object | 遊びに連れていくペア。`{ pair }`(null でだれも連れていない) |
+| `mh_assistant_peer_quarrel_v1` | object | 助手どうしのけんか→仲直り(2026-11-07)。`{ pending: { id, pair, at } \| null, done: [けんかid] }`。pending は言い合いを見て、まだ仲直りを見ていないもの(次に HOME を開いたとき仲直りが流れる)。done は見たけんか(同じけんかは2度出ない) |
+| `mh_assistant_peer_special2_seen_v1` | array | 仲良し度 Lv10 の「2人の特別なお話・その2」を見たペア。`[ペア]`。Lv5 の記録(`mh_assistant_peer_special_seen_v1`)とは別に持つ |
+| `mh_assistant_life_v1` | object | 助手たちの今(2026-11-07・公開の印 assistantLife)。いまの時間の様子 `{ salt(端末ごとの種), abs(時間の通し番号), slot, moods:{助手:気分}, groups:[{ids,doing,place}], solo:{助手:{doing,place,reason}}, lonely:[助手], recent:[{kind,abs,pair,ids}](最近のできごと 40件まで), nudges:{invite:[{id,abs}],introduce:[{pair,abs}]}(ブリーダーの声かけ) }`。壊れていたら空として読み直す |
+| `mh_assistant_life_play_v1` | object | 助手たちの今のにぎわい `{ day(朝4時区切り), points, counts:{rhythm,battle,card,chat,peer}, lastDay, streak }`。段(静か/ふつう/にぎやか/お祭り)で助手どうしの仲良くなり方と1日の上限が変わる。助手どうしの点 `mh_assistant_peer_bond_v1` は書き換えない(上がる量が変わるだけ) |
 | `mh_assistant_daily_lines_v1` | object | ふだんの吹き出しを1日1回まとめて作ったひとこと(2026-10-14)。`{ day, assistantId, lines: { [場面]: [{ e, t, n }] } }`。日付が変われば使わず、次に作ったら入れ替える。n はその日に出した回数 |
 | `mh_story_assistant_chat_seen_v1` | boolean | 助手とおしゃべりのお話「話せるようになった日」を本編で見たか(飛ばしても立つ)。公開の後の最初の HOME で1回だけ流すため。回想・デバッグでは立てない |
 | `mh_beat_shop_vip_letter_seen_v1` | boolean | お話「レジェンドブリーダーへの招待状」を本編で見たか(飛ばしても立つ・2026-11-05)。ブリーダーレベル1000以上の HOME で1回だけ流す。true の人だけ、ビートP交換所のダイヤ・トレーニングチケット・重トレーニングチケットが「優待パス還元」になる(値段は data/rhythm-event.js の LEGEND_BREEDER_PASS_OFFERS。保存しない)。回想・デバッグでは立てない |
@@ -86,6 +102,7 @@
 | `mh_card_tactics_v1` | object / `cardNormalizeTactics` | MFバトルカードの戦術カード(2026-10-29・82-card-tactics-core / 96-card-tactics.jsx)`{ v:1, own:{ カードid: 枚数 }, frames:{ base:[メイン,サブ1,サブ2], breeder:[行], mons:[[行]×3] }, shards(かけら), tickets(引く券), pulls(引いた回数), dry(SRが出ないまま引いた回数・天井) }`。行は `{ c(条件), a(行動), on, sp(種族) }`。はじめに配る10枚は保存に無くても持っている扱い。知らないカードidは消さずに残す。壊れた値は空。`CARD_SAVE_KEYS` には入れない(デバッグの記録の消去で消さない) |
 | `mh_card_tactics_by_deck_v1` | object / `cardTacticsDeckNormalize` | デッキごとの戦術カード(2026-11-02・96-card-tactics.jsx)`{ v:1, decks:{ デッキのid: { frames, aces, at } } }`・新しい40組まで。覚えていないデッキは `mh_card_tactics_v1` の frames から始める(共通のキーは「最後に使った物」のまま両方に書く)。はじめて書くときだけ、ほかのデッキにも書く前の共通の frames を入れる(キーがあれば二度と走らない) |
 | `mh_card_auto_reward_v1` | object / `cardAutoRewardNormalize` | オートで挑む(ほかのブリーダーの登録デッキ)のごほうびの回数(2026-11-02・96-card-tactics.jsx)`{ v:1, day:'YYYY-MM-DD'(日本の日付), n }`。日付が今日でなければ0回。1日はじめの3回だけごほうび(手の半分)。壊れていたら0回の扱い |
+| `mh_day_reset_20261107_v1` | boolean(一度きりの印) | 2026-11-07 の一度きりの戻しを済ませた印(17-release-changelog-login-missions.jsx の `runDayReset20261107`)。4時そろえ(#4679)の切り替えの夜に0時区切りで書いた「11/7」が今日の分として残ったため、11/7(朝4時区切り)のあいだに1回だけ、`mh_card_daily_v1`・`mh_card_level_v1`・`mh_rhythm_rank_v1` の `day` と `mh_daily_masu_advice_date_v1` が 11/7 なら 11/6 に書き換える(日付だけ。中身はそのまま)。先に立ててから書き換えるので二重に戻さない。ほかの日は読むだけで何もしない |
 | `mh_card_cup_wallet_v1` | array / `[]` | MFバトルカード個人杯のごほうび・参加費の印(2026-10-31・99-card-cup-prize.jsx)`[{ cup, kind:'prize'|'fee'|'claim', item, amount, nonce, state, at, card?, gift?, items? }]`(新しい200件まで。終わった物から落とす)。預ける: 持ち物を減らすのと同じ取引で `sending` を書き、サーバの返事で `held`(預けた)か `returned`(戻した)。受け取る: `claiming`(nonce を決めた)→ `claimed`。サーバは nonce ごとに1回だけ数え、受け取りは最初の nonce にだけ中身を返す。壊れていたら書かない(持ち物を足しも減らしもしない) |
 | `mh_card_tactic_use_v1` | object / `cardTacticUseNormalize` | MFバトルカードの戦術カードを、登録の一覧から入れた回数 `{ v:1, used:{ [カードid]: 回数 } }`(一覧の「よく使う順」。2026-10-31・97-card-tactics-screen.jsx)。無い・壊れているときは空。知らないカードidと0以下の数は捨てる |
 | `mh_card_level_v1` | object / `cardNormalizeLevel` | MFバトルカードのレベル(2026-10-29・96-card-tactics.jsx)`{ v:1, xp, day, dayWin, got:[引く券を配ったレベル] }`。上限なし・全員 Lv1 から(今の戦績からは起こさない)。対戦の結果と同じ取引で足す(84)。公開前はデバッグの人だけ入る。壊れた経験値は0。`got` で引く券を二度配らない。`CARD_SAVE_KEYS` には入れない |

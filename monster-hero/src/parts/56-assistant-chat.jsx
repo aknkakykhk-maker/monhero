@@ -9,7 +9,8 @@ const ASSISTANT_CHAT_LOG_KEY = 'mh_assistant_chat_log_v1';   // { [助手id]: [{
 const ASSISTANT_CHAT_MEMO_KEY = 'mh_assistant_chat_memo_v1'; // 前の形 { [助手id]: '120字までの文' }。読むだけで書かない
 // 思い出メモを5つの欄に広げた(2026-10-14)。新しいキーに書く。前のキーの文は「前に話した話題」として引き継ぐ(CLAUDE.md ⑦)
 const ASSISTANT_CHAT_MEMO_V2_KEY = 'mh_assistant_chat_memo_v2'; // { [助手id]: { likes, goals, events, topics, summary } }
-const ASSISTANT_CHAT_MEMO_FIELDS = { likes:100, goals:100, events:100, topics:100, summary:160 };
+// secret … 「ないしょ」「秘密」と言われたこと(2026-11-07 助手どうしの共有で足した欄)。ほかの助手には渡さない。無い人は空として読む
+const ASSISTANT_CHAT_MEMO_FIELDS = { likes:100, goals:100, events:100, topics:100, summary:160, secret:100 };
 const ASSISTANT_CHAT_LOG_LIMIT = 60;
 // 送る会話は直近10往復まで。10件ずつ区切って送り、前のほうの並びを毎回変えない(中継役でキャッシュが効く)
 const ASSISTANT_CHAT_SEND_STEP = 10;
@@ -284,10 +285,48 @@ const normalizeAssistantChatMemo = (rawV2, rawV1) => {
   return out;
 };
 
+// ===== 助手どうしの共有(段階1・2026-11-07 社長「ガッツリ作りこんで」「共有は全部」) =====
+// おしゃべりのとき、ほかの助手の思い出メモも中継役へ渡す(「みゅあちんから聞きましたよ」と話題にできる)。
+// 守り: 「ないしょ」の欄(secret)は渡さない・ないしょ/秘密らしい言葉を含む欄も渡さない・30日話していない助手の分は渡さない。
+// 設計: docs/progress/assistant-peer-plan.md。★保存は新しいキーだけ(CLAUDE.md ⑦)
+// 助手どうしの「今日」(2026-11-07 社長の決定: ゲーム全体の1日の区切りを朝4時 JST にそろえる)。
+//   共通の jstDayKey4(17-release)を使う(前の loginBonusPeriodKey と中身は同じなので、保存した日付はそのまま読める)
+const assistantPeerDayKey = (now = Date.now()) => jstDayKey4(now);
+const ASSISTANT_CHAT_LAST_KEY = 'mh_assistant_chat_last_v1'; // { [助手id]: 'YYYY-MM-DD' } 最後に返事が来た日(assistantPeerDayKey・朝4時区切り)
+const ASSISTANT_PEER_SHARE_DAYS = 30;
+const ASSISTANT_PEER_SHARE_FIELDS = ['likes', 'goals', 'events', 'topics', 'summary'];
+const ASSISTANT_PEER_SECRET_RE = /ないしょ|内緒|ナイショ|秘密|ひみつ|ヒミツ|だれにも言わ|誰にも言わ|言わないで/;
+const normalizeAssistantChatLast = (raw) => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [id, day] of Object.entries(raw)) if (typeof day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day)) out[id] = day;
+  return out;
+};
+const assistantPeerDaysBetween = (a, b) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86400000);
+// selfId 以外で、30日以内に話した助手のメモ(ないしょを除く)。中身が無い助手は入れない
+const assistantPeerMemosFor = (selfId, memos, last, today = assistantPeerDayKey()) => {
+  const out = {};
+  for (const [id, memo] of Object.entries(memos || {})) {
+    if (id === selfId || !memo || typeof memo !== 'object') continue;
+    const day = last && last[id];
+    if (!day) continue;
+    const gap = assistantPeerDaysBetween(day, today);
+    if (!Number.isFinite(gap) || gap < 0 || gap > ASSISTANT_PEER_SHARE_DAYS) continue;
+    const one = {};
+    for (const k of ASSISTANT_PEER_SHARE_FIELDS) {
+      const v = typeof memo[k] === 'string' ? memo[k].trim() : '';
+      if (v && !ASSISTANT_PEER_SECRET_RE.test(v) && !assistantChatLooksPersonal(v)) one[k] = v.slice(0, ASSISTANT_CHAT_MEMO_FIELDS[k]);
+    }
+    if (Object.keys(one).length) out[id] = one;
+  }
+  return out;
+};
+
 function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondTitle, bondTone, onExchange, onClose }) {
   const id = assistant && assistant.id;
   const [logs, setLogs] = React.useState({});
   const [memos, setMemos] = React.useState({});
+  const [lastDays, setLastDays] = React.useState({});
   const [loaded, setLoaded] = React.useState(false);
   const [input, setInput] = React.useState('');
   const [sending, setSending] = React.useState(false);
@@ -296,8 +335,9 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
   React.useEffect(() => {
     let alive = true;
     (async () => {
-      const [rawLog, rawMemo, rawMemoV2] = await Promise.all([storeGet(ASSISTANT_CHAT_LOG_KEY, {}, false), storeGet(ASSISTANT_CHAT_MEMO_KEY, {}, false), storeGet(ASSISTANT_CHAT_MEMO_V2_KEY, {}, false)]);
+      const [rawLog, rawMemo, rawMemoV2, rawLast] = await Promise.all([storeGet(ASSISTANT_CHAT_LOG_KEY, {}, false), storeGet(ASSISTANT_CHAT_MEMO_KEY, {}, false), storeGet(ASSISTANT_CHAT_MEMO_V2_KEY, {}, false), storeGet(ASSISTANT_CHAT_LAST_KEY, {}, false)]);
       if (!alive) return;
+      setLastDays(normalizeAssistantChatLast(rawLast));
       setLogs(normalizeAssistantChatLog(rawLog));
       setMemos(normalizeAssistantChatMemo(rawMemoV2, rawMemo));
       setLoaded(true);
@@ -319,6 +359,14 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
     setMemos(prev => {
       const all = { ...prev, [id]: normalizeAssistantChatMemoOne(memo) };
       try { storeSet(ASSISTANT_CHAT_MEMO_V2_KEY, all, false); } catch {}
+      return all;
+    });
+  };
+
+  const saveLastDay = () => {
+    setLastDays(prev => {
+      const all = { ...prev, [id]: assistantPeerDayKey() };
+      try { storeSet(ASSISTANT_CHAT_LAST_KEY, all, false); } catch {}
       return all;
     });
   };
@@ -348,7 +396,7 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
           breederId: breederId || 'unknown',
           assistantId: id,
           messages: assistantChatSendWindow(withUser).map(m => ({ role: m.role, text: m.text })),
-          ctx: { playerName, callName, bondLevel, bondTitle, bondTone, memo: memos[id] || null },
+          ctx: { playerName, callName, bondLevel, bondTitle, bondTone, memo: memos[id] || null, peerMemos: assistantPeerMemosFor(id, memos, lastDays) },
           // ランキングの話題のときだけ、読むランキングの計画を付ける(それ以外は付けない)
           ...(rankingPlan ? { ranking: rankingPlan } : {}),
         }),
@@ -363,7 +411,10 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
     // 本当に返事が来た1往復だけ、思い出メモと仲良し度に数える(断り・失敗は数えない)
     if (res && res.kind === 'reply') {
       if (res.memo && typeof res.memo === 'object') saveMemo(res.memo);
+      saveLastDay();
       if (typeof onExchange === 'function') onExchange();
+      // 助手たちの今: おしゃべり1往復でにぎわいがたまる(公開の印 assistantLife の後ろ)
+      if (typeof assistantLifeAddPlay === 'function') void assistantLifeAddPlay('chat');
     }
   };
 

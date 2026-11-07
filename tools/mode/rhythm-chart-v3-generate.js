@@ -509,6 +509,14 @@ let registryEntry=null;
     // MASTER だけ音を多く拾う倍率(2026-11-01 社長「もっとノーツ数を増やした高速系にしてほしい」・Rebellion)。hellDensity と同じ仕組みを MASTER に。書いた曲の MASTER だけ
     const masterDensity=Number(entry&&entry.masterDensity);
     if(Number.isFinite(masterDensity)&&masterDensity>1)audio.masterDensity=masterDensity;
+    // HOLD・SLIDE の本数の倍率(2026-11-07 社長「ノーツの数で難しく、気持ちよく押せる」・ヒューマノイド)。{MASTER:.5,HELL:.5} のように難易度ごとに 0〜1。
+    //   押さえている間の打点は指が足りないので落とす(下の events)。押さえる本数を減らすと、その間に鳴っていた音がタップとして戻る。
+    //   書いた曲の書いた難易度だけに効く。書いていない曲(配信中の曲すべて)は今までと1音も変わらない
+    const sustainScale=entry&&entry.sustainScale;
+    if(sustainScale&&typeof sustainScale==='object'&&!Array.isArray(sustainScale)){
+      const clean=Object.fromEntries(Object.entries(sustainScale).filter(([,v])=>Number.isFinite(Number(v))&&Number(v)>=0&&Number(v)<1).map(([k,v])=>[k,Number(v)]));
+      if(Object.keys(clean).length)audio.sustainScale=clean;
+    }
     // --hell-density で HELL の量の倍率を渡せる(rhythm-hell-mix.js の SONGS の hellDensity・2026-10-21 社長「ざしてぃを60ぐらいまで下げる」「すてぃうぃずみーだけ上げる」)。
     //   0.5〜2。1より小さいと量を減らす(拾う音の範囲は広げない)。曲の一覧の値より優先。HELL のときだけ効く
     {const cli=Number(arg('--hell-density',NaN));if(Number.isFinite(cli)&&cli>=.5&&cli<=2&&cli!==1)audio.hellDensity=cli;}
@@ -1193,7 +1201,10 @@ const buildChart=(difficulty,options={})=>{
   // 分あたりの割合を、この曲の長さぶんの個数へ直す
   const playableMinutes=Math.max(.25,(gridTimeMs(maxGrid)-gridTimeMs(minGrid))/60000);
   const countOf=perMinute=>perMinute>0?Math.max(1,Math.round(perMinute*playableMinutes)):0;
-  const holdMax=countOf(P.holdPerMinute),slideMax=countOf(P.slidePerMinute),
+  // sustainScale を書いた曲の書いた難易度だけ、HOLD・SLIDE の本数を減らす(上の読み込みを参照)。0 なら置かない
+  const sustainRate=audio&&audio.sustainScale&&Object.prototype.hasOwnProperty.call(audio.sustainScale,difficulty)?audio.sustainScale[difficulty]:1;
+  const sustainCount=perMinute=>sustainRate>=1?countOf(perMinute):Math.round(countOf(perMinute)*sustainRate);
+  const holdMax=sustainCount(P.holdPerMinute),slideMax=sustainCount(P.slidePerMinute),
     flickMax=countOf(P.flickPerMinute),endFlickMax=countOf(P.endFlickPerMinute),
     chordMax=countOf(P.chord?P.chord.perMinute:0),accentMax=countOf(P.accentPerMinute);
   const log=[];

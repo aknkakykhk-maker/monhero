@@ -370,6 +370,32 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
         return top && (top === b || b.contains(top)) ? '' : `札の上に ${top ? top.tagName : '何もない'} が重なっている`;
       });
       check(`結果画面 ${label}: MVPの札がアイコンより前に見えている`, mvp === '', mvp);
+      // 発言の吹き出しは、カードの外の上へ出す(2026-11-07 社長「結果画面で喋ったときも吹き出しだして」)。
+      // 以前はカードの中の上の端に重ねていて、MVP の人が話すと「👑 MVP」の札を隠し、カードの枠で切れていた
+      await B.evaluate(() => RHYTHM_MULTI.sendChat('ナイス!'));
+      await A.evaluate(() => RHYTHM_MULTI.sendChat('ありがとう!'));
+      await A.waitForTimeout(700);
+      const bubble = await A.evaluate(() => {
+        const bs = [...document.querySelectorAll('[data-rhythm-multi-result-bubble]')];
+        if (bs.length < 2) return `吹き出しが ${bs.length} 個しか出ない`;
+        const rows = [...document.querySelectorAll('[data-rhythm-multi-result-row]')].map((r) => r.getBoundingClientRect());
+        const mvp = document.querySelector('[data-rhythm-multi-mvp]');
+        const m = mvp ? mvp.getBoundingClientRect() : null;
+        const rot = document.querySelector('[data-mh-view-rotation=true]');
+        const bad = [];
+        bs.forEach((b) => {
+          const box = b.firstElementChild.getBoundingClientRect();
+          const text = b.innerText.trim();
+          if (box.width < 20 || box.height < 12) bad.push(`${text}: 小さすぎる`);
+          // カードの「上」= 回転していないときは上、回転中は見た目の上が画面の右
+          const outside = rows.some((r) => (rot ? box.left >= r.right - 2 : box.bottom <= r.top + 2));
+          if (!outside) bad.push(`${text}: カードの中に重なっている`);
+          if (m && box.left < m.right && box.right > m.left && box.top < m.bottom && box.bottom > m.top) bad.push(`${text}: MVPの札に重なる`);
+          if (box.left < -1 || box.top < -1 || box.right > innerWidth + 1 || box.bottom > innerHeight + 1) bad.push(`${text}: 画面の外へはみ出す`);
+        });
+        return bad.join(' / ');
+      });
+      check(`結果画面 ${label}: 発言の吹き出しがカードの外の上に出て、MVPの札を隠さない`, bubble === '', bubble);
       const out = await overflowing(A, '[data-rhythm-multi]');
       check(`結果画面 ${label}: ボタンが画面の外へはみ出さない`, out.length === 0, out.join(' / '));
       // 結果画面から全国ランキングを開く: 対戦の画面の上へ重なり(画面は移らない)、戻ると閉じて結果画面へ戻る
