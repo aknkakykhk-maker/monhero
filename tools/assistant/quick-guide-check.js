@@ -41,7 +41,7 @@ check('クイックの難易度えらびで g1b(チャレンジの難易度え�
 check('AUTO設定は全員に g2(クイックが開く前でも)', pick({ gameState: 'AUTO_SETTINGS', quickUnlocked: false }) === 'g2');
 check('クイックで∞にしたバトルで g3a', pick({ gameState: 'BATTLE', quickRun: true, autoRepeat: true }) === 'g3a');
 check('ふつうのバトルの1戦目は AUTO の案内', pick({ gameState: 'BATTLE', quickRun: false, autoRepeat: false }) === 'auto');
-check('れんしゅう・台本のバトルでは出さない', pick({ gameState: 'BATTLE', battleTutorial: true }) === null);
+check('れんしゅう・台本のバトル・ジャックとの戦いでは出さない', pick({ gameState: 'BATTLE', battleTutorial: true }) === null && pick({ gameState: 'BATTLE', raidJack: true }) === null);
 check('裏周回のままの曲えらびで g3b・モードえらびで g3c(裏周回でなければ出さない)',
   pick({ gameState: 'RHYTHM_DEMO_HOME', backgroundRun: true }) === 'g3b' && pick({ gameState: 'RHYTHM_MODE_SELECT', backgroundRun: true }) === 'g3c'
   && pick({ gameState: 'RHYTHM_DEMO_HOME', backgroundRun: false }) === null && pick({ gameState: 'RHYTHM_MODE_SELECT', backgroundRun: false }) === null);
@@ -185,7 +185,9 @@ const browser = async () => {
     const mustOk = () => page.evaluate((map) => {
       const g = document.querySelector('[data-quick-guide]'); if (!g) return { ok: false, why: '案内なし' };
       const id = g.getAttribute('data-quick-guide-page'), sel = map[id]; if (!sel) return { ok: true, why: 'must なし' };
-      const el = [...document.querySelectorAll(sel)].find((x) => { const r = x.getBoundingClientRect(); return r.width > 0 && r.height > 0; });
+      // 同じ目印が並ぶ物(横に並ぶ難易度の札など)は、いちばん画面に入っている1つで見る
+      const vis = (x) => { const r = x.getBoundingClientRect(); return Math.max(0, Math.min(r.bottom, innerHeight) - Math.max(r.top, 0)) * Math.max(0, Math.min(r.right, innerWidth) - Math.max(r.left, 0)); };
+      const el = [...document.querySelectorAll(sel)].filter((x) => vis(x) > 0).sort((a, b) => vis(b) - vis(a))[0];
       if (!el) return { ok: false, why: `${id}: ${sel} が無い` };
       const m = el.getBoundingClientRect(), vh = innerHeight, vw = innerWidth;
       const ring = document.querySelector('[data-quick-guide-spot]'), panel = document.querySelector('[data-quick-guide-panel]');
@@ -194,7 +196,8 @@ const browser = async () => {
       const inView = m.top >= 0 && m.bottom <= vh + 1 && m.left >= -1 && m.right <= vw + 1;
       const inRing = ring ? inter(m, ring.getBoundingClientRect()) >= area * 0.9 : false;
       const covered = panel ? inter(m, panel.getBoundingClientRect()) : 0;
-      return { ok: inView && inRing && covered <= area * 0.05, why: `${id}: 画面${inView ? '○' : '×'} 枠${inRing ? '○' : '×'} 窓かぶり${Math.round(covered)}` };
+      const rr = ring && ring.getBoundingClientRect(), pr = panel && panel.getBoundingClientRect();
+      return { ok: inView && inRing && covered <= area * 0.05, why: `${id}: 画面${inView ? '○' : '×'} 枠${inRing ? '○' : '×'} 窓かぶり${Math.round(covered)} 中身${[m.left, m.top, m.right, m.bottom].map(Math.round)} 枠${rr ? [rr.left, rr.top, rr.right, rr.bottom].map(Math.round) : '-'} 窓${pr ? [pr.left, pr.top, pr.right, pr.bottom].map(Math.round) : '-'} 横置き${panel && panel.getAttribute("data-quick-guide-side")}` };
     }, mustOf);
     const T = `[${vp.name}] `;
     await boot();
@@ -233,6 +236,7 @@ const browser = async () => {
     check(`${T}クイックの難易度えらび: g1b が出る`, g && g.id === 'g1b' && g.page === 'g1.2', JSON.stringify(g));
     ov = await overlap();
     check(`${T}g1.2: 光らせた所が窓で隠れない`, ov && ov.area < ov.spot * 0.05, JSON.stringify(ov));
+    if (process.env.QUICK_GUIDE_SHOT_DIR) await page.screenshot({ path: path.join(process.env.QUICK_GUIDE_SHOT_DIR, `quick-guide-g1-2-${vp.name === '縦' ? 'p' : 'l'}.png`) }).catch(() => {});
     mo = await mustOk();
     check(`${T}g1.2: 難易度の札が画面に入り、枠の中で、窓に隠れない`, mo.ok, mo.why);
     await click('[data-quick-guide-next]'); await page.waitForTimeout(500);

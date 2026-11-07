@@ -11503,7 +11503,7 @@ function MonsterHeroGame() {
   const quickGuidePicked = typeof quickGuidePick === 'function' && !quickGuideReplay ? quickGuidePick({
     gameState, busy: quickGuideBusy, seen: quickGuideSeen, quickUnlocked: quickGuideQuickUnlocked, quickEverCleared: quickGuideEverCleared,
     quickSelect: isQuickMode(battleMode), quickRun: isQuickMode(runMode), autoRepeat: autoRepeat === true,
-    battleTutorial: battleTutorialStep != null || !!battleScenarioRef.current, backgroundRun: !!rhythmBackgroundRun,
+    battleTutorial: battleTutorialStep != null || !!battleScenarioRef.current, raidJack: isRaidJackMode(runMode), backgroundRun: !!rhythmBackgroundRun,
     nudgeOk: !!quickNudge && quickNudgeAllowed(quickNudge, quickGuideToday),
   }) : null;
   // 「あとで」を押した案内は、その画面を出ているあいだは出し直さない(画面を開き直したら、また最初から)

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8c13901b9da19de0
+// source-sha256: e2ce3db4c48f6bdd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -98464,7 +98464,7 @@ const quickGuidePick = ctx => {
     case 'AUTO_SETTINGS':
       return not('g2') ? 'g2' : null;
     case 'BATTLE':
-      if (c.battleTutorial) return null;
+      if (c.battleTutorial || c.raidJack === true) return null;
       if (c.quickRun === true && c.autoRepeat === true && not('g3a')) return 'g3a';
       return not('auto') ? 'auto' : null;
     case 'RHYTHM_DEMO_HOME':
@@ -98480,17 +98480,25 @@ const quickGuidePick = ctx => {
 const quickGuideSpotRect = selector => {
   if (!selector || typeof document === 'undefined') return null;
   try {
+    let best = null,
+      bestArea = -1;
     for (const el of document.querySelectorAll(selector)) {
       const r = el.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0) return {
-        el,
-        top: r.top,
-        left: r.left,
-        width: r.width,
-        height: r.height,
-        bottom: r.bottom
-      };
+      if (!(r.width > 0 && r.height > 0)) continue;
+      const area = Math.max(0, Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0)) * Math.max(0, Math.min(r.right, window.innerWidth) - Math.max(r.left, 0));
+      if (area > bestArea) {
+        bestArea = area;
+        best = {
+          el,
+          top: r.top,
+          left: r.left,
+          width: r.width,
+          height: r.height,
+          bottom: r.bottom
+        };
+      }
     }
+    if (best) return best;
   } catch (_) {}
   return null;
 };
@@ -98547,7 +98555,12 @@ const QuickGuideOverlay = ({
       if (must && must.el && (must.top < 0 || must.bottom > vh0 - panelH - 24)) quickGuideScrollTo(must.el, true);
     } catch (_) {}
     const measure = () => {
-      const r = quickGuideSpotRect(page.spot);
+      let r = quickGuideSpotRect(page.spot);
+      const vh = window.innerHeight || 0;
+      if (r && page.must && r.height > vh - panelH - 40) {
+        const m = quickGuideSpotRect(page.must);
+        if (m) r = m;
+      }
       setRect(r ? {
         top: r.top,
         left: r.left,
@@ -98563,7 +98576,7 @@ const QuickGuideOverlay = ({
       clearInterval(t);
       window.removeEventListener('resize', measure);
     };
-  }, [guideId, step, page && page.spot]);
+  }, [guideId, step, page && page.spot, panelH]);
   if (!page) return null;
   const line = quickGuideLine(assistant && assistant.id, page.id);
   if (!line) return null;
@@ -98575,8 +98588,14 @@ const QuickGuideOverlay = ({
   const roomTop = rect ? rect.top - pad - gap : 0,
     roomBottom = rect ? vh - rect.bottom - pad - gap : 0;
   const atTop = !!rect && vh > 0 && roomBottom < panelH && roomTop >= panelH;
+  const vw = typeof window !== 'undefined' ? window.innerWidth || 0 : 0;
+  const roomLeft = rect ? rect.left - pad - gap : 0,
+    roomRight = rect ? vw - (rect.left + rect.width) - pad - gap : 0;
+  const side = !!rect && vh > 0 && vw > vh && !atTop && roomBottom < panelH && Math.max(roomLeft, roomRight) >= 170 ? roomRight >= roomLeft ? 'right' : 'left' : null;
+  const sideWidth = side ? Math.min(300, Math.max(roomLeft, roomRight) - 4) : 0;
+  const sideTop = side ? Math.max(8, Math.min(vh - panelH - 8, rect.top + rect.height / 2 - panelH / 2)) : 0;
   let ring = rect;
-  if (rect && vh > 0) {
+  if (rect && vh > 0 && !side) {
     if (atTop && roomTop < panelH) {
       const top = panelH + gap + pad + 10;
       ring = {
@@ -98618,8 +98637,17 @@ const QuickGuideOverlay = ({
   }), React.createElement("div", {
     ref: panelRef,
     "data-quick-guide-panel": true,
-    className: "fixed left-1/2 w-[min(560px,calc(100vw-24px))] -translate-x-1/2 rounded-2xl border-2 border-fuchsia-300/70 bg-slate-950/95 p-3 shadow-2xl landscape:max-[500px]:p-2",
-    style: atTop ? {
+    "data-quick-guide-side": side || undefined,
+    className: `fixed rounded-2xl border-2 border-fuchsia-300/70 bg-slate-950/95 p-3 shadow-2xl landscape:max-[500px]:p-2 ${side ? '' : 'left-1/2 w-[min(560px,calc(100vw-24px))] -translate-x-1/2'}`,
+    style: side ? {
+      top: sideTop,
+      width: sideWidth,
+      ...(side === 'right' ? {
+        right: 8
+      } : {
+        left: 8
+      })
+    } : atTop ? {
       top: 'calc(10px + var(--mh-sa-top, 0px))'
     } : {
       bottom: 'calc(10px + var(--mh-sa-bottom, 0px))'
@@ -98636,7 +98664,7 @@ const QuickGuideOverlay = ({
   }, React.createElement("div", {
     className: "flex items-center gap-2"
   }, React.createElement("b", {
-    className: "min-w-0 flex-1 truncate text-[13px] font-black text-amber-100"
+    className: `min-w-0 flex-1 text-[13px] font-black text-amber-100 ${side ? 'leading-snug' : 'truncate'}`
   }, line.title || ''), pages.length > 1 && React.createElement("span", {
     className: "shrink-0 text-[10px] font-black tabular-nums text-slate-400"
   }, step + 1, " / ", pages.length)), React.createElement("p", {
@@ -150605,6 +150633,7 @@ function MonsterHeroGame() {
     quickRun: isQuickMode(runMode),
     autoRepeat: autoRepeat === true,
     battleTutorial: battleTutorialStep != null || !!battleScenarioRef.current,
+    raidJack: isRaidJackMode(runMode),
     backgroundRun: !!rhythmBackgroundRun,
     nudgeOk: !!quickNudge && quickNudgeAllowed(quickNudge, quickGuideToday)
   }) : null;

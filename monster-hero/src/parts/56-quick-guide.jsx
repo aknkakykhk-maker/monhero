@@ -80,7 +80,7 @@ const normalizeQuickNudge = (v) => {
 // 今日の誘導を出してよいか(1日1回・合計3回まで)
 const quickNudgeAllowed = (nudge, today) => { const s = normalizeQuickNudge(nudge); return s.n < QUICK_GUIDE_NUDGE_MAX && s.day !== today; };
 const quickNudgeAfter = (nudge, today) => { const s = normalizeQuickNudge(nudge); return { v: 1, n: s.n + 1, day: today }; };
-// いまの画面で出す案内。ctx … { gameState, busy, seen, quickUnlocked, quickEverCleared, quickSelect, quickRun, autoRepeat, battleTutorial, backgroundRun, nudgeOk }
+// いまの画面で出す案内。ctx … { gameState, busy, seen, quickUnlocked, quickEverCleared, quickSelect, quickRun, autoRepeat, battleTutorial, raidJack, backgroundRun, nudgeOk }
 const quickGuidePick = (ctx) => {
   const c = ctx || {};
   if (c.busy || !Array.isArray(c.seen)) return null;
@@ -95,7 +95,8 @@ const quickGuidePick = (ctx) => {
     case 'AUTO_SETTINGS':
       return not('g2') ? 'g2' : null;
     case 'BATTLE':
-      if (c.battleTutorial) return null;
+      // れんしゅう・台本のバトルと、ジャックとの戦い(レイドバトル・グランドスラム。特別な戦い)では出さない
+      if (c.battleTutorial || c.raidJack === true) return null;
       if (c.quickRun === true && c.autoRepeat === true && not('g3a')) return 'g3a';
       return not('auto') ? 'auto' : null;
     case 'RHYTHM_DEMO_HOME':
@@ -113,10 +114,15 @@ const quickGuidePick = (ctx) => {
 const quickGuideSpotRect = (selector) => {
   if (!selector || typeof document === 'undefined') return null;
   try {
+    // 同じ目印が並ぶ物(横に並ぶ難易度の札など)は、いちばん画面に入っている1つ
+    let best = null, bestArea = -1;
     for (const el of document.querySelectorAll(selector)) {
       const r = el.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0) return { el, top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom };
+      if (!(r.width > 0 && r.height > 0)) continue;
+      const area = Math.max(0, Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0)) * Math.max(0, Math.min(r.right, window.innerWidth) - Math.max(r.left, 0));
+      if (area > bestArea) { bestArea = area; best = { el, top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom }; }
     }
+    if (best) return best;
   } catch (_) { /* 書き方の違うセレクタは光らせないだけ */ }
   return null;
 };
@@ -165,12 +171,18 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
       const must = page.must ? quickGuideSpotRect(page.must) : null;
       if (must && must.el && (must.top < 0 || must.bottom > vh0 - panelH - 24)) quickGuideScrollTo(must.el, true);
     } catch (_) { /* 寄せられなくても測れる */ }
-    const measure = () => { const r = quickGuideSpotRect(page.spot); setRect(r ? { top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom } : null); };
+    // 光らせる所が大きすぎて窓と上下に並べられないときは、文で言っている中身(must)だけを光らせる(横画面の難易度の札など)
+    const measure = () => {
+      let r = quickGuideSpotRect(page.spot);
+      const vh = window.innerHeight || 0;
+      if (r && page.must && r.height > vh - panelH - 40) { const m = quickGuideSpotRect(page.must); if (m) r = m; }
+      setRect(r ? { top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom } : null);
+    };
     measure();
     const t = setInterval(measure, 300);
     window.addEventListener('resize', measure);
     return () => { clearInterval(t); window.removeEventListener('resize', measure); };
-  }, [guideId, step, page && page.spot]);
+  }, [guideId, step, page && page.spot, panelH]);
   if (!page) return null;
   const line = quickGuideLine(assistant && assistant.id, page.id);
   if (!line) return null;
@@ -183,8 +195,15 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
   const roomTop = rect ? rect.top - pad - gap : 0, roomBottom = rect ? vh - rect.bottom - pad - gap : 0;
   //   どちらにも入らないときは下に置く(大きな所は先頭へ寄せてあるので、見出しが窓の上に見える)
   const atTop = !!rect && vh > 0 && roomBottom < panelH && roomTop >= panelH;
+  // 横画面で上下どちらにも入らないときは、左右の空きが十分なら窓を細くして横に置く(横画面の難易度の札など。切り詰めずに済む)
+  const vw = typeof window !== 'undefined' ? window.innerWidth || 0 : 0;
+  const roomLeft = rect ? rect.left - pad - gap : 0, roomRight = rect ? vw - (rect.left + rect.width) - pad - gap : 0;
+  const side = !!rect && vh > 0 && vw > vh && !atTop && roomBottom < panelH && Math.max(roomLeft, roomRight) >= 170
+    ? (roomRight >= roomLeft ? 'right' : 'left') : null;
+  const sideWidth = side ? Math.min(300, Math.max(roomLeft, roomRight) - 4) : 0;
+  const sideTop = side ? Math.max(8, Math.min(vh - panelH - 8, rect.top + rect.height / 2 - panelH / 2)) : 0;
   let ring = rect;
-  if (rect && vh > 0) {
+  if (rect && vh > 0 && !side) {
     if (atTop && roomTop < panelH) { const top = panelH + gap + pad + 10; ring = { ...rect, top, height: Math.max(0, rect.bottom - top) }; }
     if (!atTop && roomBottom < panelH) { const bottom = vh - panelH - gap - pad - 10; ring = { ...rect, height: Math.max(0, Math.min(rect.bottom, bottom) - rect.top) }; }
   }
@@ -198,13 +217,15 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
         ? <div data-quick-guide-spot aria-hidden="true" className="pointer-events-none fixed rounded-xl border-2 border-amber-300"
             style={{ top: ring.top - pad, left: ring.left - pad, width: ring.width + pad * 2, height: ring.height + pad * 2, boxShadow: '0 0 0 9999px rgba(2,6,23,0.62), 0 0 18px rgba(252,211,77,0.75)' }}/>
         : <div aria-hidden="true" className="pointer-events-none fixed inset-0 bg-slate-950/60"/>}
-      <div ref={panelRef} data-quick-guide-panel className="fixed left-1/2 w-[min(560px,calc(100vw-24px))] -translate-x-1/2 rounded-2xl border-2 border-fuchsia-300/70 bg-slate-950/95 p-3 shadow-2xl landscape:max-[500px]:p-2"
-        style={atTop ? { top: 'calc(10px + var(--mh-sa-top, 0px))' } : { bottom: 'calc(10px + var(--mh-sa-bottom, 0px))' }}>
+      <div ref={panelRef} data-quick-guide-panel data-quick-guide-side={side || undefined}
+        className={`fixed rounded-2xl border-2 border-fuchsia-300/70 bg-slate-950/95 p-3 shadow-2xl landscape:max-[500px]:p-2 ${side ? '' : 'left-1/2 w-[min(560px,calc(100vw-24px))] -translate-x-1/2'}`}
+        style={side ? { top: sideTop, width: sideWidth, ...(side === 'right' ? { right: 8 } : { left: 8 }) }
+          : atTop ? { top: 'calc(10px + var(--mh-sa-top, 0px))' } : { bottom: 'calc(10px + var(--mh-sa-bottom, 0px))' }}>
         <div className="flex items-start gap-2.5">
           {face && <img src={face} alt="" aria-hidden="true" className="h-12 w-12 shrink-0 rounded-full border-2 border-fuchsia-300/70 bg-slate-900 object-cover object-top landscape:max-[500px]:h-9 landscape:max-[500px]:w-9"/>}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <b className="min-w-0 flex-1 truncate text-[13px] font-black text-amber-100">{line.title || ''}</b>
+              <b className={`min-w-0 flex-1 text-[13px] font-black text-amber-100 ${side ? 'leading-snug' : 'truncate'}`}>{line.title || ''}</b>
               {pages.length > 1 && <span className="shrink-0 text-[10px] font-black tabular-nums text-slate-400">{step + 1} / {pages.length}</span>}
             </div>
             <p data-quick-guide-text className="mt-1 text-[12px] font-bold leading-relaxed text-slate-100" style={typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined}>{text}</p>
