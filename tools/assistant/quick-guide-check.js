@@ -114,6 +114,11 @@ const missingBusy = needBusy.filter((x) => !busy.includes(x));
 check('割り込まない場面(お話・おしゃべり・ほかの案内・演奏中・れんしゅう中)を busy に入れている', missingBusy.length === 0, missingBusy.join(' '));
 check('前の吹き出し(∞周回×モンヒロビート)は、案内の部品があるあいだ出さない', /quickRhythmIntroVisible = [^\n]*!quickGuideAvailable/.test(app) && /quickRhythmBackgroundVisible = [^\n]*!quickGuideAvailable/.test(app));
 check('MFバトルカード: 🤖オートを選んだときだけ吹き出し(OKで二度と出さない)', /\{auto\.on && <CardAutoIntro\/>\}/.test(read('monster-hero/src/parts/87-card-deck-pick.jsx')) && /storeSet\(CARD_AUTO_INTRO_SEEN_KEY, true, false\)/.test(read('monster-hero/src/parts/87-card-deck-pick.jsx')));
+check('g3.5(負けたとき)は曲えらびの周回の帯を開いて、中のボタンを光らせる(案内が開いたときは閉じて戻す)',
+  E.QUICK_GUIDE_PAGES.g3b.find((p) => p.id === 'g3.5').openDetail === true && /\[data-quick-run-progress-detail\]/.test(E.QUICK_GUIDE_PAGES.g3b.find((p) => p.id === 'g3.5').spot)
+  && /p\.openDetail&&!quickRunDetailOpen\)\{ quickGuideOpenedDetailRef\.current=true; setQuickRunDetailOpen\(true\);/.test(app) && /quickGuideOpenedDetailRef\.current=false; setQuickRunDetailOpen\(false\);/.test(app));
+check('文で言う中身(must)を、光らせる所のあるページに決めてある', Object.values(E.QUICK_GUIDE_PAGES).flat().filter((p) => p.spot && !p.must).length === 0,
+  Object.values(E.QUICK_GUIDE_PAGES).flat().filter((p) => p.spot && !p.must).map((p) => p.id).join(' '));
 check('光らせる目印が画面にある', ['data-auto-settings-section="policy"', 'data-auto-settings-section="ally"', 'data-auto-settings-section="quickRun"', 'data-auto-settings-section="breakthrough"', 'data-quick-reward-policy', 'data-battle-system-card={sys.id}', 'data-difficulty-carousel', 'aria-label="周回を続けたままモンヒロビートへ"'].every((m) => app.includes(m))
   && read('monster-hero/src/parts/71-screen-battle.jsx').includes('data-battle-auto-button') && read('monster-hero/src/parts/58-screen-rhythm.jsx').includes('data-quick-run-band') && read('monster-hero/src/parts/77-screen-rhythm-multi.jsx').includes('data-rhythm-back'));
 
@@ -175,6 +180,22 @@ const browser = async () => {
       const h = Math.max(0, Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top)), w = Math.max(0, Math.min(a.right, c.right) - Math.max(a.left, c.left));
       return { area: h * w, spot: Math.round(a.height * a.width) };
     });
+    // 文で言っている中身(must)が、画面に入り・光らせた枠の中にあり・窓に隠れていない
+    const mustOf = Object.fromEntries(Object.values(E.QUICK_GUIDE_PAGES).flat().filter((p) => p.must).map((p) => [p.id, p.must]));
+    const mustOk = () => page.evaluate((map) => {
+      const g = document.querySelector('[data-quick-guide]'); if (!g) return { ok: false, why: '案内なし' };
+      const id = g.getAttribute('data-quick-guide-page'), sel = map[id]; if (!sel) return { ok: true, why: 'must なし' };
+      const el = [...document.querySelectorAll(sel)].find((x) => { const r = x.getBoundingClientRect(); return r.width > 0 && r.height > 0; });
+      if (!el) return { ok: false, why: `${id}: ${sel} が無い` };
+      const m = el.getBoundingClientRect(), vh = innerHeight, vw = innerWidth;
+      const ring = document.querySelector('[data-quick-guide-spot]'), panel = document.querySelector('[data-quick-guide-panel]');
+      const inter = (a, b) => Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)) * Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+      const area = m.width * m.height;
+      const inView = m.top >= 0 && m.bottom <= vh + 1 && m.left >= -1 && m.right <= vw + 1;
+      const inRing = ring ? inter(m, ring.getBoundingClientRect()) >= area * 0.9 : false;
+      const covered = panel ? inter(m, panel.getBoundingClientRect()) : 0;
+      return { ok: inView && inRing && covered <= area * 0.05, why: `${id}: 画面${inView ? '○' : '×'} 枠${inRing ? '○' : '×'} 窓かぶり${Math.round(covered)}` };
+    }, mustOf);
     const T = `[${vp.name}] `;
     await boot();
     let g = await guide();
@@ -192,6 +213,8 @@ const browser = async () => {
     check(`${T}バトルの選び方: クイックの案内(g1a)が出て、クイックの札を光らせる`, g && g.id === 'g1a' && !!(await page.$('[data-quick-guide-spot]')), JSON.stringify(g));
     let ov = await overlap();
     check(`${T}g1a: 光らせた所が窓で隠れない`, ov && ov.area < ov.spot * 0.05, JSON.stringify(ov));
+    let mo = await mustOk();
+    check(`${T}g1a: クイックの札が画面に入り、枠の中で、窓に隠れない`, mo.ok, mo.why);
     if (vp.name === '縦' && process.env.QUICK_GUIDE_SHOT_DIR) await page.screenshot({ path: path.join(process.env.QUICK_GUIDE_SHOT_DIR, 'quick-guide-g1a.png') }).catch(() => {});
     // ページが1つなので「あとで」は無い。読み込み直して、閉じずに出ていった扱いを見る
     await boot();
@@ -210,10 +233,14 @@ const browser = async () => {
     check(`${T}クイックの難易度えらび: g1b が出る`, g && g.id === 'g1b' && g.page === 'g1.2', JSON.stringify(g));
     ov = await overlap();
     check(`${T}g1.2: 光らせた所が窓で隠れない`, ov && ov.area < ov.spot * 0.05, JSON.stringify(ov));
+    mo = await mustOk();
+    check(`${T}g1.2: 難易度の札が画面に入り、枠の中で、窓に隠れない`, mo.ok, mo.why);
     await click('[data-quick-guide-next]'); await page.waitForTimeout(500);
     ov = await overlap();
     g = await guide();
     check(`${T}g1.3: 報酬方針を光らせ、窓で隠れない`, g && g.page === 'g1.3' && ov && ov.area < ov.spot * 0.05, JSON.stringify({ g, ov }));
+    mo = await mustOk();
+    check(`${T}g1.3: 報酬方針のボタンが画面に入り、枠の中で、窓に隠れない`, mo.ok, mo.why);
     await click('[data-quick-guide-later]'); await page.waitForTimeout(400);
     check(`${T}「あとで」で消え、見た印は付かない`, !(await guide()) && !((await store('mh_quick_guide_seen_v1')).seen || []).includes('g1b'));
     // いったん出て、もう一度クイックの難易度えらびへ
@@ -235,9 +262,10 @@ const browser = async () => {
       await click('[data-quick-guide-next]'); await page.waitForTimeout(700);
       const o = await overlap(); const gg = await guide();
       if (!o || o.area > o.spot * 0.05) g2Bad.push(`${gg && gg.page}:${JSON.stringify(o)}`);
+      const m2 = await mustOk(); if (!m2.ok) g2Bad.push(m2.why);
       if (vp.name === '縦' && i === 2 && process.env.QUICK_GUIDE_SHOT_DIR) await page.screenshot({ path: path.join(process.env.QUICK_GUIDE_SHOT_DIR, 'quick-guide-g2-4.png') }).catch(() => {});
     }
-    check(`${T}AUTO設定の各欄を光らせ、窓で隠れない`, g2Bad.length === 0, g2Bad.join(' / '));
+    check(`${T}AUTO設定の各欄を光らせ、文で言う中身(「開いたら自動で始める」のスイッチなど)が画面に入り、窓で隠れない`, g2Bad.length === 0, g2Bad.join(' / '));
     await click('[data-quick-guide-next]'); await page.waitForTimeout(400);
     check(`${T}AUTO設定の案内を最後まで見たら出ない`, !(await guide()) && (await store('mh_quick_guide_seen_v1')).seen.includes('g2'));
     check(`${T}画面のエラーが無い`, errors.length === 0, errors.slice(0, 3).join(' / '));

@@ -5216,6 +5216,7 @@ function MonsterHeroGame() {
   const [quickGuideSeen, setQuickGuideSeen] = useState(null);
   const [quickNudge, setQuickNudge] = useState(null);
   const [quickGuideReplay, setQuickGuideReplay] = useState(null);
+  const quickGuideOpenedDetailRef = useRef(false);   // 案内が曲えらびの周回の帯を開いたか(閉じるときに元へ戻す)
   const QUICK_RHYTHM_INTRO_KEY = 'mh_quick_rhythm_intro_seen_v1';
   const QUICK_RHYTHM_BACKGROUND_KEY = 'mh_quick_rhythm_bg_seen_v1';
   const [quickRhythmIntroSeen, setQuickRhythmIntroSeen] = useState(true);
@@ -18974,7 +18975,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const lv=assistantBondLevelNow;
           return <QuickGuideOverlay key={quickGuideActive} guideId={quickGuideActive} pages={pages} assistant={activeAssistant}
             callName={assistantCallName(breederName,lv,assistantCallStyles[activeAssistant.id]||null,activeAssistant.id)}
-            onDone={(done)=>finishQuickGuide(quickGuideActive,done)} onGoAutoSettings={replay?null:openAutoSettings}/>;
+            onDone={(done)=>{ if(quickGuideOpenedDetailRef.current){ quickGuideOpenedDetailRef.current=false; setQuickRunDetailOpen(false); } finishQuickGuide(quickGuideActive,done); }}
+            onGoAutoSettings={replay?null:openAutoSettings}
+            onPage={replay?null:(p)=>{ if(p&&p.openDetail&&!quickRunDetailOpen){ quickGuideOpenedDetailRef.current=true; setQuickRunDetailOpen(true); } }}/>;
         })()}
 
         {/* モンヒロビート(音ゲー)の準備中の案内。公開フラグが立つまでHOMEのモンヒロビートはここへ来る。

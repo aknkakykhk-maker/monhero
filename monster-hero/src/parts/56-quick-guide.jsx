@@ -23,34 +23,37 @@ const CARD_AUTO_INTRO_SEEN_KEY = 'mh_card_auto_intro_seen_v1';
 const QUICK_GUIDE_NUDGE_MAX = 3;
 const QUICK_GUIDE_IDS = Object.freeze(['g1a', 'g1b', 'g2', 'g3a', 'g3b', 'g3c', 'auto']);
 // 案内ごとのページ。spot … 光らせる所(CSS セレクタ。見えている最初の1つ)。無ければ光らせない
+//   must … 文で言っている中身(スイッチ・ボタンなど)。画面に入り、光らせた枠の中にあり、窓に隠れないこと(検査 quick-guide-check が見る)
+//   openDetail … そのページのあいだ、曲えらびの周回の帯を開く(中のボタンを見せるため。画面は移さない)
 const QUICK_GUIDE_PAGES = Object.freeze({
-  g1a: [{ id: 'g1.1', spot: '[data-battle-system-card="systemQuick"]' }],
+  g1a: [{ id: 'g1.1', spot: '[data-battle-system-card="systemQuick"]', must: '[data-battle-system="systemQuick"]' }],
   g1b: [
-    { id: 'g1.2', spot: '[data-difficulty-carousel]' },
-    { id: 'g1.3', spot: '[data-quick-reward-policy]' },
+    { id: 'g1.2', spot: '[data-difficulty-carousel]', must: '[data-difficulty-card]' },
+    { id: 'g1.3', spot: '[data-quick-reward-policy]', must: '[data-quick-reward-policy] button' },
     { id: 'g1.4' },
     { id: 'g1.5', goAutoSettings: true },
   ],
   g2: [
     { id: 'g2.1' },
-    { id: 'g2.2', spot: '[data-auto-settings-section="policy"]' },
-    { id: 'g2.3', spot: '[data-auto-settings-section="ally"]' },
+    { id: 'g2.2', spot: '[data-auto-settings-section="policy"]', must: '[data-auto-settings-section="policy"] h3' },
+    { id: 'g2.3', spot: '[data-auto-settings-section="ally"]', must: '[data-auto-settings-section="ally"] h3' },
     // 文で言う「開いたら自動で始める」のスイッチを光らせる(欄ごとだと横画面でスイッチが画面の外に出る・2026-11-07 レフェリーくんの止め絵)
-    { id: 'g2.4', spot: '[data-auto-quick-run-autostart]' },
-    { id: 'g2.5', spot: '[data-auto-settings-section="breakthrough"]' },
+    { id: 'g2.4', spot: '[data-auto-quick-run-autostart]', must: '[data-auto-quick-run-autostart]' },
+    { id: 'g2.5', spot: '[data-auto-settings-section="breakthrough"]', must: '[data-auto-settings-section="breakthrough"] h3' },
   ],
   g3a: [
     { id: 'g3.1' },
     // モンヒロビートへの入口(60-app.jsx の quickToRhythmButtonNode)。入口の目印は1か所だけにする決まりなので、ボタンの名前で探す
-    { id: 'g3.2', spot: 'button[aria-label="周回を続けたままモンヒロビートへ"]' },
+    { id: 'g3.2', spot: 'button[aria-label="周回を続けたままモンヒロビートへ"]', must: 'button[aria-label="周回を続けたままモンヒロビートへ"]' },
     { id: 'g3.3' },
   ],
   g3b: [
-    { id: 'g3.4', spot: '[data-quick-run-band]' },
-    { id: 'g3.5', spot: '[data-quick-run-band]' },
+    { id: 'g3.4', spot: '[data-quick-run-band]', must: '[data-quick-run-band]' },
+    // 帯を開いて、中のボタン(バトルへ戻る・ここで周回をやめる。負けたあとは「1周目から新しく始める」)を光らせる(2026-11-07 レフェリーくんの止め絵)
+    { id: 'g3.5', spot: '[data-quick-run-progress-detail]', must: '[data-quick-run-progress-detail] button', openDetail: true },
   ],
-  g3c: [{ id: 'g3.6', spot: '[data-rhythm-mode-select] [data-rhythm-back]' }],
-  auto: [{ id: 'auto.first', spot: '[data-battle-auto-button]' }],
+  g3c: [{ id: 'g3.6', spot: '[data-rhythm-mode-select] [data-rhythm-back]', must: '[data-rhythm-mode-select] [data-rhythm-back]' }],
+  auto: [{ id: 'auto.first', spot: '[data-battle-auto-button]', must: '[data-battle-auto-button]' }],
   nudgeHome: [{ id: 'nudge.home' }],
   nudgeBattle: [{ id: 'nudge.battle' }],
 });
@@ -139,7 +142,7 @@ const quickGuideScrollTo = (el, top) => {
 const quickGuideNoBreak = (t) => String(t).replace(/(\p{Extended_Pictographic}\uFE0F?) /gu, '$1\u00a0');
 
 // 案内の窓。pages … [{ id, spot?, goAutoSettings? }]。onDone(true) … 最後まで見た / onDone(false) … あとで
-const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAutoSettings }) => {
+const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAutoSettings, onPage = null }) => {
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState(null);
   const [panelH, setPanelH] = useState(150);
@@ -147,6 +150,8 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
   useEffect(() => { setStep(0); }, [guideId]);
   const page = pages[Math.min(step, pages.length - 1)] || null;
   // 窓の高さを測る(光らせる所と重ならない置き方を決めるため)
+  // ページが変わったら知らせる(帯を開く・閉じるなど、画面の側でする事のため)
+  useEffect(() => { if (onPage && page) onPage(page); }, [guideId, step]);
   useEffect(() => { try { const h = panelRef.current && panelRef.current.getBoundingClientRect().height; if (h > 0) setPanelH(Math.ceil(h)); } catch (_) { /* 既定のまま */ } });
   // 光らせる所を測る。初めに画面の中へ寄せ、あとは 300ms ごとと画面の大きさが変わったときに測り直す(バトルは動き続けるため)
   //   ★窓の分を引いた残りに入りきらない大きな所(AUTO設定の欄・横画面の難易度)は、先頭を上へ寄せ、窓に重ならない範囲だけ光らせる
@@ -154,7 +159,12 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
     if (!page || !page.spot) { setRect(null); return undefined; }
     const first = quickGuideSpotRect(page.spot);
     const vh0 = window.innerHeight || 0;
-    try { if (first && first.el) quickGuideScrollTo(first.el, first.height > vh0 - panelH - 40); } catch (_) { /* 寄せられなくても測れる */ }
+    try {
+      if (first && first.el) quickGuideScrollTo(first.el, first.height > vh0 - panelH - 40);
+      // 文で言っている中身が画面の外なら、そこまで寄せる(大きな欄の下のほうにあるスイッチなど)
+      const must = page.must ? quickGuideSpotRect(page.must) : null;
+      if (must && must.el && (must.top < 0 || must.bottom > vh0 - panelH - 24)) quickGuideScrollTo(must.el, true);
+    } catch (_) { /* 寄せられなくても測れる */ }
     const measure = () => { const r = quickGuideSpotRect(page.spot); setRect(r ? { top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom } : null); };
     measure();
     const t = setInterval(measure, 300);
