@@ -8468,6 +8468,11 @@ function MonsterHeroGame() {
   }, [grantProfileFrames, deliverAssistantBondRewards]);
   // 助手どうしの掛け合い・今日のペアで、出てきた助手それぞれの仲良し度を増やす(2026-11-07・56-assistant-peer.jsx)
   useEffect(() => { if (typeof assistantPeerSetPlayerBondAdder === 'function') assistantPeerSetPlayerBondAdder(addAssistantBondFor); }, [addAssistantBondFor]);
+  // 助手どうし・助手ライフの台本の {name} を、話している助手がいまプレイヤーを呼ぶ呼び方にする(仲良し度の段・性別・選んだ呼び方。2026-11-07 社長「ブリーダーとか呼び方がおかしい」)
+  useEffect(() => {
+    if (typeof assistantPeerSetPlayerCaller !== 'function') return;
+    assistantPeerSetPlayerCaller((id) => assistantCallName(breederName, assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points), assistantCallStyles[id] || null, id));
+  }, [breederName, assistantCallStyles, assistantBonds]);
   // 行動に応じて助手との仲良し度を増やす。
   // 増えるのは「いま選んでいる助手」のぶんだけ。もう片方の助手の値には触れない
   const addAssistantBond = useCallback((actionKey) => {

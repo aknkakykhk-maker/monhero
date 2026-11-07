@@ -607,35 +607,35 @@ edit dra-sorashido-w-newyear 1 | dra happy お正月のおもち、何個食べ�
 edit dra-sorashido-w-newyear 2 | sorashido happy 8個だ！ ちゃんと数えてたからな笑
 edit erubin-kyuko-w-newyear 1 | kyuko happy 今年の目標、決めた？
 edit erubin-kyuko-w-newyear 2 | erubin normal みんなが楽しく遊べること、かな
-edit atsu-mua-w-battle 1 | atsu happy 今日のブリーダーのバトル見た？笑
+edit atsu-mua-w-battle 1 | atsu happy 今日の{name}のバトル見た？笑
 edit atsu-mua-w-battle 2 | mua excited 見た見た！ けっこういい動きだったよね！
-edit dra-kiki-w-battle 1 | dra normal 今日のブリーダー、バトルで攻めてたな
+edit dra-kiki-w-battle 1 | dra normal 今日の{name}、バトルで攻めてたな
 edit dra-kiki-w-battle 2 | kiki happy はい。ちから全開でしたね♪
 edit momosuke-sorashido-w-battle 1 | sorashido excited 今日のバトルの記録、もう表にしたぜ・・・！
 edit momosuke-sorashido-w-battle 2 | momosuke wink はや！！w {c}、仕事早すぎ
-edit erubin-kyuko-w-battle 1 | erubin happy 今日のブリーダーのバトル、落ち着いてたね
+edit erubin-kyuko-w-battle 1 | erubin happy 今日の{name}のバトル、落ち着いてたね
 edit erubin-kyuko-w-battle 2 | kyuko normal 判断がよかったよねぇ。見てて楽しかった笑
-edit momosuke-mua-w-clear 1 | mua excited 今日、ブリーダーがチャレンジクリアしたって！
+edit momosuke-mua-w-clear 1 | mua excited 今日、{name}がチャレンジクリアしたって！
 edit momosuke-mua-w-clear 2 | momosuke excited ほんと！？ すごすぎ！！
 edit atsu-kiki-w-clear 1 | atsu happy 今日のクリア、ちゃんと見てたよ笑
 edit atsu-kiki-w-clear 2 | kiki happy 私もでつ。うれしいですね♪
-edit dra-erubin-w-clear 1 | erubin happy ブリーダー、チャレンジをクリアしたんだって
+edit dra-erubin-w-clear 1 | erubin happy {name}、チャレンジをクリアしたんだって
 edit dra-erubin-w-clear 2 | dra excited おでもうれしいぞ、えへへ
 edit kyuko-sorashido-w-clear 1 | sorashido excited クリアおめでとうの表、作るか！
 edit kyuko-sorashido-w-clear 2 | kyuko happy それ作るの！？笑 いいねぇ
-edit kyuko-mua-w-enhance 1 | kyuko normal 今日のブリーダーの強化、いい選び方だったねぇ
+edit kyuko-mua-w-enhance 1 | kyuko normal 今日の{name}の強化、いい選び方だったねぇ
 edit kyuko-mua-w-enhance 2 | mua happy {c}がほめるなら、間違いないぢゃん！
 edit kiki-sorashido-w-enhance 1 | kiki happy 今日の強化、ちからに振ってましたよ♪
 edit kiki-sorashido-w-enhance 2 | sorashido happy ダメージ、計算しとくよ笑
 edit erubin-momosuke-w-enhance 1 | momosuke excited マスモンがまた強くなってた！！
-edit erubin-momosuke-w-enhance 2 | erubin happy ブリーダーは毎日がんばってるもんね
+edit erubin-momosuke-w-enhance 2 | erubin happy {name}は毎日がんばってるもんね
 edit atsu-dra-w-enhance 1 | dra normal 今日の強化、悪くないな
 edit atsu-dra-w-enhance 2 | atsu wink もう一段いけるよね笑
-edit dra-mua-w-streak 1 | mua excited ブリーダー、毎日来てくれてるね！
+edit dra-mua-w-streak 1 | mua excited {name}、毎日来てくれてるね！
 edit dra-mua-w-streak 2 | dra happy おでもうれしいぞ。えへへ
-edit kiki-momosuke-w-streak 1 | momosuke excited ブリーダー、連続で来てるよ！！
+edit kiki-momosuke-w-streak 1 | momosuke excited {name}、連続で来てるよ！！
 edit kiki-momosuke-w-streak 2 | kiki happy ほんとですね。ありがとうございまつ♪
-edit atsu-kyuko-w-streak 1 | atsu happy ブリーダー、毎日えらいね笑
+edit atsu-kyuko-w-streak 1 | atsu happy {name}、毎日えらいね笑
 edit atsu-kyuko-w-streak 2 | kyuko wink 続けるのが一番大事だからねぇ笑
 edit erubin-sorashido-w-streak 1 | sorashido excited 連続ログインの日数、記録してるぜ・・・！
 edit erubin-sorashido-w-streak 2 | erubin happy それは大事な記録だね
@@ -714,11 +714,11 @@ edit erubin-sorashido-sp2 6 | erubin wink それなら十分かな笑 また表�
 edit erubin-momosuke-sp2 6 | erubin happy おけ！ {c}がいちばん輝けるように、手伝うね
 
 ## E ミニイベント(ASSISTANT_PEER_EVENTS)
-edit kiki-mua-ev1 1 | mua excited クッキー対決しよ！ ブリーダーに食べ比べてもらうの！
+edit kiki-mua-ev1 1 | mua excited クッキー対決しよ！ {name}に食べ比べてもらうの！
 edit dra-momosuke-ev1 1 | momosuke excited モンヒロビートで勝負しよ！！ 負けたらジュースおごりね！
 edit kyuko-sorashido-ev1 1 | sorashido excited うぉぉぉ！ どっちのデッキ案が強いか勝負だ！
 edit kyuko-sorashido-ev1 3 | sorashido happy 俺は計算した。先に攻めきる型が、勝率いちばん高いぜ笑
-edit kyuko-sorashido-ev1 7 | sorashido normal ブリーダー、判定たのむ！ どっちの作戦が好きだ？
+edit kyuko-sorashido-ev1 7 | sorashido normal {name}、判定たのむ！ どっちの作戦が好きだ？
 edit kyuko-sorashido-ev1 reply2-1 | sorashido excited よっしゃー！ 計算どおりだ！
 edit kyuko-sorashido-ev1 reply3-2 | sorashido excited 最強の作戦ができたな！ さっそく表にするぜ笑
 edit atsu-dra-ev1 1 | atsu happy どっちのモンスターがかっこいいか勝負しよ笑
@@ -727,7 +727,7 @@ edit momosuke-mua-ev1 1 | momosuke excited 新しい振り付け考えたから�
 edit atsu-kyuko-ev1 1 | kyuko happy モンスタークイズで早押し勝負しよぉ
 edit dra-sorashido-ev1 1 | sorashido excited 海で釣り勝負だ！ 潮の時間は計算ずみだぜ笑
 edit dra-sorashido-ev1 3 | sorashido happy お、かかった！ …小さいけど、でーじかわいい魚だな笑
-edit dra-sorashido-ev1 7 | sorashido normal ブリーダー、これ、どっちの勝ちだ…？
+edit dra-sorashido-ev1 7 | sorashido normal {name}、これ、どっちの勝ちだ…？
 edit dra-sorashido-ev1 reply3-1 | sorashido happy それだ！ 楽しかったなら全部勝ちだぜ・・・！
 edit erubin-momosuke-ev1 1 | momosuke excited お部屋の飾りつけ対決しよ！！
 edit kiki-kyuko-ev1 1 | kyuko happy お絵かき対決しよぉ。お題は好きなモンスター〜
@@ -753,6 +753,6 @@ edit atsu-kyuko-c1 reply1-2 | atsu happy お、言ったね！ 燃えてきた�
 edit atsu-erubin-c1 reply1-1 | atsu troubled …分かった！ 少しだけね！
 edit mua-sorashido-sp2 3 | mua happy ぢゃあ今日は逆！ あたしにも表の作り方、教えて！
 edit erubin-mua-sp2 3 | mua happy ぢゃあ今日は、二人でおそろいコーデしよ！ 砂の色入れるね♪
-edit atsu-dra-ev1 5 | atsu wink てか、決めてもらおうぜ！ ブリーダーに！
+edit atsu-dra-ev1 5 | atsu wink てか、決めてもらおうぜ！ {name}に！
 edit mua-sorashido-ev1 reply3-1 | mua happy ぢゃあアルバム作ろ！ 2人の写真集♪
 edit reaction-atsu-play | happy {c}と見てたよ！ いい感じだったね！
