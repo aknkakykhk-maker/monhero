@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 36a95fef038f05ce
+// source-sha256: 95ee38ad630dab33
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -50143,8 +50143,10 @@ const rhythmAssistSessionNormalize = raw => {
       rewarded
     };
   });
+  const talk = ['all', 'few', 'off'].includes(o.talk) ? o.talk : 'all';
   return {
-    mons
+    mons,
+    talk
   };
 };
 const rhythmAssistSessionMon = (state, assistantId) => {
@@ -50206,7 +50208,8 @@ const rhythmAssistSessionApplyLive = (state, assistantId, {
   score,
   maxScore,
   chartLevel = 0,
-  humans = 1
+  humans = 1,
+  expBonus = 0
 }) => {
   const st = rhythmAssistSessionNormalize(state);
   if (!RHYTHM_ASSIST_SESSION_IDS.includes(assistantId)) return {
@@ -50244,7 +50247,7 @@ const rhythmAssistSessionApplyLive = (state, assistantId, {
     familiarUp: false,
     tickets: 0
   };
-  const gain = Math.max(1, Math.round(r.gain * rhythmAssistSessionExpScale(likeBefore)));
+  const gain = Math.max(1, Math.round(r.gain * (rhythmAssistSessionExpScale(likeBefore) + Math.max(0, Math.min(0.2, Number(expBonus) || 0)))));
   const sid = rhythmBuddyStr(songId, 60);
   const likes = {
     ...before.likes
@@ -50305,6 +50308,8 @@ const rhythmAssistSessionChooseSong = (state, assistantId, catalog, rand = Math.
     why: ''
   };
 };
+const RHYTHM_ASSIST_SESSION_FRAME_LEVEL = 45;
+const RHYTHM_ASSIST_SESSION_BACK_LEVEL = 90;
 const RHYTHM_ASSIST_SESSION_TASTE_LEVEL = 10;
 const RHYTHM_ASSIST_SESSION_GLOW_LEVEL = 15;
 const RHYTHM_ASSIST_SESSION_TICKET_REWARDS = Object.freeze([[35, 1], [65, 2], [100, 3]]);
@@ -50359,6 +50364,71 @@ const rhythmAssistSessionDuos = (ids, levelOf, seenOf) => {
   }));
 };
 const rhythmAssistSessionDuoBonus = duos => (Array.isArray(duos) ? duos : []).filter(d => d && d.result).length * RHYTHM_ASSIST_SESSION_DUO_P_BONUS;
+const RHYTHM_ASSIST_SESSION_CHEER_LEVEL = 25;
+const rhythmAssistSessionCheer = (assistantId, {
+  level = 1,
+  fc = false,
+  marvRate = 0,
+  ratio = 0,
+  cleared = true,
+  firstSong = false,
+  diffId = ''
+} = {}) => {
+  if (level < RHYTHM_ASSIST_SESSION_CHEER_LEVEL || !cleared) return null;
+  const hard = RHYTHM_BUDDY_DIFF_IDS.indexOf(diffId) >= RHYTHM_BUDDY_DIFF_IDS.indexOf('HARD');
+  switch (assistantId) {
+    case 'mua':
+      return fc ? {
+        exp: 0,
+        points: 3,
+        label: 'フルコンの応援 ビートP+3'
+      } : null;
+    case 'kiki':
+      return marvRate >= 0.9 ? {
+        exp: 0.1,
+        points: 0,
+        label: '正確さの応援 経験値+10%'
+      } : null;
+    case 'momosuke':
+      return ratio >= 0.9 ? {
+        exp: 0,
+        points: 3,
+        label: 'ライブの応援 ビートP+3'
+      } : null;
+    case 'dra':
+      return {
+        exp: 0.1,
+        points: 0,
+        label: 'ねばりの応援 経験値+10%'
+      };
+    case 'atsu':
+      return ratio >= 0.95 ? {
+        exp: 0,
+        points: 3,
+        label: '締めの応援 ビートP+3'
+      } : null;
+    case 'kyuko':
+      return firstSong ? {
+        exp: 0.2,
+        points: 0,
+        label: 'はじめての曲の応援 経験値+20%'
+      } : null;
+    case 'sorashido':
+      return hard ? {
+        exp: 0.1,
+        points: 0,
+        label: '計算の応援 経験値+10%'
+      } : null;
+    case 'erubin':
+      return ratio < 0.7 ? {
+        exp: 0,
+        points: 3,
+        label: '気づかいの応援 ビートP+3'
+      } : null;
+    default:
+      return null;
+  }
+};
 const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
   mua: {
     join: [['happy', 'やっほ〜！あたしも一緒に叩くね♪'], ['happy', 'ブリーダー、今日もセッションしよ！']],
@@ -91295,10 +91365,13 @@ function RhythmMultiScreen({
       return React.createElement("li", {
         key: r.m.id,
         "data-rhythm-multi-result-row": true,
+        style: rhythmAssistSessionCardStyle(r.m, isMvp),
         role: r.m.id !== view.selfId ? 'button' : undefined,
         onClick: r.m.id !== view.selfId ? () => r.m.cpu ? setBuddyInfoId(r.m.id) : setMemberSheetId(r.m.id) : undefined,
         className: `relative flex ${r.m.id !== view.selfId ? 'cursor-pointer active:brightness-125' : ''} min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden rounded-xl px-0.5 pb-1.5 text-center ${isMvp ? 'mhmv-mvp z-10 border-2 border-amber-300 bg-gradient-to-b from-amber-500/35 via-pink-600/25 to-slate-900 pt-4 [@media(max-height:440px)]:pt-3.5 [[data-mh-view-rotation=true]_&]:pt-3.5' : 'border border-white/10 bg-slate-900/80 pt-3 [@media(max-height:440px)]:pt-1.5 [[data-mh-view-rotation=true]_&]:pt-1.5'}`
-      }, isMvp && React.createElement("b", {
+      }, React.createElement(RhythmAssistSessionCardBack, {
+        m: r.m
+      }), isMvp && React.createElement("b", {
         "data-rhythm-multi-mvp": true,
         className: "mhmv-badge absolute left-1/2 top-1 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-to-r from-amber-300 via-yellow-100 to-amber-400 px-2.5 py-0.5 text-[11px] font-black tracking-wider text-slate-950 shadow-[0_0_12px_rgba(252,211,77,.9)] landscape:text-[13px]"
       }, "👑 MVP"), React.createElement("span", {
@@ -91367,6 +91440,7 @@ function RhythmMultiScreen({
       }) : React.createElement(RhythmAssistSessionGrowth, {
         key: assistantId,
         assistantId: assistantId,
+        ownerRes: myRow.res,
         onTickets: n => {
           for (let i = 0; i < n; i += 1) {
             if (onRefundBuddyTicket) void onRefundBuddyTicket();
@@ -93837,6 +93911,7 @@ const rhythmAssistSessionRatio = (score, diffId) => {
   const diffDef = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find(d => d.id === diffId);
   return Number(score) / (diffDef && diffDef.maxScore || 1000000);
 };
+const RHYTHM_ASSIST_SESSION_FEW_KINDS = Object.freeze(['join', 'climax']);
 const rhythmAssistSessionTalk = ({
   assistantId,
   kind,
@@ -93848,6 +93923,9 @@ const rhythmAssistSessionTalk = ({
   quit = false,
   rand = Math.random
 }) => {
+  const mode = RHYTHM_ASSIST_SESSION_STORE.get().talk;
+  if (mode === 'off') return '';
+  if (mode === 'few' && !RHYTHM_ASSIST_SESSION_FEW_KINDS.includes(kind) && !(kind === 'result' && mvp) && !(kind === 'reactResult' && Number(fc) > 0)) return '';
   const say = scene => {
     const hit = rhythmAssistSessionPickLine(assistantId, scene, rand);
     return hit ? hit[1] : '';
@@ -93951,6 +94029,23 @@ function RhythmAssistSessionPicker({
     "data-rhythm-assist-picker": true,
     className: "flex min-h-0 flex-1 flex-col"
   }, React.createElement("div", {
+    "data-rhythm-assist-talk-option": true,
+    className: "mb-2 flex shrink-0 items-center gap-1.5"
+  }, React.createElement("span", {
+    className: "shrink-0 text-[11px] font-black text-slate-300"
+  }, "助手のひとこと"), [['all', '全部'], ['few', '少なめ'], ['off', '切る']].map(([id, label]) => React.createElement("button", {
+    key: id,
+    type: "button",
+    "data-rhythm-assist-talk": id,
+    "aria-pressed": state.talk === id,
+    onClick: () => {
+      void RHYTHM_ASSIST_SESSION_STORE.update(st => st.talk === id ? null : {
+        ...st,
+        talk: id
+      });
+    },
+    className: `min-h-[36px] flex-1 rounded-lg text-[11px] font-black ${state.talk === id ? 'border-2 border-pink-300 bg-pink-500/25 text-pink-100' : 'border border-white/10 bg-slate-800 text-slate-300'}`
+  }, label))), React.createElement("div", {
     className: "min-h-0 flex-1 overflow-y-auto"
   }, list.length === 0 ? React.createElement("p", {
     className: "py-6 text-center text-[12px] font-bold text-slate-400"
@@ -94035,7 +94130,8 @@ function RhythmAssistSessionGrowth({
   maxScore = 0,
   chartLevel = 0,
   humans = 1,
-  onTickets = null
+  onTickets = null,
+  ownerRes = null
 }) {
   const [shown, setShown] = React.useState(null);
   React.useEffect(() => {
@@ -94044,6 +94140,19 @@ function RhythmAssistSessionGrowth({
     let outcome = null;
     const dayKey = rhythmBuddyDayKey(Date.now());
     RHYTHM_ASSIST_SESSION_STORE.update(st => {
+      const before = rhythmAssistSessionMon(st, assistantId);
+      const j = ownerRes && Array.isArray(ownerRes.j) ? ownerRes.j : null;
+      const total = j ? j.reduce((a, b) => a + (Number(b) || 0), 0) : 0;
+      const ownerDiff = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find(d => d.id === (ownerRes && ownerRes.diffId));
+      const cheer = rhythmAssistSessionEnabled() && ownerRes ? rhythmAssistSessionCheer(assistantId, {
+        level: rhythmBuddyLevelInfo(before.exp).level,
+        fc: Number(ownerRes.fc) > 0,
+        marvRate: total > 0 ? (Number(j[0]) || 0) / total : 0,
+        ratio: Number(ownerRes.score) / (ownerDiff && ownerDiff.maxScore || 1000000),
+        cleared: ownerRes.cleared !== false && !ownerRes.quit,
+        firstSong: !(before.songs && before.songs[songId]),
+        diffId: ownerRes.diffId || diffId
+      }) : null;
       const r = rhythmAssistSessionApplyLive(st, assistantId, {
         round,
         songId,
@@ -94055,15 +94164,24 @@ function RhythmAssistSessionGrowth({
         score,
         maxScore,
         chartLevel,
-        humans
+        humans,
+        expBonus: cheer ? cheer.exp : 0
       });
       if (!r.next) return null;
-      outcome = r;
+      outcome = {
+        ...r,
+        cheer
+      };
       return r.next;
     }).then(() => {
       if (outcome && outcome.tickets > 0 && typeof onTickets === 'function') {
         try {
           onTickets(outcome.tickets);
+        } catch (_) {}
+      }
+      if (outcome && outcome.cheer && outcome.cheer.points > 0 && typeof addRhythmEventPoints === 'function') {
+        try {
+          void addRhythmEventPoints(outcome.cheer.points);
         } catch (_) {}
       }
       if (outcome && outcome.levelUp > 0) {
@@ -94105,7 +94223,10 @@ function RhythmAssistSessionGrowth({
   }, "好み度+", shown.likeUp), shown.tickets > 0 && React.createElement("span", {
     "data-rhythm-assist-ticket": true,
     className: "text-lime-200"
-  }, "セッション券+", shown.tickets));
+  }, "セッション券+", shown.tickets), shown.cheer && React.createElement("span", {
+    "data-rhythm-assist-cheer": true,
+    className: "text-violet-200"
+  }, shown.cheer.label));
 }
 const rhythmAssistSessionPeerLevel = (a, b) => {
   if (typeof assistantPeerEnabled !== 'function' || !assistantPeerEnabled() || typeof ASSISTANT_PEER_STORE === 'undefined') return 0;
@@ -94195,8 +94316,10 @@ function RhythmAssistSessionPlayFace({
       }
       return false;
     };
+    const mode = RHYTHM_ASSIST_SESSION_STORE.get().talk;
     const speak = kind => {
-      if (queue.length || hideAt) return;
+      if (queue.length || hideAt || mode === 'off') return;
+      if (mode === 'few' && !RHYTHM_ASSIST_SESSION_FEW_KINDS.includes(kind)) return;
       if ((kind === 'combo' || kind === 'climax') && duos.length && duoTalks < RHYTHM_ASSIST_SESSION_DUO_TALK_MAX && speakDuo('play')) {
         duoTalks += 1;
         return;
@@ -94279,7 +94402,7 @@ function RhythmAssistSessionPlayFace({
               a: g.a,
               b: g.b
             });
-            const rows = rhythmAssistSessionPickPair(g, 'gattai', usedPair);
+            const rows = mode === 'off' ? null : rhythmAssistSessionPickPair(g, 'gattai', usedPair);
             if (rows) {
               queue.length = 0;
               hideAt = 0;
@@ -94444,7 +94567,32 @@ function RhythmAssistSessionDuoResult({
   }, rhythmAssistSessionName(who), "「", text, "」")), gained > 0 && React.createElement("span", {
     "data-rhythm-assist-peer-gain": true,
     className: "text-amber-200"
-  }, typeof assistantPeerLifeOn === 'function' && assistantPeerLifeOn() ? '友情' : '仲良し度', "+", gained))));
+  }, "友情Lv +", gained))));
+}
+const rhythmAssistSessionCardStyle = (m, isMvp = false) => {
+  const who = m && m.cpu && m.as ? rhythmAssistSessionWho(m.as) : null;
+  if (!who || isMvp) return undefined;
+  const lv = Number(m.level) || 0;
+  if (lv < RHYTHM_ASSIST_SESSION_FRAME_LEVEL) return undefined;
+  return {
+    borderColor: who.accent || '#f472b6',
+    borderWidth: 2,
+    boxShadow: `inset 0 0 12px ${who.accent || '#f472b6'}55`
+  };
+};
+function RhythmAssistSessionCardBack({
+  m
+}) {
+  const who = m && m.cpu && m.as ? rhythmAssistSessionWho(m.as) : null;
+  if (!who || (Number(m.level) || 0) < RHYTHM_ASSIST_SESSION_BACK_LEVEL) return null;
+  return React.createElement("b", {
+    "data-rhythm-assist-card-back": true,
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute inset-x-0 bottom-1 z-0 select-none truncate text-center text-[15px] font-black italic tracking-widest opacity-25",
+    style: {
+      color: who.accent || '#f472b6'
+    }
+  }, who.name);
 }
 const RAID_JACK_DEBUG_NOW_CHOICES = Object.freeze([{
   id: 'real',
