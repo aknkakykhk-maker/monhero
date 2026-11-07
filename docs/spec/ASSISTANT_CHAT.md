@@ -172,3 +172,24 @@ HELL・モンヒロビート・マルチの項目が材料に無かった)。
   **総合力は記録の `detail.power` をそのまま**(計算し直さない。`collectPowerRankingEntries`)・曲ごとは1人1件
 - 公開: 中継役を出し直したあと、`RELEASE_FLAGS.assistantChatRanking` を真にする(ヘルプの説明と更新履歴はこの印で出る)
 - 検査: `tools/assistant/assistant-chat-ranking-check.js`(偽物のデータベース)
+
+## 助手どうしのつながり(2026-11-07 社長「ガッツリ作りこんで」)
+
+計画: [`docs/progress/assistant-peer-plan.md`](../progress/assistant-peer-plan.md)・進み具合: [`docs/progress/assistant-peer/STATUS.md`](../progress/assistant-peer/STATUS.md)
+
+### 段階1 会話の共有(おしゃべりに相乗り)
+
+- ゲームは `ctx.peerMemos` に、ほかの助手の思い出メモを付けて送る(`assistantPeerMemosFor`)。30日以内に返事が来た助手だけ(`mh_assistant_chat_last_v1`)。
+- 思い出メモに6つ目の欄 `secret`(ないしょの話)を足した。決まり文で「ないしょ・秘密と言われたことは secret だけに書く」と頼み、secret はほかの助手へ渡さない。
+  ほかの欄でも「ないしょ」「秘密」らしい言葉・個人情報らしい文が入っていれば渡さない(ゲームと中継役の両方で外す)。
+- 中継役は `<peer-memos>` を system の4つ目(区切り付き)に置く。キャッシュの区切りは system 3つ+会話の履歴1つで4つまで。
+
+### 段階3 API 版の掛け合い(kind:'peer_talks')
+
+- ゲームは HOME に入ったとき、その日に作った掛け合いが尽きていて、その日に頼んだ回数が100回より少なければ頼む(`assistantPeerRequestGen`。HOME で流すのは1日5回までなので、ふつうは1日1〜2回で足りる)。公開の印 `RELEASE_FLAGS.assistantPeerApi`。
+- 送るもの: 会ったペア(`{ a, b, lv, ab, ba }`。ab … a が b を呼ぶ呼び方)・遊んだ記録(数字だけ)・共有してよいメモ。会話の本文は送らない。
+- 返すもの: 掛け合い4本まで(2〜4行・1行60字まで・相手は `{c}`)。崩れたもの(ペア外の話し手・記録に無い数字・恋愛やないしょの言葉・AI の話・個人情報)は捨てる。1本も残らなければ回数を戻す。
+- 回数: 1人1日100回(2026-11-07 社長「今のおしゃべりと同じ数え方」)・全員1日3,000回。表 `assistant_peer_talk_usage` と関数 `assistant_peer_talk_take` / `assistant_peer_talk_refund`
+  (`supabase/migrations/202611070001_assistant_peer_talk_usage.sql`。足すだけ)。Secrets `ASSISTANT_PEER_TALK_USER_DAILY_LIMIT` / `ASSISTANT_PEER_TALK_TOTAL_DAILY_LIMIT` で下げられる。
+- 作れないとき・上限のときは、台本版(`ASSISTANT_PEER_TALKS`)だけで流れる。
+- 呼び方は仲良し度が上がっても変えない(2026-11-07 社長「呼び方は変えないでいい」)。Lv4 は「息の合った掛け合いが増える・API 版でお互いの話題を多めに出す」。

@@ -149,7 +149,9 @@ function BreederMarketScreen({
   // ビートP交換所のアイテムと強化素材の分け方。育成に使う素材(プシュケー・証片・虹の超越の実・勇者の証)を「強化素材」へ
   const BEAT_POINT_MATERIAL_ITEM_IDS = ['rainbow_psyche','hero_proof_shard','transcend_fruit_rainbow','hero_proof'];
   // レジェンドブリーダー優待パス(2026-11-05)を持っている人は、対象の3つの値段と受け取る数を優待パス還元に差し替えて並べる(交換するときも本体が決め直す)
-  const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer=>(eventTab==='material')===BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId))
+  // releaseFlag の付いた品物(助手どうしの差し入れなど)は、その公開の印が立つまで並べない
+  const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer=>!offer.releaseFlag||(typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS[offer.releaseFlag]===true))
+    .filter(offer=>(eventTab==='material')===BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId))
     .map(offer=>rhythmEventPointShopOfferWithPass(offer, legendPassActive===true));
   // 優待パス還元の札がある一覧では、ほかの札にも同じ高さの段を取って、札の高さをそろえる
   const legendPassSlot = eventItemOffers.some(offer=>offer.legendPass===true);

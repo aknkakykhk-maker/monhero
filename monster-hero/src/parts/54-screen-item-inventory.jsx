@@ -66,6 +66,8 @@ function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
                     ? <div className={usageNoteClass}>マーケットで<br/>{HERO_PROOF_SHARD_PER_PROOF}個→<br/>勇者の証1個</div>
                     : item.usage==='rhythmBuddy'
                     ? <div className={usageNoteClass}>モンヒロビートの<br/>マルチで<br/>マスモンを呼ぶ</div>
+                    : item.usage==='assistantPeer'
+                    ? <div className={usageNoteClass}>プロフィールの<br/>助手どうしの<br/>関係図で使う</div>
                     : item.usage==='soulRankRespec'||item.usage==='soulCrystal'
                     ? <div className={usageNoteClass}>マスモン詳細の<br/>魂格特性で<br/>使用</div>
                     : <button onClick={()=>onUseItem(item.id)} className="shrink-0 w-[84px] min-h-[44px] rounded-xl bg-teal-600 text-[12px] font-black text-white active:scale-95">使う</button>}
