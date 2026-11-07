@@ -44,6 +44,18 @@ const seed = ({ storyIds, life, intro = false, bondAll = null }) => {
   }
   // 公開の印はページの中だけで切り替える(本体は 2026-11-07 から真)。偽の確かめのときは偽に戻す
   { const t = setInterval(() => { try { if (typeof RELEASE_FLAGS !== 'undefined') { RELEASE_FLAGS.assistantLife = !!life; clearInterval(t); } } catch {} }, 2); }
+  // いまの時間の様子を決めて入れておく(様子は時間帯と種で変わり、組やひとりの助手ができないことがあるため。印が偽の確かめでは入れない)
+  if (life && localStorage.getItem('mh_check_life_seeded') === null) {
+    localStorage.setItem('mh_check_life_seeded', '1');
+    const t = Date.now() + 9 * 3600000, h = new Date(t).getUTCHours();
+    const i = [0, 5, 10, 14, 18, 21].filter(x => h >= x).length - 1, ids = ['late', 'morning', 'noon', 'afternoon', 'evening', 'night'];
+    const base = { salt: 'check', abs: Math.floor(t / 86400000) * 6 + i, slot: ids[i], recent: [], nudges: { invite: [], introduce: [] }, watched: [] };
+    put('mh_assistant_life_v1', bondAll != null
+      ? { ...base, moods: {}, solo: {}, groups: [{ ids: ['kiki', 'mua'], doing: 'snack', place: 'cafe' }, { ids: ['dra', 'momosuke'], doing: 'walk', place: 'plaza' }, { ids: ['atsu', 'kyuko'], doing: 'cards', place: 'library' }, { ids: ['erubin', 'sorashido'], doing: 'cards', place: 'cardroom' }] }
+      : { ...base, moods: { atsu: 'lonely', kyuko: 'happy', momosuke: 'lonely' },
+        groups: [{ ids: ['kiki', 'mua'], doing: 'snack', place: 'cafe' }, { ids: ['dra', 'erubin', 'sorashido'], doing: 'cards', place: 'cardroom' }],
+        solo: { atsu: { doing: 'idle', place: 'home', reason: 'lonely' }, kyuko: { doing: 'read', place: 'library', reason: 'mypace' }, momosuke: { doing: 'practice', place: 'studio', reason: 'lonely' } } });
+  }
   if (bondAll != null && localStorage.getItem('mh_check_bond_all') === null) { localStorage.setItem('mh_check_bond_all', '1'); const b = {}; const ids = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']; for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) b[[ids[i], ids[j]].sort().join('-')] = bondAll; put('mh_assistant_peer_bond_v1', b); }
 };
 const toHome = async (page) => {
@@ -165,7 +177,8 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
       const owned = await ls(page, 'mh_owned_items');
       const info = await talkInfo(page);
       check('⑧ 渡すと、2人のひとことが流れて差し入れが1つ減る', owned && owned.peer_gift === 1 && !!info, info ? info.id : 'なし');
-      // 品物を渡した演出(44-growth-fx.jsx)。渡した直後に真ん中へ出て、数秒で閉じる
+      // 品物を渡した演出(44-growth-fx.jsx)。演出は1つずつ出るので、前の札が出ていればその後に出る(数秒で閉じる)
+      await page.locator('[data-growth-fx-sheet="item"]').waitFor({ timeout: 10000 }).catch(() => {});
       check('⑨ 渡すと、品物の演出(2人の友情Lv・仲良し度)が出る', (await page.locator('[data-growth-fx-sheet="item"]').count()) > 0);
       // 数字は数え上がるので、止まってから見る
       await page.waitForTimeout(1800);
@@ -224,7 +237,7 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
         await reopen(V.page);
         wb = V.page.locator('[data-assistant-life-watch]:not([disabled])').first();
         if (await wb.count()) break;
-        await V.page.close();
+        if (tries < 3) await V.page.close(); // 最後の1枚は閉じない(閉じたページを触って落ちないように)
       }
       if (await wb.count()) {
         await wb.click(); await V.page.waitForTimeout(500);
