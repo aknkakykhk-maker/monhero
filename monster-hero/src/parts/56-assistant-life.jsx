@@ -345,12 +345,15 @@ const assistantLifeDecide = ({ abs, members, bond = {}, prev = null, recent = []
     if (inGroup.has(id)) { if (moods[id] === 'lonely') moods[id] = 'happy'; continue; }
     const p = ASSISTANT_LIFE_PREFS[id];
     const quarrel = ids.some(o => o !== id && quarrelNow(id, o) && !introduced.includes(assistantLifePairKey(id, o)));
-    const reason = quarrel ? 'distance' : (wants[id] ? 'lonely' : 'mypace');
+    // 寝ている助手は「さみしそう」にしない・気分は「ねむい」(2026-11-07 ミハリ L2・L12)。
+    // だれかに来てほしい助手は、寝ずに家でごろごろしている(ドラの「昼寝していても来てほしい」はこの形)
+    const d = doing[id] === 'sleep' && wants[id] && !quarrel ? 'idle' : doing[id];
+    const reason = quarrel ? 'distance' : (wants[id] && d !== 'sleep' ? 'lonely' : 'mypace');
     if (reason === 'lonely') { moods[id] = 'lonely'; lonely.push(id); }
-    const d = doing[id];
+    if (d === 'sleep') moods[id] = 'sleepy';
     const places = ASSISTANT_LIFE_DOINGS[d].places;
-    // ひとりのときは好きな場所にいやすい(ぼーっと・散歩は、どこの好きな場所でもできる)
-    const favOk = places.includes(p.fav) || ((d === 'idle' || d === 'walk') && rand() < 0.6);
+    // ひとりのときは好きな場所にいやすい。ただし、そのしていることができる場所だけ(カード部屋で散歩、にしない。ミハリ L9)
+    const favOk = places.includes(p.fav);
     let place = favOk ? p.fav : places[Math.floor(rand() * places.length)];
     if (reason === 'lonely' && (d === 'idle' || d === 'sleep')) place = 'home';
     solo[id] = { doing: d, place, reason };
@@ -414,11 +417,16 @@ const normalizeAssistantLife = (v) => {
     .map(g => ({ ids: [...g.ids], doing: g.doing, place: g.place })) : [];
   const solo = {};
   if (o.solo && typeof o.solo === 'object') for (const [id, s] of Object.entries(o.solo)) if (ok(id) && s && ASSISTANT_LIFE_DOINGS[s.doing] && ASSISTANT_LIFE_PLACES[s.place]) solo[id] = { doing: s.doing, place: s.place, reason: ['lonely', 'mypace', 'distance'].includes(s.reason) ? s.reason : 'mypace' };
+  // 前の版で保存した様子の整え(寝ているのに「さみしそう」・できない場所でしていること。2026-11-07 ミハリ L2・L9・L12)
+  for (const [id, s] of Object.entries(solo)) {
+    if (s.doing === 'sleep') { if (s.reason === 'lonely') s.reason = 'mypace'; moods[id] = 'sleepy'; }
+    if (!ASSISTANT_LIFE_DOINGS[s.doing].places.includes(s.place)) s.place = ASSISTANT_LIFE_DOINGS[s.doing].places[0];
+  }
   const recent = Array.isArray(o.recent) ? o.recent.filter(r => r && typeof r.kind === 'string' && Number.isFinite(r.abs)).slice(-40) : [];
   const nudgeList = (x) => Array.isArray(x) ? x.filter(n => n && Number.isFinite(n.abs)).slice(-20) : [];
   const nudges = { invite: nudgeList(o.nudges && o.nudges.invite).filter(n => ok(n.id)), introduce: nudgeList(o.nudges && o.nudges.introduce).filter(n => typeof n.pair === 'string') };
   return { salt: typeof o.salt === 'string' && o.salt ? o.salt : '', abs: Number.isFinite(o.abs) ? o.abs : null, slot: typeof o.slot === 'string' ? o.slot : null,
-    moods, groups, solo, lonely: Array.isArray(o.lonely) ? o.lonely.filter(ok) : [], recent, nudges,
+    moods, groups, solo, lonely: Array.isArray(o.lonely) ? o.lonely.filter(id => ok(id) && !(solo[id] && solo[id].doing === 'sleep')) : [], recent, nudges,
     watched: Array.isArray(o.watched) ? o.watched.filter(k => typeof k === 'string').slice(-30) : [] };
 };
 
@@ -882,11 +890,11 @@ const assistantLifeNextSlotText = (now = Date.now()) => {
   const h = new Date(Number(now) + 9 * 3600000);
   const slot = ASSISTANT_LIFE_SLOTS[cur.i];
   const mins = Math.max(1, (slot.to * 60) - (h.getUTCHours() * 60 + h.getUTCMinutes()));
-  const next = ASSISTANT_LIFE_SLOTS[(cur.i + 1) % ASSISTANT_LIFE_SLOTS.length];
   const t = mins >= 60 ? `${Math.floor(mins / 60)}時間${mins % 60 ? `${mins % 60}分` : ''}` : `${mins}分`;
-  return `あと${t}で${next.label}(みんなが動きます)`;
+  // 次の区切りの名前(夕方・深夜など)は出さない。見出しの朝・昼・夕・夜とずれる(2026-11-07 ミハリ L8)
+  return `あと${t}でみんなが動きます`;
 };
-const assistantLifeSlotRange = (id) => { const s = ASSISTANT_LIFE_SLOTS.find(x => x.id === id); return s ? `${s.label}(${s.from}〜${s.to}時)` : ''; };
+const assistantLifeSlotRange = (id) => { const s = ASSISTANT_LIFE_SLOTS.find(x => x.id === id); return s ? `${s.from}〜${s.to % 24}時` : ''; }; // 区切りの名前(午後・深夜など)は出さない。見出しの朝・昼・夕・夜とずれる(2026-11-07 ミハリ L8)
 
 // 様子を、いまの時間に合わせて読む(画面と帯で使う)
 const useAssistantLifeNow = (metIds) => {
@@ -1025,7 +1033,7 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
       <div className={embedded ? 'w-full' : 'flex h-full w-full max-w-md flex-col bg-slate-950'} style={embedded ? undefined : { paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {!embedded && <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
           <p className="min-w-0 flex-1 text-[15px] font-black text-pink-200">助手ライフ</p>
-          <span className="text-right text-[10px] font-bold leading-tight text-slate-400">いまは{assistantLifeSlotRange(slot.id)}<br/><span data-assistant-life-next-slot className="text-slate-300">{assistantLifeNextSlotText()}</span></span>
+          <span className="text-right text-[10px] font-bold leading-tight text-slate-400">いまは{assistantLifeSlotRange(slot.id)}の過ごし方<br/><span data-assistant-life-next-slot className="text-slate-300">{assistantLifeNextSlotText()}</span></span>
           <button type="button" data-assistant-life-close onClick={assistantLifeCloseScreen} aria-label="閉じる" className="h-9 w-9 rounded-full border border-slate-600 text-[15px] font-black text-slate-300 active:scale-95">×</button>
         </div>}
         <div className={embedded ? 'pb-2' : 'min-h-0 flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-2'}>
@@ -1215,7 +1223,7 @@ function AssistantLifeItemIntro({ peerItems }) {
           {guide && <AssistantFace who={guide} size={44} accent={guide.accent} expression="wink"/>}
           <p className="text-[14px] font-black text-amber-200">はじめての {info.emoji} {info.name}！</p>
         </div>
-        <p className="mt-2 text-[12px] leading-relaxed text-white">① 「🏡 助手ライフ」で、一緒にいる2人に渡せるよ<br/>② 2人の友情Lv と、あなたとの仲良し度が上がる<br/>③ 1日1回。「🤝 もうすぐ友情Lv」の印がついた2人に渡すと、Lv が上がりやすい！</p>
+        <p className="mt-2 text-[12px] leading-relaxed text-white">① 「🏡 助手ライフ」で、一緒にいる2人に渡せるよ<br/>② 2人の<span className="whitespace-nowrap">友情Lv と</span>、あなたとの仲良し度が上がる<br/>③ 1日1回。<span className="whitespace-nowrap">「🤝 もうすぐ友情Lv」</span>の印がついた2人に渡すと、<span className="whitespace-nowrap">Lv が上がりやすい！</span></p>
         <div className="mt-2 flex gap-2">
           <button type="button" data-assistant-life-item-intro-close onClick={() => close(false)} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">あとで</button>
           <button type="button" data-assistant-life-item-intro-open onClick={() => close(true)} className="min-h-[44px] flex-[2] rounded-xl border border-amber-300/70 bg-amber-400/20 text-[12px] font-black text-amber-100 active:scale-[.98]">「助手ライフ」を開く</button>
