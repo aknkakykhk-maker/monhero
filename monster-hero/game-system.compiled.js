@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fe73a7aec4c4bb59
+// source-sha256: 47dc0ed536bdf4ed
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -102994,6 +102994,7 @@ const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({
   market: '.mh-home-facility.market',
   life: '.mh-home-facility.life'
 });
+const ASSISTANT_LIFE_HOME_OBSTACLES = '.mh-home-facility,.mh-home-card-battle,.mh-home-event-banner,.mh-home-tour-banner,.mh-home-mission,.mh-home-gift,.mh-home-event-badge,.mh-home-assistant';
 function AssistantLifeHomeFaces({
   metIds
 }) {
@@ -103003,17 +103004,30 @@ function AssistantLifeHomeFaces({
     if (!assistantLifeEnabled()) return undefined;
     const measure = () => {
       const o = {};
+      const obs = [...document.querySelectorAll(ASSISTANT_LIFE_HOME_OBSTACLES)].filter(el => el.offsetParent).map(el => ({
+        el,
+        r: el.getBoundingClientRect()
+      }));
       for (const [k, sel] of Object.entries(ASSISTANT_LIFE_FACILITY_SEL)) {
         const el = document.querySelector(sel);
-        if (el && el.offsetParent) {
-          const r = el.getBoundingClientRect();
-          o[k] = {
-            x: r.left,
-            y: r.top,
-            w: r.width,
-            h: r.height
-          };
+        if (!el || !el.offsetParent) continue;
+        const r = el.getBoundingClientRect();
+        const right = r.left + r.width / 2 > window.innerWidth / 2;
+        const x0 = right ? r.right - Math.max(r.width, 140) : r.left,
+          x1 = right ? r.right : r.left + Math.max(r.width, 140);
+        let gap = window.innerHeight - r.bottom;
+        for (const b of obs) {
+          if (b.el === el || b.el.contains(el) || el.contains(b.el)) continue;
+          if (b.r.top >= r.bottom - 2 && b.r.right > x0 && b.r.left < x1) gap = Math.min(gap, b.r.top - r.bottom);
         }
+        o[k] = {
+          x: r.left,
+          y: r.top,
+          w: r.width,
+          h: r.height,
+          gap: Math.round(gap),
+          right
+        };
       }
       setRects(prev => JSON.stringify(prev) === JSON.stringify(o) ? prev : o);
     };
@@ -103040,32 +103054,28 @@ function AssistantLifeHomeFaces({
   const peer = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null;
   const q = peer && peer.quarrel && peer.quarrel.pending;
   const after = new Set(q && q.pair ? String(q.pair).split('-') : []);
-  const vw = window.innerWidth;
   return React.createElement(React.Fragment, null, Object.entries(by).map(([f, list]) => {
     const r = rects[f];
-    const size = 26,
-      wrap = list.length > 4;
-    const cols = wrap ? 4 : list.length;
-    const boxW = wrap ? cols * (size + 3) + 8 : size + (list.length - 1) * (size - 7) + 10;
-    const right = r.x + r.w / 2 > vw / 2;
-    const left = right ? r.x - boxW - 4 : r.x + r.w + 4;
-    const rowsN = wrap ? Math.ceil(list.length / cols) : 1;
-    const boxH = rowsN * (size + 3) + 6;
+    const side = r.gap < 15;
+    const size = side ? 20 : Math.max(12, Math.min(20, r.gap - 3));
+    const step = size - 4;
+    const rowW = size + (list.length - 1) * step + 6;
+    const left = side ? r.right ? r.x - rowW - 4 : r.x + r.w + 4 : r.right ? Math.max(4, r.x + r.w - rowW) : r.x;
+    const top = side ? r.y + r.h / 2 - size / 2 : r.y + r.h + 1;
     return React.createElement("div", {
       key: f,
       "data-assistant-life-home-faces": f,
-      className: "fixed",
+      "data-assistant-life-home-face-size": size,
+      "data-assistant-life-home-face-side": side ? '1' : '0',
+      className: "pointer-events-none fixed",
       style: {
         zIndex: 40,
         left,
-        top: r.y + r.h / 2 - boxH / 2,
-        width: boxW
+        top,
+        width: rowW
       }
     }, React.createElement("div", {
-      className: `pointer-events-auto rounded-[14px] border border-white/35 bg-slate-950/75 p-[3px] shadow-lg ${wrap ? 'grid gap-[3px]' : 'flex items-center'}`,
-      style: wrap ? {
-        gridTemplateColumns: `repeat(${cols}, ${size}px)`
-      } : undefined
+      className: "pointer-events-auto flex items-center rounded-full bg-slate-950/70 px-[3px] shadow"
     }, list.map((id, i) => {
       const who = assistantById(id);
       if (!who) return null;
@@ -103082,15 +103092,18 @@ function AssistantLifeHomeFaces({
             focus: id
           });
         },
-        className: "rounded-full active:scale-90",
+        className: "relative shrink-0 rounded-full active:scale-90",
         style: {
-          marginLeft: !wrap && i ? -7 : 0,
-          boxShadow: lonely ? '0 0 0 2px #fbbf24,0 0 8px #fbbf24' : after.has(id) ? '0 0 0 2px #7dd3fc' : '0 0 0 2px #fff'
+          marginLeft: i ? -4 : 0,
+          boxShadow: lonely ? '0 0 0 1.5px #fbbf24,0 0 6px #fbbf24' : after.has(id) ? '0 0 0 1.5px #7dd3fc' : '0 0 0 1.5px #fff'
         }
       }, React.createElement(AssistantFace, {
         who: who,
         size: size,
         accent: who.accent
+      }), React.createElement("span", {
+        "aria-hidden": "true",
+        className: "absolute -inset-1.5"
       }));
     })));
   }));
@@ -181954,7 +181967,7 @@ const createAnimationStyle = () => {
     .mh-gift-list{display:flex;flex-direction:column;gap:8px}.mh-gift-card{display:flex;flex:none;flex-direction:column;gap:4px;min-height:88px;padding:10px 12px}.mh-gift-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;min-width:0;min-height:20px}.mh-gift-heading h3{display:flex;align-items:flex-start;gap:4px;min-width:0;font-size:14px;line-height:19px;color:#fff}.mh-gift-heading h3 span{flex:none;margin-top:1px;padding:1px 6px;border-radius:6px;background:#78350f;color:#fde68a;font-size:10px;line-height:16px}.mh-gift-heading h3 b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-width:0;white-space:normal;overflow-wrap:anywhere}.mh-gift-heading>em{flex:none;padding:2px 8px;border-radius:999px;font-size:10px;line-height:16px;font-style:normal;font-weight:900}.mh-gift-main{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px}.mh-gift-rewards{display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:2px 7px;min-width:0;color:#fde68a;font-size:11px;line-height:15px;font-weight:900}.mh-gift-rewards span{overflow-wrap:anywhere}.mh-gift-main>button{flex:none;min-width:84px;height:44px;padding:0 12px;border-radius:12px;background:#0891b2;color:#fff;font-size:12px;font-weight:900;white-space:nowrap;transition:transform .12s ease-out}.mh-gift-main>button:active{transform:scale(.95)}.mh-gift-main>button:disabled{opacity:.4;transform:none}.mh-gift-deadline{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#94a3b8;font-size:10px;line-height:14px}
     @media(max-height:620px){.mh-home-mission{top:64%}.mh-home-gift{top:73%}}
     /* 横画面(#146・2026-09-05)。コラムが画面いっぱいになるので、左右の余白へ施設を振り分ける。左＝吹き出し・M/B管理・モンヒロビート、右＝更新履歴・神殿・マーケット、右下＝ミッションとギフトを横並び、下中央＝バトル。上の max-height:620px は横画面のスマホにも当たるので、この行はそれより後ろに置いて上書きする */
-    @media(orientation:landscape) and (max-height:600px){.mh-home-assistant{left:2%;width:36%;top:calc(70px + env(safe-area-inset-top))}.mh-home-facility>span{padding:6px 12px}.mh-home-facility.management{left:2.4%;top:max(calc(146px + env(safe-area-inset-top)),calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.rhythm{left:2.4%;top:64.8%}.mh-home-facility.temple{right:2.4%;top:35.76%}.mh-home-facility.market{right:2.4%;top:59.76%}.mh-home-scene .mh-home-facility.life{left:auto;right:2.4%;top:47.6%}.mh-home-mission{right:calc(5% + 120px);top:78%}.mh-home-gift{top:78%}.mh-home-facility.battle>span{padding:8px 16px;font-size:18px;animation:none}.mh-home-masumon-layer{left:30%;right:30%;top:30%;bottom:34%}}
+    @media(orientation:landscape) and (max-height:600px){.mh-home-assistant{left:2%;width:36%;top:calc(70px + env(safe-area-inset-top))}.mh-home-facility>span{padding:6px 12px}.mh-home-facility.management{left:2.4%;top:max(calc(146px + env(safe-area-inset-top)),calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.rhythm{left:2.4%;top:64.8%}.mh-home-facility.temple{right:2.4%;top:35.76%}.mh-home-facility.market{right:2.4%;top:59.76%}.mh-home-scene .mh-home-facility.life{left:auto;right:calc(2.4% + 118px);top:59.76%}.mh-home-mission{right:calc(5% + 120px);top:78%}.mh-home-gift{top:78%}.mh-home-facility.battle>span{padding:8px 16px;font-size:18px;animation:none}.mh-home-masumon-layer{left:30%;right:30%;top:30%;bottom:34%}}
     /* 横画面でも幅が 760px までの端末(667×375 など)では、ミッションがモンヒロバトルの札に33px重なっていた。ミッション・ギフトを細く、バトルの札を小さくして、すき間をあける(2026-10-27) */
     @media(orientation:landscape) and (max-height:600px) and (max-width:760px){.mh-home-mission{width:104px;padding:7px 5px;right:calc(3% + 104px);white-space:nowrap}.mh-home-gift{width:96px;padding:7px 5px;right:3%}.mh-home-facility.battle>span{min-width:120px;padding:8px 8px;font-size:15px}}
     .mh-boot-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom));color:#fff;text-align:center;background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%);isolation:isolate}

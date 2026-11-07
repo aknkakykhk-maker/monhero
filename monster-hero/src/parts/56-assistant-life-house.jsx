@@ -613,9 +613,11 @@ function AssistantLifeTownMap({ life, ids, look, onPick }) {
     </div>);
 }
 
-// ---------- HOME: 遊んでいる所の施設の横に顔だけ ----------
-// HOME の施設の場所を測って、その横に重ねる(施設の並びは 69-screen-home.jsx・70-bootstrap.jsx の CSS が決める)
+// ---------- HOME: 遊んでいる所の施設の下に顔だけ(2026-11-07 社長「もっと小さくしてコンテンツの下において」) ----------
+// 施設の札のすぐ下に、小さい顔を横1列で並べる。全員出す(上限で切らない)。札やほかのボタンに重ならないよう、
+// 下にある札までのすき間を測って顔の大きさを決める(20〜12px)。1列に並びきらないときは、札の幅より外へ伸ばす(左の列は右へ・右の列は左へ)
 const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({ rhythm: '.mh-home-facility.rhythm', card: '.mh-home-card-battle', management: '.mh-home-facility.management', market: '.mh-home-facility.market', life: '.mh-home-facility.life' });
+const ASSISTANT_LIFE_HOME_OBSTACLES = '.mh-home-facility,.mh-home-card-battle,.mh-home-event-banner,.mh-home-tour-banner,.mh-home-mission,.mh-home-gift,.mh-home-event-badge,.mh-home-assistant';
 function AssistantLifeHomeFaces({ metIds }) {
   const st = useAssistantLifeNow(metIds);
   const [rects, setRects] = React.useState({});
@@ -623,7 +625,18 @@ function AssistantLifeHomeFaces({ metIds }) {
     if (!assistantLifeEnabled()) return undefined;
     const measure = () => {
       const o = {};
-      for (const [k, sel] of Object.entries(ASSISTANT_LIFE_FACILITY_SEL)) { const el = document.querySelector(sel); if (el && el.offsetParent) { const r = el.getBoundingClientRect(); o[k] = { x: r.left, y: r.top, w: r.width, h: r.height }; } }
+      const obs = [...document.querySelectorAll(ASSISTANT_LIFE_HOME_OBSTACLES)].filter(el => el.offsetParent).map(el => ({ el, r: el.getBoundingClientRect() }));
+      for (const [k, sel] of Object.entries(ASSISTANT_LIFE_FACILITY_SEL)) {
+        const el = document.querySelector(sel);
+        if (!el || !el.offsetParent) continue;
+        const r = el.getBoundingClientRect();
+        // 札の下にある、横に重なるものまでのすき間(顔の列は札の幅+140px まで伸びうるので、その幅で見る)
+        const right = r.left + r.width / 2 > window.innerWidth / 2;
+        const x0 = right ? r.right - Math.max(r.width, 140) : r.left, x1 = right ? r.right : r.left + Math.max(r.width, 140);
+        let gap = window.innerHeight - r.bottom;
+        for (const b of obs) { if (b.el === el || b.el.contains(el) || el.contains(b.el)) continue; if (b.r.top >= r.bottom - 2 && b.r.right > x0 && b.r.left < x1) gap = Math.min(gap, b.r.top - r.bottom); }
+        o[k] = { x: r.left, y: r.top, w: r.width, h: r.height, gap: Math.round(gap), right };
+      }
       setRects(prev => (JSON.stringify(prev) === JSON.stringify(o) ? prev : o));
     };
     measure();
@@ -646,25 +659,26 @@ function AssistantLifeHomeFaces({ metIds }) {
   const peer = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null;
   const q = peer && peer.quarrel && peer.quarrel.pending;
   const after = new Set(q && q.pair ? String(q.pair).split('-') : []);
-  const vw = window.innerWidth;
   return (<>
     {Object.entries(by).map(([f, list]) => {
       const r = rects[f];
-      const size = 26, wrap = list.length > 4;
-      const cols = wrap ? 4 : list.length;
-      const boxW = wrap ? cols * (size + 3) + 8 : size + (list.length - 1) * (size - 7) + 10;
-      const right = r.x + r.w / 2 > vw / 2; // 右の列の施設は左に出す
-      const left = right ? r.x - boxW - 4 : r.x + r.w + 4;
-      const rowsN = wrap ? Math.ceil(list.length / cols) : 1;
-      const boxH = rowsN * (size + 3) + 6;
+      // 札の下に 14px も取れない(横向きで画面のいちばん下にある札など)ときだけ、札の横(画面の内側)に並べる
+      const side = r.gap < 15;
+      const size = side ? 20 : Math.max(12, Math.min(20, r.gap - 3));
+      const step = size - 4; // 少し重ねる
+      const rowW = size + (list.length - 1) * step + 6;
+      const left = side ? (r.right ? r.x - rowW - 4 : r.x + r.w + 4) : (r.right ? Math.max(4, r.x + r.w - rowW) : r.x);
+      const top = side ? r.y + r.h / 2 - size / 2 : r.y + r.h + 1;
       return (
-        <div key={f} data-assistant-life-home-faces={f} className="fixed" style={{ zIndex: 40, left, top: r.y + r.h / 2 - boxH / 2, width: boxW }}>
-          <div className={`pointer-events-auto rounded-[14px] border border-white/35 bg-slate-950/75 p-[3px] shadow-lg ${wrap ? 'grid gap-[3px]' : 'flex items-center'}`} style={wrap ? { gridTemplateColumns: `repeat(${cols}, ${size}px)` } : undefined}>
+        <div key={f} data-assistant-life-home-faces={f} data-assistant-life-home-face-size={size} data-assistant-life-home-face-side={side ? '1' : '0'} className="pointer-events-none fixed" style={{ zIndex: 40, left, top, width: rowW }}>
+          <div className="pointer-events-auto flex items-center rounded-full bg-slate-950/70 px-[3px] shadow">
             {list.map((id, i) => { const who = assistantById(id); if (!who) return null; const w = assistantLifeWhereOf(life, id); const lonely = w && w.reason === 'lonely';
               return (
                 <button key={id} type="button" data-assistant-life-home-face={id} aria-label={`${who.name}のようす`} onClick={() => { ASSISTANT_LIFE_STORE.set({ open: true, focus: id }); }}
-                  className="rounded-full active:scale-90" style={{ marginLeft: !wrap && i ? -7 : 0, boxShadow: lonely ? '0 0 0 2px #fbbf24,0 0 8px #fbbf24' : after.has(id) ? '0 0 0 2px #7dd3fc' : '0 0 0 2px #fff' }}>
+                  className="relative shrink-0 rounded-full active:scale-90" style={{ marginLeft: i ? -4 : 0, boxShadow: lonely ? '0 0 0 1.5px #fbbf24,0 0 6px #fbbf24' : after.has(id) ? '0 0 0 1.5px #7dd3fc' : '0 0 0 1.5px #fff' }}>
                   <AssistantFace who={who} size={size} accent={who.accent}/>
+                  {/* 押しやすいように、見た目より広く押せる */}
+                  <span aria-hidden="true" className="absolute -inset-1.5"/>
                 </button>); })}
           </div>
         </div>); })}
