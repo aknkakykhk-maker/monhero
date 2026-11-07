@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 407774679db5237a
+// source-sha256: fc98185c191fcf65
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -2679,6 +2679,8 @@ const resetMasuForRebirth = (masu, {
   if (Array.isArray(masu?.fusionHistory)) reset.fusionHistory = masu.fusionHistory.map(entry => ({
     ...entry
   }));
+  if (Array.isArray(masu?.uniqueOrder)) reset.uniqueOrder = masu.uniqueOrder.filter(key => typeof key === 'string');
+  if (typeof masu?.initialUniqueKey === 'string' && masu.initialUniqueKey) reset.initialUniqueKey = masu.initialUniqueKey;
   if (masu?.individualStats && typeof masu.individualStats === 'object') reset.individualStats = {
     ...masu.individualStats
   };
@@ -34272,7 +34274,7 @@ const RhythmOptions = ({
       "data-rhythm-option-nudge": `${key}${sign(amount)}`,
       disabled: amount < 0 ? value <= min : value >= max,
       onClick: () => nudge(amount),
-      className: `${wide ? 'min-h-[38px]' : 'min-h-[46px]'} rounded-xl border ${dim ? 'border-white/25 bg-slate-300 text-slate-900' : 'border-white/40 bg-slate-100 text-slate-900'} px-0.5 text-[11px] font-black tabular-nums shadow-[0_2px_0_rgba(2,6,23,.55)] active:translate-y-[1px] active:shadow-none disabled:opacity-35`
+      className: `${wide ? 'min-h-[38px]' : 'min-h-[46px]'} rounded-xl border ${dim ? 'border-white/25 bg-slate-300 text-slate-900' : 'border-white/40 bg-slate-100 text-slate-900'} min-w-0 whitespace-nowrap px-0.5 text-[11px] font-black tabular-nums tracking-tight shadow-[0_2px_0_rgba(2,6,23,.55)] active:translate-y-[1px] active:shadow-none disabled:opacity-35`
     }, sign(amount));
     return React.createElement("div", {
       "data-rhythm-option-stepper": key,
@@ -34354,10 +34356,11 @@ const RhythmOptions = ({
     className: `border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide ? 'min-h-[38px]' : 'min-h-[44px]'} ${hellDraft[name] === id ? 'bg-cyan-600 text-white' : 'bg-slate-900 text-slate-300'}`
   }, text)));
   const field = (title, control, description = null, {
-    full = false
+    full = false,
+    wideFull = false
   } = {}) => React.createElement("div", {
     "data-rhythm-option-field": true,
-    className: `${full && !wide ? 'col-span-2' : ''} rounded-xl border border-cyan-400/20 bg-slate-950/55 ${wide ? 'p-1.5' : 'p-2.5'}`
+    className: `${full && !wide ? 'col-span-2' : ''}${wideFull && wide ? 'col-span-3' : ''} rounded-xl border border-cyan-400/20 bg-slate-950/55 ${wide ? 'p-1.5' : 'p-2.5'}`
   }, React.createElement("p", {
     className: `rounded-lg bg-cyan-700/70 px-2 text-center ${label} ${wide ? 'mb-1 py-0.5 text-[11px]' : 'mb-2 py-1'}`,
     style: JA_WRAP_STYLE
@@ -34370,7 +34373,7 @@ const RhythmOptions = ({
     className: `mt-1 ${note}`,
     style: JA_WRAP_STYLE
   }, typeof description === 'string' ? jaWrap(description) : description)));
-  const grid = `grid gap-2.5 ${wide ? 'grid-cols-3 gap-2' : 'grid-cols-2'}`;
+  const grid = `grid gap-2.5 ${wide ? 'grid-cols-3 items-start gap-2' : 'grid-cols-2'}`;
   const [fxGroup, setFxGroup] = useState(null);
   const fxGroupNow = fxGroup || 'stage';
   const fxGroupShown = id => !wide || fxGroupNow === id;
@@ -34379,7 +34382,7 @@ const RhythmOptions = ({
     const n = rhythmFxChangedCount(draft, RHYTHM_FX_ITEMS.filter(item => item.group === id).map(item => item.key));
     return n ? `${n}つ変更` : 'おまかせ';
   };
-  const fxGrid = `grid gap-2.5 ${wide ? 'grid-cols-2 gap-2' : 'grid-cols-2'}`;
+  const fxGrid = `grid gap-2.5 ${wide ? 'grid-cols-2 items-start gap-2' : 'grid-cols-2'}`;
   const FX_WEIGHT = {
     l: ['軽', 'bg-emerald-500/25 text-emerald-200'],
     m: ['中', 'bg-amber-500/25 text-amber-200'],
@@ -34575,6 +34578,9 @@ const RhythmOptions = ({
     const pct = v => `${(Math.max(0, Math.min(1, v)) * 100).toFixed(2)}%`;
     return React.createElement("div", {
       "data-rhythm-line-position": true,
+      className: wide ? 'grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-start gap-3' : 'space-y-2'
+    }, React.createElement("div", {
+      "data-rhythm-line-position-side": true,
       className: "space-y-2"
     }, React.createElement("div", {
       "data-rhythm-line-preview": true,
@@ -34642,7 +34648,10 @@ const RhythmOptions = ({
       "data-rhythm-line-adjust-open": true,
       onClick: goLineAdjust,
       className: "min-h-[46px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-[12px] font-black text-cyan-100"
-    }, "🎯 実際の画面で合わせる"), stepper('judgmentLineHeight', RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, {
+    }, "🎯 実際の画面で合わせる")), React.createElement("div", {
+      "data-rhythm-line-position-steppers": true,
+      className: wide ? 'grid grid-cols-2 gap-x-3 gap-y-2' : 'space-y-2'
+    }, stepper('judgmentLineHeight', RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, {
       fine: RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,
       coarse: RHYTHM_JUDGMENT_LINE_HEIGHT_STEP * 4,
       suffix: '%',
@@ -34693,9 +34702,10 @@ const RhythmOptions = ({
         skyTop: rhythmNormalizeSkyAcceptTop(v)
       })),
       slider: true
-    }));
+    })));
   })(), 'タップする判定ラインを、画面の下から何％の高さに置くかです。大きくするほど上へ上がり、指が届きやすくなります（12％が2026-09-13より前の位置です）。ノーツも弾ける光も判定文字も一緒に上がります。判定の幅（秒数）・スコア・譜面は変わりません。ただしレーンは奥へ行くほど狭くなるので、上げすぎると横の幅が狭く感じられます。' + (hellReleased ? '\n空中の判定ライン(HELL)は、地上の判定ラインからの高さを上下にずらします。空中の線・空中のノーツ・空中を受け付ける範囲が一緒に動きます(地上を受け付ける範囲は変わりません)。上へずらしすぎると、空中を受け付ける範囲が地上の範囲に届いたところで止まります。空中を受け付けるのは、空中の線から上へ一定の幅(画面の高さの20%×「上の端」の値)までです。それより上を押しても空中のノーツは取れません。「実際の画面で合わせる」を押すと、演奏画面に切り替わり、本番と同じ大きさのレーン・判定ライン・受け付ける範囲を見ながら、時間を気にせず合わせられます(合わせているあいだはノーツは流れません)。「保存して試す」で保存すると、ノーツがくり返し流れる画面になり、ふつうに叩いて試せます。右上の「位置を直す」でまた合わせ直せて、「終わる」でこの画面へ戻ります。「受け付ける範囲の広さ」は、地上と空中の境目の側だけを狭めます(空中は線より下へのはみ出し、地上は線より上へのはみ出し。100%が今の広さで、50%まで)。狭めると、境目のあたりを押したときにもう一方のノーツを取り違えにくくなりますが、線から離れた所を押すと空振りになります。地上の判定ラインを動かすと、空中の線も一緒に動きます。押す時刻(判定の幅)とスコアは変わりません。' : ''), {
-    full: true
+    full: true,
+    wideFull: true
   }), field('ノーツの出る位置', stepper('noteStartPosition', -100, 100, 5, {
     fine: 5,
     coarse: 25
@@ -61593,7 +61603,7 @@ const GrowthFxChip = ({
     key: `i${chip.rev}`,
     className: "ico beat",
     "aria-hidden": "true"
-  }, k.icon), React.createElement("span", {
+  }, cardIconNode(k.icon, 13)), React.createElement("span", {
     className: "min-w-0"
   }, React.createElement("span", {
     className: "who block"
@@ -61668,7 +61678,7 @@ const GrowthFxItemCard = ({
     }, React.createElement("span", {
       className: "ico",
       "aria-hidden": "true"
-    }, rk.icon), React.createElement("div", {
+    }, cardIconNode(rk.icon, 18)), React.createElement("div", {
       style: {
         flex: 1,
         minWidth: 0
@@ -61753,7 +61763,7 @@ const GrowthFxLevelUp = ({
       className: "mh-gfx-band"
     }, React.createElement("span", {
       className: "big"
-    }, k.icon, " ", k.label, " Lv.", sheet.levelTo), React.createElement("small", null, sheet.sub, gains.length ? ` ・ ${gains.map(g => g.text).join('・')}` : ''), React.createElement("small", null, "押すと閉じる")));
+    }, cardIconNode(k.icon, 20), " ", k.label, " Lv.", sheet.levelTo), React.createElement("small", null, sheet.sub, gains.length ? ` ・ ${gains.map(g => g.text).join('・')}` : ''), React.createElement("small", null, "押すと閉じる")));
   }
   const conf = level === 'full' ? Array.from({
     length: 24
@@ -61857,7 +61867,7 @@ const GrowthFxLevelUp = ({
     }
   }, React.createElement("span", {
     "aria-hidden": "true"
-  }, g.icon || '✨'), React.createElement("span", {
+  }, cardIconNode(g.icon || '✨', 14)), React.createElement("span", {
     className: "min-w-0"
   }, React.createElement("b", null, String(g.text || '')), g.note && React.createElement("small", null, String(g.note))), g.isNew && React.createElement("span", {
     className: "new"
@@ -90455,6 +90465,7 @@ function RhythmMultiScreen({
     assistants: sessionAssistants,
     pickAssistant: callAssistant,
     guideAssistantId: guideAssistantId,
+    freeSeats: view ? Math.max(0, RHYTHM_MULTI_ROOM_MAX - (view.members || []).length) : 0,
     breederName: profile && profile.name,
     songName: buddySongName,
     tickets: buddyTickets,
@@ -90766,15 +90777,41 @@ function RhythmMultiScreen({
     "data-rhythm-buddy-open": true,
     "data-rhythm-buddy-header": true,
     type: "button",
-    "aria-label": "マスモンを呼ぶ",
+    "aria-label": sessionAssistantsOn ? 'マスモン・助手を呼ぶ' : 'マスモンを呼ぶ',
     onClick: () => setBuddySheet('pick'),
     className: `relative flex min-h-[44px] min-w-[52px] max-[480px]:min-w-[46px] max-[380px]:min-w-[42px] shrink-0 flex-col items-center justify-center rounded-xl border border-lime-300/70 bg-gradient-to-b from-lime-400 to-emerald-600 px-1.5 max-[480px]:px-1 leading-none text-slate-950 ${extra}`
-  }, React.createElement("span", {
-    "aria-hidden": "true",
-    className: "text-base"
-  }, "🎵"), React.createElement("span", {
-    className: "text-[10px] font-black"
-  }, "マスモン"), view.myCpus && view.myCpus.length > 0 && React.createElement("b", {
+  }, (() => {
+    const masu = (masuMons || [])[0] || null;
+    const base = masu && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
+    const masuSrc = base && typeof masuDisplayImageUrl === 'function' ? masuDisplayImageUrl(base) : '';
+    const who = sessionAssistantsOn && typeof assistantById === 'function' ? assistantById(guideAssistantId) || (sessionAssistants || [])[0] || null : null;
+    const whoSrc = who && typeof assistantFaceSrc === 'function' ? assistantFaceSrc(who, 'happy') : '';
+    if (!masuSrc && !whoSrc) return React.createElement("span", {
+      "aria-hidden": "true",
+      className: "text-base"
+    }, "🎵");
+    return React.createElement("span", {
+      "data-rhythm-buddy-header-faces": true,
+      "aria-hidden": "true",
+      className: "relative flex h-[18px] items-center"
+    }, masuSrc && React.createElement("span", {
+      className: "block h-[18px] w-[18px] overflow-hidden rounded-full border border-white/80 bg-slate-800"
+    }, React.createElement("img", {
+      src: masuSrc,
+      alt: "",
+      draggable: false,
+      className: "h-full w-full object-contain"
+    })), whoSrc && React.createElement("span", {
+      className: `block h-[18px] w-[18px] overflow-hidden rounded-full border border-white/80 bg-slate-800 ${masuSrc ? '-ml-1.5' : ''}`
+    }, React.createElement("img", {
+      src: whoSrc,
+      alt: "",
+      draggable: false,
+      className: "h-full w-full object-cover"
+    })));
+  })(), React.createElement("span", {
+    className: "mt-0.5 text-[10px] font-black"
+  }, "呼ぶ"), view.myCpus && view.myCpus.length > 0 && React.createElement("b", {
     className: "absolute -right-1.5 -top-1.5 min-w-[18px] rounded-full bg-slate-950 px-1 text-[10px] font-black leading-[18px] text-lime-200"
   }, view.myCpus.length)) : null;
   const header = (step, onBackClick, opts = {}) => React.createElement("header", {
@@ -93647,7 +93684,8 @@ function RhythmBuddySheet({
   breederName = '',
   assistants = [],
   pickAssistant = null,
-  guideAssistantId = ''
+  guideAssistantId = '',
+  freeSeats = 4
 }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
@@ -93657,17 +93695,54 @@ function RhythmBuddySheet({
   const detail = detailId ? (masuMons || []).find(x => x && x.id === detailId) : null;
   const canPay = freeLeft > 0 || tickets > 0;
   const listControls = useRhythmBuddyListControls();
-  const [selId, setSelId] = React.useState('');
+  const [picks, setPicks] = React.useState([]);
+  const [pickNote, setPickNote] = React.useState('');
+  const isPicked = (kind, id) => picks.some(p => p.kind === kind && p.id === id);
+  const togglePick = (kind, id) => {
+    const key = kind === 'assistant' ? rhythmAssistSessionKey(id) : id;
+    if (calledIds.includes(key)) return;
+    if (isPicked(kind, id)) {
+      setPicks(picks.filter(p => !(p.kind === kind && p.id === id)));
+      setPickNote('');
+      return;
+    }
+    if (picks.length >= freeSeats) {
+      setPickNote(`部屋の空き席は ${freeSeats} つです。ほかを外してから選んでください`);
+      return;
+    }
+    setPicks([...picks, {
+      kind,
+      id
+    }]);
+    setPickNote('');
+  };
   const assistOn = rhythmAssistSessionEnabled() && typeof pickAssistant === 'function' && (assistants || []).length > 0;
   const [tab, setTab] = React.useState(() => (masuMons || []).length ? 'masu' : 'assistant');
   const tabNow = assistOn ? tab : 'masu';
-  const chooseAssistant = async who => {
-    if (busy || !canPay) return;
+  const masuPicks = picks.filter(p => p.kind === 'masu');
+  const singleMasu = masuPicks.length === 1 && picks.length === 1 ? (masuMons || []).find(x => x && x.id === masuPicks[0].id) : null;
+  const useFree = Math.min(freeLeft, picks.length);
+  const useTickets = picks.length - useFree;
+  const shortTickets = Math.max(0, useTickets - tickets);
+  const pickedAssistantIds = picks.filter(p => p.kind === 'assistant').map(p => p.id);
+  const duoNow = assistOn && pickedAssistantIds.length && typeof rhythmAssistSessionDuosNow === 'function' ? rhythmAssistSessionDuosNow([...calledIds.map(c => rhythmAssistSessionIdOf(c)).filter(Boolean), ...pickedAssistantIds]).filter(d => pickedAssistantIds.includes(d.a) || pickedAssistantIds.includes(d.b)) : [];
+  const callAll = async () => {
+    if (busy || !picks.length || shortTickets > 0) return;
     setBusy(true);
+    const list = picks.slice();
     try {
-      await pickAssistant(who);
+      for (const p of list) {
+        if (p.kind === 'masu') {
+          const masu = (masuMons || []).find(x => x && x.id === p.id);
+          if (masu) await pick(masu);
+        } else {
+          const who = (assistants || []).find(x => x && x.id === p.id);
+          if (who && pickAssistant) await pickAssistant(who);
+        }
+      }
     } finally {
       setBusy(false);
+      setPicks([]);
     }
   };
   const choose = async masu => {
@@ -93679,6 +93754,52 @@ function RhythmBuddySheet({
       setBusy(false);
     }
   };
+  const showMultiBar = !!(masuPicker || assistOn) && !detail;
+  const multiBar = React.createElement("div", {
+    "data-rhythm-buddy-multi": true,
+    className: "mt-2 shrink-0 rounded-2xl border border-lime-300/40 bg-slate-950/85 p-2"
+  }, picks.length === 0 ? React.createElement("p", {
+    className: "text-center text-[11px] font-bold text-slate-400"
+  }, helpWrap('呼びたい相手をタップしてください(何人でも選べます)')) : React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "mb-1 flex flex-wrap items-center gap-1"
+  }, picks.map(p => {
+    const masu = p.kind === 'masu' ? (masuMons || []).find(x => x && x.id === p.id) : null;
+    const who = p.kind === 'assistant' && typeof rhythmAssistSessionWho === 'function' ? rhythmAssistSessionWho(p.id) : null;
+    const name = masu ? rhythmBuddyMasuName(masu) : who ? who.name : '';
+    return React.createElement("button", {
+      key: `${p.kind}:${p.id}`,
+      type: "button",
+      "data-rhythm-buddy-picked": p.id,
+      onClick: () => togglePick(p.kind, p.id),
+      className: "rounded-full border border-white/20 bg-slate-800 px-2 py-0.5 text-[10px] font-black"
+    }, name, " ✕");
+  })), React.createElement("p", {
+    "data-rhythm-buddy-multi-cost": true,
+    className: "text-[10px] font-bold leading-snug text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います`)), shortTickets > 0 && React.createElement("p", {
+    "data-rhythm-buddy-multi-short": true,
+    className: "text-[10px] font-black text-rose-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`セッション券が ${shortTickets}枚 足りません。選ぶ数を減らすと呼べます`)), duoNow.length > 0 && React.createElement("p", {
+    "data-rhythm-buddy-multi-duo": true,
+    className: "text-[10px] font-black text-pink-200"
+  }, "🎤 デュオ: ", duoNow.map(d => `${rhythmAssistSessionName(d.a)}×${rhythmAssistSessionName(d.b)}`).join('・'))), pickNote && React.createElement("p", {
+    "data-rhythm-buddy-multi-note": true,
+    className: "text-[10px] font-black text-amber-200"
+  }, pickNote), React.createElement("div", {
+    className: "mt-1 flex gap-1.5"
+  }, singleMasu && React.createElement("button", {
+    type: "button",
+    onClick: () => setDetailId(singleMasu.id),
+    className: "min-h-[44px] shrink-0 rounded-xl bg-slate-700 px-2 text-[11px] font-black"
+  }, "くわしく"), React.createElement("button", {
+    "data-rhythm-buddy-call-all": true,
+    type: "button",
+    disabled: busy || !picks.length || shortTickets > 0,
+    onClick: callAll,
+    className: "min-h-[44px] flex-1 rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-3 text-sm font-black text-slate-950 disabled:opacity-40"
+  }, picks.length > 1 ? `まとめて呼ぶ(${picks.length}人)` : '呼ぶ')));
   return React.createElement("div", {
     className: "absolute inset-0 z-[86000] flex items-end justify-center landscape:items-center"
   }, React.createElement("button", {
@@ -93721,24 +93842,22 @@ function RhythmBuddySheet({
     className: "mb-1 text-slate-200"
   }), tabNow === 'assistant' ? React.createElement("p", {
     "data-rhythm-assist-note": true,
-    className: "mb-2 text-[10px] font-bold leading-relaxed text-slate-400",
+    className: `mb-2 text-[10px] font-bold leading-relaxed text-slate-400 ${picks.length ? 'landscape:hidden' : ''}`,
     style: JA_WRAP_STYLE
   }, jaWrap('助手をえらんで、CPUとしてこの部屋に呼べます。回数はマスモンと同じです(1日3回までは無料、そのあとはセッション券を1枚使います)。')) : React.createElement("p", {
-    className: "mb-2 text-[10px] font-bold leading-relaxed text-slate-400",
+    className: `mb-2 text-[10px] font-bold leading-relaxed text-slate-400 ${picks.length ? 'landscape:hidden' : ''}`,
     style: JA_WRAP_STYLE
-  }, jaWrap(`マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日${RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。`))), tabNow === 'assistant' ? React.createElement("div", {
+  }, jaWrap(`マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日${RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。`)), showMultiBar && React.createElement("div", {
+    className: "hidden landscape:block"
+  }, multiBar)), tabNow === 'assistant' ? React.createElement("div", {
     className: "flex min-h-0 flex-1 flex-col"
   }, React.createElement(RhythmAssistSessionPicker, {
     assistants: assistants,
     calledIds: calledIds,
-    canPay: canPay,
-    busy: busy,
-    onPick: chooseAssistant,
-    guideAssistantId: guideAssistantId
-  }), !canPay && React.createElement("p", {
-    "data-rhythm-buddy-empty": true,
-    className: "mt-2 text-[11px] font-black text-rose-300"
-  }, "今日の無料ぶんを使い切りました。セッション券があれば呼べます")) : React.createElement("div", {
+    guideAssistantId: guideAssistantId,
+    picked: pickedAssistantIds,
+    onToggle: id => togglePick('assistant', id)
+  })) : React.createElement("div", {
     className: "flex min-h-0 flex-1 flex-col"
   }, React.createElement("div", {
     className: "min-h-0 flex-1 overflow-y-auto"
@@ -93761,10 +93880,13 @@ function RhythmBuddySheet({
     key: e.key,
     type: "button",
     "data-rhythm-buddy-card": true,
-    onClick: () => setSelId(e.masu.id),
+    "data-picked": isPicked('masu', e.masu.id) ? '1' : undefined,
+    onClick: () => togglePick('masu', e.masu.id),
     style: masuPicker.cardStyle,
-    className: `${masuPicker.cardClass} ${selId === e.masu.id ? 'border-lime-300 bg-slate-800' : 'border-white/10 bg-slate-900'}`
-  }, masuPicker.renderCardBody({
+    className: `relative ${masuPicker.cardClass} ${isPicked('masu', e.masu.id) ? 'border-lime-300 bg-slate-800' : 'border-white/10 bg-slate-900'}`
+  }, isPicked('masu', e.masu.id) && React.createElement("b", {
+    className: "absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-lime-400 text-[12px] font-black text-slate-950"
+  }, picks.findIndex(p => p.kind === 'masu' && p.id === e.masu.id) + 1), masuPicker.renderCardBody({
     masu: e.masu,
     base: e.base,
     nameBand: true,
@@ -93783,47 +93905,12 @@ function RhythmBuddySheet({
     canPay: canPay,
     calledIds: calledIds,
     settings: listControls.settings
-  }))), masuPicker && !detail && (() => {
-    const masu = selId ? (masuMons || []).find(x => x && x.id === selId) : null;
-    if (!masu) return React.createElement("p", {
-      className: "mt-2 text-center text-[11px] font-bold text-slate-400"
-    }, "呼びたいマスモンをタップしてください");
-    const mon = state.mons[masu.id];
-    const mood = rhythmBuddyMood(masu.id, dayKey, mon);
-    const called = calledIds.includes(masu.id);
-    return React.createElement("div", {
-      "data-rhythm-buddy-confirm": true,
-      className: "mt-2 flex shrink-0 items-center gap-2 rounded-2xl border border-lime-300/40 bg-slate-950/80 p-2"
-    }, React.createElement(RhythmBuddyFace, {
-      masu: masu,
-      sizeClass: "h-11 w-11"
-    }), React.createElement("span", {
-      className: "min-w-0 flex-1"
-    }, React.createElement("b", {
-      className: "block truncate text-[13px] font-black"
-    }, rhythmBuddyMasuName(masu)), React.createElement("small", {
-      className: "flex items-center gap-1 text-[10px] font-bold text-slate-300"
-    }, React.createElement(RhythmBuddyMoodFace, {
-      moodId: mood.id,
-      size: 16
-    }), mon ? `ビートLv.${rhythmBuddyLevelInfo(mon.exp).level}` : 'まだ一緒に遊んでいない')), React.createElement("button", {
-      type: "button",
-      onClick: () => setDetailId(masu.id),
-      className: "min-h-[44px] shrink-0 rounded-xl bg-slate-700 px-2 text-[11px] font-black"
-    }, "くわしく"), called ? React.createElement("span", {
-      "data-rhythm-buddy-called": true,
-      className: "shrink-0 rounded-xl border border-lime-300/50 px-2 py-3 text-[10px] font-black text-lime-200"
-    }, "呼んでいる") : React.createElement("button", {
-      "data-rhythm-buddy-call": true,
-      type: "button",
-      disabled: busy || !canPay,
-      onClick: () => choose(masu),
-      className: "min-h-[44px] shrink-0 rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-4 text-sm font-black text-slate-950 disabled:opacity-40"
-    }, "呼ぶ"));
-  })(), listControls.sheet, !canPay && React.createElement("p", {
+  }))), listControls.sheet, !masuPicker && !canPay && React.createElement("p", {
     "data-rhythm-buddy-empty": true,
     className: "mt-2 text-[11px] font-black text-rose-300"
-  }, "今日の無料ぶんを使い切りました。セッション券があれば呼べます"))));
+  }, "今日の無料ぶんを使い切りました。セッション券があれば呼べます")), showMultiBar && React.createElement("div", {
+    className: "landscape:hidden"
+  }, multiBar)));
 }
 function MasuBeatScreen({
   masuMons = [],
@@ -94472,15 +94559,12 @@ const rhythmAssistSessionWrapBrain = (brain, songs) => ({
 function RhythmAssistSessionPicker({
   assistants = [],
   calledIds = [],
-  canPay = true,
-  busy = false,
-  onPick,
-  guideAssistantId = ''
+  guideAssistantId = '',
+  picked = [],
+  onToggle = null
 }) {
   const state = useRhythmAssistSessionState();
-  const [selId, setSelId] = React.useState('');
   const list = (assistants || []).filter(who => who && RHYTHM_ASSIST_SESSION_IDS.includes(who.id));
-  const sel = list.find(who => who.id === selId) || null;
   const calledOf = id => calledIds.includes(rhythmAssistSessionKey(id));
   return React.createElement("div", {
     "data-rhythm-assist-picker": true,
@@ -94516,49 +94600,27 @@ function RhythmAssistSessionPicker({
       key: who.id,
       type: "button",
       "data-rhythm-assist-card": who.id,
-      onClick: () => setSelId(who.id),
-      className: `flex min-h-[112px] w-full flex-col items-center gap-1 rounded-2xl border-2 p-2 active:scale-95 ${selId === who.id ? 'border-pink-300 bg-slate-800' : 'border-white/10 bg-slate-900'}`
+      "data-picked": picked.includes(who.id) ? '1' : undefined,
+      onClick: () => onToggle && onToggle(who.id),
+      className: `relative flex min-h-[112px] w-full flex-col items-center gap-1 rounded-2xl border-2 p-2 active:scale-95 ${picked.includes(who.id) ? 'border-pink-300 bg-slate-800' : 'border-white/10 bg-slate-900'}`
     }, React.createElement(AssistantFace, {
       who: who,
       size: 48,
       accent: who.accent,
-      expression: selId === who.id ? 'happy' : null
-    }), React.createElement("span", {
+      expression: picked.includes(who.id) ? 'happy' : null
+    }), picked.includes(who.id) && React.createElement("b", {
+      className: "absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-pink-400 text-[12px] font-black text-slate-950"
+    }, "✓"), React.createElement("span", {
       className: "w-full truncate rounded-lg border border-white/10 bg-slate-950/70 px-1 py-0.5 text-center text-[11px] font-black"
     }, who.name), React.createElement("span", {
       className: "whitespace-nowrap text-[10px] font-black text-pink-200"
-    }, "セッションLv.", lv), calledOf(who.id) && React.createElement("span", {
+    }, "セッションLv.", lv), lv >= RHYTHM_ASSIST_SESSION_TASTE_LEVEL && React.createElement("span", {
+      "data-rhythm-assist-taste": true,
+      className: "w-full truncate text-center text-[9px] font-bold text-slate-300"
+    }, "♡ ", rhythmAssistSessionLikedNames(who.id).join('・')), calledOf(who.id) && React.createElement("span", {
       className: "rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950"
     }, "呼んでいる"));
-  }))), sel ? React.createElement("div", {
-    "data-rhythm-assist-confirm": true,
-    className: "mt-2 flex shrink-0 items-center gap-2 rounded-2xl border border-pink-300/40 bg-slate-950/80 p-2"
-  }, React.createElement(AssistantFace, {
-    who: sel,
-    size: 44,
-    accent: sel.accent,
-    expression: "happy"
-  }), React.createElement("span", {
-    className: "min-w-0 flex-1"
-  }, React.createElement("b", {
-    className: "block truncate text-[13px] font-black"
-  }, sel.name), React.createElement("small", {
-    className: "block whitespace-nowrap text-[10px] font-bold text-pink-200"
-  }, "セッションLv.", rhythmAssistSessionLevel(state, sel.id)), React.createElement("small", {
-    "data-rhythm-assist-taste": true,
-    className: "block truncate text-[10px] font-bold text-slate-300"
-  }, rhythmAssistSessionLevel(state, sel.id) >= RHYTHM_ASSIST_SESSION_TASTE_LEVEL ? `♡ ${rhythmAssistSessionLikedNames(sel.id).join('・')}` : `Lv.${RHYTHM_ASSIST_SESSION_TASTE_LEVEL} で好きな曲が分かります`)), calledOf(sel.id) ? React.createElement("span", {
-    "data-rhythm-assist-called": true,
-    className: "shrink-0 rounded-xl border border-lime-300/50 px-2 py-3 text-[10px] font-black text-lime-200"
-  }, "呼んでいる") : React.createElement("button", {
-    "data-rhythm-assist-call": true,
-    type: "button",
-    disabled: busy || !canPay,
-    onClick: () => onPick && onPick(sel),
-    className: "min-h-[44px] shrink-0 rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-4 text-sm font-black text-slate-950 disabled:opacity-40"
-  }, "呼ぶ")) : React.createElement("p", {
-    className: "mt-2 text-center text-[11px] font-bold text-slate-400"
-  }, "呼びたい助手をタップしてください"));
+  }))));
 }
 const RHYTHM_ASSIST_SESSION_FX_QUEUE = {
   list: [],
@@ -94728,6 +94790,7 @@ function RhythmAssistSessionPlayFace({
   const [say, setSay] = React.useState(null);
   const [glow, setGlow] = React.useState(false);
   const [gattai, setGattai] = React.useState(null);
+  const [ended, setEnded] = React.useState(false);
   const ids = rhythmAssistSessionCalledIds().slice(0, 4);
   const idsKey = ids.join(',');
   React.useEffect(() => {
@@ -94829,6 +94892,9 @@ function RhythmAssistSessionPlayFace({
       setPos(q => q && q.top === next.top && q.left === next.left ? q : next);
     };
     const tick = () => {
+      const done = !!document.querySelector('[data-rhythm-result]');
+      setEnded(e => e === done ? e : done);
+      if (done) return;
       place();
       const watch = typeof RHYTHM_PLAY_WATCH !== 'undefined' ? RHYTHM_PLAY_WATCH : null;
       const h = watch && watch.hud ? watch.hud.get() : null;
@@ -94880,7 +94946,7 @@ function RhythmAssistSessionPlayFace({
     tick();
     return () => clearInterval(t);
   }, [idsKey, songId]);
-  if (!ids.length) return null;
+  if (!ids.length || ended) return null;
   const whoA = gattai ? rhythmAssistSessionWho(gattai.a) : null;
   const whoB = gattai ? rhythmAssistSessionWho(gattai.b) : null;
   return React.createElement(React.Fragment, null, whoA && whoB && ['left', 'right'].map(side => React.createElement("div", {
@@ -95009,7 +95075,9 @@ function RhythmAssistSessionDuoResult({
     };
   }, [key]);
   if (!shown.length) return null;
-  return React.createElement(React.Fragment, null, shown.map(({
+  const withLines = shown.filter(x => x.rows);
+  const onlyGain = shown.filter(x => !x.rows && x.gained > 0);
+  return React.createElement(React.Fragment, null, withLines.map(({
     key: k,
     d,
     rows,
@@ -95017,16 +95085,29 @@ function RhythmAssistSessionDuoResult({
   }) => React.createElement("p", {
     key: k,
     "data-rhythm-assist-duo-result": k,
-    className: "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/50 bg-violet-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100"
+    className: "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/50 bg-violet-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100 landscape:col-span-2 [[data-mh-view-rotation=true]_&]:col-span-2"
   }, React.createElement("span", {
     className: "shrink-0"
-  }, "🎤 ", rhythmAssistSessionName(d.a), "・", rhythmAssistSessionName(d.b)), rows && rows.map(([who,, text], i) => React.createElement("span", {
+  }, "🎤 ", rhythmAssistSessionName(d.a), "・", rhythmAssistSessionName(d.b)), rows.map(([who,, text], i) => React.createElement("span", {
     key: i,
     className: "min-w-0"
   }, rhythmAssistSessionName(who), "「", text, "」")), gained > 0 && React.createElement("span", {
     "data-rhythm-assist-peer-gain": true,
     className: "text-amber-200"
-  }, "友情Lv +", gained))));
+  }, "友情Lv +", gained))), onlyGain.length > 0 && React.createElement("p", {
+    "data-rhythm-assist-peer-gains": true,
+    className: "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/40 bg-violet-950/50 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100 landscape:col-span-2 [[data-mh-view-rotation=true]_&]:col-span-2"
+  }, React.createElement("span", {
+    className: "shrink-0"
+  }, "🎤 友情Lv"), onlyGain.map(({
+    key: k,
+    d,
+    gained
+  }) => React.createElement("span", {
+    key: k,
+    "data-rhythm-assist-peer-gain": true,
+    className: "whitespace-nowrap text-amber-200"
+  }, rhythmAssistSessionName(d.a), "・", rhythmAssistSessionName(d.b), " +", gained))));
 }
 const rhythmAssistSessionCardStyle = (m, isMvp = false) => {
   const who = m && m.cpu && m.as ? rhythmAssistSessionWho(m.as) : null;

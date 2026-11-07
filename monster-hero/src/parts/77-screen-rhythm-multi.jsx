@@ -2160,7 +2160,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   const buddyInfoPhase = view && view.room ? view.room.phase : '';
   React.useEffect(() => { if (buddyInfoPhase === 'playing') setBuddyInfoId(''); }, [buddyInfoPhase]);
   const buddySheetLayer = buddySheet === 'pick' ? (
-    <RhythmBuddySheet masuMons={masuMons} masuPicker={masuPicker} assistants={sessionAssistants} pickAssistant={callAssistant} guideAssistantId={guideAssistantId} breederName={profile && profile.name} songName={buddySongName} tickets={buddyTickets} pick={callBuddy} onClose={() => setBuddySheet('')}
+    <RhythmBuddySheet masuMons={masuMons} masuPicker={masuPicker} assistants={sessionAssistants} pickAssistant={callAssistant} guideAssistantId={guideAssistantId} freeSeats={view ? Math.max(0, RHYTHM_MULTI_ROOM_MAX - (view.members || []).length) : 0} breederName={profile && profile.name} songName={buddySongName} tickets={buddyTickets} pick={callBuddy} onClose={() => setBuddySheet('')}
       calledIds={(view && view.myCpus ? view.myCpus : []).map((c) => c.masuId)} />
   ) : null;
   const buddyCallButton = (extra = '') => (view && RHYTHM_MULTI.canSummon() && (masuMons.length > 0 || sessionAssistantsOn) ? (
@@ -2407,10 +2407,24 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
       className={`min-h-[40px] shrink-0 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 text-[11px] font-black leading-tight text-amber-100 ${extra}`}>選曲<br />{rhythmMultiSelectSecLabel(room.selectSec)}</button>
   );
   const buddyHeaderButton = (extra = '') => (view && RHYTHM_MULTI.canSummon() && (masuMons.length > 0 || sessionAssistantsOn) ? (
-    <button data-rhythm-buddy-open data-rhythm-buddy-header type="button" aria-label="マスモンを呼ぶ" onClick={() => setBuddySheet('pick')}
+    <button data-rhythm-buddy-open data-rhythm-buddy-header type="button" aria-label={sessionAssistantsOn ? 'マスモン・助手を呼ぶ' : 'マスモンを呼ぶ'} onClick={() => setBuddySheet('pick')}
       className={`relative flex min-h-[44px] min-w-[52px] max-[480px]:min-w-[46px] max-[380px]:min-w-[42px] shrink-0 flex-col items-center justify-center rounded-xl border border-lime-300/70 bg-gradient-to-b from-lime-400 to-emerald-600 px-1.5 max-[480px]:px-1 leading-none text-slate-950 ${extra}`}>
-      <span aria-hidden="true" className="text-base">🎵</span>
-      <span className="text-[10px] font-black">マスモン</span>
+      {/* 2026-11-07 社長「表示を変えたい」: 文字は「呼ぶ」、絵はマスモンと助手の小さな顔を重ねる(どちらも呼べると分かるように) */}
+      {(() => {
+        const masu = (masuMons || [])[0] || null;
+        const base = masu && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
+        const masuSrc = base && typeof masuDisplayImageUrl === 'function' ? masuDisplayImageUrl(base) : '';
+        const who = sessionAssistantsOn && typeof assistantById === 'function' ? (assistantById(guideAssistantId) || (sessionAssistants || [])[0] || null) : null;
+        const whoSrc = who && typeof assistantFaceSrc === 'function' ? assistantFaceSrc(who, 'happy') : '';
+        if (!masuSrc && !whoSrc) return <span aria-hidden="true" className="text-base">🎵</span>;
+        return (
+          <span data-rhythm-buddy-header-faces aria-hidden="true" className="relative flex h-[18px] items-center">
+            {masuSrc && <span className="block h-[18px] w-[18px] overflow-hidden rounded-full border border-white/80 bg-slate-800"><img src={masuSrc} alt="" draggable={false} className="h-full w-full object-contain" /></span>}
+            {whoSrc && <span className={`block h-[18px] w-[18px] overflow-hidden rounded-full border border-white/80 bg-slate-800 ${masuSrc ? '-ml-1.5' : ''}`}><img src={whoSrc} alt="" draggable={false} className="h-full w-full object-cover" /></span>}
+          </span>
+        );
+      })()}
+      <span className="mt-0.5 text-[10px] font-black">呼ぶ</span>
       {view.myCpus && view.myCpus.length > 0 && <b className="absolute -right-1.5 -top-1.5 min-w-[18px] rounded-full bg-slate-950 px-1 text-[10px] font-black leading-[18px] text-lime-200">{view.myCpus.length}</b>}
     </button>
   ) : null);

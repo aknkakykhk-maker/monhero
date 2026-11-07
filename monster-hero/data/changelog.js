@@ -35,6 +35,12 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-07 19:41", type:'fix', group:'masu', title:'転生すると、固有技の並び順と初期技の設定が元に戻っていた不具合を直しました', status:'new',
+    items:[
+      '転生すると、固有技の並び順と初期技の設定が元に戻っていた不具合を直しました',
+    ],
+  },
+  {
     // 2026-11-07 助手とのセッション(社長「この文で公開」・docs/progress/beat-assistant-session/RELEASE-TEXT.md)
     date: "2026-11-07 18:26", type:'content', group:'rhythm', title:'助手とモンヒロビートで一緒に演奏できるようになりました', status:'new', releaseFlag:'rhythmAssistantSession',
     items:[
