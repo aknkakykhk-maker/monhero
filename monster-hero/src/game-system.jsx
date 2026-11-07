@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 622d21cb4a2e4dcf
+// generated-sha256: f4226292968408ca
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -73475,10 +73475,17 @@ const cardTacticsAutoOf = async (db, deck) => {
 //   新しいキー mh_card_auto_reward_v1 = { v:1, day:'YYYY-MM-DD'(日本の日付), n: その日にごほうびをもらった回数 }。壊れていたら0回の扱い
 const CARD_AUTO_REWARD_KEY = 'mh_card_auto_reward_v1';
 const CARD_AUTO_REWARD_DAY_MAX = 3;
-const cardAutoRewardNormalize = (raw, today0) => {
+// 2026-11-07 の一度きりの戻し(社長「オートご褒美がリセットされてない。今日の分は全員リセットして」)。
+//   4時そろえ(#4679)の前の0時区切りで、11/7 の0:00〜4:00 に使った分が「11/7」と保存され、4:00 を過ぎても今日の分として残っていた。
+//   11/7(朝4時区切り)のあいだだけ、印 r:'20261107' の無い 11/7 の回数を0として読む。数えるときは印を付けて書くので、戻すのは1回きり。
+//   ほかの日は何もしない。キーの名前・形はそのまま(項目 r を足しただけ。前からの読み方は r を見ない)
+const CARD_AUTO_REWARD_RESET_DAY = '2026-11-07';
+const CARD_AUTO_REWARD_RESET_MARK = '20261107';
+const cardAutoRewardNormalize = (raw, today) => {
   const day = raw && typeof raw === 'object' && typeof raw.day === 'string' ? raw.day : '';
-  const today = cardDayCarry(day, today0);   // 切り替えの夜は、0時区切りで書いた次の日のまま数える
-  const n = raw && Number.isInteger(raw.n) && raw.n >= 0 && raw.n < 10000 ? raw.n : 0;
+  // 切り替えの夜の持ち越し(cardDayCarry)はここでは使わない。上のとおり、持ち越した分が4:00 を過ぎても今日の分として残ったため
+  let n = raw && Number.isInteger(raw.n) && raw.n >= 0 && raw.n < 10000 ? raw.n : 0;
+  if (day === CARD_AUTO_REWARD_RESET_DAY && today === CARD_AUTO_REWARD_RESET_DAY && raw.r !== CARD_AUTO_REWARD_RESET_MARK) n = 0;
   return { day: today, n: day === today ? n : 0 };
 };
 const cardAutoRewardLoad = async () => {
@@ -73489,7 +73496,7 @@ const cardAutoRewardLoad = async () => {
   return { raw, today: c.day, n: c.n, left: Math.max(0, CARD_AUTO_REWARD_DAY_MAX - c.n) };
 };
 // ごほうびをもらった1回を数える項目(結果の取引に足す)
-const cardAutoRewardEntry = (loaded) => ({ key: CARD_AUTO_REWARD_KEY, before: loaded.raw, next: { v: 1, day: loaded.today, n: loaded.n + 1 } });
+const cardAutoRewardEntry = (loaded) => ({ key: CARD_AUTO_REWARD_KEY, before: loaded.raw, next: { v: 1, day: loaded.today, n: loaded.n + 1, ...(loaded.today === CARD_AUTO_REWARD_RESET_DAY ? { r: CARD_AUTO_REWARD_RESET_MARK } : {}) } });
 // 1試合ぶんの経験値の保存の項目(84 の結果の取引に足す)。経験値を入れない人(公開前・デバッグでない)は空
 const cardLevelEntries = async ({ kind, level, outcome, debug = false, auto = false }) => {
   if (!cardTacticsOpen() && !debug) return { entries: [], gain: null };
