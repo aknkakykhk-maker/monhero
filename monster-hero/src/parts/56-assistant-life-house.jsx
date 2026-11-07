@@ -670,7 +670,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         {typeof TimeOfDayClock === 'function' && <div className="shrink-0 self-center"><TimeOfDayClock/></div>}
       </div>
       {/* 時間帯と、みんなが動くまで(題を切らないよう2段目に。2026-11-07 社長「文字列も気をつけて」) */}
-      <p className="mt-0.5 text-[10px] font-bold text-slate-200" data-assistant-life-clock>{{ morning: '🌅 朝', noon: '☀ 昼', evening: '🌇 夕方', night: '🌙 夜' }[look]} ・ <span data-assistant-life-next-slot className="whitespace-nowrap">{assistantLifeNextSlotText().replace(/で.+?\(みんなが動きます\)/, 'でみんなが動く')}</span></p>
+      <p className="mt-0.5 text-[10px] font-bold text-slate-200" data-assistant-life-clock>{{ morning: '朝', noon: '昼', evening: '夕方', night: '夜' }[look]} ・ <span data-assistant-life-next-slot className="whitespace-nowrap">{assistantLifeNextSlotText().replace(/で.+?\(みんなが動きます\)/, 'でみんなが動く')}</span></p>
       <div className="mt-1 flex items-center gap-1.5" data-assistant-life-tier={tier.id} title={ASSISTANT_LIFE_TIER_NOTES[tier.id]}>
         <span className="mhl-chip">🎉 {tier.label} ×{tier.mult}</span>
         <span className="mhl-bar" aria-hidden="true"><i style={{ width: `${next ? Math.min(100, Math.round(100 * (play.points - tier.min) / (next.min - tier.min))) : 100}%` }}/></span>
@@ -827,9 +827,10 @@ function AssistantLifeHomeFaces({ metIds }) {
   return (<>
     {Object.entries(by).map(([f, list]) => {
       const r = rects[f];
-      // 札の下に 14px も取れない(横向きで画面のいちばん下にある札など)ときだけ、札の横(画面の内側)に並べる
-      const side = r.gap < 15;
-      const size = side ? 20 : Math.max(12, Math.min(20, r.gap - 3));
+      // 顔は必ず札(名前)の下(2026-11-07 社長「アイコンってコンテンツ名の下に表示じゃなかったっけ？」。横へ逃がす形はやめた)。
+      //   すき間は札の並び(70-bootstrap.jsx)であけてある。足りないときは顔を小さくする(12px まで)
+      const side = false;
+      const size = Math.max(12, Math.min(20, r.gap - 3));
       const step = size - 4; // 少し重ねる
       const rowW = size + (list.length - 1) * step + 6;
       const left = side ? (r.right ? r.x - rowW - 4 : r.x + r.w + 4) : (r.right ? Math.max(4, r.x + r.w - rowW) : r.x);
