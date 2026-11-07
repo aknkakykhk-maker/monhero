@@ -2851,24 +2851,33 @@ const cardCpuBasePoint = (levelId, outcome, facts) => {
   return 0;
 };
 // コンピューター戦のクイック周回(◯周ぶん)。周回クリア扱いにするかどうか(クイックで通したことがあるか)は、配る側(60-app)が決める
-const cardCpuLoops = (levelId, outcome, facts = cardResultFacts(null)) => {
+const cardCpuLoops = (levelId, outcome, facts = cardResultFacts(null), mult = 1) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   if (facts.ownTurns < CARD_MIN_OWN_TURNS) return 0;
   const loseFull = cardLoseLoops(level);
-  if (outcome === 'win') return level.loops;
-  if (outcome === 'lose') return Math.floor(loseFull * Math.min(1, facts.ownTurns / CARD_LOSE_FULL_TURNS));
-  if (outcome === 'surrender') return Math.min(loseFull, Math.round((facts.kos * loseFull) / 3));
-  return 0;
+  let n = 0;
+  if (outcome === 'win') n = level.loops;
+  else if (outcome === 'lose') n = Math.floor(loseFull * Math.min(1, facts.ownTurns / CARD_LOSE_FULL_TURNS));
+  else if (outcome === 'surrender') n = Math.min(loseFull, Math.round((facts.kos * loseFull) / 3));
+  return cardLifeUpApply(n, mult);
 };
-const cardCpuReward = (daily, levelId, outcome, facts = cardResultFacts(null)) => {
+// 助手ライフ: カード部屋にいる助手と対戦すると、ごほうび(ビートP・カードランクの経験値・クイック周回)が 1.5倍(2026-11-07 社長・案A)
+//   手で遊んだ助手と対戦だけ。その日はじめての勝ちの +50・+30 は倍にしない。0 は 0 のまま
+const CARD_LIFE_UP_MULT = 1.5;
+const cardLifeUpApply = (n, mult = 1) => {
+  const v = Number.isFinite(n) ? n : 0;
+  return Number.isFinite(mult) && mult > 1 && v > 0 ? Math.round(v * mult) : v;
+};
+const cardCpuReward = (daily, levelId, outcome, facts = cardResultFacts(null), mult = 1) => {
   const base = cardCpuBasePoint(levelId, outcome, facts);
   // 上限なし(何戦してももらえる)。daily.cpuPoint は前のまま数えるだけで、もらえる数には使わない(保存の形は変えない・決まり⑦)
-  const got = base;
+  // mult … カード部屋にいる助手と対戦したとき 1.5(cardLifeUpApply)。base は倍にする前の数(結果の画面で「ふだん」に出す)
+  const got = cardLifeUpApply(base, mult);
   const bonus = outcome === 'win' && base > 0 && !daily.firstWin ? CARD_FIRST_WIN_BONUS : 0;
   // full・ownTurns・kos は結果の画面で「減った理由」を出すためだけ(2026-10-26 カゲあつくんの通しの点検「負けの 42 に理由が無い」)
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   const full = outcome === 'win' ? level.point : cardLosePoint(level);
-  return { base, got, capped: false, bonus, total: got + bonus, short: facts.ownTurns < CARD_MIN_OWN_TURNS, full, ownTurns: facts.ownTurns, kos: facts.kos, daily: { ...daily, cpuPoint: daily.cpuPoint + got, firstWin: daily.firstWin || bonus > 0 } };
+  return { base, got, lifeUp: got > base, capped: false, bonus, total: got + bonus, short: facts.ownTurns < CARD_MIN_OWN_TURNS, full, ownTurns: facts.ownTurns, kos: facts.kos, daily: { ...daily, cpuPoint: daily.cpuPoint + got, firstWin: daily.firstWin || bonus > 0 } };
 };
 // 勝ったら次の難易度を開く(NORMAL→HARD→EXPERT→MASTER)
 const cardUnlockAfterWin = (unlocked, levelId) => {
