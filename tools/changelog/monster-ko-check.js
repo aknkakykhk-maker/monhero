@@ -35,10 +35,8 @@ for(const f of files){
 //   ここでは複数・一般の形だけを見る
 const DIALOG_KO=/子(?:たち|ら(?![しい]))|子ほど|(?:どの|ほかの|他の)子(?![供ど])/g;
 // 開催中のイベントのお話は、開催のあいだ触らない決まり(CLAUDE.md ⑥-4)。終わったら言い換えること(期限を過ぎると NG になる)
-const DIALOG_KO_HOLD=[
-  { text:'……あの子たちは、悪くない', until:'2026-11-09T04:00:00+09:00', why:'パンドラとふたつの翼(開催中)' },
-  { text:'……外で、あの子たちが歌ってる', until:'2026-11-09T04:00:00+09:00', why:'パンドラとふたつの翼(開催中)' },
-];
+// 開催中のイベントで見送った台詞は、2026-11-09 のイベント終了後に言い換えた(パンドラとふたつの翼 EP3・EP7)。見送りが要るときはここへ { text, until, why } を足す
+const DIALOG_KO_HOLD=[];
 const dialogFound=[],held=[];
 for(const f of DIALOG_FILES){
   if(!fs.existsSync(path.join(ROOT,f)))continue;
