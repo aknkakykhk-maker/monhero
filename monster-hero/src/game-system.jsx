@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 00978bf1b3b57687
+// generated-sha256: 6e30e925cc5f7596
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -54350,10 +54350,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   // 自分のライブが始まったら閉じる(演奏から戻ったときに窓が残らないように)
   const buddyInfoPhase = view && view.room ? view.room.phase : '';
   React.useEffect(() => { if (buddyInfoPhase === 'playing') setBuddyInfoId(''); }, [buddyInfoPhase]);
-  // 寝ている助手に断られたら、ほかの子が入ってシートが閉じても、もう一度開いて一言を見せる(閉じたら消す)
+  // 寝ている助手に断られたら、ほかの助手やマスモンが入ってシートが閉じても、もう一度開いて一言を見せる(閉じたら消す。呼び直したら消す)
   React.useEffect(() => { if (buddyRefused && !buddySheet) setBuddySheet('pick'); }, [buddyRefused, buddySheet]);
   const buddySheetLayer = buddySheet === 'pick' ? (
-    <RhythmBuddySheet masuMons={masuMons} masuPicker={masuPicker} assistants={sessionAssistants} pickAssistant={callAssistant} guideAssistantId={guideAssistantId} freeSeats={view ? Math.max(0, RHYTHM_MULTI_ROOM_MAX - (view.members || []).length) : 0} breederName={profile && profile.name} songName={buddySongName} tickets={buddyTickets} pick={callBuddy} onClose={() => { setBuddySheet(''); setBuddyRefused(null); }} refused={buddyRefused}
+    <RhythmBuddySheet masuMons={masuMons} masuPicker={masuPicker} assistants={sessionAssistants} pickAssistant={callAssistant} guideAssistantId={guideAssistantId} freeSeats={view ? Math.max(0, RHYTHM_MULTI_ROOM_MAX - (view.members || []).length) : 0} breederName={profile && profile.name} songName={buddySongName} tickets={buddyTickets} pick={callBuddy} onClose={() => { setBuddySheet(''); setBuddyRefused(null); }} refused={buddyRefused} onCallStart={() => setBuddyRefused(null)}
       calledIds={(view && view.myCpus ? view.myCpus : []).map((c) => c.masuId)} />
   ) : null;
   const buddyCallButton = (extra = '') => (view && RHYTHM_MULTI.canSummon() && (masuMons.length > 0 || sessionAssistantsOn) ? (
@@ -56284,7 +56284,7 @@ function RhythmBuddyList({ masuMons, state, dayKey, onOpen, onPick = null, busy 
 }
 
 // 部屋の中の「マスモンを呼ぶ」(下から出る選択の画面)
-function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [], breederName = '', assistants = [], pickAssistant = null, guideAssistantId = '', freeSeats = 4, refused = null }) {
+function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [], breederName = '', assistants = [], pickAssistant = null, guideAssistantId = '', freeSeats = 4, refused = null, onCallStart = null }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
   const [detailId, setDetailId] = React.useState('');
@@ -56328,6 +56328,8 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
   const callAll = async () => {
     if (busy || !picks.length || shortTickets > 0) return;
     setBusy(true);
+    // 前に断られた一言は、呼び直したら消す(来てくれたのに古い一言が残っていた・ミハリの指摘 B5)
+    if (typeof onCallStart === 'function') { try { onCallStart(); } catch (_) { /* 消せなくても続ける */ } }
     const list = picks.slice();
     try {
       for (const p of list) {
@@ -56358,7 +56360,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
                     })}
                   </div>
                   <p data-rhythm-buddy-multi-cost className="text-[10px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>
-                    {jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。${paidPicks ? `無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います` : '回数は使いません'}${visitPicks ? `(モンビーにいる助手 ${visitPicks}人は回数なし)` : ''}`)}
+                    {jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。${paidPicks ? `無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います` : '回数は使いません'}${visitPicks ? `(モンヒロビートにいる助手 ${visitPicks}人は回数なし)` : ''}`)}
                   </p>
                   {asleepPicks > 0 && <p data-rhythm-buddy-multi-asleep className="text-[10px] font-bold text-indigo-200" style={JA_WRAP_STYLE}>{jaWrap('💤 寝ている助手は、来ないこともあります(来なければ回数は使いません)')}</p>}
                   {shortTickets > 0 && <p data-rhythm-buddy-multi-short className="text-[10px] font-black text-rose-300" style={JA_WRAP_STYLE}>{jaWrap(`セッション券が ${shortTickets}枚 足りません。選ぶ数を減らすと呼べます`)}</p>}
@@ -56869,7 +56871,7 @@ function RhythmAssistSessionPicker({ assistants = [], calledIds = [], guideAssis
                   {lv >= RHYTHM_ASSIST_SESSION_TASTE_LEVEL && <span data-rhythm-assist-taste className="w-full truncate text-center text-[9px] font-bold text-slate-300">♡ {rhythmAssistSessionLikedNames(who.id).join('・')}</span>}
                   {calledOf(who.id) && <span className="rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950">呼んでいる</span>}
                   {!calledOf(who.id) && !rhythmAssistSessionVisitFree(who.id) && rhythmAssistSessionAsleep(who.id) && <span data-rhythm-assist-asleep className="w-full rounded-xl bg-indigo-300/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950">💤 寝ている</span>}
-                  {!calledOf(who.id) && rhythmAssistSessionVisitFree(who.id) && <span data-rhythm-assist-visit aria-label="🎵 いまモンビーにいる・回数なし" className="flex w-full flex-wrap justify-center rounded-xl bg-sky-400/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"><span className="whitespace-nowrap">🎵 いま</span><span className="whitespace-nowrap">モンビーにいる</span><span className="whitespace-nowrap">・回数なし</span></span>}
+                  {!calledOf(who.id) && rhythmAssistSessionVisitFree(who.id) && <span data-rhythm-assist-visit aria-label="🎵 いまモンヒロビートにいる・回数なし" className="flex w-full flex-wrap justify-center rounded-xl bg-sky-400/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"><span className="whitespace-nowrap">🎵 いま</span><span className="whitespace-nowrap">モンヒロビート</span><span className="whitespace-nowrap">にいる・回数なし</span></span>}
                 </button>
               );
             })}

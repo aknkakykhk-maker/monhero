@@ -272,6 +272,9 @@ check('助手のスコアをランキングへ送らない(助手の計算の部
 check('部屋の入口のボタンは「呼ぶ」+マスモンと助手の小さな顔(社長 2026-11-07)', /data-rhythm-buddy-header-faces/.test(MULTI) && /<span className="mt-0\.5 text-\[10px\] font-black">呼ぶ<\/span>/.test(MULTI));
 check('演奏の結果が出たら、演奏中の顔とひとことは消す(結果のボーナスの枠に重ねない)', /const done = !!document\.querySelector\('\[data-rhythm-result\]'\);/.test(SCREEN) && /if \(!ids\.length \|\| ended\) return null;/.test(SCREEN));
 // 助手ライフとのつなぎ(2026-11-07 ナカヨシ5と決めた窓口)
+// 画面に出す名前は正式名称「モンヒロビート」(略称「モンビー」はキャラクターの会話だけ・CLAUDE.md ⑤)。呼ぶシートの札と内訳の文を見張る(ミハリ 2026-11-07)
+check('呼ぶシートの札と内訳の文に、略称「モンビー」を使わない', !/data-rhythm-assist-visit[^\n]*モンビー/.test(SCREEN) && !/visitPicks \? `\([^`]*モンビー/.test(SHEET));
+check('呼び直したら、前に断られた一言を消す(来てくれたのに古い一言が残っていた・ミハリ B5)', /onCallStart=\{\(\) => setBuddyRefused\(null\)\}/.test(MULTI) && /if \(typeof onCallStart === 'function'\)/.test(SHEET));
 // 寝ている助手(社長 2026-11-07「呼んで来てくれるときもあれば断られるときある」)。来てくれる割合は統括の案
 {
   const ctx = { Math };
@@ -287,7 +290,7 @@ check('寝ている助手に断られたら、払う前に戻る(回数も券も
 check('来てくれたら、部屋に来たときの一言を起こされた一言(woke)にする', /RHYTHM_ASSIST_SESSION_WAKE\.woke\.delete\(assistantId\)\) \{ const w = say\('woke'\)/.test(SCREEN));
 check('呼ぶシートに「💤 寝ている」の札', /data-rhythm-assist-asleep[^>]*>💤 寝ている</.test(SCREEN));
 check('モンビーに出かけている助手は回数なし(社長 2026-11-07)。呼ぶ時点で assistantLifeAtBeat を見て、払わず・控えも残さない', /const rhythmAssistSessionVisitFree = \(id\) =>/.test(SCREEN) && /assistantLifeAtBeat\(id\) === true/.test(SCREEN) && /let paid = rhythmAssistSessionVisitFree\(who\.id\) \? 'visit' : '';/.test(MULTI) && /if \(!paid\) paid = \(await RHYTHM_BUDDY_STORE\.update\(\(st\) => rhythmBuddyUseFreeWithCall\(st, day, call\)\)\) \? 'free' : '';/.test(MULTI));
-check('呼ぶシート: モンビーにいる助手の札「🎵 いまモンビーにいる・回数なし」・その人数は回数と券の数に入れない', /data-rhythm-assist-visit aria-label=\"🎵 いまモンビーにいる・回数なし\"/.test(SCREEN) && /const paidPicks = picks\.length - visitPicks;/.test(SHEET));
+check('呼ぶシート: モンヒロビートにいる助手の札「🎵 いまモンヒロビートにいる・回数なし」・その人数は回数と券の数に入れない', /data-rhythm-assist-visit aria-label=\"🎵 いまモンヒロビートにいる・回数なし\"/.test(SCREEN) && /const paidPicks = picks\.length - visitPicks;/.test(SHEET));
 check('誘うときも、モンビーにいる助手なら回数が無くても誘える', /if \(!rhythmAssistSessionVisitFree\(id\) && !rhythmAssistSessionCanPayNow\(\)\)/.test(SCREEN));
 check('助手ライフの受け口へ知らせる(typeof で確かめてから assistantLifeOnSessionLive)', /if \(typeof assistantLifeOnSessionLive === 'function'\)/.test(SCREEN) && /assistantLifeOnSessionLive\(\{ assistantId, partnerIds, songId, levelUp, level, duo, at \}\)/.test(SCREEN));
 check('家の部屋の「一緒にモンビー」は rhythmAssistSessionInvite を呼ぶ(ASSISTANT_LIFE_LINKS.beatInvite)', /ASSISTANT_LIFE_LINKS\.beatInvite = \(id\) => rhythmAssistSessionInvite\(id\);/.test(SCREEN));

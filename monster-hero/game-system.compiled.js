@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9fb7091952dd5136
+// source-sha256: e2eae2e4444a3e9e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -90926,6 +90926,7 @@ function RhythmMultiScreen({
       setBuddyRefused(null);
     },
     refused: buddyRefused,
+    onCallStart: () => setBuddyRefused(null),
     calledIds: (view && view.myCpus ? view.myCpus : []).map(c => c.masuId)
   }) : null;
   const buddyCallButton = (extra = '') => view && RHYTHM_MULTI.canSummon() && (masuMons.length > 0 || sessionAssistantsOn) ? React.createElement("button", {
@@ -94229,7 +94230,8 @@ function RhythmBuddySheet({
   pickAssistant = null,
   guideAssistantId = '',
   freeSeats = 4,
-  refused = null
+  refused = null,
+  onCallStart = null
 }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
@@ -94276,6 +94278,11 @@ function RhythmBuddySheet({
   const callAll = async () => {
     if (busy || !picks.length || shortTickets > 0) return;
     setBusy(true);
+    if (typeof onCallStart === 'function') {
+      try {
+        onCallStart();
+      } catch (_) {}
+    }
     const list = picks.slice();
     try {
       for (const p of list) {
@@ -94324,7 +94331,7 @@ function RhythmBuddySheet({
     "data-rhythm-buddy-multi-cost": true,
     className: "text-[10px] font-bold leading-snug text-slate-300",
     style: JA_WRAP_STYLE
-  }, jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。${paidPicks ? `無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います` : '回数は使いません'}${visitPicks ? `(モンビーにいる助手 ${visitPicks}人は回数なし)` : ''}`)), asleepPicks > 0 && React.createElement("p", {
+  }, jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。${paidPicks ? `無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います` : '回数は使いません'}${visitPicks ? `(モンヒロビートにいる助手 ${visitPicks}人は回数なし)` : ''}`)), asleepPicks > 0 && React.createElement("p", {
     "data-rhythm-buddy-multi-asleep": true,
     className: "text-[10px] font-bold text-indigo-200",
     style: JA_WRAP_STYLE
@@ -95185,15 +95192,15 @@ function RhythmAssistSessionPicker({
       className: "w-full rounded-xl bg-indigo-300/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"
     }, "💤 寝ている"), !calledOf(who.id) && rhythmAssistSessionVisitFree(who.id) && React.createElement("span", {
       "data-rhythm-assist-visit": true,
-      "aria-label": "🎵 いまモンビーにいる・回数なし",
+      "aria-label": "🎵 いまモンヒロビートにいる・回数なし",
       className: "flex w-full flex-wrap justify-center rounded-xl bg-sky-400/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"
     }, React.createElement("span", {
       className: "whitespace-nowrap"
     }, "🎵 いま"), React.createElement("span", {
       className: "whitespace-nowrap"
-    }, "モンビーにいる"), React.createElement("span", {
+    }, "モンヒロビート"), React.createElement("span", {
       className: "whitespace-nowrap"
-    }, "・回数なし")));
+    }, "にいる・回数なし")));
   }))));
 }
 const RHYTHM_ASSIST_SESSION_FX_QUEUE = {

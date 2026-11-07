@@ -816,7 +816,7 @@ function RhythmBuddyList({ masuMons, state, dayKey, onOpen, onPick = null, busy 
 }
 
 // 部屋の中の「マスモンを呼ぶ」(下から出る選択の画面)
-function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [], breederName = '', assistants = [], pickAssistant = null, guideAssistantId = '', freeSeats = 4, refused = null }) {
+function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [], breederName = '', assistants = [], pickAssistant = null, guideAssistantId = '', freeSeats = 4, refused = null, onCallStart = null }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
   const [detailId, setDetailId] = React.useState('');
@@ -860,6 +860,8 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
   const callAll = async () => {
     if (busy || !picks.length || shortTickets > 0) return;
     setBusy(true);
+    // 前に断られた一言は、呼び直したら消す(来てくれたのに古い一言が残っていた・ミハリの指摘 B5)
+    if (typeof onCallStart === 'function') { try { onCallStart(); } catch (_) { /* 消せなくても続ける */ } }
     const list = picks.slice();
     try {
       for (const p of list) {
@@ -890,7 +892,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
                     })}
                   </div>
                   <p data-rhythm-buddy-multi-cost className="text-[10px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>
-                    {jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。${paidPicks ? `無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います` : '回数は使いません'}${visitPicks ? `(モンビーにいる助手 ${visitPicks}人は回数なし)` : ''}`)}
+                    {jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。${paidPicks ? `無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います` : '回数は使いません'}${visitPicks ? `(モンヒロビートにいる助手 ${visitPicks}人は回数なし)` : ''}`)}
                   </p>
                   {asleepPicks > 0 && <p data-rhythm-buddy-multi-asleep className="text-[10px] font-bold text-indigo-200" style={JA_WRAP_STYLE}>{jaWrap('💤 寝ている助手は、来ないこともあります(来なければ回数は使いません)')}</p>}
                   {shortTickets > 0 && <p data-rhythm-buddy-multi-short className="text-[10px] font-black text-rose-300" style={JA_WRAP_STYLE}>{jaWrap(`セッション券が ${shortTickets}枚 足りません。選ぶ数を減らすと呼べます`)}</p>}
