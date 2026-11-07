@@ -1650,6 +1650,36 @@
    "notes": "083c9eed96b12c3c",
    "mirror": "11a5478eb131e1e1",
    "assist": "b403ab36b8f696dc"
+  },
+  "humanoid/easy": {
+   "notes": "87977b91f049bf28",
+   "mirror": "fd56df4e89b3296c",
+   "assist": "87977b91f049bf28"
+  },
+  "humanoid/normal": {
+   "notes": "4ea985ca7e03d134",
+   "mirror": "865088cf44035560",
+   "assist": "bf6cbbc8c39fdb49"
+  },
+  "humanoid/hard": {
+   "notes": "96f5ed14124b92ff",
+   "mirror": "1a53f417435c59ea",
+   "assist": "9b1e4f7278843677"
+  },
+  "humanoid/expert": {
+   "notes": "74ade558dc514db7",
+   "mirror": "8be578a063a76cec",
+   "assist": "9b5c9c8b7d50f699"
+  },
+  "humanoid/master": {
+   "notes": "078753ad291aac7f",
+   "mirror": "aefa6a96b56cc1c9",
+   "assist": "d8347d294e98c340"
+  },
+  "humanoid/hell": {
+   "notes": "0782b5ccf3a3cc6c",
+   "mirror": "5d2870874242193e",
+   "assist": "300d03c9c258054a"
   }
  },
  "history": [
@@ -1657,6 +1687,18 @@
    "at": "2026-11-07 12:11",
    "reason": "2026-11-07 社長「既存曲ちょこちょこ勝手に変わるけどそうならないようにできないの？」→ 見張りを足す(ビート部 マモリ)。今の main の値を控えにする",
    "changedCount": 330
+  },
+  {
+   "at": "2026-11-07 12:27",
+   "reason": "新曲 ヒューマノイド を公開(譜面の指紋の控えに合わせて入れる)",
+   "changed": [
+    "humanoid/easy",
+    "humanoid/normal",
+    "humanoid/hard",
+    "humanoid/expert",
+    "humanoid/master",
+    "humanoid/hell"
+   ]
   }
  ]
 }
