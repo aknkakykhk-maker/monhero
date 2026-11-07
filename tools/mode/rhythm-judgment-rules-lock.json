@@ -1,0 +1,317 @@
+{
+ "note": "モンヒロビートの判定の決まりの控え。勝手に書き換えない。意図して変えたときだけ rhythm-judgment-rules-lock-check.js --update --reason で更新する",
+ "items": {
+  "RHYTHM_JUDGMENTS": [
+   {
+    "id": "MARVELOUS",
+    "scoreRate": 1,
+    "windowMs": 55
+   },
+   {
+    "id": "EXCELLENT",
+    "scoreRate": 0.98,
+    "windowMs": 100
+   },
+   {
+    "id": "GREAT",
+    "scoreRate": 0.9,
+    "windowMs": 150
+   },
+   {
+    "id": "GOOD",
+    "scoreRate": 0.7,
+    "windowMs": 170
+   },
+   {
+    "id": "BAD",
+    "scoreRate": 0.3,
+    "windowMs": 185
+   },
+   {
+    "id": "MISS",
+    "scoreRate": 0,
+    "windowMs": null
+   }
+  ],
+  "RHYTHM_COMBO_SAFE_JUDGMENT_IDS": [
+   "MARVELOUS",
+   "EXCELLENT",
+   "GREAT",
+   "GOOD"
+  ],
+  "RHYTHM_COMBO_SAFE_WINDOW_MS": 170,
+  "RHYTHM_INPUT_MATCH_WINDOW_MS": 185,
+  "RHYTHM_TAP_TOLERANCE_EXTRA_SUB_LANES": 0.5,
+  "RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES": 0.95,
+  "RHYTHM_TAP_TOLERANCE_SUB_LANES": 1.1,
+  "RHYTHM_INPUT_EDGE_MARGIN_SUB_LANES": 1.5,
+  "RHYTHM_SLIDE_TOLERANCE_LANES": 1.07,
+  "RHYTHM_SLIDE_TRACKING_BY_DIFFICULTY": {
+   "EASY": {
+    "graceMs": 200,
+    "toleranceBonusLanes": 0.4
+   },
+   "EXPERT": {
+    "graceMs": 150,
+    "toleranceBonusLanes": 0.12
+   },
+   "HARD": {
+    "graceMs": 175,
+    "toleranceBonusLanes": 0.24
+   },
+   "HELL": {
+    "graceMs": 120,
+    "toleranceBonusLanes": 0
+   },
+   "MASTER": {
+    "graceMs": 120,
+    "toleranceBonusLanes": 0
+   },
+   "NORMAL": {
+    "graceMs": 190,
+    "toleranceBonusLanes": 0.32
+   }
+  },
+  "RHYTHM_MID_TRACKING_GRACE_MS": 120,
+  "RHYTHM_HOLD_TRACKING_MARGIN_LANES": 0.15,
+  "RHYTHM_HOLD_HANDOVER_GRACE_MS": 200,
+  "RHYTHM_HOLD_RELEASE_GRACE_MS": 100,
+  "RHYTHM_RELEASE_MAX_MS": 185,
+  "RHYTHM_RELEASE_LATE_FLOOR": "GOOD",
+  "RHYTHM_RELEASE_JUDGMENT_IDS": [
+   "MARVELOUS",
+   "EXCELLENT",
+   "GREAT",
+   "GOOD",
+   "BAD",
+   "MISS"
+  ],
+  "RHYTHM_RECLAIM_WIDE_WINDOW_MS": 600,
+  "RHYTHM_INPUT_AGE_MAX_MS": 80,
+  "RHYTHM_INPUT_AGE_BASE_ALIGNED_MS": 25,
+  "RHYTHM_INPUT_AGE_CAP_WIDE_MS": 300,
+  "RHYTHM_FLICK_DISTANCE_PX": 24,
+  "RHYTHM_FLICK_MAX_MS": 450,
+  "RHYTHM_FLICK_SIDE_DOMINANCE": 0.8,
+  "RHYTHM_SKY_ACCEPT_BELOW": 0.035,
+  "RHYTHM_GROUND_ACCEPT_ABOVE": 0.05,
+  "RHYTHM_SKY_ACCEPT_TOP_BASE": 0.2,
+  "RHYTHM_ACCEPT_WIDTH": {
+   "ground": 100,
+   "sky": 100,
+   "skyTop": 100
+  },
+  "RHYTHM_SLIDE_CHECKPOINT_BASE_MS": {
+   "EASY": 240,
+   "EXPERT": 150,
+   "HARD": 180,
+   "HELL": 125,
+   "MASTER": 125,
+   "NORMAL": 210
+  },
+  "RHYTHM_SLIDE_CHECKPOINT_REFERENCE_LEVEL": {
+   "EASY": 4,
+   "EXPERT": 18,
+   "HARD": 13,
+   "HELL": 25,
+   "MASTER": 25,
+   "NORMAL": 8
+  },
+  "RHYTHM_SLIDE_CHECKPOINT_MIN_MS": 90,
+  "RHYTHM_COMBO_TICK_DIVISION": {
+   "EASY": 1,
+   "EXPERT": 2,
+   "HARD": 1,
+   "HELL": 2,
+   "MASTER": 2,
+   "NORMAL": 1
+  },
+  "RHYTHM_TICK_SWITCH_AT": "2026-10-17T15:03:00+09:00",
+  "RHYTHM_TAP_REJUDGE_MOVE_SUBLANES": 0.2,
+  "rhythmJudgeTap()": [
+   [
+    -250,
+    -186,
+    "MISS"
+   ],
+   [
+    -185,
+    -171,
+    "BAD"
+   ],
+   [
+    -170,
+    -151,
+    "GOOD"
+   ],
+   [
+    -150,
+    -101,
+    "GREAT"
+   ],
+   [
+    -100,
+    -56,
+    "EXCELLENT"
+   ],
+   [
+    -55,
+    55,
+    "MARVELOUS"
+   ],
+   [
+    56,
+    100,
+    "EXCELLENT"
+   ],
+   [
+    101,
+    150,
+    "GREAT"
+   ],
+   [
+    151,
+    170,
+    "GOOD"
+   ],
+   [
+    171,
+    185,
+    "BAD"
+   ],
+   [
+    186,
+    250,
+    "MISS"
+   ]
+  ],
+  "rhythmJudgeRelease()": [
+   [
+    -250,
+    -186,
+    "MISS"
+   ],
+   [
+    -185,
+    -171,
+    "BAD"
+   ],
+   [
+    -170,
+    -151,
+    "GOOD"
+   ],
+   [
+    -150,
+    -101,
+    "GREAT"
+   ],
+   [
+    -100,
+    -56,
+    "EXCELLENT"
+   ],
+   [
+    -55,
+    55,
+    "MARVELOUS"
+   ],
+   [
+    56,
+    100,
+    "EXCELLENT"
+   ],
+   [
+    101,
+    150,
+    "GREAT"
+   ],
+   [
+    151,
+    170,
+    "GOOD"
+   ],
+   [
+    171,
+    185,
+    "BAD"
+   ],
+   [
+    186,
+    250,
+    "MISS"
+   ]
+  ],
+  "rhythmJudgeReleaseLenient()": [
+   [
+    -250,
+    -186,
+    "MISS"
+   ],
+   [
+    -185,
+    -171,
+    "BAD"
+   ],
+   [
+    -170,
+    -151,
+    "GOOD"
+   ],
+   [
+    -150,
+    -101,
+    "GREAT"
+   ],
+   [
+    -100,
+    -56,
+    "EXCELLENT"
+   ],
+   [
+    -55,
+    55,
+    "MARVELOUS"
+   ],
+   [
+    56,
+    100,
+    "EXCELLENT"
+   ],
+   [
+    101,
+    150,
+    "GREAT"
+   ],
+   [
+    151,
+    185,
+    "GOOD"
+   ],
+   [
+    186,
+    400,
+    "MISS"
+   ]
+  ],
+  "rhythmHoldTrackingMarginLanes()": [
+   [
+    1,
+    1,
+    0.475
+   ],
+   [
+    2,
+    12,
+    0.55
+   ]
+  ]
+ },
+ "history": [
+  {
+   "at": "2026-11-07 12:11",
+   "reason": "2026-11-07 社長「既存曲ちょこちょこ勝手に変わるけどそうならないようにできないの？」→ 見張りを足す(ビート部 マモリ)。今の main の値を控えにする",
+   "changedCount": 38
+  }
+ ]
+}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c50e1120078b1000
+// generated-sha256: 622d21cb4a2e4dcf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4427,6 +4427,8 @@ const BGM_TRACKS = [
   { id:'melo_altar_world_tree', name:'Altar of the World Tree, Beneath the White Night', creator:'仙夜玖子', src:'audio/bgm-altar-world-tree.mp3', gain:1, loop:true },
   { id:'melo_altar_world_tree_short', name:'Altar of the World Tree, Beneath the White Night short ver.', creator:'仙夜玖子', src:'audio/bgm-altar-world-tree-short.mp3', gain:1, loop:true },
   { id:'melo_evans', name:'Evans', creator:'DJ YOSHITAKA', src:'audio/bgm-evans.mp3', gain:1, loop:true },
+  // 2026-11-07 追加。ZUTOMAYO(ずっと真夜中でいいのに。)。表記はジャケットのとおり
+  { id:'melo_humanoid', name:'ヒューマノイド', creator:'ZUTOMAYO', src:'audio/bgm-humanoid.mp3', gain:1, loop:true },
   { id:'melo_tsuki_ga_michiru_mae_ni_short', name:'月が満ちる前に short ver.', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
@@ -5832,6 +5834,7 @@ const Audio_ = (() => {
     "audio/bgm-grievous-lady.mp3": "28bfeda8d534",
     "audio/bgm-haruka.mp3": "7a7164dbf152",
     "audio/bgm-home-ichika.mp3": "29295336d1af",
+    "audio/bgm-humanoid.mp3": "763466fbbf97",
     "audio/bgm-journey.mp3": "816f0cdab93e",
     "audio/bgm-kaze-ga-soyogu-basho.mp3": "e986277401a6",
     "audio/bgm-kiki-issen-short.mp3": "add607be5bec",
