@@ -86,8 +86,8 @@ const BGM_TRACKS = [
   { id:'melo_altar_world_tree', name:'Altar of the World Tree, Beneath the White Night', creator:'仙夜玖子', src:'audio/bgm-altar-world-tree.mp3', gain:1, loop:true },
   { id:'melo_altar_world_tree_short', name:'Altar of the World Tree, Beneath the White Night short ver.', creator:'仙夜玖子', src:'audio/bgm-altar-world-tree-short.mp3', gain:1, loop:true },
   { id:'melo_evans', name:'Evans', creator:'DJ YOSHITAKA', src:'audio/bgm-evans.mp3', gain:1, loop:true },
-  // 作者名は社長に確認中(2026-11-07)。分かったら creator へ書く
-  { id:'melo_humanoid', name:'ヒューマノイド', creator:'', src:'audio/bgm-humanoid.mp3', gain:1, loop:true },
+  // 2026-11-07 追加。ZUTOMAYO(ずっと真夜中でいいのに。)。表記はジャケットのとおり
+  { id:'melo_humanoid', name:'ヒューマノイド', creator:'ZUTOMAYO', src:'audio/bgm-humanoid.mp3', gain:1, loop:true },
   { id:'melo_tsuki_ga_michiru_mae_ni_short', name:'月が満ちる前に short ver.', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },

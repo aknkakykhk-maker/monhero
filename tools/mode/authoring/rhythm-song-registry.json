@@ -1374,12 +1374,11 @@
     "subdivisionsPerBeat": 4,
     "source": "detected"
    },
-   "chartIntensity": "strong",
+   "chartIntensity": "extreme",
    "chartIntensityByDifficulty": {
     "EXPERT": "mild"
    },
-   "masterDensity": 1.3,
-   "hellDensity": 1.6
+   "masterDensity": 1.6
   }
  }
 }
