@@ -56,7 +56,7 @@ for (const n of names) {
 // 書きかけの台本(docs/progress/assistant-peer/lines/*.txt の新しい形)も「新しい形」として読む。形・鍵・口調の基本はここで止める
 const KINDS = { solo: 1, invite: 2, pair: 2, trio: 3, quarrel: 2, breeder: 1,
   // 助手たちの家(lines/ORDER-HOUSE.md・2026-11-07 ナカヨシ5)
-  fight: 2, mend: 2, mend3: 3, jealous: 3, secret: 2, consult: 2, tease: 2, rival: 2, awkward: 2, sleep: 1, owl: 1, home: 1 };
+  fight: 2, mend: 2, mend3: 3, jealous: 3, secret: 2, consult: 2, tease: 2, rival: 2, awkward: 2, sleep: 1, owl: 1, home: 1, rhythm: 1 };
 const TRIO_KINDS = ['trio', 'mend3', 'jealous'];
 const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'];
 const FACES = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];
@@ -65,7 +65,7 @@ const KEYS = {
   mood: ['happy', 'lonely', 'restless', 'sulky', 'sleepy', 'eager'], why: ['lonely', 'mypace', 'distance'],
   doing: ['snack', 'practice', 'training', 'cards', 'walk', 'idle', 'sleep', 'read'], lv: ['1-3', '4-6', '7-10', '1-4', '5-10'],
   air: ['normal', 'after', 'makeup'], answer: ['glad', 'decline', 'shy'], line: ['scene', 'feel', 'talk', 'woken'],
-  cause: ['tidy', 'snack', 'song', 'win', 'late', 'promise'], how: ['apology', 'gift', 'player'], game: ['beat', 'card'], slot: ['evening', 'night'],
+  cause: ['tidy', 'snack', 'song', 'win', 'late', 'promise'], how: ['apology', 'gift', 'player'], game: ['beat', 'card'], slot: ['evening', 'night'], shift: ['night', 'morning'],
   // けんかのたね(lines/FEELINGS.md): おやつ・順番・寝ぐせや服・作戦の好み・遅れた・うるさい/夜ふかし・メモを見た・勝負の結果
   seed: ['snack', 'order', 'look', 'plan', 'late', 'noise', 'peek', 'score'],
 };

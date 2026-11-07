@@ -33,8 +33,8 @@
 
 ## 助手たちの家(2026-11-07・注文 ORDER-HOUSE.md・ナカヨシ5)
 
-- `kotoba-house.txt`: fight 42・mend 42・secret 28・consult 28・tease 56・sleep(talk 48・woken 32)・owl 32 = 336本
+- `kotoba-house.txt`: fight 42・mend 42・secret 28・consult 28・tease 56・sleep(talk 48・woken 32)・owl 32・rhythm 32 = 368本(mend はどのけんかのあとでも出せるよう、原因に触れない形にそろえた)
 - fight・mend の組は ALLOC.md 2回目のコトバ14組(ツムギと同じ分け方で知らせ済み)。secret・consult・tease は28組すべて
 - secret は「ないしょ」「秘密」の言葉を使わず「（ひそひそ）」の話として書いた(VOICE.md・台帳の守りに合わせる)。中身はぼかし、{name} から聞いたことは話さない
 - woken の lv は助手と {name} の仲良し度(1-4 / 5-10。呼び方が変わる Lv5 で分けた)
-- 検査: `peer-lines-variety-check.js` に新しい種類(fight mend mend3 jealous secret consult tease rival awkward sleep owl home)と鍵(cause how game slot、line=talk/woken、lv=1-4/5-10)を足した。取り込み道具はナカヨシ側
+- 検査: `peer-lines-variety-check.js` に新しい種類(fight mend mend3 jealous secret consult tease rival awkward sleep owl home rhythm)と鍵(cause how game slot shift、line=talk/woken、lv=1-4/5-10)を足した。取り込み道具はナカヨシ側
