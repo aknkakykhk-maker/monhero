@@ -674,7 +674,7 @@ pair kiki mua doing=walk lv=1-3 | mua excited {c}、{place}まで散歩しよ！
 pair kiki mua doing=walk lv=4-6 | kiki normal {c}、さっきから3回もお店をのぞいていますね | mua troubled ばれた？ かわいい服が多すぎるの！ | kiki happy では、帰りにいっしょに見ましょう
 pair kiki mua doing=walk lv=7-10 | mua normal {c}って、あたしが元気ないとき、いつも隣を歩いてくれるよね | kiki happy 気づいていましたか | mua happy うん。何も言わなくても分かるの、すごいよね
 pair kiki mua lv=1-3 | kiki normal {c}、今日の服、すてきですね | mua excited ほんと！？ {c}にほめられると、まぢでうれしい！ | kiki happy 本当のことを言っただけですよ
-pair kiki mua lv=4-6 air=after | kiki troubled 私のおやつ、先に食べましたね… | mua troubled ……ごめん、おいしそうでつい | kiki normal 少しだけ、すねてもいいでしょうか
+pair kiki mua lv=4-6 air=after | kiki troubled 私のおやつ、先に食べましたね… | mua troubled ……ごめん、おいしそうだったから、つい | kiki normal 少しだけ、すねてもいいでしょうか
 pair kiki mua lv=4-6 air=makeup | mua normal {c}、新しいおやつ買ってきた！ 今度は{c}が先に選んで！ | kiki happy …では、いちばん大きいのを | mua surprise ちゃんと食べるんだｗ よかった〜
 
 ## 2人 えるびん × きゅうこ(18本)

@@ -17816,7 +17816,7 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
   ] },
   { id:'life-pair-kiki-mua-077', kind:'pair', pair:['kiki', 'mua'], keys:{ lv:'4-6', air:'after' }, lines:[
     { who:'kiki', e:'troubled', t:'私のおやつ、先に食べましたね…' },
-    { who:'mua', e:'troubled', t:'……ごめん、おいしそうでつい' },
+    { who:'mua', e:'troubled', t:'……ごめん、おいしそうだったから、つい' },
     { who:'kiki', e:'normal', t:'少しだけ、すねてもいいでしょうか' },
   ] },
   { id:'life-pair-kiki-mua-078', kind:'pair', pair:['kiki', 'mua'], keys:{ lv:'4-6', air:'makeup' }, lines:[
