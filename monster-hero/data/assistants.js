@@ -1268,6 +1268,9 @@ const ASSISTANT_BOND_ACTIONS = {
   peerTalk:   { amount:2,  dailyMax:10, label:'助手どうしの掛け合いを見る', releaseFlag:'assistantPeer' },
   peerChoice: { amount:5,  dailyMax:15, label:'助手どうしの掛け合いで返事をする', releaseFlag:'assistantPeer' },
   peerDaily:  { amount:20, dailyMax:20, label:'今日のペアを達成する', releaseFlag:'assistantPeer' },
+  peerGift:   { amount:30, dailyMax:30, label:'助手どうしに差し入れをする', releaseFlag:'assistantPeer' },
+  peerToken:  { amount:25, dailyMax:25, label:'助手どうしに友情のしるしを使う', releaseFlag:'assistantPeer' },
+  peerPlay:   { amount:6,  dailyMax:24, label:'ペアを連れて遊ぶ', releaseFlag:'assistantPeer' },
 };
 // 1日に増やせる合計。行動の種類が増えるほど「1日でどれだけ遊んでも上限40で頭打ち」が
 // きつくなりすぎたため、行動ごとの上限をすべて合わせた理論上の最大値まで引き上げた。
@@ -12930,6 +12933,10 @@ const ASSISTANT_PEER_BOND_ACTIONS = Object.freeze({
   // uncapped … ペアごとの1日の合計(ASSISTANT_PEER_BOND_DAILY_MAX)の外で数える特別なもの(2026-11-07 社長)
   daily:  { amount:10, dailyMax:10, label:'今日のペアを達成した', uncapped:true },
   streak: { amount:2, dailyMax:2, label:'続けてログインした(今日のペア)', uncapped:true },
+  // ② 差し入れ・友情のしるし(ビートP交換所の品物。どちらも全体で1日1回)・ペアで遊ぶ(2026-11-07 社長)
+  gift:   { amount:15, dailyMax:15, label:'差し入れをもらった', uncapped:true },
+  token:  { amount:30, dailyMax:30, label:'友情のしるしを使った', uncapped:true },
+  play:   { amount:4, dailyMax:12, label:'いっしょに遊びに行った' },
 });
 const ASSISTANT_PEER_BOND_DAILY_MAX = 20;
 // 思い出アルバムのツーショット写真(段ごとに1枚。2人の立ち絵を並べて作る)。e … 左・右の表情
@@ -14138,3 +14145,16 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
     { who:'erubin', e:'happy', t:'{c}、それは大事な記録だね' },
   ] },
 ]);
+
+// 差し入れ・友情のしるし・ペアで遊んだあとに、2人が言うひとこと(2026-11-07 ②)。{c} は相手の呼び方。
+//   gift … 差し入れを受け取ったとき / token … 友情のしるしを使ったとき / play … 連れていった遊びが終わったとき
+const ASSISTANT_PEER_REACTIONS = Object.freeze({
+  mua:       { gift:{ e:'excited', t:'わ〜！ 差し入れありがと♪ {c}と半分こするね！' }, token:{ e:'happy', t:'友情のしるし…！ {c}とおそろいぢゃん♪' }, play:{ e:'excited', t:'{c}と応援してたよ！ 楽しかった〜♪' } },
+  kiki:      { gift:{ e:'happy', t:'差し入れ、ありがとうございまつ♪ {c}といただきますね' }, token:{ e:'wink', t:'友情のしるし…大事にしまつね、{c}' }, play:{ e:'happy', t:'{c}と一緒に見てました。かっこよかったです♪' } },
+  momosuke:  { gift:{ e:'excited', t:'えっ差し入れ！？ {c}、一緒に食べよ！！' }, token:{ e:'happy', t:'友情のしるし！！ {c}とずっと仲良しだね♡' }, play:{ e:'excited', t:'{c}と全力で応援してたよ！！' } },
+  dra:       { gift:{ e:'happy', t:'差し入れか、ありがたいわ。{c}、分けような' }, token:{ e:'wink', t:'友情のしるしだってよ、{c}。照れるな、えへへ' }, play:{ e:'happy', t:'{c}と見てたぞ。いい遊びっぷりだったな' } },
+  atsu:      { gift:{ e:'happy', t:'差し入れありがと笑 {c}と食べるわ！' }, token:{ e:'wink', t:'友情のしるしね。{c}、これからもよろしく笑' }, play:{ e:'happy', t:'{c}と見てたよ。いい感じだったね！' } },
+  kyuko:     { gift:{ e:'happy', t:'差し入れだぁ、ありがとん笑 {c}と分けるね' }, token:{ e:'wink', t:'友情のしるし、うれしいなぁ🥺 {c}、よろしくね' }, play:{ e:'happy', t:'{c}と応援してたよぉ。おつかれさま笑' } },
+  sorashido: { gift:{ e:'excited', t:'差し入れ！？ ありがとうだぜ・・・！ {c}と分けるぜ笑' }, token:{ e:'happy', t:'友情のしるし…でーじうれしいぜ！ {c}、これからも頼むな' }, play:{ e:'excited', t:'{c}と記録とってたぜ・・・！ いい結果だったな笑' } },
+  erubin:    { gift:{ e:'happy', t:'差し入れ、ありがとう。{c}と一緒にいただくね' }, token:{ e:'wink', t:'友情のしるし、大切にするね。{c}もよろしくね' }, play:{ e:'happy', t:'{c}と見守ってたよ。おつかれさまだね' } },
+});

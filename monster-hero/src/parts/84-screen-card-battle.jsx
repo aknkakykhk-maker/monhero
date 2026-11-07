@@ -3414,6 +3414,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         setView(back);
         return;
       }
+      // 助手どうし(2026-11-07・56-assistant-peer.jsx): 遊びに連れていくペアがいれば、対戦を1回終えるごとに2人が仲良くなる(見返しは除く)
+      if (typeof assistantPeerOnPlay === 'function') void assistantPeerOnPlay('card');
       // マルチ対戦: 封を開けて確かめるのは 91 の CARD_PVP。結果は部屋の画面に出す(報酬は区切り2)
       if (game.pvp) {
         CARD_PVP.finish(outcome, st);

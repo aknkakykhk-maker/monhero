@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4df3d1ef41a94176
+// source-sha256: 54f1ac5e81441bbd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -60620,7 +60620,9 @@ function ItemInventoryScreen({
     className: usageNoteClass
   }, "マーケットで", React.createElement("br", null), HERO_PROOF_SHARD_PER_PROOF, "個→", React.createElement("br", null), "勇者の証1個") : item.usage === 'rhythmBuddy' ? React.createElement("div", {
     className: usageNoteClass
-  }, "モンヒロビートの", React.createElement("br", null), "マルチで", React.createElement("br", null), "マスモンを呼ぶ") : item.usage === 'soulRankRespec' || item.usage === 'soulCrystal' ? React.createElement("div", {
+  }, "モンヒロビートの", React.createElement("br", null), "マルチで", React.createElement("br", null), "マスモンを呼ぶ") : item.usage === 'assistantPeer' ? React.createElement("div", {
+    className: usageNoteClass
+  }, "プロフィールの", React.createElement("br", null), "助手どうしの", React.createElement("br", null), "関係図で使う") : item.usage === 'soulRankRespec' || item.usage === 'soulCrystal' ? React.createElement("div", {
     className: usageNoteClass
   }, "マスモン詳細の", React.createElement("br", null), "魂格特性で", React.createElement("br", null), "使用") : React.createElement("button", {
     onClick: () => onUseItem(item.id),
@@ -60866,7 +60868,7 @@ function BreederMarketScreen({
   const exchangeTab = activeSectionTab('exchange');
   const eventTab = activeSectionTab('event');
   const BEAT_POINT_MATERIAL_ITEM_IDS = ['rainbow_psyche', 'hero_proof_shard', 'transcend_fruit_rainbow', 'hero_proof'];
-  const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer => eventTab === 'material' === BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId)).map(offer => rhythmEventPointShopOfferWithPass(offer, legendPassActive === true));
+  const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer => !offer.releaseFlag || typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS[offer.releaseFlag] === true).filter(offer => eventTab === 'material' === BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId)).map(offer => rhythmEventPointShopOfferWithPass(offer, legendPassActive === true));
   const legendPassSlot = eventItemOffers.some(offer => offer.legendPass === true);
   const renderSectionTabs = (section, scroll = false) => {
     const items = SECTION_TABS[section].tabs.map(tab => ({
@@ -61888,7 +61890,9 @@ function ProfileScreen({
   breederGender = 'none',
   onSelectBreederGender = null,
   unlockedAssistants,
-  onReplayPeerTalk = null
+  onReplayPeerTalk = null,
+  peerItems = null,
+  onUsePeerItem = null
 }) {
   const [rhythmAchRows, setRhythmAchRows] = React.useState([]);
   const [bondRewardListOpen, setBondRewardListOpen] = React.useState(false);
@@ -62383,7 +62387,9 @@ function ProfileScreen({
       className: "mt-3"
     }, React.createElement(AssistantPeerMap, {
       metIds: assistantChoices.map(w => w.id),
-      onReplay: onReplayPeerTalk
+      onReplay: onReplayPeerTalk,
+      peerItems: peerItems,
+      onUseItem: onUsePeerItem
     }))));
   })(), (() => {
     const difficultyIds = Object.keys(DIFFICULTY_SETTINGS);
@@ -93509,6 +93515,12 @@ const ASSISTANT_PEER_TALK_GEN_KEY = 'mh_assistant_peer_talk_gen_v1';
 const ASSISTANT_PEER_DAILY_KEY = 'mh_assistant_peer_daily_v1';
 const ASSISTANT_PEER_CHOICE_KEY = 'mh_assistant_peer_choice_v1';
 const ASSISTANT_PEER_ALBUM_KEY = 'mh_assistant_peer_album_v1';
+const ASSISTANT_PEER_GIFT_KEY = 'mh_assistant_peer_gift_v1';
+const ASSISTANT_PEER_PLAY_KEY = 'mh_assistant_peer_play_v1';
+const ASSISTANT_PEER_ITEM_IDS = Object.freeze({
+  gift: 'peer_gift',
+  token: 'peer_token'
+});
 const ASSISTANT_PEER_TALK_LOG_MAX = 30;
 const ASSISTANT_PEER_DAILY_GOAL = 3;
 const ASSISTANT_PEER_GEN_ASK_MAX = 100;
@@ -93608,6 +93620,22 @@ const normalizeAssistantPeerChoice = raw => {
   for (const [k, v] of Object.entries(raw)) if (typeof k === 'string' && Number.isInteger(v) && v >= 0 && v < 3) out[k] = v;
   return out;
 };
+const normalizeAssistantPeerGift = raw => {
+  const ok = raw && typeof raw === 'object' && !Array.isArray(raw) && typeof raw.day === 'string';
+  const pk = v => typeof v === 'string' && /^[a-z]+-[a-z]+$/.test(v) ? v : null;
+  return ok ? {
+    day: raw.day,
+    gift: pk(raw.gift),
+    token: pk(raw.token)
+  } : {
+    day: null,
+    gift: null,
+    token: null
+  };
+};
+const normalizeAssistantPeerPlay = raw => ({
+  pair: raw && typeof raw === 'object' && typeof raw.pair === 'string' && /^[a-z]+-[a-z]+$/.test(raw.pair) ? raw.pair : null
+});
 const normalizeAssistantPeerAlbum = raw => {
   const out = {};
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
@@ -93670,6 +93698,15 @@ const ASSISTANT_PEER_STORE = {
     },
     choice: {},
     album: {},
+    gift: {
+      day: null,
+      gift: null,
+      token: null
+    },
+    play: {
+      pair: null
+    },
+    playNote: null,
     lastShownAt: 0
   },
   loading: null,
@@ -93692,7 +93729,7 @@ const ASSISTANT_PEER_STORE = {
     if (this.state.loaded) return Promise.resolve(this.state);
     if (this.loading) return this.loading;
     this.loading = (async () => {
-      const [bond, bondDay, log, talkDay, special, gen, daily, choice, album] = await Promise.all([storeGet(ASSISTANT_PEER_BOND_STORE_KEY, {}, false), storeGet(ASSISTANT_PEER_BOND_DAY_KEY, null, false), storeGet(ASSISTANT_PEER_TALK_LOG_KEY, [], false), storeGet(ASSISTANT_PEER_TALK_DAY_KEY, null, false), storeGet(ASSISTANT_PEER_SPECIAL_SEEN_KEY, [], false), storeGet(ASSISTANT_PEER_TALK_GEN_KEY, null, false), storeGet(ASSISTANT_PEER_DAILY_KEY, null, false), storeGet(ASSISTANT_PEER_CHOICE_KEY, {}, false), storeGet(ASSISTANT_PEER_ALBUM_KEY, {}, false)].map(p => Promise.resolve(p).catch(() => null)));
+      const [bond, bondDay, log, talkDay, special, gen, daily, choice, album, gift, play] = await Promise.all([storeGet(ASSISTANT_PEER_BOND_STORE_KEY, {}, false), storeGet(ASSISTANT_PEER_BOND_DAY_KEY, null, false), storeGet(ASSISTANT_PEER_TALK_LOG_KEY, [], false), storeGet(ASSISTANT_PEER_TALK_DAY_KEY, null, false), storeGet(ASSISTANT_PEER_SPECIAL_SEEN_KEY, [], false), storeGet(ASSISTANT_PEER_TALK_GEN_KEY, null, false), storeGet(ASSISTANT_PEER_DAILY_KEY, null, false), storeGet(ASSISTANT_PEER_CHOICE_KEY, {}, false), storeGet(ASSISTANT_PEER_ALBUM_KEY, {}, false), storeGet(ASSISTANT_PEER_GIFT_KEY, null, false), storeGet(ASSISTANT_PEER_PLAY_KEY, null, false)].map(p => Promise.resolve(p).catch(() => null)));
       this.set({
         loaded: true,
         bond: normalizeAssistantPeerBond(bond),
@@ -93703,7 +93740,9 @@ const ASSISTANT_PEER_STORE = {
         gen: normalizeAssistantPeerGen(gen),
         daily: normalizeAssistantPeerDaily(daily),
         choice: normalizeAssistantPeerChoice(choice),
-        album: normalizeAssistantPeerAlbum(album)
+        album: normalizeAssistantPeerAlbum(album),
+        gift: normalizeAssistantPeerGift(gift),
+        play: normalizeAssistantPeerPlay(play)
       });
       return this.state;
     })();
@@ -93938,6 +93977,79 @@ const assistantPeerSaveChoice = (talkId, index) => {
     storeSet(ASSISTANT_PEER_CHOICE_KEY, choice, false);
   } catch {}
 };
+const assistantPeerReactionTalk = (kind, pair) => {
+  const R = typeof ASSISTANT_PEER_REACTIONS !== 'undefined' ? ASSISTANT_PEER_REACTIONS : {};
+  const [a, b] = pair;
+  const line = who => R[who] && R[who][kind] ? {
+    who,
+    e: R[who][kind].e,
+    t: R[who][kind].t
+  } : null;
+  const lines = [line(a), line(b)].filter(Boolean);
+  return lines.length === 2 ? {
+    id: `react-${kind}-${assistantPeerPairKey(a, b)}`,
+    pair: [a, b],
+    lv: 1,
+    scene: 'any',
+    reaction: kind,
+    lines
+  } : null;
+};
+const assistantPeerItemUsedToday = (st, kind, now = Date.now()) => {
+  const g = st.gift;
+  return !!(g && g.day === assistantPeerDayKey(now) && g[kind]);
+};
+const assistantPeerUseItem = async (kind, pair) => {
+  if (!assistantPeerEnabled() || kind !== 'gift' && kind !== 'token' || !Array.isArray(pair) || pair.length !== 2) return null;
+  await ASSISTANT_PEER_STORE.load();
+  const st = ASSISTANT_PEER_STORE.state;
+  if (assistantPeerItemUsedToday(st, kind)) return null;
+  const day = assistantPeerDayKey();
+  const g = st.gift && st.gift.day === day ? st.gift : {
+    day,
+    gift: null,
+    token: null
+  };
+  const next = {
+    ...g,
+    [kind]: assistantPeerPairKey(pair[0], pair[1])
+  };
+  ASSISTANT_PEER_STORE.set({
+    gift: next
+  });
+  try {
+    storeSet(ASSISTANT_PEER_GIFT_KEY, next, false);
+  } catch {}
+  await assistantPeerGain(pair[0], pair[1], kind);
+  assistantPeerAddPlayerBond(pair, kind === 'gift' ? 'peerGift' : 'peerToken');
+  return assistantPeerReactionTalk(kind, pair);
+};
+const assistantPeerSetPlayPair = pair => {
+  const play = {
+    pair: Array.isArray(pair) && pair.length === 2 ? assistantPeerPairKey(pair[0], pair[1]) : null
+  };
+  ASSISTANT_PEER_STORE.set({
+    play
+  });
+  try {
+    storeSet(ASSISTANT_PEER_PLAY_KEY, play, false);
+  } catch {}
+};
+const assistantPeerOnPlay = async kind => {
+  if (!assistantPeerEnabled()) return;
+  await ASSISTANT_PEER_STORE.load();
+  const pk = ASSISTANT_PEER_STORE.state.play && ASSISTANT_PEER_STORE.state.play.pair;
+  if (!pk) return;
+  const pair = pk.split('-');
+  const r = await assistantPeerGain(pair[0], pair[1], 'play');
+  assistantPeerAddPlayerBond(pair, 'peerPlay');
+  if (r && r.gained > 0) ASSISTANT_PEER_STORE.set({
+    playNote: {
+      pair,
+      kind
+    }
+  });
+};
 const assistantPeerPickTalk = (st, {
   scene,
   metIds,
@@ -94094,6 +94206,22 @@ function AssistantPeerTalk({
     });
   }, [scene, selectedId, st.loaded, replay, metKey]);
   React.useEffect(() => {
+    if (!scene || !st.playNote || cur) return;
+    const talk = assistantPeerReactionTalk('play', st.playNote.pair);
+    ASSISTANT_PEER_STORE.set({
+      playNote: null
+    });
+    if (talk) setCur({
+      talk,
+      special: false,
+      step: 0,
+      phase: 'lines',
+      pick: null,
+      replay: true,
+      reaction: true
+    });
+  }, [scene, st.playNote]);
+  React.useEffect(() => {
     decidedRef.current = decidedRef.current.startsWith(`${scene}:`) ? decidedRef.current : '';
     setCur(c => c && !c.replay ? null : c);
   }, [scene]);
@@ -94101,7 +94229,7 @@ function AssistantPeerTalk({
   const finish = React.useCallback(async c => {
     setCur(null);
     if (c.replay) {
-      if (typeof onReplayEnd === 'function') onReplayEnd();
+      if ((!c.reaction || replay) && typeof onReplayEnd === 'function') onReplayEnd();
       return;
     }
     const r = await assistantPeerGain(c.talk.pair[0], c.talk.pair[1], 'talk');
@@ -94116,7 +94244,7 @@ function AssistantPeerTalk({
       pair: c.talk.pair,
       level: r.levelAfter
     });
-  }, [onReplayEnd]);
+  }, [onReplayEnd, replay]);
   const choose = index => {
     const c = cur;
     if (!c || c.phase !== 'choice') return;
@@ -94315,7 +94443,9 @@ function AssistantPeerPhoto({
 function AssistantPeerAlbum({
   pair,
   onClose,
-  onReplay
+  onReplay,
+  peerItems = null,
+  onUseItem = null
 }) {
   const st = useAssistantPeerState();
   const [a, b] = pair.map(id => assistantById(id));
@@ -94355,7 +94485,43 @@ function AssistantPeerAlbum({
     pair: pair,
     photo: ph,
     open: lv >= ph.lv
-  }))), React.createElement("p", {
+  }))), typeof onUseItem === 'function' && (() => {
+    const playing = st.play && st.play.pair === key;
+    const itemBtn = (kind, emoji, label) => {
+      const have = peerItems && Number(peerItems[kind]) || 0;
+      const used = assistantPeerItemUsedToday(st, kind);
+      return React.createElement("button", {
+        type: "button",
+        "data-assistant-peer-use": kind,
+        disabled: used || have <= 0,
+        onClick: () => onUseItem(kind, pair),
+        className: "min-h-[44px] rounded-xl border border-amber-300/50 bg-amber-400/10 px-2 py-1 text-left active:scale-[.98] disabled:opacity-40"
+      }, React.createElement("span", {
+        className: "block text-[11px] font-black text-amber-100"
+      }, emoji, " ", label), React.createElement("span", {
+        className: "block text-[9px] font-bold text-slate-400"
+      }, used ? '今日はもう使いました' : have > 0 ? `持っている ${have}個` : 'ビートP交換所で手に入ります'));
+    };
+    return React.createElement("div", {
+      "data-assistant-peer-actions": true,
+      className: "mt-3"
+    }, React.createElement("p", {
+      className: "mb-1 text-[11px] font-black text-amber-200"
+    }, "2人にしてあげる"), React.createElement("div", {
+      className: "grid grid-cols-2 gap-1.5"
+    }, itemBtn('gift', '🧺', '差し入れを渡す'), itemBtn('token', '🤝', '友情のしるしを使う')), React.createElement("button", {
+      type: "button",
+      "data-assistant-peer-play": playing ? 'on' : 'off',
+      onClick: () => assistantPeerSetPlayPair(playing ? null : pair),
+      className: "mt-1.5 min-h-[44px] w-full rounded-xl border border-sky-300/50 bg-sky-400/10 px-2 py-1 text-left active:scale-[.98]"
+    }, React.createElement("span", {
+      className: "block text-[11px] font-black text-sky-100"
+    }, playing ? '🎮 遊びに連れていく(いま連れています。押すとやめます)' : '🎮 遊びに連れていく'), React.createElement("span", {
+      className: "block text-[9px] font-bold text-slate-400"
+    }, "遊び終えるたびに、2人が仲良くなります"), React.createElement("span", {
+      className: "block text-[9px] font-bold text-slate-400"
+    }, "(モンヒロビート・モンヒロバトル・MFバトルカード)")));
+  })(), React.createElement("p", {
     className: "mb-1 mt-3 text-[11px] font-black text-pink-200"
   }, "見た掛け合い"), talks.length === 0 && React.createElement("p", {
     className: "text-[10px] text-slate-500"
@@ -94376,7 +94542,9 @@ function AssistantPeerAlbum({
 }
 function AssistantPeerMap({
   metIds,
-  onReplay
+  onReplay,
+  peerItems = null,
+  onUseItem = null
 }) {
   const st = useAssistantPeerState();
   const [showAll, setShowAll] = React.useState(false);
@@ -94424,7 +94592,10 @@ function AssistantPeerMap({
     className: "min-w-0 flex-1 truncate text-[11px] font-black text-white"
   }, assistantById(dailyPair[0]).name, " × ", assistantById(dailyPair[1]).name), React.createElement("span", {
     className: "text-[10px] font-black text-amber-200"
-  }, daily.done ? '達成！' : `掛け合い ${daily.seen}/${ASSISTANT_PEER_DAILY_GOAL}`)), React.createElement("div", {
+  }, daily.done ? '達成！' : `掛け合い ${daily.seen}/${ASSISTANT_PEER_DAILY_GOAL}`)), st.play && st.play.pair && st.play.pair.split('-').every(id => ids.includes(id)) && React.createElement("p", {
+    "data-assistant-peer-playing": true,
+    className: "mb-2 text-[10px] font-bold text-sky-200"
+  }, "🎮 遊びに連れているペア: ", st.play.pair.split('-').map(id => assistantById(id).name).join(' × ')), React.createElement("div", {
     className: "relative mx-auto",
     style: {
       width: size,
@@ -94500,7 +94671,15 @@ function AssistantPeerMap({
     onReplay: t => {
       setAlbumPair(null);
       if (onReplay) onReplay(t);
-    }
+    },
+    peerItems: peerItems,
+    onUseItem: onUseItem ? async (kind, pair) => {
+      const talk = await onUseItem(kind, pair);
+      if (talk) {
+        setAlbumPair(null);
+        if (onReplay) onReplay(talk);
+      }
+    } : null
   }));
 }
 let assistantPeerGenBusy = false;
@@ -109534,6 +109713,7 @@ const CardBattleScreen = ({
         setView(back);
         return;
       }
+      if (typeof assistantPeerOnPlay === 'function') void assistantPeerOnPlay('card');
       if (game.pvp) {
         CARD_PVP.finish(outcome, st);
         onBgm && onBgm(cardBgmOf(save.bgm.top));
@@ -133266,6 +133446,26 @@ function MonsterHeroGame() {
     await storeSet('mh_owned_items', nextItems, false);
     return true;
   };
+  const useAssistantPeerItem = async (kind, pair) => {
+    const itemId = kind === 'gift' ? 'peer_gift' : kind === 'token' ? 'peer_token' : null;
+    if (!itemId || typeof assistantPeerUseItem !== 'function' || RELEASE_FLAGS.assistantPeer !== true) return null;
+    await ASSISTANT_PEER_STORE.load();
+    if (assistantPeerItemUsedToday(ASSISTANT_PEER_STORE.state, kind)) return null;
+    const have = ownedItemCount(ownedItemsRef.current, itemId);
+    if (have <= 0) return null;
+    const nextItems = {
+      ...ownedItemsRef.current,
+      [itemId]: have - 1
+    };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    try {
+      await storeSet('mh_owned_items', nextItems, false);
+    } catch {
+      return null;
+    }
+    return assistantPeerUseItem(kind, pair);
+  };
   const useBuddyTraitSeed = async (masuId, traitId) => {
     const have = ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TRAIT_SEED_ITEM_ID);
     if (have <= 0) return false;
@@ -140246,6 +140446,10 @@ function MonsterHeroGame() {
       offer = rhythmEventPointShopOfferWithPass(base, hasPass);
     }
     if (offer?.available === false) return {
+      ok: false,
+      reason: 'soon'
+    };
+    if (offer?.releaseFlag && RELEASE_FLAGS[offer.releaseFlag] !== true) return {
       ok: false,
       reason: 'soon'
     };
@@ -149869,6 +150073,7 @@ function MonsterHeroGame() {
     }
     if (w === 1 && !forcedEnemyKey && !debugBattleRef.current) {
       addAssistantBond('battle');
+      if (typeof assistantPeerOnPlay === 'function') void assistantPeerOnPlay('battle');
       addAssistantBond(extremeRunRef.current && !isTacticsMode(runMode) ? 'extreme' : modeBondAction(runMode));
       grantEquippedAssistantCardBond('assistantCardEquip');
     }
@@ -158430,6 +158635,7 @@ function MonsterHeroGame() {
         if (rhythmPlay.from === 'notedex') return;
         if (result?.assist === true) return;
         if (rhythmPlay.from === 'demo' || rhythmPlay.from === 'multi' || rhythmPlay.from === 'raid') await grantBeatRankForResult(result, rhythmPlay);
+        if ((rhythmPlay.from === 'demo' || rhythmPlay.from === 'multi' || rhythmPlay.from === 'raid') && typeof assistantPeerOnPlay === 'function') void assistantPeerOnPlay('rhythm');
         if (result?.cleared !== false) {
           try {
             setRhythmClearTotal(await addRhythmClearTotal());
@@ -160835,6 +161041,11 @@ function MonsterHeroGame() {
       rhythmHistoryCount: rhythmHistoryCount,
       unlockedAssistants: assistantsUnlockedFrom(rhythmEventStorySeen).filter(who => who.id !== 'momosuke' || momosukeIntroSeenFlag),
       onReplayPeerTalk: talk => setPeerReplay(talk),
+      peerItems: {
+        gift: ownedItemCount(ownedItems, 'peer_gift'),
+        token: ownedItemCount(ownedItems, 'peer_token')
+      },
+      onUsePeerItem: useAssistantPeerItem,
       onOpenRhythmHistory: openRhythmHistory,
       friendsEnabled: RELEASE_FLAGS.friends === true,
       onOpenFriends: () => openFriends(null),

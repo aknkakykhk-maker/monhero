@@ -2164,6 +2164,21 @@ function MonsterHeroGame() {
     await storeSet('mh_owned_items', nextItems, false);
     return true;
   };
+  // 助手どうしの差し入れ・友情のしるしを1個使う(2026-11-07)。今日まだ使っていないかを先に確かめ、持ち物を1個減らして保存できたときだけ
+  //   2人の仲良し度を上げる(56-assistant-peer.jsx の assistantPeerUseItem)。返すのは2人のひとことの台本(使えなければ null)
+  const useAssistantPeerItem = async (kind, pair) => {
+    const itemId = kind === 'gift' ? 'peer_gift' : kind === 'token' ? 'peer_token' : null;
+    if (!itemId || typeof assistantPeerUseItem !== 'function' || RELEASE_FLAGS.assistantPeer !== true) return null;
+    await ASSISTANT_PEER_STORE.load();
+    if (assistantPeerItemUsedToday(ASSISTANT_PEER_STORE.state, kind)) return null;
+    const have = ownedItemCount(ownedItemsRef.current, itemId);
+    if (have <= 0) return null;
+    const nextItems = { ...ownedItemsRef.current, [itemId]: have - 1 };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    try { await storeSet('mh_owned_items', nextItems, false); } catch { return null; }
+    return assistantPeerUseItem(kind, pair);
+  };
   // 性格のたねを1個使って、マスモンの性格を選び直す(2026-11-06 社長の決定 C)。
   // 先に相棒の保存(mh_rhythm_buddy_v1)を書き換え、できたときだけたねを1個減らす(減ったのに性格が変わらない、を作らない)
   const useBuddyTraitSeed = async (masuId, traitId) => {
@@ -8934,6 +8949,8 @@ function MonsterHeroGame() {
     }
     // 予告中(まだ仲間にできない)の子の円盤石は交換しない。画面でも「近日追加」で押せないが、ここでも止める
     if (offer?.available === false) return { ok:false, reason:'soon' };
+    // 公開の印の付いた品物(助手どうしの差し入れ・友情のしるし)は、印が立つまで交換しない(画面に出ていなくても、ここでも止める)
+    if (offer?.releaseFlag && RELEASE_FLAGS[offer.releaseFlag] !== true) return { ok:false, reason:'soon' };
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
     try {
@@ -16274,6 +16291,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 1周のはじめだけ、みゅあとの仲良し度を増やす(WAVEごとには数えない)
     if (w === 1 && !forcedEnemyKey && !debugBattleRef.current) {
       addAssistantBond('battle');
+      // 助手どうし: 遊びに連れていくペアがいれば、2人が仲良くなる(56-assistant-peer.jsx)
+      if (typeof assistantPeerOnPlay === 'function') void assistantPeerOnPlay('battle');
       // ★タクティクスバトルの極限は「極限チャレンジで遊んだ」ではないので、'extreme' を渡さない
       addAssistantBond(extremeRunRef.current && !isTacticsMode(runMode) ? 'extreme' : modeBondAction(runMode));
       // 助手のアシストカードを編成して挑んだぶん。編成を保存しただけでは増えず、
@@ -20485,6 +20504,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(result?.assist===true)return;
           // ビートランクの経験値(2026-10-29)。ソロ・みんなで対戦・レイドを最後まで遊んだときだけ(ここは最後まで遊んだときしか通らない)
           if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')await grantBeatRankForResult(result,rhythmPlay);
+          // 助手どうし: 遊びに連れていくペアがいれば、2人が仲良くなる(ソロ・みんなで対戦・レイドを最後まで遊んだとき)
+          if((rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')&&typeof assistantPeerOnPlay==='function')void assistantPeerOnPlay('rhythm');
           // 通算クリア回数を数える(スエゾービートのフレームの条件)。ライフを残して終えたときだけ。
           // 練習・アシストモードは上で除いてある。数えられなくても記録の保存は止めない
           if(result?.cleared!==false){ try{ setRhythmClearTotal(await addRhythmClearTotal()); }catch{} }
@@ -21341,6 +21362,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                ももすけは最初の会話を見たか(momosukeIntroSeenFlag)、あつなどは加入のお話を見たか(assistantsUnlockedFrom) */
             unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag)}
             onReplayPeerTalk={(talk)=>setPeerReplay(talk)}
+            peerItems={{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}}
+            onUsePeerItem={useAssistantPeerItem}
             onOpenRhythmHistory={openRhythmHistory}
             friendsEnabled={RELEASE_FLAGS.friends===true}
             onOpenFriends={()=>openFriends(null)}

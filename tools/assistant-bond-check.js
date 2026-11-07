@@ -170,8 +170,9 @@ const WANT_AMOUNTS = {
   chat: [2, 20],
   // 助手どうし(2026-11-07・社長「助手の親密度を上げる何かがもっとほしい」。掛け合いに出た2人それぞれへ入る。公開の印 assistantPeer)
   peerTalk: [2, 10], peerChoice: [5, 15], peerDaily: [20, 20],
+  peerGift: [30, 30], peerToken: [25, 25], peerPlay: [6, 24],
 };
-const PEER_KEYS = ['peerTalk', 'peerChoice', 'peerDaily'];
+const PEER_KEYS = ['peerTalk', 'peerChoice', 'peerDaily', 'peerGift', 'peerToken', 'peerPlay'];
 const wrongAmounts = Object.entries(WANT_AMOUNTS)
   .filter(([k, [amount, dailyMax]]) => !actions[k] || actions[k].amount !== amount || actions[k].dailyMax !== dailyMax)
   .map(([k, [amount, dailyMax]]) => `${k}: ${actions[k] ? `${actions[k].amount}/${actions[k].dailyMax}` : 'なし'} (期待 ${amount}/${dailyMax})`);

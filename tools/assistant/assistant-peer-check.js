@@ -245,6 +245,40 @@ const pairKey = (a, b) => [a, b].sort().join('-');
   // ⑦ で保存から読み直すので、置き場を読み込む前に戻す
   store.state = { ...empty(), loaded: false }; store.loading = null;
 
+  // ⑩ 差し入れ・友情のしるし・ペアで遊ぶ(②)
+  const RE = G('ASSISTANT_PEER_REACTIONS');
+  check('⑩ 8人全員に、差し入れ・友情のしるし・遊んだあとのひとことがある', IDS.every(id => RE[id] && ['gift', 'token', 'play'].every(k => RE[id][k] && EXPR.includes(RE[id][k].e) && RE[id][k].t.length > 0)));
+  const reLines = Object.entries(RE).flatMap(([id, o]) => Object.values(o).map(x => ({ id, t: x.t })));
+  check('⑩ ひとことの口調(みゅあは「じゃん」「まじ」を使わない・あつは文の最後に笑か記号)', reLines.filter(x => x.id === 'mua').every(x => !/じゃん|まじ/.test(x.t))
+    && reLines.filter(x => x.id === 'atsu').every(x => /(笑|[！？!?…。])$/.test(x.t)));
+  const PA = G('ASSISTANT_PEER_BOND_ACTIONS');
+  check('⑩ ペアへの増え方: 差し入れ +15・しるし +30(1日20の上限の外)・遊ぶ +4(1日12)', PA.gift.amount === 15 && PA.gift.uncapped && PA.token.amount === 30 && PA.token.uncapped && PA.play.amount === 4 && PA.play.dailyMax === 12);
+  check('⑩ プレイヤーの親密度: 差し入れ +30・しるし +25・遊ぶ +6(1日24)', BA.peerGift.amount === 30 && BA.peerToken.amount === 25 && BA.peerPlay.amount === 6 && BA.peerPlay.dailyMax === 24
+    && ['peerGift', 'peerToken', 'peerPlay'].every(k => BA[k].releaseFlag === 'assistantPeer'));
+  const OFF = vm.runInContext('typeof RHYTHM_EVENT_POINT_SHOP_OFFERS !== "undefined" ? RHYTHM_EVENT_POINT_SHOP_OFFERS : null', ctx) || (() => { const c2 = vm.createContext({}); vm.runInContext(fs.readFileSync(path.join(root, 'monster-hero', 'data', 'rhythm-event.js'), 'utf8') + ';this.O=RHYTHM_EVENT_POINT_SHOP_OFFERS', c2); return c2.O; })();
+  const og = OFF.find(o => o.id === 'peer_gift'), ot = OFF.find(o => o.id === 'peer_token');
+  check('⑩ ビートP交換所: 差し入れ 200P・友情のしるし 500P、どちらも公開の印 assistantPeer の後ろ', og && og.cost === 200 && ot && ot.cost === 500 && og.releaseFlag === 'assistantPeer' && ot.releaseFlag === 'assistantPeer');
+  ctx.RELEASE_FLAGS.assistantPeer = true;
+  store.state = { ...empty(), loaded: true }; store.loading = null;
+  added.length = 0;
+  const t1 = await G('assistantPeerUseItem')('gift', ['mua', 'kiki']);
+  check('⑩ 差し入れを渡すと、ペア +15・2人の親密度(peerGift)・2人のひとことの台本', store.state.bond['kiki-mua'] === 15 && ['mua:peerGift', 'kiki:peerGift'].every(x => added.includes(x)) && t1 && t1.lines.length === 2 && t1.reaction === 'gift');
+  check('⑩ 差し入れは全体で1日1回(ほかのペアにも渡せない)', (await G('assistantPeerUseItem')('gift', ['dra', 'atsu'])) === null && G('assistantPeerItemUsedToday')(store.state, 'gift'));
+  const t2 = await G('assistantPeerUseItem')('token', ['mua', 'kiki']);
+  check('⑩ 友情のしるしは差し入れとは別に1日1回。ペア +30', t2 && store.state.bond['kiki-mua'] === 45);
+  dayNow = '2026-11-08';
+  check('⑩ 次の日はまた使える', !G('assistantPeerItemUsedToday')(store.state, 'gift'));
+  dayNow = '2026-11-07';
+  added.length = 0;
+  await G('assistantPeerOnPlay')('battle');
+  check('⑩ 連れていくペアがいないときは、遊んでも何も増えない', added.length === 0 && !store.state.playNote);
+  G('assistantPeerSetPlayPair')(['dra', 'mua']);
+  await G('assistantPeerOnPlay')('rhythm');
+  check('⑩ 連れていくペアがいれば、遊び終えるとペア +4・2人の親密度(peerPlay)・次の画面でひとこと', store.state.bond['dra-mua'] === 4 && added.includes('dra:peerPlay') && added.includes('mua:peerPlay') && store.state.playNote && store.state.playNote.kind === 'rhythm');
+  await G('assistantPeerOnPlay')('card'); await G('assistantPeerOnPlay')('card'); await G('assistantPeerOnPlay')('card');
+  check('⑩ 遊ぶ +4 はペアごとに1日12まで', store.state.bond['dra-mua'] === 12);
+  store.state = { ...empty(), loaded: false }; store.loading = null;
+
   // ⑦ 保存
   writes.length = 0;
   mem.mh_assistant_peer_bond_v1 = { 'kiki-mua': 'x', 'BAD KEY': 5, 'dra-mua': 40 };
@@ -254,7 +288,7 @@ const pairKey = (a, b) => [a, b].sort().join('-');
   dayNow = '2026-11-07';
   await G('assistantPeerGain')('mua', 'dra', 'talk');
   G('assistantPeerMarkShown')(TALKS[0], { scene: 'home', special: false });
-  check('⑦ 書くのは mh_assistant_peer_* の新しいキーだけ', writes.length > 0 && writes.every(k => /^mh_assistant_peer_(bond|bond_day|talk_log|talk_day|special_seen|talk_gen|daily|choice|album)_v1$/.test(k)), writes.join(','));
+  check('⑦ 書くのは mh_assistant_peer_* の新しいキーだけ', writes.length > 0 && writes.every(k => /^mh_assistant_peer_(bond|bond_day|talk_log|talk_day|special_seen|talk_gen|daily|choice|album|gift|play)_v1$/.test(k)), writes.join(','));
   check('⑦ 上がった点数が保存される', mem.mh_assistant_peer_bond_v1['dra-mua'] === 42);
   ctx.RELEASE_FLAGS.assistantPeer = false;
   const off = await G('assistantPeerGain')('mua', 'dra', 'talk');
