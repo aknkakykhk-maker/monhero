@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 515cab8af0f9cd52
+// generated-sha256: 119522108bbd8f48
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -24016,6 +24016,9 @@ const RhythmChartNotePanel=({song,difficulty,chart})=>{
 const rhythmHudInitial=()=>({score:0,combo:0,last:'',lastPrecise:false,fastSlow:'',lastDeltaMs:null,skyLast:'',skyLastPrecise:false,skyFastSlow:'',skyDeltaMs:null,counts:null,life:RHYTHM_LIFE_MAX});
 // 空中のノーツか(判定の文字を空中の判定線の上に出す。2026-10-11 社長「地上は今まで通り、空中は地上と同じ仕組みを空中版の位置にする」)
 const rhythmNoteIsSky=note=>rhythmNoteSkyHeight(note)>0||rhythmSlideHasSky(note);
+/* 演奏中の様子を、演奏画面の外から「読むだけ」の窓(2026-11-07 助手とのセッションの顔とひとこと・80-screen-rhythm-assistant-session.jsx)。
+   判定・スコア・譜面には一切使わない。演奏画面が開いているあいだだけ hud(上の帯の中身)・曲・曲の中の時刻を置く */
+const RHYTHM_PLAY_WATCH={hud:null,songId:'',timeMs:0};
 const rhythmCreateHud=()=>{let state=rhythmHudInitial();const subs=new Set();
   return {get:()=>state,set(patch){state={...state,...patch};subs.forEach(fn=>fn());},subscribe(fn){subs.add(fn);return()=>{subs.delete(fn);};}};};
 const useRhythmHud=hud=>React.useSyncExternalStore(hud.subscribe,hud.get);
@@ -24401,6 +24404,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),touchSweepRef=useRef(null),judgmentTextRef=useRef(null),skyJudgmentTextRef=useRef(null),skyJudgmentBurstRef=useRef(null),comboRef=useRef(null),judgmentBurstRef=useRef(null),comboRingRef=useRef(null);
   // 判定ごとに変わる表示の入れ物(rhythmCreateHud の説明を参照)
   const hudRef=useRef(null);if(!hudRef.current)hudRef.current=rhythmCreateHud();
+  useEffect(()=>{const hud=hudRef.current;RHYTHM_PLAY_WATCH.hud=hud;RHYTHM_PLAY_WATCH.songId=(song&&song.songId)||'';RHYTHM_PLAY_WATCH.timeMs=0;return()=>{if(RHYTHM_PLAY_WATCH.hud===hud){RHYTHM_PLAY_WATCH.hud=null;RHYTHM_PLAY_WATCH.songId='';RHYTHM_PLAY_WATCH.timeMs=0;}};},[]);
   // 判定文字の光を焼いた絵にする(rhythmBakeJudgmentHalos の説明を参照)。演出量・軽量モードで影の枚数が変わるので、そのたびに焼き直す。
   // 焼けるまで・焼けなかったとき・影が1枚だけの判定は、今までどおり CSS のぼかしで出す(haloKeys に入っていない)。
   const [haloKeys,setHaloKeys]=useState(null);
@@ -25644,6 +25648,7 @@ const progressEl=songProgressRef.current;
 if(progressEl){const ratio=playEndTimeMs>0?Math.max(0,Math.min(1,songTimeMs/playEndTimeMs)):0;if(Math.abs(ratio-(progressEl._mhRatio||0))>=.005||ratio===1){progressEl._mhRatio=ratio;progressEl.style.transform=`scaleX(${ratio.toFixed(4)})`;}}
 if(run.luckRushUntil!=null&&songTimeMs>=run.luckRushUntil){run.luckRushUntil=null;setLuckyRush(false);}
 const timeEl=songTimeRef.current;
+RHYTHM_PLAY_WATCH.timeMs=songTimeMs;/* 読むだけの窓(上の RHYTHM_PLAY_WATCH) */
 if(timeEl){const shownMs=Math.max(0,Math.min(playEndTimeMs,songTimeMs)),second=Math.floor(shownMs/1000);if(timeEl._mhSecond!==second){timeEl._mhSecond=second;rhythmSetText(timeEl,`${rhythmClockLabel(shownMs)}/${rhythmClockLabel(playEndTimeMs)}`);}}
 /* 譜面より音源のほうが長い曲(デュラハンの2曲は音源をバトルと共用しているので切れない)は、
    終わりの手前から音量をなめらかに落とす。何もしないと曲の途中でぶつっと止まる。
@@ -30840,13 +30845,15 @@ const rhythmAssistSessionNormalize = (raw) => {
     if (l && typeof l === 'object' && !Array.isArray(l)) {
       Object.keys(l).slice(0, 200).forEach((sid) => { const key = rhythmBuddyStr(sid, 60); const n = rhythmBuddyInt(l[sid], 100000); if (key && n > 0) likes[key] = n; });
     }
-    mons[id] = { ...mon, likes };
+    // セッション券を渡した節目(Lv.35/65/100。二重に渡さないための印・2026-11-07)
+    const rewarded = (Array.isArray(src[id].rewarded) ? src[id].rewarded : []).map((n) => rhythmBuddyInt(n, 100)).filter((n, i, arr) => n > 0 && arr.indexOf(n) === i);
+    mons[id] = { ...mon, likes, rewarded };
   });
   return { mons };
 };
 const rhythmAssistSessionMon = (state, assistantId) => {
   const st = rhythmAssistSessionNormalize(state);
-  return st.mons[assistantId] || { ...rhythmBuddyNormalizeMon(null), likes: {} };
+  return st.mons[assistantId] || { ...rhythmBuddyNormalizeMon(null), likes: {}, rewarded: [] };
 };
 const rhythmAssistSessionLevel = (state, assistantId) => rhythmBuddyLevelInfo(rhythmAssistSessionMon(state, assistantId).exp).level;
 // 好み度(-2〜+3)
@@ -30873,22 +30880,26 @@ const rhythmAssistSessionPlay = ({ state, assistantId, songId, diffId, totalNote
 // 1ライブぶん育てる(同じ回は2度数えない)。{ next, gain, levelUp, likeUp, like, familiarUp }。数えなかったら next は null
 const rhythmAssistSessionApplyLive = (state, assistantId, { round, songId, diffId, durationMs, teamRank, dayKey, nowMs, score, maxScore, chartLevel = 0, humans = 1 }) => {
   const st = rhythmAssistSessionNormalize(state);
-  if (!RHYTHM_ASSIST_SESSION_IDS.includes(assistantId)) return { next: null, gain: 0, levelUp: 0, likeUp: 0, like: 0, familiarUp: false };
+  if (!RHYTHM_ASSIST_SESSION_IDS.includes(assistantId)) return { next: null, gain: 0, levelUp: 0, likeUp: 0, like: 0, familiarUp: false, tickets: 0 };
   const before = rhythmAssistSessionMon(st, assistantId);
   const likeBefore = rhythmAssistSessionLike(before, assistantId, songId);
   // 育ち方はマスモンと同じ(調子なし)。性格は付けない
   const r = rhythmBuddyApplyLive(before, { round, songId, diffId, durationMs, teamRank, dayKey, lean: '', nowMs, score, maxScore, chartLevel, humans, moodId: '' });
-  if (!r.gain) return { next: null, gain: 0, levelUp: 0, likeUp: 0, like: likeBefore, familiarUp: false };
+  if (!r.gain) return { next: null, gain: 0, levelUp: 0, likeUp: 0, like: likeBefore, familiarUp: false, tickets: 0 };
   const gain = Math.max(1, Math.round(r.gain * rhythmAssistSessionExpScale(likeBefore)));
   const sid = rhythmBuddyStr(songId, 60);
   const likes = { ...before.likes };
   if (sid) likes[sid] = (likes[sid] || 0) + 1;
-  const after = { ...r.mon, exp: before.exp + gain, trait: '', born: '', traitAt: 0, traitLock: false, likes };
+  const after = { ...r.mon, exp: before.exp + gain, trait: '', born: '', traitAt: 0, traitLock: false, likes, rewarded: before.rewarded.slice() };
   const likeAfter = rhythmAssistSessionLike(after, assistantId, songId);
-  const levelUp = rhythmBuddyLevelInfo(after.exp).level - rhythmBuddyLevelInfo(before.exp).level;
+  const levelAfter = rhythmBuddyLevelInfo(after.exp).level;
+  const levelUp = levelAfter - rhythmBuddyLevelInfo(before.exp).level;
+  // 節目のセッション券(まだ渡していない節目だけ。渡した印は同じ書き込みで残す)
+  let tickets = 0;
+  RHYTHM_ASSIST_SESSION_TICKET_REWARDS.forEach(([lv, n]) => { if (levelAfter >= lv && !after.rewarded.includes(lv)) { after.rewarded.push(lv); tickets += n; } });
   return {
     next: { ...st, mons: { ...st.mons, [assistantId]: after } },
-    gain, levelUp, likeUp: likeAfter - likeBefore, like: likeAfter, familiarUp: r.familiarUp,
+    gain, levelUp, likeUp: likeAfter - likeBefore, like: likeAfter, familiarUp: r.familiarUp, tickets,
   };
 };
 
@@ -30902,6 +30913,27 @@ const rhythmAssistSessionChooseSong = (state, assistantId, catalog, rand = Math.
   const ok = list.filter((id) => rhythmAssistSessionLike(mon, assistantId, id) >= 0);
   const pool = ok.length ? ok : list;
   return { songId: pool[Math.floor(rand() * pool.length)], why: '' };
+};
+
+// ---- セッションLv で開くもの(PLAN.md 2章。スコア・判定には効かない) ----
+// 演奏中のひとことは Lv.1 から。サビで顔が光るのは Lv.15 から。ビートP の上乗せは Lv.20/40/60/80 で +2/4/6/8%
+// 好きな曲(好み度)が見えるのは Lv.10 から
+const RHYTHM_ASSIST_SESSION_TASTE_LEVEL = 10;
+const RHYTHM_ASSIST_SESSION_GLOW_LEVEL = 15;
+// セッション券: Lv.35 で1枚・Lv.65 で2枚・Lv.100 で3枚(それぞれ1回だけ)
+const RHYTHM_ASSIST_SESSION_TICKET_REWARDS = Object.freeze([[35, 1], [65, 2], [100, 3]]);
+const RHYTHM_ASSIST_SESSION_P_BONUS = Object.freeze([[80, 0.08], [60, 0.06], [40, 0.04], [20, 0.02]]);
+const rhythmAssistSessionPBonusOf = (level) => { const hit = RHYTHM_ASSIST_SESSION_P_BONUS.find(([lv]) => level >= lv); return hit ? hit[1] : 0; };
+// 呼んだ助手みんなのビートP の上乗せ(周回の報酬・ビートP の人数ボーナスと同じ所にだけ足す。スコアには入れない)
+const rhythmAssistSessionRewardBonus = (state, assistantIds) => (Array.isArray(assistantIds) ? assistantIds : [])
+  .filter((id, i, arr) => RHYTHM_ASSIST_SESSION_IDS.includes(id) && arr.indexOf(id) === i)
+  .reduce((sum, id) => sum + rhythmAssistSessionPBonusOf(rhythmAssistSessionLevel(state, id)), 0);
+// 曲の中の時刻がサビ(RHYTHM_SONG_CLIMAX の強さ 0.9 以上の区間)に入っているか
+const rhythmAssistSessionInClimax = (songId, timeMs) => {
+  const table = typeof RHYTHM_SONG_CLIMAX !== 'undefined' ? RHYTHM_SONG_CLIMAX : null;
+  const spans = table && Array.isArray(table[songId]) ? table[songId] : [];
+  const t = Number(timeMs);
+  return Number.isFinite(t) && spans.some((x) => Array.isArray(x) && Number(x[2]) >= 0.9 && t >= Number(x[0]) && t < Number(x[1]));
 };
 
 // ---- part: 33-rhythm-buddy-talk.jsx ----
@@ -52230,7 +52262,9 @@ function RhythmMultiMemberCards({ members, hostId, selfId, resolveIconUrl, badge
               {openable && <span aria-hidden="true" className={`absolute -bottom-1 -right-1.5 flex items-center justify-center rounded-full bg-lime-300 font-black leading-none text-slate-950 ${tall ? 'h-4 w-4 text-[10px]' : 'h-3 w-3 text-[8px]'}`}>i</span>}
             </span>
             <span className={`min-w-0 ${tall ? 'mt-1 w-full text-center' : 'mt-0.5 w-full text-center landscape:mt-0 landscape:flex-1 landscape:text-left'}`}>
-              <span className={`block font-black leading-tight ${tall ? 'line-clamp-2 break-all text-[11px] landscape:text-sm' : 'truncate text-[10px]'}`}>{m.cpu && <b data-rhythm-multi-cpu-mark className="mr-0.5 rounded bg-lime-300 px-0.5 text-[8px] font-black text-slate-950">CPU</b>}{m.name}{self ? '*' : ''}</span>
+              <span className={`block font-black leading-tight ${tall ? 'line-clamp-2 break-all text-[11px] landscape:text-sm' : 'truncate text-[10px]'}`}>{m.cpu && (m.as
+                ? <b data-rhythm-multi-cpu-mark data-rhythm-multi-assist-mark className="mr-0.5 rounded bg-pink-300 px-0.5 text-[8px] font-black text-slate-950">助手</b>
+                : <b data-rhythm-multi-cpu-mark className="mr-0.5 rounded bg-lime-300 px-0.5 text-[8px] font-black text-slate-950">CPU</b>)}{m.name}{self ? '*' : ''}</span>
               {badge.sub && <small className={`block truncate font-bold leading-tight text-slate-400 ${tall ? 'text-[9px] landscape:text-[11px]' : 'text-[8px]'}`}>{badge.sub}</small>}
             </span>
           </li>
@@ -53494,7 +53528,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               humans={team.rows.filter((row) => !row.m.cpu).length}
               score={cpuRow.res.score} maxScore={((typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === cpuRow.res.diffId) || {}).maxScore || 0} />
             ) : (
-            <RhythmAssistSessionGrowth key={assistantId} assistantId={assistantId} round={room.round} songId={room.songId} diffId={cpuRow.res.diffId} durationMs={song ? Number(song.playDurationMs) || 0 : 0} teamRank={team.rank}
+            <RhythmAssistSessionGrowth key={assistantId} assistantId={assistantId} onTickets={(n) => { for (let i = 0; i < n; i += 1) { if (onRefundBuddyTicket) void onRefundBuddyTicket(); } }} round={room.round} songId={room.songId} diffId={cpuRow.res.diffId} durationMs={song ? Number(song.playDurationMs) || 0 : 0} teamRank={team.rank}
               chartLevel={song && song.difficulties && song.difficulties[cpuRow.res.diffId] ? Number(song.difficulties[cpuRow.res.diffId].level) || 0 : 0}
               humans={team.rows.filter((row) => !row.m.cpu).length}
               score={cpuRow.res.score} maxScore={((typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === cpuRow.res.diffId) || {}).maxScore || 0} />
@@ -54896,23 +54930,31 @@ const useRhythmAssistSessionState = () => {
   return state;
 };
 const rhythmAssistSessionWho = (assistantId) => (typeof assistantById === 'function' ? assistantById(assistantId) : null);
+// 好きな曲の名前(曲の別の版は1つにまとめる。一覧に無い曲は出さない)
+const rhythmAssistSessionLikedNames = (assistantId) => {
+  const t = RHYTHM_ASSIST_SESSION_TASTE[assistantId];
+  const songs = typeof RHYTHM_SONGS !== 'undefined' && Array.isArray(RHYTHM_SONGS) ? RHYTHM_SONGS : [];
+  return t ? t.like.map((ids) => { const song = songs.find((x) => x && ids.includes(x.songId)); return song ? String(song.displayName || '') : ''; }).filter(Boolean) : [];
+};
 const rhythmAssistSessionName = (assistantId) => { const who = rhythmAssistSessionWho(assistantId); return String((who && who.name) || '助手').slice(0, 12); };
 
 // 部屋で話すひとこと(段階1は最小限。段階3でコトバ・ナカヨシと場面を増やす。口調の基準は docs/progress/assistant-peer/VOICE.md)
 const RHYTHM_ASSIST_SESSION_LINES = Object.freeze({
-  mua: { join: 'やっほ〜！あたしも一緒に叩くね♪', love: 'この曲あたし大好きなの♪', mvp: 'MVPとっちゃった！？あたしすごくない？♪', high: 'まぢいい感じぢゃん！楽しかったぁ♪', low: '次はもっと合わせよ！あたしもがんばる♪' },
-  kiki: { join: 'ブリーダーさん、よろしくお願いしまつ♪', love: 'この曲、私とても好きなんです♪', mvp: '私がMVPですか？ちょっと照れちゃいまつ♪', high: 'とってもいい演奏でした♪', low: '次はきっと、もっと合わせられますよ♪' },
-  momosuke: { join: 'ももが来たからには盛り上げるよ！！', love: 'この曲ももの推し曲！！', mvp: 'MVPはもも！！当然でしょw', high: 'ももと合わせたらこんなもんでしょw さすが♡', low: 'ドンマイ！次はもも、もっと見ててあげる♡' },
-  dra: { join: 'おでも混ぜてくれよな、えへへ', love: 'この曲、おで好きなんだな', mvp: 'おでがMVPか、えへへ、照れくさいな', high: 'いい演奏だったくさ。おで楽しかったな', low: 'どんまいだな、次でとりかえすからな' },
-  atsu: { join: 'とりあえず一曲いくか笑', love: 'これ俺の好きなやつだな笑', mvp: 'MVPもらっといた笑', high: 'てか今の、普通にうまかったな笑', low: 'まあ次だな、切り替えていこう！' },
-  kyuko: { join: 'ほい！俺も入るね〜', love: 'この曲は構成がきれいなんだよね〜', mvp: 'MVPいただきました〜笑', high: 'いい流れだったね〜、ありがとん笑', low: 'ぐぬぬぬ、次はサビ前を意識してみよ〜' },
-  sorashido: { join: 'うぉぉぉ！俺も参戦するぜ・・・！', love: 'この曲は全ノーツ計算済みだぜ・・・！', mvp: 'MVPは計算済みだったぜ・・・！', high: '計算どおりの名演だぜ・・・！', low: '次は全ノーツ計算して挑むぜ笑' },
-  erubin: { join: '俺も一緒にいいかな？よろしくね', love: 'この曲、好きなんだよね', mvp: '俺がMVP？ありがとね', high: 'いい演奏だったね、おつかれさま', low: '大丈夫、次はきっと合うよ' },
+  mua: { join: 'やっほ〜！あたしも一緒に叩くね♪', love: 'この曲あたし大好きなの♪', combo: 'いい流れぢゃん♪ 全部いこ！', miss: 'どんまい！ここから取り返そ♪', climax: 'サビきた〜！テンションまぢ上がる♪', mvp: 'MVPとっちゃった！？あたしすごくない？♪', high: 'まぢいい感じぢゃん！楽しかったぁ♪', low: '次はもっと合わせよ！あたしもがんばる♪' },
+  kiki: { join: 'ブリーダーさん、よろしくお願いしまつ♪', love: 'この曲、私とても好きなんです♪', combo: 'いい流れでつね♪ このまま全部いきましょう', miss: '大丈夫でつ、落ち着いていきましょう♪', climax: 'ここが一番きれいなところでつ♪', mvp: '私がMVPですか？ちょっと照れちゃいまつ♪', high: 'とってもいい演奏でした♪', low: '次はきっと、もっと合わせられますよ♪' },
+  momosuke: { join: 'ももが来たからには盛り上げるよ！！', love: 'この曲ももの推し曲！！', combo: 'いい感じ！！ももも乗ってきた♡', miss: 'ドンマイドンマイ！ももがついてるよw', climax: 'サビ！！ここで一番かわいく決めるよ♡', mvp: 'MVPはもも！！当然でしょw', high: 'ももと合わせたらこんなもんでしょw さすが♡', low: 'ドンマイ！次はもも、もっと見ててあげる♡' },
+  dra: { join: 'おでも混ぜてくれよな、えへへ', love: 'この曲、おで好きなんだな', combo: 'すごいな、ずっとつながってるくさ', miss: 'どんまいだな、次でとりかえすからな', climax: 'ここからが本番だな、えへへ', mvp: 'おでがMVPか、えへへ、照れくさいな', high: 'いい演奏だったくさ。おで楽しかったな', low: 'どんまいだな、次でとりかえすからな' },
+  atsu: { join: 'とりあえず一曲いくか笑', love: 'これ俺の好きなやつだな笑', combo: 'とりあえずいい感じだな笑', miss: 'てか焦らなくていいぞ！', climax: 'ここ決めるぞ笑', mvp: 'MVPもらっといた笑', high: 'てか今の、普通にうまかったな笑', low: 'まあ次だな、切り替えていこう！' },
+  kyuko: { join: 'ほい！俺も入るね〜', love: 'この曲は構成がきれいなんだよね〜', combo: 'ほい！いい流れだね〜', miss: 'ぐぬぬぬ、でもリズムは合ってるよ〜', climax: 'サビ前で一回引いて…ここだね〜', mvp: 'MVPいただきました〜笑', high: 'いい流れだったね〜、ありがとん笑', low: 'ぐぬぬぬ、次はサビ前を意識してみよ〜' },
+  sorashido: { join: 'うぉぉぉ！俺も参戦するぜ・・・！', love: 'この曲は全ノーツ計算済みだぜ・・・！', combo: 'うぉぉぉ！計算どおりだぜ・・・！', miss: 'ここから巻き返す計算だぜ笑', climax: 'うぉぉぉ！ここだぜ・・・！', mvp: 'MVPは計算済みだったぜ・・・！', high: '計算どおりの名演だぜ・・・！', low: '次は全ノーツ計算して挑むぜ笑' },
+  erubin: { join: '俺も一緒にいいかな？よろしくね', love: 'この曲、好きなんだよね', combo: 'いい感じだね、そのままで大丈夫', miss: '大丈夫、ゆっくりいこうね', climax: 'ここ、いいところだね', mvp: '俺がMVP？ありがとね', high: 'いい演奏だったね、おつかれさま', low: '大丈夫、次はきっと合うよ' },
 });
+// 演奏中の場面(combo・miss・climax)は顔のふきだし(RhythmAssistSessionPlayFace)が使う
 const rhythmAssistSessionTalk = ({ assistantId, kind, songId = '', score = 0, diffId = '', mvp = false }) => {
   const lines = RHYTHM_ASSIST_SESSION_LINES[assistantId];
   if (!lines) return '';
   if (kind === 'join') return lines.join;
+  if (kind === 'combo' || kind === 'miss' || kind === 'climax') return lines[kind] || '';
   if ((kind === 'pick' || kind === 'song') && songId && rhythmAssistSessionTaste(assistantId, songId) === 'like') return lines.love;
   if (kind === 'result') {
     if (mvp) return lines.mvp;
@@ -54987,6 +55029,9 @@ function RhythmAssistSessionPicker({ assistants = [], calledIds = [], canPay = t
             <span className="min-w-0 flex-1">
               <b className="block truncate text-[13px] font-black">{sel.name}</b>
               <small className="block whitespace-nowrap text-[10px] font-bold text-pink-200">セッションLv.{rhythmAssistSessionLevel(state, sel.id)}</small>
+              <small data-rhythm-assist-taste className="block truncate text-[10px] font-bold text-slate-300">{rhythmAssistSessionLevel(state, sel.id) >= RHYTHM_ASSIST_SESSION_TASTE_LEVEL
+                ? `♡ ${rhythmAssistSessionLikedNames(sel.id).join('・')}`
+                : `Lv.${RHYTHM_ASSIST_SESSION_TASTE_LEVEL} で好きな曲が分かります`}</small>
             </span>
             {calledOf(sel.id)
               ? <span data-rhythm-assist-called className="shrink-0 rounded-xl border border-lime-300/50 px-2 py-3 text-[10px] font-black text-lime-200">呼んでいる</span>
@@ -55000,7 +55045,7 @@ function RhythmAssistSessionPicker({ assistants = [], calledIds = [], canPay = t
 }
 
 // 結果画面で、呼んだ助手を育てる(1ライブ1回。同じ回は2度数えない)。マスモンの RhythmBuddyGrowth と同じ作り
-function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, durationMs, teamRank, score = 0, maxScore = 0, chartLevel = 0, humans = 1 }) {
+function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, durationMs, teamRank, score = 0, maxScore = 0, chartLevel = 0, humans = 1, onTickets = null }) {
   const [shown, setShown] = React.useState(null);
   React.useEffect(() => {
     if (!assistantId || !round) return undefined;
@@ -55012,7 +55057,11 @@ function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, duratio
       if (!r.next) return null;
       outcome = r;
       return r.next;
-    }).then(() => { if (alive && outcome) setShown(outcome); });
+    }).then(() => {
+      // 節目のセッション券は、渡した印を保存したあとで渡す(画面を閉じても二重にならない)
+      if (outcome && outcome.tickets > 0 && typeof onTickets === 'function') { try { onTickets(outcome.tickets); } catch (_) { /* 渡せなくても続ける */ } }
+      if (alive && outcome) setShown(outcome);
+    });
     return () => { alive = false; };
   }, [assistantId, round]);
   if (!shown || !assistantId) return null;
@@ -55023,7 +55072,104 @@ function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, duratio
       <span className="text-pink-200">経験値+{shown.gain}</span>
       {shown.levelUp > 0 && <span data-rhythm-assist-levelup className="rounded bg-amber-300 px-1 text-slate-950">セッションLv.UP! Lv.{level}</span>}
       {shown.likeUp > 0 && <span className="text-amber-200">好み度+{shown.likeUp}</span>}
+      {shown.tickets > 0 && <span data-rhythm-assist-ticket className="text-lime-200">セッション券+{shown.tickets}</span>}
     </p>
+  );
+}
+
+// 演奏中の助手の顔とひとこと(2026-11-07 社長の止め絵の形)。演奏画面の外(60-app)から重ねる。演奏の仕組みには触れず、
+// 30-rhythm-play.jsx の読むだけの窓(RHYTHM_PLAY_WATCH)から、コンボ・ミス・曲の時刻を読むだけ。
+// 置き場所: 左上の表示(data-rhythm-hud-left)のすぐ下(縦は時間の行の下・横は曲名の行の下。道の外)。
+// ひとことは 1.6秒で消える。同じ曲で同じ場面のひとことは1回だけ。セッションLv.15 からサビで顔が光る
+const RHYTHM_ASSIST_SESSION_BUBBLE_MS = 1600;
+const RHYTHM_ASSIST_SESSION_COMBO_STEPS = Object.freeze([50, 100, 300]);
+function RhythmAssistSessionPlayFace({ songId }) {
+  const state = useRhythmAssistSessionState();
+  const boxRef = React.useRef(null);
+  const [pos, setPos] = React.useState(null);
+  const [say, setSay] = React.useState(null); // { aid, text }
+  const [glow, setGlow] = React.useState(false);
+  const ids = (() => {
+    const v = typeof RHYTHM_MULTI !== 'undefined' ? RHYTHM_MULTI.view() : null;
+    return (v && v.myCpus ? v.myCpus : []).map((c) => rhythmAssistSessionIdOf(c.masuId)).filter(Boolean).slice(0, 4);
+  })();
+  const idsKey = ids.join(',');
+  React.useEffect(() => {
+    if (!ids.length) return undefined;
+    const said = new Set();
+    let lastCombo = 0; let missRow = 0; let lastMiss = 0; let inClimax = false; let hideAt = 0; let turn = 0;
+    const speak = (kind) => {
+      const order = ids.slice(turn).concat(ids.slice(0, turn));
+      for (const aid of order) {
+        const key = `${aid}:${kind}`;
+        if (said.has(key)) continue;
+        const text = rhythmAssistSessionTalk({ assistantId: aid, kind });
+        if (!text) continue;
+        said.add(key); turn = (ids.indexOf(aid) + 1) % ids.length;
+        setSay({ aid, text }); hideAt = Date.now() + RHYTHM_ASSIST_SESSION_BUBBLE_MS;
+        return;
+      }
+    };
+    const place = () => {
+      const box = boxRef.current; const hud = document.querySelector('[data-rhythm-hud]');
+      if (!box || !hud || !box.offsetParent) return;
+      // 演奏画面ごと回して描く(RHYTHM_VIEW_ROTATION)ときも合うよう、画面上の位置ではなく offset の鎖で測る
+      const at = (node) => { let top = 0; let left = 0; let el = node; while (el && el !== box.offsetParent) { top += el.offsetTop; left += el.offsetLeft; el = el.offsetParent; } return el === box.offsetParent ? { top, left } : null; };
+      const hudAt = at(hud);
+      if (!hudAt) return;
+      // 上の帯と時間の行のうち、左側(顔の幅ぶん)にかかる表示(点数・曲名・時間)のいちばん下の、すぐ下に置く
+      let bottom = hudAt.top;
+      // 時間の行(data-rhythm-song-clock)は縦画面では上の帯の外にあるので、これも測る
+      document.querySelectorAll('[data-rhythm-hud] *, [data-rhythm-song-clock] *').forEach((el) => {
+        if (el.children.length || !el.offsetHeight) return;
+        const p = at(el);
+        if (!p || p.left - hudAt.left > 150) return;
+        bottom = Math.max(bottom, p.top + el.offsetHeight);
+      });
+      const next = { top: Math.round(bottom + 6), left: Math.round(hudAt.left + 8) };
+      setPos((q) => (q && q.top === next.top && q.left === next.left ? q : next));
+    };
+    const tick = () => {
+      place();
+      const watch = typeof RHYTHM_PLAY_WATCH !== 'undefined' ? RHYTHM_PLAY_WATCH : null;
+      const h = watch && watch.hud ? watch.hud.get() : null;
+      if (h) {
+        const combo = Number(h.combo) || 0;
+        const miss = h.counts ? Number(h.counts.MISS) || 0 : 0;
+        if (RHYTHM_ASSIST_SESSION_COMBO_STEPS.some((n) => lastCombo < n && combo >= n)) speak('combo');
+        if (miss > lastMiss) { missRow = combo === 0 ? missRow + (miss - lastMiss) : 0; if (missRow >= 3) { speak('miss'); missRow = 0; } }
+        if (combo > 0) missRow = 0;
+        lastCombo = combo; lastMiss = miss;
+        const now = rhythmAssistSessionInClimax(songId || watch.songId, watch.timeMs);
+        if (now && !inClimax) speak('climax');
+        if (now !== inClimax) { inClimax = now; setGlow(now); }
+      }
+      if (hideAt && Date.now() >= hideAt) { hideAt = 0; setSay(null); }
+    };
+    const t = setInterval(tick, 200);
+    tick();
+    return () => clearInterval(t);
+  }, [idsKey, songId]);
+  if (!ids.length) return null;
+  return (
+    <div ref={boxRef} data-rhythm-assist-play aria-hidden="true" className="pointer-events-none absolute z-[60] flex w-[140px] flex-col gap-1"
+      style={pos ? { top: pos.top, left: pos.left } : { visibility: 'hidden', top: 0, left: 0 }}>
+      {ids.map((aid) => {
+        const who = rhythmAssistSessionWho(aid);
+        if (!who) return null;
+        const lit = glow && rhythmAssistSessionLevel(state, aid) >= RHYTHM_ASSIST_SESSION_GLOW_LEVEL;
+        const talking = say && say.aid === aid;
+        return (
+          <div key={aid} data-rhythm-assist-play-face={aid} data-glow={lit ? '1' : undefined} className="flex items-start gap-1.5">
+            <span className="block h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 bg-slate-800 transition-shadow duration-300"
+              style={{ borderColor: who.accent || '#f472b6', boxShadow: lit ? `0 0 14px 4px ${who.accent || '#f472b6'}` : 'none' }}>
+              <img src={assistantFaceSrc(who, talking ? 'happy' : null)} alt="" draggable={false} className="h-full w-full object-cover" />
+            </span>
+            {talking && <span data-rhythm-assist-play-bubble className="block min-w-0 rounded-xl bg-white px-1.5 py-0.5 text-[9.5px] font-black leading-snug text-slate-900" style={JA_WRAP_STYLE}>{jaWrap(say.text)}</span>}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -98654,7 +98800,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 周回の報酬・自己ベスト・全国ランキングへも入れる(2026-10-02・ユーザー指示「ランキングにも反映」)。
           // 周回の報酬とビートPは、ライブに参加した人数ぶん多くなる(1人ふえるごとに+50%)。
           // 同じメンバーで続けると、さらに1曲ごとに+10%(上限+100%・2026-10-03)
-          const multiScale=rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1;
+          // 呼んだ助手のセッションLv.20/40/60/80 で +2/4/6/8%(助手とのセッション・2026-11-07。人数ボーナスと同じ所にだけ足す。スコアには入れない)
+          const assistBonus=rhythmPlay.from==='multi'&&rhythmAssistSessionEnabled()?rhythmAssistSessionRewardBonus(RHYTHM_ASSIST_SESSION_STORE.get(),((RHYTHM_MULTI.view()||{}).myCpus||[]).map(c=>rhythmAssistSessionIdOf(c.masuId))):0;
+          const multiScale=rhythmPlay.from==='multi'?Math.round(rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus)*(1+assistBonus)*100)/100:1;
           if(rhythmPlay.from==='multi')RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,result,false,{diffId:rhythmPlay.difficulty.id});
           // ===== 演奏1曲ぶんを、裏の∞周回の周回クリアとして反映する(2026-09-07・ユーザー提案) =====
           // 最後まで演奏したこの場でだけ行う。途中でやめたときは onComplete を通らないので何も入らない
@@ -98740,6 +98888,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }
           setRhythmPlay(null);setGameState('RHYTHM_OPTIONS');
         }}/>}
+        {/* 助手とのセッション: 演奏中の助手の顔とひとこと(演奏画面の外から重ねる。演奏の仕組みには触れない) */}
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='multi'&&rhythmAssistSessionEnabled()&&<RhythmAssistSessionPlayFace songId={rhythmPlay.song&&rhythmPlay.song.songId}/>}
 
         {/* モードえらび(RHYTHM_MODE_SELECT)と対戦(RHYTHM_MULTI)は同じ部品で描く。部屋に入る処理(フリーマッチ・
             ルーム作成・入室・フレンドの招待)はモードえらびの画面に並べ、入れたら RHYTHM_MULTI へ移る。
