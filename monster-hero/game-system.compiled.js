@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 994552a929aab180
+// source-sha256: d6bf6034033ac0ce
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -94001,6 +94001,24 @@ function RhythmAssistSessionPicker({
     className: "mt-2 text-center text-[11px] font-bold text-slate-400"
   }, "呼びたい助手をタップしてください"));
 }
+const RHYTHM_ASSIST_SESSION_FX_QUEUE = {
+  list: [],
+  timer: null
+};
+const rhythmAssistSessionQueueFx = item => {
+  if (!rhythmAssistSessionEnabled() || typeof growthFxSessionLevel !== 'function') return;
+  const q = RHYTHM_ASSIST_SESSION_FX_QUEUE;
+  q.list.push(item);
+  if (q.timer) return;
+  q.timer = setTimeout(() => {
+    const list = q.list;
+    q.list = [];
+    q.timer = null;
+    try {
+      growthFxSessionLevel(list);
+    } catch (_) {}
+  }, 500);
+};
 function RhythmAssistSessionGrowth({
   assistantId,
   round,
@@ -94042,6 +94060,15 @@ function RhythmAssistSessionGrowth({
         try {
           onTickets(outcome.tickets);
         } catch (_) {}
+      }
+      if (outcome && outcome.levelUp > 0) {
+        const after = rhythmBuddyLevelInfo((outcome.next.mons[assistantId] || {}).exp).level;
+        rhythmAssistSessionQueueFx({
+          assistantId,
+          levelBefore: after - outcome.levelUp,
+          levelAfter: after,
+          tickets: outcome.tickets || 0
+        });
       }
       if (outcome && typeof RHYTHM_MULTI !== 'undefined' && RHYTHM_MULTI.noteBuddyGrowth) {
         const likeUp = outcome.likeUp > 0 && rhythmAssistSessionTaste(assistantId, songId) !== 'like' ? outcome.likeUp : 0;

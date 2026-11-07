@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 413c87d5002ae753
+// generated-sha256: 6314be6b8703192f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -55954,6 +55954,19 @@ function RhythmAssistSessionPicker({ assistants = [], calledIds = [], canPay = t
   );
 }
 
+// セッションLv が上がったときの祝い(演出担当ハナビの 44-growth-fx.jsx の growthFxSessionLevel)。その回に上がった助手を、
+// 少し待ってまとめて1回で渡す。祝いはマルチを出てから出る(ハナビの作り)。印が偽・関数が無いなら何もしない
+const RHYTHM_ASSIST_SESSION_FX_QUEUE = { list: [], timer: null };
+const rhythmAssistSessionQueueFx = (item) => {
+  if (!rhythmAssistSessionEnabled() || typeof growthFxSessionLevel !== 'function') return;
+  const q = RHYTHM_ASSIST_SESSION_FX_QUEUE;
+  q.list.push(item);
+  if (q.timer) return;
+  q.timer = setTimeout(() => {
+    const list = q.list; q.list = []; q.timer = null;
+    try { growthFxSessionLevel(list); } catch (_) { /* 祝いが出せなくても続ける */ }
+  }, 500);
+};
 // 結果画面で、呼んだ助手を育てる(1ライブ1回。同じ回は2度数えない)。マスモンの RhythmBuddyGrowth と同じ作り
 function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, durationMs, teamRank, score = 0, maxScore = 0, chartLevel = 0, humans = 1, onTickets = null }) {
   const [shown, setShown] = React.useState(null);
@@ -55970,6 +55983,10 @@ function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, duratio
     }).then(() => {
       // 節目のセッション券は、渡した印を保存したあとで渡す(画面を閉じても二重にならない)
       if (outcome && outcome.tickets > 0 && typeof onTickets === 'function') { try { onTickets(outcome.tickets); } catch (_) { /* 渡せなくても続ける */ } }
+      if (outcome && outcome.levelUp > 0) {
+        const after = rhythmBuddyLevelInfo((outcome.next.mons[assistantId] || {}).exp).level;
+        rhythmAssistSessionQueueFx({ assistantId, levelBefore: after - outcome.levelUp, levelAfter: after, tickets: outcome.tickets || 0 });
+      }
       // 部屋のチャットに、育ったひとこと(セッションLv.UP・苦手だった曲が好きになってきた)
       if (outcome && typeof RHYTHM_MULTI !== 'undefined' && RHYTHM_MULTI.noteBuddyGrowth) {
         const likeUp = outcome.likeUp > 0 && rhythmAssistSessionTaste(assistantId, songId) !== 'like' ? outcome.likeUp : 0;

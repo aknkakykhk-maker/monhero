@@ -148,6 +148,7 @@ check('助手のスコアをランキングへ送らない(助手の計算の部
   check('同じ曲で同じ場面のひとことは1回だけ(said に覚える)', /if \(said\.has\(key\)\) continue;/.test(SCREEN));
   check('サビで顔が光るのは セッションLv.15 から', /const RHYTHM_ASSIST_SESSION_GLOW_LEVEL = 15;/.test(SESSION) && /glow && rhythmAssistSessionLevel\(state, aid\) >= RHYTHM_ASSIST_SESSION_GLOW_LEVEL/.test(SCREEN));
   check('ビートP の上乗せは 周回の報酬の倍率(multiScale)にだけ掛ける', /const multiScale=rhythmPlay\.from==='multi'\?Math\.round\(rhythmMultiTotalScale\([^)]*\)\*\(1\+assistBonus\)\*100\)\/100:1;/.test(APP));
+  check('セッションLv の祝い(growthFxSessionLevel)は、印が立っていて関数があるときだけ・まとめて1回で呼ぶ', /if \(!rhythmAssistSessionEnabled\(\) \|\| typeof growthFxSessionLevel !== 'function'\) return;/.test(SCREEN) && /if \(q\.timer\) return;/.test(SCREEN));
   check('結果のカードは「CPU」ではなく「助手」の印', /data-rhythm-multi-assist-mark[^>]*>助手<\/b>/.test(MULTI));
 }
 {
