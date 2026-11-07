@@ -602,7 +602,8 @@ const CompactCount = ({ value, className = '', style }) => {
 };
 // ノーツの見本の絵(2026-10-21 社長「見た目とかちゃんとわかるようにしてほしい」)。ヘルプの表と助手のおしゃべりで使う。
 // 絵は演奏画面と同じ描き方(data/rhythm-mode.js の rhythmDrawNoteSwatch)で描く。手描きの絵や写真は使わない。kind は RHYTHM_NOTE_SWATCH_KINDS の id
-const RhythmNoteSwatch = ({ kind, width = 54, height = 42, className = '' }) => {
+// look を渡すと、その見た目(ノーツの色の組など)で描く(オプションの見本・2026-11-07)。渡さなければいまの見た目
+const RhythmNoteSwatch = ({ kind, width = 54, height = 42, className = '', look = null }) => {
   const ref = React.useRef(null);
   React.useEffect(() => {
     const c = ref.current;
@@ -612,8 +613,9 @@ const RhythmNoteSwatch = ({ kind, width = 54, height = 42, className = '' }) => 
     const g = c.getContext('2d');
     if (!g) return;
     g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, width, height);
-    rhythmDrawNoteSwatch(g, kind, width, height);
-  }, [kind, width, height]);
+    if (look && typeof rhythmDrawNoteSwatchWith === 'function') rhythmDrawNoteSwatchWith(look, g, kind, width, height);
+    else rhythmDrawNoteSwatch(g, kind, width, height);
+  }, [kind, width, height, look ? JSON.stringify(look) : '']);
   const label = ((typeof RHYTHM_NOTE_SWATCH_KINDS !== 'undefined' ? RHYTHM_NOTE_SWATCH_KINDS : []).find(k => k.id === kind) || {}).label || kind;
   return <canvas ref={ref} data-rhythm-note-swatch={kind} role="img" aria-label={`${label}の見た目`} className={className} style={{ display: 'block', width, height }} />;
 };
