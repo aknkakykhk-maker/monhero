@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 92cd3d3dd9117a6b
+// generated-sha256: 038c4233e5ade639
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -53388,12 +53388,13 @@ function RhythmMultiStampBar({ phase, onSend, className = '', limit = 0, wrap = 
 }
 
 
-// カードの上の吹き出し(発言してから少しのあいだだけ)
+// カードの上の吹き出し(発言してから少しのあいだだけ)。
+// 席のカードの中に収める(2026-11-07 社長のスクショ: 横・🔄横で吹き出しが席の下の曲の一覧に重なっていた)。2行まで・字は縦横で同じ大きさ
 function RhythmMultiChatBubble({ text }) {
   if (!text) return null;
   return (
-    <span data-rhythm-multi-chat-bubble className="pointer-events-none absolute inset-x-0.5 top-3 z-40 flex justify-center">
-      <span className="line-clamp-2 max-w-full break-words rounded-xl bg-white px-1.5 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg landscape:text-xs">{text}</span>
+    <span data-rhythm-multi-chat-bubble className="pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden">
+      <span className="line-clamp-2 max-h-full max-w-full break-words rounded-xl bg-white px-1.5 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg">{text}</span>
     </span>
   );
 }
