@@ -1330,7 +1330,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
         </div>
         </>}
       {/* 横持ちの助手のひとことは、決定ボタンより下へ置く(2026-09-26)。上に置くと決定が画面の外へ押し出されていた */}
-      {notice&&noticeOpen&&<div data-rhythm-song-notice-landscape className="mt-2 hidden landscape:block">{notice}</div>}
+      {notice&&noticeOpen&&<div data-rhythm-song-notice-landscape className="mt-1.5 hidden landscape:block">{React.isValidElement(notice)?React.cloneElement(notice,{maxLines:1,faceSize:28}):notice}</div>}
     </aside>
 
     {/* 並び替えのシート。行を1本増やさずに済むよう、選ぶところは下から出す。
