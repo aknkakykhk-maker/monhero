@@ -58,7 +58,24 @@ const KINDS = { solo: 1, invite: 2, pair: 2, trio: 3, quarrel: 2, breeder: 1,
   // 助手たちの家(lines/ORDER-HOUSE.md・2026-11-07 ナカヨシ5)
   fight: 2, mend: 2, mend3: 3, jealous: 3, secret: 2, consult: 2, tease: 2, rival: 2, awkward: 2, sleep: 1, owl: 1, home: 1, rhythm: 1,
   // 段階2の遊び場(LIFE-STAGE2-LINES-ORDER.md・2026-11-08 ナカヨシ7)
-  visit: 1, lure: 1 };
+  visit: 1, lure: 1,
+  // 道具・家具のプレゼント(lines/ORDER-GIFT.md・2026-11-08 オクリモノ)。gift・hint・furn は「表情 セリフ」、furnuse は「セリフ」だけ(話すのは見出しの人)
+  gift: 1, hint: 1, furn: 1, furnuse: 1, visitfurn: 2 };
+const NOWHO_KINDS = ['gift', 'hint', 'furn', 'furnuse'];
+// 好みの表(ORDER-GIFT.md のとおり)。gift・furn の like= と、hint の品物(好きなものだけ)を見張る
+const GIFT_LIKES = {
+  mua: { like: 'misanga cake cheki', bad: 'puzzle sleeve', flike: 'bear heartmirror mirrorball', fbad: 'bookshelf' },
+  kiki: { like: 'tea puzzle flower', bad: 'onigiri earphone', flike: 'plant bookshelf windbell', fbad: 'mirrorball' },
+  momosuke: { like: 'cake earphone cheki', bad: 'tea puzzle', flike: 'record heartmirror mirrorball', fbad: 'plant' },
+  dra: { like: 'basket cake onigiri', bad: 'puzzle flower', flike: 'sofa bear nyacushion', fbad: 'trophy' },
+  atsu: { like: 'misanga onigiri earphone', bad: 'tea flower', flike: 'sofa record trophy', fbad: 'heartmirror' },
+  kyuko: { like: 'tea earphone puzzle', bad: 'basket cheki', flike: 'nyacushion starpic bookshelf', fbad: 'mirrorball' },
+  sorashido: { like: 'onigiri puzzle sleeve', bad: 'tea flower', flike: 'starpic trophy lantern', fbad: 'bear' },
+  erubin: { like: 'tea sleeve flower', bad: 'cake earphone', flike: 'plant lantern windbell', fbad: 'mirrorball' },
+};
+const GIFT_ITEMS = 'basket misanga cake onigiri tea earphone puzzle sleeve cheki flower'.split(' ');
+const FURN_ITEMS = 'sofa bear plant record nyacushion starpic trophy bookshelf heartmirror lantern mirrorball windbell'.split(' ');
+const giftLike = (who, item, furn) => { const g = GIFT_LIKES[who]; const has = (k) => g[k].split(' ').includes(item); return furn ? (has('flike') ? 'like' : has('fbad') ? 'bad' : 'mid') : (has('like') ? 'like' : has('bad') ? 'bad' : 'mid'); };
 const TRIO_KINDS = ['trio', 'mend3', 'jealous'];
 const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'];
 const FACES = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];
@@ -68,6 +85,7 @@ const KEYS = {
   doing: ['snack', 'practice', 'training', 'cards', 'walk', 'idle', 'sleep', 'read', 'temple', 'shopping'], lv: ['1-3', '4-6', '7-10', '1-4', '5-10'],
   air: ['normal', 'after', 'makeup'], answer: ['glad', 'decline', 'shy'], line: ['scene', 'feel', 'talk', 'woken'],
   cause: ['tidy', 'snack', 'song', 'win', 'late', 'promise'], how: ['apology', 'gift', 'player'], game: ['beat', 'card'], slot: ['evening', 'night'], shift: ['night', 'morning'], to: ['song', 'deck', 'temple', 'market'],
+  item: [...'basket misanga cake onigiri tea earphone puzzle sleeve cheki flower sofa bear plant record nyacushion starpic trophy bookshelf heartmirror lantern mirrorball windbell'.split(' ')], like: ['like', 'mid', 'bad'],
   // けんかのたね(lines/FEELINGS.md): おやつ・順番・寝ぐせや服・作戦の好み・遅れた・うるさい/夜ふかし・メモを見た・勝負の結果
   seed: ['snack', 'order', 'look', 'plan', 'late', 'noise', 'peek', 'score'],
 };
@@ -89,8 +107,17 @@ for (const f of txtFiles) {
     if (who.length !== (any ? 2 : KINDS[head]) || !who.every(w => IDS.includes(w)) || new Set(who).size !== who.length) bad(`人の数・名前がおかしい(${who.join(' ')})`);
     for (const [k, v] of Object.entries(keys)) if (!KEYS[k] || !KEYS[k].includes(v)) bad(`鍵 ${k}=${v} が無い`);
     if (who.length === 2 && head !== 'invite' && (keys.place === 'home' || keys.doing === 'sleep')) bad('2人きりの home・sleep は書かない');
+    if (NOWHO_KINDS.includes(head) && keys.item && GIFT_LIKES[who[0]]) {
+      const furn = head === 'furn' || head === 'furnuse';
+      if (head !== 'hint' && !(furn ? FURN_ITEMS : GIFT_ITEMS).includes(keys.item)) bad(`品物 ${keys.item} は ${head} に使えない`);
+      if (keys.like && keys.like !== giftLike(who[0], keys.item, furn)) bad(`好みが表とちがう(${who[0]} ${keys.item} は ${giftLike(who[0], keys.item, furn)})`);
+      if (head === 'hint' && giftLike(who[0], keys.item, FURN_ITEMS.includes(keys.item)) !== 'like') bad(`hint は好きなものだけ(${who[0]} ${keys.item})`);
+    }
     const rows = [];
-    for (const p of parts.slice(1)) {
+    for (const p0 of parts.slice(1)) {
+      // gift・hint・furn は「表情 セリフ」、furnuse は「セリフ」だけ。話すのは見出しの人
+      const p = NOWHO_KINDS.includes(head) ? (head === 'furnuse' ? `${who[0]} normal ${p0}` : `${who[0]} ${p0}`) : p0;
+      if (head === 'furnuse' && [...p0].length > 20) bad(`furnuse は20字まで「${p0}」`);
       const m = p.match(/^(\S+) (\S+) (.+)$/);
       if (!m) { bad(`行の形がおかしい「${p}」`); continue; }
       const [, w, e, t] = m;
