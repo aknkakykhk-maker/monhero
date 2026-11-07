@@ -282,9 +282,15 @@ const rhythmAssistSessionVisitFree = (id) => {
 //     同じ時間帯に断られた助手を呼び直すと1回ごとに+2割(9割まで)。断られた回数は起動の中だけ覚える(保存しない)
 //   断られたら回数もセッション券も使わない。来てくれたら、部屋に来たときの一言を「起こされた」一言にする
 const RHYTHM_ASSIST_SESSION_WAKE = { refused: {}, woke: new Set() };
+// 寝ているかの正本は助手ライフの assistantLifeAsleep(ナカヨシ5・#4862。印が偽・失敗なら偽)
 const rhythmAssistSessionAsleep = (id) => {
-  if (!rhythmAssistSessionEnabled() || typeof assistantLifeCurrent !== 'function' || typeof assistantLifeWhereOf !== 'function') return false;
-  try { const w = assistantLifeWhereOf(assistantLifeCurrent(), id); return !!(w && w.doing === 'sleep'); } catch (_) { return false; }
+  if (!rhythmAssistSessionEnabled() || typeof assistantLifeAsleep !== 'function') return false;
+  try { return assistantLifeAsleep(id) === true; } catch (_) { return false; }
+};
+// 起こして部屋に入れたことを助手ライフへ知らせる(家の「今日あったこと」と生活のリズムの「誘って遊んだ」)。入れたときだけ呼ぶ
+const rhythmAssistSessionNoteWoken = (id) => {
+  if (typeof assistantLifeOnWoken !== 'function') return;
+  try { assistantLifeOnWoken({ assistantId: id, came: true, at: Date.now() }); } catch (_) { /* 受け手の失敗で止めない */ }
 };
 const rhythmAssistSessionWakeChance = ({ nightOwl = false, bondLevel = 1, bondMax = 1, retries = 0 } = {}) => {
   const bond = bondMax > 1 ? Math.max(0, Math.min(1, (Number(bondLevel) - 1) / (bondMax - 1))) : 0;
