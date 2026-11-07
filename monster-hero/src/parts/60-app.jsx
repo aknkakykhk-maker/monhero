@@ -2406,6 +2406,8 @@ function MonsterHeroGame() {
   const [masuRegisteredThisRun, setMasuRegisteredThisRun] = useState(false); // 今回のランで既に登録済みか(二重登録防止)
   const [masuMonDetail, setMasuMonDetail] = useState(null); // マスモン一覧: タップ中のマスモン詳細
   const [uniqueSettingMasuId, setUniqueSettingMasuId] = useState(null); // 固有技設定(並び順・初期技)を開いているマスモンのid
+  const [uniqueBoostTarget, setUniqueBoostTarget] = useState(null); // オリジナル強化のシートを開いている { masuId, skillKey }
+  const [powerBreakdownMasuId, setPowerBreakdownMasuId] = useState(null); // 総合力の内わけを開いているマスモンのid(詳細の総合力の札を押すと開く)
   const [dexLineageFilter, setDexLineageFilter] = useState('all'); // モンスター図鑑: 主血統の絞り込み('all'または血統id)
   const [dexMonsterId, setDexMonsterId] = useState(null);          // モンスター図鑑: 詳細で見ているモンスターのid
   const [dexTab, setDexTab] = useState('basic');                   // モンスター図鑑の詳細タブ(basic/stats/skills)
@@ -2442,6 +2444,7 @@ function MonsterHeroGame() {
   const [fusionSubId, setFusionSubId] = useState(null); // 副として選んだマスモンid(合体後に消滅する)
   const [fusionSubIds, setFusionSubIds] = useState([]); // 通常合体でまとめて消費する副。配列順を処理順として維持する
   const [fusionInheritUniqueIds, setFusionInheritUniqueIds] = useState([]); // 固有技を引き継ぐ副id（合体画面内だけの一時状態）
+  const [fusionInheritSkillKeys, setFusionInheritSkillKeys] = useState({}); // 副ごとに引き継ぐ技のキー { 副id: 'own' | 'inhId:<id>' }（合体画面内だけの一時状態）
   const [fusionInheritSoulRank, setFusionInheritSoulRank] = useState(false); // STEP5: 副の上位魂格を通常進化コストで主へ継承する
   const [fusionAnimPhase, setFusionAnimPhase] = useState(0); // 合体演出の進行段階(0=開始前,1=接近,2=フラッシュ)
   const [fusionResultData, setFusionResultData] = useState(null); // 演出後の結果画面表示用スナップショット
@@ -9547,6 +9550,19 @@ function MonsterHeroGame() {
     Audio_.se.levelUp();
     return updatedMasu;
   };
+  // 固有技のオリジナル強化を確定。plan は { 種類id: 確定後の目盛り数 }。中身の検証は applyUniqueBoostPlan(だめなら保存しない)
+  const commitUniqueBoostPlan = (masuId, skillKey, plan) => {
+    const masu = getMasuMon(masuId);
+    const result = masu ? applyUniqueBoostPlan(masu, skillKey, plan) : null;
+    if (!result) return null;
+    setMasuMons(prev => {
+      const next = prev.map(m => String(m.id) === String(masuId) ? result.nextMasu : m);
+      storeSet('mh_masu_mons', next, false);
+      return next;
+    });
+    Audio_.se.levelUp();
+    return result.nextMasu;
+  };
   // 魂格特性の強化を確定。未使用魂格Pは保存せず、最高初到達Lvと振り分けから毎回導出する。
   const commitSoulTraitUpgrade = async (masuId, traitId, levels) => {
     if (soulTraitProcessingRef.current) return null;
@@ -9868,7 +9884,7 @@ function MonsterHeroGame() {
     const mainLvl = masuBondLevelInfo(main);
     const totalGainedXp = subs.reduce((sum, sub)=>sum+cappedBondXp(sub), 0);
     const firstSubLvl = masuBondLevelInfo(subs[0]);
-    const inheritancePlan = buildFusionInheritancePlan({ main, subs, selectedSubIds:fusionInheritUniqueIds });
+    const inheritancePlan = buildFusionInheritancePlan({ main, subs, selectedSubIds:fusionInheritUniqueIds, choiceBySubId:fusionInheritSkillKeys });
     // UI表示後に副のLv・技・重複状況が変わっていても、この再計算結果だけで費用と保存内容を確定する。
     if (inheritancePlan.entries.some(entry=>entry.requested&&!entry.eligible)
       || fusionInheritUniqueIds.some(id=>!uniqueSubIds.has(id))) { fusionProcessingRef.current=false; return null; }
@@ -9903,8 +9919,16 @@ function MonsterHeroGame() {
       const subBase = ALL_PLAYER_MONSTERS[sub.baseId];
       const subUniqueLineageId = uniqueLineageId(subBase?.unique, subBase?.id);
       const canInherit = !!inheritancePlan.entries[subIndex]?.inherited;
-      const inheritedLevel = Math.max(0, Number(sub.uniqueSkillLevels?.own) || Number(subBase?.unique?.evoLevel) || 0);
-      const inheritedUnique = canInherit ? { ...uniqueSkillAtLevel(subBase.unique, inheritedLevel), monId:subBase.id, lineageId:subUniqueLineageId, sourceMasuName:sub.name } : null;
+      // 引き継ぐのは副が選んだ1つの技(自前、または副が前に引き継いだ技)。Lv とオリジナル強化も一緒に移る
+      const chosenOption = canInherit ? inheritancePlan.entries[subIndex].chosen : null;
+      const inheritedLevel = chosenOption ? chosenOption.level : 0;
+      let inheritedUnique = null;
+      if (chosenOption && chosenOption.own) {
+        inheritedUnique = { ...uniqueSkillAtLevel(subBase.unique, inheritedLevel), monId:subBase.id, lineageId:subUniqueLineageId, sourceMasuName:sub.name };
+      } else if (chosenOption) {
+        const { inheritedUniqueId:_oldInheritedId, ...rest } = uniqueSkillAtLevel(chosenOption.unique, inheritedLevel);
+        inheritedUnique = { ...rest, monId:chosenOption.monId || rest.monId, lineageId:chosenOption.lineageId, sourceMasuName:chosenOption.unique.sourceMasuName || sub.name };
+      }
       const transfer = transferableReincarnateBonus(sub);
       const advanced = applyBondXpGain(nextMain, gainedXp);
       nextMain = {
@@ -9915,7 +9939,11 @@ function MonsterHeroGame() {
         fusionBondLevels: donationDiamondValue(nextMain.fusionBondLevels) + advanced.gainedLevels,
         fusionHistory: [...(nextMain.fusionHistory || []), { subName:sub.name, subBaseId:sub.baseId, subBondLevel:subLvl.level, xpGained:gainedXp, inherited:!!inheritedUnique, inheritedReincarnateCount:transfer.count, timestamp:Date.now() }],
       };
-      if (inheritedUnique) nextMain=appendInheritedUnique(nextMain, inheritedUnique, inheritedLevel);
+      if (inheritedUnique) {
+        nextMain=appendInheritedUnique(nextMain, inheritedUnique, inheritedLevel);
+        const added=nextMain.inheritedUniques[nextMain.inheritedUniques.length-1];
+        nextMain=withInheritedUniqueBoosts(nextMain, inheritedUniqueLevelKey(added), chosenOption.boosts);
+      }
       inherited ||= !!inheritedUnique;
       inheritedReincarnatePoints += transfer.points;
       inheritedReincarnateCount += transfer.count;
@@ -9956,10 +9984,10 @@ function MonsterHeroGame() {
     };
   };
   const resetFusionFlow = () => {
-    fusionProcessingRef.current=false; setFusionStep('main'); setFusionMainId(null); setFusionSubId(null); setFusionSubIds([]); setFusionInheritUniqueIds([]); setFusionInheritSoulRank(false); setFusionAnimPhase(0); setFusionResultData(null);
+    fusionProcessingRef.current=false; setFusionStep('main'); setFusionMainId(null); setFusionSubId(null); setFusionSubIds([]); setFusionInheritUniqueIds([]); setFusionInheritSkillKeys({}); setFusionInheritSoulRank(false); setFusionAnimPhase(0); setFusionResultData(null);
   };
   const continueFusionFlow = () => {
-    fusionProcessingRef.current=false; setFusionStep('sub'); setFusionSubId(null); setFusionSubIds([]); setFusionInheritUniqueIds([]); setFusionInheritSoulRank(false); setFusionAnimPhase(0); setFusionResultData(null);
+    fusionProcessingRef.current=false; setFusionStep('sub'); setFusionSubId(null); setFusionSubIds([]); setFusionInheritUniqueIds([]); setFusionInheritSkillKeys({}); setFusionInheritSoulRank(false); setFusionAnimPhase(0); setFusionResultData(null);
   };
   const resetDonationFlow = () => { if (donationProcessingRef.current) return; setDonationSelectedIds([]); setDonationConfirmOpen(false); setDonationResult(null); setDonationAnimation(null); setDonationError(''); };
   const getRebirthSkillChoices = (masu) => {
@@ -11227,7 +11255,8 @@ function MonsterHeroGame() {
     // 絶氷の楔は使用後のカードすべてを3%ずつ軽くする。重ねすぎても負倍率にならないよう10%を下限にする。
     cost = Math.floor(cost * Math.max(0.1, 1 - 0.03*getPermaBuff('snegurochkaGutsDiscountStacks')));
     const soulOwner=Number.isInteger(slotIdx)&&slots[slotIdx]?.masuId?getMasuMon(slots[slotIdx].masuId):null;
-    const soulGutsMultiplier=soulTraitAttackProfile(soulOwner,card,slotIdx).gutsCostMultiplier;
+    // ★固有技のオリジナル強化「省気」も同じ倍率へ重ねる(その技だけ。attackBoostProfile が魂格の省気と掛け合わせる)
+    const soulGutsMultiplier=attackBoostProfile(soulOwner,card,slotIdx).gutsCostMultiplier;
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     // 省気は本人のカードだけ。既存の高難度ガッツ倍率と掛け合わせ、最後の1回で丸める。
     if(extremeWaveStage(specialRuleDifficulty))return Math.floor(cost*effectiveExtremeSpecialRule(specialRuleDifficulty,'gutsCost',wave)*soulGutsMultiplier);
@@ -13285,9 +13314,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     '全体':'border-violet-400/60 bg-violet-500/20 text-violet-200',
     '敵へ':'border-slate-400/60 bg-slate-500/20 text-slate-200' };
   const CARD_SCOPE_NOTE = { '単体':'置いたモンスターだけに効きます', '全体':'立っている味方ぜんぶに効きます', '敵へ':'置いたモンスターのちからで殴ります' };
+  // 固有技カードに積んだオリジナル強化(効果の強さ・回復の量・効果の長さ・効果の確率・見切り)。
+  //   持ち主はカードを入れた枠(ownerSlotIdx)の個体。予測(cardEffectMultiplier)と実処理(processTurn)の両方がここを見る
+  const uniqueBoostOfCardInRun = (card, slotIdx=null) => {
+    if (!card || card.type!=='unique') return UNIQUE_BOOST_EMPTY_PROFILE;
+    const si = Number.isInteger(card.ownerSlotIdx) ? card.ownerSlotIdx : slotIdx;
+    const owner = Number.isInteger(si) ? slots[si] : null;
+    return uniqueBoostProfile(owner?.masuId ? getMasuMon(owner.masuId) : null, card);
+  };
   const cardEffectMultiplier = (card, halved=false) => {
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
-    return isAssistCard(card)&&specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty,'assistCardEffect') : (halved?0.5:1);
+    const base = isAssistCard(card)&&specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty,'assistCardEffect') : (halved?0.5:1);
+    // ★オリジナル強化「効果の強さ」は効果の数字そのものを強くする(ゴーレムの闘志・モッチー砲の被ダメUPなど、この技のダメージに乗るぶんも)
+    return base * (1 + uniqueBoostOfCardInRun(card).effectPct/100);
   };
   // 「2枚目以降は効果半減」を、誰の2枚目として数えるか(2026-09-20 ユーザー指示)。
   // ★新モードはステータスが1体ずつなので、パーティ全体で数えると
@@ -13433,6 +13472,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const pendingHalved=counter.peek(pendingCard,excludeIdx!=null&&cardAssignments[excludeIdx]!=null?cardAssignments[excludeIdx]:null);
     return { perCard, final:{oryo,dmgMod,combo}, forPending:boostsForCardDamage({oryo,dmgMod,combo},pendingCard,pendingHalved) };
   };
+  // 固有技のオリジナル強化の「〇〇特攻」を見るための、いまの戦いの様子。予測と実際のダメージ(どちらも getDmg)が同じ値を使う
+  const uniqueBoostCtxFor = (mon, slotIdx, attackStartDist=enemyDist) => {
+    const sr=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
+    const maxHp=Number(enemy?.maxHp)||0;
+    const heroOf=(m)=>m?.masuId&&mainHero?.masuId?m.masuId===mainHero.masuId:(!!m&&m.id===mainHero?.id);
+    return {
+      enemyId:enemy?.id,
+      enemyHpRatio:maxHp>0?Math.max(0,Number(enemy?.hp)||0)/maxHp:null,
+      enemyCharging:['CHARGE','PIERCE_CHARGE'].includes(enemyIntent?.type),
+      enemyImmobile:!!getTurnBuff('stunEnemy',false)||(getWaveBuff('iceLockTurns')>0&&!getWaveBuff('iceLockPreparing',false)),
+      sameDistance:Number.isInteger(Number(slotIdx))&&Number(slotIdx)===Number(attackStartDist),
+      isHero:isTacticsMode(runMode)?false:heroOf(mon),
+      extreme:!!sr&&isExtremeDifficultyId(sr),
+      eventBattle:isRaidJackMode(runMode),
+    };
+  };
   const getDmg = useCallback((card, slotIdx, mon, additionalOryo=0, additionalDmgMod=0, isSecondOrLaterAtk=false, attackStartDist=enemyDist, skillDmgMult=1) => {
     if (!mon||!card||['guard','draw','buff','heal','weak_guard'].includes(card.type)) return 0;
     const distDiff = Math.abs(slotIdx-attackStartDist);
@@ -13458,7 +13513,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ? getMonsterAptPct(mon,specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty),wave)
       : distAptPct;
     const distBonusMult=1.0+(distDmgBonus[slotIdx]||0)+(aptForSlot[slotIdx]||0);
-    const soulAttack=soulTraitAttackProfile(mon?.masuId?getMasuMon(mon.masuId):null,card,slotIdx);
+    // 魂格特性と、固有技のオリジナル強化(威力・〇〇特攻)を合わせた倍率。予測(getAttackPredictedDmg)もこの getDmg を通る
+    const soulAttack=attackBoostProfile(mon?.masuId?getMasuMon(mon.masuId):null,card,slotIdx,uniqueBoostCtxFor(mon,slotIdx,attackStartDist));
     // ★みゃるの薬の攻撃バフは、タクティクスでは「飲んだ子だけ」に乗る(設計 4.4)。
     //   既存5モードは今までどおりパーティ全体(atkMult)。どちらか一方しか 1.0 以外にならない
     // ★クッキー10個(メロディー)の与ダメアップは味方全体、黒音符(クロミー)は本人の攻撃だけ
@@ -13483,7 +13539,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       distanceBrokenDmg=applyUltimateDistanceBreak(turnPressedDmg,slotIdx,ultimateDistanceBreakLevels,specialRuleDifficulty,card.type);
     }
     return applyExtremeIntegerRule(distanceBrokenDmg,specialRuleDifficulty,'damageDealt');
-  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, ultimateDistanceBreakLevels, totalTurnCount, turnCount, runMode, difficulty, extremeDifficulty]);
+  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, ultimateDistanceBreakLevels, totalTurnCount, turnCount, runMode, difficulty, extremeDifficulty, enemy, enemyIntent]);
 
   // 確定している追加ヒットまで含めた攻撃1枚の予測値。中央合計と各スロットで必ず同じ入口を使う。
   // ランダム会心は含めず、会心予約だけは実処理と同じ倍率を適用する。
@@ -13494,8 +13550,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (baseDmg<=0) return 0;
     // ヒット列は実処理(processTurn)と同じ buildAttackHits。予測では乱数会心を乗せず、確定会心(guaranteedCrit)だけを反映する。
     // あつの挑発(stun_atsu)は実処理と同じくメインに会心が乗らない(mainCanCrit:false)
-    const soulAttack=soulTraitAttackProfile(mon?.masuId?getMasuMon(mon.masuId):null,card,null);
-    const hits=buildAttackHits({ d:baseDmg, card, attackerId:mon?.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(mon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus+erubinIsshenCritDmg(card), kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
+    const soulAttack=attackBoostProfile(mon?.masuId?getMasuMon(mon.masuId):null,card,null);
+    const hits=buildAttackHits({ d:baseDmg, card, attackerId:mon?.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(mon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus+erubinIsshenCritDmg(card), kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'), boostExtraCombos:soulAttack.uniqueBoost.comboExtra,
       guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit')||tacticsCritFixedNow(slotIdx,card)||erubinIsshenOn(card), rollCrit:()=>false,
       globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo, mainCanCrit:card.subType!=='stun_atsu',
       comboFinalMultiplier:soulAttack.comboFinalMultiplier, swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
@@ -13795,7 +13851,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ★影潜(イルミネ・ドリーミィ): 受ける子が持ち主なら、楔1つごとに回避率+15%。キーは既存5モード 'party'・タクティクスは受ける子の枠
         const kusabiDefenseKey = !isTacticsMode(runMode) ? 'party' : (defenseSlot!=null ? String(defenseSlot) : null);
         // ★霊魂(キュービ・オリヒメの固有技): 効いているあいだ、味方全員の回避率+10%。楔の回避と同じ値に足して、同じ表へ入れる
-        const kusabiEvasion = (hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiAt(defenseSlot)) : 0) + reikonEvasionNow();
+        // ★固有技のオリジナル強化「見切り」: その技を使ったターンだけ、回避の表へ同じく足す(タクティクスは使った子が狙われたときだけ)
+        const boostEvade = !isTacticsMode(runMode) ? (Number(immediateEffects.boostEvade)||0)
+          : (defenseSlot!=null ? (Number(immediateEffects.boostEvadeBySlot?.[defenseSlot])||0) : 0);
+        const kusabiEvasion = (hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiAt(defenseSlot)) : 0) + reikonEvasionNow() + boostEvade;
         const defenseTable = (!isTacticsMode(runMode) && kusabiEvasion<=0) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({
           soulEvasion:soulBattleParty.evasion,
           soulReflect:soulBattleParty.reflect,
@@ -14872,6 +14931,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     let lastType='none', guardTypeInTurn='none', totalDmg=0, totalHeal=0, totalHealRate=0, localOryoAdd=0, localDmgModAdd=0, localGlobalComboAdd=0, attackCount=0, hasCrit=false, immediateInvincible=false, immediateStun=false, currentTurnGuardFlat=0, currentTurnGuardMult=0;
     // 大樹の加護の「このターンぶん」。既存5モードは全体、タクティクスは使った子の枠だけ
     let immediateTakenMult=1; const immediateTakenMultBySlot={};
+    let boostEvadeThisTurn=0; const boostEvadeBySlot={};
     // 新モードは「ガードはカードを使った子自身を守る」。誰が構えたかをスロットごとに持つ。
     // 既存モードは今までどおり currentTurnGuardFlat / Mult の合計だけを見る
     const guardBySlot={};
@@ -14949,9 +15009,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const halved=entry.aiCopy?false:halveCounter.take(card,entry.slotIdx);
       // EXTREMEでは消費量・枚数でなく、教えカードから発生する効果量だけを半減する。
       const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
-      const effMul=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect'):(halved?0.5:1);
+      const effMulBase=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect'):(halved?0.5:1);
       if(halved) addPopup(isTacticsMode(runMode)?'同じモンスターの2枚目 効果半減':'2枚目以降 効果半減','hero','text-slate-300 text-sm font-black');
       const slotIdx=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
+      // ★固有技のオリジナル強化。効果の強さは effMul に、回復の量は healMul に掛ける(AIコピーの札には乗せない)
+      const cardBoost=entry.aiCopy?UNIQUE_BOOST_EMPTY_PROFILE:uniqueBoostOfCardInRun(card,slotIdx);
+      const effMul=effMulBase*(1+cardBoost.effectPct/100);
+      const healMul=effMulBase*(1+cardBoost.healPct/100);
+      // 見切り: この技を使ったターン、敵の攻撃をよける率+(タクティクスは使った子、ほかはパーティ。重ねず大きいほう)
+      if(cardBoost.evadePoints>0){ boostEvadeThisTurn=Math.max(boostEvadeThisTurn,cardBoost.evadePoints); boostEvadeBySlot[slotIdx]=Math.max(boostEvadeBySlot[slotIdx]||0,cardBoost.evadePoints); }
       lastType=card.type;
       // ★パンドラの箱の「強化ダイスキライライ」(2026-10-06): 箱のあいだにパンドラが固有技を使うと、威力アップ・悪魔の追加連撃(getDmg・連撃側で掛かる)に加えて、
       //   天使の力で味方全員のライフ・ガッツが上限の一部だけ戻る。固有技のヒットには悪魔の姿の印を付ける(固有技以外のカードは姿を変えない)
@@ -15168,7 +15234,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 運命のコイン(ゴースト): 使うたびに表・裏50%。表=この技4倍＋この子の連撃+10%、裏=この技0.5倍＋ゴーストの固有技の消費ガッツ+20%。
           //   積むものは permaBuffs.fateStacks(ランが終わるまで残る・重なる)。この技の消費ガッツはもう払ってあるので、裏の増加は次の使用から
           else if(card.monId===FATE_COIN_MONSTER_ID){
-            const side=rollFateCoin();
+            const side=rollFateCoin(Math.random,cardBoost.chancePoints);
             fateDmgMult=fateCoinDmgMult(side);
             if(side==='heads'){
               writePermaBuffs(p=>({...p,fateStacks:withFateSlotStack(p.fateStacks,slotIdx,'combo')}));
@@ -15180,19 +15246,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }
           // 運命の輪(スプーキー): 6つから1つ。ダメージ3倍・2倍はこの技に、ほかは当たったあとに効かせる(下の固有技の効果)
           else if(card.monId===FATE_WHEEL_MONSTER_ID){
-            fateWheelPick=rollFateWheel();
+            fateWheelPick=rollFateWheel(Math.random,cardBoost.chancePoints);
             if(fateWheelPick.dmgMult) fateDmgMult=fateWheelPick.dmgMult;
           }
         }
         const attackStartDist=attackDistance;
         // コピーの縮めは「この技のダメージ」の倍率(skillDmgMult)に掛けて渡す(ふつうの札は1倍なので今までと同じ)
         const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,fateDmgMult*copyDmgScale); attackCount++;
-        const soulAttack=soulTraitAttackProfile(activeMon?.masuId?getMasuMon(activeMon.masuId):null,card,slotIdx);
+        // 魂格特性と固有技のオリジナル強化(会心率・会心ダメージ・連撃ダメージ・連撃数)。予測と同じ attackBoostProfile
+        const soulAttack=attackBoostProfile(activeMon?.masuId?getMasuMon(activeMon.masuId):null,card,slotIdx);
         const critRateBonus=getPermaBuff('critRatePct')+soulAttack.critRateBonus;
         const critDmgBonus=getPermaBuff('critDmgPct')+soulAttack.critDamageBonus+erubinIsshenCritDmg(card);
         // ヒット列(メイン・勇者特性と固有技の連撃・全体連撃)は予測表示と同じ buildAttackHits が作る。
         // 会心は 1 ヒットごとに独立して判定し、連撃は元ダメージ d を基準にする(メインの会心を二重に乗せない)。
-        const hits=buildAttackHits({ d, card, attackerId:activeMon.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(activeMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
+        const hits=buildAttackHits({ d, card, attackerId:activeMon.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(activeMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'), boostExtraCombos:soulAttack.uniqueBoost.comboExtra,
           guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit')||tacticsCritFixedNow(slotIdx,card)||erubinIsshenOn(card), rollCrit:()=>Math.random()<Math.min(1,((card.crit||0.1)+critRateBonus+(tacticsExMultiBuffNow(slotIdx).critAdd||0)+blackNoteEffectAt(slotIdx,activeMon?.id).critAdd+kyubiAttackAt(slotIdx,activeMon?.id,card).critAdd)*tacticsExMultiBuffNow(slotIdx).critRate),
           globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, comboFinalMultiplier:soulAttack.comboFinalMultiplier,
           swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
@@ -15236,18 +15303,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if (card.type==='unique') {
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ
           // ドリームペイン(ドリーミィ): 次のターンから3ターン、敵の被ダメージ+40%(楔1つごとに+40%)。数は使ったときの楔(増える前)で決める
-          if(card.monId===DREAM_PAIN_MONSTER_ID){const dp=writeDreamPain({...startDreamPain(kusabiBeforeAttack),bonus:dreamPainTakenOf(kusabiBeforeAttack)*effMul}); addPopup(`💤 ドリームペイン 被ダメ+${Math.round(dp.bonus*100)}%`,'enemy','text-fuchsia-300 text-lg font-bold');}
+          if(card.monId===DREAM_PAIN_MONSTER_ID){const dp=writeDreamPain({...startDreamPain(kusabiBeforeAttack),turns:DREAM_PAIN_TURNS+cardBoost.durationTurns,bonus:dreamPainTakenOf(kusabiBeforeAttack)*effMul}); addPopup(`💤 ドリームペイン 被ダメ+${Math.round(dp.bonus*100)}%`,'enemy','text-fuchsia-300 text-lg font-bold');}
           // 霊魂(キュービ・オリヒメ): 次のターンから3ターン、消費ガッツ×0.7・味方全員の回避率+10%。使い直したらかけ直し(重ならない)
-          if(hasReikon(card.monId)){writeReikonKey(trickStartKeyOf(slotIdx),startReikon()); addPopup(`👻 霊魂 次のターンから${REIKON_TURNS}ターン 消費ガッツ−${Math.round((1-REIKON_GUTS_MULT)*100)}%・回避+${REIKON_EVASION_UP}%`,'hero','text-violet-200 text-base font-bold drop-shadow-md',undefined,slotIdx);}
+          if(hasReikon(card.monId)){writeReikonKey(trickStartKeyOf(slotIdx),{...startReikon(),turns:REIKON_TURNS+cardBoost.durationTurns}); addPopup(`👻 霊魂 次のターンから${REIKON_TURNS+cardBoost.durationTurns}ターン 消費ガッツ−${Math.round((1-REIKON_GUTS_MULT)*100)}%・回避+${REIKON_EVASION_UP}%`,'hero','text-violet-200 text-base font-bold drop-shadow-md',undefined,slotIdx);}
           if(card.monId==='Ham'){immediateStun=true; setImmediateTurnBuff('stunEnemy',true); addPopup('スタン!','enemy','text-yellow-400 text-lg font-bold');}
-          else if(card.monId==='Suezo'){const gRec=gainGutsByRate(slotIdx,0.5*effMul); if(gRec>0) addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-xl font-black drop-shadow-md');}
+          else if(card.monId==='Suezo'){const gRec=gainGutsByRate(slotIdx,0.5*healMul); if(gRec>0) addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-xl font-black drop-shadow-md');}
           // ★タクティクスは「使った子だけ」に効く(2026-09-22 ユーザー選択)。ステータスが
           //   1体ずつなので、味方全員がタダになる・全員が会心確定になるのは効きすぎる。
           //   既存5モードは今までどおりパーティ全体
           else if(card.monId==='Pixie'||card.monId==='Mia'){if(isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx,'zeroGuts',true); else setNextTurnBuff('zeroGuts',true); addPopup('次ターン消費0!','hero','text-blue-400 text-lg font-bold');}
           else if(card.monId==='Tiger'){if(isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx,'guaranteedCrit',true); else setNextTurnBuff('guaranteedCrit',true); addPermaBuff('critRatePct',0.02*effMul); addPermaBuff('critDmgPct',0.02*effMul); addPopup('次ターン会心確定!','hero','text-red-400 text-lg font-bold'); addPopup(`会心率+${(2*effMul).toFixed(effMul===1?0:1)}% 会心ダメ+${(2*effMul).toFixed(effMul===1?0:1)}%`,'hero','text-yellow-400 text-sm font-bold');}
           else if(card.monId==='Monol'){addPermaBuff('defPct',0.03*effMul); addWaveBuff('enemyAtkDebuffPct',0.10*effMul); setNextTurnBuff('reflect',true); addPopup('丈夫さUP!','hero','text-emerald-400 text-lg font-bold'); addPopup('次ターン反射！','hero','text-purple-400 text-lg font-bold');}
-          else if(card.monId==='Oboro'||card.monId==='Plant'){const hRec=Math.floor(finalD*0.5); const gRec=Math.floor(finalD*0.05);
+          else if(card.monId==='Oboro'||card.monId==='Plant'){const healBoost=1+cardBoost.healPct/100; const hRec=Math.floor(finalD*0.5*healBoost); const gRec=Math.floor(finalD*0.05*healBoost);
             if(isTacticsMode(runMode)) hpBeforeEnemyAttack=commitTacticsUnits(healTacticsAt(tacticsUnitsRef.current,slotIdx,hRec));
             else { hpBeforeEnemyAttack=Math.min(liveEffectiveMaxHp(),hpBeforeEnemyAttack+hRec); setHp(hpBeforeEnemyAttack); } gainGutsAt(slotIdx,gRec); addPopup(`💚 ドレイン +${hRec}`,'life','text-emerald-400 text-xl font-black drop-shadow-md'); addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-base font-bold drop-shadow-md');}
           else if(card.monId==='Ark'||card.monId==='Iblis'){
@@ -15269,12 +15336,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             //   このターンぶんは handleEnemyTurn へ倍率で渡し、次ターンぶんは予約する。
             //   ほかの軽減(メロソ・贖罪)を消さないよう、次ターンの倍率は掛け合わせる
             const guardFx=lifeTreeGuardEffectOf(card.monId);
-            const gRec=gainGutsByRate(slotIdx,guardFx.guts*effMul);
+            const gRec=gainGutsByRate(slotIdx,guardFx.guts*healMul);
             const guardMult=lifeTreeGuardMult(effMul,card.monId);
             // ピンク音符の加護: ライフも回復する(タクティクスは使った子、既存5モードはパーティ)
             if(guardFx.hp>0){
-              if(isTacticsMode(runMode)){ const healed=tacticsRateHealAt(slotIdx,guardFx.hp*effMul,0); if(healed) hpBeforeEnemyAttack=healed.total; }
-              else { const heal=Math.floor(liveEffectiveMaxHp()*guardFx.hp*effMul); if(heal>0){ hpBeforeEnemyAttack=Math.min(liveEffectiveMaxHp(),hpBeforeEnemyAttack+heal); setHp(hpBeforeEnemyAttack); addPopup(`💚 ライフ +${heal}`,'life','text-emerald-300 text-base font-bold'); } }
+              if(isTacticsMode(runMode)){ const healed=tacticsRateHealAt(slotIdx,guardFx.hp*healMul,0); if(healed) hpBeforeEnemyAttack=healed.total; }
+              else { const heal=Math.floor(liveEffectiveMaxHp()*guardFx.hp*healMul); if(heal>0){ hpBeforeEnemyAttack=Math.min(liveEffectiveMaxHp(),hpBeforeEnemyAttack+heal); setHp(hpBeforeEnemyAttack); addPopup(`💚 ライフ +${heal}`,'life','text-emerald-300 text-base font-bold'); } }
             }
             // ピンク音符の加護: 使った子がクッキーを持つ子(メロディー本人)なら、カード1枚ぶんに加えてさらに足す
             if(guardFx.cookie>0&&sweetStackTraitOf(sweetOwnerAt(slotIdx))?.kind==='cookie'&&activeMon?.id===sweetOwnerAt(slotIdx)){
@@ -15297,24 +15364,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           else if(card.monId===FATE_WHEEL_MONSTER_ID){
             if(fateWheelPick && finalD>0){
               const id=fateWheelPick.id;
-              if(id==='enemyAtkDown') writeFateWheel({...fateWheelRef.current,atkDown:FATE_WHEEL_DEBUFF_TURNS});
-              else if(id==='enemyTakenUp') writeFateWheel({...fateWheelRef.current,takenUp:FATE_WHEEL_DEBUFF_TURNS});
+              if(id==='enemyAtkDown') writeFateWheel({...fateWheelRef.current,atkDown:FATE_WHEEL_DEBUFF_TURNS+cardBoost.durationTurns});
+              else if(id==='enemyTakenUp') writeFateWheel({...fateWheelRef.current,takenUp:FATE_WHEEL_DEBUFF_TURNS+cardBoost.durationTurns});
               else if(id==='combo') writePermaBuffs(p=>({...p,fateStacks:withFateSlotStack(p.fateStacks,slotIdx,'combo')}));
               else if(id==='atk') writePermaBuffs(p=>({...p,fateStacks:withFateSlotStack(p.fateStacks,slotIdx,'atk')}));
               showLuckBanner({ icon:'🎡', title:`${actorName(slotIdx)}の運命の輪`, result:fateWheelPick.label, tone:(id==='enemyAtkDown'||id==='enemyTakenUp')?'enemy':'good' });
             }
           }
           else if(card.monId==='Pandora'){
-            // 双極共振は次ターンから2ターン。再使用時は加算せず2へ更新する。
-            if(isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx,'pandoraResonanceTurns',2);
-            else setNextTurnBuff('pandoraResonanceTurns',2);
-            addPopup('双極共振！ 次の2ターン消費半減','hero','text-fuchsia-300 text-lg font-bold');
+            // 双極共振は次ターンから2ターン。再使用時は加算せず2へ更新する。オリジナル強化「効果の長さ」でそのぶん長くなる
+            const resonanceTurns=2+cardBoost.durationTurns;
+            if(isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx,'pandoraResonanceTurns',resonanceTurns);
+            else setNextTurnBuff('pandoraResonanceTurns',resonanceTurns);
+            addPopup(`双極共振！ 次の${resonanceTurns}ターン消費半減`,'hero','text-fuchsia-300 text-lg font-bold');
           }
           else if(isIceLockMonster(card.monId)){
             activatedIceLockThisTurn=true;
-            setWaveBuffs(p=>({...p,iceLockTurns:5,iceLockPreparing:(p.iceLockTurns||0)<=0}));
+            const iceTurns=5+cardBoost.durationTurns;
+            setWaveBuffs(p=>({...p,iceLockTurns:5+cardBoost.durationTurns,iceLockPreparing:(p.iceLockTurns||0)<=0}));
             addPermaBuff('snegurochkaGutsDiscountStacks',1);
-            addPopup('絶氷の楔！ 5ターン移動封印','enemy','text-cyan-200 text-lg font-bold');
+            addPopup(`絶氷の楔！ ${iceTurns}ターン移動封印`,'enemy','text-cyan-200 text-lg font-bold');
             addPopup('消費ガッツ3%減！','hero','text-cyan-300 text-sm font-bold');
           }
         }
@@ -15606,7 +15675,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const finalActionType=guardTypeInTurn!=='none'?guardTypeInTurn:lastType;
     const executedIntent=enemyIntent;
     // distLocked: このターン距離撃を撃ったか。敵の移動は距離撃で上書きされるため、行動しなかった扱いにする
-    await handleEnemyTurn(finalActionType,{invincible:immediateInvincible,stun:immediateStun,guardFlat:currentTurnGuardFlat,guardMult:currentTurnGuardMult,guardBySlot,distLocked:forcedMoveTarget!=null,forcedMoveTarget,iceLockRefreshed:activatedIceLockThisTurn,takenMult:immediateTakenMult,takenMultBySlot:immediateTakenMultBySlot},executedIntent,hpBeforeEnemyAttack,enemyHpAfterOurAttacks);
+    await handleEnemyTurn(finalActionType,{invincible:immediateInvincible,stun:immediateStun,guardFlat:currentTurnGuardFlat,guardMult:currentTurnGuardMult,guardBySlot,distLocked:forcedMoveTarget!=null,forcedMoveTarget,iceLockRefreshed:activatedIceLockThisTurn,takenMult:immediateTakenMult,takenMultBySlot:immediateTakenMultBySlot,boostEvade:boostEvadeThisTurn,boostEvadeBySlot},executedIntent,hpBeforeEnemyAttack,enemyHpAfterOurAttacks);
     // きゅうこの譜面: 引き受けは使ったターンだけ。ダメージダウンは敵の番を1回過ぎるごとに1ターン減る(使ったターンも1と数える)
     kyukoRedirectRef.current=null;
     writePermaBuffs(p=>p.kyukoCutTurns>0?({...p,kyukoCutTurns:Math.max(0,p.kyukoCutTurns-1)}):p);
@@ -18124,6 +18193,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const remaining = Math.max(0,normalized.uniqueSkillPoints-allocated);
     const resetTicketCount = ownedItemCount(ownedItems, 'unique_skill_reset_ticket');
     const resetPointCount = Object.values(normalized.uniqueSkillLevels).reduce((sum,level)=>sum+Math.max(0,Math.floor(Number(level)||0)),0);
+    // オリジナル強化に使ったP(リセット券で一緒に戻る)
+    const boostPointCount = Object.values(normalizeUniqueSkillBoosts(normalized)).reduce((sum,steps)=>sum+uniqueBoostSpentOfSteps(steps),0);
+    const hasMaxedSkill = choices.some(choice=>choice.level>=MAX_UNIQUE_SKILL_LEVEL);
     const changeDraft = (skillKey,delta) => setUniqueSkillPointDrafts(prev=>{
       const id=String(masu.id),current={...(prev[id]||{})},choice=choices.find(item=>item.key===skillKey);
       if(!choice)return prev;
@@ -18138,19 +18210,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     return (
       <div className={`bg-black/40 p-2 rounded-xl border ${normalized.uniqueSkillPoints>0?'border-amber-400/60':'border-white/10'}`}>
         <div className="flex items-center justify-between gap-2 mb-1"><div className={`text-[10px] uppercase font-black ${normalized.uniqueSkillPoints>0?'text-amber-300':'text-slate-400'}`}>固有技強化</div><div className={`text-[10px] font-black flex items-center gap-1 ${normalized.uniqueSkillPoints>0?'text-amber-300':'text-slate-500'}`}><Sparkles size={10}/>未使用 固有技P：{normalized.uniqueSkillPoints}</div></div>
-        {normalized.uniqueSkillPoints>0&&<><div className="text-[8px] text-slate-400 font-bold mb-1.5 leading-tight">＋／－で仮配分し、「強化を確定」で反映します。</div>
+        {(normalized.uniqueSkillPoints>0||hasMaxedSkill)&&<>{normalized.uniqueSkillPoints>0&&<div className="text-[8px] text-slate-400 font-bold mb-1.5 leading-tight">＋／－で仮配分し、「強化を確定」で反映します。</div>}
         <div className="space-y-1.5">{choices.map(choice=>{const amount=Math.max(0,Math.floor(Number(draft[choice.key])||0)),after=choice.level+amount,current=uniqueSkillAtLevel(choice.unique,after),maxed=choice.level>=MAX_UNIQUE_SKILL_LEVEL;return (
-          <div key={choice.key} className="rounded-lg border border-white/10 bg-slate-900/80 px-2 py-1.5 min-w-0"><div className="flex items-center justify-between gap-2"><span className="min-w-0 truncate text-[10px] font-black text-white">{current?.name||choice.name}</span><span className="shrink-0 text-[9px] font-mono font-black text-amber-300">{maxed?`Lv.${choice.level} MAX`:`Lv.${choice.level} → Lv.${after}`}</span></div>{!maxed&&<div className="mt-1 flex items-center justify-end gap-2"><button aria-label={`${current?.name||choice.name}の仮配分を減らす`} disabled={amount<=0} onClick={()=>changeDraft(choice.key,-1)} className="w-9 min-h-[36px] rounded-lg bg-slate-700 text-base font-black disabled:opacity-30">−</button><span className="w-8 text-center text-[11px] font-mono font-black text-amber-200">＋{amount}</span><button aria-label={`${current?.name||choice.name}の仮配分を増やす`} disabled={remaining<=0||after>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>changeDraft(choice.key,1)} className="w-9 min-h-[36px] rounded-lg bg-amber-700 text-base font-black disabled:opacity-30">＋</button></div>}</div>
+          <div key={choice.key} className="rounded-lg border border-white/10 bg-slate-900/80 px-2 py-1.5 min-w-0"><div className="flex items-center justify-between gap-2"><span className="min-w-0 truncate text-[10px] font-black text-white">{current?.name||choice.name}</span><span className="shrink-0 text-[9px] font-mono font-black text-amber-300">{maxed?`Lv.${choice.level} MAX`:`Lv.${choice.level} → Lv.${after}`}</span></div>{!maxed&&<div className="mt-1 flex items-center justify-end gap-2"><button aria-label={`${current?.name||choice.name}の仮配分を減らす`} disabled={amount<=0} onClick={()=>changeDraft(choice.key,-1)} className="w-9 min-h-[36px] rounded-lg bg-slate-700 text-base font-black disabled:opacity-30">−</button><span className="w-8 text-center text-[11px] font-mono font-black text-amber-200">＋{amount}</span><button aria-label={`${current?.name||choice.name}の仮配分を増やす`} disabled={remaining<=0||after>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>changeDraft(choice.key,1)} className="w-9 min-h-[36px] rounded-lg bg-amber-700 text-base font-black disabled:opacity-30">＋</button></div>}
+          {/* Lv.8(MAX)の技は、余った固有技Pでオリジナル強化を積める(2026-11-07 社長)。積んだ強化は行に小さく出す */}
+          {maxed&&(()=>{const summary=uniqueBoostSummaryText(uniqueBoostStepsOf(normalized,choice.key));return <div className="mt-1 flex items-center justify-between gap-2 min-w-0"><span data-unique-boost-summary className={`min-w-0 text-[9px] font-black leading-tight ${summary?'text-amber-200':'text-slate-500'}`}>{summary?`✨ ${summary}`:'オリジナル強化:なし'}</span><button type="button" data-unique-boost-open aria-label={`${current?.name||choice.name}のオリジナル強化を開く`} onClick={()=>setUniqueBoostTarget({masuId:masu.id,skillKey:choice.key})} className="shrink-0 min-h-[40px] px-2.5 rounded-xl bg-gradient-to-b from-amber-500 to-orange-700 text-white text-[10px] font-black active:scale-95">✨ オリジナル強化</button></div>;})()}</div>
         );})}</div>
-        <div className="mt-2 flex items-center justify-between text-[10px] font-black"><span className="text-slate-400">残りP</span><span className="text-amber-300">{remaining}</span></div><div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 mt-2"><button disabled={allocated<=0} onClick={clearDraft} className="min-h-[42px] rounded-xl bg-slate-700 text-[10px] font-black disabled:opacity-30">やめる</button><button disabled={allocated<=0} onClick={()=>{const updated=spendUniqueSkillPoint(masu.id,draft);if(updated){clearDraft();if(onUpdated)onUpdated(updated);}}} className="min-h-[42px] rounded-xl bg-amber-600 text-[11px] font-black disabled:opacity-30">強化を確定</button></div></>}
+        {normalized.uniqueSkillPoints>0&&<><div className="mt-2 flex items-center justify-between text-[10px] font-black"><span className="text-slate-400">残りP</span><span className="text-amber-300">{remaining}</span></div><div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 mt-2"><button disabled={allocated<=0} onClick={clearDraft} className="min-h-[42px] rounded-xl bg-slate-700 text-[10px] font-black disabled:opacity-30">やめる</button><button disabled={allocated<=0} onClick={()=>{const updated=spendUniqueSkillPoint(masu.id,draft);if(updated){clearDraft();if(onUpdated)onUpdated(updated);}}} className="min-h-[42px] rounded-xl bg-amber-600 text-[11px] font-black disabled:opacity-30">強化を確定</button></div></>}</>}
         <div className="mt-2 border-t border-white/10 pt-2">
           <button type="button" data-unique-setting-open aria-label={`${masu.name}の固有技設定を開く`} onClick={()=>setUniqueSettingMasuId(masu.id)} className="w-full min-h-[44px] px-2 rounded-xl bg-gradient-to-b from-violet-600 to-indigo-800 text-white text-[10px] font-black leading-tight active:scale-95 flex items-center justify-center gap-1.5"><List size={13}/><span>固有技設定（並び順・初期技）</span></button>
           <div className="text-[8px] text-slate-400 font-bold text-center mt-1 leading-tight">バトルでの並び順と、開始時に構える固有技を決められます</div>
         </div>
         <div className="mt-2 border-t border-white/10 pt-2 flex flex-col gap-1.5">
           <div className="flex items-center justify-between gap-2 text-[9px] font-black"><span className="text-slate-400">スキルポイントリセット券</span><span className={resetTicketCount>0?'text-cyan-300':'text-slate-500'}>所持 {resetTicketCount}枚</span></div>
-          <button disabled={resetTicketCount<=0||resetPointCount<=0} onClick={async()=>{if(!(await askConfirm({title:'配分済み固有技Pをリセットしますか？',message:`このマスモンの固有技に配分した${resetPointCount}ポイントをリセットし、未使用の固有技Pへ戻します。スキルポイントリセット券を1枚消費します。`,confirmLabel:'リセットする'})))return;const result=useUniqueSkillResetTicket(masu.id);if(result){clearDraft();if(onUpdated)onUpdated(result.nextMasu);}}} className="w-full min-h-[42px] px-2 rounded-xl bg-cyan-700 text-[10px] font-black leading-tight disabled:opacity-30 disabled:bg-slate-700">配分済み固有技Pをリセット</button>
-          {resetPointCount<=0&&<div className="text-[8px] text-slate-500 font-bold text-center">配分済み固有技Pがないため使用できません</div>}
+          <button disabled={resetTicketCount<=0||resetPointCount+boostPointCount<=0} onClick={async()=>{if(!(await askConfirm({title:'配分済み固有技Pをリセットしますか？',message:boostPointCount>0?`固有技Lv とオリジナル強化をすべて戻し、使った固有技P(Lv ${resetPointCount.toLocaleString()}P・オリジナル強化 ${boostPointCount.toLocaleString()}P)をすべて返します。スキルポイントリセット券を1枚消費します。`:`このマスモンの固有技に配分した${resetPointCount}ポイントをリセットし、未使用の固有技Pへ戻します。スキルポイントリセット券を1枚消費します。`,confirmLabel:'リセットする'})))return;const result=useUniqueSkillResetTicket(masu.id);if(result){clearDraft();if(onUpdated)onUpdated(result.nextMasu);}}} className="w-full min-h-[42px] px-2 rounded-xl bg-cyan-700 text-[10px] font-black leading-tight disabled:opacity-30 disabled:bg-slate-700">配分済み固有技Pをリセット</button>
+          {resetPointCount+boostPointCount<=0&&<div className="text-[8px] text-slate-500 font-bold text-center">配分済み固有技Pがないため使用できません</div>}
         </div>
       </div>
     );
@@ -18229,7 +18303,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>
             {onClose && <button onClick={onClose} aria-label="閉じる" className="mh-hit-expand relative p-2 -m-1 bg-white/5 rounded-full active:scale-90 shrink-0"><X size={16}/></button>}
           </div>
-          {renderPowerBadge(power, { note: powerNote })}
+          {/* マスモンのいまの総合力は、札を押すと内わけが開く(2026-11-07 社長)。記録した時点の総合力(ランキング)は開かない */}
+          {masu && powerOverride === undefined ? (()=>{
+            const open = String(powerBreakdownMasuId) === String(masu.id);
+            const parts = monsterPowerParts(mon);
+            const row = (label, value, extra=null) => <div className={`flex items-start justify-between gap-2 text-[11px] font-black ${extra?'rounded-lg bg-amber-900/40 px-1.5 py-1 text-amber-200':'text-slate-200'}`}><span className="min-w-0">{label}{extra}</span><span className="shrink-0 font-mono tabular-nums">{Math.round(value)<0?'':'+'}{formatMonsterPower(Math.round(value))}</span></div>;
+            return (<>
+              <button type="button" data-power-breakdown-toggle aria-expanded={open} aria-label="総合力の内わけを開く" onClick={()=>setPowerBreakdownMasuId(open?null:masu.id)} className="block w-full text-left active:scale-[0.99]">
+                {renderPowerBadge(power, { note: powerNote })}
+              </button>
+              {open && <div data-power-breakdown className="rounded-xl border border-amber-400/40 bg-black/40 px-2.5 py-2 space-y-1">
+                <div className="text-[10px] font-black text-amber-300">総合力の内わけ</div>
+                {row('能力', parts.stat)}
+                {row('適性', parts.aptitude)}
+                {row('固有技', parts.unique)}
+                {row('魂格特性', parts.soul)}
+                {parts.boostSpent > 0 && row('✨ オリジナル強化', parts.boost, <span className="font-bold">(使った固有技P {parts.boostSpent.toLocaleString()})</span>)}
+                <div className="flex items-center justify-between gap-2 border-t border-white/15 pt-1 text-[12px] font-black text-white"><span>合計</span><span className="font-mono tabular-nums">{formatMonsterPower(power)}</span></div>
+              </div>}
+            </>);
+          })() : renderPowerBadge(power, { note: powerNote })}
           {extraLine}
           {masu && !compact && (<>
             <div className="flex items-center justify-between gap-2 text-[10px] font-black">
@@ -21944,6 +22037,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ownedItems={ownedItems} renderMonsterCardBody={renderMonsterCardBody}
             renderScreenNote={renderScreenNote} resetFusionFlow={resetFusionFlow}
             setFusionInheritSoulRank={setFusionInheritSoulRank} setFusionInheritUniqueIds={setFusionInheritUniqueIds}
+            fusionInheritSkillKeys={fusionInheritSkillKeys} setFusionInheritSkillKeys={setFusionInheritSkillKeys}
             setFusionMainId={setFusionMainId} setFusionResultData={setFusionResultData}
             setFusionSortDir={setFusionSortDir} setFusionSortKey={setFusionSortKey}
             setFusionStep={setFusionStep} setFusionSubId={setFusionSubId} setFusionSubIds={setFusionSubIds}
@@ -22361,6 +22455,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>
             </div>
           );
+        })()}
+
+        {/* 固有技のオリジナル強化のシート。中身(検証・保存)は commitUniqueBoostPlan */}
+        {uniqueBoostTarget&&(()=>{
+          const masu=getMasuMon(uniqueBoostTarget.masuId);
+          if(!masu) return null;
+          return <UniqueBoostSheet key={`${uniqueBoostTarget.masuId}:${uniqueBoostTarget.skillKey}`} masu={masu} skillKey={uniqueBoostTarget.skillKey}
+            onClose={()=>setUniqueBoostTarget(null)}
+            onCommit={(plan)=>!!commitUniqueBoostPlan(uniqueBoostTarget.masuId,uniqueBoostTarget.skillKey,plan)}/>;
         })()}
 
         {/* マスモン強化: 専用ページ(間合い適性・ステータス強化を、変動値のプレビュー付きで行う) */}
@@ -24649,6 +24752,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           const current=uniqueSkillAtLevel(skill.unique, skill.level);
           return <div key={skill.key} className="w-full flex items-center justify-between text-[10px] font-black py-0.5"><span className="text-white truncate">{current?.name||skill.name}</span><span className="text-amber-300 shrink-0">Lv.{skill.level}</span></div>;
         })}
+        {masu.uniqueBoostSpentSnapshot>0&&<div data-ranking-unique-boost className="mt-1 pt-1 border-t border-white/10 w-full flex items-center justify-between text-[10px] font-black"><span className="text-amber-200">✨ オリジナル強化に使った固有技P</span><span className="text-amber-300 shrink-0">{masu.uniqueBoostSpentSnapshot.toLocaleString()}</span></div>}
       </div>
     </>
   ),

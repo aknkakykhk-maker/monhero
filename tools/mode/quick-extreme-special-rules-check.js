@@ -35,7 +35,8 @@ assert(source.includes('const specialRuleDifficultyForRun = (runMode, difficulty
 assert(source.includes('const candidate=extremeRun ? extremeDifficultyId : (isQuickMode(runMode) ? difficultyId : null);'));
 assert(source.includes('return hasExtremeSpecialRules(candidate) ? candidate : null;'));
 assert(!source.includes('extremeRunRef.current?extremeSpecialRule(extremeDifficulty'), 'special rule activation must not depend only on extremeRunRef');
-assert(source.includes("const effMul=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect')"));
+// 2026-11-07: 固有技のオリジナル強化を掛ける前の値を effMulBase に分けた(EXTREME のアシスト倍率はそちらに入る)
+assert(source.includes("const effMul=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect')") || source.includes("const effMulBase=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect')"));
 for (const use of [
   // 係数は DIST_BONUS_PER_DAMAGE(= 0.001/100)へまとめた
   'applyDistanceEnhancement(d*DIST_BONUS_PER_DAMAGE,specialRuleDifficulty,wave)',

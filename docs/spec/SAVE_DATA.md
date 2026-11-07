@@ -484,6 +484,16 @@
 設定の保存は `uniqueSkillLevels` と `uniqueSkillPoints` に触れないため、並び替えや初期技の変更で
 固有技Lv・固有技ポイントが変化することはない。
 
+固有技のオリジナル強化(2026-11-07)で足した項目は `uniqueSkillBoosts` の1つだけで、`mh_masu_mons` の個体オブジェクトへ
+**追加**する(新しい保存キーは作らない)。形は `{ '<技のキー>': { '<種類id>': 目盛りの数 } }`。技のキーは恒久Lvと同じ
+`own` / `inhId:<inheritedUniqueId>`、種類idは `UNIQUE_BOOST_DEFINITIONS`(11-masu-progression.jsx)の id。
+強化に使ったぶんだけ既存の `uniqueSkillPoints` が減り、`uniqueSkillLevels` の意味は変えない。
+持たない既存個体は「強化なし」として読み、知らない種類・負の値・上限超えは読むときに捨てる/丸める(一括書き換えはしない)。
+転生では持っている個体だけそのまま持ち越す(`resetMasuForRebirth`)。スキルポイントリセット券は Lv と一緒に強化も空にし、
+使った固有技Pを `uniqueSkillPoints` へ返す。合体では副の選んだ技の強化を、主に付いた新しい技のキーへ写す。
+総合力は「使った固有技P × 10」を足す(100Pで+1000)。ランキングの詳細(`rankingMasuDetail`)には合計だけを
+`uniqueBoostSpent` として、積んでいるときだけ足す(読む側は無ければ0)。
+
 ### 魂格システム
 
 魂格の詳細仕様は [SOUL_RANK_SYSTEM.md](./SOUL_RANK_SYSTEM.md) を正本とする。保存形式としては、新しいトップレベル `mh_*` キーを増やさず、既存 `mh_masu_mons` の各個体へ次を追加する。
