@@ -36,6 +36,7 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 
 | 目印 | 分類 | 現状 | 何をしているか / 判断の理由 |
 | --- | --- | --- | --- |
+| `setTimeout(() => { quickGuideShownRef.current.set(id, screen); persistQuickGuideSeen(id); }` | progress | 止めない | クイック・裏周回の案内が1.2秒見えていたら「見た」を保存する(#4837)。effect の片付けで止まるので、すぐ消えた案内は数えない |
 | `setTimeout(() => setRpgBattle(prev =>` | screen | 止める | RPG デバッグ戦闘を1体ずつ進める。`RPG_DEBUG_BATTLE` 以外では effect ごと止まる |
 | `setTimeout(() => setGameState('RPG_DEBUG_RESULT')` | screen | 止める | 決着を見せてから結果画面へ。デバッグ戦闘の中だけの遷移 |
 | `setTimeout(() => setRpgActing(null)` | screen | 止める | RPG デバッグの攻撃モーションを消す |
