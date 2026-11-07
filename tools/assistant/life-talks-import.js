@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // 助手たちの今の台本(テキスト)を data/assistants.js の ASSISTANT_LIFE_TALKS へ取り込む(コトバ 2026-11-07)。
-// 読むもの: docs/progress/assistant-peer/lines/ の kotoba-life.txt・tsumugi.txt(SAMPLE.txt はお手本なので読まない)。
+// 読むもの: docs/progress/assistant-peer/lines/ の kotoba-life.txt・tsumugi.txt・tsumugi-rewrite.txt(SAMPLE.txt はお手本なので読まない)。
 // 形は lines/SAMPLE.txt の頭の説明のとおり。データの形はナカヨシ(3)の案(2026-11-07):
 //   solo    { id, kind:'solo', who, keys, line, lines }
 //   invite  { id, kind:'invite', who(誘われる人), from(声をかける人), keys, lines }
@@ -19,7 +19,7 @@ const path = require('path');
 const root = path.join(__dirname, '..', '..');
 const linesDir = path.join(root, 'docs', 'progress', 'assistant-peer', 'lines');
 const dataFile = path.join(root, 'monster-hero', 'data', 'assistants.js');
-const SOURCES = ['kotoba-life.txt', 'tsumugi.txt'];
+const SOURCES = ['kotoba-life.txt', 'tsumugi.txt', 'tsumugi-rewrite.txt'];
 const BEGIN = '// ===== ASSISTANT_LIFE_TALKS ここから(tools で生成・手で直さない) =====';
 const END = '// ===== ASSISTANT_LIFE_TALKS ここまで =====';
 const KINDS = { solo: 1, invite: 2, pair: 2, trio: 3, quarrel: 2, breeder: 1 };
