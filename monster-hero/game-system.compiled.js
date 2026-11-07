@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d080459ea709aa32
+// source-sha256: 57f265ca44309fe3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -100066,7 +100066,7 @@ const ASSISTANT_LIFE_DOINGS = Object.freeze({
     label: 'おやつ',
     te: 'おやつを食べて',
     group: true,
-    places: ['cafe', 'plaza', 'home']
+    places: ['cafe', 'home']
   },
   practice: {
     label: '練習',
@@ -101944,22 +101944,33 @@ function AssistantLifeScreenBody({
       place: g.place
     });
   };
+  const sleepingOf = id => {
+    const x = (life.solo || {})[id];
+    return !!(x && x.doing === 'sleep');
+  };
   const invite = async id => {
-    const talk = assistantLifePickCallTalk(id, life);
+    const talk = sleepingOf(id) && typeof assistantLifePickSleepTalk === 'function' ? assistantLifePickSleepTalk(id, {
+      wake: true,
+      place: 'home'
+    }) : assistantLifePickCallTalk(id, life);
     if (!(await assistantLifeNudge('invite', id))) return;
     setNote(`${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
     if (talk) {
-      assistantLifeMarkSeen(talk);
+      if (!sleepingOf(id)) assistantLifeMarkSeen(talk);
       playTalk(talk, {
         ids: [id],
-        place: ((life.solo || {})[id] || {}).place
+        place: ((life.solo || {})[id] || {}).place,
+        sleep: sleepingOf(id)
       });
     }
   };
   const peek = id => {
     const key = `solo:${id}`;
     if ((life.watched || []).includes(key)) return;
-    const talk = assistantLifePickSoloTalk(id, life);
+    const talk = sleepingOf(id) && typeof assistantLifePickSleepTalk === 'function' ? assistantLifePickSleepTalk(id, {
+      wake: false,
+      place: 'home'
+    }) : typeof assistantLifeOnlyPresent === 'function' ? assistantLifeOnlyPresent(assistantLifePickSoloTalk(id, life), [id]) : assistantLifePickSoloTalk(id, life);
     if (!talk) {
       setNote(`${nameOf(id)}は、いまは静かに過ごしています`);
       return;
@@ -101971,10 +101982,11 @@ function AssistantLifeScreenBody({
       }
     });
     assistantLifeSaveLife();
-    assistantLifeMarkSeen(talk);
+    if (!sleepingOf(id)) assistantLifeMarkSeen(talk);
     playTalk(talk, {
       ids: [id],
-      place: ((life.solo || {})[id] || {}).place
+      place: ((life.solo || {})[id] || {}).place,
+      sleep: sleepingOf(id)
     });
   };
   const introduce = async () => {
@@ -102508,6 +102520,953 @@ const ASSISTANT_LIFE_VIEW = Object.freeze({
   night: ['images/story-bg/monhero_night.jpg', 'images/story-bg/forest_night.jpg']
 });
 const ASSISTANT_LIFE_BGM_TRACK = 'kaze_ga_soyogu';
+const ASSISTANT_LIFE_SLEEP_TALKS = Object.freeze([{
+  id: 'life-sleep-mua-001',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'mua',
+    e: 'happy',
+    t: '…むにゃ…プリン、もう1個だけぇ…'
+  }]
+}, {
+  id: 'life-sleep-mua-002',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'mua',
+    e: 'happy',
+    t: '…んふふ…このコーデ、まぢ優勝…'
+  }]
+}, {
+  id: 'life-sleep-mua-003',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'mua',
+    e: 'normal',
+    t: '…あと5分…いや、あと5曲…'
+  }]
+}, {
+  id: 'life-sleep-mua-004',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'mua',
+    e: 'happy',
+    t: '…モッチー…ふわふわ…ぢゃん…'
+  }]
+}, {
+  id: 'life-sleep-mua-005',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'mua',
+    e: 'normal',
+    t: '…{name}…いっしょに、広場いこ…'
+  }]
+}, {
+  id: 'life-sleep-mua-006',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'mua',
+    e: 'excited',
+    t: '…フルコン…きた…！ …すぅ…'
+  }]
+}, {
+  id: 'life-sleep-kiki-001',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '…すぅ…火力は…ぜんぶ攻撃に…'
+  }]
+}, {
+  id: 'life-sleep-kiki-002',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kiki',
+    e: 'happy',
+    t: '…お茶が…はいりましたよ…むにゃ'
+  }]
+}, {
+  id: 'life-sleep-kiki-003',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '…ゴーレムさん…今日も、かたいでつね…'
+  }]
+}, {
+  id: 'life-sleep-kiki-004',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kiki',
+    e: 'happy',
+    t: '…{name}…おはようございまつ…すぅ'
+  }]
+}, {
+  id: 'life-sleep-kiki-005',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '…しおりは…ここに…はさんで…'
+  }]
+}, {
+  id: 'life-sleep-kiki-006',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kiki',
+    e: 'happy',
+    t: '…ちから…全開…でつ…'
+  }]
+}, {
+  id: 'life-sleep-momosuke-001',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'momosuke',
+    e: 'happy',
+    t: '…むにゃ…もも、センター…♡'
+  }]
+}, {
+  id: 'life-sleep-momosuke-002',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '…HELL…もう1回…'
+  }]
+}, {
+  id: 'life-sleep-momosuke-003',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'momosuke',
+    e: 'happy',
+    t: '…メタルナー…ぴかぴか…w'
+  }]
+}, {
+  id: 'life-sleep-momosuke-004',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '…アンコール…ありがと…すぅ'
+  }]
+}, {
+  id: 'life-sleep-momosuke-005',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'momosuke',
+    e: 'happy',
+    t: '…{name}…見ててね…♡'
+  }]
+}, {
+  id: 'life-sleep-momosuke-006',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '…ミス…ゼロ…！！ …すぅ'
+  }]
+}, {
+  id: 'life-sleep-dra-001',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'dra',
+    e: 'happy',
+    t: '…ぐぅ…グジラ…でっかいな…'
+  }]
+}, {
+  id: 'life-sleep-dra-002',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '…ふとんが…むにゃ…'
+  }]
+}, {
+  id: 'life-sleep-dra-003',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'dra',
+    e: 'happy',
+    t: '…アルミ缶の…上に…すぅ'
+  }]
+}, {
+  id: 'life-sleep-dra-004',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '…おで…まだ…食べられるぞ…'
+  }]
+}, {
+  id: 'life-sleep-dra-005',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'dra',
+    e: 'happy',
+    t: '…{name}…膝…だいじょうぶか…'
+  }]
+}, {
+  id: 'life-sleep-dra-006',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '…あと10時間…寝かせてくれ…'
+  }]
+}, {
+  id: 'life-sleep-atsu-001',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '…ドラゴン…もう1周…！'
+  }]
+}, {
+  id: 'life-sleep-atsu-002',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'atsu',
+    e: 'happy',
+    t: '…勝った…笑 …すぅ…'
+  }]
+}, {
+  id: 'life-sleep-atsu-003',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '…とりあえず…突っこむ…'
+  }]
+}, {
+  id: 'life-sleep-atsu-004',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '…てか…ノーカン…だろ…'
+  }]
+}, {
+  id: 'life-sleep-atsu-005',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'atsu',
+    e: 'happy',
+    t: '…{name}…ナイス…！'
+  }]
+}, {
+  id: 'life-sleep-atsu-006',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '…朝練…6時…！'
+  }]
+}, {
+  id: 'life-sleep-kyuko-001',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '…むにゃ…その本、あと1章だけぇ…'
+  }]
+}, {
+  id: 'life-sleep-kyuko-002',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kyuko',
+    e: 'happy',
+    t: '…ニャー…ふかふかぁ…'
+  }]
+}, {
+  id: 'life-sleep-kyuko-003',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '…ぐぬぬぬ…あと1枚…'
+  }]
+}, {
+  id: 'life-sleep-kyuko-004',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kyuko',
+    e: 'happy',
+    t: '…ほい…ありがとん…すぅ'
+  }]
+}, {
+  id: 'life-sleep-kyuko-005',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '…だいたい…97点…'
+  }]
+}, {
+  id: 'life-sleep-kyuko-006',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kyuko',
+    e: 'happy',
+    t: '…{name}…イルミネ、きれいだねぇ…'
+  }]
+}, {
+  id: 'life-sleep-sorashido-001',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '…表の…3行目…ずれてる…'
+  }]
+}, {
+  id: 'life-sleep-sorashido-002',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'sorashido',
+    e: 'happy',
+    t: '…うぉぉぉ…新記録…むにゃ'
+  }]
+}, {
+  id: 'life-sleep-sorashido-003',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '…なんくるないさ…すぅ…'
+  }]
+}, {
+  id: 'life-sleep-sorashido-004',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'sorashido',
+    e: 'happy',
+    t: '…確率…でーじ…高い…'
+  }]
+}, {
+  id: 'life-sleep-sorashido-005',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '…攻略本…完成…だぜ…'
+  }]
+}, {
+  id: 'life-sleep-sorashido-006',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'sorashido',
+    e: 'happy',
+    t: '…{name}…ちばりよー…'
+  }]
+}, {
+  id: 'life-sleep-erubin-001',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '…すぅ…デュラハン…いけ…'
+  }]
+}, {
+  id: 'life-sleep-erubin-002',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'erubin',
+    e: 'happy',
+    t: '…みんな…おやすみ…'
+  }]
+}, {
+  id: 'life-sleep-erubin-003',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '…もう1戦…いいね…'
+  }]
+}, {
+  id: 'life-sleep-erubin-004',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'erubin',
+    e: 'happy',
+    t: '…お茶…おいしいね…'
+  }]
+}, {
+  id: 'life-sleep-erubin-005',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '…ちがうよ…石油王じゃ…ないって…'
+  }]
+}, {
+  id: 'life-sleep-erubin-006',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'erubin',
+    e: 'happy',
+    t: '…{name}…今日も、ありがとう…'
+  }]
+}, {
+  id: 'life-sleep-mua-007',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'mua',
+    e: 'surprise',
+    t: 'ふぇっ！？ {name}！？ …あ、寝ぐせ見ないで〜！'
+  }]
+}, {
+  id: 'life-sleep-mua-008',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '…ん…まだ朝？ あたし、朝ほんとに弱くて…ごめんね'
+  }]
+}, {
+  id: 'life-sleep-mua-009',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'mua',
+    e: 'troubled',
+    t: 'んー…{name}…あと5分だけぇ…'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '…しょうがないなぁ、起きるぢゃん♪'
+  }]
+}, {
+  id: 'life-sleep-mua-010',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'mua',
+    e: 'angry',
+    t: 'もう！ いい夢見てたのに〜！ …で、なに？ｗ'
+  }]
+}, {
+  id: 'life-sleep-kiki-007',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'kiki',
+    e: 'surprise',
+    t: '…まあ、{name}。私、うとうとしていましたか'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'お見苦しいところを。お茶でもいれまつね'
+  }]
+}, {
+  id: 'life-sleep-kiki-008',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '…はい、起きまつ。早寝なので、少しぼんやりしていまつ'
+  }]
+}, {
+  id: 'life-sleep-kiki-009',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'kiki',
+    e: 'troubled',
+    t: '…{name}…もう22時すぎでつよ…'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '…でも、来てくれたのはうれしいでつ♪'
+  }]
+}, {
+  id: 'life-sleep-kiki-010',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'kiki',
+    e: 'happy',
+    t: '…ふふ、起こされてしまいました。少しだけ、お話ししまつか'
+  }]
+}, {
+  id: 'life-sleep-momosuke-007',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'momosuke',
+    e: 'surprise',
+    t: 'わっ！！ な、なに！？ もも寝てないよ！！'
+  }]
+}, {
+  id: 'life-sleep-momosuke-008',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '…ん…いま何時…？ 朝は、もも苦手なの…'
+  }]
+}, {
+  id: 'life-sleep-momosuke-009',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'momosuke',
+    e: 'angry',
+    t: 'ちょっとー！！ 寝起きの顔見ないで！！'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '…まあ、{name}ならいっか♡'
+  }]
+}, {
+  id: 'life-sleep-momosuke-010',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '…むにゃ…起こすなら、おやつ持ってきてw'
+  }]
+}, {
+  id: 'life-sleep-dra-007',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'dra',
+    e: 'surprise',
+    t: '…ん、おお、{name}か。寝てたぞ'
+  }]
+}, {
+  id: 'life-sleep-dra-008',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '…すまん、もうちょっとだけ寝かせてくれるか…'
+  }]
+}, {
+  id: 'life-sleep-dra-009',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '…{name}…いま、いい夢だったんだがな…'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'まあ、起こされたなら起きるか'
+  }]
+}, {
+  id: 'life-sleep-dra-010',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '…ぐぅ……はっ、起きてるぞ。目は閉じてるけどな'
+  }]
+}, {
+  id: 'life-sleep-atsu-007',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'atsu',
+    e: 'surprise',
+    t: '…ん！？ あ、{name}か！ 寝てた笑'
+  }]
+}, {
+  id: 'life-sleep-atsu-008',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '…おう…朝練の前に、もうちょい寝る…'
+  }]
+}, {
+  id: 'life-sleep-atsu-009',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'atsu',
+    e: 'troubled',
+    t: '…{name}かよ… 夜は寝かせろって笑'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '…まあいいや、起きた！ なんだ？'
+  }]
+}, {
+  id: 'life-sleep-atsu-010',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'atsu',
+    e: 'happy',
+    t: '…ふぁ…起こしたなら、朝いっしょに走るぞ笑'
+  }]
+}, {
+  id: 'life-sleep-kyuko-007',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'kyuko',
+    e: 'surprise',
+    t: '…ぇ、あ、{name}…？ 寝ぼけてたぁ'
+  }]
+}, {
+  id: 'life-sleep-kyuko-008',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '…ん…朝はまだ、むりぃ…'
+  }]
+}, {
+  id: 'life-sleep-kyuko-009',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '…{name}ぉ…いま、本の夢見てたのにぃ'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '…ま、いっか。ほい、起きたよ笑'
+  }]
+}, {
+  id: 'life-sleep-kyuko-010',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '…ぐぬぬぬ…起こされたぁ。ありがとん…なのかなぁ'
+  }]
+}, {
+  id: 'life-sleep-sorashido-007',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'sorashido',
+    e: 'surprise',
+    t: '…うぉっ！？ {name}か…寝ぼけてたぜ'
+  }]
+}, {
+  id: 'life-sleep-sorashido-008',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '…まだ10時前だろ…朝は弱いのさ…'
+  }]
+}, {
+  id: 'life-sleep-sorashido-009',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '…{name}…いま、表の夢の途中だったんだぜ…'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '…まあいいさ。起きたからには、計算するぜ'
+  }]
+}, {
+  id: 'life-sleep-sorashido-010',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'sorashido',
+    e: 'happy',
+    t: '…ふぁ…{name}の声なら、目ざましより効くさ'
+  }]
+}, {
+  id: 'life-sleep-erubin-007',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'erubin',
+    e: 'surprise',
+    t: '…あ、{name}。ごめんね、寝てたみたい'
+  }]
+}, {
+  id: 'life-sleep-erubin-008',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '…ん…どうしたの？ 何かあった？'
+  }]
+}, {
+  id: 'life-sleep-erubin-009',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'erubin',
+    e: 'troubled',
+    t: '…{name}…もう23時すぎてるよ…'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '…でも、顔見られてよかった。少しだけ話そっか'
+  }]
+}, {
+  id: 'life-sleep-erubin-010',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'erubin',
+    e: 'happy',
+    t: '…ふぁ…起こされちゃった笑 どうしたの？'
+  }]
+}]);
+const assistantLifePickSleepTalk = (id, {
+  wake = true,
+  bondLv = 1,
+  place = 'home'
+} = {}) => {
+  const all = (typeof ASSISTANT_LIFE_SLEEP_TALKS !== 'undefined' ? ASSISTANT_LIFE_SLEEP_TALKS : []).filter(t => t.who === id);
+  const band = bondLv >= 5 ? '5-10' : '1-4';
+  const talk = all.filter(t => t.line === 'talk'),
+    woken = all.filter(t => t.line === 'woken' && (!t.lv || t.lv === band));
+  const list = wake && woken.length && Math.random() < 0.4 ? woken : talk.length ? talk : woken;
+  if (!list.length) return null;
+  const t = list[Math.floor(Math.random() * list.length)];
+  return {
+    ...t,
+    pair: [id],
+    lv: 1,
+    scene: 'any',
+    lifePlace: place,
+    lifeDoing: 'sleep'
+  };
+};
+const assistantLifeOnlyPresent = (talk, ids) => {
+  if (!talk || !Array.isArray(talk.lines)) return talk;
+  if (talk.lines.every(l => ids.includes(l.who))) return talk;
+  const lines = talk.lines.filter(l => ids.includes(l.who));
+  return lines.length ? {
+    ...talk,
+    lines
+  } : null;
+};
 const assistantLifeWhereOf = (life, id) => {
   if (!life) return null;
   const g = (life.groups || []).find(x => x.ids.includes(id));
@@ -102714,7 +103673,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-room .lock{position:absolute;inset:0;z-index:6;display:grid;place-items:center;background:rgba(15,23,42,.78);font-size:11px;font-weight:900;color:#cbd5e1}
 .mhl-liv{position:absolute;overflow:hidden;border-radius:3px;background:linear-gradient(#f3e3c4,#e7cfa2)}
 .mhl-board{position:absolute;left:8px;top:6px;bottom:6px;border-radius:5px;background:#c08a52;border:3px solid #7c4a22;padding:3px 6px;overflow:hidden}
-.mhl-board b{display:block;font-size:9.5px;color:#fff}.mhl-board p{font-size:9px;font-weight:800;color:#1e293b;background:#fffbeb;border-radius:3px;padding:1px 4px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mhl-board b{display:block;font-size:9.5px;color:#fff}.mhl-board p{font-size:9px;font-weight:800;line-height:1.25;color:#1e293b;background:#fffbeb;border-radius:3px;padding:1px 4px;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .mhl-door{position:absolute;bottom:0;width:38px;border-radius:18px 18px 0 0;background:linear-gradient(#8b5a2b,#6b4423);border:2px solid #3b2412}
 .mhl-find{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:900;padding:6px 10px;border-radius:999px;background:linear-gradient(135deg,#7c3aed,#db2777);border:1.5px solid #fff9;box-shadow:0 4px 12px #0009}
 .mhl-tile{position:relative;display:block;min-height:58px;border-radius:12px;padding:6px 6px 4px;text-align:left;clip-path:polygon(0 0,88% 0,100% 20%,100% 100%,0 100%);overflow:hidden;box-shadow:inset 0 -4px 0 #0003;color:#fff}
@@ -102744,6 +103703,17 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 `;
 function AssistantLifeHouseStyle() {
   return React.createElement("style", null, ASSISTANT_LIFE_HOUSE_CSS);
+}
+function AssistantLifeNames({
+  text
+}) {
+  const parts = String(text || '').split('・');
+  return React.createElement(React.Fragment, null, parts.map((n, i) => React.createElement(React.Fragment, {
+    key: i
+  }, i ? '・' : '', React.createElement("span", {
+    "data-assistant-life-name": true,
+    className: "whitespace-nowrap"
+  }, n), i < parts.length - 1 ? React.createElement("wbr", null) : null)));
 }
 function AssistantLifeRoom({
   id,
@@ -102836,7 +103806,9 @@ function AssistantLifeRoom({
     "data-assistant-life-room-away": id
   }, React.createElement("b", null, state.tag[0]), React.createElement("small", null, state.tag[1]), state.tag[2] && React.createElement("small", {
     "data-assistant-life-room-with": true
-  }, state.tag[2])), !met && React.createElement("span", {
+  }, React.createElement(AssistantLifeNames, {
+    text: state.tag[2]
+  }))), !met && React.createElement("span", {
     className: "lock"
   }, "まだ会っていない"));
 }
@@ -102848,7 +103820,8 @@ function AssistantLifeHouseArt({
   metSet,
   onOpen,
   diary,
-  pop
+  pop,
+  onBoard
 }) {
   const wall = 6,
     cols = land ? 4 : 2,
@@ -102923,14 +103896,18 @@ function AssistantLifeHouseArt({
       height: lh,
       filter: night ? 'brightness(.62)' : undefined
     }
-  }, React.createElement("div", {
-    className: "mhl-board",
+  }, React.createElement("button", {
+    type: "button",
+    className: "mhl-board text-left",
     "data-assistant-life-board": true,
+    onClick: onBoard,
     style: {
-      width: Math.min(width * (land ? .42 : .5), 240)
-    }
-  }, React.createElement("b", null, "📌 今日あったこと"), items.length ? items.slice(0, land ? 2 : 3).map((x, i) => React.createElement("p", {
-    key: i
+      width: Math.min(width * (land ? .42 : .52), 240)
+    },
+    "aria-label": "今日あったことを全部見る"
+  }, React.createElement("b", null, "📌 今日あったこと", items.length ? ' ›' : ''), items.length ? items.slice(0, land ? 1 : 2).map((x, i) => React.createElement("p", {
+    key: i,
+    "data-assistant-life-board-item": true
   }, x.t, " ", x.text)) : React.createElement("p", null, "まだ何もありません")), React.createElement("div", {
     className: "mhl-door",
     style: {
@@ -102983,7 +103960,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
           in: [host, ...ids.filter(x => x !== host)],
           lonely,
           sleep: w.doing === 'sleep',
-          bub: w.doing === 'sleep' ? '💤 おやすみ中' : lonely ? '💭 だれか来ないかな…' : ids.length > 1 ? `${ASSISTANT_LIFE_PLACE_ICON.home} ${ids.length}人で${doing.label}` : doing.label
+          bub: w.doing === 'sleep' ? '💤 おやすみ中' : lonely ? '💭 だれか来ないかな…' : ids.length > 1 ? `部屋で${ids.length}人で${doing.label}` : `部屋で${doing.label}`
         };
       } else rooms[id] = {
         tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)]
@@ -103050,8 +104027,9 @@ function AssistantLifeRoomSheet({
   const canWatch = groupKey ? !watched.includes(groupKey) : !watched.includes(`solo:${id}`);
   const atBeat = w && w.doing === 'practice';
   const slotDef = ASSISTANT_LIFE_SLOTS[slot.i];
-  const groupText = w && w.group ? ` ・ ${w.group.ids.length}人(${assistantLifeGroupNames(w.group.ids, 8)})` : ' ・ ひとり';
-  const where = !w ? '🏡 部屋で過ごしている' : home ? `🏡 ${doing}${groupText}` : `${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${ASSISTANT_LIFE_PLACES[w.place]}で${doing}${groupText}`;
+  const groupNames = w && w.group ? assistantLifeGroupNames(w.group.ids, 8) : null;
+  const groupText = w && w.group ? '' : ' ・ ひとり';
+  const where = !w ? '🏡 部屋で過ごしている' : home ? `🏡 部屋で${doing}${groupText}` : `${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${ASSISTANT_LIFE_PLACES[w.place]}で${doing}${groupText}`;
   return React.createElement("div", {
     className: "absolute inset-0",
     style: {
@@ -103086,7 +104064,9 @@ function AssistantLifeRoomSheet({
   }, who.name, "の部屋"), React.createElement("p", {
     className: "mt-1 max-w-[62%] text-[12px] font-bold",
     "data-assistant-life-room-where": true
-  }, where), !home && React.createElement("p", {
+  }, where, groupNames && React.createElement(React.Fragment, null, " ・ ", w.group.ids.length, "人(", React.createElement(AssistantLifeNames, {
+    text: groupNames
+  }), ")")), !home && React.createElement("p", {
     className: "text-[11px] font-bold text-violet-200"
   }, "⏱ ", slotDef ? `${ASSISTANT_LIFE_SLOTS[(slot.i + 1) % 6].label}(${slotDef.to}時)まで` : '', "いる"), (() => {
     const sh = assistantLifeRhythmShiftOn((ASSISTANT_LIFE_STORE.state.rhythm || {})[id], assistantLifeDayKey());
@@ -103268,19 +104248,31 @@ function AssistantLifeScene({
     if (!who) return null;
     const n = ids.length;
     const cx = n === 1 ? 50 : n === 2 ? i ? 66 : 34 : n === 3 ? [22, 50, 78][i] : [16, 38, 62, 84][i];
-    return React.createElement("img", {
-      key: pid,
+    const zz = (scene.sleep || []).includes(pid);
+    return React.createElement(React.Fragment, {
+      key: pid
+    }, React.createElement("img", {
       className: "st",
-      src: assistantFullImage(who, 'happy'),
+      "data-assistant-life-scene-stand": pid,
+      "data-assistant-life-scene-sleep": zz ? '1' : '0',
+      src: assistantFullImage(who, zz ? 'normal' : 'happy'),
       alt: "",
       style: {
         left: `${cx}%`,
         transform: 'translateX(-50%)',
         height: n >= 4 ? '50%' : '58%',
         width: n === 1 ? '90%' : n >= 4 ? '46%' : '70%',
-        bottom: '22%'
+        bottom: '22%',
+        filter: zz ? 'brightness(.45) saturate(.6) drop-shadow(0 6px 12px #0008)' : undefined
       }
-    });
+    }), zz && React.createElement("span", {
+      className: "absolute text-[34px]",
+      style: {
+        left: `${cx + 8}%`,
+        top: '30%'
+      },
+      "aria-hidden": "true"
+    }, "💤"));
   }), React.createElement("div", {
     className: "mhl-hdr absolute inset-x-0 top-0",
     style: {
@@ -103309,7 +104301,9 @@ function AssistantLifeScene({
     style: {
       background: 'linear-gradient(90deg,#0ea5e9,#a855f7)'
     }
-  }, "👥 ", ids.length, "人で ・ ", assistantLifeGroupNames(ids, 8)), hint && ids.length === 2 && React.createElement("p", {
+  }, "👥 ", ids.length, "人で ・ ", React.createElement(AssistantLifeNames, {
+    text: assistantLifeGroupNames(ids, 8)
+  })), hint && ids.length === 2 && React.createElement("p", {
     className: "mt-1 w-fit rounded-full px-2 py-0.5 text-[10px] font-black",
     style: {
       background: 'linear-gradient(90deg,#db2777,#a855f7)'
@@ -103362,6 +104356,7 @@ function AssistantLifeHouse({
   const [note, setNote] = React.useState('');
   const [give, setGive] = React.useState(null);
   const [intro, setIntro] = React.useState(null);
+  const [boardOpen, setBoardOpen] = React.useState(false);
   const [vw, setVw] = React.useState(() => typeof window !== 'undefined' ? window.innerWidth : 390);
   React.useEffect(() => {
     const f = () => setVw(window.innerWidth);
@@ -103421,11 +104416,13 @@ function AssistantLifeHouse({
     if (!talk) return;
     const speakers = [...new Set((talk.lines || []).map(l => l && l.who).filter(Boolean))];
     const sceneIds = [...new Set([...(ctx && ctx.ids || []), ...speakers])];
+    const sleepIds = ctx && ctx.sleep ? ctx.ids || [] : [];
     setRoomId(null);
     setScene({
       ids: sceneIds,
       place: ctx && ctx.place || 'home',
-      key: talk.id
+      key: `${talk.id}-${Date.now()}`,
+      sleep: sleepIds
     });
     if (onReplay) onReplay(talk);
     if (sceneIds.length >= 2) void assistantLifeDiaryAdd(`${sceneIds.map(nameOf).join('・')}の様子を見守った`, sceneIds, {
@@ -103446,7 +104443,12 @@ function AssistantLifeHouse({
   const peek = id => {
     const key = `solo:${id}`;
     if ((life.watched || []).includes(key)) return;
-    const talk = assistantLifePickSoloTalk(id, life);
+    const w = assistantLifeWhereOf(life, id);
+    const sleeping = !!(w && w.doing === 'sleep');
+    const talk = sleeping ? assistantLifePickSleepTalk(id, {
+      wake: false,
+      place: w.place
+    }) : assistantLifeOnlyPresent(assistantLifePickSoloTalk(id, life), [id]);
     if (!talk) {
       setNote(`${nameOf(id)}は、いまは静かに過ごしています`);
       return;
@@ -103458,23 +104460,29 @@ function AssistantLifeHouse({
       }
     });
     assistantLifeSaveLife();
-    assistantLifeMarkSeen(talk);
-    const w = assistantLifeWhereOf(life, id);
+    if (!sleeping) assistantLifeMarkSeen(talk);
     playTalk(talk, {
       ids: [id],
-      place: w ? w.place : 'home'
+      place: w ? w.place : 'home',
+      sleep: sleeping
     });
   };
   const invite = async id => {
-    const talk = assistantLifePickCallTalk(id, life);
+    const w = assistantLifeWhereOf(life, id);
+    const sleeping = !!(w && w.doing === 'sleep');
+    const talk = sleeping ? assistantLifePickSleepTalk(id, {
+      wake: true,
+      bondLv: typeof bondLevelOf === 'function' ? bondLevelOf(id) : 1,
+      place: w.place
+    }) : assistantLifePickCallTalk(id, life);
     if (!(await assistantLifeNudge('invite', id))) return;
-    setNote(`${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
+    setNote(sleeping ? `${nameOf(id)}は寝ています。次の時間に、起きてだれかのところへ行きます` : `${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
     if (talk) {
-      assistantLifeMarkSeen(talk);
-      const w = assistantLifeWhereOf(life, id);
+      if (!sleeping) assistantLifeMarkSeen(talk);
       playTalk(talk, {
         ids: [id],
-        place: w ? w.place : 'home'
+        place: w ? w.place : 'home',
+        sleep: sleeping
       });
     }
   };
@@ -103599,7 +104607,8 @@ function AssistantLifeHouse({
     "aria-label": "閉じる",
     className: "h-9 w-8 shrink-0 text-[19px] text-slate-100"
   }, "←"), React.createElement("div", {
-    className: "min-w-0 flex-1"
+    className: "min-w-0 shrink-0",
+    "data-assistant-life-title": true
   }, React.createElement("p", {
     className: "mhl-en whitespace-nowrap",
     style: land ? {
@@ -103611,23 +104620,23 @@ function AssistantLifeHouse({
     style: land ? {
       fontSize: 18
     } : undefined
-  }, "助手ライフ")), !land && typeof TimeOfDayClock === 'function' && React.createElement("div", {
+  }, "助手ライフ")), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }), typeof TimeOfDayClock === 'function' && React.createElement("div", {
     className: "shrink-0 self-center"
-  }, React.createElement(TimeOfDayClock, null)), React.createElement("div", {
-    className: "mhl-clock shrink-0",
+  }, React.createElement(TimeOfDayClock, null))), React.createElement("p", {
+    className: "mt-0.5 text-[10px] font-bold text-slate-200",
     "data-assistant-life-clock": true
-  }, React.createElement("p", {
-    className: "whitespace-nowrap text-[11px] font-black"
   }, {
     morning: '🌅 朝',
     noon: '☀ 昼',
     evening: '🌇 夕方',
     night: '🌙 夜'
-  }[look]), React.createElement("p", {
+  }[look], " ・ ", React.createElement("span", {
     "data-assistant-life-next-slot": true,
-    className: "whitespace-nowrap text-[9.5px] font-bold text-slate-300"
-  }, assistantLifeNextSlotText().replace(/で.+?\(みんなが動きます\)/, 'でみんなが動く')))), React.createElement("div", {
-    className: "mt-1.5 flex items-center gap-1.5",
+    className: "whitespace-nowrap"
+  }, assistantLifeNextSlotText().replace(/で.+?\(みんなが動きます\)/, 'でみんなが動く'))), React.createElement("div", {
+    className: "mt-1 flex items-center gap-1.5",
     "data-assistant-life-tier": tier.id,
     title: ASSISTANT_LIFE_TIER_NOTES[tier.id]
   }, React.createElement("span", {
@@ -103663,7 +104672,8 @@ function AssistantLifeHouse({
     metSet: metSet,
     onOpen: setRoomId,
     diary: diary,
-    pop: !!intro
+    pop: !!intro,
+    onBoard: () => setBoardOpen(true)
   }));
   const tabBody = tab === 'house' ? houseView : tab === 'where' ? React.createElement("div", {
     className: "px-3 pb-3",
@@ -103783,7 +104793,42 @@ function AssistantLifeHouse({
     onWatch: watch,
     onGive: g => openGive(g.ids),
     onBeat: beat
-  }), scene && React.createElement(AssistantLifeScene, {
+  }), boardOpen && React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      zIndex: 25
+    },
+    "data-assistant-life-diary": true
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    className: "absolute inset-0 bg-black/60",
+    onClick: () => setBoardOpen(false)
+  }), React.createElement("div", {
+    className: "mhl-sheet",
+    style: land ? {
+      left: 'auto',
+      width: '42%',
+      top: 0,
+      maxHeight: '100%',
+      borderRadius: '22px 0 0 22px'
+    } : undefined
+  }, React.createElement("p", {
+    className: "mhl-en"
+  }, "TODAY"), React.createElement("p", {
+    className: "text-[18px] font-black"
+  }, "📌 今日あったこと"), (diary.items || []).length ? [...diary.items].reverse().map((x, i) => React.createElement("p", {
+    key: i,
+    className: "mt-1.5 text-[12px] font-bold leading-snug text-slate-100"
+  }, React.createElement("b", {
+    className: "mr-1.5 text-amber-200"
+  }, x.t), x.text)) : React.createElement("p", {
+    className: "mt-2 text-[12px] text-slate-400"
+  }, "まだ何もありません"), React.createElement("button", {
+    type: "button",
+    className: "mhl-btn mt-3 w-full bg-slate-700",
+    onClick: () => setBoardOpen(false)
+  }, "閉じる"))), scene && React.createElement(AssistantLifeScene, {
     key: scene.key,
     scene: scene,
     look: look,
@@ -103837,17 +104882,21 @@ function AssistantLifeHouse({
     onGive: doGive
   }));
 }
+const ASSISTANT_LIFE_MAP_CROP = Object.freeze({
+  y0: 120,
+  h: 1440
+});
 const ASSISTANT_LIFE_MAP_POS = Object.freeze({
-  studio: [24, 22],
-  ranch: [10, 38],
-  library: [81, 25],
-  garden: [68, 34],
-  plaza: [51, 47],
-  cafe: [16, 53],
-  market: [86, 56],
-  home: [8, 65],
-  cardroom: [49, 82],
-  hill: [85, 10]
+  ranch: [23.4, 30.6],
+  library: [69.1, 22.9],
+  studio: [83.5, 27.8],
+  garden: [69.1, 33.3],
+  plaza: [51.0, 48.6],
+  cafe: [14.9, 61.8],
+  market: [85.0, 64.6],
+  home: [9.6, 78.5],
+  cardroom: [49.9, 91.7],
+  hill: [80.8, 5.6]
 });
 function AssistantLifeTownMap({
   life,
@@ -103870,8 +104919,7 @@ function AssistantLifeTownMap({
   return React.createElement("div", {
     className: "relative mb-2 overflow-hidden rounded-2xl border border-white/15",
     style: {
-      aspectRatio: '941 / 1000',
-      maxHeight: 340
+      aspectRatio: `941 / ${ASSISTANT_LIFE_MAP_CROP.h}`
     },
     "data-assistant-life-map": true
   }, React.createElement("img", {
@@ -103880,7 +104928,7 @@ function AssistantLifeTownMap({
     className: "absolute left-0 top-0 w-full",
     style: {
       filter,
-      transform: 'translateY(-14%)'
+      transform: `translateY(-${(100 * ASSISTANT_LIFE_MAP_CROP.y0 / 1672).toFixed(2)}%)`
     }
   }), Object.entries(ASSISTANT_LIFE_MAP_POS).map(([place, [x, y]]) => {
     const who = at[place] || [];
@@ -103908,7 +104956,7 @@ function AssistantLifeTownMap({
       })) : null;
     })), React.createElement("span", {
       className: `mt-0.5 whitespace-nowrap rounded-md border px-1.5 text-[9.5px] font-black ${who.length ? 'border-amber-300 bg-amber-950/90 text-amber-50' : 'border-slate-500/60 bg-slate-950/70 text-slate-300'}`
-    }, ASSISTANT_LIFE_PLACE_ICON[place], " ", ASSISTANT_LIFE_PLACES[place]));
+    }, ASSISTANT_LIFE_PLACE_ICON[place], " ", place === 'home' ? '助手の家' : ASSISTANT_LIFE_PLACES[place]));
   }));
 }
 const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({

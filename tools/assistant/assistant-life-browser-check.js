@@ -4,6 +4,7 @@
 //   ① HOME の施設の横に、会った助手の顔が全部出る(帯は出ない)/ 施設「🏡 助手ライフ」を押すと家が開く / 縦 390・横 844×390 ではみ出さない
 //   ⑩ 家: 8人の部屋・いる部屋は顔・出かけた部屋は行き先の札・部屋を押すとその助手のこと・場面・みんなの居場所(地図と一覧)・入場の演出
 //   一覧(組・ひとり・誘う・引き合わせる・見守る・渡す)は家の「📋 居場所」の中。掛け合いは家を閉じずに場面で流れる
+//   ⑫ 文字が切れない・名前の途中で折れない・地図の札が重ならない ⑬ 寝ている助手は寝言・起こされた反応
 //   ⑪ 声をかける: その助手だけが {name} へ話す(ほかの助手の台本を流さない)・ひとりの助手の場面に、いない助手が出ない(2026-11-07 社長の指摘)
 //   ② 見守る: 掛け合いが流れ、見守った数・にぎわい・友情Lv が増える / 同じ時間に同じ組は2度見守れない
 //   ③ 誘う・引き合わせる: 次の時間の声かけとして残る
@@ -128,6 +129,18 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     check('⑩ 居間に「今日あったこと」の掲示板', (await page.locator('[data-assistant-life-board]').count()) === 1);
     check('⑩ 家ははみ出さない(縦 390)', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
     if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-12-house.png') });
+    // ⑫ 文字(2026-11-07 社長「文字列も気をつけて」): 題が切れない・助手の名前の途中で折れない・掲示板は2行で読める
+    const textOk = await page.evaluate(() => {
+      const ng = [];
+      const ti = document.querySelector('[data-assistant-life-title] .mhl-ti');
+      if (!ti || ti.scrollWidth > ti.clientWidth + 1) ng.push('題が切れる');
+      const clk = document.querySelector('[data-assistant-life-title]'); const tc = [...document.querySelectorAll('.mhl-hdr *')].find(e => /\d{1,2}:\d{2}/.test(e.textContent || '') && e.children.length === 0);
+      if (clk && tc) { const a = clk.getBoundingClientRect(), b = tc.getBoundingClientRect(); if (a.right > b.left + 1 && a.top < b.bottom && b.top < a.bottom) ng.push('題と時刻の札が重なる'); }
+      for (const n of document.querySelectorAll('[data-assistant-life-name]')) if (n.getClientRects().length > 1) ng.push(`名前の途中で折れる: ${n.textContent}`);
+      for (const p of document.querySelectorAll('[data-assistant-life-board-item]')) if (p.scrollHeight > p.clientHeight + 2) ng.push(`掲示板が切れる: ${p.textContent}`);
+      return ng;
+    });
+    check('⑫ 家の文字が切れない・助手の名前の途中で折れない(縦)', textOk.length === 0, textOk.slice(0, 3).join(' / '));
     await page.locator('[data-assistant-life-room="atsu"]').click(); await page.waitForTimeout(300);
     const sheetText = await page.locator('[data-assistant-life-room-sheet="atsu"]').innerText().catch(() => '');
     check('⑩ 部屋を押すと、その助手のこと(いまどこ・仲良し度・友情Lv・セッション・今日あったこと)', ['あつの部屋', '仲良し度', '友情Lv', 'セッション', '今日あったこと'].every(w => sheetText.includes(w)), sheetText.replace(/\s+/g, ' ').slice(0, 80));
@@ -145,8 +158,32 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
       await endScene(page);
     }
     await page.locator('[data-assistant-life-room-sheet] > button').first().click({ position: { x: 10, y: 10 } }).catch(() => {});
+    // ⑬ 寝ている助手(2026-11-07 社長「寝てるのに話したら普通に会話した」): 声をかけると寝言か起こされた反応・場面は寝ている見せ方
+    await page.evaluate(() => { const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, solo: { ...l.solo, kyuko: { doing: 'sleep', place: 'home', reason: 'mypace' } } } }); });
+    await page.waitForTimeout(300);
+    check('⑬ 寝ている部屋には「💤 おやすみ中」', /おやすみ中/.test(await page.locator('[data-assistant-life-room="kyuko"]').innerText().catch(() => '')));
+    await page.locator('[data-assistant-life-room="kyuko"]').click().catch(() => {}); await page.waitForTimeout(300);
+    await page.locator('[data-assistant-life-room-sheet="kyuko"] [data-assistant-life-room-act="invite"]').click().catch(() => {});
+    await page.waitForTimeout(800);
+    {
+      const info = await talkInfo(page);
+      check('⑬ 寝ている助手に声をかけると、寝言か起こされた反応(その助手だけ)', !!info && /^life-sleep-kyuko/.test(info.id) && info.faces.every(id => id === 'kyuko'), info ? `${info.id}・${info.line}` : 'なし');
+      check('⑬ 寝ている助手の場面は、寝ている見せ方(暗い立ち絵と💤)', (await page.locator('[data-assistant-life-scene-stand="kyuko"][data-assistant-life-scene-sleep="1"]').count()) === 1);
+      if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-16-sleep.png') });
+      await endScene(page);
+    }
+    await page.locator('[data-assistant-life-room-sheet] > button').first().click({ position: { x: 10, y: 10 } }).catch(() => {});
     await toWhere(page);
     check('⑩ みんなの居場所に町の地図(場所に顔)', (await page.locator('[data-assistant-life-map] [data-assistant-life-map-place="cafe"] button').count()) === 2);
+    const mapOk = await page.evaluate(() => {
+      const map = document.querySelector('[data-assistant-life-map]'); if (!map) return ['地図が無い'];
+      const m = map.getBoundingClientRect(); const ng = [];
+      const labs = [...map.querySelectorAll('[data-assistant-life-map-place] > span:last-child')].map(e => ({ id: e.parentElement.getAttribute('data-assistant-life-map-place'), r: e.getBoundingClientRect() }));
+      for (const a of labs) { if (a.r.left < m.left - 1 || a.r.right > m.right + 1 || a.r.top < m.top - 1 || a.r.bottom > m.bottom + 1) ng.push(`地図の外: ${a.id}`); }
+      for (let i = 0; i < labs.length; i++) for (let j = i + 1; j < labs.length; j++) { const a = labs[i].r, b = labs[j].r; if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1) ng.push(`札が重なる: ${labs[i].id}×${labs[j].id}`); }
+      return ng;
+    });
+    check('⑫ 地図の場所の札は地図の中で、たがいに重ならない(家とおやつ屋さんも)', mapOk.length === 0, mapOk.join(' / '));
     const groups = await page.locator('[data-assistant-life-group]').count();
     const solos = await page.locator('[data-assistant-life-solo]').count();
     check('① 画面が開き、組とひとりの助手が出る(8人ぶん)', groups + solos >= 3, `組 ${groups}・ひとり ${solos}`);
@@ -268,6 +305,8 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     await openHouse(L.page);
     check('① 横 844×390 でも画面がはみ出さない(家は左・右の列に今日やれること)', await L.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1) && (await L.page.locator('[data-assistant-life-screen][data-assistant-life-land="1"]').count()) === 1 && (await L.page.locator('[data-assistant-life-room]').count()) === 8);
     if (SHOTS) await L.page.screenshot({ path: path.join(shotDir, 'life-6-house-land.png') });
+    const textL = await L.page.evaluate(() => { const ng = []; const ti = document.querySelector('[data-assistant-life-title] .mhl-ti'); if (!ti || ti.scrollWidth > ti.clientWidth + 1) ng.push('題が切れる'); for (const n of document.querySelectorAll('[data-assistant-life-name]')) if (n.getClientRects().length > 1) ng.push(`名前の途中で折れる: ${n.textContent}`); return ng; });
+    check('⑫ 横でも家の文字が切れない・名前の途中で折れない', textL.length === 0, textL.join(' / '));
     await L.page.locator('[data-assistant-life-room="atsu"]').click().catch(() => {}); await L.page.waitForTimeout(300);
     check('⑩ 横: 部屋を押すと右にその助手のこと(はみ出さない)', await L.page.evaluate(() => { const el = document.querySelector('[data-assistant-life-room-sheet] .mhl-sheet'); const r = el && el.getBoundingClientRect(); return !!r && r.left > window.innerWidth / 2 - 1 && r.right <= window.innerWidth + 1; }));
     if (SHOTS) await L.page.screenshot({ path: path.join(shotDir, 'life-14-room-land.png') });

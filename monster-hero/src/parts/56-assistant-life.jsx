@@ -25,7 +25,7 @@ const ASSISTANT_LIFE_MOODS = Object.freeze({
 });
 // していること。label … 台本の {doing}(名詞)/ te … {doing_te}(「〜して」の形)。group … 2人以上でもする(2人の掛け合いの「していること」5つ・コトバと決めた 2026-11-07)
 const ASSISTANT_LIFE_DOINGS = Object.freeze({
-  snack:    { label: 'おやつ',     te: 'おやつを食べて', group: true,  places: ['cafe', 'plaza', 'home'] },
+  snack:    { label: 'おやつ',     te: 'おやつを食べて', group: true,  places: ['cafe', 'home'] }, // 広場ではしない(2026-11-07 社長「広場でおやつ、は分かりにくい」)
   practice: { label: '練習',       te: '練習して',       group: true,  places: ['studio'] },
   training: { label: '育成',       te: '育成して',       group: true,  places: ['ranch'] },
   cards:    { label: 'カード研究', te: 'カードを研究して', group: true,  places: ['cardroom', 'library'] },
@@ -976,22 +976,25 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
   };
   // 誘う: 次の時間にだれかのところへ行く。声をかけに行く台本があれば、その場で流す
   // 誘う(声をかける): その助手が {name} に話す台本だけ。次の時間に、だれかのところへ行く(2026-11-07 社長の指摘で、ほかの助手が出る台本はやめた)
+  const sleepingOf = (id) => { const x = (life.solo || {})[id]; return !!(x && x.doing === 'sleep'); };
   const invite = async (id) => {
-    const talk = assistantLifePickCallTalk(id, life);
+    const talk = sleepingOf(id) && typeof assistantLifePickSleepTalk === 'function' ? assistantLifePickSleepTalk(id, { wake: true, place: 'home' }) : assistantLifePickCallTalk(id, life);
     if (!(await assistantLifeNudge('invite', id))) return;
     setNote(`${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
-    if (talk) { assistantLifeMarkSeen(talk); playTalk(talk, { ids: [id], place: ((life.solo || {})[id] || {}).place }); }
+    if (talk) { if (!sleepingOf(id)) assistantLifeMarkSeen(talk); playTalk(talk, { ids: [id], place: ((life.solo || {})[id] || {}).place, sleep: sleepingOf(id) }); }
   };
   // ようすを見る(ひとりの助手): ひとりごと・距離をおく・ブリーダーへのひとこと。同じ時間に同じ助手は1回。何も増えない
   const peek = (id) => {
     const key = `solo:${id}`;
     if ((life.watched || []).includes(key)) return;
-    const talk = assistantLifePickSoloTalk(id, life);
+    // 寝ているなら寝言。起きていれば、その助手だけが話す台本(いない相手の行は外す)
+    const talk = sleepingOf(id) && typeof assistantLifePickSleepTalk === 'function' ? assistantLifePickSleepTalk(id, { wake: false, place: 'home' })
+      : (typeof assistantLifeOnlyPresent === 'function' ? assistantLifeOnlyPresent(assistantLifePickSoloTalk(id, life), [id]) : assistantLifePickSoloTalk(id, life));
     if (!talk) { setNote(`${nameOf(id)}は、いまは静かに過ごしています`); return; }
     ASSISTANT_LIFE_STORE.set({ life: { ...life, watched: [...(life.watched || []), key] } });
     assistantLifeSaveLife();
-    assistantLifeMarkSeen(talk);
-    playTalk(talk, { ids: [id], place: ((life.solo || {})[id] || {}).place });
+    if (!sleepingOf(id)) assistantLifeMarkSeen(talk);
+    playTalk(talk, { ids: [id], place: ((life.solo || {})[id] || {}).place, sleep: sleepingOf(id) });
   };
   const introduce = async () => { if (pick.length === 2 && await assistantLifeNudge('introduce', pick)) { setNote(`${nameOf(pick[0])}と${nameOf(pick[1])}が、次の時間に一緒に過ごしやすくなりました`); setPick([]); } };
   const mood = (id) => ASSISTANT_LIFE_MOODS[(life.moods || {})[id]] || '';
