@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6c10ff4e2d9f45e4
+// source-sha256: 449c0cef5b370235
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6034,6 +6034,9 @@ const RHYTHM_MULTI_LOOK_LEVELS = Object.freeze(['LIGHT', 'STANDARD', 'VIVID', 'O
 const rhythmLookPresetOf = settings => (RHYTHM_LOOK_PRESETS.find(preset => Object.entries(preset.values).every(([key, value]) => settings && settings[key] === value)) || {
   id: ''
 }).id;
+const RHYTHM_NOTE_PALETTE_CHOICES = Object.freeze([['STANDARD', '標準'], ['PASTEL', 'パステル'], ['NEON', 'ネオン'], ['CLEAR', '見分けやすい']]);
+const RHYTHM_STAGE_THEME_CHOICES = Object.freeze([['NONE', 'いつもの背景'], ['GRAND_OPEN', '本オープン記念']]);
+const rhythmStageThemeActive = settings => settings?.stageTheme === 'GRAND_OPEN' && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmGrandOpen === true;
 const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['LIVE', 'ライブ'], ['VIVID', '派手'], ['CALM', '控えめ'], ['SIMPLE', 'シンプル']]);
 const RHYTHM_LANE_COVER_MIN = 0,
   RHYTHM_LANE_COVER_MAX = 60,
@@ -6212,6 +6215,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   effectAmount: 'LIGHT',
   lightweightMode: false,
   fx: Object.freeze({}),
+  notePalette: 'STANDARD',
+  stageTheme: 'NONE',
   multiLightLook: true,
   multiLook: 'LIGHT',
   modeSelectArt: true,
@@ -6583,7 +6588,9 @@ const normalizeRhythmSettings = value => {
     assistMode: bool('assistMode'),
     mirrorChart: bool('mirrorChart'),
     luckyRush: bool('luckyRush'),
-    fx: normalizeRhythmFx(source.fx)
+    fx: normalizeRhythmFx(source.fx),
+    notePalette: RHYTHM_NOTE_PALETTE_CHOICES.some(([id]) => id === source.notePalette) ? source.notePalette : DEFAULT_RHYTHM_SETTINGS.notePalette,
+    stageTheme: RHYTHM_STAGE_THEME_CHOICES.some(([id]) => id === source.stageTheme) ? source.stageTheme : DEFAULT_RHYTHM_SETTINGS.stageTheme
   };
 };
 const emptyRhythmBestRecord = () => ({
@@ -34954,7 +34961,7 @@ const RhythmOptions = ({
     className: wide ? `mt-1 ${fxGrid}` : `mt-3 ${fxGrid}`
   }, field('ライブ背景', segments('stageEffect', RHYTHM_STAGE_EFFECT_LABELS), '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「ライブ」＝「派手」に加えて、ライブ会場のようにします。サーチライトが曲の拍に合わせて明るくなり、レーザーが小節ごとに向きと色を変えて走り、道の両側には観客のペンライトが奥までずらりと並び、拍に合わせて揺れます。ペンライトの色もコンボが伸びるほど変わります。いちばん重い段なので、端末が熱くなるときは下げてください。絵を描くのが得意な専用の部分（GPU）が無い端末では「派手」と同じになります。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライト・光の粒・レーザー・ペンライトは出しません。', {
     full: true
-  }), RHYTHM_FX_ITEMS.filter(item => item.group === 'stage').map(fxField))), fxGroupShown('road') && React.createElement("section", {
+  }), RHYTHM_FX_ITEMS.filter(item => item.group === 'stage').map(fxField), typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmGrandOpen === true && field('記念ステージ', segments('stageTheme', RHYTHM_STAGE_THEME_CHOICES), 'モンヒロビートの本オープンを記念した背景です。金色の光と紙吹雪が、いつもの背景に重なります。判定・スコアは変わりません。\n演出量「最小」と軽量モードでは、紙吹雪は止まったまま出ます。'))), fxGroupShown('road') && React.createElement("section", {
     "data-rhythm-options-group": "道",
     "data-rhythm-fx-group": "road",
     className: card
@@ -34994,7 +35001,7 @@ const RhythmOptions = ({
     className: "ml-auto text-[10px] font-bold text-slate-400"
   }, fxGroupCount('note'), "項目")), (wide || fxGroup === 'note') && React.createElement("div", {
     className: wide ? `mt-1 ${fxGrid}` : `mt-3 ${fxGrid}`
-  }, field('ノーツの動き', toggle('noteMotionFx'), 'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。'), field('にじむ光', toggle('noteBloom'), 'ノーツの光や、ノーツを取ったときの光のまわりを、ふわっとにじませます。既定は「OFF」です。判定・スコアは変わりません。\n描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効きます。「Canvas」のときは何も変わりません。\n光を小さな絵にぼかしてから重ねるので、GPU の仕事が少し増えます。端末が熱くなるときは OFF にしてください。演出量「最小」と軽量モードでは出しません。'), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
+  }, field('ノーツの色', segments('notePalette', RHYTHM_NOTE_PALETTE_CHOICES), 'ノーツの色の組み合わせです。既定は「標準」（これまでの色）です。判定・スコアは変わりません。\n「パステル」＝やわらかい色。「ネオン」＝くっきり光る色。「見分けやすい」＝色の見え方に左右されにくい組み合わせで、ノーツのまわりの光を出しません。\nTAP・HOLD・SLIDE・FLICK などの種類ごとに色が分かれているのは、どれを選んでも同じです。次に演奏を始めたときから変わります。'), field('ノーツの動き', toggle('noteMotionFx'), 'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。'), field('にじむ光', toggle('noteBloom'), 'ノーツの光や、ノーツを取ったときの光のまわりを、ふわっとにじませます。既定は「OFF」です。判定・スコアは変わりません。\n描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効きます。「Canvas」のときは何も変わりません。\n光を小さな絵にぼかしてから重ねるので、GPU の仕事が少し増えます。端末が熱くなるときは OFF にしてください。演出量「最小」と軽量モードでは出しません。'), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
     full: true
   }), RHYTHM_FX_ITEMS.filter(item => item.group === 'note').map(fxField))), fxGroupShown('judge') && React.createElement("section", {
     "data-rhythm-options-group": "判定",
@@ -39072,6 +39079,15 @@ const RhythmLineAdjustPanel = ({
     className: "min-h-[40px] rounded-lg border border-white/25 bg-slate-800 px-3 text-[12px] font-black"
   }, "やめる")));
 };
+const RHYTHM_GRAND_STAGE_CONFETTI = Object.freeze(Array.from({
+  length: 48
+}, (_, k) => Object.freeze({
+  x: k * 37 % 100,
+  y: k * 53 % 90,
+  dur: 6 + k * 7 % 6,
+  delay: -(k * 13 % 11),
+  color: ['#ffd45e', '#ff9ec4', '#8fd8ff', '#ffffff', '#ffc061'][k % 5]
+})));
 const RhythmTapTest = ({
   song,
   difficulty,
@@ -39092,7 +39108,8 @@ const RhythmTapTest = ({
   onApplyCalibration = null,
   multi = false,
   multiRewardScale = 1,
-  lineAdjust = null
+  lineAdjust = null,
+  breederName = ''
 }) => {
   const tutorialProp = tutorial;
   tutorial = tutorial || !!lineAdjust;
@@ -39105,6 +39122,12 @@ const RhythmTapTest = ({
     judgmentLineHeight: lineHeightOverride
   }, [settingsIn, lineHeightOverride]);
   const settings = useMemo(() => settingsBase && settingsBase.autoEffectDown !== false ? rhythmCapEffects(settingsBase, effectCap) : settingsBase, [settingsBase, effectCap]);
+  useState(() => {
+    try {
+      if (typeof rhythmApplyNotePalette === 'function') rhythmApplyNotePalette(settingsIn?.notePalette);
+    } catch (e) {}
+    return 0;
+  });
   const settingsLiveRef = useRef(settings);
   settingsLiveRef.current = settings;
   useEffect(() => {
@@ -39438,6 +39461,7 @@ const RhythmTapTest = ({
     })));
   }), [chart.notes, monsterSignature, settings.lightweightMode, settings.effectAmount, monsterFaceHidden]);
   const [sideArtUrls, setSideArtUrls] = useState([]);
+  const partnerLineRef = useRef(null);
   useEffect(() => {
     let cancelled = false;
     const made = [];
@@ -43483,6 +43507,35 @@ const RhythmTapTest = ({
     }, "+", Number(quickRunAward.psyche).toLocaleString())), quickRunAward.shard > 0 && React.createElement("span", null, "🎖️ ", React.createElement("b", {
       className: "text-amber-200"
     }, "+", Number(quickRunAward.shard).toLocaleString())))), (() => {
+      if (tutorial || calibrating || debugPlay || multi || index < 0 || !monsters[index]) return null;
+      if (partnerLineRef.current === null) partnerLineRef.current = typeof rhythmSoloPartnerLine === 'function' ? rhythmSoloPartnerLine({
+        masu: monsters[index],
+        song,
+        diffId: difficulty?.id,
+        score: view.score,
+        fullCombo: !!result.fullCombo,
+        cleared: result.cleared !== false,
+        who: breederName
+      }) : '';
+      const line = partnerLineRef.current;
+      if (!line) return null;
+      return React.createElement("div", {
+        "data-rhythm-result-partner-line": true,
+        className: "mx-auto my-2 flex max-w-sm items-center gap-2 rounded-2xl border border-sky-300/40 bg-sky-950/40 px-3 py-2"
+      }, heroArt && React.createElement("img", {
+        src: heroArt,
+        alt: "",
+        "aria-hidden": "true",
+        className: "h-12 w-12 shrink-0 object-contain"
+      }), React.createElement("div", {
+        className: "min-w-0 flex-1"
+      }, React.createElement("small", {
+        className: "block truncate text-[10px] font-black text-sky-200"
+      }, monsters[index].name), React.createElement("p", {
+        style: JA_WRAP_STYLE,
+        className: "text-[12px] font-bold leading-snug text-white"
+      }, jaWrap(line))));
+    })(), (() => {
       if (tutorial || calibrating || debugPlay || multi || result.assist || result.cleared === false) return null;
       const before = runRef.current?.startBest;
       if (before && before.clear === true) return null;
@@ -44020,6 +44073,19 @@ const RhythmTapTest = ({
     src: stageImages.sparks[1],
     alt: "",
     draggable: false
+  }))), rhythmStageThemeActive(settings) && React.createElement("div", {
+    "data-rhythm-grand-stage": true,
+    "data-still": settings.effectAmount === 'MINIMAL' || settings.lightweightMode ? '1' : undefined,
+    "aria-hidden": "true"
+  }, React.createElement("style", null, `[data-rhythm-grand-stage]{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden;background:radial-gradient(ellipse 70% 38% at 50% 0%,rgba(255,196,64,.42),rgba(255,196,64,0) 70%),linear-gradient(180deg,rgba(255,214,102,.10),rgba(255,214,102,0) 45%)}[data-rhythm-grand-stage] i{position:absolute;top:-4%;width:1.2vmin;height:2.2vmin;border-radius:2px;opacity:.9;animation:mhGrandConfetti linear infinite}[data-rhythm-grand-stage][data-still] i{animation:none}[data-rhythm-grand-stage] b{position:absolute;left:0;right:0;top:24%;text-align:center;font:900 7vmin/1 system-ui,sans-serif;letter-spacing:.12em;color:rgba(255,220,120,.16)}@keyframes mhGrandConfetti{from{transform:translateY(0) rotate(0deg)}to{transform:translateY(110vh) rotate(540deg)}}`), React.createElement("b", null, "GRAND OPEN"), RHYTHM_GRAND_STAGE_CONFETTI.map((c, k) => React.createElement("i", {
+    key: k,
+    style: {
+      left: `${c.x}%`,
+      background: c.color,
+      animationDuration: `${c.dur}s`,
+      animationDelay: `${c.delay}s`,
+      top: settings.effectAmount === 'MINIMAL' || settings.lightweightMode ? `${c.y}%` : undefined
+    }
   }))), roadFogOn && React.createElement(React.Fragment, null, React.createElement("i", {
     "data-rhythm-road-haze": true,
     "aria-hidden": "true"
@@ -52445,6 +52511,37 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       good: ['{who}さん、次はいけるよ!'],
       normal: [],
       bad: ['…{who}さん、どうしたの'],
+      awful: ['…{who}さん']
+    }
+  },
+  hMid: {
+    common: ['{who}さん、おつかれさま!', '{who}さん、いい感じだったね!', '{who}さん、もう1曲いこっか!', '{who}さん、となりで聞いてて楽しかった!'],
+    trait: {
+      jester: ['{who}さん、いいノリだったね!'],
+      brave: ['{who}さん、次はもっと上を狙おう!'],
+      clingy: ['{who}さん、となりで演奏できてうれしい〜'],
+      smart: ['{who}さん、安定していましたね'],
+      serious: ['{who}さん、おつかれさまでした'],
+      proud: ['{who}さん、まあまあね。次はもっといけるわ'],
+      worrier: ['{who}さん、最後までいけたね…よかった'],
+      stubborn: ['{who}さん、悪くない。次だ'],
+      easygoing: ['{who}さん、のんびり楽しかったね〜'],
+      fiery: ['{who}さん、まだまだ燃えられるぞ!'],
+      cool: ['{who}さん、悪くない。伸びしろはある'],
+      fickle: ['{who}さん、次はどの曲にする?'],
+      mellow: ['{who}さん、おだやかでいい演奏でした'],
+      hasty: ['{who}さん、さあ次!すぐ次!'],
+      competitive: ['{who}さん、次は自己ベスト更新だ!'],
+      showoff: ['{who}さん、見てた見てた!いい感じ!'],
+      shy: ['{who}さん…いっしょに演奏、楽しかった'],
+      hardworker: ['{who}さん、くり返せばもっと伸びます'],
+      romantic: ['{who}さん、いい音色だったね']
+    },
+    mood: {
+      great: ['{who}さん、いい感じ!!'],
+      good: ['{who}さん、ナイス!'],
+      normal: [],
+      bad: ['…{who}さん、おつかれ'],
       awful: ['…{who}さん']
     }
   },
@@ -89705,6 +89802,45 @@ const rhythmBuddyMasuName = masu => {
   return String(masu && masu.name || base && base.name || 'マスモン').slice(0, 12);
 };
 const rhythmBuddyTalkRecent = new Map();
+const rhythmSoloPartnerLine = ({
+  masu,
+  song,
+  diffId,
+  score = 0,
+  fullCombo = false,
+  cleared = true,
+  who = ''
+}) => {
+  if (!masu || masu.id == null || !who) return '';
+  try {
+    const brain = rhythmBuddyMakeBrain(song ? [song] : []);
+    const base = {
+      masuId: String(masu.id),
+      baseId: masu.baseId || null,
+      songId: song?.songId || '',
+      score,
+      diffId,
+      who
+    };
+    let text = cleared === false ? brain.talk({
+      ...base,
+      kind: 'hLow'
+    }) : brain.talk({
+      ...base,
+      kind: 'reactResult',
+      fc: fullCombo ? 1 : 0,
+      quit: false,
+      missRate: 0
+    });
+    if (!text && cleared !== false) text = brain.talk({
+      ...base,
+      kind: 'hMid'
+    });
+    return typeof text === 'string' ? text : '';
+  } catch (e) {
+    return '';
+  }
+};
 const rhythmBuddyMakeBrain = songs => ({
   play({
     songId,
@@ -157469,6 +157605,7 @@ function MonsterHeroGame() {
       difficulty: rhythmPlay.difficulty,
       settings: rhythmPlay.from === 'multi' ? rhythmMultiPlaySettings : rhythmSettings,
       monsterEntries: rhythmMonsterNoteEntries,
+      breederName: breederName,
       multi: rhythmPlay.from === 'multi',
       multiRewardScale: rhythmPlay.from === 'multi' ? rhythmMultiTotalScale(rhythmPlay.multiCount, rhythmPlay.multiStreak, rhythmPlay.multiCpus) : 1,
       bestRecord: rhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id),
