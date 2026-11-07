@@ -6731,6 +6731,12 @@ function MonsterHeroGame() {
         await storeSet('mh_battle_fx_autoload_default_off_v1', true, false);
       }
       setBattleFxSettingsState(savedBattleFx);
+      // 2026-11-07 の一度きりの戻し(社長「今日の分は全員リセット」→「まとめて戻す」)。
+      //   4時そろえ(#4679)の前の0時区切りで、11/7 の0:00〜4:00 に書いた「11/7」が、4:00 を過ぎても今日(11/7)の分として残った。
+      //   11/7(朝4時区切り)のあいだに1回だけ、日付が 11/7 の「その日の分」を前の日(11/6)の日付へ書き換えて、今日の分を「まだ」に戻す。
+      //   中身(経験値・ポイントの合計・記録)は変えない。日付だけ。キーの名前・形はそのまま。フラグを先に立てて二重に戻さない
+      //   (オートで挑むのごほうびは 96 の CARD_AUTO_REWARD_RESET_* で別に戻している)。ほかの日は何もしない
+      await runDayReset20261107({ storeGet, storeSet });
       const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
@@ -20605,6 +20611,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             key で分けて、画面が変わったら部品の中の状態を作り直す */}
         {/* 招待の部屋を開いたまま、ほかの画面にいるあいだの帯(2026-10-29・案A)。部屋が見えている所(対戦の画面・モードえらび・演奏中)では出さない。
             バトルの最中は画面を移ると途中のものが宙に浮くので、人が来たときだけ知らせる */}
+        {/* フレンドから招待が届いたら、HOME の上に帯で知らせる(2026-11-07 社長)。入るを押すと、モンヒロビートのマルチを開いてその部屋へ */}
+        <RhythmInviteHomeBar show={gameState==='HOME'} onAccept={()=>{void openRhythmDemo({to:'RHYTHM_MULTI'});}} />
         <RhythmMultiAwayBar hidden={gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT'||!!rhythmPlay}
           busy={['BATTLE','WAVE_RESULT','CHAMPION','BATTLE_TUTORIAL','CARD_BATTLE','RPG_DEBUG_BATTLE','DEBUG_BATTLE_SETUP'].includes(gameState)}
           onReturn={()=>{void openRhythmDemo({to:'RHYTHM_MULTI'});}} />
