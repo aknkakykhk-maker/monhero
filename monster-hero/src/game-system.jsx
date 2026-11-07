@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a802471fd8b00275
+// generated-sha256: 4c46b03797ec71ad
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -55642,7 +55642,7 @@ function RhythmAssistSessionPlayFace({ songId }) {
           const talker = say && (say.aid === aid || (partner && say.aid === gattai.b)) ? say : null;
           const face = (w, expr) => <img src={assistantFaceSrc(w, expr || null)} alt="" draggable={false} className="h-full w-full object-cover" />;
           return (
-            <div key={aid} data-rhythm-assist-play-face={aid} data-glow={lit ? '1' : undefined} data-gattai={partner ? '1' : undefined} className="flex items-start gap-1.5">
+            <div key={aid} data-rhythm-assist-play-face={aid} data-glow={lit ? '1' : undefined} data-gattai={partner ? '1' : undefined} className={partner ? 'flex flex-col items-start gap-1' : 'flex items-start gap-1.5'}>
               <span className={`relative block h-10 shrink-0 ${partner ? 'w-[64px]' : 'w-10'}`}>
                 {partner && (
                   <span data-rhythm-assist-gattai-partner className="absolute left-6 top-0 block h-10 w-10 overflow-hidden rounded-full border-2 bg-slate-800"

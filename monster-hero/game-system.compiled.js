@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 808d344e745a1071
+// source-sha256: 663d536f6afee558
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93400,7 +93400,7 @@ function RhythmAssistSessionPlayFace({
       "data-rhythm-assist-play-face": aid,
       "data-glow": lit ? '1' : undefined,
       "data-gattai": partner ? '1' : undefined,
-      className: "flex items-start gap-1.5"
+      className: partner ? 'flex flex-col items-start gap-1' : 'flex items-start gap-1.5'
     }, React.createElement("span", {
       className: `relative block h-10 shrink-0 ${partner ? 'w-[64px]' : 'w-10'}`
     }, partner && React.createElement("span", {

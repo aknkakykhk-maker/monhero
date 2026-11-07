@@ -400,7 +400,7 @@ function RhythmAssistSessionPlayFace({ songId }) {
           const talker = say && (say.aid === aid || (partner && say.aid === gattai.b)) ? say : null;
           const face = (w, expr) => <img src={assistantFaceSrc(w, expr || null)} alt="" draggable={false} className="h-full w-full object-cover" />;
           return (
-            <div key={aid} data-rhythm-assist-play-face={aid} data-glow={lit ? '1' : undefined} data-gattai={partner ? '1' : undefined} className="flex items-start gap-1.5">
+            <div key={aid} data-rhythm-assist-play-face={aid} data-glow={lit ? '1' : undefined} data-gattai={partner ? '1' : undefined} className={partner ? 'flex flex-col items-start gap-1' : 'flex items-start gap-1.5'}>
               <span className={`relative block h-10 shrink-0 ${partner ? 'w-[64px]' : 'w-10'}`}>
                 {partner && (
                   <span data-rhythm-assist-gattai-partner className="absolute left-6 top-0 block h-10 w-10 overflow-hidden rounded-full border-2 bg-slate-800"
