@@ -1025,6 +1025,9 @@ const RhythmChartNotePanel=({song,difficulty,chart})=>{
 const rhythmHudInitial=()=>({score:0,combo:0,last:'',lastPrecise:false,fastSlow:'',lastDeltaMs:null,skyLast:'',skyLastPrecise:false,skyFastSlow:'',skyDeltaMs:null,counts:null,life:RHYTHM_LIFE_MAX});
 // 空中のノーツか(判定の文字を空中の判定線の上に出す。2026-10-11 社長「地上は今まで通り、空中は地上と同じ仕組みを空中版の位置にする」)
 const rhythmNoteIsSky=note=>rhythmNoteSkyHeight(note)>0||rhythmSlideHasSky(note);
+/* 演奏中の様子を、演奏画面の外から「読むだけ」の窓(2026-11-07 助手とのセッションの顔とひとこと・80-screen-rhythm-assistant-session.jsx)。
+   判定・スコア・譜面には一切使わない。演奏画面が開いているあいだだけ hud(上の帯の中身)・曲・曲の中の時刻を置く */
+const RHYTHM_PLAY_WATCH={hud:null,songId:'',timeMs:0};
 const rhythmCreateHud=()=>{let state=rhythmHudInitial();const subs=new Set();
   return {get:()=>state,set(patch){state={...state,...patch};subs.forEach(fn=>fn());},subscribe(fn){subs.add(fn);return()=>{subs.delete(fn);};}};};
 const useRhythmHud=hud=>React.useSyncExternalStore(hud.subscribe,hud.get);
@@ -1410,6 +1413,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),touchSweepRef=useRef(null),judgmentTextRef=useRef(null),skyJudgmentTextRef=useRef(null),skyJudgmentBurstRef=useRef(null),comboRef=useRef(null),judgmentBurstRef=useRef(null),comboRingRef=useRef(null);
   // 判定ごとに変わる表示の入れ物(rhythmCreateHud の説明を参照)
   const hudRef=useRef(null);if(!hudRef.current)hudRef.current=rhythmCreateHud();
+  useEffect(()=>{const hud=hudRef.current;RHYTHM_PLAY_WATCH.hud=hud;RHYTHM_PLAY_WATCH.songId=(song&&song.songId)||'';RHYTHM_PLAY_WATCH.timeMs=0;return()=>{if(RHYTHM_PLAY_WATCH.hud===hud){RHYTHM_PLAY_WATCH.hud=null;RHYTHM_PLAY_WATCH.songId='';RHYTHM_PLAY_WATCH.timeMs=0;}};},[]);
   // 判定文字の光を焼いた絵にする(rhythmBakeJudgmentHalos の説明を参照)。演出量・軽量モードで影の枚数が変わるので、そのたびに焼き直す。
   // 焼けるまで・焼けなかったとき・影が1枚だけの判定は、今までどおり CSS のぼかしで出す(haloKeys に入っていない)。
   const [haloKeys,setHaloKeys]=useState(null);
@@ -2653,6 +2657,7 @@ const progressEl=songProgressRef.current;
 if(progressEl){const ratio=playEndTimeMs>0?Math.max(0,Math.min(1,songTimeMs/playEndTimeMs)):0;if(Math.abs(ratio-(progressEl._mhRatio||0))>=.005||ratio===1){progressEl._mhRatio=ratio;progressEl.style.transform=`scaleX(${ratio.toFixed(4)})`;}}
 if(run.luckRushUntil!=null&&songTimeMs>=run.luckRushUntil){run.luckRushUntil=null;setLuckyRush(false);}
 const timeEl=songTimeRef.current;
+RHYTHM_PLAY_WATCH.timeMs=songTimeMs;/* 読むだけの窓(上の RHYTHM_PLAY_WATCH) */
 if(timeEl){const shownMs=Math.max(0,Math.min(playEndTimeMs,songTimeMs)),second=Math.floor(shownMs/1000);if(timeEl._mhSecond!==second){timeEl._mhSecond=second;rhythmSetText(timeEl,`${rhythmClockLabel(shownMs)}/${rhythmClockLabel(playEndTimeMs)}`);}}
 /* 譜面より音源のほうが長い曲(デュラハンの2曲は音源をバトルと共用しているので切れない)は、
    終わりの手前から音量をなめらかに落とす。何もしないと曲の途中でぶつっと止まる。

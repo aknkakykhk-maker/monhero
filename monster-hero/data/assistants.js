@@ -21126,9 +21126,9 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'mua', e:'happy', t:'星、大きめでね♪' },
   ] },
   { id:'life-pair-mua-sorashido-021', kind:'pair', pair:['mua', 'sorashido'], keys:{ doing:'practice', lv:'7-10', air:'makeup' }, lines:[
-    { who:'mua', e:'normal', t:'さっきはごめんね。ミスの数の表、ほんとは役に立ってた' },
-    { who:'sorashido', e:'happy', t:'俺もごめん。次からは「伸びた数」の表にする笑' },
-    { who:'mua', e:'excited', t:'それ最高ぢゃん！ いっしょに作ろ♪' },
+    { who:'mua', e:'normal', t:'さっきはごめんね。あたし、ちょっと言いすぎた' },
+    { who:'sorashido', e:'happy', t:'俺もごめん。熱くなると、つい声が大きくなるんだ笑' },
+    { who:'mua', e:'excited', t:'ぢゃあ、仲直りの一曲いっしょにやろ♪' },
   ] },
   { id:'life-pair-mua-sorashido-022', kind:'pair', pair:['mua', 'sorashido'], keys:{ doing:'cards', lv:'1-3' }, lines:[
     { who:'mua', e:'troubled', t:'ねぇ、このカードとこのカード、どっちが強いの？' },
@@ -21162,11 +21162,11 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
   ] },
   { id:'life-pair-dra-erubin-109', kind:'pair', pair:['dra', 'erubin'], keys:{ doing:'cards', lv:'4-6', air:'after' }, lines:[
     { who:'erubin', e:'normal', t:'……一戦、やる？' },
-    { who:'dra', e:'troubled', t:'……おう。今日はふつうの服だな' },
-    { who:'erubin', e:'troubled', t:'うん。ふつうの服だよ笑' },
+    { who:'dra', e:'troubled', t:'……おう。今日は、静かにやるか' },
+    { who:'erubin', e:'troubled', t:'うん。静かにね笑' },
   ] },
   { id:'life-pair-dra-erubin-110', kind:'pair', pair:['dra', 'erubin'], keys:{ doing:'cards', lv:'7-10', air:'makeup' }, lines:[
-    { who:'dra', e:'normal', t:'ビンビン、この前は石油王の話ばっかりして悪かったな' },
+    { who:'dra', e:'normal', t:'ビンビン、さっきは悪かったな。おで、しつこかった' },
     { who:'erubin', e:'happy', t:'もう気にしてないよ。ドラちゃんのいじり、きらいじゃないしね' },
     { who:'dra', e:'happy', t:'……そうか。じゃあ、ほどほどにするくさ' },
   ] },
@@ -21213,7 +21213,7 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'mua', e:'troubled', t:'それはそれでさみしいんだけどｗ' },
   ] },
   { id:'life-pair-atsu-mua-116', kind:'pair', pair:['atsu', 'mua'], keys:{ doing:'practice', lv:'7-10', air:'makeup' }, lines:[
-    { who:'atsu', e:'normal', t:'この前は、からかいすぎた！ ごめん笑' },
+    { who:'atsu', e:'normal', t:'さっきはごめん！ 俺、調子に乗りすぎた笑' },
     { who:'mua', e:'happy', t:'いいよ。あたしもすねすぎた' },
     { who:'atsu', e:'happy', t:'じゃあ仲直りの一曲いこ！' },
     { who:'mua', e:'excited', t:'一曲だけね！ｗ' },
@@ -21255,12 +21255,12 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
   ] },
   { id:'life-pair-momosuke-sorashido-033', kind:'pair', pair:['momosuke', 'sorashido'], keys:{ doing:'practice', lv:'4-6', air:'after' }, lines:[
     { who:'sorashido', e:'troubled', t:'……ももさん、今日の練習、見てても大丈夫か？' },
-    { who:'momosuke', e:'normal', t:'……見るだけならいいよ。数えないでね' },
+    { who:'momosuke', e:'normal', t:'……見るだけならいいよ。今日は静かにね' },
     { who:'sorashido', e:'normal', t:'わかった。今日はただ見てる' },
   ] },
   { id:'life-pair-momosuke-sorashido-034', kind:'pair', pair:['momosuke', 'sorashido'], keys:{ doing:'practice', lv:'7-10', air:'makeup' }, lines:[
-    { who:'sorashido', e:'normal', t:'この前は、ミスの数を大声で言って悪かった' },
-    { who:'momosuke', e:'happy', t:'もういいよ！！ 次は、ふたりにしか聞こえない声でね♡' },
+    { who:'sorashido', e:'normal', t:'さっきは悪かった。俺、言い方がきつかったな' },
+    { who:'momosuke', e:'happy', t:'もういいよ！！ そのかわり、次はいっぱいほめてね♡' },
     { who:'sorashido', e:'happy', t:'了解だ。小声で「すごい」も言うよ笑' },
   ] },
   { id:'life-pair-momosuke-sorashido-035', kind:'pair', pair:['momosuke', 'sorashido'], keys:{ doing:'cards', lv:'4-6' }, lines:[
@@ -21286,14 +21286,14 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'atsu', e:'happy', t:'ブレないの、かっこいい！' },
   ] },
   { id:'life-pair-atsu-kiki-123', kind:'pair', pair:['atsu', 'kiki'], keys:{ doing:'cards', lv:'4-6', air:'after' }, lines:[
-    { who:'kiki', e:'normal', t:'……今日は、あっくんが前でどうぞ' },
-    { who:'atsu', e:'troubled', t:'……いや、ききが前でいいよ！' },
-    { who:'kiki', e:'troubled', t:'……では、ふたりで前に出ましょうか' },
+    { who:'kiki', e:'normal', t:'……今日は、あっくんが先にどうぞ' },
+    { who:'atsu', e:'troubled', t:'……いや、ききが先でいいよ！' },
+    { who:'kiki', e:'troubled', t:'……では、ふたり同時にしましょうか' },
   ] },
   { id:'life-pair-atsu-kiki-124', kind:'pair', pair:['atsu', 'kiki'], keys:{ doing:'cards', lv:'7-10', air:'makeup' }, lines:[
-    { who:'atsu', e:'normal', t:'この前は、どっちが前に出るかでもめてごめん笑' },
-    { who:'kiki', e:'happy', t:'いえ。結局、ふたりで前に出たら勝てましたね' },
-    { who:'atsu', e:'happy', t:'それな！ 最初からそうすればよかった笑' },
+    { who:'atsu', e:'normal', t:'さっきはムキになってごめん笑' },
+    { who:'kiki', e:'happy', t:'いえ。私も、引かなさすぎました' },
+    { who:'atsu', e:'happy', t:'おたがい引かないもんね！ でも、そこがいいとこだし笑' },
   ] },
   { id:'life-pair-atsu-kiki-125', kind:'pair', pair:['atsu', 'kiki'], keys:{ doing:'practice', lv:'1-3' }, lines:[
     { who:'kiki', e:'normal', t:'あっくん、HELLには、どのくらいで慣れましたか' },
@@ -21316,15 +21316,15 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'kiki', e:'surprise', t:'膝で飲むんでつか？' },
   ] },
   { id:'life-pair-dra-kiki-117', kind:'pair', pair:['dra', 'kiki'], keys:{ doing:'snack', lv:'4-6', air:'after' }, lines:[
-    { who:'dra', e:'troubled', t:'……今日のギャグは、まだ0回だぞ' },
-    { who:'kiki', e:'normal', t:'……知ってまつ' },
-    { who:'dra', e:'normal', t:'……1回だけ、いいか？' },
-    { who:'kiki', e:'troubled', t:'……1回だけですよ' },
+    { who:'dra', e:'troubled', t:'……靴下さん、まだ怒ってるか？' },
+    { who:'kiki', e:'normal', t:'……少しだけでつ' },
+    { who:'dra', e:'normal', t:'……おやつ、半分いるか？' },
+    { who:'kiki', e:'troubled', t:'……半分だけ、いただきます' },
   ] },
   { id:'life-pair-dra-kiki-118', kind:'pair', pair:['dra', 'kiki'], keys:{ doing:'snack', lv:'7-10', air:'makeup' }, lines:[
-    { who:'kiki', e:'normal', t:'ドラさん、昨日はギャグを止めすぎました' },
-    { who:'dra', e:'happy', t:'いや、おでも3回を超えてたからな。おあいこだ' },
-    { who:'kiki', e:'happy', t:'では今日は、4回まで聞きまつ♪' },
+    { who:'kiki', e:'normal', t:'ドラさん、さっきは言いすぎました' },
+    { who:'dra', e:'happy', t:'いや、おでも悪かった。おあいこだ' },
+    { who:'kiki', e:'happy', t:'では今日は、ギャグを4回まで聞きまつ♪' },
   ] },
   { id:'life-pair-dra-kiki-119', kind:'pair', pair:['dra', 'kiki'], keys:{ doing:'cards', lv:'4-6' }, lines:[
     { who:'dra', e:'normal', t:'守りのカードも1枚くらい入れておこう' },
@@ -21338,8 +21338,8 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'kiki', e:'happy', t:'それは、ギャグに入りますか？' },
   ] },
   { id:'life-pair-momosuke-mua-038', kind:'pair', pair:['momosuke', 'mua'], keys:{ doing:'practice', lv:'4-6', air:'after' }, lines:[
-    { who:'momosuke', e:'normal', t:'……みゅあねぇ、鏡、空いたよ' },
-    { who:'mua', e:'troubled', t:'……ありがと。ももが先に使っていいよ' },
+    { who:'momosuke', e:'normal', t:'……みゅあねぇ、今日も練習する？' },
+    { who:'mua', e:'troubled', t:'……する。ももが先に踊っていいよ' },
     { who:'momosuke', e:'troubled', t:'……じゃあ、半分ずつね' },
   ] },
   { id:'life-pair-momosuke-mua-039', kind:'pair', pair:['momosuke', 'mua'], keys:{ doing:'practice', lv:'7-10', air:'makeup' }, lines:[
@@ -21358,12 +21358,12 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'momosuke', e:'wink', t:'みゅあねぇも入るんだよ！！' },
   ] },
   { id:'life-pair-atsu-momosuke-128', kind:'pair', pair:['atsu', 'momosuke'], keys:{ doing:'practice', lv:'4-6', air:'after' }, lines:[
-    { who:'momosuke', e:'normal', t:'……あつ、今日は煽らないの？' },
-    { who:'atsu', e:'troubled', t:'……やめとく！ 昨日やりすぎた笑' },
-    { who:'momosuke', e:'wink', t:'……ちょっとだけなら、いいよ' },
+    { who:'momosuke', e:'normal', t:'……あつ、今日は静かだね' },
+    { who:'atsu', e:'troubled', t:'……うん！ 昨日やりすぎた笑' },
+    { who:'momosuke', e:'wink', t:'……ちょっとくらいなら、からかってもいいよ' },
   ] },
   { id:'life-pair-atsu-momosuke-129', kind:'pair', pair:['atsu', 'momosuke'], keys:{ doing:'practice', lv:'7-10', air:'makeup' }, lines:[
-    { who:'atsu', e:'normal', t:'昨日の煽り合い、止まんなかったね笑' },
+    { who:'atsu', e:'normal', t:'昨日は、ふたりとも止まんなかったね笑' },
     { who:'momosuke', e:'happy', t:'ももも言いすぎた！！ ごめんね' },
     { who:'atsu', e:'happy', t:'じゃあ今日は、ほめ合いで勝負しよ！' },
   ] },
@@ -21380,7 +21380,7 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
   ] },
   { id:'life-pair-kyuko-momosuke-052', kind:'pair', pair:['kyuko', 'momosuke'], keys:{ doing:'training', lv:'4-6', air:'makeup' }, lines:[
     { who:'kyuko', e:'normal', t:'……ももすけ、ドリーミィ、抱っこしていいよぉ' },
-    { who:'momosuke', e:'troubled', t:'……ひとり占めしたの、怒ってない？' },
+    { who:'momosuke', e:'troubled', t:'……さっきの、怒ってない？' },
     { who:'kyuko', e:'happy', t:'怒ってないよぉ。ドリーミィも、ももすけになついてるし笑' },
   ] },
   { id:'life-pair-kyuko-momosuke-053', kind:'pair', pair:['kyuko', 'momosuke'], keys:{ doing:'cards', lv:'4-6' }, lines:[
@@ -21394,14 +21394,14 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'kyuko', e:'wink', t:'光ってはないけどねぇ笑' },
   ] },
   { id:'life-pair-atsu-kyuko-132', kind:'pair', pair:['atsu', 'kyuko'], keys:{ doing:'cards', lv:'4-6', air:'after' }, lines:[
-    { who:'kyuko', e:'normal', t:'……あつニキ、今日は作戦、最後まで聞く？' },
-    { who:'atsu', e:'troubled', t:'……聞く！ 全部聞く！' },
+    { who:'kyuko', e:'normal', t:'……あつニキ、今日はゆっくり作戦立てる？' },
+    { who:'atsu', e:'troubled', t:'……立てる！ 今日は全部聞く！' },
     { who:'kyuko', e:'happy', t:'……ほい。じゃあ、ひとつ目からね' },
   ] },
   { id:'life-pair-atsu-kyuko-133', kind:'pair', pair:['atsu', 'kyuko'], keys:{ doing:'cards', lv:'7-10', air:'makeup' }, lines:[
-    { who:'atsu', e:'normal', t:'この前は待たずに突っこんでごめん！' },
-    { who:'kyuko', e:'happy', t:'いいよぉ。あの突っこみがはまる作戦も、考えといたから笑' },
-    { who:'atsu', e:'excited', t:'さすが！ それでいこ！' },
+    { who:'atsu', e:'normal', t:'さっきはごめん！ 俺、勢いだけで言っちゃった！' },
+    { who:'kyuko', e:'happy', t:'いいよぉ。俺も理屈ばっかりだったし笑' },
+    { who:'atsu', e:'excited', t:'じゃあ、勢いと理屈で組も！' },
   ] },
   { id:'life-pair-atsu-kyuko-134', kind:'pair', pair:['atsu', 'kyuko'], keys:{ doing:'practice', lv:'4-6' }, lines:[
     { who:'kyuko', e:'normal', t:'あつニキ、ランキングの上の人、この曲だけ得点が高いんだよねぇ' },
@@ -21409,14 +21409,14 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'kyuko', e:'happy', t:'ほい！ 狙いどころが分かると楽しいでしょ笑' },
   ] },
   { id:'life-pair-erubin-mua-098', kind:'pair', pair:['erubin', 'mua'], keys:{ doing:'walk', lv:'4-6', air:'after' }, lines:[
-    { who:'mua', e:'normal', t:'……るびちん、今日もその服なんだ' },
-    { who:'erubin', e:'troubled', t:'……うん。ごめんね、選んでもらったのを着てこなくて' },
-    { who:'mua', e:'troubled', t:'……べつにいいけど' },
+    { who:'mua', e:'normal', t:'……るびちん、今日は静かだね' },
+    { who:'erubin', e:'troubled', t:'……うん。さっきのこと、考えてて' },
+    { who:'mua', e:'troubled', t:'……べつに、もういいけど' },
   ] },
   { id:'life-pair-erubin-mua-099', kind:'pair', pair:['erubin', 'mua'], keys:{ doing:'walk', lv:'7-10', air:'makeup' }, lines:[
-    { who:'erubin', e:'happy', t:'今日は、みゅあちゃんの選んだ服で来たよ' },
-    { who:'mua', e:'excited', t:'ほんとだ！ やっぱり似合うぢゃん♪' },
-    { who:'erubin', e:'happy', t:'この前はごめんね。この服、すごく気に入ってるんだ' },
+    { who:'erubin', e:'happy', t:'みゅあちゃん、さっきはごめんね' },
+    { who:'mua', e:'excited', t:'もういいよ！ あたしこそ、むきになってごめん♪' },
+    { who:'erubin', e:'happy', t:'よかった。並んで歩くと、やっぱり楽しいね' },
   ] },
   { id:'life-pair-erubin-mua-100', kind:'pair', pair:['erubin', 'mua'], keys:{ doing:'snack', lv:'4-6' }, lines:[
     { who:'mua', e:'happy', t:'るびちん、口にクリームついてるｗ' },
@@ -21426,11 +21426,11 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
   { id:'life-pair-atsu-dra-135', kind:'pair', pair:['atsu', 'dra'], keys:{ doing:'cards', lv:'4-6', air:'after' }, lines:[
     { who:'dra', e:'normal', t:'……あっくん、一戦やるか' },
     { who:'atsu', e:'troubled', t:'……やる！ 今度は文句なしね笑' },
-    { who:'dra', e:'troubled', t:'……おう。すべっても、言わないからな' },
+    { who:'dra', e:'troubled', t:'……おう。何があっても、言わないからな' },
   ] },
   { id:'life-pair-atsu-dra-136', kind:'pair', pair:['atsu', 'dra'], keys:{ doing:'cards', lv:'7-10', air:'makeup' }, lines:[
-    { who:'atsu', e:'normal', t:'昨日のノーカン、半分は俺の負けでいいよ笑' },
-    { who:'dra', e:'happy', t:'じゃあ、半分はおでの負けだな。これで五分だ' },
+    { who:'atsu', e:'normal', t:'さっきのは、半分は俺が悪かった笑' },
+    { who:'dra', e:'happy', t:'じゃあ、半分はおでが悪いな。これで五分だ' },
     { who:'atsu', e:'excited', t:'で、今日の決着つけよ！' },
   ] },
   { id:'life-pair-atsu-dra-137', kind:'pair', pair:['atsu', 'dra'], keys:{ doing:'snack', lv:'4-6' }, lines:[
@@ -21439,8 +21439,8 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'dra', e:'happy', t:'忘れるわけないだろ。あれは熱い大会だったからな' },
   ] },
   { id:'life-pair-atsu-erubin-138', kind:'pair', pair:['atsu', 'erubin'], keys:{ doing:'practice', lv:'4-6', air:'makeup' }, lines:[
-    { who:'erubin', e:'normal', t:'……あっくん、今日は三曲までにしようね' },
-    { who:'atsu', e:'troubled', t:'うん、昨日はごめん！ 無理しすぎた！' },
+    { who:'erubin', e:'normal', t:'……あっくん、今日はゆっくりやろうね' },
+    { who:'atsu', e:'troubled', t:'うん、さっきはごめん！ 熱くなりすぎた！' },
     { who:'erubin', e:'happy', t:'分かってくれたなら、いいよ' },
   ] },
   { id:'life-pair-atsu-erubin-139', kind:'pair', pair:['atsu', 'erubin'], keys:{ doing:'walk', lv:'4-6' }, lines:[
@@ -21454,7 +21454,7 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'kiki', e:'wink', t:'好きなことだけは、くわしいでつ' },
   ] },
   { id:'life-pair-erubin-kiki-102', kind:'pair', pair:['erubin', 'kiki'], keys:{ doing:'walk', lv:'7-10', air:'makeup' }, lines:[
-    { who:'erubin', e:'normal', t:'さっきは席を譲り合いすぎて、立ったままだったね笑' },
+    { who:'erubin', e:'normal', t:'さっきは、おたがい意地をはっちゃったね笑' },
     { who:'kiki', e:'happy', t:'はい。今度は、並んで座りましょう' },
     { who:'erubin', e:'happy', t:'うん、それがいちばんだね' },
   ] },
