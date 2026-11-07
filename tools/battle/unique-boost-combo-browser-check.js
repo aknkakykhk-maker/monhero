@@ -49,7 +49,7 @@ const runOnce = async (browser, label, boosts) => {
     set('mh_quick_guide_seen_v1', { v: 1, seen: ['g1a', 'g1b', 'g2', 'g3a', 'g3b', 'g3c', 'auto'] });
     set('mh_rhythm_event_story_v1', ['card_cup_2026_10_31']);
     set('mh_unlocked_monsters', ['Mocchi', 'Zan', 'Golem']);
-    const m = { id: 'zb1', baseId: 'Zan', name: '連撃ザン', bondXp: 0, levelCap: 30, createdAt: 1, statPoints: { hp: 0, atk: 0, def: 0, guts: 0 },
+    const m = { id: 'zb1', baseId: 'Zan', name: '連撃ザン', bondXp: 0, levelCap: 30, createdAt: 1, statPoints: { hp: 3000, atk: 0, def: 0, guts: 3000 },
       uniqueSkillLevels: { own: 8 }, uniqueSkillPoints: 0 };
     if (boosts) m.uniqueSkillBoosts = { own: boosts };
     set('mh_masu_mons', [m]);
@@ -123,7 +123,9 @@ const runOnce = async (browser, label, boosts) => {
     const before = await turnNo();
     if (process.env.DEBUG) { console.log(label, 'TURN', await turnNo(), JSON.stringify(await page.evaluate(() => [...document.querySelectorAll('[data-hand-card]')].map((c) => [c.getAttribute('data-card-type'), c.getAttribute('data-card-usable'), c.textContent.slice(0, 8)])))); if (turn === 0 && SHOT) await page.screenshot({ path: path.join(SHOT, `combo-${label}-turn0.png`) }); }
     const uniqueIdx = await page.evaluate(() => [...document.querySelectorAll('[data-hand-card]')].findIndex((c) => c.getAttribute('data-card-usable') === 'true' && c.getAttribute('data-card-type') === 'unique'));
-    const idx = uniqueIdx >= 0 ? uniqueIdx : await page.evaluate(() => [...document.querySelectorAll('[data-hand-card]')].findIndex((c) => c.getAttribute('data-card-usable') === 'true' && /^(guard|weak_guard|heal|draw)$/.test(c.getAttribute('data-card-type') || '')));
+    // 固有技が使えないターンは、守り・回復の札、無ければ固有技以外の使える札でターンを進める
+    const idx = uniqueIdx >= 0 ? uniqueIdx : await page.evaluate(() => { const cs = [...document.querySelectorAll('[data-hand-card]')]; const ok = (c) => c.getAttribute('data-card-usable') === 'true';
+      let i = cs.findIndex((c) => ok(c) && /^(guard|weak_guard|heal|draw)$/.test(c.getAttribute('data-card-type') || '')); if (i < 0) i = cs.findIndex((c) => ok(c) && c.getAttribute('data-card-type') !== 'unique'); return i; });
     if (idx >= 0) {
       await page.locator('[data-hand-card]').nth(idx).click({ timeout: 10000 }).catch(() => {});
       await page.waitForTimeout(500);
