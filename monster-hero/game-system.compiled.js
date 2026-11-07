@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7f0f460b4c1c5249
+// source-sha256: 62bb3821141a1fab
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -117915,6 +117915,14 @@ const assistantLifeRelCauseOf = quarrelId => {
   const t = assistantLifeRelSet().byId[quarrelId];
   return t && t.cause ? ASSISTANT_LIFE_REL_CAUSES[t.cause] || null : null;
 };
+const assistantLifeRelGiftName = () => {
+  try {
+    const x = typeof assistantLifeItemInfo === 'function' ? assistantLifeItemInfo('gift') : null;
+    return x && x.name || '差し入れ';
+  } catch (_) {
+    return '差し入れ';
+  }
+};
 const assistantLifeRelPending = (peerSt = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null) => {
   const q = peerSt && peerSt.quarrel && peerSt.quarrel.pending;
   return q && q.pair ? {
@@ -117983,7 +117991,7 @@ const assistantLifeRelOnMakeup = (talk, {
       ASSISTANT_LIFE_STORE.emit();
     } catch {}
     const [a, b] = talk.pair.map(assistantLifeName);
-    const by = talk.mediator ? `(${assistantLifeName(talk.mediator)}が間に)` : how === 'gift' ? '(差し入れで)' : '';
+    const by = talk.mediator ? `(${assistantLifeName(talk.mediator)}が間に)` : how === 'gift' ? `(${assistantLifeRelGiftName()}で)` : '';
     if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`🤝 ${a}・${b}が仲直り${by}`, [...talk.pair, ...(talk.mediator ? [talk.mediator] : [])], {
       kind: 'makeup',
       now
@@ -118281,7 +118289,7 @@ function AssistantLifeRelSheetRow({
       className: "whitespace-nowrap"
     }, "(原因: ", cause, ")") : null), React.createElement("p", {
       className: "text-[10px] font-bold leading-snug text-sky-200"
-    }, ['朝4時までには、', '自分たちで', '仲直りします。', '取り持つか、', '2人に差し入れを', '渡すと、', 'すぐ仲直り'].map((x, i) => React.createElement(React.Fragment, {
+    }, ['朝4時までには、', '自分たちで', '仲直りします。', '取り持つか、', `2人に${assistantLifeRelGiftName()}を`, '渡すと、', 'すぐ仲直り'].map((x, i) => React.createElement(React.Fragment, {
       key: i
     }, i ? React.createElement("wbr", null) : null, React.createElement("span", {
       className: "whitespace-nowrap"

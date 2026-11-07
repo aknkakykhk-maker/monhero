@@ -492,6 +492,8 @@ const assistantLifeRelCauseOf = (quarrelId) => {
   const t = assistantLifeRelSet().byId[quarrelId];
   return t && t.cause ? ASSISTANT_LIFE_REL_CAUSES[t.cause] || null : null;
 };
+// 仲直りに使える道具の名前(道具の表から読む。改名「🧺おやつバスケット」が入れば自動でそろう・2026-11-08 社長)
+const assistantLifeRelGiftName = () => { try { const x = typeof assistantLifeItemInfo === 'function' ? assistantLifeItemInfo('gift') : null; return (x && x.name) || '差し入れ'; } catch (_) { return '差し入れ'; } };
 const assistantLifeRelPending = (peerSt = (typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null)) => {
   const q = peerSt && peerSt.quarrel && peerSt.quarrel.pending;
   return q && q.pair ? { ...q, ids: String(q.pair).split('-') } : null;
@@ -542,7 +544,7 @@ const assistantLifeRelOnMakeup = (talk, { now = Date.now() } = {}) => {
     try { ASSISTANT_LIFE_STORE.emit(); } catch {}
     const [a, b] = talk.pair.map(assistantLifeName);
     // 掲示板は短く(狭い横の掲示板でも切れない)。間に入った助手だけ名前を足す
-    const by = talk.mediator ? `(${assistantLifeName(talk.mediator)}が間に)` : how === 'gift' ? '(差し入れで)' : '';
+    const by = talk.mediator ? `(${assistantLifeName(talk.mediator)}が間に)` : how === 'gift' ? `(${assistantLifeRelGiftName()}で)` : '';
     if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`🤝 ${a}・${b}が仲直り${by}`, [...talk.pair, ...(talk.mediator ? [talk.mediator] : [])], { kind: 'makeup', now });
     if (talk.mediator && typeof assistantPeerGain === 'function') for (const id of talk.pair) await assistantPeerGain(talk.mediator, id, 'mediate');
   })();
@@ -739,7 +741,7 @@ function AssistantLifeRelSheetRow({ id, state, peerSt, onMediate }) {
     return (
       <div className="mt-1 rounded-xl border border-sky-300/50 bg-sky-950/60 px-2.5 py-1.5" data-assistant-life-rel-row="quarrel">
         <p className="text-[11.5px] font-black text-sky-100">💢 いま {nm(other)}とけんか中{cause ? <span className="whitespace-nowrap">(原因: {cause})</span> : null}</p>
-        <p className="text-[10px] font-bold leading-snug text-sky-200">{['朝4時までには、', '自分たちで', '仲直りします。', '取り持つか、', '2人に差し入れを', '渡すと、', 'すぐ仲直り'].map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span className="whitespace-nowrap">{x}</span></React.Fragment>)}</p>
+        <p className="text-[10px] font-bold leading-snug text-sky-200">{['朝4時までには、', '自分たちで', '仲直りします。', '取り持つか、', `2人に${assistantLifeRelGiftName()}を`, '渡すと、', 'すぐ仲直り'].map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span className="whitespace-nowrap">{x}</span></React.Fragment>)}</p>
         {onMediate && <button type="button" className="mhl-btn mt-1.5 w-full" data-assistant-life-room-act="mediate" style={{ background: 'linear-gradient(90deg,#fb923c,#f472b6)' }} onClick={() => onMediate(id)}>🤝 取り持つ(無料)</button>}
       </div>);
   }
