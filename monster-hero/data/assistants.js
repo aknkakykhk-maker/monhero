@@ -12411,7 +12411,19 @@ const assistantRhythmTutorialPages = (assistantId) =>
   ASSISTANT_RHYTHM_TUTORIAL_SETS[assistantId] || ASSISTANT_RHYTHM_TUTORIAL;
 
 const assistantIntroPages = (assistantId) => ASSISTANT_INTRO_SETS[assistantId] || ASSISTANT_INTRO;
-const assistantTutorialPages = (assistantId) => ASSISTANT_TUTORIAL_SETS[assistantId] || ASSISTANT_TUTORIAL;
+// 村の案内に「AUTOとクイック」の1ページを足す(2026-11-07 社長「はじめてやる人のチュートリアルに、こういうものがあるって説明を追加」)。
+//   置き場所は、建物「バトル」を光らせる最後のページのすぐあと。文は ASSISTANT_QUICK_GUIDE_LINES の tour.autoQuick(無い助手はみゅあの文)
+const assistantTutorialWithAutoQuick = (pages, assistantId) => {
+  const lines = typeof ASSISTANT_QUICK_GUIDE_LINES === 'object' && ASSISTANT_QUICK_GUIDE_LINES ? ASSISTANT_QUICK_GUIDE_LINES : {};
+  const line = (lines[assistantId] && lines[assistantId]['tour.autoQuick']) || (lines.mua && lines.mua['tour.autoQuick']);
+  if (!line || !Array.isArray(pages)) return pages;
+  let at = -1;
+  pages.forEach((p, i) => { if (p && p.spot === 'battle') at = i; });
+  if (at < 0) return pages;
+  const page = { e: line.e || 'normal', t: line.t, title: line.title || 'AUTOとクイック', help: 'battle/quick-auto-guide', spot: 'battle', autoQuick: true };
+  return [...pages.slice(0, at + 1), page, ...pages.slice(at + 1)];
+};
+const assistantTutorialPages = (assistantId) => assistantTutorialWithAutoQuick(ASSISTANT_TUTORIAL_SETS[assistantId] || ASSISTANT_TUTORIAL, assistantId);
 
 // ---------- バトルチュートリアルの初回案内 ----------
 // バトルの練習を未完了の人へ、ログイン後のHOMEで一度だけ見せる。
@@ -12629,7 +12641,7 @@ const ASSISTANT_BATTLE_TUTORIAL_OUTRO_V2 = [
   { id:'ally',         at:'*',             e:'normal',  title:'このあとは', t:'WAVE2・4・6では供モンが合流するよ。ステータスがそのまま足されるんだ！', wait:'next' },
   { id:'unique',       at:'*',             e:'happy',   title:'固有技のこと', t:'勇者モンの固有技は、レベルが上がるほど強くなるよ。育てるほど頼りになる♪', wait:'next' },
   { id:'modeAfter',    at:'*',             e:'normal',  title:'モードの使い分け', t:'クラシックの中は、スコアに挑むチャレンジ、腕だめしの種族チャレンジ、しばりのプロだよ。', wait:'next' },
-  { id:'modeLater',    at:'*',             e:'wink',    title:'早く育てたいときは', t:'入口でクイックを選ぶと、さくさく回せて経験値も1.5倍。いつでも選べるからね♪', wait:'next' },
+  { id:'modeLater',    at:'*',             e:'wink',    title:'早く育てたいときは', t:'早く育てたいときはクイック！ チャレンジでクリアした難易度から、クイックでも遊べるようになるよ♪', wait:'next' },
   { id:'wrapUp',       at:'*',             e:'excited', title:'おつかれさま！', t:'これでバトルのれんしゅうは終わり！ 一連の流れはバッチリだね♪', wait:'next' },
   { id:'end',          at:'*',             e:'happy',   title:'いってらっしゃい！', t:'困ったらヘルプからいつでもこの練習をやり直せるよ。がんばってね{name}！', wait:'end' },
 ];
@@ -15481,7 +15493,7 @@ const ASSISTANT_PEER_TRIO_TALKS = Object.freeze([
 // ---------- クイック・AUTO設定・裏周回の案内(2026-11-07 社長「モンバトのオート設定や他コンテンツのクイックの誘導やチュートリアルや説明をつけたい」) ----------
 // ★台詞はここ1か所だけ。形は { 助手id: { ページid: { e:表情, title:見出し, t:本文 } } }。
 //   ページが無い助手は、みゅあ(mua)の同じページで出す(quickGuideLine)。ページid を増やす・変えるときは
-//   src/parts/22-quick-guide.jsx の QUICK_GUIDE_PAGES も直す(検査 tools/assistant/quick-guide-check.js が突き合わせる)。
+//   src/parts/56-quick-guide.jsx の QUICK_GUIDE_PAGES も直す(検査 tools/assistant/quick-guide-check.js が突き合わせる)。
 //   {name} はプレイヤーの呼び方に置き換わる。モンスターを「子」と呼ばない。口調は docs/progress/assistant-peer/VOICE.md
 // ページid:
 //   tour.autoQuick … 村の案内(バトルのページのあと)

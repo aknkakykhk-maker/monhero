@@ -330,6 +330,10 @@
       "role": "助手どうしの仲良し度(ペアごと)と台本版の掛け合い(AssistantPeerTalk)・プロフィールの関係図(AssistantPeerMap)。公開の印 assistantPeer の後ろ。保存は mh_assistant_peer_* の新しいキーだけ"
     },
     {
+      "file": "56-quick-guide.jsx",
+      "role": "クイック・AUTO設定・裏周回の一度きりの案内(QuickGuideOverlay・quickGuidePick)と誘導の回数。保存は mh_quick_guide_seen_v1・mh_quick_nudge_v1・mh_card_auto_intro_seen_v1 の新しいキーだけ"
+    },
+    {
       "file": "56-assistant-life.jsx",
       "role": "助手たちの今: 時間ごとに助手1人ずつの気分・したいこと・だれといるかを決める仕組みと、遊んだ量の「にぎわい」(段で助手どうしの仲良くなり方が変わる)。公開の印 assistantLife の後ろ。保存は mh_assistant_life_v1・mh_assistant_life_play_v1 だけ"
     },

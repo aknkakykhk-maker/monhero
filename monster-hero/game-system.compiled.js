@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4890cedb2815761e
+// source-sha256: dfc382b8911d6b39
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -78898,6 +78898,7 @@ function BattleScreen({
   }, "BGM")), quickToRhythmButtonNode), quickToCardButtonNode, React.createElement("div", {
     className: "w-[44px] shrink-0 flex flex-col gap-0.5"
   }, React.createElement("button", {
+    "data-battle-auto-button": true,
     type: "button",
     disabled: !!battleScenarioRef.current || battleTutorialStep != null,
     onClick: cycleBattleAuto,
@@ -81224,6 +81225,7 @@ function BattleScreen({
   }, quickToRhythmButtonNode, quickToCardButtonNode), React.createElement("div", {
     className: "w-[44px] shrink-0 flex flex-col gap-0.5"
   }, React.createElement("button", {
+    "data-battle-auto-button": true,
     type: "button",
     disabled: !!battleScenarioRef.current || battleTutorialStep != null,
     onClick: cycleBattleAuto,
@@ -95825,6 +95827,316 @@ const assistantPeerRequestGen = async ({
   } finally {
     assistantPeerGenBusy = false;
   }
+};
+const QUICK_GUIDE_SEEN_KEY = 'mh_quick_guide_seen_v1';
+const QUICK_GUIDE_NUDGE_KEY = 'mh_quick_nudge_v1';
+const CARD_AUTO_INTRO_SEEN_KEY = 'mh_card_auto_intro_seen_v1';
+const QUICK_GUIDE_NUDGE_MAX = 3;
+const QUICK_GUIDE_IDS = Object.freeze(['g1a', 'g1b', 'g2', 'g3a', 'g3b', 'g3c', 'auto']);
+const QUICK_GUIDE_PAGES = Object.freeze({
+  g1a: [{
+    id: 'g1.1',
+    spot: '[data-battle-system-card="systemQuick"]'
+  }],
+  g1b: [{
+    id: 'g1.2',
+    spot: '[data-difficulty-carousel]'
+  }, {
+    id: 'g1.3',
+    spot: '[data-quick-reward-policy]'
+  }, {
+    id: 'g1.4'
+  }, {
+    id: 'g1.5',
+    goAutoSettings: true
+  }],
+  g2: [{
+    id: 'g2.1'
+  }, {
+    id: 'g2.2',
+    spot: '[data-auto-settings-section="policy"]'
+  }, {
+    id: 'g2.3',
+    spot: '[data-auto-settings-section="ally"]'
+  }, {
+    id: 'g2.4',
+    spot: '[data-auto-settings-section="quickRun"]'
+  }, {
+    id: 'g2.5',
+    spot: '[data-auto-settings-section="breakthrough"]'
+  }],
+  g3a: [{
+    id: 'g3.1'
+  }, {
+    id: 'g3.2',
+    spot: '[data-quick-to-rhythm]'
+  }, {
+    id: 'g3.3'
+  }],
+  g3b: [{
+    id: 'g3.4',
+    spot: '[data-quick-run-band]'
+  }, {
+    id: 'g3.5',
+    spot: '[data-quick-run-band]'
+  }],
+  g3c: [{
+    id: 'g3.6',
+    spot: '[data-rhythm-mode-select] [data-rhythm-back]'
+  }],
+  auto: [{
+    id: 'auto.first',
+    spot: '[data-battle-auto-button]'
+  }],
+  nudgeHome: [{
+    id: 'nudge.home'
+  }],
+  nudgeBattle: [{
+    id: 'nudge.battle'
+  }]
+});
+const QUICK_GUIDE_REPLAYS = Object.freeze({
+  g1: ['g1a', 'g1b'],
+  g2: ['g2'],
+  g3: ['g3a', 'g3b', 'g3c']
+});
+const quickGuideReplayPages = replayId => (QUICK_GUIDE_REPLAYS[replayId] || []).flatMap(g => QUICK_GUIDE_PAGES[g].map(p => ({
+  id: p.id
+})));
+const quickGuideLine = (assistantId, pageId) => {
+  const all = typeof ASSISTANT_QUICK_GUIDE_LINES === 'object' && ASSISTANT_QUICK_GUIDE_LINES ? ASSISTANT_QUICK_GUIDE_LINES : {};
+  const own = all[assistantId] && all[assistantId][pageId];
+  const line = own && typeof own.t === 'string' && own.t ? own : all.mua && all.mua[pageId] || null;
+  return line && typeof line.t === 'string' ? line : null;
+};
+const normalizeQuickGuideSeen = v => {
+  const list = v && typeof v === 'object' && Array.isArray(v.seen) ? v.seen : [];
+  return QUICK_GUIDE_IDS.filter(id => list.includes(id));
+};
+const quickGuideSeenAfter = (seen, id) => ({
+  v: 1,
+  seen: normalizeQuickGuideSeen({
+    seen: [...(Array.isArray(seen) ? seen : []), id]
+  })
+});
+const normalizeQuickNudge = v => {
+  const r = v && typeof v === 'object' ? v : {};
+  const n = Number.isInteger(r.n) && r.n >= 0 ? Math.min(r.n, 1000) : 0;
+  return {
+    v: 1,
+    n,
+    day: typeof r.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.day) ? r.day : ''
+  };
+};
+const quickNudgeAllowed = (nudge, today) => {
+  const s = normalizeQuickNudge(nudge);
+  return s.n < QUICK_GUIDE_NUDGE_MAX && s.day !== today;
+};
+const quickNudgeAfter = (nudge, today) => {
+  const s = normalizeQuickNudge(nudge);
+  return {
+    v: 1,
+    n: s.n + 1,
+    day: today
+  };
+};
+const quickGuidePick = ctx => {
+  const c = ctx || {};
+  if (c.busy || !Array.isArray(c.seen)) return null;
+  const not = id => !c.seen.includes(id);
+  const nudge = c.nudgeOk === true && c.quickUnlocked === true && c.quickEverCleared !== true;
+  switch (c.gameState) {
+    case 'BATTLE_SYSTEM_SELECT':
+      if (c.quickUnlocked === true && not('g1a')) return 'g1a';
+      return nudge ? 'nudgeBattle' : null;
+    case 'BATTLE_DIFFICULTY_SELECT':
+      return c.quickSelect === true && c.quickUnlocked === true && not('g1b') ? 'g1b' : null;
+    case 'AUTO_SETTINGS':
+      return not('g2') ? 'g2' : null;
+    case 'BATTLE':
+      if (c.battleTutorial) return null;
+      if (c.quickRun === true && c.autoRepeat === true && not('g3a')) return 'g3a';
+      return not('auto') ? 'auto' : null;
+    case 'RHYTHM_DEMO_HOME':
+      return c.backgroundRun === true && not('g3b') ? 'g3b' : null;
+    case 'RHYTHM_MODE_SELECT':
+      return c.backgroundRun === true && not('g3c') ? 'g3c' : null;
+    case 'HOME':
+      return nudge ? 'nudgeHome' : null;
+    default:
+      return null;
+  }
+};
+const quickGuideSpotRect = selector => {
+  if (!selector || typeof document === 'undefined') return null;
+  try {
+    for (const el of document.querySelectorAll(selector)) {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) return {
+        el,
+        top: r.top,
+        left: r.left,
+        width: r.width,
+        height: r.height,
+        bottom: r.bottom
+      };
+    }
+  } catch (_) {}
+  return null;
+};
+const QuickGuideOverlay = ({
+  guideId,
+  pages,
+  assistant,
+  callName,
+  onDone,
+  onGoAutoSettings
+}) => {
+  const [step, setStep] = useState(0);
+  const [rect, setRect] = useState(null);
+  const [panelH, setPanelH] = useState(150);
+  const panelRef = useRef(null);
+  useEffect(() => {
+    setStep(0);
+  }, [guideId]);
+  const page = pages[Math.min(step, pages.length - 1)] || null;
+  useEffect(() => {
+    try {
+      const h = panelRef.current && panelRef.current.getBoundingClientRect().height;
+      if (h > 0) setPanelH(Math.ceil(h));
+    } catch (_) {}
+  });
+  useEffect(() => {
+    if (!page || !page.spot) {
+      setRect(null);
+      return undefined;
+    }
+    const first = quickGuideSpotRect(page.spot);
+    const vh0 = window.innerHeight || 0;
+    try {
+      if (first && first.el && first.el.scrollIntoView) first.el.scrollIntoView({
+        block: first.height > vh0 - panelH - 40 ? 'start' : 'nearest',
+        inline: 'nearest'
+      });
+    } catch (_) {}
+    const measure = () => {
+      const r = quickGuideSpotRect(page.spot);
+      setRect(r ? {
+        top: r.top,
+        left: r.left,
+        width: r.width,
+        height: r.height,
+        bottom: r.bottom
+      } : null);
+    };
+    measure();
+    const t = setInterval(measure, 300);
+    window.addEventListener('resize', measure);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener('resize', measure);
+    };
+  }, [guideId, step, page && page.spot]);
+  if (!page) return null;
+  const line = quickGuideLine(assistant && assistant.id, page.id);
+  if (!line) return null;
+  const text = String(line.t).split('{name}').join(callName || 'ブリーダー');
+  const last = step >= pages.length - 1;
+  const vh = typeof window !== 'undefined' ? window.innerHeight || 0 : 0;
+  const pad = 6,
+    gap = 12;
+  const roomTop = rect ? rect.top - pad - gap : 0,
+    roomBottom = rect ? vh - rect.bottom - pad - gap : 0;
+  const atTop = !!rect && vh > 0 && roomBottom < panelH && roomTop >= panelH;
+  let ring = rect;
+  if (rect && vh > 0) {
+    if (atTop && roomTop < panelH) {
+      const top = panelH + gap + pad + 10;
+      ring = {
+        ...rect,
+        top,
+        height: Math.max(0, rect.bottom - top)
+      };
+    }
+    if (!atTop && roomBottom < panelH) {
+      const bottom = vh - panelH - gap - pad - 10;
+      ring = {
+        ...rect,
+        height: Math.max(0, Math.min(rect.bottom, bottom) - rect.top)
+      };
+    }
+  }
+  const face = assistant && typeof assistantFaceImage === 'function' ? assistantFaceImage(assistant, line.e || 'normal') : null;
+  return React.createElement("div", {
+    "data-quick-guide": guideId,
+    "data-quick-guide-page": page.id,
+    className: "fixed inset-0 z-[100050]",
+    style: {
+      pointerEvents: 'auto'
+    }
+  }, ring && ring.height > 0 ? React.createElement("div", {
+    "data-quick-guide-spot": true,
+    "aria-hidden": "true",
+    className: "pointer-events-none fixed rounded-xl border-2 border-amber-300",
+    style: {
+      top: ring.top - pad,
+      left: ring.left - pad,
+      width: ring.width + pad * 2,
+      height: ring.height + pad * 2,
+      boxShadow: '0 0 0 9999px rgba(2,6,23,0.62), 0 0 18px rgba(252,211,77,0.75)'
+    }
+  }) : React.createElement("div", {
+    "aria-hidden": "true",
+    className: "pointer-events-none fixed inset-0 bg-slate-950/60"
+  }), React.createElement("div", {
+    ref: panelRef,
+    "data-quick-guide-panel": true,
+    className: "fixed left-1/2 w-[min(560px,calc(100vw-24px))] -translate-x-1/2 rounded-2xl border-2 border-fuchsia-300/70 bg-slate-950/95 p-3 shadow-2xl landscape:max-[500px]:p-2",
+    style: atTop ? {
+      top: 'calc(10px + var(--mh-sa-top, 0px))'
+    } : {
+      bottom: 'calc(10px + var(--mh-sa-bottom, 0px))'
+    }
+  }, React.createElement("div", {
+    className: "flex items-start gap-2.5"
+  }, face && React.createElement("img", {
+    src: face,
+    alt: "",
+    "aria-hidden": "true",
+    className: "h-12 w-12 shrink-0 rounded-full border-2 border-fuchsia-300/70 bg-slate-900 object-cover object-top landscape:max-[500px]:h-9 landscape:max-[500px]:w-9"
+  }), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, React.createElement("b", {
+    className: "min-w-0 flex-1 truncate text-[13px] font-black text-amber-100"
+  }, line.title || ''), pages.length > 1 && React.createElement("span", {
+    className: "shrink-0 text-[10px] font-black tabular-nums text-slate-400"
+  }, step + 1, " / ", pages.length)), React.createElement("p", {
+    "data-quick-guide-text": true,
+    className: "mt-1 text-[12px] font-bold leading-relaxed text-slate-100",
+    style: typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined
+  }, text))), React.createElement("div", {
+    className: "mt-2 flex flex-wrap items-center justify-end gap-2 landscape:max-[500px]:mt-1"
+  }, !last && React.createElement("button", {
+    type: "button",
+    "data-quick-guide-later": true,
+    onClick: () => onDone(false),
+    className: "min-h-[40px] rounded-xl border border-slate-500/60 px-3 text-[11px] font-black text-slate-300 active:scale-[.97]"
+  }, "あとで"), last && page.goAutoSettings && onGoAutoSettings && React.createElement("button", {
+    type: "button",
+    "data-quick-guide-go-auto": true,
+    onClick: () => {
+      onDone(true);
+      onGoAutoSettings();
+    },
+    className: "min-h-[40px] rounded-xl border border-cyan-300/70 bg-cyan-800/70 px-3 text-[11px] font-black text-cyan-50 active:scale-[.97]"
+  }, "AUTO設定を見に行く"), React.createElement("button", {
+    type: "button",
+    "data-quick-guide-next": true,
+    onClick: () => last ? onDone(true) : setStep(step + 1),
+    className: "min-h-[40px] min-w-[84px] rounded-xl border border-fuchsia-300/70 bg-fuchsia-700/80 px-3 text-[12px] font-black text-white active:scale-[.97]"
+  }, last ? pages.length > 1 ? 'わかった！' : 'OK' : '次へ'))));
 };
 const ASSISTANT_LIFE_STORE_KEY = 'mh_assistant_life_v1';
 const ASSISTANT_LIFE_PLAY_KEY = 'mh_assistant_life_play_v1';
@@ -117353,6 +117665,52 @@ const cardDeckPickChoices = (db, decks, collection, opts = {}) => {
     why: cardDeckProblems(db, r.deck)
   }];
 };
+const CardAutoIntro = () => {
+  const bond = typeof useAssistantBond === 'function' ? useAssistantBond() : null;
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (typeof CARD_AUTO_INTRO_SEEN_KEY !== 'string') return undefined;
+    let cancelled = false;
+    (async () => {
+      let seen = false;
+      try {
+        seen = await storeGet(CARD_AUTO_INTRO_SEEN_KEY, false, false);
+      } catch (_) {
+        seen = false;
+      }
+      if (!cancelled && seen !== true) setShow(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  if (!show || typeof quickGuideLine !== 'function') return null;
+  const id = bond && bond.assistantId ? bond.assistantId : 'mua';
+  const line = quickGuideLine(id, 'card.auto');
+  if (!line) return null;
+  const who = typeof assistantById === 'function' ? assistantById(id) : null;
+  const face = who && typeof assistantFaceImage === 'function' ? assistantFaceImage(who, line.e || 'normal') : null;
+  return React.createElement("div", {
+    "data-card-auto-intro": true,
+    className: "flex items-start gap-2 rounded-xl border-2 border-fuchsia-300/70 bg-slate-950/90 px-2.5 py-2"
+  }, face && React.createElement("img", {
+    src: face,
+    alt: "",
+    "aria-hidden": "true",
+    className: "h-10 w-10 shrink-0 rounded-full border border-fuchsia-300/60 bg-slate-900 object-cover object-top"
+  }), React.createElement("p", {
+    className: "min-w-0 flex-1 text-[11px] font-bold leading-snug text-slate-100",
+    style: JA_WRAP_STYLE
+  }, line.t), React.createElement("button", {
+    type: "button",
+    "data-card-auto-intro-ok": true,
+    onClick: () => {
+      setShow(false);
+      storeSet(CARD_AUTO_INTRO_SEEN_KEY, true, false);
+    },
+    className: "min-h-[36px] shrink-0 self-center rounded-lg border border-fuchsia-300/70 bg-fuchsia-700/80 px-2.5 text-[11px] font-black text-white active:scale-[.97]"
+  }, "OK"));
+};
 const CardDeckPick = ({
   db,
   decks,
@@ -117497,7 +117855,7 @@ const CardDeckPick = ({
   }, auto.quick ? '✓' : ''), React.createElement("span", {
     className: "min-w-0 flex-1",
     style: JA_WRAP_STYLE
-  }, jaWrap('⏩ 結果だけ見る(対戦の画面を出さずに、一瞬で最後まで戦う)'))), auto.on && React.createElement("p", {
+  }, jaWrap('⏩ 結果だけ見る(対戦の画面を出さずに、一瞬で最後まで戦う)'))), auto.on && React.createElement(CardAutoIntro, null), auto.on && React.createElement("p", {
     "data-card-deck-pick-auto-note": true,
     className: "rounded-xl bg-slate-900/80 px-2.5 py-2 text-[11px] font-bold leading-snug text-slate-200",
     style: JA_WRAP_STYLE
@@ -139235,17 +139593,21 @@ function MonsterHeroGame() {
       baseLoops: Math.max(0, Math.trunc(Number(baseLoops) || 0)) || count
     };
   };
+  const [quickGuideSeen, setQuickGuideSeen] = useState(null);
+  const [quickNudge, setQuickNudge] = useState(null);
+  const [quickGuideReplay, setQuickGuideReplay] = useState(null);
   const QUICK_RHYTHM_INTRO_KEY = 'mh_quick_rhythm_intro_seen_v1';
   const QUICK_RHYTHM_BACKGROUND_KEY = 'mh_quick_rhythm_bg_seen_v1';
   const [quickRhythmIntroSeen, setQuickRhythmIntroSeen] = useState(true);
   const [quickRhythmBackgroundSeen, setQuickRhythmBackgroundSeen] = useState(true);
   const quickRhythmGuideReleased = RELEASE_FLAGS.quickRhythmLink === true;
-  const quickRhythmIntroVisible = quickRhythmGuideReleased && !quickRhythmIntroSeen && gameState === 'BATTLE' && isQuickMode(runMode) && autoRepeat === true;
+  const quickGuideAvailable = typeof QuickGuideOverlay === 'function';
+  const quickRhythmIntroVisible = quickRhythmGuideReleased && !quickRhythmIntroSeen && !quickGuideAvailable && gameState === 'BATTLE' && isQuickMode(runMode) && autoRepeat === true;
   const dismissQuickRhythmIntro = () => {
     setQuickRhythmIntroSeen(true);
     storeSet(QUICK_RHYTHM_INTRO_KEY, true, false);
   };
-  const quickRhythmBackgroundVisible = quickRhythmGuideReleased && !quickRhythmBackgroundSeen && rhythmBackgroundRun;
+  const quickRhythmBackgroundVisible = quickRhythmGuideReleased && !quickRhythmBackgroundSeen && !quickGuideAvailable && rhythmBackgroundRun;
   const dismissQuickRhythmBackground = () => {
     setQuickRhythmBackgroundSeen(true);
     storeSet(QUICK_RHYTHM_BACKGROUND_KEY, true, false);
@@ -146883,6 +147245,71 @@ function MonsterHeroGame() {
     };
   };
   const updateNoticeVisible = updateAvailable && (!latestBuild || latestBuild !== dismissedUpdateBuild);
+  useEffect(() => {
+    if (!dataLoaded || typeof normalizeQuickGuideSeen !== 'function') return;
+    let cancelled = false;
+    (async () => {
+      let seenRaw = null,
+        nudgeRaw = null;
+      try {
+        [seenRaw, nudgeRaw] = await Promise.all([storeGet(QUICK_GUIDE_SEEN_KEY, null, false), storeGet(QUICK_GUIDE_NUDGE_KEY, null, false)]);
+      } catch (_) {}
+      if (cancelled) return;
+      setQuickGuideSeen(normalizeQuickGuideSeen(seenRaw));
+      setQuickNudge(normalizeQuickNudge(nudgeRaw));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [dataLoaded]);
+  const quickGuideBusy = bootPhase !== 'GAME' || !dataLoaded || !onboarded || !assistantChosen || tutorialStep != null || battleTutorialStep != null || !!eventReplay || assistantChatOpen || showAssistantPicker || kikiIntroStep != null || momosukeIntroStep != null || !!rhythmPlay || updateGuideQueue.length > 0 || updateNoticeVisible || !!loginBonusPopup || !!levelCapCompensation || !!inheritedUniqueCompensation || !!dailyMasuAdvice || !!cardTeaserOpen || !!peerReplay;
+  const quickGuideQuickUnlocked = typeof QUICK_DIFFICULTY_SETTINGS === 'object' && Object.keys(QUICK_DIFFICULTY_SETTINGS).some(d => isQuickDifficultyUnlocked(d, clearCounts, proClearCounts, extremeDifficultyClearCounts));
+  const quickGuideEverCleared = Object.values(quickClearCounts || {}).some(n => Number(n) > 0);
+  const quickGuideToday = jstDayKey4();
+  const quickGuidePicked = typeof quickGuidePick === 'function' && !quickGuideReplay ? quickGuidePick({
+    gameState,
+    busy: quickGuideBusy,
+    seen: quickGuideSeen,
+    quickUnlocked: quickGuideQuickUnlocked,
+    quickEverCleared: quickGuideEverCleared,
+    quickSelect: isQuickMode(battleMode),
+    quickRun: isQuickMode(runMode),
+    autoRepeat: autoRepeat === true,
+    battleTutorial: battleTutorialStep != null || !!battleScenarioRef.current,
+    backgroundRun: !!rhythmBackgroundRun,
+    nudgeOk: !!quickNudge && quickNudgeAllowed(quickNudge, quickGuideToday)
+  }) : null;
+  const [quickGuideLater, setQuickGuideLater] = useState(null);
+  const [quickNudgeShowing, setQuickNudgeShowing] = useState(null);
+  useEffect(() => {
+    setQuickGuideLater(null);
+    setQuickNudgeShowing(null);
+  }, [gameState]);
+  useEffect(() => {
+    if (quickGuidePicked !== 'nudgeHome' && quickGuidePicked !== 'nudgeBattle') return;
+    const next = quickNudgeAfter(quickNudge, quickGuideToday);
+    setQuickNudge(next);
+    setQuickNudgeShowing(quickGuidePicked);
+    storeSet(QUICK_GUIDE_NUDGE_KEY, next, false);
+  }, [quickGuidePicked]);
+  const quickGuideActive = quickGuideReplay ? `replay:${quickGuideReplay}` : quickNudgeShowing && !quickGuideBusy ? quickNudgeShowing : quickGuidePicked && quickGuidePicked !== quickGuideLater && quickGuidePicked !== 'nudgeHome' && quickGuidePicked !== 'nudgeBattle' ? quickGuidePicked : null;
+  const finishQuickGuide = (guideId, done) => {
+    if (quickGuideReplay) {
+      setQuickGuideReplay(null);
+      return;
+    }
+    if (guideId === 'nudgeHome' || guideId === 'nudgeBattle') {
+      setQuickNudgeShowing(null);
+      return;
+    }
+    if (!done) {
+      setQuickGuideLater(guideId);
+      return;
+    }
+    const next = quickGuideSeenAfter(quickGuideSeen, guideId);
+    setQuickGuideSeen(next.seen);
+    storeSet(QUICK_GUIDE_SEEN_KEY, next, false);
+  };
   const startOnboardingPreview = () => {
     onboardingPreviewBackupRef.current = {
       name: breederName,
@@ -157108,6 +157535,20 @@ function MonsterHeroGame() {
         },
         onUseItem: useAssistantPeerItem
       }));
+    })(), typeof QuickGuideOverlay === 'function' && quickGuideActive && activeAssistant && (() => {
+      const replay = quickGuideActive.startsWith('replay:') ? quickGuideActive.slice(7) : null;
+      const pages = replay ? quickGuideReplayPages(replay) : QUICK_GUIDE_PAGES[quickGuideActive] || [];
+      if (!pages.length) return null;
+      const lv = assistantBondLevelNow;
+      return React.createElement(QuickGuideOverlay, {
+        key: quickGuideActive,
+        guideId: quickGuideActive,
+        pages: pages,
+        assistant: activeAssistant,
+        callName: assistantCallName(breederName, lv, assistantCallStyles[activeAssistant.id] || null, activeAssistant.id),
+        onDone: done => finishQuickGuide(quickGuideActive, done),
+        onGoAutoSettings: replay ? null : openAutoSettings
+      });
     })(), gameState === 'RHYTHM_INFO' && React.createElement(RhythmInfoScreen, {
       returnToHome: returnToHome
     }), gameState === 'TRAINING_INFO' && React.createElement("main", {
@@ -157658,6 +158099,7 @@ function MonsterHeroGame() {
       }), React.createElement("div", {
         className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-3`
       }, React.createElement("section", {
+        "data-auto-settings-section": "policy",
         className: SCREEN_PANEL_CLASS
       }, React.createElement("h3", {
         className: "text-[13px] font-black text-indigo-200 mb-2"
@@ -157676,6 +158118,7 @@ function MonsterHeroGame() {
       }, label), React.createElement("span", {
         className: "block mt-1 text-[10px] leading-snug text-slate-300"
       }, description))))), React.createElement("section", {
+        "data-auto-settings-section": "ally",
         className: "space-y-3"
       }, React.createElement("div", null, React.createElement("h3", {
         className: "text-[13px] font-black text-indigo-200"
@@ -157712,6 +158155,7 @@ function MonsterHeroGame() {
         "aria-pressed": ally.slot === slot,
         className: `min-h-[44px] min-w-0 rounded-xl border text-[10px] font-black active:scale-95 ${slot === null ? 'bg-slate-700 border-slate-500 text-white' : `${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`} ${ally.slot === slot ? 'ring-2 ring-white border-white' : 'opacity-50'}`
       }, ally.slot === slot && '✓', label))))))), React.createElement("section", {
+        "data-auto-settings-section": "quickRun",
         className: "space-y-3"
       }, React.createElement("div", null, React.createElement("h3", {
         className: "text-[13px] font-black text-indigo-200"
@@ -157790,6 +158234,7 @@ function MonsterHeroGame() {
         className: "text-[11px] leading-relaxed text-slate-400"
       }, autoQuickRunConfigured(draftAutoSettings) ? '✅ 3つとも決まっています。モンヒロビートから周回を始められます。' : 'まだ使えません（3つとも決めると使えます）。'))), React.createElement("section", {
         "data-auto-breakthrough-bulk-settings": true,
+        "data-auto-settings-section": "breakthrough",
         className: `${SCREEN_PANEL_CLASS} space-y-3`
       }, React.createElement("div", null, React.createElement("h3", {
         className: "text-[13px] font-black text-cyan-200"
@@ -159462,6 +159907,7 @@ function MonsterHeroGame() {
       }, React.createElement("div", {
         className: "mhbs-hint mt-auto mb-1 shrink-0"
       }, "左右にスワイプして難易度をえらぶ"), quick && React.createElement("fieldset", {
+        "data-quick-reward-policy": true,
         className: "shrink-0 mx-1 mb-1 rounded-2xl border border-teal-400/30 bg-slate-900/80 p-1"
       }, React.createElement("legend", {
         className: "px-1 text-[9px] font-black text-teal-200"
@@ -168931,7 +169377,19 @@ function MonsterHeroGame() {
         className: "shrink-0 text-slate-500"
       }))))), cat && topic && React.createElement("div", {
         className: "space-y-3.5 pb-2"
-      }, renderHelpBlocks(topic.blocks, cat.color), topic.launch === 'battleTutorial' && React.createElement("button", {
+      }, renderHelpBlocks(topic.blocks, cat.color), topic.launch === 'quickGuides' && typeof QUICK_GUIDE_REPLAYS === 'object' && React.createElement("div", {
+        "data-quick-guide-replays": true,
+        className: "grid gap-2"
+      }, [['g1', '🎓 クイックの案内をもう一度見る'], ['g2', '🎓 AUTO設定の案内をもう一度見る'], ['g3', '🎓 裏周回の案内をもう一度見る']].map(([id, label]) => React.createElement("button", {
+        key: id,
+        type: "button",
+        "data-quick-guide-replay": id,
+        onClick: () => setQuickGuideReplay(id),
+        className: "w-full rounded-2xl py-3 text-[12px] font-black text-black active:scale-95",
+        style: {
+          backgroundColor: cat.color
+        }
+      }, label))), topic.launch === 'battleTutorial' && React.createElement("button", {
         onClick: () => startBattleTutorial('HOME'),
         className: "w-full rounded-2xl py-3.5 text-[12px] font-black text-black active:scale-95",
         style: {

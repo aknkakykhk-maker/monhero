@@ -1,0 +1,188 @@
+// ==== クイック・AUTO設定・裏周回の案内(2026-11-07 社長「モンバトのオート設定や他コンテンツのクイックの誘導やチュートリアルや説明をつけたい」) ====
+//
+// 画面ごとに分けた一度きりの案内。台詞は data/assistants.js の ASSISTANT_QUICK_GUIDE_LINES(助手id → ページid → 文)。
+//   g1a … バトルの選び方(クイックの札)                 クイックの難易度が1つでも開いた人
+//   g1b … クイックの難易度えらび(難易度・報酬方針)      同上
+//   g2  … AUTO設定(4つの欄)                            全員
+//   g3a … クイックで∞にしたバトル画面(🎵 モンヒロビート)  全員
+//   g3b … 裏周回のままの曲えらび(周回の帯)              全員
+//   g3c … 裏周回のままのモードえらび(左上の ⏹ 終了)       全員
+//   auto … ふつうのバトル(練習・台本のバトルでない)の AUTO ボタン
+//   nudgeHome / nudgeBattle … クイックが開いているのに一度もクイックをクリアしていない人への誘導(1日1回・合計3回)
+//
+// 【決めごと】
+// ・全員に一度(前から遊んでいる人にも)。最後のページまで見たら「見た」。途中で「あとで」を押したら、次にその画面を開いたとき最初から
+// ・お話・おしゃべり・ほかの案内・演奏中・れんしゅう中は出さない(busy)。案内は画面を切り替えない(g1 の「AUTO設定を見に行く」は押したときだけ)
+// ・ヘルプの「クイックのAUTO設定と裏周回」から、3つの案内(g1・g2・g3)をいつでも見返せる(光らせる所は無しで、ページだけ流す)
+// ・保存は新しいキーだけ。mh_quick_guide_seen_v1 = { v:1, seen:[案内id] } / mh_quick_nudge_v1 = { v:1, n:出した回数, day:最後に出した日(jstDayKey4) }
+//   MFバトルカードの🤖オートの吹き出しは、カードの画面が別に読むので mh_card_auto_intro_seen_v1(真偽値)に分ける
+// ・検査: tools/assistant/quick-guide-check.js
+const QUICK_GUIDE_SEEN_KEY = 'mh_quick_guide_seen_v1';
+const QUICK_GUIDE_NUDGE_KEY = 'mh_quick_nudge_v1';
+const CARD_AUTO_INTRO_SEEN_KEY = 'mh_card_auto_intro_seen_v1';
+const QUICK_GUIDE_NUDGE_MAX = 3;
+const QUICK_GUIDE_IDS = Object.freeze(['g1a', 'g1b', 'g2', 'g3a', 'g3b', 'g3c', 'auto']);
+// 案内ごとのページ。spot … 光らせる所(CSS セレクタ。見えている最初の1つ)。無ければ光らせない
+const QUICK_GUIDE_PAGES = Object.freeze({
+  g1a: [{ id: 'g1.1', spot: '[data-battle-system-card="systemQuick"]' }],
+  g1b: [
+    { id: 'g1.2', spot: '[data-difficulty-carousel]' },
+    { id: 'g1.3', spot: '[data-quick-reward-policy]' },
+    { id: 'g1.4' },
+    { id: 'g1.5', goAutoSettings: true },
+  ],
+  g2: [
+    { id: 'g2.1' },
+    { id: 'g2.2', spot: '[data-auto-settings-section="policy"]' },
+    { id: 'g2.3', spot: '[data-auto-settings-section="ally"]' },
+    { id: 'g2.4', spot: '[data-auto-settings-section="quickRun"]' },
+    { id: 'g2.5', spot: '[data-auto-settings-section="breakthrough"]' },
+  ],
+  g3a: [
+    { id: 'g3.1' },
+    { id: 'g3.2', spot: '[data-quick-to-rhythm]' },
+    { id: 'g3.3' },
+  ],
+  g3b: [
+    { id: 'g3.4', spot: '[data-quick-run-band]' },
+    { id: 'g3.5', spot: '[data-quick-run-band]' },
+  ],
+  g3c: [{ id: 'g3.6', spot: '[data-rhythm-mode-select] [data-rhythm-back]' }],
+  auto: [{ id: 'auto.first', spot: '[data-battle-auto-button]' }],
+  nudgeHome: [{ id: 'nudge.home' }],
+  nudgeBattle: [{ id: 'nudge.battle' }],
+});
+// ヘルプから見返すときのまとまり(光らせる所は無しで、ページを続けて流す)
+const QUICK_GUIDE_REPLAYS = Object.freeze({ g1: ['g1a', 'g1b'], g2: ['g2'], g3: ['g3a', 'g3b', 'g3c'] });
+const quickGuideReplayPages = (replayId) => (QUICK_GUIDE_REPLAYS[replayId] || []).flatMap((g) => QUICK_GUIDE_PAGES[g].map((p) => ({ id: p.id })));
+// ページの文。その助手の文が無ければ、みゅあの文(なければ null)
+const quickGuideLine = (assistantId, pageId) => {
+  const all = typeof ASSISTANT_QUICK_GUIDE_LINES === 'object' && ASSISTANT_QUICK_GUIDE_LINES ? ASSISTANT_QUICK_GUIDE_LINES : {};
+  const own = all[assistantId] && all[assistantId][pageId];
+  const line = own && typeof own.t === 'string' && own.t ? own : (all.mua && all.mua[pageId]) || null;
+  return line && typeof line.t === 'string' ? line : null;
+};
+const normalizeQuickGuideSeen = (v) => {
+  const list = v && typeof v === 'object' && Array.isArray(v.seen) ? v.seen : [];
+  return QUICK_GUIDE_IDS.filter((id) => list.includes(id));
+};
+const quickGuideSeenAfter = (seen, id) => ({ v: 1, seen: normalizeQuickGuideSeen({ seen: [...(Array.isArray(seen) ? seen : []), id] }) });
+const normalizeQuickNudge = (v) => {
+  const r = v && typeof v === 'object' ? v : {};
+  const n = Number.isInteger(r.n) && r.n >= 0 ? Math.min(r.n, 1000) : 0;
+  return { v: 1, n, day: typeof r.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.day) ? r.day : '' };
+};
+// 今日の誘導を出してよいか(1日1回・合計3回まで)
+const quickNudgeAllowed = (nudge, today) => { const s = normalizeQuickNudge(nudge); return s.n < QUICK_GUIDE_NUDGE_MAX && s.day !== today; };
+const quickNudgeAfter = (nudge, today) => { const s = normalizeQuickNudge(nudge); return { v: 1, n: s.n + 1, day: today }; };
+// いまの画面で出す案内。ctx … { gameState, busy, seen, quickUnlocked, quickEverCleared, quickSelect, quickRun, autoRepeat, battleTutorial, backgroundRun, nudgeOk }
+const quickGuidePick = (ctx) => {
+  const c = ctx || {};
+  if (c.busy || !Array.isArray(c.seen)) return null;
+  const not = (id) => !c.seen.includes(id);
+  const nudge = c.nudgeOk === true && c.quickUnlocked === true && c.quickEverCleared !== true;
+  switch (c.gameState) {
+    case 'BATTLE_SYSTEM_SELECT':
+      if (c.quickUnlocked === true && not('g1a')) return 'g1a';
+      return nudge ? 'nudgeBattle' : null;
+    case 'BATTLE_DIFFICULTY_SELECT':
+      return c.quickSelect === true && c.quickUnlocked === true && not('g1b') ? 'g1b' : null;
+    case 'AUTO_SETTINGS':
+      return not('g2') ? 'g2' : null;
+    case 'BATTLE':
+      if (c.battleTutorial) return null;
+      if (c.quickRun === true && c.autoRepeat === true && not('g3a')) return 'g3a';
+      return not('auto') ? 'auto' : null;
+    case 'RHYTHM_DEMO_HOME':
+      return c.backgroundRun === true && not('g3b') ? 'g3b' : null;
+    case 'RHYTHM_MODE_SELECT':
+      return c.backgroundRun === true && not('g3c') ? 'g3c' : null;
+    case 'HOME':
+      return nudge ? 'nudgeHome' : null;
+    default:
+      return null;
+  }
+};
+
+// 光らせる所。見えている最初の1つの位置(画面の座標)。無ければ null
+const quickGuideSpotRect = (selector) => {
+  if (!selector || typeof document === 'undefined') return null;
+  try {
+    for (const el of document.querySelectorAll(selector)) {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) return { el, top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom };
+    }
+  } catch (_) { /* 書き方の違うセレクタは光らせないだけ */ }
+  return null;
+};
+
+// 案内の窓。pages … [{ id, spot?, goAutoSettings? }]。onDone(true) … 最後まで見た / onDone(false) … あとで
+const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAutoSettings }) => {
+  const [step, setStep] = useState(0);
+  const [rect, setRect] = useState(null);
+  const [panelH, setPanelH] = useState(150);
+  const panelRef = useRef(null);
+  useEffect(() => { setStep(0); }, [guideId]);
+  const page = pages[Math.min(step, pages.length - 1)] || null;
+  // 窓の高さを測る(光らせる所と重ならない置き方を決めるため)
+  useEffect(() => { try { const h = panelRef.current && panelRef.current.getBoundingClientRect().height; if (h > 0) setPanelH(Math.ceil(h)); } catch (_) { /* 既定のまま */ } });
+  // 光らせる所を測る。初めに画面の中へ寄せ、あとは 300ms ごとと画面の大きさが変わったときに測り直す(バトルは動き続けるため)
+  //   ★窓の分を引いた残りに入りきらない大きな所(AUTO設定の欄・横画面の難易度)は、先頭を上へ寄せ、窓に重ならない範囲だけ光らせる
+  useEffect(() => {
+    if (!page || !page.spot) { setRect(null); return undefined; }
+    const first = quickGuideSpotRect(page.spot);
+    const vh0 = window.innerHeight || 0;
+    try {
+      if (first && first.el && first.el.scrollIntoView) first.el.scrollIntoView({ block: first.height > vh0 - panelH - 40 ? 'start' : 'nearest', inline: 'nearest' });
+    } catch (_) { /* 寄せられなくても測れる */ }
+    const measure = () => { const r = quickGuideSpotRect(page.spot); setRect(r ? { top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom } : null); };
+    measure();
+    const t = setInterval(measure, 300);
+    window.addEventListener('resize', measure);
+    return () => { clearInterval(t); window.removeEventListener('resize', measure); };
+  }, [guideId, step, page && page.spot]);
+  if (!page) return null;
+  const line = quickGuideLine(assistant && assistant.id, page.id);
+  if (!line) return null;
+  const text = String(line.t).split('{name}').join(callName || 'ブリーダー');
+  const last = step >= pages.length - 1;
+  const vh = typeof window !== 'undefined' ? window.innerHeight || 0 : 0;
+  const pad = 6, gap = 12;
+  // 窓は光らせた所と重ならない側へ。上に入るなら上・下に入るなら下・どちらにも入らなければ、下に置いて光らせる所を切り詰める
+  const roomTop = rect ? rect.top - pad - gap : 0, roomBottom = rect ? vh - rect.bottom - pad - gap : 0;
+  //   どちらにも入らないときは下に置く(大きな所は先頭へ寄せてあるので、見出しが窓の上に見える)
+  const atTop = !!rect && vh > 0 && roomBottom < panelH && roomTop >= panelH;
+  let ring = rect;
+  if (rect && vh > 0) {
+    if (atTop && roomTop < panelH) { const top = panelH + gap + pad + 10; ring = { ...rect, top, height: Math.max(0, rect.bottom - top) }; }
+    if (!atTop && roomBottom < panelH) { const bottom = vh - panelH - gap - pad - 10; ring = { ...rect, height: Math.max(0, Math.min(rect.bottom, bottom) - rect.top) }; }
+  }
+  const face = assistant && typeof assistantFaceImage === 'function' ? assistantFaceImage(assistant, line.e || 'normal') : null;
+  return (
+    <div data-quick-guide={guideId} data-quick-guide-page={page.id} className="fixed inset-0 z-[100050]" style={{ pointerEvents: 'auto' }}>
+      {/* 光らせた所の外を暗くする(光らせる所が無いときは、全体を少し暗くするだけ) */}
+      {ring && ring.height > 0
+        ? <div data-quick-guide-spot aria-hidden="true" className="pointer-events-none fixed rounded-xl border-2 border-amber-300"
+            style={{ top: ring.top - pad, left: ring.left - pad, width: ring.width + pad * 2, height: ring.height + pad * 2, boxShadow: '0 0 0 9999px rgba(2,6,23,0.62), 0 0 18px rgba(252,211,77,0.75)' }}/>
+        : <div aria-hidden="true" className="pointer-events-none fixed inset-0 bg-slate-950/60"/>}
+      <div ref={panelRef} data-quick-guide-panel className="fixed left-1/2 w-[min(560px,calc(100vw-24px))] -translate-x-1/2 rounded-2xl border-2 border-fuchsia-300/70 bg-slate-950/95 p-3 shadow-2xl landscape:max-[500px]:p-2"
+        style={atTop ? { top: 'calc(10px + var(--mh-sa-top, 0px))' } : { bottom: 'calc(10px + var(--mh-sa-bottom, 0px))' }}>
+        <div className="flex items-start gap-2.5">
+          {face && <img src={face} alt="" aria-hidden="true" className="h-12 w-12 shrink-0 rounded-full border-2 border-fuchsia-300/70 bg-slate-900 object-cover object-top landscape:max-[500px]:h-9 landscape:max-[500px]:w-9"/>}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <b className="min-w-0 flex-1 truncate text-[13px] font-black text-amber-100">{line.title || ''}</b>
+              {pages.length > 1 && <span className="shrink-0 text-[10px] font-black tabular-nums text-slate-400">{step + 1} / {pages.length}</span>}
+            </div>
+            <p data-quick-guide-text className="mt-1 text-[12px] font-bold leading-relaxed text-slate-100" style={typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined}>{text}</p>
+          </div>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center justify-end gap-2 landscape:max-[500px]:mt-1">
+          {!last && <button type="button" data-quick-guide-later onClick={() => onDone(false)} className="min-h-[40px] rounded-xl border border-slate-500/60 px-3 text-[11px] font-black text-slate-300 active:scale-[.97]">あとで</button>}
+          {last && page.goAutoSettings && onGoAutoSettings && <button type="button" data-quick-guide-go-auto onClick={() => { onDone(true); onGoAutoSettings(); }} className="min-h-[40px] rounded-xl border border-cyan-300/70 bg-cyan-800/70 px-3 text-[11px] font-black text-cyan-50 active:scale-[.97]">AUTO設定を見に行く</button>}
+          <button type="button" data-quick-guide-next onClick={() => (last ? onDone(true) : setStep(step + 1))} className="min-h-[40px] min-w-[84px] rounded-xl border border-fuchsia-300/70 bg-fuchsia-700/80 px-3 text-[12px] font-black text-white active:scale-[.97]">{last ? (pages.length > 1 ? 'わかった！' : 'OK') : '次へ'}</button>
+        </div>
+      </div>
+    </div>
+  );
+};

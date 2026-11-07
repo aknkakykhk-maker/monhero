@@ -86,13 +86,22 @@ const eventStorySeed = ({ except = [] } = {}) => ({
 // 起動直後に画面いっぱいへ出る「一度きりの案内」。押さずに進めないので、検査では出さない。
 //   ・お詫びの配布(継承固有技Lvの不具合の補償)
 //   ・みゅあの「今日のマスモン」アドバイス(1日1回。日付が入っていれば出ない)
-// ★日付の形は本体の localCalendarDate と同じ(YYYY-MM-DD)。ページの中で今日を作る
+//   ・クイック・AUTO設定・裏周回の案内と誘導、MFバトルカードの🤖オートの吹き出し(2026-11-07。56-quick-guide.jsx)。
+//     バトルの選び方・AUTO設定・バトル画面の上に重なって押せなくなるので、全部見たことにする。案内そのものの検査はこの種を使わない
+// ★日付は本体と同じ「日本時間・朝4時区切り」(jstDayKey4。2026-11-07 から。前は端末の暦日)。ページの中で今日を作る
+const quickGuideIds = () => {
+  const src = fs.readFileSync(path.resolve(__dirname, '..', '..', 'monster-hero/src/parts/56-quick-guide.jsx'), 'utf8');
+  const list = (src.match(/const QUICK_GUIDE_IDS = Object\.freeze\(\[([^\]]*)\]/) || [])[1] || '';
+  return list.match(/'[^']+'/g)?.map((x) => x.slice(1, -1)) || [];
+};
 const ONE_TIME_NOTICE_SCRIPT = `(() => { try {
   const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
   put('mh_inherited_unique_level_compensation_v1', true);
   put('mh_inherited_unique_level_compensation_pending_v1', false);
-  const d = new Date(), pad = (n) => String(n).padStart(2, '0');
-  put('mh_daily_masu_advice_date_v1', d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()));
+  put('mh_daily_masu_advice_date_v1', new Date(Date.now() + 5 * 3600 * 1000).toISOString().slice(0, 10));
+  if (localStorage.getItem('mh_quick_guide_seen_v1') === null) put('mh_quick_guide_seen_v1', { v: 1, seen: ${JSON.stringify(quickGuideIds())} });
+  if (localStorage.getItem('mh_quick_nudge_v1') === null) put('mh_quick_nudge_v1', { v: 1, n: 3, day: '' });
+  if (localStorage.getItem('mh_card_auto_intro_seen_v1') === null) put('mh_card_auto_intro_seen_v1', true);
 } catch (e) {} })();`;
 
 const oneTimeNoticeSeed = () => ({ content: ONE_TIME_NOTICE_SCRIPT });
