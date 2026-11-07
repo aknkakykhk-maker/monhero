@@ -2,6 +2,7 @@
 // 固有技のオリジナル強化を、遊ぶ人として縦・横・🔄横の3つの向きで触って確かめる(2026-11-07 社長「ちゃんと検査しながらすすめて」)。
 //
 //   node tools/masu/unique-boost-screens-check.js            (UB_SHOT_DIR=<フォルダ> で止め絵も撮る)
+//   UB_BASE=https://aknkakykhk-maker.github.io/monhero/ で本番の版を見る(公開後の確かめ。既定は手元の配信)
 //
 // 向き: 縦 390×844 / 横 844×390 / 🔄横(端末は縦のまま、モンヒロビートの「🔄 横」と同じ回し方)
 // 触る所と見ること:
@@ -79,7 +80,7 @@ const VIEWS = [
       await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
       await page.route('**/functions/v1/**', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
       await page.route('**/rest/v1/**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
-      await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
+      await page.goto(`${process.env.UB_BASE ? process.env.UB_BASE.replace(/\/?$/, '/') : `http://localhost:${PORT}/`}monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
       await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 90000 });
       const top = page.getByRole('button', { name: 'トップ画面へ進む' }), home = page.locator('button[aria-label="モンヒロバトル"]');
       const closePopups = () => page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => x.offsetParent && /^(確認|受け取る|閉じる|OK|スキップ|あとで読む|あとで)$/.test((x.innerText || '').trim()) && !x.closest('[data-unique-boost-sheet]')); if (b) { b.click(); return true; } return false; });
