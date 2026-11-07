@@ -78,5 +78,9 @@ ok('招待はプライベートでもフリーでも(待合いの欄と💌の�
 const app = read('monster-hero/src/parts/60-app.jsx');
 ok('HOME の上の帯で招待が届く(入る→その部屋へ)', /function RhythmInviteHomeBar/.test(src) && /<RhythmInviteHomeBar show=\{gameState==='HOME'\}/.test(app) && /rhythmMultiPendingInvite = invite/.test(src) && /joinFromInvite\(pending\)/.test(src));
 
+// 途中で抜けた部屋へ戻る(2026-11-07 社長「途中抜けして戻ろうとしたときに部屋がなかった」)
+ok('自分で抜けた部屋を覚える(部屋を移るときは覚えない)', /leave\(opts = \{\}\)/.test(src) && /rhythmMultiLastRoom = \{ code: s\.code/.test(src) && /this\.leave\(\{ silent: true \}\)/.test(src));
+ok('「↩ さっきの部屋に戻る」は10分のあいだ・フリーだけ。戻るときはほかの部屋へまとめない', /RHYTHM_MULTI_REJOIN_MS = 10 \* 60 \* 1000/.test(src) && /data-rhythm-multi-rejoin=/.test(src) && /RHYTHM_MULTI\.join\(r\.code, myProfile\(\), r\.mode, \{ create: true \}\)/.test(src));
+ok('シートの「部屋に入る」に、いま待っている部屋の数と顔(無いときは「部屋を作る」を目立たせる)', /data-rhythm-multi-free-room-count=/.test(src) && /data-rhythm-multi-free-create-hot=/.test(src));
 console.log(failed ? `${failed}件のNGがあります` : 'すべてOK');
 process.exit(failed ? 1 : 0);
