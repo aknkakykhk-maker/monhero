@@ -8486,6 +8486,11 @@ function MonsterHeroGame() {
     });
   };
   const assistantBondLevelNow = assistantBondLevelOf(assistantBond.points);
+  // モンヒロビートの助手とのセッション: 台詞の {name} を、話す助手ごとの呼び方に置きかえるための名前・仲良し度・呼び方(2026-11-07)
+  useEffect(() => {
+    if (typeof rhythmAssistSessionSetCall !== 'function') return;
+    rhythmAssistSessionSetCall({ name: breederName, levelOf: (id) => assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points), styleOf: (id) => (assistantCallStyles && assistantCallStyles[id]) || null });
+  }, [breederName, assistantBonds, assistantCallStyles]);
   // いま選んでいる助手そのもの。画面はこれを見て顔・名前・色を出す
   const activeAssistant = assistantById(selectedAssistantId);
   // ふだんの吹き出しを、その日最初に HOME を開いたとき1回だけまとめて頼む(2026-10-14)。

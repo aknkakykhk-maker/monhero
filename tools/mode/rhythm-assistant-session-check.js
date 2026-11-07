@@ -254,5 +254,12 @@ check('助手のスコアをランキングへ送らない(助手の計算の部
   check('プロフィールの欄は印が偽ならなにも出さない(RhythmAssistSessionProfileBadges)', /typeof RhythmAssistSessionProfileBadges==='function'&&<RhythmAssistSessionProfileBadges\/>/.test(PROFILE) && /function RhythmAssistSessionProfileBadges\(\) \{\n  const state = useRhythmAssistSessionState\(\);\n  if \(!rhythmAssistSessionEnabled\(\)\) return null;/.test(SCREEN));
   check('特別な台詞の束(Lv.50・80・100)が8人ぶんある', p2.ids.every((id) => ['sp50', 'sp80', 'sp100'].every((sc) => p2.SOLO[id] && p2.SOLO[id][sc] && p2.SOLO[id][sc].length)));
 }
+// ---- プレイヤーの呼び方(docs/rules/CALL_NAMES.md・2026-11-07 社長) ----
+{
+  const bare = (LINES.match(/'[^']*ブリーダー(?!Lv|P|経験値)[^']*'/g) || []);
+  check('台詞でプレイヤーを「ブリーダー」と直に呼ばない({name} と書く)', bare.length === 0, bare.slice(0, 3).join(' / '));
+  check('{name} は話す助手の呼び方に置きかえる(rhythmAssistSessionSpeak → assistantSpeakText)', /return \[hit\[0\], rhythmAssistSessionSpeak\(assistantId, hit\[1\]\)\];/.test(SCREEN) && /rhythmAssistSessionSpeak\(who, String\(text\)/.test(SCREEN) && /assistantSpeakText\(text, c\.name, lv, style, assistantId\)/.test(SCREEN));
+  check('本体が名前・仲良し度・呼び方を渡す', /rhythmAssistSessionSetCall\(\{ name: breederName, levelOf:/.test(P('60-app.jsx')));
+}
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

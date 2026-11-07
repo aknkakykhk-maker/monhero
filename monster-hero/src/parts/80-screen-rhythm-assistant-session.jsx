@@ -58,6 +58,17 @@ const rhythmAssistSessionLikedNames = (assistantId) => {
 };
 const rhythmAssistSessionName = (assistantId) => { const who = rhythmAssistSessionWho(assistantId); return String((who && who.name) || '助手').slice(0, 12); };
 
+// プレイヤーの呼び方(2026-11-07 社長「ブリーダーとか呼び方がおかしい」・docs/rules/CALL_NAMES.md)。
+// 台詞の {name} を、話す助手のいまの呼び方(仲良し度の段・性別・自分で決めた呼び方)に置きかえる。
+// 名前・助手ごとの仲良し度 Lv・呼び方は本体(60-app)が rhythmAssistSessionSetCall で渡す(保存しない)
+const RHYTHM_ASSIST_SESSION_CALL = { name: '', levelOf: null, styleOf: null };
+const rhythmAssistSessionSetCall = (c) => { Object.assign(RHYTHM_ASSIST_SESSION_CALL, c || {}); };
+const rhythmAssistSessionSpeak = (assistantId, text) => {
+  const c = RHYTHM_ASSIST_SESSION_CALL;
+  let lv; try { lv = typeof c.levelOf === 'function' ? c.levelOf(assistantId) : undefined; } catch (_) { lv = undefined; }
+  let style = null; try { style = typeof c.styleOf === 'function' ? c.styleOf(assistantId) : null; } catch (_) { style = null; }
+  return typeof assistantSpeakText === 'function' ? assistantSpeakText(text, c.name, lv, style, assistantId) : String(text || '').replace(/\{name\}/g, c.name || 'キミ');
+};
 // 台詞は 33-rhythm-assistant-session-lines.jsx(docs/progress/beat-assistant-session/lines/*.txt から生成)。
 // 助手ごとに直近に言った台詞を覚えて避ける(保存しない)。同じ曲で同じ台詞を出さないため
 const RHYTHM_ASSIST_SESSION_RECENT = new Map();
@@ -72,7 +83,7 @@ const rhythmAssistSessionPickLine = (assistantId, scene, rand = Math.random) => 
   const pool = fresh.length ? fresh : list;
   const hit = pool[Math.floor(rand() * pool.length)];
   RHYTHM_ASSIST_SESSION_RECENT.set(assistantId, [hit[1], ...recent.filter((t) => t !== hit[1])].slice(0, RHYTHM_ASSIST_SESSION_RECENT_KEEP));
-  return hit;
+  return [hit[0], rhythmAssistSessionSpeak(assistantId, hit[1])];
 };
 // 好きな曲・苦手な曲の結果の専用(曲の別の版も同じ曲として探す)
 const rhythmAssistSessionSongScene = (assistantId, songId) => {
@@ -326,7 +337,7 @@ const rhythmAssistSessionPickPair = (duo, scene, used, rand = Math.random) => {
   const rows = fresh[Math.floor(rand() * fresh.length)];
   used.add(rows);
   const callOf = (who, to) => (typeof assistantPeerCall === 'function' ? assistantPeerCall(who, to) : rhythmAssistSessionName(to));
-  return rows.map(([who, expr, text]) => [who, expr, String(text).replace(/\{c\}/g, callOf(who, who === duo.a ? duo.b : duo.a))]);
+  return rows.map(([who, expr, text]) => [who, expr, rhythmAssistSessionSpeak(who, String(text).replace(/\{c\}/g, callOf(who, who === duo.a ? duo.b : duo.a)))]);
 };
 
 // 演奏中の助手の顔とひとこと(2026-11-07 社長の止め絵の形)。演奏画面の外(60-app)から重ねる。演奏の仕組みには触れず、

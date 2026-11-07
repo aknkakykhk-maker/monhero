@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c59eaaaa78b68613
+// generated-sha256: 0db736780d377d8b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -31021,7 +31021,7 @@ const rhythmAssistSessionBadges = (state) => RHYTHM_ASSIST_SESSION_IDS
 // デュオ: { 'a-b'(並べた id): { play/result/gattai: [[[話す人, 表情, 台詞], …], …] } }。{c} は話す人から相手への呼び方
 const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
   mua: {
-    join: [['happy', 'やっほ〜！あたしも一緒に叩くね♪'], ['happy', 'ブリーダー、今日もセッションしよ！']],
+    join: [['happy', 'やっほ〜！あたしも一緒に叩くね♪'], ['happy', '{name}、今日もセッションしよ！']],
     first: [['excited', 'この曲はじめてかも！ワクワクするぢゃん♪'], ['excited', '知らない曲って、なんか燃えるよね♪']],
     like: [['happy', 'この曲あたし大好きなの♪']],
     dislike: [['troubled', 'えっ、この曲！？速すぎて目が回るんだけどｗ']],
@@ -31033,7 +31033,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     high: [['happy', 'まぢいい感じぢゃん！楽しかったぁ♪'], ['happy', '今の、めっちゃそろってたよね♪']],
     mid: [['happy', 'いい感じだったよ！次はもっといけるかも♪'], ['happy', '楽しかったぁ♪ もう一曲いこ！']],
     low: [['troubled', '次はもっと合わせよ！あたしもがんばる♪'], ['troubled', '大丈夫！何回でも付き合うよ♪']],
-    fc: [['surprise', 'フルコンぢゃん！ブリーダー天才かもｗ'], ['surprise', '全部つながった〜！まぢ感動♪']],
+    fc: [['surprise', 'フルコンぢゃん！{name}天才かもｗ'], ['surprise', '全部つながった〜！まぢ感動♪']],
     levelup: [['happy', 'セッションLvが上がった♪ あたしも上手になってるかも！'], ['happy', 'もっと一緒に叩きたくなってきた♪']],
     likeup: [['wink', 'この曲、ちょっと好きになってきたかも♪']],
     overcome: [['happy', '苦手な曲だったけど、乗りこえたよ！'], ['happy', '目は回ったけど、楽しかったかもｗ']],
@@ -31041,8 +31041,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'song:haruka': [['happy', 'ハルカ、聞くたびにキュンとしちゃう♪']],
     'song:crazy_party_night': [['happy', 'パーティーの曲って、それだけで楽しいぢゃん♪']],
     'song:grievous_lady': [['happy', 'Grievous Lady、最後までついていけた！あたしえらいｗ']],
-    'sp50': [['happy', 'あたしたち、もうセッションLv.50ぢゃん！まぢ最強コンビかも♪'], ['wink', 'ブリーダーとならどんな曲でも楽しいの、ほんとだよ♪']],
-    'sp80': [['excited', 'Lv.80！ここまで来たら、もう息ぴったりぢゃん♪'], ['happy', 'あたしの一番のセッション相手は、ブリーダーだよｗ']],
+    'sp50': [['happy', 'あたしたち、もうセッションLv.50ぢゃん！まぢ最強コンビかも♪'], ['wink', '{name}とならどんな曲でも楽しいの、ほんとだよ♪']],
+    'sp80': [['excited', 'Lv.80！ここまで来たら、もう息ぴったりぢゃん♪'], ['happy', 'あたしの一番のセッション相手は、{name}だよｗ']],
     'sp100': [['excited', 'セッションLv.100！あたしたち、セッションマスターぢゃん！'], ['happy', 'ここまで一緒に叩いてくれて、まぢありがと♪']],
     'listen:mf_ichika_mix': [['excited', 'サビは1:48から！ そこからテンションまぢ上がるやつ♪']],
     'listen:monster_hero': [['excited', '1:50からずーっといちばん強いの！ 最後までアゲてこ♪']],
@@ -31092,11 +31092,11 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:humanoid': [['excited', '0:57から30秒、ずっとサビなの！ ここまぢでアガる♪']],
   },
   kiki: {
-    join: [['happy', 'ブリーダーさん、よろしくお願いしまつ♪'], ['happy', '今日も一緒に演奏できてうれしいです♪']],
-    first: [['excited', 'はじめての曲ですね。どきどきしまつ♪'], ['excited', '知らない曲も、ブリーダーさんとなら平気です']],
+    join: [['happy', '{name}、よろしくお願いしまつ♪'], ['happy', '今日も一緒に演奏できてうれしいです♪']],
+    first: [['excited', 'はじめての曲ですね。どきどきしまつ♪'], ['excited', '知らない曲も、{name}となら平気です']],
     like: [['happy', 'この曲、私とても好きなんです♪']],
     dislike: [['troubled', 'この曲は大きい音でどなられるので、少しびっくりしちゃいます']],
-    combo: [['excited', 'いい流れでつね♪ このまま全部いけそうです'], ['excited', 'とってもきれいにつながっていますよ♪'], ['excited', 'ブリーダーさん、さすがでつ']],
+    combo: [['excited', 'いい流れでつね♪ このまま全部いけそうです'], ['excited', 'とってもきれいにつながっていますよ♪'], ['excited', '{name}、さすがでつ']],
     miss: [['normal', '大丈夫でつ、落ち着いていきましょう♪'], ['normal', 'ひと呼吸おけば、また合わせられまつよ']],
     climax: [['excited', 'ここが一番きれいなところでつ♪'], ['excited', 'ここは押し切りまつ ( ˘ω˘)9グッ!'], ['excited', '雪が舞うみたいな気持ちになりまつ♪']],
     last: [['normal', 'あと少しでつ。最後までていねいに♪'], ['normal', '最後のひと押しでつ']],
@@ -31104,7 +31104,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     high: [['happy', 'とってもいい演奏でした♪'], ['happy', '息がぴったりでしたね♪']],
     mid: [['happy', 'いい演奏でした。次はもっと合わせられそうです'], ['happy', '楽しかったです♪ もう一曲いかがですか？']],
     low: [['troubled', '次はきっと、もっと合わせられますよ♪'], ['troubled', '何度でもお付き合いしまつ♪']],
-    fc: [['surprise', 'フルコンボでつ！ブリーダーさん、すごいです♪'], ['surprise', '最後まで一つも落とさないなんて、見とれちゃいました']],
+    fc: [['surprise', 'フルコンボでつ！{name}、すごいです♪'], ['surprise', '最後まで一つも落とさないなんて、見とれちゃいました']],
     levelup: [['happy', 'セッションLvが上がりました♪ うれしいでつ'], ['happy', '少しずつ、上手になれている気がします♪']],
     likeup: [['wink', 'この曲、だんだん好きになってきました♪']],
     overcome: [['happy', '苦手な曲でしたけど、最後までいけました♪'], ['happy', 'びっくりしましたけど、楽しかったです']],
@@ -31112,8 +31112,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'song:tsuki_ga_michiru_mae_ni': [['happy', '月が満ちる前に、しっとりしていて落ち着きます♪']],
     'song:kaze_ga_soyogu': [['happy', '風がそよぐ場所、気持ちがすっと軽くなりますね']],
     'song:black_shout': [['happy', 'BLACK SHOUT、こわかったけど、最後までがんばれました']],
-    'sp50': [['happy', 'ブリーダーさんとのセッション、Lv.50になりました♪'], ['wink', '指が覚えてくれている気がしまつ♪']],
-    'sp80': [['happy', 'Lv.80でつ。目を閉じても合わせられそうです♪'], ['normal', 'ブリーダーさんの音、ちゃんと聞こえていますよ']],
+    'sp50': [['happy', '{name}とのセッション、Lv.50になりました♪'], ['wink', '指が覚えてくれている気がしまつ♪']],
+    'sp80': [['happy', 'Lv.80でつ。目を閉じても合わせられそうです♪'], ['normal', '{name}の音、ちゃんと聞こえていますよ']],
     'sp100': [['excited', 'Lv.100でつ！セッションマスターですね♪'], ['happy', 'たくさん一緒に演奏してくれて、ありがとうございまつ♪']],
     'listen:mf_ichika_mix': [['normal', '2分25秒の曲でつ。終わりの手前の盛り上がりまで、ていねいにいきましょう']],
     'listen:monster_hero': [['normal', '最初の45秒くらいは静かなんでつ。そこから少しずつ強くなっていきます']],
@@ -31163,7 +31163,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:humanoid': [['normal', '0:25で一度静かになるところ、すっとした感じが好きでつ']],
   },
   momosuke: {
-    join: [['happy', 'ももが来たからには盛り上げるよ！！'], ['happy', 'ブリーダー、ももとセッションできるなんてラッキーだよw']],
+    join: [['happy', 'ももが来たからには盛り上げるよ！！'], ['happy', '{name}、ももとセッションできるなんてラッキーだよw']],
     first: [['excited', 'はじめての曲！！ももが一番に覚えちゃうもんね'], ['excited', '新曲でもももは完璧にこなすよ♡']],
     like: [['happy', 'この曲ももの推し曲！！']],
     dislike: [['troubled', 'チクタクがずっと鳴っててもも眠くなる〜♡']],
@@ -31175,16 +31175,16 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     high: [['happy', 'ももと合わせたらこんなもんでしょw さすが♡'], ['happy', '今のステージ、拍手もらえるやつだよ！！']],
     mid: [['happy', 'まあまあかな！！次はもっと盛り上げよ♡'], ['happy', '楽しかった！！アンコールいく？w']],
     low: [['troubled', 'ドンマイ！次はもも、もっと見ててあげる♡'], ['troubled', '練習あるのみ！！ももも付き合うからw']],
-    fc: [['surprise', 'フルコン！？ブリーダー、もものファン一号にしてあげる♡'], ['surprise', '全部つながった！！最高のステージだったよ！！']],
-    levelup: [['happy', 'セッションLvアップ！！もも、また一段とかわいくなっちゃったw'], ['happy', '上達してるのはももだけじゃないよ、ブリーダーもね♡']],
+    fc: [['surprise', 'フルコン！？{name}、もものファン一号にしてあげる♡'], ['surprise', '全部つながった！！最高のステージだったよ！！']],
+    levelup: [['happy', 'セッションLvアップ！！もも、また一段とかわいくなっちゃったw'], ['happy', '上達してるのはももだけじゃないよ、{name}もね♡']],
     likeup: [['wink', 'この曲、ちょっとだけ好きになったかも…ちょっとだけね！！']],
     overcome: [['happy', '眠くならずに最後までいけた！！もも、えらい♡'], ['happy', '苦手でもちゃんと決めるのがアイドルだよw']],
     'song:crossing_field': [['happy', 'crossing field は、ももが一番かわいく踊れる曲！！']],
     'song:only_my_railgun': [['happy', 'only my railgun、テンション上がりっぱなしw']],
     'song:rose': [['happy', 'ROSE はかっこいいももも見せられる曲なんだよ♡']],
-    'song:dullahan_clockwork': [['happy', 'チクタクに負けなかった！！ブリーダーもえらい♡']],
-    'sp50': [['excited', 'Lv.50！！ももとブリーダー、もう名コンビだね♡'], ['wink', 'ここまで来たら、ももの専属だよw']],
-    'sp80': [['excited', 'Lv.80！！ステージの上で一番息が合うの、ブリーダーかも♡'], ['happy', 'ももについてこれるの、ブリーダーくらいだよ！！']],
+    'song:dullahan_clockwork': [['happy', 'チクタクに負けなかった！！{name}もえらい♡']],
+    'sp50': [['excited', 'Lv.50！！ももと{name}、もう名コンビだね♡'], ['wink', 'ここまで来たら、ももの専属だよw']],
+    'sp80': [['excited', 'Lv.80！！ステージの上で一番息が合うの、{name}かも♡'], ['happy', 'ももについてこれるの、{name}くらいだよ！！']],
     'sp100': [['excited', 'Lv.100！！セッションマスターはもものおかげだよね♡'], ['happy', 'ずっと一緒にステージ立ってくれて、ありがと！！']],
     'listen:mf_ichika_mix': [['excited', '1:48からがいちばん盛り上がるとこ！！ そこでももが決めるね♡']],
     'listen:monster_hero': [['excited', '1:50からいちばん強いとこが続くの！！ 最高に盛り上がるやつ♡']],
@@ -31234,7 +31234,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:humanoid': [['excited', '0:57からのサビで、もう最高潮！！ 一緒に盛り上がろ♡']],
   },
   dra: {
-    join: [['happy', 'おでも混ぜてくれよな、えへへ'], ['happy', 'ブリーダー、今日もよろしくな']],
+    join: [['happy', 'おでも混ぜてくれよな、えへへ'], ['happy', '{name}、今日もよろしくな']],
     first: [['excited', 'はじめての曲か。冒険って感じでいいな'], ['excited', '知らない道を行くのは、わくわくするからな']],
     like: [['happy', 'この曲、おで好きなんだよ']],
     dislike: [['troubled', 'しんみりした曲は、おで照れくさいんだな、えへへ']],
@@ -31246,7 +31246,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     high: [['happy', 'いい演奏だったな。おで楽しかったよ'], ['happy', 'ぴったりだったな、えへへ']],
     mid: [['happy', 'なかなかよかったな。次も行くからな'], ['happy', '楽しかったな。もう一回いいか？']],
     low: [['troubled', 'どんまいだな、次でとりかえすからな'], ['troubled', 'おでも練習するからな。一緒にがんばろう']],
-    fc: [['surprise', '全部つながったな！？すごいな、ブリーダー'], ['surprise', 'フルコンだな、おで鼻が高いからな']],
+    fc: [['surprise', '全部つながったな！？すごいな、{name}'], ['surprise', 'フルコンだな、おで鼻が高いからな']],
     levelup: [['happy', 'セッションLvが上がったな、えへへ'], ['happy', 'おでも少しは上手になってきたかな']],
     likeup: [['wink', 'この曲、だんだん好きになってきたわ']],
     overcome: [['happy', '苦手な曲だったけど、最後まで行けたな'], ['happy', '照れくさかったけど、いい曲だったな']],
@@ -31255,7 +31255,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'song:senjou_no_shippuu': [['happy', '戦場の疾風、風みたいに駆け抜けたな']],
     'song:stay_with_me': [['happy', 'Stay With Me、しんみりしたけど、悪くなかったよ']],
     'sp50': [['happy', 'セッションLv.50だな。おで、うれしいくさ'], ['normal', 'ここまで来たの、ちょっとした冒険だったな']],
-    'sp80': [['happy', 'Lv.80だな。もう目をつぶっても合わせられるからな'], ['happy', 'ブリーダーと叩くの、おで好きなんだな、えへへ']],
+    'sp80': [['happy', 'Lv.80だな。もう目をつぶっても合わせられるからな'], ['happy', '{name}と叩くの、おで好きなんだな、えへへ']],
     'sp100': [['excited', 'Lv.100だな！セッションマスターだからな！'], ['happy', '長い冒険だったな。ありがとうな、えへへ']],
     'listen:mf_ichika_mix': [['happy', 'サビは1:48から2:14までだな。そこまでは体力をとっとけよ']],
     'listen:monster_hero': [['happy', '静かに始まって、だんだん強くなる。冒険の始まりみたいな曲だな']],
@@ -31396,7 +31396,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'song:six_eternel_beat': [['happy', 'SIX ÉTERNEL、展開がきれいでいいよね〜']],
     'song:evans': [['happy', 'Evans は、音の重ね方が気持ちいいんだよね〜']],
     'song:toriko': [['happy', 'トリコ、最後までノリについていけた〜！']],
-    'sp50': [['happy', 'Lv.50だね〜。合わせ方が分かってきたよ'], ['wink', 'ブリーダーの癖、だいたい読めるようになったよ〜笑']],
+    'sp50': [['happy', 'Lv.50だね〜。合わせ方が分かってきたよ'], ['wink', '{name}の癖、だいたい読めるようになったよ〜笑']],
     'sp80': [['happy', 'Lv.80〜。構成を読まなくても合うね〜'], ['normal', 'ここまでの記録、きれいに積み上がってるよ〜']],
     'sp100': [['excited', 'Lv.100〜！セッションマスターだね、ありがとん笑'], ['happy', 'ここまでの全部、いい流れだったよ〜']],
     'listen:mf_ichika_mix': [['normal', 'サビは1:48から2:14。終わりの近くに山があるから、前半はためていこ']],
@@ -56260,6 +56260,17 @@ const rhythmAssistSessionLikedNames = (assistantId) => {
 };
 const rhythmAssistSessionName = (assistantId) => { const who = rhythmAssistSessionWho(assistantId); return String((who && who.name) || '助手').slice(0, 12); };
 
+// プレイヤーの呼び方(2026-11-07 社長「ブリーダーとか呼び方がおかしい」・docs/rules/CALL_NAMES.md)。
+// 台詞の {name} を、話す助手のいまの呼び方(仲良し度の段・性別・自分で決めた呼び方)に置きかえる。
+// 名前・助手ごとの仲良し度 Lv・呼び方は本体(60-app)が rhythmAssistSessionSetCall で渡す(保存しない)
+const RHYTHM_ASSIST_SESSION_CALL = { name: '', levelOf: null, styleOf: null };
+const rhythmAssistSessionSetCall = (c) => { Object.assign(RHYTHM_ASSIST_SESSION_CALL, c || {}); };
+const rhythmAssistSessionSpeak = (assistantId, text) => {
+  const c = RHYTHM_ASSIST_SESSION_CALL;
+  let lv; try { lv = typeof c.levelOf === 'function' ? c.levelOf(assistantId) : undefined; } catch (_) { lv = undefined; }
+  let style = null; try { style = typeof c.styleOf === 'function' ? c.styleOf(assistantId) : null; } catch (_) { style = null; }
+  return typeof assistantSpeakText === 'function' ? assistantSpeakText(text, c.name, lv, style, assistantId) : String(text || '').replace(/\{name\}/g, c.name || 'キミ');
+};
 // 台詞は 33-rhythm-assistant-session-lines.jsx(docs/progress/beat-assistant-session/lines/*.txt から生成)。
 // 助手ごとに直近に言った台詞を覚えて避ける(保存しない)。同じ曲で同じ台詞を出さないため
 const RHYTHM_ASSIST_SESSION_RECENT = new Map();
@@ -56274,7 +56285,7 @@ const rhythmAssistSessionPickLine = (assistantId, scene, rand = Math.random) => 
   const pool = fresh.length ? fresh : list;
   const hit = pool[Math.floor(rand() * pool.length)];
   RHYTHM_ASSIST_SESSION_RECENT.set(assistantId, [hit[1], ...recent.filter((t) => t !== hit[1])].slice(0, RHYTHM_ASSIST_SESSION_RECENT_KEEP));
-  return hit;
+  return [hit[0], rhythmAssistSessionSpeak(assistantId, hit[1])];
 };
 // 好きな曲・苦手な曲の結果の専用(曲の別の版も同じ曲として探す)
 const rhythmAssistSessionSongScene = (assistantId, songId) => {
@@ -56528,7 +56539,7 @@ const rhythmAssistSessionPickPair = (duo, scene, used, rand = Math.random) => {
   const rows = fresh[Math.floor(rand() * fresh.length)];
   used.add(rows);
   const callOf = (who, to) => (typeof assistantPeerCall === 'function' ? assistantPeerCall(who, to) : rhythmAssistSessionName(to));
-  return rows.map(([who, expr, text]) => [who, expr, String(text).replace(/\{c\}/g, callOf(who, who === duo.a ? duo.b : duo.a))]);
+  return rows.map(([who, expr, text]) => [who, expr, rhythmAssistSessionSpeak(who, String(text).replace(/\{c\}/g, callOf(who, who === duo.a ? duo.b : duo.a)))]);
 };
 
 // 演奏中の助手の顔とひとこと(2026-11-07 社長の止め絵の形)。演奏画面の外(60-app)から重ねる。演奏の仕組みには触れず、
@@ -88861,6 +88872,11 @@ function MonsterHeroGame() {
     });
   };
   const assistantBondLevelNow = assistantBondLevelOf(assistantBond.points);
+  // モンヒロビートの助手とのセッション: 台詞の {name} を、話す助手ごとの呼び方に置きかえるための名前・仲良し度・呼び方(2026-11-07)
+  useEffect(() => {
+    if (typeof rhythmAssistSessionSetCall !== 'function') return;
+    rhythmAssistSessionSetCall({ name: breederName, levelOf: (id) => assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points), styleOf: (id) => (assistantCallStyles && assistantCallStyles[id]) || null });
+  }, [breederName, assistantBonds, assistantCallStyles]);
   // いま選んでいる助手そのもの。画面はこれを見て顔・名前・色を出す
   const activeAssistant = assistantById(selectedAssistantId);
   // ふだんの吹き出しを、その日最初に HOME を開いたとき1回だけまとめて頼む(2026-10-14)。
