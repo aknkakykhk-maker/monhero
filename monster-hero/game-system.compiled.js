@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 20cc4a01b53574f0
+// source-sha256: 43aa9cc04e231a37
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6035,6 +6035,7 @@ const rhythmLookPresetOf = settings => (RHYTHM_LOOK_PRESETS.find(preset => Objec
   id: ''
 }).id;
 const RHYTHM_NOTE_PALETTE_CHOICES = Object.freeze([['STANDARD', '標準'], ['PASTEL', 'パステル'], ['NEON', 'ネオン'], ['CLEAR', '見分けやすい']]);
+const RHYTHM_NOTE_SHAPE_CHOICES = Object.freeze([['STANDARD', '標準'], ['ROUND', 'まる'], ['CUT', 'カット'], ['FRAME', 'フレーム'], ['STRIPE', 'ストライプ']]);
 const RHYTHM_STAGE_THEME_CHOICES = Object.freeze([['NONE', 'いつもの背景'], ['GRAND_OPEN', '本オープン記念']]);
 const rhythmStageThemeActive = settings => settings?.stageTheme === 'GRAND_OPEN' && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmGrandOpen === true;
 const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['LIVE', 'ライブ'], ['VIVID', '派手'], ['CALM', '控えめ'], ['SIMPLE', 'シンプル']]);
@@ -6217,6 +6218,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   fx: Object.freeze({}),
   notePalette: 'STANDARD',
   stageTheme: 'NONE',
+  noteShape: 'STANDARD',
   multiLightLook: true,
   multiLook: 'LIGHT',
   modeSelectArt: true,
@@ -6590,7 +6592,8 @@ const normalizeRhythmSettings = value => {
     luckyRush: bool('luckyRush'),
     fx: normalizeRhythmFx(source.fx),
     notePalette: RHYTHM_NOTE_PALETTE_CHOICES.some(([id]) => id === source.notePalette) ? source.notePalette : DEFAULT_RHYTHM_SETTINGS.notePalette,
-    stageTheme: RHYTHM_STAGE_THEME_CHOICES.some(([id]) => id === source.stageTheme) ? source.stageTheme : DEFAULT_RHYTHM_SETTINGS.stageTheme
+    stageTheme: RHYTHM_STAGE_THEME_CHOICES.some(([id]) => id === source.stageTheme) ? source.stageTheme : DEFAULT_RHYTHM_SETTINGS.stageTheme,
+    noteShape: RHYTHM_NOTE_SHAPE_CHOICES.some(([id]) => id === source.noteShape) ? source.noteShape : DEFAULT_RHYTHM_SETTINGS.noteShape
   };
 };
 const emptyRhythmBestRecord = () => ({
@@ -39115,6 +39118,9 @@ const RhythmTapTest = ({
   useState(() => {
     try {
       if (typeof rhythmApplyNotePalette === 'function') rhythmApplyNotePalette(settingsIn?.notePalette);
+    } catch (e) {}
+    try {
+      if (typeof rhythmApplyNoteShape === 'function') rhythmApplyNoteShape(settingsIn?.noteShape);
     } catch (e) {}
     return 0;
   });
