@@ -34,10 +34,11 @@
 | --- | --- | --- |
 | ① | 今日のペア(3回見て達成・ペア+10・2人の親密度+20、連続ログインでペア+2)/返事を選ぶ掛け合い(28本・ペア+3・2人の親密度+5)/その日の出来事(9種類×4本=36本)/思い出アルバム(写真 Lv3・5・8・10、見た掛け合いの見返し)/仲良し度 Lv10・ペアの1日の上限20/プレイヤーの親密度の行動 peerTalk・peerChoice・peerDaily | できた(この枝) |
 | ② | 差し入れ(ビートP交換所 200P・ペア+15・2人の親密度+30)・友情のしるし(500P・ペア+30・2人の親密度+25)。どちらも全体で1日1回、思い出アルバムの「2人にしてあげる」から渡す/遊びに連れていくペア(ビート・バトル・カードを遊び終えるとペア+4・2人の親密度+6、次の画面で2人がひとこと) | できた(この枝) |
-| ③ | ミニイベント・3人の掛け合い(決まった8組)・けんか→仲直り・Lv10 の2本目の特別なお話・Lv7/9 の掛け合い | これから(下の「引き継ぎ」) |
+| ③ | ミニイベント(12本・Lv3 から、Lv6 から3倍)・3人の掛け合い(8組×2本・3組とも Lv2 以上、Lv7 のペアがいれば6倍)・けんか→仲直り(8組・Lv2〜3・HOME)・Lv10 の2本目の特別なお話の仕組み・プレイヤーの親密度 peerTrio/peerEvent/peerMakeup | ナカヨシの分はできた(この枝)。Lv7/9 の掛け合いと Lv10 の台本はコトバの取り込み待ち |
 
 止め絵(①): `shots/4-map-daily.jpg`(関係図と今日のペア)・`shots/5-album.jpg`(思い出アルバム)・`shots/6-choice.jpg`(返事を選ぶ)・`shots/7-reply.jpg`(選んだあとの反応)
 止め絵(②): `shots/8-album-actions.jpg`(2人にしてあげる)・`shots/9-gift-thanks.jpg`(差し入れのあとの2人のひとこと)
+止め絵(③): `shots/10-trio.jpg`(3人の帯)・`shots/11-event.jpg`(ミニイベントの判定)・`shots/12-quarrel.jpg`(言い合い)・`shots/13-makeup.jpg`(仲直り)
 
 ## 引き継ぎ(2026-11-07 ナカヨシの1つ目の会話から)
 
@@ -63,3 +64,14 @@
 
 ### 終わったら
 - 止め絵(3人の帯・ミニイベント・仲直り)・台本の抜粋・更新履歴の文を窓口へ。⑥の検査(`run-checks.js --changed`)を通す
+
+## ③ ナカヨシの分(2026-11-07 ナカヨシの2つ目の会話)
+
+- データ `data/assistants.js` 末尾: `ASSISTANT_PEER_EVENTS`(title・choice つき)・`ASSISTANT_PEER_QUARRELS`(lines と makeup)・`ASSISTANT_PEER_TRIO_TALKS`(trio・`{c:id}`)。
+  ペアの行動 `event`(+5・1日5)・`makeup`(+5・上限の外)。プレイヤーの親密度 `peerTrio` 3/6・`peerEvent` 8/16・`peerMakeup` 8/8
+- 端末 `56-assistant-peer.jsx`: `assistantPeerExtraTalks`(kind 付きの形にそろえる)・`assistantPeerPickTalk`(HOME で 仲直り→Lv5→Lv10 の順に先に流す)・
+  `assistantPeerMarkShown`(けんかで待ちを残す・Lv10 は別キー)・帯の3人表示・アルバム(3人は3組それぞれに入る)
+- 保存(足しただけ): `mh_assistant_peer_quarrel_v1`・`mh_assistant_peer_special2_seen_v1`(SAVE_DATA.md に記載)
+- 検査 `assistant-peer-check.js` ⑪。口調・守りの検査は③の台本にも広げた。返事は1人1行に書く(行ごとに見る口調の検査が取り違えるため。前からあった kiki-kyuko-c1 の NG もこれで直った)
+- 残り: コトバの台本(`claude/assistant-peer-lines` の `lines/kotoba.txt`)を `peer-talks-import.js` で取り込む → ⑪ の「(参考)」が 28・28・28 になる。
+  更新履歴の「Lv5とLv10で特別なお話」は、取り込んでから本当になる

@@ -62,6 +62,8 @@
 | `mh_assistant_peer_album_v1` | object | 助手どうしの思い出アルバム。`{ [ペア]: [見た掛け合いid] }`(台本だけ。API 版で作ったものは入れない) |
 | `mh_assistant_peer_gift_v1` | object | その日に差し入れ・友情のしるしを渡したペア(2026-11-07)。`{ day, gift, token }`(どちらも全体で1日1回)。品物そのものは `mh_owned_items` の `peer_gift`・`peer_token` |
 | `mh_assistant_peer_play_v1` | object | 遊びに連れていくペア。`{ pair }`(null でだれも連れていない) |
+| `mh_assistant_peer_quarrel_v1` | object | 助手どうしのけんか→仲直り(2026-11-07)。`{ pending: { id, pair, at } \| null, done: [けんかid] }`。pending は言い合いを見て、まだ仲直りを見ていないもの(次に HOME を開いたとき仲直りが流れる)。done は見たけんか(同じけんかは2度出ない) |
+| `mh_assistant_peer_special2_seen_v1` | array | 仲良し度 Lv10 の「2人の特別なお話・その2」を見たペア。`[ペア]`。Lv5 の記録(`mh_assistant_peer_special_seen_v1`)とは別に持つ |
 | `mh_assistant_daily_lines_v1` | object | ふだんの吹き出しを1日1回まとめて作ったひとこと(2026-10-14)。`{ day, assistantId, lines: { [場面]: [{ e, t, n }] } }`。日付が変われば使わず、次に作ったら入れ替える。n はその日に出した回数 |
 | `mh_story_assistant_chat_seen_v1` | boolean | 助手とおしゃべりのお話「話せるようになった日」を本編で見たか(飛ばしても立つ)。公開の後の最初の HOME で1回だけ流すため。回想・デバッグでは立てない |
 | `mh_beat_shop_vip_letter_seen_v1` | boolean | お話「レジェンドブリーダーへの招待状」を本編で見たか(飛ばしても立つ・2026-11-05)。ブリーダーレベル1000以上の HOME で1回だけ流す。true の人だけ、ビートP交換所のダイヤ・トレーニングチケット・重トレーニングチケットが「優待パス還元」になる(値段は data/rhythm-event.js の LEGEND_BREEDER_PASS_OFFERS。保存しない)。回想・デバッグでは立てない |

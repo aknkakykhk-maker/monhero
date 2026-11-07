@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d4e6c3616e600293
+// source-sha256: a0261adae2f39a02
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93863,6 +93863,8 @@ const ASSISTANT_PEER_CHOICE_KEY = 'mh_assistant_peer_choice_v1';
 const ASSISTANT_PEER_ALBUM_KEY = 'mh_assistant_peer_album_v1';
 const ASSISTANT_PEER_GIFT_KEY = 'mh_assistant_peer_gift_v1';
 const ASSISTANT_PEER_PLAY_KEY = 'mh_assistant_peer_play_v1';
+const ASSISTANT_PEER_QUARREL_KEY = 'mh_assistant_peer_quarrel_v1';
+const ASSISTANT_PEER_SPECIAL2_SEEN_KEY = 'mh_assistant_peer_special2_seen_v1';
 const ASSISTANT_PEER_ITEM_IDS = Object.freeze({
   gift: 'peer_gift',
   token: 'peer_token'
@@ -93891,6 +93893,62 @@ const assistantPeerEnabled = () => typeof RELEASE_FLAGS !== 'undefined' && RELEA
 const assistantPeerApiEnabled = () => assistantPeerEnabled() && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantPeerApi === true;
 const assistantPeerPairKey = (a, b) => [String(a), String(b)].sort().join('-');
 const assistantPeerTalkList = () => typeof ASSISTANT_PEER_TALKS !== 'undefined' && Array.isArray(ASSISTANT_PEER_TALKS) ? ASSISTANT_PEER_TALKS : [];
+let assistantPeerExtraCache = null;
+const assistantPeerExtraTalks = () => {
+  if (assistantPeerExtraCache) return assistantPeerExtraCache;
+  const events = (typeof ASSISTANT_PEER_EVENTS !== 'undefined' ? ASSISTANT_PEER_EVENTS : []).map(t => ({
+    ...t,
+    pair: [...t.pair].sort(),
+    kind: 'event',
+    lv: t.lv || (typeof ASSISTANT_PEER_EVENT_LV !== 'undefined' ? ASSISTANT_PEER_EVENT_LV : 3),
+    scene: 'any'
+  }));
+  const quarrels = [];
+  for (const q of typeof ASSISTANT_PEER_QUARRELS !== 'undefined' ? ASSISTANT_PEER_QUARRELS : []) {
+    const pair = [...q.pair].sort();
+    quarrels.push({
+      id: q.id,
+      pair,
+      kind: 'quarrel',
+      lv: 2,
+      scene: 'home',
+      makeupId: `${q.id}m`,
+      lines: q.lines
+    });
+    quarrels.push({
+      id: `${q.id}m`,
+      pair,
+      kind: 'makeup',
+      lv: 2,
+      scene: 'home',
+      quarrelId: q.id,
+      lines: q.makeup
+    });
+  }
+  const trios = (typeof ASSISTANT_PEER_TRIO_TALKS !== 'undefined' ? ASSISTANT_PEER_TRIO_TALKS : []).map(t => ({
+    ...t,
+    kind: 'trio',
+    lv: 1,
+    scene: 'any'
+  }));
+  assistantPeerExtraCache = {
+    events,
+    quarrels,
+    trios
+  };
+  return assistantPeerExtraCache;
+};
+const assistantPeerAllTalks = () => {
+  const x = assistantPeerExtraTalks();
+  return [...assistantPeerTalkList(), ...x.events, ...x.quarrels, ...x.trios];
+};
+const assistantPeerMembers = t => t && Array.isArray(t.trio) ? t.trio : t && Array.isArray(t.pair) ? t.pair : [];
+const assistantPeerPairsOf = t => {
+  const m = assistantPeerMembers(t);
+  const out = [];
+  for (let i = 0; i < m.length; i++) for (let j = i + 1; j < m.length; j++) out.push([m[i], m[j]]);
+  return out;
+};
 const assistantPeerLevelOf = points => typeof assistantPeerBondLevel === 'function' ? assistantPeerBondLevel(points) : 1;
 const normalizeAssistantPeerBond = raw => {
   const out = {};
@@ -93979,6 +94037,18 @@ const normalizeAssistantPeerGift = raw => {
     token: null
   };
 };
+const normalizeAssistantPeerQuarrel = raw => {
+  const ok = raw && typeof raw === 'object' && !Array.isArray(raw);
+  const p = ok && raw.pending && typeof raw.pending === 'object' && typeof raw.pending.id === 'string' && typeof raw.pending.pair === 'string' && /^[a-z]+-[a-z]+$/.test(raw.pending.pair) ? {
+    id: raw.pending.id,
+    pair: raw.pending.pair,
+    at: Number.isFinite(raw.pending.at) ? raw.pending.at : 0
+  } : null;
+  return {
+    pending: p,
+    done: ok && Array.isArray(raw.done) ? [...new Set(raw.done.filter(x => typeof x === 'string'))].slice(0, 100) : []
+  };
+};
 const normalizeAssistantPeerPlay = raw => ({
   pair: raw && typeof raw === 'object' && typeof raw.pair === 'string' && /^[a-z]+-[a-z]+$/.test(raw.pair) ? raw.pair : null
 });
@@ -94053,7 +94123,12 @@ const ASSISTANT_PEER_STORE = {
       pair: null
     },
     playNote: null,
-    lastShownAt: 0
+    lastShownAt: 0,
+    quarrel: {
+      pending: null,
+      done: []
+    },
+    special2: []
   },
   loading: null,
   listeners: new Set(),
@@ -94075,7 +94150,7 @@ const ASSISTANT_PEER_STORE = {
     if (this.state.loaded) return Promise.resolve(this.state);
     if (this.loading) return this.loading;
     this.loading = (async () => {
-      const [bond, bondDay, log, talkDay, special, gen, daily, choice, album, gift, play] = await Promise.all([storeGet(ASSISTANT_PEER_BOND_STORE_KEY, {}, false), storeGet(ASSISTANT_PEER_BOND_DAY_KEY, null, false), storeGet(ASSISTANT_PEER_TALK_LOG_KEY, [], false), storeGet(ASSISTANT_PEER_TALK_DAY_KEY, null, false), storeGet(ASSISTANT_PEER_SPECIAL_SEEN_KEY, [], false), storeGet(ASSISTANT_PEER_TALK_GEN_KEY, null, false), storeGet(ASSISTANT_PEER_DAILY_KEY, null, false), storeGet(ASSISTANT_PEER_CHOICE_KEY, {}, false), storeGet(ASSISTANT_PEER_ALBUM_KEY, {}, false), storeGet(ASSISTANT_PEER_GIFT_KEY, null, false), storeGet(ASSISTANT_PEER_PLAY_KEY, null, false)].map(p => Promise.resolve(p).catch(() => null)));
+      const [bond, bondDay, log, talkDay, special, gen, daily, choice, album, gift, play, quarrel, special2] = await Promise.all([storeGet(ASSISTANT_PEER_BOND_STORE_KEY, {}, false), storeGet(ASSISTANT_PEER_BOND_DAY_KEY, null, false), storeGet(ASSISTANT_PEER_TALK_LOG_KEY, [], false), storeGet(ASSISTANT_PEER_TALK_DAY_KEY, null, false), storeGet(ASSISTANT_PEER_SPECIAL_SEEN_KEY, [], false), storeGet(ASSISTANT_PEER_TALK_GEN_KEY, null, false), storeGet(ASSISTANT_PEER_DAILY_KEY, null, false), storeGet(ASSISTANT_PEER_CHOICE_KEY, {}, false), storeGet(ASSISTANT_PEER_ALBUM_KEY, {}, false), storeGet(ASSISTANT_PEER_GIFT_KEY, null, false), storeGet(ASSISTANT_PEER_PLAY_KEY, null, false), storeGet(ASSISTANT_PEER_QUARREL_KEY, null, false), storeGet(ASSISTANT_PEER_SPECIAL2_SEEN_KEY, [], false)].map(p => Promise.resolve(p).catch(() => null)));
       this.set({
         loaded: true,
         bond: normalizeAssistantPeerBond(bond),
@@ -94088,7 +94163,9 @@ const ASSISTANT_PEER_STORE = {
         choice: normalizeAssistantPeerChoice(choice),
         album: normalizeAssistantPeerAlbum(album),
         gift: normalizeAssistantPeerGift(gift),
-        play: normalizeAssistantPeerPlay(play)
+        play: normalizeAssistantPeerPlay(play),
+        quarrel: normalizeAssistantPeerQuarrel(quarrel),
+        special2: normalizeAssistantPeerSpecialSeen(special2)
       });
       return this.state;
     })();
@@ -94266,6 +94343,9 @@ const assistantPeerEnsureDaily = (metIds, now = Date.now()) => {
   return daily;
 };
 const assistantPeerDailyProgress = async talk => {
+  if (!talk || !Array.isArray(talk.pair) || talk.kind === 'trio' || talk.kind === 'quarrel') return {
+    done: false
+  };
   const st = ASSISTANT_PEER_STORE.state;
   const day = assistantPeerDayKey();
   const pair = assistantPeerPairKey(talk.pair[0], talk.pair[1]);
@@ -94297,13 +94377,18 @@ const assistantPeerDailyProgress = async talk => {
 const assistantPeerAlbumAdd = talk => {
   if (!talk || talk.gen) return;
   const st = ASSISTANT_PEER_STORE.state;
-  const pair = assistantPeerPairKey(talk.pair[0], talk.pair[1]);
-  const list = st.album[pair] || [];
-  if (list.includes(talk.id)) return;
   const album = {
-    ...st.album,
-    [pair]: [...list, talk.id]
+    ...st.album
   };
+  let changed = false;
+  for (const [a, b] of assistantPeerPairsOf(talk)) {
+    const pair = assistantPeerPairKey(a, b);
+    const list = album[pair] || [];
+    if (list.includes(talk.id)) continue;
+    album[pair] = [...list, talk.id];
+    changed = true;
+  }
+  if (!changed) return;
   ASSISTANT_PEER_STORE.set({
     album
   });
@@ -94410,12 +94495,30 @@ const assistantPeerPickTalk = (st, {
     today,
     streak: st.daily && st.daily.streak || 0
   };
-  const ok = t => t && Array.isArray(t.pair) && t.pair.length === 2 && t.pair.every(id => met.has(id)) && assistantPeerWhenOk(t.when, whenCtx);
+  const ok = t => t && assistantPeerMembers(t).length >= 2 && assistantPeerMembers(t).every(id => met.has(id)) && assistantPeerWhenOk(t.when, whenCtx);
   const all = assistantPeerTalkList().filter(ok);
+  const extra = assistantPeerExtraTalks();
+  const lvOf = t => assistantPeerLevel(st, t.pair[0], t.pair[1]);
+  const quarrel = st.quarrel || {
+    pending: null,
+    done: []
+  };
   if (scene === 'home') {
-    const sp = all.find(t => t.special && assistantPeerLevel(st, t.pair[0], t.pair[1]) >= 5 && !st.special.includes(assistantPeerPairKey(t.pair[0], t.pair[1])));
+    if (quarrel.pending && now - (quarrel.pending.at || 0) >= ASSISTANT_PEER_TALK_GAP_MS) {
+      const mk = extra.quarrels.find(t => t.kind === 'makeup' && t.quarrelId === quarrel.pending.id);
+      if (mk && ok(mk)) return {
+        talk: mk,
+        special: false
+      };
+    }
+    const sp = all.find(t => t.special && (t.lv || 5) < 10 && lvOf(t) >= 5 && !st.special.includes(assistantPeerPairKey(t.pair[0], t.pair[1])));
     if (sp) return {
       talk: sp,
+      special: true
+    };
+    const sp2 = all.find(t => t.special && (t.lv || 5) >= 10 && lvOf(t) >= t.lv && (st.special2 || []).indexOf(assistantPeerPairKey(t.pair[0], t.pair[1])) < 0);
+    if (sp2) return {
+      talk: sp2,
       special: true
     };
   }
@@ -94440,15 +94543,40 @@ const assistantPeerPickTalk = (st, {
       };
     }
   }
-  const fits = t => !t.special && assistantPeerLevel(st, t.pair[0], t.pair[1]) >= (t.lv || 1);
-  let pool = isHome ? all.filter(t => fits(t) && (t.scene === 'any' || t.scene === 'home')) : all.filter(t => fits(t) && t.scene === scene);
-  if (!pool.length && !isHome) pool = all.filter(t => fits(t) && t.scene === 'any');
+  const trioLv = typeof ASSISTANT_PEER_TRIO_LV !== 'undefined' ? ASSISTANT_PEER_TRIO_LV : 2;
+  const qLv = typeof ASSISTANT_PEER_QUARREL_LV !== 'undefined' ? ASSISTANT_PEER_QUARREL_LV : {
+    min: 2,
+    max: 3
+  };
+  const pairLvs = t => assistantPeerPairsOf(t).map(([a, b]) => assistantPeerLevel(st, a, b));
+  const fits = t => {
+    if (t.special) return false;
+    if (t.kind === 'trio') return pairLvs(t).every(lv => lv >= trioLv);
+    if (t.kind === 'makeup') return false;
+    if (t.kind === 'quarrel') {
+      const lv = lvOf(t);
+      return isHome && lv >= qLv.min && lv <= qLv.max && !quarrel.pending && !quarrel.done.includes(t.id);
+    }
+    return lvOf(t) >= (t.lv || 1);
+  };
+  const cand = [...all, ...extra.events.filter(ok), ...extra.quarrels.filter(ok), ...extra.trios.filter(ok)];
+  let pool = isHome ? cand.filter(t => fits(t) && (t.scene === 'any' || t.scene === 'home')) : cand.filter(t => fits(t) && t.scene === scene);
+  if (!pool.length && !isHome) pool = cand.filter(t => fits(t) && t.scene === 'any');
   if (!pool.length) return null;
   const recent = st.log.map(x => x.id);
   const fresh = pool.filter(t => !recent.includes(t.id));
   if (fresh.length) pool = fresh;else pool = [...pool].sort((x, y) => recent.indexOf(x.id) - recent.indexOf(y.id)).slice(0, Math.max(1, Math.ceil(pool.length / 3)));
   const dailyPair = st.daily && st.daily.day === day && !st.daily.done ? st.daily.pair : null;
-  const weight = t => (t.pair.includes(selectedId) ? 3 : 1) * (1 + 0.5 * (assistantPeerLevel(st, t.pair[0], t.pair[1]) - 1)) * (dailyPair && assistantPeerPairKey(t.pair[0], t.pair[1]) === dailyPair ? 4 : 1) * (t.when ? 6 : 1);
+  const evBoost = typeof ASSISTANT_PEER_EVENT_BOOST_LV !== 'undefined' ? ASSISTANT_PEER_EVENT_BOOST_LV : 6;
+  const trioBoost = typeof ASSISTANT_PEER_TRIO_BOOST_LV !== 'undefined' ? ASSISTANT_PEER_TRIO_BOOST_LV : 7;
+  const weight = t => {
+    const lvs = pairLvs(t);
+    const lv = Math.min(...lvs);
+    const base = (assistantPeerMembers(t).includes(selectedId) ? 3 : 1) * (1 + 0.5 * (lv - 1));
+    if (t.kind === 'trio') return base * (lvs.some(x => x >= trioBoost) ? 6 : 1);
+    const pk = assistantPeerPairKey(t.pair[0], t.pair[1]);
+    return base * (dailyPair && pk === dailyPair ? 4 : 1) * (t.when ? 6 : 1) * (t.kind === 'event' && lv >= evBoost ? 3 : 1) * (t.kind === 'quarrel' ? 0.5 : 1);
+  };
   const sum = pool.reduce((s, t) => s + weight(t), 0);
   let r = rand() * sum;
   for (const t of pool) {
@@ -94477,31 +94605,77 @@ const assistantPeerMarkShown = (talk, {
     home: 0,
     other: 0
   };
-  if (!special) {
+  if (!special && talk.kind !== 'makeup') {
     if (scene === 'home') td.home += 1;else td.other += 1;
   }
   const log = [...st.log.filter(x => x.id !== talk.id), {
     id: talk.id,
     at: now
   }].slice(-ASSISTANT_PEER_TALK_LOG_MAX);
-  const pair = assistantPeerPairKey(talk.pair[0], talk.pair[1]);
-  const specialSeen = special && !st.special.includes(pair) ? [...st.special, pair] : st.special;
-  ASSISTANT_PEER_STORE.set({
+  const patch = {
     talkDay: td,
     log,
-    special: specialSeen,
     lastShownAt: now
-  });
+  };
   try {
     storeSet(ASSISTANT_PEER_TALK_DAY_KEY, td, false);
     storeSet(ASSISTANT_PEER_TALK_LOG_KEY, log, false);
-    if (specialSeen !== st.special) storeSet(ASSISTANT_PEER_SPECIAL_SEEN_KEY, specialSeen, false);
   } catch {}
+  if (special && Array.isArray(talk.pair)) {
+    const pair = assistantPeerPairKey(talk.pair[0], talk.pair[1]);
+    const lv10 = (talk.lv || 5) >= 10;
+    const list = lv10 ? st.special2 || [] : st.special;
+    if (!list.includes(pair)) {
+      const next = [...list, pair];
+      patch[lv10 ? 'special2' : 'special'] = next;
+      try {
+        storeSet(lv10 ? ASSISTANT_PEER_SPECIAL2_SEEN_KEY : ASSISTANT_PEER_SPECIAL_SEEN_KEY, next, false);
+      } catch {}
+    }
+  }
+  if (talk.kind === 'quarrel') {
+    const q = st.quarrel || {
+      pending: null,
+      done: []
+    };
+    const quarrel = {
+      pending: {
+        id: talk.id,
+        pair: assistantPeerPairKey(talk.pair[0], talk.pair[1]),
+        at: now
+      },
+      done: [...new Set([...q.done, talk.id])]
+    };
+    patch.quarrel = quarrel;
+    try {
+      storeSet(ASSISTANT_PEER_QUARREL_KEY, quarrel, false);
+    } catch {}
+  }
+  ASSISTANT_PEER_STORE.set(patch);
+};
+const assistantPeerMakeupDone = talk => {
+  const q = ASSISTANT_PEER_STORE.state.quarrel || {
+    pending: null,
+    done: []
+  };
+  if (!q.pending || q.pending.id !== talk.quarrelId) return false;
+  const quarrel = {
+    pending: null,
+    done: q.done
+  };
+  ASSISTANT_PEER_STORE.set({
+    quarrel
+  });
+  try {
+    storeSet(ASSISTANT_PEER_QUARREL_KEY, quarrel, false);
+  } catch {}
+  return true;
 };
 const assistantPeerLineText = (line, talk) => {
-  const partner = talk.pair.find(id => id !== line.who) || talk.pair[0];
-  const call = typeof assistantPeerCall === 'function' ? assistantPeerCall(line.who, partner) : partner;
-  return String(line.t || '').replace(/\{c\}/g, call);
+  const members = assistantPeerMembers(talk);
+  const partner = members.find(id => id !== line.who) || members[0];
+  const callOf = to => typeof assistantPeerCall === 'function' ? assistantPeerCall(line.who, to) : to;
+  return String(line.t || '').replace(/\{c:([a-z]+)\}/g, (m, id) => callOf(id)).replace(/\{c\}/g, callOf(partner));
 };
 function AssistantPeerTalk({
   scene,
@@ -94578,16 +94752,48 @@ function AssistantPeerTalk({
       if ((!c.reaction || replay) && typeof onReplayEnd === 'function') onReplayEnd();
       return;
     }
-    const r = await assistantPeerGain(c.talk.pair[0], c.talk.pair[1], 'talk');
-    assistantPeerAddPlayerBond(c.talk.pair, 'peerTalk');
-    assistantPeerAlbumAdd(c.talk);
-    const d = await assistantPeerDailyProgress(c.talk);
+    const t = c.talk;
+    assistantPeerAlbumAdd(t);
+    if (t.kind === 'trio') {
+      let up = null;
+      for (const [a, b] of assistantPeerPairsOf(t)) {
+        const r = await assistantPeerGain(a, b, 'talk');
+        if (!up && r && r.gained > 0 && r.levelAfter > r.levelBefore) up = {
+          kind: 'level',
+          pair: [a, b],
+          level: r.levelAfter
+        };
+      }
+      assistantPeerAddPlayerBond(t.trio, 'peerTrio');
+      if (up) setToast(up);
+      return;
+    }
+    if (t.kind === 'quarrel') return;
+    let r = null;
+    if (t.kind === 'makeup') {
+      if (!assistantPeerMakeupDone(t)) return;
+      r = await assistantPeerGain(t.pair[0], t.pair[1], 'makeup');
+      assistantPeerAddPlayerBond(t.pair, 'peerMakeup');
+      setToast({
+        kind: 'makeup',
+        pair: t.pair
+      });
+      return;
+    }
+    if (t.kind === 'event') {
+      r = await assistantPeerGain(t.pair[0], t.pair[1], 'event');
+      assistantPeerAddPlayerBond(t.pair, 'peerEvent');
+    } else {
+      r = await assistantPeerGain(t.pair[0], t.pair[1], 'talk');
+      assistantPeerAddPlayerBond(t.pair, 'peerTalk');
+    }
+    const d = await assistantPeerDailyProgress(t);
     if (d.done) setToast({
       kind: 'daily',
-      pair: c.talk.pair
+      pair: t.pair
     });else if (r && r.gained > 0 && r.levelAfter > r.levelBefore) setToast({
       kind: 'level',
-      pair: c.talk.pair,
+      pair: t.pair,
       level: r.levelAfter
     });
   }, [onReplayEnd, replay]);
@@ -94596,8 +94802,10 @@ function AssistantPeerTalk({
     if (!c || c.phase !== 'choice') return;
     if (!c.replay) {
       assistantPeerSaveChoice(c.talk.id, index);
-      void assistantPeerGain(c.talk.pair[0], c.talk.pair[1], 'choice');
-      assistantPeerAddPlayerBond(c.talk.pair, 'peerChoice');
+      if (c.talk.kind !== 'event') {
+        void assistantPeerGain(c.talk.pair[0], c.talk.pair[1], 'choice');
+        assistantPeerAddPlayerBond(c.talk.pair, 'peerChoice');
+      }
     }
     setCur({
       ...c,
@@ -94653,30 +94861,33 @@ function AssistantPeerTalk({
     return wrap(React.createElement("div", {
       "data-assistant-peer-toast": toast.kind,
       className: "mx-auto w-fit rounded-full border border-pink-300/60 bg-slate-950/90 px-4 py-1.5 text-[11px] font-black text-pink-200 shadow-xl"
-    }, toast.kind === 'daily' ? `今日のペア達成！ ${a.name}と${b.name}がもっと仲良くなりました` : `${a.name}と${b.name}の仲良し度が Lv${toast.level}${stage ? `「${stage.name}」` : ''}になりました`));
+    }, toast.kind === 'daily' ? `今日のペア達成！ ${a.name}と${b.name}がもっと仲良くなりました` : toast.kind === 'makeup' ? `${a.name}と${b.name}が仲直りしました` : `${a.name}と${b.name}の仲良し度が Lv${toast.level}${stage ? `「${stage.name}」` : ''}になりました`));
   }
   const {
     talk
   } = cur;
   const list = linesOf(cur);
   const line = cur.phase === 'choice' ? talk.lines[talk.lines.length - 1] : list[cur.step];
+  const isTrio = talk.kind === 'trio';
   const left = assistantById(talk.lines[0].who);
-  const right = assistantById(talk.pair.find(id => id !== left.id));
+  const right = isTrio ? null : assistantById(talk.pair.find(id => id !== left.id));
   const speaker = assistantById(line.who);
-  const pairKey = assistantPeerPairKey(talk.pair[0], talk.pair[1]);
-  const daily = st.daily && st.daily.day === assistantPeerDayKey() && st.daily.pair === pairKey ? st.daily : null;
-  const face = who => {
+  const pairKey = isTrio ? null : assistantPeerPairKey(talk.pair[0], talk.pair[1]);
+  const daily = pairKey && talk.kind !== 'quarrel' && st.daily && st.daily.day === assistantPeerDayKey() && st.daily.pair === pairKey ? st.daily : null;
+  const face = (who, size = 44) => {
     const speaking = who.id === line.who;
     return React.createElement("div", {
       className: `shrink-0 transition-all duration-200 ${speaking ? 'opacity-100 scale-100' : 'opacity-50 scale-90'}`,
       "data-assistant-peer-face": who.id
     }, React.createElement(AssistantFace, {
       who: who,
-      size: 44,
+      size: size,
       accent: who.accent,
       expression: speaking ? line.e : 'normal'
     }));
   };
+  const names = assistantPeerMembers(talk).map(id => assistantById(id).name);
+  const chip = talk.kind === 'event' ? `ミニイベント「${talk.title || ''}」` : talk.kind === 'trio' ? `${names.join('・')}の掛け合い` : talk.kind === 'quarrel' ? 'ちょっと言い合い中…' : talk.kind === 'makeup' ? `${names.join('と')}の仲直り` : null;
   const total = talk.lines.length + (cur.phase === 'reply' ? list.length : 0);
   const pos = cur.phase === 'reply' ? talk.lines.length + cur.step + 1 : cur.phase === 'choice' ? talk.lines.length : cur.step + 1;
   return wrap(React.createElement("div", {
@@ -94700,12 +94911,20 @@ function AssistantPeerTalk({
   }, cur.special && React.createElement("p", {
     "data-assistant-peer-special": true,
     className: "mb-1 text-center text-[10px] font-black tracking-wider text-amber-200"
-  }, "✦ ", left.name, "と", right.name, "の特別なお話 ✦"), daily && !cur.replay && React.createElement("p", {
+  }, "✦ ", names.join('と'), "の特別なお話", (talk.lv || 5) >= 10 ? '・その2' : '', " ✦"), chip && React.createElement("p", {
+    "data-assistant-peer-kind": talk.kind,
+    className: "mb-1 text-center text-[10px] font-black tracking-wider text-sky-200"
+  }, chip), daily && !cur.replay && React.createElement("p", {
     "data-assistant-peer-daily-chip": true,
     className: "mb-1 w-fit rounded-full bg-amber-400/15 px-2 py-0.5 text-[9px] font-black text-amber-200"
   }, "今日のペア ", daily.done ? '達成！' : `${Math.min(daily.seen + 1, ASSISTANT_PEER_DAILY_GOAL)}/${ASSISTANT_PEER_DAILY_GOAL}`), React.createElement("div", {
     className: "flex items-center gap-2"
-  }, face(left), React.createElement("div", {
+  }, isTrio ? React.createElement("div", {
+    "data-assistant-peer-trio": true,
+    className: "flex shrink-0 -space-x-2"
+  }, talk.trio.map(id => React.createElement(React.Fragment, {
+    key: id
+  }, face(assistantById(id), 38)))) : face(left), React.createElement("div", {
     className: "min-w-0 flex-1"
   }, React.createElement("p", {
     className: "text-[10px] font-black leading-none",
@@ -94715,7 +94934,7 @@ function AssistantPeerTalk({
   }, speaker.name), React.createElement("p", {
     "data-assistant-peer-line": true,
     className: "mt-1 text-[12px] font-bold leading-snug text-white"
-  }, helpWrap(assistantPeerLineText(line, talk)))), face(right)), cur.phase === 'choice' && React.createElement("div", {
+  }, helpWrap(assistantPeerLineText(line, talk)))), right && face(right)), cur.phase === 'choice' && React.createElement("div", {
     "data-assistant-peer-choices": true,
     className: "mt-2 grid gap-1.5"
   }, talk.choice.map((o, i) => React.createElement("button", {
@@ -94799,8 +95018,13 @@ function AssistantPeerAlbum({
   const lv = assistantPeerLevel(st, pair[0], pair[1]);
   const photos = typeof ASSISTANT_PEER_PHOTOS !== 'undefined' ? ASSISTANT_PEER_PHOTOS : [];
   const seen = new Set(st.album[key] || []);
-  const talks = assistantPeerTalkList().filter(t => assistantPeerPairKey(t.pair[0], t.pair[1]) === key && (seen.has(t.id) || t.special && st.special.includes(key)));
-  const all = assistantPeerTalkList().filter(t => assistantPeerPairKey(t.pair[0], t.pair[1]) === key).length;
+  const mine = assistantPeerAllTalks().filter(t => {
+    const m = assistantPeerMembers(t);
+    return m.includes(pair[0]) && m.includes(pair[1]);
+  });
+  const spSeen = t => t.special && ((t.lv || 5) >= 10 ? (st.special2 || []).includes(key) : st.special.includes(key));
+  const talks = mine.filter(t => seen.has(t.id) || spSeen(t));
+  const all = mine.length;
   const firstLine = t => assistantPeerLineText(t.lines[0], t);
   return React.createElement("div", {
     "data-assistant-peer-album": key,
@@ -94882,9 +95106,9 @@ function AssistantPeerAlbum({
   }, React.createElement("span", {
     className: "shrink-0 text-[10px]",
     "aria-hidden": "true"
-  }, t.special ? '✦' : t.choice ? '💬' : '▶'), React.createElement("span", {
+  }, t.special ? '✦' : t.kind === 'event' ? '🎪' : t.kind === 'trio' ? '👥' : t.kind === 'quarrel' || t.kind === 'makeup' ? '🤝' : t.choice ? '💬' : '▶'), React.createElement("span", {
     className: "min-w-0 flex-1 truncate text-[10px] font-bold text-slate-200"
-  }, t.special ? '特別なお話' : firstLine(t)))))));
+  }, t.special ? (t.lv || 5) >= 10 ? '特別なお話・その2' : '特別なお話' : t.kind === 'event' ? `ミニイベント「${t.title}」` : t.kind === 'makeup' ? '仲直り' : t.kind === 'quarrel' ? `言い合い: ${firstLine(t)}` : firstLine(t)))))));
 }
 function AssistantPeerMap({
   metIds,

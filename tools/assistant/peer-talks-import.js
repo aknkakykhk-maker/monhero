@@ -18,7 +18,8 @@ const errors = [];
 let pair = null;
 fs.readFileSync(file, 'utf8').split('\n').forEach((raw, i) => {
   const l = raw.trim();
-  if (!l || l.startsWith('#!')) return;
+  // 「# 」で始まる行と「#!」は注記として読み飛ばす(ペアは「## 」)
+  if (!l || l.startsWith('#!') || (l.startsWith('#') && !l.startsWith('## '))) return;
   if (l.startsWith('## ')) { pair = l.slice(3).trim().split(/\s+/); if (pair.length !== 2 || !pair.every(id => IDS.includes(id))) errors.push(`${i + 1}行目: ペアが読めない`); return; }
   if (!pair) { errors.push(`${i + 1}行目: ## のペアより前`); return; }
   const parts = l.split(' | ');

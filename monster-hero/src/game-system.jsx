@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 38d274e81e90ab8c
+// generated-sha256: a0d8c89fe6151743
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -55906,6 +55906,8 @@ const loadAssistantChatMemoFor = async (assistantId) => {
 //   mh_assistant_peer_album_v1       { [ペア]: [掛け合いid] }  思い出アルバム(見た掛け合い。API 版で作ったものは入れない)
 //   mh_assistant_peer_gift_v1        { day, gift, token }  その日に差し入れ・友情のしるしを渡したペア(どちらも全体で1日1回・②)
 //   mh_assistant_peer_play_v1        { pair }  遊びに連れていくペア(②。ビート・バトル・カードを遊び終えると2人が上がる)
+//   mh_assistant_peer_quarrel_v1     { pending: { id, pair, at } | null, done: [けんかid] }  ③ けんかを見て、まだ仲直りを見ていないもの・もう見たけんか
+//   mh_assistant_peer_special2_seen_v1 [ペア] Lv10 の2本目の特別なお話を見たペア(③)
 // プレイヤーと助手の親密度(mh_assistant_bond_*)は、60-app.jsx の addAssistantBondFor を通して、今の行動と同じように足すだけ
 const ASSISTANT_PEER_BOND_STORE_KEY = 'mh_assistant_peer_bond_v1';
 const ASSISTANT_PEER_BOND_DAY_KEY = 'mh_assistant_peer_bond_day_v1';
@@ -55918,6 +55920,8 @@ const ASSISTANT_PEER_CHOICE_KEY = 'mh_assistant_peer_choice_v1';
 const ASSISTANT_PEER_ALBUM_KEY = 'mh_assistant_peer_album_v1';
 const ASSISTANT_PEER_GIFT_KEY = 'mh_assistant_peer_gift_v1';
 const ASSISTANT_PEER_PLAY_KEY = 'mh_assistant_peer_play_v1';
+const ASSISTANT_PEER_QUARREL_KEY = 'mh_assistant_peer_quarrel_v1';
+const ASSISTANT_PEER_SPECIAL2_SEEN_KEY = 'mh_assistant_peer_special2_seen_v1';
 const ASSISTANT_PEER_ITEM_IDS = Object.freeze({ gift: 'peer_gift', token: 'peer_token' });
 const ASSISTANT_PEER_TALK_LOG_MAX = 30;
 // 今日のペア: そのペアの掛け合いをこの回数見る(返事をした回も1回)と達成
@@ -55943,6 +55947,32 @@ const assistantPeerEnabled = () => typeof RELEASE_FLAGS !== 'undefined' && RELEA
 const assistantPeerApiEnabled = () => assistantPeerEnabled() && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantPeerApi === true;
 const assistantPeerPairKey = (a, b) => [String(a), String(b)].sort().join('-');
 const assistantPeerTalkList = () => (typeof ASSISTANT_PEER_TALKS !== 'undefined' && Array.isArray(ASSISTANT_PEER_TALKS)) ? ASSISTANT_PEER_TALKS : [];
+// ③ ミニイベント・けんか/仲直り・3人の掛け合いを、掛け合いと同じ形(kind 付き)にして返す。一度作ったら使い回す
+let assistantPeerExtraCache = null;
+const assistantPeerExtraTalks = () => {
+  if (assistantPeerExtraCache) return assistantPeerExtraCache;
+  const events = (typeof ASSISTANT_PEER_EVENTS !== 'undefined' ? ASSISTANT_PEER_EVENTS : []).map(t => ({ ...t, pair: [...t.pair].sort(), kind: 'event', lv: t.lv || (typeof ASSISTANT_PEER_EVENT_LV !== 'undefined' ? ASSISTANT_PEER_EVENT_LV : 3), scene: 'any' }));
+  const quarrels = [];
+  for (const q of (typeof ASSISTANT_PEER_QUARRELS !== 'undefined' ? ASSISTANT_PEER_QUARRELS : [])) {
+    const pair = [...q.pair].sort();
+    quarrels.push({ id: q.id, pair, kind: 'quarrel', lv: 2, scene: 'home', makeupId: `${q.id}m`, lines: q.lines });
+    quarrels.push({ id: `${q.id}m`, pair, kind: 'makeup', lv: 2, scene: 'home', quarrelId: q.id, lines: q.makeup });
+  }
+  const trios = (typeof ASSISTANT_PEER_TRIO_TALKS !== 'undefined' ? ASSISTANT_PEER_TRIO_TALKS : []).map(t => ({ ...t, kind: 'trio', lv: 1, scene: 'any' }));
+  assistantPeerExtraCache = { events, quarrels, trios };
+  return assistantPeerExtraCache;
+};
+// 思い出アルバムで見返せるもの全部(2人の掛け合い・ミニイベント・けんか/仲直り・3人の掛け合い)
+const assistantPeerAllTalks = () => { const x = assistantPeerExtraTalks(); return [...assistantPeerTalkList(), ...x.events, ...x.quarrels, ...x.trios]; };
+// 掛け合いに出る助手(2人か3人)
+const assistantPeerMembers = (t) => (t && Array.isArray(t.trio) ? t.trio : (t && Array.isArray(t.pair) ? t.pair : []));
+// その掛け合いに出る助手どうしのペア(3人なら3組)
+const assistantPeerPairsOf = (t) => {
+  const m = assistantPeerMembers(t);
+  const out = [];
+  for (let i = 0; i < m.length; i++) for (let j = i + 1; j < m.length; j++) out.push([m[i], m[j]]);
+  return out;
+};
 const assistantPeerLevelOf = (points) => (typeof assistantPeerBondLevel === 'function') ? assistantPeerBondLevel(points) : 1;
 
 const normalizeAssistantPeerBond = (raw) => {
@@ -55992,6 +56022,12 @@ const normalizeAssistantPeerGift = (raw) => {
   const pk = (v) => (typeof v === 'string' && /^[a-z]+-[a-z]+$/.test(v) ? v : null);
   return ok ? { day: raw.day, gift: pk(raw.gift), token: pk(raw.token) } : { day: null, gift: null, token: null };
 };
+const normalizeAssistantPeerQuarrel = (raw) => {
+  const ok = raw && typeof raw === 'object' && !Array.isArray(raw);
+  const p = ok && raw.pending && typeof raw.pending === 'object' && typeof raw.pending.id === 'string' && typeof raw.pending.pair === 'string' && /^[a-z]+-[a-z]+$/.test(raw.pending.pair)
+    ? { id: raw.pending.id, pair: raw.pending.pair, at: Number.isFinite(raw.pending.at) ? raw.pending.at : 0 } : null;
+  return { pending: p, done: ok && Array.isArray(raw.done) ? [...new Set(raw.done.filter(x => typeof x === 'string'))].slice(0, 100) : [] };
+};
 const normalizeAssistantPeerPlay = (raw) => ({ pair: raw && typeof raw === 'object' && typeof raw.pair === 'string' && /^[a-z]+-[a-z]+$/.test(raw.pair) ? raw.pair : null });
 const normalizeAssistantPeerAlbum = (raw) => {
   const out = {};
@@ -56015,7 +56051,8 @@ const normalizeAssistantPeerGen = (raw) => {
 const ASSISTANT_PEER_STORE = {
   state: { loaded: false, bond: {}, bondDay: { day: null, got: {} }, log: [], talkDay: { day: null, home: 0, other: 0 }, special: [], gen: { day: null, asked: 0, talks: [] },
     daily: { day: null, pair: null, seen: 0, done: false, lastDay: null, streak: 0 }, choice: {}, album: {},
-    gift: { day: null, gift: null, token: null }, play: { pair: null }, playNote: null, lastShownAt: 0 },
+    gift: { day: null, gift: null, token: null }, play: { pair: null }, playNote: null, lastShownAt: 0,
+    quarrel: { pending: null, done: [] }, special2: [] },
   loading: null,
   listeners: new Set(),
   emit() { for (const fn of this.listeners) { try { fn(this.state); } catch {} } },
@@ -56024,17 +56061,19 @@ const ASSISTANT_PEER_STORE = {
     if (this.state.loaded) return Promise.resolve(this.state);
     if (this.loading) return this.loading;
     this.loading = (async () => {
-      const [bond, bondDay, log, talkDay, special, gen, daily, choice, album, gift, play] = await Promise.all([
+      const [bond, bondDay, log, talkDay, special, gen, daily, choice, album, gift, play, quarrel, special2] = await Promise.all([
         storeGet(ASSISTANT_PEER_BOND_STORE_KEY, {}, false), storeGet(ASSISTANT_PEER_BOND_DAY_KEY, null, false),
         storeGet(ASSISTANT_PEER_TALK_LOG_KEY, [], false), storeGet(ASSISTANT_PEER_TALK_DAY_KEY, null, false),
         storeGet(ASSISTANT_PEER_SPECIAL_SEEN_KEY, [], false), storeGet(ASSISTANT_PEER_TALK_GEN_KEY, null, false),
         storeGet(ASSISTANT_PEER_DAILY_KEY, null, false), storeGet(ASSISTANT_PEER_CHOICE_KEY, {}, false), storeGet(ASSISTANT_PEER_ALBUM_KEY, {}, false),
         storeGet(ASSISTANT_PEER_GIFT_KEY, null, false), storeGet(ASSISTANT_PEER_PLAY_KEY, null, false),
+        storeGet(ASSISTANT_PEER_QUARREL_KEY, null, false), storeGet(ASSISTANT_PEER_SPECIAL2_SEEN_KEY, [], false),
       ].map(p => Promise.resolve(p).catch(() => null)));
       this.set({ loaded: true, bond: normalizeAssistantPeerBond(bond), bondDay: normalizeAssistantPeerBondDay(bondDay),
         log: normalizeAssistantPeerTalkLog(log), talkDay: normalizeAssistantPeerTalkDay(talkDay), special: normalizeAssistantPeerSpecialSeen(special), gen: normalizeAssistantPeerGen(gen),
         daily: normalizeAssistantPeerDaily(daily), choice: normalizeAssistantPeerChoice(choice), album: normalizeAssistantPeerAlbum(album),
-        gift: normalizeAssistantPeerGift(gift), play: normalizeAssistantPeerPlay(play) });
+        gift: normalizeAssistantPeerGift(gift), play: normalizeAssistantPeerPlay(play),
+        quarrel: normalizeAssistantPeerQuarrel(quarrel), special2: normalizeAssistantPeerSpecialSeen(special2) });
       return this.state;
     })();
     return this.loading;
@@ -56153,6 +56192,8 @@ const assistantPeerEnsureDaily = (metIds, now = Date.now()) => {
 };
 // 今日のペアの掛け合いを見た(返事をした)。達成したら { done:true } を返す
 const assistantPeerDailyProgress = async (talk) => {
+  // 3人の掛け合い・けんかは今日のペアに数えない
+  if (!talk || !Array.isArray(talk.pair) || talk.kind === 'trio' || talk.kind === 'quarrel') return { done: false };
   const st = ASSISTANT_PEER_STORE.state;
   const day = assistantPeerDayKey();
   const pair = assistantPeerPairKey(talk.pair[0], talk.pair[1]);
@@ -56168,14 +56209,20 @@ const assistantPeerDailyProgress = async (talk) => {
   }
   return { done, seen };
 };
-// 思い出アルバムに入れる(台本だけ。API 版で作ったものは見返せないので入れない)
+// 思い出アルバムに入れる(台本だけ。API 版で作ったものは見返せないので入れない)。3人の掛け合いは3組のペアそれぞれに入れる
 const assistantPeerAlbumAdd = (talk) => {
   if (!talk || talk.gen) return;
   const st = ASSISTANT_PEER_STORE.state;
-  const pair = assistantPeerPairKey(talk.pair[0], talk.pair[1]);
-  const list = st.album[pair] || [];
-  if (list.includes(talk.id)) return;
-  const album = { ...st.album, [pair]: [...list, talk.id] };
+  const album = { ...st.album };
+  let changed = false;
+  for (const [a, b] of assistantPeerPairsOf(talk)) {
+    const pair = assistantPeerPairKey(a, b);
+    const list = album[pair] || [];
+    if (list.includes(talk.id)) continue;
+    album[pair] = [...list, talk.id];
+    changed = true;
+  }
+  if (!changed) return;
   ASSISTANT_PEER_STORE.set({ album });
   try { storeSet(ASSISTANT_PEER_ALBUM_KEY, album, false); } catch {}
 };
@@ -56236,15 +56283,25 @@ const assistantPeerOnPlay = async (kind) => {
 // ---------- 掛け合いを選ぶ ----------
 // metIds … 会った助手(選べる助手)。selectedId … いま一緒にいる助手(その助手が入るペアを出やすくする)
 // 返すのは { talk, special } か null。rand は検査から決めた値を渡せる
+// HOME では、割合や1日の数に関係なく、次の順で先に流す: けんかのあとの仲直り → Lv5 の特別なお話 → Lv10 の2本目の特別なお話
 const assistantPeerPickTalk = (st, { scene, metIds, selectedId, now = Date.now(), rand = Math.random, today = {} }) => {
   const met = new Set(metIds || []);
   const whenCtx = { now, today, streak: (st.daily && st.daily.streak) || 0 };
-  const ok = (t) => t && Array.isArray(t.pair) && t.pair.length === 2 && t.pair.every(id => met.has(id)) && assistantPeerWhenOk(t.when, whenCtx);
+  const ok = (t) => t && assistantPeerMembers(t).length >= 2 && assistantPeerMembers(t).every(id => met.has(id)) && assistantPeerWhenOk(t.when, whenCtx);
   const all = assistantPeerTalkList().filter(ok);
-  // Lv5 になったペアの特別なお話は、まだ見ていなければ HOME で先に流す(1日の数には入れない)
+  const extra = assistantPeerExtraTalks();
+  const lvOf = (t) => assistantPeerLevel(st, t.pair[0], t.pair[1]);
+  const quarrel = st.quarrel || { pending: null, done: [] };
   if (scene === 'home') {
-    const sp = all.find(t => t.special && assistantPeerLevel(st, t.pair[0], t.pair[1]) >= 5 && !st.special.includes(assistantPeerPairKey(t.pair[0], t.pair[1])));
+    // けんかを見たあと、次に HOME を開いたとき(続けて流さない間をあけて)仲直りを流す
+    if (quarrel.pending && now - (quarrel.pending.at || 0) >= ASSISTANT_PEER_TALK_GAP_MS) {
+      const mk = extra.quarrels.find(t => t.kind === 'makeup' && t.quarrelId === quarrel.pending.id);
+      if (mk && ok(mk)) return { talk: mk, special: false };
+    }
+    const sp = all.find(t => t.special && (t.lv || 5) < 10 && lvOf(t) >= 5 && !st.special.includes(assistantPeerPairKey(t.pair[0], t.pair[1])));
     if (sp) return { talk: sp, special: true };
+    const sp2 = all.find(t => t.special && (t.lv || 5) >= 10 && lvOf(t) >= t.lv && (st.special2 || []).indexOf(assistantPeerPairKey(t.pair[0], t.pair[1])) < 0);
+    if (sp2) return { talk: sp2, special: true };
   }
   const day = assistantPeerDayKey(now);
   const td = st.talkDay.day === day ? st.talkDay : { day, home: 0, other: 0 };
@@ -56261,10 +56318,21 @@ const assistantPeerPickTalk = (st, { scene, metIds, selectedId, now = Date.now()
       return { talk: (mine.length ? mine : gen)[0], special: false };
     }
   }
+  // ③ の台本の出る条件
+  const trioLv = typeof ASSISTANT_PEER_TRIO_LV !== 'undefined' ? ASSISTANT_PEER_TRIO_LV : 2;
+  const qLv = typeof ASSISTANT_PEER_QUARREL_LV !== 'undefined' ? ASSISTANT_PEER_QUARREL_LV : { min: 2, max: 3 };
+  const pairLvs = (t) => assistantPeerPairsOf(t).map(([a, b]) => assistantPeerLevel(st, a, b));
+  const fits = (t) => {
+    if (t.special) return false;
+    if (t.kind === 'trio') return pairLvs(t).every(lv => lv >= trioLv);
+    if (t.kind === 'makeup') return false;
+    if (t.kind === 'quarrel') { const lv = lvOf(t); return isHome && lv >= qLv.min && lv <= qLv.max && !quarrel.pending && !quarrel.done.includes(t.id); }
+    return lvOf(t) >= (t.lv || 1);
+  };
+  const cand = [...all, ...extra.events.filter(ok), ...extra.quarrels.filter(ok), ...extra.trios.filter(ok)];
   // ほかの画面はその画面の台本を先に。無ければどこでもの台本
-  const fits = (t) => !t.special && assistantPeerLevel(st, t.pair[0], t.pair[1]) >= (t.lv || 1);
-  let pool = isHome ? all.filter(t => fits(t) && (t.scene === 'any' || t.scene === 'home')) : all.filter(t => fits(t) && t.scene === scene);
-  if (!pool.length && !isHome) pool = all.filter(t => fits(t) && t.scene === 'any');
+  let pool = isHome ? cand.filter(t => fits(t) && (t.scene === 'any' || t.scene === 'home')) : cand.filter(t => fits(t) && t.scene === scene);
+  if (!pool.length && !isHome) pool = cand.filter(t => fits(t) && t.scene === 'any');
   if (!pool.length) return null;
   // 最近見たものは外す(全部見たなら、いちばん前に見たものから)
   const recent = st.log.map(x => x.id);
@@ -56272,36 +56340,74 @@ const assistantPeerPickTalk = (st, { scene, metIds, selectedId, now = Date.now()
   if (fresh.length) pool = fresh;
   else pool = [...pool].sort((x, y) => recent.indexOf(x.id) - recent.indexOf(y.id)).slice(0, Math.max(1, Math.ceil(pool.length / 3)));
   // 重み: いまの助手が入るペアは3倍。仲良し度Lv2から掛け合いが増える(Lv が上がるほど出やすい)。
-  //   今日のペア(まだ達成していない)は4倍、その日の出来事に合う掛け合いは6倍
+  //   今日のペア(まだ達成していない)は4倍、その日の出来事に合う掛け合いは6倍。
+  //   ③ ミニイベントは Lv6 から3倍・3人の掛け合いはどれかのペアが Lv7 なら6倍・けんかは「たまに」なので半分
   const dailyPair = st.daily && st.daily.day === day && !st.daily.done ? st.daily.pair : null;
-  const weight = (t) => (t.pair.includes(selectedId) ? 3 : 1) * (1 + 0.5 * (assistantPeerLevel(st, t.pair[0], t.pair[1]) - 1))
-    * (dailyPair && assistantPeerPairKey(t.pair[0], t.pair[1]) === dailyPair ? 4 : 1) * (t.when ? 6 : 1);
+  const evBoost = typeof ASSISTANT_PEER_EVENT_BOOST_LV !== 'undefined' ? ASSISTANT_PEER_EVENT_BOOST_LV : 6;
+  const trioBoost = typeof ASSISTANT_PEER_TRIO_BOOST_LV !== 'undefined' ? ASSISTANT_PEER_TRIO_BOOST_LV : 7;
+  const weight = (t) => {
+    const lvs = pairLvs(t);
+    const lv = Math.min(...lvs);
+    const base = (assistantPeerMembers(t).includes(selectedId) ? 3 : 1) * (1 + 0.5 * (lv - 1));
+    // 3人は、どれかのペアが Lv7 になると6倍(ペアの Lv が上がってほかの掛け合いも増えるので、それより強く押す)
+    if (t.kind === 'trio') return base * (lvs.some(x => x >= trioBoost) ? 6 : 1);
+    const pk = assistantPeerPairKey(t.pair[0], t.pair[1]);
+    return base * (dailyPair && pk === dailyPair ? 4 : 1) * (t.when ? 6 : 1)
+      * (t.kind === 'event' && lv >= evBoost ? 3 : 1) * (t.kind === 'quarrel' ? 0.5 : 1);
+  };
   const sum = pool.reduce((s, t) => s + weight(t), 0);
   let r = rand() * sum;
   for (const t of pool) { r -= weight(t); if (r <= 0) return { talk: t, special: false }; }
   return { talk: pool[pool.length - 1], special: false };
 };
-// 流したことを残す(1日の数・最近の記録・特別なお話)
+// 流したことを残す(1日の数・最近の記録・特別なお話・けんか)
 const assistantPeerMarkShown = (talk, { scene, special, now = Date.now() }) => {
   const st = ASSISTANT_PEER_STORE.state;
   const day = assistantPeerDayKey(now);
   const td = st.talkDay.day === day ? { ...st.talkDay } : { day, home: 0, other: 0 };
-  if (!special) { if (scene === 'home') td.home += 1; else td.other += 1; }
+  // 特別なお話と仲直りは1日の数に入れない
+  if (!special && talk.kind !== 'makeup') { if (scene === 'home') td.home += 1; else td.other += 1; }
   const log = [...st.log.filter(x => x.id !== talk.id), { id: talk.id, at: now }].slice(-ASSISTANT_PEER_TALK_LOG_MAX);
-  const pair = assistantPeerPairKey(talk.pair[0], talk.pair[1]);
-  const specialSeen = special && !st.special.includes(pair) ? [...st.special, pair] : st.special;
-  ASSISTANT_PEER_STORE.set({ talkDay: td, log, special: specialSeen, lastShownAt: now });
+  const patch = { talkDay: td, log, lastShownAt: now };
   try {
     storeSet(ASSISTANT_PEER_TALK_DAY_KEY, td, false);
     storeSet(ASSISTANT_PEER_TALK_LOG_KEY, log, false);
-    if (specialSeen !== st.special) storeSet(ASSISTANT_PEER_SPECIAL_SEEN_KEY, specialSeen, false);
   } catch {}
+  if (special && Array.isArray(talk.pair)) {
+    const pair = assistantPeerPairKey(talk.pair[0], talk.pair[1]);
+    const lv10 = (talk.lv || 5) >= 10;
+    const list = lv10 ? (st.special2 || []) : st.special;
+    if (!list.includes(pair)) {
+      const next = [...list, pair];
+      patch[lv10 ? 'special2' : 'special'] = next;
+      try { storeSet(lv10 ? ASSISTANT_PEER_SPECIAL2_SEEN_KEY : ASSISTANT_PEER_SPECIAL_SEEN_KEY, next, false); } catch {}
+    }
+  }
+  // けんかを見たら、次に HOME を開いたときの仲直りを待つ(同じけんかは2度出さない)
+  if (talk.kind === 'quarrel') {
+    const q = st.quarrel || { pending: null, done: [] };
+    const quarrel = { pending: { id: talk.id, pair: assistantPeerPairKey(talk.pair[0], talk.pair[1]), at: now }, done: [...new Set([...q.done, talk.id])] };
+    patch.quarrel = quarrel;
+    try { storeSet(ASSISTANT_PEER_QUARREL_KEY, quarrel, false); } catch {}
+  }
+  ASSISTANT_PEER_STORE.set(patch);
+};
+// 仲直りを最後まで見た(または閉じた)。待っていた仲直りを消す
+const assistantPeerMakeupDone = (talk) => {
+  const q = ASSISTANT_PEER_STORE.state.quarrel || { pending: null, done: [] };
+  if (!q.pending || q.pending.id !== talk.quarrelId) return false;
+  const quarrel = { pending: null, done: q.done };
+  ASSISTANT_PEER_STORE.set({ quarrel });
+  try { storeSet(ASSISTANT_PEER_QUARREL_KEY, quarrel, false); } catch {}
+  return true;
 };
 // 台本の {c} を、話している助手が相手を呼ぶ呼び方へ置きかえる(呼び方は仲良し度では変えない・2026-11-07 社長)
+//   3人の掛け合いは {c:kiki} の形(話している助手が kiki を呼ぶ呼び方)
 const assistantPeerLineText = (line, talk) => {
-  const partner = talk.pair.find(id => id !== line.who) || talk.pair[0];
-  const call = typeof assistantPeerCall === 'function' ? assistantPeerCall(line.who, partner) : partner;
-  return String(line.t || '').replace(/\{c\}/g, call);
+  const members = assistantPeerMembers(talk);
+  const partner = members.find(id => id !== line.who) || members[0];
+  const callOf = (to) => (typeof assistantPeerCall === 'function' ? assistantPeerCall(line.who, to) : to);
+  return String(line.t || '').replace(/\{c:([a-z]+)\}/g, (m, id) => callOf(id)).replace(/\{c\}/g, callOf(partner));
 };
 
 // ---------- 掛け合いの表示 ----------
@@ -56341,12 +56447,37 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
     setCur(null);
     // 見返し・ひとこと(reaction)は何も増やさない。遊びのあとのひとこと(replay を渡されていないとき)は onReplayEnd を呼ばない
     if (c.replay) { if ((!c.reaction || replay) && typeof onReplayEnd === 'function') onReplayEnd(); return; }
-    const r = await assistantPeerGain(c.talk.pair[0], c.talk.pair[1], 'talk');
-    assistantPeerAddPlayerBond(c.talk.pair, 'peerTalk');
-    assistantPeerAlbumAdd(c.talk);
-    const d = await assistantPeerDailyProgress(c.talk);
-    if (d.done) setToast({ kind: 'daily', pair: c.talk.pair });
-    else if (r && r.gained > 0 && r.levelAfter > r.levelBefore) setToast({ kind: 'level', pair: c.talk.pair, level: r.levelAfter });
+    const t = c.talk;
+    assistantPeerAlbumAdd(t);
+    // 3人の掛け合い: 3組のペアそれぞれに「掛け合いを見た」・3人それぞれの親密度(peerTrio)
+    if (t.kind === 'trio') {
+      let up = null;
+      for (const [a, b] of assistantPeerPairsOf(t)) { const r = await assistantPeerGain(a, b, 'talk'); if (!up && r && r.gained > 0 && r.levelAfter > r.levelBefore) up = { kind: 'level', pair: [a, b], level: r.levelAfter }; }
+      assistantPeerAddPlayerBond(t.trio, 'peerTrio');
+      if (up) setToast(up);
+      return;
+    }
+    // けんかは何も増やさない(次に HOME を開いたときの仲直りで増える)
+    if (t.kind === 'quarrel') return;
+    let r = null;
+    if (t.kind === 'makeup') {
+      // 仲直りは1回のけんかにつき1回だけ(待っていた仲直りを消せたときだけ増やす)
+      if (!assistantPeerMakeupDone(t)) return;
+      r = await assistantPeerGain(t.pair[0], t.pair[1], 'makeup');
+      assistantPeerAddPlayerBond(t.pair, 'peerMakeup');
+      setToast({ kind: 'makeup', pair: t.pair });
+      return;
+    }
+    if (t.kind === 'event') {
+      r = await assistantPeerGain(t.pair[0], t.pair[1], 'event');
+      assistantPeerAddPlayerBond(t.pair, 'peerEvent');
+    } else {
+      r = await assistantPeerGain(t.pair[0], t.pair[1], 'talk');
+      assistantPeerAddPlayerBond(t.pair, 'peerTalk');
+    }
+    const d = await assistantPeerDailyProgress(t);
+    if (d.done) setToast({ kind: 'daily', pair: t.pair });
+    else if (r && r.gained > 0 && r.levelAfter > r.levelBefore) setToast({ kind: 'level', pair: t.pair, level: r.levelAfter });
   }, [onReplayEnd, replay]);
   // 返事を選んだ(見返しでは何も増やさない)。加算は状態の更新の外で1回だけ
   const choose = (index) => {
@@ -56354,8 +56485,11 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
     if (!c || c.phase !== 'choice') return;
     if (!c.replay) {
       assistantPeerSaveChoice(c.talk.id, index);
-      void assistantPeerGain(c.talk.pair[0], c.talk.pair[1], 'choice');
-      assistantPeerAddPlayerBond(c.talk.pair, 'peerChoice');
+      // ミニイベントの判定は、見終えたときの「ミニイベント」で増やす(返事のぶんは重ねない)
+      if (c.talk.kind !== 'event') {
+        void assistantPeerGain(c.talk.pair[0], c.talk.pair[1], 'choice');
+        assistantPeerAddPlayerBond(c.talk.pair, 'peerChoice');
+      }
     }
     setCur({ ...c, phase: 'reply', pick: index, step: 0 });
   };
@@ -56386,25 +56520,31 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
     const stage = (typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' ? ASSISTANT_PEER_BOND_LEVELS : []).find(s => s.level === toast.level);
     return wrap(
       <div data-assistant-peer-toast={toast.kind} className="mx-auto w-fit rounded-full border border-pink-300/60 bg-slate-950/90 px-4 py-1.5 text-[11px] font-black text-pink-200 shadow-xl">
-        {toast.kind === 'daily' ? `今日のペア達成！ ${a.name}と${b.name}がもっと仲良くなりました` : `${a.name}と${b.name}の仲良し度が Lv${toast.level}${stage ? `「${stage.name}」` : ''}になりました`}
+        {toast.kind === 'daily' ? `今日のペア達成！ ${a.name}と${b.name}がもっと仲良くなりました`
+          : toast.kind === 'makeup' ? `${a.name}と${b.name}が仲直りしました`
+          : `${a.name}と${b.name}の仲良し度が Lv${toast.level}${stage ? `「${stage.name}」` : ''}になりました`}
       </div>);
   }
   const { talk } = cur;
   const list = linesOf(cur);
   const line = cur.phase === 'choice' ? talk.lines[talk.lines.length - 1] : list[cur.step];
-  // 左は最初に話す助手、右はその相手
+  // 左は最初に話す助手、右はその相手。3人の掛け合いは左に3人の顔を並べる
+  const isTrio = talk.kind === 'trio';
   const left = assistantById(talk.lines[0].who);
-  const right = assistantById(talk.pair.find(id => id !== left.id));
+  const right = isTrio ? null : assistantById(talk.pair.find(id => id !== left.id));
   const speaker = assistantById(line.who);
-  const pairKey = assistantPeerPairKey(talk.pair[0], talk.pair[1]);
-  const daily = st.daily && st.daily.day === assistantPeerDayKey() && st.daily.pair === pairKey ? st.daily : null;
-  const face = (who) => {
+  const pairKey = isTrio ? null : assistantPeerPairKey(talk.pair[0], talk.pair[1]);
+  const daily = pairKey && talk.kind !== 'quarrel' && st.daily && st.daily.day === assistantPeerDayKey() && st.daily.pair === pairKey ? st.daily : null;
+  const face = (who, size = 44) => {
     const speaking = who.id === line.who;
     return (
       <div className={`shrink-0 transition-all duration-200 ${speaking ? 'opacity-100 scale-100' : 'opacity-50 scale-90'}`} data-assistant-peer-face={who.id}>
-        <AssistantFace who={who} size={44} accent={who.accent} expression={speaking ? line.e : 'normal'}/>
+        <AssistantFace who={who} size={size} accent={who.accent} expression={speaking ? line.e : 'normal'}/>
       </div>);
   };
+  const names = assistantPeerMembers(talk).map(id => assistantById(id).name);
+  const chip = talk.kind === 'event' ? `ミニイベント「${talk.title || ''}」` : talk.kind === 'trio' ? `${names.join('・')}の掛け合い`
+    : talk.kind === 'quarrel' ? 'ちょっと言い合い中…' : talk.kind === 'makeup' ? `${names.join('と')}の仲直り` : null;
   const total = talk.lines.length + (cur.phase === 'reply' ? list.length : 0);
   const pos = cur.phase === 'reply' ? talk.lines.length + cur.step + 1 : cur.phase === 'choice' ? talk.lines.length : cur.step + 1;
   return wrap(
@@ -56412,15 +56552,18 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
       onKeyDown={ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); advance(cur); } }}
       className="relative rounded-2xl border-2 bg-slate-950/92 px-2 py-2 shadow-2xl cursor-pointer select-none"
       style={{ borderColor: speaker.accent || '#f472b6', backgroundColor: '#020617' }}>
-      {cur.special && <p data-assistant-peer-special className="mb-1 text-center text-[10px] font-black tracking-wider text-amber-200">✦ {left.name}と{right.name}の特別なお話 ✦</p>}
+      {cur.special && <p data-assistant-peer-special className="mb-1 text-center text-[10px] font-black tracking-wider text-amber-200">✦ {names.join('と')}の特別なお話{(talk.lv || 5) >= 10 ? '・その2' : ''} ✦</p>}
+      {chip && <p data-assistant-peer-kind={talk.kind} className="mb-1 text-center text-[10px] font-black tracking-wider text-sky-200">{chip}</p>}
       {daily && !cur.replay && <p data-assistant-peer-daily-chip className="mb-1 w-fit rounded-full bg-amber-400/15 px-2 py-0.5 text-[9px] font-black text-amber-200">今日のペア {daily.done ? '達成！' : `${Math.min(daily.seen + 1, ASSISTANT_PEER_DAILY_GOAL)}/${ASSISTANT_PEER_DAILY_GOAL}`}</p>}
       <div className="flex items-center gap-2">
-        {face(left)}
+        {isTrio ? (
+          <div data-assistant-peer-trio className="flex shrink-0 -space-x-2">{talk.trio.map(id => <React.Fragment key={id}>{face(assistantById(id), 38)}</React.Fragment>)}</div>
+        ) : face(left)}
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-black leading-none" style={{ color: speaker.accent || '#f472b6' }}>{speaker.name}</p>
           <p data-assistant-peer-line className="mt-1 text-[12px] font-bold leading-snug text-white">{helpWrap(assistantPeerLineText(line, talk))}</p>
         </div>
-        {face(right)}
+        {right && face(right)}
       </div>
       {cur.phase === 'choice' && (
         <div data-assistant-peer-choices className="mt-2 grid gap-1.5">
@@ -56461,9 +56604,12 @@ function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseIt
   const lv = assistantPeerLevel(st, pair[0], pair[1]);
   const photos = typeof ASSISTANT_PEER_PHOTOS !== 'undefined' ? ASSISTANT_PEER_PHOTOS : [];
   const seen = new Set(st.album[key] || []);
-  // 特別なお話は見たら(Lv5 で流れたら)アルバムに入る。前に見た人の分は special の記録からも拾う
-  const talks = assistantPeerTalkList().filter(t => assistantPeerPairKey(t.pair[0], t.pair[1]) === key && (seen.has(t.id) || (t.special && st.special.includes(key))));
-  const all = assistantPeerTalkList().filter(t => assistantPeerPairKey(t.pair[0], t.pair[1]) === key).length;
+  // 特別なお話は見たら(Lv5 で流れたら)アルバムに入る。前に見た人の分は special の記録からも拾う(Lv10 の2本目は special2)。
+  //   ミニイベント・けんかと仲直り・その2人が入る3人の掛け合いも入る
+  const mine = assistantPeerAllTalks().filter(t => { const m = assistantPeerMembers(t); return m.includes(pair[0]) && m.includes(pair[1]); });
+  const spSeen = (t) => t.special && ((t.lv || 5) >= 10 ? (st.special2 || []).includes(key) : st.special.includes(key));
+  const talks = mine.filter(t => seen.has(t.id) || spSeen(t));
+  const all = mine.length;
   const firstLine = (t) => assistantPeerLineText(t.lines[0], t);
   return (
     <div data-assistant-peer-album={key} className="fixed inset-0 flex items-end sm:items-center justify-center bg-black/70 p-2" style={{ zIndex: 9100 }} onClick={onClose}>
@@ -56509,8 +56655,9 @@ function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseIt
           {talks.map(t => (
             <button key={t.id} type="button" data-assistant-peer-replay={t.id} onClick={() => onReplay && onReplay(t)}
               className="flex w-full items-center gap-2 rounded-lg bg-slate-900/80 px-2 py-1.5 text-left active:scale-[.98]">
-              <span className="shrink-0 text-[10px]" aria-hidden="true">{t.special ? '✦' : t.choice ? '💬' : '▶'}</span>
-              <span className="min-w-0 flex-1 truncate text-[10px] font-bold text-slate-200">{t.special ? '特別なお話' : firstLine(t)}</span>
+              <span className="shrink-0 text-[10px]" aria-hidden="true">{t.special ? '✦' : t.kind === 'event' ? '🎪' : t.kind === 'trio' ? '👥' : t.kind === 'quarrel' || t.kind === 'makeup' ? '🤝' : t.choice ? '💬' : '▶'}</span>
+              <span className="min-w-0 flex-1 truncate text-[10px] font-bold text-slate-200">{t.special ? ((t.lv || 5) >= 10 ? '特別なお話・その2' : '特別なお話')
+                : t.kind === 'event' ? `ミニイベント「${t.title}」` : t.kind === 'makeup' ? '仲直り' : t.kind === 'quarrel' ? `言い合い: ${firstLine(t)}` : firstLine(t)}</span>
             </button>))}
         </div>
       </div>

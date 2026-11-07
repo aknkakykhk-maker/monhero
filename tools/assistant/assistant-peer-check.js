@@ -12,6 +12,7 @@
 //      Lv5 の特別なお話を HOME で先に流す・ほかの画面はその画面の台本を先に出す
 //   ⑥ API 版で作った掛け合い: 崩れたものは捨てる・HOME で台本より先に出す・見たもの/会っていない助手のものは出さない
 //   ⑦ 保存: 新しいキー(mh_assistant_peer_*)だけに書く。壊れた値でも空として読む
+//   ⑪ ③ ミニイベント・3人の掛け合い・けんか→仲直り・Lv10 の2本目の特別なお話(台本の形・出る条件・増え方)
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -39,6 +40,8 @@ vm.runInContext(part, ctx);
 const G = (expr) => vm.runInContext(expr, ctx);
 
 const TALKS = G('ASSISTANT_PEER_TALKS');
+// 口調・守りは ③ の台本(ミニイベント・けんか/仲直り・3人の掛け合い)もまとめて見る
+const ALLT = G('assistantPeerAllTalks()');
 const CALLS = G('ASSISTANT_PEER_CALLS');
 const IDS = Object.keys(CALLS);
 const EXPR = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];
@@ -79,7 +82,7 @@ const pairKey = (a, b) => [a, b].sort().join('-');
 
 // ② 口調
 {
-  const lines = (who) => TALKS.flatMap(t => [...t.lines, ...(t.choice || []).flatMap(o => o.reply)].filter(l => l.who === who).map(l => ({ id: t.id, t: l.t })));
+  const lines = (who) => ALLT.flatMap(t => [...t.lines, ...(t.choice || []).flatMap(o => o.reply)].filter(l => l.who === who).map(l => ({ id: t.id, t: l.t })));
   const ng = (who, re) => lines(who).filter(x => re.test(x.t)).map(x => `${x.id}「${x.t}」`);
   check('② みゅあは「じゃん」「まじ」を使わない(「ぢゃん」「まぢ」・2026-10-25 社長)', ng('mua', /じゃん|まじ/).length === 0, ng('mua', /じゃん|まじ/).join(' / '));
   const atsuBad = lines('atsu').filter(x => !/(笑|[！？!?…。]|[)）ノ])$/.test(x.t.trim()));
@@ -95,7 +98,7 @@ const pairKey = (a, b) => [a, b].sort().join('-');
 
 // ③ 守り
 {
-  const all = TALKS.flatMap(t => [...t.lines, ...(t.choice || []).flatMap(o => o.reply), ...(t.choice || []).map(o => ({ t: o.label }))].map(l => ({ id: t.id, t: l.t })));
+  const all = ALLT.flatMap(t => [...t.lines, ...(t.choice || []).flatMap(o => o.reply), ...(t.choice || []).map(o => ({ t: o.label }))].map(l => ({ id: t.id, t: l.t })));
   const ko = all.filter(x => /(この|あの|その|うちの|いい|強い)子|子たち/.test(x.t));
   check('③ モンスターを「子」と呼ばない(2026-11-06 社長)', ko.length === 0, ko.map(x => x.id).join(','));
   const love = all.filter(x => /恋|デート|付き合|キス|彼氏|彼女|結婚|ラブ/.test(x.t));
@@ -103,7 +106,7 @@ const pairKey = (a, b) => [a, b].sort().join('-');
   const dirty = all.filter(x => /バカ|ばか(?!り)|きらい|嫌い|うざ|ブス|最低/.test(x.t));
   check('③ 悪口のことばが無い', dirty.length === 0, dirty.map(x => `${x.id}「${x.t}」`).join(' / '));
   // 敬称が重ならない(「{c}さん」と書かない)
-  const hon = TALKS.flatMap(t => t.lines.filter(l => /\{c\}(さん|ちゃん|くん|ちん)/.test(l.t)).map(() => t.id));
+  const hon = ALLT.flatMap(t => [...t.lines, ...(t.choice || []).flatMap(o => o.reply)].filter(l => /\{c(:[a-z]+)?\}(さん|ちゃん|くん|ちん)/.test(l.t)).map(() => t.id));
   check('③ {c} のあとに敬称を付けない(呼び方に入っている)', hon.length === 0, hon.join(','));
 }
 
@@ -242,6 +245,121 @@ const pairKey = (a, b) => [a, b].sort().join('-');
   G('assistantPeerAddPlayerBond')(['mua', 'kiki'], 'peerTalk');
   check('⑨ 公開の印が偽ならプレイヤーの親密度も増やさない', added.length === 0);
   ctx.RELEASE_FLAGS.assistantPeer = true;
+
+  // ⑪ ③ ミニイベント・3人の掛け合い・けんか→仲直り・Lv10 の2本目
+  {
+    const X = G('assistantPeerExtraTalks()');
+    const lineOk = (t, l, members) => members.includes(l.who) && EXPR.includes(l.e) && l.t.length <= 60 && !/[{}]/.test(G('assistantPeerLineText')(l, t));
+    // ミニイベント
+    const evBad = X.events.filter(t => t.lines.length < 6 || t.lines.length > 8 || !Array.isArray(t.choice) || t.choice.length !== 3 || !t.title
+      || t.choice.some(o => !o.label || o.label.length > 16 || !Array.isArray(o.reply) || o.reply.length < 1 || !o.reply.every(l => lineOk(t, l, t.pair)))
+      || !t.lines.every(l => lineOk(t, l, t.pair)) || new Set(t.lines.map(l => l.who)).size !== 2);
+    check(`⑪ ミニイベントは12本以上(いま${X.events.length}本)・6〜8行・判定の返事3つ(16字まで)・話し手はペアの2人・1行60字まで`, X.events.length >= 12 && evBad.length === 0, evBad.map(t => t.id).join(','));
+    const evIds = new Set(X.events.map(t => pairKey(t.pair[0], t.pair[1])));
+    check('⑪ ミニイベントは8人全員が出る', IDS.every(id => X.events.some(t => t.pair.includes(id))), [...evIds].join(','));
+    // けんか→仲直り
+    const qs = X.quarrels.filter(t => t.kind === 'quarrel'), mk = X.quarrels.filter(t => t.kind === 'makeup');
+    const qBad = X.quarrels.filter(t => t.lines.length < 3 || !t.lines.every(l => lineOk(t, l, t.pair)) || new Set(t.lines.map(l => l.who)).size !== 2);
+    check(`⑪ けんかと仲直りは8組(いま${qs.length}組)・どのけんかにも仲直りがある・話し手はペアの2人`, qs.length >= 8 && qs.every(q => mk.some(m => m.quarrelId === q.id)) && qBad.length === 0, qBad.map(t => t.id).join(','));
+    check('⑪ 仲直りでは2人とも「ごめん」と言う(かわいい言い合いで終える)', mk.every(m => m.pair.every(id => m.lines.some(l => l.who === id && /ごめん/.test(l.t)))), mk.filter(m => !m.pair.every(id => m.lines.some(l => l.who === id && /ごめん/.test(l.t)))).map(m => m.id).join(','));
+    // 3人の掛け合い
+    const groups = [...new Set(X.trios.map(t => [...t.trio].sort().join('-')))];
+    const trBad = X.trios.filter(t => t.trio.length !== 3 || new Set(t.trio).size !== 3 || !t.trio.every(id => IDS.includes(id)) || !t.lines.every(l => lineOk(t, l, t.trio))
+      || new Set(t.lines.map(l => l.who)).size !== 3 || t.lines.some(l => /\{c\}/.test(l.t))
+      || t.lines.some(l => [...l.t.matchAll(/\{c:([a-z]+)\}/g)].some(m => !t.trio.includes(m[1]) || m[1] === l.who)));
+    check(`⑪ 3人の掛け合いは決まった8組×2本(いま${groups.length}組${X.trios.length}本)・3人とも話す・{c:id} は自分以外の2人`, groups.length === 8 && groups.every(g => X.trios.filter(t => [...t.trio].sort().join('-') === g).length >= 2) && trBad.length === 0, trBad.map(t => t.id).join(','));
+    const tr = X.trios[0];
+    const tx = G('assistantPeerLineText')(tr.lines[0], tr);
+    check('⑪ 3人の {c:kiki} は話し手の呼び方に置きかわる(みゅあ→きき「ひめちん」・みゅあ→もも「もも」)', tx.startsWith('ひめちん、もも！'), tx);
+    const allIds = ALLT.map(t => t.id);
+    check('⑪ 台本の id が全体で重ならない', new Set(allIds).size === allIds.length);
+
+    // 出る条件
+    const now0 = Date.parse('2026-11-07T03:00:00Z');
+    const bondOf = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, v]));
+    const many = (st, opts, n = 400) => { const got = []; for (let i = 0; i < n; i++) { const rr = (() => { let k = 0; const xs = [0, Math.random()]; return () => (k < xs.length ? xs[k++] : Math.random()); })(); const p = pick(st, { now: now0, rand: rr, ...opts }); if (p) got.push(p.talk); } return got; };
+    // Lv2 のペアだけ: ミニイベント(Lv3)は出ない・けんかは HOME で出る
+    const lv2 = { ...empty(), bond: bondOf({ 'kiki-kyuko': 50 }) };
+    const g2 = many(lv2, { scene: 'home', metIds: ['kiki', 'kyuko'], selectedId: 'kiki' });
+    check('⑪ ミニイベントは Lv3 から(Lv2 のペアには出ない)', !g2.some(t => t.kind === 'event'));
+    check('⑪ Lv2〜3 のペアには、HOME でけんかがたまに出る', g2.some(t => t.kind === 'quarrel'));
+    const g2m = many(lv2, { scene: 'market', metIds: ['kiki', 'kyuko'], selectedId: 'kiki' });
+    check('⑪ けんかは HOME だけ', !g2m.some(t => t.kind === 'quarrel'));
+    const lv4 = { ...empty(), bond: bondOf({ 'kiki-kyuko': 260 }) };
+    const g4 = many(lv4, { scene: 'home', metIds: ['kiki', 'kyuko'], selectedId: 'kiki' });
+    check('⑪ Lv4 になったペアにはけんかが出ない・ミニイベントは出る', !g4.some(t => t.kind === 'quarrel') && g4.some(t => t.kind === 'event'));
+    const share = (list) => list.filter(t => t.kind === 'event').length / Math.max(1, list.length);
+    const g6 = many({ ...empty(), bond: bondOf({ 'kiki-kyuko': 710 }), special: ['kiki-kyuko'] }, { scene: 'home', metIds: ['kiki', 'kyuko'], selectedId: 'kiki' }, 800);
+    check('⑪ ミニイベントは Lv6 から出やすくなる', share(g6) > share(g4), `${share(g4).toFixed(2)} → ${share(g6).toFixed(2)}`);
+    // 3人
+    const trioMet = ['mua', 'kiki', 'momosuke'];
+    const t1 = many({ ...empty(), bond: bondOf({ 'kiki-mua': 50, 'momosuke-mua': 50, 'kiki-momosuke': 10 }) }, { scene: 'home', metIds: trioMet, selectedId: 'mua' });
+    check('⑪ 3人のうち1組でも Lv1 なら、3人の掛け合いは出ない', !t1.some(t => t.kind === 'trio'));
+    const t2 = many({ ...empty(), bond: bondOf({ 'kiki-mua': 50, 'momosuke-mua': 50, 'kiki-momosuke': 50 }) }, { scene: 'home', metIds: trioMet, selectedId: 'mua' });
+    check('⑪ 3組とも Lv2 以上なら、3人の掛け合いが出る(会った3人だけ)', t2.some(t => t.kind === 'trio') && t2.filter(t => t.kind === 'trio').every(t => t.trio.every(id => trioMet.includes(id))));
+    const trioShare = (list) => list.filter(t => t.kind === 'trio').length / Math.max(1, list.length);
+    const t7 = many({ ...empty(), bond: bondOf({ 'kiki-mua': 1000, 'momosuke-mua': 50, 'kiki-momosuke': 50 }), special: ['kiki-mua'] }, { scene: 'home', metIds: trioMet, selectedId: 'mua' }, 800);
+    check('⑪ どれかのペアが Lv7 なら、3人の掛け合いに出やすくなる', trioShare(t7) > trioShare(t2), `${trioShare(t2).toFixed(2)} → ${trioShare(t7).toFixed(2)}`);
+
+    // けんか → 仲直り(保存と増え方)
+    store.set({ ...empty() });
+    const q = X.quarrels.find(t => t.id === 'kiki-kyuko-q');
+    const tq = now0;
+    G('assistantPeerMarkShown')(q, { scene: 'home', special: false, now: tq });
+    check('⑪ けんかを見ると、仲直りを待つ(mh_assistant_peer_quarrel_v1)', store.state.quarrel.pending && store.state.quarrel.pending.id === q.id && mem.mh_assistant_peer_quarrel_v1.done.includes(q.id));
+    const soon = pick({ ...store.state, lastShownAt: 0 }, { scene: 'home', metIds: ['kiki', 'kyuko'], selectedId: 'kiki', now: tq + 10 * 1000, rand: () => 0.99 });
+    check('⑪ すぐには仲直りしない(続けて流さない間をあける)', !soon || soon.talk.kind !== 'makeup');
+    const later = pick(store.state, { scene: 'home', metIds: ['kiki', 'kyuko'], selectedId: 'kiki', now: tq + 120 * 1000, rand: () => 0.99 });
+    check('⑪ 次に HOME を開いたとき、割合に関係なく仲直りを先に流す', later && later.talk.kind === 'makeup' && later.talk.quarrelId === q.id, later && later.talk.id);
+    const notHome = pick(store.state, { scene: 'market', metIds: ['kiki', 'kyuko'], selectedId: 'kiki', now: tq + 120 * 1000, rand: () => 0.99 });
+    check('⑪ 仲直りは HOME で流す(ほかの画面では先に出さない)', !notHome || notHome.talk.kind !== 'makeup');
+    const q2 = many({ ...store.state, bond: { 'kiki-kyuko': 50 }, lastShownAt: 0 }, { scene: 'home', metIds: ['kiki', 'kyuko'], selectedId: 'kiki' });
+    check('⑪ 仲直りを待つあいだ、新しいけんかは出ない', !q2.some(t => t.kind === 'quarrel'));
+    check('⑪ 仲直りを見ると待ちが消え、2度目は増えない', G('assistantPeerMakeupDone')(later.talk) === true && !store.state.quarrel.pending && G('assistantPeerMakeupDone')(later.talk) === false);
+    const q3 = many({ ...store.state, bond: { 'kiki-kyuko': 50 }, lastShownAt: 0 }, { scene: 'home', metIds: ['kiki', 'kyuko'], selectedId: 'kiki' });
+    check('⑪ 見たけんかは2度出ない', !q3.some(t => t.id === q.id));
+    const PA = G('ASSISTANT_PEER_BOND_ACTIONS');
+    let gs = { ...empty() };
+    for (let i = 0; i < 4; i++) gs = gain(gs, 'kiki', 'kyuko', 'talk', 'd').st;
+    gs = gain(gs, 'kiki', 'kyuko', 'story', 'd').st; gs = gain(gs, 'kiki', 'kyuko', 'switch', 'd').st; gs = gain(gs, 'kiki', 'kyuko', 'choice', 'd').st; gs = gain(gs, 'kiki', 'kyuko', 'choice', 'd').st;
+    const mkr = gain(gs, 'kiki', 'kyuko', 'makeup', 'd');
+    check('⑪ ペアへの増え方: 仲直り +5(1日20の上限の外)・ミニイベント +5(1日5)', PA.makeup.amount === 5 && PA.makeup.uncapped === true && mkr.gained === 5
+      && PA.event.amount === 5 && PA.event.dailyMax === 5 && gain(gain({ ...empty() }, 'a', 'b', 'event', 'd').st, 'a', 'b', 'event', 'd').gained === 0);
+    check('⑪ プレイヤーの親密度: 3人 +3/6・ミニイベント +8/16・仲直り +8/8(公開の印 assistantPeer の後ろ)', BA.peerTrio.amount === 3 && BA.peerTrio.dailyMax === 6 && BA.peerEvent.amount === 8 && BA.peerEvent.dailyMax === 16
+      && BA.peerMakeup.amount === 8 && BA.peerMakeup.dailyMax === 8 && ['peerTrio', 'peerEvent', 'peerMakeup'].every(k => BA[k].releaseFlag === 'assistantPeer'));
+    // 3人の掛け合いはアルバムの3組それぞれに入る・今日のペアに数えない
+    store.set({ ...empty(), daily: { day: dayNow, pair: 'kiki-mua', seen: 0, done: false, lastDay: dayNow, streak: 1 } });
+    G('assistantPeerAlbumAdd')(tr);
+    check('⑪ 3人の掛け合いは、3組のペアのアルバムそれぞれに入る', ['kiki-mua', 'momosuke-mua', 'kiki-momosuke'].every(k => (store.state.album[k] || []).includes(tr.id)));
+    check('⑪ 3人の掛け合い・けんかは今日のペアに数えない', (await G('assistantPeerDailyProgress')(tr)).done === false && store.state.daily.seen === 0
+      && (await G('assistantPeerDailyProgress')(X.quarrels.find(t => t.kind === 'quarrel' && t.pair.join('-') === 'kiki-mua') || q)).done === false && store.state.daily.seen === 0);
+
+    // Lv10 の2本目の特別なお話。コトバの台本が届く前は、仮の1本を足した別の入れ物で仕組みだけ見る
+    let C2 = ctx, sp2 = TALKS.find(t => t.special && t.lv >= 10 && pairKey(t.pair[0], t.pair[1]) === 'kiki-mua');
+    if (!sp2) {
+      sp2 = { id: 'kiki-mua-sp2', pair: ['kiki', 'mua'], lv: 10, scene: 'home', special: true, lines: [{ who: 'mua', e: 'happy', t: '{c}' }, { who: 'kiki', e: 'happy', t: '{c}' }] };
+      const src = fs.readFileSync(path.join(root, 'monster-hero', 'data', 'assistants.js'), 'utf8');
+      const at = src.indexOf('\n]);\n', src.indexOf('const ASSISTANT_PEER_TALKS = Object.freeze(['));
+      C2 = vm.createContext({ ...ctx, ASSISTANT_PEER_STORE: undefined });
+      vm.runInContext(`${src.slice(0, at)}\n${JSON.stringify(sp2)},${src.slice(at)}`, C2);
+      vm.runInContext('var assistantBubbleDayKey = () => __day(); var assistantPeerDayKey = () => __day(); var assistantById = (id) => ASSISTANTS.find(a => a.id === id);', C2);
+      vm.runInContext(part, C2);
+    }
+    const pick2 = vm.runInContext('assistantPeerPickTalk', C2), store2 = vm.runInContext('ASSISTANT_PEER_STORE', C2);
+    const s10 = { ...empty(), bond: { 'kiki-mua': 2600 } };
+    let pp = pick2(s10, { scene: 'home', metIds: ['kiki', 'mua'], selectedId: 'mua', now: now0, rand: () => 0.99 });
+    check('⑪ Lv10 になっても、Lv5 の特別なお話を先に流す', pp && pp.special && pp.talk.id === 'kiki-mua-sp', pp && pp.talk.id);
+    pp = pick2({ ...s10, special: ['kiki-mua'] }, { scene: 'home', metIds: ['kiki', 'mua'], selectedId: 'mua', now: now0, rand: () => 0.99 });
+    check('⑪ Lv5 を見たあと、Lv10 の2本目の特別なお話を HOME で先に流す', pp && pp.special && pp.talk.id === sp2.id, pp && pp.talk.id);
+    pp = pick2({ ...s10, bond: { 'kiki-mua': 2400 }, special: ['kiki-mua'] }, { scene: 'home', metIds: ['kiki', 'mua'], selectedId: 'mua', now: now0, rand: () => 0.99 });
+    check('⑪ Lv9 では2本目は流れない', !pp || !pp.special);
+    store2.set({ ...s10, special: ['kiki-mua'] });
+    vm.runInContext('assistantPeerMarkShown', C2)(sp2, { scene: 'home', special: true, now: now0 });
+    check('⑪ 2本目を見たことは別のキー(mh_assistant_peer_special2_seen_v1)に残し、Lv5 の記録は変えない', store2.state.special2.includes('kiki-mua') && mem.mh_assistant_peer_special2_seen_v1.includes('kiki-mua') && store2.state.special.length === 1);
+    pp = pick2(store2.state, { scene: 'home', metIds: ['kiki', 'mua'], selectedId: 'mua', now: now0 + 1e6, rand: () => 0.99 });
+    check('⑪ 見た2本目は、もう流さない', !pp || !pp.special);
+    check(`⑪ (参考) コトバの Lv7・Lv9・Lv10 の台本: ${TALKS.filter(t => !t.special && t.lv === 7).length}・${TALKS.filter(t => !t.special && t.lv === 9).length}・${TALKS.filter(t => t.special && t.lv >= 10).length} 本(届いたら 28・28・28)`, true);
+  }
   // ⑦ で保存から読み直すので、置き場を読み込む前に戻す
   store.state = { ...empty(), loaded: false }; store.loading = null;
 
@@ -288,7 +406,7 @@ const pairKey = (a, b) => [a, b].sort().join('-');
   dayNow = '2026-11-07';
   await G('assistantPeerGain')('mua', 'dra', 'talk');
   G('assistantPeerMarkShown')(TALKS[0], { scene: 'home', special: false });
-  check('⑦ 書くのは mh_assistant_peer_* の新しいキーだけ', writes.length > 0 && writes.every(k => /^mh_assistant_peer_(bond|bond_day|talk_log|talk_day|special_seen|talk_gen|daily|choice|album|gift|play)_v1$/.test(k)), writes.join(','));
+  check('⑦ 書くのは mh_assistant_peer_* の新しいキーだけ', writes.length > 0 && writes.every(k => /^mh_assistant_peer_(bond|bond_day|talk_log|talk_day|special_seen|talk_gen|daily|choice|album|gift|play|quarrel|special2_seen)_v1$/.test(k)), writes.join(','));
   check('⑦ 上がった点数が保存される', mem.mh_assistant_peer_bond_v1['dra-mua'] === 42);
   ctx.RELEASE_FLAGS.assistantPeer = false;
   const off = await G('assistantPeerGain')('mua', 'dra', 'talk');
