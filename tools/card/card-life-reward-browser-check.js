@@ -2,17 +2,17 @@
 //
 //   node tools/card/card-life-reward-browser-check.js        (SHOT_DIR=<フォルダ> で止め絵を残す)
 //
-// 助手ライフ段階2の読むだけの口(assistantLifeCardIds・assistantLifeAtCard・assistantLifeOnCardMatch)がまだ無いときは、
-// 検査の中だけで同じ名前の口を置く(ある版では本物の口を使い、ソラシド・えるびんをカード部屋に置いた状態で見る)
+// 助手ライフ段階2の本物の口(assistantLifeCardIds・assistantLifeAtCard・assistantLifeOnCardMatch)を使う。
+// 助手ライフの様子を書きかえて、ソラシド・えるびんだけをカード部屋に置いた状態で見る
 //
 // 見ているもの(縦 390×844・横 844×390・🔄横 の3つ)
 //   ① HOME: MFバトルカードの札の横の顔の並びに「UP」。画面の中に入っている
 //   ② 顔を押した助手の部屋に「🃏 カード部屋で対戦する」。画面の中に入っていて、押すとMFバトルカードの相手えらびがその助手で開く
 //   ③ 相手えらび: カード部屋にいる助手の札だけに「🃏UP」。札の左上の角で、名前・「勝」の印に重ならず、札からはみ出さない。下に説明の帯(いる助手の名前)
 //   ④ MASTER で勝つ: もらったビートP 300(ふだん 200)・帯「200 → 300」・保存のビートPも 300 増える(ランクアップのごほうびは別)。
-//      カードランクの経験値が数えられる版なら 27(はじめての勝ちなら +30)。助手ライフへ「勝った」と知らせる
+//      カードランクの経験値が数えられる版なら 27(はじめての勝ちなら +30)。助手ライフの「今日あったこと」に勝ったと入る
 //   ⑤ すぐ投了(もらえる数 0): 帯を出さない
-//   ⑥ 口が無い(カード部屋にだれもいない)とき: 相手えらびに印も帯も出ない
+//   ⑥ カード部屋にだれもいないとき: 相手えらびに印も帯も出ない
 //   ⑦ 実行時エラーが無い
 const http = require('http');
 const path = require('path');
@@ -53,27 +53,19 @@ const run = async (browser, mode, errors) => {
     put('mh_breeder_name', 'あかり'); put('mh_breeder_icon', '🐣'); put('mh_onboarded', true); put('mh_intro_done', true); put('mh_tutorial_seen_v1', true); put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true);
     put('mh_inherited_unique_level_compensation_v1', true); put('mh_update_notice_seen_v1', true); });
   await page.addInitScript(eventStorySeed());
-  // 段階2の口が無い版だけ、同じ名前の口を検査の中で置く(window.__lifeOff で「だれもいない」にできる)
-  await page.addInitScript((ids) => {
-    window.__lifeMatches = [];
-    window.__lifeIds = ids;
-    const own = () => (window.__lifeOff ? [] : window.__lifeIds.slice());
-    if (!('assistantLifeCardIds' in window)) window.assistantLifeCardIds = own;
-    if (!('assistantLifeAtCard' in window)) window.assistantLifeAtCard = (id) => own().includes(id);
-    if (!('assistantLifeOnCardMatch' in window)) window.assistantLifeOnCardMatch = (x) => { window.__lifeMatches.push(x); };
-  }, LIFE);
   const dismiss = async () => { for (let i = 0; i < 16; i++) { const did = await page.evaluate(() => { const inO = (el) => { for (let e = el; e && e !== document.body; e = e.parentElement) { const s = getComputedStyle(e); if (s.position === 'fixed' || (s.position === 'absolute' && Number(s.zIndex) >= 40)) return true; } return false; };
     const l = [...document.querySelectorAll('button')].filter((b) => inO(b) && /^(確認|閉じる|OK|受け取る|次へ|わかった|はい|スキップ|あとで読む|あとで)$/.test((b.innerText || '').replace(/\s+/g, ' ').trim())); if (!l.length) return false; l[0].click(); return true; }); if (!did) break; await page.waitForTimeout(400); } };
-  // ソラシド・えるびんをカード部屋でカード研究にする(HOME の顔の並びのため。ほかの助手はそのまま)
-  const force = () => page.evaluate((ids) => { const st = ASSISTANT_LIFE_STORE.state; const life = st.life; const abs = assistantLifeSlotAt().abs; // eslint-disable-line no-undef
-    const groups = (life.groups || []).map((g) => ({ ...g, ids: g.ids.filter((x) => !ids.includes(x)) })).filter((g) => g.ids.length >= 2);
+  // 指定の助手だけをカード部屋でカード研究にする(ほかにカード部屋にいた助手は広場へ散歩に。ids が空ならだれもいない)
+  const force = (ids = LIFE) => page.evaluate((ids) => { const st = ASSISTANT_LIFE_STORE.state; const life = st.life; const abs = assistantLifeSlotAt().abs; // eslint-disable-line no-undef
+    const away = (v) => (v.place === 'cardroom' ? { ...v, place: 'plaza', doing: 'walk' } : v);
+    const groups = (life.groups || []).map((g) => away({ ...g, ids: g.ids.filter((x) => !ids.includes(x)) })).filter((g) => g.ids.length >= 2);
     const inGroup = new Set(groups.flatMap((g) => g.ids));
     const solo = {};
-    for (const [k, v] of Object.entries(life.solo || {})) if (!ids.includes(k)) solo[k] = v;
-    for (const g of life.groups || []) for (const x of g.ids) if (!ids.includes(x) && !inGroup.has(x) && !solo[x]) solo[x] = { place: g.place, doing: g.doing };
+    for (const [k, v] of Object.entries(life.solo || {})) if (!ids.includes(k)) solo[k] = away(v);
+    for (const g of life.groups || []) for (const x of g.ids) if (!ids.includes(x) && !inGroup.has(x) && !solo[x]) solo[x] = away({ place: g.place, doing: g.doing });
     for (const x of ids) solo[x] = { place: 'cardroom', doing: 'cards' };
     ASSISTANT_LIFE_STORE.set({ life: { ...life, abs, groups, solo } }); // eslint-disable-line no-undef
-  }, LIFE);
+  }, ids);
   const rotate = async () => { if (mode.rot) { await page.evaluate(() => RHYTHM_VIEW_ROTATION.set(90)); await page.waitForTimeout(1000); } }; // eslint-disable-line no-undef
   // 対戦の前の画面(デッキの確かめ・対戦開始の演出)を進める
   const pass = async () => {
@@ -121,6 +113,8 @@ const run = async (browser, mode, errors) => {
     // ① HOME
     await rotate();
     await force(); await page.waitForTimeout(1500);
+    const ids = await page.evaluate(() => (typeof assistantLifeCardIds === 'function' ? assistantLifeCardIds() : null)); // eslint-disable-line no-undef
+    check(`① ${mode.label} 助手ライフの口で、カード部屋にいるのがソラシド・えるびんだと読める`, Array.isArray(ids) && ids.slice().sort().join() === LIFE.slice().sort().join(), JSON.stringify(ids));
     const up = await inView('[data-assistant-life-home-card-up]');
     const faces = await page.evaluate((ids) => ids.every((id) => !!document.querySelector(`[data-assistant-life-home-faces="card"] [data-assistant-life-home-face="${id}"]`)), LIFE);
     check(`① ${mode.label} HOME: カードの札の横の顔(ソラシド・えるびん)に「UP」が出て、画面に入っている`, faces && up === true, `顔 ${faces} / UP ${up}`);
@@ -194,7 +188,7 @@ const run = async (browser, mode, errors) => {
     const after = await page.evaluate(() => {
       const p = Number(JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0')) || 0;
       const lv = JSON.parse(localStorage.getItem('mh_card_level_v1') || 'null');
-      return { p, lv, matches: window.__lifeMatches };
+      return { p, lv };
     });
     const got0 = (before.lv && Array.isArray(before.lv.got)) ? before.lv.got : [];
     const gotNew = after.lv && Array.isArray(after.lv.got) ? after.lv.got.filter((x) => !got0.includes(x)) : [];
@@ -202,9 +196,9 @@ const run = async (browser, mode, errors) => {
     check(`④ ${mode.label} 保存のビートPが 300 増える(ランクアップのごほうび ${rankPoint} は別)`, after.p - before.p - rankPoint === 300, `${before.p} → ${after.p}`);
     const xpAdd = (after.lv && Number(after.lv.xp)) - ((before.lv && Number(before.lv.xp)) || 0);
     check(`④ ${mode.label} カードランクの経験値: 数える版なら 27(はじめての勝ちなら 57)`, !after.lv || xpAdd === 27 || xpAdd === 57, String(xpAdd));
-    const m = (after.matches || [])[0];
-    const real = await page.evaluate(() => !window.hasOwnProperty('__lifeMatches') || typeof assistantLifeOnCardMatch !== 'function' || assistantLifeOnCardMatch.toString().indexOf('__lifeMatches') < 0); // eslint-disable-line no-undef
-    check(`④ ${mode.label} 助手ライフへ「ソラシドに勝った」と知らせる`, real || (!!m && m.assistantId === 'sorashido' && m.won === true && Number.isFinite(m.at)), JSON.stringify(after.matches));
+    await page.waitForTimeout(800);
+    const diary = await page.evaluate(() => (ASSISTANT_LIFE_DIARY.state.items || []).map((x) => x.text)); // eslint-disable-line no-undef
+    check(`④ ${mode.label} 助手ライフの「今日あったこと」に「ソラシドとカード部屋で対戦して勝った」が入る`, diary.some((t) => /ソラシドとカード部屋で対戦して勝った/.test(t)), JSON.stringify(diary.slice(-3)));
     // ⑤ すぐ投了(0)
     await page.evaluate(() => { window.__mhCardScene = null; });
     await closeUp();
@@ -220,12 +214,11 @@ const run = async (browser, mode, errors) => {
     const zero = await page.evaluate(() => ({ gain: document.querySelector('[data-card-top="result"]').getAttribute('data-card-gain'), band: !!document.querySelector('[data-card-result-life-up]'), plain: !!document.querySelector('[data-card-result-life-plain]') }));
     check(`⑤ ${mode.label} すぐ投了(0): 帯も「ふだん」も出さない`, zero.gain === '0' && !zero.band && !zero.plain, JSON.stringify(zero));
     // ⑥ だれもいないとき
-    await page.evaluate(() => { window.__lifeOff = true; window.__lifeIds = []; });
+    await force([]);
     await page.getByRole('button', { name: '相手をえらぶ' }).click();
     await page.locator('[data-card-top="foe"]').waitFor({ timeout: 20000 });
     const none = await page.evaluate(() => ({ chips: document.querySelectorAll('[data-card-foe-life-chip]').length, band: !!document.querySelector('[data-card-foe-life-band]') }));
-    const realLife = await page.evaluate(() => typeof assistantLifeCardIds === 'function' && assistantLifeCardIds.toString().indexOf('__lifeOff') < 0); // eslint-disable-line no-undef
-    check(`⑥ ${mode.label} カード部屋にだれもいないとき、印も帯も出ない`, realLife || (none.chips === 0 && !none.band), JSON.stringify(none));
+    check(`⑥ ${mode.label} カード部屋にだれもいないとき、印も帯も出ない`, none.chips === 0 && !none.band, JSON.stringify(none));
   } finally { await ctx.close(); }
 };
 
