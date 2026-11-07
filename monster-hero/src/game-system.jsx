@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d4bc239143cc2de5
+// generated-sha256: 912536906e8d8117
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -59880,6 +59880,8 @@ const quickNudgeAfter = (nudge, today) => { const s = normalizeQuickNudge(nudge)
 //   ここで案内を消すと作り直されて1ページ目へ戻り、「あとで」も取り消される(2026-11-07 レフェリーくんの止め絵)。
 //   出している ∞ の案内(g3a)は、このあいだも出したままにし、「あとで」もバトルの画面と同じに扱う
 const QUICK_GUIDE_RUN_BETWEEN = Object.freeze(['WAVE_RESULT', 'QUICK_GROWTH', 'PICK_ALLY', 'QUICK_JOIN']);
+// 案内がこれだけ見えていたら「見た」にする(閉じなくても、アプリを閉じても、二度と自動では出さない。2026-11-07 社長)
+const QUICK_GUIDE_SEEN_AFTER_MS = 1200;
 const quickGuideScreenKey = (gameState, quickRun, autoRepeat) => (quickRun === true && autoRepeat === true && QUICK_GUIDE_RUN_BETWEEN.includes(gameState) ? 'BATTLE' : gameState);
 // いまの画面で出す案内。ctx … { gameState, busy, seen, quickUnlocked, quickEverCleared, quickSelect, quickRun, autoRepeat, battleTutorial, raidJack, backgroundRun, nudgeOk, showing }
 //   showing … いま出している案内(WAVE のあいだも ∞ の案内を出したままにするため)
@@ -87221,6 +87223,8 @@ function MonsterHeroGame() {
   // quickGuideSeen … 見終えた案内の id(null は読み込み前。読み込むまで何も出さない)/ quickNudge … 誘導の回数と最後の日
   // quickGuideReplay … ヘルプから見返している案内のまとまり('g1' 'g2' 'g3')。保存は新しいキーだけ(CLAUDE.md ⑦)
   const [quickGuideSeen, setQuickGuideSeen] = useState(null);
+  const quickGuideSeenRef = useRef(null); // 見た印の最新(閉じると画面を離れるが同じ描画で重なっても、印を取りこぼさない)
+  const quickGuideStoredRef = useRef(null); // 保存してある見た印(出した時点で先に保存する。画面の印は閉じる・離れるまで付けない)
   const [quickNudge, setQuickNudge] = useState(null);
   const [quickGuideReplay, setQuickGuideReplay] = useState(null);
   // いま出している案内(前の描画の分)。クイックの∞の WAVE のあいだも案内を出したままにするため(56 の quickGuidePick の showing)
@@ -93514,7 +93518,9 @@ function MonsterHeroGame() {
       let seenRaw = null, nudgeRaw = null;
       try { [seenRaw, nudgeRaw] = await Promise.all([storeGet(QUICK_GUIDE_SEEN_KEY, null, false), storeGet(QUICK_GUIDE_NUDGE_KEY, null, false)]); } catch (_) { /* 読めなければ既定 */ }
       if (cancelled) return;
-      setQuickGuideSeen(normalizeQuickGuideSeen(seenRaw));
+      quickGuideSeenRef.current = normalizeQuickGuideSeen(seenRaw);
+      quickGuideStoredRef.current = quickGuideSeenRef.current;
+      setQuickGuideSeen(quickGuideSeenRef.current);
       setQuickNudge(normalizeQuickNudge(nudgeRaw));
     })();
     return () => { cancelled = true; };
@@ -93554,15 +93560,50 @@ function MonsterHeroGame() {
     : quickNudgeShowing && !quickGuideBusy ? quickNudgeShowing
     : quickGuidePicked && quickGuidePicked !== quickGuideLater && quickGuidePicked !== 'nudgeHome' && quickGuidePicked !== 'nudgeBattle' ? quickGuidePicked : null;
   quickGuideShowingRef.current = quickGuideActive;
-  // 案内を閉じる。done … 最後まで見た(見た印を付ける)。誘導とヘルプからの見返しは印を付けない
+  // 見た印を保存する(同じ案内に二度書かない)。★案内を出した時点で呼ぶ(2026-11-07 社長「モンビーとかひらくたびに助手が裏周回の説明をしてくる」)。
+  //   出したまま閉じずにアプリを閉じた・読み込み直したときも、二度と自動では出さない。見返しはヘルプからできる
+  const persistQuickGuideSeen = (guideId) => {
+    if (!guideId || !Array.isArray(quickGuideStoredRef.current) || quickGuideStoredRef.current.includes(guideId)) return;
+    const next = quickGuideSeenAfter(quickGuideStoredRef.current, guideId);
+    quickGuideStoredRef.current = next.seen;
+    storeSet(QUICK_GUIDE_SEEN_KEY, next, false);
+  };
+  // 画面の見た印を付ける(閉じた・画面を離れたとき)。保存もする
+  const markQuickGuideSeen = (guideId) => {
+    persistQuickGuideSeen(guideId);
+    if (!guideId || !Array.isArray(quickGuideSeenRef.current) || quickGuideSeenRef.current.includes(guideId)) return;
+    quickGuideSeenRef.current = normalizeQuickGuideSeen({ seen: [...quickGuideSeenRef.current, guideId] });
+    setQuickGuideSeen(quickGuideSeenRef.current);
+  };
+  // 案内を閉じる。誘導とヘルプからの見返しは印を付けない。
+  // ★「最後まで」でも「あとで」でも見た印を付ける(2026-11-07 社長「モンビーとかひらくたびに助手が裏周回の説明をしてくる」)。
+  //   前は「あとで」に印を付けず、画面を開き直すたびに最初から出していた。見返しはヘルプの「クイックのAUTO設定と裏周回」からできる
   const finishQuickGuide = (guideId, done) => {
     if (quickGuideReplay) { setQuickGuideReplay(null); return; }
     if (guideId === 'nudgeHome' || guideId === 'nudgeBattle') { setQuickNudgeShowing(null); return; }
-    if (!done) { setQuickGuideLater(guideId); return; }
-    const next = quickGuideSeenAfter(quickGuideSeen, guideId);
-    setQuickGuideSeen(next.seen);
-    storeSet(QUICK_GUIDE_SEEN_KEY, next, false);
+    if (!done) setQuickGuideLater(guideId);
+    markQuickGuideSeen(guideId);
   };
+  // 案内を出したまま画面を離れた(閉じずに戻った・別の画面へ進んだ)ときも、見た印を付ける。一度出した案内は二度と自動では出さない
+  //   画面(quickGuideScreen。∞の WAVE のあいだはバトルと同じ)が変わったときにだけ見る。一瞬出ない描画があっても、案内を途中で消さない
+  //   出した案内は { 案内id: 出した画面 } で覚え、画面が変わったら「前の画面で出した物」だけに印を付ける(新しい画面の案内には付けない)
+  const quickGuideShownRef = useRef(new Map());
+  // 出してから少し(1.2秒)見えていたら、保存だけ先にする(画面の印は付けないので、閉じるまで・WAVE をまたいでも出したまま)。
+  //   ★一瞬だけ出て、すぐほかの案内(曲えらびの初めての説明など)に替わった案内は数えない(読めていないので)
+  useEffect(() => {
+    const id = quickGuideActive && !String(quickGuideActive).startsWith('replay:') && quickGuideActive !== 'nudgeHome' && quickGuideActive !== 'nudgeBattle' ? quickGuideActive : null;
+    if (!id) return undefined;
+    const screen = quickGuideScreen;
+    const t = setTimeout(() => { quickGuideShownRef.current.set(id, screen); persistQuickGuideSeen(id); }, QUICK_GUIDE_SEEN_AFTER_MS);
+    return () => clearTimeout(t);
+  }, [quickGuideActive, quickGuideScreen]);
+  useEffect(() => {
+    for (const [id, screen] of [...quickGuideShownRef.current]) {
+      if (screen === quickGuideScreen) continue;
+      quickGuideShownRef.current.delete(id);
+      markQuickGuideSeen(id);
+    }
+  }, [quickGuideScreen]);
 
   // 初回チュートリアル。HOMEを最初に開いたときだけ自動で始める。
   // デバッグから何度でも呼べるよう、開始と終了を関数に分けている
