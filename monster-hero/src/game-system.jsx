@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 912536906e8d8117
+// generated-sha256: 27b7a19e23b39a5a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -37901,6 +37901,11 @@ html[data-mh-tod="night"] .mh-title-gate img.mh-title-visual{filter:brightness(.
 html[data-mh-tod="morning"] :is([data-mh-theme-category="menu"],[data-mh-theme-category="market"],[data-mh-theme-category="temple"]) .mh-screen-shell,html[data-mh-tod="morning"] .mhms-stage{box-shadow:inset 0 0 0 100vmax rgba(190,215,255,.05)}
 html[data-mh-tod="evening"] :is([data-mh-theme-category="menu"],[data-mh-theme-category="market"],[data-mh-theme-category="temple"]) .mh-screen-shell,html[data-mh-tod="evening"] .mhms-stage{box-shadow:inset 0 0 0 100vmax rgba(255,120,48,.07)}
 html[data-mh-tod="night"] :is([data-mh-theme-category="menu"],[data-mh-theme-category="market"],[data-mh-theme-category="temple"]) .mh-screen-shell,html[data-mh-tod="night"] .mhms-stage{box-shadow:inset 0 0 0 100vmax rgba(6,10,40,.24)}
+.mh-tod-tint{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity 2.4s ease;border-radius:inherit}
+html[data-mh-tod="morning"] .mh-tod-tint{opacity:var(--tod-k,1);background:linear-gradient(180deg,rgba(186,214,255,.30) 0%,rgba(214,236,255,.16) 50%,rgba(255,236,214,.10) 100%)}
+html[data-mh-tod="evening"] .mh-tod-tint{opacity:var(--tod-k,1);background:linear-gradient(180deg,rgba(255,128,48,.34) 0%,rgba(255,110,64,.24) 45%,rgba(120,40,30,.34) 100%)}
+html[data-mh-tod="night"] .mh-tod-tint{opacity:var(--tod-k,1);background:linear-gradient(180deg,rgba(5,8,34,.84) 0%,rgba(10,16,52,.70) 50%,rgba(6,10,34,.76) 100%)}
+@media (prefers-reduced-motion:reduce){.mh-tod-tint{transition:none!important}}
 @media (prefers-reduced-motion:reduce){.mh-home-background::after,.mh-home-background::before,.mh-title-gate img,.mh-screen-shell,.mhms-stage{transition:none!important}}
 .mh-tod-clock{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border:1px solid #eed99566;border-radius:999px;background:#0f1d2ad9;color:#f9eac2;font-size:11px;font-weight:900;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap;box-shadow:0 2px 6px #0007;pointer-events:none}
 .mh-tod-clock i{font-style:normal;font-size:12px}
@@ -37964,6 +37969,17 @@ const TimeOfDayClockText = ({ prefix = ' ' }) => {
   if (st.settings.clock !== 'on') return null;
   return <span data-time-of-day-clock-text={st.slot.id} style={{ fontVariantNumeric: 'tabular-nums' }}>{prefix}{st.minute}</span>;
 };
+
+// 背景の絵の上に、HOME と同じ時間帯の色を重ねる層(2026-11-07 ミハリの指摘 L7③ 地図が夜も昼の明るさ・L14 夜の場面が昼の絵)。
+//   置き方: 背景の絵の「すぐ後ろ」(ボタン・文字・顔より前)に <TimeOfDayTint/> を置く。親は position:relative などで位置を持つこと。
+//   strength … 濃さ(0〜1。既定1 = HOME と同じ)。設定の「時間帯で雰囲気を変える」が切なら何も重ならない(印が外れるため)
+const TimeOfDayTint = ({ strength = 1, className = '' }) => {
+  useEffect(() => { ensureTimeOfDayCss(); }, []);
+  const k = Math.max(0, Math.min(1, Number(strength)));
+  return <span aria-hidden="true" data-time-of-day-tint className={`mh-tod-tint ${className}`} style={{ '--tod-k': Number.isFinite(k) ? k : 1 }}/>;
+};
+// いまの時間帯の名前(朝・昼・夕・夜)。画面に時間帯の言葉を出すときはここから取る(L8: 同じ17:30に「夕方」と「午後」が並んだ)
+const timeOfDayLabelAt = (now = Date.now()) => timeOfDayAt(now).label;
 
 // 設定の欄(設定画面の「画面テーマ」の下)
 const TimeOfDaySettingsPanel = () => {
