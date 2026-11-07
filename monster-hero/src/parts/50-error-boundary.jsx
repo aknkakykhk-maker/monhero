@@ -16,6 +16,7 @@ class MhErrorBoundary extends React.Component {
     try {
       const stack = info && info.componentStack ? info.componentStack.split('\n').filter(Boolean).slice(0, 3).join(' ') : '';
       window.__mhErr && window.__mhErr('[screen-error] ' + (this.props.screen || 'root') + ': ' + (error && error.message) + ' ' + stack);
+      if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('err', (this.props.screen || 'root') + ':' + String(error && error.message || '').slice(0, 60));
     } catch (e) {}
   }
   render() {

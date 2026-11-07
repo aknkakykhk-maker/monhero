@@ -2,12 +2,50 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: dda67911c2f97fc2
+// generated-sha256: 756780bd16d246ca
 // ============================================================
 // ---- part: 10-core.jsx ----
 
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const { useState, useEffect, useCallback, useMemo, useRef, useContext } = React;
+// ==== 画面の出来事の記録(2026-11-07 社長「モンビー中に音は流れてるのにいきなりホームに戻された」) ====
+// 演奏の曲が鳴ったまま HOME が見え、しばらくして戻った。画面を HOME にする道はどれも押したときだけで、再現もできなかった。
+// 次に起きたときに何があったかが分かるよう、画面の出来事を端末の中に最近30件だけ残す(新しいキー mh_screen_trail_v1)。
+//   gs   … 画面(gameState)が変わった。d は「次の画面 < 動かした処理の名前」
+//   err  … 画面のエラーを受け止めた(MhErrorBoundary)
+//   vis / page … 画面が隠れた・戻った(アプリの切り替え・通知など)
+//   gap  … 画面の描き直しが1秒以上止まった(見えているのに)
+//   gl   … 演奏の絵(WebGL)が端末に捨てられた/戻った
+//   rot  … 自前の画面の回転(🔄 横)を切り替えた
+//   play … 演奏が始まった・終わった
+// 演奏ごとの診断(rhythm_touch_diagnostics の stats)にも、その演奏のあいだの出来事を短く足す(stats.scr・足すだけ)。
+// 名前・ブリーダーID・セーブデータは入れない。判定・スコア・保存には一切関わらない。読めない・壊れていれば空から始める
+const MH_SCREEN_TRAIL_KEY='mh_screen_trail_v1';
+const MH_SCREEN_TRAIL=(()=>{
+  const MAX=30;
+  let list=[];let saveTimer=0;
+  try{const raw=JSON.parse((typeof localStorage!=='undefined'&&localStorage.getItem(MH_SCREEN_TRAIL_KEY))||'[]');if(Array.isArray(raw))list=raw.filter(x=>x&&typeof x==='object'&&Number.isFinite(x.t)&&typeof x.k==='string').slice(-MAX);}catch(_){list=[];}
+  const save=()=>{if(saveTimer)return;saveTimer=setTimeout(()=>{saveTimer=0;try{localStorage.setItem(MH_SCREEN_TRAIL_KEY,JSON.stringify(list));}catch(_){}},1500);};
+  const push=(k,d='')=>{try{list.push({t:Date.now(),k:String(k).slice(0,8),d:String(d==null?'':d).slice(0,80)});if(list.length>MAX)list=list.slice(-MAX);save();}catch(_){}};
+  // いちばん新しい「k が d で始まる」出来事から後(演奏ひとつぶんを取り出すのに使う)
+  const sinceLast=(k,prefix='')=>{for(let i=list.length-1;i>=0;i--){if(list[i].k===k&&String(list[i].d).startsWith(prefix))return list.slice(i);}return [];};
+  // 演奏の診断に足す短い形。「始まりからの秒:種類:中身」を最大10件・合わせて400文字まで
+  const compact=(items)=>{if(!items.length)return [];const t0=items[0].t;const out=[];let size=0;for(const x of items){const s=`${Math.round((x.t-t0)/100)/10}:${x.k}:${x.d}`.slice(0,60);if(out.length>=10||size+s.length>400)break;out.push(s);size+=s.length;}return out;};
+  if(typeof window!=='undefined'&&typeof document!=='undefined'){
+    try{
+      document.addEventListener('visibilitychange',()=>push('vis',document.visibilityState));
+      window.addEventListener('pagehide',e=>push('page','hide'+(e&&e.persisted?'*':'')));
+      window.addEventListener('pageshow',e=>push('page','show'+(e&&e.persisted?'*':'')));
+      document.addEventListener('webglcontextlost',()=>push('gl','lost'),true);
+      document.addEventListener('webglcontextrestored',()=>push('gl','restored'),true);
+      // 描き直しの止まり。1コマに1回時刻を見るだけ(演奏の判定・描画には触れない)
+      let last=0;
+      const tick=now=>{if(last>0&&now-last>1000&&document.visibilityState==='visible')push('gap',Math.round(now-last));last=now;window.requestAnimationFrame(tick);};
+      if(typeof window.requestAnimationFrame==='function')window.requestAnimationFrame(tick);
+    }catch(_){}
+  }
+  return {push,list:()=>list.slice(),sinceLast,compact};
+})();
 // ==== 見えないページのずれを戻す(全画面) ====
 // 【2026-11-02 社長「押した所と反応する所がたまにずれる。横向きにしたり、更新情報の窓を開いたりしたあとになる気がする」→ 決定「A+B 両方入れる」】
 // iPhone(とくにホーム画面のアプリ)では、回転・キーボードの出し入れ・動画の全画面との行き来のあとに、
@@ -23909,7 +23947,9 @@ const rhythmTouchDiagOf=({song,difficulty,notes,inputTimes,assist,mirror,cleared
       outside:perfTouch?.outside||0,ignored:perfTouch?.ignored||0,gestures:perfTouch?.gestures||0,assist:!!assist,mirror:!!mirror,cleared:!!cleared,
       playId:rhythmTouchDiagPlayId(),fixes:rhythmTouchFixesActive(),timing:RHYTHM_TIMING_DIAG.snapshot(),
             // 1コマの重さ(2026-10-11)。足すだけ(古い行には無い)
-            ...(frame&&typeof frame==='object'?{frame}:{})}};
+            ...(frame&&typeof frame==='object'?{frame}:{}),
+            // 演奏のあいだの画面の出来事(2026-11-07・MH_SCREEN_TRAIL)。足すだけ(古い行には無い)
+            ...(typeof MH_SCREEN_TRAIL!=='undefined'?{scr:MH_SCREEN_TRAIL.compact(MH_SCREEN_TRAIL.sinceLast('play','start'))}:{})}};
 };
 // モンスターノーツの前後のコマ(2026-10-16・RHYTHM_FRAME_DIAG.mark)を stats.mon に足す。行の大きさの上限(stats は 4KB・表の check 制約)を
 // 超えると行ごと断られるので、文字にした大きさが RHYTHM_TOUCH_DIAG_MON_MAX を超えるあいだ、うしろの回から手がかりを削り、それでも超えれば回ごと外す
@@ -25780,7 +25820,7 @@ if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTick
     };
     if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>work());else setTimeout(work,16);
   });
-  const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;const generation=++generationRef.current;disposeRun();rhythmSongPrepSignal(true,song.songId);setLifeDownCount(0);setView({...initialView(),status:'loading'});hudRef.current.set(rhythmHudInitial());
+  const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;if(typeof MH_SCREEN_TRAIL!=='undefined')MH_SCREEN_TRAIL.push('play','start:'+String(song&&song.songId||'').slice(0,24));const generation=++generationRef.current;disposeRun();rhythmSongPrepSignal(true,song.songId);setLifeDownCount(0);setView({...initialView(),status:'loading'});hudRef.current.set(rhythmHudInitial());
 /* 曲が始まる前の幕。読み込みと同時に上げ、カウントダウンの前で閉じる(RHYTHM_SONG_INTRO_MS)。
    チュートリアル・タイミング調整は曲を見せる場面ではないので出さない */
 {const introKey=`${song.songId}|${difficulty.id}`;
@@ -38474,6 +38514,7 @@ class MhErrorBoundary extends React.Component {
     try {
       const stack = info && info.componentStack ? info.componentStack.split('\n').filter(Boolean).slice(0, 3).join(' ') : '';
       window.__mhErr && window.__mhErr('[screen-error] ' + (this.props.screen || 'root') + ': ' + (error && error.message) + ' ' + stack);
+      if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('err', (this.props.screen || 'root') + ':' + String(error && error.message || '').slice(0, 60));
     } catch (e) {}
   }
   render() {
@@ -81973,7 +82014,9 @@ function MonsterHeroGame() {
   //   (WAVEの切り替わりに重なったときだけなので「たまに」になる。2026-09-12の
   //    「モンビー中にオプションに行くとたまにバトルに飛ばされる」と同じ型の、逆向きの事故)
   // ここで控えも一緒に更新すれば、切り替えたその瞬間から正しい判断になる。
-  const setGameState = (next) => { runBackgroundAllowedRef.current = isBackgroundRunScreen(next); setGameStateRaw(next); };
+  // 画面を変えるたびに、どの処理が変えたかを記録に残す(MH_SCREEN_TRAIL・10-core.jsx)
+  const gameStateCaller = () => { try { const line = String(new Error().stack || '').split('\n').slice(2).find((l) => !/setGameState|gameStateCaller/.test(l)) || ''; const m = /at\s+([\w$.]+)/.exec(line) || /^([\w$.]+)@/.exec(line.trim()); return m ? m[1] : ''; } catch (_) { return ''; } };
+  const setGameState = (next) => { runBackgroundAllowedRef.current = isBackgroundRunScreen(next); if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`); setGameStateRaw(next); };
   const [debugThrowScreenError, setDebugThrowScreenError] = useState(false); // デバッグ設定から画面エラーの受け止めを試すためだけの印
   const debugMenuRootRef = useRef(null); // デバッグメニューの名前で絞り込む欄が、どの範囲を探すか(2026-10-27)
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
