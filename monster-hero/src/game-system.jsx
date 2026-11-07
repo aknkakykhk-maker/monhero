@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d21484c89952fb61
+// generated-sha256: c32f5741bcc44786
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -56599,6 +56599,8 @@ function RhythmAssistSessionPlayFace({ songId }) {
   const [say, setSay] = React.useState(null); // { aid, text, expr }
   const [glow, setGlow] = React.useState(false);
   const [gattai, setGattai] = React.useState(null); // { a, b }
+  // 演奏が終わって結果(data-rhythm-result)が出たら、顔とひとことは消す(2026-11-07 社長「切れてるとこが多い」: 結果のボーナスの枠に顔が重なっていた)
+  const [ended, setEnded] = React.useState(false);
   const ids = rhythmAssistSessionCalledIds().slice(0, 4);
   const idsKey = ids.join(',');
   React.useEffect(() => {
@@ -56661,6 +56663,9 @@ function RhythmAssistSessionPlayFace({ songId }) {
       setPos((q) => (q && q.top === next.top && q.left === next.left ? q : next));
     };
     const tick = () => {
+      const done = !!document.querySelector('[data-rhythm-result]');
+      setEnded((e) => (e === done ? e : done));
+      if (done) return;
       place();
       const watch = typeof RHYTHM_PLAY_WATCH !== 'undefined' ? RHYTHM_PLAY_WATCH : null;
       const h = watch && watch.hud ? watch.hud.get() : null;
@@ -56691,7 +56696,7 @@ function RhythmAssistSessionPlayFace({ songId }) {
     tick();
     return () => clearInterval(t);
   }, [idsKey, songId]);
-  if (!ids.length) return null;
+  if (!ids.length || ended) return null;
   const whoA = gattai ? rhythmAssistSessionWho(gattai.a) : null;
   const whoB = gattai ? rhythmAssistSessionWho(gattai.b) : null;
   return (
@@ -56764,15 +56769,24 @@ function RhythmAssistSessionDuoResult({ ids = [], round }) {
     return () => { alive = false; };
   }, [key]);
   if (!shown.length) return null;
+  // ひとことのあるデュオは1組1行。ひとことの無いペアの友情Lv は1行にまとめる(4人呼ぶと6組並んで窮屈だった・2026-11-07 社長「切れてるとこが多い」)
+  const withLines = shown.filter((x) => x.rows);
+  const onlyGain = shown.filter((x) => !x.rows && x.gained > 0);
   return (
     <>
-      {shown.map(({ key: k, d, rows, gained }) => (
-        <p key={k} data-rhythm-assist-duo-result={k} className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/50 bg-violet-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100">
+      {withLines.map(({ key: k, d, rows, gained }) => (
+        <p key={k} data-rhythm-assist-duo-result={k} className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/50 bg-violet-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100 landscape:col-span-2 [[data-mh-view-rotation=true]_&]:col-span-2">
           <span className="shrink-0">🎤 {rhythmAssistSessionName(d.a)}・{rhythmAssistSessionName(d.b)}</span>
-          {rows && rows.map(([who, , text], i) => <span key={i} className="min-w-0">{rhythmAssistSessionName(who)}「{text}」</span>)}
+          {rows.map(([who, , text], i) => <span key={i} className="min-w-0">{rhythmAssistSessionName(who)}「{text}」</span>)}
           {gained > 0 && <span data-rhythm-assist-peer-gain className="text-amber-200">友情Lv +{gained}</span>}
         </p>
       ))}
+      {onlyGain.length > 0 && (
+        <p data-rhythm-assist-peer-gains className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/40 bg-violet-950/50 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100 landscape:col-span-2 [[data-mh-view-rotation=true]_&]:col-span-2">
+          <span className="shrink-0">🎤 友情Lv</span>
+          {onlyGain.map(({ key: k, d, gained }) => <span key={k} data-rhythm-assist-peer-gain className="whitespace-nowrap text-amber-200">{rhythmAssistSessionName(d.a)}・{rhythmAssistSessionName(d.b)} +{gained}</span>)}
+        </p>
+      )}
     </>
   );
 }

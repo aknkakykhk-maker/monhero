@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e3004ace3643b109
+// source-sha256: 19b7063ebd976dca
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -94780,6 +94780,7 @@ function RhythmAssistSessionPlayFace({
   const [say, setSay] = React.useState(null);
   const [glow, setGlow] = React.useState(false);
   const [gattai, setGattai] = React.useState(null);
+  const [ended, setEnded] = React.useState(false);
   const ids = rhythmAssistSessionCalledIds().slice(0, 4);
   const idsKey = ids.join(',');
   React.useEffect(() => {
@@ -94881,6 +94882,9 @@ function RhythmAssistSessionPlayFace({
       setPos(q => q && q.top === next.top && q.left === next.left ? q : next);
     };
     const tick = () => {
+      const done = !!document.querySelector('[data-rhythm-result]');
+      setEnded(e => e === done ? e : done);
+      if (done) return;
       place();
       const watch = typeof RHYTHM_PLAY_WATCH !== 'undefined' ? RHYTHM_PLAY_WATCH : null;
       const h = watch && watch.hud ? watch.hud.get() : null;
@@ -94932,7 +94936,7 @@ function RhythmAssistSessionPlayFace({
     tick();
     return () => clearInterval(t);
   }, [idsKey, songId]);
-  if (!ids.length) return null;
+  if (!ids.length || ended) return null;
   const whoA = gattai ? rhythmAssistSessionWho(gattai.a) : null;
   const whoB = gattai ? rhythmAssistSessionWho(gattai.b) : null;
   return React.createElement(React.Fragment, null, whoA && whoB && ['left', 'right'].map(side => React.createElement("div", {
@@ -95061,7 +95065,9 @@ function RhythmAssistSessionDuoResult({
     };
   }, [key]);
   if (!shown.length) return null;
-  return React.createElement(React.Fragment, null, shown.map(({
+  const withLines = shown.filter(x => x.rows);
+  const onlyGain = shown.filter(x => !x.rows && x.gained > 0);
+  return React.createElement(React.Fragment, null, withLines.map(({
     key: k,
     d,
     rows,
@@ -95069,16 +95075,29 @@ function RhythmAssistSessionDuoResult({
   }) => React.createElement("p", {
     key: k,
     "data-rhythm-assist-duo-result": k,
-    className: "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/50 bg-violet-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100"
+    className: "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/50 bg-violet-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100 landscape:col-span-2 [[data-mh-view-rotation=true]_&]:col-span-2"
   }, React.createElement("span", {
     className: "shrink-0"
-  }, "🎤 ", rhythmAssistSessionName(d.a), "・", rhythmAssistSessionName(d.b)), rows && rows.map(([who,, text], i) => React.createElement("span", {
+  }, "🎤 ", rhythmAssistSessionName(d.a), "・", rhythmAssistSessionName(d.b)), rows.map(([who,, text], i) => React.createElement("span", {
     key: i,
     className: "min-w-0"
   }, rhythmAssistSessionName(who), "「", text, "」")), gained > 0 && React.createElement("span", {
     "data-rhythm-assist-peer-gain": true,
     className: "text-amber-200"
-  }, "友情Lv +", gained))));
+  }, "友情Lv +", gained))), onlyGain.length > 0 && React.createElement("p", {
+    "data-rhythm-assist-peer-gains": true,
+    className: "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/40 bg-violet-950/50 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100 landscape:col-span-2 [[data-mh-view-rotation=true]_&]:col-span-2"
+  }, React.createElement("span", {
+    className: "shrink-0"
+  }, "🎤 友情Lv"), onlyGain.map(({
+    key: k,
+    d,
+    gained
+  }) => React.createElement("span", {
+    key: k,
+    "data-rhythm-assist-peer-gain": true,
+    className: "whitespace-nowrap text-amber-200"
+  }, rhythmAssistSessionName(d.a), "・", rhythmAssistSessionName(d.b), " +", gained))));
 }
 const rhythmAssistSessionCardStyle = (m, isMvp = false) => {
   const who = m && m.cpu && m.as ? rhythmAssistSessionWho(m.as) : null;

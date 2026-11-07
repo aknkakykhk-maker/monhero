@@ -270,5 +270,6 @@ check('助手のスコアをランキングへ送らない(助手の計算の部
   check('デュオになる組み合わせを選んでいるあいだに出す', /data-rhythm-buddy-multi-duo/.test(SHEET));
 }
 check('部屋の入口のボタンは「呼ぶ」+マスモンと助手の小さな顔(社長 2026-11-07)', /data-rhythm-buddy-header-faces/.test(MULTI) && /<span className="mt-0\.5 text-\[10px\] font-black">呼ぶ<\/span>/.test(MULTI));
+check('演奏の結果が出たら、演奏中の顔とひとことは消す(結果のボーナスの枠に重ねない)', /const done = !!document\.querySelector\('\[data-rhythm-result\]'\);/.test(SCREEN) && /if \(!ids\.length \|\| ended\) return null;/.test(SCREEN));
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
