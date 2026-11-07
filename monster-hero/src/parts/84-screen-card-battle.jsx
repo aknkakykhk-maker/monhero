@@ -3092,7 +3092,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const res = await cardAutoRewardAddExtra({ consume: onUseSessionTicket, refund: onRefundSessionTicket, count });
       const l = res && res.loaded;
       if (l) applyAutoLoaded(l);
-      setAutoTicketNote(res && res.ok ? `ごほうびが${res.count}回ぶん戻りました`
+      // 残りがあるうちからも足せるので、使い切ったあとに戻す前の言い方はやめて「ふえました」にした(2026-11-07 部長)
+      setAutoTicketNote(res && res.ok ? `オートのごほうびが${res.count}回ふえました`
         : res && res.why === 'limit' ? '今日はこれ以上ふやせません'
           : res && res.why === 'noTicket' ? 'セッション券が足りません'
               : '保存できなかったので、セッション券は戻しました');
