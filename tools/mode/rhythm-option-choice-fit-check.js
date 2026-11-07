@@ -4,6 +4,7 @@
 //   python3 tools/serve.py を起動した状態で  node tools/mode/rhythm-option-choice-fit-check.js
 //
 // 【なぜ要るか】
+// ノーツの形(2026-11-07)の8つの並びと、選んだ形で見本が描き変わることも見る。
 // 社長が本番の iPhone で「ノーツの色」の4つ並びが「標準|パステ|ネオン|見分け」と切れているのを見つけた。
 // 4つ並びで長い名前は 2×2 に並べる決まり(29-rhythm-screens.jsx の segments)にしたので、
 // オプションの全部のタブ・全部の組を開いて、字が箱からはみ出している選択肢が1つも無いことを確かめる。
@@ -34,7 +35,7 @@ const ok = (name, cond, detail = '') => { console.log(`${cond ? 'OK' : 'NG'}: ${
     for (let i = 0; i < 12; i++) { await page.mouse.click(195, 300); await page.waitForTimeout(200); if (!(await clickText('^スキップ$|閉じる|OK|^確認$'))) break; await page.waitForTimeout(400); }
     await clickText('設定'); await page.waitForTimeout(1200);
     const tabs = ['演奏', '表示', '音', '軽さ'];
-    const cut = []; let seen = 0; let twoByTwo = 0; let preview = 0;
+    const cut = []; let seen = 0; let twoByTwo = 0; let preview = 0; let shapeCols = 0; let shapeRedraw = false;
     for (const tab of tabs) {
       await clickText(`^${tab}`); await page.waitForTimeout(700);
       // 組(背景・道・ノーツ…)は1度に1つしか開かないので、1つずつ開いて数える(組の無いタブは1回だけ数える)
@@ -53,6 +54,14 @@ const ok = (name, cond, detail = '') => { console.log(`${cond ? 'OK' : 'NG'}: ${
           if (note === 'note') {
             twoByTwo = await page.evaluate(() => { const b = document.querySelector('[data-rhythm-option-choice="notePalette:CLEAR"]'); return b ? getComputedStyle(b.parentElement).gridTemplateColumns.split(' ').length : 0; });
             preview = await page.evaluate(() => document.querySelectorAll('[data-rhythm-note-look-preview] [data-rhythm-note-swatch]').length);
+            // ノーツの形(2026-11-07・8つ)は 4列×2段。形を選ぶと見本の絵が描き変わる(元の形へ戻しておく)
+            shapeCols = await page.evaluate(() => { const b = document.querySelector('[data-rhythm-option-choice="noteShape:PAW"]'); return b ? getComputedStyle(b.parentElement).gridTemplateColumns.split(' ').length : 0; });
+            const pic = () => page.evaluate(() => document.querySelector('[data-rhythm-note-look-preview] [data-rhythm-note-swatch]')?.toDataURL() || '');
+            const before = await pic();
+            await page.evaluate(() => document.querySelector('[data-rhythm-option-choice="noteShape:PAW"]')?.click()); await page.waitForTimeout(400);
+            const after = await pic();
+            shapeRedraw = !!before && !!after && before !== after;
+            await page.evaluate(() => document.querySelector('[data-rhythm-option-choice="noteShape:STANDARD"]')?.click()); await page.waitForTimeout(300);
           }
         }
       }
@@ -62,7 +71,9 @@ const ok = (name, cond, detail = '') => { console.log(`${cond ? 'OK' : 'NG'}: ${
     ok('オプションの選択肢を見つけられた(全部のタブ)', seen >= 20, `${seen}個`);
     ok('縦の iPhone の幅(390px)で、字が切れている選択肢が無い', cut.length === 0, cut.slice(0, 6).join(' / '));
     ok('ノーツの色の4つは 2×2 に並ぶ', twoByTwo === 2, `${twoByTwo}列`);
-    ok('ノーツの色の欄に、各ノーツの見本が並ぶ', preview >= 4, `${preview}枚`);
+    ok('ノーツの色と形の欄に、各ノーツの見本が並ぶ', preview >= 4, `${preview}枚`);
+    ok('ノーツの形の8つは 4列×2段に並ぶ', shapeCols === 4, `${shapeCols}列`);
+    ok('ノーツの形を選ぶと、見本の絵がその場で描き変わる', shapeRedraw);
   } catch (e) {
     ok('オプション画面を開けた', false, String(e.message || e).split('\n')[0]);
   }

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8e1dc2a4110af809
+// source-sha256: fa5e9b5a69d99f33
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6042,6 +6042,7 @@ const rhythmLookPresetOf = settings => (RHYTHM_LOOK_PRESETS.find(preset => Objec
   id: ''
 }).id;
 const RHYTHM_NOTE_PALETTE_CHOICES = Object.freeze([['STANDARD', '標準'], ['PASTEL', 'パステル'], ['NEON', 'ネオン'], ['CLEAR', '見分けやすい']]);
+const RHYTHM_NOTE_SHAPE_CHOICES = Object.freeze([['STANDARD', '標準'], ['ROUND', 'まる'], ['DIAMOND', 'ひし形'], ['CHEVRON', 'Vの字'], ['HOLLOW', '中抜き'], ['PIXEL', 'ドット'], ['GEM', '宝石'], ['PAW', '肉球']]);
 const RHYTHM_STAGE_THEME_CHOICES = Object.freeze([['NONE', 'いつもの背景'], ['GRAND_OPEN', '本オープン記念']]);
 const rhythmStageThemeActive = settings => settings?.stageTheme === 'GRAND_OPEN' && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmGrandOpen === true;
 const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['LIVE', 'ライブ'], ['VIVID', '派手'], ['CALM', '控えめ'], ['SIMPLE', 'シンプル']]);
@@ -6224,6 +6225,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   fx: Object.freeze({}),
   notePalette: 'STANDARD',
   stageTheme: 'NONE',
+  noteShape: 'STANDARD',
   multiLightLook: true,
   multiLook: 'LIGHT',
   modeSelectArt: true,
@@ -6597,7 +6599,8 @@ const normalizeRhythmSettings = value => {
     luckyRush: bool('luckyRush'),
     fx: normalizeRhythmFx(source.fx),
     notePalette: RHYTHM_NOTE_PALETTE_CHOICES.some(([id]) => id === source.notePalette) ? source.notePalette : DEFAULT_RHYTHM_SETTINGS.notePalette,
-    stageTheme: RHYTHM_STAGE_THEME_CHOICES.some(([id]) => id === source.stageTheme) ? source.stageTheme : DEFAULT_RHYTHM_SETTINGS.stageTheme
+    stageTheme: RHYTHM_STAGE_THEME_CHOICES.some(([id]) => id === source.stageTheme) ? source.stageTheme : DEFAULT_RHYTHM_SETTINGS.stageTheme,
+    noteShape: RHYTHM_NOTE_SHAPE_CHOICES.some(([id]) => id === source.noteShape) ? source.noteShape : DEFAULT_RHYTHM_SETTINGS.noteShape
   };
 };
 const emptyRhythmBestRecord = () => ({
@@ -13234,6 +13237,7 @@ const RELEASE_FLAGS = {
   assistantPeer: true,
   assistantPeerApi: true,
   assistantLife: false,
+  rhythmAssistantSession: false,
   assistantSorashido: true,
   assistantErubin: true,
   cardBattle: true,
@@ -34320,7 +34324,7 @@ const RhythmOptions = ({
     className: draft[key] === flag ? 'text-white' : 'text-slate-400'
   }, text))));
   const segments = (key, items, onPick = null) => React.createElement("div", {
-    className: `grid ${items.length === 4 && items.some(([, text]) => String(text).length >= 4) ? 'grid-cols-2 [&>button:nth-child(2n)]:border-r-0 [&>button:nth-child(-n+2)]:border-b [&>button:nth-child(-n+2)]:border-b-white/10' : items.length === 6 ? 'grid-cols-3 [&>button:nth-child(3n)]:border-r-0 [&>button:nth-child(-n+3)]:border-b [&>button:nth-child(-n+3)]:border-b-white/10' : items.length >= 5 ? 'grid-cols-5' : items.length >= 4 ? 'grid-cols-4' : items.length === 2 ? 'grid-cols-2' : 'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`
+    className: `grid ${items.length === 4 && items.some(([, text]) => String(text).length >= 4) ? 'grid-cols-2 [&>button:nth-child(2n)]:border-r-0 [&>button:nth-child(-n+2)]:border-b [&>button:nth-child(-n+2)]:border-b-white/10' : items.length === 6 ? 'grid-cols-3 [&>button:nth-child(3n)]:border-r-0 [&>button:nth-child(-n+3)]:border-b [&>button:nth-child(-n+3)]:border-b-white/10' : items.length === 8 ? 'grid-cols-4 [&>button:nth-child(4n)]:border-r-0 [&>button:nth-child(-n+4)]:border-b [&>button:nth-child(-n+4)]:border-b-white/10' : items.length >= 5 ? 'grid-cols-5' : items.length >= 4 ? 'grid-cols-4' : items.length === 2 ? 'grid-cols-2' : 'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`
   }, items.map(([id, text]) => React.createElement("button", {
     type: "button",
     key: id,
@@ -35044,9 +35048,11 @@ const RhythmOptions = ({
     className: "ml-auto text-[10px] font-bold text-slate-400"
   }, fxGroupCount('note'), "項目")), (wide || fxGroup === 'note') && React.createElement("div", {
     className: wide ? `mt-1 ${fxGrid}` : `mt-3 ${fxGrid}`
-  }, field('ノーツの色', React.createElement(React.Fragment, null, segments('notePalette', RHYTHM_NOTE_PALETTE_CHOICES), React.createElement("div", {
-    "data-rhythm-note-look-preview": draft.notePalette || 'STANDARD',
-    className: "mt-1 grid grid-cols-3 gap-1 rounded-lg bg-slate-950/70 p-1"
+  }, field('ノーツの色', segments('notePalette', RHYTHM_NOTE_PALETTE_CHOICES), 'ノーツの色の組み合わせです。既定は「標準」（これまでの色）です。判定・スコアは変わりません。\n「パステル」＝やわらかい色。「ネオン」＝くっきり光る色。「見分けやすい」＝色の見え方に左右されにくい組み合わせで、ノーツのまわりの光を出しません。\nTAP・HOLD・SLIDE・FLICK などの種類ごとに色が分かれているのは、どれを選んでも同じです。次に演奏を始めたときから変わります。', {
+    full: true
+  }), field('ノーツの形', React.createElement(React.Fragment, null, segments('noteShape', RHYTHM_NOTE_SHAPE_CHOICES), React.createElement("div", {
+    "data-rhythm-note-look-preview": (draft.notePalette || 'STANDARD') + ':' + (draft.noteShape || 'STANDARD'),
+    className: `mt-1 grid ${wide ? 'grid-cols-3' : 'grid-cols-6'} gap-1 rounded-lg bg-slate-950/70 p-1`
   }, [['TAP', 'TAP'], ['HOLD', 'HOLD'], ['SLIDE', 'SLIDE'], ['FLICK', 'FLICK'], ['FLICK_LEFT', '横(左)'], ['FLICK_RIGHT', '横(右)']].map(([kind, label]) => React.createElement("div", {
     key: kind,
     className: "flex min-w-0 flex-col items-center"
@@ -35055,11 +35061,14 @@ const RhythmOptions = ({
     width: 46,
     height: 30,
     look: {
-      palette: draft.notePalette || 'STANDARD'
+      palette: draft.notePalette || 'STANDARD',
+      shape: draft.noteShape || 'STANDARD'
     }
   }), React.createElement("small", {
     className: "truncate text-[8px] font-bold leading-tight text-slate-400"
-  }, label))))), 'ノーツの色の組み合わせです。既定は「標準」（これまでの色）です。判定・スコアは変わりません。\n「パステル」＝やわらかい色。「ネオン」＝くっきり光る色。「見分けやすい」＝色の見え方に左右されにくい組み合わせで、ノーツのまわりの光を出しません。\nTAP・HOLD・SLIDE・FLICK などの種類ごとに色が分かれているのは、どれを選んでも同じです。次に演奏を始めたときから変わります。'), field('ノーツの動き', toggle('noteMotionFx'), 'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。'), field('にじむ光', toggle('noteBloom'), 'ノーツの光や、ノーツを取ったときの光のまわりを、ふわっとにじませます。既定は「OFF」です。判定・スコアは変わりません。\n描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効きます。「Canvas」のときは何も変わりません。\n光を小さな絵にぼかしてから重ねるので、GPU の仕事が少し増えます。端末が熱くなるときは OFF にしてください。演出量「最小」と軽量モードでは出しません。'), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
+  }, label))))), 'ノーツの形です。既定は「標準」（これまでの形）です。判定・スコア・叩く位置は変わりません。\n「まる」＝両はしが丸い。「ひし形」＝まん中が厚いひし形。「Vの字」＝下向きに折れた形。「中抜き」＝太い枠だけ。「ドット」＝四角を並べた形。「宝石」＝面を切った宝石。「肉球」＝まん中に肉球のメダル。\nノーツの左右のはしとまん中の位置は、どの形でも同じです。ひし形・Vの字・宝石は、上下に少しはみ出して見えます。\nTAP・HOLD・SLIDE・FLICK などの種類ごとの色分けと、フリックの矢印は、どの形でも同じです。マスモンのノーツは形が変わりません。次に演奏を始めたときから変わります。', {
+    full: true
+  }), field('ノーツの動き', toggle('noteMotionFx'), 'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。'), field('にじむ光', toggle('noteBloom'), 'ノーツの光や、ノーツを取ったときの光のまわりを、ふわっとにじませます。既定は「OFF」です。判定・スコアは変わりません。\n描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効きます。「Canvas」のときは何も変わりません。\n光を小さな絵にぼかしてから重ねるので、GPU の仕事が少し増えます。端末が熱くなるときは OFF にしてください。演出量「最小」と軽量モードでは出しません。'), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
     full: true
   }), RHYTHM_FX_ITEMS.filter(item => item.group === 'note').map(fxField))), fxGroupShown('judge') && React.createElement("section", {
     "data-rhythm-options-group": "判定",
@@ -39183,6 +39192,9 @@ const RhythmTapTest = ({
   useState(() => {
     try {
       if (typeof rhythmApplyNotePalette === 'function') rhythmApplyNotePalette(settingsIn?.notePalette);
+    } catch (e) {}
+    try {
+      if (typeof rhythmApplyNoteShape === 'function') rhythmApplyNoteShape(settingsIn?.noteShape);
     } catch (e) {}
     return 0;
   });
@@ -49314,7 +49326,9 @@ const rhythmBuddyNormalizeCalls = raw => (Array.isArray(raw) ? raw : []).filter(
   day: rhythmBuddyStr(x.day, 10),
   at: rhythmBuddyInt(x.at, 9e15),
   load: rhythmBuddyStr(x.load, 40),
-  started: x.started === true
+  started: x.started === true,
+  kind: x.kind === 'assistant' ? 'assistant' : 'masu',
+  assistantId: x.kind === 'assistant' ? rhythmBuddyStr(x.assistantId, 20) : ''
 })).filter(x => x.id && x.paid);
 const rhythmBuddyNormalize = raw => {
   const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
@@ -49500,7 +49514,8 @@ const RHYTHM_BUDDY_PICK_WHY = Object.freeze({
   revenge: 'さっきの曲でリベンジ!',
   practice: '得意な曲をもっと練習!',
   easy: 'ゆっくり楽しめる曲がいいな',
-  romance: 'この曲の世界にひたりたい'
+  romance: 'この曲の世界にひたりたい',
+  love: 'この曲が大好き!'
 });
 const rhythmBuddyNewSongChance = (trait, moodId) => {
   const base = {
@@ -50021,6 +50036,239 @@ const rhythmBuddyApplyLive = (mon, {
     familiarUp,
     traitNew,
     sproutNew
+  };
+};
+const RHYTHM_ASSIST_SESSION_KEY = 'mh_rhythm_assistant_session_v1';
+const RHYTHM_ASSIST_SESSION_PREFIX = 'as:';
+const RHYTHM_ASSIST_SESSION_IDS = Object.freeze(['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']);
+const rhythmAssistSessionEnabled = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmAssistantSession === true;
+const rhythmAssistSessionKey = assistantId => `${RHYTHM_ASSIST_SESSION_PREFIX}${assistantId}`;
+const rhythmAssistSessionIdOf = masuId => {
+  const s = typeof masuId === 'string' ? masuId : '';
+  if (!s.startsWith(RHYTHM_ASSIST_SESSION_PREFIX)) return '';
+  const id = s.slice(RHYTHM_ASSIST_SESSION_PREFIX.length);
+  return RHYTHM_ASSIST_SESSION_IDS.includes(id) ? id : '';
+};
+const RHYTHM_ASSIST_SESSION_TASTE = Object.freeze({
+  mua: {
+    like: [['toriko'], ['haruka'], ['crazy_party_night', 'crazy_party_night_full']],
+    dislike: ['grievous_lady']
+  },
+  kiki: {
+    like: [['kiki_issen', 'kiki_issen_short'], ['tsuki_ga_michiru_mae_ni', 'tsuki_ga_michiru_mae_ni_short'], ['kaze_ga_soyogu']],
+    dislike: ['black_shout']
+  },
+  momosuke: {
+    like: [['crossing_field'], ['only_my_railgun'], ['rose', 'rose_short']],
+    dislike: ['dullahan_clockwork']
+  },
+  dra: {
+    like: [['mou_hitotsu_no_sekai_e'], ['big_bridge_no_shitou'], ['senjou_no_shippuu']],
+    dislike: ['stay_with_me', 'stay_with_me_short']
+  },
+  atsu: {
+    like: [['against_my_own_shadow'], ['sad_song', 'sad_song_short'], ['rebellion', 'rebellion_short']],
+    dislike: ['mf_ichika_mix']
+  },
+  kyuko: {
+    like: [['toward_the_stars_short'], ['six_eternel_beat', 'six_eternel_remix'], ['evans']],
+    dislike: ['toriko']
+  },
+  sorashido: {
+    like: [['monster_hero'], ['freedom_dive'], ['humanoid']],
+    dislike: ['kaze_ga_soyogu']
+  },
+  erubin: {
+    like: [['wrath_of_the_thorn_king'], ['altar_world_tree', 'altar_world_tree_short'], ['dullahan']],
+    dislike: ['crazy_party_night', 'crazy_party_night_full']
+  }
+});
+const RHYTHM_ASSIST_SESSION_LIKE_MIN = -2;
+const RHYTHM_ASSIST_SESSION_LIKE_MAX = 3;
+const RHYTHM_ASSIST_SESSION_LIKE_STEP = 3;
+const rhythmAssistSessionBaseLike = (assistantId, songId) => {
+  const t = RHYTHM_ASSIST_SESSION_TASTE[assistantId];
+  if (!t || !songId) return 0;
+  if (t.like.some(ids => ids.includes(songId))) return RHYTHM_ASSIST_SESSION_LIKE_MAX;
+  if (t.dislike.includes(songId)) return RHYTHM_ASSIST_SESSION_LIKE_MIN;
+  return 0;
+};
+const rhythmAssistSessionTaste = (assistantId, songId) => {
+  const b = rhythmAssistSessionBaseLike(assistantId, songId);
+  return b > 0 ? 'like' : b < 0 ? 'dislike' : '';
+};
+const rhythmAssistSessionNormalize = raw => {
+  const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const src = o.mons && typeof o.mons === 'object' && !Array.isArray(o.mons) ? o.mons : {};
+  const mons = {};
+  RHYTHM_ASSIST_SESSION_IDS.forEach(id => {
+    if (!src[id] || typeof src[id] !== 'object') return;
+    const mon = rhythmBuddyNormalizeMon(src[id]);
+    mon.trait = '';
+    mon.born = '';
+    mon.traitAt = 0;
+    mon.traitLock = false;
+    const likes = {};
+    const l = src[id].likes;
+    if (l && typeof l === 'object' && !Array.isArray(l)) {
+      Object.keys(l).slice(0, 200).forEach(sid => {
+        const key = rhythmBuddyStr(sid, 60);
+        const n = rhythmBuddyInt(l[sid], 100000);
+        if (key && n > 0) likes[key] = n;
+      });
+    }
+    mons[id] = {
+      ...mon,
+      likes
+    };
+  });
+  return {
+    mons
+  };
+};
+const rhythmAssistSessionMon = (state, assistantId) => {
+  const st = rhythmAssistSessionNormalize(state);
+  return st.mons[assistantId] || {
+    ...rhythmBuddyNormalizeMon(null),
+    likes: {}
+  };
+};
+const rhythmAssistSessionLevel = (state, assistantId) => rhythmBuddyLevelInfo(rhythmAssistSessionMon(state, assistantId).exp).level;
+const rhythmAssistSessionLike = (mon, assistantId, songId) => {
+  const base = rhythmAssistSessionBaseLike(assistantId, songId);
+  const plays = mon && mon.likes ? rhythmBuddyInt(mon.likes[songId], 100000) : 0;
+  return Math.max(RHYTHM_ASSIST_SESSION_LIKE_MIN, Math.min(RHYTHM_ASSIST_SESSION_LIKE_MAX, base + Math.floor(plays / RHYTHM_ASSIST_SESSION_LIKE_STEP)));
+};
+const rhythmAssistSessionMood = like => {
+  const id = like >= RHYTHM_ASSIST_SESSION_LIKE_MAX ? 'good' : like < 0 ? 'bad' : 'normal';
+  return RHYTHM_BUDDY_MOODS.find(m => m.id === id) || RHYTHM_BUDDY_MOODS.find(m => m.id === 'normal');
+};
+const rhythmAssistSessionExpScale = like => like >= RHYTHM_ASSIST_SESSION_LIKE_MAX ? 1.3 : like < 0 ? 1.5 : 1;
+const rhythmAssistSessionPlay = ({
+  state,
+  assistantId,
+  songId,
+  diffId,
+  totalNotes,
+  maxScore,
+  durationMs,
+  rand,
+  chartLevel = 0,
+  humans = 1,
+  nowMs = 0
+}) => {
+  const mon = rhythmAssistSessionMon(state, assistantId);
+  const mood = rhythmAssistSessionMood(rhythmAssistSessionLike(mon, assistantId, songId));
+  return rhythmBuddyPlay({
+    mon,
+    songId,
+    diffId,
+    totalNotes,
+    maxScore,
+    durationMs,
+    mood,
+    rand,
+    chartLevel,
+    humans,
+    nowMs
+  });
+};
+const rhythmAssistSessionApplyLive = (state, assistantId, {
+  round,
+  songId,
+  diffId,
+  durationMs,
+  teamRank,
+  dayKey,
+  nowMs,
+  score,
+  maxScore,
+  chartLevel = 0,
+  humans = 1
+}) => {
+  const st = rhythmAssistSessionNormalize(state);
+  if (!RHYTHM_ASSIST_SESSION_IDS.includes(assistantId)) return {
+    next: null,
+    gain: 0,
+    levelUp: 0,
+    likeUp: 0,
+    like: 0,
+    familiarUp: false
+  };
+  const before = rhythmAssistSessionMon(st, assistantId);
+  const likeBefore = rhythmAssistSessionLike(before, assistantId, songId);
+  const r = rhythmBuddyApplyLive(before, {
+    round,
+    songId,
+    diffId,
+    durationMs,
+    teamRank,
+    dayKey,
+    lean: '',
+    nowMs,
+    score,
+    maxScore,
+    chartLevel,
+    humans,
+    moodId: ''
+  });
+  if (!r.gain) return {
+    next: null,
+    gain: 0,
+    levelUp: 0,
+    likeUp: 0,
+    like: likeBefore,
+    familiarUp: false
+  };
+  const gain = Math.max(1, Math.round(r.gain * rhythmAssistSessionExpScale(likeBefore)));
+  const sid = rhythmBuddyStr(songId, 60);
+  const likes = {
+    ...before.likes
+  };
+  if (sid) likes[sid] = (likes[sid] || 0) + 1;
+  const after = {
+    ...r.mon,
+    exp: before.exp + gain,
+    trait: '',
+    born: '',
+    traitAt: 0,
+    traitLock: false,
+    likes
+  };
+  const likeAfter = rhythmAssistSessionLike(after, assistantId, songId);
+  const levelUp = rhythmBuddyLevelInfo(after.exp).level - rhythmBuddyLevelInfo(before.exp).level;
+  return {
+    next: {
+      ...st,
+      mons: {
+        ...st.mons,
+        [assistantId]: after
+      }
+    },
+    gain,
+    levelUp,
+    likeUp: likeAfter - likeBefore,
+    like: likeAfter,
+    familiarUp: r.familiarUp
+  };
+};
+const rhythmAssistSessionChooseSong = (state, assistantId, catalog, rand = Math.random) => {
+  const list = Array.isArray(catalog) ? catalog.filter(x => typeof x === 'string' && x) : [];
+  if (!list.length) return {
+    songId: '',
+    why: ''
+  };
+  const mon = rhythmAssistSessionMon(state, assistantId);
+  const liked = list.filter(id => rhythmAssistSessionLike(mon, assistantId, id) >= RHYTHM_ASSIST_SESSION_LIKE_MAX);
+  if (liked.length && rand() < 0.6) return {
+    songId: liked[Math.floor(rand() * liked.length)],
+    why: 'love'
+  };
+  const ok = list.filter(id => rhythmAssistSessionLike(mon, assistantId, id) >= 0);
+  const pool = ok.length ? ok : list;
+  return {
+    songId: pool[Math.floor(rand() * pool.length)],
+    why: ''
   };
 };
 const RHYTHM_BUDDY_TALK_MAX = 40;
@@ -85283,6 +85531,7 @@ const rhythmMultiCleanMessage = raw => {
       out.mb = rhythmMultiText(raw.mb, 40).replace(/[^A-Za-z0-9_-]/g, '');
       out.mc = Array.isArray(raw.mc) ? raw.mc.slice(0, 8).map(rhythmMultiColorId) : [];
       out.pw = rhythmMultiText(raw.pw, 12).replace(/[^a-z]/g, '');
+      out.as = rhythmMultiText(raw.as, 20).replace(/[^a-z]/g, '');
     }
     return out;
   }
@@ -85579,7 +85828,8 @@ const RHYTHM_MULTI = (() => {
       owner: s.selfId,
       mb: c.mb,
       mc: c.mc,
-      pw: c.pickWhy || ''
+      pw: c.pickWhy || '',
+      as: c.as || undefined
     });
   };
   const reportCpuResult = round => {
@@ -86244,7 +86494,8 @@ const RHYTHM_MULTI = (() => {
         owner: msg.owner || '',
         mb: msg.mb || '',
         mc: msg.mc || [],
-        pickWhy: msg.pw || ''
+        pickWhy: msg.pw || '',
+        as: msg.as || ''
       };
       if (msg.room && fromHost()) {
         const r = msg.room;
@@ -86387,6 +86638,7 @@ const RHYTHM_MULTI = (() => {
         level: rhythmMultiInt(buddy.level, 9999),
         mb: rhythmMultiText(buddy.baseId, 40).replace(/[^A-Za-z0-9_-]/g, ''),
         mc: Array.isArray(buddy.colors) ? buddy.colors.slice(0, 8).map(rhythmMultiColorId) : [],
+        as: rhythmMultiText(buddy.assistantId, 20).replace(/[^a-z]/g, ''),
         icon: '',
         frame: '',
         bid: '',
@@ -87545,6 +87797,23 @@ function RhythmMultiAvatar({
   sizeClass = 'h-10 w-10',
   small = false
 }) {
+  const asWho = m.cpu && m.as && typeof assistantById === 'function' ? assistantById(m.as) : null;
+  if (asWho) {
+    const src = typeof assistantFaceSrc === 'function' ? assistantFaceSrc(asWho, null) : null;
+    return React.createElement("span", {
+      "data-rhythm-multi-cpu-avatar": true,
+      "data-rhythm-multi-assist-avatar": m.as,
+      className: `relative block shrink-0 overflow-hidden rounded-full border-2 border-pink-300/90 bg-slate-800 ${sizeClass}`
+    }, src ? React.createElement("img", {
+      src: src,
+      alt: "",
+      draggable: false,
+      className: "h-full w-full object-cover"
+    }) : React.createElement("span", {
+      "aria-hidden": "true",
+      className: "flex h-full w-full items-center justify-center text-lg"
+    }, asWho.emoji || '🎤'));
+  }
   if (m.cpu) {
     const base = m.mb && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[m.mb] : null;
     const src = masuDisplayImageUrl(base);
@@ -88126,7 +88395,8 @@ function RhythmMultiScreen({
   onUseBuddyTicket = null,
   onRefundBuddyTicket = null,
   onOpenMasuBeat = null,
-  onStepAway = null
+  onStepAway = null,
+  sessionAssistants = []
 }) {
   const view = useRhythmMultiView();
   useModeSelectStageCss();
@@ -88244,7 +88514,7 @@ function RhythmMultiScreen({
   const [buddyBumped, setBuddyBumped] = React.useState(false);
   React.useEffect(() => {
     RHYTHM_MULTI.setCpuBrain({
-      ...rhythmBuddyMakeBrain(songs),
+      ...rhythmAssistSessionWrapBrain(rhythmBuddyMakeBrain(songs), songs),
       refund: refundBuddy,
       ended: endBuddy,
       started: startBuddy
@@ -88293,6 +88563,50 @@ function RhythmMultiScreen({
     if (!joined) endBuddy(masu.id, call.id);
     setBuddySheet('');
   };
+  const callAssistant = async who => {
+    if (!who || !rhythmAssistSessionEnabled() || !RHYTHM_MULTI.canSummon()) {
+      setBuddySheet('');
+      return;
+    }
+    const key = rhythmAssistSessionKey(who.id);
+    if ((view && view.myCpus ? view.myCpus : []).some(c => c.masuId === key)) return;
+    const day = rhythmBuddyDayKey(Date.now());
+    const call = {
+      id: rhythmBuddyCallId(),
+      masuId: key,
+      at: Date.now(),
+      load: RHYTHM_BUDDY_LOAD_ID,
+      kind: 'assistant',
+      assistantId: who.id
+    };
+    let paid = (await RHYTHM_BUDDY_STORE.update(st => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
+    if (!paid && onUseBuddyTicket) {
+      try {
+        paid = (await onUseBuddyTicket()) === true ? 'ticket' : '';
+      } catch (_) {
+        paid = '';
+      }
+      if (paid) await RHYTHM_BUDDY_STORE.update(st => rhythmBuddyAddCall(st, {
+        ...call,
+        paid: 'ticket',
+        day
+      }));
+    }
+    if (!paid) return;
+    setBuddyBumped(false);
+    const joined = RHYTHM_MULTI.summon({
+      masuId: key,
+      callId: call.id,
+      name: rhythmAssistSessionName(who.id),
+      level: rhythmAssistSessionLevel(RHYTHM_ASSIST_SESSION_STORE.get(), who.id),
+      baseId: '',
+      colors: [],
+      assistantId: who.id
+    });
+    if (!joined) endBuddy(key, call.id);
+    setBuddySheet('');
+  };
+  const sessionAssistantsOn = rhythmAssistSessionEnabled() && (sessionAssistants || []).length > 0;
   const buddySongName = id => {
     const song = songs.find(x => x.songId === id);
     return song ? rhythmSongFullName(song) : '(曲)';
@@ -88317,6 +88631,8 @@ function RhythmMultiScreen({
   const buddySheetLayer = buddySheet === 'pick' ? React.createElement(RhythmBuddySheet, {
     masuMons: masuMons,
     masuPicker: masuPicker,
+    assistants: sessionAssistants,
+    pickAssistant: callAssistant,
     breederName: profile && profile.name,
     songName: buddySongName,
     tickets: buddyTickets,
@@ -88324,14 +88640,14 @@ function RhythmMultiScreen({
     onClose: () => setBuddySheet(''),
     calledIds: (view && view.myCpus ? view.myCpus : []).map(c => c.masuId)
   }) : null;
-  const buddyCallButton = (extra = '') => view && RHYTHM_MULTI.canSummon() && masuMons.length > 0 ? React.createElement("button", {
+  const buddyCallButton = (extra = '') => view && RHYTHM_MULTI.canSummon() && (masuMons.length > 0 || sessionAssistantsOn) ? React.createElement("button", {
     "data-rhythm-buddy-open": true,
     type: "button",
     onClick: () => setBuddySheet('pick'),
     className: `min-h-[44px] w-full rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-2 text-sm font-black text-slate-950 ${extra}`
-  }, "🎵 マスモンを呼ぶ", React.createElement("small", {
+  }, sessionAssistantsOn ? '🎵 マスモン・助手を呼ぶ' : '🎵 マスモンを呼ぶ', React.createElement("small", {
     className: "block text-[9px] font-bold opacity-80"
-  }, "マスモンがCPUとして一緒に遊びます")) : null;
+  }, sessionAssistantsOn ? 'マスモンや助手がCPUとして一緒に遊びます' : 'マスモンがCPUとして一緒に遊びます')) : null;
   const mine = view ? view.members.find(m => m.id === view.selfId) : null;
   const [selSongId, setSelSongId] = React.useState(mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '');
   const [selectView, setSelectView] = React.useState(null);
@@ -88624,7 +88940,7 @@ function RhythmMultiScreen({
     onClick: cycleSelectSec,
     className: `min-h-[40px] shrink-0 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 text-[11px] font-black leading-tight text-amber-100 ${extra}`
   }), "選曲", React.createElement("br", null), rhythmMultiSelectSecLabel(room.selectSec));
-  const buddyHeaderButton = (extra = '') => view && RHYTHM_MULTI.canSummon() && masuMons.length > 0 ? React.createElement("button", {
+  const buddyHeaderButton = (extra = '') => view && RHYTHM_MULTI.canSummon() && (masuMons.length > 0 || sessionAssistantsOn) ? React.createElement("button", {
     "data-rhythm-buddy-open": true,
     "data-rhythm-buddy-header": true,
     type: "button",
@@ -89686,8 +90002,12 @@ function RhythmMultiScreen({
       const grown = (view.myCpus || []).map(c => {
         const cpuRow = team.rows.find(row => row.m.id === c.id);
         const masu = cpuRow && cpuRow.res ? masuMons.find(x => x && x.id === c.masuId) : null;
+        const assistantId = cpuRow && cpuRow.res ? rhythmAssistSessionIdOf(c.masuId) : '';
         return masu ? {
           masu,
+          cpuRow
+        } : assistantId ? {
+          assistantId,
           cpuRow
         } : null;
       }).filter(Boolean);
@@ -89697,10 +90017,23 @@ function RhythmMultiScreen({
         className: "grid shrink-0 grid-cols-1 gap-1 px-3 pt-1 landscape:grid-cols-2 [[data-mh-view-rotation=true]_&]:grid-cols-2"
       }, grown.map(({
         masu,
+        assistantId,
         cpuRow
-      }) => React.createElement(RhythmBuddyGrowth, {
+      }) => masu ? React.createElement(RhythmBuddyGrowth, {
         key: masu.id,
         masu: masu,
+        round: room.round,
+        songId: room.songId,
+        diffId: cpuRow.res.diffId,
+        durationMs: song ? Number(song.playDurationMs) || 0 : 0,
+        teamRank: team.rank,
+        chartLevel: song && song.difficulties && song.difficulties[cpuRow.res.diffId] ? Number(song.difficulties[cpuRow.res.diffId].level) || 0 : 0,
+        humans: team.rows.filter(row => !row.m.cpu).length,
+        score: cpuRow.res.score,
+        maxScore: ((typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find(d => d.id === cpuRow.res.diffId) || {}).maxScore || 0
+      }) : React.createElement(RhythmAssistSessionGrowth, {
+        key: assistantId,
+        assistantId: assistantId,
         round: room.round,
         songId: room.songId,
         diffId: cpuRow.res.diffId,
@@ -91477,7 +91810,9 @@ function RhythmBuddySheet({
   pick,
   onClose,
   calledIds = [],
-  breederName = ''
+  breederName = '',
+  assistants = [],
+  pickAssistant = null
 }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
@@ -91488,6 +91823,18 @@ function RhythmBuddySheet({
   const canPay = freeLeft > 0 || tickets > 0;
   const listControls = useRhythmBuddyListControls();
   const [selId, setSelId] = React.useState('');
+  const assistOn = rhythmAssistSessionEnabled() && typeof pickAssistant === 'function' && (assistants || []).length > 0;
+  const [tab, setTab] = React.useState(() => (masuMons || []).length ? 'masu' : 'assistant');
+  const tabNow = assistOn ? tab : 'masu';
+  const chooseAssistant = async who => {
+    if (busy || !canPay) return;
+    setBusy(true);
+    try {
+      await pickAssistant(who);
+    } finally {
+      setBusy(false);
+    }
+  };
   const choose = async masu => {
     if (busy || !canPay) return;
     setBusy(true);
@@ -91516,19 +91863,46 @@ function RhythmBuddySheet({
     className: "mb-2 flex items-center gap-2"
   }, React.createElement("h3", {
     className: "min-w-0 flex-1 text-base font-black text-lime-200"
-  }, "🎵 マスモンを呼ぶ"), React.createElement("button", {
+  }, assistOn ? '🎵 一緒に遊ぶ相手を呼ぶ' : '🎵 マスモンを呼ぶ'), React.createElement("button", {
     type: "button",
     "aria-label": "閉じる",
     onClick: onClose,
     className: "min-h-[40px] min-w-[40px] rounded-full bg-slate-800 text-lg font-black"
-  }, "✕")), React.createElement(RhythmBuddyAllowance, {
+  }, "✕")), assistOn && React.createElement("div", {
+    "data-rhythm-buddy-tabs": true,
+    role: "tablist",
+    className: "mb-2 flex gap-1.5"
+  }, [['masu', '🎵 マスモン'], ['assistant', '🎤 助手']].map(([id, label]) => React.createElement("button", {
+    key: id,
+    type: "button",
+    role: "tab",
+    "aria-selected": tabNow === id,
+    "data-rhythm-buddy-tab": id,
+    onClick: () => setTab(id),
+    className: `min-h-[40px] flex-1 rounded-xl text-[13px] font-black ${tabNow === id ? 'border-2 border-pink-300 bg-pink-500/25 text-pink-100' : 'border border-white/10 bg-slate-800 text-slate-300'}`
+  }, label))), React.createElement(RhythmBuddyAllowance, {
     freeLeft: freeLeft,
     tickets: tickets,
     className: "mb-1 text-slate-200"
-  }), React.createElement("p", {
+  }), tabNow === 'assistant' ? React.createElement("p", {
+    "data-rhythm-assist-note": true,
     className: "mb-2 text-[10px] font-bold leading-relaxed text-slate-400",
     style: JA_WRAP_STYLE
-  }, jaWrap(`マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日${RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。`))), React.createElement("div", {
+  }, jaWrap('助手をえらんで、CPUとしてこの部屋に呼べます。回数はマスモンと同じです(1日3回までは無料、そのあとはセッション券を1枚使います)。')) : React.createElement("p", {
+    className: "mb-2 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日${RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。`))), tabNow === 'assistant' ? React.createElement("div", {
+    className: "flex min-h-0 flex-1 flex-col"
+  }, React.createElement(RhythmAssistSessionPicker, {
+    assistants: assistants,
+    calledIds: calledIds,
+    canPay: canPay,
+    busy: busy,
+    onPick: chooseAssistant
+  }), !canPay && React.createElement("p", {
+    "data-rhythm-buddy-empty": true,
+    className: "mt-2 text-[11px] font-black text-rose-300"
+  }, "今日の無料ぶんを使い切りました。セッション券があれば呼べます")) : React.createElement("div", {
     className: "flex min-h-0 flex-1 flex-col"
   }, React.createElement("div", {
     className: "min-h-0 flex-1 overflow-y-auto"
@@ -92025,6 +92399,326 @@ function RhythmBuddyRankingBoard({
     renderBreederIcon: renderBreederIcon,
     songName: songName
   }));
+}
+const RHYTHM_ASSIST_SESSION_STORE = (() => {
+  let state = rhythmAssistSessionNormalize(null);
+  let loaded = false;
+  let chain = Promise.resolve();
+  const listeners = new Set();
+  const emit = () => listeners.forEach(fn => {
+    try {
+      fn(state);
+    } catch (_) {}
+  });
+  return {
+    get: () => state,
+    load() {
+      chain = chain.then(async () => {
+        try {
+          state = rhythmAssistSessionNormalize(await storeGet(RHYTHM_ASSIST_SESSION_KEY, null));
+        } catch (_) {}
+        loaded = true;
+        emit();
+      });
+      return chain;
+    },
+    update(fn) {
+      let out = null;
+      chain = chain.then(async () => {
+        if (!loaded) {
+          try {
+            state = rhythmAssistSessionNormalize(await storeGet(RHYTHM_ASSIST_SESSION_KEY, null));
+          } catch (_) {}
+          loaded = true;
+        }
+        const next = fn(state);
+        if (!next) return;
+        out = rhythmAssistSessionNormalize(next);
+        state = out;
+        try {
+          await storeSet(RHYTHM_ASSIST_SESSION_KEY, state);
+        } catch (_) {}
+        emit();
+      });
+      return chain.then(() => out);
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    }
+  };
+})();
+const useRhythmAssistSessionState = () => {
+  const [state, setState] = React.useState(() => RHYTHM_ASSIST_SESSION_STORE.get());
+  React.useEffect(() => {
+    const off = RHYTHM_ASSIST_SESSION_STORE.subscribe(setState);
+    void RHYTHM_ASSIST_SESSION_STORE.load();
+    return off;
+  }, []);
+  return state;
+};
+const rhythmAssistSessionWho = assistantId => typeof assistantById === 'function' ? assistantById(assistantId) : null;
+const rhythmAssistSessionName = assistantId => {
+  const who = rhythmAssistSessionWho(assistantId);
+  return String(who && who.name || '助手').slice(0, 12);
+};
+const RHYTHM_ASSIST_SESSION_LINES = Object.freeze({
+  mua: {
+    join: 'やっほ〜！あたしも一緒に叩くね♪',
+    love: 'この曲あたし大好きなの♪',
+    mvp: 'MVPとっちゃった！？あたしすごくない？♪',
+    high: 'まぢいい感じぢゃん！楽しかったぁ♪',
+    low: '次はもっと合わせよ！あたしもがんばる♪'
+  },
+  kiki: {
+    join: 'ブリーダーさん、よろしくお願いしまつ♪',
+    love: 'この曲、私とても好きなんです♪',
+    mvp: '私がMVPですか？ちょっと照れちゃいまつ♪',
+    high: 'とってもいい演奏でした♪',
+    low: '次はきっと、もっと合わせられますよ♪'
+  },
+  momosuke: {
+    join: 'ももが来たからには盛り上げるよ！！',
+    love: 'この曲ももの推し曲！！',
+    mvp: 'MVPはもも！！当然でしょw',
+    high: 'ももと合わせたらこんなもんでしょw さすが♡',
+    low: 'ドンマイ！次はもも、もっと見ててあげる♡'
+  },
+  dra: {
+    join: 'おでも混ぜてくれよな、えへへ',
+    love: 'この曲、おで好きなんだな',
+    mvp: 'おでがMVPか、えへへ、照れくさいな',
+    high: 'いい演奏だったくさ。おで楽しかったな',
+    low: 'どんまいだな、次でとりかえすからな'
+  },
+  atsu: {
+    join: 'とりあえず一曲いくか笑',
+    love: 'これ俺の好きなやつだな笑',
+    mvp: 'MVPもらっといた笑',
+    high: 'てか今の、普通にうまかったな笑',
+    low: 'まあ次だな、切り替えていこう！'
+  },
+  kyuko: {
+    join: 'ほい！俺も入るね〜',
+    love: 'この曲は構成がきれいなんだよね〜',
+    mvp: 'MVPいただきました〜笑',
+    high: 'いい流れだったね〜、ありがとん笑',
+    low: 'ぐぬぬぬ、次はサビ前を意識してみよ〜'
+  },
+  sorashido: {
+    join: 'うぉぉぉ！俺も参戦するぜ・・・！',
+    love: 'この曲は全ノーツ計算済みだぜ・・・！',
+    mvp: 'MVPは計算済みだったぜ・・・！',
+    high: '計算どおりの名演だぜ・・・！',
+    low: '次は全ノーツ計算して挑むぜ笑'
+  },
+  erubin: {
+    join: '俺も一緒にいいかな？よろしくね',
+    love: 'この曲、好きなんだよね',
+    mvp: '俺がMVP？ありがとね',
+    high: 'いい演奏だったね、おつかれさま',
+    low: '大丈夫、次はきっと合うよ'
+  }
+});
+const rhythmAssistSessionTalk = ({
+  assistantId,
+  kind,
+  songId = '',
+  score = 0,
+  diffId = '',
+  mvp = false
+}) => {
+  const lines = RHYTHM_ASSIST_SESSION_LINES[assistantId];
+  if (!lines) return '';
+  if (kind === 'join') return lines.join;
+  if ((kind === 'pick' || kind === 'song') && songId && rhythmAssistSessionTaste(assistantId, songId) === 'like') return lines.love;
+  if (kind === 'result') {
+    if (mvp) return lines.mvp;
+    const diffDef = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find(d => d.id === diffId);
+    const ratio = Number(score) / (diffDef && diffDef.maxScore || 1000000);
+    return ratio >= 0.85 ? lines.high : ratio < 0.7 ? lines.low : '';
+  }
+  return '';
+};
+const rhythmAssistSessionWrapBrain = (brain, songs) => ({
+  ...brain,
+  play(args) {
+    const aid = rhythmAssistSessionIdOf(args && args.masuId);
+    if (!aid) return brain.play(args);
+    const {
+      songId,
+      diffId,
+      humans = 1
+    } = args;
+    const song = (songs || []).find(x => x.songId === songId);
+    const chart = song && song.difficulties ? song.difficulties[diffId] : null;
+    const totalNotes = chart ? Number(chart.totalNotes) > 0 ? Number(chart.totalNotes) : Array.isArray(chart.notes) ? chart.notes.length : 300 : 300;
+    const diffDef = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find(d => d.id === diffId);
+    return rhythmAssistSessionPlay({
+      state: RHYTHM_ASSIST_SESSION_STORE.get(),
+      assistantId: aid,
+      songId,
+      diffId,
+      totalNotes,
+      maxScore: diffDef ? diffDef.maxScore : 1000000,
+      durationMs: chart && Number(chart.durationMs) || (song ? Number(song.playDurationMs) || 0 : 0),
+      rand: Math.random,
+      chartLevel: chart ? Number(chart.level) || 0 : 0,
+      humans,
+      nowMs: Date.now()
+    });
+  },
+  talk(args) {
+    const aid = rhythmAssistSessionIdOf(args && args.masuId);
+    if (!aid) return brain.talk(args);
+    try {
+      return rhythmAssistSessionTalk({
+        assistantId: aid,
+        ...args
+      });
+    } catch (_) {
+      return '';
+    }
+  },
+  style(masuId) {
+    return rhythmAssistSessionIdOf(masuId) ? {
+      ask: 0,
+      starter: [1, 1, 1]
+    } : brain.style(masuId);
+  },
+  pair(a, b) {
+    return rhythmAssistSessionIdOf(a) || rhythmAssistSessionIdOf(b) ? 'banter' : brain.pair(a, b);
+  },
+  pick(catalog, masuId) {
+    const aid = rhythmAssistSessionIdOf(masuId);
+    return aid ? rhythmAssistSessionChooseSong(RHYTHM_ASSIST_SESSION_STORE.get(), aid, catalog) : brain.pick(catalog, masuId);
+  }
+});
+function RhythmAssistSessionPicker({
+  assistants = [],
+  calledIds = [],
+  canPay = true,
+  busy = false,
+  onPick
+}) {
+  const state = useRhythmAssistSessionState();
+  const [selId, setSelId] = React.useState('');
+  const list = (assistants || []).filter(who => who && RHYTHM_ASSIST_SESSION_IDS.includes(who.id));
+  const sel = list.find(who => who.id === selId) || null;
+  const calledOf = id => calledIds.includes(rhythmAssistSessionKey(id));
+  return React.createElement("div", {
+    "data-rhythm-assist-picker": true,
+    className: "flex min-h-0 flex-1 flex-col"
+  }, React.createElement("div", {
+    className: "min-h-0 flex-1 overflow-y-auto"
+  }, list.length === 0 ? React.createElement("p", {
+    className: "py-6 text-center text-[12px] font-bold text-slate-400"
+  }, "まだ呼べる助手がいません") : React.createElement("div", {
+    className: "grid grid-cols-3 gap-2.5 pb-4"
+  }, list.map(who => {
+    const lv = rhythmAssistSessionLevel(state, who.id);
+    return React.createElement("button", {
+      key: who.id,
+      type: "button",
+      "data-rhythm-assist-card": who.id,
+      onClick: () => setSelId(who.id),
+      className: `flex min-h-[112px] w-full flex-col items-center gap-1 rounded-2xl border-2 p-2 active:scale-95 ${selId === who.id ? 'border-pink-300 bg-slate-800' : 'border-white/10 bg-slate-900'}`
+    }, React.createElement(AssistantFace, {
+      who: who,
+      size: 48,
+      accent: who.accent,
+      expression: selId === who.id ? 'happy' : null
+    }), React.createElement("span", {
+      className: "w-full truncate rounded-lg border border-white/10 bg-slate-950/70 px-1 py-0.5 text-center text-[11px] font-black"
+    }, who.name), React.createElement("span", {
+      className: "whitespace-nowrap text-[10px] font-black text-pink-200"
+    }, "セッションLv.", lv), calledOf(who.id) && React.createElement("span", {
+      className: "rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950"
+    }, "呼んでいる"));
+  }))), sel ? React.createElement("div", {
+    "data-rhythm-assist-confirm": true,
+    className: "mt-2 flex shrink-0 items-center gap-2 rounded-2xl border border-pink-300/40 bg-slate-950/80 p-2"
+  }, React.createElement(AssistantFace, {
+    who: sel,
+    size: 44,
+    accent: sel.accent,
+    expression: "happy"
+  }), React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("b", {
+    className: "block truncate text-[13px] font-black"
+  }, sel.name), React.createElement("small", {
+    className: "block whitespace-nowrap text-[10px] font-bold text-pink-200"
+  }, "セッションLv.", rhythmAssistSessionLevel(state, sel.id))), calledOf(sel.id) ? React.createElement("span", {
+    "data-rhythm-assist-called": true,
+    className: "shrink-0 rounded-xl border border-lime-300/50 px-2 py-3 text-[10px] font-black text-lime-200"
+  }, "呼んでいる") : React.createElement("button", {
+    "data-rhythm-assist-call": true,
+    type: "button",
+    disabled: busy || !canPay,
+    onClick: () => onPick && onPick(sel),
+    className: "min-h-[44px] shrink-0 rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-4 text-sm font-black text-slate-950 disabled:opacity-40"
+  }, "呼ぶ")) : React.createElement("p", {
+    className: "mt-2 text-center text-[11px] font-bold text-slate-400"
+  }, "呼びたい助手をタップしてください"));
+}
+function RhythmAssistSessionGrowth({
+  assistantId,
+  round,
+  songId,
+  diffId,
+  durationMs,
+  teamRank,
+  score = 0,
+  maxScore = 0,
+  chartLevel = 0,
+  humans = 1
+}) {
+  const [shown, setShown] = React.useState(null);
+  React.useEffect(() => {
+    if (!assistantId || !round) return undefined;
+    let alive = true;
+    let outcome = null;
+    const dayKey = rhythmBuddyDayKey(Date.now());
+    RHYTHM_ASSIST_SESSION_STORE.update(st => {
+      const r = rhythmAssistSessionApplyLive(st, assistantId, {
+        round,
+        songId,
+        diffId,
+        durationMs,
+        teamRank,
+        dayKey,
+        nowMs: Date.now(),
+        score,
+        maxScore,
+        chartLevel,
+        humans
+      });
+      if (!r.next) return null;
+      outcome = r;
+      return r.next;
+    }).then(() => {
+      if (alive && outcome) setShown(outcome);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [assistantId, round]);
+  if (!shown || !assistantId) return null;
+  const level = rhythmBuddyLevelInfo((shown.next.mons[assistantId] || {}).exp).level;
+  return React.createElement("p", {
+    "data-rhythm-assist-growth": true,
+    className: "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-pink-300/50 bg-pink-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-pink-100"
+  }, React.createElement("span", {
+    className: "max-w-full truncate"
+  }, "🎤 ", rhythmAssistSessionName(assistantId)), React.createElement("span", {
+    className: "text-pink-200"
+  }, "経験値+", shown.gain), shown.levelUp > 0 && React.createElement("span", {
+    "data-rhythm-assist-levelup": true,
+    className: "rounded bg-amber-300 px-1 text-slate-950"
+  }, "セッションLv.UP! Lv.", level), shown.likeUp > 0 && React.createElement("span", {
+    className: "text-amber-200"
+  }, "好み度+", shown.likeUp));
 }
 const RAID_JACK_DEBUG_NOW_CHOICES = Object.freeze([{
   id: 'real',
@@ -94342,11 +95036,45 @@ const assistantPeerLifeOn = () => typeof assistantLifeEnabled === 'function' && 
 const assistantPeerStageName = stage => stage ? assistantPeerLifeOn() && stage.lifeName ? stage.lifeName : stage.name : '';
 const assistantPeerPhotoTitle = photo => photo ? assistantPeerLifeOn() && photo.lifeTitle ? photo.lifeTitle : photo.title : '';
 const assistantPeerLvLabel = lv => assistantPeerLifeOn() ? `友情Lv${lv}` : `仲良し度 Lv${lv}`;
-const assistantPeerTalkList = () => typeof ASSISTANT_PEER_TALKS !== 'undefined' && Array.isArray(ASSISTANT_PEER_TALKS) ? ASSISTANT_PEER_TALKS : [];
+const assistantPeerRewrite = t => {
+  if (!t || !assistantPeerLifeOn()) return t;
+  const x = (typeof ASSISTANT_PEER_REWRITES !== 'undefined' ? ASSISTANT_PEER_REWRITES : {})[t.id];
+  if (!x) return t;
+  const out = {
+    ...t
+  };
+  if (x.lines) out.lines = x.lines;
+  if (x.makeup && Array.isArray(t.makeup)) out.makeup = x.makeup;
+  if (x.reply && Array.isArray(t.choice)) out.choice = t.choice.map((c, i) => x.reply[i] ? {
+    ...c,
+    reply: x.reply[i]
+  } : c);
+  if (x.distance) out.distance = x.distance;
+  if (x.doing) out.lifeDoing = x.doing;
+  if (x.lv) out.lifeLv = x.lv;
+  if (x.similar) out.similar = x.similar;
+  return out;
+};
+const assistantPeerTalkListCache = {
+  on: null,
+  list: null
+};
+const assistantPeerTalkList = () => {
+  const raw = typeof ASSISTANT_PEER_TALKS !== 'undefined' && Array.isArray(ASSISTANT_PEER_TALKS) ? ASSISTANT_PEER_TALKS : [];
+  const on = assistantPeerLifeOn();
+  if (!on) return raw;
+  if (assistantPeerTalkListCache.on !== on || !assistantPeerTalkListCache.list) {
+    assistantPeerTalkListCache.on = on;
+    assistantPeerTalkListCache.list = raw.map(assistantPeerRewrite);
+  }
+  return assistantPeerTalkListCache.list;
+};
 let assistantPeerExtraCache = null;
+let assistantPeerExtraCacheOn = null;
 const assistantPeerExtraTalks = () => {
-  if (assistantPeerExtraCache) return assistantPeerExtraCache;
-  const events = (typeof ASSISTANT_PEER_EVENTS !== 'undefined' ? ASSISTANT_PEER_EVENTS : []).map(t => ({
+  const on = assistantPeerLifeOn();
+  if (assistantPeerExtraCache && assistantPeerExtraCacheOn === on) return assistantPeerExtraCache;
+  const events = (typeof ASSISTANT_PEER_EVENTS !== 'undefined' ? ASSISTANT_PEER_EVENTS : []).map(assistantPeerRewrite).map(t => ({
     ...t,
     pair: [...t.pair].sort(),
     kind: 'event',
@@ -94354,7 +95082,8 @@ const assistantPeerExtraTalks = () => {
     scene: 'any'
   }));
   const quarrels = [];
-  for (const q of typeof ASSISTANT_PEER_QUARRELS !== 'undefined' ? ASSISTANT_PEER_QUARRELS : []) {
+  for (const q0 of typeof ASSISTANT_PEER_QUARRELS !== 'undefined' ? ASSISTANT_PEER_QUARRELS : []) {
+    const q = assistantPeerRewrite(q0);
     const pair = [...q.pair].sort();
     quarrels.push({
       id: q.id,
@@ -94363,7 +95092,8 @@ const assistantPeerExtraTalks = () => {
       lv: 2,
       scene: 'home',
       makeupId: `${q.id}m`,
-      lines: q.lines
+      lines: q.lines,
+      distance: q.distance || []
     });
     quarrels.push({
       id: `${q.id}m`,
@@ -94375,7 +95105,8 @@ const assistantPeerExtraTalks = () => {
       lines: q.makeup
     });
   }
-  const trios = (typeof ASSISTANT_PEER_TRIO_TALKS !== 'undefined' ? ASSISTANT_PEER_TRIO_TALKS : []).map(t => ({
+  if (on && typeof assistantLifeQuarrelTalks === 'function') quarrels.push(...assistantLifeQuarrelTalks());
+  const trios = (typeof ASSISTANT_PEER_TRIO_TALKS !== 'undefined' ? ASSISTANT_PEER_TRIO_TALKS : []).map(assistantPeerRewrite).map(t => ({
     ...t,
     kind: 'trio',
     lv: 1,
@@ -94386,11 +95117,13 @@ const assistantPeerExtraTalks = () => {
     quarrels,
     trios
   };
+  assistantPeerExtraCacheOn = on;
   return assistantPeerExtraCache;
 };
 const assistantPeerAllTalks = () => {
   const x = assistantPeerExtraTalks();
-  return [...assistantPeerTalkList(), ...x.events, ...x.quarrels, ...x.trios];
+  const life = assistantPeerLifeOn() && typeof assistantLifeAlbumTalks === 'function' ? assistantLifeAlbumTalks() : [];
+  return [...assistantPeerTalkList(), ...x.events, ...x.quarrels, ...x.trios, ...life];
 };
 const assistantPeerMembers = t => t && Array.isArray(t.trio) ? t.trio : t && Array.isArray(t.pair) ? t.pair : [];
 const assistantPeerPairsOf = t => {
@@ -94870,10 +95603,12 @@ const assistantPeerSaveChoice = (talkId, index) => {
 const assistantPeerReactionTalk = (kind, pair) => {
   const R = typeof ASSISTANT_PEER_REACTIONS !== 'undefined' ? ASSISTANT_PEER_REACTIONS : {};
   const [a, b] = pair;
-  const line = who => R[who] && R[who][kind] ? {
+  const RW = assistantPeerLifeOn() && typeof ASSISTANT_PEER_REACTION_REWRITES !== 'undefined' ? ASSISTANT_PEER_REACTION_REWRITES : {};
+  const pickR = who => RW[who] && RW[who][kind] || R[who] && R[who][kind] || null;
+  const line = who => pickR(who) ? {
     who,
-    e: R[who][kind].e,
-    t: R[who][kind].t
+    e: pickR(who).e,
+    t: pickR(who).t
   } : null;
   const lines = [line(a), line(b)].filter(Boolean);
   return lines.length === 2 ? {
@@ -94967,8 +95702,11 @@ const assistantPeerPickTalk = (st, {
     pending: null,
     done: []
   };
+  const lifeOn = assistantPeerLifeOn();
+  const lifeGroups = lifeOn && typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.life && ASSISTANT_LIFE_STORE.state.life.groups || [];
+  const together = ms => lifeGroups.some(g => ms.every(id => g.ids.includes(id)));
   if (scene === 'home') {
-    if (quarrel.pending && now - (quarrel.pending.at || 0) >= ASSISTANT_PEER_TALK_GAP_MS) {
+    if (quarrel.pending && now - (quarrel.pending.at || 0) >= ASSISTANT_PEER_TALK_GAP_MS && (!lifeOn || together(String(quarrel.pending.pair || '').split('-')))) {
       const mk = extra.quarrels.find(t => t.kind === 'makeup' && t.quarrelId === quarrel.pending.id);
       if (mk && ok(mk)) return {
         talk: mk,
@@ -95007,6 +95745,17 @@ const assistantPeerPickTalk = (st, {
       };
     }
   }
+  if (lifeOn && isHome && typeof assistantLifePickHomeTalk === 'function' && rand() < 0.75) {
+    const t = assistantLifePickHomeTalk(st, {
+      selectedId,
+      metIds,
+      rand
+    });
+    if (t) return {
+      talk: t,
+      special: false
+    };
+  }
   const trioLv = typeof ASSISTANT_PEER_TRIO_LV !== 'undefined' ? ASSISTANT_PEER_TRIO_LV : 2;
   const qLv = typeof ASSISTANT_PEER_QUARREL_LV !== 'undefined' ? ASSISTANT_PEER_QUARREL_LV : {
     min: 2,
@@ -95015,6 +95764,7 @@ const assistantPeerPickTalk = (st, {
   const pairLvs = t => assistantPeerPairsOf(t).map(([a, b]) => assistantPeerLevel(st, a, b));
   const fits = t => {
     if (t.special) return false;
+    if (lifeOn && (t.similar || t.kind === 'quarrel')) return false;
     if (t.kind === 'trio') return pairLvs(t).every(lv => lv >= trioLv);
     if (t.kind === 'makeup') return false;
     if (t.kind === 'quarrel') {
@@ -95031,8 +95781,6 @@ const assistantPeerPickTalk = (st, {
   const fresh = pool.filter(t => !recent.includes(t.id));
   if (fresh.length) pool = fresh;else pool = [...pool].sort((x, y) => recent.indexOf(x.id) - recent.indexOf(y.id)).slice(0, Math.max(1, Math.ceil(pool.length / 3)));
   const dailyPair = !assistantPeerLifeOn() && st.daily && st.daily.day === day && !st.daily.done ? st.daily.pair : null;
-  const lifeGroups = assistantPeerLifeOn() && typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.life && ASSISTANT_LIFE_STORE.state.life.groups || [];
-  const together = ms => lifeGroups.some(g => ms.every(id => g.ids.includes(id)));
   const evBoost = typeof ASSISTANT_PEER_EVENT_BOOST_LV !== 'undefined' ? ASSISTANT_PEER_EVENT_BOOST_LV : 6;
   const trioBoost = typeof ASSISTANT_PEER_TRIO_BOOST_LV !== 'undefined' ? ASSISTANT_PEER_TRIO_BOOST_LV : 7;
   const weight = t => {
@@ -95119,6 +95867,7 @@ const assistantPeerMarkShown = (talk, {
   }
   ASSISTANT_PEER_STORE.set(patch);
   if (typeof assistantLifeAddPlay === 'function') void assistantLifeAddPlay('peer', now);
+  if (typeof assistantLifeMarkSeen === 'function') assistantLifeMarkSeen(talk, now);
   if (talk.kind === 'quarrel' && typeof assistantLifeNote === 'function') void assistantLifeNote('quarrel', {
     pair: assistantPeerPairKey(talk.pair[0], talk.pair[1]),
     now
@@ -95146,10 +95895,11 @@ const assistantPeerMakeupDone = talk => {
   return true;
 };
 const assistantPeerLineText = (line, talk) => {
-  const members = assistantPeerMembers(talk);
+  const members = talk && talk.anyTrio && Array.isArray(talk.pair) ? talk.pair : assistantPeerMembers(talk);
   const partner = members.find(id => id !== line.who) || members[0];
   const callOf = to => typeof assistantPeerCall === 'function' ? assistantPeerCall(line.who, to) : to;
-  return String(line.t || '').replace(/\{c:([a-z]+)\}/g, (m, id) => callOf(id)).replace(/\{c\}/g, callOf(partner));
+  const text = String(line.t || '').replace(/\{c:([a-z]+)\}/g, (m, id) => callOf(id)).replace(/\{c\}/g, callOf(partner));
+  return text.includes('{') && typeof assistantLifeFillHoles === 'function' ? assistantLifeFillHoles(text, talk) : text;
 };
 function AssistantPeerTalk({
   scene,
@@ -95349,7 +96099,8 @@ function AssistantPeerTalk({
   const line = cur.phase === 'choice' ? talk.lines[talk.lines.length - 1] : list[cur.step];
   const isTrio = talk.kind === 'trio';
   const left = assistantById(talk.lines[0].who);
-  const right = isTrio ? null : assistantById(talk.pair.find(id => id !== left.id));
+  const rightId = isTrio ? null : talk.pair.find(id => id !== left.id);
+  const right = rightId ? assistantById(rightId) : null;
   const speaker = assistantById(line.who);
   const pairKey = isTrio ? null : assistantPeerPairKey(talk.pair[0], talk.pair[1]);
   const daily = pairKey && talk.kind !== 'quarrel' && st.daily && st.daily.day === assistantPeerDayKey() && st.daily.pair === pairKey ? st.daily : null;
@@ -96353,7 +97104,7 @@ const assistantLifeDecide = ({
     const pm = prev && prev.moods && prev.moods[id];
     if (pm && w[pm] != null && inertia > 0) w[pm] *= inertia;
     if (wasLonely.has(id)) w.lonely *= 4;
-    if (ids.some(o => o !== id && quarrelNow(id, o))) w.sulky *= 12;
+    if (ids.some(o => o !== id && quarrelNow(id, o) && !introduced.includes(assistantLifePairKey(id, o)))) w.sulky *= 12;
     if (recentOf('gift', r => (r.ids || []).includes(id), 4) || recentOf('play', r => (r.ids || []).includes(id), 4)) w.happy *= 3;
     if (invited.has(id)) {
       w.happy *= 4;
@@ -96388,7 +97139,7 @@ const assistantLifeDecide = ({
   }
   const lvOf = (a, b) => typeof assistantPeerBondLevel === 'function' ? assistantPeerBondLevel(bond[assistantLifePairKey(a, b)] || 0) : 1;
   const score = (a, b) => {
-    if (quarrelNow(a, b)) return -10;
+    if (quarrelNow(a, b) && !introduced.includes(assistantLifePairKey(a, b))) return -10;
     let s = 1 + lvOf(a, b) * 0.25;
     if (prevPairs.has(assistantLifePairKey(a, b))) s -= 1;
     if (doing[a] === doing[b] && ASSISTANT_LIFE_DOINGS[doing[a]].group) s += 1.5;
@@ -96460,7 +97211,7 @@ const assistantLifeDecide = ({
       continue;
     }
     const p = ASSISTANT_LIFE_PREFS[id];
-    const quarrel = ids.some(o => o !== id && quarrelNow(id, o));
+    const quarrel = ids.some(o => o !== id && quarrelNow(id, o) && !introduced.includes(assistantLifePairKey(id, o)));
     const reason = quarrel ? 'distance' : wants[id] ? 'lonely' : 'mypace';
     if (reason === 'lonely') {
       moods[id] = 'lonely';
@@ -96599,7 +97350,7 @@ const normalizeAssistantLife = v => {
     lonely: Array.isArray(o.lonely) ? o.lonely.filter(ok) : [],
     recent,
     nudges,
-    watched: Array.isArray(o.watched) ? o.watched.filter(k => typeof k === 'string').slice(-10) : []
+    watched: Array.isArray(o.watched) ? o.watched.filter(k => typeof k === 'string').slice(-30) : []
   };
 };
 const ASSISTANT_LIFE_STORE = {
@@ -96607,7 +97358,8 @@ const ASSISTANT_LIFE_STORE = {
     loaded: false,
     open: false,
     life: normalizeAssistantLife(null),
-    play: normalizeAssistantLifePlay(null)
+    play: normalizeAssistantLifePlay(null),
+    seen: {}
   },
   loading: null,
   listeners: new Set(),
@@ -96629,13 +97381,14 @@ const ASSISTANT_LIFE_STORE = {
     if (this.state.loaded) return Promise.resolve(this.state);
     if (this.loading) return this.loading;
     this.loading = (async () => {
-      const [life, play] = await Promise.all([storeGet(ASSISTANT_LIFE_STORE_KEY, null, false), storeGet(ASSISTANT_LIFE_PLAY_KEY, null, false)].map(p => Promise.resolve(p).catch(() => null)));
+      const [life, play, seen] = await Promise.all([storeGet(ASSISTANT_LIFE_STORE_KEY, null, false), storeGet(ASSISTANT_LIFE_PLAY_KEY, null, false), storeGet('mh_assistant_peer_seen14_v1', null, false)].map(p => Promise.resolve(p).catch(() => null)));
       const l = normalizeAssistantLife(life);
       if (!l.salt) l.salt = Math.random().toString(36).slice(2, 10);
       this.set({
         loaded: true,
         life: l,
-        play: normalizeAssistantLifePlay(play)
+        play: normalizeAssistantLifePlay(play),
+        seen: normalizeAssistantLifeSeen(seen)
       });
       return this.state;
     })();
@@ -96780,6 +97533,393 @@ const useAssistantLifeState = () => {
   }, []);
   return st;
 };
+const ASSISTANT_LIFE_SEEN_KEY = 'mh_assistant_peer_seen14_v1';
+const ASSISTANT_LIFE_SEEN_DAYS = 14;
+const ASSISTANT_LIFE_SEEN_MAX = 4000;
+const assistantLifeLvBand = lv => lv >= 7 ? '7-10' : lv >= 4 ? '4-6' : '1-3';
+const ASSISTANT_LIFE_BAND_RANK = Object.freeze({
+  '1-3': 0,
+  '4-6': 1,
+  '7-10': 2
+});
+const assistantLifePlaceType = (who, place) => place === 'home' ? 'home' : ASSISTANT_LIFE_PREFS[who] && ASSISTANT_LIFE_PREFS[who].fav === place ? 'fav' : 'other';
+const normalizeAssistantLifeSeen = (v, today = assistantLifeDayKey()) => {
+  const out = {};
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
+  const limit = Date.parse(`${today}T00:00:00Z`) - ASSISTANT_LIFE_SEEN_DAYS * 86400000;
+  const rows = Object.entries(v).filter(([id, d]) => typeof id === 'string' && typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && Date.parse(`${d}T00:00:00Z`) > limit);
+  rows.sort((x, y) => x[1] < y[1] ? -1 : x[1] > y[1] ? 1 : 0);
+  for (const [id, d] of rows.slice(-ASSISTANT_LIFE_SEEN_MAX)) out[id] = d;
+  return out;
+};
+const assistantLifeMarkSeen = (talk, now = Date.now()) => {
+  if (!assistantLifeEnabled() || !talk || !talk.id || talk.gen) return;
+  const day = assistantLifeDayKey(now);
+  const seen = {
+    ...(ASSISTANT_LIFE_STORE.state.seen || {})
+  };
+  for (const id of Array.isArray(talk.parts) && talk.parts.length ? talk.parts : [talk.id]) seen[id] = day;
+  const next = normalizeAssistantLifeSeen(seen, day);
+  ASSISTANT_LIFE_STORE.set({
+    seen: next
+  });
+  try {
+    storeSet(ASSISTANT_LIFE_SEEN_KEY, next, false);
+  } catch {}
+};
+let assistantLifeTalkCache = null;
+const assistantLifeTalkSet = () => {
+  if (assistantLifeTalkCache) return assistantLifeTalkCache;
+  const raw = typeof ASSISTANT_LIFE_TALKS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_TALKS) ? ASSISTANT_LIFE_TALKS : [];
+  const out = {
+    solo: [],
+    breeder: [],
+    invite: [],
+    pair: [],
+    trio: [],
+    anyTrio: [],
+    quarrel: []
+  };
+  const okLines = a => Array.isArray(a) && a.length > 0 && a.every(l => l && typeof l.who === 'string' && typeof l.t === 'string');
+  for (const t of raw) {
+    if (!t || typeof t.id !== 'string' || !okLines(t.lines)) continue;
+    const keys = t.keys && typeof t.keys === 'object' ? t.keys : {};
+    const base = {
+      id: t.id,
+      keys,
+      lines: t.lines,
+      lv: 1,
+      scene: 'any',
+      life: true
+    };
+    if (t.kind === 'solo') out.solo.push({
+      ...base,
+      kind: 'life-solo',
+      who: t.who,
+      pair: [t.who],
+      line: t.line === 'feel' ? 'feel' : 'scene'
+    });else if (t.kind === 'breeder') out.breeder.push({
+      ...base,
+      kind: 'life-breeder',
+      who: t.who,
+      pair: [t.who]
+    });else if (t.kind === 'invite' && t.from) out.invite.push({
+      ...base,
+      kind: 'life-invite',
+      who: t.who,
+      from: t.from,
+      pair: [t.from, t.who]
+    });else if (t.kind === 'pair' && Array.isArray(t.pair)) out.pair.push({
+      ...base,
+      pair: [...t.pair].sort()
+    });else if (t.kind === 'trio' && t.any && Array.isArray(t.pair)) out.anyTrio.push({
+      ...base,
+      pair: [...t.pair].sort(),
+      anyTrio: true
+    });else if (t.kind === 'trio' && Array.isArray(t.trio)) out.trio.push({
+      ...base,
+      kind: 'trio',
+      trio: [...t.trio].sort()
+    });else if (t.kind === 'quarrel' && Array.isArray(t.pair)) {
+      const pair = [...t.pair].sort();
+      out.quarrel.push({
+        ...base,
+        pair,
+        kind: 'quarrel',
+        lv: 2,
+        scene: 'home',
+        makeupId: `${t.id}m`,
+        distance: okLines(t.distance) ? t.distance : []
+      });
+      if (okLines(t.makeup)) out.quarrel.push({
+        ...base,
+        id: `${t.id}m`,
+        pair,
+        kind: 'makeup',
+        lv: 2,
+        scene: 'home',
+        quarrelId: t.id,
+        lines: t.makeup
+      });
+    }
+  }
+  assistantLifeTalkCache = out;
+  return out;
+};
+const assistantLifeQuarrelTalks = () => assistantLifeTalkSet().quarrel;
+const assistantLifeAlbumTalks = () => {
+  const x = assistantLifeTalkSet();
+  return [...x.pair, ...x.anyTrio, ...x.trio];
+};
+const assistantLifeFillHoles = (text, talk) => {
+  const c = talk && talk.ctx || {};
+  const k = talk && talk.keys || {};
+  const doing = ASSISTANT_LIFE_DOINGS[c.doing] ? c.doing : ASSISTANT_LIFE_DOINGS[k.doing] ? k.doing : ASSISTANT_LIFE_DOINGS[talk && talk.lifeDoing] ? talk.lifeDoing : 'walk';
+  const place = ASSISTANT_LIFE_PLACES[c.place] ? c.place : ASSISTANT_LIFE_PLACES[k.place] ? k.place : ASSISTANT_LIFE_DOINGS[doing].places[0];
+  return String(text).replace(/\{place\}/g, ASSISTANT_LIFE_PLACES[place]).replace(/\{doing_te\}/g, ASSISTANT_LIFE_DOINGS[doing].te).replace(/\{doing\}/g, ASSISTANT_LIFE_DOINGS[doing].label);
+};
+const assistantLifeChoose = (cands, want, relax, seen, rand = Math.random) => {
+  const fit = (keys, skip) => Object.entries(want).every(([k, v]) => skip.has(k) || v == null || keys[k] == null || keys[k] === v);
+  const weight = keys => Object.entries(want).reduce((w, [k, v]) => v != null && keys[k] === v ? w * (k === 'air' ? 4 : 2) : w, 1);
+  let firstPool = null;
+  for (let n = 0; n <= relax.length; n++) {
+    const skip = new Set(relax.slice(0, n));
+    const pool = cands.filter(c => fit(c.keys || {}, skip));
+    if (!pool.length) continue;
+    if (!firstPool) firstPool = pool;
+    const fresh = pool.filter(c => !(seen && seen[c.talk.id]));
+    if (!fresh.length) continue;
+    const sum = fresh.reduce((x, c) => x + weight(c.keys || {}), 0);
+    let r = rand() * sum;
+    for (const c of fresh) {
+      r -= weight(c.keys || {});
+      if (r <= 0) return c.talk;
+    }
+    return fresh[fresh.length - 1].talk;
+  }
+  if (!firstPool) return null;
+  return [...firstPool].sort((x, y) => String((seen || {})[x.talk.id] || '').localeCompare(String((seen || {})[y.talk.id] || '')))[0].talk;
+};
+const assistantLifeWithCtx = (talk, ctx) => talk ? {
+  ...talk,
+  ctx: {
+    ...(talk.ctx || {}),
+    ...ctx
+  }
+} : null;
+const assistantLifeAirOf = (life, a, b) => {
+  const key = assistantLifePairKey(a, b);
+  const now = life && Number.isFinite(life.abs) ? life.abs : 0;
+  const rs = (life && life.recent || []).filter(r => r && r.pair === key && Number.isFinite(r.abs) && now - r.abs >= 0 && now - r.abs <= ASSISTANT_LIFE_RECENT_SLOTS);
+  const lastQ = Math.max(-Infinity, ...rs.filter(r => r.kind === 'quarrel').map(r => r.abs));
+  const lastM = Math.max(-Infinity, ...rs.filter(r => r.kind === 'makeup').map(r => r.abs));
+  if (lastM >= lastQ && lastM > -Infinity && now - lastM <= 6) return 'makeup';
+  if (lastQ > -Infinity && lastQ > lastM) return 'after';
+  return 'normal';
+};
+const assistantLifeLevelOf = (peerSt, a, b) => typeof assistantPeerLevel === 'function' ? assistantPeerLevel(peerSt, a, b) : 1;
+const assistantLifeOldPairCands = (pair, lv) => {
+  if (typeof assistantPeerTalkList !== 'function') return [];
+  const ev = typeof assistantPeerExtraTalks === 'function' ? assistantPeerExtraTalks().events : [];
+  return [...assistantPeerTalkList(), ...ev].filter(t => t && Array.isArray(t.pair) && !t.special && !t.when && !t.gen && !t.similar && t.kind !== 'quarrel' && t.kind !== 'makeup' && assistantLifePairKey(t.pair[0], t.pair[1]) === assistantLifePairKey(pair[0], pair[1]) && lv >= (t.lv || 1)).map(t => ({
+    talk: t,
+    keys: {
+      doing: t.lifeDoing || null,
+      lv: t.lifeLv || null
+    }
+  }));
+};
+const assistantLifePickPairTalk = (pair, group, peerSt, life, seen, rand = Math.random) => {
+  const [a, b] = [...pair].sort();
+  const key = assistantLifePairKey(a, b);
+  const lv = assistantLifeLevelOf(peerSt, a, b);
+  const ctx = {
+    place: group.place,
+    doing: group.doing
+  };
+  const quarrels = typeof assistantPeerExtraTalks === 'function' ? assistantPeerExtraTalks().quarrels : assistantLifeQuarrelTalks();
+  const q = peerSt && peerSt.quarrel || {
+    pending: null,
+    done: []
+  };
+  if (q.pending && q.pending.pair === key) {
+    const mk = quarrels.find(t => t.kind === 'makeup' && t.quarrelId === q.pending.id);
+    if (mk) return assistantLifeWithCtx(mk, ctx);
+  }
+  const moods = life && life.moods || {};
+  const grumpy = [a, b].some(id => moods[id] === 'sulky' || moods[id] === 'restless');
+  if (!q.pending && lv >= 2 && rand() < (grumpy ? 0.3 : 0.05)) {
+    const qs = quarrels.filter(t => t.kind === 'quarrel' && assistantLifePairKey(t.pair[0], t.pair[1]) === key && !(seen && seen[t.id]));
+    if (qs.length) return assistantLifeWithCtx(qs[Math.floor(rand() * qs.length)], ctx);
+  }
+  const band = assistantLifeLvBand(lv);
+  const air = assistantLifeAirOf(life, a, b);
+  const okBand = x => x == null || (ASSISTANT_LIFE_BAND_RANK[x] ?? 0) <= ASSISTANT_LIFE_BAND_RANK[band];
+  const okAir = x => x == null || x === 'normal' || x === air;
+  const cands = [...assistantLifeTalkSet().pair.filter(t => assistantLifePairKey(t.pair[0], t.pair[1]) === key).map(t => ({
+    talk: t,
+    keys: {
+      doing: t.keys.doing || null,
+      lv: t.keys.lv || null,
+      air: t.keys.air || null
+    }
+  })), ...assistantLifeOldPairCands([a, b], lv)].filter(c => okBand(c.keys.lv) && okAir(c.keys.air));
+  return assistantLifeWithCtx(assistantLifeChoose(cands, {
+    air: air === 'normal' ? null : air,
+    doing: group.doing,
+    lv: band
+  }, ['doing', 'lv'], seen, rand), ctx);
+};
+const assistantLifePickGroupTalk = (group, peerSt, life = ASSISTANT_LIFE_STORE.state.life, rand = Math.random) => {
+  if (!group || !Array.isArray(group.ids) || group.ids.length < 2) return null;
+  const seen = ASSISTANT_LIFE_STORE.state.seen || {};
+  const ids = group.ids;
+  const ctx = {
+    place: group.place,
+    doing: group.doing
+  };
+  if (ids.length === 2) return assistantLifePickPairTalk(ids, group, peerSt, life, seen, rand);
+  const trioLv = typeof ASSISTANT_PEER_TRIO_LV !== 'undefined' ? ASSISTANT_PEER_TRIO_LV : 2;
+  const pairsOk = m => {
+    for (let i = 0; i < m.length; i++) for (let j = i + 1; j < m.length; j++) if (assistantLifeLevelOf(peerSt, m[i], m[j]) < trioLv) return false;
+    return true;
+  };
+  const oldTrios = typeof assistantPeerExtraTalks === 'function' ? assistantPeerExtraTalks().trios : [];
+  const fixed = [...assistantLifeTalkSet().trio, ...oldTrios.filter(t => !t.similar)].filter(t => Array.isArray(t.trio) && t.trio.every(id => ids.includes(id)) && pairsOk(t.trio)).map(t => ({
+    talk: t,
+    keys: {
+      doing: t.keys && t.keys.doing || t.lifeDoing || null
+    }
+  }));
+  const freshFixed = fixed.filter(c => !seen[c.talk.id]);
+  if (freshFixed.length) return assistantLifeWithCtx(assistantLifeChoose(freshFixed, {
+    doing: group.doing
+  }, ['doing'], seen, rand), ctx);
+  const any = assistantLifeTalkSet().anyTrio.filter(t => t.pair.every(id => ids.includes(id))).map(t => ({
+    talk: t,
+    keys: {
+      doing: t.keys.doing || null
+    }
+  }));
+  const freshAny = any.filter(c => !seen[c.talk.id]);
+  if (freshAny.length) return assistantLifeWithCtx({
+    ...assistantLifeChoose(freshAny, {
+      doing: group.doing
+    }, ['doing'], seen, rand),
+    kind: 'trio',
+    trio: [...ids]
+  }, ctx);
+  const pairs = [];
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) pairs.push([ids[i], ids[j]]);
+  const w = pairs.map(p => 1 + assistantLifeLevelOf(peerSt, p[0], p[1]));
+  let r = rand() * w.reduce((x, y) => x + y, 0);
+  let pick = pairs[pairs.length - 1];
+  for (let i = 0; i < pairs.length; i++) {
+    r -= w[i];
+    if (r <= 0) {
+      pick = pairs[i];
+      break;
+    }
+  }
+  return assistantLifePickPairTalk(pick, group, peerSt, life, seen, rand) || (fixed.length ? assistantLifeWithCtx(assistantLifeChoose(fixed, {
+    doing: group.doing
+  }, ['doing'], seen, rand), ctx) : null);
+};
+const assistantLifePickHomeTalk = (peerSt, {
+  selectedId,
+  metIds,
+  rand = Math.random
+} = {}) => {
+  if (!assistantLifeEnabled() || !ASSISTANT_LIFE_STORE.state.loaded) return null;
+  const met = new Set(metIds || []);
+  const groups = (ASSISTANT_LIFE_STORE.state.life && ASSISTANT_LIFE_STORE.state.life.groups || []).filter(g => g.ids.every(id => met.has(id)));
+  if (!groups.length) return null;
+  const w = groups.map(g => g.ids.includes(selectedId) ? 3 : 1);
+  let r = rand() * w.reduce((x, y) => x + y, 0);
+  let g = groups[groups.length - 1];
+  for (let i = 0; i < groups.length; i++) {
+    r -= w[i];
+    if (r <= 0) {
+      g = groups[i];
+      break;
+    }
+  }
+  return assistantLifePickGroupTalk(g, peerSt, ASSISTANT_LIFE_STORE.state.life, rand);
+};
+const assistantLifePickSoloTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, peerSt = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null, rand = Math.random) => {
+  const s = life && life.solo && life.solo[id];
+  if (!s) return null;
+  const seen = ASSISTANT_LIFE_STORE.state.seen || {};
+  const ctx = {
+    place: s.place,
+    doing: s.doing
+  };
+  const mood = (life.moods || {})[id] || null;
+  const q = peerSt && peerSt.quarrel || {};
+  if (s.reason === 'distance' && q.pending && String(q.pending.pair).split('-').includes(id) && typeof assistantPeerExtraTalks === 'function') {
+    const qt = assistantPeerExtraTalks().quarrels.find(t => t.id === q.pending.id && t.kind === 'quarrel');
+    if (qt && Array.isArray(qt.distance) && qt.distance.length) return assistantLifeWithCtx({
+      id: `${qt.id}-distance`,
+      kind: 'life-distance',
+      pair: qt.pair,
+      lines: qt.distance,
+      lv: 1,
+      scene: 'any'
+    }, ctx);
+  }
+  const keysOf = t => ({
+    pt: t.keys.place ? assistantLifePlaceType(id, t.keys.place) : null,
+    mood: t.keys.mood || null,
+    why: t.keys.why || null,
+    doing: t.keys.doing || null
+  });
+  const want = {
+    pt: assistantLifePlaceType(id, s.place),
+    mood,
+    why: s.reason === 'distance' ? null : s.reason,
+    doing: s.doing
+  };
+  const T = assistantLifeTalkSet();
+  const br = T.breeder.filter(t => t.who === id).map(t => ({
+    talk: t,
+    keys: keysOf(t)
+  }));
+  if (br.length && rand() < 0.3) {
+    const t = assistantLifeChoose(br, want, ['doing', 'why', 'mood', 'pt'], seen, rand);
+    if (t && !seen[t.id]) return assistantLifeWithCtx(t, ctx);
+  }
+  const mine = T.solo.filter(t => t.who === id);
+  const ok = c => c.keys.pt == null || c.keys.pt === want.pt;
+  const scene = assistantLifeChoose(mine.filter(t => t.line === 'scene').map(t => ({
+    talk: t,
+    keys: keysOf(t)
+  })).filter(ok), want, ['doing', 'why', 'mood'], seen, rand);
+  const feel = assistantLifeChoose(mine.filter(t => t.line === 'feel').map(t => ({
+    talk: t,
+    keys: keysOf(t)
+  })).filter(ok), want, ['doing', 'why', 'mood'], seen, rand);
+  const parts = [scene, feel].filter(Boolean);
+  if (!parts.length) return null;
+  return assistantLifeWithCtx({
+    id: parts.map(t => t.id).join('+'),
+    kind: 'life-solo',
+    pair: [id],
+    parts: parts.map(t => t.id),
+    lines: parts.flatMap(t => t.lines),
+    keys: parts[0].keys,
+    lv: 1,
+    scene: 'any'
+  }, ctx);
+};
+const assistantLifePickInviteTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, peerSt = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null, rand = Math.random) => {
+  const s = life && life.solo && life.solo[id];
+  if (!s) return null;
+  const seen = ASSISTANT_LIFE_STORE.state.seen || {};
+  const mood = (life.moods || {})[id];
+  const answer = mood === 'sulky' ? 'shy' : s.reason === 'mypace' ? rand() < 0.6 ? 'decline' : 'glad' : rand() < 0.8 ? 'glad' : 'shy';
+  const others = [...(life.groups || []).flatMap(g => g.ids), ...Object.keys(life.solo || {})].filter(x => x !== id);
+  const cands = assistantLifeTalkSet().invite.filter(t => t.who === id && others.includes(t.from)).map(t => ({
+    talk: t,
+    keys: {
+      answer: t.keys.answer || null,
+      from: t.from
+    }
+  }));
+  const best = [...new Set(cands.map(c => c.talk.from))].sort((x, y) => assistantLifeLevelOf(peerSt, y, id) - assistantLifeLevelOf(peerSt, x, id))[0] || null;
+  const t = assistantLifeChoose(cands, {
+    answer,
+    from: best
+  }, ['from', 'answer'], seen, rand);
+  if (!t) return null;
+  const g = (life.groups || []).find(x => x.ids.includes(t.from));
+  return assistantLifeWithCtx(t, g ? {
+    place: g.place,
+    doing: g.doing
+  } : {
+    place: s.place,
+    doing: s.doing
+  });
+};
 const assistantLifeWatchLeft = (play, day) => {
   const p = assistantLifePlayForDay(play, day);
   const tier = assistantLifeTierOf(p.points);
@@ -96812,7 +97952,7 @@ const assistantLifeWatch = async (group, now = Date.now()) => {
   const life = ASSISTANT_LIFE_STORE.state.life;
   const key = assistantLifeGroupKey(group);
   if ((life.watched || []).includes(key) || assistantLifeWatchLeft(ASSISTANT_LIFE_STORE.state.play, day) <= 0) return null;
-  const talk = assistantLifePickWatchTalk(group, ASSISTANT_PEER_STORE.state);
+  const talk = assistantLifePickGroupTalk(group, ASSISTANT_PEER_STORE.state, life) || assistantLifePickWatchTalk(group, ASSISTANT_PEER_STORE.state);
   if (!talk) return null;
   const p = assistantLifePlayForDay(ASSISTANT_LIFE_STORE.state.play, day);
   ASSISTANT_LIFE_STORE.set({
@@ -96837,9 +97977,25 @@ const assistantLifeWatch = async (group, now = Date.now()) => {
       now
     });
   } catch {}
+  if (talk.kind === 'quarrel') return talk;
+  if (talk.kind === 'makeup') {
+    if (assistantPeerMakeupDone(talk)) {
+      await assistantPeerGain(talk.pair[0], talk.pair[1], 'makeup');
+      assistantPeerAddPlayerBond(talk.pair, 'peerMakeup');
+    }
+    try {
+      assistantPeerAlbumAdd(talk);
+    } catch {}
+    return talk;
+  }
   try {
     assistantPeerAlbumAdd(talk);
   } catch {}
+  if (talk.kind === 'event') {
+    await assistantPeerGain(talk.pair[0], talk.pair[1], 'event');
+    assistantPeerAddPlayerBond(talk.pair, 'peerEvent');
+    return talk;
+  }
   for (const [a, b] of assistantPeerPairsOf(talk)) await assistantPeerGain(a, b, 'talk');
   assistantPeerAddPlayerBond(assistantPeerMembers(talk), talk.kind === 'trio' ? 'peerTrio' : 'peerTalk');
   return talk;
@@ -96992,7 +98148,33 @@ function AssistantLifeScreenBody({
     if (onReplay) onReplay(talk);
   };
   const invite = async id => {
-    if (await assistantLifeNudge('invite', id)) setNote(`${nameOf(id)}を誘いました。次の時間に、だれかのところへ行きます`);
+    const talk = assistantLifePickInviteTalk(id, life);
+    if (!(await assistantLifeNudge('invite', id))) return;
+    setNote(`${nameOf(id)}を誘いました。次の時間に、だれかのところへ行きます`);
+    if (talk) {
+      assistantLifeMarkSeen(talk);
+      assistantLifeCloseScreen();
+      if (onReplay) onReplay(talk);
+    }
+  };
+  const peek = id => {
+    const key = `solo:${id}`;
+    if ((life.watched || []).includes(key)) return;
+    const talk = assistantLifePickSoloTalk(id, life);
+    if (!talk) {
+      setNote(`${nameOf(id)}は、いまは静かに過ごしています`);
+      return;
+    }
+    ASSISTANT_LIFE_STORE.set({
+      life: {
+        ...life,
+        watched: [...(life.watched || []), key]
+      }
+    });
+    assistantLifeSaveLife();
+    assistantLifeMarkSeen(talk);
+    assistantLifeCloseScreen();
+    if (onReplay) onReplay(talk);
   };
   const introduce = async () => {
     if (pick.length === 2 && (await assistantLifeNudge('introduce', pick))) {
@@ -97109,7 +98291,13 @@ function AssistantLifeScreenBody({
     className: `ml-1 text-[10px] ${s.reason === 'lonely' ? 'text-amber-200' : 'text-slate-400'}`
   }, ASSISTANT_LIFE_REASON_LABEL[s.reason])), React.createElement("p", {
     className: "text-[11px] font-bold leading-tight text-slate-300"
-  }, ASSISTANT_LIFE_PLACES[s.place], "で", ASSISTANT_LIFE_DOINGS[s.doing].label, "・", mood(id))), s.reason !== 'distance' && React.createElement("button", {
+  }, ASSISTANT_LIFE_PLACES[s.place], "で", ASSISTANT_LIFE_DOINGS[s.doing].label, "・", mood(id))), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-peek": id,
+    disabled: (life.watched || []).includes(`solo:${id}`),
+    onClick: () => peek(id),
+    className: "min-h-[44px] shrink-0 rounded-xl border border-pink-300/40 bg-pink-400/5 px-2 text-[11px] font-black text-pink-100 active:scale-[.98] disabled:opacity-40"
+  }, (life.watched || []).includes(`solo:${id}`) ? '見た' : 'ようすを見る'), s.reason !== 'distance' && React.createElement("button", {
     type: "button",
     "data-assistant-life-invite": id,
     disabled: invitedNext.has(id),
@@ -137258,6 +138446,18 @@ function MonsterHeroGame() {
   const [extremeRuleOpen, setExtremeRuleOpen] = useState(false);
   const [extremeDifficulty, setExtremeDifficulty] = useState('EXTREME');
   const UNDERWORLD_TAB_SEEN_KEY = 'mh_underworld_tab_seen_v1';
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const settings = normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false)));
+        if (alive) setRhythmSettings(prev => prev === DEFAULT_RHYTHM_SETTINGS ? settings : prev);
+      } catch (e) {}
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [underworldTabSeen, setUnderworldTabSeen] = useState(true);
   useEffect(() => {
     (async () => {
@@ -161395,6 +162595,7 @@ function MonsterHeroGame() {
       onUseBuddyTicket: consumeBuddyTicket,
       onRefundBuddyTicket: refundBuddyTicket,
       onOpenMasuBeat: () => openMasuBeat(gameState),
+      sessionAssistants: rhythmAssistSessionEnabled() && typeof assistantsUnlockedFrom === 'function' ? assistantsUnlockedFrom(rhythmEventStorySeen).filter(who => who.id !== 'momosuke' || momosukeIntroSeenFlag) : [],
       songs: rhythmDemoSongs(RHYTHM_SONGS),
       difficultiesOf: song => rhythmDemoDifficulties(song, RHYTHM_PLAY_DIFFICULTIES),
       difficultyList: rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES),

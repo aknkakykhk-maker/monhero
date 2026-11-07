@@ -816,7 +816,7 @@ function RhythmBuddyList({ masuMons, state, dayKey, onOpen, onPick = null, busy 
 }
 
 // 部屋の中の「マスモンを呼ぶ」(下から出る選択の画面)
-function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [], breederName = '' }) {
+function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [], breederName = '', assistants = [], pickAssistant = null }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
   const [detailId, setDetailId] = React.useState('');
@@ -827,6 +827,15 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
   const listControls = useRhythmBuddyListControls();
   // M/B管理の「マスモン一覧(バトル)」と同じ並べ替え・カードで選ぶ(2026-10-07・ユーザー指示「マスモン呼び出しも管理画面と同じものに」)
   const [selId, setSelId] = React.useState('');
+  // 助手のタブ(2026-11-07 助手とのセッション・80-screen-rhythm-assistant-session.jsx)。公開の印が偽のあいだは出さない
+  const assistOn = rhythmAssistSessionEnabled() && typeof pickAssistant === 'function' && (assistants || []).length > 0;
+  const [tab, setTab] = React.useState(() => ((masuMons || []).length ? 'masu' : 'assistant'));
+  const tabNow = assistOn ? tab : 'masu';
+  const chooseAssistant = async (who) => {
+    if (busy || !canPay) return;
+    setBusy(true);
+    try { await pickAssistant(who); } finally { setBusy(false); }
+  };
   const choose = async (masu) => {
     if (busy || !canPay) return;
     setBusy(true);
@@ -839,15 +848,33 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
         {/* 横画面は、左に説明(題・残り回数・ことわり)、右にマスモンの一覧を並べる(高さが足りず、一覧が1段しか見えなかった。2026-10-07) */}
         <div className="shrink-0 landscape:w-[34%] landscape:overflow-y-auto">
         <header className="mb-2 flex items-center gap-2">
-          <h3 className="min-w-0 flex-1 text-base font-black text-lime-200">🎵 マスモンを呼ぶ</h3>
+          <h3 className="min-w-0 flex-1 text-base font-black text-lime-200">{assistOn ? '🎵 一緒に遊ぶ相手を呼ぶ' : '🎵 マスモンを呼ぶ'}</h3>
           <button type="button" aria-label="閉じる" onClick={onClose} className="min-h-[40px] min-w-[40px] rounded-full bg-slate-800 text-lg font-black">✕</button>
         </header>
+        {assistOn && (
+          <div data-rhythm-buddy-tabs role="tablist" className="mb-2 flex gap-1.5">
+            {[['masu', '🎵 マスモン'], ['assistant', '🎤 助手']].map(([id, label]) => (
+              <button key={id} type="button" role="tab" aria-selected={tabNow === id} data-rhythm-buddy-tab={id} onClick={() => setTab(id)}
+                className={`min-h-[40px] flex-1 rounded-xl text-[13px] font-black ${tabNow === id ? 'border-2 border-pink-300 bg-pink-500/25 text-pink-100' : 'border border-white/10 bg-slate-800 text-slate-300'}`}>{label}</button>
+            ))}
+          </div>
+        )}
         <RhythmBuddyAllowance freeLeft={freeLeft} tickets={tickets} className="mb-1 text-slate-200" />
         {/* 言葉の切れ目で折る(320幅で「呼べま／す」「あ／と」と折れていた・2026-10-26) */}
-        <p className="mb-2 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>
+        {tabNow === 'assistant'
+          ? <p data-rhythm-assist-note className="mb-2 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('助手をえらんで、CPUとしてこの部屋に呼べます。回数はマスモンと同じです(1日3回までは無料、そのあとはセッション券を1枚使います)。')}</p>
+          : <p className="mb-2 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>
           {jaWrap(`マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日${RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。`)}
-        </p>
+        </p>}
         </div>
+        {tabNow === 'assistant'
+          ? (
+            <div className="flex min-h-0 flex-1 flex-col">
+              <RhythmAssistSessionPicker assistants={assistants} calledIds={calledIds} canPay={canPay} busy={busy} onPick={chooseAssistant} />
+              {!canPay && <p data-rhythm-buddy-empty className="mt-2 text-[11px] font-black text-rose-300">今日の無料ぶんを使い切りました。セッション券があれば呼べます</p>}
+            </div>
+          )
+          : (
         <div className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto">
           {detail
@@ -895,6 +922,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
         {listControls.sheet}
         {!canPay && <p data-rhythm-buddy-empty className="mt-2 text-[11px] font-black text-rose-300">今日の無料ぶんを使い切りました。セッション券があれば呼べます</p>}
         </div>
+          )}
       </section>
     </div>
   );
