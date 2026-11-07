@@ -183,11 +183,10 @@ const rhythmAssistSessionWrapBrain = (brain, songs) => ({
 });
 
 // 呼ぶシートの「助手」のタブの中身。カードを押して選び、下の帯の「呼ぶ」で呼ぶ(マスモンのタブと同じ流れ)
-function RhythmAssistSessionPicker({ assistants = [], calledIds = [], canPay = true, busy = false, onPick, guideAssistantId = '' }) {
+// 2026-11-07 社長「複数選択がほしい」: 選んだ印(picked)は呼ぶシートが持ち、まとめて呼ぶ帯もシートが出す
+function RhythmAssistSessionPicker({ assistants = [], calledIds = [], guideAssistantId = '', picked = [], onToggle = null }) {
   const state = useRhythmAssistSessionState();
-  const [selId, setSelId] = React.useState('');
   const list = (assistants || []).filter((who) => who && RHYTHM_ASSIST_SESSION_IDS.includes(who.id));
-  const sel = list.find((who) => who.id === selId) || null;
   const calledOf = (id) => calledIds.includes(rhythmAssistSessionKey(id));
   return (
     <div data-rhythm-assist-picker className="flex min-h-0 flex-1 flex-col">
@@ -207,35 +206,19 @@ function RhythmAssistSessionPicker({ assistants = [], calledIds = [], canPay = t
             {list.map((who) => {
               const lv = rhythmAssistSessionLevel(state, who.id);
               return (
-                <button key={who.id} type="button" data-rhythm-assist-card={who.id} onClick={() => setSelId(who.id)}
-                  className={`flex min-h-[112px] w-full flex-col items-center gap-1 rounded-2xl border-2 p-2 active:scale-95 ${selId === who.id ? 'border-pink-300 bg-slate-800' : 'border-white/10 bg-slate-900'}`}>
-                  <AssistantFace who={who} size={48} accent={who.accent} expression={selId === who.id ? 'happy' : null} />
+                <button key={who.id} type="button" data-rhythm-assist-card={who.id} data-picked={picked.includes(who.id) ? '1' : undefined} onClick={() => onToggle && onToggle(who.id)}
+                  className={`relative flex min-h-[112px] w-full flex-col items-center gap-1 rounded-2xl border-2 p-2 active:scale-95 ${picked.includes(who.id) ? 'border-pink-300 bg-slate-800' : 'border-white/10 bg-slate-900'}`}>
+                  <AssistantFace who={who} size={48} accent={who.accent} expression={picked.includes(who.id) ? 'happy' : null} />
+                  {picked.includes(who.id) && <b className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-pink-400 text-[12px] font-black text-slate-950">✓</b>}
                   <span className="w-full truncate rounded-lg border border-white/10 bg-slate-950/70 px-1 py-0.5 text-center text-[11px] font-black">{who.name}</span>
                   <span className="whitespace-nowrap text-[10px] font-black text-pink-200">セッションLv.{lv}</span>
+                  {lv >= RHYTHM_ASSIST_SESSION_TASTE_LEVEL && <span data-rhythm-assist-taste className="w-full truncate text-center text-[9px] font-bold text-slate-300">♡ {rhythmAssistSessionLikedNames(who.id).join('・')}</span>}
                   {calledOf(who.id) && <span className="rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950">呼んでいる</span>}
                 </button>
               );
             })}
           </div>}
       </div>
-      {sel
-        ? (
-          <div data-rhythm-assist-confirm className="mt-2 flex shrink-0 items-center gap-2 rounded-2xl border border-pink-300/40 bg-slate-950/80 p-2">
-            <AssistantFace who={sel} size={44} accent={sel.accent} expression="happy" />
-            <span className="min-w-0 flex-1">
-              <b className="block truncate text-[13px] font-black">{sel.name}</b>
-              <small className="block whitespace-nowrap text-[10px] font-bold text-pink-200">セッションLv.{rhythmAssistSessionLevel(state, sel.id)}</small>
-              <small data-rhythm-assist-taste className="block truncate text-[10px] font-bold text-slate-300">{rhythmAssistSessionLevel(state, sel.id) >= RHYTHM_ASSIST_SESSION_TASTE_LEVEL
-                ? `♡ ${rhythmAssistSessionLikedNames(sel.id).join('・')}`
-                : `Lv.${RHYTHM_ASSIST_SESSION_TASTE_LEVEL} で好きな曲が分かります`}</small>
-            </span>
-            {calledOf(sel.id)
-              ? <span data-rhythm-assist-called className="shrink-0 rounded-xl border border-lime-300/50 px-2 py-3 text-[10px] font-black text-lime-200">呼んでいる</span>
-              : <button data-rhythm-assist-call type="button" disabled={busy || !canPay} onClick={() => onPick && onPick(sel)}
-                className="min-h-[44px] shrink-0 rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-4 text-sm font-black text-slate-950 disabled:opacity-40">呼ぶ</button>}
-          </div>
-        )
-        : <p className="mt-2 text-center text-[11px] font-bold text-slate-400">呼びたい助手をタップしてください</p>}
     </div>
   );
 }
@@ -357,6 +340,8 @@ function RhythmAssistSessionPlayFace({ songId }) {
   const [say, setSay] = React.useState(null); // { aid, text, expr }
   const [glow, setGlow] = React.useState(false);
   const [gattai, setGattai] = React.useState(null); // { a, b }
+  // 演奏が終わって結果(data-rhythm-result)が出たら、顔とひとことは消す(2026-11-07 社長「切れてるとこが多い」: 結果のボーナスの枠に顔が重なっていた)
+  const [ended, setEnded] = React.useState(false);
   const ids = rhythmAssistSessionCalledIds().slice(0, 4);
   const idsKey = ids.join(',');
   React.useEffect(() => {
@@ -419,6 +404,9 @@ function RhythmAssistSessionPlayFace({ songId }) {
       setPos((q) => (q && q.top === next.top && q.left === next.left ? q : next));
     };
     const tick = () => {
+      const done = !!document.querySelector('[data-rhythm-result]');
+      setEnded((e) => (e === done ? e : done));
+      if (done) return;
       place();
       const watch = typeof RHYTHM_PLAY_WATCH !== 'undefined' ? RHYTHM_PLAY_WATCH : null;
       const h = watch && watch.hud ? watch.hud.get() : null;
@@ -449,7 +437,7 @@ function RhythmAssistSessionPlayFace({ songId }) {
     tick();
     return () => clearInterval(t);
   }, [idsKey, songId]);
-  if (!ids.length) return null;
+  if (!ids.length || ended) return null;
   const whoA = gattai ? rhythmAssistSessionWho(gattai.a) : null;
   const whoB = gattai ? rhythmAssistSessionWho(gattai.b) : null;
   return (
@@ -522,15 +510,24 @@ function RhythmAssistSessionDuoResult({ ids = [], round }) {
     return () => { alive = false; };
   }, [key]);
   if (!shown.length) return null;
+  // ひとことのあるデュオは1組1行。ひとことの無いペアの友情Lv は1行にまとめる(4人呼ぶと6組並んで窮屈だった・2026-11-07 社長「切れてるとこが多い」)
+  const withLines = shown.filter((x) => x.rows);
+  const onlyGain = shown.filter((x) => !x.rows && x.gained > 0);
   return (
     <>
-      {shown.map(({ key: k, d, rows, gained }) => (
-        <p key={k} data-rhythm-assist-duo-result={k} className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/50 bg-violet-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100">
+      {withLines.map(({ key: k, d, rows, gained }) => (
+        <p key={k} data-rhythm-assist-duo-result={k} className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/50 bg-violet-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100 landscape:col-span-2 [[data-mh-view-rotation=true]_&]:col-span-2">
           <span className="shrink-0">🎤 {rhythmAssistSessionName(d.a)}・{rhythmAssistSessionName(d.b)}</span>
-          {rows && rows.map(([who, , text], i) => <span key={i} className="min-w-0">{rhythmAssistSessionName(who)}「{text}」</span>)}
+          {rows.map(([who, , text], i) => <span key={i} className="min-w-0">{rhythmAssistSessionName(who)}「{text}」</span>)}
           {gained > 0 && <span data-rhythm-assist-peer-gain className="text-amber-200">友情Lv +{gained}</span>}
         </p>
       ))}
+      {onlyGain.length > 0 && (
+        <p data-rhythm-assist-peer-gains className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/40 bg-violet-950/50 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100 landscape:col-span-2 [[data-mh-view-rotation=true]_&]:col-span-2">
+          <span className="shrink-0">🎤 友情Lv</span>
+          {onlyGain.map(({ key: k, d, gained }) => <span key={k} data-rhythm-assist-peer-gain className="whitespace-nowrap text-amber-200">{rhythmAssistSessionName(d.a)}・{rhythmAssistSessionName(d.b)} +{gained}</span>)}
+        </p>
+      )}
     </>
   );
 }
