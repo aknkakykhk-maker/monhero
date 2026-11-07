@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4094d50ab94d316e
+// source-sha256: cbe9279d17b39d08
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99885,6 +99885,7 @@ const quickNudgeAfter = (nudge, today) => {
   };
 };
 const QUICK_GUIDE_RUN_BETWEEN = Object.freeze(['WAVE_RESULT', 'QUICK_GROWTH', 'PICK_ALLY', 'QUICK_JOIN']);
+const QUICK_GUIDE_SEEN_AFTER_MS = 1200;
 const quickGuideScreenKey = (gameState, quickRun, autoRepeat) => quickRun === true && autoRepeat === true && QUICK_GUIDE_RUN_BETWEEN.includes(gameState) ? 'BATTLE' : gameState;
 const quickGuidePick = ctx => {
   const c = ctx || {};
@@ -146258,6 +146259,8 @@ function MonsterHeroGame() {
     };
   };
   const [quickGuideSeen, setQuickGuideSeen] = useState(null);
+  const quickGuideSeenRef = useRef(null);
+  const quickGuideStoredRef = useRef(null);
   const [quickNudge, setQuickNudge] = useState(null);
   const [quickGuideReplay, setQuickGuideReplay] = useState(null);
   const quickGuideShowingRef = useRef(null);
@@ -153961,7 +153964,9 @@ function MonsterHeroGame() {
         [seenRaw, nudgeRaw] = await Promise.all([storeGet(QUICK_GUIDE_SEEN_KEY, null, false), storeGet(QUICK_GUIDE_NUDGE_KEY, null, false)]);
       } catch (_) {}
       if (cancelled) return;
-      setQuickGuideSeen(normalizeQuickGuideSeen(seenRaw));
+      quickGuideSeenRef.current = normalizeQuickGuideSeen(seenRaw);
+      quickGuideStoredRef.current = quickGuideSeenRef.current;
+      setQuickGuideSeen(quickGuideSeenRef.current);
       setQuickNudge(normalizeQuickNudge(nudgeRaw));
     })();
     return () => {
@@ -154003,6 +154008,20 @@ function MonsterHeroGame() {
   }, [quickGuidePicked]);
   const quickGuideActive = quickGuideReplay ? `replay:${quickGuideReplay}` : quickNudgeShowing && !quickGuideBusy ? quickNudgeShowing : quickGuidePicked && quickGuidePicked !== quickGuideLater && quickGuidePicked !== 'nudgeHome' && quickGuidePicked !== 'nudgeBattle' ? quickGuidePicked : null;
   quickGuideShowingRef.current = quickGuideActive;
+  const persistQuickGuideSeen = guideId => {
+    if (!guideId || !Array.isArray(quickGuideStoredRef.current) || quickGuideStoredRef.current.includes(guideId)) return;
+    const next = quickGuideSeenAfter(quickGuideStoredRef.current, guideId);
+    quickGuideStoredRef.current = next.seen;
+    storeSet(QUICK_GUIDE_SEEN_KEY, next, false);
+  };
+  const markQuickGuideSeen = guideId => {
+    persistQuickGuideSeen(guideId);
+    if (!guideId || !Array.isArray(quickGuideSeenRef.current) || quickGuideSeenRef.current.includes(guideId)) return;
+    quickGuideSeenRef.current = normalizeQuickGuideSeen({
+      seen: [...quickGuideSeenRef.current, guideId]
+    });
+    setQuickGuideSeen(quickGuideSeenRef.current);
+  };
   const finishQuickGuide = (guideId, done) => {
     if (quickGuideReplay) {
       setQuickGuideReplay(null);
@@ -154012,14 +154031,27 @@ function MonsterHeroGame() {
       setQuickNudgeShowing(null);
       return;
     }
-    if (!done) {
-      setQuickGuideLater(guideId);
-      return;
-    }
-    const next = quickGuideSeenAfter(quickGuideSeen, guideId);
-    setQuickGuideSeen(next.seen);
-    storeSet(QUICK_GUIDE_SEEN_KEY, next, false);
+    if (!done) setQuickGuideLater(guideId);
+    markQuickGuideSeen(guideId);
   };
+  const quickGuideShownRef = useRef(new Map());
+  useEffect(() => {
+    const id = quickGuideActive && !String(quickGuideActive).startsWith('replay:') && quickGuideActive !== 'nudgeHome' && quickGuideActive !== 'nudgeBattle' ? quickGuideActive : null;
+    if (!id) return undefined;
+    const screen = quickGuideScreen;
+    const t = setTimeout(() => {
+      quickGuideShownRef.current.set(id, screen);
+      persistQuickGuideSeen(id);
+    }, QUICK_GUIDE_SEEN_AFTER_MS);
+    return () => clearTimeout(t);
+  }, [quickGuideActive, quickGuideScreen]);
+  useEffect(() => {
+    for (const [id, screen] of [...quickGuideShownRef.current]) {
+      if (screen === quickGuideScreen) continue;
+      quickGuideShownRef.current.delete(id);
+      markQuickGuideSeen(id);
+    }
+  }, [quickGuideScreen]);
   const startOnboardingPreview = () => {
     onboardingPreviewBackupRef.current = {
       name: breederName,

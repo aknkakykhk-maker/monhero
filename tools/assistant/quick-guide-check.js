@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // クイック・AUTO設定・裏周回の案内(2026-11-07 社長。monster-hero/src/parts/56-quick-guide.jsx)を確かめる。
 //   ① どの画面で・だれに・どの案内を出すか(quickGuidePick)。お話・おしゃべり・ほかの案内・演奏中・れんしゅう中は出さない
-//   ② 一度きり(最後まで見たら出ない)・途中で「あとで」なら次に出る・誘導は1日1回・合計3回・クイックを一度クリアしたら出ない
+//   ② 一度きり(一度出したら、最後まで見ても・「あとで」でも・閉じずに出ていっても、二度と自動では出ない。2026-11-07 社長)・誘導は1日1回・合計3回・クイックを一度クリアしたら出ない
 //   ③ 台詞: 全ページに みゅあ の文がある・助手のページidに知らない物が無い・モンスターを「子」と呼ばない・口調の言葉
 //   ④ 村の案内に1ページ足す(バトルのページのすぐあと)・れんしゅうの終わりの文を直した・ヘルプから見返せる・画面を切り替えない
-//   ⑤ 実ブラウザ(縦 390×844・横 844×390): HOME の誘導 → バトルの選び方の案内(あとで → 読み込み直すとまた出る → OK で出ない)
+//   ⑤ 実ブラウザ(縦 390×844・横 844×390): HOME の誘導 → バトルの選び方の案内(出した時点で見た印 → 読み込み直しても出ない)・モンヒロビートを何回開き直しても裏周回の案内は一度だけ
 //      → クイックの難易度えらびの案内 →「AUTO設定を見に行く」で AUTO設定 の案内。光らせた所が窓で隠れない
 // 使い方: node tools/build.js のあと、:8899 でリポジトリを配信して node tools/assistant/quick-guide-check.js
 'use strict';
@@ -29,7 +29,7 @@ const linesEnd = assistantsSrc.indexOf('\n};', linesStart);
 check('台詞のまとまり ASSISTANT_QUICK_GUIDE_LINES がある', linesStart > 0 && linesEnd > linesStart);
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(`${assistantsSrc.slice(linesStart, linesEnd + 3)}\n${pure}\nthis.E = { ASSISTANT_QUICK_GUIDE_LINES, QUICK_GUIDE_IDS, QUICK_GUIDE_PAGES, QUICK_GUIDE_REPLAYS, QUICK_GUIDE_SEEN_KEY, QUICK_GUIDE_NUDGE_KEY, CARD_AUTO_INTRO_SEEN_KEY, quickGuideReplayPages, quickGuideLine, normalizeQuickGuideSeen, quickGuideSeenAfter, normalizeQuickNudge, quickNudgeAllowed, quickNudgeAfter, quickGuidePick, QUICK_GUIDE_RUN_BETWEEN, quickGuideScreenKey };`, ctx);
+vm.runInContext(`${assistantsSrc.slice(linesStart, linesEnd + 3)}\n${pure}\nthis.E = { ASSISTANT_QUICK_GUIDE_LINES, QUICK_GUIDE_IDS, QUICK_GUIDE_PAGES, QUICK_GUIDE_REPLAYS, QUICK_GUIDE_SEEN_KEY, QUICK_GUIDE_NUDGE_KEY, CARD_AUTO_INTRO_SEEN_KEY, QUICK_GUIDE_SEEN_AFTER_MS, quickGuideReplayPages, quickGuideLine, normalizeQuickGuideSeen, quickGuideSeenAfter, normalizeQuickNudge, quickNudgeAllowed, quickNudgeAfter, quickGuidePick, QUICK_GUIDE_RUN_BETWEEN, quickGuideScreenKey };`, ctx);
 const E = ctx.E;
 check('保存は新しいキーだけ', E.QUICK_GUIDE_SEEN_KEY === 'mh_quick_guide_seen_v1' && E.QUICK_GUIDE_NUDGE_KEY === 'mh_quick_nudge_v1' && E.CARD_AUTO_INTRO_SEEN_KEY === 'mh_card_auto_intro_seen_v1');
 const base = { busy: false, seen: [], quickUnlocked: true, quickEverCleared: false, nudgeOk: true };
@@ -56,6 +56,13 @@ check('「あとで」の取り消しは、∞の WAVE のあいだをバトル�
   E.QUICK_GUIDE_RUN_BETWEEN.every((g) => E.quickGuideScreenKey(g, true, true) === 'BATTLE' && E.quickGuideScreenKey(g, false, true) === g)
   && /const quickGuideScreen = [^\n]*quickGuideScreenKey\(gameState, isQuickMode\(runMode\), autoRepeat\)/.test(app) && /setQuickGuideLater\(null\); setQuickNudgeShowing\(null\); \}, \[quickGuideScreen\]\)/.test(app)
   && /showing: quickGuideShowingRef\.current/.test(app) && /quickGuideShowingRef\.current = quickGuideActive;/.test(app));
+{
+  const app = fs.readFileSync(path.join(__dirname, '../../monster-hero/src/parts/60-app.jsx'), 'utf8');
+  check('「あとで」でも見た印を付ける(開くたびに出直さない。2026-11-07 社長)', !app.includes("if (!done) { setQuickGuideLater(guideId); return; }") && /const finishQuickGuide = [\s\S]{0,600}markQuickGuideSeen\(guideId\);/.test(app));
+  check('出して少し見えていたら見た印を保存する(閉じずにアプリを閉じても二度と出ない・一瞬で替わった案内は数えない)',
+    /setTimeout\(\(\) => \{ quickGuideShownRef\.current\.set\(id, screen\); persistQuickGuideSeen\(id\); \}, QUICK_GUIDE_SEEN_AFTER_MS\)/.test(app) && E.QUICK_GUIDE_SEEN_AFTER_MS > 0 && E.QUICK_GUIDE_SEEN_AFTER_MS <= 3000);
+  check('案内を出したまま画面を離れても見た印を付ける', /quickGuideShownRef\.current\.delete\(id\);\s*markQuickGuideSeen\(id\);/.test(app));
+}
 check('保存の読み込み前(seen が null)は出さない', E.quickGuidePick({ ...base, gameState: 'AUTO_SETTINGS', seen: null }) === null);
 check('一度見た案内は出さない', pick({ gameState: 'AUTO_SETTINGS', seen: ['g2'] }) === null && pick({ gameState: 'BATTLE', seen: ['auto'] }) === null);
 check('HOME の誘導: クイックが開いて未クリアの人だけ', pick({ gameState: 'HOME' }) === 'nudgeHome' && pick({ gameState: 'HOME', quickEverCleared: true }) === null && pick({ gameState: 'HOME', quickUnlocked: false }) === null && pick({ gameState: 'HOME', nudgeOk: false }) === null);
@@ -235,11 +242,8 @@ const browser = async () => {
     await click('button[aria-label="モンヒロバトル"]');
     await page.waitForTimeout(1500);
     g = await guide();
-    check(`${T}OK を押す前に出ていったら、次に開いたときまた出る`, g && g.id === 'g1a', JSON.stringify(g));
-    await click('[data-quick-guide-next]');
-    await page.waitForTimeout(400);
     const seen1 = await store('mh_quick_guide_seen_v1');
-    check(`${T}OK で見た印が付く`, seen1 && Array.isArray(seen1.seen) && seen1.seen.includes('g1a'), JSON.stringify(seen1));
+    check(`${T}OK を押す前に出ていっても(読み込み直し)、一度出した案内は二度と出ない・見た印が付いている`, !(g && g.id === 'g1a') && seen1 && Array.isArray(seen1.seen) && seen1.seen.includes('g1a'), JSON.stringify({ g, seen1 }));
     check(`${T}g1a のあとに同じ日の誘導は出ない`, !(await guide()));
     await click('[data-battle-system="systemQuick"]');
     await page.waitForTimeout(1500);
@@ -256,15 +260,7 @@ const browser = async () => {
     check(`${T}g1.3: 報酬方針を光らせ、窓で隠れない`, g && g.page === 'g1.3' && ov && ov.area < ov.spot * 0.05, JSON.stringify({ g, ov }));
     mo = await mustOk();
     check(`${T}g1.3: 報酬方針のボタンが画面に入り、枠の中で、窓に隠れない`, mo.ok, mo.why);
-    await click('[data-quick-guide-later]'); await page.waitForTimeout(400);
-    check(`${T}「あとで」で消え、見た印は付かない`, !(await guide()) && !((await store('mh_quick_guide_seen_v1')).seen || []).includes('g1b'));
-    // いったん出て、もう一度クイックの難易度えらびへ
-    await boot();
-    await click('button[aria-label="モンヒロバトル"]'); await page.waitForTimeout(1200);
-    await click('[data-battle-system="systemQuick"]'); await page.waitForTimeout(1500);
-    g = await guide();
-    check(`${T}途中でやめた案内は、次に開いたとき最初から`, g && g.id === 'g1b' && g.page === 'g1.2', JSON.stringify(g));
-    for (let i = 0; i < 3; i++) { await click('[data-quick-guide-next]'); await page.waitForTimeout(350); }
+    for (let i = 0; i < 2; i++) { await click('[data-quick-guide-next]'); await page.waitForTimeout(350); }
     g = await guide();
     check(`${T}最後のページに「AUTO設定を見に行く」`, g && g.page === 'g1.5' && !!(await page.$('[data-quick-guide-go-auto]')), JSON.stringify(g));
     await click('[data-quick-guide-go-auto]');
@@ -324,7 +320,50 @@ const browser = async () => {
       for (let k = 0; k < 60 && (w3 === w2 || w3 == null); k++) { await page.waitForTimeout(250); w3 = await waveNo(); }
       await page.waitForTimeout(1500);
       check(`${T}「あとで」を押したら、WAVE が変わっても(${w2}→${w3})出直さない`, w3 !== w2 && w3 != null && !(await guide()), JSON.stringify(await guide()));
+      check(`${T}「あとで」でも見た印が付く(g3a)`, ((await store('mh_quick_guide_seen_v1')).seen || []).includes('g3a'));
+      // 裏周回のままモンヒロビートへ。曲えらびの案内(g3b)は一度だけ。何回開き直しても二度と出ない(2026-11-07 社長「モンビーとかひらくたびに助手が裏周回の説明をしてくる」)
+      // 裏周回のままモンヒロビートへ(モードえらび → 曲えらび)。案内は一度だけで、何回行き来しても二度と出ない
+      //   (2026-11-07 社長「モンビーとかひらくたびに助手が裏周回の説明をしてくる」)
+      const toBeat = () => page.evaluate(() => { const b = document.querySelector('button[aria-label="周回を続けたままモンヒロビートへ"]'); if (b && b.offsetParent) { b.click(); return true; } return false; });
+      const tapSel = (sel) => page.evaluate((q) => { const b = document.querySelector(q); if (b && b.offsetParent && !b.disabled) { b.click(); return true; } return false; }, sel);
+      // モンヒロビートの初めての説明(14ページ)は見たことにしておく(この検査で見るのは裏周回の案内)
+      await page.evaluate(() => localStorage.setItem('mh_rhythm_tutorial_seen_v1', 'true'));
+      let opened = false;
+      for (let k = 0; k < 20 && !opened; k++) { opened = await toBeat(); if (!opened) await page.waitForTimeout(500); }
+      await page.waitForTimeout(1800);
+      const gc = await guide();
+      check(`${T}裏周回のままモンヒロビートを開くと、モードえらびの案内(g3c)が出る`, opened && gc && gc.id === 'g3c', JSON.stringify({ opened, gc }));
+      if (gc) await click('[data-quick-guide-next]');
+      await page.waitForTimeout(400);
+      await tapSel('[data-rhythm-mode-solo]'); await page.waitForTimeout(1800);
+      const gb = await guide();
+      if (process.env.QG_DEBUG_DIR) await page.screenshot({ path: path.join(process.env.QG_DEBUG_DIR, `g3b-${vp.name}.png`) }).catch(() => {});
+      check(`${T}曲えらびでは曲えらびの案内(g3b)が出る`, gb && gb.id === 'g3b', JSON.stringify(gb));
+      if (gb) await click('[data-quick-guide-later]');
+      await page.waitForTimeout(400);
+      const again = [];
+      for (let n = 0; n < 3; n++) {
+        const back = await tapSel('[data-rhythm-song-select-back]'); await page.waitForTimeout(1500);
+        const gm = await guide();
+        const solo = await tapSel('[data-rhythm-mode-solo]'); await page.waitForTimeout(1500);
+        const gs = await guide();
+        again.push({ back, mode: gm && gm.id, solo, song: gs && gs.id });
+      }
+      check(`${T}一度閉じたら、モードえらび・曲えらびを何回行き来しても裏周回の案内は出ない`, again.every((x) => x.back && x.solo && !x.mode && !x.song), JSON.stringify(again));
+      const seenBeat = (await store('mh_quick_guide_seen_v1')).seen || [];
+      check(`${T}「あとで」で閉じた曲えらびの案内にも見た印が付く`, seenBeat.includes('g3b') && seenBeat.includes('g3c'), JSON.stringify(seenBeat));
     }
+    // 裏周回していないときは、モンヒロビートを開いても裏周回の案内は出ない(見た印を消して確かめる)
+    await page.evaluate(() => localStorage.setItem('mh_quick_guide_seen_v1', JSON.stringify({ v: 1, seen: ['g1a', 'g1b', 'g2', 'auto', 'g3a'] })));
+    await boot();
+    await click('button[aria-label="モンヒロビート"]'); await page.waitForTimeout(2500);
+    const atMode = !!(await page.$('[data-rhythm-mode-select]'));
+    const gNo = await guide();
+    await click('[data-rhythm-mode-solo]'); await page.waitForTimeout(2000);
+    const atSong = !!(await page.$('[data-rhythm-song-select-back]'));
+    const gNo2 = await guide();
+    check(`${T}裏周回していないときは、モンヒロビート(モードえらび・曲えらび)を開いても裏周回の案内は出ない`,
+      atMode && atSong && !(gNo && /^g3/.test(gNo.id)) && !(gNo2 && /^g3/.test(gNo2.id)), JSON.stringify({ atMode, atSong, gNo, gNo2 }));
     check(`${T}画面のエラーが無い`, errors.length === 0, errors.slice(0, 3).join(' / '));
     await page.close();
   }
