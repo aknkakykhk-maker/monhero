@@ -28,7 +28,9 @@ function MonsterHeroGame() {
   //   (WAVEの切り替わりに重なったときだけなので「たまに」になる。2026-09-12の
   //    「モンビー中にオプションに行くとたまにバトルに飛ばされる」と同じ型の、逆向きの事故)
   // ここで控えも一緒に更新すれば、切り替えたその瞬間から正しい判断になる。
-  const setGameState = (next) => { runBackgroundAllowedRef.current = isBackgroundRunScreen(next); setGameStateRaw(next); };
+  // 画面を変えるたびに、どの処理が変えたかを記録に残す(MH_SCREEN_TRAIL・10-core.jsx)
+  const gameStateCaller = () => { try { const line = String(new Error().stack || '').split('\n').slice(2).find((l) => !/setGameState|gameStateCaller/.test(l)) || ''; const m = /at\s+([\w$.]+)/.exec(line) || /^([\w$.]+)@/.exec(line.trim()); return m ? m[1] : ''; } catch (_) { return ''; } };
+  const setGameState = (next) => { runBackgroundAllowedRef.current = isBackgroundRunScreen(next); if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`); setGameStateRaw(next); };
   const [debugThrowScreenError, setDebugThrowScreenError] = useState(false); // デバッグ設定から画面エラーの受け止めを試すためだけの印
   const debugMenuRootRef = useRef(null); // デバッグメニューの名前で絞り込む欄が、どの範囲を探すか(2026-10-27)
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
@@ -2385,6 +2387,14 @@ function MonsterHeroGame() {
   // 助手との仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる。
   // 助手ごとに完全に分けて持つので、切り替えてももう片方の進捗は消えない
   const [assistantBonds, setAssistantBonds] = useState({});
+  // 助手ライフの画面を開いているか(曲を「風がそよぐ場所」にする・ふだんの掛け合いを止める。2026-11-07 社長)
+  const [assistantLifeOpenNow, setAssistantLifeOpenNow] = useState(false);
+  useEffect(() => {
+    if (typeof ASSISTANT_LIFE_STORE === 'undefined') return undefined;
+    const fn = (st) => setAssistantLifeOpenNow(!!(st && st.open));
+    ASSISTANT_LIFE_STORE.listeners.add(fn);
+    return () => { ASSISTANT_LIFE_STORE.listeners.delete(fn); };
+  }, []);
   const assistantBondsRef = useRef({});
   const assistantBond = normalizeAssistantBond(assistantBonds[selectedAssistantId]);
   // 親密度Lvが上がった直後かどうか。次にHOMEを開いたときだけ、助手がそのことに触れる
@@ -5220,6 +5230,8 @@ function MonsterHeroGame() {
   // quickGuideSeen … 見終えた案内の id(null は読み込み前。読み込むまで何も出さない)/ quickNudge … 誘導の回数と最後の日
   // quickGuideReplay … ヘルプから見返している案内のまとまり('g1' 'g2' 'g3')。保存は新しいキーだけ(CLAUDE.md ⑦)
   const [quickGuideSeen, setQuickGuideSeen] = useState(null);
+  const quickGuideSeenRef = useRef(null); // 見た印の最新(閉じると画面を離れるが同じ描画で重なっても、印を取りこぼさない)
+  const quickGuideStoredRef = useRef(null); // 保存してある見た印(出した時点で先に保存する。画面の印は閉じる・離れるまで付けない)
   const [quickNudge, setQuickNudge] = useState(null);
   const [quickGuideReplay, setQuickGuideReplay] = useState(null);
   // いま出している案内(前の描画の分)。クイックの∞の WAVE のあいだも案内を出したままにするため(56 の quickGuidePick の showing)
@@ -6201,6 +6213,8 @@ function MonsterHeroGame() {
     // イベントが終わればこの判定を抜けるので、元の画面のBGMへそのまま戻る
     if (eventLineBgm) return eventLineBgm;
     if (eventBgmScene) return bgmArrangementWithEventDefault(bgmArrangement, eventBgmScene);
+    // 助手ライフの画面(HOME・プロフィール・持ち物の上に開く)は「風がそよぐ場所」(2026-11-07 社長)
+    if (assistantLifeOpenNow && (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') && typeof ASSISTANT_LIFE_BGM_TRACK === 'string') return ASSISTANT_LIFE_BGM_TRACK;
     // イベント・レイドボス「ジャック」: ジャックとの戦いは Monster(全編)、レイド画面・段階えらび・編成はぱんぷきんの曲に固定する
     if (state === 'BATTLE' && raidJackRunRef.current) return RAID_JACK_BATTLE_BGM_TRACK;
     if (RAID_JACK_BGM_STATES.includes(state)) return RAID_JACK_BGM_TRACK;
@@ -6322,7 +6336,7 @@ function MonsterHeroGame() {
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);
     else if (key) Audio_.playBGM(key);
     else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   // 超省エネではBGMを選んで鳴らしてもSEだけは常に0。保存済みSE音量そのものは変更しない。
@@ -11537,7 +11551,9 @@ function MonsterHeroGame() {
       let seenRaw = null, nudgeRaw = null;
       try { [seenRaw, nudgeRaw] = await Promise.all([storeGet(QUICK_GUIDE_SEEN_KEY, null, false), storeGet(QUICK_GUIDE_NUDGE_KEY, null, false)]); } catch (_) { /* 読めなければ既定 */ }
       if (cancelled) return;
-      setQuickGuideSeen(normalizeQuickGuideSeen(seenRaw));
+      quickGuideSeenRef.current = normalizeQuickGuideSeen(seenRaw);
+      quickGuideStoredRef.current = quickGuideSeenRef.current;
+      setQuickGuideSeen(quickGuideSeenRef.current);
       setQuickNudge(normalizeQuickNudge(nudgeRaw));
     })();
     return () => { cancelled = true; };
@@ -11577,15 +11593,50 @@ function MonsterHeroGame() {
     : quickNudgeShowing && !quickGuideBusy ? quickNudgeShowing
     : quickGuidePicked && quickGuidePicked !== quickGuideLater && quickGuidePicked !== 'nudgeHome' && quickGuidePicked !== 'nudgeBattle' ? quickGuidePicked : null;
   quickGuideShowingRef.current = quickGuideActive;
-  // 案内を閉じる。done … 最後まで見た(見た印を付ける)。誘導とヘルプからの見返しは印を付けない
+  // 見た印を保存する(同じ案内に二度書かない)。★案内を出した時点で呼ぶ(2026-11-07 社長「モンビーとかひらくたびに助手が裏周回の説明をしてくる」)。
+  //   出したまま閉じずにアプリを閉じた・読み込み直したときも、二度と自動では出さない。見返しはヘルプからできる
+  const persistQuickGuideSeen = (guideId) => {
+    if (!guideId || !Array.isArray(quickGuideStoredRef.current) || quickGuideStoredRef.current.includes(guideId)) return;
+    const next = quickGuideSeenAfter(quickGuideStoredRef.current, guideId);
+    quickGuideStoredRef.current = next.seen;
+    storeSet(QUICK_GUIDE_SEEN_KEY, next, false);
+  };
+  // 画面の見た印を付ける(閉じた・画面を離れたとき)。保存もする
+  const markQuickGuideSeen = (guideId) => {
+    persistQuickGuideSeen(guideId);
+    if (!guideId || !Array.isArray(quickGuideSeenRef.current) || quickGuideSeenRef.current.includes(guideId)) return;
+    quickGuideSeenRef.current = normalizeQuickGuideSeen({ seen: [...quickGuideSeenRef.current, guideId] });
+    setQuickGuideSeen(quickGuideSeenRef.current);
+  };
+  // 案内を閉じる。誘導とヘルプからの見返しは印を付けない。
+  // ★「最後まで」でも「あとで」でも見た印を付ける(2026-11-07 社長「モンビーとかひらくたびに助手が裏周回の説明をしてくる」)。
+  //   前は「あとで」に印を付けず、画面を開き直すたびに最初から出していた。見返しはヘルプの「クイックのAUTO設定と裏周回」からできる
   const finishQuickGuide = (guideId, done) => {
     if (quickGuideReplay) { setQuickGuideReplay(null); return; }
     if (guideId === 'nudgeHome' || guideId === 'nudgeBattle') { setQuickNudgeShowing(null); return; }
-    if (!done) { setQuickGuideLater(guideId); return; }
-    const next = quickGuideSeenAfter(quickGuideSeen, guideId);
-    setQuickGuideSeen(next.seen);
-    storeSet(QUICK_GUIDE_SEEN_KEY, next, false);
+    if (!done) setQuickGuideLater(guideId);
+    markQuickGuideSeen(guideId);
   };
+  // 案内を出したまま画面を離れた(閉じずに戻った・別の画面へ進んだ)ときも、見た印を付ける。一度出した案内は二度と自動では出さない
+  //   画面(quickGuideScreen。∞の WAVE のあいだはバトルと同じ)が変わったときにだけ見る。一瞬出ない描画があっても、案内を途中で消さない
+  //   出した案内は { 案内id: 出した画面 } で覚え、画面が変わったら「前の画面で出した物」だけに印を付ける(新しい画面の案内には付けない)
+  const quickGuideShownRef = useRef(new Map());
+  // 出してから少し(1.2秒)見えていたら、保存だけ先にする(画面の印は付けないので、閉じるまで・WAVE をまたいでも出したまま)。
+  //   ★一瞬だけ出て、すぐほかの案内(曲えらびの初めての説明など)に替わった案内は数えない(読めていないので)
+  useEffect(() => {
+    const id = quickGuideActive && !String(quickGuideActive).startsWith('replay:') && quickGuideActive !== 'nudgeHome' && quickGuideActive !== 'nudgeBattle' ? quickGuideActive : null;
+    if (!id) return undefined;
+    const screen = quickGuideScreen;
+    const t = setTimeout(() => { quickGuideShownRef.current.set(id, screen); persistQuickGuideSeen(id); }, QUICK_GUIDE_SEEN_AFTER_MS);
+    return () => clearTimeout(t);
+  }, [quickGuideActive, quickGuideScreen]);
+  useEffect(() => {
+    for (const [id, screen] of [...quickGuideShownRef.current]) {
+      if (screen === quickGuideScreen) continue;
+      quickGuideShownRef.current.delete(id);
+      markQuickGuideSeen(id);
+    }
+  }, [quickGuideScreen]);
 
   // 初回チュートリアル。HOMEを最初に開いたときだけ自動で始める。
   // デバッグから何度でも呼べるよう、開始と終了を関数に分けている
@@ -18478,10 +18529,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const accentClass = accent === 'pink' ? 'border-pink-500' : 'border-indigo-500';
     return (
       <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex,paddingTop}} role="dialog" aria-modal="true" aria-label={label||`${mon.name}の詳細`}>
-        <div className={`bg-slate-900 border-2 ${accentClass} rounded-3xl p-4 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto overflow-hidden`}
+        {/* ★背の低い横画面(844×390 など)では、見出し(お気に入り/転生ロックつき)と下の操作だけで枠が埋まり、
+              真ん中の欄(技・固有技強化・合体…)の高さが0になって見えなかった(#1998 で見出しが高くなってから。2026-11-07 レフェリーくん)。
+              横で背が低いときと「🔄 横」で回したときだけ、詳細の枠ごと縦に動かす(縦の見た目は変えない)。
+              回したときは --mh-vh が端末の縦の長さ(844)のままで枠が画面からはみ出すので、上限を回した画面の高さ(max-h-full)にする。検査: tools/masu/masu-detail-landscape-check.js */}
+        <div data-monster-detail-box className={`bg-slate-900 border-2 ${accentClass} rounded-3xl p-4 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto [[data-mh-view-rotation=true]_&]:overflow-y-auto [[data-mh-view-rotation=true]_&]:!max-h-full`}
              style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px)'}}>
           {renderMonsterSummaryHeader({ mon, masu, onRename: readOnly ? null : onRename, onClose, power, powerNote })}
-          <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
+          <div data-monster-detail-body className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2 [@media(orientation:landscape)_and_(max-height:520px)]:flex-none [@media(orientation:landscape)_and_(max-height:520px)]:overflow-visible [[data-mh-view-rotation=true]_&]:flex-none [[data-mh-view-rotation=true]_&]:overflow-visible">
             {detailOpts.marketDiscIcon && <section className="rounded-xl border border-amber-500/40 bg-amber-950/30 p-2 flex items-center gap-3"><img src={detailOpts.marketDiscIcon} alt={detailOpts.marketDiscName||'円盤石'} className="w-12 h-12 rounded-full object-cover border-2 border-white/10 shrink-0"/><div className="min-w-0"><div className="text-[10px] font-black text-amber-400">マーケット販売中の円盤石</div><div className="text-[11px] font-black text-white leading-tight break-words">{detailOpts.marketDiscName}</div></div></section>}
             {renderDetailSectionLabel('この個体の強さ', '総合力に反映されます')}
             {renderMonsterDetailInfo(mon, detailOpts)}
@@ -19083,7 +19138,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {typeof AssistantPeerTalk==='function'&&RELEASE_FLAGS.assistantPeer===true&&(()=>{
           const metIds=assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag).map(who=>who.id);
           const busy=!!eventReplay||assistantChatOpen||showAssistantPicker||kikiIntroStep!=null||momosukeIntroStep!=null||!assistantChosen;
-          const scene=busy?null:(ASSISTANT_PEER_SCENES[gameState]||null);
+          // 助手ライフの画面を開いているあいだは、ふだんの掛け合いを始めない(場面の掛け合いだけ)
+          const scene=busy||assistantLifeOpenNow?null:(ASSISTANT_PEER_SCENES[gameState]||null);
           // その日の遊び方(その日の出来事の掛け合いに使う)。ミッションの今日の数から読むだけ
           const md=normalizeMissions(missions).daily||{};
           const today={battles:md.battles||0,clears:md.challengeClears||0,enhances:md.enhances||0};
@@ -19091,10 +19147,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <AssistantPeerTalk scene={peerReplay?null:scene} metIds={metIds} selectedId={selectedAssistantId}
               replay={peerReplay} onReplayEnd={()=>setPeerReplay(null)} today={today}/>
             {/* 助手たちの今(2026-11-07・公開の印 assistantLife)。帯は HOME だけ(演奏中・マルチ中・お話の最中は出さない)。画面は帯とプロフィールから開く */}
-            {typeof AssistantLifeBand==='function'&&gameState==='HOME'&&!busy&&!peerReplay&&<AssistantLifeBand metIds={metIds}/>}
+            {/* 2026-11-07 社長: 帯はやめて、HOME の施設の横に顔だけ(56-assistant-life-house.jsx) */}
+            {typeof AssistantLifeHomeFaces==='function'&&gameState==='HOME'&&!busy&&!peerReplay&&<AssistantLifeHomeFaces metIds={metIds}/>}
             {/* はじめて差し入れ・友情のしるしを手に入れたときの案内(HOME で1回だけ・公開の印 assistantLife) */}
             {typeof AssistantLifeItemIntro==='function'&&gameState==='HOME'&&!busy&&!peerReplay&&<AssistantLifeItemIntro peerItems={{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}}/>}
-            {typeof AssistantLifeScreen==='function'&&<AssistantLifeScreen metIds={metIds} onReplay={(talk)=>setPeerReplay(talk)}
+            {typeof AssistantLifeScreen==='function'&&<AssistantLifeScreen metIds={metIds} onReplay={(talk)=>setPeerReplay(talk)} bondLevelOf={(id)=>assistantBondLevel(normalizeAssistantBond(assistantBonds[id]).points)}
               peerItems={{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}} onUseItem={useAssistantPeerItem}/>}
           </>;
         })()}

@@ -84,6 +84,8 @@ const quickNudgeAfter = (nudge, today) => { const s = normalizeQuickNudge(nudge)
 //   ここで案内を消すと作り直されて1ページ目へ戻り、「あとで」も取り消される(2026-11-07 レフェリーくんの止め絵)。
 //   出している ∞ の案内(g3a)は、このあいだも出したままにし、「あとで」もバトルの画面と同じに扱う
 const QUICK_GUIDE_RUN_BETWEEN = Object.freeze(['WAVE_RESULT', 'QUICK_GROWTH', 'PICK_ALLY', 'QUICK_JOIN']);
+// 案内がこれだけ見えていたら「見た」にする(閉じなくても、アプリを閉じても、二度と自動では出さない。2026-11-07 社長)
+const QUICK_GUIDE_SEEN_AFTER_MS = 1200;
 const quickGuideScreenKey = (gameState, quickRun, autoRepeat) => (quickRun === true && autoRepeat === true && QUICK_GUIDE_RUN_BETWEEN.includes(gameState) ? 'BATTLE' : gameState);
 // いまの画面で出す案内。ctx … { gameState, busy, seen, quickUnlocked, quickEverCleared, quickSelect, quickRun, autoRepeat, battleTutorial, raidJack, backgroundRun, nudgeOk, showing }
 //   showing … いま出している案内(WAVE のあいだも ∞ の案内を出したままにするため)

@@ -69,6 +69,9 @@
 | `mh_assistant_life_play_v1` | object | 助手たちの今のにぎわい `{ day(朝4時区切り), points, counts:{rhythm,battle,card,chat,peer}, lastDay, streak }`。段(静か/ふつう/にぎやか/お祭り)で助手どうしの仲良くなり方と1日の上限が変わる。助手どうしの点 `mh_assistant_peer_bond_v1` は書き換えない(上がる量が変わるだけ) |
 | `mh_assistant_peer_seen14_v1` | object | 助手たちの今で見た台本 `{ [台本の id]: 見た日(朝4時区切り) }`。見た台本は14日のあいだ出しにくくする(全部見ていたら前に見たものから)。14日より前の記録・壊れた値は読むときに捨てる(最大4000件)。公開の印 `assistantLife` が真のときだけ書く |
 | `mh_assistant_life_item_intro_v1` | boolean | 2人にあげる道具(差し入れ・友情のしるし)を初めて持ったときの案内を出したか。true なら2度出さない。公開の印 `assistantLife` が真のときだけ書く |
+| `mh_assistant_life_diary_v1` | object | 助手ライフ「助手たちの家」の今日あったこと `{ day(朝4時区切り), items:[{ t('HH:MM'), text, ids, kind }], slots:[書いた時間の番号] }`。日が変わると空から始める。40件まで。公開の印 `assistantLife` が真のときだけ書く(2026-11-07) |
+| `mh_assistant_life_intro_v1` | string | 助手ライフの入場の演出を長く見せた日(朝4時区切りの日付)。同じ日の2回目からは短くする。公開の印 `assistantLife` が真のときだけ書く(2026-11-07) |
+| `mh_assistant_life_rhythm_v1` | object | 助手ライフの生活のリズムの変わり方 `{ [助手id]: { shift(-1 朝型〜+1 夜型), day(最後に動いた日), dayGain(その日に動いた量) } }`。夜・朝に誘って遊ぶと少しずつ動き、誘わない日は 0 へ戻る。性格ごとの上限あり。公開の印 `assistantLife` が真のときだけ書く(2026-11-07) |
 | `mh_assistant_daily_lines_v1` | object | ふだんの吹き出しを1日1回まとめて作ったひとこと(2026-10-14)。`{ day, assistantId, lines: { [場面]: [{ e, t, n }] } }`。日付が変われば使わず、次に作ったら入れ替える。n はその日に出した回数 |
 | `mh_story_assistant_chat_seen_v1` | boolean | 助手とおしゃべりのお話「話せるようになった日」を本編で見たか(飛ばしても立つ)。公開の後の最初の HOME で1回だけ流すため。回想・デバッグでは立てない |
 | `mh_beat_shop_vip_letter_seen_v1` | boolean | お話「レジェンドブリーダーへの招待状」を本編で見たか(飛ばしても立つ・2026-11-05)。ブリーダーレベル1000以上の HOME で1回だけ流す。true の人だけ、ビートP交換所のダイヤ・トレーニングチケット・重トレーニングチケットが「優待パス還元」になる(値段は data/rhythm-event.js の LEGEND_BREEDER_PASS_OFFERS。保存しない)。回想・デバッグでは立てない |
@@ -244,6 +247,7 @@
 | `mh_rhythm_achievements_v1` | object / 空の台帳 | モンヒロビートの実績の台帳(2026-10-05・`docs/spec/RHYTHM_ACHIEVEMENTS.md`)。`{v:1, items:{'曲:難易度:称号':{at:取った時刻ms(0=不明)}}, claimed:{'実績のid#報酬ルールのid':受け取った時刻ms}}`。称号は fullCombo・allExcellent・allMarvelous(上の称号は下の称号も含む)。**取れたかの正本は BEST のまま**(BESTには何も足さない)。受け取り済みの印は消さない。壊れた項目は読まずに捨てる。台帳が無い人は、モンヒロビートを開いたときに BEST から取り込む(1度きり・時刻は不明の0) |
 | `mh_rhythm_monsters_v1` | string[] | モンスターノーツ用のマスモン枠(`data/rhythm-mode.js`) |
 | `mh_rhythm_rank_pending_v1` | object[] | 全国ランキングへ送れなかったモンビーの記録(次回に再送) |
+| `mh_screen_trail_v1` | array / `null` | 画面の出来事の記録(2026-11-07 追加・診断用)。最近30件の `{ t: 時刻(ms), k: 種類(gs/err/vis/page/gap/gl/rot/play), d: 中身(80文字まで) }`。名前・ID・セーブの中身は入れない。読めない・壊れていれば空から始める。ゲームの進行には使わない |
 | `mh_rhythm_multi_ask_open_v1` | string / `null` | マルチのチャットの「◯◯に聞く」の札を開いておくか(2026-11-07 追加)。`'1'` で開く、それ以外・無いときは畳む。読み書きできなくても、その場で開け閉めできる |
 | `mh_rhythm_multi_penalty_v1` | object / `null` | みんなで対戦(マルチ)で、公開ルームのライブを途中でやめたときの入室待ち `{ until: 時刻(ms) }`。3分を超える値・壊れた値は0扱い(`rhythmMultiPenaltyLeftMs`)。2026-10-02 追加 |
 | `mh_rhythm_multi_record_v1` | object / `null` | みんなで対戦の記録(2026-10-03 追加)。`{ lives, mvp, bestAvg, bestStreak, lastRound, recent:[{at, round, songId, avg, score, n, streak, mvp, quit, names}] }`。最近は30回ぶん。読むときは `rhythmMultiNormalizeRecord` を通し(無い・壊れた値は0から)、同じ回(`round`)は2度数えない(`rhythmMultiAddRecord`) |
