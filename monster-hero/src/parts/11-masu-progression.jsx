@@ -1554,6 +1554,10 @@ const resetMasuForRebirth = (masu, { rebirthCount, reincarnateCount, reincarnate
   else if (masu?.color != null) reset.color = masu.color;
   if (Array.isArray(masu?.inheritedUniques)) reset.inheritedUniques = masu.inheritedUniques.map(unique => ({ ...unique }));
   if (Array.isArray(masu?.fusionHistory)) reset.fusionHistory = masu.fusionHistory.map(entry => ({ ...entry }));
+  // 固有技設定(並び順・初期技)も転生で失われない(2026-11-07。ここに無かったので、転生のたびに初期状態へ戻っていた)。
+  //   保存されているときだけ、そのまま持ち越す(読むときに normalizeUniqueOrder / normalizeInitialUniqueKey が今の技に合わせる)
+  if (Array.isArray(masu?.uniqueOrder)) reset.uniqueOrder = masu.uniqueOrder.filter(key => typeof key === 'string');
+  if (typeof masu?.initialUniqueKey === 'string' && masu.initialUniqueKey) reset.initialUniqueKey = masu.initialUniqueKey;
   if (masu?.individualStats && typeof masu.individualStats === 'object') reset.individualStats = { ...masu.individualStats };
   if (masu?.individualStatOffsets && typeof masu.individualStatOffsets === 'object') reset.individualStatOffsets = { ...masu.individualStatOffsets };
   if (Array.isArray(masu?.distAptBoosts)) reset.distAptBoosts = [0,0,0,0];
