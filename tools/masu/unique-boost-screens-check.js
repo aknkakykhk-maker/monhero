@@ -133,7 +133,11 @@ const VIEWS = [
       await page.waitForTimeout(400);
       const sheetBox = await page.locator('[data-unique-boost-sheet] > div').first().boundingBox();
       const vw = vp.rot ? vp.h : vp.w, vh = vp.rot ? vp.w : vp.h; // 回したときは画面の縦横が入れ替わる
-      check(`${T}② シートが画面に収まる`, !!sheetBox, JSON.stringify(sheetBox));
+      // 画面に収まるか。🔄横は絵を回しているので getBoundingClientRect ではなく、回した枠の中の位置(offsetTop/offsetHeight)で見る
+      //   (2026-11-07 レフェリーくんの指摘: 🔄横でシートの上の段(技の名前・タブ)が画面の外に出ていたのを、前の検査は見逃していた)
+      const fit = await page.evaluate(() => { const root = document.querySelector('[data-unique-boost-sheet]'), panel = root && (root.querySelector('[data-unique-boost-panel]') || root.firstElementChild);
+        if (!panel) return null; return { top: panel.offsetTop, h: panel.offsetHeight, frame: root.offsetHeight }; });
+      check(`${T}② シートの上の段(技の名前・タブ)から下のボタンまで、画面(回したときは回した枠)に収まる`, !!sheetBox && !!fit && fit.top >= 0 && fit.top + fit.h <= fit.frame + 1, JSON.stringify(fit));
       // 行を見る場所が狭すぎない(横で説明が場所を取り、行が1つしか見えなかった。2026-11-07)。行2つぶん(約150px)は見える
       const rowsH = await page.evaluate(() => { const r = document.querySelector('[data-unique-boost-rows]'); return r ? r.clientHeight : -1; });
       check(`${T}② 行を見る場所が、行2つぶん以上ある`, rowsH >= 150, `${rowsH}px`);

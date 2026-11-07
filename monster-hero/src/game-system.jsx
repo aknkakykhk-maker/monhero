@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 51ddb51bf046eb04
+// generated-sha256: 84b4a7e0a00e49d0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -43288,6 +43288,8 @@ function MasuSoulTraitsScreen({
 // 下書き(draft)は「確定後の目盛り数」。確定するまで保存へ触らない。確定は onCommit(plan) が
 // applyUniqueBoostPlan を通して保存する(今より下げる・効かない種類・上限超え・P不足はそこで弾く)。
 // 見た目はレフェリーくんの案の絵(docs/progress/unique-boost)に合わせる。
+// ★🔄横(端末は縦のまま絵を回す)では --mh-vh が端末の縦の長さのままなので、高さは回した枠いっぱい(!max-h-full)にし、
+//   横で背が低いときの畳み方も回したとき用([[data-mh-view-rotation=true]_&]:…)を並べて持つ(2026-11-07 レフェリーくんの指摘)
 
 function UniqueBoostSheet({ masu, skillKey, onClose, onCommit }) {
   const [tab, setTab] = useState('attack');
@@ -43322,20 +43324,20 @@ function UniqueBoostSheet({ masu, skillKey, onClose, onCommit }) {
   return (
     <div className="fixed inset-0 flex items-end sm:items-center justify-center" style={{ position:'fixed', inset:0, backgroundColor:'rgba(2,6,23,0.78)', zIndex:31600 }}
       role="dialog" aria-modal="true" aria-label={`${skillName}のオリジナル強化`} data-unique-boost-sheet>
-      <div className="w-full max-w-md bg-slate-900 border-2 border-amber-500/80 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+      <div data-unique-boost-panel className="w-full max-w-md bg-slate-900 border-2 border-amber-500/80 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden [[data-mh-view-rotation=true]_&]:!max-h-full"
         style={{ maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - 12px)', paddingBottom:'env(safe-area-inset-bottom)' }}>
-        <div data-unique-boost-head className="shrink-0 px-4 pt-3 pb-2 border-b border-white/10 [@media(orientation:landscape)_and_(max-height:520px)]:pt-2 [@media(orientation:landscape)_and_(max-height:520px)]:pb-1.5">
+        <div data-unique-boost-head className="shrink-0 px-4 pt-3 pb-2 border-b border-white/10 [@media(orientation:landscape)_and_(max-height:520px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2 [@media(orientation:landscape)_and_(max-height:520px)]:pb-1.5 [[data-mh-view-rotation=true]_&]:pb-1.5">
           <div className="flex items-center justify-between gap-2 min-w-0">
             <div className="min-w-0 flex items-baseline gap-1.5"><span className="truncate text-[15px] font-black text-white">{skillName}</span><span className="shrink-0 text-[11px] font-mono font-black text-amber-300">Lv.{level}</span></div>
             <div className="shrink-0 flex items-center gap-1 text-[11px] font-black text-amber-300"><Sparkles size={12}/>未使用 固有技P {normalized.uniqueSkillPoints.toLocaleString()}</div>
           </div>
-          <div className="mt-1.5 text-[12px] font-black text-amber-200 [@media(orientation:landscape)_and_(max-height:520px)]:hidden">✨ オリジナル強化(この技だけに効きます)</div>
+          <div className="mt-1.5 text-[12px] font-black text-amber-200 [@media(orientation:landscape)_and_(max-height:520px)]:hidden [[data-mh-view-rotation=true]_&]:hidden">✨ オリジナル強化(この技だけに効きます)</div>
           {/* 横で背が低いときは説明を畳み、行が見える場所を広くする(2026-11-07 実画面で1行しか見えなかった) */}
-          <div className="mt-0.5 text-[10px] font-bold leading-relaxed text-slate-400 [@media(orientation:landscape)_and_(max-height:520px)]:hidden">Lv.8 になった固有技に、余った固有技Pで強化を積めます。合体でこの技を引き継ぐと、強化も一緒に引き継ぎます。</div>
-          <div className="mt-2 grid grid-cols-3 gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1" role="tablist">
+          <div className="mt-0.5 text-[10px] font-bold leading-relaxed text-slate-400 [@media(orientation:landscape)_and_(max-height:520px)]:hidden [[data-mh-view-rotation=true]_&]:hidden">Lv.8 になった固有技に、余った固有技Pで強化を積めます。合体でこの技を引き継ぐと、強化も一緒に引き継ぎます。</div>
+          <div className="mt-2 grid grid-cols-3 gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1 [[data-mh-view-rotation=true]_&]:mt-1" role="tablist">
             {UNIQUE_BOOST_TABS.map(t => (
               <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} data-unique-boost-tab={t.id} onClick={() => setTab(t.id)}
-                className={`min-h-[40px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[34px] rounded-xl text-[12px] font-black border ${tab === t.id ? 'bg-amber-500 text-slate-950 border-amber-300' : 'bg-slate-800 text-slate-300 border-white/10'}`}>{t.label}</button>
+                className={`min-h-[40px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[34px] [[data-mh-view-rotation=true]_&]:min-h-[34px] rounded-xl text-[12px] font-black border ${tab === t.id ? 'bg-amber-500 text-slate-950 border-amber-300' : 'bg-slate-800 text-slate-300 border-white/10'}`}>{t.label}</button>
             ))}
           </div>
         </div>
@@ -43371,14 +43373,14 @@ function UniqueBoostSheet({ masu, skillKey, onClose, onCommit }) {
             );
           })}
         </div>
-        <div className="shrink-0 px-4 pt-2 pb-3 border-t border-white/10 [@media(orientation:landscape)_and_(max-height:520px)]:pt-1 [@media(orientation:landscape)_and_(max-height:520px)]:pb-2">
+        <div className="shrink-0 px-4 pt-2 pb-3 border-t border-white/10 [@media(orientation:landscape)_and_(max-height:520px)]:pt-1 [[data-mh-view-rotation=true]_&]:pt-1 [@media(orientation:landscape)_and_(max-height:520px)]:pb-2 [[data-mh-view-rotation=true]_&]:pb-2">
           <div className="flex items-center justify-between text-[12px] font-black"><span className="text-slate-400">残りP</span><span className="text-amber-300">{remaining.toLocaleString()}</span></div>
-          <div className="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1">
-            <button type="button" onClick={onClose} className="min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] rounded-2xl bg-slate-800 text-[13px] font-black text-white">やめる</button>
+          <div className="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1 [[data-mh-view-rotation=true]_&]:mt-1">
+            <button type="button" onClick={onClose} className="min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px] rounded-2xl bg-slate-800 text-[13px] font-black text-white">やめる</button>
             <button type="button" data-unique-boost-commit disabled={draftCost <= 0} onClick={() => {
               const plan = {}; UNIQUE_BOOST_DEFINITIONS.forEach(def => { if (targetOf(def.id) > (current[def.id] || 0)) plan[def.id] = targetOf(def.id); });
               if (onCommit(plan)) { setDraft({}); onClose(); }
-            }} className="min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] rounded-2xl bg-gradient-to-b from-amber-500 to-orange-700 text-[13px] font-black text-white disabled:opacity-40">強化を確定</button>
+            }} className="min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px] rounded-2xl bg-gradient-to-b from-amber-500 to-orange-700 text-[13px] font-black text-white disabled:opacity-40">強化を確定</button>
           </div>
         </div>
       </div>
