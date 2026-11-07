@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c2b9a0dcec748f3a
+// source-sha256: 86bf45e9017cfbfc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -97172,7 +97172,11 @@ function AssistantPeerTalk({
     decidedRef.current = decidedRef.current.startsWith(`${scene}:`) ? decidedRef.current : '';
     setCur(c => c && !c.replay ? null : c);
   }, [scene]);
-  const [toast, setToast] = React.useState(null);
+  const [toast, setToast0] = React.useState(null);
+  const setToast = React.useCallback(t => {
+    if (t && t.kind === 'level' && assistantPeerLifeOn() && typeof growthFxPeerLevel === 'function') return;
+    setToast0(t);
+  }, []);
   const finish = React.useCallback(async c => {
     setCur(null);
     if (c.replay) {
