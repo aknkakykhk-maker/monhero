@@ -273,7 +273,11 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
         if (tries < 3) await V.page.close(); // 最後の1枚は閉じない(閉じたページを触って落ちないように)
       }
       if (await wb.count()) {
+        // 見守ったときに言い合いの台本が選ばれると友情Lv は上がらない(運で落ちないよう、選ぶあいだだけ乱数を高い値に固定する。2026-11-07 統括)
+        await V.page.evaluate(() => { window.__mhRandom = Math.random; Math.random = () => 0.99; });
         await wb.click(); await V.page.waitForTimeout(500);
+        await V.page.evaluate(() => { if (window.__mhRandom) Math.random = window.__mhRandom; });
+        check('⑨ 見守った掛け合いは言い合いではない(友情Lv が上がる掛け合い)', (await V.page.locator('[data-assistant-peer-kind="quarrel"]').count()) === 0);
         await finishTalk(V.page);
         await V.page.locator('[data-growth-fx-sheet="level"]').waitFor({ timeout: 8000 }).catch(() => {});
         check('⑨ 見守って友情Lv が上がると、Lv アップの演出が出る', (await V.page.locator('[data-growth-fx-sheet="level"]').count()) > 0);

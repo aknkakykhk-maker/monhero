@@ -269,6 +269,27 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
       await C.evaluate(() => RHYTHM_MULTI.summon({ masuId: 'm1', name: 'もちまる', level: 5, baseId: 'Mocchi', colors: [] }));
       await C.waitForFunction(() => RHYTHM_MULTI.view() && (RHYTHM_MULTI.view().myCpus || []).length === 1, null, { timeout: 8000 }).catch(() => {});
       for (const text of ['よろしく!', 'もちまる、調子どう?', 'ナイス!']) { await C.evaluate((t) => RHYTHM_MULTI.sendChat(t), text); await C.waitForTimeout(1300); }
+      // 席の吹き出しは席のカードの中に収める(2026-11-07 社長のスクショ: 助手を呼ぶと吹き出しが増え、横・🔄横で席の下の曲の一覧に重なっていた・マモリ)。
+      //   長い発言で、縦・横・🔄横のどれでも、吹き出しが自分の席のカードからはみ出さないことを見る
+      await C.evaluate(() => RHYTHM_MULTI.sendChat('今日はいっぱい遊ぼうね!いちばん長い吹き出しでもはみ出さないか見ています'));
+      await C.waitForTimeout(400);
+      for (const [w, h, rotated, label] of [[390, 844, false, '縦画面'], [844, 390, false, '横画面'], [390, 844, true, '回転(横)']]) {
+        await C.setViewportSize({ width: w, height: h });
+        await C.evaluate((on) => RHYTHM_VIEW_ROTATION.set(on ? 90 : 0), !!rotated);
+        await C.waitForTimeout(rotated ? 900 : 500);
+        const bub = await C.evaluate(() => {
+          const list = [...document.querySelectorAll('[data-rhythm-multi-chat-bubble]:not([data-rhythm-multi-result-bubble])')].filter((el) => el.getBoundingClientRect().width > 0);
+          if (!list.length) return '(吹き出しが無い)';
+          return list.map((el) => {
+            const c = el.parentElement.getBoundingClientRect(); const b = (el.firstElementChild || el).getBoundingClientRect();
+            return b.top < c.top - 2 || b.bottom > c.bottom + 2 || b.left < c.left - 2 || b.right > c.right + 2 ? `はみ出し(下 ${Math.round(b.bottom - c.bottom)}px・右 ${Math.round(b.right - c.right)}px)` : '';
+          }).filter(Boolean).join(' / ');
+        });
+        check(`席の吹き出し(${label}): 長い発言でも、吹き出しが席のカードからはみ出さない(下の曲の一覧・部屋の札に重ならない)`, bub === '', bub);
+      }
+      await C.setViewportSize({ width: 390, height: 844 });
+      await C.evaluate(() => RHYTHM_VIEW_ROTATION.set(0));
+      await C.waitForTimeout(500);
       for (const [w, h, rotated, label] of [[390, 844, false, '縦画面'], [375, 667, false, '小さい縦画面'], [390, 844, true, '回転(横)'], [844, 390, false, '横画面'], [667, 375, false, '小さい横画面']]) {
         await C.setViewportSize({ width: w, height: h });
         await C.evaluate((on) => RHYTHM_VIEW_ROTATION.set(on ? 90 : 0), !!rotated);

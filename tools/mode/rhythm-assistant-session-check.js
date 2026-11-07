@@ -272,6 +272,8 @@ check('助手のスコアをランキングへ送らない(助手の計算の部
 check('部屋の入口のボタンは「呼ぶ」+マスモンと助手の小さな顔(社長 2026-11-07)', /data-rhythm-buddy-header-faces/.test(MULTI) && /<span className="mt-0\.5 text-\[10px\] font-black">呼ぶ<\/span>/.test(MULTI));
 check('演奏の結果が出たら、演奏中の顔とひとことは消す(結果のボーナスの枠に重ねない)', /const done = !!document\.querySelector\('\[data-rhythm-result\]'\);/.test(SCREEN) && /if \(!ids\.length \|\| ended\) return null;/.test(SCREEN));
 // 助手ライフとのつなぎ(2026-11-07 ナカヨシ5と決めた窓口)
+check('助手ライフの受け口へ知らせる(typeof で確かめてから assistantLifeOnSessionLive)', /if \(typeof assistantLifeOnSessionLive === 'function'\)/.test(SCREEN) && /assistantLifeOnSessionLive\(\{ assistantId, partnerIds, songId, levelUp, level, duo, at \}\)/.test(SCREEN));
+check('家の部屋の「一緒にモンビー」は rhythmAssistSessionInvite を呼ぶ(ASSISTANT_LIFE_LINKS.beatInvite)', /ASSISTANT_LIFE_LINKS\.beatInvite = \(id\) => rhythmAssistSessionInvite\(id\);/.test(SCREEN));
 check('助手ライフへ「1曲一緒に遊んだ」を知らせる窓口 rhythmAssistSessionOnLive がある(育ちを保存したあとに1回)', /const rhythmAssistSessionOnLive = \(fn\)/.test(SCREEN) && /rhythmAssistSessionEmitLive\(\{\s*assistantId, partnerIds:/.test(SCREEN) && /gain: outcome\.gain \|\| 0, levelUp: outcome\.levelUp \|\| 0, level, likeUp: outcome\.likeUp \|\| 0,\s*duo:/.test(SCREEN));
 check('「モンビーへ誘う」は払えないとき部屋へ行かずに知らせる(no_ticket)', /if \(!rhythmAssistSessionCanPayNow\(\)\) return rhythmAssistSessionInviteDone\(onResult, \{ ok: false, reason: 'no_ticket' \}\);/.test(SCREEN));
 check('誘いは5分で消える・1回だけ使う(部屋に入る前にやめたら何もしない)', /RHYTHM_ASSIST_SESSION_INVITE_TTL_MS = 5 \* 60 \* 1000/.test(SCREEN) && /const rhythmAssistSessionTakeInvite = /.test(SCREEN));

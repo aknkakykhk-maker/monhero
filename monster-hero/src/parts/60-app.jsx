@@ -28,7 +28,9 @@ function MonsterHeroGame() {
   //   (WAVEの切り替わりに重なったときだけなので「たまに」になる。2026-09-12の
   //    「モンビー中にオプションに行くとたまにバトルに飛ばされる」と同じ型の、逆向きの事故)
   // ここで控えも一緒に更新すれば、切り替えたその瞬間から正しい判断になる。
-  const setGameState = (next) => { runBackgroundAllowedRef.current = isBackgroundRunScreen(next); setGameStateRaw(next); };
+  // 画面を変えるたびに、どの処理が変えたかを記録に残す(MH_SCREEN_TRAIL・10-core.jsx)
+  const gameStateCaller = () => { try { const line = String(new Error().stack || '').split('\n').slice(2).find((l) => !/setGameState|gameStateCaller/.test(l)) || ''; const m = /at\s+([\w$.]+)/.exec(line) || /^([\w$.]+)@/.exec(line.trim()); return m ? m[1] : ''; } catch (_) { return ''; } };
+  const setGameState = (next) => { runBackgroundAllowedRef.current = isBackgroundRunScreen(next); if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`); setGameStateRaw(next); };
   const [debugThrowScreenError, setDebugThrowScreenError] = useState(false); // デバッグ設定から画面エラーの受け止めを試すためだけの印
   const debugMenuRootRef = useRef(null); // デバッグメニューの名前で絞り込む欄が、どの範囲を探すか(2026-10-27)
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
@@ -18434,10 +18436,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const accentClass = accent === 'pink' ? 'border-pink-500' : 'border-indigo-500';
     return (
       <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex,paddingTop}} role="dialog" aria-modal="true" aria-label={label||`${mon.name}の詳細`}>
-        <div className={`bg-slate-900 border-2 ${accentClass} rounded-3xl p-4 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto overflow-hidden`}
+        {/* ★背の低い横画面(844×390 など)では、見出し(お気に入り/転生ロックつき)と下の操作だけで枠が埋まり、
+              真ん中の欄(技・固有技強化・合体…)の高さが0になって見えなかった(#1998 で見出しが高くなってから。2026-11-07 レフェリーくん)。
+              横で背が低いときと「🔄 横」で回したときだけ、詳細の枠ごと縦に動かす(縦の見た目は変えない)。
+              回したときは --mh-vh が端末の縦の長さ(844)のままで枠が画面からはみ出すので、上限を回した画面の高さ(max-h-full)にする。検査: tools/masu/masu-detail-landscape-check.js */}
+        <div data-monster-detail-box className={`bg-slate-900 border-2 ${accentClass} rounded-3xl p-4 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto [[data-mh-view-rotation=true]_&]:overflow-y-auto [[data-mh-view-rotation=true]_&]:!max-h-full`}
              style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px)'}}>
           {renderMonsterSummaryHeader({ mon, masu, onRename: readOnly ? null : onRename, onClose, power, powerNote })}
-          <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
+          <div data-monster-detail-body className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2 [@media(orientation:landscape)_and_(max-height:520px)]:flex-none [@media(orientation:landscape)_and_(max-height:520px)]:overflow-visible [[data-mh-view-rotation=true]_&]:flex-none [[data-mh-view-rotation=true]_&]:overflow-visible">
             {detailOpts.marketDiscIcon && <section className="rounded-xl border border-amber-500/40 bg-amber-950/30 p-2 flex items-center gap-3"><img src={detailOpts.marketDiscIcon} alt={detailOpts.marketDiscName||'円盤石'} className="w-12 h-12 rounded-full object-cover border-2 border-white/10 shrink-0"/><div className="min-w-0"><div className="text-[10px] font-black text-amber-400">マーケット販売中の円盤石</div><div className="text-[11px] font-black text-white leading-tight break-words">{detailOpts.marketDiscName}</div></div></section>}
             {renderDetailSectionLabel('この個体の強さ', '総合力に反映されます')}
             {renderMonsterDetailInfo(mon, detailOpts)}
