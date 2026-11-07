@@ -212,7 +212,11 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     let watched = null;
     if (await wbtn.count()) {
       watched = await wbtn.getAttribute('data-assistant-life-watch');
+      // 言い合いの台本が選ばれると友情Lv は上がらない(運で落ちないよう、選ぶあいだだけ乱数を固定する)
+      await page.evaluate(() => { window.__mhRandom = Math.random; Math.random = () => 0.99; });
       await wbtn.click();
+      await page.waitForTimeout(300);
+      await page.evaluate(() => { if (window.__mhRandom) Math.random = window.__mhRandom; });
       await page.waitForTimeout(800);
       const talking = await page.locator('[data-assistant-peer-talk], [data-assistant-peer-line]').count();
       check('② 見守ると、家を閉じずに場面でその組の掛け合いが流れる', (await page.locator('[data-assistant-life-screen]').count()) === 1 && (await page.locator('[data-assistant-life-scene]').count()) === 1 && talking > 0, `${talking}`);
