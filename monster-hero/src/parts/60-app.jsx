@@ -18882,6 +18882,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               replay={peerReplay} onReplayEnd={()=>setPeerReplay(null)} today={today}/>
             {/* 助手たちの今(2026-11-07・公開の印 assistantLife)。帯は HOME だけ(演奏中・マルチ中・お話の最中は出さない)。画面は帯とプロフィールから開く */}
             {typeof AssistantLifeBand==='function'&&gameState==='HOME'&&!busy&&!peerReplay&&<AssistantLifeBand metIds={metIds}/>}
+            {/* はじめて差し入れ・友情のしるしを手に入れたときの案内(HOME で1回だけ・公開の印 assistantLife) */}
+            {typeof AssistantLifeItemIntro==='function'&&gameState==='HOME'&&!busy&&!peerReplay&&<AssistantLifeItemIntro peerItems={{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}}/>}
             {typeof AssistantLifeScreen==='function'&&<AssistantLifeScreen metIds={metIds} onReplay={(talk)=>setPeerReplay(talk)}
               peerItems={{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}} onUseItem={useAssistantPeerItem}/>}
           </>;
