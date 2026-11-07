@@ -781,7 +781,7 @@ const ASSISTANT_BOND_LEVELS = [
   { level:19, need:11650, title:'唯一の理解者',       call:'{name}ちん', tone:'いちばんの理解者として接する' },
   { level:20, need:12800, title:'永遠の相棒',         call:'{name}ちん', tone:'永遠の相棒。いちばん自然体な話し方' },
   // Lv21〜30(2026-10-21 社長「助手レベルの上限もそろそろ上げて」)。need は Lv20 までの伸び方
-  // (1段ごとに必要な量が +50 ずつ広がる)をそのまま続けた。Lv20→30 は 14,250。毎日しっかり遊んで(1日160ほど)約3か月
+  // (1段ごとに必要な量が +50 ずつ広がる)をそのまま続けた。Lv20→30 は 14,250。毎日しっかり遊んで(1日160ほど)約3か月(2026-11-07 に増え方を2倍にしたので、いまは1日320ほど・約1か月半)
   { level:21, need:14000, title:'終わらない冒険',     call:'{name}ちん', tone:'Lv20の先へ。これからの冒険の話もする' },
   { level:22, need:15250, title:'背中を預けあう仲',   call:'{name}ちん', tone:'お互いに背中を任せられる、頼もしい話し方' },
   { level:23, need:16550, title:'心のよりどころ',     call:'{name}ちん', tone:'へこんだ日も、顔を見ると元気が出る相手' },
@@ -1229,40 +1229,41 @@ const assistantSpeak = (text, name, level, customCall, assistantId) =>
 // 放置しても減らない(久しぶりに開いた人が冷たくされないため)。
 //   amount   … 1回で増える量
 //   dailyMax … その行動で1日に増やせる上限
+// 2026-11-07 社長「助手の親密度は既存のものも数値上げて」→ どの行動も、1回の量と1日の上限をどちらも2倍にした(保存の形・必要な量は変えない)
 const ASSISTANT_BOND_ACTIONS = {
-  login:     { amount:10, dailyMax:10, label:'ログイン' },
-  battle:    { amount:6, dailyMax:30, label:'バトルを遊ぶ' },
-  challenge: { amount:4, dailyMax:20, label:'チャレンジモード' },
-  quick:     { amount:2, dailyMax:12, label:'クイックモード' },
-  pro:       { amount:4, dailyMax:20, label:'プロモード' },
-  ranking:   { amount:2, dailyMax:6,  label:'ランキングを見る' },
-  temple:    { amount:2, dailyMax:8,  label:'神殿を使う' },
-  mission:   { amount:4, dailyMax:16, label:'ミッション達成' },
-  gift:      { amount:2, dailyMax:8,  label:'ギフトを受け取る' },
-  market:    { amount:2, dailyMax:6,  label:'マーケットを見る' },
-  talk:      { amount:2, dailyMax:10, label:'みゅあと話す' },
-  management:  { amount:2, dailyMax:8,  label:'M/B管理を見る' },
-  fusion:      { amount:4, dailyMax:12, label:'合体する' },
-  breakthrough:{ amount:4, dailyMax:12, label:'限界突破する' },
-  reincarnate: { amount:4, dailyMax:12, label:'転生する' },
-  regenerate:  { amount:2, dailyMax:6,  label:'再生する' },
-  donate:      { amount:4, dailyMax:12, label:'寄付する' },
-  enhance:     { amount:2, dailyMax:12, label:'マスモンを強化する' },
-  dye:         { amount:2, dailyMax:6,  label:'染色する' },
-  partySet:    { amount:2, dailyMax:6,  label:'編成を保存する' },
-  extreme:      { amount:6, dailyMax:18, label:'極限チャレンジに挑む' },
-  clear:        { amount:4, dailyMax:16, label:'チャレンジモードをクリア' },
-  quickClear:   { amount:2, dailyMax:12, label:'クイックモードをクリア' },
-  proClear:     { amount:4, dailyMax:16, label:'プロモードをクリア' },
-  extremeClear: { amount:8, dailyMax:24, label:'極限チャレンジをクリア' },
+  login:     { amount:20, dailyMax:20, label:'ログイン' },
+  battle:    { amount:12, dailyMax:60, label:'バトルを遊ぶ' },
+  challenge: { amount:8, dailyMax:40, label:'チャレンジモード' },
+  quick:     { amount:4, dailyMax:24, label:'クイックモード' },
+  pro:       { amount:8, dailyMax:40, label:'プロモード' },
+  ranking:   { amount:4, dailyMax:12,  label:'ランキングを見る' },
+  temple:    { amount:4, dailyMax:16,  label:'神殿を使う' },
+  mission:   { amount:8, dailyMax:32, label:'ミッション達成' },
+  gift:      { amount:4, dailyMax:16,  label:'ギフトを受け取る' },
+  market:    { amount:4, dailyMax:12,  label:'マーケットを見る' },
+  talk:      { amount:4, dailyMax:20, label:'みゅあと話す' },
+  management:  { amount:4, dailyMax:16,  label:'M/B管理を見る' },
+  fusion:      { amount:8, dailyMax:24, label:'合体する' },
+  breakthrough:{ amount:8, dailyMax:24, label:'限界突破する' },
+  reincarnate: { amount:8, dailyMax:24, label:'転生する' },
+  regenerate:  { amount:4, dailyMax:12,  label:'再生する' },
+  donate:      { amount:8, dailyMax:24, label:'寄付する' },
+  enhance:     { amount:4, dailyMax:24, label:'マスモンを強化する' },
+  dye:         { amount:4, dailyMax:12,  label:'染色する' },
+  partySet:    { amount:4, dailyMax:12,  label:'編成を保存する' },
+  extreme:      { amount:12, dailyMax:36, label:'極限チャレンジに挑む' },
+  clear:        { amount:8, dailyMax:32, label:'チャレンジモードをクリア' },
+  quickClear:   { amount:4, dailyMax:24, label:'クイックモードをクリア' },
+  proClear:     { amount:8, dailyMax:32, label:'プロモードをクリア' },
+  extremeClear: { amount:16, dailyMax:48, label:'極限チャレンジをクリア' },
   // 助手のアシストカード(みゅあ・きき)だけの行動。
   // ここだけは「いま選んでいる助手」ではなく、そのカード本人の仲良し度が増える。
   // 編成を保存しただけでは増えない(付け外しでは稼げず、実際にバトルを始めた時だけ数える)
-  assistantCardEquip: { amount:4, dailyMax:20, label:'助手のカードを編成して挑む' },
-  assistantCardUse:   { amount:6, dailyMax:24, label:'助手のカードをバトルで使う' },
-  // 助手とおしゃべり(2026-10-14・社長の決定「1往復 +2、1日 +20 まで」)。返事が来た1往復だけ数え、
+  assistantCardEquip: { amount:8, dailyMax:40, label:'助手のカードを編成して挑む' },
+  assistantCardUse:   { amount:12, dailyMax:48, label:'助手のカードをバトルで使う' },
+  // 助手とおしゃべり(2026-10-14・社長の決定「1往復 +2、1日 +20 まで」→ 2026-11-07 に2倍で +4・1日 +40)。返事が来た1往復だけ数え、
   // 話した相手の助手へ入る(いま選んでいる助手と同じ)。公開の印が立つまではヘルプの表にも出さない
-  chat: { amount:2, dailyMax:20, label:'助手とおしゃべりする', releaseFlag:'assistantChat' },
+  chat: { amount:4, dailyMax:40, label:'助手とおしゃべりする', releaseFlag:'assistantChat' },
 };
 // 1日に増やせる合計。行動の種類が増えるほど「1日でどれだけ遊んでも上限40で頭打ち」が
 // きつくなりすぎたため、行動ごとの上限をすべて合わせた理論上の最大値まで引き上げた。
