@@ -473,8 +473,8 @@ pair erubin momosuke doing=training lv=4-6 | erubin normal アークにも、み
 pair erubin momosuke doing=cards lv=4-6 | momosuke wink デュラハンばっかり使ってるの、知ってるよw | erubin troubled ばれちゃったかな…好きなんだよね笑 | momosuke happy いいと思う！！ ももはメタルナーで勝負するから！！
 pair erubin momosuke doing=walk lv=1-3 | momosuke excited {c}！ この道、まだ通ったことないでしょ！！ | erubin surprise 本当だ。どこにつながってるのかな | momosuke wink 行ってみよ！！ ももが案内してあげる♡
 pair erubin momosuke doing=walk lv=7-10 | erubin happy {c}といると、毎日がにぎやかだね | momosuke surprise え、うるさかった！？ | erubin wink ちがうよ。それが、とってもうれしいんだ
-pair erubin momosuke lv=4-6 air=after | momosuke troubled ……話のとちゅうで、うとうとしてたでしょ | erubin troubled ごめん、昨日あまり寝てなくて…💦 | momosuke normal べつにいいけど。…ちょっとだけ、さみしかった
-pair erubin momosuke lv=4-6 air=makeup | erubin normal さっきはごめんね。今日は最後まで、ちゃんと聞くよ | momosuke happy ほんと！？ じゃあ、さっきの続きからね！！ | erubin happy おけ！ 今度は寝ないよ笑
+pair erubin momosuke lv=4-6 air=after | momosuke troubled ……さっきのこと、まだちょっと気にしてるんだからね | erubin troubled うん。俺も、ちゃんと謝りたいと思ってたんだ | momosuke normal べつにいいけど。…ちょっとだけ、さみしかった
+pair erubin momosuke lv=4-6 air=makeup | erubin normal さっきはごめんね。今日は{c}の話、最後までちゃんと聞くよ | momosuke happy ほんと！？ じゃあ、いっぱい話す！！ | erubin happy おけ！ 時間はたっぷりあるよ笑
 pair erubin momosuke lv=7-10 air=makeup | momosuke happy もう怒ってないよ！！ ももも言いすぎたし | erubin happy ありがとう。{c}がそう言ってくれると、ほっとするね | momosuke wink じゃあ仲直りのしるしに、いちごひとつあげる♡
 pair erubin momosuke lv=1-3 | momosuke normal {c}って、怒ったことある？ | erubin surprise うーん、あんまりないかな | momosuke wink じゃあ、ももが初めて怒らせちゃうかもw
 
@@ -497,7 +497,7 @@ pair dra mua doing=walk lv=7-10 | dra normal なあ、{c}。たまにおでの�
 pair dra mua lv=1-3 | mua surprise {c}、なんでいつも眠そうなの？ | dra normal おでは省エネなんだよ。動くときは動く | mua wink 動いてるとこ、あんま見たことないけどｗ
 pair dra mua lv=4-6 | dra happy さっきのギャグ、もう1回聞くか？ | mua angry もういい！ 3回聞いた！ | dra wink 4回目がいちばんおもしろいんだぞ
 pair dra mua lv=7-10 | mua normal {c}がいないと、広場がちょっと静かなんだよね | dra surprise おでのギャグがないからか？ | mua happy それもあるけど、{c}がいるだけで安心するのｗ
-pair dra mua lv=4-6 air=after | mua angry ギャグ、しつこいってば！ | dra troubled ……そんなに怒らなくてもいいだろ | mua normal 今日はもう聞かないから
+pair dra mua lv=4-6 air=after | mua angry ……まだちょっと怒ってるんだからね | dra troubled ……そんなに怒らなくてもいいだろ | mua normal 今日はもう、話しかけないで
 pair dra mua lv=4-6 air=makeup | dra normal みゅあ、さっきは調子に乗りすぎた。すまんな | mua happy …あたしも言いすぎた。ギャグ、1個だけなら聞く！ | dra excited よし、とっておきのやつだ！
 pair dra mua lv=7-10 air=makeup | mua happy {c}、おせんべい持ってきた！ 仲直りのしるし♪ | dra happy おでのいちばん好きなやつだ。わかってるな | mua wink 何年いっしょにいると思ってんのｗ
 pair dra mua doing=snack lv=4-6 | mua excited {place}の新作、2人で半分こしよ！ | dra normal 半分こか。……おで、大きいほうでいいか？ | mua angry だめ！ あみだくじで決めるの！
@@ -522,9 +522,9 @@ pair atsu sorashido doing=walk lv=7-10 | sorashido normal なあ{c}、俺らっ�
 pair atsu sorashido lv=1-3 | atsu happy {c}、今日も勝負する？笑 | sorashido excited 当たり前だろ！ 準備はできてる！ | atsu wink いいね、上等！
 pair atsu sorashido lv=4-6 | sorashido crying また2点差…これで3回目だぞ… | atsu happy 毎回ほぼ同じじゃん笑 もう実力いっしょだよ！ | sorashido normal ……なんくるないさ〜。次は1点差にする
 pair atsu sorashido lv=7-10 | atsu normal {c}が全部記録してくれてるから、あとで見返せるのいいよね！ | sorashido happy だろ？ 俺らの勝負、もう本1冊分あるぜ笑 | atsu wink じゃあ2冊目もいこ笑
-pair atsu sorashido lv=4-6 air=after | sorashido angry 今のは俺の勝ちだろ！ | atsu troubled いや、数え方が違うって… | sorashido normal ……ちょっと頭冷やしてくる
-pair atsu sorashido lv=4-6 air=makeup | atsu happy {c}、さっきのはどっちの勝ちでもいいよ笑 | sorashido troubled ……いや、ちゃんと数え直した。{c}の勝ちだった | atsu wink 正直じゃん！ 次の勝負いこ！
-pair atsu sorashido lv=7-10 air=makeup | sorashido normal 数え方、2人で決めといたぜ・・・！ | atsu happy いいね笑 これでもうもめないね！ | sorashido happy ……たぶんな笑
+pair atsu sorashido lv=4-6 air=after | sorashido normal ……まだ、ちょっと納得いってない | atsu troubled …まぁ〜、俺もむきになってたかも… | sorashido normal ……ちょっと頭冷やしてくる
+pair atsu sorashido lv=4-6 air=makeup | atsu happy {c}、さっきのはもういいよ笑 | sorashido troubled ……いや、俺も言いすぎた。悪かった | atsu wink 正直じゃん！ 次の勝負いこ！
+pair atsu sorashido lv=7-10 air=makeup | sorashido normal もめないための決まり、2人で作っといたぜ・・・！ | atsu happy いいね笑 これでもう大丈夫だね！ | sorashido happy ……たぶんな笑
 pair atsu sorashido doing=practice lv=1-3 | sorashido excited {c}の打ち方、録画して研究してもいいか？ | atsu surprise いいけど、恥ずかしいって笑 | sorashido happy 分析したら、俺も同じくらいになれるはずだ
 
 ## 2人 きき × ソラシド(21本)
@@ -546,8 +546,8 @@ pair kiki sorashido doing=walk lv=7-10 | sorashido happy {c}と歩くと、数�
 pair kiki sorashido lv=1-3 | kiki happy {c}の表、きのうのも読みました | sorashido excited ほんとか！ どうだった？ | kiki normal 字が小さかったです。でも、とても分かりやすかったですよ
 pair kiki sorashido lv=4-6 | sorashido normal {c}って、静かなのに大胆だよな | kiki wink よく言われまつ | sorashido happy その差を表にしたいくらいだ笑
 pair kiki sorashido lv=7-10 | kiki normal {c}が作る表、いつか全部集めて本にしたいです | sorashido surprise 本に！？ | kiki happy はい。いちばん前の席に置いておきたいので
-pair kiki sorashido lv=4-6 air=after | kiki normal …表に「守りが弱い」と書かれていました | sorashido troubled いや、事実を書いただけで…… | kiki normal 事実でも、少し傷つきました
-pair kiki sorashido lv=4-6 air=makeup | sorashido normal {c}、表を書き直したぜ。「攻撃がとても強い」にした | kiki happy …ありがとうございます。そちらのほうが好きです | sorashido happy 事実だしな笑
+pair kiki sorashido lv=4-6 air=after | kiki normal …さっきのことは、まだ少し気にしています | sorashido troubled ……そうだよな。俺の言い方が悪かった | kiki normal 少しだけ、時間をください
+pair kiki sorashido lv=4-6 air=makeup | sorashido normal {c}、さっきは悪かった。仲直りの表、作ってきた | kiki happy …仲直りの表、ですか。ありがとうございます | sorashido happy 中身は「ごめん」って1行だけだけどな笑
 pair kiki sorashido lv=7-10 air=makeup | kiki happy 仲直りのお茶、いれました | sorashido happy ありがとう。……これ、何杯目か数えないでおくわ | kiki wink 今日だけは、ですね
 
 ## 2人 えるびん × ソラシド(20本)
@@ -569,8 +569,8 @@ pair erubin sorashido doing=walk lv=7-10 | sorashido normal {c}とこうやっ�
 pair erubin sorashido lv=1-3 | erubin normal {c}、ちゃんと寝てる？ | sorashido troubled ……3時間くらい | erubin troubled それは心配だな💦 今日は早めに休もうね
 pair erubin sorashido lv=4-6 | sorashido excited {c}、新しい表見てくれ！ | erubin happy うん。……文字、ちょっと小さいかな笑 | sorashido surprise また言われた！ 次は大きくする！
 pair erubin sorashido lv=7-10 | erubin happy {c}の表、こっちに来たとき最初に読んだ本みたいなものなんだ | sorashido surprise そんなにか！？ | erubin wink うん。だから、これからもいっぱい読ませてね
-pair erubin sorashido lv=4-6 air=after | erubin troubled {c}、表の文字、本当に読めなくて… | sorashido troubled ……そんなに小さいか？ 気にしてたんだけどな | erubin normal ごめんね。言い方がよくなかったかな
-pair erubin sorashido lv=4-6 air=makeup | sorashido happy 文字、2倍にしたぜ・・・！ | erubin happy 読みやすい！ ありがとう、{c} | sorashido wink {c}専用の大きい表だ笑
+pair erubin sorashido lv=4-6 air=after | erubin troubled {c}、さっきは言い方がよくなかったかな… | sorashido troubled ……いや、俺も気にしすぎた | erubin normal 少し、ひとりで歩いてくるね
+pair erubin sorashido lv=4-6 air=makeup | sorashido happy {c}、さっきのこと、もう気にしてないぜ・・・！ | erubin happy よかった。ありがとう、{c} | sorashido wink 気にしてたら、表が進まないからな笑
 
 ## 2人 きき × もも(20本)
 pair kiki momosuke doing=snack lv=1-3 | momosuke excited {c}！ いちごのケーキ、半分こしよ！！ | kiki happy はい。いちごは、{c}のほうへ | momosuke wink やった！！ {c}、やさしい♡
@@ -591,8 +591,8 @@ pair kiki momosuke doing=walk lv=7-10 | momosuke normal ねぇ{c}、今日はも
 pair kiki momosuke lv=1-3 | momosuke excited {c}、聞いて！！ 今日ね、ほめられたの！！ | kiki happy あれま、よかったですね | momosuke wink {c}にもほめてほしいな〜♡
 pair kiki momosuke lv=4-6 | kiki normal {c}、今日は少し元気がないですね | momosuke surprise え、なんで分かったの！？ | kiki happy 声が、いつもより半音低いので
 pair kiki momosuke lv=7-10 | momosuke happy {c}のとなりって、なんか落ち着くんだよね！！ | kiki happy 私も、{c}のとなりはにぎやかで楽しいですよ | momosuke excited じゃあ、おたがいさまだ！！w
-pair kiki momosuke lv=4-6 air=after | kiki troubled 本のしおり、ちがうページにはさまっていました | momosuke troubled ……ごめん。もも、さわっちゃった | kiki normal …少しだけ、時間をください
-pair kiki momosuke lv=4-6 air=makeup | momosuke normal {c}、新しいしおり作ってきた！！ ピカピカのやつ！！ | kiki happy …きれいですね。大事に使います | momosuke excited ゆるしてくれる！？ やったー！！
+pair kiki momosuke lv=4-6 air=after | kiki troubled …さっきのことで、まだ少し胸がちくっとしています | momosuke troubled ……ごめん。ももが悪かった | kiki normal …少しだけ、時間をください
+pair kiki momosuke lv=4-6 air=makeup | momosuke normal {c}、仲直りのしるしに、ピカピカのしおり作ってきた！！ | kiki happy …きれいですね。大事に使います | momosuke excited ゆるしてくれる！？ やったー！！
 
 ## 2人 きゅうこ × みゅあ(19本)
 pair kyuko mua doing=snack lv=1-3 | mua excited {c}、甘いのと辛いの、どっちにする？ | kyuko happy どっちもいけるよぉ。{c}が選んでいいよ笑 | mua wink ぢゃあ両方！ 半分こね♪
@@ -611,9 +611,9 @@ pair kyuko mua doing=walk lv=1-3 | mua excited {c}、{place}まで競争しよ�
 pair kyuko mua doing=walk lv=4-6 | kyuko normal {c}と歩くと、知らない話がいっぱい聞けるねぇ | mua happy あたし、しゃべってないと死んじゃうのｗ | kyuko happy それは困るから、いっぱい聞くよ笑
 pair kyuko mua doing=walk lv=7-10 | mua normal {c}って、あたしの話、いつも楽しそうに聞いてくれるよね | kyuko happy 楽しいからね笑 | mua excited もー、そういうとこ！ もっと話しちゃう！
 pair kyuko mua lv=1-3 | kyuko happy {c}、今日も元気だねぇ | mua excited 元気だけが取りえ！ ……あ、コーデも！ | kyuko wink 2つあるじゃん笑
-pair kyuko mua lv=4-6 air=after | kyuko troubled {c}、図書室では静かにって言ったよね… | mua troubled ……ごめん、つい大きい声出ちゃった | kyuko normal 今日はちょっと、ひとりで考えたいかな
-pair kyuko mua lv=4-6 air=makeup | mua normal {c}、さっきはごめん。小さい声で話す練習してきた！ | kyuko happy それ、ふつうの声と同じ大きさだよぉ笑 | mua wink ……がんばったのにｗ
-pair kyuko mua lv=7-10 air=makeup | kyuko happy {c}、もう気にしてないよ。図書室じゃなかったら、いくらでもしゃべって笑 | mua excited ほんと！？ じゃあ広場で3時間しゃべろ！ | kyuko wink 3時間はさすがに長いかなw
+pair kyuko mua lv=4-6 air=after | kyuko troubled {c}、さっきのこと、まだちょっとね… | mua troubled ……うん。あたしも、ごめん | kyuko normal 今日はちょっと、ひとりで考えたいかな
+pair kyuko mua lv=4-6 air=makeup | mua normal {c}、さっきはごめん！ 反省してきた！ | kyuko happy 反省早いねぇ笑 もう大丈夫だよ | mua wink よかった〜！ ぢゃあ、いつもどおりね！
+pair kyuko mua lv=7-10 air=makeup | kyuko happy {c}、もう気にしてないよ。いつもみたいに、いっぱいしゃべって笑 | mua excited ほんと！？ じゃあ広場で3時間しゃべろ！ | kyuko wink 3時間はさすがに長いかなw
 
 ## 2人 ドラ × もも(19本)
 pair dra momosuke doing=snack lv=1-3 | momosuke excited {c}、プリン2つあるよ！！ | dra happy おお、1つくれるのか？ | momosuke wink うそ、ももが2つ食べるのw
@@ -632,8 +632,8 @@ pair dra momosuke doing=walk lv=1-3 | momosuke excited {c}、{place}まで競争
 pair dra momosuke doing=walk lv=4-6 | dra normal {c}、さっきからスキップしてるな | momosuke happy だって楽しいもん！！ {c}もやって！！ | dra troubled ……膝が、遠慮しときますって言ってる
 pair dra momosuke doing=walk lv=7-10 | momosuke normal {c}、ももがへこんでたとき、いつも気づいてくれるよね | dra surprise お、おう。顔に出てるからな | momosuke happy ありがと。今日はももが、{c}を笑わせる番！！
 pair dra momosuke lv=1-3 | dra wink 今日のギャグ、聞くか？ | momosuke excited 聞く聞く！！ つまんなかったら採点するw | dra troubled 採点されるのか…
-pair dra momosuke lv=4-6 air=after | momosuke angry {c}のギャグ、ももが先に言っちゃったの怒ってるの！？ | dra troubled ……おでのとっておきだったんだ | momosuke troubled …ごめん。ちょっと言いたくなっちゃって
-pair dra momosuke lv=4-6 air=makeup | momosuke normal {c}、新しいギャグ考えてきた！！ ……いっしょに言お！！ | dra happy おお、2人で言うのか。いいな | momosuke excited せーの！！ ……やっぱり{c}が言って！！w
+pair dra momosuke lv=4-6 air=after | momosuke troubled {c}、まだ怒ってる…？ | dra troubled ……ちょっとだけな | momosuke normal …じゃあ、もうちょっとだけ待ってる
+pair dra momosuke lv=4-6 air=makeup | momosuke normal {c}、新しいギャグ考えてきた！！ ……仲直りに、いっしょに言お！！ | dra happy おお、2人で言うのか。いいな | momosuke excited せーの！！ ……やっぱり{c}が言って！！w
 pair dra momosuke lv=7-10 | dra normal {c}がいると、おでのギャグもちょっとだけ光るんだよな | momosuke wink ちょっとだけねw | dra happy それで十分だ。えへへ
 
 ## 2人 きき × きゅうこ(19本)
@@ -653,8 +653,8 @@ pair kiki kyuko doing=walk lv=1-3 | kyuko normal {c}と歩くと、静かでい�
 pair kiki kyuko doing=walk lv=4-6 | kiki normal {c}、さっきから何を考えているんですか？ | kyuko happy 晩ごはんのこと笑 編成じゃなくてごめんね | kiki wink それも大事な作戦ですね
 pair kiki kyuko doing=walk lv=7-10 | kyuko normal {c}のとなりだと、考えごとがうまくまとまるんだよねぇ | kiki happy 私は、{c}のとなりだと安心して歩けます | kyuko wink おたがい、いい席だね笑
 pair kiki kyuko lv=1-3 | kiki normal {c}、きのうも夜ふかししましたね | kyuko troubled ……ばれてる笑 | kiki happy 目の下が、少しだけ眠そうなので
-pair kiki kyuko lv=4-6 air=after | kiki normal {c}、また「だいたい」で組みましたね | kyuko troubled ……ごめん、今回はちょっとだけ | kiki normal 少し、ひとりで考えます
-pair kiki kyuko lv=4-6 air=makeup | kyuko normal {c}、今回はちゃんと全部数えて組んだよ | kiki happy ……本当ですね。きれいな形です | kyuko happy {c}に見てほしくて、がんばった笑
+pair kiki kyuko lv=4-6 air=after | kiki normal {c}、さっきのことは、まだ少し気になっています | kyuko troubled ……ごめん。俺がちゃんとしてなかった | kiki normal 少し、ひとりで考えます
+pair kiki kyuko lv=4-6 air=makeup | kyuko normal {c}、さっきはごめんね。ちゃんと考え直してきたよ | kiki happy ……ありがとうございます。もう大丈夫です | kyuko happy {c}にそう言ってもらえると、ほっとするよぉ笑
 pair kiki kyuko lv=7-10 | kyuko happy {c}ってさ、静かなのに一番たよりになるよねぇ | kiki surprise そうでしょうか | kyuko wink うん。俺が迷ったら、{c}が押してくれるもん
 
 ## 2人 きき × みゅあ(18本)
@@ -674,8 +674,8 @@ pair kiki mua doing=walk lv=1-3 | mua excited {c}、{place}まで散歩しよ！
 pair kiki mua doing=walk lv=4-6 | kiki normal {c}、さっきから3回もお店をのぞいていますね | mua troubled ばれた？ かわいい服が多すぎるの！ | kiki happy では、帰りにいっしょに見ましょう
 pair kiki mua doing=walk lv=7-10 | mua normal {c}って、あたしが元気ないとき、いつも隣を歩いてくれるよね | kiki happy 気づいていましたか | mua happy うん。何も言わなくても分かるの、すごいよね
 pair kiki mua lv=1-3 | kiki normal {c}、今日の服、すてきですね | mua excited ほんと！？ {c}にほめられると、まぢでうれしい！ | kiki happy 本当のことを言っただけですよ
-pair kiki mua lv=4-6 air=after | kiki troubled 私のおやつ、先に食べましたね… | mua troubled ……ごめん、おいしそうだったから、つい | kiki normal 少しだけ、すねてもいいでしょうか
-pair kiki mua lv=4-6 air=makeup | mua normal {c}、新しいおやつ買ってきた！ 今度は{c}が先に選んで！ | kiki happy …では、いちばん大きいのを | mua surprise ちゃんと食べるんだｗ よかった〜
+pair kiki mua lv=4-6 air=after | kiki troubled …まだ少し、すねていてもいいでしょうか | mua troubled ……うん。あたしが悪かったもん | kiki normal では、もう少しだけ
+pair kiki mua lv=4-6 air=makeup | mua normal {c}、仲直りのおやつ買ってきた！ 今度は{c}が先に選んで！ | kiki happy …では、いちばん大きいのを | mua surprise ちゃんと食べるんだｗ よかった〜
 
 ## 2人 えるびん × きゅうこ(18本)
 pair erubin kyuko doing=snack lv=1-3 | kyuko normal {c}、ここのおすすめ、知ってる？ | erubin happy まだ分からないんだ。きゅうこちゃんのおすすめは？ | kyuko happy 甘いのと辛いの、両方たのむのがおすすめ笑
@@ -694,8 +694,8 @@ pair erubin kyuko doing=walk lv=1-3 | kyuko normal {c}、{place}って来たこ�
 pair erubin kyuko doing=walk lv=4-6 | erubin normal {c}、眠そうだね。昨日も夜ふかししたのかな？ | kyuko troubled ……ばれてる笑 | erubin happy 歩いたら、早めに休もうね
 pair erubin kyuko doing=walk lv=7-10 | kyuko normal {c}と歩くと、なんか落ち着くんだよねぇ | erubin happy 俺もだよ。{c}は話すテンポがちょうどいいしね | kyuko wink のんびり同士だね笑
 pair erubin kyuko lv=1-3 | erubin happy {c}、今日はなにしてたの？ | kyuko happy 図書室でひとりで考えごと笑 | erubin normal ひとりの時間、大事だよね。じゃましないようにするね
-pair erubin kyuko lv=4-6 air=after | erubin troubled {c}、また夜ふかししたの？ 心配だよ | kyuko troubled ……心配しすぎだよぉ。大丈夫だって | erubin normal そっかぁ。……ちょっと言いすぎたかな
-pair erubin kyuko lv=4-6 air=makeup | kyuko normal {c}、さっきはごめん。昨日はちゃんと寝たよ | erubin happy よかった。それだけで安心したよ☺️ | kyuko happy 心配してくれて、ありがとん笑
+pair erubin kyuko lv=4-6 air=after | erubin troubled {c}、さっきは言いすぎちゃったかな | kyuko troubled ……俺も、ちょっとむきになったぁ | erubin normal そっかぁ。少しだけ、時間をおこうか
+pair erubin kyuko lv=4-6 air=makeup | kyuko normal {c}、さっきはごめん。もう大丈夫だよ | erubin happy よかった。それだけで安心したよ☺️ | kyuko happy 心配してくれて、ありがとん笑
 
 ## 2人 ドラ × ソラシド(17本)
 pair dra sorashido doing=snack lv=1-3 | sorashido excited {c}、せんべいの割れ方、表にしてみたぜ・・・！ | dra surprise そんなことまで表にするのか | sorashido happy きれいに割れる確率、3割だった笑
@@ -713,8 +713,8 @@ pair dra sorashido doing=cards lv=7-10 | dra happy {c}、きのうの大会の�
 pair dra sorashido doing=walk lv=1-3 | sorashido normal {c}、{place}まで何分か計ってもいいか？ | dra happy いいけど、おでの膝の分、長めに見とけよ | sorashido happy 膝の分、2割足しとく笑
 pair dra sorashido doing=walk lv=4-6 | dra troubled ちょっと休けいだ。膝が限界だ | sorashido normal 計算どおりだ。ちょうどベンチの前だぜ | dra surprise 休むとこまで計算してたのか
 pair dra sorashido doing=walk lv=7-10 | sorashido happy {c}と歩くと、ゆっくりで、なんか考えがまとまるんだよな | dra happy おでの膝のおかげだな | sorashido wink それは表にしとく笑
-pair dra sorashido lv=4-6 air=after | sorashido angry {c}、表の誤字、笑っただろ！ | dra troubled いや、「勝率」が「勝卒」になってたから…… | sorashido normal ……ちょっと、ひとりで直してくる
-pair dra sorashido lv=4-6 air=makeup | dra normal {c}、さっきは笑って悪かった。誤字、いっしょに探すか | sorashido happy ……頼む。{c}の目、正確だからな | dra wink 見つけるたびに、ギャグにしていいか？
+pair dra sorashido lv=4-6 air=after | sorashido angry ……まだちょっと、むっとしてるからな | dra troubled ……悪かったって | sorashido normal ……ちょっと、ひとりで表でも作ってくる
+pair dra sorashido lv=4-6 air=makeup | dra normal {c}、さっきは悪かった。せんべい食うか | sorashido happy ……食う。{c}のせんべい、うまいからな | dra wink 仲直りのしるしだ。えへへ
 
 ## 2人 きゅうこ × ソラシド(17本)
 pair kyuko sorashido doing=snack lv=1-3 | sorashido excited {c}、新作の甘さ、表にしたぜ・・・！ | kyuko happy 見せて見せて。……俺、まん中くらいのがいいなぁ | sorashido happy じゃあこれだな笑
@@ -732,8 +732,8 @@ pair kyuko sorashido doing=cards lv=7-10 | kyuko happy {c}と研究してると�
 pair kyuko sorashido doing=walk lv=1-3 | sorashido normal {c}、歩きながら何聞いてるんだ？ | kyuko happy 好きな曲。{c}も聞く？ | sorashido surprise お、いいのか。……いい曲だな
 pair kyuko sorashido doing=walk lv=4-6 | kyuko normal {c}、今日は攻略の話なしで歩こ | sorashido troubled ……3分もつかな笑 | kyuko wink 2分でもいいよぉ
 pair kyuko sorashido doing=walk lv=7-10 | sorashido happy {c}と歩くと、表のことを忘れられるんだよな | kyuko happy それ、いいことだよぉ | sorashido normal 忘れたぶん、帰ってから倍やるけどな笑
-pair kyuko sorashido lv=4-6 air=after | kyuko troubled {c}、俺のメモ、勝手に表にしたでしょ… | sorashido troubled いや、まとめたほうが見やすいと思って | kyuko normal ……ちょっとだけ、ひとりで考えたかったんだよぉ
-pair kyuko sorashido lv=4-6 air=makeup | sorashido normal {c}、次からは聞いてから表にする | kyuko happy ありがとん。でも、表は見やすかった笑 | sorashido happy ……それ聞いて安心したわ
+pair kyuko sorashido lv=4-6 air=after | kyuko troubled {c}、さっきのは、まだちょっとね… | sorashido troubled ……ごめん。俺、先走ってたな | kyuko normal ……ちょっとだけ、ひとりで考えたいんだよぉ
+pair kyuko sorashido lv=4-6 air=makeup | sorashido normal {c}、さっきは悪かった。次からは先に聞く | kyuko happy ありがとん。もう気にしてないよぉ笑 | sorashido happy ……それ聞いて安心したわ
 
 ## 2人 ドラ × きゅうこ(17本)
 pair dra kyuko doing=snack lv=1-3 | kyuko normal {c}、そのせんべい、おいしそうだねぇ | dra happy 1枚やるよ。おでの自慢のやつだ | kyuko happy ありがとん笑
@@ -751,8 +751,8 @@ pair dra kyuko doing=cards lv=7-10 | dra happy {c}と組んだデッキ、きの
 pair dra kyuko doing=walk lv=1-3 | kyuko normal {c}、ゆっくり歩こ。俺も急ぎたくないし | dra happy 話が分かるな。{place}まで、のんびり行くか | kyuko happy ほい！
 pair dra kyuko doing=walk lv=4-6 | dra troubled ふぁ〜……歩きながら寝そうだ | kyuko troubled 俺も…昨日夜ふかししたぁ | dra happy 2人そろって眠いとは、困ったもんだな
 pair dra kyuko doing=walk lv=7-10 | kyuko normal {c}といると、何もしなくても楽しいんだよねぇ | dra surprise お、そうか？ | kyuko happy うん。のんびりできる相手、なかなかいないもん
-pair dra kyuko lv=4-6 air=after | dra troubled {c}、おでの寝ぐせ、みんなの前で言っただろ | kyuko troubled ……ごめん、つい | dra normal 今日はちょっと、帽子かぶって過ごすわ
-pair dra kyuko lv=4-6 air=makeup | kyuko normal {c}、寝ぐせ直し、持ってきたよぉ | dra happy ……気がきくな。ありがとな | kyuko wink 今度は俺の寝ぐせ、{c}が言っていいよ笑
+pair dra kyuko lv=4-6 air=after | dra troubled {c}、さっきのは、ちょっと傷ついたぞ | kyuko troubled ……ごめん、つい | dra normal 今日はちょっと、帽子かぶって過ごすわ
+pair dra kyuko lv=4-6 air=makeup | kyuko normal {c}、さっきはごめんねぇ。仲直りのしるしに、お茶持ってきた | dra happy ……気がきくな。ありがとな | kyuko wink 次は{c}が、俺に言いたいこと言っていいよ笑
 
 ## 声をかける → こたえる(みゅあのペア)
 invite kiki mua answer=glad | mua excited {c}、{place}でおやつしよ！ | kiki happy はい、ぜひ。お茶もいれていきまつね
