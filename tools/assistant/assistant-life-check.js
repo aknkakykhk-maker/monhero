@@ -416,6 +416,38 @@ if (process.argv.includes('--stats')) {
     }
     check('⑧ 台本の穴({c}・{place}・{doing} など)が残らない', left.length === 0, left.slice(0, 2).join(' / '));
   }
+  // 新しい種類(声かけ・決まった3人・言い合い・ブリーダーへ)が引ける
+  {
+    const T = G('assistantLifeTalkSet()');
+    let badInv = [];
+    for (const id of IDS) {
+      const others = IDS.filter(x => x !== id);
+      const life = { ...lifeBase, moods: { [id]: 'lonely' }, solo: { [id]: { doing: 'idle', place: 'home', reason: 'lonely' } }, groups: [{ ids: others.slice(0, 2), doing: 'snack', place: 'cafe' }, { ids: others.slice(2, 4), doing: 'walk', place: 'plaza' }] };
+      const t = G('assistantLifePickInviteTalk')(id, life, peer(3), Math.random);
+      if (T.invite.some(x => x.who === id) && (!t || t.who !== id || !others.slice(0, 4).includes(t.from))) badInv.push(id);
+    }
+    check('⑧ 誘う: 誘われる人と、いま組にいる人のあいだの声かけが出る', badInv.length === 0, badInv.join(',') || `${T.invite.length}本`);
+    let badTrio = 0, hitFixed = 0;
+    for (const t of T.trio) {
+      lstore.set({ seen: {} });
+      const got = pickG({ ids: [...t.trio], doing: t.keys.doing || 'snack', place: 'plaza' }, peer(3), lifeBase, Math.random);
+      if (!got || !got.trio || !got.trio.every(id => t.trio.includes(id))) badTrio++;
+      else if (!got.anyTrio) hitFixed++;
+    }
+    check('⑧ 決まった3人がそろうと、その3人の台本が先に出る', badTrio === 0 && hitFixed === T.trio.length, `${hitFixed}/${T.trio.length}`);
+    const lq = T.quarrel.filter(t => t.kind === 'quarrel');
+    const lifeQ = G('assistantPeerExtraTalks()').quarrels.filter(t => t.kind === 'quarrel' && /^life-/.test(t.id));
+    check('⑧ 言い合い(言い合い・距離・仲直り)が仲直りの流れに乗る', lq.length > 0 && lifeQ.length === lq.length && lq.every(q => q.distance.length && T.quarrel.some(m => m.kind === 'makeup' && m.quarrelId === q.id)), `${lq.length}本`);
+    // 気分がすぐれない2人はたまに言い合い(Lv2 から)
+    lstore.set({ seen: {} });
+    let qn = 0;
+    for (let k = 0; k < 400; k++) { const t = pickG({ ids: ['kiki', 'mua'], doing: 'snack', place: 'cafe' }, peer(3), { ...lifeBase, moods: { kiki: 'sulky' } }, Math.random); if (t && t.kind === 'quarrel') qn++; }
+    check('⑧ すねている2人は3割くらいで言い合いになる', qn > 80 && qn < 160, `${qn}/400`);
+    let brN = 0;
+    for (let k = 0; k < 300; k++) { const t = G('assistantLifePickSoloTalk')('mua', { ...lifeBase, moods: { mua: 'happy' }, solo: { mua: { doing: 'walk', place: 'plaza', reason: 'mypace' } } }, peer(1), Math.random); if (t && t.kind === 'life-breeder') brN++; }
+    check('⑧ ようすを見ると、ときどきブリーダーへのひとこと', T.breeder.length === 0 || (brN > 30 && brN < 150), `${brN}/300`);
+    lstore.set({ seen: {} });
+  }
   // 2人にあげる道具: 数字は表から読む/渡すとよさそうな印
   {
     const g = G("assistantLifeItemInfo('gift')"), t = G("assistantLifeItemInfo('token')");
