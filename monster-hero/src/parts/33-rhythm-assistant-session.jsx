@@ -5,7 +5,7 @@
 //   ・調子の代わりに「好み」: 好きな曲は少し上がる・ブレ小・経験値 ×1.3 / 苦手な曲は少し下がる・ブレ大・経験値 ×1.5
 //   ・プレイヤーのスコア・判定は変えない。助手のスコアはランキング・自己ベストに送らない
 // ★公開の印 RELEASE_FLAGS.rhythmAssistantSession の後ろ。偽のあいだは呼ぶシートに助手のタブを出さない
-// 保存は新しいキー RHYTHM_ASSIST_SESSION_KEY だけ(⑦)。マスモンの育ち・助手の絆・助手どうしの仲良し度には書かない
+// 保存は新しいキー RHYTHM_ASSIST_SESSION_KEY だけ(⑦)。マスモンの育ち・助手の絆・助手どうしの友情Lvには書かない
 
 const RHYTHM_ASSIST_SESSION_KEY = 'mh_rhythm_assistant_session_v1';
 // 部屋の中では、助手を「masuId」の欄に印つきで入れる(マスモンの id と混ざらないように)。例: 'as:mua'
@@ -69,7 +69,9 @@ const rhythmAssistSessionNormalize = (raw) => {
     const rewarded = (Array.isArray(src[id].rewarded) ? src[id].rewarded : []).map((n) => rhythmBuddyInt(n, 100)).filter((n, i, arr) => n > 0 && arr.indexOf(n) === i);
     mons[id] = { ...mon, likes, rewarded };
   });
-  return { mons };
+  // オプション「助手のひとこと」(2026-11-07)。'all' 全部 / 'few' 少なめ / 'off' 切る。無い人は全部
+  const talk = ['all', 'few', 'off'].includes(o.talk) ? o.talk : 'all';
+  return { mons, talk };
 };
 const rhythmAssistSessionMon = (state, assistantId) => {
   const st = rhythmAssistSessionNormalize(state);
@@ -98,7 +100,7 @@ const rhythmAssistSessionPlay = ({ state, assistantId, songId, diffId, totalNote
 };
 
 // 1ライブぶん育てる(同じ回は2度数えない)。{ next, gain, levelUp, likeUp, like, familiarUp }。数えなかったら next は null
-const rhythmAssistSessionApplyLive = (state, assistantId, { round, songId, diffId, durationMs, teamRank, dayKey, nowMs, score, maxScore, chartLevel = 0, humans = 1 }) => {
+const rhythmAssistSessionApplyLive = (state, assistantId, { round, songId, diffId, durationMs, teamRank, dayKey, nowMs, score, maxScore, chartLevel = 0, humans = 1, expBonus = 0 }) => {
   const st = rhythmAssistSessionNormalize(state);
   if (!RHYTHM_ASSIST_SESSION_IDS.includes(assistantId)) return { next: null, gain: 0, levelUp: 0, likeUp: 0, like: 0, familiarUp: false, tickets: 0 };
   const before = rhythmAssistSessionMon(st, assistantId);
@@ -106,7 +108,8 @@ const rhythmAssistSessionApplyLive = (state, assistantId, { round, songId, diffI
   // 育ち方はマスモンと同じ(調子なし)。性格は付けない
   const r = rhythmBuddyApplyLive(before, { round, songId, diffId, durationMs, teamRank, dayKey, lean: '', nowMs, score, maxScore, chartLevel, humans, moodId: '' });
   if (!r.gain) return { next: null, gain: 0, levelUp: 0, likeUp: 0, like: likeBefore, familiarUp: false, tickets: 0 };
-  const gain = Math.max(1, Math.round(r.gain * rhythmAssistSessionExpScale(likeBefore)));
+  // expBonus … 得意の応援の上乗せ(0〜0.2)
+  const gain = Math.max(1, Math.round(r.gain * (rhythmAssistSessionExpScale(likeBefore) + Math.max(0, Math.min(0.2, Number(expBonus) || 0)))));
   const sid = rhythmBuddyStr(songId, 60);
   const likes = { ...before.likes };
   if (sid) likes[sid] = (likes[sid] || 0) + 1;
@@ -137,6 +140,9 @@ const rhythmAssistSessionChooseSong = (state, assistantId, catalog, rand = Math.
 
 // ---- セッションLv で開くもの(PLAN.md 2章。スコア・判定には効かない) ----
 // 演奏中のひとことは Lv.1 から。サビで顔が光るのは Lv.15 から。ビートP の上乗せは Lv.20/40/60/80 で +2/4/6/8%
+// 結果のカードの枠が助手の色になるのは Lv.45 から・名前入りの背景は Lv.90 から
+const RHYTHM_ASSIST_SESSION_FRAME_LEVEL = 45;
+const RHYTHM_ASSIST_SESSION_BACK_LEVEL = 90;
 // 好きな曲(好み度)が見えるのは Lv.10 から
 const RHYTHM_ASSIST_SESSION_TASTE_LEVEL = 10;
 const RHYTHM_ASSIST_SESSION_GLOW_LEVEL = 15;
@@ -156,17 +162,17 @@ const rhythmAssistSessionInClimax = (songId, timeMs) => {
   return Number.isFinite(t) && spans.some((x) => Array.isArray(x) && Number(x[2]) >= 0.9 && t >= Number(x[0]) && t < Number(x[1]));
 };
 
-// ---- デュオ(助手どうしの仲良し度。PLAN.md 3章・社長の決定 2026-11-07) ----
-// 仲良し度 Lv3 から「デュオ」(演奏中の掛け合い1曲3回まで)。Lv4 で結果の2人のひとこと・ビートP +5%。
-// Lv5 で、2人の特別なお話を見たあとは、サビで合体の演出(1曲1回)。仲良し度は読むだけ(足すのは 2人で1曲終えたときの +3 だけ)
+// ---- デュオ(助手どうしの友情Lv。PLAN.md 3章・社長の決定 2026-11-07) ----
+// 友情Lv3 から「デュオ」(演奏中の掛け合い1曲3回まで)。Lv4 で結果の2人のひとこと・ビートP +5%。
+// Lv5 で、2人の特別なお話を見たあとは、サビで合体の演出(1曲1回)。友情Lv は読むだけ(足すのは 2人で1曲終えたときの +3 だけ)
 const RHYTHM_ASSIST_SESSION_DUO_LEVEL = 3;
 const RHYTHM_ASSIST_SESSION_DUO_RESULT_LEVEL = 4;
 const RHYTHM_ASSIST_SESSION_GATTAI_LEVEL = 5;
 const RHYTHM_ASSIST_SESSION_DUO_P_BONUS = 0.05;
 const RHYTHM_ASSIST_SESSION_DUO_TALK_MAX = 3;
 const rhythmAssistSessionPairKey = (a, b) => [String(a), String(b)].sort().join('-');
-// 呼んだ助手(呼んだ順)から、デュオを組む。仲良し度の高いペアから先に組み、1人は1つのデュオにだけ入る。
-// levelOf(a, b) … 2人の仲良し度 Lv / seenOf(a, b) … 2人の特別なお話を見たか
+// 呼んだ助手(呼んだ順)から、デュオを組む。友情Lv の高いペアから先に組み、1人は1つのデュオにだけ入る。
+// levelOf(a, b) … 2人の友情Lv / seenOf(a, b) … 2人の特別なお話を見たか
 const rhythmAssistSessionDuos = (ids, levelOf, seenOf) => {
   const list = (Array.isArray(ids) ? ids : []).filter((id, i, arr) => RHYTHM_ASSIST_SESSION_IDS.includes(id) && arr.indexOf(id) === i);
   const pairs = [];
@@ -183,5 +189,46 @@ const rhythmAssistSessionDuos = (ids, levelOf, seenOf) => {
       gattai: lv >= RHYTHM_ASSIST_SESSION_GATTAI_LEVEL && !!(typeof seenOf === 'function' && seenOf(a, b)),
     }));
 };
-// デュオのビートP の上乗せ(仲良し度 Lv4 以上のデュオ1組につき +5%)
+// デュオのビートP の上乗せ(友情Lv4 以上のデュオ1組につき +5%)
 const rhythmAssistSessionDuoBonus = (duos) => (Array.isArray(duos) ? duos : []).filter((d) => d && d.result).length * RHYTHM_ASSIST_SESSION_DUO_P_BONUS;
+
+// ---- 得意の応援(セッションLv.25 から・PLAN.md 2章。報酬と見た目だけで、スコア・判定には効かない) ----
+// 呼んだ人のこの1曲の結果で決まる。{ exp: 経験値の上乗せの割合, points: ビートP, label: 結果の行に出す文 }。当たらなければ null
+//   みゅあ(コンボ): フルコンでビートP +3 / きき(正確さ): MARVELOUS 9割以上で経験値 +10% / ももすけ(ライブ感): S(9割)以上でビートP +3
+//   ドラ(ねばり): クリアで経験値 +10% / あつ(締め): 95%以上でビートP +3 / きゅうこ(曲を読む): はじめての曲をクリアで経験値 +20%
+//   ソラシド(計算): HARD 以上で経験値 +10% / えるびん(気づかい): 7割に届かなかったときビートP +3
+const RHYTHM_ASSIST_SESSION_CHEER_LEVEL = 25;
+const rhythmAssistSessionCheer = (assistantId, { level = 1, fc = false, marvRate = 0, ratio = 0, cleared = true, firstSong = false, diffId = '' } = {}) => {
+  if (level < RHYTHM_ASSIST_SESSION_CHEER_LEVEL || !cleared) return null;
+  const hard = RHYTHM_BUDDY_DIFF_IDS.indexOf(diffId) >= RHYTHM_BUDDY_DIFF_IDS.indexOf('HARD');
+  switch (assistantId) {
+    case 'mua': return fc ? { exp: 0, points: 3, label: 'フルコンの応援 ビートP+3' } : null;
+    case 'kiki': return marvRate >= 0.9 ? { exp: 0.1, points: 0, label: '正確さの応援 経験値+10%' } : null;
+    case 'momosuke': return ratio >= 0.9 ? { exp: 0, points: 3, label: 'ライブの応援 ビートP+3' } : null;
+    case 'dra': return { exp: 0.1, points: 0, label: 'ねばりの応援 経験値+10%' };
+    case 'atsu': return ratio >= 0.95 ? { exp: 0, points: 3, label: '締めの応援 ビートP+3' } : null;
+    case 'kyuko': return firstSong ? { exp: 0.2, points: 0, label: 'はじめての曲の応援 経験値+20%' } : null;
+    case 'sorashido': return hard ? { exp: 0.1, points: 0, label: '計算の応援 経験値+10%' } : null;
+    case 'erubin': return ratio < 0.7 ? { exp: 0, points: 3, label: '気づかいの応援 ビートP+3' } : null;
+    default: return null;
+  }
+};
+
+// ---- 曲の聞きどころ(セッションLv.75 から・社長 2026-11-07「全部の曲」) ----
+// 曲が決まったとき(待機の画面)に、その曲の聞きどころを話す。台詞は場面 'listen:<曲id>'(別の版は元の曲の id にまとめる)
+const RHYTHM_ASSIST_SESSION_LISTEN_LEVEL = 75;
+const rhythmAssistSessionListenBase = (songId, songs = (typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [])) => {
+  const id = String(songId || '');
+  const base = id.replace(/_(short|full)$/, '');
+  return base !== id && Array.isArray(songs) && songs.some((s) => s && s.songId === base) ? base : id;
+};
+
+// ---- プロフィールの札(Lv.50)と称号(Lv.100「セッションマスター」) ----
+const RHYTHM_ASSIST_SESSION_BADGE_LEVEL = 50;
+const RHYTHM_ASSIST_SESSION_MASTER_LEVEL = 100;
+// [{ assistantId, level, master }](Lv.50 以上の助手だけ。Lv の高い順)
+const rhythmAssistSessionBadges = (state) => RHYTHM_ASSIST_SESSION_IDS
+  .map((id) => ({ assistantId: id, level: rhythmAssistSessionLevel(state, id) }))
+  .filter((x) => x.level >= RHYTHM_ASSIST_SESSION_BADGE_LEVEL)
+  .map((x) => ({ ...x, master: x.level >= RHYTHM_ASSIST_SESSION_MASTER_LEVEL }))
+  .sort((a, b) => b.level - a.level);

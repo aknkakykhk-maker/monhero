@@ -9,6 +9,7 @@
 //   ⑥ 印が偽のときは帯も入口も出ない
 //   ⑧ 2人にあげる道具: 道具の欄(持っている数・起きること)/「渡す」で5つが分かる確かめ → 渡すと2人のひとこと・持ち物が1つ減る・2回目は理由が出る/
 //      はじめて手に入れたときの案内は HOME で1回だけ(止め絵 life-8-give・life-9-intro)
+//   ⑨ 演出(44-growth-fx.jsx): 渡すと品物の演出/見守って友情Lv が上がると Lv アップの演出(トーストは重ねない)。止め絵 life-10・life-11
 //   ⑦ 段階3: 見守ると組の中の人だけが話す様子の台本が流れる(穴が残らない)/ひとりの助手の「ようすを見る」で、その人のひとりごとが流れる
 const http = require('http'), path = require('path'), fs = require('fs');
 const root = path.resolve(__dirname, '..', '..'), PORT = 9231;
@@ -21,7 +22,7 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'applica
 const assistantsSrc = fs.readFileSync(path.join(root, 'monster-hero/data/assistants.js'), 'utf8');
 const replaySrc = assistantsSrc.slice(assistantsSrc.indexOf('const EVENT_REPLAYS = ['));
 const STORY_IDS = [...replaySrc.matchAll(/\{ id: '([a-z0-9_]+)'/g)].map(m => m[1]);
-const seed = ({ storyIds, life, intro = false }) => {
+const seed = ({ storyIds, life, intro = false, bondAll = null }) => {
   const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
   if (localStorage.getItem('mh_breeder_name') === null) {
     put('mh_breeder_name', 'テスト'); put('mh_breeder_icon', 'Mocchi'); put('mh_onboarded', true);
@@ -41,7 +42,21 @@ const seed = ({ storyIds, life, intro = false }) => {
     put('mh_owned_items', { ...owned, peer_gift: 2, peer_token: 1 });
     if (!intro) put('mh_assistant_life_item_intro_v1', true);
   }
-  if (life) { const t = setInterval(() => { try { if (typeof RELEASE_FLAGS !== 'undefined') { RELEASE_FLAGS.assistantLife = true; clearInterval(t); } } catch {} }, 2); }
+  // 公開の印はページの中だけで切り替える(本体は 2026-11-07 から真)。偽の確かめのときは偽に戻す
+  { const t = setInterval(() => { try { if (typeof RELEASE_FLAGS !== 'undefined') { RELEASE_FLAGS.assistantLife = !!life; clearInterval(t); } } catch {} }, 2); }
+  // いまの時間の様子を決めて入れておく(様子は時間帯と種で変わり、組やひとりの助手ができないことがあるため。印が偽の確かめでは入れない)
+  if (life && localStorage.getItem('mh_check_life_seeded') === null) {
+    localStorage.setItem('mh_check_life_seeded', '1');
+    const t = Date.now() + 9 * 3600000, h = new Date(t).getUTCHours();
+    const i = [0, 5, 10, 14, 18, 21].filter(x => h >= x).length - 1, ids = ['late', 'morning', 'noon', 'afternoon', 'evening', 'night'];
+    const base = { salt: 'check', abs: Math.floor(t / 86400000) * 6 + i, slot: ids[i], recent: [], nudges: { invite: [], introduce: [] }, watched: [] };
+    put('mh_assistant_life_v1', bondAll != null
+      ? { ...base, moods: {}, solo: {}, groups: [{ ids: ['kiki', 'mua'], doing: 'snack', place: 'cafe' }, { ids: ['dra', 'momosuke'], doing: 'walk', place: 'plaza' }, { ids: ['atsu', 'kyuko'], doing: 'cards', place: 'library' }, { ids: ['erubin', 'sorashido'], doing: 'cards', place: 'cardroom' }] }
+      : { ...base, moods: { atsu: 'lonely', kyuko: 'happy', momosuke: 'lonely' },
+        groups: [{ ids: ['kiki', 'mua'], doing: 'snack', place: 'cafe' }, { ids: ['dra', 'erubin', 'sorashido'], doing: 'cards', place: 'cardroom' }],
+        solo: { atsu: { doing: 'idle', place: 'home', reason: 'lonely' }, kyuko: { doing: 'read', place: 'library', reason: 'mypace' }, momosuke: { doing: 'practice', place: 'studio', reason: 'lonely' } } });
+  }
+  if (bondAll != null && localStorage.getItem('mh_check_bond_all') === null) { localStorage.setItem('mh_check_bond_all', '1'); const b = {}; const ids = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']; for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) b[[ids[i], ids[j]].sort().join('-')] = bondAll; put('mh_assistant_peer_bond_v1', b); }
 };
 const toHome = async (page) => {
   for (let i = 0; i < 60; i++) {
@@ -67,14 +82,14 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
   });
   await new Promise(r => server.listen(PORT, r));
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-  const open = async ({ w, h, life = true, intro = false }) => {
+  const open = async ({ w, h, life = true, intro = false, bondAll = null }) => {
     const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: SHOTS ? 2 : 1 });
     const errors = []; page.on('pageerror', e => errors.push(String(e)));
     await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
     await page.addInitScript(quietBootSeed());
     await page.addInitScript(updateNoticeSeed());
     await page.addInitScript(oneTimeNoticeSeed());
-    await page.addInitScript(seed, { storyIds: STORY_IDS, life, intro });
+    await page.addInitScript(seed, { storyIds: STORY_IDS, life, intro, bondAll });
     await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     await toHome(page);
@@ -162,7 +177,17 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
       const owned = await ls(page, 'mh_owned_items');
       const info = await talkInfo(page);
       check('⑧ 渡すと、2人のひとことが流れて差し入れが1つ減る', owned && owned.peer_gift === 1 && !!info, info ? info.id : 'なし');
-      await finishTalk(page); await reopen(page);
+      // 品物を渡した演出(44-growth-fx.jsx)。演出は1つずつ出るので、前の札が出ていればその後に出る(数秒で閉じる)
+      await page.locator('[data-growth-fx-sheet="item"]').waitFor({ timeout: 10000 }).catch(() => {});
+      check('⑨ 渡すと、品物の演出(2人の友情Lv・仲良し度)が出る', (await page.locator('[data-growth-fx-sheet="item"]').count()) > 0);
+      // 数字は数え上がるので、止まってから見る
+      await page.waitForTimeout(1800);
+      const fxText = await page.locator('[data-growth-fx-sheet="item"]').innerText().catch(() => '');
+      check('⑨ 品物の演出の数字が、渡した量と合う(友情Lv +15・仲良し度 +30)', /\+15/.test(fxText) && /\+30/.test(fxText), fxText.replace(/\s+/g, ' ').slice(0, 90));
+      if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-10-item-fx.png') });
+      await finishTalk(page);
+      for (let i = 0; i < 10 && (await page.locator('[data-growth-fx-sheet]').count()); i++) { await page.locator('[data-growth-fx-sheet]').first().click({ timeout: 800 }).catch(() => {}); await page.waitForTimeout(600); }
+      await reopen(page);
       await page.locator('[data-assistant-life-give]').first().click(); await page.waitForTimeout(300);
       await page.locator('[data-assistant-life-give-kind="gift"]').click().catch(() => {});
       const reason = await page.locator('[data-assistant-life-give-reason]').innerText().catch(() => '');
@@ -202,6 +227,29 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     if (SHOTS) await L.page.screenshot({ path: path.join(shotDir, 'life-6-screen-land.png') });
     await L.page.close();
 
+    // ⑨ 友情Lv が上がった演出: みんなの友情Lv を Lv3 の手前(118)にして見守る → 上がると画面いっぱいの祝い(トーストは出さない)
+    {
+      // 様子は端末ごとの種で決まるので、組ができていなければ開き直す(新しい端末として)
+      let V = null, wb = null;
+      for (let tries = 0; tries < 4; tries++) {
+        V = await open({ w: 390, h: 844, bondAll: 118 });
+        for (let i = 0; i < 40 && !(await V.page.locator('[data-assistant-life-band]').count()); i++) { await finishTalk(V.page); await V.page.waitForTimeout(500); }
+        await reopen(V.page);
+        wb = V.page.locator('[data-assistant-life-watch]:not([disabled])').first();
+        if (await wb.count()) break;
+        if (tries < 3) await V.page.close(); // 最後の1枚は閉じない(閉じたページを触って落ちないように)
+      }
+      if (await wb.count()) {
+        await wb.click(); await V.page.waitForTimeout(500);
+        await finishTalk(V.page);
+        await V.page.locator('[data-growth-fx-sheet="level"]').waitFor({ timeout: 8000 }).catch(() => {});
+        check('⑨ 見守って友情Lv が上がると、Lv アップの演出が出る', (await V.page.locator('[data-growth-fx-sheet="level"]').count()) > 0);
+        check('⑨ 友情Lv のトーストは重ねて出さない', (await V.page.locator('[data-assistant-peer-toast="level"]').count()) === 0);
+        if (SHOTS) await V.page.screenshot({ path: path.join(shotDir, 'life-11-level-fx.png') });
+      } else check('⑨ 見守れる組がある', false);
+      check('⑨ 演出のあいだもエラーが出ない', V.errors.length === 0, V.errors.slice(0, 2).join(' / '));
+      await V.page.close();
+    }
     // ⑧ はじめての案内
     const I = await open({ w: 390, h: 844, intro: true });
     // 掛け合いが流れているあいだは案内を出さない(重ねない)。流れていたら最後まで進めてから見る

@@ -177,10 +177,10 @@ const pairKey = (a, b) => [a, b].sort().join('-');
   const gen = ng({ day, asked: 1, talks: [
     { id: 'gen-1', pair: ['mua', 'kiki'], lines: [{ who: 'mua', e: 'happy', t: '{c}、おはよ！' }, { who: 'kiki', e: 'wink', t: 'おはようございまつ' }] },
     { id: 'gen-bad1', pair: ['mua', 'kiki'], lines: [{ who: 'dra', e: 'happy', t: 'ちがう人' }, { who: 'kiki', e: 'wink', t: 'はい' }] },
-    { id: 'gen-bad2', pair: ['mua', 'kiki'], lines: [{ who: 'mua', e: 'happy', t: '{name} の印' }, { who: 'kiki', e: 'wink', t: 'はい' }] },
+    { id: 'gen-bad2', pair: ['mua', 'kiki'], lines: [{ who: 'mua', e: 'happy', t: '{who} の印' }, { who: 'kiki', e: 'wink', t: 'はい' }] },
     { id: 'gen-bad3', pair: ['mua', 'nobody'], lines: [{ who: 'mua', e: 'happy', t: 'だれ' }, { who: 'nobody', e: 'wink', t: 'はい' }] },
   ] });
-  check('⑥ API 版の掛け合いは、形の崩れたもの(ペア外の話し手・{c} 以外の印・知らない助手)を捨てて読む', gen.talks.length === 1 && gen.talks[0].id === 'gen-1' && gen.talks[0].gen === true);
+  check('⑥ API 版の掛け合いは、形の崩れたもの(ペア外の話し手・{c}・{name} 以外の印・知らない助手)を捨てて読む', gen.talks.length === 1 && gen.talks[0].id === 'gen-1' && gen.talks[0].gen === true);
   p = pick({ ...base, gen }, { scene: 'home', metIds: met, selectedId: 'mua', now: Date.now() + 1e9, rand: seq(0, 0) });
   check('⑥ HOME では、その日に作った掛け合いを台本より先に出す', p && p.talk.id === 'gen-1', p && p.talk.id);
   p = pick({ ...base, gen, log: [{ id: 'gen-1', at: 1 }] }, { scene: 'home', metIds: met, selectedId: 'mua', now: Date.now() + 1e9, rand: seq(0, 0) });

@@ -2,9 +2,9 @@
 # 見直し: ナカヨシ(4)(ペアの関係・距離感)とコトバ(口調)。直した行はそのまま書き換えて返してください
 # 書き方は助手たちの今の台本(SAMPLE.txt)に合わせる: `話す人 表情 台詞` を ` | ` でつなぐ。相手の呼び方は {c}(さん・ちゃんは付けない)
 # 場面:
-#   play   … デュオの演奏中(仲良し度 Lv3 から。1曲に最大3回。ここでは1ペア2つの掛け合い)
-#   result … デュオの結果の2人のひとこと(仲良し度 Lv4 から)
-#   gattai … サビの合体の演出(仲良し度 Lv5・特別なお話を見たあと。1曲1回)
+#   play   … デュオの演奏中(友情Lv3 から。1曲に最大3回。ここでは1ペア2つの掛け合い)
+#   result … デュオの結果の2人のひとこと(友情Lv4 から)
+#   gattai … サビの合体の演出(友情Lv5・特別なお話を見たあと。1曲1回)
 # 守り: 恋愛にしない・悪口なし・からかっても下げない・呼び方は今のまま
 
 ## mua kiki
@@ -20,19 +20,19 @@ result | momosuke happy 2人でセンターだったね♡ | mua wink それな�
 gattai | mua excited {c}、ここで決めよ！ | momosuke excited ダブルセンターいくよ！！
 
 ## mua dra
-play | mua happy {c}、のってる〜？ | dra happy のってるくさ、えへへ
-play | dra happy {c}、おでのギャグより盛り上がってるくさ | mua happy ギャグは置いといて、叩こ♪
+play | mua happy {c}、のってる〜？ | dra happy のってるぞ、えへへ
+play | dra happy {c}、おでのギャグより盛り上がってるな | mua happy ギャグは置いといて、叩こ♪
 result | dra happy 楽しかったな、{c} | mua wink また一緒に叩こうね♪
 gattai | mua excited {c}、いっくよ〜！ | dra excited おでも全力だからな！
 
 ## mua atsu
 play | atsu happy {c}、走りすぎるなよ笑 | mua happy 走ってないもん！ちょっとだけｗ
 play | mua happy {c}、ここ合わせて！ | atsu happy おう、任せとけ！
-result | atsu happy とりあえず、いいセッションだったな笑 | mua wink でしょ！また組も♪
+result | atsu happy いいね、今日のセッション最高じゃん笑 | mua wink でしょ！また組も♪
 gattai | atsu excited {c}、ここ決めるぞ笑 | mua excited りょ！いっくよ〜♪
 
 ## mua kyuko
-play | kyuko happy {c}、サビ前で一回引くよ〜 | mua happy おっけ！あたし合わせる♪
+play | kyuko happy {c}、ここで一回ためるよぉ | mua happy おっけ！あたし合わせる♪
 play | mua happy {c}、余裕そうぢゃん！ | kyuko happy ほい、構成は読めてるよ〜
 result | kyuko happy いい流れだったね〜、ありがとん笑 | mua wink こっちこそ！楽しかった♪
 gattai | kyuko excited {c}、ここだよ〜 | mua excited まかせて！せーの♪
@@ -46,7 +46,7 @@ gattai | sorashido excited うぉぉぉ！{c}、いくぜ！ | mua excited い�
 ## mua erubin
 play | erubin happy {c}、楽しそうだね | mua happy {c}も一緒に楽しも♪
 play | mua happy {c}、ついてこれてる？ | erubin happy うん、ちょうどいいよ
-result | erubin happy 楽しかったね、おつかれさま | mua wink おつかれ〜！またやろ♪
+result | erubin happy 楽しかったね。いいね、この感じ☺️ | mua wink おつかれ〜！またやろ♪
 gattai | mua excited {c}、いくよ！ | erubin excited うん、一緒にね
 
 ## kiki momosuke
@@ -88,13 +88,13 @@ gattai | kiki excited {c}、いきましょう♪ | erubin excited うん、合�
 ## momosuke dra
 play | momosuke happy {c}、ももの後ろでがんばって！！ | dra happy おう、ついていくからな
 play | dra happy {c}、元気だな、えへへ | momosuke happy アイドルは体力勝負なの！！
-result | momosuke happy {c}、ちゃんとついてこれたじゃん♡ | dra wink えへへ、楽しかったんだな
-gattai | momosuke excited {c}、ここ合わせて！！ | dra excited おう、いくくさ！
+result | momosuke happy {c}、ちゃんとついてこれたじゃん♡ | dra wink えへへ、楽しかったな
+gattai | momosuke excited {c}、ここ合わせて！！ | dra excited おう、いくぞ！
 
 ## momosuke atsu
 play | atsu happy {c}、そこ走りすぎな笑 | momosuke happy ももは走ってないもん！！
 play | momosuke happy {c}、ちゃんと見ててよね！！ | atsu happy 見てるって笑
-result | atsu happy とりあえず、いいステージだったな笑 | momosuke wink でしょ！！もものおかげ♡
+result | atsu happy いいステージだったじゃん笑 | momosuke wink でしょ！！もものおかげ♡
 gattai | momosuke excited {c}、ももに合わせて！！ | atsu excited よし、決めるぞ！
 
 ## momosuke kyuko
@@ -104,7 +104,7 @@ result | kyuko happy 2人でいい流れだったね〜 | momosuke wink {c}、�
 gattai | momosuke excited {c}、いくよ！！ | kyuko excited おけ〜、せーの！
 
 ## momosuke sorashido
-play | sorashido happy {c}、ここの盛り上がり、計算済みだぜ・・・！ | momosuke happy ももが盛り上げるから計算いらないよw
+play | sorashido happy {c}、ここ、でーじ盛り上がるぞ笑 | momosuke happy ももが盛り上げるから計算いらないよw
 play | sorashido happy {c}のミス、今日はまだ0だぜ！ | momosuke troubled 数えなくていいから！！w
 result | sorashido happy 今日のステージ、表にしたら満点だぜ・・・！ | momosuke wink 当然でしょ！！♡
 gattai | sorashido excited {c}、ここが計算の答えだぜ！ | momosuke excited ももの見せ場だよ！！
@@ -122,7 +122,7 @@ result | atsu happy いい勝負だったな笑 | dra wink えへへ、楽しか
 gattai | atsu excited {c}、いくぞ！ | dra excited おう、全力だからな！
 
 ## dra kyuko
-play | kyuko happy {c}、ここからが山場だよ〜 | dra happy わかったな、気合い入れるくさ
+play | kyuko happy {c}、ここからが山場だよ〜 | dra happy わかった。気合い入れるぞ
 play | dra happy {c}、よく先が読めるな | kyuko happy 構成を見てるからね〜
 result | kyuko happy 今日も気持ちよく流れたね〜 | dra wink こっちこそだな、えへへ
 gattai | kyuko excited {c}、いくよ〜 | dra excited おう、いくからな
@@ -131,7 +131,7 @@ gattai | kyuko excited {c}、いくよ〜 | dra excited おう、いくからな
 play | sorashido happy {c}、ここの密度、すごいぜ・・・！ | dra happy おでも負けないからな
 play | dra happy {c}、楽しそうだな | sorashido happy 楽しいぜ笑
 result | sorashido happy 2人の数字、いい感じだぜ・・・！ | dra wink えへへ、うれしいな
-gattai | sorashido excited いくぜ、{c}！最高値を出すぜ笑 | dra excited おう、ワイもいくくさ！
+gattai | sorashido excited いくぜ、{c}！最高値を出すぜ笑 | dra excited おう、ワイもいくぞ！
 
 ## dra erubin
 play | erubin happy {c}、無理しないでね | dra happy 大丈夫だな、楽しいからな
@@ -140,13 +140,13 @@ result | erubin happy いい演奏だったね | dra wink えへへ、またや�
 gattai | dra excited {c}、いくからな | erubin excited うん、一緒に
 
 ## atsu kyuko
-play | atsu happy {c}、次どう来る？ | kyuko happy サビ前で一回引くよ〜
-play | kyuko happy {c}、締め方きれいだね〜 | atsu happy だろ笑
-result | atsu happy とりあえず、いい流れだったな笑 | kyuko wink ありがとん笑
+play | atsu happy {c}、次どう来る？ | kyuko happy 次はためて、サビで一気にいくよぉ
+play | kyuko happy {c}、締め方きれいだね〜 | atsu happy それね笑
+result | atsu happy いい流れだったね笑 | kyuko wink ありがとん笑
 gattai | atsu excited {c}、締めるぞ笑 | kyuko excited おけ〜、いくよ〜
 
 ## atsu sorashido
-play | sorashido happy {c}、ここのノーツ、計算済みだぜ・・・！ | atsu happy さすがだな笑
+play | sorashido happy {c}、ここのノーツ、気持ちいいぜ・・・！ | atsu happy さすがだな笑
 play | sorashido happy {c}との差、今日は2点だぜ笑 | atsu happy 細かすぎだろ笑
 result | sorashido happy 2人で最高値だぜ・・・！ | atsu wink いい数字だったな笑
 gattai | atsu excited {c}、いくぞ！ | sorashido excited うぉぉぉ！ここだぜ！
@@ -159,7 +159,7 @@ gattai | atsu excited {c}、合わせるぞ！ | erubin excited うん、いこ�
 
 ## kyuko sorashido
 play | sorashido happy {c}、ここの構成、計算どおりだぜ・・・！ | kyuko happy 読みどおりだね〜
-play | kyuko happy だいたいこのへんでサビだよ〜 | sorashido happy 正確には3小節あとだぜ笑
+play | kyuko happy だいたいこのへんでサビだよぉ | sorashido happy 正確には3小節あとだぜ笑
 result | kyuko happy 構成も計算もぴったりだったね〜 | sorashido wink うぉぉぉ！最高のデータだぜ・・・！
 gattai | kyuko excited {c}、いくよ〜 | sorashido excited うぉぉぉ！いくぜ！
 
@@ -170,7 +170,7 @@ result | erubin happy 気持ちのいい演奏だったね | kyuko wink あり�
 gattai | kyuko excited {c}、せーので〜 | erubin excited うん、せーの
 
 ## sorashido erubin
-play | sorashido happy {c}、ここの盛り上がり、計算済みだぜ・・・！ | erubin happy 頼もしいね
+play | sorashido happy ここからが山場だ！ うぉぉぉ！ | erubin happy 頼もしいね
 play | erubin happy {c}、楽しそうだね | sorashido happy 楽しいぜ笑
-result | sorashido happy 2人のデータ、最高だぜ・・・！ | erubin wink うん、おつかれさま
+result | sorashido happy 2人のデータ、最高だぜ・・・！ | erubin wink うん、さすがだね笑
 gattai | sorashido excited うぉぉぉ！{c}、合わせるぜ！ | erubin excited うん、一緒にいこう
