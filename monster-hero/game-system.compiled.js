@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 396ab06dae0db645
+// source-sha256: 97bfd0b80a18bbc3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -95808,41 +95808,49 @@ const ASSISTANT_LIFE_MOODS = Object.freeze({
 const ASSISTANT_LIFE_DOINGS = Object.freeze({
   snack: {
     label: 'おやつ',
+    te: 'おやつを食べて',
     group: true,
     places: ['cafe', 'plaza', 'home']
   },
   practice: {
     label: '練習',
+    te: '練習して',
     group: true,
     places: ['studio']
   },
   training: {
     label: '育成',
+    te: '育成して',
     group: true,
     places: ['ranch']
   },
   cards: {
     label: 'カード研究',
+    te: 'カードを研究して',
     group: true,
     places: ['cardroom', 'library']
   },
   walk: {
     label: '散歩',
+    te: '散歩して',
     group: true,
     places: ['plaza', 'garden', 'hill']
   },
   idle: {
     label: 'ぼーっと',
+    te: 'ぼーっとして',
     group: false,
     places: ['home', 'hill', 'garden']
   },
   sleep: {
-    label: '寝る',
+    label: 'おやすみ',
+    te: '寝て',
     group: false,
     places: ['home']
   },
   read: {
     label: '読書',
+    te: '本を読んで',
     group: false,
     places: ['library']
   }
@@ -95862,7 +95870,7 @@ const ASSISTANT_LIFE_PLACES = Object.freeze({
 const ASSISTANT_LIFE_PREFS = Object.freeze({
   mua: {
     social: 0.85,
-    fav: 'market',
+    fav: 'plaza',
     w: {
       snack: 4,
       practice: 2,
@@ -95881,11 +95889,11 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
         walk: 1.5
       }
     },
-    note: 'にぎやかなのが好き。おやつと散歩、マーケットをのぞくのが好き'
+    note: 'にぎやかなのが好き。人が集まる広場。おやつと散歩、マーケットをのぞくのも好き'
   },
   kiki: {
     social: 0.65,
-    fav: 'cafe',
+    fav: 'library',
     w: {
       snack: 3,
       practice: 1,
@@ -95904,7 +95912,7 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
         snack: 1.5
       }
     },
-    note: '朝の散歩とおやつ屋さんのお茶。ゴーレムの育成はしっかり'
+    note: '静かな図書室が好き。朝の散歩とおやつ。ゴーレムの育成はしっかり'
   },
   momosuke: {
     social: 0.8,
@@ -95931,7 +95939,7 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
   },
   dra: {
     social: 0.6,
-    fav: 'hill',
+    fav: 'home',
     w: {
       snack: 3,
       practice: 1,
@@ -95954,7 +95962,7 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
   },
   atsu: {
     social: 0.6,
-    fav: 'ranch',
+    fav: 'studio',
     w: {
       snack: 1,
       practice: 3,
@@ -95973,7 +95981,7 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
         practice: 1.3
       }
     },
-    note: 'とりあえず育成場。ドラゴンの育成と練習'
+    note: 'ビートの練習(HELL)とドラゴンの育成。カードも強い'
   },
   kyuko: {
     social: 0.5,
@@ -96022,7 +96030,7 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
   },
   erubin: {
     social: 0.7,
-    fav: 'garden',
+    fav: 'cardroom',
     w: {
       snack: 2,
       practice: 1,
@@ -96042,7 +96050,7 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       }
     },
     caring: true,
-    note: '中庭の散歩とカード。さみしそうな助手のそばへ行く'
+    note: 'カード部屋(デュラハン)と広場の散歩。さみしそうな助手のそばへ行く'
   }
 });
 const ASSISTANT_LIFE_SLOT_MOD = Object.freeze({
@@ -96319,7 +96327,7 @@ const assistantLifeDecide = ({
     if (slot.id === 'late') x *= 0.3;
     if (!ASSISTANT_LIFE_DOINGS[doing[id]].group) x *= 0.4;
     x *= 1 + 0.08 * tierI;
-    wants[id] = invited.has(id) || rand() < Math.min(0.95, x);
+    wants[id] = invited.has(id) || introduced.some(k => k.split('-').includes(id)) || rand() < Math.min(0.95, x);
   }
   const lvOf = (a, b) => typeof assistantPeerBondLevel === 'function' ? assistantPeerBondLevel(bond[assistantLifePairKey(a, b)] || 0) : 1;
   const score = (a, b) => {
@@ -96328,7 +96336,9 @@ const assistantLifeDecide = ({
     if (doing[a] === doing[b] && ASSISTANT_LIFE_DOINGS[doing[a]].group) s += 1.5;
     if (recentOf('gift', r => hasPair(r, a, b), 6) || recentOf('play', r => hasPair(r, a, b), 6) || recentOf('makeup', r => hasPair(r, a, b), 6)) s += 1.5;
     if (introduced.includes(assistantLifePairKey(a, b))) s += 6;
+    if (invited.has(a) || invited.has(b)) s += 3;
     if (ASSISTANT_LIFE_PREFS[a].caring && (wasLonely.has(b) || moods[b] === 'lonely')) s += 2;
+    if (!ASSISTANT_LIFE_DOINGS[doing[b]].group && !ASSISTANT_LIFE_PREFS[a].caring) s -= 1.5;
     return s + rand() * 1.5;
   };
   const mutual = {};
@@ -96365,7 +96375,7 @@ const assistantLifeDecide = ({
         bestS = avg;
       }
     }
-    if (best && rand() < (best.length === 2 ? 0.7 : 0.35)) {
+    if (best && rand() < (best.length === 2 ? 0.55 : 0.3)) {
       best.push(id);
       free.delete(id);
     }
@@ -96400,7 +96410,8 @@ const assistantLifeDecide = ({
     }
     const d = doing[id];
     const places = ASSISTANT_LIFE_DOINGS[d].places;
-    let place = places.includes(p.fav) ? p.fav : places[Math.floor(rand() * places.length)];
+    const favOk = places.includes(p.fav) || (d === 'idle' || d === 'walk') && rand() < 0.6;
+    let place = favOk ? p.fav : places[Math.floor(rand() * places.length)];
     if (reason === 'lonely' && (d === 'idle' || d === 'sleep')) place = 'home';
     solo[id] = {
       doing: d,

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 08ff5377abb0d8f6
+// generated-sha256: 52df78d5916a1c08
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -57040,16 +57040,16 @@ const ASSISTANT_LIFE_SLOTS = Object.freeze([
 const ASSISTANT_LIFE_MOODS = Object.freeze({
   happy: 'ごきげん', lonely: 'さみしい', restless: 'そわそわ', sulky: 'すねてる', sleepy: 'ねむい', eager: 'やる気',
 });
-// していること。group … 2人以上でもする(2人の掛け合いの「していること」5つ・コトバと決めた 2026-11-07)
+// していること。label … 台本の {doing}(名詞)/ te … {doing_te}(「〜して」の形)。group … 2人以上でもする(2人の掛け合いの「していること」5つ・コトバと決めた 2026-11-07)
 const ASSISTANT_LIFE_DOINGS = Object.freeze({
-  snack:    { label: 'おやつ',     group: true,  places: ['cafe', 'plaza', 'home'] },
-  practice: { label: '練習',       group: true,  places: ['studio'] },
-  training: { label: '育成',       group: true,  places: ['ranch'] },
-  cards:    { label: 'カード研究', group: true,  places: ['cardroom', 'library'] },
-  walk:     { label: '散歩',       group: true,  places: ['plaza', 'garden', 'hill'] },
-  idle:     { label: 'ぼーっと',   group: false, places: ['home', 'hill', 'garden'] },
-  sleep:    { label: '寝る',       group: false, places: ['home'] },
-  read:     { label: '読書',       group: false, places: ['library'] },
+  snack:    { label: 'おやつ',     te: 'おやつを食べて', group: true,  places: ['cafe', 'plaza', 'home'] },
+  practice: { label: '練習',       te: '練習して',       group: true,  places: ['studio'] },
+  training: { label: '育成',       te: '育成して',       group: true,  places: ['ranch'] },
+  cards:    { label: 'カード研究', te: 'カードを研究して', group: true,  places: ['cardroom', 'library'] },
+  walk:     { label: '散歩',       te: '散歩して',       group: true,  places: ['plaza', 'garden', 'hill'] },
+  idle:     { label: 'ぼーっと',   te: 'ぼーっとして',   group: false, places: ['home', 'hill', 'garden'] },
+  sleep:    { label: 'おやすみ',     te: '寝て',           group: false, places: ['home'] },
+  read:     { label: '読書',       te: '本を読んで',     group: false, places: ['library'] },
 });
 // 場所。台本の {place} に入る言葉(穴の言葉の一覧は docs/progress/assistant-peer/LIFE-WORDS.md)
 const ASSISTANT_LIFE_PLACES = Object.freeze({
@@ -57060,22 +57060,22 @@ const ASSISTANT_LIFE_PLACES = Object.freeze({
 //   social … だれかといたい気持ちの強さ(0〜1)/ fav … 好きな場所(ひとりごとの場所の型「好きな場所」)
 //   w … したいことの重み / slot … 時間ごとに重みへ掛ける数 / solo … ひとりが好きな時間 / caring … さみしそうな助手のそばへ行きやすい
 const ASSISTANT_LIFE_PREFS = Object.freeze({
-  mua:       { social: 0.85, fav: 'market',   w: { snack: 4, practice: 2, training: 2, cards: 1, walk: 3, idle: 1, sleep: 1, read: 0 },
-               slot: { noon: { snack: 1.5 }, evening: { walk: 1.5 } }, note: 'にぎやかなのが好き。おやつと散歩、マーケットをのぞくのが好き' },
-  kiki:      { social: 0.65, fav: 'cafe',     w: { snack: 3, practice: 1, training: 3, cards: 1, walk: 2, idle: 2, sleep: 1, read: 1 },
-               slot: { morning: { walk: 1.5 }, afternoon: { snack: 1.5 } }, note: '朝の散歩とおやつ屋さんのお茶。ゴーレムの育成はしっかり' },
+  mua:       { social: 0.85, fav: 'plaza',   w: { snack: 4, practice: 2, training: 2, cards: 1, walk: 3, idle: 1, sleep: 1, read: 0 },
+               slot: { noon: { snack: 1.5 }, evening: { walk: 1.5 } }, note: 'にぎやかなのが好き。人が集まる広場。おやつと散歩、マーケットをのぞくのも好き' },
+  kiki:      { social: 0.65, fav: 'library',     w: { snack: 3, practice: 1, training: 3, cards: 1, walk: 2, idle: 2, sleep: 1, read: 1 },
+               slot: { morning: { walk: 1.5 }, afternoon: { snack: 1.5 } }, note: '静かな図書室が好き。朝の散歩とおやつ。ゴーレムの育成はしっかり' },
   momosuke:  { social: 0.8,  fav: 'studio',   w: { snack: 2, practice: 4, training: 2, cards: 1, walk: 2, idle: 1, sleep: 1, read: 0 },
                slot: { evening: { practice: 2 }, night: { practice: 1.3 } }, note: '夕方から夜は練習スタジオでレッスン。見てほしいのでだれかと' },
-  dra:       { social: 0.6,  fav: 'hill',     w: { snack: 3, practice: 1, training: 1, cards: 1, walk: 1, idle: 2, sleep: 4, read: 0 },
+  dra:       { social: 0.6,  fav: 'home',     w: { snack: 3, practice: 1, training: 1, cards: 1, walk: 1, idle: 2, sleep: 4, read: 0 },
                slot: { noon: { sleep: 2 }, afternoon: { sleep: 2 } }, note: '昼寝が好き。だれか来てほしいのに家でごろごろしがち(さみしくなりやすい)' },
-  atsu:      { social: 0.6,  fav: 'ranch',    w: { snack: 1, practice: 3, training: 4, cards: 2, walk: 1, idle: 1, sleep: 1, read: 0 },
-               slot: { morning: { training: 1.5 }, afternoon: { practice: 1.3 } }, note: 'とりあえず育成場。ドラゴンの育成と練習' },
+  atsu:      { social: 0.6,  fav: 'studio',    w: { snack: 1, practice: 3, training: 4, cards: 2, walk: 1, idle: 1, sleep: 1, read: 0 },
+               slot: { morning: { training: 1.5 }, afternoon: { practice: 1.3 } }, note: 'ビートの練習(HELL)とドラゴンの育成。カードも強い' },
   kyuko:     { social: 0.5,  fav: 'library',  w: { snack: 2, practice: 1, training: 2, cards: 3, walk: 1, idle: 1, sleep: 1, read: 3 },
                slot: { afternoon: { read: 3, cards: 1.5 } }, solo: ['afternoon'], note: '午後は図書室でひとりの時間。カードの研究も好き' },
   sorashido: { social: 0.8,  fav: 'cardroom', w: { snack: 1, practice: 3, training: 1, cards: 4, walk: 1, idle: 1, sleep: 1, read: 1 },
                slot: { night: { cards: 2 }, evening: { cards: 1.3 } }, note: '夜はカード部屋で研究と計算。だれかを巻きこみたい' },
-  erubin:    { social: 0.7,  fav: 'garden',   w: { snack: 2, practice: 1, training: 2, cards: 3, walk: 3, idle: 1, sleep: 1, read: 1 },
-               slot: { morning: { walk: 1.3 }, evening: { cards: 1.3 } }, caring: true, note: '中庭の散歩とカード。さみしそうな助手のそばへ行く' },
+  erubin:    { social: 0.7,  fav: 'cardroom',   w: { snack: 2, practice: 1, training: 2, cards: 3, walk: 3, idle: 1, sleep: 1, read: 1 },
+               slot: { morning: { walk: 1.3 }, evening: { cards: 1.3 } }, caring: true, note: 'カード部屋(デュラハン)と広場の散歩。さみしそうな助手のそばへ行く' },
 });
 // 時間ごとにみんなの重みへ掛ける数
 const ASSISTANT_LIFE_SLOT_MOD = Object.freeze({
@@ -57226,7 +57226,8 @@ const assistantLifeDecide = ({ abs, members, bond = {}, prev = null, recent = []
     if (slot.id === 'late') x *= 0.3;
     if (!ASSISTANT_LIFE_DOINGS[doing[id]].group) x *= 0.4;
     x *= 1 + 0.08 * tierI; // にぎわうほど集まりやすい
-    wants[id] = invited.has(id) || rand() < Math.min(0.95, x);
+    // 誘われた・引き合わせられた助手は、だれかといたい
+    wants[id] = invited.has(id) || introduced.some(k => k.split('-').includes(id)) || rand() < Math.min(0.95, x);
   }
   // 4. 相手ごとの点(a から見た b)
   const lvOf = (a, b) => (typeof assistantPeerBondLevel === 'function') ? assistantPeerBondLevel(bond[assistantLifePairKey(a, b)] || 0) : 1;
@@ -57236,7 +57237,10 @@ const assistantLifeDecide = ({ abs, members, bond = {}, prev = null, recent = []
     if (doing[a] === doing[b] && ASSISTANT_LIFE_DOINGS[doing[a]].group) s += 1.5;
     if (recentOf('gift', r => hasPair(r, a, b), 6) || recentOf('play', r => hasPair(r, a, b), 6) || recentOf('makeup', r => hasPair(r, a, b), 6)) s += 1.5;
     if (introduced.includes(assistantLifePairKey(a, b))) s += 6;
+    if (invited.has(a) || invited.has(b)) s += 3; // 誘われた助手は張り切って、だれかのところへ行く
     if (ASSISTANT_LIFE_PREFS[a].caring && (wasLonely.has(b) || moods[b] === 'lonely')) s += 2;
+    // ごろごろ・昼寝・読書をしている相手のところへは行きにくい(来てほしいのに、だれも来ないことがある)
+    if (!ASSISTANT_LIFE_DOINGS[doing[b]].group && !ASSISTANT_LIFE_PREFS[a].caring) s -= 1.5;
     return s + rand() * 1.5;
   };
   const mutual = {};
@@ -57264,7 +57268,7 @@ const assistantLifeDecide = ({ abs, members, bond = {}, prev = null, recent = []
       if (g.some(m => mu(id, m) < 0)) continue;
       if (avg > bestS) { best = g; bestS = avg; }
     }
-    if (best && rand() < (best.length === 2 ? 0.7 : 0.35)) { best.push(id); free.delete(id); }
+    if (best && rand() < (best.length === 2 ? 0.55 : 0.3)) { best.push(id); free.delete(id); }
   }
   // 組の していること・場所。2人きりで「家」「寝る」は作らない(家は ひとり か 3人以上)
   const outGroups = groups.map(g => {
@@ -57288,7 +57292,9 @@ const assistantLifeDecide = ({ abs, members, bond = {}, prev = null, recent = []
     if (reason === 'lonely') { moods[id] = 'lonely'; lonely.push(id); }
     const d = doing[id];
     const places = ASSISTANT_LIFE_DOINGS[d].places;
-    let place = places.includes(p.fav) ? p.fav : places[Math.floor(rand() * places.length)];
+    // ひとりのときは好きな場所にいやすい(ぼーっと・散歩は、どこの好きな場所でもできる)
+    const favOk = places.includes(p.fav) || ((d === 'idle' || d === 'walk') && rand() < 0.6);
+    let place = favOk ? p.fav : places[Math.floor(rand() * places.length)];
     if (reason === 'lonely' && (d === 'idle' || d === 'sleep')) place = 'home';
     solo[id] = { doing: d, place, reason };
   }
