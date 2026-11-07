@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 86063bfffc9e6430
+// generated-sha256: e5ceda8f03f2b035
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -66257,12 +66257,13 @@ const cardTourRewardOf = (rewards, place, wins) => {
 //   challenge 対戦の前の挑戦の一言(4) / start 対戦の始まり(4) / big 大技を出した(消費ガッツ5以上・全員に当たる技)(4) /
 //   bigHit 1回で3以上のダメージを受けた(4) / guardMine 自分の回避・防御が決まった(3) / guardTheirs 相手に決められた(3) /
 //   myKo 自分のモンスターが KO(3) / theirKo 相手のモンスターを KO(3) / lastMine 自分が残り1体(2) / lastTheirs 相手が残り1体(2) /
-//   deckMine 自分の山札が残り10枚(2) / deckTheirs 相手の山札が残り10枚(2) / win 助手の勝ち(3) / lose 助手の負け(3)
-const CARD_LINE_SCENES = Object.freeze(['challenge', 'start', 'big', 'bigHit', 'guardMine', 'guardTheirs', 'myKo', 'theirKo', 'lastMine', 'lastTheirs', 'deckMine', 'deckTheirs', 'win', 'lose']);
+//   deckMine 自分の山札が残り10枚(2) / deckTheirs 相手の山札が残り10枚(2) / win 助手の勝ち(3) / lose 助手の負け(3) /
+//   winQuick 助手の勝ちで、遊んでいる人が1体も倒さずに終わった(投了・早い負け)(2)(2026-11-07 ミハリの指摘)
+const CARD_LINE_SCENES = Object.freeze(['challenge', 'start', 'big', 'bigHit', 'guardMine', 'guardTheirs', 'myKo', 'theirKo', 'lastMine', 'lastTheirs', 'deckMine', 'deckTheirs', 'win', 'lose', 'winQuick']);
 // 場面ごとの表情(ASSISTANT_EXPRESSIONS)
 const CARD_LINE_FACE = Object.freeze({
   challenge: 'wink', start: 'happy', big: 'excited', bigHit: 'troubled', guardMine: 'happy', guardTheirs: 'surprise',
-  myKo: 'crying', theirKo: 'excited', lastMine: 'troubled', lastTheirs: 'excited', deckMine: 'surprise', deckTheirs: 'wink', win: 'happy', lose: 'crying',
+  myKo: 'crying', theirKo: 'excited', lastMine: 'troubled', lastTheirs: 'excited', deckMine: 'surprise', deckTheirs: 'wink', win: 'happy', lose: 'crying', winQuick: 'wink',
 });
 // 1本は文字だけか [文, 表情]。表情を書いた行はその表情を出す(負けたときなど、子と台詞で顔を変える)
 const CARD_BATTLE_LINES = Object.freeze({
@@ -66281,6 +66282,7 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckTheirs: ['そっちの山札、もう少ないよ？ 大丈夫？', 'カード足りる…？ あたしまでﾄﾞｷﾄﾞｷしてきた！'],
     win: ['あたしの勝ちー！ めっちゃ楽しかった♪', 'やったー！ またいつでも相手するよ！', '勝っちゃった！ 次も全力でいこ！'],
     lose: [['負けたー！ でも、まぢ楽しかったよ！', 'happy'], ['強すぎぢゃんｗ もう1回やろ！', 'excited'], ['くやしー！ 次は絶対負けないからね♪', 'crying']],
+    winQuick: [['あれ、もう終わり？ 次はもっと長く遊ぼ♪', 'surprise'], ['まだまだこれからだったのにー！ もう1回やろ！', 'wink']],
   },
   kiki: {
     challenge: ['カードで勝負でつか？ 喜んでお相手しまつ♪♪', '私、こう見えて火力で押すタイプなんです( ˘ω˘)', 'よろしくお願いします。全力でいきますね', '準備はいいですか？ 私はガッツをためて待ってまつ'],
@@ -66297,6 +66299,7 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckTheirs: ['あれま、そちらの山札、もうそんなに減ったんでつね', 'このまま押し切りまつね( ˘ω˘)'],
     win: ['私の勝ちでつ。ありがとうございました♪♪', '火力で押し切れました( ˘ω˘)9グッ!', 'いい勝負でした。またお相手してくださいね'],
     lose: [['負けちゃいました…お強いですね', 'troubled'], ['あれま…悔しいでつ。もう一度お願いしまつ', 'crying'], ['完敗です。次はもっとためてから挑みますね(´ー`*)', 'normal']],
+    winQuick: [['あれま、もう終わりでつか？ 次はゆっくりお相手しまつ♪', 'surprise'], ['今日は手札がかみ合わなかったでつか？ またいつでもどうぞ( ˘ω˘)', 'normal']],
   },
   momosuke: {
     challenge: ['カードでももに勝てると思ってる？w', 'いいよ、相手してあげる♡ 泣いても知らないよ？', '手札、ぜーんぶ見えちゃうかもよ？w', 'ももと勝負！？ 楽しませてよね♡'],
@@ -66313,6 +66316,7 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckTheirs: ['山札、あとちょっとじゃん？w', 'カードなくなりそうでかわいそ〜♡ 早く降参する？w'],
     win: ['ももの勝ち〜♡ 楽しかったよ！', 'ね、言ったでしょ？ ももはずるいって！w', '勝った！！ でもけっこう強かったよ、えらいえらい♡'],
     lose: [['うそでしょ！？ …強いじゃん、すご', 'surprise'], ['むかつく〜！！ もう1回！！', 'angry'], ['負けた…今日だけは認めてあげる♡', 'wink']],
+    winQuick: [['え、もう降参？ ももの勝ち〜♡ つまんないの〜w', 'wink'], ['ちょっと〜、まだ1体も倒されてないんだけど？w 次は本気で来てよね♡', 'angry']],
   },
   kyuko: {
     challenge: ['ほい！ カード勝負だねぇ。組み方なら負けないよ笑', '先まで読むタイプなんで、よろしくぅ', 'おけ〜、相手するよ。お手柔らかにね笑', '俺のデッキ、安い技ばっかりだけど強いよぉ'],
@@ -66329,6 +66333,7 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckTheirs: ['そっちの山札、もう少ないねぇ', '山札が切れたら負けだから、数えといたほうがいいよw'],
     win: ['ほい、俺の勝ち！ ありがとん笑', '計算どおり…ってことにしといて笑', 'いい勝負だったねぇ。またやろw'],
     lose: [['ぐぬぬぬ…負けたぁ', 'angry'], ['見立てがずれてたかぁ🥲 強いねぇ', 'troubled'], ['おけ、組み方から考え直すよw', 'normal']],
+    winQuick: [['ほい、今回は早かったねぇ。組み直してまたおいで笑', 'normal'], ['あらら、まだ序盤だったのに〜。次はゆっくりやろw', 'wink']],
   },
   dra: {
     challenge: ['おでとカード勝負か。守りの固さ、見せてやるからな', 'ふむ、いいよ。膝以外も固いってとこ見せるわ', 'よろしくな。カードの組み合わせで勝つのが、おでのやり方だよ', 'えへへ、手札は見せないよ。隠しごとは得意なんだ'],
@@ -66345,6 +66350,7 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckTheirs: ['そっちの山札、もう少ないよ。数えといたほうがいいぞ', '山札切れも負けだからな。覚えとくといいよ'],
     win: ['おでの勝ちだな。えへへ、ありがとな', 'ふむ、守り勝ちってやつだな', 'いい勝負だったよ。また相手してくれよな'],
     lose: [['わぁ、負けたか…強いな、ほんとに', 'surprise'], ['負けたわ…おでなんか膝しか取り柄ないからな。えへへ', 'troubled'], ['たしかに、今日はそっちが一枚上だったな', 'normal']],
+    winQuick: [['ふむ、今日はここまでか。また相手してくれよな', 'normal'], ['えへへ、おでの守り、まだ崩されてないぞ。次はがんばれよな', 'happy']],
   },
   atsu: {
     challenge: ['カード勝負ね。とりあえず全力でいこ笑', 'いいね、受けて立つよ( *\'ω\'*)ノ', '今日は最後まで本気な笑', 'まとめて押し込むのが俺のやり方だから笑', 'これでもモンスター甲子園に出たことあるんだよね笑'],
@@ -66361,6 +66367,7 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckTheirs: ['山札、もう少ないじゃん…焦ってる？笑', 'そろそろ山札が尽きるな！ 押し込むぞ！'],
     win: ['俺の勝ち！ いい勝負だった笑', '楽しかった！ 次は上の難易度でやろうぜ笑', 'いいね、また相手してな！'],
     lose: [['負けた…まじで強いじゃん笑', 'happy'], ['やるね！ 次は俺が勝つからな笑', 'excited'], ['しゃあない、俺の負け！ もう1回やろ！', 'wink']],
+    winQuick: [['え、もう終わり？ 次は最後までやろうぜ笑', 'surprise'], ['今日は俺のペースだったな笑 また相手してな！', 'wink']],
   },
   // ソラシド(2026-10-27 社長「この形で入れる」。案はフキダシくん docs/progress/card-sorashido-lines.md v3)。公開の印が立つまで画面には出ない
   sorashido: {
@@ -66378,6 +66385,7 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckTheirs: [['そっちの山札、もう少ないな？ 笑', 'wink'], ['山札切れも勝ち筋のひとつだぜ・・・！', 'happy']],
     win: [['うぉぉぉ！ 読み通り！ いい勝負だった笑', 'happy'], ['作戦がきれいにはまった！ もう1戦だけやろ笑', 'excited'], ['楽しかった！ 気づいたら朝になりそう笑', 'wink'], ['うぉぉぉ！ オリヒメにも見せたかった笑', 'excited']],
     lose: [['なに！？ そこでそれ！？…悔しいけど、今のはうまいぜ・・・！', 'crying'], ['完敗！ 今の対戦、攻略まとめにして研究する笑', 'troubled'], ['なんくるないさ〜。次はデッキ組み直してくる笑', 'happy']],
+    winQuick: [['え、もう終わり！？ ここからが本番だったのに笑', 'surprise'], ['今回は手札がかみ合わなかった感じか・・・！ 次はがっつりやろうぜ笑', 'wink']],
   },
   // えるびん(2026-11-05 案・ルールくん。口調は docs/progress/tempo-2026-11-05/erubin-split.md)。こっちで覚えてはまったカード・デュラハン好き・組み方をいくつも持つ。公開の印が立つまで画面には出ない
   erubin: {
@@ -66395,6 +66403,7 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckTheirs: [['そっちの山札、だいぶ減ってるけど大丈夫かな？', 'wink'], ['山札の残りも、ちゃんと見てるからね笑', 'happy']],
     win: [['楽しかったー！ いい勝負だったね☺️', 'happy'], ['勝てた！ 組み方がうまくはまったね笑', 'excited'], ['またやろうね。次はどの組み方でいこうかな🤔', 'wink']],
     lose: [['負けちゃった笑 さすがだね、強かった！', 'happy'], ['くやしいなぁ。デッキ、組み直してくるね', 'troubled'], ['お見事！ 今の勝ち方、勉強になったよ', 'normal']],
+    winQuick: [['あれ、もう終わり？ 次はゆっくり遊ぼうね☺️', 'surprise'], ['今日は手札がきびしかったかな🤔 またやろうね', 'normal']],
   },
 });
 // 1ターンにしゃべるのは2回まで。同じ場面では、直近に出した台詞を続けて出さない
@@ -68311,6 +68320,8 @@ const CardResultVsRow = ({ meIcon = null, meName = 'あなた', foeNode = null, 
     {outcome && <span data-card-result-vs-outcome className={`shrink-0 rounded-md px-1.5 py-0.5 text-[12px] font-black ${outcome === '勝ち' ? 'bg-amber-300 text-slate-950' : 'bg-slate-700 text-slate-100'}`}>{outcome}</span>}
   </div>
 );
+// 遊んでいる人が1体も倒さずに終わった負け・投了は、助手が「いい勝負だった」と言わない(2026-11-07 ミハリの指摘)
+const cardResultLineQuick = (result) => !!(result && result.outcome !== 'win' && result.facts && Number.isFinite(result.facts.kos) && result.facts.kos === 0);
 const CardResultTalk = ({ a, lineScene, talkFacts }) => {
   const [line] = useState(() => cardPickLine(a.id, lineScene, null)); // 助手から見た勝ち負け
   const [ai, setAi] = useState(null);
@@ -71938,7 +71949,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           <CardResultBanner title={win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…'} sub={win ? 'YOU WIN' : result.outcome === 'surrender' ? 'SURRENDER' : 'YOU LOSE'} tone={win ? 'win' : 'lose'}/>
           {/* カードランクの経験値の棒は、結果を開いてすぐ目に入るよう、いちばん上(勝ち負けのすぐ下)に置く(2026-10-30 社長「終わったあとに経験値ゲージのバーの動きが見れない」) */}
           {result.rankGain && <CardRankResult gain={result.rankGain}/>}
-          {a && <CardResultTalk a={a} lineScene={win ? 'lose' : 'win'} talkFacts={result.talk}/>}
+          {a && <CardResultTalk a={a} lineScene={win ? 'lose' : cardResultLineQuick(result) ? 'winQuick' : 'win'} talkFacts={result.talk}/>}
           {result.share && <p data-card-result-share className="text-center text-[13px] font-black text-emerald-200">{result.share.name}さんのデッキと対戦しました</p>}
           {a && <CardResultVsRow meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meName={(rank && rank.profile && rank.profile.name) || 'あなた'}
             foeNode={<img src={assistantFaceImage(a, 'normal')} alt="" className="h-8 w-8 rounded-lg border-2 bg-black object-cover object-top" style={{ borderColor: a.accent }}/>} foeName={a.name} outcome={win ? '勝ち' : result.outcome === 'surrender' ? '投了' : '負け'}/>}
