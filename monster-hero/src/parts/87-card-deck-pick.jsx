@@ -20,37 +20,6 @@ const cardDeckPickChoices = (db, decks, collection, opts = {}) => {
 // rentTab … 「自分のデッキ/借りたデッキ」のタブにし、借りたデッキのタブで借りる・返すをする(2026-10-29 社長の作り直し「借りるのは対戦前のデッキを選ぶ画面のタブで」)。
 //   公開の印(cardShareOpen)までは、デバッグの人だけ(84 が決める)。借りられるのは1組・マルチでは使えない、は今のまま
 // auto … ほかのブリーダーと戦うときだけ { on, onChange, left, quick, onQuick }(quick … 結果だけ見る。2026-11-02)(オートで挑む・案B 2026-11-02)。left … 今日のごほうびの残り回数(読めていなければ null)
-// 🤖オートを初めて選んだときの助手の吹き出し(2026-11-07 社長「オート設定やクイックの誘導やチュートリアル」)。
-//   文は ASSISTANT_QUICK_GUIDE_LINES の card.auto(56-quick-guide.jsx の quickGuideLine。無い助手はみゅあの文)。
-//   「OK」を押したら二度と出さない。新しいキー mh_card_auto_intro_seen_v1(真偽値)だけを使う(CLAUDE.md ⑦)
-const CardAutoIntro = () => {
-  const bond = typeof useAssistantBond === 'function' ? useAssistantBond() : null;
-  const [show, setShow] = useState(false);
-  useEffect(() => {
-    if (typeof CARD_AUTO_INTRO_SEEN_KEY !== 'string') return undefined;
-    let cancelled = false;
-    (async () => {
-      let seen = false;
-      try { seen = await storeGet(CARD_AUTO_INTRO_SEEN_KEY, false, false); } catch (_) { seen = false; }
-      if (!cancelled && seen !== true) setShow(true);
-    })();
-    return () => { cancelled = true; };
-  }, []);
-  if (!show || typeof quickGuideLine !== 'function') return null;
-  const id = bond && bond.assistantId ? bond.assistantId : 'mua';
-  const line = quickGuideLine(id, 'card.auto');
-  if (!line) return null;
-  const who = typeof assistantById === 'function' ? assistantById(id) : null;
-  const face = who && typeof assistantFaceImage === 'function' ? assistantFaceImage(who, line.e || 'normal') : null;
-  return (
-    <div data-card-auto-intro className="flex items-start gap-2 rounded-xl border-2 border-fuchsia-300/70 bg-slate-950/90 px-2.5 py-2">
-      {face && <img src={face} alt="" aria-hidden="true" className="h-10 w-10 shrink-0 rounded-full border border-fuchsia-300/60 bg-slate-900 object-cover object-top"/>}
-      <p className="min-w-0 flex-1 text-[11px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE}>{line.t}</p>
-      <button type="button" data-card-auto-intro-ok onClick={() => { setShow(false); storeSet(CARD_AUTO_INTRO_SEEN_KEY, true, false); }}
-        className="min-h-[36px] shrink-0 self-center rounded-lg border border-fuchsia-300/70 bg-fuchsia-700/80 px-2.5 text-[11px] font-black text-white active:scale-[.97]">OK</button>
-    </div>
-  );
-};
 const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', note = '', onPick, onBack, allowRented = false, rentTab = false, auto = null }) => {
   const [rented, setRented] = useState(null);
   const [tab, setTab] = useState('own'); // own / rent
@@ -197,6 +166,38 @@ const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', 
         <button type="button" data-card-deck-pick-go disabled={!chosen || busy} onClick={() => { void go(); }}
           className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40">対戦へ</button>
       </div>
+    </div>
+  );
+};
+
+// 🤖オートを初めて選んだときの助手の吹き出し(2026-11-07 社長「オート設定やクイックの誘導やチュートリアル」)。
+//   文は ASSISTANT_QUICK_GUIDE_LINES の card.auto(56-quick-guide.jsx の quickGuideLine。無い助手はみゅあの文)。
+//   「OK」を押したら二度と出さない。新しいキー mh_card_auto_intro_seen_v1(真偽値)だけを使う(CLAUDE.md ⑦)
+const CardAutoIntro = () => {
+  const bond = typeof useAssistantBond === 'function' ? useAssistantBond() : null;
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (typeof CARD_AUTO_INTRO_SEEN_KEY !== 'string') return undefined;
+    let cancelled = false;
+    (async () => {
+      let seen = false;
+      try { seen = await storeGet(CARD_AUTO_INTRO_SEEN_KEY, false, false); } catch (_) { seen = false; }
+      if (!cancelled && seen !== true) setShow(true);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  if (!show || typeof quickGuideLine !== 'function') return null;
+  const id = bond && bond.assistantId ? bond.assistantId : 'mua';
+  const line = quickGuideLine(id, 'card.auto');
+  if (!line) return null;
+  const who = typeof assistantById === 'function' ? assistantById(id) : null;
+  const face = who && typeof assistantFaceImage === 'function' ? assistantFaceImage(who, line.e || 'normal') : null;
+  return (
+    <div data-card-auto-intro className="flex items-start gap-2 rounded-xl border-2 border-fuchsia-300/70 bg-slate-950/90 px-2.5 py-2">
+      {face && <img src={face} alt="" aria-hidden="true" className="h-10 w-10 shrink-0 rounded-full border border-fuchsia-300/60 bg-slate-900 object-cover object-top"/>}
+      <p className="min-w-0 flex-1 text-[11px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE}>{line.t}</p>
+      <button type="button" data-card-auto-intro-ok onClick={() => { setShow(false); storeSet(CARD_AUTO_INTRO_SEEN_KEY, true, false); }}
+        className="min-h-[36px] shrink-0 self-center rounded-lg border border-fuchsia-300/70 bg-fuchsia-700/80 px-2.5 text-[11px] font-black text-white active:scale-[.97]">OK</button>
     </div>
   );
 };

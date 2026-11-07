@@ -112,7 +112,7 @@ const missingBusy = needBusy.filter((x) => !busy.includes(x));
 check('割り込まない場面(お話・おしゃべり・ほかの案内・演奏中・れんしゅう中)を busy に入れている', missingBusy.length === 0, missingBusy.join(' '));
 check('前の吹き出し(∞周回×モンヒロビート)は、案内の部品があるあいだ出さない', /quickRhythmIntroVisible = [^\n]*!quickGuideAvailable/.test(app) && /quickRhythmBackgroundVisible = [^\n]*!quickGuideAvailable/.test(app));
 check('MFバトルカード: 🤖オートを選んだときだけ吹き出し(OKで二度と出さない)', /\{auto\.on && <CardAutoIntro\/>\}/.test(read('monster-hero/src/parts/87-card-deck-pick.jsx')) && /storeSet\(CARD_AUTO_INTRO_SEEN_KEY, true, false\)/.test(read('monster-hero/src/parts/87-card-deck-pick.jsx')));
-check('光らせる目印が画面にある', ['data-auto-settings-section="policy"', 'data-auto-settings-section="ally"', 'data-auto-settings-section="quickRun"', 'data-auto-settings-section="breakthrough"', 'data-quick-reward-policy', 'data-battle-system-card={sys.id}', 'data-difficulty-carousel', 'data-quick-to-rhythm'].every((m) => app.includes(m))
+check('光らせる目印が画面にある', ['data-auto-settings-section="policy"', 'data-auto-settings-section="ally"', 'data-auto-settings-section="quickRun"', 'data-auto-settings-section="breakthrough"', 'data-quick-reward-policy', 'data-battle-system-card={sys.id}', 'data-difficulty-carousel', 'aria-label="周回を続けたままモンヒロビートへ"'].every((m) => app.includes(m))
   && read('monster-hero/src/parts/71-screen-battle.jsx').includes('data-battle-auto-button') && read('monster-hero/src/parts/58-screen-rhythm.jsx').includes('data-quick-run-band') && read('monster-hero/src/parts/77-screen-rhythm-multi.jsx').includes('data-rhythm-back'));
 
 // ---- ⑤ 実ブラウザ ----

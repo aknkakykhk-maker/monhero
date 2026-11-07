@@ -40,7 +40,8 @@ const QUICK_GUIDE_PAGES = Object.freeze({
   ],
   g3a: [
     { id: 'g3.1' },
-    { id: 'g3.2', spot: '[data-quick-to-rhythm]' },
+    // モンヒロビートへの入口(60-app.jsx の quickToRhythmButtonNode)。入口の目印は1か所だけにする決まりなので、ボタンの名前で探す
+    { id: 'g3.2', spot: 'button[aria-label="周回を続けたままモンヒロビートへ"]' },
     { id: 'g3.3' },
   ],
   g3b: [
@@ -116,6 +117,23 @@ const quickGuideSpotRect = (selector) => {
   return null;
 };
 
+// 光らせる所を画面の中へ寄せる。縦にだけ動かす(scrollIntoView は横のカルーセルまで動かすので使わない決まり・viewport-height-check)
+//   top … 先頭を上の端へ / それ以外 … 見えていなければ近い側へ
+const quickGuideScrollTo = (el, top) => {
+  if (!el || typeof window === 'undefined') return;
+  let box = el.parentElement;
+  while (box && box !== document.body) {
+    const oy = getComputedStyle(box).overflowY;
+    if ((oy === 'auto' || oy === 'scroll') && box.scrollHeight > box.clientHeight + 1) break;
+    box = box.parentElement;
+  }
+  if (!box || box === document.body) return;
+  const r = el.getBoundingClientRect(), b = box.getBoundingClientRect();
+  if (top) box.scrollTop += r.top - b.top - 8;
+  else if (r.top < b.top) box.scrollTop += r.top - b.top - 8;
+  else if (r.bottom > b.bottom) box.scrollTop += r.bottom - b.bottom + 8;
+};
+
 // 案内の窓。pages … [{ id, spot?, goAutoSettings? }]。onDone(true) … 最後まで見た / onDone(false) … あとで
 const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAutoSettings }) => {
   const [step, setStep] = useState(0);
@@ -132,9 +150,7 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
     if (!page || !page.spot) { setRect(null); return undefined; }
     const first = quickGuideSpotRect(page.spot);
     const vh0 = window.innerHeight || 0;
-    try {
-      if (first && first.el && first.el.scrollIntoView) first.el.scrollIntoView({ block: first.height > vh0 - panelH - 40 ? 'start' : 'nearest', inline: 'nearest' });
-    } catch (_) { /* 寄せられなくても測れる */ }
+    try { if (first && first.el) quickGuideScrollTo(first.el, first.height > vh0 - panelH - 40); } catch (_) { /* 寄せられなくても測れる */ }
     const measure = () => { const r = quickGuideSpotRect(page.spot); setRect(r ? { top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom } : null); };
     measure();
     const t = setInterval(measure, 300);

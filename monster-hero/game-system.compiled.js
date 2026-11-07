@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dfc382b8911d6b39
+// source-sha256: 012149d8df408662
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -95869,7 +95869,7 @@ const QUICK_GUIDE_PAGES = Object.freeze({
     id: 'g3.1'
   }, {
     id: 'g3.2',
-    spot: '[data-quick-to-rhythm]'
+    spot: 'button[aria-label="周回を続けたままモンヒロビートへ"]'
   }, {
     id: 'g3.3'
   }],
@@ -95984,6 +95984,19 @@ const quickGuideSpotRect = selector => {
   } catch (_) {}
   return null;
 };
+const quickGuideScrollTo = (el, top) => {
+  if (!el || typeof window === 'undefined') return;
+  let box = el.parentElement;
+  while (box && box !== document.body) {
+    const oy = getComputedStyle(box).overflowY;
+    if ((oy === 'auto' || oy === 'scroll') && box.scrollHeight > box.clientHeight + 1) break;
+    box = box.parentElement;
+  }
+  if (!box || box === document.body) return;
+  const r = el.getBoundingClientRect(),
+    b = box.getBoundingClientRect();
+  if (top) box.scrollTop += r.top - b.top - 8;else if (r.top < b.top) box.scrollTop += r.top - b.top - 8;else if (r.bottom > b.bottom) box.scrollTop += r.bottom - b.bottom + 8;
+};
 const QuickGuideOverlay = ({
   guideId,
   pages,
@@ -96014,10 +96027,7 @@ const QuickGuideOverlay = ({
     const first = quickGuideSpotRect(page.spot);
     const vh0 = window.innerHeight || 0;
     try {
-      if (first && first.el && first.el.scrollIntoView) first.el.scrollIntoView({
-        block: first.height > vh0 - panelH - 40 ? 'start' : 'nearest',
-        inline: 'nearest'
-      });
+      if (first && first.el) quickGuideScrollTo(first.el, first.height > vh0 - panelH - 40);
     } catch (_) {}
     const measure = () => {
       const r = quickGuideSpotRect(page.spot);
@@ -117665,52 +117675,6 @@ const cardDeckPickChoices = (db, decks, collection, opts = {}) => {
     why: cardDeckProblems(db, r.deck)
   }];
 };
-const CardAutoIntro = () => {
-  const bond = typeof useAssistantBond === 'function' ? useAssistantBond() : null;
-  const [show, setShow] = useState(false);
-  useEffect(() => {
-    if (typeof CARD_AUTO_INTRO_SEEN_KEY !== 'string') return undefined;
-    let cancelled = false;
-    (async () => {
-      let seen = false;
-      try {
-        seen = await storeGet(CARD_AUTO_INTRO_SEEN_KEY, false, false);
-      } catch (_) {
-        seen = false;
-      }
-      if (!cancelled && seen !== true) setShow(true);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-  if (!show || typeof quickGuideLine !== 'function') return null;
-  const id = bond && bond.assistantId ? bond.assistantId : 'mua';
-  const line = quickGuideLine(id, 'card.auto');
-  if (!line) return null;
-  const who = typeof assistantById === 'function' ? assistantById(id) : null;
-  const face = who && typeof assistantFaceImage === 'function' ? assistantFaceImage(who, line.e || 'normal') : null;
-  return React.createElement("div", {
-    "data-card-auto-intro": true,
-    className: "flex items-start gap-2 rounded-xl border-2 border-fuchsia-300/70 bg-slate-950/90 px-2.5 py-2"
-  }, face && React.createElement("img", {
-    src: face,
-    alt: "",
-    "aria-hidden": "true",
-    className: "h-10 w-10 shrink-0 rounded-full border border-fuchsia-300/60 bg-slate-900 object-cover object-top"
-  }), React.createElement("p", {
-    className: "min-w-0 flex-1 text-[11px] font-bold leading-snug text-slate-100",
-    style: JA_WRAP_STYLE
-  }, line.t), React.createElement("button", {
-    type: "button",
-    "data-card-auto-intro-ok": true,
-    onClick: () => {
-      setShow(false);
-      storeSet(CARD_AUTO_INTRO_SEEN_KEY, true, false);
-    },
-    className: "min-h-[36px] shrink-0 self-center rounded-lg border border-fuchsia-300/70 bg-fuchsia-700/80 px-2.5 text-[11px] font-black text-white active:scale-[.97]"
-  }, "OK"));
-};
 const CardDeckPick = ({
   db,
   decks,
@@ -118005,6 +117969,52 @@ const CardDeckPick = ({
     },
     className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40"
   }, "対戦へ")));
+};
+const CardAutoIntro = () => {
+  const bond = typeof useAssistantBond === 'function' ? useAssistantBond() : null;
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (typeof CARD_AUTO_INTRO_SEEN_KEY !== 'string') return undefined;
+    let cancelled = false;
+    (async () => {
+      let seen = false;
+      try {
+        seen = await storeGet(CARD_AUTO_INTRO_SEEN_KEY, false, false);
+      } catch (_) {
+        seen = false;
+      }
+      if (!cancelled && seen !== true) setShow(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  if (!show || typeof quickGuideLine !== 'function') return null;
+  const id = bond && bond.assistantId ? bond.assistantId : 'mua';
+  const line = quickGuideLine(id, 'card.auto');
+  if (!line) return null;
+  const who = typeof assistantById === 'function' ? assistantById(id) : null;
+  const face = who && typeof assistantFaceImage === 'function' ? assistantFaceImage(who, line.e || 'normal') : null;
+  return React.createElement("div", {
+    "data-card-auto-intro": true,
+    className: "flex items-start gap-2 rounded-xl border-2 border-fuchsia-300/70 bg-slate-950/90 px-2.5 py-2"
+  }, face && React.createElement("img", {
+    src: face,
+    alt: "",
+    "aria-hidden": "true",
+    className: "h-10 w-10 shrink-0 rounded-full border border-fuchsia-300/60 bg-slate-900 object-cover object-top"
+  }), React.createElement("p", {
+    className: "min-w-0 flex-1 text-[11px] font-bold leading-snug text-slate-100",
+    style: JA_WRAP_STYLE
+  }, line.t), React.createElement("button", {
+    type: "button",
+    "data-card-auto-intro-ok": true,
+    onClick: () => {
+      setShow(false);
+      storeSet(CARD_AUTO_INTRO_SEEN_KEY, true, false);
+    },
+    className: "min-h-[36px] shrink-0 self-center rounded-lg border border-fuchsia-300/70 bg-fuchsia-700/80 px-2.5 text-[11px] font-black text-white active:scale-[.97]"
+  }, "OK"));
 };
 const CARD_RANK_TABLE = 'card_battle_ranks';
 const CARD_RANK_TABLE_V2 = 'card_battle_ranks_v2';
