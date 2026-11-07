@@ -226,7 +226,7 @@ const cardTacticsAutoOf = async (db, deck) => {
 
 // ---- オートで挑む(案B・2026-11-02 社長「部のおすすめ」・ごほうびは案3) ----
 //   ほかのブリーダーの登録デッキに、自分の側も戦術カードで自動で挑む。ごほうびは1日はじめの3回だけ手の半分、4回目からは無し(何回でも挑める)
-//   新しいキー mh_card_auto_reward_v1 = { v:1, day:'YYYY-MM-DD'(日本の日付), n: その日にごほうびをもらった回数 }。壊れていたら0回の扱い
+//   新しいキー mh_card_auto_reward_v1 = { v:1, day:'YYYY-MM-DD'(日本の日付), n: その日にごほうびをもらった回数, extra?: その日にセッション券でふやした回数, r?: 戻しの印 }。壊れていたら0回の扱い
 const CARD_AUTO_REWARD_KEY = 'mh_card_auto_reward_v1';
 const CARD_AUTO_REWARD_DAY_MAX = 3;
 // 2026-11-07 の一度きりの戻し(社長「オートご褒美がリセットされてない。今日の分は全員リセットして」)。
@@ -235,22 +235,50 @@ const CARD_AUTO_REWARD_DAY_MAX = 3;
 //   ほかの日は何もしない。キーの名前・形はそのまま(項目 r を足しただけ。前からの読み方は r を見ない)
 const CARD_AUTO_REWARD_RESET_DAY = '2026-11-07';
 const CARD_AUTO_REWARD_RESET_MARK = '20261107';
+// ★セッション券でふやした回数 extra(2026-11-07 社長「セッション券1枚でオートごほうび1回分を復活できるようにしたい」・1日20回まで)。
+//   同じ値に項目 extra を足しただけ(n の意味は変えない)。残りは max(0, 3 + extra - n)。無い・壊れている・0〜20の整数でないときは0。
+//   日が変わると n と同じく0に戻る。書くときは印 r を消さない(11/7 は印を付けて書く。付けないと n が0に戻って二重になる)
+const CARD_AUTO_REWARD_EXTRA_MAX = 20;
 const cardAutoRewardNormalize = (raw, today) => {
   const day = raw && typeof raw === 'object' && typeof raw.day === 'string' ? raw.day : '';
   // 切り替えの夜の持ち越し(cardDayCarry)はここでは使わない。上のとおり、持ち越した分が4:00 を過ぎても今日の分として残ったため
   let n = raw && Number.isInteger(raw.n) && raw.n >= 0 && raw.n < 10000 ? raw.n : 0;
   if (day === CARD_AUTO_REWARD_RESET_DAY && today === CARD_AUTO_REWARD_RESET_DAY && raw.r !== CARD_AUTO_REWARD_RESET_MARK) n = 0;
-  return { day: today, n: day === today ? n : 0 };
+  const extra = raw && Number.isInteger(raw.extra) && raw.extra >= 0 && raw.extra <= CARD_AUTO_REWARD_EXTRA_MAX ? raw.extra : 0;
+  return { day: today, n: day === today ? n : 0, extra: day === today ? extra : 0 };
 };
 const cardAutoRewardLoad = async () => {
   let raw = null;
   try { raw = await storeGet(CARD_AUTO_REWARD_KEY, null); } catch (_) { /* 読めなければ0回の扱い */ }
   const today = typeof cardTodayJst === 'function' ? cardTodayJst() : '';
   const c = cardAutoRewardNormalize(raw, today);
-  return { raw, today: c.day, n: c.n, left: Math.max(0, CARD_AUTO_REWARD_DAY_MAX - c.n) };
+  return { raw, today: c.day, n: c.n, extra: c.extra, left: Math.max(0, CARD_AUTO_REWARD_DAY_MAX + c.extra - c.n), extraLeft: Math.max(0, CARD_AUTO_REWARD_EXTRA_MAX - c.extra) };
 };
-// ごほうびをもらった1回を数える項目(結果の取引に足す)
-const cardAutoRewardEntry = (loaded) => ({ key: CARD_AUTO_REWARD_KEY, before: loaded.raw, next: { v: 1, day: loaded.today, n: loaded.n + 1, ...(loaded.today === CARD_AUTO_REWARD_RESET_DAY ? { r: CARD_AUTO_REWARD_RESET_MARK } : {}) } });
+// 書く値(n・extra・印 r)。11/7 は印を付ける。ほかの日に前から付いている印もそのまま残す
+const cardAutoRewardValue = (loaded, { n, extra }) => ({
+  v: 1, day: loaded.today, n, ...(extra > 0 ? { extra } : {}),
+  ...(loaded.today === CARD_AUTO_REWARD_RESET_DAY || (loaded.raw && typeof loaded.raw === 'object' && loaded.raw.r === CARD_AUTO_REWARD_RESET_MARK && loaded.raw.day === loaded.today) ? { r: CARD_AUTO_REWARD_RESET_MARK } : {}),
+});
+// ごほうびをもらった1回を数える項目(結果の取引に足す)。券でふやした回数(extra)はそのまま引き継ぐ
+const cardAutoRewardEntry = (loaded) => ({ key: CARD_AUTO_REWARD_KEY, before: loaded.raw, next: cardAutoRewardValue(loaded, { n: loaded.n + 1, extra: loaded.extra || 0 }) });
+// セッション券1枚でごほうびを1回ふやす。consume は券を1枚減らす関数(60 の consumeBuddyTicket。持っていなければ false)、
+//   refund は返す関数(60 の refundBuddyTicket)。上限20は、画面の値ではなく、ここで読み直した保存の値で数える。
+//   順番: 読み直す → 上限・残りを確かめる → 券を1枚減らす → extra+1 を書く。書けなければ券を返す(券だけ減ってごほうびが戻らない、を作らない)
+//   返すのは { ok, why, loaded }。why … 'limit'(今日はもう20回ふやした)・'notEmpty'(まだごほうびが残っている)・'noTicket'(券が無い)・'save'(書けなかった。券は返した)
+const cardAutoRewardAddExtra = async ({ consume, refund } = {}) => {
+  const loaded = await cardAutoRewardLoad();
+  if (loaded.extra >= CARD_AUTO_REWARD_EXTRA_MAX) return { ok: false, why: 'limit', loaded };
+  if (loaded.left > 0) return { ok: false, why: 'notEmpty', loaded };
+  if (typeof consume !== 'function' || !(await consume())) return { ok: false, why: 'noTicket', loaded };
+  // storeSet は書けなかったとき false を返す(例外は出さない。25-storage.jsx)
+  let saved = false;
+  try { saved = (await storeSet(CARD_AUTO_REWARD_KEY, cardAutoRewardValue(loaded, { n: loaded.n, extra: loaded.extra + 1 }))) !== false; } catch (_) { saved = false; }
+  if (!saved) {
+    if (typeof refund === 'function') { try { await refund(); } catch (__) { /* 返せなくても遊びは止めない */ } }
+    return { ok: false, why: 'save', loaded };
+  }
+  return { ok: true, why: '', loaded: await cardAutoRewardLoad() };
+};
 // 1試合ぶんの経験値の保存の項目(84 の結果の取引に足す)。経験値を入れない人(公開前・デバッグでない)は空
 const cardLevelEntries = async ({ kind, level, outcome, debug = false, auto = false }) => {
   if (!cardTacticsOpen() && !debug) return { entries: [], gain: null };

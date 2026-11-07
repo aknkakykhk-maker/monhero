@@ -1,0 +1,170 @@
+// 助手たちの今(段階2)の画面と HOME の帯を、実際に開いて確かめる。公開の印 assistantLife はページの中でだけ立てる(本体の印は偽のまま)。
+//   node tools/assistant/assistant-life-browser-check.js            検査
+//   node tools/assistant/assistant-life-browser-check.js --shots    止め絵も撮る(docs/progress/assistant-peer/shots/life-*.png)
+//   ① HOME に帯が出る(会った助手の様子・にぎわい)/ 押すと画面が開く / 縦 390・横 844×390 ではみ出さない
+//   ② 見守る: 掛け合いが流れ、見守った数・にぎわい・友情Lv が増える / 同じ時間に同じ組は2度見守れない
+//   ③ 誘う・引き合わせる: 次の時間の声かけとして残る
+//   ④ 関係とアルバム: 名前は「友情Lv」「友だち」。今日のペアは出ない
+//   ⑤ 帯は HOME だけ(モンヒロビートの画面へ行くと消える)。画面を閉じているあいだは様子を書き換えない
+//   ⑥ 印が偽のときは帯も入口も出ない
+const http = require('http'), path = require('path'), fs = require('fs');
+const root = path.resolve(__dirname, '..', '..'), PORT = 9231;
+const { quietBootSeed, updateNoticeSeed, oneTimeNoticeSeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
+const SHOTS = process.argv.includes('--shots');
+const shotDir = path.join(root, 'docs/progress/assistant-peer/shots');
+let failed = 0;
+const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.woff2': 'font/woff2' };
+const assistantsSrc = fs.readFileSync(path.join(root, 'monster-hero/data/assistants.js'), 'utf8');
+const replaySrc = assistantsSrc.slice(assistantsSrc.indexOf('const EVENT_REPLAYS = ['));
+const STORY_IDS = [...replaySrc.matchAll(/\{ id: '([a-z0-9_]+)'/g)].map(m => m[1]);
+const seed = ({ storyIds, life }) => {
+  const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+  if (localStorage.getItem('mh_breeder_name') === null) {
+    put('mh_breeder_name', 'テスト'); put('mh_breeder_icon', 'Mocchi'); put('mh_onboarded', true);
+    for (const k of ['mh_tutorial_seen_v1','mh_battle_tutorial_seen_v1','mh_battle_tutorial_guide_shown_v1','mh_rhythm_tutorial_seen_v1','mh_masu_migrated','mh_kiki_intro_seen_v1','mh_momosuke_intro_seen_v1','mh_tactics_intro_seen_v1','mh_rhythm_hell_story_seen_v1','mh_story_assistant_chat_seen_v1','mh_story_tactics_types_seen_v1','mh_story_card_battle_seen_v1','mh_inherited_unique_level_compensation_v1']) put(k, true);
+    put('mh_inherited_unique_level_compensation_pending_v1', false);
+    put('mh_assistant_selected_v1', 'mua'); put('mh_rhythm_event_story_v1', storyIds);
+    const d = new Date(), pad = (n) => String(n).padStart(2, '0');
+    put('mh_daily_masu_advice_date_v1', `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
+    put('mh_login_bonus_last_v1', `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
+    // 友情Lv をいろいろに(Lv3 友だち・Lv4 いい友だち・Lv5 名コンビ…)
+    put('mh_assistant_peer_bond_v1', { 'kiki-mua': 460, 'dra-momosuke': 260, 'atsu-sorashido': 130, 'erubin-kyuko': 130, 'kiki-kyuko': 60, 'dra-mua': 720 });
+    // にぎわい「にぎやか」(朝4時区切りの今日)
+    const day = new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 10);
+    put('mh_assistant_life_play_v1', { day, points: 70, counts: { rhythm: 40, card: 30 }, lastDay: null, streak: 1 });
+  }
+  if (life) { const t = setInterval(() => { try { if (typeof RELEASE_FLAGS !== 'undefined') { RELEASE_FLAGS.assistantLife = true; clearInterval(t); } } catch {} }, 2); }
+};
+const toHome = async (page) => {
+  for (let i = 0; i < 60; i++) {
+    if (await page.locator('.mh-home-player').count()) break;
+    await page.getByRole('button', { name: /TAP TO START|トップ画面へ進む/ }).first().click({ timeout: 800 }).catch(() => {});
+    await page.waitForTimeout(500);
+  }
+  for (let i = 0; i < 12; i++) { const c = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.offsetParent && /^(受け取る|閉じる|OK|わかった！?|とじる)$/.test((x.innerText || '').trim())); if (b) { b.click(); return true; } return false; }); if (!c) break; await page.waitForTimeout(400); }
+};
+const ls = (page, k) => page.evaluate((key) => { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } }, k);
+const overflowX = (page, sel) => page.evaluate((s) => { const el = document.querySelector(s); if (!el) return null; const r = el.getBoundingClientRect(); return r.left < -1 || r.right > window.innerWidth + 1; }, sel);
+
+(async () => {
+  let chromium;
+  try { ({ chromium } = require('playwright')); } catch { console.log('SKIP: playwright が入っていないので確認できません'); process.exit(0); }
+  const server = http.createServer((req, res) => {
+    const rel = decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, ''), file = path.join(root, rel);
+    if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end(); return; }
+    res.writeHead(200, { 'Content-Type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream' }); fs.createReadStream(file).pipe(res);
+  });
+  await new Promise(r => server.listen(PORT, r));
+  const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const open = async ({ w, h, life = true }) => {
+    const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: SHOTS ? 2 : 1 });
+    const errors = []; page.on('pageerror', e => errors.push(String(e)));
+    await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
+    await page.addInitScript(quietBootSeed());
+    await page.addInitScript(updateNoticeSeed());
+    await page.addInitScript(oneTimeNoticeSeed());
+    await page.addInitScript(seed, { storyIds: STORY_IDS, life });
+    await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+    await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
+    await toHome(page);
+    return { page, errors };
+  };
+  try {
+    // 縦 390
+    const { page, errors } = await open({ w: 390, h: 844 });
+    // 流れてくる掛け合いが終わるのを待ってから帯を見る(掛け合いのあいだ帯は隠れる)
+    await page.locator('[data-assistant-life-band]').waitFor({ timeout: 40000 }).catch(() => {});
+    const band = await page.locator('[data-assistant-life-band]').count();
+    check('① HOME に助手たちの今の帯が出る', band === 1);
+    check('① 帯ははみ出さない(縦 390)', (await overflowX(page, '[data-assistant-life-band] > div')) === false);
+    if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-1-home-band.png') });
+    await page.locator('[data-assistant-life-open]').click();
+    await page.locator('[data-assistant-life-screen]').waitFor({ timeout: 5000 });
+    const groups = await page.locator('[data-assistant-life-group]').count();
+    const solos = await page.locator('[data-assistant-life-solo]').count();
+    check('① 画面が開き、組とひとりの助手が出る(8人ぶん)', groups + solos >= 3, `組 ${groups}・ひとり ${solos}`);
+    check('① にぎわいは「にぎやか」(×1.5・上限45)', /にぎやか/.test(await page.locator('[data-assistant-life-tier]').innerText()) && /×1\.5/.test(await page.locator('[data-assistant-life-tier]').innerText()));
+    check('① 画面ははみ出さない(縦 390)', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
+    if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-2-screen.png') });
+    // ③ 誘う
+    const inv = page.locator('[data-assistant-life-invite]:not([disabled])').first();
+    if (await inv.count()) {
+      const who = await inv.getAttribute('data-assistant-life-invite');
+      await inv.click(); await page.waitForTimeout(300);
+      const life = await ls(page, 'mh_assistant_life_v1');
+      check('③ 誘うと、次の時間の声かけとして残る', life && life.nudges && life.nudges.invite.some(n => n.id === who && n.abs === life.abs + 1));
+    } else check('③ 誘えるひとりの助手がいる', false);
+    // 引き合わせる
+    await page.locator('[data-assistant-life-pick="kyuko"]').click(); await page.locator('[data-assistant-life-pick="dra"]').click();
+    await page.locator('[data-assistant-life-introduce-go]').click(); await page.waitForTimeout(300);
+    const life2 = await ls(page, 'mh_assistant_life_v1');
+    check('③ 引き合わせると、2人が次の時間の声かけとして残る', life2 && life2.nudges.introduce.some(n => n.pair === 'dra-kyuko' && n.abs === life2.abs + 1));
+    // ② 見守る
+    const bondBefore = await ls(page, 'mh_assistant_peer_bond_v1');
+    const playBefore = await ls(page, 'mh_assistant_life_play_v1');
+    const wbtn = page.locator('[data-assistant-life-watch]:not([disabled])').first();
+    let watched = null;
+    if (await wbtn.count()) {
+      watched = await wbtn.getAttribute('data-assistant-life-watch');
+      await wbtn.click();
+      await page.waitForTimeout(800);
+      const talking = await page.locator('[data-assistant-peer-talk], [data-assistant-peer-line]').count();
+      check('② 見守ると画面が閉じて、その組の掛け合いが流れる', (await page.locator('[data-assistant-life-screen]').count()) === 0 && talking > 0, `${talking}`);
+      if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-3-watch.png') });
+      const playAfter = await ls(page, 'mh_assistant_life_play_v1');
+      const bondAfter = await ls(page, 'mh_assistant_peer_bond_v1');
+      const ids = watched.split('+');
+      const up = ids.some((a, i) => ids.slice(i + 1).some(b => ((bondAfter || {})[[a, b].sort().join('-')] || 0) > ((bondBefore || {})[[a, b].sort().join('-')] || 0)));
+      check('② 見守った数・にぎわいが増え、組の友情Lv の点が上がる', playAfter.counts.watch === 1 && playAfter.points > playBefore.points && up, JSON.stringify(playAfter.counts));
+      // 掛け合いを最後まで進める
+      for (let i = 0; i < 20; i++) { const n = await page.locator('[data-assistant-peer-talk], [data-assistant-peer-line]').count(); if (!n) break; await page.locator('[data-assistant-peer-talk], [data-assistant-peer-line]').first().click({ timeout: 800 }).catch(() => {}); await page.waitForTimeout(250); }
+      await page.locator('[data-assistant-life-open]').click({ timeout: 20000 }).catch(() => {});
+      await page.locator('[data-assistant-life-screen]').waitFor({ timeout: 5000 }).catch(() => {});
+      check('② 同じ時間に同じ組は2度見守れない', await page.locator(`[data-assistant-life-watch="${watched}"]`).isDisabled().catch(() => false));
+    } else check('② 見守れる組がある', false);
+    // ④ 関係とアルバム
+    await page.locator('[data-assistant-life-tab="map"]').click(); await page.waitForTimeout(300);
+    const mapText = await page.locator('[data-assistant-peer-map]').innerText().catch(() => '');
+    check('④ 関係図の名前は「友情Lv」で、Lv3 は「友だち」・Lv4 は「いい友だち」', /友情Lv3/.test(mapText) && /友だち/.test(mapText) && /いい友だち/.test(mapText) && !/仲良し度 Lv/.test(mapText) && !/なかよし/.test(mapText));
+    check('④ 今日のペアは出ない', (await page.locator('[data-assistant-peer-daily]').count()) === 0);
+    if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-4-map.png') });
+    await page.locator('[data-assistant-peer-row="kiki-mua"]').click(); await page.waitForTimeout(300);
+    const album = await page.locator('[data-assistant-peer-album]').innerText().catch(() => '');
+    check('④ アルバムも「友情Lv」・写真の題は「友だちの1枚」', /友情Lv5/.test(album) && /友だちの1枚/.test(album));
+    await page.locator('[data-assistant-peer-album-close]').click().catch(() => {});
+    await page.locator('[data-assistant-life-close]').click(); await page.waitForTimeout(300);
+    // ⑤ 帯は HOME だけ・閉じているあいだは様子を書き換えない
+    const lifeBefore = await page.evaluate(() => localStorage.getItem('mh_assistant_life_v1'));
+    await page.getByRole('button', { name: /モンヒロビート/ }).first().click({ timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(1500);
+    const gs = await page.evaluate(() => document.querySelector('.mh-home-player') ? 'HOME' : 'other');
+    check('⑤ HOME を離れると帯は出ない', gs === 'HOME' || (await page.locator('[data-assistant-life-band]').count()) === 0, gs);
+    await page.waitForTimeout(2000);
+    check('⑤ HOME の外にいるあいだは、様子を書き換えない', (await page.evaluate(() => localStorage.getItem('mh_assistant_life_v1'))) === lifeBefore);
+    check('① 画面の出し入れでエラーが出ない', errors.length === 0, errors.slice(0, 2).join(' / '));
+    await page.close();
+
+    // 横 844×390
+    const L = await open({ w: 844, h: 390 });
+    await L.page.locator('[data-assistant-life-band]').waitFor({ timeout: 40000 }).catch(() => {});
+    check('① 横 844×390 でも帯がはみ出さない', (await overflowX(L.page, '[data-assistant-life-band] > div')) === false);
+    if (SHOTS) await L.page.screenshot({ path: path.join(shotDir, 'life-5-home-band-land.png') });
+    await L.page.locator('[data-assistant-life-open]').click().catch(() => {});
+    await L.page.locator('[data-assistant-life-screen]').waitFor({ timeout: 5000 }).catch(() => {});
+    check('① 横 844×390 でも画面がはみ出さない', await L.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1) && (await L.page.locator('[data-assistant-life-screen]').count()) === 1);
+    if (SHOTS) await L.page.screenshot({ path: path.join(shotDir, 'life-6-screen-land.png') });
+    await L.page.close();
+
+    // ⑥ 印が偽
+    const F = await open({ w: 390, h: 844, life: false });
+    await F.page.waitForTimeout(3000);
+    check('⑥ 印が偽なら帯は出ない', (await F.page.locator('[data-assistant-life-band]').count()) === 0);
+    check('⑥ 印が偽なら様子を保存しない', (await ls(F.page, 'mh_assistant_life_v1')) === null);
+    await F.page.close();
+  } finally {
+    await browser.close(); server.close();
+  }
+  console.log(failed ? `\n${failed} 件 NG` : '\nすべて OK');
+  process.exit(failed ? 1 : 0);
+})();

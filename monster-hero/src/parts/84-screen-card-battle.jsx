@@ -2965,7 +2965,7 @@ const cardNormalizeCpuOpen = (v) => {
 };
 // 対戦の見出し・結果に出す強さの名前。登録デッキが相手なら、そのデッキの賢さの段(GRAND MASTER・HELL・LEGEND まで。2026-10-30 社長)
 const cardBattleLevelLabel = (level, share) => (share && typeof cardShareSmartLevel === 'function' ? CARD_SHARE_SMART_LABEL[cardShareSmartLevel(share.tactics)] : CARD_LEVEL_LABEL[level]) || '';
-const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, cupItems = null, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null, quickAutoReady = false, onSettings = null }) => {
+const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, cupItems = null, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null, quickAutoReady = false, onSettings = null, sessionTickets = null, onUseSessionTicket = null, onRefundSessionTicket = null }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
@@ -3001,13 +3001,33 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const [shareAuto, setShareAuto] = useState(false);
   const [shareQuick, setShareQuick] = useState(false); // オートの「結果だけ見る」(2026-11-02)
   const [autoLeft, setAutoLeft] = useState(null);
+  // セッション券でふやせる今日の残り(2026-11-07 社長・1日20回まで。96 の cardAutoRewardAddExtra)と、確認の窓・結果のひとこと
+  const [autoExtraLeft, setAutoExtraLeft] = useState(null);
+  const [autoTicketAsk, setAutoTicketAsk] = useState(false);
+  const [autoTicketBusy, setAutoTicketBusy] = useState(false);
+  const [autoTicketNote, setAutoTicketNote] = useState('');
   useEffect(() => {
     if (view !== 'deckPick' || !(deckPick && deckPick.pick && deckPick.pick.share) || typeof cardAutoRewardLoad !== 'function') return undefined;
     let alive = true;
-    setAutoLeft(null);
-    void cardAutoRewardLoad().then((r) => { if (alive) setAutoLeft(r.left); }).catch(() => {});
+    setAutoLeft(null); setAutoExtraLeft(null); setAutoTicketNote('');
+    void cardAutoRewardLoad().then((r) => { if (alive) { setAutoLeft(r.left); setAutoExtraLeft(Number.isInteger(r.extraLeft) ? r.extraLeft : null); } }).catch(() => {});
     return () => { alive = false; };
   }, [view, deckPick]);
+  // 確認の窓の「1枚使って1回ふやす」。券は 60 の consumeBuddyTicket を通し、書けなければ refundBuddyTicket で返す(96 の中で)
+  const useAutoTicket = async () => {
+    if (autoTicketBusy || typeof cardAutoRewardAddExtra !== 'function') return;
+    setAutoTicketBusy(true);
+    try {
+      const res = await cardAutoRewardAddExtra({ consume: onUseSessionTicket, refund: onRefundSessionTicket });
+      const l = res && res.loaded;
+      if (l) { setAutoLeft(l.left); setAutoExtraLeft(l.extraLeft); }
+      setAutoTicketNote(res && res.ok ? 'ごほうびが1回ぶん戻りました'
+        : res && res.why === 'limit' ? '今日はこれ以上ふやせません'
+          : res && res.why === 'noTicket' ? 'セッション券がありません'
+            : res && res.why === 'notEmpty' ? 'まだ今日のごほうびが残っています'
+              : '保存できなかったので、セッション券は戻しました');
+    } finally { setAutoTicketBusy(false); setAutoTicketAsk(false); }
+  };
   // マルチは、入口で相手を決めたあとにデッキ選びを挟む(2026-10-30 社長「相手を選んだあとにして」。91 の CARD_PVP_NEXT)。
   //   試合のあとに部屋を出て入口へ戻るとき(over → idle)は挟まない(次に相手を決めたときに選ぶ)。「もう1戦」は同じ部屋・同じデッキのまま
   const [kitPick, setKitPick] = useState(null);
@@ -3885,11 +3905,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const toPvp = deckPick.next === 'pvp';
     // ほかのブリーダーの登録デッキと戦うとき(2026-10-31 テスターさんの要望)。借りたデッキでは戦わない(ごほうびの扱いを変えないため)
     const sharePick = !!(deckPick.pick && deckPick.pick.share);
-    return <CardDeckPick db={db} decks={save.decks} collection={save.collection}
+    return <><CardDeckPick db={db} decks={save.decks} collection={save.collection}
       note={toPvp ? 'マルチ対戦で使うデッキを選んでください。選んだデッキは次の対戦でも使います' : '使うデッキを選んでください。選んだデッキは次の対戦でも使います'}
       onBack={() => { const back = deckPick.back; setDeckPick(null); if (toPvp && CARD_PVP_NEXT.take()) { setView('pvp'); return; } setView(toPvp ? 'mode' : back || 'foe'); }}
       allowRented={!toPvp && !sharePick} rentTab={shareForm && !toPvp && !sharePick}
-      auto={sharePick && typeof cardTacticsAutoOf === 'function' ? { on: shareAuto, onChange: setShareAuto, left: autoLeft, quick: shareQuick, onQuick: typeof cardShareAutoFinish === 'function' ? setShareQuick : null } : null}
+      auto={sharePick && typeof cardTacticsAutoOf === 'function' ? { on: shareAuto, onChange: setShareAuto, left: autoLeft, quick: shareQuick, extraLeft: autoExtraLeft, tickets: Number.isInteger(sessionTickets) ? sessionTickets : null, ticketNote: autoTicketNote, onExtra: typeof onUseSessionTicket === 'function' && typeof cardAutoRewardAddExtra === 'function' ? () => { setAutoTicketNote(''); setAutoTicketAsk(true); } : null, onQuick: typeof cardShareAutoFinish === 'function' ? setShareQuick : null } : null}
       onPick={async (c) => {
         // 借りたデッキ(みんなのデッキ・95): 自分のデッキの active は書き換えない
         if (c.kind === 'rent') { const next = deckPick; setDeckPick(null); if (next.next !== 'pvp') startBattle(next.pick, c.deck, { rented: c }); return; }
@@ -3906,7 +3926,28 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         setDeckPick(null);
         if (next.next === 'pvp') { setView('pvp'); return; }
         startBattle(next.pick, deck, autoT ? { auto: { tactics: autoT, quick: shareQuick && typeof cardShareAutoFinish === 'function' } } : {});
-      }}/>;
+      }}/>
+      {/* セッション券でオートのごほうびを1回ふやす確認の窓(2026-11-07 社長。見た目は案 docs/progress/card-auto-ticket のまま) */}
+      {autoTicketAsk && (
+        <ModalFrame label="セッション券を使う確認" onClose={autoTicketBusy ? undefined : () => setAutoTicketAsk(false)} zIndex={MODAL_Z.confirm}>
+          <div data-card-auto-ticket-ask>
+            <h3 className="text-center text-base font-black leading-snug text-amber-200" style={JA_LABEL_STYLE}>{jaWrap('セッション券を1枚使いますか？')}</h3>
+            <p className="mt-3 text-[12px] font-bold leading-relaxed text-slate-200" style={JA_WRAP_STYLE}>{jaWrap('オートで挑むの今日のごほうびが1回ぶん戻ります。')}</p>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-center">
+              <div className="rounded-xl bg-slate-900 p-2"><small className="block text-[10px] font-bold text-slate-400">セッション券</small>
+                <b data-card-auto-ticket-count className="text-[16px] font-black tabular-nums">{Number.isInteger(sessionTickets) ? sessionTickets : 0} → <span className="text-amber-200">{Math.max(0, (Number.isInteger(sessionTickets) ? sessionTickets : 0) - 1)}</span>枚</b></div>
+              <div className="rounded-xl bg-slate-900 p-2"><small className="block text-[10px] font-bold text-slate-400">今日のごほうび</small>
+                <b className="text-[16px] font-black tabular-nums">{Number.isInteger(autoLeft) ? autoLeft : 0} → <span className="text-emerald-200">{(Number.isInteger(autoLeft) ? autoLeft : 0) + 1}</span>回</b></div>
+            </div>
+            <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`ふやしたぶんは今日(朝4時まで)だけ使えます。今日ふやせるのはあと${Number.isInteger(autoExtraLeft) ? autoExtraLeft : 0}回です。`)}</p>
+            <div className="mt-4 grid grid-cols-1 gap-2">
+              <button type="button" data-card-auto-ticket-use disabled={autoTicketBusy} onClick={() => { void useAutoTicket(); }} className="mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98] disabled:opacity-50">1枚使って1回ふやす</button>
+              <ModalCloseButton onClick={() => setAutoTicketAsk(false)} disabled={autoTicketBusy} label="やめる"/>
+            </div>
+          </div>
+        </ModalFrame>
+      )}
+    </>;
   }
 
   if (view === 'pvp') {

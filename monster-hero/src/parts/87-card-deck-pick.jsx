@@ -98,6 +98,16 @@ const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', 
               {jaWrap('選んだデッキの戦術カードで、あなたの側も自動で戦います。試合の途中で「自分で」に切り替えられます')}
               <span data-card-deck-pick-auto-left={auto.left === null ? '' : auto.left} className={`mt-1 block ${auto.left ? 'text-emerald-200' : 'text-amber-200'}`}>
                 {auto.left === null ? '' : auto.left > 0 ? `今日のごほうびはあと${auto.left}回(自分で戦うときの半分)` : '今日のごほうびは終わりました。ごほうびなしで遊べます'}</span>
+              {/* セッション券1枚でごほうびを1回ふやす(2026-11-07 社長・1日20回まで)。今日のごほうびを使い切ったときだけ出す。
+                  押すと確認の窓(84)。券が0枚なら押せない。今日ふやせる回数を使い切ったら出さない */}
+              {auto.left === 0 && typeof auto.onExtra === 'function' && Number.isInteger(auto.extraLeft) && (auto.extraLeft > 0 ? (<>
+                <button type="button" data-card-auto-ticket disabled={!(auto.tickets > 0)} onClick={() => { Audio_.fgSe.tap(); auto.onExtra(); }}
+                  className="mt-2 flex min-h-[44px] w-full items-center justify-center gap-1 rounded-xl border border-emerald-300 bg-emerald-900/70 px-2 text-[12px] font-black text-emerald-100 shadow-[0_0_10px_rgba(52,211,153,.45)] active:scale-[.98] disabled:border-slate-600 disabled:bg-slate-800 disabled:text-slate-400 disabled:shadow-none" style={JA_WRAP_STYLE}>
+                  {jaWrap('🎫 セッション券1枚でごほうびを1回ふやす')}</button>
+                <span data-card-auto-ticket-left={auto.extraLeft} className="mt-1 block text-right text-[10px] text-slate-400" style={JA_WRAP_STYLE}>
+                  {jaWrap(auto.tickets > 0 ? `持っているセッション券 ${auto.tickets}枚・今日ふやせるのはあと${auto.extraLeft}回` : 'セッション券がありません(モンヒロビートのランクが上がるともらえます)')}</span>
+              </>) : <span data-card-auto-ticket-left="0" className="mt-1 block text-[10px] text-slate-400">今日はこれ以上ふやせません</span>)}
+              {auto.ticketNote && <span data-card-auto-ticket-note className="mt-1 block text-[11px] text-emerald-200" style={JA_WRAP_STYLE}>{jaWrap(auto.ticketNote)}</span>}
             </p>}
           </div>
         )}
