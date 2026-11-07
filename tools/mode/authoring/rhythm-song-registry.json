@@ -1378,7 +1378,13 @@
    "chartIntensityByDifficulty": {
     "EXPERT": "mild"
    },
-   "masterDensity": 1.6
+   "masterDensity": 1.6,
+   "hellDensity": 1.6,
+   "sustainScale": {
+    "EXPERT": 0.8,
+    "MASTER": 0.3,
+    "HELL": 0.3
+   }
   }
  }
 }
