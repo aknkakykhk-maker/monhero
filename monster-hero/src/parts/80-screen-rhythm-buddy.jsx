@@ -106,7 +106,7 @@ const useRhythmBuddyState = () => {
   }, []);
   return state;
 };
-// 日付が変わったら(朝5:00)画面の数字を出し直すため、1分ごとに日付キーを見る
+// 日付が変わったら(朝4:00)画面の数字を出し直すため、1分ごとに日付キーを見る
 const useRhythmBuddyDayKey = () => {
   const [day, setDay] = React.useState(() => rhythmBuddyDayKey(Date.now()));
   React.useEffect(() => {
@@ -458,7 +458,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = ''
         <section className="rounded-xl bg-slate-950/60 p-2">
           <h4 className="text-[10px] font-black text-slate-400">今日の調子</h4>
           <p data-rhythm-buddy-mood={mood.id} className="flex items-center gap-1 text-sm font-black"><RhythmBuddyMoodFace moodId={mood.id} size={22} />{mood.label}</p>
-          <small className="block text-[9px] font-bold leading-snug text-slate-500">朝5:00に変わります。育つ早さは経験値×{rhythmBuddyMoodExpScale(mood.id, m.trait)}</small>
+          <small className="block text-[9px] font-bold leading-snug text-slate-500">朝4:00に変わります。育つ早さは経験値×{rhythmBuddyMoodExpScale(mood.id, m.trait)}</small>
         </section>
         <section className="rounded-xl bg-slate-950/60 p-2">
           <h4 className="text-[10px] font-black text-slate-400">性格</h4>

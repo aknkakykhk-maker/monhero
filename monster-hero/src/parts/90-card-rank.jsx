@@ -624,7 +624,8 @@ const cardRecordDetailAfter = (d0, { who, level, outcome, turns = 0, deck = null
       if (level in f.levels) f.levels[level] += 1;
       if (t > 0) f.fastest = f.fastest ? Math.min(f.fastest, t) : t;
       d.wins = { n: d.wins.n + 1, turns: d.wins.turns + t, fastest: t > 0 ? (d.wins.fastest ? Math.min(d.wins.fastest, t) : t) : d.wins.fastest };
-      d.day = { key: today, win: (d.day.key === today ? d.day.win : 0) + 1 };
+      const dayKey = cardDayCarry(d.day.key, today);   // 切り替えの夜は、0時区切りで書いた次の日のまま数える
+      d.day = { key: dayKey, win: (d.day.key === dayKey ? d.day.win : 0) + 1 };
     } else if (outcome === 'surrender') { f.surrender += 1; f.now = 0; }
     else { f.lose += 1; f.now = 0; }
     d.foes[who] = f;
