@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 012149d8df408662
+// source-sha256: c15f3151382f31cc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -205,7 +205,7 @@ const normalizeBattleFxSettings = value => {
 const BATTLE_FX_SETTING_ITEMS = Object.freeze([{
   key: 'load',
   title: '画面の軽さ',
-  desc: 'バトル画面の飾りと演出の量です。スマホが熱くなる・動きがかくつくときは、軽いほうを選んでください。ダメージや進行は変わりません。',
+  desc: 'バトル画面の飾りと演出の量です。スマホが熱くなる・動きがかくつくときは、軽いほうを選んでください。仲良し度などが上がったときの演出も、軽いほど控えめになります。ダメージや進行は変わりません。',
   options: [{
     id: 'RICH',
     label: '豪華',
@@ -13237,6 +13237,7 @@ const RELEASE_FLAGS = {
   assistantPeer: true,
   assistantPeerApi: true,
   assistantLife: false,
+  rhythmAssistantSession: false,
   assistantSorashido: true,
   assistantErubin: true,
   cardBattle: true,
@@ -38674,6 +38675,11 @@ const rhythmHudInitial = () => ({
   life: RHYTHM_LIFE_MAX
 });
 const rhythmNoteIsSky = note => rhythmNoteSkyHeight(note) > 0 || rhythmSlideHasSky(note);
+const RHYTHM_PLAY_WATCH = {
+  hud: null,
+  songId: '',
+  timeMs: 0
+};
 const rhythmCreateHud = () => {
   let state = rhythmHudInitial();
   const subs = new Set();
@@ -39648,6 +39654,19 @@ const RhythmTapTest = ({
     comboRingRef = useRef(null);
   const hudRef = useRef(null);
   if (!hudRef.current) hudRef.current = rhythmCreateHud();
+  useEffect(() => {
+    const hud = hudRef.current;
+    RHYTHM_PLAY_WATCH.hud = hud;
+    RHYTHM_PLAY_WATCH.songId = song && song.songId || '';
+    RHYTHM_PLAY_WATCH.timeMs = 0;
+    return () => {
+      if (RHYTHM_PLAY_WATCH.hud === hud) {
+        RHYTHM_PLAY_WATCH.hud = null;
+        RHYTHM_PLAY_WATCH.songId = '';
+        RHYTHM_PLAY_WATCH.timeMs = 0;
+      }
+    };
+  }, []);
   const [haloKeys, setHaloKeys] = useState(null);
   useEffect(() => {
     let cancelled = false,
@@ -41748,6 +41767,7 @@ const RhythmTapTest = ({
         setLuckyRush(false);
       }
       const timeEl = songTimeRef.current;
+      RHYTHM_PLAY_WATCH.timeMs = songTimeMs;
       if (timeEl) {
         const shownMs = Math.max(0, Math.min(playEndTimeMs, songTimeMs)),
           second = Math.floor(shownMs / 1000);
@@ -49325,7 +49345,9 @@ const rhythmBuddyNormalizeCalls = raw => (Array.isArray(raw) ? raw : []).filter(
   day: rhythmBuddyStr(x.day, 10),
   at: rhythmBuddyInt(x.at, 9e15),
   load: rhythmBuddyStr(x.load, 40),
-  started: x.started === true
+  started: x.started === true,
+  kind: x.kind === 'assistant' ? 'assistant' : 'masu',
+  assistantId: x.kind === 'assistant' ? rhythmBuddyStr(x.assistantId, 20) : ''
 })).filter(x => x.id && x.paid);
 const rhythmBuddyNormalize = raw => {
   const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
@@ -49511,7 +49533,8 @@ const RHYTHM_BUDDY_PICK_WHY = Object.freeze({
   revenge: 'さっきの曲でリベンジ!',
   practice: '得意な曲をもっと練習!',
   easy: 'ゆっくり楽しめる曲がいいな',
-  romance: 'この曲の世界にひたりたい'
+  romance: 'この曲の世界にひたりたい',
+  love: 'この曲が大好き!'
 });
 const rhythmBuddyNewSongChance = (trait, moodId) => {
   const base = {
@@ -50034,6 +50057,628 @@ const rhythmBuddyApplyLive = (mon, {
     sproutNew
   };
 };
+const RHYTHM_ASSIST_SESSION_KEY = 'mh_rhythm_assistant_session_v1';
+const RHYTHM_ASSIST_SESSION_PREFIX = 'as:';
+const RHYTHM_ASSIST_SESSION_IDS = Object.freeze(['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']);
+const rhythmAssistSessionEnabled = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmAssistantSession === true;
+const rhythmAssistSessionKey = assistantId => `${RHYTHM_ASSIST_SESSION_PREFIX}${assistantId}`;
+const rhythmAssistSessionIdOf = masuId => {
+  const s = typeof masuId === 'string' ? masuId : '';
+  if (!s.startsWith(RHYTHM_ASSIST_SESSION_PREFIX)) return '';
+  const id = s.slice(RHYTHM_ASSIST_SESSION_PREFIX.length);
+  return RHYTHM_ASSIST_SESSION_IDS.includes(id) ? id : '';
+};
+const RHYTHM_ASSIST_SESSION_TASTE = Object.freeze({
+  mua: {
+    like: [['toriko'], ['haruka'], ['crazy_party_night', 'crazy_party_night_full']],
+    dislike: ['grievous_lady']
+  },
+  kiki: {
+    like: [['kiki_issen', 'kiki_issen_short'], ['tsuki_ga_michiru_mae_ni', 'tsuki_ga_michiru_mae_ni_short'], ['kaze_ga_soyogu']],
+    dislike: ['black_shout']
+  },
+  momosuke: {
+    like: [['crossing_field'], ['only_my_railgun'], ['rose', 'rose_short']],
+    dislike: ['dullahan_clockwork']
+  },
+  dra: {
+    like: [['mou_hitotsu_no_sekai_e'], ['big_bridge_no_shitou'], ['senjou_no_shippuu']],
+    dislike: ['stay_with_me', 'stay_with_me_short']
+  },
+  atsu: {
+    like: [['against_my_own_shadow'], ['sad_song', 'sad_song_short'], ['rebellion', 'rebellion_short']],
+    dislike: ['mf_ichika_mix']
+  },
+  kyuko: {
+    like: [['toward_the_stars_short'], ['six_eternel_beat', 'six_eternel_remix'], ['evans']],
+    dislike: ['toriko']
+  },
+  sorashido: {
+    like: [['monster_hero'], ['freedom_dive'], ['humanoid']],
+    dislike: ['kaze_ga_soyogu']
+  },
+  erubin: {
+    like: [['wrath_of_the_thorn_king'], ['altar_world_tree', 'altar_world_tree_short'], ['dullahan']],
+    dislike: ['crazy_party_night', 'crazy_party_night_full']
+  }
+});
+const RHYTHM_ASSIST_SESSION_LIKE_MIN = -2;
+const RHYTHM_ASSIST_SESSION_LIKE_MAX = 3;
+const RHYTHM_ASSIST_SESSION_LIKE_STEP = 3;
+const rhythmAssistSessionBaseLike = (assistantId, songId) => {
+  const t = RHYTHM_ASSIST_SESSION_TASTE[assistantId];
+  if (!t || !songId) return 0;
+  if (t.like.some(ids => ids.includes(songId))) return RHYTHM_ASSIST_SESSION_LIKE_MAX;
+  if (t.dislike.includes(songId)) return RHYTHM_ASSIST_SESSION_LIKE_MIN;
+  return 0;
+};
+const rhythmAssistSessionTaste = (assistantId, songId) => {
+  const b = rhythmAssistSessionBaseLike(assistantId, songId);
+  return b > 0 ? 'like' : b < 0 ? 'dislike' : '';
+};
+const rhythmAssistSessionNormalize = raw => {
+  const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const src = o.mons && typeof o.mons === 'object' && !Array.isArray(o.mons) ? o.mons : {};
+  const mons = {};
+  RHYTHM_ASSIST_SESSION_IDS.forEach(id => {
+    if (!src[id] || typeof src[id] !== 'object') return;
+    const mon = rhythmBuddyNormalizeMon(src[id]);
+    mon.trait = '';
+    mon.born = '';
+    mon.traitAt = 0;
+    mon.traitLock = false;
+    const likes = {};
+    const l = src[id].likes;
+    if (l && typeof l === 'object' && !Array.isArray(l)) {
+      Object.keys(l).slice(0, 200).forEach(sid => {
+        const key = rhythmBuddyStr(sid, 60);
+        const n = rhythmBuddyInt(l[sid], 100000);
+        if (key && n > 0) likes[key] = n;
+      });
+    }
+    const rewarded = (Array.isArray(src[id].rewarded) ? src[id].rewarded : []).map(n => rhythmBuddyInt(n, 100)).filter((n, i, arr) => n > 0 && arr.indexOf(n) === i);
+    mons[id] = {
+      ...mon,
+      likes,
+      rewarded
+    };
+  });
+  return {
+    mons
+  };
+};
+const rhythmAssistSessionMon = (state, assistantId) => {
+  const st = rhythmAssistSessionNormalize(state);
+  return st.mons[assistantId] || {
+    ...rhythmBuddyNormalizeMon(null),
+    likes: {},
+    rewarded: []
+  };
+};
+const rhythmAssistSessionLevel = (state, assistantId) => rhythmBuddyLevelInfo(rhythmAssistSessionMon(state, assistantId).exp).level;
+const rhythmAssistSessionLike = (mon, assistantId, songId) => {
+  const base = rhythmAssistSessionBaseLike(assistantId, songId);
+  const plays = mon && mon.likes ? rhythmBuddyInt(mon.likes[songId], 100000) : 0;
+  return Math.max(RHYTHM_ASSIST_SESSION_LIKE_MIN, Math.min(RHYTHM_ASSIST_SESSION_LIKE_MAX, base + Math.floor(plays / RHYTHM_ASSIST_SESSION_LIKE_STEP)));
+};
+const rhythmAssistSessionMood = like => {
+  const id = like >= RHYTHM_ASSIST_SESSION_LIKE_MAX ? 'good' : like < 0 ? 'bad' : 'normal';
+  return RHYTHM_BUDDY_MOODS.find(m => m.id === id) || RHYTHM_BUDDY_MOODS.find(m => m.id === 'normal');
+};
+const rhythmAssistSessionExpScale = like => like >= RHYTHM_ASSIST_SESSION_LIKE_MAX ? 1.3 : like < 0 ? 1.5 : 1;
+const rhythmAssistSessionPlay = ({
+  state,
+  assistantId,
+  songId,
+  diffId,
+  totalNotes,
+  maxScore,
+  durationMs,
+  rand,
+  chartLevel = 0,
+  humans = 1,
+  nowMs = 0
+}) => {
+  const mon = rhythmAssistSessionMon(state, assistantId);
+  const mood = rhythmAssistSessionMood(rhythmAssistSessionLike(mon, assistantId, songId));
+  return rhythmBuddyPlay({
+    mon,
+    songId,
+    diffId,
+    totalNotes,
+    maxScore,
+    durationMs,
+    mood,
+    rand,
+    chartLevel,
+    humans,
+    nowMs
+  });
+};
+const rhythmAssistSessionApplyLive = (state, assistantId, {
+  round,
+  songId,
+  diffId,
+  durationMs,
+  teamRank,
+  dayKey,
+  nowMs,
+  score,
+  maxScore,
+  chartLevel = 0,
+  humans = 1
+}) => {
+  const st = rhythmAssistSessionNormalize(state);
+  if (!RHYTHM_ASSIST_SESSION_IDS.includes(assistantId)) return {
+    next: null,
+    gain: 0,
+    levelUp: 0,
+    likeUp: 0,
+    like: 0,
+    familiarUp: false,
+    tickets: 0
+  };
+  const before = rhythmAssistSessionMon(st, assistantId);
+  const likeBefore = rhythmAssistSessionLike(before, assistantId, songId);
+  const r = rhythmBuddyApplyLive(before, {
+    round,
+    songId,
+    diffId,
+    durationMs,
+    teamRank,
+    dayKey,
+    lean: '',
+    nowMs,
+    score,
+    maxScore,
+    chartLevel,
+    humans,
+    moodId: ''
+  });
+  if (!r.gain) return {
+    next: null,
+    gain: 0,
+    levelUp: 0,
+    likeUp: 0,
+    like: likeBefore,
+    familiarUp: false,
+    tickets: 0
+  };
+  const gain = Math.max(1, Math.round(r.gain * rhythmAssistSessionExpScale(likeBefore)));
+  const sid = rhythmBuddyStr(songId, 60);
+  const likes = {
+    ...before.likes
+  };
+  if (sid) likes[sid] = (likes[sid] || 0) + 1;
+  const after = {
+    ...r.mon,
+    exp: before.exp + gain,
+    trait: '',
+    born: '',
+    traitAt: 0,
+    traitLock: false,
+    likes,
+    rewarded: before.rewarded.slice()
+  };
+  const likeAfter = rhythmAssistSessionLike(after, assistantId, songId);
+  const levelAfter = rhythmBuddyLevelInfo(after.exp).level;
+  const levelUp = levelAfter - rhythmBuddyLevelInfo(before.exp).level;
+  let tickets = 0;
+  RHYTHM_ASSIST_SESSION_TICKET_REWARDS.forEach(([lv, n]) => {
+    if (levelAfter >= lv && !after.rewarded.includes(lv)) {
+      after.rewarded.push(lv);
+      tickets += n;
+    }
+  });
+  return {
+    next: {
+      ...st,
+      mons: {
+        ...st.mons,
+        [assistantId]: after
+      }
+    },
+    gain,
+    levelUp,
+    likeUp: likeAfter - likeBefore,
+    like: likeAfter,
+    familiarUp: r.familiarUp,
+    tickets
+  };
+};
+const rhythmAssistSessionChooseSong = (state, assistantId, catalog, rand = Math.random) => {
+  const list = Array.isArray(catalog) ? catalog.filter(x => typeof x === 'string' && x) : [];
+  if (!list.length) return {
+    songId: '',
+    why: ''
+  };
+  const mon = rhythmAssistSessionMon(state, assistantId);
+  const liked = list.filter(id => rhythmAssistSessionLike(mon, assistantId, id) >= RHYTHM_ASSIST_SESSION_LIKE_MAX);
+  if (liked.length && rand() < 0.6) return {
+    songId: liked[Math.floor(rand() * liked.length)],
+    why: 'love'
+  };
+  const ok = list.filter(id => rhythmAssistSessionLike(mon, assistantId, id) >= 0);
+  const pool = ok.length ? ok : list;
+  return {
+    songId: pool[Math.floor(rand() * pool.length)],
+    why: ''
+  };
+};
+const RHYTHM_ASSIST_SESSION_TASTE_LEVEL = 10;
+const RHYTHM_ASSIST_SESSION_GLOW_LEVEL = 15;
+const RHYTHM_ASSIST_SESSION_TICKET_REWARDS = Object.freeze([[35, 1], [65, 2], [100, 3]]);
+const RHYTHM_ASSIST_SESSION_P_BONUS = Object.freeze([[80, 0.08], [60, 0.06], [40, 0.04], [20, 0.02]]);
+const rhythmAssistSessionPBonusOf = level => {
+  const hit = RHYTHM_ASSIST_SESSION_P_BONUS.find(([lv]) => level >= lv);
+  return hit ? hit[1] : 0;
+};
+const rhythmAssistSessionRewardBonus = (state, assistantIds) => (Array.isArray(assistantIds) ? assistantIds : []).filter((id, i, arr) => RHYTHM_ASSIST_SESSION_IDS.includes(id) && arr.indexOf(id) === i).reduce((sum, id) => sum + rhythmAssistSessionPBonusOf(rhythmAssistSessionLevel(state, id)), 0);
+const rhythmAssistSessionInClimax = (songId, timeMs) => {
+  const table = typeof RHYTHM_SONG_CLIMAX !== 'undefined' ? RHYTHM_SONG_CLIMAX : null;
+  const spans = table && Array.isArray(table[songId]) ? table[songId] : [];
+  const t = Number(timeMs);
+  return Number.isFinite(t) && spans.some(x => Array.isArray(x) && Number(x[2]) >= 0.9 && t >= Number(x[0]) && t < Number(x[1]));
+};
+const RHYTHM_ASSIST_SESSION_DUO_LEVEL = 3;
+const RHYTHM_ASSIST_SESSION_DUO_RESULT_LEVEL = 4;
+const RHYTHM_ASSIST_SESSION_GATTAI_LEVEL = 5;
+const RHYTHM_ASSIST_SESSION_DUO_P_BONUS = 0.05;
+const RHYTHM_ASSIST_SESSION_DUO_TALK_MAX = 3;
+const rhythmAssistSessionPairKey = (a, b) => [String(a), String(b)].sort().join('-');
+const rhythmAssistSessionDuos = (ids, levelOf, seenOf) => {
+  const list = (Array.isArray(ids) ? ids : []).filter((id, i, arr) => RHYTHM_ASSIST_SESSION_IDS.includes(id) && arr.indexOf(id) === i);
+  const pairs = [];
+  for (let i = 0; i < list.length; i += 1) for (let j = i + 1; j < list.length; j += 1) {
+    const lv = Number(typeof levelOf === 'function' ? levelOf(list[i], list[j]) : 0) || 0;
+    if (lv >= RHYTHM_ASSIST_SESSION_DUO_LEVEL) pairs.push({
+      a: list[i],
+      b: list[j],
+      lv,
+      order: i * 10 + j
+    });
+  }
+  pairs.sort((x, y) => y.lv - x.lv || x.order - y.order);
+  const used = new Set();
+  return pairs.filter(p => {
+    if (used.has(p.a) || used.has(p.b)) return false;
+    used.add(p.a);
+    used.add(p.b);
+    return true;
+  }).map(({
+    a,
+    b,
+    lv
+  }) => ({
+    a,
+    b,
+    lv,
+    key: rhythmAssistSessionPairKey(a, b),
+    result: lv >= RHYTHM_ASSIST_SESSION_DUO_RESULT_LEVEL,
+    gattai: lv >= RHYTHM_ASSIST_SESSION_GATTAI_LEVEL && !!(typeof seenOf === 'function' && seenOf(a, b))
+  }));
+};
+const rhythmAssistSessionDuoBonus = duos => (Array.isArray(duos) ? duos : []).filter(d => d && d.result).length * RHYTHM_ASSIST_SESSION_DUO_P_BONUS;
+const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
+  mua: {
+    join: [['happy', 'やっほ〜！あたしも一緒に叩くね♪'], ['happy', 'ブリーダー、今日もセッションしよ！']],
+    first: [['excited', 'この曲はじめてかも！ワクワクするぢゃん♪'], ['excited', '知らない曲って、なんか燃えるよね♪']],
+    like: [['happy', 'この曲あたし大好きなの♪']],
+    dislike: [['troubled', 'えっ、この曲！？速すぎて目が回るんだけどｗ']],
+    combo: [['excited', 'いい流れぢゃん♪ 全部いこ！'], ['excited', 'まぢつながってる！すごくない？ｗ'], ['excited', 'このままフルコンいけるかも♪']],
+    miss: [['normal', 'どんまい！ここから取り返そ♪'], ['normal', '大丈夫、あたしもいるよ♪']],
+    climax: [['excited', 'サビきた〜！テンションまぢ上がる♪'], ['excited', 'ここ一番楽しいとこ！'], ['excited', 'いっくよ〜♪']],
+    last: [['normal', 'あとちょっと！ラストまで一緒に♪'], ['normal', '最後まで笑顔でいこ！']],
+    mvp: [['wink', 'MVPとっちゃった！？あたしすごくない？ｗ'], ['wink', 'えへへ、今日のあたし、ノッてたかも♪']],
+    high: [['happy', 'まぢいい感じぢゃん！楽しかったぁ♪'], ['happy', '今の、めっちゃそろってたよね♪']],
+    mid: [['happy', 'いい感じだったよ！次はもっといけるかも♪'], ['happy', '楽しかったぁ♪ もう一曲いこ！']],
+    low: [['troubled', '次はもっと合わせよ！あたしもがんばる♪'], ['troubled', '大丈夫！何回でも付き合うよ♪']],
+    fc: [['surprise', 'フルコンぢゃん！ブリーダー天才かもｗ'], ['surprise', '全部つながった〜！まぢ感動♪']],
+    levelup: [['happy', 'セッションLvが上がった♪ あたしも上手になってるかも！'], ['happy', 'もっと一緒に叩きたくなってきた♪']],
+    likeup: [['wink', 'この曲、ちょっと好きになってきたかも♪']],
+    overcome: [['happy', '苦手な曲だったけど、乗りこえたよ！'], ['happy', '目は回ったけど、楽しかったかもｗ']],
+    'song:toriko': [['happy', 'トリコはあたしの杯の曲だし、テンションまぢ上がるの♪']],
+    'song:haruka': [['happy', 'ハルカ、聞くたびにキュンとしちゃう♪']],
+    'song:crazy_party_night': [['happy', 'パーティーの曲って、それだけで楽しいぢゃん♪']],
+    'song:grievous_lady': [['happy', 'Grievous Lady、最後までついていけた！あたしえらいｗ']]
+  },
+  kiki: {
+    join: [['happy', 'ブリーダーさん、よろしくお願いしまつ♪'], ['happy', '今日も一緒に演奏できてうれしいです♪']],
+    first: [['excited', 'はじめての曲ですね。どきどきしまつ♪'], ['excited', '知らない曲も、ブリーダーさんとなら平気です']],
+    like: [['happy', 'この曲、私とても好きなんです♪']],
+    dislike: [['troubled', 'この曲は大きい音でどなられるので、少しびっくりしちゃいます']],
+    combo: [['excited', 'いい流れでつね♪ このまま全部いきましょう'], ['excited', 'とってもきれいにつながっていますよ♪'], ['excited', 'ブリーダーさん、さすがでつ']],
+    miss: [['normal', '大丈夫でつ、落ち着いていきましょう♪'], ['normal', 'ひと呼吸おいて、また合わせましょうね']],
+    climax: [['excited', 'ここが一番きれいなところでつ♪'], ['excited', 'ここは思いきっていきましょう♪'], ['excited', '雪が舞うみたいな気持ちでまつ♪']],
+    last: [['normal', 'あと少しでつ。最後までていねいに♪'], ['normal', '最後のひと押し、いきましょう']],
+    mvp: [['wink', '私がMVPですか？ちょっと照れちゃいまつ♪'], ['wink', '今日は指がよく動きました♪']],
+    high: [['happy', 'とってもいい演奏でした♪'], ['happy', '息がぴったりでしたね♪']],
+    mid: [['happy', 'いい演奏でした。次はもっと合わせられそうです'], ['happy', '楽しかったです♪ もう一曲いかがですか？']],
+    low: [['troubled', '次はきっと、もっと合わせられますよ♪'], ['troubled', '何度でもお付き合いしまつ♪']],
+    fc: [['surprise', 'フルコンボでつ！ブリーダーさん、すごいです♪'], ['surprise', '最後まで一つも落とさないなんて、見とれちゃいました']],
+    levelup: [['happy', 'セッションLvが上がりました♪ うれしいでつ'], ['happy', '少しずつ、上手になれている気がします♪']],
+    likeup: [['wink', 'この曲、だんだん好きになってきました♪']],
+    overcome: [['happy', '苦手な曲でしたけど、最後までいけました♪'], ['happy', 'びっくりしましたけど、楽しかったです']],
+    'song:kiki_issen': [['happy', '綺季一閃は、私の曲でつ♪ 雪の舞う感じが好きなんです']],
+    'song:tsuki_ga_michiru_mae_ni': [['happy', '月が満ちる前に、しっとりしていて落ち着きます♪']],
+    'song:kaze_ga_soyogu': [['happy', '風がそよぐ場所、気持ちがすっと軽くなりますね']],
+    'song:black_shout': [['happy', 'BLACK SHOUT、こわかったけど、最後までがんばれました']]
+  },
+  momosuke: {
+    join: [['happy', 'ももが来たからには盛り上げるよ！！'], ['happy', 'ブリーダー、ももとセッションできるなんてラッキーだよw']],
+    first: [['excited', 'はじめての曲！！ももが一番に覚えちゃうもんね'], ['excited', '新曲でもももは完璧にこなすよ♡']],
+    like: [['happy', 'この曲ももの推し曲！！']],
+    dislike: [['troubled', 'チクタクがずっと鳴っててもも眠くなる〜♡']],
+    combo: [['excited', 'いい感じ！！ももも乗ってきた♡'], ['excited', 'まだつながってるの！？やるじゃんw'], ['excited', 'このままいけばもも並みだよ♡']],
+    miss: [['normal', 'ドンマイドンマイ！ももがついてるよw'], ['normal', 'ちょっとくらいミスってもかわいいから平気♡']],
+    climax: [['excited', 'サビ！！ここで一番かわいく決めるよ♡'], ['excited', 'ここがももの見せ場！！'], ['excited', 'ペンライト振って〜！！']],
+    last: [['normal', 'ラストスパート！！最後までアイドルでいくよ♡'], ['normal', 'あとちょっと！！ももより先にバテないでよw']],
+    mvp: [['wink', 'MVPはもも！！当然でしょw'], ['wink', 'センターはやっぱりもも♡']],
+    high: [['happy', 'ももと合わせたらこんなもんでしょw さすが♡'], ['happy', '今のステージ、拍手もらえるやつだよ！！']],
+    mid: [['happy', 'まあまあかな！！次はもっと盛り上げよ♡'], ['happy', '楽しかった！！アンコールいく？w']],
+    low: [['troubled', 'ドンマイ！次はもも、もっと見ててあげる♡'], ['troubled', '練習あるのみ！！ももも付き合うからw']],
+    fc: [['surprise', 'フルコン！？ブリーダー、もものファン一号にしてあげる♡'], ['surprise', '全部つながった！！最高のステージだったよ！！']],
+    levelup: [['happy', 'セッションLvアップ！！もも、また一段とかわいくなっちゃったw'], ['happy', '上達してるのはももだけじゃないよ、ブリーダーもね♡']],
+    likeup: [['wink', 'この曲、ちょっとだけ好きになったかも…ちょっとだけね！！']],
+    overcome: [['happy', '眠くならずに最後までいけた！！もも、えらい♡'], ['happy', '苦手でもちゃんと決めるのがアイドルだよw']],
+    'song:crossing_field': [['happy', 'crossing field は、ももが一番かわいく踊れる曲！！']],
+    'song:only_my_railgun': [['happy', 'only my railgun、テンション上がりっぱなしw']],
+    'song:rose': [['happy', 'ROSE はかっこいいももも見せられる曲なんだよ♡']],
+    'song:dullahan_clockwork': [['happy', 'チクタクに負けなかった！！ブリーダーもえらい♡']]
+  },
+  dra: {
+    join: [['happy', 'おでも混ぜてくれよな、えへへ'], ['happy', 'ブリーダー、今日もよろしくな']],
+    first: [['excited', 'はじめての曲だな。冒険って感じでいいくさ'], ['excited', '知らない道を行くのは、わくわくするからな']],
+    like: [['happy', 'この曲、おで好きなんだな']],
+    dislike: [['troubled', 'しんみりした曲は、おで照れくさいんだな、えへへ']],
+    combo: [['excited', 'すごいな、ずっとつながってるくさ'], ['excited', 'いいぞ、その調子だからな'], ['excited', 'おでもびっくりの長さだな']],
+    miss: [['normal', 'どんまいだな、次でとりかえすからな'], ['normal', 'あわてなくていいんだな、えへへ']],
+    climax: [['excited', 'ここからが本番だな、えへへ'], ['excited', '山場だな、いくぞ'], ['excited', 'ワイもここは気合い入れるくさ']],
+    last: [['normal', 'あと少しだな、最後まで行くからな'], ['normal', 'ゴールが見えてきたな']],
+    mvp: [['wink', 'おでがMVPか、えへへ、照れくさいな'], ['wink', '今日はおで、調子よかったんだな']],
+    high: [['happy', 'いい演奏だったくさ。おで楽しかったな'], ['happy', 'ぴったりだったな、えへへ']],
+    mid: [['happy', 'なかなかよかったな。次も行くからな'], ['happy', '楽しかったな。もう一回いいか？']],
+    low: [['troubled', 'どんまいだな、次でとりかえすからな'], ['troubled', 'おでも練習するからな、一緒にがんばるくさ']],
+    fc: [['surprise', '全部つながったな！？すごいな、ブリーダー'], ['surprise', 'フルコンだな、おで鼻が高いからな']],
+    levelup: [['happy', 'セッションLvが上がったな、えへへ'], ['happy', 'おでも少しは上手になってきたかな']],
+    likeup: [['wink', 'この曲、だんだん好きになってきたんだな']],
+    overcome: [['happy', '苦手な曲だったけど、最後まで行けたな'], ['happy', '照れくさかったけど、いい曲だったな']],
+    'song:mou_hitotsu_no_sekai_e': [['happy', 'もう一つの世界へは、おでの曲だからな。冒険って感じでいいくさ']],
+    'song:big_bridge_no_shitou': [['happy', 'ビッグブリッヂの死闘、橋を渡りきった気分だな']],
+    'song:senjou_no_shippuu': [['happy', '戦場の疾風、風みたいに駆け抜けたな']],
+    'song:stay_with_me': [['happy', 'Stay With Me、しんみりしたけど、悪くなかったんだな']]
+  },
+  atsu: {
+    join: [['happy', 'とりあえず一曲いくか笑'], ['happy', '来たぞ。今日もやるか！']],
+    first: [['excited', 'てか初見の曲か。燃えるな笑'], ['excited', '知らない曲こそ、とりあえずやってみるか笑']],
+    like: [['happy', 'これ俺の好きなやつだな笑']],
+    dislike: [['troubled', 'てか自分の大会の曲って、なんか照れるだろ笑']],
+    combo: [['excited', 'とりあえずいい感じだな笑'], ['excited', 'まだつながってるのかよ！すげえな笑'], ['excited', 'そのまま行け！']],
+    miss: [['normal', 'てか焦らなくていいぞ！'], ['normal', '切り替えていこう笑']],
+    climax: [['excited', 'ここ決めるぞ笑'], ['excited', '山場だ、いくぞ！'], ['excited', 'ここは全力な笑']],
+    last: [['normal', '最後の10秒、締めるぞ！'], ['normal', 'ラスト、きれいに決めるか笑']],
+    mvp: [['wink', 'MVPもらっといた笑'], ['wink', '今日は俺の日だったな笑']],
+    high: [['happy', 'てか今の、普通にうまかったな笑'], ['happy', 'いい締めだったな！']],
+    mid: [['happy', '悪くないな。次はもっと上いけるだろ笑'], ['happy', 'とりあえずもう一曲いくか笑']],
+    low: [['troubled', 'まあ次だな、切り替えていこう！'], ['troubled', '練習あるのみだな笑']],
+    fc: [['surprise', 'フルコンかよ！やるな笑'], ['surprise', '全部つないだのか。すげえな！']],
+    levelup: [['happy', 'セッションLv上がったな笑'], ['happy', '俺もまだまだ伸びるな！']],
+    likeup: [['wink', 'この曲、ちょっと好きになってきたかもな笑']],
+    overcome: [['happy', '苦手だったけど、とりあえずいけたな笑'], ['happy', '照れくさかったけど、やりきったぞ！']],
+    'song:against_my_own_shadow': [['happy', 'AMOSは俺の曲だしな笑']],
+    'song:sad_song': [['happy', 'SAD SONG、しっかり聞かせたな！']],
+    'song:rebellion': [['happy', 'Rebellion、最後まで攻めきったな笑']],
+    'song:mf_ichika_mix': [['happy', '自分の大会の曲、やりきったぞ笑']]
+  },
+  kyuko: {
+    join: [['happy', 'ほい！俺も入るね〜'], ['happy', 'よろしく〜、今日は何いく？']],
+    first: [['excited', 'はじめての曲だね〜。構成見ながらいくよ'], ['excited', '初見かぁ、サビの場所を探しながらいこ〜']],
+    like: [['happy', 'この曲は構成がきれいなんだよね〜']],
+    dislike: [['troubled', 'トリコはノリが良すぎて、俺だけ置いていかれるんだよぇ']],
+    combo: [['excited', 'ほい！いい流れだね〜'], ['excited', 'リズムが安定してるからつながるんだよね〜'], ['excited', 'このままいけるよ〜、ありがとん笑']],
+    miss: [['normal', 'ぐぬぬぬ、でもリズムは合ってるよ〜'], ['normal', '一回深呼吸ね〜、次の小節から戻そ']],
+    climax: [['excited', 'サビ前で一回引いて…ここだね〜'], ['excited', 'ここが一番盛り上がる所だよ〜'], ['excited', 'ここから音が増えるよ〜、おけ〜？']],
+    last: [['normal', '最後まで、ていねいにね〜'], ['normal', 'あと少し〜、おけ〜？']],
+    mvp: [['wink', 'MVPいただきました〜笑'], ['wink', '曲を読んだのが効いたかも〜']],
+    high: [['happy', 'いい流れだったね〜、ありがとん笑'], ['happy', '今のは理想の形だったよ〜']],
+    mid: [['happy', 'いい感じ〜。サビ前をもう少しそろえたら上がるよ'], ['happy', 'おけ〜、次いこ〜']],
+    low: [['troubled', 'ぐぬぬぬ、次はサビ前を意識してみよ〜'], ['troubled', '難しい所は分かったから、次はいけるよ〜']],
+    fc: [['surprise', 'フルコンだね〜！すごいね、ありがとん笑'], ['surprise', '全部つながった〜！理由は練習量だね〜']],
+    levelup: [['happy', 'セッションLv上がったね〜、ほい！'], ['happy', 'だんだん合わせ方が分かってきたよ〜']],
+    likeup: [['wink', 'この曲、構成がおもしろく見えてきたかも〜']],
+    overcome: [['happy', '置いていかれなかった〜、ありがとん笑'], ['happy', '苦手な曲だったけど、ノリ方が分かったよ〜']],
+    'song:toward_the_stars_short': [['happy', 'Toward the Stars は、サビ前で一回引くのがいいの笑']],
+    'song:six_eternel_beat': [['happy', 'SIX ÉTERNEL、展開がきれいでいいよね〜']],
+    'song:evans': [['happy', 'Evans は、音の重ね方が気持ちいいんだよね〜']],
+    'song:toriko': [['happy', 'トリコ、最後までノリについていけた〜！']]
+  },
+  sorashido: {
+    join: [['happy', 'うぉぉぉ！俺も参戦するぜ・・・！'], ['happy', '今日も計算どおりにいくぜ笑']],
+    first: [['excited', 'はじめての曲か。今から計算するぜ・・・！'], ['excited', '初見でも、俺の計算に死角はないぜ笑']],
+    like: [['happy', 'この曲は全ノーツ計算済みだぜ笑']],
+    dislike: [['troubled', 'ゆっくりの曲は、計算が合わなくてそわそわするぜ笑']],
+    combo: [['excited', 'うぉぉぉ！計算どおりだぜ・・・！'], ['excited', 'つながり方が表のとおりだぜ笑'], ['excited', 'このまま最後まで行く計算だぜ・・・！']],
+    miss: [['normal', 'ここから巻き返す計算だぜ笑'], ['normal', '誤差の範囲だぜ、気にすんな！']],
+    climax: [['excited', 'うぉぉぉ！ここだぜ！'], ['excited', 'サビの密度、計算済みだぜ笑'], ['excited', 'なんくるないさ〜、ここは楽しむところだぜ！']],
+    last: [['normal', '残り10秒、計算どおりに締めるぜ笑'], ['normal', 'ラストは全部拾う計算だぜ笑']],
+    mvp: [['wink', 'MVPは計算済みだったぜ・・・！'], ['wink', '表にしたら俺が一番だったぜ笑']],
+    high: [['happy', '計算どおりの名演だぜ・・・！'], ['happy', '今の数字、表に残しておきたいぜ笑']],
+    mid: [['happy', '悪くない数字だぜ。次はもっと上がる計算だ'], ['happy', 'もう一曲いくぜ！']],
+    low: [['troubled', '次は全ノーツ計算して挑むぜ笑'], ['troubled', 'データは取れたぜ。次は上がるぜ！']],
+    fc: [['surprise', 'うぉぉぉ！フルコンだぜ笑'], ['surprise', '計算を超えてきたぜ笑']],
+    levelup: [['happy', 'セッションLvアップだぜ・・・！'], ['happy', '伸び方、グラフにしたら右肩上がりだぜ笑']],
+    likeup: [['wink', 'この曲、計算してたら好きになってきたぜ笑']],
+    overcome: [['happy', 'ゆっくりの曲も、計算が合ったぜ！'], ['happy', 'そわそわしたけど、乗りこえたぜ笑']],
+    'song:monster_hero': [['happy', 'Monster Hero は全ノーツ計算済みだぜ！']],
+    'song:freedom_dive': [['happy', 'FREEDOM DiVE↓、速さも計算のうちだぜ笑']],
+    'song:humanoid': [['happy', 'ヒューマノイド、ノーツの多さがたまらないぜ！']],
+    'song:kaze_ga_soyogu': [['happy', '風がそよぐ場所、ゆっくりでも合わせきったぜ笑']]
+  },
+  erubin: {
+    join: [['happy', '俺も一緒にいいかな？よろしくね'], ['happy', '今日もセッション、楽しみにしてたよ']],
+    first: [['excited', 'はじめての曲だね。ゆっくり覚えていこうね'], ['excited', '知らない曲でも、一緒なら大丈夫だよ']],
+    like: [['happy', 'この曲、好きなんだよね']],
+    dislike: [['troubled', 'にぎやかすぎるのは、ちょっと疲れちゃうかな']],
+    combo: [['excited', 'いい感じだね、そのままで大丈夫'], ['excited', 'きれいにつながってるね'], ['excited', 'すごいね、落ち着いてるのが分かるよ']],
+    miss: [['normal', '大丈夫、ゆっくりいこうね'], ['normal', '無理しないでね、次で合わせよう']],
+    climax: [['excited', 'ここ、いいところだね'], ['excited', '一緒に盛り上がろうか'], ['excited', 'ここは思いきっていこうね']],
+    last: [['normal', 'あと少しだね、最後まで一緒に'], ['normal', '最後まで楽しもうね']],
+    mvp: [['wink', '俺がMVP？ありがとね'], ['wink', '今日はたまたま調子がよかったかな']],
+    high: [['happy', 'いい演奏だったね、おつかれさま'], ['happy', '息が合ってたね、うれしいな']],
+    mid: [['happy', 'いい演奏だったよ。少し休んでもいいからね'], ['happy', '楽しかったね、もう一曲どうかな']],
+    low: [['troubled', '大丈夫、次はきっと合うよ'], ['troubled', '疲れてないかな？無理しないでね']],
+    fc: [['surprise', 'フルコンかな？すごいね、おつかれさま'], ['surprise', '全部つながったね、見ててうれしかったよ']],
+    levelup: [['happy', 'セッションLvが上がったね。ありがとね'], ['happy', '少しずつ合ってきたかな']],
+    likeup: [['wink', 'この曲、少し好きになってきたかな']],
+    overcome: [['happy', 'にぎやかだったけど、楽しかったよ'], ['happy', '苦手な曲も、一緒だと平気だったね']],
+    'song:wrath_of_the_thorn_king': [['happy', '茨の王の怒りは、ここに来たときの曲だからね']],
+    'song:altar_world_tree': [['happy', 'Altar of the World Tree、静かで落ち着くんだよね']],
+    'song:dullahan': [['happy', 'デュラハンのテーマ、重たいけど好きなんだよね']],
+    'song:crazy_party_night': [['happy', 'Crazy Party Night、最後までついていけたね']]
+  }
+});
+const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
+  'atsu-dra': {
+    play: [[['atsu', 'happy', '{c}、気合い入ってるな笑'], ['dra', 'happy', 'おう、負けないからな']], [['dra', 'happy', '{c}、ここ決めるんだな'], ['atsu', 'happy', 'おう、任せとけ！']]],
+    result: [[['atsu', 'happy', 'いい勝負だったな笑'], ['dra', 'wink', 'えへへ、楽しかったな']]],
+    gattai: [[['atsu', 'excited', '{c}、いくぞ！'], ['dra', 'excited', 'おう、全力だからな！']]]
+  },
+  'atsu-erubin': {
+    play: [[['erubin', 'happy', '{c}、いい感じだね'], ['atsu', 'happy', 'だろ笑']], [['atsu', 'happy', '{c}、ペース合ってるか？'], ['erubin', 'happy', '大丈夫、合ってるよ']]],
+    result: [[['atsu', 'happy', 'いいセッションだったな！'], ['erubin', 'wink', 'うん、おつかれさま']]],
+    gattai: [[['atsu', 'excited', '{c}、合わせるぞ！'], ['erubin', 'excited', 'うん、いこうか']]]
+  },
+  'atsu-kiki': {
+    play: [[['atsu', 'happy', '{c}、テンポ安定してるな笑'], ['kiki', 'happy', 'ありがとうございます♪']], [['kiki', 'happy', '{c}、次のサビ、思いきっていきましょう'], ['atsu', 'happy', 'いいな、攻めるか笑']]],
+    result: [[['atsu', 'happy', '今日はいい締めだったな！'], ['kiki', 'wink', 'はい、気持ちよかったでつ♪']]],
+    gattai: [[['atsu', 'excited', '{c}、ここ決めるぞ！'], ['kiki', 'excited', 'ちから全開でいきまつ♪']]]
+  },
+  'atsu-kyuko': {
+    play: [[['atsu', 'happy', '{c}、次どう来る？'], ['kyuko', 'happy', 'サビ前で一回引くよ〜']], [['kyuko', 'happy', '{c}、締め方きれいだね〜'], ['atsu', 'happy', 'だろ笑']]],
+    result: [[['atsu', 'happy', 'とりあえず、いい流れだったな笑'], ['kyuko', 'wink', 'ありがとん笑']]],
+    gattai: [[['atsu', 'excited', '{c}、締めるぞ笑'], ['kyuko', 'excited', 'おけ〜、いくよ〜']]]
+  },
+  'atsu-momosuke': {
+    play: [[['atsu', 'happy', '{c}、そこ走りすぎな笑'], ['momosuke', 'happy', 'ももは走ってないもん！！']], [['momosuke', 'happy', '{c}、ちゃんと見ててよね！！'], ['atsu', 'happy', '見てるって笑']]],
+    result: [[['atsu', 'happy', 'とりあえず、いいステージだったな笑'], ['momosuke', 'wink', 'でしょ！！もものおかげ♡']]],
+    gattai: [[['momosuke', 'excited', '{c}、ももに合わせて！！'], ['atsu', 'excited', 'よし、決めるぞ！']]]
+  },
+  'atsu-mua': {
+    play: [[['atsu', 'happy', '{c}、走りすぎるなよ笑'], ['mua', 'happy', '走ってないもん！ちょっとだけｗ']], [['mua', 'happy', '{c}、ここ合わせて！'], ['atsu', 'happy', 'おう、任せとけ！']]],
+    result: [[['atsu', 'happy', 'とりあえず、いいセッションだったな笑'], ['mua', 'wink', 'でしょ！また組も♪']]],
+    gattai: [[['atsu', 'excited', '{c}、ここ決めるぞ笑'], ['mua', 'excited', 'りょ！いっくよ〜♪']]]
+  },
+  'atsu-sorashido': {
+    play: [[['sorashido', 'happy', '{c}、ここのノーツ、計算済みだぜ・・・！'], ['atsu', 'happy', 'さすがだな笑']], [['sorashido', 'happy', '{c}との差、今日は2点だぜ笑'], ['atsu', 'happy', '細かすぎだろ笑']]],
+    result: [[['sorashido', 'happy', '2人で最高値だぜ・・・！'], ['atsu', 'wink', 'いい数字だったな笑']]],
+    gattai: [[['atsu', 'excited', '{c}、いくぞ！'], ['sorashido', 'excited', 'うぉぉぉ！ここだぜ！']]]
+  },
+  'dra-erubin': {
+    play: [[['erubin', 'happy', '{c}、無理しないでね'], ['dra', 'happy', '大丈夫だな、楽しいからな']], [['dra', 'happy', '{c}、カードと同じで、リズムも慣れだからな'], ['erubin', 'happy', 'ありがとね、先生']]],
+    result: [[['erubin', 'happy', 'いい演奏だったね'], ['dra', 'wink', 'えへへ、またやろうな']]],
+    gattai: [[['dra', 'excited', '{c}、いくからな'], ['erubin', 'excited', 'うん、一緒に']]]
+  },
+  'dra-kiki': {
+    play: [[['dra', 'happy', '{c}、落ち着いてるな'], ['kiki', 'happy', '{c}がいてくれるからでつ♪']], [['dra', 'happy', '{c}、ここでギャグを1つ……'], ['kiki', 'wink', '演奏中は、あと1回まででつ♪']]],
+    result: [[['dra', 'happy', 'いい演奏だったな、えへへ'], ['kiki', 'wink', 'ありがとうございまつ♪']]],
+    gattai: [[['kiki', 'excited', '{c}、いきましょう♪'], ['dra', 'excited', 'おう、全力だからな']]]
+  },
+  'dra-kyuko': {
+    play: [[['kyuko', 'happy', '{c}、ここからが山場だよ〜'], ['dra', 'happy', 'わかったな、気合い入れるくさ']], [['dra', 'happy', '{c}、よく先が読めるな'], ['kyuko', 'happy', '構成を見てるからね〜']]],
+    result: [[['kyuko', 'happy', '今日も気持ちよく流れたね〜'], ['dra', 'wink', 'こっちこそだな、えへへ']]],
+    gattai: [[['kyuko', 'excited', '{c}、いくよ〜'], ['dra', 'excited', 'おう、いくからな']]]
+  },
+  'dra-momosuke': {
+    play: [[['momosuke', 'happy', '{c}、ももの後ろでがんばって！！'], ['dra', 'happy', 'おう、ついていくからな']], [['dra', 'happy', '{c}、元気だな、えへへ'], ['momosuke', 'happy', 'アイドルは体力勝負なの！！']]],
+    result: [[['momosuke', 'happy', '{c}、ちゃんとついてこれたじゃん♡'], ['dra', 'wink', 'えへへ、楽しかったんだな']]],
+    gattai: [[['momosuke', 'excited', '{c}、ここ合わせて！！'], ['dra', 'excited', 'おう、いくくさ！']]]
+  },
+  'dra-mua': {
+    play: [[['mua', 'happy', '{c}、のってる〜？'], ['dra', 'happy', 'のってるくさ、えへへ']], [['dra', 'happy', '{c}、おでのギャグより盛り上がってるくさ'], ['mua', 'happy', 'ギャグは置いといて、叩こ♪']]],
+    result: [[['dra', 'happy', '楽しかったな、{c}'], ['mua', 'wink', 'また一緒に叩こうね♪']]],
+    gattai: [[['mua', 'excited', '{c}、いっくよ〜！'], ['dra', 'excited', 'おでも全力だからな！']]]
+  },
+  'dra-sorashido': {
+    play: [[['sorashido', 'happy', '{c}、ここの密度、すごいぜ・・・！'], ['dra', 'happy', 'おでも負けないからな']], [['dra', 'happy', '{c}、楽しそうだな'], ['sorashido', 'happy', '楽しいぜ笑']]],
+    result: [[['sorashido', 'happy', '2人の数字、いい感じだぜ・・・！'], ['dra', 'wink', 'えへへ、うれしいな']]],
+    gattai: [[['sorashido', 'excited', 'いくぜ、{c}！最高値を出すぜ笑'], ['dra', 'excited', 'おう、ワイもいくくさ！']]]
+  },
+  'erubin-kiki': {
+    play: [[['erubin', 'happy', '{c}、無理してないかな？'], ['kiki', 'happy', '大丈夫でつ、楽しいです♪']], [['kiki', 'happy', '{c}、ここは静かにきれいにいきましょう'], ['erubin', 'happy', 'うん、そうしよう']]],
+    result: [[['erubin', 'happy', '落ち着いたいい演奏だったね'], ['kiki', 'wink', 'はい、ほっとしました♪']]],
+    gattai: [[['kiki', 'excited', '{c}、いきましょう♪'], ['erubin', 'excited', 'うん、合わせるね']]]
+  },
+  'erubin-kyuko': {
+    play: [[['erubin', 'happy', '{c}、よく曲を見てるね'], ['kyuko', 'happy', '構成を見るのが好きなんだよね〜']], [['kyuko', 'happy', '{c}、ここは落ち着いていこ〜'], ['erubin', 'happy', 'うん、そうしよう']]],
+    result: [[['erubin', 'happy', '気持ちのいい演奏だったね'], ['kyuko', 'wink', 'ありがとん笑']]],
+    gattai: [[['kyuko', 'excited', '{c}、せーので〜'], ['erubin', 'excited', 'うん、せーの']]]
+  },
+  'erubin-momosuke': {
+    play: [[['erubin', 'happy', '{c}、元気だね'], ['momosuke', 'happy', '{c}ももっと盛り上がって！！']], [['momosuke', 'happy', '{c}、ペース大丈夫？'], ['erubin', 'happy', 'うん、いいペースだよ']]],
+    result: [[['erubin', 'happy', 'にぎやかで楽しかったよ'], ['momosuke', 'wink', '{c}もいい感じだったよ♡']]],
+    gattai: [[['momosuke', 'excited', '{c}、見せ場だよ！！'], ['erubin', 'excited', 'うん、いこうか']]]
+  },
+  'erubin-mua': {
+    play: [[['erubin', 'happy', '{c}、楽しそうだね'], ['mua', 'happy', '{c}も一緒に楽しも♪']], [['mua', 'happy', '{c}、ついてこれてる？'], ['erubin', 'happy', 'うん、ちょうどいいよ']]],
+    result: [[['erubin', 'happy', '楽しかったね、おつかれさま'], ['mua', 'wink', 'おつかれ〜！またやろ♪']]],
+    gattai: [[['mua', 'excited', '{c}、いくよ！'], ['erubin', 'excited', 'うん、一緒にね']]]
+  },
+  'erubin-sorashido': {
+    play: [[['sorashido', 'happy', '{c}、ここの盛り上がり、計算済みだぜ・・・！'], ['erubin', 'happy', '頼もしいね']], [['erubin', 'happy', '{c}、楽しそうだね'], ['sorashido', 'happy', '楽しいぜ笑']]],
+    result: [[['sorashido', 'happy', '2人のデータ、最高だぜ・・・！'], ['erubin', 'wink', 'うん、おつかれさま']]],
+    gattai: [[['sorashido', 'excited', 'うぉぉぉ！{c}、合わせるぜ！'], ['erubin', 'excited', 'うん、一緒にいこう']]]
+  },
+  'kiki-kyuko': {
+    play: [[['kyuko', 'happy', '{c}、ここから盛り上がるよ〜'], ['kiki', 'happy', 'ありがとうございまつ、気をつけますね']], [['kiki', 'happy', '叩くのは私、読むのは{c}でつ♪'], ['kyuko', 'happy', 'おけ〜、次はサビ前だよ〜']]],
+    result: [[['kyuko', 'happy', '構成どおりきれいにいけたね〜'], ['kiki', 'wink', '{c}のおかげでつ♪']]],
+    gattai: [[['kyuko', 'excited', '{c}、せーので〜'], ['kiki', 'excited', 'はい、せーの♪']]]
+  },
+  'kiki-momosuke': {
+    play: [[['momosuke', 'happy', '{c}、ももの踊り見てて！！'], ['kiki', 'happy', 'はい、とってもかわいいでつ♪']], [['kiki', 'happy', '{c}、ここは息をそろえましょう'], ['momosuke', 'happy', 'まかせて！！']]],
+    result: [[['kiki', 'happy', 'とってもいいステージでした♪'], ['momosuke', 'wink', 'ももと{c}なら当然だよ♡']]],
+    gattai: [[['momosuke', 'excited', '{c}、ここだよ！！'], ['kiki', 'excited', 'はい、思いきっていきまつ♪']]]
+  },
+  'kiki-mua': {
+    play: [[['mua', 'happy', '{c}、サビ前そろえよ！'], ['kiki', 'happy', 'はい、合わせまつ♪']], [['kiki', 'happy', '{c}、いい流れでつね♪'], ['mua', 'happy', 'でしょ！このままいこ♪']]],
+    result: [[['mua', 'happy', '今日のあたしたち、まぢぴったりぢゃん♪'], ['kiki', 'wink', 'ふふ、また一緒に演奏しましょうね♪']]],
+    gattai: [[['mua', 'excited', '{c}、いくよ！'], ['kiki', 'excited', 'せーの、でつ♪']]]
+  },
+  'kiki-sorashido': {
+    play: [[['sorashido', 'happy', '{c}、ここの判定、ぴったりだぜ！'], ['kiki', 'happy', 'ほんとですか？うれしいでつ♪']], [['kiki', 'happy', '{c}、次はどう来ますか？'], ['sorashido', 'happy', '計算済みだぜ、右から来るぜ笑']]],
+    result: [[['sorashido', 'happy', '2人の数字、きれいにそろったぜ・・・！'], ['kiki', 'wink', '計算どおりでしたか？♪']]],
+    gattai: [[['sorashido', 'excited', 'うぉぉぉ！{c}、ここだぜ！'], ['kiki', 'excited', 'はい、いきまつ♪']]]
+  },
+  'kyuko-momosuke': {
+    play: [[['kyuko', 'happy', '{c}、ここサビ前だよ〜'], ['momosuke', 'happy', '知ってる！！ももが一番かわいくなるとこ♡']], [['momosuke', 'happy', '{c}、もものダンスどう？'], ['kyuko', 'happy', 'ほい、リズムぴったりだよ〜']]],
+    result: [[['kyuko', 'happy', '2人でいい流れだったね〜'], ['momosuke', 'wink', '{c}、ももについてこれてえらい♡']]],
+    gattai: [[['momosuke', 'excited', '{c}、いくよ！！'], ['kyuko', 'excited', 'おけ〜、せーの！']]]
+  },
+  'kyuko-mua': {
+    play: [[['kyuko', 'happy', '{c}、サビ前で一回引くよ〜'], ['mua', 'happy', 'おっけ！あたし合わせる♪']], [['mua', 'happy', '{c}、余裕そうぢゃん！'], ['kyuko', 'happy', 'ほい、構成は読めてるよ〜']]],
+    result: [[['kyuko', 'happy', 'いい流れだったね〜、ありがとん笑'], ['mua', 'wink', 'こっちこそ！楽しかった♪']]],
+    gattai: [[['kyuko', 'excited', '{c}、ここだよ〜'], ['mua', 'excited', 'まかせて！せーの♪']]]
+  },
+  'kyuko-sorashido': {
+    play: [[['sorashido', 'happy', '{c}、ここの構成、計算どおりだぜ・・・！'], ['kyuko', 'happy', '読みどおりだね〜']], [['kyuko', 'happy', 'だいたいこのへんでサビだよ〜'], ['sorashido', 'happy', '正確には3小節あとだぜ笑']]],
+    result: [[['kyuko', 'happy', '構成も計算もぴったりだったね〜'], ['sorashido', 'wink', 'うぉぉぉ！最高のデータだぜ・・・！']]],
+    gattai: [[['kyuko', 'excited', '{c}、いくよ〜'], ['sorashido', 'excited', 'うぉぉぉ！いくぜ！']]]
+  },
+  'momosuke-mua': {
+    play: [[['momosuke', 'happy', '{c}、ももについてきてね！！'], ['mua', 'happy', 'えー、あたしが先頭なんだけどｗ']], [['mua', 'wink', '{c}、そのポーズあたしが教えたやつぢゃん？ｗ'], ['momosuke', 'happy', 'ももがアレンジしたから、もものだよ！！']]],
+    result: [[['momosuke', 'happy', '2人でセンターだったね♡'], ['mua', 'wink', 'それな！最高のステージぢゃん♪']]],
+    gattai: [[['mua', 'excited', '{c}、ここで決めよ！'], ['momosuke', 'excited', 'ダブルセンターいくよ！！']]]
+  },
+  'momosuke-sorashido': {
+    play: [[['sorashido', 'happy', '{c}、ここの盛り上がり、計算済みだぜ・・・！'], ['momosuke', 'happy', 'ももが盛り上げるから計算いらないよw']], [['sorashido', 'happy', '{c}のミス、今日はまだ0だぜ！'], ['momosuke', 'troubled', '数えなくていいから！！w']]],
+    result: [[['sorashido', 'happy', '今日のステージ、表にしたら満点だぜ・・・！'], ['momosuke', 'wink', '当然でしょ！！♡']]],
+    gattai: [[['sorashido', 'excited', '{c}、ここが計算の答えだぜ！'], ['momosuke', 'excited', 'ももの見せ場だよ！！']]]
+  },
+  'mua-sorashido': {
+    play: [[['sorashido', 'happy', '{c}、ここから密度が上がるぜ！'], ['mua', 'happy', 'まぢ！？がんばる♪']], [['sorashido', 'happy', '{c}の勝ち数、表に足しとくぜ笑'], ['mua', 'excited', 'やった！今日も勝つ♪']]],
+    result: [[['sorashido', 'happy', '今日の2人、表にしたら最高値だぜ！'], ['mua', 'wink', 'すごっ！また一緒にやろ♪']]],
+    gattai: [[['sorashido', 'excited', 'うぉぉぉ！{c}、いくぜ！'], ['mua', 'excited', 'いっくよ〜♪']]]
+  }
+});
 const RHYTHM_BUDDY_TALK_MAX = 40;
 const RHYTHM_BUDDY_TALK_KINDS = Object.freeze(['join', 'pick', 'song', 'mvp', 'high', 'mid', 'low', 'bump', 'replyHello', 'replyThanks', 'replyNice', 'replyAgain', 'replyCall', 'replyDrop', 'replyWait', 'idle']);
 const RHYTHM_BUDDY_TALK_BASE = {
@@ -59881,6 +60526,917 @@ function PlayerRankUpFx({
     "aria-hidden": "true"
   }));
 }
+const GROWTH_FX_KINDS = Object.freeze({
+  bond: {
+    color: '#f472b6',
+    deep: '#9d174d',
+    icon: '💗',
+    particle: '♥',
+    label: '仲良し度'
+  },
+  friend: {
+    color: '#fb923c',
+    deep: '#9a3412',
+    icon: '🤝',
+    particle: '✦',
+    label: '友情Lv'
+  },
+  star: {
+    color: '#facc15',
+    deep: '#a16207',
+    icon: '★',
+    particle: '★',
+    label: '絆Lv'
+  },
+  session: {
+    color: '#c084fc',
+    deep: '#6b21a8',
+    icon: '🎤',
+    particle: '♪',
+    label: 'セッションLv'
+  },
+  beat: {
+    color: '#a3e635',
+    deep: '#3f6212',
+    icon: '🎵',
+    particle: '♪',
+    label: 'ビートLv'
+  },
+  breeder: {
+    color: '#60a5fa',
+    deep: '#1e40af',
+    icon: '🛡️',
+    particle: '◆',
+    label: 'ブリーダーLv'
+  }
+});
+const growthFxKind = kind => GROWTH_FX_KINDS[kind] || GROWTH_FX_KINDS.bond;
+const GROWTH_FX_CALM_SCREENS = Object.freeze(new Set(['HOME', 'PROFILE', 'ITEM_INVENTORY', 'GIFT_BOX', 'MISSIONS', 'BREEDER_MARKET', 'MB_MANAGEMENT', 'MASU_MONS', 'OWNED_MONSTERS', 'MONSTER_DEX', 'MONSTER_DEX_DETAIL', 'MONSTER_LIST_MENU', 'FRIENDS', 'ASSISTANT_SELECT', 'MASU_ENHANCE', 'MASU_AUTO_ENHANCE', 'MASU_FUSION', 'MASU_DONATION', 'MASU_OFFERING', 'MASU_REBIRTH', 'MASU_REGENERATION', 'MASU_REGENERATION_DETAIL', 'MASU_REINCARNATE', 'MASU_SOUL_RANK', 'MASU_SOUL_TRAITS', 'MASU_TRANSCENDENCE', 'MASU_TRANSCEND_ENHANCE']));
+const GROWTH_FX_HOLD_ALL_SELECTOR = '[data-event-story],[data-story-stage],[data-story-sheet],[data-player-rank-up-fx]';
+const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat]';
+const GROWTH_FX_SMALL_MS = 1900;
+const GROWTH_FX_ITEM_MS = 3400;
+const GROWTH_FX_SMALL_MAX = 3;
+const GROWTH_FX_QUEUE_MAX = 24;
+const GROWTH_FX_STORE = {
+  small: [],
+  sheets: [],
+  seq: 0,
+  listeners: new Set()
+};
+const growthFxEmit = () => {
+  GROWTH_FX_STORE.listeners.forEach(fn => {
+    try {
+      fn();
+    } catch {}
+  });
+};
+const growthFxSubscribe = fn => {
+  GROWTH_FX_STORE.listeners.add(fn);
+  return () => GROWTH_FX_STORE.listeners.delete(fn);
+};
+const growthFxPct = v => {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0;
+};
+const growthFxNum = v => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+const growthFxPush = ev => {
+  if (!ev || typeof ev !== 'object') return;
+  const tier = ev.tier === 'item' || ev.tier === 'level' ? ev.tier : 'small';
+  if (tier === 'small') {
+    const gain = growthFxNum(ev.gain);
+    if (gain <= 0) return;
+    const key = String(ev.key || `${ev.kind}:${ev.who || ''}`);
+    const list = GROWTH_FX_STORE.small;
+    const same = list.find(c => c.key === key);
+    if (same) {
+      same.gain += gain;
+      same.pctTo = growthFxPct(ev.pctTo);
+      same.rev += 1;
+    } else {
+      list.push({
+        id: ++GROWTH_FX_STORE.seq,
+        rev: 0,
+        key,
+        kind: ev.kind,
+        name: String(ev.name || ''),
+        gain,
+        pctFrom: growthFxPct(ev.pctFrom),
+        pctTo: growthFxPct(ev.pctTo)
+      });
+      if (list.length > GROWTH_FX_QUEUE_MAX) list.splice(0, list.length - GROWTH_FX_QUEUE_MAX);
+    }
+  } else {
+    const sheets = GROWTH_FX_STORE.sheets;
+    const mergeKey = tier === 'level' ? String(ev.key || `${ev.kind}:${ev.who || ''}`) : null;
+    const prev = mergeKey ? sheets.find((s, i) => i > 0 && s.tier === 'level' && s.key === mergeKey) : null;
+    if (prev) Object.assign(prev, {
+      ...ev,
+      tier,
+      key: mergeKey,
+      levelFrom: prev.levelFrom,
+      gains: [...(prev.gains || []), ...(ev.gains || [])]
+    });else {
+      sheets.push({
+        ...ev,
+        tier,
+        key: mergeKey,
+        id: ++GROWTH_FX_STORE.seq
+      });
+      if (sheets.length > GROWTH_FX_QUEUE_MAX) sheets.splice(0, sheets.length - GROWTH_FX_QUEUE_MAX);
+    }
+  }
+  growthFxEmit();
+};
+const growthFxDropSmall = id => {
+  GROWTH_FX_STORE.small = GROWTH_FX_STORE.small.filter(c => c.id !== id);
+  growthFxEmit();
+};
+const growthFxDropSheet = id => {
+  GROWTH_FX_STORE.sheets = GROWTH_FX_STORE.sheets.filter(s => s.id !== id);
+  growthFxEmit();
+};
+const growthFxAssistantFace = (assistantId, expression = 'happy') => {
+  const list = typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST) ? ASSISTANT_LIST : [];
+  const who = list.find(a => a && a.id === assistantId);
+  if (!who || !who.imageDir || !who.imagePrefix) return null;
+  return `${who.imageDir}/${who.imagePrefix}_${expression}.PNG`;
+};
+const growthFxAssistantName = assistantId => {
+  const list = typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST) ? ASSISTANT_LIST : [];
+  const who = list.find(a => a && a.id === assistantId);
+  return who && who.name || '';
+};
+const growthFxAssistantBondPct = points => {
+  const p = growthFxNum(points);
+  const stage = typeof assistantBondStage === 'function' ? assistantBondStage(p) : null;
+  const next = typeof assistantBondNext === 'function' ? assistantBondNext(p) : null;
+  if (!stage) return 0;
+  if (!next) return 100;
+  const span = Math.max(1, next.need - growthFxNum(stage.need));
+  return growthFxPct((p - growthFxNum(stage.need)) / span * 100);
+};
+const growthFxAssistantBond = (assistantId, beforePoints, afterPoints) => {
+  const before = growthFxNum(beforePoints),
+    after = growthFxNum(afterPoints);
+  if (!(after > before)) return;
+  const name = growthFxAssistantName(assistantId);
+  const lvOf = p => typeof assistantBondLevel === 'function' ? assistantBondLevel(p) : 1;
+  const levelFrom = lvOf(before),
+    levelTo = lvOf(after);
+  growthFxPush({
+    tier: 'small',
+    kind: 'bond',
+    who: assistantId,
+    name,
+    gain: after - before,
+    pctFrom: levelTo > levelFrom ? 0 : growthFxAssistantBondPct(before),
+    pctTo: growthFxAssistantBondPct(after)
+  });
+  if (levelTo <= levelFrom) return;
+  const gains = [];
+  const rows = typeof assistantBondRewardRows === 'function' ? assistantBondRewardRows(assistantId) : [];
+  for (let lv = levelFrom + 1; lv <= levelTo; lv++) {
+    const row = rows.find(r => r && r.level === lv);
+    if (!row) continue;
+    if (row.rewards && row.rewards.length) gains.push({
+      icon: '🎁',
+      text: 'ごほうび',
+      note: `${row.rewards.join('・')}(ギフトボックスへ)`
+    });
+    (row.frames || []).forEach(frame => gains.push({
+      icon: '🖼️',
+      text: frame && frame.name || `${name}の飾り枠`,
+      note: 'プロフィールで使える',
+      isNew: true
+    }));
+    if (row.callStyle) gains.push({
+      icon: '💬',
+      text: '呼ばれ方を自由に決められる',
+      note: 'プロフィールの助手の欄から',
+      isNew: true
+    });
+  }
+  const stage = typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(levelTo, assistantId) : null;
+  growthFxPush({
+    tier: 'level',
+    kind: 'bond',
+    who: assistantId,
+    levelFrom,
+    levelTo,
+    title: '仲良し度 UP!',
+    sub: `${name} との仲良し度が Lv.${levelTo} になった${stage && stage.title ? `(${stage.title})` : ''}`,
+    face: growthFxAssistantFace(assistantId, 'excited'),
+    gains
+  });
+};
+const growthFxMasuBondItem = ({
+  masuName,
+  image,
+  itemName,
+  itemEmoji,
+  count,
+  gain,
+  before,
+  after
+}) => {
+  if (!before || !after || !(growthFxNum(gain) > 0)) return;
+  const pct = info => growthFxPct(growthFxNum(info.xpIntoLevel) / Math.max(1, growthFxNum(info.xpForNext)) * 100);
+  growthFxPush({
+    tier: 'item',
+    kind: 'star',
+    title: `${masuName} に ${itemName}！`,
+    item: `${itemEmoji || ''} ${itemName} ×${count}`,
+    faces: image ? [image] : [],
+    faceRound: true,
+    rows: [{
+      kind: 'star',
+      label: '絆Lv',
+      levelFrom: before.level,
+      levelTo: after.level,
+      pctFrom: pct(before),
+      pctTo: pct(after),
+      gain,
+      unit: '絆経験値'
+    }]
+  });
+};
+const growthFxBreederLevel = (levelFrom, levelTo, breederName = '') => {
+  const a = growthFxNum(levelFrom),
+    b = growthFxNum(levelTo);
+  if (!(b > a)) return;
+  growthFxPush({
+    tier: 'level',
+    kind: 'breeder',
+    who: 'self',
+    levelFrom: a,
+    levelTo: b,
+    title: 'ブリーダーLv UP!',
+    sub: `${breederName ? `${breederName} の` : ''}ブリーダーLvが Lv.${b} になった`,
+    gains: []
+  });
+};
+const growthFxPeerPct = points => {
+  const list = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' && Array.isArray(ASSISTANT_PEER_BOND_LEVELS) ? ASSISTANT_PEER_BOND_LEVELS : [];
+  const p = growthFxNum(points);
+  let cur = list[0],
+    next = null;
+  for (let i = 0; i < list.length; i++) {
+    if (p >= growthFxNum(list[i].min)) {
+      cur = list[i];
+      next = list[i + 1] || null;
+    }
+  }
+  if (!cur) return 0;
+  if (!next) return 100;
+  return growthFxPct((p - growthFxNum(cur.min)) / Math.max(1, growthFxNum(next.min) - growthFxNum(cur.min)) * 100);
+};
+const growthFxPeerLevelName = (level, lifeName = true) => {
+  const list = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' && Array.isArray(ASSISTANT_PEER_BOND_LEVELS) ? ASSISTANT_PEER_BOND_LEVELS : [];
+  const row = list.find(r => r && r.level === level);
+  return row ? lifeName && row.lifeName || row.name || '' : '';
+};
+const growthFxPeerLevel = ({
+  pair,
+  levelBefore,
+  levelAfter
+} = {}) => {
+  if (!Array.isArray(pair) || pair.length !== 2 || !(growthFxNum(levelAfter) > growthFxNum(levelBefore))) return;
+  const [a, b] = pair;
+  const stage = growthFxPeerLevelName(levelAfter);
+  growthFxPush({
+    tier: 'level',
+    kind: 'friend',
+    who: [a, b].sort().join('-'),
+    levelFrom: levelBefore,
+    levelTo: levelAfter,
+    title: '友情Lv UP!',
+    sub: `${growthFxAssistantName(a)} と ${growthFxAssistantName(b)} の友情Lvが Lv.${levelAfter} になった${stage ? `(${stage})` : ''}`,
+    face: growthFxAssistantFace(a, 'excited'),
+    gains: []
+  });
+};
+const growthFxPeerItem = ({
+  pair,
+  itemId,
+  pointsBefore,
+  pointsAfter,
+  levelBefore,
+  levelAfter,
+  reaction = null,
+  playerGain = 0
+} = {}) => {
+  if (!Array.isArray(pair) || pair.length !== 2) return;
+  const gain = growthFxNum(pointsAfter) - growthFxNum(pointsBefore);
+  if (!(gain > 0) && !(growthFxNum(playerGain) > 0)) return;
+  const items = typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : [];
+  const item = items.find(i => i && i.id === itemId) || {};
+  const [a, b] = pair;
+  const rows = [];
+  if (gain > 0) rows.push({
+    kind: 'friend',
+    label: '2人の友情Lv',
+    levelFrom: levelBefore,
+    levelTo: levelAfter,
+    pctFrom: growthFxPeerPct(pointsBefore),
+    pctTo: growthFxPeerPct(pointsAfter),
+    gain
+  });
+  if (growthFxNum(playerGain) > 0) rows.push({
+    kind: 'bond',
+    label: 'あなたとの仲良し度(2人とも)',
+    pctFrom: 0,
+    pctTo: 100,
+    gain: growthFxNum(playerGain)
+  });
+  const face = id => growthFxAssistantFace(id, reaction === 'dislike' ? 'troubled' : reaction === 'like' ? 'excited' : 'happy');
+  growthFxPush({
+    tier: 'item',
+    kind: 'friend',
+    title: `${growthFxAssistantName(a)} と ${growthFxAssistantName(b)} に ${item.name || ''}！`,
+    item: `${item.emoji || ''} ${item.name || ''} ×1`,
+    faces: [face(a), face(b)].filter(Boolean),
+    reaction,
+    rows
+  });
+};
+const growthFxSessionLevel = (list = []) => {
+  const ups = (Array.isArray(list) ? list : []).filter(u => u && growthFxNum(u.levelAfter) > growthFxNum(u.levelBefore));
+  if (!ups.length) return;
+  const top = ups[0];
+  const gains = ups.map(u => ({
+    icon: '🎤',
+    text: `${growthFxAssistantName(u.assistantId)} セッションLv.${u.levelAfter}`,
+    note: growthFxNum(u.tickets) > 0 ? `セッション券 ×${growthFxNum(u.tickets)}` : ''
+  }));
+  growthFxPush({
+    tier: 'level',
+    kind: 'session',
+    who: ups.map(u => u.assistantId).join('+'),
+    levelFrom: top.levelBefore,
+    levelTo: top.levelAfter,
+    title: 'セッションLv UP!',
+    sub: ups.length > 1 ? 'いっしょに演奏した助手のセッションLvが上がった' : `${growthFxAssistantName(top.assistantId)} とのセッションLvが Lv.${top.levelAfter} になった`,
+    face: growthFxAssistantFace(top.assistantId, 'excited'),
+    gains: ups.length > 1 || gains[0].note ? gains : []
+  });
+};
+const GROWTH_FX_CSS = `
+.mh-gfx-chips{position:fixed;top:calc(env(safe-area-inset-top,0px) + 52px);right:10px;z-index:44000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
+.mh-gfx-chip{position:relative;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;border-radius:999px;background:linear-gradient(90deg,#1e1b2ef0,#0f172af0);
+  border:1.5px solid var(--gc);box-shadow:0 0 14px color-mix(in srgb,var(--gc) 40%,transparent);font-weight:900;font-size:11px;color:#fff;
+  animation:mhGfxChipIn .35s cubic-bezier(.2,1.6,.4,1) both}
+.mh-gfx-chip.out{animation:mhGfxChipOut .3s ease-in forwards}
+.mh-gfx-chip .ico{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--gc) 30%,transparent);font-size:13px;color:var(--gc)}
+.mh-gfx-chip .ico.beat{animation:mhGfxBeat .5s ease-out}
+.mh-gfx-chip .who{font-size:9px;color:#cbd5e1;line-height:1.1;max-width:9.5em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mh-gfx-chip .bar{width:56px;height:5px;border-radius:9px;background:#334155;overflow:hidden;margin-top:2px}
+.mh-gfx-chip .bar i{display:block;height:100%;background:var(--gc);transition:width .7s ease-out}
+.mh-gfx-chip .num{color:var(--gc);font-size:14px;font-variant-numeric:tabular-nums}
+.mh-gfx-chip .num.pop{animation:mhGfxPop .4s cubic-bezier(.2,1.8,.4,1)}
+.mh-gfx-chip .pt{position:absolute;left:12px;top:4px;font-size:12px;color:var(--gc);text-shadow:0 0 6px var(--gc);animation:mhGfxFloat 1.1s ease-out both}
+@keyframes mhGfxChipIn{from{transform:translateX(26px) scale(.6);opacity:0}to{transform:none;opacity:1}}
+@keyframes mhGfxChipOut{to{transform:translateY(-12px);opacity:0}}
+@keyframes mhGfxBeat{40%{transform:scale(1.45)}}
+@keyframes mhGfxPop{from{transform:scale(.3);opacity:0}to{transform:none;opacity:1}}
+@keyframes mhGfxFloat{0%{transform:translate(0,0) scale(.4);opacity:0}20%{opacity:1}100%{transform:translate(var(--dx),-46px) scale(.7);opacity:0}}
+.mh-gfx-sheet{position:fixed;inset:0;z-index:44500;display:flex;align-items:center;justify-content:center;padding:16px;cursor:pointer}
+.mh-gfx-sheet.item{background:#0b102666}
+.mh-gfx-card{position:relative;width:min(340px,100%);border-radius:22px;padding:14px 16px 14px;text-align:center;color:#fff;
+  background:linear-gradient(180deg,#1f1633f5,#0f172af5);border:2px solid var(--gc);box-shadow:0 0 36px color-mix(in srgb,var(--gc) 40%,transparent),0 12px 40px #0009;
+  animation:mhGfxCardIn .45s cubic-bezier(.2,1.5,.4,1) both}
+.mh-gfx-card .faces{display:flex;justify-content:center;gap:4px;height:64px}
+.mh-gfx-card .faces img{height:116px;margin-top:-60px;object-fit:contain;filter:drop-shadow(0 6px 10px #0008);animation:mhGfxHop .5s .4s ease-out both}
+.mh-gfx-card .faces img.round{height:92px;width:92px;margin-top:-46px;border-radius:20px;border:2px solid var(--gc);background:#0f172a;object-fit:cover}
+.mh-gfx-card .ttl{font-weight:900;font-size:14px;margin-top:4px;line-height:1.35}
+.mh-gfx-card .itm{display:inline-flex;gap:6px;font-size:11px;font-weight:900;color:#e2e8f0;background:#ffffff14;border-radius:999px;padding:3px 10px;margin-top:6px;animation:mhGfxPop .45s .1s ease-out both}
+.mh-gfx-card .tag{display:inline-block;font-size:10px;font-weight:900;padding:1px 8px;border-radius:999px;margin-left:4px;background:#ffffff22}
+.mh-gfx-card .tag.like{background:#f472b6;color:#3b0a24}.mh-gfx-card .tag.dislike{background:#64748b}
+.mh-gfx-row{display:flex;align-items:center;gap:8px;margin-top:10px;text-align:left}
+.mh-gfx-row .ico{font-size:18px;width:26px;text-align:center;color:var(--rc)}
+.mh-gfx-row .lab{font-size:11px;font-weight:900;color:#cbd5e1}
+.mh-gfx-row .lab em{font-style:normal;color:var(--rc)}
+.mh-gfx-row .lab .up{margin-left:4px;font-size:10px;background:var(--rc);color:#111;border-radius:6px;padding:0 5px;animation:mhGfxPop .35s cubic-bezier(.2,1.8,.4,1) both}
+.mh-gfx-gauge{height:10px;border-radius:9px;background:#334155;position:relative;overflow:hidden;border:1px solid #fff2;margin-top:3px}
+.mh-gfx-gauge i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,color-mix(in srgb,var(--rc) 65%,#000),var(--rc))}
+.mh-gfx-row .val{font-weight:900;font-size:18px;color:var(--rc);min-width:64px;text-align:right;font-variant-numeric:tabular-nums;line-height:1.1}
+.mh-gfx-row .val small{display:block;font-size:9px;color:#94a3b8}
+.mh-gfx-hint{font-size:10px;color:#94a3b8;margin-top:10px}
+.mh-gfx-burst{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none}
+.mh-gfx-burst span{position:absolute;color:var(--gc);text-shadow:0 0 10px var(--gc);animation:mhGfxBurst 1.2s var(--d) cubic-bezier(.1,.8,.3,1) both}
+@keyframes mhGfxBurst{0%{transform:translate(-50%,-50%) scale(.2);opacity:0}15%{opacity:1}100%{transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) rotate(var(--r));opacity:0}}
+@keyframes mhGfxCardIn{from{transform:translateY(30px) scale(.7);opacity:0}to{transform:none;opacity:1}}
+@keyframes mhGfxHop{0%{transform:translateY(14px);opacity:0}60%{transform:translateY(-8px);opacity:1}100%{transform:none}}
+.mh-gfx-sheet.level{background:radial-gradient(circle at 50% 38%,color-mix(in srgb,var(--gc) 36%,transparent) 0%,#0b1026f0 62%);animation:mhGfxFade .3s both;overflow:hidden}
+.mh-gfx-rays{position:absolute;left:50%;top:38%;width:170vmax;height:170vmax;transform:translate(-50%,-50%);pointer-events:none;
+  background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--gc) 14%,transparent) 0 8deg,transparent 8deg 22deg);animation:mhGfxSpin 12s linear infinite;
+  -webkit-mask:radial-gradient(circle,#000 0 20%,transparent 60%);mask:radial-gradient(circle,#000 0 20%,transparent 60%)}
+.mh-gfx-lv{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;margin-top:-16vh}
+.mh-gfx-lv .left{display:flex;flex-direction:column;align-items:center}
+.mh-gfx-emblem{position:relative;width:140px;height:140px;display:grid;place-items:center;animation:mhGfxEm .7s .1s cubic-bezier(.2,1.6,.4,1) both}
+.mh-gfx-emblem svg{position:absolute;inset:0;width:140px;height:140px;filter:drop-shadow(0 0 20px var(--gc))}
+.mh-gfx-emblem .n{position:relative;font-weight:900;font-size:40px;line-height:1;padding-top:6px;text-shadow:0 2px 0 var(--gd),0 0 12px #fff;text-align:center;color:#fff}
+.mh-gfx-emblem .n small{display:block;font-size:13px;margin-bottom:-2px}
+.mh-gfx-ring{position:absolute;left:50%;top:50%;width:140px;height:140px;border-radius:50%;border:4px solid #fff;transform:translate(-50%,-50%);animation:mhGfxRing .9s .5s ease-out both;pointer-events:none}
+.mh-gfx-lv .ttl{font-weight:900;font-size:26px;letter-spacing:.06em;margin-top:6px;color:#fff;text-shadow:0 0 14px var(--gc),0 3px 0 #0006;animation:mhGfxPop .45s .6s cubic-bezier(.2,1.8,.4,1) both}
+.mh-gfx-lv .sub{font-size:12px;font-weight:900;color:#e2e8f0;text-align:center;max-width:300px;animation:mhGfxFade .4s .75s both}
+.mh-gfx-gains{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;width:min(300px,82vw)}
+.mh-gfx-gains li{display:flex;align-items:center;gap:8px;background:#0f172ae0;border:1px solid color-mix(in srgb,var(--gc) 60%,transparent);border-radius:12px;padding:6px 10px;font-size:12px;font-weight:900;text-align:left;
+  animation:mhGfxGain .4s var(--d) cubic-bezier(.2,1.5,.4,1) both}
+.mh-gfx-gains li small{display:block;font-size:10px;color:#94a3b8;font-weight:700}
+.mh-gfx-gains li .new{margin-left:auto;font-size:9px;background:var(--gc);color:#111;border-radius:6px;padding:1px 5px}
+.mh-gfx-face{position:absolute;height:32vh;left:50%;margin-left:-21vh;bottom:0;z-index:1;pointer-events:none;animation:mhGfxRise .6s .85s cubic-bezier(.2,1.4,.4,1) both;filter:drop-shadow(0 0 20px #000a)}
+.mh-gfx-lv-hint{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);left:0;right:0;text-align:center;font-size:10px;color:#cbd5e1;z-index:3;animation:mhGfxFade .3s 1.6s both}
+.mh-gfx-conf{position:absolute;left:50%;top:38%;width:8px;height:12px;pointer-events:none;animation:mhGfxConf 1.8s var(--d) cubic-bezier(.1,.7,.3,1) both}
+@keyframes mhGfxConf{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}10%{opacity:1}100%{transform:translate(var(--x),var(--y)) rotate(var(--r));opacity:0}}
+@keyframes mhGfxSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes mhGfxFade{from{opacity:0}to{opacity:1}}
+@keyframes mhGfxEm{0%{transform:scale(.1) rotate(-30deg);opacity:0}100%{transform:none;opacity:1}}
+@keyframes mhGfxRing{0%{transform:translate(-50%,-50%) scale(.6);opacity:1}100%{transform:translate(-50%,-50%) scale(2.6);opacity:0}}
+@keyframes mhGfxRise{from{transform:translateY(60px);opacity:0}to{transform:none;opacity:1}}
+@keyframes mhGfxGain{from{transform:translateY(14px) scale(.9);opacity:0}to{transform:none;opacity:1}}
+@media (orientation:landscape){
+  .mh-gfx-lv{flex-direction:row;gap:22px;margin-top:0}
+  .mh-gfx-sheet.has-face .mh-gfx-lv{margin-left:min(36vw,300px)}
+  .mh-gfx-lv .sub{max-width:240px}
+  .mh-gfx-gains{margin-top:0;width:290px}
+  .mh-gfx-face{left:0;margin-left:0;height:62vh}
+}
+/* 最後の形(押して飛ばした・軽い設定): 動きを終わらせた状態で見せる */
+.mh-gfx-done *,.mh-gfx-done{animation-delay:0s !important;animation-duration:.01s !important}
+.mh-gfx-done .mh-gfx-rays{animation:none !important}
+/* 控えめ: 粒・光の筋・紙吹雪・光の輪を出さない */
+.mh-gfx-reduced .pt,.mh-gfx-reduced .mh-gfx-burst,.mh-gfx-reduced .mh-gfx-rays,.mh-gfx-reduced .mh-gfx-conf,.mh-gfx-reduced .mh-gfx-ring{display:none}
+/* 最小: 動かさない(札・カード・帯がその場に出て消えるだけ) */
+.mh-gfx-minimal *,.mh-gfx-minimal{animation:none !important;transition:none !important}
+.mh-gfx-minimal .pt,.mh-gfx-minimal .mh-gfx-burst,.mh-gfx-minimal .mh-gfx-rays,.mh-gfx-minimal .mh-gfx-conf,.mh-gfx-minimal .mh-gfx-ring,.mh-gfx-minimal .mh-gfx-face{display:none}
+.mh-gfx-band{position:relative;width:100%;padding:12px 16px;display:flex;flex-direction:column;align-items:center;gap:2px;font-weight:900;color:#fff;
+  background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--gc) 45%,#0f172a) 20% 80%,transparent);border-block:1.5px solid var(--gc)}
+.mh-gfx-band .big{font-size:20px;white-space:nowrap}
+.mh-gfx-band small{font-size:11px;color:#e2e8f0;text-align:center}
+`;
+let growthFxCssDone = false;
+const ensureGrowthFxCss = () => {
+  if (growthFxCssDone || typeof document === 'undefined') return;
+  growthFxCssDone = true;
+  const el = document.createElement('style');
+  el.setAttribute('data-growth-fx-css', '');
+  el.textContent = GROWTH_FX_CSS;
+  document.head.appendChild(el);
+};
+const growthFxVisible = (screen, domHold = {}) => {
+  const all = GROWTH_FX_CALM_SCREENS.has(screen) && !domHold.all;
+  return {
+    all,
+    sheet: all && !domHold.sheet
+  };
+};
+const growthFxLevelOf = load => {
+  let reduce = false;
+  try {
+    reduce = typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {}
+  if (reduce || load === 'MINIMAL') return 'minimal';
+  if (load === 'STANDARD' || load === 'LIGHT') return 'reduced';
+  return 'full';
+};
+const growthFxBurstBits = (n, delay, size) => Array.from({
+  length: n
+}, (_, i) => {
+  const a = i / n * Math.PI * 2,
+    r = 150 + i % 3 * 40;
+  return {
+    x: `${Math.round(Math.cos(a) * r)}px`,
+    y: `${Math.round(Math.sin(a) * r - 30)}px`,
+    r: `${i * 47 % 90 - 45}deg`,
+    d: `${(delay + i % 4 * 0.04).toFixed(2)}s`,
+    s: size - i % 3 * 4
+  };
+});
+const GROWTH_FX_CONFETTI_COLORS = ['#fde047', '#ffffff', '#c084fc', '#22d3ee'];
+const GrowthFxCount = ({
+  from = 0,
+  to = 0,
+  delay = 0,
+  duration = 1000,
+  instant = false,
+  prefix = ''
+}) => {
+  const [v, setV] = useState(instant ? to : from);
+  useEffect(() => {
+    if (instant) {
+      setV(to);
+      return undefined;
+    }
+    let raf = 0;
+    const t0 = performance.now() + delay;
+    const step = now => {
+      const x = Math.max(0, Math.min(1, (now - t0) / Math.max(1, duration)));
+      setV(Math.round(from + (to - from) * (1 - Math.pow(1 - x, 3))));
+      if (x < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [from, to, delay, duration, instant]);
+  return React.createElement("span", null, prefix, Number(v).toLocaleString());
+};
+const GrowthFxGauge = ({
+  from = 0,
+  to = 0,
+  wrap = false,
+  delay = 700,
+  instant = false
+}) => {
+  const [w, setW] = useState(instant ? to : from);
+  const [noTr, setNoTr] = useState(false);
+  useEffect(() => {
+    if (instant) {
+      setW(to);
+      return undefined;
+    }
+    const ts = [];
+    if (wrap) {
+      ts.push(setTimeout(() => setW(100), delay));
+      ts.push(setTimeout(() => {
+        setNoTr(true);
+        setW(0);
+      }, delay + 650));
+      ts.push(setTimeout(() => {
+        setNoTr(false);
+        setW(to);
+      }, delay + 720));
+    } else ts.push(setTimeout(() => setW(to), delay));
+    return () => ts.forEach(clearTimeout);
+  }, [from, to, wrap, delay, instant]);
+  return React.createElement("div", {
+    className: "mh-gfx-gauge"
+  }, React.createElement("i", {
+    style: {
+      width: `${w}%`,
+      transition: noTr ? 'none' : 'width .65s cubic-bezier(.3,0,.2,1)'
+    }
+  }));
+};
+const GrowthFxChip = ({
+  chip,
+  level,
+  held
+}) => {
+  const k = growthFxKind(chip.kind);
+  const [out, setOut] = useState(false);
+  useEffect(() => {
+    if (held) return undefined;
+    setOut(false);
+    const t1 = setTimeout(() => setOut(true), GROWTH_FX_SMALL_MS);
+    const t2 = setTimeout(() => growthFxDropSmall(chip.id), GROWTH_FX_SMALL_MS + 320);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [chip.id, chip.rev, held]);
+  const pts = level === 'full' ? [0, 1, 2, 3] : [];
+  return React.createElement("div", {
+    className: `mh-gfx-chip${out ? ' out' : ''}`,
+    "data-growth-fx-chip": chip.kind,
+    style: {
+      '--gc': k.color
+    }
+  }, React.createElement("span", {
+    key: `i${chip.rev}`,
+    className: "ico beat",
+    "aria-hidden": "true"
+  }, k.icon), React.createElement("span", {
+    className: "min-w-0"
+  }, React.createElement("span", {
+    className: "who block"
+  }, chip.name ? `${chip.name}・` : '', k.label), React.createElement("span", {
+    className: "bar block"
+  }, React.createElement("i", {
+    style: {
+      width: `${chip.pctTo}%`
+    }
+  }))), React.createElement("span", {
+    key: `n${chip.rev}`,
+    className: "num pop"
+  }, "+", Number(chip.gain).toLocaleString()), pts.map(i => React.createElement("span", {
+    key: `p${chip.rev}-${i}`,
+    className: "pt",
+    "aria-hidden": "true",
+    style: {
+      '--dx': `${i * 53 % 50 - 25}px`,
+      animationDelay: `${0.15 + i * 0.1}s`
+    }
+  }, k.particle)));
+};
+const GrowthFxItemCard = ({
+  sheet,
+  level,
+  onClose
+}) => {
+  const k = growthFxKind(sheet.kind);
+  const instant = level === 'minimal';
+  useEffect(() => {
+    const t = setTimeout(onClose, GROWTH_FX_ITEM_MS);
+    return () => clearTimeout(t);
+  }, [sheet.id]);
+  const reaction = sheet.reaction === 'like' || sheet.reaction === 'dislike' ? sheet.reaction : null;
+  return React.createElement("div", {
+    className: `mh-gfx-sheet item mh-gfx-${level}`,
+    "data-growth-fx-sheet": "item",
+    "data-growth-fx-kind": sheet.kind,
+    role: "dialog",
+    "aria-label": sheet.title || '',
+    style: {
+      '--gc': k.color
+    },
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "mh-gfx-card"
+  }, (sheet.faces || []).length > 0 && React.createElement("div", {
+    className: "faces"
+  }, sheet.faces.map((src, i) => React.createElement("img", {
+    key: i,
+    src: src,
+    alt: "",
+    className: sheet.faceRound ? 'round' : '',
+    style: {
+      animationDelay: `${0.4 + i * 0.15}s`
+    }
+  }))), React.createElement("div", {
+    className: "ttl"
+  }, sheet.title, reaction && React.createElement("span", {
+    className: `tag ${reaction}`
+  }, reaction === 'like' ? '大好き！' : 'ちょっと苦手…')), sheet.item && React.createElement("div", {
+    className: "itm"
+  }, sheet.item), (sheet.rows || []).map((row, i) => {
+    const rk = growthFxKind(row.kind);
+    const lvUp = growthFxNum(row.levelTo) > growthFxNum(row.levelFrom);
+    return React.createElement("div", {
+      key: i,
+      className: "mh-gfx-row",
+      style: {
+        '--rc': rk.color
+      }
+    }, React.createElement("span", {
+      className: "ico",
+      "aria-hidden": "true"
+    }, rk.icon), React.createElement("div", {
+      style: {
+        flex: 1,
+        minWidth: 0
+      }
+    }, React.createElement("div", {
+      className: "lab"
+    }, React.createElement("em", null, row.label || rk.label, row.levelTo != null ? React.createElement(React.Fragment, null, " Lv.", React.createElement(GrowthFxCount, {
+      from: row.levelFrom,
+      to: row.levelTo,
+      delay: 900,
+      duration: 900,
+      instant: instant
+    })) : null), lvUp && React.createElement("span", {
+      className: "up",
+      style: {
+        animationDelay: instant ? '0s' : '1.6s'
+      }
+    }, "Lv +", row.levelTo - row.levelFrom)), React.createElement(GrowthFxGauge, {
+      from: row.pctFrom,
+      to: row.pctTo,
+      wrap: lvUp,
+      delay: 700 + i * 400,
+      instant: instant
+    })), React.createElement("div", {
+      className: "val"
+    }, React.createElement(GrowthFxCount, {
+      from: 0,
+      to: growthFxNum(row.gain),
+      delay: 700 + i * 400,
+      duration: 1100,
+      instant: instant,
+      prefix: "+"
+    }), row.unit && React.createElement("small", null, row.unit)));
+  }), React.createElement("div", {
+    className: "mh-gfx-hint"
+  }, "押すと閉じる")), level === 'full' && React.createElement("div", {
+    className: "mh-gfx-burst",
+    "aria-hidden": "true"
+  }, growthFxBurstBits(reaction === 'like' ? 18 : 12, 0.7, 18).map((b, i) => React.createElement("span", {
+    key: i,
+    style: {
+      '--x': b.x,
+      '--y': b.y,
+      '--r': b.r,
+      '--d': b.d,
+      fontSize: `${b.s}px`
+    }
+  }, k.particle))));
+};
+const GrowthFxLevelUp = ({
+  sheet,
+  level,
+  onClose
+}) => {
+  const k = growthFxKind(sheet.kind);
+  const [done, setDone] = useState(level === 'minimal');
+  const opened = useRef(Date.now());
+  useEffect(() => {
+    try {
+      if (level !== 'minimal' && typeof Audio_ !== 'undefined') Audio_.se.levelUp();
+    } catch {}
+  }, [sheet.id]);
+  const next = () => {
+    if (Date.now() - opened.current < 250) return;
+    if (!done) setDone(true);else onClose();
+  };
+  const gains = Array.isArray(sheet.gains) ? sheet.gains : [];
+  const label = `${k.label}が Lv.${sheet.levelTo} に上がりました`;
+  if (level === 'minimal') {
+    return React.createElement("div", {
+      className: "mh-gfx-sheet level-mini mh-gfx-minimal",
+      "data-growth-fx-sheet": "level",
+      "data-growth-fx-kind": sheet.kind,
+      role: "dialog",
+      "aria-label": label,
+      style: {
+        '--gc': k.color,
+        background: '#0b102699'
+      },
+      onClick: onClose
+    }, React.createElement("div", {
+      className: "mh-gfx-band"
+    }, React.createElement("span", {
+      className: "big"
+    }, k.icon, " ", k.label, " Lv.", sheet.levelTo), React.createElement("small", null, sheet.sub, gains.length ? ` ・ ${gains.map(g => g.text).join('・')}` : ''), React.createElement("small", null, "押すと閉じる")));
+  }
+  const conf = level === 'full' ? Array.from({
+    length: 24
+  }, (_, i) => ({
+    c: i % 2 ? k.color : GROWTH_FX_CONFETTI_COLORS[i % 4],
+    x: `${i * 71 % 340 - 170}px`,
+    y: `${i * 43 % 300 - 200}px`,
+    r: `${i * 57}deg`,
+    d: `${(0.5 + i % 6 * 0.05).toFixed(2)}s`
+  })) : [];
+  return React.createElement("div", {
+    className: `mh-gfx-sheet level mh-gfx-${level}${done ? ' mh-gfx-done' : ''}${sheet.face ? ' has-face' : ''}`,
+    "data-growth-fx-sheet": "level",
+    "data-growth-fx-kind": sheet.kind,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": label,
+    tabIndex: 0,
+    style: {
+      '--gc': k.color,
+      '--gd': k.deep
+    },
+    onClick: next,
+    onKeyDown: e => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
+        e.preventDefault();
+        next();
+      }
+    }
+  }, React.createElement("div", {
+    className: "mh-gfx-rays",
+    "aria-hidden": "true"
+  }), conf.map((c, i) => React.createElement("span", {
+    key: i,
+    className: "mh-gfx-conf",
+    "aria-hidden": "true",
+    style: {
+      background: c.c,
+      '--x': c.x,
+      '--y': c.y,
+      '--r': c.r,
+      '--d': c.d
+    }
+  })), sheet.face && React.createElement("img", {
+    className: "mh-gfx-face",
+    src: sheet.face,
+    alt: ""
+  }), React.createElement("div", {
+    className: "mh-gfx-lv"
+  }, React.createElement("div", {
+    className: "left"
+  }, React.createElement("div", {
+    className: "mh-gfx-emblem"
+  }, React.createElement("svg", {
+    viewBox: "0 0 100 100",
+    "aria-hidden": "true"
+  }, sheet.kind === 'bond' ? React.createElement("path", {
+    d: "M50 88 C20 66 6 50 6 32 C6 18 17 8 30 8 C40 8 46 14 50 21 C54 14 60 8 70 8 C83 8 94 18 94 32 C94 50 80 66 50 88Z",
+    fill: k.color,
+    stroke: "#fff",
+    strokeWidth: "3"
+  }) : sheet.kind === 'friend' ? React.createElement("g", {
+    fill: k.color,
+    stroke: "#fff",
+    strokeWidth: "3"
+  }, React.createElement("circle", {
+    cx: "36",
+    cy: "52",
+    r: "32"
+  }), React.createElement("circle", {
+    cx: "64",
+    cy: "52",
+    r: "32",
+    fillOpacity: ".85"
+  })) : sheet.kind === 'star' ? React.createElement("path", {
+    d: "M50 4 L62 36 L96 38 L69 59 L79 93 L50 73 L21 93 L31 59 L4 38 L38 36 Z",
+    fill: k.color,
+    stroke: "#fff",
+    strokeWidth: "3"
+  }) : React.createElement("path", {
+    d: "M50 6 L88 20 L84 58 C80 76 66 88 50 95 C34 88 20 76 16 58 L12 20 Z",
+    fill: k.color,
+    stroke: "#fff",
+    strokeWidth: "3"
+  })), React.createElement("span", {
+    className: "n"
+  }, React.createElement("small", null, "Lv."), sheet.levelTo), React.createElement("div", {
+    className: "mh-gfx-ring",
+    "aria-hidden": "true"
+  })), React.createElement("div", {
+    className: "ttl"
+  }, sheet.title || `${k.label} UP!`), sheet.sub && React.createElement("div", {
+    className: "sub"
+  }, sheet.sub)), gains.length > 0 && React.createElement("ul", {
+    className: "mh-gfx-gains",
+    "aria-label": "新しく開いたもの"
+  }, gains.map((g, i) => React.createElement("li", {
+    key: i,
+    style: {
+      '--d': `${1.2 + i * 0.3}s`
+    }
+  }, React.createElement("span", {
+    "aria-hidden": "true"
+  }, g.icon || '✨'), React.createElement("span", {
+    className: "min-w-0"
+  }, React.createElement("b", null, String(g.text || '')), g.note && React.createElement("small", null, String(g.note))), g.isNew && React.createElement("span", {
+    className: "new"
+  }, "NEW"))))), React.createElement("div", {
+    className: "mh-gfx-lv-hint"
+  }, done ? '押すと閉じる' : '押すと先へ'));
+};
+const GrowthFxLayer = ({
+  screen,
+  load
+}) => {
+  const [, setTick] = useState(0);
+  const [domHold, setDomHold] = useState({
+    all: false,
+    sheet: false
+  });
+  useEffect(() => {
+    ensureGrowthFxCss();
+    return growthFxSubscribe(() => setTick(t => t + 1));
+  }, []);
+  const small = GROWTH_FX_STORE.small,
+    sheets = GROWTH_FX_STORE.sheets;
+  const pending = small.length + sheets.length;
+  useEffect(() => {
+    if (!pending || typeof document === 'undefined') return undefined;
+    const check = () => {
+      const all = !!document.querySelector(GROWTH_FX_HOLD_ALL_SELECTOR);
+      const sheet = all || !!document.querySelector(GROWTH_FX_HOLD_SHEET_SELECTOR);
+      setDomHold(prev => prev.all === all && prev.sheet === sheet ? prev : {
+        all,
+        sheet
+      });
+    };
+    check();
+    const t = setInterval(check, 600);
+    return () => clearInterval(t);
+  }, [pending > 0]);
+  if (!pending) return null;
+  const vis = growthFxVisible(screen, domHold);
+  const holdAll = !vis.all;
+  const holdSheet = !vis.sheet;
+  const level = growthFxLevelOf(load);
+  const sheet = !holdSheet ? sheets[0] : null;
+  return React.createElement(React.Fragment, null, !holdAll && !sheet && small.length > 0 && React.createElement("div", {
+    className: `mh-gfx-chips mh-gfx-${level}`,
+    "data-growth-fx-chips": true,
+    "aria-live": "polite"
+  }, small.slice(0, GROWTH_FX_SMALL_MAX).map(c => React.createElement(GrowthFxChip, {
+    key: c.id,
+    chip: c,
+    level: level,
+    held: false
+  }))), sheet && (sheet.tier === 'level' ? React.createElement(GrowthFxLevelUp, {
+    key: sheet.id,
+    sheet: sheet,
+    level: level,
+    onClose: () => growthFxDropSheet(sheet.id)
+  }) : React.createElement(GrowthFxItemCard, {
+    key: sheet.id,
+    sheet: sheet,
+    level: level,
+    onClose: () => growthFxDropSheet(sheet.id)
+  })));
+};
 class MhErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -60918,7 +62474,7 @@ function ItemInventoryScreen({
     className: "shrink-0 rounded-full bg-slate-950/60 px-2.5 py-0.5 text-[11px] font-black tabular-nums text-teal-300"
   }, "所持数: ", ownedItems[item.id])), React.createElement("div", {
     className: "text-[10px] text-slate-400 leading-relaxed mt-1"
-  }, helpWrap(item.desc))), item.usage === 'battleSkip' ? React.createElement("div", {
+  }, helpWrap(typeof assistantLifeItemDesc === 'function' ? assistantLifeItemDesc(item) : item.desc))), item.usage === 'battleSkip' ? React.createElement("div", {
     className: usageNoteClass
   }, "バトルの", React.createElement("br", null), DIFFICULTY_SETTINGS[item.skipDifficulty]?.label, React.createElement("br", null), "スキップで使用") : item.usage === 'breakthrough' ? React.createElement("div", {
     className: usageNoteClass
@@ -60934,7 +62490,12 @@ function ItemInventoryScreen({
     className: usageNoteClass
   }, "マーケットで", React.createElement("br", null), HERO_PROOF_SHARD_PER_PROOF, "個→", React.createElement("br", null), "勇者の証1個") : item.usage === 'rhythmBuddy' ? React.createElement("div", {
     className: usageNoteClass
-  }, "モンヒロビートの", React.createElement("br", null), "マルチで", React.createElement("br", null), "マスモンを呼ぶ") : item.usage === 'assistantPeer' ? React.createElement("div", {
+  }, "モンヒロビートの", React.createElement("br", null), "マルチで", React.createElement("br", null), "マスモンを呼ぶ") : item.usage === 'assistantPeer' && typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() ? React.createElement("button", {
+    type: "button",
+    "data-assistant-life-item-use": item.id,
+    onClick: () => assistantLifeOpenScreen(),
+    className: "shrink-0 w-[84px] min-h-[44px] rounded-xl border border-amber-300/60 bg-amber-400/15 text-[12px] font-black text-amber-100 active:scale-95"
+  }, "使う ▸") : item.usage === 'assistantPeer' ? React.createElement("div", {
     className: usageNoteClass
   }, "プロフィールの", React.createElement("br", null), "助手どうしの", React.createElement("br", null), "関係図で使う") : item.usage === 'soulRankRespec' || item.usage === 'soulCrystal' ? React.createElement("div", {
     className: usageNoteClass
@@ -61359,7 +62920,7 @@ function BreederMarketScreen({
       type: 'item',
       currency: 'beatPoint',
       cost: offer.cost,
-      desc: base?.desc || '',
+      desc: (typeof assistantLifeItemDesc === 'function' ? assistantLifeItemDesc(base) : base?.desc) || '',
       base
     };
   };
@@ -85296,6 +86857,7 @@ const rhythmMultiCleanMessage = raw => {
       out.mb = rhythmMultiText(raw.mb, 40).replace(/[^A-Za-z0-9_-]/g, '');
       out.mc = Array.isArray(raw.mc) ? raw.mc.slice(0, 8).map(rhythmMultiColorId) : [];
       out.pw = rhythmMultiText(raw.pw, 12).replace(/[^a-z]/g, '');
+      out.as = rhythmMultiText(raw.as, 20).replace(/[^a-z]/g, '');
     }
     return out;
   }
@@ -85592,7 +87154,8 @@ const RHYTHM_MULTI = (() => {
       owner: s.selfId,
       mb: c.mb,
       mc: c.mc,
-      pw: c.pickWhy || ''
+      pw: c.pickWhy || '',
+      as: c.as || undefined
     });
   };
   const reportCpuResult = round => {
@@ -86257,7 +87820,8 @@ const RHYTHM_MULTI = (() => {
         owner: msg.owner || '',
         mb: msg.mb || '',
         mc: msg.mc || [],
-        pickWhy: msg.pw || ''
+        pickWhy: msg.pw || '',
+        as: msg.as || ''
       };
       if (msg.room && fromHost()) {
         const r = msg.room;
@@ -86400,6 +87964,7 @@ const RHYTHM_MULTI = (() => {
         level: rhythmMultiInt(buddy.level, 9999),
         mb: rhythmMultiText(buddy.baseId, 40).replace(/[^A-Za-z0-9_-]/g, ''),
         mc: Array.isArray(buddy.colors) ? buddy.colors.slice(0, 8).map(rhythmMultiColorId) : [],
+        as: rhythmMultiText(buddy.assistantId, 20).replace(/[^a-z]/g, ''),
         icon: '',
         frame: '',
         bid: '',
@@ -86760,6 +88325,11 @@ const RHYTHM_MULTI = (() => {
       const x = s.cpus.find(c => c.masuId === masuId);
       if (!x) return;
       if (growth.levelUp > 0) cpuSay(x, 'lvUp', {
+        who: ownerName()
+      }, {
+        extraDelay: 800,
+        skipGap: true
+      });else if (growth.likeUp > 0) cpuSay(x, 'likeUp', {
         who: ownerName()
       }, {
         extraDelay: 800,
@@ -87558,6 +89128,23 @@ function RhythmMultiAvatar({
   sizeClass = 'h-10 w-10',
   small = false
 }) {
+  const asWho = m.cpu && m.as && typeof assistantById === 'function' ? assistantById(m.as) : null;
+  if (asWho) {
+    const src = typeof assistantFaceSrc === 'function' ? assistantFaceSrc(asWho, null) : null;
+    return React.createElement("span", {
+      "data-rhythm-multi-cpu-avatar": true,
+      "data-rhythm-multi-assist-avatar": m.as,
+      className: `relative block shrink-0 overflow-hidden rounded-full border-2 border-pink-300/90 bg-slate-800 ${sizeClass}`
+    }, src ? React.createElement("img", {
+      src: src,
+      alt: "",
+      draggable: false,
+      className: "h-full w-full object-cover"
+    }) : React.createElement("span", {
+      "aria-hidden": "true",
+      className: "flex h-full w-full items-center justify-center text-lg"
+    }, asWho.emoji || '🎤'));
+  }
   if (m.cpu) {
     const base = m.mb && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[m.mb] : null;
     const src = masuDisplayImageUrl(base);
@@ -87657,10 +89244,14 @@ function RhythmMultiMemberCards({
       className: `min-w-0 ${tall ? 'mt-1 w-full text-center' : 'mt-0.5 w-full text-center landscape:mt-0 landscape:flex-1 landscape:text-left'}`
     }, React.createElement("span", {
       className: `block font-black leading-tight ${tall ? 'line-clamp-2 break-all text-[11px] landscape:text-sm' : 'truncate text-[10px]'}`
-    }, m.cpu && React.createElement("b", {
+    }, m.cpu && (m.as ? React.createElement("b", {
+      "data-rhythm-multi-cpu-mark": true,
+      "data-rhythm-multi-assist-mark": true,
+      className: "mr-0.5 rounded bg-pink-300 px-0.5 text-[8px] font-black text-slate-950"
+    }, "助手") : React.createElement("b", {
       "data-rhythm-multi-cpu-mark": true,
       className: "mr-0.5 rounded bg-lime-300 px-0.5 text-[8px] font-black text-slate-950"
-    }, "CPU"), m.name, self ? '*' : ''), badge.sub && React.createElement("small", {
+    }, "CPU")), m.name, self ? '*' : ''), badge.sub && React.createElement("small", {
       className: `block truncate font-bold leading-tight text-slate-400 ${tall ? 'text-[9px] landscape:text-[11px]' : 'text-[8px]'}`
     }, badge.sub)));
   }));
@@ -88139,7 +89730,8 @@ function RhythmMultiScreen({
   onUseBuddyTicket = null,
   onRefundBuddyTicket = null,
   onOpenMasuBeat = null,
-  onStepAway = null
+  onStepAway = null,
+  sessionAssistants = []
 }) {
   const view = useRhythmMultiView();
   useModeSelectStageCss();
@@ -88257,7 +89849,7 @@ function RhythmMultiScreen({
   const [buddyBumped, setBuddyBumped] = React.useState(false);
   React.useEffect(() => {
     RHYTHM_MULTI.setCpuBrain({
-      ...rhythmBuddyMakeBrain(songs),
+      ...rhythmAssistSessionWrapBrain(rhythmBuddyMakeBrain(songs), songs),
       refund: refundBuddy,
       ended: endBuddy,
       started: startBuddy
@@ -88306,6 +89898,50 @@ function RhythmMultiScreen({
     if (!joined) endBuddy(masu.id, call.id);
     setBuddySheet('');
   };
+  const callAssistant = async who => {
+    if (!who || !rhythmAssistSessionEnabled() || !RHYTHM_MULTI.canSummon()) {
+      setBuddySheet('');
+      return;
+    }
+    const key = rhythmAssistSessionKey(who.id);
+    if ((view && view.myCpus ? view.myCpus : []).some(c => c.masuId === key)) return;
+    const day = rhythmBuddyDayKey(Date.now());
+    const call = {
+      id: rhythmBuddyCallId(),
+      masuId: key,
+      at: Date.now(),
+      load: RHYTHM_BUDDY_LOAD_ID,
+      kind: 'assistant',
+      assistantId: who.id
+    };
+    let paid = (await RHYTHM_BUDDY_STORE.update(st => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
+    if (!paid && onUseBuddyTicket) {
+      try {
+        paid = (await onUseBuddyTicket()) === true ? 'ticket' : '';
+      } catch (_) {
+        paid = '';
+      }
+      if (paid) await RHYTHM_BUDDY_STORE.update(st => rhythmBuddyAddCall(st, {
+        ...call,
+        paid: 'ticket',
+        day
+      }));
+    }
+    if (!paid) return;
+    setBuddyBumped(false);
+    const joined = RHYTHM_MULTI.summon({
+      masuId: key,
+      callId: call.id,
+      name: rhythmAssistSessionName(who.id),
+      level: rhythmAssistSessionLevel(RHYTHM_ASSIST_SESSION_STORE.get(), who.id),
+      baseId: '',
+      colors: [],
+      assistantId: who.id
+    });
+    if (!joined) endBuddy(key, call.id);
+    setBuddySheet('');
+  };
+  const sessionAssistantsOn = rhythmAssistSessionEnabled() && (sessionAssistants || []).length > 0;
   const buddySongName = id => {
     const song = songs.find(x => x.songId === id);
     return song ? rhythmSongFullName(song) : '(曲)';
@@ -88330,6 +89966,8 @@ function RhythmMultiScreen({
   const buddySheetLayer = buddySheet === 'pick' ? React.createElement(RhythmBuddySheet, {
     masuMons: masuMons,
     masuPicker: masuPicker,
+    assistants: sessionAssistants,
+    pickAssistant: callAssistant,
     breederName: profile && profile.name,
     songName: buddySongName,
     tickets: buddyTickets,
@@ -88337,14 +89975,14 @@ function RhythmMultiScreen({
     onClose: () => setBuddySheet(''),
     calledIds: (view && view.myCpus ? view.myCpus : []).map(c => c.masuId)
   }) : null;
-  const buddyCallButton = (extra = '') => view && RHYTHM_MULTI.canSummon() && masuMons.length > 0 ? React.createElement("button", {
+  const buddyCallButton = (extra = '') => view && RHYTHM_MULTI.canSummon() && (masuMons.length > 0 || sessionAssistantsOn) ? React.createElement("button", {
     "data-rhythm-buddy-open": true,
     type: "button",
     onClick: () => setBuddySheet('pick'),
     className: `min-h-[44px] w-full rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-2 text-sm font-black text-slate-950 ${extra}`
-  }, "🎵 マスモンを呼ぶ", React.createElement("small", {
+  }, sessionAssistantsOn ? '🎵 マスモン・助手を呼ぶ' : '🎵 マスモンを呼ぶ', React.createElement("small", {
     className: "block text-[9px] font-bold opacity-80"
-  }, "マスモンがCPUとして一緒に遊びます")) : null;
+  }, sessionAssistantsOn ? 'マスモンや助手がCPUとして一緒に遊びます' : 'マスモンがCPUとして一緒に遊びます')) : null;
   const mine = view ? view.members.find(m => m.id === view.selfId) : null;
   const [selSongId, setSelSongId] = React.useState(mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '');
   const [selectView, setSelectView] = React.useState(null);
@@ -88637,7 +90275,7 @@ function RhythmMultiScreen({
     onClick: cycleSelectSec,
     className: `min-h-[40px] shrink-0 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 text-[11px] font-black leading-tight text-amber-100 ${extra}`
   }), "選曲", React.createElement("br", null), rhythmMultiSelectSecLabel(room.selectSec));
-  const buddyHeaderButton = (extra = '') => view && RHYTHM_MULTI.canSummon() && masuMons.length > 0 ? React.createElement("button", {
+  const buddyHeaderButton = (extra = '') => view && RHYTHM_MULTI.canSummon() && (masuMons.length > 0 || sessionAssistantsOn) ? React.createElement("button", {
     "data-rhythm-buddy-open": true,
     "data-rhythm-buddy-header": true,
     type: "button",
@@ -89699,8 +91337,12 @@ function RhythmMultiScreen({
       const grown = (view.myCpus || []).map(c => {
         const cpuRow = team.rows.find(row => row.m.id === c.id);
         const masu = cpuRow && cpuRow.res ? masuMons.find(x => x && x.id === c.masuId) : null;
+        const assistantId = cpuRow && cpuRow.res ? rhythmAssistSessionIdOf(c.masuId) : '';
         return masu ? {
           masu,
+          cpuRow
+        } : assistantId ? {
+          assistantId,
           cpuRow
         } : null;
       }).filter(Boolean);
@@ -89710,8 +91352,9 @@ function RhythmMultiScreen({
         className: "grid shrink-0 grid-cols-1 gap-1 px-3 pt-1 landscape:grid-cols-2 [[data-mh-view-rotation=true]_&]:grid-cols-2"
       }, grown.map(({
         masu,
+        assistantId,
         cpuRow
-      }) => React.createElement(RhythmBuddyGrowth, {
+      }) => masu ? React.createElement(RhythmBuddyGrowth, {
         key: masu.id,
         masu: masu,
         round: room.round,
@@ -89723,7 +91366,27 @@ function RhythmMultiScreen({
         humans: team.rows.filter(row => !row.m.cpu).length,
         score: cpuRow.res.score,
         maxScore: ((typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find(d => d.id === cpuRow.res.diffId) || {}).maxScore || 0
-      })));
+      }) : React.createElement(RhythmAssistSessionGrowth, {
+        key: assistantId,
+        assistantId: assistantId,
+        onTickets: n => {
+          for (let i = 0; i < n; i += 1) {
+            if (onRefundBuddyTicket) void onRefundBuddyTicket();
+          }
+        },
+        round: room.round,
+        songId: room.songId,
+        diffId: cpuRow.res.diffId,
+        durationMs: song ? Number(song.playDurationMs) || 0 : 0,
+        teamRank: team.rank,
+        chartLevel: song && song.difficulties && song.difficulties[cpuRow.res.diffId] ? Number(song.difficulties[cpuRow.res.diffId].level) || 0 : 0,
+        humans: team.rows.filter(row => !row.m.cpu).length,
+        score: cpuRow.res.score,
+        maxScore: ((typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find(d => d.id === cpuRow.res.diffId) || {}).maxScore || 0
+      })), React.createElement(RhythmAssistSessionDuoResult, {
+        round: room.round,
+        ids: grown.map(g => g.assistantId).filter(Boolean)
+      }));
     })(), React.createElement("div", {
       className: "mt-auto flex shrink-0 gap-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 landscape:justify-end landscape:border-t-0 landscape:bg-transparent [@media(max-height:440px)]:pt-1 [[data-mh-view-rotation=true]_&]:pt-1",
       style: {
@@ -91490,7 +93153,9 @@ function RhythmBuddySheet({
   pick,
   onClose,
   calledIds = [],
-  breederName = ''
+  breederName = '',
+  assistants = [],
+  pickAssistant = null
 }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
@@ -91501,6 +93166,18 @@ function RhythmBuddySheet({
   const canPay = freeLeft > 0 || tickets > 0;
   const listControls = useRhythmBuddyListControls();
   const [selId, setSelId] = React.useState('');
+  const assistOn = rhythmAssistSessionEnabled() && typeof pickAssistant === 'function' && (assistants || []).length > 0;
+  const [tab, setTab] = React.useState(() => (masuMons || []).length ? 'masu' : 'assistant');
+  const tabNow = assistOn ? tab : 'masu';
+  const chooseAssistant = async who => {
+    if (busy || !canPay) return;
+    setBusy(true);
+    try {
+      await pickAssistant(who);
+    } finally {
+      setBusy(false);
+    }
+  };
   const choose = async masu => {
     if (busy || !canPay) return;
     setBusy(true);
@@ -91529,19 +93206,46 @@ function RhythmBuddySheet({
     className: "mb-2 flex items-center gap-2"
   }, React.createElement("h3", {
     className: "min-w-0 flex-1 text-base font-black text-lime-200"
-  }, "🎵 マスモンを呼ぶ"), React.createElement("button", {
+  }, assistOn ? '🎵 一緒に遊ぶ相手を呼ぶ' : '🎵 マスモンを呼ぶ'), React.createElement("button", {
     type: "button",
     "aria-label": "閉じる",
     onClick: onClose,
     className: "min-h-[40px] min-w-[40px] rounded-full bg-slate-800 text-lg font-black"
-  }, "✕")), React.createElement(RhythmBuddyAllowance, {
+  }, "✕")), assistOn && React.createElement("div", {
+    "data-rhythm-buddy-tabs": true,
+    role: "tablist",
+    className: "mb-2 flex gap-1.5"
+  }, [['masu', '🎵 マスモン'], ['assistant', '🎤 助手']].map(([id, label]) => React.createElement("button", {
+    key: id,
+    type: "button",
+    role: "tab",
+    "aria-selected": tabNow === id,
+    "data-rhythm-buddy-tab": id,
+    onClick: () => setTab(id),
+    className: `min-h-[40px] flex-1 rounded-xl text-[13px] font-black ${tabNow === id ? 'border-2 border-pink-300 bg-pink-500/25 text-pink-100' : 'border border-white/10 bg-slate-800 text-slate-300'}`
+  }, label))), React.createElement(RhythmBuddyAllowance, {
     freeLeft: freeLeft,
     tickets: tickets,
     className: "mb-1 text-slate-200"
-  }), React.createElement("p", {
+  }), tabNow === 'assistant' ? React.createElement("p", {
+    "data-rhythm-assist-note": true,
     className: "mb-2 text-[10px] font-bold leading-relaxed text-slate-400",
     style: JA_WRAP_STYLE
-  }, jaWrap(`マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日${RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。`))), React.createElement("div", {
+  }, jaWrap('助手をえらんで、CPUとしてこの部屋に呼べます。回数はマスモンと同じです(1日3回までは無料、そのあとはセッション券を1枚使います)。')) : React.createElement("p", {
+    className: "mb-2 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日${RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。`))), tabNow === 'assistant' ? React.createElement("div", {
+    className: "flex min-h-0 flex-1 flex-col"
+  }, React.createElement(RhythmAssistSessionPicker, {
+    assistants: assistants,
+    calledIds: calledIds,
+    canPay: canPay,
+    busy: busy,
+    onPick: chooseAssistant
+  }), !canPay && React.createElement("p", {
+    "data-rhythm-buddy-empty": true,
+    className: "mt-2 text-[11px] font-black text-rose-300"
+  }, "今日の無料ぶんを使い切りました。セッション券があれば呼べます")) : React.createElement("div", {
     className: "flex min-h-0 flex-1 flex-col"
   }, React.createElement("div", {
     className: "min-h-0 flex-1 overflow-y-auto"
@@ -92038,6 +93742,711 @@ function RhythmBuddyRankingBoard({
     renderBreederIcon: renderBreederIcon,
     songName: songName
   }));
+}
+const RHYTHM_ASSIST_SESSION_STORE = (() => {
+  let state = rhythmAssistSessionNormalize(null);
+  let loaded = false;
+  let chain = Promise.resolve();
+  const listeners = new Set();
+  const emit = () => listeners.forEach(fn => {
+    try {
+      fn(state);
+    } catch (_) {}
+  });
+  return {
+    get: () => state,
+    load() {
+      chain = chain.then(async () => {
+        try {
+          state = rhythmAssistSessionNormalize(await storeGet(RHYTHM_ASSIST_SESSION_KEY, null));
+        } catch (_) {}
+        loaded = true;
+        emit();
+      });
+      return chain;
+    },
+    update(fn) {
+      let out = null;
+      chain = chain.then(async () => {
+        if (!loaded) {
+          try {
+            state = rhythmAssistSessionNormalize(await storeGet(RHYTHM_ASSIST_SESSION_KEY, null));
+          } catch (_) {}
+          loaded = true;
+        }
+        const next = fn(state);
+        if (!next) return;
+        out = rhythmAssistSessionNormalize(next);
+        state = out;
+        try {
+          await storeSet(RHYTHM_ASSIST_SESSION_KEY, state);
+        } catch (_) {}
+        emit();
+      });
+      return chain.then(() => out);
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    }
+  };
+})();
+const useRhythmAssistSessionState = () => {
+  const [state, setState] = React.useState(() => RHYTHM_ASSIST_SESSION_STORE.get());
+  React.useEffect(() => {
+    const off = RHYTHM_ASSIST_SESSION_STORE.subscribe(setState);
+    void RHYTHM_ASSIST_SESSION_STORE.load();
+    return off;
+  }, []);
+  return state;
+};
+const rhythmAssistSessionWho = assistantId => typeof assistantById === 'function' ? assistantById(assistantId) : null;
+const rhythmAssistSessionLikedNames = assistantId => {
+  const t = RHYTHM_ASSIST_SESSION_TASTE[assistantId];
+  const songs = typeof RHYTHM_SONGS !== 'undefined' && Array.isArray(RHYTHM_SONGS) ? RHYTHM_SONGS : [];
+  return t ? t.like.map(ids => {
+    const song = songs.find(x => x && ids.includes(x.songId));
+    return song ? String(song.displayName || '') : '';
+  }).filter(Boolean) : [];
+};
+const rhythmAssistSessionName = assistantId => {
+  const who = rhythmAssistSessionWho(assistantId);
+  return String(who && who.name || '助手').slice(0, 12);
+};
+const RHYTHM_ASSIST_SESSION_RECENT = new Map();
+const RHYTHM_ASSIST_SESSION_RECENT_KEEP = 12;
+const rhythmAssistSessionPickLine = (assistantId, scene, rand = Math.random) => {
+  const table = typeof RHYTHM_ASSIST_SESSION_SOLO_LINES !== 'undefined' ? RHYTHM_ASSIST_SESSION_SOLO_LINES[assistantId] : null;
+  const list = table && Array.isArray(table[scene]) ? table[scene] : [];
+  if (!list.length) return null;
+  const recent = RHYTHM_ASSIST_SESSION_RECENT.get(assistantId) || [];
+  const fresh = list.filter(x => !recent.includes(x[1]));
+  const pool = fresh.length ? fresh : list;
+  const hit = pool[Math.floor(rand() * pool.length)];
+  RHYTHM_ASSIST_SESSION_RECENT.set(assistantId, [hit[1], ...recent.filter(t => t !== hit[1])].slice(0, RHYTHM_ASSIST_SESSION_RECENT_KEEP));
+  return hit;
+};
+const rhythmAssistSessionSongScene = (assistantId, songId) => {
+  const table = typeof RHYTHM_ASSIST_SESSION_SOLO_LINES !== 'undefined' ? RHYTHM_ASSIST_SESSION_SOLO_LINES[assistantId] : null;
+  if (!table || !songId) return '';
+  if (table[`song:${songId}`]) return `song:${songId}`;
+  const t = RHYTHM_ASSIST_SESSION_TASTE[assistantId];
+  const family = t ? [...(t.like.find(ids => ids.includes(songId)) || []), ...(t.dislike.includes(songId) ? t.dislike : [])] : [];
+  const key = family.map(id => `song:${id}`).find(k => table[k]);
+  return key || '';
+};
+const rhythmAssistSessionRatio = (score, diffId) => {
+  const diffDef = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find(d => d.id === diffId);
+  return Number(score) / (diffDef && diffDef.maxScore || 1000000);
+};
+const rhythmAssistSessionTalk = ({
+  assistantId,
+  kind,
+  songId = '',
+  score = 0,
+  diffId = '',
+  mvp = false,
+  fc = 0,
+  quit = false,
+  rand = Math.random
+}) => {
+  const say = scene => {
+    const hit = rhythmAssistSessionPickLine(assistantId, scene, rand);
+    return hit ? hit[1] : '';
+  };
+  const roomSong = () => {
+    const v = typeof RHYTHM_MULTI !== 'undefined' ? RHYTHM_MULTI.view() : null;
+    return v && v.room && v.room.songId || '';
+  };
+  if (kind === 'join') return say('join');
+  if (kind === 'combo' || kind === 'miss' || kind === 'climax' || kind === 'last') return say(kind);
+  if (kind === 'lvUp') return say('levelup');
+  if (kind === 'likeUp') return say('likeup');
+  if (kind === 'pick' || kind === 'song') {
+    if (!songId) return '';
+    const taste = rhythmAssistSessionTaste(assistantId, songId);
+    if (taste === 'like') return say('like');
+    if (taste === 'dislike') return say('dislike');
+    const mon = rhythmAssistSessionMon(RHYTHM_ASSIST_SESSION_STORE.get(), assistantId);
+    return !(mon.songs && mon.songs[songId]) && rand() < 0.6 ? say('first') : '';
+  }
+  if (kind === 'result') return mvp ? say('mvp') : '';
+  if (kind === 'reactResult') {
+    if (quit) return '';
+    const sid = songId || roomSong();
+    const special = rhythmAssistSessionSongScene(assistantId, sid);
+    if (special && rand() < 0.5) return say(special);
+    if (rhythmAssistSessionTaste(assistantId, sid) === 'dislike' && rand() < 0.5) return say('overcome');
+    if (Number(fc) > 0) return say('fc');
+    const ratio = rhythmAssistSessionRatio(score, diffId);
+    return say(ratio >= 0.9 ? 'high' : ratio < 0.7 ? 'low' : 'mid');
+  }
+  return '';
+};
+const rhythmAssistSessionWrapBrain = (brain, songs) => ({
+  ...brain,
+  play(args) {
+    const aid = rhythmAssistSessionIdOf(args && args.masuId);
+    if (!aid) return brain.play(args);
+    const {
+      songId,
+      diffId,
+      humans = 1
+    } = args;
+    const song = (songs || []).find(x => x.songId === songId);
+    const chart = song && song.difficulties ? song.difficulties[diffId] : null;
+    const totalNotes = chart ? Number(chart.totalNotes) > 0 ? Number(chart.totalNotes) : Array.isArray(chart.notes) ? chart.notes.length : 300 : 300;
+    const diffDef = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find(d => d.id === diffId);
+    return rhythmAssistSessionPlay({
+      state: RHYTHM_ASSIST_SESSION_STORE.get(),
+      assistantId: aid,
+      songId,
+      diffId,
+      totalNotes,
+      maxScore: diffDef ? diffDef.maxScore : 1000000,
+      durationMs: chart && Number(chart.durationMs) || (song ? Number(song.playDurationMs) || 0 : 0),
+      rand: Math.random,
+      chartLevel: chart ? Number(chart.level) || 0 : 0,
+      humans,
+      nowMs: Date.now()
+    });
+  },
+  talk(args) {
+    const aid = rhythmAssistSessionIdOf(args && args.masuId);
+    if (!aid) return brain.talk(args);
+    try {
+      return rhythmAssistSessionTalk({
+        assistantId: aid,
+        ...args
+      });
+    } catch (_) {
+      return '';
+    }
+  },
+  style(masuId) {
+    return rhythmAssistSessionIdOf(masuId) ? {
+      ask: 0,
+      starter: [1, 1, 1]
+    } : brain.style(masuId);
+  },
+  pair(a, b) {
+    return rhythmAssistSessionIdOf(a) || rhythmAssistSessionIdOf(b) ? 'banter' : brain.pair(a, b);
+  },
+  pick(catalog, masuId) {
+    const aid = rhythmAssistSessionIdOf(masuId);
+    return aid ? rhythmAssistSessionChooseSong(RHYTHM_ASSIST_SESSION_STORE.get(), aid, catalog) : brain.pick(catalog, masuId);
+  }
+});
+function RhythmAssistSessionPicker({
+  assistants = [],
+  calledIds = [],
+  canPay = true,
+  busy = false,
+  onPick
+}) {
+  const state = useRhythmAssistSessionState();
+  const [selId, setSelId] = React.useState('');
+  const list = (assistants || []).filter(who => who && RHYTHM_ASSIST_SESSION_IDS.includes(who.id));
+  const sel = list.find(who => who.id === selId) || null;
+  const calledOf = id => calledIds.includes(rhythmAssistSessionKey(id));
+  return React.createElement("div", {
+    "data-rhythm-assist-picker": true,
+    className: "flex min-h-0 flex-1 flex-col"
+  }, React.createElement("div", {
+    className: "min-h-0 flex-1 overflow-y-auto"
+  }, list.length === 0 ? React.createElement("p", {
+    className: "py-6 text-center text-[12px] font-bold text-slate-400"
+  }, "まだ呼べる助手がいません") : React.createElement("div", {
+    className: "grid grid-cols-3 gap-2.5 pb-4"
+  }, list.map(who => {
+    const lv = rhythmAssistSessionLevel(state, who.id);
+    return React.createElement("button", {
+      key: who.id,
+      type: "button",
+      "data-rhythm-assist-card": who.id,
+      onClick: () => setSelId(who.id),
+      className: `flex min-h-[112px] w-full flex-col items-center gap-1 rounded-2xl border-2 p-2 active:scale-95 ${selId === who.id ? 'border-pink-300 bg-slate-800' : 'border-white/10 bg-slate-900'}`
+    }, React.createElement(AssistantFace, {
+      who: who,
+      size: 48,
+      accent: who.accent,
+      expression: selId === who.id ? 'happy' : null
+    }), React.createElement("span", {
+      className: "w-full truncate rounded-lg border border-white/10 bg-slate-950/70 px-1 py-0.5 text-center text-[11px] font-black"
+    }, who.name), React.createElement("span", {
+      className: "whitespace-nowrap text-[10px] font-black text-pink-200"
+    }, "セッションLv.", lv), calledOf(who.id) && React.createElement("span", {
+      className: "rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950"
+    }, "呼んでいる"));
+  }))), sel ? React.createElement("div", {
+    "data-rhythm-assist-confirm": true,
+    className: "mt-2 flex shrink-0 items-center gap-2 rounded-2xl border border-pink-300/40 bg-slate-950/80 p-2"
+  }, React.createElement(AssistantFace, {
+    who: sel,
+    size: 44,
+    accent: sel.accent,
+    expression: "happy"
+  }), React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("b", {
+    className: "block truncate text-[13px] font-black"
+  }, sel.name), React.createElement("small", {
+    className: "block whitespace-nowrap text-[10px] font-bold text-pink-200"
+  }, "セッションLv.", rhythmAssistSessionLevel(state, sel.id)), React.createElement("small", {
+    "data-rhythm-assist-taste": true,
+    className: "block truncate text-[10px] font-bold text-slate-300"
+  }, rhythmAssistSessionLevel(state, sel.id) >= RHYTHM_ASSIST_SESSION_TASTE_LEVEL ? `♡ ${rhythmAssistSessionLikedNames(sel.id).join('・')}` : `Lv.${RHYTHM_ASSIST_SESSION_TASTE_LEVEL} で好きな曲が分かります`)), calledOf(sel.id) ? React.createElement("span", {
+    "data-rhythm-assist-called": true,
+    className: "shrink-0 rounded-xl border border-lime-300/50 px-2 py-3 text-[10px] font-black text-lime-200"
+  }, "呼んでいる") : React.createElement("button", {
+    "data-rhythm-assist-call": true,
+    type: "button",
+    disabled: busy || !canPay,
+    onClick: () => onPick && onPick(sel),
+    className: "min-h-[44px] shrink-0 rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-4 text-sm font-black text-slate-950 disabled:opacity-40"
+  }, "呼ぶ")) : React.createElement("p", {
+    className: "mt-2 text-center text-[11px] font-bold text-slate-400"
+  }, "呼びたい助手をタップしてください"));
+}
+const RHYTHM_ASSIST_SESSION_FX_QUEUE = {
+  list: [],
+  timer: null
+};
+const rhythmAssistSessionQueueFx = item => {
+  if (!rhythmAssistSessionEnabled() || typeof growthFxSessionLevel !== 'function') return;
+  const q = RHYTHM_ASSIST_SESSION_FX_QUEUE;
+  q.list.push(item);
+  if (q.timer) return;
+  q.timer = setTimeout(() => {
+    const list = q.list;
+    q.list = [];
+    q.timer = null;
+    try {
+      growthFxSessionLevel(list);
+    } catch (_) {}
+  }, 500);
+};
+function RhythmAssistSessionGrowth({
+  assistantId,
+  round,
+  songId,
+  diffId,
+  durationMs,
+  teamRank,
+  score = 0,
+  maxScore = 0,
+  chartLevel = 0,
+  humans = 1,
+  onTickets = null
+}) {
+  const [shown, setShown] = React.useState(null);
+  React.useEffect(() => {
+    if (!assistantId || !round) return undefined;
+    let alive = true;
+    let outcome = null;
+    const dayKey = rhythmBuddyDayKey(Date.now());
+    RHYTHM_ASSIST_SESSION_STORE.update(st => {
+      const r = rhythmAssistSessionApplyLive(st, assistantId, {
+        round,
+        songId,
+        diffId,
+        durationMs,
+        teamRank,
+        dayKey,
+        nowMs: Date.now(),
+        score,
+        maxScore,
+        chartLevel,
+        humans
+      });
+      if (!r.next) return null;
+      outcome = r;
+      return r.next;
+    }).then(() => {
+      if (outcome && outcome.tickets > 0 && typeof onTickets === 'function') {
+        try {
+          onTickets(outcome.tickets);
+        } catch (_) {}
+      }
+      if (outcome && outcome.levelUp > 0) {
+        const after = rhythmBuddyLevelInfo((outcome.next.mons[assistantId] || {}).exp).level;
+        rhythmAssistSessionQueueFx({
+          assistantId,
+          levelBefore: after - outcome.levelUp,
+          levelAfter: after,
+          tickets: outcome.tickets || 0
+        });
+      }
+      if (outcome && typeof RHYTHM_MULTI !== 'undefined' && RHYTHM_MULTI.noteBuddyGrowth) {
+        const likeUp = outcome.likeUp > 0 && rhythmAssistSessionTaste(assistantId, songId) !== 'like' ? outcome.likeUp : 0;
+        if (outcome.levelUp > 0 || likeUp > 0) RHYTHM_MULTI.noteBuddyGrowth(rhythmAssistSessionKey(assistantId), {
+          levelUp: outcome.levelUp,
+          likeUp
+        });
+      }
+      if (alive && outcome) setShown(outcome);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [assistantId, round]);
+  if (!shown || !assistantId) return null;
+  const level = rhythmBuddyLevelInfo((shown.next.mons[assistantId] || {}).exp).level;
+  return React.createElement("p", {
+    "data-rhythm-assist-growth": true,
+    className: "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-pink-300/50 bg-pink-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-pink-100"
+  }, React.createElement("span", {
+    className: "max-w-full truncate"
+  }, "🎤 ", rhythmAssistSessionName(assistantId)), React.createElement("span", {
+    className: "text-pink-200"
+  }, "経験値+", shown.gain), shown.levelUp > 0 && React.createElement("span", {
+    "data-rhythm-assist-levelup": true,
+    className: "rounded bg-amber-300 px-1 text-slate-950"
+  }, "セッションLv.UP! Lv.", level), shown.likeUp > 0 && React.createElement("span", {
+    className: "text-amber-200"
+  }, "好み度+", shown.likeUp), shown.tickets > 0 && React.createElement("span", {
+    "data-rhythm-assist-ticket": true,
+    className: "text-lime-200"
+  }, "セッション券+", shown.tickets));
+}
+const rhythmAssistSessionPeerLevel = (a, b) => {
+  if (typeof assistantPeerEnabled !== 'function' || !assistantPeerEnabled() || typeof ASSISTANT_PEER_STORE === 'undefined') return 0;
+  return assistantPeerLevel(ASSISTANT_PEER_STORE.state, a, b);
+};
+const rhythmAssistSessionPeerSeen = (a, b) => {
+  if (typeof ASSISTANT_PEER_STORE === 'undefined') return false;
+  const st = ASSISTANT_PEER_STORE.state;
+  return !!(st && Array.isArray(st.special) && st.special.includes(assistantPeerPairKey(a, b)));
+};
+const rhythmAssistSessionDuosNow = ids => rhythmAssistSessionDuos(ids, rhythmAssistSessionPeerLevel, rhythmAssistSessionPeerSeen);
+const rhythmAssistSessionCalledIds = () => {
+  const v = typeof RHYTHM_MULTI !== 'undefined' ? RHYTHM_MULTI.view() : null;
+  return (v && v.myCpus ? v.myCpus : []).map(c => rhythmAssistSessionIdOf(c.masuId)).filter(Boolean);
+};
+const rhythmAssistSessionRewardBonusNow = () => {
+  const ids = rhythmAssistSessionCalledIds();
+  return rhythmAssistSessionRewardBonus(RHYTHM_ASSIST_SESSION_STORE.get(), ids) + rhythmAssistSessionDuoBonus(rhythmAssistSessionDuosNow(ids));
+};
+const rhythmAssistSessionPickPair = (duo, scene, used, rand = Math.random) => {
+  const table = typeof RHYTHM_ASSIST_SESSION_PAIR_LINES !== 'undefined' ? RHYTHM_ASSIST_SESSION_PAIR_LINES[duo.key] : null;
+  const list = table && Array.isArray(table[scene]) ? table[scene] : [];
+  const fresh = list.filter(rows => !used.has(rows));
+  if (!fresh.length) return null;
+  const rows = fresh[Math.floor(rand() * fresh.length)];
+  used.add(rows);
+  const callOf = (who, to) => typeof assistantPeerCall === 'function' ? assistantPeerCall(who, to) : rhythmAssistSessionName(to);
+  return rows.map(([who, expr, text]) => [who, expr, String(text).replace(/\{c\}/g, callOf(who, who === duo.a ? duo.b : duo.a))]);
+};
+const RHYTHM_ASSIST_SESSION_BUBBLE_MS = 1600;
+const RHYTHM_ASSIST_SESSION_COMBO_STEPS = Object.freeze([50, 100, 300]);
+const RHYTHM_ASSIST_SESSION_LAST_MS = 10000;
+const RHYTHM_ASSIST_SESSION_GATTAI_MS = 3600;
+function RhythmAssistSessionPlayFace({
+  songId
+}) {
+  const state = useRhythmAssistSessionState();
+  const boxRef = React.useRef(null);
+  const [pos, setPos] = React.useState(null);
+  const [say, setSay] = React.useState(null);
+  const [glow, setGlow] = React.useState(false);
+  const [gattai, setGattai] = React.useState(null);
+  const ids = rhythmAssistSessionCalledIds().slice(0, 4);
+  const idsKey = ids.join(',');
+  React.useEffect(() => {
+    if (!ids.length) return undefined;
+    const said = new Set();
+    const usedPair = new Set();
+    const duos = rhythmAssistSessionDuosNow(ids);
+    const song = typeof RHYTHM_SONGS !== 'undefined' && Array.isArray(RHYTHM_SONGS) ? RHYTHM_SONGS.find(x => x && x.songId === songId) : null;
+    const endMs = song ? Number(song.playDurationMs) || 0 : 0;
+    let lastCombo = 0;
+    let missRow = 0;
+    let lastMiss = 0;
+    let inClimax = false;
+    let hideAt = 0;
+    let turn = 0;
+    let duoTalks = 0;
+    let gattaiDone = false;
+    let gattaiUntil = 0;
+    const queue = [];
+    const showNext = () => {
+      const next = queue.shift();
+      if (!next) {
+        setSay(null);
+        hideAt = 0;
+        return;
+      }
+      setSay(next);
+      hideAt = Date.now() + RHYTHM_ASSIST_SESSION_BUBBLE_MS;
+    };
+    const enqueue = rows => {
+      if (queue.length || hideAt) return false;
+      rows.forEach(([aid, expr, text]) => queue.push({
+        aid,
+        expr,
+        text
+      }));
+      showNext();
+      return true;
+    };
+    const speakDuo = scene => {
+      if (queue.length || hideAt) return false;
+      for (const d of duos) {
+        const rows = rhythmAssistSessionPickPair(d, scene, usedPair);
+        if (rows && enqueue(rows)) return true;
+      }
+      return false;
+    };
+    const speak = kind => {
+      if (queue.length || hideAt) return;
+      if ((kind === 'combo' || kind === 'climax') && duos.length && duoTalks < RHYTHM_ASSIST_SESSION_DUO_TALK_MAX && speakDuo('play')) {
+        duoTalks += 1;
+        return;
+      }
+      const order = ids.slice(turn).concat(ids.slice(0, turn));
+      for (const aid of order) {
+        const key = `${aid}:${kind}`;
+        if (said.has(key)) continue;
+        const hit = rhythmAssistSessionPickLine(aid, kind);
+        if (!hit) continue;
+        said.add(key);
+        turn = (ids.indexOf(aid) + 1) % ids.length;
+        enqueue([[aid, hit[0], hit[1]]]);
+        return;
+      }
+    };
+    const place = () => {
+      const box = boxRef.current;
+      const hud = document.querySelector('[data-rhythm-hud]');
+      if (!box || !hud || !box.offsetParent) return;
+      const at = node => {
+        let top = 0;
+        let left = 0;
+        let el = node;
+        while (el && el !== box.offsetParent) {
+          top += el.offsetTop;
+          left += el.offsetLeft;
+          el = el.offsetParent;
+        }
+        return el === box.offsetParent ? {
+          top,
+          left
+        } : null;
+      };
+      const hudAt = at(hud);
+      if (!hudAt) return;
+      let bottom = hudAt.top;
+      document.querySelectorAll('[data-rhythm-hud] *, [data-rhythm-song-clock] *').forEach(el => {
+        if (el.children.length || !el.offsetHeight) return;
+        const p = at(el);
+        if (!p || p.left - hudAt.left > 150) return;
+        bottom = Math.max(bottom, p.top + el.offsetHeight);
+      });
+      const next = {
+        top: Math.round(bottom + 6),
+        left: Math.round(hudAt.left + 8)
+      };
+      setPos(q => q && q.top === next.top && q.left === next.left ? q : next);
+    };
+    const tick = () => {
+      place();
+      const watch = typeof RHYTHM_PLAY_WATCH !== 'undefined' ? RHYTHM_PLAY_WATCH : null;
+      const h = watch && watch.hud ? watch.hud.get() : null;
+      if (hideAt && Date.now() >= hideAt) showNext();
+      if (gattaiUntil && Date.now() >= gattaiUntil) {
+        gattaiUntil = 0;
+        setGattai(null);
+      }
+      if (h) {
+        const combo = Number(h.combo) || 0;
+        const miss = h.counts ? Number(h.counts.MISS) || 0 : 0;
+        if (RHYTHM_ASSIST_SESSION_COMBO_STEPS.some(n => lastCombo < n && combo >= n)) speak('combo');
+        if (miss > lastMiss) {
+          missRow = combo === 0 ? missRow + (miss - lastMiss) : 0;
+          if (missRow >= 3) {
+            speak('miss');
+            missRow = 0;
+          }
+        }
+        if (combo > 0) missRow = 0;
+        lastCombo = combo;
+        lastMiss = miss;
+        const now = rhythmAssistSessionInClimax(songId || watch.songId, watch.timeMs);
+        if (now && !inClimax) {
+          const g = !gattaiDone ? duos.find(d => d.gattai) : null;
+          if (g) {
+            gattaiDone = true;
+            gattaiUntil = Date.now() + RHYTHM_ASSIST_SESSION_GATTAI_MS;
+            setGattai({
+              a: g.a,
+              b: g.b
+            });
+            const rows = rhythmAssistSessionPickPair(g, 'gattai', usedPair);
+            if (rows) {
+              queue.length = 0;
+              hideAt = 0;
+              enqueue(rows);
+            }
+          } else speak('climax');
+        }
+        if (now !== inClimax) {
+          inClimax = now;
+          setGlow(now);
+        }
+        if (endMs > RHYTHM_ASSIST_SESSION_LAST_MS && Number(watch.timeMs) >= endMs - RHYTHM_ASSIST_SESSION_LAST_MS && Number(watch.timeMs) < endMs) speak('last');
+      }
+    };
+    const t = setInterval(tick, 200);
+    tick();
+    return () => clearInterval(t);
+  }, [idsKey, songId]);
+  if (!ids.length) return null;
+  const whoA = gattai ? rhythmAssistSessionWho(gattai.a) : null;
+  const whoB = gattai ? rhythmAssistSessionWho(gattai.b) : null;
+  return React.createElement(React.Fragment, null, whoA && whoB && ['left', 'right'].map(side => React.createElement("div", {
+    key: side,
+    "data-rhythm-assist-gattai-light": side,
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute inset-y-0 z-[59] w-3",
+    style: {
+      [side]: 0,
+      background: `linear-gradient(180deg, ${whoA.accent || '#f472b6'}, ${whoB.accent || '#38bdf8'}, ${whoA.accent || '#f472b6'})`,
+      opacity: 0.75,
+      boxShadow: `0 0 18px 6px ${side === 'left' ? whoA.accent || '#f472b6' : whoB.accent || '#38bdf8'}`
+    }
+  })), React.createElement("div", {
+    ref: boxRef,
+    "data-rhythm-assist-play": true,
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute z-[60] flex w-[140px] flex-col gap-1",
+    style: pos ? {
+      top: pos.top,
+      left: pos.left
+    } : {
+      visibility: 'hidden',
+      top: 0,
+      left: 0
+    }
+  }, ids.map(aid => {
+    const who = rhythmAssistSessionWho(aid);
+    if (!who) return null;
+    if (gattai && aid === gattai.b) return null;
+    const partner = gattai && aid === gattai.a ? whoB : null;
+    const lit = glow && rhythmAssistSessionLevel(state, aid) >= RHYTHM_ASSIST_SESSION_GLOW_LEVEL || !!partner;
+    const talker = say && (say.aid === aid || partner && say.aid === gattai.b) ? say : null;
+    const face = (w, expr) => React.createElement("img", {
+      src: assistantFaceSrc(w, expr || null),
+      alt: "",
+      draggable: false,
+      className: "h-full w-full object-cover"
+    });
+    return React.createElement("div", {
+      key: aid,
+      "data-rhythm-assist-play-face": aid,
+      "data-glow": lit ? '1' : undefined,
+      "data-gattai": partner ? '1' : undefined,
+      className: partner ? 'flex flex-col items-start gap-1' : 'flex items-start gap-1.5'
+    }, React.createElement("span", {
+      className: `relative block h-10 shrink-0 ${partner ? 'w-[64px]' : 'w-10'}`
+    }, partner && React.createElement("span", {
+      "data-rhythm-assist-gattai-partner": true,
+      className: "absolute left-6 top-0 block h-10 w-10 overflow-hidden rounded-full border-2 bg-slate-800",
+      style: {
+        borderColor: partner.accent || '#38bdf8',
+        boxShadow: `0 0 14px 4px ${partner.accent || '#38bdf8'}`
+      }
+    }, face(partner, say && say.aid === gattai.b ? say.expr : 'excited')), React.createElement("span", {
+      className: "relative z-10 block h-10 w-10 overflow-hidden rounded-full border-2 bg-slate-800 transition-shadow duration-300",
+      style: {
+        borderColor: who.accent || '#f472b6',
+        boxShadow: lit ? `0 0 14px 4px ${who.accent || '#f472b6'}` : 'none'
+      }
+    }, face(who, talker && talker.aid === aid ? talker.expr : partner ? 'excited' : null))), talker && React.createElement("span", {
+      "data-rhythm-assist-play-bubble": true,
+      className: "block min-w-0 rounded-xl bg-white px-1.5 py-0.5 text-[9.5px] font-black leading-snug text-slate-900",
+      style: JA_WRAP_STYLE
+    }, partner && React.createElement("b", {
+      className: "mr-0.5",
+      style: {
+        color: (rhythmAssistSessionWho(talker.aid) || {}).accent || '#db2777'
+      }
+    }, rhythmAssistSessionName(talker.aid), ":"), jaWrap(talker.text)));
+  })));
+}
+const RHYTHM_ASSIST_SESSION_PEER_DONE = new Set();
+function RhythmAssistSessionDuoResult({
+  ids = [],
+  round
+}) {
+  const [shown, setShown] = React.useState([]);
+  const key = `${round}:${ids.join(',')}`;
+  React.useEffect(() => {
+    if (!round || ids.length < 2) return undefined;
+    let alive = true;
+    const duos = rhythmAssistSessionDuosNow(ids);
+    const used = new Set();
+    const lines = duos.filter(d => d.result).map(d => ({
+      d,
+      rows: rhythmAssistSessionPickPair(d, 'result', used)
+    })).filter(x => x.rows);
+    (async () => {
+      const gains = {};
+      for (let i = 0; i < ids.length; i += 1) for (let j = i + 1; j < ids.length; j += 1) {
+        const pk = `${round}:${rhythmAssistSessionPairKey(ids[i], ids[j])}`;
+        if (RHYTHM_ASSIST_SESSION_PEER_DONE.has(pk) || typeof assistantPeerGain !== 'function') continue;
+        RHYTHM_ASSIST_SESSION_PEER_DONE.add(pk);
+        try {
+          const r = await assistantPeerGain(ids[i], ids[j], 'session');
+          if (r && r.gained > 0) gains[rhythmAssistSessionPairKey(ids[i], ids[j])] = r.gained;
+        } catch (_) {}
+      }
+      if (!alive) return;
+      const out = lines.map(({
+        d,
+        rows
+      }) => ({
+        key: d.key,
+        d,
+        rows,
+        gained: gains[d.key] || 0
+      }));
+      Object.keys(gains).filter(k => !out.some(x => x.key === k)).forEach(k => {
+        const [a, b] = k.split('-');
+        out.push({
+          key: k,
+          d: {
+            a,
+            b
+          },
+          rows: null,
+          gained: gains[k]
+        });
+      });
+      setShown(out);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [key]);
+  if (!shown.length) return null;
+  return React.createElement(React.Fragment, null, shown.map(({
+    key: k,
+    d,
+    rows,
+    gained
+  }) => React.createElement("p", {
+    key: k,
+    "data-rhythm-assist-duo-result": k,
+    className: "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/50 bg-violet-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100"
+  }, React.createElement("span", {
+    className: "shrink-0"
+  }, "🎤 ", rhythmAssistSessionName(d.a), "・", rhythmAssistSessionName(d.b)), rows && rows.map(([who,, text], i) => React.createElement("span", {
+    key: i,
+    className: "min-w-0"
+  }, rhythmAssistSessionName(who), "「", text, "」")), gained > 0 && React.createElement("span", {
+    "data-rhythm-assist-peer-gain": true,
+    className: "text-amber-200"
+  }, typeof assistantPeerLifeOn === 'function' && assistantPeerLifeOn() ? '友情' : '仲良し度', "+", gained))));
 }
 const RAID_JACK_DEBUG_NOW_CHOICES = Object.freeze([{
   id: 'real',
@@ -94355,11 +96764,45 @@ const assistantPeerLifeOn = () => typeof assistantLifeEnabled === 'function' && 
 const assistantPeerStageName = stage => stage ? assistantPeerLifeOn() && stage.lifeName ? stage.lifeName : stage.name : '';
 const assistantPeerPhotoTitle = photo => photo ? assistantPeerLifeOn() && photo.lifeTitle ? photo.lifeTitle : photo.title : '';
 const assistantPeerLvLabel = lv => assistantPeerLifeOn() ? `友情Lv${lv}` : `仲良し度 Lv${lv}`;
-const assistantPeerTalkList = () => typeof ASSISTANT_PEER_TALKS !== 'undefined' && Array.isArray(ASSISTANT_PEER_TALKS) ? ASSISTANT_PEER_TALKS : [];
+const assistantPeerRewrite = t => {
+  if (!t || !assistantPeerLifeOn()) return t;
+  const x = (typeof ASSISTANT_PEER_REWRITES !== 'undefined' ? ASSISTANT_PEER_REWRITES : {})[t.id];
+  if (!x) return t;
+  const out = {
+    ...t
+  };
+  if (x.lines) out.lines = x.lines;
+  if (x.makeup && Array.isArray(t.makeup)) out.makeup = x.makeup;
+  if (x.reply && Array.isArray(t.choice)) out.choice = t.choice.map((c, i) => x.reply[i] ? {
+    ...c,
+    reply: x.reply[i]
+  } : c);
+  if (x.distance) out.distance = x.distance;
+  if (x.doing) out.lifeDoing = x.doing;
+  if (x.lv) out.lifeLv = x.lv;
+  if (x.similar) out.similar = x.similar;
+  return out;
+};
+const assistantPeerTalkListCache = {
+  on: null,
+  list: null
+};
+const assistantPeerTalkList = () => {
+  const raw = typeof ASSISTANT_PEER_TALKS !== 'undefined' && Array.isArray(ASSISTANT_PEER_TALKS) ? ASSISTANT_PEER_TALKS : [];
+  const on = assistantPeerLifeOn();
+  if (!on) return raw;
+  if (assistantPeerTalkListCache.on !== on || !assistantPeerTalkListCache.list) {
+    assistantPeerTalkListCache.on = on;
+    assistantPeerTalkListCache.list = raw.map(assistantPeerRewrite);
+  }
+  return assistantPeerTalkListCache.list;
+};
 let assistantPeerExtraCache = null;
+let assistantPeerExtraCacheOn = null;
 const assistantPeerExtraTalks = () => {
-  if (assistantPeerExtraCache) return assistantPeerExtraCache;
-  const events = (typeof ASSISTANT_PEER_EVENTS !== 'undefined' ? ASSISTANT_PEER_EVENTS : []).map(t => ({
+  const on = assistantPeerLifeOn();
+  if (assistantPeerExtraCache && assistantPeerExtraCacheOn === on) return assistantPeerExtraCache;
+  const events = (typeof ASSISTANT_PEER_EVENTS !== 'undefined' ? ASSISTANT_PEER_EVENTS : []).map(assistantPeerRewrite).map(t => ({
     ...t,
     pair: [...t.pair].sort(),
     kind: 'event',
@@ -94367,7 +96810,8 @@ const assistantPeerExtraTalks = () => {
     scene: 'any'
   }));
   const quarrels = [];
-  for (const q of typeof ASSISTANT_PEER_QUARRELS !== 'undefined' ? ASSISTANT_PEER_QUARRELS : []) {
+  for (const q0 of typeof ASSISTANT_PEER_QUARRELS !== 'undefined' ? ASSISTANT_PEER_QUARRELS : []) {
+    const q = assistantPeerRewrite(q0);
     const pair = [...q.pair].sort();
     quarrels.push({
       id: q.id,
@@ -94376,7 +96820,8 @@ const assistantPeerExtraTalks = () => {
       lv: 2,
       scene: 'home',
       makeupId: `${q.id}m`,
-      lines: q.lines
+      lines: q.lines,
+      distance: q.distance || []
     });
     quarrels.push({
       id: `${q.id}m`,
@@ -94388,7 +96833,8 @@ const assistantPeerExtraTalks = () => {
       lines: q.makeup
     });
   }
-  const trios = (typeof ASSISTANT_PEER_TRIO_TALKS !== 'undefined' ? ASSISTANT_PEER_TRIO_TALKS : []).map(t => ({
+  if (on && typeof assistantLifeQuarrelTalks === 'function') quarrels.push(...assistantLifeQuarrelTalks());
+  const trios = (typeof ASSISTANT_PEER_TRIO_TALKS !== 'undefined' ? ASSISTANT_PEER_TRIO_TALKS : []).map(assistantPeerRewrite).map(t => ({
     ...t,
     kind: 'trio',
     lv: 1,
@@ -94399,11 +96845,13 @@ const assistantPeerExtraTalks = () => {
     quarrels,
     trios
   };
+  assistantPeerExtraCacheOn = on;
   return assistantPeerExtraCache;
 };
 const assistantPeerAllTalks = () => {
   const x = assistantPeerExtraTalks();
-  return [...assistantPeerTalkList(), ...x.events, ...x.quarrels, ...x.trios];
+  const life = assistantPeerLifeOn() && typeof assistantLifeAlbumTalks === 'function' ? assistantLifeAlbumTalks() : [];
+  return [...assistantPeerTalkList(), ...x.events, ...x.quarrels, ...x.trios, ...life];
 };
 const assistantPeerMembers = t => t && Array.isArray(t.trio) ? t.trio : t && Array.isArray(t.pair) ? t.pair : [];
 const assistantPeerPairsOf = t => {
@@ -94720,6 +97168,15 @@ const assistantPeerGain = async (a, b, action) => {
     ASSISTANT_PEER_STORE.set(r.st);
     assistantPeerSaveBond();
   }
+  if (r.gained > 0 && r.levelAfter > r.levelBefore && action !== 'gift' && action !== 'token' && assistantPeerLifeOn() && typeof growthFxPeerLevel === 'function') {
+    try {
+      growthFxPeerLevel({
+        pair: [a, b],
+        levelBefore: r.levelBefore,
+        levelAfter: r.levelAfter
+      });
+    } catch {}
+  }
   return r;
 };
 const assistantPeerGainStory = ids => {
@@ -94883,10 +97340,12 @@ const assistantPeerSaveChoice = (talkId, index) => {
 const assistantPeerReactionTalk = (kind, pair) => {
   const R = typeof ASSISTANT_PEER_REACTIONS !== 'undefined' ? ASSISTANT_PEER_REACTIONS : {};
   const [a, b] = pair;
-  const line = who => R[who] && R[who][kind] ? {
+  const RW = assistantPeerLifeOn() && typeof ASSISTANT_PEER_REACTION_REWRITES !== 'undefined' ? ASSISTANT_PEER_REACTION_REWRITES : {};
+  const pickR = who => RW[who] && RW[who][kind] || R[who] && R[who][kind] || null;
+  const line = who => pickR(who) ? {
     who,
-    e: R[who][kind].e,
-    t: R[who][kind].t
+    e: pickR(who).e,
+    t: pickR(who).t
   } : null;
   const lines = [line(a), line(b)].filter(Boolean);
   return lines.length === 2 ? {
@@ -94923,8 +97382,25 @@ const assistantPeerUseItem = async (kind, pair) => {
   try {
     storeSet(ASSISTANT_PEER_GIFT_KEY, next, false);
   } catch {}
-  await assistantPeerGain(pair[0], pair[1], kind);
+  const pointsBefore = assistantPeerPoints(ASSISTANT_PEER_STORE.state, pair[0], pair[1]);
+  const r = await assistantPeerGain(pair[0], pair[1], kind);
   assistantPeerAddPlayerBond(pair, kind === 'gift' ? 'peerGift' : 'peerToken');
+  if (assistantPeerLifeOn() && typeof growthFxPeerItem === 'function') {
+    const pa = typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS[kind === 'gift' ? 'peerGift' : 'peerToken'];
+    const after = pointsBefore + (r && r.gained || 0);
+    try {
+      growthFxPeerItem({
+        pair: [...pair],
+        itemId: ASSISTANT_PEER_ITEM_IDS[kind],
+        pointsBefore,
+        pointsAfter: after,
+        levelBefore: assistantPeerLevelOf(pointsBefore),
+        levelAfter: assistantPeerLevelOf(after),
+        reaction: null,
+        playerGain: pa ? pa.amount : 0
+      });
+    } catch {}
+  }
   if (typeof assistantLifeNote === 'function') void assistantLifeNote('gift', {
     pair: assistantPeerPairKey(pair[0], pair[1])
   });
@@ -94980,8 +97456,11 @@ const assistantPeerPickTalk = (st, {
     pending: null,
     done: []
   };
+  const lifeOn = assistantPeerLifeOn();
+  const lifeGroups = lifeOn && typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.life && ASSISTANT_LIFE_STORE.state.life.groups || [];
+  const together = ms => lifeGroups.some(g => ms.every(id => g.ids.includes(id)));
   if (scene === 'home') {
-    if (quarrel.pending && now - (quarrel.pending.at || 0) >= ASSISTANT_PEER_TALK_GAP_MS) {
+    if (quarrel.pending && now - (quarrel.pending.at || 0) >= ASSISTANT_PEER_TALK_GAP_MS && (!lifeOn || together(String(quarrel.pending.pair || '').split('-')))) {
       const mk = extra.quarrels.find(t => t.kind === 'makeup' && t.quarrelId === quarrel.pending.id);
       if (mk && ok(mk)) return {
         talk: mk,
@@ -95020,6 +97499,17 @@ const assistantPeerPickTalk = (st, {
       };
     }
   }
+  if (lifeOn && isHome && typeof assistantLifePickHomeTalk === 'function' && rand() < 0.75) {
+    const t = assistantLifePickHomeTalk(st, {
+      selectedId,
+      metIds,
+      rand
+    });
+    if (t) return {
+      talk: t,
+      special: false
+    };
+  }
   const trioLv = typeof ASSISTANT_PEER_TRIO_LV !== 'undefined' ? ASSISTANT_PEER_TRIO_LV : 2;
   const qLv = typeof ASSISTANT_PEER_QUARREL_LV !== 'undefined' ? ASSISTANT_PEER_QUARREL_LV : {
     min: 2,
@@ -95028,6 +97518,7 @@ const assistantPeerPickTalk = (st, {
   const pairLvs = t => assistantPeerPairsOf(t).map(([a, b]) => assistantPeerLevel(st, a, b));
   const fits = t => {
     if (t.special) return false;
+    if (lifeOn && (t.similar || t.kind === 'quarrel')) return false;
     if (t.kind === 'trio') return pairLvs(t).every(lv => lv >= trioLv);
     if (t.kind === 'makeup') return false;
     if (t.kind === 'quarrel') {
@@ -95044,8 +97535,6 @@ const assistantPeerPickTalk = (st, {
   const fresh = pool.filter(t => !recent.includes(t.id));
   if (fresh.length) pool = fresh;else pool = [...pool].sort((x, y) => recent.indexOf(x.id) - recent.indexOf(y.id)).slice(0, Math.max(1, Math.ceil(pool.length / 3)));
   const dailyPair = !assistantPeerLifeOn() && st.daily && st.daily.day === day && !st.daily.done ? st.daily.pair : null;
-  const lifeGroups = assistantPeerLifeOn() && typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.life && ASSISTANT_LIFE_STORE.state.life.groups || [];
-  const together = ms => lifeGroups.some(g => ms.every(id => g.ids.includes(id)));
   const evBoost = typeof ASSISTANT_PEER_EVENT_BOOST_LV !== 'undefined' ? ASSISTANT_PEER_EVENT_BOOST_LV : 6;
   const trioBoost = typeof ASSISTANT_PEER_TRIO_BOOST_LV !== 'undefined' ? ASSISTANT_PEER_TRIO_BOOST_LV : 7;
   const weight = t => {
@@ -95132,6 +97621,7 @@ const assistantPeerMarkShown = (talk, {
   }
   ASSISTANT_PEER_STORE.set(patch);
   if (typeof assistantLifeAddPlay === 'function') void assistantLifeAddPlay('peer', now);
+  if (typeof assistantLifeMarkSeen === 'function') assistantLifeMarkSeen(talk, now);
   if (talk.kind === 'quarrel' && typeof assistantLifeNote === 'function') void assistantLifeNote('quarrel', {
     pair: assistantPeerPairKey(talk.pair[0], talk.pair[1]),
     now
@@ -95159,10 +97649,11 @@ const assistantPeerMakeupDone = talk => {
   return true;
 };
 const assistantPeerLineText = (line, talk) => {
-  const members = assistantPeerMembers(talk);
+  const members = talk && talk.anyTrio && Array.isArray(talk.pair) ? talk.pair : assistantPeerMembers(talk);
   const partner = members.find(id => id !== line.who) || members[0];
   const callOf = to => typeof assistantPeerCall === 'function' ? assistantPeerCall(line.who, to) : to;
-  return String(line.t || '').replace(/\{c:([a-z]+)\}/g, (m, id) => callOf(id)).replace(/\{c\}/g, callOf(partner));
+  const text = String(line.t || '').replace(/\{c:([a-z]+)\}/g, (m, id) => callOf(id)).replace(/\{c\}/g, callOf(partner));
+  return text.includes('{') && typeof assistantLifeFillHoles === 'function' ? assistantLifeFillHoles(text, talk) : text;
 };
 function AssistantPeerTalk({
   scene,
@@ -95237,7 +97728,11 @@ function AssistantPeerTalk({
     decidedRef.current = decidedRef.current.startsWith(`${scene}:`) ? decidedRef.current : '';
     setCur(c => c && !c.replay ? null : c);
   }, [scene]);
-  const [toast, setToast] = React.useState(null);
+  const [toast, setToast0] = React.useState(null);
+  const setToast = React.useCallback(t => {
+    if (t && t.kind === 'level' && assistantPeerLifeOn() && typeof growthFxPeerLevel === 'function') return;
+    setToast0(t);
+  }, []);
   const finish = React.useCallback(async c => {
     setCur(null);
     if (c.replay) {
@@ -95362,7 +97857,8 @@ function AssistantPeerTalk({
   const line = cur.phase === 'choice' ? talk.lines[talk.lines.length - 1] : list[cur.step];
   const isTrio = talk.kind === 'trio';
   const left = assistantById(talk.lines[0].who);
-  const right = isTrio ? null : assistantById(talk.pair.find(id => id !== left.id));
+  const rightId = isTrio ? null : talk.pair.find(id => id !== left.id);
+  const right = rightId ? assistantById(rightId) : null;
   const speaker = assistantById(line.who);
   const pairKey = isTrio ? null : assistantPeerPairKey(talk.pair[0], talk.pair[1]);
   const daily = pairKey && talk.kind !== 'quarrel' && st.daily && st.daily.day === assistantPeerDayKey() && st.daily.pair === pairKey ? st.daily : null;
@@ -96686,7 +99182,7 @@ const assistantLifeDecide = ({
     const pm = prev && prev.moods && prev.moods[id];
     if (pm && w[pm] != null && inertia > 0) w[pm] *= inertia;
     if (wasLonely.has(id)) w.lonely *= 4;
-    if (ids.some(o => o !== id && quarrelNow(id, o))) w.sulky *= 12;
+    if (ids.some(o => o !== id && quarrelNow(id, o) && !introduced.includes(assistantLifePairKey(id, o)))) w.sulky *= 12;
     if (recentOf('gift', r => (r.ids || []).includes(id), 4) || recentOf('play', r => (r.ids || []).includes(id), 4)) w.happy *= 3;
     if (invited.has(id)) {
       w.happy *= 4;
@@ -96721,7 +99217,7 @@ const assistantLifeDecide = ({
   }
   const lvOf = (a, b) => typeof assistantPeerBondLevel === 'function' ? assistantPeerBondLevel(bond[assistantLifePairKey(a, b)] || 0) : 1;
   const score = (a, b) => {
-    if (quarrelNow(a, b)) return -10;
+    if (quarrelNow(a, b) && !introduced.includes(assistantLifePairKey(a, b))) return -10;
     let s = 1 + lvOf(a, b) * 0.25;
     if (prevPairs.has(assistantLifePairKey(a, b))) s -= 1;
     if (doing[a] === doing[b] && ASSISTANT_LIFE_DOINGS[doing[a]].group) s += 1.5;
@@ -96793,7 +99289,7 @@ const assistantLifeDecide = ({
       continue;
     }
     const p = ASSISTANT_LIFE_PREFS[id];
-    const quarrel = ids.some(o => o !== id && quarrelNow(id, o));
+    const quarrel = ids.some(o => o !== id && quarrelNow(id, o) && !introduced.includes(assistantLifePairKey(id, o)));
     const reason = quarrel ? 'distance' : wants[id] ? 'lonely' : 'mypace';
     if (reason === 'lonely') {
       moods[id] = 'lonely';
@@ -96932,7 +99428,7 @@ const normalizeAssistantLife = v => {
     lonely: Array.isArray(o.lonely) ? o.lonely.filter(ok) : [],
     recent,
     nudges,
-    watched: Array.isArray(o.watched) ? o.watched.filter(k => typeof k === 'string').slice(-10) : []
+    watched: Array.isArray(o.watched) ? o.watched.filter(k => typeof k === 'string').slice(-30) : []
   };
 };
 const ASSISTANT_LIFE_STORE = {
@@ -96940,7 +99436,8 @@ const ASSISTANT_LIFE_STORE = {
     loaded: false,
     open: false,
     life: normalizeAssistantLife(null),
-    play: normalizeAssistantLifePlay(null)
+    play: normalizeAssistantLifePlay(null),
+    seen: {}
   },
   loading: null,
   listeners: new Set(),
@@ -96962,13 +99459,14 @@ const ASSISTANT_LIFE_STORE = {
     if (this.state.loaded) return Promise.resolve(this.state);
     if (this.loading) return this.loading;
     this.loading = (async () => {
-      const [life, play] = await Promise.all([storeGet(ASSISTANT_LIFE_STORE_KEY, null, false), storeGet(ASSISTANT_LIFE_PLAY_KEY, null, false)].map(p => Promise.resolve(p).catch(() => null)));
+      const [life, play, seen] = await Promise.all([storeGet(ASSISTANT_LIFE_STORE_KEY, null, false), storeGet(ASSISTANT_LIFE_PLAY_KEY, null, false), storeGet('mh_assistant_peer_seen14_v1', null, false)].map(p => Promise.resolve(p).catch(() => null)));
       const l = normalizeAssistantLife(life);
       if (!l.salt) l.salt = Math.random().toString(36).slice(2, 10);
       this.set({
         loaded: true,
         life: l,
-        play: normalizeAssistantLifePlay(play)
+        play: normalizeAssistantLifePlay(play),
+        seen: normalizeAssistantLifeSeen(seen)
       });
       return this.state;
     })();
@@ -97113,6 +99611,450 @@ const useAssistantLifeState = () => {
   }, []);
   return st;
 };
+const ASSISTANT_LIFE_SEEN_KEY = 'mh_assistant_peer_seen14_v1';
+const ASSISTANT_LIFE_SEEN_DAYS = 14;
+const ASSISTANT_LIFE_SEEN_MAX = 4000;
+const assistantLifeLvBand = lv => lv >= 7 ? '7-10' : lv >= 4 ? '4-6' : '1-3';
+const ASSISTANT_LIFE_BAND_RANK = Object.freeze({
+  '1-3': 0,
+  '4-6': 1,
+  '7-10': 2
+});
+const assistantLifePlaceType = (who, place) => place === 'home' ? 'home' : ASSISTANT_LIFE_PREFS[who] && ASSISTANT_LIFE_PREFS[who].fav === place ? 'fav' : 'other';
+const normalizeAssistantLifeSeen = (v, today = assistantLifeDayKey()) => {
+  const out = {};
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
+  const limit = Date.parse(`${today}T00:00:00Z`) - ASSISTANT_LIFE_SEEN_DAYS * 86400000;
+  const rows = Object.entries(v).filter(([id, d]) => typeof id === 'string' && typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && Date.parse(`${d}T00:00:00Z`) > limit);
+  rows.sort((x, y) => x[1] < y[1] ? -1 : x[1] > y[1] ? 1 : 0);
+  for (const [id, d] of rows.slice(-ASSISTANT_LIFE_SEEN_MAX)) out[id] = d;
+  return out;
+};
+const assistantLifeMarkSeen = (talk, now = Date.now()) => {
+  if (!assistantLifeEnabled() || !talk || !talk.id || talk.gen) return;
+  const day = assistantLifeDayKey(now);
+  const seen = {
+    ...(ASSISTANT_LIFE_STORE.state.seen || {})
+  };
+  for (const id of Array.isArray(talk.parts) && talk.parts.length ? talk.parts : [talk.id]) seen[id] = day;
+  const next = normalizeAssistantLifeSeen(seen, day);
+  ASSISTANT_LIFE_STORE.set({
+    seen: next
+  });
+  try {
+    storeSet(ASSISTANT_LIFE_SEEN_KEY, next, false);
+  } catch {}
+};
+let assistantLifeTalkCache = null;
+const assistantLifeTalkSet = () => {
+  if (assistantLifeTalkCache) return assistantLifeTalkCache;
+  const raw = typeof ASSISTANT_LIFE_TALKS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_TALKS) ? ASSISTANT_LIFE_TALKS : [];
+  const out = {
+    solo: [],
+    breeder: [],
+    invite: [],
+    pair: [],
+    trio: [],
+    anyTrio: [],
+    quarrel: []
+  };
+  const okLines = a => Array.isArray(a) && a.length > 0 && a.every(l => l && typeof l.who === 'string' && typeof l.t === 'string');
+  for (const t of raw) {
+    if (!t || typeof t.id !== 'string' || !okLines(t.lines)) continue;
+    const keys = t.keys && typeof t.keys === 'object' ? t.keys : {};
+    const base = {
+      id: t.id,
+      keys,
+      lines: t.lines,
+      lv: 1,
+      scene: 'any',
+      life: true
+    };
+    if (t.kind === 'solo') out.solo.push({
+      ...base,
+      kind: 'life-solo',
+      who: t.who,
+      pair: [t.who],
+      line: t.line === 'feel' ? 'feel' : 'scene'
+    });else if (t.kind === 'breeder') out.breeder.push({
+      ...base,
+      kind: 'life-breeder',
+      who: t.who,
+      pair: [t.who]
+    });else if (t.kind === 'invite' && t.from) out.invite.push({
+      ...base,
+      kind: 'life-invite',
+      who: t.who,
+      from: t.from,
+      pair: [t.from, t.who]
+    });else if (t.kind === 'pair' && Array.isArray(t.pair)) out.pair.push({
+      ...base,
+      pair: [...t.pair].sort()
+    });else if (t.kind === 'trio' && t.any && Array.isArray(t.pair)) out.anyTrio.push({
+      ...base,
+      pair: [...t.pair].sort(),
+      anyTrio: true
+    });else if (t.kind === 'trio' && Array.isArray(t.trio)) out.trio.push({
+      ...base,
+      kind: 'trio',
+      trio: [...t.trio].sort()
+    });else if (t.kind === 'quarrel' && Array.isArray(t.pair)) {
+      const pair = [...t.pair].sort();
+      out.quarrel.push({
+        ...base,
+        pair,
+        kind: 'quarrel',
+        lv: 2,
+        scene: 'home',
+        makeupId: `${t.id}m`,
+        distance: okLines(t.distance) ? t.distance : []
+      });
+      if (okLines(t.makeup)) out.quarrel.push({
+        ...base,
+        id: `${t.id}m`,
+        pair,
+        kind: 'makeup',
+        lv: 2,
+        scene: 'home',
+        quarrelId: t.id,
+        lines: t.makeup
+      });
+    }
+  }
+  assistantLifeTalkCache = out;
+  return out;
+};
+const assistantLifeQuarrelTalks = () => assistantLifeTalkSet().quarrel;
+const assistantLifeAlbumTalks = () => {
+  const x = assistantLifeTalkSet();
+  return [...x.pair, ...x.anyTrio, ...x.trio];
+};
+const assistantLifeFillHoles = (text, talk) => {
+  const c = talk && talk.ctx || {};
+  const k = talk && talk.keys || {};
+  const doing = ASSISTANT_LIFE_DOINGS[c.doing] ? c.doing : ASSISTANT_LIFE_DOINGS[k.doing] ? k.doing : ASSISTANT_LIFE_DOINGS[talk && talk.lifeDoing] ? talk.lifeDoing : 'walk';
+  const place = ASSISTANT_LIFE_PLACES[c.place] ? c.place : ASSISTANT_LIFE_PLACES[k.place] ? k.place : ASSISTANT_LIFE_DOINGS[doing].places[0];
+  return String(text).replace(/\{place\}/g, ASSISTANT_LIFE_PLACES[place]).replace(/\{doing_te\}/g, ASSISTANT_LIFE_DOINGS[doing].te).replace(/\{doing\}/g, ASSISTANT_LIFE_DOINGS[doing].label);
+};
+const assistantLifeChoose = (cands, want, relax, seen, rand = Math.random) => {
+  const fit = (keys, skip) => Object.entries(want).every(([k, v]) => skip.has(k) || v == null || keys[k] == null || keys[k] === v);
+  const weight = keys => Object.entries(want).reduce((w, [k, v]) => v != null && keys[k] === v ? w * (k === 'air' ? 4 : 2) : w, 1);
+  let firstPool = null;
+  for (let n = 0; n <= relax.length; n++) {
+    const skip = new Set(relax.slice(0, n));
+    const pool = cands.filter(c => fit(c.keys || {}, skip));
+    if (!pool.length) continue;
+    if (!firstPool) firstPool = pool;
+    const fresh = pool.filter(c => !(seen && seen[c.talk.id]));
+    if (!fresh.length) continue;
+    const sum = fresh.reduce((x, c) => x + weight(c.keys || {}), 0);
+    let r = rand() * sum;
+    for (const c of fresh) {
+      r -= weight(c.keys || {});
+      if (r <= 0) return c.talk;
+    }
+    return fresh[fresh.length - 1].talk;
+  }
+  if (!firstPool) return null;
+  return [...firstPool].sort((x, y) => String((seen || {})[x.talk.id] || '').localeCompare(String((seen || {})[y.talk.id] || '')))[0].talk;
+};
+const assistantLifeWithCtx = (talk, ctx) => talk ? {
+  ...talk,
+  ctx: {
+    ...(talk.ctx || {}),
+    ...ctx
+  }
+} : null;
+const assistantLifeAirOf = (life, a, b) => {
+  const key = assistantLifePairKey(a, b);
+  const now = life && Number.isFinite(life.abs) ? life.abs : 0;
+  const rs = (life && life.recent || []).filter(r => r && r.pair === key && Number.isFinite(r.abs) && now - r.abs >= 0 && now - r.abs <= ASSISTANT_LIFE_RECENT_SLOTS);
+  const lastQ = Math.max(-Infinity, ...rs.filter(r => r.kind === 'quarrel').map(r => r.abs));
+  const lastM = Math.max(-Infinity, ...rs.filter(r => r.kind === 'makeup').map(r => r.abs));
+  if (lastM >= lastQ && lastM > -Infinity && now - lastM <= 6) return 'makeup';
+  if (lastQ > -Infinity && lastQ > lastM) return 'after';
+  return 'normal';
+};
+const assistantLifeLevelOf = (peerSt, a, b) => typeof assistantPeerLevel === 'function' ? assistantPeerLevel(peerSt, a, b) : 1;
+const assistantLifeOldPairCands = (pair, lv) => {
+  if (typeof assistantPeerTalkList !== 'function') return [];
+  const ev = typeof assistantPeerExtraTalks === 'function' ? assistantPeerExtraTalks().events : [];
+  return [...assistantPeerTalkList(), ...ev].filter(t => t && Array.isArray(t.pair) && !t.special && !t.when && !t.gen && !t.similar && t.kind !== 'quarrel' && t.kind !== 'makeup' && assistantLifePairKey(t.pair[0], t.pair[1]) === assistantLifePairKey(pair[0], pair[1]) && lv >= (t.lv || 1)).map(t => ({
+    talk: t,
+    keys: {
+      doing: t.lifeDoing || null,
+      lv: t.lifeLv || null
+    }
+  }));
+};
+const assistantLifePickPairTalk = (pair, group, peerSt, life, seen, rand = Math.random) => {
+  const [a, b] = [...pair].sort();
+  const key = assistantLifePairKey(a, b);
+  const lv = assistantLifeLevelOf(peerSt, a, b);
+  const ctx = {
+    place: group.place,
+    doing: group.doing
+  };
+  const quarrels = typeof assistantPeerExtraTalks === 'function' ? assistantPeerExtraTalks().quarrels : assistantLifeQuarrelTalks();
+  const q = peerSt && peerSt.quarrel || {
+    pending: null,
+    done: []
+  };
+  if (q.pending && q.pending.pair === key) {
+    const mk = quarrels.find(t => t.kind === 'makeup' && t.quarrelId === q.pending.id);
+    if (mk) return assistantLifeWithCtx(mk, ctx);
+  }
+  const moods = life && life.moods || {};
+  const grumpy = [a, b].some(id => moods[id] === 'sulky' || moods[id] === 'restless');
+  if (!q.pending && lv >= 2 && rand() < (grumpy ? 0.3 : 0.05)) {
+    const qs = quarrels.filter(t => t.kind === 'quarrel' && assistantLifePairKey(t.pair[0], t.pair[1]) === key && !(seen && seen[t.id]));
+    if (qs.length) return assistantLifeWithCtx(qs[Math.floor(rand() * qs.length)], ctx);
+  }
+  const band = assistantLifeLvBand(lv);
+  const air = assistantLifeAirOf(life, a, b);
+  const okBand = x => x == null || (ASSISTANT_LIFE_BAND_RANK[x] ?? 0) <= ASSISTANT_LIFE_BAND_RANK[band];
+  const okAir = x => x == null || x === 'normal' || x === air;
+  const cands = [...assistantLifeTalkSet().pair.filter(t => assistantLifePairKey(t.pair[0], t.pair[1]) === key).map(t => ({
+    talk: t,
+    keys: {
+      doing: t.keys.doing || null,
+      lv: t.keys.lv || null,
+      air: t.keys.air || null
+    }
+  })), ...assistantLifeOldPairCands([a, b], lv)].filter(c => okBand(c.keys.lv) && okAir(c.keys.air));
+  return assistantLifeWithCtx(assistantLifeChoose(cands, {
+    air: air === 'normal' ? null : air,
+    doing: group.doing,
+    lv: band
+  }, ['doing', 'lv'], seen, rand), ctx);
+};
+const assistantLifePickGroupTalk = (group, peerSt, life = ASSISTANT_LIFE_STORE.state.life, rand = Math.random) => {
+  if (!group || !Array.isArray(group.ids) || group.ids.length < 2) return null;
+  const seen = ASSISTANT_LIFE_STORE.state.seen || {};
+  const ids = group.ids;
+  const ctx = {
+    place: group.place,
+    doing: group.doing
+  };
+  if (ids.length === 2) return assistantLifePickPairTalk(ids, group, peerSt, life, seen, rand);
+  const trioLv = typeof ASSISTANT_PEER_TRIO_LV !== 'undefined' ? ASSISTANT_PEER_TRIO_LV : 2;
+  const pairsOk = m => {
+    for (let i = 0; i < m.length; i++) for (let j = i + 1; j < m.length; j++) if (assistantLifeLevelOf(peerSt, m[i], m[j]) < trioLv) return false;
+    return true;
+  };
+  const oldTrios = typeof assistantPeerExtraTalks === 'function' ? assistantPeerExtraTalks().trios : [];
+  const fixed = [...assistantLifeTalkSet().trio, ...oldTrios.filter(t => !t.similar)].filter(t => Array.isArray(t.trio) && t.trio.every(id => ids.includes(id)) && pairsOk(t.trio)).map(t => ({
+    talk: t,
+    keys: {
+      doing: t.keys && t.keys.doing || t.lifeDoing || null
+    }
+  }));
+  const freshFixed = fixed.filter(c => !seen[c.talk.id]);
+  if (freshFixed.length) return assistantLifeWithCtx(assistantLifeChoose(freshFixed, {
+    doing: group.doing
+  }, ['doing'], seen, rand), ctx);
+  const any = assistantLifeTalkSet().anyTrio.filter(t => t.pair.every(id => ids.includes(id))).map(t => ({
+    talk: t,
+    keys: {
+      doing: t.keys.doing || null
+    }
+  }));
+  const freshAny = any.filter(c => !seen[c.talk.id]);
+  if (freshAny.length) return assistantLifeWithCtx({
+    ...assistantLifeChoose(freshAny, {
+      doing: group.doing
+    }, ['doing'], seen, rand),
+    kind: 'trio',
+    trio: [...ids]
+  }, ctx);
+  const pairs = [];
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) pairs.push([ids[i], ids[j]]);
+  const w = pairs.map(p => 1 + assistantLifeLevelOf(peerSt, p[0], p[1]));
+  let r = rand() * w.reduce((x, y) => x + y, 0);
+  let pick = pairs[pairs.length - 1];
+  for (let i = 0; i < pairs.length; i++) {
+    r -= w[i];
+    if (r <= 0) {
+      pick = pairs[i];
+      break;
+    }
+  }
+  return assistantLifePickPairTalk(pick, group, peerSt, life, seen, rand) || (fixed.length ? assistantLifeWithCtx(assistantLifeChoose(fixed, {
+    doing: group.doing
+  }, ['doing'], seen, rand), ctx) : null);
+};
+const assistantLifePickHomeTalk = (peerSt, {
+  selectedId,
+  metIds,
+  rand = Math.random
+} = {}) => {
+  if (!assistantLifeEnabled() || !ASSISTANT_LIFE_STORE.state.loaded) return null;
+  const met = new Set(metIds || []);
+  const groups = (ASSISTANT_LIFE_STORE.state.life && ASSISTANT_LIFE_STORE.state.life.groups || []).filter(g => g.ids.every(id => met.has(id)));
+  if (!groups.length) return null;
+  const w = groups.map(g => g.ids.includes(selectedId) ? 3 : 1);
+  let r = rand() * w.reduce((x, y) => x + y, 0);
+  let g = groups[groups.length - 1];
+  for (let i = 0; i < groups.length; i++) {
+    r -= w[i];
+    if (r <= 0) {
+      g = groups[i];
+      break;
+    }
+  }
+  return assistantLifePickGroupTalk(g, peerSt, ASSISTANT_LIFE_STORE.state.life, rand);
+};
+const assistantLifePickSoloTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, peerSt = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null, rand = Math.random) => {
+  const s = life && life.solo && life.solo[id];
+  if (!s) return null;
+  const seen = ASSISTANT_LIFE_STORE.state.seen || {};
+  const ctx = {
+    place: s.place,
+    doing: s.doing
+  };
+  const mood = (life.moods || {})[id] || null;
+  const q = peerSt && peerSt.quarrel || {};
+  if (s.reason === 'distance' && q.pending && String(q.pending.pair).split('-').includes(id) && typeof assistantPeerExtraTalks === 'function') {
+    const qt = assistantPeerExtraTalks().quarrels.find(t => t.id === q.pending.id && t.kind === 'quarrel');
+    if (qt && Array.isArray(qt.distance) && qt.distance.length) return assistantLifeWithCtx({
+      id: `${qt.id}-distance`,
+      kind: 'life-distance',
+      pair: qt.pair,
+      lines: qt.distance,
+      lv: 1,
+      scene: 'any'
+    }, ctx);
+  }
+  const keysOf = t => ({
+    pt: t.keys.place ? assistantLifePlaceType(id, t.keys.place) : null,
+    mood: t.keys.mood || null,
+    why: t.keys.why || null,
+    doing: t.keys.doing || null
+  });
+  const want = {
+    pt: assistantLifePlaceType(id, s.place),
+    mood,
+    why: s.reason === 'distance' ? null : s.reason,
+    doing: s.doing
+  };
+  const T = assistantLifeTalkSet();
+  const br = T.breeder.filter(t => t.who === id).map(t => ({
+    talk: t,
+    keys: keysOf(t)
+  }));
+  if (br.length && rand() < 0.3) {
+    const t = assistantLifeChoose(br, want, ['doing', 'why', 'mood', 'pt'], seen, rand);
+    if (t && !seen[t.id]) return assistantLifeWithCtx(t, ctx);
+  }
+  const mine = T.solo.filter(t => t.who === id);
+  const ok = c => c.keys.pt == null || c.keys.pt === want.pt;
+  const scene = assistantLifeChoose(mine.filter(t => t.line === 'scene').map(t => ({
+    talk: t,
+    keys: keysOf(t)
+  })).filter(ok), want, ['doing', 'why', 'mood'], seen, rand);
+  const feel = assistantLifeChoose(mine.filter(t => t.line === 'feel').map(t => ({
+    talk: t,
+    keys: keysOf(t)
+  })).filter(ok), want, ['doing', 'why', 'mood'], seen, rand);
+  const parts = [scene, feel].filter(Boolean);
+  if (!parts.length) return null;
+  return assistantLifeWithCtx({
+    id: parts.map(t => t.id).join('+'),
+    kind: 'life-solo',
+    pair: [id],
+    parts: parts.map(t => t.id),
+    lines: parts.flatMap(t => t.lines),
+    keys: parts[0].keys,
+    lv: 1,
+    scene: 'any'
+  }, ctx);
+};
+const assistantLifePickInviteTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, peerSt = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null, rand = Math.random) => {
+  const s = life && life.solo && life.solo[id];
+  if (!s) return null;
+  const seen = ASSISTANT_LIFE_STORE.state.seen || {};
+  const mood = (life.moods || {})[id];
+  const answer = mood === 'sulky' ? 'shy' : s.reason === 'mypace' ? rand() < 0.6 ? 'decline' : 'glad' : rand() < 0.8 ? 'glad' : 'shy';
+  const others = [...(life.groups || []).flatMap(g => g.ids), ...Object.keys(life.solo || {})].filter(x => x !== id);
+  const cands = assistantLifeTalkSet().invite.filter(t => t.who === id && others.includes(t.from)).map(t => ({
+    talk: t,
+    keys: {
+      answer: t.keys.answer || null,
+      from: t.from
+    }
+  }));
+  const best = [...new Set(cands.map(c => c.talk.from))].sort((x, y) => assistantLifeLevelOf(peerSt, y, id) - assistantLifeLevelOf(peerSt, x, id))[0] || null;
+  const t = assistantLifeChoose(cands, {
+    answer,
+    from: best
+  }, ['from', 'answer'], seen, rand);
+  if (!t) return null;
+  const g = (life.groups || []).find(x => x.ids.includes(t.from));
+  return assistantLifeWithCtx(t, g ? {
+    place: g.place,
+    doing: g.doing
+  } : {
+    place: s.place,
+    doing: s.doing
+  });
+};
+const ASSISTANT_LIFE_ITEM_KINDS = Object.freeze([{
+  kind: 'gift',
+  itemId: 'peer_gift',
+  what: '2人にあげるおやつ。2人でおやつの時間をすごします',
+  player: 'peerGift'
+}, {
+  kind: 'token',
+  itemId: 'peer_token',
+  what: '2人の友情を深める記念の品。2人の友情がぐっと深まります',
+  player: 'peerToken'
+}]);
+const ASSISTANT_LIFE_ITEM_INTRO_KEY = 'mh_assistant_life_item_intro_v1';
+const assistantLifeItemInfo = kind => {
+  const k = ASSISTANT_LIFE_ITEM_KINDS.find(x => x.kind === kind);
+  if (!k) return null;
+  const item = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : []).find(x => x.id === k.itemId) || {};
+  const offer = (typeof RHYTHM_EVENT_POINT_SHOP_OFFERS !== 'undefined' ? RHYTHM_EVENT_POINT_SHOP_OFFERS : []).find(x => x.itemId === k.itemId) || {};
+  const peerAmt = typeof ASSISTANT_PEER_BOND_ACTIONS !== 'undefined' && ASSISTANT_PEER_BOND_ACTIONS[kind] ? ASSISTANT_PEER_BOND_ACTIONS[kind].amount : 0;
+  const playerAmt = typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS[k.player] ? ASSISTANT_BOND_ACTIONS[k.player].amount : 0;
+  return {
+    ...k,
+    name: item.name || offer.name || '',
+    emoji: item.emoji || offer.emoji || '🎁',
+    cost: Number.isFinite(offer.cost) ? offer.cost : null,
+    peerAmt,
+    playerAmt
+  };
+};
+const assistantLifeItemDesc = item => {
+  if (!item) return '';
+  if (!assistantLifeEnabled()) return item.desc || '';
+  const k = ASSISTANT_LIFE_ITEM_KINDS.find(x => x.itemId === item.id);
+  if (!k) return item.desc || '';
+  const info = assistantLifeItemInfo(k.kind);
+  return `${k.what.split('。')[0]}。助手2人に使うと、2人の友情Lv +${info.peerAmt}・2人それぞれとあなたの仲良し度 +${info.playerAmt}・2人のひとこと。HOME の「助手たちの今」で、一緒にいる2人を選んで使う。1日1回まで(朝4時に戻る)。ビートP交換所で手に入る。`;
+};
+const assistantLifePairHint = (peerSt, life, a, b) => {
+  const pts = peerSt && peerSt.bond && peerSt.bond[assistantLifePairKey(a, b)] || 0;
+  const levels = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' ? ASSISTANT_PEER_BOND_LEVELS : [];
+  const lv = typeof assistantPeerBondLevel === 'function' ? assistantPeerBondLevel(pts) : 1;
+  const cur = levels.find(x => x.level === lv);
+  const next = levels.find(x => x.level === lv + 1);
+  const q = peerSt && peerSt.quarrel && peerSt.quarrel.pending;
+  const after = q && q.pair === assistantLifePairKey(a, b) || assistantLifeAirOf(life, a, b) === 'after';
+  const near = next && next.min - pts <= 30 ? {
+    level: next.level,
+    left: next.min - pts,
+    ratio: cur ? (pts - cur.min) / (next.min - cur.min) : 0
+  } : null;
+  return {
+    lv,
+    pts,
+    near,
+    after,
+    next
+  };
+};
 const assistantLifeWatchLeft = (play, day) => {
   const p = assistantLifePlayForDay(play, day);
   const tier = assistantLifeTierOf(p.points);
@@ -97145,7 +100087,7 @@ const assistantLifeWatch = async (group, now = Date.now()) => {
   const life = ASSISTANT_LIFE_STORE.state.life;
   const key = assistantLifeGroupKey(group);
   if ((life.watched || []).includes(key) || assistantLifeWatchLeft(ASSISTANT_LIFE_STORE.state.play, day) <= 0) return null;
-  const talk = assistantLifePickWatchTalk(group, ASSISTANT_PEER_STORE.state);
+  const talk = assistantLifePickGroupTalk(group, ASSISTANT_PEER_STORE.state, life) || assistantLifePickWatchTalk(group, ASSISTANT_PEER_STORE.state);
   if (!talk) return null;
   const p = assistantLifePlayForDay(ASSISTANT_LIFE_STORE.state.play, day);
   ASSISTANT_LIFE_STORE.set({
@@ -97170,9 +100112,25 @@ const assistantLifeWatch = async (group, now = Date.now()) => {
       now
     });
   } catch {}
+  if (talk.kind === 'quarrel') return talk;
+  if (talk.kind === 'makeup') {
+    if (assistantPeerMakeupDone(talk)) {
+      await assistantPeerGain(talk.pair[0], talk.pair[1], 'makeup');
+      assistantPeerAddPlayerBond(talk.pair, 'peerMakeup');
+    }
+    try {
+      assistantPeerAlbumAdd(talk);
+    } catch {}
+    return talk;
+  }
   try {
     assistantPeerAlbumAdd(talk);
   } catch {}
+  if (talk.kind === 'event') {
+    await assistantPeerGain(talk.pair[0], talk.pair[1], 'event');
+    assistantPeerAddPlayerBond(talk.pair, 'peerEvent');
+    return talk;
+  }
   for (const [a, b] of assistantPeerPairsOf(talk)) await assistantPeerGain(a, b, 'talk');
   assistantPeerAddPlayerBond(assistantPeerMembers(talk), talk.kind === 'trio' ? 'peerTrio' : 'peerTalk');
   return talk;
@@ -97303,6 +100261,8 @@ function AssistantLifeScreenBody({
   const [tab, setTab] = React.useState('now');
   const [pick, setPick] = React.useState([]);
   const [note, setNote] = React.useState('');
+  const [give, setGive] = React.useState(null);
+  const peerSt = typeof useAssistantPeerState === 'function' ? useAssistantPeerState() : null;
   if (!assistantLifeEnabled() || !st.loaded || !st.open) return null;
   const life = st.life || {};
   const day = assistantLifeDayKey();
@@ -97325,7 +100285,33 @@ function AssistantLifeScreenBody({
     if (onReplay) onReplay(talk);
   };
   const invite = async id => {
-    if (await assistantLifeNudge('invite', id)) setNote(`${nameOf(id)}を誘いました。次の時間に、だれかのところへ行きます`);
+    const talk = assistantLifePickInviteTalk(id, life);
+    if (!(await assistantLifeNudge('invite', id))) return;
+    setNote(`${nameOf(id)}を誘いました。次の時間に、だれかのところへ行きます`);
+    if (talk) {
+      assistantLifeMarkSeen(talk);
+      assistantLifeCloseScreen();
+      if (onReplay) onReplay(talk);
+    }
+  };
+  const peek = id => {
+    const key = `solo:${id}`;
+    if ((life.watched || []).includes(key)) return;
+    const talk = assistantLifePickSoloTalk(id, life);
+    if (!talk) {
+      setNote(`${nameOf(id)}は、いまは静かに過ごしています`);
+      return;
+    }
+    ASSISTANT_LIFE_STORE.set({
+      life: {
+        ...life,
+        watched: [...(life.watched || []), key]
+      }
+    });
+    assistantLifeSaveLife();
+    assistantLifeMarkSeen(talk);
+    assistantLifeCloseScreen();
+    if (onReplay) onReplay(talk);
   };
   const introduce = async () => {
     if (pick.length === 2 && (await assistantLifeNudge('introduce', pick))) {
@@ -97334,6 +100320,38 @@ function AssistantLifeScreenBody({
     }
   };
   const mood = id => ASSISTANT_LIFE_MOODS[(life.moods || {})[id]] || '';
+  const canGive = !!(peerItems && onUseItem);
+  const itemInfos = ASSISTANT_LIFE_ITEM_KINDS.map(k => assistantLifeItemInfo(k.kind));
+  const haveOf = kind => peerItems && Number(peerItems[kind]) || 0;
+  const usedOf = kind => !!(peerSt && typeof assistantPeerItemUsedToday === 'function' && assistantPeerItemUsedToday(peerSt, kind));
+  const pairsOf = gids => {
+    const o = [];
+    for (let i = 0; i < gids.length; i++) for (let j = i + 1; j < gids.length; j++) o.push([gids[i], gids[j]]);
+    return o;
+  };
+  const openGive = g => {
+    const kind = itemInfos.find(x => haveOf(x.kind) > 0 && !usedOf(x.kind))?.kind || 'gift';
+    const ps = pairsOf(g.ids);
+    const best = ps.find(([a, b]) => assistantLifePairHint(peerSt, life, a, b).near) || ps.find(([a, b]) => assistantLifePairHint(peerSt, life, a, b).after) || ps[0];
+    setGive({
+      ids: g.ids,
+      pair: g.ids.length === 2 ? [...g.ids] : best,
+      kind
+    });
+  };
+  const doGive = async () => {
+    if (!give || !give.pair) return;
+    const talk = await onUseItem(give.kind, give.pair);
+    const info = assistantLifeItemInfo(give.kind);
+    if (!talk) {
+      setNote(`${info.name}は、いまは渡せません(1日1回・持っている数を見てください)`);
+      setGive(null);
+      return;
+    }
+    setGive(null);
+    assistantLifeCloseScreen();
+    if (onReplay) onReplay(talk);
+  };
   return React.createElement("div", {
     "data-assistant-life-screen": true,
     className: "fixed inset-0 flex justify-center bg-black/80",
@@ -97397,7 +100415,33 @@ function AssistantLifeScreenBody({
   }, label))), note && React.createElement("p", {
     "data-assistant-life-note": true,
     className: "mt-2 rounded-xl bg-sky-400/10 px-2 py-1.5 text-[11px] font-bold text-sky-100"
-  }, note), tab === 'now' && React.createElement(React.Fragment, null, React.createElement("div", {
+  }, note), tab === 'now' && React.createElement(React.Fragment, null, canGive && React.createElement("div", {
+    "data-assistant-life-items": true,
+    className: "mt-2 rounded-2xl border border-amber-300/40 bg-amber-400/5 p-2"
+  }, React.createElement("p", {
+    className: "text-[12px] font-black text-amber-200"
+  }, "🎁 2人にあげる道具(今日あと:", itemInfos.map(x => `${x.emoji}${usedOf(x.kind) ? 0 : 1}回`).join('・'), ")"), itemInfos.map(x => React.createElement("div", {
+    key: x.kind,
+    "data-assistant-life-item": x.kind,
+    className: "mt-1.5 flex items-center gap-2"
+  }, React.createElement("span", {
+    className: "grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 text-[24px]",
+    "aria-hidden": "true"
+  }, x.emoji), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "text-[12px] font-black text-white"
+  }, x.name, " ", React.createElement("span", {
+    className: "text-[10px] text-slate-400"
+  }, "持っている ", haveOf(x.kind), "個")), React.createElement("p", {
+    className: "text-[10px] leading-snug text-slate-300"
+  }, x.what.split('。')[0], "。", React.createElement("span", {
+    className: "text-orange-300"
+  }, "友情Lv +", x.peerAmt), "・2人との", React.createElement("span", {
+    className: "text-pink-200"
+  }, "仲良し度 +", x.playerAmt), "・2人のひとこと")))), React.createElement("p", {
+    className: "mt-1.5 text-[9px] leading-snug text-slate-400"
+  }, "手に入れる:モンヒロビートの「ビートP交換所」(", itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・'), ")/渡す:下の組の「", itemInfos[0].emoji, " 渡す」。誘う・引き合わせるは無料で、次の時間の過ごし方が変わります")), React.createElement("div", {
     className: "mt-2 space-y-2"
   }, (life.groups || []).map(g => {
     const key = assistantLifeGroupKey(g);
@@ -97419,13 +100463,44 @@ function AssistantLifeScreenBody({
       className: "text-[11px] font-bold leading-tight text-pink-200"
     }, ASSISTANT_LIFE_PLACES[g.place], "で", ASSISTANT_LIFE_DOINGS[g.doing].label))), React.createElement("p", {
       className: "mt-1 text-[10px] text-slate-400"
-    }, g.ids.map(id => `${nameOf(id)}: ${mood(id)}`).join(' / ')), React.createElement("button", {
+    }, g.ids.map(id => `${nameOf(id)}: ${mood(id)}`).join(' / ')), (() => {
+      const hints = pairsOf(g.ids).map(([a, b]) => ({
+        a,
+        b,
+        ...assistantLifePairHint(peerSt, life, a, b)
+      }));
+      const near = hints.filter(h => h.near).sort((x, y) => x.near.left - y.near.left)[0];
+      const after = hints.find(h => h.after);
+      const who2 = h => g.ids.length > 2 ? `${nameOf(h.a)}と${nameOf(h.b)}、` : '';
+      return React.createElement(React.Fragment, null, near && React.createElement("p", {
+        "data-assistant-life-hint": "near",
+        className: "mt-1 w-fit rounded-full bg-orange-400/20 px-2 py-0.5 text-[9px] font-black text-orange-200"
+      }, "⬆ ", who2(near), "もうすぐ友情Lv", near.near.level, "(あと", near.near.left, ")"), near && g.ids.length === 2 && React.createElement("div", {
+        className: "mt-0.5 h-1.5 overflow-hidden rounded-full bg-slate-800",
+        "aria-hidden": "true"
+      }, React.createElement("div", {
+        className: "h-full bg-orange-400",
+        style: {
+          width: `${Math.round(100 * Math.min(1, Math.max(0, near.near.ratio)))}%`
+        }
+      })), after && React.createElement("p", {
+        "data-assistant-life-hint": "after",
+        className: "mt-1 w-fit rounded-full bg-sky-400/20 px-2 py-0.5 text-[9px] font-black text-sky-200"
+      }, "💦 ", who2(after), "言い合いのあと(渡すと仲直りのきっかけに)"));
+    })(), React.createElement("div", {
+      className: "mt-1.5 flex gap-1.5"
+    }, React.createElement("button", {
       type: "button",
       "data-assistant-life-watch": key,
       disabled: done || watchLeft <= 0,
       onClick: () => watch(g),
-      className: "mt-1.5 min-h-[44px] w-full rounded-xl border border-pink-300/50 bg-pink-400/10 px-2 text-[12px] font-black text-pink-100 active:scale-[.98] disabled:opacity-40"
-    }, done ? '見守りました' : watchLeft <= 0 ? '今日はもう見守れません' : '👀 見守る(友情Lv・仲良し度が上がる)'));
+      className: "min-h-[44px] flex-1 rounded-xl border border-pink-300/50 bg-pink-400/10 px-2 text-[12px] font-black text-pink-100 active:scale-[.98] disabled:opacity-40"
+    }, done ? '見守りました' : watchLeft <= 0 ? '今日はもう見守れません' : '👀 見守る'), canGive && React.createElement("button", {
+      type: "button",
+      "data-assistant-life-give": key,
+      onClick: () => openGive(g),
+      className: "min-h-[44px] flex-1 rounded-xl border border-amber-300/60 bg-amber-400/15 px-2 text-[12px] font-black text-amber-100 active:scale-[.98]"
+    }, itemInfos[0].emoji, " ", g.ids.length === 2 ? '渡す' : 'だれに渡す？')));
   }), Object.entries(life.solo || {}).map(([id, s]) => React.createElement("div", {
     key: id,
     "data-assistant-life-solo": id,
@@ -97442,7 +100517,13 @@ function AssistantLifeScreenBody({
     className: `ml-1 text-[10px] ${s.reason === 'lonely' ? 'text-amber-200' : 'text-slate-400'}`
   }, ASSISTANT_LIFE_REASON_LABEL[s.reason])), React.createElement("p", {
     className: "text-[11px] font-bold leading-tight text-slate-300"
-  }, ASSISTANT_LIFE_PLACES[s.place], "で", ASSISTANT_LIFE_DOINGS[s.doing].label, "・", mood(id))), s.reason !== 'distance' && React.createElement("button", {
+  }, ASSISTANT_LIFE_PLACES[s.place], "で", ASSISTANT_LIFE_DOINGS[s.doing].label, "・", mood(id))), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-peek": id,
+    disabled: (life.watched || []).includes(`solo:${id}`),
+    onClick: () => peek(id),
+    className: "min-h-[44px] shrink-0 rounded-xl border border-pink-300/40 bg-pink-400/5 px-2 text-[11px] font-black text-pink-100 active:scale-[.98] disabled:opacity-40"
+  }, (life.watched || []).includes(`solo:${id}`) ? '見た' : 'ようすを見る'), s.reason !== 'distance' && React.createElement("button", {
     type: "button",
     "data-assistant-life-invite": id,
     disabled: invitedNext.has(id),
@@ -97485,7 +100566,194 @@ function AssistantLifeScreenBody({
     },
     peerItems: peerItems,
     onUseItem: onUseItem
-  })))));
+  })))), give && React.createElement(AssistantLifeGiveSheet, {
+    give: give,
+    setGive: setGive,
+    life: life,
+    peerSt: peerSt,
+    itemInfos: itemInfos,
+    haveOf: haveOf,
+    usedOf: usedOf,
+    nameOf: nameOf,
+    onGive: doGive
+  }));
+}
+function AssistantLifeGiveSheet({
+  give,
+  setGive,
+  life,
+  peerSt,
+  itemInfos,
+  haveOf,
+  usedOf,
+  nameOf,
+  onGive
+}) {
+  const info = itemInfos.find(x => x.kind === give.kind) || itemInfos[0];
+  const pair = give.pair || [];
+  const hint = pair.length === 2 ? assistantLifePairHint(peerSt, life, pair[0], pair[1]) : null;
+  const left = hint && hint.next ? hint.next.min - hint.pts : null;
+  const have = haveOf(info.kind);
+  const used = usedOf(info.kind);
+  const reason = used ? '今日はもう使いました(朝4時に戻ります)' : have <= 0 ? `持っていません(ビートP交換所で手に入ります)` : '';
+  const pairs = [];
+  for (let i = 0; i < give.ids.length; i++) for (let j = i + 1; j < give.ids.length; j++) pairs.push([give.ids[i], give.ids[j]]);
+  const samePair = p => pair.length === 2 && p.every(id => pair.includes(id));
+  return React.createElement("div", {
+    "data-assistant-life-give-sheet": info.kind,
+    className: "absolute inset-0 flex items-end justify-center bg-black/70",
+    style: {
+      zIndex: 2
+    },
+    onClick: () => setGive(null)
+  }, React.createElement("div", {
+    className: "w-full max-w-md rounded-t-3xl border-t-2 border-amber-300/60 bg-slate-900 p-3",
+    style: {
+      paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))'
+    },
+    onClick: ev => ev.stopPropagation()
+  }, React.createElement("div", {
+    className: "flex gap-1.5",
+    role: "tablist"
+  }, itemInfos.map(x => React.createElement("button", {
+    key: x.kind,
+    type: "button",
+    role: "tab",
+    "aria-selected": x.kind === info.kind,
+    "data-assistant-life-give-kind": x.kind,
+    onClick: () => setGive({
+      ...give,
+      kind: x.kind
+    }),
+    className: `min-h-[40px] flex-1 rounded-xl border px-1 text-[12px] font-black active:scale-[.98] ${x.kind === info.kind ? 'border-amber-300 bg-amber-400/20 text-amber-100' : 'border-white/10 text-slate-400'}`
+  }, x.emoji, " ", x.name, "(", haveOf(x.kind), ")"))), pairs.length > 1 && React.createElement("div", {
+    className: "mt-2 flex flex-wrap gap-1.5"
+  }, pairs.map(p => React.createElement("button", {
+    key: p.join('-'),
+    type: "button",
+    "data-assistant-life-give-pair": p.join('-'),
+    "aria-pressed": samePair(p),
+    onClick: () => setGive({
+      ...give,
+      pair: p
+    }),
+    className: `min-h-[36px] rounded-full border px-2.5 text-[11px] font-black active:scale-95 ${samePair(p) ? 'border-amber-300 bg-amber-400/25 text-white' : 'border-white/15 text-slate-300'}`
+  }, p.map(nameOf).join('と')))), React.createElement("div", {
+    className: "mt-2 flex items-center gap-2"
+  }, React.createElement("span", {
+    className: "grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/5 text-[30px]",
+    "aria-hidden": "true"
+  }, info.emoji), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "text-[15px] font-black text-white"
+  }, info.name, "を渡す"), React.createElement("p", {
+    className: "text-[11px] text-slate-300"
+  }, pair.map(nameOf).join(' と '), " へ")), React.createElement(AssistantLifeFaces, {
+    ids: pair,
+    size: 40
+  })), React.createElement("dl", {
+    className: "mt-2 grid grid-cols-[4.5rem_1fr] gap-x-2 gap-y-1 text-[11px]"
+  }, React.createElement("dt", {
+    className: "font-black text-amber-200"
+  }, "何の道具？"), React.createElement("dd", {
+    className: "text-slate-200"
+  }, info.what), React.createElement("dt", {
+    className: "font-black text-amber-200"
+  }, "起きること"), React.createElement("dd", {
+    className: "text-slate-200"
+  }, React.createElement("span", {
+    className: "text-orange-300"
+  }, "2人の友情Lv +", info.peerAmt), hint ? `(いま Lv${hint.lv}${left != null ? ` → あと${left}で Lv${hint.lv + 1}${left <= info.peerAmt ? '！' : ''}` : ''})` : '', React.createElement("br", null), React.createElement("span", {
+    className: "text-pink-200"
+  }, "あなたと ", pair.map(nameOf).join('・'), " の仲良し度 +", info.playerAmt), React.createElement("br", null), "渡したあと、2人がひとこと"), React.createElement("dt", {
+    className: "font-black text-amber-200"
+  }, "使える数"), React.createElement("dd", {
+    className: "text-slate-200"
+  }, "1日1回(朝4時に戻る)・持っている ", have, "個"), React.createElement("dt", {
+    className: "font-black text-amber-200"
+  }, "手に入れる"), React.createElement("dd", {
+    className: "text-slate-200"
+  }, "ビートP交換所", info.cost != null ? `(${info.cost}P)` : ''), React.createElement("dt", {
+    className: "font-black text-amber-200"
+  }, "このあと"), React.createElement("dd", {
+    className: "text-slate-200"
+  }, hint && hint.after ? '仲直りのきっかけになり、2人がまた一緒にすごしやすくなります' : '2人はしばらくごきげんで、一緒にすごしやすくなります')), reason && React.createElement("p", {
+    "data-assistant-life-give-reason": true,
+    className: "mt-2 rounded-xl bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-300"
+  }, reason), React.createElement("div", {
+    className: "mt-2 flex gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    "data-assistant-life-give-cancel": true,
+    onClick: () => setGive(null),
+    className: "min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]"
+  }, "やめる"), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-give-go": true,
+    disabled: !!reason || pair.length !== 2,
+    onClick: onGive,
+    className: "min-h-[44px] flex-[2] rounded-xl border border-amber-300/70 bg-amber-400/20 text-[14px] font-black text-amber-100 active:scale-[.98] disabled:opacity-40"
+  }, info.emoji, " 渡す"))));
+}
+function AssistantLifeItemIntro({
+  peerItems
+}) {
+  const [state, setState] = React.useState('loading');
+  const have = ASSISTANT_LIFE_ITEM_KINDS.find(k => peerItems && Number(peerItems[k.kind]) > 0);
+  const peer = typeof useAssistantPeerState === 'function' ? useAssistantPeerState() : null;
+  React.useEffect(() => {
+    if (!assistantLifeEnabled() || !have || state !== 'loading') return;
+    let alive = true;
+    Promise.resolve(storeGet(ASSISTANT_LIFE_ITEM_INTRO_KEY, false, false)).catch(() => false).then(v => {
+      if (alive) setState(v === true ? 'done' : 'show');
+    });
+    return () => {
+      alive = false;
+    };
+  }, [!!have]);
+  if (!assistantLifeEnabled() || !have || state !== 'show' || peer && peer.talking) return null;
+  const info = assistantLifeItemInfo(have.kind);
+  const close = open => {
+    setState('done');
+    try {
+      storeSet(ASSISTANT_LIFE_ITEM_INTRO_KEY, true, false);
+    } catch {}
+    if (open) assistantLifeOpenScreen();
+  };
+  const guide = typeof assistantById === 'function' ? assistantById('mua') : null;
+  return React.createElement("div", {
+    "data-assistant-life-item-intro": true,
+    className: "fixed inset-0 flex items-center justify-center bg-black/60 px-4",
+    style: {
+      zIndex: 8800
+    }
+  }, React.createElement("div", {
+    className: "w-full max-w-sm rounded-2xl border-2 border-amber-300 bg-[#1c1405] p-3 shadow-2xl"
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, guide && React.createElement(AssistantFace, {
+    who: guide,
+    size: 44,
+    accent: guide.accent,
+    expression: "wink"
+  }), React.createElement("p", {
+    className: "text-[14px] font-black text-amber-200"
+  }, "はじめての ", info.emoji, " ", info.name, "！")), React.createElement("p", {
+    className: "mt-2 text-[12px] leading-relaxed text-white"
+  }, "① 「助手たちの今」で、一緒にいる2人を選んで渡せるよ", React.createElement("br", null), "② 2人の友情Lv と、あなたとの仲良し度が上がる", React.createElement("br", null), "③ 1日1回。⬆ の印がついた2人に渡すと、Lv が上がりやすい！"), React.createElement("div", {
+    className: "mt-2 flex gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    "data-assistant-life-item-intro-close": true,
+    onClick: () => close(false),
+    className: "min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]"
+  }, "あとで"), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-item-intro-open": true,
+    onClick: () => close(true),
+    className: "min-h-[44px] flex-[2] rounded-xl border border-amber-300/70 bg-amber-400/20 text-[12px] font-black text-amber-100 active:scale-[.98]"
+  }, "「助手たちの今」を開く"))));
 }
 const CARD_BATTLE_HAND_MAX = 5;
 const CARD_BATTLE_DECK_SIZE = 50;
@@ -137637,6 +140905,18 @@ function MonsterHeroGame() {
   const [extremeRuleOpen, setExtremeRuleOpen] = useState(false);
   const [extremeDifficulty, setExtremeDifficulty] = useState('EXTREME');
   const UNDERWORLD_TAB_SEEN_KEY = 'mh_underworld_tab_seen_v1';
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const settings = normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false)));
+        if (alive) setRhythmSettings(prev => prev === DEFAULT_RHYTHM_SETTINGS ? settings : prev);
+      } catch (e) {}
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [underworldTabSeen, setUnderworldTabSeen] = useState(true);
   useEffect(() => {
     (async () => {
@@ -139506,6 +142786,7 @@ function MonsterHeroGame() {
       const after = levelInfo(nextXp);
       setBreederXp(nextXp);
       storeSet('mh_breeder_xp', nextXp, false);
+      if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(before.level, after.level, breederName);
       const gainedLevels = after.level - before.level;
       if (gainedLevels > 0) {
         setBreederPoints(prev => {
@@ -142764,6 +146045,7 @@ function MonsterHeroGame() {
       ...prev,
       [id]: result.state
     }));
+    if (typeof growthFxAssistantBond === 'function') growthFxAssistantBond(id, current.points, result.state.points);
     const after = assistantBondLevelOf(result.state.points);
     if (id === selectedAssistantIdRef.current && after > before) setAssistantBondUp(true);
     if (after > before) grantProfileFrames(id, after);
@@ -144606,6 +147888,19 @@ function MonsterHeroGame() {
       return next;
     });
     Audio_.se.levelUp();
+    if (typeof growthFxMasuBondItem === 'function') {
+      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+      growthFxMasuBondItem({
+        masuName: masu.name,
+        image: base && base.iconUrl,
+        itemName: item.name,
+        itemEmoji: item.emoji,
+        count: n,
+        gain: result.xpGain,
+        before: result.before,
+        after: result.after
+      });
+    }
     return result;
   };
   const openTrainingInfo = () => setGameState('TRAINING_INFO');
@@ -146324,6 +149619,7 @@ function MonsterHeroGame() {
     const breederLevelAfter = levelInfo(nextXp);
     setBreederXp(nextXp);
     storeSet('mh_breeder_xp', nextXp, false);
+    if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(breederLevelBefore.level, breederLevelAfter.level, breederName);
     const gainedLevels = breederLevelAfter.level - breederLevelBefore.level;
     if (gainedLevels > 0) {
       setBreederPoints(prev => {
@@ -146463,6 +149759,7 @@ function MonsterHeroGame() {
       const breederLevelAfter = levelInfo(nextBreederXp);
       setBreederXp(nextBreederXp);
       await storeSet('mh_breeder_xp', nextBreederXp, false);
+      if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(breederLevelBefore.level, breederLevelAfter.level, breederName);
       const gainedBreederLevels = breederLevelAfter.level - breederLevelBefore.level;
       if (gainedBreederLevels > 0) {
         setBreederPoints(prev => {
@@ -157373,6 +160670,9 @@ function MonsterHeroGame() {
       }
     }, React.createElement(TapRippleLayer, {
       spawnRef: rippleSpawnRef
+    }), React.createElement(GrowthFxLayer, {
+      screen: gameState,
+      load: battleFxSettings.load
     }), updateNotice, storageTroubleNotice, showAutoBgmPicker && isRunStage(gameState) && React.createElement("div", {
       "data-auto-bgm-picker": true,
       className: "fixed inset-0 flex items-end justify-center bg-black/55 p-3",
@@ -157536,6 +160836,11 @@ function MonsterHeroGame() {
         today: today
       }), typeof AssistantLifeBand === 'function' && gameState === 'HOME' && !busy && !peerReplay && React.createElement(AssistantLifeBand, {
         metIds: metIds
+      }), typeof AssistantLifeItemIntro === 'function' && gameState === 'HOME' && !busy && !peerReplay && React.createElement(AssistantLifeItemIntro, {
+        peerItems: {
+          gift: ownedItemCount(ownedItems, 'peer_gift'),
+          token: ownedItemCount(ownedItems, 'peer_token')
+        }
       }), typeof AssistantLifeScreen === 'function' && React.createElement(AssistantLifeScreen, {
         metIds: metIds,
         onReplay: talk => setPeerReplay(talk),
@@ -161711,7 +165016,8 @@ function MonsterHeroGame() {
         if (rhythmPlay.from === 'proto') return;
         if (rhythmPlay.from === 'lineAdjust') return;
         if (rhythmPlay.from === 'raid') void completeRaidJackRhythm(result, rhythmPlay.song, rhythmPlay.difficulty);
-        const multiScale = rhythmPlay.from === 'multi' ? rhythmMultiTotalScale(rhythmPlay.multiCount, rhythmPlay.multiStreak, rhythmPlay.multiCpus) : 1;
+        const assistBonus = rhythmPlay.from === 'multi' && rhythmAssistSessionEnabled() ? rhythmAssistSessionRewardBonusNow() : 0;
+        const multiScale = rhythmPlay.from === 'multi' ? Math.round(rhythmMultiTotalScale(rhythmPlay.multiCount, rhythmPlay.multiStreak, rhythmPlay.multiCpus) * (1 + assistBonus) * 100) / 100 : 1;
         if (rhythmPlay.from === 'multi') RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId, result, false, {
           diffId: rhythmPlay.difficulty.id
         });
@@ -161826,6 +165132,8 @@ function MonsterHeroGame() {
         setRhythmPlay(null);
         setGameState('RHYTHM_OPTIONS');
       }
+    }), gameState === 'RHYTHM_PLAY' && rhythmPlay && rhythmPlay.from === 'multi' && rhythmAssistSessionEnabled() && React.createElement(RhythmAssistSessionPlayFace, {
+      songId: rhythmPlay.song && rhythmPlay.song.songId
     }), React.createElement(RhythmInviteHomeBar, {
       show: gameState === 'HOME',
       onAccept: () => {
@@ -161862,6 +165170,7 @@ function MonsterHeroGame() {
       onUseBuddyTicket: consumeBuddyTicket,
       onRefundBuddyTicket: refundBuddyTicket,
       onOpenMasuBeat: () => openMasuBeat(gameState),
+      sessionAssistants: rhythmAssistSessionEnabled() && typeof assistantsUnlockedFrom === 'function' ? assistantsUnlockedFrom(rhythmEventStorySeen).filter(who => who.id !== 'momosuke' || momosukeIntroSeenFlag) : [],
       songs: rhythmDemoSongs(RHYTHM_SONGS),
       difficultiesOf: song => rhythmDemoDifficulties(song, RHYTHM_PLAY_DIFFICULTIES),
       difficultyList: rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES),

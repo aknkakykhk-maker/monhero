@@ -7,6 +7,9 @@
 //   ④ 関係とアルバム: 名前は「友情Lv」「友だち」。今日のペアは出ない
 //   ⑤ 帯は HOME だけ(モンヒロビートの画面へ行くと消える)。画面を閉じているあいだは様子を書き換えない
 //   ⑥ 印が偽のときは帯も入口も出ない
+//   ⑧ 2人にあげる道具: 道具の欄(持っている数・起きること)/「渡す」で5つが分かる確かめ → 渡すと2人のひとこと・持ち物が1つ減る・2回目は理由が出る/
+//      はじめて手に入れたときの案内は HOME で1回だけ(止め絵 life-8-give・life-9-intro)
+//   ⑦ 段階3: 見守ると組の中の人だけが話す様子の台本が流れる(穴が残らない)/ひとりの助手の「ようすを見る」で、その人のひとりごとが流れる
 const http = require('http'), path = require('path'), fs = require('fs');
 const root = path.resolve(__dirname, '..', '..'), PORT = 9231;
 const { quietBootSeed, updateNoticeSeed, oneTimeNoticeSeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
@@ -18,7 +21,7 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'applica
 const assistantsSrc = fs.readFileSync(path.join(root, 'monster-hero/data/assistants.js'), 'utf8');
 const replaySrc = assistantsSrc.slice(assistantsSrc.indexOf('const EVENT_REPLAYS = ['));
 const STORY_IDS = [...replaySrc.matchAll(/\{ id: '([a-z0-9_]+)'/g)].map(m => m[1]);
-const seed = ({ storyIds, life }) => {
+const seed = ({ storyIds, life, intro = false }) => {
   const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
   if (localStorage.getItem('mh_breeder_name') === null) {
     put('mh_breeder_name', 'テスト'); put('mh_breeder_icon', 'Mocchi'); put('mh_onboarded', true);
@@ -33,6 +36,10 @@ const seed = ({ storyIds, life }) => {
     // にぎわい「にぎやか」(朝4時区切りの今日)
     const day = new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 10);
     put('mh_assistant_life_play_v1', { day, points: 70, counts: { rhythm: 40, card: 30 }, lastDay: null, streak: 1 });
+    // 2人にあげる道具(差し入れ2・友情のしるし1)。はじめての案内は intro のときだけ出す
+    let owned = {}; try { owned = JSON.parse(localStorage.getItem('mh_owned_items')) || {}; } catch {}
+    put('mh_owned_items', { ...owned, peer_gift: 2, peer_token: 1 });
+    if (!intro) put('mh_assistant_life_item_intro_v1', true);
   }
   if (life) { const t = setInterval(() => { try { if (typeof RELEASE_FLAGS !== 'undefined') { RELEASE_FLAGS.assistantLife = true; clearInterval(t); } } catch {} }, 2); }
 };
@@ -44,6 +51,9 @@ const toHome = async (page) => {
   }
   for (let i = 0; i < 12; i++) { const c = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.offsetParent && /^(受け取る|閉じる|OK|わかった！?|とじる)$/.test((x.innerText || '').trim())); if (b) { b.click(); return true; } return false; }); if (!c) break; await page.waitForTimeout(400); }
 };
+const finishTalk = async (page) => { for (let i = 0; i < 24; i++) { const n = await page.locator('[data-assistant-peer-talk]').count(); if (!n) break; await page.locator('[data-assistant-peer-talk]').first().click({ timeout: 800 }).catch(() => {}); await page.waitForTimeout(250); } };
+const reopen = async (page) => { await page.locator('[data-assistant-life-open]').click({ timeout: 20000 }).catch(() => {}); await page.locator('[data-assistant-life-screen]').waitFor({ timeout: 5000 }).catch(() => {}); };
+const talkInfo = (page) => page.evaluate(() => { const el = document.querySelector('[data-assistant-peer-talk]'); if (!el) return null; return { id: el.getAttribute('data-assistant-peer-talk'), faces: [...el.querySelectorAll('[data-assistant-peer-face]')].map(x => x.getAttribute('data-assistant-peer-face')), line: (el.querySelector('[data-assistant-peer-line]') || {}).innerText || '' }; });
 const ls = (page, k) => page.evaluate((key) => { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } }, k);
 const overflowX = (page, sel) => page.evaluate((s) => { const el = document.querySelector(s); if (!el) return null; const r = el.getBoundingClientRect(); return r.left < -1 || r.right > window.innerWidth + 1; }, sel);
 
@@ -57,14 +67,14 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
   });
   await new Promise(r => server.listen(PORT, r));
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-  const open = async ({ w, h, life = true }) => {
+  const open = async ({ w, h, life = true, intro = false }) => {
     const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: SHOTS ? 2 : 1 });
     const errors = []; page.on('pageerror', e => errors.push(String(e)));
     await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
     await page.addInitScript(quietBootSeed());
     await page.addInitScript(updateNoticeSeed());
     await page.addInitScript(oneTimeNoticeSeed());
-    await page.addInitScript(seed, { storyIds: STORY_IDS, life });
+    await page.addInitScript(seed, { storyIds: STORY_IDS, life, intro });
     await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     await toHome(page);
@@ -94,6 +104,8 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
       await inv.click(); await page.waitForTimeout(300);
       const life = await ls(page, 'mh_assistant_life_v1');
       check('③ 誘うと、次の時間の声かけとして残る', life && life.nudges && life.nudges.invite.some(n => n.id === who && n.abs === life.abs + 1));
+      // 声をかけに行く台本があれば流れて画面が閉じる → 最後まで進めて開き直す
+      if (!(await page.locator('[data-assistant-life-screen]').count())) { await finishTalk(page); await reopen(page); }
     } else check('③ 誘えるひとりの助手がいる', false);
     // 引き合わせる
     await page.locator('[data-assistant-life-pick="kyuko"]').click(); await page.locator('[data-assistant-life-pick="dra"]').click();
@@ -112,6 +124,8 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
       const talking = await page.locator('[data-assistant-peer-talk], [data-assistant-peer-line]').count();
       check('② 見守ると画面が閉じて、その組の掛け合いが流れる', (await page.locator('[data-assistant-life-screen]').count()) === 0 && talking > 0, `${talking}`);
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-3-watch.png') });
+      const info = await talkInfo(page);
+      check('⑦ 見守ると、その組の中の人だけが話す台本が流れる(穴が残らない)', info && info.faces.every(id => watched.split('+').includes(id)) && !/[{}]/.test(info.line), info ? `${info.id}・${info.faces.join(',')}` : 'なし');
       const playAfter = await ls(page, 'mh_assistant_life_play_v1');
       const bondAfter = await ls(page, 'mh_assistant_peer_bond_v1');
       const ids = watched.split('+');
@@ -123,6 +137,38 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
       await page.locator('[data-assistant-life-screen]').waitFor({ timeout: 5000 }).catch(() => {});
       check('② 同じ時間に同じ組は2度見守れない', await page.locator(`[data-assistant-life-watch="${watched}"]`).isDisabled().catch(() => false));
     } else check('② 見守れる組がある', false);
+    // ⑦ ひとりの助手の様子を見る
+    const peekBtn = page.locator('[data-assistant-life-peek]:not([disabled])').first();
+    if (await peekBtn.count()) {
+      const who = await peekBtn.getAttribute('data-assistant-life-peek');
+      await peekBtn.click(); await page.waitForTimeout(800);
+      const info = await talkInfo(page);
+      check('⑦ ようすを見ると、その助手のひとりごとが流れる(顔はその助手だけ・穴が残らない)', info && (/^life-solo/.test(info.id) ? info.faces.join() === who : info.faces.includes(who)) && !/[{}]/.test(info.line), info ? `${info.id}・${info.faces.join(',')}・${info.line.slice(0, 30)}` : 'なし');
+      if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-7-solo.png') });
+      await finishTalk(page); await reopen(page);
+      check('⑦ 同じ時間に同じ助手は1回だけ', await page.locator(`[data-assistant-life-peek="${who}"]`).isDisabled().catch(() => false));
+    } else check('⑦ ようすを見られるひとりの助手がいる', false);
+    // ⑧ 2人にあげる道具
+    const itemsText = await page.locator('[data-assistant-life-items]').innerText().catch(() => '');
+    check('⑧ 道具の欄に、持っている数・起きること・手に入れる所が出る', /持っている 2個/.test(itemsText) && /友情Lv \+15/.test(itemsText) && /仲良し度 \+\d+/.test(itemsText) && /ビートP交換所/.test(itemsText), itemsText.replace(/\s+/g, ' ').slice(0, 80));
+    const giveBtn = page.locator('[data-assistant-life-give]').first();
+    if (await giveBtn.count()) {
+      await giveBtn.click(); await page.waitForTimeout(300);
+      const sheet = await page.locator('[data-assistant-life-give-sheet]').innerText().catch(() => '');
+      check('⑧ 「渡す」で、何の道具か・起きること・使える数・手に入れる所・このあと が1枚で出る', ['何の道具', '起きること', '使える数', '手に入れる', 'このあと'].every(w => sheet.includes(w)) && /1日1回/.test(sheet));
+      check('⑧ 確かめの1枚もはみ出さない(縦 390)', await page.evaluate(() => { const el = document.querySelector('[data-assistant-life-give-sheet] > div'); const r = el && el.getBoundingClientRect(); return !!r && r.left >= -1 && r.right <= window.innerWidth + 1 && r.top >= -1; }));
+      if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-8-give.png') });
+      await page.locator('[data-assistant-life-give-go]').click(); await page.waitForTimeout(800);
+      const owned = await ls(page, 'mh_owned_items');
+      const info = await talkInfo(page);
+      check('⑧ 渡すと、2人のひとことが流れて差し入れが1つ減る', owned && owned.peer_gift === 1 && !!info, info ? info.id : 'なし');
+      await finishTalk(page); await reopen(page);
+      await page.locator('[data-assistant-life-give]').first().click(); await page.waitForTimeout(300);
+      await page.locator('[data-assistant-life-give-kind="gift"]').click().catch(() => {});
+      const reason = await page.locator('[data-assistant-life-give-reason]').innerText().catch(() => '');
+      check('⑧ 同じ日に2回目は、理由が出て渡せない', /今日はもう使いました/.test(reason) && await page.locator('[data-assistant-life-give-go]').isDisabled());
+      await page.locator('[data-assistant-life-give-cancel]').click();
+    } else check('⑧ 渡せる組がある', false);
     // ④ 関係とアルバム
     await page.locator('[data-assistant-life-tab="map"]').click(); await page.waitForTimeout(300);
     const mapText = await page.locator('[data-assistant-peer-map]').innerText().catch(() => '');
@@ -155,6 +201,18 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     check('① 横 844×390 でも画面がはみ出さない', await L.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1) && (await L.page.locator('[data-assistant-life-screen]').count()) === 1);
     if (SHOTS) await L.page.screenshot({ path: path.join(shotDir, 'life-6-screen-land.png') });
     await L.page.close();
+
+    // ⑧ はじめての案内
+    const I = await open({ w: 390, h: 844, intro: true });
+    // 掛け合いが流れているあいだは案内を出さない(重ねない)。流れていたら最後まで進めてから見る
+    for (let i = 0; i < 40 && !(await I.page.locator('[data-assistant-life-item-intro]').count()); i++) { await finishTalk(I.page); await I.page.waitForTimeout(500); }
+    check('⑧ 案内は掛け合いと重ならない', !((await I.page.locator('[data-assistant-life-item-intro]').count()) && (await I.page.locator('[data-assistant-peer-talk]').count())));
+    check('⑧ はじめて道具を持っていると、HOME で案内が出る', (await I.page.locator('[data-assistant-life-item-intro]').count()) === 1);
+    if (SHOTS) await I.page.screenshot({ path: path.join(shotDir, 'life-9-intro.png') });
+    await I.page.locator('[data-assistant-life-item-intro-open]').click().catch(() => {});
+    await I.page.waitForTimeout(400);
+    check('⑧ 案内から「助手たちの今」が開き、案内は2度出ない', (await I.page.locator('[data-assistant-life-screen]').count()) === 1 && (await ls(I.page, 'mh_assistant_life_item_intro_v1')) === true);
+    await I.page.close();
 
     // ⑥ 印が偽
     const F = await open({ w: 390, h: 844, life: false });

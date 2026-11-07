@@ -10,6 +10,8 @@
 //   ⑤ にぎわい: 遊びごとの量と1日の上限・段の境目・日付で数え直し・続けた日数の上乗せ
 //   ⑥ 仲良くなり方: 段の倍率と1日の上限(静か 20/ふつう 30/にぎやか 45/お祭り 60)。印が偽なら今のまま
 //   ⑦ 保存: 新しいキー(mh_assistant_life_v1・mh_assistant_life_play_v1)だけに書く。壊れた値でも空として読む
+//   ⑧ 台本(段階3): ASSISTANT_LIFE_TALKS の id・鍵・話し手/書き直しの表は印が真のときだけ・id を変えない/
+//      組・ひとり・誘う・言い合いの台本が様子に合う(顔ぶれ・していること・友情Lv の段・場所の型・空気)/穴が残らない/見たものは14日出さない
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -35,6 +37,13 @@ const load = (rel) => {
   vm.runInContext(code, ctx);
 };
 load('monster-hero/data/assistants.js');
+// 2人にあげる道具の検査用に、持ち物(breeder.js)と交換所(rhythm-event.js)から2品の行だけを切り出して読む(ファイル丸ごとはほかの定義に頼っているため)
+{
+  const pick = (rel, re) => fs.readFileSync(path.join(root, rel), 'utf8').split('\n').filter(l => re.test(l));
+  const items = fs.readFileSync(path.join(root, 'monster-hero/data/breeder.js'), 'utf8').match(/\{ id:'peer_(gift|token)'[\s\S]*?desc:"[^"]*" \}/g) || [];
+  const offers = pick('monster-hero/data/rhythm-event.js', /Object\.freeze\(\{ id:'peer_(gift|token)'/).map(l => l.trim().replace(/,$/, ''));
+  vm.runInContext(`var BREEDER_MARKET_ITEMS = [${items.join(',')}]; var RHYTHM_EVENT_POINT_SHOP_OFFERS = [${offers.join(',')}];`, ctx);
+}
 let dayNow = '2026-11-07';
 vm.runInContext('var assistantBubbleDayKey = () => __day(); var assistantPeerDayKey = () => __day(); var jstDayKey4 = () => __day(); var assistantById = (id) => ASSISTANTS.find(a => a.id === id);', Object.assign(ctx, { __day: () => dayNow }));
 load('monster-hero/src/parts/56-assistant-peer.jsx');
@@ -281,6 +290,183 @@ if (process.argv.includes('--stats')) {
   check('⑥ 差し入れなど決まった量のものは倍にしない', r2.gained === 15);
 }
 
+// ⑧ 台本(段階3)
+{
+  // テキスト(docs/progress/assistant-peer/lines/)とデータがずれていない
+  const { spawnSync } = require('child_process');
+  for (const tool of ['life-talks-import.js', 'peer-rewrite-table.js']) {
+    const r = spawnSync(process.execPath, [path.join(__dirname, tool), '--check'], { encoding: 'utf8' });
+    check(`⑧ ${tool} --check(テキストとデータが同じ)`, r.status === 0, (r.stdout || r.stderr || '').trim().split('\n').pop());
+  }
+  const LT = G('ASSISTANT_LIFE_TALKS');
+  const RW = G('ASSISTANT_PEER_REWRITES');
+  const RAW = G('ASSISTANT_PEER_TALKS');
+  const KEYS = { place: Object.keys(PLACES), mood: Object.keys(MOODS), why: ['lonely', 'mypace', 'distance'], doing: ['snack', 'practice', 'training', 'cards', 'walk'],
+    lv: ['1-3', '4-6', '7-10'], air: ['normal', 'after', 'makeup'], answer: ['glad', 'decline', 'shy'], seed: ['snack', 'order', 'look', 'plan', 'late', 'noise', 'peek', 'score'] };
+  const oldIds = new Set([...RAW, ...G('ASSISTANT_PEER_EVENTS'), ...G('ASSISTANT_PEER_QUARRELS'), ...G('ASSISTANT_PEER_TRIO_TALKS')].map(t => t.id));
+  const ids = LT.map(t => t.id);
+  check('⑧ 台本の id が重ならない(今の台本とも)', new Set(ids).size === ids.length && ids.every(id => !oldIds.has(id) && !oldIds.has(id.replace(/m$/, ''))), `${ids.length}本`);
+  const badKey = LT.filter(t => Object.entries(t.keys || {}).some(([k, v]) => !KEYS[k] || !KEYS[k].includes(v)));
+  check('⑧ 鍵の名前と値が決めたものだけ', badKey.length === 0, badKey.slice(0, 3).map(t => t.id).join(', '));
+  const speakers = (t) => t.kind === 'solo' || t.kind === 'breeder' ? [t.who] : t.kind === 'invite' ? [t.who, t.from] : (Array.isArray(t.trio) ? t.trio : t.pair);
+  const badWho = LT.filter(t => { const m = speakers(t) || []; const rows = [...t.lines, ...(t.distance || []), ...(t.makeup || [])]; return !m.every(id => IDS.includes(id)) || !rows.every(l => m.includes(l.who)); });
+  check('⑧ 話し手はその台本の顔ぶれの中の人', badWho.length === 0, badWho.slice(0, 3).map(t => t.id).join(', '));
+  const twoOk = LT.filter(t => t.kind === 'pair' || (t.kind === 'trio' && t.any)).every(t => new Set(t.lines.map(l => l.who)).size === 2);
+  check('⑧ 2人の掛け合い・どの3人でもは2人とも話す', twoOk);
+  check('⑧ 2人きりで「家」の台本は無い', !LT.some(t => t.kind === 'pair' && t.keys.place === 'home'));
+
+  // 書き直しの表: 印が偽なら今の文のまま・真なら表の文。id と話す人は変えない
+  flags.assistantLife = false;
+  const offList = G('assistantPeerTalkList()');
+  check('⑧ 印が偽なら今の台本をそのまま使う', offList === RAW);
+  flags.assistantLife = true;
+  const onList = G('assistantPeerTalkList()');
+  const sameIds = onList.length === RAW.length && onList.every((t, i) => t.id === RAW[i].id);
+  const sameWho = onList.every((t, i) => t.lines.length === RAW[i].lines.length && t.lines.every((l, j) => l.who === RAW[i].lines[j].who));
+  const changed = onList.filter((t, i) => JSON.stringify(t.lines) !== JSON.stringify(RAW[i].lines)).length;
+  const want = RAW.filter(t => RW[t.id] && RW[t.id].lines).length;
+  check('⑧ 印が真なら書き直しの文で出す(id・行の数・話す人は同じ)', sameIds && sameWho && changed === want && changed > 0, `${changed}本`);
+  const q0 = G('ASSISTANT_PEER_QUARRELS')[0];
+  const qOn = G('assistantPeerExtraTalks()').quarrels.find(t => t.id === q0.id);
+  check('⑧ けんかに「距離をおく」の行がつく(印が真のとき)', !RW[q0.id] || !RW[q0.id].distance || (qOn.distance && qOn.distance.length === RW[q0.id].distance.length));
+  flags.assistantLife = false;
+  const allOff = G('assistantPeerAllTalks()').length;
+  flags.assistantLife = true;
+  const allOn = G('assistantPeerAllTalks()').length;
+  check('⑧ アルバムには印が真のときだけ新しい2人・3人の台本も入る', allOn > allOff, `${allOff} → ${allOn}`);
+
+  // 様子に合う台本
+  const lstore = G('ASSISTANT_LIFE_STORE');
+  lstore.set({ loaded: true, seen: {} });
+  const bondOf = (lv) => [0, 0, 40, 120, 250, 450, 700, 1000, 1400, 1900, 2500][lv];
+  const peer = (lv, extra = {}) => { const bond = {}; for (let i = 0; i < IDS.length; i++) for (let j = i + 1; j < IDS.length; j++) bond[pairKey(IDS[i], IDS[j])] = bondOf(lv); return { bond, quarrel: { pending: null, done: [] }, ...extra }; };
+  const rank = { '1-3': 0, '4-6': 1, '7-10': 2 };
+  const pickG = G('assistantLifePickGroupTalk');
+  const membersOf = (t) => (Array.isArray(t.trio) ? t.trio : t.pair);
+  const lifeBase = { abs: 1000, moods: {}, recent: [], groups: [], solo: {} };
+  let n = 0, bad = [], doingHit = 0, doingAll = 0, bandBad = 0;
+  for (let i = 0; i < IDS.length; i++) for (let j = i + 1; j < IDS.length; j++) for (const d of KEYS.doing) for (const lv of [1, 5, 8]) {
+    const g = { ids: [IDS[i], IDS[j]].sort(), doing: d, place: DOINGS[d].places[0] };
+    const t = pickG(g, peer(lv), lifeBase, Math.random);
+    n++;
+    if (!t || !membersOf(t).every(id => g.ids.includes(id))) { bad.push(`${g.ids.join('-')} ${d} Lv${lv}`); continue; }
+    const tl = (t.keys && t.keys.lv) || t.lifeLv;
+    const band = lv >= 7 ? '7-10' : lv >= 4 ? '4-6' : '1-3';
+    if (tl && rank[tl] > rank[band]) bandBad++;
+    const td = (t.keys && t.keys.doing) || t.lifeDoing;
+    doingAll++; if (!td || td === d) doingHit++;
+  }
+  check('⑧ 2人の組: どの2人・していること・段でも、その2人の台本が出る', bad.length === 0, bad.slice(0, 3).join(' / ') || `${n}通り`);
+  check('⑧ 2人の組: 友情Lv の段より上の台本は出ない', bandBad === 0, `${bandBad}`);
+  check('⑧ 2人の組: していることが合う台本を先に出す(9割以上)', doingHit / doingAll >= 0.9, `${Math.round(100 * doingHit / doingAll)}%`);
+  // 14日のあいだは同じ台本を出さない(全部見たら、いちばん前に見たもの)
+  {
+    lstore.set({ seen: {} });
+    const g = { ids: ['erubin', 'momosuke'], doing: 'snack', place: 'cafe' };
+    const got = [];
+    for (let k = 0; k < 12; k++) { const t = pickG(g, peer(5), lifeBase, Math.random); got.push(t.id); G('assistantLifeMarkSeen')(t); }
+    check('⑧ 見た台本は続けて出さない(14日)', new Set(got).size === got.length, `${new Set(got).size}/${got.length}`);
+    const seen = G('ASSISTANT_LIFE_STORE').state.seen;
+    check('⑧ 見た記録は id と日付だけ', Object.entries(seen).every(([k, v]) => typeof k === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)));
+    const norm = G('normalizeAssistantLifeSeen')({ a: '2026-10-01', b: '2026-11-06', c: 5, d: 'x' }, '2026-11-07');
+    check('⑧ 14日より前の記録と壊れた値は捨てる', JSON.stringify(norm) === JSON.stringify({ b: '2026-11-06' }));
+    lstore.set({ seen: {} });
+  }
+  // 3人以上の組
+  {
+    let bad3 = [];
+    for (let k = 0; k < 200; k++) {
+      const pool = [...IDS].sort(() => Math.random() - 0.5);
+      const g = { ids: pool.slice(0, 3 + (k % 2)).sort(), doing: KEYS.doing[k % 5], place: 'plaza' };
+      const t = pickG(g, peer(3), lifeBase, Math.random);
+      if (!t || !membersOf(t).every(id => g.ids.includes(id))) bad3.push(g.ids.join('-'));
+    }
+    check('⑧ 3人・4人の組: その組の中の人だけが話す台本が出る', bad3.length === 0, bad3.slice(0, 3).join(' / '));
+  }
+  // ひとりの助手
+  {
+    let badS = [];
+    for (const id of IDS) for (const [place, reason, mood] of [['home', 'lonely', 'lonely'], [PREFS[id].fav, 'mypace', 'happy'], ['hill', 'mypace', 'sleepy']]) {
+      const life = { ...lifeBase, moods: { [id]: mood }, solo: { [id]: { doing: 'idle', place, reason } } };
+      const t = G('assistantLifePickSoloTalk')(id, life, peer(1), () => 0.99);
+      const okPlace = t && (t.parts || []).every(pid => { const raw = LT.find(x => x.id === pid); const pl = raw.keys.place; return !pl || G('assistantLifePlaceType')(id, pl) === G('assistantLifePlaceType')(id, place); });
+      if (!t || !t.lines.every(l => l.who === id) || !okPlace) badS.push(`${id}@${place}`);
+    }
+    check('⑧ ひとりの助手: その人のひとりごと(場所の型が合う・様子→気持ち)が出る', badS.length === 0, badS.slice(0, 4).join(' / '));
+    const t = G('assistantLifePickSoloTalk')('dra', { ...lifeBase, moods: { dra: 'lonely' }, solo: { dra: { doing: 'sleep', place: 'home', reason: 'lonely' } } }, peer(1), () => 0.99);
+    check('⑧ ひとりごとは「様子の1行 → 気持ちの1行」の順', t && t.parts.length === 2 && LT.find(x => x.id === t.parts[0]).line === 'scene' && LT.find(x => x.id === t.parts[1]).line === 'feel');
+  }
+  // 言い合い中の2人がまた一緒なら仲直り
+  {
+    const q = G('assistantPeerExtraTalks()').quarrels.find(t => t.kind === 'quarrel');
+    const st = peer(3, { quarrel: { pending: { id: q.id, pair: pairKey(q.pair[0], q.pair[1]), at: 0 }, done: [q.id] } });
+    const t = pickG({ ids: [...q.pair].sort(), doing: 'walk', place: 'plaza' }, st, lifeBase, Math.random);
+    check('⑧ 言い合いのあとの2人がまた一緒にいると、仲直りが流れる', t && t.kind === 'makeup' && t.quarrelId === q.id);
+    const life = { ...lifeBase, moods: { [q.pair[0]]: 'sulky' }, solo: { [q.pair[0]]: { doing: 'idle', place: 'hill', reason: 'distance' } } };
+    const d = G('assistantLifePickSoloTalk')(q.pair[0], life, st, () => 0.5);
+    check('⑧ 距離をおいている助手の様子を見ると「距離をおく」の行', !q.distance.length || (d && d.kind === 'life-distance'));
+  }
+  // 穴が残らない
+  {
+    const fill = G('assistantPeerLineText');
+    const left = [];
+    for (const t of [...LT]) for (const l of [...t.lines, ...(t.distance || []), ...(t.makeup || [])]) {
+      const text = fill(l, { ...t, pair: speakers(t), trio: t.kind === 'trio' && !t.any ? t.trio : undefined, ctx: { place: 'plaza', doing: 'snack' } });
+      if (/[{}]/.test(text)) left.push(`${t.id}: ${text}`);
+    }
+    check('⑧ 台本の穴({c}・{place}・{doing} など)が残らない', left.length === 0, left.slice(0, 2).join(' / '));
+  }
+  // 新しい種類(声かけ・決まった3人・言い合い・ブリーダーへ)が引ける
+  {
+    const T = G('assistantLifeTalkSet()');
+    let badInv = [];
+    for (const id of IDS) {
+      const others = IDS.filter(x => x !== id);
+      const life = { ...lifeBase, moods: { [id]: 'lonely' }, solo: { [id]: { doing: 'idle', place: 'home', reason: 'lonely' } }, groups: [{ ids: others.slice(0, 2), doing: 'snack', place: 'cafe' }, { ids: others.slice(2, 4), doing: 'walk', place: 'plaza' }] };
+      const t = G('assistantLifePickInviteTalk')(id, life, peer(3), Math.random);
+      if (T.invite.some(x => x.who === id) && (!t || t.who !== id || !others.slice(0, 4).includes(t.from))) badInv.push(id);
+    }
+    check('⑧ 誘う: 誘われる人と、いま組にいる人のあいだの声かけが出る', badInv.length === 0, badInv.join(',') || `${T.invite.length}本`);
+    let badTrio = 0, hitFixed = 0;
+    for (const t of T.trio) {
+      lstore.set({ seen: {} });
+      const got = pickG({ ids: [...t.trio], doing: t.keys.doing || 'snack', place: 'plaza' }, peer(3), lifeBase, Math.random);
+      if (!got || !got.trio || !got.trio.every(id => t.trio.includes(id))) badTrio++;
+      else if (!got.anyTrio) hitFixed++;
+    }
+    check('⑧ 決まった3人がそろうと、その3人の台本が先に出る', badTrio === 0 && hitFixed === T.trio.length, `${hitFixed}/${T.trio.length}`);
+    const lq = T.quarrel.filter(t => t.kind === 'quarrel');
+    const lifeQ = G('assistantPeerExtraTalks()').quarrels.filter(t => t.kind === 'quarrel' && /^life-/.test(t.id));
+    check('⑧ 言い合い(言い合い・距離・仲直り)が仲直りの流れに乗る', lq.length > 0 && lifeQ.length === lq.length && lq.every(q => q.distance.length && T.quarrel.some(m => m.kind === 'makeup' && m.quarrelId === q.id)), `${lq.length}本`);
+    // 気分がすぐれない2人はたまに言い合い(Lv2 から)
+    lstore.set({ seen: {} });
+    let qn = 0;
+    for (let k = 0; k < 400; k++) { const t = pickG({ ids: ['kiki', 'mua'], doing: 'snack', place: 'cafe' }, peer(3), { ...lifeBase, moods: { kiki: 'sulky' } }, Math.random); if (t && t.kind === 'quarrel') qn++; }
+    check('⑧ すねている2人は3割くらいで言い合いになる', qn > 80 && qn < 160, `${qn}/400`);
+    let brN = 0;
+    for (let k = 0; k < 300; k++) { const t = G('assistantLifePickSoloTalk')('mua', { ...lifeBase, moods: { mua: 'happy' }, solo: { mua: { doing: 'walk', place: 'plaza', reason: 'mypace' } } }, peer(1), Math.random); if (t && t.kind === 'life-breeder') brN++; }
+    check('⑧ ようすを見ると、ときどきブリーダーへのひとこと', T.breeder.length === 0 || (brN > 30 && brN < 150), `${brN}/300`);
+    lstore.set({ seen: {} });
+  }
+  // 2人にあげる道具: 数字は表から読む/渡すとよさそうな印
+  {
+    const g = G("assistantLifeItemInfo('gift')"), t = G("assistantLifeItemInfo('token')");
+    check('⑧ 道具の名前・値段・上がる量は表から読む(差し入れ 200P・友情Lv +15/しるし 500P・+30)', g.name === '差し入れ' && g.cost === 200 && g.peerAmt === 15 && g.playerAmt > 0 && t.cost === 500 && t.peerAmt === 30, `${g.name} ${g.cost} ${g.peerAmt}/${g.playerAmt}・${t.name} ${t.cost} ${t.peerAmt}/${t.playerAmt}`);
+    const hint = G('assistantLifePairHint');
+    const h1 = hint({ bond: { 'kiki-mua': 440 }, quarrel: {} }, lifeBase, 'kiki', 'mua');
+    const h2 = hint({ bond: { 'kiki-mua': 300 }, quarrel: { pending: { pair: 'kiki-mua' } } }, lifeBase, 'kiki', 'mua');
+    check('⑧ 印: もうすぐ友情Lv が上がる(あと30以内)・言い合いのあと', h1.near && h1.near.level === 5 && h1.near.left === 10 && !h1.after && !h2.near && h2.after);
+    flags.assistantLife = false;
+    const off = G("assistantLifeItemDesc(BREEDER_MARKET_ITEMS.find(x => x.id === 'peer_gift'))");
+    flags.assistantLife = true;
+    const on = G("assistantLifeItemDesc(BREEDER_MARKET_ITEMS.find(x => x.id === 'peer_gift'))");
+    check('⑧ 持ち物・交換所の説明は、印が真のときだけ「何が起きるか」中心の文', off === G("BREEDER_MARKET_ITEMS.find(x => x.id === 'peer_gift').desc") && /友情Lv \+15/.test(on) && /助手たちの今/.test(on) && /1日1回/.test(on));
+  }
+  // ⑦ のために入れ物を読み込む前へ戻す
+  lstore.loading = null;
+  lstore.set({ loaded: false, life: G('normalizeAssistantLife(null)'), play: G('normalizeAssistantLifePlay(null)'), seen: {} });
+}
+
 // ⑦ 保存
 (async () => {
   for (const k of Object.keys(mem)) delete mem[k];
@@ -307,7 +493,7 @@ if (process.argv.includes('--stats')) {
   check('⑦ 印が偽なら数えず、何も書かない', writes.length === before && off === null && G('assistantLifeGainOptsNow()') === null);
   flags.assistantLife = true;
   const keys = [...new Set(writes)];
-  check('⑦ 書くのは mh_assistant_life_v1・mh_assistant_life_play_v1 だけ', keys.every(k => k === 'mh_assistant_life_v1' || k === 'mh_assistant_life_play_v1'), keys.join(', '));
+  check('⑦ 書くのは mh_assistant_life_v1・mh_assistant_life_play_v1・mh_assistant_peer_seen14_v1 だけ', keys.every(k => ['mh_assistant_life_v1', 'mh_assistant_life_play_v1', 'mh_assistant_peer_seen14_v1'].includes(k)), keys.join(', '));
 
   console.log(failed ? `\n${failed} 件 NG` : '\nすべて OK');
   process.exit(failed ? 1 : 0);

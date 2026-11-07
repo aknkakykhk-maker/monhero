@@ -226,3 +226,27 @@
 2. 段階2(PR): 演奏中の顔とふきだし・結果のカード・Lv で開くもの
 3. 段階3(PR): 台詞(コトバ・ナカヨシと分担)と口調の検査・デュオ・合体の演出(仲良し度は main の 9d21861 から読む)
 5. ヘルプ・更新履歴・一度きりの案内 → カゲあつくんの見直し → 社長
+
+## 進捗(作る段)
+
+- [x] 社長の止め絵の確認(縦 `real-*.jpg`・横 `real-land-*.jpg`)→「この形で作る」(11/7)
+- [x] 段階1: 計算と保存・呼ぶシートの助手のタブ・部屋の中の動き(公開の印 `RELEASE_FLAGS.rhythmAssistantSession` は偽)
+  - 計算 `33-rhythm-assistant-session.jsx`(純粋)・保存と画面 `80-screen-rhythm-assistant-session.jsx`・部屋 `77-screen-rhythm-multi.jsx`(知らせに `as`)
+  - 部屋の中では助手を masuId `as:<助手id>` で持つ。頭(cpuBrain)は `rhythmAssistSessionWrapBrain` で包んで、助手のときだけ助手の計算へ回す
+  - 控えは `mh_rhythm_buddy_v1` の calls に `kind:'assistant'`・`assistantId`(無い控えはマスモン)
+  - 台詞は最小限(来たとき・好きな曲・MVP・高い・低い)。段階3でコトバ・ツムギ・ナカヨシ(4)と増やす
+  - 検査 `tools/mode/rhythm-assistant-session-check.js`
+  - 印を立てて試すとき: ゲームを開いて HOME で `RELEASE_FLAGS.rhythmAssistantSession = true` にしてからモンヒロビートへ入る
+- [x] 段階2: 演奏中の顔とひとこと・「助手」の印・Lv で開くもの(Lv.10 好きな曲が見える・Lv.15 サビで顔が光る・Lv.20/40/60/80 ビートP +2/4/6/8%・Lv.35/65/100 セッション券1/2/3枚)
+  - 顔とひとことは演奏画面の外(60-app)から重ねる `RhythmAssistSessionPlayFace`。演奏画面(30-rhythm-play.jsx)には読むだけの窓 `RHYTHM_PLAY_WATCH`(hud・曲・時刻を書くだけ)を置いた
+  - 置き場所は、上の帯と時間の行(`data-rhythm-song-clock`)の左側の表示のいちばん下のすぐ下(縦=時間の行の下・横=曲名の行の下)。offset の鎖で測るので回転でも合う
+  - 場面: 50/100/300コンボ・ミス3つ続き・サビ(RHYTHM_SONG_CLIMAX の強さ0.9以上)。1.6秒で消える・同じ曲で同じ場面は1回
+  - 残り(段階3で): Lv.45 結果の枠の色・Lv.50/100 プロフィールの札と称号・Lv.75 聞きどころ・Lv.90 結果の背景・Lv.5 結果の台詞の増加・オプション「助手のひとこと」
+- [x] 段階3(仕組み): 台詞の取り込み・場面ごとの選び方・デュオ・サビの合体・仲良し度 +3
+  - 台詞の正本は `lines/solo-draft.txt`・`lines/pair-draft.txt`。部品 `33-rhythm-assistant-session-lines.jsx` は `tools/mode/rhythm-assistant-session-lines-import.js` で作る(手で直さない・`--check` で食い違いを見張る)
+  - コトバ(口調)・ナカヨシ(4)(呼び方・距離感)の見直しが返ったら、txt を直して取り込み直す
+  - デュオ: 仲良し度 Lv3 以上のペアを高い順に組む(1人は1組だけ)。演奏中の掛け合い1曲3回まで(コンボ・サビのとき)。Lv4 で結果の2人のひとこと・ビートP +5%。Lv5+特別なお話(`st.special`)でサビの合体(1曲1回・顔が重なり、画面のふちに2人の色の光)
+  - 仲良し度: 2人で1曲終えたら `assistantPeerGain(a, b, 'session')`(`ASSISTANT_PEER_BOND_ACTIONS.session` +3・1日12・ペアの1日の上限の中)。同じ回は2度足さない
+  - 部屋のチャット: 来たとき・曲が決まったとき(はじめて・好き・苦手)・自分が MVP・呼んだ人の結果(フルコン・高い・ふつう・低い・好きな曲の専用・苦手を乗りこえた)・セッションLv.UP・苦手が好きになってきた
+  - 残り: ハナビの祝い(`growthFxSessionLevel`)は 44-growth-fx.jsx が main に入ってからつなぐ / Lv.45〜100 の見た目(枠の色・札・称号・聞きどころ・背景)/ オプション「助手のひとこと」
+- [ ] 止め絵(縦横)・台詞の抜粋・更新履歴とヘルプの文 → 窓口
