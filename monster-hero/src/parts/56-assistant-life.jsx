@@ -778,6 +778,16 @@ const ASSISTANT_LIFE_TIER_NOTES = Object.freeze({
   festival: 'お祭りみたいににぎやか！ 友情Lv がぐんぐん上がります',
 });
 const ASSISTANT_LIFE_REASON_LABEL = Object.freeze({ lonely: 'さみしそう', mypace: 'マイペース', distance: '距離をおいている' });
+// 次の時間まで(「あと1時間12分で 夜」)。時間が変わるとみんなが過ごし方を決め直す
+const assistantLifeNextSlotText = (now = Date.now()) => {
+  const cur = assistantLifeSlotAt(now);
+  const h = new Date(Number(now) + 9 * 3600000);
+  const slot = ASSISTANT_LIFE_SLOTS[cur.i];
+  const mins = Math.max(1, (slot.to * 60) - (h.getUTCHours() * 60 + h.getUTCMinutes()));
+  const next = ASSISTANT_LIFE_SLOTS[(cur.i + 1) % ASSISTANT_LIFE_SLOTS.length];
+  const t = mins >= 60 ? `${Math.floor(mins / 60)}時間${mins % 60 ? `${mins % 60}分` : ''}` : `${mins}分`;
+  return `あと${t}で${next.label}(みんなが動きます)`;
+};
 const assistantLifeSlotRange = (id) => { const s = ASSISTANT_LIFE_SLOTS.find(x => x.id === id); return s ? `${s.label}(${s.from}〜${s.to}時)` : ''; };
 
 // 様子を、いまの時間に合わせて読む(画面と帯で使う)
@@ -823,7 +833,7 @@ function AssistantLifeBand({ metIds }) {
           <span className="min-w-0 flex-1">
             <span className="block text-[11px] font-black leading-tight text-white">{text || sub}</span>
             {text && sub ? <span className="block text-[10px] font-bold leading-tight text-slate-300">{sub}</span> : null}
-            <span className="block text-[9px] font-bold leading-tight text-pink-200">にぎわい「{tier.label}」・みんなの様子 ▸</span>
+            <span className="block text-[10px] font-bold leading-tight text-pink-200">にぎわい「{tier.label}」・みんなの様子 ▸</span>
           </span>
         </button>
         <button type="button" data-assistant-life-band-close onClick={() => setHidden(true)} aria-label="閉じる" className="h-8 w-8 shrink-0 rounded-full border border-slate-600 text-[13px] font-black text-slate-300 active:scale-95">×</button>
@@ -910,7 +920,7 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
       <div className="flex h-full w-full max-w-md flex-col bg-slate-950" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
           <p className="min-w-0 flex-1 text-[15px] font-black text-pink-200">助手たちの今</p>
-          <span className="whitespace-nowrap text-[10px] font-bold text-slate-400">いまは{assistantLifeSlotRange(slot.id)}</span>
+          <span className="text-right text-[10px] font-bold leading-tight text-slate-400">いまは{assistantLifeSlotRange(slot.id)}<br/><span data-assistant-life-next-slot className="text-slate-300">{assistantLifeNextSlotText()}</span></span>
           <button type="button" data-assistant-life-close onClick={assistantLifeCloseScreen} aria-label="閉じる" className="h-9 w-9 rounded-full border border-slate-600 text-[15px] font-black text-slate-300 active:scale-95">×</button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-2">
@@ -924,8 +934,8 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
               <div className="h-full bg-pink-400" style={{ width: `${next ? Math.min(100, Math.round(100 * (play.points - tier.min) / (next.min - tier.min))) : 100}%` }}/>
             </div>
             <p className="mt-1 text-[11px] font-bold text-white">{ASSISTANT_LIFE_TIER_NOTES[tier.id]}</p>
-            <p className="text-[10px] text-slate-300">友情Lv の上がり方 ×{tier.mult}・1組の1日の上限 {tier.cap}・今日見守れるのは あと{watchLeft}回</p>
-            <p className="text-[9px] text-slate-400">モンヒロビート・バトル・MFバトルカード・おしゃべりで遊ぶと、にぎわいがたまります(朝4時に新しくなります)</p>
+            <p className="mt-0.5 text-[11px] text-slate-200"><span className="text-orange-300">🤝 友情Lv の上がり方 ×{tier.mult}</span>(1組1日 {tier.cap} まで)・👀 今日見守れるのは あと<b className="text-white">{watchLeft}</b>回</p>
+            <p className="text-[10px] text-slate-400">モンヒロビート・バトル・MFバトルカード・おしゃべりで遊ぶと、にぎわいがたまります(朝4時に新しくなります)</p>
           </div>
           <div className="mt-2 flex gap-1" role="tablist">
             {[['now', 'いまの様子'], ['map', '関係とアルバム']].map(([k, label]) => (
@@ -942,10 +952,10 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
                     <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 text-[24px]" aria-hidden="true">{x.emoji}</span>
                     <div className="min-w-0 flex-1">
                       <p className="text-[12px] font-black text-white">{x.name} <span className="text-[10px] text-slate-400">持っている {haveOf(x.kind)}個</span></p>
-                      <p className="text-[10px] leading-snug text-slate-300">{x.what.split('。')[0]}。<span className="text-orange-300">友情Lv +{x.peerAmt}</span>・2人との<span className="text-pink-200">仲良し度 +{x.playerAmt}</span>・2人のひとこと</p>
+                      <p className="text-[10px] leading-snug text-slate-300">{x.what.split('。')[0]}。<span className="text-orange-300">🤝 友情Lv +{x.peerAmt}</span>・2人との<span className="text-pink-200">💗 仲良し度 +{x.playerAmt}</span>・2人のひとこと</p>
                     </div>
                   </div>))}
-                <p className="mt-1.5 text-[9px] leading-snug text-slate-400">手に入れる:モンヒロビートの「ビートP交換所」({itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・')})/渡す:下の組の「{itemInfos[0].emoji} 渡す」。誘う・引き合わせるは無料で、次の時間の過ごし方が変わります</p>
+                <p className="mt-1.5 text-[10px] leading-snug text-slate-400">手に入れる:モンヒロビートの「ビートP交換所」({itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・')})/渡す:下の組の「{itemInfos[0].emoji} 渡す」。誘う・引き合わせるは無料で、次の時間の過ごし方が変わります</p>
               </div>)}
             <div className="mt-2 space-y-2">
               {(life.groups || []).map(g => { const key = assistantLifeGroupKey(g); const done = (life.watched || []).includes(key); return (
@@ -957,7 +967,7 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
                       <p className="text-[11px] font-bold leading-tight text-pink-200">{ASSISTANT_LIFE_PLACES[g.place]}で{ASSISTANT_LIFE_DOINGS[g.doing].label}</p>
                     </div>
                   </div>
-                  <p className="mt-1 text-[10px] text-slate-400">{g.ids.map(id => `${nameOf(id)}: ${mood(id)}`).join(' / ')}</p>
+                  {g.ids.some(id => mood(id)) && <p className="mt-1 text-[11px] text-slate-300">{g.ids.filter(id => mood(id)).map(id => `${nameOf(id)}: ${mood(id)}`).join(' / ')}</p>}
                   {(() => {
                     // 渡すとよさそうな印(もうすぐ友情Lv が上がる/言い合いのあと)
                     const hints = pairsOf(g.ids).map(([a, b]) => ({ a, b, ...assistantLifePairHint(peerSt, life, a, b) }));
@@ -965,9 +975,9 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
                     const after = hints.find(h => h.after);
                     const who2 = (h) => (g.ids.length > 2 ? `${nameOf(h.a)}と${nameOf(h.b)}、` : '');
                     return (<>
-                      {near && <p data-assistant-life-hint="near" className="mt-1 w-fit rounded-full bg-orange-400/20 px-2 py-0.5 text-[9px] font-black text-orange-200">⬆ {who2(near)}もうすぐ友情Lv{near.near.level}(あと{near.near.left})</p>}
+                      {near && <p data-assistant-life-hint="near" className="mt-1 w-fit rounded-full bg-orange-400/20 px-2 py-0.5 text-[10px] font-black text-orange-200">🤝 {who2(near)}もうすぐ友情Lv{near.near.level}(あと{near.near.left})</p>}
                       {near && g.ids.length === 2 && <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-slate-800" aria-hidden="true"><div className="h-full bg-orange-400" style={{ width: `${Math.round(100 * Math.min(1, Math.max(0, near.near.ratio)))}%` }}/></div>}
-                      {after && <p data-assistant-life-hint="after" className="mt-1 w-fit rounded-full bg-sky-400/20 px-2 py-0.5 text-[9px] font-black text-sky-200">💦 {who2(after)}言い合いのあと(渡すと仲直りのきっかけに)</p>}
+                      {after && <p data-assistant-life-hint="after" className="mt-1 w-fit rounded-full bg-sky-400/20 px-2 py-0.5 text-[10px] font-black text-sky-200">💦 {who2(after)}言い合いのあと(渡すと仲直りのきっかけに)</p>}
                     </>);
                   })()}
                   <div className="mt-1.5 flex gap-1.5">
@@ -1014,7 +1024,7 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
                   {introNext ? `次の時間は ${introNext.pair.split('-').map(nameOf).join('と')} を引き合わせます` : '次の時間に一緒に過ごしてもらう'}
                 </button>
               </div>)}
-            <p className="mt-3 text-[9px] leading-snug text-slate-500">みんな、時間(朝5・昼10・午後14・夕方18・夜21・深夜0時)が変わるたびに、自分で過ごし方を決めます。</p>
+            <p className="mt-3 text-[10px] leading-snug text-slate-500">みんな、時間(朝5・昼10・午後14・夕方18・夜21・深夜0時)が変わるたびに、自分で過ごし方を決めます。</p>
           </>)}
           {tab === 'map' && typeof AssistantPeerMap === 'function' && (
             <div className="mt-2"><AssistantPeerMap metIds={metIds} onReplay={(t) => { assistantLifeCloseScreen(); if (onReplay) onReplay(t); }} peerItems={peerItems} onUseItem={onUseItem}/></div>)}
@@ -1060,8 +1070,8 @@ function AssistantLifeGiveSheet({ give, setGive, life, peerSt, itemInfos, haveOf
         <dl className="mt-2 grid grid-cols-[4.5rem_1fr] gap-x-2 gap-y-1 text-[11px]">
           <dt className="font-black text-amber-200">何の道具？</dt><dd className="text-slate-200">{info.what}</dd>
           <dt className="font-black text-amber-200">起きること</dt>
-          <dd className="text-slate-200"><span className="text-orange-300">2人の友情Lv +{info.peerAmt}</span>{hint ? `(いま Lv${hint.lv}${left != null ? ` → あと${left}で Lv${hint.lv + 1}${left <= info.peerAmt ? '！' : ''}` : ''})` : ''}<br/>
-            <span className="text-pink-200">あなたと {pair.map(nameOf).join('・')} の仲良し度 +{info.playerAmt}</span><br/>渡したあと、2人がひとこと</dd>
+          <dd className="text-slate-200"><span className="text-orange-300">🤝 2人の友情Lv +{info.peerAmt}</span>{hint ? `(いま Lv${hint.lv}${left != null ? ` → あと${left}で Lv${hint.lv + 1}${left <= info.peerAmt ? '！' : ''}` : ''})` : ''}<br/>
+            <span className="text-pink-200">💗 あなたと {pair.map(nameOf).join('・')} の仲良し度 +{info.playerAmt}</span><br/>渡したあと、2人がひとこと</dd>
           <dt className="font-black text-amber-200">使える数</dt><dd className="text-slate-200">1日1回(朝4時に戻る)・持っている {have}個</dd>
           <dt className="font-black text-amber-200">手に入れる</dt><dd className="text-slate-200">ビートP交換所{info.cost != null ? `(${info.cost}P)` : ''}</dd>
           <dt className="font-black text-amber-200">このあと</dt><dd className="text-slate-200">{hint && hint.after ? '仲直りのきっかけになり、2人がまた一緒にすごしやすくなります' : '2人はしばらくごきげんで、一緒にすごしやすくなります'}</dd>
@@ -1098,7 +1108,7 @@ function AssistantLifeItemIntro({ peerItems }) {
           {guide && <AssistantFace who={guide} size={44} accent={guide.accent} expression="wink"/>}
           <p className="text-[14px] font-black text-amber-200">はじめての {info.emoji} {info.name}！</p>
         </div>
-        <p className="mt-2 text-[12px] leading-relaxed text-white">① 「助手たちの今」で、一緒にいる2人を選んで渡せるよ<br/>② 2人の友情Lv と、あなたとの仲良し度が上がる<br/>③ 1日1回。⬆ の印がついた2人に渡すと、Lv が上がりやすい！</p>
+        <p className="mt-2 text-[12px] leading-relaxed text-white">① 「助手たちの今」で、一緒にいる2人を選んで渡せるよ<br/>② 2人の友情Lv と、あなたとの仲良し度が上がる<br/>③ 1日1回。「🤝 もうすぐ友情Lv」の印がついた2人に渡すと、Lv が上がりやすい！</p>
         <div className="mt-2 flex gap-2">
           <button type="button" data-assistant-life-item-intro-close onClick={() => close(false)} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">あとで</button>
           <button type="button" data-assistant-life-item-intro-open onClick={() => close(true)} className="min-h-[44px] flex-[2] rounded-xl border border-amber-300/70 bg-amber-400/20 text-[12px] font-black text-amber-100 active:scale-[.98]">「助手たちの今」を開く</button>
