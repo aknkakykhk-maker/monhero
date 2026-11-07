@@ -10,6 +10,8 @@ import {
   handleRequest,
   loadDigest,
   TOTAL_DAILY_LIMIT,
+  PEER_USER_LIMIT,
+  PEER_TOTAL_LIMIT,
   USER_DAILY_LIMIT,
 } from "./core.js";
 import { RANKING_FUNCTIONS, RANKING_TABLES } from "./ranking.js";
@@ -61,6 +63,9 @@ const envInt = (name: string, fallback: number) => {
 const limits = {
   user: envInt("ASSISTANT_CHAT_USER_DAILY_LIMIT", USER_DAILY_LIMIT),
   total: envInt("ASSISTANT_CHAT_TOTAL_DAILY_LIMIT", TOTAL_DAILY_LIMIT),
+  // 助手どうしの掛け合い(kind:'peer_talks'・2026-11-07)。おしゃべりとは別の表で数える
+  peerUser: envInt("ASSISTANT_PEER_TALK_USER_DAILY_LIMIT", PEER_USER_LIMIT),
+  peerTotal: envInt("ASSISTANT_PEER_TALK_TOTAL_DAILY_LIMIT", PEER_TOTAL_LIMIT),
 };
 const allowedOrigins = (Deno.env.get("ASSISTANT_CHAT_ALLOWED_ORIGINS") ?? "")
   .split(",").map((s) => s.trim()).filter(Boolean);
@@ -84,6 +89,17 @@ const refund = async (breederId: string) => {
   const { error } = await supabase.rpc("assistant_chat_refund", { p_breeder: breederId });
   if (error) throw new Error("refund");
 };
+const takePeer = async (breederId: string, userLimit: number, totalLimit: number) => {
+  const { data, error } = await supabase.rpc("assistant_peer_talk_take", {
+    p_breeder: breederId, p_user_limit: userLimit, p_total_limit: totalLimit,
+  });
+  if (error) throw new Error("take");
+  return data;
+};
+const refundPeer = async (breederId: string) => {
+  const { error } = await supabase.rpc("assistant_peer_talk_refund", { p_breeder: breederId });
+  if (error) throw new Error("refund");
+};
 // 本文を含まない記録だけ
 const log = (entry: Record<string, unknown>) => console.log(JSON.stringify({ fn: "assistant-chat", ...entry }));
 
@@ -103,6 +119,6 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: true, kind: "sorry", reply: "ごめん、今うまく話せないや", expression: "troubled" }), { status: 200, headers });
   }
   // kind:'daily_lines' はふだんの吹き出しを1日1回まとめて作る頼み。それ以外はおしゃべり(core.js の handleRequest が分ける)
-  const result = await handleRequest({ body, digest, client: anthropic, take, refund, log, limits, rankingDb });
+  const result = await handleRequest({ body, digest, client: anthropic, take, refund, takePeer, refundPeer, log, limits, rankingDb });
   return new Response(JSON.stringify(result.json), { status: result.status, headers });
 });
