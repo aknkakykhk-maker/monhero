@@ -76,10 +76,11 @@ for (const f of txtFiles) {
     if (!KINDS[head]) return; // 見出し・注記・前の形(kotoba.txt)は読まない
     const parts = l.split(/\s+\|\|?\s+/);
     const words = parts[0].split(/\s+/).slice(1);
-    const who = words.filter(w => !w.includes('='));
+    const any = head === 'trio' && words.includes('any'); // どの3人でも: trio A B any(話すのは A と B だけ)
+    const who = words.filter(w => !w.includes('=') && w !== 'any');
     const keys = Object.fromEntries(words.filter(w => w.includes('=')).map(w => w.split('=')));
     const bad = (m) => txtProblems.push(`${where} ${m}`);
-    if (who.length !== KINDS[head] || !who.every(w => IDS.includes(w)) || new Set(who).size !== who.length) bad(`人の数・名前がおかしい(${who.join(' ')})`);
+    if (who.length !== (any ? 2 : KINDS[head]) || !who.every(w => IDS.includes(w)) || new Set(who).size !== who.length) bad(`人の数・名前がおかしい(${who.join(' ')})`);
     for (const [k, v] of Object.entries(keys)) if (!KEYS[k] || !KEYS[k].includes(v)) bad(`鍵 ${k}=${v} が無い`);
     if (who.length === 2 && head !== 'invite' && (keys.place === 'home' || keys.doing === 'sleep')) bad('2人きりの home・sleep は書かない');
     const rows = [];
