@@ -1,0 +1,112 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>助手ライフ 本番の形</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0b1020;font-family:"Noto Sans JP","Hiragino Sans",sans-serif;color:#fff;padding:16px}
+.row{display:flex;gap:16px;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap}
+.cap{font-size:14px;font-weight:900;color:#fde68a;margin-bottom:6px;max-width:390px}
+.ph{width:390px;height:844px;border-radius:28px;border:2px solid #334155;overflow:hidden;position:relative;background:#020617}
+.ld{width:844px;height:390px;border-radius:24px;border:2px solid #334155;overflow:hidden;position:relative;background:#020617}
+.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cover{position:absolute;background:#0f2a24;opacity:.96}
+.fc{display:inline-block;width:26px;height:26px;border-radius:50%;border:2px solid #fff;background:#334155;overflow:hidden;box-shadow:0 2px 6px #000a}.fc img{width:100%;height:100%}
+.fc.lonely{border-color:#fbbf24}.fc.after{border-color:#7dd3fc}
+.faces{position:absolute;display:flex;align-items:center}.faces .fc+.fc{margin-left:-8px}.faces b{font-size:10px;background:#0f172a;border-radius:9px;padding:1px 5px;margin-left:2px;border:1px solid #fff6}
+.fac{position:absolute;padding:8px 12px;border-radius:14px;background:linear-gradient(135deg,#4a1d3bf2,#1e1b4bf2);border:2px solid #f9a8d4;font-weight:900;font-size:12px;display:flex;gap:5px;align-items:center;box-shadow:0 0 14px #f472b670}
+.fac small{display:block;font-size:8px;color:#fbcfe8}
+.note{position:absolute;font-size:10px;color:#fde68a;background:#000b;border-radius:8px;padding:2px 6px}
+/* 町の地図 */
+.map{position:absolute;left:0;right:0;background:radial-gradient(circle at 30% 30%,#3f7d4d,#24513a 60%,#1b3b2c);overflow:hidden}
+.path{position:absolute;background:#c9a96e;opacity:.55;border-radius:20px}
+.place{position:absolute;display:flex;flex-direction:column;align-items:center;gap:2px}
+.place .bld{width:64px;height:44px;border-radius:10px;display:grid;place-items:center;font-size:24px;border:2px solid #fff6;box-shadow:0 3px 8px #0008}
+.place .nm{font-size:9px;font-weight:900;background:#000a;border-radius:6px;padding:0 5px}
+.place .who{display:flex;margin-top:-8px}.place .who .fc{width:24px;height:24px}.place .who .fc+.fc{margin-left:-7px}
+.top{position:absolute;left:0;right:0;top:0;padding:10px;background:linear-gradient(#020617f2,#02061700);display:flex;align-items:center;gap:8px}
+.top b{flex:1;font-size:17px;color:#fbcfe8}.back{font-size:11px;border:1px solid #64748b;border-radius:10px;padding:5px 8px;color:#cbd5e1}
+.tm{font-size:9px;color:#cbd5e1;text-align:right;line-height:1.3}
+.todo{position:absolute;left:10px;right:10px;border-radius:14px;border:1px solid #fcd34d88;background:#1c1405ee;padding:7px 9px;font-size:11px}
+.todo b{color:#fde68a}
+.nav{position:absolute;left:0;right:0;bottom:0;display:flex;background:#0f172af2;border-top:1px solid #ffffff22}
+.nav span{flex:1;text-align:center;font-size:10px;font-weight:900;padding:8px 0 calc(8px + 4px);color:#94a3b8}.nav span.on{color:#fce7f3;background:#f472b622}.nav span.lock{opacity:.35}
+.nav span i{display:block;font-style:normal;font-size:17px}
+/* 場面 */
+.scene{position:absolute;inset:0;background:linear-gradient(#f6c98b,#d58c5a 55%,#6b3f2b)}
+.stand{position:absolute;bottom:200px;height:330px}
+.talk{position:absolute;left:10px;right:10px;bottom:70px;border-radius:16px;border:2px solid #f472b6;background:#020617f0;padding:10px}
+.talk p{font-size:13px;font-weight:700}.talk small{font-size:10px;color:#f9a8d4;font-weight:900}
+.gain{position:absolute;left:50%;top:120px;transform:translateX(-50%);display:flex;gap:6px}.gain span{font-size:12px;font-weight:900;border-radius:999px;padding:4px 10px;background:#0f172ae6}
+.acts{position:absolute;left:10px;right:10px;bottom:14px;display:flex;gap:6px}.acts span{flex:1;text-align:center;font-size:11px;font-weight:900;border-radius:12px;padding:10px 0;border:1px solid #fcd34d;color:#fef3c7;background:#1c1405}
+.pal{position:absolute;width:24px;height:24px;border-radius:50%}
+</style></head><body>
+<div class="row">
+<!-- ① HOME 縦 -->
+<div><p class="cap">① HOME(縦): 施設に、そこで遊んでいる助手の顔だけ。2つまで+数。家にいる助手は新しい施設「🏡 助手ライフ」に</p><div class="ph">
+ <img class="bg" src="../shots/life-7-solo.png">
+ <div class="cover" style="left:0;right:0;bottom:150px;height:110px;opacity:.0"></div>
+ <div class="faces" style="left:150px;top:470px"><span class="fc"><img src="../../../../monster-hero/images/assistant/face/momosuke_happy.PNG"></span><span class="fc"><img src="../../../../monster-hero/images/assistant/face/atsu_happy.PNG"></span></div>
+ <div class="faces" style="left:150px;top:572px"><span class="fc"><img src="../../../../monster-hero/images/assistant/face/erubin_happy.PNG"></span><span class="fc"><img src="../../../../monster-hero/images/assistant/face/sorashido_excited.PNG"></span><b>+1</b></div>
+ <div class="faces" style="left:268px;top:485px"><span class="fc"><img src="../../../../monster-hero/images/assistant/face/myua_happy.PNG"></span></div>
+ <div class="faces" style="left:330px;top:220px"><span class="fc"><img src="../../../../monster-hero/images/assistant/face/kiki_normal.PNG"></span></div>
+ <div class="fac" style="left:9px;top:400px">🏡<span>助手ライフ<small>みんなの町</small></span></div>
+ <div class="faces" style="left:110px;top:388px"><span class="fc lonely"><img src="../../../../monster-hero/images/assistant/face/dra_troubled.PNG"></span><span class="fc"><img src="../../../../monster-hero/images/assistant/face/kyuko_happy.PNG"></span></div>
+ <span class="note" style="left:190px;top:392px">← 家にいる・ひとり</span>
+ <span class="note" style="left:200px;top:600px">← カード対戦中(3人)</span>
+</div></div>
+<!-- ② 入場 + 町の地図 縦 -->
+<div><p class="cap">② 助手ライフ(縦): 入ると町の地図に8人。場所を押すとその場面。下に「今日やれること」1行・下のボタン</p><div class="ph">
+ <div class="map" style="top:0;bottom:0">
+  <div class="path" style="left:40px;top:300px;width:310px;height:26px"></div><div class="path" style="left:180px;top:150px;width:26px;height:420px"></div>
+  <div class="place" style="left:150px;top:250px"><div class="bld" style="background:#a16207">⛲</div><span class="nm">広場</span><div class="who"><span class="fc"><img src="../../../../monster-hero/images/assistant/face/kiki_happy.PNG"></span><span class="fc"><img src="../../../../monster-hero/images/assistant/face/myua_happy.PNG"></span></div></div>
+  <div class="place" style="left:40px;top:140px"><div class="bld" style="background:#9d174d">🎵</div><span class="nm">練習スタジオ</span><div class="who"><span class="fc"><img src="../../../../monster-hero/images/assistant/face/momosuke_happy.PNG"></span><span class="fc"><img src="../../../../monster-hero/images/assistant/face/atsu_happy.PNG"></span></div></div>
+  <div class="place" style="left:270px;top:150px"><div class="bld" style="background:#1e3a8a">🃏</div><span class="nm">カード部屋</span><div class="who"><span class="fc"><img src="../../../../monster-hero/images/assistant/face/erubin_happy.PNG"></span><span class="fc"><img src="../../../../monster-hero/images/assistant/face/sorashido_excited.PNG"></span></div></div>
+  <div class="place" style="left:40px;top:380px"><div class="bld" style="background:#7c2d12">🍰</div><span class="nm">おやつ屋さん</span></div>
+  <div class="place" style="left:280px;top:380px"><div class="bld" style="background:#3f6212">📚</div><span class="nm">図書室</span><div class="who"><span class="fc"><img src="../../../../monster-hero/images/assistant/face/kyuko_happy.PNG"></span></div></div>
+  <div class="place" style="left:150px;top:470px"><div class="bld" style="background:#78350f">🏠</div><span class="nm">ドラの家</span><div class="who"><span class="fc lonely"><img src="../../../../monster-hero/images/assistant/face/dra_troubled.PNG"></span></div></div>
+  <div class="place" style="left:40px;top:540px"><div class="bld" style="background:#14532d">🐉</div><span class="nm">育成場</span></div>
+  <div class="place" style="left:280px;top:540px"><div class="bld" style="background:#365314">🌼</div><span class="nm">ひなたの丘</span></div>
+ </div>
+ <div class="top"><span class="back">◀</span><b>🏡 助手ライフ</b><span class="tm">夕方 18〜21時<br>あと1時間で夜</span></div>
+ <p class="note" style="left:10px;top:52px">🎉 にぎやか ×1.5</p>
+ <div class="todo" style="bottom:66px"><b>今日やれること ▸</b> 👀 見守る あと14 ・ 💬 ドラがさみしそう ・ 🧺 1回</div>
+ <div class="nav"><span class="on"><i>🗺</i>町</span><span><i>🤝</i>友情</span><span><i>🎒</i>道具</span><span class="lock"><i>🏡</i>家</span></div>
+</div></div>
+<!-- ③ 場面 -->
+<div><p class="cap">③ 場面: 場所の背景に2人の立ち絵。その場で掛け合い → 🤝友情Lv・💗仲良し度(ハナビの演出)→ その場でできること</p><div class="ph">
+ <div class="scene"></div>
+ <img class="stand" style="left:-95px;height:300px" src="../../../../monster-hero/images/assistant/kiki_happy.PNG" onerror="this.style.display='none'">
+ <img class="stand" style="right:-95px;height:300px" src="../../../../monster-hero/images/assistant/myua_excited.PNG" onerror="this.style.display='none'">
+ <div class="top"><span class="back">◀ 町へ</span><b>⛲ 広場</b><span class="tm">きき・みゅあ<br>おやつ</span></div>
+ <div class="gain"><span style="color:#fdba74">🤝 友情Lv +3</span><span style="color:#f9a8d4">💗 仲良し度 +2</span></div>
+ <div class="talk"><small>みゅあ</small><p>ひめちん、このタルト半分こしよ♪ あたし、いちごのとこ！</p><p class="note" style="position:static;display:inline-block;margin-top:6px">2/3・タップで次へ</p></div>
+ <div class="acts"><span>🧺 渡す</span><span>💬 誘う</span><span>🗺 町へ</span></div>
+</div></div>
+</div>
+<div class="row">
+<!-- ④ HOME 横 -->
+<div><p class="cap">④ HOME(横): 同じく施設に顔。札が小さい所は顔1つ+数</p><div class="ld">
+ <img class="bg" src="../shots/life-5-home-band-land.png">
+ <div class="cover" style="left:220px;right:150px;top:240px;height:80px;background:#1a3a2c"></div>
+ <div class="faces" style="left:150px;top:335px"><span class="fc"><img src="../../../../monster-hero/images/assistant/face/momosuke_happy.PNG"></span><b>+1</b></div>
+ <div class="faces" style="left:160px;top:258px"><span class="fc"><img src="../../../../monster-hero/images/assistant/face/erubin_happy.PNG"></span><b>+2</b></div>
+ <div class="faces" style="left:830px;top:180px;transform:translateX(-100%)"><span class="fc"><img src="../../../../monster-hero/images/assistant/face/myua_happy.PNG"></span></div>
+ <div class="fac" style="right:16px;top:220px;padding:6px 10px">🏡<span>助手ライフ</span></div>
+ <div class="faces" style="right:130px;top:212px"><span class="fc lonely"><img src="../../../../monster-hero/images/assistant/face/dra_troubled.PNG"></span><b>+1</b></div>
+</div></div>
+<!-- ⑤ 町 横 -->
+<div><p class="cap">⑤ 助手ライフ(横): 地図を横に広げ、右に「今日やれること」</p><div class="ld">
+ <div class="map" style="top:0;bottom:0;right:230px">
+  <div class="path" style="left:30px;top:180px;width:560px;height:24px"></div>
+  <div class="place" style="left:260px;top:120px"><div class="bld" style="background:#a16207">⛲</div><span class="nm">広場</span><div class="who"><span class="fc"><img src="../../../../monster-hero/images/assistant/face/kiki_happy.PNG"></span><span class="fc"><img src="../../../../monster-hero/images/assistant/face/myua_happy.PNG"></span></div></div>
+  <div class="place" style="left:60px;top:70px"><div class="bld" style="background:#9d174d">🎵</div><span class="nm">練習スタジオ</span><div class="who"><span class="fc"><img src="../../../../monster-hero/images/assistant/face/momosuke_happy.PNG"></span><span class="fc"><img src="../../../../monster-hero/images/assistant/face/atsu_happy.PNG"></span></div></div>
+  <div class="place" style="left:470px;top:70px"><div class="bld" style="background:#1e3a8a">🃏</div><span class="nm">カード部屋</span><div class="who"><span class="fc"><img src="../../../../monster-hero/images/assistant/face/erubin_happy.PNG"></span><span class="fc"><img src="../../../../monster-hero/images/assistant/face/sorashido_excited.PNG"></span></div></div>
+  <div class="place" style="left:60px;top:240px"><div class="bld" style="background:#7c2d12">🍰</div><span class="nm">おやつ屋さん</span></div>
+  <div class="place" style="left:260px;top:240px"><div class="bld" style="background:#78350f">🏠</div><span class="nm">ドラの家</span><div class="who"><span class="fc lonely"><img src="../../../../monster-hero/images/assistant/face/dra_troubled.PNG"></span></div></div>
+  <div class="place" style="left:470px;top:240px"><div class="bld" style="background:#3f6212">📚</div><span class="nm">図書室</span><div class="who"><span class="fc"><img src="../../../../monster-hero/images/assistant/face/kyuko_happy.PNG"></span></div></div>
+ </div>
+ <div style="position:absolute;right:0;top:0;bottom:0;width:230px;background:#0f172a;padding:10px">
+  <p style="font-size:15px;font-weight:900;color:#fbcfe8">🏡 助手ライフ</p><p class="tm" style="text-align:left">夕方 18〜21時・あと1時間で夜・🎉 にぎやか ×1.5</p>
+  <div class="todo" style="position:static;margin-top:8px"><b>今日やれること</b><br>👀 見守る あと14<br>💬 ドラがさみしそう<br>🧺 差し入れ 1回</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px;font-size:11px;font-weight:900;text-align:center"><span style="border:1px solid #f9a8d4;border-radius:10px;padding:7px 0">🗺 町</span><span style="border:1px solid #475569;border-radius:10px;padding:7px 0">🤝 友情</span><span style="border:1px solid #475569;border-radius:10px;padding:7px 0">🎒 道具</span><span style="border:1px solid #334155;border-radius:10px;padding:7px 0;opacity:.4">🏡 家</span></div>
+ </div>
+</div></div>
+</div>
+</body></html>
