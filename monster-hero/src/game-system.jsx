@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6b5d3fc0336313d9
+// generated-sha256: 0c6a5561ff002998
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -51636,6 +51636,21 @@ function RhythmMultiChatBubble({ text }) {
   );
 }
 
+// 結果画面の吹き出し(2026-11-07 社長「モンビーマルチで結果画面で喋ったときも吹き出しだして」)。
+// カードの中に重ねると「👑 MVP」の札を隠し、カードの枠で切れて吹き出しに見えなかった。カードの外の上へ出し、しっぽをカードへ向ける。
+// 置き場所は結果画面の一覧(ul)の上の余白。カードと同じ5列に並べるので、だれの発言か分かる
+function RhythmMultiResultBubble({ text }) {
+  if (!text) return null;
+  return (
+    <span data-rhythm-multi-chat-bubble data-rhythm-multi-result-bubble className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center">
+      <span className="relative max-w-full rounded-xl border-2 border-sky-300 bg-white px-1.5 py-0.5 text-center text-[11px] font-black leading-tight text-slate-900 shadow-[0_2px_10px_rgba(0,0,0,.5)] landscape:text-xs" style={JA_WRAP_STYLE}>
+        <span className="line-clamp-2 break-words">{text}</span>
+        <i aria-hidden="true" className="absolute -bottom-[6px] left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-b-2 border-r-2 border-sky-300 bg-white" />
+      </span>
+    </span>
+  );
+}
+
 // ---- 2026-10-03・ユーザー指示「フレンド申請と待ち時間の目安」「ごほうびと記録」で足した小さな部品 ----
 // 部品の中に自分の状態を持たせる(大きな画面の部品の途中で return するので、そこへ hooks を足さないため)
 
@@ -53176,7 +53191,14 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             ))}
           </div>
         </div>
-        <ul className="grid max-h-[260px] min-h-0 flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2">
+        <ul className="relative grid max-h-[300px] min-h-0 flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-11 landscape:pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2">
+          {/* 吹き出しの段: カードの上の余白に、カードと同じ5列で重ねる(高さは ul の上の余白と同じ。下の端=カードの上の端) */}
+          <li aria-hidden="true" data-rhythm-multi-result-bubbles className="pointer-events-none absolute inset-x-2 top-0 z-40 grid h-11 grid-cols-5 gap-1.5 landscape:inset-x-3 landscape:h-4 landscape:gap-2 [@media(max-height:440px)]:h-2 [[data-mh-view-rotation=true]_&]:h-2">
+            {Array.from({ length: RHYTHM_MULTI_ROOM_MAX }).map((_, i) => {
+              const r = team.rows[i];
+              return <span key={r ? r.m.id : `b${i}`} className="relative min-w-0">{r ? <RhythmMultiResultBubble text={chatBubbleOf(r.m.id)} /> : null}</span>;
+            })}
+          </li>
           {Array.from({ length: RHYTHM_MULTI_ROOM_MAX }).map((_, i) => {
             const r = team.rows[i];
             if (!r) return <li key={`empty${i}`} aria-hidden="true" className="rounded-xl border border-dashed border-white/5" />;
@@ -53184,7 +53206,6 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             const lv = r.res ? drawnLevel(r.res.diffId) : 0;
             return (
               <li key={r.m.id} data-rhythm-multi-result-row role={r.m.id !== view.selfId ? 'button' : undefined} onClick={r.m.id !== view.selfId ? () => (r.m.cpu ? setBuddyInfoId(r.m.id) : setMemberSheetId(r.m.id)) : undefined} className={`relative flex ${r.m.id !== view.selfId ? 'cursor-pointer active:brightness-125' : ''} min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden rounded-xl px-0.5 pb-1.5 text-center ${isMvp ? 'mhmv-mvp z-10 border-2 border-amber-300 bg-gradient-to-b from-amber-500/35 via-pink-600/25 to-slate-900 pt-4 [@media(max-height:440px)]:pt-3.5 [[data-mh-view-rotation=true]_&]:pt-3.5' : 'border border-white/10 bg-slate-900/80 pt-3 [@media(max-height:440px)]:pt-1.5 [[data-mh-view-rotation=true]_&]:pt-1.5'}`}>
-                <RhythmMultiChatBubble text={chatBubbleOf(r.m.id)} />
                 {/* MVP は札をアイコンより前に出し、王冠・金色の光で目立たせる(2026-10-03・ユーザー指摘「MVPが裏に回ってる / もっと強調して」) */}
                 {isMvp && <b data-rhythm-multi-mvp className="mhmv-badge absolute left-1/2 top-1 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-to-r from-amber-300 via-yellow-100 to-amber-400 px-2.5 py-0.5 text-[11px] font-black tracking-wider text-slate-950 shadow-[0_0_12px_rgba(252,211,77,.9)] landscape:text-[13px]">👑 MVP</b>}
                 <span className={`relative z-10 shrink-0 rounded-full ${isMvp ? 'mhmv-ring' : ''}`}>

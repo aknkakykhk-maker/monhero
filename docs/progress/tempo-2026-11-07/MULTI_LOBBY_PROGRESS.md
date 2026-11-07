@@ -31,3 +31,4 @@
 - HOME の帯: RhythmInviteHomeBar(60-app の RhythmMultiAwayBar の隣)。入る → rhythmMultiPendingInvite → マルチを開いて joinFromInvite
 - HOME の帯はお知らせの窓に隠れたので、body へ直接出す(ポータル・z 99000)
 - 実画面の止め絵: multi-lobby-real.jpg(HOME の帯・シート・一覧・💌)
+- 追加(社長「結果画面で喋ったときも吹き出しだして」): 結果画面の吹き出しは、今まではカードの中の上端にあって MVP の札を隠していた。カードの外の上へ出す `RhythmMultiResultBubble`(止め絵 multi-result-bubble.jpg)。rhythm-multi-layout-check.js で縦・横・回転を見る

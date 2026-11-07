@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: daa8d91a21fe0129
+// source-sha256: 453f79a0ef694864
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -86976,6 +86976,24 @@ function RhythmMultiChatBubble({
     className: "line-clamp-2 max-w-full break-words rounded-xl bg-white px-1.5 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg landscape:text-xs"
   }, text));
 }
+function RhythmMultiResultBubble({
+  text
+}) {
+  if (!text) return null;
+  return React.createElement("span", {
+    "data-rhythm-multi-chat-bubble": true,
+    "data-rhythm-multi-result-bubble": true,
+    className: "pointer-events-none absolute inset-x-0 bottom-0 flex justify-center"
+  }, React.createElement("span", {
+    className: "relative max-w-full rounded-xl border-2 border-sky-300 bg-white px-1.5 py-0.5 text-center text-[11px] font-black leading-tight text-slate-900 shadow-[0_2px_10px_rgba(0,0,0,.5)] landscape:text-xs",
+    style: JA_WRAP_STYLE
+  }, React.createElement("span", {
+    className: "line-clamp-2 break-words"
+  }, text), React.createElement("i", {
+    "aria-hidden": "true",
+    className: "absolute -bottom-[6px] left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-b-2 border-r-2 border-sky-300 bg-white"
+  })));
+}
 function RhythmMultiLobbyCount() {
   const [count, setCount] = React.useState(null);
   React.useEffect(() => RHYTHM_MULTI.watchLobby('free', people => setCount(people)), []);
@@ -89547,8 +89565,22 @@ function RhythmMultiScreen({
     }, React.createElement("small", {
       className: "absolute -top-3.5 -translate-x-1/2 text-[9px] font-black text-slate-300"
     }, mk.id))))), React.createElement("ul", {
-      className: "grid max-h-[260px] min-h-0 flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2"
+      className: "relative grid max-h-[300px] min-h-0 flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-11 landscape:pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2"
+    }, React.createElement("li", {
+      "aria-hidden": "true",
+      "data-rhythm-multi-result-bubbles": true,
+      className: "pointer-events-none absolute inset-x-2 top-0 z-40 grid h-11 grid-cols-5 gap-1.5 landscape:inset-x-3 landscape:h-4 landscape:gap-2 [@media(max-height:440px)]:h-2 [[data-mh-view-rotation=true]_&]:h-2"
     }, Array.from({
+      length: RHYTHM_MULTI_ROOM_MAX
+    }).map((_, i) => {
+      const r = team.rows[i];
+      return React.createElement("span", {
+        key: r ? r.m.id : `b${i}`,
+        className: "relative min-w-0"
+      }, r ? React.createElement(RhythmMultiResultBubble, {
+        text: chatBubbleOf(r.m.id)
+      }) : null);
+    })), Array.from({
       length: RHYTHM_MULTI_ROOM_MAX
     }).map((_, i) => {
       const r = team.rows[i];
@@ -89565,9 +89597,7 @@ function RhythmMultiScreen({
         role: r.m.id !== view.selfId ? 'button' : undefined,
         onClick: r.m.id !== view.selfId ? () => r.m.cpu ? setBuddyInfoId(r.m.id) : setMemberSheetId(r.m.id) : undefined,
         className: `relative flex ${r.m.id !== view.selfId ? 'cursor-pointer active:brightness-125' : ''} min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden rounded-xl px-0.5 pb-1.5 text-center ${isMvp ? 'mhmv-mvp z-10 border-2 border-amber-300 bg-gradient-to-b from-amber-500/35 via-pink-600/25 to-slate-900 pt-4 [@media(max-height:440px)]:pt-3.5 [[data-mh-view-rotation=true]_&]:pt-3.5' : 'border border-white/10 bg-slate-900/80 pt-3 [@media(max-height:440px)]:pt-1.5 [[data-mh-view-rotation=true]_&]:pt-1.5'}`
-      }, React.createElement(RhythmMultiChatBubble, {
-        text: chatBubbleOf(r.m.id)
-      }), isMvp && React.createElement("b", {
+      }, isMvp && React.createElement("b", {
         "data-rhythm-multi-mvp": true,
         className: "mhmv-badge absolute left-1/2 top-1 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-to-r from-amber-300 via-yellow-100 to-amber-400 px-2.5 py-0.5 text-[11px] font-black tracking-wider text-slate-950 shadow-[0_0_12px_rgba(252,211,77,.9)] landscape:text-[13px]"
       }, "👑 MVP"), React.createElement("span", {
