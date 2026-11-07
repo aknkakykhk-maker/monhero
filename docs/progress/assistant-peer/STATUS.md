@@ -230,6 +230,9 @@
 - 段階2(一歩目)は枝 claude/assistant-life-stage2-step1(未公開)。止め絵 shots/stage2/・文案 LIFE-STAGE2-RELEASE.md を窓口へ送った。窓口の「この文で」待ち
 - 🔄横(rotation-height-check #4874 の助手部3件): 仲良し度のシート・おしゃべり・助手たちの今のアルバムに、回したとき用の上限(vw)を足した。回した器の中で 331/343px(回した画面 390px に収まる)
 - ミハリの小さい残り2件: 横の部屋の吹き出しが切れる → 狭い部屋は「💭 さみしいな…」(1行・名札に重ならない)/夕方に「朝の散歩で」→ 台本に言える時間帯(`assistantLifeTalkTods`: 朝の・寝る前・夕方にな・昼寝)。検査 assistant-life-check ⑧・browser ⑫
+- 2026-11-08 段階2の一歩目を公開(社長「この文で公開」・告知なし)。枝は古い履歴の上だったので、main から claude/assistant-life-stage2-step1b に載せ直した。カード部の「🃏 カード部屋で対戦する」と並ぶ
+- 二歩目の台詞をコトバ(solo 120・visit 32 → lines/kotoba-stage2.txt)・ツムギ(pair 56・lure 32 → lines/tsumugi-stage2.txt)へ注文。注文書 LIFE-STAGE2-LINES-ORDER.md。届いたら取り込み道具に temple/shopping・visit・lure を足し、抜き出しを窓口へ
+- AssistantBubble に oneLine(#4888)。ビート部が曲えらびの横につないだ(#4889)
 
 ## オクリモノ(2026-11-08〜・道具の種類・好み・家具のプレゼント)
 - 案 `GIFT-PLAN.md`・表 `gifts/tables.png`・止め絵 `gifts/gifts-tate.jpg`・`gifts/gifts-yoko.jpg`(本物の家の画面に案の部品を重ねて撮った)を窓口へ送った
