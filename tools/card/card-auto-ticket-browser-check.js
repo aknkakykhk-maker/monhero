@@ -10,7 +10,7 @@
 //      最大は「持っている券」と「今日あとふやせる回数」の小さいほう
 //   ③ 確定すると、券は選んだ枚数だけ減り、残りの札は表示どおりにふえる(保存の extra も同じ数)
 //   ④ 「もう一度」で、ごほうびありの対戦になる
-//   ⑤ 残りがあるときは控えめ(left)で、ボタンは押せず、わけをひとこと出す
+//   ⑤ 残りがあるときは控えめ(left)だが、ボタンは押せる(2026-11-07 社長の答え B)。残り3で2枚 → 窓は「残り 5回になります」、確定で札も5・券は3→1・保存の extra は6
 //   ⑥ 窓・札・ボタンの字が画面からはみ出さない・切れない(縦 390×844・横 844×390・🔄横=縦の端末を縦横ボタンで回した横)
 //   ⑦ 実行時エラーが無い。サーバへは何も書かない
 const fs = require('fs');
@@ -124,7 +124,7 @@ const LABEL = { portrait: '縦', landscape: '横', rotated: '🔄横' };
             preview: (document.querySelector('[data-card-auto-ticket-preview]') || {}).textContent || '', use: use ? use.textContent : '', useK: use ? Number(use.getAttribute('data-card-auto-ticket-use')) : null };
         });
         // 表示(数の欄・「券 ◯枚 → +◯回(残り ◯回)」・確定のボタン)が、選んだ数とそろっているか
-        const agree = (st, k) => st.k === k && st.input === String(k) && st.useK === k && st.use === `${k}枚使って+${k}回` && st.preview.includes(`券 ${k}枚 → オートのごほうび +${k}回(残り ${k}回になります)`);
+        const agree = (st, k, base = 0) => st.k === k && st.input === String(k) && st.useK === k && st.use === `${k}枚使って+${k}回` && st.preview.includes(`券 ${k}枚 → オートのごほうび +${k}回(残り ${base + k}回になります)`);
         const btn = (t) => ask.locator('button').filter({ hasText: new RegExp(`^${t.replace('+', '\\+')}$`) });
         const steps = [];
         let st = await state(); steps.push(['はじめ', 1, agree(st, 1), st]);
@@ -154,7 +154,7 @@ const LABEL = { portrait: '縦', landscape: '横', rotated: '🔄横' };
           left: document.querySelector('[data-card-auto-reward-left]').getAttribute('data-card-auto-reward-left'), note: (document.querySelector('[data-card-auto-ticket-note]') || {}).textContent || '' }));
         await shot('3-result-added');
         check(`③ ${L}: 表示どおり、券が4枚減り(7→3)、残りの札が0→4、保存の extra が4`, before === 7 && after.tickets === 3 && after.left === '4' && after.store && after.store.extra === 4 && /4回ぶん戻りました/.test(after.note), JSON.stringify(after));
-        // ④ もう一度 → ごほうびあり。⑤ 残りがあるときは控えめで押せない
+        // ④ もう一度 → ごほうびあり。⑤ 残りがあるときも押せて、今の残りに足される
         await page.locator('[data-card-top="result"] button, [data-mh-screen] button').filter({ hasText: /^もう一度/ }).first().click();
         await page.waitForTimeout(1200);
         await page.locator('[data-card-top="result"]').waitFor({ timeout: 60000 });
@@ -163,12 +163,28 @@ const LABEL = { portrait: '縦', landscape: '横', rotated: '🔄横' };
         const paid = await page.locator('[data-card-result-auto]').getAttribute('data-card-result-auto');
         const bar2 = await page.locator('[data-card-auto-reward-bar]').getAttribute('data-card-auto-reward-bar');
         const left2 = await page.locator('[data-card-auto-reward-left]').getAttribute('data-card-auto-reward-left');
-        const off = await page.locator('[data-card-auto-ticket]').isDisabled();
-        const why = await page.locator('[data-card-auto-ticket-why]').first().innerText().catch(() => '');
+        const on2 = await page.locator('[data-card-auto-ticket]').isEnabled();
+        const why2 = await page.locator('[data-card-auto-ticket-why]').count();
         await page.locator('[data-card-auto-reward-bar]').scrollIntoViewIfNeeded();
         await shot('4-result-paid');
         check(`④ ${L}: ふやしたあとの「もう一度」は、ごほうびあり(残り4→3)`, paid === 'paid' && left2 === '3', `${paid} 残り${left2}`);
-        check(`⑤ ${L}: 残りがあるときは控えめ(left)で、ボタンは押せず、わけを出す`, bar2 === 'left' && off && /使い切ると/.test(why), `${bar2} ${off} ${why}`);
+        check(`⑤ ${L}: 残りがあるときは控えめ(left)だが、ボタンは押せて、止めるわけは出さない`, bar2 === 'left' && on2 && why2 === 0, `${bar2} ${on2} わけ${why2}`);
+        // ⑤ 残り3から2枚ふやす: 窓は「残り 5回になります」・確定で札も5・券は3→1・extra は4→6
+        await page.locator('[data-card-auto-ticket]').click();
+        await ask.waitFor({ timeout: 5000 });
+        await ask.locator('[data-quantity-input]').fill('2'); await ask.locator('[data-quantity-input]').blur();
+        const st5 = await state();
+        const max5 = await ask.locator('button').filter({ hasText: /^MAX/ }).innerText();
+        await shot('5-sheet-left3');
+        check(`⑤ ${L}: 残り3のとき、2枚で「券 2枚 → +2回(残り 5回になります)」・最大は持っている券3枚`, agree(st5, 2, 3) && /3枚/.test(max5), `${JSON.stringify(st5)} ${max5}`);
+        await ask.locator('[data-card-auto-ticket-use]').click();
+        await ask.waitFor({ state: 'detached', timeout: 8000 });
+        await page.locator('[data-card-auto-reward-left="5"]').waitFor({ timeout: 8000 }).catch(() => {});
+        const after5 = await page.evaluate(async () => ({ tickets: JSON.parse(localStorage.getItem('mh_owned_items')).session_ticket, store: await storeGet('mh_card_auto_reward_v1', null),
+          left: document.querySelector('[data-card-auto-reward-left]').getAttribute('data-card-auto-reward-left') }));
+        await page.locator('[data-card-auto-reward-bar]').scrollIntoViewIfNeeded();
+        await shot('6-result-left5');
+        check(`⑤ ${L}: 表示どおり、残りの札が3→5、券が3→1、保存の extra が4→6`, after5.left === '5' && after5.tickets === 1 && after5.store && after5.store.extra === 6, JSON.stringify(after5));
         check(`⑦ ${L}: 実行時エラーが無い・サーバの表へ書かない`, errors.length === 0 && sent.length === 0, [...errors.slice(0, 2), ...sent.slice(0, 2)].join(' / '));
       } catch (e) {
         check(`${L}: 最後まで進められた`, false, String(e).split('\n')[0]);

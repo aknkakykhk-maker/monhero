@@ -130,4 +130,11 @@ const updateNoticeSeed = () => ({
 // 会話も案内もまとめて黙らせる(ふつうはこれを使う)
 const quietBootSeed = () => ({ content: `${eventStorySeed().content}\n${ONE_TIME_NOTICE_SCRIPT}` });
 
-module.exports = { eventStoryIds, eventStoryKey, eventStorySeed, oneTimeNoticeSeed, quietBootSeed, updateNoticeSeed };
+// ログインボーナスを「もう受け取った」ことにする種(2026-11-07 マモリ: 日付が変わる時刻をまたぐと、ログインボーナスの窓が割りこんで
+// お話を待つ検査が落ち、回し直すと通る)。lastGrantedPeriod を遠い先にしておくと、いつ回しても配られない(本体の grantLoginBonus は
+// 「前回の期間以下なら配らない」)。ログインボーナスそのものを確かめる検査では使わない
+const loginBonusDoneSeed = () => () => {
+  try { localStorage.setItem('mh_login_bonus', JSON.stringify({ currentDay: 1, lastGrantedPeriod: '9999-12-31', totalLoginDays: 1 })); } catch {}
+};
+
+module.exports = { eventStoryIds, eventStoryKey, eventStorySeed, loginBonusDoneSeed, oneTimeNoticeSeed, quietBootSeed, updateNoticeSeed };
