@@ -75,12 +75,16 @@ const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 //   ・新しく始める人へのプレゼント → 「モンヒロビート本オープン記念」(大盛り)。NEW_PLAYER_CAMPAIGN_GIFT_GRAND
 //   ・すでに遊んでいる人全員へ1回だけ「本オープン記念ギフト」(ダイヤ1,000万ほか)。GRAND_OPEN_ALL_GIFT
 //   ・ヘルプの新規キャンペーンの話題・更新履歴(releaseFlag:'rhythmGrandOpen')
-// 社長が「本オープン」と言うまで偽のまま
-const RHYTHM_GRAND_OPEN_RELEASE = false;
+// 2026-11-08 社長「まず告知をして明日の10時ぐらいにやりたい」→ 本オープンは 2026-11-09(月)10:00 JST。
+//   時刻で切り替える(人が印を立てに行かなくても開く)。RELEASE_FLAGS.rhythmGrandOpen は、この印が真で、かつ開始時刻を過ぎたときだけ真。
+//   見るたびに時刻と比べるので、開いたままの端末でも HOME のお話は切り替わる。更新履歴・助手の告知・ギフトは起動したときに決まる(開き直したときに出る)
+const RHYTHM_GRAND_OPEN_RELEASE = true;
+const RHYTHM_GRAND_OPEN_START_AT = '2026-11-09T10:00:00+09:00';
 // 本オープンの予告(2026-11-07 社長「ホームで流してから本オープン。その前に予告の告知あり」)。
 // 真にすると、予告の更新情報・助手の告知・HOME で1回だけ流す予告のお話(rhythm_grand_open_teaser)が出る。
 // 本オープン(上)を真にしたあとは、予告のお話は HOME では流さない(回想には残る)。日にちが決まって社長が「予告を出す」と言うまで偽
-const RHYTHM_GRAND_OPEN_TEASER_RELEASE = false;
+// 2026-11-08 社長「この文で」(本オープンは 11/9 10:00)
+const RHYTHM_GRAND_OPEN_TEASER_RELEASE = true;
 // ★tacticsBattle は「β公開のあいだも開く枠」。ヘルプは、β版で遊べる人にも要る
 //   (tactics は本公開だけ。両方を1つのフラグにすると、本公開前の告知まで出てしまう)
 // ★rhythmHell … 難易度 HELL(空中のノーツ SKY TAP・SKY SLIDE)。社長の OK まで偽(HISTORY 10/11 02:05「HELL はデバッグで色々見てから」)。
@@ -138,7 +142,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   //   数字は 32-tactics-units.jsx の TACTICS_HATE / MONSTER_TYPES。お話「タクティクスバトル ～4人のタイプ～」(tactics_types)もこの印で出る
   tacticsHate: true,
   // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
-  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmGrandOpen:RHYTHM_GRAND_OPEN_RELEASE, rhythmGrandOpenTeaser:RHYTHM_GRAND_OPEN_TEASER_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
+  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, get rhythmGrandOpen() { try { return RHYTHM_GRAND_OPEN_RELEASE === true && Date.now() >= Date.parse(RHYTHM_GRAND_OPEN_START_AT); } catch (e) { return false; } }, rhythmGrandOpenTeaser:RHYTHM_GRAND_OPEN_TEASER_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
@@ -934,7 +938,9 @@ const NEW_PLAYER_CAMPAIGN_GIFT_GRAND = Object.freeze({
   ],
 });
 // 本オープンの印を読む。検査はこのあたりだけを切り出して動かすので、印が見えなくても落ちないよう typeof で守る(見えなければ偽)
-const rhythmGrandOpenReleased = () => typeof RHYTHM_GRAND_OPEN_RELEASE !== 'undefined' && RHYTHM_GRAND_OPEN_RELEASE === true;
+// 2026-11-08: 開始時刻(RHYTHM_GRAND_OPEN_START_AT)を過ぎてから真。now を渡すと、その時刻で見る(検査用)
+const rhythmGrandOpenReleased = (now = Date.now()) => { try { return typeof RHYTHM_GRAND_OPEN_RELEASE !== 'undefined' && RHYTHM_GRAND_OPEN_RELEASE === true
+  && typeof RHYTHM_GRAND_OPEN_START_AT !== 'undefined' && Number(now) >= Date.parse(RHYTHM_GRAND_OPEN_START_AT); } catch (e) { return false; } };
 const newPlayerCampaignGiftDef = () => (rhythmGrandOpenReleased() ? NEW_PLAYER_CAMPAIGN_GIFT_GRAND : NEW_PLAYER_CAMPAIGN_GIFT);
 // ギフト一覧へ1件足す。すでに同じidがあれば何もしない(何度呼んでも増えない)
 // extraRewards … 配らなかったお詫びの合計(waivedCompensationRewards)。同じ種類は数を足し、新しい種類は並べる

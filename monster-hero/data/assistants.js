@@ -11668,7 +11668,7 @@ const ASSISTANT_RHYTHM_GRAND_OPEN_TEASER = [
   { who:'sorashido', e:'excited',  t:'うぉぉぉ、本オープン！ 飾りつけの数の計算なら任せてくれだぜ・・・！' },
   { who:'erubin',    e:'happy',    t:'いいねー！ 俺も手伝うよ。何から始めよっか' },
   { who:'mua',       e:'wink',     t:'それは当日までのひみつ〜。ぜったい楽しみにしててね！' },
-  { who:'kiki',      e:'happy',    t:'くわしいことは、更新情報でお知らせしまつ。みなさん、お楽しみに〜♪♪' },
+  { who:'kiki',      e:'happy',    t:'本オープンは、11月9日の朝10時でつ。くわしいことは、更新情報でお知らせしまつ。みなさん、お楽しみに〜♪♪' },
 ];
 const ASSISTANT_RHYTHM_GRAND_OPEN_TEASER_CALLS = { kiki: 'みゅあちん' };
 const ASSISTANT_RHYTHM_GRAND_OPEN_STORY = [

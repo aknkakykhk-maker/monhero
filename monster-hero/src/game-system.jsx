@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ebcc9d53e95811f9
+// generated-sha256: 329823ea5b57495a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9554,12 +9554,16 @@ const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 //   ・新しく始める人へのプレゼント → 「モンヒロビート本オープン記念」(大盛り)。NEW_PLAYER_CAMPAIGN_GIFT_GRAND
 //   ・すでに遊んでいる人全員へ1回だけ「本オープン記念ギフト」(ダイヤ1,000万ほか)。GRAND_OPEN_ALL_GIFT
 //   ・ヘルプの新規キャンペーンの話題・更新履歴(releaseFlag:'rhythmGrandOpen')
-// 社長が「本オープン」と言うまで偽のまま
-const RHYTHM_GRAND_OPEN_RELEASE = false;
+// 2026-11-08 社長「まず告知をして明日の10時ぐらいにやりたい」→ 本オープンは 2026-11-09(月)10:00 JST。
+//   時刻で切り替える(人が印を立てに行かなくても開く)。RELEASE_FLAGS.rhythmGrandOpen は、この印が真で、かつ開始時刻を過ぎたときだけ真。
+//   見るたびに時刻と比べるので、開いたままの端末でも HOME のお話は切り替わる。更新履歴・助手の告知・ギフトは起動したときに決まる(開き直したときに出る)
+const RHYTHM_GRAND_OPEN_RELEASE = true;
+const RHYTHM_GRAND_OPEN_START_AT = '2026-11-09T10:00:00+09:00';
 // 本オープンの予告(2026-11-07 社長「ホームで流してから本オープン。その前に予告の告知あり」)。
 // 真にすると、予告の更新情報・助手の告知・HOME で1回だけ流す予告のお話(rhythm_grand_open_teaser)が出る。
 // 本オープン(上)を真にしたあとは、予告のお話は HOME では流さない(回想には残る)。日にちが決まって社長が「予告を出す」と言うまで偽
-const RHYTHM_GRAND_OPEN_TEASER_RELEASE = false;
+// 2026-11-08 社長「この文で」(本オープンは 11/9 10:00)
+const RHYTHM_GRAND_OPEN_TEASER_RELEASE = true;
 // ★tacticsBattle は「β公開のあいだも開く枠」。ヘルプは、β版で遊べる人にも要る
 //   (tactics は本公開だけ。両方を1つのフラグにすると、本公開前の告知まで出てしまう)
 // ★rhythmHell … 難易度 HELL(空中のノーツ SKY TAP・SKY SLIDE)。社長の OK まで偽(HISTORY 10/11 02:05「HELL はデバッグで色々見てから」)。
@@ -9617,7 +9621,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   //   数字は 32-tactics-units.jsx の TACTICS_HATE / MONSTER_TYPES。お話「タクティクスバトル ～4人のタイプ～」(tactics_types)もこの印で出る
   tacticsHate: true,
   // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
-  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmGrandOpen:RHYTHM_GRAND_OPEN_RELEASE, rhythmGrandOpenTeaser:RHYTHM_GRAND_OPEN_TEASER_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
+  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, get rhythmGrandOpen() { try { return RHYTHM_GRAND_OPEN_RELEASE === true && Date.now() >= Date.parse(RHYTHM_GRAND_OPEN_START_AT); } catch (e) { return false; } }, rhythmGrandOpenTeaser:RHYTHM_GRAND_OPEN_TEASER_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
@@ -10413,7 +10417,9 @@ const NEW_PLAYER_CAMPAIGN_GIFT_GRAND = Object.freeze({
   ],
 });
 // 本オープンの印を読む。検査はこのあたりだけを切り出して動かすので、印が見えなくても落ちないよう typeof で守る(見えなければ偽)
-const rhythmGrandOpenReleased = () => typeof RHYTHM_GRAND_OPEN_RELEASE !== 'undefined' && RHYTHM_GRAND_OPEN_RELEASE === true;
+// 2026-11-08: 開始時刻(RHYTHM_GRAND_OPEN_START_AT)を過ぎてから真。now を渡すと、その時刻で見る(検査用)
+const rhythmGrandOpenReleased = (now = Date.now()) => { try { return typeof RHYTHM_GRAND_OPEN_RELEASE !== 'undefined' && RHYTHM_GRAND_OPEN_RELEASE === true
+  && typeof RHYTHM_GRAND_OPEN_START_AT !== 'undefined' && Number(now) >= Date.parse(RHYTHM_GRAND_OPEN_START_AT); } catch (e) { return false; } };
 const newPlayerCampaignGiftDef = () => (rhythmGrandOpenReleased() ? NEW_PLAYER_CAMPAIGN_GIFT_GRAND : NEW_PLAYER_CAMPAIGN_GIFT);
 // ギフト一覧へ1件足す。すでに同じidがあれば何もしない(何度呼んでも増えない)
 // extraRewards … 配らなかったお詫びの合計(waivedCompensationRewards)。同じ種類は数を足し、新しい種類は並べる
@@ -13631,7 +13637,7 @@ const HELP_DATA_TITLES = {
   rhythmDifficultyRanks: 'モンヒロビートの難易度別の満点と上限ランク',
   rhythmHellEntry: 'はじめての HELL の目安',
   rhythmHellSongs: 'HELL がある曲',
-  rhythmDemoSongLevels: '体験版で遊べる難易度とレベル',
+  rhythmDemoSongLevels: '遊べる難易度とレベル',
   rhythmDemoSongList: '先行公開している曲',
   rhythmDifficultySpread: '同じ難易度でも曲でどれだけ違うか',
   rhythmSongArtwork: '曲えらびに絵が出る曲',
@@ -21840,7 +21846,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
       className={`${wide?'min-h-[38px]':'min-h-[46px]'} rounded-xl border ${dim?'border-white/25 bg-slate-300 text-slate-900':'border-white/40 bg-slate-100 text-slate-900'} min-w-0 whitespace-nowrap px-0.5 text-[11px] font-black tabular-nums tracking-tight shadow-[0_2px_0_rgba(2,6,23,.55)] active:translate-y-[1px] active:shadow-none disabled:opacity-35`}>{sign(amount)}</button>;
     return <div data-rhythm-option-stepper={key} className={wide?'':'space-y-1.5'}>
       {label&&<div data-rhythm-option-stepper-label={key} className="flex items-baseline justify-between gap-2 px-0.5 pb-0.5 leading-none">
-        <small className="text-[10px] font-black text-cyan-200">{label}</small>
+        {/* 長い名前は言葉の切れ目で折る(2026-11-08 ミハリ S3「はみ出／し」) */}
+        <small className="min-w-0 text-[10px] font-black text-cyan-200" style={JA_WRAP_STYLE}>{jaWrap(label)}</small>
         <small className="text-[10px] font-bold tabular-nums text-slate-400">{decimals>0?min.toFixed(decimals):min}〜{decimals>0?max.toFixed(decimals):max}{suffix}</small>
       </div>}
       <div className="grid grid-cols-[1fr_1fr_minmax(52px,1.3fr)_1fr_1fr] items-center gap-1">
@@ -41318,7 +41325,7 @@ function RhythmSongSelectScreen({
           <div className="min-w-0 flex-1">
             {/* 「体験版」の札は、右のボタンの幅を空けるためこの小さな行へ入れた(2026-10-01)。
                 題名はヘルプや案内と同じ呼び名「曲えらび」にそろえた(以前は「楽曲選択」) */}
-            <small className="flex items-center gap-1.5 text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"><span className="max-[359px]:hidden">MONBEAT</span><span data-rhythm-demo-badge data-rhythm-debug-select-badge={debugAll?true:undefined} className="rounded-full border border-amber-300/60 bg-amber-500/15 px-1.5 py-px text-[8px] tracking-normal text-amber-200">{debugAll?'記録しない':'体験版'}</span></small>
+            <small className="flex items-center gap-1.5 text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"><span className="max-[359px]:hidden">MONBEAT</span>{/* 本オープン(2026-11-09 10:00)のあとは「体験版」を出さない(2026-11-08 ミハリ S1)。デバッグの「記録しない」は今までどおり */}{(debugAll||!(typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS.rhythmGrandOpen===true))&&<span data-rhythm-demo-badge data-rhythm-debug-select-badge={debugAll?true:undefined} className="rounded-full border border-amber-300/60 bg-amber-500/15 px-1.5 py-px text-[8px] tracking-normal text-amber-200">{debugAll?'記録しない':'体験版'}</span>}</small>
             {/* 幅の狭い端末(320px など)は縦の題名の行にアシスト・ミラーが入るので、♪と字の間隔を詰めて「曲えらび」を収める(2026-10-19) */}
             <h2 className="truncate text-sm font-black leading-tight tracking-widest text-cyan-200 max-[359px]:tracking-normal"><span className="max-[359px]:hidden">🎵 </span>曲えらび</h2>
             {beatPointReleased&&Number.isFinite(beatPointBalance)&&<small data-rhythm-beat-point-balance aria-label={`所持ビートP ${beatPointBalance.toLocaleString()}`}
@@ -91746,7 +91753,7 @@ function MonsterHeroGame() {
           if (grant.granted) { await storeSet('mh_gifts', grant.gifts, false); setGifts(grant.gifts); }
           await storeSet(NEW_PLAYER_CAMPAIGN_KEY, true, false);
           // 本オープン記念の新規プレゼントを配った人には、全員向けの本オープン記念ギフトは配らない(大盛りを重ねない)
-          if (RHYTHM_GRAND_OPEN_RELEASE) await storeSet(GRAND_OPEN_ALL_GIFT_KEY, true, false);
+          if (rhythmGrandOpenReleased()) await storeSet(GRAND_OPEN_ALL_GIFT_KEY, true, false);
         }
       } catch {}
     }
