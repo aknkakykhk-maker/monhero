@@ -59,6 +59,19 @@ ok('判定の窓・スコアの数え方には入れていない',
   &&!/rhythmCalculateScore\([^)]*judgmentLineHeight/.test(game)
   &&!/rhythmJudgeTap\([^)]*judgmentLineHeight/.test(game));
 
+// ---- 設定の通り道(2026-11-07 社長「オプションの判定ラインの位置の設定が、ゲームとちゃんとリンクできているか」) ----
+// 演奏画面を出すのは1か所だけで、マルチのとき以外は保存した設定(rhythmSettings)をそのまま渡す
+ok('演奏画面へ渡す設定は、マルチは自分の設定に見た目の組を重ねたもの・それ以外は自分の設定',
+  (game.match(/<RhythmTapTest /g)||[]).length===1
+  &&game.includes("settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings}"));
+// マルチで重ねる見た目の組(RHYTHM_LOOK_PRESETS)に判定ラインの高さが入っていない(部屋や組に引きずられない)
+{const presets=(game.match(/const RHYTHM_LOOK_PRESETS[\s\S]*?\]\);/)||[''])[0];
+  ok('マルチの見た目の組は、判定ラインの高さを上書きしない',presets.length>0&&!presets.includes('judgmentLineHeight'));}
+// 起動時に保存した設定を読む。これまではモンヒロビートの入口でしか読まず、レイドジャックなど別の画面から演奏を始めると既定(20%)で遊んでいた
+ok('演奏の設定を起動時に一度読む(どの入口から演奏しても、保存した高さで遊ぶ)',
+  /useEffect\(\(\) => \{ let alive = true; \(async \(\) => \{\s*try \{\s*const settings = normalizeRhythmSettings\(await restoreRhythmPlayDefaultsOnce\(await storeGet\(RHYTHM_SETTINGS_KEY/.test(game)
+  &&game.includes('setRhythmSettings(prev => prev === DEFAULT_RHYTHM_SETTINGS ? settings : prev)'));
+
 // ---- 実ブラウザ: 変数を動かすと、ラインもノーツの行き先も一緒に動く ----
 const serve=page=>new Promise(r=>{const s=http.createServer((req,res)=>{
   res.writeHead(200,{'Content-Type':'text/html'});res.end(page);});s.listen(PORT,()=>r(s));});

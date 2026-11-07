@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ac2319fdf9b2c2aa
+// source-sha256: fa5e9b5a69d99f33
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13237,6 +13237,7 @@ const RELEASE_FLAGS = {
   assistantPeer: true,
   assistantPeerApi: true,
   assistantLife: false,
+  rhythmAssistantSession: false,
   assistantSorashido: true,
   assistantErubin: true,
   cardBattle: true,
@@ -49325,7 +49326,9 @@ const rhythmBuddyNormalizeCalls = raw => (Array.isArray(raw) ? raw : []).filter(
   day: rhythmBuddyStr(x.day, 10),
   at: rhythmBuddyInt(x.at, 9e15),
   load: rhythmBuddyStr(x.load, 40),
-  started: x.started === true
+  started: x.started === true,
+  kind: x.kind === 'assistant' ? 'assistant' : 'masu',
+  assistantId: x.kind === 'assistant' ? rhythmBuddyStr(x.assistantId, 20) : ''
 })).filter(x => x.id && x.paid);
 const rhythmBuddyNormalize = raw => {
   const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
@@ -49511,7 +49514,8 @@ const RHYTHM_BUDDY_PICK_WHY = Object.freeze({
   revenge: 'さっきの曲でリベンジ!',
   practice: '得意な曲をもっと練習!',
   easy: 'ゆっくり楽しめる曲がいいな',
-  romance: 'この曲の世界にひたりたい'
+  romance: 'この曲の世界にひたりたい',
+  love: 'この曲が大好き!'
 });
 const rhythmBuddyNewSongChance = (trait, moodId) => {
   const base = {
@@ -50032,6 +50036,239 @@ const rhythmBuddyApplyLive = (mon, {
     familiarUp,
     traitNew,
     sproutNew
+  };
+};
+const RHYTHM_ASSIST_SESSION_KEY = 'mh_rhythm_assistant_session_v1';
+const RHYTHM_ASSIST_SESSION_PREFIX = 'as:';
+const RHYTHM_ASSIST_SESSION_IDS = Object.freeze(['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']);
+const rhythmAssistSessionEnabled = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmAssistantSession === true;
+const rhythmAssistSessionKey = assistantId => `${RHYTHM_ASSIST_SESSION_PREFIX}${assistantId}`;
+const rhythmAssistSessionIdOf = masuId => {
+  const s = typeof masuId === 'string' ? masuId : '';
+  if (!s.startsWith(RHYTHM_ASSIST_SESSION_PREFIX)) return '';
+  const id = s.slice(RHYTHM_ASSIST_SESSION_PREFIX.length);
+  return RHYTHM_ASSIST_SESSION_IDS.includes(id) ? id : '';
+};
+const RHYTHM_ASSIST_SESSION_TASTE = Object.freeze({
+  mua: {
+    like: [['toriko'], ['haruka'], ['crazy_party_night', 'crazy_party_night_full']],
+    dislike: ['grievous_lady']
+  },
+  kiki: {
+    like: [['kiki_issen', 'kiki_issen_short'], ['tsuki_ga_michiru_mae_ni', 'tsuki_ga_michiru_mae_ni_short'], ['kaze_ga_soyogu']],
+    dislike: ['black_shout']
+  },
+  momosuke: {
+    like: [['crossing_field'], ['only_my_railgun'], ['rose', 'rose_short']],
+    dislike: ['dullahan_clockwork']
+  },
+  dra: {
+    like: [['mou_hitotsu_no_sekai_e'], ['big_bridge_no_shitou'], ['senjou_no_shippuu']],
+    dislike: ['stay_with_me', 'stay_with_me_short']
+  },
+  atsu: {
+    like: [['against_my_own_shadow'], ['sad_song', 'sad_song_short'], ['rebellion', 'rebellion_short']],
+    dislike: ['mf_ichika_mix']
+  },
+  kyuko: {
+    like: [['toward_the_stars_short'], ['six_eternel_beat', 'six_eternel_remix'], ['evans']],
+    dislike: ['toriko']
+  },
+  sorashido: {
+    like: [['monster_hero'], ['freedom_dive'], ['humanoid']],
+    dislike: ['kaze_ga_soyogu']
+  },
+  erubin: {
+    like: [['wrath_of_the_thorn_king'], ['altar_world_tree', 'altar_world_tree_short'], ['dullahan']],
+    dislike: ['crazy_party_night', 'crazy_party_night_full']
+  }
+});
+const RHYTHM_ASSIST_SESSION_LIKE_MIN = -2;
+const RHYTHM_ASSIST_SESSION_LIKE_MAX = 3;
+const RHYTHM_ASSIST_SESSION_LIKE_STEP = 3;
+const rhythmAssistSessionBaseLike = (assistantId, songId) => {
+  const t = RHYTHM_ASSIST_SESSION_TASTE[assistantId];
+  if (!t || !songId) return 0;
+  if (t.like.some(ids => ids.includes(songId))) return RHYTHM_ASSIST_SESSION_LIKE_MAX;
+  if (t.dislike.includes(songId)) return RHYTHM_ASSIST_SESSION_LIKE_MIN;
+  return 0;
+};
+const rhythmAssistSessionTaste = (assistantId, songId) => {
+  const b = rhythmAssistSessionBaseLike(assistantId, songId);
+  return b > 0 ? 'like' : b < 0 ? 'dislike' : '';
+};
+const rhythmAssistSessionNormalize = raw => {
+  const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const src = o.mons && typeof o.mons === 'object' && !Array.isArray(o.mons) ? o.mons : {};
+  const mons = {};
+  RHYTHM_ASSIST_SESSION_IDS.forEach(id => {
+    if (!src[id] || typeof src[id] !== 'object') return;
+    const mon = rhythmBuddyNormalizeMon(src[id]);
+    mon.trait = '';
+    mon.born = '';
+    mon.traitAt = 0;
+    mon.traitLock = false;
+    const likes = {};
+    const l = src[id].likes;
+    if (l && typeof l === 'object' && !Array.isArray(l)) {
+      Object.keys(l).slice(0, 200).forEach(sid => {
+        const key = rhythmBuddyStr(sid, 60);
+        const n = rhythmBuddyInt(l[sid], 100000);
+        if (key && n > 0) likes[key] = n;
+      });
+    }
+    mons[id] = {
+      ...mon,
+      likes
+    };
+  });
+  return {
+    mons
+  };
+};
+const rhythmAssistSessionMon = (state, assistantId) => {
+  const st = rhythmAssistSessionNormalize(state);
+  return st.mons[assistantId] || {
+    ...rhythmBuddyNormalizeMon(null),
+    likes: {}
+  };
+};
+const rhythmAssistSessionLevel = (state, assistantId) => rhythmBuddyLevelInfo(rhythmAssistSessionMon(state, assistantId).exp).level;
+const rhythmAssistSessionLike = (mon, assistantId, songId) => {
+  const base = rhythmAssistSessionBaseLike(assistantId, songId);
+  const plays = mon && mon.likes ? rhythmBuddyInt(mon.likes[songId], 100000) : 0;
+  return Math.max(RHYTHM_ASSIST_SESSION_LIKE_MIN, Math.min(RHYTHM_ASSIST_SESSION_LIKE_MAX, base + Math.floor(plays / RHYTHM_ASSIST_SESSION_LIKE_STEP)));
+};
+const rhythmAssistSessionMood = like => {
+  const id = like >= RHYTHM_ASSIST_SESSION_LIKE_MAX ? 'good' : like < 0 ? 'bad' : 'normal';
+  return RHYTHM_BUDDY_MOODS.find(m => m.id === id) || RHYTHM_BUDDY_MOODS.find(m => m.id === 'normal');
+};
+const rhythmAssistSessionExpScale = like => like >= RHYTHM_ASSIST_SESSION_LIKE_MAX ? 1.3 : like < 0 ? 1.5 : 1;
+const rhythmAssistSessionPlay = ({
+  state,
+  assistantId,
+  songId,
+  diffId,
+  totalNotes,
+  maxScore,
+  durationMs,
+  rand,
+  chartLevel = 0,
+  humans = 1,
+  nowMs = 0
+}) => {
+  const mon = rhythmAssistSessionMon(state, assistantId);
+  const mood = rhythmAssistSessionMood(rhythmAssistSessionLike(mon, assistantId, songId));
+  return rhythmBuddyPlay({
+    mon,
+    songId,
+    diffId,
+    totalNotes,
+    maxScore,
+    durationMs,
+    mood,
+    rand,
+    chartLevel,
+    humans,
+    nowMs
+  });
+};
+const rhythmAssistSessionApplyLive = (state, assistantId, {
+  round,
+  songId,
+  diffId,
+  durationMs,
+  teamRank,
+  dayKey,
+  nowMs,
+  score,
+  maxScore,
+  chartLevel = 0,
+  humans = 1
+}) => {
+  const st = rhythmAssistSessionNormalize(state);
+  if (!RHYTHM_ASSIST_SESSION_IDS.includes(assistantId)) return {
+    next: null,
+    gain: 0,
+    levelUp: 0,
+    likeUp: 0,
+    like: 0,
+    familiarUp: false
+  };
+  const before = rhythmAssistSessionMon(st, assistantId);
+  const likeBefore = rhythmAssistSessionLike(before, assistantId, songId);
+  const r = rhythmBuddyApplyLive(before, {
+    round,
+    songId,
+    diffId,
+    durationMs,
+    teamRank,
+    dayKey,
+    lean: '',
+    nowMs,
+    score,
+    maxScore,
+    chartLevel,
+    humans,
+    moodId: ''
+  });
+  if (!r.gain) return {
+    next: null,
+    gain: 0,
+    levelUp: 0,
+    likeUp: 0,
+    like: likeBefore,
+    familiarUp: false
+  };
+  const gain = Math.max(1, Math.round(r.gain * rhythmAssistSessionExpScale(likeBefore)));
+  const sid = rhythmBuddyStr(songId, 60);
+  const likes = {
+    ...before.likes
+  };
+  if (sid) likes[sid] = (likes[sid] || 0) + 1;
+  const after = {
+    ...r.mon,
+    exp: before.exp + gain,
+    trait: '',
+    born: '',
+    traitAt: 0,
+    traitLock: false,
+    likes
+  };
+  const likeAfter = rhythmAssistSessionLike(after, assistantId, songId);
+  const levelUp = rhythmBuddyLevelInfo(after.exp).level - rhythmBuddyLevelInfo(before.exp).level;
+  return {
+    next: {
+      ...st,
+      mons: {
+        ...st.mons,
+        [assistantId]: after
+      }
+    },
+    gain,
+    levelUp,
+    likeUp: likeAfter - likeBefore,
+    like: likeAfter,
+    familiarUp: r.familiarUp
+  };
+};
+const rhythmAssistSessionChooseSong = (state, assistantId, catalog, rand = Math.random) => {
+  const list = Array.isArray(catalog) ? catalog.filter(x => typeof x === 'string' && x) : [];
+  if (!list.length) return {
+    songId: '',
+    why: ''
+  };
+  const mon = rhythmAssistSessionMon(state, assistantId);
+  const liked = list.filter(id => rhythmAssistSessionLike(mon, assistantId, id) >= RHYTHM_ASSIST_SESSION_LIKE_MAX);
+  if (liked.length && rand() < 0.6) return {
+    songId: liked[Math.floor(rand() * liked.length)],
+    why: 'love'
+  };
+  const ok = list.filter(id => rhythmAssistSessionLike(mon, assistantId, id) >= 0);
+  const pool = ok.length ? ok : list;
+  return {
+    songId: pool[Math.floor(rand() * pool.length)],
+    why: ''
   };
 };
 const RHYTHM_BUDDY_TALK_MAX = 40;
@@ -85294,6 +85531,7 @@ const rhythmMultiCleanMessage = raw => {
       out.mb = rhythmMultiText(raw.mb, 40).replace(/[^A-Za-z0-9_-]/g, '');
       out.mc = Array.isArray(raw.mc) ? raw.mc.slice(0, 8).map(rhythmMultiColorId) : [];
       out.pw = rhythmMultiText(raw.pw, 12).replace(/[^a-z]/g, '');
+      out.as = rhythmMultiText(raw.as, 20).replace(/[^a-z]/g, '');
     }
     return out;
   }
@@ -85590,7 +85828,8 @@ const RHYTHM_MULTI = (() => {
       owner: s.selfId,
       mb: c.mb,
       mc: c.mc,
-      pw: c.pickWhy || ''
+      pw: c.pickWhy || '',
+      as: c.as || undefined
     });
   };
   const reportCpuResult = round => {
@@ -86255,7 +86494,8 @@ const RHYTHM_MULTI = (() => {
         owner: msg.owner || '',
         mb: msg.mb || '',
         mc: msg.mc || [],
-        pickWhy: msg.pw || ''
+        pickWhy: msg.pw || '',
+        as: msg.as || ''
       };
       if (msg.room && fromHost()) {
         const r = msg.room;
@@ -86398,6 +86638,7 @@ const RHYTHM_MULTI = (() => {
         level: rhythmMultiInt(buddy.level, 9999),
         mb: rhythmMultiText(buddy.baseId, 40).replace(/[^A-Za-z0-9_-]/g, ''),
         mc: Array.isArray(buddy.colors) ? buddy.colors.slice(0, 8).map(rhythmMultiColorId) : [],
+        as: rhythmMultiText(buddy.assistantId, 20).replace(/[^a-z]/g, ''),
         icon: '',
         frame: '',
         bid: '',
@@ -87556,6 +87797,23 @@ function RhythmMultiAvatar({
   sizeClass = 'h-10 w-10',
   small = false
 }) {
+  const asWho = m.cpu && m.as && typeof assistantById === 'function' ? assistantById(m.as) : null;
+  if (asWho) {
+    const src = typeof assistantFaceSrc === 'function' ? assistantFaceSrc(asWho, null) : null;
+    return React.createElement("span", {
+      "data-rhythm-multi-cpu-avatar": true,
+      "data-rhythm-multi-assist-avatar": m.as,
+      className: `relative block shrink-0 overflow-hidden rounded-full border-2 border-pink-300/90 bg-slate-800 ${sizeClass}`
+    }, src ? React.createElement("img", {
+      src: src,
+      alt: "",
+      draggable: false,
+      className: "h-full w-full object-cover"
+    }) : React.createElement("span", {
+      "aria-hidden": "true",
+      className: "flex h-full w-full items-center justify-center text-lg"
+    }, asWho.emoji || '🎤'));
+  }
   if (m.cpu) {
     const base = m.mb && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[m.mb] : null;
     const src = masuDisplayImageUrl(base);
@@ -88137,7 +88395,8 @@ function RhythmMultiScreen({
   onUseBuddyTicket = null,
   onRefundBuddyTicket = null,
   onOpenMasuBeat = null,
-  onStepAway = null
+  onStepAway = null,
+  sessionAssistants = []
 }) {
   const view = useRhythmMultiView();
   useModeSelectStageCss();
@@ -88255,7 +88514,7 @@ function RhythmMultiScreen({
   const [buddyBumped, setBuddyBumped] = React.useState(false);
   React.useEffect(() => {
     RHYTHM_MULTI.setCpuBrain({
-      ...rhythmBuddyMakeBrain(songs),
+      ...rhythmAssistSessionWrapBrain(rhythmBuddyMakeBrain(songs), songs),
       refund: refundBuddy,
       ended: endBuddy,
       started: startBuddy
@@ -88304,6 +88563,50 @@ function RhythmMultiScreen({
     if (!joined) endBuddy(masu.id, call.id);
     setBuddySheet('');
   };
+  const callAssistant = async who => {
+    if (!who || !rhythmAssistSessionEnabled() || !RHYTHM_MULTI.canSummon()) {
+      setBuddySheet('');
+      return;
+    }
+    const key = rhythmAssistSessionKey(who.id);
+    if ((view && view.myCpus ? view.myCpus : []).some(c => c.masuId === key)) return;
+    const day = rhythmBuddyDayKey(Date.now());
+    const call = {
+      id: rhythmBuddyCallId(),
+      masuId: key,
+      at: Date.now(),
+      load: RHYTHM_BUDDY_LOAD_ID,
+      kind: 'assistant',
+      assistantId: who.id
+    };
+    let paid = (await RHYTHM_BUDDY_STORE.update(st => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
+    if (!paid && onUseBuddyTicket) {
+      try {
+        paid = (await onUseBuddyTicket()) === true ? 'ticket' : '';
+      } catch (_) {
+        paid = '';
+      }
+      if (paid) await RHYTHM_BUDDY_STORE.update(st => rhythmBuddyAddCall(st, {
+        ...call,
+        paid: 'ticket',
+        day
+      }));
+    }
+    if (!paid) return;
+    setBuddyBumped(false);
+    const joined = RHYTHM_MULTI.summon({
+      masuId: key,
+      callId: call.id,
+      name: rhythmAssistSessionName(who.id),
+      level: rhythmAssistSessionLevel(RHYTHM_ASSIST_SESSION_STORE.get(), who.id),
+      baseId: '',
+      colors: [],
+      assistantId: who.id
+    });
+    if (!joined) endBuddy(key, call.id);
+    setBuddySheet('');
+  };
+  const sessionAssistantsOn = rhythmAssistSessionEnabled() && (sessionAssistants || []).length > 0;
   const buddySongName = id => {
     const song = songs.find(x => x.songId === id);
     return song ? rhythmSongFullName(song) : '(曲)';
@@ -88328,6 +88631,8 @@ function RhythmMultiScreen({
   const buddySheetLayer = buddySheet === 'pick' ? React.createElement(RhythmBuddySheet, {
     masuMons: masuMons,
     masuPicker: masuPicker,
+    assistants: sessionAssistants,
+    pickAssistant: callAssistant,
     breederName: profile && profile.name,
     songName: buddySongName,
     tickets: buddyTickets,
@@ -88335,14 +88640,14 @@ function RhythmMultiScreen({
     onClose: () => setBuddySheet(''),
     calledIds: (view && view.myCpus ? view.myCpus : []).map(c => c.masuId)
   }) : null;
-  const buddyCallButton = (extra = '') => view && RHYTHM_MULTI.canSummon() && masuMons.length > 0 ? React.createElement("button", {
+  const buddyCallButton = (extra = '') => view && RHYTHM_MULTI.canSummon() && (masuMons.length > 0 || sessionAssistantsOn) ? React.createElement("button", {
     "data-rhythm-buddy-open": true,
     type: "button",
     onClick: () => setBuddySheet('pick'),
     className: `min-h-[44px] w-full rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-2 text-sm font-black text-slate-950 ${extra}`
-  }, "🎵 マスモンを呼ぶ", React.createElement("small", {
+  }, sessionAssistantsOn ? '🎵 マスモン・助手を呼ぶ' : '🎵 マスモンを呼ぶ', React.createElement("small", {
     className: "block text-[9px] font-bold opacity-80"
-  }, "マスモンがCPUとして一緒に遊びます")) : null;
+  }, sessionAssistantsOn ? 'マスモンや助手がCPUとして一緒に遊びます' : 'マスモンがCPUとして一緒に遊びます')) : null;
   const mine = view ? view.members.find(m => m.id === view.selfId) : null;
   const [selSongId, setSelSongId] = React.useState(mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '');
   const [selectView, setSelectView] = React.useState(null);
@@ -88635,7 +88940,7 @@ function RhythmMultiScreen({
     onClick: cycleSelectSec,
     className: `min-h-[40px] shrink-0 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 text-[11px] font-black leading-tight text-amber-100 ${extra}`
   }), "選曲", React.createElement("br", null), rhythmMultiSelectSecLabel(room.selectSec));
-  const buddyHeaderButton = (extra = '') => view && RHYTHM_MULTI.canSummon() && masuMons.length > 0 ? React.createElement("button", {
+  const buddyHeaderButton = (extra = '') => view && RHYTHM_MULTI.canSummon() && (masuMons.length > 0 || sessionAssistantsOn) ? React.createElement("button", {
     "data-rhythm-buddy-open": true,
     "data-rhythm-buddy-header": true,
     type: "button",
@@ -89697,8 +90002,12 @@ function RhythmMultiScreen({
       const grown = (view.myCpus || []).map(c => {
         const cpuRow = team.rows.find(row => row.m.id === c.id);
         const masu = cpuRow && cpuRow.res ? masuMons.find(x => x && x.id === c.masuId) : null;
+        const assistantId = cpuRow && cpuRow.res ? rhythmAssistSessionIdOf(c.masuId) : '';
         return masu ? {
           masu,
+          cpuRow
+        } : assistantId ? {
+          assistantId,
           cpuRow
         } : null;
       }).filter(Boolean);
@@ -89708,10 +90017,23 @@ function RhythmMultiScreen({
         className: "grid shrink-0 grid-cols-1 gap-1 px-3 pt-1 landscape:grid-cols-2 [[data-mh-view-rotation=true]_&]:grid-cols-2"
       }, grown.map(({
         masu,
+        assistantId,
         cpuRow
-      }) => React.createElement(RhythmBuddyGrowth, {
+      }) => masu ? React.createElement(RhythmBuddyGrowth, {
         key: masu.id,
         masu: masu,
+        round: room.round,
+        songId: room.songId,
+        diffId: cpuRow.res.diffId,
+        durationMs: song ? Number(song.playDurationMs) || 0 : 0,
+        teamRank: team.rank,
+        chartLevel: song && song.difficulties && song.difficulties[cpuRow.res.diffId] ? Number(song.difficulties[cpuRow.res.diffId].level) || 0 : 0,
+        humans: team.rows.filter(row => !row.m.cpu).length,
+        score: cpuRow.res.score,
+        maxScore: ((typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find(d => d.id === cpuRow.res.diffId) || {}).maxScore || 0
+      }) : React.createElement(RhythmAssistSessionGrowth, {
+        key: assistantId,
+        assistantId: assistantId,
         round: room.round,
         songId: room.songId,
         diffId: cpuRow.res.diffId,
@@ -91488,7 +91810,9 @@ function RhythmBuddySheet({
   pick,
   onClose,
   calledIds = [],
-  breederName = ''
+  breederName = '',
+  assistants = [],
+  pickAssistant = null
 }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
@@ -91499,6 +91823,18 @@ function RhythmBuddySheet({
   const canPay = freeLeft > 0 || tickets > 0;
   const listControls = useRhythmBuddyListControls();
   const [selId, setSelId] = React.useState('');
+  const assistOn = rhythmAssistSessionEnabled() && typeof pickAssistant === 'function' && (assistants || []).length > 0;
+  const [tab, setTab] = React.useState(() => (masuMons || []).length ? 'masu' : 'assistant');
+  const tabNow = assistOn ? tab : 'masu';
+  const chooseAssistant = async who => {
+    if (busy || !canPay) return;
+    setBusy(true);
+    try {
+      await pickAssistant(who);
+    } finally {
+      setBusy(false);
+    }
+  };
   const choose = async masu => {
     if (busy || !canPay) return;
     setBusy(true);
@@ -91527,19 +91863,46 @@ function RhythmBuddySheet({
     className: "mb-2 flex items-center gap-2"
   }, React.createElement("h3", {
     className: "min-w-0 flex-1 text-base font-black text-lime-200"
-  }, "🎵 マスモンを呼ぶ"), React.createElement("button", {
+  }, assistOn ? '🎵 一緒に遊ぶ相手を呼ぶ' : '🎵 マスモンを呼ぶ'), React.createElement("button", {
     type: "button",
     "aria-label": "閉じる",
     onClick: onClose,
     className: "min-h-[40px] min-w-[40px] rounded-full bg-slate-800 text-lg font-black"
-  }, "✕")), React.createElement(RhythmBuddyAllowance, {
+  }, "✕")), assistOn && React.createElement("div", {
+    "data-rhythm-buddy-tabs": true,
+    role: "tablist",
+    className: "mb-2 flex gap-1.5"
+  }, [['masu', '🎵 マスモン'], ['assistant', '🎤 助手']].map(([id, label]) => React.createElement("button", {
+    key: id,
+    type: "button",
+    role: "tab",
+    "aria-selected": tabNow === id,
+    "data-rhythm-buddy-tab": id,
+    onClick: () => setTab(id),
+    className: `min-h-[40px] flex-1 rounded-xl text-[13px] font-black ${tabNow === id ? 'border-2 border-pink-300 bg-pink-500/25 text-pink-100' : 'border border-white/10 bg-slate-800 text-slate-300'}`
+  }, label))), React.createElement(RhythmBuddyAllowance, {
     freeLeft: freeLeft,
     tickets: tickets,
     className: "mb-1 text-slate-200"
-  }), React.createElement("p", {
+  }), tabNow === 'assistant' ? React.createElement("p", {
+    "data-rhythm-assist-note": true,
     className: "mb-2 text-[10px] font-bold leading-relaxed text-slate-400",
     style: JA_WRAP_STYLE
-  }, jaWrap(`マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日${RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。`))), React.createElement("div", {
+  }, jaWrap('助手をえらんで、CPUとしてこの部屋に呼べます。回数はマスモンと同じです(1日3回までは無料、そのあとはセッション券を1枚使います)。')) : React.createElement("p", {
+    className: "mb-2 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日${RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。`))), tabNow === 'assistant' ? React.createElement("div", {
+    className: "flex min-h-0 flex-1 flex-col"
+  }, React.createElement(RhythmAssistSessionPicker, {
+    assistants: assistants,
+    calledIds: calledIds,
+    canPay: canPay,
+    busy: busy,
+    onPick: chooseAssistant
+  }), !canPay && React.createElement("p", {
+    "data-rhythm-buddy-empty": true,
+    className: "mt-2 text-[11px] font-black text-rose-300"
+  }, "今日の無料ぶんを使い切りました。セッション券があれば呼べます")) : React.createElement("div", {
     className: "flex min-h-0 flex-1 flex-col"
   }, React.createElement("div", {
     className: "min-h-0 flex-1 overflow-y-auto"
@@ -92036,6 +92399,326 @@ function RhythmBuddyRankingBoard({
     renderBreederIcon: renderBreederIcon,
     songName: songName
   }));
+}
+const RHYTHM_ASSIST_SESSION_STORE = (() => {
+  let state = rhythmAssistSessionNormalize(null);
+  let loaded = false;
+  let chain = Promise.resolve();
+  const listeners = new Set();
+  const emit = () => listeners.forEach(fn => {
+    try {
+      fn(state);
+    } catch (_) {}
+  });
+  return {
+    get: () => state,
+    load() {
+      chain = chain.then(async () => {
+        try {
+          state = rhythmAssistSessionNormalize(await storeGet(RHYTHM_ASSIST_SESSION_KEY, null));
+        } catch (_) {}
+        loaded = true;
+        emit();
+      });
+      return chain;
+    },
+    update(fn) {
+      let out = null;
+      chain = chain.then(async () => {
+        if (!loaded) {
+          try {
+            state = rhythmAssistSessionNormalize(await storeGet(RHYTHM_ASSIST_SESSION_KEY, null));
+          } catch (_) {}
+          loaded = true;
+        }
+        const next = fn(state);
+        if (!next) return;
+        out = rhythmAssistSessionNormalize(next);
+        state = out;
+        try {
+          await storeSet(RHYTHM_ASSIST_SESSION_KEY, state);
+        } catch (_) {}
+        emit();
+      });
+      return chain.then(() => out);
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    }
+  };
+})();
+const useRhythmAssistSessionState = () => {
+  const [state, setState] = React.useState(() => RHYTHM_ASSIST_SESSION_STORE.get());
+  React.useEffect(() => {
+    const off = RHYTHM_ASSIST_SESSION_STORE.subscribe(setState);
+    void RHYTHM_ASSIST_SESSION_STORE.load();
+    return off;
+  }, []);
+  return state;
+};
+const rhythmAssistSessionWho = assistantId => typeof assistantById === 'function' ? assistantById(assistantId) : null;
+const rhythmAssistSessionName = assistantId => {
+  const who = rhythmAssistSessionWho(assistantId);
+  return String(who && who.name || '助手').slice(0, 12);
+};
+const RHYTHM_ASSIST_SESSION_LINES = Object.freeze({
+  mua: {
+    join: 'やっほ〜！あたしも一緒に叩くね♪',
+    love: 'この曲あたし大好きなの♪',
+    mvp: 'MVPとっちゃった！？あたしすごくない？♪',
+    high: 'まぢいい感じぢゃん！楽しかったぁ♪',
+    low: '次はもっと合わせよ！あたしもがんばる♪'
+  },
+  kiki: {
+    join: 'ブリーダーさん、よろしくお願いしまつ♪',
+    love: 'この曲、私とても好きなんです♪',
+    mvp: '私がMVPですか？ちょっと照れちゃいまつ♪',
+    high: 'とってもいい演奏でした♪',
+    low: '次はきっと、もっと合わせられますよ♪'
+  },
+  momosuke: {
+    join: 'ももが来たからには盛り上げるよ！！',
+    love: 'この曲ももの推し曲！！',
+    mvp: 'MVPはもも！！当然でしょw',
+    high: 'ももと合わせたらこんなもんでしょw さすが♡',
+    low: 'ドンマイ！次はもも、もっと見ててあげる♡'
+  },
+  dra: {
+    join: 'おでも混ぜてくれよな、えへへ',
+    love: 'この曲、おで好きなんだな',
+    mvp: 'おでがMVPか、えへへ、照れくさいな',
+    high: 'いい演奏だったくさ。おで楽しかったな',
+    low: 'どんまいだな、次でとりかえすからな'
+  },
+  atsu: {
+    join: 'とりあえず一曲いくか笑',
+    love: 'これ俺の好きなやつだな笑',
+    mvp: 'MVPもらっといた笑',
+    high: 'てか今の、普通にうまかったな笑',
+    low: 'まあ次だな、切り替えていこう！'
+  },
+  kyuko: {
+    join: 'ほい！俺も入るね〜',
+    love: 'この曲は構成がきれいなんだよね〜',
+    mvp: 'MVPいただきました〜笑',
+    high: 'いい流れだったね〜、ありがとん笑',
+    low: 'ぐぬぬぬ、次はサビ前を意識してみよ〜'
+  },
+  sorashido: {
+    join: 'うぉぉぉ！俺も参戦するぜ・・・！',
+    love: 'この曲は全ノーツ計算済みだぜ・・・！',
+    mvp: 'MVPは計算済みだったぜ・・・！',
+    high: '計算どおりの名演だぜ・・・！',
+    low: '次は全ノーツ計算して挑むぜ笑'
+  },
+  erubin: {
+    join: '俺も一緒にいいかな？よろしくね',
+    love: 'この曲、好きなんだよね',
+    mvp: '俺がMVP？ありがとね',
+    high: 'いい演奏だったね、おつかれさま',
+    low: '大丈夫、次はきっと合うよ'
+  }
+});
+const rhythmAssistSessionTalk = ({
+  assistantId,
+  kind,
+  songId = '',
+  score = 0,
+  diffId = '',
+  mvp = false
+}) => {
+  const lines = RHYTHM_ASSIST_SESSION_LINES[assistantId];
+  if (!lines) return '';
+  if (kind === 'join') return lines.join;
+  if ((kind === 'pick' || kind === 'song') && songId && rhythmAssistSessionTaste(assistantId, songId) === 'like') return lines.love;
+  if (kind === 'result') {
+    if (mvp) return lines.mvp;
+    const diffDef = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find(d => d.id === diffId);
+    const ratio = Number(score) / (diffDef && diffDef.maxScore || 1000000);
+    return ratio >= 0.85 ? lines.high : ratio < 0.7 ? lines.low : '';
+  }
+  return '';
+};
+const rhythmAssistSessionWrapBrain = (brain, songs) => ({
+  ...brain,
+  play(args) {
+    const aid = rhythmAssistSessionIdOf(args && args.masuId);
+    if (!aid) return brain.play(args);
+    const {
+      songId,
+      diffId,
+      humans = 1
+    } = args;
+    const song = (songs || []).find(x => x.songId === songId);
+    const chart = song && song.difficulties ? song.difficulties[diffId] : null;
+    const totalNotes = chart ? Number(chart.totalNotes) > 0 ? Number(chart.totalNotes) : Array.isArray(chart.notes) ? chart.notes.length : 300 : 300;
+    const diffDef = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find(d => d.id === diffId);
+    return rhythmAssistSessionPlay({
+      state: RHYTHM_ASSIST_SESSION_STORE.get(),
+      assistantId: aid,
+      songId,
+      diffId,
+      totalNotes,
+      maxScore: diffDef ? diffDef.maxScore : 1000000,
+      durationMs: chart && Number(chart.durationMs) || (song ? Number(song.playDurationMs) || 0 : 0),
+      rand: Math.random,
+      chartLevel: chart ? Number(chart.level) || 0 : 0,
+      humans,
+      nowMs: Date.now()
+    });
+  },
+  talk(args) {
+    const aid = rhythmAssistSessionIdOf(args && args.masuId);
+    if (!aid) return brain.talk(args);
+    try {
+      return rhythmAssistSessionTalk({
+        assistantId: aid,
+        ...args
+      });
+    } catch (_) {
+      return '';
+    }
+  },
+  style(masuId) {
+    return rhythmAssistSessionIdOf(masuId) ? {
+      ask: 0,
+      starter: [1, 1, 1]
+    } : brain.style(masuId);
+  },
+  pair(a, b) {
+    return rhythmAssistSessionIdOf(a) || rhythmAssistSessionIdOf(b) ? 'banter' : brain.pair(a, b);
+  },
+  pick(catalog, masuId) {
+    const aid = rhythmAssistSessionIdOf(masuId);
+    return aid ? rhythmAssistSessionChooseSong(RHYTHM_ASSIST_SESSION_STORE.get(), aid, catalog) : brain.pick(catalog, masuId);
+  }
+});
+function RhythmAssistSessionPicker({
+  assistants = [],
+  calledIds = [],
+  canPay = true,
+  busy = false,
+  onPick
+}) {
+  const state = useRhythmAssistSessionState();
+  const [selId, setSelId] = React.useState('');
+  const list = (assistants || []).filter(who => who && RHYTHM_ASSIST_SESSION_IDS.includes(who.id));
+  const sel = list.find(who => who.id === selId) || null;
+  const calledOf = id => calledIds.includes(rhythmAssistSessionKey(id));
+  return React.createElement("div", {
+    "data-rhythm-assist-picker": true,
+    className: "flex min-h-0 flex-1 flex-col"
+  }, React.createElement("div", {
+    className: "min-h-0 flex-1 overflow-y-auto"
+  }, list.length === 0 ? React.createElement("p", {
+    className: "py-6 text-center text-[12px] font-bold text-slate-400"
+  }, "まだ呼べる助手がいません") : React.createElement("div", {
+    className: "grid grid-cols-3 gap-2.5 pb-4"
+  }, list.map(who => {
+    const lv = rhythmAssistSessionLevel(state, who.id);
+    return React.createElement("button", {
+      key: who.id,
+      type: "button",
+      "data-rhythm-assist-card": who.id,
+      onClick: () => setSelId(who.id),
+      className: `flex min-h-[112px] w-full flex-col items-center gap-1 rounded-2xl border-2 p-2 active:scale-95 ${selId === who.id ? 'border-pink-300 bg-slate-800' : 'border-white/10 bg-slate-900'}`
+    }, React.createElement(AssistantFace, {
+      who: who,
+      size: 48,
+      accent: who.accent,
+      expression: selId === who.id ? 'happy' : null
+    }), React.createElement("span", {
+      className: "w-full truncate rounded-lg border border-white/10 bg-slate-950/70 px-1 py-0.5 text-center text-[11px] font-black"
+    }, who.name), React.createElement("span", {
+      className: "whitespace-nowrap text-[10px] font-black text-pink-200"
+    }, "セッションLv.", lv), calledOf(who.id) && React.createElement("span", {
+      className: "rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950"
+    }, "呼んでいる"));
+  }))), sel ? React.createElement("div", {
+    "data-rhythm-assist-confirm": true,
+    className: "mt-2 flex shrink-0 items-center gap-2 rounded-2xl border border-pink-300/40 bg-slate-950/80 p-2"
+  }, React.createElement(AssistantFace, {
+    who: sel,
+    size: 44,
+    accent: sel.accent,
+    expression: "happy"
+  }), React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("b", {
+    className: "block truncate text-[13px] font-black"
+  }, sel.name), React.createElement("small", {
+    className: "block whitespace-nowrap text-[10px] font-bold text-pink-200"
+  }, "セッションLv.", rhythmAssistSessionLevel(state, sel.id))), calledOf(sel.id) ? React.createElement("span", {
+    "data-rhythm-assist-called": true,
+    className: "shrink-0 rounded-xl border border-lime-300/50 px-2 py-3 text-[10px] font-black text-lime-200"
+  }, "呼んでいる") : React.createElement("button", {
+    "data-rhythm-assist-call": true,
+    type: "button",
+    disabled: busy || !canPay,
+    onClick: () => onPick && onPick(sel),
+    className: "min-h-[44px] shrink-0 rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-4 text-sm font-black text-slate-950 disabled:opacity-40"
+  }, "呼ぶ")) : React.createElement("p", {
+    className: "mt-2 text-center text-[11px] font-bold text-slate-400"
+  }, "呼びたい助手をタップしてください"));
+}
+function RhythmAssistSessionGrowth({
+  assistantId,
+  round,
+  songId,
+  diffId,
+  durationMs,
+  teamRank,
+  score = 0,
+  maxScore = 0,
+  chartLevel = 0,
+  humans = 1
+}) {
+  const [shown, setShown] = React.useState(null);
+  React.useEffect(() => {
+    if (!assistantId || !round) return undefined;
+    let alive = true;
+    let outcome = null;
+    const dayKey = rhythmBuddyDayKey(Date.now());
+    RHYTHM_ASSIST_SESSION_STORE.update(st => {
+      const r = rhythmAssistSessionApplyLive(st, assistantId, {
+        round,
+        songId,
+        diffId,
+        durationMs,
+        teamRank,
+        dayKey,
+        nowMs: Date.now(),
+        score,
+        maxScore,
+        chartLevel,
+        humans
+      });
+      if (!r.next) return null;
+      outcome = r;
+      return r.next;
+    }).then(() => {
+      if (alive && outcome) setShown(outcome);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [assistantId, round]);
+  if (!shown || !assistantId) return null;
+  const level = rhythmBuddyLevelInfo((shown.next.mons[assistantId] || {}).exp).level;
+  return React.createElement("p", {
+    "data-rhythm-assist-growth": true,
+    className: "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-pink-300/50 bg-pink-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-pink-100"
+  }, React.createElement("span", {
+    className: "max-w-full truncate"
+  }, "🎤 ", rhythmAssistSessionName(assistantId)), React.createElement("span", {
+    className: "text-pink-200"
+  }, "経験値+", shown.gain), shown.levelUp > 0 && React.createElement("span", {
+    "data-rhythm-assist-levelup": true,
+    className: "rounded bg-amber-300 px-1 text-slate-950"
+  }, "セッションLv.UP! Lv.", level), shown.likeUp > 0 && React.createElement("span", {
+    className: "text-amber-200"
+  }, "好み度+", shown.likeUp));
 }
 const RAID_JACK_DEBUG_NOW_CHOICES = Object.freeze([{
   id: 'real',
@@ -137763,6 +138446,18 @@ function MonsterHeroGame() {
   const [extremeRuleOpen, setExtremeRuleOpen] = useState(false);
   const [extremeDifficulty, setExtremeDifficulty] = useState('EXTREME');
   const UNDERWORLD_TAB_SEEN_KEY = 'mh_underworld_tab_seen_v1';
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const settings = normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false)));
+        if (alive) setRhythmSettings(prev => prev === DEFAULT_RHYTHM_SETTINGS ? settings : prev);
+      } catch (e) {}
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [underworldTabSeen, setUnderworldTabSeen] = useState(true);
   useEffect(() => {
     (async () => {
@@ -161900,6 +162595,7 @@ function MonsterHeroGame() {
       onUseBuddyTicket: consumeBuddyTicket,
       onRefundBuddyTicket: refundBuddyTicket,
       onOpenMasuBeat: () => openMasuBeat(gameState),
+      sessionAssistants: rhythmAssistSessionEnabled() && typeof assistantsUnlockedFrom === 'function' ? assistantsUnlockedFrom(rhythmEventStorySeen).filter(who => who.id !== 'momosuke' || momosukeIntroSeenFlag) : [],
       songs: rhythmDemoSongs(RHYTHM_SONGS),
       difficultiesOf: song => rhythmDemoDifficulties(song, RHYTHM_PLAY_DIFFICULTIES),
       difficultyList: rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES),

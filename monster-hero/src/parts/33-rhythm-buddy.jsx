@@ -177,6 +177,9 @@ const rhythmBuddyNormalizeCalls = (raw) => (Array.isArray(raw) ? raw : [])
     id: rhythmBuddyStr(x.id, 40), masuId: rhythmBuddyStr(x.masuId, 80),
     paid: x.paid === 'ticket' ? 'ticket' : x.paid === 'free' ? 'free' : '',
     day: rhythmBuddyStr(x.day, 10), at: rhythmBuddyInt(x.at, 9e15), load: rhythmBuddyStr(x.load, 40), started: x.started === true,
+    // 2026-11-07 助手とのセッションで足した項目。無い控え(それより前のもの)はマスモンとして読む(⑦)
+    kind: x.kind === 'assistant' ? 'assistant' : 'masu',
+    assistantId: x.kind === 'assistant' ? rhythmBuddyStr(x.assistantId, 20) : '',
   }))
   .filter((x) => x.id && x.paid);
 const rhythmBuddyNormalize = (raw) => {
@@ -309,6 +312,8 @@ const RHYTHM_BUDDY_PICK_WHY = Object.freeze({
   // 2026-11-06 の10個の性格
   short: '短い曲でサクッといきたい!', revenge: 'さっきの曲でリベンジ!', practice: '得意な曲をもっと練習!', easy: 'ゆっくり楽しめる曲がいいな',
   romance: 'この曲の世界にひたりたい',
+  // 2026-11-07 助手とのセッション(33-rhythm-assistant-session.jsx)。助手の好きな曲
+  love: 'この曲が大好き!',
 });
 // 新しい曲(まだ一緒に遊んでいない曲)に挑戦する確率。性格と今日の調子で変わる
 const rhythmBuddyNewSongChance = (trait, moodId) => {
