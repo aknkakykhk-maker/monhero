@@ -37,6 +37,13 @@ const load = (rel) => {
   vm.runInContext(code, ctx);
 };
 load('monster-hero/data/assistants.js');
+// 2人にあげる道具の検査用に、持ち物(breeder.js)と交換所(rhythm-event.js)から2品の行だけを切り出して読む(ファイル丸ごとはほかの定義に頼っているため)
+{
+  const pick = (rel, re) => fs.readFileSync(path.join(root, rel), 'utf8').split('\n').filter(l => re.test(l));
+  const items = fs.readFileSync(path.join(root, 'monster-hero/data/breeder.js'), 'utf8').match(/\{ id:'peer_(gift|token)'[\s\S]*?desc:"[^"]*" \}/g) || [];
+  const offers = pick('monster-hero/data/rhythm-event.js', /Object\.freeze\(\{ id:'peer_(gift|token)'/).map(l => l.trim().replace(/,$/, ''));
+  vm.runInContext(`var BREEDER_MARKET_ITEMS = [${items.join(',')}]; var RHYTHM_EVENT_POINT_SHOP_OFFERS = [${offers.join(',')}];`, ctx);
+}
 let dayNow = '2026-11-07';
 vm.runInContext('var assistantBubbleDayKey = () => __day(); var assistantPeerDayKey = () => __day(); var jstDayKey4 = () => __day(); var assistantById = (id) => ASSISTANTS.find(a => a.id === id);', Object.assign(ctx, { __day: () => dayNow }));
 load('monster-hero/src/parts/56-assistant-peer.jsx');
@@ -408,6 +415,52 @@ if (process.argv.includes('--stats')) {
       if (/[{}]/.test(text)) left.push(`${t.id}: ${text}`);
     }
     check('⑧ 台本の穴({c}・{place}・{doing} など)が残らない', left.length === 0, left.slice(0, 2).join(' / '));
+  }
+  // 新しい種類(声かけ・決まった3人・言い合い・ブリーダーへ)が引ける
+  {
+    const T = G('assistantLifeTalkSet()');
+    let badInv = [];
+    for (const id of IDS) {
+      const others = IDS.filter(x => x !== id);
+      const life = { ...lifeBase, moods: { [id]: 'lonely' }, solo: { [id]: { doing: 'idle', place: 'home', reason: 'lonely' } }, groups: [{ ids: others.slice(0, 2), doing: 'snack', place: 'cafe' }, { ids: others.slice(2, 4), doing: 'walk', place: 'plaza' }] };
+      const t = G('assistantLifePickInviteTalk')(id, life, peer(3), Math.random);
+      if (T.invite.some(x => x.who === id) && (!t || t.who !== id || !others.slice(0, 4).includes(t.from))) badInv.push(id);
+    }
+    check('⑧ 誘う: 誘われる人と、いま組にいる人のあいだの声かけが出る', badInv.length === 0, badInv.join(',') || `${T.invite.length}本`);
+    let badTrio = 0, hitFixed = 0;
+    for (const t of T.trio) {
+      lstore.set({ seen: {} });
+      const got = pickG({ ids: [...t.trio], doing: t.keys.doing || 'snack', place: 'plaza' }, peer(3), lifeBase, Math.random);
+      if (!got || !got.trio || !got.trio.every(id => t.trio.includes(id))) badTrio++;
+      else if (!got.anyTrio) hitFixed++;
+    }
+    check('⑧ 決まった3人がそろうと、その3人の台本が先に出る', badTrio === 0 && hitFixed === T.trio.length, `${hitFixed}/${T.trio.length}`);
+    const lq = T.quarrel.filter(t => t.kind === 'quarrel');
+    const lifeQ = G('assistantPeerExtraTalks()').quarrels.filter(t => t.kind === 'quarrel' && /^life-/.test(t.id));
+    check('⑧ 言い合い(言い合い・距離・仲直り)が仲直りの流れに乗る', lq.length > 0 && lifeQ.length === lq.length && lq.every(q => q.distance.length && T.quarrel.some(m => m.kind === 'makeup' && m.quarrelId === q.id)), `${lq.length}本`);
+    // 気分がすぐれない2人はたまに言い合い(Lv2 から)
+    lstore.set({ seen: {} });
+    let qn = 0;
+    for (let k = 0; k < 400; k++) { const t = pickG({ ids: ['kiki', 'mua'], doing: 'snack', place: 'cafe' }, peer(3), { ...lifeBase, moods: { kiki: 'sulky' } }, Math.random); if (t && t.kind === 'quarrel') qn++; }
+    check('⑧ すねている2人は3割くらいで言い合いになる', qn > 80 && qn < 160, `${qn}/400`);
+    let brN = 0;
+    for (let k = 0; k < 300; k++) { const t = G('assistantLifePickSoloTalk')('mua', { ...lifeBase, moods: { mua: 'happy' }, solo: { mua: { doing: 'walk', place: 'plaza', reason: 'mypace' } } }, peer(1), Math.random); if (t && t.kind === 'life-breeder') brN++; }
+    check('⑧ ようすを見ると、ときどきブリーダーへのひとこと', T.breeder.length === 0 || (brN > 30 && brN < 150), `${brN}/300`);
+    lstore.set({ seen: {} });
+  }
+  // 2人にあげる道具: 数字は表から読む/渡すとよさそうな印
+  {
+    const g = G("assistantLifeItemInfo('gift')"), t = G("assistantLifeItemInfo('token')");
+    check('⑧ 道具の名前・値段・上がる量は表から読む(差し入れ 200P・友情Lv +15/しるし 500P・+30)', g.name === '差し入れ' && g.cost === 200 && g.peerAmt === 15 && g.playerAmt > 0 && t.cost === 500 && t.peerAmt === 30, `${g.name} ${g.cost} ${g.peerAmt}/${g.playerAmt}・${t.name} ${t.cost} ${t.peerAmt}/${t.playerAmt}`);
+    const hint = G('assistantLifePairHint');
+    const h1 = hint({ bond: { 'kiki-mua': 440 }, quarrel: {} }, lifeBase, 'kiki', 'mua');
+    const h2 = hint({ bond: { 'kiki-mua': 300 }, quarrel: { pending: { pair: 'kiki-mua' } } }, lifeBase, 'kiki', 'mua');
+    check('⑧ 印: もうすぐ友情Lv が上がる(あと30以内)・言い合いのあと', h1.near && h1.near.level === 5 && h1.near.left === 10 && !h1.after && !h2.near && h2.after);
+    flags.assistantLife = false;
+    const off = G("assistantLifeItemDesc(BREEDER_MARKET_ITEMS.find(x => x.id === 'peer_gift'))");
+    flags.assistantLife = true;
+    const on = G("assistantLifeItemDesc(BREEDER_MARKET_ITEMS.find(x => x.id === 'peer_gift'))");
+    check('⑧ 持ち物・交換所の説明は、印が真のときだけ「何が起きるか」中心の文', off === G("BREEDER_MARKET_ITEMS.find(x => x.id === 'peer_gift').desc") && /友情Lv \+15/.test(on) && /助手たちの今/.test(on) && /1日1回/.test(on));
   }
   // ⑦ のために入れ物を読み込む前へ戻す
   lstore.loading = null;
