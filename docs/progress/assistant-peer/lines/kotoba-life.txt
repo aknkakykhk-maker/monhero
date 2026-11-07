@@ -593,3 +593,66 @@ pair kiki momosuke lv=4-6 | kiki normal {c}、今日は少し元気がないで�
 pair kiki momosuke lv=7-10 | momosuke happy {c}のとなりって、なんか落ち着くんだよね！！ | kiki happy 私も、{c}のとなりはにぎやかで楽しいですよ | momosuke excited じゃあ、おたがいさまだ！！w
 pair kiki momosuke lv=4-6 air=after | kiki troubled 本のしおり、ちがうページにはさまっていました | momosuke troubled ……ごめん。もも、さわっちゃった | kiki normal …少しだけ、時間をください
 pair kiki momosuke lv=4-6 air=makeup | momosuke normal {c}、新しいしおり作ってきた！！ ピカピカのやつ！！ | kiki happy …きれいですね。大事に使います | momosuke excited ゆるしてくれる！？ やったー！！
+
+## 2人 きゅうこ × みゅあ(19本)
+pair kyuko mua doing=snack lv=1-3 | mua excited {c}、甘いのと辛いの、どっちにする？ | kyuko happy どっちもいけるよぉ。{c}が選んでいいよ笑 | mua wink ぢゃあ両方！ 半分こね♪
+pair kyuko mua doing=snack lv=4-6 | kyuko normal {c}、さっきから話が3回とんだよ笑 | mua surprise え、そうだっけ！？ | kyuko happy でも全部おもしろかったからいいよぉ
+pair kyuko mua doing=snack lv=7-10 | mua happy {c}の好物、もう覚えたよ！ 今日はそれ買ってきた♪ | kyuko surprise え、ほんとに？ ありがとん🥺 | mua wink あたし、こういうのは忘れないのｗ
+pair kyuko mua doing=practice lv=1-3 | kyuko normal {c}のリズム、勢いあっていいねぇ | mua excited でしょ！ あたし、ノリだけはあるから！ | kyuko happy ノリだけで上手なの、すごいよ笑
+pair kyuko mua doing=practice lv=4-6 | mua troubled 速いとこ、いつも指がこんがらがる〜 | kyuko normal そこは手を入れかえると楽だよ。こうやって | mua surprise ほんとだ！ {c}、なんでも知ってるぢゃん！
+pair kyuko mua doing=practice lv=7-10 | kyuko happy {c}が隣で叩いてると、俺もテンポ上がるんだよねぇ | mua excited ほんと！？ じゃあ毎日隣で叩く！ | kyuko wink 毎日はさすがに俺がもたないかもw
+pair kyuko mua doing=training lv=1-3 | mua normal モッチーの育て方、合ってるか見てくれる？ | kyuko happy ほい！ ……うん、いい感じ。ちょっとだけ素早さ足そっか | mua excited さすが！ すぐ分かるんだね！
+pair kyuko mua doing=training lv=4-6 | kyuko surprise {c}のモッチー、「なんかいい」で育てたのに強いね | mua wink でしょ！ あたしの勘、当たるのｗ | kyuko happy 数字で見ても正解なんだよねぇ。ふしぎ笑
+pair kyuko mua doing=training lv=7-10 | mua happy {c}が教えてくれたとおりにしたら、モッチーがランキング入りした！ | kyuko excited ほんと！？ やったねぇ！ | mua happy {c}のおかげだよ！ ありがと♪
+pair kyuko mua doing=cards lv=1-3 | kyuko normal {c}、このデッキの名前どうする？ | mua excited 「キラキラモッチー団」！ | kyuko happy 決めるの早っw でもいいね
+pair kyuko mua doing=cards lv=4-6 | mua troubled カードの数字、見てるとねむくなる… | kyuko happy じゃあ数字は俺が見るから、{c}は名前を決めて笑 | mua wink それなら得意！
+pair kyuko mua doing=cards lv=7-10 | kyuko normal {c}の勘と俺の数字、合わせると負けないよね | mua excited それな！ 最強コンビぢゃん！ | kyuko wink ほい！ 次の大会もこれでいこ笑
+pair kyuko mua doing=walk lv=1-3 | mua excited {c}、{place}まで競争しよ！ | kyuko troubled え、走るの？ 歩こうよぉ | mua happy ぢゃあ早歩きで！ｗ
+pair kyuko mua doing=walk lv=4-6 | kyuko normal {c}と歩くと、知らない話がいっぱい聞けるねぇ | mua happy あたし、しゃべってないと死んじゃうのｗ | kyuko happy それは困るから、いっぱい聞くよ笑
+pair kyuko mua doing=walk lv=7-10 | mua normal {c}って、あたしの話、いつも楽しそうに聞いてくれるよね | kyuko happy 楽しいからね笑 | mua excited もー、そういうとこ！ もっと話しちゃう！
+pair kyuko mua lv=1-3 | kyuko happy {c}、今日も元気だねぇ | mua excited 元気だけが取りえ！ ……あ、コーデも！ | kyuko wink 2つあるじゃん笑
+pair kyuko mua lv=4-6 air=after | kyuko troubled {c}、図書室では静かにって言ったよね… | mua troubled ……ごめん、つい大きい声出ちゃった | kyuko normal 今日はちょっと、ひとりで考えたいかな
+pair kyuko mua lv=4-6 air=makeup | mua normal {c}、さっきはごめん。小さい声で話す練習してきた！ | kyuko happy それ、ふつうの声と同じ大きさだよぉ笑 | mua wink ……がんばったのにｗ
+pair kyuko mua lv=7-10 air=makeup | kyuko happy {c}、もう気にしてないよ。図書室じゃなかったら、いくらでもしゃべって笑 | mua excited ほんと！？ じゃあ広場で3時間しゃべろ！ | kyuko wink 3時間はさすがに長いかなw
+
+## 2人 ドラ × もも(19本)
+pair dra momosuke doing=snack lv=1-3 | momosuke excited {c}、プリン2つあるよ！！ | dra happy おお、1つくれるのか？ | momosuke wink うそ、ももが2つ食べるのw
+pair dra momosuke doing=snack lv=4-6 | dra normal {c}、いちごは最後に食べる派だったよな | momosuke surprise なんで知ってるの！？ | dra wink おで、見てないようで見てるんだぞ。えへへ
+pair dra momosuke doing=snack lv=7-10 | momosuke happy {c}とおやつ食べると、ずっと笑ってる気がする！！ | dra happy おでのギャグのおかげだな | momosuke wink 半分はギャグ、半分は{c}の顔w
+pair dra momosuke doing=practice lv=1-3 | dra surprise {c}の歌、おでの家まで聞こえてたぞ | momosuke excited ほんと！？ じゃあ毎日届けるね！！ | dra happy 昼寝のじゃまにならない時間で頼むわ
+pair dra momosuke doing=practice lv=4-6 | momosuke wink {c}、いっしょに踊ろ！！ | dra troubled おでが踊ったら、膝が拍子を刻むぞ | momosuke excited それ、いい音しそう！！w
+pair dra momosuke doing=practice lv=7-10 | dra normal {c}、今日の声、ちょっとかすれてないか | momosuke surprise ……分かった？ 少しだけ | dra happy 今日は休め。代わりにおでが歌ってやる。……冗談だ、えへへ
+pair dra momosuke doing=training lv=1-3 | momosuke normal グジラって、ピカピカになる？ | dra wink みがけばなるかもな。おでの頭みたいに | momosuke excited それはならないでしょw
+pair dra momosuke doing=training lv=4-6 | dra happy {c}のメタルナー、今日も光ってるな | momosuke excited でしょ！！ {c}のグジラも、ももがみがいてあげよっか？ | dra surprise ……グジラが照れてるぞ
+pair dra momosuke doing=training lv=7-10 | momosuke happy {c}、グジラの育て方、ももにも教えて！！ | dra normal いいぞ。まずは、よく寝かせることだな | momosuke wink それ、{c}がやってることじゃんw
+pair dra momosuke doing=cards lv=1-3 | dra normal {c}、カードの説明、3分でいけるぞ | momosuke wink 1分にして！！ | dra troubled ……ギャグを抜けばいけるな
+pair dra momosuke doing=cards lv=4-6 | momosuke excited {c}のギャグ、カードにしたら強そう！！ | dra happy 「膝が鳴る」カードか？ | momosuke wink 相手が笑って動けなくなるやつw
+pair dra momosuke doing=cards lv=7-10 | dra happy {c}、きのうの対戦、いい手だったぞ | momosuke surprise え、見てたの！？ | dra wink おでは{c}の試合、全部見てるからな
+pair dra momosuke doing=walk lv=1-3 | momosuke excited {c}、{place}まで競争！！ | dra troubled おでの膝に、それは酷だぞ | momosuke wink じゃあ、ももがゆっくり歩いてあげる♡
+pair dra momosuke doing=walk lv=4-6 | dra normal {c}、さっきからスキップしてるな | momosuke happy だって楽しいもん！！ {c}もやって！！ | dra troubled ……膝が、遠慮しときますって言ってる
+pair dra momosuke doing=walk lv=7-10 | momosuke normal {c}、ももがへこんでたとき、いつも気づいてくれるよね | dra surprise お、おう。顔に出てるからな | momosuke happy ありがと。今日はももが、{c}を笑わせる番！！
+pair dra momosuke lv=1-3 | dra wink 今日のギャグ、聞くか？ | momosuke excited 聞く聞く！！ つまんなかったら採点するw | dra troubled 採点されるのか…
+pair dra momosuke lv=4-6 air=after | momosuke angry {c}のギャグ、ももが先に言っちゃったの怒ってるの！？ | dra troubled ……おでのとっておきだったんだ | momosuke troubled …ごめん。ちょっと言いたくなっちゃって
+pair dra momosuke lv=4-6 air=makeup | momosuke normal {c}、新しいギャグ考えてきた！！ ……いっしょに言お！！ | dra happy おお、2人で言うのか。いいな | momosuke excited せーの！！ ……やっぱり{c}が言って！！w
+pair dra momosuke lv=7-10 | dra normal {c}がいると、おでのギャグもちょっとだけ光るんだよな | momosuke wink ちょっとだけねw | dra happy それで十分だ。えへへ
+
+## 2人 きき × きゅうこ(19本)
+pair kiki kyuko doing=snack lv=1-3 | kyuko normal {c}、ここのお茶、何がおすすめ？ | kiki happy あたたかいほうじ茶です。落ち着きますよ | kyuko happy ほい！ それにする笑
+pair kiki kyuko doing=snack lv=4-6 | kiki normal {c}は、甘いものと辛いもの、どちらが好きですか？ | kyuko happy どっちもいける笑 お腹すいてればなんでも | kiki wink では、両方たのみましょう
+pair kiki kyuko doing=snack lv=7-10 | kyuko normal {c}とおやつ食べてると、時間がゆっくり進む気がするよぉ | kiki happy 私もそう思っていました | kyuko happy じゃあ今日は、ゆっくりいこ
+pair kiki kyuko doing=practice lv=1-3 | kiki normal {c}、この曲、どこで手を入れかえますか？ | kyuko happy ここ。理由は、次の連打が楽になるからだよ | kiki happy なるほど。分かりやすいです
+pair kiki kyuko doing=practice lv=4-6 | kyuko surprise {c}、連打だけ急に強いよね笑 | kiki wink 押し切るのは得意でつ | kyuko happy 押し切りすぎて、スコアがはみ出てるよぉ
+pair kiki kyuko doing=practice lv=7-10 | kiki happy {c}が考えた順番で練習したら、ミスが半分になりました | kyuko excited ほんと！？ やったねぇ | kiki normal 考えるのは{c}、叩くのは私。いつもの形ですね
+pair kiki kyuko doing=training lv=1-3 | kyuko normal ゴーレム、ちからだけすごい伸びてるねぇ | kiki happy ちからだけ上げましたから | kyuko troubled …ほかも少し上げると、もっと強いかもよぉ
+pair kiki kyuko doing=training lv=4-6 | kiki normal {c}、ニャーとゴーレム、どちらが速いでしょう | kyuko happy ニャーかな笑 でもゴーレムに追いつかれたら終わりだね | kiki wink 追いつく前に、倒しまつ
+pair kiki kyuko doing=training lv=7-10 | kyuko happy {c}、ちからの振り方、ちょっと変えた？ | kiki surprise 気づきましたか。{c}の表を見て、少しだけ | kyuko excited うれしいなぁ。数字もちゃんと伸びてるよぉ
+pair kiki kyuko doing=cards lv=1-3 | kiki normal {c}のデッキ、守りのカードが多いですね | kyuko happy ゆっくり勝つのが好きなんだよねぇ | kiki happy 私とは反対ですね。おもしろいです
+pair kiki kyuko doing=cards lv=4-6 | kyuko wink {c}、今日は俺のデッキで攻めてみる？ | kiki surprise 私が守りのデッキを？ | kyuko happy うん。{c}が使ったら、たぶん守りでも押し切りそう笑
+pair kiki kyuko doing=cards lv=7-10 | kiki happy {c}と組んで出た大会、楽しかったです | kyuko happy 俺も笑 また出よっか | kiki wink 次は、優勝しまつよ
+pair kiki kyuko doing=walk lv=1-3 | kyuko normal {c}と歩くと、静かでいいねぇ | kiki happy はい。話さなくても、落ち着きます | kyuko happy それ、すごく分かる笑
+pair kiki kyuko doing=walk lv=4-6 | kiki normal {c}、さっきから何を考えているんですか？ | kyuko happy 晩ごはんのこと笑 編成じゃなくてごめんね | kiki wink それも大事な作戦ですね
+pair kiki kyuko doing=walk lv=7-10 | kyuko normal {c}のとなりだと、考えごとがうまくまとまるんだよねぇ | kiki happy 私は、{c}のとなりだと安心して歩けます | kyuko wink おたがい、いい席だね笑
+pair kiki kyuko lv=1-3 | kiki normal {c}、きのうも夜ふかししましたね | kyuko troubled ……ばれてる笑 | kiki happy 目の下が、少しだけ眠そうなので
+pair kiki kyuko lv=4-6 air=after | kiki normal {c}、また「だいたい」で組みましたね | kyuko troubled ……ごめん、今回はちょっとだけ | kiki normal 少し、ひとりで考えます
+pair kiki kyuko lv=4-6 air=makeup | kyuko normal {c}、今回はちゃんと全部数えて組んだよ | kiki happy ……本当ですね。きれいな形です | kyuko happy {c}に見てほしくて、がんばった笑
+pair kiki kyuko lv=7-10 | kyuko happy {c}ってさ、静かなのに一番たよりになるよねぇ | kiki surprise そうでしょうか | kyuko wink うん。俺が迷ったら、{c}が押してくれるもん
