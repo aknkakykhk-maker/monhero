@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3de3e8729c86f5c3
+// generated-sha256: 7e9174f5fa9382b1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4817,6 +4817,12 @@ const rhythmNextEffectCap = (settings,level) => {const now=rhythmCapEffects(sett
 // 対戦の演出の段階。見た目のおまかせの id と、自分の設定のまま(OWN)
 const RHYTHM_MULTI_LOOK_LEVELS = Object.freeze(['LIGHT', 'STANDARD', 'VIVID', 'OWN']);
 const rhythmLookPresetOf = settings => (RHYTHM_LOOK_PRESETS.find(preset=>Object.entries(preset.values).every(([key,value])=>settings&&settings[key]===value))||{id:''}).id;
+// ノーツの色の組(B5・2026-11-07)。並びは画面のボタンの順。id は data/rhythm-mode.js の RHYTHM_NOTE_PALETTES と同じ
+const RHYTHM_NOTE_PALETTE_CHOICES = Object.freeze([['STANDARD','標準'],['PASTEL','パステル'],['NEON','ネオン'],['CLEAR','見分けやすい']]);
+// 記念ステージ(B5)。本オープンの印(rhythmGrandOpen)が立つまで、選ぶところを出さず、選んであっても描かない
+const RHYTHM_STAGE_THEME_CHOICES = Object.freeze([['NONE','いつもの背景'],['GRAND_OPEN','本オープン記念']]);
+const rhythmStageThemeActive = (settings) => settings?.stageTheme === 'GRAND_OPEN'
+  && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmGrandOpen === true;
 const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['LIVE','ライブ'],['VIVID','派手'],['CALM','控えめ'],['SIMPLE','シンプル']]);
 // ===== 他の音ゲーから取り入れた表示(2026-09-24・ユーザー指示「他の音ゲーを学習して取り入れるとこを取り入れて / 設定でいじれるように」) =====
 // レーンカバー(beatmania IIDX・SOUND VOLTEX の SUDDEN)。レーンの奥を何%隠すか。0で出さない
@@ -4951,6 +4957,9 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   noteSeVolume:70, noteSeEnabled:true, vibrationEnabled:false, effectAmount:'LIGHT', lightweightMode:false,
   // 演出を1つずつ選ぶ設定(2026-11-01)。おまかせ以外を選んだ項目だけ入る
   fx:Object.freeze({}),
+  // ノーツの色の組と記念ステージ(2026-11-07 本オープンの目玉 B5・社長「4つとも入れる」)。新しい項目なので、保存値に無い人はいまの見た目で補う。
+  //   notePalette … RHYTHM_NOTE_PALETTES(data/rhythm-mode.js)の id / stageTheme … NONE(いまの背景)か GRAND_OPEN(本オープン記念ステージ)
+  notePalette:'STANDARD', stageTheme:'NONE',
   // みんなで対戦のライブでは、演出を「軽さ優先」にそろえる(2026-10-03・ユーザー指示「マルチは演出量をデフォで下げたほうがいい」)。
   // ふだんの見た目の設定は書き換えない。対戦のあいだだけ上から重ねる
   multiLightLook:true,
@@ -5229,6 +5238,8 @@ const normalizeRhythmSettings = value => {
     assistMode:bool('assistMode'), mirrorChart:bool('mirrorChart'), luckyRush:bool('luckyRush'),
     // 演出を1つずつ(2026-11-01)。無い・壊れた値は全部「おまかせ」
     fx:normalizeRhythmFx(source.fx),
+    notePalette:RHYTHM_NOTE_PALETTE_CHOICES.some(([id])=>id===source.notePalette)?source.notePalette:DEFAULT_RHYTHM_SETTINGS.notePalette,
+    stageTheme:RHYTHM_STAGE_THEME_CHOICES.some(([id])=>id===source.stageTheme)?source.stageTheme:DEFAULT_RHYTHM_SETTINGS.stageTheme,
   };
 };
 const emptyRhythmBestRecord = () => ({bestScore:0,maxCombo:0,played:false,clear:false,fullCombo:false,allExcellent:false,allMarvelous:false,judgments:Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0]))});
@@ -9571,6 +9582,19 @@ const LOGIN_BONUS_DEFAULT = { currentDay:1, lastGrantedPeriod:null, totalLoginDa
 // 日本時間へ直した後に4時間戻した暦日を期間キーにする。03:59と04:00は別の日、
 // 04:00から翌03:59までは同じ日として扱える、比較・保存しやすい YYYY-MM-DD 形式。
 const loginBonusPeriodKey = (now=Date.now()) => new Date(Number(now) + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+// ---------- ゲームの「今日」(日本時間・朝4時区切り) ----------
+// 2026-11-07 社長「てかぜんぶ4時に統一して」。1日で数える物は、これで「今日」を決める(loginBonusPeriodKey と同じ値)。
+//   jstDayKey4(now) … 'YYYY-MM-DD'。04:00 から翌03:59 までが同じ日
+//   jstDayCarry(saved, today) … 切り替えの夜の持ち越し。前は0時区切りだった物は、0:00〜4:00 に「次の日」の日付で保存されている。
+//     保存された日がちょうど today の次の日なら、その日を今日として扱う(受け取り済みのまま・書くときもその日付のまま)。
+//     4:00 になると today がその日に追いつくので、二重取りも取り逃しも起きない。それ以外は today
+//   ★どちらもキーの名前・形は変えない。区切り方の検査は tools/boot/day-boundary-check.js
+const jstDayKey4 = (now=Date.now()) => new Date(Number(now) + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const jstDayCarry = (saved, today) => {
+  if (typeof saved !== 'string' || typeof today !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(saved)) return today;
+  const t = Date.parse(`${today}T00:00:00Z`);
+  return Number.isFinite(t) && saved === new Date(t + 86400000).toISOString().slice(0, 10) ? saved : today;
+};
 // ---------- どの助手と一緒に遊ぶか ----------
 // 助手は「みゅあ」「きき」から選ぶ。どちらも最初から解放されていて、解放条件は無い。
 //
@@ -10250,8 +10274,11 @@ const PLAYTIME_KEY = 'mh_playtime_v1';
 const PLAYTIME_TICK_MS = 15000;        // 数える間隔
 const PLAYTIME_SAVE_MS = 60000;        // 保存する間隔(数えるたびに保存すると書き込みが多すぎる)
 const PLAYTIME_MAX_STEP_MS = 60000;    // 1回で足してよい上限。スリープ復帰などで飛んだぶんは数えない
-const playtimeDayKey = (now=Date.now()) => new Date(Number(now)+9*60*60*1000).toISOString().slice(0,10);
+// 日の区切りは朝4時(jstDayKey4 と同じ。2026-11-07 から。前は0時)。切り出して検査されるので式はここに持つ
+const playtimeDayKey = (now=Date.now()) => new Date(Number(now)+5*60*60*1000).toISOString().slice(0,10);
 const PLAYTIME_DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+// 切り替えの夜の持ち越し(jstDayCarry と同じ)。0時区切りのころに0:00〜4:00で書いた「次の日」が残っていれば、その日のまま数える(遊んだ日数を二重に足さない)
+const playtimeDayOf = (savedDay, now=Date.now()) => { const day = playtimeDayKey(now); return savedDay === playtimeDayKey(Number(now) + 86400000) ? savedDay : day; };
 const playtimeDayValue = (value) => typeof value === 'string' && PLAYTIME_DAY_PATTERN.test(value) ? value : null;
 const playtimeSpan = (value) => {
   const ms = Number(value?.ms);
@@ -10277,7 +10304,7 @@ const advancePlaytime = (current, deltaMs, now=Date.now()) => {
   const base = normalizePlaytime(current);
   const delta = Number(deltaMs);
   if (!(Number.isFinite(delta) && delta > 0)) return base;
-  const day = playtimeDayKey(now);
+  const day = playtimeDayOf(base.today.day, now);
   const sameDay = base.today.day === day;
   const todayMs = (sameDay ? base.today.ms : 0) + delta;
   return {
@@ -10293,7 +10320,7 @@ const advancePlaytime = (current, deltaMs, now=Date.now()) => {
 // (プロフィールを開いた時点ではまだ加算が走っていないことがあるため)
 const playtimeTodayMs = (value, now=Date.now()) => {
   const base = normalizePlaytime(value);
-  return base.today.day === playtimeDayKey(now) ? base.today.ms : 0;
+  return base.today.day === playtimeDayOf(base.today.day, now) ? base.today.ms : 0;
 };
 // --- 端末ごとのプレイ時間(2026-10-06) ---
 // ユーザー報告「プレイ時間が短くなるバグ」。プレイ時間(mh_playtime_v1)は端末の中だけで数え、
@@ -13538,7 +13565,7 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
 });
 // ---- 助手のひとことを出す回数(2026-10-10・改善 G6「助手の吹き出しが、ほぼ全画面に出たまま」→ 社長が選択肢1) ----
 //   'ALWAYS' … いつも(これまでどおり。既定。保存が無い既存ユーザーも同じ見え方)
-//   'DAILY'  … 同じ画面のひとことは1日1回だけ(朝5:00で戻る)
+//   'DAILY'  … 同じ画面のひとことは1日1回だけ(朝4:00で戻る)
 //   'OFF'    … 出さない
 // ★止めるのは「画面ごとの決まったひとこと」だけ。次は設定にかかわらず出す(大事な案内まで消さないため):
 //   ・文を直接渡す吹き出し(line=。はじめての名前決めの案内・ヘルプ画面)と、最初から開く吹き出し(defaultOpen)
@@ -13557,8 +13584,8 @@ const ASSISTANT_BUBBLE_MODE_LABELS = Object.freeze([
 ]);
 const ASSISTANT_BUBBLE_ALWAYS_SCENES = Object.freeze(['home', 'quickRhythmBackground', 'rhythmWeeklyEvent']);
 const assistantBubbleAlwaysShown = (scene) => !scene || ASSISTANT_BUBBLE_ALWAYS_SCENES.includes(scene) || /Intro$/.test(String(scene));
-// 日の区切りは朝5:00(日本時間)。モンヒロビートの相棒の調子と同じ
-const assistantBubbleDayKey = (now = Date.now()) => new Date(Number(now) + (9 - 5) * 3600000).toISOString().slice(0, 10);
+// 日の区切りは朝4:00(日本時間。jstDayKey4 と同じ。2026-11-07 に5:00からそろえた)
+const assistantBubbleDayKey = (now = Date.now()) => new Date(Number(now) + (9 - 4) * 3600000).toISOString().slice(0, 10);
 // 見た場面の記録 { day, scenes:[場面のキー] }。日が変わったもの・壊れたものは空にする
 const normalizeAssistantBubbleSeen = (raw, day) => (raw && typeof raw === 'object' && raw.day === day && Array.isArray(raw.scenes))
   ? { day, scenes: raw.scenes.filter((x) => typeof x === 'string').slice(0, 300) }
@@ -21811,6 +21838,9 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 {field('ライブ背景',segments('stageEffect',RHYTHM_STAGE_EFFECT_LABELS),
               '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「ライブ」＝「派手」に加えて、ライブ会場のようにします。サーチライトが曲の拍に合わせて明るくなり、レーザーが小節ごとに向きと色を変えて走り、道の両側には観客のペンライトが奥までずらりと並び、拍に合わせて揺れます。ペンライトの色もコンボが伸びるほど変わります。いちばん重い段なので、端末が熱くなるときは下げてください。絵を描くのが得意な専用の部分（GPU）が無い端末では「派手」と同じになります。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライト・光の粒・レーザー・ペンライトは出しません。',{full:true})}
 {RHYTHM_FX_ITEMS.filter(item=>item.group==='stage').map(fxField)}
+{/* 本オープン記念ステージ(B5)。本オープンの印が立つまで出さない */}
+{typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS.rhythmGrandOpen===true&&field('記念ステージ',segments('stageTheme',RHYTHM_STAGE_THEME_CHOICES),
+              'モンヒロビートの本オープンを記念した背景です。金色の光と紙吹雪が、いつもの背景に重なります。判定・スコアは変わりません。\n演出量「最小」と軽量モードでは、紙吹雪は止まったまま出ます。')}
 </div>}
 </section>}
 {fxGroupShown('road')&&<section data-rhythm-options-group="道" data-rhythm-fx-group="road" className={card}>
@@ -21828,6 +21858,9 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 {fxGroupShown('note')&&<section data-rhythm-options-group="ノーツ" data-rhythm-fx-group="note" className={card}>
 {!wide&&<button type="button" data-rhythm-fx-group-head="note" aria-expanded={fxGroup==='note'} onClick={()=>setFxGroup(cur=>cur==='note'?null:'note')} className={`flex w-full items-center gap-2 text-left ${head}`}><span aria-hidden="true" className="text-cyan-300/80">{fxGroup==='note'?'▼':'▶'}</span>🎵 ノーツ<span data-rhythm-fx-group-badge className="rounded-full bg-fuchsia-500/25 px-2 py-0.5 text-[10px] font-black text-fuchsia-100">{fxGroupSummary('note')}</span><small className="ml-auto text-[10px] font-bold text-slate-400">{fxGroupCount('note')}項目</small></button>}
 {(wide||fxGroup==='note')&&<div className={wide?`mt-1 ${fxGrid}`:`mt-3 ${fxGrid}`}>
+{/* ノーツの色の組(B5・2026-11-07 社長「4つとも入れる」)。種類ごとの色分けはそのままで、色味だけ替える */}
+{field('ノーツの色',segments('notePalette',RHYTHM_NOTE_PALETTE_CHOICES),
+              'ノーツの色の組み合わせです。既定は「標準」（これまでの色）です。判定・スコアは変わりません。\n「パステル」＝やわらかい色。「ネオン」＝くっきり光る色。「見分けやすい」＝色の見え方に左右されにくい組み合わせで、ノーツのまわりの光を出しません。\nTAP・HOLD・SLIDE・FLICK などの種類ごとに色が分かれているのは、どれを選んでも同じです。次に演奏を始めたときから変わります。')}
 {field('ノーツの動き',toggle('noteMotionFx'),
               'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。')}
 {/* にじむ光(2026-09-26・ユーザー指示「見た目の向上＋軽量化」の3。既定は OFF)。WebGL で描いているときだけ効く */}
@@ -24040,7 +24073,11 @@ const RhythmLineAdjustPanel=({adjust,onBump,isLandscape})=>{
     </div>
   </div>;
 };
-const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,quickRunAward=null,beatRankAward=null,onRankBarFull=null,onRankBarDone=null,onRankBarStart=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1,lineAdjust=null})=>{
+// 本オープン記念ステージの紙吹雪(B5)。決まった並び(乱数を使わない)なので、毎回同じ見え方になる
+const RHYTHM_GRAND_STAGE_CONFETTI=Object.freeze(Array.from({length:48},(_,k)=>Object.freeze({
+  x:(k*37)%100, y:(k*53)%90, dur:6+(k*7)%6, delay:-((k*13)%11),
+  color:['#ffd45e','#ff9ec4','#8fd8ff','#ffffff','#ffc061'][k%5]})));
+const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,quickRunAward=null,beatRankAward=null,onRankBarFull=null,onRankBarDone=null,onRankBarStart=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1,lineAdjust=null,breederName=''})=>{
   // 判定ラインの位置の合わせ(lineAdjust)は、練習と同じ扱い(ライフを減らさない・記録を送らない)。練習の説明の帯は出さない
   const tutorialProp=tutorial;tutorial=tutorial||!!lineAdjust;
   // 合わせている間の地上の判定ラインの高さ(保存はまだ・親が持つ)。null なら設定のまま
@@ -24050,6 +24087,8 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const [effectCap,setEffectCap]=useState(()=>rhythmAutoEffectMemory.level);
   const settingsBase=useMemo(()=>lineHeightOverride===null||!settingsIn?settingsIn:{...settingsIn,judgmentLineHeight:lineHeightOverride},[settingsIn,lineHeightOverride]);
   const settings=useMemo(()=>settingsBase&&settingsBase.autoEffectDown!==false?rhythmCapEffects(settingsBase,effectCap):settingsBase,[settingsBase,effectCap]);
+  // ノーツの色の組(B5・2026-11-07)。演奏画面を開いた最初の1回だけ当てる(描き先を取り付けるより前。演奏中は作り直さない)
+  useState(()=>{try{if(typeof rhythmApplyNotePalette==='function')rhythmApplyNotePalette(settingsIn?.notePalette);}catch(e){}return 0;});
   // 演奏の途中で段が下がっても、作り直されない処理(毎フレームの処理・判定の処理)が最新の設定を読めるように
   const settingsLiveRef=useRef(settings);settingsLiveRef.current=settings;
   // タップ音を作り置きしておく(1回だけ。作り終わる前に叩いた音はクラシックで鳴る)
@@ -24258,6 +24297,8 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 端末が最大1024pxの絵へマスクを掛け直して描き直す。モンスターノーツを踏んだ瞬間にちょうど重なる。
   // 大きさは横画面でいちばん大きくなるとき(一辺160px前後・能力中はその1.14倍)が収まる180px。
   const [sideArtUrls,setSideArtUrls]=useState([]);
+  // 結果のひとこと(B3)。結果を出したときに1回だけ決めて、描き直しでセリフが変わらないようにする
+  const partnerLineRef=useRef(null);
   useEffect(()=>{let cancelled=false;const made=[];
     const deviceDpr=typeof window!=='undefined'&&window.devicePixelRatio>0?window.devicePixelRatio:1;
     const px=Math.round(180*Math.min(3,Math.max(1,deviceDpr)));
@@ -26240,6 +26281,15 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
     それまでは戻って難易度ボタンを見ないと気づけなかった。
     ★前の記録がまだクリアしていなかったときだけ(=このプレイで初めて開いたときだけ)出す。
     ★練習・タイミング合わせ・デバッグから始めたプレイは記録に残らないので出さない */}
+{/* 連れていったマスモンのひとこと(B3・2026-11-07 社長「見た目と一言だけ」)。ひとりで遊んだ結果だけ。練習・合わせ・デバッグ・マルチには出さない。
+    話すのは大きく出しているマスモン(index)。性格と結果でセリフが変わる(rhythmSoloPartnerLine)。券・育ちには何も触れない */}
+{(()=>{if(tutorial||calibrating||debugPlay||multi||index<0||!monsters[index])return null;
+  if(partnerLineRef.current===null)partnerLineRef.current=typeof rhythmSoloPartnerLine==='function'?rhythmSoloPartnerLine({masu:monsters[index],song,diffId:difficulty?.id,score:view.score,fullCombo:!!result.fullCombo,cleared:result.cleared!==false,who:breederName}):'';
+  const line=partnerLineRef.current;if(!line)return null;
+  return <div data-rhythm-result-partner-line className="mx-auto my-2 flex max-w-sm items-center gap-2 rounded-2xl border border-sky-300/40 bg-sky-950/40 px-3 py-2">
+    {heroArt&&<img src={heroArt} alt="" aria-hidden="true" className="h-12 w-12 shrink-0 object-contain"/>}
+    <div className="min-w-0 flex-1"><small className="block truncate text-[10px] font-black text-sky-200">{monsters[index].name}</small><p style={JA_WRAP_STYLE} className="text-[12px] font-bold leading-snug text-white">{jaWrap(line)}</p></div>
+  </div>;})()}
 {(()=>{if(tutorial||calibrating||debugPlay||multi||result.assist||result.cleared===false)return null;const before=runRef.current?.startBest;if(before&&before.clear===true)return null;/* 新曲は HARD のクリアで EXPERT と MASTER が一度に開く(2026-10-09・rhythmDifficultyUnlockRequirement)ので、開いたものを全部並べる */const openedIds=RHYTHM_SELECTABLE_DIFFICULTY_IDS.filter(id=>rhythmDifficultyUnlockRequirement(id,song.songId)===difficulty.id&&rhythmChartPlayable(song,id));if(!openedIds.length)return null;const opened=openedIds.join('・');return <div data-rhythm-result-unlock={openedIds.join(',')} className="mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"><b className="block text-base font-black text-amber-100">🔓 {opened} が解放されました！</b><small className="mt-0.5 block text-[10px] font-bold text-amber-200/90">この曲の {openedIds.map(id=>`${id}（Lv.${song.difficulties[id].level}）`).join('・')} を曲えらびで選べます</small></div>;})()}
 {result.luck&&(result.luck.draws>0||result.luck.points>0)&&<div data-rhythm-result-luck className="mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-lime-200">🍀 ラッキーラッシュ</small><b className="mt-0.5 block text-lg font-black tabular-nums text-white">{Number(result.luck.points).toLocaleString()}pt</b><span className="mt-0.5 block text-[10px] font-bold text-lime-100">抽選 {result.luck.draws}回・RUSH {result.luck.rush}回{result.luck.bonus>0?`・おまけビートP +${result.luck.bonus}P`:''}</span></div>}
 {result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.multiScale>1&&<span data-rhythm-result-beat-points-multi className="mt-1 block text-[9px] font-black text-cyan-200">👥 みんなで対戦のボーナス(人数・連続) ×{result.eventPointAward.multiScale}</span>}{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 1.5倍</span>}{result.eventPointAward.lengthBonusPercent>0&&<span data-rhythm-result-beat-points-length className="mt-1 block text-[10px] font-black text-sky-200">曲の長さ +{result.eventPointAward.lengthBonusPercent}%</span>}{result.eventPointAward.campaign&&<span data-rhythm-result-beat-points-campaign className="mt-1 block text-[9px] font-black text-amber-200">ビートPアップキャンペーン いつもの{result.eventPointAward.boost}倍</span>}{result.eventPointAward.offEvent&&<span data-rhythm-result-beat-points-off-event className="mt-1 block text-[9px] font-black text-violet-200">イベント開催中はこの5倍もらえます</span>}</div>}{/* ライブログ(バンドリ！アワーノーツの演奏後の振り返り)。曲を8つの区間に分け、区間ごとに
@@ -26350,6 +26400,12 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
       以前はサーチライトを clip-path で切り抜いた層、光の粒を画面の2倍の高さの CSS の模様で作っていた */}
   {!stageGl&&stageFxOn&&stageImages&&<>{stageBeamOn&&<><img data-rhythm-stage-beam="left" src={stageImages.beams[stageTierNow]||stageImages.beams[0]} alt="" draggable={false}/><img data-rhythm-stage-beam="right" src={stageImages.beams[stageTierNow]||stageImages.beams[0]} alt="" draggable={false}/></>}
     {stageSparks==='MANY'&&<img data-rhythm-stage-sparks="far" src={stageImages.sparks[0]} alt="" draggable={false}/>}{stageSparks!=='NONE'&&<img data-rhythm-stage-sparks="near" src={stageImages.sparks[1]} alt="" draggable={false}/>}</>}
+</div>}{/* 本オープン記念ステージ(B5・2026-11-07)。いつもの背景のすぐ上に、金の光と紙吹雪を重ねる。判定・スコアには何も触れない。
+    本オープンの印が立つまでは選んであっても出さない(rhythmStageThemeActive)。演出量「最小」と軽量モードでは紙吹雪を止める */}
+{rhythmStageThemeActive(settings)&&<div data-rhythm-grand-stage data-still={settings.effectAmount==='MINIMAL'||settings.lightweightMode?'1':undefined} aria-hidden="true">
+  <style>{`[data-rhythm-grand-stage]{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden;background:radial-gradient(ellipse 70% 38% at 50% 0%,rgba(255,196,64,.42),rgba(255,196,64,0) 70%),linear-gradient(180deg,rgba(255,214,102,.10),rgba(255,214,102,0) 45%)}[data-rhythm-grand-stage] i{position:absolute;top:-4%;width:1.2vmin;height:2.2vmin;border-radius:2px;opacity:.9;animation:mhGrandConfetti linear infinite}[data-rhythm-grand-stage][data-still] i{animation:none}[data-rhythm-grand-stage] b{position:absolute;left:0;right:0;top:24%;text-align:center;font:900 7vmin/1 system-ui,sans-serif;letter-spacing:.12em;color:rgba(255,220,120,.16)}@keyframes mhGrandConfetti{from{transform:translateY(0) rotate(0deg)}to{transform:translateY(110vh) rotate(540deg)}}`}</style>
+  <b>GRAND OPEN</b>
+  {RHYTHM_GRAND_STAGE_CONFETTI.map((c,k)=><i key={k} style={{left:`${c.x}%`,background:c.color,animationDuration:`${c.dur}s`,animationDelay:`${c.delay}s`,top:settings.effectAmount==='MINIMAL'||settings.lightweightMode?`${c.y}%`:undefined}}/>)}
 </div>}{/* ノーツのタイミングの光だけは、レーンの上(z-index:1)・判定の帯とノーツ(2〜6)の下へ置く。
     背景の側に置くとレーンの暗い面に隠れて、下のふちがうっすら光るだけになっていた */}
 {roadFogOn&&<><i data-rhythm-road-haze aria-hidden="true"/><i ref={roadGlowRef} data-rhythm-road-glow aria-hidden="true"/></>}{climaxFxOn&&<i ref={climaxRef} data-rhythm-climax data-on="0" style={{'--climax-cycle':`${climaxCycleMs}ms`}} aria-hidden="true"><b data-side="l"/><b data-side="r"/></i>}{stageLevel!=='SIMPLE'&&stageTimingOn&&<i ref={stagePulseRef} data-rhythm-stage-pulse data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true"/>}{sideMonsterElements}{cutInElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
@@ -29964,7 +30020,7 @@ const classicEnemyEffectsFromDebuffs = (debuffs, stackCounts = null, { withoutEx
 // ここは保存も画面も持たない純粋な計算だけ。保存と画面は 77-screen-rhythm-multi.jsx。
 //
 // ・育ち具合はマスモン1体ごと(id ごと)。一度でも相棒として呼んだ子だけが持つ。マスモン本体の保存には触れない
-// ・Lv(経験値)・曲のなじみ・難易度の熟練・性格(Lv.30で決まる)・その日の調子(朝5:00で変わる)
+// ・Lv(経験値)・曲のなじみ・難易度の熟練・性格(Lv.30で決まる)・その日の調子(朝4:00で変わる)
 // ・演奏はしない。曲・難易度・育ち具合から、それらしい判定の数とスコアを作る
 
 // 新しい保存キー(既存のキーは触らない)。中身は rhythmBuddyNormalize を必ず通す
@@ -29976,7 +30032,7 @@ const RHYTHM_BUDDY_SEEN_KEY = 'mh_rhythm_buddy_seen_v1';
 // 「マスモンランキングができた」「マスモンが話しかけてくる」の一度きりの案内(2026-10-08。新しい保存キー。値は true だけ)
 const RHYTHM_BUDDY_RANK_SEEN_KEY = 'mh_rhythm_buddy_rank_seen_v1';
 const RHYTHM_BUDDY_TALK_SEEN_KEY = 'mh_rhythm_buddy_talk_seen_v1';
-// マスモン全体で1日に無料で呼べる回数(朝5:00で戻る)
+// マスモン全体で1日に無料で呼べる回数(朝4:00で戻る)
 const RHYTHM_BUDDY_FREE_PER_DAY = 3;
 // 2026-10-07・ユーザー指示「レベルは100まで引き上げてもいい」
 const RHYTHM_BUDDY_LEVEL_MAX = 100;
@@ -30053,10 +30109,10 @@ const rhythmBuddyInt = (v, max = 1e9) => {
 };
 const rhythmBuddyStr = (v, max) => String(v == null ? '' : v).replace(/[\u0000-\u001f]/g, '').slice(0, max);
 
-// 朝5:00(JST)で区切った日付キー(レイドの回数と同じ数え方)
+// 朝4:00(JST)で区切った日付キー(jstDayKey4 と同じ。2026-11-07 に5:00からそろえた)
 const rhythmBuddyDayKey = (nowMs) => {
   const now = Number.isFinite(nowMs) ? nowMs : 0;
-  return new Date(now + 9 * 3600 * 1000 - 5 * 3600 * 1000).toISOString().slice(0, 10);
+  return new Date(now + 9 * 3600 * 1000 - 4 * 3600 * 1000).toISOString().slice(0, 10);
 };
 const rhythmBuddyPrevDayKey = (dayKey) => {
   const t = Date.parse(`${dayKey}T00:00:00Z`);
@@ -30129,7 +30185,7 @@ const rhythmBuddyNormalizeMon = (raw) => {
 // calls: [{ id, masuId, paid:'free'|'ticket', day(払った日), at, load(呼んだときの起動), started }]。既存の保存(mh_rhythm_buddy_v1)へ項目を足す形(CLAUDE.md ⑦)。
 // 部屋を出たとき(呼んだ人が抜けた・部屋が解散した)、1曲も始まっていなければ払ったものを返し、控えを消す。始まっていれば消すだけ。
 // 控えを消すのと無料1回を返すのを同じ書き込みでするので、二重に返らない。アプリを閉じて残った控え(ほかの起動のもの)は、次に開いたとき一度だけ返す。
-// 無料1回は、払った日と同じ日のときだけ返す(朝5:00を過ぎたら無料回数はもう戻っているので、返すと増えすぎる)
+// 無料1回は、払った日と同じ日のときだけ返す(朝4:00を過ぎたら無料回数はもう戻っているので、返すと増えすぎる)
 const RHYTHM_BUDDY_CALLS_KEEP = 40;
 const rhythmBuddyNormalizeCalls = (raw) => (Array.isArray(raw) ? raw : [])
   .filter((x) => x && typeof x === 'object' && !Array.isArray(x))
@@ -31648,6 +31704,18 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
       serious: ['{who}さん、お体を大切に'], proud: ['{who}さん、たまにはそんな日もあるわ'], worrier: ['{who}さん、だ、大丈夫…?なにかあった…?'], stubborn: ['{who}さん、次は最後までやれ'], easygoing: ['{who}さん、ゆっくりでいいよ〜'], fiery: ['{who}さん、次は最後まで燃えよう!'], cool: ['{who}さん、大丈夫?'], fickle: ['{who}さん、気分が変わったのかな'], mellow: ['{who}さん、ご無理なさらずに'], hasty: ['{who}さん、どうした?はやく戻って!'], competitive: ['{who}さん、勝負はおあずけだな'], showoff: ['{who}さん、また戻ってきてね〜!'], shy: ['…{who}さん、また、来てね'], hardworker: ['{who}さん、また今度いっしょに!'], romantic: ['{who}さん、また旋律の中で会おう'],
     },
     mood: { great: ['{who}さん、次は最後まで!!'], good: ['{who}さん、次はいけるよ!'], normal: [], bad: ['…{who}さん、どうしたの'], awful: ['…{who}さん'] },
+  },
+  // 人がふつうの点だった(高くも低くもない。2026-11-07 本オープンの目玉 B3「ひとりで遊ぶときも横で演奏し、結果で一言」で足した)
+  hMid: {
+    common: ['{who}さん、おつかれさま!', '{who}さん、いい感じだったね!', '{who}さん、もう1曲いこっか!', '{who}さん、となりで聞いてて楽しかった!'],
+    trait: {
+      jester: ['{who}さん、いいノリだったね!'], brave: ['{who}さん、次はもっと上を狙おう!'], clingy: ['{who}さん、となりで演奏できてうれしい〜'], smart: ['{who}さん、安定していましたね'],
+      serious: ['{who}さん、おつかれさまでした'], proud: ['{who}さん、まあまあね。次はもっといけるわ'], worrier: ['{who}さん、最後までいけたね…よかった'], stubborn: ['{who}さん、悪くない。次だ'], easygoing: ['{who}さん、のんびり楽しかったね〜'],
+      fiery: ['{who}さん、まだまだ燃えられるぞ!'], cool: ['{who}さん、悪くない。伸びしろはある'], fickle: ['{who}さん、次はどの曲にする?'], mellow: ['{who}さん、おだやかでいい演奏でした'],
+      hasty: ['{who}さん、さあ次!すぐ次!'], competitive: ['{who}さん、次は自己ベスト更新だ!'], showoff: ['{who}さん、見てた見てた!いい感じ!'], shy: ['{who}さん…いっしょに演奏、楽しかった'],
+      hardworker: ['{who}さん、くり返せばもっと伸びます'], romantic: ['{who}さん、いい音色だったね'],
+    },
+    mood: { great: ['{who}さん、いい感じ!!'], good: ['{who}さん、ナイス!'], normal: [], bad: ['…{who}さん、おつかれ'], awful: ['…{who}さん'] },
   },
   // 人に名前で呼びかける(静かなとき)
   callOut: {
@@ -33428,10 +33496,10 @@ const raidJackParticipated = (raw) => {
   return !!(st.a.day || st.b.day || st.b.total > 0 || st.a.defeated.length || st.b.defeated.length || st.claimed.length || st.pending.length);
 };
 
-// 毎日5:00(JST)で回数が戻る。日付キー = 5時間引いたJSTの日付。
+// 毎日4:00(JST)で回数が戻る。日付キー = 4時間引いたJSTの日付(jstDayKey4 と同じ。2026-11-07 に5:00からそろえた)
 const raidJackDayKey = (nowMs) => {
   const now = Number.isFinite(nowMs) ? nowMs : 0;
-  const jst = new Date(now + 9 * 3600 * 1000 - 5 * 3600 * 1000);
+  const jst = new Date(now + 9 * 3600 * 1000 - 4 * 3600 * 1000);
   return jst.toISOString().slice(0, 10);
 };
 
@@ -37048,7 +37116,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
             止めるのは画面ごとのひとことだけ。はじめての案内・一度きりの案内・HOMEの助手・助手の告知は出る(21-assistant.jsx) */}
         <div data-assistant-bubble-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
           <b className="block text-[13px] font-black text-slate-200">助手のひとこと</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝5:00で戻ります)。「出さない」にしても、はじめての案内やHOMEの助手、新しい機能のお知らせは出ます。</p>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、はじめての案内やHOMEの助手、新しい機能のお知らせは出ます。</p>
           <div className="mt-2 grid grid-cols-3 gap-2">
             {ASSISTANT_BUBBLE_MODE_LABELS.map(option => (
               <button key={option.id} type="button" data-assistant-bubble-mode={option.id}
@@ -53284,7 +53352,7 @@ const useRhythmBuddyState = () => {
   }, []);
   return state;
 };
-// 日付が変わったら(朝5:00)画面の数字を出し直すため、1分ごとに日付キーを見る
+// 日付が変わったら(朝4:00)画面の数字を出し直すため、1分ごとに日付キーを見る
 const useRhythmBuddyDayKey = () => {
   const [day, setDay] = React.useState(() => rhythmBuddyDayKey(Date.now()));
   React.useEffect(() => {
@@ -53315,6 +53383,21 @@ const rhythmBuddyMasuName = (masu) => {
 
 // マスモンごとの、直近に言ったセリフ(保存しない。部屋を出ても覚えているのは、このページを開いている間だけ)
 const rhythmBuddyTalkRecent = new Map();
+// ひとりで遊んだ結果への、連れていったマスモンのひとこと(2026-11-07 本オープンの目玉 B3・社長「見た目と一言だけ」)。
+//   セッション券・無料回数は使わない。育ち(経験値・なじみ)も付けない。相棒の記録(mh_rhythm_buddy_v1)は読むだけで書かない。
+//   選び方はマルチの「部屋の人の結果への反応」と同じ(reactResult: フルコン・高得点・低め)。どれにも当たらないふつうの点は hMid、
+//   途中でライフが尽きたときは hLow。言えるセリフが無ければ ''(吹き出しを出さない)
+const rhythmSoloPartnerLine = ({ masu, song, diffId, score = 0, fullCombo = false, cleared = true, who = '' }) => {
+  if (!masu || masu.id == null || !who) return '';
+  try {
+    const brain = rhythmBuddyMakeBrain(song ? [song] : []);
+    const base = { masuId: String(masu.id), baseId: masu.baseId || null, songId: song?.songId || '', score, diffId, who };
+    let text = cleared === false ? brain.talk({ ...base, kind: 'hLow' })
+      : brain.talk({ ...base, kind: 'reactResult', fc: fullCombo ? 1 : 0, quit: false, missRate: 0 });
+    if (!text && cleared !== false) text = brain.talk({ ...base, kind: 'hMid' });
+    return typeof text === 'string' ? text : '';
+  } catch (e) { return ''; }
+};
 // 部屋の中で相棒が演奏と選曲をするための「頭」。RHYTHM_MULTI.setCpuBrain へ渡す
 const rhythmBuddyMakeBrain = (songs) => ({
   play({ songId, diffId, masuId, humans = 1 }) {
@@ -53636,7 +53719,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = ''
         <section className="rounded-xl bg-slate-950/60 p-2">
           <h4 className="text-[10px] font-black text-slate-400">今日の調子</h4>
           <p data-rhythm-buddy-mood={mood.id} className="flex items-center gap-1 text-sm font-black"><RhythmBuddyMoodFace moodId={mood.id} size={22} />{mood.label}</p>
-          <small className="block text-[9px] font-bold leading-snug text-slate-500">朝5:00に変わります。育つ早さは経験値×{rhythmBuddyMoodExpScale(mood.id, m.trait)}</small>
+          <small className="block text-[9px] font-bold leading-snug text-slate-500">朝4:00に変わります。育つ早さは経験値×{rhythmBuddyMoodExpScale(mood.id, m.trait)}</small>
         </section>
         <section className="rounded-xl bg-slate-950/60 p-2">
           <h4 className="text-[10px] font-black text-slate-400">性格</h4>
@@ -58220,7 +58303,15 @@ const cardNormalizeDecks = (v) => {
   return { active, decks };
 };
 // quickLoops … その日にバトルカードの対戦でクイック周回へ足した周の数(2026-10-26 で足した項目。トップの周回の札の詳細に出す。無い人は0)
-const cardNormalizeDaily = (v, today) => {
+// 切り替えの夜の持ち越し(17 の jstDayCarry と同じ。82 は単独でも読まれるのでここに持つ)。
+//   前は0時区切りで、0:00〜4:00 に「次の日」の日付で保存されている。それがちょうど today の次の日なら、その日を今日として扱う
+const cardDayCarry = (saved, today) => {
+  if (typeof saved !== 'string' || typeof today !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(saved)) return today;
+  const t = Date.parse(`${today}T00:00:00Z`);
+  return Number.isFinite(t) && saved === new Date(t + 86400000).toISOString().slice(0, 10) ? saved : today;
+};
+const cardNormalizeDaily = (v, today0) => {
+  const today = cardDayCarry(cardIsPlainObject(v) ? v.day : null, today0);
   const base = { day: today, cpuPoint: 0, pvpPoint: 0, firstWin: false, foes: {}, quickLoops: 0 };
   if (!cardIsPlainObject(v) || v.day !== today) return base;
   return { day: today, cpuPoint: cardNormalizePoint(v.cpuPoint), pvpPoint: cardNormalizePoint(v.pvpPoint), firstWin: v.firstWin === true, foes: cardIsPlainObject(v.foes) ? { ...v.foes } : {}, quickLoops: cardNormalizePoint(v.quickLoops) };
@@ -61620,7 +61711,8 @@ const cardFieldArtTransform = (src, flip) => {
   const ty = (1 - (0.5 + k * (y1 - 0.5))) * 100;
   return `translate(${tx.toFixed(1)}%, ${ty.toFixed(1)}%) scale(${(flip ? -k : k).toFixed(3)}, ${k.toFixed(3)})`;
 };
-const cardTodayJst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+// バトルカードの「今日」は朝4時区切り(jstDayKey4 と同じ。2026-11-07 社長「バトルカードの日付変更線を4時にして」。前は0時)
+const cardTodayJst = () => new Date(Date.now() + 5 * 3600 * 1000).toISOString().slice(0, 10);
 const cardCaption = (c) => (!c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : c.kind === 'fld' ? '全体' : Number.isFinite(c.damage) ? `ダメージ${c.damage}` : '');   // 全体カードはダメージが無い(「ダメージnull」と出ていた)
 // 場の子に今かかっている効果(2026-10-28 社長「こういう効果がかかってるやつがわからない バフとかデバフとか」・案A)。
 //   ルールの項目を読むだけ。返す [{ key, short(札の言葉), left(「次」「あと2」など), text(窓の説明), tone, pill(札に出すか) }]
@@ -67768,7 +67860,8 @@ const cardRecordDetailAfter = (d0, { who, level, outcome, turns = 0, deck = null
       if (level in f.levels) f.levels[level] += 1;
       if (t > 0) f.fastest = f.fastest ? Math.min(f.fastest, t) : t;
       d.wins = { n: d.wins.n + 1, turns: d.wins.turns + t, fastest: t > 0 ? (d.wins.fastest ? Math.min(d.wins.fastest, t) : t) : d.wins.fastest };
-      d.day = { key: today, win: (d.day.key === today ? d.day.win : 0) + 1 };
+      const dayKey = cardDayCarry(d.day.key, today);   // 切り替えの夜は、0時区切りで書いた次の日のまま数える
+      d.day = { key: dayKey, win: (d.day.key === dayKey ? d.day.win : 0) + 1 };
     } else if (outcome === 'surrender') { f.surrender += 1; f.now = 0; }
     else { f.lose += 1; f.now = 0; }
     d.foes[who] = f;
@@ -72242,8 +72335,9 @@ const cardLevelXpOf = ({ kind, level, outcome }) => {
 //   ごほうびは、この試合で上がったランク(from より上・to まで)の分だけ。前に上がったランクの分はさかのぼって配らない
 //   parts は結果に出す内わけ、gains はランクアップの演出に出す「もらった物」
 //   auto … オートで挑んだ試合(2026-11-02 社長・案3): 手で戦うときの半分。その日はじめての勝ちは付けず、その日の勝ちの印も動かさない
-const cardLevelAfter = (prev, { kind, level, outcome, today, auto = false }) => {
+const cardLevelAfter = (prev, { kind, level, outcome, today: today0, auto = false }) => {
   const cur = cardNormalizeLevel(prev);
+  const today = cardDayCarry(cur.day, today0);   // 切り替えの夜は、0時区切りで書いた次の日のまま数える
   const lv0 = cardLevelInfo(cur.xp).level;
   const base = auto ? Math.floor(cardLevelXpOf({ kind, level, outcome }) / 2) : cardLevelXpOf({ kind, level, outcome });
   if (!base) return { next: cur, tickets: 0, points: 0, add: 0, from: lv0, to: lv0, xp: cur.xp, parts: [], gains: [] };
@@ -72408,8 +72502,9 @@ const cardTacticsAutoOf = async (db, deck) => {
 //   新しいキー mh_card_auto_reward_v1 = { v:1, day:'YYYY-MM-DD'(日本の日付), n: その日にごほうびをもらった回数 }。壊れていたら0回の扱い
 const CARD_AUTO_REWARD_KEY = 'mh_card_auto_reward_v1';
 const CARD_AUTO_REWARD_DAY_MAX = 3;
-const cardAutoRewardNormalize = (raw, today) => {
+const cardAutoRewardNormalize = (raw, today0) => {
   const day = raw && typeof raw === 'object' && typeof raw.day === 'string' ? raw.day : '';
+  const today = cardDayCarry(day, today0);   // 切り替えの夜は、0時区切りで書いた次の日のまま数える
   const n = raw && Number.isInteger(raw.n) && raw.n >= 0 && raw.n < 10000 ? raw.n : 0;
   return { day: today, n: day === today ? n : 0 };
 };
@@ -72418,7 +72513,7 @@ const cardAutoRewardLoad = async () => {
   try { raw = await storeGet(CARD_AUTO_REWARD_KEY, null); } catch (_) { /* 読めなければ0回の扱い */ }
   const today = typeof cardTodayJst === 'function' ? cardTodayJst() : '';
   const c = cardAutoRewardNormalize(raw, today);
-  return { raw, today, n: c.n, left: Math.max(0, CARD_AUTO_REWARD_DAY_MAX - c.n) };
+  return { raw, today: c.day, n: c.n, left: Math.max(0, CARD_AUTO_REWARD_DAY_MAX - c.n) };
 };
 // ごほうびをもらった1回を数える項目(結果の取引に足す)
 const cardAutoRewardEntry = (loaded) => ({ key: CARD_AUTO_REWARD_KEY, before: loaded.raw, next: { v: 1, day: loaded.today, n: loaded.n + 1 } });
@@ -77857,7 +77952,8 @@ function MonsterHeroGame() {
   const grantBeatRankForResult = async (result, play) => {
     try {
       const raw = await storeGet(BEAT_RANK_KEY, null, false);
-      const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+      // 日の区切りは朝4時(2026-11-07 から。前は0時)。切り替えの夜は、0時区切りで書いた次の日のまま数える(その日はじめての1曲を二重に付けない)
+      const today = jstDayCarry(normalizeBeatRank(raw).day, jstDayKey4());
       const gain = beatRankAfter(raw, { difficultyId: play && play.difficulty && play.difficulty.id, cleared: result?.cleared !== false,
         fullCombo: result?.fullCombo === true, allMarvelous: result?.allMarvelous === true, multi: play && play.from === 'multi', today,
         // 曲の長さ(経験値は 長さ÷2:00 倍。2026-11-02)。読めないときは0で、今までどおりの値になる
@@ -87296,8 +87392,9 @@ function MonsterHeroGame() {
         dailyMasuAdviceCheckedRef.current = false;
         return;
       }
-      const today = localCalendarDate();
+      // 日の区切りは朝4時(jstDayKey4。2026-11-07 から。前は端末の時計の0時)。切り替えの夜に0時区切りで書いた次の日が残っていれば、もう出した扱い
       const shownDate = await storeGet(DAILY_MASU_ADVICE_KEY, '', false);
+      const today = jstDayCarry(shownDate, jstDayKey4());
       if (cancelled || masuMons.length >= 8 || shownDate === today) return;
       await storeSet(DAILY_MASU_ADVICE_KEY, today, false);
       // 「あきらめる」の近道は、クイックを何回かクリアした人だけへ(2026-10-10・改善部の提案G9)。
@@ -96071,7 +96168,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {raidDamageFx&&((gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='raid')||gameState==='RAID_JACK_DEBUG')&&<RaidJackDamageFx key={raidDamageFx.key} fx={raidDamageFx} onDone={()=>setRaidDamageFx(null)}/>}
         {beatRankFx&&beatRankFx.ready&&gameState==='RHYTHM_PLAY'&&<PlayerRankUpFx kind="beat" from={beatRankFx.from} to={beatRankFx.to} gains={beatRankFx.gains} onClose={()=>setBeatRankFx(null)}/>}
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward}
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} breederName={breederName} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward}
           onRankBarFull={()=>setBeatRankFx(f=>f&&!f.ready?{...f,ready:true}:f)} onRankBarStart={()=>setBeatRankFx(f=>f&&!f.started?{...f,started:true}:f)} onRankBarDone={()=>setBeatRankBarPlaying(false)} onComplete={async(result,merged)=>{
           // デバッグ画面の試作曲(RHYTHM_PROTO_SONGS)は、何も残さない。周回の報酬・経験値・自己ベスト・クリア回数・
           // 実績・全国ランキングのどれにも入れない(CLAUDE.md ⑦。試作は公開しない曲なので、記録に混ぜない)

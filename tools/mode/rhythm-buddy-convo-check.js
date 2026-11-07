@@ -32,7 +32,7 @@ const HON = { jester: 'っち', brave: '', clingy: 'ちゃん', smart: 'さん',
   fiery: '', cool: 'さん', fickle: 'くん', mellow: 'さん', hasty: '', competitive: '', showoff: 'ちゃん', shy: 'さん', hardworker: 'さん', romantic: 'さん' };
 
 // ===== セリフ集 =====
-check('会話の場面は53個(2026-11-06 に性格の芽 sproutNew を足した)', C.kinds.length === 53 && C.kinds.every((k) => C.convo[k]), String(C.kinds.length));
+check('会話の場面は54個(2026-11-06 に性格の芽 sproutNew・2026-11-07 にひとりの結果のふつう hMid を足した)', C.kinds.length === 54 && C.kinds.every((k) => C.convo[k]), String(C.kinds.length));
 const missing = [];
 C.kinds.forEach((k) => {
   const set = C.convo[k];
@@ -67,7 +67,7 @@ const noBrace = all.filter(([, l]) => /[{}]/.test(l.replace(/\{[a-z]+\}/g, '')))
 check('「{」「}」が穴以外に残っていない', noBrace.length === 0);
 
 // ===== 選べる(どの値が無くても黙らない)=====
-const NEED = { recall: ['topic'], bondHello: ['plays'], bondJoin: ['plays'], lvUp: ['lv'], traitNew: ['trait'], sproutNew: ['sprout'], banterRival: ['mate'], banterFriend: ['mate'], hMiss: ['who'], banter: ['mate'], qHow: ['who'], qFav: ['who'], songTalk: ['song'], nameAsk: ['me'], welcome: ['who'], farewell: ['who'], reactPick: ['who', 'song'], reactOmakase: ['who'], hMvp: ['who'], hHigh: ['who'], hLow: ['who'], hFull: ['who'], hQuit: ['who'], callOut: ['who'] };
+const NEED = { recall: ['topic'], bondHello: ['plays'], bondJoin: ['plays'], lvUp: ['lv'], traitNew: ['trait'], sproutNew: ['sprout'], banterRival: ['mate'], banterFriend: ['mate'], hMiss: ['who'], banter: ['mate'], qHow: ['who'], qFav: ['who'], songTalk: ['song'], nameAsk: ['me'], welcome: ['who'], farewell: ['who'], reactPick: ['who', 'song'], reactOmakase: ['who'], hMvp: ['who'], hHigh: ['who'], hMid: ['who'], hLow: ['who'], hFull: ['who'], hQuit: ['who'], callOut: ['who'] };
 const vars0 = {}; // 値がまだ何も無い(性格も得意な曲も決まっていない)
 const silent = [];
 C.kinds.forEach((k) => ['', ...TRAITS].forEach((t) => MOODS.forEach((m) => {

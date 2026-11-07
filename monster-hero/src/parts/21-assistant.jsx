@@ -253,7 +253,7 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
 });
 // ---- 助手のひとことを出す回数(2026-10-10・改善 G6「助手の吹き出しが、ほぼ全画面に出たまま」→ 社長が選択肢1) ----
 //   'ALWAYS' … いつも(これまでどおり。既定。保存が無い既存ユーザーも同じ見え方)
-//   'DAILY'  … 同じ画面のひとことは1日1回だけ(朝5:00で戻る)
+//   'DAILY'  … 同じ画面のひとことは1日1回だけ(朝4:00で戻る)
 //   'OFF'    … 出さない
 // ★止めるのは「画面ごとの決まったひとこと」だけ。次は設定にかかわらず出す(大事な案内まで消さないため):
 //   ・文を直接渡す吹き出し(line=。はじめての名前決めの案内・ヘルプ画面)と、最初から開く吹き出し(defaultOpen)
@@ -272,8 +272,8 @@ const ASSISTANT_BUBBLE_MODE_LABELS = Object.freeze([
 ]);
 const ASSISTANT_BUBBLE_ALWAYS_SCENES = Object.freeze(['home', 'quickRhythmBackground', 'rhythmWeeklyEvent']);
 const assistantBubbleAlwaysShown = (scene) => !scene || ASSISTANT_BUBBLE_ALWAYS_SCENES.includes(scene) || /Intro$/.test(String(scene));
-// 日の区切りは朝5:00(日本時間)。モンヒロビートの相棒の調子と同じ
-const assistantBubbleDayKey = (now = Date.now()) => new Date(Number(now) + (9 - 5) * 3600000).toISOString().slice(0, 10);
+// 日の区切りは朝4:00(日本時間。jstDayKey4 と同じ。2026-11-07 に5:00からそろえた)
+const assistantBubbleDayKey = (now = Date.now()) => new Date(Number(now) + (9 - 4) * 3600000).toISOString().slice(0, 10);
 // 見た場面の記録 { day, scenes:[場面のキー] }。日が変わったもの・壊れたものは空にする
 const normalizeAssistantBubbleSeen = (raw, day) => (raw && typeof raw === 'object' && raw.day === day && Array.isArray(raw.scenes))
   ? { day, scenes: raw.scenes.filter((x) => typeof x === 'string').slice(0, 300) }

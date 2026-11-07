@@ -83,9 +83,9 @@ const pure = (() => {
   for (let i = 0; i < 3; i += 1) st = b.useFree(st, d1);
   check('3回使うと残り0回になり、4回目は使えない(null)', b.freeLeft(st, d1) === 0 && b.useFree(st, d1) === null);
   check('日付が変わると3回に戻る', b.freeLeft(st, '2026-10-08') === 3);
-  // 朝5:00(JST)で区切る: JST 4:59 は前の日、5:00 はその日
+  // 朝4:00(JST)で区切る(2026-11-07 にほかの「1日」とそろえた): JST 3:59 は前の日、4:00 はその日
   const jst = (h, m) => Date.UTC(2026, 9, 7, h - 9, m);
-  check('日付の区切りは朝5:00(JST)', b.day(jst(4, 59)) === '2026-10-06' && b.day(jst(5, 0)) === '2026-10-07');
+  check('日付の区切りは朝4:00(JST)', b.day(jst(3, 59)) === '2026-10-06' && b.day(jst(4, 0)) === '2026-10-07');
 
   check('Lv は1から始まり、100で止まる', b.level(0).level === 1 && b.level(1e9).level === b.max && b.max === 100);
   let expTo50 = 0; for (let l = 1; l < 50; l += 1) expTo50 += b.need(l);
@@ -249,7 +249,7 @@ const pure = (() => {
   const r3 = B.settle(st2, 'c2', 'bump', day);
   check('人が来て席をゆずったときは、1曲始まっていてもいままでどおり返す', r3 && r3.refund === 'free' && r3.next.used === 0);
   const r4 = B.settle(B.useFreeCall(B.norm(null), day, call('c3')), 'c3', 'end', next);
-  check('朝5:00をまたいだら、無料1回は返さない(無料回数はもう戻っているので増えすぎない)', r4 && r4.refund === '' && r4.next.calls.length === 0, JSON.stringify(r4));
+  check('朝4:00をまたいだら、無料1回は返さない(無料回数はもう戻っているので増えすぎない)', r4 && r4.refund === '' && r4.next.calls.length === 0, JSON.stringify(r4));
   const r5 = B.settle(B.addCall(B.norm(null), { ...call('c4'), paid: 'ticket', day }), 'c4', 'end', day);
   check('セッション券で呼んだ子は、券を1枚返す(日付をまたいでも返す)', r5 && r5.refund === 'ticket' && r5.next.used === 0 && B.settle(B.addCall(B.norm(null), { ...call('c5'), paid: 'ticket', day }), 'c5', 'end', next).refund === 'ticket');
   let st6 = B.useFreeCall(B.norm(null), day, call('o1', { load: 'OLD' }));
