@@ -313,7 +313,7 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
         check(`オプション(${label}): 部屋の上の帯に ⚙ がある`, hasBtn === '', hasBtn);
         await C.evaluate(() => document.querySelector('[data-rhythm-multi-options-open]')?.click());
         await C.waitForTimeout(700);
-        const opened = await C.evaluate(() => ({ layer: !!document.querySelector('[data-rhythm-multi-options-layer] [data-rhythm-options]'), room: typeof RHYTHM_MULTI !== 'undefined' && !!RHYTHM_MULTI.view(), calib: !!document.querySelector('[data-rhythm-multi-options-layer] [data-rhythm-line-adjust-open]') }));
+        const opened = await C.evaluate(() => ({ layer: !!document.querySelector('[data-rhythm-multi-options-layer] [data-rhythm-options]'), room: typeof RHYTHM_MULTI !== 'undefined' && !!RHYTHM_MULTI.view(), calib: !!document.querySelector('[data-rhythm-multi-options-layer] [data-rhythm-line-adjust-open],[data-rhythm-multi-options-layer] [data-rhythm-calibrator-open]') }));
         check(`オプション(${label}): ソロと同じオプションが部屋の上に開き、部屋は抜けない(演奏を始める項目は出さない)`, opened.layer && opened.room && !opened.calib, JSON.stringify(opened));
         // オプションは中を上下にすべらせる作りなので、左右のはみ出しと、文字の切れだけを見る
         const out = await C.evaluate(() => [...document.querySelectorAll('[data-rhythm-multi-options-layer] button')].filter((el) => {

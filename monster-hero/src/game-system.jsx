@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2e4ac7630aea9217
+// generated-sha256: 13e351b2ba8a90ca
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -21633,7 +21633,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
               `1.0〜12.0を0.1刻みで調整できます。変わるのはノーツが流れてくる見た目の速さだけで、譜面のタイミング・判定窓・スコアは変わりません（現在 約${rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString()}ms）。`,{full:true})}
 {field('タイミング調整',<>
               {stepper('judgmentTimingOffsetMs',-RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_STEP_MS,{fine:1,coarse:10,suffix:'ms'})}
-              <button type="button" data-rhythm-calibrator-open onClick={goCalibrate} className="mt-2 min-h-[46px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-[12px] font-black text-cyan-100">🎯 実際の画面で合わせる</button>
+              {onCalibrate&&<button type="button" data-rhythm-calibrator-open onClick={goCalibrate} className="mt-2 min-h-[46px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-[12px] font-black text-cyan-100">🎯 実際の画面で合わせる</button>}
               {/* 合わせ終わって戻ってきたときのお知らせ。値はもう入っているので、ここは報告だけ
                   (2026-09-13・ユーザー指摘「設定にもなってない」。決めるのは測り終わった画面) */}
               {calibrationResult&&<div data-rhythm-calibrator-result className="mt-2 rounded-xl border border-amber-300/50 bg-amber-950/30 p-2 text-[11px] leading-relaxed text-amber-100">
