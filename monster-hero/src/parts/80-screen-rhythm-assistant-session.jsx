@@ -214,6 +214,7 @@ function RhythmAssistSessionPicker({ assistants = [], calledIds = [], guideAssis
                   <span className="whitespace-nowrap text-[10px] font-black text-pink-200">セッションLv.{lv}</span>
                   {lv >= RHYTHM_ASSIST_SESSION_TASTE_LEVEL && <span data-rhythm-assist-taste className="w-full truncate text-center text-[9px] font-bold text-slate-300">♡ {rhythmAssistSessionLikedNames(who.id).join('・')}</span>}
                   {calledOf(who.id) && <span className="rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950">呼んでいる</span>}
+                  {!calledOf(who.id) && rhythmAssistSessionVisitFree(who.id) && <span data-rhythm-assist-visit className="w-full rounded-full bg-sky-400/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950">🎵 いまモンビーにいる・回数なし</span>}
                 </button>
               );
             })}
@@ -267,6 +268,13 @@ const rhythmAssistSessionSetApp = (app) => {
   RHYTHM_ASSIST_SESSION_INVITE.app = app && typeof app === 'object' ? app : null;
   if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.beatInvite = (id) => rhythmAssistSessionInvite(id);
 };
+// 助手が自分でモンビーに出かけているあいだ(助手ライフの「練習」の時間帯)は、その助手とは何回でも券なし(2026-11-07 社長の決定・台帳)。
+//   帰ったら今までどおり回数を使う。呼んだ時点で決め、その部屋にいるあいだは無料のまま。助手ライフが非公開なら常に偽
+//   (払っていないので控え mh_rhythm_buddy_v1 の calls には残さない。返すものも無い)
+const rhythmAssistSessionVisitFree = (id) => {
+  if (!rhythmAssistSessionEnabled() || typeof assistantLifeAtBeat !== 'function') return false;
+  try { return assistantLifeAtBeat(id) === true; } catch (_) { return false; }
+};
 const rhythmAssistSessionCanPayNow = () => {
   const app = RHYTHM_ASSIST_SESSION_INVITE.app;
   const free = typeof RHYTHM_BUDDY_STORE !== 'undefined' ? rhythmBuddyFreeLeft(RHYTHM_BUDDY_STORE.get(), rhythmBuddyDayKey(Date.now())) : 0;
@@ -279,7 +287,7 @@ const rhythmAssistSessionInvite = (id, opts = {}) => {
   const app = RHYTHM_ASSIST_SESSION_INVITE.app;
   if (!rhythmAssistSessionEnabled() || !app || typeof app.open !== 'function') return rhythmAssistSessionInviteDone(onResult, { ok: false, reason: 'off' });
   if (!rhythmAssistSessionWho(id)) return rhythmAssistSessionInviteDone(onResult, { ok: false, reason: 'unknown' });
-  if (!rhythmAssistSessionCanPayNow()) return rhythmAssistSessionInviteDone(onResult, { ok: false, reason: 'no_ticket' });
+  if (!rhythmAssistSessionVisitFree(id) && !rhythmAssistSessionCanPayNow()) return rhythmAssistSessionInviteDone(onResult, { ok: false, reason: 'no_ticket' });
   const inRoom = typeof RHYTHM_MULTI !== 'undefined' && !!RHYTHM_MULTI.view();
   RHYTHM_ASSIST_SESSION_INVITE.pending = { id, at: Date.now(), onResult: typeof onResult === 'function' ? onResult : null };
   RHYTHM_ASSIST_SESSION_INVITE.listeners.forEach((fn) => { try { fn(); } catch (_) { /* 画面の失敗で止めない */ } });
