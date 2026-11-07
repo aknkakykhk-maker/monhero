@@ -223,6 +223,9 @@ function MonsterHeroGame() {
   // 体験版で遊べるのは Monster Hero 1曲・EASY/NORMAL/HARD だけで、デバッグ用の曲は出さない。
   // 音ゲー設定はデバッグ画面と体験版ホームの両方から開く。閉じたとき元の画面へ戻すため覚えておく
   const [rhythmOptionsBack,setRhythmOptionsBack]=useState('RHYTHM_DEBUG');
+  // マルチの部屋の上に重ねて開くオプション(2026-11-07 社長「マルチでもオプションボタンつけて」)。画面(gameState)は部屋のまま
+  const [rhythmMultiOptionsOpen,setRhythmMultiOptionsOpen]=useState(false);
+  useEffect(()=>{if(gameState!=='RHYTHM_MULTI')setRhythmMultiOptionsOpen(false);},[gameState]);
   // 曲えらびで選んでいる曲・難易度。画面(RhythmSongSelect)の中ではなくここで持つ。
   // ・ランキングやマスモン設定を開いて戻ってきても、選んでいた曲がそのまま残る
   // ・選んでいる曲を、曲えらび以外の画面でも鳴らし続けられる
@@ -20753,6 +20756,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           onBack={gameState==='RHYTHM_MODE_SELECT'?exitRhythmSongSelect:()=>setGameState('RHYTHM_MODE_SELECT')}
           onRoomEntered={()=>setGameState('RHYTHM_MULTI')}
           onStepAway={exitRhythmSongSelect}
+          onOpenOptions={()=>setRhythmMultiOptionsOpen(true)} onCloseOptions={()=>setRhythmMultiOptionsOpen(false)}
           rankingSupport={{
             breederIcon:rankingBreederIcon,
             // 部屋の中から全国ランキングを見る(2026-10-04・ユーザー指示「マルチ中にもランキングボタンいれて」)。
@@ -20797,6 +20801,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }:null}
           onStartPlay={(song,difficulty,startId,count,streak,cpus)=>{if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();setRhythmPlay({song,difficulty,from:'multi',multiStartId:startId,multiCount:count,multiStreak:streak,multiCpus:cpus||0});setGameState('RHYTHM_PLAY');}}/>}
 
+        {rhythmMultiOptionsOpen&&gameState==='RHYTHM_MULTI'&&<div data-rhythm-multi-options-layer className="fixed inset-0 flex flex-col bg-slate-950" style={{zIndex:89000}}>
+          {/* 部屋の上に重ねるソロと同じオプション。タイミング調整・判定ラインを実際の画面で合わせる、は演奏を始めるので部屋の中では出さない */}
+          <RhythmOptions value={rhythmSettings} onBack={()=>setRhythmMultiOptionsOpen(false)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);rhythmResetAutoEffect();return saved;}}/>
+        </div>}
         {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onCalibrate={startRhythmCalibration} onLineAdjust={startRhythmLineAdjust} calibrationResult={rhythmCalibrationResult} onClearCalibration={()=>setRhythmCalibrationResult(null)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);rhythmResetAutoEffect();return saved;}}/>}
 
         {/* 音ゲー体験版のホーム。デバッグ画面をそのまま公開しないために作った、正式導線の最小構成。

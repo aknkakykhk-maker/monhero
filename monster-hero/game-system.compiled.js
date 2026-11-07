@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4fe3e073939059d4
+// source-sha256: 7b5bdd43363e2beb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -87225,6 +87225,11 @@ const rhythmMultiStreakBonus = streak => {
   const n = Number.isFinite(v) ? Math.max(1, Math.floor(v)) : 1;
   return Math.min(RHYTHM_MULTI_STREAK_MAX_BONUS, Math.round(RHYTHM_MULTI_STREAK_STEP * (n - 1) * 100) / 100);
 };
+const rhythmMultiStreakNextText = streak => {
+  const n = Math.max(1, Math.floor(Number(streak) || 1));
+  const next = Math.round(rhythmMultiStreakBonus(n + 1) * 100);
+  return n >= 2 ? `連続${n}曲 ・ 次の曲+${next}%` : `次の曲も続けると+${next}%`;
+};
 const rhythmMultiTotalScale = (count, streak, cpus = 0) => Math.round(rhythmMultiRewardScale(count, cpus) * (1 + rhythmMultiStreakBonus(streak)) * 100) / 100;
 const RHYTHM_MULTI_JUDGMENT_IDS = Object.freeze(['MARVELOUS', 'EXCELLENT', 'GREAT', 'GOOD', 'BAD', 'MISS']);
 const rhythmMultiMakeCode = () => {
@@ -88913,6 +88918,19 @@ const rhythmMultiPickDifficulty = (available, wishId, orderIds) => {
   if (lower.length) return lower[0];
   return available.slice().sort((a, b) => rank(a.id) - rank(b.id))[0];
 };
+const RHYTHM_MULTI_ASK_OPEN_KEY = 'mh_rhythm_multi_ask_open_v1';
+const rhythmMultiAskOpenLoad = () => {
+  try {
+    return localStorage.getItem(RHYTHM_MULTI_ASK_OPEN_KEY) === '1';
+  } catch (_) {
+    return false;
+  }
+};
+const rhythmMultiAskOpenSave = on => {
+  try {
+    localStorage.setItem(RHYTHM_MULTI_ASK_OPEN_KEY, on ? '1' : '0');
+  } catch (_) {}
+};
 function RhythmMultiChatPanel({
   view,
   phase = '',
@@ -88940,6 +88958,12 @@ function RhythmMultiChatPanel({
     if (send(chatText)) setChatText('');
   };
   const memberOf = id => members.find(m => m.id === id) || null;
+  const [askOpen, setAskOpen] = React.useState(() => rhythmMultiAskOpenLoad());
+  const toggleAsk = () => setAskOpen(v => {
+    const next = !v;
+    rhythmMultiAskOpenSave(next);
+    return next;
+  });
   return React.createElement("section", {
     "data-rhythm-multi-chat": true,
     className: "flex h-full min-h-0 flex-col"
@@ -88998,13 +89022,17 @@ function RhythmMultiChatPanel({
     }, c.text)));
   })), React.createElement("div", {
     "data-rhythm-multi-chat-quick": true,
-    className: "mt-2 flex max-h-[8.5rem] shrink-0 flex-col gap-2 overflow-y-auto landscape:max-h-none landscape:flex-row landscape:items-center landscape:gap-1.5 landscape:overflow-x-auto landscape:overflow-y-hidden landscape:[scrollbar-width:none]"
+    className: "mt-2 flex max-h-[8.5rem] shrink-0 flex-col gap-2 overflow-y-auto landscape:max-h-none [[data-mh-view-rotation=true]_&]:max-h-none landscape:flex-row [[data-mh-view-rotation=true]_&]:flex-row landscape:items-center [[data-mh-view-rotation=true]_&]:items-center landscape:gap-1.5 [[data-mh-view-rotation=true]_&]:gap-1.5 landscape:overflow-x-auto [[data-mh-view-rotation=true]_&]:overflow-x-auto landscape:overflow-y-hidden [[data-mh-view-rotation=true]_&]:overflow-y-hidden landscape:[scrollbar-width:none] [[data-mh-view-rotation=true]_&]:[scrollbar-width:none]"
   }, askName && React.createElement("div", {
-    "data-rhythm-buddy-ask": true,
-    className: "flex shrink-0 flex-wrap items-center gap-1.5 landscape:flex-nowrap"
-  }, React.createElement("b", {
-    className: "shrink-0 text-[10px] font-black text-lime-300"
-  }, "🎵 ", askName, "に聞く"), RHYTHM_BUDDY_ASK_CHIPS.map(chip => React.createElement("button", {
+    "data-rhythm-buddy-ask": askOpen ? 'open' : 'closed',
+    className: "flex shrink-0 flex-wrap items-center gap-1.5 landscape:flex-nowrap [[data-mh-view-rotation=true]_&]:flex-nowrap"
+  }, React.createElement("button", {
+    type: "button",
+    "data-rhythm-buddy-ask-toggle": true,
+    "aria-expanded": askOpen,
+    onClick: toggleAsk,
+    className: "min-h-[34px] shrink-0 whitespace-nowrap rounded-full border border-lime-300/40 bg-slate-900 px-2.5 text-[11px] font-black text-lime-300 active:scale-95"
+  }, "🎵 ", askName, "に聞く ", askOpen ? '◂' : '▸'), askOpen && RHYTHM_BUDDY_ASK_CHIPS.map(chip => React.createElement("button", {
     key: chip.label,
     "data-rhythm-buddy-ask-chip": true,
     type: "button",
@@ -89015,7 +89043,7 @@ function RhythmMultiChatPanel({
     onSend: send,
     wrap: true,
     limit: 10,
-    className: "shrink-0 landscape:flex-nowrap"
+    className: "shrink-0 landscape:flex-nowrap [[data-mh-view-rotation=true]_&]:flex-nowrap"
   })), waitNote && React.createElement("small", {
     "data-rhythm-multi-chat-wait": true,
     className: "mt-1 block shrink-0 text-[11px] font-black text-amber-300"
@@ -90213,7 +90241,9 @@ function RhythmMultiScreen({
   onOpenMasuBeat = null,
   onStepAway = null,
   sessionAssistants = [],
-  guideAssistantId = ''
+  guideAssistantId = '',
+  onOpenOptions = null,
+  onCloseOptions = null
 }) {
   const view = useRhythmMultiView();
   useModeSelectStageCss();
@@ -90232,6 +90262,9 @@ function RhythmMultiScreen({
   const [message, setMessage] = React.useState('');
   const [searching, setSearching] = React.useState(null);
   const [countdown, setCountdown] = React.useState(null);
+  React.useEffect(() => {
+    if (countdown && onCloseOptions) onCloseOptions();
+  }, [!!countdown]);
   const [copied, setCopied] = React.useState(false);
   const [chatOpen, setChatOpen] = React.useState(false);
   const [chatSeenAt, setChatSeenAt] = React.useState(() => Date.now());
@@ -90792,7 +90825,10 @@ function RhythmMultiScreen({
     className: "mt-0.5 block break-keep text-[10px] font-black leading-tight text-fuchsia-200"
   }, "▶ ", step, view ? React.createElement(React.Fragment, null, " ・ ", React.createElement("span", {
     className: "whitespace-nowrap"
-  }, view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode], " ", view.code)) : '')), quickRunInfo && React.createElement(RhythmQuickRunPill, {
+  }, view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode], " ", view.code)) : ''), view && room && room.round && React.createElement("small", {
+    "data-rhythm-multi-streak-next": true,
+    className: "mt-0.5 inline-block whitespace-nowrap rounded-full bg-gradient-to-r from-orange-500 to-rose-500 px-1.5 text-[9px] font-black leading-4 text-white"
+  }, "🔥 ", rhythmMultiStreakNextText(view.streak))), quickRunInfo && React.createElement(RhythmQuickRunPill, {
     info: quickRunInfo,
     onRestart: onRestartQuickRun,
     onResume: onResumeQuickRun,
@@ -90808,7 +90844,17 @@ function RhythmMultiScreen({
   }, opts.advance), opts.selectTime && view && room && isHost && selectTimeButton('max-[480px]:hidden landscape:block'), opts.timer != null && React.createElement("b", {
     "data-rhythm-multi-timer": true,
     className: `shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`
-  }, "⏱ ", opts.timer), React.createElement(RhythmOrientationButton, null), view && rankingButton(), view && inviteButton(), view && chatButton());
+  }, "⏱ ", opts.timer), React.createElement(RhythmOrientationButton, null), view && optionsButton(), view && rankingButton(), view && inviteButton(), view && chatButton());
+  const optionsButton = (extra = '') => onOpenOptions && React.createElement("button", {
+    "data-rhythm-multi-options-open": true,
+    type: "button",
+    "aria-label": "オプション",
+    onClick: () => {
+      setChatOpen(false);
+      onOpenOptions();
+    },
+    className: `min-h-[44px] min-w-[44px] max-[380px]:min-w-[38px] shrink-0 rounded-xl border border-slate-400/50 bg-slate-800/60 text-lg ${extra}`
+  }, "⚙");
   const chatButton = (extra = '') => React.createElement("button", {
     "data-rhythm-multi-chat-open": true,
     type: "button",
@@ -90953,7 +90999,7 @@ function RhythmMultiScreen({
     onClick: () => setChatOpen(false)
   }), React.createElement("div", {
     "data-rhythm-multi-chat-sheet": true,
-    className: "absolute inset-x-0 bottom-0 flex h-[80%] flex-col rounded-t-2xl border-t border-cyan-400/40 bg-slate-900 p-2.5 shadow-2xl landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:h-full landscape:w-[50%] landscape:rounded-none landscape:rounded-l-2xl landscape:border-l landscape:border-t-0 landscape:pt-[calc(.6rem+var(--mh-sa-top))]",
+    className: "absolute inset-x-0 bottom-0 flex h-[80%] flex-col rounded-t-2xl border-t border-cyan-400/40 bg-slate-900 p-2.5 shadow-2xl landscape:inset-y-0 [[data-mh-view-rotation=true]_&]:inset-y-0 landscape:left-auto [[data-mh-view-rotation=true]_&]:left-auto landscape:right-0 [[data-mh-view-rotation=true]_&]:right-0 landscape:h-full [[data-mh-view-rotation=true]_&]:h-full landscape:w-[50%] [[data-mh-view-rotation=true]_&]:w-[50%] landscape:rounded-none [[data-mh-view-rotation=true]_&]:rounded-none landscape:rounded-l-2xl [[data-mh-view-rotation=true]_&]:rounded-l-2xl landscape:border-l [[data-mh-view-rotation=true]_&]:border-l landscape:border-t-0 [[data-mh-view-rotation=true]_&]:border-t-0 landscape:pt-[calc(.6rem+var(--mh-sa-top))] [[data-mh-view-rotation=true]_&]:pt-[calc(.6rem+var(--mh-sa-top))]",
     style: {
       paddingBottom: 'calc(.6rem + var(--mh-sa-bottom))'
     }
@@ -138427,6 +138473,10 @@ function MonsterHeroGame() {
   const [rhythmStageGlPref, setRhythmStageGlPref] = useState(() => rhythmStageGlPreference());
   const [rhythmChartToolsOpened, setRhythmChartToolsOpened] = useState(false);
   const [rhythmOptionsBack, setRhythmOptionsBack] = useState('RHYTHM_DEBUG');
+  const [rhythmMultiOptionsOpen, setRhythmMultiOptionsOpen] = useState(false);
+  useEffect(() => {
+    if (gameState !== 'RHYTHM_MULTI') setRhythmMultiOptionsOpen(false);
+  }, [gameState]);
   const [rhythmSelectedSongId, setRhythmSelectedSongId] = useState(() => {
     const list = rhythmDemoSongs(RHYTHM_SONGS);
     return list[0] && list[0].songId || '';
@@ -165998,6 +166048,8 @@ function MonsterHeroGame() {
       onBack: gameState === 'RHYTHM_MODE_SELECT' ? exitRhythmSongSelect : () => setGameState('RHYTHM_MODE_SELECT'),
       onRoomEntered: () => setGameState('RHYTHM_MULTI'),
       onStepAway: exitRhythmSongSelect,
+      onOpenOptions: () => setRhythmMultiOptionsOpen(true),
+      onCloseOptions: () => setRhythmMultiOptionsOpen(false),
       rankingSupport: {
         breederIcon: rankingBreederIcon,
         open: song => {
@@ -166076,7 +166128,22 @@ function MonsterHeroGame() {
         });
         setGameState('RHYTHM_PLAY');
       }
-    }), gameState === 'RHYTHM_OPTIONS' && React.createElement(RhythmOptions, {
+    }), rhythmMultiOptionsOpen && gameState === 'RHYTHM_MULTI' && React.createElement("div", {
+      "data-rhythm-multi-options-layer": true,
+      className: "fixed inset-0 flex flex-col bg-slate-950",
+      style: {
+        zIndex: 89000
+      }
+    }, React.createElement(RhythmOptions, {
+      value: rhythmSettings,
+      onBack: () => setRhythmMultiOptionsOpen(false),
+      onSave: async draft => {
+        const saved = await saveRhythmSettings(draft);
+        setRhythmSettings(saved);
+        rhythmResetAutoEffect();
+        return saved;
+      }
+    })), gameState === 'RHYTHM_OPTIONS' && React.createElement(RhythmOptions, {
       value: rhythmSettings,
       onBack: () => setGameState(rhythmOptionsBack),
       onCalibrate: startRhythmCalibration,
