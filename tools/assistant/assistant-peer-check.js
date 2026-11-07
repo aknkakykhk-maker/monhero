@@ -33,7 +33,7 @@ const ctx = vm.createContext({
 });
 vm.runInContext(fs.readFileSync(path.join(root, 'monster-hero', 'data', 'assistants.js'), 'utf8'), ctx);
 let dayNow = '2026-11-07';
-vm.runInContext('var assistantBubbleDayKey = () => __day(); var assistantById = (id) => ASSISTANTS.find(a => a.id === id);', Object.assign(ctx, { __day: () => dayNow }));
+vm.runInContext('var assistantBubbleDayKey = () => __day(); var assistantPeerDayKey = () => __day(); var assistantById = (id) => ASSISTANTS.find(a => a.id === id);', Object.assign(ctx, { __day: () => dayNow }));
 const part = babel.transformSync(fs.readFileSync(path.join(root, 'monster-hero', 'src', 'parts', '56-assistant-peer.jsx'), 'utf8'), { presets: [require.resolve('@babel/preset-react')], babelrc: false, configFile: false }).code;
 vm.runInContext(part, ctx);
 const G = (expr) => vm.runInContext(expr, ctx);
@@ -155,7 +155,7 @@ const pairKey = (a, b) => [a, b].sort().join('-');
   }
   check('⑥ Lv1 のペアには Lv2 の台本・特別なお話・ほかの画面の台本が出ない', leak === 0, String(leak));
   check('⑥ 割合に外れたら出さない', pick(base, { scene: 'home', metIds: met, selectedId: 'mua', now: 1e13, rand: () => 0.99 }) === null);
-  const day = G('assistantBubbleDayKey')();
+  const day = G('assistantPeerDayKey')();
   check('⑥ HOME は1日5回まで', pick({ ...base, talkDay: { day, home: 5, other: 0 } }, { scene: 'home', metIds: met, selectedId: 'mua', now: Date.now(), rand: () => 0 }) === null);
   check('⑥ ほかの画面は1日3回まで', pick({ ...base, talkDay: { day, home: 0, other: 3 } }, { scene: 'market', metIds: met, selectedId: 'mua', now: Date.now(), rand: () => 0 }) === null);
   check('⑥ 続けて流さない(前に流してから90秒)', pick({ ...base, lastShownAt: Date.now() - 1000 }, { scene: 'home', metIds: met, selectedId: 'mua', now: Date.now(), rand: () => 0 }) === null);

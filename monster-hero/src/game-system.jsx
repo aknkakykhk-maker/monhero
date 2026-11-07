@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d97291eb409fa0ca
+// generated-sha256: 3ede7aed42839dfe
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -55390,7 +55390,10 @@ const normalizeAssistantChatMemo = (rawV2, rawV1) => {
 // おしゃべりのとき、ほかの助手の思い出メモも中継役へ渡す(「みゅあちんから聞きましたよ」と話題にできる)。
 // 守り: 「ないしょ」の欄(secret)は渡さない・ないしょ/秘密らしい言葉を含む欄も渡さない・30日話していない助手の分は渡さない。
 // 設計: docs/progress/assistant-peer-plan.md。★保存は新しいキーだけ(CLAUDE.md ⑦)
-const ASSISTANT_CHAT_LAST_KEY = 'mh_assistant_chat_last_v1'; // { [助手id]: 'YYYY-MM-DD' } 最後に返事が来た日(assistantBubbleDayKey)
+// 助手どうしの「今日」(2026-11-07 社長の決定: ゲーム全体の1日の区切りを朝4時 JST にそろえる)。
+//   共通の jstDayKey4(バトル部セコンドが 17-release に足す)と同じ中身の loginBonusPeriodKey を使う。jstDayKey4 が入ったらここだけ差しかえる
+const assistantPeerDayKey = (now = Date.now()) => loginBonusPeriodKey(now);
+const ASSISTANT_CHAT_LAST_KEY = 'mh_assistant_chat_last_v1'; // { [助手id]: 'YYYY-MM-DD' } 最後に返事が来た日(assistantPeerDayKey・朝4時区切り)
 const ASSISTANT_PEER_SHARE_DAYS = 30;
 const ASSISTANT_PEER_SHARE_FIELDS = ['likes', 'goals', 'events', 'topics', 'summary'];
 const ASSISTANT_PEER_SECRET_RE = /ないしょ|内緒|ナイショ|秘密|ひみつ|ヒミツ|だれにも言わ|誰にも言わ|言わないで/;
@@ -55402,7 +55405,7 @@ const normalizeAssistantChatLast = (raw) => {
 };
 const assistantPeerDaysBetween = (a, b) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86400000);
 // selfId 以外で、30日以内に話した助手のメモ(ないしょを除く)。中身が無い助手は入れない
-const assistantPeerMemosFor = (selfId, memos, last, today = assistantBubbleDayKey()) => {
+const assistantPeerMemosFor = (selfId, memos, last, today = assistantPeerDayKey()) => {
   const out = {};
   for (const [id, memo] of Object.entries(memos || {})) {
     if (id === selfId || !memo || typeof memo !== 'object') continue;
@@ -55463,7 +55466,7 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
 
   const saveLastDay = () => {
     setLastDays(prev => {
-      const all = { ...prev, [id]: assistantBubbleDayKey() };
+      const all = { ...prev, [id]: assistantPeerDayKey() };
       try { storeSet(ASSISTANT_CHAT_LAST_KEY, all, false); } catch {}
       return all;
     });
@@ -55846,7 +55849,7 @@ const assistantPeerSaveBond = () => {
 const assistantPeerGain = async (a, b, action) => {
   if (!assistantPeerEnabled()) return { gained: 0 };
   await ASSISTANT_PEER_STORE.load();
-  const r = assistantPeerGainState(ASSISTANT_PEER_STORE.state, a, b, action, assistantBubbleDayKey());
+  const r = assistantPeerGainState(ASSISTANT_PEER_STORE.state, a, b, action, assistantPeerDayKey());
   if (r.gained > 0) { ASSISTANT_PEER_STORE.set(r.st); assistantPeerSaveBond(); }
   return r;
 };
@@ -55904,7 +55907,7 @@ const assistantPeerTodayPairOf = (metIds, day) => {
 const assistantPeerEnsureDaily = (metIds, now = Date.now()) => {
   if (!assistantPeerEnabled()) return null;
   const st = ASSISTANT_PEER_STORE.state;
-  const day = assistantBubbleDayKey(now);
+  const day = assistantPeerDayKey(now);
   if (st.daily.day === day && st.daily.pair) return st.daily;
   const pair = assistantPeerTodayPairOf(metIds, day);
   if (!pair) return null;
@@ -55918,7 +55921,7 @@ const assistantPeerEnsureDaily = (metIds, now = Date.now()) => {
 // 今日のペアの掛け合いを見た(返事をした)。達成したら { done:true } を返す
 const assistantPeerDailyProgress = async (talk) => {
   const st = ASSISTANT_PEER_STORE.state;
-  const day = assistantBubbleDayKey();
+  const day = assistantPeerDayKey();
   const pair = assistantPeerPairKey(talk.pair[0], talk.pair[1]);
   if (st.daily.day !== day || st.daily.pair !== pair || st.daily.done) return { done: false };
   const seen = st.daily.seen + 1;
@@ -55962,7 +55965,7 @@ const assistantPeerPickTalk = (st, { scene, metIds, selectedId, now = Date.now()
     const sp = all.find(t => t.special && assistantPeerLevel(st, t.pair[0], t.pair[1]) >= 5 && !st.special.includes(assistantPeerPairKey(t.pair[0], t.pair[1])));
     if (sp) return { talk: sp, special: true };
   }
-  const day = assistantBubbleDayKey(now);
+  const day = assistantPeerDayKey(now);
   const td = st.talkDay.day === day ? st.talkDay : { day, home: 0, other: 0 };
   const isHome = scene === 'home';
   if (isHome ? td.home >= ASSISTANT_PEER_TALK_HOME_MAX : td.other >= ASSISTANT_PEER_TALK_OTHER_MAX) return null;
@@ -56000,7 +56003,7 @@ const assistantPeerPickTalk = (st, { scene, metIds, selectedId, now = Date.now()
 // 流したことを残す(1日の数・最近の記録・特別なお話)
 const assistantPeerMarkShown = (talk, { scene, special, now = Date.now() }) => {
   const st = ASSISTANT_PEER_STORE.state;
-  const day = assistantBubbleDayKey(now);
+  const day = assistantPeerDayKey(now);
   const td = st.talkDay.day === day ? { ...st.talkDay } : { day, home: 0, other: 0 };
   if (!special) { if (scene === 'home') td.home += 1; else td.other += 1; }
   const log = [...st.log.filter(x => x.id !== talk.id), { id: talk.id, at: now }].slice(-ASSISTANT_PEER_TALK_LOG_MAX);
@@ -56105,7 +56108,7 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
   const right = assistantById(talk.pair.find(id => id !== left.id));
   const speaker = assistantById(line.who);
   const pairKey = assistantPeerPairKey(talk.pair[0], talk.pair[1]);
-  const daily = st.daily && st.daily.day === assistantBubbleDayKey() && st.daily.pair === pairKey ? st.daily : null;
+  const daily = st.daily && st.daily.day === assistantPeerDayKey() && st.daily.pair === pairKey ? st.daily : null;
   const face = (who) => {
     const speaking = who.id === line.who;
     return (
@@ -56218,7 +56221,7 @@ function AssistantPeerMap({ metIds, onReplay }) {
   const lineColor = (lv) => (lv >= 9 ? '#fde68a' : lv >= 7 ? '#fcd34d' : lv >= 5 ? '#f9a8d4' : lv >= 4 ? '#c4b5fd' : '#93c5fd');
   const rows = pairs.map(([a, b]) => ({ a, b, pts: assistantPeerPoints(st, a, b), lv: assistantPeerLevel(st, a, b) }))
     .sort((x, y) => y.pts - x.pts);
-  const daily = st.daily && st.daily.day === assistantBubbleDayKey() && st.daily.pair ? st.daily : null;
+  const daily = st.daily && st.daily.day === assistantPeerDayKey() && st.daily.pair ? st.daily : null;
   const dailyPair = daily ? daily.pair.split('-') : null;
   return (
     <div data-assistant-peer-map className="rounded-2xl border border-white/10 bg-slate-950/60 p-3">
@@ -56274,7 +56277,7 @@ const assistantPeerRequestGen = async ({ metIds, stats }) => {
   if (!assistantPeerApiEnabled() || assistantPeerGenBusy) return 'skip';
   await ASSISTANT_PEER_STORE.load();
   const st = ASSISTANT_PEER_STORE.state;
-  const day = assistantBubbleDayKey();
+  const day = assistantPeerDayKey();
   const gen = st.gen && st.gen.day === day ? st.gen : { day, asked: 0, talks: [] };
   const met = (metIds || []).filter(id => typeof ASSISTANT_PEER_CALLS !== 'undefined' && ASSISTANT_PEER_CALLS[id]);
   const seen = st.log.map(x => x.id);
