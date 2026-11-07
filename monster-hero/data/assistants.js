@@ -13143,7 +13143,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   ] },
   { id:'kyuko-mua-2', pair:['kyuko', 'mua'], lv:1, scene:'market', lines:[
     { who:'mua', e:'troubled', t:'{c}、ダイヤ足りないかも…' },
-    { who:'kyuko', e:'normal', t:'急がないなら、ビートP交換所で替えるほうがお得だと思う。俺もそうしてる笑' },
+    { who:'kyuko', e:'normal', t:'急がないなら、ビートP交換所で替えるのがお得かな。俺もそうしてる笑' },
     { who:'mua', e:'excited', t:'さすが無課金ランカー！ まぢ天才ぢゃん！' },
   ] },
   { id:'kyuko-mua-3', pair:['kyuko', 'mua'], lv:2, scene:'any', lines:[
@@ -14217,7 +14217,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
     ] },
     { label:'一緒に使う', reply:[
       { who:'erubin', e:'happy', t:'それ、いい考えだね' },
-      { who:'dra', e:'excited', t:'ふたりでデュラハンデッキだな！' },
+      { who:'dra', e:'excited', t:'ふたりのデッキは、デュラハンで決まりだな！' },
     ] },
   ] },
   { id:'atsu-kyuko-c1', pair:['atsu', 'kyuko'], lv:1, scene:'any', lines:[
@@ -15476,3 +15476,1302 @@ const ASSISTANT_PEER_TRIO_TALKS = Object.freeze([
     { who:'erubin', e:'happy', t:'まあいいか。楽しければね' },
   ] },
 ]);
+
+// ===== ASSISTANT_LIFE_TALKS ここから(tools で生成・手で直さない) =====
+// 元: docs/progress/assistant-peer/lines/(kotoba-life.txt・tsumugi.txt)。取り込み: node tools/assistant/life-talks-import.js
+const ASSISTANT_LIFE_TALKS = Object.freeze([
+  { id:'life-solo-dra-001', kind:'solo', who:'dra', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'dra', e:'happy', t:'せんべいとお茶。これが最強の組み合わせだな' },
+  ] },
+  { id:'life-solo-dra-002', kind:'solo', who:'dra', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'dra', e:'happy', t:'座布団を2枚重ねたら、膝がよろこんでるわ' },
+  ] },
+  { id:'life-solo-dra-003', kind:'solo', who:'dra', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'dra', e:'wink', t:'今日のギャグ、3つも思いついたぞ。……全部膝の話だけどな' },
+  ] },
+  { id:'life-solo-dra-004', kind:'solo', who:'dra', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'dra', e:'normal', t:'窓をあけたら、いい風が入ってくるな' },
+  ] },
+  { id:'life-solo-dra-005', kind:'solo', who:'dra', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'dra', e:'happy', t:'カードの山、きれいに並べなおしたぞ。見てるだけで楽しいわ' },
+  ] },
+  { id:'life-solo-dra-006', kind:'solo', who:'dra', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'dra', e:'normal', t:'グジラの図鑑を読み返してる。やっぱりかっこいいな' },
+  ] },
+  { id:'life-solo-dra-007', kind:'solo', who:'dra', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'dra', e:'happy', t:'プリン、冷やしといてよかった。ひとくち目がいちばんうまい' },
+  ] },
+  { id:'life-solo-dra-008', kind:'solo', who:'dra', keys:{ place:'home', mood:'happy' }, line:'feel', lines:[
+    { who:'dra', e:'happy', t:'なんか今日は、いい日になりそうな気がするわ' },
+  ] },
+  { id:'life-solo-dra-009', kind:'solo', who:'dra', keys:{ place:'home', mood:'happy' }, line:'feel', lines:[
+    { who:'dra', e:'wink', t:'ひとりでにやにやしてるおで、だれにも見せられないな。えへへ' },
+  ] },
+  { id:'life-solo-dra-010', kind:'solo', who:'dra', keys:{ place:'home', mood:'happy' }, line:'feel', lines:[
+    { who:'dra', e:'normal', t:'あとでだれかに、このギャグ試してみるか' },
+  ] },
+  { id:'life-solo-dra-011', kind:'solo', who:'dra', keys:{ place:'home', mood:'happy' }, line:'feel', lines:[
+    { who:'dra', e:'happy', t:'こういうのんびりした日も、悪くないよな' },
+  ] },
+  { id:'life-solo-dra-012', kind:'solo', who:'dra', keys:{ place:'home', mood:'happy' }, line:'feel', lines:[
+    { who:'dra', e:'happy', t:'膝の調子がいいと、気分までいいんだよな' },
+  ] },
+  { id:'life-solo-dra-013', kind:'solo', who:'dra', keys:{ place:'home', mood:'happy' }, line:'feel', lines:[
+    { who:'dra', e:'normal', t:'ふむ。今日は説明したいことが山ほどあるな' },
+  ] },
+  { id:'life-solo-dra-014', kind:'solo', who:'dra', keys:{ place:'home', mood:'eager' }, line:'scene', lines:[
+    { who:'dra', e:'excited', t:'よし、新しいカードの組み方を紙に書き出すか' },
+  ] },
+  { id:'life-solo-dra-015', kind:'solo', who:'dra', keys:{ place:'home', mood:'eager' }, line:'scene', lines:[
+    { who:'dra', e:'normal', t:'説明用の図、もう一枚作っとこう。わかりやすいのが一番だからな' },
+  ] },
+  { id:'life-solo-dra-016', kind:'solo', who:'dra', keys:{ place:'home', mood:'eager' }, line:'scene', lines:[
+    { who:'dra', e:'excited', t:'膝のストレッチ、今日は10回いけたぞ' },
+  ] },
+  { id:'life-solo-dra-017', kind:'solo', who:'dra', keys:{ place:'home', mood:'eager' }, line:'scene', lines:[
+    { who:'dra', e:'happy', t:'部屋の片づけ、いっきに終わらせたわ' },
+  ] },
+  { id:'life-solo-dra-018', kind:'solo', who:'dra', keys:{ place:'home', mood:'eager' }, line:'feel', lines:[
+    { who:'dra', e:'excited', t:'だれか来たら、すぐに説明してやれるように準備しとこ' },
+  ] },
+  { id:'life-solo-dra-019', kind:'solo', who:'dra', keys:{ place:'home', mood:'eager' }, line:'feel', lines:[
+    { who:'dra', e:'normal', t:'今日は昼寝しないで動くぞ。……たぶんな' },
+  ] },
+  { id:'life-solo-dra-020', kind:'solo', who:'dra', keys:{ place:'home', mood:'eager' }, line:'feel', lines:[
+    { who:'dra', e:'wink', t:'やる気のある日のおでは、ちょっとすごいからな' },
+  ] },
+  { id:'life-solo-dra-021', kind:'solo', who:'dra', keys:{ place:'home', mood:'sleepy' }, line:'scene', lines:[
+    { who:'dra', e:'happy', t:'ふぁ〜……昼寝、2回目いくか' },
+  ] },
+  { id:'life-solo-dra-022', kind:'solo', who:'dra', keys:{ place:'home', mood:'sleepy' }, line:'scene', lines:[
+    { who:'dra', e:'normal', t:'毛布が、おでを離してくれないんだよ' },
+  ] },
+  { id:'life-solo-dra-023', kind:'solo', who:'dra', keys:{ place:'home', mood:'sleepy' }, line:'scene', lines:[
+    { who:'dra', e:'troubled', t:'目をつぶったら、カードの夢を見そうだな' },
+  ] },
+  { id:'life-solo-dra-024', kind:'solo', who:'dra', keys:{ place:'home', mood:'sleepy' }, line:'scene', lines:[
+    { who:'dra', e:'normal', t:'お茶をいれたのに、飲む前にうとうとしてたわ' },
+  ] },
+  { id:'life-solo-dra-025', kind:'solo', who:'dra', keys:{ place:'home', mood:'sleepy' }, line:'feel', lines:[
+    { who:'dra', e:'happy', t:'起きたら、だれか来てたらいいな……むにゃ' },
+  ] },
+  { id:'life-solo-dra-026', kind:'solo', who:'dra', keys:{ place:'home', mood:'sleepy' }, line:'feel', lines:[
+    { who:'dra', e:'normal', t:'寝るのも膝のためだからな。言いわけじゃないぞ' },
+  ] },
+  { id:'life-solo-dra-027', kind:'solo', who:'dra', keys:{ place:'home', mood:'sleepy' }, line:'feel', lines:[
+    { who:'dra', e:'wink', t:'あと5分。……いや、あと30分だな' },
+  ] },
+  { id:'life-solo-dra-028', kind:'solo', who:'dra', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'dra', e:'troubled', t:'……今日は、まだだれにも呼ばれてないな' },
+  ] },
+  { id:'life-solo-dra-029', kind:'solo', who:'dra', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'dra', e:'normal', t:'窓から広場が見えるわ。みんな楽しそうだな' },
+  ] },
+  { id:'life-solo-dra-030', kind:'solo', who:'dra', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'dra', e:'troubled', t:'お茶、2つ用意しちゃったわ。……おでの分だけでいいのにな' },
+  ] },
+  { id:'life-solo-dra-031', kind:'solo', who:'dra', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'dra', e:'normal', t:'カードの山を、ひとりで切ってる。音だけがひびくな' },
+  ] },
+  { id:'life-solo-dra-032', kind:'solo', who:'dra', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'dra', e:'troubled', t:'ドアの音がした気がしたけど、風だったわ' },
+  ] },
+  { id:'life-solo-dra-033', kind:'solo', who:'dra', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'dra', e:'normal', t:'膝でもさすって待つか。……べつに待ってないけどな' },
+  ] },
+  { id:'life-solo-dra-034', kind:'solo', who:'dra', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'dra', e:'troubled', t:'おでのギャグ、だれか聞いてくれないかな……えへへ' },
+  ] },
+  { id:'life-solo-dra-035', kind:'solo', who:'dra', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'dra', e:'crying', t:'おでなんか、膝しか取りえないしな……' },
+  ] },
+  { id:'life-solo-dra-036', kind:'solo', who:'dra', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'dra', e:'troubled', t:'自分から誘えばいいんだけどな。それができたら苦労しないわ' },
+  ] },
+  { id:'life-solo-dra-037', kind:'solo', who:'dra', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'dra', e:'normal', t:'だれか来たら、いちばんいいせんべい出してやるのにな' },
+  ] },
+  { id:'life-solo-dra-038', kind:'solo', who:'dra', keys:{ place:'home', mood:'restless' }, line:'scene', lines:[
+    { who:'dra', e:'surprise', t:'新しいカードの話、だれかにしたくて落ち着かないわ' },
+  ] },
+  { id:'life-solo-dra-039', kind:'solo', who:'dra', keys:{ place:'home', mood:'restless' }, line:'feel', lines:[
+    { who:'dra', e:'normal', t:'部屋を3周してしまった。膝にはよくないな' },
+  ] },
+  { id:'life-solo-dra-040', kind:'solo', who:'dra', keys:{ place:'home', mood:'sulky' }, line:'scene', lines:[
+    { who:'dra', e:'troubled', t:'……ふとんにもぐってる。今日は出ないからな' },
+  ] },
+  { id:'life-solo-dra-041', kind:'solo', who:'dra', keys:{ place:'home', mood:'sulky' }, line:'feel', lines:[
+    { who:'dra', e:'normal', t:'どうせおでのギャグなんて……いや、あれはおもしろかったはずだ' },
+  ] },
+  { id:'life-solo-dra-042', kind:'solo', who:'dra', keys:{ place:'hill', mood:'happy' }, line:'scene', lines:[
+    { who:'dra', e:'happy', t:'{place}、ぽかぽかだな。膝があったまるわ' },
+  ] },
+  { id:'life-solo-dra-043', kind:'solo', who:'dra', keys:{ place:'hill', mood:'happy' }, line:'scene', lines:[
+    { who:'dra', e:'normal', t:'{place}で寝ころがったら、雲がグジラの形に見えるな' },
+  ] },
+  { id:'life-solo-dra-044', kind:'solo', who:'dra', keys:{ place:'hill', mood:'happy' }, line:'feel', lines:[
+    { who:'dra', e:'happy', t:'こういうところで昼寝するのが、いちばんのぜいたくだな' },
+  ] },
+  { id:'life-solo-dra-045', kind:'solo', who:'dra', keys:{ place:'hill', mood:'sleepy' }, line:'scene', lines:[
+    { who:'dra', e:'normal', t:'あったかすぎて、まぶたが重いわ' },
+  ] },
+  { id:'life-solo-dra-046', kind:'solo', who:'dra', keys:{ place:'hill', mood:'sleepy' }, line:'feel', lines:[
+    { who:'dra', e:'happy', t:'ここで寝たら、起きたら夕方になってそうだな。それもいいか' },
+  ] },
+  { id:'life-solo-dra-047', kind:'solo', who:'dra', keys:{ mood:'eager' }, line:'scene', lines:[
+    { who:'dra', e:'excited', t:'だれか見つけたら、今日こそ一戦申しこむぞ' },
+  ] },
+  { id:'life-solo-dra-048', kind:'solo', who:'dra', keys:{ mood:'eager' }, line:'scene', lines:[
+    { who:'dra', e:'normal', t:'説明のメモ、ポケットに入れてきたわ' },
+  ] },
+  { id:'life-solo-dra-049', kind:'solo', who:'dra', keys:{ mood:'eager' }, line:'feel', lines:[
+    { who:'dra', e:'wink', t:'今日のおでは、ちょっとだけかっこいいぞ。えへへ' },
+  ] },
+  { id:'life-solo-dra-050', kind:'solo', who:'dra', keys:{ mood:'happy' }, line:'scene', lines:[
+    { who:'dra', e:'happy', t:'散歩のとちゅうで、いい石を見つけたわ' },
+  ] },
+  { id:'life-solo-dra-051', kind:'solo', who:'dra', keys:{ mood:'happy' }, line:'feel', lines:[
+    { who:'dra', e:'normal', t:'たまには外に出るのも、悪くないな' },
+  ] },
+  { id:'life-solo-dra-052', kind:'solo', who:'dra', keys:{ mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'dra', e:'troubled', t:'みんな、どこ行ったんだろうな' },
+  ] },
+  { id:'life-solo-dra-053', kind:'solo', who:'dra', keys:{ mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'dra', e:'normal', t:'ひとりで歩くと、膝の音がよく聞こえるわ。……くさ' },
+  ] },
+  { id:'life-solo-dra-054', kind:'solo', who:'dra', keys:{ mood:'restless' }, line:'scene', lines:[
+    { who:'dra', e:'surprise', t:'なんか、そわそわするな。いいことでもあるのか？' },
+  ] },
+  { id:'life-solo-dra-055', kind:'solo', who:'dra', keys:{ mood:'restless' }, line:'feel', lines:[
+    { who:'dra', e:'normal', t:'落ち着け、おで。まずは深呼吸だ' },
+  ] },
+  { id:'life-solo-dra-056', kind:'solo', who:'dra', keys:{ mood:'sleepy' }, line:'scene', lines:[
+    { who:'dra', e:'normal', t:'歩きながら、あくびが3回も出たわ' },
+  ] },
+  { id:'life-solo-dra-057', kind:'solo', who:'dra', keys:{ mood:'sleepy' }, line:'feel', lines:[
+    { who:'dra', e:'happy', t:'帰ったら、すぐ昼寝だな' },
+  ] },
+  { id:'life-solo-dra-058', kind:'solo', who:'dra', keys:{ mood:'sulky' }, line:'scene', lines:[
+    { who:'dra', e:'troubled', t:'石をけっとばしたら、思ったより遠くまで行ったわ' },
+  ] },
+  { id:'life-solo-dra-059', kind:'solo', who:'dra', keys:{ mood:'sulky' }, line:'feel', lines:[
+    { who:'dra', e:'normal', t:'……べつに、すねてなんかないからな' },
+  ] },
+  { id:'life-solo-mua-001', kind:'solo', who:'mua', keys:{ place:'home', mood:'sleepy' }, line:'feel', lines:[
+    { who:'mua', e:'troubled', t:'起きたら髪ぼさぼさだったら、どうしよｗ' },
+  ] },
+  { id:'life-solo-mua-002', kind:'solo', who:'mua', keys:{ place:'plaza', mood:'happy' }, line:'scene', lines:[
+    { who:'mua', e:'wink', t:'噴水の前で写真とったら、いい感じに撮れたｗ' },
+  ] },
+  { id:'life-solo-mua-003', kind:'solo', who:'mua', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'mua', e:'happy', t:'新しいワンピース、鏡の前で回ってみたｗ' },
+  ] },
+  { id:'life-solo-mua-004', kind:'solo', who:'mua', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'mua', e:'excited', t:'クッキー焼けた！ いいにおいすぎる〜' },
+  ] },
+  { id:'life-solo-mua-005', kind:'solo', who:'mua', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'mua', e:'wink', t:'モッチーのぬいぐるみ、ベッドに並べなおしたよ♪' },
+  ] },
+  { id:'life-solo-mua-006', kind:'solo', who:'mua', keys:{ place:'home', mood:'happy' }, line:'feel', lines:[
+    { who:'mua', e:'happy', t:'今日のあたし、なんかイケてる気がするｗ' },
+  ] },
+  { id:'life-solo-mua-007', kind:'solo', who:'mua', keys:{ place:'home', mood:'happy' }, line:'feel', lines:[
+    { who:'mua', e:'excited', t:'あとでだれかにこの服見せよ！ 絶対ほめてもらう！' },
+  ] },
+  { id:'life-solo-mua-008', kind:'solo', who:'mua', keys:{ place:'home', mood:'happy' }, line:'feel', lines:[
+    { who:'mua', e:'happy', t:'おうち時間もたまにはいいかも♪' },
+  ] },
+  { id:'life-solo-mua-009', kind:'solo', who:'mua', keys:{ place:'home', mood:'sleepy' }, line:'scene', lines:[
+    { who:'mua', e:'normal', t:'ふぁ〜…ソファから動けないんだけどｗ' },
+  ] },
+  { id:'life-solo-mua-010', kind:'solo', who:'mua', keys:{ place:'home', mood:'sleepy' }, line:'scene', lines:[
+    { who:'mua', e:'troubled', t:'髪かわかしてる途中で寝そうになった…' },
+  ] },
+  { id:'life-solo-mua-011', kind:'solo', who:'mua', keys:{ place:'home', mood:'sleepy' }, line:'feel', lines:[
+    { who:'mua', e:'happy', t:'ちょっとだけ…5分だけ寝よ…' },
+  ] },
+  { id:'life-solo-mua-012', kind:'solo', who:'mua', keys:{ place:'home', mood:'sleepy' }, line:'feel', lines:[
+    { who:'mua', e:'normal', t:'夢の中でもおやつ食べたいな〜' },
+  ] },
+  { id:'life-solo-mua-013', kind:'solo', who:'mua', keys:{ place:'home', mood:'eager' }, line:'scene', lines:[
+    { who:'mua', e:'excited', t:'明日のコーデ、3パターン決めた！' },
+  ] },
+  { id:'life-solo-mua-014', kind:'solo', who:'mua', keys:{ place:'home', mood:'eager' }, line:'scene', lines:[
+    { who:'mua', e:'happy', t:'モッチーの育て方メモ、ノートにまとめちゃった♪' },
+  ] },
+  { id:'life-solo-mua-015', kind:'solo', who:'mua', keys:{ place:'home', mood:'eager' }, line:'feel', lines:[
+    { who:'mua', e:'excited', t:'よーし、今日はガンガンいくぞー！' },
+  ] },
+  { id:'life-solo-mua-016', kind:'solo', who:'mua', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'mua', e:'troubled', t:'だれからも連絡こないんだけど…' },
+  ] },
+  { id:'life-solo-mua-017', kind:'solo', who:'mua', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'mua', e:'normal', t:'お菓子、2人分あけちゃった。…ひとりで食べるかｗ' },
+  ] },
+  { id:'life-solo-mua-018', kind:'solo', who:'mua', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'mua', e:'troubled', t:'みんな忙しいのかな。ちょっとさみしいかも' },
+  ] },
+  { id:'life-solo-mua-019', kind:'solo', who:'mua', keys:{ place:'home', mood:'restless' }, line:'scene', lines:[
+    { who:'mua', e:'surprise', t:'マーケットの新作、まだかなまだかな…！' },
+  ] },
+  { id:'life-solo-mua-020', kind:'solo', who:'mua', keys:{ place:'home', mood:'restless' }, line:'feel', lines:[
+    { who:'mua', e:'excited', t:'そわそわしすぎて、部屋の中ぐるぐるしてるｗ' },
+  ] },
+  { id:'life-solo-mua-021', kind:'solo', who:'mua', keys:{ place:'home', mood:'sulky' }, line:'scene', lines:[
+    { who:'mua', e:'angry', t:'……べつにー。ひとりで遊ぶもん' },
+  ] },
+  { id:'life-solo-mua-022', kind:'solo', who:'mua', keys:{ place:'home', mood:'sulky' }, line:'feel', lines:[
+    { who:'mua', e:'troubled', t:'…やっぱおやつ食べたら元気出るかも' },
+  ] },
+  { id:'life-solo-mua-023', kind:'solo', who:'mua', keys:{ place:'plaza', mood:'happy' }, line:'scene', lines:[
+    { who:'mua', e:'happy', t:'{place}、今日は人いっぱいぢゃん！' },
+  ] },
+  { id:'life-solo-mua-024', kind:'solo', who:'mua', keys:{ place:'plaza', mood:'happy' }, line:'feel', lines:[
+    { who:'mua', e:'excited', t:'だれか知ってる人いないかな〜♪' },
+  ] },
+  { id:'life-solo-mua-025', kind:'solo', who:'mua', keys:{ place:'plaza', mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'mua', e:'troubled', t:'あれ、{place}だれもいないぢゃん…' },
+  ] },
+  { id:'life-solo-mua-026', kind:'solo', who:'mua', keys:{ place:'plaza', mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'mua', e:'normal', t:'まいっか！ だれか来るまで新しいポーズ考えとこｗ' },
+  ] },
+  { id:'life-solo-mua-027', kind:'solo', who:'mua', keys:{ place:'plaza', mood:'sleepy' }, line:'scene', lines:[
+    { who:'mua', e:'normal', t:'ベンチ、あったかくて眠くなる…' },
+  ] },
+  { id:'life-solo-mua-028', kind:'solo', who:'mua', keys:{ place:'plaza', mood:'sleepy' }, line:'feel', lines:[
+    { who:'mua', e:'happy', t:'ここでお昼寝したら、だれか起こしてくれるかな' },
+  ] },
+  { id:'life-solo-mua-029', kind:'solo', who:'mua', keys:{ place:'plaza', mood:'restless' }, line:'scene', lines:[
+    { who:'mua', e:'excited', t:'なんか楽しいことないかな〜！ きょろきょろ' },
+  ] },
+  { id:'life-solo-mua-030', kind:'solo', who:'mua', keys:{ place:'plaza', mood:'restless' }, line:'feel', lines:[
+    { who:'mua', e:'wink', t:'今日はなにか起きる気がするんだよねｗ' },
+  ] },
+  { id:'life-solo-mua-031', kind:'solo', who:'mua', keys:{ place:'plaza', mood:'eager' }, line:'scene', lines:[
+    { who:'mua', e:'excited', t:'広場で新しいダンス、練習しちゃお！' },
+  ] },
+  { id:'life-solo-mua-032', kind:'solo', who:'mua', keys:{ place:'plaza', mood:'eager' }, line:'feel', lines:[
+    { who:'mua', e:'happy', t:'だれか来たら、いっしょに踊ってもらお♪' },
+  ] },
+  { id:'life-solo-mua-033', kind:'solo', who:'mua', keys:{ place:'plaza', mood:'sulky' }, line:'scene', lines:[
+    { who:'mua', e:'angry', t:'噴水に小石なげてる。…ぽちゃん' },
+  ] },
+  { id:'life-solo-mua-034', kind:'solo', who:'mua', keys:{ place:'plaza', mood:'sulky' }, line:'feel', lines:[
+    { who:'mua', e:'normal', t:'あたし、すねてる顔も似合うかもｗ' },
+  ] },
+  { id:'life-solo-mua-035', kind:'solo', who:'mua', keys:{ mood:'happy' }, line:'scene', lines:[
+    { who:'mua', e:'happy', t:'かわいい雑貨屋さん見つけちゃった！' },
+  ] },
+  { id:'life-solo-mua-036', kind:'solo', who:'mua', keys:{ mood:'happy' }, line:'scene', lines:[
+    { who:'mua', e:'wink', t:'帽子、ちょっと斜めにかぶってみたｗ' },
+  ] },
+  { id:'life-solo-mua-037', kind:'solo', who:'mua', keys:{ mood:'happy' }, line:'feel', lines:[
+    { who:'mua', e:'excited', t:'今日はなにしても楽しい日ぢゃん♪' },
+  ] },
+  { id:'life-solo-mua-038', kind:'solo', who:'mua', keys:{ mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'mua', e:'troubled', t:'おそろいにしようと思ってたのに、相手がいない…' },
+  ] },
+  { id:'life-solo-mua-039', kind:'solo', who:'mua', keys:{ mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'mua', e:'normal', t:'ひとりで歩くと、道がいつもより長く感じるね' },
+  ] },
+  { id:'life-solo-mua-040', kind:'solo', who:'mua', keys:{ mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'mua', e:'happy', t:'でも、帰ったらだれかいるかも！ がんばろ' },
+  ] },
+  { id:'life-solo-mua-041', kind:'solo', who:'mua', keys:{ mood:'sleepy' }, line:'scene', lines:[
+    { who:'mua', e:'normal', t:'歩きながらあくび出ちゃった。まぢ眠い…' },
+  ] },
+  { id:'life-solo-mua-042', kind:'solo', who:'mua', keys:{ mood:'sleepy' }, line:'scene', lines:[
+    { who:'mua', e:'troubled', t:'目がしょぼしょぼする〜' },
+  ] },
+  { id:'life-solo-mua-043', kind:'solo', who:'mua', keys:{ mood:'sleepy' }, line:'feel', lines:[
+    { who:'mua', e:'happy', t:'帰ったら絶対お昼寝するｗ' },
+  ] },
+  { id:'life-solo-mua-044', kind:'solo', who:'mua', keys:{ mood:'eager' }, line:'scene', lines:[
+    { who:'mua', e:'excited', t:'今日はモッチーの育成、いっぱいがんばる！' },
+  ] },
+  { id:'life-solo-mua-045', kind:'solo', who:'mua', keys:{ mood:'eager' }, line:'feel', lines:[
+    { who:'mua', e:'happy', t:'あたし、やるときはやるんだから！' },
+  ] },
+  { id:'life-solo-mua-046', kind:'solo', who:'mua', keys:{ mood:'restless' }, line:'scene', lines:[
+    { who:'mua', e:'surprise', t:'え、新しいお店できてる！？ 気になる〜！' },
+  ] },
+  { id:'life-solo-mua-047', kind:'solo', who:'mua', keys:{ mood:'restless' }, line:'feel', lines:[
+    { who:'mua', e:'excited', t:'だれか誘ってのぞきに行きたい！' },
+  ] },
+  { id:'life-solo-mua-048', kind:'solo', who:'mua', keys:{ mood:'sulky' }, line:'scene', lines:[
+    { who:'mua', e:'troubled', t:'前髪、思ったより切りすぎちゃった…' },
+  ] },
+  { id:'life-solo-mua-049', kind:'solo', who:'mua', keys:{ mood:'sulky' }, line:'feel', lines:[
+    { who:'mua', e:'normal', t:'…帽子かぶればバレないよね。うん、大丈夫ｗ' },
+  ] },
+  { id:'life-solo-kiki-001', kind:'solo', who:'kiki', keys:{ place:'library', mood:'happy' }, line:'scene', lines:[
+    { who:'kiki', e:'normal', t:'窓ぎわの席が空いていました。今日はついていまつ' },
+  ] },
+  { id:'life-solo-kiki-002', kind:'solo', who:'kiki', keys:{ place:'library', mood:'happy' }, line:'feel', lines:[
+    { who:'kiki', e:'happy', t:'読み終わったら、だれかにおすすめしたいですね♪♪' },
+  ] },
+  { id:'life-solo-kiki-003', kind:'solo', who:'kiki', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'kiki', e:'happy', t:'窓ぎわでお茶をいれました。いい香りでつ♪♪' },
+  ] },
+  { id:'life-solo-kiki-004', kind:'solo', who:'kiki', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'kiki', e:'normal', t:'ゴーレムの図鑑を、最初から読み返していまつ' },
+  ] },
+  { id:'life-solo-kiki-005', kind:'solo', who:'kiki', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'kiki', e:'happy', t:'今日のおやつは、あたたかいスープにしました' },
+  ] },
+  { id:'life-solo-kiki-006', kind:'solo', who:'kiki', keys:{ place:'home', mood:'happy' }, line:'feel', lines:[
+    { who:'kiki', e:'happy', t:'こういう静かな時間が、いちばん落ち着きまつ' },
+  ] },
+  { id:'life-solo-kiki-007', kind:'solo', who:'kiki', keys:{ place:'home', mood:'happy' }, line:'feel', lines:[
+    { who:'kiki', e:'wink', t:'あとで、だれかにもお茶を出してあげたいですね' },
+  ] },
+  { id:'life-solo-kiki-008', kind:'solo', who:'kiki', keys:{ place:'home', mood:'sleepy' }, line:'scene', lines:[
+    { who:'kiki', e:'normal', t:'ひざかけがあたたかくて、目がとろんとしてきました' },
+  ] },
+  { id:'life-solo-kiki-009', kind:'solo', who:'kiki', keys:{ place:'home', mood:'sleepy' }, line:'scene', lines:[
+    { who:'kiki', e:'troubled', t:'本を読みながら、同じ行を3回読んでいました…' },
+  ] },
+  { id:'life-solo-kiki-010', kind:'solo', who:'kiki', keys:{ place:'home', mood:'sleepy' }, line:'feel', lines:[
+    { who:'kiki', e:'happy', t:'少しだけ、目を閉じてもいいでつか…' },
+  ] },
+  { id:'life-solo-kiki-011', kind:'solo', who:'kiki', keys:{ place:'home', mood:'sleepy' }, line:'feel', lines:[
+    { who:'kiki', e:'normal', t:'起きたら、またお茶をいれなおしましょう' },
+  ] },
+  { id:'life-solo-kiki-012', kind:'solo', who:'kiki', keys:{ place:'home', mood:'eager' }, line:'scene', lines:[
+    { who:'kiki', e:'excited', t:'育成の計画、全部ちからに振る形で書き直しまつ' },
+  ] },
+  { id:'life-solo-kiki-013', kind:'solo', who:'kiki', keys:{ place:'home', mood:'eager' }, line:'scene', lines:[
+    { who:'kiki', e:'normal', t:'次の相手を、倒す順番に並べてみました' },
+  ] },
+  { id:'life-solo-kiki-014', kind:'solo', who:'kiki', keys:{ place:'home', mood:'eager' }, line:'feel', lines:[
+    { who:'kiki', e:'wink', t:'今日の私は、いつもより火力が高い気がしまつ ( ˘ω˘)9グッ!' },
+  ] },
+  { id:'life-solo-kiki-015', kind:'solo', who:'kiki', keys:{ place:'home', mood:'eager' }, line:'feel', lines:[
+    { who:'kiki', e:'happy', t:'迷ったら、攻めでつね' },
+  ] },
+  { id:'life-solo-kiki-016', kind:'solo', who:'kiki', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'kiki', e:'normal', t:'お茶を2つ入れてしまいました。…どうしましょう' },
+  ] },
+  { id:'life-solo-kiki-017', kind:'solo', who:'kiki', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'kiki', e:'troubled', t:'少しだけ、だれかの声が聞きたいでつ' },
+  ] },
+  { id:'life-solo-kiki-018', kind:'solo', who:'kiki', keys:{ place:'home', mood:'restless' }, line:'scene', lines:[
+    { who:'kiki', e:'surprise', t:'強い相手が出たと聞いて、落ち着かないんです' },
+  ] },
+  { id:'life-solo-kiki-019', kind:'solo', who:'kiki', keys:{ place:'home', mood:'restless' }, line:'feel', lines:[
+    { who:'kiki', e:'normal', t:'静かに、でも確実に燃えてきました' },
+  ] },
+  { id:'life-solo-kiki-020', kind:'solo', who:'kiki', keys:{ place:'home', mood:'sulky' }, line:'scene', lines:[
+    { who:'kiki', e:'normal', t:'…そうですか。べつに、かまいません' },
+  ] },
+  { id:'life-solo-kiki-021', kind:'solo', who:'kiki', keys:{ place:'home', mood:'sulky' }, line:'feel', lines:[
+    { who:'kiki', e:'troubled', t:'……でも、少しだけ、気にしてほしかったでつ' },
+  ] },
+  { id:'life-solo-kiki-022', kind:'solo', who:'kiki', keys:{ place:'library', mood:'happy' }, line:'scene', lines:[
+    { who:'kiki', e:'happy', t:'{place}は、今日も静かでいいですね' },
+  ] },
+  { id:'life-solo-kiki-023', kind:'solo', who:'kiki', keys:{ place:'library', mood:'happy' }, line:'scene', lines:[
+    { who:'kiki', e:'normal', t:'育成の本を3冊、借りてきました♪♪' },
+  ] },
+  { id:'life-solo-kiki-024', kind:'solo', who:'kiki', keys:{ place:'library', mood:'happy' }, line:'feel', lines:[
+    { who:'kiki', e:'happy', t:'本のにおいって、ほっとしまつね' },
+  ] },
+  { id:'life-solo-kiki-025', kind:'solo', who:'kiki', keys:{ place:'library', mood:'happy' }, line:'feel', lines:[
+    { who:'kiki', e:'wink', t:'次はどの棚にしましょう。わくわくしまつ' },
+  ] },
+  { id:'life-solo-kiki-026', kind:'solo', who:'kiki', keys:{ place:'library', mood:'eager' }, line:'scene', lines:[
+    { who:'kiki', e:'excited', t:'「火力の上げ方」という本を見つけました' },
+  ] },
+  { id:'life-solo-kiki-027', kind:'solo', who:'kiki', keys:{ place:'library', mood:'eager' }, line:'feel', lines:[
+    { who:'kiki', e:'happy', t:'全部覚えて、次の戦いで試しまつ' },
+  ] },
+  { id:'life-solo-kiki-028', kind:'solo', who:'kiki', keys:{ place:'library', mood:'eager' }, line:'feel', lines:[
+    { who:'kiki', e:'normal', t:'守りの本は…あとで読みまつ。たぶん' },
+  ] },
+  { id:'life-solo-kiki-029', kind:'solo', who:'kiki', keys:{ place:'library', mood:'sleepy' }, line:'scene', lines:[
+    { who:'kiki', e:'normal', t:'窓からの光が、ちょうどいい暖かさで…' },
+  ] },
+  { id:'life-solo-kiki-030', kind:'solo', who:'kiki', keys:{ place:'library', mood:'sleepy' }, line:'scene', lines:[
+    { who:'kiki', e:'troubled', t:'ページをめくる手が、止まりがちでつ' },
+  ] },
+  { id:'life-solo-kiki-031', kind:'solo', who:'kiki', keys:{ place:'library', mood:'sleepy' }, line:'feel', lines:[
+    { who:'kiki', e:'happy', t:'ここで眠ったら、怒られますよね…' },
+  ] },
+  { id:'life-solo-kiki-032', kind:'solo', who:'kiki', keys:{ place:'library', mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'kiki', e:'normal', t:'向かいの席が、ずっと空いたままでつ' },
+  ] },
+  { id:'life-solo-kiki-033', kind:'solo', who:'kiki', keys:{ place:'library', mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'kiki', e:'troubled', t:'だれか、となりで本を読んでくれたらいいのに' },
+  ] },
+  { id:'life-solo-kiki-034', kind:'solo', who:'kiki', keys:{ place:'library', mood:'restless' }, line:'scene', lines:[
+    { who:'kiki', e:'surprise', t:'新しい本が入ったみたいでつ。早く読みたい…' },
+  ] },
+  { id:'life-solo-kiki-035', kind:'solo', who:'kiki', keys:{ place:'library', mood:'restless' }, line:'feel', lines:[
+    { who:'kiki', e:'normal', t:'図書室なのに、そわそわが止まりません' },
+  ] },
+  { id:'life-solo-kiki-036', kind:'solo', who:'kiki', keys:{ place:'library', mood:'sulky' }, line:'scene', lines:[
+    { who:'kiki', e:'normal', t:'本で顔をかくしています。いまは話しかけないでください' },
+  ] },
+  { id:'life-solo-kiki-037', kind:'solo', who:'kiki', keys:{ place:'library', mood:'sulky' }, line:'feel', lines:[
+    { who:'kiki', e:'troubled', t:'…と言いつつ、だれか気づいてくれないかと待っていまつ' },
+  ] },
+  { id:'life-solo-kiki-038', kind:'solo', who:'kiki', keys:{ mood:'happy' }, line:'scene', lines:[
+    { who:'kiki', e:'happy', t:'朝の散歩で、きれいな花を見つけました' },
+  ] },
+  { id:'life-solo-kiki-039', kind:'solo', who:'kiki', keys:{ mood:'happy' }, line:'scene', lines:[
+    { who:'kiki', e:'normal', t:'おやつ屋さんの新しいお茶、おいしかったでつ' },
+  ] },
+  { id:'life-solo-kiki-040', kind:'solo', who:'kiki', keys:{ mood:'happy' }, line:'scene', lines:[
+    { who:'kiki', e:'happy', t:'育成場で、ゴーレムがよく動いてくれました' },
+  ] },
+  { id:'life-solo-kiki-041', kind:'solo', who:'kiki', keys:{ mood:'happy' }, line:'feel', lines:[
+    { who:'kiki', e:'happy', t:'今日は、いい一日になりそうでつね' },
+  ] },
+  { id:'life-solo-kiki-042', kind:'solo', who:'kiki', keys:{ mood:'happy' }, line:'feel', lines:[
+    { who:'kiki', e:'wink', t:'小さなことで、うれしくなれる日でつ♪♪' },
+  ] },
+  { id:'life-solo-kiki-043', kind:'solo', who:'kiki', keys:{ mood:'happy' }, line:'feel', lines:[
+    { who:'kiki', e:'normal', t:'このまま、のんびり歩きましょう' },
+  ] },
+  { id:'life-solo-kiki-044', kind:'solo', who:'kiki', keys:{ mood:'eager' }, line:'scene', lines:[
+    { who:'kiki', e:'excited', t:'育成場で、ちからを上げる練習をしてきました' },
+  ] },
+  { id:'life-solo-kiki-045', kind:'solo', who:'kiki', keys:{ mood:'eager' }, line:'scene', lines:[
+    { who:'kiki', e:'normal', t:'ゴーレムといっしょに、押し切る形を考えていまつ' },
+  ] },
+  { id:'life-solo-kiki-046', kind:'solo', who:'kiki', keys:{ mood:'eager' }, line:'feel', lines:[
+    { who:'kiki', e:'happy', t:'倒される前に倒す。今日も変わりません ( ˘ω˘)9グッ!' },
+  ] },
+  { id:'life-solo-kiki-047', kind:'solo', who:'kiki', keys:{ mood:'eager' }, line:'feel', lines:[
+    { who:'kiki', e:'wink', t:'静かな顔で、いちばん強く。それが私でつ' },
+  ] },
+  { id:'life-solo-kiki-048', kind:'solo', who:'kiki', keys:{ mood:'eager' }, line:'feel', lines:[
+    { who:'kiki', e:'normal', t:'次は、もう少し速く倒せる気がしまつ' },
+  ] },
+  { id:'life-solo-kiki-049', kind:'solo', who:'kiki', keys:{ mood:'sleepy' }, line:'scene', lines:[
+    { who:'kiki', e:'normal', t:'歩きながら、小さくあくびが出ました' },
+  ] },
+  { id:'life-solo-kiki-050', kind:'solo', who:'kiki', keys:{ mood:'sleepy' }, line:'feel', lines:[
+    { who:'kiki', e:'happy', t:'帰ったら、ひざかけをかけてお昼寝でつ' },
+  ] },
+  { id:'life-solo-kiki-051', kind:'solo', who:'kiki', keys:{ mood:'sleepy' }, line:'feel', lines:[
+    { who:'kiki', e:'troubled', t:'今日は少し、早めに休みましょうか' },
+  ] },
+  { id:'life-solo-kiki-052', kind:'solo', who:'kiki', keys:{ mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'kiki', e:'normal', t:'おやつ屋さんの席、私ひとりでした' },
+  ] },
+  { id:'life-solo-kiki-053', kind:'solo', who:'kiki', keys:{ mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'kiki', e:'troubled', t:'こういう日もありまつね。…少しだけ、さみしいです' },
+  ] },
+  { id:'life-solo-kiki-054', kind:'solo', who:'kiki', keys:{ mood:'restless' }, line:'scene', lines:[
+    { who:'kiki', e:'surprise', t:'あれま、新しいモンスターの話を聞きました' },
+  ] },
+  { id:'life-solo-kiki-055', kind:'solo', who:'kiki', keys:{ mood:'restless' }, line:'feel', lines:[
+    { who:'kiki', e:'normal', t:'早く育ててみたくて、足が速くなってしまいます' },
+  ] },
+  { id:'life-solo-kiki-056', kind:'solo', who:'kiki', keys:{ mood:'sulky' }, line:'scene', lines:[
+    { who:'kiki', e:'normal', t:'石をひとつ、そっとけりました' },
+  ] },
+  { id:'life-solo-kiki-057', kind:'solo', who:'kiki', keys:{ mood:'sulky' }, line:'feel', lines:[
+    { who:'kiki', e:'troubled', t:'……もう少ししたら、元にもどりまつ' },
+  ] },
+  { id:'life-solo-momosuke-001', kind:'solo', who:'momosuke', keys:{ place:'home', mood:'sleepy' }, line:'scene', lines:[
+    { who:'momosuke', e:'normal', t:'ふとんの中で、今日の振り付けおさらいしてたら眠くなってきた…' },
+  ] },
+  { id:'life-solo-momosuke-002', kind:'solo', who:'momosuke', keys:{ place:'home', mood:'sleepy' }, line:'scene', lines:[
+    { who:'momosuke', e:'troubled', t:'まくら、ふかふかすぎて起きられないんだけどw' },
+  ] },
+  { id:'life-solo-momosuke-003', kind:'solo', who:'momosuke', keys:{ place:'home', mood:'sleepy' }, line:'scene', lines:[
+    { who:'momosuke', e:'normal', t:'あくび3回目。アイドルはあくびしないのに〜' },
+  ] },
+  { id:'life-solo-momosuke-004', kind:'solo', who:'momosuke', keys:{ place:'home', mood:'sleepy' }, line:'feel', lines:[
+    { who:'momosuke', e:'happy', t:'夢の中でライブしてこよ…♡' },
+  ] },
+  { id:'life-solo-momosuke-005', kind:'solo', who:'momosuke', keys:{ place:'home', mood:'sleepy' }, line:'feel', lines:[
+    { who:'momosuke', e:'normal', t:'起きたらメタルナーみがかなきゃ…むにゃ' },
+  ] },
+  { id:'life-solo-momosuke-006', kind:'solo', who:'momosuke', keys:{ place:'home', mood:'sleepy' }, line:'feel', lines:[
+    { who:'momosuke', e:'wink', t:'ちょっとだけ寝たら、もっとかわいくなってるはず！！' },
+  ] },
+  { id:'life-solo-momosuke-007', kind:'solo', who:'momosuke', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'momosuke', e:'excited', t:'メタルナー、今日もピッカピカ！！ 顔が映るレベル！！' },
+  ] },
+  { id:'life-solo-momosuke-008', kind:'solo', who:'momosuke', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'momosuke', e:'happy', t:'いちごのケーキ、上のいちごは最後にとっておく♡' },
+  ] },
+  { id:'life-solo-momosuke-009', kind:'solo', who:'momosuke', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'momosuke', e:'wink', t:'鏡の前で決めポーズ。…うん、今日も最強w' },
+  ] },
+  { id:'life-solo-momosuke-010', kind:'solo', who:'momosuke', keys:{ place:'home', mood:'happy' }, line:'feel', lines:[
+    { who:'momosuke', e:'excited', t:'だれかに見せたい！！ だれか来ないかな〜！！' },
+  ] },
+  { id:'life-solo-momosuke-011', kind:'solo', who:'momosuke', keys:{ place:'home', mood:'happy' }, line:'feel', lines:[
+    { who:'momosuke', e:'happy', t:'ももって、やっぱりえらいと思う！！' },
+  ] },
+  { id:'life-solo-momosuke-012', kind:'solo', who:'momosuke', keys:{ place:'home', mood:'eager' }, line:'scene', lines:[
+    { who:'momosuke', e:'excited', t:'新しい振り付け、ノートに書き出してる！！' },
+  ] },
+  { id:'life-solo-momosuke-013', kind:'solo', who:'momosuke', keys:{ place:'home', mood:'eager' }, line:'feel', lines:[
+    { who:'momosuke', e:'happy', t:'今日はいっぱい練習して、いっぱいほめてもらうんだ♡' },
+  ] },
+  { id:'life-solo-momosuke-014', kind:'solo', who:'momosuke', keys:{ place:'home', mood:'eager' }, line:'feel', lines:[
+    { who:'momosuke', e:'wink', t:'本気のももを見せちゃうから！！' },
+  ] },
+  { id:'life-solo-momosuke-015', kind:'solo', who:'momosuke', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'momosuke', e:'troubled', t:'ほめてくれる人がいないので、鏡にほめてもらってる…' },
+  ] },
+  { id:'life-solo-momosuke-016', kind:'solo', who:'momosuke', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'momosuke', e:'normal', t:'メタルナーに話しかけてみた。…返事はないけどw' },
+  ] },
+  { id:'life-solo-momosuke-017', kind:'solo', who:'momosuke', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'momosuke', e:'troubled', t:'べつに、さみしくなんてないし。…ちょっとだけだし' },
+  ] },
+  { id:'life-solo-momosuke-018', kind:'solo', who:'momosuke', keys:{ place:'home', mood:'restless' }, line:'scene', lines:[
+    { who:'momosuke', e:'surprise', t:'新曲の話、聞いた！？ 聞いてないの、ももだけ！？' },
+  ] },
+  { id:'life-solo-momosuke-019', kind:'solo', who:'momosuke', keys:{ place:'home', mood:'restless' }, line:'feel', lines:[
+    { who:'momosuke', e:'excited', t:'早く歌いたくて、じっとしてられない！！' },
+  ] },
+  { id:'life-solo-momosuke-020', kind:'solo', who:'momosuke', keys:{ place:'home', mood:'sulky' }, line:'scene', lines:[
+    { who:'momosuke', e:'angry', t:'ふーん、べつにいいもん。ひとりでケーキ食べるもん' },
+  ] },
+  { id:'life-solo-momosuke-021', kind:'solo', who:'momosuke', keys:{ place:'home', mood:'sulky' }, line:'feel', lines:[
+    { who:'momosuke', e:'troubled', t:'…だれか「かわいい」って言ってくれたら、許してあげてもいいけど' },
+  ] },
+  { id:'life-solo-momosuke-022', kind:'solo', who:'momosuke', keys:{ place:'studio', mood:'happy' }, line:'scene', lines:[
+    { who:'momosuke', e:'happy', t:'{place}、今日はももの貸し切り！！' },
+  ] },
+  { id:'life-solo-momosuke-023', kind:'solo', who:'momosuke', keys:{ place:'studio', mood:'happy' }, line:'feel', lines:[
+    { who:'momosuke', e:'excited', t:'声の調子、最高かも！！ ノッてきた！！' },
+  ] },
+  { id:'life-solo-momosuke-024', kind:'solo', who:'momosuke', keys:{ place:'studio', mood:'sleepy' }, line:'scene', lines:[
+    { who:'momosuke', e:'normal', t:'鏡の前でストレッチしてたら、そのまま寝そうになったw' },
+  ] },
+  { id:'life-solo-momosuke-025', kind:'solo', who:'momosuke', keys:{ place:'studio', mood:'sleepy' }, line:'scene', lines:[
+    { who:'momosuke', e:'troubled', t:'休けいのつもりが、ねっころがって動けない…' },
+  ] },
+  { id:'life-solo-momosuke-026', kind:'solo', who:'momosuke', keys:{ place:'studio', mood:'sleepy' }, line:'feel', lines:[
+    { who:'momosuke', e:'happy', t:'ちょっと休んだら、また踊る♡' },
+  ] },
+  { id:'life-solo-momosuke-027', kind:'solo', who:'momosuke', keys:{ place:'studio', mood:'eager' }, line:'scene', lines:[
+    { who:'momosuke', e:'excited', t:'サビの振り、10回連続でいけた！！' },
+  ] },
+  { id:'life-solo-momosuke-028', kind:'solo', who:'momosuke', keys:{ place:'studio', mood:'eager' }, line:'feel', lines:[
+    { who:'momosuke', e:'wink', t:'この調子なら、次のライブは完ぺき！！' },
+  ] },
+  { id:'life-solo-momosuke-029', kind:'solo', who:'momosuke', keys:{ place:'studio', mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'momosuke', e:'troubled', t:'練習、見てくれる人いないなぁ…' },
+  ] },
+  { id:'life-solo-momosuke-030', kind:'solo', who:'momosuke', keys:{ place:'studio', mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'momosuke', e:'normal', t:'拍手の音、自分でやっちゃった。…ぱちぱちw' },
+  ] },
+  { id:'life-solo-momosuke-031', kind:'solo', who:'momosuke', keys:{ place:'studio', mood:'restless' }, line:'scene', lines:[
+    { who:'momosuke', e:'surprise', t:'新しい衣装、もうすぐ届くって！！' },
+  ] },
+  { id:'life-solo-momosuke-032', kind:'solo', who:'momosuke', keys:{ place:'studio', mood:'restless' }, line:'feel', lines:[
+    { who:'momosuke', e:'excited', t:'届いたら、だれかに一番に見せるんだ！！' },
+  ] },
+  { id:'life-solo-momosuke-033', kind:'solo', who:'momosuke', keys:{ place:'studio', mood:'sulky' }, line:'scene', lines:[
+    { who:'momosuke', e:'angry', t:'今のステップ、ぜんぜんだめ！！ もう1回！！' },
+  ] },
+  { id:'life-solo-momosuke-034', kind:'solo', who:'momosuke', keys:{ place:'studio', mood:'sulky' }, line:'feel', lines:[
+    { who:'momosuke', e:'troubled', t:'…くやしいけど、できるまでやるもん' },
+  ] },
+  { id:'life-solo-momosuke-035', kind:'solo', who:'momosuke', keys:{ mood:'happy' }, line:'scene', lines:[
+    { who:'momosuke', e:'happy', t:'かわいい髪どめ見つけた♡ 買っちゃおうかな' },
+  ] },
+  { id:'life-solo-momosuke-036', kind:'solo', who:'momosuke', keys:{ mood:'happy' }, line:'feel', lines:[
+    { who:'momosuke', e:'excited', t:'今日はいいことしかない日な気がする！！' },
+  ] },
+  { id:'life-solo-momosuke-037', kind:'solo', who:'momosuke', keys:{ mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'momosuke', e:'troubled', t:'ひとりでおやつ屋さん、ちょっと入りにくい…' },
+  ] },
+  { id:'life-solo-momosuke-038', kind:'solo', who:'momosuke', keys:{ mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'momosuke', e:'normal', t:'だれか誘ってくれたら、すぐ行くのにな' },
+  ] },
+  { id:'life-solo-momosuke-039', kind:'solo', who:'momosuke', keys:{ mood:'eager' }, line:'scene', lines:[
+    { who:'momosuke', e:'excited', t:'歩きながら、新曲のリズム覚えてる！！' },
+  ] },
+  { id:'life-solo-momosuke-040', kind:'solo', who:'momosuke', keys:{ mood:'eager' }, line:'feel', lines:[
+    { who:'momosuke', e:'happy', t:'次は絶対、ほめられるくらい上手になる！！' },
+  ] },
+  { id:'life-solo-momosuke-041', kind:'solo', who:'momosuke', keys:{ mood:'sleepy' }, line:'scene', lines:[
+    { who:'momosuke', e:'normal', t:'歩いてるのに、まぶたが下がってくる…' },
+  ] },
+  { id:'life-solo-momosuke-042', kind:'solo', who:'momosuke', keys:{ mood:'sleepy' }, line:'feel', lines:[
+    { who:'momosuke', e:'troubled', t:'今日は早く帰って寝よ…' },
+  ] },
+  { id:'life-solo-momosuke-043', kind:'solo', who:'momosuke', keys:{ mood:'restless' }, line:'scene', lines:[
+    { who:'momosuke', e:'surprise', t:'あれ、だれかが歌ってる！？ どこどこ！？' },
+  ] },
+  { id:'life-solo-momosuke-044', kind:'solo', who:'momosuke', keys:{ mood:'restless' }, line:'feel', lines:[
+    { who:'momosuke', e:'excited', t:'気になる！！ 見に行きたい！！' },
+  ] },
+  { id:'life-solo-momosuke-045', kind:'solo', who:'momosuke', keys:{ mood:'sulky' }, line:'scene', lines:[
+    { who:'momosuke', e:'angry', t:'道の小石、ぜんぶよけてやる！！' },
+  ] },
+  { id:'life-solo-momosuke-046', kind:'solo', who:'momosuke', keys:{ mood:'sulky' }, line:'feel', lines:[
+    { who:'momosuke', e:'normal', t:'…よけてたら、ちょっと楽しくなってきたw' },
+  ] },
+  { id:'life-solo-atsu-001', kind:'solo', who:'atsu', keys:{ mood:'sleepy' }, line:'scene', lines:[
+    { who:'atsu', e:'normal', t:'育成場のベンチで、ちょっと寝てた笑' },
+  ] },
+  { id:'life-solo-atsu-002', kind:'solo', who:'atsu', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'atsu', e:'happy', t:'昨日のHELL、録画見返してる笑' },
+  ] },
+  { id:'life-solo-atsu-003', kind:'solo', who:'atsu', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'atsu', e:'normal', t:'肉焼いたー笑 冒険の前はがっつり食べるのが一番！' },
+  ] },
+  { id:'life-solo-atsu-004', kind:'solo', who:'atsu', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'atsu', e:'wink', t:'ドラゴンの図鑑、またながめてた( *\'ω\'*)ノ！' },
+  ] },
+  { id:'life-solo-atsu-005', kind:'solo', who:'atsu', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'atsu', e:'happy', t:'部屋で指の体操！ あしたも上いける気しかしない笑' },
+  ] },
+  { id:'life-solo-atsu-006', kind:'solo', who:'atsu', keys:{ place:'home', mood:'happy' }, line:'feel', lines:[
+    { who:'atsu', e:'happy', t:'いいね、今日は調子いいわ笑' },
+  ] },
+  { id:'life-solo-atsu-007', kind:'solo', who:'atsu', keys:{ place:'home', mood:'happy' }, line:'feel', lines:[
+    { who:'atsu', e:'normal', t:'だれか誘ってみよっかなー笑' },
+  ] },
+  { id:'life-solo-atsu-008', kind:'solo', who:'atsu', keys:{ place:'home', mood:'happy' }, line:'feel', lines:[
+    { who:'atsu', e:'wink', t:'まぁ〜、こういう日もあり！' },
+  ] },
+  { id:'life-solo-atsu-009', kind:'solo', who:'atsu', keys:{ place:'home', mood:'sleepy' }, line:'scene', lines:[
+    { who:'atsu', e:'normal', t:'ふぁ〜…さすがに練習しすぎた笑' },
+  ] },
+  { id:'life-solo-atsu-010', kind:'solo', who:'atsu', keys:{ place:'home', mood:'sleepy' }, line:'scene', lines:[
+    { who:'atsu', e:'troubled', t:'目、しょぼしょぼする…' },
+  ] },
+  { id:'life-solo-atsu-011', kind:'solo', who:'atsu', keys:{ place:'home', mood:'sleepy' }, line:'feel', lines:[
+    { who:'atsu', e:'happy', t:'今日はもう寝るー笑 勇者だって宿屋で休むし！' },
+  ] },
+  { id:'life-solo-atsu-012', kind:'solo', who:'atsu', keys:{ place:'home', mood:'sleepy' }, line:'feel', lines:[
+    { who:'atsu', e:'normal', t:'あした起きたら、一曲だけやろ笑' },
+  ] },
+  { id:'life-solo-atsu-013', kind:'solo', who:'atsu', keys:{ place:'home', mood:'sleepy' }, line:'feel', lines:[
+    { who:'atsu', e:'wink', t:'寝る前にもう一回…いや、寝よ笑' },
+  ] },
+  { id:'life-solo-atsu-014', kind:'solo', who:'atsu', keys:{ place:'home', mood:'eager' }, line:'scene', lines:[
+    { who:'atsu', e:'excited', t:'次の難易度、もう決めた！' },
+  ] },
+  { id:'life-solo-atsu-015', kind:'solo', who:'atsu', keys:{ place:'home', mood:'eager' }, line:'feel', lines:[
+    { who:'atsu', e:'happy', t:'とりあえずHELL1周いこ笑' },
+  ] },
+  { id:'life-solo-atsu-016', kind:'solo', who:'atsu', keys:{ place:'home', mood:'eager' }, line:'feel', lines:[
+    { who:'atsu', e:'wink', t:'今日のオレは止まらないよ！' },
+  ] },
+  { id:'life-solo-atsu-017', kind:'solo', who:'atsu', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'atsu', e:'normal', t:'対戦相手いないー笑 暇すぎる…' },
+  ] },
+  { id:'life-solo-atsu-018', kind:'solo', who:'atsu', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'atsu', e:'troubled', t:'…だれか誘えばよかったかな…' },
+  ] },
+  { id:'life-solo-atsu-019', kind:'solo', who:'atsu', keys:{ place:'home', mood:'restless' }, line:'scene', lines:[
+    { who:'atsu', e:'surprise', t:'ランキング更新まで、あと少しじゃん！' },
+  ] },
+  { id:'life-solo-atsu-020', kind:'solo', who:'atsu', keys:{ place:'home', mood:'restless' }, line:'feel', lines:[
+    { who:'atsu', e:'excited', t:'気になって寝られないやつだ笑' },
+  ] },
+  { id:'life-solo-atsu-021', kind:'solo', who:'atsu', keys:{ place:'studio', mood:'happy' }, line:'scene', lines:[
+    { who:'atsu', e:'happy', t:'{place}、今日はいい音してる笑' },
+  ] },
+  { id:'life-solo-atsu-022', kind:'solo', who:'atsu', keys:{ place:'studio', mood:'happy' }, line:'scene', lines:[
+    { who:'atsu', e:'wink', t:'フルコン出た！ やっぱ上が一番おもしろい！' },
+  ] },
+  { id:'life-solo-atsu-023', kind:'solo', who:'atsu', keys:{ place:'studio', mood:'happy' }, line:'feel', lines:[
+    { who:'atsu', e:'happy', t:'いいね、この感じ笑' },
+  ] },
+  { id:'life-solo-atsu-024', kind:'solo', who:'atsu', keys:{ place:'studio', mood:'happy' }, line:'feel', lines:[
+    { who:'atsu', e:'normal', t:'だれか来たら、いっしょにやろって言お笑' },
+  ] },
+  { id:'life-solo-atsu-025', kind:'solo', who:'atsu', keys:{ place:'studio', mood:'eager' }, line:'scene', lines:[
+    { who:'atsu', e:'excited', t:'あと1曲、いや3曲いこ笑' },
+  ] },
+  { id:'life-solo-atsu-026', kind:'solo', who:'atsu', keys:{ place:'studio', mood:'eager' }, line:'scene', lines:[
+    { who:'atsu', e:'normal', t:'指、あったまってきた！' },
+  ] },
+  { id:'life-solo-atsu-027', kind:'solo', who:'atsu', keys:{ place:'studio', mood:'eager' }, line:'feel', lines:[
+    { who:'atsu', e:'happy', t:'今日はスコア更新いけるでしょ笑' },
+  ] },
+  { id:'life-solo-atsu-028', kind:'solo', who:'atsu', keys:{ place:'studio', mood:'eager' }, line:'feel', lines:[
+    { who:'atsu', e:'wink', t:'上等！ かかってこい！' },
+  ] },
+  { id:'life-solo-atsu-029', kind:'solo', who:'atsu', keys:{ place:'studio', mood:'sleepy' }, line:'scene', lines:[
+    { who:'atsu', e:'troubled', t:'休けいのつもりが、床で寝そうになってた笑' },
+  ] },
+  { id:'life-solo-atsu-030', kind:'solo', who:'atsu', keys:{ place:'studio', mood:'sleepy' }, line:'feel', lines:[
+    { who:'atsu', e:'normal', t:'ちょっと休も…勇者にも休みは要る！' },
+  ] },
+  { id:'life-solo-atsu-031', kind:'solo', who:'atsu', keys:{ place:'studio', mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'atsu', e:'normal', t:'ひとりでセッション…ちょっと静かすぎない？笑' },
+  ] },
+  { id:'life-solo-atsu-032', kind:'solo', who:'atsu', keys:{ place:'studio', mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'atsu', e:'troubled', t:'次はだれか誘ってこよ…' },
+  ] },
+  { id:'life-solo-atsu-033', kind:'solo', who:'atsu', keys:{ place:'studio', mood:'restless' }, line:'scene', lines:[
+    { who:'atsu', e:'surprise', t:'新しい譜面きたって！ まじで？' },
+  ] },
+  { id:'life-solo-atsu-034', kind:'solo', who:'atsu', keys:{ place:'studio', mood:'restless' }, line:'feel', lines:[
+    { who:'atsu', e:'excited', t:'やるしかないかー笑' },
+  ] },
+  { id:'life-solo-atsu-035', kind:'solo', who:'atsu', keys:{ place:'studio', mood:'sulky' }, line:'scene', lines:[
+    { who:'atsu', e:'troubled', t:'今のミスはノーカン笑' },
+  ] },
+  { id:'life-solo-atsu-036', kind:'solo', who:'atsu', keys:{ place:'studio', mood:'sulky' }, line:'feel', lines:[
+    { who:'atsu', e:'normal', t:'…まぁ〜、しゃあない！ もう1回！' },
+  ] },
+  { id:'life-solo-atsu-037', kind:'solo', who:'atsu', keys:{ mood:'happy' }, line:'scene', lines:[
+    { who:'atsu', e:'happy', t:'育成場でドラゴンが新しい技おぼえた！' },
+  ] },
+  { id:'life-solo-atsu-038', kind:'solo', who:'atsu', keys:{ mood:'happy' }, line:'scene', lines:[
+    { who:'atsu', e:'normal', t:'散歩してたら、いい感じの空だった笑' },
+  ] },
+  { id:'life-solo-atsu-039', kind:'solo', who:'atsu', keys:{ mood:'happy' }, line:'scene', lines:[
+    { who:'atsu', e:'wink', t:'道ですれちがった人に「HELL見てます」って言われた笑' },
+  ] },
+  { id:'life-solo-atsu-040', kind:'solo', who:'atsu', keys:{ mood:'happy' }, line:'feel', lines:[
+    { who:'atsu', e:'happy', t:'いいね、今日はいい日！' },
+  ] },
+  { id:'life-solo-atsu-041', kind:'solo', who:'atsu', keys:{ mood:'happy' }, line:'feel', lines:[
+    { who:'atsu', e:'normal', t:'みんな元気かな？ 顔見に行こ笑' },
+  ] },
+  { id:'life-solo-atsu-042', kind:'solo', who:'atsu', keys:{ mood:'eager' }, line:'scene', lines:[
+    { who:'atsu', e:'excited', t:'育成場で、ドラゴンと特訓中！' },
+  ] },
+  { id:'life-solo-atsu-043', kind:'solo', who:'atsu', keys:{ mood:'eager' }, line:'scene', lines:[
+    { who:'atsu', e:'normal', t:'とりあえず育成、そのあと練習笑' },
+  ] },
+  { id:'life-solo-atsu-044', kind:'solo', who:'atsu', keys:{ mood:'eager' }, line:'feel', lines:[
+    { who:'atsu', e:'happy', t:'パーティの準備は、早いほうがいいっしょ！' },
+  ] },
+  { id:'life-solo-atsu-045', kind:'solo', who:'atsu', keys:{ mood:'eager' }, line:'feel', lines:[
+    { who:'atsu', e:'wink', t:'今日も上いこ( *\'ω\'*)ノ！' },
+  ] },
+  { id:'life-solo-atsu-046', kind:'solo', who:'atsu', keys:{ mood:'sleepy' }, line:'scene', lines:[
+    { who:'atsu', e:'troubled', t:'歩きながら寝そう…' },
+  ] },
+  { id:'life-solo-atsu-047', kind:'solo', who:'atsu', keys:{ mood:'sleepy' }, line:'feel', lines:[
+    { who:'atsu', e:'normal', t:'今日は早めに宿屋…じゃなくて家に帰ろ笑' },
+  ] },
+  { id:'life-solo-atsu-048', kind:'solo', who:'atsu', keys:{ mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'atsu', e:'normal', t:'みんなどこ行ったんだろ…' },
+  ] },
+  { id:'life-solo-atsu-049', kind:'solo', who:'atsu', keys:{ mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'atsu', e:'happy', t:'ま、だれか見つけたら声かけるか笑' },
+  ] },
+  { id:'life-solo-atsu-050', kind:'solo', who:'atsu', keys:{ mood:'restless' }, line:'scene', lines:[
+    { who:'atsu', e:'surprise', t:'イベントの告知、まだかな？' },
+  ] },
+  { id:'life-solo-atsu-051', kind:'solo', who:'atsu', keys:{ mood:'restless' }, line:'feel', lines:[
+    { who:'atsu', e:'excited', t:'そわそわするー笑' },
+  ] },
+  { id:'life-solo-atsu-052', kind:'solo', who:'atsu', keys:{ mood:'sulky' }, line:'scene', lines:[
+    { who:'atsu', e:'troubled', t:'今日はちょっとうまくいかないなー笑' },
+  ] },
+  { id:'life-solo-atsu-053', kind:'solo', who:'atsu', keys:{ mood:'sulky' }, line:'feel', lines:[
+    { who:'atsu', e:'normal', t:'ちなみに、悔しいのは本気だかららしい笑' },
+  ] },
+  { id:'life-solo-kyuko-001', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'happy', why:'mypace' }, line:'scene', lines:[
+    { who:'kyuko', e:'normal', t:'図書室、今日は俺ひとりだぁ。貸し切りっしょ笑' },
+  ] },
+  { id:'life-solo-kyuko-002', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'happy', why:'mypace' }, line:'scene', lines:[
+    { who:'kyuko', e:'happy', t:'いちばん奥の席、空いてた。ここが落ち着くんだよねぇ' },
+  ] },
+  { id:'life-solo-kyuko-003', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'happy', why:'mypace' }, line:'scene', lines:[
+    { who:'kyuko', e:'normal', t:'ニャーの育成記録、ノート3冊目に入ったぁ' },
+  ] },
+  { id:'life-solo-kyuko-004', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'happy', why:'mypace' }, line:'scene', lines:[
+    { who:'kyuko', e:'happy', t:'イヤホンで小さく音楽流しながら、編成メモ書いてる笑' },
+  ] },
+  { id:'life-solo-kyuko-005', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'happy', why:'mypace' }, line:'scene', lines:[
+    { who:'kyuko', e:'normal', t:'古い攻略本見つけた。今でも使えるとこあるなぁ' },
+  ] },
+  { id:'life-solo-kyuko-006', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'happy', why:'mypace' }, line:'scene', lines:[
+    { who:'kyuko', e:'wink', t:'ページの端に、だれかの落書き発見w' },
+  ] },
+  { id:'life-solo-kyuko-007', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'happy', why:'mypace' }, line:'scene', lines:[
+    { who:'kyuko', e:'normal', t:'イルミネとドリーミィの相性、表にしてみたぁ' },
+  ] },
+  { id:'life-solo-kyuko-008', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'happy', why:'mypace' }, line:'feel', lines:[
+    { who:'kyuko', e:'happy', t:'静かだと、編成の答えがすぐ見えるんだよねぇ' },
+  ] },
+  { id:'life-solo-kyuko-009', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'happy', why:'mypace' }, line:'feel', lines:[
+    { who:'kyuko', e:'normal', t:'ひとりの時間って、大事だよね笑' },
+  ] },
+  { id:'life-solo-kyuko-010', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'happy', why:'mypace' }, line:'feel', lines:[
+    { who:'kyuko', e:'happy', t:'この組み方、たぶん課金しなくても勝てるやつだぁ' },
+  ] },
+  { id:'life-solo-kyuko-011', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'happy', why:'mypace' }, line:'feel', lines:[
+    { who:'kyuko', e:'wink', t:'まあ、なんとかなるっしょ笑' },
+  ] },
+  { id:'life-solo-kyuko-012', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'happy', why:'mypace' }, line:'feel', lines:[
+    { who:'kyuko', e:'normal', t:'あとでだれかに見せよっと。まずは自分で試してからね' },
+  ] },
+  { id:'life-solo-kyuko-013', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'happy', why:'mypace' }, line:'feel', lines:[
+    { who:'kyuko', e:'happy', t:'今日はいい答えが出そうな気がするよぉ' },
+  ] },
+  { id:'life-solo-kyuko-014', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'eager', why:'mypace' }, line:'scene', lines:[
+    { who:'kyuko', e:'excited', t:'新しい組み方、3つ思いついた！' },
+  ] },
+  { id:'life-solo-kyuko-015', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'eager', why:'mypace' }, line:'scene', lines:[
+    { who:'kyuko', e:'normal', t:'素早さに振るか、かしこさに振るか…数字で比べてるとこ' },
+  ] },
+  { id:'life-solo-kyuko-016', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'eager', why:'mypace' }, line:'scene', lines:[
+    { who:'kyuko', e:'happy', t:'メモの字が、だんだん速くなってきたw' },
+  ] },
+  { id:'life-solo-kyuko-017', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'eager', why:'mypace' }, line:'scene', lines:[
+    { who:'kyuko', e:'normal', t:'ランキング上位の編成、全部書き出してみたぁ' },
+  ] },
+  { id:'life-solo-kyuko-018', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'eager', why:'mypace' }, line:'feel', lines:[
+    { who:'kyuko', e:'excited', t:'これ、いけるかも。早く試したいなぁ' },
+  ] },
+  { id:'life-solo-kyuko-019', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'eager', why:'mypace' }, line:'feel', lines:[
+    { who:'kyuko', e:'happy', t:'頭を使って勝つの、やっぱ楽しいよね笑' },
+  ] },
+  { id:'life-solo-kyuko-020', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'eager', why:'mypace' }, line:'feel', lines:[
+    { who:'kyuko', e:'wink', t:'今日は本気出しちゃおっかなぁw' },
+  ] },
+  { id:'life-solo-kyuko-021', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'eager', why:'mypace' }, line:'feel', lines:[
+    { who:'kyuko', e:'normal', t:'ちゃんと理由が分かると、迷わなくなるんだよね' },
+  ] },
+  { id:'life-solo-kyuko-022', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'sleepy' }, line:'scene', lines:[
+    { who:'kyuko', e:'troubled', t:'本、顔の上にのせたまま寝てたぁ' },
+  ] },
+  { id:'life-solo-kyuko-023', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'sleepy' }, line:'scene', lines:[
+    { who:'kyuko', e:'normal', t:'文字がにじんで見えるよぉ笑' },
+  ] },
+  { id:'life-solo-kyuko-024', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'sleepy' }, line:'feel', lines:[
+    { who:'kyuko', e:'happy', t:'夜ふかしの分、ここで取りかえそ…' },
+  ] },
+  { id:'life-solo-kyuko-025', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'kyuko', e:'normal', t:'作戦できたのに、見せる人がいないなぁ' },
+  ] },
+  { id:'life-solo-kyuko-026', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'kyuko', e:'troubled', t:'だれか来たら、いちばんに話したいのにぃ🥺' },
+  ] },
+  { id:'life-solo-kyuko-027', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'restless' }, line:'scene', lines:[
+    { who:'kyuko', e:'surprise', t:'新しいモンスターの数字、早く見たいなぁ' },
+  ] },
+  { id:'life-solo-kyuko-028', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'restless' }, line:'feel', lines:[
+    { who:'kyuko', e:'excited', t:'気になって、本の内容が入ってこないw' },
+  ] },
+  { id:'life-solo-kyuko-029', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'sulky' }, line:'scene', lines:[
+    { who:'kyuko', e:'troubled', t:'作戦、ぜんぶ外れたぁ…ぐぬぬぬ' },
+  ] },
+  { id:'life-solo-kyuko-030', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'sulky' }, line:'feel', lines:[
+    { who:'kyuko', e:'normal', t:'まあ、なんとかなるっしょ。次いこ次' },
+  ] },
+  { id:'life-solo-kyuko-031', kind:'solo', who:'kyuko', keys:{ place:'home', mood:'happy', why:'mypace' }, line:'scene', lines:[
+    { who:'kyuko', e:'happy', t:'好きな曲かけながら、ごろごろしてる笑' },
+  ] },
+  { id:'life-solo-kyuko-032', kind:'solo', who:'kyuko', keys:{ place:'home', mood:'happy', why:'mypace' }, line:'scene', lines:[
+    { who:'kyuko', e:'normal', t:'ドリーミィの写真、整理してたらこんな時間だぁ' },
+  ] },
+  { id:'life-solo-kyuko-033', kind:'solo', who:'kyuko', keys:{ place:'home', mood:'happy', why:'mypace' }, line:'feel', lines:[
+    { who:'kyuko', e:'happy', t:'家でのんびりするの、最高だよねぇ' },
+  ] },
+  { id:'life-solo-kyuko-034', kind:'solo', who:'kyuko', keys:{ place:'home', mood:'happy', why:'mypace' }, line:'feel', lines:[
+    { who:'kyuko', e:'wink', t:'このあとどうしよっかな。まあ、あとで考えよw' },
+  ] },
+  { id:'life-solo-kyuko-035', kind:'solo', who:'kyuko', keys:{ place:'home', mood:'happy', why:'mypace' }, line:'feel', lines:[
+    { who:'kyuko', e:'normal', t:'こういう日があるから、またがんばれるんだよね' },
+  ] },
+  { id:'life-solo-kyuko-036', kind:'solo', who:'kyuko', keys:{ place:'home', mood:'sleepy' }, line:'scene', lines:[
+    { who:'kyuko', e:'troubled', t:'昨日も夜中まで育成してたぁ😭' },
+  ] },
+  { id:'life-solo-kyuko-037', kind:'solo', who:'kyuko', keys:{ place:'home', mood:'sleepy' }, line:'scene', lines:[
+    { who:'kyuko', e:'normal', t:'ふとんから出たくないよぉ' },
+  ] },
+  { id:'life-solo-kyuko-038', kind:'solo', who:'kyuko', keys:{ place:'home', mood:'sleepy' }, line:'scene', lines:[
+    { who:'kyuko', e:'troubled', t:'目覚まし、3回止めたっぽい笑' },
+  ] },
+  { id:'life-solo-kyuko-039', kind:'solo', who:'kyuko', keys:{ place:'home', mood:'sleepy' }, line:'feel', lines:[
+    { who:'kyuko', e:'happy', t:'寝るのも作戦のうち…ってことで' },
+  ] },
+  { id:'life-solo-kyuko-040', kind:'solo', who:'kyuko', keys:{ place:'home', mood:'sleepy' }, line:'feel', lines:[
+    { who:'kyuko', e:'normal', t:'今日はゆるく動こ。そういう日もあるっしょ' },
+  ] },
+  { id:'life-solo-kyuko-041', kind:'solo', who:'kyuko', keys:{ place:'home', mood:'eager' }, line:'scene', lines:[
+    { who:'kyuko', e:'excited', t:'新しいデッキ、机の上に並べてみた！' },
+  ] },
+  { id:'life-solo-kyuko-042', kind:'solo', who:'kyuko', keys:{ place:'home', mood:'eager' }, line:'feel', lines:[
+    { who:'kyuko', e:'happy', t:'組み直したら、ぜんぜん違う顔になったね' },
+  ] },
+  { id:'life-solo-kyuko-043', kind:'solo', who:'kyuko', keys:{ place:'home', mood:'eager' }, line:'feel', lines:[
+    { who:'kyuko', e:'wink', t:'次の対戦、ちょっと楽しみだなぁ笑' },
+  ] },
+  { id:'life-solo-kyuko-044', kind:'solo', who:'kyuko', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'kyuko', e:'normal', t:'家、今日はやけに静かだなぁ' },
+  ] },
+  { id:'life-solo-kyuko-045', kind:'solo', who:'kyuko', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'kyuko', e:'troubled', t:'…たまには、だれかとしゃべりたいかも' },
+  ] },
+  { id:'life-solo-kyuko-046', kind:'solo', who:'kyuko', keys:{ place:'home', mood:'restless' }, line:'scene', lines:[
+    { who:'kyuko', e:'surprise', t:'新しい曲、出たって！？' },
+  ] },
+  { id:'life-solo-kyuko-047', kind:'solo', who:'kyuko', keys:{ place:'home', mood:'restless' }, line:'feel', lines:[
+    { who:'kyuko', e:'excited', t:'聞きたいけど、今は育成もしたい…どっちもやろ笑' },
+  ] },
+  { id:'life-solo-kyuko-048', kind:'solo', who:'kyuko', keys:{ place:'home', mood:'sulky' }, line:'scene', lines:[
+    { who:'kyuko', e:'troubled', t:'布団にくるまってる。今日はもう動かないよぉ' },
+  ] },
+  { id:'life-solo-kyuko-049', kind:'solo', who:'kyuko', keys:{ place:'home', mood:'sulky' }, line:'feel', lines:[
+    { who:'kyuko', e:'normal', t:'…ちょっとしたら、また考えよ' },
+  ] },
+  { id:'life-solo-kyuko-050', kind:'solo', who:'kyuko', keys:{ mood:'happy', why:'mypace' }, line:'scene', lines:[
+    { who:'kyuko', e:'happy', t:'育成場で、ニャーがいい動きしてくれたぁ' },
+  ] },
+  { id:'life-solo-kyuko-051', kind:'solo', who:'kyuko', keys:{ mood:'happy', why:'mypace' }, line:'scene', lines:[
+    { who:'kyuko', e:'normal', t:'散歩のとちゅうで、いい曲思いついた笑' },
+  ] },
+  { id:'life-solo-kyuko-052', kind:'solo', who:'kyuko', keys:{ mood:'happy', why:'mypace' }, line:'scene', lines:[
+    { who:'kyuko', e:'happy', t:'おやつ屋さんの新作、甘いのと辛いの両方いけた' },
+  ] },
+  { id:'life-solo-kyuko-053', kind:'solo', who:'kyuko', keys:{ mood:'happy', why:'mypace' }, line:'scene', lines:[
+    { who:'kyuko', e:'normal', t:'カード部屋で、昔の対戦を見返してたぁ' },
+  ] },
+  { id:'life-solo-kyuko-054', kind:'solo', who:'kyuko', keys:{ mood:'happy', why:'mypace' }, line:'feel', lines:[
+    { who:'kyuko', e:'happy', t:'今日はなんか、ぜんぶうまくいく気がするよぉ' },
+  ] },
+  { id:'life-solo-kyuko-055', kind:'solo', who:'kyuko', keys:{ mood:'happy', why:'mypace' }, line:'feel', lines:[
+    { who:'kyuko', e:'wink', t:'自分のペースが一番だよね笑' },
+  ] },
+  { id:'life-solo-kyuko-056', kind:'solo', who:'kyuko', keys:{ mood:'happy', why:'mypace' }, line:'feel', lines:[
+    { who:'kyuko', e:'normal', t:'お腹すいてればなんでもおいしい。今日もそれ' },
+  ] },
+  { id:'life-solo-kyuko-057', kind:'solo', who:'kyuko', keys:{ mood:'eager', why:'mypace' }, line:'scene', lines:[
+    { who:'kyuko', e:'excited', t:'育成場で試したら、思ったとおりの数字が出た！' },
+  ] },
+  { id:'life-solo-kyuko-058', kind:'solo', who:'kyuko', keys:{ mood:'eager', why:'mypace' }, line:'scene', lines:[
+    { who:'kyuko', e:'normal', t:'カード部屋で、新しい組み方をひとりで試し打ち中' },
+  ] },
+  { id:'life-solo-kyuko-059', kind:'solo', who:'kyuko', keys:{ mood:'eager', why:'mypace' }, line:'scene', lines:[
+    { who:'kyuko', e:'happy', t:'歩きながら、頭の中で編成を組んでるw' },
+  ] },
+  { id:'life-solo-kyuko-060', kind:'solo', who:'kyuko', keys:{ mood:'eager', why:'mypace' }, line:'feel', lines:[
+    { who:'kyuko', e:'excited', t:'ランキング、もうひとつ上いけそう！' },
+  ] },
+  { id:'life-solo-kyuko-061', kind:'solo', who:'kyuko', keys:{ mood:'eager', why:'mypace' }, line:'feel', lines:[
+    { who:'kyuko', e:'normal', t:'理屈どおりに勝てると、気持ちいいんだよねぇ' },
+  ] },
+  { id:'life-solo-kyuko-062', kind:'solo', who:'kyuko', keys:{ mood:'eager', why:'mypace' }, line:'feel', lines:[
+    { who:'kyuko', e:'happy', t:'課金しなくても、組み方しだいでいけるってとこ見せたいな' },
+  ] },
+  { id:'life-solo-kyuko-063', kind:'solo', who:'kyuko', keys:{ mood:'sleepy' }, line:'scene', lines:[
+    { who:'kyuko', e:'normal', t:'ベンチで、ちょっとだけ目をつぶってた笑' },
+  ] },
+  { id:'life-solo-kyuko-064', kind:'solo', who:'kyuko', keys:{ mood:'sleepy' }, line:'feel', lines:[
+    { who:'kyuko', e:'troubled', t:'帰って寝よぉ…' },
+  ] },
+  { id:'life-solo-kyuko-065', kind:'solo', who:'kyuko', keys:{ mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'kyuko', e:'normal', t:'みんな、どこにいるのかなぁ' },
+  ] },
+  { id:'life-solo-kyuko-066', kind:'solo', who:'kyuko', keys:{ mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'kyuko', e:'happy', t:'見つけたら、さっきの作戦話そっと' },
+  ] },
+  { id:'life-solo-kyuko-067', kind:'solo', who:'kyuko', keys:{ mood:'restless' }, line:'scene', lines:[
+    { who:'kyuko', e:'surprise', t:'え、新しいカード出てる！？' },
+  ] },
+  { id:'life-solo-kyuko-068', kind:'solo', who:'kyuko', keys:{ mood:'restless' }, line:'feel', lines:[
+    { who:'kyuko', e:'excited', t:'数字、早く見たい…！' },
+  ] },
+  { id:'life-solo-kyuko-069', kind:'solo', who:'kyuko', keys:{ mood:'sulky' }, line:'scene', lines:[
+    { who:'kyuko', e:'troubled', t:'ランキング、ひとつ落ちてたぁ…ぐぬぬぬ' },
+  ] },
+  { id:'life-solo-kyuko-070', kind:'solo', who:'kyuko', keys:{ mood:'sulky' }, line:'feel', lines:[
+    { who:'kyuko', e:'normal', t:'ま、組み直せばいいだけだし' },
+  ] },
+  { id:'life-solo-sorashido-001', kind:'solo', who:'sorashido', keys:{ place:'cardroom', mood:'eager' }, line:'scene', lines:[
+    { who:'sorashido', e:'excited', t:'新しい表、あと3列で完成だ笑' },
+  ] },
+  { id:'life-solo-sorashido-002', kind:'solo', who:'sorashido', keys:{ place:'cardroom', mood:'eager' }, line:'scene', lines:[
+    { who:'sorashido', e:'normal', t:'キュービの使われ方、きのうより増えてるな笑' },
+  ] },
+  { id:'life-solo-sorashido-003', kind:'solo', who:'sorashido', keys:{ place:'cardroom', mood:'eager' }, line:'feel', lines:[
+    { who:'sorashido', e:'happy', t:'終わったら、だれかに見せたいな。まずはきゅうこちゃんかな笑' },
+  ] },
+  { id:'life-solo-sorashido-004', kind:'solo', who:'sorashido', keys:{ place:'cardroom', mood:'eager' }, line:'feel', lines:[
+    { who:'sorashido', e:'excited', t:'今日こそ答えが出るぜ・・・！' },
+  ] },
+  { id:'life-solo-sorashido-005', kind:'solo', who:'sorashido', keys:{ place:'cardroom', mood:'happy' }, line:'scene', lines:[
+    { who:'sorashido', e:'happy', t:'オリヒメのカード、ずっとながめてても飽きないんだよな笑' },
+  ] },
+  { id:'life-solo-sorashido-006', kind:'solo', who:'sorashido', keys:{ place:'cardroom', mood:'happy' }, line:'scene', lines:[
+    { who:'sorashido', e:'normal', t:'山札を並べかえたら、なんかきれいになった' },
+  ] },
+  { id:'life-solo-sorashido-007', kind:'solo', who:'sorashido', keys:{ place:'cardroom', mood:'happy' }, line:'feel', lines:[
+    { who:'sorashido', e:'happy', t:'ここにいると時間が早いんだよなー笑' },
+  ] },
+  { id:'life-solo-sorashido-008', kind:'solo', who:'sorashido', keys:{ place:'cardroom', mood:'happy' }, line:'feel', lines:[
+    { who:'sorashido', e:'wink', t:'好きなことしてると、疲れないんだよね' },
+  ] },
+  { id:'life-solo-sorashido-009', kind:'solo', who:'sorashido', keys:{ place:'cardroom', mood:'sleepy' }, line:'scene', lines:[
+    { who:'sorashido', e:'troubled', t:'机につっぷして寝てた…表に顔のあとがついてる笑' },
+  ] },
+  { id:'life-solo-sorashido-010', kind:'solo', who:'sorashido', keys:{ place:'cardroom', mood:'sleepy' }, line:'scene', lines:[
+    { who:'sorashido', e:'normal', t:'数字が二重に見えてきた。そろそろ限界かも' },
+  ] },
+  { id:'life-solo-sorashido-011', kind:'solo', who:'sorashido', keys:{ place:'cardroom', mood:'sleepy' }, line:'feel', lines:[
+    { who:'sorashido', e:'happy', t:'ちょっと寝てから続きやろ。なんくるないさ〜' },
+  ] },
+  { id:'life-solo-sorashido-012', kind:'solo', who:'sorashido', keys:{ place:'cardroom', mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'sorashido', e:'normal', t:'表できたけど、見てくれる人いないな笑' },
+  ] },
+  { id:'life-solo-sorashido-013', kind:'solo', who:'sorashido', keys:{ place:'cardroom', mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'sorashido', e:'troubled', t:'……だれか通らないかな。説明したくてしかたない' },
+  ] },
+  { id:'life-solo-sorashido-014', kind:'solo', who:'sorashido', keys:{ place:'cardroom', mood:'restless' }, line:'scene', lines:[
+    { who:'sorashido', e:'surprise', t:'なに！？ 新カードの情報きてる！' },
+  ] },
+  { id:'life-solo-sorashido-015', kind:'solo', who:'sorashido', keys:{ place:'cardroom', mood:'restless' }, line:'feel', lines:[
+    { who:'sorashido', e:'excited', t:'うぉぉぉ、早く数字ほしい！' },
+  ] },
+  { id:'life-solo-sorashido-016', kind:'solo', who:'sorashido', keys:{ place:'cardroom', mood:'sulky' }, line:'scene', lines:[
+    { who:'sorashido', e:'crying', t:'計算まちがえてた…全部やり直しだ笑' },
+  ] },
+  { id:'life-solo-sorashido-017', kind:'solo', who:'sorashido', keys:{ place:'cardroom', mood:'sulky' }, line:'feel', lines:[
+    { who:'sorashido', e:'normal', t:'くっそー。でも、まちがいが分かったのは前進だな' },
+  ] },
+  { id:'life-solo-sorashido-018', kind:'solo', who:'sorashido', keys:{ place:'home', mood:'sleepy' }, line:'scene', lines:[
+    { who:'sorashido', e:'normal', t:'夜中まで計算してたから、さすがに眠い笑' },
+  ] },
+  { id:'life-solo-sorashido-019', kind:'solo', who:'sorashido', keys:{ place:'home', mood:'sleepy' }, line:'scene', lines:[
+    { who:'sorashido', e:'troubled', t:'パソコンつけたまま寝落ちしてた…' },
+  ] },
+  { id:'life-solo-sorashido-020', kind:'solo', who:'sorashido', keys:{ place:'home', mood:'sleepy' }, line:'scene', lines:[
+    { who:'sorashido', e:'normal', t:'あくびが止まらない笑 いちばん寝てないの、たぶん俺' },
+  ] },
+  { id:'life-solo-sorashido-021', kind:'solo', who:'sorashido', keys:{ place:'home', mood:'sleepy' }, line:'feel', lines:[
+    { who:'sorashido', e:'happy', t:'今日はちゃんと寝よう。……あと1列だけやったら' },
+  ] },
+  { id:'life-solo-sorashido-022', kind:'solo', who:'sorashido', keys:{ place:'home', mood:'sleepy' }, line:'feel', lines:[
+    { who:'sorashido', e:'normal', t:'寝るのも検証のうちってことで' },
+  ] },
+  { id:'life-solo-sorashido-023', kind:'solo', who:'sorashido', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'sorashido', e:'happy', t:'ソーキそば作った！ 今日のはでーじうまい笑' },
+  ] },
+  { id:'life-solo-sorashido-024', kind:'solo', who:'sorashido', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'sorashido', e:'normal', t:'AIに表を読ませたら、ちゃんとほめてくれた笑' },
+  ] },
+  { id:'life-solo-sorashido-025', kind:'solo', who:'sorashido', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'sorashido', e:'wink', t:'オリヒメのポスター、まっすぐ貼りなおした' },
+  ] },
+  { id:'life-solo-sorashido-026', kind:'solo', who:'sorashido', keys:{ place:'home', mood:'happy' }, line:'feel', lines:[
+    { who:'sorashido', e:'happy', t:'いい一日だった。あしたも計算しよ笑' },
+  ] },
+  { id:'life-solo-sorashido-027', kind:'solo', who:'sorashido', keys:{ place:'home', mood:'happy' }, line:'feel', lines:[
+    { who:'sorashido', e:'normal', t:'好きなものに囲まれてると、元気出るんだよな' },
+  ] },
+  { id:'life-solo-sorashido-028', kind:'solo', who:'sorashido', keys:{ place:'home', mood:'eager' }, line:'scene', lines:[
+    { who:'sorashido', e:'excited', t:'対戦の記録、全部まとめなおしてる笑' },
+  ] },
+  { id:'life-solo-sorashido-029', kind:'solo', who:'sorashido', keys:{ place:'home', mood:'eager' }, line:'feel', lines:[
+    { who:'sorashido', e:'happy', t:'今日はいける気しかしないぜ・・・！' },
+  ] },
+  { id:'life-solo-sorashido-030', kind:'solo', who:'sorashido', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'sorashido', e:'normal', t:'ひとりでごはん。……表を見ながら食べるか笑' },
+  ] },
+  { id:'life-solo-sorashido-031', kind:'solo', who:'sorashido', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'sorashido', e:'troubled', t:'たまには、だれかとしゃべりながら食べたいな' },
+  ] },
+  { id:'life-solo-sorashido-032', kind:'solo', who:'sorashido', keys:{ place:'home', mood:'restless' }, line:'scene', lines:[
+    { who:'sorashido', e:'surprise', t:'ランキングの更新、あと10分！' },
+  ] },
+  { id:'life-solo-sorashido-033', kind:'solo', who:'sorashido', keys:{ place:'home', mood:'restless' }, line:'feel', lines:[
+    { who:'sorashido', e:'excited', t:'待ちきれなくて、部屋うろうろしてる笑' },
+  ] },
+  { id:'life-solo-sorashido-034', kind:'solo', who:'sorashido', keys:{ mood:'happy' }, line:'scene', lines:[
+    { who:'sorashido', e:'happy', t:'散歩してたら、いい形の雲見つけた。ニャーに似てる笑' },
+  ] },
+  { id:'life-solo-sorashido-035', kind:'solo', who:'sorashido', keys:{ mood:'happy' }, line:'scene', lines:[
+    { who:'sorashido', e:'normal', t:'おやつ屋さんで、新作を全部数えてきた笑' },
+  ] },
+  { id:'life-solo-sorashido-036', kind:'solo', who:'sorashido', keys:{ mood:'happy' }, line:'scene', lines:[
+    { who:'sorashido', e:'happy', t:'育成場の数字、今日はいい感じに伸びてる' },
+  ] },
+  { id:'life-solo-sorashido-037', kind:'solo', who:'sorashido', keys:{ mood:'happy' }, line:'feel', lines:[
+    { who:'sorashido', e:'happy', t:'なんか今日は、全部うまくいく気がするな笑' },
+  ] },
+  { id:'life-solo-sorashido-038', kind:'solo', who:'sorashido', keys:{ mood:'eager' }, line:'scene', lines:[
+    { who:'sorashido', e:'excited', t:'歩きながら、さっきの対戦を頭の中で検証してる' },
+  ] },
+  { id:'life-solo-sorashido-039', kind:'solo', who:'sorashido', keys:{ mood:'eager' }, line:'scene', lines:[
+    { who:'sorashido', e:'normal', t:'次の大会まで、あと何回練習できるか数えてる笑' },
+  ] },
+  { id:'life-solo-sorashido-040', kind:'solo', who:'sorashido', keys:{ mood:'eager' }, line:'feel', lines:[
+    { who:'sorashido', e:'happy', t:'ちばりよー、俺！' },
+  ] },
+  { id:'life-solo-sorashido-041', kind:'solo', who:'sorashido', keys:{ mood:'sleepy' }, line:'scene', lines:[
+    { who:'sorashido', e:'normal', t:'歩きながらうとうとしてた…危ない笑' },
+  ] },
+  { id:'life-solo-sorashido-042', kind:'solo', who:'sorashido', keys:{ mood:'sleepy' }, line:'feel', lines:[
+    { who:'sorashido', e:'troubled', t:'今日は早めに帰ろう。たぶん無理だけど笑' },
+  ] },
+  { id:'life-solo-sorashido-043', kind:'solo', who:'sorashido', keys:{ mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'sorashido', e:'normal', t:'広場、だれもいないな笑' },
+  ] },
+  { id:'life-solo-sorashido-044', kind:'solo', who:'sorashido', keys:{ mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'sorashido', e:'happy', t:'なんくるないさ〜。そのうちだれか来るっしょ' },
+  ] },
+  { id:'life-solo-sorashido-045', kind:'solo', who:'sorashido', keys:{ mood:'restless' }, line:'scene', lines:[
+    { who:'sorashido', e:'surprise', t:'なに！？ キュービの新しい絵が出たって！？' },
+  ] },
+  { id:'life-solo-sorashido-046', kind:'solo', who:'sorashido', keys:{ mood:'restless' }, line:'feel', lines:[
+    { who:'sorashido', e:'excited', t:'見に行くしかないだろ笑' },
+  ] },
+  { id:'life-solo-sorashido-047', kind:'solo', who:'sorashido', keys:{ mood:'sulky' }, line:'scene', lines:[
+    { who:'sorashido', e:'crying', t:'2点差で負けたの、まだ引きずってる笑' },
+  ] },
+  { id:'life-solo-sorashido-048', kind:'solo', who:'sorashido', keys:{ mood:'sulky' }, line:'feel', lines:[
+    { who:'sorashido', e:'normal', t:'…組み直せばいいだけだ。次は勝つ' },
+  ] },
+  { id:'life-solo-erubin-001', kind:'solo', who:'erubin', keys:{ place:'home', mood:'sulky' }, line:'scene', lines:[
+    { who:'erubin', e:'troubled', t:'対戦の負け、部屋でひとりで反省会かな笑' },
+  ] },
+  { id:'life-solo-erubin-002', kind:'solo', who:'erubin', keys:{ place:'home', mood:'sulky' }, line:'feel', lines:[
+    { who:'erubin', e:'normal', t:'少し時間がたてば、また楽しめるよね' },
+  ] },
+  { id:'life-solo-erubin-003', kind:'solo', who:'erubin', keys:{ place:'cardroom', mood:'happy' }, line:'scene', lines:[
+    { who:'erubin', e:'happy', t:'デュラハンの新しい組み方、思いついたよ' },
+  ] },
+  { id:'life-solo-erubin-004', kind:'solo', who:'erubin', keys:{ place:'cardroom', mood:'happy' }, line:'scene', lines:[
+    { who:'erubin', e:'normal', t:'アークのカードを、つい手に取っちゃうんだよね笑' },
+  ] },
+  { id:'life-solo-erubin-005', kind:'solo', who:'erubin', keys:{ place:'cardroom', mood:'happy' }, line:'feel', lines:[
+    { who:'erubin', e:'happy', t:'カード部屋は、いつ来ても落ち着くね☺️' },
+  ] },
+  { id:'life-solo-erubin-006', kind:'solo', who:'erubin', keys:{ place:'cardroom', mood:'eager' }, line:'scene', lines:[
+    { who:'erubin', e:'excited', t:'守りを固めて、じっくり勝つ形。試してみようかな' },
+  ] },
+  { id:'life-solo-erubin-007', kind:'solo', who:'erubin', keys:{ place:'cardroom', mood:'eager' }, line:'scene', lines:[
+    { who:'erubin', e:'normal', t:'いろんな組み方を並べて、くらべてるところ' },
+  ] },
+  { id:'life-solo-erubin-008', kind:'solo', who:'erubin', keys:{ place:'cardroom', mood:'eager' }, line:'feel', lines:[
+    { who:'erubin', e:'happy', t:'新しい形がうまくいくと、うれしいんだよね' },
+  ] },
+  { id:'life-solo-erubin-009', kind:'solo', who:'erubin', keys:{ place:'cardroom', mood:'sleepy' }, line:'scene', lines:[
+    { who:'erubin', e:'normal', t:'カードを並べたまま、うとうとしてたかな笑' },
+  ] },
+  { id:'life-solo-erubin-010', kind:'solo', who:'erubin', keys:{ place:'cardroom', mood:'sleepy' }, line:'feel', lines:[
+    { who:'erubin', e:'happy', t:'少し休んでから、続きにしようか' },
+  ] },
+  { id:'life-solo-erubin-011', kind:'solo', who:'erubin', keys:{ place:'cardroom', mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'erubin', e:'normal', t:'今日は、対戦の相手がいないみたいだね' },
+  ] },
+  { id:'life-solo-erubin-012', kind:'solo', who:'erubin', keys:{ place:'cardroom', mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'erubin', e:'troubled', t:'みんな忙しいのかな。また声をかけてみよう' },
+  ] },
+  { id:'life-solo-erubin-013', kind:'solo', who:'erubin', keys:{ place:'cardroom', mood:'restless' }, line:'scene', lines:[
+    { who:'erubin', e:'surprise', t:'新しいカードが出たって聞いたよ' },
+  ] },
+  { id:'life-solo-erubin-014', kind:'solo', who:'erubin', keys:{ place:'cardroom', mood:'restless' }, line:'feel', lines:[
+    { who:'erubin', e:'happy', t:'どんな組み方ができるか、ちょっとわくわくするね' },
+  ] },
+  { id:'life-solo-erubin-015', kind:'solo', who:'erubin', keys:{ place:'cardroom', mood:'sulky' }, line:'scene', lines:[
+    { who:'erubin', e:'troubled', t:'3回つづけて負けちゃった…そっかぁ笑' },
+  ] },
+  { id:'life-solo-erubin-016', kind:'solo', who:'erubin', keys:{ place:'cardroom', mood:'sulky' }, line:'feel', lines:[
+    { who:'erubin', e:'normal', t:'負けたぶん、学べることもあるよね' },
+  ] },
+  { id:'life-solo-erubin-017', kind:'solo', who:'erubin', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'erubin', e:'happy', t:'部屋の窓から、中庭がよく見えるんだよね' },
+  ] },
+  { id:'life-solo-erubin-018', kind:'solo', who:'erubin', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
+    { who:'erubin', e:'normal', t:'みゅあちゃんが選んでくれた服、ちゃんとたたんでおいたよ' },
+  ] },
+  { id:'life-solo-erubin-019', kind:'solo', who:'erubin', keys:{ place:'home', mood:'happy' }, line:'feel', lines:[
+    { who:'erubin', e:'happy', t:'こっちの暮らしにも、だいぶ慣れてきたかな☺️' },
+  ] },
+  { id:'life-solo-erubin-020', kind:'solo', who:'erubin', keys:{ place:'home', mood:'happy' }, line:'feel', lines:[
+    { who:'erubin', e:'normal', t:'静かな時間も、いいものだね' },
+  ] },
+  { id:'life-solo-erubin-021', kind:'solo', who:'erubin', keys:{ place:'home', mood:'sleepy' }, line:'scene', lines:[
+    { who:'erubin', e:'normal', t:'本を読みながら、まぶたが重くなってきたよ' },
+  ] },
+  { id:'life-solo-erubin-022', kind:'solo', who:'erubin', keys:{ place:'home', mood:'sleepy' }, line:'scene', lines:[
+    { who:'erubin', e:'troubled', t:'つい長くカードを考えちゃって、寝不足かな💦' },
+  ] },
+  { id:'life-solo-erubin-023', kind:'solo', who:'erubin', keys:{ place:'home', mood:'sleepy' }, line:'feel', lines:[
+    { who:'erubin', e:'happy', t:'今日は早めに休もうかな' },
+  ] },
+  { id:'life-solo-erubin-024', kind:'solo', who:'erubin', keys:{ place:'home', mood:'sleepy' }, line:'feel', lines:[
+    { who:'erubin', e:'normal', t:'ちゃんと寝るのも大事だしね' },
+  ] },
+  { id:'life-solo-erubin-025', kind:'solo', who:'erubin', keys:{ place:'home', mood:'eager' }, line:'scene', lines:[
+    { who:'erubin', e:'excited', t:'明日の対戦にそなえて、デッキを見直してるよ' },
+  ] },
+  { id:'life-solo-erubin-026', kind:'solo', who:'erubin', keys:{ place:'home', mood:'eager' }, line:'feel', lines:[
+    { who:'erubin', e:'happy', t:'今日はなんだか、いける気がするね' },
+  ] },
+  { id:'life-solo-erubin-027', kind:'solo', who:'erubin', keys:{ place:'home', mood:'eager' }, line:'feel', lines:[
+    { who:'erubin', e:'normal', t:'よし、もうひとがんばりしようか' },
+  ] },
+  { id:'life-solo-erubin-028', kind:'solo', who:'erubin', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'erubin', e:'normal', t:'部屋が、いつもより静かに感じるね' },
+  ] },
+  { id:'life-solo-erubin-029', kind:'solo', who:'erubin', keys:{ place:'home', mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'erubin', e:'troubled', t:'だれか、元気にしてるかな。顔を見に行こうかな' },
+  ] },
+  { id:'life-solo-erubin-030', kind:'solo', who:'erubin', keys:{ place:'home', mood:'restless' }, line:'scene', lines:[
+    { who:'erubin', e:'surprise', t:'知らない場所の話を聞いて、気になってるんだ' },
+  ] },
+  { id:'life-solo-erubin-031', kind:'solo', who:'erubin', keys:{ place:'home', mood:'restless' }, line:'feel', lines:[
+    { who:'erubin', e:'happy', t:'今度だれかに、案内してもらおうかな🤔' },
+  ] },
+  { id:'life-solo-erubin-032', kind:'solo', who:'erubin', keys:{ mood:'happy' }, line:'scene', lines:[
+    { who:'erubin', e:'happy', t:'中庭の花が、きれいに咲いてたよ' },
+  ] },
+  { id:'life-solo-erubin-033', kind:'solo', who:'erubin', keys:{ mood:'happy' }, line:'scene', lines:[
+    { who:'erubin', e:'normal', t:'ベンチに座って、みんなの様子を見てたんだ' },
+  ] },
+  { id:'life-solo-erubin-034', kind:'solo', who:'erubin', keys:{ mood:'happy' }, line:'scene', lines:[
+    { who:'erubin', e:'happy', t:'散歩のとちゅうで、知らない道を見つけたよ' },
+  ] },
+  { id:'life-solo-erubin-035', kind:'solo', who:'erubin', keys:{ mood:'happy' }, line:'feel', lines:[
+    { who:'erubin', e:'happy', t:'この世界のこと、少しずつ好きになってるかな☺️' },
+  ] },
+  { id:'life-solo-erubin-036', kind:'solo', who:'erubin', keys:{ mood:'happy' }, line:'feel', lines:[
+    { who:'erubin', e:'normal', t:'みんなが元気だと、それだけでうれしいね' },
+  ] },
+  { id:'life-solo-erubin-037', kind:'solo', who:'erubin', keys:{ mood:'eager' }, line:'scene', lines:[
+    { who:'erubin', e:'excited', t:'育成場で、アークがいい動きをしてくれたよ' },
+  ] },
+  { id:'life-solo-erubin-038', kind:'solo', who:'erubin', keys:{ mood:'eager' }, line:'scene', lines:[
+    { who:'erubin', e:'normal', t:'今日は散歩のあと、カード研究もしようかな' },
+  ] },
+  { id:'life-solo-erubin-039', kind:'solo', who:'erubin', keys:{ mood:'eager' }, line:'feel', lines:[
+    { who:'erubin', e:'happy', t:'おけ！ 今日はいろいろやってみよう' },
+  ] },
+  { id:'life-solo-erubin-040', kind:'solo', who:'erubin', keys:{ mood:'eager' }, line:'feel', lines:[
+    { who:'erubin', e:'normal', t:'できることが増えると、楽しいよね' },
+  ] },
+  { id:'life-solo-erubin-041', kind:'solo', who:'erubin', keys:{ mood:'sleepy' }, line:'scene', lines:[
+    { who:'erubin', e:'normal', t:'ひなたで、ついうとうとしちゃった笑' },
+  ] },
+  { id:'life-solo-erubin-042', kind:'solo', who:'erubin', keys:{ mood:'sleepy' }, line:'scene', lines:[
+    { who:'erubin', e:'troubled', t:'歩きながらあくびが出ちゃったよ' },
+  ] },
+  { id:'life-solo-erubin-043', kind:'solo', who:'erubin', keys:{ mood:'sleepy' }, line:'feel', lines:[
+    { who:'erubin', e:'happy', t:'少し休んだら、また歩こうか' },
+  ] },
+  { id:'life-solo-erubin-044', kind:'solo', who:'erubin', keys:{ mood:'lonely', why:'lonely' }, line:'scene', lines:[
+    { who:'erubin', e:'normal', t:'みんな、どこにいるのかな' },
+  ] },
+  { id:'life-solo-erubin-045', kind:'solo', who:'erubin', keys:{ mood:'lonely', why:'lonely' }, line:'feel', lines:[
+    { who:'erubin', e:'happy', t:'さみしそうにしてる人がいたら、声をかけよう' },
+  ] },
+  { id:'life-solo-erubin-046', kind:'solo', who:'erubin', keys:{ mood:'restless' }, line:'scene', lines:[
+    { who:'erubin', e:'surprise', t:'あそこ、人が集まってるね。何かあったのかな' },
+  ] },
+  { id:'life-solo-erubin-047', kind:'solo', who:'erubin', keys:{ mood:'restless' }, line:'feel', lines:[
+    { who:'erubin', e:'happy', t:'ちょっとのぞいてみようか' },
+  ] },
+  { id:'life-solo-erubin-048', kind:'solo', who:'erubin', keys:{ mood:'sulky' }, line:'scene', lines:[
+    { who:'erubin', e:'troubled', t:'「石油王」って呼ばれるの、まだ慣れないなぁ笑' },
+  ] },
+  { id:'life-solo-erubin-049', kind:'solo', who:'erubin', keys:{ mood:'sulky' }, line:'feel', lines:[
+    { who:'erubin', e:'normal', t:'まあ、みんな楽しそうだからいいかな' },
+  ] },
+]);
+// ===== ASSISTANT_LIFE_TALKS ここまで =====
