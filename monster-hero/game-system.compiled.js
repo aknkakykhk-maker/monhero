@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c15f3151382f31cc
+// source-sha256: 8c13901b9da19de0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -19682,6 +19682,7 @@ const AssistantBubble = ({
     }, "💬 ", who.name, "のひとこと ▾"));
   }
   return React.createElement(React.Fragment, null, React.createElement("div", {
+    "data-assistant-bubble": true,
     className: `w-full flex items-end gap-2 ${collapseKey ? 'relative' : ''}`
   }, React.createElement("button", {
     type: "button",
@@ -98332,14 +98333,17 @@ const QUICK_GUIDE_IDS = Object.freeze(['g1a', 'g1b', 'g2', 'g3a', 'g3b', 'g3c', 
 const QUICK_GUIDE_PAGES = Object.freeze({
   g1a: [{
     id: 'g1.1',
-    spot: '[data-battle-system-card="systemQuick"]'
+    spot: '[data-battle-system-card="systemQuick"]',
+    must: '[data-battle-system="systemQuick"]'
   }],
   g1b: [{
     id: 'g1.2',
-    spot: '[data-difficulty-carousel]'
+    spot: '[data-difficulty-carousel]',
+    must: '[data-difficulty-card]'
   }, {
     id: 'g1.3',
-    spot: '[data-quick-reward-policy]'
+    spot: '[data-quick-reward-policy]',
+    must: '[data-quick-reward-policy] button'
   }, {
     id: 'g1.4'
   }, {
@@ -98350,39 +98354,49 @@ const QUICK_GUIDE_PAGES = Object.freeze({
     id: 'g2.1'
   }, {
     id: 'g2.2',
-    spot: '[data-auto-settings-section="policy"]'
+    spot: '[data-auto-settings-section="policy"]',
+    must: '[data-auto-settings-section="policy"] h3'
   }, {
     id: 'g2.3',
-    spot: '[data-auto-settings-section="ally"]'
+    spot: '[data-auto-settings-section="ally"]',
+    must: '[data-auto-settings-section="ally"] h3'
   }, {
     id: 'g2.4',
-    spot: '[data-auto-settings-section="quickRun"]'
+    spot: '[data-auto-quick-run-autostart]',
+    must: '[data-auto-quick-run-autostart]'
   }, {
     id: 'g2.5',
-    spot: '[data-auto-settings-section="breakthrough"]'
+    spot: '[data-auto-settings-section="breakthrough"]',
+    must: '[data-auto-settings-section="breakthrough"] h3'
   }],
   g3a: [{
     id: 'g3.1'
   }, {
     id: 'g3.2',
-    spot: 'button[aria-label="周回を続けたままモンヒロビートへ"]'
+    spot: 'button[aria-label="周回を続けたままモンヒロビートへ"]',
+    must: 'button[aria-label="周回を続けたままモンヒロビートへ"]'
   }, {
     id: 'g3.3'
   }],
   g3b: [{
     id: 'g3.4',
-    spot: '[data-quick-run-band]'
+    spot: '[data-quick-run-band]',
+    must: '[data-quick-run-band]'
   }, {
     id: 'g3.5',
-    spot: '[data-quick-run-band]'
+    spot: '[data-quick-run-progress-detail]',
+    must: '[data-quick-run-progress-detail] button',
+    openDetail: true
   }],
   g3c: [{
     id: 'g3.6',
-    spot: '[data-rhythm-mode-select] [data-rhythm-back]'
+    spot: '[data-rhythm-mode-select] [data-rhythm-back]',
+    must: '[data-rhythm-mode-select] [data-rhythm-back]'
   }],
   auto: [{
     id: 'auto.first',
-    spot: '[data-battle-auto-button]'
+    spot: '[data-battle-auto-button]',
+    must: '[data-battle-auto-button]'
   }],
   nudgeHome: [{
     id: 'nudge.home'
@@ -98493,13 +98507,15 @@ const quickGuideScrollTo = (el, top) => {
     b = box.getBoundingClientRect();
   if (top) box.scrollTop += r.top - b.top - 8;else if (r.top < b.top) box.scrollTop += r.top - b.top - 8;else if (r.bottom > b.bottom) box.scrollTop += r.bottom - b.bottom + 8;
 };
+const quickGuideNoBreak = t => String(t).replace(/(\p{Extended_Pictographic}\uFE0F?) /gu, '$1\u00a0');
 const QuickGuideOverlay = ({
   guideId,
   pages,
   assistant,
   callName,
   onDone,
-  onGoAutoSettings
+  onGoAutoSettings,
+  onPage = null
 }) => {
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState(null);
@@ -98509,6 +98525,9 @@ const QuickGuideOverlay = ({
     setStep(0);
   }, [guideId]);
   const page = pages[Math.min(step, pages.length - 1)] || null;
+  useEffect(() => {
+    if (onPage && page) onPage(page);
+  }, [guideId, step]);
   useEffect(() => {
     try {
       const h = panelRef.current && panelRef.current.getBoundingClientRect().height;
@@ -98524,6 +98543,8 @@ const QuickGuideOverlay = ({
     const vh0 = window.innerHeight || 0;
     try {
       if (first && first.el) quickGuideScrollTo(first.el, first.height > vh0 - panelH - 40);
+      const must = page.must ? quickGuideSpotRect(page.must) : null;
+      if (must && must.el && (must.top < 0 || must.bottom > vh0 - panelH - 24)) quickGuideScrollTo(must.el, true);
     } catch (_) {}
     const measure = () => {
       const r = quickGuideSpotRect(page.spot);
@@ -98546,10 +98567,10 @@ const QuickGuideOverlay = ({
   if (!page) return null;
   const line = quickGuideLine(assistant && assistant.id, page.id);
   if (!line) return null;
-  const text = String(line.t).split('{name}').join(callName || 'ブリーダー');
+  const text = quickGuideNoBreak(String(line.t).split('{name}').join(callName || 'ブリーダー'));
   const last = step >= pages.length - 1;
   const vh = typeof window !== 'undefined' ? window.innerHeight || 0 : 0;
-  const pad = 6,
+  const pad = rect && Math.min(rect.width, rect.height) < 56 ? 3 : 6,
     gap = 12;
   const roomTop = rect ? rect.top - pad - gap : 0,
     roomBottom = rect ? vh - rect.bottom - pad - gap : 0;
@@ -98580,7 +98601,7 @@ const QuickGuideOverlay = ({
     style: {
       pointerEvents: 'auto'
     }
-  }, ring && ring.height > 0 ? React.createElement("div", {
+  }, React.createElement("style", null, '[data-assistant-bubble]{visibility:hidden !important}'), ring && ring.height > 0 ? React.createElement("div", {
     "data-quick-guide-spot": true,
     "aria-hidden": "true",
     className: "pointer-events-none fixed rounded-xl border-2 border-amber-300",
@@ -121274,7 +121295,7 @@ const CardAutoIntro = () => {
   }), React.createElement("p", {
     className: "min-w-0 flex-1 text-[11px] font-bold leading-snug text-slate-100",
     style: JA_WRAP_STYLE
-  }, line.t), React.createElement("button", {
+  }, typeof quickGuideNoBreak === 'function' ? quickGuideNoBreak(line.t) : line.t), React.createElement("button", {
     type: "button",
     "data-card-auto-intro-ok": true,
     onClick: () => {
@@ -142887,6 +142908,7 @@ function MonsterHeroGame() {
   const [quickGuideSeen, setQuickGuideSeen] = useState(null);
   const [quickNudge, setQuickNudge] = useState(null);
   const [quickGuideReplay, setQuickGuideReplay] = useState(null);
+  const quickGuideOpenedDetailRef = useRef(false);
   const QUICK_RHYTHM_INTRO_KEY = 'mh_quick_rhythm_intro_seen_v1';
   const QUICK_RHYTHM_BACKGROUND_KEY = 'mh_quick_rhythm_bg_seen_v1';
   const [quickRhythmIntroSeen, setQuickRhythmIntroSeen] = useState(true);
@@ -160861,8 +160883,20 @@ function MonsterHeroGame() {
         pages: pages,
         assistant: activeAssistant,
         callName: assistantCallName(breederName, lv, assistantCallStyles[activeAssistant.id] || null, activeAssistant.id),
-        onDone: done => finishQuickGuide(quickGuideActive, done),
-        onGoAutoSettings: replay ? null : openAutoSettings
+        onDone: done => {
+          if (quickGuideOpenedDetailRef.current) {
+            quickGuideOpenedDetailRef.current = false;
+            setQuickRunDetailOpen(false);
+          }
+          finishQuickGuide(quickGuideActive, done);
+        },
+        onGoAutoSettings: replay ? null : openAutoSettings,
+        onPage: replay ? null : p => {
+          if (p && p.openDetail && !quickRunDetailOpen) {
+            quickGuideOpenedDetailRef.current = true;
+            setQuickRunDetailOpen(true);
+          }
+        }
       });
     })(), gameState === 'RHYTHM_INFO' && React.createElement(RhythmInfoScreen, {
       returnToHome: returnToHome
