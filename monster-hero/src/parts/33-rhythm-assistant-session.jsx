@@ -65,13 +65,15 @@ const rhythmAssistSessionNormalize = (raw) => {
     if (l && typeof l === 'object' && !Array.isArray(l)) {
       Object.keys(l).slice(0, 200).forEach((sid) => { const key = rhythmBuddyStr(sid, 60); const n = rhythmBuddyInt(l[sid], 100000); if (key && n > 0) likes[key] = n; });
     }
-    mons[id] = { ...mon, likes };
+    // セッション券を渡した節目(Lv.35/65/100。二重に渡さないための印・2026-11-07)
+    const rewarded = (Array.isArray(src[id].rewarded) ? src[id].rewarded : []).map((n) => rhythmBuddyInt(n, 100)).filter((n, i, arr) => n > 0 && arr.indexOf(n) === i);
+    mons[id] = { ...mon, likes, rewarded };
   });
   return { mons };
 };
 const rhythmAssistSessionMon = (state, assistantId) => {
   const st = rhythmAssistSessionNormalize(state);
-  return st.mons[assistantId] || { ...rhythmBuddyNormalizeMon(null), likes: {} };
+  return st.mons[assistantId] || { ...rhythmBuddyNormalizeMon(null), likes: {}, rewarded: [] };
 };
 const rhythmAssistSessionLevel = (state, assistantId) => rhythmBuddyLevelInfo(rhythmAssistSessionMon(state, assistantId).exp).level;
 // 好み度(-2〜+3)
@@ -98,22 +100,26 @@ const rhythmAssistSessionPlay = ({ state, assistantId, songId, diffId, totalNote
 // 1ライブぶん育てる(同じ回は2度数えない)。{ next, gain, levelUp, likeUp, like, familiarUp }。数えなかったら next は null
 const rhythmAssistSessionApplyLive = (state, assistantId, { round, songId, diffId, durationMs, teamRank, dayKey, nowMs, score, maxScore, chartLevel = 0, humans = 1 }) => {
   const st = rhythmAssistSessionNormalize(state);
-  if (!RHYTHM_ASSIST_SESSION_IDS.includes(assistantId)) return { next: null, gain: 0, levelUp: 0, likeUp: 0, like: 0, familiarUp: false };
+  if (!RHYTHM_ASSIST_SESSION_IDS.includes(assistantId)) return { next: null, gain: 0, levelUp: 0, likeUp: 0, like: 0, familiarUp: false, tickets: 0 };
   const before = rhythmAssistSessionMon(st, assistantId);
   const likeBefore = rhythmAssistSessionLike(before, assistantId, songId);
   // 育ち方はマスモンと同じ(調子なし)。性格は付けない
   const r = rhythmBuddyApplyLive(before, { round, songId, diffId, durationMs, teamRank, dayKey, lean: '', nowMs, score, maxScore, chartLevel, humans, moodId: '' });
-  if (!r.gain) return { next: null, gain: 0, levelUp: 0, likeUp: 0, like: likeBefore, familiarUp: false };
+  if (!r.gain) return { next: null, gain: 0, levelUp: 0, likeUp: 0, like: likeBefore, familiarUp: false, tickets: 0 };
   const gain = Math.max(1, Math.round(r.gain * rhythmAssistSessionExpScale(likeBefore)));
   const sid = rhythmBuddyStr(songId, 60);
   const likes = { ...before.likes };
   if (sid) likes[sid] = (likes[sid] || 0) + 1;
-  const after = { ...r.mon, exp: before.exp + gain, trait: '', born: '', traitAt: 0, traitLock: false, likes };
+  const after = { ...r.mon, exp: before.exp + gain, trait: '', born: '', traitAt: 0, traitLock: false, likes, rewarded: before.rewarded.slice() };
   const likeAfter = rhythmAssistSessionLike(after, assistantId, songId);
-  const levelUp = rhythmBuddyLevelInfo(after.exp).level - rhythmBuddyLevelInfo(before.exp).level;
+  const levelAfter = rhythmBuddyLevelInfo(after.exp).level;
+  const levelUp = levelAfter - rhythmBuddyLevelInfo(before.exp).level;
+  // 節目のセッション券(まだ渡していない節目だけ。渡した印は同じ書き込みで残す)
+  let tickets = 0;
+  RHYTHM_ASSIST_SESSION_TICKET_REWARDS.forEach(([lv, n]) => { if (levelAfter >= lv && !after.rewarded.includes(lv)) { after.rewarded.push(lv); tickets += n; } });
   return {
     next: { ...st, mons: { ...st.mons, [assistantId]: after } },
-    gain, levelUp, likeUp: likeAfter - likeBefore, like: likeAfter, familiarUp: r.familiarUp,
+    gain, levelUp, likeUp: likeAfter - likeBefore, like: likeAfter, familiarUp: r.familiarUp, tickets,
   };
 };
 
@@ -127,4 +133,25 @@ const rhythmAssistSessionChooseSong = (state, assistantId, catalog, rand = Math.
   const ok = list.filter((id) => rhythmAssistSessionLike(mon, assistantId, id) >= 0);
   const pool = ok.length ? ok : list;
   return { songId: pool[Math.floor(rand() * pool.length)], why: '' };
+};
+
+// ---- セッションLv で開くもの(PLAN.md 2章。スコア・判定には効かない) ----
+// 演奏中のひとことは Lv.1 から。サビで顔が光るのは Lv.15 から。ビートP の上乗せは Lv.20/40/60/80 で +2/4/6/8%
+// 好きな曲(好み度)が見えるのは Lv.10 から
+const RHYTHM_ASSIST_SESSION_TASTE_LEVEL = 10;
+const RHYTHM_ASSIST_SESSION_GLOW_LEVEL = 15;
+// セッション券: Lv.35 で1枚・Lv.65 で2枚・Lv.100 で3枚(それぞれ1回だけ)
+const RHYTHM_ASSIST_SESSION_TICKET_REWARDS = Object.freeze([[35, 1], [65, 2], [100, 3]]);
+const RHYTHM_ASSIST_SESSION_P_BONUS = Object.freeze([[80, 0.08], [60, 0.06], [40, 0.04], [20, 0.02]]);
+const rhythmAssistSessionPBonusOf = (level) => { const hit = RHYTHM_ASSIST_SESSION_P_BONUS.find(([lv]) => level >= lv); return hit ? hit[1] : 0; };
+// 呼んだ助手みんなのビートP の上乗せ(周回の報酬・ビートP の人数ボーナスと同じ所にだけ足す。スコアには入れない)
+const rhythmAssistSessionRewardBonus = (state, assistantIds) => (Array.isArray(assistantIds) ? assistantIds : [])
+  .filter((id, i, arr) => RHYTHM_ASSIST_SESSION_IDS.includes(id) && arr.indexOf(id) === i)
+  .reduce((sum, id) => sum + rhythmAssistSessionPBonusOf(rhythmAssistSessionLevel(state, id)), 0);
+// 曲の中の時刻がサビ(RHYTHM_SONG_CLIMAX の強さ 0.9 以上の区間)に入っているか
+const rhythmAssistSessionInClimax = (songId, timeMs) => {
+  const table = typeof RHYTHM_SONG_CLIMAX !== 'undefined' ? RHYTHM_SONG_CLIMAX : null;
+  const spans = table && Array.isArray(table[songId]) ? table[songId] : [];
+  const t = Number(timeMs);
+  return Number.isFinite(t) && spans.some((x) => Array.isArray(x) && Number(x[2]) >= 0.9 && t >= Number(x[0]) && t < Number(x[1]));
 };

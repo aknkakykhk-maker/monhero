@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 56838412ea613a2e
+// source-sha256: fdd733b6f1e4a49c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -205,7 +205,7 @@ const normalizeBattleFxSettings = value => {
 const BATTLE_FX_SETTING_ITEMS = Object.freeze([{
   key: 'load',
   title: '画面の軽さ',
-  desc: 'バトル画面の飾りと演出の量です。スマホが熱くなる・動きがかくつくときは、軽いほうを選んでください。ダメージや進行は変わりません。',
+  desc: 'バトル画面の飾りと演出の量です。スマホが熱くなる・動きがかくつくときは、軽いほうを選んでください。仲良し度などが上がったときの演出も、軽いほど控えめになります。ダメージや進行は変わりません。',
   options: [{
     id: 'RICH',
     label: '豪華',
@@ -38675,6 +38675,11 @@ const rhythmHudInitial = () => ({
   life: RHYTHM_LIFE_MAX
 });
 const rhythmNoteIsSky = note => rhythmNoteSkyHeight(note) > 0 || rhythmSlideHasSky(note);
+const RHYTHM_PLAY_WATCH = {
+  hud: null,
+  songId: '',
+  timeMs: 0
+};
 const rhythmCreateHud = () => {
   let state = rhythmHudInitial();
   const subs = new Set();
@@ -39649,6 +39654,19 @@ const RhythmTapTest = ({
     comboRingRef = useRef(null);
   const hudRef = useRef(null);
   if (!hudRef.current) hudRef.current = rhythmCreateHud();
+  useEffect(() => {
+    const hud = hudRef.current;
+    RHYTHM_PLAY_WATCH.hud = hud;
+    RHYTHM_PLAY_WATCH.songId = song && song.songId || '';
+    RHYTHM_PLAY_WATCH.timeMs = 0;
+    return () => {
+      if (RHYTHM_PLAY_WATCH.hud === hud) {
+        RHYTHM_PLAY_WATCH.hud = null;
+        RHYTHM_PLAY_WATCH.songId = '';
+        RHYTHM_PLAY_WATCH.timeMs = 0;
+      }
+    };
+  }, []);
   const [haloKeys, setHaloKeys] = useState(null);
   useEffect(() => {
     let cancelled = false,
@@ -41749,6 +41767,7 @@ const RhythmTapTest = ({
         setLuckyRush(false);
       }
       const timeEl = songTimeRef.current;
+      RHYTHM_PLAY_WATCH.timeMs = songTimeMs;
       if (timeEl) {
         const shownMs = Math.max(0, Math.min(playEndTimeMs, songTimeMs)),
           second = Math.floor(shownMs / 1000);
@@ -50117,9 +50136,11 @@ const rhythmAssistSessionNormalize = raw => {
         if (key && n > 0) likes[key] = n;
       });
     }
+    const rewarded = (Array.isArray(src[id].rewarded) ? src[id].rewarded : []).map(n => rhythmBuddyInt(n, 100)).filter((n, i, arr) => n > 0 && arr.indexOf(n) === i);
     mons[id] = {
       ...mon,
-      likes
+      likes,
+      rewarded
     };
   });
   return {
@@ -50130,7 +50151,8 @@ const rhythmAssistSessionMon = (state, assistantId) => {
   const st = rhythmAssistSessionNormalize(state);
   return st.mons[assistantId] || {
     ...rhythmBuddyNormalizeMon(null),
-    likes: {}
+    likes: {},
+    rewarded: []
   };
 };
 const rhythmAssistSessionLevel = (state, assistantId) => rhythmBuddyLevelInfo(rhythmAssistSessionMon(state, assistantId).exp).level;
@@ -50193,7 +50215,8 @@ const rhythmAssistSessionApplyLive = (state, assistantId, {
     levelUp: 0,
     likeUp: 0,
     like: 0,
-    familiarUp: false
+    familiarUp: false,
+    tickets: 0
   };
   const before = rhythmAssistSessionMon(st, assistantId);
   const likeBefore = rhythmAssistSessionLike(before, assistantId, songId);
@@ -50218,7 +50241,8 @@ const rhythmAssistSessionApplyLive = (state, assistantId, {
     levelUp: 0,
     likeUp: 0,
     like: likeBefore,
-    familiarUp: false
+    familiarUp: false,
+    tickets: 0
   };
   const gain = Math.max(1, Math.round(r.gain * rhythmAssistSessionExpScale(likeBefore)));
   const sid = rhythmBuddyStr(songId, 60);
@@ -50233,10 +50257,19 @@ const rhythmAssistSessionApplyLive = (state, assistantId, {
     born: '',
     traitAt: 0,
     traitLock: false,
-    likes
+    likes,
+    rewarded: before.rewarded.slice()
   };
   const likeAfter = rhythmAssistSessionLike(after, assistantId, songId);
-  const levelUp = rhythmBuddyLevelInfo(after.exp).level - rhythmBuddyLevelInfo(before.exp).level;
+  const levelAfter = rhythmBuddyLevelInfo(after.exp).level;
+  const levelUp = levelAfter - rhythmBuddyLevelInfo(before.exp).level;
+  let tickets = 0;
+  RHYTHM_ASSIST_SESSION_TICKET_REWARDS.forEach(([lv, n]) => {
+    if (levelAfter >= lv && !after.rewarded.includes(lv)) {
+      after.rewarded.push(lv);
+      tickets += n;
+    }
+  });
   return {
     next: {
       ...st,
@@ -50249,7 +50282,8 @@ const rhythmAssistSessionApplyLive = (state, assistantId, {
     levelUp,
     likeUp: likeAfter - likeBefore,
     like: likeAfter,
-    familiarUp: r.familiarUp
+    familiarUp: r.familiarUp,
+    tickets
   };
 };
 const rhythmAssistSessionChooseSong = (state, assistantId, catalog, rand = Math.random) => {
@@ -50270,6 +50304,21 @@ const rhythmAssistSessionChooseSong = (state, assistantId, catalog, rand = Math.
     songId: pool[Math.floor(rand() * pool.length)],
     why: ''
   };
+};
+const RHYTHM_ASSIST_SESSION_TASTE_LEVEL = 10;
+const RHYTHM_ASSIST_SESSION_GLOW_LEVEL = 15;
+const RHYTHM_ASSIST_SESSION_TICKET_REWARDS = Object.freeze([[35, 1], [65, 2], [100, 3]]);
+const RHYTHM_ASSIST_SESSION_P_BONUS = Object.freeze([[80, 0.08], [60, 0.06], [40, 0.04], [20, 0.02]]);
+const rhythmAssistSessionPBonusOf = level => {
+  const hit = RHYTHM_ASSIST_SESSION_P_BONUS.find(([lv]) => level >= lv);
+  return hit ? hit[1] : 0;
+};
+const rhythmAssistSessionRewardBonus = (state, assistantIds) => (Array.isArray(assistantIds) ? assistantIds : []).filter((id, i, arr) => RHYTHM_ASSIST_SESSION_IDS.includes(id) && arr.indexOf(id) === i).reduce((sum, id) => sum + rhythmAssistSessionPBonusOf(rhythmAssistSessionLevel(state, id)), 0);
+const rhythmAssistSessionInClimax = (songId, timeMs) => {
+  const table = typeof RHYTHM_SONG_CLIMAX !== 'undefined' ? RHYTHM_SONG_CLIMAX : null;
+  const spans = table && Array.isArray(table[songId]) ? table[songId] : [];
+  const t = Number(timeMs);
+  return Number.isFinite(t) && spans.some(x => Array.isArray(x) && Number(x[2]) >= 0.9 && t >= Number(x[0]) && t < Number(x[1]));
 };
 const RHYTHM_BUDDY_TALK_MAX = 40;
 const RHYTHM_BUDDY_TALK_KINDS = Object.freeze(['join', 'pick', 'song', 'mvp', 'high', 'mid', 'low', 'bump', 'replyHello', 'replyThanks', 'replyNice', 'replyAgain', 'replyCall', 'replyDrop', 'replyWait', 'idle']);
@@ -60118,6 +60167,917 @@ function PlayerRankUpFx({
     "aria-hidden": "true"
   }));
 }
+const GROWTH_FX_KINDS = Object.freeze({
+  bond: {
+    color: '#f472b6',
+    deep: '#9d174d',
+    icon: '💗',
+    particle: '♥',
+    label: '仲良し度'
+  },
+  friend: {
+    color: '#fb923c',
+    deep: '#9a3412',
+    icon: '🤝',
+    particle: '✦',
+    label: '友情Lv'
+  },
+  star: {
+    color: '#facc15',
+    deep: '#a16207',
+    icon: '★',
+    particle: '★',
+    label: '絆Lv'
+  },
+  session: {
+    color: '#c084fc',
+    deep: '#6b21a8',
+    icon: '🎤',
+    particle: '♪',
+    label: 'セッションLv'
+  },
+  beat: {
+    color: '#a3e635',
+    deep: '#3f6212',
+    icon: '🎵',
+    particle: '♪',
+    label: 'ビートLv'
+  },
+  breeder: {
+    color: '#60a5fa',
+    deep: '#1e40af',
+    icon: '🛡️',
+    particle: '◆',
+    label: 'ブリーダーLv'
+  }
+});
+const growthFxKind = kind => GROWTH_FX_KINDS[kind] || GROWTH_FX_KINDS.bond;
+const GROWTH_FX_CALM_SCREENS = Object.freeze(new Set(['HOME', 'PROFILE', 'ITEM_INVENTORY', 'GIFT_BOX', 'MISSIONS', 'BREEDER_MARKET', 'MB_MANAGEMENT', 'MASU_MONS', 'OWNED_MONSTERS', 'MONSTER_DEX', 'MONSTER_DEX_DETAIL', 'MONSTER_LIST_MENU', 'FRIENDS', 'ASSISTANT_SELECT', 'MASU_ENHANCE', 'MASU_AUTO_ENHANCE', 'MASU_FUSION', 'MASU_DONATION', 'MASU_OFFERING', 'MASU_REBIRTH', 'MASU_REGENERATION', 'MASU_REGENERATION_DETAIL', 'MASU_REINCARNATE', 'MASU_SOUL_RANK', 'MASU_SOUL_TRAITS', 'MASU_TRANSCENDENCE', 'MASU_TRANSCEND_ENHANCE']));
+const GROWTH_FX_HOLD_ALL_SELECTOR = '[data-event-story],[data-story-stage],[data-story-sheet],[data-player-rank-up-fx]';
+const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat]';
+const GROWTH_FX_SMALL_MS = 1900;
+const GROWTH_FX_ITEM_MS = 3400;
+const GROWTH_FX_SMALL_MAX = 3;
+const GROWTH_FX_QUEUE_MAX = 24;
+const GROWTH_FX_STORE = {
+  small: [],
+  sheets: [],
+  seq: 0,
+  listeners: new Set()
+};
+const growthFxEmit = () => {
+  GROWTH_FX_STORE.listeners.forEach(fn => {
+    try {
+      fn();
+    } catch {}
+  });
+};
+const growthFxSubscribe = fn => {
+  GROWTH_FX_STORE.listeners.add(fn);
+  return () => GROWTH_FX_STORE.listeners.delete(fn);
+};
+const growthFxPct = v => {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0;
+};
+const growthFxNum = v => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+const growthFxPush = ev => {
+  if (!ev || typeof ev !== 'object') return;
+  const tier = ev.tier === 'item' || ev.tier === 'level' ? ev.tier : 'small';
+  if (tier === 'small') {
+    const gain = growthFxNum(ev.gain);
+    if (gain <= 0) return;
+    const key = String(ev.key || `${ev.kind}:${ev.who || ''}`);
+    const list = GROWTH_FX_STORE.small;
+    const same = list.find(c => c.key === key);
+    if (same) {
+      same.gain += gain;
+      same.pctTo = growthFxPct(ev.pctTo);
+      same.rev += 1;
+    } else {
+      list.push({
+        id: ++GROWTH_FX_STORE.seq,
+        rev: 0,
+        key,
+        kind: ev.kind,
+        name: String(ev.name || ''),
+        gain,
+        pctFrom: growthFxPct(ev.pctFrom),
+        pctTo: growthFxPct(ev.pctTo)
+      });
+      if (list.length > GROWTH_FX_QUEUE_MAX) list.splice(0, list.length - GROWTH_FX_QUEUE_MAX);
+    }
+  } else {
+    const sheets = GROWTH_FX_STORE.sheets;
+    const mergeKey = tier === 'level' ? String(ev.key || `${ev.kind}:${ev.who || ''}`) : null;
+    const prev = mergeKey ? sheets.find((s, i) => i > 0 && s.tier === 'level' && s.key === mergeKey) : null;
+    if (prev) Object.assign(prev, {
+      ...ev,
+      tier,
+      key: mergeKey,
+      levelFrom: prev.levelFrom,
+      gains: [...(prev.gains || []), ...(ev.gains || [])]
+    });else {
+      sheets.push({
+        ...ev,
+        tier,
+        key: mergeKey,
+        id: ++GROWTH_FX_STORE.seq
+      });
+      if (sheets.length > GROWTH_FX_QUEUE_MAX) sheets.splice(0, sheets.length - GROWTH_FX_QUEUE_MAX);
+    }
+  }
+  growthFxEmit();
+};
+const growthFxDropSmall = id => {
+  GROWTH_FX_STORE.small = GROWTH_FX_STORE.small.filter(c => c.id !== id);
+  growthFxEmit();
+};
+const growthFxDropSheet = id => {
+  GROWTH_FX_STORE.sheets = GROWTH_FX_STORE.sheets.filter(s => s.id !== id);
+  growthFxEmit();
+};
+const growthFxAssistantFace = (assistantId, expression = 'happy') => {
+  const list = typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST) ? ASSISTANT_LIST : [];
+  const who = list.find(a => a && a.id === assistantId);
+  if (!who || !who.imageDir || !who.imagePrefix) return null;
+  return `${who.imageDir}/${who.imagePrefix}_${expression}.PNG`;
+};
+const growthFxAssistantName = assistantId => {
+  const list = typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST) ? ASSISTANT_LIST : [];
+  const who = list.find(a => a && a.id === assistantId);
+  return who && who.name || '';
+};
+const growthFxAssistantBondPct = points => {
+  const p = growthFxNum(points);
+  const stage = typeof assistantBondStage === 'function' ? assistantBondStage(p) : null;
+  const next = typeof assistantBondNext === 'function' ? assistantBondNext(p) : null;
+  if (!stage) return 0;
+  if (!next) return 100;
+  const span = Math.max(1, next.need - growthFxNum(stage.need));
+  return growthFxPct((p - growthFxNum(stage.need)) / span * 100);
+};
+const growthFxAssistantBond = (assistantId, beforePoints, afterPoints) => {
+  const before = growthFxNum(beforePoints),
+    after = growthFxNum(afterPoints);
+  if (!(after > before)) return;
+  const name = growthFxAssistantName(assistantId);
+  const lvOf = p => typeof assistantBondLevel === 'function' ? assistantBondLevel(p) : 1;
+  const levelFrom = lvOf(before),
+    levelTo = lvOf(after);
+  growthFxPush({
+    tier: 'small',
+    kind: 'bond',
+    who: assistantId,
+    name,
+    gain: after - before,
+    pctFrom: levelTo > levelFrom ? 0 : growthFxAssistantBondPct(before),
+    pctTo: growthFxAssistantBondPct(after)
+  });
+  if (levelTo <= levelFrom) return;
+  const gains = [];
+  const rows = typeof assistantBondRewardRows === 'function' ? assistantBondRewardRows(assistantId) : [];
+  for (let lv = levelFrom + 1; lv <= levelTo; lv++) {
+    const row = rows.find(r => r && r.level === lv);
+    if (!row) continue;
+    if (row.rewards && row.rewards.length) gains.push({
+      icon: '🎁',
+      text: 'ごほうび',
+      note: `${row.rewards.join('・')}(ギフトボックスへ)`
+    });
+    (row.frames || []).forEach(frame => gains.push({
+      icon: '🖼️',
+      text: frame && frame.name || `${name}の飾り枠`,
+      note: 'プロフィールで使える',
+      isNew: true
+    }));
+    if (row.callStyle) gains.push({
+      icon: '💬',
+      text: '呼ばれ方を自由に決められる',
+      note: 'プロフィールの助手の欄から',
+      isNew: true
+    });
+  }
+  const stage = typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(levelTo, assistantId) : null;
+  growthFxPush({
+    tier: 'level',
+    kind: 'bond',
+    who: assistantId,
+    levelFrom,
+    levelTo,
+    title: '仲良し度 UP!',
+    sub: `${name} との仲良し度が Lv.${levelTo} になった${stage && stage.title ? `(${stage.title})` : ''}`,
+    face: growthFxAssistantFace(assistantId, 'excited'),
+    gains
+  });
+};
+const growthFxMasuBondItem = ({
+  masuName,
+  image,
+  itemName,
+  itemEmoji,
+  count,
+  gain,
+  before,
+  after
+}) => {
+  if (!before || !after || !(growthFxNum(gain) > 0)) return;
+  const pct = info => growthFxPct(growthFxNum(info.xpIntoLevel) / Math.max(1, growthFxNum(info.xpForNext)) * 100);
+  growthFxPush({
+    tier: 'item',
+    kind: 'star',
+    title: `${masuName} に ${itemName}！`,
+    item: `${itemEmoji || ''} ${itemName} ×${count}`,
+    faces: image ? [image] : [],
+    faceRound: true,
+    rows: [{
+      kind: 'star',
+      label: '絆Lv',
+      levelFrom: before.level,
+      levelTo: after.level,
+      pctFrom: pct(before),
+      pctTo: pct(after),
+      gain,
+      unit: '絆経験値'
+    }]
+  });
+};
+const growthFxBreederLevel = (levelFrom, levelTo, breederName = '') => {
+  const a = growthFxNum(levelFrom),
+    b = growthFxNum(levelTo);
+  if (!(b > a)) return;
+  growthFxPush({
+    tier: 'level',
+    kind: 'breeder',
+    who: 'self',
+    levelFrom: a,
+    levelTo: b,
+    title: 'ブリーダーLv UP!',
+    sub: `${breederName ? `${breederName} の` : ''}ブリーダーLvが Lv.${b} になった`,
+    gains: []
+  });
+};
+const growthFxPeerPct = points => {
+  const list = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' && Array.isArray(ASSISTANT_PEER_BOND_LEVELS) ? ASSISTANT_PEER_BOND_LEVELS : [];
+  const p = growthFxNum(points);
+  let cur = list[0],
+    next = null;
+  for (let i = 0; i < list.length; i++) {
+    if (p >= growthFxNum(list[i].min)) {
+      cur = list[i];
+      next = list[i + 1] || null;
+    }
+  }
+  if (!cur) return 0;
+  if (!next) return 100;
+  return growthFxPct((p - growthFxNum(cur.min)) / Math.max(1, growthFxNum(next.min) - growthFxNum(cur.min)) * 100);
+};
+const growthFxPeerLevelName = (level, lifeName = true) => {
+  const list = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' && Array.isArray(ASSISTANT_PEER_BOND_LEVELS) ? ASSISTANT_PEER_BOND_LEVELS : [];
+  const row = list.find(r => r && r.level === level);
+  return row ? lifeName && row.lifeName || row.name || '' : '';
+};
+const growthFxPeerLevel = ({
+  pair,
+  levelBefore,
+  levelAfter
+} = {}) => {
+  if (!Array.isArray(pair) || pair.length !== 2 || !(growthFxNum(levelAfter) > growthFxNum(levelBefore))) return;
+  const [a, b] = pair;
+  const stage = growthFxPeerLevelName(levelAfter);
+  growthFxPush({
+    tier: 'level',
+    kind: 'friend',
+    who: [a, b].sort().join('-'),
+    levelFrom: levelBefore,
+    levelTo: levelAfter,
+    title: '友情Lv UP!',
+    sub: `${growthFxAssistantName(a)} と ${growthFxAssistantName(b)} の友情Lvが Lv.${levelAfter} になった${stage ? `(${stage})` : ''}`,
+    face: growthFxAssistantFace(a, 'excited'),
+    gains: []
+  });
+};
+const growthFxPeerItem = ({
+  pair,
+  itemId,
+  pointsBefore,
+  pointsAfter,
+  levelBefore,
+  levelAfter,
+  reaction = null,
+  playerGain = 0
+} = {}) => {
+  if (!Array.isArray(pair) || pair.length !== 2) return;
+  const gain = growthFxNum(pointsAfter) - growthFxNum(pointsBefore);
+  if (!(gain > 0) && !(growthFxNum(playerGain) > 0)) return;
+  const items = typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : [];
+  const item = items.find(i => i && i.id === itemId) || {};
+  const [a, b] = pair;
+  const rows = [];
+  if (gain > 0) rows.push({
+    kind: 'friend',
+    label: '2人の友情Lv',
+    levelFrom: levelBefore,
+    levelTo: levelAfter,
+    pctFrom: growthFxPeerPct(pointsBefore),
+    pctTo: growthFxPeerPct(pointsAfter),
+    gain
+  });
+  if (growthFxNum(playerGain) > 0) rows.push({
+    kind: 'bond',
+    label: 'あなたとの仲良し度(2人とも)',
+    pctFrom: 0,
+    pctTo: 100,
+    gain: growthFxNum(playerGain)
+  });
+  const face = id => growthFxAssistantFace(id, reaction === 'dislike' ? 'troubled' : reaction === 'like' ? 'excited' : 'happy');
+  growthFxPush({
+    tier: 'item',
+    kind: 'friend',
+    title: `${growthFxAssistantName(a)} と ${growthFxAssistantName(b)} に ${item.name || ''}！`,
+    item: `${item.emoji || ''} ${item.name || ''} ×1`,
+    faces: [face(a), face(b)].filter(Boolean),
+    reaction,
+    rows
+  });
+};
+const growthFxSessionLevel = (list = []) => {
+  const ups = (Array.isArray(list) ? list : []).filter(u => u && growthFxNum(u.levelAfter) > growthFxNum(u.levelBefore));
+  if (!ups.length) return;
+  const top = ups[0];
+  const gains = ups.map(u => ({
+    icon: '🎤',
+    text: `${growthFxAssistantName(u.assistantId)} セッションLv.${u.levelAfter}`,
+    note: growthFxNum(u.tickets) > 0 ? `セッション券 ×${growthFxNum(u.tickets)}` : ''
+  }));
+  growthFxPush({
+    tier: 'level',
+    kind: 'session',
+    who: ups.map(u => u.assistantId).join('+'),
+    levelFrom: top.levelBefore,
+    levelTo: top.levelAfter,
+    title: 'セッションLv UP!',
+    sub: ups.length > 1 ? 'いっしょに演奏した助手のセッションLvが上がった' : `${growthFxAssistantName(top.assistantId)} とのセッションLvが Lv.${top.levelAfter} になった`,
+    face: growthFxAssistantFace(top.assistantId, 'excited'),
+    gains: ups.length > 1 || gains[0].note ? gains : []
+  });
+};
+const GROWTH_FX_CSS = `
+.mh-gfx-chips{position:fixed;top:calc(env(safe-area-inset-top,0px) + 52px);right:10px;z-index:44000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
+.mh-gfx-chip{position:relative;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;border-radius:999px;background:linear-gradient(90deg,#1e1b2ef0,#0f172af0);
+  border:1.5px solid var(--gc);box-shadow:0 0 14px color-mix(in srgb,var(--gc) 40%,transparent);font-weight:900;font-size:11px;color:#fff;
+  animation:mhGfxChipIn .35s cubic-bezier(.2,1.6,.4,1) both}
+.mh-gfx-chip.out{animation:mhGfxChipOut .3s ease-in forwards}
+.mh-gfx-chip .ico{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--gc) 30%,transparent);font-size:13px;color:var(--gc)}
+.mh-gfx-chip .ico.beat{animation:mhGfxBeat .5s ease-out}
+.mh-gfx-chip .who{font-size:9px;color:#cbd5e1;line-height:1.1;max-width:9.5em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mh-gfx-chip .bar{width:56px;height:5px;border-radius:9px;background:#334155;overflow:hidden;margin-top:2px}
+.mh-gfx-chip .bar i{display:block;height:100%;background:var(--gc);transition:width .7s ease-out}
+.mh-gfx-chip .num{color:var(--gc);font-size:14px;font-variant-numeric:tabular-nums}
+.mh-gfx-chip .num.pop{animation:mhGfxPop .4s cubic-bezier(.2,1.8,.4,1)}
+.mh-gfx-chip .pt{position:absolute;left:12px;top:4px;font-size:12px;color:var(--gc);text-shadow:0 0 6px var(--gc);animation:mhGfxFloat 1.1s ease-out both}
+@keyframes mhGfxChipIn{from{transform:translateX(26px) scale(.6);opacity:0}to{transform:none;opacity:1}}
+@keyframes mhGfxChipOut{to{transform:translateY(-12px);opacity:0}}
+@keyframes mhGfxBeat{40%{transform:scale(1.45)}}
+@keyframes mhGfxPop{from{transform:scale(.3);opacity:0}to{transform:none;opacity:1}}
+@keyframes mhGfxFloat{0%{transform:translate(0,0) scale(.4);opacity:0}20%{opacity:1}100%{transform:translate(var(--dx),-46px) scale(.7);opacity:0}}
+.mh-gfx-sheet{position:fixed;inset:0;z-index:44500;display:flex;align-items:center;justify-content:center;padding:16px;cursor:pointer}
+.mh-gfx-sheet.item{background:#0b102666}
+.mh-gfx-card{position:relative;width:min(340px,100%);border-radius:22px;padding:14px 16px 14px;text-align:center;color:#fff;
+  background:linear-gradient(180deg,#1f1633f5,#0f172af5);border:2px solid var(--gc);box-shadow:0 0 36px color-mix(in srgb,var(--gc) 40%,transparent),0 12px 40px #0009;
+  animation:mhGfxCardIn .45s cubic-bezier(.2,1.5,.4,1) both}
+.mh-gfx-card .faces{display:flex;justify-content:center;gap:4px;height:64px}
+.mh-gfx-card .faces img{height:116px;margin-top:-60px;object-fit:contain;filter:drop-shadow(0 6px 10px #0008);animation:mhGfxHop .5s .4s ease-out both}
+.mh-gfx-card .faces img.round{height:92px;width:92px;margin-top:-46px;border-radius:20px;border:2px solid var(--gc);background:#0f172a;object-fit:cover}
+.mh-gfx-card .ttl{font-weight:900;font-size:14px;margin-top:4px;line-height:1.35}
+.mh-gfx-card .itm{display:inline-flex;gap:6px;font-size:11px;font-weight:900;color:#e2e8f0;background:#ffffff14;border-radius:999px;padding:3px 10px;margin-top:6px;animation:mhGfxPop .45s .1s ease-out both}
+.mh-gfx-card .tag{display:inline-block;font-size:10px;font-weight:900;padding:1px 8px;border-radius:999px;margin-left:4px;background:#ffffff22}
+.mh-gfx-card .tag.like{background:#f472b6;color:#3b0a24}.mh-gfx-card .tag.dislike{background:#64748b}
+.mh-gfx-row{display:flex;align-items:center;gap:8px;margin-top:10px;text-align:left}
+.mh-gfx-row .ico{font-size:18px;width:26px;text-align:center;color:var(--rc)}
+.mh-gfx-row .lab{font-size:11px;font-weight:900;color:#cbd5e1}
+.mh-gfx-row .lab em{font-style:normal;color:var(--rc)}
+.mh-gfx-row .lab .up{margin-left:4px;font-size:10px;background:var(--rc);color:#111;border-radius:6px;padding:0 5px;animation:mhGfxPop .35s cubic-bezier(.2,1.8,.4,1) both}
+.mh-gfx-gauge{height:10px;border-radius:9px;background:#334155;position:relative;overflow:hidden;border:1px solid #fff2;margin-top:3px}
+.mh-gfx-gauge i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,color-mix(in srgb,var(--rc) 65%,#000),var(--rc))}
+.mh-gfx-row .val{font-weight:900;font-size:18px;color:var(--rc);min-width:64px;text-align:right;font-variant-numeric:tabular-nums;line-height:1.1}
+.mh-gfx-row .val small{display:block;font-size:9px;color:#94a3b8}
+.mh-gfx-hint{font-size:10px;color:#94a3b8;margin-top:10px}
+.mh-gfx-burst{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none}
+.mh-gfx-burst span{position:absolute;color:var(--gc);text-shadow:0 0 10px var(--gc);animation:mhGfxBurst 1.2s var(--d) cubic-bezier(.1,.8,.3,1) both}
+@keyframes mhGfxBurst{0%{transform:translate(-50%,-50%) scale(.2);opacity:0}15%{opacity:1}100%{transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) rotate(var(--r));opacity:0}}
+@keyframes mhGfxCardIn{from{transform:translateY(30px) scale(.7);opacity:0}to{transform:none;opacity:1}}
+@keyframes mhGfxHop{0%{transform:translateY(14px);opacity:0}60%{transform:translateY(-8px);opacity:1}100%{transform:none}}
+.mh-gfx-sheet.level{background:radial-gradient(circle at 50% 38%,color-mix(in srgb,var(--gc) 36%,transparent) 0%,#0b1026f0 62%);animation:mhGfxFade .3s both;overflow:hidden}
+.mh-gfx-rays{position:absolute;left:50%;top:38%;width:170vmax;height:170vmax;transform:translate(-50%,-50%);pointer-events:none;
+  background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--gc) 14%,transparent) 0 8deg,transparent 8deg 22deg);animation:mhGfxSpin 12s linear infinite;
+  -webkit-mask:radial-gradient(circle,#000 0 20%,transparent 60%);mask:radial-gradient(circle,#000 0 20%,transparent 60%)}
+.mh-gfx-lv{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;margin-top:-16vh}
+.mh-gfx-lv .left{display:flex;flex-direction:column;align-items:center}
+.mh-gfx-emblem{position:relative;width:140px;height:140px;display:grid;place-items:center;animation:mhGfxEm .7s .1s cubic-bezier(.2,1.6,.4,1) both}
+.mh-gfx-emblem svg{position:absolute;inset:0;width:140px;height:140px;filter:drop-shadow(0 0 20px var(--gc))}
+.mh-gfx-emblem .n{position:relative;font-weight:900;font-size:40px;line-height:1;padding-top:6px;text-shadow:0 2px 0 var(--gd),0 0 12px #fff;text-align:center;color:#fff}
+.mh-gfx-emblem .n small{display:block;font-size:13px;margin-bottom:-2px}
+.mh-gfx-ring{position:absolute;left:50%;top:50%;width:140px;height:140px;border-radius:50%;border:4px solid #fff;transform:translate(-50%,-50%);animation:mhGfxRing .9s .5s ease-out both;pointer-events:none}
+.mh-gfx-lv .ttl{font-weight:900;font-size:26px;letter-spacing:.06em;margin-top:6px;color:#fff;text-shadow:0 0 14px var(--gc),0 3px 0 #0006;animation:mhGfxPop .45s .6s cubic-bezier(.2,1.8,.4,1) both}
+.mh-gfx-lv .sub{font-size:12px;font-weight:900;color:#e2e8f0;text-align:center;max-width:300px;animation:mhGfxFade .4s .75s both}
+.mh-gfx-gains{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;width:min(300px,82vw)}
+.mh-gfx-gains li{display:flex;align-items:center;gap:8px;background:#0f172ae0;border:1px solid color-mix(in srgb,var(--gc) 60%,transparent);border-radius:12px;padding:6px 10px;font-size:12px;font-weight:900;text-align:left;
+  animation:mhGfxGain .4s var(--d) cubic-bezier(.2,1.5,.4,1) both}
+.mh-gfx-gains li small{display:block;font-size:10px;color:#94a3b8;font-weight:700}
+.mh-gfx-gains li .new{margin-left:auto;font-size:9px;background:var(--gc);color:#111;border-radius:6px;padding:1px 5px}
+.mh-gfx-face{position:absolute;height:32vh;left:50%;margin-left:-21vh;bottom:0;z-index:1;pointer-events:none;animation:mhGfxRise .6s .85s cubic-bezier(.2,1.4,.4,1) both;filter:drop-shadow(0 0 20px #000a)}
+.mh-gfx-lv-hint{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);left:0;right:0;text-align:center;font-size:10px;color:#cbd5e1;z-index:3;animation:mhGfxFade .3s 1.6s both}
+.mh-gfx-conf{position:absolute;left:50%;top:38%;width:8px;height:12px;pointer-events:none;animation:mhGfxConf 1.8s var(--d) cubic-bezier(.1,.7,.3,1) both}
+@keyframes mhGfxConf{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}10%{opacity:1}100%{transform:translate(var(--x),var(--y)) rotate(var(--r));opacity:0}}
+@keyframes mhGfxSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes mhGfxFade{from{opacity:0}to{opacity:1}}
+@keyframes mhGfxEm{0%{transform:scale(.1) rotate(-30deg);opacity:0}100%{transform:none;opacity:1}}
+@keyframes mhGfxRing{0%{transform:translate(-50%,-50%) scale(.6);opacity:1}100%{transform:translate(-50%,-50%) scale(2.6);opacity:0}}
+@keyframes mhGfxRise{from{transform:translateY(60px);opacity:0}to{transform:none;opacity:1}}
+@keyframes mhGfxGain{from{transform:translateY(14px) scale(.9);opacity:0}to{transform:none;opacity:1}}
+@media (orientation:landscape){
+  .mh-gfx-lv{flex-direction:row;gap:22px;margin-top:0}
+  .mh-gfx-sheet.has-face .mh-gfx-lv{margin-left:min(36vw,300px)}
+  .mh-gfx-lv .sub{max-width:240px}
+  .mh-gfx-gains{margin-top:0;width:290px}
+  .mh-gfx-face{left:0;margin-left:0;height:62vh}
+}
+/* 最後の形(押して飛ばした・軽い設定): 動きを終わらせた状態で見せる */
+.mh-gfx-done *,.mh-gfx-done{animation-delay:0s !important;animation-duration:.01s !important}
+.mh-gfx-done .mh-gfx-rays{animation:none !important}
+/* 控えめ: 粒・光の筋・紙吹雪・光の輪を出さない */
+.mh-gfx-reduced .pt,.mh-gfx-reduced .mh-gfx-burst,.mh-gfx-reduced .mh-gfx-rays,.mh-gfx-reduced .mh-gfx-conf,.mh-gfx-reduced .mh-gfx-ring{display:none}
+/* 最小: 動かさない(札・カード・帯がその場に出て消えるだけ) */
+.mh-gfx-minimal *,.mh-gfx-minimal{animation:none !important;transition:none !important}
+.mh-gfx-minimal .pt,.mh-gfx-minimal .mh-gfx-burst,.mh-gfx-minimal .mh-gfx-rays,.mh-gfx-minimal .mh-gfx-conf,.mh-gfx-minimal .mh-gfx-ring,.mh-gfx-minimal .mh-gfx-face{display:none}
+.mh-gfx-band{position:relative;width:100%;padding:12px 16px;display:flex;flex-direction:column;align-items:center;gap:2px;font-weight:900;color:#fff;
+  background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--gc) 45%,#0f172a) 20% 80%,transparent);border-block:1.5px solid var(--gc)}
+.mh-gfx-band .big{font-size:20px;white-space:nowrap}
+.mh-gfx-band small{font-size:11px;color:#e2e8f0;text-align:center}
+`;
+let growthFxCssDone = false;
+const ensureGrowthFxCss = () => {
+  if (growthFxCssDone || typeof document === 'undefined') return;
+  growthFxCssDone = true;
+  const el = document.createElement('style');
+  el.setAttribute('data-growth-fx-css', '');
+  el.textContent = GROWTH_FX_CSS;
+  document.head.appendChild(el);
+};
+const growthFxVisible = (screen, domHold = {}) => {
+  const all = GROWTH_FX_CALM_SCREENS.has(screen) && !domHold.all;
+  return {
+    all,
+    sheet: all && !domHold.sheet
+  };
+};
+const growthFxLevelOf = load => {
+  let reduce = false;
+  try {
+    reduce = typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {}
+  if (reduce || load === 'MINIMAL') return 'minimal';
+  if (load === 'STANDARD' || load === 'LIGHT') return 'reduced';
+  return 'full';
+};
+const growthFxBurstBits = (n, delay, size) => Array.from({
+  length: n
+}, (_, i) => {
+  const a = i / n * Math.PI * 2,
+    r = 150 + i % 3 * 40;
+  return {
+    x: `${Math.round(Math.cos(a) * r)}px`,
+    y: `${Math.round(Math.sin(a) * r - 30)}px`,
+    r: `${i * 47 % 90 - 45}deg`,
+    d: `${(delay + i % 4 * 0.04).toFixed(2)}s`,
+    s: size - i % 3 * 4
+  };
+});
+const GROWTH_FX_CONFETTI_COLORS = ['#fde047', '#ffffff', '#c084fc', '#22d3ee'];
+const GrowthFxCount = ({
+  from = 0,
+  to = 0,
+  delay = 0,
+  duration = 1000,
+  instant = false,
+  prefix = ''
+}) => {
+  const [v, setV] = useState(instant ? to : from);
+  useEffect(() => {
+    if (instant) {
+      setV(to);
+      return undefined;
+    }
+    let raf = 0;
+    const t0 = performance.now() + delay;
+    const step = now => {
+      const x = Math.max(0, Math.min(1, (now - t0) / Math.max(1, duration)));
+      setV(Math.round(from + (to - from) * (1 - Math.pow(1 - x, 3))));
+      if (x < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [from, to, delay, duration, instant]);
+  return React.createElement("span", null, prefix, Number(v).toLocaleString());
+};
+const GrowthFxGauge = ({
+  from = 0,
+  to = 0,
+  wrap = false,
+  delay = 700,
+  instant = false
+}) => {
+  const [w, setW] = useState(instant ? to : from);
+  const [noTr, setNoTr] = useState(false);
+  useEffect(() => {
+    if (instant) {
+      setW(to);
+      return undefined;
+    }
+    const ts = [];
+    if (wrap) {
+      ts.push(setTimeout(() => setW(100), delay));
+      ts.push(setTimeout(() => {
+        setNoTr(true);
+        setW(0);
+      }, delay + 650));
+      ts.push(setTimeout(() => {
+        setNoTr(false);
+        setW(to);
+      }, delay + 720));
+    } else ts.push(setTimeout(() => setW(to), delay));
+    return () => ts.forEach(clearTimeout);
+  }, [from, to, wrap, delay, instant]);
+  return React.createElement("div", {
+    className: "mh-gfx-gauge"
+  }, React.createElement("i", {
+    style: {
+      width: `${w}%`,
+      transition: noTr ? 'none' : 'width .65s cubic-bezier(.3,0,.2,1)'
+    }
+  }));
+};
+const GrowthFxChip = ({
+  chip,
+  level,
+  held
+}) => {
+  const k = growthFxKind(chip.kind);
+  const [out, setOut] = useState(false);
+  useEffect(() => {
+    if (held) return undefined;
+    setOut(false);
+    const t1 = setTimeout(() => setOut(true), GROWTH_FX_SMALL_MS);
+    const t2 = setTimeout(() => growthFxDropSmall(chip.id), GROWTH_FX_SMALL_MS + 320);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [chip.id, chip.rev, held]);
+  const pts = level === 'full' ? [0, 1, 2, 3] : [];
+  return React.createElement("div", {
+    className: `mh-gfx-chip${out ? ' out' : ''}`,
+    "data-growth-fx-chip": chip.kind,
+    style: {
+      '--gc': k.color
+    }
+  }, React.createElement("span", {
+    key: `i${chip.rev}`,
+    className: "ico beat",
+    "aria-hidden": "true"
+  }, k.icon), React.createElement("span", {
+    className: "min-w-0"
+  }, React.createElement("span", {
+    className: "who block"
+  }, chip.name ? `${chip.name}・` : '', k.label), React.createElement("span", {
+    className: "bar block"
+  }, React.createElement("i", {
+    style: {
+      width: `${chip.pctTo}%`
+    }
+  }))), React.createElement("span", {
+    key: `n${chip.rev}`,
+    className: "num pop"
+  }, "+", Number(chip.gain).toLocaleString()), pts.map(i => React.createElement("span", {
+    key: `p${chip.rev}-${i}`,
+    className: "pt",
+    "aria-hidden": "true",
+    style: {
+      '--dx': `${i * 53 % 50 - 25}px`,
+      animationDelay: `${0.15 + i * 0.1}s`
+    }
+  }, k.particle)));
+};
+const GrowthFxItemCard = ({
+  sheet,
+  level,
+  onClose
+}) => {
+  const k = growthFxKind(sheet.kind);
+  const instant = level === 'minimal';
+  useEffect(() => {
+    const t = setTimeout(onClose, GROWTH_FX_ITEM_MS);
+    return () => clearTimeout(t);
+  }, [sheet.id]);
+  const reaction = sheet.reaction === 'like' || sheet.reaction === 'dislike' ? sheet.reaction : null;
+  return React.createElement("div", {
+    className: `mh-gfx-sheet item mh-gfx-${level}`,
+    "data-growth-fx-sheet": "item",
+    "data-growth-fx-kind": sheet.kind,
+    role: "dialog",
+    "aria-label": sheet.title || '',
+    style: {
+      '--gc': k.color
+    },
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "mh-gfx-card"
+  }, (sheet.faces || []).length > 0 && React.createElement("div", {
+    className: "faces"
+  }, sheet.faces.map((src, i) => React.createElement("img", {
+    key: i,
+    src: src,
+    alt: "",
+    className: sheet.faceRound ? 'round' : '',
+    style: {
+      animationDelay: `${0.4 + i * 0.15}s`
+    }
+  }))), React.createElement("div", {
+    className: "ttl"
+  }, sheet.title, reaction && React.createElement("span", {
+    className: `tag ${reaction}`
+  }, reaction === 'like' ? '大好き！' : 'ちょっと苦手…')), sheet.item && React.createElement("div", {
+    className: "itm"
+  }, sheet.item), (sheet.rows || []).map((row, i) => {
+    const rk = growthFxKind(row.kind);
+    const lvUp = growthFxNum(row.levelTo) > growthFxNum(row.levelFrom);
+    return React.createElement("div", {
+      key: i,
+      className: "mh-gfx-row",
+      style: {
+        '--rc': rk.color
+      }
+    }, React.createElement("span", {
+      className: "ico",
+      "aria-hidden": "true"
+    }, rk.icon), React.createElement("div", {
+      style: {
+        flex: 1,
+        minWidth: 0
+      }
+    }, React.createElement("div", {
+      className: "lab"
+    }, React.createElement("em", null, row.label || rk.label, row.levelTo != null ? React.createElement(React.Fragment, null, " Lv.", React.createElement(GrowthFxCount, {
+      from: row.levelFrom,
+      to: row.levelTo,
+      delay: 900,
+      duration: 900,
+      instant: instant
+    })) : null), lvUp && React.createElement("span", {
+      className: "up",
+      style: {
+        animationDelay: instant ? '0s' : '1.6s'
+      }
+    }, "Lv +", row.levelTo - row.levelFrom)), React.createElement(GrowthFxGauge, {
+      from: row.pctFrom,
+      to: row.pctTo,
+      wrap: lvUp,
+      delay: 700 + i * 400,
+      instant: instant
+    })), React.createElement("div", {
+      className: "val"
+    }, React.createElement(GrowthFxCount, {
+      from: 0,
+      to: growthFxNum(row.gain),
+      delay: 700 + i * 400,
+      duration: 1100,
+      instant: instant,
+      prefix: "+"
+    }), row.unit && React.createElement("small", null, row.unit)));
+  }), React.createElement("div", {
+    className: "mh-gfx-hint"
+  }, "押すと閉じる")), level === 'full' && React.createElement("div", {
+    className: "mh-gfx-burst",
+    "aria-hidden": "true"
+  }, growthFxBurstBits(reaction === 'like' ? 18 : 12, 0.7, 18).map((b, i) => React.createElement("span", {
+    key: i,
+    style: {
+      '--x': b.x,
+      '--y': b.y,
+      '--r': b.r,
+      '--d': b.d,
+      fontSize: `${b.s}px`
+    }
+  }, k.particle))));
+};
+const GrowthFxLevelUp = ({
+  sheet,
+  level,
+  onClose
+}) => {
+  const k = growthFxKind(sheet.kind);
+  const [done, setDone] = useState(level === 'minimal');
+  const opened = useRef(Date.now());
+  useEffect(() => {
+    try {
+      if (level !== 'minimal' && typeof Audio_ !== 'undefined') Audio_.se.levelUp();
+    } catch {}
+  }, [sheet.id]);
+  const next = () => {
+    if (Date.now() - opened.current < 250) return;
+    if (!done) setDone(true);else onClose();
+  };
+  const gains = Array.isArray(sheet.gains) ? sheet.gains : [];
+  const label = `${k.label}が Lv.${sheet.levelTo} に上がりました`;
+  if (level === 'minimal') {
+    return React.createElement("div", {
+      className: "mh-gfx-sheet level-mini mh-gfx-minimal",
+      "data-growth-fx-sheet": "level",
+      "data-growth-fx-kind": sheet.kind,
+      role: "dialog",
+      "aria-label": label,
+      style: {
+        '--gc': k.color,
+        background: '#0b102699'
+      },
+      onClick: onClose
+    }, React.createElement("div", {
+      className: "mh-gfx-band"
+    }, React.createElement("span", {
+      className: "big"
+    }, k.icon, " ", k.label, " Lv.", sheet.levelTo), React.createElement("small", null, sheet.sub, gains.length ? ` ・ ${gains.map(g => g.text).join('・')}` : ''), React.createElement("small", null, "押すと閉じる")));
+  }
+  const conf = level === 'full' ? Array.from({
+    length: 24
+  }, (_, i) => ({
+    c: i % 2 ? k.color : GROWTH_FX_CONFETTI_COLORS[i % 4],
+    x: `${i * 71 % 340 - 170}px`,
+    y: `${i * 43 % 300 - 200}px`,
+    r: `${i * 57}deg`,
+    d: `${(0.5 + i % 6 * 0.05).toFixed(2)}s`
+  })) : [];
+  return React.createElement("div", {
+    className: `mh-gfx-sheet level mh-gfx-${level}${done ? ' mh-gfx-done' : ''}${sheet.face ? ' has-face' : ''}`,
+    "data-growth-fx-sheet": "level",
+    "data-growth-fx-kind": sheet.kind,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": label,
+    tabIndex: 0,
+    style: {
+      '--gc': k.color,
+      '--gd': k.deep
+    },
+    onClick: next,
+    onKeyDown: e => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
+        e.preventDefault();
+        next();
+      }
+    }
+  }, React.createElement("div", {
+    className: "mh-gfx-rays",
+    "aria-hidden": "true"
+  }), conf.map((c, i) => React.createElement("span", {
+    key: i,
+    className: "mh-gfx-conf",
+    "aria-hidden": "true",
+    style: {
+      background: c.c,
+      '--x': c.x,
+      '--y': c.y,
+      '--r': c.r,
+      '--d': c.d
+    }
+  })), sheet.face && React.createElement("img", {
+    className: "mh-gfx-face",
+    src: sheet.face,
+    alt: ""
+  }), React.createElement("div", {
+    className: "mh-gfx-lv"
+  }, React.createElement("div", {
+    className: "left"
+  }, React.createElement("div", {
+    className: "mh-gfx-emblem"
+  }, React.createElement("svg", {
+    viewBox: "0 0 100 100",
+    "aria-hidden": "true"
+  }, sheet.kind === 'bond' ? React.createElement("path", {
+    d: "M50 88 C20 66 6 50 6 32 C6 18 17 8 30 8 C40 8 46 14 50 21 C54 14 60 8 70 8 C83 8 94 18 94 32 C94 50 80 66 50 88Z",
+    fill: k.color,
+    stroke: "#fff",
+    strokeWidth: "3"
+  }) : sheet.kind === 'friend' ? React.createElement("g", {
+    fill: k.color,
+    stroke: "#fff",
+    strokeWidth: "3"
+  }, React.createElement("circle", {
+    cx: "36",
+    cy: "52",
+    r: "32"
+  }), React.createElement("circle", {
+    cx: "64",
+    cy: "52",
+    r: "32",
+    fillOpacity: ".85"
+  })) : sheet.kind === 'star' ? React.createElement("path", {
+    d: "M50 4 L62 36 L96 38 L69 59 L79 93 L50 73 L21 93 L31 59 L4 38 L38 36 Z",
+    fill: k.color,
+    stroke: "#fff",
+    strokeWidth: "3"
+  }) : React.createElement("path", {
+    d: "M50 6 L88 20 L84 58 C80 76 66 88 50 95 C34 88 20 76 16 58 L12 20 Z",
+    fill: k.color,
+    stroke: "#fff",
+    strokeWidth: "3"
+  })), React.createElement("span", {
+    className: "n"
+  }, React.createElement("small", null, "Lv."), sheet.levelTo), React.createElement("div", {
+    className: "mh-gfx-ring",
+    "aria-hidden": "true"
+  })), React.createElement("div", {
+    className: "ttl"
+  }, sheet.title || `${k.label} UP!`), sheet.sub && React.createElement("div", {
+    className: "sub"
+  }, sheet.sub)), gains.length > 0 && React.createElement("ul", {
+    className: "mh-gfx-gains",
+    "aria-label": "新しく開いたもの"
+  }, gains.map((g, i) => React.createElement("li", {
+    key: i,
+    style: {
+      '--d': `${1.2 + i * 0.3}s`
+    }
+  }, React.createElement("span", {
+    "aria-hidden": "true"
+  }, g.icon || '✨'), React.createElement("span", {
+    className: "min-w-0"
+  }, React.createElement("b", null, String(g.text || '')), g.note && React.createElement("small", null, String(g.note))), g.isNew && React.createElement("span", {
+    className: "new"
+  }, "NEW"))))), React.createElement("div", {
+    className: "mh-gfx-lv-hint"
+  }, done ? '押すと閉じる' : '押すと先へ'));
+};
+const GrowthFxLayer = ({
+  screen,
+  load
+}) => {
+  const [, setTick] = useState(0);
+  const [domHold, setDomHold] = useState({
+    all: false,
+    sheet: false
+  });
+  useEffect(() => {
+    ensureGrowthFxCss();
+    return growthFxSubscribe(() => setTick(t => t + 1));
+  }, []);
+  const small = GROWTH_FX_STORE.small,
+    sheets = GROWTH_FX_STORE.sheets;
+  const pending = small.length + sheets.length;
+  useEffect(() => {
+    if (!pending || typeof document === 'undefined') return undefined;
+    const check = () => {
+      const all = !!document.querySelector(GROWTH_FX_HOLD_ALL_SELECTOR);
+      const sheet = all || !!document.querySelector(GROWTH_FX_HOLD_SHEET_SELECTOR);
+      setDomHold(prev => prev.all === all && prev.sheet === sheet ? prev : {
+        all,
+        sheet
+      });
+    };
+    check();
+    const t = setInterval(check, 600);
+    return () => clearInterval(t);
+  }, [pending > 0]);
+  if (!pending) return null;
+  const vis = growthFxVisible(screen, domHold);
+  const holdAll = !vis.all;
+  const holdSheet = !vis.sheet;
+  const level = growthFxLevelOf(load);
+  const sheet = !holdSheet ? sheets[0] : null;
+  return React.createElement(React.Fragment, null, !holdAll && !sheet && small.length > 0 && React.createElement("div", {
+    className: `mh-gfx-chips mh-gfx-${level}`,
+    "data-growth-fx-chips": true,
+    "aria-live": "polite"
+  }, small.slice(0, GROWTH_FX_SMALL_MAX).map(c => React.createElement(GrowthFxChip, {
+    key: c.id,
+    chip: c,
+    level: level,
+    held: false
+  }))), sheet && (sheet.tier === 'level' ? React.createElement(GrowthFxLevelUp, {
+    key: sheet.id,
+    sheet: sheet,
+    level: level,
+    onClose: () => growthFxDropSheet(sheet.id)
+  }) : React.createElement(GrowthFxItemCard, {
+    key: sheet.id,
+    sheet: sheet,
+    level: level,
+    onClose: () => growthFxDropSheet(sheet.id)
+  })));
+};
 class MhErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -87918,10 +88878,14 @@ function RhythmMultiMemberCards({
       className: `min-w-0 ${tall ? 'mt-1 w-full text-center' : 'mt-0.5 w-full text-center landscape:mt-0 landscape:flex-1 landscape:text-left'}`
     }, React.createElement("span", {
       className: `block font-black leading-tight ${tall ? 'line-clamp-2 break-all text-[11px] landscape:text-sm' : 'truncate text-[10px]'}`
-    }, m.cpu && React.createElement("b", {
+    }, m.cpu && (m.as ? React.createElement("b", {
+      "data-rhythm-multi-cpu-mark": true,
+      "data-rhythm-multi-assist-mark": true,
+      className: "mr-0.5 rounded bg-pink-300 px-0.5 text-[8px] font-black text-slate-950"
+    }, "助手") : React.createElement("b", {
       "data-rhythm-multi-cpu-mark": true,
       className: "mr-0.5 rounded bg-lime-300 px-0.5 text-[8px] font-black text-slate-950"
-    }, "CPU"), m.name, self ? '*' : ''), badge.sub && React.createElement("small", {
+    }, "CPU")), m.name, self ? '*' : ''), badge.sub && React.createElement("small", {
       className: `block truncate font-bold leading-tight text-slate-400 ${tall ? 'text-[9px] landscape:text-[11px]' : 'text-[8px]'}`
     }, badge.sub)));
   }));
@@ -90039,6 +91003,11 @@ function RhythmMultiScreen({
       }) : React.createElement(RhythmAssistSessionGrowth, {
         key: assistantId,
         assistantId: assistantId,
+        onTickets: n => {
+          for (let i = 0; i < n; i += 1) {
+            if (onRefundBuddyTicket) void onRefundBuddyTicket();
+          }
+        },
         round: room.round,
         songId: room.songId,
         diffId: cpuRow.res.diffId,
@@ -92463,6 +93432,14 @@ const useRhythmAssistSessionState = () => {
   return state;
 };
 const rhythmAssistSessionWho = assistantId => typeof assistantById === 'function' ? assistantById(assistantId) : null;
+const rhythmAssistSessionLikedNames = assistantId => {
+  const t = RHYTHM_ASSIST_SESSION_TASTE[assistantId];
+  const songs = typeof RHYTHM_SONGS !== 'undefined' && Array.isArray(RHYTHM_SONGS) ? RHYTHM_SONGS : [];
+  return t ? t.like.map(ids => {
+    const song = songs.find(x => x && ids.includes(x.songId));
+    return song ? String(song.displayName || '') : '';
+  }).filter(Boolean) : [];
+};
 const rhythmAssistSessionName = assistantId => {
   const who = rhythmAssistSessionWho(assistantId);
   return String(who && who.name || '助手').slice(0, 12);
@@ -92471,6 +93448,9 @@ const RHYTHM_ASSIST_SESSION_LINES = Object.freeze({
   mua: {
     join: 'やっほ〜！あたしも一緒に叩くね♪',
     love: 'この曲あたし大好きなの♪',
+    combo: 'いい流れぢゃん♪ 全部いこ！',
+    miss: 'どんまい！ここから取り返そ♪',
+    climax: 'サビきた〜！テンションまぢ上がる♪',
     mvp: 'MVPとっちゃった！？あたしすごくない？♪',
     high: 'まぢいい感じぢゃん！楽しかったぁ♪',
     low: '次はもっと合わせよ！あたしもがんばる♪'
@@ -92478,6 +93458,9 @@ const RHYTHM_ASSIST_SESSION_LINES = Object.freeze({
   kiki: {
     join: 'ブリーダーさん、よろしくお願いしまつ♪',
     love: 'この曲、私とても好きなんです♪',
+    combo: 'いい流れでつね♪ このまま全部いきましょう',
+    miss: '大丈夫でつ、落ち着いていきましょう♪',
+    climax: 'ここが一番きれいなところでつ♪',
     mvp: '私がMVPですか？ちょっと照れちゃいまつ♪',
     high: 'とってもいい演奏でした♪',
     low: '次はきっと、もっと合わせられますよ♪'
@@ -92485,6 +93468,9 @@ const RHYTHM_ASSIST_SESSION_LINES = Object.freeze({
   momosuke: {
     join: 'ももが来たからには盛り上げるよ！！',
     love: 'この曲ももの推し曲！！',
+    combo: 'いい感じ！！ももも乗ってきた♡',
+    miss: 'ドンマイドンマイ！ももがついてるよw',
+    climax: 'サビ！！ここで一番かわいく決めるよ♡',
     mvp: 'MVPはもも！！当然でしょw',
     high: 'ももと合わせたらこんなもんでしょw さすが♡',
     low: 'ドンマイ！次はもも、もっと見ててあげる♡'
@@ -92492,6 +93478,9 @@ const RHYTHM_ASSIST_SESSION_LINES = Object.freeze({
   dra: {
     join: 'おでも混ぜてくれよな、えへへ',
     love: 'この曲、おで好きなんだな',
+    combo: 'すごいな、ずっとつながってるくさ',
+    miss: 'どんまいだな、次でとりかえすからな',
+    climax: 'ここからが本番だな、えへへ',
     mvp: 'おでがMVPか、えへへ、照れくさいな',
     high: 'いい演奏だったくさ。おで楽しかったな',
     low: 'どんまいだな、次でとりかえすからな'
@@ -92499,6 +93488,9 @@ const RHYTHM_ASSIST_SESSION_LINES = Object.freeze({
   atsu: {
     join: 'とりあえず一曲いくか笑',
     love: 'これ俺の好きなやつだな笑',
+    combo: 'とりあえずいい感じだな笑',
+    miss: 'てか焦らなくていいぞ！',
+    climax: 'ここ決めるぞ笑',
     mvp: 'MVPもらっといた笑',
     high: 'てか今の、普通にうまかったな笑',
     low: 'まあ次だな、切り替えていこう！'
@@ -92506,6 +93498,9 @@ const RHYTHM_ASSIST_SESSION_LINES = Object.freeze({
   kyuko: {
     join: 'ほい！俺も入るね〜',
     love: 'この曲は構成がきれいなんだよね〜',
+    combo: 'ほい！いい流れだね〜',
+    miss: 'ぐぬぬぬ、でもリズムは合ってるよ〜',
+    climax: 'サビ前で一回引いて…ここだね〜',
     mvp: 'MVPいただきました〜笑',
     high: 'いい流れだったね〜、ありがとん笑',
     low: 'ぐぬぬぬ、次はサビ前を意識してみよ〜'
@@ -92513,6 +93508,9 @@ const RHYTHM_ASSIST_SESSION_LINES = Object.freeze({
   sorashido: {
     join: 'うぉぉぉ！俺も参戦するぜ・・・！',
     love: 'この曲は全ノーツ計算済みだぜ・・・！',
+    combo: 'うぉぉぉ！計算どおりだぜ・・・！',
+    miss: 'ここから巻き返す計算だぜ笑',
+    climax: 'うぉぉぉ！ここだぜ・・・！',
     mvp: 'MVPは計算済みだったぜ・・・！',
     high: '計算どおりの名演だぜ・・・！',
     low: '次は全ノーツ計算して挑むぜ笑'
@@ -92520,6 +93518,9 @@ const RHYTHM_ASSIST_SESSION_LINES = Object.freeze({
   erubin: {
     join: '俺も一緒にいいかな？よろしくね',
     love: 'この曲、好きなんだよね',
+    combo: 'いい感じだね、そのままで大丈夫',
+    miss: '大丈夫、ゆっくりいこうね',
+    climax: 'ここ、いいところだね',
     mvp: '俺がMVP？ありがとね',
     high: 'いい演奏だったね、おつかれさま',
     low: '大丈夫、次はきっと合うよ'
@@ -92536,6 +93537,7 @@ const rhythmAssistSessionTalk = ({
   const lines = RHYTHM_ASSIST_SESSION_LINES[assistantId];
   if (!lines) return '';
   if (kind === 'join') return lines.join;
+  if (kind === 'combo' || kind === 'miss' || kind === 'climax') return lines[kind] || '';
   if ((kind === 'pick' || kind === 'song') && songId && rhythmAssistSessionTaste(assistantId, songId) === 'like') return lines.love;
   if (kind === 'result') {
     if (mvp) return lines.mvp;
@@ -92654,7 +93656,10 @@ function RhythmAssistSessionPicker({
     className: "block truncate text-[13px] font-black"
   }, sel.name), React.createElement("small", {
     className: "block whitespace-nowrap text-[10px] font-bold text-pink-200"
-  }, "セッションLv.", rhythmAssistSessionLevel(state, sel.id))), calledOf(sel.id) ? React.createElement("span", {
+  }, "セッションLv.", rhythmAssistSessionLevel(state, sel.id)), React.createElement("small", {
+    "data-rhythm-assist-taste": true,
+    className: "block truncate text-[10px] font-bold text-slate-300"
+  }, rhythmAssistSessionLevel(state, sel.id) >= RHYTHM_ASSIST_SESSION_TASTE_LEVEL ? `♡ ${rhythmAssistSessionLikedNames(sel.id).join('・')}` : `Lv.${RHYTHM_ASSIST_SESSION_TASTE_LEVEL} で好きな曲が分かります`)), calledOf(sel.id) ? React.createElement("span", {
     "data-rhythm-assist-called": true,
     className: "shrink-0 rounded-xl border border-lime-300/50 px-2 py-3 text-[10px] font-black text-lime-200"
   }, "呼んでいる") : React.createElement("button", {
@@ -92677,7 +93682,8 @@ function RhythmAssistSessionGrowth({
   score = 0,
   maxScore = 0,
   chartLevel = 0,
-  humans = 1
+  humans = 1,
+  onTickets = null
 }) {
   const [shown, setShown] = React.useState(null);
   React.useEffect(() => {
@@ -92703,6 +93709,11 @@ function RhythmAssistSessionGrowth({
       outcome = r;
       return r.next;
     }).then(() => {
+      if (outcome && outcome.tickets > 0 && typeof onTickets === 'function') {
+        try {
+          onTickets(outcome.tickets);
+        } catch (_) {}
+      }
       if (alive && outcome) setShown(outcome);
     });
     return () => {
@@ -92723,7 +93734,163 @@ function RhythmAssistSessionGrowth({
     className: "rounded bg-amber-300 px-1 text-slate-950"
   }, "セッションLv.UP! Lv.", level), shown.likeUp > 0 && React.createElement("span", {
     className: "text-amber-200"
-  }, "好み度+", shown.likeUp));
+  }, "好み度+", shown.likeUp), shown.tickets > 0 && React.createElement("span", {
+    "data-rhythm-assist-ticket": true,
+    className: "text-lime-200"
+  }, "セッション券+", shown.tickets));
+}
+const RHYTHM_ASSIST_SESSION_BUBBLE_MS = 1600;
+const RHYTHM_ASSIST_SESSION_COMBO_STEPS = Object.freeze([50, 100, 300]);
+function RhythmAssistSessionPlayFace({
+  songId
+}) {
+  const state = useRhythmAssistSessionState();
+  const boxRef = React.useRef(null);
+  const [pos, setPos] = React.useState(null);
+  const [say, setSay] = React.useState(null);
+  const [glow, setGlow] = React.useState(false);
+  const ids = (() => {
+    const v = typeof RHYTHM_MULTI !== 'undefined' ? RHYTHM_MULTI.view() : null;
+    return (v && v.myCpus ? v.myCpus : []).map(c => rhythmAssistSessionIdOf(c.masuId)).filter(Boolean).slice(0, 4);
+  })();
+  const idsKey = ids.join(',');
+  React.useEffect(() => {
+    if (!ids.length) return undefined;
+    const said = new Set();
+    let lastCombo = 0;
+    let missRow = 0;
+    let lastMiss = 0;
+    let inClimax = false;
+    let hideAt = 0;
+    let turn = 0;
+    const speak = kind => {
+      const order = ids.slice(turn).concat(ids.slice(0, turn));
+      for (const aid of order) {
+        const key = `${aid}:${kind}`;
+        if (said.has(key)) continue;
+        const text = rhythmAssistSessionTalk({
+          assistantId: aid,
+          kind
+        });
+        if (!text) continue;
+        said.add(key);
+        turn = (ids.indexOf(aid) + 1) % ids.length;
+        setSay({
+          aid,
+          text
+        });
+        hideAt = Date.now() + RHYTHM_ASSIST_SESSION_BUBBLE_MS;
+        return;
+      }
+    };
+    const place = () => {
+      const box = boxRef.current;
+      const hud = document.querySelector('[data-rhythm-hud]');
+      if (!box || !hud || !box.offsetParent) return;
+      const at = node => {
+        let top = 0;
+        let left = 0;
+        let el = node;
+        while (el && el !== box.offsetParent) {
+          top += el.offsetTop;
+          left += el.offsetLeft;
+          el = el.offsetParent;
+        }
+        return el === box.offsetParent ? {
+          top,
+          left
+        } : null;
+      };
+      const hudAt = at(hud);
+      if (!hudAt) return;
+      let bottom = hudAt.top;
+      document.querySelectorAll('[data-rhythm-hud] *, [data-rhythm-song-clock] *').forEach(el => {
+        if (el.children.length || !el.offsetHeight) return;
+        const p = at(el);
+        if (!p || p.left - hudAt.left > 150) return;
+        bottom = Math.max(bottom, p.top + el.offsetHeight);
+      });
+      const next = {
+        top: Math.round(bottom + 6),
+        left: Math.round(hudAt.left + 8)
+      };
+      setPos(q => q && q.top === next.top && q.left === next.left ? q : next);
+    };
+    const tick = () => {
+      place();
+      const watch = typeof RHYTHM_PLAY_WATCH !== 'undefined' ? RHYTHM_PLAY_WATCH : null;
+      const h = watch && watch.hud ? watch.hud.get() : null;
+      if (h) {
+        const combo = Number(h.combo) || 0;
+        const miss = h.counts ? Number(h.counts.MISS) || 0 : 0;
+        if (RHYTHM_ASSIST_SESSION_COMBO_STEPS.some(n => lastCombo < n && combo >= n)) speak('combo');
+        if (miss > lastMiss) {
+          missRow = combo === 0 ? missRow + (miss - lastMiss) : 0;
+          if (missRow >= 3) {
+            speak('miss');
+            missRow = 0;
+          }
+        }
+        if (combo > 0) missRow = 0;
+        lastCombo = combo;
+        lastMiss = miss;
+        const now = rhythmAssistSessionInClimax(songId || watch.songId, watch.timeMs);
+        if (now && !inClimax) speak('climax');
+        if (now !== inClimax) {
+          inClimax = now;
+          setGlow(now);
+        }
+      }
+      if (hideAt && Date.now() >= hideAt) {
+        hideAt = 0;
+        setSay(null);
+      }
+    };
+    const t = setInterval(tick, 200);
+    tick();
+    return () => clearInterval(t);
+  }, [idsKey, songId]);
+  if (!ids.length) return null;
+  return React.createElement("div", {
+    ref: boxRef,
+    "data-rhythm-assist-play": true,
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute z-[60] flex w-[140px] flex-col gap-1",
+    style: pos ? {
+      top: pos.top,
+      left: pos.left
+    } : {
+      visibility: 'hidden',
+      top: 0,
+      left: 0
+    }
+  }, ids.map(aid => {
+    const who = rhythmAssistSessionWho(aid);
+    if (!who) return null;
+    const lit = glow && rhythmAssistSessionLevel(state, aid) >= RHYTHM_ASSIST_SESSION_GLOW_LEVEL;
+    const talking = say && say.aid === aid;
+    return React.createElement("div", {
+      key: aid,
+      "data-rhythm-assist-play-face": aid,
+      "data-glow": lit ? '1' : undefined,
+      className: "flex items-start gap-1.5"
+    }, React.createElement("span", {
+      className: "block h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 bg-slate-800 transition-shadow duration-300",
+      style: {
+        borderColor: who.accent || '#f472b6',
+        boxShadow: lit ? `0 0 14px 4px ${who.accent || '#f472b6'}` : 'none'
+      }
+    }, React.createElement("img", {
+      src: assistantFaceSrc(who, talking ? 'happy' : null),
+      alt: "",
+      draggable: false,
+      className: "h-full w-full object-cover"
+    })), talking && React.createElement("span", {
+      "data-rhythm-assist-play-bubble": true,
+      className: "block min-w-0 rounded-xl bg-white px-1.5 py-0.5 text-[9.5px] font-black leading-snug text-slate-900",
+      style: JA_WRAP_STYLE
+    }, jaWrap(say.text)));
+  }));
 }
 const RAID_JACK_DEBUG_NOW_CHOICES = Object.freeze([{
   id: 'real',
@@ -140667,6 +141834,7 @@ function MonsterHeroGame() {
       const after = levelInfo(nextXp);
       setBreederXp(nextXp);
       storeSet('mh_breeder_xp', nextXp, false);
+      if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(before.level, after.level, breederName);
       const gainedLevels = after.level - before.level;
       if (gainedLevels > 0) {
         setBreederPoints(prev => {
@@ -143921,6 +145089,7 @@ function MonsterHeroGame() {
       ...prev,
       [id]: result.state
     }));
+    if (typeof growthFxAssistantBond === 'function') growthFxAssistantBond(id, current.points, result.state.points);
     const after = assistantBondLevelOf(result.state.points);
     if (id === selectedAssistantIdRef.current && after > before) setAssistantBondUp(true);
     if (after > before) grantProfileFrames(id, after);
@@ -145763,6 +146932,19 @@ function MonsterHeroGame() {
       return next;
     });
     Audio_.se.levelUp();
+    if (typeof growthFxMasuBondItem === 'function') {
+      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+      growthFxMasuBondItem({
+        masuName: masu.name,
+        image: base && base.iconUrl,
+        itemName: item.name,
+        itemEmoji: item.emoji,
+        count: n,
+        gain: result.xpGain,
+        before: result.before,
+        after: result.after
+      });
+    }
     return result;
   };
   const openTrainingInfo = () => setGameState('TRAINING_INFO');
@@ -147481,6 +148663,7 @@ function MonsterHeroGame() {
     const breederLevelAfter = levelInfo(nextXp);
     setBreederXp(nextXp);
     storeSet('mh_breeder_xp', nextXp, false);
+    if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(breederLevelBefore.level, breederLevelAfter.level, breederName);
     const gainedLevels = breederLevelAfter.level - breederLevelBefore.level;
     if (gainedLevels > 0) {
       setBreederPoints(prev => {
@@ -147620,6 +148803,7 @@ function MonsterHeroGame() {
       const breederLevelAfter = levelInfo(nextBreederXp);
       setBreederXp(nextBreederXp);
       await storeSet('mh_breeder_xp', nextBreederXp, false);
+      if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(breederLevelBefore.level, breederLevelAfter.level, breederName);
       const gainedBreederLevels = breederLevelAfter.level - breederLevelBefore.level;
       if (gainedBreederLevels > 0) {
         setBreederPoints(prev => {
@@ -158465,6 +159649,9 @@ function MonsterHeroGame() {
       }
     }, React.createElement(TapRippleLayer, {
       spawnRef: rippleSpawnRef
+    }), React.createElement(GrowthFxLayer, {
+      screen: gameState,
+      load: battleFxSettings.load
     }), updateNotice, storageTroubleNotice, showAutoBgmPicker && isRunStage(gameState) && React.createElement("div", {
       "data-auto-bgm-picker": true,
       className: "fixed inset-0 flex items-end justify-center bg-black/55 p-3",
@@ -162789,7 +163976,8 @@ function MonsterHeroGame() {
         if (rhythmPlay.from === 'proto') return;
         if (rhythmPlay.from === 'lineAdjust') return;
         if (rhythmPlay.from === 'raid') void completeRaidJackRhythm(result, rhythmPlay.song, rhythmPlay.difficulty);
-        const multiScale = rhythmPlay.from === 'multi' ? rhythmMultiTotalScale(rhythmPlay.multiCount, rhythmPlay.multiStreak, rhythmPlay.multiCpus) : 1;
+        const assistBonus = rhythmPlay.from === 'multi' && rhythmAssistSessionEnabled() ? rhythmAssistSessionRewardBonus(RHYTHM_ASSIST_SESSION_STORE.get(), ((RHYTHM_MULTI.view() || {}).myCpus || []).map(c => rhythmAssistSessionIdOf(c.masuId))) : 0;
+        const multiScale = rhythmPlay.from === 'multi' ? Math.round(rhythmMultiTotalScale(rhythmPlay.multiCount, rhythmPlay.multiStreak, rhythmPlay.multiCpus) * (1 + assistBonus) * 100) / 100 : 1;
         if (rhythmPlay.from === 'multi') RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId, result, false, {
           diffId: rhythmPlay.difficulty.id
         });
@@ -162904,6 +164092,8 @@ function MonsterHeroGame() {
         setRhythmPlay(null);
         setGameState('RHYTHM_OPTIONS');
       }
+    }), gameState === 'RHYTHM_PLAY' && rhythmPlay && rhythmPlay.from === 'multi' && rhythmAssistSessionEnabled() && React.createElement(RhythmAssistSessionPlayFace, {
+      songId: rhythmPlay.song && rhythmPlay.song.songId
     }), React.createElement(RhythmInviteHomeBar, {
       show: gameState === 'HOME',
       onAccept: () => {

@@ -128,7 +128,34 @@ check('部屋の頭(cpuBrain)は助手の振り分けで包む', /rhythmAssistSe
 check('結果画面で、呼んだ助手を育てる(RhythmAssistSessionGrowth)', /<RhythmAssistSessionGrowth key=\{assistantId\} assistantId=\{assistantId\}/.test(MULTI));
 check('演奏の仕組みには触れない(30-rhythm-play.jsx は助手のセッションを呼ばない)', !/rhythmAssistSession|RHYTHM_ASSIST_SESSION/.test(PLAY));
 check('助手のスコアをランキングへ送らない(助手の計算の部品は送信の関数を呼ばない)', !/sbUpsert|sbInsert|submitRhythm|rankings/.test(SESSION + SCREEN));
-check('台詞は8人ぶん(部屋に来たとき・好きな曲・MVP・高い・低い)', ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'].every((id) => new RegExp(`\\n  ${id}: \\{ join: '[^']+', love: '[^']+', mvp: '[^']+', high: '[^']+', low: '[^']+' \\},`).test(SCREEN)));
+check('台詞は8人ぶん(来たとき・好きな曲・コンボ・ミス続き・サビ・MVP・高い・低い)', ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'].every((id) => new RegExp(`\\n  ${id}: \\{ join: '[^']+', love: '[^']+', combo: '[^']+', miss: '[^']+', climax: '[^']+', mvp: '[^']+', high: '[^']+', low: '[^']+' \\},`).test(SCREEN)));
+// ---- 段階2: 演奏中の顔とひとこと・Lv で開くもの ----
+{
+  const APP = P('60-app.jsx');
+  // 演奏画面には「読むだけの窓」を置くだけ。窓へ書くのは hud・曲・時刻だけで、演奏画面の中では窓を読まない
+  const writes = PLAY.match(/RHYTHM_PLAY_WATCH\.[a-zA-Z]+(?:===|=)/g) || [];
+  const reads = (PLAY.match(/RHYTHM_PLAY_WATCH\.[a-zA-Z]+/g) || []).length;
+  check('演奏画面は窓(RHYTHM_PLAY_WATCH)に書くだけで、判定・スコアに使わない', writes.length >= 4 && writes.every((w) => /\.(hud|songId|timeMs)=/.test(w) || /===/.test(w)) && reads === writes.length, `${reads}か所`);
+  check('顔とひとことは演奏画面の外(60-app)から、マルチで印が立っているときだけ重ねる', /gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay\.from==='multi'&&rhythmAssistSessionEnabled\(\)&&<RhythmAssistSessionPlayFace /.test(APP));
+  check('ひとことは1.6秒で消える', /const RHYTHM_ASSIST_SESSION_BUBBLE_MS = 1600;/.test(SCREEN));
+  check('同じ曲で同じ場面のひとことは1回だけ(said に覚える)', /if \(said\.has\(key\)\) continue;/.test(SCREEN));
+  check('サビで顔が光るのは セッションLv.15 から', /const RHYTHM_ASSIST_SESSION_GLOW_LEVEL = 15;/.test(SESSION) && /glow && rhythmAssistSessionLevel\(state, aid\) >= RHYTHM_ASSIST_SESSION_GLOW_LEVEL/.test(SCREEN));
+  check('ビートP の上乗せは 周回の報酬の倍率(multiScale)にだけ掛ける', /const multiScale=rhythmPlay\.from==='multi'\?Math\.round\(rhythmMultiTotalScale\([^)]*\)\*\(1\+assistBonus\)\*100\)\/100:1;/.test(APP));
+  check('結果のカードは「CPU」ではなく「助手」の印', /data-rhythm-multi-assist-mark[^>]*>助手<\/b>/.test(MULTI));
+}
+{
+  const sb2 = { Math, Date, Object, Number, String, Array, JSON, console, RHYTHM_SONG_CLIMAX: { x: [[1000, 2000, 0.6], [5000, 9000, 1]] } };
+  vm.createContext(sb2);
+  vm.runInContext(`${BUDDY}\n${SESSION}\n;globalThis.__t={apply:rhythmAssistSessionApplyLive,bonus:rhythmAssistSessionRewardBonus,climax:rhythmAssistSessionInClimax,level:rhythmAssistSessionLevel,norm:rhythmAssistSessionNormalize};`, sb2);
+  const t = sb2.__t;
+  check('サビは強さ0.9以上の区間だけ', t.climax('x', 6000) && !t.climax('x', 1500) && !t.climax('x', 9500) && !t.climax('nope', 6000));
+  let st = null; let tickets = 0; const got = [];
+  for (let i = 0; i < 400; i += 1) { const r = t.apply(st, 'atsu', { round: `t${i}`, songId: 'evans', diffId: 'MASTER', durationMs: 120000, teamRank: 'S', dayKey: '2026-11-07', nowMs: 1, score: 1, maxScore: 1000000 }); if (r.next) st = r.next; if (r.tickets) { tickets += r.tickets; got.push(`Lv.${t.level(st, 'atsu')}:${r.tickets}`); } }
+  check('セッション券は Lv.35 で1枚・Lv.65 で2枚・Lv.100 で3枚(合わせて6枚・1回ずつ)', tickets === 6 && got.length === 3, got.join(' '));
+  check('渡した節目は保存に残る(読み直しても二重に渡さない)', JSON.stringify(t.norm(JSON.parse(JSON.stringify(st))).mons.atsu.rewarded) === JSON.stringify([35, 65, 100]));
+  const lv = (exp) => ({ mons: { mua: { exp } } });
+  check('ビートP の上乗せ: Lv.19 は0・Lv.20 で +2%・2人なら足す', t.bonus(lv(0), ['mua']) === 0 && t.bonus(st, ['atsu']) === 0.08 && t.bonus(st, ['atsu', 'atsu']) === 0.08 && t.bonus(st, ['atsu', 'nobody']) === 0.08);
+}
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
