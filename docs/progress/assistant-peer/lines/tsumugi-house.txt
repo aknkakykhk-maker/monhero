@@ -91,7 +91,7 @@ mend atsu erubin how=apology | atsu normal {c}、さっきはごめん！ | erub
 mend atsu erubin how=gift | erubin normal {c}、{name}から差し入れのおにぎりだよ | atsu excited まじ！？ 腹へってた！ | erubin happy 一緒に食べよう。さっきはごめんね | atsu happy 俺こそ！ ありがと笑
 mend atsu erubin how=player | atsu troubled {name}に「{c}に早く謝りな」って言われた笑 | erubin happy 俺も「{c}を許してあげて」って言われたよ | atsu happy {name}に言われたら、しょうがない！ ごめん！ | erubin happy うん、仲直りだね
 
-## 間に入る(3人)28本
+## 間に入る(3人)35本(28本 + キズナの頼みの7組 2026-11-08)
 mend3 erubin mua sorashido | erubin normal {c:mua}、{c:sorashido}、まだ口をきいてないのかな？ | mua troubled ……だって | sorashido troubled ……きっかけがなくてな | erubin happy じゃあ、俺がお茶をいれるから、3人で飲もうか。それがきっかけだね
 mend3 erubin atsu dra | erubin normal 二人とも、背中合わせで座ってるね笑 | atsu troubled ……ちょっと気まずくて… | dra troubled ……おでもだ | erubin happy じゃあ、俺が審判で一戦やろうか。終わったら握手ね | atsu happy ……のった笑
 mend3 erubin momosuke kyuko | erubin normal {c:momosuke}、{c:kyuko}、二人とも相手のほうをちらちら見てるよ | momosuke surprise え、見てないもん！！ | kyuko troubled ……見てたかもぉ | erubin happy 二人とも、本当はもう仲直りしたいんだよね | momosuke happy ……うん。{c:kyuko}、ごめんね！！
@@ -120,6 +120,13 @@ mend3 erubin kiki kyuko | erubin normal {c:kiki}、{c:kyuko}、図書室がい�
 mend3 kiki erubin sorashido | kiki normal {c:erubin}、{c:sorashido}。お茶を三つ、いれました | erubin troubled ……ありがとう | sorashido troubled ……ありがとう、{c:kiki} | kiki wink 熱いうちに。冷めたら、二人のせいにしまつよ♪ | sorashido happy ……それは困るな笑 {c:erubin}、さっきは悪かった | erubin happy ううん。俺もごめんね、{c:sorashido}
 mend3 momosuke atsu erubin | momosuke excited {c:atsu}、{c:erubin}、ももの新曲の振り付け、2人で見て！！ | atsu troubled ……2人で？ | erubin troubled ……そうだね | momosuke wink ラストのポーズ、2人で手を合わせてやってほしいの♡ | atsu happy ……{c:erubin}、手、出して笑 さっきはごめん！ | erubin happy うん。ごめんね、{c:atsu}
 mend3 dra kiki mua | dra normal {c:kiki}、{c:mua}、おで、今日はギャグを封印する | kiki surprise ……どうしたんですか | mua surprise え、{c:dra}が！？ | dra troubled 二人が仲直りするまでな。……おで、つらいんだぞ | mua happy ……もう、ずるいｗ {c:kiki}、ごめんね | kiki happy はい。私も、ごめんなさいでつ
+mend3 atsu dra mua | atsu happy {c:dra}、{c:mua}、HARDで一曲いこ笑 膝にやさしいやつ！ | mua troubled ……{c:dra}と一緒に？ | dra troubled ……おでもか | atsu wink 一緒に叩いたら、すぐ戻るって笑 | mua happy ……しょうがないなぁ。{c:dra}、さっきはごめんね | dra happy おう。おでも悪かった。えへへ
+mend3 mua kiki momosuke | mua excited {c:kiki}、{c:momosuke}、3人でおそろいのリボンつけよ♪ | kiki troubled ……いまでつか | momosuke troubled ……うん、いま？ | mua wink おそろいにしたら、もうけんかできないぢゃん♪ | momosuke happy ……{c:kiki}、ごめんね！！ | kiki happy はい。私も、ごめんなさい♪
+mend3 kyuko kiki sorashido | kyuko normal {c:kiki}、{c:sorashido}、二人とも同じ表を見てるのに、黙ってるねぇ | sorashido troubled ……話すきっかけがなくてな | kiki troubled ……私もでつ | kyuko wink じゃあ俺が質問ねぇ。この表、どこがいちばんいい？ | sorashido happy ……{c:kiki}の攻めの列だな | kiki happy ……では、私も。{c:sorashido}、さっきはすみませんでした
+mend3 mua momosuke sorashido | mua happy {c:momosuke}、{c:sorashido}、今日はあたしが記録係やる♪ | momosuke surprise {c:mua}が？ | sorashido surprise ……数え方、分かるのか？ | mua wink 分かんないから、二人で教えて！ｗ | momosuke happy ……しょうがないなぁ。{c:sorashido}、一緒に教えよ！！ | sorashido happy おう。{c:momosuke}、さっきは悪かったな
+mend3 dra erubin momosuke | dra normal {c:erubin}、{c:momosuke}、二人がしゃべらないと、おでの膝が痛むらしい | momosuke surprise なにそれw | erubin troubled ……それは大変だね笑 | dra wink だから、早く仲直りしてくれ | momosuke happy ……{c:erubin}、ごめんね！！ {c:dra}の膝のために！！ | erubin happy うん、俺もごめんね。膝のためにね笑
+mend3 erubin dra kyuko | erubin normal {c:dra}、{c:kyuko}、二人とも、同じデッキの前で黙ってるね | kyuko troubled ……1枚、どっちにするかで、ちょっとねぇ | dra troubled ……おでも、ゆずれなくてな | erubin happy じゃあ、両方入れて試してみようか。決めるのは、そのあとでいいよ | kyuko happy ……それ、いちばんいい答えだねぇ。{c:dra}、ごめんねぇ | dra happy おう。おでも悪かったな
+mend3 kiki erubin kyuko | kiki normal {c:erubin}、{c:kyuko}。お茶をいれたので、並んで座ってください | erubin troubled ……うん。いい香りだね | kyuko troubled ……ほい | kiki wink 並んで座ったら、もう半分は仲直りでつ♪ | kyuko happy ……{c:erubin}、さっきはごめんねぇ | erubin happy ううん。俺こそ、ごめんね
 
 
 ## やきもち(3人)20組 × 友情Lvの段2(友だちとしてのやきもち。少しすねる → 2人が誘って3人で)
