@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9561c282b4cb6639
+// generated-sha256: 6f091a1e2561481b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9562,7 +9562,7 @@ const RHYTHM_GRAND_OPEN_START_AT = '2026-11-09T10:00:00+09:00';
 // 本オープンの予告(2026-11-07 社長「ホームで流してから本オープン。その前に予告の告知あり」)。
 // 真にすると、予告の更新情報・助手の告知・HOME で1回だけ流す予告のお話(rhythm_grand_open_teaser)が出る。
 // 本オープン(上)を真にしたあとは、予告のお話は HOME では流さない(回想には残る)。日にちが決まって社長が「予告を出す」と言うまで偽
-const RHYTHM_GRAND_OPEN_TEASER_RELEASE = false;
+const RHYTHM_GRAND_OPEN_TEASER_RELEASE = true; // 2026-11-08 社長「この文で」(本オープンは 11/9 10:00)
 // ★tacticsBattle は「β公開のあいだも開く枠」。ヘルプは、β版で遊べる人にも要る
 //   (tactics は本公開だけ。両方を1つのフラグにすると、本公開前の告知まで出てしまう)
 // ★rhythmHell … 難易度 HELL(空中のノーツ SKY TAP・SKY SLIDE)。社長の OK まで偽(HISTORY 10/11 02:05「HELL はデバッグで色々見てから」)。

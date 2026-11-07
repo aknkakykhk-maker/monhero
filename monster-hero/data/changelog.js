@@ -48,6 +48,17 @@ const CHANGELOG = [
     ],
   },
   {
+    // 2026-11-07 社長「ホームで流してから本オープン。その前に予告の告知あり」。予告の印(rhythmGrandOpenTeaser)が立つまで一覧にも告知にも出さない。
+    // ★予告を出すときは、date を出した時刻へ取り直し、日にちが決まっていれば items に本オープンの日時を1行足す
+    date: "2026-11-08 08:14", type:'content', group:'rhythm', title:'モンヒロビートが、もうすぐ本オープンします', status:'new', releaseFlag:'rhythmGrandOpenTeaser',
+    assistantNotice:{ id:'update_notice_rhythm_grand_open_teaser_v1', type:'content', notifyUntil:'2026-11-09T10:00:00+09:00' },
+    items:[
+      'モンヒロビートは、11月9日(月)の朝10時に、プレオープンを終えて本オープンします。',
+      '本オープンの日には、遊んでくださっている皆さん全員へ、記念のプレゼントをお届けします。',
+      '本オープンのあとに初めてHOMEを開いたときは、助手たちのお祝いのお話が流れます。お楽しみに。',
+    ],
+  },
+  {
     date: "2026-11-08 01:43", type:'update', group:'cardBattle', title:'カード部屋にいる助手と対戦すると、ごほうびが 1.5倍になりました', status:'new',
     items:[
       '助手ライフで、カード部屋でカード研究をしている助手と対戦すると、もらえるビートP・カードランクの経験値・クイック周回が 1.5倍になります(MASTER の勝ちなら 200 → 300)。',
@@ -230,17 +241,6 @@ const CHANGELOG = [
     items:[
       'まだ1曲も遊んでいないときは、曲えらびで短くてやさしい曲に「🔰 はじめての1曲」の札が付きます。',
       'どれから遊べばよいか迷ったら、この曲の EASY から始めてみてください。1曲遊ぶと札は消えます。',
-    ],
-  },
-  {
-    // 2026-11-07 社長「ホームで流してから本オープン。その前に予告の告知あり」。予告の印(rhythmGrandOpenTeaser)が立つまで一覧にも告知にも出さない。
-    // ★予告を出すときは、date を出した時刻へ取り直し、日にちが決まっていれば items に本オープンの日時を1行足す
-    date: "2026-11-07 09:00", type:'content', group:'rhythm', title:'モンヒロビートが、もうすぐ本オープンします', status:'new', releaseFlag:'rhythmGrandOpenTeaser',
-    assistantNotice:{ id:'update_notice_rhythm_grand_open_teaser_v1', type:'content', notifyUntil:'2026-11-09T10:00:00+09:00' },
-    items:[
-      'モンヒロビートは、11月9日(月)の朝10時に、プレオープンを終えて本オープンします。',
-      '本オープンの日には、遊んでくださっている皆さん全員へ、記念のプレゼントをお届けします。',
-      '本オープンのあとに初めてHOMEを開いたときは、助手たちのお祝いのお話が流れます。お楽しみに。',
     ],
   },
   {
