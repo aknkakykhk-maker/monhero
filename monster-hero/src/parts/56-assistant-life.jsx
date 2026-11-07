@@ -735,6 +735,20 @@ const assistantLifePickSoloTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, p
   if (!parts.length) return null;
   return assistantLifeWithCtx({ id: parts.map(t => t.id).join('+'), kind: 'life-solo', pair: [id], parts: parts.map(t => t.id), lines: parts.flatMap(t => t.lines), keys: parts[0].keys, lv: 1, scene: 'any' }, ctx);
 };
+// 声をかけたとき(2026-11-07 社長「声をかけにいったら俺とじゃなくて別の助手と喋ってる」): その助手が {name} に話す台本だけ(ほかの助手は出ない)。
+//   台本は「ブリーダーへのひとこと」(kind:'breeder'・8人×12本)。いまの場所の型・気分・していることに近いものから。見つくしたら前に見たものから
+const assistantLifePickCallTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, rand = Math.random) => {
+  const seen = ASSISTANT_LIFE_STORE.state.seen || {};
+  const g = life && (life.groups || []).find(x => x.ids.includes(id));
+  const s = (life && life.solo && life.solo[id]) || (g ? { place: g.place, doing: g.doing } : { place: 'home', doing: 'idle' });
+  const ctx = { place: s.place, doing: s.doing };
+  const keysOf = (t) => ({ pt: t.keys && t.keys.place ? assistantLifePlaceType(id, t.keys.place) : null, mood: (t.keys && t.keys.mood) || null, why: (t.keys && t.keys.why) || null, doing: (t.keys && t.keys.doing) || null });
+  const want = { pt: assistantLifePlaceType(id, s.place), mood: ((life && life.moods) || {})[id] || null, why: s.reason && s.reason !== 'distance' ? s.reason : null, doing: s.doing };
+  const cands = assistantLifeTalkSet().breeder.filter(t => t.who === id && (t.lines || []).every(l => l.who === id)).map(t => ({ talk: t, keys: keysOf(t) }));
+  if (!cands.length) return null;
+  const t = assistantLifeChoose(cands, want, ['doing', 'why', 'mood', 'pt'], seen, rand);
+  return t ? assistantLifeWithCtx({ ...t, pair: Array.isArray(t.pair) && t.pair.length ? t.pair : [id] }, ctx) : null;
+};
 // 誘ったとき: 近くの助手が声をかけに行く(声をかける → こたえる)。答えは気分と理由から(さみしい → 喜ぶ/マイペース → 断る(あとで行く)/すねてる → 照れる)
 const assistantLifePickInviteTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, peerSt = (typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null), rand = Math.random) => {
   const s = life && life.solo && life.solo[id];
@@ -961,10 +975,11 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
     playTalk(talk, { ids: g.ids, place: g.place });
   };
   // 誘う: 次の時間にだれかのところへ行く。声をかけに行く台本があれば、その場で流す
+  // 誘う(声をかける): その助手が {name} に話す台本だけ。次の時間に、だれかのところへ行く(2026-11-07 社長の指摘で、ほかの助手が出る台本はやめた)
   const invite = async (id) => {
-    const talk = assistantLifePickInviteTalk(id, life);
+    const talk = assistantLifePickCallTalk(id, life);
     if (!(await assistantLifeNudge('invite', id))) return;
-    setNote(`${nameOf(id)}を誘いました。次の時間に、だれかのところへ行きます`);
+    setNote(`${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
     if (talk) { assistantLifeMarkSeen(talk); playTalk(talk, { ids: [id], place: ((life.solo || {})[id] || {}).place }); }
   };
   // ようすを見る(ひとりの助手): ひとりごと・距離をおく・ブリーダーへのひとこと。同じ時間に同じ助手は1回。何も増えない

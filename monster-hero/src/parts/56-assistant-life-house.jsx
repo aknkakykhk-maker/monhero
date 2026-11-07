@@ -467,7 +467,9 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   // 掛け合いを、家を閉じずに場面で流す
   const playTalk = (talk, ctx) => {
     if (!talk) return;
-    const sceneIds = (ctx && ctx.ids && ctx.ids.length) ? ctx.ids : (typeof assistantPeerMembers === 'function' ? assistantPeerMembers(talk) : []);
+    // 場面の立ち絵は、実際に話す助手と必ずそろえる(組の人+台本で話す人。いない助手が話す台本を流しても、その助手の絵が出る)
+    const speakers = [...new Set((talk.lines || []).map(l => l && l.who).filter(Boolean))];
+    const sceneIds = [...new Set([...((ctx && ctx.ids) || []), ...speakers])];
     setRoomId(null);
     setScene({ ids: sceneIds, place: (ctx && ctx.place) || 'home', key: talk.id });
     if (onReplay) onReplay(talk);
@@ -485,7 +487,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
     playTalk(talk, { ids: [id], place: w ? w.place : 'home' });
   };
   const invite = async (id) => {
-    const talk = assistantLifePickInviteTalk(id, life);
+    // その助手が {name} に話す台本だけ(ほかの助手が出る台本は使わない・2026-11-07 社長の指摘)
+    const talk = assistantLifePickCallTalk(id, life);
     if (!(await assistantLifeNudge('invite', id))) return;
     setNote(`${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
     if (talk) { assistantLifeMarkSeen(talk); const w = assistantLifeWhereOf(life, id); playTalk(talk, { ids: [id], place: w ? w.place : 'home' }); }

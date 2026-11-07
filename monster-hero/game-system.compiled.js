@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 33426497c68eebd9
+// source-sha256: 321c9ce885095cb0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -101552,6 +101552,43 @@ const assistantLifePickSoloTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, p
     scene: 'any'
   }, ctx);
 };
+const assistantLifePickCallTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, rand = Math.random) => {
+  const seen = ASSISTANT_LIFE_STORE.state.seen || {};
+  const g = life && (life.groups || []).find(x => x.ids.includes(id));
+  const s = life && life.solo && life.solo[id] || (g ? {
+    place: g.place,
+    doing: g.doing
+  } : {
+    place: 'home',
+    doing: 'idle'
+  });
+  const ctx = {
+    place: s.place,
+    doing: s.doing
+  };
+  const keysOf = t => ({
+    pt: t.keys && t.keys.place ? assistantLifePlaceType(id, t.keys.place) : null,
+    mood: t.keys && t.keys.mood || null,
+    why: t.keys && t.keys.why || null,
+    doing: t.keys && t.keys.doing || null
+  });
+  const want = {
+    pt: assistantLifePlaceType(id, s.place),
+    mood: (life && life.moods || {})[id] || null,
+    why: s.reason && s.reason !== 'distance' ? s.reason : null,
+    doing: s.doing
+  };
+  const cands = assistantLifeTalkSet().breeder.filter(t => t.who === id && (t.lines || []).every(l => l.who === id)).map(t => ({
+    talk: t,
+    keys: keysOf(t)
+  }));
+  if (!cands.length) return null;
+  const t = assistantLifeChoose(cands, want, ['doing', 'why', 'mood', 'pt'], seen, rand);
+  return t ? assistantLifeWithCtx({
+    ...t,
+    pair: Array.isArray(t.pair) && t.pair.length ? t.pair : [id]
+  }, ctx) : null;
+};
 const assistantLifePickInviteTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, peerSt = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null, rand = Math.random) => {
   const s = life && life.solo && life.solo[id];
   if (!s) return null;
@@ -101885,9 +101922,9 @@ function AssistantLifeScreenBody({
     });
   };
   const invite = async id => {
-    const talk = assistantLifePickInviteTalk(id, life);
+    const talk = assistantLifePickCallTalk(id, life);
     if (!(await assistantLifeNudge('invite', id))) return;
-    setNote(`${nameOf(id)}を誘いました。次の時間に、だれかのところへ行きます`);
+    setNote(`${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
     if (talk) {
       assistantLifeMarkSeen(talk);
       playTalk(talk, {
@@ -103359,7 +103396,8 @@ function AssistantLifeHouse({
   };
   const playTalk = (talk, ctx) => {
     if (!talk) return;
-    const sceneIds = ctx && ctx.ids && ctx.ids.length ? ctx.ids : typeof assistantPeerMembers === 'function' ? assistantPeerMembers(talk) : [];
+    const speakers = [...new Set((talk.lines || []).map(l => l && l.who).filter(Boolean))];
+    const sceneIds = [...new Set([...(ctx && ctx.ids || []), ...speakers])];
     setRoomId(null);
     setScene({
       ids: sceneIds,
@@ -103405,7 +103443,7 @@ function AssistantLifeHouse({
     });
   };
   const invite = async id => {
-    const talk = assistantLifePickInviteTalk(id, life);
+    const talk = assistantLifePickCallTalk(id, life);
     if (!(await assistantLifeNudge('invite', id))) return;
     setNote(`${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
     if (talk) {

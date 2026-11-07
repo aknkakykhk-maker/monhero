@@ -4,6 +4,7 @@
 //   ① HOME の施設の横に、会った助手の顔が全部出る(帯は出ない)/ 施設「🏡 助手ライフ」を押すと家が開く / 縦 390・横 844×390 ではみ出さない
 //   ⑩ 家: 8人の部屋・いる部屋は顔・出かけた部屋は行き先の札・部屋を押すとその助手のこと・場面・みんなの居場所(地図と一覧)・入場の演出
 //   一覧(組・ひとり・誘う・引き合わせる・見守る・渡す)は家の「📋 居場所」の中。掛け合いは家を閉じずに場面で流れる
+//   ⑪ 声をかける: その助手だけが {name} へ話す(ほかの助手の台本を流さない)・ひとりの助手の場面に、いない助手が出ない(2026-11-07 社長の指摘)
 //   ② 見守る: 掛け合いが流れ、見守った数・にぎわい・友情Lv が増える / 同じ時間に同じ組は2度見守れない
 //   ③ 誘う・引き合わせる: 次の時間の声かけとして残る
 //   ④ 関係とアルバム: 名前は「友情Lv」「友だち」。今日のペアは出ない
@@ -131,7 +132,19 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     const sheetText = await page.locator('[data-assistant-life-room-sheet="atsu"]').innerText().catch(() => '');
     check('⑩ 部屋を押すと、その助手のこと(いまどこ・仲良し度・友情Lv・セッション・今日あったこと)', ['あつの部屋', '仲良し度', '友情Lv', 'セッション', '今日あったこと'].every(w => sheetText.includes(w)), sheetText.replace(/\s+/g, ' ').slice(0, 80));
     if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-13-room.png') });
-    await page.locator('[data-assistant-life-room-sheet="atsu"] > button').first().click({ position: { x: 10, y: 10 } }).catch(() => {});
+    // ⑪ 声をかける(2026-11-07 社長「声をかけにいったら俺とじゃなくて別の助手と喋ってる」): その助手だけが {name} に話す・場面にいない助手が出ない
+    await page.locator('[data-assistant-life-room-sheet="atsu"] [data-assistant-life-room-act="invite"]').click().catch(() => {});
+    await page.waitForTimeout(800);
+    {
+      const info = await talkInfo(page);
+      const speakers = await page.evaluate(() => [...document.querySelectorAll('[data-assistant-peer-face]')].map(e => e.getAttribute('data-assistant-peer-face')));
+      const stands = await page.locator('[data-assistant-life-scene] img.st').count();
+      check('⑪ 声をかけると、選んだ助手だけがプレイヤーへ話す(ほかの助手の顔・台詞が出ない)', !!info && info.faces.every(id => id === 'atsu') && speakers.every(id => id === 'atsu') && /^life-breeder-atsu/.test(info.id), info ? `${info.id}・${info.faces.join(',')}` : 'なし');
+      check('⑪ ひとりの助手の場面には、その助手の立ち絵だけ', stands === 1, `${stands}`);
+      if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-15-call.png') });
+      await endScene(page);
+    }
+    await page.locator('[data-assistant-life-room-sheet] > button').first().click({ position: { x: 10, y: 10 } }).catch(() => {});
     await toWhere(page);
     check('⑩ みんなの居場所に町の地図(場所に顔)', (await page.locator('[data-assistant-life-map] [data-assistant-life-map-place="cafe"] button').count()) === 2);
     const groups = await page.locator('[data-assistant-life-group]').count();
