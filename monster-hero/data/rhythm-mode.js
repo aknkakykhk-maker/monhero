@@ -52470,8 +52470,18 @@ const RHYTHM_NOTE_SWATCH_KINDS=Object.freeze([
   Object.freeze({id:'SKY_SLIDE_R',label:'SKY SLIDE(右手)',words:Object.freeze(['SKY SLIDE','SKYSLIDE','スカイスライド','空のスライド','空中のスライド'])}),
   Object.freeze({id:'SKY_LINE',label:'空の判定ライン',words:Object.freeze(['空の判定ライン','上の判定ライン','空中の判定ライン'])}),
 ]);
-// 描き手を作る。色の組(RHYTHM_NOTE_COLORS)は作るときに読み込むので、色を替えたら作り直す(rhythmApplyNotePalette)
+// ノーツの形(2026-11-07 社長「本オープンにむけて、ノーツの形も何種類か作って選べるようにしたい」)。演奏の設定 noteShape で選ぶ。
+//   既定は STANDARD(これまでの形)。変えるのは粒(ノーツの板)の輪郭と飾りだけで、幅・高さ・位置・当たり判定・色分けは変えない。
+//   マスモンのノーツ・終わりの横棒・帯は、どの形でも今のまま(マスモンのノーツは形でも見分けられるように残す)
+//   2026-11-07 社長「どれも変化少なすぎない？」→ ひと目で違うと分かる形に作り直した(カット・フレーム・ストライプはやめた)
+//   ROUND … 両端が丸い / DIAMOND … ひし形 / CHEVRON … 下向きの「く」の字(V) / HOLLOW … 太い枠だけの中抜き
+//   PIXEL … 四角のブロックを並べたドット風 / GEM … 面を切った宝石 / PAW … まん中に肉球のメダル
+//   ★押す位置が分かるよう、どの形も「粒の中心(判定ラインに重なる所)」と左右のはしは今と同じ。上下へ少し出る形はあるが、横には出ない
+const RHYTHM_NOTE_SHAPE_IDS=Object.freeze(['STANDARD','ROUND','DIAMOND','CHEVRON','HOLLOW','PIXEL','GEM','PAW']);
+let RHYTHM_NOTE_SHAPE_ID='STANDARD';
+// 描き手を作る。色の組(RHYTHM_NOTE_COLORS)と形(RHYTHM_NOTE_SHAPE_ID)は作るときに読み込むので、替えたら作り直す(rhythmApplyNotePalette・rhythmApplyNoteShape)
 const rhythmBuildCanvasRenderer=()=>{
+  const SHAPE=RHYTHM_NOTE_SHAPE_ID;
   const HEAD_H=12;          // 粒の高さ(ノーツ要素 20px から inset 4px 0 を引いた値)
   const GLOW=20;            // 光の画像の余白(px)。いちばん広い光(18px)が収まる
   const CAP=28;             // 3分割画像の両端の幅(角丸7px + 縁取り + 余白)
@@ -52488,7 +52498,7 @@ const rhythmBuildCanvasRenderer=()=>{
   const SKY_ARROW_GLOWS=Object.freeze([[5,`rgba(${SKY_NOTE_COLOR.rgb},.95)`],[11,`rgba(${SKY_NOTE_COLOR.rgb},.6)`],[2,'rgba(2,6,23,.9)']]);
   // 空中のフリックの▲は、縁を白・中を赤にする(地上のピンクの▲は中まで塗ってあるので、縁の有無で分かれる)
   const SKY_ARROW_FILL=Object.freeze([[0,'#ff7b7b'],[1,'#e11d1d']]);
-  const headOf=c=>({radius:2,gradient:[c.hi,['#ffffff',.36],[c.mid,.66],c.lo],border:'rgba(255,255,255,.96)',inset:'rgba(255,255,255,.8)',glow:c.noGlow?[]:[[15,`rgba(${c.rgb},.62)`],[6,'rgba(255,255,255,.34)'],[12,`rgba(${c.rgb},.34)`]]});
+  const headOf=c=>({rgb:c.rgb,radius:2,gradient:[c.hi,['#ffffff',.36],[c.mid,.66],c.lo],border:'rgba(255,255,255,.96)',inset:'rgba(255,255,255,.8)',glow:c.noGlow?[]:[[15,`rgba(${c.rgb},.62)`],[6,'rgba(255,255,255,.34)'],[12,`rgba(${c.rgb},.34)`]]});
   const HEADS={
     TAP:    headOf(RHYTHM_NOTE_COLORS.TAP),
     HOLD:   headOf(RHYTHM_NOTE_COLORS.HOLD),
@@ -52543,6 +52553,87 @@ const rhythmBuildCanvasRenderer=()=>{
     c.beginPath();c.moveTo(x+rr,y);c.lineTo(x+w-rr,y);c.arcTo(x+w,y,x+w,y+rr,rr);c.lineTo(x+w,y+h-rr);c.arcTo(x+w,y+h,x+w-rr,y+h,rr);
     c.lineTo(x+rr,y+h);c.arcTo(x,y+h,x,y+h-rr,rr);c.lineTo(x,y+rr);c.arcTo(x,y,x+rr,y,rr);c.closePath();
   };
+  // 粒の輪郭。STANDARD はこれまでと同じ角丸の四角(roundRectPath そのもの)。r は角の丸み、h は粒の高さ
+  const headPath=(c,x,y,w,h,r)=>roundRectPath(c,x,y,w,h,SHAPE==='ROUND'?h/2:r);
+  const headEdgeInset=(w,h,r,d)=>{
+    const dd=Math.max(0,Math.min(h/2,d)),R=SHAPE==='ROUND'?h/2:r;
+    return dd>=R?0:R-Math.sqrt(Math.max(0,R*R-(R-dd)*(R-dd)));
+  };
+  // 横の帯(y0〜y1)を、輪郭の内側に収まる台形で塗る(芯の白い帯に使う)。WebGL の描き先(GL2D)には clip が無いので、切り抜かずに位置を計算する
+  const headInnerBand=(c,x,y,w,h,r,y0,y1)=>{
+    const a=headEdgeInset(w,h,r,Math.min(y0-y,y+h-y0))+.5,b=headEdgeInset(w,h,r,Math.min(y1-y,y+h-y1))+.5;
+    if(w-a*2<=0||w-b*2<=0)return;
+    c.beginPath();c.moveTo(x+a,y0);c.lineTo(x+w-a,y0);c.lineTo(x+w-b,y1);c.lineTo(x+b,y1);c.closePath();c.fill();
+  };
+  // ── はっきり違う形(DIAMOND・CHEVRON・HOLLOW・PIXEL・GEM・PAW)。3分割の光の画像は使わず、輪郭に沿って光の線を引く ──
+  const CUSTOM_HEAD=SHAPE!=='STANDARD'&&SHAPE!=='ROUND';
+  const pixelBlocks=(x,w,h)=>{const gap=Math.max(1.5,h*.2),n=Math.max(2,Math.round((w+gap)/(h*1.25+gap))),bw=(w-gap*(n-1))/n,out=[];for(let i=0;i<n;i++)out.push([x+i*(bw+gap),bw]);return out;};
+  const customBox=(x,y,w,h)=>{
+    const cy=y+h/2;
+    if(SHAPE==='DIAMOND')return {top:cy-h*.95,bh:h*1.9};
+    if(SHAPE==='GEM')return {top:cy-h*.72,bh:h*1.44};
+    if(SHAPE==='CHEVRON'){const b=Math.min(h*.9,w*.2);return {top:y-b/2,bh:h+b,b};}
+    return {top:y,bh:h};
+  };
+  const customPath=(c,x,y,w,h,box)=>{
+    const cx=x+w/2,cy=y+h/2;
+    if(SHAPE==='DIAMOND'){c.beginPath();c.moveTo(x,cy);c.lineTo(cx,box.top);c.lineTo(x+w,cy);c.lineTo(cx,box.top+box.bh);c.closePath();return;}
+    if(SHAPE==='CHEVRON'){const b=box.b;c.beginPath();c.moveTo(x,y-b/2);c.lineTo(cx,y+b/2);c.lineTo(x+w,y-b/2);c.lineTo(x+w,y+h-b/2);c.lineTo(cx,y+h+b/2);c.lineTo(x,y+h-b/2);c.closePath();return;}
+    if(SHAPE==='GEM'){const t=box.top,H=box.bh,k=Math.min(H*.32,w/5);c.beginPath();c.moveTo(x+k,t);c.lineTo(x+w-k,t);c.lineTo(x+w,t+k);c.lineTo(x+w,t+H-k);c.lineTo(x+w-k,t+H);c.lineTo(x+k,t+H);c.lineTo(x,t+H-k);c.lineTo(x,t+k);c.closePath();return;}
+    if(SHAPE==='PIXEL'){c.beginPath();for(const [bx,bw] of pixelBlocks(x,w,h)){c.moveTo(bx,y);c.lineTo(bx+bw,y);c.lineTo(bx+bw,y+h);c.lineTo(bx,y+h);c.closePath();}return;}
+    return roundRectPath(c,x,y,w,h,SHAPE==='PAW'?h/2:Math.min(3,h/3));
+  };
+  const colorsOf=style=>{const g=style.gradient,pick=v=>Array.isArray(v)?v[0]:v;return {hi:pick(g[0]),mid:pick(g[Math.min(2,g.length-1)]),lo:pick(g[g.length-1])};};
+  const drawCustomHead=(style,x,y,w,h,sizeMul,o)=>{
+    const c=ctx,cx=x+w/2,cy=y+h/2,box=customBox(x,y,w,h),P=()=>customPath(c,x,y,w,h,box),col=colorsOf(style);
+    // 光: 輪郭に沿って色の線を2本(太い薄い線と細い濃い線)。演出量・軽量モードで光を弱める段は今の粒と同じ考え
+    if(!o.failed&&style.glow.length&&style.rgb){
+      const k=glowLevel==='STRONG'?1.5:glowLevel==='WEAK'?.6:1;c.lineJoin='round';
+      P();c.lineWidth=7*sizeMul*k;c.strokeStyle='rgba('+style.rgb+',.26)';c.stroke();
+      c.lineWidth=3.4*sizeMul*k;c.strokeStyle='rgba('+style.rgb+',.5)';c.stroke();
+    }
+    // 外の暗い縁取り(今の粒と同じ太さ・色。線の内側半分は本体で隠れる)
+    if(!o.failed){P();c.lineWidth=RHYTHM_NOTE_OUTLINE_PX*sizeMul*2;c.strokeStyle=RHYTHM_NOTE_OUTLINE_COLOR;c.stroke();}
+    P();c.fillStyle=fillGradient(x,box.top,box.bh,style.gradient);c.fill();c.lineWidth=1;c.strokeStyle=style.border;c.stroke();
+    if(!o.failed){
+      if(SHAPE==='HOLLOW'){
+        // 中を抜く: 枠の太さは粒の高さの3割(押す位置の中心は見える)
+        const t=Math.max(2,h*.3);c.beginPath();roundRectPath(c,x+t,y+t*.8,w-t*2,h-t*1.6,1.5);c.fillStyle='rgba(4,8,24,.9)';c.fill();
+        c.lineWidth=1;c.strokeStyle='rgba(255,255,255,.55)';c.stroke();
+        c.fillStyle='rgba(255,255,255,.55)';c.fillRect(x+t,y+1,Math.max(0,w-t*2),Math.max(1,t*.35));
+      }else if(SHAPE==='DIAMOND'){
+        c.beginPath();c.moveTo(x+w*.08,cy-h*.06);c.lineTo(cx,box.top+h*.22);c.lineTo(x+w*.92,cy-h*.06);c.closePath();c.fillStyle='rgba(255,255,255,.5)';c.fill();
+      }else if(SHAPE==='CHEVRON'){
+        const b=box.b,d=h*.34;c.beginPath();c.moveTo(x+1,y-b/2+1);c.lineTo(cx,y+b/2+1);c.lineTo(x+w-1,y-b/2+1);c.lineTo(x+w-1,y-b/2+d);c.lineTo(cx,y+b/2+d);c.lineTo(x+1,y-b/2+d);c.closePath();c.fillStyle='rgba(255,255,255,.55)';c.fill();
+      }else if(SHAPE==='PIXEL'){
+        c.fillStyle='rgba(255,255,255,.6)';for(const [bx,bw] of pixelBlocks(x,w,h))c.fillRect(bx+1,y+1,Math.max(0,bw-2),Math.max(1,h*.28));
+      }else if(SHAPE==='GEM'){
+        // 面: 上の面は明るく・下の面は暗く・まん中の台は その色。左上に小さなきらめき
+        const t=box.top,H=box.bh,k=Math.min(H*.32,w/5),tx=x+k,ty=t+k*.75,tw=w-k*2,th=H-k*1.5;
+        c.beginPath();c.moveTo(x+k,t);c.lineTo(x+w-k,t);c.lineTo(tx+tw,ty);c.lineTo(tx,ty);c.closePath();c.fillStyle='rgba(255,255,255,.7)';c.fill();
+        c.beginPath();c.moveTo(tx,ty+th);c.lineTo(tx+tw,ty+th);c.lineTo(x+w-k,t+H);c.lineTo(x+k,t+H);c.closePath();c.fillStyle='rgba(2,6,23,.35)';c.fill();
+        c.beginPath();c.moveTo(tx,ty);c.lineTo(tx+tw,ty);c.lineTo(tx+tw,ty+th);c.lineTo(tx,ty+th);c.closePath();c.fillStyle=col.mid;c.fill();
+        c.fillStyle='rgba(255,255,255,.35)';c.fillRect(tx,ty,tw,Math.max(1,th*.35));
+        const sx=tx+Math.min(tw*.18,8*sizeMul),sy=ty+th*.35,sr=Math.max(1.5,th*.42);
+        c.beginPath();c.moveTo(sx,sy-sr);c.lineTo(sx+sr*.28,sy);c.lineTo(sx,sy+sr);c.lineTo(sx-sr*.28,sy);c.closePath();c.fillStyle='#ffffff';c.fill();
+      }else if(SHAPE==='PAW'){
+        c.fillStyle='rgba(255,255,255,.55)';c.fillRect(x+h/2,y+1,Math.max(0,w-h),Math.max(1,h*.22));
+        // まん中のメダル(白いふち+その色)と肉球。メダルは粒の幅の3割まで(細いノーツでもはみ出さない)
+        const r=Math.min(h*1.05,w*.3);
+        c.beginPath();c.arc(cx,cy,r+1.2*sizeMul,0,Math.PI*2);c.fillStyle=RHYTHM_NOTE_OUTLINE_COLOR;c.fill();
+        c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.fillStyle='#ffffff';c.fill();
+        c.beginPath();c.arc(cx,cy,r*.82,0,Math.PI*2);c.fillStyle=col.mid;c.fill();
+        c.fillStyle='#ffffff';c.beginPath();c.arc(cx,cy+r*.2,r*.3,0,Math.PI*2);c.fill();
+        for(const [dx,dy] of [[-.36,-.22],[0,-.4],[.36,-.22]]){c.beginPath();c.arc(cx+dx*r,cy+dy*r,r*.14,0,Math.PI*2);c.fill();}
+      }
+      // ホールドの印(まん中の横線)。肉球はメダルの下に隠れるので、メダルの左右に分けて引く
+      if(o.hold){c.fillStyle='rgba(8,47,73,.6)';
+        if(SHAPE==='PAW'){const r=Math.min(h*1.05,w*.3);c.fillRect(x+w*.14,cy-1,Math.max(0,w*.36-r),2);c.fillRect(cx+r+w*.0,cy-1,Math.max(0,w*.36-r),2);}
+        else c.fillRect(x+w*.24,cy-1,w*.52,2);}
+    }
+    if(o.brightness<1){P();c.fillStyle='rgba(2,6,23,'+(1-o.brightness).toFixed(3)+')';c.fill();}
+    if(o.pressed){P();c.fillStyle='rgba(255,255,255,.4)';c.fill();}
+  };
   const makeSpriteCanvas=(w,h)=>{const c=document.createElement('canvas');c.width=Math.max(1,Math.ceil(w*dpr));c.height=Math.max(1,Math.ceil(h*dpr));const g=c.getContext('2d');g.scale(dpr,dpr);return {canvas:c,ctx:g,w,h};};
   // 光の画像(3分割)。角丸の四角の外側へ box-shadow 相当のぼかしを一度だけ描く。
   // 高さは HEAD_H(+余白)で固定し、貼るときに奥行きぶんだけ縦へ伸縮する。
@@ -52552,7 +52643,8 @@ const rhythmBuildCanvasRenderer=()=>{
     const w=CAP*2+MID,h=HEAD_H+GLOW*2,s=makeSpriteCanvas(w,h);
     const c=s.ctx;
     // 形は余白(GLOW)の内側に置く。貼るときは「粒の左端 - GLOW」から貼るので、形が粒にぴったり重なる
-    const shape=()=>roundRectPath(c,GLOW-outsetX,GLOW-outsetY,w-GLOW*2+outsetX*2,HEAD_H+outsetY*2,radius+outsetX);
+    const shaped=SHAPE==='ROUND'&&!/^(end:|MONSTER)/.test(String(key));
+    const shape=()=>(shaped?headPath:roundRectPath)(c,GLOW-outsetX,GLOW-outsetY,w-GLOW*2+outsetX*2,HEAD_H+outsetY*2,radius+outsetX);
     for(const [blur,color] of glows){
       c.save();c.shadowBlur=blur;c.shadowColor=color;c.fillStyle=color;shape();c.fill();c.restore();
     }
@@ -52709,7 +52801,8 @@ const rhythmBuildCanvasRenderer=()=>{
     ctx.globalAlpha=alpha;
     // 光の絵(3分割で貼るもの)を、描く順に並べる。使い回しの入れ物へ入れる(ノーツごとに配列を作らない)
     headGlowCount=0;
-    if(style.glow.length&&!failed){
+    const customHead=CUSTOM_HEAD&&!monster;
+    if(style.glow.length&&!failed&&!customHead){
       if(glowLevel==='WEAK')pushHeadGlow(glowSprite(monster?'MONSTER':(style===HEADS.SKY?'SKY':note.type),style.radius,style.glow),w,h,alpha);
       else if(glowLevel==='STRONG')pushHeadGlow(glowSprite(style.glowStrongKey,style.radius,style.glowStrong),w*1.12,h*1.6,alpha);
       else pushHeadGlow(glowSprite(style.glowStrongKey,style.radius,style.glowStrong),w*1.04,h*1.25,alpha);
@@ -52723,7 +52816,9 @@ const rhythmBuildCanvasRenderer=()=>{
     // デバッグの「スライドの帯の描き方(検証用)」→ GPU のときは、板の本体(下の縁取り〜押さえている最中の白)を GPU で1回で描く(rhythmCreateGpuPlate)
     // 試作(floor3d): 地上の粒は床に貼り付けた台形で描く(空中・マスモンの粒は今まで)
     const floorHead=floor3d&&!isSkyPlate(note)&&!monster;
-    const plate=geo.gpu&&gpuBandWanted&&backend==='webgl'&&!floorHead?ctx.plate:null;
+    const shaped=SHAPE==='ROUND'&&!monster;
+    const plate=geo.gpu&&gpuBandWanted&&backend==='webgl'&&!floorHead&&!shaped&&!customHead?ctx.plate:null;
+    const hp=shaped?headPath:roundRectPath;
     // 光の絵も板のシェーダーで描く(2026-10-12・発熱の手当て④)。ノーツ1つごとに「光(GL2D)→ 板 → 矢印(GL2D)」と描き方が切り替わり、
     // そのたびに GL2D の状態の送り直しが起きていたため。にじむ光(ブルーム)が入っているときは GL2D の足し算の光を覚えて使うので、今までどおり
     const fuseGlow=!!plate&&plateGlowWanted&&headGlowCount>0&&!ctx.bloomActive;
@@ -52751,33 +52846,39 @@ const rhythmBuildCanvasRenderer=()=>{
       if(brightness<1){floorQuadPath(q);ctx.fillStyle=`rgba(2,6,23,${(1-brightness).toFixed(3)})`;ctx.fill();}
       if(pressed){floorQuadPath(q);ctx.fillStyle='rgba(255,255,255,.4)';ctx.fill();}
     }
-    if(!plateDone&&!floorHead){
+    if(!plateDone&&!floorHead&&customHead)drawCustomHead(style,x,y,w,h,sizeMul,{failed,pressed,brightness,hold:rhythmNoteIsHold(note)});
+    else if(!plateDone&&!floorHead){
       // ノーツの外周に暗い縁取りを1本引く(2026-10-07・ユーザー指摘「レーンのはじにハーフノーツが来たとき、道のふちと被って見にくい」)。
       // 道のふちの白い線に隣り合っても、ノーツの輪郭が埋もれない。位置も大きさも変えない(線を外へ描くだけ)。
       // 太さ・濃さは端も中も同じ(RHYTHM_NOTE_OUTLINE_PX・COLOR。2026-10-12 までは道のはじのノーツだけ太く濃くしていた)
       if(!failed){
         const outline=RHYTHM_NOTE_OUTLINE_PX*sizeMul;
         ctx.lineWidth=outline;ctx.strokeStyle=RHYTHM_NOTE_OUTLINE_COLOR;
-        roundRectPath(ctx,x-outline/2,y-outline/2,w+outline,h+outline,radius+outline/2);ctx.stroke();
+        hp(ctx,x-outline/2,y-outline/2,w+outline,h+outline,radius+outline/2);ctx.stroke();
       }
       if(style.ring){ctx.lineWidth=2*sizeMul;ctx.strokeStyle=style.ring;roundRectPath(ctx,x-1*sizeMul,y-1*sizeMul,w+2*sizeMul,h+2*sizeMul,radius+1);ctx.stroke();}
-      roundRectPath(ctx,x,y,w,h,radius);
+      hp(ctx,x,y,w,h,radius);
       ctx.fillStyle=fillGradient(x,y,h,style.gradient);ctx.fill();
       ctx.lineWidth=1;ctx.strokeStyle=style.border;ctx.stroke();
+      // 形を変えたときは、芯・飾り・幅広の印を輪郭の内側だけに描く(六角の角から芯がはみ出さない)。
+      // ★WebGL の描き先(GL2D)には clip が無いので、切り抜かずに内側の位置を計算して描く
       // 上端の白い筋(inset 0 1px 0)
       // 上半分の白い芯(以前は上端の白い筋1本だった)
       // 白い芯は半透明の四角を2段塗るだけにする(ノーツごとにグラデーションを作らない。上と同じ実測で JS が重かった)
-      if(!failed){ctx.fillStyle='rgba(255,255,255,.62)';ctx.fillRect(x+radius/2,y+1,Math.max(0,w-radius),Math.max(1,h*.22));ctx.fillStyle='rgba(255,255,255,.26)';ctx.fillRect(x+radius/2,y+1+h*.22,Math.max(0,w-radius),Math.max(1,h*.22));}
+      if(shaped&&!failed){ctx.fillStyle='rgba(255,255,255,.62)';headInnerBand(ctx,x,y,w,h,radius,y+1,y+1+Math.max(1,h*.22));ctx.fillStyle='rgba(255,255,255,.26)';headInnerBand(ctx,x,y,w,h,radius,y+1+h*.22,y+1+h*.22+Math.max(1,h*.22));}
+      else if(!failed){ctx.fillStyle='rgba(255,255,255,.62)';ctx.fillRect(x+radius/2,y+1,Math.max(0,w-radius),Math.max(1,h*.22));ctx.fillStyle='rgba(255,255,255,.26)';ctx.fillRect(x+radius/2,y+1+h*.22,Math.max(0,w-radius),Math.max(1,h*.22));}
+      else if(shaped){ctx.fillStyle=style.inset;headInnerBand(ctx,x,y,w,h,radius,y+1,y+2);}
       else{ctx.fillStyle=style.inset;ctx.fillRect(x+radius/2,y+1,Math.max(0,w-radius),1);}
       if(wide&&!monster){
         const bar=ctx.createLinearGradient(0,y,0,y+h);bar.addColorStop(0,'rgba(255,255,255,.95)');bar.addColorStop(1,'rgba(255,255,255,.55)');
-        ctx.fillStyle=bar;ctx.fillRect(x+1,y+1,3,h-2);ctx.fillRect(x+w-4,y+1,3,h-2);
+        const bx=shaped?headEdgeInset(w,h,radius,1)+.5:1;
+        ctx.fillStyle=bar;ctx.fillRect(x+bx,y+1,3,h-2);ctx.fillRect(x+w-bx-3,y+1,3,h-2);
       }
       if(rhythmNoteIsHold(note)&&!monster){ctx.fillStyle='rgba(8,47,73,.55)';ctx.fillRect(x+w*.24,cy-1,w*.52,2);}
       // 奥ほど暗い(filter:brightness 相当。不透明な粒の上では黒を (1-明るさ) の濃さで重ねると同じ色になる)
-      if(brightness<1){roundRectPath(ctx,x,y,w,h,radius);ctx.fillStyle=`rgba(2,6,23,${(1-brightness).toFixed(3)})`;ctx.fill();}
+      if(brightness<1){hp(ctx,x,y,w,h,radius);ctx.fillStyle=`rgba(2,6,23,${(1-brightness).toFixed(3)})`;ctx.fill();}
       // 押さえている最中は粒を白く明るくする(以前は .22)
-      if(pressed){roundRectPath(ctx,x,y,w,h,radius);ctx.fillStyle='rgba(255,255,255,.4)';ctx.fill();}
+      if(pressed){hp(ctx,x,y,w,h,radius);ctx.fillStyle='rgba(255,255,255,.4)';ctx.fill();}
     }
     const sideDir=rhythmNoteVisualType(note)==='FLICK'&&!failed?rhythmFlickDir(note):'';
     if(sideDir){
@@ -54591,20 +54692,32 @@ const rhythmApplyNotePalette=(id)=>{
   try{RHYTHM_NOTE_COLORS=RHYTHM_NOTE_PALETTES[next];RHYTHM_NOTE_PALETTE_ID=next;RHYTHM_CANVAS_RENDERER=rhythmBuildCanvasRenderer();return true;}
   catch(e){RHYTHM_NOTE_COLORS=prevColors;RHYTHM_NOTE_PALETTE_ID=prevId;RHYTHM_CANVAS_RENDERER=prevRenderer;return false;}
 };
-// 選んでいない見た目でノーツの見本を描く(2026-11-07 社長「各ノーツごとにどうかわるか」・オプションのノーツの色の見本)。
-//   look … { palette: RHYTHM_NOTE_PALETTES の id }。ほかの見た目(ノーツの形など)を足すときも、この入れ物に項目を足す。
+// 演奏の設定のノーツの形(noteShape)を描き手へ当てる。同じ形なら何もしない。当て方の決まりは rhythmApplyNotePalette と同じ
+// (★演奏を始めるとき・描き先を取り付ける前だけ呼ぶ)
+const rhythmApplyNoteShape=(id)=>{
+  const next=RHYTHM_NOTE_SHAPE_IDS.includes(id)?id:'STANDARD';
+  if(next===RHYTHM_NOTE_SHAPE_ID)return false;
+  const prevId=RHYTHM_NOTE_SHAPE_ID,prevRenderer=RHYTHM_CANVAS_RENDERER;
+  try{RHYTHM_NOTE_SHAPE_ID=next;RHYTHM_CANVAS_RENDERER=rhythmBuildCanvasRenderer();return true;}
+  catch(e){RHYTHM_NOTE_SHAPE_ID=prevId;RHYTHM_CANVAS_RENDERER=prevRenderer;return false;}
+};
+// 選んでいない見た目でノーツの見本を描く(2026-11-07 社長「各ノーツごとにどうかわるか」・オプションのノーツの色と形の見本)。
+//   look … { palette: RHYTHM_NOTE_PALETTES の id, shape: RHYTHM_NOTE_SHAPE_IDS の id }。ほかの見た目を足すときも、この入れ物に項目を足す。
 //   演奏に使っている描き手(RHYTHM_CANVAS_RENDERER)は作り直さない。見本用の描き手を見た目ごとに1つ作って取っておく。
-//   描き手は描くときにも RHYTHM_NOTE_COLORS を読むので、描くあいだだけ差し替えて、すぐ戻す(同期で終わるので演奏の描画とは混ざらない)
+//   描き手は描くときにも RHYTHM_NOTE_COLORS を読むので、描くあいだだけ差し替えて、すぐ戻す(同期で終わるので演奏の描画とは混ざらない)。
+//   形は作るときに読む(描き手の中の SHAPE)ので、作るあいだだけ RHYTHM_NOTE_SHAPE_ID を差し替える
 const rhythmPreviewRenderers=new Map();
-const rhythmNoteLookKey=(look)=>(RHYTHM_NOTE_PALETTES[look&&look.palette]?look.palette:'STANDARD');
+const rhythmNoteLookPalette=(look)=>(RHYTHM_NOTE_PALETTES[look&&look.palette]?look.palette:'STANDARD');
+const rhythmNoteLookShape=(look)=>(RHYTHM_NOTE_SHAPE_IDS.includes(look&&look.shape)?look.shape:'STANDARD');
+const rhythmNoteLookKey=(look)=>rhythmNoteLookPalette(look)+'|'+rhythmNoteLookShape(look);
 const rhythmDrawNoteSwatchWith=(look,c,kind,w,h)=>{
-  const key=rhythmNoteLookKey(look);
-  if(key===RHYTHM_NOTE_PALETTE_ID)return RHYTHM_CANVAS_RENDERER.drawSwatch(c,kind,w,h);
-  const prev=RHYTHM_NOTE_COLORS;
+  const palette=rhythmNoteLookPalette(look),shape=rhythmNoteLookShape(look),key=palette+'|'+shape;
+  if(palette===RHYTHM_NOTE_PALETTE_ID&&shape===RHYTHM_NOTE_SHAPE_ID)return RHYTHM_CANVAS_RENDERER.drawSwatch(c,kind,w,h);
+  const prev=RHYTHM_NOTE_COLORS,prevShape=RHYTHM_NOTE_SHAPE_ID;
   try{
-    RHYTHM_NOTE_COLORS=RHYTHM_NOTE_PALETTES[key];
+    RHYTHM_NOTE_COLORS=RHYTHM_NOTE_PALETTES[palette];
     let r=rhythmPreviewRenderers.get(key);
-    if(!r){r=rhythmBuildCanvasRenderer();rhythmPreviewRenderers.set(key,r);}
+    if(!r){RHYTHM_NOTE_SHAPE_ID=shape;try{r=rhythmBuildCanvasRenderer();}finally{RHYTHM_NOTE_SHAPE_ID=prevShape;}rhythmPreviewRenderers.set(key,r);}
     return r.drawSwatch(c,kind,w,h);
   }catch(e){return false;}finally{RHYTHM_NOTE_COLORS=prev;}
 };

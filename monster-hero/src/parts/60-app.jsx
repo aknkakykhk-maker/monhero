@@ -18867,8 +18867,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // その日の遊び方(その日の出来事の掛け合いに使う)。ミッションの今日の数から読むだけ
           const md=normalizeMissions(missions).daily||{};
           const today={battles:md.battles||0,clears:md.challengeClears||0,enhances:md.enhances||0};
-          return <AssistantPeerTalk scene={peerReplay?null:scene} metIds={metIds} selectedId={selectedAssistantId}
-            replay={peerReplay} onReplayEnd={()=>setPeerReplay(null)} today={today}/>;
+          return <>
+            <AssistantPeerTalk scene={peerReplay?null:scene} metIds={metIds} selectedId={selectedAssistantId}
+              replay={peerReplay} onReplayEnd={()=>setPeerReplay(null)} today={today}/>
+            {/* 助手たちの今(2026-11-07・公開の印 assistantLife)。帯は HOME だけ(演奏中・マルチ中・お話の最中は出さない)。画面は帯とプロフィールから開く */}
+            {typeof AssistantLifeBand==='function'&&gameState==='HOME'&&!busy&&!peerReplay&&<AssistantLifeBand metIds={metIds}/>}
+            {typeof AssistantLifeScreen==='function'&&<AssistantLifeScreen metIds={metIds} onReplay={(talk)=>setPeerReplay(talk)}
+              peerItems={{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}} onUseItem={useAssistantPeerItem}/>}
+          </>;
         })()}
 
         {/* モンヒロビート(音ゲー)の準備中の案内。公開フラグが立つまでHOMEのモンヒロビートはここへ来る。

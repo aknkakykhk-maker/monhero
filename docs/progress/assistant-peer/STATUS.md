@@ -103,3 +103,38 @@
 - 検査 `node tools/assistant/assistant-life-check.js`(`--table` 好みの表・`--stats` お祭りの人の30日)
 - コトバへ: `LIFE-WORDS.md`(穴の言葉・好みの表・30日の回数)
 - 次: 段階2 画面「助手たちの今」・HOME の帯・関係とアルバムのつなぎ直し・名前「友情Lv」(段の名前の案は窓口へ送った)
+
+## 助手たちの今 段階2(2026-11-07 ナカヨシ3)
+
+- #4718: コトバの指摘で、同じ2人ばかりにならないよう調整(ペアの差 23倍→約7倍・ドラが家でさみしい 1日約0.7回)
+- 画面「助手たちの今」(`AssistantLifeScreen`): にぎわいの帯・いまの様子(組=見守る/ひとり=誘う)・引き合わせる・「関係とアルバム」タブ(今の関係図)。HOME の帯(`AssistantLifeBand`)とプロフィールから開く
+- 見守る: その組の今ある台本から1本流す。組のペアに talk の上がり・プレイヤーの仲良し度・にぎわい+2。1日に見守れる数は段の moves(6/10/16/24)、同じ時間に同じ組は1回
+- 名前: 印が真なら「友情Lv」・Lv3「友だち」・Lv4「いい友だち」・写真「友だちの1枚」(社長 2026-11-07)。今日のペアは出さない・数えない。関係の行に「あと◯」
+- 帯は HOME だけ(`gameState==='HOME'&&!busy`)。掛け合いが流れているあいだは隠れる。画面は閉じているあいだ何も読まない・書かない(演奏中・マルチ中に様子を決め直さない)
+- 検査 `node tools/assistant/assistant-life-browser-check.js`(`--shots` で止め絵 `shots/life-*.png`)
+- 次: 段階3 台詞の取り込み(コトバの道具 → `ASSISTANT_LIFE_TALKS`)と、様子に合う台本を引く仕組み(ひとりごと・声かけ・2人・3人・言い合い・ブリーダーへ)。データの形はコトバへ送った
+
+## 引き継ぎ(2026-11-07 ナカヨシ3 → ナカヨシ4・段階3)
+
+### できたこと(main・印 assistantLife は偽)
+- #4717・#4718 段階1(仕組み・にぎわい)/#4722 段階2(画面・帯・友情Lv の名前)。#4715 は急ぎの折り返しの直し
+- 検査: `assistant-life-check.js`(仕組み)・`assistant-life-browser-check.js`(画面。`--shots` で止め絵)
+
+### 台詞(枝。まだ main に入れていない)
+- コトバ `claude/assistant-life-lines`: `lines/kotoba-life.txt`(ひとりごと431本+2人279本)・`tsumugi.txt` を取り込み済み・`lines/ALLOC.md`(本数)・`lines/KOTOBA-STATUS.md`(残り)・取り込み道具 `tools/assistant/life-talks-import.js`(→ assistants.js 末尾の印のあいだ `ASSISTANT_LIFE_TALKS`。`--check` あり)・検査 `peer-lines-variety-check.js`
+- ツムギ `claude/assistant-life-lines-tsumugi`: 2人280本・`lines/tsumugi-rewrite.txt`(今ある台本の書き直し edit 506・tag 209・add 15=けんかの「距離」)。当てる道具は `tools/assistant/peer-rewrite-apply.js` で置いてもらうよう頼んだ
+- 残り(コトバ): 声かけ→こたえる・決まった3人の上位20組・言い合い→仲直り・ブリーダーへのひとこと。ツムギ: どの3人でも約30本・折り返しの4行
+
+### 決めたデータの形
+- `ASSISTANT_LIFE_TALKS`: { id:'life-<kind>-<人>-<3けた>', kind:'solo'|'invite'|'pair'|'trio'|'quarrel'|'breeder', keys:{place,mood,why,doing,lv('1-3'/'4-6'/'7-10'),air(normal/after/makeup),answer(glad/decline/shy),seed}, lines:[{who,e,t}] }
+  - solo: who・line('scene'|'feel'。ひとりごとは scene→feel の順でつなぐ)/ invite: who(誘われる人)・from / quarrel: lines・distance・makeup
+  - trio: 決まった3人は trio:[3人]。どの3人でもは { trio:null, pair:[A,B], any:true }(A・B だけが話す。A と B がいる3人以上の組で、決まった3人の台本が無いときに出す)
+  - 穴 {c}・{c:id}・{place}・{doing}・{doing_te} は文字のまま。置きかえはゲーム側
+- 今ある台本の書き直し: **id を変えない**(思い出アルバムが id で覚えている)。公開中なので **印が真のときだけ** 書き直した文で出す(書き直しの表を足す形。assistants.js の今の文は消さない)。tag の doing・lv は新しい選び方で使う。similar= は新しい選び方で出しにくくするだけ(アルバムには残す)
+- when(その日の出来事)は今の仕組みのまま
+
+### 段階3でやること
+1. コトバの道具で `ASSISTANT_LIFE_TALKS` を main へ(コトバがコミット後)。assistant-life-check に id の重なり・鍵の名前・話し手が組の中の人か を足す
+2. 様子に合う台本を引く: 帯・見守る・誘う(invite の answer)・ひとりの助手をタップ(solo scene→feel)・言い合い(quarrel → 距離 → 引き合わせで makeup)・ブリーダーへ。見たものは14日出さない(新しいキー `mh_assistant_peer_seen14_v1`。LIFE-PLAN の4)
+3. 書き直しの表の当て込み(印が真のときだけ)
+4. 全部そろったら: 止め絵(縦・横の iPhone 幅)・台詞の抜粋・更新履歴とヘルプの文を窓口へ(changelog-help-update スキル)。社長の「この文で公開」をもらってから印を真に
