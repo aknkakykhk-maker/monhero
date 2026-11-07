@@ -13011,6 +13011,8 @@ const ASSISTANT_PEER_BOND_ACTIONS = Object.freeze({
   gift:   { amount:15, dailyMax:15, label:'差し入れをもらった', uncapped:true },
   token:  { amount:30, dailyMax:30, label:'友情のしるしを使った', uncapped:true },
   play:   { amount:4, dailyMax:12, label:'いっしょに遊びに行った' },
+  // モンヒロビートの助手とのセッション: 2人で部屋に呼ばれて1曲終えた(2026-11-07 社長の決定・ビート部マモリ。公開の印 rhythmAssistantSession の後ろで足す)
+  session: { amount:3, dailyMax:12, label:'2人でセッションをした' },
   // ③ ミニイベント(1日5まで)・仲直り(1回の仲直りにつき1回・1日20の上限の外)(2026-11-07 社長)
   event:  { amount:5, dailyMax:5, label:'2人のミニイベントを見た' },
   makeup: { amount:5, dailyMax:5, label:'けんかのあと仲直りした', uncapped:true },

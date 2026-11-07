@@ -1143,6 +1143,8 @@ const RHYTHM_MULTI = (() => {
       const x = s.cpus.find((c) => c.masuId === masuId);
       if (!x) return;
       if (growth.levelUp > 0) cpuSay(x, 'lvUp', { who: ownerName() }, { extraDelay: 800, skipGap: true });
+      // 助手の苦手な曲の好み度が上がった(2026-11-07 助手とのセッション)
+      else if (growth.likeUp > 0) cpuSay(x, 'likeUp', { who: ownerName() }, { extraDelay: 800, skipGap: true });
       if (growth.traitNew) cpuSay(x, 'traitNew', { who: ownerName() }, { extraDelay: growth.levelUp > 0 ? 3000 : 800, skipGap: true });
       // 性格の芽が出た(ビートLv.10・2026-11-06)
       else if (growth.sproutNew) cpuSay(x, 'sproutNew', { who: ownerName() }, { extraDelay: growth.levelUp > 0 ? 3000 : 800, skipGap: true });
@@ -2982,7 +2984,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               chartLevel={song && song.difficulties && song.difficulties[cpuRow.res.diffId] ? Number(song.difficulties[cpuRow.res.diffId].level) || 0 : 0}
               humans={team.rows.filter((row) => !row.m.cpu).length}
               score={cpuRow.res.score} maxScore={((typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === cpuRow.res.diffId) || {}).maxScore || 0} />
-            )))}</div>;
+            )))}
+            {/* 助手が2人以上このライブに出ていたら、デュオの2人のひとことと仲良し度 +3(2026-11-07 助手とのセッション) */}
+            <RhythmAssistSessionDuoResult round={room.round} ids={grown.map((g) => g.assistantId).filter(Boolean)} />
+          </div>;
         })()}
         <div className="mt-auto flex shrink-0 gap-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 landscape:justify-end landscape:border-t-0 landscape:bg-transparent [@media(max-height:440px)]:pt-1 [[data-mh-view-rotation=true]_&]:pt-1" style={{ paddingBottom: 'calc(.4rem + var(--mh-sa-bottom))' }}>
           <button data-rhythm-multi-member-stats type="button" onClick={() => setStatsOpen(true)}

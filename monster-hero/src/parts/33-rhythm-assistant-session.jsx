@@ -155,3 +155,33 @@ const rhythmAssistSessionInClimax = (songId, timeMs) => {
   const t = Number(timeMs);
   return Number.isFinite(t) && spans.some((x) => Array.isArray(x) && Number(x[2]) >= 0.9 && t >= Number(x[0]) && t < Number(x[1]));
 };
+
+// ---- デュオ(助手どうしの仲良し度。PLAN.md 3章・社長の決定 2026-11-07) ----
+// 仲良し度 Lv3 から「デュオ」(演奏中の掛け合い1曲3回まで)。Lv4 で結果の2人のひとこと・ビートP +5%。
+// Lv5 で、2人の特別なお話を見たあとは、サビで合体の演出(1曲1回)。仲良し度は読むだけ(足すのは 2人で1曲終えたときの +3 だけ)
+const RHYTHM_ASSIST_SESSION_DUO_LEVEL = 3;
+const RHYTHM_ASSIST_SESSION_DUO_RESULT_LEVEL = 4;
+const RHYTHM_ASSIST_SESSION_GATTAI_LEVEL = 5;
+const RHYTHM_ASSIST_SESSION_DUO_P_BONUS = 0.05;
+const RHYTHM_ASSIST_SESSION_DUO_TALK_MAX = 3;
+const rhythmAssistSessionPairKey = (a, b) => [String(a), String(b)].sort().join('-');
+// 呼んだ助手(呼んだ順)から、デュオを組む。仲良し度の高いペアから先に組み、1人は1つのデュオにだけ入る。
+// levelOf(a, b) … 2人の仲良し度 Lv / seenOf(a, b) … 2人の特別なお話を見たか
+const rhythmAssistSessionDuos = (ids, levelOf, seenOf) => {
+  const list = (Array.isArray(ids) ? ids : []).filter((id, i, arr) => RHYTHM_ASSIST_SESSION_IDS.includes(id) && arr.indexOf(id) === i);
+  const pairs = [];
+  for (let i = 0; i < list.length; i += 1) for (let j = i + 1; j < list.length; j += 1) {
+    const lv = Number(typeof levelOf === 'function' ? levelOf(list[i], list[j]) : 0) || 0;
+    if (lv >= RHYTHM_ASSIST_SESSION_DUO_LEVEL) pairs.push({ a: list[i], b: list[j], lv, order: i * 10 + j });
+  }
+  pairs.sort((x, y) => y.lv - x.lv || x.order - y.order);
+  const used = new Set();
+  return pairs.filter((p) => { if (used.has(p.a) || used.has(p.b)) return false; used.add(p.a); used.add(p.b); return true; })
+    .map(({ a, b, lv }) => ({
+      a, b, lv, key: rhythmAssistSessionPairKey(a, b),
+      result: lv >= RHYTHM_ASSIST_SESSION_DUO_RESULT_LEVEL,
+      gattai: lv >= RHYTHM_ASSIST_SESSION_GATTAI_LEVEL && !!(typeof seenOf === 'function' && seenOf(a, b)),
+    }));
+};
+// デュオのビートP の上乗せ(仲良し度 Lv4 以上のデュオ1組につき +5%)
+const rhythmAssistSessionDuoBonus = (duos) => (Array.isArray(duos) ? duos : []).filter((d) => d && d.result).length * RHYTHM_ASSIST_SESSION_DUO_P_BONUS;

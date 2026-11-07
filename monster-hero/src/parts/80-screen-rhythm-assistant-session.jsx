@@ -58,29 +58,67 @@ const rhythmAssistSessionLikedNames = (assistantId) => {
 };
 const rhythmAssistSessionName = (assistantId) => { const who = rhythmAssistSessionWho(assistantId); return String((who && who.name) || '助手').slice(0, 12); };
 
-// 部屋で話すひとこと(段階1は最小限。段階3でコトバ・ナカヨシと場面を増やす。口調の基準は docs/progress/assistant-peer/VOICE.md)
-const RHYTHM_ASSIST_SESSION_LINES = Object.freeze({
-  mua: { join: 'やっほ〜！あたしも一緒に叩くね♪', love: 'この曲あたし大好きなの♪', combo: 'いい流れぢゃん♪ 全部いこ！', miss: 'どんまい！ここから取り返そ♪', climax: 'サビきた〜！テンションまぢ上がる♪', mvp: 'MVPとっちゃった！？あたしすごくない？♪', high: 'まぢいい感じぢゃん！楽しかったぁ♪', low: '次はもっと合わせよ！あたしもがんばる♪' },
-  kiki: { join: 'ブリーダーさん、よろしくお願いしまつ♪', love: 'この曲、私とても好きなんです♪', combo: 'いい流れでつね♪ このまま全部いきましょう', miss: '大丈夫でつ、落ち着いていきましょう♪', climax: 'ここが一番きれいなところでつ♪', mvp: '私がMVPですか？ちょっと照れちゃいまつ♪', high: 'とってもいい演奏でした♪', low: '次はきっと、もっと合わせられますよ♪' },
-  momosuke: { join: 'ももが来たからには盛り上げるよ！！', love: 'この曲ももの推し曲！！', combo: 'いい感じ！！ももも乗ってきた♡', miss: 'ドンマイドンマイ！ももがついてるよw', climax: 'サビ！！ここで一番かわいく決めるよ♡', mvp: 'MVPはもも！！当然でしょw', high: 'ももと合わせたらこんなもんでしょw さすが♡', low: 'ドンマイ！次はもも、もっと見ててあげる♡' },
-  dra: { join: 'おでも混ぜてくれよな、えへへ', love: 'この曲、おで好きなんだな', combo: 'すごいな、ずっとつながってるくさ', miss: 'どんまいだな、次でとりかえすからな', climax: 'ここからが本番だな、えへへ', mvp: 'おでがMVPか、えへへ、照れくさいな', high: 'いい演奏だったくさ。おで楽しかったな', low: 'どんまいだな、次でとりかえすからな' },
-  atsu: { join: 'とりあえず一曲いくか笑', love: 'これ俺の好きなやつだな笑', combo: 'とりあえずいい感じだな笑', miss: 'てか焦らなくていいぞ！', climax: 'ここ決めるぞ笑', mvp: 'MVPもらっといた笑', high: 'てか今の、普通にうまかったな笑', low: 'まあ次だな、切り替えていこう！' },
-  kyuko: { join: 'ほい！俺も入るね〜', love: 'この曲は構成がきれいなんだよね〜', combo: 'ほい！いい流れだね〜', miss: 'ぐぬぬぬ、でもリズムは合ってるよ〜', climax: 'サビ前で一回引いて…ここだね〜', mvp: 'MVPいただきました〜笑', high: 'いい流れだったね〜、ありがとん笑', low: 'ぐぬぬぬ、次はサビ前を意識してみよ〜' },
-  sorashido: { join: 'うぉぉぉ！俺も参戦するぜ・・・！', love: 'この曲は全ノーツ計算済みだぜ・・・！', combo: 'うぉぉぉ！計算どおりだぜ・・・！', miss: 'ここから巻き返す計算だぜ笑', climax: 'うぉぉぉ！ここだぜ・・・！', mvp: 'MVPは計算済みだったぜ・・・！', high: '計算どおりの名演だぜ・・・！', low: '次は全ノーツ計算して挑むぜ笑' },
-  erubin: { join: '俺も一緒にいいかな？よろしくね', love: 'この曲、好きなんだよね', combo: 'いい感じだね、そのままで大丈夫', miss: '大丈夫、ゆっくりいこうね', climax: 'ここ、いいところだね', mvp: '俺がMVP？ありがとね', high: 'いい演奏だったね、おつかれさま', low: '大丈夫、次はきっと合うよ' },
-});
-// 演奏中の場面(combo・miss・climax)は顔のふきだし(RhythmAssistSessionPlayFace)が使う
-const rhythmAssistSessionTalk = ({ assistantId, kind, songId = '', score = 0, diffId = '', mvp = false }) => {
-  const lines = RHYTHM_ASSIST_SESSION_LINES[assistantId];
-  if (!lines) return '';
-  if (kind === 'join') return lines.join;
-  if (kind === 'combo' || kind === 'miss' || kind === 'climax') return lines[kind] || '';
-  if ((kind === 'pick' || kind === 'song') && songId && rhythmAssistSessionTaste(assistantId, songId) === 'like') return lines.love;
-  if (kind === 'result') {
-    if (mvp) return lines.mvp;
-    const diffDef = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === diffId);
-    const ratio = Number(score) / ((diffDef && diffDef.maxScore) || 1000000);
-    return ratio >= 0.85 ? lines.high : ratio < 0.7 ? lines.low : '';
+// 台詞は 33-rhythm-assistant-session-lines.jsx(docs/progress/beat-assistant-session/lines/*.txt から生成)。
+// 助手ごとに直近に言った台詞を覚えて避ける(保存しない)。同じ曲で同じ台詞を出さないため
+const RHYTHM_ASSIST_SESSION_RECENT = new Map();
+const RHYTHM_ASSIST_SESSION_RECENT_KEEP = 12;
+// 場面の台詞を1つ選ぶ。[表情, 台詞]。無ければ null
+const rhythmAssistSessionPickLine = (assistantId, scene, rand = Math.random) => {
+  const table = typeof RHYTHM_ASSIST_SESSION_SOLO_LINES !== 'undefined' ? RHYTHM_ASSIST_SESSION_SOLO_LINES[assistantId] : null;
+  const list = table && Array.isArray(table[scene]) ? table[scene] : [];
+  if (!list.length) return null;
+  const recent = RHYTHM_ASSIST_SESSION_RECENT.get(assistantId) || [];
+  const fresh = list.filter((x) => !recent.includes(x[1]));
+  const pool = fresh.length ? fresh : list;
+  const hit = pool[Math.floor(rand() * pool.length)];
+  RHYTHM_ASSIST_SESSION_RECENT.set(assistantId, [hit[1], ...recent.filter((t) => t !== hit[1])].slice(0, RHYTHM_ASSIST_SESSION_RECENT_KEEP));
+  return hit;
+};
+// 好きな曲・苦手な曲の結果の専用(曲の別の版も同じ曲として探す)
+const rhythmAssistSessionSongScene = (assistantId, songId) => {
+  const table = typeof RHYTHM_ASSIST_SESSION_SOLO_LINES !== 'undefined' ? RHYTHM_ASSIST_SESSION_SOLO_LINES[assistantId] : null;
+  if (!table || !songId) return '';
+  if (table[`song:${songId}`]) return `song:${songId}`;
+  const t = RHYTHM_ASSIST_SESSION_TASTE[assistantId];
+  const family = t ? [...t.like.find((ids) => ids.includes(songId)) || [], ...(t.dislike.includes(songId) ? t.dislike : [])] : [];
+  const key = family.map((id) => `song:${id}`).find((k) => table[k]);
+  return key || '';
+};
+const rhythmAssistSessionRatio = (score, diffId) => {
+  const diffDef = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === diffId);
+  return Number(score) / ((diffDef && diffDef.maxScore) || 1000000);
+};
+// 部屋のチャットで話すひとこと(cpuBrain.talk の助手の分)。kind は部屋(77)が渡す場面の名前
+//   join … 部屋に来た / pick・song … 曲が決まった(はじめて・好き・苦手) / result … 自分の結果(MVP のときだけ話す)
+//   reactResult … 呼んだ人の結果(フル コン・高い・ふつう・低い・好きな曲の専用・苦手を乗りこえた) / lvUp・likeUp … 育った
+const rhythmAssistSessionTalk = ({ assistantId, kind, songId = '', score = 0, diffId = '', mvp = false, fc = 0, quit = false, rand = Math.random }) => {
+  const say = (scene) => { const hit = rhythmAssistSessionPickLine(assistantId, scene, rand); return hit ? hit[1] : ''; };
+  const roomSong = () => {
+    const v = typeof RHYTHM_MULTI !== 'undefined' ? RHYTHM_MULTI.view() : null;
+    return (v && v.room && v.room.songId) || '';
+  };
+  if (kind === 'join') return say('join');
+  if (kind === 'combo' || kind === 'miss' || kind === 'climax' || kind === 'last') return say(kind);
+  if (kind === 'lvUp') return say('levelup');
+  if (kind === 'likeUp') return say('likeup');
+  if (kind === 'pick' || kind === 'song') {
+    if (!songId) return '';
+    const taste = rhythmAssistSessionTaste(assistantId, songId);
+    if (taste === 'like') return say('like');
+    if (taste === 'dislike') return say('dislike');
+    const mon = rhythmAssistSessionMon(RHYTHM_ASSIST_SESSION_STORE.get(), assistantId);
+    return !(mon.songs && mon.songs[songId]) && rand() < 0.6 ? say('first') : '';
+  }
+  if (kind === 'result') return mvp ? say('mvp') : '';
+  if (kind === 'reactResult') {
+    if (quit) return '';
+    const sid = songId || roomSong();
+    const special = rhythmAssistSessionSongScene(assistantId, sid);
+    if (special && rand() < 0.5) return say(special);
+    if (rhythmAssistSessionTaste(assistantId, sid) === 'dislike' && rand() < 0.5) return say('overcome');
+    if (Number(fc) > 0) return say('fc');
+    const ratio = rhythmAssistSessionRatio(score, diffId);
+    return say(ratio >= 0.9 ? 'high' : ratio < 0.7 ? 'low' : 'mid');
   }
   return '';
 };
@@ -180,6 +218,11 @@ function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, duratio
     }).then(() => {
       // 節目のセッション券は、渡した印を保存したあとで渡す(画面を閉じても二重にならない)
       if (outcome && outcome.tickets > 0 && typeof onTickets === 'function') { try { onTickets(outcome.tickets); } catch (_) { /* 渡せなくても続ける */ } }
+      // 部屋のチャットに、育ったひとこと(セッションLv.UP・苦手だった曲が好きになってきた)
+      if (outcome && typeof RHYTHM_MULTI !== 'undefined' && RHYTHM_MULTI.noteBuddyGrowth) {
+        const likeUp = outcome.likeUp > 0 && rhythmAssistSessionTaste(assistantId, songId) !== 'like' ? outcome.likeUp : 0;
+        if (outcome.levelUp > 0 || likeUp > 0) RHYTHM_MULTI.noteBuddyGrowth(rhythmAssistSessionKey(assistantId), { levelUp: outcome.levelUp, likeUp });
+      }
       if (alive && outcome) setShown(outcome);
     });
     return () => { alive = false; };
@@ -197,36 +240,92 @@ function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, duratio
   );
 }
 
+// 助手どうしの仲良し度を読む(56-assistant-peer.jsx。書かない)。公開の印 assistantPeer が偽なら、デュオは組まない
+const rhythmAssistSessionPeerLevel = (a, b) => {
+  if (typeof assistantPeerEnabled !== 'function' || !assistantPeerEnabled() || typeof ASSISTANT_PEER_STORE === 'undefined') return 0;
+  return assistantPeerLevel(ASSISTANT_PEER_STORE.state, a, b);
+};
+const rhythmAssistSessionPeerSeen = (a, b) => {
+  if (typeof ASSISTANT_PEER_STORE === 'undefined') return false;
+  const st = ASSISTANT_PEER_STORE.state;
+  return !!(st && Array.isArray(st.special) && st.special.includes(assistantPeerPairKey(a, b)));
+};
+const rhythmAssistSessionDuosNow = (ids) => rhythmAssistSessionDuos(ids, rhythmAssistSessionPeerLevel, rhythmAssistSessionPeerSeen);
+// いま部屋に呼んでいる助手(呼んだ順)
+const rhythmAssistSessionCalledIds = () => {
+  const v = typeof RHYTHM_MULTI !== 'undefined' ? RHYTHM_MULTI.view() : null;
+  return (v && v.myCpus ? v.myCpus : []).map((c) => rhythmAssistSessionIdOf(c.masuId)).filter(Boolean);
+};
+// 呼んだ助手みんなのビートP の上乗せ(セッションLv の上乗せ + 仲良し度 Lv4 以上のデュオ)。60-app の周回の報酬の倍率に掛ける
+const rhythmAssistSessionRewardBonusNow = () => {
+  const ids = rhythmAssistSessionCalledIds();
+  return rhythmAssistSessionRewardBonus(RHYTHM_ASSIST_SESSION_STORE.get(), ids) + rhythmAssistSessionDuoBonus(rhythmAssistSessionDuosNow(ids));
+};
+// デュオの台詞を1本選ぶ(1曲のうちに同じものは出さない)。[[話す人, 表情, 台詞(呼び方入り)], …]
+const rhythmAssistSessionPickPair = (duo, scene, used, rand = Math.random) => {
+  const table = typeof RHYTHM_ASSIST_SESSION_PAIR_LINES !== 'undefined' ? RHYTHM_ASSIST_SESSION_PAIR_LINES[duo.key] : null;
+  const list = table && Array.isArray(table[scene]) ? table[scene] : [];
+  const fresh = list.filter((rows) => !used.has(rows));
+  if (!fresh.length) return null;
+  const rows = fresh[Math.floor(rand() * fresh.length)];
+  used.add(rows);
+  const callOf = (who, to) => (typeof assistantPeerCall === 'function' ? assistantPeerCall(who, to) : rhythmAssistSessionName(to));
+  return rows.map(([who, expr, text]) => [who, expr, String(text).replace(/\{c\}/g, callOf(who, who === duo.a ? duo.b : duo.a))]);
+};
+
 // 演奏中の助手の顔とひとこと(2026-11-07 社長の止め絵の形)。演奏画面の外(60-app)から重ねる。演奏の仕組みには触れず、
 // 30-rhythm-play.jsx の読むだけの窓(RHYTHM_PLAY_WATCH)から、コンボ・ミス・曲の時刻を読むだけ。
-// 置き場所: 左上の表示(data-rhythm-hud-left)のすぐ下(縦は時間の行の下・横は曲名の行の下。道の外)。
-// ひとことは 1.6秒で消える。同じ曲で同じ場面のひとことは1回だけ。セッションLv.15 からサビで顔が光る
+// 置き場所: 上の帯と時間の行の左側の表示のすぐ下(縦は時間の行の下・横は曲名の行の下。道の外)。
+// 場面: 50/100/300コンボ・ミス3つ続き・サビ・最後の10秒。ひとことは 1.6秒で消える。同じ曲で同じ場面は1回(デュオの掛け合いは3回まで)。
+// セッションLv.15 からサビで顔が光る。仲良し度 Lv3 のデュオは掛け合い、Lv5(特別なお話を見たあと)はサビで合体(顔が重なり、画面のふちに2人の色の光)
 const RHYTHM_ASSIST_SESSION_BUBBLE_MS = 1600;
 const RHYTHM_ASSIST_SESSION_COMBO_STEPS = Object.freeze([50, 100, 300]);
+const RHYTHM_ASSIST_SESSION_LAST_MS = 10000;
+const RHYTHM_ASSIST_SESSION_GATTAI_MS = 3600;
 function RhythmAssistSessionPlayFace({ songId }) {
   const state = useRhythmAssistSessionState();
   const boxRef = React.useRef(null);
   const [pos, setPos] = React.useState(null);
-  const [say, setSay] = React.useState(null); // { aid, text }
+  const [say, setSay] = React.useState(null); // { aid, text, expr }
   const [glow, setGlow] = React.useState(false);
-  const ids = (() => {
-    const v = typeof RHYTHM_MULTI !== 'undefined' ? RHYTHM_MULTI.view() : null;
-    return (v && v.myCpus ? v.myCpus : []).map((c) => rhythmAssistSessionIdOf(c.masuId)).filter(Boolean).slice(0, 4);
-  })();
+  const [gattai, setGattai] = React.useState(null); // { a, b }
+  const ids = rhythmAssistSessionCalledIds().slice(0, 4);
   const idsKey = ids.join(',');
   React.useEffect(() => {
     if (!ids.length) return undefined;
     const said = new Set();
-    let lastCombo = 0; let missRow = 0; let lastMiss = 0; let inClimax = false; let hideAt = 0; let turn = 0;
+    const usedPair = new Set();
+    const duos = rhythmAssistSessionDuosNow(ids);
+    const song = typeof RHYTHM_SONGS !== 'undefined' && Array.isArray(RHYTHM_SONGS) ? RHYTHM_SONGS.find((x) => x && x.songId === songId) : null;
+    const endMs = song ? Number(song.playDurationMs) || 0 : 0;
+    let lastCombo = 0; let missRow = 0; let lastMiss = 0; let inClimax = false; let hideAt = 0; let turn = 0; let duoTalks = 0; let gattaiDone = false; let gattaiUntil = 0;
+    const queue = [];
+    const showNext = () => {
+      const next = queue.shift();
+      if (!next) { setSay(null); hideAt = 0; return; }
+      setSay(next); hideAt = Date.now() + RHYTHM_ASSIST_SESSION_BUBBLE_MS;
+    };
+    const enqueue = (rows) => { if (queue.length || hideAt) return false; rows.forEach(([aid, expr, text]) => queue.push({ aid, expr, text })); showNext(); return true; };
+    const speakDuo = (scene) => {
+      if (queue.length || hideAt) return false;
+      for (const d of duos) {
+        const rows = rhythmAssistSessionPickPair(d, scene, usedPair);
+        if (rows && enqueue(rows)) return true;
+      }
+      return false;
+    };
     const speak = (kind) => {
+      if (queue.length || hideAt) return;
+      // デュオがいれば、コンボ・サビのときは掛け合い(1曲3回まで)
+      if ((kind === 'combo' || kind === 'climax') && duos.length && duoTalks < RHYTHM_ASSIST_SESSION_DUO_TALK_MAX && speakDuo('play')) { duoTalks += 1; return; }
       const order = ids.slice(turn).concat(ids.slice(0, turn));
       for (const aid of order) {
         const key = `${aid}:${kind}`;
         if (said.has(key)) continue;
-        const text = rhythmAssistSessionTalk({ assistantId: aid, kind });
-        if (!text) continue;
+        const hit = rhythmAssistSessionPickLine(aid, kind);
+        if (!hit) continue;
         said.add(key); turn = (ids.indexOf(aid) + 1) % ids.length;
-        setSay({ aid, text }); hideAt = Date.now() + RHYTHM_ASSIST_SESSION_BUBBLE_MS;
+        enqueue([[aid, hit[0], hit[1]]]);
         return;
       }
     };
@@ -253,6 +352,8 @@ function RhythmAssistSessionPlayFace({ songId }) {
       place();
       const watch = typeof RHYTHM_PLAY_WATCH !== 'undefined' ? RHYTHM_PLAY_WATCH : null;
       const h = watch && watch.hud ? watch.hud.get() : null;
+      if (hideAt && Date.now() >= hideAt) showNext();
+      if (gattaiUntil && Date.now() >= gattaiUntil) { gattaiUntil = 0; setGattai(null); }
       if (h) {
         const combo = Number(h.combo) || 0;
         const miss = h.counts ? Number(h.counts.MISS) || 0 : 0;
@@ -261,34 +362,105 @@ function RhythmAssistSessionPlayFace({ songId }) {
         if (combo > 0) missRow = 0;
         lastCombo = combo; lastMiss = miss;
         const now = rhythmAssistSessionInClimax(songId || watch.songId, watch.timeMs);
-        if (now && !inClimax) speak('climax');
+        if (now && !inClimax) {
+          const g = !gattaiDone ? duos.find((d) => d.gattai) : null;
+          if (g) {
+            // 合体(1曲1回): 2人の顔が重なり、画面のふちに2人の色の光。掛け合いは gattai の台詞
+            gattaiDone = true; gattaiUntil = Date.now() + RHYTHM_ASSIST_SESSION_GATTAI_MS; setGattai({ a: g.a, b: g.b });
+            const rows = rhythmAssistSessionPickPair(g, 'gattai', usedPair);
+            if (rows) { queue.length = 0; hideAt = 0; enqueue(rows); }
+          } else speak('climax');
+        }
         if (now !== inClimax) { inClimax = now; setGlow(now); }
+        if (endMs > RHYTHM_ASSIST_SESSION_LAST_MS && Number(watch.timeMs) >= endMs - RHYTHM_ASSIST_SESSION_LAST_MS && Number(watch.timeMs) < endMs) speak('last');
       }
-      if (hideAt && Date.now() >= hideAt) { hideAt = 0; setSay(null); }
     };
     const t = setInterval(tick, 200);
     tick();
     return () => clearInterval(t);
   }, [idsKey, songId]);
   if (!ids.length) return null;
+  const whoA = gattai ? rhythmAssistSessionWho(gattai.a) : null;
+  const whoB = gattai ? rhythmAssistSessionWho(gattai.b) : null;
   return (
-    <div ref={boxRef} data-rhythm-assist-play aria-hidden="true" className="pointer-events-none absolute z-[60] flex w-[140px] flex-col gap-1"
-      style={pos ? { top: pos.top, left: pos.left } : { visibility: 'hidden', top: 0, left: 0 }}>
-      {ids.map((aid) => {
-        const who = rhythmAssistSessionWho(aid);
-        if (!who) return null;
-        const lit = glow && rhythmAssistSessionLevel(state, aid) >= RHYTHM_ASSIST_SESSION_GLOW_LEVEL;
-        const talking = say && say.aid === aid;
-        return (
-          <div key={aid} data-rhythm-assist-play-face={aid} data-glow={lit ? '1' : undefined} className="flex items-start gap-1.5">
-            <span className="block h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 bg-slate-800 transition-shadow duration-300"
-              style={{ borderColor: who.accent || '#f472b6', boxShadow: lit ? `0 0 14px 4px ${who.accent || '#f472b6'}` : 'none' }}>
-              <img src={assistantFaceSrc(who, talking ? 'happy' : null)} alt="" draggable={false} className="h-full w-full object-cover" />
-            </span>
-            {talking && <span data-rhythm-assist-play-bubble className="block min-w-0 rounded-xl bg-white px-1.5 py-0.5 text-[9.5px] font-black leading-snug text-slate-900" style={JA_WRAP_STYLE}>{jaWrap(say.text)}</span>}
-          </div>
-        );
-      })}
-    </div>
+    <>
+      {whoA && whoB && ['left', 'right'].map((side) => (
+        <div key={side} data-rhythm-assist-gattai-light={side} aria-hidden="true" className="pointer-events-none absolute inset-y-0 z-[59] w-3"
+          style={{ [side]: 0, background: `linear-gradient(180deg, ${whoA.accent || '#f472b6'}, ${whoB.accent || '#38bdf8'}, ${whoA.accent || '#f472b6'})`, opacity: 0.75, boxShadow: `0 0 18px 6px ${side === 'left' ? (whoA.accent || '#f472b6') : (whoB.accent || '#38bdf8')}` }} />
+      ))}
+      <div ref={boxRef} data-rhythm-assist-play aria-hidden="true" className="pointer-events-none absolute z-[60] flex w-[140px] flex-col gap-1"
+        style={pos ? { top: pos.top, left: pos.left } : { visibility: 'hidden', top: 0, left: 0 }}>
+        {ids.map((aid) => {
+          const who = rhythmAssistSessionWho(aid);
+          if (!who) return null;
+          // 合体中は、相方の顔を自分の顔に重ねる(2つ目の顔は1つ目の後ろへ回す)
+          if (gattai && aid === gattai.b) return null;
+          const partner = gattai && aid === gattai.a ? whoB : null;
+          const lit = (glow && rhythmAssistSessionLevel(state, aid) >= RHYTHM_ASSIST_SESSION_GLOW_LEVEL) || !!partner;
+          const talker = say && (say.aid === aid || (partner && say.aid === gattai.b)) ? say : null;
+          const face = (w, expr) => <img src={assistantFaceSrc(w, expr || null)} alt="" draggable={false} className="h-full w-full object-cover" />;
+          return (
+            <div key={aid} data-rhythm-assist-play-face={aid} data-glow={lit ? '1' : undefined} data-gattai={partner ? '1' : undefined} className="flex items-start gap-1.5">
+              <span className={`relative block h-10 shrink-0 ${partner ? 'w-[64px]' : 'w-10'}`}>
+                {partner && (
+                  <span data-rhythm-assist-gattai-partner className="absolute left-6 top-0 block h-10 w-10 overflow-hidden rounded-full border-2 bg-slate-800"
+                    style={{ borderColor: partner.accent || '#38bdf8', boxShadow: `0 0 14px 4px ${partner.accent || '#38bdf8'}` }}>
+                    {face(partner, say && say.aid === gattai.b ? say.expr : 'excited')}
+                  </span>
+                )}
+                <span className="relative z-10 block h-10 w-10 overflow-hidden rounded-full border-2 bg-slate-800 transition-shadow duration-300"
+                  style={{ borderColor: who.accent || '#f472b6', boxShadow: lit ? `0 0 14px 4px ${who.accent || '#f472b6'}` : 'none' }}>
+                  {face(who, talker && talker.aid === aid ? talker.expr : partner ? 'excited' : null)}
+                </span>
+              </span>
+              {talker && <span data-rhythm-assist-play-bubble className="block min-w-0 rounded-xl bg-white px-1.5 py-0.5 text-[9.5px] font-black leading-snug text-slate-900" style={JA_WRAP_STYLE}>
+                {partner && <b className="mr-0.5" style={{ color: (rhythmAssistSessionWho(talker.aid) || {}).accent || '#db2777' }}>{rhythmAssistSessionName(talker.aid)}:</b>}{jaWrap(talker.text)}
+              </span>}
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+// デュオの結果(仲良し度 Lv4 から2人のひとこと)と、2人で1曲終えたときの仲良し度 +3(どの2人でも。1日12まで・ペアの1日の上限の中)。
+// 同じ回(round)に2度は足さない。仲良し度を足すのは assistantPeerGain(56-assistant-peer.jsx)だけ
+const RHYTHM_ASSIST_SESSION_PEER_DONE = new Set();
+function RhythmAssistSessionDuoResult({ ids = [], round }) {
+  const [shown, setShown] = React.useState([]);
+  const key = `${round}:${ids.join(',')}`;
+  React.useEffect(() => {
+    if (!round || ids.length < 2) return undefined;
+    let alive = true;
+    const duos = rhythmAssistSessionDuosNow(ids);
+    const used = new Set();
+    const lines = duos.filter((d) => d.result).map((d) => ({ d, rows: rhythmAssistSessionPickPair(d, 'result', used) })).filter((x) => x.rows);
+    (async () => {
+      const gains = {};
+      for (let i = 0; i < ids.length; i += 1) for (let j = i + 1; j < ids.length; j += 1) {
+        const pk = `${round}:${rhythmAssistSessionPairKey(ids[i], ids[j])}`;
+        if (RHYTHM_ASSIST_SESSION_PEER_DONE.has(pk) || typeof assistantPeerGain !== 'function') continue;
+        RHYTHM_ASSIST_SESSION_PEER_DONE.add(pk);
+        try { const r = await assistantPeerGain(ids[i], ids[j], 'session'); if (r && r.gained > 0) gains[rhythmAssistSessionPairKey(ids[i], ids[j])] = r.gained; } catch (_) { /* 足せなくても続ける */ }
+      }
+      if (!alive) return;
+      const out = lines.map(({ d, rows }) => ({ key: d.key, d, rows, gained: gains[d.key] || 0 }));
+      Object.keys(gains).filter((k) => !out.some((x) => x.key === k)).forEach((k) => { const [a, b] = k.split('-'); out.push({ key: k, d: { a, b }, rows: null, gained: gains[k] }); });
+      setShown(out);
+    })();
+    return () => { alive = false; };
+  }, [key]);
+  if (!shown.length) return null;
+  return (
+    <>
+      {shown.map(({ key: k, d, rows, gained }) => (
+        <p key={k} data-rhythm-assist-duo-result={k} className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/50 bg-violet-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100">
+          <span className="shrink-0">🎤 {rhythmAssistSessionName(d.a)}・{rhythmAssistSessionName(d.b)}</span>
+          {rows && rows.map(([who, , text], i) => <span key={i} className="min-w-0">{rhythmAssistSessionName(who)}「{text}」</span>)}
+          {gained > 0 && <span data-rhythm-assist-peer-gain className="text-amber-200">{typeof assistantPeerLifeOn === 'function' && assistantPeerLifeOn() ? '友情' : '仲良し度'}+{gained}</span>}
+        </p>
+      ))}
+    </>
   );
 }
