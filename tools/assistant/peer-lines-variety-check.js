@@ -107,7 +107,7 @@ for (const f of txtFiles) {
       if (w === 'dra' && /んよ|ほんま|やな|やで|ええ(?!っ)|へん|とる|とんだ|俺|私/.test(t)) bad(`ドラの口調「${t}」`);
       if (w === 'sorashido' && (/w(?![A-Za-z])/.test(t) || (t.match(/ぜ・・・/g) || []).length > 1)) bad(`ソラシドの口調「${t}」`);
       if (w === 'atsu') {
-        if (/リーダー/.test(t)) bad(`あつは自分でリーダーと言わない「${t}」`);
+        if (/(?<!ブ)リーダー/.test(t)) bad(`あつは自分でリーダーと言わない「${t}」`);
         for (const seg of t.replace(/\([^)]*\)[ノ9]?/g, '！').split(/(?<=。)|\s+/).filter(Boolean)) if (!/(笑|[！？…!?]|\)ノ)$/.test(seg)) { bad(`あつの文の終わりは「笑」か記号「${t}」`); break; }
       }
       if ((w === 'kyuko' || w === 'erubin') && t.split(/\s+/).some(s => /w(?![A-Za-z])/.test(s) && /笑/.test(s))) bad(`1つの文に「笑」と「w」の両方「${t}」`);

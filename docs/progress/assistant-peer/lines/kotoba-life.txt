@@ -1052,3 +1052,101 @@ quarrel erubin kyuko seed=late | erubin troubled {c}、また夜ふかしした�
 quarrel erubin kyuko seed=plan | kyuko troubled {c}のデッキ、守りのカード多すぎない？ | erubin troubled 俺はじっくり勝ちたいんだよね… || kyuko normal ……そっか。口出しすぎたかも || kyuko happy {c}、守りのまま強くなる形、考えてきたよ | erubin happy ありがとう。それなら試してみたいな
 quarrel erubin sorashido seed=look | erubin troubled {c}、表の文字、本当に読めなくて… | sorashido troubled ……そんなに小さいか？ 気にしてたんだけどな || erubin normal ごめんね。言い方がよくなかったかな || sorashido happy {c}、文字を2倍にしたぜ・・・！ | erubin happy 読みやすい！ ありがとう、{c}
 quarrel erubin sorashido seed=late | sorashido angry {c}、待ち合わせ15分遅れたぞ！ | erubin troubled ごめんね、中庭の花に見とれてて… || sorashido normal ……先に行ってる || erubin normal {c}、お詫びに、その花の場所を教えるね | sorashido happy ……何本咲いてるか、数えに行こう笑
+
+## ブリーダーへのひとこと
+breeder mua place=plaza mood=happy | mua excited あ、ブリーダー！ ちょうど会いたかったの♪
+breeder mua place=plaza mood=happy | mua wink 見て見て、今日のコーデ！ どう？ｗ
+breeder mua place=plaza mood=happy | mua happy 広場、人多くて楽しいよ！ いっしょに歩こ！
+breeder mua mood=lonely why=lonely | mua surprise ブリーダー！ 来てくれたの！？ まぢうれしい！
+breeder mua mood=lonely why=lonely | mua troubled ちょうど、だれか来ないかなって思ってたとこ…
+breeder mua mood=lonely why=lonely | mua happy ひとりで暇だったの！ なにして遊ぶ？
+breeder mua doing=snack | mua excited ブリーダーも食べる？ いちごのやつ、おいしいよ♪
+breeder mua doing=practice | mua happy 今の見てた？ けっこういい感じぢゃない？ｗ
+breeder mua doing=walk | mua wink いっしょに歩く？ 今日いい天気だよ！
+breeder mua mood=sleepy | mua normal ふぁ〜…ブリーダー？ ちょっとうとうとしてたｗ
+breeder mua mood=sulky | mua angry ……べつにすねてないし。…でも来てくれてうれしい
+breeder mua mood=sleepy | mua troubled 寝ぐせ見ないで〜！ 今直すから！
+breeder kiki place=library mood=happy | kiki happy ブリーダーさん、静かにどうぞ。今いいところなんでつ♪♪
+breeder kiki place=library mood=happy | kiki normal この本、おすすめですよ。育成の話がたくさんあります
+breeder kiki place=library mood=happy | kiki wink 窓ぎわの席、空いていますよ。いっしょにどうですか
+breeder kiki mood=lonely why=lonely | kiki surprise あれま、ブリーダーさん。来てくださったんですね
+breeder kiki mood=lonely why=lonely | kiki happy 少しだけ、だれかと話したかったんです。ちょうどよかったでつ
+breeder kiki mood=lonely why=lonely | kiki normal お茶、ちょうど2つ入れていたんです。どうぞ
+breeder kiki doing=training | kiki happy ゴーレム、今日もちからを上げました。見てくださいね
+breeder kiki doing=snack | kiki normal ブリーダーさんの分のおやつも、とってありまつよ
+breeder kiki doing=cards | kiki wink 今日のデッキも、攻撃のカードばかりです ( ˘ω˘)9グッ!
+breeder kiki mood=sleepy | kiki troubled あ、少しうとうとしていました…見なかったことにしてください
+breeder kiki mood=sulky | kiki normal …今は、少しひとりにしてほしいです。…でも、来てくれてありがとう
+breeder kiki mood=eager | kiki excited ブリーダーさん、次のバトルはいつですか。準備はできていまつ
+breeder momosuke place=studio mood=happy | momosuke excited ブリーダー！！ ももの練習、見に来てくれたの！？
+breeder momosuke place=studio mood=happy | momosuke wink 今のステップ、ちゃんと見てた？ 見てたよね！？w
+breeder momosuke place=studio mood=happy | momosuke happy いちばん前の席、ブリーダーのために空けといたよ♡
+breeder momosuke mood=lonely why=lonely | momosuke surprise ブリーダー！！ もう、来るの遅いんだから！！
+breeder momosuke mood=lonely why=lonely | momosuke troubled …べつにさみしくなかったし。ちょっとだけだし
+breeder momosuke mood=lonely why=lonely | momosuke happy 来てくれたから、許してあげる♡
+breeder momosuke doing=training | momosuke excited 見て！！ メタルナー、今日もピッカピカ！！
+breeder momosuke doing=snack | momosuke wink いちごは最後に食べるの。ブリーダーにもひとつあげよっか？
+breeder momosuke doing=walk | momosuke happy いっしょに歩こ！！ ももが前ね！！
+breeder momosuke mood=sleepy | momosuke normal ふぁ…今、アイドルお休み中…
+breeder momosuke mood=sulky | momosuke angry 今ももに話しかけても、なにも出ないよ！！ …ほめてくれたら別だけど
+breeder momosuke mood=eager | momosuke excited 今日のもも、本気モードだから！！ 見ててね！！
+breeder dra place=home mood=lonely why=lonely | dra surprise お、ブリーダーか。……べつに、さみしくなんてなかったぞ。えへへ
+breeder dra place=home mood=lonely why=lonely | dra happy 来てくれたのか。いいせんべいがあるんだ、食ってけ
+breeder dra place=home mood=lonely why=lonely | dra normal おでのギャグ、聞いてくれる人を待ってたんだよ
+breeder dra place=home mood=happy | dra happy いらっしゃい。座布団、2枚目出してやるわ
+breeder dra place=home mood=happy | dra wink 今日の膝の調子は上々だぞ。何でも説明してやる
+breeder dra place=home mood=sleepy | dra normal ふぁ〜…ブリーダーか。いま昼寝の2回目に入るとこだった
+breeder dra doing=cards | dra happy カードのこと、聞きたいことあるか？ 3分で説明するぞ
+breeder dra doing=walk | dra troubled ちょうど休けいしたかったんだ。膝がな
+breeder dra doing=snack | dra normal プリン、もうひとつあるぞ。ブリーダーの分だ
+breeder dra mood=sulky | dra troubled ……ふとんから出ないぞ。今日は出ないからな。…ちょっとだけなら出る
+breeder dra mood=eager | dra excited ブリーダー、いいとこに来た。新しい組み方、説明させてくれ
+breeder dra mood=restless | dra surprise なんかそわそわするんだよ。ブリーダー、何かいいことあったか？
+breeder atsu place=studio mood=happy | atsu happy お、ブリーダー！ 一曲いこ笑
+breeder atsu place=studio mood=happy | atsu wink いいとこ来たね！ 今フルコン出たとこ！
+breeder atsu place=studio mood=happy | atsu normal 見てて！ 次は上の難易度いくから笑
+breeder atsu mood=lonely why=lonely | atsu happy ちょうど対戦相手さがしてたんだよね笑
+breeder atsu mood=lonely why=lonely | atsu normal 来てくれてありがと！ ひとりだと暇でさ笑
+breeder atsu mood=lonely why=lonely | atsu wink ま、待ってたわけじゃないけどね笑
+breeder atsu doing=training | atsu happy ドラゴン、だいぶ強くなったでしょ！
+breeder atsu doing=cards | atsu excited カードで一戦どう？ 手加減しないよ笑
+breeder atsu doing=practice | atsu happy とりあえずHELL1周、見てってよ笑
+breeder atsu mood=sleepy | atsu troubled さすがに練習しすぎた笑 ちょっと休むわ！
+breeder atsu mood=sulky | atsu normal …今日はちょっとうまくいかない日なんだよね笑
+breeder atsu mood=eager | atsu excited いいね、来てくれたなら上いくしかないじゃん！
+breeder kyuko place=library mood=happy why=mypace | kyuko normal あ、ブリーダー。今いいとこ考えてたんだぁ
+breeder kyuko place=library mood=happy why=mypace | kyuko happy 静かに見ててくれるなら、ここにいていいよぉ笑
+breeder kyuko place=library mood=happy why=mypace | kyuko wink 新しい組み方、あとでいちばんに見せてあげる
+breeder kyuko mood=lonely why=lonely | kyuko surprise ブリーダー？ ちょうど作戦を見せたかったんだぁ
+breeder kyuko mood=lonely why=lonely | kyuko happy 来てくれてありがとん笑
+breeder kyuko mood=lonely why=lonely | kyuko normal ひとりで考えるのも好きだけど、たまには話したいよね
+breeder kyuko doing=training | kyuko happy ニャー、今日も素早さ伸びてるよぉ
+breeder kyuko doing=cards | kyuko normal このデッキ、課金しなくても組めるやつなんだぁ
+breeder kyuko doing=snack | kyuko happy 甘いのと辛いの、両方あるよ。どっちがいい？
+breeder kyuko mood=sleepy | kyuko troubled 昨日も夜ふかししちゃったぁ…ねむい😭
+breeder kyuko mood=sulky | kyuko normal ……ランキング落ちたぁ。ぐぬぬぬ。まあ、なんとかなるっしょ
+breeder kyuko mood=eager | kyuko excited ブリーダー、いいとこ来た！ 今の数字見て！
+breeder sorashido place=cardroom mood=eager | sorashido excited ブリーダー！ 新しい表、できたとこだぜ・・・！
+breeder sorashido place=cardroom mood=eager | sorashido happy ちょうどいい。この数字、いっしょに見てくれ笑
+breeder sorashido place=cardroom mood=happy | sorashido normal カード部屋、今日も落ち着くわ。ゆっくりしてってくれ
+breeder sorashido mood=lonely why=lonely | sorashido surprise なに！？ ブリーダー！ 表を見てくれる人、待ってたんだ笑
+breeder sorashido mood=lonely why=lonely | sorashido happy 来てくれてありがとな。でーじうれしい
+breeder sorashido mood=lonely why=lonely | sorashido normal ひとりで計算してると、時間を忘れるんだよな笑
+breeder sorashido doing=cards | sorashido excited 今の対戦、勝率の計算どおりだった！
+breeder sorashido doing=practice | sorashido happy 今日のミス、きのうより3つ少ないぞ笑
+breeder sorashido doing=snack | sorashido normal おやつの新作、全部で6つあった。数えたぞ笑
+breeder sorashido mood=sleepy | sorashido troubled 朝まで計算してたから、さすがに眠い…笑
+breeder sorashido mood=sulky | sorashido crying また2点差で負けたんだよ…くっそー笑
+breeder sorashido mood=restless | sorashido surprise 新しいカードの情報、もう見たか！？ 気になってしかたない笑
+breeder erubin place=cardroom mood=happy | erubin happy いらっしゃい。デュラハンの新しい形、見ていくかな？
+breeder erubin place=cardroom mood=happy | erubin normal ゆっくりしていってね。ここ、落ち着くんだよね☺️
+breeder erubin place=cardroom mood=eager | erubin excited ちょうどいいところに来たね。今の組み方、試してみたいんだ
+breeder erubin mood=lonely why=lonely | erubin surprise 来てくれたんだね。うれしいな☺️
+breeder erubin mood=lonely why=lonely | erubin happy みんな忙しそうだったから、少しさみしかったんだ笑
+breeder erubin mood=lonely why=lonely | erubin normal 話し相手になってくれるかな？
+breeder erubin doing=walk | erubin happy 中庭の花、見に行かない？ きれいに咲いてたよ
+breeder erubin doing=snack | erubin normal お茶、いれようか。少し休もう
+breeder erubin doing=training | erubin happy アーク、守りがまた伸びたんだよ
+breeder erubin mood=sleepy | erubin troubled つい遅くまでカードを考えちゃって…眠いかな💦
+breeder erubin mood=sulky | erubin troubled 3回つづけて負けちゃったんだ…そっかぁ笑
+breeder erubin mood=restless | erubin surprise 新しい場所の話を聞いたんだ。ちょっとわくわくするね
