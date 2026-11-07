@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1d00d1b12f1d0f22
+// generated-sha256: 9c50cf0115d297b3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9308,7 +9308,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 助手どうしの作り直し「助手たちの今」(2026-11-07 社長。設計 docs/progress/assistant-peer/LIFE-PLAN.md)。1人ずつが気分としたいことで
   //   だれと過ごすかを決める仕組み・にぎわい(遊んだ量で4段)・専用の画面。全部そろって社長が「この文で公開」と言ったら真にする。
   //   偽のあいだは、にぎわいを数えず、助手どうしの仲良くなり方も今のまま(56-assistant-life.jsx)
-  assistantLife: false,
+  assistantLife: true,
   // モンヒロビートの助手とのセッション(2026-11-07 社長の決定・ビート部マモリ)。全部そろって社長の「この文で」が出るまで偽
   rhythmAssistantSession: false,
   // 7人目の助手ソラシド(2026-10-27 社長の決定)。絵・お話・お知らせがそろって、社長が「公開」と言ったら真にする。
