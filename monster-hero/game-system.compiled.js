@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1a4cab1c65acd93c
+// source-sha256: 5ac2d0f15945f11a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -95011,8 +95011,15 @@ function RhythmAssistSessionPicker({
       className: "rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950"
     }, "呼んでいる"), !calledOf(who.id) && rhythmAssistSessionVisitFree(who.id) && React.createElement("span", {
       "data-rhythm-assist-visit": true,
-      className: "w-full rounded-full bg-sky-400/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"
-    }, "🎵 いまモンビーにいる・回数なし"));
+      "aria-label": "🎵 いまモンビーにいる・回数なし",
+      className: "flex w-full flex-wrap justify-center rounded-xl bg-sky-400/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"
+    }, React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "🎵 いま"), React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "モンビーにいる"), React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "・回数なし")));
   }))));
 }
 const RHYTHM_ASSIST_SESSION_FX_QUEUE = {

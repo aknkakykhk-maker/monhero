@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fa8bf0346a2ac4f2
+// generated-sha256: 46fb1f44ef4a73eb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -56765,7 +56765,7 @@ function RhythmAssistSessionPicker({ assistants = [], calledIds = [], guideAssis
                   <span className="whitespace-nowrap text-[10px] font-black text-pink-200">セッションLv.{lv}</span>
                   {lv >= RHYTHM_ASSIST_SESSION_TASTE_LEVEL && <span data-rhythm-assist-taste className="w-full truncate text-center text-[9px] font-bold text-slate-300">♡ {rhythmAssistSessionLikedNames(who.id).join('・')}</span>}
                   {calledOf(who.id) && <span className="rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950">呼んでいる</span>}
-                  {!calledOf(who.id) && rhythmAssistSessionVisitFree(who.id) && <span data-rhythm-assist-visit className="w-full rounded-full bg-sky-400/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950">🎵 いまモンビーにいる・回数なし</span>}
+                  {!calledOf(who.id) && rhythmAssistSessionVisitFree(who.id) && <span data-rhythm-assist-visit aria-label="🎵 いまモンビーにいる・回数なし" className="flex w-full flex-wrap justify-center rounded-xl bg-sky-400/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"><span className="whitespace-nowrap">🎵 いま</span><span className="whitespace-nowrap">モンビーにいる</span><span className="whitespace-nowrap">・回数なし</span></span>}
                 </button>
               );
             })}
