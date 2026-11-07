@@ -2160,7 +2160,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   const buddyInfoPhase = view && view.room ? view.room.phase : '';
   React.useEffect(() => { if (buddyInfoPhase === 'playing') setBuddyInfoId(''); }, [buddyInfoPhase]);
   const buddySheetLayer = buddySheet === 'pick' ? (
-    <RhythmBuddySheet masuMons={masuMons} masuPicker={masuPicker} assistants={sessionAssistants} pickAssistant={callAssistant} guideAssistantId={guideAssistantId} breederName={profile && profile.name} songName={buddySongName} tickets={buddyTickets} pick={callBuddy} onClose={() => setBuddySheet('')}
+    <RhythmBuddySheet masuMons={masuMons} masuPicker={masuPicker} assistants={sessionAssistants} pickAssistant={callAssistant} guideAssistantId={guideAssistantId} freeSeats={view ? Math.max(0, RHYTHM_MULTI_ROOM_MAX - (view.members || []).length) : 0} breederName={profile && profile.name} songName={buddySongName} tickets={buddyTickets} pick={callBuddy} onClose={() => setBuddySheet('')}
       calledIds={(view && view.myCpus ? view.myCpus : []).map((c) => c.masuId)} />
   ) : null;
   const buddyCallButton = (extra = '') => (view && RHYTHM_MULTI.canSummon() && (masuMons.length > 0 || sessionAssistantsOn) ? (
