@@ -12984,11 +12984,12 @@ const MUA_CARD_SHOP_LINES = Object.freeze([
 // 段階2 ペアの仲良し度。点数は端末の mh_assistant_peer_bond_v1 { "kiki-mua"(id の名前順): 点数 }(56-assistant-peer.jsx)。
 // Lv2: 掛け合いが増える / Lv3: プロフィールの関係図に線が出る / Lv4: 息の合った掛け合いが増え、API 版ではお互いの話題を多めに出す / Lv5: 2人の特別なお話
 // ★呼び方は仲良し度が上がっても変えない(2026-11-07 社長「呼び方は変えないでいい」)。いつも ASSISTANT_PEER_CALLS のまま
+// lifeName・lifeTitle … 助手たちの今(公開の印 assistantLife)で名前を「友情Lv」にするときの段の名前(2026-11-07 社長「友だち・いい友だち」)。「仲良し度」と同じ言葉にしない
 const ASSISTANT_PEER_BOND_LEVELS = Object.freeze([
   { level:1, min:0,   name:'顔見知り' },
   { level:2, min:40,  name:'話し仲間' },
-  { level:3, min:120, name:'なかよし' },
-  { level:4, min:250, name:'大のなかよし' },
+  { level:3, min:120, name:'なかよし', lifeName:'友だち' },
+  { level:4, min:250, name:'大のなかよし', lifeName:'いい友だち' },
   { level:5, min:450, name:'名コンビ' },
   // Lv6〜10(2026-11-07 社長「もっと上限を高くしてよい」)
   { level:6, min:700,  name:'息ぴったり' },
@@ -13017,7 +13018,7 @@ const ASSISTANT_PEER_BOND_ACTIONS = Object.freeze({
 const ASSISTANT_PEER_BOND_DAILY_MAX = 20;
 // 思い出アルバムのツーショット写真(段ごとに1枚。2人の立ち絵を並べて作る)。e … 左・右の表情
 const ASSISTANT_PEER_PHOTOS = Object.freeze([
-  { lv:3,  title:'なかよしの1枚',   e:['happy', 'happy'] },
+  { lv:3,  title:'なかよしの1枚',   lifeTitle:'友だちの1枚', e:['happy', 'happy'] },
   { lv:5,  title:'名コンビの1枚',   e:['wink', 'excited'] },
   { lv:8,  title:'大親友の1枚',     e:['excited', 'happy'] },
   { lv:10, title:'伝説のふたりの1枚', e:['happy', 'wink'] },
