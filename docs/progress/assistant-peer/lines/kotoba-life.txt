@@ -992,3 +992,31 @@ trio dra momosuke sorashido doing=snack | dra happy プリン、3つあるぞ | 
 trio atsu kiki kyuko doing=training | kiki normal ゴーレム、今日もちからを上げまつ | kyuko happy じゃあ俺は、ほかの数字を見とくねぇ | atsu happy 役割分担、ばっちりじゃん笑
 trio atsu kiki kyuko doing=cards | atsu excited 攻めは{c:kiki}と俺！ | kyuko normal 守りは俺が考える。それでいいよね | kiki wink 守りは、おまかせしまつ
 trio atsu kiki kyuko | kyuko happy この3人、気づくといつも勝ってるよねぇ | kiki happy 迷わないので、強いんでしょうか | atsu wink それね笑 次もいこ！
+
+## 言い合い → 距離をおく → 仲直り(前半14ペア)
+quarrel kiki mua seed=snack | kiki troubled 私のいちご、なくなっています… | mua troubled ご、ごめん！ おいしそうで、つい！ || kiki normal 少しだけ、ひとりでお茶をいただきます || mua normal {c}、新しいいちご買ってきた！ ごめんね | kiki happy …では、半分こにしましょう
+quarrel kiki mua seed=noise | kiki normal {c}、図書室では静かにお願いします | mua angry 静かにしてたもん！ ちょっと笑っただけ！ || mua troubled …広場でひとりで遊んでよっかな || kiki happy さっきは、少しきつく言いすぎました | mua happy ううん、あたしも声大きかった！ 小声で話そ
+quarrel momosuke mua seed=order | momosuke angry {c}、鏡の前ずっと使ってる！！ | mua angry だってまだ前髪決まってないもん！ || momosuke troubled ……ふーん、べつにいいもん || mua happy さっきはごめんね。いっしょに鏡使お！ | momosuke wink …しょうがないなぁ。前髪、ももがやってあげる♡
+quarrel momosuke mua seed=look | mua surprise え、その服、あたしと同じ！？ | momosuke angry ももが先に買ったんだもん！！ || mua troubled ……今日は別のとこで遊ぼっかな || momosuke normal {c}、おそろいって思えば、悪くないかも | mua excited それ！ おそろいで写真とろ！
+quarrel dra mua seed=noise | mua angry {c}、ギャグしつこい！ もう5回目！ | dra troubled 5回目がいちばんおもしろいんだぞ… || dra normal ……家で、ひとりでギャグの練習するわ || mua normal {c}、さっきは言いすぎた。6回目、聞いたげる | dra happy ほんとか！ えへへ、とっておきだぞ
+quarrel dra mua seed=late | mua angry {c}、約束の時間、30分も過ぎてる！ | dra troubled 昼寝がな、長引いたんだよ… || mua troubled …もういい。ひとりで行く || dra normal みゅあ、待たせて悪かった。せんべい持ってきた | mua happy …せんべいで許す！ 次は起こしに行くから！
+quarrel atsu mua seed=look | atsu wink {c}、転んだとこ、まだネタにしてる笑 | mua angry もう忘れてって言ったぢゃん！ || mua troubled ……今日は{c}と話さない || atsu normal ごめん、からかいすぎた！ もう言わないから！ | mua happy …ほんと？ じゃあ、いっしょに一曲だけ！
+quarrel atsu mua seed=order | mua excited 次、あたしの番！ | atsu happy いや、今のは俺の番だったでしょ笑 || atsu troubled …まぁ〜、ちょっと頭冷やすわ… || mua normal {c}、さっきは順番ゆずればよかった | atsu happy いいって笑 じゃ、交代でいこ！
+quarrel kyuko mua seed=noise | kyuko troubled {c}、図書室では静かにって言ったよね… | mua troubled ……ごめん、つい大きい声出ちゃった || kyuko normal 今日はちょっと、ひとりで考えたいかな || mua normal {c}、小さい声で話す練習してきた！ | kyuko happy それ、ふつうの声と同じだよぉ笑 でもありがとん
+quarrel kyuko mua seed=plan | mua angry 「なんかいい」で決めちゃだめなの！？ | kyuko troubled だめじゃないけど、数字も見てほしいなぁ… || mua troubled ……あたし、数字苦手なんだもん || kyuko happy さっきはごめん。数字は俺、名前は{c}で決めよ | mua excited それならいい！ 最強の名前つける！
+quarrel mua sorashido seed=peek | mua angry 表に「ミスの数」って書いてある！ | sorashido troubled 事実を書いただけなんだけどな… || mua troubled ……もう表見ない || sorashido normal {c}、「がんばった回数」に書き直したぜ | mua happy …それならいい！ 何回だった？
+quarrel mua sorashido seed=late | sorashido angry 待ち合わせ、計算より20分遅れてるぞ！ | mua troubled だって服が決まらなかったの！ || sorashido normal ……先に行って表作っとく || mua normal {c}、待たせてごめん！ おやつ買ってきた | sorashido happy ……20分ぶんのおやつだな笑 許す
+quarrel erubin mua seed=look | mua angry {c}、あたしが選んだ服、着てないぢゃん！ | erubin troubled ごめん、今日は石油王の服の気分で… || mua troubled ……べつにいいけど || erubin normal {c}、着替えてきたよ。やっぱりこっちが落ち着くね | mua happy でしょ！ 似合ってるよ♪
+quarrel erubin mua seed=noise | erubin normal {c}、夜遅くまで騒ぐと、みんな寝られないよ | mua angry ちょっとはしゃいだだけだもん！ || mua troubled ……もう寝る || erubin happy さっきは言いすぎたかな。明日の朝、いっしょに騒ごうか笑 | mua excited 朝なら騒いでいいの！？ やった！
+quarrel kiki momosuke seed=peek | kiki troubled 本のしおりが、ちがうページにはさまっていました | momosuke troubled ……ごめん、もも、さわっちゃった || kiki normal …少しだけ、時間をください || momosuke normal {c}、新しいしおり作ってきた！！ ピカピカのやつ！！ | kiki happy …きれいですね。大事に使いまつ
+quarrel kiki momosuke seed=noise | kiki normal {c}、もう少し小さい声で歌えますか？ | momosuke angry ももの歌、うるさいってこと！？ || momosuke troubled ……ふーん。もう歌わないもん || kiki happy さっきは言い方がよくなかったです。{c}の歌、好きですよ | momosuke excited ほんと！？ じゃあ小さめに歌う！！
+quarrel dra kiki seed=noise | kiki normal おやじギャグ、今日はもう4回目でつ | dra troubled 3回までって決まりだったか…… || dra normal ……今日はもう、ギャグは封印だ || kiki happy {c}、1回だけなら、もう聞きますよ | dra excited ほんとか！ じゃあ、とっておきのやつ！
+quarrel dra kiki seed=plan | dra normal {c}、たまには守りも考えろって | kiki angry 守るより、倒したほうが早いでつ || kiki normal ……少し、ひとりで考えまつ || dra happy 悪かった。{c}の攻め、おでが説明できる形にするわ | kiki happy …お願いしまつ。攻めのままで
+quarrel atsu kiki seed=order | atsu excited 前は俺が出るって！ | kiki angry 前は私です。押し切りまつ || atsu troubled …まぁ〜、しゃあない！ ちょっと休む… || kiki normal {c}、交代で前に出ませんか | atsu happy いいね！ それが一番強いじゃん笑
+quarrel atsu kiki seed=plan | kiki normal {c}、今回は攻めすぎでした | atsu angry いや、{c}だって全部ちからに振ってたじゃん！ || kiki troubled ……そうでした || atsu happy ごめん、言いすぎた！ 2人とも攻めすぎだったね笑 | kiki happy では次は、少しだけ守りましょう
+quarrel kiki kyuko seed=plan | kiki normal {c}、また「だいたい」で組みましたね | kyuko troubled ……今回はちょっとだけだよぉ || kiki normal 少し、ひとりで考えまつ || kyuko normal {c}、今回はちゃんと全部数えて組んだよ | kiki happy ……本当ですね。きれいな形です
+quarrel kiki kyuko seed=late | kyuko troubled {c}、朝の待ち合わせ、早すぎない？ | kiki angry 約束は朝の6時でしたよ || kyuko normal ……昼まで寝てから考えるね || kiki happy さっきは怒ってすみません。お昼の約束にしましょう | kyuko happy ありがとん笑 昼なら絶対行く
+quarrel kiki sorashido seed=peek | kiki normal …表に「守りが弱い」と書かれていました | sorashido troubled いや、事実を書いただけで…… || kiki normal 事実でも、少し傷つきました || sorashido normal {c}、「攻撃がとても強い」に書き直したぜ | kiki happy …ありがとうございます。そちらのほうがうれしいです
+quarrel kiki sorashido seed=score | sorashido angry 今の対戦、計算だと俺が勝ってたはずだ！ | kiki wink 計算より、押し切るほうが速かったです || sorashido troubled ……計算、やり直してくる || kiki happy {c}、さっきの表、いっしょに見ませんか | sorashido happy ……おう。{c}が強いって分かったわ笑
+quarrel erubin kiki seed=order | erubin normal ベンチ、{c}が座っていいよ | kiki normal いえ、{c}がどうぞ || erubin troubled ……そっかぁ。じゃあ俺は立ってるね || kiki happy では、2人で半分ずつ座りましょう | erubin happy いいね。それがいちばんだね
+quarrel erubin kiki seed=late | kiki troubled お茶、冷めてしまいました | erubin troubled ごめんね、カードの研究に夢中で… || kiki normal …少し、ひとりで飲みまつ || erubin normal {c}、いれなおしたよ。今度は俺がいれたんだ | kiki happy …あたたかいですね。ありがとうございます
