@@ -226,3 +226,6 @@
 - ついで: 縦で屋根の札「🏡 助手の家」の下半分が家の枠に隠れていた(前から)→ 前に出した
 - 検査: assistant-life-check ⑧(8人×場所×気分×理由で別の場所の名前を言わない)/browser ⑫(掲示板のまとまり・今日やれることの字・屋根の札・地図の顔と札)。止め絵 shots/life-16-board*.png・life-17-map-garden.png
 - カード部とのつなぎ口(読むだけ)を足した: `assistantLifeAtCard(id)`・`assistantLifeCardIds()`(カード部屋でカード研究の組の全員。図書室は入れない)・`assistantLifeOnCardMatch({ assistantId, won, at })`(今日あったことに1件・生活のリズムに数える)。browser ⑭
+- 公開: #4880(main 0c55472)。本番で assistant-life-browser-check・home-layout-check(🔄横含む)OK。ミハリに撮り直し、ソランド・マモリにつなぎ口を知らせた。画面の検査に `LIFE_BASE`(本番を見る)を足した
+- 段階2(一歩目)を枝 claude/assistant-life-stage2-step1 で作った(未公開): 遊び場を施設の名前で出す(`ASSISTANT_LIFE_PLACE_SHOW`・台本の言葉は変えない)・モンヒロビートにいる助手の部屋に「🎵 会いに行く 券なし」(`rhythmAssistSessionVisitFree` を読む)・今日やれることに「N人 ・ 券なし」。止め絵 shots/stage2/・文案 LIFE-STAGE2-RELEASE.md を窓口へ送った
+- 待ち: 窓口(カゲあつくん・社長)の「この文で」→ 更新履歴・ヘルプを書いて公開/台詞240本の注文の可否/カード部の対戦の入口(ASSISTANT_LIFE_LINKS に cardInvite を足すか、ソランドと相談)
