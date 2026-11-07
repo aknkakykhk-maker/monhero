@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7d57afeef645cdcb
+// source-sha256: 7f0f460b4c1c5249
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -103642,6 +103642,12 @@ const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({
   hill: '🌄',
   garden: '🌷'
 });
+const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({
+  studio: 'モンヒロビート',
+  cardroom: 'MFバトルカード',
+  ranch: 'M/B管理'
+});
+const assistantLifePlaceShow = place => ASSISTANT_LIFE_PLACE_SHOW[place] || ASSISTANT_LIFE_PLACES[place] || '';
 const assistantLifeFacilityOf = entry => {
   if (!entry) return 'life';
   if (entry.doing === 'practice') return 'rhythm';
@@ -104926,7 +104932,7 @@ function AssistantLifeChunks({
   String(text || '').split(' ').forEach((tok, i) => {
     if (i) out.push(' ');
     const m = tok.match(/^(.+?で)(.+)$/);
-    const subs = tok.includes('・') ? tok.split('・').map((x, k, a) => k < a.length - 1 ? `${x}・` : x) : m && Object.values(ASSISTANT_LIFE_PLACES).includes(m[1].slice(0, -1)) ? [m[1], m[2]] : [tok];
+    const subs = tok.includes('・') ? tok.split('・').map((x, k, a) => k < a.length - 1 ? `${x}・` : x) : m && [...Object.values(ASSISTANT_LIFE_PLACES), ...Object.values(ASSISTANT_LIFE_PLACE_SHOW)].includes(m[1].slice(0, -1)) ? [m[1], m[2]] : [tok];
     subs.forEach((x, k) => {
       if (k) out.push(React.createElement("wbr", {
         key: `w${i}-${k}`
@@ -105213,7 +105219,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
     }
     const sub = w.group ? `${w.group.ids.length}人で ${doing.label}` : `ひとりで ${doing.label}`;
     rooms[id] = {
-      tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${ASSISTANT_LIFE_PLACES[w.place]}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null]
+      tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null]
     };
   }
   const q = peer && peer.quarrel && peer.quarrel.pending;
@@ -105278,11 +105284,18 @@ function AssistantLifeRoomSheet({
   const groupKey = w && w.group ? assistantLifeGroupKey(w.group) : null;
   const canWatch = groupKey ? !watched.includes(groupKey) : !watched.includes(`solo:${id}`);
   const atBeat = w && w.doing === 'practice';
+  const beatFree = !!atBeat && typeof rhythmAssistSessionVisitFree === 'function' && (() => {
+    try {
+      return rhythmAssistSessionVisitFree(id) === true;
+    } catch (_) {
+      return false;
+    }
+  })();
   const asleep = !!(w && w.doing === 'sleep');
   const slotDef = ASSISTANT_LIFE_SLOTS[slot.i];
   const groupNames = w && w.group ? assistantLifeGroupNames(w.group.ids, 8) : null;
   const groupText = w && w.group ? '' : ' ・ ひとり';
-  const where = !w ? '🏡 部屋で過ごしている' : home ? `🏡 部屋で${doing}${groupText}` : `${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${ASSISTANT_LIFE_PLACES[w.place]}で${doing}${groupText}`;
+  const where = !w ? '🏡 部屋で過ごしている' : home ? `🏡 部屋で${doing}${groupText}` : `${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}で${doing}${groupText}`;
   return React.createElement("div", {
     className: "absolute inset-0",
     style: {
@@ -105407,7 +105420,10 @@ function AssistantLifeRoomSheet({
     className: "mhl-btn mhl-beat col-span-2",
     "data-assistant-life-room-act": "beat",
     onClick: () => onBeat(id)
-  }, asleep ? '🎵 起こしてモンヒロビートに誘う' : `🎵 一緒にモンヒロビート${atBeat ? '(いまモンヒロビートにいる)' : ''}`), typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id) && React.createElement("button", {
+  }, asleep ? '🎵 起こしてモンヒロビートに誘う' : atBeat && beatFree ? React.createElement(React.Fragment, null, "🎵 会いに行く", React.createElement("em", {
+    className: "ml-1 rounded-full bg-amber-300 px-1.5 text-[10px] not-italic text-amber-950",
+    "data-assistant-life-room-free": true
+  }, "券なし")) : '🎵 一緒にモンヒロビート'), typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id) && React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-card col-span-2",
     "data-assistant-life-room-act": "card",
@@ -105474,7 +105490,7 @@ function AssistantLifeScene({
   const room = host ? ASSISTANT_LIFE_ROOM_LOOK[host] : null;
   const hint = ids.length >= 2 && typeof assistantLifePairHint === 'function' && peer ? assistantLifePairHint(peer, ASSISTANT_LIFE_STORE.state.life, ids[0], ids[1]) : null;
   const stage = hint && typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' ? ASSISTANT_PEER_BOND_LEVELS.find(s => s.level === hint.lv) : null;
-  const placeName = scene.place === 'home' ? `${assistantLifeName(host)}の部屋` : ASSISTANT_LIFE_PLACES[scene.place] || '';
+  const placeName = scene.place === 'home' ? `${assistantLifeName(host)}の部屋` : assistantLifePlaceShow(scene.place);
   return React.createElement("div", {
     className: "mhl-scene",
     "data-assistant-life-scene": scene.place || 'home'
@@ -105892,7 +105908,7 @@ function AssistantLifeHouse({
       if (beatIds[0]) setRoomId(beatIds[0]);
     },
     disabled: !beatIds.length
-  }, React.createElement("i", null, "🎵"), React.createElement("b", null, "モンヒロビート"), React.createElement("small", null, beatIds.length ? `${beatIds.length}人が練習中` : 'いまはだれも')));
+  }, React.createElement("i", null, "🎵"), React.createElement("b", null, "モンヒロビート"), React.createElement("small", null, beatIds.length ? `${beatIds.length}人 ・ 券なし` : 'いまはだれも')));
   const icons = React.createElement("div", {
     className: "mhl-icons",
     role: "tablist",
@@ -106319,7 +106335,7 @@ function AssistantLifeTownMap({
       })) : null;
     })), React.createElement("span", {
       className: `mt-0.5 whitespace-nowrap rounded-md border px-1.5 text-[9.5px] font-black ${who.length ? 'border-amber-300 bg-amber-950/90 text-amber-50' : 'border-slate-500/60 bg-slate-950/70 text-slate-300'}`
-    }, ASSISTANT_LIFE_PLACE_ICON[place], " ", place === 'home' ? '助手の家' : ASSISTANT_LIFE_PLACES[place]));
+    }, ASSISTANT_LIFE_PLACE_ICON[place], " ", place === 'home' ? '助手の家' : assistantLifePlaceShow(place)));
   }));
 }
 const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({
