@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0db736780d377d8b
+// generated-sha256: b7a56dfc81a342c1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9310,7 +9310,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   //   偽のあいだは、にぎわいを数えず、助手どうしの仲良くなり方も今のまま(56-assistant-life.jsx)
   assistantLife: true,
   // モンヒロビートの助手とのセッション(2026-11-07 社長の決定・ビート部マモリ)。全部そろって社長の「この文で」が出るまで偽
-  rhythmAssistantSession: false,
+  rhythmAssistantSession: true, // 2026-11-07 社長「この文で公開」
   // 7人目の助手ソラシド(2026-10-27 社長の決定)。絵・お話・お知らせがそろって、社長が「公開」と言ったら真にする。
   //   偽のあいだは、助手の一覧・おしゃべり・選ぶ画面に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS)。
   //   MFバトルカードの相手えらび・マルチ・観戦・記録・曲の並びにも出ない(82 の cardFoeReleased)
@@ -53870,7 +53870,7 @@ function RhythmQuickRunPill({ info, onRestart = null, onResume = null, widthClas
     </small>
   );
 }
-function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onRestartQuickRun = null, onResumeQuickRun = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null, onStepAway = null, sessionAssistants = [] }) {
+function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onRestartQuickRun = null, onResumeQuickRun = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null, onStepAway = null, sessionAssistants = [], guideAssistantId = '' }) {
   const view = useRhythmMultiView();
   useModeSelectStageCss();
   const difficultyIds = difficultyList.map((d) => d.id);
@@ -54025,7 +54025,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   const buddyInfoPhase = view && view.room ? view.room.phase : '';
   React.useEffect(() => { if (buddyInfoPhase === 'playing') setBuddyInfoId(''); }, [buddyInfoPhase]);
   const buddySheetLayer = buddySheet === 'pick' ? (
-    <RhythmBuddySheet masuMons={masuMons} masuPicker={masuPicker} assistants={sessionAssistants} pickAssistant={callAssistant} breederName={profile && profile.name} songName={buddySongName} tickets={buddyTickets} pick={callBuddy} onClose={() => setBuddySheet('')}
+    <RhythmBuddySheet masuMons={masuMons} masuPicker={masuPicker} assistants={sessionAssistants} pickAssistant={callAssistant} guideAssistantId={guideAssistantId} breederName={profile && profile.name} songName={buddySongName} tickets={buddyTickets} pick={callBuddy} onClose={() => setBuddySheet('')}
       calledIds={(view && view.myCpus ? view.myCpus : []).map((c) => c.masuId)} />
   ) : null;
   const buddyCallButton = (extra = '') => (view && RHYTHM_MULTI.canSummon() && (masuMons.length > 0 || sessionAssistantsOn) ? (
@@ -55883,7 +55883,7 @@ function RhythmBuddyList({ masuMons, state, dayKey, onOpen, onPick = null, busy 
 }
 
 // 部屋の中の「マスモンを呼ぶ」(下から出る選択の画面)
-function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [], breederName = '', assistants = [], pickAssistant = null }) {
+function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [], breederName = '', assistants = [], pickAssistant = null, guideAssistantId = '' }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
   const [detailId, setDetailId] = React.useState('');
@@ -55937,7 +55937,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
         {tabNow === 'assistant'
           ? (
             <div className="flex min-h-0 flex-1 flex-col">
-              <RhythmAssistSessionPicker assistants={assistants} calledIds={calledIds} canPay={canPay} busy={busy} onPick={chooseAssistant} />
+              <RhythmAssistSessionPicker assistants={assistants} calledIds={calledIds} canPay={canPay} busy={busy} onPick={chooseAssistant} guideAssistantId={guideAssistantId} />
               {!canPay && <p data-rhythm-buddy-empty className="mt-2 text-[11px] font-black text-rose-300">今日の無料ぶんを使い切りました。セッション券があれば呼べます</p>}
             </div>
           )
@@ -56385,7 +56385,7 @@ const rhythmAssistSessionWrapBrain = (brain, songs) => ({
 });
 
 // 呼ぶシートの「助手」のタブの中身。カードを押して選び、下の帯の「呼ぶ」で呼ぶ(マスモンのタブと同じ流れ)
-function RhythmAssistSessionPicker({ assistants = [], calledIds = [], canPay = true, busy = false, onPick }) {
+function RhythmAssistSessionPicker({ assistants = [], calledIds = [], canPay = true, busy = false, onPick, guideAssistantId = '' }) {
   const state = useRhythmAssistSessionState();
   const [selId, setSelId] = React.useState('');
   const list = (assistants || []).filter((who) => who && RHYTHM_ASSIST_SESSION_IDS.includes(who.id));
@@ -56393,6 +56393,7 @@ function RhythmAssistSessionPicker({ assistants = [], calledIds = [], canPay = t
   const calledOf = (id) => calledIds.includes(rhythmAssistSessionKey(id));
   return (
     <div data-rhythm-assist-picker className="flex min-h-0 flex-1 flex-col">
+      <RhythmAssistSessionGuide assistantId={guideAssistantId} />
       <div data-rhythm-assist-talk-option className="mb-2 flex shrink-0 items-center gap-1.5">
         <span className="shrink-0 text-[11px] font-black text-slate-300">助手のひとこと</span>
         {[['all', '全部'], ['few', '少なめ'], ['off', '切る']].map(([id, label]) => (
@@ -56778,6 +56779,40 @@ function RhythmAssistSessionProfileBadges() {
         })}
       </div>
     </section>
+  );
+}
+
+// 一度きりの案内(2026-11-07 社長「この文で公開」)。呼ぶシートの「助手」のタブをはじめて開いたとき、いま選んでいる助手が1回だけ話す。
+// 新しいキー mh_rhythm_assistant_session_seen_v1(⑦)。プレイヤーは {name}(話す助手の呼び方に置きかえる)
+const RHYTHM_ASSIST_SESSION_SEEN_KEY = 'mh_rhythm_assistant_session_seen_v1';
+const RHYTHM_ASSIST_SESSION_GUIDE_LINES = Object.freeze({
+  mua: 'あたしたち助手も、ここから呼べるようになったよ！{name}、一緒に演奏しよ♪',
+  kiki: '{name}、私たち助手も、ここから呼べるようになりました♪ 一緒に演奏しまつ',
+  momosuke: 'ももたち助手も呼べるようになったよ！！{name}、ステージ一緒に立と♡',
+  dra: 'おでたち助手も、ここから呼べるようになったんだ。{name}、一緒に叩こうな',
+  atsu: 'てか、俺たち助手もここから呼べるようになったぞ！{name}、一曲いくか笑',
+  kyuko: 'ほい！俺たち助手も、ここから呼べるようになったよぉ。{name}、一緒にやろぉ',
+  sorashido: 'うぉぉぉ！俺たち助手も呼べるようになったぜ！{name}、一緒に演奏だぜ笑',
+  erubin: '俺たち助手も、ここから呼べるようになったんだ。{name}、よかったら一緒にね',
+});
+function RhythmAssistSessionGuide({ assistantId = '' }) {
+  const [show, setShow] = React.useState(false);
+  React.useEffect(() => {
+    if (!rhythmAssistSessionEnabled()) return undefined;
+    let alive = true;
+    (async () => { try { const seen = await storeGet(RHYTHM_ASSIST_SESSION_SEEN_KEY, false); if (alive && seen !== true) setShow(true); } catch (_) { /* 読めなければ出さない */ } })();
+    return () => { alive = false; };
+  }, []);
+  const id = RHYTHM_ASSIST_SESSION_GUIDE_LINES[assistantId] ? assistantId : 'mua';
+  const who = rhythmAssistSessionWho(id);
+  if (!show || !who) return null;
+  const close = () => { setShow(false); void storeSet(RHYTHM_ASSIST_SESSION_SEEN_KEY, true).catch(() => {}); };
+  return (
+    <div data-rhythm-assist-guide className="mb-2 flex shrink-0 items-start gap-2 rounded-2xl border border-pink-300/50 bg-pink-950/60 p-2">
+      <AssistantFace who={who} size={40} accent={who.accent} expression="happy" />
+      <p className="min-w-0 flex-1 text-[11px] font-bold leading-snug text-pink-50" style={JA_WRAP_STYLE}>{jaWrap(rhythmAssistSessionSpeak(id, RHYTHM_ASSIST_SESSION_GUIDE_LINES[id]))}</p>
+      <button type="button" data-rhythm-assist-guide-close aria-label="閉じる" onClick={close} className="min-h-[36px] shrink-0 rounded-lg bg-slate-800 px-2 text-[11px] font-black">わかった</button>
+    </div>
   );
 }
 
@@ -101042,7 +101077,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         <RhythmMultiAwayBar hidden={gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT'||!!rhythmPlay}
           busy={['BATTLE','WAVE_RESULT','CHAMPION','BATTLE_TUTORIAL','CARD_BATTLE','RPG_DEBUG_BATTLE','DEBUG_BATTLE_SETUP'].includes(gameState)}
           onReturn={()=>{void openRhythmDemo({to:'RHYTHM_MULTI'});}} />
-        {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} masuMons={masuMons} masuPicker={{entries:unifiedMonsterEntriesSingleType.filter(e=>e.type==='masu'),renderSortFilterBar:renderMonsterSortFilterBar,renderCardBody:renderMonsterCardBody,cardClass:MONSTER_CARD_CLASS,cardStyle:MONSTER_CARD_STYLE}} buddyTickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseBuddyTicket={consumeBuddyTicket} onRefundBuddyTicket={refundBuddyTicket} onOpenMasuBeat={()=>openMasuBeat(gameState)} sessionAssistants={rhythmAssistSessionEnabled()&&typeof assistantsUnlockedFrom==='function'?assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag):[]} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_PLAY_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
+        {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} masuMons={masuMons} masuPicker={{entries:unifiedMonsterEntriesSingleType.filter(e=>e.type==='masu'),renderSortFilterBar:renderMonsterSortFilterBar,renderCardBody:renderMonsterCardBody,cardClass:MONSTER_CARD_CLASS,cardStyle:MONSTER_CARD_STYLE}} buddyTickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseBuddyTicket={consumeBuddyTicket} onRefundBuddyTicket={refundBuddyTicket} onOpenMasuBeat={()=>openMasuBeat(gameState)} guideAssistantId={selectedAssistantId} sessionAssistants={rhythmAssistSessionEnabled()&&typeof assistantsUnlockedFrom==='function'?assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag):[]} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_PLAY_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
           onUserGesture={()=>{/* 全画面と画面ロック防止は、指で押した直後しか許されない。準備完了を押したこの場で頼んでおく(ひとりのときの「決定」と同じ) */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();}}
           multiLook={rhythmSettings.multiLook||'LIGHT'}
           onChangeMultiLook={async(id)=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLook:id,multiLightLook:id!=='OWN'});setRhythmSettings(saved);}}

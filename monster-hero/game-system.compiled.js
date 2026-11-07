@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5ec72f1e9984d316
+// source-sha256: 1e268e3aab2a80fa
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13237,7 +13237,7 @@ const RELEASE_FLAGS = {
   assistantPeer: true,
   assistantPeerApi: true,
   assistantLife: true,
-  rhythmAssistantSession: false,
+  rhythmAssistantSession: true,
   assistantSorashido: true,
   assistantErubin: true,
   cardBattle: true,
@@ -90209,7 +90209,8 @@ function RhythmMultiScreen({
   onRefundBuddyTicket = null,
   onOpenMasuBeat = null,
   onStepAway = null,
-  sessionAssistants = []
+  sessionAssistants = [],
+  guideAssistantId = ''
 }) {
   const view = useRhythmMultiView();
   useModeSelectStageCss();
@@ -90446,6 +90447,7 @@ function RhythmMultiScreen({
     masuPicker: masuPicker,
     assistants: sessionAssistants,
     pickAssistant: callAssistant,
+    guideAssistantId: guideAssistantId,
     breederName: profile && profile.name,
     songName: buddySongName,
     tickets: buddyTickets,
@@ -93637,7 +93639,8 @@ function RhythmBuddySheet({
   calledIds = [],
   breederName = '',
   assistants = [],
-  pickAssistant = null
+  pickAssistant = null,
+  guideAssistantId = ''
 }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
@@ -93723,7 +93726,8 @@ function RhythmBuddySheet({
     calledIds: calledIds,
     canPay: canPay,
     busy: busy,
-    onPick: chooseAssistant
+    onPick: chooseAssistant,
+    guideAssistantId: guideAssistantId
   }), !canPay && React.createElement("p", {
     "data-rhythm-buddy-empty": true,
     className: "mt-2 text-[11px] font-black text-rose-300"
@@ -94463,7 +94467,8 @@ function RhythmAssistSessionPicker({
   calledIds = [],
   canPay = true,
   busy = false,
-  onPick
+  onPick,
+  guideAssistantId = ''
 }) {
   const state = useRhythmAssistSessionState();
   const [selId, setSelId] = React.useState('');
@@ -94473,7 +94478,9 @@ function RhythmAssistSessionPicker({
   return React.createElement("div", {
     "data-rhythm-assist-picker": true,
     className: "flex min-h-0 flex-1 flex-col"
-  }, React.createElement("div", {
+  }, React.createElement(RhythmAssistSessionGuide, {
+    assistantId: guideAssistantId
+  }), React.createElement("div", {
     "data-rhythm-assist-talk-option": true,
     className: "mb-2 flex shrink-0 items-center gap-1.5"
   }, React.createElement("span", {
@@ -95073,6 +95080,60 @@ function RhythmAssistSessionProfileBadges() {
       draggable: false
     })), rhythmAssistSessionName(x.assistantId), "とセッション Lv.", x.master ? RHYTHM_ASSIST_SESSION_MASTER_LEVEL : RHYTHM_ASSIST_SESSION_BADGE_LEVEL);
   })));
+}
+const RHYTHM_ASSIST_SESSION_SEEN_KEY = 'mh_rhythm_assistant_session_seen_v1';
+const RHYTHM_ASSIST_SESSION_GUIDE_LINES = Object.freeze({
+  mua: 'あたしたち助手も、ここから呼べるようになったよ！{name}、一緒に演奏しよ♪',
+  kiki: '{name}、私たち助手も、ここから呼べるようになりました♪ 一緒に演奏しまつ',
+  momosuke: 'ももたち助手も呼べるようになったよ！！{name}、ステージ一緒に立と♡',
+  dra: 'おでたち助手も、ここから呼べるようになったんだ。{name}、一緒に叩こうな',
+  atsu: 'てか、俺たち助手もここから呼べるようになったぞ！{name}、一曲いくか笑',
+  kyuko: 'ほい！俺たち助手も、ここから呼べるようになったよぉ。{name}、一緒にやろぉ',
+  sorashido: 'うぉぉぉ！俺たち助手も呼べるようになったぜ！{name}、一緒に演奏だぜ笑',
+  erubin: '俺たち助手も、ここから呼べるようになったんだ。{name}、よかったら一緒にね'
+});
+function RhythmAssistSessionGuide({
+  assistantId = ''
+}) {
+  const [show, setShow] = React.useState(false);
+  React.useEffect(() => {
+    if (!rhythmAssistSessionEnabled()) return undefined;
+    let alive = true;
+    (async () => {
+      try {
+        const seen = await storeGet(RHYTHM_ASSIST_SESSION_SEEN_KEY, false);
+        if (alive && seen !== true) setShow(true);
+      } catch (_) {}
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const id = RHYTHM_ASSIST_SESSION_GUIDE_LINES[assistantId] ? assistantId : 'mua';
+  const who = rhythmAssistSessionWho(id);
+  if (!show || !who) return null;
+  const close = () => {
+    setShow(false);
+    void storeSet(RHYTHM_ASSIST_SESSION_SEEN_KEY, true).catch(() => {});
+  };
+  return React.createElement("div", {
+    "data-rhythm-assist-guide": true,
+    className: "mb-2 flex shrink-0 items-start gap-2 rounded-2xl border border-pink-300/50 bg-pink-950/60 p-2"
+  }, React.createElement(AssistantFace, {
+    who: who,
+    size: 40,
+    accent: who.accent,
+    expression: "happy"
+  }), React.createElement("p", {
+    className: "min-w-0 flex-1 text-[11px] font-bold leading-snug text-pink-50",
+    style: JA_WRAP_STYLE
+  }, jaWrap(rhythmAssistSessionSpeak(id, RHYTHM_ASSIST_SESSION_GUIDE_LINES[id]))), React.createElement("button", {
+    type: "button",
+    "data-rhythm-assist-guide-close": true,
+    "aria-label": "閉じる",
+    onClick: close,
+    className: "min-h-[36px] shrink-0 rounded-lg bg-slate-800 px-2 text-[11px] font-black"
+  }, "わかった"));
 }
 const RAID_JACK_DEBUG_NOW_CHOICES = Object.freeze([{
   id: 'real',
@@ -165350,6 +165411,7 @@ function MonsterHeroGame() {
       onUseBuddyTicket: consumeBuddyTicket,
       onRefundBuddyTicket: refundBuddyTicket,
       onOpenMasuBeat: () => openMasuBeat(gameState),
+      guideAssistantId: selectedAssistantId,
       sessionAssistants: rhythmAssistSessionEnabled() && typeof assistantsUnlockedFrom === 'function' ? assistantsUnlockedFrom(rhythmEventStorySeen).filter(who => who.id !== 'momosuke' || momosukeIntroSeenFlag) : [],
       songs: rhythmDemoSongs(RHYTHM_SONGS),
       difficultiesOf: song => rhythmDemoDifficulties(song, RHYTHM_PLAY_DIFFICULTIES),

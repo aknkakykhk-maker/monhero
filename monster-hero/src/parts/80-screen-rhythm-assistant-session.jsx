@@ -183,7 +183,7 @@ const rhythmAssistSessionWrapBrain = (brain, songs) => ({
 });
 
 // 呼ぶシートの「助手」のタブの中身。カードを押して選び、下の帯の「呼ぶ」で呼ぶ(マスモンのタブと同じ流れ)
-function RhythmAssistSessionPicker({ assistants = [], calledIds = [], canPay = true, busy = false, onPick }) {
+function RhythmAssistSessionPicker({ assistants = [], calledIds = [], canPay = true, busy = false, onPick, guideAssistantId = '' }) {
   const state = useRhythmAssistSessionState();
   const [selId, setSelId] = React.useState('');
   const list = (assistants || []).filter((who) => who && RHYTHM_ASSIST_SESSION_IDS.includes(who.id));
@@ -191,6 +191,7 @@ function RhythmAssistSessionPicker({ assistants = [], calledIds = [], canPay = t
   const calledOf = (id) => calledIds.includes(rhythmAssistSessionKey(id));
   return (
     <div data-rhythm-assist-picker className="flex min-h-0 flex-1 flex-col">
+      <RhythmAssistSessionGuide assistantId={guideAssistantId} />
       <div data-rhythm-assist-talk-option className="mb-2 flex shrink-0 items-center gap-1.5">
         <span className="shrink-0 text-[11px] font-black text-slate-300">助手のひとこと</span>
         {[['all', '全部'], ['few', '少なめ'], ['off', '切る']].map(([id, label]) => (
@@ -576,5 +577,39 @@ function RhythmAssistSessionProfileBadges() {
         })}
       </div>
     </section>
+  );
+}
+
+// 一度きりの案内(2026-11-07 社長「この文で公開」)。呼ぶシートの「助手」のタブをはじめて開いたとき、いま選んでいる助手が1回だけ話す。
+// 新しいキー mh_rhythm_assistant_session_seen_v1(⑦)。プレイヤーは {name}(話す助手の呼び方に置きかえる)
+const RHYTHM_ASSIST_SESSION_SEEN_KEY = 'mh_rhythm_assistant_session_seen_v1';
+const RHYTHM_ASSIST_SESSION_GUIDE_LINES = Object.freeze({
+  mua: 'あたしたち助手も、ここから呼べるようになったよ！{name}、一緒に演奏しよ♪',
+  kiki: '{name}、私たち助手も、ここから呼べるようになりました♪ 一緒に演奏しまつ',
+  momosuke: 'ももたち助手も呼べるようになったよ！！{name}、ステージ一緒に立と♡',
+  dra: 'おでたち助手も、ここから呼べるようになったんだ。{name}、一緒に叩こうな',
+  atsu: 'てか、俺たち助手もここから呼べるようになったぞ！{name}、一曲いくか笑',
+  kyuko: 'ほい！俺たち助手も、ここから呼べるようになったよぉ。{name}、一緒にやろぉ',
+  sorashido: 'うぉぉぉ！俺たち助手も呼べるようになったぜ！{name}、一緒に演奏だぜ笑',
+  erubin: '俺たち助手も、ここから呼べるようになったんだ。{name}、よかったら一緒にね',
+});
+function RhythmAssistSessionGuide({ assistantId = '' }) {
+  const [show, setShow] = React.useState(false);
+  React.useEffect(() => {
+    if (!rhythmAssistSessionEnabled()) return undefined;
+    let alive = true;
+    (async () => { try { const seen = await storeGet(RHYTHM_ASSIST_SESSION_SEEN_KEY, false); if (alive && seen !== true) setShow(true); } catch (_) { /* 読めなければ出さない */ } })();
+    return () => { alive = false; };
+  }, []);
+  const id = RHYTHM_ASSIST_SESSION_GUIDE_LINES[assistantId] ? assistantId : 'mua';
+  const who = rhythmAssistSessionWho(id);
+  if (!show || !who) return null;
+  const close = () => { setShow(false); void storeSet(RHYTHM_ASSIST_SESSION_SEEN_KEY, true).catch(() => {}); };
+  return (
+    <div data-rhythm-assist-guide className="mb-2 flex shrink-0 items-start gap-2 rounded-2xl border border-pink-300/50 bg-pink-950/60 p-2">
+      <AssistantFace who={who} size={40} accent={who.accent} expression="happy" />
+      <p className="min-w-0 flex-1 text-[11px] font-bold leading-snug text-pink-50" style={JA_WRAP_STYLE}>{jaWrap(rhythmAssistSessionSpeak(id, RHYTHM_ASSIST_SESSION_GUIDE_LINES[id]))}</p>
+      <button type="button" data-rhythm-assist-guide-close aria-label="閉じる" onClick={close} className="min-h-[36px] shrink-0 rounded-lg bg-slate-800 px-2 text-[11px] font-black">わかった</button>
+    </div>
   );
 }
