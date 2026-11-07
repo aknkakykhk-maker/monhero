@@ -269,5 +269,6 @@ check('助手のスコアをランキングへ送らない(助手の計算の部
   check('使う回数は1人1回のまま(無料から先・足りないぶんは券)。券が足りないときは押せない', /const useFree = Math\.min\(freeLeft, picks\.length\);/.test(SHEET) && /const shortTickets = Math\.max\(0, useTickets - tickets\);/.test(SHEET) && /disabled=\{busy \|\| !picks\.length \|\| shortTickets > 0\}/.test(SHEET));
   check('デュオになる組み合わせを選んでいるあいだに出す', /data-rhythm-buddy-multi-duo/.test(SHEET));
 }
+check('部屋の入口のボタンは「呼ぶ」+マスモンと助手の小さな顔(社長 2026-11-07)', /data-rhythm-buddy-header-faces/.test(MULTI) && /<span className="mt-0\.5 text-\[10px\] font-black">呼ぶ<\/span>/.test(MULTI));
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

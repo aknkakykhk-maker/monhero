@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5a19ba54b7c3802c
+// source-sha256: 7f14b6025cff1b66
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -90763,15 +90763,41 @@ function RhythmMultiScreen({
     "data-rhythm-buddy-open": true,
     "data-rhythm-buddy-header": true,
     type: "button",
-    "aria-label": "マスモンを呼ぶ",
+    "aria-label": sessionAssistantsOn ? 'マスモン・助手を呼ぶ' : 'マスモンを呼ぶ',
     onClick: () => setBuddySheet('pick'),
     className: `relative flex min-h-[44px] min-w-[52px] max-[480px]:min-w-[46px] max-[380px]:min-w-[42px] shrink-0 flex-col items-center justify-center rounded-xl border border-lime-300/70 bg-gradient-to-b from-lime-400 to-emerald-600 px-1.5 max-[480px]:px-1 leading-none text-slate-950 ${extra}`
-  }, React.createElement("span", {
-    "aria-hidden": "true",
-    className: "text-base"
-  }, "🎵"), React.createElement("span", {
-    className: "text-[10px] font-black"
-  }, "マスモン"), view.myCpus && view.myCpus.length > 0 && React.createElement("b", {
+  }, (() => {
+    const masu = (masuMons || [])[0] || null;
+    const base = masu && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
+    const masuSrc = base && typeof masuDisplayImageUrl === 'function' ? masuDisplayImageUrl(base) : '';
+    const who = sessionAssistantsOn && typeof assistantById === 'function' ? assistantById(guideAssistantId) || (sessionAssistants || [])[0] || null : null;
+    const whoSrc = who && typeof assistantFaceSrc === 'function' ? assistantFaceSrc(who, 'happy') : '';
+    if (!masuSrc && !whoSrc) return React.createElement("span", {
+      "aria-hidden": "true",
+      className: "text-base"
+    }, "🎵");
+    return React.createElement("span", {
+      "data-rhythm-buddy-header-faces": true,
+      "aria-hidden": "true",
+      className: "relative flex h-[18px] items-center"
+    }, masuSrc && React.createElement("span", {
+      className: "block h-[18px] w-[18px] overflow-hidden rounded-full border border-white/80 bg-slate-800"
+    }, React.createElement("img", {
+      src: masuSrc,
+      alt: "",
+      draggable: false,
+      className: "h-full w-full object-contain"
+    })), whoSrc && React.createElement("span", {
+      className: `block h-[18px] w-[18px] overflow-hidden rounded-full border border-white/80 bg-slate-800 ${masuSrc ? '-ml-1.5' : ''}`
+    }, React.createElement("img", {
+      src: whoSrc,
+      alt: "",
+      draggable: false,
+      className: "h-full w-full object-cover"
+    })));
+  })(), React.createElement("span", {
+    className: "mt-0.5 text-[10px] font-black"
+  }, "呼ぶ"), view.myCpus && view.myCpus.length > 0 && React.createElement("b", {
     className: "absolute -right-1.5 -top-1.5 min-w-[18px] rounded-full bg-slate-950 px-1 text-[10px] font-black leading-[18px] text-lime-200"
   }, view.myCpus.length)) : null;
   const header = (step, onBackClick, opts = {}) => React.createElement("header", {
