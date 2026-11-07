@@ -47,7 +47,7 @@ function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
                       <div className="flex-1 min-w-0 text-[13px] leading-snug font-black text-white">{item.name}</div>
                       <span className="shrink-0 rounded-full bg-slate-950/60 px-2.5 py-0.5 text-[11px] font-black tabular-nums text-teal-300">所持数: {ownedItems[item.id]}</span>
                     </div>
-                    <div className="text-[10px] text-slate-400 leading-relaxed mt-1">{helpWrap(item.desc)}</div>
+                    <div className="text-[10px] text-slate-400 leading-relaxed mt-1">{helpWrap(typeof assistantLifeItemDesc==='function'?assistantLifeItemDesc(item):item.desc)}</div>
                   </div>
                   {/* スキップチケットや超越の実はマスモン詳細の別の場所で使うものなので、使う場所だけ案内する */}
                   {item.usage==='battleSkip'
@@ -66,6 +66,8 @@ function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
                     ? <div className={usageNoteClass}>マーケットで<br/>{HERO_PROOF_SHARD_PER_PROOF}個→<br/>勇者の証1個</div>
                     : item.usage==='rhythmBuddy'
                     ? <div className={usageNoteClass}>モンヒロビートの<br/>マルチで<br/>マスモンを呼ぶ</div>
+                    : item.usage==='assistantPeer'&&typeof assistantLifeEnabled==='function'&&assistantLifeEnabled()
+                    ? <button type="button" data-assistant-life-item-use={item.id} onClick={()=>assistantLifeOpenScreen()} className="shrink-0 w-[84px] min-h-[44px] rounded-xl border border-amber-300/60 bg-amber-400/15 text-[12px] font-black text-amber-100 active:scale-95">使う ▸</button>
                     : item.usage==='assistantPeer'
                     ? <div className={usageNoteClass}>プロフィールの<br/>助手どうしの<br/>関係図で使う</div>
                     : item.usage==='soulRankRespec'||item.usage==='soulCrystal'

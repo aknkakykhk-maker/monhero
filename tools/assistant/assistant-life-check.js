@@ -37,6 +37,13 @@ const load = (rel) => {
   vm.runInContext(code, ctx);
 };
 load('monster-hero/data/assistants.js');
+// 2人にあげる道具の検査用に、持ち物(breeder.js)と交換所(rhythm-event.js)から2品の行だけを切り出して読む(ファイル丸ごとはほかの定義に頼っているため)
+{
+  const pick = (rel, re) => fs.readFileSync(path.join(root, rel), 'utf8').split('\n').filter(l => re.test(l));
+  const items = fs.readFileSync(path.join(root, 'monster-hero/data/breeder.js'), 'utf8').match(/\{ id:'peer_(gift|token)'[\s\S]*?desc:"[^"]*" \}/g) || [];
+  const offers = pick('monster-hero/data/rhythm-event.js', /Object\.freeze\(\{ id:'peer_(gift|token)'/).map(l => l.trim().replace(/,$/, ''));
+  vm.runInContext(`var BREEDER_MARKET_ITEMS = [${items.join(',')}]; var RHYTHM_EVENT_POINT_SHOP_OFFERS = [${offers.join(',')}];`, ctx);
+}
 let dayNow = '2026-11-07';
 vm.runInContext('var assistantBubbleDayKey = () => __day(); var assistantPeerDayKey = () => __day(); var jstDayKey4 = () => __day(); var assistantById = (id) => ASSISTANTS.find(a => a.id === id);', Object.assign(ctx, { __day: () => dayNow }));
 load('monster-hero/src/parts/56-assistant-peer.jsx');
@@ -408,6 +415,20 @@ if (process.argv.includes('--stats')) {
       if (/[{}]/.test(text)) left.push(`${t.id}: ${text}`);
     }
     check('⑧ 台本の穴({c}・{place}・{doing} など)が残らない', left.length === 0, left.slice(0, 2).join(' / '));
+  }
+  // 2人にあげる道具: 数字は表から読む/渡すとよさそうな印
+  {
+    const g = G("assistantLifeItemInfo('gift')"), t = G("assistantLifeItemInfo('token')");
+    check('⑧ 道具の名前・値段・上がる量は表から読む(差し入れ 200P・友情Lv +15/しるし 500P・+30)', g.name === '差し入れ' && g.cost === 200 && g.peerAmt === 15 && g.playerAmt > 0 && t.cost === 500 && t.peerAmt === 30, `${g.name} ${g.cost} ${g.peerAmt}/${g.playerAmt}・${t.name} ${t.cost} ${t.peerAmt}/${t.playerAmt}`);
+    const hint = G('assistantLifePairHint');
+    const h1 = hint({ bond: { 'kiki-mua': 440 }, quarrel: {} }, lifeBase, 'kiki', 'mua');
+    const h2 = hint({ bond: { 'kiki-mua': 300 }, quarrel: { pending: { pair: 'kiki-mua' } } }, lifeBase, 'kiki', 'mua');
+    check('⑧ 印: もうすぐ友情Lv が上がる(あと30以内)・言い合いのあと', h1.near && h1.near.level === 5 && h1.near.left === 10 && !h1.after && !h2.near && h2.after);
+    flags.assistantLife = false;
+    const off = G("assistantLifeItemDesc(BREEDER_MARKET_ITEMS.find(x => x.id === 'peer_gift'))");
+    flags.assistantLife = true;
+    const on = G("assistantLifeItemDesc(BREEDER_MARKET_ITEMS.find(x => x.id === 'peer_gift'))");
+    check('⑧ 持ち物・交換所の説明は、印が真のときだけ「何が起きるか」中心の文', off === G("BREEDER_MARKET_ITEMS.find(x => x.id === 'peer_gift').desc") && /友情Lv \+15/.test(on) && /助手たちの今/.test(on) && /1日1回/.test(on));
   }
   // ⑦ のために入れ物を読み込む前へ戻す
   lstore.loading = null;

@@ -154,3 +154,11 @@
   - 穴 {place}{doing}{doing_te} は `assistantLifeFillHoles`(いまの様子 → 台本の鍵 → していることの場所)
 - 検査: `assistant-life-check.js` ⑧(id・鍵・話し手・書き直しの表・組/ひとり/言い合い・穴・14日・2つの道具の --check)/`assistant-life-browser-check.js` ⑦(見守る・ようすを見る。止め絵 `shots/life-7-solo.png`)
 - 残り: コトバの 声かけ・決まった3人の上位20組・言い合い→仲直り・ブリーダーへ(取り込めば仕組みはそのまま使う)。そろったら 止め絵・台詞の抜粋・更新履歴とヘルプの文を窓口へ → 社長の「この文で」→ 印を真に
+
+### 2人にあげる道具を分かりやすく(2026-11-07 社長「この見本で作る」 ux/items-mock.png)
+- 「助手たちの今」: 上に「2人にあげる道具」の欄(持っている数・今日あと何回・起きること・手に入れる所。誘う/引き合わせるは無料と書く)。組ごとに「🧺 渡す」(3人以上は「だれに渡す？」で2人を選ぶ)。
+  印「⬆ もうすぐ友情Lv(あと30以内)」「💦 言い合いのあと」。渡す前の確かめ `AssistantLifeGiveSheet`(何の道具か・起きること・使える数・手に入れる所・このあと)
+- 持ち物: 印が真なら「使う ▸」で「助手たちの今」が開く。持ち物・交換所の説明は `assistantLifeItemDesc`(印が真のときだけ何が起きるか中心)
+- はじめての案内 `AssistantLifeItemIntro`(HOME で1回・掛け合いと重ねない・新しいキー `mh_assistant_life_item_intro_v1`)
+- 名前・絵・値段・上がる量は書き込まず、BREEDER_MARKET_ITEMS・RHYTHM_EVENT_POINT_SHOP_OFFERS・上がり方の表から読む(名前と種類はあとで「道具を広げる」ときに決める)
+- 止め絵 `shots/life-8-give.png`・`life-9-intro.png`。検査 assistant-life-check ⑧・browser ⑧

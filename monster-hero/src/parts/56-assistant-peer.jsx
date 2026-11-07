@@ -279,6 +279,11 @@ const assistantPeerGain = async (a, b, action) => {
   const opts = typeof assistantLifeGainOptsNow === 'function' ? assistantLifeGainOptsNow() : null;
   const r = assistantPeerGainState(ASSISTANT_PEER_STORE.state, a, b, action, assistantPeerDayKey(), opts);
   if (r.gained > 0) { ASSISTANT_PEER_STORE.set(r.st); assistantPeerSaveBond(); }
+  // 友情Lv が上がった演出(44-growth-fx.jsx)。どの道で上がっても、ここ1か所から呼ぶ。道具のときは道具の演出の中で見せるので呼ばない。
+  //   助手たちの今(印 assistantLife)の公開と一緒に出す。見た目だけ(保存・計算は触らない)
+  if (r.gained > 0 && r.levelAfter > r.levelBefore && action !== 'gift' && action !== 'token' && assistantPeerLifeOn() && typeof growthFxPeerLevel === 'function') {
+    try { growthFxPeerLevel({ pair: [a, b], levelBefore: r.levelBefore, levelAfter: r.levelAfter }); } catch {}
+  }
   return r;
 };
 // お話を最後まで見たとき(60-app.jsx のお話の finish)。出た助手のペアぜんぶ
@@ -415,8 +420,16 @@ const assistantPeerUseItem = async (kind, pair) => {
   const next = { ...g, [kind]: assistantPeerPairKey(pair[0], pair[1]) };
   ASSISTANT_PEER_STORE.set({ gift: next });
   try { storeSet(ASSISTANT_PEER_GIFT_KEY, next, false); } catch {}
-  await assistantPeerGain(pair[0], pair[1], kind);
+  const pointsBefore = assistantPeerPoints(ASSISTANT_PEER_STORE.state, pair[0], pair[1]);
+  const r = await assistantPeerGain(pair[0], pair[1], kind);
   assistantPeerAddPlayerBond(pair, kind === 'gift' ? 'peerGift' : 'peerToken');
+  // 品物を渡した演出(44-growth-fx.jsx)。名前と絵は演出の側が持ち物の表から取る。好き嫌いはまだ無いので reaction は null
+  if (assistantPeerLifeOn() && typeof growthFxPeerItem === 'function') {
+    const pa = typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS[kind === 'gift' ? 'peerGift' : 'peerToken'];
+    const after = pointsBefore + ((r && r.gained) || 0);
+    try { growthFxPeerItem({ pair: [...pair], itemId: ASSISTANT_PEER_ITEM_IDS[kind], pointsBefore, pointsAfter: after,
+      levelBefore: assistantPeerLevelOf(pointsBefore), levelAfter: assistantPeerLevelOf(after), reaction: null, playerGain: pa ? pa.amount : 0 }); } catch {}
+  }
   // 助手たちの今: もらった2人はしばらくごきげんで、一緒に過ごしやすい
   if (typeof assistantLifeNote === 'function') void assistantLifeNote('gift', { pair: assistantPeerPairKey(pair[0], pair[1]) });
   if (typeof assistantLifeAddPlay === 'function') void assistantLifeAddPlay('peer');
