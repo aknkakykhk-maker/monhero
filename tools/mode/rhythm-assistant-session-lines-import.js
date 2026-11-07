@@ -17,7 +17,7 @@ const DIR = path.join(ROOT, 'docs/progress/beat-assistant-session/lines');
 const OUT = path.join(ROOT, 'monster-hero/src/parts/33-rhythm-assistant-session-lines.jsx');
 const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'];
 const EXPR = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];
-const SOLO_SCENES = ['join', 'first', 'like', 'dislike', 'combo', 'miss', 'climax', 'last', 'mvp', 'high', 'mid', 'low', 'fc', 'levelup', 'likeup', 'overcome', 'sp50', 'sp80', 'sp100'];
+const SOLO_SCENES = ['join', 'first', 'like', 'dislike', 'combo', 'miss', 'climax', 'last', 'mvp', 'high', 'mid', 'low', 'fc', 'levelup', 'likeup', 'overcome', 'sp50', 'sp80', 'sp100', 'woke', 'refuse'];
 const PAIR_SCENES = ['play', 'result', 'gattai'];
 
 const errors = [];

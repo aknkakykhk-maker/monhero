@@ -90,7 +90,15 @@ check('寝ている助手を選ぶと「来ないこともあります(来なけ
 await page.locator('[data-rhythm-buddy-call-all]:visible').click();await page.waitForTimeout(800);
 const ref=await page.evaluate(()=>({note:!!document.querySelector('[data-rhythm-assist-refused="dra"]'),inRoom:(RHYTHM_MULTI.view().myCpus||[]).some((c)=>c.masuId==='as:dra'),free:rhythmBuddyFreeLeft(RHYTHM_BUDDY_STORE.get(),rhythmBuddyDayKey(Date.now())),sheet:!!document.querySelector('[data-rhythm-buddy-sheet]')}));
 check('断られたら、来ない・回数を使わない・シートに断りの一言が出る',ref.note&&!ref.inRoom&&ref.free===free0&&ref.sheet,JSON.stringify({...ref,free0}));
-if(process.env.MH_SHOT_DIR)await page.screenshot({path:path.join(process.env.MH_SHOT_DIR,'assist-sheet-refused.png')});
+check('断りの一言は、その助手の refuse の台詞(寝言・断り)',await page.evaluate(()=>{const el=document.querySelector('[data-rhythm-assist-refused="dra"]');const lines=(RHYTHM_ASSIST_SESSION_SOLO_LINES.dra.refuse||[]).map((x)=>x[1]);return !!el&&lines.length>0&&lines.some((t)=>el.textContent.includes(t.replace(/\{name\}/g,'').slice(0,6)));}));
+for(const [w,h,rot,lab] of [[390,844,false,'縦画面'],[844,390,false,'横画面'],[390,844,true,'回転(横)']]){
+  await page.setViewportSize({width:w,height:h});await page.evaluate(on=>RHYTHM_VIEW_ROTATION.set(on?90:0),rot);await page.waitForTimeout(rot?1200:700);
+  if(process.env.MH_SHOT_DIR)await page.screenshot({path:path.join(process.env.MH_SHOT_DIR,`assist-sheet-refused-${lab}.png`)});
+  const fit=await page.evaluate(()=>{const el=document.querySelector('[data-rhythm-assist-refused]');if(!el)return '(一言が無い)';const b=el.getBoundingClientRect(),p=el.parentElement.getBoundingClientRect();
+    return b.width<=0?'(見えない)':b.left<p.left-1||b.right>p.right+1?`はみ出し ${Math.round(b.right-p.right)}px`:el.scrollWidth>el.clientWidth+1?'文字が切れる':'';});
+  check(`断りの一言(${lab}): シートの中に収まり、文字が切れない`,fit==='',fit);
+}
+await page.setViewportSize({width:390,height:844});await page.evaluate(()=>RHYTHM_VIEW_ROTATION.set(0));await page.waitForTimeout(500);
 // 呼び直すと起きやすくなる(1回断られたあとは7割)
 check('同じ時間帯に断られた助手は、呼び直すと起きやすくなる(5割→7割)',await page.evaluate(()=>rhythmAssistSessionWakeChanceOf('dra'))===0.7);
 // 来てくれる(乱数を小さくする)
@@ -101,6 +109,9 @@ await page.waitForFunction(()=>(RHYTHM_MULTI.view().myCpus||[]).some((c)=>c.masu
 await page.evaluate(()=>{Math.random=window.__rand;});
 const came=await page.evaluate(()=>({inRoom:(RHYTHM_MULTI.view().myCpus||[]).some((c)=>c.masuId==='as:dra'),free:rhythmBuddyFreeLeft(RHYTHM_BUDDY_STORE.get(),rhythmBuddyDayKey(Date.now()))}));
 check('来てくれたら部屋に入り、回数を1回使う',came.inRoom&&came.free===free0-1,JSON.stringify({...came,free0}));
+await page.waitForTimeout(2500);
+const wokeSaid=await page.evaluate(()=>{const lines=(RHYTHM_ASSIST_SESSION_SOLO_LINES.dra.woke||[]).map((x)=>x[1].replace(/\{name\}/g,'').slice(0,6));const chat=(RHYTHM_MULTI.view().chat||[]).map((c)=>String(c.text||''));return {ok:chat.some((t)=>lines.some((l)=>t.includes(l))),chat:chat.slice(-3)};});
+check('来てくれたら、部屋に来たときの一言が起こされた一言(woke)になる',wokeSaid.ok,JSON.stringify(wokeSaid));
 check('ページのエラーが出ない',errs.length===0,errs.slice(0,3).join(' / '));
 await browser.close();server.close();
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);

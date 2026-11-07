@@ -274,3 +274,4 @@
   - 結果の友情Lv に段の名前「+3(Lv4 いい友だち)」
 - [x] 🔄横の土台の直し(テンポ #4808)のあと撮り直し、席の吹き出しを席のカードに収めた(#4830)。検査は rhythm-multi-layout-check の「席の吹き出し」
 - [x] 券なしセッション(社長の決定: 助手が自分でモンビーに出かけているあいだは、その助手とは何回でも回数なし)。呼ぶ時点で `assistantLifeAtBeat(id)` を見る(`rhythmAssistSessionVisitFree`)。払っていないので控えは残さない。呼ぶシートに札「🎵 いまモンビーにいる・回数なし」。検査 `tools/mode/rhythm-assistant-session-sheet-check.js`(縦・横・🔄横・小さい縦で測る)。止め絵 `visit-tate.jpg`・`visit-yoko.jpg`・`visit-kaiten.jpg`
+- [x] 寝ている助手を呼ぶ(社長 2026-11-07「呼んで来てくれるときもあれば断られるときある」・ミハリの指摘 B4)。寝ているかは助手ライフのいまの時間帯の様子(doing 'sleep')。来てくれる割合は統括の案(もと5割・夜型+2割・あなたとの仲良し度で最大+2割・同じ時間帯に呼び直すたび+2割・9割まで。`rhythmAssistSessionWakeChance`)。断られたら払わず、呼ぶシートに寝言・断りの一言(場面 refuse)。来たら部屋に来たときの一言が起こされた一言(場面 woke)。台詞はコトバ(solo-draft.txt に8人×各3本)。検査 `rhythm-assistant-session-sheet-check.js`。止め絵 `sleep-refused-tate.jpg`・`sleep-refused-yoko.jpg`・`sleep-refused-kaiten.jpg`
