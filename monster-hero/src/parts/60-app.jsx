@@ -6731,6 +6731,12 @@ function MonsterHeroGame() {
         await storeSet('mh_battle_fx_autoload_default_off_v1', true, false);
       }
       setBattleFxSettingsState(savedBattleFx);
+      // 2026-11-07 の一度きりの戻し(社長「今日の分は全員リセット」→「まとめて戻す」)。
+      //   4時そろえ(#4679)の前の0時区切りで、11/7 の0:00〜4:00 に書いた「11/7」が、4:00 を過ぎても今日(11/7)の分として残った。
+      //   11/7(朝4時区切り)のあいだに1回だけ、日付が 11/7 の「その日の分」を前の日(11/6)の日付へ書き換えて、今日の分を「まだ」に戻す。
+      //   中身(経験値・ポイントの合計・記録)は変えない。日付だけ。キーの名前・形はそのまま。フラグを先に立てて二重に戻さない
+      //   (オートで挑むのごほうびは 96 の CARD_AUTO_REWARD_RESET_* で別に戻している)。ほかの日は何もしない
+      await runDayReset20261107({ storeGet, storeSet });
       const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);

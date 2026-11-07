@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d4d54ef2644aaf52
+// generated-sha256: 6166697f7605efce
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9603,6 +9603,34 @@ const jstDayCarry = (saved, today) => {
   if (typeof saved !== 'string' || typeof today !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(saved)) return today;
   const t = Date.parse(`${today}T00:00:00Z`);
   return Number.isFinite(t) && saved === new Date(t + 86400000).toISOString().slice(0, 10) ? saved : today;
+};
+// ---------- 2026-11-07 の一度きりの戻し(社長「今日の分は全員リセット」) ----------
+//   4時そろえの切り替えの夜に0時区切りで書いた「11/7」が、4:00 を過ぎても今日の分として残ったので、11/7 のあいだに1回だけ前の日の日付へ戻す。
+//   items … [キー, その値の中で日付を持つ所]。'' は値そのものが日付の文字列(マス助言)。日付だけを '2026-11-06' にし、ほかは触らない
+const DAY_RESET_20261107_FLAG = 'mh_day_reset_20261107_v1';
+const DAY_RESET_20261107_ITEMS = Object.freeze([
+  ['mh_card_daily_v1', 'day'],        // バトルカードの毎日の分(助手と対戦のごほうび・その日のポイント)
+  ['mh_card_level_v1', 'day'],        // バトルカードのレベルの「その日はじめての勝ち」
+  ['mh_rhythm_rank_v1', 'day'],       // モンヒロビートのランクの「その日はじめての1曲」
+  ['mh_daily_masu_advice_date_v1', ''], // 毎日のマス助言
+]);
+const dayReset20261107Value = (v, field) => {
+  if (field === '') return v === '2026-11-07' ? '2026-11-06' : null;
+  if (!v || typeof v !== 'object' || Array.isArray(v) || v[field] !== '2026-11-07') return null;
+  return { ...v, [field]: '2026-11-06' };
+};
+const runDayReset20261107 = async ({ storeGet, storeSet, now = Date.now() }) => {
+  try {
+    if (jstDayKey4(now) !== '2026-11-07') return 0;
+    if (await storeGet(DAY_RESET_20261107_FLAG, false, false)) return 0;
+    await storeSet(DAY_RESET_20261107_FLAG, true, false);   // 先に立てる(途中で止まっても二重に戻さない)
+    let n = 0;
+    for (const [key, field] of DAY_RESET_20261107_ITEMS) {
+      const next = dayReset20261107Value(await storeGet(key, null, false), field);
+      if (next !== null) { await storeSet(key, next, false); n += 1; }
+    }
+    return n;
+  } catch (_) { return 0; }
 };
 // ---------- どの助手と一緒に遊ぶか ----------
 // 助手は「みゅあ」「きき」から選ぶ。どちらも最初から解放されていて、解放条件は無い。
@@ -83633,6 +83661,12 @@ function MonsterHeroGame() {
         await storeSet('mh_battle_fx_autoload_default_off_v1', true, false);
       }
       setBattleFxSettingsState(savedBattleFx);
+      // 2026-11-07 の一度きりの戻し(社長「今日の分は全員リセット」→「まとめて戻す」)。
+      //   4時そろえ(#4679)の前の0時区切りで、11/7 の0:00〜4:00 に書いた「11/7」が、4:00 を過ぎても今日(11/7)の分として残った。
+      //   11/7(朝4時区切り)のあいだに1回だけ、日付が 11/7 の「その日の分」を前の日(11/6)の日付へ書き換えて、今日の分を「まだ」に戻す。
+      //   中身(経験値・ポイントの合計・記録)は変えない。日付だけ。キーの名前・形はそのまま。フラグを先に立てて二重に戻さない
+      //   (オートで挑むのごほうびは 96 の CARD_AUTO_REWARD_RESET_* で別に戻している)。ほかの日は何もしない
+      await runDayReset20261107({ storeGet, storeSet });
       const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);

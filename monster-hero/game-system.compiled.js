@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6aaafa93749940b7
+// source-sha256: c9d2de60b4dbf79a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13587,6 +13587,38 @@ const jstDayCarry = (saved, today) => {
   if (typeof saved !== 'string' || typeof today !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(saved)) return today;
   const t = Date.parse(`${today}T00:00:00Z`);
   return Number.isFinite(t) && saved === new Date(t + 86400000).toISOString().slice(0, 10) ? saved : today;
+};
+const DAY_RESET_20261107_FLAG = 'mh_day_reset_20261107_v1';
+const DAY_RESET_20261107_ITEMS = Object.freeze([['mh_card_daily_v1', 'day'], ['mh_card_level_v1', 'day'], ['mh_rhythm_rank_v1', 'day'], ['mh_daily_masu_advice_date_v1', '']]);
+const dayReset20261107Value = (v, field) => {
+  if (field === '') return v === '2026-11-07' ? '2026-11-06' : null;
+  if (!v || typeof v !== 'object' || Array.isArray(v) || v[field] !== '2026-11-07') return null;
+  return {
+    ...v,
+    [field]: '2026-11-06'
+  };
+};
+const runDayReset20261107 = async ({
+  storeGet,
+  storeSet,
+  now = Date.now()
+}) => {
+  try {
+    if (jstDayKey4(now) !== '2026-11-07') return 0;
+    if (await storeGet(DAY_RESET_20261107_FLAG, false, false)) return 0;
+    await storeSet(DAY_RESET_20261107_FLAG, true, false);
+    let n = 0;
+    for (const [key, field] of DAY_RESET_20261107_ITEMS) {
+      const next = dayReset20261107Value(await storeGet(key, null, false), field);
+      if (next !== null) {
+        await storeSet(key, next, false);
+        n += 1;
+      }
+    }
+    return n;
+  } catch (_) {
+    return 0;
+  }
 };
 const ASSISTANT_SELECTED_KEY = 'mh_assistant_selected_v1';
 const KIKI_INTRO_SEEN_KEY = 'mh_kiki_intro_seen_v1';
@@ -139052,6 +139084,10 @@ function MonsterHeroGame() {
         await storeSet('mh_battle_fx_autoload_default_off_v1', true, false);
       }
       setBattleFxSettingsState(savedBattleFx);
+      await runDayReset20261107({
+        storeGet,
+        storeSet
+      });
       const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
