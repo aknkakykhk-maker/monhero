@@ -30,6 +30,35 @@ for(const f of files){
     for(const k in n){if(k==='loc'||/Comments$/.test(k))continue;const v=n[k];if(v&&typeof v==='object')visit(v);}};
   visit(ast.program);
 }
+// 【2026-11-07 ジン部長】助手などの台詞でも、複数・一般のモンスターを「子」と呼ばない(「この子たち」「この子ら」「高い子ほど」「どの子」など)。
+//   特定の1体を指す「この子」「あの子」はそのまま通す(社長)。人を指す言葉(女の子・〜ばっかりの子 など)は台詞の場面で決めるので、
+//   ここでは複数・一般の形だけを見る
+const DIALOG_KO=/子(?:たち|ら(?![しい]))|子ほど|(?:どの|ほかの|他の)子(?![供ど])/g;
+// 開催中のイベントのお話は、開催のあいだ触らない決まり(CLAUDE.md ⑥-4)。終わったら言い換えること(期限を過ぎると NG になる)
+const DIALOG_KO_HOLD=[
+  { text:'……あの子たちは、悪くない', until:'2026-11-09T04:00:00+09:00', why:'パンドラとふたつの翼(開催中)' },
+  { text:'……外で、あの子たちが歌ってる', until:'2026-11-09T04:00:00+09:00', why:'パンドラとふたつの翼(開催中)' },
+];
+const dialogFound=[],held=[];
+for(const f of DIALOG_FILES){
+  if(!fs.existsSync(path.join(ROOT,f)))continue;
+  const src=fs.readFileSync(path.join(ROOT,f),'utf8');
+  const ast=parser.parse(src,{sourceType:'script',plugins:['jsx'],errorRecovery:true});
+  const visit=n=>{if(!n||typeof n!=='object')return;if(Array.isArray(n)){n.forEach(visit);return;}
+    if(n.type==='StringLiteral'||n.type==='TemplateElement'||n.type==='JSXText'){
+      const t=n.type==='TemplateElement'?n.value.cooked||'':n.value;let m;DIALOG_KO.lastIndex=0;
+      while((m=DIALOG_KO.exec(t))){
+        const at=m.index+m[0].indexOf('子');
+        if(EXCL.test(t.slice(Math.max(0,at-4),at+3)))continue;
+        const hold=DIALOG_KO_HOLD.find(h=>t.includes(h.text));
+        if(hold&&Date.now()<Date.parse(hold.until)){held.push(`${hold.why}「${hold.text}」`);continue;}
+        dialogFound.push(`${f.replace('monster-hero/','')}:${n.loc.start.line} 「${t.slice(Math.max(0,at-8),at+4)}」`);
+      }}
+    for(const k in n){if(k==='loc'||/Comments$/.test(k))continue;const v=n[k];if(v&&typeof v==='object')visit(v);}};
+  visit(ast.program);
+}
 console.log(`${found.length?'NG':'OK'}: プレイヤー向けの文で、モンスターを「子」と呼んでいない(助手の台詞は除く) — ${found.length?found.slice(0,8).join(' / '):`${files.length}ファイル`}`);
-console.log(found.length?`\n${found.length}件のNGがあります`:'\nすべてOK');
-process.exit(found.length?1:0);
+console.log(`${dialogFound.length?'NG':'OK'}: 助手などの台詞で、複数・一般のモンスターを「子たち」「子ら」「〜子ほど」「どの子」と呼んでいない(特定の1体の「この子」は通す) — ${dialogFound.length?dialogFound.slice(0,process.env.ALL?999:8).join(' / '):`${DIALOG_FILES.size}ファイル`}${held.length?` (開催中のイベントのため期限まで見送り: ${held.join('・')})`:''}`);
+const ng=found.length+dialogFound.length;
+console.log(ng?`\n${ng}件のNGがあります`:'\nすべてOK');
+process.exit(ng?1:0);

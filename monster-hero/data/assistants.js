@@ -513,7 +513,7 @@ const ASSISTANT_UPDATE_NOTICE_SCRIPTS = {
   update_notice_tactics_hate_v1: {
     mua: [
       { e:'surprise', t:'{name}、聞いて聞いて！ タクティクスバトルの敵が、目立つモンスターを狙うようになったんだって！' },
-      { e:'normal',   t:'いっぱい攻撃したり、回復したり、挑発したりすると、名前の横に🔥が付くの。🔥が多い子ほど狙われやすいよ〜' },
+      { e:'normal',   t:'いっぱい攻撃したり、回復したり、挑発したりすると、名前の横に🔥が付くの。🔥が多いモンスターほど狙われやすいよ〜' },
       { e:'wink',     t:'だからね、モノリスみたいな硬いモンスターが前に出てかばうと、攻撃を引き受けてくれるんだ♪ 守りたいモンスターの🔥を見ながら戦ってみて！' },
       { e:'happy',    t:'あと、モンスターに「タイプ」ができたよ！ アタッカー・タンク・サポーター・ヒーラー・シャドウの5つ。図鑑で見てみてね〜' },
     ],
@@ -1623,7 +1623,7 @@ const ASSISTANT_SCENES = {
       { e:'happy',   t:'この人が使ってた編成だよ。色も染めたとおりに出てるの、すごー。' },
       { e:'excited', t:'どの距離に置いてたかも分かるよ。真似してみる？' },
       { e:'normal',  t:'王冠が付いてるのが勇者モン。主役になった子だね〜。' },
-      { e:'wink',    t:'絆レベルが高い子ほど、その人が大事に育ててる子なんだよ〜✨' },
+      { e:'wink',    t:'絆レベルが高いモンスターほど、その人が大事に育ててるモンスターなんだよ〜✨' },
       { e:'normal',  t:'染めた色が残るのは、この画面ができたあとの記録からだよ。' },
       { e:'surprise', t:'強い人の編成、けっこう参考になるでしょ？ (｡ ˘_˘)ｳﾝｳﾝ' },
     ],
@@ -3002,7 +3002,7 @@ addAssistantLinePack({
       { e:'happy',    t:'{name}、サクッと回したいときはこっちですね♪', bond:[1,2] },
       { e:'normal',   t:'クイックはランキングに乗らないから、気楽にいこ〜', bond:[1,2] },
       { e:'wink',     t:'{name}、育成したいモンスターを連れていきましょ♪', bond:[1,2] },
-      { e:'excited',  t:'{name}、今日はどの子育てる？ てかてか迷うよね〜', bond:[3,4] },
+      { e:'excited',  t:'{name}、今日はどのモンスターを育てる？ てかてか迷うよね〜', bond:[3,4] },
       { e:'happy',    t:'{name}、周回はほどほどにね。疲れちゃうから！', bond:[3,4] },
       { e:'wink',     t:'{name}、あたしも一緒に数えててあげるｗ', bond:4 },
       { e:'excited',  t:'{name}、いってらっしゃい！ 何周でも付き合うよ(｡ ˘_˘)ｳﾝｳﾝ', bond:5 },
@@ -3111,10 +3111,10 @@ addAssistantLinePack({
       { e:'happy',    t:'{name}、育てたモンスターはここに並びますよ♪', bond:[1,2] },
       { e:'normal',   t:'絆レベルが上がると、強化ポイントがもらえるよ。', bond:[1,2] },
       { e:'excited',  t:'{name}、ずいぶん増えたね〜すごー！', bond:[1,2] },
-      { e:'happy',    t:'{name}、この子たちみんな{name}が育てたんだよねｗ', bond:[3,4] },
+      { e:'happy',    t:'{name}、ここにいるみんな、{name}が育てたんだよねｗ', bond:[3,4] },
       { e:'wink',     t:'{name}、名前つけるセンスまぢあると思う(´＾ω＾｀)ﾌﾞﾌｫｗ', bond:[3,4] },
       { e:'excited',  t:'{name}のマスモン、見てるだけで時間溶けるｗ', bond:4 },
-      { e:'happy',    t:'{name}、この子たちと一緒にここまで来たんだね(｡ ˘_˘)ｳﾝｳﾝ', bond:5 },
+      { e:'happy',    t:'{name}、この仲間たちと一緒にここまで来たんだね(｡ ˘_˘)ｳﾝｳﾝ', bond:5 },
       { e:'normal',   t:'{name}のお気に入り、あたし当てられる気がするんだよねｗ', bond:5, w:0.4 },
       { e:'normal',   t:'強化ポイントは間合い適性とステータスに振れるよ〜' },
       { e:'happy',    t:'振り直したいときは、絆ポイントリセットの書を使えばおっけー👍✨' },
@@ -3583,7 +3583,7 @@ addAssistantLinePack({
       { e:'happy',    t:'この方が使ってた編成でつ。染めた色もそのまま♪' },
       { e:'excited',  t:'どの距離に置いてたかも分かるの。真似してみまつか？' },
       { e:'normal',   t:'王冠が付いてるのが勇者モン。主役になったモンスターですね。' },
-      { e:'wink',     t:'絆レベルが高い子ほど、大事に育てられた子♪' },
+      { e:'wink',     t:'絆レベルが高いモンスターほど、大事に育てられた証でつ♪' },
       { e:'normal',   t:'染めた色が残るのは、この画面ができたあとの記録から。' },
       { e:'surprise', t:'強い方の編成、けっこう参考になるよね (・∀・)' },
     ],
@@ -3750,7 +3750,7 @@ addAssistantLinePack({
     ],
     rebirth: [
       { e:'normal',   t:'限界突破でつ。絆Lvの上限を超えられまつよ。' },
-      { e:'wink',     t:'かかるダイヤは絆Lvぶん。育った子ほど高くなるの。' },
+      { e:'wink',     t:'かかるダイヤは絆Lvぶん。育ったモンスターほど高くなるの。' },
       { e:'happy',    t:'お気に入りのモンスターを、さらに先へ連れていけるね♪♪' },
       { e:'normal',   t:'継承する技も、ここで選べまつよ。' },
       { e:'excited',  t:'星が増えると、見た目にも育ちが分かる (・∀・)ノ' },
@@ -4356,7 +4356,7 @@ addAssistantLinePack({
       { e:'normal',   t:'絆レベルを上げると、能力もいっしょに伸びるよ。' },
       { e:'wink',     t:'えこひいきしてるでしょ〜？ ……ももは知ってるよ♡' },
       { e:'excited',  t:'枠は限られてるから、だれを残すか考えどころだね。' },
-      { e:'normal',   t:'モンビーのモンスターノーツにも、この子たちが出るよ。' },
+      { e:'normal',   t:'モンビーのモンスターノーツにも、このモンスターたちが出るよ。' },
       { e:'happy',    t:'みんな{name}に育てられて幸せそうじゃんw' },
     ],
     masuAutoEnhance: [
@@ -4523,7 +4523,7 @@ addAssistantLinePack({
     // 期間限定イベントのあいだ(画面側から condition='limited' で切り替える)
     speciesChallenge: {
       species: [
-        { e:'excited',  t:'種族をえらんで！ この子たちだけで戦うんだからね！' },
+        { e:'excited',  t:'種族をえらんで！ その種族のモンスターだけで戦うんだからね！' },
         { e:'normal',   t:'手持ちが多い種族のほうが、たぶん楽だよ。' },
         { e:'wink',     t:'あえて少ないほうを選ぶ? ……いい度胸じゃん♡' },
       ],
@@ -5137,7 +5137,7 @@ addAssistantLinePack({
       { e:'happy',    t:'{name}、育て直すぶん強くなるで' },
       { e:'wink',     t:'一度リセットされるから、覚悟してから押せよ' },
       { e:'normal',   t:'受け継ぐものと失うものを見てから決めろ' },
-      { e:'happy',    t:'長く付き合う子ほど効いてくるわ' },
+      { e:'happy',    t:'長く付き合うモンスターほど効いてくるわ' },
     ],
     donation: [
       { e:'troubled', t:'寄付したマスモンは戻ってこんぞ。ほんまに戻せん' },
@@ -5522,7 +5522,7 @@ addAssistantLinePack({
     ],
     pickHero: [
       { e:'normal',  t:'この子が最後まで戦うからな。相性で選んでいい' },
-      { e:'normal',  t:'固有技は絆Lvで伸びる。育ってる子ほど心強いよ' },
+      { e:'normal',  t:'固有技は絆Lvで伸びる。育ってるモンスターほど心強いよ' },
       { e:'happy',   t:'好きなモンスターで行くのがいちばん続くと思う' },
     ],
     pickSlot: [
@@ -5603,7 +5603,7 @@ addAssistantLinePack({
     masuList: [
       { e:'normal',  t:'総合力で並べると、育ち具合がひと目で分かるよ' },
       { e:'normal',  t:'名前は何度でも変えられるからな' },
-      { e:'happy',   t:'この子ら、ぜんぶ{name}が育てたんだよな。すごいわ' },
+      { e:'happy',   t:'ここにいるモンスター、ぜんぶ{name}が育てたんだよな。すごいわ' },
     ],
     masuAutoEnhance: [
       { e:'normal',   t:'決めときゃ、あとは順番に振ってくれるよ' },
@@ -5626,7 +5626,7 @@ addAssistantLinePack({
       { e:'happy',   t:'思いがけん組み合わせが当たりのこと、あるで' },
     ],
     rebirth: [
-      { e:'normal',  t:'上限が伸びるからな。育てきった子ほど効くよ' },
+      { e:'normal',  t:'上限が伸びるからな。育てきったモンスターほど効くよ' },
       { e:'normal',  t:'かかるダイヤは絆Lvぶん。育つほど高いわ' },
       { e:'excited', t:'星が増える瞬間、おでもちょっと嬉しい' },
     ],
@@ -6078,7 +6078,7 @@ addAssistantLinePack({
       { e:'happy',   t:'変な組み合わせが当たりだったりするよ♡' },
     ],
     rebirth: [
-      { e:'normal',  t:'上限が伸びるよ。育てきった子ほど効く。' },
+      { e:'normal',  t:'上限が伸びるよ。育てきったモンスターほど効く。' },
       { e:'wink',    t:'ダイヤは絆Lvぶん。育つほど高いんだよねw' },
       { e:'happy',   t:'星が増えるの、見ててちょっと嬉しい♡' },
     ],
@@ -6315,7 +6315,7 @@ addAssistantLinePack({
     ],
     pickHero: [
       { e:'normal',  t:'この子が最後まで戦いまつ。相性で選んで大丈夫でつよ。' },
-      { e:'normal',  t:'固有技は絆Lvで伸びまつ。育っている子ほど心強いでつ。' },
+      { e:'normal',  t:'固有技は絆Lvで伸びまつ。育っているモンスターほど心強いでつ。' },
       { e:'happy',   t:'好きなモンスターで行くのがいちばん続きまつ (´ー`*)ウンウン' },
     ],
     pickSlot: [
@@ -6396,7 +6396,7 @@ addAssistantLinePack({
     masuList: [
       { e:'normal',  t:'総合力で並べると、育ち具合がひと目で分かりまつ。' },
       { e:'normal',  t:'名前は何度でも変えられまつよ。' },
-      { e:'happy',   t:'この子たち、ぜんぶ{name}が育てたモンスター (´ー`*)ウンウン' },
+      { e:'happy',   t:'ここにいるみんな、ぜんぶ{name}が育てたモンスター (´ー`*)ウンウン' },
     ],
     masuAutoEnhance: [
       { e:'normal',  t:'決めておけば、あとは私が順番に振っておきまつ。' },
@@ -6419,7 +6419,7 @@ addAssistantLinePack({
       { e:'happy',   t:'思いがけない組み合わせが当たりのこと、ありまつ (・∀・)' },
     ],
     rebirth: [
-      { e:'normal',  t:'上限が伸びるので、育てきった子ほど効きまつ。' },
+      { e:'normal',  t:'上限が伸びるので、育てきったモンスターほど効きまつ。' },
       { e:'normal',  t:'かかるダイヤは絆Lvぶん。育つほど高くなりまつ。' },
       { e:'excited', t:'星が増える瞬間、私も少し嬉しくなりまつ♪♪' },
     ],
@@ -6822,7 +6822,7 @@ addAssistantLinePack({
       { e:'normal',   t:'特性は全部のWAVEに効くからね。ここだけは適当に選ばないで！' },
       { e:'excited',  t:'勇者選びが一番テンション上がるとこだよね。分かる！' },
       { e:'normal',   t:'この子が最後まで戦うから、相性で選んでいいよ！' },
-      { e:'normal',   t:'固有技は絆Lvで伸びるよ。育ってる子ほど心強い！' },
+      { e:'normal',   t:'固有技は絆Lvで伸びるよ。育ってるモンスターほど心強い！' },
       { e:'happy',    t:'好きなモンスターで行くのが、いちばん続くと思う！' },
     ],
     pickSlot: [
@@ -6987,7 +6987,7 @@ addAssistantLinePack({
       { e:'happy',    t:'手をかけたぶんはちゃんと返ってくるから！' },
       { e:'normal',   t:'総合力で並べ替えると、誰が育ってるか一発で分かるよ！' },
       { e:'normal',   t:'名前は何度でも変えられるよ！' },
-      { e:'happy',    t:'この子たち、全部{name}が育てたんだよね。すごいよ！' },
+      { e:'happy',    t:'ここにいるみんな、全部{name}が育てたんだよね。すごいよ！' },
     ],
     masuAutoEnhance: [
       { e:'normal',   t:'決めとけば、ポイントが入るたびに自動で振ってくれるよ！' },
@@ -7035,7 +7035,7 @@ addAssistantLinePack({
       { e:'wink',     t:'育てた時間がちゃんと形になる。いいね笑' },
       { e:'normal',   t:'条件を満たしたモンスターだけができるやつね！' },
       { e:'happy',    t:'こういう区切り、いいね！' },
-      { e:'normal',   t:'上限が伸びるから、育てきった子ほど効くよ！' },
+      { e:'normal',   t:'上限が伸びるから、育てきったモンスターほど効くよ！' },
       { e:'normal',   t:'かかるダイヤは絆Lvぶん。育つほど高いよ！' },
       { e:'excited',  t:'星が増える瞬間、まじでテンション上がる！' },
     ],
@@ -7054,7 +7054,7 @@ addAssistantLinePack({
       { e:'happy',    t:'{name}、育て直すぶん強くなるよ！' },
       { e:'wink',     t:'一度リセットされるから、覚悟してから押してね笑' },
       { e:'normal',   t:'受け継ぐものと失うものを見てから決めて！' },
-      { e:'happy',    t:'長く付き合う子ほど効いてくるよ！' },
+      { e:'happy',    t:'長く付き合うモンスターほど効いてくるよ！' },
       { e:'normal',   t:'別の姿に生まれ変わるよ。技は選んで持っていける！' },
       { e:'troubled', t:'元には戻せないからね。ゆっくり決めて…' },
       { e:'excited',  t:'転職みたいでわくわくするよね！' },
@@ -7574,7 +7574,7 @@ addAssistantLinePack({
       { e:'normal',   t:'特性は全部のWAVEに効くからね。ここだけはちゃんと選ぼ！' },
       { e:'excited',  t:'最初の1体で全体の組み方が決まるんだよね。ここ好きw' },
       { e:'normal',   t:'この子が最後まで戦うから、相性で選んでいいと思う' },
-      { e:'normal',   t:'固有技は絆Lvで伸びるよ。育ってる子ほど心強いですね' },
+      { e:'normal',   t:'固有技は絆Lvで伸びるよ。育ってるモンスターほど心強いですね' },
       { e:'happy',    t:'好きなモンスターで行くのが、いちばん続くと思うよぉ' },
     ],
     pickSlot: [
@@ -7739,7 +7739,7 @@ addAssistantLinePack({
       { e:'happy',    t:'手をかけたぶんは、ちゃんと返ってくるんですよね' },
       { e:'normal',   t:'総合力で並べ替えると、誰が育ってるか一発で分かるよぉ' },
       { e:'normal',   t:'名前は何度でも変えられるよ' },
-      { e:'happy',    t:'この子たち、全部{name}が育てたんだよね。すごいよ🥺' },
+      { e:'happy',    t:'ここにいるみんな、全部{name}が育てたんだよね。すごいよ🥺' },
     ],
     masuAutoEnhance: [
       { e:'normal',   t:'決めとけば、ポイントが入るたびに自動で振ってくれるよ' },
@@ -7787,7 +7787,7 @@ addAssistantLinePack({
       { e:'wink',     t:'育てた時間がちゃんと形になる。いいねw' },
       { e:'normal',   t:'条件を満たしたモンスターだけができるやつね' },
       { e:'happy',    t:'こういう区切り、いいよね笑' },
-      { e:'normal',   t:'上限が伸びるから、育てきった子ほど効くんですよね' },
+      { e:'normal',   t:'上限が伸びるから、育てきったモンスターほど効くんですよね' },
       { e:'normal',   t:'かかるダイヤは絆Lvぶん。育つほど高いよ' },
       { e:'excited',  t:'星が増える瞬間、ちょっとテンション上がるw' },
     ],
@@ -7806,7 +7806,7 @@ addAssistantLinePack({
       { e:'happy',    t:'{name}、育て直すぶん強くなるよぉ' },
       { e:'wink',     t:'一度リセットされるから、覚悟してから押してねぇ💦' },
       { e:'normal',   t:'受け継ぐものと失うもの、先に見てから決めるのがいいと思う' },
-      { e:'happy',    t:'長く付き合う子ほど効いてくるよ。俺もよく使うw' },
+      { e:'happy',    t:'長く付き合うモンスターほど効いてくるよ。俺もよく使うw' },
       { e:'normal',   t:'別の姿に生まれ変わるよ。技は選んで持っていけるから、そこは考えどころですね' },
       { e:'troubled', t:'元には戻せないからねぇ。ゆっくり決めよ💦' },
       { e:'excited',  t:'育て直しって、組み方を考え直すチャンスなんだよね笑' },
@@ -8426,7 +8426,7 @@ addAssistantLinePack({
       { e:'normal',   t:'最初の1体は効いてくるよ。勇者特性はちゃんと見て' },
       { e:'happy',    t:'{name}、好きなモンスターでいいよ。推しは強い笑' },
       { e:'normal',   t:'特性は全部のWAVEに効くから、ここだけは丁寧に選ぼ' },
-      { e:'normal',   t:'固有技は絆Lvで伸びるよ。育ってる子ほど頼れる' },
+      { e:'normal',   t:'固有技は絆Lvで伸びるよ。育ってるモンスターほど頼れる' },
       { e:'wink',     t:'迷ったら守りが堅いモンスター。事故が減るのは計算済み笑' },
       { e:'excited',  t:'最初の1体で全体の組み方が決まる。ここが分かれ道だぜ・・・！' },
     ],
@@ -8520,7 +8520,7 @@ addAssistantLinePack({
       { e:'normal',   t:'名前はあとから何度でも付け直せるよ' },
       { e:'normal',   t:'気に入ったモンスターは牧場に出しとこ' },
       { e:'wink',     t:'絆Lvが上がると、できることが増えるよ' },
-      { e:'happy',    t:'この子たち、全部{name}が育てたんだよね。すごいって' },
+      { e:'happy',    t:'ここにいるみんな、全部{name}が育てたんだよね。すごいって' },
     ],
     masuAutoEnhance: [
       { e:'normal',   t:'方針を決めとけば、ポイントが入るたびに勝手に振ってくれる' },
@@ -8557,7 +8557,7 @@ addAssistantLinePack({
       { e:'normal',   t:'{name}、ここからさらに伸びるよ' },
       { e:'normal',   t:'条件を満たしたモンスターだけが使えるよ' },
       { e:'normal',   t:'かかるダイヤは絆Lvぶん。育つほど高くなるよ' },
-      { e:'happy',    t:'上限が伸びるから、育てきった子ほど効くぜ・・・！' },
+      { e:'happy',    t:'上限が伸びるから、育てきったモンスターほど効くぜ・・・！' },
     ],
     transcendence: [
       { e:'normal',   t:'Lv400まで育てたモンスターだけが行ける、限界の先だよ' },
@@ -9276,7 +9276,7 @@ addAssistantLinePack({
       { e:'normal',   t:'最初の1体は効いてくるよ。勇者特性はちゃんと見ておこうね' },
       { e:'happy',    t:'{name}、好きなモンスターでいいよ。好きって気持ちは強いからね' },
       { e:'normal',   t:'特性は全部のWAVEに効くから、ここだけは丁寧に選ぼうか' },
-      { e:'normal',   t:'固有技は絆Lvで伸びるよ。育ってる子ほど頼れるね' },
+      { e:'normal',   t:'固有技は絆Lvで伸びるよ。育ってるモンスターほど頼れるね' },
       { e:'wink',     t:'迷ったら守りが堅い子かな。事故が減るからね' },
       { e:'excited',  t:'最初の1体で全体の組み方が決まるよね。ここが分かれ道だよ' },
     ],
@@ -9370,7 +9370,7 @@ addAssistantLinePack({
       { e:'normal',   t:'名前は、あとから何度でも付け直せるからね' },
       { e:'normal',   t:'気に入ったモンスターは、牧場に出しておこうか' },
       { e:'wink',     t:'絆Lvが上がると、できることが増えるんだよね' },
-      { e:'happy',    t:'この子たち、全部{name}が育てたんだよね。すごいなぁ' },
+      { e:'happy',    t:'ここにいるみんな、全部{name}が育てたんだよね。すごいなぁ' },
     ],
     masuAutoEnhance: [
       { e:'normal',   t:'方針を決めておけば、ポイントが入るたびに自動で振ってくれるよ' },
@@ -9407,7 +9407,7 @@ addAssistantLinePack({
       { e:'normal',   t:'{name}、ここからさらに伸びていくよ' },
       { e:'normal',   t:'条件を満たしたモンスターだけが使えるんだよね' },
       { e:'normal',   t:'かかるダイヤは絆Lvぶんだよ。育つほど高くなるからね' },
-      { e:'happy',    t:'上限が伸びるから、育てきった子ほど効くよね' },
+      { e:'happy',    t:'上限が伸びるから、育てきったモンスターほど効くよね' },
     ],
     transcendence: [
       { e:'normal',   t:'Lv400まで育てたモンスターだけが行ける、限界の先なんだよね' },
@@ -11439,7 +11439,7 @@ const ASSISTANT_SORASHIDO_JOIN_STORY = [
   { who:'orihime',   e:'normal',   t:'……りん……りん……' },
   { who:'kiki',      e:'surprise', t:'風鈴と三線の音が……重なってまつ……' },
   { who:'kyubi',     e:'normal',   monsters:[{ id:'Orihime', pose:'idle' }, { id:'Kyubi', pose:'back' }], t:'コン……(提灯の火が、少しずつ小さくなる)' },
-  { who:'dra',       e:'normal',   t:'……データじゃなくて、あの子たちの好きな音で呼んだのか' },
+  { who:'dra',       e:'normal',   t:'……データじゃなくて、あのモンスターたちの好きな音で呼んだのか' },
   { who:'orihime',   e:'normal',   monsters:[{ id:'Orihime', pose:'approach' }, { id:'Kyubi', pose:'back' }], t:'…………(そっと近づいて、ソラシドの袖を引く)' },
   { who:'kyubi',     e:'normal',   monsters:[{ id:'Orihime', pose:'approach' }, { id:'Kyubi', pose:'idle' }], t:'……コン(提灯を下ろして、となりに座る)' },
   { who:'mua',       e:'surprise', t:'今……袖、ひっぱった……！' },
@@ -12573,7 +12573,7 @@ const ASSISTANT_BATTLE_TUTORIAL_BODY = [
   { id:'enemyTalk',    at:'BATTLE',        e:'normal',  title:'相手の情報', t:'敵の名前・いる距離・ライフバー。距離はこまめに変わるから要チェック！', spot:'enemyBar', wait:'next' },
   { id:'scanTalk',     at:'BATTLE',        e:'happy',   title:'敵をくわしく', t:'右上の「解析」を押すと、敵の技や次に何をしてくるかまで見られるよ。', spot:'enemyBar', wait:'next' },
   { id:'heroTalk2',    at:'BATTLE',        e:'normal',  title:'自分の情報', t:'左上の「ステータス」で、自分のライフ・ちから・丈夫さ・ガッツを確認できるよ。', spot:'heroStatus', wait:'next' },
-  { id:'slotTalk2',    at:'BATTLE',        e:'wink',    title:'4つの距離枠', t:'仲間が並んでる枠が距離。敵と同じ距離の子ほど大ダメージを出せるよ！', spot:'battleSlots', wait:'next' },
+  { id:'slotTalk2',    at:'BATTLE',        e:'wink',    title:'4つの距離枠', t:'仲間が並んでる枠が距離。敵と同じ距離のモンスターほど大ダメージを出せるよ！', spot:'battleSlots', wait:'next' },
   { id:'cards',        at:'BATTLE',        e:'normal',  title:'手札のカード', t:'下にあるのが今つかえるカード。ガッツが足りるモンスターだけ光ってるよ。', spot:'cards', wait:'next' },
   { id:'cardKinds',    at:'BATTLE',        e:'normal',  title:'カードの種類', t:'攻めの攻撃カード、ダメージを減らすガードカード、力を底上げするアシストカードがあるよ。', spot:'cards', wait:'next' },
   { id:'cardDetail',   at:'BATTLE',        e:'wink',    title:'カードの説明', t:'カードを2回つづけてトントンって押すと、そのカードの説明が出るよ。1回だけのときは選ぶだけなんだ♪', spot:'cards', wait:'next' },
@@ -12699,7 +12699,7 @@ const ASSISTANT_BATTLE_TUTORIAL_TACTICS_BODY = [
   { id:'tEnemyTalk',   at:'BATTLE',        e:'normal',  title:'相手の情報', t:'敵の名前・いる距離・ライフバー。距離はこまめに変わるから要チェック！', spot:'enemyBar', wait:'next' },
   { id:'tScanTalk',    at:'BATTLE',        e:'happy',   title:'敵をくわしく', t:'右上の「解析」を押すと、敵の技や次に何をしてくるかまで見られるよ。', spot:'enemyBar', wait:'next' },
   { id:'tSkillsMore',  at:'BATTLE',        e:'surprise',title:'技が多いよ', t:'タクティクスの敵は、連撃や貫通撃みたいな技も使ってくるの。解析で確かめる癖をつけてね。', spot:'enemyBar', wait:'next' },
-  { id:'tSlotTalk2',   at:'BATTLE',        e:'wink',    title:'4つの距離枠', t:'仲間が並んでる枠が距離。敵と同じ距離の子ほど大ダメージを出せるよ！', spot:'battleSlots', wait:'next' },
+  { id:'tSlotTalk2',   at:'BATTLE',        e:'wink',    title:'4つの距離枠', t:'仲間が並んでる枠が距離。敵と同じ距離のモンスターほど大ダメージを出せるよ！', spot:'battleSlots', wait:'next' },
   { id:'tCards',       at:'BATTLE',        e:'normal',  title:'手札のカード', t:'下にあるのが今つかえるカード。攻めの攻撃、ダメージを減らすガード、力を上げるアシストがあるよ。', spot:'cards', wait:'next' },
   { id:'tCardDetail',  at:'BATTLE',        e:'wink',    title:'カードの説明', t:'カードを2回つづけてトントンって押すと、そのカードの説明が出るよ。1回だけのときは選ぶだけなんだ♪', spot:'cards', wait:'next' },
   { id:'tCardWho',     at:'BATTLE',        e:'surprise',title:'使うモンスターを選ぶ', t:'タクティクスはカードを選んだあと、使うモンスターの枠もタップするよ。ガッツはそのモンスターのぶんから払うの。', spot:['cards','battleSlots'], wait:'next' },
@@ -12756,7 +12756,7 @@ const ASSISTANT_BATTLE_TUTORIAL_TACTICS_BODY = [
 const ASSISTANT_BATTLE_TUTORIAL_TACTICS_OUTRO = [
   { id:'tAlly',        at:'*',             e:'normal',  title:'このあとは', t:'WAVE2・4・6では供モンが合流するよ。ライフもガッツも、そのモンスターのぶんが増えるんだ。', wait:'next' },
   { id:'tAllyAim',     at:'*',             e:'surprise',title:'仲間が増えると', t:'狙われるモンスターも選ばれるようになるよ。誰に受けさせて、誰で殴るかを考えるのが楽しいの♪', wait:'next' },
-  { id:'tAllyStrong',  at:'*',             e:'normal',  title:'強い子ほど手ごわい', t:'供モンが加わると、そのぶん敵も強くなるよ。少ない人数のまま進む選び方もあるんだ。', wait:'next' },
+  { id:'tAllyStrong',  at:'*',             e:'normal',  title:'仲間が多いほど手ごわい', t:'供モンが加わると、そのぶん敵も強くなるよ。少ない人数のまま進む選び方もあるんだ。', wait:'next' },
   { id:'tRecord',      at:'*',             e:'happy',   title:'記録は別々', t:'タクティクスのスコアはクラシックとは別のランキングに載るよ。記録を奪い合わないから安心してね♪', wait:'next' },
   { id:'tWrapUp',      at:'*',             e:'excited', title:'おつかれさま！', t:'これでタクティクスのれんしゅうは終わり！ 一連の流れはバッチリだね♪', wait:'next' },
   { id:'tEnd',         at:'*',             e:'happy',   title:'いってらっしゃい！', t:'困ったらヘルプからいつでもこの練習をやり直せるよ。がんばってね{name}！', wait:'end' },

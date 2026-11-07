@@ -594,9 +594,13 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const volatile = /^mh_(debug_entry|debug_menu|last_|play_|session|boot|reload|device|playtime|visit|bgm_|se_|audio|login|daily_|mission|update|seen_build|build)/;
     // ★ポイントはビートP(2026-10-26 社長「カードポイントを廃止してビートポイントにして」)。ビートPの残高 mh_rhythm_event_points_v1 だけは書いてよい
     const BEAT_KEY = 'mh_rhythm_event_points_v1';
-    const changed = Object.keys(before).filter((k) => !k.startsWith('mh_card_') && k !== BEAT_KEY && !volatile.test(k) && before[k] !== after.all[k]);
+    // ほかの部の仕組みが、カードを遊んだときにわざと書く新しいキー(2026-11-07 ミハリの知らせで足した。どれも新しいキーで、既存のセーブは書き換えない)
+    //   mh_screen_trail_v1 … 画面の出来事を最近30件だけ残す記録(10-core) / mh_assistant_life_play_v1 … 助手ライフのにぎわい(カードを遊び終えると assistantPeerOnPlay('card') が数える) /
+    //   mh_assistant_peer_play_v1 … 連れていくペアの印(同じ assistantPeerOnPlay が書く)
+    const OTHER_OK = new Set(['mh_screen_trail_v1', 'mh_assistant_life_play_v1', 'mh_assistant_peer_play_v1']);
+    const changed = Object.keys(before).filter((k) => !k.startsWith('mh_card_') && k !== BEAT_KEY && !OTHER_OK.has(k) && !volatile.test(k) && before[k] !== after.all[k]);
     check('⑧ カードバトル以外の保存キーを書き換えていない(ビートPの残高を除く)', changed.length === 0, changed.join(', '));
-    const added = Object.keys(after.all).filter((k) => !(k in before) && !k.startsWith('mh_card_') && k !== BEAT_KEY && !volatile.test(k));
+    const added = Object.keys(after.all).filter((k) => !(k in before) && !k.startsWith('mh_card_') && k !== BEAT_KEY && !OTHER_OK.has(k) && !volatile.test(k));
     check('⑧ 新しく増えた保存キーは mh_card_* とビートPの残高だけ', added.length === 0, added.join(', '));
     // ⑬ 結果の画面の「クイック周回 ◯周ぶん」(デバッグの見本。NORMAL の勝ち = 16周ぶん・保存しない)
     await closeRankUp(page); await page.locator('[data-card-top="result"] button').first().click();

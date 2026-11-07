@@ -116,6 +116,8 @@ function alwaysChecks() {
   catch { return []; }
 }
 const FORCE_CHECKS = [
+  // 本体を読み込む検査が、用を終えたら抜けるか(2026-11-07・#4832 の見張りで harness を使う検査が600秒止まった)。本体や harness を触ったら確かめる
+  { re: /^monster-hero\/src\/parts\/.+\.jsx$|^tools\/harness\.js$/, checks: ['boot/harness-exit-check.js'], why: '本体を読み込む検査が、終わったら抜けるか(止まらないタイマーが無いか)' },
   // 保存キー(mh_*)は docs/spec/SAVE_DATA.md の一覧に載せる決まり。本体・データを触ったら必ず確かめる
   // (2026-10-12・新しいキーを一覧に書き忘れて main で落ちた。ファイル名の語では拾えない)
   { re: /^monster-hero\/(src\/parts\/.+\.jsx|data\/.+\.js|index\.html)$|^docs\/spec\/SAVE_DATA\.md$/, checks: ['boot/save-keys-check.js'], why: '保存キーが SAVE_DATA.md の一覧に載っているか' },

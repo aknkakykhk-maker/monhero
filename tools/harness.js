@@ -466,7 +466,9 @@ function makeBrowserStubs() {
     navigator: { userAgent: 'node', language: 'ja' },
     matchMedia: () => ({ matches: false, addEventListener: noop, removeEventListener: noop, addListener: noop, removeListener: noop }),
     addEventListener: noop, removeEventListener: noop,
-    requestAnimationFrame: (cb) => setTimeout(() => cb(Date.now()), 0),
+    // 本体には1コマごとに自分を呼び直す見張り(10-core.jsx の描き直しの止まりの記録・#4832)があり、
+    // ふつうのタイマーだと検査が終わってもプロセスが抜けなくなる。unref してプロセスを引き止めないようにする(呼ばれ方は今までと同じ)
+    requestAnimationFrame: (cb) => { const t = setTimeout(() => cb(Date.now()), 0); if (t && typeof t.unref === 'function') t.unref(); return t; },
     cancelAnimationFrame: clearTimeout,
     setTimeout, clearTimeout, setInterval, clearInterval,
     devicePixelRatio: 1, innerWidth: 390, innerHeight: 844,
