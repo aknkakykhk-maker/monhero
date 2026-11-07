@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c3030ca5a5e214aa
+// source-sha256: b2df827bcd1d8d5a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -120390,7 +120390,7 @@ const CardAutoRewardBar = ({
       Audio_.fgSe.tap();
       if (typeof onAdd === 'function') onAdd();
     },
-    className: `flex min-h-[44px] shrink-0 flex-col items-center justify-center rounded-xl border px-2 text-[12px] font-black leading-tight active:scale-[.98] disabled:opacity-45 ${empty ? 'border-emerald-300 bg-emerald-900/80 text-emerald-100 shadow-[0_0_10px_rgba(52,211,153,.45)]' : 'border-white/15 bg-slate-800 text-slate-300'}`
+    className: `flex min-h-[44px] shrink-0 flex-col items-center justify-center rounded-xl border px-2 text-[12px] font-black leading-tight active:scale-[.98] disabled:opacity-45 ${empty ? 'border-emerald-300 bg-emerald-900/80 text-emerald-100 shadow-[0_0_10px_rgba(52,211,153,.45)]' : 'border-emerald-300/60 bg-emerald-950/70 text-emerald-100'}`
   }, React.createElement("span", {
     className: "whitespace-nowrap"
   }, "🎫 セッション券で"), React.createElement("span", {
@@ -120607,7 +120607,7 @@ const CardBattleScreen = ({
       });
       const l = res && res.loaded;
       if (l) applyAutoLoaded(l);
-      setAutoTicketNote(res && res.ok ? `ごほうびが${res.count}回ぶん戻りました` : res && res.why === 'limit' ? '今日はこれ以上ふやせません' : res && res.why === 'noTicket' ? 'セッション券が足りません' : res && res.why === 'notEmpty' ? 'まだ今日のごほうびが残っています' : '保存できなかったので、セッション券は戻しました');
+      setAutoTicketNote(res && res.ok ? `ごほうびが${res.count}回ぶん戻りました` : res && res.why === 'limit' ? '今日はこれ以上ふやせません' : res && res.why === 'noTicket' ? 'セッション券が足りません' : '保存できなかったので、セッション券は戻しました');
     } finally {
       setAutoTicketBusy(false);
       setAutoTicketAsk(false);
@@ -136254,12 +136254,6 @@ const cardAutoRewardAddExtra = async ({
     count: k,
     loaded
   };
-  if (loaded.left > 0) return {
-    ok: false,
-    why: 'notEmpty',
-    count: k,
-    loaded
-  };
   const giveBack = async n => {
     for (let i = 0; i < n; i++) {
       if (typeof refund !== 'function') return;
@@ -136307,10 +136301,9 @@ const cardAutoRewardAddExtra = async ({
   };
 };
 const cardAutoTicketBlock = ({
-  left,
   tickets,
   extraLeft
-}) => Number.isInteger(left) && left > 0 ? 'ごほうびを使い切ると、ふやせます' : !(Number.isInteger(extraLeft) && extraLeft > 0) ? `今日はこれ以上ふやせません(1日${CARD_AUTO_REWARD_EXTRA_MAX}回まで)` : !(Number.isInteger(tickets) && tickets > 0) ? 'セッション券がありません(モンヒロビートのランクが上がるともらえます)' : '';
+}) => !(Number.isInteger(extraLeft) && extraLeft > 0) ? `今日はこれ以上ふやせません(1日${CARD_AUTO_REWARD_EXTRA_MAX}回まで)` : !(Number.isInteger(tickets) && tickets > 0) ? 'セッション券がありません(モンヒロビートのランクが上がるともらえます)' : '';
 const cardLevelEntries = async ({
   kind,
   level,

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1025b968d055429c
+// generated-sha256: e35fe556fff2b077
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -71292,7 +71292,7 @@ const CardAutoRewardBar = ({ info, tickets, onAdd, note = '' }) => {
           <b className={`block whitespace-nowrap font-black leading-tight tabular-nums ${empty ? 'text-[17px] text-white' : 'text-[14px] text-slate-200'}`}>残り {info.left}<span className="text-[11px] text-slate-400"> / {total}回</span></b>
         </div>
         <button type="button" data-card-auto-ticket disabled={!!why} onClick={() => { Audio_.fgSe.tap(); if (typeof onAdd === 'function') onAdd(); }}
-          className={`flex min-h-[44px] shrink-0 flex-col items-center justify-center rounded-xl border px-2 text-[12px] font-black leading-tight active:scale-[.98] disabled:opacity-45 ${empty ? 'border-emerald-300 bg-emerald-900/80 text-emerald-100 shadow-[0_0_10px_rgba(52,211,153,.45)]' : 'border-white/15 bg-slate-800 text-slate-300'}`}>
+          className={`flex min-h-[44px] shrink-0 flex-col items-center justify-center rounded-xl border px-2 text-[12px] font-black leading-tight active:scale-[.98] disabled:opacity-45 ${empty ? 'border-emerald-300 bg-emerald-900/80 text-emerald-100 shadow-[0_0_10px_rgba(52,211,153,.45)]' : 'border-emerald-300/60 bg-emerald-950/70 text-emerald-100'}`}>
           <span className="whitespace-nowrap">🎫 セッション券で</span><span className="whitespace-nowrap">ふやす</span></button>
       </div>
       {why && <span data-card-auto-ticket-why className="mt-1 block text-right text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(why)}</span>}
@@ -71404,7 +71404,6 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       setAutoTicketNote(res && res.ok ? `ごほうびが${res.count}回ぶん戻りました`
         : res && res.why === 'limit' ? '今日はこれ以上ふやせません'
           : res && res.why === 'noTicket' ? 'セッション券が足りません'
-            : res && res.why === 'notEmpty' ? 'まだ今日のごほうびが残っています'
               : '保存できなかったので、セッション券は戻しました');
     } finally { setAutoTicketBusy(false); setAutoTicketAsk(false); }
   };
@@ -79612,12 +79611,12 @@ const cardAutoRewardEntry = (loaded) => ({ key: CARD_AUTO_REWARD_KEY, before: lo
 //   上限20は、画面の値ではなく、ここで読み直した保存の値で数える(extra + count が20を超えるなら使わない)。
 //   順番: 読み直す → 上限・残りを確かめる → 券を count 枚減らす(途中で足りなくなったら、減らした分を返して止める) → extra+count を書く。
 //   書けなければ券を全部返す(券だけ減ってごほうびが戻らない、を作らない)。保存の形は #4720 のまま(extra の数がふえるだけ)
-//   返すのは { ok, why, count, loaded }。why … 'limit'(今日の20回を超える)・'notEmpty'(まだごほうびが残っている)・'noTicket'(券が足りない)・'save'(書けなかった。券は返した)
+//   ★今日のごほうびが残っているうちからふやせる(2026-11-07 社長の答え B。前は使い切ったときだけだった)。ふえた回数は今の残りに足される
+//   返すのは { ok, why, count, loaded }。why … 'limit'(今日の20回を超える)・'noTicket'(券が足りない)・'save'(書けなかった。券は返した)
 const cardAutoRewardAddExtra = async ({ consume, refund, count = 1 } = {}) => {
   const k = Number.isInteger(count) && count > 0 ? count : 1;
   const loaded = await cardAutoRewardLoad();
   if (loaded.extra + k > CARD_AUTO_REWARD_EXTRA_MAX) return { ok: false, why: 'limit', count: k, loaded };
-  if (loaded.left > 0) return { ok: false, why: 'notEmpty', count: k, loaded };
   const giveBack = async (n) => { for (let i = 0; i < n; i++) { if (typeof refund !== 'function') return; try { await refund(); } catch (__) { /* 返せなくても遊びは止めない */ } } };
   let used = 0;
   if (typeof consume === 'function') { while (used < k && (await consume())) used++; }
@@ -79629,9 +79628,9 @@ const cardAutoRewardAddExtra = async ({ consume, refund, count = 1 } = {}) => {
   return { ok: true, why: '', count: k, loaded: await cardAutoRewardLoad() };
 };
 // 券でふやせないわけ(押せないときのひとこと)。left … 今日のごほうびの残り、tickets … 持っている券、extraLeft … 今日あとふやせる回数
-const cardAutoTicketBlock = ({ left, tickets, extraLeft }) => (
-  Number.isInteger(left) && left > 0 ? 'ごほうびを使い切ると、ふやせます'
-    : !(Number.isInteger(extraLeft) && extraLeft > 0) ? `今日はこれ以上ふやせません(1日${CARD_AUTO_REWARD_EXTRA_MAX}回まで)`
+//   ごほうびが残っていても止めない(2026-11-07 社長の答え B)。left は呼ぶ側との形をそろえるために受け取るだけ
+const cardAutoTicketBlock = ({ tickets, extraLeft }) => (
+  !(Number.isInteger(extraLeft) && extraLeft > 0) ? `今日はこれ以上ふやせません(1日${CARD_AUTO_REWARD_EXTRA_MAX}回まで)`
       : !(Number.isInteger(tickets) && tickets > 0) ? 'セッション券がありません(モンヒロビートのランクが上がるともらえます)' : '');
 // 1試合ぶんの経験値の保存の項目(84 の結果の取引に足す)。経験値を入れない人(公開前・デバッグでない)は空
 const cardLevelEntries = async ({ kind, level, outcome, debug = false, auto = false }) => {
