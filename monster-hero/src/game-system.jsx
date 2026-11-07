@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3de3e8729c86f5c3
+// generated-sha256: b6f2bbee68804d9e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9571,6 +9571,19 @@ const LOGIN_BONUS_DEFAULT = { currentDay:1, lastGrantedPeriod:null, totalLoginDa
 // 日本時間へ直した後に4時間戻した暦日を期間キーにする。03:59と04:00は別の日、
 // 04:00から翌03:59までは同じ日として扱える、比較・保存しやすい YYYY-MM-DD 形式。
 const loginBonusPeriodKey = (now=Date.now()) => new Date(Number(now) + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+// ---------- ゲームの「今日」(日本時間・朝4時区切り) ----------
+// 2026-11-07 社長「てかぜんぶ4時に統一して」。1日で数える物は、これで「今日」を決める(loginBonusPeriodKey と同じ値)。
+//   jstDayKey4(now) … 'YYYY-MM-DD'。04:00 から翌03:59 までが同じ日
+//   jstDayCarry(saved, today) … 切り替えの夜の持ち越し。前は0時区切りだった物は、0:00〜4:00 に「次の日」の日付で保存されている。
+//     保存された日がちょうど today の次の日なら、その日を今日として扱う(受け取り済みのまま・書くときもその日付のまま)。
+//     4:00 になると today がその日に追いつくので、二重取りも取り逃しも起きない。それ以外は today
+//   ★どちらもキーの名前・形は変えない。区切り方の検査は tools/boot/day-boundary-check.js
+const jstDayKey4 = (now=Date.now()) => new Date(Number(now) + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const jstDayCarry = (saved, today) => {
+  if (typeof saved !== 'string' || typeof today !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(saved)) return today;
+  const t = Date.parse(`${today}T00:00:00Z`);
+  return Number.isFinite(t) && saved === new Date(t + 86400000).toISOString().slice(0, 10) ? saved : today;
+};
 // ---------- どの助手と一緒に遊ぶか ----------
 // 助手は「みゅあ」「きき」から選ぶ。どちらも最初から解放されていて、解放条件は無い。
 //
@@ -10250,8 +10263,11 @@ const PLAYTIME_KEY = 'mh_playtime_v1';
 const PLAYTIME_TICK_MS = 15000;        // 数える間隔
 const PLAYTIME_SAVE_MS = 60000;        // 保存する間隔(数えるたびに保存すると書き込みが多すぎる)
 const PLAYTIME_MAX_STEP_MS = 60000;    // 1回で足してよい上限。スリープ復帰などで飛んだぶんは数えない
-const playtimeDayKey = (now=Date.now()) => new Date(Number(now)+9*60*60*1000).toISOString().slice(0,10);
+// 日の区切りは朝4時(jstDayKey4 と同じ。2026-11-07 から。前は0時)。切り出して検査されるので式はここに持つ
+const playtimeDayKey = (now=Date.now()) => new Date(Number(now)+5*60*60*1000).toISOString().slice(0,10);
 const PLAYTIME_DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+// 切り替えの夜の持ち越し(jstDayCarry と同じ)。0時区切りのころに0:00〜4:00で書いた「次の日」が残っていれば、その日のまま数える(遊んだ日数を二重に足さない)
+const playtimeDayOf = (savedDay, now=Date.now()) => { const day = playtimeDayKey(now); return savedDay === playtimeDayKey(Number(now) + 86400000) ? savedDay : day; };
 const playtimeDayValue = (value) => typeof value === 'string' && PLAYTIME_DAY_PATTERN.test(value) ? value : null;
 const playtimeSpan = (value) => {
   const ms = Number(value?.ms);
@@ -10277,7 +10293,7 @@ const advancePlaytime = (current, deltaMs, now=Date.now()) => {
   const base = normalizePlaytime(current);
   const delta = Number(deltaMs);
   if (!(Number.isFinite(delta) && delta > 0)) return base;
-  const day = playtimeDayKey(now);
+  const day = playtimeDayOf(base.today.day, now);
   const sameDay = base.today.day === day;
   const todayMs = (sameDay ? base.today.ms : 0) + delta;
   return {
@@ -10293,7 +10309,7 @@ const advancePlaytime = (current, deltaMs, now=Date.now()) => {
 // (プロフィールを開いた時点ではまだ加算が走っていないことがあるため)
 const playtimeTodayMs = (value, now=Date.now()) => {
   const base = normalizePlaytime(value);
-  return base.today.day === playtimeDayKey(now) ? base.today.ms : 0;
+  return base.today.day === playtimeDayOf(base.today.day, now) ? base.today.ms : 0;
 };
 // --- 端末ごとのプレイ時間(2026-10-06) ---
 // ユーザー報告「プレイ時間が短くなるバグ」。プレイ時間(mh_playtime_v1)は端末の中だけで数え、
@@ -13538,7 +13554,7 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
 });
 // ---- 助手のひとことを出す回数(2026-10-10・改善 G6「助手の吹き出しが、ほぼ全画面に出たまま」→ 社長が選択肢1) ----
 //   'ALWAYS' … いつも(これまでどおり。既定。保存が無い既存ユーザーも同じ見え方)
-//   'DAILY'  … 同じ画面のひとことは1日1回だけ(朝5:00で戻る)
+//   'DAILY'  … 同じ画面のひとことは1日1回だけ(朝4:00で戻る)
 //   'OFF'    … 出さない
 // ★止めるのは「画面ごとの決まったひとこと」だけ。次は設定にかかわらず出す(大事な案内まで消さないため):
 //   ・文を直接渡す吹き出し(line=。はじめての名前決めの案内・ヘルプ画面)と、最初から開く吹き出し(defaultOpen)
@@ -13557,8 +13573,8 @@ const ASSISTANT_BUBBLE_MODE_LABELS = Object.freeze([
 ]);
 const ASSISTANT_BUBBLE_ALWAYS_SCENES = Object.freeze(['home', 'quickRhythmBackground', 'rhythmWeeklyEvent']);
 const assistantBubbleAlwaysShown = (scene) => !scene || ASSISTANT_BUBBLE_ALWAYS_SCENES.includes(scene) || /Intro$/.test(String(scene));
-// 日の区切りは朝5:00(日本時間)。モンヒロビートの相棒の調子と同じ
-const assistantBubbleDayKey = (now = Date.now()) => new Date(Number(now) + (9 - 5) * 3600000).toISOString().slice(0, 10);
+// 日の区切りは朝4:00(日本時間。jstDayKey4 と同じ。2026-11-07 に5:00からそろえた)
+const assistantBubbleDayKey = (now = Date.now()) => new Date(Number(now) + (9 - 4) * 3600000).toISOString().slice(0, 10);
 // 見た場面の記録 { day, scenes:[場面のキー] }。日が変わったもの・壊れたものは空にする
 const normalizeAssistantBubbleSeen = (raw, day) => (raw && typeof raw === 'object' && raw.day === day && Array.isArray(raw.scenes))
   ? { day, scenes: raw.scenes.filter((x) => typeof x === 'string').slice(0, 300) }
@@ -29964,7 +29980,7 @@ const classicEnemyEffectsFromDebuffs = (debuffs, stackCounts = null, { withoutEx
 // ここは保存も画面も持たない純粋な計算だけ。保存と画面は 77-screen-rhythm-multi.jsx。
 //
 // ・育ち具合はマスモン1体ごと(id ごと)。一度でも相棒として呼んだ子だけが持つ。マスモン本体の保存には触れない
-// ・Lv(経験値)・曲のなじみ・難易度の熟練・性格(Lv.30で決まる)・その日の調子(朝5:00で変わる)
+// ・Lv(経験値)・曲のなじみ・難易度の熟練・性格(Lv.30で決まる)・その日の調子(朝4:00で変わる)
 // ・演奏はしない。曲・難易度・育ち具合から、それらしい判定の数とスコアを作る
 
 // 新しい保存キー(既存のキーは触らない)。中身は rhythmBuddyNormalize を必ず通す
@@ -29976,7 +29992,7 @@ const RHYTHM_BUDDY_SEEN_KEY = 'mh_rhythm_buddy_seen_v1';
 // 「マスモンランキングができた」「マスモンが話しかけてくる」の一度きりの案内(2026-10-08。新しい保存キー。値は true だけ)
 const RHYTHM_BUDDY_RANK_SEEN_KEY = 'mh_rhythm_buddy_rank_seen_v1';
 const RHYTHM_BUDDY_TALK_SEEN_KEY = 'mh_rhythm_buddy_talk_seen_v1';
-// マスモン全体で1日に無料で呼べる回数(朝5:00で戻る)
+// マスモン全体で1日に無料で呼べる回数(朝4:00で戻る)
 const RHYTHM_BUDDY_FREE_PER_DAY = 3;
 // 2026-10-07・ユーザー指示「レベルは100まで引き上げてもいい」
 const RHYTHM_BUDDY_LEVEL_MAX = 100;
@@ -30053,10 +30069,10 @@ const rhythmBuddyInt = (v, max = 1e9) => {
 };
 const rhythmBuddyStr = (v, max) => String(v == null ? '' : v).replace(/[\u0000-\u001f]/g, '').slice(0, max);
 
-// 朝5:00(JST)で区切った日付キー(レイドの回数と同じ数え方)
+// 朝4:00(JST)で区切った日付キー(jstDayKey4 と同じ。2026-11-07 に5:00からそろえた)
 const rhythmBuddyDayKey = (nowMs) => {
   const now = Number.isFinite(nowMs) ? nowMs : 0;
-  return new Date(now + 9 * 3600 * 1000 - 5 * 3600 * 1000).toISOString().slice(0, 10);
+  return new Date(now + 9 * 3600 * 1000 - 4 * 3600 * 1000).toISOString().slice(0, 10);
 };
 const rhythmBuddyPrevDayKey = (dayKey) => {
   const t = Date.parse(`${dayKey}T00:00:00Z`);
@@ -30129,7 +30145,7 @@ const rhythmBuddyNormalizeMon = (raw) => {
 // calls: [{ id, masuId, paid:'free'|'ticket', day(払った日), at, load(呼んだときの起動), started }]。既存の保存(mh_rhythm_buddy_v1)へ項目を足す形(CLAUDE.md ⑦)。
 // 部屋を出たとき(呼んだ人が抜けた・部屋が解散した)、1曲も始まっていなければ払ったものを返し、控えを消す。始まっていれば消すだけ。
 // 控えを消すのと無料1回を返すのを同じ書き込みでするので、二重に返らない。アプリを閉じて残った控え(ほかの起動のもの)は、次に開いたとき一度だけ返す。
-// 無料1回は、払った日と同じ日のときだけ返す(朝5:00を過ぎたら無料回数はもう戻っているので、返すと増えすぎる)
+// 無料1回は、払った日と同じ日のときだけ返す(朝4:00を過ぎたら無料回数はもう戻っているので、返すと増えすぎる)
 const RHYTHM_BUDDY_CALLS_KEEP = 40;
 const rhythmBuddyNormalizeCalls = (raw) => (Array.isArray(raw) ? raw : [])
   .filter((x) => x && typeof x === 'object' && !Array.isArray(x))
@@ -33428,10 +33444,10 @@ const raidJackParticipated = (raw) => {
   return !!(st.a.day || st.b.day || st.b.total > 0 || st.a.defeated.length || st.b.defeated.length || st.claimed.length || st.pending.length);
 };
 
-// 毎日5:00(JST)で回数が戻る。日付キー = 5時間引いたJSTの日付。
+// 毎日4:00(JST)で回数が戻る。日付キー = 4時間引いたJSTの日付(jstDayKey4 と同じ。2026-11-07 に5:00からそろえた)
 const raidJackDayKey = (nowMs) => {
   const now = Number.isFinite(nowMs) ? nowMs : 0;
-  const jst = new Date(now + 9 * 3600 * 1000 - 5 * 3600 * 1000);
+  const jst = new Date(now + 9 * 3600 * 1000 - 4 * 3600 * 1000);
   return jst.toISOString().slice(0, 10);
 };
 
@@ -37048,7 +37064,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
             止めるのは画面ごとのひとことだけ。はじめての案内・一度きりの案内・HOMEの助手・助手の告知は出る(21-assistant.jsx) */}
         <div data-assistant-bubble-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
           <b className="block text-[13px] font-black text-slate-200">助手のひとこと</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝5:00で戻ります)。「出さない」にしても、はじめての案内やHOMEの助手、新しい機能のお知らせは出ます。</p>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、はじめての案内やHOMEの助手、新しい機能のお知らせは出ます。</p>
           <div className="mt-2 grid grid-cols-3 gap-2">
             {ASSISTANT_BUBBLE_MODE_LABELS.map(option => (
               <button key={option.id} type="button" data-assistant-bubble-mode={option.id}
@@ -53284,7 +53300,7 @@ const useRhythmBuddyState = () => {
   }, []);
   return state;
 };
-// 日付が変わったら(朝5:00)画面の数字を出し直すため、1分ごとに日付キーを見る
+// 日付が変わったら(朝4:00)画面の数字を出し直すため、1分ごとに日付キーを見る
 const useRhythmBuddyDayKey = () => {
   const [day, setDay] = React.useState(() => rhythmBuddyDayKey(Date.now()));
   React.useEffect(() => {
@@ -53636,7 +53652,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = ''
         <section className="rounded-xl bg-slate-950/60 p-2">
           <h4 className="text-[10px] font-black text-slate-400">今日の調子</h4>
           <p data-rhythm-buddy-mood={mood.id} className="flex items-center gap-1 text-sm font-black"><RhythmBuddyMoodFace moodId={mood.id} size={22} />{mood.label}</p>
-          <small className="block text-[9px] font-bold leading-snug text-slate-500">朝5:00に変わります。育つ早さは経験値×{rhythmBuddyMoodExpScale(mood.id, m.trait)}</small>
+          <small className="block text-[9px] font-bold leading-snug text-slate-500">朝4:00に変わります。育つ早さは経験値×{rhythmBuddyMoodExpScale(mood.id, m.trait)}</small>
         </section>
         <section className="rounded-xl bg-slate-950/60 p-2">
           <h4 className="text-[10px] font-black text-slate-400">性格</h4>
@@ -58220,7 +58236,15 @@ const cardNormalizeDecks = (v) => {
   return { active, decks };
 };
 // quickLoops … その日にバトルカードの対戦でクイック周回へ足した周の数(2026-10-26 で足した項目。トップの周回の札の詳細に出す。無い人は0)
-const cardNormalizeDaily = (v, today) => {
+// 切り替えの夜の持ち越し(17 の jstDayCarry と同じ。82 は単独でも読まれるのでここに持つ)。
+//   前は0時区切りで、0:00〜4:00 に「次の日」の日付で保存されている。それがちょうど today の次の日なら、その日を今日として扱う
+const cardDayCarry = (saved, today) => {
+  if (typeof saved !== 'string' || typeof today !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(saved)) return today;
+  const t = Date.parse(`${today}T00:00:00Z`);
+  return Number.isFinite(t) && saved === new Date(t + 86400000).toISOString().slice(0, 10) ? saved : today;
+};
+const cardNormalizeDaily = (v, today0) => {
+  const today = cardDayCarry(cardIsPlainObject(v) ? v.day : null, today0);
   const base = { day: today, cpuPoint: 0, pvpPoint: 0, firstWin: false, foes: {}, quickLoops: 0 };
   if (!cardIsPlainObject(v) || v.day !== today) return base;
   return { day: today, cpuPoint: cardNormalizePoint(v.cpuPoint), pvpPoint: cardNormalizePoint(v.pvpPoint), firstWin: v.firstWin === true, foes: cardIsPlainObject(v.foes) ? { ...v.foes } : {}, quickLoops: cardNormalizePoint(v.quickLoops) };
@@ -61620,7 +61644,8 @@ const cardFieldArtTransform = (src, flip) => {
   const ty = (1 - (0.5 + k * (y1 - 0.5))) * 100;
   return `translate(${tx.toFixed(1)}%, ${ty.toFixed(1)}%) scale(${(flip ? -k : k).toFixed(3)}, ${k.toFixed(3)})`;
 };
-const cardTodayJst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+// バトルカードの「今日」は朝4時区切り(jstDayKey4 と同じ。2026-11-07 社長「バトルカードの日付変更線を4時にして」。前は0時)
+const cardTodayJst = () => new Date(Date.now() + 5 * 3600 * 1000).toISOString().slice(0, 10);
 const cardCaption = (c) => (!c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : c.kind === 'fld' ? '全体' : Number.isFinite(c.damage) ? `ダメージ${c.damage}` : '');   // 全体カードはダメージが無い(「ダメージnull」と出ていた)
 // 場の子に今かかっている効果(2026-10-28 社長「こういう効果がかかってるやつがわからない バフとかデバフとか」・案A)。
 //   ルールの項目を読むだけ。返す [{ key, short(札の言葉), left(「次」「あと2」など), text(窓の説明), tone, pill(札に出すか) }]
@@ -67768,7 +67793,8 @@ const cardRecordDetailAfter = (d0, { who, level, outcome, turns = 0, deck = null
       if (level in f.levels) f.levels[level] += 1;
       if (t > 0) f.fastest = f.fastest ? Math.min(f.fastest, t) : t;
       d.wins = { n: d.wins.n + 1, turns: d.wins.turns + t, fastest: t > 0 ? (d.wins.fastest ? Math.min(d.wins.fastest, t) : t) : d.wins.fastest };
-      d.day = { key: today, win: (d.day.key === today ? d.day.win : 0) + 1 };
+      const dayKey = cardDayCarry(d.day.key, today);   // 切り替えの夜は、0時区切りで書いた次の日のまま数える
+      d.day = { key: dayKey, win: (d.day.key === dayKey ? d.day.win : 0) + 1 };
     } else if (outcome === 'surrender') { f.surrender += 1; f.now = 0; }
     else { f.lose += 1; f.now = 0; }
     d.foes[who] = f;
@@ -72242,8 +72268,9 @@ const cardLevelXpOf = ({ kind, level, outcome }) => {
 //   ごほうびは、この試合で上がったランク(from より上・to まで)の分だけ。前に上がったランクの分はさかのぼって配らない
 //   parts は結果に出す内わけ、gains はランクアップの演出に出す「もらった物」
 //   auto … オートで挑んだ試合(2026-11-02 社長・案3): 手で戦うときの半分。その日はじめての勝ちは付けず、その日の勝ちの印も動かさない
-const cardLevelAfter = (prev, { kind, level, outcome, today, auto = false }) => {
+const cardLevelAfter = (prev, { kind, level, outcome, today: today0, auto = false }) => {
   const cur = cardNormalizeLevel(prev);
+  const today = cardDayCarry(cur.day, today0);   // 切り替えの夜は、0時区切りで書いた次の日のまま数える
   const lv0 = cardLevelInfo(cur.xp).level;
   const base = auto ? Math.floor(cardLevelXpOf({ kind, level, outcome }) / 2) : cardLevelXpOf({ kind, level, outcome });
   if (!base) return { next: cur, tickets: 0, points: 0, add: 0, from: lv0, to: lv0, xp: cur.xp, parts: [], gains: [] };
@@ -72408,8 +72435,9 @@ const cardTacticsAutoOf = async (db, deck) => {
 //   新しいキー mh_card_auto_reward_v1 = { v:1, day:'YYYY-MM-DD'(日本の日付), n: その日にごほうびをもらった回数 }。壊れていたら0回の扱い
 const CARD_AUTO_REWARD_KEY = 'mh_card_auto_reward_v1';
 const CARD_AUTO_REWARD_DAY_MAX = 3;
-const cardAutoRewardNormalize = (raw, today) => {
+const cardAutoRewardNormalize = (raw, today0) => {
   const day = raw && typeof raw === 'object' && typeof raw.day === 'string' ? raw.day : '';
+  const today = cardDayCarry(day, today0);   // 切り替えの夜は、0時区切りで書いた次の日のまま数える
   const n = raw && Number.isInteger(raw.n) && raw.n >= 0 && raw.n < 10000 ? raw.n : 0;
   return { day: today, n: day === today ? n : 0 };
 };
@@ -72418,7 +72446,7 @@ const cardAutoRewardLoad = async () => {
   try { raw = await storeGet(CARD_AUTO_REWARD_KEY, null); } catch (_) { /* 読めなければ0回の扱い */ }
   const today = typeof cardTodayJst === 'function' ? cardTodayJst() : '';
   const c = cardAutoRewardNormalize(raw, today);
-  return { raw, today, n: c.n, left: Math.max(0, CARD_AUTO_REWARD_DAY_MAX - c.n) };
+  return { raw, today: c.day, n: c.n, left: Math.max(0, CARD_AUTO_REWARD_DAY_MAX - c.n) };
 };
 // ごほうびをもらった1回を数える項目(結果の取引に足す)
 const cardAutoRewardEntry = (loaded) => ({ key: CARD_AUTO_REWARD_KEY, before: loaded.raw, next: { v: 1, day: loaded.today, n: loaded.n + 1 } });
@@ -77857,7 +77885,8 @@ function MonsterHeroGame() {
   const grantBeatRankForResult = async (result, play) => {
     try {
       const raw = await storeGet(BEAT_RANK_KEY, null, false);
-      const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+      // 日の区切りは朝4時(2026-11-07 から。前は0時)。切り替えの夜は、0時区切りで書いた次の日のまま数える(その日はじめての1曲を二重に付けない)
+      const today = jstDayCarry(normalizeBeatRank(raw).day, jstDayKey4());
       const gain = beatRankAfter(raw, { difficultyId: play && play.difficulty && play.difficulty.id, cleared: result?.cleared !== false,
         fullCombo: result?.fullCombo === true, allMarvelous: result?.allMarvelous === true, multi: play && play.from === 'multi', today,
         // 曲の長さ(経験値は 長さ÷2:00 倍。2026-11-02)。読めないときは0で、今までどおりの値になる
@@ -87296,8 +87325,9 @@ function MonsterHeroGame() {
         dailyMasuAdviceCheckedRef.current = false;
         return;
       }
-      const today = localCalendarDate();
+      // 日の区切りは朝4時(jstDayKey4。2026-11-07 から。前は端末の時計の0時)。切り替えの夜に0時区切りで書いた次の日が残っていれば、もう出した扱い
       const shownDate = await storeGet(DAILY_MASU_ADVICE_KEY, '', false);
+      const today = jstDayCarry(shownDate, jstDayKey4());
       if (cancelled || masuMons.length >= 8 || shownDate === today) return;
       await storeSet(DAILY_MASU_ADVICE_KEY, today, false);
       // 「あきらめる」の近道は、クイックを何回かクリアした人だけへ(2026-10-10・改善部の提案G9)。

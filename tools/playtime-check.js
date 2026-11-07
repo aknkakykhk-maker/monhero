@@ -112,9 +112,9 @@ check('おかしな値を渡しても表示が壊れない',
 
 // --- 4. 日付は日本時間で区切る ---
 check('数え始めた日は日本時間で決める',
-  playtimeDayKey(Date.parse('2026-09-04T14:30:00Z'))==='2026-09-04'
-  &&playtimeDayKey(Date.parse('2026-09-04T15:30:00Z'))==='2026-09-05',
-  `UTC14:30→${playtimeDayKey(Date.parse('2026-09-04T14:30:00Z'))} / UTC15:30→${playtimeDayKey(Date.parse('2026-09-04T15:30:00Z'))}`);
+  playtimeDayKey(Date.parse('2026-09-04T18:30:00Z'))==='2026-09-04'
+  &&playtimeDayKey(Date.parse('2026-09-04T19:30:00Z'))==='2026-09-05',
+  `JST3:30→${playtimeDayKey(Date.parse('2026-09-04T18:30:00Z'))} / JST4:30→${playtimeDayKey(Date.parse('2026-09-04T19:30:00Z'))}`);
 
 // --- 5. 数え方 ---
 check('数える間隔・保存する間隔・1回の上限が定数で見える',
