@@ -75,7 +75,7 @@ const EXPR = ['normal', 'happy', 'wink', 'excited', 'surprise', 'troubled', 'ang
 const badExpr = ASSISTANT_IDS.flatMap((a) => Object.entries(L[a] || {}).filter(([, v]) => !EXPR.includes(v.e) || typeof v.t !== 'string' || !v.t).map(([id]) => `${a}:${id}`));
 check('表情は既存の名前・本文がある', badExpr.length === 0, badExpr.join(' '));
 const allText = ASSISTANT_IDS.flatMap((a) => Object.entries(L[a] || {}).map(([id, v]) => ({ a, id, t: `${v.title || ''} ${v.t}` })));
-const ko = allText.filter((x) => /[のなたい]子(?!供|ども)/.test(x.t));
+const ko = allText.filter((x) => /[のなたい]子(?!供|ども)/.test(x.t.replace(/様子|調子/g, '')));
 check('モンスターを「子」と呼ばない', ko.length === 0, ko.map((x) => `${x.a}:${x.id}`).join(' '));
 // 口調(docs/progress/assistant-peer/VOICE.md)。書いた助手だけ見る
 const tone = {
@@ -87,6 +87,8 @@ const tone = {
 };
 const toneBad = allText.filter((x) => tone[x.a] && !tone[x.a](x.t.replace(/^.*? /, '')));
 check('口調の言葉(みゅあ「ぢゃん・まぢ」/もも「私・あたし」なし/ドラ 関西弁なし/きき タメ口なし/あつ 文末)', toneBad.length === 0, toneBad.map((x) => `${x.a}:${x.id}`).join(' '));
+const manyEmoji = allText.filter((x) => (x.t.match(/\p{Extended_Pictographic}/gu) || []).length > 2);
+check('記号(⚔ ▶ ⏹ 🎵 など)は1本に2つまで', manyEmoji.length === 0, manyEmoji.map((x) => `${x.a}:${x.id}`).join(' '));
 const filled = ASSISTANT_IDS.filter((a) => pageIds.every((id) => L[a] && L[a][id]));
 console.log(`   (台詞がそろっている助手: ${filled.join(' ') || 'なし'} / ほかはみゅあの文で出る)`);
 check('台詞の無いページは みゅあ の文で出る', E.quickGuideLine('erubin', 'g2.4') && E.quickGuideLine('erubin', 'g2.4').t === (L.erubin['g2.4'] || L.mua['g2.4']).t && E.quickGuideLine('nobody', 'g1.1').t === L.mua['g1.1'].t);
