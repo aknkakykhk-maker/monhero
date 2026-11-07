@@ -24,7 +24,7 @@ await page.addInitScript(require(ROOT+'/tools/boot/quiet-boot-seed').eventStoryS
 await page.goto(process.env.MH_BASE_URL?`${process.env.MH_BASE_URL.replace(/\/+$/,'')}/monster-hero/index.html`:`http://localhost:${PORT}/monster-hero/index.html`,{waitUntil:'load',timeout:60000});
 await page.waitForFunction(()=>document.body&&document.body.innerText.includes('TAP TO START'),null,{timeout:60000});
 await page.getByText('TAP TO START').click();await page.waitForTimeout(2500);await page.mouse.click(Number(390)/2,Number(844)/2);await page.waitForTimeout(3000);
-await page.evaluate(()=>{setInterval(()=>{const d=document.querySelector('[role=dialog]');if(!d)return;const b=d.querySelector('button[aria-label="次へ"],button[aria-label="閉じる"]')||[...d.querySelectorAll('button')].find(x=>/受け取|閉じる|とじる|OK|はじめる|わかった|^次へ|あとで|見た/.test(x.innerText));if(b)b.click();},250);});
+await page.evaluate(()=>{setInterval(()=>{if(window.__noAutoClose)return;const d=document.querySelector('[role=dialog]');if(!d)return;const b=d.querySelector('button[aria-label="次へ"],button[aria-label="閉じる"]')||[...d.querySelectorAll('button')].find(x=>/受け取|閉じる|とじる|OK|はじめる|わかった|^次へ|あとで|見た/.test(x.innerText));if(b)b.click();},250);});
 await page.waitForFunction(()=>document.querySelector('button.mh-home-facility.rhythm')&&!document.querySelector('[role=dialog]'),null,{timeout:40000});
 
 await page.evaluate(()=>{try{localStorage.setItem('mh_rhythm_select_view_v1',JSON.stringify({noticeOpen:true,noticeTouched:true}));}catch(e){}});
@@ -49,7 +49,8 @@ for(const [w,h,rot,lab] of [[844,390,false,'横画面'],[667,375,false,'小さ�
 }
 // 押すと説明が開く(1行にしても、全文は「詳しく」で読める)
 await page.setViewportSize({width:844,height:390});await page.evaluate(()=>RHYTHM_VIEW_ROTATION.set(0));await page.waitForTimeout(800);
-const opened=await page.evaluate(async()=>{const n=[...document.querySelectorAll('[data-rhythm-song-notice-landscape] [aria-label$="の説明を開く"]')].filter((e)=>e.getBoundingClientRect().width>0)[0];if(!n)return '押すところが無い';n.click();await new Promise((r)=>setTimeout(r,150));return document.querySelector('[aria-label="説明を閉じる"]')?'':'開かない';});
+// 起動の窓を自動で閉じる仕掛けを止めてから押す(開いた説明まで閉じてしまうため)
+const opened=await page.evaluate(async()=>{window.__noAutoClose=true;await new Promise((r)=>setTimeout(r,300));const n=[...document.querySelectorAll('[data-rhythm-song-notice-landscape] [aria-label$="の説明を開く"]')].filter((e)=>e.getBoundingClientRect().width>0)[0];if(!n)return '押すところが無い';n.click();await new Promise((r)=>setTimeout(r,400));return document.querySelector('[aria-label="説明を閉じる"]')?'':'開かない';});
 check('曲えらび(横画面): 1行の吹き出しを押すと、詳しい説明が開く',opened==='',opened);
 check('ページのエラーが出ない',errs.length===0,errs.slice(0,3).join(' / '));
 await browser.close();server.close();
