@@ -825,7 +825,7 @@ function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseIt
   const firstLine = (t) => assistantPeerLineText(t.lines[0], t);
   return (
     <div data-assistant-peer-album={key} className="fixed inset-0 flex items-end sm:items-center justify-center bg-black/70 p-2" style={{ zIndex: 9100 }} onClick={onClose}>
-      <div className="w-full max-w-md max-h-[85vh] overflow-y-auto mh-scroll rounded-2xl border-2 border-amber-300/60 bg-slate-950 p-3" onClick={ev => ev.stopPropagation()}>
+      <div className="w-full max-w-md max-h-[85vh] [[data-mh-view-rotation=true]_&]:max-h-[85vw] overflow-y-auto mh-scroll rounded-2xl border-2 border-amber-300/60 bg-slate-950 p-3" onClick={ev => ev.stopPropagation()}>
         <div className="mb-2 flex items-center gap-2">
           <p className="min-w-0 flex-1 text-[13px] font-black text-amber-200">{a.name}と{b.name}の思い出アルバム</p>
           <button type="button" data-assistant-peer-album-close onClick={onClose} aria-label="閉じる" className="h-8 w-8 rounded-full border border-slate-600 text-[14px] font-black text-slate-300 active:scale-95">×</button>

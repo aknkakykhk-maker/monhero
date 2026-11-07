@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 828ca5062f7d58dc
+// generated-sha256: a204ad8425783828
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -14155,7 +14155,7 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
       </div>
       {open&&(
         <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:70000}} role="dialog" aria-modal="true" aria-label={`${who.name}の説明`}>
-          <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 bg-slate-950 flex flex-col" style={{ borderColor:color, maxHeight:'88vh' }}>
+          <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 bg-slate-950 flex flex-col max-h-[88vh] [[data-mh-view-rotation=true]_&]:max-h-[88vw]" style={{ borderColor:color }}>
             <div className="shrink-0 flex items-center gap-3 p-4 border-b border-white/10">
               <AssistantFace who={who} size={68} accent={color} expression={face}/>
               <div className="flex-1 min-w-0">
@@ -59211,7 +59211,7 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
   const accent = assistant.accent || '#f472b6';
   return (
     <div data-assistant-chat className="fixed inset-0 flex items-end sm:items-center justify-center bg-black/60 p-2" style={{ zIndex: 9000, paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }} onClick={onClose}>
-      <div className="w-full max-w-md max-h-[85vh] flex flex-col rounded-2xl border-2 bg-slate-950 text-slate-100 shadow-2xl" style={{ borderColor: accent }} onClick={ev => ev.stopPropagation()}>
+      <div className="w-full max-w-md max-h-[85vh] [[data-mh-view-rotation=true]_&]:max-h-[85vw] flex flex-col rounded-2xl border-2 bg-slate-950 text-slate-100 shadow-2xl" style={{ borderColor: accent }} onClick={ev => ev.stopPropagation()}>
         <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-800 shrink-0">
           <img data-assistant-chat-face={lastExpression} src={assistantFaceSrc(assistant, lastExpression)} alt="" className="h-11 w-11 rounded-full border-2 object-cover bg-slate-900" style={{ borderColor: accent }}/>
           <div className="min-w-0 flex-1">
@@ -60188,7 +60188,7 @@ function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseIt
   const firstLine = (t) => assistantPeerLineText(t.lines[0], t);
   return (
     <div data-assistant-peer-album={key} className="fixed inset-0 flex items-end sm:items-center justify-center bg-black/70 p-2" style={{ zIndex: 9100 }} onClick={onClose}>
-      <div className="w-full max-w-md max-h-[85vh] overflow-y-auto mh-scroll rounded-2xl border-2 border-amber-300/60 bg-slate-950 p-3" onClick={ev => ev.stopPropagation()}>
+      <div className="w-full max-w-md max-h-[85vh] [[data-mh-view-rotation=true]_&]:max-h-[85vw] overflow-y-auto mh-scroll rounded-2xl border-2 border-amber-300/60 bg-slate-950 p-3" onClick={ev => ev.stopPropagation()}>
         <div className="mb-2 flex items-center gap-2">
           <p className="min-w-0 flex-1 text-[13px] font-black text-amber-200">{a.name}と{b.name}の思い出アルバム</p>
           <button type="button" data-assistant-peer-album-close onClick={onClose} aria-label="閉じる" className="h-8 w-8 rounded-full border border-slate-600 text-[14px] font-black text-slate-300 active:scale-95">×</button>
@@ -61212,6 +61212,21 @@ const assistantLifeTalkAt = (t, keys = (t && t.keys) || {}) => {
   for (const [w, place] of ASSISTANT_LIFE_TALK_PLACE_WORDS) if (txt.includes(w)) return place;
   return null;
 };
+// 台本を言える時間帯(2026-11-08 ミハリ: 夕方に「朝の散歩で、きれいな花を見つけました」)。台詞の言葉から決める。どの時間帯でも言えるなら null
+//   時間帯は家の見出しと同じ朝・昼・夕・夜(assistantLifeTimeLook。56-assistant-life-house.jsx)
+const ASSISTANT_LIFE_TALK_TOD_RULES = Object.freeze([
+  [/朝の/, ['morning']],
+  [/寝る前/, ['night']],
+  [/夕方にな/, ['morning', 'noon']],
+  [/昼寝/, ['morning', 'noon', 'evening']],
+]);
+const assistantLifeTalkTods = (t) => {
+  const txt = ((t && t.lines) || []).map(l => (l && l.t) || '').join('\n');
+  let ok = null;
+  for (const [re, tods] of ASSISTANT_LIFE_TALK_TOD_RULES) if (re.test(txt)) ok = ok ? ok.filter(x => tods.includes(x)) : [...tods];
+  return ok;
+};
+const assistantLifeLookNow = () => { try { return typeof assistantLifeTimeLook === 'function' ? assistantLifeTimeLook() : null; } catch (_) { return null; } };
 const assistantLifeTalkSet = () => {
   if (assistantLifeTalkCache) return assistantLifeTalkCache;
   const raw = (typeof ASSISTANT_LIFE_TALKS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_TALKS)) ? ASSISTANT_LIFE_TALKS : [];
@@ -61220,7 +61235,7 @@ const assistantLifeTalkSet = () => {
   for (const t of raw) {
     if (!t || typeof t.id !== 'string' || !okLines(t.lines)) continue;
     const keys = t.keys && typeof t.keys === 'object' ? t.keys : {};
-    const base = { id: t.id, keys, lines: t.lines, lv: 1, scene: 'any', life: true, at: assistantLifeTalkAt(t, keys) };
+    const base = { id: t.id, keys, lines: t.lines, lv: 1, scene: 'any', life: true, at: assistantLifeTalkAt(t, keys), tods: assistantLifeTalkTods(t) };
     if (t.kind === 'solo') out.solo.push({ ...base, kind: 'life-solo', who: t.who, pair: [t.who], line: t.line === 'feel' ? 'feel' : 'scene' });
     else if (t.kind === 'breeder') out.breeder.push({ ...base, kind: 'life-breeder', who: t.who, pair: [t.who] });
     else if (t.kind === 'invite' && t.from) out.invite.push({ ...base, kind: 'life-invite', who: t.who, from: t.from, pair: [t.from, t.who] });
@@ -61373,7 +61388,8 @@ const assistantLifePickSoloTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, p
   const keysOf = (t) => ({ pt: t.keys.place ? assistantLifePlaceType(id, t.keys.place) : null, mood: t.keys.mood || null, why: t.keys.why || null, doing: t.keys.doing || null });
   const want = { pt: assistantLifePlaceType(id, s.place), mood, why: s.reason === 'distance' ? null : s.reason, doing: s.doing };
   const T = assistantLifeTalkSet();
-  const here = (t) => t.at == null || t.at === s.place; // 台詞の場所といまの場所を合わせる
+  const look = assistantLifeLookNow();
+  const here = (t) => (t.at == null || t.at === s.place) && (!t.tods || !look || t.tods.includes(look)); // 台詞の場所・時間帯をいまに合わせる
   const br = T.breeder.filter(t => t.who === id && here(t)).map(t => ({ talk: t, keys: keysOf(t) }));
   if (br.length && rand() < 0.3) { const t = assistantLifeChoose(br, want, ['doing', 'why', 'mood', 'pt'], seen, rand); if (t && !seen[t.id]) return assistantLifeWithCtx(t, ctx); }
   const mine = T.solo.filter(t => t.who === id && here(t));
@@ -61393,7 +61409,8 @@ const assistantLifePickCallTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, r
   const ctx = { place: s.place, doing: s.doing };
   const keysOf = (t) => ({ pt: t.keys && t.keys.place ? assistantLifePlaceType(id, t.keys.place) : null, mood: (t.keys && t.keys.mood) || null, why: (t.keys && t.keys.why) || null, doing: (t.keys && t.keys.doing) || null });
   const want = { pt: assistantLifePlaceType(id, s.place), mood: ((life && life.moods) || {})[id] || null, why: s.reason && s.reason !== 'distance' ? s.reason : null, doing: s.doing };
-  const cands = assistantLifeTalkSet().breeder.filter(t => t.who === id && (t.at == null || t.at === s.place) && (t.lines || []).every(l => l.who === id)).map(t => ({ talk: t, keys: keysOf(t) }));
+  const look = assistantLifeLookNow();
+  const cands = assistantLifeTalkSet().breeder.filter(t => t.who === id && (t.at == null || t.at === s.place) && (!t.tods || !look || t.tods.includes(look)) && (t.lines || []).every(l => l.who === id)).map(t => ({ talk: t, keys: keysOf(t) }));
   if (!cands.length) return null;
   const t = assistantLifeChoose(cands, want, ['doing', 'why', 'mood', 'pt'], seen, rand);
   return t ? assistantLifeWithCtx({ ...t, pair: Array.isArray(t.pair) && t.pair.length ? t.pair : [id] }, ctx) : null;
@@ -62180,7 +62197,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-room .pp{position:absolute;bottom:9px;right:10%;z-index:4;display:flex}
 .mhl-room .pp>span{border-radius:50%;box-shadow:0 2px 6px #0008}.mhl-room .pp>span+span{margin-left:-10px}
 .mhl-room .pp .lonely{box-shadow:0 0 0 2.5px #fbbf24,0 0 10px #fbbf24}.mhl-room .pp .after{box-shadow:0 0 0 2.5px #7dd3fc}
-.mhl-room .bb{position:absolute;right:4px;z-index:5;max-width:80%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9.5px;font-weight:900;background:#fff;color:#1e293b;border-radius:9px;padding:1px 6px;box-shadow:0 2px 5px #0007}
+.mhl-room .bb{position:absolute;right:4px;z-index:5;max-width:88%;overflow:hidden;white-space:normal;line-height:1.2;text-align:center;font-size:9.5px;font-weight:900;background:#fff;color:#1e293b;border-radius:9px;padding:1px 6px;box-shadow:0 2px 5px #0007}
 .mhl-room .off{position:absolute;inset:0;z-index:3;background:rgba(6,9,24,.5)}
 .mhl-room .lamp{position:absolute;inset:0;z-index:3;background:radial-gradient(circle at 60% 40%,rgba(255,214,140,.45),transparent 70%);mix-blend-mode:screen;pointer-events:none}
 .mhl-room .tag{position:absolute;left:50%;top:50%;z-index:6;transform:translate(-50%,-38%) rotate(-3deg);max-width:92%;text-align:center;padding:3px 8px 4px;border-radius:7px;background:linear-gradient(#fef3c7,#fde68a);color:#422006;border:1.5px solid #b45309;box-shadow:0 3px 6px #0009}
@@ -62259,7 +62276,7 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx }) {
       {!ppl && met && <div className="off" style={night ? { background: 'rgba(3,5,16,.72)' } : undefined}/>}
       {ppl && <div className="pp">{ppl.map(pid => { const who = assistantById(pid); return who ? (
         <span key={pid} className={state.lonely && pid === id ? 'lonely' : state.after ? 'after' : ''} data-assistant-life-room-face={pid}><AssistantFace who={who} size={Math.round(Math.min(40, h * .44))} accent={who.accent}/></span>) : null; })}</div>}
-      {ppl && state.bub && <span className="bb" style={{ bottom: Math.round(Math.min(40, h * .44)) + 14 }}>{state.bub}</span>}
+      {ppl && state.bub && <span className="bb" data-assistant-life-room-bub style={{ bottom: Math.round(Math.min(40, h * .44)) + 14, fontSize: w < 150 ? 8.5 : undefined }}>{[].concat(state.lonely && !state.sleep && !state.after && w < 150 ? ['💭 さみしいな…'] : state.bub).map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span className="whitespace-nowrap" data-assistant-life-chunk>{x}</span></React.Fragment>)}</span>}
       {state && state.tag && <span className="tag" data-assistant-life-room-away={id}><b>{state.tag[0]}</b><small>{state.tag[1]}</small>{state.tag[2] && <small data-assistant-life-room-with><AssistantLifeNames text={state.tag[2]}/></small>}</span>}
       {!met && <span className="lock">まだ会っていない</span>}
     </button>);
@@ -62313,7 +62330,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
       const host = w.group ? assistantLifeHostOf(ids) : id;
       if (host === id) {
         const lonely = w.reason === 'lonely';
-        rooms[id] = { in: [host, ...ids.filter(x => x !== host)], lonely, sleep: w.doing === 'sleep', bub: w.doing === 'sleep' ? '💤 おやすみ中' : lonely ? '💭 だれか来ないかな…' : ids.length > 1 ? `部屋で${ids.length}人で${doing.label}` : `部屋で${doing.label}` };
+        rooms[id] = { in: [host, ...ids.filter(x => x !== host)], lonely, sleep: w.doing === 'sleep', bub: w.doing === 'sleep' ? ['💤 おやすみ中'] : lonely ? ['💭 だれか', '来ないかな…'] : ids.length > 1 ? ['部屋で', `${ids.length}人で`, doing.label] : ['部屋で', doing.label] };
       } else rooms[id] = { tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)] };
       continue;
     }
@@ -62329,7 +62346,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
       const other = pair.find(x => x !== id);
       if (!rooms[id] || !other) continue;
       const mark = `💢 ${assistantLifeName(other)}と言い合いのあと`;
-      rooms[id] = rooms[id].in ? { ...rooms[id], after: true, bub: mark } : { ...rooms[id], tag: [rooms[id].tag[0], mark, rooms[id].tag[2] || null] };
+      rooms[id] = rooms[id].in ? { ...rooms[id], after: true, bub: [`💢 ${assistantLifeName(other)}と`, '言い合いのあと'] } : { ...rooms[id], tag: [rooms[id].tag[0], mark, rooms[id].tag[2] || null] };
     }
   }
   return rooms;

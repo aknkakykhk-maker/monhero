@@ -304,7 +304,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-room .pp{position:absolute;bottom:9px;right:10%;z-index:4;display:flex}
 .mhl-room .pp>span{border-radius:50%;box-shadow:0 2px 6px #0008}.mhl-room .pp>span+span{margin-left:-10px}
 .mhl-room .pp .lonely{box-shadow:0 0 0 2.5px #fbbf24,0 0 10px #fbbf24}.mhl-room .pp .after{box-shadow:0 0 0 2.5px #7dd3fc}
-.mhl-room .bb{position:absolute;right:4px;z-index:5;max-width:80%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9.5px;font-weight:900;background:#fff;color:#1e293b;border-radius:9px;padding:1px 6px;box-shadow:0 2px 5px #0007}
+.mhl-room .bb{position:absolute;right:4px;z-index:5;max-width:88%;overflow:hidden;white-space:normal;line-height:1.2;text-align:center;font-size:9.5px;font-weight:900;background:#fff;color:#1e293b;border-radius:9px;padding:1px 6px;box-shadow:0 2px 5px #0007}
 .mhl-room .off{position:absolute;inset:0;z-index:3;background:rgba(6,9,24,.5)}
 .mhl-room .lamp{position:absolute;inset:0;z-index:3;background:radial-gradient(circle at 60% 40%,rgba(255,214,140,.45),transparent 70%);mix-blend-mode:screen;pointer-events:none}
 .mhl-room .tag{position:absolute;left:50%;top:50%;z-index:6;transform:translate(-50%,-38%) rotate(-3deg);max-width:92%;text-align:center;padding:3px 8px 4px;border-radius:7px;background:linear-gradient(#fef3c7,#fde68a);color:#422006;border:1.5px solid #b45309;box-shadow:0 3px 6px #0009}
@@ -383,7 +383,7 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx }) {
       {!ppl && met && <div className="off" style={night ? { background: 'rgba(3,5,16,.72)' } : undefined}/>}
       {ppl && <div className="pp">{ppl.map(pid => { const who = assistantById(pid); return who ? (
         <span key={pid} className={state.lonely && pid === id ? 'lonely' : state.after ? 'after' : ''} data-assistant-life-room-face={pid}><AssistantFace who={who} size={Math.round(Math.min(40, h * .44))} accent={who.accent}/></span>) : null; })}</div>}
-      {ppl && state.bub && <span className="bb" style={{ bottom: Math.round(Math.min(40, h * .44)) + 14 }}>{state.bub}</span>}
+      {ppl && state.bub && <span className="bb" data-assistant-life-room-bub style={{ bottom: Math.round(Math.min(40, h * .44)) + 14, fontSize: w < 150 ? 8.5 : undefined }}>{[].concat(state.lonely && !state.sleep && !state.after && w < 150 ? ['💭 さみしいな…'] : state.bub).map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span className="whitespace-nowrap" data-assistant-life-chunk>{x}</span></React.Fragment>)}</span>}
       {state && state.tag && <span className="tag" data-assistant-life-room-away={id}><b>{state.tag[0]}</b><small>{state.tag[1]}</small>{state.tag[2] && <small data-assistant-life-room-with><AssistantLifeNames text={state.tag[2]}/></small>}</span>}
       {!met && <span className="lock">まだ会っていない</span>}
     </button>);
@@ -437,7 +437,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
       const host = w.group ? assistantLifeHostOf(ids) : id;
       if (host === id) {
         const lonely = w.reason === 'lonely';
-        rooms[id] = { in: [host, ...ids.filter(x => x !== host)], lonely, sleep: w.doing === 'sleep', bub: w.doing === 'sleep' ? '💤 おやすみ中' : lonely ? '💭 だれか来ないかな…' : ids.length > 1 ? `部屋で${ids.length}人で${doing.label}` : `部屋で${doing.label}` };
+        rooms[id] = { in: [host, ...ids.filter(x => x !== host)], lonely, sleep: w.doing === 'sleep', bub: w.doing === 'sleep' ? ['💤 おやすみ中'] : lonely ? ['💭 だれか', '来ないかな…'] : ids.length > 1 ? ['部屋で', `${ids.length}人で`, doing.label] : ['部屋で', doing.label] };
       } else rooms[id] = { tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)] };
       continue;
     }
@@ -453,7 +453,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
       const other = pair.find(x => x !== id);
       if (!rooms[id] || !other) continue;
       const mark = `💢 ${assistantLifeName(other)}と言い合いのあと`;
-      rooms[id] = rooms[id].in ? { ...rooms[id], after: true, bub: mark } : { ...rooms[id], tag: [rooms[id].tag[0], mark, rooms[id].tag[2] || null] };
+      rooms[id] = rooms[id].in ? { ...rooms[id], after: true, bub: [`💢 ${assistantLifeName(other)}と`, '言い合いのあと'] } : { ...rooms[id], tag: [rooms[id].tag[0], mark, rooms[id].tag[2] || null] };
     }
   }
   return rooms;

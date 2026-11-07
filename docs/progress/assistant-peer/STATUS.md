@@ -226,3 +226,7 @@
 - ついで: 縦で屋根の札「🏡 助手の家」の下半分が家の枠に隠れていた(前から)→ 前に出した
 - 検査: assistant-life-check ⑧(8人×場所×気分×理由で別の場所の名前を言わない)/browser ⑫(掲示板のまとまり・今日やれることの字・屋根の札・地図の顔と札)。止め絵 shots/life-16-board*.png・life-17-map-garden.png
 - カード部とのつなぎ口(読むだけ)を足した: `assistantLifeAtCard(id)`・`assistantLifeCardIds()`(カード部屋でカード研究の組の全員。図書室は入れない)・`assistantLifeOnCardMatch({ assistantId, won, at })`(今日あったことに1件・生活のリズムに数える)。browser ⑭
+- 公開: #4880(main 0c55472)。本番で画面の検査・HOME の配置(🔄横含む)OK。ミハリの撮り直し(#4881)で4件とも直っていた
+- 段階2(一歩目)は枝 claude/assistant-life-stage2-step1(未公開)。止め絵 shots/stage2/・文案 LIFE-STAGE2-RELEASE.md を窓口へ送った。窓口の「この文で」待ち
+- 🔄横(rotation-height-check #4874 の助手部3件): 仲良し度のシート・おしゃべり・助手たちの今のアルバムに、回したとき用の上限(vw)を足した。回した器の中で 331/343px(回した画面 390px に収まる)
+- ミハリの小さい残り2件: 横の部屋の吹き出しが切れる → 狭い部屋は「💭 さみしいな…」(1行・名札に重ならない)/夕方に「朝の散歩で」→ 台本に言える時間帯(`assistantLifeTalkTods`: 朝の・寝る前・夕方にな・昼寝)。検査 assistant-life-check ⑧・browser ⑫
