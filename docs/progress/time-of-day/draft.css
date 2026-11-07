@@ -12,3 +12,8 @@ html[data-mh-tod="night"] .mh-home-background::before{opacity:1;
   radial-gradient(40% 18% at 50% 100%,rgba(255,190,100,.38),transparent 70%),
   radial-gradient(14% 8% at 20% 62%,rgba(255,196,110,.50),transparent 70%),radial-gradient(14% 8% at 80% 58%,rgba(255,196,110,.50),transparent 70%),
   radial-gradient(10% 6% at 50% 46%,rgba(140,200,255,.42),transparent 70%)}
+/* 試作: いまの時刻の札 */
+.mh-tod-clock{position:absolute;z-index:5;right:9px;top:calc(107px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;padding:3px 9px;border:1px solid #eed99566;border-radius:999px;background:#0f1d2ad9;color:#f9eac2;font:900 11px/1.2 system-ui,sans-serif;font-variant-numeric:tabular-nums;box-shadow:0 2px 6px #0007;pointer-events:none}
+.mh-tod-clock i{font-style:normal;font-size:12px}
+@media(orientation:landscape) and (max-height:600px){.mh-tod-clock{top:calc(69px + env(safe-area-inset-top));right:calc(9px + var(--mh-tod-upd,96px))}}
+[data-mh-view-rotation="true"] .mh-tod-clock{top:calc(69px + env(safe-area-inset-top));right:calc(9px + 96px)}

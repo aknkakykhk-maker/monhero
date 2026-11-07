@@ -91,6 +91,10 @@ const seed = () => {
       const closed = await page.evaluate(() => {
         const b = [...document.querySelectorAll('button')].find((x) => /^(確認|受け取る|閉じる|OK|スキップ)$/.test((x.innerText || '').trim()));
         if (b) { b.click(); return true; }
+        // 値が上がった瞬間の演出(#4743・44-growth-fx)。ボタンは無く、押すと「演出中 → 最後の形 → 閉じる」と進む。
+        //   裏の周回でブリーダーLv などが上がると、カードの画面の上にも出る(2026-11-07 マーケットの戻るが押せず③④⑤が落ちた)
+        const fx = [...document.querySelectorAll('[role="dialog"][aria-label]')].find((d) => /に上がりました$/.test(d.getAttribute('aria-label') || ''));
+        if (fx) { fx.click(); return true; }
         return false;
       });
       if (!closed) break;
@@ -217,6 +221,7 @@ const seed = () => {
     await click('[data-card-market-open]');
     await page.waitForSelector('[data-card-shop]', { timeout: 10000 }).catch(() => {});
     check('③ カードから開いたマーケットにいるあいだ、画面がバトルへ飛ばない', await stayOn('[data-card-shop]', WATCH_MS));
+    await dismissOverlays(); // 裏の周回で上がった値の演出が戻るボタンを覆うことがある
     await page.locator('[data-mh-screen] button').first().click().catch(() => {});
     await page.waitForSelector('[data-card-top="top"]', { timeout: 10000 }).catch(() => {});
     check('③ マーケットから戻ると、カードのトップ(帯つき)へ戻る', await has('[data-card-top="top"]') && await has('[data-card-quick-run="live"]'));
