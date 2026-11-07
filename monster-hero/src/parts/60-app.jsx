@@ -5116,6 +5116,7 @@ function MonsterHeroGame() {
       const after = levelInfo(nextXp);
       setBreederXp(nextXp);
       storeSet('mh_breeder_xp', nextXp, false);
+      if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(before.level, after.level, breederName);
       const gainedLevels = after.level - before.level;
       if (gainedLevels > 0) {
         setBreederPoints(prev => { const next = prev + gainedLevels; storeSet('mh_breeder_points', next, false); return next; });
@@ -8452,6 +8453,8 @@ function MonsterHeroGame() {
     if (!result.changed) return;
     assistantBondsRef.current = { ...assistantBondsRef.current, [id]: result.state };
     setAssistantBonds(prev => ({ ...prev, [id]: result.state }));
+    // 上がった瞬間の演出(見た目だけ。値と保存はこの前後のまま)
+    if (typeof growthFxAssistantBond === 'function') growthFxAssistantBond(id, current.points, result.state.points);
     // Lvが上がったら、次にHOMEを開いたときに助手がそのことに触れる。
     // ただし、いま選んでいる助手のときだけ(選んでいない助手のLvアップを本人以外に言わせない)
     const after = assistantBondLevelOf(result.state.points);
@@ -9739,6 +9742,12 @@ function MonsterHeroGame() {
     });
     setOwnedItems(prev => { const next = { ...prev, [itemId]: have - n }; storeSet('mh_owned_items', next, false); return next; });
     Audio_.se.levelUp();
+    // 使った瞬間の演出(見た目だけ)
+    if (typeof growthFxMasuBondItem === 'function') {
+      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+      growthFxMasuBondItem({ masuName: masu.name, image: base && base.iconUrl, itemName: item.name, itemEmoji: item.emoji, count: n, gain: result.xpGain,
+        before: result.before, after: result.after });
+    }
     return result;
   };
   const openTrainingInfo=()=>setGameState('TRAINING_INFO');
@@ -10649,6 +10658,7 @@ function MonsterHeroGame() {
     const breederLevelAfter = levelInfo(nextXp);
     setBreederXp(nextXp);
     storeSet('mh_breeder_xp', nextXp, false);
+    if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(breederLevelBefore.level, breederLevelAfter.level, breederName);
     const gainedLevels = breederLevelAfter.level - breederLevelBefore.level;
     if (gainedLevels > 0) {
       setBreederPoints(prev => { const next = prev + gainedLevels; storeSet('mh_breeder_points', next, false); return next; });
@@ -10787,6 +10797,7 @@ function MonsterHeroGame() {
       const breederLevelAfter = levelInfo(nextBreederXp);
       setBreederXp(nextBreederXp);
       await storeSet('mh_breeder_xp', nextBreederXp, false);
+      if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(breederLevelBefore.level, breederLevelAfter.level, breederName);
       const gainedBreederLevels = breederLevelAfter.level - breederLevelBefore.level;
       if (gainedBreederLevels > 0) {
         setBreederPoints(prev => { const next = prev + gainedBreederLevels; storeSet('mh_breeder_points', next, false); return next; });
@@ -18812,6 +18823,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     <div data-mh-theme={screenThemeFor(screenTheme, screenThemeCategory(gameState, rhythmScreenOpen))} data-mh-theme-category={screenThemeCategory(gameState, rhythmScreenOpen)} data-mh-view-rotation={forcedRotationStyle?'true':'false'} data-mh-portrait-layout={portraitOnlyScreen?'true':'false'} data-phase-look={(ecoMode==='lite'||ultraEcoSession||normalizeBattleFxSettings(battleFxSettings).idleMotion==='OFF'||battleFxLoad==='LIGHT'||battleFxLoad==='MINIMAL')?'calm':'rich'} data-fx-level={battleFxLoad} data-mh-count-up={battleFxEffective.countUp} data-mh-end-fx={battleFxEffective.endFx} onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="mh-app h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={forcedRotationStyle||{height:'100%'}}>
       {/* タップ・スライドの波紋。押している場所を指すだけの見た目なのでタップ判定は奪わない */}
       <TapRippleLayer spawnRef={rippleSpawnRef}/>
+      {/* 上がる値の演出(44-growth-fx.jsx)。見た目だけ。出してよい画面でだけ出し、演奏中・バトル中・お話の最中は貯めておく */}
+      <GrowthFxLayer screen={gameState} load={battleFxSettings.load}/>
       {updateNotice}{storageTroubleNotice}
       {/* ランの途中ならどの画面でも出し続ける。gameState==='BATTLE' に限っていたため、
           敵を倒してWAVE_RESULTへ移った瞬間に消えて、曲を選べなくなっていた */}
@@ -18882,6 +18895,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               replay={peerReplay} onReplayEnd={()=>setPeerReplay(null)} today={today}/>
             {/* 助手たちの今(2026-11-07・公開の印 assistantLife)。帯は HOME だけ(演奏中・マルチ中・お話の最中は出さない)。画面は帯とプロフィールから開く */}
             {typeof AssistantLifeBand==='function'&&gameState==='HOME'&&!busy&&!peerReplay&&<AssistantLifeBand metIds={metIds}/>}
+            {/* はじめて差し入れ・友情のしるしを手に入れたときの案内(HOME で1回だけ・公開の印 assistantLife) */}
+            {typeof AssistantLifeItemIntro==='function'&&gameState==='HOME'&&!busy&&!peerReplay&&<AssistantLifeItemIntro peerItems={{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}}/>}
             {typeof AssistantLifeScreen==='function'&&<AssistantLifeScreen metIds={metIds} onReplay={(talk)=>setPeerReplay(talk)}
               peerItems={{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}} onUseItem={useAssistantPeerItem}/>}
           </>;
@@ -20535,8 +20550,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 周回の報酬・自己ベスト・全国ランキングへも入れる(2026-10-02・ユーザー指示「ランキングにも反映」)。
           // 周回の報酬とビートPは、ライブに参加した人数ぶん多くなる(1人ふえるごとに+50%)。
           // 同じメンバーで続けると、さらに1曲ごとに+10%(上限+100%・2026-10-03)
-          // 呼んだ助手のセッションLv.20/40/60/80 で +2/4/6/8%(助手とのセッション・2026-11-07。人数ボーナスと同じ所にだけ足す。スコアには入れない)
-          const assistBonus=rhythmPlay.from==='multi'&&rhythmAssistSessionEnabled()?rhythmAssistSessionRewardBonus(RHYTHM_ASSIST_SESSION_STORE.get(),((RHYTHM_MULTI.view()||{}).myCpus||[]).map(c=>rhythmAssistSessionIdOf(c.masuId))):0;
+          // 呼んだ助手のセッションLv.20/40/60/80 で +2/4/6/8%・仲良し度 Lv4 以上のデュオ1組 +5%(助手とのセッション・2026-11-07。人数ボーナスと同じ所にだけ足す。スコアには入れない)
+          const assistBonus=rhythmPlay.from==='multi'&&rhythmAssistSessionEnabled()?rhythmAssistSessionRewardBonusNow():0;
           const multiScale=rhythmPlay.from==='multi'?Math.round(rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus)*(1+assistBonus)*100)/100:1;
           if(rhythmPlay.from==='multi')RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,result,false,{diffId:rhythmPlay.difficulty.id});
           // ===== 演奏1曲ぶんを、裏の∞周回の周回クリアとして反映する(2026-09-07・ユーザー提案) =====

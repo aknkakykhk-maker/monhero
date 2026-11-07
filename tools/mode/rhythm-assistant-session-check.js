@@ -19,6 +19,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const P = (f) => fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts', f), 'utf8');
 const BUDDY = P('33-rhythm-buddy.jsx');
 const SESSION = P('33-rhythm-assistant-session.jsx');
+const LINES = P('33-rhythm-assistant-session-lines.jsx');
 const SCREEN = P('80-screen-rhythm-assistant-session.jsx');
 const SHEET = P('80-screen-rhythm-buddy.jsx');
 const MULTI = P('77-screen-rhythm-multi.jsx');
@@ -128,7 +129,12 @@ check('部屋の頭(cpuBrain)は助手の振り分けで包む', /rhythmAssistSe
 check('結果画面で、呼んだ助手を育てる(RhythmAssistSessionGrowth)', /<RhythmAssistSessionGrowth key=\{assistantId\} assistantId=\{assistantId\}/.test(MULTI));
 check('演奏の仕組みには触れない(30-rhythm-play.jsx は助手のセッションを呼ばない)', !/rhythmAssistSession|RHYTHM_ASSIST_SESSION/.test(PLAY));
 check('助手のスコアをランキングへ送らない(助手の計算の部品は送信の関数を呼ばない)', !/sbUpsert|sbInsert|submitRhythm|rankings/.test(SESSION + SCREEN));
-check('台詞は8人ぶん(来たとき・好きな曲・コンボ・ミス続き・サビ・MVP・高い・低い)', ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'].every((id) => new RegExp(`\\n  ${id}: \\{ join: '[^']+', love: '[^']+', combo: '[^']+', miss: '[^']+', climax: '[^']+', mvp: '[^']+', high: '[^']+', low: '[^']+' \\},`).test(SCREEN)));
+{
+  // 台詞は txt が正本。部品は道具で作った生成物(食い違いを見張る)
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools/mode/rhythm-assistant-session-lines-import.js'), '--check'], { encoding: 'utf8' });
+  check('台詞の部品は txt(docs/progress/beat-assistant-session/lines)と同じ', r.status === 0, (r.stdout || '').trim().split('\n').slice(-2).join(' '));
+}
 // ---- 段階2: 演奏中の顔とひとこと・Lv で開くもの ----
 {
   const APP = P('60-app.jsx');
@@ -137,10 +143,12 @@ check('台詞は8人ぶん(来たとき・好きな曲・コンボ・ミス続�
   const reads = (PLAY.match(/RHYTHM_PLAY_WATCH\.[a-zA-Z]+/g) || []).length;
   check('演奏画面は窓(RHYTHM_PLAY_WATCH)に書くだけで、判定・スコアに使わない', writes.length >= 4 && writes.every((w) => /\.(hud|songId|timeMs)=/.test(w) || /===/.test(w)) && reads === writes.length, `${reads}か所`);
   check('顔とひとことは演奏画面の外(60-app)から、マルチで印が立っているときだけ重ねる', /gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay\.from==='multi'&&rhythmAssistSessionEnabled\(\)&&<RhythmAssistSessionPlayFace /.test(APP));
+  check('ビートP の上乗せは、セッションLv とデュオの両方(rhythmAssistSessionRewardBonusNow)', /assistBonus=rhythmPlay\.from==='multi'&&rhythmAssistSessionEnabled\(\)\?rhythmAssistSessionRewardBonusNow\(\):0/.test(APP));
   check('ひとことは1.6秒で消える', /const RHYTHM_ASSIST_SESSION_BUBBLE_MS = 1600;/.test(SCREEN));
   check('同じ曲で同じ場面のひとことは1回だけ(said に覚える)', /if \(said\.has\(key\)\) continue;/.test(SCREEN));
   check('サビで顔が光るのは セッションLv.15 から', /const RHYTHM_ASSIST_SESSION_GLOW_LEVEL = 15;/.test(SESSION) && /glow && rhythmAssistSessionLevel\(state, aid\) >= RHYTHM_ASSIST_SESSION_GLOW_LEVEL/.test(SCREEN));
   check('ビートP の上乗せは 周回の報酬の倍率(multiScale)にだけ掛ける', /const multiScale=rhythmPlay\.from==='multi'\?Math\.round\(rhythmMultiTotalScale\([^)]*\)\*\(1\+assistBonus\)\*100\)\/100:1;/.test(APP));
+  check('セッションLv の祝い(growthFxSessionLevel)は、印が立っていて関数があるときだけ・まとめて1回で呼ぶ', /if \(!rhythmAssistSessionEnabled\(\) \|\| typeof growthFxSessionLevel !== 'function'\) return;/.test(SCREEN) && /if \(q\.timer\) return;/.test(SCREEN));
   check('結果のカードは「CPU」ではなく「助手」の印', /data-rhythm-multi-assist-mark[^>]*>助手<\/b>/.test(MULTI));
 }
 {
@@ -157,5 +165,62 @@ check('台詞は8人ぶん(来たとき・好きな曲・コンボ・ミス続�
   check('ビートP の上乗せ: Lv.19 は0・Lv.20 で +2%・2人なら足す', t.bonus(lv(0), ['mua']) === 0 && t.bonus(st, ['atsu']) === 0.08 && t.bonus(st, ['atsu', 'atsu']) === 0.08 && t.bonus(st, ['atsu', 'nobody']) === 0.08);
 }
 
+// ---- 段階3: 台詞・デュオ・合体・仲良し度 ----
+{
+  const sb3 = { Math, Date, Object, Number, String, Array, JSON, console };
+  vm.createContext(sb3);
+  vm.runInContext(`${BUDDY}\n${SESSION}\n${LINES}\n;globalThis.__d={duos:rhythmAssistSessionDuos,bonus:rhythmAssistSessionDuoBonus,SOLO:RHYTHM_ASSIST_SESSION_SOLO_LINES,PAIR:RHYTHM_ASSIST_SESSION_PAIR_LINES,ids:RHYTHM_ASSIST_SESSION_IDS};`, sb3);
+  const d = sb3.__d;
+  const lv = { 'kiki-mua': 5, 'atsu-mua': 3, 'atsu-kiki': 2, 'dra-kyuko': 4 };
+  const levelOf = (a, b) => lv[[a, b].sort().join('-')] || 1;
+  const seen = (a, b) => [a, b].sort().join('-') === 'kiki-mua';
+  const one = d.duos(['mua', 'atsu'], levelOf, seen);
+  check('友情Lv3 からデュオ(Lv2 以下はならない)', one.length === 1 && one[0].key === 'atsu-mua' && !one[0].result && !one[0].gattai && d.duos(['kiki', 'atsu'], levelOf, seen).length === 0);
+  const three = d.duos(['atsu', 'mua', 'kiki'], levelOf, seen);
+  check('友情Lv の高いペアから組み、1人は1つのデュオだけ', three.length === 1 && three[0].key === 'kiki-mua' && three[0].result && three[0].gattai);
+  const four = d.duos(['mua', 'kiki', 'dra', 'kyuko'], levelOf, () => false);
+  check('4人なら2組。Lv5 でも特別なお話を見ていなければ合体しない', four.length === 2 && four.every((x) => !x.gattai) && four.find((x) => x.key === 'dra-kyuko').result);
+  check('デュオ(Lv4 以上)1組につきビートP +5%', Math.abs(d.bonus(four) - 0.1) < 1e-9 && d.bonus(one) === 0);
+  const scenes = ['join', 'first', 'like', 'dislike', 'combo', 'miss', 'climax', 'last', 'mvp', 'high', 'mid', 'low', 'fc', 'levelup', 'likeup', 'overcome'];
+  check('1人ぶんの台詞は、8人とも全部の場面がある', d.ids.every((id) => d.SOLO[id] && scenes.every((sc) => Array.isArray(d.SOLO[id][sc]) && d.SOLO[id][sc].length > 0)));
+  let pairOk = 0; for (let i = 0; i < d.ids.length; i += 1) for (let j = i + 1; j < d.ids.length; j += 1) { const t = d.PAIR[[d.ids[i], d.ids[j]].sort().join('-')]; if (t && ['play', 'result', 'gattai'].every((sc) => t[sc] && t[sc].length)) pairOk += 1; }
+  check('デュオの台詞は28ペアとも 演奏中・結果・合体 がある', pairOk === 28, `${pairOk}ペア`);
+  check('デュオの掛け合いは1曲3回まで・合体は1曲1回', /const RHYTHM_ASSIST_SESSION_DUO_TALK_MAX = 3;/.test(SESSION) && /duoTalks < RHYTHM_ASSIST_SESSION_DUO_TALK_MAX/.test(SCREEN) && /const g = !gattaiDone \? duos\.find\(\(d\) => d\.gattai\) : null;/.test(SCREEN));
+  check('友情Lv は assistantPeerGain(a, b, \'session\') で足し、同じ回(round)に2度は足さない', /assistantPeerGain\(ids\[i\], ids\[j\], 'session'\)/.test(SCREEN) && /if \(RHYTHM_ASSIST_SESSION_PEER_DONE\.has\(pk\)/.test(SCREEN));
+  check('友情Lv は読むだけ(助手のセッションの部品は ASSISTANT_PEER_STORE を書き換えない)', !/ASSISTANT_PEER_STORE\.set|storeSet\(ASSISTANT_PEER/.test(SCREEN + SESSION));
+  check('デュオは公開の印 assistantPeer が偽なら組まない', /if \(typeof assistantPeerEnabled !== 'function' \|\| !assistantPeerEnabled\(\)/.test(SCREEN));
+  const DATA = fs.readFileSync(path.join(ROOT, 'monster-hero/data/assistants.js'), 'utf8');
+  check('友情Lv の行動 session は +3・1日12(ペアの1日の上限の中・uncapped なし)', /\n  session: \{ amount:3, dailyMax:12, label:'2人でセッションをした' \},/.test(DATA));
+}
+// ---- 見た目・オプション ----
+{
+  const sb4 = { Math, Date, Object, Number, String, Array, JSON, console };
+  vm.createContext(sb4);
+  vm.runInContext(`${BUDDY}\n${SESSION}\n;globalThis.__o={norm:rhythmAssistSessionNormalize};`, sb4);
+  const o = sb4.__o;
+  check('オプション「助手のひとこと」は 全部/少なめ/切る。無い人・壊れた値は「全部」', o.norm(null).talk === 'all' && o.norm({ talk: 'few' }).talk === 'few' && o.norm({ talk: 'off' }).talk === 'off' && o.norm({ talk: 'zzz' }).talk === 'all');
+  check('「切る」なら部屋のチャットも演奏中のふきだしも出さない(合体の光は出す)', /if \(mode === 'off'\) return '';/.test(SCREEN) && /if \(queue\.length \|\| hideAt \|\| mode === 'off'\) return;/.test(SCREEN) && /const rows = mode === 'off' \? null : rhythmAssistSessionPickPair\(g, 'gattai', usedPair\);/.test(SCREEN));
+  check('結果のカード: Lv.45 で枠が助手の色・Lv.90 で名前入りの背景(MVP のカードは今のまま)', /const RHYTHM_ASSIST_SESSION_FRAME_LEVEL = 45;/.test(SESSION) && /const RHYTHM_ASSIST_SESSION_BACK_LEVEL = 90;/.test(SESSION) && /if \(!who \|\| isMvp\) return undefined;/.test(SCREEN) && /style=\{rhythmAssistSessionCardStyle\(r\.m, isMvp\)\}/.test(MULTI));
+}
+// ---- 得意の応援(Lv.25) ----
+{
+  const sb5 = { Math, Date, Object, Number, String, Array, JSON, console };
+  vm.createContext(sb5);
+  vm.runInContext(`${BUDDY}\n${SESSION}\n;globalThis.__c={cheer:rhythmAssistSessionCheer,apply:rhythmAssistSessionApplyLive};`, sb5);
+  const c = sb5.__c;
+  const base = { level: 25, fc: false, marvRate: 0.5, ratio: 0.8, cleared: true, firstSong: false, diffId: 'NORMAL' };
+  check('得意の応援は Lv.25 から(Lv.24 では出ない)', c.cheer('dra', { ...base, level: 24 }) === null && !!c.cheer('dra', base));
+  check('みゅあ: フルコンでビートP+3 / ももすけ: 9割以上でビートP+3 / あつ: 95%以上でビートP+3 / えるびん: 7割未満でビートP+3',
+    c.cheer('mua', { ...base, fc: true }).points === 3 && c.cheer('mua', base) === null && c.cheer('momosuke', { ...base, ratio: 0.9 }).points === 3
+    && c.cheer('atsu', { ...base, ratio: 0.95 }).points === 3 && c.cheer('atsu', { ...base, ratio: 0.94 }) === null && c.cheer('erubin', { ...base, ratio: 0.6 }).points === 3);
+  check('きき: MARVELOUS 9割で経験値+10% / ドラ: クリアで+10% / きゅうこ: はじめての曲で+20% / ソラシド: HARD 以上で+10%',
+    c.cheer('kiki', { ...base, marvRate: 0.9 }).exp === 0.1 && c.cheer('dra', base).exp === 0.1 && c.cheer('kyuko', { ...base, firstSong: true }).exp === 0.2
+    && c.cheer('sorashido', { ...base, diffId: 'HARD' }).exp === 0.1 && c.cheer('sorashido', base) === null);
+  check('途中でやめた・クリアしていない曲では応援しない', c.cheer('dra', { ...base, cleared: false }) === null);
+  const args = { round: 'r', songId: 'evans', diffId: 'MASTER', durationMs: 1, teamRank: 'S', dayKey: 'd', nowMs: 1, score: 1, maxScore: 1000000 };
+  const plain = c.apply(null, 'dra', args).gain; const up = c.apply(null, 'dra', { ...args, expBonus: 0.1 }).gain; const capped = c.apply(null, 'dra', { ...args, expBonus: 5 }).gain;
+  check('経験値の上乗せは足すだけ(上限 +20%)', up === Math.round(plain * 1.1) && capped === Math.round(plain * 1.2), `${plain}→${up}・${capped}`);
+  check('ビートP は育ちが数えた回だけ(同じ回は2度足さない)', /if \(outcome && outcome\.cheer && outcome\.cheer\.points > 0 && typeof addRhythmEventPoints === 'function'\)/.test(SCREEN));
+}
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

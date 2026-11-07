@@ -250,7 +250,7 @@ function BreederMarketScreen({
   const beatPointItemOf = (offer) => {
     const base = offer.itemId ? (BREEDER_MARKET_ITEMS.find(item=>item.id===offer.itemId) || [HERO_PROOF_ITEM,HERO_PROOF_SHARD_ITEM].find(item=>item.id===offer.itemId) || null) : null;
     return { id:offer.id, name:offer.grantAmount>1?`${offer.name} ×${offer.grantAmount.toLocaleString()}`:offer.name, emoji:offer.emoji,
-      icon:base?.icon, type:'item', currency:'beatPoint', cost:offer.cost, desc:base?.desc||'', base };
+      icon:base?.icon, type:'item', currency:'beatPoint', cost:offer.cost, desc:(typeof assistantLifeItemDesc==='function'?assistantLifeItemDesc(base):base?.desc)||'', base };
   };
 
   const headerTitle = marketSection ? sectionMeta[marketSection].label : 'マーケット';

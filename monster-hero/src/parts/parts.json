@@ -146,6 +146,11 @@
       "pure": true
     },
     {
+      "file": "33-rhythm-assistant-session-lines.jsx",
+      "role": "助手とのセッションの台詞(1人ぶんの場面ごと・デュオ28ペアの掛け合いと合体)。生成物: 正本は docs/progress/beat-assistant-session/lines/*.txt、書き直しは tools/mode/rhythm-assistant-session-lines-import.js",
+      "pure": true
+    },
+    {
       "file": "33-rhythm-buddy-talk.jsx",
       "role": "呼んだマスモンのおしゃべり(部屋のチャットへ一言)。場面×性格×調子のセリフ集と、選び方・人のチャットへの返事の振り分け。AIは使わず用意したセリフから選ぶ",
       "pure": true
@@ -205,6 +210,10 @@
     {
       "file": "43-player-rank-ui.jsx",
       "role": "プレイヤーのランクの見せ方(札・棒・ランクアップの演出・ランキングの行。ビートランク・カードランク共通)"
+    },
+    {
+      "file": "44-growth-fx.jsx",
+      "role": "上がる値の演出(仲良し度・絆Lv・ブリーダーLv など。小=札・中=アイテムのカード・大=Lvアップ)。見た目だけ"
     },
     {
       "file": "50-error-boundary.jsx",

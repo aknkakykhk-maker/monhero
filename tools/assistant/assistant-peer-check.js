@@ -370,6 +370,7 @@ const pairKey = (a, b) => [a, b].sort().join('-');
   check('⑩ ひとことの口調(みゅあは「じゃん」「まじ」を使わない・あつは文の最後に笑か記号)', reLines.filter(x => x.id === 'mua').every(x => !/じゃん|まじ/.test(x.t))
     && reLines.filter(x => x.id === 'atsu').every(x => /(笑|[！？!?…。])$/.test(x.t)));
   const PA = G('ASSISTANT_PEER_BOND_ACTIONS');
+  check('⑩ ペアへの増え方: 2人でセッション +3(1日12・ペアの1日の上限の中)', PA.session && PA.session.amount === 3 && PA.session.dailyMax === 12 && !PA.session.uncapped);
   check('⑩ ペアへの増え方: 差し入れ +15・しるし +30(1日20の上限の外)・遊ぶ +4(1日12)', PA.gift.amount === 15 && PA.gift.uncapped && PA.token.amount === 30 && PA.token.uncapped && PA.play.amount === 4 && PA.play.dailyMax === 12);
   check('⑩ プレイヤーの親密度: 差し入れ +30・しるし +25・遊ぶ +6(1日24)', BA.peerGift.amount === 30 && BA.peerToken.amount === 25 && BA.peerPlay.amount === 6 && BA.peerPlay.dailyMax === 24
     && ['peerGift', 'peerToken', 'peerPlay'].every(k => BA[k].releaseFlag === 'assistantPeer'));

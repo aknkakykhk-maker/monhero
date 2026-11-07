@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6747cd034382b0c3
+// generated-sha256: c83660b48ffe9a26
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -176,7 +176,7 @@ const normalizeBattleFxSettings = (value) => {
 // 設定画面に並べる項目。文言はここだけに書く(設定画面・ヘルプの説明と食い違わせない)
 const BATTLE_FX_SETTING_ITEMS = Object.freeze([
   { key:'load', title:'画面の軽さ',
-    desc:'バトル画面の飾りと演出の量です。スマホが熱くなる・動きがかくつくときは、軽いほうを選んでください。ダメージや進行は変わりません。',
+    desc:'バトル画面の飾りと演出の量です。スマホが熱くなる・動きがかくつくときは、軽いほうを選んでください。仲良し度などが上がったときの演出も、軽いほど控えめになります。ダメージや進行は変わりません。',
     options:[
       { id:'RICH', label:'豪華', note:'すべての飾りと演出' },
       { id:'STANDARD', label:'標準', note:'飾りの動きを止める' },
@@ -30785,7 +30785,7 @@ const rhythmBuddyApplyLive = (mon, { round, songId, diffId, durationMs, teamRank
 //   ・調子の代わりに「好み」: 好きな曲は少し上がる・ブレ小・経験値 ×1.3 / 苦手な曲は少し下がる・ブレ大・経験値 ×1.5
 //   ・プレイヤーのスコア・判定は変えない。助手のスコアはランキング・自己ベストに送らない
 // ★公開の印 RELEASE_FLAGS.rhythmAssistantSession の後ろ。偽のあいだは呼ぶシートに助手のタブを出さない
-// 保存は新しいキー RHYTHM_ASSIST_SESSION_KEY だけ(⑦)。マスモンの育ち・助手の絆・助手どうしの仲良し度には書かない
+// 保存は新しいキー RHYTHM_ASSIST_SESSION_KEY だけ(⑦)。マスモンの育ち・助手の絆・助手どうしの友情Lvには書かない
 
 const RHYTHM_ASSIST_SESSION_KEY = 'mh_rhythm_assistant_session_v1';
 // 部屋の中では、助手を「masuId」の欄に印つきで入れる(マスモンの id と混ざらないように)。例: 'as:mua'
@@ -30849,7 +30849,9 @@ const rhythmAssistSessionNormalize = (raw) => {
     const rewarded = (Array.isArray(src[id].rewarded) ? src[id].rewarded : []).map((n) => rhythmBuddyInt(n, 100)).filter((n, i, arr) => n > 0 && arr.indexOf(n) === i);
     mons[id] = { ...mon, likes, rewarded };
   });
-  return { mons };
+  // オプション「助手のひとこと」(2026-11-07)。'all' 全部 / 'few' 少なめ / 'off' 切る。無い人は全部
+  const talk = ['all', 'few', 'off'].includes(o.talk) ? o.talk : 'all';
+  return { mons, talk };
 };
 const rhythmAssistSessionMon = (state, assistantId) => {
   const st = rhythmAssistSessionNormalize(state);
@@ -30878,7 +30880,7 @@ const rhythmAssistSessionPlay = ({ state, assistantId, songId, diffId, totalNote
 };
 
 // 1ライブぶん育てる(同じ回は2度数えない)。{ next, gain, levelUp, likeUp, like, familiarUp }。数えなかったら next は null
-const rhythmAssistSessionApplyLive = (state, assistantId, { round, songId, diffId, durationMs, teamRank, dayKey, nowMs, score, maxScore, chartLevel = 0, humans = 1 }) => {
+const rhythmAssistSessionApplyLive = (state, assistantId, { round, songId, diffId, durationMs, teamRank, dayKey, nowMs, score, maxScore, chartLevel = 0, humans = 1, expBonus = 0 }) => {
   const st = rhythmAssistSessionNormalize(state);
   if (!RHYTHM_ASSIST_SESSION_IDS.includes(assistantId)) return { next: null, gain: 0, levelUp: 0, likeUp: 0, like: 0, familiarUp: false, tickets: 0 };
   const before = rhythmAssistSessionMon(st, assistantId);
@@ -30886,7 +30888,8 @@ const rhythmAssistSessionApplyLive = (state, assistantId, { round, songId, diffI
   // 育ち方はマスモンと同じ(調子なし)。性格は付けない
   const r = rhythmBuddyApplyLive(before, { round, songId, diffId, durationMs, teamRank, dayKey, lean: '', nowMs, score, maxScore, chartLevel, humans, moodId: '' });
   if (!r.gain) return { next: null, gain: 0, levelUp: 0, likeUp: 0, like: likeBefore, familiarUp: false, tickets: 0 };
-  const gain = Math.max(1, Math.round(r.gain * rhythmAssistSessionExpScale(likeBefore)));
+  // expBonus … 得意の応援の上乗せ(0〜0.2)
+  const gain = Math.max(1, Math.round(r.gain * (rhythmAssistSessionExpScale(likeBefore) + Math.max(0, Math.min(0.2, Number(expBonus) || 0)))));
   const sid = rhythmBuddyStr(songId, 60);
   const likes = { ...before.likes };
   if (sid) likes[sid] = (likes[sid] || 0) + 1;
@@ -30917,6 +30920,9 @@ const rhythmAssistSessionChooseSong = (state, assistantId, catalog, rand = Math.
 
 // ---- セッションLv で開くもの(PLAN.md 2章。スコア・判定には効かない) ----
 // 演奏中のひとことは Lv.1 から。サビで顔が光るのは Lv.15 から。ビートP の上乗せは Lv.20/40/60/80 で +2/4/6/8%
+// 結果のカードの枠が助手の色になるのは Lv.45 から・名前入りの背景は Lv.90 から
+const RHYTHM_ASSIST_SESSION_FRAME_LEVEL = 45;
+const RHYTHM_ASSIST_SESSION_BACK_LEVEL = 90;
 // 好きな曲(好み度)が見えるのは Lv.10 から
 const RHYTHM_ASSIST_SESSION_TASTE_LEVEL = 10;
 const RHYTHM_ASSIST_SESSION_GLOW_LEVEL = 15;
@@ -30935,6 +30941,385 @@ const rhythmAssistSessionInClimax = (songId, timeMs) => {
   const t = Number(timeMs);
   return Number.isFinite(t) && spans.some((x) => Array.isArray(x) && Number(x[2]) >= 0.9 && t >= Number(x[0]) && t < Number(x[1]));
 };
+
+// ---- デュオ(助手どうしの友情Lv。PLAN.md 3章・社長の決定 2026-11-07) ----
+// 友情Lv3 から「デュオ」(演奏中の掛け合い1曲3回まで)。Lv4 で結果の2人のひとこと・ビートP +5%。
+// Lv5 で、2人の特別なお話を見たあとは、サビで合体の演出(1曲1回)。友情Lv は読むだけ(足すのは 2人で1曲終えたときの +3 だけ)
+const RHYTHM_ASSIST_SESSION_DUO_LEVEL = 3;
+const RHYTHM_ASSIST_SESSION_DUO_RESULT_LEVEL = 4;
+const RHYTHM_ASSIST_SESSION_GATTAI_LEVEL = 5;
+const RHYTHM_ASSIST_SESSION_DUO_P_BONUS = 0.05;
+const RHYTHM_ASSIST_SESSION_DUO_TALK_MAX = 3;
+const rhythmAssistSessionPairKey = (a, b) => [String(a), String(b)].sort().join('-');
+// 呼んだ助手(呼んだ順)から、デュオを組む。友情Lv の高いペアから先に組み、1人は1つのデュオにだけ入る。
+// levelOf(a, b) … 2人の友情Lv / seenOf(a, b) … 2人の特別なお話を見たか
+const rhythmAssistSessionDuos = (ids, levelOf, seenOf) => {
+  const list = (Array.isArray(ids) ? ids : []).filter((id, i, arr) => RHYTHM_ASSIST_SESSION_IDS.includes(id) && arr.indexOf(id) === i);
+  const pairs = [];
+  for (let i = 0; i < list.length; i += 1) for (let j = i + 1; j < list.length; j += 1) {
+    const lv = Number(typeof levelOf === 'function' ? levelOf(list[i], list[j]) : 0) || 0;
+    if (lv >= RHYTHM_ASSIST_SESSION_DUO_LEVEL) pairs.push({ a: list[i], b: list[j], lv, order: i * 10 + j });
+  }
+  pairs.sort((x, y) => y.lv - x.lv || x.order - y.order);
+  const used = new Set();
+  return pairs.filter((p) => { if (used.has(p.a) || used.has(p.b)) return false; used.add(p.a); used.add(p.b); return true; })
+    .map(({ a, b, lv }) => ({
+      a, b, lv, key: rhythmAssistSessionPairKey(a, b),
+      result: lv >= RHYTHM_ASSIST_SESSION_DUO_RESULT_LEVEL,
+      gattai: lv >= RHYTHM_ASSIST_SESSION_GATTAI_LEVEL && !!(typeof seenOf === 'function' && seenOf(a, b)),
+    }));
+};
+// デュオのビートP の上乗せ(友情Lv4 以上のデュオ1組につき +5%)
+const rhythmAssistSessionDuoBonus = (duos) => (Array.isArray(duos) ? duos : []).filter((d) => d && d.result).length * RHYTHM_ASSIST_SESSION_DUO_P_BONUS;
+
+// ---- 得意の応援(セッションLv.25 から・PLAN.md 2章。報酬と見た目だけで、スコア・判定には効かない) ----
+// 呼んだ人のこの1曲の結果で決まる。{ exp: 経験値の上乗せの割合, points: ビートP, label: 結果の行に出す文 }。当たらなければ null
+//   みゅあ(コンボ): フルコンでビートP +3 / きき(正確さ): MARVELOUS 9割以上で経験値 +10% / ももすけ(ライブ感): S(9割)以上でビートP +3
+//   ドラ(ねばり): クリアで経験値 +10% / あつ(締め): 95%以上でビートP +3 / きゅうこ(曲を読む): はじめての曲をクリアで経験値 +20%
+//   ソラシド(計算): HARD 以上で経験値 +10% / えるびん(気づかい): 7割に届かなかったときビートP +3
+const RHYTHM_ASSIST_SESSION_CHEER_LEVEL = 25;
+const rhythmAssistSessionCheer = (assistantId, { level = 1, fc = false, marvRate = 0, ratio = 0, cleared = true, firstSong = false, diffId = '' } = {}) => {
+  if (level < RHYTHM_ASSIST_SESSION_CHEER_LEVEL || !cleared) return null;
+  const hard = RHYTHM_BUDDY_DIFF_IDS.indexOf(diffId) >= RHYTHM_BUDDY_DIFF_IDS.indexOf('HARD');
+  switch (assistantId) {
+    case 'mua': return fc ? { exp: 0, points: 3, label: 'フルコンの応援 ビートP+3' } : null;
+    case 'kiki': return marvRate >= 0.9 ? { exp: 0.1, points: 0, label: '正確さの応援 経験値+10%' } : null;
+    case 'momosuke': return ratio >= 0.9 ? { exp: 0, points: 3, label: 'ライブの応援 ビートP+3' } : null;
+    case 'dra': return { exp: 0.1, points: 0, label: 'ねばりの応援 経験値+10%' };
+    case 'atsu': return ratio >= 0.95 ? { exp: 0, points: 3, label: '締めの応援 ビートP+3' } : null;
+    case 'kyuko': return firstSong ? { exp: 0.2, points: 0, label: 'はじめての曲の応援 経験値+20%' } : null;
+    case 'sorashido': return hard ? { exp: 0.1, points: 0, label: '計算の応援 経験値+10%' } : null;
+    case 'erubin': return ratio < 0.7 ? { exp: 0, points: 3, label: '気づかいの応援 ビートP+3' } : null;
+    default: return null;
+  }
+};
+
+// ---- part: 33-rhythm-assistant-session-lines.jsx ----
+// ===== 助手とのセッションの台詞(生成物。手で直さない) =====
+// 正本は docs/progress/beat-assistant-session/lines/solo-draft.txt・pair-draft.txt。
+// 直したら node tools/mode/rhythm-assistant-session-lines-import.js で書き直す(--check で食い違いを見張る)。
+// 1人ぶん: { 助手id: { 場面: [[表情, 台詞], …] } }。場面 'song:<曲id>' は好きな曲・苦手な曲の結果の専用
+// デュオ: { 'a-b'(並べた id): { play/result/gattai: [[[話す人, 表情, 台詞], …], …] } }。{c} は話す人から相手への呼び方
+const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
+  mua: {
+    join: [['happy', 'やっほ〜！あたしも一緒に叩くね♪'], ['happy', 'ブリーダー、今日もセッションしよ！']],
+    first: [['excited', 'この曲はじめてかも！ワクワクするぢゃん♪'], ['excited', '知らない曲って、なんか燃えるよね♪']],
+    like: [['happy', 'この曲あたし大好きなの♪']],
+    dislike: [['troubled', 'えっ、この曲！？速すぎて目が回るんだけどｗ']],
+    combo: [['excited', 'いい流れぢゃん♪ 全部いこ！'], ['excited', 'まぢつながってる！すごくない？ｗ'], ['excited', 'このままフルコンいけるかも♪']],
+    miss: [['normal', 'どんまい！ここから取り返そ♪'], ['normal', '大丈夫、あたしもいるよ♪']],
+    climax: [['excited', 'サビきた〜！テンションまぢ上がる♪'], ['excited', 'ここ一番楽しいとこ！'], ['excited', 'いっくよ〜♪']],
+    last: [['normal', 'あとちょっと！ラストまで一緒に♪'], ['normal', '最後まで笑顔でいこ！']],
+    mvp: [['wink', 'MVPとっちゃった！？あたしすごくない？ｗ'], ['wink', 'えへへ、今日のあたし、ノッてたかも♪']],
+    high: [['happy', 'まぢいい感じぢゃん！楽しかったぁ♪'], ['happy', '今の、めっちゃそろってたよね♪']],
+    mid: [['happy', 'いい感じだったよ！次はもっといけるかも♪'], ['happy', '楽しかったぁ♪ もう一曲いこ！']],
+    low: [['troubled', '次はもっと合わせよ！あたしもがんばる♪'], ['troubled', '大丈夫！何回でも付き合うよ♪']],
+    fc: [['surprise', 'フルコンぢゃん！ブリーダー天才かもｗ'], ['surprise', '全部つながった〜！まぢ感動♪']],
+    levelup: [['happy', 'セッションLvが上がった♪ あたしも上手になってるかも！'], ['happy', 'もっと一緒に叩きたくなってきた♪']],
+    likeup: [['wink', 'この曲、ちょっと好きになってきたかも♪']],
+    overcome: [['happy', '苦手な曲だったけど、乗りこえたよ！'], ['happy', '目は回ったけど、楽しかったかもｗ']],
+    'song:toriko': [['happy', 'トリコはあたしの杯の曲だし、テンションまぢ上がるの♪']],
+    'song:haruka': [['happy', 'ハルカ、聞くたびにキュンとしちゃう♪']],
+    'song:crazy_party_night': [['happy', 'パーティーの曲って、それだけで楽しいぢゃん♪']],
+    'song:grievous_lady': [['happy', 'Grievous Lady、最後までついていけた！あたしえらいｗ']],
+  },
+  kiki: {
+    join: [['happy', 'ブリーダーさん、よろしくお願いしまつ♪'], ['happy', '今日も一緒に演奏できてうれしいです♪']],
+    first: [['excited', 'はじめての曲ですね。どきどきしまつ♪'], ['excited', '知らない曲も、ブリーダーさんとなら平気です']],
+    like: [['happy', 'この曲、私とても好きなんです♪']],
+    dislike: [['troubled', 'この曲は大きい音でどなられるので、少しびっくりしちゃいます']],
+    combo: [['excited', 'いい流れでつね♪ このまま全部いきましょう'], ['excited', 'とってもきれいにつながっていますよ♪'], ['excited', 'ブリーダーさん、さすがでつ']],
+    miss: [['normal', '大丈夫でつ、落ち着いていきましょう♪'], ['normal', 'ひと呼吸おいて、また合わせましょうね']],
+    climax: [['excited', 'ここが一番きれいなところでつ♪'], ['excited', 'ここは思いきっていきましょう♪'], ['excited', '雪が舞うみたいな気持ちでまつ♪']],
+    last: [['normal', 'あと少しでつ。最後までていねいに♪'], ['normal', '最後のひと押し、いきましょう']],
+    mvp: [['wink', '私がMVPですか？ちょっと照れちゃいまつ♪'], ['wink', '今日は指がよく動きました♪']],
+    high: [['happy', 'とってもいい演奏でした♪'], ['happy', '息がぴったりでしたね♪']],
+    mid: [['happy', 'いい演奏でした。次はもっと合わせられそうです'], ['happy', '楽しかったです♪ もう一曲いかがですか？']],
+    low: [['troubled', '次はきっと、もっと合わせられますよ♪'], ['troubled', '何度でもお付き合いしまつ♪']],
+    fc: [['surprise', 'フルコンボでつ！ブリーダーさん、すごいです♪'], ['surprise', '最後まで一つも落とさないなんて、見とれちゃいました']],
+    levelup: [['happy', 'セッションLvが上がりました♪ うれしいでつ'], ['happy', '少しずつ、上手になれている気がします♪']],
+    likeup: [['wink', 'この曲、だんだん好きになってきました♪']],
+    overcome: [['happy', '苦手な曲でしたけど、最後までいけました♪'], ['happy', 'びっくりしましたけど、楽しかったです']],
+    'song:kiki_issen': [['happy', '綺季一閃は、私の曲でつ♪ 雪の舞う感じが好きなんです']],
+    'song:tsuki_ga_michiru_mae_ni': [['happy', '月が満ちる前に、しっとりしていて落ち着きます♪']],
+    'song:kaze_ga_soyogu': [['happy', '風がそよぐ場所、気持ちがすっと軽くなりますね']],
+    'song:black_shout': [['happy', 'BLACK SHOUT、こわかったけど、最後までがんばれました']],
+  },
+  momosuke: {
+    join: [['happy', 'ももが来たからには盛り上げるよ！！'], ['happy', 'ブリーダー、ももとセッションできるなんてラッキーだよw']],
+    first: [['excited', 'はじめての曲！！ももが一番に覚えちゃうもんね'], ['excited', '新曲でもももは完璧にこなすよ♡']],
+    like: [['happy', 'この曲ももの推し曲！！']],
+    dislike: [['troubled', 'チクタクがずっと鳴っててもも眠くなる〜♡']],
+    combo: [['excited', 'いい感じ！！ももも乗ってきた♡'], ['excited', 'まだつながってるの！？やるじゃんw'], ['excited', 'このままいけばもも並みだよ♡']],
+    miss: [['normal', 'ドンマイドンマイ！ももがついてるよw'], ['normal', 'ちょっとくらいミスってもかわいいから平気♡']],
+    climax: [['excited', 'サビ！！ここで一番かわいく決めるよ♡'], ['excited', 'ここがももの見せ場！！'], ['excited', 'ペンライト振って〜！！']],
+    last: [['normal', 'ラストスパート！！最後までアイドルでいくよ♡'], ['normal', 'あとちょっと！！ももより先にバテないでよw']],
+    mvp: [['wink', 'MVPはもも！！当然でしょw'], ['wink', 'センターはやっぱりもも♡']],
+    high: [['happy', 'ももと合わせたらこんなもんでしょw さすが♡'], ['happy', '今のステージ、拍手もらえるやつだよ！！']],
+    mid: [['happy', 'まあまあかな！！次はもっと盛り上げよ♡'], ['happy', '楽しかった！！アンコールいく？w']],
+    low: [['troubled', 'ドンマイ！次はもも、もっと見ててあげる♡'], ['troubled', '練習あるのみ！！ももも付き合うからw']],
+    fc: [['surprise', 'フルコン！？ブリーダー、もものファン一号にしてあげる♡'], ['surprise', '全部つながった！！最高のステージだったよ！！']],
+    levelup: [['happy', 'セッションLvアップ！！もも、また一段とかわいくなっちゃったw'], ['happy', '上達してるのはももだけじゃないよ、ブリーダーもね♡']],
+    likeup: [['wink', 'この曲、ちょっとだけ好きになったかも…ちょっとだけね！！']],
+    overcome: [['happy', '眠くならずに最後までいけた！！もも、えらい♡'], ['happy', '苦手でもちゃんと決めるのがアイドルだよw']],
+    'song:crossing_field': [['happy', 'crossing field は、ももが一番かわいく踊れる曲！！']],
+    'song:only_my_railgun': [['happy', 'only my railgun、テンション上がりっぱなしw']],
+    'song:rose': [['happy', 'ROSE はかっこいいももも見せられる曲なんだよ♡']],
+    'song:dullahan_clockwork': [['happy', 'チクタクに負けなかった！！ブリーダーもえらい♡']],
+  },
+  dra: {
+    join: [['happy', 'おでも混ぜてくれよな、えへへ'], ['happy', 'ブリーダー、今日もよろしくな']],
+    first: [['excited', 'はじめての曲だな。冒険って感じでいいくさ'], ['excited', '知らない道を行くのは、わくわくするからな']],
+    like: [['happy', 'この曲、おで好きなんだな']],
+    dislike: [['troubled', 'しんみりした曲は、おで照れくさいんだな、えへへ']],
+    combo: [['excited', 'すごいな、ずっとつながってるくさ'], ['excited', 'いいぞ、その調子だからな'], ['excited', 'おでもびっくりの長さだな']],
+    miss: [['normal', 'どんまいだな、次でとりかえすからな'], ['normal', 'あわてなくていいんだな、えへへ']],
+    climax: [['excited', 'ここからが本番だな、えへへ'], ['excited', '山場だな、いくぞ'], ['excited', 'ワイもここは気合い入れるくさ']],
+    last: [['normal', 'あと少しだな、最後まで行くからな'], ['normal', 'ゴールが見えてきたな']],
+    mvp: [['wink', 'おでがMVPか、えへへ、照れくさいな'], ['wink', '今日はおで、調子よかったんだな']],
+    high: [['happy', 'いい演奏だったくさ。おで楽しかったな'], ['happy', 'ぴったりだったな、えへへ']],
+    mid: [['happy', 'なかなかよかったな。次も行くからな'], ['happy', '楽しかったな。もう一回いいか？']],
+    low: [['troubled', 'どんまいだな、次でとりかえすからな'], ['troubled', 'おでも練習するからな、一緒にがんばるくさ']],
+    fc: [['surprise', '全部つながったな！？すごいな、ブリーダー'], ['surprise', 'フルコンだな、おで鼻が高いからな']],
+    levelup: [['happy', 'セッションLvが上がったな、えへへ'], ['happy', 'おでも少しは上手になってきたかな']],
+    likeup: [['wink', 'この曲、だんだん好きになってきたんだな']],
+    overcome: [['happy', '苦手な曲だったけど、最後まで行けたな'], ['happy', '照れくさかったけど、いい曲だったな']],
+    'song:mou_hitotsu_no_sekai_e': [['happy', 'もう一つの世界へは、おでの曲だからな。冒険って感じでいいくさ']],
+    'song:big_bridge_no_shitou': [['happy', 'ビッグブリッヂの死闘、橋を渡りきった気分だな']],
+    'song:senjou_no_shippuu': [['happy', '戦場の疾風、風みたいに駆け抜けたな']],
+    'song:stay_with_me': [['happy', 'Stay With Me、しんみりしたけど、悪くなかったんだな']],
+  },
+  atsu: {
+    join: [['happy', 'とりあえず一曲いくか笑'], ['happy', '来たぞ。今日もやるか！']],
+    first: [['excited', 'てか初見の曲か。燃えるな笑'], ['excited', '知らない曲こそ、とりあえずやってみるか笑']],
+    like: [['happy', 'これ俺の好きなやつだな笑']],
+    dislike: [['troubled', 'てか自分の大会の曲って、なんか照れるだろ笑']],
+    combo: [['excited', 'とりあえずいい感じだな笑'], ['excited', 'まだつながってるのかよ！すげえな笑'], ['excited', 'そのまま行け！']],
+    miss: [['normal', 'てか焦らなくていいぞ！'], ['normal', '切り替えていこう笑']],
+    climax: [['excited', 'ここ決めるぞ笑'], ['excited', '山場だ、いくぞ！'], ['excited', 'ここは全力な笑']],
+    last: [['normal', '最後の10秒、締めるぞ！'], ['normal', 'ラスト、きれいに決めるか笑']],
+    mvp: [['wink', 'MVPもらっといた笑'], ['wink', '今日は俺の日だったな笑']],
+    high: [['happy', 'てか今の、普通にうまかったな笑'], ['happy', 'いい締めだったな！']],
+    mid: [['happy', '悪くないな。次はもっと上いけるだろ笑'], ['happy', 'とりあえずもう一曲いくか笑']],
+    low: [['troubled', 'まあ次だな、切り替えていこう！'], ['troubled', '練習あるのみだな笑']],
+    fc: [['surprise', 'フルコンかよ！やるな笑'], ['surprise', '全部つないだのか。すげえな！']],
+    levelup: [['happy', 'セッションLv上がったな笑'], ['happy', '俺もまだまだ伸びるな！']],
+    likeup: [['wink', 'この曲、ちょっと好きになってきたかもな笑']],
+    overcome: [['happy', '苦手だったけど、とりあえずいけたな笑'], ['happy', '照れくさかったけど、やりきったぞ！']],
+    'song:against_my_own_shadow': [['happy', 'AMOSは俺の曲だしな笑']],
+    'song:sad_song': [['happy', 'SAD SONG、しっかり聞かせたな！']],
+    'song:rebellion': [['happy', 'Rebellion、最後まで攻めきったな笑']],
+    'song:mf_ichika_mix': [['happy', '自分の大会の曲、やりきったぞ笑']],
+  },
+  kyuko: {
+    join: [['happy', 'ほい！俺も入るね〜'], ['happy', 'よろしく〜、今日は何いく？']],
+    first: [['excited', 'はじめての曲だね〜。構成見ながらいくよ'], ['excited', '初見かぁ、サビの場所を探しながらいこ〜']],
+    like: [['happy', 'この曲は構成がきれいなんだよね〜']],
+    dislike: [['troubled', 'トリコはノリが良すぎて、俺だけ置いていかれるんだよぇ']],
+    combo: [['excited', 'ほい！いい流れだね〜'], ['excited', 'リズムが安定してるからつながるんだよね〜'], ['excited', 'このままいけるよ〜、ありがとん笑']],
+    miss: [['normal', 'ぐぬぬぬ、でもリズムは合ってるよ〜'], ['normal', '一回深呼吸ね〜、次の小節から戻そ']],
+    climax: [['excited', 'サビ前で一回引いて…ここだね〜'], ['excited', 'ここが一番盛り上がる所だよ〜'], ['excited', 'ここから音が増えるよ〜、おけ〜？']],
+    last: [['normal', '最後まで、ていねいにね〜'], ['normal', 'あと少し〜、おけ〜？']],
+    mvp: [['wink', 'MVPいただきました〜笑'], ['wink', '曲を読んだのが効いたかも〜']],
+    high: [['happy', 'いい流れだったね〜、ありがとん笑'], ['happy', '今のは理想の形だったよ〜']],
+    mid: [['happy', 'いい感じ〜。サビ前をもう少しそろえたら上がるよ'], ['happy', 'おけ〜、次いこ〜']],
+    low: [['troubled', 'ぐぬぬぬ、次はサビ前を意識してみよ〜'], ['troubled', '難しい所は分かったから、次はいけるよ〜']],
+    fc: [['surprise', 'フルコンだね〜！すごいね、ありがとん笑'], ['surprise', '全部つながった〜！理由は練習量だね〜']],
+    levelup: [['happy', 'セッションLv上がったね〜、ほい！'], ['happy', 'だんだん合わせ方が分かってきたよ〜']],
+    likeup: [['wink', 'この曲、構成がおもしろく見えてきたかも〜']],
+    overcome: [['happy', '置いていかれなかった〜、ありがとん笑'], ['happy', '苦手な曲だったけど、ノリ方が分かったよ〜']],
+    'song:toward_the_stars_short': [['happy', 'Toward the Stars は、サビ前で一回引くのがいいの笑']],
+    'song:six_eternel_beat': [['happy', 'SIX ÉTERNEL、展開がきれいでいいよね〜']],
+    'song:evans': [['happy', 'Evans は、音の重ね方が気持ちいいんだよね〜']],
+    'song:toriko': [['happy', 'トリコ、最後までノリについていけた〜！']],
+  },
+  sorashido: {
+    join: [['happy', 'うぉぉぉ！俺も参戦するぜ・・・！'], ['happy', '今日も計算どおりにいくぜ笑']],
+    first: [['excited', 'はじめての曲か。今から計算するぜ・・・！'], ['excited', '初見でも、俺の計算に死角はないぜ笑']],
+    like: [['happy', 'この曲は全ノーツ計算済みだぜ笑']],
+    dislike: [['troubled', 'ゆっくりの曲は、計算が合わなくてそわそわするぜ笑']],
+    combo: [['excited', 'うぉぉぉ！計算どおりだぜ・・・！'], ['excited', 'つながり方が表のとおりだぜ笑'], ['excited', 'このまま最後まで行く計算だぜ・・・！']],
+    miss: [['normal', 'ここから巻き返す計算だぜ笑'], ['normal', '誤差の範囲だぜ、気にすんな！']],
+    climax: [['excited', 'うぉぉぉ！ここだぜ！'], ['excited', 'サビの密度、計算済みだぜ笑'], ['excited', 'なんくるないさ〜、ここは楽しむところだぜ！']],
+    last: [['normal', '残り10秒、計算どおりに締めるぜ笑'], ['normal', 'ラストは全部拾う計算だぜ笑']],
+    mvp: [['wink', 'MVPは計算済みだったぜ・・・！'], ['wink', '表にしたら俺が一番だったぜ笑']],
+    high: [['happy', '計算どおりの名演だぜ・・・！'], ['happy', '今の数字、表に残しておきたいぜ笑']],
+    mid: [['happy', '悪くない数字だぜ。次はもっと上がる計算だ'], ['happy', 'もう一曲いくぜ！']],
+    low: [['troubled', '次は全ノーツ計算して挑むぜ笑'], ['troubled', 'データは取れたぜ。次は上がるぜ！']],
+    fc: [['surprise', 'うぉぉぉ！フルコンだぜ笑'], ['surprise', '計算を超えてきたぜ笑']],
+    levelup: [['happy', 'セッションLvアップだぜ・・・！'], ['happy', '伸び方、グラフにしたら右肩上がりだぜ笑']],
+    likeup: [['wink', 'この曲、計算してたら好きになってきたぜ笑']],
+    overcome: [['happy', 'ゆっくりの曲も、計算が合ったぜ！'], ['happy', 'そわそわしたけど、乗りこえたぜ笑']],
+    'song:monster_hero': [['happy', 'Monster Hero は全ノーツ計算済みだぜ！']],
+    'song:freedom_dive': [['happy', 'FREEDOM DiVE↓、速さも計算のうちだぜ笑']],
+    'song:humanoid': [['happy', 'ヒューマノイド、ノーツの多さがたまらないぜ！']],
+    'song:kaze_ga_soyogu': [['happy', '風がそよぐ場所、ゆっくりでも合わせきったぜ笑']],
+  },
+  erubin: {
+    join: [['happy', '俺も一緒にいいかな？よろしくね'], ['happy', '今日もセッション、楽しみにしてたよ']],
+    first: [['excited', 'はじめての曲だね。ゆっくり覚えていこうね'], ['excited', '知らない曲でも、一緒なら大丈夫だよ']],
+    like: [['happy', 'この曲、好きなんだよね']],
+    dislike: [['troubled', 'にぎやかすぎるのは、ちょっと疲れちゃうかな']],
+    combo: [['excited', 'いい感じだね、そのままで大丈夫'], ['excited', 'きれいにつながってるね'], ['excited', 'すごいね、落ち着いてるのが分かるよ']],
+    miss: [['normal', '大丈夫、ゆっくりいこうね'], ['normal', '無理しないでね、次で合わせよう']],
+    climax: [['excited', 'ここ、いいところだね'], ['excited', '一緒に盛り上がろうか'], ['excited', 'ここは思いきっていこうね']],
+    last: [['normal', 'あと少しだね、最後まで一緒に'], ['normal', '最後まで楽しもうね']],
+    mvp: [['wink', '俺がMVP？ありがとね'], ['wink', '今日はたまたま調子がよかったかな']],
+    high: [['happy', 'いい演奏だったね、おつかれさま'], ['happy', '息が合ってたね、うれしいな']],
+    mid: [['happy', 'いい演奏だったよ。少し休んでもいいからね'], ['happy', '楽しかったね、もう一曲どうかな']],
+    low: [['troubled', '大丈夫、次はきっと合うよ'], ['troubled', '疲れてないかな？無理しないでね']],
+    fc: [['surprise', 'フルコンかな？すごいね、おつかれさま'], ['surprise', '全部つながったね、見ててうれしかったよ']],
+    levelup: [['happy', 'セッションLvが上がったね。ありがとね'], ['happy', '少しずつ合ってきたかな']],
+    likeup: [['wink', 'この曲、少し好きになってきたかな']],
+    overcome: [['happy', 'にぎやかだったけど、楽しかったよ'], ['happy', '苦手な曲も、一緒だと平気だったね']],
+    'song:wrath_of_the_thorn_king': [['happy', '茨の王の怒りは、ここに来たときの曲だからね']],
+    'song:altar_world_tree': [['happy', 'Altar of the World Tree、静かで落ち着くんだよね']],
+    'song:dullahan': [['happy', 'デュラハンのテーマ、重たいけど好きなんだよね']],
+    'song:crazy_party_night': [['happy', 'Crazy Party Night、最後までついていけたね']],
+  },
+});
+const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
+  'atsu-dra': {
+    play: [[['atsu', 'happy', '{c}、気合い入ってるな笑'], ['dra', 'happy', 'おう、負けないからな']], [['dra', 'happy', '{c}、ここ決めるんだな'], ['atsu', 'happy', 'おう、任せとけ！']]],
+    result: [[['atsu', 'happy', 'いい勝負だったな笑'], ['dra', 'wink', 'えへへ、楽しかったな']]],
+    gattai: [[['atsu', 'excited', '{c}、いくぞ！'], ['dra', 'excited', 'おう、全力だからな！']]],
+  },
+  'atsu-erubin': {
+    play: [[['erubin', 'happy', '{c}、いい感じだね'], ['atsu', 'happy', 'だろ笑']], [['atsu', 'happy', '{c}、ペース合ってるか？'], ['erubin', 'happy', '大丈夫、合ってるよ']]],
+    result: [[['atsu', 'happy', 'いいセッションだったな！'], ['erubin', 'wink', 'うん、おつかれさま']]],
+    gattai: [[['atsu', 'excited', '{c}、合わせるぞ！'], ['erubin', 'excited', 'うん、いこうか']]],
+  },
+  'atsu-kiki': {
+    play: [[['atsu', 'happy', '{c}、テンポ安定してるな笑'], ['kiki', 'happy', 'ありがとうございます♪']], [['kiki', 'happy', '{c}、次のサビ、思いきっていきましょう'], ['atsu', 'happy', 'いいな、攻めるか笑']]],
+    result: [[['atsu', 'happy', '今日はいい締めだったな！'], ['kiki', 'wink', 'はい、気持ちよかったでつ♪']]],
+    gattai: [[['atsu', 'excited', '{c}、ここ決めるぞ！'], ['kiki', 'excited', 'ちから全開でいきまつ♪']]],
+  },
+  'atsu-kyuko': {
+    play: [[['atsu', 'happy', '{c}、次どう来る？'], ['kyuko', 'happy', 'サビ前で一回引くよ〜']], [['kyuko', 'happy', '{c}、締め方きれいだね〜'], ['atsu', 'happy', 'だろ笑']]],
+    result: [[['atsu', 'happy', 'とりあえず、いい流れだったな笑'], ['kyuko', 'wink', 'ありがとん笑']]],
+    gattai: [[['atsu', 'excited', '{c}、締めるぞ笑'], ['kyuko', 'excited', 'おけ〜、いくよ〜']]],
+  },
+  'atsu-momosuke': {
+    play: [[['atsu', 'happy', '{c}、そこ走りすぎな笑'], ['momosuke', 'happy', 'ももは走ってないもん！！']], [['momosuke', 'happy', '{c}、ちゃんと見ててよね！！'], ['atsu', 'happy', '見てるって笑']]],
+    result: [[['atsu', 'happy', 'とりあえず、いいステージだったな笑'], ['momosuke', 'wink', 'でしょ！！もものおかげ♡']]],
+    gattai: [[['momosuke', 'excited', '{c}、ももに合わせて！！'], ['atsu', 'excited', 'よし、決めるぞ！']]],
+  },
+  'atsu-mua': {
+    play: [[['atsu', 'happy', '{c}、走りすぎるなよ笑'], ['mua', 'happy', '走ってないもん！ちょっとだけｗ']], [['mua', 'happy', '{c}、ここ合わせて！'], ['atsu', 'happy', 'おう、任せとけ！']]],
+    result: [[['atsu', 'happy', 'とりあえず、いいセッションだったな笑'], ['mua', 'wink', 'でしょ！また組も♪']]],
+    gattai: [[['atsu', 'excited', '{c}、ここ決めるぞ笑'], ['mua', 'excited', 'りょ！いっくよ〜♪']]],
+  },
+  'atsu-sorashido': {
+    play: [[['sorashido', 'happy', '{c}、ここのノーツ、計算済みだぜ・・・！'], ['atsu', 'happy', 'さすがだな笑']], [['sorashido', 'happy', '{c}との差、今日は2点だぜ笑'], ['atsu', 'happy', '細かすぎだろ笑']]],
+    result: [[['sorashido', 'happy', '2人で最高値だぜ・・・！'], ['atsu', 'wink', 'いい数字だったな笑']]],
+    gattai: [[['atsu', 'excited', '{c}、いくぞ！'], ['sorashido', 'excited', 'うぉぉぉ！ここだぜ！']]],
+  },
+  'dra-erubin': {
+    play: [[['erubin', 'happy', '{c}、無理しないでね'], ['dra', 'happy', '大丈夫だな、楽しいからな']], [['dra', 'happy', '{c}、カードと同じで、リズムも慣れだからな'], ['erubin', 'happy', 'ありがとね、先生']]],
+    result: [[['erubin', 'happy', 'いい演奏だったね'], ['dra', 'wink', 'えへへ、またやろうな']]],
+    gattai: [[['dra', 'excited', '{c}、いくからな'], ['erubin', 'excited', 'うん、一緒に']]],
+  },
+  'dra-kiki': {
+    play: [[['dra', 'happy', '{c}、落ち着いてるな'], ['kiki', 'happy', '{c}がいてくれるからでつ♪']], [['dra', 'happy', '{c}、ここでギャグを1つ……'], ['kiki', 'wink', '演奏中は、あと1回まででつ♪']]],
+    result: [[['dra', 'happy', 'いい演奏だったな、えへへ'], ['kiki', 'wink', 'ありがとうございまつ♪']]],
+    gattai: [[['kiki', 'excited', '{c}、いきましょう♪'], ['dra', 'excited', 'おう、全力だからな']]],
+  },
+  'dra-kyuko': {
+    play: [[['kyuko', 'happy', '{c}、ここからが山場だよ〜'], ['dra', 'happy', 'わかったな、気合い入れるくさ']], [['dra', 'happy', '{c}、よく先が読めるな'], ['kyuko', 'happy', '構成を見てるからね〜']]],
+    result: [[['kyuko', 'happy', '今日も気持ちよく流れたね〜'], ['dra', 'wink', 'こっちこそだな、えへへ']]],
+    gattai: [[['kyuko', 'excited', '{c}、いくよ〜'], ['dra', 'excited', 'おう、いくからな']]],
+  },
+  'dra-momosuke': {
+    play: [[['momosuke', 'happy', '{c}、ももの後ろでがんばって！！'], ['dra', 'happy', 'おう、ついていくからな']], [['dra', 'happy', '{c}、元気だな、えへへ'], ['momosuke', 'happy', 'アイドルは体力勝負なの！！']]],
+    result: [[['momosuke', 'happy', '{c}、ちゃんとついてこれたじゃん♡'], ['dra', 'wink', 'えへへ、楽しかったんだな']]],
+    gattai: [[['momosuke', 'excited', '{c}、ここ合わせて！！'], ['dra', 'excited', 'おう、いくくさ！']]],
+  },
+  'dra-mua': {
+    play: [[['mua', 'happy', '{c}、のってる〜？'], ['dra', 'happy', 'のってるくさ、えへへ']], [['dra', 'happy', '{c}、おでのギャグより盛り上がってるくさ'], ['mua', 'happy', 'ギャグは置いといて、叩こ♪']]],
+    result: [[['dra', 'happy', '楽しかったな、{c}'], ['mua', 'wink', 'また一緒に叩こうね♪']]],
+    gattai: [[['mua', 'excited', '{c}、いっくよ〜！'], ['dra', 'excited', 'おでも全力だからな！']]],
+  },
+  'dra-sorashido': {
+    play: [[['sorashido', 'happy', '{c}、ここの密度、すごいぜ・・・！'], ['dra', 'happy', 'おでも負けないからな']], [['dra', 'happy', '{c}、楽しそうだな'], ['sorashido', 'happy', '楽しいぜ笑']]],
+    result: [[['sorashido', 'happy', '2人の数字、いい感じだぜ・・・！'], ['dra', 'wink', 'えへへ、うれしいな']]],
+    gattai: [[['sorashido', 'excited', 'いくぜ、{c}！最高値を出すぜ笑'], ['dra', 'excited', 'おう、ワイもいくくさ！']]],
+  },
+  'erubin-kiki': {
+    play: [[['erubin', 'happy', '{c}、無理してないかな？'], ['kiki', 'happy', '大丈夫でつ、楽しいです♪']], [['kiki', 'happy', '{c}、ここは静かにきれいにいきましょう'], ['erubin', 'happy', 'うん、そうしよう']]],
+    result: [[['erubin', 'happy', '落ち着いたいい演奏だったね'], ['kiki', 'wink', 'はい、ほっとしました♪']]],
+    gattai: [[['kiki', 'excited', '{c}、いきましょう♪'], ['erubin', 'excited', 'うん、合わせるね']]],
+  },
+  'erubin-kyuko': {
+    play: [[['erubin', 'happy', '{c}、よく曲を見てるね'], ['kyuko', 'happy', '構成を見るのが好きなんだよね〜']], [['kyuko', 'happy', '{c}、ここは落ち着いていこ〜'], ['erubin', 'happy', 'うん、そうしよう']]],
+    result: [[['erubin', 'happy', '気持ちのいい演奏だったね'], ['kyuko', 'wink', 'ありがとん笑']]],
+    gattai: [[['kyuko', 'excited', '{c}、せーので〜'], ['erubin', 'excited', 'うん、せーの']]],
+  },
+  'erubin-momosuke': {
+    play: [[['erubin', 'happy', '{c}、元気だね'], ['momosuke', 'happy', '{c}ももっと盛り上がって！！']], [['momosuke', 'happy', '{c}、ペース大丈夫？'], ['erubin', 'happy', 'うん、いいペースだよ']]],
+    result: [[['erubin', 'happy', 'にぎやかで楽しかったよ'], ['momosuke', 'wink', '{c}もいい感じだったよ♡']]],
+    gattai: [[['momosuke', 'excited', '{c}、見せ場だよ！！'], ['erubin', 'excited', 'うん、いこうか']]],
+  },
+  'erubin-mua': {
+    play: [[['erubin', 'happy', '{c}、楽しそうだね'], ['mua', 'happy', '{c}も一緒に楽しも♪']], [['mua', 'happy', '{c}、ついてこれてる？'], ['erubin', 'happy', 'うん、ちょうどいいよ']]],
+    result: [[['erubin', 'happy', '楽しかったね、おつかれさま'], ['mua', 'wink', 'おつかれ〜！またやろ♪']]],
+    gattai: [[['mua', 'excited', '{c}、いくよ！'], ['erubin', 'excited', 'うん、一緒にね']]],
+  },
+  'erubin-sorashido': {
+    play: [[['sorashido', 'happy', '{c}、ここの盛り上がり、計算済みだぜ・・・！'], ['erubin', 'happy', '頼もしいね']], [['erubin', 'happy', '{c}、楽しそうだね'], ['sorashido', 'happy', '楽しいぜ笑']]],
+    result: [[['sorashido', 'happy', '2人のデータ、最高だぜ・・・！'], ['erubin', 'wink', 'うん、おつかれさま']]],
+    gattai: [[['sorashido', 'excited', 'うぉぉぉ！{c}、合わせるぜ！'], ['erubin', 'excited', 'うん、一緒にいこう']]],
+  },
+  'kiki-kyuko': {
+    play: [[['kyuko', 'happy', '{c}、ここから盛り上がるよ〜'], ['kiki', 'happy', 'ありがとうございまつ、気をつけますね']], [['kiki', 'happy', '叩くのは私、読むのは{c}でつ♪'], ['kyuko', 'happy', 'おけ〜、次はサビ前だよ〜']]],
+    result: [[['kyuko', 'happy', '構成どおりきれいにいけたね〜'], ['kiki', 'wink', '{c}のおかげでつ♪']]],
+    gattai: [[['kyuko', 'excited', '{c}、せーので〜'], ['kiki', 'excited', 'はい、せーの♪']]],
+  },
+  'kiki-momosuke': {
+    play: [[['momosuke', 'happy', '{c}、ももの踊り見てて！！'], ['kiki', 'happy', 'はい、とってもかわいいでつ♪']], [['kiki', 'happy', '{c}、ここは息をそろえましょう'], ['momosuke', 'happy', 'まかせて！！']]],
+    result: [[['kiki', 'happy', 'とってもいいステージでした♪'], ['momosuke', 'wink', 'ももと{c}なら当然だよ♡']]],
+    gattai: [[['momosuke', 'excited', '{c}、ここだよ！！'], ['kiki', 'excited', 'はい、思いきっていきまつ♪']]],
+  },
+  'kiki-mua': {
+    play: [[['mua', 'happy', '{c}、サビ前そろえよ！'], ['kiki', 'happy', 'はい、合わせまつ♪']], [['kiki', 'happy', '{c}、いい流れでつね♪'], ['mua', 'happy', 'でしょ！このままいこ♪']]],
+    result: [[['mua', 'happy', '今日のあたしたち、まぢぴったりぢゃん♪'], ['kiki', 'wink', 'ふふ、また一緒に演奏しましょうね♪']]],
+    gattai: [[['mua', 'excited', '{c}、いくよ！'], ['kiki', 'excited', 'せーの、でつ♪']]],
+  },
+  'kiki-sorashido': {
+    play: [[['sorashido', 'happy', '{c}、ここの判定、ぴったりだぜ！'], ['kiki', 'happy', 'ほんとですか？うれしいでつ♪']], [['kiki', 'happy', '{c}、次はどう来ますか？'], ['sorashido', 'happy', '計算済みだぜ、右から来るぜ笑']]],
+    result: [[['sorashido', 'happy', '2人の数字、きれいにそろったぜ・・・！'], ['kiki', 'wink', '計算どおりでしたか？♪']]],
+    gattai: [[['sorashido', 'excited', 'うぉぉぉ！{c}、ここだぜ！'], ['kiki', 'excited', 'はい、いきまつ♪']]],
+  },
+  'kyuko-momosuke': {
+    play: [[['kyuko', 'happy', '{c}、ここサビ前だよ〜'], ['momosuke', 'happy', '知ってる！！ももが一番かわいくなるとこ♡']], [['momosuke', 'happy', '{c}、もものダンスどう？'], ['kyuko', 'happy', 'ほい、リズムぴったりだよ〜']]],
+    result: [[['kyuko', 'happy', '2人でいい流れだったね〜'], ['momosuke', 'wink', '{c}、ももについてこれてえらい♡']]],
+    gattai: [[['momosuke', 'excited', '{c}、いくよ！！'], ['kyuko', 'excited', 'おけ〜、せーの！']]],
+  },
+  'kyuko-mua': {
+    play: [[['kyuko', 'happy', '{c}、サビ前で一回引くよ〜'], ['mua', 'happy', 'おっけ！あたし合わせる♪']], [['mua', 'happy', '{c}、余裕そうぢゃん！'], ['kyuko', 'happy', 'ほい、構成は読めてるよ〜']]],
+    result: [[['kyuko', 'happy', 'いい流れだったね〜、ありがとん笑'], ['mua', 'wink', 'こっちこそ！楽しかった♪']]],
+    gattai: [[['kyuko', 'excited', '{c}、ここだよ〜'], ['mua', 'excited', 'まかせて！せーの♪']]],
+  },
+  'kyuko-sorashido': {
+    play: [[['sorashido', 'happy', '{c}、ここの構成、計算どおりだぜ・・・！'], ['kyuko', 'happy', '読みどおりだね〜']], [['kyuko', 'happy', 'だいたいこのへんでサビだよ〜'], ['sorashido', 'happy', '正確には3小節あとだぜ笑']]],
+    result: [[['kyuko', 'happy', '構成も計算もぴったりだったね〜'], ['sorashido', 'wink', 'うぉぉぉ！最高のデータだぜ・・・！']]],
+    gattai: [[['kyuko', 'excited', '{c}、いくよ〜'], ['sorashido', 'excited', 'うぉぉぉ！いくぜ！']]],
+  },
+  'momosuke-mua': {
+    play: [[['momosuke', 'happy', '{c}、ももについてきてね！！'], ['mua', 'happy', 'えー、あたしが先頭なんだけどｗ']], [['mua', 'wink', '{c}、そのポーズあたしが教えたやつぢゃん？ｗ'], ['momosuke', 'happy', 'ももがアレンジしたから、もものだよ！！']]],
+    result: [[['momosuke', 'happy', '2人でセンターだったね♡'], ['mua', 'wink', 'それな！最高のステージぢゃん♪']]],
+    gattai: [[['mua', 'excited', '{c}、ここで決めよ！'], ['momosuke', 'excited', 'ダブルセンターいくよ！！']]],
+  },
+  'momosuke-sorashido': {
+    play: [[['sorashido', 'happy', '{c}、ここの盛り上がり、計算済みだぜ・・・！'], ['momosuke', 'happy', 'ももが盛り上げるから計算いらないよw']], [['sorashido', 'happy', '{c}のミス、今日はまだ0だぜ！'], ['momosuke', 'troubled', '数えなくていいから！！w']]],
+    result: [[['sorashido', 'happy', '今日のステージ、表にしたら満点だぜ・・・！'], ['momosuke', 'wink', '当然でしょ！！♡']]],
+    gattai: [[['sorashido', 'excited', '{c}、ここが計算の答えだぜ！'], ['momosuke', 'excited', 'ももの見せ場だよ！！']]],
+  },
+  'mua-sorashido': {
+    play: [[['sorashido', 'happy', '{c}、ここから密度が上がるぜ！'], ['mua', 'happy', 'まぢ！？がんばる♪']], [['sorashido', 'happy', '{c}の勝ち数、表に足しとくぜ笑'], ['mua', 'excited', 'やった！今日も勝つ♪']]],
+    result: [[['sorashido', 'happy', '今日の2人、表にしたら最高値だぜ！'], ['mua', 'wink', 'すごっ！また一緒にやろ♪']]],
+    gattai: [[['sorashido', 'excited', 'うぉぉぉ！{c}、いくぜ！'], ['mua', 'excited', 'いっくよ〜♪']]],
+  },
+});
 
 // ---- part: 33-rhythm-buddy-talk.jsx ----
 // ==================== 呼んだマスモンのおしゃべり(2026-10-07・ユーザー指示「マスモンもチャットで話してくる」) ====================
@@ -36957,6 +37342,516 @@ function PlayerRankUpFx({ kind = 'beat', from = 1, to = 1, gains = [], onClose =
   );
 }
 
+// ---- part: 44-growth-fx.jsx ----
+// ==================== 上がる値の演出(2026-11-07 社長「色んな親密度があるけど、アイテムであがるものなど、もっと変動の演出をつけたい」) ====================
+// 演出担当ハナビ。案と止め絵: docs/progress/growth-fx/PLAN.md(社長が3段・色・「小は全部の行動で出す」を選んだ)
+// ★見た目だけ。保存のキー・値の計算・1日の上限には一切触らない。演出を見たかどうかも保存しない(取りこぼしても値は正しい)。
+// ★画面を切り替えない・ゲームの状態を書き換えない。出してよい画面(GROWTH_FX_CALM_SCREENS)にいるときだけ出し、
+//   演奏中・マルチ中・バトル中・お話の最中は出さずに貯めておき、出してよい画面へ来たときに出す。
+// 強さの段:
+//   small … 行動でちょっと上がった。右上の札(1.9秒)。同じ値・同じ相手が続いたら1枚にまとめて数字を足す。押せない(下の画面の操作を邪魔しない)
+//   item  … アイテムを使った。真ん中のカード(約3.4秒・押せばすぐ閉じる)
+//   level … Lvが上がった。画面いっぱい(押すと最後の形へ → もう1回で閉じる)
+// 軽さ: バトル設定「画面の軽さ」と端末の「動きを減らす」に合わせる(full / reduced / minimal)。
+// 呼び方: growthFxPush({ tier, kind, ... })。値ごとの便利な呼び方は下の growthFxAssistantBond など。
+
+const GROWTH_FX_KINDS = Object.freeze({
+  bond:    { color: '#f472b6', deep: '#9d174d', icon: '💗', particle: '♥', label: '仲良し度' },
+  friend:  { color: '#fb923c', deep: '#9a3412', icon: '🤝', particle: '✦', label: '友情Lv' },
+  star:    { color: '#facc15', deep: '#a16207', icon: '★', particle: '★', label: '絆Lv' },
+  session: { color: '#c084fc', deep: '#6b21a8', icon: '🎤', particle: '♪', label: 'セッションLv' },
+  beat:    { color: '#a3e635', deep: '#3f6212', icon: '🎵', particle: '♪', label: 'ビートLv' },
+  breeder: { color: '#60a5fa', deep: '#1e40af', icon: '🛡️', particle: '◆', label: 'ブリーダーLv' },
+});
+const growthFxKind = (kind) => GROWTH_FX_KINDS[kind] || GROWTH_FX_KINDS.bond;
+
+// 出してよい画面。ここに無い画面(バトル・モンヒロビート・マルチ・カード対戦・お話・結果画面など)では出さずに貯める
+const GROWTH_FX_CALM_SCREENS = Object.freeze(new Set([
+  'HOME', 'PROFILE', 'ITEM_INVENTORY', 'GIFT_BOX', 'MISSIONS', 'BREEDER_MARKET', 'MB_MANAGEMENT', 'MASU_MONS',
+  'OWNED_MONSTERS', 'MONSTER_DEX', 'MONSTER_DEX_DETAIL', 'MONSTER_LIST_MENU', 'FRIENDS', 'ASSISTANT_SELECT',
+  'MASU_ENHANCE', 'MASU_AUTO_ENHANCE', 'MASU_FUSION', 'MASU_DONATION', 'MASU_OFFERING', 'MASU_REBIRTH', 'MASU_REGENERATION',
+  'MASU_REGENERATION_DETAIL', 'MASU_REINCARNATE', 'MASU_SOUL_RANK', 'MASU_SOUL_TRAITS', 'MASU_TRANSCENDENCE', 'MASU_TRANSCEND_ENHANCE',
+]));
+// 画面の上にこれが出ているあいだは出さない(お話・ほかの大きな演出・案内)。中・大の段だけ止める目印もある(おしゃべりの画面)
+const GROWTH_FX_HOLD_ALL_SELECTOR = '[data-event-story],[data-story-stage],[data-story-sheet],[data-player-rank-up-fx]';
+const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat]';
+const GROWTH_FX_SMALL_MS = 1900;
+const GROWTH_FX_ITEM_MS = 3400;
+const GROWTH_FX_SMALL_MAX = 3;       // 一度に並べる札の数
+const GROWTH_FX_QUEUE_MAX = 24;      // 貯めておく数の上限(古いものから捨てる。値は保存済みなので見えなくなるだけ)
+
+// ---------- 貯めておく場所(画面の外に置く。React の状態ではないので、どこから呼んでも描画を起こさない) ----------
+const GROWTH_FX_STORE = { small: [], sheets: [], seq: 0, listeners: new Set() };
+const growthFxEmit = () => { GROWTH_FX_STORE.listeners.forEach(fn => { try { fn(); } catch {} }); };
+const growthFxSubscribe = (fn) => { GROWTH_FX_STORE.listeners.add(fn); return () => GROWTH_FX_STORE.listeners.delete(fn); };
+const growthFxPct = (v) => { const n = Number(v); return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0; };
+const growthFxNum = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+
+// ev: { tier:'small'|'item'|'level', kind, key?, who?, name?, gain?, pctFrom?, pctTo?, ... }
+const growthFxPush = (ev) => {
+  if (!ev || typeof ev !== 'object') return;
+  const tier = ev.tier === 'item' || ev.tier === 'level' ? ev.tier : 'small';
+  if (tier === 'small') {
+    const gain = growthFxNum(ev.gain);
+    if (gain <= 0) return;
+    const key = String(ev.key || `${ev.kind}:${ev.who || ''}`);
+    const list = GROWTH_FX_STORE.small;
+    const same = list.find(c => c.key === key);
+    // 続けて上がったら1枚にまとめる(数字を足し上げ、ゲージは今の位置へ)。出し直しの合図(rev)を進めて、消える時間を延ばす
+    if (same) { same.gain += gain; same.pctTo = growthFxPct(ev.pctTo); same.rev += 1; }
+    else {
+      list.push({ id: ++GROWTH_FX_STORE.seq, rev: 0, key, kind: ev.kind, name: String(ev.name || ''), gain,
+        pctFrom: growthFxPct(ev.pctFrom), pctTo: growthFxPct(ev.pctTo) });
+      if (list.length > GROWTH_FX_QUEUE_MAX) list.splice(0, list.length - GROWTH_FX_QUEUE_MAX);
+    }
+  } else {
+    // 同じ値の Lvアップが続いたら(貯めているあいだに2つ上がったなど)、新しいほうへまとめる(from は古いほうのまま)
+    const sheets = GROWTH_FX_STORE.sheets;
+    const mergeKey = tier === 'level' ? String(ev.key || `${ev.kind}:${ev.who || ''}`) : null;
+    const prev = mergeKey ? sheets.find((s, i) => i > 0 && s.tier === 'level' && s.key === mergeKey) : null;
+    if (prev) Object.assign(prev, { ...ev, tier, key: mergeKey, levelFrom: prev.levelFrom, gains: [...(prev.gains || []), ...(ev.gains || [])] });
+    else {
+      sheets.push({ ...ev, tier, key: mergeKey, id: ++GROWTH_FX_STORE.seq });
+      if (sheets.length > GROWTH_FX_QUEUE_MAX) sheets.splice(0, sheets.length - GROWTH_FX_QUEUE_MAX);
+    }
+  }
+  growthFxEmit();
+};
+const growthFxDropSmall = (id) => { GROWTH_FX_STORE.small = GROWTH_FX_STORE.small.filter(c => c.id !== id); growthFxEmit(); };
+const growthFxDropSheet = (id) => { GROWTH_FX_STORE.sheets = GROWTH_FX_STORE.sheets.filter(s => s.id !== id); growthFxEmit(); };
+
+// ---------- 値ごとの呼び方 ----------
+// 助手の顔の絵(表情つき)。登録が無ければ null
+const growthFxAssistantFace = (assistantId, expression = 'happy') => {
+  const list = typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST) ? ASSISTANT_LIST : [];
+  const who = list.find(a => a && a.id === assistantId);
+  if (!who || !who.imageDir || !who.imagePrefix) return null;
+  return `${who.imageDir}/${who.imagePrefix}_${expression}.PNG`;
+};
+const growthFxAssistantName = (assistantId) => {
+  const list = typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST) ? ASSISTANT_LIST : [];
+  const who = list.find(a => a && a.id === assistantId);
+  return (who && who.name) || '';
+};
+// 仲良し度の、いまの段の中での位置(0〜100)。段の表は助手ごとに同じ点数(ASSISTANT_BOND_LEVELS)
+const growthFxAssistantBondPct = (points) => {
+  const p = growthFxNum(points);
+  const stage = typeof assistantBondStage === 'function' ? assistantBondStage(p) : null;
+  const next = typeof assistantBondNext === 'function' ? assistantBondNext(p) : null;
+  if (!stage) return 0;
+  if (!next) return 100;
+  const span = Math.max(1, next.need - growthFxNum(stage.need));
+  return growthFxPct(((p - growthFxNum(stage.need)) / span) * 100);
+};
+// 助手の仲良し度が上がった(60-app.jsx の addAssistantBondFor から。値と保存はそちらで済んでいる)
+const growthFxAssistantBond = (assistantId, beforePoints, afterPoints) => {
+  const before = growthFxNum(beforePoints), after = growthFxNum(afterPoints);
+  if (!(after > before)) return;
+  const name = growthFxAssistantName(assistantId);
+  const lvOf = (p) => (typeof assistantBondLevel === 'function' ? assistantBondLevel(p) : 1);
+  const levelFrom = lvOf(before), levelTo = lvOf(after);
+  growthFxPush({ tier: 'small', kind: 'bond', who: assistantId, name, gain: after - before,
+    pctFrom: levelTo > levelFrom ? 0 : growthFxAssistantBondPct(before), pctTo: growthFxAssistantBondPct(after) });
+  if (levelTo <= levelFrom) return;
+  // 新しく開いたもの(プロフィールの「ごほうび一覧」と同じ表から。56-screen-profile.jsx の assistantBondRewardRows)
+  const gains = [];
+  const rows = typeof assistantBondRewardRows === 'function' ? assistantBondRewardRows(assistantId) : [];
+  for (let lv = levelFrom + 1; lv <= levelTo; lv++) {
+    const row = rows.find(r => r && r.level === lv);
+    if (!row) continue;
+    if (row.rewards && row.rewards.length) gains.push({ icon: '🎁', text: 'ごほうび', note: `${row.rewards.join('・')}(ギフトボックスへ)` });
+    (row.frames || []).forEach(frame => gains.push({ icon: '🖼️', text: (frame && frame.name) || `${name}の飾り枠`, note: 'プロフィールで使える', isNew: true }));
+    if (row.callStyle) gains.push({ icon: '💬', text: '呼ばれ方を自由に決められる', note: 'プロフィールの助手の欄から', isNew: true });
+  }
+  const stage = typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(levelTo, assistantId) : null;
+  growthFxPush({ tier: 'level', kind: 'bond', who: assistantId, levelFrom, levelTo,
+    title: '仲良し度 UP!', sub: `${name} との仲良し度が Lv.${levelTo} になった${stage && stage.title ? `(${stage.title})` : ''}`,
+    face: growthFxAssistantFace(assistantId, 'excited'), gains });
+};
+// マスモンに絆経験値のアイテムを使った(60-app.jsx の useBondXpTickets から)
+const growthFxMasuBondItem = ({ masuName, image, itemName, itemEmoji, count, gain, before, after }) => {
+  if (!before || !after || !(growthFxNum(gain) > 0)) return;
+  const pct = (info) => growthFxPct((growthFxNum(info.xpIntoLevel) / Math.max(1, growthFxNum(info.xpForNext))) * 100);
+  growthFxPush({ tier: 'item', kind: 'star', title: `${masuName} に ${itemName}！`, item: `${itemEmoji || ''} ${itemName} ×${count}`,
+    faces: image ? [image] : [], faceRound: true,
+    rows: [{ kind: 'star', label: '絆Lv', levelFrom: before.level, levelTo: after.level, pctFrom: pct(before), pctTo: pct(after), gain, unit: '絆経験値' }] });
+};
+// ブリーダーLvが上がった(60-app.jsx でブリーダー経験値を足した所から)。経験値の伸びは結果画面のバーで見せているので、ここは Lvアップだけ
+const growthFxBreederLevel = (levelFrom, levelTo, breederName = '') => {
+  const a = growthFxNum(levelFrom), b = growthFxNum(levelTo);
+  if (!(b > a)) return;
+  growthFxPush({ tier: 'level', kind: 'breeder', who: 'self', levelFrom: a, levelTo: b,
+    title: 'ブリーダーLv UP!', sub: `${breederName ? `${breederName} の` : ''}ブリーダーLvが Lv.${b} になった`, gains: [] });
+};
+
+// ---------- 公開前の値の呼び出し口(呼ぶのはそれぞれの担当。公開の印が真になるまで呼ばれない) ----------
+// 友情Lv(助手どうし・ナカヨシ)。points は2人の友情の点数。段の表は ASSISTANT_PEER_BOND_LEVELS
+const growthFxPeerPct = (points) => {
+  const list = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' && Array.isArray(ASSISTANT_PEER_BOND_LEVELS) ? ASSISTANT_PEER_BOND_LEVELS : [];
+  const p = growthFxNum(points);
+  let cur = list[0], next = null;
+  for (let i = 0; i < list.length; i++) { if (p >= growthFxNum(list[i].min)) { cur = list[i]; next = list[i + 1] || null; } }
+  if (!cur) return 0;
+  if (!next) return 100;
+  return growthFxPct(((p - growthFxNum(cur.min)) / Math.max(1, growthFxNum(next.min) - growthFxNum(cur.min))) * 100);
+};
+const growthFxPeerLevelName = (level, lifeName = true) => {
+  const list = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' && Array.isArray(ASSISTANT_PEER_BOND_LEVELS) ? ASSISTANT_PEER_BOND_LEVELS : [];
+  const row = list.find(r => r && r.level === level);
+  return row ? ((lifeName && row.lifeName) || row.name || '') : '';
+};
+// 2人の友情Lvが上がった(どの道で上がっても、assistantPeerGain の結果 { pair, levelBefore, levelAfter } を渡せばよい)
+const growthFxPeerLevel = ({ pair, levelBefore, levelAfter } = {}) => {
+  if (!Array.isArray(pair) || pair.length !== 2 || !(growthFxNum(levelAfter) > growthFxNum(levelBefore))) return;
+  const [a, b] = pair;
+  const stage = growthFxPeerLevelName(levelAfter);
+  growthFxPush({ tier: 'level', kind: 'friend', who: [a, b].sort().join('-'), levelFrom: levelBefore, levelTo: levelAfter,
+    title: '友情Lv UP!', sub: `${growthFxAssistantName(a)} と ${growthFxAssistantName(b)} の友情Lvが Lv.${levelAfter} になった${stage ? `(${stage})` : ''}`,
+    face: growthFxAssistantFace(a, 'excited'), gains: [] });
+};
+// 2人に品物を渡した。名前と絵は持ち物のデータ(BREEDER_MARKET_ITEMS の name・emoji)から取る(種類・名前はあとで変わるため書き込まない)
+//   reaction … 'like' | 'dislike' | null(好き嫌いが入ったら渡す) / playerGain … あなたとの仲良し度の増えた量(2人それぞれ)
+const growthFxPeerItem = ({ pair, itemId, pointsBefore, pointsAfter, levelBefore, levelAfter, reaction = null, playerGain = 0 } = {}) => {
+  if (!Array.isArray(pair) || pair.length !== 2) return;
+  const gain = growthFxNum(pointsAfter) - growthFxNum(pointsBefore);
+  if (!(gain > 0) && !(growthFxNum(playerGain) > 0)) return;
+  const items = typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : [];
+  const item = items.find(i => i && i.id === itemId) || {};
+  const [a, b] = pair;
+  const rows = [];
+  if (gain > 0) rows.push({ kind: 'friend', label: '2人の友情Lv', levelFrom: levelBefore, levelTo: levelAfter,
+    pctFrom: growthFxPeerPct(pointsBefore), pctTo: growthFxPeerPct(pointsAfter), gain });
+  if (growthFxNum(playerGain) > 0) rows.push({ kind: 'bond', label: 'あなたとの仲良し度(2人とも)', pctFrom: 0, pctTo: 100, gain: growthFxNum(playerGain) });
+  const face = (id) => growthFxAssistantFace(id, reaction === 'dislike' ? 'troubled' : reaction === 'like' ? 'excited' : 'happy');
+  growthFxPush({ tier: 'item', kind: 'friend', title: `${growthFxAssistantName(a)} と ${growthFxAssistantName(b)} に ${item.name || ''}！`,
+    item: `${item.emoji || ''} ${item.name || ''} ×1`, faces: [face(a), face(b)].filter(Boolean), reaction, rows });
+};
+// セッションLv(モンヒロビートの助手・マモリ)。マルチの結果で決まるが、マルチの最中は出さず、出してよい画面へ戻ってから出す。
+//   何人も一度に上がったら1回にまとめる(list に [{ assistantId, levelBefore, levelAfter, tickets }] を全部入れて呼ぶ)
+const growthFxSessionLevel = (list = []) => {
+  const ups = (Array.isArray(list) ? list : []).filter(u => u && growthFxNum(u.levelAfter) > growthFxNum(u.levelBefore));
+  if (!ups.length) return;
+  const top = ups[0];
+  const gains = ups.map(u => ({ icon: '🎤', text: `${growthFxAssistantName(u.assistantId)} セッションLv.${u.levelAfter}`,
+    note: growthFxNum(u.tickets) > 0 ? `セッション券 ×${growthFxNum(u.tickets)}` : '' }));
+  growthFxPush({ tier: 'level', kind: 'session', who: ups.map(u => u.assistantId).join('+'), levelFrom: top.levelBefore, levelTo: top.levelAfter,
+    title: 'セッションLv UP!', sub: ups.length > 1 ? 'いっしょに演奏した助手のセッションLvが上がった' : `${growthFxAssistantName(top.assistantId)} とのセッションLvが Lv.${top.levelAfter} になった`,
+    face: growthFxAssistantFace(top.assistantId, 'excited'), gains: ups.length > 1 || gains[0].note ? gains : [] });
+};
+
+// ---------- 見た目 ----------
+const GROWTH_FX_CSS = `
+.mh-gfx-chips{position:fixed;top:calc(env(safe-area-inset-top,0px) + 52px);right:10px;z-index:44000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
+.mh-gfx-chip{position:relative;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;border-radius:999px;background:linear-gradient(90deg,#1e1b2ef0,#0f172af0);
+  border:1.5px solid var(--gc);box-shadow:0 0 14px color-mix(in srgb,var(--gc) 40%,transparent);font-weight:900;font-size:11px;color:#fff;
+  animation:mhGfxChipIn .35s cubic-bezier(.2,1.6,.4,1) both}
+.mh-gfx-chip.out{animation:mhGfxChipOut .3s ease-in forwards}
+.mh-gfx-chip .ico{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--gc) 30%,transparent);font-size:13px;color:var(--gc)}
+.mh-gfx-chip .ico.beat{animation:mhGfxBeat .5s ease-out}
+.mh-gfx-chip .who{font-size:9px;color:#cbd5e1;line-height:1.1;max-width:9.5em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mh-gfx-chip .bar{width:56px;height:5px;border-radius:9px;background:#334155;overflow:hidden;margin-top:2px}
+.mh-gfx-chip .bar i{display:block;height:100%;background:var(--gc);transition:width .7s ease-out}
+.mh-gfx-chip .num{color:var(--gc);font-size:14px;font-variant-numeric:tabular-nums}
+.mh-gfx-chip .num.pop{animation:mhGfxPop .4s cubic-bezier(.2,1.8,.4,1)}
+.mh-gfx-chip .pt{position:absolute;left:12px;top:4px;font-size:12px;color:var(--gc);text-shadow:0 0 6px var(--gc);animation:mhGfxFloat 1.1s ease-out both}
+@keyframes mhGfxChipIn{from{transform:translateX(26px) scale(.6);opacity:0}to{transform:none;opacity:1}}
+@keyframes mhGfxChipOut{to{transform:translateY(-12px);opacity:0}}
+@keyframes mhGfxBeat{40%{transform:scale(1.45)}}
+@keyframes mhGfxPop{from{transform:scale(.3);opacity:0}to{transform:none;opacity:1}}
+@keyframes mhGfxFloat{0%{transform:translate(0,0) scale(.4);opacity:0}20%{opacity:1}100%{transform:translate(var(--dx),-46px) scale(.7);opacity:0}}
+.mh-gfx-sheet{position:fixed;inset:0;z-index:44500;display:flex;align-items:center;justify-content:center;padding:16px;cursor:pointer}
+.mh-gfx-sheet.item{background:#0b102666}
+.mh-gfx-card{position:relative;width:min(340px,100%);border-radius:22px;padding:14px 16px 14px;text-align:center;color:#fff;
+  background:linear-gradient(180deg,#1f1633f5,#0f172af5);border:2px solid var(--gc);box-shadow:0 0 36px color-mix(in srgb,var(--gc) 40%,transparent),0 12px 40px #0009;
+  animation:mhGfxCardIn .45s cubic-bezier(.2,1.5,.4,1) both}
+.mh-gfx-card .faces{display:flex;justify-content:center;gap:4px;height:64px}
+.mh-gfx-card .faces img{height:116px;margin-top:-60px;object-fit:contain;filter:drop-shadow(0 6px 10px #0008);animation:mhGfxHop .5s .4s ease-out both}
+.mh-gfx-card .faces img.round{height:92px;width:92px;margin-top:-46px;border-radius:20px;border:2px solid var(--gc);background:#0f172a;object-fit:cover}
+.mh-gfx-card .ttl{font-weight:900;font-size:14px;margin-top:4px;line-height:1.35}
+.mh-gfx-card .itm{display:inline-flex;gap:6px;font-size:11px;font-weight:900;color:#e2e8f0;background:#ffffff14;border-radius:999px;padding:3px 10px;margin-top:6px;animation:mhGfxPop .45s .1s ease-out both}
+.mh-gfx-card .tag{display:inline-block;font-size:10px;font-weight:900;padding:1px 8px;border-radius:999px;margin-left:4px;background:#ffffff22}
+.mh-gfx-card .tag.like{background:#f472b6;color:#3b0a24}.mh-gfx-card .tag.dislike{background:#64748b}
+.mh-gfx-row{display:flex;align-items:center;gap:8px;margin-top:10px;text-align:left}
+.mh-gfx-row .ico{font-size:18px;width:26px;text-align:center;color:var(--rc)}
+.mh-gfx-row .lab{font-size:11px;font-weight:900;color:#cbd5e1}
+.mh-gfx-row .lab em{font-style:normal;color:var(--rc)}
+.mh-gfx-row .lab .up{margin-left:4px;font-size:10px;background:var(--rc);color:#111;border-radius:6px;padding:0 5px;animation:mhGfxPop .35s cubic-bezier(.2,1.8,.4,1) both}
+.mh-gfx-gauge{height:10px;border-radius:9px;background:#334155;position:relative;overflow:hidden;border:1px solid #fff2;margin-top:3px}
+.mh-gfx-gauge i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,color-mix(in srgb,var(--rc) 65%,#000),var(--rc))}
+.mh-gfx-row .val{font-weight:900;font-size:18px;color:var(--rc);min-width:64px;text-align:right;font-variant-numeric:tabular-nums;line-height:1.1}
+.mh-gfx-row .val small{display:block;font-size:9px;color:#94a3b8}
+.mh-gfx-hint{font-size:10px;color:#94a3b8;margin-top:10px}
+.mh-gfx-burst{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none}
+.mh-gfx-burst span{position:absolute;color:var(--gc);text-shadow:0 0 10px var(--gc);animation:mhGfxBurst 1.2s var(--d) cubic-bezier(.1,.8,.3,1) both}
+@keyframes mhGfxBurst{0%{transform:translate(-50%,-50%) scale(.2);opacity:0}15%{opacity:1}100%{transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) rotate(var(--r));opacity:0}}
+@keyframes mhGfxCardIn{from{transform:translateY(30px) scale(.7);opacity:0}to{transform:none;opacity:1}}
+@keyframes mhGfxHop{0%{transform:translateY(14px);opacity:0}60%{transform:translateY(-8px);opacity:1}100%{transform:none}}
+.mh-gfx-sheet.level{background:radial-gradient(circle at 50% 38%,color-mix(in srgb,var(--gc) 36%,transparent) 0%,#0b1026f0 62%);animation:mhGfxFade .3s both;overflow:hidden}
+.mh-gfx-rays{position:absolute;left:50%;top:38%;width:170vmax;height:170vmax;transform:translate(-50%,-50%);pointer-events:none;
+  background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--gc) 14%,transparent) 0 8deg,transparent 8deg 22deg);animation:mhGfxSpin 12s linear infinite;
+  -webkit-mask:radial-gradient(circle,#000 0 20%,transparent 60%);mask:radial-gradient(circle,#000 0 20%,transparent 60%)}
+.mh-gfx-lv{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;margin-top:-16vh}
+.mh-gfx-lv .left{display:flex;flex-direction:column;align-items:center}
+.mh-gfx-emblem{position:relative;width:140px;height:140px;display:grid;place-items:center;animation:mhGfxEm .7s .1s cubic-bezier(.2,1.6,.4,1) both}
+.mh-gfx-emblem svg{position:absolute;inset:0;width:140px;height:140px;filter:drop-shadow(0 0 20px var(--gc))}
+.mh-gfx-emblem .n{position:relative;font-weight:900;font-size:40px;line-height:1;padding-top:6px;text-shadow:0 2px 0 var(--gd),0 0 12px #fff;text-align:center;color:#fff}
+.mh-gfx-emblem .n small{display:block;font-size:13px;margin-bottom:-2px}
+.mh-gfx-ring{position:absolute;left:50%;top:50%;width:140px;height:140px;border-radius:50%;border:4px solid #fff;transform:translate(-50%,-50%);animation:mhGfxRing .9s .5s ease-out both;pointer-events:none}
+.mh-gfx-lv .ttl{font-weight:900;font-size:26px;letter-spacing:.06em;margin-top:6px;color:#fff;text-shadow:0 0 14px var(--gc),0 3px 0 #0006;animation:mhGfxPop .45s .6s cubic-bezier(.2,1.8,.4,1) both}
+.mh-gfx-lv .sub{font-size:12px;font-weight:900;color:#e2e8f0;text-align:center;max-width:300px;animation:mhGfxFade .4s .75s both}
+.mh-gfx-gains{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;width:min(300px,82vw)}
+.mh-gfx-gains li{display:flex;align-items:center;gap:8px;background:#0f172ae0;border:1px solid color-mix(in srgb,var(--gc) 60%,transparent);border-radius:12px;padding:6px 10px;font-size:12px;font-weight:900;text-align:left;
+  animation:mhGfxGain .4s var(--d) cubic-bezier(.2,1.5,.4,1) both}
+.mh-gfx-gains li small{display:block;font-size:10px;color:#94a3b8;font-weight:700}
+.mh-gfx-gains li .new{margin-left:auto;font-size:9px;background:var(--gc);color:#111;border-radius:6px;padding:1px 5px}
+.mh-gfx-face{position:absolute;height:32vh;left:50%;margin-left:-21vh;bottom:0;z-index:1;pointer-events:none;animation:mhGfxRise .6s .85s cubic-bezier(.2,1.4,.4,1) both;filter:drop-shadow(0 0 20px #000a)}
+.mh-gfx-lv-hint{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);left:0;right:0;text-align:center;font-size:10px;color:#cbd5e1;z-index:3;animation:mhGfxFade .3s 1.6s both}
+.mh-gfx-conf{position:absolute;left:50%;top:38%;width:8px;height:12px;pointer-events:none;animation:mhGfxConf 1.8s var(--d) cubic-bezier(.1,.7,.3,1) both}
+@keyframes mhGfxConf{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}10%{opacity:1}100%{transform:translate(var(--x),var(--y)) rotate(var(--r));opacity:0}}
+@keyframes mhGfxSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes mhGfxFade{from{opacity:0}to{opacity:1}}
+@keyframes mhGfxEm{0%{transform:scale(.1) rotate(-30deg);opacity:0}100%{transform:none;opacity:1}}
+@keyframes mhGfxRing{0%{transform:translate(-50%,-50%) scale(.6);opacity:1}100%{transform:translate(-50%,-50%) scale(2.6);opacity:0}}
+@keyframes mhGfxRise{from{transform:translateY(60px);opacity:0}to{transform:none;opacity:1}}
+@keyframes mhGfxGain{from{transform:translateY(14px) scale(.9);opacity:0}to{transform:none;opacity:1}}
+@media (orientation:landscape){
+  .mh-gfx-lv{flex-direction:row;gap:22px;margin-top:0}
+  .mh-gfx-sheet.has-face .mh-gfx-lv{margin-left:min(36vw,300px)}
+  .mh-gfx-lv .sub{max-width:240px}
+  .mh-gfx-gains{margin-top:0;width:290px}
+  .mh-gfx-face{left:0;margin-left:0;height:62vh}
+}
+/* 最後の形(押して飛ばした・軽い設定): 動きを終わらせた状態で見せる */
+.mh-gfx-done *,.mh-gfx-done{animation-delay:0s !important;animation-duration:.01s !important}
+.mh-gfx-done .mh-gfx-rays{animation:none !important}
+/* 控えめ: 粒・光の筋・紙吹雪・光の輪を出さない */
+.mh-gfx-reduced .pt,.mh-gfx-reduced .mh-gfx-burst,.mh-gfx-reduced .mh-gfx-rays,.mh-gfx-reduced .mh-gfx-conf,.mh-gfx-reduced .mh-gfx-ring{display:none}
+/* 最小: 動かさない(札・カード・帯がその場に出て消えるだけ) */
+.mh-gfx-minimal *,.mh-gfx-minimal{animation:none !important;transition:none !important}
+.mh-gfx-minimal .pt,.mh-gfx-minimal .mh-gfx-burst,.mh-gfx-minimal .mh-gfx-rays,.mh-gfx-minimal .mh-gfx-conf,.mh-gfx-minimal .mh-gfx-ring,.mh-gfx-minimal .mh-gfx-face{display:none}
+.mh-gfx-band{position:relative;width:100%;padding:12px 16px;display:flex;flex-direction:column;align-items:center;gap:2px;font-weight:900;color:#fff;
+  background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--gc) 45%,#0f172a) 20% 80%,transparent);border-block:1.5px solid var(--gc)}
+.mh-gfx-band .big{font-size:20px;white-space:nowrap}
+.mh-gfx-band small{font-size:11px;color:#e2e8f0;text-align:center}
+`;
+let growthFxCssDone = false;
+const ensureGrowthFxCss = () => {
+  if (growthFxCssDone || typeof document === 'undefined') return;
+  growthFxCssDone = true;
+  const el = document.createElement('style');
+  el.setAttribute('data-growth-fx-css', '');
+  el.textContent = GROWTH_FX_CSS;
+  document.head.appendChild(el);
+};
+
+// いま出してよいか(画面と、画面の上に出ているもの)。tools/ui/growth-fx-check.js が確かめる
+//   all … 札も含めて出す / sheet … 真ん中のカード・Lvアップも出す
+const growthFxVisible = (screen, domHold = {}) => {
+  const all = GROWTH_FX_CALM_SCREENS.has(screen) && !domHold.all;
+  return { all, sheet: all && !domHold.sheet };
+};
+// 軽さ: 端末の「動きを減らす」と最軽量は minimal、標準・軽めは reduced、豪華は full
+const growthFxLevelOf = (load) => {
+  let reduce = false;
+  try { reduce = typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch {}
+  if (reduce || load === 'MINIMAL') return 'minimal';
+  if (load === 'STANDARD' || load === 'LIGHT') return 'reduced';
+  return 'full';
+};
+
+// 決まった並びの粒(毎回同じ形。乱数を使わないので止め絵の検査でぶれない)
+const growthFxBurstBits = (n, delay, size) => Array.from({ length: n }, (_, i) => {
+  const a = (i / n) * Math.PI * 2, r = 150 + (i % 3) * 40;
+  return { x: `${Math.round(Math.cos(a) * r)}px`, y: `${Math.round(Math.sin(a) * r - 30)}px`, r: `${(i * 47) % 90 - 45}deg`, d: `${(delay + (i % 4) * 0.04).toFixed(2)}s`, s: size - (i % 3) * 4 };
+});
+const GROWTH_FX_CONFETTI_COLORS = ['#fde047', '#ffffff', '#c084fc', '#22d3ee'];
+
+// 数え上げ(TrainingCountUp と同じ考え方。軽い設定では最初から最後の数)
+const GrowthFxCount = ({ from = 0, to = 0, delay = 0, duration = 1000, instant = false, prefix = '' }) => {
+  const [v, setV] = useState(instant ? to : from);
+  useEffect(() => {
+    if (instant) { setV(to); return undefined; }
+    let raf = 0; const t0 = performance.now() + delay;
+    const step = (now) => {
+      const x = Math.max(0, Math.min(1, (now - t0) / Math.max(1, duration)));
+      setV(Math.round(from + (to - from) * (1 - Math.pow(1 - x, 3))));
+      if (x < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [from, to, delay, duration, instant]);
+  return <span>{prefix}{Number(v).toLocaleString()}</span>;
+};
+
+// ゲージ(Lvをまたぐときは満タン → 0 → 伸び直す。LevelGrowthBar と同じ動き)
+const GrowthFxGauge = ({ from = 0, to = 0, wrap = false, delay = 700, instant = false }) => {
+  const [w, setW] = useState(instant ? to : from);
+  const [noTr, setNoTr] = useState(false);
+  useEffect(() => {
+    if (instant) { setW(to); return undefined; }
+    const ts = [];
+    if (wrap) {
+      ts.push(setTimeout(() => setW(100), delay));
+      ts.push(setTimeout(() => { setNoTr(true); setW(0); }, delay + 650));
+      ts.push(setTimeout(() => { setNoTr(false); setW(to); }, delay + 720));
+    } else ts.push(setTimeout(() => setW(to), delay));
+    return () => ts.forEach(clearTimeout);
+  }, [from, to, wrap, delay, instant]);
+  return <div className="mh-gfx-gauge"><i style={{ width: `${w}%`, transition: noTr ? 'none' : 'width .65s cubic-bezier(.3,0,.2,1)' }}/></div>;
+};
+
+const GrowthFxChip = ({ chip, level, held }) => {
+  const k = growthFxKind(chip.kind);
+  const [out, setOut] = useState(false);
+  useEffect(() => {
+    if (held) return undefined;
+    setOut(false);
+    const t1 = setTimeout(() => setOut(true), GROWTH_FX_SMALL_MS);
+    const t2 = setTimeout(() => growthFxDropSmall(chip.id), GROWTH_FX_SMALL_MS + 320);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [chip.id, chip.rev, held]);
+  const pts = level === 'full' ? [0, 1, 2, 3] : [];
+  return (
+    <div className={`mh-gfx-chip${out ? ' out' : ''}`} data-growth-fx-chip={chip.kind} style={{ '--gc': k.color }}>
+      <span key={`i${chip.rev}`} className="ico beat" aria-hidden="true">{k.icon}</span>
+      <span className="min-w-0"><span className="who block">{chip.name ? `${chip.name}・` : ''}{k.label}</span>
+        <span className="bar block"><i style={{ width: `${chip.pctTo}%` }}/></span></span>
+      <span key={`n${chip.rev}`} className="num pop">+{Number(chip.gain).toLocaleString()}</span>
+      {pts.map(i => <span key={`p${chip.rev}-${i}`} className="pt" aria-hidden="true" style={{ '--dx': `${(i * 53) % 50 - 25}px`, animationDelay: `${0.15 + i * 0.1}s` }}>{k.particle}</span>)}
+    </div>
+  );
+};
+
+const GrowthFxItemCard = ({ sheet, level, onClose }) => {
+  const k = growthFxKind(sheet.kind);
+  const instant = level === 'minimal';
+  useEffect(() => { const t = setTimeout(onClose, GROWTH_FX_ITEM_MS); return () => clearTimeout(t); }, [sheet.id]);
+  const reaction = sheet.reaction === 'like' || sheet.reaction === 'dislike' ? sheet.reaction : null;
+  return (
+    <div className={`mh-gfx-sheet item mh-gfx-${level}`} data-growth-fx-sheet="item" data-growth-fx-kind={sheet.kind} role="dialog" aria-label={sheet.title || ''}
+      style={{ '--gc': k.color }} onClick={onClose}>
+      <div className="mh-gfx-card">
+        {(sheet.faces || []).length > 0 && <div className="faces">{sheet.faces.map((src, i) => <img key={i} src={src} alt="" className={sheet.faceRound ? 'round' : ''} style={{ animationDelay: `${0.4 + i * 0.15}s` }}/>)}</div>}
+        <div className="ttl">{sheet.title}{reaction && <span className={`tag ${reaction}`}>{reaction === 'like' ? '大好き！' : 'ちょっと苦手…'}</span>}</div>
+        {sheet.item && <div className="itm">{sheet.item}</div>}
+        {(sheet.rows || []).map((row, i) => {
+          const rk = growthFxKind(row.kind);
+          const lvUp = growthFxNum(row.levelTo) > growthFxNum(row.levelFrom);
+          return (
+            <div key={i} className="mh-gfx-row" style={{ '--rc': rk.color }}>
+              <span className="ico" aria-hidden="true">{rk.icon}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="lab"><em>{row.label || rk.label}{row.levelTo != null ? <> Lv.<GrowthFxCount from={row.levelFrom} to={row.levelTo} delay={900} duration={900} instant={instant}/></> : null}</em>
+                  {lvUp && <span className="up" style={{ animationDelay: instant ? '0s' : '1.6s' }}>Lv +{row.levelTo - row.levelFrom}</span>}</div>
+                <GrowthFxGauge from={row.pctFrom} to={row.pctTo} wrap={lvUp} delay={700 + i * 400} instant={instant}/>
+              </div>
+              <div className="val"><GrowthFxCount from={0} to={growthFxNum(row.gain)} delay={700 + i * 400} duration={1100} instant={instant} prefix="+"/>{row.unit && <small>{row.unit}</small>}</div>
+            </div>
+          );
+        })}
+        <div className="mh-gfx-hint">押すと閉じる</div>
+      </div>
+      {level === 'full' && <div className="mh-gfx-burst" aria-hidden="true">{growthFxBurstBits(reaction === 'like' ? 18 : 12, 0.7, 18).map((b, i) =>
+        <span key={i} style={{ '--x': b.x, '--y': b.y, '--r': b.r, '--d': b.d, fontSize: `${b.s}px` }}>{k.particle}</span>)}</div>}
+    </div>
+  );
+};
+
+const GrowthFxLevelUp = ({ sheet, level, onClose }) => {
+  const k = growthFxKind(sheet.kind);
+  const [done, setDone] = useState(level === 'minimal');
+  const opened = useRef(Date.now());
+  useEffect(() => { try { if (level !== 'minimal' && typeof Audio_ !== 'undefined') Audio_.se.levelUp(); } catch {} }, [sheet.id]);
+  // 押すと先へ: 演出中 → 最後の形 → 閉じる(開いた直後の押し間違いでは閉じない)
+  const next = () => { if (Date.now() - opened.current < 250) return; if (!done) setDone(true); else onClose(); };
+  const gains = Array.isArray(sheet.gains) ? sheet.gains : [];
+  const label = `${k.label}が Lv.${sheet.levelTo} に上がりました`;
+  if (level === 'minimal') {
+    return (
+      <div className="mh-gfx-sheet level-mini mh-gfx-minimal" data-growth-fx-sheet="level" data-growth-fx-kind={sheet.kind} role="dialog" aria-label={label}
+        style={{ '--gc': k.color, background: '#0b102699' }} onClick={onClose}>
+        <div className="mh-gfx-band"><span className="big">{k.icon} {k.label} Lv.{sheet.levelTo}</span>
+          <small>{sheet.sub}{gains.length ? ` ・ ${gains.map(g => g.text).join('・')}` : ''}</small><small>押すと閉じる</small></div>
+      </div>
+    );
+  }
+  const conf = level === 'full' ? Array.from({ length: 24 }, (_, i) => ({ c: i % 2 ? k.color : GROWTH_FX_CONFETTI_COLORS[i % 4],
+    x: `${(i * 71) % 340 - 170}px`, y: `${(i * 43) % 300 - 200}px`, r: `${i * 57}deg`, d: `${(0.5 + (i % 6) * 0.05).toFixed(2)}s` })) : [];
+  return (
+    <div className={`mh-gfx-sheet level mh-gfx-${level}${done ? ' mh-gfx-done' : ''}${sheet.face ? ' has-face' : ''}`} data-growth-fx-sheet="level" data-growth-fx-kind={sheet.kind}
+      role="dialog" aria-modal="true" aria-label={label} tabIndex={0} style={{ '--gc': k.color, '--gd': k.deep }} onClick={next}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') { e.preventDefault(); next(); } }}>
+      <div className="mh-gfx-rays" aria-hidden="true"/>
+      {conf.map((c, i) => <span key={i} className="mh-gfx-conf" aria-hidden="true" style={{ background: c.c, '--x': c.x, '--y': c.y, '--r': c.r, '--d': c.d }}/>)}
+      {sheet.face && <img className="mh-gfx-face" src={sheet.face} alt=""/>}
+      <div className="mh-gfx-lv">
+        <div className="left">
+          <div className="mh-gfx-emblem">
+            <svg viewBox="0 0 100 100" aria-hidden="true">{sheet.kind === 'bond'
+              ? <path d="M50 88 C20 66 6 50 6 32 C6 18 17 8 30 8 C40 8 46 14 50 21 C54 14 60 8 70 8 C83 8 94 18 94 32 C94 50 80 66 50 88Z" fill={k.color} stroke="#fff" strokeWidth="3"/>
+              : sheet.kind === 'friend'
+                ? <g fill={k.color} stroke="#fff" strokeWidth="3"><circle cx="36" cy="52" r="32"/><circle cx="64" cy="52" r="32" fillOpacity=".85"/></g>
+                : sheet.kind === 'star'
+                  ? <path d="M50 4 L62 36 L96 38 L69 59 L79 93 L50 73 L21 93 L31 59 L4 38 L38 36 Z" fill={k.color} stroke="#fff" strokeWidth="3"/>
+                  : <path d="M50 6 L88 20 L84 58 C80 76 66 88 50 95 C34 88 20 76 16 58 L12 20 Z" fill={k.color} stroke="#fff" strokeWidth="3"/>}</svg>
+            <span className="n"><small>Lv.</small>{sheet.levelTo}</span>
+            <div className="mh-gfx-ring" aria-hidden="true"/>
+          </div>
+          <div className="ttl">{sheet.title || `${k.label} UP!`}</div>
+          {sheet.sub && <div className="sub">{sheet.sub}</div>}
+        </div>
+        {gains.length > 0 && <ul className="mh-gfx-gains" aria-label="新しく開いたもの">
+          {gains.map((g, i) => (
+            <li key={i} style={{ '--d': `${1.2 + i * 0.3}s` }}>
+              <span aria-hidden="true">{g.icon || '✨'}</span>
+              <span className="min-w-0"><b>{String(g.text || '')}</b>{g.note && <small>{String(g.note)}</small>}</span>
+              {g.isNew && <span className="new">NEW</span>}
+            </li>
+          ))}
+        </ul>}
+      </div>
+      <div className="mh-gfx-lv-hint">{done ? '押すと閉じる' : '押すと先へ'}</div>
+    </div>
+  );
+};
+
+// 60-app.jsx に1つだけ置く。screen … いまの gameState / load … バトル設定「画面の軽さ」
+const GrowthFxLayer = ({ screen, load }) => {
+  const [, setTick] = useState(0);
+  const [domHold, setDomHold] = useState({ all: false, sheet: false });
+  useEffect(() => { ensureGrowthFxCss(); return growthFxSubscribe(() => setTick(t => t + 1)); }, []);
+  const small = GROWTH_FX_STORE.small, sheets = GROWTH_FX_STORE.sheets;
+  const pending = small.length + sheets.length;
+  // お話・ほかの大きな演出が画面に出ているかを見る(貯めているものがあるときだけ、0.6秒ごと)
+  useEffect(() => {
+    if (!pending || typeof document === 'undefined') return undefined;
+    const check = () => {
+      const all = !!document.querySelector(GROWTH_FX_HOLD_ALL_SELECTOR);
+      const sheet = all || !!document.querySelector(GROWTH_FX_HOLD_SHEET_SELECTOR);
+      setDomHold(prev => (prev.all === all && prev.sheet === sheet ? prev : { all, sheet }));
+    };
+    check();
+    const t = setInterval(check, 600);
+    return () => clearInterval(t);
+  }, [pending > 0]);
+  if (!pending) return null;
+  const vis = growthFxVisible(screen, domHold);
+  const holdAll = !vis.all;
+  const holdSheet = !vis.sheet;
+  const level = growthFxLevelOf(load);
+  const sheet = !holdSheet ? sheets[0] : null;
+  return (
+    <>
+      {!holdAll && !sheet && small.length > 0 && <div className={`mh-gfx-chips mh-gfx-${level}`} data-growth-fx-chips aria-live="polite">
+        {small.slice(0, GROWTH_FX_SMALL_MAX).map(c => <GrowthFxChip key={c.id} chip={c} level={level} held={false}/>)}
+      </div>}
+      {sheet && (sheet.tier === 'level'
+        ? <GrowthFxLevelUp key={sheet.id} sheet={sheet} level={level} onClose={() => growthFxDropSheet(sheet.id)}/>
+        : <GrowthFxItemCard key={sheet.id} sheet={sheet} level={level} onClose={() => growthFxDropSheet(sheet.id)}/>)}
+    </>
+  );
+};
+
 // ---- part: 50-error-boundary.jsx ----
 // ==== 画面のエラー境界 ====
 // React 18 は描画中に例外が1つ出るとルートごと外してしまい、画面が真っ白のまま何も押せなくなる
@@ -37592,7 +38487,7 @@ function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
                       <div className="flex-1 min-w-0 text-[13px] leading-snug font-black text-white">{item.name}</div>
                       <span className="shrink-0 rounded-full bg-slate-950/60 px-2.5 py-0.5 text-[11px] font-black tabular-nums text-teal-300">所持数: {ownedItems[item.id]}</span>
                     </div>
-                    <div className="text-[10px] text-slate-400 leading-relaxed mt-1">{helpWrap(item.desc)}</div>
+                    <div className="text-[10px] text-slate-400 leading-relaxed mt-1">{helpWrap(typeof assistantLifeItemDesc==='function'?assistantLifeItemDesc(item):item.desc)}</div>
                   </div>
                   {/* スキップチケットや超越の実はマスモン詳細の別の場所で使うものなので、使う場所だけ案内する */}
                   {item.usage==='battleSkip'
@@ -37611,6 +38506,8 @@ function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
                     ? <div className={usageNoteClass}>マーケットで<br/>{HERO_PROOF_SHARD_PER_PROOF}個→<br/>勇者の証1個</div>
                     : item.usage==='rhythmBuddy'
                     ? <div className={usageNoteClass}>モンヒロビートの<br/>マルチで<br/>マスモンを呼ぶ</div>
+                    : item.usage==='assistantPeer'&&typeof assistantLifeEnabled==='function'&&assistantLifeEnabled()
+                    ? <button type="button" data-assistant-life-item-use={item.id} onClick={()=>assistantLifeOpenScreen()} className="shrink-0 w-[84px] min-h-[44px] rounded-xl border border-amber-300/60 bg-amber-400/15 text-[12px] font-black text-amber-100 active:scale-95">使う ▸</button>
                     : item.usage==='assistantPeer'
                     ? <div className={usageNoteClass}>プロフィールの<br/>助手どうしの<br/>関係図で使う</div>
                     : item.usage==='soulRankRespec'||item.usage==='soulCrystal'
@@ -37877,7 +38774,7 @@ function BreederMarketScreen({
   const beatPointItemOf = (offer) => {
     const base = offer.itemId ? (BREEDER_MARKET_ITEMS.find(item=>item.id===offer.itemId) || [HERO_PROOF_ITEM,HERO_PROOF_SHARD_ITEM].find(item=>item.id===offer.itemId) || null) : null;
     return { id:offer.id, name:offer.grantAmount>1?`${offer.name} ×${offer.grantAmount.toLocaleString()}`:offer.name, emoji:offer.emoji,
-      icon:base?.icon, type:'item', currency:'beatPoint', cost:offer.cost, desc:base?.desc||'', base };
+      icon:base?.icon, type:'item', currency:'beatPoint', cost:offer.cost, desc:(typeof assistantLifeItemDesc==='function'?assistantLifeItemDesc(base):base?.desc)||'', base };
   };
 
   const headerTitle = marketSection ? sectionMeta[marketSection].label : 'マーケット';
@@ -51693,6 +52590,8 @@ const RHYTHM_MULTI = (() => {
       const x = s.cpus.find((c) => c.masuId === masuId);
       if (!x) return;
       if (growth.levelUp > 0) cpuSay(x, 'lvUp', { who: ownerName() }, { extraDelay: 800, skipGap: true });
+      // 助手の苦手な曲の好み度が上がった(2026-11-07 助手とのセッション)
+      else if (growth.likeUp > 0) cpuSay(x, 'likeUp', { who: ownerName() }, { extraDelay: 800, skipGap: true });
       if (growth.traitNew) cpuSay(x, 'traitNew', { who: ownerName() }, { extraDelay: growth.levelUp > 0 ? 3000 : 800, skipGap: true });
       // 性格の芽が出た(ビートLv.10・2026-11-06)
       else if (growth.sproutNew) cpuSay(x, 'sproutNew', { who: ownerName() }, { extraDelay: growth.levelUp > 0 ? 3000 : 800, skipGap: true });
@@ -53479,7 +54378,9 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             const isMvp = r.m.id === team.mvpId && !team.waiting;
             const lv = r.res ? drawnLevel(r.res.diffId) : 0;
             return (
-              <li key={r.m.id} data-rhythm-multi-result-row role={r.m.id !== view.selfId ? 'button' : undefined} onClick={r.m.id !== view.selfId ? () => (r.m.cpu ? setBuddyInfoId(r.m.id) : setMemberSheetId(r.m.id)) : undefined} className={`relative flex ${r.m.id !== view.selfId ? 'cursor-pointer active:brightness-125' : ''} min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden rounded-xl px-0.5 pb-1.5 text-center ${isMvp ? 'mhmv-mvp z-10 border-2 border-amber-300 bg-gradient-to-b from-amber-500/35 via-pink-600/25 to-slate-900 pt-4 [@media(max-height:440px)]:pt-3.5 [[data-mh-view-rotation=true]_&]:pt-3.5' : 'border border-white/10 bg-slate-900/80 pt-3 [@media(max-height:440px)]:pt-1.5 [[data-mh-view-rotation=true]_&]:pt-1.5'}`}>
+              <li key={r.m.id} data-rhythm-multi-result-row style={rhythmAssistSessionCardStyle(r.m, isMvp)} role={r.m.id !== view.selfId ? 'button' : undefined} onClick={r.m.id !== view.selfId ? () => (r.m.cpu ? setBuddyInfoId(r.m.id) : setMemberSheetId(r.m.id)) : undefined} className={`relative flex ${r.m.id !== view.selfId ? 'cursor-pointer active:brightness-125' : ''} min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden rounded-xl px-0.5 pb-1.5 text-center ${isMvp ? 'mhmv-mvp z-10 border-2 border-amber-300 bg-gradient-to-b from-amber-500/35 via-pink-600/25 to-slate-900 pt-4 [@media(max-height:440px)]:pt-3.5 [[data-mh-view-rotation=true]_&]:pt-3.5' : 'border border-white/10 bg-slate-900/80 pt-3 [@media(max-height:440px)]:pt-1.5 [[data-mh-view-rotation=true]_&]:pt-1.5'}`}>
+                {/* 助手のセッションLv.90 からは、カードの下に助手の名前を薄く入れる(2026-11-07 助手とのセッション) */}
+                <RhythmAssistSessionCardBack m={r.m} />
                 {/* MVP は札をアイコンより前に出し、王冠・金色の光で目立たせる(2026-10-03・ユーザー指摘「MVPが裏に回ってる / もっと強調して」) */}
                 {isMvp && <b data-rhythm-multi-mvp className="mhmv-badge absolute left-1/2 top-1 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-to-r from-amber-300 via-yellow-100 to-amber-400 px-2.5 py-0.5 text-[11px] font-black tracking-wider text-slate-950 shadow-[0_0_12px_rgba(252,211,77,.9)] landscape:text-[13px]">👑 MVP</b>}
                 <span className={`relative z-10 shrink-0 rounded-full ${isMvp ? 'mhmv-ring' : ''}`}>
@@ -53528,11 +54429,14 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               humans={team.rows.filter((row) => !row.m.cpu).length}
               score={cpuRow.res.score} maxScore={((typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === cpuRow.res.diffId) || {}).maxScore || 0} />
             ) : (
-            <RhythmAssistSessionGrowth key={assistantId} assistantId={assistantId} onTickets={(n) => { for (let i = 0; i < n; i += 1) { if (onRefundBuddyTicket) void onRefundBuddyTicket(); } }} round={room.round} songId={room.songId} diffId={cpuRow.res.diffId} durationMs={song ? Number(song.playDurationMs) || 0 : 0} teamRank={team.rank}
+            <RhythmAssistSessionGrowth key={assistantId} assistantId={assistantId} ownerRes={myRow.res} onTickets={(n) => { for (let i = 0; i < n; i += 1) { if (onRefundBuddyTicket) void onRefundBuddyTicket(); } }} round={room.round} songId={room.songId} diffId={cpuRow.res.diffId} durationMs={song ? Number(song.playDurationMs) || 0 : 0} teamRank={team.rank}
               chartLevel={song && song.difficulties && song.difficulties[cpuRow.res.diffId] ? Number(song.difficulties[cpuRow.res.diffId].level) || 0 : 0}
               humans={team.rows.filter((row) => !row.m.cpu).length}
               score={cpuRow.res.score} maxScore={((typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === cpuRow.res.diffId) || {}).maxScore || 0} />
-            )))}</div>;
+            )))}
+            {/* 助手が2人以上このライブに出ていたら、デュオの2人のひとことと友情Lv +3(2026-11-07 助手とのセッション) */}
+            <RhythmAssistSessionDuoResult round={room.round} ids={grown.map((g) => g.assistantId).filter(Boolean)} />
+          </div>;
         })()}
         <div className="mt-auto flex shrink-0 gap-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 landscape:justify-end landscape:border-t-0 landscape:bg-transparent [@media(max-height:440px)]:pt-1 [[data-mh-view-rotation=true]_&]:pt-1" style={{ paddingBottom: 'calc(.4rem + var(--mh-sa-bottom))' }}>
           <button data-rhythm-multi-member-stats type="button" onClick={() => setStatsOpen(true)}
@@ -54938,29 +55842,72 @@ const rhythmAssistSessionLikedNames = (assistantId) => {
 };
 const rhythmAssistSessionName = (assistantId) => { const who = rhythmAssistSessionWho(assistantId); return String((who && who.name) || '助手').slice(0, 12); };
 
-// 部屋で話すひとこと(段階1は最小限。段階3でコトバ・ナカヨシと場面を増やす。口調の基準は docs/progress/assistant-peer/VOICE.md)
-const RHYTHM_ASSIST_SESSION_LINES = Object.freeze({
-  mua: { join: 'やっほ〜！あたしも一緒に叩くね♪', love: 'この曲あたし大好きなの♪', combo: 'いい流れぢゃん♪ 全部いこ！', miss: 'どんまい！ここから取り返そ♪', climax: 'サビきた〜！テンションまぢ上がる♪', mvp: 'MVPとっちゃった！？あたしすごくない？♪', high: 'まぢいい感じぢゃん！楽しかったぁ♪', low: '次はもっと合わせよ！あたしもがんばる♪' },
-  kiki: { join: 'ブリーダーさん、よろしくお願いしまつ♪', love: 'この曲、私とても好きなんです♪', combo: 'いい流れでつね♪ このまま全部いきましょう', miss: '大丈夫でつ、落ち着いていきましょう♪', climax: 'ここが一番きれいなところでつ♪', mvp: '私がMVPですか？ちょっと照れちゃいまつ♪', high: 'とってもいい演奏でした♪', low: '次はきっと、もっと合わせられますよ♪' },
-  momosuke: { join: 'ももが来たからには盛り上げるよ！！', love: 'この曲ももの推し曲！！', combo: 'いい感じ！！ももも乗ってきた♡', miss: 'ドンマイドンマイ！ももがついてるよw', climax: 'サビ！！ここで一番かわいく決めるよ♡', mvp: 'MVPはもも！！当然でしょw', high: 'ももと合わせたらこんなもんでしょw さすが♡', low: 'ドンマイ！次はもも、もっと見ててあげる♡' },
-  dra: { join: 'おでも混ぜてくれよな、えへへ', love: 'この曲、おで好きなんだな', combo: 'すごいな、ずっとつながってるくさ', miss: 'どんまいだな、次でとりかえすからな', climax: 'ここからが本番だな、えへへ', mvp: 'おでがMVPか、えへへ、照れくさいな', high: 'いい演奏だったくさ。おで楽しかったな', low: 'どんまいだな、次でとりかえすからな' },
-  atsu: { join: 'とりあえず一曲いくか笑', love: 'これ俺の好きなやつだな笑', combo: 'とりあえずいい感じだな笑', miss: 'てか焦らなくていいぞ！', climax: 'ここ決めるぞ笑', mvp: 'MVPもらっといた笑', high: 'てか今の、普通にうまかったな笑', low: 'まあ次だな、切り替えていこう！' },
-  kyuko: { join: 'ほい！俺も入るね〜', love: 'この曲は構成がきれいなんだよね〜', combo: 'ほい！いい流れだね〜', miss: 'ぐぬぬぬ、でもリズムは合ってるよ〜', climax: 'サビ前で一回引いて…ここだね〜', mvp: 'MVPいただきました〜笑', high: 'いい流れだったね〜、ありがとん笑', low: 'ぐぬぬぬ、次はサビ前を意識してみよ〜' },
-  sorashido: { join: 'うぉぉぉ！俺も参戦するぜ・・・！', love: 'この曲は全ノーツ計算済みだぜ・・・！', combo: 'うぉぉぉ！計算どおりだぜ・・・！', miss: 'ここから巻き返す計算だぜ笑', climax: 'うぉぉぉ！ここだぜ・・・！', mvp: 'MVPは計算済みだったぜ・・・！', high: '計算どおりの名演だぜ・・・！', low: '次は全ノーツ計算して挑むぜ笑' },
-  erubin: { join: '俺も一緒にいいかな？よろしくね', love: 'この曲、好きなんだよね', combo: 'いい感じだね、そのままで大丈夫', miss: '大丈夫、ゆっくりいこうね', climax: 'ここ、いいところだね', mvp: '俺がMVP？ありがとね', high: 'いい演奏だったね、おつかれさま', low: '大丈夫、次はきっと合うよ' },
-});
-// 演奏中の場面(combo・miss・climax)は顔のふきだし(RhythmAssistSessionPlayFace)が使う
-const rhythmAssistSessionTalk = ({ assistantId, kind, songId = '', score = 0, diffId = '', mvp = false }) => {
-  const lines = RHYTHM_ASSIST_SESSION_LINES[assistantId];
-  if (!lines) return '';
-  if (kind === 'join') return lines.join;
-  if (kind === 'combo' || kind === 'miss' || kind === 'climax') return lines[kind] || '';
-  if ((kind === 'pick' || kind === 'song') && songId && rhythmAssistSessionTaste(assistantId, songId) === 'like') return lines.love;
-  if (kind === 'result') {
-    if (mvp) return lines.mvp;
-    const diffDef = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === diffId);
-    const ratio = Number(score) / ((diffDef && diffDef.maxScore) || 1000000);
-    return ratio >= 0.85 ? lines.high : ratio < 0.7 ? lines.low : '';
+// 台詞は 33-rhythm-assistant-session-lines.jsx(docs/progress/beat-assistant-session/lines/*.txt から生成)。
+// 助手ごとに直近に言った台詞を覚えて避ける(保存しない)。同じ曲で同じ台詞を出さないため
+const RHYTHM_ASSIST_SESSION_RECENT = new Map();
+const RHYTHM_ASSIST_SESSION_RECENT_KEEP = 12;
+// 場面の台詞を1つ選ぶ。[表情, 台詞]。無ければ null
+const rhythmAssistSessionPickLine = (assistantId, scene, rand = Math.random) => {
+  const table = typeof RHYTHM_ASSIST_SESSION_SOLO_LINES !== 'undefined' ? RHYTHM_ASSIST_SESSION_SOLO_LINES[assistantId] : null;
+  const list = table && Array.isArray(table[scene]) ? table[scene] : [];
+  if (!list.length) return null;
+  const recent = RHYTHM_ASSIST_SESSION_RECENT.get(assistantId) || [];
+  const fresh = list.filter((x) => !recent.includes(x[1]));
+  const pool = fresh.length ? fresh : list;
+  const hit = pool[Math.floor(rand() * pool.length)];
+  RHYTHM_ASSIST_SESSION_RECENT.set(assistantId, [hit[1], ...recent.filter((t) => t !== hit[1])].slice(0, RHYTHM_ASSIST_SESSION_RECENT_KEEP));
+  return hit;
+};
+// 好きな曲・苦手な曲の結果の専用(曲の別の版も同じ曲として探す)
+const rhythmAssistSessionSongScene = (assistantId, songId) => {
+  const table = typeof RHYTHM_ASSIST_SESSION_SOLO_LINES !== 'undefined' ? RHYTHM_ASSIST_SESSION_SOLO_LINES[assistantId] : null;
+  if (!table || !songId) return '';
+  if (table[`song:${songId}`]) return `song:${songId}`;
+  const t = RHYTHM_ASSIST_SESSION_TASTE[assistantId];
+  const family = t ? [...t.like.find((ids) => ids.includes(songId)) || [], ...(t.dislike.includes(songId) ? t.dislike : [])] : [];
+  const key = family.map((id) => `song:${id}`).find((k) => table[k]);
+  return key || '';
+};
+const rhythmAssistSessionRatio = (score, diffId) => {
+  const diffDef = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === diffId);
+  return Number(score) / ((diffDef && diffDef.maxScore) || 1000000);
+};
+// 部屋のチャットで話すひとこと(cpuBrain.talk の助手の分)。kind は部屋(77)が渡す場面の名前
+//   join … 部屋に来た / pick・song … 曲が決まった(はじめて・好き・苦手) / result … 自分の結果(MVP のときだけ話す)
+//   reactResult … 呼んだ人の結果(フル コン・高い・ふつう・低い・好きな曲の専用・苦手を乗りこえた) / lvUp・likeUp … 育った
+// オプション「助手のひとこと」: 切る … 何も言わない / 少なめ … 来たとき・MVP・フルコン・演奏中のサビだけ
+const RHYTHM_ASSIST_SESSION_FEW_KINDS = Object.freeze(['join', 'climax']);
+const rhythmAssistSessionTalk = ({ assistantId, kind, songId = '', score = 0, diffId = '', mvp = false, fc = 0, quit = false, rand = Math.random }) => {
+  const mode = RHYTHM_ASSIST_SESSION_STORE.get().talk;
+  if (mode === 'off') return '';
+  if (mode === 'few' && !RHYTHM_ASSIST_SESSION_FEW_KINDS.includes(kind) && !(kind === 'result' && mvp) && !(kind === 'reactResult' && Number(fc) > 0)) return '';
+  const say = (scene) => { const hit = rhythmAssistSessionPickLine(assistantId, scene, rand); return hit ? hit[1] : ''; };
+  const roomSong = () => {
+    const v = typeof RHYTHM_MULTI !== 'undefined' ? RHYTHM_MULTI.view() : null;
+    return (v && v.room && v.room.songId) || '';
+  };
+  if (kind === 'join') return say('join');
+  if (kind === 'combo' || kind === 'miss' || kind === 'climax' || kind === 'last') return say(kind);
+  if (kind === 'lvUp') return say('levelup');
+  if (kind === 'likeUp') return say('likeup');
+  if (kind === 'pick' || kind === 'song') {
+    if (!songId) return '';
+    const taste = rhythmAssistSessionTaste(assistantId, songId);
+    if (taste === 'like') return say('like');
+    if (taste === 'dislike') return say('dislike');
+    const mon = rhythmAssistSessionMon(RHYTHM_ASSIST_SESSION_STORE.get(), assistantId);
+    return !(mon.songs && mon.songs[songId]) && rand() < 0.6 ? say('first') : '';
+  }
+  if (kind === 'result') return mvp ? say('mvp') : '';
+  if (kind === 'reactResult') {
+    if (quit) return '';
+    const sid = songId || roomSong();
+    const special = rhythmAssistSessionSongScene(assistantId, sid);
+    if (special && rand() < 0.5) return say(special);
+    if (rhythmAssistSessionTaste(assistantId, sid) === 'dislike' && rand() < 0.5) return say('overcome');
+    if (Number(fc) > 0) return say('fc');
+    const ratio = rhythmAssistSessionRatio(score, diffId);
+    return say(ratio >= 0.9 ? 'high' : ratio < 0.7 ? 'low' : 'mid');
   }
   return '';
 };
@@ -55004,6 +55951,14 @@ function RhythmAssistSessionPicker({ assistants = [], calledIds = [], canPay = t
   const calledOf = (id) => calledIds.includes(rhythmAssistSessionKey(id));
   return (
     <div data-rhythm-assist-picker className="flex min-h-0 flex-1 flex-col">
+      <div data-rhythm-assist-talk-option className="mb-2 flex shrink-0 items-center gap-1.5">
+        <span className="shrink-0 text-[11px] font-black text-slate-300">助手のひとこと</span>
+        {[['all', '全部'], ['few', '少なめ'], ['off', '切る']].map(([id, label]) => (
+          <button key={id} type="button" data-rhythm-assist-talk={id} aria-pressed={state.talk === id}
+            onClick={() => { void RHYTHM_ASSIST_SESSION_STORE.update((st) => (st.talk === id ? null : { ...st, talk: id })); }}
+            className={`min-h-[36px] flex-1 rounded-lg text-[11px] font-black ${state.talk === id ? 'border-2 border-pink-300 bg-pink-500/25 text-pink-100' : 'border border-white/10 bg-slate-800 text-slate-300'}`}>{label}</button>
+        ))}
+      </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {list.length === 0
           ? <p className="py-6 text-center text-[12px] font-bold text-slate-400">まだ呼べる助手がいません</p>
@@ -55044,8 +55999,21 @@ function RhythmAssistSessionPicker({ assistants = [], calledIds = [], canPay = t
   );
 }
 
+// セッションLv が上がったときの祝い(演出担当ハナビの 44-growth-fx.jsx の growthFxSessionLevel)。その回に上がった助手を、
+// 少し待ってまとめて1回で渡す。祝いはマルチを出てから出る(ハナビの作り)。印が偽・関数が無いなら何もしない
+const RHYTHM_ASSIST_SESSION_FX_QUEUE = { list: [], timer: null };
+const rhythmAssistSessionQueueFx = (item) => {
+  if (!rhythmAssistSessionEnabled() || typeof growthFxSessionLevel !== 'function') return;
+  const q = RHYTHM_ASSIST_SESSION_FX_QUEUE;
+  q.list.push(item);
+  if (q.timer) return;
+  q.timer = setTimeout(() => {
+    const list = q.list; q.list = []; q.timer = null;
+    try { growthFxSessionLevel(list); } catch (_) { /* 祝いが出せなくても続ける */ }
+  }, 500);
+};
 // 結果画面で、呼んだ助手を育てる(1ライブ1回。同じ回は2度数えない)。マスモンの RhythmBuddyGrowth と同じ作り
-function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, durationMs, teamRank, score = 0, maxScore = 0, chartLevel = 0, humans = 1, onTickets = null }) {
+function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, durationMs, teamRank, score = 0, maxScore = 0, chartLevel = 0, humans = 1, onTickets = null, ownerRes = null }) {
   const [shown, setShown] = React.useState(null);
   React.useEffect(() => {
     if (!assistantId || !round) return undefined;
@@ -55053,13 +56021,34 @@ function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, duratio
     let outcome = null;
     const dayKey = rhythmBuddyDayKey(Date.now());
     RHYTHM_ASSIST_SESSION_STORE.update((st) => {
-      const r = rhythmAssistSessionApplyLive(st, assistantId, { round, songId, diffId, durationMs, teamRank, dayKey, nowMs: Date.now(), score, maxScore, chartLevel, humans });
+      // 得意の応援(Lv.25 から)。呼んだ人のこの1曲の結果で決まる
+      const before = rhythmAssistSessionMon(st, assistantId);
+      const j = ownerRes && Array.isArray(ownerRes.j) ? ownerRes.j : null;
+      const total = j ? j.reduce((a, b) => a + (Number(b) || 0), 0) : 0;
+      const ownerDiff = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === (ownerRes && ownerRes.diffId));
+      const cheer = rhythmAssistSessionEnabled() && ownerRes ? rhythmAssistSessionCheer(assistantId, {
+        level: rhythmBuddyLevelInfo(before.exp).level, fc: Number(ownerRes.fc) > 0, marvRate: total > 0 ? (Number(j[0]) || 0) / total : 0,
+        ratio: Number(ownerRes.score) / ((ownerDiff && ownerDiff.maxScore) || 1000000), cleared: ownerRes.cleared !== false && !ownerRes.quit,
+        firstSong: !(before.songs && before.songs[songId]), diffId: ownerRes.diffId || diffId,
+      }) : null;
+      const r = rhythmAssistSessionApplyLive(st, assistantId, { round, songId, diffId, durationMs, teamRank, dayKey, nowMs: Date.now(), score, maxScore, chartLevel, humans, expBonus: cheer ? cheer.exp : 0 });
       if (!r.next) return null;
-      outcome = r;
+      outcome = { ...r, cheer };
       return r.next;
     }).then(() => {
       // 節目のセッション券は、渡した印を保存したあとで渡す(画面を閉じても二重にならない)
       if (outcome && outcome.tickets > 0 && typeof onTickets === 'function') { try { onTickets(outcome.tickets); } catch (_) { /* 渡せなくても続ける */ } }
+      // 得意の応援のビートP(同じ回は育ちが2度数えないので、ここも1回だけ)
+      if (outcome && outcome.cheer && outcome.cheer.points > 0 && typeof addRhythmEventPoints === 'function') { try { void addRhythmEventPoints(outcome.cheer.points); } catch (_) { /* 足せなくても続ける */ } }
+      if (outcome && outcome.levelUp > 0) {
+        const after = rhythmBuddyLevelInfo((outcome.next.mons[assistantId] || {}).exp).level;
+        rhythmAssistSessionQueueFx({ assistantId, levelBefore: after - outcome.levelUp, levelAfter: after, tickets: outcome.tickets || 0 });
+      }
+      // 部屋のチャットに、育ったひとこと(セッションLv.UP・苦手だった曲が好きになってきた)
+      if (outcome && typeof RHYTHM_MULTI !== 'undefined' && RHYTHM_MULTI.noteBuddyGrowth) {
+        const likeUp = outcome.likeUp > 0 && rhythmAssistSessionTaste(assistantId, songId) !== 'like' ? outcome.likeUp : 0;
+        if (outcome.levelUp > 0 || likeUp > 0) RHYTHM_MULTI.noteBuddyGrowth(rhythmAssistSessionKey(assistantId), { levelUp: outcome.levelUp, likeUp });
+      }
       if (alive && outcome) setShown(outcome);
     });
     return () => { alive = false; };
@@ -55073,40 +56062,99 @@ function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, duratio
       {shown.levelUp > 0 && <span data-rhythm-assist-levelup className="rounded bg-amber-300 px-1 text-slate-950">セッションLv.UP! Lv.{level}</span>}
       {shown.likeUp > 0 && <span className="text-amber-200">好み度+{shown.likeUp}</span>}
       {shown.tickets > 0 && <span data-rhythm-assist-ticket className="text-lime-200">セッション券+{shown.tickets}</span>}
+      {shown.cheer && <span data-rhythm-assist-cheer className="text-violet-200">{shown.cheer.label}</span>}
     </p>
   );
 }
 
+// 助手どうしの友情Lvを読む(56-assistant-peer.jsx。書かない)。公開の印 assistantPeer が偽なら、デュオは組まない
+const rhythmAssistSessionPeerLevel = (a, b) => {
+  if (typeof assistantPeerEnabled !== 'function' || !assistantPeerEnabled() || typeof ASSISTANT_PEER_STORE === 'undefined') return 0;
+  return assistantPeerLevel(ASSISTANT_PEER_STORE.state, a, b);
+};
+const rhythmAssistSessionPeerSeen = (a, b) => {
+  if (typeof ASSISTANT_PEER_STORE === 'undefined') return false;
+  const st = ASSISTANT_PEER_STORE.state;
+  return !!(st && Array.isArray(st.special) && st.special.includes(assistantPeerPairKey(a, b)));
+};
+const rhythmAssistSessionDuosNow = (ids) => rhythmAssistSessionDuos(ids, rhythmAssistSessionPeerLevel, rhythmAssistSessionPeerSeen);
+// いま部屋に呼んでいる助手(呼んだ順)
+const rhythmAssistSessionCalledIds = () => {
+  const v = typeof RHYTHM_MULTI !== 'undefined' ? RHYTHM_MULTI.view() : null;
+  return (v && v.myCpus ? v.myCpus : []).map((c) => rhythmAssistSessionIdOf(c.masuId)).filter(Boolean);
+};
+// 呼んだ助手みんなのビートP の上乗せ(セッションLv の上乗せ + 友情Lv4 以上のデュオ)。60-app の周回の報酬の倍率に掛ける
+const rhythmAssistSessionRewardBonusNow = () => {
+  const ids = rhythmAssistSessionCalledIds();
+  return rhythmAssistSessionRewardBonus(RHYTHM_ASSIST_SESSION_STORE.get(), ids) + rhythmAssistSessionDuoBonus(rhythmAssistSessionDuosNow(ids));
+};
+// デュオの台詞を1本選ぶ(1曲のうちに同じものは出さない)。[[話す人, 表情, 台詞(呼び方入り)], …]
+const rhythmAssistSessionPickPair = (duo, scene, used, rand = Math.random) => {
+  const table = typeof RHYTHM_ASSIST_SESSION_PAIR_LINES !== 'undefined' ? RHYTHM_ASSIST_SESSION_PAIR_LINES[duo.key] : null;
+  const list = table && Array.isArray(table[scene]) ? table[scene] : [];
+  const fresh = list.filter((rows) => !used.has(rows));
+  if (!fresh.length) return null;
+  const rows = fresh[Math.floor(rand() * fresh.length)];
+  used.add(rows);
+  const callOf = (who, to) => (typeof assistantPeerCall === 'function' ? assistantPeerCall(who, to) : rhythmAssistSessionName(to));
+  return rows.map(([who, expr, text]) => [who, expr, String(text).replace(/\{c\}/g, callOf(who, who === duo.a ? duo.b : duo.a))]);
+};
+
 // 演奏中の助手の顔とひとこと(2026-11-07 社長の止め絵の形)。演奏画面の外(60-app)から重ねる。演奏の仕組みには触れず、
 // 30-rhythm-play.jsx の読むだけの窓(RHYTHM_PLAY_WATCH)から、コンボ・ミス・曲の時刻を読むだけ。
-// 置き場所: 左上の表示(data-rhythm-hud-left)のすぐ下(縦は時間の行の下・横は曲名の行の下。道の外)。
-// ひとことは 1.6秒で消える。同じ曲で同じ場面のひとことは1回だけ。セッションLv.15 からサビで顔が光る
+// 置き場所: 上の帯と時間の行の左側の表示のすぐ下(縦は時間の行の下・横は曲名の行の下。道の外)。
+// 場面: 50/100/300コンボ・ミス3つ続き・サビ・最後の10秒。ひとことは 1.6秒で消える。同じ曲で同じ場面は1回(デュオの掛け合いは3回まで)。
+// セッションLv.15 からサビで顔が光る。友情Lv3 のデュオは掛け合い、Lv5(特別なお話を見たあと)はサビで合体(顔が重なり、画面のふちに2人の色の光)
 const RHYTHM_ASSIST_SESSION_BUBBLE_MS = 1600;
 const RHYTHM_ASSIST_SESSION_COMBO_STEPS = Object.freeze([50, 100, 300]);
+const RHYTHM_ASSIST_SESSION_LAST_MS = 10000;
+const RHYTHM_ASSIST_SESSION_GATTAI_MS = 3600;
 function RhythmAssistSessionPlayFace({ songId }) {
   const state = useRhythmAssistSessionState();
   const boxRef = React.useRef(null);
   const [pos, setPos] = React.useState(null);
-  const [say, setSay] = React.useState(null); // { aid, text }
+  const [say, setSay] = React.useState(null); // { aid, text, expr }
   const [glow, setGlow] = React.useState(false);
-  const ids = (() => {
-    const v = typeof RHYTHM_MULTI !== 'undefined' ? RHYTHM_MULTI.view() : null;
-    return (v && v.myCpus ? v.myCpus : []).map((c) => rhythmAssistSessionIdOf(c.masuId)).filter(Boolean).slice(0, 4);
-  })();
+  const [gattai, setGattai] = React.useState(null); // { a, b }
+  const ids = rhythmAssistSessionCalledIds().slice(0, 4);
   const idsKey = ids.join(',');
   React.useEffect(() => {
     if (!ids.length) return undefined;
     const said = new Set();
-    let lastCombo = 0; let missRow = 0; let lastMiss = 0; let inClimax = false; let hideAt = 0; let turn = 0;
+    const usedPair = new Set();
+    const duos = rhythmAssistSessionDuosNow(ids);
+    const song = typeof RHYTHM_SONGS !== 'undefined' && Array.isArray(RHYTHM_SONGS) ? RHYTHM_SONGS.find((x) => x && x.songId === songId) : null;
+    const endMs = song ? Number(song.playDurationMs) || 0 : 0;
+    let lastCombo = 0; let missRow = 0; let lastMiss = 0; let inClimax = false; let hideAt = 0; let turn = 0; let duoTalks = 0; let gattaiDone = false; let gattaiUntil = 0;
+    const queue = [];
+    const showNext = () => {
+      const next = queue.shift();
+      if (!next) { setSay(null); hideAt = 0; return; }
+      setSay(next); hideAt = Date.now() + RHYTHM_ASSIST_SESSION_BUBBLE_MS;
+    };
+    const enqueue = (rows) => { if (queue.length || hideAt) return false; rows.forEach(([aid, expr, text]) => queue.push({ aid, expr, text })); showNext(); return true; };
+    const speakDuo = (scene) => {
+      if (queue.length || hideAt) return false;
+      for (const d of duos) {
+        const rows = rhythmAssistSessionPickPair(d, scene, usedPair);
+        if (rows && enqueue(rows)) return true;
+      }
+      return false;
+    };
+    const mode = RHYTHM_ASSIST_SESSION_STORE.get().talk;
     const speak = (kind) => {
+      if (queue.length || hideAt || mode === 'off') return;
+      if (mode === 'few' && !RHYTHM_ASSIST_SESSION_FEW_KINDS.includes(kind)) return;
+      // デュオがいれば、コンボ・サビのときは掛け合い(1曲3回まで)
+      if ((kind === 'combo' || kind === 'climax') && duos.length && duoTalks < RHYTHM_ASSIST_SESSION_DUO_TALK_MAX && speakDuo('play')) { duoTalks += 1; return; }
       const order = ids.slice(turn).concat(ids.slice(0, turn));
       for (const aid of order) {
         const key = `${aid}:${kind}`;
         if (said.has(key)) continue;
-        const text = rhythmAssistSessionTalk({ assistantId: aid, kind });
-        if (!text) continue;
+        const hit = rhythmAssistSessionPickLine(aid, kind);
+        if (!hit) continue;
         said.add(key); turn = (ids.indexOf(aid) + 1) % ids.length;
-        setSay({ aid, text }); hideAt = Date.now() + RHYTHM_ASSIST_SESSION_BUBBLE_MS;
+        enqueue([[aid, hit[0], hit[1]]]);
         return;
       }
     };
@@ -55133,6 +56181,8 @@ function RhythmAssistSessionPlayFace({ songId }) {
       place();
       const watch = typeof RHYTHM_PLAY_WATCH !== 'undefined' ? RHYTHM_PLAY_WATCH : null;
       const h = watch && watch.hud ? watch.hud.get() : null;
+      if (hideAt && Date.now() >= hideAt) showNext();
+      if (gattaiUntil && Date.now() >= gattaiUntil) { gattaiUntil = 0; setGattai(null); }
       if (h) {
         const combo = Number(h.combo) || 0;
         const miss = h.counts ? Number(h.counts.MISS) || 0 : 0;
@@ -55141,35 +56191,123 @@ function RhythmAssistSessionPlayFace({ songId }) {
         if (combo > 0) missRow = 0;
         lastCombo = combo; lastMiss = miss;
         const now = rhythmAssistSessionInClimax(songId || watch.songId, watch.timeMs);
-        if (now && !inClimax) speak('climax');
+        if (now && !inClimax) {
+          const g = !gattaiDone ? duos.find((d) => d.gattai) : null;
+          if (g) {
+            // 合体(1曲1回): 2人の顔が重なり、画面のふちに2人の色の光。掛け合いは gattai の台詞
+            gattaiDone = true; gattaiUntil = Date.now() + RHYTHM_ASSIST_SESSION_GATTAI_MS; setGattai({ a: g.a, b: g.b });
+            const rows = mode === 'off' ? null : rhythmAssistSessionPickPair(g, 'gattai', usedPair);
+            if (rows) { queue.length = 0; hideAt = 0; enqueue(rows); }
+          } else speak('climax');
+        }
         if (now !== inClimax) { inClimax = now; setGlow(now); }
+        if (endMs > RHYTHM_ASSIST_SESSION_LAST_MS && Number(watch.timeMs) >= endMs - RHYTHM_ASSIST_SESSION_LAST_MS && Number(watch.timeMs) < endMs) speak('last');
       }
-      if (hideAt && Date.now() >= hideAt) { hideAt = 0; setSay(null); }
     };
     const t = setInterval(tick, 200);
     tick();
     return () => clearInterval(t);
   }, [idsKey, songId]);
   if (!ids.length) return null;
+  const whoA = gattai ? rhythmAssistSessionWho(gattai.a) : null;
+  const whoB = gattai ? rhythmAssistSessionWho(gattai.b) : null;
   return (
-    <div ref={boxRef} data-rhythm-assist-play aria-hidden="true" className="pointer-events-none absolute z-[60] flex w-[140px] flex-col gap-1"
-      style={pos ? { top: pos.top, left: pos.left } : { visibility: 'hidden', top: 0, left: 0 }}>
-      {ids.map((aid) => {
-        const who = rhythmAssistSessionWho(aid);
-        if (!who) return null;
-        const lit = glow && rhythmAssistSessionLevel(state, aid) >= RHYTHM_ASSIST_SESSION_GLOW_LEVEL;
-        const talking = say && say.aid === aid;
-        return (
-          <div key={aid} data-rhythm-assist-play-face={aid} data-glow={lit ? '1' : undefined} className="flex items-start gap-1.5">
-            <span className="block h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 bg-slate-800 transition-shadow duration-300"
-              style={{ borderColor: who.accent || '#f472b6', boxShadow: lit ? `0 0 14px 4px ${who.accent || '#f472b6'}` : 'none' }}>
-              <img src={assistantFaceSrc(who, talking ? 'happy' : null)} alt="" draggable={false} className="h-full w-full object-cover" />
-            </span>
-            {talking && <span data-rhythm-assist-play-bubble className="block min-w-0 rounded-xl bg-white px-1.5 py-0.5 text-[9.5px] font-black leading-snug text-slate-900" style={JA_WRAP_STYLE}>{jaWrap(say.text)}</span>}
-          </div>
-        );
-      })}
-    </div>
+    <>
+      {whoA && whoB && ['left', 'right'].map((side) => (
+        <div key={side} data-rhythm-assist-gattai-light={side} aria-hidden="true" className="pointer-events-none absolute inset-y-0 z-[59] w-3"
+          style={{ [side]: 0, background: `linear-gradient(180deg, ${whoA.accent || '#f472b6'}, ${whoB.accent || '#38bdf8'}, ${whoA.accent || '#f472b6'})`, opacity: 0.75, boxShadow: `0 0 18px 6px ${side === 'left' ? (whoA.accent || '#f472b6') : (whoB.accent || '#38bdf8')}` }} />
+      ))}
+      <div ref={boxRef} data-rhythm-assist-play aria-hidden="true" className="pointer-events-none absolute z-[60] flex w-[140px] flex-col gap-1"
+        style={pos ? { top: pos.top, left: pos.left } : { visibility: 'hidden', top: 0, left: 0 }}>
+        {ids.map((aid) => {
+          const who = rhythmAssistSessionWho(aid);
+          if (!who) return null;
+          // 合体中は、相方の顔を自分の顔に重ねる(2つ目の顔は1つ目の後ろへ回す)
+          if (gattai && aid === gattai.b) return null;
+          const partner = gattai && aid === gattai.a ? whoB : null;
+          const lit = (glow && rhythmAssistSessionLevel(state, aid) >= RHYTHM_ASSIST_SESSION_GLOW_LEVEL) || !!partner;
+          const talker = say && (say.aid === aid || (partner && say.aid === gattai.b)) ? say : null;
+          const face = (w, expr) => <img src={assistantFaceSrc(w, expr || null)} alt="" draggable={false} className="h-full w-full object-cover" />;
+          return (
+            <div key={aid} data-rhythm-assist-play-face={aid} data-glow={lit ? '1' : undefined} data-gattai={partner ? '1' : undefined} className={partner ? 'flex flex-col items-start gap-1' : 'flex items-start gap-1.5'}>
+              <span className={`relative block h-10 shrink-0 ${partner ? 'w-[64px]' : 'w-10'}`}>
+                {partner && (
+                  <span data-rhythm-assist-gattai-partner className="absolute left-6 top-0 block h-10 w-10 overflow-hidden rounded-full border-2 bg-slate-800"
+                    style={{ borderColor: partner.accent || '#38bdf8', boxShadow: `0 0 14px 4px ${partner.accent || '#38bdf8'}` }}>
+                    {face(partner, say && say.aid === gattai.b ? say.expr : 'excited')}
+                  </span>
+                )}
+                <span className="relative z-10 block h-10 w-10 overflow-hidden rounded-full border-2 bg-slate-800 transition-shadow duration-300"
+                  style={{ borderColor: who.accent || '#f472b6', boxShadow: lit ? `0 0 14px 4px ${who.accent || '#f472b6'}` : 'none' }}>
+                  {face(who, talker && talker.aid === aid ? talker.expr : partner ? 'excited' : null)}
+                </span>
+              </span>
+              {talker && <span data-rhythm-assist-play-bubble className="block min-w-0 rounded-xl bg-white px-1.5 py-0.5 text-[9.5px] font-black leading-snug text-slate-900" style={JA_WRAP_STYLE}>
+                {partner && <b className="mr-0.5" style={{ color: (rhythmAssistSessionWho(talker.aid) || {}).accent || '#db2777' }}>{rhythmAssistSessionName(talker.aid)}:</b>}{jaWrap(talker.text)}
+              </span>}
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+// デュオの結果(友情Lv4 から2人のひとこと)と、2人で1曲終えたときの友情Lv +3(どの2人でも。1日12まで・ペアの1日の上限の中)。
+// 同じ回(round)に2度は足さない。友情Lv を足すのは assistantPeerGain(56-assistant-peer.jsx)だけ
+const RHYTHM_ASSIST_SESSION_PEER_DONE = new Set();
+function RhythmAssistSessionDuoResult({ ids = [], round }) {
+  const [shown, setShown] = React.useState([]);
+  const key = `${round}:${ids.join(',')}`;
+  React.useEffect(() => {
+    if (!round || ids.length < 2) return undefined;
+    let alive = true;
+    const duos = rhythmAssistSessionDuosNow(ids);
+    const used = new Set();
+    const lines = duos.filter((d) => d.result).map((d) => ({ d, rows: rhythmAssistSessionPickPair(d, 'result', used) })).filter((x) => x.rows);
+    (async () => {
+      const gains = {};
+      for (let i = 0; i < ids.length; i += 1) for (let j = i + 1; j < ids.length; j += 1) {
+        const pk = `${round}:${rhythmAssistSessionPairKey(ids[i], ids[j])}`;
+        if (RHYTHM_ASSIST_SESSION_PEER_DONE.has(pk) || typeof assistantPeerGain !== 'function') continue;
+        RHYTHM_ASSIST_SESSION_PEER_DONE.add(pk);
+        try { const r = await assistantPeerGain(ids[i], ids[j], 'session'); if (r && r.gained > 0) gains[rhythmAssistSessionPairKey(ids[i], ids[j])] = r.gained; } catch (_) { /* 足せなくても続ける */ }
+      }
+      if (!alive) return;
+      const out = lines.map(({ d, rows }) => ({ key: d.key, d, rows, gained: gains[d.key] || 0 }));
+      Object.keys(gains).filter((k) => !out.some((x) => x.key === k)).forEach((k) => { const [a, b] = k.split('-'); out.push({ key: k, d: { a, b }, rows: null, gained: gains[k] }); });
+      setShown(out);
+    })();
+    return () => { alive = false; };
+  }, [key]);
+  if (!shown.length) return null;
+  return (
+    <>
+      {shown.map(({ key: k, d, rows, gained }) => (
+        <p key={k} data-rhythm-assist-duo-result={k} className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/50 bg-violet-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100">
+          <span className="shrink-0">🎤 {rhythmAssistSessionName(d.a)}・{rhythmAssistSessionName(d.b)}</span>
+          {rows && rows.map(([who, , text], i) => <span key={i} className="min-w-0">{rhythmAssistSessionName(who)}「{text}」</span>)}
+          {gained > 0 && <span data-rhythm-assist-peer-gain className="text-amber-200">友情Lv +{gained}</span>}
+        </p>
+      ))}
+    </>
+  );
+}
+
+// 結果のカードの見た目(Lv.45 で枠が助手の色・Lv.90 で名前入りの背景)。m.level は呼んだときのセッションLv(部屋の知らせに載る)
+const rhythmAssistSessionCardStyle = (m, isMvp = false) => {
+  const who = m && m.cpu && m.as ? rhythmAssistSessionWho(m.as) : null;
+  if (!who || isMvp) return undefined;
+  const lv = Number(m.level) || 0;
+  if (lv < RHYTHM_ASSIST_SESSION_FRAME_LEVEL) return undefined;
+  return { borderColor: who.accent || '#f472b6', borderWidth: 2, boxShadow: `inset 0 0 12px ${who.accent || '#f472b6'}55` };
+};
+function RhythmAssistSessionCardBack({ m }) {
+  const who = m && m.cpu && m.as ? rhythmAssistSessionWho(m.as) : null;
+  if (!who || (Number(m.level) || 0) < RHYTHM_ASSIST_SESSION_BACK_LEVEL) return null;
+  return (
+    <b data-rhythm-assist-card-back aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-1 z-0 select-none truncate text-center text-[15px] font-black italic tracking-widest opacity-25"
+      style={{ color: who.accent || '#f472b6' }}>{who.name}</b>
   );
 }
 
@@ -56978,6 +58116,11 @@ const assistantPeerGain = async (a, b, action) => {
   const opts = typeof assistantLifeGainOptsNow === 'function' ? assistantLifeGainOptsNow() : null;
   const r = assistantPeerGainState(ASSISTANT_PEER_STORE.state, a, b, action, assistantPeerDayKey(), opts);
   if (r.gained > 0) { ASSISTANT_PEER_STORE.set(r.st); assistantPeerSaveBond(); }
+  // 友情Lv が上がった演出(44-growth-fx.jsx)。どの道で上がっても、ここ1か所から呼ぶ。道具のときは道具の演出の中で見せるので呼ばない。
+  //   助手たちの今(印 assistantLife)の公開と一緒に出す。見た目だけ(保存・計算は触らない)
+  if (r.gained > 0 && r.levelAfter > r.levelBefore && action !== 'gift' && action !== 'token' && assistantPeerLifeOn() && typeof growthFxPeerLevel === 'function') {
+    try { growthFxPeerLevel({ pair: [a, b], levelBefore: r.levelBefore, levelAfter: r.levelAfter }); } catch {}
+  }
   return r;
 };
 // お話を最後まで見たとき(60-app.jsx のお話の finish)。出た助手のペアぜんぶ
@@ -57114,8 +58257,16 @@ const assistantPeerUseItem = async (kind, pair) => {
   const next = { ...g, [kind]: assistantPeerPairKey(pair[0], pair[1]) };
   ASSISTANT_PEER_STORE.set({ gift: next });
   try { storeSet(ASSISTANT_PEER_GIFT_KEY, next, false); } catch {}
-  await assistantPeerGain(pair[0], pair[1], kind);
+  const pointsBefore = assistantPeerPoints(ASSISTANT_PEER_STORE.state, pair[0], pair[1]);
+  const r = await assistantPeerGain(pair[0], pair[1], kind);
   assistantPeerAddPlayerBond(pair, kind === 'gift' ? 'peerGift' : 'peerToken');
+  // 品物を渡した演出(44-growth-fx.jsx)。名前と絵は演出の側が持ち物の表から取る。好き嫌いはまだ無いので reaction は null
+  if (assistantPeerLifeOn() && typeof growthFxPeerItem === 'function') {
+    const pa = typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS[kind === 'gift' ? 'peerGift' : 'peerToken'];
+    const after = pointsBefore + ((r && r.gained) || 0);
+    try { growthFxPeerItem({ pair: [...pair], itemId: ASSISTANT_PEER_ITEM_IDS[kind], pointsBefore, pointsAfter: after,
+      levelBefore: assistantPeerLevelOf(pointsBefore), levelAfter: assistantPeerLevelOf(after), reaction: null, playerGain: pa ? pa.amount : 0 }); } catch {}
+  }
   // 助手たちの今: もらった2人はしばらくごきげんで、一緒に過ごしやすい
   if (typeof assistantLifeNote === 'function') void assistantLifeNote('gift', { pair: assistantPeerPairKey(pair[0], pair[1]) });
   if (typeof assistantLifeAddPlay === 'function') void assistantLifeAddPlay('peer');
@@ -57327,7 +58478,9 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
   }, [scene, st.playNote]);
   // 画面が変わったら閉じる(見返しは閉じない)。次にその画面へ入ったときに、もう一度決める
   React.useEffect(() => { decidedRef.current = decidedRef.current.startsWith(`${scene}:`) ? decidedRef.current : ''; setCur(c => (c && !c.replay ? null : c)); }, [scene]);
-  const [toast, setToast] = React.useState(null); // { kind:'level'|'daily', pair, level }
+  const [toast, setToast0] = React.useState(null); // { kind:'level'|'daily', pair, level }
+  // 友情Lv が上がった知らせは、印 assistantLife が真なら画面いっぱいの祝い(44-growth-fx.jsx・assistantPeerGain から)が出すので、トーストは出さない(同じことを2回言わない)
+  const setToast = React.useCallback((t) => { if (t && t.kind === 'level' && assistantPeerLifeOn() && typeof growthFxPeerLevel === 'function') return; setToast0(t); }, []);
   const finish = React.useCallback(async (c) => {
     setCur(null);
     // 見返し・ひとこと(reaction)は何も増やさない。遊びのあとのひとこと(replay を渡されていないとき)は onReplayEnd を呼ばない
@@ -58336,6 +59489,46 @@ const assistantLifePickInviteTalk = (id, life = ASSISTANT_LIFE_STORE.state.life,
   return assistantLifeWithCtx(t, g ? { place: g.place, doing: g.doing } : { place: s.place, doing: s.doing });
 };
 
+
+// ---------- 2人にあげる道具(差し入れ・友情のしるし)を分かりやすく(2026-11-07 社長「この見本で作る」 ux/items-mock.png) ----------
+// 名前・絵・値段・上がる量は書き込まず、持ち物(ITEMS)・交換所(RHYTHM_EVENT_POINT_SHOP_OFFERS)・上がり方の表から読む(あとで名前や種類が変わってもずれない)
+// 誘う・引き合わせる … 無料。次の時間の過ごし方が変わる/道具 … 今すぐ2人の友情Lv とあなたとの仲良し度が上がる
+const ASSISTANT_LIFE_ITEM_KINDS = Object.freeze([
+  { kind: 'gift', itemId: 'peer_gift', what: '2人にあげるおやつ。2人でおやつの時間をすごします', player: 'peerGift' },
+  { kind: 'token', itemId: 'peer_token', what: '2人の友情を深める記念の品。2人の友情がぐっと深まります', player: 'peerToken' },
+]);
+const ASSISTANT_LIFE_ITEM_INTRO_KEY = 'mh_assistant_life_item_intro_v1';
+const assistantLifeItemInfo = (kind) => {
+  const k = ASSISTANT_LIFE_ITEM_KINDS.find(x => x.kind === kind);
+  if (!k) return null;
+  const item = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : []).find(x => x.id === k.itemId) || {};
+  const offer = (typeof RHYTHM_EVENT_POINT_SHOP_OFFERS !== 'undefined' ? RHYTHM_EVENT_POINT_SHOP_OFFERS : []).find(x => x.itemId === k.itemId) || {};
+  const peerAmt = (typeof ASSISTANT_PEER_BOND_ACTIONS !== 'undefined' && ASSISTANT_PEER_BOND_ACTIONS[kind]) ? ASSISTANT_PEER_BOND_ACTIONS[kind].amount : 0;
+  const playerAmt = (typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS[k.player]) ? ASSISTANT_BOND_ACTIONS[k.player].amount : 0;
+  return { ...k, name: item.name || offer.name || '', emoji: item.emoji || offer.emoji || '🎁', cost: Number.isFinite(offer.cost) ? offer.cost : null, peerAmt, playerAmt };
+};
+// 持ち物・交換所の説明(印が真のときだけ「何が起きるか」中心の文。偽なら今の desc)
+const assistantLifeItemDesc = (item) => {
+  if (!item) return '';
+  if (!assistantLifeEnabled()) return item.desc || '';
+  const k = ASSISTANT_LIFE_ITEM_KINDS.find(x => x.itemId === item.id);
+  if (!k) return item.desc || '';
+  const info = assistantLifeItemInfo(k.kind);
+  return `${k.what.split('。')[0]}。助手2人に使うと、2人の友情Lv +${info.peerAmt}・2人それぞれとあなたの仲良し度 +${info.playerAmt}・2人のひとこと。HOME の「助手たちの今」で、一緒にいる2人を選んで使う。1日1回まで(朝4時に戻る)。ビートP交換所で手に入る。`;
+};
+// 道具を渡すとよさそうな2人の印(もうすぐ友情Lv が上がる/言い合いのあと)
+const assistantLifePairHint = (peerSt, life, a, b) => {
+  const pts = (peerSt && peerSt.bond && peerSt.bond[assistantLifePairKey(a, b)]) || 0;
+  const levels = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' ? ASSISTANT_PEER_BOND_LEVELS : [];
+  const lv = typeof assistantPeerBondLevel === 'function' ? assistantPeerBondLevel(pts) : 1;
+  const cur = levels.find(x => x.level === lv);
+  const next = levels.find(x => x.level === lv + 1);
+  const q = peerSt && peerSt.quarrel && peerSt.quarrel.pending;
+  const after = (q && q.pair === assistantLifePairKey(a, b)) || assistantLifeAirOf(life, a, b) === 'after';
+  const near = next && next.min - pts <= 30 ? { level: next.level, left: next.min - pts, ratio: cur ? (pts - cur.min) / (next.min - cur.min) : 0 } : null;
+  return { lv, pts, near, after, next };
+};
+
 // ---------- 見守る(段階2) ----------
 // その日に見守れる数は、にぎわいの段の moves(静か6・ふつう10・にぎやか16・お祭り24)。やりこむほど動きが増える(2026-11-07 社長)
 const assistantLifeWatchLeft = (play, day) => {
@@ -58469,6 +59662,8 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
   const [tab, setTab] = React.useState('now');
   const [pick, setPick] = React.useState([]);
   const [note, setNote] = React.useState('');
+  const [give, setGive] = React.useState(null); // { ids(組), pair, kind }  渡す前の確かめ
+  const peerSt = (typeof useAssistantPeerState === 'function') ? useAssistantPeerState() : null;
   if (!assistantLifeEnabled() || !st.loaded || !st.open) return null;
   const life = st.life || {};
   const day = assistantLifeDayKey();
@@ -58508,6 +59703,28 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
   };
   const introduce = async () => { if (pick.length === 2 && await assistantLifeNudge('introduce', pick)) { setNote(`${nameOf(pick[0])}と${nameOf(pick[1])}が、次の時間に一緒に過ごしやすくなりました`); setPick([]); } };
   const mood = (id) => ASSISTANT_LIFE_MOODS[(life.moods || {})[id]] || '';
+  // 2人にあげる道具
+  const canGive = !!(peerItems && onUseItem);
+  const itemInfos = ASSISTANT_LIFE_ITEM_KINDS.map(k => assistantLifeItemInfo(k.kind));
+  const haveOf = (kind) => (peerItems && Number(peerItems[kind])) || 0;
+  const usedOf = (kind) => !!(peerSt && typeof assistantPeerItemUsedToday === 'function' && assistantPeerItemUsedToday(peerSt, kind));
+  const pairsOf = (gids) => { const o = []; for (let i = 0; i < gids.length; i++) for (let j = i + 1; j < gids.length; j++) o.push([gids[i], gids[j]]); return o; };
+  const openGive = (g) => {
+    const kind = itemInfos.find(x => haveOf(x.kind) > 0 && !usedOf(x.kind))?.kind || 'gift';
+    // 3人以上の組は、渡すとよさそうな2人(もうすぐ Lv が上がる → 言い合いのあと)を先に選んでおく
+    const ps = pairsOf(g.ids);
+    const best = ps.find(([a, b]) => assistantLifePairHint(peerSt, life, a, b).near) || ps.find(([a, b]) => assistantLifePairHint(peerSt, life, a, b).after) || ps[0];
+    setGive({ ids: g.ids, pair: g.ids.length === 2 ? [...g.ids] : best, kind });
+  };
+  const doGive = async () => {
+    if (!give || !give.pair) return;
+    const talk = await onUseItem(give.kind, give.pair);
+    const info = assistantLifeItemInfo(give.kind);
+    if (!talk) { setNote(`${info.name}は、いまは渡せません(1日1回・持っている数を見てください)`); setGive(null); return; }
+    setGive(null);
+    assistantLifeCloseScreen();
+    if (onReplay) onReplay(talk);
+  };
   return (
     <div data-assistant-life-screen className="fixed inset-0 flex justify-center bg-black/80" style={{ zIndex: 9000 }}>
       <div className="flex h-full w-full max-w-md flex-col bg-slate-950" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
@@ -58537,6 +59754,19 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
           </div>
           {note && <p data-assistant-life-note className="mt-2 rounded-xl bg-sky-400/10 px-2 py-1.5 text-[11px] font-bold text-sky-100">{note}</p>}
           {tab === 'now' && (<>
+            {canGive && (
+              <div data-assistant-life-items className="mt-2 rounded-2xl border border-amber-300/40 bg-amber-400/5 p-2">
+                <p className="text-[12px] font-black text-amber-200">🎁 2人にあげる道具(今日あと:{itemInfos.map(x => `${x.emoji}${usedOf(x.kind) ? 0 : 1}回`).join('・')})</p>
+                {itemInfos.map(x => (
+                  <div key={x.kind} data-assistant-life-item={x.kind} className="mt-1.5 flex items-center gap-2">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 text-[24px]" aria-hidden="true">{x.emoji}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] font-black text-white">{x.name} <span className="text-[10px] text-slate-400">持っている {haveOf(x.kind)}個</span></p>
+                      <p className="text-[10px] leading-snug text-slate-300">{x.what.split('。')[0]}。<span className="text-orange-300">友情Lv +{x.peerAmt}</span>・2人との<span className="text-pink-200">仲良し度 +{x.playerAmt}</span>・2人のひとこと</p>
+                    </div>
+                  </div>))}
+                <p className="mt-1.5 text-[9px] leading-snug text-slate-400">手に入れる:モンヒロビートの「ビートP交換所」({itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・')})/渡す:下の組の「{itemInfos[0].emoji} 渡す」。誘う・引き合わせるは無料で、次の時間の過ごし方が変わります</p>
+              </div>)}
             <div className="mt-2 space-y-2">
               {(life.groups || []).map(g => { const key = assistantLifeGroupKey(g); const done = (life.watched || []).includes(key); return (
                 <div key={key} data-assistant-life-group={key} className="rounded-2xl border border-white/10 bg-slate-900/80 p-2">
@@ -58548,10 +59778,29 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
                     </div>
                   </div>
                   <p className="mt-1 text-[10px] text-slate-400">{g.ids.map(id => `${nameOf(id)}: ${mood(id)}`).join(' / ')}</p>
-                  <button type="button" data-assistant-life-watch={key} disabled={done || watchLeft <= 0} onClick={() => watch(g)}
-                    className="mt-1.5 min-h-[44px] w-full rounded-xl border border-pink-300/50 bg-pink-400/10 px-2 text-[12px] font-black text-pink-100 active:scale-[.98] disabled:opacity-40">
-                    {done ? '見守りました' : watchLeft <= 0 ? '今日はもう見守れません' : '👀 見守る(友情Lv・仲良し度が上がる)'}
-                  </button>
+                  {(() => {
+                    // 渡すとよさそうな印(もうすぐ友情Lv が上がる/言い合いのあと)
+                    const hints = pairsOf(g.ids).map(([a, b]) => ({ a, b, ...assistantLifePairHint(peerSt, life, a, b) }));
+                    const near = hints.filter(h => h.near).sort((x, y) => x.near.left - y.near.left)[0];
+                    const after = hints.find(h => h.after);
+                    const who2 = (h) => (g.ids.length > 2 ? `${nameOf(h.a)}と${nameOf(h.b)}、` : '');
+                    return (<>
+                      {near && <p data-assistant-life-hint="near" className="mt-1 w-fit rounded-full bg-orange-400/20 px-2 py-0.5 text-[9px] font-black text-orange-200">⬆ {who2(near)}もうすぐ友情Lv{near.near.level}(あと{near.near.left})</p>}
+                      {near && g.ids.length === 2 && <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-slate-800" aria-hidden="true"><div className="h-full bg-orange-400" style={{ width: `${Math.round(100 * Math.min(1, Math.max(0, near.near.ratio)))}%` }}/></div>}
+                      {after && <p data-assistant-life-hint="after" className="mt-1 w-fit rounded-full bg-sky-400/20 px-2 py-0.5 text-[9px] font-black text-sky-200">💦 {who2(after)}言い合いのあと(渡すと仲直りのきっかけに)</p>}
+                    </>);
+                  })()}
+                  <div className="mt-1.5 flex gap-1.5">
+                    <button type="button" data-assistant-life-watch={key} disabled={done || watchLeft <= 0} onClick={() => watch(g)}
+                      className="min-h-[44px] flex-1 rounded-xl border border-pink-300/50 bg-pink-400/10 px-2 text-[12px] font-black text-pink-100 active:scale-[.98] disabled:opacity-40">
+                      {done ? '見守りました' : watchLeft <= 0 ? '今日はもう見守れません' : '👀 見守る'}
+                    </button>
+                    {canGive && (
+                      <button type="button" data-assistant-life-give={key} onClick={() => openGive(g)}
+                        className="min-h-[44px] flex-1 rounded-xl border border-amber-300/60 bg-amber-400/15 px-2 text-[12px] font-black text-amber-100 active:scale-[.98]">
+                        {itemInfos[0].emoji} {g.ids.length === 2 ? '渡す' : 'だれに渡す？'}
+                      </button>)}
+                  </div>
                 </div>); })}
               {Object.entries(life.solo || {}).map(([id, s]) => (
                 <div key={id} data-assistant-life-solo={id} data-assistant-life-reason={s.reason} className="flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-900/60 p-2">
@@ -58589,6 +59838,90 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
           </>)}
           {tab === 'map' && typeof AssistantPeerMap === 'function' && (
             <div className="mt-2"><AssistantPeerMap metIds={metIds} onReplay={(t) => { assistantLifeCloseScreen(); if (onReplay) onReplay(t); }} peerItems={peerItems} onUseItem={onUseItem}/></div>)}
+        </div>
+      </div>
+      {give && <AssistantLifeGiveSheet give={give} setGive={setGive} life={life} peerSt={peerSt} itemInfos={itemInfos} haveOf={haveOf} usedOf={usedOf} nameOf={nameOf} onGive={doGive}/>}
+    </div>);
+}
+// 渡す前の確かめ(何の道具か・起きること・使える数・手に入れる所・このあと を1枚で)
+function AssistantLifeGiveSheet({ give, setGive, life, peerSt, itemInfos, haveOf, usedOf, nameOf, onGive }) {
+  const info = itemInfos.find(x => x.kind === give.kind) || itemInfos[0];
+  const pair = give.pair || [];
+  const hint = pair.length === 2 ? assistantLifePairHint(peerSt, life, pair[0], pair[1]) : null;
+  const left = hint && hint.next ? hint.next.min - hint.pts : null;
+  const have = haveOf(info.kind);
+  const used = usedOf(info.kind);
+  const reason = used ? '今日はもう使いました(朝4時に戻ります)' : have <= 0 ? `持っていません(ビートP交換所で手に入ります)` : '';
+  const pairs = [];
+  for (let i = 0; i < give.ids.length; i++) for (let j = i + 1; j < give.ids.length; j++) pairs.push([give.ids[i], give.ids[j]]);
+  const samePair = (p) => pair.length === 2 && p.every(id => pair.includes(id));
+  return (
+    <div data-assistant-life-give-sheet={info.kind} className="absolute inset-0 flex items-end justify-center bg-black/70" style={{ zIndex: 2 }} onClick={() => setGive(null)}>
+      <div className="w-full max-w-md rounded-t-3xl border-t-2 border-amber-300/60 bg-slate-900 p-3" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }} onClick={ev => ev.stopPropagation()}>
+        <div className="flex gap-1.5" role="tablist">
+          {itemInfos.map(x => (
+            <button key={x.kind} type="button" role="tab" aria-selected={x.kind === info.kind} data-assistant-life-give-kind={x.kind} onClick={() => setGive({ ...give, kind: x.kind })}
+              className={`min-h-[40px] flex-1 rounded-xl border px-1 text-[12px] font-black active:scale-[.98] ${x.kind === info.kind ? 'border-amber-300 bg-amber-400/20 text-amber-100' : 'border-white/10 text-slate-400'}`}>{x.emoji} {x.name}({haveOf(x.kind)})</button>))}
+        </div>
+        {pairs.length > 1 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {pairs.map(p => (
+              <button key={p.join('-')} type="button" data-assistant-life-give-pair={p.join('-')} aria-pressed={samePair(p)} onClick={() => setGive({ ...give, pair: p })}
+                className={`min-h-[36px] rounded-full border px-2.5 text-[11px] font-black active:scale-95 ${samePair(p) ? 'border-amber-300 bg-amber-400/25 text-white' : 'border-white/15 text-slate-300'}`}>{p.map(nameOf).join('と')}</button>))}
+          </div>)}
+        <div className="mt-2 flex items-center gap-2">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/5 text-[30px]" aria-hidden="true">{info.emoji}</span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[15px] font-black text-white">{info.name}を渡す</p>
+            <p className="text-[11px] text-slate-300">{pair.map(nameOf).join(' と ')} へ</p>
+          </div>
+          <AssistantLifeFaces ids={pair} size={40}/>
+        </div>
+        <dl className="mt-2 grid grid-cols-[4.5rem_1fr] gap-x-2 gap-y-1 text-[11px]">
+          <dt className="font-black text-amber-200">何の道具？</dt><dd className="text-slate-200">{info.what}</dd>
+          <dt className="font-black text-amber-200">起きること</dt>
+          <dd className="text-slate-200"><span className="text-orange-300">2人の友情Lv +{info.peerAmt}</span>{hint ? `(いま Lv${hint.lv}${left != null ? ` → あと${left}で Lv${hint.lv + 1}${left <= info.peerAmt ? '！' : ''}` : ''})` : ''}<br/>
+            <span className="text-pink-200">あなたと {pair.map(nameOf).join('・')} の仲良し度 +{info.playerAmt}</span><br/>渡したあと、2人がひとこと</dd>
+          <dt className="font-black text-amber-200">使える数</dt><dd className="text-slate-200">1日1回(朝4時に戻る)・持っている {have}個</dd>
+          <dt className="font-black text-amber-200">手に入れる</dt><dd className="text-slate-200">ビートP交換所{info.cost != null ? `(${info.cost}P)` : ''}</dd>
+          <dt className="font-black text-amber-200">このあと</dt><dd className="text-slate-200">{hint && hint.after ? '仲直りのきっかけになり、2人がまた一緒にすごしやすくなります' : '2人はしばらくごきげんで、一緒にすごしやすくなります'}</dd>
+        </dl>
+        {reason && <p data-assistant-life-give-reason className="mt-2 rounded-xl bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-300">{reason}</p>}
+        <div className="mt-2 flex gap-2">
+          <button type="button" data-assistant-life-give-cancel onClick={() => setGive(null)} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">やめる</button>
+          <button type="button" data-assistant-life-give-go disabled={!!reason || pair.length !== 2} onClick={onGive}
+            className="min-h-[44px] flex-[2] rounded-xl border border-amber-300/70 bg-amber-400/20 text-[14px] font-black text-amber-100 active:scale-[.98] disabled:opacity-40">{info.emoji} 渡す</button>
+        </div>
+      </div>
+    </div>);
+}
+// はじめて道具を手に入れたときの案内(HOME で1回だけ。mh_assistant_life_item_intro_v1)
+function AssistantLifeItemIntro({ peerItems }) {
+  const [state, setState] = React.useState('loading'); // loading | show | done
+  const have = ASSISTANT_LIFE_ITEM_KINDS.find(k => peerItems && Number(peerItems[k.kind]) > 0);
+  // 掛け合いが流れているあいだは待つ(重ねない)
+  const peer = (typeof useAssistantPeerState === 'function') ? useAssistantPeerState() : null;
+  React.useEffect(() => {
+    if (!assistantLifeEnabled() || !have || state !== 'loading') return;
+    let alive = true;
+    Promise.resolve(storeGet(ASSISTANT_LIFE_ITEM_INTRO_KEY, false, false)).catch(() => false).then(v => { if (alive) setState(v === true ? 'done' : 'show'); });
+    return () => { alive = false; };
+  }, [!!have]);
+  if (!assistantLifeEnabled() || !have || state !== 'show' || (peer && peer.talking)) return null;
+  const info = assistantLifeItemInfo(have.kind);
+  const close = (open) => { setState('done'); try { storeSet(ASSISTANT_LIFE_ITEM_INTRO_KEY, true, false); } catch {} if (open) assistantLifeOpenScreen(); };
+  const guide = (typeof assistantById === 'function') ? assistantById('mua') : null;
+  return (
+    <div data-assistant-life-item-intro className="fixed inset-0 flex items-center justify-center bg-black/60 px-4" style={{ zIndex: 8800 }}>
+      <div className="w-full max-w-sm rounded-2xl border-2 border-amber-300 bg-[#1c1405] p-3 shadow-2xl">
+        <div className="flex items-center gap-2">
+          {guide && <AssistantFace who={guide} size={44} accent={guide.accent} expression="wink"/>}
+          <p className="text-[14px] font-black text-amber-200">はじめての {info.emoji} {info.name}！</p>
+        </div>
+        <p className="mt-2 text-[12px] leading-relaxed text-white">① 「助手たちの今」で、一緒にいる2人を選んで渡せるよ<br/>② 2人の友情Lv と、あなたとの仲良し度が上がる<br/>③ 1日1回。⬆ の印がついた2人に渡すと、Lv が上がりやすい！</p>
+        <div className="mt-2 flex gap-2">
+          <button type="button" data-assistant-life-item-intro-close onClick={() => close(false)} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">あとで</button>
+          <button type="button" data-assistant-life-item-intro-open onClick={() => close(true)} className="min-h-[44px] flex-[2] rounded-xl border border-amber-300/70 bg-amber-400/20 text-[12px] font-black text-amber-100 active:scale-[.98]">「助手たちの今」を開く</button>
         </div>
       </div>
     </div>);
@@ -83699,6 +85032,7 @@ function MonsterHeroGame() {
       const after = levelInfo(nextXp);
       setBreederXp(nextXp);
       storeSet('mh_breeder_xp', nextXp, false);
+      if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(before.level, after.level, breederName);
       const gainedLevels = after.level - before.level;
       if (gainedLevels > 0) {
         setBreederPoints(prev => { const next = prev + gainedLevels; storeSet('mh_breeder_points', next, false); return next; });
@@ -87035,6 +88369,8 @@ function MonsterHeroGame() {
     if (!result.changed) return;
     assistantBondsRef.current = { ...assistantBondsRef.current, [id]: result.state };
     setAssistantBonds(prev => ({ ...prev, [id]: result.state }));
+    // 上がった瞬間の演出(見た目だけ。値と保存はこの前後のまま)
+    if (typeof growthFxAssistantBond === 'function') growthFxAssistantBond(id, current.points, result.state.points);
     // Lvが上がったら、次にHOMEを開いたときに助手がそのことに触れる。
     // ただし、いま選んでいる助手のときだけ(選んでいない助手のLvアップを本人以外に言わせない)
     const after = assistantBondLevelOf(result.state.points);
@@ -88322,6 +89658,12 @@ function MonsterHeroGame() {
     });
     setOwnedItems(prev => { const next = { ...prev, [itemId]: have - n }; storeSet('mh_owned_items', next, false); return next; });
     Audio_.se.levelUp();
+    // 使った瞬間の演出(見た目だけ)
+    if (typeof growthFxMasuBondItem === 'function') {
+      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+      growthFxMasuBondItem({ masuName: masu.name, image: base && base.iconUrl, itemName: item.name, itemEmoji: item.emoji, count: n, gain: result.xpGain,
+        before: result.before, after: result.after });
+    }
     return result;
   };
   const openTrainingInfo=()=>setGameState('TRAINING_INFO');
@@ -89232,6 +90574,7 @@ function MonsterHeroGame() {
     const breederLevelAfter = levelInfo(nextXp);
     setBreederXp(nextXp);
     storeSet('mh_breeder_xp', nextXp, false);
+    if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(breederLevelBefore.level, breederLevelAfter.level, breederName);
     const gainedLevels = breederLevelAfter.level - breederLevelBefore.level;
     if (gainedLevels > 0) {
       setBreederPoints(prev => { const next = prev + gainedLevels; storeSet('mh_breeder_points', next, false); return next; });
@@ -89370,6 +90713,7 @@ function MonsterHeroGame() {
       const breederLevelAfter = levelInfo(nextBreederXp);
       setBreederXp(nextBreederXp);
       await storeSet('mh_breeder_xp', nextBreederXp, false);
+      if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(breederLevelBefore.level, breederLevelAfter.level, breederName);
       const gainedBreederLevels = breederLevelAfter.level - breederLevelBefore.level;
       if (gainedBreederLevels > 0) {
         setBreederPoints(prev => { const next = prev + gainedBreederLevels; storeSet('mh_breeder_points', next, false); return next; });
@@ -97395,6 +98739,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     <div data-mh-theme={screenThemeFor(screenTheme, screenThemeCategory(gameState, rhythmScreenOpen))} data-mh-theme-category={screenThemeCategory(gameState, rhythmScreenOpen)} data-mh-view-rotation={forcedRotationStyle?'true':'false'} data-mh-portrait-layout={portraitOnlyScreen?'true':'false'} data-phase-look={(ecoMode==='lite'||ultraEcoSession||normalizeBattleFxSettings(battleFxSettings).idleMotion==='OFF'||battleFxLoad==='LIGHT'||battleFxLoad==='MINIMAL')?'calm':'rich'} data-fx-level={battleFxLoad} data-mh-count-up={battleFxEffective.countUp} data-mh-end-fx={battleFxEffective.endFx} onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="mh-app h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={forcedRotationStyle||{height:'100%'}}>
       {/* タップ・スライドの波紋。押している場所を指すだけの見た目なのでタップ判定は奪わない */}
       <TapRippleLayer spawnRef={rippleSpawnRef}/>
+      {/* 上がる値の演出(44-growth-fx.jsx)。見た目だけ。出してよい画面でだけ出し、演奏中・バトル中・お話の最中は貯めておく */}
+      <GrowthFxLayer screen={gameState} load={battleFxSettings.load}/>
       {updateNotice}{storageTroubleNotice}
       {/* ランの途中ならどの画面でも出し続ける。gameState==='BATTLE' に限っていたため、
           敵を倒してWAVE_RESULTへ移った瞬間に消えて、曲を選べなくなっていた */}
@@ -97465,6 +98811,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               replay={peerReplay} onReplayEnd={()=>setPeerReplay(null)} today={today}/>
             {/* 助手たちの今(2026-11-07・公開の印 assistantLife)。帯は HOME だけ(演奏中・マルチ中・お話の最中は出さない)。画面は帯とプロフィールから開く */}
             {typeof AssistantLifeBand==='function'&&gameState==='HOME'&&!busy&&!peerReplay&&<AssistantLifeBand metIds={metIds}/>}
+            {/* はじめて差し入れ・友情のしるしを手に入れたときの案内(HOME で1回だけ・公開の印 assistantLife) */}
+            {typeof AssistantLifeItemIntro==='function'&&gameState==='HOME'&&!busy&&!peerReplay&&<AssistantLifeItemIntro peerItems={{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}}/>}
             {typeof AssistantLifeScreen==='function'&&<AssistantLifeScreen metIds={metIds} onReplay={(talk)=>setPeerReplay(talk)}
               peerItems={{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}} onUseItem={useAssistantPeerItem}/>}
           </>;
@@ -99118,8 +100466,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 周回の報酬・自己ベスト・全国ランキングへも入れる(2026-10-02・ユーザー指示「ランキングにも反映」)。
           // 周回の報酬とビートPは、ライブに参加した人数ぶん多くなる(1人ふえるごとに+50%)。
           // 同じメンバーで続けると、さらに1曲ごとに+10%(上限+100%・2026-10-03)
-          // 呼んだ助手のセッションLv.20/40/60/80 で +2/4/6/8%(助手とのセッション・2026-11-07。人数ボーナスと同じ所にだけ足す。スコアには入れない)
-          const assistBonus=rhythmPlay.from==='multi'&&rhythmAssistSessionEnabled()?rhythmAssistSessionRewardBonus(RHYTHM_ASSIST_SESSION_STORE.get(),((RHYTHM_MULTI.view()||{}).myCpus||[]).map(c=>rhythmAssistSessionIdOf(c.masuId))):0;
+          // 呼んだ助手のセッションLv.20/40/60/80 で +2/4/6/8%・仲良し度 Lv4 以上のデュオ1組 +5%(助手とのセッション・2026-11-07。人数ボーナスと同じ所にだけ足す。スコアには入れない)
+          const assistBonus=rhythmPlay.from==='multi'&&rhythmAssistSessionEnabled()?rhythmAssistSessionRewardBonusNow():0;
           const multiScale=rhythmPlay.from==='multi'?Math.round(rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus)*(1+assistBonus)*100)/100:1;
           if(rhythmPlay.from==='multi')RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,result,false,{diffId:rhythmPlay.difficulty.id});
           // ===== 演奏1曲ぶんを、裏の∞周回の周回クリアとして反映する(2026-09-07・ユーザー提案) =====
