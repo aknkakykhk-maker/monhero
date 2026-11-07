@@ -36,6 +36,7 @@
 | `mh_title_art` | string / `'auto'` | タイトル画像アレンジ。`'auto'`(おまかせ)・`'halloween'`・`'classic'`。無い・知らない値は `'auto'`。起動時の先読み(index.html)もこのキーを読む |
 | `mh_home_art` | string / `'auto'` | ホーム画面アレンジ。値は `mh_title_art` と同じ |
 | `mh_screen_theme_v1` | object / 全部 `'auto'` | 画面テーマ。`{ menu, market, temple, battle, rhythm }` に `'auto'`/`'halloween'`/`'classic'`。`normalizeScreenTheme` で知らない項目・不正な値は `'auto'` に補う(docs/spec/SCREEN_THEME.md) |
+| `mh_time_of_day_v1` | object / `{ mood:'on', clock:'on' }` | 時間帯で変わる雰囲気と、いまの時刻の札の入/切(2026-11-07・44-time-of-day.jsx)。`{ mood:'on'|'off', clock:'on'|'off' }`。読みは `normalizeTimeOfDaySettings`(無い・壊れている・知らない値は 'on')。見た目だけで、ほかの値には関わらない |
 | `mh_battle_perf_v1` | boolean / false | バトルの性能計測のON/OFF(デバッグ限定)。`BATTLE_PERF` が持つ |
 | `mh_debug_battle_card_art_v1` | `'1'` / 未設定 | 行動カードの絵(試作)を出す切り替え(デバッグ限定・2026-10-15)。`BATTLE_CARD_ART_DEBUG` が持つ。公開の印 `battleCardArt` が真なら、未設定でも絵を出す |
 | `mh_battle_card_look_v1` | `'art'` / `'classic'` / 未設定 | 行動カードの見た目(設定 → バトル設定。2026-10-16)。`'classic'` で前のカード、それ以外・未設定・壊れた値は新しいカードの絵(既定)。`BATTLE_CARD_LOOK`(71-screen-battle.jsx)が `normalizeBattleCardLook` を通して読む |
