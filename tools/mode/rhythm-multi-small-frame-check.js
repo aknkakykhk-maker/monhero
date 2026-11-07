@@ -13,7 +13,8 @@ ok('small のときも枠は外さず、small を渡す',/frameId=\{m\.frame\} s
 const widgets=fs.readFileSync(path.join(ROOT,'monster-hero/src/parts/20-market-notices-help.jsx'),'utf8');
 ok('ProfileAvatar が small をフレームの層へ渡す',/const ProfileAvatar = \(\{[^}]*small=false[^}]*\}\)/.test(widgets)&&/<ProfileFrameLayer frameId=\{frameId\} small=\{small\}\/>/.test(widgets));
 ok('small のときは前もって縮めた絵(srcSmall)を使う',/src=\{\(small && frame\.srcSmall\) \|\| frame\.src\}/.test(widgets));
-ok('上の5人の細い帯は small で描く',/sizeClass=\{tall \? 'h-12 w-12 landscape:h-16 landscape:w-16' : 'h-7 w-7'\} small=\{!tall\}/.test(src));
+// 2026-11-07: 大きい札の顔に、横で背の低いときの大きさ(h-11)を足した(ミハリ B2)。細い帯(h-7)を small で描くことは同じ
+ok('上の5人の細い帯は small で描く',/sizeClass=\{tall \? 'h-12 w-12 landscape:h-16 landscape:w-16[^']*' : 'h-7 w-7'\} small=\{!tall\}/.test(src));
 ok('チャットのアイコンは small で描く',/sizeClass="h-8 w-8 shrink-0" small \/>/.test(src));
 ok('大きく出す所(ステータスの窓)は今までどおり枠つき',(src.match(/<RhythmMultiAvatar m=\{m\} resolveIconUrl=\{resolveIconUrl\} sizeClass="h-16 w-16" \/>/g)||[]).length>=2);
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');

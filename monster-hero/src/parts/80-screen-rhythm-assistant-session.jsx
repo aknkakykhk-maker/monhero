@@ -119,7 +119,7 @@ const rhythmAssistSessionTalk = ({ assistantId, kind, songId = '', score = 0, di
     const open = [[100, 'sp100'], [80, 'sp80'], [50, 'sp50']].filter(([n]) => lv >= n).map(([, sc]) => sc);
     return open.length && rand() < 0.3 ? say(open[Math.floor(rand() * open.length)]) : '';
   };
-  if (kind === 'join') return special() || say('join');
+  if (kind === 'join') { if (RHYTHM_ASSIST_SESSION_WAKE.woke.delete(assistantId)) { const w = say('woke'); if (w) return w; } return special() || say('join'); }
   if (kind === 'combo' || kind === 'miss' || kind === 'climax' || kind === 'last') return say(kind);
   if (kind === 'lvUp') return say('levelup');
   if (kind === 'likeUp') return say('likeup');
@@ -214,6 +214,8 @@ function RhythmAssistSessionPicker({ assistants = [], calledIds = [], guideAssis
                   <span className="whitespace-nowrap text-[10px] font-black text-pink-200">セッションLv.{lv}</span>
                   {lv >= RHYTHM_ASSIST_SESSION_TASTE_LEVEL && <span data-rhythm-assist-taste className="w-full truncate text-center text-[9px] font-bold text-slate-300">♡ {rhythmAssistSessionLikedNames(who.id).join('・')}</span>}
                   {calledOf(who.id) && <span className="rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950">呼んでいる</span>}
+                  {!calledOf(who.id) && !rhythmAssistSessionVisitFree(who.id) && rhythmAssistSessionAsleep(who.id) && <span data-rhythm-assist-asleep className="w-full rounded-xl bg-indigo-300/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950">💤 寝ている</span>}
+                  {!calledOf(who.id) && rhythmAssistSessionVisitFree(who.id) && <span data-rhythm-assist-visit aria-label="🎵 いまモンヒロビートにいる・回数なし" className="flex w-full flex-wrap justify-center rounded-xl bg-sky-400/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"><span className="whitespace-nowrap">🎵 いま</span><span className="whitespace-nowrap">モンヒロビート</span><span className="whitespace-nowrap">にいる・回数なし</span></span>}
                 </button>
               );
             })}
@@ -267,6 +269,46 @@ const rhythmAssistSessionSetApp = (app) => {
   RHYTHM_ASSIST_SESSION_INVITE.app = app && typeof app === 'object' ? app : null;
   if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.beatInvite = (id) => rhythmAssistSessionInvite(id);
 };
+// 助手が自分でモンビーに出かけているあいだ(助手ライフの「練習」の時間帯)は、その助手とは何回でも券なし(2026-11-07 社長の決定・台帳)。
+//   帰ったら今までどおり回数を使う。呼んだ時点で決め、その部屋にいるあいだは無料のまま。助手ライフが非公開なら常に偽
+//   (払っていないので控え mh_rhythm_buddy_v1 の calls には残さない。返すものも無い)
+const rhythmAssistSessionVisitFree = (id) => {
+  if (!rhythmAssistSessionEnabled() || typeof assistantLifeAtBeat !== 'function') return false;
+  try { return assistantLifeAtBeat(id) === true; } catch (_) { return false; }
+};
+// 寝ている助手を呼ぶ(2026-11-07 社長「呼んで来てくれるときもあれば断られるときある」・ミハリの指摘 B4)。
+//   寝ているか … 助手ライフのいまの時間帯の様子で doing が 'sleep'(助手ライフが非公開なら、いつも偽 = 今までどおり)
+//   来てくれる割合(統括が決めた案) … もと5割・夜型(寝る時刻が0〜11時)+2割・あなたとの仲良し度で最大+2割・
+//     同じ時間帯に断られた助手を呼び直すと1回ごとに+2割(9割まで)。断られた回数は起動の中だけ覚える(保存しない)
+//   断られたら回数もセッション券も使わない。来てくれたら、部屋に来たときの一言を「起こされた」一言にする
+const RHYTHM_ASSIST_SESSION_WAKE = { refused: {}, woke: new Set() };
+const rhythmAssistSessionAsleep = (id) => {
+  if (!rhythmAssistSessionEnabled() || typeof assistantLifeCurrent !== 'function' || typeof assistantLifeWhereOf !== 'function') return false;
+  try { const w = assistantLifeWhereOf(assistantLifeCurrent(), id); return !!(w && w.doing === 'sleep'); } catch (_) { return false; }
+};
+const rhythmAssistSessionWakeChance = ({ nightOwl = false, bondLevel = 1, bondMax = 1, retries = 0 } = {}) => {
+  const bond = bondMax > 1 ? Math.max(0, Math.min(1, (Number(bondLevel) - 1) / (bondMax - 1))) : 0;
+  const p = 0.5 + (nightOwl ? 0.2 : 0) + 0.2 * bond + 0.2 * Math.max(0, Math.floor(Number(retries) || 0));
+  return Math.min(0.9, Math.round(p * 100) / 100);
+};
+const rhythmAssistSessionWakeKey = (id) => { let slot = ''; try { slot = typeof assistantLifeSlotAt === 'function' ? String(assistantLifeSlotAt().abs) : ''; } catch (_) { slot = ''; } return `${slot}:${id}`; };
+const rhythmAssistSessionWakeChanceOf = (id) => {
+  const rhythm = typeof ASSISTANT_LIFE_RHYTHM !== 'undefined' ? ASSISTANT_LIFE_RHYTHM[id] : null;
+  const bed = rhythm && Number.isFinite(rhythm.bed) ? rhythm.bed : 22;
+  const c = RHYTHM_ASSIST_SESSION_CALL;
+  let lv = 1; try { lv = typeof c.levelOf === 'function' ? Number(c.levelOf(id)) || 1 : 1; } catch (_) { lv = 1; }
+  const max = typeof ASSISTANT_BOND_LEVELS !== 'undefined' && Array.isArray(ASSISTANT_BOND_LEVELS) ? ASSISTANT_BOND_LEVELS.length : 1;
+  return rhythmAssistSessionWakeChance({ nightOwl: bed < 12, bondLevel: lv, bondMax: max, retries: RHYTHM_ASSIST_SESSION_WAKE.refused[rhythmAssistSessionWakeKey(id)] || 0 });
+};
+// 寝ている助手を起こしてみる。戻り値 { came, line }(line は起こされた・断った一言。台詞が無ければ空)
+const rhythmAssistSessionTryWake = (id, rand = Math.random) => {
+  const came = rand() < rhythmAssistSessionWakeChanceOf(id);
+  const key = rhythmAssistSessionWakeKey(id);
+  if (came) { delete RHYTHM_ASSIST_SESSION_WAKE.refused[key]; RHYTHM_ASSIST_SESSION_WAKE.woke.add(id); return { came: true, line: '' }; }
+  RHYTHM_ASSIST_SESSION_WAKE.refused[key] = (RHYTHM_ASSIST_SESSION_WAKE.refused[key] || 0) + 1;
+  const hit = rhythmAssistSessionPickLine(id, 'refuse', rand);
+  return { came: false, line: hit ? hit[1] : '' };
+};
 const rhythmAssistSessionCanPayNow = () => {
   const app = RHYTHM_ASSIST_SESSION_INVITE.app;
   const free = typeof RHYTHM_BUDDY_STORE !== 'undefined' ? rhythmBuddyFreeLeft(RHYTHM_BUDDY_STORE.get(), rhythmBuddyDayKey(Date.now())) : 0;
@@ -279,7 +321,7 @@ const rhythmAssistSessionInvite = (id, opts = {}) => {
   const app = RHYTHM_ASSIST_SESSION_INVITE.app;
   if (!rhythmAssistSessionEnabled() || !app || typeof app.open !== 'function') return rhythmAssistSessionInviteDone(onResult, { ok: false, reason: 'off' });
   if (!rhythmAssistSessionWho(id)) return rhythmAssistSessionInviteDone(onResult, { ok: false, reason: 'unknown' });
-  if (!rhythmAssistSessionCanPayNow()) return rhythmAssistSessionInviteDone(onResult, { ok: false, reason: 'no_ticket' });
+  if (!rhythmAssistSessionVisitFree(id) && !rhythmAssistSessionCanPayNow()) return rhythmAssistSessionInviteDone(onResult, { ok: false, reason: 'no_ticket' });
   const inRoom = typeof RHYTHM_MULTI !== 'undefined' && !!RHYTHM_MULTI.view();
   RHYTHM_ASSIST_SESSION_INVITE.pending = { id, at: Date.now(), onResult: typeof onResult === 'function' ? onResult : null };
   RHYTHM_ASSIST_SESSION_INVITE.listeners.forEach((fn) => { try { fn(); } catch (_) { /* 画面の失敗で止めない */ } });

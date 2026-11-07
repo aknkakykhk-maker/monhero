@@ -7,6 +7,7 @@
 #   mvp / high(9割以上) / mid / low(7割未満) / fc(フルコン) / levelup(セッションLv.UP) / likeup(苦手が好きになった) / overcome(苦手な曲をクリア)
 #   song:<曲id>(好きな曲・苦手な曲の結果の専用)
 #   sp50 / sp80 / sp100(セッションLv.50・80・100 で開く特別な台詞。部屋に来たとき・結果でときどき)
+#   woke(寝ているところを呼ばれて来る) / refuse(寝言・断り。来ない)。1本は全角25字くらいまで
 # 守り: 恋愛にしない・悪口なし・下げない・ネタバレなし・プレイヤーは {name}(ゲームがその助手のいまの呼び方に置きかえる。「ブリーダー」と直に書かない・docs/rules/CALL_NAMES.md)
 
 ## mua
@@ -51,6 +52,12 @@ sp80 | mua excited Lv.80！ここまで来たら、もう息ぴったりぢゃ�
 sp80 | mua happy あたしの一番のセッション相手は、{name}だよｗ
 sp100 | mua excited セッションLv.100！あたしたち、セッションマスターぢゃん！
 sp100 | mua happy ここまで一緒に叩いてくれて、まぢありがと♪
+woke | mua troubled ふぁ…{name}？ 起こされたけど、行く〜
+woke | mua happy ん〜…目、半分閉じてるけど叩くｗ
+woke | mua wink 寝ぐせのままだけど、来ちゃった♪
+refuse | mua normal むにゃ…あと5曲…ぢゃなくて5分…
+refuse | mua normal …ん…あしたなら、まぢで行く…
+refuse | mua happy すぅ…{name}…またあとでね…
 
 ## kiki
 join | kiki happy {name}、よろしくお願いしまつ♪
@@ -94,6 +101,12 @@ sp80 | kiki happy Lv.80でつ。目を閉じても合わせられそうです♪
 sp80 | kiki normal {name}の音、ちゃんと聞こえていますよ
 sp100 | kiki excited Lv.100でつ！セッションマスターですね♪
 sp100 | kiki happy たくさん一緒に演奏してくれて、ありがとうございまつ♪
+woke | kiki troubled …ふぁ。起きまつ。お供しまつね
+woke | kiki wink 眠いでつが、ちから全開でいきまつ♪
+woke | kiki happy 早寝の私を呼ぶなんて、大胆でつね
+refuse | kiki normal …すぅ…明日の朝なら、ぜひ…
+refuse | kiki normal …むにゃ…お茶は…あとで…
+refuse | kiki troubled …ごめんなさい…もう、夢の中でつ…
 
 ## momosuke
 join | momosuke happy ももが来たからには盛り上げるよ！！
@@ -137,6 +150,12 @@ sp80 | momosuke excited Lv.80！！ステージの上で一番息が合うの、
 sp80 | momosuke happy ももについてこれるの、{name}くらいだよ！！
 sp100 | momosuke excited Lv.100！！セッションマスターはもものおかげだよね♡
 sp100 | momosuke happy ずっと一緒にステージ立ってくれて、ありがと！！
+woke | momosuke angry ふぁ…ももを起こすなんて！ でも行く！！
+woke | momosuke excited 寝起きでもセンターは、もも！！
+woke | momosuke wink 目こすりながら叩くねw
+refuse | momosuke normal …むにゃ…アンコールは…あした…
+refuse | momosuke happy …もも、いま夢でライブ中…♡
+refuse | momosuke normal …すぅ…起こさないで…w
 
 ## dra
 join | dra happy おでも混ぜてくれよな、えへへ
@@ -180,6 +199,12 @@ sp80 | dra happy Lv.80だな。もう目をつぶっても合わせられるか�
 sp80 | dra happy {name}と叩くの、おで好きなんだな、えへへ
 sp100 | dra excited Lv.100だな！セッションマスターだからな！
 sp100 | dra happy 長い冒険だったな。ありがとうな、えへへ
+woke | dra troubled …ぐぅ…はっ、起きたぞ。行くからな
+woke | dra normal 寝ぼけてるが、叩くのはできるぞ
+woke | dra happy おでを起こすとは…しょうがないな
+refuse | dra normal …ぐぅ…あと10時間…
+refuse | dra happy …むにゃ…グジラ…でっかい…
+refuse | dra troubled …すまん…膝が、まだ寝てる…
 
 ## atsu
 join | atsu happy とりあえず一曲いくか笑
@@ -223,6 +248,12 @@ sp80 | atsu happy Lv.80か。普通にいいコンビだろ笑
 sp80 | atsu normal ここまで来たら、締めも任せていいよな！
 sp100 | atsu excited Lv.100！セッションマスターだな笑
 sp100 | atsu happy ここまで付き合ってくれて、ありがとな！
+woke | atsu surprise …ん！？ 起きた起きた！ 行くぞ笑
+woke | atsu happy 寝起きだけど、とりあえずやる！
+woke | atsu happy 眠いけど、{name}の頼みなら！
+refuse | atsu normal …朝練…6時…だから…！
+refuse | atsu troubled …わり…明日な…笑
+refuse | atsu normal …すぅ…ノーカン…だろ…
 
 ## kyuko
 join | kyuko happy ほい！俺も入るね〜
@@ -266,6 +297,12 @@ sp80 | kyuko happy Lv.80〜。構成を読まなくても合うね〜
 sp80 | kyuko normal ここまでの記録、きれいに積み上がってるよ〜
 sp100 | kyuko excited Lv.100〜！セッションマスターだね、ありがとん笑
 sp100 | kyuko happy ここまでの全部、いい流れだったよ〜
+woke | kyuko troubled ぇ…起こされたぁ。ほい、行くよぉ
+woke | kyuko happy ふぁ…ありがとん。目、さめたかも笑
+woke | kyuko normal 寝ぼけてても、だいたい叩けるっしょ笑
+refuse | kyuko normal …むにゃ…あと1章…だけぇ…
+refuse | kyuko troubled …ぐぬぬぬ…眠い…またあとでぇ…
+refuse | kyuko happy …すぅ…{name}…おやすみぃ…
 
 ## sorashido
 join | sorashido happy うぉぉぉ！俺も参戦するぜ・・・！
@@ -309,6 +346,12 @@ sp80 | sorashido excited Lv.80！誤差がほとんど無くなってきたぜ�
 sp80 | sorashido happy この伸び方、グラフにしたらきれいだぜ笑
 sp100 | sorashido excited うぉぉぉ！Lv.100、セッションマスターだぜ・・・！
 sp100 | sorashido happy ここまでの記録、全部宝物だぜ笑
+woke | sorashido surprise …うぉっ！？ 起きたぜ、行くさ！
+woke | sorashido normal 寝起きの指でも、計算どおり叩くぜ
+woke | sorashido happy ふぁ…目ざましより効いたさ笑
+refuse | sorashido normal …表の…3行目…むにゃ…
+refuse | sorashido troubled …すまん…朝は弱いのさ…
+refuse | sorashido happy …なんくるないさ…すぅ…
 
 ## erubin
 join | erubin happy 俺も一緒にいいかな？よろしくね
@@ -352,3 +395,9 @@ sp80 | erubin happy Lv.80か。ずいぶん合うようになったね
 sp80 | erubin normal 無理しないで、これからもゆっくりいこうね
 sp100 | erubin excited Lv.100だね。セッションマスター、すごいよ
 sp100 | erubin happy ここまで一緒にいてくれて、ありがとね
+woke | erubin surprise …あ、呼ばれた？ うん、行くよ
+woke | erubin happy ふぁ…起こされちゃった笑 いいよ
+woke | erubin happy 眠いけど、{name}と叩きたいしね
+refuse | erubin troubled …ごめんね…今日はもう寝るね…
+refuse | erubin normal …すぅ…また明日、いっしょにね…
+refuse | erubin happy …むにゃ…デュラハン…いけ…

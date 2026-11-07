@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b9bd32526a66de6f
+// source-sha256: d6c4db797194137a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -50994,6 +50994,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', 'あたしたち、もうセッションLv.50ぢゃん！まぢ最強コンビかも♪'], ['wink', '{name}とならどんな曲でも楽しいの、ほんとだよ♪']],
     'sp80': [['excited', 'Lv.80！ここまで来たら、もう息ぴったりぢゃん♪'], ['happy', 'あたしの一番のセッション相手は、{name}だよｗ']],
     'sp100': [['excited', 'セッションLv.100！あたしたち、セッションマスターぢゃん！'], ['happy', 'ここまで一緒に叩いてくれて、まぢありがと♪']],
+    woke: [['troubled', 'ふぁ…{name}？ 起こされたけど、行く〜'], ['happy', 'ん〜…目、半分閉じてるけど叩くｗ'], ['wink', '寝ぐせのままだけど、来ちゃった♪']],
+    refuse: [['normal', 'むにゃ…あと5曲…ぢゃなくて5分…'], ['normal', '…ん…あしたなら、まぢで行く…'], ['happy', 'すぅ…{name}…またあとでね…']],
     'listen:mf_ichika_mix': [['excited', 'サビは1:48から！ そこからテンションまぢ上がるやつ♪']],
     'listen:monster_hero': [['excited', '1:50からずーっといちばん強いの！ 最後までアゲてこ♪']],
     'listen:monster_hero_another': [['excited', 'こっちもサビは1:49から！ 最後までずっと盛り上がるの♪']],
@@ -51065,6 +51067,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', '{name}とのセッション、Lv.50になりました♪'], ['wink', '指が覚えてくれている気がしまつ♪']],
     'sp80': [['happy', 'Lv.80でつ。目を閉じても合わせられそうです♪'], ['normal', '{name}の音、ちゃんと聞こえていますよ']],
     'sp100': [['excited', 'Lv.100でつ！セッションマスターですね♪'], ['happy', 'たくさん一緒に演奏してくれて、ありがとうございまつ♪']],
+    woke: [['troubled', '…ふぁ。起きまつ。お供しまつね'], ['wink', '眠いでつが、ちから全開でいきまつ♪'], ['happy', '早寝の私を呼ぶなんて、大胆でつね']],
+    refuse: [['normal', '…すぅ…明日の朝なら、ぜひ…'], ['normal', '…むにゃ…お茶は…あとで…'], ['troubled', '…ごめんなさい…もう、夢の中でつ…']],
     'listen:mf_ichika_mix': [['normal', '2分25秒の曲でつ。終わりの手前の盛り上がりまで、ていねいにいきましょう']],
     'listen:monster_hero': [['normal', '最初の45秒くらいは静かなんでつ。そこから少しずつ強くなっていきます']],
     'listen:monster_hero_another': [['normal', '0:48までは、静かな時間が長いんでつ。そこが好きです']],
@@ -51136,6 +51140,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['excited', 'Lv.50！！ももと{name}、もう名コンビだね♡'], ['wink', 'ここまで来たら、ももの専属だよw']],
     'sp80': [['excited', 'Lv.80！！ステージの上で一番息が合うの、{name}かも♡'], ['happy', 'ももについてこれるの、{name}くらいだよ！！']],
     'sp100': [['excited', 'Lv.100！！セッションマスターはもものおかげだよね♡'], ['happy', 'ずっと一緒にステージ立ってくれて、ありがと！！']],
+    woke: [['angry', 'ふぁ…ももを起こすなんて！ でも行く！！'], ['excited', '寝起きでもセンターは、もも！！'], ['wink', '目こすりながら叩くねw']],
+    refuse: [['normal', '…むにゃ…アンコールは…あした…'], ['happy', '…もも、いま夢でライブ中…♡'], ['normal', '…すぅ…起こさないで…w']],
     'listen:mf_ichika_mix': [['excited', '1:48からがいちばん盛り上がるとこ！！ そこでももが決めるね♡']],
     'listen:monster_hero': [['excited', '1:50からいちばん強いとこが続くの！！ 最高に盛り上がるやつ♡']],
     'listen:monster_hero_another': [['excited', '1:49からの盛り上がり、もとの曲に負けてないよ！！']],
@@ -51207,6 +51213,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', 'セッションLv.50だな。おで、うれしいくさ'], ['normal', 'ここまで来たの、ちょっとした冒険だったな']],
     'sp80': [['happy', 'Lv.80だな。もう目をつぶっても合わせられるからな'], ['happy', '{name}と叩くの、おで好きなんだな、えへへ']],
     'sp100': [['excited', 'Lv.100だな！セッションマスターだからな！'], ['happy', '長い冒険だったな。ありがとうな、えへへ']],
+    woke: [['troubled', '…ぐぅ…はっ、起きたぞ。行くからな'], ['normal', '寝ぼけてるが、叩くのはできるぞ'], ['happy', 'おでを起こすとは…しょうがないな']],
+    refuse: [['normal', '…ぐぅ…あと10時間…'], ['happy', '…むにゃ…グジラ…でっかい…'], ['troubled', '…すまん…膝が、まだ寝てる…']],
     'listen:mf_ichika_mix': [['happy', 'サビは1:48から2:14までだな。そこまでは体力をとっとけよ']],
     'listen:monster_hero': [['happy', '静かに始まって、だんだん強くなる。冒険の始まりみたいな曲だな']],
     'listen:monster_hero_another': [['normal', '0:48で急に強くなるからな。そこで置いていかれるなよ']],
@@ -51278,6 +51286,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', 'とりあえずLv.50だな笑'], ['wink', 'てか、だいぶ息合ってきたな！']],
     'sp80': [['happy', 'Lv.80か。普通にいいコンビだろ笑'], ['normal', 'ここまで来たら、締めも任せていいよな！']],
     'sp100': [['excited', 'Lv.100！セッションマスターだな笑'], ['happy', 'ここまで付き合ってくれて、ありがとな！']],
+    woke: [['surprise', '…ん！？ 起きた起きた！ 行くぞ笑'], ['happy', '寝起きだけど、とりあえずやる！'], ['happy', '眠いけど、{name}の頼みなら！']],
+    refuse: [['normal', '…朝練…6時…だから…！'], ['troubled', '…わり…明日な…笑'], ['normal', '…すぅ…ノーカン…だろ…']],
     'listen:mf_ichika_mix': [['wink', '自分の大会の曲はちょっと照れる笑 でも1:48からのサビは全力でいくよ！']],
     'listen:monster_hero': [['happy', '最後の2:30でいきなり静かになるから、きれいに締めよ笑']],
     'listen:monster_hero_another': [['happy', 'サビは2:34まで続くから、最後の1秒までちゃんと締めよ！']],
@@ -51349,6 +51359,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', 'Lv.50だね〜。合わせ方が分かってきたよ'], ['wink', '{name}の癖、だいたい読めるようになったよ〜笑']],
     'sp80': [['happy', 'Lv.80〜。構成を読まなくても合うね〜'], ['normal', 'ここまでの記録、きれいに積み上がってるよ〜']],
     'sp100': [['excited', 'Lv.100〜！セッションマスターだね、ありがとん笑'], ['happy', 'ここまでの全部、いい流れだったよ〜']],
+    woke: [['troubled', 'ぇ…起こされたぁ。ほい、行くよぉ'], ['happy', 'ふぁ…ありがとん。目、さめたかも笑'], ['normal', '寝ぼけてても、だいたい叩けるっしょ笑']],
+    refuse: [['normal', '…むにゃ…あと1章…だけぇ…'], ['troubled', '…ぐぬぬぬ…眠い…またあとでぇ…'], ['happy', '…すぅ…{name}…おやすみぃ…']],
     'listen:mf_ichika_mix': [['normal', 'サビは1:48から2:14。終わりの近くに山があるから、前半はためていこ']],
     'listen:monster_hero': [['normal', '0:46でふつう、0:57で強め、1:50でいちばん強い。段の上がり方がきれいなんだよねぇ']],
     'listen:monster_hero_another': [['normal', '0:48で強くなって、1:14で一回ふつうに戻るんだよねぇ。そこが休みどころ']],
@@ -51420,6 +51432,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['excited', 'セッションLv.50だぜ！表に太字で書いとくぜ笑'], ['happy', 'ここまでの演奏回数、ちゃんと数えてあるぜ・・・！']],
     'sp80': [['excited', 'Lv.80！誤差がほとんど無くなってきたぜ！'], ['happy', 'この伸び方、グラフにしたらきれいだぜ笑']],
     'sp100': [['excited', 'うぉぉぉ！Lv.100、セッションマスターだぜ・・・！'], ['happy', 'ここまでの記録、全部宝物だぜ笑']],
+    woke: [['surprise', '…うぉっ！？ 起きたぜ、行くさ！'], ['normal', '寝起きの指でも、計算どおり叩くぜ'], ['happy', 'ふぁ…目ざましより効いたさ笑']],
+    refuse: [['normal', '…表の…3行目…むにゃ…'], ['troubled', '…すまん…朝は弱いのさ…'], ['happy', '…なんくるないさ…すぅ…']],
     'listen:mf_ichika_mix': [['excited', 'いちばん上はLv.23で434ノーツだぜ・・・！ サビは1:48からな笑']],
     'listen:monster_hero': [['excited', '強く打つ音が62%、軽い音は3%だぜ・・・！ 553ノーツ、全部数えたい笑']],
     'listen:monster_hero_another': [['happy', 'BPMはおよそ171。もとの曲より少しだけゆっくりだぜ笑']],
@@ -51491,6 +51505,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', 'セッションLv.50になったね。ありがとね'], ['normal', '一緒に演奏する時間、落ち着くんだよね']],
     'sp80': [['happy', 'Lv.80か。ずいぶん合うようになったね'], ['normal', '無理しないで、これからもゆっくりいこうね']],
     'sp100': [['excited', 'Lv.100だね。セッションマスター、すごいよ'], ['happy', 'ここまで一緒にいてくれて、ありがとね']],
+    woke: [['surprise', '…あ、呼ばれた？ うん、行くよ'], ['happy', 'ふぁ…起こされちゃった笑 いいよ'], ['happy', '眠いけど、{name}と叩きたいしね']],
+    refuse: [['troubled', '…ごめんね…今日はもう寝るね…'], ['normal', '…すぅ…また明日、いっしょにね…'], ['happy', '…むにゃ…デュラハン…いけ…']],
     'listen:mf_ichika_mix': [['happy', '2分半くらいの曲だね。サビの1:48までは、落ち着いて合わせようか']],
     'listen:monster_hero': [['normal', 'はじめの静かなところで、気持ちを落ち着けておくといいよ']],
     'listen:monster_hero_another': [['happy', '1:14から少し落ち着く所があるね。そこでひと息つこうか']],
@@ -61650,6 +61666,11 @@ html[data-mh-tod="night"] .mh-title-gate img.mh-title-visual{filter:brightness(.
 html[data-mh-tod="morning"] :is([data-mh-theme-category="menu"],[data-mh-theme-category="market"],[data-mh-theme-category="temple"]) .mh-screen-shell,html[data-mh-tod="morning"] .mhms-stage{box-shadow:inset 0 0 0 100vmax rgba(190,215,255,.05)}
 html[data-mh-tod="evening"] :is([data-mh-theme-category="menu"],[data-mh-theme-category="market"],[data-mh-theme-category="temple"]) .mh-screen-shell,html[data-mh-tod="evening"] .mhms-stage{box-shadow:inset 0 0 0 100vmax rgba(255,120,48,.07)}
 html[data-mh-tod="night"] :is([data-mh-theme-category="menu"],[data-mh-theme-category="market"],[data-mh-theme-category="temple"]) .mh-screen-shell,html[data-mh-tod="night"] .mhms-stage{box-shadow:inset 0 0 0 100vmax rgba(6,10,40,.24)}
+.mh-tod-tint{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity 2.4s ease;border-radius:inherit}
+html[data-mh-tod="morning"] .mh-tod-tint{opacity:var(--tod-k,1);background:linear-gradient(180deg,rgba(186,214,255,.30) 0%,rgba(214,236,255,.16) 50%,rgba(255,236,214,.10) 100%)}
+html[data-mh-tod="evening"] .mh-tod-tint{opacity:var(--tod-k,1);background:linear-gradient(180deg,rgba(255,128,48,.34) 0%,rgba(255,110,64,.24) 45%,rgba(120,40,30,.34) 100%)}
+html[data-mh-tod="night"] .mh-tod-tint{opacity:var(--tod-k,1);background:linear-gradient(180deg,rgba(5,8,34,.84) 0%,rgba(10,16,52,.70) 50%,rgba(6,10,34,.76) 100%)}
+@media (prefers-reduced-motion:reduce){.mh-tod-tint{transition:none!important}}
 @media (prefers-reduced-motion:reduce){.mh-home-background::after,.mh-home-background::before,.mh-title-gate img,.mh-screen-shell,.mhms-stage{transition:none!important}}
 .mh-tod-clock{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border:1px solid #eed99566;border-radius:999px;background:#0f1d2ad9;color:#f9eac2;font-size:11px;font-weight:900;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap;box-shadow:0 2px 6px #0007;pointer-events:none}
 .mh-tod-clock i{font-style:normal;font-size:12px}
@@ -61735,6 +61756,24 @@ const TimeOfDayClockText = ({
     }
   }, prefix, st.minute);
 };
+const TimeOfDayTint = ({
+  strength = 1,
+  className = ''
+}) => {
+  useEffect(() => {
+    ensureTimeOfDayCss();
+  }, []);
+  const k = Math.max(0, Math.min(1, Number(strength)));
+  return React.createElement("span", {
+    "aria-hidden": "true",
+    "data-time-of-day-tint": true,
+    className: `mh-tod-tint ${className}`,
+    style: {
+      '--tod-k': Number.isFinite(k) ? k : 1
+    }
+  });
+};
+const timeOfDayLabelAt = (now = Date.now()) => timeOfDayAt(now).label;
 const TimeOfDaySettingsPanel = () => {
   const st = useTimeOfDay();
   const row = (key, title, desc) => React.createElement("div", {
@@ -90795,7 +90834,7 @@ function RhythmMultiMemberCards({
     }, React.createElement(RhythmMultiAvatar, {
       m: m,
       resolveIconUrl: resolveIconUrl,
-      sizeClass: tall ? 'h-12 w-12 landscape:h-16 landscape:w-16' : 'h-7 w-7',
+      sizeClass: tall ? 'h-12 w-12 landscape:h-16 landscape:w-16 [@media(max-height:440px)]:h-11 [@media(max-height:440px)]:w-11 [[data-mh-view-rotation=true]_&]:h-11 [[data-mh-view-rotation=true]_&]:w-11' : 'h-7 w-7',
       small: !tall
     }), m.id === hostId && React.createElement("span", {
       "aria-hidden": "true",
@@ -91416,6 +91455,7 @@ function RhythmMultiScreen({
     void RHYTHM_BUDDY_STORE.update(st => rhythmBuddyMarkStarted(st, callId));
   };
   const [buddyBumped, setBuddyBumped] = React.useState(false);
+  const [buddyRefused, setBuddyRefused] = React.useState(null);
   React.useEffect(() => {
     RHYTHM_MULTI.setCpuBrain({
       ...rhythmAssistSessionWrapBrain(rhythmBuddyMakeBrain(songs), songs),
@@ -91483,7 +91523,19 @@ function RhythmMultiScreen({
       kind: 'assistant',
       assistantId: who.id
     };
-    let paid = (await RHYTHM_BUDDY_STORE.update(st => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
+    let paid = rhythmAssistSessionVisitFree(who.id) ? 'visit' : '';
+    if (!paid && rhythmAssistSessionAsleep(who.id)) {
+      const woke = rhythmAssistSessionTryWake(who.id);
+      if (!woke.came) {
+        setBuddyRefused({
+          id: who.id,
+          line: woke.line,
+          at: Date.now()
+        });
+        return 'refused';
+      }
+    }
+    if (!paid) paid = (await RHYTHM_BUDDY_STORE.update(st => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
     if (!paid && onUseBuddyTicket) {
       try {
         paid = (await onUseBuddyTicket()) === true ? 'ticket' : '';
@@ -91550,6 +91602,9 @@ function RhythmMultiScreen({
   React.useEffect(() => {
     if (buddyInfoPhase === 'playing') setBuddyInfoId('');
   }, [buddyInfoPhase]);
+  React.useEffect(() => {
+    if (buddyRefused && !buddySheet) setBuddySheet('pick');
+  }, [buddyRefused, buddySheet]);
   const buddySheetLayer = buddySheet === 'pick' ? React.createElement(RhythmBuddySheet, {
     masuMons: masuMons,
     masuPicker: masuPicker,
@@ -91561,7 +91616,12 @@ function RhythmMultiScreen({
     songName: buddySongName,
     tickets: buddyTickets,
     pick: callBuddy,
-    onClose: () => setBuddySheet(''),
+    onClose: () => {
+      setBuddySheet('');
+      setBuddyRefused(null);
+    },
+    refused: buddyRefused,
+    onCallStart: () => setBuddyRefused(null),
     calledIds: (view && view.myCpus ? view.myCpus : []).map(c => c.masuId)
   }) : null;
   const buddyCallButton = (extra = '') => view && RHYTHM_MULTI.canSummon() && (masuMons.length > 0 || sessionAssistantsOn) ? React.createElement("button", {
@@ -91964,9 +92024,11 @@ function RhythmMultiScreen({
     className: "block whitespace-nowrap text-base font-black italic tracking-wider text-cyan-200"
   }, "MULTI LIVE"), React.createElement("small", {
     className: "mt-0.5 block break-keep text-[10px] font-black leading-tight text-fuchsia-200"
-  }, "▶ ", step, view ? React.createElement(React.Fragment, null, " ・ ", React.createElement("span", {
+  }, React.createElement("span", {
     className: "whitespace-nowrap"
-  }, view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode], " ", view.code)) : ''), view && room && room.round && React.createElement("small", {
+  }, "▶ ", step), view ? React.createElement(React.Fragment, null, " ", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "・", view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode], " ", view.code)) : ''), view && room && room.round && React.createElement("small", {
     "data-rhythm-multi-streak-next": true,
     className: "mt-0.5 inline-block whitespace-nowrap rounded-full bg-gradient-to-r from-orange-500 to-rose-500 px-1.5 text-[9px] font-black leading-4 text-white"
   }, "🔥 ", rhythmMultiStreakNextText(view.streak))), quickRunInfo && React.createElement(RhythmQuickRunPill, {
@@ -92854,7 +92916,7 @@ function RhythmMultiScreen({
       className: "min-h-[48px] rounded-xl bg-fuchsia-700 px-2 text-sm font-black disabled:opacity-40"
     }, "メンバー確定")), friendsOn && view && React.createElement("section", {
       "data-rhythm-multi-friend-invite": true,
-      className: card
+      className: `${card} landscape:hidden`
     }, React.createElement("button", {
       "data-rhythm-multi-friend-invite-toggle": true,
       type: "button",
@@ -92863,7 +92925,12 @@ function RhythmMultiScreen({
     }, invitePanel ? 'フレンドの招待を閉じる' : 'フレンドを招待する'), invitePanel && inviteListBody), buddyBumped && React.createElement("p", {
       "data-rhythm-buddy-bumped": true,
       className: "text-[11px] font-black leading-snug text-amber-200"
-    }, "人が入ってきたので、呼んだマスモンは席をゆずって帰りました(使った回数・券は戻りました)"), buddyCallButton(), view && !publicRoom && !view.full && onStepAway && React.createElement("button", {
+    }, "人が入ってきたので、呼んだマスモンは席をゆずって帰りました(使った回数・券は戻りました)"), React.createElement("div", {
+      className: "landscape:hidden"
+    }, buddyCallButton()), React.createElement("div", {
+      "data-rhythm-multi-exit-row": true,
+      className: "space-y-2 landscape:grid landscape:grid-flow-col landscape:auto-cols-fr landscape:gap-2 landscape:space-y-0"
+    }, view && !publicRoom && !view.full && onStepAway && React.createElement("button", {
       "data-rhythm-multi-step-away": true,
       type: "button",
       className: `${btn} w-full bg-cyan-800`,
@@ -92874,7 +92941,7 @@ function RhythmMultiScreen({
       type: "button",
       className: `${btn} w-full bg-slate-700`,
       onClick: leaveRoomAfterTap
-    }, view ? 'ルームを出る' : 'やめる'), message && React.createElement("p", {
+    }, view ? 'ルームを出る' : 'やめる')), message && React.createElement("p", {
       className: "text-[12px] font-black text-rose-300"
     }, message)))), chatSheet, inviteSheetLayer, rankingLayer, buddyInfoLayer, buddySheetLayer);
   }
@@ -94857,7 +94924,9 @@ function RhythmBuddySheet({
   assistants = [],
   pickAssistant = null,
   guideAssistantId = '',
-  freeSeats = 4
+  freeSeats = 4,
+  refused = null,
+  onCallStart = null
 }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
@@ -94889,18 +94958,26 @@ function RhythmBuddySheet({
     setPickNote('');
   };
   const assistOn = rhythmAssistSessionEnabled() && typeof pickAssistant === 'function' && (assistants || []).length > 0;
-  const [tab, setTab] = React.useState(() => (masuMons || []).length ? 'masu' : 'assistant');
+  const [tab, setTab] = React.useState(() => (masuMons || []).length && !refused ? 'masu' : 'assistant');
   const tabNow = assistOn ? tab : 'masu';
   const masuPicks = picks.filter(p => p.kind === 'masu');
   const singleMasu = masuPicks.length === 1 && picks.length === 1 ? (masuMons || []).find(x => x && x.id === masuPicks[0].id) : null;
-  const useFree = Math.min(freeLeft, picks.length);
-  const useTickets = picks.length - useFree;
+  const visitPicks = picks.filter(p => p.kind === 'assistant' && rhythmAssistSessionVisitFree(p.id)).length;
+  const paidPicks = picks.length - visitPicks;
+  const asleepPicks = picks.filter(p => p.kind === 'assistant' && !rhythmAssistSessionVisitFree(p.id) && rhythmAssistSessionAsleep(p.id)).length;
+  const useFree = Math.min(freeLeft, paidPicks);
+  const useTickets = paidPicks - useFree;
   const shortTickets = Math.max(0, useTickets - tickets);
   const pickedAssistantIds = picks.filter(p => p.kind === 'assistant').map(p => p.id);
   const duoNow = assistOn && pickedAssistantIds.length && typeof rhythmAssistSessionDuosNow === 'function' ? rhythmAssistSessionDuosNow([...calledIds.map(c => rhythmAssistSessionIdOf(c)).filter(Boolean), ...pickedAssistantIds]).filter(d => pickedAssistantIds.includes(d.a) || pickedAssistantIds.includes(d.b)) : [];
   const callAll = async () => {
     if (busy || !picks.length || shortTickets > 0) return;
     setBusy(true);
+    if (typeof onCallStart === 'function') {
+      try {
+        onCallStart();
+      } catch (_) {}
+    }
     const list = picks.slice();
     try {
       for (const p of list) {
@@ -94949,7 +95026,11 @@ function RhythmBuddySheet({
     "data-rhythm-buddy-multi-cost": true,
     className: "text-[10px] font-bold leading-snug text-slate-300",
     style: JA_WRAP_STYLE
-  }, jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います`)), shortTickets > 0 && React.createElement("p", {
+  }, jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。${paidPicks ? `無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います` : '回数は使いません'}${visitPicks ? `(モンヒロビートにいる助手 ${visitPicks}人は回数なし)` : ''}`)), asleepPicks > 0 && React.createElement("p", {
+    "data-rhythm-buddy-multi-asleep": true,
+    className: "text-[10px] font-bold text-indigo-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap('💤 寝ている助手は、来ないこともあります(来なければ回数は使いません)')), shortTickets > 0 && React.createElement("p", {
     "data-rhythm-buddy-multi-short": true,
     className: "text-[10px] font-black text-rose-300",
     style: JA_WRAP_STYLE
@@ -95023,7 +95104,11 @@ function RhythmBuddySheet({
     className: "hidden landscape:block"
   }, multiBar)), tabNow === 'assistant' ? React.createElement("div", {
     className: "flex min-h-0 flex-1 flex-col"
-  }, React.createElement(RhythmAssistSessionPicker, {
+  }, refused && refused.id && React.createElement("p", {
+    "data-rhythm-assist-refused": refused.id,
+    className: "mb-2 shrink-0 rounded-xl border border-indigo-300/50 bg-indigo-950/70 px-2 py-1 text-[11px] font-black leading-snug text-indigo-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`💤 ${rhythmAssistSessionName(refused.id)}${refused.line ? `「${refused.line}」……来てくれませんでした` : 'は起きませんでした'}(回数は使っていません)。もう一度呼ぶと、起きやすくなります`)), React.createElement(RhythmAssistSessionPicker, {
     assistants: assistants,
     calledIds: calledIds,
     guideAssistantId: guideAssistantId,
@@ -95643,7 +95728,13 @@ const rhythmAssistSessionTalk = ({
     const open = [[100, 'sp100'], [80, 'sp80'], [50, 'sp50']].filter(([n]) => lv >= n).map(([, sc]) => sc);
     return open.length && rand() < 0.3 ? say(open[Math.floor(rand() * open.length)]) : '';
   };
-  if (kind === 'join') return special() || say('join');
+  if (kind === 'join') {
+    if (RHYTHM_ASSIST_SESSION_WAKE.woke.delete(assistantId)) {
+      const w = say('woke');
+      if (w) return w;
+    }
+    return special() || say('join');
+  }
   if (kind === 'combo' || kind === 'miss' || kind === 'climax' || kind === 'last') return say(kind);
   if (kind === 'lvUp') return say('levelup');
   if (kind === 'likeUp') return say('likeup');
@@ -95791,7 +95882,20 @@ function RhythmAssistSessionPicker({
       className: "w-full truncate text-center text-[9px] font-bold text-slate-300"
     }, "♡ ", rhythmAssistSessionLikedNames(who.id).join('・')), calledOf(who.id) && React.createElement("span", {
       className: "rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950"
-    }, "呼んでいる"));
+    }, "呼んでいる"), !calledOf(who.id) && !rhythmAssistSessionVisitFree(who.id) && rhythmAssistSessionAsleep(who.id) && React.createElement("span", {
+      "data-rhythm-assist-asleep": true,
+      className: "w-full rounded-xl bg-indigo-300/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"
+    }, "💤 寝ている"), !calledOf(who.id) && rhythmAssistSessionVisitFree(who.id) && React.createElement("span", {
+      "data-rhythm-assist-visit": true,
+      "aria-label": "🎵 いまモンヒロビートにいる・回数なし",
+      className: "flex w-full flex-wrap justify-center rounded-xl bg-sky-400/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"
+    }, React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "🎵 いま"), React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "モンヒロビート"), React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "にいる・回数なし")));
   }))));
 }
 const RHYTHM_ASSIST_SESSION_FX_QUEUE = {
@@ -95865,6 +95969,82 @@ const rhythmAssistSessionSetApp = app => {
   RHYTHM_ASSIST_SESSION_INVITE.app = app && typeof app === 'object' ? app : null;
   if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.beatInvite = id => rhythmAssistSessionInvite(id);
 };
+const rhythmAssistSessionVisitFree = id => {
+  if (!rhythmAssistSessionEnabled() || typeof assistantLifeAtBeat !== 'function') return false;
+  try {
+    return assistantLifeAtBeat(id) === true;
+  } catch (_) {
+    return false;
+  }
+};
+const RHYTHM_ASSIST_SESSION_WAKE = {
+  refused: {},
+  woke: new Set()
+};
+const rhythmAssistSessionAsleep = id => {
+  if (!rhythmAssistSessionEnabled() || typeof assistantLifeCurrent !== 'function' || typeof assistantLifeWhereOf !== 'function') return false;
+  try {
+    const w = assistantLifeWhereOf(assistantLifeCurrent(), id);
+    return !!(w && w.doing === 'sleep');
+  } catch (_) {
+    return false;
+  }
+};
+const rhythmAssistSessionWakeChance = ({
+  nightOwl = false,
+  bondLevel = 1,
+  bondMax = 1,
+  retries = 0
+} = {}) => {
+  const bond = bondMax > 1 ? Math.max(0, Math.min(1, (Number(bondLevel) - 1) / (bondMax - 1))) : 0;
+  const p = 0.5 + (nightOwl ? 0.2 : 0) + 0.2 * bond + 0.2 * Math.max(0, Math.floor(Number(retries) || 0));
+  return Math.min(0.9, Math.round(p * 100) / 100);
+};
+const rhythmAssistSessionWakeKey = id => {
+  let slot = '';
+  try {
+    slot = typeof assistantLifeSlotAt === 'function' ? String(assistantLifeSlotAt().abs) : '';
+  } catch (_) {
+    slot = '';
+  }
+  return `${slot}:${id}`;
+};
+const rhythmAssistSessionWakeChanceOf = id => {
+  const rhythm = typeof ASSISTANT_LIFE_RHYTHM !== 'undefined' ? ASSISTANT_LIFE_RHYTHM[id] : null;
+  const bed = rhythm && Number.isFinite(rhythm.bed) ? rhythm.bed : 22;
+  const c = RHYTHM_ASSIST_SESSION_CALL;
+  let lv = 1;
+  try {
+    lv = typeof c.levelOf === 'function' ? Number(c.levelOf(id)) || 1 : 1;
+  } catch (_) {
+    lv = 1;
+  }
+  const max = typeof ASSISTANT_BOND_LEVELS !== 'undefined' && Array.isArray(ASSISTANT_BOND_LEVELS) ? ASSISTANT_BOND_LEVELS.length : 1;
+  return rhythmAssistSessionWakeChance({
+    nightOwl: bed < 12,
+    bondLevel: lv,
+    bondMax: max,
+    retries: RHYTHM_ASSIST_SESSION_WAKE.refused[rhythmAssistSessionWakeKey(id)] || 0
+  });
+};
+const rhythmAssistSessionTryWake = (id, rand = Math.random) => {
+  const came = rand() < rhythmAssistSessionWakeChanceOf(id);
+  const key = rhythmAssistSessionWakeKey(id);
+  if (came) {
+    delete RHYTHM_ASSIST_SESSION_WAKE.refused[key];
+    RHYTHM_ASSIST_SESSION_WAKE.woke.add(id);
+    return {
+      came: true,
+      line: ''
+    };
+  }
+  RHYTHM_ASSIST_SESSION_WAKE.refused[key] = (RHYTHM_ASSIST_SESSION_WAKE.refused[key] || 0) + 1;
+  const hit = rhythmAssistSessionPickLine(id, 'refuse', rand);
+  return {
+    came: false,
+    line: hit ? hit[1] : ''
+  };
+};
 const rhythmAssistSessionCanPayNow = () => {
   const app = RHYTHM_ASSIST_SESSION_INVITE.app;
   const free = typeof RHYTHM_BUDDY_STORE !== 'undefined' ? rhythmBuddyFreeLeft(RHYTHM_BUDDY_STORE.get(), rhythmBuddyDayKey(Date.now())) : 0;
@@ -95890,7 +96070,7 @@ const rhythmAssistSessionInvite = (id, opts = {}) => {
     ok: false,
     reason: 'unknown'
   });
-  if (!rhythmAssistSessionCanPayNow()) return rhythmAssistSessionInviteDone(onResult, {
+  if (!rhythmAssistSessionVisitFree(id) && !rhythmAssistSessionCanPayNow()) return rhythmAssistSessionInviteDone(onResult, {
     ok: false,
     reason: 'no_ticket'
   });
@@ -100852,7 +101032,7 @@ const ASSISTANT_LIFE_DOINGS = Object.freeze({
     label: 'おやつ',
     te: 'おやつを食べて',
     group: true,
-    places: ['cafe', 'plaza', 'home']
+    places: ['cafe', 'home']
   },
   practice: {
     label: '練習',
@@ -102361,6 +102541,43 @@ const assistantLifePickSoloTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, p
     scene: 'any'
   }, ctx);
 };
+const assistantLifePickCallTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, rand = Math.random) => {
+  const seen = ASSISTANT_LIFE_STORE.state.seen || {};
+  const g = life && (life.groups || []).find(x => x.ids.includes(id));
+  const s = life && life.solo && life.solo[id] || (g ? {
+    place: g.place,
+    doing: g.doing
+  } : {
+    place: 'home',
+    doing: 'idle'
+  });
+  const ctx = {
+    place: s.place,
+    doing: s.doing
+  };
+  const keysOf = t => ({
+    pt: t.keys && t.keys.place ? assistantLifePlaceType(id, t.keys.place) : null,
+    mood: t.keys && t.keys.mood || null,
+    why: t.keys && t.keys.why || null,
+    doing: t.keys && t.keys.doing || null
+  });
+  const want = {
+    pt: assistantLifePlaceType(id, s.place),
+    mood: (life && life.moods || {})[id] || null,
+    why: s.reason && s.reason !== 'distance' ? s.reason : null,
+    doing: s.doing
+  };
+  const cands = assistantLifeTalkSet().breeder.filter(t => t.who === id && (t.lines || []).every(l => l.who === id)).map(t => ({
+    talk: t,
+    keys: keysOf(t)
+  }));
+  if (!cands.length) return null;
+  const t = assistantLifeChoose(cands, want, ['doing', 'why', 'mood', 'pt'], seen, rand);
+  return t ? assistantLifeWithCtx({
+    ...t,
+    pair: Array.isArray(t.pair) && t.pair.length ? t.pair : [id]
+  }, ctx) : null;
+};
 const assistantLifePickInviteTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, peerSt = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null, rand = Math.random) => {
   const s = life && life.solo && life.solo[id];
   if (!s) return null;
@@ -102693,22 +102910,33 @@ function AssistantLifeScreenBody({
       place: g.place
     });
   };
+  const sleepingOf = id => {
+    const x = (life.solo || {})[id];
+    return !!(x && x.doing === 'sleep');
+  };
   const invite = async id => {
-    const talk = assistantLifePickInviteTalk(id, life);
+    const talk = sleepingOf(id) && typeof assistantLifePickSleepTalk === 'function' ? assistantLifePickSleepTalk(id, {
+      wake: true,
+      place: 'home'
+    }) : assistantLifePickCallTalk(id, life);
     if (!(await assistantLifeNudge('invite', id))) return;
-    setNote(`${nameOf(id)}を誘いました。次の時間に、だれかのところへ行きます`);
+    setNote(`${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
     if (talk) {
-      assistantLifeMarkSeen(talk);
+      if (!sleepingOf(id)) assistantLifeMarkSeen(talk);
       playTalk(talk, {
         ids: [id],
-        place: ((life.solo || {})[id] || {}).place
+        place: ((life.solo || {})[id] || {}).place,
+        sleep: sleepingOf(id)
       });
     }
   };
   const peek = id => {
     const key = `solo:${id}`;
     if ((life.watched || []).includes(key)) return;
-    const talk = assistantLifePickSoloTalk(id, life);
+    const talk = sleepingOf(id) && typeof assistantLifePickSleepTalk === 'function' ? assistantLifePickSleepTalk(id, {
+      wake: false,
+      place: 'home'
+    }) : typeof assistantLifeOnlyPresent === 'function' ? assistantLifeOnlyPresent(assistantLifePickSoloTalk(id, life), [id]) : assistantLifePickSoloTalk(id, life);
     if (!talk) {
       setNote(`${nameOf(id)}は、いまは静かに過ごしています`);
       return;
@@ -102720,10 +102948,11 @@ function AssistantLifeScreenBody({
       }
     });
     assistantLifeSaveLife();
-    assistantLifeMarkSeen(talk);
+    if (!sleepingOf(id)) assistantLifeMarkSeen(talk);
     playTalk(talk, {
       ids: [id],
-      place: ((life.solo || {})[id] || {}).place
+      place: ((life.solo || {})[id] || {}).place,
+      sleep: sleepingOf(id)
     });
   };
   const introduce = async () => {
@@ -103257,6 +103486,953 @@ const ASSISTANT_LIFE_VIEW = Object.freeze({
   night: ['images/story-bg/monhero_night.jpg', 'images/story-bg/forest_night.jpg']
 });
 const ASSISTANT_LIFE_BGM_TRACK = 'kaze_ga_soyogu';
+const ASSISTANT_LIFE_SLEEP_TALKS = Object.freeze([{
+  id: 'life-sleep-mua-001',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'mua',
+    e: 'happy',
+    t: '…むにゃ…プリン、もう1個だけぇ…'
+  }]
+}, {
+  id: 'life-sleep-mua-002',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'mua',
+    e: 'happy',
+    t: '…んふふ…このコーデ、まぢ優勝…'
+  }]
+}, {
+  id: 'life-sleep-mua-003',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'mua',
+    e: 'normal',
+    t: '…あと5分…いや、あと5曲…'
+  }]
+}, {
+  id: 'life-sleep-mua-004',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'mua',
+    e: 'happy',
+    t: '…モッチー…ふわふわ…ぢゃん…'
+  }]
+}, {
+  id: 'life-sleep-mua-005',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'mua',
+    e: 'normal',
+    t: '…{name}…いっしょに、広場いこ…'
+  }]
+}, {
+  id: 'life-sleep-mua-006',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'mua',
+    e: 'excited',
+    t: '…フルコン…きた…！ …すぅ…'
+  }]
+}, {
+  id: 'life-sleep-kiki-001',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '…すぅ…火力は…ぜんぶ攻撃に…'
+  }]
+}, {
+  id: 'life-sleep-kiki-002',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kiki',
+    e: 'happy',
+    t: '…お茶が…はいりましたよ…むにゃ'
+  }]
+}, {
+  id: 'life-sleep-kiki-003',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '…ゴーレムさん…今日も、かたいでつね…'
+  }]
+}, {
+  id: 'life-sleep-kiki-004',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kiki',
+    e: 'happy',
+    t: '…{name}…おはようございまつ…すぅ'
+  }]
+}, {
+  id: 'life-sleep-kiki-005',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '…しおりは…ここに…はさんで…'
+  }]
+}, {
+  id: 'life-sleep-kiki-006',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kiki',
+    e: 'happy',
+    t: '…ちから…全開…でつ…'
+  }]
+}, {
+  id: 'life-sleep-momosuke-001',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'momosuke',
+    e: 'happy',
+    t: '…むにゃ…もも、センター…♡'
+  }]
+}, {
+  id: 'life-sleep-momosuke-002',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '…HELL…もう1回…'
+  }]
+}, {
+  id: 'life-sleep-momosuke-003',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'momosuke',
+    e: 'happy',
+    t: '…メタルナー…ぴかぴか…w'
+  }]
+}, {
+  id: 'life-sleep-momosuke-004',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '…アンコール…ありがと…すぅ'
+  }]
+}, {
+  id: 'life-sleep-momosuke-005',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'momosuke',
+    e: 'happy',
+    t: '…{name}…見ててね…♡'
+  }]
+}, {
+  id: 'life-sleep-momosuke-006',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '…ミス…ゼロ…！！ …すぅ'
+  }]
+}, {
+  id: 'life-sleep-dra-001',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'dra',
+    e: 'happy',
+    t: '…ぐぅ…グジラ…でっかいな…'
+  }]
+}, {
+  id: 'life-sleep-dra-002',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '…ふとんが…むにゃ…'
+  }]
+}, {
+  id: 'life-sleep-dra-003',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'dra',
+    e: 'happy',
+    t: '…アルミ缶の…上に…すぅ'
+  }]
+}, {
+  id: 'life-sleep-dra-004',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '…おで…まだ…食べられるぞ…'
+  }]
+}, {
+  id: 'life-sleep-dra-005',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'dra',
+    e: 'happy',
+    t: '…{name}…膝…だいじょうぶか…'
+  }]
+}, {
+  id: 'life-sleep-dra-006',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '…あと10時間…寝かせてくれ…'
+  }]
+}, {
+  id: 'life-sleep-atsu-001',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '…ドラゴン…もう1周…！'
+  }]
+}, {
+  id: 'life-sleep-atsu-002',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'atsu',
+    e: 'happy',
+    t: '…勝った…笑 …すぅ…'
+  }]
+}, {
+  id: 'life-sleep-atsu-003',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '…とりあえず…突っこむ…'
+  }]
+}, {
+  id: 'life-sleep-atsu-004',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '…てか…ノーカン…だろ…'
+  }]
+}, {
+  id: 'life-sleep-atsu-005',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'atsu',
+    e: 'happy',
+    t: '…{name}…ナイス…！'
+  }]
+}, {
+  id: 'life-sleep-atsu-006',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '…朝練…6時…！'
+  }]
+}, {
+  id: 'life-sleep-kyuko-001',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '…むにゃ…その本、あと1章だけぇ…'
+  }]
+}, {
+  id: 'life-sleep-kyuko-002',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kyuko',
+    e: 'happy',
+    t: '…ニャー…ふかふかぁ…'
+  }]
+}, {
+  id: 'life-sleep-kyuko-003',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '…ぐぬぬぬ…あと1枚…'
+  }]
+}, {
+  id: 'life-sleep-kyuko-004',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kyuko',
+    e: 'happy',
+    t: '…ほい…ありがとん…すぅ'
+  }]
+}, {
+  id: 'life-sleep-kyuko-005',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '…だいたい…97点…'
+  }]
+}, {
+  id: 'life-sleep-kyuko-006',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kyuko',
+    e: 'happy',
+    t: '…{name}…イルミネ、きれいだねぇ…'
+  }]
+}, {
+  id: 'life-sleep-sorashido-001',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '…表の…3行目…ずれてる…'
+  }]
+}, {
+  id: 'life-sleep-sorashido-002',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'sorashido',
+    e: 'happy',
+    t: '…うぉぉぉ…新記録…むにゃ'
+  }]
+}, {
+  id: 'life-sleep-sorashido-003',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '…なんくるないさ…すぅ…'
+  }]
+}, {
+  id: 'life-sleep-sorashido-004',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'sorashido',
+    e: 'happy',
+    t: '…確率…でーじ…高い…'
+  }]
+}, {
+  id: 'life-sleep-sorashido-005',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '…攻略本…完成…だぜ…'
+  }]
+}, {
+  id: 'life-sleep-sorashido-006',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'sorashido',
+    e: 'happy',
+    t: '…{name}…ちばりよー…'
+  }]
+}, {
+  id: 'life-sleep-erubin-001',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '…すぅ…デュラハン…いけ…'
+  }]
+}, {
+  id: 'life-sleep-erubin-002',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'erubin',
+    e: 'happy',
+    t: '…みんな…おやすみ…'
+  }]
+}, {
+  id: 'life-sleep-erubin-003',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '…もう1戦…いいね…'
+  }]
+}, {
+  id: 'life-sleep-erubin-004',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'erubin',
+    e: 'happy',
+    t: '…お茶…おいしいね…'
+  }]
+}, {
+  id: 'life-sleep-erubin-005',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '…ちがうよ…石油王じゃ…ないって…'
+  }]
+}, {
+  id: 'life-sleep-erubin-006',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'erubin',
+    e: 'happy',
+    t: '…{name}…今日も、ありがとう…'
+  }]
+}, {
+  id: 'life-sleep-mua-007',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'mua',
+    e: 'surprise',
+    t: 'ふぇっ！？ {name}！？ …あ、寝ぐせ見ないで〜！'
+  }]
+}, {
+  id: 'life-sleep-mua-008',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '…ん…まだ朝？ あたし、朝ほんとに弱くて…ごめんね'
+  }]
+}, {
+  id: 'life-sleep-mua-009',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'mua',
+    e: 'troubled',
+    t: 'んー…{name}…あと5分だけぇ…'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '…しょうがないなぁ、起きるぢゃん♪'
+  }]
+}, {
+  id: 'life-sleep-mua-010',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'mua',
+    e: 'angry',
+    t: 'もう！ いい夢見てたのに〜！ …で、なに？ｗ'
+  }]
+}, {
+  id: 'life-sleep-kiki-007',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'kiki',
+    e: 'surprise',
+    t: '…まあ、{name}。私、うとうとしていましたか'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'お見苦しいところを。お茶でもいれまつね'
+  }]
+}, {
+  id: 'life-sleep-kiki-008',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '…はい、起きまつ。早寝なので、少しぼんやりしていまつ'
+  }]
+}, {
+  id: 'life-sleep-kiki-009',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'kiki',
+    e: 'troubled',
+    t: '…{name}…もう22時すぎでつよ…'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '…でも、来てくれたのはうれしいでつ♪'
+  }]
+}, {
+  id: 'life-sleep-kiki-010',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'kiki',
+    e: 'happy',
+    t: '…ふふ、起こされてしまいました。少しだけ、お話ししまつか'
+  }]
+}, {
+  id: 'life-sleep-momosuke-007',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'momosuke',
+    e: 'surprise',
+    t: 'わっ！！ な、なに！？ もも寝てないよ！！'
+  }]
+}, {
+  id: 'life-sleep-momosuke-008',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '…ん…いま何時…？ 朝は、もも苦手なの…'
+  }]
+}, {
+  id: 'life-sleep-momosuke-009',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'momosuke',
+    e: 'angry',
+    t: 'ちょっとー！！ 寝起きの顔見ないで！！'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '…まあ、{name}ならいっか♡'
+  }]
+}, {
+  id: 'life-sleep-momosuke-010',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '…むにゃ…起こすなら、おやつ持ってきてw'
+  }]
+}, {
+  id: 'life-sleep-dra-007',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'dra',
+    e: 'surprise',
+    t: '…ん、おお、{name}か。寝てたぞ'
+  }]
+}, {
+  id: 'life-sleep-dra-008',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '…すまん、もうちょっとだけ寝かせてくれるか…'
+  }]
+}, {
+  id: 'life-sleep-dra-009',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '…{name}…いま、いい夢だったんだがな…'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'まあ、起こされたなら起きるか'
+  }]
+}, {
+  id: 'life-sleep-dra-010',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '…ぐぅ……はっ、起きてるぞ。目は閉じてるけどな'
+  }]
+}, {
+  id: 'life-sleep-atsu-007',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'atsu',
+    e: 'surprise',
+    t: '…ん！？ あ、{name}か！ 寝てた笑'
+  }]
+}, {
+  id: 'life-sleep-atsu-008',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '…おう…朝練の前に、もうちょい寝る…'
+  }]
+}, {
+  id: 'life-sleep-atsu-009',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'atsu',
+    e: 'troubled',
+    t: '…{name}かよ… 夜は寝かせろって笑'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '…まあいいや、起きた！ なんだ？'
+  }]
+}, {
+  id: 'life-sleep-atsu-010',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'atsu',
+    e: 'happy',
+    t: '…ふぁ…起こしたなら、朝いっしょに走るぞ笑'
+  }]
+}, {
+  id: 'life-sleep-kyuko-007',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'kyuko',
+    e: 'surprise',
+    t: '…ぇ、あ、{name}…？ 寝ぼけてたぁ'
+  }]
+}, {
+  id: 'life-sleep-kyuko-008',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '…ん…朝はまだ、むりぃ…'
+  }]
+}, {
+  id: 'life-sleep-kyuko-009',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '…{name}ぉ…いま、本の夢見てたのにぃ'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '…ま、いっか。ほい、起きたよ笑'
+  }]
+}, {
+  id: 'life-sleep-kyuko-010',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '…ぐぬぬぬ…起こされたぁ。ありがとん…なのかなぁ'
+  }]
+}, {
+  id: 'life-sleep-sorashido-007',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'sorashido',
+    e: 'surprise',
+    t: '…うぉっ！？ {name}か…寝ぼけてたぜ'
+  }]
+}, {
+  id: 'life-sleep-sorashido-008',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '…まだ10時前だろ…朝は弱いのさ…'
+  }]
+}, {
+  id: 'life-sleep-sorashido-009',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '…{name}…いま、表の夢の途中だったんだぜ…'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '…まあいいさ。起きたからには、計算するぜ'
+  }]
+}, {
+  id: 'life-sleep-sorashido-010',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'sorashido',
+    e: 'happy',
+    t: '…ふぁ…{name}の声なら、目ざましより効くさ'
+  }]
+}, {
+  id: 'life-sleep-erubin-007',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'erubin',
+    e: 'surprise',
+    t: '…あ、{name}。ごめんね、寝てたみたい'
+  }]
+}, {
+  id: 'life-sleep-erubin-008',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '…ん…どうしたの？ 何かあった？'
+  }]
+}, {
+  id: 'life-sleep-erubin-009',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'erubin',
+    e: 'troubled',
+    t: '…{name}…もう23時すぎてるよ…'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '…でも、顔見られてよかった。少しだけ話そっか'
+  }]
+}, {
+  id: 'life-sleep-erubin-010',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'erubin',
+    e: 'happy',
+    t: '…ふぁ…起こされちゃった笑 どうしたの？'
+  }]
+}]);
+const assistantLifePickSleepTalk = (id, {
+  wake = true,
+  bondLv = 1,
+  place = 'home'
+} = {}) => {
+  const all = (typeof ASSISTANT_LIFE_SLEEP_TALKS !== 'undefined' ? ASSISTANT_LIFE_SLEEP_TALKS : []).filter(t => t.who === id);
+  const band = bondLv >= 5 ? '5-10' : '1-4';
+  const talk = all.filter(t => t.line === 'talk'),
+    woken = all.filter(t => t.line === 'woken' && (!t.lv || t.lv === band));
+  const list = wake && woken.length && Math.random() < 0.4 ? woken : talk.length ? talk : woken;
+  if (!list.length) return null;
+  const t = list[Math.floor(Math.random() * list.length)];
+  return {
+    ...t,
+    pair: [id],
+    lv: 1,
+    scene: 'any',
+    lifePlace: place,
+    lifeDoing: 'sleep'
+  };
+};
+const assistantLifeOnlyPresent = (talk, ids) => {
+  if (!talk || !Array.isArray(talk.lines)) return talk;
+  if (talk.lines.every(l => ids.includes(l.who))) return talk;
+  const lines = talk.lines.filter(l => ids.includes(l.who));
+  return lines.length ? {
+    ...talk,
+    lines
+  } : null;
+};
 const assistantLifeWhereOf = (life, id) => {
   if (!life) return null;
   const g = (life.groups || []).find(x => x.ids.includes(id));
@@ -103463,7 +104639,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-room .lock{position:absolute;inset:0;z-index:6;display:grid;place-items:center;background:rgba(15,23,42,.78);font-size:11px;font-weight:900;color:#cbd5e1}
 .mhl-liv{position:absolute;overflow:hidden;border-radius:3px;background:linear-gradient(#f3e3c4,#e7cfa2)}
 .mhl-board{position:absolute;left:8px;top:6px;bottom:6px;border-radius:5px;background:#c08a52;border:3px solid #7c4a22;padding:3px 6px;overflow:hidden}
-.mhl-board b{display:block;font-size:9.5px;color:#fff}.mhl-board p{font-size:9px;font-weight:800;color:#1e293b;background:#fffbeb;border-radius:3px;padding:1px 4px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mhl-board b{display:block;font-size:9.5px;color:#fff}.mhl-board p{font-size:9px;font-weight:800;line-height:1.25;color:#1e293b;background:#fffbeb;border-radius:3px;padding:1px 4px;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .mhl-door{position:absolute;bottom:0;width:38px;border-radius:18px 18px 0 0;background:linear-gradient(#8b5a2b,#6b4423);border:2px solid #3b2412}
 .mhl-find{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:900;padding:6px 10px;border-radius:999px;background:linear-gradient(135deg,#7c3aed,#db2777);border:1.5px solid #fff9;box-shadow:0 4px 12px #0009}
 .mhl-tile{position:relative;display:block;min-height:58px;border-radius:12px;padding:6px 6px 4px;text-align:left;clip-path:polygon(0 0,88% 0,100% 20%,100% 100%,0 100%);overflow:hidden;box-shadow:inset 0 -4px 0 #0003;color:#fff}
@@ -103493,6 +104669,17 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 `;
 function AssistantLifeHouseStyle() {
   return React.createElement("style", null, ASSISTANT_LIFE_HOUSE_CSS);
+}
+function AssistantLifeNames({
+  text
+}) {
+  const parts = String(text || '').split('・');
+  return React.createElement(React.Fragment, null, parts.map((n, i) => React.createElement(React.Fragment, {
+    key: i
+  }, i ? '・' : '', React.createElement("span", {
+    "data-assistant-life-name": true,
+    className: "whitespace-nowrap"
+  }, n), i < parts.length - 1 ? React.createElement("wbr", null) : null)));
 }
 function AssistantLifeRoom({
   id,
@@ -103585,7 +104772,9 @@ function AssistantLifeRoom({
     "data-assistant-life-room-away": id
   }, React.createElement("b", null, state.tag[0]), React.createElement("small", null, state.tag[1]), state.tag[2] && React.createElement("small", {
     "data-assistant-life-room-with": true
-  }, state.tag[2])), !met && React.createElement("span", {
+  }, React.createElement(AssistantLifeNames, {
+    text: state.tag[2]
+  }))), !met && React.createElement("span", {
     className: "lock"
   }, "まだ会っていない"));
 }
@@ -103597,7 +104786,8 @@ function AssistantLifeHouseArt({
   metSet,
   onOpen,
   diary,
-  pop
+  pop,
+  onBoard
 }) {
   const wall = 6,
     cols = land ? 4 : 2,
@@ -103672,14 +104862,18 @@ function AssistantLifeHouseArt({
       height: lh,
       filter: night ? 'brightness(.62)' : undefined
     }
-  }, React.createElement("div", {
-    className: "mhl-board",
+  }, React.createElement("button", {
+    type: "button",
+    className: "mhl-board text-left",
     "data-assistant-life-board": true,
+    onClick: onBoard,
     style: {
-      width: Math.min(width * (land ? .42 : .5), 240)
-    }
-  }, React.createElement("b", null, "📌 今日あったこと"), items.length ? items.slice(0, land ? 2 : 3).map((x, i) => React.createElement("p", {
-    key: i
+      width: Math.min(width * (land ? .42 : .52), 240)
+    },
+    "aria-label": "今日あったことを全部見る"
+  }, React.createElement("b", null, "📌 今日あったこと", items.length ? ' ›' : ''), items.length ? items.slice(0, land ? 1 : 2).map((x, i) => React.createElement("p", {
+    key: i,
+    "data-assistant-life-board-item": true
   }, x.t, " ", x.text)) : React.createElement("p", null, "まだ何もありません")), React.createElement("div", {
     className: "mhl-door",
     style: {
@@ -103732,7 +104926,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
           in: [host, ...ids.filter(x => x !== host)],
           lonely,
           sleep: w.doing === 'sleep',
-          bub: w.doing === 'sleep' ? '💤 おやすみ中' : lonely ? '💭 だれか来ないかな…' : ids.length > 1 ? `${ASSISTANT_LIFE_PLACE_ICON.home} ${ids.length}人で${doing.label}` : doing.label
+          bub: w.doing === 'sleep' ? '💤 おやすみ中' : lonely ? '💭 だれか来ないかな…' : ids.length > 1 ? `部屋で${ids.length}人で${doing.label}` : `部屋で${doing.label}`
         };
       } else rooms[id] = {
         tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)]
@@ -103799,8 +104993,9 @@ function AssistantLifeRoomSheet({
   const canWatch = groupKey ? !watched.includes(groupKey) : !watched.includes(`solo:${id}`);
   const atBeat = w && w.doing === 'practice';
   const slotDef = ASSISTANT_LIFE_SLOTS[slot.i];
-  const groupText = w && w.group ? ` ・ ${w.group.ids.length}人(${assistantLifeGroupNames(w.group.ids, 8)})` : ' ・ ひとり';
-  const where = !w ? '🏡 部屋で過ごしている' : home ? `🏡 ${doing}${groupText}` : `${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${ASSISTANT_LIFE_PLACES[w.place]}で${doing}${groupText}`;
+  const groupNames = w && w.group ? assistantLifeGroupNames(w.group.ids, 8) : null;
+  const groupText = w && w.group ? '' : ' ・ ひとり';
+  const where = !w ? '🏡 部屋で過ごしている' : home ? `🏡 部屋で${doing}${groupText}` : `${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${ASSISTANT_LIFE_PLACES[w.place]}で${doing}${groupText}`;
   return React.createElement("div", {
     className: "absolute inset-0",
     style: {
@@ -103835,7 +105030,9 @@ function AssistantLifeRoomSheet({
   }, who.name, "の部屋"), React.createElement("p", {
     className: "mt-1 max-w-[62%] text-[12px] font-bold",
     "data-assistant-life-room-where": true
-  }, where), !home && React.createElement("p", {
+  }, where, groupNames && React.createElement(React.Fragment, null, " ・ ", w.group.ids.length, "人(", React.createElement(AssistantLifeNames, {
+    text: groupNames
+  }), ")")), !home && React.createElement("p", {
     className: "text-[11px] font-bold text-violet-200"
   }, "⏱ ", slotDef ? `${ASSISTANT_LIFE_SLOTS[(slot.i + 1) % 6].label}(${slotDef.to}時)まで` : '', "いる"), (() => {
     const sh = assistantLifeRhythmShiftOn((ASSISTANT_LIFE_STORE.state.rhythm || {})[id], assistantLifeDayKey());
@@ -104017,19 +105214,31 @@ function AssistantLifeScene({
     if (!who) return null;
     const n = ids.length;
     const cx = n === 1 ? 50 : n === 2 ? i ? 66 : 34 : n === 3 ? [22, 50, 78][i] : [16, 38, 62, 84][i];
-    return React.createElement("img", {
-      key: pid,
+    const zz = (scene.sleep || []).includes(pid);
+    return React.createElement(React.Fragment, {
+      key: pid
+    }, React.createElement("img", {
       className: "st",
-      src: assistantFullImage(who, 'happy'),
+      "data-assistant-life-scene-stand": pid,
+      "data-assistant-life-scene-sleep": zz ? '1' : '0',
+      src: assistantFullImage(who, zz ? 'normal' : 'happy'),
       alt: "",
       style: {
         left: `${cx}%`,
         transform: 'translateX(-50%)',
         height: n >= 4 ? '50%' : '58%',
         width: n === 1 ? '90%' : n >= 4 ? '46%' : '70%',
-        bottom: '22%'
+        bottom: '22%',
+        filter: zz ? 'brightness(.45) saturate(.6) drop-shadow(0 6px 12px #0008)' : undefined
       }
-    });
+    }), zz && React.createElement("span", {
+      className: "absolute text-[34px]",
+      style: {
+        left: `${cx + 8}%`,
+        top: '30%'
+      },
+      "aria-hidden": "true"
+    }, "💤"));
   }), React.createElement("div", {
     className: "mhl-hdr absolute inset-x-0 top-0",
     style: {
@@ -104058,7 +105267,9 @@ function AssistantLifeScene({
     style: {
       background: 'linear-gradient(90deg,#0ea5e9,#a855f7)'
     }
-  }, "👥 ", ids.length, "人で ・ ", assistantLifeGroupNames(ids, 8)), hint && ids.length === 2 && React.createElement("p", {
+  }, "👥 ", ids.length, "人で ・ ", React.createElement(AssistantLifeNames, {
+    text: assistantLifeGroupNames(ids, 8)
+  })), hint && ids.length === 2 && React.createElement("p", {
     className: "mt-1 w-fit rounded-full px-2 py-0.5 text-[10px] font-black",
     style: {
       background: 'linear-gradient(90deg,#db2777,#a855f7)'
@@ -104111,6 +105322,7 @@ function AssistantLifeHouse({
   const [note, setNote] = React.useState('');
   const [give, setGive] = React.useState(null);
   const [intro, setIntro] = React.useState(null);
+  const [boardOpen, setBoardOpen] = React.useState(false);
   const [vw, setVw] = React.useState(() => typeof window !== 'undefined' ? window.innerWidth : 390);
   React.useEffect(() => {
     const f = () => setVw(window.innerWidth);
@@ -104168,12 +105380,15 @@ function AssistantLifeHouse({
   };
   const playTalk = (talk, ctx) => {
     if (!talk) return;
-    const sceneIds = ctx && ctx.ids && ctx.ids.length ? ctx.ids : typeof assistantPeerMembers === 'function' ? assistantPeerMembers(talk) : [];
+    const speakers = [...new Set((talk.lines || []).map(l => l && l.who).filter(Boolean))];
+    const sceneIds = [...new Set([...(ctx && ctx.ids || []), ...speakers])];
+    const sleepIds = ctx && ctx.sleep ? ctx.ids || [] : [];
     setRoomId(null);
     setScene({
       ids: sceneIds,
       place: ctx && ctx.place || 'home',
-      key: talk.id
+      key: `${talk.id}-${Date.now()}`,
+      sleep: sleepIds
     });
     if (onReplay) onReplay(talk);
     if (sceneIds.length >= 2) void assistantLifeDiaryAdd(`${sceneIds.map(nameOf).join('・')}の様子を見守った`, sceneIds, {
@@ -104194,7 +105409,12 @@ function AssistantLifeHouse({
   const peek = id => {
     const key = `solo:${id}`;
     if ((life.watched || []).includes(key)) return;
-    const talk = assistantLifePickSoloTalk(id, life);
+    const w = assistantLifeWhereOf(life, id);
+    const sleeping = !!(w && w.doing === 'sleep');
+    const talk = sleeping ? assistantLifePickSleepTalk(id, {
+      wake: false,
+      place: w.place
+    }) : assistantLifeOnlyPresent(assistantLifePickSoloTalk(id, life), [id]);
     if (!talk) {
       setNote(`${nameOf(id)}は、いまは静かに過ごしています`);
       return;
@@ -104206,23 +105426,29 @@ function AssistantLifeHouse({
       }
     });
     assistantLifeSaveLife();
-    assistantLifeMarkSeen(talk);
-    const w = assistantLifeWhereOf(life, id);
+    if (!sleeping) assistantLifeMarkSeen(talk);
     playTalk(talk, {
       ids: [id],
-      place: w ? w.place : 'home'
+      place: w ? w.place : 'home',
+      sleep: sleeping
     });
   };
   const invite = async id => {
-    const talk = assistantLifePickInviteTalk(id, life);
+    const w = assistantLifeWhereOf(life, id);
+    const sleeping = !!(w && w.doing === 'sleep');
+    const talk = sleeping ? assistantLifePickSleepTalk(id, {
+      wake: true,
+      bondLv: typeof bondLevelOf === 'function' ? bondLevelOf(id) : 1,
+      place: w.place
+    }) : assistantLifePickCallTalk(id, life);
     if (!(await assistantLifeNudge('invite', id))) return;
-    setNote(`${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
+    setNote(sleeping ? `${nameOf(id)}は寝ています。次の時間に、起きてだれかのところへ行きます` : `${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
     if (talk) {
-      assistantLifeMarkSeen(talk);
-      const w = assistantLifeWhereOf(life, id);
+      if (!sleeping) assistantLifeMarkSeen(talk);
       playTalk(talk, {
         ids: [id],
-        place: w ? w.place : 'home'
+        place: w ? w.place : 'home',
+        sleep: sleeping
       });
     }
   };
@@ -104347,7 +105573,8 @@ function AssistantLifeHouse({
     "aria-label": "閉じる",
     className: "h-9 w-8 shrink-0 text-[19px] text-slate-100"
   }, "←"), React.createElement("div", {
-    className: "min-w-0 flex-1"
+    className: "min-w-0 shrink-0",
+    "data-assistant-life-title": true
   }, React.createElement("p", {
     className: "mhl-en whitespace-nowrap",
     style: land ? {
@@ -104359,23 +105586,23 @@ function AssistantLifeHouse({
     style: land ? {
       fontSize: 18
     } : undefined
-  }, "助手ライフ")), !land && typeof TimeOfDayClock === 'function' && React.createElement("div", {
+  }, "助手ライフ")), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }), typeof TimeOfDayClock === 'function' && React.createElement("div", {
     className: "shrink-0 self-center"
-  }, React.createElement(TimeOfDayClock, null)), React.createElement("div", {
-    className: "mhl-clock shrink-0",
+  }, React.createElement(TimeOfDayClock, null))), React.createElement("p", {
+    className: "mt-0.5 text-[10px] font-bold text-slate-200",
     "data-assistant-life-clock": true
-  }, React.createElement("p", {
-    className: "whitespace-nowrap text-[11px] font-black"
   }, {
-    morning: '🌅 朝',
-    noon: '☀ 昼',
-    evening: '🌇 夕方',
-    night: '🌙 夜'
-  }[look]), React.createElement("p", {
+    morning: '朝',
+    noon: '昼',
+    evening: '夕方',
+    night: '夜'
+  }[look], " ・ ", React.createElement("span", {
     "data-assistant-life-next-slot": true,
-    className: "whitespace-nowrap text-[9.5px] font-bold text-slate-300"
-  }, assistantLifeNextSlotText().replace(/で.+?\(みんなが動きます\)/, 'でみんなが動く')))), React.createElement("div", {
-    className: "mt-1.5 flex items-center gap-1.5",
+    className: "whitespace-nowrap"
+  }, assistantLifeNextSlotText().replace(/で.+?\(みんなが動きます\)/, 'でみんなが動く'))), React.createElement("div", {
+    className: "mt-1 flex items-center gap-1.5",
     "data-assistant-life-tier": tier.id,
     title: ASSISTANT_LIFE_TIER_NOTES[tier.id]
   }, React.createElement("span", {
@@ -104411,7 +105638,8 @@ function AssistantLifeHouse({
     metSet: metSet,
     onOpen: setRoomId,
     diary: diary,
-    pop: !!intro
+    pop: !!intro,
+    onBoard: () => setBoardOpen(true)
   }));
   const tabBody = tab === 'house' ? houseView : tab === 'where' ? React.createElement("div", {
     className: "px-3 pb-3",
@@ -104531,7 +105759,42 @@ function AssistantLifeHouse({
     onWatch: watch,
     onGive: g => openGive(g.ids),
     onBeat: beat
-  }), scene && React.createElement(AssistantLifeScene, {
+  }), boardOpen && React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      zIndex: 25
+    },
+    "data-assistant-life-diary": true
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    className: "absolute inset-0 bg-black/60",
+    onClick: () => setBoardOpen(false)
+  }), React.createElement("div", {
+    className: "mhl-sheet",
+    style: land ? {
+      left: 'auto',
+      width: '42%',
+      top: 0,
+      maxHeight: '100%',
+      borderRadius: '22px 0 0 22px'
+    } : undefined
+  }, React.createElement("p", {
+    className: "mhl-en"
+  }, "TODAY"), React.createElement("p", {
+    className: "text-[18px] font-black"
+  }, "📌 今日あったこと"), (diary.items || []).length ? [...diary.items].reverse().map((x, i) => React.createElement("p", {
+    key: i,
+    className: "mt-1.5 text-[12px] font-bold leading-snug text-slate-100"
+  }, React.createElement("b", {
+    className: "mr-1.5 text-amber-200"
+  }, x.t), x.text)) : React.createElement("p", {
+    className: "mt-2 text-[12px] text-slate-400"
+  }, "まだ何もありません"), React.createElement("button", {
+    type: "button",
+    className: "mhl-btn mt-3 w-full bg-slate-700",
+    onClick: () => setBoardOpen(false)
+  }, "閉じる"))), scene && React.createElement(AssistantLifeScene, {
     key: scene.key,
     scene: scene,
     look: look,
@@ -104585,17 +105848,21 @@ function AssistantLifeHouse({
     onGive: doGive
   }));
 }
+const ASSISTANT_LIFE_MAP_CROP = Object.freeze({
+  y0: 120,
+  h: 1440
+});
 const ASSISTANT_LIFE_MAP_POS = Object.freeze({
-  studio: [24, 22],
-  ranch: [10, 38],
-  library: [81, 25],
-  garden: [68, 34],
-  plaza: [51, 47],
-  cafe: [16, 53],
-  market: [86, 56],
-  home: [8, 65],
-  cardroom: [49, 82],
-  hill: [85, 10]
+  ranch: [23.4, 30.6],
+  library: [69.1, 22.9],
+  studio: [83.5, 27.8],
+  garden: [69.1, 33.3],
+  plaza: [51.0, 48.6],
+  cafe: [14.9, 61.8],
+  market: [85.0, 64.6],
+  home: [9.6, 78.5],
+  cardroom: [49.9, 91.7],
+  hill: [80.8, 5.6]
 });
 function AssistantLifeTownMap({
   life,
@@ -104618,8 +105885,7 @@ function AssistantLifeTownMap({
   return React.createElement("div", {
     className: "relative mb-2 overflow-hidden rounded-2xl border border-white/15",
     style: {
-      aspectRatio: '941 / 1000',
-      maxHeight: 340
+      aspectRatio: `941 / ${ASSISTANT_LIFE_MAP_CROP.h}`
     },
     "data-assistant-life-map": true
   }, React.createElement("img", {
@@ -104628,7 +105894,7 @@ function AssistantLifeTownMap({
     className: "absolute left-0 top-0 w-full",
     style: {
       filter,
-      transform: 'translateY(-14%)'
+      transform: `translateY(-${(100 * ASSISTANT_LIFE_MAP_CROP.y0 / 1672).toFixed(2)}%)`
     }
   }), Object.entries(ASSISTANT_LIFE_MAP_POS).map(([place, [x, y]]) => {
     const who = at[place] || [];
@@ -104656,7 +105922,7 @@ function AssistantLifeTownMap({
       })) : null;
     })), React.createElement("span", {
       className: `mt-0.5 whitespace-nowrap rounded-md border px-1.5 text-[9.5px] font-black ${who.length ? 'border-amber-300 bg-amber-950/90 text-amber-50' : 'border-slate-500/60 bg-slate-950/70 text-slate-300'}`
-    }, ASSISTANT_LIFE_PLACE_ICON[place], " ", ASSISTANT_LIFE_PLACES[place]));
+    }, ASSISTANT_LIFE_PLACE_ICON[place], " ", place === 'home' ? '助手の家' : ASSISTANT_LIFE_PLACES[place]));
   }));
 }
 const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({
@@ -104728,8 +105994,8 @@ function AssistantLifeHomeFaces({
   const after = new Set(q && q.pair ? String(q.pair).split('-') : []);
   return React.createElement(React.Fragment, null, Object.entries(by).map(([f, list]) => {
     const r = rects[f];
-    const side = r.gap < 15;
-    const size = side ? 20 : Math.max(12, Math.min(20, r.gap - 3));
+    const side = false;
+    const size = Math.max(12, Math.min(20, r.gap - 3));
     const step = size - 4;
     const rowW = size + (list.length - 1) * step + 6;
     const left = side ? r.right ? r.x - rowW - 4 : r.x + r.w + 4 : r.right ? Math.max(4, r.x + r.w - rowW) : r.x;
@@ -111713,7 +112979,7 @@ const cardTourRewardOf = (rewards, place, wins) => {
     point: base + t.perWin * Math.max(0, Math.floor(Number(wins) || 0))
   };
 };
-const CARD_LINE_SCENES = Object.freeze(['challenge', 'start', 'big', 'bigHit', 'guardMine', 'guardTheirs', 'myKo', 'theirKo', 'lastMine', 'lastTheirs', 'deckMine', 'deckTheirs', 'win', 'lose']);
+const CARD_LINE_SCENES = Object.freeze(['challenge', 'start', 'big', 'bigHit', 'guardMine', 'guardTheirs', 'myKo', 'theirKo', 'lastMine', 'lastTheirs', 'deckMine', 'deckTheirs', 'win', 'lose', 'winQuick']);
 const CARD_LINE_FACE = Object.freeze({
   challenge: 'wink',
   start: 'happy',
@@ -111728,7 +112994,8 @@ const CARD_LINE_FACE = Object.freeze({
   deckMine: 'surprise',
   deckTheirs: 'wink',
   win: 'happy',
-  lose: 'crying'
+  lose: 'crying',
+  winQuick: 'wink'
 });
 const CARD_BATTLE_LINES = Object.freeze({
   mua: {
@@ -111745,7 +113012,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: ['山札、あと少しぢゃん…！ 急がなきゃ！', 'カード残り少ない…早く決めなきゃ！'],
     deckTheirs: ['そっちの山札、もう少ないよ？ 大丈夫？', 'カード足りる…？ あたしまでﾄﾞｷﾄﾞｷしてきた！'],
     win: ['あたしの勝ちー！ めっちゃ楽しかった♪', 'やったー！ またいつでも相手するよ！', '勝っちゃった！ 次も全力でいこ！'],
-    lose: [['負けたー！ でも、まぢ楽しかったよ！', 'happy'], ['強すぎぢゃんｗ もう1回やろ！', 'excited'], ['くやしー！ 次は絶対負けないからね♪', 'crying']]
+    lose: [['負けたー！ でも、まぢ楽しかったよ！', 'happy'], ['強すぎぢゃんｗ もう1回やろ！', 'excited'], ['くやしー！ 次は絶対負けないからね♪', 'crying']],
+    winQuick: [['あれ、もう終わり？ 次はもっと長く遊ぼ♪', 'surprise'], ['まだまだこれからだったのにー！ もう1回やろ！', 'wink']]
   },
   kiki: {
     challenge: ['カードで勝負でつか？ 喜んでお相手しまつ♪♪', '私、こう見えて火力で押すタイプなんです( ˘ω˘)', 'よろしくお願いします。全力でいきますね', '準備はいいですか？ 私はガッツをためて待ってまつ'],
@@ -111761,7 +113029,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: ['山札が少なくなってきました…急がないと', 'あれま、カードがもう残りわずかでつ'],
     deckTheirs: ['あれま、そちらの山札、もうそんなに減ったんでつね', 'このまま押し切りまつね( ˘ω˘)'],
     win: ['私の勝ちでつ。ありがとうございました♪♪', '火力で押し切れました( ˘ω˘)9グッ!', 'いい勝負でした。またお相手してくださいね'],
-    lose: [['負けちゃいました…お強いですね', 'troubled'], ['あれま…悔しいでつ。もう一度お願いしまつ', 'crying'], ['完敗です。次はもっとためてから挑みますね(´ー`*)', 'normal']]
+    lose: [['負けちゃいました…お強いですね', 'troubled'], ['あれま…悔しいでつ。もう一度お願いしまつ', 'crying'], ['完敗です。次はもっとためてから挑みますね(´ー`*)', 'normal']],
+    winQuick: [['あれま、もう終わりでつか？ 次はゆっくりお相手しまつ♪', 'surprise'], ['今日は手札がかみ合わなかったでつか？ またいつでもどうぞ( ˘ω˘)', 'normal']]
   },
   momosuke: {
     challenge: ['カードでももに勝てると思ってる？w', 'いいよ、相手してあげる♡ 泣いても知らないよ？', '手札、ぜーんぶ見えちゃうかもよ？w', 'ももと勝負！？ 楽しませてよね♡'],
@@ -111777,7 +113046,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: ['え、ももの山札もう少ない！？', 'カードなくなる前に決めちゃお！！'],
     deckTheirs: ['山札、あとちょっとじゃん？w', 'カードなくなりそうでかわいそ〜♡ 早く降参する？w'],
     win: ['ももの勝ち〜♡ 楽しかったよ！', 'ね、言ったでしょ？ ももはずるいって！w', '勝った！！ でもけっこう強かったよ、えらいえらい♡'],
-    lose: [['うそでしょ！？ …強いじゃん、すご', 'surprise'], ['むかつく〜！！ もう1回！！', 'angry'], ['負けた…今日だけは認めてあげる♡', 'wink']]
+    lose: [['うそでしょ！？ …強いじゃん、すご', 'surprise'], ['むかつく〜！！ もう1回！！', 'angry'], ['負けた…今日だけは認めてあげる♡', 'wink']],
+    winQuick: [['え、もう降参？ ももの勝ち〜♡ つまんないの〜w', 'wink'], ['ちょっと〜、まだ1体も倒されてないんだけど？w 次は本気で来てよね♡', 'angry']]
   },
   kyuko: {
     challenge: ['ほい！ カード勝負だねぇ。組み方なら負けないよ笑', '先まで読むタイプなんで、よろしくぅ', 'おけ〜、相手するよ。お手柔らかにね笑', '俺のデッキ、安い技ばっかりだけど強いよぉ'],
@@ -111793,7 +113063,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: ['山札、思ったより減ってるなぁ笑', 'カード切れ、気をつけないとだぁ'],
     deckTheirs: ['そっちの山札、もう少ないねぇ', '山札が切れたら負けだから、数えといたほうがいいよw'],
     win: ['ほい、俺の勝ち！ ありがとん笑', '計算どおり…ってことにしといて笑', 'いい勝負だったねぇ。またやろw'],
-    lose: [['ぐぬぬぬ…負けたぁ', 'angry'], ['見立てがずれてたかぁ🥲 強いねぇ', 'troubled'], ['おけ、組み方から考え直すよw', 'normal']]
+    lose: [['ぐぬぬぬ…負けたぁ', 'angry'], ['見立てがずれてたかぁ🥲 強いねぇ', 'troubled'], ['おけ、組み方から考え直すよw', 'normal']],
+    winQuick: [['ほい、今回は早かったねぇ。組み直してまたおいで笑', 'normal'], ['あらら、まだ序盤だったのに〜。次はゆっくりやろw', 'wink']]
   },
   dra: {
     challenge: ['おでとカード勝負か。守りの固さ、見せてやるからな', 'ふむ、いいよ。膝以外も固いってとこ見せるわ', 'よろしくな。カードの組み合わせで勝つのが、おでのやり方だよ', 'えへへ、手札は見せないよ。隠しごとは得意なんだ'],
@@ -111809,7 +113080,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: ['山札が心もとないな…', 'わぁ、カードが残り少ないわ。急がないとな'],
     deckTheirs: ['そっちの山札、もう少ないよ。数えといたほうがいいぞ', '山札切れも負けだからな。覚えとくといいよ'],
     win: ['おでの勝ちだな。えへへ、ありがとな', 'ふむ、守り勝ちってやつだな', 'いい勝負だったよ。また相手してくれよな'],
-    lose: [['わぁ、負けたか…強いな、ほんとに', 'surprise'], ['負けたわ…おでなんか膝しか取り柄ないからな。えへへ', 'troubled'], ['たしかに、今日はそっちが一枚上だったな', 'normal']]
+    lose: [['わぁ、負けたか…強いな、ほんとに', 'surprise'], ['負けたわ…おでなんか膝しか取り柄ないからな。えへへ', 'troubled'], ['たしかに、今日はそっちが一枚上だったな', 'normal']],
+    winQuick: [['ふむ、今日はここまでか。また相手してくれよな', 'normal'], ['えへへ、おでの守り、まだ崩されてないぞ。次はがんばれよな', 'happy']]
   },
   atsu: {
     challenge: ['カード勝負ね。とりあえず全力でいこ笑', 'いいね、受けて立つよ( *\'ω\'*)ノ', '今日は最後まで本気な笑', 'まとめて押し込むのが俺のやり方だから笑', 'これでもモンスター甲子園に出たことあるんだよね笑'],
@@ -111825,7 +113097,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: ['山札少ないな…急ぐか笑', 'カードもう残りわずかじゃん…！'],
     deckTheirs: ['山札、もう少ないじゃん…焦ってる？笑', 'そろそろ山札が尽きるな！ 押し込むぞ！'],
     win: ['俺の勝ち！ いい勝負だった笑', '楽しかった！ 次は上の難易度でやろうぜ笑', 'いいね、また相手してな！'],
-    lose: [['負けた…まじで強いじゃん笑', 'happy'], ['やるね！ 次は俺が勝つからな笑', 'excited'], ['しゃあない、俺の負け！ もう1回やろ！', 'wink']]
+    lose: [['負けた…まじで強いじゃん笑', 'happy'], ['やるね！ 次は俺が勝つからな笑', 'excited'], ['しゃあない、俺の負け！ もう1回やろ！', 'wink']],
+    winQuick: [['え、もう終わり？ 次は最後までやろうぜ笑', 'surprise'], ['今日は俺のペースだったな笑 また相手してな！', 'wink']]
   },
   sorashido: {
     challenge: [['カード勝負か。受けて立つぜ・・・！', 'wink'], ['対戦しよ！ 攻略まとめ、もう頭に入ってる笑', 'happy'], ['手加減なしでいくぜ・・・！ 勝ち負けは本気笑', 'excited'], ['どんなデッキでくるか、楽しみすぎる笑', 'wink']],
@@ -111841,7 +113114,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: [['なに！？ 山札やば…急がないと笑', 'surprise'], ['ガッツにしすぎた…計算ミス笑', 'troubled']],
     deckTheirs: [['そっちの山札、もう少ないな？ 笑', 'wink'], ['山札切れも勝ち筋のひとつだぜ・・・！', 'happy']],
     win: [['うぉぉぉ！ 読み通り！ いい勝負だった笑', 'happy'], ['作戦がきれいにはまった！ もう1戦だけやろ笑', 'excited'], ['楽しかった！ 気づいたら朝になりそう笑', 'wink'], ['うぉぉぉ！ オリヒメにも見せたかった笑', 'excited']],
-    lose: [['なに！？ そこでそれ！？…悔しいけど、今のはうまいぜ・・・！', 'crying'], ['完敗！ 今の対戦、攻略まとめにして研究する笑', 'troubled'], ['なんくるないさ〜。次はデッキ組み直してくる笑', 'happy']]
+    lose: [['なに！？ そこでそれ！？…悔しいけど、今のはうまいぜ・・・！', 'crying'], ['完敗！ 今の対戦、攻略まとめにして研究する笑', 'troubled'], ['なんくるないさ〜。次はデッキ組み直してくる笑', 'happy']],
+    winQuick: [['え、もう終わり！？ ここからが本番だったのに笑', 'surprise'], ['今回は手札がかみ合わなかった感じか・・・！ 次はがっつりやろうぜ笑', 'wink']]
   },
   erubin: {
     challenge: [['カード勝負、いいね！ こっちに来てから、すっかりはまってるんだよね笑', 'happy'], ['今日はどの組み方でいこうかな🤔 いくつか持ってきたんだよね', 'wink'], ['対戦しよっか。手加減はしないけど、それでもよいかな？笑', 'wink'], ['デュラハンの出番だね。よろしくお願いします☺️', 'happy']],
@@ -111857,7 +113131,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: [['あれ、山札がもう少ないね💦 ちょっと急がないと', 'surprise'], ['ガッツにしすぎたかな…計算ミスだw', 'troubled']],
     deckTheirs: [['そっちの山札、だいぶ減ってるけど大丈夫かな？', 'wink'], ['山札の残りも、ちゃんと見てるからね笑', 'happy']],
     win: [['楽しかったー！ いい勝負だったね☺️', 'happy'], ['勝てた！ 組み方がうまくはまったね笑', 'excited'], ['またやろうね。次はどの組み方でいこうかな🤔', 'wink']],
-    lose: [['負けちゃった笑 さすがだね、強かった！', 'happy'], ['くやしいなぁ。デッキ、組み直してくるね', 'troubled'], ['お見事！ 今の勝ち方、勉強になったよ', 'normal']]
+    lose: [['負けちゃった笑 さすがだね、強かった！', 'happy'], ['くやしいなぁ。デッキ、組み直してくるね', 'troubled'], ['お見事！ 今の勝ち方、勉強になったよ', 'normal']],
+    winQuick: [['あれ、もう終わり？ 次はゆっくり遊ぼうね☺️', 'surprise'], ['今日は手札がきびしかったかな🤔 またやろうね', 'normal']]
   }
 });
 const CARD_LINE_PER_TURN = 2;
@@ -115017,6 +116292,7 @@ const CardResultVsRow = ({
   "data-card-result-vs-outcome": true,
   className: `shrink-0 rounded-md px-1.5 py-0.5 text-[12px] font-black ${outcome === '勝ち' ? 'bg-amber-300 text-slate-950' : 'bg-slate-700 text-slate-100'}`
 }, outcome));
+const cardResultLineQuick = result => !!(result && result.outcome !== 'win' && result.facts && Number.isFinite(result.facts.kos) && result.facts.kos === 0);
 const CardResultTalk = ({
   a,
   lineScene,
@@ -118964,6 +120240,135 @@ const cardNormalizeCpuOpen = v => {
   };
 };
 const cardBattleLevelLabel = (level, share) => (share && typeof cardShareSmartLevel === 'function' ? CARD_SHARE_SMART_LABEL[cardShareSmartLevel(share.tactics)] : CARD_LEVEL_LABEL[level]) || '';
+const CardAutoRewardBar = ({
+  info,
+  tickets,
+  onAdd,
+  note = ''
+}) => {
+  if (!info || !Number.isInteger(info.left)) return null;
+  const total = CARD_AUTO_REWARD_DAY_MAX + (Number.isInteger(info.extra) ? info.extra : 0);
+  const empty = info.left <= 0;
+  const why = cardAutoTicketBlock({
+    left: info.left,
+    tickets,
+    extraLeft: info.extraLeft
+  });
+  return React.createElement("div", {
+    "data-card-auto-reward-bar": empty ? 'empty' : 'left',
+    className: "mt-2"
+  }, React.createElement("div", {
+    className: "flex items-stretch gap-1.5"
+  }, React.createElement("div", {
+    "data-card-auto-reward-left": info.left,
+    className: `flex min-w-0 flex-1 flex-col justify-center rounded-xl border px-2 py-1 ${empty ? 'border-rose-300 bg-rose-950/70 shadow-[0_0_12px_rgba(251,113,133,.45)]' : 'border-white/15 bg-slate-900/70'}`
+  }, React.createElement("small", {
+    className: `block text-[10px] font-black leading-tight ${empty ? 'text-rose-200' : 'text-slate-400'}`
+  }, "🤖 オートのごほうび"), React.createElement("b", {
+    className: `block whitespace-nowrap font-black leading-tight tabular-nums ${empty ? 'text-[17px] text-white' : 'text-[14px] text-slate-200'}`
+  }, "残り ", info.left, React.createElement("span", {
+    className: "text-[11px] text-slate-400"
+  }, " / ", total, "回"))), React.createElement("button", {
+    type: "button",
+    "data-card-auto-ticket": true,
+    disabled: !!why,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      if (typeof onAdd === 'function') onAdd();
+    },
+    className: `flex min-h-[44px] shrink-0 flex-col items-center justify-center rounded-xl border px-2 text-[12px] font-black leading-tight active:scale-[.98] disabled:opacity-45 ${empty ? 'border-emerald-300 bg-emerald-900/80 text-emerald-100 shadow-[0_0_10px_rgba(52,211,153,.45)]' : 'border-white/15 bg-slate-800 text-slate-300'}`
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "🎫 セッション券で"), React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "ふやす"))), why && React.createElement("span", {
+    "data-card-auto-ticket-why": true,
+    className: "mt-1 block text-right text-[10px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap(why)), note && React.createElement("span", {
+    "data-card-auto-ticket-note": true,
+    className: "mt-1 block text-[11px] font-black text-emerald-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(note)));
+};
+const CardAutoTicketSheet = ({
+  info,
+  tickets,
+  busy = false,
+  onUse,
+  onClose
+}) => {
+  const have = Number.isInteger(tickets) && tickets > 0 ? tickets : 0;
+  const extraLeft = info && Number.isInteger(info.extraLeft) ? Math.max(0, info.extraLeft) : 0;
+  const left = info && Number.isInteger(info.left) ? info.left : 0;
+  const max = Math.min(have, extraLeft);
+  const [count, setCount] = React.useState(1);
+  const k = Math.min(Math.max(1, count), Math.max(1, max));
+  const why = cardAutoTicketBlock({
+    left,
+    tickets: have,
+    extraLeft
+  });
+  const wide = typeof orientationIsLandscape === 'function' && orientationIsLandscape();
+  return React.createElement(ModalFrame, {
+    label: "セッション券でごほうびをふやす",
+    onClose: busy ? undefined : onClose,
+    zIndex: MODAL_Z.confirm
+  }, React.createElement("div", {
+    "data-card-auto-ticket-ask": wide ? 'wide' : 'tall'
+  }, React.createElement("h3", {
+    className: "text-center text-base font-black leading-snug text-amber-200",
+    style: JA_LABEL_STYLE
+  }, jaWrap('セッション券でごほうびをふやす')), !wide && React.createElement("p", {
+    className: "mt-2 text-[12px] font-bold leading-relaxed text-slate-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap('1枚で、オートで挑むの今日のごほうびが1回ふえます。ふやしたぶんは今日(朝4時まで)だけ使えます。')), React.createElement("div", {
+    className: `${wide ? 'mt-1.5' : 'mt-3'} grid grid-cols-2 gap-2 text-center`
+  }, React.createElement("div", {
+    className: `rounded-xl bg-slate-900 ${wide ? 'px-2 py-1' : 'p-2'}`
+  }, React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, "持っているセッション券"), React.createElement("b", {
+    "data-card-auto-ticket-count": have,
+    className: `${wide ? 'text-[14px]' : 'text-[16px]'} font-black tabular-nums`
+  }, have, "枚")), React.createElement("div", {
+    className: `rounded-xl bg-slate-900 ${wide ? 'px-2 py-1' : 'p-2'}`
+  }, React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, "今日あとふやせる"), React.createElement("b", {
+    "data-card-auto-ticket-extra-left": extraLeft,
+    className: `${wide ? 'text-[14px]' : 'text-[16px]'} font-black tabular-nums`
+  }, extraLeft, "回"))), why ? React.createElement("p", {
+    "data-card-auto-ticket-why": true,
+    className: "mt-3 text-center text-[12px] font-black text-rose-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(why)) : React.createElement(React.Fragment, null, React.createElement("div", {
+    "data-card-auto-ticket-pick": k
+  }, React.createElement(QuantityStepper, {
+    value: k,
+    max: max,
+    onChange: setCount,
+    unit: "枚"
+  })), React.createElement("p", {
+    "data-card-auto-ticket-preview": true,
+    className: "mt-2 rounded-xl border border-emerald-300/40 bg-emerald-950/60 px-2 py-1.5 text-center text-[13px] font-black text-emerald-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`券 ${k}枚 → オートのごほうび +${k}回(残り ${left + k}回になります)`))), React.createElement("div", {
+    className: `${wide ? 'mt-2' : 'mt-3'} grid ${wide && !why ? 'grid-cols-2' : 'grid-cols-1'} gap-2`
+  }, !why && React.createElement("button", {
+    type: "button",
+    "data-card-auto-ticket-use": k,
+    disabled: busy,
+    onClick: () => {
+      if (typeof onUse === 'function') onUse(k);
+    },
+    className: "mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98] disabled:opacity-50"
+  }, `${k}枚使って+${k}回`), React.createElement(ModalCloseButton, {
+    onClick: onClose,
+    disabled: busy,
+    label: "やめる"
+  }))));
+};
 const CardBattleScreen = ({
   screen,
   onNavigate,
@@ -119040,9 +120445,21 @@ const CardBattleScreen = ({
   const [shareQuick, setShareQuick] = useState(false);
   const [autoLeft, setAutoLeft] = useState(null);
   const [autoExtraLeft, setAutoExtraLeft] = useState(null);
+  const [autoExtra, setAutoExtra] = useState(0);
   const [autoTicketAsk, setAutoTicketAsk] = useState(false);
   const [autoTicketBusy, setAutoTicketBusy] = useState(false);
   const [autoTicketNote, setAutoTicketNote] = useState('');
+  const applyAutoLoaded = r => {
+    if (!r) return;
+    setAutoLeft(r.left);
+    setAutoExtraLeft(Number.isInteger(r.extraLeft) ? r.extraLeft : null);
+    setAutoExtra(Number.isInteger(r.extra) ? r.extra : 0);
+  };
+  const autoInfo = Number.isInteger(autoLeft) ? {
+    left: autoLeft,
+    extra: autoExtra,
+    extraLeft: autoExtraLeft
+  } : null;
   useEffect(() => {
     if (view !== 'deckPick' || !(deckPick && deckPick.pick && deckPick.pick.share) || typeof cardAutoRewardLoad !== 'function') return undefined;
     let alive = true;
@@ -119050,29 +120467,33 @@ const CardBattleScreen = ({
     setAutoExtraLeft(null);
     setAutoTicketNote('');
     void cardAutoRewardLoad().then(r => {
-      if (alive) {
-        setAutoLeft(r.left);
-        setAutoExtraLeft(Number.isInteger(r.extraLeft) ? r.extraLeft : null);
-      }
+      if (alive) applyAutoLoaded(r);
     }).catch(() => {});
     return () => {
       alive = false;
     };
   }, [view, deckPick]);
-  const useAutoTicket = async () => {
+  const autoTicketSheet = autoTicketAsk && typeof CardAutoTicketSheet === 'function' ? React.createElement(CardAutoTicketSheet, {
+    info: autoInfo,
+    tickets: Number.isInteger(sessionTickets) ? sessionTickets : 0,
+    busy: autoTicketBusy,
+    onUse: k => {
+      void useAutoTicket(k);
+    },
+    onClose: () => setAutoTicketAsk(false)
+  }) : null;
+  const useAutoTicket = async (count = 1) => {
     if (autoTicketBusy || typeof cardAutoRewardAddExtra !== 'function') return;
     setAutoTicketBusy(true);
     try {
       const res = await cardAutoRewardAddExtra({
         consume: onUseSessionTicket,
-        refund: onRefundSessionTicket
+        refund: onRefundSessionTicket,
+        count
       });
       const l = res && res.loaded;
-      if (l) {
-        setAutoLeft(l.left);
-        setAutoExtraLeft(l.extraLeft);
-      }
-      setAutoTicketNote(res && res.ok ? 'ごほうびが1回ぶん戻りました' : res && res.why === 'limit' ? '今日はこれ以上ふやせません' : res && res.why === 'noTicket' ? 'セッション券がありません' : res && res.why === 'notEmpty' ? 'まだ今日のごほうびが残っています' : '保存できなかったので、セッション券は戻しました');
+      if (l) applyAutoLoaded(l);
+      setAutoTicketNote(res && res.ok ? `ごほうびが${res.count}回ぶん戻りました` : res && res.why === 'limit' ? '今日はこれ以上ふやせません' : res && res.why === 'noTicket' ? 'セッション券が足りません' : res && res.why === 'notEmpty' ? 'まだ今日のごほうびが残っています' : '保存できなかったので、セッション券は戻しました');
     } finally {
       setAutoTicketBusy(false);
       setAutoTicketAsk(false);
@@ -119120,6 +120541,17 @@ const CardBattleScreen = ({
   }, [save]);
   const [game, setGame] = useState(null);
   const [result, setResult] = useState(null);
+  useEffect(() => {
+    if (view !== 'result' || !(result && result.auto) || typeof cardAutoRewardLoad !== 'function') return undefined;
+    let alive = true;
+    setAutoTicketNote('');
+    void cardAutoRewardLoad().then(r => {
+      if (alive) applyAutoLoaded(r);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [view, result]);
   const [notice, setNotice] = useState('');
   const [confirmReset, setConfirmReset] = useState(false);
   const [detail, setDetail] = useState(null);
@@ -120883,6 +122315,7 @@ const CardBattleScreen = ({
         on: shareAuto,
         onChange: setShareAuto,
         left: autoLeft,
+        info: autoInfo,
         quick: shareQuick,
         extraLeft: autoExtraLeft,
         tickets: Number.isInteger(sessionTickets) ? sessionTickets : null,
@@ -120934,55 +122367,7 @@ const CardBattleScreen = ({
           }
         } : {});
       }
-    }), autoTicketAsk && React.createElement(ModalFrame, {
-      label: "セッション券を使う確認",
-      onClose: autoTicketBusy ? undefined : () => setAutoTicketAsk(false),
-      zIndex: MODAL_Z.confirm
-    }, React.createElement("div", {
-      "data-card-auto-ticket-ask": true
-    }, React.createElement("h3", {
-      className: "text-center text-base font-black leading-snug text-amber-200",
-      style: JA_LABEL_STYLE
-    }, jaWrap('セッション券を1枚使いますか？')), React.createElement("p", {
-      className: "mt-3 text-[12px] font-bold leading-relaxed text-slate-200",
-      style: JA_WRAP_STYLE
-    }, jaWrap('オートで挑むの今日のごほうびが1回ぶん戻ります。')), React.createElement("div", {
-      className: "mt-3 grid grid-cols-2 gap-2 text-center"
-    }, React.createElement("div", {
-      className: "rounded-xl bg-slate-900 p-2"
-    }, React.createElement("small", {
-      className: "block text-[10px] font-bold text-slate-400"
-    }, "セッション券"), React.createElement("b", {
-      "data-card-auto-ticket-count": true,
-      className: "text-[16px] font-black tabular-nums"
-    }, Number.isInteger(sessionTickets) ? sessionTickets : 0, " → ", React.createElement("span", {
-      className: "text-amber-200"
-    }, Math.max(0, (Number.isInteger(sessionTickets) ? sessionTickets : 0) - 1)), "枚")), React.createElement("div", {
-      className: "rounded-xl bg-slate-900 p-2"
-    }, React.createElement("small", {
-      className: "block text-[10px] font-bold text-slate-400"
-    }, "今日のごほうび"), React.createElement("b", {
-      className: "text-[16px] font-black tabular-nums"
-    }, Number.isInteger(autoLeft) ? autoLeft : 0, " → ", React.createElement("span", {
-      className: "text-emerald-200"
-    }, (Number.isInteger(autoLeft) ? autoLeft : 0) + 1), "回"))), React.createElement("p", {
-      className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400",
-      style: JA_WRAP_STYLE
-    }, jaWrap(`ふやしたぶんは今日(朝4時まで)だけ使えます。今日ふやせるのはあと${Number.isInteger(autoExtraLeft) ? autoExtraLeft : 0}回です。`)), React.createElement("div", {
-      className: "mt-4 grid grid-cols-1 gap-2"
-    }, React.createElement("button", {
-      type: "button",
-      "data-card-auto-ticket-use": true,
-      disabled: autoTicketBusy,
-      onClick: () => {
-        void useAutoTicket();
-      },
-      className: "mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98] disabled:opacity-50"
-    }, "1枚使って1回ふやす"), React.createElement(ModalCloseButton, {
-      onClick: () => setAutoTicketAsk(false),
-      disabled: autoTicketBusy,
-      label: "やめる"
-    })))));
+    }), autoTicketSheet);
   }
   if (view === 'pvp') {
     const pvpReward = async r => {
@@ -121464,7 +122849,7 @@ const CardBattleScreen = ({
       gain: result.rankGain
     }), a && React.createElement(CardResultTalk, {
       a: a,
-      lineScene: win ? 'lose' : 'win',
+      lineScene: win ? 'lose' : cardResultLineQuick(result) ? 'winQuick' : 'win',
       talkFacts: result.talk
     }), result.share && React.createElement("p", {
       "data-card-result-share": true,
@@ -121519,7 +122904,15 @@ const CardBattleScreen = ({
       "data-card-result-auto": result.auto.paid ? 'paid' : 'free',
       className: "mt-1 text-[12px] font-black text-sky-200",
       style: JA_LABEL_STYLE
-    }, jaWrap(result.auto.paid ? `🤖 オートで挑みました(ごほうびは自分で戦うときの半分)。今日のごほうびはあと${result.auto.left}回` : '🤖 オートで挑みました。今日のごほうびは終わっています(ごほうびなしで遊べます)')), React.createElement("div", {
+    }, jaWrap(result.auto.paid ? '🤖 オートで挑みました(ごほうびは自分で戦うときの半分)' : '🤖 オートで挑みました(今日のごほうびは終わっていたので、ごほうびなし)')), result.auto && !result.demo && typeof CardAutoRewardBar === 'function' && React.createElement(CardAutoRewardBar, {
+      info: autoInfo,
+      tickets: Number.isInteger(sessionTickets) ? sessionTickets : 0,
+      onAdd: typeof onUseSessionTicket === 'function' && typeof cardAutoRewardAddExtra === 'function' ? () => {
+        setAutoTicketNote('');
+        setAutoTicketAsk(true);
+      } : null,
+      note: autoTicketNote
+    }), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
     }, "いまのビートP: ", save.point), result.opened && React.createElement("div", {
       className: "mt-1 text-[13px] font-black text-emerald-300"
@@ -121578,7 +122971,7 @@ const CardBattleScreen = ({
       type: "button",
       className: `${btn} mh-button-secondary border border-white/20 bg-slate-800`,
       onClick: () => setView(result.share ? 'share' : 'foe')
-    }, "相手をえらぶ")));
+    }, "相手をえらぶ")), autoTicketSheet);
   }
   if (view === 'replays') return React.createElement(CardReplayList, {
     onOpen: id => {
@@ -125119,28 +126512,12 @@ const CardDeckPick = ({
   }, jaWrap('選んだデッキの戦術カードで、あなたの側も自動で戦います。試合の途中で「自分で」に切り替えられます'), React.createElement("span", {
     "data-card-deck-pick-auto-left": auto.left === null ? '' : auto.left,
     className: `mt-1 block ${auto.left ? 'text-emerald-200' : 'text-amber-200'}`
-  }, auto.left === null ? '' : auto.left > 0 ? `今日のごほうびはあと${auto.left}回(自分で戦うときの半分)` : '今日のごほうびは終わりました。ごほうびなしで遊べます'), auto.left === 0 && typeof auto.onExtra === 'function' && Number.isInteger(auto.extraLeft) && (auto.extraLeft > 0 ? React.createElement(React.Fragment, null, React.createElement("button", {
-    type: "button",
-    "data-card-auto-ticket": true,
-    disabled: !(auto.tickets > 0),
-    onClick: () => {
-      Audio_.fgSe.tap();
-      auto.onExtra();
-    },
-    className: "mt-2 flex min-h-[44px] w-full items-center justify-center gap-1 rounded-xl border border-emerald-300 bg-emerald-900/70 px-2 text-[12px] font-black text-emerald-100 shadow-[0_0_10px_rgba(52,211,153,.45)] active:scale-[.98] disabled:border-slate-600 disabled:bg-slate-800 disabled:text-slate-400 disabled:shadow-none",
-    style: JA_WRAP_STYLE
-  }, jaWrap('🎫 セッション券1枚でごほうびを1回ふやす')), React.createElement("span", {
-    "data-card-auto-ticket-left": auto.extraLeft,
-    className: "mt-1 block text-right text-[10px] text-slate-400",
-    style: JA_WRAP_STYLE
-  }, jaWrap(auto.tickets > 0 ? `持っているセッション券 ${auto.tickets}枚・今日ふやせるのはあと${auto.extraLeft}回` : 'セッション券がありません(モンヒロビートのランクが上がるともらえます)'))) : React.createElement("span", {
-    "data-card-auto-ticket-left": "0",
-    className: "mt-1 block text-[10px] text-slate-400"
-  }, "今日はこれ以上ふやせません")), auto.ticketNote && React.createElement("span", {
-    "data-card-auto-ticket-note": true,
-    className: "mt-1 block text-[11px] text-emerald-200",
-    style: JA_WRAP_STYLE
-  }, jaWrap(auto.ticketNote)))), note && tab === 'own' && React.createElement("p", {
+  }, auto.left === null ? '' : auto.left > 0 ? `今日のごほうびはあと${auto.left}回(自分で戦うときの半分)` : '今日のごほうびは終わりました。ごほうびなしで遊べます')), auto.on && auto.info && typeof auto.onExtra === 'function' && typeof CardAutoRewardBar === 'function' && React.createElement(CardAutoRewardBar, {
+    info: auto.info,
+    tickets: auto.tickets,
+    onAdd: auto.onExtra,
+    note: auto.ticketNote
+  })), note && tab === 'own' && React.createElement("p", {
     className: "text-[11px] font-bold text-slate-400",
     style: JA_WRAP_STYLE
   }, note), choices.map(c => {
@@ -134752,51 +136129,74 @@ const cardAutoRewardEntry = loaded => ({
 });
 const cardAutoRewardAddExtra = async ({
   consume,
-  refund
+  refund,
+  count = 1
 } = {}) => {
+  const k = Number.isInteger(count) && count > 0 ? count : 1;
   const loaded = await cardAutoRewardLoad();
-  if (loaded.extra >= CARD_AUTO_REWARD_EXTRA_MAX) return {
+  if (loaded.extra + k > CARD_AUTO_REWARD_EXTRA_MAX) return {
     ok: false,
     why: 'limit',
+    count: k,
     loaded
   };
   if (loaded.left > 0) return {
     ok: false,
     why: 'notEmpty',
+    count: k,
     loaded
   };
-  if (typeof consume !== 'function' || !(await consume())) return {
-    ok: false,
-    why: 'noTicket',
-    loaded
+  const giveBack = async n => {
+    for (let i = 0; i < n; i++) {
+      if (typeof refund !== 'function') return;
+      try {
+        await refund();
+      } catch (__) {}
+    }
   };
+  let used = 0;
+  if (typeof consume === 'function') {
+    while (used < k && (await consume())) used++;
+  }
+  if (used < k) {
+    await giveBack(used);
+    return {
+      ok: false,
+      why: 'noTicket',
+      count: k,
+      loaded
+    };
+  }
   let saved = false;
   try {
     saved = (await storeSet(CARD_AUTO_REWARD_KEY, cardAutoRewardValue(loaded, {
       n: loaded.n,
-      extra: loaded.extra + 1
+      extra: loaded.extra + k
     }))) !== false;
   } catch (_) {
     saved = false;
   }
   if (!saved) {
-    if (typeof refund === 'function') {
-      try {
-        await refund();
-      } catch (__) {}
-    }
+    await giveBack(k);
     return {
       ok: false,
       why: 'save',
+      count: k,
       loaded
     };
   }
   return {
     ok: true,
     why: '',
+    count: k,
     loaded: await cardAutoRewardLoad()
   };
 };
+const cardAutoTicketBlock = ({
+  left,
+  tickets,
+  extraLeft
+}) => Number.isInteger(left) && left > 0 ? 'ごほうびを使い切ると、ふやせます' : !(Number.isInteger(extraLeft) && extraLeft > 0) ? `今日はこれ以上ふやせません(1日${CARD_AUTO_REWARD_EXTRA_MAX}回まで)` : !(Number.isInteger(tickets) && tickets > 0) ? 'セッション券がありません(モンヒロビートのランクが上がるともらえます)' : '';
 const cardLevelEntries = async ({
   kind,
   level,
@@ -183877,7 +185277,7 @@ const createAnimationStyle = () => {
     .mh-gift-list{display:flex;flex-direction:column;gap:8px}.mh-gift-card{display:flex;flex:none;flex-direction:column;gap:4px;min-height:88px;padding:10px 12px}.mh-gift-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;min-width:0;min-height:20px}.mh-gift-heading h3{display:flex;align-items:flex-start;gap:4px;min-width:0;font-size:14px;line-height:19px;color:#fff}.mh-gift-heading h3 span{flex:none;margin-top:1px;padding:1px 6px;border-radius:6px;background:#78350f;color:#fde68a;font-size:10px;line-height:16px}.mh-gift-heading h3 b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-width:0;white-space:normal;overflow-wrap:anywhere}.mh-gift-heading>em{flex:none;padding:2px 8px;border-radius:999px;font-size:10px;line-height:16px;font-style:normal;font-weight:900}.mh-gift-main{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px}.mh-gift-rewards{display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:2px 7px;min-width:0;color:#fde68a;font-size:11px;line-height:15px;font-weight:900}.mh-gift-rewards span{overflow-wrap:anywhere}.mh-gift-main>button{flex:none;min-width:84px;height:44px;padding:0 12px;border-radius:12px;background:#0891b2;color:#fff;font-size:12px;font-weight:900;white-space:nowrap;transition:transform .12s ease-out}.mh-gift-main>button:active{transform:scale(.95)}.mh-gift-main>button:disabled{opacity:.4;transform:none}.mh-gift-deadline{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#94a3b8;font-size:10px;line-height:14px}
     @media(max-height:620px){.mh-home-mission{top:64%}.mh-home-gift{top:73%}}
     /* 横画面(#146・2026-09-05)。コラムが画面いっぱいになるので、左右の余白へ施設を振り分ける。左＝吹き出し・M/B管理・モンヒロビート、右＝更新履歴・神殿・マーケット、右下＝ミッションとギフトを横並び、下中央＝バトル。上の max-height:620px は横画面のスマホにも当たるので、この行はそれより後ろに置いて上書きする */
-    @media(orientation:landscape) and (max-height:600px){.mh-home-assistant{left:2%;width:36%;top:calc(70px + env(safe-area-inset-top))}.mh-home-facility>span{padding:6px 12px}.mh-home-facility.management{left:2.4%;top:max(calc(146px + env(safe-area-inset-top)),calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.rhythm{left:2.4%;top:64.8%}.mh-home-facility.temple{right:2.4%;top:35.76%}.mh-home-facility.market{right:2.4%;top:59.76%}.mh-home-scene .mh-home-facility.life{left:auto;right:calc(2.4% + 118px);top:59.76%}.mh-home-mission{right:calc(5% + 120px);top:78%}.mh-home-gift{top:78%}.mh-home-facility.battle>span{padding:8px 16px;font-size:18px;animation:none}.mh-home-masumon-layer{left:30%;right:30%;top:30%;bottom:34%}}
+    @media(orientation:landscape) and (max-height:600px){.mh-home-assistant{left:2%;width:36%;top:calc(70px + env(safe-area-inset-top))}.mh-home-facility>span{padding:6px 12px}.mh-home-facility.management{left:2.4%;top:max(calc(146px + env(safe-area-inset-top)),calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.rhythm{left:2.4%;top:64.8%}.mh-home-facility.temple{right:2.4%;top:35.76%}.mh-home-facility.market{right:2.4%;top:59.76%}.mh-home-scene .mh-home-facility.life{left:auto;right:calc(2.4% + 118px);top:59.76%}.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle,.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle.raised,.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle.below-tour{bottom:32px}.mh-home-scene:has(.mh-home-facility.life) .mh-home-event-banner{bottom:72px}.mh-home-mission{right:calc(5% + 120px);top:78%}.mh-home-gift{top:78%}.mh-home-facility.battle>span{padding:8px 16px;font-size:18px;animation:none}.mh-home-masumon-layer{left:30%;right:30%;top:30%;bottom:34%}}
     /* 横画面でも幅が 760px までの端末(667×375 など)では、ミッションがモンヒロバトルの札に33px重なっていた。ミッション・ギフトを細く、バトルの札を小さくして、すき間をあける(2026-10-27) */
     @media(orientation:landscape) and (max-height:600px) and (max-width:760px){.mh-home-mission{width:104px;padding:7px 5px;right:calc(3% + 104px);white-space:nowrap}.mh-home-gift{width:96px;padding:7px 5px;right:3%}.mh-home-facility.battle>span{min-width:120px;padding:8px 8px;font-size:15px}}
     .mh-boot-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom));color:#fff;text-align:center;background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%);isolation:isolate}
@@ -183913,7 +185313,7 @@ const createAnimationStyle = () => {
     @media(max-width:350px){.mh-title-actions button{width:46px;height:46px}.mh-mocchi-wrap{width:130px;height:130px}.mh-title-header{padding-left:9px;padding-right:9px}}
     @media(max-height:620px){.mh-mocchi-wrap{width:105px;height:105px;margin-bottom:5px}.mh-boot-copy h2{margin-bottom:10px}.mh-boot-copy p{margin-top:5px}}
     @media(prefers-reduced-motion:reduce){.mh-mocchi-wrap img,.mh-mocchi-wrap span,.mh-mocchi-wrap i{animation:none!important}.mh-entering>img{animation:mhReducedFade .85s ease both}.mh-gate-core,.mh-gate-particles{display:none}.mh-gate-flash{animation:mhReducedFlash .85s ease both}}@keyframes mhReducedFade{to{opacity:.4}}@keyframes mhReducedFlash{0%,55%{opacity:0}100%{opacity:1}}
-    .mh-home-facility.rhythm{left:1.9%;top:55.25%}.mh-home-facility.life{left:2.52%;top:46.4%}.mh-home-facility.life>span{border-color:#f9a8d4dd;background:linear-gradient(135deg,#4a1d3bf2,#1e1b4bf2);box-shadow:0 3px 12px #0009,0 0 15px #f472b666}.mh-home-facility.rhythm>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#0e7490ee,#4c1d95ee);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66}
+    .mh-home-facility.rhythm{left:1.9%;top:55.25%}.mh-home-facility.life{left:2.52%;top:37%}@media (orientation:portrait){.mh-home-facilities:has(.mh-home-facility.life) .mh-home-facility.rhythm{top:49.5%}}@media (orientation:portrait) and (max-height:620px){.mh-home-facility.life{top:39%}.mh-home-facilities:has(.mh-home-facility.life) .mh-home-facility.rhythm{top:52%}}.mh-home-facility.life>span{border-color:#f9a8d4dd;background:linear-gradient(135deg,#4a1d3bf2,#1e1b4bf2);box-shadow:0 3px 12px #0009,0 0 15px #f472b666}.mh-home-facility.rhythm>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#0e7490ee,#4c1d95ee);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66}
     .mh-debug-banner{flex:none;text-align:center;background:#be123c;color:white;padding:5px;font-size:9px;font-weight:1000;letter-spacing:.04em}.mh-home-facility.rhythm small{display:block;font-size:7px;color:#fde68a}.mh-rule-button{width:100%;margin-top:18px;padding:13px;border-radius:14px;background:#4338ca;font-weight:900}.mh-node-map{position:relative;flex:1;min-height:250px;overflow:hidden;border:1px solid #ffffff33;border-radius:15px;background:radial-gradient(circle,#164e63,#020617);transition:.4s}.mh-node-map>i{position:absolute;height:3px;background:#94a3b8;transform-origin:0 50%;z-index:0}.mh-node-map>button{position:absolute;z-index:2;width:52px;height:52px;margin:-26px;border:3px solid #ffffff88;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;transition:.25s}.mh-node-map>button span{font-size:17px}.mh-node-map>button small{font-size:6px;font-weight:900}.mh-node-map>button.current{border-color:#fff700;box-shadow:0 0 18px #fff700}.mh-node-map>button.destination{animation:trainingGlow .7s infinite alternate;pointer-events:auto}.mh-node-map>button:not(.destination){pointer-events:auto}.mh-node-map img,.mh-node-map>button>div{position:absolute;width:48px;height:48px;object-fit:contain;z-index:3}.mh-board-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:5px}.mh-board-buttons button{min-height:34px;border-radius:8px;background:#334155;font-size:8px;font-weight:900}@keyframes trainingGlow{to{transform:scale(1.2);border-color:#fff;box-shadow:0 0 24px #fde047}}.mh-training-debug{position:absolute;right:8px;bottom:82px;z-index:30;width:min(270px,82vw);max-height:55vh;overflow:auto;padding:10px;border:2px solid #e879f9;border-radius:14px;background:#0f172ff5;font-size:8px}.mh-training-debug button,.mh-training-debug select{margin:3px;padding:6px;border-radius:6px;background:#334155}.mh-training-debug button.active{background:#db2777}.mh-training-debug pre{max-height:110px;overflow:auto;white-space:pre-wrap;background:#000;padding:5px}.mh-training-modal{position:fixed;z-index:50000;inset:0;display:flex;align-items:center;padding:16px;background:#020617e8}.mh-training-modal>div{width:100%;max-height:85vh;overflow:auto;padding:18px;border:1px solid #a78bfa;border-radius:20px;background:#111827}.mh-training-modal h3{margin:8px 0;font-size:17px;font-weight:1000}.mh-training-modal p{margin:7px 0;color:#cbd5e1;font-size:10px}.mh-rules-list p{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #ffffff22;padding:7px}.mh-rules-list b{font-size:10px}.mh-rules-list span{font-size:8px;text-align:right}.mh-route-choice,.mh-modal-close{display:block;width:100%;margin-top:8px;padding:12px;border-radius:10px;background:#4338ca;font-size:10px;font-weight:900}.mh-modal-close{background:#475569}.mh-training-result>div>button+button{margin-top:7px;background:#334155;color:white}
     .mh-training-screen{height:100%;display:flex;flex-direction:column;overflow:hidden;padding:calc(10px + env(safe-area-inset-top)) 12px calc(10px + env(safe-area-inset-bottom));background:radial-gradient(circle at top,#312e81,#07101f 60%)}.mh-training-head{display:grid;grid-template-columns:46px 1fr 46px;align-items:center;flex:none}.mh-training-head>button{min-height:44px;display:flex;align-items:center;justify-content:center}.mh-training-head div{text-align:center}.mh-training-head small{display:block;color:#f9a8d4;font:900 8px monospace;letter-spacing:.25em}.mh-training-head h2{font-size:18px;font-weight:1000}.mh-training-selected{display:flex;align-items:center;gap:10px;margin:9px 0;padding:10px;border:1px solid #f9a8d477;border-radius:18px;background:#3b076455}.mh-training-selected>img,.mh-training-selected>div:first-child{width:56px;height:56px;object-fit:contain;flex:none}.mh-training-selected>div{display:flex;flex:1;min-width:0;flex-direction:column}.mh-training-selected b{font-size:14px}.mh-training-selected span{color:#fbcfe8;font-size:9px}.mh-training-selected button{padding:9px;border-radius:10px;background:#7e22ce;font-size:9px;font-weight:900}.mh-training-note{font-size:9px;color:#cbd5e1;padding:2px 3px 8px}.mh-training-mon-list{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;overflow-y:auto;padding:2px 1px 90px}.mh-training-mon-list>button{position:relative;min-width:0;padding:7px 4px;border:2px solid #334155;border-radius:16px;background:#0f172acc}.mh-training-mon-list>button.active{border-color:#f472b6;background:#83184377;box-shadow:0 0 13px #ec489966}.mh-training-mon-list img,.mh-training-mon-list>button>div:first-child{width:54px;height:54px;object-fit:contain;margin:auto}.mh-training-mon-list b,.mh-training-mon-list small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-training-mon-list b{font-size:10px}.mh-training-mon-list small{font-size:7px;color:#94a3b8}.mh-training-mon-list span{position:absolute;right:5px;top:4px;color:#fde68a;font-size:8px}.mh-training-empty{grid-column:1/-1;text-align:center;margin-top:50px;color:#64748b}.mh-training-footer{position:absolute;z-index:6;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));padding-top:20px;background:linear-gradient(transparent,#07101f 24%)}.mh-training-footer button{width:100%;min-height:52px;border-radius:18px;background:linear-gradient(90deg,#db2777,#7c3aed);font-weight:1000;box-shadow:0 6px 20px #0008}.mh-training-footer button:disabled{background:#334155;color:#64748b}.mh-training-difficulties{overflow:auto;padding:10px 1px 95px}.mh-training-difficulties>button{display:block;width:100%;margin-bottom:10px;padding:14px;text-align:left;border:2px solid #334155;border-radius:20px;background:#0f172acc}.mh-training-difficulties>button.active{border-color:#f472b6}.mh-training-difficulties>button.soon{opacity:.72}.mh-training-difficulties>button>div{display:flex;justify-content:space-between}.mh-training-difficulties b{font-size:18px}.mh-training-difficulties em{padding:4px 8px;border-radius:999px;background:#475569;font-size:8px;font-style:normal}.mh-training-difficulties p{margin:8px 0;color:#cbd5e1;font-size:10px}.mh-training-difficulties dl{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}.mh-training-difficulties dl span{padding:5px;border-radius:7px;background:#02061788;text-align:center;font-size:8px}.mh-training-confirm{overflow:auto;padding:12px 2px 100px}.mh-training-confirm h3{margin:10px 0 2px;color:#f9a8d4;font-size:26px;font-weight:1000}.mh-training-confirm h4{margin-top:16px;color:#c4b5fd;font-size:11px;font-weight:1000}.mh-training-confirm p{color:#cbd5e1;font-size:10px}.mh-training-ticket{display:flex;flex-wrap:wrap;justify-content:space-between;margin-top:16px;padding:14px;border:1px solid #fbbf24aa;border-radius:16px;background:#78350f55}.mh-training-ticket b{color:#fde68a}.mh-training-ticket small{width:100%;margin-top:5px;color:#fef3c7;font-size:8px}
     .mh-training-board{height:100%;display:flex;flex-direction:column;padding:calc(8px + env(safe-area-inset-top)) 9px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(#0c4a6e,#082f49 44%,#052e16)}.mh-training-board>header{display:flex;align-items:center;justify-content:space-between}.mh-training-board>header div{display:flex;flex-direction:column}.mh-training-board>header b{font-size:14px}.mh-training-board>header span{font-size:8px;color:#bae6fd}.mh-training-board>header button{min-height:40px;padding:0 10px;border-radius:10px;background:#7f1d1d;font-size:9px;font-weight:900}.mh-training-hud{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:7px 0}.mh-training-hud span{padding:6px 2px;border-radius:8px;background:#020617aa;text-align:center;font-size:8px;font-weight:900}.mh-training-map{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;flex:1;min-height:0;padding:7px;overflow:auto;border:1px solid #ffffff22;border-radius:16px;background:#0005}.mh-training-map>div{position:relative;aspect-ratio:1;border:2px solid #64748b;border-radius:10px;background:#334155;display:flex;align-items:center;justify-content:center}.mh-training-map>div.passed{opacity:.52}.mh-training-map>div.current{border-color:#fde047;background:#854d0e;box-shadow:0 0 14px #fde047}.mh-training-map span{font-size:17px}.mh-training-map small{position:absolute;left:3px;top:1px;font-size:6px}.mh-training-map img,.mh-training-map>div.current>div{position:absolute;width:45px;height:45px;object-fit:contain;filter:drop-shadow(0 3px 3px #000);z-index:2}.mh-training-message{min-height:28px;padding:7px;text-align:center;font-size:10px;font-weight:900}.mh-training-tools{display:flex;min-height:54px;gap:5px}.mh-training-tools button{flex:1;display:flex;align-items:center;justify-content:center;gap:3px;padding:4px;border:1px solid #a78bfa;border-radius:10px;background:#312e81}.mh-training-tools button span{font-size:17px}.mh-training-tools button small{font-size:7px}.mh-training-tools p{margin:auto;color:#94a3b8;font-size:8px}.mh-training-board>footer{margin-top:7px}.mh-roll-button{width:100%;min-height:58px;border-radius:19px;background:linear-gradient(#fbbf24,#d97706);color:#451a03;font-size:17px;font-weight:1000}.mh-roll-button small{display:block;font-size:7px}.mh-fixed-dice{display:grid;grid-template-columns:1fr repeat(3,58px);gap:5px;align-items:center}.mh-fixed-dice button{height:54px;border-radius:14px;background:#fbbf24;color:#422006;font-size:20px;font-weight:1000}.mh-training-branch{position:fixed;z-index:40000;inset:0;display:flex;align-items:center;padding:20px;background:#020617dd}.mh-training-branch>div{width:100%;padding:18px;border:1px solid #c4b5fd;border-radius:22px;background:#111827}.mh-training-branch h3{text-align:center;font-size:18px;font-weight:1000}.mh-training-branch button{display:flex;justify-content:space-between;width:100%;margin-top:8px;padding:14px;border-radius:12px;background:#312e81}.mh-training-branch span{font-size:9px;color:#cbd5e1}.mh-training-board{position:relative;background:linear-gradient(160deg,#082f49,#0f172a 52%,#14532d)}.mh-training-board>header{gap:8px}.mh-training-board>header b small{margin-left:5px;color:#facc15;font-size:7px}.mh-debug-toggle{background:#be185d!important;letter-spacing:.08em}.mh-training-hud{grid-template-columns:repeat(3,1fr)}.mh-training-hud span{display:flex;flex-direction:column;gap:2px}.mh-training-hud b{color:white;font-size:11px}.mh-tile-viewport{position:relative;flex:1;min-height:250px;overflow:auto;scroll-behavior:smooth;border:2px solid #67e8f966;border-radius:18px;background:linear-gradient(#0c4a6e99,#052e1699),repeating-linear-gradient(45deg,#ffffff08 0 8px,transparent 8px 16px);box-shadow:inset 0 0 30px #020617}.mh-tile-board{position:relative;width:720px;height:520px;transform-origin:center;transition:transform .3s}.mh-tile-viewport.overview{overflow:hidden}.mh-tile-viewport.overview .mh-tile-board{transform:scale(.46) translate(-58%,-58%)}.mh-tile-board>i{position:absolute;height:13px;border:2px solid #dbeafe99;background:#64748b;box-shadow:0 2px 0 #0f172a;transform-origin:0 50%;z-index:0}.mh-training-tile{position:absolute;z-index:2;width:68px;height:68px;margin:-34px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:4px solid #e2e8f0;border-radius:12px;color:white;background:var(--tile-color);box-shadow:0 5px 0 #0f172a,0 8px 14px #0008;transition:left .25s,top .25s,transform .2s}.mh-training-tile>span{font-size:23px;line-height:1}.mh-training-tile>small{max-width:62px;font-size:7px;font-weight:1000;text-shadow:0 1px 2px #000}.mh-training-tile.branch:after{content:'分岐';position:absolute;right:-9px;top:-10px;padding:2px 4px;border-radius:6px;background:#f97316;font-size:6px;font-weight:1000}.mh-training-tile.start{border-color:#86efac}.mh-training-tile.goal{border-color:#fde047;box-shadow:0 0 22px #facc15,0 5px 0 #713f12}.mh-training-tile.current{z-index:8;border-color:#fff;box-shadow:0 0 0 4px #facc15,0 8px 18px #000;transform:scale(1.05)}.mh-training-tile.branch-choice{z-index:9;animation:trainingGlow .55s infinite alternate;pointer-events:auto}.mh-training-piece{position:absolute;left:50%;bottom:34px;width:62px;height:73px;transform:translateX(-50%);pointer-events:none;filter:drop-shadow(0 5px 3px #000)}.mh-training-piece img,.mh-training-piece>div{width:58px!important;height:58px!important;object-fit:contain}.mh-training-piece b{position:absolute;bottom:0;left:50%;max-width:75px;transform:translateX(-50%);padding:2px 5px;border-radius:8px;background:#020617e8;white-space:nowrap;font-size:7px}.mh-training-message{color:#fef3c7}.mh-training-tools{align-items:stretch}.mh-training-tools>strong{display:flex;align-items:center;font-size:8px}.mh-training-tools button{min-width:0}.mh-training-tools button small{line-height:1.25}.mh-training-debug{right:8px;top:calc(52px + env(safe-area-inset-top));bottom:auto;box-shadow:0 14px 30px #000}.mh-debug-close{float:right;background:#be123c!important}.mh-training-board>footer{flex:none}.mh-roll-button:disabled{filter:grayscale(.7);opacity:.65}.mh-training-tools button.waiting{border-color:#fde047;box-shadow:inset 0 0 12px #facc1544}.mh-roll-decision{display:grid;grid-template-columns:1fr 2fr;gap:7px;align-items:center;min-height:58px;padding:6px 8px;border:2px solid #fbbf24;border-radius:19px;background:#451a03}.mh-roll-decision b{text-align:center;color:#fde68a}.mh-roll-decision button{height:44px;border-radius:13px;background:#fbbf24;color:#451a03;font-weight:1000}.mh-tool-unavailable{padding:9px;border:1px solid #f8717177;border-radius:10px;background:#450a0a;color:#fecaca!important}@media(max-width:380px){.mh-training-piece{transform:translateX(-50%) scale(.85)}.mh-training-tools{min-height:48px}.mh-training-message{min-height:24px;padding:4px}.mh-tile-viewport{min-height:220px}}
