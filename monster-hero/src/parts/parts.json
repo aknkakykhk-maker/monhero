@@ -360,6 +360,10 @@
       "role": "助手たちの今: 時間ごとに助手1人ずつの気分・したいこと・だれといるかを決める仕組みと、遊んだ量の「にぎわい」(段で助手どうしの仲良くなり方が変わる)。公開の印 assistantLife の後ろ。保存は mh_assistant_life_v1・mh_assistant_life_play_v1 だけ"
     },
     {
+      "file": "56-assistant-life-house.jsx",
+      "role": "助手ライフの専用ページ「助手たちの家」(AssistantLifeHouse: 8人の部屋・部屋を押す・場面・みんなの居場所・入場・今日やれること)と、HOME の施設の横の顔(AssistantLifeHomeFaces)。ビート部とのつなぎ口 assistantLifeAtBeat・assistantLifeBeatIds。公開の印 assistantLife の後ろ。保存は mh_assistant_life_diary_v1・mh_assistant_life_intro_v1 の新しいキーだけ"
+    },
+    {
       "file": "82-card-battle-core.jsx",
       "role": "MFバトルカードのルールの本体とコンピューターの考え方(ゲームの始まり・できる操作・操作を進める・守り・勝ち負け・くせと難易度)。カードの表は data/card-battle-cards.js",
       "pure": true

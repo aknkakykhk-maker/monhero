@@ -418,7 +418,7 @@ function ProfileScreen({
                       {/* 助手たちの今(公開の印 assistantLife)の入口 */}
                       {typeof assistantLifeEnabled==='function'&&assistantLifeEnabled()&&(
                         <button type="button" data-assistant-life-open-profile onClick={assistantLifeOpenScreen}
-                          className="mb-2 min-h-[44px] w-full rounded-xl border border-pink-300/50 bg-pink-400/10 px-3 text-left text-[12px] font-black text-pink-100 active:scale-[.98]">👥 助手たちの今を見る ▸</button>)}
+                          className="mb-2 min-h-[44px] w-full rounded-xl border border-pink-300/50 bg-pink-400/10 px-3 text-left text-[12px] font-black text-pink-100 active:scale-[.98]">🏡 助手ライフを開く ▸</button>)}
                       <AssistantPeerMap metIds={assistantChoices.map(w=>w.id)} onReplay={onReplayPeerTalk} peerItems={peerItems} onUseItem={onUsePeerItem}/>
                     </div>
                   )}
