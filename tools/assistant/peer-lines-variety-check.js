@@ -94,8 +94,8 @@ for (const f of txtFiles) {
       if (head === 'trio' && /\{c\}/.test(t)) bad('3人の台本は {c:id} で呼ぶ');
       if (/\{c:([a-z]+)\}/.test(t) && !who.includes(t.match(/\{c:([a-z]+)\}/)[1])) bad(`{c:id} の相手がいない「${t}」`);
       if (/\{c\}(さん|ちゃん|くん)/.test(t)) bad(`{c} のあとに敬称を付けない「${t}」`);
-      if (/(?<!様)子(?!園|供)/.test(t.replace(/調子|様子|子ども/g, ''))) bad(`「子」を使っている(モンスターを子と呼ばない)「${t}」`);
-      if (/恋人|デート|付き合っ|ないしょ|秘密/.test(t)) bad(`守りの言葉「${t}」`);
+      if (/(あの|その|どの|うちの|いい|かわいい)子|子たち|子ら(?![しい])/.test(t)) bad(`モンスターを「子」と呼ばない(助手が特定のマスモンを「この子」と言うのだけはよい)「${t}」`);
+      if (/恋人|デート|付き合っ|ないしょ|内緒|秘密/.test(t)) bad(`守りの言葉「${t}」`);
       if (w === 'mua' && /じゃん|まじ(?!め)|あたし以外|[^ｗ]w(?![A-Za-z])|(?<![あ])私|俺/.test(t)) bad(`みゅあの口調「${t}」`);
       if (w === 'kiki' && /だよ|だね|してよ|あたし|俺/.test(t)) bad(`ききの口調「${t}」`);
       if (w === 'momosuke' && /私|あたし|ｗ/.test(t)) bad(`ももの口調「${t}」`);
@@ -103,7 +103,7 @@ for (const f of txtFiles) {
       if (w === 'sorashido' && (/w(?![A-Za-z])/.test(t) || (t.match(/ぜ・・・/g) || []).length > 1)) bad(`ソラシドの口調「${t}」`);
       if (w === 'atsu') {
         if (/リーダー/.test(t)) bad(`あつは自分でリーダーと言わない「${t}」`);
-        for (const seg of t.split(/(?<=。)|\s+/).filter(Boolean)) if (!/(笑|[！？…!?]|\)ノ)$/.test(seg)) { bad(`あつの文の終わりは「笑」か記号「${t}」`); break; }
+        for (const seg of t.replace(/\([^)]*\)[ノ9]?/g, '！').split(/(?<=。)|\s+/).filter(Boolean)) if (!/(笑|[！？…!?]|\)ノ)$/.test(seg)) { bad(`あつの文の終わりは「笑」か記号「${t}」`); break; }
       }
       if ((w === 'kyuko' || w === 'erubin') && t.split(/\s+/).some(s => /w(?![A-Za-z])/.test(s) && /笑/.test(s))) bad(`1つの文に「笑」と「w」の両方「${t}」`);
       rows.push({ who: w, t });

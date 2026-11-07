@@ -1,0 +1,270 @@
+# 助手たちの今 — コトバの台本(形は SAMPLE.txt)。ひとりごと・声かけ・3人・言い合い・ブリーダー・2人(14ペア)
+
+## ひとりごと ドラ
+solo dra place=home mood=happy line=scene | dra happy せんべいとお茶。これが最強の組み合わせだな
+solo dra place=home mood=happy line=scene | dra happy 座布団を2枚重ねたら、膝がよろこんでるわ
+solo dra place=home mood=happy line=scene | dra wink 今日のギャグ、3つも思いついたぞ。……全部膝の話だけどな
+solo dra place=home mood=happy line=scene | dra normal 窓をあけたら、いい風が入ってくるな
+solo dra place=home mood=happy line=scene | dra happy カードの山、きれいに並べなおしたぞ。見てるだけで楽しいわ
+solo dra place=home mood=happy line=scene | dra normal グジラの図鑑を読み返してる。やっぱりかっこいいな
+solo dra place=home mood=happy line=scene | dra happy プリン、冷やしといてよかった。ひとくち目がいちばんうまい
+solo dra place=home mood=happy line=feel | dra happy なんか今日は、いい日になりそうな気がするわ
+solo dra place=home mood=happy line=feel | dra wink ひとりでにやにやしてるおで、だれにも見せられないな。えへへ
+solo dra place=home mood=happy line=feel | dra normal あとでだれかに、このギャグ試してみるか
+solo dra place=home mood=happy line=feel | dra happy こういうのんびりした日も、悪くないよな
+solo dra place=home mood=happy line=feel | dra happy 膝の調子がいいと、気分までいいんだよな
+solo dra place=home mood=happy line=feel | dra normal ふむ。今日は説明したいことが山ほどあるな
+solo dra place=home mood=eager line=scene | dra excited よし、新しいカードの組み方を紙に書き出すか
+solo dra place=home mood=eager line=scene | dra normal 説明用の図、もう一枚作っとこう。わかりやすいのが一番だからな
+solo dra place=home mood=eager line=scene | dra excited 膝のストレッチ、今日は10回いけたぞ
+solo dra place=home mood=eager line=scene | dra happy 部屋の片づけ、いっきに終わらせたわ
+solo dra place=home mood=eager line=feel | dra excited だれか来たら、すぐに説明してやれるように準備しとこ
+solo dra place=home mood=eager line=feel | dra normal 今日は昼寝しないで動くぞ。……たぶんな
+solo dra place=home mood=eager line=feel | dra wink やる気のある日のおでは、ちょっとすごいからな
+solo dra place=home mood=sleepy line=scene | dra happy ふぁ〜……昼寝、2回目いくか
+solo dra place=home mood=sleepy line=scene | dra normal 毛布が、おでを離してくれないんだよ
+solo dra place=home mood=sleepy line=scene | dra troubled 目をつぶったら、カードの夢を見そうだな
+solo dra place=home mood=sleepy line=scene | dra normal お茶をいれたのに、飲む前にうとうとしてたわ
+solo dra place=home mood=sleepy line=feel | dra happy 起きたら、だれか来てたらいいな……むにゃ
+solo dra place=home mood=sleepy line=feel | dra normal 寝るのも膝のためだからな。言いわけじゃないぞ
+solo dra place=home mood=sleepy line=feel | dra wink あと5分。……いや、あと30分だな
+solo dra place=home mood=lonely why=lonely line=scene | dra troubled ……今日は、まだだれにも呼ばれてないな
+solo dra place=home mood=lonely why=lonely line=scene | dra normal 窓から広場が見えるわ。みんな楽しそうだな
+solo dra place=home mood=lonely why=lonely line=scene | dra troubled お茶、2つ用意しちゃったわ。……おでの分だけでいいのにな
+solo dra place=home mood=lonely why=lonely line=scene | dra normal カードの山を、ひとりで切ってる。音だけがひびくな
+solo dra place=home mood=lonely why=lonely line=scene | dra troubled ドアの音がした気がしたけど、風だったわ
+solo dra place=home mood=lonely why=lonely line=feel | dra normal 膝でもさすって待つか。……べつに待ってないけどな
+solo dra place=home mood=lonely why=lonely line=feel | dra troubled おでのギャグ、だれか聞いてくれないかな……えへへ
+solo dra place=home mood=lonely why=lonely line=feel | dra crying おでなんか、膝しか取りえないしな……
+solo dra place=home mood=lonely why=lonely line=feel | dra troubled 自分から誘えばいいんだけどな。それができたら苦労しないわ
+solo dra place=home mood=lonely why=lonely line=feel | dra normal だれか来たら、いちばんいいせんべい出してやるのにな
+solo dra place=home mood=restless line=scene | dra surprise 新しいカードの話、だれかにしたくて落ち着かないわ
+solo dra place=home mood=restless line=feel | dra normal 部屋を3周してしまった。膝にはよくないな
+solo dra place=home mood=sulky line=scene | dra troubled ……ふとんにもぐってる。今日は出ないからな
+solo dra place=home mood=sulky line=feel | dra normal どうせおでのギャグなんて……いや、あれはおもしろかったはずだ
+solo dra place=hill mood=happy line=scene | dra happy {place}、ぽかぽかだな。膝があったまるわ
+solo dra place=hill mood=happy line=scene | dra normal {place}で寝ころがったら、雲がグジラの形に見えるな
+solo dra place=hill mood=happy line=feel | dra happy こういうところで昼寝するのが、いちばんのぜいたくだな
+solo dra place=hill mood=sleepy line=scene | dra normal あったかすぎて、まぶたが重いわ
+solo dra place=hill mood=sleepy line=feel | dra happy ここで寝たら、起きたら夕方になってそうだな。それもいいか
+solo dra mood=eager line=scene | dra excited だれか見つけたら、今日こそ一戦申しこむぞ
+solo dra mood=eager line=scene | dra normal 説明のメモ、ポケットに入れてきたわ
+solo dra mood=eager line=feel | dra wink 今日のおでは、ちょっとだけかっこいいぞ。えへへ
+solo dra mood=happy line=scene | dra happy 散歩のとちゅうで、いい石を見つけたわ
+solo dra mood=happy line=feel | dra normal たまには外に出るのも、悪くないな
+solo dra mood=lonely why=lonely line=scene | dra troubled みんな、どこ行ったんだろうな
+solo dra mood=lonely why=lonely line=feel | dra normal ひとりで歩くと、膝の音がよく聞こえるわ。……くさ
+solo dra mood=restless line=scene | dra surprise なんか、そわそわするな。いいことでもあるのか？
+solo dra mood=restless line=feel | dra normal 落ち着け、おで。まずは深呼吸だ
+solo dra mood=sleepy line=scene | dra normal 歩きながら、あくびが3回も出たわ
+solo dra mood=sleepy line=feel | dra happy 帰ったら、すぐ昼寝だな
+solo dra mood=sulky line=scene | dra troubled 石をけっとばしたら、思ったより遠くまで行ったわ
+solo dra mood=sulky line=feel | dra normal ……べつに、すねてなんかないからな
+
+## ひとりごと みゅあ
+solo mua place=home mood=happy line=scene | mua happy 新しいワンピース、鏡の前で回ってみたｗ
+solo mua place=home mood=happy line=scene | mua excited クッキー焼けた！ いいにおいすぎる〜
+solo mua place=home mood=happy line=scene | mua wink モッチーのぬいぐるみ、ベッドに並べなおしたよ♪
+solo mua place=home mood=happy line=feel | mua happy 今日のあたし、なんかイケてる気がするｗ
+solo mua place=home mood=happy line=feel | mua excited あとでだれかにこの服見せよ！ 絶対ほめてもらう！
+solo mua place=home mood=happy line=feel | mua happy おうち時間もたまにはいいかも♪
+solo mua place=home mood=sleepy line=scene | mua normal ふぁ〜…ソファから動けないんだけどｗ
+solo mua place=home mood=sleepy line=scene | mua troubled 髪かわかしてる途中で寝そうになった…
+solo mua place=home mood=sleepy line=feel | mua happy ちょっとだけ…5分だけ寝よ…
+solo mua place=home mood=sleepy line=feel | mua normal 夢の中でもおやつ食べたいな〜
+solo mua place=home mood=eager line=scene | mua excited 明日のコーデ、3パターン決めた！
+solo mua place=home mood=eager line=scene | mua happy モッチーの育て方メモ、ノートにまとめちゃった♪
+solo mua place=home mood=eager line=feel | mua excited よーし、今日はガンガンいくぞー！
+solo mua place=home mood=lonely why=lonely line=scene | mua troubled だれからも連絡こないんだけど…
+solo mua place=home mood=lonely why=lonely line=scene | mua normal お菓子、2人分あけちゃった。…ひとりで食べるかｗ
+solo mua place=home mood=lonely why=lonely line=feel | mua troubled みんな忙しいのかな。ちょっとさみしいかも
+solo mua place=home mood=restless line=scene | mua surprise マーケットの新作、まだかなまだかな…！
+solo mua place=home mood=restless line=feel | mua excited そわそわしすぎて、部屋の中ぐるぐるしてるｗ
+solo mua place=home mood=sulky line=scene | mua angry ……べつにー。ひとりで遊ぶもん
+solo mua place=home mood=sulky line=feel | mua troubled …やっぱおやつ食べたら元気出るかも
+solo mua place=plaza mood=happy line=scene | mua happy {place}、今日は人いっぱいぢゃん！
+solo mua place=plaza mood=happy line=feel | mua excited だれか知ってる人いないかな〜♪
+solo mua place=plaza mood=lonely why=lonely line=scene | mua troubled あれ、{place}だれもいないぢゃん…
+solo mua place=plaza mood=lonely why=lonely line=feel | mua normal まいっか！ だれか来るまで新しいポーズ考えとこｗ
+solo mua place=plaza mood=sleepy line=scene | mua normal ベンチ、あったかくて眠くなる…
+solo mua place=plaza mood=sleepy line=feel | mua happy ここでお昼寝したら、だれか起こしてくれるかな
+solo mua place=plaza mood=restless line=scene | mua excited なんか楽しいことないかな〜！ きょろきょろ
+solo mua place=plaza mood=restless line=feel | mua wink 今日はなにか起きる気がするんだよねｗ
+solo mua place=plaza mood=eager line=scene | mua excited 広場で新しいダンス、練習しちゃお！
+solo mua place=plaza mood=eager line=feel | mua happy だれか来たら、いっしょに踊ってもらお♪
+solo mua place=plaza mood=sulky line=scene | mua angry 噴水に小石なげてる。…ぽちゃん
+solo mua place=plaza mood=sulky line=feel | mua normal あたし、すねてる顔も似合うかもｗ
+solo mua mood=happy line=scene | mua happy かわいい雑貨屋さん見つけちゃった！
+solo mua mood=happy line=scene | mua wink 帽子、ちょっと斜めにかぶってみたｗ
+solo mua mood=happy line=feel | mua excited 今日はなにしても楽しい日ぢゃん♪
+solo mua mood=lonely why=lonely line=scene | mua troubled おそろいにしようと思ってたのに、相手がいない…
+solo mua mood=lonely why=lonely line=scene | mua normal ひとりで歩くと、道がいつもより長く感じるね
+solo mua mood=lonely why=lonely line=feel | mua happy でも、帰ったらだれかいるかも！ がんばろ
+solo mua mood=sleepy line=scene | mua normal 歩きながらあくび出ちゃった。まぢ眠い…
+solo mua mood=sleepy line=scene | mua troubled 目がしょぼしょぼする〜
+solo mua mood=sleepy line=feel | mua happy 帰ったら絶対お昼寝するｗ
+solo mua mood=eager line=scene | mua excited 今日はモッチーの育成、いっぱいがんばる！
+solo mua mood=eager line=feel | mua happy あたし、やるときはやるんだから！
+solo mua mood=restless line=scene | mua surprise え、新しいお店できてる！？ 気になる〜！
+solo mua mood=restless line=feel | mua excited だれか誘ってのぞきに行きたい！
+solo mua mood=sulky line=scene | mua troubled 前髪、思ったより切りすぎちゃった…
+solo mua mood=sulky line=feel | mua normal …帽子かぶればバレないよね。うん、大丈夫ｗ
+
+## ひとりごと きき
+solo kiki place=home mood=happy line=scene | kiki happy 窓ぎわでお茶をいれました。いい香りでつ♪♪
+solo kiki place=home mood=happy line=scene | kiki normal ゴーレムの図鑑を、最初から読み返していまつ
+solo kiki place=home mood=happy line=scene | kiki happy 今日のおやつは、あたたかいスープにしました
+solo kiki place=home mood=happy line=feel | kiki happy こういう静かな時間が、いちばん落ち着きまつ
+solo kiki place=home mood=happy line=feel | kiki wink あとで、だれかにもお茶を出してあげたいですね
+solo kiki place=home mood=sleepy line=scene | kiki normal ひざかけがあたたかくて、目がとろんとしてきました
+solo kiki place=home mood=sleepy line=scene | kiki troubled 本を読みながら、同じ行を3回読んでいました…
+solo kiki place=home mood=sleepy line=feel | kiki happy 少しだけ、目を閉じてもいいでつか…
+solo kiki place=home mood=sleepy line=feel | kiki normal 起きたら、またお茶をいれなおしましょう
+solo kiki place=home mood=eager line=scene | kiki excited 育成の計画、全部ちからに振る形で書き直しまつ
+solo kiki place=home mood=eager line=scene | kiki normal 次の相手を、倒す順番に並べてみました
+solo kiki place=home mood=eager line=feel | kiki wink 今日の私は、いつもより火力が高い気がしまつ ( ˘ω˘)9グッ!
+solo kiki place=home mood=eager line=feel | kiki happy 迷ったら、攻めでつね
+solo kiki place=home mood=lonely why=lonely line=scene | kiki normal お茶を2つ入れてしまいました。…どうしましょう
+solo kiki place=home mood=lonely why=lonely line=feel | kiki troubled 少しだけ、だれかの声が聞きたいでつ
+solo kiki place=home mood=restless line=scene | kiki surprise 強い相手が出たと聞いて、落ち着かないんです
+solo kiki place=home mood=restless line=feel | kiki normal 静かに、でも確実に燃えてきました
+solo kiki place=home mood=sulky line=scene | kiki normal …そうですか。べつに、かまいません
+solo kiki place=home mood=sulky line=feel | kiki troubled ……でも、少しだけ、気にしてほしかったでつ
+solo kiki place=library mood=happy line=scene | kiki happy {place}は、今日も静かでいいですね
+solo kiki place=library mood=happy line=scene | kiki normal 育成の本を3冊、借りてきました♪♪
+solo kiki place=library mood=happy line=feel | kiki happy 本のにおいって、ほっとしまつね
+solo kiki place=library mood=happy line=feel | kiki wink 次はどの棚にしましょう。わくわくしまつ
+solo kiki place=library mood=eager line=scene | kiki excited 「火力の上げ方」という本を見つけました
+solo kiki place=library mood=eager line=feel | kiki happy 全部覚えて、次の戦いで試しまつ
+solo kiki place=library mood=eager line=feel | kiki normal 守りの本は…あとで読みまつ。たぶん
+solo kiki place=library mood=sleepy line=scene | kiki normal 窓からの光が、ちょうどいい暖かさで…
+solo kiki place=library mood=sleepy line=scene | kiki troubled ページをめくる手が、止まりがちでつ
+solo kiki place=library mood=sleepy line=feel | kiki happy ここで眠ったら、怒られますよね…
+solo kiki place=library mood=lonely why=lonely line=scene | kiki normal 向かいの席が、ずっと空いたままでつ
+solo kiki place=library mood=lonely why=lonely line=feel | kiki troubled だれか、となりで本を読んでくれたらいいのに
+solo kiki place=library mood=restless line=scene | kiki surprise 新しい本が入ったみたいでつ。早く読みたい…
+solo kiki place=library mood=restless line=feel | kiki normal 静かにしなきゃいけないのに、そわそわしてしまいます
+solo kiki place=library mood=sulky line=scene | kiki normal 本で顔をかくしています。いまは話しかけないでください
+solo kiki place=library mood=sulky line=feel | kiki troubled …と言いつつ、だれか気づいてくれないかと待っていまつ
+solo kiki mood=happy line=scene | kiki happy 朝の散歩で、きれいな花を見つけました
+solo kiki mood=happy line=scene | kiki normal おやつ屋さんの新しいお茶、おいしかったでつ
+solo kiki mood=happy line=scene | kiki happy 育成場で、ゴーレムがよく動いてくれました
+solo kiki mood=happy line=feel | kiki happy 今日は、いい一日になりそうでつね
+solo kiki mood=happy line=feel | kiki wink 小さなことで、うれしくなれる日でつ♪♪
+solo kiki mood=happy line=feel | kiki normal このまま、のんびり歩きましょう
+solo kiki mood=eager line=scene | kiki excited 育成場で、ちからを上げる練習をしてきました
+solo kiki mood=eager line=scene | kiki normal ゴーレムといっしょに、押し切る形を考えていまつ
+solo kiki mood=eager line=feel | kiki happy 倒される前に倒す。今日も変わりません ( ˘ω˘)9グッ!
+solo kiki mood=eager line=feel | kiki wink 静かな顔で、いちばん強く。それが私でつ
+solo kiki mood=eager line=feel | kiki normal 次は、もう少し速く倒せる気がしまつ
+solo kiki mood=sleepy line=scene | kiki normal 歩きながら、小さくあくびが出ました
+solo kiki mood=sleepy line=feel | kiki happy 帰ったら、ひざかけをかけてお昼寝でつ
+solo kiki mood=sleepy line=feel | kiki troubled 今日は少し、早めに休みましょうか
+solo kiki mood=lonely why=lonely line=scene | kiki normal おやつ屋さんの席、私ひとりでした
+solo kiki mood=lonely why=lonely line=feel | kiki troubled こういう日もありまつね。…少しだけ、さみしいです
+solo kiki mood=restless line=scene | kiki surprise あれま、新しいモンスターの話を聞きました
+solo kiki mood=restless line=feel | kiki normal 早く育ててみたくて、足が速くなってしまいます
+solo kiki mood=sulky line=scene | kiki normal 石をひとつ、そっとけりました
+solo kiki mood=sulky line=feel | kiki troubled ……もう少ししたら、元にもどりまつ
+
+## ひとりごと もも
+solo momosuke place=home mood=sleepy line=scene | momosuke normal ふとんの中で、今日の振り付けおさらいしてたら眠くなってきた…
+solo momosuke place=home mood=sleepy line=scene | momosuke troubled まくら、ふかふかすぎて起きられないんだけどw
+solo momosuke place=home mood=sleepy line=scene | momosuke normal あくび3回目。アイドルはあくびしないのに〜
+solo momosuke place=home mood=sleepy line=feel | momosuke happy 夢の中でライブしてこよ…♡
+solo momosuke place=home mood=sleepy line=feel | momosuke normal 起きたらメタルナーみがかなきゃ…むにゃ
+solo momosuke place=home mood=sleepy line=feel | momosuke wink ちょっとだけ寝たら、もっとかわいくなってるはず！！
+solo momosuke place=home mood=happy line=scene | momosuke excited メタルナー、今日もピッカピカ！！ 顔が映るレベル！！
+solo momosuke place=home mood=happy line=scene | momosuke happy いちごのケーキ、上のいちごは最後にとっておく♡
+solo momosuke place=home mood=happy line=scene | momosuke wink 鏡の前で決めポーズ。…うん、今日も最強w
+solo momosuke place=home mood=happy line=feel | momosuke excited だれかに見せたい！！ だれか来ないかな〜！！
+solo momosuke place=home mood=happy line=feel | momosuke happy ももって、やっぱりえらいと思う！！
+solo momosuke place=home mood=eager line=scene | momosuke excited 新しい振り付け、ノートに書き出してる！！
+solo momosuke place=home mood=eager line=feel | momosuke happy 今日はいっぱい練習して、いっぱいほめてもらうんだ♡
+solo momosuke place=home mood=eager line=feel | momosuke wink 本気のももを見せちゃうから！！
+solo momosuke place=home mood=lonely why=lonely line=scene | momosuke troubled だれもほめてくれないから、鏡にほめてもらってる…
+solo momosuke place=home mood=lonely why=lonely line=scene | momosuke normal メタルナーに話しかけてみた。…返事はないけどw
+solo momosuke place=home mood=lonely why=lonely line=feel | momosuke troubled べつに、さみしくなんてないし。…ちょっとだけだし
+solo momosuke place=home mood=restless line=scene | momosuke surprise 新曲の話、聞いた！？ 聞いてないの、ももだけ！？
+solo momosuke place=home mood=restless line=feel | momosuke excited 早く歌いたくて、じっとしてられない！！
+solo momosuke place=home mood=sulky line=scene | momosuke angry ふーん、べつにいいもん。ひとりでケーキ食べるもん
+solo momosuke place=home mood=sulky line=feel | momosuke troubled …だれか「かわいい」って言ってくれたら、許してあげてもいいけど
+solo momosuke place=studio mood=happy line=scene | momosuke happy {place}、今日はももの貸し切り！！
+solo momosuke place=studio mood=happy line=feel | momosuke excited 声の調子、最高かも！！ ノッてきた！！
+solo momosuke place=studio mood=sleepy line=scene | momosuke normal 鏡の前でストレッチしてたら、そのまま寝そうになったw
+solo momosuke place=studio mood=sleepy line=scene | momosuke troubled 休けいのつもりが、ねっころがって動けない…
+solo momosuke place=studio mood=sleepy line=feel | momosuke happy ちょっと休んだら、また踊る♡
+solo momosuke place=studio mood=eager line=scene | momosuke excited サビの振り、10回連続でいけた！！
+solo momosuke place=studio mood=eager line=feel | momosuke wink この調子なら、次のライブは完ぺき！！
+solo momosuke place=studio mood=lonely why=lonely line=scene | momosuke troubled 練習、見てくれる人いないなぁ…
+solo momosuke place=studio mood=lonely why=lonely line=feel | momosuke normal 拍手の音、自分でやっちゃった。…ぱちぱちw
+solo momosuke place=studio mood=restless line=scene | momosuke surprise 新しい衣装、もうすぐ届くって！！
+solo momosuke place=studio mood=restless line=feel | momosuke excited 届いたら、だれかに一番に見せるんだ！！
+solo momosuke place=studio mood=sulky line=scene | momosuke angry 今のステップ、ぜんぜんだめ！！ もう1回！！
+solo momosuke place=studio mood=sulky line=feel | momosuke troubled …くやしいけど、できるまでやるもん
+solo momosuke mood=happy line=scene | momosuke happy かわいい髪どめ見つけた♡ 買っちゃおうかな
+solo momosuke mood=happy line=feel | momosuke excited 今日はいいことしかない日な気がする！！
+solo momosuke mood=lonely why=lonely line=scene | momosuke troubled ひとりでおやつ屋さん、ちょっと入りにくい…
+solo momosuke mood=lonely why=lonely line=feel | momosuke normal だれか誘ってくれたら、すぐ行くのにな
+solo momosuke mood=eager line=scene | momosuke excited 歩きながら、新曲のリズム覚えてる！！
+solo momosuke mood=eager line=feel | momosuke happy 次は絶対、ほめられるくらい上手になる！！
+solo momosuke mood=sleepy line=scene | momosuke normal 歩いてるのに、まぶたが下がってくる…
+solo momosuke mood=sleepy line=feel | momosuke troubled 今日は早く帰って寝よ…
+solo momosuke mood=restless line=scene | momosuke surprise あれ、だれかが歌ってる！？ どこどこ！？
+solo momosuke mood=restless line=feel | momosuke excited 気になる！！ 見に行きたい！！
+solo momosuke mood=sulky line=scene | momosuke angry 道の小石、ぜんぶよけてやる！！
+solo momosuke mood=sulky line=feel | momosuke normal …よけてたら、ちょっと楽しくなってきたw
+
+## ひとりごと あつ
+solo atsu place=home mood=happy line=scene | atsu happy 昨日のHELL、録画見返してる笑
+solo atsu place=home mood=happy line=scene | atsu normal 肉焼いたー笑 冒険の前はがっつり食べるのが一番！
+solo atsu place=home mood=happy line=scene | atsu wink ドラゴンの図鑑、またながめてた( *'ω'*)ノ！
+solo atsu place=home mood=happy line=scene | atsu happy 部屋で指の体操！ あしたも上いける気しかしない笑
+solo atsu place=home mood=happy line=feel | atsu happy いいね、今日は調子いいわ笑
+solo atsu place=home mood=happy line=feel | atsu normal だれか誘ってみよっかなー笑
+solo atsu place=home mood=happy line=feel | atsu wink まぁ〜、こういう日もあり！
+solo atsu place=home mood=sleepy line=scene | atsu normal ふぁ〜…さすがに練習しすぎた笑
+solo atsu place=home mood=sleepy line=scene | atsu troubled 目、しょぼしょぼする…
+solo atsu place=home mood=sleepy line=feel | atsu happy 今日はもう寝るー笑 勇者だって宿屋で休むし！
+solo atsu place=home mood=sleepy line=feel | atsu normal あした起きたら、一曲だけやろ笑
+solo atsu place=home mood=sleepy line=feel | atsu wink 寝る前にもう一回…いや、寝よ笑
+solo atsu place=home mood=eager line=scene | atsu excited 次の難易度、もう決めた！
+solo atsu place=home mood=eager line=feel | atsu happy とりあえずHELL1周いこ笑
+solo atsu place=home mood=eager line=feel | atsu wink 今日のオレは止まらないよ！
+solo atsu place=home mood=lonely why=lonely line=scene | atsu normal 対戦相手いないー笑 暇すぎる…
+solo atsu place=home mood=lonely why=lonely line=feel | atsu troubled …だれか誘えばよかったかな…
+solo atsu place=home mood=restless line=scene | atsu surprise ランキング更新まで、あと少しじゃん！
+solo atsu place=home mood=restless line=feel | atsu excited 気になって寝られないやつだ笑
+solo atsu place=studio mood=happy line=scene | atsu happy {place}、今日はいい音してる笑
+solo atsu place=studio mood=happy line=scene | atsu wink フルコン出た！ やっぱ上が一番おもしろい！
+solo atsu place=studio mood=happy line=feel | atsu happy いいね、この感じ笑
+solo atsu place=studio mood=happy line=feel | atsu normal だれか来たら、いっしょにやろって言お笑
+solo atsu place=studio mood=eager line=scene | atsu excited あと1曲、いや3曲いこ笑
+solo atsu place=studio mood=eager line=scene | atsu normal 指、あったまってきた！
+solo atsu place=studio mood=eager line=feel | atsu happy 今日はスコア更新いけるでしょ笑
+solo atsu place=studio mood=eager line=feel | atsu wink 上等！ かかってこい！
+solo atsu place=studio mood=sleepy line=scene | atsu troubled 休けいのつもりが、床で寝そうになってた笑
+solo atsu place=studio mood=sleepy line=feel | atsu normal ちょっと休も…勇者にも休みは要る！
+solo atsu place=studio mood=lonely why=lonely line=scene | atsu normal ひとりでセッション…ちょっと静かすぎない？笑
+solo atsu place=studio mood=lonely why=lonely line=feel | atsu troubled 次はだれか誘ってこよ…
+solo atsu place=studio mood=restless line=scene | atsu surprise 新しい譜面きたって！ まじで？
+solo atsu place=studio mood=restless line=feel | atsu excited やるしかないかー笑
+solo atsu place=studio mood=sulky line=scene | atsu troubled 今のミスはノーカン笑
+solo atsu place=studio mood=sulky line=feel | atsu normal …まぁ〜、しゃあない！ もう1回！
+solo atsu mood=happy line=scene | atsu happy 育成場でドラゴンが新しい技おぼえた！
+solo atsu mood=happy line=scene | atsu normal 散歩してたら、いい感じの空だった笑
+solo atsu mood=happy line=scene | atsu wink 道ですれちがった人に「HELL見てます」って言われた笑
+solo atsu mood=happy line=feel | atsu happy いいね、今日はいい日！
+solo atsu mood=happy line=feel | atsu normal みんな元気かな？ 顔見に行こ笑
+solo atsu mood=eager line=scene | atsu excited 育成場で、ドラゴンと特訓中！
+solo atsu mood=eager line=scene | atsu normal とりあえず育成、そのあと練習笑
+solo atsu mood=eager line=feel | atsu happy パーティの準備は、早いほうがいいっしょ！
+solo atsu mood=eager line=feel | atsu wink 今日も上いこ( *'ω'*)ノ！
+solo atsu mood=sleepy line=scene | atsu troubled 歩きながら寝そう…
+solo atsu mood=sleepy line=feel | atsu normal 今日は早めに宿屋…じゃなくて家に帰ろ笑
+solo atsu mood=lonely why=lonely line=scene | atsu normal みんなどこ行ったんだろ…
+solo atsu mood=lonely why=lonely line=feel | atsu happy ま、だれか見つけたら声かけるか笑
+solo atsu mood=restless line=scene | atsu surprise イベントの告知、まだかな？
+solo atsu mood=restless line=feel | atsu excited そわそわするー笑
+solo atsu mood=sulky line=scene | atsu troubled 今日はちょっとうまくいかないなー笑
+solo atsu mood=sulky line=feel | atsu normal ちなみに、悔しいのは本気だかららしい笑
