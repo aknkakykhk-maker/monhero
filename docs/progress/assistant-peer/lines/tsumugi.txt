@@ -340,3 +340,36 @@ pair atsu erubin doing=walk lv=4-6 | erubin happy あっくん、ベンチで少
 ## えるびん × きき(+2・計17)
 pair erubin kiki doing=snack lv=4-6 | kiki happy えるびんさん、今日はハーブティーにしてみました | erubin surprise いい香りだね。ききさんはお茶にくわしいね | kiki wink 好きなことだけは、くわしいでつ
 pair erubin kiki doing=walk lv=7-10 air=makeup | erubin normal さっきは席を譲り合いすぎて、立ったままだったね笑 | kiki happy はい。今度は、並んで座りましょう | erubin happy うん、それがいちばんだね
+
+## どの3人でも(コトバの頼み・30本)。話すのは A と B の2人だけ。3人目は名前を出さず「3人で」「みんな」「もう1人」で触れる
+# A と B は ALLOC.md の2人の表の上のほうから15組 × 2本(コトバの受け持ちのペアもまぜた)
+trio erubin momosuke any doing=snack | momosuke excited 3人で食べると、おやつってなんでこんなにおいしいの！！ | erubin happy にぎやかだからかな。みんなの顔を見てると、つい食べすぎちゃうね | momosuke wink じゃあ、もう1個ずつ食べよ！！ 3人分ね♡
+trio erubin momosuke any doing=walk | erubin normal みんなで歩くと、いつもより道が短く感じるね | momosuke excited わかる！！ おしゃべりしてたら、もう着いちゃった！！ | erubin happy 帰りは遠回りしようか。もう少し話していたいしね
+trio mua sorashido any doing=practice | mua excited 3人いると、拍手が3倍で気持ちいいぢゃん♪ | sorashido happy 計算だと3倍だが、うれしさは5倍くらいだな笑 | mua wink 数字はてきとうでいいのｗ もう1曲いこ！
+trio mua sorashido any doing=cards | sorashido normal 3人だと、総当たりで3試合できるな。表にしておくぞ笑 | mua troubled 表はいいから、早く始めよ〜ｗ | sorashido excited よし、1試合目は{c:mua}からだ！
+trio dra erubin any doing=cards | dra normal 3人いるなら、おでは解説係をやるか | erubin happy {c:dra}の解説を聞きながら対戦すると、勉強になるんだよね | dra wink 膝が痛くならないうちに、早く始めるぞ
+trio dra erubin any doing=snack | erubin happy みんなの分、おやつを3つに分けたよ | dra surprise おっ、きっちり同じ大きさだな。{c:erubin}は細かいなぁ | erubin wink 分けるのは得意なんだ笑 さあ、食べようか
+trio atsu mua any doing=practice | atsu excited 3人いるし、順番に一曲ずつ回そ笑 | mua happy いいね！ あたし2番目ね♪ | atsu wink じゃあ俺はトリ！ 盛り上げて待ってて笑
+trio atsu mua any doing=walk | mua excited 3人で並んで歩くと、なんかチームっぽくない？ | atsu happy それな！ 次のイベントもこのメンバーでいこ笑 | mua wink 決まりね！ 作戦はあとでみんなで考えよ♪
+trio dra mua any doing=snack | mua happy みんなでおやつって、それだけで楽しいぢゃん♪ | dra happy おでのせんべいも分けてやるぞ。膝にはやさしくないけどな | mua troubled せんべいと膝、関係あるの？ｗ
+trio dra mua any doing=training | dra normal 3人で育てると、マスモンも目移りしそうだな | mua happy モッチーはぜったい、あたしのとこに来るもん！ | dra wink それはどうかな。おでのとこはおやつがあるからな
+trio atsu sorashido any doing=practice | sorashido excited 3人の自己ベスト、並べたら全部2点差以内だったぜ・・・！ | atsu surprise まじ！？ じゃあ今日で差がつくね笑 | sorashido happy 記録はちゃんと取るからな。全員本気で頼む笑
+trio atsu sorashido any doing=cards | atsu happy 3人で勝ち抜き戦しよ！ 負けた人が次の審判ね笑 | sorashido normal いいな。勝ち数の表は俺が作る | atsu wink 審判しながら表作るの、忙しすぎでしょ笑
+trio momosuke sorashido any doing=practice | momosuke excited 3人で踊ったら、ステージみたいじゃない！？ | sorashido happy たしかに。立ち位置、計算しておこうか笑 | momosuke wink 真ん中はもも！！ そこだけは決まってるの♡
+trio momosuke sorashido any doing=snack | sorashido normal ちんすこう、3人分持ってきたぞ | momosuke excited やったー！！ {c:sorashido}のふるさとのやつ！！ | sorashido happy みんなで食べると、いつもよりうまく感じるな笑
+trio kiki sorashido any doing=training | kiki normal 3人で育成するなら、全員ちから全振りでいきましょう | sorashido surprise 全員！？ 計算したら、守りがゼロになるぞ笑 | kiki wink 先に倒せば、ゼロでも困りませんよ♪
+trio kiki sorashido any doing=cards | sorashido excited 3人分のデッキ、強さを表にして比べてみたぜ・・・！ | kiki happy 見せてください。…あれま、私のが一番とがってまつね | sorashido happy とがりすぎて、表の外にはみ出してるぞ笑
+trio atsu kiki any doing=training | atsu happy 3人で育成すると、それぞれ育て方ちがっておもしろいね笑 | kiki normal 私は攻撃、{c:atsu}は勢い、もう1人は…何でしょうね | atsu wink それ、あとで本人に聞こ笑
+trio atsu kiki any doing=practice | kiki happy 3人で叩くと、音が厚くなって楽しいでつ♪ | atsu excited わかる！ {c:kiki}の音、一番強いけど笑 | kiki wink 力いっぱい、が私の取りえでつから
+trio erubin sorashido any doing=cards | sorashido normal 3人いると、デュラハン対策の話がはかどるな | erubin happy うん。みんなの意見を聞くと、新しい組み方が見えてくるね | sorashido excited よし、今日の結論は表にまとめておくぜ・・・！
+trio erubin sorashido any doing=walk | erubin normal 3人で散歩すると、{c:sorashido}は歩数を数えるのかな？ | sorashido happy もちろんだ。3人分ちゃんと数えてるぞ笑 | erubin wink それは大変そうだね笑 たまには景色も見ようね
+trio dra kiki any doing=snack | kiki happy みなさんの分も、お茶をいれましたよ | dra happy 助かるな。おやつは、おでが3人分持ってきたぞ | kiki wink では、ゆっくり3人のお茶会にしましょう♪
+trio dra kiki any doing=walk | dra troubled 3人で歩くと、おでがいつも最後になるな | kiki normal では、私たちが歩くのをゆっくりにしまつ | dra happy ……そういうとこ、優しいよな
+trio kiki momosuke any doing=snack | momosuke excited ケーキ、3人分選んできた！！ どれがいい！？ | kiki happy では、残ったものをいただきまつね♪ | momosuke wink {c:kiki}、いつも最後に選ぶよね！！ 優しいんだから♡
+trio kiki momosuke any doing=practice | kiki normal 3人で練習すると、{c:momosuke}が一番楽しそうですね | momosuke excited だって、見てくれる人が2人もいるんだもん！！ | kiki happy では、二人でしっかり見てまつね♪
+trio momosuke mua any doing=practice | mua excited 3人そろったし、おそろいポーズ撮ろ！ | momosuke happy いいね！！ もう1人にもポーズ教えてあげよ！！ | mua wink せーので決めるよ！ はい、チーズ♪
+trio momosuke mua any doing=walk | momosuke excited 3人で歩いてたら、みんなに見られてる気がする！！ | mua happy あたしたち、目立つもんねｗ | momosuke wink もっと目立っちゃお！！
+trio kyuko mua any doing=cards | kyuko normal 3人で作戦会議すると、意見が3つ出ていいねぇ | mua happy あたしのは「なんかいい」だけどね！ｗ | kyuko happy それがいちばん当たるんだよぉ笑
+trio kyuko mua any doing=snack | mua excited 3人でおやつ、どれから食べる？ | kyuko wink 好きなのは最後に取っておく派だよぉ | mua surprise え、あたし最初に食べる派！ もう1人はどっちかな？ｗ
+trio atsu kyuko any doing=training | atsu excited 3人のマスモン、並べてランキングつけよ笑 | kyuko troubled えぇ、それ絶対もめるやつだよぉ | atsu wink じゃあ全員1位ってことで笑
+trio atsu kyuko any doing=cards | kyuko normal 3人だと、いろんな組み合わせで試せるねぇ | atsu happy いいね！ 俺は全部攻めで出るから笑 | kyuko wink ほい！ じゃあ守りは、もう1人に任せよっか笑
