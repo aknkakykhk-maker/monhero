@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1c30458f2c6fdcfd
+// generated-sha256: d21484c89952fb61
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -30027,6 +30027,8 @@ const CLASSIC_CHIP_VIEW = Object.freeze({
   zeroGuts:     { icon: '⭐', turns: 'now' },  reflectNext:{ icon: '🔁', turns: 'next' }, reflectNow: { icon: '🔁', turns: 'now' },
   takenNext:    { icon: '🛡️', turns: 'next' }, takenNow:  { icon: '🛡️', turns: 'now' },
   costNext:     { icon: '⚡', turns: 'next', kind: 'debuff' }, costNow: { icon: '⚡', turns: 'now', kind: 'debuff' },
+  // えるびんの見守り③「一閃の構え」(そのターンの固有技は必ず会心・会心ダメージ+)。そのターンだけ
+  erubinIsshen: { icon: '🗡️', turns: 'now' },
 });
 const CLASSIC_DEBUFF_VIEW = Object.freeze({
   shell: 'wave', ice: 'wave', confuse: 'count', aquaPrison: 'count', aquaFreeze: 'count', aquaFinale: 'count', nightmare: 'count', psycho: 'count',
@@ -38129,7 +38131,7 @@ const GrowthFxChip = ({ chip, level, held }) => {
   const pts = level === 'full' ? [0, 1, 2, 3] : [];
   return (
     <div className={`mh-gfx-chip${out ? ' out' : ''}`} data-growth-fx-chip={chip.kind} style={{ '--gc': k.color }}>
-      <span key={`i${chip.rev}`} className="ico beat" aria-hidden="true">{k.icon}</span>
+      <span key={`i${chip.rev}`} className="ico beat" aria-hidden="true">{cardIconNode(k.icon, 13)}</span>
       <span className="min-w-0"><span className="who block">{chip.name ? `${chip.name}・` : ''}{k.label}</span>
         <span className="bar block"><i style={{ width: `${chip.pctTo}%` }}/></span></span>
       <span key={`n${chip.rev}`} className="num pop">+{Number(chip.gain).toLocaleString()}</span>
@@ -38155,7 +38157,7 @@ const GrowthFxItemCard = ({ sheet, level, onClose }) => {
           const lvUp = growthFxNum(row.levelTo) > growthFxNum(row.levelFrom);
           return (
             <div key={i} className="mh-gfx-row" style={{ '--rc': rk.color }}>
-              <span className="ico" aria-hidden="true">{rk.icon}</span>
+              <span className="ico" aria-hidden="true">{cardIconNode(rk.icon, 18)}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="lab"><em>{row.label || rk.label}{row.levelTo != null ? <> Lv.<GrowthFxCount from={row.levelFrom} to={row.levelTo} delay={900} duration={900} instant={instant}/></> : null}</em>
                   {lvUp && <span className="up" style={{ animationDelay: instant ? '0s' : '1.6s' }}>Lv +{row.levelTo - row.levelFrom}</span>}</div>
@@ -38186,7 +38188,7 @@ const GrowthFxLevelUp = ({ sheet, level, onClose }) => {
     return (
       <div className="mh-gfx-sheet level-mini mh-gfx-minimal" data-growth-fx-sheet="level" data-growth-fx-kind={sheet.kind} role="dialog" aria-label={label}
         style={{ '--gc': k.color, background: '#0b102699' }} onClick={onClose}>
-        <div className="mh-gfx-band"><span className="big">{k.icon} {k.label} Lv.{sheet.levelTo}</span>
+        <div className="mh-gfx-band"><span className="big">{cardIconNode(k.icon, 20)} {k.label} Lv.{sheet.levelTo}</span>
           <small>{sheet.sub}{gains.length ? ` ・ ${gains.map(g => g.text).join('・')}` : ''}</small><small>押すと閉じる</small></div>
       </div>
     );
@@ -38219,7 +38221,7 @@ const GrowthFxLevelUp = ({ sheet, level, onClose }) => {
         {gains.length > 0 && <ul className="mh-gfx-gains" aria-label="新しく開いたもの">
           {gains.map((g, i) => (
             <li key={i} style={{ '--d': `${1.2 + i * 0.3}s` }}>
-              <span aria-hidden="true">{g.icon || '✨'}</span>
+              <span aria-hidden="true">{cardIconNode(g.icon || '✨', 14)}</span>
               <span className="min-w-0"><b>{String(g.text || '')}</b>{g.note && <small>{String(g.note)}</small>}</span>
               {g.isNew && <span className="new">NEW</span>}
             </li>

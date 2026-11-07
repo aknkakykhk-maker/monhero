@@ -132,8 +132,8 @@ const browser = async () => {
     check('③ ビートPは自分で戦うときの半分(勝ち100・負け75まで)で、はじめての勝ちの +50 は付かない', halfOk, `${out1} ${gain1}`);
     check('③ その日の数(daily)は変えず、ごほうびの回数が1つ増え、結果に「あと2回」が出る', after.daily === before.daily && after.auto && after.auto.day === today && after.auto.n === 1 && /あと2回/.test(autoNote),
       JSON.stringify({ auto: after.auto, note: autoNote, same: after.daily === before.daily }));
-    // ④ 3回を使い切った日
-    await page.evaluate(async (d) => { await storeSet('mh_card_auto_reward_v1', { v: 1, day: d, n: 3 }, false); }, today);
+    // ④ 3回を使い切った日(r … 2026-11-07 の一度きりの戻しの印。印が無いと 11/7 だけは0回として読まれるので付けておく。ほかの日は見ない)
+    await page.evaluate(async (d) => { await storeSet('mh_card_auto_reward_v1', { v: 1, day: d, n: 3, r: '20261107' }, false); }, today);
     const p2 = await getS('point');
     await page.locator('[data-card-result-again], [data-card-top="result"] .mh-button-primary').first().click().catch(() => {});
     let end2 = false;
