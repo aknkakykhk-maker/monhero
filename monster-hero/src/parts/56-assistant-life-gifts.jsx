@@ -226,22 +226,30 @@ const assistantLifeGiftHintLine = (who, key) => {
 };
 
 // 部屋のシートの「🎁 好きなもの」の行(10種類の印。分かっていないものは ?)。教えてくれた知らせがあれば吹き出しで出す
-function AssistantLifeGiftLikesRow({ id }) {
+// compact … 横の狭い部屋のシート。1行(分かった好きな物と数)にまとめ、押すと全部の印を開く
+function AssistantLifeGiftLikesRow({ id, compact = false }) {
   const st = useAssistantLifeGiftState();
+  const [open, setOpen] = React.useState(false);
   if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled()) return null;
   const gifts = assistantLifeGiftKinds().map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
   const known = gifts.filter(g => assistantLifeGiftKnown(id, g.key, st)).length;
+  const liked = gifts.filter(g => assistantLifeGiftShownLike(id, g.key, st) === 'like');
   const told = st.likes.told.filter(x => x.who === id).slice(-1)[0] || null;
   const hint = told ? assistantLifeGiftHintLine(id, told.key) : null;
   const cls = { like: 'border-pink-300 bg-pink-500/30 text-white', mid: 'border-slate-500 bg-slate-700/60 text-slate-100', bad: 'border-cyan-300 bg-cyan-700/40 text-white', unknown: 'border-white/15 bg-slate-800/70 text-slate-400' };
+  const showAll = !compact || open;
   return (
-    <div className="py-1.5" data-assistant-life-gift-likes={id}>
-      <p className="flex items-center text-[10.5px] font-black text-slate-300">🎁 好きなもの<span className="ml-auto text-[10px] font-bold text-slate-400">分かった {known}/{gifts.length}</span></p>
+    <div className={compact ? 'py-1' : 'py-1.5'} data-assistant-life-gift-likes={id}>
+      <button type="button" className="flex w-full items-center gap-1 text-left text-[10.5px] font-black text-slate-300" onClick={() => compact && setOpen(v => !v)} aria-expanded={showAll}>
+        <span className="shrink-0">🎁 好きなもの</span>
+        {compact && <span className="min-w-0 truncate text-[11px]">{liked.length ? liked.map(g => g.emoji).join('') : ''}</span>}
+        <span className="ml-auto shrink-0 text-[10px] font-bold text-slate-400">分かった {known}/{gifts.length}{compact ? (showAll ? ' ▲' : ' ▼') : ''}</span>
+      </button>
       {hint && (
         <button type="button" data-assistant-life-gift-told={told.key} onClick={() => assistantLifeGiftToldSeen(id)}
-          className="mt-1 block w-full rounded-xl bg-white px-2 py-1 text-left text-[11px] font-black leading-snug text-slate-800">
-          <span className="block text-[9.5px] text-pink-600">💡 教えてくれた(タップで閉じる)</span>{hint.t}</button>)}
-      <div className="mt-1 flex flex-wrap gap-1">
+          className={`mt-1 block w-full rounded-xl bg-white px-2 py-1 text-left text-[11px] font-black leading-snug text-slate-800 ${compact ? 'truncate' : ''}`}>
+          <span className={`${compact ? 'mr-1 inline' : 'block'} text-[9.5px] text-pink-600`}>💡{compact ? '' : ' 教えてくれた(タップで閉じる)'}</span>{hint.t}</button>)}
+      <div className={`mt-1 flex flex-wrap gap-1 ${showAll ? '' : 'hidden'}`}>
         {gifts.map(g => { const s = assistantLifeGiftShownLike(id, g.key, st); return (
           <span key={g.key} data-assistant-life-gift-like={`${g.key}:${s}`} title={`${g.name} ${ASSISTANT_LIFE_GIFT_LABEL[s]}`}
             className={`inline-flex items-center gap-0.5 whitespace-nowrap rounded-lg border px-1 text-[10px] font-black leading-[18px] ${cls[s]}`}>
@@ -301,10 +309,10 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
               </button>); })}
         </div>
         <div className="mt-2 flex items-center gap-2">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/5 text-[28px]" aria-hidden="true">{info.emoji}</span>
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/5 text-[28px] [[data-assistant-life-land='1']_&]:hidden" aria-hidden="true">{info.emoji}</span>
           <div className="min-w-0 flex-1">
             <p className="text-[14px] font-black text-white" data-assistant-life-give-name>{info.name}</p>
-            <p className="text-[10.5px] leading-snug text-slate-300">{info.what}</p>
+            <p className="text-[10.5px] leading-snug text-slate-300 [[data-assistant-life-land='1']_&]:hidden">{info.what}</p>
           </div>
         </div>
         <div className="mt-1.5 space-y-1 text-[11px]">
@@ -319,7 +327,7 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
             <span className="ml-auto whitespace-nowrap font-black text-orange-300">🤝 友情Lv {peerText}{hint && left != null ? `(あと${left}で Lv${hint.lv + 1})` : ''}</span>
           </div>
         </div>
-        <p className="mt-1 text-[10px] leading-snug text-slate-400">{lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)・?=贈ると分かる。同じ道具は1日1回・合わせて1日3回(朝4時に戻る)' : '1日1回(朝4時に戻る)'}・持っている {have}個{info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''}</p>
+        <p className="mt-1 text-[10px] leading-snug text-slate-400 [[data-assistant-life-land='1']_&]:hidden">{lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)・?=贈ると分かる。同じ道具は1日1回・合わせて1日3回(朝4時に戻る)' : '1日1回(朝4時に戻る)'}・持っている {have}個{info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''}</p>
         {reason && <p data-assistant-life-give-reason className="mt-1.5 rounded-xl bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-300">{reason}</p>}
         <div className="mt-2 flex gap-2">
           <button type="button" data-assistant-life-give-cancel onClick={() => setGive(null)} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">やめる</button>
