@@ -251,4 +251,14 @@
   - 友情Lv: 2人で1曲終えたら `assistantPeerGain(a, b, 'session')`(`ASSISTANT_PEER_BOND_ACTIONS.session` +3・1日12・ペアの1日の上限の中)。同じ回は2度足さない
   - 部屋のチャット: 来たとき・曲が決まったとき(はじめて・好き・苦手)・自分が MVP・呼んだ人の結果(フルコン・高い・ふつう・低い・好きな曲の専用・苦手を乗りこえた)・セッションLv.UP・苦手が好きになってきた
   - 残り: ハナビの祝い(`growthFxSessionLevel`)は 44-growth-fx.jsx が main に入ってからつなぐ / Lv.45〜100 の見た目(枠の色・札・称号・聞きどころ・背景)/ オプション「助手のひとこと」
-- [ ] 止め絵(縦横)・台詞の抜粋・更新履歴とヘルプの文 → 窓口
+- [ ] 段階4(作業ブランチ claude/beat-assistant-session-4・まだマージ前): Lv で開くものの残り
+  - [x] 呼び名を「友情Lv」にそろえた(結果の「友情Lv +3」)
+  - [x] オプション「助手のひとこと」(全部/少なめ/切る)。保存は `mh_rhythm_assistant_session_v1` の `talk`(無い人は全部)。切り替えは呼ぶシートの助手のタブの上
+  - [x] Lv.45 結果のカードの枠が助手の色・Lv.90 名前入りの背景(`rhythmAssistSessionCardStyle`・`RhythmAssistSessionCardBack`)
+  - [ ] Lv.25 得意の応援(8人・報酬と見た目だけ)
+  - [ ] Lv.50・100 プロフィールの札と称号
+  - [ ] Lv.50・80・100 特別な台詞の束(txt に場面を足して取り込む)
+  - [ ] Lv.75 聞きどころ → 統括に量を相談中(案A: 好き・苦手の4曲だけ=32行 / 案B: 全曲 約480行)
+- [ ] 台詞の見直し: コトバ(口調・「元の行 → 直した行(理由)」で返る)・ナカヨシ(4)(呼び方・距離感)。返ったら txt を直して `rhythm-assistant-session-lines-import.js`
+- [ ] 止め絵(縦横)・台詞の抜粋・更新履歴とヘルプの文 → 窓口(モンヒロくん)。公開の印は社長の「この文で」まで偽
+- 試し方: ゲームを開き HOME で `RELEASE_FLAGS.rhythmAssistantSession = true` にしてからモンヒロビートへ。デュオを試すときは `await ASSISTANT_PEER_STORE.load()` のあとで `ASSISTANT_PEER_STORE.set({ bond: { 'kiki-mua': 99999 }, special: ['kiki-mua'] })`(読み込む前に入れると消える)。サビが早い曲は「風がそよぐ場所」(約36秒)
