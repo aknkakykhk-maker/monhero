@@ -175,8 +175,11 @@
 - マモリ: セッションの台詞の `{name}`(枝 claude/beat-assistant-session-7)。main に入ったら `player-call-check.js` の(参考)を必ず止める形へ。デュオの見直しは返した(4行)
 - 窓口へ送った案のあと: 遊び場のアイコン・家・行事は LIFE-CONTENT-PLAN の段階2〜5
 
-## 助手ライフ 専用ページの作り込み(2026-11-07 ナカヨシ5)
+## 助手ライフ 専用ページ「助手たちの家」(2026-11-07 ナカヨシ5)
 
-- 社長の答え(がっつり案の4問): 地図の助手は顔の丸/HOME の施設の顔は全部出す/最初の公開は段階1だけ/専用ページはもっと作り込む
-- 作り込んだ案 `LIFE-FULL-PLAN.md`・止め絵 `ux/life-full-mock-tate.jpg`(縦)・`ux/life-full-mock-yoko.jpg`(横)・`ux/life-full-mock-ab.png`(A/B 4つ)。窓口へ送った
-- 待っていること: 社長の A/B(❶ 地図の絵 ❷ 下の作り ❸ 入場 ❹ 曲)と「これで作る」→ 段階1を作る
+- 社長の答え(がっつり案の4問): 顔の丸/HOME の施設の顔は全部出す/最初の公開は段階1だけ/専用ページはもっと作り込む
+- そのあと社長「専用ページは助手たちの家みたいな感じ」→ 町の地図が真ん中の案(#4779)は置きかえた。町の地図は「📋 みんなの居場所」の先へ
+- 案 `LIFE-HOUSE-PLAN.md`・止め絵 `ux/life-house-mock-tate.jpg`(縦)・`ux/life-house-mock-yoko.jpg`(横)・`ux/life-house-mock-ab.png`(A/B 5つ)。窓口へ送った
+- セッションとのつなぎ: マモリ(2)(session_0113GBaBXVrsDeVzvjC9ndFy)に要るものを返した(OnLive の知らせ・Invite の入口はプライベート・券なしは段階2。こちらは assistantLifeAtBeat・assistantLifeBeatIds を出し、マモリ側が呼んだ時点で paid:visit を付ける。線引きはマモリ案に合わせ A=出かけているあいだ何回でも/B=1日1回/C=その日ずっと・段の名前は assistantPeerStageName・暮らしの経験値は入れない)
+- 待っていること: 社長の A/B(❶ 家の絵 ❷ 下の作り ❸ 入場 ❹ 曲 ❺ 券なしの線引き A/B/C)と「これで作る」→ 段階1を作る
+- 2026-11-07 社長の答え: ❶ B(家の絵は描き下ろし。届くまでは図形の形)/❷ A 札4つ+アイコンの列/❸ A 毎回/❹ A「風がそよぐ場所」/❺ 出かけているあいだは何回でも券なし(段階2)。注文書 `HOUSE-ART-ORDER.md`(縦 1080×1680・横 1560×1080・部屋の位置の表)。→ 段階1を作り始めた(枝 claude/assistant-life-stage1)

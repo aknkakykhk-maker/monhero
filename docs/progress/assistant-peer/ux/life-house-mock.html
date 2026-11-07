@@ -1,0 +1,429 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>助手ライフ 助手たちの家</title>
+<!-- 2026-11-07 ナカヨシ5。助手たちの家の形(社長「専用ページは助手たちの家みたいな感じ」)。縦・横の止め絵とA/B。本物の絵: 町=HOME の村の絵(時間帯で塗り替え)/場面=お話の背景・助手の立ち絵/顔=助手の顔の絵 -->
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0b1020;font-family:"Hiragino Sans","Noto Sans JP","WenQuanYi Zen Hei",sans-serif;color:#fff;padding:18px;width:max-content}
+.row{display:flex;gap:18px;align-items:flex-start;margin-bottom:22px}
+.cap{font-size:14px;font-weight:900;color:#fde68a;margin-bottom:6px;width:390px;line-height:1.4}
+.cap.w{width:844px}.cap small{display:block;font-size:11px;color:#cbd5e1;font-weight:700}
+.ph{width:390px;height:844px;border-radius:28px;border:2px solid #334155;overflow:hidden;position:relative;background:#070b1d}
+.ld{width:844px;height:390px;border-radius:24px;border:2px solid #334155;overflow:hidden;position:relative;background:#070b1d}
+.abs{position:absolute}
+/* ===== 町の地図 ===== */
+.map{position:absolute;overflow:hidden;background:#1b3b2c}
+.map .art{position:absolute;left:0;top:0;transform-origin:0 0}
+.map .art img.v{position:absolute;left:0;top:0;width:941px;height:1672px}
+.map .sidefill{position:absolute;inset:-20px;background:url(../../../../monster-hero/data/images/home-background.jpg) center/cover;filter:blur(14px) brightness(.55)}
+.tint{position:absolute;inset:0;pointer-events:none}
+/* 時間帯 */
+.t-morning img.v{filter:saturate(.8) brightness(1.06) sepia(.22) hue-rotate(-6deg)}
+.t-morning .tint.a{background:linear-gradient(180deg,rgba(255,180,190,.42),rgba(255,226,170,.18) 45%,rgba(200,225,255,.22));mix-blend-mode:screen}
+.t-morning .tint.b{background:linear-gradient(0deg,rgba(255,255,255,.5),rgba(255,255,255,0) 40%)}
+.t-noon .tint.a{background:radial-gradient(ellipse 120px 60px at 30% 40%,rgba(0,20,40,.18),transparent),radial-gradient(ellipse 140px 70px at 80% 75%,rgba(0,20,40,.16),transparent)}
+.t-evening img.v{filter:saturate(1.1) brightness(.92)}
+.t-evening .tint.a{background:linear-gradient(180deg,rgba(255,110,70,.7),rgba(255,150,80,.5) 50%,rgba(110,50,90,.6));mix-blend-mode:multiply}
+.t-evening .tint.b{background:linear-gradient(110deg,rgba(255,200,120,.35),transparent 55%);mix-blend-mode:screen}
+.t-night img.v{filter:brightness(.42) saturate(.65) hue-rotate(-12deg)}
+.t-night .tint.a{background:linear-gradient(180deg,rgba(30,40,110,.55),rgba(20,30,80,.35));mix-blend-mode:multiply}
+.glow{position:absolute;border-radius:50%;pointer-events:none;mix-blend-mode:screen}
+.win{background:radial-gradient(circle,rgba(255,214,120,.95),rgba(255,170,60,.35) 40%,transparent 70%)}
+.lamp{background:radial-gradient(circle,rgba(255,236,170,.9),rgba(255,200,90,.25) 45%,transparent 70%)}
+.blue{background:radial-gradient(circle,rgba(140,220,255,.9),rgba(60,160,255,.3) 45%,transparent 70%)}
+.star{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;box-shadow:0 0 4px #fff}
+.fly{position:absolute;width:4px;height:4px;border-radius:50%;background:#e9ff9a;box-shadow:0 0 8px 2px #d9f99d}
+.mote{position:absolute;font-size:13px;opacity:.9;text-shadow:0 1px 3px #0009}
+/* 場所の札と顔 */
+.pin{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center}
+.pin .who{display:flex;align-items:center;padding:2px 4px;border-radius:999px;background:rgba(2,6,23,.62);border:1px solid rgba(255,255,255,.4);box-shadow:0 3px 10px #000a;position:relative}
+.pin .who img{width:30px;height:30px;border-radius:50%;border:2px solid #fff;background:#334155;object-fit:cover}
+.pin .who img+img{margin-left:-9px}
+.pin .who img.lonely{border-color:#fbbf24;box-shadow:0 0 8px #fbbf24}.pin .who img.after{border-color:#7dd3fc}
+.pin .bond{position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:900;white-space:nowrap;background:linear-gradient(90deg,#f472b6,#fb923c);border-radius:999px;padding:0 6px;border:1px solid #fff8}
+.pin .eye{position:absolute;right:-12px;top:-10px;width:20px;height:20px;border-radius:50%;background:#fde047;color:#422006;font-size:11px;display:grid;place-items:center;border:2px solid #fff;box-shadow:0 0 10px #fde047}
+.pin .bub{position:absolute;left:100%;top:-6px;margin-left:8px;white-space:nowrap;font-size:9px;font-weight:800;background:#fff;color:#1e293b;border-radius:10px;padding:2px 7px;box-shadow:0 2px 6px #0007}
+.pin .bub:before{content:"";position:absolute;left:-4px;top:7px;border:4px solid transparent;border-right-color:#fff;border-left:0}
+.pin .zz{position:absolute;right:-10px;top:-12px;font-size:13px}
+.plq{margin-top:3px;display:flex;align-items:center;gap:3px;font-size:10px;font-weight:900;padding:2px 8px 2px 5px;border-radius:8px;background:linear-gradient(#5b3a1e,#3b2412);border:1.5px solid #e8c37a;color:#fff3d6;box-shadow:0 2px 6px #000b;white-space:nowrap}
+.plq i{font-style:normal;font-size:12px}
+.pin.empty .plq{opacity:.78;filter:saturate(.6)}
+.pin.lock .plq{background:#1f2937;border-color:#64748b;color:#94a3b8}
+.edge{position:absolute;display:flex;align-items:center;gap:4px;font-size:10px;font-weight:900;padding:3px 8px 3px 5px;border-radius:999px;background:rgba(2,6,23,.78);border:1px solid #fde68a99}
+.edge img{width:22px;height:22px;border-radius:50%;border:1.5px solid #fff;object-fit:cover}.edge img+img{margin-left:-7px}
+/* ===== 画面の部品(モンヒロビートの入口とそろえる) ===== */
+.hdr{position:absolute;left:0;right:0;top:0;padding:10px 12px 8px;background:linear-gradient(180deg,#140b2e,#140b2ef0 70%,#140b2e00);z-index:5}
+.hdr .back{position:absolute;left:12px;top:14px;width:30px;height:30px;display:grid;place-items:center;font-size:18px;color:#e2e8f0}
+.hdr .en{margin-left:38px;font-size:9px;letter-spacing:.18em;font-weight:900;color:#f9a8d4}
+.hdr .ti{margin-left:38px;font-size:22px;font-weight:900;line-height:1.05;background:linear-gradient(90deg,#fff,#fbcfe8 60%,#fde68a);-webkit-background-clip:text;color:transparent}
+.clock{position:absolute;right:10px;top:8px;text-align:right;border-radius:12px;padding:4px 8px;border:1px solid #ffffff33;background:rgba(15,23,42,.7)}
+.clock b{display:block;font-size:12px}.clock small{font-size:9px;color:#cbd5e1}
+.meter{display:flex;align-items:center;gap:6px;margin:10px 0 0 38px;font-size:10px;font-weight:900}
+.meter .chip{display:flex;align-items:center;gap:3px;background:linear-gradient(90deg,#be185d,#f59e0b);padding:1px 7px;border-radius:999px;font-size:10px}
+.meter .bar{flex:1;height:7px;border-radius:9px;background:#ffffff1f;overflow:hidden;position:relative}.meter .bar i{position:absolute;inset:0;width:58%;background:linear-gradient(90deg,#f472b6,#fbbf24)}
+.meter .bar s{position:absolute;top:0;bottom:0;width:2px;background:#0b1020}
+.meter small{color:#cbd5e1;font-size:9px;white-space:nowrap}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tile{position:relative;height:66px;border-radius:12px;padding:8px 10px 6px 50px;clip-path:polygon(0 0,92% 0,100% 22%,100% 100%,0 100%);overflow:hidden;box-shadow:inset 0 -4px 0 #0003}
+.tile .ic{position:absolute;left:8px;top:12px;font-size:28px;filter:drop-shadow(0 2px 2px #0006)}
+.tile b{display:block;font-size:17px;font-weight:900;line-height:1.15;text-shadow:0 1px 2px #0007}
+.tile small{display:block;font-size:9.5px;font-weight:800;line-height:1.25;opacity:.95}
+.tile .wm{position:absolute;right:6px;bottom:-4px;font-size:22px;font-weight:900;font-style:italic;color:#fff;opacity:.2;letter-spacing:.02em}
+.tile .cnt{position:absolute;right:12px;top:8px;font-size:10px;font-weight:900;background:#0f172acc;border-radius:999px;padding:1px 6px}
+.watch{background:linear-gradient(135deg,#fb7185,#f59e0b)}.call{background:linear-gradient(135deg,#38bdf8,#6366f1)}
+.give{background:linear-gradient(135deg,#34d399,#16a34a)}.visit{background:linear-gradient(135deg,#475569,#1e293b);color:#cbd5e1}
+.visit b{color:#e2e8f0}
+.people{display:flex;justify-content:space-between;padding:6px 8px;border-radius:14px;background:rgba(15,23,42,.75);border:1px solid #ffffff1f}
+.pp{display:flex;flex-direction:column;align-items:center;width:40px;position:relative}
+.pp img{width:34px;height:34px;border-radius:50%;border:2px solid #fff;object-fit:cover;background:#334155}
+.pp img.lonely{border-color:#fbbf24;box-shadow:0 0 8px #fbbf24}
+.pp .at{position:absolute;right:0;top:20px;font-size:10px;background:#0f172a;border-radius:50%;width:16px;height:16px;display:grid;place-items:center;border:1px solid #fff6}
+.pp span{font-size:8.5px;font-weight:900;color:#fbcfe8;margin-top:1px;white-space:nowrap}
+.icons{display:flex;gap:6px}
+.icons span{flex:1;height:52px;border-radius:12px;background:rgba(30,41,59,.85);border:1px solid #ffffff2a;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9.5px;font-weight:900;color:#e2e8f0;position:relative}
+.icons span i{font-style:normal;font-size:18px;line-height:1.1}
+.icons span.on{background:linear-gradient(#f472b633,#f472b611);border-color:#f9a8d4;color:#fff}
+.icons span.lock{opacity:.5}.icons span .bd{position:absolute;right:4px;top:3px;width:8px;height:8px;border-radius:50%;background:#ef4444}
+.lbl{font-size:10px;font-weight:900;color:#cbd5e1;margin:0 0 4px 2px;display:flex;justify-content:space-between}
+.lbl em{font-style:normal;color:#94a3b8;font-weight:700}
+/* 場面 */
+.scene{position:absolute;inset:0;overflow:hidden}
+.scene .bgimg{position:absolute;inset:0;background-size:cover;background-position:center}
+.stand{position:absolute;bottom:0;object-fit:contain;object-position:bottom;filter:drop-shadow(0 6px 12px #0008)}
+.talk{position:absolute;border-radius:16px;border:2px solid #f472b6;background:rgba(2,6,23,.93);padding:10px 12px}
+.talk .nm{font-size:11px;font-weight:900;color:#f9a8d4;display:flex;align-items:center;gap:5px}
+.talk .nm img{width:22px;height:22px;border-radius:50%;border:1.5px solid #f9a8d4}
+.talk p{font-size:13.5px;font-weight:700;line-height:1.55;margin-top:3px}
+.talk .nx{position:absolute;right:10px;bottom:6px;font-size:9px;color:#f9a8d4;font-weight:900}
+.emo{position:absolute;font-size:22px;filter:drop-shadow(0 2px 3px #0008)}
+.gain{display:flex;gap:6px;justify-content:center}
+.gain span{font-size:13px;font-weight:900;border-radius:999px;padding:5px 11px;background:rgba(15,23,42,.88);border:1.5px solid #fde68a;box-shadow:0 0 18px #fbbf2499}
+.spark{position:absolute;color:#fde68a;font-size:14px;text-shadow:0 0 8px #fbbf24}
+.acts{display:flex;gap:6px}.acts span{flex:1;text-align:center;font-size:12px;font-weight:900;border-radius:12px;padding:10px 0;color:#fff}
+.note{position:absolute;font-size:10px;font-weight:800;color:#0b1020;background:#fde68a;border-radius:8px;padding:2px 7px;box-shadow:0 2px 6px #0008;z-index:20;white-space:nowrap}
+.ab{position:absolute;font-size:11px;font-weight:900;color:#fff;background:#db2777;border-radius:8px;padding:2px 7px;z-index:21}
+.panel{position:absolute;border-radius:16px;background:rgba(15,23,42,.92);border:1px solid #ffffff22}
+</style></head><body>
+<div id="root"></div>
+<script>
+const R='../../../../monster-hero/';
+const F=(id,e='happy')=>`${R}images/assistant/face/${id}_${e}.PNG`;
+const ST=(id,e='happy')=>`${R}images/assistant/${id}_${e}.PNG`;
+// 場所(HOME の村の絵の上の位置。絵の元の大きさ 941×1672)
+const P={studio:[230,360,'🎵','練習スタジオ'],ranch:[95,640,'🥚','育成場'],library:[760,410,'📚','図書室'],garden:[640,560,'🌷','中庭'],
+ plaza:[478,790,'⛲','広場'],cafe:[150,880,'🍰','おやつ屋さん'],market:[810,930,'🛍','マーケット'],home:[70,1090,'🏡','みんなの家'],
+ cardroom:[460,1370,'🃏','カード部屋'],hill:[800,170,'🌄','ひなたの丘']};
+// いまの様子(HOME の止め絵と同じ)
+const NOW={plaza:{who:[['kiki','happy'],['myua','happy']],bond:'🤝Lv5 名コンビ',eye:1,bub:'おやつ中…'},
+ studio:{who:[['momosuke','excited'],['atsu','happy']],bond:'🤝Lv2',eye:1,bub:'♪ 練習中'},
+ library:{who:[['kyuko','normal']],bub:'読書中'},home:{who:[['dra','troubled','lonely']],bub:'さみしそう…'},
+ cardroom:{who:[['sorashido','excited'],['erubin','happy']],eye:1}};
+const NIGHT={plaza:{who:[['kiki','normal'],['myua','happy'],['kyuko','happy']],bond:'🤝3人',eye:1,bub:'星を見に…'},
+ studio:{who:[['momosuke','excited']],bub:'♪ 夜の練習'},home:{who:[['dra','normal'],['atsu','happy']],zz:1,bub:'おやすみ'},
+ cardroom:{who:[['sorashido','excited'],['erubin','happy']],eye:1,bub:'計算中…'}};
+const glows=(t,s)=>{ if(t!=='night') return '';
+ const W=[[190,330,40],[260,380,30],[700,430,34],[770,470,30],[120,860,34],[170,900,28],[780,960,40],[860,980,30],[430,1330,46],[500,1330,46],[300,1500,60],[640,1500,60]];
+ const L=[[470,760,60],[640,560,90,'blue'],[478,790,70,'blue'],[340,1060,40],[600,1060,40]];
+ return W.map(([x,y,r])=>`<div class="glow win" style="left:${x-r}px;top:${y-r}px;width:${2*r}px;height:${2*r}px"></div>`).join('')+
+   L.map(([x,y,r,c])=>`<div class="glow ${c||'lamp'}" style="left:${x-r}px;top:${y-r}px;width:${2*r}px;height:${2*r}px"></div>`).join('');};
+const motes=(t)=>{ // 場所ごとの小さな動き(止め絵では1こま)
+ const m={morning:[[280,300,'🐦'],[330,280,'🐦'],[160,830,'♨']],noon:[[250,300,'♪'],[290,270,'♫'],[160,830,'♨'],[470,1300,'✦'],[840,880,'🎏']],
+  evening:[[250,300,'♪'],[160,830,'♨'],[470,1300,'✦'],[520,1320,'✦']],night:[[250,300,'♪'],[470,1300,'✦']]}[t]||[];
+ return m.map(([x,y,c])=>`<div class="mote" style="left:${x}px;top:${y}px;font-size:${c==='♨'?22:26}px">${c}</div>`).join('');};
+const stars=(t,w,h)=>{ if(t!=='night') return ''; let s='';let k=7;for(let i=0;i<40;i++){k=(k*9301+49297)%233280;const x=k%941;k=(k*9301+49297)%233280;const y=k%260;s+=`<div class="star" style="left:${x}px;top:${y}px;opacity:${.4+(i%5)/8}"></div>`;}
+ for(let i=0;i<14;i++){k=(k*9301+49297)%233280;const x=k%941;k=(k*9301+49297)%233280;const y=500+k%900;s+=`<div class="fly" style="left:${x}px;top:${y}px"></div>`;} return s;};
+// 地図: w,h=窓の大きさ / sc=絵の縮尺 / oy=絵の上を何px切るか(元の大きさで)/ ox=横のずらし(画面px)
+function map({w,h,sc,oy,ox=0,t='noon',now=NOW,pins=true,edges=true,top=0,left=0,side=false}){
+ const dx=ox, art=`<div class="art" style="transform:translate(${dx}px,${-oy*sc}px) scale(${sc})"><img class="v" src="${R}data/images/home-background.jpg">${glows(t)}${stars(t)}${motes(t)}</div>`;
+ let pinH='';
+ if(pins) for(const [k,[x,y,ic,nm]] of Object.entries(P)){
+  const sx=dx+x*sc, sy=(y-oy)*sc; if(sy<40||sy>h-4||sx<0||sx>w) continue;
+  const n=now[k];
+  pinH+=`<div class="pin ${n?'':'empty'}" style="left:${sx}px;top:${sy}px">${n?`<div class="who">${n.bond?`<span class="bond">${n.bond}</span>`:''}${n.who.map(([i,e,c])=>`<img class="${c||''}" src="${F(i,e)}">`).join('')}${n.eye?'<span class="eye">👀</span>':''}${n.zz?'<span class="zz">💤</span>':''}${n.bub?`<span class="bub">${n.bub}</span>`:''}</div>`:''}<div class="plq"><i>${ic}</i>${nm}</div></div>`;}
+ let edgeH='';
+ if(edges) for(const [k,[x,y,ic,nm]] of Object.entries(P)){ const sy=(y-oy)*sc; const n=now[k]; if(!n) continue;
+  if(sy<40) edgeH+=`<div class="edge" style="left:${Math.min(w-150,dx+x*sc-40)}px;top:8px">▲ ${ic}${nm}${n.who.map(([i,e])=>`<img src="${F(i,e)}">`).join('')}</div>`;
+  if(sy>h-4) edgeH+=`<div class="edge" style="left:${Math.max(6,dx+x*sc-70)}px;bottom:8px">▼ ${ic}${nm}${n.who.map(([i,e])=>`<img src="${F(i,e)}">`).join('')}${n.eye?' 👀':''}</div>`;}
+ return `<div class="map t-${t}" style="left:${left}px;top:${top}px;width:${w}px;height:${h}px">${side?'<div class="sidefill"></div>':''}${art}<div class="tint a"></div><div class="tint b"></div>${pinH}${edgeH}</div>`;}
+const header=({t='noon',clock='☀ 昼 10〜14時',left='午後まで あと1時間12分',land=false}={})=>`<div class="hdr" style="${land?'right:auto;width:100%':''}"><div class="back">←</div><div class="en">ASSISTANT LIFE · TOWN</div><div class="ti">助手ライフ</div>
+ <div class="clock"><b>${clock}</b><small>${left}</small></div>
+ <div class="meter"><span class="chip">🎉 にぎやか ×1.5</span><span class="bar"><i></i><s style="left:17%"></s><s style="left:50%"></s></span><small>お祭りまで 50</small></div></div>`;
+const tiles=(cmp)=>`<div class="tiles">
+ <div class="tile watch"><span class="ic">👀</span><span class="cnt">あと14</span><b>見守る</b><small>3か所で話してる</small><span class="wm">WATCH</span></div>
+ <div class="tile call"><span class="ic">💬</span><span class="cnt">無料</span><b>声をかける</b><small>ドラがさみしそう</small><span class="wm">INVITE</span></div>
+ <div class="tile give"><span class="ic">🧺</span><span class="cnt">あと1回</span><b>渡す</b><small>差し入れ2・しるし1</small><span class="wm">GIFT</span></div>
+ <div class="tile visit"><span class="ic">🔒</span><b>訪ねる</b><small>だれかと友情Lv5で開く</small><span class="wm">VISIT</span></div></div>`;
+const PEOPLE=[['myua','happy','⛲','Lv5'],['kiki','happy','⛲','Lv4'],['momosuke','excited','🎵','Lv3'],['dra','troubled','🏡','Lv3','lonely'],['atsu','happy','🎵','Lv2'],['kyuko','normal','📚','Lv2'],['sorashido','excited','🃏','Lv1'],['erubin','happy','🃏','Lv1']];
+const people=(sz)=>`<div class="people">${PEOPLE.map(([i,e,at,lv,c])=>`<div class="pp" ${sz?`style="width:${sz}px"`:''}><img class="${c||''}" src="${F(i,e)}" ${sz?`style="width:${sz-8}px;height:${sz-8}px"`:''}><span class="at" ${sz?`style="top:${sz-26}px"`:''}>${at}</span><span>💗${lv}</span></div>`).join('')}</div>`;
+const icons=()=>`<div class="icons"><span class="on"><i>🗺</i>町</span><span><i>🤝</i>友情<b class="bd"></b></span><span><i>📖</i>アルバム</span><span><i>🎒</i>道具</span><span><i>❓</i>遊びかた</span></div>`;
+
+const mini=(inner,cap)=>`<div><div style="width:190px;height:411px;border-radius:18px;border:2px solid #334155;overflow:hidden;position:relative;background:#070b1d">${inner}</div><p style="font-size:10px;font-weight:800;color:#cbd5e1;width:190px;margin-top:4px;line-height:1.35">${cap}</p></div>`;
+const SCENE=`<div class="scene"><div class="bgimg" style="background-image:url(${R}images/story-bg/monhero_plaza_evening.jpg)"></div>
+  <div class="tint" style="background:linear-gradient(180deg,rgba(255,170,90,.25),transparent 40%,rgba(10,6,30,.65) 75%)"></div>
+  <div class="tint" style="background:linear-gradient(115deg,rgba(255,220,150,.45),transparent 45%);mix-blend-mode:screen"></div>
+  <img class="stand" src="${ST('kiki','normal')}" style="left:-222px;height:430px;width:645px;bottom:250px">
+  <img class="stand" src="${ST('myua','surprise')}" style="left:-30px;height:440px;width:660px;bottom:244px">
+  <span class="emo" style="left:62px;top:250px">♪</span><span class="emo" style="left:300px;top:220px">✨</span>
+  <span class="mote" style="left:40px;top:180px;font-size:16px">🍂</span><span class="mote" style="left:330px;top:330px;font-size:14px">🍂</span>
+ </div>
+ <div class="hdr" style="background:linear-gradient(180deg,#1a0f2ef2,#1a0f2e00)"><div class="back">←</div><div class="en">PLAZA · EVENING</div><div class="ti" style="font-size:20px">⛲ 広場</div>
+  <div class="clock"><b>🌇 夕方</b><small>町へ戻る</small></div>
+  <div class="meter" style="margin-top:8px"><span class="chip" style="background:linear-gradient(90deg,#db2777,#a855f7)">🤝 きき・みゅあ 友情Lv5 名コンビ</span><span class="bar"><i style="width:72%"></i></span><small>Lv6 まで 28</small></div></div>
+ <div class="abs gain" style="left:0;right:0;top:118px"><span>🤝 友情Lv +3</span><span>💗 仲良し度 +2</span><span>🎉 +2</span></div>
+ <span class="spark" style="left:70px;top:105px">✦</span><span class="spark" style="left:320px;top:100px">✧</span><span class="spark" style="left:190px;top:160px">✦</span>
+ <div class="talk" style="left:10px;right:10px;bottom:150px"><div class="nm"><img src="${F('kiki','normal')}">きき</div><p>みゅあちん、ほっぺたに<br>クリームがついていますよ</p><span class="nx">1/3 ・ タップで次へ ▼</span></div>
+ <div class="abs" style="left:10px;right:10px;bottom:68px;display:flex;gap:6px;font-size:10px;font-weight:900;color:#e2e8f0"><span style="flex:1;border-radius:10px;padding:6px 8px;background:#0f172acc;border:1px solid #ffffff22">💬 この場所の思い出 <b style="color:#fde68a">12/40</b></span><span style="flex:1;border-radius:10px;padding:6px 8px;background:#0f172acc;border:1px solid #ffffff22">📷 この2人のアルバム <b style="color:#fde68a">8話</b></span></div>
+ <div class="abs acts" style="left:10px;right:10px;bottom:14px"><span style="background:linear-gradient(135deg,#34d399,#16a34a)">🧺 渡す</span><span style="background:linear-gradient(135deg,#38bdf8,#6366f1)">💬 誘う</span><span style="background:#334155">🗺 町へ</span></div>
+`;
+// ===== 助手たちの家 =====
+document.head.insertAdjacentHTML('beforeend',`<style>
+.sky{position:absolute;inset:0}
+.sky.t-noon{background:linear-gradient(#7cc4f5,#cdeafe 60%,#e6f6d8)}
+.sky.t-morning{background:linear-gradient(#f9c6c9,#fde7c8 55%,#e8f3dc)}
+.sky.t-evening{background:linear-gradient(#5b2a6e,#e8775a 50%,#f6c98b)}
+.sky.t-night{background:linear-gradient(#070b24,#1b2452 60%,#22305e)}
+.backwood{position:absolute;left:0;right:0;bottom:0;background-size:cover;background-position:center bottom;opacity:.75}
+.house{position:absolute}
+.roof{position:absolute;left:-10px;right:-10px;top:0;clip-path:polygon(50% 0,100% 100%,0 100%);background:repeating-linear-gradient(0deg,#7a2e1e 0 7px,#5e2216 7px 9px),#7a2e1e;box-shadow:inset 0 -6px 0 #3b140c}
+.chim{position:absolute;width:22px;background:#6b4a3a;border:2px solid #3b2a20}
+.attic{position:absolute;left:50%;transform:translateX(-50%);width:44px;height:44px;border-radius:50%;border:4px solid #e8c37a;background:#1e293b;display:grid;place-items:center;font-size:15px}
+.hname{position:absolute;left:50%;transform:translateX(-50%);font-size:11px;font-weight:900;padding:2px 10px;border-radius:8px;background:linear-gradient(#5b3a1e,#3b2412);border:1.5px solid #e8c37a;color:#fff3d6;white-space:nowrap}
+.body{position:absolute;background:#6b4423;border-radius:4px;box-shadow:0 10px 24px #0008}
+.room{position:absolute;overflow:hidden;border-radius:3px}
+.room .wall{position:absolute;inset:0}
+.room .floor{position:absolute;left:0;right:0;bottom:0;height:13px;background:repeating-linear-gradient(90deg,#b07a4a 0 22px,#9a6a3e 22px 24px)}
+.room .win{position:absolute;right:7px;top:7px;width:46px;height:32px;border:3px solid #f5e6c8;border-radius:3px;overflow:hidden;background:#000;box-shadow:0 1px 3px #0006}
+.room .win img{width:100%;height:100%;object-fit:cover}
+.room .win:before,.room .win:after{content:"";position:absolute;top:0;bottom:0;width:9px;background:linear-gradient(90deg,#f9a8d4cc,#f472b688);z-index:1}
+.room .win:before{left:0}.room .win:after{right:0;transform:scaleX(-1)}
+.room .plate{position:absolute;left:5px;top:5px;font-size:9.5px;font-weight:900;padding:0 6px;border-radius:6px;background:#fffbeb;color:#422006;border:1px solid #d6b37a;z-index:3}
+.room .lvp{position:absolute;left:5px;top:22px;font-size:8.5px;font-weight:900;padding:0 4px;border-radius:5px;background:#312e81;color:#fde68a;border:1px solid #fde68a88;z-index:3}
+.room .furn{position:absolute;left:5px;bottom:9px;font-size:19px;letter-spacing:1px;z-index:2;filter:drop-shadow(0 1px 1px #0005)}
+.room .ppl{position:absolute;bottom:10px;display:flex;z-index:4}
+.room .ppl img{width:40px;height:40px;border-radius:50%;border:2.5px solid #fff;background:#334155;object-fit:cover;box-shadow:0 2px 6px #0008}
+.room .ppl img+img{margin-left:-10px}.room .ppl img.lonely{border-color:#fbbf24;box-shadow:0 0 10px #fbbf24}
+.room .rb{position:absolute;z-index:5;white-space:nowrap;font-size:9px;font-weight:900;background:#fff;color:#1e293b;border-radius:9px;padding:1px 6px;box-shadow:0 2px 5px #0007}
+.room .off{position:absolute;inset:0;background:rgba(6,9,24,.5);z-index:3}
+.room .lamp{position:absolute;inset:0;background:radial-gradient(circle at 60% 40%,rgba(255,214,140,.45),transparent 70%);mix-blend-mode:screen;z-index:3}
+.room .tag{position:absolute;left:50%;top:50%;transform:translate(-50%,-38%) rotate(-3deg);z-index:6;text-align:center;padding:3px 8px 4px;border-radius:7px;background:linear-gradient(#fef3c7,#fde68a);color:#422006;border:1.5px solid #b45309;box-shadow:0 3px 6px #0009;white-space:nowrap}
+.room .tag b{display:block;font-size:10.5px}.room .tag small{display:block;font-size:8.5px;font-weight:800;color:#7c2d12}
+.room .tag:before{content:"";position:absolute;left:50%;top:-12px;width:1px;height:12px;background:#b45309}
+.room .ask{position:absolute;z-index:6;width:20px;height:20px;border-radius:50%;background:#f472b6;border:2px solid #fff;display:grid;place-items:center;font-size:11px;font-weight:900;box-shadow:0 0 10px #f472b6}
+.liv{position:absolute;overflow:hidden;border-radius:3px;background:linear-gradient(#f3e3c4,#e7cfa2)}
+.board{position:absolute;border-radius:5px;background:#c08a52;border:3px solid #7c4a22;padding:4px 6px;box-shadow:0 2px 5px #0006}
+.board p{font-size:8.5px;font-weight:800;color:#1e293b;background:#fffbeb;border-radius:3px;padding:1px 4px;margin-top:2px;white-space:nowrap}
+.board b{font-size:9px;color:#fff;display:block}
+.door{position:absolute;width:40px;border-radius:18px 18px 0 0;background:linear-gradient(#8b5a2b,#6b4423);border:2px solid #3b2412}
+.door:after{content:"";position:absolute;right:6px;top:50%;width:5px;height:5px;border-radius:50%;background:#fde68a}
+.findbtn{position:absolute;z-index:8;display:flex;align-items:center;gap:5px;font-size:11px;font-weight:900;padding:6px 10px;border-radius:999px;background:linear-gradient(135deg,#7c3aed,#db2777);border:1.5px solid #fff9;box-shadow:0 4px 12px #0009}
+.trow{display:flex;gap:6px}
+.trow .tile{flex:1;height:58px;padding:6px 6px 4px 6px;clip-path:polygon(0 0,88% 0,100% 20%,100% 100%,0 100%);text-align:left}
+.trow .tile .ic{position:static;font-size:17px;display:block;line-height:1}
+.trow .tile b{font-size:12px;margin-top:2px}.trow .tile small{font-size:8.5px}
+.trow .tile .cnt{right:6px;top:4px;font-size:8.5px;padding:0 4px}
+.sess{background:linear-gradient(135deg,#a855f7,#ec4899)}
+.sheet{position:absolute;left:0;right:0;bottom:0;border-radius:22px 22px 0 0;background:linear-gradient(#1e1b4b,#0b1020 40%);border-top:2px solid #f9a8d4;box-shadow:0 -10px 30px #000a;z-index:20;overflow:hidden}
+.srow{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed #ffffff1a;font-size:11.5px;font-weight:800}
+.srow .k{width:74px;color:#cbd5e1;font-size:10px;flex:none}
+.bar2{flex:1;height:7px;border-radius:9px;background:#ffffff1f;overflow:hidden}.bar2 i{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fbbf24)}
+.btn4{display:grid;grid-template-columns:1fr 1fr;gap:6px}.btn4 span{text-align:center;font-size:12px;font-weight:900;border-radius:12px;padding:10px 0}
+.tl p{font-size:10.5px;font-weight:700;padding:3px 0;color:#e2e8f0}.tl p b{color:#fde68a;margin-right:6px;font-size:10px}
+.wl{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:12px;background:#0f172acc;border:1px solid #ffffff1f;margin-bottom:5px}
+.wl .fs{display:flex}.wl .fs img{width:30px;height:30px;border-radius:50%;border:2px solid #fff;object-fit:cover}.wl .fs img+img{margin-left:-9px}
+.wl b{font-size:12px}.wl small{display:block;font-size:9.5px;color:#cbd5e1;font-weight:700}
+.wl .go{margin-left:auto;font-size:10px;font-weight:900;border-radius:10px;padding:5px 8px;white-space:nowrap}
+.call2{position:absolute;font-size:10px;font-weight:900;color:#0b1020;background:#fde68a;border-radius:8px;padding:2px 7px;z-index:30;white-space:nowrap;box-shadow:0 2px 6px #000a}
+.stg{display:inline-block;min-width:18px;text-align:center;border-radius:6px;background:#db2777;color:#fff;font-size:9px;margin-right:3px;padding:0 3px}
+</style>`);
+const NM={myua:'みゅあ',kiki:'きき',momosuke:'ももすけ',dra:'ドラ',atsu:'あつ',kyuko:'きゅうこ',sorashido:'ソラシド',erubin:'えるびん'};
+const THEME={myua:['#fde4f0','#f9c4dd'],kiki:['#ece7ff','#d6ccfb'],momosuke:['#ffe9d6','#fdd0a8'],dra:['#e3f8e6','#bfe9c7'],atsu:['#ffe2e2','#f8bcbc'],kyuko:['#e0f2fe','#b9e0f8'],sorashido:['#fff8d6','#f6e59a'],erubin:['#e8edf3','#c9d3df']};
+const FURN={myua:'🪞🎀🍰',kiki:'🫖📚🗿',momosuke:'🎹🎧',dra:'🛏️🍪',atsu:'🥁🐉',kyuko:'📚🎼',sorashido:'🃏🧮',erubin:'⚔️🛡️'};
+const SLV={myua:'🎵Lv12',kiki:'🎵Lv9',momosuke:'🎵Lv15',dra:'🎵Lv4',atsu:'🎵Lv18',kyuko:'🎵Lv7',sorashido:'🎵Lv6',erubin:'🎵Lv5'};
+const VIEW={noon:['monhero_plaza','forest_deep'],morning:['monhero_plaza','forest_morning'],evening:['monhero_plaza_evening','forest_evening'],night:['monhero_night','forest_night']};
+// 部屋ごとの様子(昼)。in … 部屋にいる人 / tag … 出かけている札
+const DAY={
+ myua:{tag:['⛲ 広場へ','ききと ・ 午後まで']}, kiki:{tag:['⛲ 広場へ','みゅあと ・ 午後まで']},
+ momosuke:{tag:['🎵 モンヒロビートへ','あつと ・ 練習中']}, dra:{in:[['dra','troubled','lonely']],bub:'💭 だれか来ないかな…'},
+ atsu:{tag:['🎵 モンヒロビートへ','ももすけと ・ 練習中']}, kyuko:{in:[['kyuko','happy'],['sorashido','excited']],bub:'🃏 2人でカード研究'},
+ sorashido:{tag:['🚪 きゅうこの部屋へ','カード研究中']}, erubin:{tag:['🃏 MFバトルカードへ','ひとりで ・ 対戦中']}};
+const NIGHTH={
+ myua:{in:[['myua','happy'],['kiki','normal']],bub:'🌙 おしゃべり中'}, kiki:{tag:['🚪 みゅあの部屋へ','おしゃべり中']},
+ momosuke:{tag:['🎵 モンヒロビートへ','ひとりで ・ 夜の練習']}, dra:{in:[['dra','normal']],zz:1,bub:'💤'},
+ atsu:{in:[['atsu','happy']],zz:1,bub:'💤'}, kyuko:{in:[['kyuko','happy']],bub:'📖 読書中'},
+ sorashido:{tag:['🃏 MFバトルカードへ','えるびんと']}, erubin:{tag:['🃏 MFバトルカードへ','ソラシドと']}};
+function room(id,x,y,w,h,t,st,i,opt={}){
+ const [c1,c2]=THEME[id], view=VIEW[t][i%2], s=st[id]||{};
+ const ppl=s.in?`<div class="ppl" style="right:${Math.max(8,w/2-36)}px">${s.in.map(([a,e,c])=>`<img class="${c||''}" src="${F(a,e)}">`).join('')}</div>`:'';
+ const bub=s.bub?`<span class="rb" style="right:${Math.max(4,w/2-50)}px;bottom:${s.in?54:30}px">${s.bub}</span>`:'';
+ const lit=s.in&&(t==='night'||t==='evening')?'<div class="lamp"></div>':'';
+ const off=!s.in?`<div class="off" style="${t==='night'?'background:rgba(3,5,16,.72)':''}"></div>`:'';
+ const tag=s.tag?`<div class="tag"><b>${s.tag[0]}</b><small>${s.tag[1]}</small></div>`:'';
+ return `<div class="room" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px"><div class="wall" style="background:linear-gradient(${c1},${c2});${t==='night'&&s.in?'filter:brightness(.92)':''}${t==='night'&&!s.in?'filter:brightness(.55)':''}"></div>
+  <div class="win"><img src="${R}images/story-bg/${view}.jpg" style="object-position:${i%3*40}% 60%"></div>
+  <span class="plate">${NM[id]}</span>${opt.noLv?'':`<span class="lvp">${SLV[id]}</span>`}<span class="furn">${FURN[id]}</span><div class="floor"></div>
+  ${lit}${off}${ppl}${bub}${tag}${opt.ask&&opt.ask===id?'<span class="ask" style="left:'+(w/2+18)+'px;top:30px">?</span>':''}</div>`;}
+// 家(縦): 4階×2部屋+居間 / 横: 2階×4部屋+居間
+function house({x,y,w,t='noon',st=DAY,land=false,board=true,opt={}}){
+ const wall=6, cols=land?4:2, rows=land?2:4, rh=land?92:88, rw=(w-wall*(cols+1))/cols, lh=land?62:78, roofH=land?44:64;
+ const order=['myua','kiki','momosuke','dra','atsu','kyuko','sorashido','erubin'];
+ let rooms='';
+ order.forEach((id,i)=>{const r=Math.floor(i/cols),c=i%cols;rooms+=room(id,wall+c*(rw+wall),wall+r*(rh+wall),rw,rh,t,st,i+r,opt);});
+ const bodyH=wall+rows*(rh+wall)+lh+wall, ly=wall+rows*(rh+wall);
+ const bd=board?`<div class="board" style="left:10px;top:8px;width:${land?190:170}px"><b>📌 今日あったこと</b><p>13:40 ももすけ・あつ セッションで 🎵Lv↑</p><p>12:10 きき・みゅあ 広場でおやつ</p>${land?'':'<p>11:00 ドラ 部屋でお昼寝</p>'}</div>`:'';
+ const liv=`<div class="liv" style="left:${wall}px;top:${ly}px;width:${w-2*wall}px;height:${lh}px;${t==='night'?'filter:brightness(.6)':''}">${bd}
+  <div class="door" style="left:${w/2+40}px;bottom:0;height:${lh-14}px"></div><span class="abs" style="left:${w/2+86}px;bottom:8px;font-size:${land?22:26}px">🛋️</span>
+  <span class="abs" style="right:10px;top:6px;font-size:9px;font-weight:900;color:#7c4a22">みんなの居間</span>${t==='night'?'<div class="abs" style="inset:0;background:radial-gradient(circle at 75% 70%,rgba(255,170,80,.5),transparent 60%);mix-blend-mode:screen"></div><span class="abs" style="right:44px;bottom:6px;font-size:18px">🔥</span>':''}</div>`;
+ return `<div class="house" style="left:${x}px;top:${y}px;width:${w}px;height:${roofH+bodyH}px">
+  <div class="chim" style="left:${w*.72}px;top:${roofH*.05}px;height:${roofH*.6}px"></div>${t==='night'||t==='morning'?'':`<span class="abs" style="left:${w*.72-4}px;top:${-14}px;font-size:16px;opacity:.8">☁️</span>`}
+  <div class="roof" style="height:${roofH}px"></div>
+  ${land?`<span class="hname" style="top:${roofH-22}px">🏡 助手の家</span>`:`<div class="attic" style="top:${roofH-56}px">🔒</div><span class="hname" style="top:${roofH-14}px">🏡 助手の家</span>`}
+  <div class="body" style="left:0;top:${roofH}px;width:${w}px;height:${bodyH}px">${rooms}${liv}</div></div>`;}
+const houseMini=(x,y,sc,t,st,opt={})=>`<div class="abs" style="left:${x}px;top:${y}px;width:366px;height:560px;transform:scale(${sc});transform-origin:0 0">${house({x:0,y:30,w:366,t,st,board:false,opt:{noLv:true,...opt}})}</div>`;
+const housePage=({t='noon',st=DAY,clock,left,land=false,ask})=>{
+ if(!land) return `<div class="sky t-${t}"></div><div class="backwood" style="height:420px;background-image:url(${R}images/story-bg/${VIEW[t][1]}.jpg)"></div>
+ ${t==='night'?stars2(390,260):''}
+ ${house({x:12,y:120,w:366,t,st,opt:{ask}})}
+ <div class="hdr" style="background:linear-gradient(180deg,#140b2ef2,#140b2e99 75%,#140b2e00)"><div class="back">←</div><div class="en">ASSISTANT LIFE · HOUSE</div><div class="ti">助手ライフ</div>
+ <div class="clock"><b>${clock}</b><small>${left}</small></div>
+ <div class="meter"><span class="chip">🎉 にぎやか ×1.5</span><span class="bar"><i></i><s style="left:17%"></s><s style="left:50%"></s></span><small>お祭りまで 50</small></div></div>
+ <div class="findbtn" style="right:10px;top:132px">📋 みんなの居場所 ›</div>
+ <div class="abs" style="left:10px;right:10px;top:672px"><div class="lbl">今日やれること<em>朝4時に戻る</em></div><div class="trow">
+  <div class="tile watch"><span class="ic">👀</span><span class="cnt">あと14</span><b>見守る</b><small>3か所</small></div>
+  <div class="tile call"><span class="ic">💬</span><span class="cnt">無料</span><b>声をかける</b><small>ドラがさみしそう</small></div>
+  <div class="tile give"><span class="ic">🧺</span><span class="cnt">1回</span><b>渡す</b><small>差し入れ2</small></div>
+  <div class="tile sess"><span class="ic">🎵</span><b>モンビー</b><small>一緒に行く</small></div></div></div>
+ <div class="abs" style="left:10px;right:10px;bottom:12px"><div class="icons"><span class="on"><i>🏡</i>家</span><span><i>📋</i>居場所</span><span><i>🤝</i>友情<b class="bd"></b></span><span><i>📖</i>アルバム</span><span><i>🎒</i>道具</span></div></div>`;
+ return '';};
+const stars2=(w,h)=>{let s='',k=11;for(let i=0;i<34;i++){k=(k*9301+49297)%233280;const x=k%w;k=(k*9301+49297)%233280;const y=k%h;s+=`<div class="star" style="left:${x}px;top:${y}px;opacity:${.4+(i%5)/8}"></div>`;}return s;};
+// 居場所の地図の様子(家の止め絵とそろえる)
+const NOWH={plaza:{who:[['kiki','happy'],['myua','happy']],bond:'🤝Lv5',eye:1,bub:'おやつ中…'},studio:{who:[['momosuke','excited'],['atsu','happy']],bond:'🤝Lv2',eye:1,bub:'♪ 練習中'},
+ home:{who:[['dra','troubled','lonely'],['kyuko','happy'],['sorashido','excited']],bub:'家に3人'},cardroom:{who:[['erubin','happy']]}};
+P.home=[70,1090,'🏡','助手の家'];
+
+let H='<section id="tate">';
+// ---- 縦 1段目 ----
+H+=`<div class="row">
+<div><p class="cap">① HOME(縦): 遊んでいる所の施設の横に顔だけ(本物の HOME に重ねた)<small>🎵ビート=練習中の2人 / 🃏カード=対戦中の1人 / 新しい施設「🏡 助手ライフ」=家と町にいる5人(5人目からは2段)。さみしそうなときは黄色の縁。帯は作らない</small></p><div class="ph"><img src="house-home-p.png" style="width:100%;height:100%"></div></div>
+<div><p class="cap">② 助手ライフ(縦・昼) = 助手たちの家<small>8人の部屋の断面。いる部屋は灯りがついて顔の丸、出かけている部屋は灯りが消えて札(行き先・だれと)。下に みんなの居間と「今日あったこと」の掲示板</small></p><div class="ph">
+ ${housePage({t:'noon',clock:'☀ 昼 10〜14時',left:'午後まで あと1時間12分'})}
+ <span class="call2" style="left:110px;top:262px">↓ 出かけている札</span><span class="call2" style="left:20px;top:462px">2人で遊んでいる部屋 →</span><span class="call2" style="left:196px;top:604px">← セッションも載る</span>
+</div></div>
+<div><p class="cap">②' 同じ家の夜(21〜24時)<small>空に星、窓の外も夜。いる部屋だけ灯りがともり、寝ている人は 💤。居間は暖炉。みゅあの部屋に ききが遊びに来ている</small></p><div class="ph">
+ ${housePage({t:'night',st:NIGHTH,clock:'🌙 夜 21〜24時',left:'深夜まで あと48分'})}
+</div></div>`;
+// ③ 部屋を押した(いる)
+const sheetIn=`<div class="sheet" style="height:470px;padding:12px 14px">
+ <img src="${ST('dra','troubled')}" class="abs" style="right:-30px;top:-6px;height:190px;width:190px;object-fit:contain;object-position:right top;opacity:.95">
+ <div style="font-size:9px;letter-spacing:.18em;color:#f9a8d4;font-weight:900">ROOM · DRA</div>
+ <div style="font-size:22px;font-weight:900">ドラの部屋</div>
+ <div style="font-size:11.5px;font-weight:800;margin-top:4px">🏡 部屋で ごろごろ ・ ひとり</div>
+ <div style="font-size:11px;font-weight:800;color:#fde68a;margin-top:2px">💭 さみしそう(だれか来てほしい)</div>
+ <div style="margin-top:44px">
+  <div class="srow"><span class="k">💗 仲良し度</span><b>Lv3</b><span class="bar2"><i style="width:40%"></i></span><small style="font-size:9px;color:#cbd5e1">次まで 60</small></div>
+  <div class="srow"><span class="k">🤝 友情Lv</span><span style="display:flex;gap:8px;font-size:10.5px"><span>みゅあ <b style="color:#f9a8d4">Lv6</b></span><span>ももすけ <b style="color:#fbbf24">Lv3</b></span><span>あつ <b>Lv1</b></span></span></div>
+  <div class="srow"><span class="k">🎵 セッション</span><b>セッションLv4</b><small style="font-size:9.5px;color:#cbd5e1;margin-left:auto">一緒に 6回</small></div>
+  <div class="tl" style="padding:6px 0 4px"><div style="font-size:10px;color:#cbd5e1;font-weight:900">今日あったこと</div><p><b>朝</b>ももすけと広場を散歩</p><p><b>昼</b>部屋でお昼寝(ひとり)</p></div>
+ </div>
+ <div class="btn4" style="margin-top:6px"><span style="background:linear-gradient(135deg,#fb7185,#f59e0b)">💬 話す</span><span style="background:linear-gradient(135deg,#38bdf8,#6366f1)">👀 ようすを見る</span><span style="background:linear-gradient(135deg,#34d399,#16a34a)">🧺 渡す</span><span style="background:linear-gradient(135deg,#a855f7,#ec4899)">🎵 一緒にモンビー</span></div>
+</div>`;
+const sheetOut=`<div class="sheet" style="height:470px;padding:12px 14px">
+ <img src="${ST('momosuke','excited')}" class="abs" style="right:-14px;top:-4px;height:170px;width:170px;object-fit:contain;object-position:right top">
+ <div style="font-size:9px;letter-spacing:.18em;color:#f9a8d4;font-weight:900">ROOM · MOMOSUKE</div>
+ <div style="font-size:22px;font-weight:900">ももすけの部屋</div>
+ <div style="font-size:11.5px;font-weight:800;margin-top:4px">🎵 モンヒロビートで練習中 ・ あつと</div>
+ <div style="font-size:11px;font-weight:800;color:#c4b5fd;margin-top:2px">⏱ 午後(14時)まで いる</div>
+ <div style="margin-top:44px">
+  <div class="srow"><span class="k">💗 仲良し度</span><b>Lv3</b><span class="bar2"><i style="width:62%"></i></span></div>
+  <div class="srow"><span class="k">🤝 あつと</span><b>友情Lv2</b><small style="font-size:9.5px;color:#cbd5e1;margin-left:auto">セッションのデュオの +3 も同じ値</small></div>
+  <div class="srow"><span class="k">🎵 セッション</span><b>セッションLv15</b><small style="font-size:9.5px;color:#cbd5e1;margin-left:auto">一緒に 21回</small></div>
+  <div class="tl" style="padding:6px 0 4px"><div style="font-size:10px;color:#cbd5e1;font-weight:900">今日あったこと</div><p><b>朝</b>ドラと広場を散歩</p><p><b>13:40</b>セッションで あつとデュオ → 🎵Lv15 に上がった</p></div>
+ </div>
+ <div style="margin-top:6px;border-radius:14px;padding:11px 0;text-align:center;font-size:14px;font-weight:900;background:linear-gradient(135deg,#a855f7,#ec4899);box-shadow:0 0 18px #ec489988">🎵 会いに行く(セッション券なし)<small style="display:block;font-size:9.5px;font-weight:800;opacity:.9">モンビーにいるあいだ(14時まで)は回数を使わない</small></div>
+ <div class="btn4" style="margin-top:6px"><span style="background:linear-gradient(135deg,#38bdf8,#6366f1)">👀 見守りに行く</span><span style="background:linear-gradient(135deg,#34d399,#16a34a)">🧺 渡す</span></div>
+</div>`;
+H+=`<div><p class="cap">③ 部屋を押す(いるとき)<small>その助手の いまどこで誰と・気持ち・仲良し度・友情Lv・セッションLv・今日あったこと。部屋にいるので その場で 話す/ようすを見る/渡す/一緒にモンビー</small></p><div class="ph">
+ ${housePage({t:'noon',clock:'☀ 昼 10〜14時',left:'午後まで あと1時間12分'})}<div class="abs" style="inset:0;background:#0009;z-index:15"></div>${sheetIn}</div></div>
+<div><p class="cap">③' 部屋を押す(出かけているとき)<small>行き先と、いつまでいるか。モンヒロビートにいるときは「会いに行く(券なし)」で、その助手とセッションへ(線引きは❺で選ぶ)</small></p><div class="ph">
+ ${housePage({t:'noon',clock:'☀ 昼 10〜14時',left:'午後まで あと1時間12分'})}<div class="abs" style="inset:0;background:#0009;z-index:15"></div>${sheetOut}</div></div>
+</div>`;
+// ---- 縦 2段目: 入場・居場所・場面・先々 ----
+const entA=`<div class="sky t-noon"></div><div class="backwood" style="height:220px;background-image:url(${R}images/story-bg/forest_deep.jpg)"></div>
+ ${houseMini(12,110,.45,'noon',{})}
+ <div class="abs" style="left:12px;top:153px;width:165px;height:211px;background:repeating-linear-gradient(0deg,#f5e6c8 0 10px,#e8d3a8 10px 12px);border-radius:3px;box-shadow:inset 0 0 0 3px #6b4423"></div>
+ ${[0,1,2,3].map(r=>[0,1].map(c=>`<div class="abs" style="left:${36+c*78}px;top:${164+r*40}px;width:40px;height:24px;border:3px solid #6b4423;background:${r===1&&c===1||r===2?'#fde68a':'#94a3b8'};box-shadow:${r===1&&c===1||r===2?'0 0 10px #fbbf24':'none'}"></div>`).join('')).join('')}
+ <div class="door" style="left:76px;top:330px;height:34px"></div>
+ <div class="abs" style="left:0;right:0;top:40px;text-align:center"><div style="font-size:8px;letter-spacing:.2em;color:#9d174d;font-weight:900">ASSISTANT LIFE</div><div style="font-size:22px;font-weight:900;color:#fff;text-shadow:0 2px 8px #9d174d">助手ライフ</div></div>`;
+const entB=`<div class="sky t-noon"></div>${houseMini(-30,40,.68,'noon',DAY)}
+ <div class="abs" style="left:0;top:110px;width:40px;height:300px;background:repeating-linear-gradient(0deg,#f5e6c8 0 10px,#e8d3a8 10px 12px);box-shadow:4px 0 10px #0008"></div><div class="abs" style="right:0;top:110px;width:40px;height:300px;background:repeating-linear-gradient(0deg,#f5e6c8 0 10px,#e8d3a8 10px 12px);box-shadow:-4px 0 10px #0008"></div>
+ <span class="abs" style="left:42px;top:250px;font-size:18px;text-shadow:0 0 6px #000">◀</span><span class="abs" style="right:42px;top:250px;font-size:18px;text-shadow:0 0 6px #000">▶</span>`;
+const entC=`<div class="sky t-noon"></div>${houseMini(4,30,.5,'noon',DAY)}
+ <span class="abs" style="left:150px;top:150px;font-size:16px">✨</span><span class="abs" style="left:150px;top:196px;font-size:16px">✨</span>
+ <div class="abs" style="left:6px;right:6px;bottom:8px;border-radius:12px;border:2px solid #f472b6;background:#020617ee;padding:6px 8px;font-size:9.5px;font-weight:700;line-height:1.45"><b style="color:#f9a8d4;font-size:9px">みゅあ</b><br>おかえり、テストちん！ あたしは いま ひめちんと広場だよ〜</div>`;
+const listH=`<div class="abs" style="inset:0;background:radial-gradient(circle at 50% 20%,#3b1d5a,#140b2e 60%,#070b1d)"></div>
+ ${map({w:390,h:300,sc:.30,oy:300,ox:54,t:'noon',now:NOWH,top:96,side:true})}
+ <div class="hdr" style="background:linear-gradient(180deg,#140b2e,#140b2ee6 80%,#140b2e00)"><div class="back">←</div><div class="en">ASSISTANT LIFE · WHERE</div><div class="ti">みんなの居場所</div><div class="clock"><b>☀ 昼</b><small>午後に入れかわる</small></div></div>
+ <div class="abs" style="left:10px;right:10px;top:404px">
+  <div class="wl"><span class="fs"><img src="${F('dra','troubled')}" style="border-color:#fbbf24"><img src="${F('kyuko')}"><img src="${F('sorashido','excited')}"></span><span><b>🏡 助手の家</b><small>ドラ(ひとり・さみしそう)/きゅうこの部屋に ソラシド</small></span><span class="go" style="background:#334155">家へ ›</span></div>
+  <div class="wl"><span class="fs"><img src="${F('kiki')}"><img src="${F('myua')}"></span><span><b>⛲ 広場</b><small>きき・みゅあ ・ 🤝Lv5 名コンビ ・ おやつ</small></span><span class="go" style="background:linear-gradient(135deg,#fb7185,#f59e0b)">👀 見守る</span></div>
+  <div class="wl"><span class="fs"><img src="${F('momosuke','excited')}"><img src="${F('atsu')}"></span><span><b>🎵 モンヒロビート</b><small>ももすけ・あつ ・ 練習中 ・ 14時まで</small></span><span class="go" style="background:linear-gradient(135deg,#a855f7,#ec4899)">🎵 会いに行く</span></div>
+  <div class="wl"><span class="fs"><img src="${F('erubin')}"></span><span><b>🃏 MFバトルカード</b><small>えるびん ・ ひとりで対戦中</small></span><span class="go" style="background:#334155">見る ›</span></div>
+  <p style="font-size:9.5px;color:#cbd5e1;font-weight:700;margin-top:4px">地図の場所や行を押すと、その場面へ。時間帯が変わると みんな動く</p>
+ </div>`;
+H+=`<div class="row">
+<div><p class="cap">④ 入場の演出(縦)<small>1. 外から家(題が出る・窓の灯りは今いる部屋)→ 2. 正面の壁が左右に開く → 3. 部屋に顔がポンと入り、選んでいる助手がひとこと({name} で呼ぶ)。その日2回目からは 2→3 だけ</small></p>
+ <div style="display:flex;gap:8px">${mini(entA,'1. 家の正面(0.3秒)。空は今の時間帯')}${mini(entB,'2. 壁が左右に開く(0.5秒)')}${mini(entC,'3. 顔が入って、ひとこと')}</div>
+ <p class="cap" style="margin-top:12px">⑦ あとで入るものの置き場所(家のどこに入るか)<small>番号は段階。段階1 は いる・いない・部屋の札・居場所・場面・セッションLv の札と今日あったこと</small></p>
+ <div style="display:flex;gap:10px;align-items:flex-start"><div style="position:relative;width:200px;height:300px;border-radius:14px;overflow:hidden;border:2px solid #334155"><div class="sky t-noon"></div>${houseMini(8,0,.5,'noon',DAY,{ask:'kyuko'})}
+  <span class="abs stg" style="left:92px;top:22px">6</span><span class="abs stg" style="left:20px;top:110px">1</span><span class="abs stg" style="left:150px;top:200px">4</span><span class="abs stg" style="left:30px;top:268px">3</span><span class="abs stg" style="left:150px;top:268px">2</span><span class="abs" style="left:4px;bottom:2px;font-size:16px">🐾</span><span class="abs stg" style="left:22px;bottom:4px">5</span></div>
+  <div style="font-size:10.5px;font-weight:800;line-height:1.55;width:200px"><span class="stg">1</span>部屋(いる・いない・札)・セッションLv の札・掲示板<br><span class="stg">2</span>玄関=出かける先が増える(遊び場)。モンビーの助手に券なしで会いに行く<br><span class="stg">3</span>居間・部屋で 2〜3人が遊ぶ・訪ねて話す・小さな遊び<br><span class="stg">4</span>部屋に「?」= 相談(この曲どう叩く?/デッキどうしよう)。答えで育ち方が変わる<br><span class="stg">5</span>庭と部屋に助手のマスモン。編成の相談・「一緒に神殿に行こう」<br><span class="stg">6</span>屋根裏=お泊まり会・部屋の飾り付け・季節の行事</div></div>
+</div>
+<div><p class="cap">⑤ 📋 みんなの居場所(詳しく見るボタンの先)<small>上に町の地図(前の案の地図をここへ)、下に場所ごとの一覧。いつまでいるか・だれと・友情Lv。モンビーにいる助手には「会いに行く」</small></p><div class="ph">${listH}</div></div>
+<div><p class="cap">⑥ 出かけ先の場面(広場・夕方)<small>居場所や HOME の顔から入る。背景はその場所の絵、2人の立ち絵で掛け合い → 友情Lv・仲良し度・にぎわいが花火で上がる</small></p><div class="ph">${SCENE}</div></div>
+</div></section>`;
+// ---- 横 ----
+H+=`<section id="yoko"><div class="row"><div><p class="cap w">⑧ HOME(横): 同じく施設の横に顔。「🏡 助手ライフ」は右の列(神殿とマーケットのあいだ)</p><div class="ld"><img src="house-home-l.png" style="width:100%;height:100%"></div></div>
+<div><p class="cap w">⑨ 助手ライフ(横・夕方): 2階建てに4部屋ずつ。右に 題・時間・にぎわい・今日やれること・アイコンの列</p><div class="ld">
+ <div class="sky t-evening" style="right:290px"></div><div class="backwood" style="right:290px;height:200px;background-image:url(${R}images/story-bg/forest_evening.jpg)"></div>
+ ${house({x:14,y:36,w:526,t:'evening',st:DAY,land:true})}
+ <div class="findbtn" style="left:16px;top:10px">📋 みんなの居場所 ›</div>
+ <div class="abs" style="left:554px;top:0;right:0;bottom:0;background:linear-gradient(180deg,#1a0f2e,#0b1020);padding:8px 10px">
+  <div style="display:flex;align-items:flex-start;gap:6px"><span style="font-size:18px;color:#e2e8f0;width:22px">←</span><div style="flex:1"><div style="font-size:8px;letter-spacing:.18em;font-weight:900;color:#f9a8d4">ASSISTANT LIFE · HOUSE</div><div style="font-size:19px;font-weight:900;line-height:1.05;background:linear-gradient(90deg,#fff,#fbcfe8,#fde68a);-webkit-background-clip:text;color:transparent">助手ライフ</div></div><div style="text-align:right;font-size:10px;font-weight:900;border:1px solid #ffffff33;border-radius:10px;padding:2px 6px;background:#0f172a">🌇 夕方<br><small style="font-size:8px;color:#cbd5e1;font-weight:700">夜まで 1:12</small></div></div>
+  <div class="meter" style="margin:6px 0 8px 0"><span class="chip">🎉 にぎやか ×1.5</span><span class="bar"><i></i></span><small>お祭りまで 50</small></div>
+  <div class="tiles" style="gap:6px">
+   <div class="tile watch" style="height:50px;padding:5px 8px 4px 40px"><span class="ic" style="font-size:22px;top:10px">👀</span><span class="cnt">あと14</span><b style="font-size:14px">見守る</b><small>3か所</small></div>
+   <div class="tile call" style="height:50px;padding:5px 8px 4px 40px"><span class="ic" style="font-size:22px;top:10px">💬</span><b style="font-size:14px">声をかける</b><small>ドラがさみしそう</small></div>
+   <div class="tile give" style="height:50px;padding:5px 8px 4px 40px"><span class="ic" style="font-size:22px;top:10px">🧺</span><span class="cnt">1回</span><b style="font-size:14px">渡す</b><small>差し入れ2</small></div>
+   <div class="tile sess" style="height:50px;padding:5px 8px 4px 40px"><span class="ic" style="font-size:20px;top:10px">🎵</span><b style="font-size:14px">モンビー</b><small>一緒に行く</small></div></div>
+  <div class="icons" style="margin-top:10px">${['🏡 家','📋 居場所','🤝 友情','📖','🎒'].map((s,i)=>`<span class="${i?'':'on'}" style="height:36px;font-size:9.5px;flex-direction:row;gap:3px">${s}</span>`).join('')}</div>
+  <p style="font-size:9.5px;color:#cbd5e1;font-weight:700;margin-top:8px">部屋を押すと右にその助手のこと</p>
+ </div></div></div></div>
+<div class="row"><div><p class="cap w">⑩ 部屋を押す(横): 家はそのまま、右の列がその助手のことに替わる</p><div class="ld">
+ <div class="sky t-evening" style="right:290px"></div>
+ ${house({x:14,y:36,w:526,t:'evening',st:DAY,land:true})}<div class="abs" style="left:0;top:0;width:554px;bottom:0;background:#0006"></div>
+ <div class="abs" style="left:14px;top:36px;width:0;height:0"></div>
+ <div class="abs" style="left:554px;top:0;right:0;bottom:0;background:linear-gradient(180deg,#1e1b4b,#0b1020);padding:10px 12px;border-left:2px solid #f9a8d4">
+  <img src="${F('dra','troubled')}" style="position:absolute;right:12px;top:10px;width:52px;height:52px;border-radius:50%;border:2.5px solid #fbbf24">
+  <div style="font-size:8px;letter-spacing:.18em;color:#f9a8d4;font-weight:900">ROOM · DRA</div><div style="font-size:18px;font-weight:900">ドラの部屋</div>
+  <div style="font-size:10.5px;font-weight:800">🏡 ごろごろ・ひとり ・ <span style="color:#fde68a">💭 さみしそう</span></div>
+  <div class="srow" style="margin-top:8px"><span class="k">💗 仲良し度</span><b>Lv3</b><span class="bar2"><i style="width:40%"></i></span></div>
+  <div class="srow"><span class="k">🤝 友情Lv</span><span style="font-size:10px">みゅあ <b style="color:#f9a8d4">Lv6</b> ・ ももすけ <b style="color:#fbbf24">Lv3</b></span></div>
+  <div class="srow"><span class="k">🎵 セッション</span><b>Lv4</b><small style="font-size:9px;color:#cbd5e1;margin-left:auto">6回</small></div>
+  <div class="btn4" style="margin-top:8px;gap:5px"><span style="background:linear-gradient(135deg,#fb7185,#f59e0b);padding:8px 0">💬 話す</span><span style="background:linear-gradient(135deg,#38bdf8,#6366f1);padding:8px 0">👀 ようす</span><span style="background:linear-gradient(135deg,#34d399,#16a34a);padding:8px 0">🧺 渡す</span><span style="background:linear-gradient(135deg,#a855f7,#ec4899);padding:8px 0">🎵 モンビー</span></div>
+ </div></div></div>
+<div><p class="cap w">⑧' HOME(横)で 8人が家・町にいる日(4人ずつ2段)</p><div class="ld"><img src="house-home-all8-l.png" style="width:100%;height:100%"></div></div></div></section>`;
+// ---- A/B ----
+H+=`<section id="ab"><p class="cap w" style="font-size:18px;width:1300px">社長に選んでもらう所(A が おすすめ)</p><div class="row">
+<div><p class="cap">❶ 家の絵の作り方<small>A: 今の止め絵の形。図形と今ある絵で組む(窓の外はお話の背景の絵・家具は絵文字)。すぐ作れる<br>B: 家の断面の絵を新しく描いた1枚にする(絵が届くまでは A で出し、あとで差し替え)</small></p>
+ <div style="display:flex;gap:8px"><div style="position:relative;width:190px;height:300px;border-radius:14px;overflow:hidden;border:3px solid #f472b6"><div class="sky t-noon"></div>${houseMini(4,0,.5,'noon',DAY)}<span class="ab" style="left:6px;top:6px">A</span></div>
+ <div style="position:relative;width:190px;height:300px;border-radius:14px;overflow:hidden;border:2px solid #334155;background:linear-gradient(#cdeafe,#e6f6d8);display:grid;place-items:center;text-align:center;font-size:11px;font-weight:900;color:#334155;padding:16px">🖼<br>描いた家の断面の絵<br>(8部屋・居間・屋根裏)<br><small style="font-weight:700">部屋の位置は A と同じにして、顔と札はその上に重ねる</small><span class="ab" style="left:6px;top:6px;background:#475569">B</span></div></div></div>
+<div><p class="cap">❷ 下の作り<small>A: 今日やれることの札4つ(色・英字はモンヒロビートと同じ)+アイコンの列(家・居場所・友情・アルバム・道具)<br>B: 下にタブ4つ(家・居場所・友情・道具)、今日やれることは1行</small></p>
+ <div style="display:flex;gap:8px"><div style="position:relative;width:190px;height:150px;border-radius:14px;overflow:hidden;border:3px solid #f472b6;background:#0b1020;padding:8px"><div style="transform:scale(.47);transform-origin:0 0;width:370px"><div class="trow"><div class="tile watch"><span class="ic">👀</span><b>見守る</b></div><div class="tile call"><span class="ic">💬</span><b>声をかける</b></div><div class="tile give"><span class="ic">🧺</span><b>渡す</b></div><div class="tile sess"><span class="ic">🎵</span><b>一緒にモンビー</b></div></div><div style="height:8px"></div><div class="icons"><span class="on"><i>🏡</i>家</span><span><i>📋</i>居場所</span><span><i>🤝</i>友情</span><span><i>📖</i>アルバム</span><span><i>🎒</i>道具</span></div></div><span class="ab" style="right:6px;bottom:6px">A</span></div>
+ <div style="position:relative;width:190px;height:150px;border-radius:14px;overflow:hidden;border:2px solid #334155;background:#0b1020">
+  <div class="abs" style="left:6px;right:6px;top:30px;border-radius:10px;border:1px solid #fcd34d88;background:#1c1405;padding:5px 7px;font-size:9px"><b style="color:#fde68a">今日やれること ▸</b> 👀 あと14 ・ 💬 ドラ ・ 🧺 1回</div>
+  <div class="abs" style="left:0;right:0;bottom:0;display:flex;background:#0f172a;border-top:1px solid #ffffff22">${['🏡<br>家','📋<br>居場所','🤝<br>友情','🎒<br>道具'].map((x,i)=>`<span style="flex:1;text-align:center;font-size:9px;font-weight:900;padding:8px 0;${i?'color:#94a3b8':'background:#f472b622'}">${x}</span>`).join('')}</div><span class="ab" style="left:6px;top:6px;background:#475569">B</span></div></div></div>
+<div><p class="cap">❸ 入場の演出<small>A: 毎回。その日の最初は 家の正面→壁が開く→顔(1.2秒)、2回目からは 壁→顔 だけ(0.4秒)。タップで飛ばせる<br>B: その日の最初だけ。2回目からはすぐ家</small></p>
+ ${mini(entB,'A/B どちらも この動き')}</div>
+<div><p class="cap">❹ 助手ライフの曲<small>A: 今ある「風がそよぐ場所」(モンヒロビートにもある 1分40秒の穏やかな曲)<br>B: 新しく1曲(社長が用意。届くまでは HOME の曲)</small></p>
+ <p class="cap" style="margin-top:14px">❺ モンビーにいる助手と、券なしでセッションできる線引き<small>A: 助手が自分でモンヒロビートに出かけているあいだ(その時間帯の3〜5時間)は、その助手と何回でも券なし。帰ったら今までどおり<br>B: 出かけているあいだに、その助手と1日1回だけ券なし<br>C: その日に一度モンビーで会えたら、その助手とはその日ずっと券なし<br>どちらも: 出かけているのは「練習」している時間帯。ランキング・スコアには効かせない</small></p></div>
+</div></section>`;
+document.getElementById('root').innerHTML=H;
+
+</script></body></html>
