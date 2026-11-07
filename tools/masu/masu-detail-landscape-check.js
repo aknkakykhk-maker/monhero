@@ -9,6 +9,7 @@
 //   ② 横で、枠を動かすと 技・固有技強化・合体 の欄まで画面の中へ届く
 //   ③ 縦(390×844)は今までどおり: 見出しと下の操作は動かず、真ん中の欄だけが動く(枠ごとは動かない)
 //   ④ 縦でも、真ん中の欄を動かすと 固有技強化・合体 の欄まで届く
+//   ⑤ モンヒロビートの「🔄 横」で回したとき(端末は縦のまま)も、①②と同じ。回したときは --mh-vh が端末の縦の長さのままなので、枠が画面からはみ出さないことも見る
 'use strict';
 const http = require('http');
 const path = require('path');
@@ -53,8 +54,8 @@ const FIXTURES = [
   let browser;
   try {
     browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-    for (const vp of [{ w: 844, h: 390, land: true }, { w: 667, h: 375, land: true }, { w: 390, h: 844, land: false }]) {
-      const T = `[${vp.w}×${vp.h}] `;
+    for (const vp of [{ w: 844, h: 390, land: true }, { w: 667, h: 375, land: true }, { w: 390, h: 844, land: false }, { w: 390, h: 844, land: true, rot: true }]) {
+      const T = `[${vp.w}×${vp.h}${vp.rot ? '・🔄横' : ''}] `;
       const page = await browser.newPage({ viewport: { width: vp.w, height: vp.h } });
       page.on('pageerror', (e) => errors.push(String(e)));
       await page.addInitScript((fixtures) => {
@@ -81,10 +82,18 @@ const FIXTURES = [
       await page.getByText('横画面けんさ').first().dispatchEvent('click');
       await page.locator('[data-monster-detail-body]').first().waitFor({ state: 'attached', timeout: 20000 });
       await page.waitForTimeout(600);
+      if (vp.rot) {
+        // モンヒロビートの「🔄 横」と同じ回し方(端末は縦のまま、絵を回す)。回したときに出る窓は閉じる
+        await page.evaluate(() => RHYTHM_VIEW_ROTATION.set(RHYTHM_VIEW_ROTATION.preferredAngle()));
+        await page.waitForTimeout(1000);
+        for (let i = 0; i < 6; i++) { const hit = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => x.offsetParent && !x.closest('[data-monster-detail-box]') && /^(確認|受け取る|閉じる|OK|スキップ|あとで読む)$/.test((x.innerText || '').trim())); if (b) b.click(); return !!b; }); if (!hit) break; await page.waitForTimeout(400); }
+        check(`${T}回した目印(data-mh-view-rotation)が付いている`, await page.evaluate(() => document.querySelector('[data-mh-view-rotation="true"]') !== null));
+      }
       const m = await page.evaluate(() => {
         const box = document.querySelector('[data-monster-detail-box]'), body = box.querySelector('[data-monster-detail-body]');
         const r = (e) => e.getBoundingClientRect();
-        return { boxH: r(box).height, boxSH: box.scrollHeight, boxCan: box.scrollHeight > box.clientHeight + 4 && getComputedStyle(box).overflowY !== 'hidden', bodyH: r(body).height, bodySH: body.scrollHeight, bodyCan: body.scrollHeight > body.clientHeight + 4 && getComputedStyle(body).overflowY !== 'visible' };
+        const frame = box.parentElement;
+        return { frameH: frame.clientHeight, boxH: box.offsetHeight, boxSH: box.scrollHeight, boxCan: box.scrollHeight > box.clientHeight + 4 && getComputedStyle(box).overflowY !== 'hidden', bodyH: body.offsetHeight, bodySH: body.scrollHeight, bodyCan: body.scrollHeight > body.clientHeight + 4 && getComputedStyle(body).overflowY !== 'visible' };
       });
       // 欄の見出しを探して、そこまで動かして画面に入るか(scrollIntoView は使わず、動かせる箱の scrollTop で寄せる)
       const reach = (label) => page.evaluate(([lbl, land]) => {
@@ -92,13 +101,21 @@ const FIXTURES = [
         const sc = land ? box : box.querySelector('[data-monster-detail-body]');
         const el = [...box.querySelectorAll('div,section,span,button')].find((x) => (x.innerText || '').trim().startsWith(lbl));
         if (!el) return { found: false };
-        sc.scrollTop = 0;
-        sc.scrollTop = el.getBoundingClientRect().top - sc.getBoundingClientRect().top - 8;
-        const r = el.getBoundingClientRect();
-        return { found: true, top: Math.round(r.top), bottom: Math.round(r.top + Math.min(r.height, 30)), inView: r.top >= 0 && r.top + Math.min(r.height, 30) <= innerHeight };
+        // 回したときも測れるよう、画面の座標ではなく、動かす箱の中での位置(offsetTop の和)で見る
+        const pos = sc.style.position; sc.style.position = 'relative';
+        let off = 0; for (let x = el; x && x !== sc; x = x.offsetParent) off += x.offsetTop;
+        sc.style.position = pos;
+        const max = sc.scrollHeight - sc.clientHeight;
+        sc.scrollTop = Math.max(0, off - 8);
+        const top = off - sc.scrollTop;
+        // 箱の中で見える位置(0〜箱の高さ)に入り、箱そのものも見える範囲(枠の中)にある
+        const frame = document.querySelector('[data-monster-detail-box]').parentElement;
+        const boxFits = document.querySelector('[data-monster-detail-box]').offsetHeight <= frame.clientHeight + 1;
+        return { found: true, off, scrollTop: sc.scrollTop, max, top, inView: top >= 0 && top + 30 <= sc.clientHeight && boxFits };
       }, [label, vp.land]);
       if (vp.land) {
         check(`${T}横: 真ん中の欄の高さが0でない(中身の高さぶん出ている)`, m.bodyH > 100 && m.bodyH >= m.bodySH - 2, JSON.stringify(m));
+        check(`${T}横: 詳細の枠が画面の中に収まる(上下にはみ出さない)`, m.boxH <= m.frameH + 1, JSON.stringify(m));
         check(`${T}横: 詳細の枠ごと縦に動かせる`, m.boxCan, JSON.stringify(m));
       } else {
         check(`${T}縦: 真ん中の欄だけが動き、枠ごとは動かない(今までどおり)`, m.bodyH > 100 && m.bodyCan && !m.boxCan, JSON.stringify(m));
