@@ -8511,6 +8511,13 @@ function MonsterHeroGame() {
     if (typeof rhythmAssistSessionSetCall !== 'function') return;
     rhythmAssistSessionSetCall({ name: breederName, levelOf: (id) => assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points), styleOf: (id) => (assistantCallStyles && assistantCallStyles[id]) || null });
   }, [breederName, assistantBonds, assistantCallStyles]);
+  // 助手ライフから「モンビーへ誘う」(rhythmAssistSessionInvite・2026-11-07)が使う、モンヒロビートを開く道とセッション券の数
+  const rhythmAssistSessionTicketsRef = useRef(0);
+  rhythmAssistSessionTicketsRef.current = ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID);
+  useEffect(() => {
+    if (typeof rhythmAssistSessionSetApp !== 'function') return;
+    rhythmAssistSessionSetApp({ open: (to) => openRhythmDemo({ to }), tickets: () => rhythmAssistSessionTicketsRef.current });
+  });
   // いま選んでいる助手そのもの。画面はこれを見て顔・名前・色を出す
   const activeAssistant = assistantById(selectedAssistantId);
   // ふだんの吹き出しを、その日最初に HOME を開いたとき1回だけまとめて頼む(2026-10-14)。
@@ -18924,6 +18931,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       <TapRippleLayer spawnRef={rippleSpawnRef}/>
       {/* 上がる値の演出(44-growth-fx.jsx)。見た目だけ。出してよい画面でだけ出し、演奏中・バトル中・お話の最中は貯めておく */}
       <GrowthFxLayer screen={gameState} load={battleFxSettings.load}/>
+      {/* 時間帯で変わる雰囲気(44-time-of-day.jsx)。<html data-mh-tod> を付け替えるだけ */}
+      <TimeOfDayRoot/>
       {updateNotice}{storageTroubleNotice}
       {/* ランの途中ならどの画面でも出し続ける。gameState==='BATTLE' に限っていたため、
           敵を倒してWAVE_RESULTへ移った瞬間に消えて、曲を選べなくなっていた */}

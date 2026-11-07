@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2727cb3054f84a09
+// generated-sha256: 66e994be424d1a56
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -37767,6 +37767,179 @@ function PlayerRankUpFx({ kind = 'beat', from = 1, to = 1, gains = [], onClose =
   );
 }
 
+// ---- part: 44-time-of-day.jsx ----
+// ==================== 時間帯で変わる雰囲気・いまの時刻(2026-11-07 社長) ====================
+// 社長「ホーム画像とかゲーム内の雰囲気をリアルタイムによってかえるとかってできる？夜なら暗くとか」→「ゲーム全体で作る」
+// 社長「それにともなってゲーム内にリアルタイム時間の表示も欲しいね。全ページはじゃまになるかもだから置けそうなとこに」
+// 演出担当ハナビ。案と止め絵: docs/progress/time-of-day/PLAN.md
+// ★見た目だけ。色は CSS の層だけで重ねる(混ぜ方・ぼかしは使わない。古い端末でも軽い)。
+//   ・絵の背景(HOME・タイトル)は絵に色を重ねる。塗りだけの画面(メニュー・マーケット・神殿・モードえらび)は塗りをほんの少し寄せる
+//   ・お話・モンヒロビートの演奏中・リザルト・バトル中・カードの場は変えない。ボタン・文字・カード・ノーツには乗らない
+//   ・色の層は背景の要素の中にあるので、「🔄 横」で回しても絵と一緒に回る
+// ★時刻はいつも日本時間(端末の時間帯の設定に関係なく UTC+9 で数える)。1日の区切り(4:00)とは別に、朝は 5:00 から
+// 保存: 新しいキー mh_time_of_day_v1 に { mood:'on'|'off', clock:'on'|'off' }(無い・壊れているときは両方 'on')
+
+const TIME_OF_DAY_STORAGE_KEY = 'mh_time_of_day_v1';
+// 区切り(日本時間の時)。[始まりの時, 名前, 印, 表示名]。助手ライフの家も同じ表を使う
+const TIME_OF_DAY_SLOTS = Object.freeze([
+  Object.freeze({ id: 'morning', from: 5,  icon: '🌅', label: '朝' }),
+  Object.freeze({ id: 'day',     from: 10, icon: '☀️', label: '昼' }),
+  Object.freeze({ id: 'evening', from: 16, icon: '🌇', label: '夕' }),
+  Object.freeze({ id: 'night',   from: 19, icon: '🌙', label: '夜' }),
+]);
+const TIME_OF_DAY_JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+// 日本時間の時・分
+const timeOfDayJstParts = (now = Date.now()) => {
+  const d = new Date((Number.isFinite(Number(now)) ? Number(now) : Date.now()) + TIME_OF_DAY_JST_OFFSET_MS);
+  return { h: d.getUTCHours(), m: d.getUTCMinutes() };
+};
+// いまの時間帯(朝 5:00〜 / 昼 10:00〜 / 夕 16:00〜 / 夜 19:00〜4:59)
+const timeOfDayAt = (now = Date.now()) => {
+  const { h } = timeOfDayJstParts(now);
+  let slot = TIME_OF_DAY_SLOTS[TIME_OF_DAY_SLOTS.length - 1];
+  for (const s of TIME_OF_DAY_SLOTS) if (h >= s.from) slot = s;
+  return slot;
+};
+const timeOfDayClockText = (now = Date.now()) => {
+  const { h, m } = timeOfDayJstParts(now);
+  return `${h}:${String(m).padStart(2, '0')}`;
+};
+const normalizeTimeOfDaySettings = (value) => {
+  const v = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return { mood: v.mood === 'off' ? 'off' : 'on', clock: v.clock === 'off' ? 'off' : 'on' };
+};
+
+// ---------- 設定と「いま」を持つ場所(どこからでも読めるように画面の外に置く) ----------
+const TIME_OF_DAY_STORE = {
+  settings: normalizeTimeOfDaySettings(null), loaded: false, slot: timeOfDayAt(), minute: timeOfDayClockText(), listeners: new Set(), timer: null,
+};
+const timeOfDayEmit = () => { TIME_OF_DAY_STORE.listeners.forEach(fn => { try { fn(); } catch {} }); };
+const timeOfDayLoad = async () => {
+  if (TIME_OF_DAY_STORE.loaded) return;
+  TIME_OF_DAY_STORE.loaded = true;
+  try { TIME_OF_DAY_STORE.settings = normalizeTimeOfDaySettings(await storeGet(TIME_OF_DAY_STORAGE_KEY, null)); } catch {}
+  timeOfDayEmit();
+};
+const timeOfDaySetSettings = (patch) => {
+  TIME_OF_DAY_STORE.settings = normalizeTimeOfDaySettings({ ...TIME_OF_DAY_STORE.settings, ...(patch || {}) });
+  try { storeSet(TIME_OF_DAY_STORAGE_KEY, TIME_OF_DAY_STORE.settings, false); } catch {}
+  timeOfDayEmit();
+};
+// 20秒ごとに見直す(分が変わったら時刻を、時間帯が変わったら雰囲気を書き換える)。見るたびに今の時刻で決める
+const timeOfDayTick = () => {
+  const slot = timeOfDayAt(), minute = timeOfDayClockText();
+  if (slot.id === TIME_OF_DAY_STORE.slot.id && minute === TIME_OF_DAY_STORE.minute) return;
+  TIME_OF_DAY_STORE.slot = slot; TIME_OF_DAY_STORE.minute = minute;
+  timeOfDayEmit();
+};
+const useTimeOfDay = () => {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    void timeOfDayLoad();
+    const off = (() => { const fn = () => setTick(t => t + 1); TIME_OF_DAY_STORE.listeners.add(fn); return () => TIME_OF_DAY_STORE.listeners.delete(fn); })();
+    timeOfDayTick();
+    return off;
+  }, []);
+  return TIME_OF_DAY_STORE;
+};
+
+// ---------- 見た目 ----------
+// 色の層: 絵の背景は ::after(色)と ::before(夜の星と灯り)。塗りだけの画面は内側の影(背景の上・中身の下に描かれる)で寄せる
+// ★1つの決まりは1行に書く(tools/home-layout-check.js が `.mh-home-` を含む行だけを抜き出して HOME を組むため。複数行にまたがると後ろを巻き込む)
+const TIME_OF_DAY_CSS = `
+.mh-home-background::after,.mh-home-background::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity 2.4s ease}
+.mh-home-background::after{z-index:3}.mh-home-background::before{z-index:4}
+html[data-mh-tod="morning"] .mh-home-background::after{opacity:1;background:linear-gradient(180deg,rgba(186,214,255,.30) 0%,rgba(214,236,255,.16) 50%,rgba(255,236,214,.10) 100%)}
+html[data-mh-tod="evening"] .mh-home-background::after{opacity:1;background:linear-gradient(180deg,rgba(255,128,48,.34) 0%,rgba(255,110,64,.24) 45%,rgba(120,40,30,.34) 100%)}
+html[data-mh-tod="night"] .mh-home-background::after{opacity:1;background:linear-gradient(180deg,rgba(5,8,34,.84) 0%,rgba(10,16,52,.70) 50%,rgba(6,10,34,.76) 100%)}
+html[data-mh-tod="night"] .mh-home-background::before{opacity:1;background: radial-gradient(2.2px 2.2px at 12% 8%,#fff 60%,transparent),radial-gradient(1.6px 1.6px at 24% 15%,#fff 60%,transparent),radial-gradient(2.2px 2.2px at 41% 6%,#fff 60%,transparent), radial-gradient(1.6px 1.6px at 57% 12%,#fff 60%,transparent),radial-gradient(2.2px 2.2px at 69% 4%,#fff 60%,transparent),radial-gradient(1.6px 1.6px at 83% 14%,#fff 60%,transparent), radial-gradient(1.6px 1.6px at 92% 7%,#fff 60%,transparent),radial-gradient(1.6px 1.6px at 33% 20%,#fffbe8 60%,transparent),radial-gradient(2.2px 2.2px at 76% 21%,#fffbe8 60%,transparent), radial-gradient(40% 18% at 50% 100%,rgba(255,190,100,.38),transparent 70%), radial-gradient(14% 8% at 20% 62%,rgba(255,196,110,.50),transparent 70%),radial-gradient(14% 8% at 80% 58%,rgba(255,196,110,.50),transparent 70%), radial-gradient(10% 6% at 50% 46%,rgba(140,200,255,.42),transparent 70%)}
+.mh-title-gate img.mh-title-visual,.mh-title-gate img.mh-title-backdrop{transition:filter 2.4s ease}
+html[data-mh-tod="morning"] .mh-title-gate img.mh-title-visual{filter:brightness(1.04) saturate(.92) hue-rotate(-6deg)}
+html[data-mh-tod="evening"] .mh-title-gate img.mh-title-visual{filter:sepia(.32) saturate(1.2) brightness(.92)}
+html[data-mh-tod="night"] .mh-title-gate img.mh-title-visual{filter:brightness(.62) saturate(.85)}
+[data-mh-theme-category="menu"] .mh-screen-shell,[data-mh-theme-category="market"] .mh-screen-shell,[data-mh-theme-category="temple"] .mh-screen-shell,.mhms-stage{transition:box-shadow 2.4s ease}
+html[data-mh-tod="morning"] :is([data-mh-theme-category="menu"],[data-mh-theme-category="market"],[data-mh-theme-category="temple"]) .mh-screen-shell,html[data-mh-tod="morning"] .mhms-stage{box-shadow:inset 0 0 0 100vmax rgba(190,215,255,.05)}
+html[data-mh-tod="evening"] :is([data-mh-theme-category="menu"],[data-mh-theme-category="market"],[data-mh-theme-category="temple"]) .mh-screen-shell,html[data-mh-tod="evening"] .mhms-stage{box-shadow:inset 0 0 0 100vmax rgba(255,120,48,.07)}
+html[data-mh-tod="night"] :is([data-mh-theme-category="menu"],[data-mh-theme-category="market"],[data-mh-theme-category="temple"]) .mh-screen-shell,html[data-mh-tod="night"] .mhms-stage{box-shadow:inset 0 0 0 100vmax rgba(6,10,40,.24)}
+@media (prefers-reduced-motion:reduce){.mh-home-background::after,.mh-home-background::before,.mh-title-gate img,.mh-screen-shell,.mhms-stage{transition:none!important}}
+.mh-tod-clock{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border:1px solid #eed99566;border-radius:999px;background:#0f1d2ad9;color:#f9eac2;font-size:11px;font-weight:900;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap;box-shadow:0 2px 6px #0007;pointer-events:none}
+.mh-tod-clock i{font-style:normal;font-size:12px}
+.mh-home-scene .mh-tod-clock{position:absolute;z-index:5;right:9px;top:calc(107px + env(safe-area-inset-top))}
+@media (orientation:landscape) and (max-height:600px){.mh-home-scene .mh-tod-clock{top:calc(69px + env(safe-area-inset-top));right:calc(9px + var(--mh-tod-upd,0px))}}
+[data-mh-view-rotation="true"] .mh-home-scene .mh-tod-clock{top:calc(69px + env(safe-area-inset-top));right:calc(9px + var(--mh-tod-upd,0px))}
+`;
+let timeOfDayCssDone = false;
+const ensureTimeOfDayCss = () => {
+  if (timeOfDayCssDone || typeof document === 'undefined') return;
+  timeOfDayCssDone = true;
+  const el = document.createElement('style');
+  el.setAttribute('data-time-of-day-css', '');
+  el.textContent = TIME_OF_DAY_CSS;
+  document.head.appendChild(el);
+};
+
+// 60-app.jsx に1つ。<html data-mh-tod="…"> を付け替えるだけ(画面・状態は触らない)。雰囲気が切のときは印を外す
+const TimeOfDayRoot = () => {
+  const st = useTimeOfDay();
+  useEffect(() => {
+    ensureTimeOfDayCss();
+    const t = setInterval(timeOfDayTick, 20000);
+    const onVis = () => { if (typeof document !== 'undefined' && document.visibilityState === 'visible') timeOfDayTick(); };
+    try { document.addEventListener('visibilitychange', onVis); } catch {}
+    return () => { clearInterval(t); try { document.removeEventListener('visibilitychange', onVis); } catch {} };
+  }, []);
+  const tod = st.settings.mood === 'on' ? st.slot.id : null;
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const html = document.documentElement;
+    if (tod) html.setAttribute('data-mh-tod', tod); else html.removeAttribute('data-mh-tod');
+  }, [tod]);
+  return null;
+};
+
+// いまの時刻の札。押せない。HOME では「更新履歴」の幅を測って、横向きでその左に並べる
+const TimeOfDayClock = ({ home = false }) => {
+  const st = useTimeOfDay();
+  const ref = useRef(null);
+  useEffect(() => {
+    ensureTimeOfDayCss();
+    if (!home || typeof window === 'undefined') return undefined;
+    const measure = () => {
+      const el = ref.current, upd = el && el.parentElement && el.parentElement.querySelector('.mh-home-update');
+      if (el) el.style.setProperty('--mh-tod-upd', upd ? `${Math.round(upd.getBoundingClientRect().width + 6)}px` : '0px');
+    };
+    measure();
+    const t = setTimeout(measure, 600);
+    window.addEventListener('resize', measure);
+    return () => { clearTimeout(t); window.removeEventListener('resize', measure); };
+  }, [home]);
+  if (st.settings.clock !== 'on') return null;
+  return <span ref={ref} className="mh-tod-clock" data-time-of-day-clock={st.slot.id} aria-label={`いまの時刻 ${st.minute}(${st.slot.label})`}><i aria-hidden="true">{st.slot.icon}</i>{st.minute}</span>;
+};
+
+// 設定の欄(設定画面の「画面テーマ」の下)
+const TimeOfDaySettingsPanel = () => {
+  const st = useTimeOfDay();
+  const row = (key, title, desc) => (
+    <div className="flex items-center gap-3 mt-2">
+      <div className="min-w-0 flex-1"><b className="block text-[12px] font-black text-slate-200">{title}</b><p className="text-[10px] font-bold leading-relaxed text-slate-400">{desc}</p></div>
+      <div className="flex shrink-0 gap-1">
+        {['on', 'off'].map(v => (
+          <button key={v} type="button" data-time-of-day-setting={`${key}-${v}`} aria-pressed={st.settings[key] === v} onClick={() => timeOfDaySetSettings({ [key]: v })}
+            className={`min-h-[36px] min-w-[44px] rounded-xl border px-2 text-[11px] font-black ${st.settings[key] === v ? 'border-amber-300 bg-amber-300 text-slate-950' : 'border-slate-600 bg-slate-800 text-slate-300'}`}>{v === 'on' ? '入' : '切'}</button>
+        ))}
+      </div>
+    </div>
+  );
+  return (
+    <div data-time-of-day-settings className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
+      <b className="block text-[13px] font-black text-slate-200">{st.slot.icon} 時間帯</b>
+      {row('mood', '時間帯で雰囲気を変える', '日本時間に合わせて、朝・昼・夕・夜で背景の色が変わります。')}
+      {row('clock', 'いまの時刻を出す', 'ホームとプロフィールに、いまの時刻(日本時間)を小さく出します。')}
+    </div>
+  );
+};
+
 // ---- part: 44-growth-fx.jsx ----
 // ==================== 上がる値の演出(2026-11-07 社長「色んな親密度があるけど、アイテムであがるものなど、もっと変動の演出をつけたい」) ====================
 // 演出担当ハナビ。案と止め絵: docs/progress/growth-fx/PLAN.md(社長が3段・色・「小は全部の行動で出す」を選んだ)
@@ -38640,6 +38813,8 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
         <SettingsMenuLink icon="🖼️" label="タイトル画像アレンジ" desc="タイトル画面の絵を選ぶ" onClick={onOpenTitleArt} data-open-title-art/>
         <SettingsMenuLink icon="🏡" label="ホーム画面アレンジ" desc="ホーム画面の背景を選ぶ" onClick={onOpenHomeArt} data-open-home-art/>
         <SettingsMenuLink icon="🎨" label="画面テーマ" desc="画面の見た目(ハロウィン／クラシック)を選ぶ" onClick={onOpenScreenTheme} data-open-screen-theme/>
+        {/* 時間帯で変わる雰囲気・いまの時刻の入/切(44-time-of-day.jsx。2026-11-07 社長) */}
+        {typeof TimeOfDaySettingsPanel==='function'&&<TimeOfDaySettingsPanel/>}
         {/* 入/切に関係なく出す(切のままだと、プレイヤーに戻す手段が無い)。対応していない端末はページの中で知らせる */}
         <SettingsMenuLink icon="📥" label="ダウンロード" desc="曲や画像を前もって端末に入れておく" onClick={() => setAssetDownloadOpen(true)} data-open-asset-download/>
         <SettingsMenuLink icon="💾" label="データ引き継ぎ" desc="バックアップの保存と、別の端末での復元" onClick={onOpenBackup}/>
@@ -39690,7 +39865,7 @@ function ProfileScreen({
   return (
       <div data-mh-screen className={SCREEN_SHELL_CLASS} style={onboardingPreview?{paddingTop:'3.25rem'}:undefined}>
         {/* はじめての設定が終わるまでは、まだ帰る場所(HOME)が無いので戻るボタンを出さない */}
-        <ScreenHead title="プロフィール" accent="text-indigo-400"
+        <ScreenHead title="プロフィール" accent="text-indigo-400" right={typeof TimeOfDayClock==='function'?<TimeOfDayClock/>:null}
           onBack={(onboarded&&!onboardingPreview)?onBack:null} backLabel="ホームへ戻る"/>
         <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="profile" compact/></div>
         <div className={`${SCREEN_LIST_CLASS} pb-4`}>
@@ -45575,6 +45750,7 @@ function HomeScreen({
         <button onClick={openGiftBox} className={`mh-home-gift${spotClass('reward')}`}><Package size={16}/>ギフト
           {giftClaimableCount(gifts)>0&&<em>{giftClaimableCount(gifts)}</em>}
         </button>
+        {typeof TimeOfDayClock==='function'&&<TimeOfDayClock home/>}
         <button onClick={openChangelog} className="mh-home-update"><RefreshCcw size={15}/>更新履歴{hasUnreadChangelog&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>
         {/* 期間限定イベントのバナー(2026-10-04)。押すと更新履歴(イベントの詳細)を開く。ゲーム全体のイベントなので、特定の遊びのボタンには付けない。縦持ちの左下(モンヒロバトルのすぐ上)。右側のボタン列・上の吹き出しとかぶらない場所。横持ちでは出さない */}
         {homeEventCampaign&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={openChangelog} aria-label={`${homeEventCampaign.banner.title} ${homeEventCampaign.banner.sub}`}>
@@ -52836,7 +53012,7 @@ const RHYTHM_MULTI = (() => {
     // opts.create … フリーマッチで「部屋を作る」を選んだ(2026-11-07)。ひとりのままでも、ほかの部屋へまとめない
     join(code, profile, mode, opts = {}) {
       loadSelectSecPref();
-      this.leave();
+      this.leave({ silent: true });
       const now = Date.now();
       const id = rhythmMultiMakeId();
       const roomMode = RHYTHM_MULTI_MODES.includes(mode) ? mode : 'private';
@@ -52866,7 +53042,11 @@ const RHYTHM_MULTI = (() => {
       sweepTimer = setInterval(sweep, 1000);
       emit();
     },
-    leave() {
+    leave(opts = {}) {
+      // 自分で抜けた部屋を覚えておく(2026-11-07 社長「途中抜けして戻ろうとしたときに部屋がなかった」)。
+      //   演奏中・結果の部屋は受付へ知らせを出さないので、一覧にもおまかせにも出てこない。合言葉で直に戻れるようにする。
+      //   部屋を移る(join の中の leave)ときは覚えない。保存はしない(このアプリを開いているあいだだけ)
+      if (s && !(opts && opts.silent)) rhythmMultiLastRoom = { code: s.code, mode: s.mode, at: Date.now(), others: alive().filter((m) => !m.cpu && m.id !== s.selfId).length };
       // 呼んだマスモンも一緒に帰る。1曲も始まっていない子は、呼ぶ側(cpuBrain.ended)が払ったものを返す
       if (s) s.cpus.forEach((c) => { try { if (cpuBrain && cpuBrain.ended) cpuBrain.ended(c.masuId, c.callId); } catch (_) { /* 返せなくても抜ける */ } });
       if (socket) {
@@ -53308,6 +53488,14 @@ function RhythmMultiAloneHint({ alone, onLeave }) {
 //   承認済みのフレンドからの3分以内の招待だけ(今のモードえらびと同じ決まり)。部屋に入っているあいだは出さない。
 //   「入る」は、受けた招待を rhythmMultiPendingInvite に置いて onAccept(モンヒロビートのマルチを開く)を呼ぶ。開いた画面がそれを読んで入る
 let rhythmMultiPendingInvite = null;
+// 自分で抜けた部屋(RHYTHM_MULTI.leave が書く)。10分のあいだだけ「↩ さっきの部屋に戻る」を出す
+let rhythmMultiLastRoom = null;
+const RHYTHM_MULTI_REJOIN_MS = 10 * 60 * 1000;
+const rhythmMultiRejoinTarget = (now = Date.now()) => {
+  const r = rhythmMultiLastRoom;
+  if (!r || !r.code || !(now - r.at >= 0 && now - r.at < RHYTHM_MULTI_REJOIN_MS)) return null;
+  return r.mode === 'private' ? null : r;   // プライベートは合言葉で入り直せるので、フリーだけ
+};
 function RhythmInviteHomeBar({ show = false, onAccept = null }) {
   const [invites, setInvites] = React.useState([]);
   const [names, setNames] = React.useState({});
@@ -54024,9 +54212,9 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   };
   // 助手を呼ぶ(2026-11-07 助手とのセッション)。払い方・控え・返し方はマスモンと同じ1本(控えに kind・assistantId を足す)
   const callAssistant = async (who) => {
-    if (!who || !rhythmAssistSessionEnabled() || !RHYTHM_MULTI.canSummon()) { setBuddySheet(''); return; }
+    if (!who || !rhythmAssistSessionEnabled() || !RHYTHM_MULTI.canSummon()) { setBuddySheet(''); return 'full'; }
     const key = rhythmAssistSessionKey(who.id);
-    if ((view && view.myCpus ? view.myCpus : []).some((c) => c.masuId === key)) return; // 同じ助手は2人呼べない
+    if ((view && view.myCpus ? view.myCpus : []).some((c) => c.masuId === key)) return 'already'; // 同じ助手は2人呼べない
     const day = rhythmBuddyDayKey(Date.now());
     const call = { id: rhythmBuddyCallId(), masuId: key, at: Date.now(), load: RHYTHM_BUDDY_LOAD_ID, kind: 'assistant', assistantId: who.id };
     let paid = (await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
@@ -54034,12 +54222,27 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
       try { paid = (await onUseBuddyTicket()) === true ? 'ticket' : ''; } catch (_) { paid = ''; }
       if (paid) await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyAddCall(st, { ...call, paid: 'ticket', day }));
     }
-    if (!paid) return;
+    if (!paid) return 'no_ticket';
     setBuddyBumped(false);
     const joined = RHYTHM_MULTI.summon({ masuId: key, callId: call.id, name: rhythmAssistSessionName(who.id), level: rhythmAssistSessionLevel(RHYTHM_ASSIST_SESSION_STORE.get(), who.id), baseId: '', colors: [], assistantId: who.id });
     if (!joined) endBuddy(key, call.id);
     setBuddySheet('');
+    return joined ? 'ok' : 'full';
   };
+  // 助手ライフから「モンビーへ誘う」で来たとき(rhythmAssistSessionInvite・2026-11-07)。部屋が無ければ自分だけの部屋を作り、
+  //   入れたらその助手を呼ぶ。払えなかった・満員だったら onResult で知らせて呼ばない。誘いは1回だけ使う
+  //   画面がもう開いているときに誘われても気づけるよう、誘いの知らせ(rhythmAssistSessionOnInvite)でも見直す
+  const [inviteTick, setInviteTick] = React.useState(0);
+  React.useEffect(() => (typeof rhythmAssistSessionOnInvite === 'function' ? rhythmAssistSessionOnInvite(() => setInviteTick((n) => n + 1)) : undefined), []);
+  const inviteRoomReady = !!(view && view.status === 'open' && view.selfId);
+  React.useEffect(() => {
+    if (!inviteRoomReady || typeof rhythmAssistSessionTakeInvite !== 'function' || !rhythmAssistSessionPeekInvite()) return;
+    const p = rhythmAssistSessionTakeInvite();
+    const who = (sessionAssistants || []).find((x) => x && x.id === p.id);
+    const done = (ok, reason) => rhythmAssistSessionInviteDone(p.onResult, { ok, reason });
+    if (!who) { done(false, 'locked'); return; }
+    void callAssistant(who).then((r) => done(r === 'ok' || r === 'already', r || 'full'));
+  }, [inviteRoomReady, inviteTick]);
   const sessionAssistantsOn = rhythmAssistSessionEnabled() && (sessionAssistants || []).length > 0;
   const buddySongName = (id) => { const song = songs.find((x) => x.songId === id); return song ? rhythmSongFullName(song) : '(曲)'; };
   // 部屋の中で相棒の札を押したときの窓。開いているのは札の id(呼んだ子が帰ったら自然に消える)
@@ -54087,18 +54290,21 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   const [roster, setRoster] = React.useState(null);        // フレンド名簿(承認済みのみ)。null=まだ読んでいない
   const [friendInvites, setFriendInvites] = React.useState([]);
   const [invitePanel, setInvitePanel] = React.useState(false);
+  // 💌 のシート(2026-11-07)。フレンドの今(居場所)は、待合いの欄と同じく、このシートを開いているあいだも読む
+  const [inviteSheet, setInviteSheet] = React.useState(false);
   const [invitedIds, setInvitedIds] = React.useState({});
   const [inviteMessage, setInviteMessage] = React.useState('');
   // 招待の行に出すフレンドの今(34 の friendsPresenceFor・75 の FriendPresenceTag。2026-10-29 社長「相手がいま何をしているかが見えると誘いやすい」)
   const [presence, setPresence] = React.useState({});
   React.useEffect(() => {
-    if (!invitePanel || !roster || !roster.length || typeof friendsPresenceFor !== 'function') return undefined;
+    // ★2026-11-07 まで 💌 のシートでは読んでいなかった(社長「招待の画面でフレンドがなにをしてるかわからない」。「◯分前に開きました」だけが出ていた)
+    if (!(invitePanel || inviteSheet) || !roster || !roster.length || typeof friendsPresenceFor !== 'function') return undefined;
     let alive = true;
     const load = () => { void friendsPresenceFor(roster.map((f) => f.otherId)).then((p) => { if (alive) setPresence(p || {}); }); };
     load();
     const t = setInterval(load, 60000);
     return () => { alive = false; clearInterval(t); };
-  }, [invitePanel, roster]);
+  }, [invitePanel, inviteSheet, roster]);
   const loadRoster = React.useCallback(async (id) => {
     try { setRoster(await sbFetchFriendRoster(id)); } catch (_) { setRoster([]); }
   }, []);
@@ -54211,6 +54417,11 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     rhythmMultiPendingInvite = null;
     if (!RHYTHM_MULTI.view()) joinFromInvite(pending);
   }, []);
+  // 助手ライフから「モンビーへ誘う」で開いたとき。部屋に入っていなければ、自分だけのプライベートの部屋を作る(呼ぶのは入れてから)
+  React.useEffect(() => {
+    if (typeof rhythmAssistSessionPeekInvite !== 'function' || !rhythmAssistSessionPeekInvite() || RHYTHM_MULTI.view()) return;
+    createPrivate();
+  }, [inviteTick]);
   const joinPrivate = () => {
     const code = rhythmMultiNormalizeCode(codeInput);
     if (!code) { setMessage(`部屋コードは${RHYTHM_MULTI_CODE_LENGTH}文字です`); return; }
@@ -54230,6 +54441,32 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     setFreeOpen(false); setFreeList(false);
     RHYTHM_MULTI.join(rhythmMultiMakeCode(), myProfile(), 'free', { create: true });
   };
+  // ↩ さっきの部屋に戻る(2026-11-07)。抜けた部屋へ合言葉で直に入る。同じ部屋へ戻るときは、途中でやめたときの入室待ちをかけない。
+  //   戻った部屋が演奏中でも、待合いで待って次の曲から一緒に遊べる。ひとりに見えても、ほかの部屋へまとめない(create)
+  const rejoinLast = () => {
+    const r = rhythmMultiRejoinTarget();
+    if (!r) return;
+    setMessage('');
+    setFreeOpen(false); setFreeList(false);
+    rhythmMultiLastRoom = null;
+    RHYTHM_MULTI.join(r.code, myProfile(), r.mode, { create: true });
+  };
+  // シートを開いているあいだ、いま人を待っている部屋を聞く(2026-11-07 社長「誰かが部屋を作ってるかを分かりやすくして」)
+  const [freeRooms, setFreeRooms] = React.useState(null);
+  React.useEffect(() => {
+    if (!freeOpen) { setFreeRooms(null); return undefined; }
+    return RHYTHM_MULTI.watchRooms('free', setFreeRooms);
+  }, [freeOpen]);
+  const freeRoomCount = Array.isArray(freeRooms) ? freeRooms.length : null;
+  const rejoinTarget = !view ? rhythmMultiRejoinTarget() : null;
+  const rejoinButton = rejoinTarget && (
+    <button type="button" data-rhythm-multi-rejoin={rejoinTarget.code} onClick={rejoinLast}
+      className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl border-2 border-amber-300/80 bg-amber-950/70 px-4 text-left active:scale-[.98]">
+      <span aria-hidden="true" className="text-xl">↩</span>
+      <span className="min-w-0 flex-1 leading-tight"><b className="block text-[15px] font-black text-amber-100">さっきの部屋に戻る</b>
+        <small className="block text-[11px] font-bold text-amber-200/90" style={JA_WRAP_STYLE}>{jaWrap(`部屋 ${rejoinTarget.code}。演奏中なら、次の曲から一緒に遊べます`)}</small></span>
+    </button>
+  );
   const joinFreeRoom = async (code) => {
     setMessage('');
     if (!(await freePenaltyOk())) return;
@@ -54435,7 +54672,6 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                     </div>
   );
   // 💌 フレンドを招待する(2026-11-07 社長「フリーマッチでも招待できる」「あとから誘えるように」)。部屋にいるあいだはいつでも開ける
-  const [inviteSheet, setInviteSheet] = React.useState(false);
   const openInviteSheet = () => {
     setInviteMessage('');
     setChatOpen(false);
@@ -54627,13 +54863,20 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 <div className="min-w-0 flex-1 leading-tight"><b className="block text-base font-black text-fuchsia-100">フリーマッチ</b><small className="block text-[11px] font-bold text-slate-400">だれとでも最大{RHYTHM_MULTI_ROOM_MAX}人で協力</small></div>
                 <button type="button" aria-label="閉じる" onClick={() => { setFreeOpen(false); setFreeList(false); }} className="min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 text-sm font-black">✕</button>
               </div>
+              {rejoinButton}
               {freeList
                 ? <RhythmMultiRoomList onJoin={joinFreeRoom} onCreate={createFree} onBack={() => setFreeList(false)} resolveIconUrl={resolveIconUrl} />
                 : <div className="flex flex-col gap-2">
-                  <button type="button" data-rhythm-multi-free-create onClick={createFree} className="flex min-h-[60px] w-full items-center gap-3 rounded-2xl bg-gradient-to-b from-fuchsia-500 to-violet-700 px-4 text-left active:scale-[.98]">
+                  <button type="button" data-rhythm-multi-free-create data-rhythm-multi-free-create-hot={freeRoomCount === 0 ? '1' : undefined} onClick={createFree} className={`flex min-h-[60px] w-full items-center gap-3 rounded-2xl bg-gradient-to-b from-fuchsia-500 to-violet-700 px-4 text-left active:scale-[.98] ${freeRoomCount === 0 ? 'ring-4 ring-amber-300 shadow-[0_0_18px_rgba(252,211,77,.6)]' : ''}`}>
                     <span aria-hidden="true" className="text-2xl">🏠</span><span className="min-w-0 flex-1 leading-tight"><b className="block text-base font-black">部屋を作る</b><small className="block text-[11px] font-bold opacity-90" style={JA_WRAP_STYLE}>{jaWrap('自分の部屋を作って、人が来るのを待つ')}</small></span></button>
                   <button type="button" data-rhythm-multi-free-list-open onClick={() => setFreeList(true)} className="flex min-h-[60px] w-full items-center gap-3 rounded-2xl bg-gradient-to-b from-sky-500 to-blue-700 px-4 text-left active:scale-[.98]">
-                    <span aria-hidden="true" className="text-2xl">🚪</span><span className="min-w-0 flex-1 leading-tight"><b className="block text-base font-black">部屋に入る</b><small className="block text-[11px] font-bold opacity-90" style={JA_WRAP_STYLE}>{jaWrap('いま開いている部屋の一覧から選ぶ')}</small></span></button>
+                    <span aria-hidden="true" className="text-2xl">🚪</span><span className="min-w-0 flex-1 leading-tight"><b className="block text-base font-black">部屋に入る</b><small className="block text-[11px] font-bold opacity-90" style={JA_WRAP_STYLE}>{jaWrap('いま開いている部屋の一覧から選ぶ')}</small>
+                      <small data-rhythm-multi-free-room-count={freeRoomCount == null ? '' : String(freeRoomCount)} className="mt-1 flex items-center gap-1.5 text-[12px] font-black">
+                        {freeRoomCount == null ? <span className="text-sky-100/80">部屋をさがしています…</span>
+                          : freeRoomCount === 0 ? <span className="text-amber-200">いま部屋はありません → 部屋を作ろう</span>
+                          : <><span className="flex">{freeRooms.slice(0, 3).map((r, n) => <span key={r.code} className="h-6 w-6 shrink-0 overflow-hidden rounded-full border border-white/70 bg-slate-900" style={n ? { marginLeft: '-6px' } : undefined}><RhythmMultiAvatar m={{ icon: r.hi }} resolveIconUrl={resolveIconUrl} sizeClass="h-6 w-6" small /></span>)}</span>
+                            <span className="text-lime-200">🟢 {freeRoomCount}部屋 待っています</span></>}
+                      </small></span></button>
                   <button type="button" data-rhythm-multi-free-auto onClick={() => { setFreeOpen(false); searchRoom('free'); }} className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl bg-slate-700 px-4 text-left active:scale-[.98]">
                     <span aria-hidden="true" className="text-xl">⚡</span><span className="min-w-0 flex-1 leading-tight"><b className="block text-[15px] font-black">おまかせで入る</b><small className="block text-[11px] font-bold opacity-90" style={JA_WRAP_STYLE}>{jaWrap('空いている部屋に自動で入る')}</small></span></button>
                 </div>}
@@ -56536,6 +56779,59 @@ const rhythmAssistSessionQueueFx = (item) => {
     try { growthFxSessionLevel(list); } catch (_) { /* 祝いが出せなくても続ける */ }
   }, 500);
 };
+// 助手ライフ(ナカヨシ5・56-assistant-life.jsx)へ「1曲一緒に遊んだ」を知らせる窓口(2026-11-07 社長「助手ライフと助手とのセッションは繋げたいね」)。
+//   rhythmAssistSessionOnLive(fn) … fn({ assistantId, partnerIds, songId, round, gain, levelUp, level, likeUp, duo, at })。戻り値で外せる
+//   知らせるのは育ちを保存したあと1回だけ(同じ回は2度数えないのと同じ)。受け手が失敗しても演奏の結果は止めない
+const RHYTHM_ASSIST_SESSION_LIVE_LISTENERS = new Set();
+const rhythmAssistSessionOnLive = (fn) => {
+  if (typeof fn !== 'function') return () => {};
+  RHYTHM_ASSIST_SESSION_LIVE_LISTENERS.add(fn);
+  return () => { RHYTHM_ASSIST_SESSION_LIVE_LISTENERS.delete(fn); };
+};
+const rhythmAssistSessionEmitLive = (payload) => {
+  RHYTHM_ASSIST_SESSION_LIVE_LISTENERS.forEach((fn) => { try { fn(payload); } catch (_) { /* 受け手の失敗で止めない */ } });
+};
+// 助手ライフから「モンビーへ誘う」入口。rhythmAssistSessionInvite(id, { onResult })
+//   ・自分だけのプライベートの部屋を作り、入れたらその助手を呼ぶ(払い方は呼ぶシートと同じ。今日の無料 → セッション券1枚)
+//   ・払えないときは部屋へ行かず { ok:false, reason:'no_ticket' } を返す(呼び出し側が知らせる)。部屋の中で払えなかったときも onResult で知らせる
+//   ・部屋に入る前にやめたら何もしない(誘いは5分で消える。払うのは部屋の中で呼ぶときだけ)
+//   ・画面を開く道(60-app の openRhythmDemo)と券の数は 60-app が rhythmAssistSessionSetApp で渡す
+const RHYTHM_ASSIST_SESSION_INVITE = { pending: null, app: null, listeners: new Set() };
+const rhythmAssistSessionOnInvite = (fn) => { RHYTHM_ASSIST_SESSION_INVITE.listeners.add(fn); return () => { RHYTHM_ASSIST_SESSION_INVITE.listeners.delete(fn); }; };
+const RHYTHM_ASSIST_SESSION_INVITE_TTL_MS = 5 * 60 * 1000;
+const rhythmAssistSessionSetApp = (app) => { RHYTHM_ASSIST_SESSION_INVITE.app = app && typeof app === 'object' ? app : null; };
+const rhythmAssistSessionCanPayNow = () => {
+  const app = RHYTHM_ASSIST_SESSION_INVITE.app;
+  const free = typeof RHYTHM_BUDDY_STORE !== 'undefined' ? rhythmBuddyFreeLeft(RHYTHM_BUDDY_STORE.get(), rhythmBuddyDayKey(Date.now())) : 0;
+  const tickets = app && typeof app.tickets === 'function' ? Number(app.tickets()) || 0 : 0;
+  return free > 0 || tickets > 0;
+};
+const rhythmAssistSessionInviteDone = (onResult, r) => { if (typeof onResult === 'function') { try { onResult(r); } catch (_) { /* 受け手の失敗で止めない */ } } return r; };
+const rhythmAssistSessionInvite = (id, opts = {}) => {
+  const onResult = opts && opts.onResult;
+  const app = RHYTHM_ASSIST_SESSION_INVITE.app;
+  if (!rhythmAssistSessionEnabled() || !app || typeof app.open !== 'function') return rhythmAssistSessionInviteDone(onResult, { ok: false, reason: 'off' });
+  if (!rhythmAssistSessionWho(id)) return rhythmAssistSessionInviteDone(onResult, { ok: false, reason: 'unknown' });
+  if (!rhythmAssistSessionCanPayNow()) return rhythmAssistSessionInviteDone(onResult, { ok: false, reason: 'no_ticket' });
+  const inRoom = typeof RHYTHM_MULTI !== 'undefined' && !!RHYTHM_MULTI.view();
+  RHYTHM_ASSIST_SESSION_INVITE.pending = { id, at: Date.now(), onResult: typeof onResult === 'function' ? onResult : null };
+  RHYTHM_ASSIST_SESSION_INVITE.listeners.forEach((fn) => { try { fn(); } catch (_) { /* 画面の失敗で止めない */ } });
+  try { void app.open(inRoom ? 'RHYTHM_MULTI' : 'RHYTHM_MODE_SELECT'); } catch (_) { RHYTHM_ASSIST_SESSION_INVITE.pending = null; return rhythmAssistSessionInviteDone(onResult, { ok: false, reason: 'off' }); }
+  return { ok: true, reason: 'opening' };
+};
+// 77-screen-rhythm-multi が読む。peek は見るだけ・take は1回だけ取り出す(古い誘いは捨てる)
+const rhythmAssistSessionPeekInvite = () => {
+  const p = RHYTHM_ASSIST_SESSION_INVITE.pending;
+  if (p && Date.now() - p.at > RHYTHM_ASSIST_SESSION_INVITE_TTL_MS) { RHYTHM_ASSIST_SESSION_INVITE.pending = null; return null; }
+  return p;
+};
+const rhythmAssistSessionTakeInvite = () => { const p = rhythmAssistSessionPeekInvite(); RHYTHM_ASSIST_SESSION_INVITE.pending = null; return p; };
+// 友情Lv が上がった表示(2026-11-07 ナカヨシ5と決めた形「友情Lv +3(Lv4 いい友だち)」)。段の名前が引けなければ数だけ
+const rhythmAssistSessionPeerGainText = (gained, level) => {
+  const stage = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' && Number.isFinite(level) ? ASSISTANT_PEER_BOND_LEVELS.find((x) => x.level === level) : null;
+  const name = stage && typeof assistantPeerStageName === 'function' ? assistantPeerStageName(stage) : '';
+  return `+${gained}${name ? `(Lv${level} ${name})` : ''}`;
+};
 // 結果画面で、呼んだ助手を育てる(1ライブ1回。同じ回は2度数えない)。マスモンの RhythmBuddyGrowth と同じ作り
 function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, durationMs, teamRank, score = 0, maxScore = 0, chartLevel = 0, humans = 1, onTickets = null, ownerRes = null }) {
   const [shown, setShown] = React.useState(null);
@@ -56574,6 +56870,16 @@ function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, duratio
         if (outcome.levelUp > 0 || likeUp > 0) RHYTHM_MULTI.noteBuddyGrowth(rhythmAssistSessionKey(assistantId), { levelUp: outcome.levelUp, likeUp });
       }
       if (alive && outcome) setShown(outcome);
+      // 助手ライフへ知らせる(育ちを保存したあと1回だけ)
+      if (outcome && rhythmAssistSessionEnabled()) {
+        const called = rhythmAssistSessionCalledIds();
+        const level = rhythmBuddyLevelInfo((outcome.next.mons[assistantId] || {}).exp).level;
+        rhythmAssistSessionEmitLive({
+          assistantId, partnerIds: called.filter((x) => x !== assistantId), songId, round,
+          gain: outcome.gain || 0, levelUp: outcome.levelUp || 0, level, likeUp: outcome.likeUp || 0,
+          duo: rhythmAssistSessionDuosNow(called).some((d) => d.a === assistantId || d.b === assistantId), at: Date.now(),
+        });
+      }
     });
     return () => { alive = false; };
   }, [assistantId, round]);
@@ -56800,11 +57106,11 @@ function RhythmAssistSessionDuoResult({ ids = [], round }) {
         const pk = `${round}:${rhythmAssistSessionPairKey(ids[i], ids[j])}`;
         if (RHYTHM_ASSIST_SESSION_PEER_DONE.has(pk) || typeof assistantPeerGain !== 'function') continue;
         RHYTHM_ASSIST_SESSION_PEER_DONE.add(pk);
-        try { const r = await assistantPeerGain(ids[i], ids[j], 'session'); if (r && r.gained > 0) gains[rhythmAssistSessionPairKey(ids[i], ids[j])] = r.gained; } catch (_) { /* 足せなくても続ける */ }
+        try { const r = await assistantPeerGain(ids[i], ids[j], 'session'); if (r && r.gained > 0) gains[rhythmAssistSessionPairKey(ids[i], ids[j])] = { gained: r.gained, level: r.levelAfter }; } catch (_) { /* 足せなくても続ける */ }
       }
       if (!alive) return;
-      const out = lines.map(({ d, rows }) => ({ key: d.key, d, rows, gained: gains[d.key] || 0 }));
-      Object.keys(gains).filter((k) => !out.some((x) => x.key === k)).forEach((k) => { const [a, b] = k.split('-'); out.push({ key: k, d: { a, b }, rows: null, gained: gains[k] }); });
+      const out = lines.map(({ d, rows }) => ({ key: d.key, d, rows, gained: gains[d.key] ? gains[d.key].gained : 0, level: gains[d.key] ? gains[d.key].level : 0 }));
+      Object.keys(gains).filter((k) => !out.some((x) => x.key === k)).forEach((k) => { const [a, b] = k.split('-'); out.push({ key: k, d: { a, b }, rows: null, gained: gains[k].gained, level: gains[k].level }); });
       setShown(out);
     })();
     return () => { alive = false; };
@@ -56815,17 +57121,17 @@ function RhythmAssistSessionDuoResult({ ids = [], round }) {
   const onlyGain = shown.filter((x) => !x.rows && x.gained > 0);
   return (
     <>
-      {withLines.map(({ key: k, d, rows, gained }) => (
+      {withLines.map(({ key: k, d, rows, gained, level }) => (
         <p key={k} data-rhythm-assist-duo-result={k} className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/50 bg-violet-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100 landscape:col-span-2 [[data-mh-view-rotation=true]_&]:col-span-2">
           <span className="shrink-0">🎤 {rhythmAssistSessionName(d.a)}・{rhythmAssistSessionName(d.b)}</span>
           {rows.map(([who, , text], i) => <span key={i} className="min-w-0">{rhythmAssistSessionName(who)}「{text}」</span>)}
-          {gained > 0 && <span data-rhythm-assist-peer-gain className="text-amber-200">友情Lv +{gained}</span>}
+          {gained > 0 && <span data-rhythm-assist-peer-gain className="text-amber-200">友情Lv {rhythmAssistSessionPeerGainText(gained, level)}</span>}
         </p>
       ))}
       {onlyGain.length > 0 && (
         <p data-rhythm-assist-peer-gains className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/40 bg-violet-950/50 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100 landscape:col-span-2 [[data-mh-view-rotation=true]_&]:col-span-2">
           <span className="shrink-0">🎤 友情Lv</span>
-          {onlyGain.map(({ key: k, d, gained }) => <span key={k} data-rhythm-assist-peer-gain className="whitespace-nowrap text-amber-200">{rhythmAssistSessionName(d.a)}・{rhythmAssistSessionName(d.b)} +{gained}</span>)}
+          {onlyGain.map(({ key: k, d, gained, level }) => <span key={k} data-rhythm-assist-peer-gain className="whitespace-nowrap text-amber-200">{rhythmAssistSessionName(d.a)}・{rhythmAssistSessionName(d.b)} {rhythmAssistSessionPeerGainText(gained, level)}</span>)}
         </p>
       )}
     </>
@@ -89331,6 +89637,13 @@ function MonsterHeroGame() {
     if (typeof rhythmAssistSessionSetCall !== 'function') return;
     rhythmAssistSessionSetCall({ name: breederName, levelOf: (id) => assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points), styleOf: (id) => (assistantCallStyles && assistantCallStyles[id]) || null });
   }, [breederName, assistantBonds, assistantCallStyles]);
+  // 助手ライフから「モンビーへ誘う」(rhythmAssistSessionInvite・2026-11-07)が使う、モンヒロビートを開く道とセッション券の数
+  const rhythmAssistSessionTicketsRef = useRef(0);
+  rhythmAssistSessionTicketsRef.current = ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID);
+  useEffect(() => {
+    if (typeof rhythmAssistSessionSetApp !== 'function') return;
+    rhythmAssistSessionSetApp({ open: (to) => openRhythmDemo({ to }), tickets: () => rhythmAssistSessionTicketsRef.current });
+  });
   // いま選んでいる助手そのもの。画面はこれを見て顔・名前・色を出す
   const activeAssistant = assistantById(selectedAssistantId);
   // ふだんの吹き出しを、その日最初に HOME を開いたとき1回だけまとめて頼む(2026-10-14)。
@@ -99744,6 +100057,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       <TapRippleLayer spawnRef={rippleSpawnRef}/>
       {/* 上がる値の演出(44-growth-fx.jsx)。見た目だけ。出してよい画面でだけ出し、演奏中・バトル中・お話の最中は貯めておく */}
       <GrowthFxLayer screen={gameState} load={battleFxSettings.load}/>
+      {/* 時間帯で変わる雰囲気(44-time-of-day.jsx)。<html data-mh-tod> を付け替えるだけ */}
+      <TimeOfDayRoot/>
       {updateNotice}{storageTroubleNotice}
       {/* ランの途中ならどの画面でも出し続ける。gameState==='BATTLE' に限っていたため、
           敵を倒してWAVE_RESULTへ移った瞬間に消えて、曲を選べなくなっていた */}

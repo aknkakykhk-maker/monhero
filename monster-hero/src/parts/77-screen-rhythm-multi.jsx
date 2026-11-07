@@ -957,7 +957,7 @@ const RHYTHM_MULTI = (() => {
     // opts.create … フリーマッチで「部屋を作る」を選んだ(2026-11-07)。ひとりのままでも、ほかの部屋へまとめない
     join(code, profile, mode, opts = {}) {
       loadSelectSecPref();
-      this.leave();
+      this.leave({ silent: true });
       const now = Date.now();
       const id = rhythmMultiMakeId();
       const roomMode = RHYTHM_MULTI_MODES.includes(mode) ? mode : 'private';
@@ -987,7 +987,11 @@ const RHYTHM_MULTI = (() => {
       sweepTimer = setInterval(sweep, 1000);
       emit();
     },
-    leave() {
+    leave(opts = {}) {
+      // 自分で抜けた部屋を覚えておく(2026-11-07 社長「途中抜けして戻ろうとしたときに部屋がなかった」)。
+      //   演奏中・結果の部屋は受付へ知らせを出さないので、一覧にもおまかせにも出てこない。合言葉で直に戻れるようにする。
+      //   部屋を移る(join の中の leave)ときは覚えない。保存はしない(このアプリを開いているあいだだけ)
+      if (s && !(opts && opts.silent)) rhythmMultiLastRoom = { code: s.code, mode: s.mode, at: Date.now(), others: alive().filter((m) => !m.cpu && m.id !== s.selfId).length };
       // 呼んだマスモンも一緒に帰る。1曲も始まっていない子は、呼ぶ側(cpuBrain.ended)が払ったものを返す
       if (s) s.cpus.forEach((c) => { try { if (cpuBrain && cpuBrain.ended) cpuBrain.ended(c.masuId, c.callId); } catch (_) { /* 返せなくても抜ける */ } });
       if (socket) {
@@ -1429,6 +1433,14 @@ function RhythmMultiAloneHint({ alone, onLeave }) {
 //   承認済みのフレンドからの3分以内の招待だけ(今のモードえらびと同じ決まり)。部屋に入っているあいだは出さない。
 //   「入る」は、受けた招待を rhythmMultiPendingInvite に置いて onAccept(モンヒロビートのマルチを開く)を呼ぶ。開いた画面がそれを読んで入る
 let rhythmMultiPendingInvite = null;
+// 自分で抜けた部屋(RHYTHM_MULTI.leave が書く)。10分のあいだだけ「↩ さっきの部屋に戻る」を出す
+let rhythmMultiLastRoom = null;
+const RHYTHM_MULTI_REJOIN_MS = 10 * 60 * 1000;
+const rhythmMultiRejoinTarget = (now = Date.now()) => {
+  const r = rhythmMultiLastRoom;
+  if (!r || !r.code || !(now - r.at >= 0 && now - r.at < RHYTHM_MULTI_REJOIN_MS)) return null;
+  return r.mode === 'private' ? null : r;   // プライベートは合言葉で入り直せるので、フリーだけ
+};
 function RhythmInviteHomeBar({ show = false, onAccept = null }) {
   const [invites, setInvites] = React.useState([]);
   const [names, setNames] = React.useState({});
@@ -2145,9 +2157,9 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   };
   // 助手を呼ぶ(2026-11-07 助手とのセッション)。払い方・控え・返し方はマスモンと同じ1本(控えに kind・assistantId を足す)
   const callAssistant = async (who) => {
-    if (!who || !rhythmAssistSessionEnabled() || !RHYTHM_MULTI.canSummon()) { setBuddySheet(''); return; }
+    if (!who || !rhythmAssistSessionEnabled() || !RHYTHM_MULTI.canSummon()) { setBuddySheet(''); return 'full'; }
     const key = rhythmAssistSessionKey(who.id);
-    if ((view && view.myCpus ? view.myCpus : []).some((c) => c.masuId === key)) return; // 同じ助手は2人呼べない
+    if ((view && view.myCpus ? view.myCpus : []).some((c) => c.masuId === key)) return 'already'; // 同じ助手は2人呼べない
     const day = rhythmBuddyDayKey(Date.now());
     const call = { id: rhythmBuddyCallId(), masuId: key, at: Date.now(), load: RHYTHM_BUDDY_LOAD_ID, kind: 'assistant', assistantId: who.id };
     let paid = (await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
@@ -2155,12 +2167,27 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
       try { paid = (await onUseBuddyTicket()) === true ? 'ticket' : ''; } catch (_) { paid = ''; }
       if (paid) await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyAddCall(st, { ...call, paid: 'ticket', day }));
     }
-    if (!paid) return;
+    if (!paid) return 'no_ticket';
     setBuddyBumped(false);
     const joined = RHYTHM_MULTI.summon({ masuId: key, callId: call.id, name: rhythmAssistSessionName(who.id), level: rhythmAssistSessionLevel(RHYTHM_ASSIST_SESSION_STORE.get(), who.id), baseId: '', colors: [], assistantId: who.id });
     if (!joined) endBuddy(key, call.id);
     setBuddySheet('');
+    return joined ? 'ok' : 'full';
   };
+  // 助手ライフから「モンビーへ誘う」で来たとき(rhythmAssistSessionInvite・2026-11-07)。部屋が無ければ自分だけの部屋を作り、
+  //   入れたらその助手を呼ぶ。払えなかった・満員だったら onResult で知らせて呼ばない。誘いは1回だけ使う
+  //   画面がもう開いているときに誘われても気づけるよう、誘いの知らせ(rhythmAssistSessionOnInvite)でも見直す
+  const [inviteTick, setInviteTick] = React.useState(0);
+  React.useEffect(() => (typeof rhythmAssistSessionOnInvite === 'function' ? rhythmAssistSessionOnInvite(() => setInviteTick((n) => n + 1)) : undefined), []);
+  const inviteRoomReady = !!(view && view.status === 'open' && view.selfId);
+  React.useEffect(() => {
+    if (!inviteRoomReady || typeof rhythmAssistSessionTakeInvite !== 'function' || !rhythmAssistSessionPeekInvite()) return;
+    const p = rhythmAssistSessionTakeInvite();
+    const who = (sessionAssistants || []).find((x) => x && x.id === p.id);
+    const done = (ok, reason) => rhythmAssistSessionInviteDone(p.onResult, { ok, reason });
+    if (!who) { done(false, 'locked'); return; }
+    void callAssistant(who).then((r) => done(r === 'ok' || r === 'already', r || 'full'));
+  }, [inviteRoomReady, inviteTick]);
   const sessionAssistantsOn = rhythmAssistSessionEnabled() && (sessionAssistants || []).length > 0;
   const buddySongName = (id) => { const song = songs.find((x) => x.songId === id); return song ? rhythmSongFullName(song) : '(曲)'; };
   // 部屋の中で相棒の札を押したときの窓。開いているのは札の id(呼んだ子が帰ったら自然に消える)
@@ -2208,18 +2235,21 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   const [roster, setRoster] = React.useState(null);        // フレンド名簿(承認済みのみ)。null=まだ読んでいない
   const [friendInvites, setFriendInvites] = React.useState([]);
   const [invitePanel, setInvitePanel] = React.useState(false);
+  // 💌 のシート(2026-11-07)。フレンドの今(居場所)は、待合いの欄と同じく、このシートを開いているあいだも読む
+  const [inviteSheet, setInviteSheet] = React.useState(false);
   const [invitedIds, setInvitedIds] = React.useState({});
   const [inviteMessage, setInviteMessage] = React.useState('');
   // 招待の行に出すフレンドの今(34 の friendsPresenceFor・75 の FriendPresenceTag。2026-10-29 社長「相手がいま何をしているかが見えると誘いやすい」)
   const [presence, setPresence] = React.useState({});
   React.useEffect(() => {
-    if (!invitePanel || !roster || !roster.length || typeof friendsPresenceFor !== 'function') return undefined;
+    // ★2026-11-07 まで 💌 のシートでは読んでいなかった(社長「招待の画面でフレンドがなにをしてるかわからない」。「◯分前に開きました」だけが出ていた)
+    if (!(invitePanel || inviteSheet) || !roster || !roster.length || typeof friendsPresenceFor !== 'function') return undefined;
     let alive = true;
     const load = () => { void friendsPresenceFor(roster.map((f) => f.otherId)).then((p) => { if (alive) setPresence(p || {}); }); };
     load();
     const t = setInterval(load, 60000);
     return () => { alive = false; clearInterval(t); };
-  }, [invitePanel, roster]);
+  }, [invitePanel, inviteSheet, roster]);
   const loadRoster = React.useCallback(async (id) => {
     try { setRoster(await sbFetchFriendRoster(id)); } catch (_) { setRoster([]); }
   }, []);
@@ -2332,6 +2362,11 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     rhythmMultiPendingInvite = null;
     if (!RHYTHM_MULTI.view()) joinFromInvite(pending);
   }, []);
+  // 助手ライフから「モンビーへ誘う」で開いたとき。部屋に入っていなければ、自分だけのプライベートの部屋を作る(呼ぶのは入れてから)
+  React.useEffect(() => {
+    if (typeof rhythmAssistSessionPeekInvite !== 'function' || !rhythmAssistSessionPeekInvite() || RHYTHM_MULTI.view()) return;
+    createPrivate();
+  }, [inviteTick]);
   const joinPrivate = () => {
     const code = rhythmMultiNormalizeCode(codeInput);
     if (!code) { setMessage(`部屋コードは${RHYTHM_MULTI_CODE_LENGTH}文字です`); return; }
@@ -2351,6 +2386,32 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     setFreeOpen(false); setFreeList(false);
     RHYTHM_MULTI.join(rhythmMultiMakeCode(), myProfile(), 'free', { create: true });
   };
+  // ↩ さっきの部屋に戻る(2026-11-07)。抜けた部屋へ合言葉で直に入る。同じ部屋へ戻るときは、途中でやめたときの入室待ちをかけない。
+  //   戻った部屋が演奏中でも、待合いで待って次の曲から一緒に遊べる。ひとりに見えても、ほかの部屋へまとめない(create)
+  const rejoinLast = () => {
+    const r = rhythmMultiRejoinTarget();
+    if (!r) return;
+    setMessage('');
+    setFreeOpen(false); setFreeList(false);
+    rhythmMultiLastRoom = null;
+    RHYTHM_MULTI.join(r.code, myProfile(), r.mode, { create: true });
+  };
+  // シートを開いているあいだ、いま人を待っている部屋を聞く(2026-11-07 社長「誰かが部屋を作ってるかを分かりやすくして」)
+  const [freeRooms, setFreeRooms] = React.useState(null);
+  React.useEffect(() => {
+    if (!freeOpen) { setFreeRooms(null); return undefined; }
+    return RHYTHM_MULTI.watchRooms('free', setFreeRooms);
+  }, [freeOpen]);
+  const freeRoomCount = Array.isArray(freeRooms) ? freeRooms.length : null;
+  const rejoinTarget = !view ? rhythmMultiRejoinTarget() : null;
+  const rejoinButton = rejoinTarget && (
+    <button type="button" data-rhythm-multi-rejoin={rejoinTarget.code} onClick={rejoinLast}
+      className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl border-2 border-amber-300/80 bg-amber-950/70 px-4 text-left active:scale-[.98]">
+      <span aria-hidden="true" className="text-xl">↩</span>
+      <span className="min-w-0 flex-1 leading-tight"><b className="block text-[15px] font-black text-amber-100">さっきの部屋に戻る</b>
+        <small className="block text-[11px] font-bold text-amber-200/90" style={JA_WRAP_STYLE}>{jaWrap(`部屋 ${rejoinTarget.code}。演奏中なら、次の曲から一緒に遊べます`)}</small></span>
+    </button>
+  );
   const joinFreeRoom = async (code) => {
     setMessage('');
     if (!(await freePenaltyOk())) return;
@@ -2556,7 +2617,6 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                     </div>
   );
   // 💌 フレンドを招待する(2026-11-07 社長「フリーマッチでも招待できる」「あとから誘えるように」)。部屋にいるあいだはいつでも開ける
-  const [inviteSheet, setInviteSheet] = React.useState(false);
   const openInviteSheet = () => {
     setInviteMessage('');
     setChatOpen(false);
@@ -2748,13 +2808,20 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 <div className="min-w-0 flex-1 leading-tight"><b className="block text-base font-black text-fuchsia-100">フリーマッチ</b><small className="block text-[11px] font-bold text-slate-400">だれとでも最大{RHYTHM_MULTI_ROOM_MAX}人で協力</small></div>
                 <button type="button" aria-label="閉じる" onClick={() => { setFreeOpen(false); setFreeList(false); }} className="min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 text-sm font-black">✕</button>
               </div>
+              {rejoinButton}
               {freeList
                 ? <RhythmMultiRoomList onJoin={joinFreeRoom} onCreate={createFree} onBack={() => setFreeList(false)} resolveIconUrl={resolveIconUrl} />
                 : <div className="flex flex-col gap-2">
-                  <button type="button" data-rhythm-multi-free-create onClick={createFree} className="flex min-h-[60px] w-full items-center gap-3 rounded-2xl bg-gradient-to-b from-fuchsia-500 to-violet-700 px-4 text-left active:scale-[.98]">
+                  <button type="button" data-rhythm-multi-free-create data-rhythm-multi-free-create-hot={freeRoomCount === 0 ? '1' : undefined} onClick={createFree} className={`flex min-h-[60px] w-full items-center gap-3 rounded-2xl bg-gradient-to-b from-fuchsia-500 to-violet-700 px-4 text-left active:scale-[.98] ${freeRoomCount === 0 ? 'ring-4 ring-amber-300 shadow-[0_0_18px_rgba(252,211,77,.6)]' : ''}`}>
                     <span aria-hidden="true" className="text-2xl">🏠</span><span className="min-w-0 flex-1 leading-tight"><b className="block text-base font-black">部屋を作る</b><small className="block text-[11px] font-bold opacity-90" style={JA_WRAP_STYLE}>{jaWrap('自分の部屋を作って、人が来るのを待つ')}</small></span></button>
                   <button type="button" data-rhythm-multi-free-list-open onClick={() => setFreeList(true)} className="flex min-h-[60px] w-full items-center gap-3 rounded-2xl bg-gradient-to-b from-sky-500 to-blue-700 px-4 text-left active:scale-[.98]">
-                    <span aria-hidden="true" className="text-2xl">🚪</span><span className="min-w-0 flex-1 leading-tight"><b className="block text-base font-black">部屋に入る</b><small className="block text-[11px] font-bold opacity-90" style={JA_WRAP_STYLE}>{jaWrap('いま開いている部屋の一覧から選ぶ')}</small></span></button>
+                    <span aria-hidden="true" className="text-2xl">🚪</span><span className="min-w-0 flex-1 leading-tight"><b className="block text-base font-black">部屋に入る</b><small className="block text-[11px] font-bold opacity-90" style={JA_WRAP_STYLE}>{jaWrap('いま開いている部屋の一覧から選ぶ')}</small>
+                      <small data-rhythm-multi-free-room-count={freeRoomCount == null ? '' : String(freeRoomCount)} className="mt-1 flex items-center gap-1.5 text-[12px] font-black">
+                        {freeRoomCount == null ? <span className="text-sky-100/80">部屋をさがしています…</span>
+                          : freeRoomCount === 0 ? <span className="text-amber-200">いま部屋はありません → 部屋を作ろう</span>
+                          : <><span className="flex">{freeRooms.slice(0, 3).map((r, n) => <span key={r.code} className="h-6 w-6 shrink-0 overflow-hidden rounded-full border border-white/70 bg-slate-900" style={n ? { marginLeft: '-6px' } : undefined}><RhythmMultiAvatar m={{ icon: r.hi }} resolveIconUrl={resolveIconUrl} sizeClass="h-6 w-6" small /></span>)}</span>
+                            <span className="text-lime-200">🟢 {freeRoomCount}部屋 待っています</span></>}
+                      </small></span></button>
                   <button type="button" data-rhythm-multi-free-auto onClick={() => { setFreeOpen(false); searchRoom('free'); }} className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl bg-slate-700 px-4 text-left active:scale-[.98]">
                     <span aria-hidden="true" className="text-xl">⚡</span><span className="min-w-0 flex-1 leading-tight"><b className="block text-[15px] font-black">おまかせで入る</b><small className="block text-[11px] font-bold opacity-90" style={JA_WRAP_STYLE}>{jaWrap('空いている部屋に自動で入る')}</small></span></button>
                 </div>}
