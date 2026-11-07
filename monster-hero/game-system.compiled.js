@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 407774679db5237a
+// source-sha256: 3abbef71aa7d50c7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -61593,7 +61593,7 @@ const GrowthFxChip = ({
     key: `i${chip.rev}`,
     className: "ico beat",
     "aria-hidden": "true"
-  }, k.icon), React.createElement("span", {
+  }, cardIconNode(k.icon, 13)), React.createElement("span", {
     className: "min-w-0"
   }, React.createElement("span", {
     className: "who block"
@@ -61668,7 +61668,7 @@ const GrowthFxItemCard = ({
     }, React.createElement("span", {
       className: "ico",
       "aria-hidden": "true"
-    }, rk.icon), React.createElement("div", {
+    }, cardIconNode(rk.icon, 18)), React.createElement("div", {
       style: {
         flex: 1,
         minWidth: 0
@@ -61753,7 +61753,7 @@ const GrowthFxLevelUp = ({
       className: "mh-gfx-band"
     }, React.createElement("span", {
       className: "big"
-    }, k.icon, " ", k.label, " Lv.", sheet.levelTo), React.createElement("small", null, sheet.sub, gains.length ? ` ・ ${gains.map(g => g.text).join('・')}` : ''), React.createElement("small", null, "押すと閉じる")));
+    }, cardIconNode(k.icon, 20), " ", k.label, " Lv.", sheet.levelTo), React.createElement("small", null, sheet.sub, gains.length ? ` ・ ${gains.map(g => g.text).join('・')}` : ''), React.createElement("small", null, "押すと閉じる")));
   }
   const conf = level === 'full' ? Array.from({
     length: 24
@@ -61857,7 +61857,7 @@ const GrowthFxLevelUp = ({
     }
   }, React.createElement("span", {
     "aria-hidden": "true"
-  }, g.icon || '✨'), React.createElement("span", {
+  }, cardIconNode(g.icon || '✨', 14)), React.createElement("span", {
     className: "min-w-0"
   }, React.createElement("b", null, String(g.text || '')), g.note && React.createElement("small", null, String(g.note))), g.isNew && React.createElement("span", {
     className: "new"
