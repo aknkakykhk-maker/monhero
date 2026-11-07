@@ -127,6 +127,6 @@ Lv6 からは、助手ごとに呼び方を選べる(選んだ呼び方が性別
 
 ## 4. 見張る検査
 
-- `node tools/assistant/player-call-check.js` … 助手どうし・助手ライフ・書き直しの表・台本のテキストに、プレイヤーへの「ブリーダー」が直に無いか/`{name}` が呼び方に置きかわるか
+- `node tools/assistant/player-call-check.js` … 助手どうし・助手ライフ・書き直しの表・台本のテキスト・助手とのセッションの台詞に、プレイヤーへの「ブリーダー」が直に無いか/`{name}` が呼び方に置きかわるか
 - `node tools/assistant/breeder-gender-call-check.js` … 性別ごとの呼び方
 - `node tools/assistant/assistant-call-honorific-check.js` … 助手どうしの呼び方に「さん」「ちゃん」が重ならないか

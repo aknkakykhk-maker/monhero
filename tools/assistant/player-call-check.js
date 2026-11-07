@@ -6,8 +6,8 @@
 //      「ブリーダーLv」「ブリーダーP」「ブリーダー経験値」「ブリーダーの教え」「ほかのブリーダー」など役目・物の名前はよい
 //   ② 表示のときに {name} が、話している助手のいまの呼び方に置きかわる(呼び方が渡される前は「あなた」)。穴が残らない
 //   ③ AI 版の掛け合いの決まり(supabase/functions/assistant-chat/core.js)も {name} で書かせる
-//   (参考) モンヒロビートの助手とのセッションの台詞(33-rhythm-assistant-session-lines.jsx)。--all で止める
-//   node tools/assistant/player-call-check.js [--all]
+//   ④ モンヒロビートの助手とのセッションの台詞(33-rhythm-assistant-session-lines.jsx)も同じ(マモリ・2026-11-07 から必ず止める)
+//   node tools/assistant/player-call-check.js
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -77,15 +77,13 @@ check('① 台本のテキスト(lines/*.txt)にも、プレイヤーへの「�
   check('③ AI 版の返事の「ブリーダー(さん)」は {name} に直してから受け取る', /replace\(\/ブリーダー\(さん\)\?/.test(core) && /\\\{c\\\}\|\\\{name\\\}/.test(core));
 }
 
-// (参考) モンヒロビートの助手とのセッションの台詞(マモリ)
+// ④ モンヒロビートの助手とのセッションの台詞(マモリ)
 {
   const f = path.join(root, 'monster-hero', 'src', 'parts', '33-rhythm-assistant-session-lines.jsx');
   if (fs.existsSync(f)) {
     const hits = fs.readFileSync(f, 'utf8').split('\n').map((l, i) => [i + 1, l]).filter(([, l]) => !/^\s*\/\//.test(l) && DIRECT.test(l));
-    const strict = process.argv.includes('--all');
-    const label = '(参考) 助手とのセッションの台詞にも、プレイヤーへの「ブリーダー」が直に無い';
-    if (strict) check(label, hits.length === 0, hits.slice(0, 3).map(([n]) => `${n}行`).join(', '));
-    else console.log(`${hits.length ? '(参考)×' : '(参考)○'}: ${label} — ${hits.length}行`);
+    // 2026-11-07 マモリが {name} に直したので、必ず止める
+    check('④ 助手とのセッションの台詞にも、プレイヤーへの「ブリーダー」が直に無い', hits.length === 0, hits.slice(0, 3).map(([n]) => `${n}行`).join(', '));
   }
 }
 

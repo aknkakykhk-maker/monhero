@@ -58,6 +58,17 @@ const rhythmAssistSessionLikedNames = (assistantId) => {
 };
 const rhythmAssistSessionName = (assistantId) => { const who = rhythmAssistSessionWho(assistantId); return String((who && who.name) || '助手').slice(0, 12); };
 
+// プレイヤーの呼び方(2026-11-07 社長「ブリーダーとか呼び方がおかしい」・docs/rules/CALL_NAMES.md)。
+// 台詞の {name} を、話す助手のいまの呼び方(仲良し度の段・性別・自分で決めた呼び方)に置きかえる。
+// 名前・助手ごとの仲良し度 Lv・呼び方は本体(60-app)が rhythmAssistSessionSetCall で渡す(保存しない)
+const RHYTHM_ASSIST_SESSION_CALL = { name: '', levelOf: null, styleOf: null };
+const rhythmAssistSessionSetCall = (c) => { Object.assign(RHYTHM_ASSIST_SESSION_CALL, c || {}); };
+const rhythmAssistSessionSpeak = (assistantId, text) => {
+  const c = RHYTHM_ASSIST_SESSION_CALL;
+  let lv; try { lv = typeof c.levelOf === 'function' ? c.levelOf(assistantId) : undefined; } catch (_) { lv = undefined; }
+  let style = null; try { style = typeof c.styleOf === 'function' ? c.styleOf(assistantId) : null; } catch (_) { style = null; }
+  return typeof assistantSpeakText === 'function' ? assistantSpeakText(text, c.name, lv, style, assistantId) : String(text || '').replace(/\{name\}/g, c.name || 'キミ');
+};
 // 台詞は 33-rhythm-assistant-session-lines.jsx(docs/progress/beat-assistant-session/lines/*.txt から生成)。
 // 助手ごとに直近に言った台詞を覚えて避ける(保存しない)。同じ曲で同じ台詞を出さないため
 const RHYTHM_ASSIST_SESSION_RECENT = new Map();
@@ -72,7 +83,7 @@ const rhythmAssistSessionPickLine = (assistantId, scene, rand = Math.random) => 
   const pool = fresh.length ? fresh : list;
   const hit = pool[Math.floor(rand() * pool.length)];
   RHYTHM_ASSIST_SESSION_RECENT.set(assistantId, [hit[1], ...recent.filter((t) => t !== hit[1])].slice(0, RHYTHM_ASSIST_SESSION_RECENT_KEEP));
-  return hit;
+  return [hit[0], rhythmAssistSessionSpeak(assistantId, hit[1])];
 };
 // 好きな曲・苦手な曲の結果の専用(曲の別の版も同じ曲として探す)
 const rhythmAssistSessionSongScene = (assistantId, songId) => {
@@ -172,7 +183,7 @@ const rhythmAssistSessionWrapBrain = (brain, songs) => ({
 });
 
 // 呼ぶシートの「助手」のタブの中身。カードを押して選び、下の帯の「呼ぶ」で呼ぶ(マスモンのタブと同じ流れ)
-function RhythmAssistSessionPicker({ assistants = [], calledIds = [], canPay = true, busy = false, onPick }) {
+function RhythmAssistSessionPicker({ assistants = [], calledIds = [], canPay = true, busy = false, onPick, guideAssistantId = '' }) {
   const state = useRhythmAssistSessionState();
   const [selId, setSelId] = React.useState('');
   const list = (assistants || []).filter((who) => who && RHYTHM_ASSIST_SESSION_IDS.includes(who.id));
@@ -180,6 +191,7 @@ function RhythmAssistSessionPicker({ assistants = [], calledIds = [], canPay = t
   const calledOf = (id) => calledIds.includes(rhythmAssistSessionKey(id));
   return (
     <div data-rhythm-assist-picker className="flex min-h-0 flex-1 flex-col">
+      <RhythmAssistSessionGuide assistantId={guideAssistantId} />
       <div data-rhythm-assist-talk-option className="mb-2 flex shrink-0 items-center gap-1.5">
         <span className="shrink-0 text-[11px] font-black text-slate-300">助手のひとこと</span>
         {[['all', '全部'], ['few', '少なめ'], ['off', '切る']].map(([id, label]) => (
@@ -326,7 +338,7 @@ const rhythmAssistSessionPickPair = (duo, scene, used, rand = Math.random) => {
   const rows = fresh[Math.floor(rand() * fresh.length)];
   used.add(rows);
   const callOf = (who, to) => (typeof assistantPeerCall === 'function' ? assistantPeerCall(who, to) : rhythmAssistSessionName(to));
-  return rows.map(([who, expr, text]) => [who, expr, String(text).replace(/\{c\}/g, callOf(who, who === duo.a ? duo.b : duo.a))]);
+  return rows.map(([who, expr, text]) => [who, expr, rhythmAssistSessionSpeak(who, String(text).replace(/\{c\}/g, callOf(who, who === duo.a ? duo.b : duo.a)))]);
 };
 
 // 演奏中の助手の顔とひとこと(2026-11-07 社長の止め絵の形)。演奏画面の外(60-app)から重ねる。演奏の仕組みには触れず、
@@ -565,5 +577,39 @@ function RhythmAssistSessionProfileBadges() {
         })}
       </div>
     </section>
+  );
+}
+
+// 一度きりの案内(2026-11-07 社長「この文で公開」)。呼ぶシートの「助手」のタブをはじめて開いたとき、いま選んでいる助手が1回だけ話す。
+// 新しいキー mh_rhythm_assistant_session_seen_v1(⑦)。プレイヤーは {name}(話す助手の呼び方に置きかえる)
+const RHYTHM_ASSIST_SESSION_SEEN_KEY = 'mh_rhythm_assistant_session_seen_v1';
+const RHYTHM_ASSIST_SESSION_GUIDE_LINES = Object.freeze({
+  mua: 'あたしたち助手も、ここから呼べるようになったよ！{name}、一緒に演奏しよ♪',
+  kiki: '{name}、私たち助手も、ここから呼べるようになりました♪ 一緒に演奏しまつ',
+  momosuke: 'ももたち助手も呼べるようになったよ！！{name}、ステージ一緒に立と♡',
+  dra: 'おでたち助手も、ここから呼べるようになったんだ。{name}、一緒に叩こうな',
+  atsu: 'てか、俺たち助手もここから呼べるようになったぞ！{name}、一曲いくか笑',
+  kyuko: 'ほい！俺たち助手も、ここから呼べるようになったよぉ。{name}、一緒にやろぉ',
+  sorashido: 'うぉぉぉ！俺たち助手も呼べるようになったぜ！{name}、一緒に演奏だぜ笑',
+  erubin: '俺たち助手も、ここから呼べるようになったんだ。{name}、よかったら一緒にね',
+});
+function RhythmAssistSessionGuide({ assistantId = '' }) {
+  const [show, setShow] = React.useState(false);
+  React.useEffect(() => {
+    if (!rhythmAssistSessionEnabled()) return undefined;
+    let alive = true;
+    (async () => { try { const seen = await storeGet(RHYTHM_ASSIST_SESSION_SEEN_KEY, false); if (alive && seen !== true) setShow(true); } catch (_) { /* 読めなければ出さない */ } })();
+    return () => { alive = false; };
+  }, []);
+  const id = RHYTHM_ASSIST_SESSION_GUIDE_LINES[assistantId] ? assistantId : 'mua';
+  const who = rhythmAssistSessionWho(id);
+  if (!show || !who) return null;
+  const close = () => { setShow(false); void storeSet(RHYTHM_ASSIST_SESSION_SEEN_KEY, true).catch(() => {}); };
+  return (
+    <div data-rhythm-assist-guide className="mb-2 flex shrink-0 items-start gap-2 rounded-2xl border border-pink-300/50 bg-pink-950/60 p-2">
+      <AssistantFace who={who} size={40} accent={who.accent} expression="happy" />
+      <p className="min-w-0 flex-1 text-[11px] font-bold leading-snug text-pink-50" style={JA_WRAP_STYLE}>{jaWrap(rhythmAssistSessionSpeak(id, RHYTHM_ASSIST_SESSION_GUIDE_LINES[id]))}</p>
+      <button type="button" data-rhythm-assist-guide-close aria-label="閉じる" onClick={close} className="min-h-[36px] shrink-0 rounded-lg bg-slate-800 px-2 text-[11px] font-black">わかった</button>
+    </div>
   );
 }

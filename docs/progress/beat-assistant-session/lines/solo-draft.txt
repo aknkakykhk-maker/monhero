@@ -7,11 +7,11 @@
 #   mvp / high(9割以上) / mid / low(7割未満) / fc(フルコン) / levelup(セッションLv.UP) / likeup(苦手が好きになった) / overcome(苦手な曲をクリア)
 #   song:<曲id>(好きな曲・苦手な曲の結果の専用)
 #   sp50 / sp80 / sp100(セッションLv.50・80・100 で開く特別な台詞。部屋に来たとき・結果でときどき)
-# 守り: 恋愛にしない・悪口なし・下げない・ネタバレなし・プレイヤーは「ブリーダー」(ききは「ブリーダーさん」)
+# 守り: 恋愛にしない・悪口なし・下げない・ネタバレなし・プレイヤーは {name}(ゲームがその助手のいまの呼び方に置きかえる。「ブリーダー」と直に書かない・docs/rules/CALL_NAMES.md)
 
 ## mua
 join | mua happy やっほ〜！あたしも一緒に叩くね♪
-join | mua happy ブリーダー、今日もセッションしよ！
+join | mua happy {name}、今日もセッションしよ！
 first | mua excited この曲はじめてかも！ワクワクするぢゃん♪
 first | mua excited 知らない曲って、なんか燃えるよね♪
 like | mua happy この曲あたし大好きなの♪
@@ -34,7 +34,7 @@ mid | mua happy いい感じだったよ！次はもっといけるかも♪
 mid | mua happy 楽しかったぁ♪ もう一曲いこ！
 low | mua troubled 次はもっと合わせよ！あたしもがんばる♪
 low | mua troubled 大丈夫！何回でも付き合うよ♪
-fc | mua surprise フルコンぢゃん！ブリーダー天才かもｗ
+fc | mua surprise フルコンぢゃん！{name}天才かもｗ
 fc | mua surprise 全部つながった〜！まぢ感動♪
 levelup | mua happy セッションLvが上がった♪ あたしも上手になってるかも！
 levelup | mua happy もっと一緒に叩きたくなってきた♪
@@ -46,22 +46,22 @@ song:haruka | mua happy ハルカ、聞くたびにキュンとしちゃう♪
 song:crazy_party_night | mua happy パーティーの曲って、それだけで楽しいぢゃん♪
 song:grievous_lady | mua happy Grievous Lady、最後までついていけた！あたしえらいｗ
 sp50 | mua happy あたしたち、もうセッションLv.50ぢゃん！まぢ最強コンビかも♪
-sp50 | mua wink ブリーダーとならどんな曲でも楽しいの、ほんとだよ♪
+sp50 | mua wink {name}とならどんな曲でも楽しいの、ほんとだよ♪
 sp80 | mua excited Lv.80！ここまで来たら、もう息ぴったりぢゃん♪
-sp80 | mua happy あたしの一番のセッション相手は、ブリーダーだよｗ
+sp80 | mua happy あたしの一番のセッション相手は、{name}だよｗ
 sp100 | mua excited セッションLv.100！あたしたち、セッションマスターぢゃん！
 sp100 | mua happy ここまで一緒に叩いてくれて、まぢありがと♪
 
 ## kiki
-join | kiki happy ブリーダーさん、よろしくお願いしまつ♪
+join | kiki happy {name}、よろしくお願いしまつ♪
 join | kiki happy 今日も一緒に演奏できてうれしいです♪
 first | kiki excited はじめての曲ですね。どきどきしまつ♪
-first | kiki excited 知らない曲も、ブリーダーさんとなら平気です
+first | kiki excited 知らない曲も、{name}となら平気です
 like | kiki happy この曲、私とても好きなんです♪
 dislike | kiki troubled この曲は大きい音でどなられるので、少しびっくりしちゃいます
 combo | kiki excited いい流れでつね♪ このまま全部いけそうです
 combo | kiki excited とってもきれいにつながっていますよ♪
-combo | kiki excited ブリーダーさん、さすがでつ
+combo | kiki excited {name}、さすがでつ
 miss | kiki normal 大丈夫でつ、落ち着いていきましょう♪
 miss | kiki normal ひと呼吸おけば、また合わせられまつよ
 climax | kiki excited ここが一番きれいなところでつ♪
@@ -77,7 +77,7 @@ mid | kiki happy いい演奏でした。次はもっと合わせられそうで
 mid | kiki happy 楽しかったです♪ もう一曲いかがですか？
 low | kiki troubled 次はきっと、もっと合わせられますよ♪
 low | kiki troubled 何度でもお付き合いしまつ♪
-fc | kiki surprise フルコンボでつ！ブリーダーさん、すごいです♪
+fc | kiki surprise フルコンボでつ！{name}、すごいです♪
 fc | kiki surprise 最後まで一つも落とさないなんて、見とれちゃいました
 levelup | kiki happy セッションLvが上がりました♪ うれしいでつ
 levelup | kiki happy 少しずつ、上手になれている気がします♪
@@ -88,16 +88,16 @@ song:kiki_issen | kiki happy 綺季一閃は、私の曲でつ♪ 雪の舞う�
 song:tsuki_ga_michiru_mae_ni | kiki happy 月が満ちる前に、しっとりしていて落ち着きます♪
 song:kaze_ga_soyogu | kiki happy 風がそよぐ場所、気持ちがすっと軽くなりますね
 song:black_shout | kiki happy BLACK SHOUT、こわかったけど、最後までがんばれました
-sp50 | kiki happy ブリーダーさんとのセッション、Lv.50になりました♪
+sp50 | kiki happy {name}とのセッション、Lv.50になりました♪
 sp50 | kiki wink 指が覚えてくれている気がしまつ♪
 sp80 | kiki happy Lv.80でつ。目を閉じても合わせられそうです♪
-sp80 | kiki normal ブリーダーさんの音、ちゃんと聞こえていますよ
+sp80 | kiki normal {name}の音、ちゃんと聞こえていますよ
 sp100 | kiki excited Lv.100でつ！セッションマスターですね♪
 sp100 | kiki happy たくさん一緒に演奏してくれて、ありがとうございまつ♪
 
 ## momosuke
 join | momosuke happy ももが来たからには盛り上げるよ！！
-join | momosuke happy ブリーダー、ももとセッションできるなんてラッキーだよw
+join | momosuke happy {name}、ももとセッションできるなんてラッキーだよw
 first | momosuke excited はじめての曲！！ももが一番に覚えちゃうもんね
 first | momosuke excited 新曲でもももは完璧にこなすよ♡
 like | momosuke happy この曲ももの推し曲！！
@@ -120,27 +120,27 @@ mid | momosuke happy まあまあかな！！次はもっと盛り上げよ♡
 mid | momosuke happy 楽しかった！！アンコールいく？w
 low | momosuke troubled ドンマイ！次はもも、もっと見ててあげる♡
 low | momosuke troubled 練習あるのみ！！ももも付き合うからw
-fc | momosuke surprise フルコン！？ブリーダー、もものファン一号にしてあげる♡
+fc | momosuke surprise フルコン！？{name}、もものファン一号にしてあげる♡
 fc | momosuke surprise 全部つながった！！最高のステージだったよ！！
 levelup | momosuke happy セッションLvアップ！！もも、また一段とかわいくなっちゃったw
-levelup | momosuke happy 上達してるのはももだけじゃないよ、ブリーダーもね♡
+levelup | momosuke happy 上達してるのはももだけじゃないよ、{name}もね♡
 likeup | momosuke wink この曲、ちょっとだけ好きになったかも…ちょっとだけね！！
 overcome | momosuke happy 眠くならずに最後までいけた！！もも、えらい♡
 overcome | momosuke happy 苦手でもちゃんと決めるのがアイドルだよw
 song:crossing_field | momosuke happy crossing field は、ももが一番かわいく踊れる曲！！
 song:only_my_railgun | momosuke happy only my railgun、テンション上がりっぱなしw
 song:rose | momosuke happy ROSE はかっこいいももも見せられる曲なんだよ♡
-song:dullahan_clockwork | momosuke happy チクタクに負けなかった！！ブリーダーもえらい♡
-sp50 | momosuke excited Lv.50！！ももとブリーダー、もう名コンビだね♡
+song:dullahan_clockwork | momosuke happy チクタクに負けなかった！！{name}もえらい♡
+sp50 | momosuke excited Lv.50！！ももと{name}、もう名コンビだね♡
 sp50 | momosuke wink ここまで来たら、ももの専属だよw
-sp80 | momosuke excited Lv.80！！ステージの上で一番息が合うの、ブリーダーかも♡
-sp80 | momosuke happy ももについてこれるの、ブリーダーくらいだよ！！
+sp80 | momosuke excited Lv.80！！ステージの上で一番息が合うの、{name}かも♡
+sp80 | momosuke happy ももについてこれるの、{name}くらいだよ！！
 sp100 | momosuke excited Lv.100！！セッションマスターはもものおかげだよね♡
 sp100 | momosuke happy ずっと一緒にステージ立ってくれて、ありがと！！
 
 ## dra
 join | dra happy おでも混ぜてくれよな、えへへ
-join | dra happy ブリーダー、今日もよろしくな
+join | dra happy {name}、今日もよろしくな
 first | dra excited はじめての曲か。冒険って感じでいいな
 first | dra excited 知らない道を行くのは、わくわくするからな
 like | dra happy この曲、おで好きなんだよ
@@ -163,7 +163,7 @@ mid | dra happy なかなかよかったな。次も行くからな
 mid | dra happy 楽しかったな。もう一回いいか？
 low | dra troubled どんまいだな、次でとりかえすからな
 low | dra troubled おでも練習するからな。一緒にがんばろう
-fc | dra surprise 全部つながったな！？すごいな、ブリーダー
+fc | dra surprise 全部つながったな！？すごいな、{name}
 fc | dra surprise フルコンだな、おで鼻が高いからな
 levelup | dra happy セッションLvが上がったな、えへへ
 levelup | dra happy おでも少しは上手になってきたかな
@@ -177,7 +177,7 @@ song:stay_with_me | dra happy Stay With Me、しんみりしたけど、悪く�
 sp50 | dra happy セッションLv.50だな。おで、うれしいくさ
 sp50 | dra normal ここまで来たの、ちょっとした冒険だったな
 sp80 | dra happy Lv.80だな。もう目をつぶっても合わせられるからな
-sp80 | dra happy ブリーダーと叩くの、おで好きなんだな、えへへ
+sp80 | dra happy {name}と叩くの、おで好きなんだな、えへへ
 sp100 | dra excited Lv.100だな！セッションマスターだからな！
 sp100 | dra happy 長い冒険だったな。ありがとうな、えへへ
 
@@ -261,7 +261,7 @@ song:six_eternel_beat | kyuko happy SIX ÉTERNEL、展開がきれいでいい�
 song:evans | kyuko happy Evans は、音の重ね方が気持ちいいんだよね〜
 song:toriko | kyuko happy トリコ、最後までノリについていけた〜！
 sp50 | kyuko happy Lv.50だね〜。合わせ方が分かってきたよ
-sp50 | kyuko wink ブリーダーの癖、だいたい読めるようになったよ〜笑
+sp50 | kyuko wink {name}の癖、だいたい読めるようになったよ〜笑
 sp80 | kyuko happy Lv.80〜。構成を読まなくても合うね〜
 sp80 | kyuko normal ここまでの記録、きれいに積み上がってるよ〜
 sp100 | kyuko excited Lv.100〜！セッションマスターだね、ありがとん笑
