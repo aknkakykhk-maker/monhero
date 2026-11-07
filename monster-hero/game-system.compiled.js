@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8e0d8d54c29a2e7f
+// source-sha256: 04876635ca97c733
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99830,6 +99830,78 @@ const ASSISTANT_LIFE_RHYTHM = Object.freeze({
     }
   }
 });
+const ASSISTANT_LIFE_RHYTHM_KEY = 'mh_assistant_life_rhythm_v1';
+const ASSISTANT_LIFE_RHYTHM_STEP = 0.08,
+  ASSISTANT_LIFE_RHYTHM_DAY_MAX = 0.2,
+  ASSISTANT_LIFE_RHYTHM_DECAY = 0.85;
+const ASSISTANT_LIFE_RHYTHM_RANGE = Object.freeze({
+  mua: [-0.5, 1],
+  kiki: [-1, 0.5],
+  momosuke: [-0.5, 1],
+  dra: [-1, 0.5],
+  atsu: [-1, 0.5],
+  kyuko: [-0.5, 1],
+  sorashido: [-0.5, 1],
+  erubin: [-1, 0.5]
+});
+const normalizeAssistantLifeRhythm = v => {
+  const o = {};
+  if (v && typeof v === 'object') for (const [id, x] of Object.entries(v)) {
+    if (!ASSISTANT_LIFE_RHYTHM_RANGE[id] || !x || typeof x !== 'object') continue;
+    const sh = Number(x.shift);
+    o[id] = {
+      shift: Number.isFinite(sh) ? Math.max(-1, Math.min(1, sh)) : 0,
+      day: typeof x.day === 'string' ? x.day : null,
+      dayGain: Number.isFinite(Number(x.dayGain)) ? Number(x.dayGain) : 0
+    };
+  }
+  return o;
+};
+const assistantLifeRhythmDayDiff = (a, b) => a && b ? Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86400000) : 0;
+const assistantLifeRhythmShiftOn = (rec, day) => {
+  if (!rec) return 0;
+  const gap = Math.max(0, assistantLifeRhythmDayDiff(rec.day, day) - 0);
+  return rec.shift * Math.pow(ASSISTANT_LIFE_RHYTHM_DECAY, gap);
+};
+const assistantLifeRhythmPlayState = (state, id, hour, day) => {
+  const rng = ASSISTANT_LIFE_RHYTHM_RANGE[id];
+  if (!rng) return state;
+  const dir = hour >= 19 || hour < 5 ? 1 : hour >= 5 && hour < 10 ? -1 : 0;
+  if (!dir) return state;
+  const rec = state[id] || {
+    shift: 0,
+    day,
+    dayGain: 0
+  };
+  const base = assistantLifeRhythmShiftOn(rec, day);
+  const dayGain = rec.day === day ? rec.dayGain : 0;
+  const step = Math.max(0, Math.min(ASSISTANT_LIFE_RHYTHM_STEP, ASSISTANT_LIFE_RHYTHM_DAY_MAX - Math.abs(dayGain)));
+  if (step <= 0) return state;
+  const shift = Math.max(rng[0], Math.min(rng[1], base + dir * step));
+  return {
+    ...state,
+    [id]: {
+      shift: Math.round(shift * 1000) / 1000,
+      day,
+      dayGain: dayGain + dir * step
+    }
+  };
+};
+const assistantLifeRhythmLabel = shift => shift >= 0.3 ? '🌙 夜型ぎみ' : shift <= -0.3 ? '☀ 朝型ぎみ' : 'いつもどおり';
+const assistantLifeRhythmMod = (shift, slotId, d) => {
+  if (!shift) return 1;
+  const s = Math.abs(shift);
+  if (shift > 0) {
+    if ((slotId === 'night' || slotId === 'late') && d === 'sleep') return 1 - 0.5 * s;
+    if ((slotId === 'night' || slotId === 'late') && (d === 'idle' || d === 'practice' || d === 'cards' || d === 'snack')) return 1 + 0.6 * s;
+    if (slotId === 'morning' && d === 'sleep') return 1 + s;
+  } else {
+    if (slotId === 'night' && d === 'sleep') return 1 + 0.8 * s;
+    if (slotId === 'morning' && d === 'sleep') return 1 - 0.5 * s;
+    if (slotId === 'morning' && (d === 'walk' || d === 'training')) return 1 + 0.5 * s;
+  }
+  return 1;
+};
 const ASSISTANT_LIFE_SLOT_MOD = Object.freeze({
   late: {
     sleep: 8,
@@ -100041,7 +100113,8 @@ const assistantLifeDecide = ({
   recent = [],
   nudges = {},
   tier = ASSISTANT_LIFE_TIERS[0],
-  salt = ''
+  salt = '',
+  rhythmShift = {}
 }) => {
   const slot = assistantLifeSlotOfAbs(abs);
   const ids = [...new Set((members || []).filter(id => ASSISTANT_LIFE_PREFS[id]))].sort();
@@ -100100,6 +100173,7 @@ const assistantLifeDecide = ({
       let x = v * ((ASSISTANT_LIFE_SLOT_MOD[slot.id] || {})[d] || 1) * (((p.slot || {})[slot.id] || {})[d] || 1);
       const rh = ASSISTANT_LIFE_RHYTHM[id];
       x *= (rh && rh.slot[slot.id] || {})[d] || 1;
+      x *= assistantLifeRhythmMod(Number(rhythmShift[id]) || 0, slot.id, d);
       x *= ASSISTANT_LIFE_MOOD_MOD[moods[id]].w[d] || 1;
       w[d] = x;
     }
@@ -100338,7 +100412,8 @@ const ASSISTANT_LIFE_STORE = {
     open: false,
     life: normalizeAssistantLife(null),
     play: normalizeAssistantLifePlay(null),
-    seen: {}
+    seen: {},
+    rhythm: {}
   },
   loading: null,
   listeners: new Set(),
@@ -100360,14 +100435,15 @@ const ASSISTANT_LIFE_STORE = {
     if (this.state.loaded) return Promise.resolve(this.state);
     if (this.loading) return this.loading;
     this.loading = (async () => {
-      const [life, play, seen] = await Promise.all([storeGet(ASSISTANT_LIFE_STORE_KEY, null, false), storeGet(ASSISTANT_LIFE_PLAY_KEY, null, false), storeGet('mh_assistant_peer_seen14_v1', null, false)].map(p => Promise.resolve(p).catch(() => null)));
+      const [life, play, seen, rhythm] = await Promise.all([storeGet(ASSISTANT_LIFE_STORE_KEY, null, false), storeGet(ASSISTANT_LIFE_PLAY_KEY, null, false), storeGet('mh_assistant_peer_seen14_v1', null, false), storeGet(ASSISTANT_LIFE_RHYTHM_KEY, null, false)].map(p => Promise.resolve(p).catch(() => null)));
       const l = normalizeAssistantLife(life);
       if (!l.salt) l.salt = Math.random().toString(36).slice(2, 10);
       this.set({
         loaded: true,
         life: l,
         play: normalizeAssistantLifePlay(play),
-        seen: normalizeAssistantLifeSeen(seen)
+        seen: normalizeAssistantLifeSeen(seen),
+        rhythm: normalizeAssistantLifeRhythm(rhythm)
       });
       return this.state;
     })();
@@ -100404,6 +100480,8 @@ const assistantLifeNow = async ({
   const day = assistantLifeDayKey(now);
   const tier = assistantLifeTierOf(assistantLifePlayForDay(ASSISTANT_LIFE_STORE.state.play, day).points);
   const prev = cur.abs != null && cur.abs < slot.abs ? cur : null;
+  const rhythmShift = {};
+  for (const id of ids) rhythmShift[id] = assistantLifeRhythmShiftOn((ASSISTANT_LIFE_STORE.state.rhythm || {})[id], day);
   const decided = assistantLifeDecide({
     abs: slot.abs,
     members: ids,
@@ -100412,7 +100490,8 @@ const assistantLifeNow = async ({
     recent: cur.recent,
     nudges: cur.nudges,
     tier,
-    salt: cur.salt
+    salt: cur.salt,
+    rhythmShift
   });
   const keep = n => n.abs >= slot.abs;
   const life = {
@@ -100460,6 +100539,18 @@ const assistantLifeNote = async (kind, {
   });
   assistantLifeSaveLife();
 };
+const assistantLifeRhythmPlay = (id, now = Date.now()) => {
+  if (!assistantLifeEnabled() || !ASSISTANT_LIFE_STORE.state.loaded) return;
+  const hour = new Date(Number(now) + 9 * 3600000).getUTCHours();
+  const next = assistantLifeRhythmPlayState(ASSISTANT_LIFE_STORE.state.rhythm || {}, id, hour, assistantLifeDayKey(now));
+  if (next === ASSISTANT_LIFE_STORE.state.rhythm) return;
+  ASSISTANT_LIFE_STORE.set({
+    rhythm: next
+  });
+  try {
+    storeSet(ASSISTANT_LIFE_RHYTHM_KEY, next, false);
+  } catch {}
+};
 const assistantLifeNudge = async (kind, value, now = Date.now()) => {
   if (!assistantLifeEnabled()) return false;
   await ASSISTANT_LIFE_STORE.load();
@@ -100471,7 +100562,8 @@ const assistantLifeNudge = async (kind, value, now = Date.now()) => {
   if (kind === 'invite' && ASSISTANT_LIFE_PREFS[value]) nudges.invite = [...nudges.invite.filter(n => !(n.id === value && n.abs === abs)), {
     id: value,
     abs
-  }];else if (kind === 'introduce' && Array.isArray(value) && value.length === 2) {
+  }];
+  if (kind === 'invite' && ASSISTANT_LIFE_PREFS[value]) assistantLifeRhythmPlay(value, now);else if (kind === 'introduce' && Array.isArray(value) && value.length === 2) {
     const pair = assistantLifePairKey(value[0], value[1]);
     nudges.introduce = [...nudges.introduce.filter(n => !(n.pair === pair && n.abs === abs)), {
       pair,
@@ -101897,6 +101989,7 @@ const assistantLifeOnSessionLive = ev => {
   if (!ev || !ev.assistantId) return;
   const ids = [ev.assistantId, ...(ev.partnerIds || []).filter(x => x !== ev.assistantId)];
   const who = ids.map(assistantLifeName).join('・');
+  for (const id of ids) assistantLifeRhythmPlay(id, ev.at || Date.now());
   void assistantLifeDiaryAdd(`${who} セッション${ev.duo ? '(デュオ)' : ''}${ev.levelUp && ev.level ? ` → 🎵Lv${ev.level}` : ''}`, ids, {
     kind: 'session'
   });
@@ -102343,7 +102436,14 @@ function AssistantLifeRoomSheet({
     "data-assistant-life-room-where": true
   }, where), !home && React.createElement("p", {
     className: "text-[11px] font-bold text-violet-200"
-  }, "⏱ ", slotDef ? `${ASSISTANT_LIFE_SLOTS[(slot.i + 1) % 6].label}(${slotDef.to}時)まで` : '', "いる"), w && w.reason === 'lonely' ? React.createElement("p", {
+  }, "⏱ ", slotDef ? `${ASSISTANT_LIFE_SLOTS[(slot.i + 1) % 6].label}(${slotDef.to}時)まで` : '', "いる"), (() => {
+    const sh = assistantLifeRhythmShiftOn((ASSISTANT_LIFE_STORE.state.rhythm || {})[id], assistantLifeDayKey());
+    const rh = ASSISTANT_LIFE_RHYTHM[id];
+    return React.createElement("p", {
+      className: "text-[10.5px] font-bold text-sky-200",
+      "data-assistant-life-room-rhythm": assistantLifeRhythmLabel(sh)
+    }, "🕰 生活のリズム: ", rh ? rh.label : '', Math.abs(sh) >= 0.3 ? `(いまは ${assistantLifeRhythmLabel(sh)})` : '');
+  })(), w && w.reason === 'lonely' ? React.createElement("p", {
     className: "text-[11px] font-bold text-amber-200"
   }, "💭 さみしそう(だれか来てほしい)") : mood ? React.createElement("p", {
     className: "text-[11px] font-bold text-pink-200"
@@ -102858,14 +102958,14 @@ function AssistantLifeHouse({
   }, React.createElement("p", {
     className: "whitespace-nowrap text-[11px] font-black"
   }, {
-    morning: '🌅',
-    noon: '☀',
-    evening: '🌇',
-    night: '🌙'
-  }[look], " ", land ? slot.label : assistantLifeSlotRange(slot.id)), React.createElement("p", {
+    morning: '🌅 朝',
+    noon: '☀ 昼',
+    evening: '🌇 夕方',
+    night: '🌙 夜'
+  }[look]), React.createElement("p", {
     "data-assistant-life-next-slot": true,
     className: "whitespace-nowrap text-[9.5px] font-bold text-slate-300"
-  }, assistantLifeNextSlotText().replace('(みんなが動きます)', '')))), React.createElement("div", {
+  }, assistantLifeNextSlotText().replace(/で.+?\(みんなが動きます\)/, 'でみんなが動く')))), React.createElement("div", {
     className: "mt-1.5 flex items-center gap-1.5",
     "data-assistant-life-tier": tier.id,
     title: ASSISTANT_LIFE_TIER_NOTES[tier.id]

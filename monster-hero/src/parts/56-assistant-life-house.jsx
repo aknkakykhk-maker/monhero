@@ -112,6 +112,7 @@ const assistantLifeOnSessionLive = (ev) => {
   if (!ev || !ev.assistantId) return;
   const ids = [ev.assistantId, ...((ev.partnerIds || []).filter(x => x !== ev.assistantId))];
   const who = ids.map(assistantLifeName).join('・');
+  for (const id of ids) assistantLifeRhythmPlay(id, ev.at || Date.now());
   void assistantLifeDiaryAdd(`${who} セッション${ev.duo ? '(デュオ)' : ''}${ev.levelUp && ev.level ? ` → 🎵Lv${ev.level}` : ''}`, ids, { kind: 'session' });
 };
 const useAssistantLifeDiary = () => {
@@ -330,6 +331,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
         <p className="text-[21px] font-black">{who.name}の部屋</p>
         <p className="mt-1 max-w-[62%] text-[12px] font-bold" data-assistant-life-room-where>{where}</p>
         {!home && <p className="text-[11px] font-bold text-violet-200">⏱ {slotDef ? `${ASSISTANT_LIFE_SLOTS[(slot.i + 1) % 6].label}(${slotDef.to}時)まで` : ''}いる</p>}
+        {(() => { const sh = assistantLifeRhythmShiftOn(((ASSISTANT_LIFE_STORE.state.rhythm || {})[id]), assistantLifeDayKey()); const rh = ASSISTANT_LIFE_RHYTHM[id]; return <p className="text-[10.5px] font-bold text-sky-200" data-assistant-life-room-rhythm={assistantLifeRhythmLabel(sh)}>🕰 生活のリズム: {rh ? rh.label : ''}{Math.abs(sh) >= 0.3 ? `(いまは ${assistantLifeRhythmLabel(sh)})` : ''}</p>; })()}
         {(w && w.reason === 'lonely') ? <p className="text-[11px] font-bold text-amber-200">💭 さみしそう(だれか来てほしい)</p> : mood ? <p className="text-[11px] font-bold text-pink-200">気分: {mood}</p> : null}
         <div className={land ? 'mt-2' : 'mt-8'}>
           {lv != null && <div className="mhl-row"><span className="k">💗 仲良し度</span><b>Lv{lv}</b></div>}
@@ -534,7 +536,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       <div className="flex items-start gap-2">
         <button type="button" data-assistant-life-close onClick={close} aria-label="閉じる" className="h-9 w-8 shrink-0 text-[19px] text-slate-100">←</button>
         <div className="min-w-0 flex-1"><p className="mhl-en whitespace-nowrap" style={land ? { letterSpacing: '.06em', fontSize: 8 } : undefined}>ASSISTANT LIFE · {tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : 'HOUSE'}</p><p className="mhl-ti whitespace-nowrap" style={land ? { fontSize: 18 } : undefined}>助手ライフ</p></div>
-        <div className="mhl-clock shrink-0" data-assistant-life-clock><p className="whitespace-nowrap text-[11px] font-black">{{ morning: '🌅', noon: '☀', evening: '🌇', night: '🌙' }[look]} {land ? slot.label : assistantLifeSlotRange(slot.id)}</p><p data-assistant-life-next-slot className="whitespace-nowrap text-[9.5px] font-bold text-slate-300">{assistantLifeNextSlotText().replace('(みんなが動きます)', '')}</p></div>
+        <div className="mhl-clock shrink-0" data-assistant-life-clock><p className="whitespace-nowrap text-[11px] font-black">{{ morning: '🌅 朝', noon: '☀ 昼', evening: '🌇 夕方', night: '🌙 夜' }[look]}</p><p data-assistant-life-next-slot className="whitespace-nowrap text-[9.5px] font-bold text-slate-300">{assistantLifeNextSlotText().replace(/で.+?\(みんなが動きます\)/, 'でみんなが動く')}</p></div>
       </div>
       <div className="mt-1.5 flex items-center gap-1.5" data-assistant-life-tier={tier.id} title={ASSISTANT_LIFE_TIER_NOTES[tier.id]}>
         <span className="mhl-chip">🎉 {tier.label} ×{tier.mult}</span>
