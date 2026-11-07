@@ -28,7 +28,9 @@ function MonsterHeroGame() {
   //   (WAVEの切り替わりに重なったときだけなので「たまに」になる。2026-09-12の
   //    「モンビー中にオプションに行くとたまにバトルに飛ばされる」と同じ型の、逆向きの事故)
   // ここで控えも一緒に更新すれば、切り替えたその瞬間から正しい判断になる。
-  const setGameState = (next) => { runBackgroundAllowedRef.current = isBackgroundRunScreen(next); setGameStateRaw(next); };
+  // 画面を変えるたびに、どの処理が変えたかを記録に残す(MH_SCREEN_TRAIL・10-core.jsx)
+  const gameStateCaller = () => { try { const line = String(new Error().stack || '').split('\n').slice(2).find((l) => !/setGameState|gameStateCaller/.test(l)) || ''; const m = /at\s+([\w$.]+)/.exec(line) || /^([\w$.]+)@/.exec(line.trim()); return m ? m[1] : ''; } catch (_) { return ''; } };
+  const setGameState = (next) => { runBackgroundAllowedRef.current = isBackgroundRunScreen(next); if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`); setGameStateRaw(next); };
   const [debugThrowScreenError, setDebugThrowScreenError] = useState(false); // デバッグ設定から画面エラーの受け止めを試すためだけの印
   const debugMenuRootRef = useRef(null); // デバッグメニューの名前で絞り込む欄が、どの範囲を探すか(2026-10-27)
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');

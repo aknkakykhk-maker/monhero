@@ -906,7 +906,9 @@ const rhythmTouchDiagOf=({song,difficulty,notes,inputTimes,assist,mirror,cleared
       outside:perfTouch?.outside||0,ignored:perfTouch?.ignored||0,gestures:perfTouch?.gestures||0,assist:!!assist,mirror:!!mirror,cleared:!!cleared,
       playId:rhythmTouchDiagPlayId(),fixes:rhythmTouchFixesActive(),timing:RHYTHM_TIMING_DIAG.snapshot(),
             // 1コマの重さ(2026-10-11)。足すだけ(古い行には無い)
-            ...(frame&&typeof frame==='object'?{frame}:{})}};
+            ...(frame&&typeof frame==='object'?{frame}:{}),
+            // 演奏のあいだの画面の出来事(2026-11-07・MH_SCREEN_TRAIL)。足すだけ(古い行には無い)
+            ...(typeof MH_SCREEN_TRAIL!=='undefined'?{scr:MH_SCREEN_TRAIL.compact(MH_SCREEN_TRAIL.sinceLast('play','start'))}:{})}};
 };
 // モンスターノーツの前後のコマ(2026-10-16・RHYTHM_FRAME_DIAG.mark)を stats.mon に足す。行の大きさの上限(stats は 4KB・表の check 制約)を
 // 超えると行ごと断られるので、文字にした大きさが RHYTHM_TOUCH_DIAG_MON_MAX を超えるあいだ、うしろの回から手がかりを削り、それでも超えれば回ごと外す
@@ -2777,7 +2779,7 @@ if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTick
     };
     if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>work());else setTimeout(work,16);
   });
-  const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;const generation=++generationRef.current;disposeRun();rhythmSongPrepSignal(true,song.songId);setLifeDownCount(0);setView({...initialView(),status:'loading'});hudRef.current.set(rhythmHudInitial());
+  const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;if(typeof MH_SCREEN_TRAIL!=='undefined')MH_SCREEN_TRAIL.push('play','start:'+String(song&&song.songId||'').slice(0,24));const generation=++generationRef.current;disposeRun();rhythmSongPrepSignal(true,song.songId);setLifeDownCount(0);setView({...initialView(),status:'loading'});hudRef.current.set(rhythmHudInitial());
 /* 曲が始まる前の幕。読み込みと同時に上げ、カウントダウンの前で閉じる(RHYTHM_SONG_INTRO_MS)。
    チュートリアル・タイミング調整は曲を見せる場面ではないので出さない */
 {const introKey=`${song.songId}|${difficulty.id}`;
