@@ -153,6 +153,11 @@ const OFFERS = G('RHYTHM_EVENT_POINT_SHOP_OFFERS');
   check('⑦ 「子」・「ブリーダー」を書かない・60字まで', allT.every(x => !/ブリーダー|(この|あの|その)子/.test(x.t) && x.t.length <= 60));
   check('⑦ 苦手のときも嫌がりすぎない(「いらない」「嫌い」を書かない)', allT.filter(x => x.k === 'bad').every(x => !/いらない|嫌い|最悪/.test(x.t)));
 
+  const imp = require('child_process').spawnSync(process.execPath, [path.join(__dirname, 'life-gift-lines-import.js'), '--check'], { encoding: 'utf8' });
+  check('⑦ 取り込んだ台詞(コトバ・ツムギ)が台詞ファイルとそろい、好みの表と合っている', imp.status === 0, (imp.stdout || '').trim().split('\n').slice(-2).join(' / '));
+  const RL = G('ASSISTANT_LIFE_GIFT_LINES');
+  const tk = G('assistantLifeGiftTalk')('tea', ['atsu', 'kyuko'], () => 0);
+  check('⑦ 台詞が届いた助手は届いた台詞を使い、届いていない助手は仮の1行', !RL.atsu || (tk && RL.atsu.tea.some(x => x.t === tk.lines[0].t)));
   // ⑧ 印が偽
   flags.assistantLife = false;
   const kinds = G('assistantLifeGiftKinds()').map(g => g.kind);
