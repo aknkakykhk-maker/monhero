@@ -11813,7 +11813,7 @@ const PANDORA_WINGS_EP3 = [
   // ---- 夕方・森の奥。きゅうこがひとりで来る ----
   { bg:'forest_evening', who:'kyuko',    e:'normal',   t:'……今日は、俺ひとり。みんなは、昨日のことちゃんと気にしてたよ' },
   { who:'kyuko',    e:'normal',   fxText:'箱は静かなままだった', t:'返事はいいよ。ここに座って、ちょっと休んでくだけだから' },
-  { who:'pandora',  e:'normal',   monsters:[{ id:'PandoraShadow', pose:'peek' }], fxText:'しばらくして、ふたが少しだけ開いた', t:'……あの子たちは、悪くない' },
+  { who:'pandora',  e:'normal',   monsters:[{ id:'PandoraShadow', pose:'peek' }], fxText:'しばらくして、ふたが少しだけ開いた', t:'……あの人たちは、悪くない' },
   { who:'kyuko',    e:'normal',   t:'うん' },
   { who:'pandora',  e:'normal',   monsters:[{ id:'Pandora', pose:'in' }], t:'みんな、そう言うの。天使のほうがかわいい、とか。悪魔のほうがかっこいい、とか' },
   { who:'pandora',  e:'normal',   monsters:[{ id:'Pandora', pose:'idle' }], t:'ほめてくれてるのは、わかってる。……でも、そのたびに、もう片方が、いらないって言われてるみたいで' },
@@ -11967,7 +11967,7 @@ const PANDORA_WINGS_EP7 = [
   { who:'sorashido', e:'normal',  fxText:'ソラシドが、三線を重ねる', t:'まだまだ、鳴らすよ' },
   // ---- 箱の中・暗やみ(天使と悪魔に分かれたパンドラが、向かい合っている) ----
   { bg:'dark_void', who:'pandora',  name:'天使のパンドラ', e:'normal', stage:'none', monsters:[{ id:'PandoraDevil', pose:'splitL' }, { id:'PandoraAngel', pose:'splitR' }], fxText:'箱の中。天使と悪魔のパンドラが、向かい合っている', t:'……聞こえる。わたしたちの歌' },
-  { who:'pandora',  name:'悪魔のパンドラ', e:'normal', t:'……外で、あの子たちが歌ってる' },
+  { who:'pandora',  name:'悪魔のパンドラ', e:'normal', t:'……外で、あの人たちが歌ってる' },
   { who:'pandora',  name:'天使のパンドラ', e:'normal', t:'あなたがいなければ、わたしはもっと、まっすぐ笑えたのに' },
   { who:'pandora',  name:'悪魔のパンドラ', e:'normal', t:'あなたがいなければ、わたしはもっと、強くいられたのに' },
   { who:'pandora',  name:'天使のパンドラ', e:'normal', t:'……でも' },
