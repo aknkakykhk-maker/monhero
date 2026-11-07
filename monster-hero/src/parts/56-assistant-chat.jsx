@@ -413,6 +413,8 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
       if (res.memo && typeof res.memo === 'object') saveMemo(res.memo);
       saveLastDay();
       if (typeof onExchange === 'function') onExchange();
+      // 助手たちの今: おしゃべり1往復でにぎわいがたまる(公開の印 assistantLife の後ろ)
+      if (typeof assistantLifeAddPlay === 'function') void assistantLifeAddPlay('chat');
     }
   };
 
