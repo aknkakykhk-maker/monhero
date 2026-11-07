@@ -137,6 +137,21 @@ const rhythmBuddyMasuName = (masu) => {
 
 // マスモンごとの、直近に言ったセリフ(保存しない。部屋を出ても覚えているのは、このページを開いている間だけ)
 const rhythmBuddyTalkRecent = new Map();
+// ひとりで遊んだ結果への、連れていったマスモンのひとこと(2026-11-07 本オープンの目玉 B3・社長「見た目と一言だけ」)。
+//   セッション券・無料回数は使わない。育ち(経験値・なじみ)も付けない。相棒の記録(mh_rhythm_buddy_v1)は読むだけで書かない。
+//   選び方はマルチの「部屋の人の結果への反応」と同じ(reactResult: フルコン・高得点・低め)。どれにも当たらないふつうの点は hMid、
+//   途中でライフが尽きたときは hLow。言えるセリフが無ければ ''(吹き出しを出さない)
+const rhythmSoloPartnerLine = ({ masu, song, diffId, score = 0, fullCombo = false, cleared = true, who = '' }) => {
+  if (!masu || masu.id == null || !who) return '';
+  try {
+    const brain = rhythmBuddyMakeBrain(song ? [song] : []);
+    const base = { masuId: String(masu.id), baseId: masu.baseId || null, songId: song?.songId || '', score, diffId, who };
+    let text = cleared === false ? brain.talk({ ...base, kind: 'hLow' })
+      : brain.talk({ ...base, kind: 'reactResult', fc: fullCombo ? 1 : 0, quit: false, missRate: 0 });
+    if (!text && cleared !== false) text = brain.talk({ ...base, kind: 'hMid' });
+    return typeof text === 'string' ? text : '';
+  } catch (e) { return ''; }
+};
 // 部屋の中で相棒が演奏と選曲をするための「頭」。RHYTHM_MULTI.setCpuBrain へ渡す
 const rhythmBuddyMakeBrain = (songs) => ({
   play({ songId, diffId, masuId, humans = 1 }) {
