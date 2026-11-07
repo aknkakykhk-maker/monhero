@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: eb22b6f01b7d6537
+// generated-sha256: dda67911c2f97fc2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -53394,12 +53394,13 @@ function RhythmMultiStampBar({ phase, onSend, className = '', limit = 0, wrap = 
 }
 
 
-// カードの上の吹き出し(発言してから少しのあいだだけ)
+// カードの上の吹き出し(発言してから少しのあいだだけ)。
+// 席のカードの中に収める(2026-11-07 社長のスクショ: 横・🔄横で吹き出しが席の下の曲の一覧に重なっていた)。2行まで・字は縦横で同じ大きさ
 function RhythmMultiChatBubble({ text }) {
   if (!text) return null;
   return (
-    <span data-rhythm-multi-chat-bubble className="pointer-events-none absolute inset-x-0.5 top-3 z-40 flex justify-center">
-      <span className="line-clamp-2 max-w-full break-words rounded-xl bg-white px-1.5 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg landscape:text-xs">{text}</span>
+    <span data-rhythm-multi-chat-bubble className="pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden">
+      <span className="line-clamp-2 max-h-full max-w-full break-words rounded-xl bg-white px-1.5 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg">{text}</span>
     </span>
   );
 }
@@ -56792,6 +56793,11 @@ const rhythmAssistSessionOnLive = (fn) => {
 };
 const rhythmAssistSessionEmitLive = (payload) => {
   RHYTHM_ASSIST_SESSION_LIVE_LISTENERS.forEach((fn) => { try { fn(payload); } catch (_) { /* 受け手の失敗で止めない */ } });
+  // 助手ライフの受け口(56-assistant-life-house.jsx)。家の「今日あったこと」と生活のリズムの「誘って遊んだ」に数える
+  if (typeof assistantLifeOnSessionLive === 'function') {
+    const { assistantId, partnerIds, songId, levelUp, level, duo, at } = payload;
+    try { assistantLifeOnSessionLive({ assistantId, partnerIds, songId, levelUp, level, duo, at }); } catch (_) { /* 受け手の失敗で止めない */ }
+  }
 };
 // 助手ライフから「モンビーへ誘う」入口。rhythmAssistSessionInvite(id, { onResult })
 //   ・自分だけのプライベートの部屋を作り、入れたらその助手を呼ぶ(払い方は呼ぶシートと同じ。今日の無料 → セッション券1枚)
@@ -56801,7 +56807,12 @@ const rhythmAssistSessionEmitLive = (payload) => {
 const RHYTHM_ASSIST_SESSION_INVITE = { pending: null, app: null, listeners: new Set() };
 const rhythmAssistSessionOnInvite = (fn) => { RHYTHM_ASSIST_SESSION_INVITE.listeners.add(fn); return () => { RHYTHM_ASSIST_SESSION_INVITE.listeners.delete(fn); }; };
 const RHYTHM_ASSIST_SESSION_INVITE_TTL_MS = 5 * 60 * 1000;
-const rhythmAssistSessionSetApp = (app) => { RHYTHM_ASSIST_SESSION_INVITE.app = app && typeof app === 'object' ? app : null; };
+// 家の部屋の「🎵 一緒にモンビー」(助手ライフ・56-assistant-life-house.jsx)も、ここで入れる。入れておくとボタンが出て、押すと家を閉じてから誘う。
+//   ★家のファイルはこのファイルより後に読み込まれるので、読み込み時ではなく 60-app が呼ぶこの関数の中で入れる(先に触ると起動が止まる)
+const rhythmAssistSessionSetApp = (app) => {
+  RHYTHM_ASSIST_SESSION_INVITE.app = app && typeof app === 'object' ? app : null;
+  if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.beatInvite = (id) => rhythmAssistSessionInvite(id);
+};
 const rhythmAssistSessionCanPayNow = () => {
   const app = RHYTHM_ASSIST_SESSION_INVITE.app;
   const free = typeof RHYTHM_BUDDY_STORE !== 'undefined' ? rhythmBuddyFreeLeft(RHYTHM_BUDDY_STORE.get(), rhythmBuddyDayKey(Date.now())) : 0;
