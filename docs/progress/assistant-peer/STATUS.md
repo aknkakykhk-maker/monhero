@@ -162,3 +162,15 @@
 - はじめての案内 `AssistantLifeItemIntro`(HOME で1回・掛け合いと重ねない・新しいキー `mh_assistant_life_item_intro_v1`)
 - 名前・絵・値段・上がる量は書き込まず、BREEDER_MARKET_ITEMS・RHYTHM_EVENT_POINT_SHOP_OFFERS・上がり方の表から読む(名前と種類はあとで「道具を広げる」ときに決める)
 - 止め絵 `shots/life-8-give.png`・`life-9-intro.png`。検査 assistant-life-check ⑧・browser ⑧
+
+## 引き継ぎ(2026-11-07 ナカヨシ4 の終わりごろ)
+
+### 公開したもの
+- #4736 段階3(様子に合う台本・書き直しの表)/#4744 2人にあげる道具を分かりやすく・演出/#4745 残りの台本(1401本)/#4750 **公開**(印 assistantLife 真・更新履歴・ヘルプ)
+- #4761 画面の検査の直し(様子を決めて入れる)/#4764 プレイヤーの呼び方 `{name}`(一覧 `docs/rules/CALL_NAMES.md`・検査 `player-call-check.js`)/#4767 小さい直し
+
+### 待っていること
+- 社長: 助手ライフの本番の形(`LIFE-CONTENT-PLAN.md`・`ux/life-content-mock.png`)の A/B
+  - 決まっていること: がっつり仕上げる/HOME の上の帯は作らない・各施設に顔だけ/名前「助手ライフ」(表示そろえはこの形と一緒に)
+- マモリ: セッションの台詞の `{name}`(枝 claude/beat-assistant-session-7)。main に入ったら `player-call-check.js` の(参考)を必ず止める形へ。デュオの見直しは返した(4行)
+- 窓口へ送った案のあと: 遊び場のアイコン・家・行事は LIFE-CONTENT-PLAN の段階2〜5
