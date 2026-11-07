@@ -10,28 +10,37 @@
 //   ②残り時間を1秒ごとに数える(そのたびにサーバーへ聞きに行かないため)の2つにだけ使う。
 // ★曲数・曲名をどこにも書き写さない(§5.1)。対象曲はIDで書き、表示名は実データから引く。
 
-// 週の区切りは毎週月曜 5:00 JST(= 日曜 20:00 UTC)。
-// 2026-09-14(月) 05:00 JST を基準点にして、そこから7日ずつ数える。
+// 週の区切りは毎週月曜 4:00 JST(2026-11-09 から。それより前の週は月曜 5:00 JST)。
+//   2026-11-07 社長「てかぜんぶ4時に統一して」→ 週は「次の週から月曜4:00」。
+//   切り替えの週(2026-11-02 05:00 〜 2026-11-09 04:00)だけ1時間短い。週のID(月曜の日付)は前も後も変わらない。
+//   サーバーのビュー rhythm_week_window も同じ日時で切り替わる(docs/sql/rankings/RHYTHM_WEEK_4AM_APPLY.sql)。
+// 2026-09-14(月) 05:00 JST を基準点にして、そこから7日ずつ数える(切り替えより前)。
 // 基準点を固定にしておくと、端末の地域設定や夏時間の有無に左右されない
 // (JSTに夏時間は無いが、Dateの曜日計算を端末の時間帯に任せないためにこの形にする)。
 const RHYTHM_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const RHYTHM_WEEK_ANCHOR_MS = Date.UTC(2026, 8, 13, 20, 0, 0); // 2026-09-14 05:00 JST
 const RHYTHM_JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+const RHYTHM_WEEK_SWITCH_MS = Date.UTC(2026, 10, 8, 19, 0, 0); // 2026-11-09 04:00 JST。ここから月曜4:00区切り
 
-// その時刻が属する週の始まり(月曜5:00 JST)。壊れた値は基準点へ倒す
+// その時刻が属する週の始まり(月曜4:00 JST。切り替えより前は月曜5:00)。壊れた値は基準点へ倒す
 // (null を Number() に通すと 0 = 1970年になってしまうので、先にはじく)
 const rhythmWeekStartMs = (nowMs) => {
   const t = (nowMs === null || nowMs === undefined || nowMs === '') ? NaN : Number(nowMs);
   if (!Number.isFinite(t)) return RHYTHM_WEEK_ANCHOR_MS;
+  if (t >= RHYTHM_WEEK_SWITCH_MS) return RHYTHM_WEEK_SWITCH_MS + Math.floor((t - RHYTHM_WEEK_SWITCH_MS) / RHYTHM_WEEK_MS) * RHYTHM_WEEK_MS;
   return RHYTHM_WEEK_ANCHOR_MS + Math.floor((t - RHYTHM_WEEK_ANCHOR_MS) / RHYTHM_WEEK_MS) * RHYTHM_WEEK_MS;
 };
+// その週の終わり(= 次の週の始まり)。切り替えの週だけ7日より1時間短い
+const rhythmWeekEndMs = (startMs) => (startMs < RHYTHM_WEEK_SWITCH_MS ? Math.min(startMs + RHYTHM_WEEK_MS, RHYTHM_WEEK_SWITCH_MS) : startMs + RHYTHM_WEEK_MS);
+// その週の1つ前の週の始まり(7日を引くと、切り替えをまたいだとき1時間ずれるので、こちらを使う)
+const rhythmPrevWeekStartMs = (startMs) => rhythmWeekStartMs(startMs - 1);
 // 週の始まりと終わり。終わりは次の週の始まりと同じ時刻(その瞬間は次の週に入る)
 const rhythmWeekWindow = (nowMs) => {
   const startMs = rhythmWeekStartMs(nowMs);
-  return { startMs, endMs: startMs + RHYTHM_WEEK_MS };
+  return { startMs, endMs: rhythmWeekEndMs(startMs) };
 };
 // 週のID。フェーズ4で報酬の受取フラグの一部になるので、**あとから形を変えない**(§7)。
-// 月曜5:00 JSTの日付そのままで weekly_YYYY_MM_DD になる
+// 週の始まり(月曜5:00 か 4:00 JST)の日付そのままで weekly_YYYY_MM_DD になる
 const rhythmWeekId = (nowMs) => {
   const jst = new Date(rhythmWeekStartMs(nowMs) + RHYTHM_JST_OFFSET_MS);
   const pad = (n) => String(n).padStart(2, '0');
@@ -948,7 +957,7 @@ const rhythmEventPeriodText = (event, range) => {
   if (range && Number.isFinite(Number(range.startMs)) && Number.isFinite(Number(range.endMs))) {
     return `今週 ${rhythmEventJstText(range.startMs)} 〜 ${rhythmEventJstText(range.endMs)}`;
   }
-  return '毎週 月曜 5:00 に切り替わります';
+  return '毎週 月曜 4:00 に切り替わります';
 };
 // 対象曲の見出し。対象曲を持つのは期間限定だけなので、いつも「対象曲」でよい
 const rhythmEventSongsLabel = (event) => '対象曲';
@@ -996,12 +1005,12 @@ const rhythmWeeksAwaitingReward = (nowMs, claimedIds) => {
   const now = Number.isFinite(Number(nowMs)) ? Number(nowMs) : 0;
   // 保存値が壊れている(配列でない)ときは「分からないので何もしない」に倒す(二重に配らないため)
   if (!Array.isArray(claimedIds)) return [];
-  const thisWeekStart = rhythmWeekStartMs(now);
   const weeks = [];
   // 受取期限は2週間なので、遡るのは直前の2週で足りる
+  let startMs = rhythmWeekStartMs(now);
   for (let back = 1; back <= 2; back++) {
-    const startMs = thisWeekStart - back * RHYTHM_WEEK_MS;
-    const endMs = startMs + RHYTHM_WEEK_MS;
+    startMs = rhythmPrevWeekStartMs(startMs);
+    const endMs = rhythmWeekEndMs(startMs);
     if (startMs < RHYTHM_WEEKLY_REWARD_FROM_MS) continue;      // 始める前の週
     if (now < endMs) continue;                                  // まだ終わっていない
     if (now >= endMs + RHYTHM_EVENT_REWARD_CLAIM_MS) continue;  // 期限切れ
@@ -1061,10 +1070,11 @@ const rhythmHistoryWeeks = (nowMs, limit = 0) => {
   const out = [];
   // 今週の1つ前から、始まりの週まで1週ずつさかのぼる。
   // 境界(fromMs)で必ず止まるので、数え続けることはない
-  for (let back = 1; ; back++) {
-    const startMs = rhythmWeekStartMs(now) - back * RHYTHM_WEEK_MS;
+  let startMs = rhythmWeekStartMs(now);
+  for (;;) {
+    startMs = rhythmPrevWeekStartMs(startMs);
     if (startMs < fromMs) break;
-    const endMs = startMs + RHYTHM_WEEK_MS;
+    const endMs = rhythmWeekEndMs(startMs);
     if (now < endMs) continue;                       // まだ終わっていない週は出さない
     out.push(Object.freeze({ id: rhythmWeekId(startMs), kind: 'weekly', startMs, endMs, event: null }));
     if (max > 0 && out.length >= max) break;

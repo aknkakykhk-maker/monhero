@@ -73,6 +73,7 @@ begin
 end $$;
 
 -- ===== ① 今週の始まりと終わり(月曜 5:00 JST 区切り) =====
+-- ★2026-11-09 から月曜 4:00 区切り。本番のビューは RHYTHM_WEEK_4AM_APPLY.sql で差し替える(このファイルをいま流し直すと5:00に戻るので、流したあとに 4AM の方も流す)
 -- 期間の正本はここ。端末の時計を進めても週は変わらない(docs/spec/RHYTHM_RANKING.md §6.1)。
 -- date_trunc('week', …) は月曜始まりなので、5時間ずらしてから戻すだけで「月曜5:00 JST」になる。
 create or replace view public.rhythm_week_window
@@ -206,11 +207,12 @@ begin
   if extract(isodow from start_jst) <> 1 then
     raise exception '週の始まりが月曜になっていません: %', start_jst;
   end if;
-  if extract(hour from start_jst) <> 5 or extract(minute from start_jst) <> 0
+  -- 2026-11-09 から月曜4:00区切り(RHYTHM_WEEK_4AM_APPLY.sql)。切り替えの週だけ1時間短い
+  if extract(hour from start_jst) not in (4, 5) or extract(minute from start_jst) <> 0
      or extract(second from start_jst) <> 0 then
-    raise exception '週の始まりが5:00になっていません: %', start_jst;
+    raise exception '週の始まりが4:00(切り替えより前は5:00)になっていません: %', start_jst;
   end if;
-  if span <> interval '7 days' then
+  if span not in (interval '7 days', interval '7 days' - interval '1 hour') then
     raise exception '週の長さが7日ではありません: %', span;
   end if;
   if (select now() < week_start or now() >= week_end from public.rhythm_week_window) then

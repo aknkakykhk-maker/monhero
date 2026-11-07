@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7e9174f5fa9382b1
+// generated-sha256: afa1e2a069ae56d1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -19143,7 +19143,7 @@ const pendingLocalRankingEntries = (list) => (Array.isArray(list) ? list : []).f
 // 送り直すときは、遊んだ時刻を行に入れて送る(2026-09-14)。
 //
 // rankings.created_at の既定値は now() なので、この列を付けずに送ると
-// **送り直した瞬間**が記録の時刻になる。週間ランキング(月曜5:00区切り)は
+// **送り直した瞬間**が記録の時刻になる。週間ランキング(月曜4:00区切り)は
 // created_at で期間を数えているため、先週以前の未送信記録を送り直すと
 // 遊んでいない今週の合計へ足されてしまう。
 // 実際に 2026-09-14 6:22 にアプリを開いただけで、4曲ぶんが今週の週間ランキングへ載った
@@ -19948,7 +19948,7 @@ const askWithProfileFrame = async (askFn, select) => {
     return askFn(select);
   }
 };
-// 今週の始まり・終わり(月曜5:00 JST区切り)。1行だけ返る
+// 今週の始まり・終わり(月曜4:00 JST区切り。2026-11-09 より前の週は5:00)。1行だけ返る
 const sbFetchRhythmWeekWindow = async ({ requestId = 'untracked' } = {}) => {
   const rows = await sbFetchRhythmEventRows({
     url: `${SUPABASE_URL}/rest/v1/rhythm_week_window?select=week_start,week_end&limit=1`,
@@ -39989,7 +39989,7 @@ function RhythmRankingScreen({
                 <div className="min-w-0 flex-1">
                   {/* 長いイベント名(「鍵の向こう側へ ～パンドラとふたつの翼～」)が幅320で「…」に切れていた。切らずに折り返す(2026-11-02) */}
                   <p style={JA_WRAP_STYLE} className="text-[11px] font-black leading-tight text-fuchsia-100">{jaWrap(eventDefinition.name)}</p>
-                  {/* 週間は「毎週月曜5:00に切り替わります」、期間限定は開始と終了そのものを出す */}
+                  {/* 週間は「毎週月曜4:00に切り替わります」、期間限定は開始と終了そのものを出す */}
                   <p data-rhythm-event-period className="text-[9px] text-slate-400">{rhythmEventPeriodText(eventDefinition,eventRange)}</p>
                 </div>
                 <p data-rhythm-event-remaining className="shrink-0 text-[10px] font-black text-fuchsia-200">
@@ -48729,7 +48729,7 @@ function RhythmHistoryScreen({
             <div className="mb-3"><AssistantBubble scene="rhythmHistory" compact/></div>
             {list.length===0
               ? <p className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400">
-                  終わった週やイベントがまだありません。<br/>週間ランキングは毎週 月曜 5:00 に切り替わります。
+                  終わった週やイベントがまだありません。<br/>週間ランキングは毎週 月曜 4:00 に切り替わります。
                 </p>
               : <>
                   {/* 週は年52件ずつ増えるので、下へ送ってもタブが見えるよう上に留める */}
@@ -48742,7 +48742,7 @@ function RhythmHistoryScreen({
                   {shownList.length===0
                     ? <p data-rhythm-history-empty={listTab} className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400">
                         {listTab==='limited'?'終わったイベントはまだありません。':'終わった週はまだありません。'}<br/>
-                        {listTab==='limited'?'イベントが終わると、ここに順位が残ります。':'週間ランキングは毎週 月曜 5:00 に切り替わります。'}
+                        {listTab==='limited'?'イベントが終わると、ここに順位が残ります。':'週間ランキングは毎週 月曜 4:00 に切り替わります。'}
                       </p>
                     : <div className="flex flex-col gap-2">
                         {shownList.map(entry=>(
@@ -58509,11 +58509,15 @@ const cardNormalizeLevelCounts = (v) => {
   const r = cardIsPlainObject(v) ? v : {};
   return Object.fromEntries(CARD_LEVEL_ORDER.map((lv) => [lv, cardNormalizePoint(r[lv])]));
 };
-// 週の区切り: モンヒロビートの週間ランキングと同じ、日本時間の月曜 5:00 から(カゲあつくん)。週の鍵はその月曜の日付(YYYY-MM-DD)
-//   日本時間から5時間戻した日付で数える(月曜 4:59 は前の週・5:00 から新しい週)
-const CARD_WEEK_START_HOUR_JST = 5;
+// 週の区切り: モンヒロビートの週間ランキングと同じ、日本時間の月曜 4:00 から(カゲあつくん)。週の鍵はその月曜の日付(YYYY-MM-DD)
+//   2026-11-09 04:00 JST(CARD_WEEK_SWITCH_MS)から4:00区切り。それより前は月曜 5:00 区切り(2026-11-07 社長「ぜんぶ4時に統一」→ 週は次の週から)。
+//   切り替えの週(2026-11-02 の週)だけ1時間短い。週の鍵の形・値は前も後も変わらない
+const CARD_WEEK_START_HOUR_JST = 4;
+const CARD_WEEK_START_HOUR_JST_OLD = 5;
+const CARD_WEEK_SWITCH_MS = Date.UTC(2026, 10, 8, 19, 0, 0); // 2026-11-09 04:00 JST
+const cardWeekStartHourAt = (now) => (Number(now) >= CARD_WEEK_SWITCH_MS ? CARD_WEEK_START_HOUR_JST : CARD_WEEK_START_HOUR_JST_OLD);
 const cardWeekKeyJst = (now) => {
-  const d = new Date(Number(now) + (9 - CARD_WEEK_START_HOUR_JST) * 3600 * 1000);
+  const d = new Date(Number(now) + (9 - cardWeekStartHourAt(now)) * 3600 * 1000);
   d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
   return d.toISOString().slice(0, 10);
 };
@@ -67416,17 +67420,21 @@ const cardWeeklyRewardForPlace = (place) => {
 };
 // 受け取った週の一覧。配列でない(壊れている)ときは null(=何も配らない)。無いときは []
 const cardNormalizeWeeklyClaims = (v) => (v === null || v === undefined ? [] : Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x) : null);
-const cardWeekStartMs = (now) => Date.parse(`${cardWeekKeyJst(now)}T${String(CARD_WEEK_START_HOUR_JST).padStart(2, '0')}:00:00+09:00`);
+// 週の始まり。週の鍵が切り替え(2026-11-09)より前の週は月曜5:00、以後は月曜4:00
+const cardWeekStartOfKey = (key) => Date.parse(`${key}T0${key >= cardWeekKeyJst(CARD_WEEK_SWITCH_MS) ? CARD_WEEK_START_HOUR_JST : CARD_WEEK_START_HOUR_JST_OLD}:00:00+09:00`);
+const cardWeekStartMs = (now) => cardWeekStartOfKey(cardWeekKeyJst(now));
+// その週の終わり(= 次の週の始まり)。切り替えの週だけ1時間短い
+const cardWeekEndMs = (startMs) => cardWeekStartMs(startMs + CARD_WEEK_MS + 2 * 3600 * 1000);
 const cardWeeklyClaimId = (weekKey) => `card_weekly_${weekKey}`;
 // 終わっていて、まだ受け取っておらず、受け取りの期限の中にある週(先に終わった週から)
 const cardWeeksAwaitingReward = (nowMs, claims) => {
   if (!Array.isArray(claims)) return [];
   const now = Number(nowMs) || 0;
   const thisStart = cardWeekStartMs(now);
+  const prev1 = cardWeekStartMs(thisStart - 1), prev2 = cardWeekStartMs(prev1 - 1);   // 7日を引くと切り替えをまたいだとき1時間ずれる
   const out = [];
-  for (let back = 2; back >= 1; back--) {
-    const startMs = thisStart - back * CARD_WEEK_MS;
-    const endMs = startMs + CARD_WEEK_MS;
+  for (const startMs of [prev2, prev1]) {
+    const endMs = cardWeekEndMs(startMs);
     if (startMs < CARD_WEEKLY_REWARD_FROM_MS || now < endMs || now >= endMs + CARD_WEEKLY_CLAIM_MS) continue;
     const key = cardWeekKeyJst(startMs);
     const id = cardWeeklyClaimId(key);
@@ -67729,7 +67737,7 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
         <div className="mb-1.5 shrink-0 space-y-1.5">
           <div className="flex gap-1.5">
             {[['week', '今週'], ['total', '通算']].map(([id, label]) => <button key={id} type="button" data-card-ranking-period={id} onClick={() => setPeriod(id)} className={chip(period === id)}>{label}</button>)}
-            <small className="ml-auto self-center text-[10px] font-bold text-slate-400">{period === 'week' ? '月曜 5:00 から' : 'フリー対戦で勝った数'}</small>
+            <small className="ml-auto self-center text-[10px] font-bold text-slate-400">{period === 'week' ? '月曜 4:00 から' : 'フリー対戦で勝った数'}</small>
           </div>
           {/* 5つを等分に並べる(横にすべらせる形だと、320幅で MASTER が画面の外・375幅で「MASTEF」と切れていた。2026-10-26 見回り #5) */}
           <div className="grid grid-cols-5 gap-1">

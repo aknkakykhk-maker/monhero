@@ -78,7 +78,7 @@ function RhythmHistoryScreen({
             <div className="mb-3"><AssistantBubble scene="rhythmHistory" compact/></div>
             {list.length===0
               ? <p className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400">
-                  終わった週やイベントがまだありません。<br/>週間ランキングは毎週 月曜 5:00 に切り替わります。
+                  終わった週やイベントがまだありません。<br/>週間ランキングは毎週 月曜 4:00 に切り替わります。
                 </p>
               : <>
                   {/* 週は年52件ずつ増えるので、下へ送ってもタブが見えるよう上に留める */}
@@ -91,7 +91,7 @@ function RhythmHistoryScreen({
                   {shownList.length===0
                     ? <p data-rhythm-history-empty={listTab} className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400">
                         {listTab==='limited'?'終わったイベントはまだありません。':'終わった週はまだありません。'}<br/>
-                        {listTab==='limited'?'イベントが終わると、ここに順位が残ります。':'週間ランキングは毎週 月曜 5:00 に切り替わります。'}
+                        {listTab==='limited'?'イベントが終わると、ここに順位が残ります。':'週間ランキングは毎週 月曜 4:00 に切り替わります。'}
                       </p>
                     : <div className="flex flex-col gap-2">
                         {shownList.map(entry=>(
