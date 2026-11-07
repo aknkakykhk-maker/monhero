@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 68c7f926e754bc75
+// generated-sha256: afedee8a281314bb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -57852,7 +57852,9 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
   }, [scene, st.playNote]);
   // 画面が変わったら閉じる(見返しは閉じない)。次にその画面へ入ったときに、もう一度決める
   React.useEffect(() => { decidedRef.current = decidedRef.current.startsWith(`${scene}:`) ? decidedRef.current : ''; setCur(c => (c && !c.replay ? null : c)); }, [scene]);
-  const [toast, setToast] = React.useState(null); // { kind:'level'|'daily', pair, level }
+  const [toast, setToast0] = React.useState(null); // { kind:'level'|'daily', pair, level }
+  // 友情Lv が上がった知らせは、印 assistantLife が真なら画面いっぱいの祝い(44-growth-fx.jsx・assistantPeerGain から)が出すので、トーストは出さない(同じことを2回言わない)
+  const setToast = React.useCallback((t) => { if (t && t.kind === 'level' && assistantPeerLifeOn() && typeof growthFxPeerLevel === 'function') return; setToast0(t); }, []);
   const finish = React.useCallback(async (c) => {
     setCur(null);
     // 見返し・ひとこと(reaction)は何も増やさない。遊びのあとのひとこと(replay を渡されていないとき)は onReplayEnd を呼ばない

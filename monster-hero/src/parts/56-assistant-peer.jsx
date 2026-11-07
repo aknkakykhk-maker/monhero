@@ -641,7 +641,9 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
   }, [scene, st.playNote]);
   // 画面が変わったら閉じる(見返しは閉じない)。次にその画面へ入ったときに、もう一度決める
   React.useEffect(() => { decidedRef.current = decidedRef.current.startsWith(`${scene}:`) ? decidedRef.current : ''; setCur(c => (c && !c.replay ? null : c)); }, [scene]);
-  const [toast, setToast] = React.useState(null); // { kind:'level'|'daily', pair, level }
+  const [toast, setToast0] = React.useState(null); // { kind:'level'|'daily', pair, level }
+  // 友情Lv が上がった知らせは、印 assistantLife が真なら画面いっぱいの祝い(44-growth-fx.jsx・assistantPeerGain から)が出すので、トーストは出さない(同じことを2回言わない)
+  const setToast = React.useCallback((t) => { if (t && t.kind === 'level' && assistantPeerLifeOn() && typeof growthFxPeerLevel === 'function') return; setToast0(t); }, []);
   const finish = React.useCallback(async (c) => {
     setCur(null);
     // 見返し・ひとこと(reaction)は何も増やさない。遊びのあとのひとこと(replay を渡されていないとき)は onReplayEnd を呼ばない
