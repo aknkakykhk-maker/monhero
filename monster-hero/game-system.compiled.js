@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 86bf45e9017cfbfc
+// source-sha256: 0340c994ff6cc2ac
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13236,7 +13236,7 @@ const RELEASE_FLAGS = {
   assistantKyuko: true,
   assistantPeer: true,
   assistantPeerApi: true,
-  assistantLife: false,
+  assistantLife: true,
   rhythmAssistantSession: false,
   assistantSorashido: true,
   assistantErubin: true,
