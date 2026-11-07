@@ -35,7 +35,8 @@ const QUICK_GUIDE_PAGES = Object.freeze({
     { id: 'g2.1' },
     { id: 'g2.2', spot: '[data-auto-settings-section="policy"]' },
     { id: 'g2.3', spot: '[data-auto-settings-section="ally"]' },
-    { id: 'g2.4', spot: '[data-auto-settings-section="quickRun"]' },
+    // 文で言う「開いたら自動で始める」のスイッチを光らせる(欄ごとだと横画面でスイッチが画面の外に出る・2026-11-07 レフェリーくんの止め絵)
+    { id: 'g2.4', spot: '[data-auto-quick-run-autostart]' },
     { id: 'g2.5', spot: '[data-auto-settings-section="breakthrough"]' },
   ],
   g3a: [
@@ -134,6 +135,9 @@ const quickGuideScrollTo = (el, top) => {
   else if (r.bottom > b.bottom) box.scrollTop += r.bottom - b.bottom + 8;
 };
 
+// ボタンの名前の記号(⚔ ⏩ ⏹ 🎵 など)のすぐあとで行が折れないよう、記号のあとの空白を折れない空白にする
+const quickGuideNoBreak = (t) => String(t).replace(/(\p{Extended_Pictographic}\uFE0F?) /gu, '$1\u00a0');
+
 // 案内の窓。pages … [{ id, spot?, goAutoSettings? }]。onDone(true) … 最後まで見た / onDone(false) … あとで
 const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAutoSettings }) => {
   const [step, setStep] = useState(0);
@@ -160,10 +164,11 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
   if (!page) return null;
   const line = quickGuideLine(assistant && assistant.id, page.id);
   if (!line) return null;
-  const text = String(line.t).split('{name}').join(callName || 'ブリーダー');
+  const text = quickGuideNoBreak(String(line.t).split('{name}').join(callName || 'ブリーダー'));
   const last = step >= pages.length - 1;
   const vh = typeof window !== 'undefined' ? window.innerHeight || 0 : 0;
-  const pad = 6, gap = 12;
+  // 小さいボタン(🎵 など)は枠を詰める(となりのボタンにかからないように)
+  const pad = rect && Math.min(rect.width, rect.height) < 56 ? 3 : 6, gap = 12;
   // 窓は光らせた所と重ならない側へ。上に入るなら上・下に入るなら下・どちらにも入らなければ、下に置いて光らせる所を切り詰める
   const roomTop = rect ? rect.top - pad - gap : 0, roomBottom = rect ? vh - rect.bottom - pad - gap : 0;
   //   どちらにも入らないときは下に置く(大きな所は先頭へ寄せてあるので、見出しが窓の上に見える)
@@ -176,6 +181,8 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
   const face = assistant && typeof assistantFaceImage === 'function' ? assistantFaceImage(assistant, line.e || 'normal') : null;
   return (
     <div data-quick-guide={guideId} data-quick-guide-page={page.id} className="fixed inset-0 z-[100050]" style={{ pointerEvents: 'auto' }}>
+      {/* 案内のあいだは、画面にもとからある助手の吹き出しを隠す(光らせた所と窓のすきまからのぞいて、ごちゃつく) */}
+      <style>{'[data-assistant-bubble]{visibility:hidden !important}'}</style>
       {/* 光らせた所の外を暗くする(光らせる所が無いときは、全体を少し暗くするだけ) */}
       {ring && ring.height > 0
         ? <div data-quick-guide-spot aria-hidden="true" className="pointer-events-none fixed rounded-xl border-2 border-amber-300"

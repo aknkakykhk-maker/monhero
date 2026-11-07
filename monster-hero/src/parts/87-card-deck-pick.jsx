@@ -195,7 +195,7 @@ const CardAutoIntro = () => {
   return (
     <div data-card-auto-intro className="flex items-start gap-2 rounded-xl border-2 border-fuchsia-300/70 bg-slate-950/90 px-2.5 py-2">
       {face && <img src={face} alt="" aria-hidden="true" className="h-10 w-10 shrink-0 rounded-full border border-fuchsia-300/60 bg-slate-900 object-cover object-top"/>}
-      <p className="min-w-0 flex-1 text-[11px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE}>{line.t}</p>
+      <p className="min-w-0 flex-1 text-[11px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE}>{typeof quickGuideNoBreak === 'function' ? quickGuideNoBreak(line.t) : line.t}</p>
       <button type="button" data-card-auto-intro-ok onClick={() => { setShow(false); storeSet(CARD_AUTO_INTRO_SEEN_KEY, true, false); }}
         className="min-h-[36px] shrink-0 self-center rounded-lg border border-fuchsia-300/70 bg-fuchsia-700/80 px-2.5 text-[11px] font-black text-white active:scale-[.97]">OK</button>
     </div>
