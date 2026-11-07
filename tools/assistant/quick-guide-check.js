@@ -135,8 +135,9 @@ check('g3.5(負けたとき)は曲えらびの周回の帯を開いて、中の�
   && /p\.openDetail&&!quickRunDetailOpen\)\{ quickGuideOpenedDetailRef\.current=true; setQuickRunDetailOpen\(true\);/.test(app) && /quickGuideOpenedDetailRef\.current=false; setQuickRunDetailOpen\(false\);/.test(app));
 check('文で言う中身(must)を、光らせる所のあるページに決めてある', Object.values(E.QUICK_GUIDE_PAGES).flat().filter((p) => p.spot && !p.must).length === 0,
   Object.values(E.QUICK_GUIDE_PAGES).flat().filter((p) => p.spot && !p.must).map((p) => p.id).join(' '));
-check('案内は document.body へ出す(技の名前の札など body へ出る物より上に重ねる)', /ReactDOM\.createPortal\(overlay, document\.body\)/.test(guideSrc) && /z-\[100050\]/.test(guideSrc)
+check('案内は document.body へ出す(技の名前の札など body へ出る物より上に重ねる)。「🔄 横」で回しているときは回した器へ出し、器の中の座標で測る', /ReactDOM\.createPortal\(overlay, target\)/.test(guideSrc) && /const quickGuidePortalTarget[\s\S]{0,300}data-mh-view-rotation="true"[\s\S]{0,80}return document\.body/.test(guideSrc) && /const quickGuideRectOf[^\n]*RHYTHM_VIEW_ROTATION\.rectOf/.test(guideSrc) && /z-\[100050\]/.test(guideSrc)
   && (() => { const b = read('monster-hero/src/parts/71-screen-battle.jsx'); const m = b.match(/slotSkill&&ReactDOM\.createPortal[\s\S]{0,400}?zIndex:(\d+)/); return !!m && Number(m[1]) < 100050; })());
+check('窓を上下どちらに置いても光らせる所が細い線しか残らない横長の所では、窓を片側へ寄せる(🔄横の曲えらびの帯の中で枠が 12px になった)', /const squeeze = [^\n]*\n[^\n]*Math\.max\(keepIfTop, keepIfBottom\) < 40/.test(guideSrc) && /: squeeze \? 'left' : null/.test(guideSrc));
 check('光らせる目印が画面にある', ['data-auto-settings-section="policy"', 'data-auto-settings-section="ally"', 'data-auto-settings-section="quickRun"', 'data-auto-settings-section="breakthrough"', 'data-quick-reward-policy', 'data-battle-system-card={sys.id}', 'data-difficulty-carousel', 'aria-label="周回を続けたままモンヒロビートへ"'].every((m) => app.includes(m))
   && read('monster-hero/src/parts/71-screen-battle.jsx').includes('data-battle-auto-button') && read('monster-hero/src/parts/58-screen-rhythm.jsx').includes('data-quick-run-band') && read('monster-hero/src/parts/77-screen-rhythm-multi.jsx').includes('data-rhythm-back'));
 
@@ -364,6 +365,29 @@ const browser = async () => {
     const gNo2 = await guide();
     check(`${T}裏周回していないときは、モンヒロビート(モードえらび・曲えらび)を開いても裏周回の案内は出ない`,
       atMode && atSong && !(gNo && /^g3/.test(gNo.id)) && !(gNo2 && /^g3/.test(gNo2.id)), JSON.stringify({ atMode, atSong, gNo, gNo2 }));
+    // 「🔄 横」(縦の端末で絵を回す)のとき、案内の窓も画面と同じ向きに回る(回した器の中に出る)。2026-11-07 ミハリくんの指摘
+    //   回すのはモンヒロビートの中だけだが、ヘルプからの見返し(裏周回の案内 g3)で同じ窓を出して見る。縦の端末だけで見る
+    if (vp.name === '縦') {
+      await boot();
+      await click('button[aria-label="モンヒロバトル"]'); await page.waitForTimeout(1200);
+      await click('[data-battle-system-help]'); await page.waitForTimeout(1000);
+      await page.evaluate(() => [...document.querySelectorAll('button')].find((x) => /バトルの仕組み/.test(x.innerText || '') && /距離/.test(x.innerText || ''))?.click()); await page.waitForTimeout(800);
+      await page.evaluate(() => [...document.querySelectorAll('button')].find((x) => /クイックのAUTO設定と裏周回/.test(x.innerText || ''))?.click()); await page.waitForTimeout(800);
+      await page.evaluate(() => RHYTHM_VIEW_ROTATION.set(RHYTHM_VIEW_ROTATION.preferredAngle())); await page.waitForTimeout(800);
+      await click('[data-quick-guide-replay="g3"]'); await page.waitForTimeout(1000);
+      const rot = await page.evaluate(() => {
+        const g = document.querySelector('[data-quick-guide]'), p = document.querySelector('[data-quick-guide-panel]');
+        const frame = document.querySelector('[data-mh-view-rotation="true"]');
+        if (!g || !p || !frame) return { g: !!g, p: !!p, frame: !!frame };
+        // 器の中の座標で、窓が器(回した画面)に収まっているか
+        const r = RHYTHM_VIEW_ROTATION.rectOf(p), fw = innerHeight, fh = innerWidth;
+        return { inFrame: frame.contains(g), left: Math.round(r.left), top: Math.round(r.top), right: Math.round(r.right), bottom: Math.round(r.bottom), fw, fh,
+          fits: r.left >= -1 && r.top >= -1 && r.right <= fw + 1 && r.bottom <= fh + 1 };
+      });
+      check(`${T}🔄横: 案内の窓が回した画面の中に出て、画面と同じ向きに回る`, rot.inFrame === true, JSON.stringify(rot));
+      check(`${T}🔄横: 案内の窓が回した画面に収まる`, rot.fits === true, JSON.stringify(rot));
+      await page.evaluate(() => RHYTHM_VIEW_ROTATION.set(0));
+    }
     check(`${T}画面のエラーが無い`, errors.length === 0, errors.slice(0, 3).join(' / '));
     await page.close();
   }
