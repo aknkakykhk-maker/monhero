@@ -65,6 +65,7 @@ edit atsu-mua-9 3 | mua wink 一緒なら怖くないもん♪ 二人でフル�
 tag atsu-mua-9 doing=practice lv=7-10
 edit kyuko-mua-1 1 | kyuko normal それ持ちすぎじゃない？ 半分持つよぉ
 tag kyuko-mua-1 doing=walk lv=1-3
+edit kyuko-mua-3 1 | mua wink {c}って、見た目よりずっと落ち着いてるよね
 edit kyuko-mua-3 3 | mua excited えへへ、ほめ言葉として受け取っとく♪
 tag kyuko-mua-3 lv=1-3
 edit kyuko-mua-4 1 | mua happy 今日も作戦会議しよ！
@@ -148,7 +149,7 @@ edit kiki-kyuko-2 1 | kiki normal {c}は、いつもどうやって育成の順�
 edit kiki-kyuko-2 2 | kyuko wink イベントの日から逆に数えてるだけだよぉ笑
 tag kiki-kyuko-2 lv=1-3
 edit kiki-kyuko-3 1 | kyuko troubled ぐぬぬぬ…また負けた
-edit kiki-kyuko-3 2 | kiki happy もう一回やりましょう。次は私がちから全開で手伝いますよ♪
+edit kiki-kyuko-3 2 | kiki happy では、もう一回。次は私がちから全開で手伝いまつよ♪
 tag kiki-kyuko-3 lv=1-3
 edit kiki-kyuko-4 1 | kyuko normal いつもの作戦でいい？
 tag kiki-kyuko-4 doing=cards lv=4-6
@@ -264,7 +265,7 @@ edit dra-kyuko-1 2 | dra wink なんで分かったんだよ
 tag dra-kyuko-1 lv=1-3
 edit dra-kyuko-2 1 | dra normal そのニャーの育て方、すごいな。無課金でここまでいくのか
 tag dra-kyuko-2 doing=training lv=1-3
-edit dra-kyuko-3 1 | dra wink 見た目はかわいいのに、中身は男前だよな
+edit dra-kyuko-3 1 | dra wink 見た目と中身の差がすごいよな。男前だぞ
 edit dra-kyuko-3 2 | kyuko happy よく言われるぅ笑 {c}は、見た目より中身がかわいいよねぇ
 edit dra-kyuko-3 3 | dra surprise おでが！？ ……照れるな
 tag dra-kyuko-3 lv=1-3
@@ -411,7 +412,7 @@ edit erubin-momosuke-9 3 | erubin happy じゃあ、いちばんいい席で応�
 tag erubin-momosuke-9 doing=practice lv=7-10
 edit atsu-dra-q 2 | atsu troubled え、さっき{c}がやってたじゃん！ 次も俺でしょ！
 edit kiki-kyuko-q 1 | kiki normal 次のバトルは、攻撃に全部振りましょう
-edit erubin-sorashido-q 1 | sorashido excited カードは番号順に並べるのがいちばんだぜ・・・！
+edit erubin-sorashido-q 1 | sorashido excited カードは番号順がいちばんだぜ・・・！
 edit erubin-sorashido-q 3 | sorashido angry 番号順のほうが探すのが速いって、計算が出てるんだ！
 edit erubin-sorashido-q makeup2 | sorashido troubled 俺こそ、数字ばっかり押しつけてた。ごめんな
 edit erubin-sorashido-q makeup4 | sorashido excited それだ！ 最強の並べ方だな笑
