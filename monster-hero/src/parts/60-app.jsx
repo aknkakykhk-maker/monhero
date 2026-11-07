@@ -8501,6 +8501,11 @@ function MonsterHeroGame() {
     });
   };
   const assistantBondLevelNow = assistantBondLevelOf(assistantBond.points);
+  // モンヒロビートの助手とのセッション: 台詞の {name} を、話す助手ごとの呼び方に置きかえるための名前・仲良し度・呼び方(2026-11-07)
+  useEffect(() => {
+    if (typeof rhythmAssistSessionSetCall !== 'function') return;
+    rhythmAssistSessionSetCall({ name: breederName, levelOf: (id) => assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points), styleOf: (id) => (assistantCallStyles && assistantCallStyles[id]) || null });
+  }, [breederName, assistantBonds, assistantCallStyles]);
   // いま選んでいる助手そのもの。画面はこれを見て顔・名前・色を出す
   const activeAssistant = assistantById(selectedAssistantId);
   // ふだんの吹き出しを、その日最初に HOME を開いたとき1回だけまとめて頼む(2026-10-14)。
@@ -20734,7 +20739,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         <RhythmMultiAwayBar hidden={gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT'||!!rhythmPlay}
           busy={['BATTLE','WAVE_RESULT','CHAMPION','BATTLE_TUTORIAL','CARD_BATTLE','RPG_DEBUG_BATTLE','DEBUG_BATTLE_SETUP'].includes(gameState)}
           onReturn={()=>{void openRhythmDemo({to:'RHYTHM_MULTI'});}} />
-        {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} masuMons={masuMons} masuPicker={{entries:unifiedMonsterEntriesSingleType.filter(e=>e.type==='masu'),renderSortFilterBar:renderMonsterSortFilterBar,renderCardBody:renderMonsterCardBody,cardClass:MONSTER_CARD_CLASS,cardStyle:MONSTER_CARD_STYLE}} buddyTickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseBuddyTicket={consumeBuddyTicket} onRefundBuddyTicket={refundBuddyTicket} onOpenMasuBeat={()=>openMasuBeat(gameState)} sessionAssistants={rhythmAssistSessionEnabled()&&typeof assistantsUnlockedFrom==='function'?assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag):[]} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_PLAY_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
+        {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} masuMons={masuMons} masuPicker={{entries:unifiedMonsterEntriesSingleType.filter(e=>e.type==='masu'),renderSortFilterBar:renderMonsterSortFilterBar,renderCardBody:renderMonsterCardBody,cardClass:MONSTER_CARD_CLASS,cardStyle:MONSTER_CARD_STYLE}} buddyTickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseBuddyTicket={consumeBuddyTicket} onRefundBuddyTicket={refundBuddyTicket} onOpenMasuBeat={()=>openMasuBeat(gameState)} guideAssistantId={selectedAssistantId} sessionAssistants={rhythmAssistSessionEnabled()&&typeof assistantsUnlockedFrom==='function'?assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag):[]} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_PLAY_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
           onUserGesture={()=>{/* 全画面と画面ロック防止は、指で押した直後しか許されない。準備完了を押したこの場で頼んでおく(ひとりのときの「決定」と同じ) */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();}}
           multiLook={rhythmSettings.multiLook||'LIGHT'}
           onChangeMultiLook={async(id)=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLook:id,multiLightLook:id!=='OWN'});setRhythmSettings(saved);}}

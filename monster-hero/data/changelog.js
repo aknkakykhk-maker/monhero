@@ -35,6 +35,19 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-11-07 助手とのセッション(社長「この文で公開」・docs/progress/beat-assistant-session/RELEASE-TEXT.md)
+    date: "2026-11-07 18:26", type:'content', group:'rhythm', title:'助手とモンヒロビートで一緒に演奏できるようになりました', status:'new', releaseFlag:'rhythmAssistantSession',
+    items:[
+      'マルチの部屋の「マスモン・助手を呼ぶ」から、助手を呼んで一緒に演奏できます。呼べる回数はマスモンと同じです(1日3回まで無料、そのあとはセッション券1枚)。',
+      '一緒に遊ぶほど、助手の「セッションLv」が上がります(最大Lv.100)。Lvが上がると、ビートPの上乗せ・セッション券・得意の応援・曲の聞きどころなどが開きます。',
+      '助手にはそれぞれ好きな曲と苦手な曲があります。苦手な曲も、一緒に遊ぶうちに少しずつ好きになっていきます。',
+      '演奏中は、画面の左上で助手がひとこと応援します。友情Lv3以上の2人を呼ぶと「デュオ」になり、2人の掛け合いが聞けます。',
+      '2人で1曲演奏すると、2人の友情Lvが上がります。',
+      'あなたのスコアやランキングは今までどおりです。助手のスコアはランキングに入りません。',
+    ],
+    assistantNotice:{ id:'update_notice_rhythm_assistant_session_v1', type:'content' },
+  },
+  {
     // 2026-11-07 助手たちの今(社長「この文で公開」・docs/progress/assistant-peer/LIFE-RELEASE.md)
     date: "2026-11-07 16:33", type:'content', group:'assistant', title:'助手たちが、それぞれ自分で過ごすようになりました', status:'new', releaseFlag:'assistantLife',
     items:[

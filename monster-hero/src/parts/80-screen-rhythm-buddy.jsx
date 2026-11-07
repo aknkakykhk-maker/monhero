@@ -816,7 +816,7 @@ function RhythmBuddyList({ masuMons, state, dayKey, onOpen, onPick = null, busy 
 }
 
 // 部屋の中の「マスモンを呼ぶ」(下から出る選択の画面)
-function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [], breederName = '', assistants = [], pickAssistant = null }) {
+function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [], breederName = '', assistants = [], pickAssistant = null, guideAssistantId = '' }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
   const [detailId, setDetailId] = React.useState('');
@@ -870,7 +870,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
         {tabNow === 'assistant'
           ? (
             <div className="flex min-h-0 flex-1 flex-col">
-              <RhythmAssistSessionPicker assistants={assistants} calledIds={calledIds} canPay={canPay} busy={busy} onPick={chooseAssistant} />
+              <RhythmAssistSessionPicker assistants={assistants} calledIds={calledIds} canPay={canPay} busy={busy} onPick={chooseAssistant} guideAssistantId={guideAssistantId} />
               {!canPay && <p data-rhythm-buddy-empty className="mt-2 text-[11px] font-black text-rose-300">今日の無料ぶんを使い切りました。セッション券があれば呼べます</p>}
             </div>
           )
