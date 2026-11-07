@@ -287,10 +287,46 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
         });
         const need = w > h || rotated ? 150 : 130;
         check(`チャット欄(${label}): 自由入力の欄が画面に収まる`, c.inView, JSON.stringify(c));
+        // 「◯◯に聞く」の札は、はじめは畳んである(2026-11-07 社長「閉じたりできるようにしたい」)
+        if (label === '縦画面') {
+          const ask0 = await C.evaluate(() => document.querySelector('[data-rhythm-buddy-ask]')?.getAttribute('data-rhythm-buddy-ask') || '');
+          await C.evaluate(() => document.querySelector('[data-rhythm-buddy-ask-toggle]')?.click());
+          await C.waitForTimeout(200);
+          const ask1 = await C.evaluate(() => ({ st: document.querySelector('[data-rhythm-buddy-ask]')?.getAttribute('data-rhythm-buddy-ask') || '', chips: document.querySelectorAll('[data-rhythm-buddy-ask-chip]').length }));
+          await C.evaluate(() => document.querySelector('[data-rhythm-buddy-ask-toggle]')?.click());
+          await C.waitForTimeout(200);
+          check('チャット欄: 「◯◯に聞く」の札ははじめ畳まれていて、押すと開き、もう一度押すと畳む', ask0 === 'closed' && ask1.st === 'open' && ask1.chips >= 3
+            && (await C.evaluate(() => document.querySelector('[data-rhythm-buddy-ask]')?.getAttribute('data-rhythm-buddy-ask'))) === 'closed', `${ask0} → ${JSON.stringify(ask1)}`);
+        }
         check(`チャット欄(${label}): 発言の一覧が読める高さ(${need}px以上)`, c.listH >= need, `${c.listH}px`);
         check(`チャット欄(${label}): 定型文と「マスモンに聞く」の札が、高さを取りすぎない(${w > h || rotated ? '1行で横にすべらせる' : '中だけ上下にすべらせる'})`, c.quickH <= (w > h || rotated ? 50 : 140), `${c.quickH}px`);
         await C.evaluate(() => document.querySelector('[data-rhythm-multi-chat-close]')?.click());
         await C.waitForTimeout(300);
+      }
+      await C.evaluate(() => RHYTHM_VIEW_ROTATION.set(0));
+      // ⚙ オプション(2026-11-07 社長「マルチでもオプションボタンつけて」)。部屋の上に重ねて開き、部屋は抜けない。戻ると部屋へ
+      for (const [w, h, rotated, label] of [[390, 844, false, '縦画面'], [844, 390, false, '横画面'], [390, 844, true, '回転(横)']]) {
+        await C.setViewportSize({ width: w, height: h });
+        await C.evaluate((on) => RHYTHM_VIEW_ROTATION.set(on ? 90 : 0), !!rotated);
+        await C.waitForTimeout(rotated ? 1000 : 600);
+        const hasBtn = await C.evaluate(() => { const b = document.querySelector('[data-rhythm-multi-options-open]'); if (!b) return 'ボタンが無い'; const r = b.getBoundingClientRect(); return r.width > 30 && r.right <= innerWidth + 1 && r.bottom <= innerHeight + 1 && r.left >= -1 && r.top >= -1 ? '' : 'ボタンが画面の外'; });
+        check(`オプション(${label}): 部屋の上の帯に ⚙ がある`, hasBtn === '', hasBtn);
+        await C.evaluate(() => document.querySelector('[data-rhythm-multi-options-open]')?.click());
+        await C.waitForTimeout(700);
+        const opened = await C.evaluate(() => ({ layer: !!document.querySelector('[data-rhythm-multi-options-layer] [data-rhythm-options]'), room: typeof RHYTHM_MULTI !== 'undefined' && !!RHYTHM_MULTI.view(), calib: !!document.querySelector('[data-rhythm-multi-options-layer] [data-rhythm-line-adjust-open],[data-rhythm-multi-options-layer] [data-rhythm-calibrator-open]') }));
+        check(`オプション(${label}): ソロと同じオプションが部屋の上に開き、部屋は抜けない(演奏を始める項目は出さない)`, opened.layer && opened.room && !opened.calib, JSON.stringify(opened));
+        // オプションは中を上下にすべらせる作りなので、左右のはみ出しと、文字の切れだけを見る
+        // オプションは中を上下にすべらせる作りなので、見た目の左右のはみ出しと、文字の切れだけを見る。
+        // ★回したときは見た目の上下が端末の左右になる。すべらせた先の中身を「左右へはみ出し」と数えないよう、端末の上下で測る
+        const out = await C.evaluate((rot) => [...document.querySelectorAll('[data-rhythm-multi-options-layer] button')].filter((el) => {
+          const r = el.getBoundingClientRect();
+          const side = rot ? (r.bottom > innerHeight + 1 || r.top < -1) : (r.right > innerWidth + 1 || r.left < -1);
+          return r.width > 0 && (side || el.scrollWidth > el.clientWidth + 1);
+        }).map((el) => `${(el.innerText || el.getAttribute('aria-label') || '').trim().slice(0, 12)}(${el.scrollWidth}/${el.clientWidth})`), !!rotated);
+        check(`オプション(${label}): ボタンが左右へはみ出さず、字が切れない`, out.length === 0, out.slice(0, 8).join(' / '));
+        await C.evaluate(() => document.querySelector('[data-rhythm-multi-options-layer] button[aria-label="戻る"]')?.click());
+        await C.waitForTimeout(500);
+        check(`オプション(${label}): 戻ると部屋の画面へ戻る`, await C.evaluate(() => !document.querySelector('[data-rhythm-multi-options-layer]') && !!document.querySelector('[data-rhythm-multi]')));
       }
       await C.evaluate(() => RHYTHM_VIEW_ROTATION.set(0));
       await C.close();

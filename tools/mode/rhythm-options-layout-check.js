@@ -46,7 +46,8 @@ check('説明文が9pxまで小さくなっていない',
 check('見出しが本文と同じ大きさになっていない', /const head='[^']*text-\[15px\]/.test(options));
 // 数値の項目は「見出し → 操作 → 説明」を必ず間を空けて並べる。
 // ここが1行に詰まると、どの説明がどの項目のものか分からなくなる
-check('項目の並べ方を1か所にまとめてある', /const field=\(title,control,description=null,\{full=false\}=\{\}\)=>/.test(options));
+// (wideFull … 横のときだけ行いっぱいに広げる指定・2026-11-07 判定ラインの位置の欄)
+check('項目の並べ方を1か所にまとめてある', /const field=\(title,control,description=null,\{full=false(?:,wideFull=false)?\}=\{\}\)=>/.test(options));
 
 // ---- タップ調整は「実際の演奏画面」で行う(2026-09-13・ユーザー指示) ----
 // 「今の仕様はみにくすぎるし実用性がない / 特に横画面は終わってる /

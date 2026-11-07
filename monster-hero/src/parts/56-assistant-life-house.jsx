@@ -97,6 +97,11 @@ const assistantLifeDiaryAdd = async (text, ids = [], { kind = 'note', now = Date
   try { storeSet(ASSISTANT_LIFE_DIARY_KEY, ASSISTANT_LIFE_DIARY.state, false); } catch {}
 };
 const assistantLifeName = (id) => (typeof assistantById === 'function' && assistantById(id) ? assistantById(id).name : id);
+// 一緒にいる全員の名前(2026-11-07 社長「3人でも4人でも同時に遊んでるならそう書く」)。並びは家の並び。max を超えたら「ほか◯人」
+const assistantLifeGroupNames = (ids, max = 4) => {
+  const list = [...ids].sort((a, b) => ASSISTANT_LIFE_HOUSE_ORDER.indexOf(a) - ASSISTANT_LIFE_HOUSE_ORDER.indexOf(b)).map(assistantLifeName);
+  return list.length > max ? `${list.slice(0, max - 1).join('・')} ほか${list.length - max + 1}人` : list.join('・');
+};
 // 時間が変わって様子が決まったら、組の過ごし方を書く(同じ時間は1回だけ)
 const assistantLifeDiaryOnSlot = (life, slot, now = Date.now()) => {
   const gs = (life.groups || []).slice(0, 3);
@@ -173,7 +178,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-room .off{position:absolute;inset:0;z-index:3;background:rgba(6,9,24,.5)}
 .mhl-room .lamp{position:absolute;inset:0;z-index:3;background:radial-gradient(circle at 60% 40%,rgba(255,214,140,.45),transparent 70%);mix-blend-mode:screen;pointer-events:none}
 .mhl-room .tag{position:absolute;left:50%;top:50%;z-index:6;transform:translate(-50%,-38%) rotate(-3deg);max-width:92%;text-align:center;padding:3px 8px 4px;border-radius:7px;background:linear-gradient(#fef3c7,#fde68a);color:#422006;border:1.5px solid #b45309;box-shadow:0 3px 6px #0009}
-.mhl-room .tag b{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mhl-room .tag small{display:block;font-size:9px;font-weight:800;color:#7c2d12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mhl-room .tag b{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mhl-room .tag small[data-assistant-life-room-with]{white-space:normal;line-height:1.15}.mhl-room .tag small{display:block;font-size:9px;font-weight:800;color:#7c2d12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mhl-room .lock{position:absolute;inset:0;z-index:6;display:grid;place-items:center;background:rgba(15,23,42,.78);font-size:11px;font-weight:900;color:#cbd5e1}
 .mhl-liv{position:absolute;overflow:hidden;border-radius:3px;background:linear-gradient(#f3e3c4,#e7cfa2)}
 .mhl-board{position:absolute;left:8px;top:6px;bottom:6px;border-radius:5px;background:#c08a52;border:3px solid #7c4a22;padding:3px 6px;overflow:hidden}
@@ -229,7 +234,7 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx }) {
       {ppl && <div className="pp">{ppl.map(pid => { const who = assistantById(pid); return who ? (
         <span key={pid} className={state.lonely && pid === id ? 'lonely' : state.after ? 'after' : ''} data-assistant-life-room-face={pid}><AssistantFace who={who} size={Math.round(Math.min(40, h * .44))} accent={who.accent}/></span>) : null; })}</div>}
       {ppl && state.bub && <span className="bb" style={{ bottom: Math.round(Math.min(40, h * .44)) + 14 }}>{state.bub}</span>}
-      {state && state.tag && <span className="tag" data-assistant-life-room-away={id}><b>{state.tag[0]}</b><small>{state.tag[1]}</small></span>}
+      {state && state.tag && <span className="tag" data-assistant-life-room-away={id}><b>{state.tag[0]}</b><small>{state.tag[1]}</small>{state.tag[2] && <small data-assistant-life-room-with>{state.tag[2]}</small>}</span>}
       {!met && <span className="lock">まだ会っていない</span>}
     </button>);
 }
@@ -283,11 +288,12 @@ const assistantLifeRoomsOf = (life, metIds) => {
       if (host === id) {
         const lonely = w.reason === 'lonely';
         rooms[id] = { in: [host, ...ids.filter(x => x !== host)], lonely, sleep: w.doing === 'sleep', bub: w.doing === 'sleep' ? '💤 おやすみ中' : lonely ? '💭 だれか来ないかな…' : ids.length > 1 ? `${ASSISTANT_LIFE_PLACE_ICON.home} ${ids.length}人で${doing.label}` : doing.label };
-      } else rooms[id] = { tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, doing.label] };
+      } else rooms[id] = { tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)] };
       continue;
     }
-    const withText = w.with.length ? `${w.with.map(assistantLifeName).join('・')}と` : 'ひとりで';
-    rooms[id] = { tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${ASSISTANT_LIFE_PLACES[w.place]}へ`, `${withText} ・ ${doing.label}`] };
+    // 組で出かけているときは、どの部屋の札にも同じ全員の名前(「3人で ドラ・ソラシド・えるびん」)
+    const sub = w.group ? `${w.group.ids.length}人で ${doing.label}` : `ひとりで ${doing.label}`;
+    rooms[id] = { tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${ASSISTANT_LIFE_PLACES[w.place]}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null] };
   }
   // 言い合いのあとの2人(水色の縁と「💢 ◯◯と言い合いのあと」。2026-11-07 社長「喧嘩とか仲直りとか人間じみたのもどんどん」)
   const q = peer && peer.quarrel && peer.quarrel.pending;
@@ -297,7 +303,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
       const other = pair.find(x => x !== id);
       if (!rooms[id] || !other) continue;
       const mark = `💢 ${assistantLifeName(other)}と言い合いのあと`;
-      rooms[id] = rooms[id].in ? { ...rooms[id], after: true, bub: mark } : { ...rooms[id], tag: [rooms[id].tag[0], mark] };
+      rooms[id] = rooms[id].in ? { ...rooms[id], after: true, bub: mark } : { ...rooms[id], tag: [rooms[id].tag[0], mark, rooms[id].tag[2] || null] };
     }
   }
   return rooms;
@@ -321,7 +327,8 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
   const canWatch = groupKey ? !watched.includes(groupKey) : !watched.includes(`solo:${id}`);
   const atBeat = w && w.doing === 'practice';
   const slotDef = ASSISTANT_LIFE_SLOTS[slot.i];
-  const where = !w ? '🏡 部屋で過ごしている' : home ? `🏡 ${w.group ? `${w.with.map(assistantLifeName).join('・')}と ` : ''}${doing}` : `${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${ASSISTANT_LIFE_PLACES[w.place]}で${doing}${w.with.length ? ` ・ ${w.with.map(assistantLifeName).join('・')}と` : ''}`;
+  const groupText = w && w.group ? ` ・ ${w.group.ids.length}人(${assistantLifeGroupNames(w.group.ids, 8)})` : ' ・ ひとり';
+  const where = !w ? '🏡 部屋で過ごしている' : home ? `🏡 ${doing}${groupText}` : `${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${ASSISTANT_LIFE_PLACES[w.place]}で${doing}${groupText}`;
   return (
     <div className="absolute inset-0" style={{ zIndex: 25 }} data-assistant-life-room-sheet={id}>
       <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/60" onClick={onClose}/>
@@ -372,7 +379,7 @@ function AssistantLifeScene({ scene, look, onClose, onGive, canGive }) {
   const [started, setStarted] = React.useState(false);
   React.useEffect(() => { if (peer && peer.talking) setStarted(true); }, [peer && peer.talking]);
   const done = started && peer && !peer.talking;
-  const ids = (scene.ids || []).slice(0, 3);
+  const ids = (scene.ids || []).slice(0, 4);
   const bg = scene.place === 'home' || !scene.place ? null : assistantLifeSceneBg(scene.place, look);
   const host = scene.place === 'home' ? assistantLifeHostOf(ids) : null;
   const room = host ? ASSISTANT_LIFE_ROOM_LOOK[host] : null;
@@ -390,14 +397,15 @@ function AssistantLifeScene({ scene, look, onClose, onGive, canGive }) {
       {bg && bg.tint && <div className="absolute inset-0" style={{ background: ASSISTANT_LIFE_TINT[bg.tint] }}/>}
       {!bg && look === 'night' && <div className="absolute inset-0" style={{ background: 'rgba(10,15,50,.35)' }}/>}
       <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg,transparent 45%,rgba(10,6,30,.7) 85%)' }}/>
-      {ids.map((pid, i) => { const who = assistantById(pid); if (!who) return null; const n = ids.length; const cx = n === 1 ? 50 : n === 2 ? (i ? 66 : 34) : [22, 50, 78][i];
-        return <img key={pid} className="st" src={assistantFullImage(who, 'happy')} alt="" style={{ left: `${cx}%`, transform: 'translateX(-50%)', height: '58%', width: n === 1 ? '90%' : '70%', bottom: '22%' }}/>; })}
+      {ids.map((pid, i) => { const who = assistantById(pid); if (!who) return null; const n = ids.length; const cx = n === 1 ? 50 : n === 2 ? (i ? 66 : 34) : n === 3 ? [22, 50, 78][i] : [16, 38, 62, 84][i];
+        return <img key={pid} className="st" src={assistantFullImage(who, 'happy')} alt="" style={{ left: `${cx}%`, transform: 'translateX(-50%)', height: n >= 4 ? '50%' : '58%', width: n === 1 ? '90%' : n >= 4 ? '46%' : '70%', bottom: '22%' }}/>; })}
       <div className="mhl-hdr absolute inset-x-0 top-0" style={{ paddingTop: 'calc(8px + env(safe-area-inset-top))' }}>
         <div className="flex items-start gap-2">
           <button type="button" data-assistant-life-scene-back onClick={onClose} aria-label="家へ戻る" className="h-9 w-9 text-[18px] text-slate-100">←</button>
           <div className="min-w-0 flex-1"><p className="mhl-en">{scene.place && scene.place !== 'home' ? String(scene.place).toUpperCase() : 'ROOM'}</p><p className="mhl-ti" style={{ fontSize: 19 }}>{ASSISTANT_LIFE_PLACE_ICON[scene.place] || '🏡'} {placeName}</p></div>
         </div>
-        {hint && <p className="mt-1 w-fit rounded-full px-2 py-0.5 text-[10px] font-black" style={{ background: 'linear-gradient(90deg,#db2777,#a855f7)' }}>🤝 {ids.slice(0, 2).map(assistantLifeName).join('・')} 友情Lv{hint.lv}{stage ? ` ${assistantPeerStageName(stage)}` : ''}</p>}
+        {ids.length >= 3 && <p data-assistant-life-scene-group className="mt-1 w-fit rounded-full px-2 py-0.5 text-[10px] font-black" style={{ background: 'linear-gradient(90deg,#0ea5e9,#a855f7)' }}>👥 {ids.length}人で ・ {assistantLifeGroupNames(ids, 8)}</p>}
+        {hint && ids.length === 2 && <p className="mt-1 w-fit rounded-full px-2 py-0.5 text-[10px] font-black" style={{ background: 'linear-gradient(90deg,#db2777,#a855f7)' }}>🤝 {ids.slice(0, 2).map(assistantLifeName).join('・')} 友情Lv{hint.lv}{stage ? ` ${assistantPeerStageName(stage)}` : ''}</p>}
       </div>
       {done && (
         <div className="absolute inset-x-3 flex gap-1.5" style={{ bottom: 'calc(14px + env(safe-area-inset-bottom))' }} data-assistant-life-scene-done>
@@ -536,6 +544,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       <div className="flex items-start gap-2">
         <button type="button" data-assistant-life-close onClick={close} aria-label="閉じる" className="h-9 w-8 shrink-0 text-[19px] text-slate-100">←</button>
         <div className="min-w-0 flex-1"><p className="mhl-en whitespace-nowrap" style={land ? { letterSpacing: '.06em', fontSize: 8 } : undefined}>ASSISTANT LIFE · {tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : 'HOUSE'}</p><p className="mhl-ti whitespace-nowrap" style={land ? { fontSize: 18 } : undefined}>助手ライフ</p></div>
+        {/* いまの時刻の札(ハナビの共通部品 44-time-of-day.jsx。設定の「いまの時刻を出す」が切なら出ない) */}
+        {!land && typeof TimeOfDayClock === 'function' && <div className="shrink-0 self-center"><TimeOfDayClock/></div>}
         <div className="mhl-clock shrink-0" data-assistant-life-clock><p className="whitespace-nowrap text-[11px] font-black">{{ morning: '🌅 朝', noon: '☀ 昼', evening: '🌇 夕方', night: '🌙 夜' }[look]}</p><p data-assistant-life-next-slot className="whitespace-nowrap text-[9.5px] font-bold text-slate-300">{assistantLifeNextSlotText().replace(/で.+?\(みんなが動きます\)/, 'でみんなが動く')}</p></div>
       </div>
       <div className="mt-1.5 flex items-center gap-1.5" data-assistant-life-tier={tier.id} title={ASSISTANT_LIFE_TIER_NOTES[tier.id]}>

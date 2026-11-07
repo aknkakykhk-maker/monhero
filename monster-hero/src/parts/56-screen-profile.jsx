@@ -168,7 +168,7 @@ function ProfileScreen({
   return (
       <div data-mh-screen className={SCREEN_SHELL_CLASS} style={onboardingPreview?{paddingTop:'3.25rem'}:undefined}>
         {/* はじめての設定が終わるまでは、まだ帰る場所(HOME)が無いので戻るボタンを出さない */}
-        <ScreenHead title="プロフィール" accent="text-indigo-400"
+        <ScreenHead title="プロフィール" accent="text-indigo-400" right={typeof TimeOfDayClock==='function'?<TimeOfDayClock/>:null}
           onBack={(onboarded&&!onboardingPreview)?onBack:null} backLabel="ホームへ戻る"/>
         <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="profile" compact/></div>
         <div className={`${SCREEN_LIST_CLASS} pb-4`}>

@@ -36,6 +36,7 @@
 | `mh_title_art` | string / `'auto'` | タイトル画像アレンジ。`'auto'`(おまかせ)・`'halloween'`・`'classic'`。無い・知らない値は `'auto'`。起動時の先読み(index.html)もこのキーを読む |
 | `mh_home_art` | string / `'auto'` | ホーム画面アレンジ。値は `mh_title_art` と同じ |
 | `mh_screen_theme_v1` | object / 全部 `'auto'` | 画面テーマ。`{ menu, market, temple, battle, rhythm }` に `'auto'`/`'halloween'`/`'classic'`。`normalizeScreenTheme` で知らない項目・不正な値は `'auto'` に補う(docs/spec/SCREEN_THEME.md) |
+| `mh_time_of_day_v1` | object / `{ mood:'on', clock:'on' }` | 時間帯で変わる雰囲気と、いまの時刻の札の入/切(2026-11-07・44-time-of-day.jsx)。`{ mood:'on'|'off', clock:'on'|'off' }`。読みは `normalizeTimeOfDaySettings`(無い・壊れている・知らない値は 'on')。見た目だけで、ほかの値には関わらない |
 | `mh_battle_perf_v1` | boolean / false | バトルの性能計測のON/OFF(デバッグ限定)。`BATTLE_PERF` が持つ |
 | `mh_debug_battle_card_art_v1` | `'1'` / 未設定 | 行動カードの絵(試作)を出す切り替え(デバッグ限定・2026-10-15)。`BATTLE_CARD_ART_DEBUG` が持つ。公開の印 `battleCardArt` が真なら、未設定でも絵を出す |
 | `mh_battle_card_look_v1` | `'art'` / `'classic'` / 未設定 | 行動カードの見た目(設定 → バトル設定。2026-10-16)。`'classic'` で前のカード、それ以外・未設定・壊れた値は新しいカードの絵(既定)。`BATTLE_CARD_LOOK`(71-screen-battle.jsx)が `normalizeBattleCardLook` を通して読む |
@@ -246,6 +247,7 @@
 | `mh_rhythm_achievements_v1` | object / 空の台帳 | モンヒロビートの実績の台帳(2026-10-05・`docs/spec/RHYTHM_ACHIEVEMENTS.md`)。`{v:1, items:{'曲:難易度:称号':{at:取った時刻ms(0=不明)}}, claimed:{'実績のid#報酬ルールのid':受け取った時刻ms}}`。称号は fullCombo・allExcellent・allMarvelous(上の称号は下の称号も含む)。**取れたかの正本は BEST のまま**(BESTには何も足さない)。受け取り済みの印は消さない。壊れた項目は読まずに捨てる。台帳が無い人は、モンヒロビートを開いたときに BEST から取り込む(1度きり・時刻は不明の0) |
 | `mh_rhythm_monsters_v1` | string[] | モンスターノーツ用のマスモン枠(`data/rhythm-mode.js`) |
 | `mh_rhythm_rank_pending_v1` | object[] | 全国ランキングへ送れなかったモンビーの記録(次回に再送) |
+| `mh_rhythm_multi_ask_open_v1` | string / `null` | マルチのチャットの「◯◯に聞く」の札を開いておくか(2026-11-07 追加)。`'1'` で開く、それ以外・無いときは畳む。読み書きできなくても、その場で開け閉めできる |
 | `mh_rhythm_multi_penalty_v1` | object / `null` | みんなで対戦(マルチ)で、公開ルームのライブを途中でやめたときの入室待ち `{ until: 時刻(ms) }`。3分を超える値・壊れた値は0扱い(`rhythmMultiPenaltyLeftMs`)。2026-10-02 追加 |
 | `mh_rhythm_multi_record_v1` | object / `null` | みんなで対戦の記録(2026-10-03 追加)。`{ lives, mvp, bestAvg, bestStreak, lastRound, recent:[{at, round, songId, avg, score, n, streak, mvp, quit, names}] }`。最近は30回ぶん。読むときは `rhythmMultiNormalizeRecord` を通し(無い・壊れた値は0から)、同じ回(`round`)は2度数えない(`rhythmMultiAddRecord`) |
 | `mh_rhythm_buddy_v1` | object / `null` | マルチに呼んだマスモンのビートLvなど(2026-10-07 追加・docs/spec/RHYTHM_BUDDY.md)。`{ day, used, mons:{ [マスモンid]: { exp, lives, songs:{曲id:回数}, diffs:{EASY…MASTER:回数}, best:{EASY…MASTER:{score,songId}}(2026-10-07 追加。無い人は最近のスコアから拾い直す), longLives, trait, traitAt, lastRound, lastDay, firstAt } } }`。`day`/`used` は1日の無料回数(朝5:00区切り)。マスモン本体(`mh_masu_mons`)には書かない。読むときは `rhythmBuddyNormalize` を通し(無い・壊れた値は既定値)、同じ回(`lastRound`)は2度育てない(`rhythmBuddyApplyLive`) 2026-11-07: 控え `calls` の1件に `kind:'masu'|'assistant'`・`assistantId` を足した(助手とのセッション。無い控えはマスモンとして読む) |
