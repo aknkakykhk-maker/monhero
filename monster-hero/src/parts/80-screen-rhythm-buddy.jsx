@@ -106,7 +106,7 @@ const useRhythmBuddyState = () => {
   }, []);
   return state;
 };
-// 日付が変わったら(朝5:00)画面の数字を出し直すため、1分ごとに日付キーを見る
+// 日付が変わったら(朝4:00)画面の数字を出し直すため、1分ごとに日付キーを見る
 const useRhythmBuddyDayKey = () => {
   const [day, setDay] = React.useState(() => rhythmBuddyDayKey(Date.now()));
   React.useEffect(() => {
@@ -137,6 +137,21 @@ const rhythmBuddyMasuName = (masu) => {
 
 // マスモンごとの、直近に言ったセリフ(保存しない。部屋を出ても覚えているのは、このページを開いている間だけ)
 const rhythmBuddyTalkRecent = new Map();
+// ひとりで遊んだ結果への、連れていったマスモンのひとこと(2026-11-07 本オープンの目玉 B3・社長「見た目と一言だけ」)。
+//   セッション券・無料回数は使わない。育ち(経験値・なじみ)も付けない。相棒の記録(mh_rhythm_buddy_v1)は読むだけで書かない。
+//   選び方はマルチの「部屋の人の結果への反応」と同じ(reactResult: フルコン・高得点・低め)。どれにも当たらないふつうの点は hMid、
+//   途中でライフが尽きたときは hLow。言えるセリフが無ければ ''(吹き出しを出さない)
+const rhythmSoloPartnerLine = ({ masu, song, diffId, score = 0, fullCombo = false, cleared = true, who = '' }) => {
+  if (!masu || masu.id == null || !who) return '';
+  try {
+    const brain = rhythmBuddyMakeBrain(song ? [song] : []);
+    const base = { masuId: String(masu.id), baseId: masu.baseId || null, songId: song?.songId || '', score, diffId, who };
+    let text = cleared === false ? brain.talk({ ...base, kind: 'hLow' })
+      : brain.talk({ ...base, kind: 'reactResult', fc: fullCombo ? 1 : 0, quit: false, missRate: 0 });
+    if (!text && cleared !== false) text = brain.talk({ ...base, kind: 'hMid' });
+    return typeof text === 'string' ? text : '';
+  } catch (e) { return ''; }
+};
 // 部屋の中で相棒が演奏と選曲をするための「頭」。RHYTHM_MULTI.setCpuBrain へ渡す
 const rhythmBuddyMakeBrain = (songs) => ({
   play({ songId, diffId, masuId, humans = 1 }) {
@@ -458,7 +473,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = ''
         <section className="rounded-xl bg-slate-950/60 p-2">
           <h4 className="text-[10px] font-black text-slate-400">今日の調子</h4>
           <p data-rhythm-buddy-mood={mood.id} className="flex items-center gap-1 text-sm font-black"><RhythmBuddyMoodFace moodId={mood.id} size={22} />{mood.label}</p>
-          <small className="block text-[9px] font-bold leading-snug text-slate-500">朝5:00に変わります。育つ早さは経験値×{rhythmBuddyMoodExpScale(mood.id, m.trait)}</small>
+          <small className="block text-[9px] font-bold leading-snug text-slate-500">朝4:00に変わります。育つ早さは経験値×{rhythmBuddyMoodExpScale(mood.id, m.trait)}</small>
         </section>
         <section className="rounded-xl bg-slate-950/60 p-2">
           <h4 className="text-[10px] font-black text-slate-400">性格</h4>

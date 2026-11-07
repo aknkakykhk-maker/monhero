@@ -115,7 +115,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
   </div>;
   // onPick … 選んだ直後に呼ぶ(タップ音の種類は、選んだその場で鳴らして聞き比べられるようにする)
   // 6つ(タップ音のセット)は3つずつ2段。5つ並べると1つだけ次の段へこぼれる
-  const segments=(key,items,onPick=null)=><div className={`grid ${items.length===6?'grid-cols-3 [&>button:nth-child(3n)]:border-r-0 [&>button:nth-child(-n+3)]:border-b [&>button:nth-child(-n+3)]:border-b-white/10':items.length>=5?'grid-cols-5':items.length>=4?'grid-cols-4':items.length===2?'grid-cols-2':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} data-rhythm-option-choice={`${key}:${id}`} aria-pressed={draft[key]===id} onClick={()=>{set(key,id);if(onPick)onPick(id);}} className={`break-keep border-r border-white/10 ${items.length>=5?'px-0 tracking-tight':'px-1'} text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
+  const segments=(key,items,onPick=null)=><div className={`grid ${items.length===4&&items.some(([,text])=>String(text).length>=4)?'grid-cols-2 [&>button:nth-child(2n)]:border-r-0 [&>button:nth-child(-n+2)]:border-b [&>button:nth-child(-n+2)]:border-b-white/10':items.length===6?'grid-cols-3 [&>button:nth-child(3n)]:border-r-0 [&>button:nth-child(-n+3)]:border-b [&>button:nth-child(-n+3)]:border-b-white/10':items.length>=5?'grid-cols-5':items.length>=4?'grid-cols-4':items.length===2?'grid-cols-2':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} data-rhythm-option-choice={`${key}:${id}`} aria-pressed={draft[key]===id} onClick={()=>{set(key,id);if(onPick)onPick(id);}} className={`break-keep border-r border-white/10 ${items.length>=5?'px-0 tracking-tight':'px-1'} text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
   // HELL の設定の選び方(segments と同じ見た目で、下書き hellDraft を書き換える)
   const hellSegments=(name,items)=><div className={`grid ${items.length===2?'grid-cols-2':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} data-rhythm-option-choice={`hell-${name}:${id}`} aria-pressed={hellDraft[name]===id} onClick={()=>{setHellDraft(cur=>({...cur,[name]:id}));setMessage('');}} className={`border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${hellDraft[name]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
   // 1項目=1枠。頭に帯のラベルを置く(参考にした画面と同じ形)。
@@ -449,6 +449,9 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 {field('ライブ背景',segments('stageEffect',RHYTHM_STAGE_EFFECT_LABELS),
               '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「ライブ」＝「派手」に加えて、ライブ会場のようにします。サーチライトが曲の拍に合わせて明るくなり、レーザーが小節ごとに向きと色を変えて走り、道の両側には観客のペンライトが奥までずらりと並び、拍に合わせて揺れます。ペンライトの色もコンボが伸びるほど変わります。いちばん重い段なので、端末が熱くなるときは下げてください。絵を描くのが得意な専用の部分（GPU）が無い端末では「派手」と同じになります。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライト・光の粒・レーザー・ペンライトは出しません。',{full:true})}
 {RHYTHM_FX_ITEMS.filter(item=>item.group==='stage').map(fxField)}
+{/* 本オープン記念ステージ(B5)。本オープンの印が立つまで出さない */}
+{typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS.rhythmGrandOpen===true&&field('記念ステージ',segments('stageTheme',RHYTHM_STAGE_THEME_CHOICES),
+              'モンヒロビートの本オープンを記念した背景です。金色の光と紙吹雪が、いつもの背景に重なります。判定・スコアは変わりません。\n演出量「最小」と軽量モードでは、紙吹雪は止まったまま出ます。')}
 </div>}
 </section>}
 {fxGroupShown('road')&&<section data-rhythm-options-group="道" data-rhythm-fx-group="road" className={card}>
@@ -466,6 +469,15 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 {fxGroupShown('note')&&<section data-rhythm-options-group="ノーツ" data-rhythm-fx-group="note" className={card}>
 {!wide&&<button type="button" data-rhythm-fx-group-head="note" aria-expanded={fxGroup==='note'} onClick={()=>setFxGroup(cur=>cur==='note'?null:'note')} className={`flex w-full items-center gap-2 text-left ${head}`}><span aria-hidden="true" className="text-cyan-300/80">{fxGroup==='note'?'▼':'▶'}</span>🎵 ノーツ<span data-rhythm-fx-group-badge className="rounded-full bg-fuchsia-500/25 px-2 py-0.5 text-[10px] font-black text-fuchsia-100">{fxGroupSummary('note')}</span><small className="ml-auto text-[10px] font-bold text-slate-400">{fxGroupCount('note')}項目</small></button>}
 {(wide||fxGroup==='note')&&<div className={wide?`mt-1 ${fxGrid}`:`mt-3 ${fxGrid}`}>
+{/* ノーツの色の組(B5・2026-11-07 社長「4つとも入れる」)。種類ごとの色分けはそのままで、色味だけ替える */}
+{field('ノーツの色',<>{segments('notePalette',RHYTHM_NOTE_PALETTE_CHOICES)}
+  {/* 選んでいる色で、ノーツの種類ごとの見本を並べる(2026-11-07 社長「各ノーツごとにどうかわるか」)。描き手はゲームと同じ。選びかえるとその場で描き直す */}
+  <div data-rhythm-note-look-preview={draft.notePalette||'STANDARD'} className="mt-1 grid grid-cols-3 gap-1 rounded-lg bg-slate-950/70 p-1">
+    {[['TAP','TAP'],['HOLD','HOLD'],['SLIDE','SLIDE'],['FLICK','FLICK'],['FLICK_LEFT','横(左)'],['FLICK_RIGHT','横(右)']].map(([kind,label])=><div key={kind} className="flex min-w-0 flex-col items-center">
+      <RhythmNoteSwatch kind={kind} width={46} height={30} look={{palette:draft.notePalette||'STANDARD'}}/>
+      <small className="truncate text-[8px] font-bold leading-tight text-slate-400">{label}</small></div>)}
+  </div></>,
+              'ノーツの色の組み合わせです。既定は「標準」（これまでの色）です。判定・スコアは変わりません。\n「パステル」＝やわらかい色。「ネオン」＝くっきり光る色。「見分けやすい」＝色の見え方に左右されにくい組み合わせで、ノーツのまわりの光を出しません。\nTAP・HOLD・SLIDE・FLICK などの種類ごとに色が分かれているのは、どれを選んでも同じです。次に演奏を始めたときから変わります。')}
 {field('ノーツの動き',toggle('noteMotionFx'),
               'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。')}
 {/* にじむ光(2026-09-26・ユーザー指示「見た目の向上＋軽量化」の3。既定は OFF)。WebGL で描いているときだけ効く */}

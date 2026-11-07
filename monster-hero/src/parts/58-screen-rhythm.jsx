@@ -994,7 +994,7 @@ function RhythmRankingScreen({
                 <div className="min-w-0 flex-1">
                   {/* 長いイベント名(「鍵の向こう側へ ～パンドラとふたつの翼～」)が幅320で「…」に切れていた。切らずに折り返す(2026-11-02) */}
                   <p style={JA_WRAP_STYLE} className="text-[11px] font-black leading-tight text-fuchsia-100">{jaWrap(eventDefinition.name)}</p>
-                  {/* 週間は「毎週月曜5:00に切り替わります」、期間限定は開始と終了そのものを出す */}
+                  {/* 週間は「毎週月曜4:00に切り替わります」、期間限定は開始と終了そのものを出す */}
                   <p data-rhythm-event-period className="text-[9px] text-slate-400">{rhythmEventPeriodText(eventDefinition,eventRange)}</p>
                 </div>
                 <p data-rhythm-event-remaining className="shrink-0 text-[10px] font-black text-fuchsia-200">

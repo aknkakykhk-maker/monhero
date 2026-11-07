@@ -115,7 +115,7 @@ check('どの週を見ているか画面に日付で出る',(()=>{
   return /^今週 \d+\/\d+\(.\) \d+:\d+ 〜 \d+\/\d+\(.\) \d+:\d+$/.test(text);
 })(),O.rhythmEventPeriodText({kind:'weekly'},{startMs:O.RHYTHM_WEEKLY_REWARD_FROM_MS,endMs:O.RHYTHM_WEEKLY_REWARD_FROM_MS+O.RHYTHM_WEEK_MS}));
 check('期間が取れないときは、これまでどおりの文へ倒す',
-  O.rhythmEventPeriodText({kind:'weekly'},null)==='毎週 月曜 5:00 に切り替わります');
+  O.rhythmEventPeriodText({kind:'weekly'},null)==='毎週 月曜 4:00 に切り替わります');
 
 // ⑨ 切り替わりは月曜5:00ちょうど(2026-09-14・ユーザー「スコア集計の切り替え時間の確認して」)
 {

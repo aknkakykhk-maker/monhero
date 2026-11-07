@@ -478,6 +478,12 @@ const rhythmNextEffectCap = (settings,level) => {const now=rhythmCapEffects(sett
 // 対戦の演出の段階。見た目のおまかせの id と、自分の設定のまま(OWN)
 const RHYTHM_MULTI_LOOK_LEVELS = Object.freeze(['LIGHT', 'STANDARD', 'VIVID', 'OWN']);
 const rhythmLookPresetOf = settings => (RHYTHM_LOOK_PRESETS.find(preset=>Object.entries(preset.values).every(([key,value])=>settings&&settings[key]===value))||{id:''}).id;
+// ノーツの色の組(B5・2026-11-07)。並びは画面のボタンの順。id は data/rhythm-mode.js の RHYTHM_NOTE_PALETTES と同じ
+const RHYTHM_NOTE_PALETTE_CHOICES = Object.freeze([['STANDARD','標準'],['PASTEL','パステル'],['NEON','ネオン'],['CLEAR','見分けやすい']]);
+// 記念ステージ(B5)。本オープンの印(rhythmGrandOpen)が立つまで、選ぶところを出さず、選んであっても描かない
+const RHYTHM_STAGE_THEME_CHOICES = Object.freeze([['NONE','いつもの背景'],['GRAND_OPEN','本オープン記念']]);
+const rhythmStageThemeActive = (settings) => settings?.stageTheme === 'GRAND_OPEN'
+  && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmGrandOpen === true;
 const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['LIVE','ライブ'],['VIVID','派手'],['CALM','控えめ'],['SIMPLE','シンプル']]);
 // ===== 他の音ゲーから取り入れた表示(2026-09-24・ユーザー指示「他の音ゲーを学習して取り入れるとこを取り入れて / 設定でいじれるように」) =====
 // レーンカバー(beatmania IIDX・SOUND VOLTEX の SUDDEN)。レーンの奥を何%隠すか。0で出さない
@@ -612,6 +618,9 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   noteSeVolume:70, noteSeEnabled:true, vibrationEnabled:false, effectAmount:'LIGHT', lightweightMode:false,
   // 演出を1つずつ選ぶ設定(2026-11-01)。おまかせ以外を選んだ項目だけ入る
   fx:Object.freeze({}),
+  // ノーツの色の組と記念ステージ(2026-11-07 本オープンの目玉 B5・社長「4つとも入れる」)。新しい項目なので、保存値に無い人はいまの見た目で補う。
+  //   notePalette … RHYTHM_NOTE_PALETTES(data/rhythm-mode.js)の id / stageTheme … NONE(いまの背景)か GRAND_OPEN(本オープン記念ステージ)
+  notePalette:'STANDARD', stageTheme:'NONE',
   // みんなで対戦のライブでは、演出を「軽さ優先」にそろえる(2026-10-03・ユーザー指示「マルチは演出量をデフォで下げたほうがいい」)。
   // ふだんの見た目の設定は書き換えない。対戦のあいだだけ上から重ねる
   multiLightLook:true,
@@ -890,6 +899,8 @@ const normalizeRhythmSettings = value => {
     assistMode:bool('assistMode'), mirrorChart:bool('mirrorChart'), luckyRush:bool('luckyRush'),
     // 演出を1つずつ(2026-11-01)。無い・壊れた値は全部「おまかせ」
     fx:normalizeRhythmFx(source.fx),
+    notePalette:RHYTHM_NOTE_PALETTE_CHOICES.some(([id])=>id===source.notePalette)?source.notePalette:DEFAULT_RHYTHM_SETTINGS.notePalette,
+    stageTheme:RHYTHM_STAGE_THEME_CHOICES.some(([id])=>id===source.stageTheme)?source.stageTheme:DEFAULT_RHYTHM_SETTINGS.stageTheme,
   };
 };
 const emptyRhythmBestRecord = () => ({bestScore:0,maxCombo:0,played:false,clear:false,fullCombo:false,allExcellent:false,allMarvelous:false,judgments:Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0]))});

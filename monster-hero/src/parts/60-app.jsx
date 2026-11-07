@@ -2237,7 +2237,8 @@ function MonsterHeroGame() {
   const grantBeatRankForResult = async (result, play) => {
     try {
       const raw = await storeGet(BEAT_RANK_KEY, null, false);
-      const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+      // 日の区切りは朝4時(2026-11-07 から。前は0時)。切り替えの夜は、0時区切りで書いた次の日のまま数える(その日はじめての1曲を二重に付けない)
+      const today = jstDayCarry(normalizeBeatRank(raw).day, jstDayKey4());
       const gain = beatRankAfter(raw, { difficultyId: play && play.difficulty && play.difficulty.id, cleared: result?.cleared !== false,
         fullCombo: result?.fullCombo === true, allMarvelous: result?.allMarvelous === true, multi: play && play.from === 'multi', today,
         // 曲の長さ(経験値は 長さ÷2:00 倍。2026-11-02)。読めないときは0で、今までどおりの値になる
@@ -11676,8 +11677,9 @@ function MonsterHeroGame() {
         dailyMasuAdviceCheckedRef.current = false;
         return;
       }
-      const today = localCalendarDate();
+      // 日の区切りは朝4時(jstDayKey4。2026-11-07 から。前は端末の時計の0時)。切り替えの夜に0時区切りで書いた次の日が残っていれば、もう出した扱い
       const shownDate = await storeGet(DAILY_MASU_ADVICE_KEY, '', false);
+      const today = jstDayCarry(shownDate, jstDayKey4());
       if (cancelled || masuMons.length >= 8 || shownDate === today) return;
       await storeSet(DAILY_MASU_ADVICE_KEY, today, false);
       // 「あきらめる」の近道は、クイックを何回かクリアした人だけへ(2026-10-10・改善部の提案G9)。
@@ -20451,7 +20453,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {raidDamageFx&&((gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='raid')||gameState==='RAID_JACK_DEBUG')&&<RaidJackDamageFx key={raidDamageFx.key} fx={raidDamageFx} onDone={()=>setRaidDamageFx(null)}/>}
         {beatRankFx&&beatRankFx.ready&&gameState==='RHYTHM_PLAY'&&<PlayerRankUpFx kind="beat" from={beatRankFx.from} to={beatRankFx.to} gains={beatRankFx.gains} onClose={()=>setBeatRankFx(null)}/>}
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward}
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} breederName={breederName} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward}
           onRankBarFull={()=>setBeatRankFx(f=>f&&!f.ready?{...f,ready:true}:f)} onRankBarStart={()=>setBeatRankFx(f=>f&&!f.started?{...f,started:true}:f)} onRankBarDone={()=>setBeatRankBarPlaying(false)} onComplete={async(result,merged)=>{
           // デバッグ画面の試作曲(RHYTHM_PROTO_SONGS)は、何も残さない。周回の報酬・経験値・自己ベスト・クリア回数・
           // 実績・全国ランキングのどれにも入れない(CLAUDE.md ⑦。試作は公開しない曲なので、記録に混ぜない)

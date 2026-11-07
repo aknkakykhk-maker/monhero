@@ -180,17 +180,21 @@ const cardWeeklyRewardForPlace = (place) => {
 };
 // 受け取った週の一覧。配列でない(壊れている)ときは null(=何も配らない)。無いときは []
 const cardNormalizeWeeklyClaims = (v) => (v === null || v === undefined ? [] : Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x) : null);
-const cardWeekStartMs = (now) => Date.parse(`${cardWeekKeyJst(now)}T${String(CARD_WEEK_START_HOUR_JST).padStart(2, '0')}:00:00+09:00`);
+// 週の始まり。週の鍵が切り替え(2026-11-09)より前の週は月曜5:00、以後は月曜4:00
+const cardWeekStartOfKey = (key) => Date.parse(`${key}T0${key >= cardWeekKeyJst(CARD_WEEK_SWITCH_MS) ? CARD_WEEK_START_HOUR_JST : CARD_WEEK_START_HOUR_JST_OLD}:00:00+09:00`);
+const cardWeekStartMs = (now) => cardWeekStartOfKey(cardWeekKeyJst(now));
+// その週の終わり(= 次の週の始まり)。切り替えの週だけ1時間短い
+const cardWeekEndMs = (startMs) => cardWeekStartMs(startMs + CARD_WEEK_MS + 2 * 3600 * 1000);
 const cardWeeklyClaimId = (weekKey) => `card_weekly_${weekKey}`;
 // 終わっていて、まだ受け取っておらず、受け取りの期限の中にある週(先に終わった週から)
 const cardWeeksAwaitingReward = (nowMs, claims) => {
   if (!Array.isArray(claims)) return [];
   const now = Number(nowMs) || 0;
   const thisStart = cardWeekStartMs(now);
+  const prev1 = cardWeekStartMs(thisStart - 1), prev2 = cardWeekStartMs(prev1 - 1);   // 7日を引くと切り替えをまたいだとき1時間ずれる
   const out = [];
-  for (let back = 2; back >= 1; back--) {
-    const startMs = thisStart - back * CARD_WEEK_MS;
-    const endMs = startMs + CARD_WEEK_MS;
+  for (const startMs of [prev2, prev1]) {
+    const endMs = cardWeekEndMs(startMs);
     if (startMs < CARD_WEEKLY_REWARD_FROM_MS || now < endMs || now >= endMs + CARD_WEEKLY_CLAIM_MS) continue;
     const key = cardWeekKeyJst(startMs);
     const id = cardWeeklyClaimId(key);
@@ -493,7 +497,7 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
         <div className="mb-1.5 shrink-0 space-y-1.5">
           <div className="flex gap-1.5">
             {[['week', '今週'], ['total', '通算']].map(([id, label]) => <button key={id} type="button" data-card-ranking-period={id} onClick={() => setPeriod(id)} className={chip(period === id)}>{label}</button>)}
-            <small className="ml-auto self-center text-[10px] font-bold text-slate-400">{period === 'week' ? '月曜 5:00 から' : 'フリー対戦で勝った数'}</small>
+            <small className="ml-auto self-center text-[10px] font-bold text-slate-400">{period === 'week' ? '月曜 4:00 から' : 'フリー対戦で勝った数'}</small>
           </div>
           {/* 5つを等分に並べる(横にすべらせる形だと、320幅で MASTER が画面の外・375幅で「MASTEF」と切れていた。2026-10-26 見回り #5) */}
           <div className="grid grid-cols-5 gap-1">
@@ -624,7 +628,8 @@ const cardRecordDetailAfter = (d0, { who, level, outcome, turns = 0, deck = null
       if (level in f.levels) f.levels[level] += 1;
       if (t > 0) f.fastest = f.fastest ? Math.min(f.fastest, t) : t;
       d.wins = { n: d.wins.n + 1, turns: d.wins.turns + t, fastest: t > 0 ? (d.wins.fastest ? Math.min(d.wins.fastest, t) : t) : d.wins.fastest };
-      d.day = { key: today, win: (d.day.key === today ? d.day.win : 0) + 1 };
+      const dayKey = cardDayCarry(d.day.key, today);   // 切り替えの夜は、0時区切りで書いた次の日のまま数える
+      d.day = { key: dayKey, win: (d.day.key === dayKey ? d.day.win : 0) + 1 };
     } else if (outcome === 'surrender') { f.surrender += 1; f.now = 0; }
     else { f.lose += 1; f.now = 0; }
     d.foes[who] = f;

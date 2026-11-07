@@ -52412,14 +52412,47 @@ const rhythmCreateGL2D=canvas=>{
 // 粒・帯・矢印・終わりの横棒・押さえている最中の光は、どれもこの表から色を取る(色をあちこちに書き写さない)。
 //   hi … いちばん明るい色(粒の上・矢印の芯) / mid … その種類の色 / lo … 暗い側 / rgb … 光(rgba)に使う
 // ★横フリックは左右で色を分ける(左=オレンジ・右=黄緑)。以前は粒が緑のまま矢印だけ左緑・右ピンクで、統一感がなかった
-const RHYTHM_NOTE_COLORS=Object.freeze({
+// ノーツの色の組(2026-11-07 社長「4つとも入れる」・本オープンの目玉 B5)。演奏の設定 notePalette で選ぶ。既定は STANDARD(これまでの色)。
+//   種類ごとの色分け(TAP=水色・HOLD=緑…)の決まりは変えず、同じ種類の中で色味だけを替える。判定・スコアは変わらない。
+//   noGlow … 粒のまわりの光を出さない(「見分けやすい」。色の見え方に左右されにくい組み合わせ)
+const RHYTHM_NOTE_PALETTES=Object.freeze({
+  STANDARD:Object.freeze({
   TAP:  Object.freeze({hi:'#f0f9ff',mid:'#38bdf8',lo:'#0284c7',rgb:'56,189,248',label:'水色'}),
   HOLD: Object.freeze({hi:'#ecfdf5',mid:'#34d399',lo:'#059669',rgb:'52,211,153',label:'緑'}),
   SLIDE:Object.freeze({hi:'#f5f3ff',mid:'#a78bfa',lo:'#7c3aed',rgb:'167,139,250',label:'紫'}),
   FLICK:RHYTHM_FLICK_UP_COLOR, // ピンク(#f472b6)
   LEFT: Object.freeze({hi:'#fff7ed',mid:'#fb923c',lo:'#ea580c',rgb:'251,146,60',label:'オレンジ'}),
   RIGHT:Object.freeze({hi:'#f7fee7',mid:'#a3e635',lo:'#4d7c0f',rgb:'163,230,53',label:'黄緑'}),
+}),
+  PASTEL:Object.freeze({
+    TAP:  Object.freeze({hi:'#f0f9ff',mid:'#a5d8ff',lo:'#74b9e8',rgb:'165,216,255',label:'水色'}),
+    HOLD: Object.freeze({hi:'#f0fdf4',mid:'#a7f3c9',lo:'#6fd3a0',rgb:'167,243,201',label:'緑'}),
+    SLIDE:Object.freeze({hi:'#faf5ff',mid:'#d8c4ff',lo:'#b39ae8',rgb:'216,196,255',label:'紫'}),
+    FLICK:Object.freeze({hi:'#fff1f7',mid:'#ffb3d1',lo:'#f08bb4',rgb:'255,179,209',label:'ピンク'}),
+    LEFT: Object.freeze({hi:'#fff7ed',mid:'#ffc999',lo:'#f5a66b',rgb:'255,201,153',label:'オレンジ'}),
+    RIGHT:Object.freeze({hi:'#fbffe8',mid:'#d4f59a',lo:'#a8d65e',rgb:'212,245,154',label:'黄緑'}),
+  }),
+  NEON:Object.freeze({
+    TAP:  Object.freeze({hi:'#e0ffff',mid:'#00e5ff',lo:'#0091ea',rgb:'0,229,255',label:'水色'}),
+    HOLD: Object.freeze({hi:'#eaffea',mid:'#39ff14',lo:'#00b300',rgb:'57,255,20',label:'緑'}),
+    SLIDE:Object.freeze({hi:'#f7e8ff',mid:'#bf40ff',lo:'#7a00cc',rgb:'191,64,255',label:'紫'}),
+    FLICK:Object.freeze({hi:'#ffe6f5',mid:'#ff2bd6',lo:'#c4009a',rgb:'255,43,214',label:'ピンク'}),
+    LEFT: Object.freeze({hi:'#fff2e0',mid:'#ff8c00',lo:'#cc5500',rgb:'255,140,0',label:'オレンジ'}),
+    RIGHT:Object.freeze({hi:'#fbffe0',mid:'#e6ff00',lo:'#99b300',rgb:'230,255,0',label:'黄緑'}),
+  }),
+  CLEAR:Object.freeze({
+    TAP:  Object.freeze({hi:'#e6f2fa',mid:'#0072b2',lo:'#004f7c',rgb:'0,114,178',label:'青',noGlow:true}),
+    HOLD: Object.freeze({hi:'#e0f5ef',mid:'#009e73',lo:'#006b4e',rgb:'0,158,115',label:'青緑',noGlow:true}),
+    SLIDE:Object.freeze({hi:'#f9eef5',mid:'#cc79a7',lo:'#9a4f78',rgb:'204,121,167',label:'赤紫',noGlow:true}),
+    FLICK:Object.freeze({hi:'#fbebe0',mid:'#d55e00',lo:'#963f00',rgb:'213,94,0',label:'朱',noGlow:true}),
+    LEFT: Object.freeze({hi:'#fdf3df',mid:'#e69f00',lo:'#a87300',rgb:'230,159,0',label:'橙',noGlow:true}),
+    RIGHT:Object.freeze({hi:'#fdfbe6',mid:'#f0e442',lo:'#b0a62a',rgb:'240,228,66',label:'黄',noGlow:true}),
+  }),
 });
+const RHYTHM_NOTE_PALETTE_IDS=Object.freeze(Object.keys(RHYTHM_NOTE_PALETTES));
+// いま描いている色の組。演奏を始めるとき rhythmApplyNotePalette で替わる(描き手を作り直すので、ここは let)
+let RHYTHM_NOTE_COLORS=RHYTHM_NOTE_PALETTES.STANDARD;
+let RHYTHM_NOTE_PALETTE_ID='STANDARD';
 // ノーツの見本の絵の種類(2026-10-21)。label はヘルプの表の書き方(画面に出す名前)。words は助手の答えの文からその絵を選ぶ言葉
 // (長い言葉から順に照らす。「SKY TAP」を「TAP」と取り違えない)。描くのは RHYTHM_CANVAS_RENDERER.drawSwatch(= rhythmDrawNoteSwatch)
 const RHYTHM_NOTE_SWATCH_KINDS=Object.freeze([
@@ -52437,7 +52470,8 @@ const RHYTHM_NOTE_SWATCH_KINDS=Object.freeze([
   Object.freeze({id:'SKY_SLIDE_R',label:'SKY SLIDE(右手)',words:Object.freeze(['SKY SLIDE','SKYSLIDE','スカイスライド','空のスライド','空中のスライド'])}),
   Object.freeze({id:'SKY_LINE',label:'空の判定ライン',words:Object.freeze(['空の判定ライン','上の判定ライン','空中の判定ライン'])}),
 ]);
-const RHYTHM_CANVAS_RENDERER=(()=>{
+// 描き手を作る。色の組(RHYTHM_NOTE_COLORS)は作るときに読み込むので、色を替えたら作り直す(rhythmApplyNotePalette)
+const rhythmBuildCanvasRenderer=()=>{
   const HEAD_H=12;          // 粒の高さ(ノーツ要素 20px から inset 4px 0 を引いた値)
   const GLOW=20;            // 光の画像の余白(px)。いちばん広い光(18px)が収まる
   const CAP=28;             // 3分割画像の両端の幅(角丸7px + 縁取り + 余白)
@@ -52454,7 +52488,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const SKY_ARROW_GLOWS=Object.freeze([[5,`rgba(${SKY_NOTE_COLOR.rgb},.95)`],[11,`rgba(${SKY_NOTE_COLOR.rgb},.6)`],[2,'rgba(2,6,23,.9)']]);
   // 空中のフリックの▲は、縁を白・中を赤にする(地上のピンクの▲は中まで塗ってあるので、縁の有無で分かれる)
   const SKY_ARROW_FILL=Object.freeze([[0,'#ff7b7b'],[1,'#e11d1d']]);
-  const headOf=c=>({radius:2,gradient:[c.hi,['#ffffff',.36],[c.mid,.66],c.lo],border:'rgba(255,255,255,.96)',inset:'rgba(255,255,255,.8)',glow:[[15,`rgba(${c.rgb},.62)`],[6,'rgba(255,255,255,.34)'],[12,`rgba(${c.rgb},.34)`]]});
+  const headOf=c=>({radius:2,gradient:[c.hi,['#ffffff',.36],[c.mid,.66],c.lo],border:'rgba(255,255,255,.96)',inset:'rgba(255,255,255,.8)',glow:c.noGlow?[]:[[15,`rgba(${c.rgb},.62)`],[6,'rgba(255,255,255,.34)'],[12,`rgba(${c.rgb},.34)`]]});
   const HEADS={
     TAP:    headOf(RHYTHM_NOTE_COLORS.TAP),
     HOLD:   headOf(RHYTHM_NOTE_COLORS.HOLD),
@@ -54546,7 +54580,34 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     },
     clear(){faces.length=0;pendingClear=false;if(ctx&&cssW&&cssH){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cssW,cssH);blank=true;}},
   };
-})();
+};
+let RHYTHM_CANVAS_RENDERER=rhythmBuildCanvasRenderer();
+// 演奏の設定のノーツの色(notePalette)を描き手へ当てる。同じ組なら何もしない。
+// ★演奏を始めるとき(描き先を取り付ける前)だけ呼ぶ。演奏中に作り直すと、取り付けた描き先が外れる
+const rhythmApplyNotePalette=(id)=>{
+  const next=RHYTHM_NOTE_PALETTES[id]?id:'STANDARD';
+  if(next===RHYTHM_NOTE_PALETTE_ID)return false;
+  const prevColors=RHYTHM_NOTE_COLORS,prevId=RHYTHM_NOTE_PALETTE_ID,prevRenderer=RHYTHM_CANVAS_RENDERER;
+  try{RHYTHM_NOTE_COLORS=RHYTHM_NOTE_PALETTES[next];RHYTHM_NOTE_PALETTE_ID=next;RHYTHM_CANVAS_RENDERER=rhythmBuildCanvasRenderer();return true;}
+  catch(e){RHYTHM_NOTE_COLORS=prevColors;RHYTHM_NOTE_PALETTE_ID=prevId;RHYTHM_CANVAS_RENDERER=prevRenderer;return false;}
+};
+// 選んでいない見た目でノーツの見本を描く(2026-11-07 社長「各ノーツごとにどうかわるか」・オプションのノーツの色の見本)。
+//   look … { palette: RHYTHM_NOTE_PALETTES の id }。ほかの見た目(ノーツの形など)を足すときも、この入れ物に項目を足す。
+//   演奏に使っている描き手(RHYTHM_CANVAS_RENDERER)は作り直さない。見本用の描き手を見た目ごとに1つ作って取っておく。
+//   描き手は描くときにも RHYTHM_NOTE_COLORS を読むので、描くあいだだけ差し替えて、すぐ戻す(同期で終わるので演奏の描画とは混ざらない)
+const rhythmPreviewRenderers=new Map();
+const rhythmNoteLookKey=(look)=>(RHYTHM_NOTE_PALETTES[look&&look.palette]?look.palette:'STANDARD');
+const rhythmDrawNoteSwatchWith=(look,c,kind,w,h)=>{
+  const key=rhythmNoteLookKey(look);
+  if(key===RHYTHM_NOTE_PALETTE_ID)return RHYTHM_CANVAS_RENDERER.drawSwatch(c,kind,w,h);
+  const prev=RHYTHM_NOTE_COLORS;
+  try{
+    RHYTHM_NOTE_COLORS=RHYTHM_NOTE_PALETTES[key];
+    let r=rhythmPreviewRenderers.get(key);
+    if(!r){r=rhythmBuildCanvasRenderer();rhythmPreviewRenderers.set(key,r);}
+    return r.drawSwatch(c,kind,w,h);
+  }catch(e){return false;}finally{RHYTHM_NOTE_COLORS=prev;}
+};
 // ノーツ1つの見本の絵を描く(2026-10-21)。c … 2D の描き込み先(呼ぶ側が画面の細かさの倍率をかけておく)/ kind … RHYTHM_NOTE_SWATCH_KINDS の id / w,h … 描く大きさ(CSS px)。
 // 描けたら true。ヘルプの表・助手のおしゃべり・ノーツ図鑑はこれを使う(絵を手で描いたり写真を貼ったりしない)
 const rhythmDrawNoteSwatch=(c,kind,w,h)=>RHYTHM_CANVAS_RENDERER.drawSwatch(c,kind,w,h);

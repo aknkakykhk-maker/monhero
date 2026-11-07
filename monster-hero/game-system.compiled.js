@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a3e597ae8ec6c657
+// source-sha256: b2ccb2a99cb33e68
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6041,6 +6041,9 @@ const RHYTHM_MULTI_LOOK_LEVELS = Object.freeze(['LIGHT', 'STANDARD', 'VIVID', 'O
 const rhythmLookPresetOf = settings => (RHYTHM_LOOK_PRESETS.find(preset => Object.entries(preset.values).every(([key, value]) => settings && settings[key] === value)) || {
   id: ''
 }).id;
+const RHYTHM_NOTE_PALETTE_CHOICES = Object.freeze([['STANDARD', '標準'], ['PASTEL', 'パステル'], ['NEON', 'ネオン'], ['CLEAR', '見分けやすい']]);
+const RHYTHM_STAGE_THEME_CHOICES = Object.freeze([['NONE', 'いつもの背景'], ['GRAND_OPEN', '本オープン記念']]);
+const rhythmStageThemeActive = settings => settings?.stageTheme === 'GRAND_OPEN' && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmGrandOpen === true;
 const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['LIVE', 'ライブ'], ['VIVID', '派手'], ['CALM', '控えめ'], ['SIMPLE', 'シンプル']]);
 const RHYTHM_LANE_COVER_MIN = 0,
   RHYTHM_LANE_COVER_MAX = 60,
@@ -6219,6 +6222,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   effectAmount: 'LIGHT',
   lightweightMode: false,
   fx: Object.freeze({}),
+  notePalette: 'STANDARD',
+  stageTheme: 'NONE',
   multiLightLook: true,
   multiLook: 'LIGHT',
   modeSelectArt: true,
@@ -6590,7 +6595,9 @@ const normalizeRhythmSettings = value => {
     assistMode: bool('assistMode'),
     mirrorChart: bool('mirrorChart'),
     luckyRush: bool('luckyRush'),
-    fx: normalizeRhythmFx(source.fx)
+    fx: normalizeRhythmFx(source.fx),
+    notePalette: RHYTHM_NOTE_PALETTE_CHOICES.some(([id]) => id === source.notePalette) ? source.notePalette : DEFAULT_RHYTHM_SETTINGS.notePalette,
+    stageTheme: RHYTHM_STAGE_THEME_CHOICES.some(([id]) => id === source.stageTheme) ? source.stageTheme : DEFAULT_RHYTHM_SETTINGS.stageTheme
   };
 };
 const emptyRhythmBestRecord = () => ({
@@ -13573,6 +13580,12 @@ const LOGIN_BONUS_DEFAULT = {
   totalLoginDays: 0
 };
 const loginBonusPeriodKey = (now = Date.now()) => new Date(Number(now) + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const jstDayKey4 = (now = Date.now()) => new Date(Number(now) + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const jstDayCarry = (saved, today) => {
+  if (typeof saved !== 'string' || typeof today !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(saved)) return today;
+  const t = Date.parse(`${today}T00:00:00Z`);
+  return Number.isFinite(t) && saved === new Date(t + 86400000).toISOString().slice(0, 10) ? saved : today;
+};
 const ASSISTANT_SELECTED_KEY = 'mh_assistant_selected_v1';
 const KIKI_INTRO_SEEN_KEY = 'mh_kiki_intro_seen_v1';
 const MOMOSUKE_INTRO_SEEN_KEY = 'mh_momosuke_intro_seen_v1';
@@ -14335,8 +14348,12 @@ const PLAYTIME_KEY = 'mh_playtime_v1';
 const PLAYTIME_TICK_MS = 15000;
 const PLAYTIME_SAVE_MS = 60000;
 const PLAYTIME_MAX_STEP_MS = 60000;
-const playtimeDayKey = (now = Date.now()) => new Date(Number(now) + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const playtimeDayKey = (now = Date.now()) => new Date(Number(now) + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
 const PLAYTIME_DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const playtimeDayOf = (savedDay, now = Date.now()) => {
+  const day = playtimeDayKey(now);
+  return savedDay === playtimeDayKey(Number(now) + 86400000) ? savedDay : day;
+};
 const playtimeDayValue = value => typeof value === 'string' && PLAYTIME_DAY_PATTERN.test(value) ? value : null;
 const playtimeSpan = value => {
   const ms = Number(value?.ms);
@@ -14360,7 +14377,7 @@ const advancePlaytime = (current, deltaMs, now = Date.now()) => {
   const base = normalizePlaytime(current);
   const delta = Number(deltaMs);
   if (!(Number.isFinite(delta) && delta > 0)) return base;
-  const day = playtimeDayKey(now);
+  const day = playtimeDayOf(base.today.day, now);
   const sameDay = base.today.day === day;
   const todayMs = (sameDay ? base.today.ms : 0) + delta;
   return {
@@ -14379,7 +14396,7 @@ const advancePlaytime = (current, deltaMs, now = Date.now()) => {
 };
 const playtimeTodayMs = (value, now = Date.now()) => {
   const base = normalizePlaytime(value);
-  return base.today.day === playtimeDayKey(now) ? base.today.ms : 0;
+  return base.today.day === playtimeDayOf(base.today.day, now) ? base.today.ms : 0;
 };
 const PLAYTIME_DEVICE_KEY = 'mhdev_playtime_device_v1';
 const PLAYTIME_DEVICE_ID_RE = /^[a-z0-9]{12,40}$/;
@@ -19346,7 +19363,7 @@ const ASSISTANT_BUBBLE_MODE_LABELS = Object.freeze([{
 }]);
 const ASSISTANT_BUBBLE_ALWAYS_SCENES = Object.freeze(['home', 'quickRhythmBackground', 'rhythmWeeklyEvent']);
 const assistantBubbleAlwaysShown = scene => !scene || ASSISTANT_BUBBLE_ALWAYS_SCENES.includes(scene) || /Intro$/.test(String(scene));
-const assistantBubbleDayKey = (now = Date.now()) => new Date(Number(now) + (9 - 5) * 3600000).toISOString().slice(0, 10);
+const assistantBubbleDayKey = (now = Date.now()) => new Date(Number(now) + (9 - 4) * 3600000).toISOString().slice(0, 10);
 const normalizeAssistantBubbleSeen = (raw, day) => raw && typeof raw === 'object' && raw.day === day && Array.isArray(raw.scenes) ? {
   day,
   scenes: raw.scenes.filter(x => typeof x === 'string').slice(0, 300)
@@ -34268,7 +34285,7 @@ const RhythmOptions = ({
     className: draft[key] === flag ? 'text-white' : 'text-slate-400'
   }, text))));
   const segments = (key, items, onPick = null) => React.createElement("div", {
-    className: `grid ${items.length === 6 ? 'grid-cols-3 [&>button:nth-child(3n)]:border-r-0 [&>button:nth-child(-n+3)]:border-b [&>button:nth-child(-n+3)]:border-b-white/10' : items.length >= 5 ? 'grid-cols-5' : items.length >= 4 ? 'grid-cols-4' : items.length === 2 ? 'grid-cols-2' : 'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`
+    className: `grid ${items.length === 4 && items.some(([, text]) => String(text).length >= 4) ? 'grid-cols-2 [&>button:nth-child(2n)]:border-r-0 [&>button:nth-child(-n+2)]:border-b [&>button:nth-child(-n+2)]:border-b-white/10' : items.length === 6 ? 'grid-cols-3 [&>button:nth-child(3n)]:border-r-0 [&>button:nth-child(-n+3)]:border-b [&>button:nth-child(-n+3)]:border-b-white/10' : items.length >= 5 ? 'grid-cols-5' : items.length >= 4 ? 'grid-cols-4' : items.length === 2 ? 'grid-cols-2' : 'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`
   }, items.map(([id, text]) => React.createElement("button", {
     type: "button",
     key: id,
@@ -34952,7 +34969,7 @@ const RhythmOptions = ({
     className: wide ? `mt-1 ${fxGrid}` : `mt-3 ${fxGrid}`
   }, field('ライブ背景', segments('stageEffect', RHYTHM_STAGE_EFFECT_LABELS), '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「ライブ」＝「派手」に加えて、ライブ会場のようにします。サーチライトが曲の拍に合わせて明るくなり、レーザーが小節ごとに向きと色を変えて走り、道の両側には観客のペンライトが奥までずらりと並び、拍に合わせて揺れます。ペンライトの色もコンボが伸びるほど変わります。いちばん重い段なので、端末が熱くなるときは下げてください。絵を描くのが得意な専用の部分（GPU）が無い端末では「派手」と同じになります。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライト・光の粒・レーザー・ペンライトは出しません。', {
     full: true
-  }), RHYTHM_FX_ITEMS.filter(item => item.group === 'stage').map(fxField))), fxGroupShown('road') && React.createElement("section", {
+  }), RHYTHM_FX_ITEMS.filter(item => item.group === 'stage').map(fxField), typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmGrandOpen === true && field('記念ステージ', segments('stageTheme', RHYTHM_STAGE_THEME_CHOICES), 'モンヒロビートの本オープンを記念した背景です。金色の光と紙吹雪が、いつもの背景に重なります。判定・スコアは変わりません。\n演出量「最小」と軽量モードでは、紙吹雪は止まったまま出ます。'))), fxGroupShown('road') && React.createElement("section", {
     "data-rhythm-options-group": "道",
     "data-rhythm-fx-group": "road",
     className: card
@@ -34992,7 +35009,22 @@ const RhythmOptions = ({
     className: "ml-auto text-[10px] font-bold text-slate-400"
   }, fxGroupCount('note'), "項目")), (wide || fxGroup === 'note') && React.createElement("div", {
     className: wide ? `mt-1 ${fxGrid}` : `mt-3 ${fxGrid}`
-  }, field('ノーツの動き', toggle('noteMotionFx'), 'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。'), field('にじむ光', toggle('noteBloom'), 'ノーツの光や、ノーツを取ったときの光のまわりを、ふわっとにじませます。既定は「OFF」です。判定・スコアは変わりません。\n描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効きます。「Canvas」のときは何も変わりません。\n光を小さな絵にぼかしてから重ねるので、GPU の仕事が少し増えます。端末が熱くなるときは OFF にしてください。演出量「最小」と軽量モードでは出しません。'), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
+  }, field('ノーツの色', React.createElement(React.Fragment, null, segments('notePalette', RHYTHM_NOTE_PALETTE_CHOICES), React.createElement("div", {
+    "data-rhythm-note-look-preview": draft.notePalette || 'STANDARD',
+    className: "mt-1 grid grid-cols-3 gap-1 rounded-lg bg-slate-950/70 p-1"
+  }, [['TAP', 'TAP'], ['HOLD', 'HOLD'], ['SLIDE', 'SLIDE'], ['FLICK', 'FLICK'], ['FLICK_LEFT', '横(左)'], ['FLICK_RIGHT', '横(右)']].map(([kind, label]) => React.createElement("div", {
+    key: kind,
+    className: "flex min-w-0 flex-col items-center"
+  }, React.createElement(RhythmNoteSwatch, {
+    kind: kind,
+    width: 46,
+    height: 30,
+    look: {
+      palette: draft.notePalette || 'STANDARD'
+    }
+  }), React.createElement("small", {
+    className: "truncate text-[8px] font-bold leading-tight text-slate-400"
+  }, label))))), 'ノーツの色の組み合わせです。既定は「標準」（これまでの色）です。判定・スコアは変わりません。\n「パステル」＝やわらかい色。「ネオン」＝くっきり光る色。「見分けやすい」＝色の見え方に左右されにくい組み合わせで、ノーツのまわりの光を出しません。\nTAP・HOLD・SLIDE・FLICK などの種類ごとに色が分かれているのは、どれを選んでも同じです。次に演奏を始めたときから変わります。'), field('ノーツの動き', toggle('noteMotionFx'), 'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。'), field('にじむ光', toggle('noteBloom'), 'ノーツの光や、ノーツを取ったときの光のまわりを、ふわっとにじませます。既定は「OFF」です。判定・スコアは変わりません。\n描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効きます。「Canvas」のときは何も変わりません。\n光を小さな絵にぼかしてから重ねるので、GPU の仕事が少し増えます。端末が熱くなるときは OFF にしてください。演出量「最小」と軽量モードでは出しません。'), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
     full: true
   }), RHYTHM_FX_ITEMS.filter(item => item.group === 'note').map(fxField))), fxGroupShown('judge') && React.createElement("section", {
     "data-rhythm-options-group": "判定",
@@ -39070,6 +39102,15 @@ const RhythmLineAdjustPanel = ({
     className: "min-h-[40px] rounded-lg border border-white/25 bg-slate-800 px-3 text-[12px] font-black"
   }, "やめる")));
 };
+const RHYTHM_GRAND_STAGE_CONFETTI = Object.freeze(Array.from({
+  length: 48
+}, (_, k) => Object.freeze({
+  x: k * 37 % 100,
+  y: k * 53 % 90,
+  dur: 6 + k * 7 % 6,
+  delay: -(k * 13 % 11),
+  color: ['#ffd45e', '#ff9ec4', '#8fd8ff', '#ffffff', '#ffc061'][k % 5]
+})));
 const RhythmTapTest = ({
   song,
   difficulty,
@@ -39090,7 +39131,8 @@ const RhythmTapTest = ({
   onApplyCalibration = null,
   multi = false,
   multiRewardScale = 1,
-  lineAdjust = null
+  lineAdjust = null,
+  breederName = ''
 }) => {
   const tutorialProp = tutorial;
   tutorial = tutorial || !!lineAdjust;
@@ -39103,6 +39145,12 @@ const RhythmTapTest = ({
     judgmentLineHeight: lineHeightOverride
   }, [settingsIn, lineHeightOverride]);
   const settings = useMemo(() => settingsBase && settingsBase.autoEffectDown !== false ? rhythmCapEffects(settingsBase, effectCap) : settingsBase, [settingsBase, effectCap]);
+  useState(() => {
+    try {
+      if (typeof rhythmApplyNotePalette === 'function') rhythmApplyNotePalette(settingsIn?.notePalette);
+    } catch (e) {}
+    return 0;
+  });
   const settingsLiveRef = useRef(settings);
   settingsLiveRef.current = settings;
   useEffect(() => {
@@ -39436,6 +39484,7 @@ const RhythmTapTest = ({
     })));
   }), [chart.notes, monsterSignature, settings.lightweightMode, settings.effectAmount, monsterFaceHidden]);
   const [sideArtUrls, setSideArtUrls] = useState([]);
+  const partnerLineRef = useRef(null);
   useEffect(() => {
     let cancelled = false;
     const made = [];
@@ -43481,6 +43530,35 @@ const RhythmTapTest = ({
     }, "+", Number(quickRunAward.psyche).toLocaleString())), quickRunAward.shard > 0 && React.createElement("span", null, "🎖️ ", React.createElement("b", {
       className: "text-amber-200"
     }, "+", Number(quickRunAward.shard).toLocaleString())))), (() => {
+      if (tutorial || calibrating || debugPlay || multi || index < 0 || !monsters[index]) return null;
+      if (partnerLineRef.current === null) partnerLineRef.current = typeof rhythmSoloPartnerLine === 'function' ? rhythmSoloPartnerLine({
+        masu: monsters[index],
+        song,
+        diffId: difficulty?.id,
+        score: view.score,
+        fullCombo: !!result.fullCombo,
+        cleared: result.cleared !== false,
+        who: breederName
+      }) : '';
+      const line = partnerLineRef.current;
+      if (!line) return null;
+      return React.createElement("div", {
+        "data-rhythm-result-partner-line": true,
+        className: "mx-auto my-2 flex max-w-sm items-center gap-2 rounded-2xl border border-sky-300/40 bg-sky-950/40 px-3 py-2"
+      }, heroArt && React.createElement("img", {
+        src: heroArt,
+        alt: "",
+        "aria-hidden": "true",
+        className: "h-12 w-12 shrink-0 object-contain"
+      }), React.createElement("div", {
+        className: "min-w-0 flex-1"
+      }, React.createElement("small", {
+        className: "block truncate text-[10px] font-black text-sky-200"
+      }, monsters[index].name), React.createElement("p", {
+        style: JA_WRAP_STYLE,
+        className: "text-[12px] font-bold leading-snug text-white"
+      }, jaWrap(line))));
+    })(), (() => {
       if (tutorial || calibrating || debugPlay || multi || result.assist || result.cleared === false) return null;
       const before = runRef.current?.startBest;
       if (before && before.clear === true) return null;
@@ -44018,6 +44096,19 @@ const RhythmTapTest = ({
     src: stageImages.sparks[1],
     alt: "",
     draggable: false
+  }))), rhythmStageThemeActive(settings) && React.createElement("div", {
+    "data-rhythm-grand-stage": true,
+    "data-still": settings.effectAmount === 'MINIMAL' || settings.lightweightMode ? '1' : undefined,
+    "aria-hidden": "true"
+  }, React.createElement("style", null, `[data-rhythm-grand-stage]{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden;background:radial-gradient(ellipse 70% 38% at 50% 0%,rgba(255,196,64,.42),rgba(255,196,64,0) 70%),linear-gradient(180deg,rgba(255,214,102,.10),rgba(255,214,102,0) 45%)}[data-rhythm-grand-stage] i{position:absolute;top:-4%;width:1.2vmin;height:2.2vmin;border-radius:2px;opacity:.9;animation:mhGrandConfetti linear infinite}[data-rhythm-grand-stage][data-still] i{animation:none}[data-rhythm-grand-stage] b{position:absolute;left:0;right:0;top:24%;text-align:center;font:900 7vmin/1 system-ui,sans-serif;letter-spacing:.12em;color:rgba(255,220,120,.16)}@keyframes mhGrandConfetti{from{transform:translateY(0) rotate(0deg)}to{transform:translateY(110vh) rotate(540deg)}}`), React.createElement("b", null, "GRAND OPEN"), RHYTHM_GRAND_STAGE_CONFETTI.map((c, k) => React.createElement("i", {
+    key: k,
+    style: {
+      left: `${c.x}%`,
+      background: c.color,
+      animationDuration: `${c.dur}s`,
+      animationDelay: `${c.delay}s`,
+      top: settings.effectAmount === 'MINIMAL' || settings.lightweightMode ? `${c.y}%` : undefined
+    }
   }))), roadFogOn && React.createElement(React.Fragment, null, React.createElement("i", {
     "data-rhythm-road-haze": true,
     "aria-hidden": "true"
@@ -49103,7 +49194,7 @@ const rhythmBuddyInt = (v, max = 1e9) => {
 const rhythmBuddyStr = (v, max) => String(v == null ? '' : v).replace(/[\u0000-\u001f]/g, '').slice(0, max);
 const rhythmBuddyDayKey = nowMs => {
   const now = Number.isFinite(nowMs) ? nowMs : 0;
-  return new Date(now + 9 * 3600 * 1000 - 5 * 3600 * 1000).toISOString().slice(0, 10);
+  return new Date(now + 9 * 3600 * 1000 - 4 * 3600 * 1000).toISOString().slice(0, 10);
 };
 const rhythmBuddyPrevDayKey = dayKey => {
   const t = Date.parse(`${dayKey}T00:00:00Z`);
@@ -52446,6 +52537,37 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       awful: ['…{who}さん']
     }
   },
+  hMid: {
+    common: ['{who}さん、おつかれさま!', '{who}さん、いい感じだったね!', '{who}さん、もう1曲いこっか!', '{who}さん、となりで聞いてて楽しかった!'],
+    trait: {
+      jester: ['{who}さん、いいノリだったね!'],
+      brave: ['{who}さん、次はもっと上を狙おう!'],
+      clingy: ['{who}さん、となりで演奏できてうれしい〜'],
+      smart: ['{who}さん、安定していましたね'],
+      serious: ['{who}さん、おつかれさまでした'],
+      proud: ['{who}さん、まあまあね。次はもっといけるわ'],
+      worrier: ['{who}さん、最後までいけたね…よかった'],
+      stubborn: ['{who}さん、悪くない。次だ'],
+      easygoing: ['{who}さん、のんびり楽しかったね〜'],
+      fiery: ['{who}さん、まだまだ燃えられるぞ!'],
+      cool: ['{who}さん、悪くない。伸びしろはある'],
+      fickle: ['{who}さん、次はどの曲にする?'],
+      mellow: ['{who}さん、おだやかでいい演奏でした'],
+      hasty: ['{who}さん、さあ次!すぐ次!'],
+      competitive: ['{who}さん、次は自己ベスト更新だ!'],
+      showoff: ['{who}さん、見てた見てた!いい感じ!'],
+      shy: ['{who}さん…いっしょに演奏、楽しかった'],
+      hardworker: ['{who}さん、くり返せばもっと伸びます'],
+      romantic: ['{who}さん、いい音色だったね']
+    },
+    mood: {
+      great: ['{who}さん、いい感じ!!'],
+      good: ['{who}さん、ナイス!'],
+      normal: [],
+      bad: ['…{who}さん、おつかれ'],
+      awful: ['…{who}さん']
+    }
+  },
   callOut: {
     common: ['{who}さん、楽しんでる?', '{who}さん、調子はどう?', 'ねえ、{who}さん!', '{who}さん、いっしょにがんばろうね!', '{who}さん、次の曲たのしみだね!'],
     trait: {
@@ -55083,7 +55205,7 @@ const raidJackParticipated = raw => {
 };
 const raidJackDayKey = nowMs => {
   const now = Number.isFinite(nowMs) ? nowMs : 0;
-  const jst = new Date(now + 9 * 3600 * 1000 - 5 * 3600 * 1000);
+  const jst = new Date(now + 9 * 3600 * 1000 - 4 * 3600 * 1000);
   return jst.toISOString().slice(0, 10);
 };
 const raidJackDefaultState = () => ({
@@ -57395,7 +57517,8 @@ const RhythmNoteSwatch = ({
   kind,
   width = 54,
   height = 42,
-  className = ''
+  className = '',
+  look = null
 }) => {
   const ref = React.useRef(null);
   React.useEffect(() => {
@@ -57408,8 +57531,8 @@ const RhythmNoteSwatch = ({
     if (!g) return;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, width, height);
-    rhythmDrawNoteSwatch(g, kind, width, height);
-  }, [kind, width, height]);
+    if (look && typeof rhythmDrawNoteSwatchWith === 'function') rhythmDrawNoteSwatchWith(look, g, kind, width, height);else rhythmDrawNoteSwatch(g, kind, width, height);
+  }, [kind, width, height, look ? JSON.stringify(look) : '']);
   const label = ((typeof RHYTHM_NOTE_SWATCH_KINDS !== 'undefined' ? RHYTHM_NOTE_SWATCH_KINDS : []).find(k => k.id === kind) || {}).label || kind;
   return React.createElement("canvas", {
     ref: ref,
@@ -60307,7 +60430,7 @@ function SettingsScreen({
     className: "block text-[13px] font-black text-slate-200"
   }, "助手のひとこと"), React.createElement("p", {
     className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝5:00で戻ります)。「出さない」にしても、はじめての案内やHOMEの助手、新しい機能のお知らせは出ます。"), React.createElement("div", {
+  }, "画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、はじめての案内やHOMEの助手、新しい機能のお知らせは出ます。"), React.createElement("div", {
     className: "mt-2 grid grid-cols-3 gap-2"
   }, ASSISTANT_BUBBLE_MODE_LABELS.map(option => React.createElement("button", {
     key: option.id,
@@ -82707,7 +82830,7 @@ function RhythmHistoryScreen({
     compact: true
   })), list.length === 0 ? React.createElement("p", {
     className: "rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400"
-  }, "終わった週やイベントがまだありません。", React.createElement("br", null), "週間ランキングは毎週 月曜 5:00 に切り替わります。") : React.createElement(React.Fragment, null, React.createElement("div", {
+  }, "終わった週やイベントがまだありません。", React.createElement("br", null), "週間ランキングは毎週 月曜 4:00 に切り替わります。") : React.createElement(React.Fragment, null, React.createElement("div", {
     "data-rhythm-history-tabs": true,
     className: "sticky top-0 z-10 -mx-3 bg-slate-950 px-3 pt-1"
   }, React.createElement(ScreenTabs, {
@@ -82725,7 +82848,7 @@ function RhythmHistoryScreen({
   })), shownList.length === 0 ? React.createElement("p", {
     "data-rhythm-history-empty": listTab,
     className: "rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400"
-  }, listTab === 'limited' ? '終わったイベントはまだありません。' : '終わった週はまだありません。', React.createElement("br", null), listTab === 'limited' ? 'イベントが終わると、ここに順位が残ります。' : '週間ランキングは毎週 月曜 5:00 に切り替わります。') : React.createElement("div", {
+  }, listTab === 'limited' ? '終わったイベントはまだありません。' : '終わった週はまだありません。', React.createElement("br", null), listTab === 'limited' ? 'イベントが終わると、ここに順位が残ります。' : '週間ランキングは毎週 月曜 4:00 に切り替わります。') : React.createElement("div", {
     className: "flex flex-col gap-2"
   }, shownList.map(entry => React.createElement("button", {
     key: entry.id,
@@ -89703,6 +89826,45 @@ const rhythmBuddyMasuName = masu => {
   return String(masu && masu.name || base && base.name || 'マスモン').slice(0, 12);
 };
 const rhythmBuddyTalkRecent = new Map();
+const rhythmSoloPartnerLine = ({
+  masu,
+  song,
+  diffId,
+  score = 0,
+  fullCombo = false,
+  cleared = true,
+  who = ''
+}) => {
+  if (!masu || masu.id == null || !who) return '';
+  try {
+    const brain = rhythmBuddyMakeBrain(song ? [song] : []);
+    const base = {
+      masuId: String(masu.id),
+      baseId: masu.baseId || null,
+      songId: song?.songId || '',
+      score,
+      diffId,
+      who
+    };
+    let text = cleared === false ? brain.talk({
+      ...base,
+      kind: 'hLow'
+    }) : brain.talk({
+      ...base,
+      kind: 'reactResult',
+      fc: fullCombo ? 1 : 0,
+      quit: false,
+      missRate: 0
+    });
+    if (!text && cleared !== false) text = brain.talk({
+      ...base,
+      kind: 'hMid'
+    });
+    return typeof text === 'string' ? text : '';
+  } catch (e) {
+    return '';
+  }
+};
 const rhythmBuddyMakeBrain = songs => ({
   play({
     songId,
@@ -90271,7 +90433,7 @@ function RhythmBuddyDetail({
     size: 22
   }), mood.label), React.createElement("small", {
     className: "block text-[9px] font-bold leading-snug text-slate-500"
-  }, "朝5:00に変わります。育つ早さは経験値×", rhythmBuddyMoodExpScale(mood.id, m.trait))), React.createElement("section", {
+  }, "朝4:00に変わります。育つ早さは経験値×", rhythmBuddyMoodExpScale(mood.id, m.trait))), React.createElement("section", {
     className: "rounded-xl bg-slate-950/60 p-2"
   }, React.createElement("h4", {
     className: "text-[10px] font-black text-slate-400"
@@ -97295,7 +97457,13 @@ const cardNormalizeDecks = v => {
     decks
   };
 };
-const cardNormalizeDaily = (v, today) => {
+const cardDayCarry = (saved, today) => {
+  if (typeof saved !== 'string' || typeof today !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(saved)) return today;
+  const t = Date.parse(`${today}T00:00:00Z`);
+  return Number.isFinite(t) && saved === new Date(t + 86400000).toISOString().slice(0, 10) ? saved : today;
+};
+const cardNormalizeDaily = (v, today0) => {
+  const today = cardDayCarry(cardIsPlainObject(v) ? v.day : null, today0);
   const base = {
     day: today,
     cpuPoint: 0,
@@ -97752,9 +97920,12 @@ const cardNormalizeLevelCounts = v => {
   const r = cardIsPlainObject(v) ? v : {};
   return Object.fromEntries(CARD_LEVEL_ORDER.map(lv => [lv, cardNormalizePoint(r[lv])]));
 };
-const CARD_WEEK_START_HOUR_JST = 5;
+const CARD_WEEK_START_HOUR_JST = 4;
+const CARD_WEEK_START_HOUR_JST_OLD = 5;
+const CARD_WEEK_SWITCH_MS = Date.UTC(2026, 10, 8, 19, 0, 0);
+const cardWeekStartHourAt = now => Number(now) >= CARD_WEEK_SWITCH_MS ? CARD_WEEK_START_HOUR_JST : CARD_WEEK_START_HOUR_JST_OLD;
 const cardWeekKeyJst = now => {
-  const d = new Date(Number(now) + (9 - CARD_WEEK_START_HOUR_JST) * 3600 * 1000);
+  const d = new Date(Number(now) + (9 - cardWeekStartHourAt(now)) * 3600 * 1000);
   d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7);
   return d.toISOString().slice(0, 10);
 };
@@ -103462,7 +103633,7 @@ const cardFieldArtTransform = (src, flip) => {
   const ty = (1 - (0.5 + k * (y1 - 0.5))) * 100;
   return `translate(${tx.toFixed(1)}%, ${ty.toFixed(1)}%) scale(${(flip ? -k : k).toFixed(3)}, ${k.toFixed(3)})`;
 };
-const cardTodayJst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+const cardTodayJst = () => new Date(Date.now() + 5 * 3600 * 1000).toISOString().slice(0, 10);
 const cardCaption = c => !c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : c.kind === 'fld' ? '全体' : Number.isFinite(c.damage) ? `ダメージ${c.damage}` : '';
 const cardMonStatuses = (st, p, m) => {
   const mon = st && st.players[p] && st.players[p].mons[m];
@@ -114205,16 +114376,19 @@ const cardWeeklyRewardForPlace = place => {
   };
 };
 const cardNormalizeWeeklyClaims = v => v === null || v === undefined ? [] : Array.isArray(v) ? v.filter(x => typeof x === 'string' && x) : null;
-const cardWeekStartMs = now => Date.parse(`${cardWeekKeyJst(now)}T${String(CARD_WEEK_START_HOUR_JST).padStart(2, '0')}:00:00+09:00`);
+const cardWeekStartOfKey = key => Date.parse(`${key}T0${key >= cardWeekKeyJst(CARD_WEEK_SWITCH_MS) ? CARD_WEEK_START_HOUR_JST : CARD_WEEK_START_HOUR_JST_OLD}:00:00+09:00`);
+const cardWeekStartMs = now => cardWeekStartOfKey(cardWeekKeyJst(now));
+const cardWeekEndMs = startMs => cardWeekStartMs(startMs + CARD_WEEK_MS + 2 * 3600 * 1000);
 const cardWeeklyClaimId = weekKey => `card_weekly_${weekKey}`;
 const cardWeeksAwaitingReward = (nowMs, claims) => {
   if (!Array.isArray(claims)) return [];
   const now = Number(nowMs) || 0;
   const thisStart = cardWeekStartMs(now);
+  const prev1 = cardWeekStartMs(thisStart - 1),
+    prev2 = cardWeekStartMs(prev1 - 1);
   const out = [];
-  for (let back = 2; back >= 1; back--) {
-    const startMs = thisStart - back * CARD_WEEK_MS;
-    const endMs = startMs + CARD_WEEK_MS;
+  for (const startMs of [prev2, prev1]) {
+    const endMs = cardWeekEndMs(startMs);
     if (startMs < CARD_WEEKLY_REWARD_FROM_MS || now < endMs || now >= endMs + CARD_WEEKLY_CLAIM_MS) continue;
     const key = cardWeekKeyJst(startMs);
     const id = cardWeeklyClaimId(key);
@@ -114785,7 +114959,7 @@ const CardRankingBoard = ({
     className: chip(period === id)
   }, label)), React.createElement("small", {
     className: "ml-auto self-center text-[10px] font-bold text-slate-400"
-  }, period === 'week' ? '月曜 5:00 から' : 'フリー対戦で勝った数')), React.createElement("div", {
+  }, period === 'week' ? '月曜 4:00 から' : 'フリー対戦で勝った数')), React.createElement("div", {
     className: "grid grid-cols-5 gap-1"
   }, CARD_LEVEL_ORDER.map(lv => React.createElement("button", {
     key: lv,
@@ -115007,9 +115181,10 @@ const cardRecordDetailAfter = (d0, {
         turns: d.wins.turns + t,
         fastest: t > 0 ? d.wins.fastest ? Math.min(d.wins.fastest, t) : t : d.wins.fastest
       };
+      const dayKey = cardDayCarry(d.day.key, today);
       d.day = {
-        key: today,
-        win: (d.day.key === today ? d.day.win : 0) + 1
+        key: dayKey,
+        win: (d.day.key === dayKey ? d.day.win : 0) + 1
       };
     } else if (outcome === 'surrender') {
       f.surrender += 1;
@@ -123091,10 +123266,11 @@ const cardLevelAfter = (prev, {
   kind,
   level,
   outcome,
-  today,
+  today: today0,
   auto = false
 }) => {
   const cur = cardNormalizeLevel(prev);
+  const today = cardDayCarry(cur.day, today0);
   const lv0 = cardLevelInfo(cur.xp).level;
   const base = auto ? Math.floor(cardLevelXpOf({
     kind,
@@ -123404,8 +123580,9 @@ const cardTacticsAutoOf = async (db, deck) => {
 };
 const CARD_AUTO_REWARD_KEY = 'mh_card_auto_reward_v1';
 const CARD_AUTO_REWARD_DAY_MAX = 3;
-const cardAutoRewardNormalize = (raw, today) => {
+const cardAutoRewardNormalize = (raw, today0) => {
   const day = raw && typeof raw === 'object' && typeof raw.day === 'string' ? raw.day : '';
+  const today = cardDayCarry(day, today0);
   const n = raw && Number.isInteger(raw.n) && raw.n >= 0 && raw.n < 10000 ? raw.n : 0;
   return {
     day: today,
@@ -123421,7 +123598,7 @@ const cardAutoRewardLoad = async () => {
   const c = cardAutoRewardNormalize(raw, today);
   return {
     raw,
-    today,
+    today: c.day,
     n: c.n,
     left: Math.max(0, CARD_AUTO_REWARD_DAY_MAX - c.n)
   };
@@ -132418,7 +132595,7 @@ function MonsterHeroGame() {
   const grantBeatRankForResult = async (result, play) => {
     try {
       const raw = await storeGet(BEAT_RANK_KEY, null, false);
-      const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+      const today = jstDayCarry(normalizeBeatRank(raw).day, jstDayKey4());
       const gain = beatRankAfter(raw, {
         difficultyId: play && play.difficulty && play.difficulty.id,
         cleared: result?.cleared !== false,
@@ -143435,8 +143612,8 @@ function MonsterHeroGame() {
         dailyMasuAdviceCheckedRef.current = false;
         return;
       }
-      const today = localCalendarDate();
       const shownDate = await storeGet(DAILY_MASU_ADVICE_KEY, '', false);
+      const today = jstDayCarry(shownDate, jstDayKey4());
       if (cancelled || masuMons.length >= 8 || shownDate === today) return;
       await storeSet(DAILY_MASU_ADVICE_KEY, today, false);
       const quickClearTotal = Object.values(quickClearCounts || {}).reduce((sum, n) => sum + (Number.isFinite(n) ? n : 0), 0);
@@ -157458,6 +157635,7 @@ function MonsterHeroGame() {
       difficulty: rhythmPlay.difficulty,
       settings: rhythmPlay.from === 'multi' ? rhythmMultiPlaySettings : rhythmSettings,
       monsterEntries: rhythmMonsterNoteEntries,
+      breederName: breederName,
       multi: rhythmPlay.from === 'multi',
       multiRewardScale: rhythmPlay.from === 'multi' ? rhythmMultiTotalScale(rhythmPlay.multiCount, rhythmPlay.multiStreak, rhythmPlay.multiCpus) : 1,
       bestRecord: rhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id),
