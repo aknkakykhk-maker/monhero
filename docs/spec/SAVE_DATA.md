@@ -131,6 +131,7 @@
 | `mh_kiki_intro_seen_v1` | boolean / `false` | きき加入の会話を見たか。既存プレイヤーへ1回だけ流すための判定に使う |
 | `mh_momosuke_intro_seen_v1` | boolean / `false` | ももすけ登場の会話を見たか。**これが立っている＝ももすけを助手に選べる**。本編で見ても、プロフィールの回想から先に見ても同じように立つ。新規プレイヤーは助手選択を通る時点で立てる |
 | `mh_monhiro_beat_preopen_new_player_campaign_v1` | boolean / `false` | 新規プレイヤーキャンペーンを配布済みか。詳細は第3章 |
+| `mh_rhythm_grand_open_gift_v1` | boolean / `false` | モンヒロビート本オープン記念の全員向けギフト(ダイヤ1,000万ほか)を配ったか(2026-11-07)。本オープンの印 `rhythmGrandOpen` が真になってからの起動で1回だけ配り、`true` を立てる。本オープンのあとに始めた人は新規キャンペーン(本オープン記念)を受け取るので、オンボーディングの完了時にも `true` を立てる(二重に配らない) |
 | `mh_hs_<難易度>` | number / `0` | 端末ハイスコア（チャレンジ） |
 | `mh_attempts_<難易度>` | number / `0` | 挑戦回数 |
 | `mh_clears_<難易度>` | number / `0` | 完走回数（チャレンジ） |

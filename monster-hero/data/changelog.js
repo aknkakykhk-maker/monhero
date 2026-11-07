@@ -35,6 +35,17 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-11-07 社長「ホームで流してから本オープン。その前に予告の告知あり」。予告の印(rhythmGrandOpenTeaser)が立つまで一覧にも告知にも出さない。
+    // ★予告を出すときは、date を出した時刻へ取り直し、日にちが決まっていれば items に本オープンの日時を1行足す
+    date: "2026-11-07 09:00", type:'content', group:'rhythm', title:'モンヒロビートが、もうすぐ本オープンします', status:'new', releaseFlag:'rhythmGrandOpenTeaser',
+    assistantNotice:{ id:'update_notice_rhythm_grand_open_teaser_v1', type:'content' },
+    items:[
+      'モンヒロビートは、もうすぐプレオープンを終えて本オープンします。',
+      '本オープンの日には、遊んでくださっている皆さん全員へ、記念のプレゼントをお届けします。',
+      '本オープンのあとに初めてHOMEを開いたときは、助手たちのお祝いのお話が流れます。お楽しみに。',
+    ],
+  },
+  {
     // 2026-11-07 社長「本オープンに記念は差し替えたい」。本オープンの印(rhythmGrandOpen)が立つまで一覧に出さない。
     // ★本オープンするときは、date を公開した時刻へ取り直す(新しいお知らせとして一番上に出すため)
     date: "2026-11-07 08:51", type:'update', group:'rhythm', title:'モンヒロビート本オープン記念のプレゼント', status:'new', releaseFlag:'rhythmGrandOpen',
