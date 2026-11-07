@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 97fd4244dabca82f
+// generated-sha256: d2d64f241f86ed61
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -54241,6 +54241,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   };
   const startBuddy = (masuId, callId) => { void RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyMarkStarted(st, callId)); };
   const [buddyBumped, setBuddyBumped] = React.useState(false);
+  // 寝ている助手に断られたとき、呼ぶシートに出す一言 { id, line, at }
+  const [buddyRefused, setBuddyRefused] = React.useState(null);
   React.useEffect(() => { RHYTHM_MULTI.setCpuBrain({ ...rhythmAssistSessionWrapBrain(rhythmBuddyMakeBrain(songs), songs), refund: refundBuddy, ended: endBuddy, started: startBuddy }); }, [buddySongKey]);
   React.useEffect(() => { void rhythmBuddySettleLeftoversOnce(onRefundBuddyTicket); }, []);
   const buddyRefundNote = useRhythmBuddyRefundNote();
@@ -54271,6 +54273,11 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     const call = { id: rhythmBuddyCallId(), masuId: key, at: Date.now(), load: RHYTHM_BUDDY_LOAD_ID, kind: 'assistant', assistantId: who.id };
     // モンビーに出かけている助手は回数を使わない(社長の決定 2026-11-07)。払っていないので控えも残さない(返すものが無い)
     let paid = rhythmAssistSessionVisitFree(who.id) ? 'visit' : '';
+    // 寝ている助手は、来てくれるときと断られるときがある(社長 2026-11-07)。断られたら払わずに、シートに一言を出して呼ばない
+    if (!paid && rhythmAssistSessionAsleep(who.id)) {
+      const woke = rhythmAssistSessionTryWake(who.id);
+      if (!woke.came) { setBuddyRefused({ id: who.id, line: woke.line, at: Date.now() }); return 'refused'; }
+    }
     if (!paid) paid = (await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
     if (!paid && onUseBuddyTicket) {
       try { paid = (await onUseBuddyTicket()) === true ? 'ticket' : ''; } catch (_) { paid = ''; }
@@ -54311,8 +54318,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   // 自分のライブが始まったら閉じる(演奏から戻ったときに窓が残らないように)
   const buddyInfoPhase = view && view.room ? view.room.phase : '';
   React.useEffect(() => { if (buddyInfoPhase === 'playing') setBuddyInfoId(''); }, [buddyInfoPhase]);
+  // 寝ている助手に断られたら、ほかの子が入ってシートが閉じても、もう一度開いて一言を見せる(閉じたら消す)
+  React.useEffect(() => { if (buddyRefused && !buddySheet) setBuddySheet('pick'); }, [buddyRefused, buddySheet]);
   const buddySheetLayer = buddySheet === 'pick' ? (
-    <RhythmBuddySheet masuMons={masuMons} masuPicker={masuPicker} assistants={sessionAssistants} pickAssistant={callAssistant} guideAssistantId={guideAssistantId} freeSeats={view ? Math.max(0, RHYTHM_MULTI_ROOM_MAX - (view.members || []).length) : 0} breederName={profile && profile.name} songName={buddySongName} tickets={buddyTickets} pick={callBuddy} onClose={() => setBuddySheet('')}
+    <RhythmBuddySheet masuMons={masuMons} masuPicker={masuPicker} assistants={sessionAssistants} pickAssistant={callAssistant} guideAssistantId={guideAssistantId} freeSeats={view ? Math.max(0, RHYTHM_MULTI_ROOM_MAX - (view.members || []).length) : 0} breederName={profile && profile.name} songName={buddySongName} tickets={buddyTickets} pick={callBuddy} onClose={() => { setBuddySheet(''); setBuddyRefused(null); }} refused={buddyRefused}
       calledIds={(view && view.myCpus ? view.myCpus : []).map((c) => c.masuId)} />
   ) : null;
   const buddyCallButton = (extra = '') => (view && RHYTHM_MULTI.canSummon() && (masuMons.length > 0 || sessionAssistantsOn) ? (
@@ -56237,7 +56246,7 @@ function RhythmBuddyList({ masuMons, state, dayKey, onOpen, onPick = null, busy 
 }
 
 // 部屋の中の「マスモンを呼ぶ」(下から出る選択の画面)
-function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [], breederName = '', assistants = [], pickAssistant = null, guideAssistantId = '', freeSeats = 4 }) {
+function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [], breederName = '', assistants = [], pickAssistant = null, guideAssistantId = '', freeSeats = 4, refused = null }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
   const [detailId, setDetailId] = React.useState('');
@@ -56261,7 +56270,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
   };
   // 助手のタブ(2026-11-07 助手とのセッション・80-screen-rhythm-assistant-session.jsx)。公開の印が偽のあいだは出さない
   const assistOn = rhythmAssistSessionEnabled() && typeof pickAssistant === 'function' && (assistants || []).length > 0;
-  const [tab, setTab] = React.useState(() => ((masuMons || []).length ? 'masu' : 'assistant'));
+  const [tab, setTab] = React.useState(() => ((masuMons || []).length && !refused ? 'masu' : 'assistant'));
   const tabNow = assistOn ? tab : 'masu';
   const masuPicks = picks.filter((p) => p.kind === 'masu');
   const singleMasu = masuPicks.length === 1 && picks.length === 1 ? (masuMons || []).find((x) => x && x.id === masuPicks[0].id) : null;
@@ -56269,6 +56278,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
   //   モンビーに出かけている助手(rhythmAssistSessionVisitFree)は回数を使わない
   const visitPicks = picks.filter((p) => p.kind === 'assistant' && rhythmAssistSessionVisitFree(p.id)).length;
   const paidPicks = picks.length - visitPicks;
+  const asleepPicks = picks.filter((p) => p.kind === 'assistant' && !rhythmAssistSessionVisitFree(p.id) && rhythmAssistSessionAsleep(p.id)).length;
   const useFree = Math.min(freeLeft, paidPicks);
   const useTickets = paidPicks - useFree;
   const shortTickets = Math.max(0, useTickets - tickets);
@@ -56312,6 +56322,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
                   <p data-rhythm-buddy-multi-cost className="text-[10px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>
                     {jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。${paidPicks ? `無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います` : '回数は使いません'}${visitPicks ? `(モンビーにいる助手 ${visitPicks}人は回数なし)` : ''}`)}
                   </p>
+                  {asleepPicks > 0 && <p data-rhythm-buddy-multi-asleep className="text-[10px] font-bold text-indigo-200" style={JA_WRAP_STYLE}>{jaWrap('💤 寝ている助手は、来ないこともあります(来なければ回数は使いません)')}</p>}
                   {shortTickets > 0 && <p data-rhythm-buddy-multi-short className="text-[10px] font-black text-rose-300" style={JA_WRAP_STYLE}>{jaWrap(`セッション券が ${shortTickets}枚 足りません。選ぶ数を減らすと呼べます`)}</p>}
                   {duoNow.length > 0 && <p data-rhythm-buddy-multi-duo className="text-[10px] font-black text-pink-200">🎤 デュオ: {duoNow.map((d) => `${rhythmAssistSessionName(d.a)}×${rhythmAssistSessionName(d.b)}`).join('・')}</p>}
                 </>
@@ -56354,6 +56365,11 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
         {tabNow === 'assistant'
           ? (
             <div className="flex min-h-0 flex-1 flex-col">
+              {refused && refused.id && (
+                <p data-rhythm-assist-refused={refused.id} className="mb-2 shrink-0 rounded-xl border border-indigo-300/50 bg-indigo-950/70 px-2 py-1 text-[11px] font-black leading-snug text-indigo-100" style={JA_WRAP_STYLE}>
+                  {jaWrap(`💤 ${rhythmAssistSessionName(refused.id)}${refused.line ? `「${refused.line}」……来てくれませんでした` : 'は起きませんでした'}(回数は使っていません)。もう一度呼ぶと、起きやすくなります`)}
+                </p>
+              )}
               <RhythmAssistSessionPicker assistants={assistants} calledIds={calledIds} guideAssistantId={guideAssistantId} picked={pickedAssistantIds} onToggle={(id) => togglePick('assistant', id)} />
             </div>
           )
@@ -56719,7 +56735,7 @@ const rhythmAssistSessionTalk = ({ assistantId, kind, songId = '', score = 0, di
     const open = [[100, 'sp100'], [80, 'sp80'], [50, 'sp50']].filter(([n]) => lv >= n).map(([, sc]) => sc);
     return open.length && rand() < 0.3 ? say(open[Math.floor(rand() * open.length)]) : '';
   };
-  if (kind === 'join') return special() || say('join');
+  if (kind === 'join') { if (RHYTHM_ASSIST_SESSION_WAKE.woke.delete(assistantId)) { const w = say('woke'); if (w) return w; } return special() || say('join'); }
   if (kind === 'combo' || kind === 'miss' || kind === 'climax' || kind === 'last') return say(kind);
   if (kind === 'lvUp') return say('levelup');
   if (kind === 'likeUp') return say('likeup');
@@ -56814,6 +56830,7 @@ function RhythmAssistSessionPicker({ assistants = [], calledIds = [], guideAssis
                   <span className="whitespace-nowrap text-[10px] font-black text-pink-200">セッションLv.{lv}</span>
                   {lv >= RHYTHM_ASSIST_SESSION_TASTE_LEVEL && <span data-rhythm-assist-taste className="w-full truncate text-center text-[9px] font-bold text-slate-300">♡ {rhythmAssistSessionLikedNames(who.id).join('・')}</span>}
                   {calledOf(who.id) && <span className="rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950">呼んでいる</span>}
+                  {!calledOf(who.id) && !rhythmAssistSessionVisitFree(who.id) && rhythmAssistSessionAsleep(who.id) && <span data-rhythm-assist-asleep className="w-full rounded-xl bg-indigo-300/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950">💤 寝ている</span>}
                   {!calledOf(who.id) && rhythmAssistSessionVisitFree(who.id) && <span data-rhythm-assist-visit aria-label="🎵 いまモンビーにいる・回数なし" className="flex w-full flex-wrap justify-center rounded-xl bg-sky-400/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"><span className="whitespace-nowrap">🎵 いま</span><span className="whitespace-nowrap">モンビーにいる</span><span className="whitespace-nowrap">・回数なし</span></span>}
                 </button>
               );
@@ -56874,6 +56891,39 @@ const rhythmAssistSessionSetApp = (app) => {
 const rhythmAssistSessionVisitFree = (id) => {
   if (!rhythmAssistSessionEnabled() || typeof assistantLifeAtBeat !== 'function') return false;
   try { return assistantLifeAtBeat(id) === true; } catch (_) { return false; }
+};
+// 寝ている助手を呼ぶ(2026-11-07 社長「呼んで来てくれるときもあれば断られるときある」・ミハリの指摘 B4)。
+//   寝ているか … 助手ライフのいまの時間帯の様子で doing が 'sleep'(助手ライフが非公開なら、いつも偽 = 今までどおり)
+//   来てくれる割合(統括が決めた案) … もと5割・夜型(寝る時刻が0〜11時)+2割・あなたとの仲良し度で最大+2割・
+//     同じ時間帯に断られた助手を呼び直すと1回ごとに+2割(9割まで)。断られた回数は起動の中だけ覚える(保存しない)
+//   断られたら回数もセッション券も使わない。来てくれたら、部屋に来たときの一言を「起こされた」一言にする
+const RHYTHM_ASSIST_SESSION_WAKE = { refused: {}, woke: new Set() };
+const rhythmAssistSessionAsleep = (id) => {
+  if (!rhythmAssistSessionEnabled() || typeof assistantLifeCurrent !== 'function' || typeof assistantLifeWhereOf !== 'function') return false;
+  try { const w = assistantLifeWhereOf(assistantLifeCurrent(), id); return !!(w && w.doing === 'sleep'); } catch (_) { return false; }
+};
+const rhythmAssistSessionWakeChance = ({ nightOwl = false, bondLevel = 1, bondMax = 1, retries = 0 } = {}) => {
+  const bond = bondMax > 1 ? Math.max(0, Math.min(1, (Number(bondLevel) - 1) / (bondMax - 1))) : 0;
+  const p = 0.5 + (nightOwl ? 0.2 : 0) + 0.2 * bond + 0.2 * Math.max(0, Math.floor(Number(retries) || 0));
+  return Math.min(0.9, Math.round(p * 100) / 100);
+};
+const rhythmAssistSessionWakeKey = (id) => { let slot = ''; try { slot = typeof assistantLifeSlotAt === 'function' ? String(assistantLifeSlotAt().abs) : ''; } catch (_) { slot = ''; } return `${slot}:${id}`; };
+const rhythmAssistSessionWakeChanceOf = (id) => {
+  const rhythm = typeof ASSISTANT_LIFE_RHYTHM !== 'undefined' ? ASSISTANT_LIFE_RHYTHM[id] : null;
+  const bed = rhythm && Number.isFinite(rhythm.bed) ? rhythm.bed : 22;
+  const c = RHYTHM_ASSIST_SESSION_CALL;
+  let lv = 1; try { lv = typeof c.levelOf === 'function' ? Number(c.levelOf(id)) || 1 : 1; } catch (_) { lv = 1; }
+  const max = typeof ASSISTANT_BOND_LEVELS !== 'undefined' && Array.isArray(ASSISTANT_BOND_LEVELS) ? ASSISTANT_BOND_LEVELS.length : 1;
+  return rhythmAssistSessionWakeChance({ nightOwl: bed < 12, bondLevel: lv, bondMax: max, retries: RHYTHM_ASSIST_SESSION_WAKE.refused[rhythmAssistSessionWakeKey(id)] || 0 });
+};
+// 寝ている助手を起こしてみる。戻り値 { came, line }(line は起こされた・断った一言。台詞が無ければ空)
+const rhythmAssistSessionTryWake = (id, rand = Math.random) => {
+  const came = rand() < rhythmAssistSessionWakeChanceOf(id);
+  const key = rhythmAssistSessionWakeKey(id);
+  if (came) { delete RHYTHM_ASSIST_SESSION_WAKE.refused[key]; RHYTHM_ASSIST_SESSION_WAKE.woke.add(id); return { came: true, line: '' }; }
+  RHYTHM_ASSIST_SESSION_WAKE.refused[key] = (RHYTHM_ASSIST_SESSION_WAKE.refused[key] || 0) + 1;
+  const hit = rhythmAssistSessionPickLine(id, 'refuse', rand);
+  return { came: false, line: hit ? hit[1] : '' };
 };
 const rhythmAssistSessionCanPayNow = () => {
   const app = RHYTHM_ASSIST_SESSION_INVITE.app;

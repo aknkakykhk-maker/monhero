@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cbe9279d17b39d08
+// source-sha256: b0527cd89b85564d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -90721,6 +90721,7 @@ function RhythmMultiScreen({
     void RHYTHM_BUDDY_STORE.update(st => rhythmBuddyMarkStarted(st, callId));
   };
   const [buddyBumped, setBuddyBumped] = React.useState(false);
+  const [buddyRefused, setBuddyRefused] = React.useState(null);
   React.useEffect(() => {
     RHYTHM_MULTI.setCpuBrain({
       ...rhythmAssistSessionWrapBrain(rhythmBuddyMakeBrain(songs), songs),
@@ -90789,6 +90790,17 @@ function RhythmMultiScreen({
       assistantId: who.id
     };
     let paid = rhythmAssistSessionVisitFree(who.id) ? 'visit' : '';
+    if (!paid && rhythmAssistSessionAsleep(who.id)) {
+      const woke = rhythmAssistSessionTryWake(who.id);
+      if (!woke.came) {
+        setBuddyRefused({
+          id: who.id,
+          line: woke.line,
+          at: Date.now()
+        });
+        return 'refused';
+      }
+    }
     if (!paid) paid = (await RHYTHM_BUDDY_STORE.update(st => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
     if (!paid && onUseBuddyTicket) {
       try {
@@ -90856,6 +90868,9 @@ function RhythmMultiScreen({
   React.useEffect(() => {
     if (buddyInfoPhase === 'playing') setBuddyInfoId('');
   }, [buddyInfoPhase]);
+  React.useEffect(() => {
+    if (buddyRefused && !buddySheet) setBuddySheet('pick');
+  }, [buddyRefused, buddySheet]);
   const buddySheetLayer = buddySheet === 'pick' ? React.createElement(RhythmBuddySheet, {
     masuMons: masuMons,
     masuPicker: masuPicker,
@@ -90867,7 +90882,11 @@ function RhythmMultiScreen({
     songName: buddySongName,
     tickets: buddyTickets,
     pick: callBuddy,
-    onClose: () => setBuddySheet(''),
+    onClose: () => {
+      setBuddySheet('');
+      setBuddyRefused(null);
+    },
+    refused: buddyRefused,
     calledIds: (view && view.myCpus ? view.myCpus : []).map(c => c.masuId)
   }) : null;
   const buddyCallButton = (extra = '') => view && RHYTHM_MULTI.canSummon() && (masuMons.length > 0 || sessionAssistantsOn) ? React.createElement("button", {
@@ -94163,7 +94182,8 @@ function RhythmBuddySheet({
   assistants = [],
   pickAssistant = null,
   guideAssistantId = '',
-  freeSeats = 4
+  freeSeats = 4,
+  refused = null
 }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
@@ -94195,12 +94215,13 @@ function RhythmBuddySheet({
     setPickNote('');
   };
   const assistOn = rhythmAssistSessionEnabled() && typeof pickAssistant === 'function' && (assistants || []).length > 0;
-  const [tab, setTab] = React.useState(() => (masuMons || []).length ? 'masu' : 'assistant');
+  const [tab, setTab] = React.useState(() => (masuMons || []).length && !refused ? 'masu' : 'assistant');
   const tabNow = assistOn ? tab : 'masu';
   const masuPicks = picks.filter(p => p.kind === 'masu');
   const singleMasu = masuPicks.length === 1 && picks.length === 1 ? (masuMons || []).find(x => x && x.id === masuPicks[0].id) : null;
   const visitPicks = picks.filter(p => p.kind === 'assistant' && rhythmAssistSessionVisitFree(p.id)).length;
   const paidPicks = picks.length - visitPicks;
+  const asleepPicks = picks.filter(p => p.kind === 'assistant' && !rhythmAssistSessionVisitFree(p.id) && rhythmAssistSessionAsleep(p.id)).length;
   const useFree = Math.min(freeLeft, paidPicks);
   const useTickets = paidPicks - useFree;
   const shortTickets = Math.max(0, useTickets - tickets);
@@ -94257,7 +94278,11 @@ function RhythmBuddySheet({
     "data-rhythm-buddy-multi-cost": true,
     className: "text-[10px] font-bold leading-snug text-slate-300",
     style: JA_WRAP_STYLE
-  }, jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。${paidPicks ? `無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います` : '回数は使いません'}${visitPicks ? `(モンビーにいる助手 ${visitPicks}人は回数なし)` : ''}`)), shortTickets > 0 && React.createElement("p", {
+  }, jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。${paidPicks ? `無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います` : '回数は使いません'}${visitPicks ? `(モンビーにいる助手 ${visitPicks}人は回数なし)` : ''}`)), asleepPicks > 0 && React.createElement("p", {
+    "data-rhythm-buddy-multi-asleep": true,
+    className: "text-[10px] font-bold text-indigo-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap('💤 寝ている助手は、来ないこともあります(来なければ回数は使いません)')), shortTickets > 0 && React.createElement("p", {
     "data-rhythm-buddy-multi-short": true,
     className: "text-[10px] font-black text-rose-300",
     style: JA_WRAP_STYLE
@@ -94331,7 +94356,11 @@ function RhythmBuddySheet({
     className: "hidden landscape:block"
   }, multiBar)), tabNow === 'assistant' ? React.createElement("div", {
     className: "flex min-h-0 flex-1 flex-col"
-  }, React.createElement(RhythmAssistSessionPicker, {
+  }, refused && refused.id && React.createElement("p", {
+    "data-rhythm-assist-refused": refused.id,
+    className: "mb-2 shrink-0 rounded-xl border border-indigo-300/50 bg-indigo-950/70 px-2 py-1 text-[11px] font-black leading-snug text-indigo-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`💤 ${rhythmAssistSessionName(refused.id)}${refused.line ? `「${refused.line}」……来てくれませんでした` : 'は起きませんでした'}(回数は使っていません)。もう一度呼ぶと、起きやすくなります`)), React.createElement(RhythmAssistSessionPicker, {
     assistants: assistants,
     calledIds: calledIds,
     guideAssistantId: guideAssistantId,
@@ -94951,7 +94980,13 @@ const rhythmAssistSessionTalk = ({
     const open = [[100, 'sp100'], [80, 'sp80'], [50, 'sp50']].filter(([n]) => lv >= n).map(([, sc]) => sc);
     return open.length && rand() < 0.3 ? say(open[Math.floor(rand() * open.length)]) : '';
   };
-  if (kind === 'join') return special() || say('join');
+  if (kind === 'join') {
+    if (RHYTHM_ASSIST_SESSION_WAKE.woke.delete(assistantId)) {
+      const w = say('woke');
+      if (w) return w;
+    }
+    return special() || say('join');
+  }
   if (kind === 'combo' || kind === 'miss' || kind === 'climax' || kind === 'last') return say(kind);
   if (kind === 'lvUp') return say('levelup');
   if (kind === 'likeUp') return say('likeup');
@@ -95099,7 +95134,10 @@ function RhythmAssistSessionPicker({
       className: "w-full truncate text-center text-[9px] font-bold text-slate-300"
     }, "♡ ", rhythmAssistSessionLikedNames(who.id).join('・')), calledOf(who.id) && React.createElement("span", {
       className: "rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950"
-    }, "呼んでいる"), !calledOf(who.id) && rhythmAssistSessionVisitFree(who.id) && React.createElement("span", {
+    }, "呼んでいる"), !calledOf(who.id) && !rhythmAssistSessionVisitFree(who.id) && rhythmAssistSessionAsleep(who.id) && React.createElement("span", {
+      "data-rhythm-assist-asleep": true,
+      className: "w-full rounded-xl bg-indigo-300/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"
+    }, "💤 寝ている"), !calledOf(who.id) && rhythmAssistSessionVisitFree(who.id) && React.createElement("span", {
       "data-rhythm-assist-visit": true,
       "aria-label": "🎵 いまモンビーにいる・回数なし",
       className: "flex w-full flex-wrap justify-center rounded-xl bg-sky-400/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"
@@ -95190,6 +95228,74 @@ const rhythmAssistSessionVisitFree = id => {
   } catch (_) {
     return false;
   }
+};
+const RHYTHM_ASSIST_SESSION_WAKE = {
+  refused: {},
+  woke: new Set()
+};
+const rhythmAssistSessionAsleep = id => {
+  if (!rhythmAssistSessionEnabled() || typeof assistantLifeCurrent !== 'function' || typeof assistantLifeWhereOf !== 'function') return false;
+  try {
+    const w = assistantLifeWhereOf(assistantLifeCurrent(), id);
+    return !!(w && w.doing === 'sleep');
+  } catch (_) {
+    return false;
+  }
+};
+const rhythmAssistSessionWakeChance = ({
+  nightOwl = false,
+  bondLevel = 1,
+  bondMax = 1,
+  retries = 0
+} = {}) => {
+  const bond = bondMax > 1 ? Math.max(0, Math.min(1, (Number(bondLevel) - 1) / (bondMax - 1))) : 0;
+  const p = 0.5 + (nightOwl ? 0.2 : 0) + 0.2 * bond + 0.2 * Math.max(0, Math.floor(Number(retries) || 0));
+  return Math.min(0.9, Math.round(p * 100) / 100);
+};
+const rhythmAssistSessionWakeKey = id => {
+  let slot = '';
+  try {
+    slot = typeof assistantLifeSlotAt === 'function' ? String(assistantLifeSlotAt().abs) : '';
+  } catch (_) {
+    slot = '';
+  }
+  return `${slot}:${id}`;
+};
+const rhythmAssistSessionWakeChanceOf = id => {
+  const rhythm = typeof ASSISTANT_LIFE_RHYTHM !== 'undefined' ? ASSISTANT_LIFE_RHYTHM[id] : null;
+  const bed = rhythm && Number.isFinite(rhythm.bed) ? rhythm.bed : 22;
+  const c = RHYTHM_ASSIST_SESSION_CALL;
+  let lv = 1;
+  try {
+    lv = typeof c.levelOf === 'function' ? Number(c.levelOf(id)) || 1 : 1;
+  } catch (_) {
+    lv = 1;
+  }
+  const max = typeof ASSISTANT_BOND_LEVELS !== 'undefined' && Array.isArray(ASSISTANT_BOND_LEVELS) ? ASSISTANT_BOND_LEVELS.length : 1;
+  return rhythmAssistSessionWakeChance({
+    nightOwl: bed < 12,
+    bondLevel: lv,
+    bondMax: max,
+    retries: RHYTHM_ASSIST_SESSION_WAKE.refused[rhythmAssistSessionWakeKey(id)] || 0
+  });
+};
+const rhythmAssistSessionTryWake = (id, rand = Math.random) => {
+  const came = rand() < rhythmAssistSessionWakeChanceOf(id);
+  const key = rhythmAssistSessionWakeKey(id);
+  if (came) {
+    delete RHYTHM_ASSIST_SESSION_WAKE.refused[key];
+    RHYTHM_ASSIST_SESSION_WAKE.woke.add(id);
+    return {
+      came: true,
+      line: ''
+    };
+  }
+  RHYTHM_ASSIST_SESSION_WAKE.refused[key] = (RHYTHM_ASSIST_SESSION_WAKE.refused[key] || 0) + 1;
+  const hit = rhythmAssistSessionPickLine(id, 'refuse', rand);
+  return {
+    came: false,
+    line: hit ? hit[1] : ''
+  };
 };
 const rhythmAssistSessionCanPayNow = () => {
   const app = RHYTHM_ASSIST_SESSION_INVITE.app;

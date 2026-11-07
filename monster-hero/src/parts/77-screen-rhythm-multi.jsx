@@ -2135,6 +2135,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   };
   const startBuddy = (masuId, callId) => { void RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyMarkStarted(st, callId)); };
   const [buddyBumped, setBuddyBumped] = React.useState(false);
+  // 寝ている助手に断られたとき、呼ぶシートに出す一言 { id, line, at }
+  const [buddyRefused, setBuddyRefused] = React.useState(null);
   React.useEffect(() => { RHYTHM_MULTI.setCpuBrain({ ...rhythmAssistSessionWrapBrain(rhythmBuddyMakeBrain(songs), songs), refund: refundBuddy, ended: endBuddy, started: startBuddy }); }, [buddySongKey]);
   React.useEffect(() => { void rhythmBuddySettleLeftoversOnce(onRefundBuddyTicket); }, []);
   const buddyRefundNote = useRhythmBuddyRefundNote();
@@ -2165,6 +2167,11 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     const call = { id: rhythmBuddyCallId(), masuId: key, at: Date.now(), load: RHYTHM_BUDDY_LOAD_ID, kind: 'assistant', assistantId: who.id };
     // モンビーに出かけている助手は回数を使わない(社長の決定 2026-11-07)。払っていないので控えも残さない(返すものが無い)
     let paid = rhythmAssistSessionVisitFree(who.id) ? 'visit' : '';
+    // 寝ている助手は、来てくれるときと断られるときがある(社長 2026-11-07)。断られたら払わずに、シートに一言を出して呼ばない
+    if (!paid && rhythmAssistSessionAsleep(who.id)) {
+      const woke = rhythmAssistSessionTryWake(who.id);
+      if (!woke.came) { setBuddyRefused({ id: who.id, line: woke.line, at: Date.now() }); return 'refused'; }
+    }
     if (!paid) paid = (await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
     if (!paid && onUseBuddyTicket) {
       try { paid = (await onUseBuddyTicket()) === true ? 'ticket' : ''; } catch (_) { paid = ''; }
@@ -2205,8 +2212,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   // 自分のライブが始まったら閉じる(演奏から戻ったときに窓が残らないように)
   const buddyInfoPhase = view && view.room ? view.room.phase : '';
   React.useEffect(() => { if (buddyInfoPhase === 'playing') setBuddyInfoId(''); }, [buddyInfoPhase]);
+  // 寝ている助手に断られたら、ほかの子が入ってシートが閉じても、もう一度開いて一言を見せる(閉じたら消す)
+  React.useEffect(() => { if (buddyRefused && !buddySheet) setBuddySheet('pick'); }, [buddyRefused, buddySheet]);
   const buddySheetLayer = buddySheet === 'pick' ? (
-    <RhythmBuddySheet masuMons={masuMons} masuPicker={masuPicker} assistants={sessionAssistants} pickAssistant={callAssistant} guideAssistantId={guideAssistantId} freeSeats={view ? Math.max(0, RHYTHM_MULTI_ROOM_MAX - (view.members || []).length) : 0} breederName={profile && profile.name} songName={buddySongName} tickets={buddyTickets} pick={callBuddy} onClose={() => setBuddySheet('')}
+    <RhythmBuddySheet masuMons={masuMons} masuPicker={masuPicker} assistants={sessionAssistants} pickAssistant={callAssistant} guideAssistantId={guideAssistantId} freeSeats={view ? Math.max(0, RHYTHM_MULTI_ROOM_MAX - (view.members || []).length) : 0} breederName={profile && profile.name} songName={buddySongName} tickets={buddyTickets} pick={callBuddy} onClose={() => { setBuddySheet(''); setBuddyRefused(null); }} refused={buddyRefused}
       calledIds={(view && view.myCpus ? view.myCpus : []).map((c) => c.masuId)} />
   ) : null;
   const buddyCallButton = (extra = '') => (view && RHYTHM_MULTI.canSummon() && (masuMons.length > 0 || sessionAssistantsOn) ? (

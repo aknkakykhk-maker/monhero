@@ -816,7 +816,7 @@ function RhythmBuddyList({ masuMons, state, dayKey, onOpen, onPick = null, busy 
 }
 
 // 部屋の中の「マスモンを呼ぶ」(下から出る選択の画面)
-function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [], breederName = '', assistants = [], pickAssistant = null, guideAssistantId = '', freeSeats = 4 }) {
+function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [], breederName = '', assistants = [], pickAssistant = null, guideAssistantId = '', freeSeats = 4, refused = null }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
   const [detailId, setDetailId] = React.useState('');
@@ -840,7 +840,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
   };
   // 助手のタブ(2026-11-07 助手とのセッション・80-screen-rhythm-assistant-session.jsx)。公開の印が偽のあいだは出さない
   const assistOn = rhythmAssistSessionEnabled() && typeof pickAssistant === 'function' && (assistants || []).length > 0;
-  const [tab, setTab] = React.useState(() => ((masuMons || []).length ? 'masu' : 'assistant'));
+  const [tab, setTab] = React.useState(() => ((masuMons || []).length && !refused ? 'masu' : 'assistant'));
   const tabNow = assistOn ? tab : 'masu';
   const masuPicks = picks.filter((p) => p.kind === 'masu');
   const singleMasu = masuPicks.length === 1 && picks.length === 1 ? (masuMons || []).find((x) => x && x.id === masuPicks[0].id) : null;
@@ -848,6 +848,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
   //   モンビーに出かけている助手(rhythmAssistSessionVisitFree)は回数を使わない
   const visitPicks = picks.filter((p) => p.kind === 'assistant' && rhythmAssistSessionVisitFree(p.id)).length;
   const paidPicks = picks.length - visitPicks;
+  const asleepPicks = picks.filter((p) => p.kind === 'assistant' && !rhythmAssistSessionVisitFree(p.id) && rhythmAssistSessionAsleep(p.id)).length;
   const useFree = Math.min(freeLeft, paidPicks);
   const useTickets = paidPicks - useFree;
   const shortTickets = Math.max(0, useTickets - tickets);
@@ -891,6 +892,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
                   <p data-rhythm-buddy-multi-cost className="text-[10px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>
                     {jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。${paidPicks ? `無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います` : '回数は使いません'}${visitPicks ? `(モンビーにいる助手 ${visitPicks}人は回数なし)` : ''}`)}
                   </p>
+                  {asleepPicks > 0 && <p data-rhythm-buddy-multi-asleep className="text-[10px] font-bold text-indigo-200" style={JA_WRAP_STYLE}>{jaWrap('💤 寝ている助手は、来ないこともあります(来なければ回数は使いません)')}</p>}
                   {shortTickets > 0 && <p data-rhythm-buddy-multi-short className="text-[10px] font-black text-rose-300" style={JA_WRAP_STYLE}>{jaWrap(`セッション券が ${shortTickets}枚 足りません。選ぶ数を減らすと呼べます`)}</p>}
                   {duoNow.length > 0 && <p data-rhythm-buddy-multi-duo className="text-[10px] font-black text-pink-200">🎤 デュオ: {duoNow.map((d) => `${rhythmAssistSessionName(d.a)}×${rhythmAssistSessionName(d.b)}`).join('・')}</p>}
                 </>
@@ -933,6 +935,11 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
         {tabNow === 'assistant'
           ? (
             <div className="flex min-h-0 flex-1 flex-col">
+              {refused && refused.id && (
+                <p data-rhythm-assist-refused={refused.id} className="mb-2 shrink-0 rounded-xl border border-indigo-300/50 bg-indigo-950/70 px-2 py-1 text-[11px] font-black leading-snug text-indigo-100" style={JA_WRAP_STYLE}>
+                  {jaWrap(`💤 ${rhythmAssistSessionName(refused.id)}${refused.line ? `「${refused.line}」……来てくれませんでした` : 'は起きませんでした'}(回数は使っていません)。もう一度呼ぶと、起きやすくなります`)}
+                </p>
+              )}
               <RhythmAssistSessionPicker assistants={assistants} calledIds={calledIds} guideAssistantId={guideAssistantId} picked={pickedAssistantIds} onToggle={(id) => togglePick('assistant', id)} />
             </div>
           )
