@@ -3,7 +3,7 @@
 // ここは保存も画面も持たない純粋な計算だけ。保存と画面は 77-screen-rhythm-multi.jsx。
 //
 // ・育ち具合はマスモン1体ごと(id ごと)。一度でも相棒として呼んだ子だけが持つ。マスモン本体の保存には触れない
-// ・Lv(経験値)・曲のなじみ・難易度の熟練・性格(Lv.30で決まる)・その日の調子(朝5:00で変わる)
+// ・Lv(経験値)・曲のなじみ・難易度の熟練・性格(Lv.30で決まる)・その日の調子(朝4:00で変わる)
 // ・演奏はしない。曲・難易度・育ち具合から、それらしい判定の数とスコアを作る
 
 // 新しい保存キー(既存のキーは触らない)。中身は rhythmBuddyNormalize を必ず通す
@@ -15,7 +15,7 @@ const RHYTHM_BUDDY_SEEN_KEY = 'mh_rhythm_buddy_seen_v1';
 // 「マスモンランキングができた」「マスモンが話しかけてくる」の一度きりの案内(2026-10-08。新しい保存キー。値は true だけ)
 const RHYTHM_BUDDY_RANK_SEEN_KEY = 'mh_rhythm_buddy_rank_seen_v1';
 const RHYTHM_BUDDY_TALK_SEEN_KEY = 'mh_rhythm_buddy_talk_seen_v1';
-// マスモン全体で1日に無料で呼べる回数(朝5:00で戻る)
+// マスモン全体で1日に無料で呼べる回数(朝4:00で戻る)
 const RHYTHM_BUDDY_FREE_PER_DAY = 3;
 // 2026-10-07・ユーザー指示「レベルは100まで引き上げてもいい」
 const RHYTHM_BUDDY_LEVEL_MAX = 100;
@@ -92,10 +92,10 @@ const rhythmBuddyInt = (v, max = 1e9) => {
 };
 const rhythmBuddyStr = (v, max) => String(v == null ? '' : v).replace(/[\u0000-\u001f]/g, '').slice(0, max);
 
-// 朝5:00(JST)で区切った日付キー(レイドの回数と同じ数え方)
+// 朝4:00(JST)で区切った日付キー(jstDayKey4 と同じ。2026-11-07 に5:00からそろえた)
 const rhythmBuddyDayKey = (nowMs) => {
   const now = Number.isFinite(nowMs) ? nowMs : 0;
-  return new Date(now + 9 * 3600 * 1000 - 5 * 3600 * 1000).toISOString().slice(0, 10);
+  return new Date(now + 9 * 3600 * 1000 - 4 * 3600 * 1000).toISOString().slice(0, 10);
 };
 const rhythmBuddyPrevDayKey = (dayKey) => {
   const t = Date.parse(`${dayKey}T00:00:00Z`);
@@ -168,7 +168,7 @@ const rhythmBuddyNormalizeMon = (raw) => {
 // calls: [{ id, masuId, paid:'free'|'ticket', day(払った日), at, load(呼んだときの起動), started }]。既存の保存(mh_rhythm_buddy_v1)へ項目を足す形(CLAUDE.md ⑦)。
 // 部屋を出たとき(呼んだ人が抜けた・部屋が解散した)、1曲も始まっていなければ払ったものを返し、控えを消す。始まっていれば消すだけ。
 // 控えを消すのと無料1回を返すのを同じ書き込みでするので、二重に返らない。アプリを閉じて残った控え(ほかの起動のもの)は、次に開いたとき一度だけ返す。
-// 無料1回は、払った日と同じ日のときだけ返す(朝5:00を過ぎたら無料回数はもう戻っているので、返すと増えすぎる)
+// 無料1回は、払った日と同じ日のときだけ返す(朝4:00を過ぎたら無料回数はもう戻っているので、返すと増えすぎる)
 const RHYTHM_BUDDY_CALLS_KEEP = 40;
 const rhythmBuddyNormalizeCalls = (raw) => (Array.isArray(raw) ? raw : [])
   .filter((x) => x && typeof x === 'object' && !Array.isArray(x))

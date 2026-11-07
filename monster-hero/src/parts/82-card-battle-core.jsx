@@ -2478,7 +2478,15 @@ const cardNormalizeDecks = (v) => {
   return { active, decks };
 };
 // quickLoops … その日にバトルカードの対戦でクイック周回へ足した周の数(2026-10-26 で足した項目。トップの周回の札の詳細に出す。無い人は0)
-const cardNormalizeDaily = (v, today) => {
+// 切り替えの夜の持ち越し(17 の jstDayCarry と同じ。82 は単独でも読まれるのでここに持つ)。
+//   前は0時区切りで、0:00〜4:00 に「次の日」の日付で保存されている。それがちょうど today の次の日なら、その日を今日として扱う
+const cardDayCarry = (saved, today) => {
+  if (typeof saved !== 'string' || typeof today !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(saved)) return today;
+  const t = Date.parse(`${today}T00:00:00Z`);
+  return Number.isFinite(t) && saved === new Date(t + 86400000).toISOString().slice(0, 10) ? saved : today;
+};
+const cardNormalizeDaily = (v, today0) => {
+  const today = cardDayCarry(cardIsPlainObject(v) ? v.day : null, today0);
   const base = { day: today, cpuPoint: 0, pvpPoint: 0, firstWin: false, foes: {}, quickLoops: 0 };
   if (!cardIsPlainObject(v) || v.day !== today) return base;
   return { day: today, cpuPoint: cardNormalizePoint(v.cpuPoint), pvpPoint: cardNormalizePoint(v.pvpPoint), firstWin: v.firstWin === true, foes: cardIsPlainObject(v.foes) ? { ...v.foes } : {}, quickLoops: cardNormalizePoint(v.quickLoops) };

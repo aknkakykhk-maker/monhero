@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9c02c3fc872b9b15
+// source-sha256: af1ecdba6c0c41e9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13565,6 +13565,12 @@ const LOGIN_BONUS_DEFAULT = {
   totalLoginDays: 0
 };
 const loginBonusPeriodKey = (now = Date.now()) => new Date(Number(now) + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const jstDayKey4 = (now = Date.now()) => new Date(Number(now) + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const jstDayCarry = (saved, today) => {
+  if (typeof saved !== 'string' || typeof today !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(saved)) return today;
+  const t = Date.parse(`${today}T00:00:00Z`);
+  return Number.isFinite(t) && saved === new Date(t + 86400000).toISOString().slice(0, 10) ? saved : today;
+};
 const ASSISTANT_SELECTED_KEY = 'mh_assistant_selected_v1';
 const KIKI_INTRO_SEEN_KEY = 'mh_kiki_intro_seen_v1';
 const MOMOSUKE_INTRO_SEEN_KEY = 'mh_momosuke_intro_seen_v1';
@@ -14327,8 +14333,12 @@ const PLAYTIME_KEY = 'mh_playtime_v1';
 const PLAYTIME_TICK_MS = 15000;
 const PLAYTIME_SAVE_MS = 60000;
 const PLAYTIME_MAX_STEP_MS = 60000;
-const playtimeDayKey = (now = Date.now()) => new Date(Number(now) + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const playtimeDayKey = (now = Date.now()) => new Date(Number(now) + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
 const PLAYTIME_DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const playtimeDayOf = (savedDay, now = Date.now()) => {
+  const day = playtimeDayKey(now);
+  return savedDay === playtimeDayKey(Number(now) + 86400000) ? savedDay : day;
+};
 const playtimeDayValue = value => typeof value === 'string' && PLAYTIME_DAY_PATTERN.test(value) ? value : null;
 const playtimeSpan = value => {
   const ms = Number(value?.ms);
@@ -14352,7 +14362,7 @@ const advancePlaytime = (current, deltaMs, now = Date.now()) => {
   const base = normalizePlaytime(current);
   const delta = Number(deltaMs);
   if (!(Number.isFinite(delta) && delta > 0)) return base;
-  const day = playtimeDayKey(now);
+  const day = playtimeDayOf(base.today.day, now);
   const sameDay = base.today.day === day;
   const todayMs = (sameDay ? base.today.ms : 0) + delta;
   return {
@@ -14371,7 +14381,7 @@ const advancePlaytime = (current, deltaMs, now = Date.now()) => {
 };
 const playtimeTodayMs = (value, now = Date.now()) => {
   const base = normalizePlaytime(value);
-  return base.today.day === playtimeDayKey(now) ? base.today.ms : 0;
+  return base.today.day === playtimeDayOf(base.today.day, now) ? base.today.ms : 0;
 };
 const PLAYTIME_DEVICE_KEY = 'mhdev_playtime_device_v1';
 const PLAYTIME_DEVICE_ID_RE = /^[a-z0-9]{12,40}$/;
@@ -19338,7 +19348,7 @@ const ASSISTANT_BUBBLE_MODE_LABELS = Object.freeze([{
 }]);
 const ASSISTANT_BUBBLE_ALWAYS_SCENES = Object.freeze(['home', 'quickRhythmBackground', 'rhythmWeeklyEvent']);
 const assistantBubbleAlwaysShown = scene => !scene || ASSISTANT_BUBBLE_ALWAYS_SCENES.includes(scene) || /Intro$/.test(String(scene));
-const assistantBubbleDayKey = (now = Date.now()) => new Date(Number(now) + (9 - 5) * 3600000).toISOString().slice(0, 10);
+const assistantBubbleDayKey = (now = Date.now()) => new Date(Number(now) + (9 - 4) * 3600000).toISOString().slice(0, 10);
 const normalizeAssistantBubbleSeen = (raw, day) => raw && typeof raw === 'object' && raw.day === day && Array.isArray(raw.scenes) ? {
   day,
   scenes: raw.scenes.filter(x => typeof x === 'string').slice(0, 300)
@@ -49095,7 +49105,7 @@ const rhythmBuddyInt = (v, max = 1e9) => {
 const rhythmBuddyStr = (v, max) => String(v == null ? '' : v).replace(/[\u0000-\u001f]/g, '').slice(0, max);
 const rhythmBuddyDayKey = nowMs => {
   const now = Number.isFinite(nowMs) ? nowMs : 0;
-  return new Date(now + 9 * 3600 * 1000 - 5 * 3600 * 1000).toISOString().slice(0, 10);
+  return new Date(now + 9 * 3600 * 1000 - 4 * 3600 * 1000).toISOString().slice(0, 10);
 };
 const rhythmBuddyPrevDayKey = dayKey => {
   const t = Date.parse(`${dayKey}T00:00:00Z`);
@@ -55075,7 +55085,7 @@ const raidJackParticipated = raw => {
 };
 const raidJackDayKey = nowMs => {
   const now = Number.isFinite(nowMs) ? nowMs : 0;
-  const jst = new Date(now + 9 * 3600 * 1000 - 5 * 3600 * 1000);
+  const jst = new Date(now + 9 * 3600 * 1000 - 4 * 3600 * 1000);
   return jst.toISOString().slice(0, 10);
 };
 const raidJackDefaultState = () => ({
@@ -60299,7 +60309,7 @@ function SettingsScreen({
     className: "block text-[13px] font-black text-slate-200"
   }, "助手のひとこと"), React.createElement("p", {
     className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝5:00で戻ります)。「出さない」にしても、はじめての案内やHOMEの助手、新しい機能のお知らせは出ます。"), React.createElement("div", {
+  }, "画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、はじめての案内やHOMEの助手、新しい機能のお知らせは出ます。"), React.createElement("div", {
     className: "mt-2 grid grid-cols-3 gap-2"
   }, ASSISTANT_BUBBLE_MODE_LABELS.map(option => React.createElement("button", {
     key: option.id,
@@ -90263,7 +90273,7 @@ function RhythmBuddyDetail({
     size: 22
   }), mood.label), React.createElement("small", {
     className: "block text-[9px] font-bold leading-snug text-slate-500"
-  }, "朝5:00に変わります。育つ早さは経験値×", rhythmBuddyMoodExpScale(mood.id, m.trait))), React.createElement("section", {
+  }, "朝4:00に変わります。育つ早さは経験値×", rhythmBuddyMoodExpScale(mood.id, m.trait))), React.createElement("section", {
     className: "rounded-xl bg-slate-950/60 p-2"
   }, React.createElement("h4", {
     className: "text-[10px] font-black text-slate-400"
@@ -97287,7 +97297,13 @@ const cardNormalizeDecks = v => {
     decks
   };
 };
-const cardNormalizeDaily = (v, today) => {
+const cardDayCarry = (saved, today) => {
+  if (typeof saved !== 'string' || typeof today !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(saved)) return today;
+  const t = Date.parse(`${today}T00:00:00Z`);
+  return Number.isFinite(t) && saved === new Date(t + 86400000).toISOString().slice(0, 10) ? saved : today;
+};
+const cardNormalizeDaily = (v, today0) => {
+  const today = cardDayCarry(cardIsPlainObject(v) ? v.day : null, today0);
   const base = {
     day: today,
     cpuPoint: 0,
@@ -103457,7 +103473,7 @@ const cardFieldArtTransform = (src, flip) => {
   const ty = (1 - (0.5 + k * (y1 - 0.5))) * 100;
   return `translate(${tx.toFixed(1)}%, ${ty.toFixed(1)}%) scale(${(flip ? -k : k).toFixed(3)}, ${k.toFixed(3)})`;
 };
-const cardTodayJst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+const cardTodayJst = () => new Date(Date.now() + 5 * 3600 * 1000).toISOString().slice(0, 10);
 const cardCaption = c => !c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : c.kind === 'fld' ? '全体' : Number.isFinite(c.damage) ? `ダメージ${c.damage}` : '';
 const cardMonStatuses = (st, p, m) => {
   const mon = st && st.players[p] && st.players[p].mons[m];
@@ -115005,9 +115021,10 @@ const cardRecordDetailAfter = (d0, {
         turns: d.wins.turns + t,
         fastest: t > 0 ? d.wins.fastest ? Math.min(d.wins.fastest, t) : t : d.wins.fastest
       };
+      const dayKey = cardDayCarry(d.day.key, today);
       d.day = {
-        key: today,
-        win: (d.day.key === today ? d.day.win : 0) + 1
+        key: dayKey,
+        win: (d.day.key === dayKey ? d.day.win : 0) + 1
       };
     } else if (outcome === 'surrender') {
       f.surrender += 1;
@@ -123089,10 +123106,11 @@ const cardLevelAfter = (prev, {
   kind,
   level,
   outcome,
-  today,
+  today: today0,
   auto = false
 }) => {
   const cur = cardNormalizeLevel(prev);
+  const today = cardDayCarry(cur.day, today0);
   const lv0 = cardLevelInfo(cur.xp).level;
   const base = auto ? Math.floor(cardLevelXpOf({
     kind,
@@ -123402,8 +123420,9 @@ const cardTacticsAutoOf = async (db, deck) => {
 };
 const CARD_AUTO_REWARD_KEY = 'mh_card_auto_reward_v1';
 const CARD_AUTO_REWARD_DAY_MAX = 3;
-const cardAutoRewardNormalize = (raw, today) => {
+const cardAutoRewardNormalize = (raw, today0) => {
   const day = raw && typeof raw === 'object' && typeof raw.day === 'string' ? raw.day : '';
+  const today = cardDayCarry(day, today0);
   const n = raw && Number.isInteger(raw.n) && raw.n >= 0 && raw.n < 10000 ? raw.n : 0;
   return {
     day: today,
@@ -123419,7 +123438,7 @@ const cardAutoRewardLoad = async () => {
   const c = cardAutoRewardNormalize(raw, today);
   return {
     raw,
-    today,
+    today: c.day,
     n: c.n,
     left: Math.max(0, CARD_AUTO_REWARD_DAY_MAX - c.n)
   };
@@ -132416,7 +132435,7 @@ function MonsterHeroGame() {
   const grantBeatRankForResult = async (result, play) => {
     try {
       const raw = await storeGet(BEAT_RANK_KEY, null, false);
-      const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+      const today = jstDayCarry(normalizeBeatRank(raw).day, jstDayKey4());
       const gain = beatRankAfter(raw, {
         difficultyId: play && play.difficulty && play.difficulty.id,
         cleared: result?.cleared !== false,
@@ -143433,8 +143452,8 @@ function MonsterHeroGame() {
         dailyMasuAdviceCheckedRef.current = false;
         return;
       }
-      const today = localCalendarDate();
       const shownDate = await storeGet(DAILY_MASU_ADVICE_KEY, '', false);
+      const today = jstDayCarry(shownDate, jstDayKey4());
       if (cancelled || masuMons.length >= 8 || shownDate === today) return;
       await storeSet(DAILY_MASU_ADVICE_KEY, today, false);
       const quickClearTotal = Object.values(quickClearCounts || {}).reduce((sum, n) => sum + (Number.isFinite(n) ? n : 0), 0);
