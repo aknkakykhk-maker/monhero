@@ -1,5 +1,7 @@
 # 助手ライフ フレンドの家との行き来の案(作る前)
 
+> **無料枠に収まるか: 収まる。** 今の約700人・その5倍までは、ふつうの遊び方で送り出し(egress)が無料枠の約5〜26%、DB は約1〜2%、Realtime と Edge Function は使わない(0%)。10倍で毎日みんなが目いっぱい遊ぶと送り出しが枠を超えうるので、サーバー側のスイッチ1つで「間引く・止める」に切り替える(0章)。
+
 担当: 助手部オトズレ(2026-11-08)。社長の依頼「助手ライフの機能を拡張してフレンドのとこに遊びに行けたりフレンドが遊びに来たりとかもいれたい」。
 今回は**案と止め絵だけ**(ゲーム本体・Supabase には触っていない)。作るのは社長の A/B と「これで作る」のあと。
 
@@ -14,6 +16,62 @@
 
 撮ったあと、1枚ずつ自分で見て、文字の切れ・言葉の途中の折れ・部品の重なりがないことを確かめた
 (途中で見つけて直したもの: 掲示板の「遊びに/来た」の折れ・HOME の知らせの右端の切れ・横で「🏘 1」の印が「助手ライフ」の字にかかる・横で帯が右のシートに隠れる・④の部屋で吹き出しと札が重なる)。
+
+---
+
+## 0. Supabase の無料枠に収まるか(2026-11-08 社長「フレンドと色々できるようにする機能でsupabaseが耐えられるか気になる。無料でつかってる」)
+
+今の状態(窓口が読むだけの SQL で見た): DB 全体 35MB/無料枠 500MB。いちばん大きい rankings 6.9MB(5,101行)、friend_profiles 696行・1.5MB。
+無料枠: DB 500MB/送り出し(egress)月 5GB/Edge Function 月50万回/Realtime 同時接続200・メッセージ月200万。
+
+### 0-1. 見積もりの前提
+
+| 項目 | 値 | 理由 |
+| --- | --- | --- |
+| 遊んでいる人 | 今 700人(friend_profiles の行数)/5倍 3,500人/10倍 7,000人 | 窓口の数字 |
+| 1日に開く人 | ふつう 半分/目いっぱい 全員 | |
+| 控えの大きさ | 1人 約1KB(上限 2,000字。会った助手8人×部屋の様子+家具の key 3つずつ) | 下の 0-2 |
+| 控えを読む | 「🏘 フレンド」を開いたとき+1日1回の来客えらび。30分は端末に控えて読み直さない。**前に読んだあとで変わった家だけ**読む(`updated_at=gt.前回`) | ふつう1日2回・目いっぱい4回 |
+| 1回に読む家 | ふつう 10軒(1軒 約1KB+返事のヘッダ)/目いっぱい 20軒 | フレンドの上限は50人だが、14日以内に控えを送った家だけ |
+| 行き来の行 | 1人1日 ふつう 1.5行/目いっぱい 5行(行く3+来る2)。1行 約250B(索引込み)。**8日たったら片づける** | 端末が読むのは7日分 |
+
+### 0-2. 見積もり(無料枠の何%か)
+
+| | 今 700人 | 5倍 3,500人 | 10倍 7,000人 |
+| --- | --- | --- | --- |
+| 増える行(控え) | 700行 | 3,500行 | 7,000行 |
+| 増える行(行き来・8日分) | ふつう 4,200行/目いっぱい 28,000行 | 2.1万/14万行 | 4.2万/28万行 |
+| DB 容量(控え×2+行き来) | 約2.5MB〜8.5MB(**0.5〜1.7%**) | 約12〜42MB(**2.4〜8.4%**) | 約25〜84MB(**5〜17%**) |
+| 送り出し 1日(1人 ふつう 約25KB/目いっぱい 約90KB) | 約9MB〜63MB | 約44〜315MB | 約88〜630MB |
+| 送り出し 1月 | 約0.26〜1.9GB(**5〜38%**) | 約1.3〜9.5GB(**26〜190%**) | 約2.6〜19GB(**53〜380%**) |
+| Edge Function の呼び出し | 0回(0%) | 0回 | 0回 |
+| Realtime の接続・メッセージ | 0(0%) | 0 | 0 |
+
+- **ふつうの遊び方なら 10倍まで枠に収まる**(送り出しが月 2.6GB=53%)。目いっぱいの見積もりは「毎日全員が1日4回フレンド一覧を開き、20軒が毎回変わっている」という上ぶれで、5倍から枠を超えうる → 0-4 のスイッチで「間引く」に切り替える
+- 送り出しは**ほかの機能(ランキング・フレンド・マルチなど)と分け合う**。今の月の送り出しの量は窓口が Supabase の Usage の画面で見る(まだ見ていない)。今がすでに枠の半分を超えていたら、最初から「間引く」で出す
+- 書き込み(端末 → Supabase)は送り出しに入らない。API の回数に無料枠の上限は無い
+
+### 0-3. 枠に収める作り
+
+- **Realtime は使わない**。同時接続200は今のマルチ(モンヒロビート・MFバトルカード)と分け合うため、行き来はすべて控えを読む形(REST)
+- 控えは小さく(上限 2,000字・目安 1KB)。名前の文は入れず id と種類の短い記号だけ
+- 開いたときに1回まとめて読む(`breeder_id=in.(…)`)。30分は端末に控えて読み直さない。変わった家だけ読む
+- 自分の控えを送るのは10分に1回まで。中身が前と同じなら送らない
+- 1日の回数の上限は表の側でも守る(行く3回・同じ家1回・来る2人)
+- 古い行き来の記録は**新しい表の中だけ**で8日たったら片づける(足すときの見張りが、ときどき古い行をまとめて消す。既存の表は触らない。端末には消す権限を渡さない)
+
+### 0-4. 危ないときの逃げ道(スイッチ1つ)
+
+新しい小さな表 `assistant_life_friend_switch`(1行だけ)に `mode` を置く。端末は起動して最初に1回だけ読む。
+
+| mode | 動き |
+| --- | --- |
+| `on` | ふつう |
+| `thin`(間引く) | 控えを読むのは1日1回・来客なし・自分の控えは1時間に1回まで。送り出しはおよそ3分の1 |
+| `off`(止める) | 「🏘 フレンド」を出さない・通信しない。表の側でも行き来を受け付けない。今までの記録は消さない |
+
+- 窓口が週に1回、DB の大きさ(`pg_database_size`)と Usage の送り出しを見て、**どちらかが枠の8割に近づいたら `thin`、超えそうなら `off`** にする(SQL 1行。ゲームの公開をし直さなくても次に開いた人から効く)
+- スイッチの表が読めないとき(無い・失敗)は `thin` として動く(安全側)
 
 ---
 
@@ -58,7 +116,8 @@
 | --- | --- |
 | 会った助手の id | `['mua','kiki','dra',…]` |
 | 部屋ごとの様子(家にいる/おでかけ中・していることの種類・気分の種類) | `{dra:{at:'home',doing:'read',mood:'happy'}}` |
-| 部屋に置いた家具の id(オクリモノの家具) | `{atsu:['sofa','lamp']}` |
+| 部屋に置いた家具の key(オクリモノの家具。`mh_assistant_life_room_v1` の `put` の天井・壁・床の3つだけ) | `{atsu:{c:'lantern',w:null,f:'sofa'}}` |
+| (❻が A のとき)育ち方の★の数と得意(キズナの `mh_assistant_life_grow_v1` から、★の数と得意の種類だけ) | `{mua:{beat:3,type:'exact'}}` |
 | 控えの時刻 | サーバが付ける `updated_at` |
 
 入れないもの: 仲良し度の数字・持ち物・お金・フレンドの一覧・端末の ID を見せる表示・自由な文。
@@ -100,11 +159,12 @@ SQL は**まだ流さない**。社長の「これで作る」のあと、フレ
 
 | 表 | 中身 |
 | --- | --- |
-| `assistant_life_friend_houses` | 1人1行の家の控え(`house` JSON・4,000字まで)と、行き来を入にしているか(`open`) |
+| `assistant_life_friend_houses` | 1人1行の家の控え(`house` JSON・2,000字まで)と、行き来を入にしているか(`open`) |
+| `assistant_life_friend_switch` | 1行だけ。`mode` = on/thin/off(0-4 の逃げ道) |
 | `assistant_life_friend_visits` | 行き来の記録。`kind` = `go`(送り出した・書くのは行った人)/`come`(相手の助手が自分で来た・書くのは来られた人)。決まった一言の番号・お礼の番号 |
 
 守り(表の側):
-- **消す権限は与えない**。控えは上書き、行き来は1日1行ずつ足すだけ
+- **端末に消す権限は与えない**。控えは上書き、行き来は1日1行ずつ足すだけ。8日たった行き来の行は、表の見張り(security definer)がときどき片づける
 - 行き来は**承認済みのフレンドどうし**で、両方が `open` のときだけ入る(足すときに `friend_links` を見る)
 - 1日の上限を表の側でも数える(行くは1人1日3回・同じ家は1日1回、来るは1人1日2人)
 - 書いたあと変えられるのは「お礼」の列だけ(列ごとの権限+見張り)
@@ -132,6 +192,17 @@ begin
   end if;
 end $$;
 
+-- ⓪ 逃げ道のスイッチ(1行だけ。窓口が update で切り替える。端末は読むだけ)
+create table if not exists public.assistant_life_friend_switch (
+  id   smallint not null default 1,
+  mode text     not null default 'on',
+  updated_at timestamptz not null default now(),
+  constraint alf_switch_pkey primary key (id),
+  constraint alf_switch_one check (id = 1),
+  constraint alf_switch_mode check (mode in ('on','thin','off'))
+);
+insert into public.assistant_life_friend_switch (id, mode) values (1, 'on') on conflict (id) do nothing;
+
 -- ① 家の控え(1人1行・上書き)
 create table if not exists public.assistant_life_friend_houses (
   breeder_id text        not null,
@@ -141,7 +212,7 @@ create table if not exists public.assistant_life_friend_houses (
   constraint alf_houses_pkey primary key (breeder_id),
   constraint alf_houses_id_shape check (length(breeder_id) between 1 and 100),
   constraint alf_houses_house_object check (jsonb_typeof(house) = 'object'),
-  constraint alf_houses_house_size check (length(house::text) <= 4000)
+  constraint alf_houses_house_size check (length(house::text) <= 2000)
 );
 comment on table public.assistant_life_friend_houses is
   '助手ライフの家の控え(会った助手・部屋の様子・家具の id)。フレンドが訪ねるときに読む。1人1行を端末が上書きする。';
@@ -189,6 +260,10 @@ create or replace function public.alf_visits_guard()
 returns trigger language plpgsql as $$
 declare today date := (now() at time zone 'Asia/Tokyo' - interval '4 hours')::date;
 begin
+  if tg_op = 'INSERT'
+     and coalesce((select mode from public.assistant_life_friend_switch where id = 1), 'thin') = 'off' then
+    raise exception '行き来はいま止めています';
+  end if;
   if tg_op = 'UPDATE' then
     -- 変えてよいのはお礼だけ
     if (new.kind, new.visitor_id, new.host_id, new.day, new.assistants, new.word, new.created_at)
@@ -222,11 +297,35 @@ begin
   new.created_at := now();
   return new;
 end $$;
+-- 8日たった行き来の行を、足すときにときどき(100回に1回)まとめて片づける。この表の中だけ
+create or replace function public.alf_visits_tidy()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if random() < 0.01 then
+    delete from public.assistant_life_friend_visits
+      where day < (now() at time zone 'Asia/Tokyo' - interval '4 hours')::date - 8;
+  end if;
+  return null;
+end $$;
+revoke all on function public.alf_visits_tidy() from public, anon, authenticated;
+drop trigger if exists alf_visits_tidy on public.assistant_life_friend_visits;
+create trigger alf_visits_tidy after insert on public.assistant_life_friend_visits
+  for each statement execute function public.alf_visits_tidy();
+
 drop trigger if exists alf_visits_guard on public.assistant_life_friend_visits;
 create trigger alf_visits_guard before insert or update on public.assistant_life_friend_visits
   for each row execute function public.alf_visits_guard();
 
 -- ③ 権限(読む・足す・控えの上書き・お礼の列だけ。消す権限は無し)
+alter table public.assistant_life_friend_switch enable row level security;
+do $$
+begin
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='assistant_life_friend_switch' and policyname='alf switch read') then
+    create policy "alf switch read" on public.assistant_life_friend_switch for select using (true);
+  end if;
+end $$;
+grant select on public.assistant_life_friend_switch to anon, authenticated;
+revoke insert, update, delete on public.assistant_life_friend_switch from anon, authenticated;
 alter table public.assistant_life_friend_houses enable row level security;
 alter table public.assistant_life_friend_visits enable row level security;
 do $$
@@ -251,7 +350,7 @@ revoke delete on public.assistant_life_friend_visits from anon, authenticated;
 commit;
 ```
 
-通信の量: 家を開いたときにフレンドの控えをまとめて1回読む(`breeder_id=in.(…)`・最大50人)/自分の控えを10分に1回まで上書き/HOME と家を開いたときに自分あての行き来を1回読む(`host_id=eq.自分&day=gte.7日前`)。
+通信の量は0章。「🏘 フレンド」を開いたときと1日1回の来客えらびに、変わった家の控えだけまとめて読む(`breeder_id=in.(…)&updated_at=gt.前回`・30分は読み直さない)/自分の控えは10分に1回まで・同じなら送らない/HOME と家を開いたときに自分あての行き来を読む(`host_id=eq.自分&day=gte.7日前`・30分は読み直さない)。
 表が無い環境では、今のフレンドと同じく「準備中」にして、ページを閉じるまで通信しない。
 
 **限界**(フレンドの設計書 3 と同じ): ログインが無いので、ID を知っている人のなりすましまでは防げない。防いでいるのは「消せない」「フレンドどうしだけ」「1日の上限」「自由な文が無い」「変えられるのはお礼だけ」の5つ。
@@ -309,9 +408,10 @@ commit;
 
 | 部署 | 使う所 | 状態 |
 | --- | --- | --- |
+| (返事) | キズナ: 3点ともぶつからない。けんか中は `assistantLifeRelPending()`(56-assistant-life-rel.jsx)を読むだけで使う。★は `mh_assistant_life_grow_v1`(予定)・見せるのは★の数と得意だけ/オクリモノ: 家具は段階Bで作る。key と `mh_assistant_life_room_v1` の `put` を控えに写せば足りる。道具・家具を配らない形に賛成 | 2026-11-08 |
 | ナカヨシ7(地図と施設) | 家のアイコンの列の5つ目「🏘 フレンド」/居間の扉の来客/部屋の行き先の札(場所の一覧に `friend` を足す)/掲示板に1件。町の地図・HOME の施設の顔の列は増やさない | 送った(2026-11-08)・返事待ち |
-| オクリモノ(道具と家具) | 控えに家具の id を写して見せるだけ(相手の家具は動かさない)。おみやげで道具・家具を配らない | 送った・返事待ち |
-| キズナ(けんかと育つ助手) | けんか中(💢)の助手は行けない/よその家ではけんかしない/育ち方の★を控えに写すかは❻ | 送った・返事待ち |
+| オクリモノ(道具と家具) | 控えに家具の key を写して見せるだけ(相手の家具は動かさない)。おみやげで道具・家具を配らない | 返事あり・賛成 |
+| キズナ(けんかと育つ助手) | けんか中(💢)の助手は行けない/よその家ではけんかしない/育ち方の★を控えに写すかは❻ | 返事あり・賛成 |
 | ハナビ(上がる値の演出) | 3段の「小」と色・印をそのまま使う | 作るとき |
 
 ---
