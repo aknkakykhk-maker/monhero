@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4fe3e073939059d4
+// source-sha256: adfb8c05afec2baf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99153,10 +99153,13 @@ const quickNudgeAfter = (nudge, today) => {
     day: today
   };
 };
+const QUICK_GUIDE_RUN_BETWEEN = Object.freeze(['WAVE_RESULT', 'QUICK_GROWTH', 'PICK_ALLY', 'QUICK_JOIN']);
+const quickGuideScreenKey = (gameState, quickRun, autoRepeat) => quickRun === true && autoRepeat === true && QUICK_GUIDE_RUN_BETWEEN.includes(gameState) ? 'BATTLE' : gameState;
 const quickGuidePick = ctx => {
   const c = ctx || {};
   if (c.busy || !Array.isArray(c.seen)) return null;
   const not = id => !c.seen.includes(id);
+  if (c.showing === 'g3a' && c.quickRun === true && c.autoRepeat === true && QUICK_GUIDE_RUN_BETWEEN.includes(c.gameState) && not('g3a')) return 'g3a';
   const nudge = c.nudgeOk === true && c.quickUnlocked === true && c.quickEverCleared !== true;
   switch (c.gameState) {
     case 'BATTLE_SYSTEM_SELECT':
@@ -99316,7 +99319,7 @@ const QuickGuideOverlay = ({
     }
   }
   const face = assistant && typeof assistantFaceImage === 'function' ? assistantFaceImage(assistant, line.e || 'normal') : null;
-  return React.createElement("div", {
+  const overlay = React.createElement("div", {
     "data-quick-guide": guideId,
     "data-quick-guide-page": page.id,
     className: "fixed inset-0 z-[100050]",
@@ -99395,6 +99398,7 @@ const QuickGuideOverlay = ({
     onClick: () => last ? onDone(true) : setStep(step + 1),
     className: "min-h-[40px] min-w-[84px] rounded-xl border border-fuchsia-300/70 bg-fuchsia-700/80 px-3 text-[12px] font-black text-white active:scale-[.97]"
   }, last ? pages.length > 1 ? 'わかった！' : 'OK' : '次へ'))));
+  return typeof document !== 'undefined' && document.body && typeof ReactDOM === 'object' && ReactDOM.createPortal ? ReactDOM.createPortal(overlay, document.body) : overlay;
 };
 const ASSISTANT_LIFE_STORE_KEY = 'mh_assistant_life_v1';
 const ASSISTANT_LIFE_PLAY_KEY = 'mh_assistant_life_play_v1';
@@ -143655,6 +143659,7 @@ function MonsterHeroGame() {
   const [quickGuideSeen, setQuickGuideSeen] = useState(null);
   const [quickNudge, setQuickNudge] = useState(null);
   const [quickGuideReplay, setQuickGuideReplay] = useState(null);
+  const quickGuideShowingRef = useRef(null);
   const quickGuideOpenedDetailRef = useRef(false);
   const QUICK_RHYTHM_INTRO_KEY = 'mh_quick_rhythm_intro_seen_v1';
   const QUICK_RHYTHM_BACKGROUND_KEY = 'mh_quick_rhythm_bg_seen_v1';
@@ -151366,14 +151371,16 @@ function MonsterHeroGame() {
     battleTutorial: battleTutorialStep != null || !!battleScenarioRef.current,
     raidJack: isRaidJackMode(runMode),
     backgroundRun: !!rhythmBackgroundRun,
-    nudgeOk: !!quickNudge && quickNudgeAllowed(quickNudge, quickGuideToday)
+    nudgeOk: !!quickNudge && quickNudgeAllowed(quickNudge, quickGuideToday),
+    showing: quickGuideShowingRef.current
   }) : null;
   const [quickGuideLater, setQuickGuideLater] = useState(null);
   const [quickNudgeShowing, setQuickNudgeShowing] = useState(null);
+  const quickGuideScreen = typeof quickGuideScreenKey === 'function' ? quickGuideScreenKey(gameState, isQuickMode(runMode), autoRepeat) : gameState;
   useEffect(() => {
     setQuickGuideLater(null);
     setQuickNudgeShowing(null);
-  }, [gameState]);
+  }, [quickGuideScreen]);
   useEffect(() => {
     if (quickGuidePicked !== 'nudgeHome' && quickGuidePicked !== 'nudgeBattle') return;
     const next = quickNudgeAfter(quickNudge, quickGuideToday);
@@ -151382,6 +151389,7 @@ function MonsterHeroGame() {
     storeSet(QUICK_GUIDE_NUDGE_KEY, next, false);
   }, [quickGuidePicked]);
   const quickGuideActive = quickGuideReplay ? `replay:${quickGuideReplay}` : quickNudgeShowing && !quickGuideBusy ? quickNudgeShowing : quickGuidePicked && quickGuidePicked !== quickGuideLater && quickGuidePicked !== 'nudgeHome' && quickGuidePicked !== 'nudgeBattle' ? quickGuidePicked : null;
+  quickGuideShowingRef.current = quickGuideActive;
   const finishQuickGuide = (guideId, done) => {
     if (quickGuideReplay) {
       setQuickGuideReplay(null);
