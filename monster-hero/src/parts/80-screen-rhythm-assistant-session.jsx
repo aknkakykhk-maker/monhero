@@ -257,7 +257,7 @@ function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, duratio
   );
 }
 
-// 助手どうしの仲良し度を読む(56-assistant-peer.jsx。書かない)。公開の印 assistantPeer が偽なら、デュオは組まない
+// 助手どうしの友情Lvを読む(56-assistant-peer.jsx。書かない)。公開の印 assistantPeer が偽なら、デュオは組まない
 const rhythmAssistSessionPeerLevel = (a, b) => {
   if (typeof assistantPeerEnabled !== 'function' || !assistantPeerEnabled() || typeof ASSISTANT_PEER_STORE === 'undefined') return 0;
   return assistantPeerLevel(ASSISTANT_PEER_STORE.state, a, b);
@@ -273,7 +273,7 @@ const rhythmAssistSessionCalledIds = () => {
   const v = typeof RHYTHM_MULTI !== 'undefined' ? RHYTHM_MULTI.view() : null;
   return (v && v.myCpus ? v.myCpus : []).map((c) => rhythmAssistSessionIdOf(c.masuId)).filter(Boolean);
 };
-// 呼んだ助手みんなのビートP の上乗せ(セッションLv の上乗せ + 仲良し度 Lv4 以上のデュオ)。60-app の周回の報酬の倍率に掛ける
+// 呼んだ助手みんなのビートP の上乗せ(セッションLv の上乗せ + 友情Lv4 以上のデュオ)。60-app の周回の報酬の倍率に掛ける
 const rhythmAssistSessionRewardBonusNow = () => {
   const ids = rhythmAssistSessionCalledIds();
   return rhythmAssistSessionRewardBonus(RHYTHM_ASSIST_SESSION_STORE.get(), ids) + rhythmAssistSessionDuoBonus(rhythmAssistSessionDuosNow(ids));
@@ -294,7 +294,7 @@ const rhythmAssistSessionPickPair = (duo, scene, used, rand = Math.random) => {
 // 30-rhythm-play.jsx の読むだけの窓(RHYTHM_PLAY_WATCH)から、コンボ・ミス・曲の時刻を読むだけ。
 // 置き場所: 上の帯と時間の行の左側の表示のすぐ下(縦は時間の行の下・横は曲名の行の下。道の外)。
 // 場面: 50/100/300コンボ・ミス3つ続き・サビ・最後の10秒。ひとことは 1.6秒で消える。同じ曲で同じ場面は1回(デュオの掛け合いは3回まで)。
-// セッションLv.15 からサビで顔が光る。仲良し度 Lv3 のデュオは掛け合い、Lv5(特別なお話を見たあと)はサビで合体(顔が重なり、画面のふちに2人の色の光)
+// セッションLv.15 からサビで顔が光る。友情Lv3 のデュオは掛け合い、Lv5(特別なお話を見たあと)はサビで合体(顔が重なり、画面のふちに2人の色の光)
 const RHYTHM_ASSIST_SESSION_BUBBLE_MS = 1600;
 const RHYTHM_ASSIST_SESSION_COMBO_STEPS = Object.freeze([50, 100, 300]);
 const RHYTHM_ASSIST_SESSION_LAST_MS = 10000;
@@ -441,8 +441,8 @@ function RhythmAssistSessionPlayFace({ songId }) {
   );
 }
 
-// デュオの結果(仲良し度 Lv4 から2人のひとこと)と、2人で1曲終えたときの仲良し度 +3(どの2人でも。1日12まで・ペアの1日の上限の中)。
-// 同じ回(round)に2度は足さない。仲良し度を足すのは assistantPeerGain(56-assistant-peer.jsx)だけ
+// デュオの結果(友情Lv4 から2人のひとこと)と、2人で1曲終えたときの友情Lv +3(どの2人でも。1日12まで・ペアの1日の上限の中)。
+// 同じ回(round)に2度は足さない。友情Lv を足すのは assistantPeerGain(56-assistant-peer.jsx)だけ
 const RHYTHM_ASSIST_SESSION_PEER_DONE = new Set();
 function RhythmAssistSessionDuoResult({ ids = [], round }) {
   const [shown, setShown] = React.useState([]);
@@ -475,7 +475,7 @@ function RhythmAssistSessionDuoResult({ ids = [], round }) {
         <p key={k} data-rhythm-assist-duo-result={k} className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/50 bg-violet-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100">
           <span className="shrink-0">🎤 {rhythmAssistSessionName(d.a)}・{rhythmAssistSessionName(d.b)}</span>
           {rows && rows.map(([who, , text], i) => <span key={i} className="min-w-0">{rhythmAssistSessionName(who)}「{text}」</span>)}
-          {gained > 0 && <span data-rhythm-assist-peer-gain className="text-amber-200">{typeof assistantPeerLifeOn === 'function' && assistantPeerLifeOn() ? '友情' : '仲良し度'}+{gained}</span>}
+          {gained > 0 && <span data-rhythm-assist-peer-gain className="text-amber-200">友情Lv +{gained}</span>}
         </p>
       ))}
     </>

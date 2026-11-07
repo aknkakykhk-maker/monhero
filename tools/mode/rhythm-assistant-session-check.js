@@ -175,9 +175,9 @@ check('助手のスコアをランキングへ送らない(助手の計算の部
   const levelOf = (a, b) => lv[[a, b].sort().join('-')] || 1;
   const seen = (a, b) => [a, b].sort().join('-') === 'kiki-mua';
   const one = d.duos(['mua', 'atsu'], levelOf, seen);
-  check('仲良し度 Lv3 からデュオ(Lv2 以下はならない)', one.length === 1 && one[0].key === 'atsu-mua' && !one[0].result && !one[0].gattai && d.duos(['kiki', 'atsu'], levelOf, seen).length === 0);
+  check('友情Lv3 からデュオ(Lv2 以下はならない)', one.length === 1 && one[0].key === 'atsu-mua' && !one[0].result && !one[0].gattai && d.duos(['kiki', 'atsu'], levelOf, seen).length === 0);
   const three = d.duos(['atsu', 'mua', 'kiki'], levelOf, seen);
-  check('仲良し度の高いペアから組み、1人は1つのデュオだけ', three.length === 1 && three[0].key === 'kiki-mua' && three[0].result && three[0].gattai);
+  check('友情Lv の高いペアから組み、1人は1つのデュオだけ', three.length === 1 && three[0].key === 'kiki-mua' && three[0].result && three[0].gattai);
   const four = d.duos(['mua', 'kiki', 'dra', 'kyuko'], levelOf, () => false);
   check('4人なら2組。Lv5 でも特別なお話を見ていなければ合体しない', four.length === 2 && four.every((x) => !x.gattai) && four.find((x) => x.key === 'dra-kyuko').result);
   check('デュオ(Lv4 以上)1組につきビートP +5%', Math.abs(d.bonus(four) - 0.1) < 1e-9 && d.bonus(one) === 0);
@@ -186,11 +186,11 @@ check('助手のスコアをランキングへ送らない(助手の計算の部
   let pairOk = 0; for (let i = 0; i < d.ids.length; i += 1) for (let j = i + 1; j < d.ids.length; j += 1) { const t = d.PAIR[[d.ids[i], d.ids[j]].sort().join('-')]; if (t && ['play', 'result', 'gattai'].every((sc) => t[sc] && t[sc].length)) pairOk += 1; }
   check('デュオの台詞は28ペアとも 演奏中・結果・合体 がある', pairOk === 28, `${pairOk}ペア`);
   check('デュオの掛け合いは1曲3回まで・合体は1曲1回', /const RHYTHM_ASSIST_SESSION_DUO_TALK_MAX = 3;/.test(SESSION) && /duoTalks < RHYTHM_ASSIST_SESSION_DUO_TALK_MAX/.test(SCREEN) && /const g = !gattaiDone \? duos\.find\(\(d\) => d\.gattai\) : null;/.test(SCREEN));
-  check('仲良し度は assistantPeerGain(a, b, \'session\') で足し、同じ回(round)に2度は足さない', /assistantPeerGain\(ids\[i\], ids\[j\], 'session'\)/.test(SCREEN) && /if \(RHYTHM_ASSIST_SESSION_PEER_DONE\.has\(pk\)/.test(SCREEN));
-  check('仲良し度は読むだけ(助手のセッションの部品は ASSISTANT_PEER_STORE を書き換えない)', !/ASSISTANT_PEER_STORE\.set|storeSet\(ASSISTANT_PEER/.test(SCREEN + SESSION));
+  check('友情Lv は assistantPeerGain(a, b, \'session\') で足し、同じ回(round)に2度は足さない', /assistantPeerGain\(ids\[i\], ids\[j\], 'session'\)/.test(SCREEN) && /if \(RHYTHM_ASSIST_SESSION_PEER_DONE\.has\(pk\)/.test(SCREEN));
+  check('友情Lv は読むだけ(助手のセッションの部品は ASSISTANT_PEER_STORE を書き換えない)', !/ASSISTANT_PEER_STORE\.set|storeSet\(ASSISTANT_PEER/.test(SCREEN + SESSION));
   check('デュオは公開の印 assistantPeer が偽なら組まない', /if \(typeof assistantPeerEnabled !== 'function' \|\| !assistantPeerEnabled\(\)/.test(SCREEN));
   const DATA = fs.readFileSync(path.join(ROOT, 'monster-hero/data/assistants.js'), 'utf8');
-  check('仲良し度の行動 session は +3・1日12(ペアの1日の上限の中・uncapped なし)', /\n  session: \{ amount:3, dailyMax:12, label:'2人でセッションをした' \},/.test(DATA));
+  check('友情Lv の行動 session は +3・1日12(ペアの1日の上限の中・uncapped なし)', /\n  session: \{ amount:3, dailyMax:12, label:'2人でセッションをした' \},/.test(DATA));
 }
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

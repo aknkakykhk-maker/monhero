@@ -5,7 +5,7 @@
 //   ・調子の代わりに「好み」: 好きな曲は少し上がる・ブレ小・経験値 ×1.3 / 苦手な曲は少し下がる・ブレ大・経験値 ×1.5
 //   ・プレイヤーのスコア・判定は変えない。助手のスコアはランキング・自己ベストに送らない
 // ★公開の印 RELEASE_FLAGS.rhythmAssistantSession の後ろ。偽のあいだは呼ぶシートに助手のタブを出さない
-// 保存は新しいキー RHYTHM_ASSIST_SESSION_KEY だけ(⑦)。マスモンの育ち・助手の絆・助手どうしの仲良し度には書かない
+// 保存は新しいキー RHYTHM_ASSIST_SESSION_KEY だけ(⑦)。マスモンの育ち・助手の絆・助手どうしの友情Lvには書かない
 
 const RHYTHM_ASSIST_SESSION_KEY = 'mh_rhythm_assistant_session_v1';
 // 部屋の中では、助手を「masuId」の欄に印つきで入れる(マスモンの id と混ざらないように)。例: 'as:mua'
@@ -156,17 +156,17 @@ const rhythmAssistSessionInClimax = (songId, timeMs) => {
   return Number.isFinite(t) && spans.some((x) => Array.isArray(x) && Number(x[2]) >= 0.9 && t >= Number(x[0]) && t < Number(x[1]));
 };
 
-// ---- デュオ(助手どうしの仲良し度。PLAN.md 3章・社長の決定 2026-11-07) ----
-// 仲良し度 Lv3 から「デュオ」(演奏中の掛け合い1曲3回まで)。Lv4 で結果の2人のひとこと・ビートP +5%。
-// Lv5 で、2人の特別なお話を見たあとは、サビで合体の演出(1曲1回)。仲良し度は読むだけ(足すのは 2人で1曲終えたときの +3 だけ)
+// ---- デュオ(助手どうしの友情Lv。PLAN.md 3章・社長の決定 2026-11-07) ----
+// 友情Lv3 から「デュオ」(演奏中の掛け合い1曲3回まで)。Lv4 で結果の2人のひとこと・ビートP +5%。
+// Lv5 で、2人の特別なお話を見たあとは、サビで合体の演出(1曲1回)。友情Lv は読むだけ(足すのは 2人で1曲終えたときの +3 だけ)
 const RHYTHM_ASSIST_SESSION_DUO_LEVEL = 3;
 const RHYTHM_ASSIST_SESSION_DUO_RESULT_LEVEL = 4;
 const RHYTHM_ASSIST_SESSION_GATTAI_LEVEL = 5;
 const RHYTHM_ASSIST_SESSION_DUO_P_BONUS = 0.05;
 const RHYTHM_ASSIST_SESSION_DUO_TALK_MAX = 3;
 const rhythmAssistSessionPairKey = (a, b) => [String(a), String(b)].sort().join('-');
-// 呼んだ助手(呼んだ順)から、デュオを組む。仲良し度の高いペアから先に組み、1人は1つのデュオにだけ入る。
-// levelOf(a, b) … 2人の仲良し度 Lv / seenOf(a, b) … 2人の特別なお話を見たか
+// 呼んだ助手(呼んだ順)から、デュオを組む。友情Lv の高いペアから先に組み、1人は1つのデュオにだけ入る。
+// levelOf(a, b) … 2人の友情Lv / seenOf(a, b) … 2人の特別なお話を見たか
 const rhythmAssistSessionDuos = (ids, levelOf, seenOf) => {
   const list = (Array.isArray(ids) ? ids : []).filter((id, i, arr) => RHYTHM_ASSIST_SESSION_IDS.includes(id) && arr.indexOf(id) === i);
   const pairs = [];
@@ -183,5 +183,5 @@ const rhythmAssistSessionDuos = (ids, levelOf, seenOf) => {
       gattai: lv >= RHYTHM_ASSIST_SESSION_GATTAI_LEVEL && !!(typeof seenOf === 'function' && seenOf(a, b)),
     }));
 };
-// デュオのビートP の上乗せ(仲良し度 Lv4 以上のデュオ1組につき +5%)
+// デュオのビートP の上乗せ(友情Lv4 以上のデュオ1組につき +5%)
 const rhythmAssistSessionDuoBonus = (duos) => (Array.isArray(duos) ? duos : []).filter((d) => d && d.result).length * RHYTHM_ASSIST_SESSION_DUO_P_BONUS;

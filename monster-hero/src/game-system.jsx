@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 29ae992688bfe55e
+// generated-sha256: b9f63a3326a9c2e9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -30785,7 +30785,7 @@ const rhythmBuddyApplyLive = (mon, { round, songId, diffId, durationMs, teamRank
 //   ・調子の代わりに「好み」: 好きな曲は少し上がる・ブレ小・経験値 ×1.3 / 苦手な曲は少し下がる・ブレ大・経験値 ×1.5
 //   ・プレイヤーのスコア・判定は変えない。助手のスコアはランキング・自己ベストに送らない
 // ★公開の印 RELEASE_FLAGS.rhythmAssistantSession の後ろ。偽のあいだは呼ぶシートに助手のタブを出さない
-// 保存は新しいキー RHYTHM_ASSIST_SESSION_KEY だけ(⑦)。マスモンの育ち・助手の絆・助手どうしの仲良し度には書かない
+// 保存は新しいキー RHYTHM_ASSIST_SESSION_KEY だけ(⑦)。マスモンの育ち・助手の絆・助手どうしの友情Lvには書かない
 
 const RHYTHM_ASSIST_SESSION_KEY = 'mh_rhythm_assistant_session_v1';
 // 部屋の中では、助手を「masuId」の欄に印つきで入れる(マスモンの id と混ざらないように)。例: 'as:mua'
@@ -30936,17 +30936,17 @@ const rhythmAssistSessionInClimax = (songId, timeMs) => {
   return Number.isFinite(t) && spans.some((x) => Array.isArray(x) && Number(x[2]) >= 0.9 && t >= Number(x[0]) && t < Number(x[1]));
 };
 
-// ---- デュオ(助手どうしの仲良し度。PLAN.md 3章・社長の決定 2026-11-07) ----
-// 仲良し度 Lv3 から「デュオ」(演奏中の掛け合い1曲3回まで)。Lv4 で結果の2人のひとこと・ビートP +5%。
-// Lv5 で、2人の特別なお話を見たあとは、サビで合体の演出(1曲1回)。仲良し度は読むだけ(足すのは 2人で1曲終えたときの +3 だけ)
+// ---- デュオ(助手どうしの友情Lv。PLAN.md 3章・社長の決定 2026-11-07) ----
+// 友情Lv3 から「デュオ」(演奏中の掛け合い1曲3回まで)。Lv4 で結果の2人のひとこと・ビートP +5%。
+// Lv5 で、2人の特別なお話を見たあとは、サビで合体の演出(1曲1回)。友情Lv は読むだけ(足すのは 2人で1曲終えたときの +3 だけ)
 const RHYTHM_ASSIST_SESSION_DUO_LEVEL = 3;
 const RHYTHM_ASSIST_SESSION_DUO_RESULT_LEVEL = 4;
 const RHYTHM_ASSIST_SESSION_GATTAI_LEVEL = 5;
 const RHYTHM_ASSIST_SESSION_DUO_P_BONUS = 0.05;
 const RHYTHM_ASSIST_SESSION_DUO_TALK_MAX = 3;
 const rhythmAssistSessionPairKey = (a, b) => [String(a), String(b)].sort().join('-');
-// 呼んだ助手(呼んだ順)から、デュオを組む。仲良し度の高いペアから先に組み、1人は1つのデュオにだけ入る。
-// levelOf(a, b) … 2人の仲良し度 Lv / seenOf(a, b) … 2人の特別なお話を見たか
+// 呼んだ助手(呼んだ順)から、デュオを組む。友情Lv の高いペアから先に組み、1人は1つのデュオにだけ入る。
+// levelOf(a, b) … 2人の友情Lv / seenOf(a, b) … 2人の特別なお話を見たか
 const rhythmAssistSessionDuos = (ids, levelOf, seenOf) => {
   const list = (Array.isArray(ids) ? ids : []).filter((id, i, arr) => RHYTHM_ASSIST_SESSION_IDS.includes(id) && arr.indexOf(id) === i);
   const pairs = [];
@@ -30963,7 +30963,7 @@ const rhythmAssistSessionDuos = (ids, levelOf, seenOf) => {
       gattai: lv >= RHYTHM_ASSIST_SESSION_GATTAI_LEVEL && !!(typeof seenOf === 'function' && seenOf(a, b)),
     }));
 };
-// デュオのビートP の上乗せ(仲良し度 Lv4 以上のデュオ1組につき +5%)
+// デュオのビートP の上乗せ(友情Lv4 以上のデュオ1組につき +5%)
 const rhythmAssistSessionDuoBonus = (duos) => (Array.isArray(duos) ? duos : []).filter((d) => d && d.result).length * RHYTHM_ASSIST_SESSION_DUO_P_BONUS;
 
 // ---- part: 33-rhythm-assistant-session-lines.jsx ----
@@ -54404,7 +54404,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               humans={team.rows.filter((row) => !row.m.cpu).length}
               score={cpuRow.res.score} maxScore={((typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === cpuRow.res.diffId) || {}).maxScore || 0} />
             )))}
-            {/* 助手が2人以上このライブに出ていたら、デュオの2人のひとことと仲良し度 +3(2026-11-07 助手とのセッション) */}
+            {/* 助手が2人以上このライブに出ていたら、デュオの2人のひとことと友情Lv +3(2026-11-07 助手とのセッション) */}
             <RhythmAssistSessionDuoResult round={room.round} ids={grown.map((g) => g.assistantId).filter(Boolean)} />
           </div>;
         })()}
@@ -56011,7 +56011,7 @@ function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, duratio
   );
 }
 
-// 助手どうしの仲良し度を読む(56-assistant-peer.jsx。書かない)。公開の印 assistantPeer が偽なら、デュオは組まない
+// 助手どうしの友情Lvを読む(56-assistant-peer.jsx。書かない)。公開の印 assistantPeer が偽なら、デュオは組まない
 const rhythmAssistSessionPeerLevel = (a, b) => {
   if (typeof assistantPeerEnabled !== 'function' || !assistantPeerEnabled() || typeof ASSISTANT_PEER_STORE === 'undefined') return 0;
   return assistantPeerLevel(ASSISTANT_PEER_STORE.state, a, b);
@@ -56027,7 +56027,7 @@ const rhythmAssistSessionCalledIds = () => {
   const v = typeof RHYTHM_MULTI !== 'undefined' ? RHYTHM_MULTI.view() : null;
   return (v && v.myCpus ? v.myCpus : []).map((c) => rhythmAssistSessionIdOf(c.masuId)).filter(Boolean);
 };
-// 呼んだ助手みんなのビートP の上乗せ(セッションLv の上乗せ + 仲良し度 Lv4 以上のデュオ)。60-app の周回の報酬の倍率に掛ける
+// 呼んだ助手みんなのビートP の上乗せ(セッションLv の上乗せ + 友情Lv4 以上のデュオ)。60-app の周回の報酬の倍率に掛ける
 const rhythmAssistSessionRewardBonusNow = () => {
   const ids = rhythmAssistSessionCalledIds();
   return rhythmAssistSessionRewardBonus(RHYTHM_ASSIST_SESSION_STORE.get(), ids) + rhythmAssistSessionDuoBonus(rhythmAssistSessionDuosNow(ids));
@@ -56048,7 +56048,7 @@ const rhythmAssistSessionPickPair = (duo, scene, used, rand = Math.random) => {
 // 30-rhythm-play.jsx の読むだけの窓(RHYTHM_PLAY_WATCH)から、コンボ・ミス・曲の時刻を読むだけ。
 // 置き場所: 上の帯と時間の行の左側の表示のすぐ下(縦は時間の行の下・横は曲名の行の下。道の外)。
 // 場面: 50/100/300コンボ・ミス3つ続き・サビ・最後の10秒。ひとことは 1.6秒で消える。同じ曲で同じ場面は1回(デュオの掛け合いは3回まで)。
-// セッションLv.15 からサビで顔が光る。仲良し度 Lv3 のデュオは掛け合い、Lv5(特別なお話を見たあと)はサビで合体(顔が重なり、画面のふちに2人の色の光)
+// セッションLv.15 からサビで顔が光る。友情Lv3 のデュオは掛け合い、Lv5(特別なお話を見たあと)はサビで合体(顔が重なり、画面のふちに2人の色の光)
 const RHYTHM_ASSIST_SESSION_BUBBLE_MS = 1600;
 const RHYTHM_ASSIST_SESSION_COMBO_STEPS = Object.freeze([50, 100, 300]);
 const RHYTHM_ASSIST_SESSION_LAST_MS = 10000;
@@ -56195,8 +56195,8 @@ function RhythmAssistSessionPlayFace({ songId }) {
   );
 }
 
-// デュオの結果(仲良し度 Lv4 から2人のひとこと)と、2人で1曲終えたときの仲良し度 +3(どの2人でも。1日12まで・ペアの1日の上限の中)。
-// 同じ回(round)に2度は足さない。仲良し度を足すのは assistantPeerGain(56-assistant-peer.jsx)だけ
+// デュオの結果(友情Lv4 から2人のひとこと)と、2人で1曲終えたときの友情Lv +3(どの2人でも。1日12まで・ペアの1日の上限の中)。
+// 同じ回(round)に2度は足さない。友情Lv を足すのは assistantPeerGain(56-assistant-peer.jsx)だけ
 const RHYTHM_ASSIST_SESSION_PEER_DONE = new Set();
 function RhythmAssistSessionDuoResult({ ids = [], round }) {
   const [shown, setShown] = React.useState([]);
@@ -56229,7 +56229,7 @@ function RhythmAssistSessionDuoResult({ ids = [], round }) {
         <p key={k} data-rhythm-assist-duo-result={k} className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/50 bg-violet-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100">
           <span className="shrink-0">🎤 {rhythmAssistSessionName(d.a)}・{rhythmAssistSessionName(d.b)}</span>
           {rows && rows.map(([who, , text], i) => <span key={i} className="min-w-0">{rhythmAssistSessionName(who)}「{text}」</span>)}
-          {gained > 0 && <span data-rhythm-assist-peer-gain className="text-amber-200">{typeof assistantPeerLifeOn === 'function' && assistantPeerLifeOn() ? '友情' : '仲良し度'}+{gained}</span>}
+          {gained > 0 && <span data-rhythm-assist-peer-gain className="text-amber-200">友情Lv +{gained}</span>}
         </p>
       ))}
     </>

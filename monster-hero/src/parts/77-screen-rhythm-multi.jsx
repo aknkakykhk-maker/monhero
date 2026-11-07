@@ -2985,7 +2985,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               humans={team.rows.filter((row) => !row.m.cpu).length}
               score={cpuRow.res.score} maxScore={((typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === cpuRow.res.diffId) || {}).maxScore || 0} />
             )))}
-            {/* 助手が2人以上このライブに出ていたら、デュオの2人のひとことと仲良し度 +3(2026-11-07 助手とのセッション) */}
+            {/* 助手が2人以上このライブに出ていたら、デュオの2人のひとことと友情Lv +3(2026-11-07 助手とのセッション) */}
             <RhythmAssistSessionDuoResult round={room.round} ids={grown.map((g) => g.assistantId).filter(Boolean)} />
           </div>;
         })()}
