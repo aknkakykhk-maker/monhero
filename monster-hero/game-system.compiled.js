@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 15051d899b86efb3
+// source-sha256: e1480e6372d153f4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -100814,15 +100814,36 @@ const quickGuidePick = ctx => {
       return null;
   }
 };
+const quickGuideRotated = () => typeof RHYTHM_VIEW_ROTATION === 'object' && !!RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.active === 'function' && RHYTHM_VIEW_ROTATION.active();
+const quickGuideRectOf = el => quickGuideRotated() && typeof RHYTHM_VIEW_ROTATION.rectOf === 'function' ? RHYTHM_VIEW_ROTATION.rectOf(el) : el.getBoundingClientRect();
+const quickGuideView = () => {
+  if (typeof window === 'undefined') return {
+    w: 0,
+    h: 0
+  };
+  return quickGuideRotated() ? {
+    w: window.innerHeight || 0,
+    h: window.innerWidth || 0
+  } : {
+    w: window.innerWidth || 0,
+    h: window.innerHeight || 0
+  };
+};
+const quickGuidePortalTarget = () => {
+  if (typeof document === 'undefined') return null;
+  if (quickGuideRotated()) return document.querySelector('[data-mh-view-rotation="true"]') || document.body;
+  return document.body;
+};
 const quickGuideSpotRect = selector => {
   if (!selector || typeof document === 'undefined') return null;
   try {
     let best = null,
       bestArea = -1;
     for (const el of document.querySelectorAll(selector)) {
-      const r = el.getBoundingClientRect();
+      const r = quickGuideRectOf(el),
+        v = quickGuideView();
       if (!(r.width > 0 && r.height > 0)) continue;
-      const area = Math.max(0, Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0)) * Math.max(0, Math.min(r.right, window.innerWidth) - Math.max(r.left, 0));
+      const area = Math.max(0, Math.min(r.bottom, v.h) - Math.max(r.top, 0)) * Math.max(0, Math.min(r.right, v.w) - Math.max(r.left, 0));
       if (area > bestArea) {
         bestArea = area;
         best = {
@@ -100848,8 +100869,8 @@ const quickGuideScrollTo = (el, top) => {
     box = box.parentElement;
   }
   if (!box || box === document.body) return;
-  const r = el.getBoundingClientRect(),
-    b = box.getBoundingClientRect();
+  const r = quickGuideRectOf(el),
+    b = quickGuideRectOf(box);
   if (top) box.scrollTop += r.top - b.top - 8;else if (r.top < b.top) box.scrollTop += r.top - b.top - 8;else if (r.bottom > b.bottom) box.scrollTop += r.bottom - b.bottom + 8;
 };
 const quickGuideNoBreak = t => String(t).replace(/(\p{Extended_Pictographic}\uFE0F?) /gu, '$1\u00a0');
@@ -100875,7 +100896,7 @@ const QuickGuideOverlay = ({
   }, [guideId, step]);
   useEffect(() => {
     try {
-      const h = panelRef.current && panelRef.current.getBoundingClientRect().height;
+      const h = panelRef.current && panelRef.current.offsetHeight;
       if (h > 0) setPanelH(Math.ceil(h));
     } catch (_) {}
   });
@@ -100885,7 +100906,7 @@ const QuickGuideOverlay = ({
       return undefined;
     }
     const first = quickGuideSpotRect(page.spot);
-    const vh0 = window.innerHeight || 0;
+    const vh0 = quickGuideView().h;
     try {
       if (first && first.el) quickGuideScrollTo(first.el, first.height > vh0 - panelH - 40);
       const must = page.must ? quickGuideSpotRect(page.must) : null;
@@ -100893,7 +100914,7 @@ const QuickGuideOverlay = ({
     } catch (_) {}
     const measure = () => {
       let r = quickGuideSpotRect(page.spot);
-      const vh = window.innerHeight || 0;
+      const vh = quickGuideView().h;
       if (r && page.must && r.height > vh - panelH - 40) {
         const m = quickGuideSpotRect(page.must);
         if (m) r = m;
@@ -100919,17 +100940,21 @@ const QuickGuideOverlay = ({
   if (!line) return null;
   const text = quickGuideNoBreak(String(line.t).split('{name}').join(callName || 'ブリーダー'));
   const last = step >= pages.length - 1;
-  const vh = typeof window !== 'undefined' ? window.innerHeight || 0 : 0;
+  const vh = quickGuideView().h;
   const pad = rect && Math.min(rect.width, rect.height) < 56 ? 3 : 6,
     gap = 12;
   const roomTop = rect ? rect.top - pad - gap : 0,
     roomBottom = rect ? vh - rect.bottom - pad - gap : 0;
-  const atTop = !!rect && vh > 0 && roomBottom < panelH && roomTop >= panelH;
-  const vw = typeof window !== 'undefined' ? window.innerWidth || 0 : 0;
+  const keepIfBottom = rect ? Math.min(rect.bottom, vh - panelH - gap - pad - 10) - rect.top : 0;
+  const keepIfTop = rect ? rect.bottom - Math.max(rect.top, panelH + gap + pad + 10) : 0;
+  const vw0 = quickGuideView().w;
+  const squeeze = !!rect && vh > 0 && vw0 > vh && roomBottom < panelH && roomTop < panelH && Math.max(rect.left - pad - gap, vw0 - (rect.left + rect.width) - pad - gap) < 170 && Math.max(keepIfTop, keepIfBottom) < 40;
+  const atTop = !!rect && vh > 0 && !squeeze && roomBottom < panelH && roomTop >= panelH;
+  const vw = quickGuideView().w;
   const roomLeft = rect ? rect.left - pad - gap : 0,
     roomRight = rect ? vw - (rect.left + rect.width) - pad - gap : 0;
-  const side = !!rect && vh > 0 && vw > vh && !atTop && roomBottom < panelH && Math.max(roomLeft, roomRight) >= 170 ? roomRight >= roomLeft ? 'right' : 'left' : null;
-  const sideWidth = side ? Math.min(300, Math.max(roomLeft, roomRight) - 4) : 0;
+  const side = !!rect && vh > 0 && vw > vh && !atTop && roomBottom < panelH && Math.max(roomLeft, roomRight) >= 170 ? roomRight >= roomLeft ? 'right' : 'left' : squeeze ? 'left' : null;
+  const sideWidth = side ? squeeze ? Math.min(300, Math.round(vw * 0.38)) : Math.min(300, Math.max(roomLeft, roomRight) - 4) : 0;
   const sideTop = side ? Math.max(8, Math.min(vh - panelH - 8, rect.top + rect.height / 2 - panelH / 2)) : 0;
   let ring = rect;
   if (rect && vh > 0 && !side) {
@@ -101029,7 +101054,8 @@ const QuickGuideOverlay = ({
     onClick: () => last ? onDone(true) : setStep(step + 1),
     className: "min-h-[40px] min-w-[84px] rounded-xl border border-fuchsia-300/70 bg-fuchsia-700/80 px-3 text-[12px] font-black text-white active:scale-[.97]"
   }, last ? pages.length > 1 ? 'わかった！' : 'OK' : '次へ'))));
-  return typeof document !== 'undefined' && document.body && typeof ReactDOM === 'object' && ReactDOM.createPortal ? ReactDOM.createPortal(overlay, document.body) : overlay;
+  const target = quickGuidePortalTarget();
+  return target && typeof ReactDOM === 'object' && ReactDOM.createPortal ? ReactDOM.createPortal(overlay, target) : overlay;
 };
 const ASSISTANT_LIFE_STORE_KEY = 'mh_assistant_life_v1';
 const ASSISTANT_LIFE_PLAY_KEY = 'mh_assistant_life_play_v1';
