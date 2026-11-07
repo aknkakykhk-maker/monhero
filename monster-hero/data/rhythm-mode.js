@@ -53881,6 +53881,23 @@ const rhythmApplyNotePalette=(id)=>{
   try{RHYTHM_NOTE_COLORS=RHYTHM_NOTE_PALETTES[next];RHYTHM_NOTE_PALETTE_ID=next;RHYTHM_CANVAS_RENDERER=rhythmBuildCanvasRenderer();return true;}
   catch(e){RHYTHM_NOTE_COLORS=prevColors;RHYTHM_NOTE_PALETTE_ID=prevId;RHYTHM_CANVAS_RENDERER=prevRenderer;return false;}
 };
+// 選んでいない見た目でノーツの見本を描く(2026-11-07 社長「各ノーツごとにどうかわるか」・オプションのノーツの色の見本)。
+//   look … { palette: RHYTHM_NOTE_PALETTES の id }。ほかの見た目(ノーツの形など)を足すときも、この入れ物に項目を足す。
+//   演奏に使っている描き手(RHYTHM_CANVAS_RENDERER)は作り直さない。見本用の描き手を見た目ごとに1つ作って取っておく。
+//   描き手は描くときにも RHYTHM_NOTE_COLORS を読むので、描くあいだだけ差し替えて、すぐ戻す(同期で終わるので演奏の描画とは混ざらない)
+const rhythmPreviewRenderers=new Map();
+const rhythmNoteLookKey=(look)=>(RHYTHM_NOTE_PALETTES[look&&look.palette]?look.palette:'STANDARD');
+const rhythmDrawNoteSwatchWith=(look,c,kind,w,h)=>{
+  const key=rhythmNoteLookKey(look);
+  if(key===RHYTHM_NOTE_PALETTE_ID)return RHYTHM_CANVAS_RENDERER.drawSwatch(c,kind,w,h);
+  const prev=RHYTHM_NOTE_COLORS;
+  try{
+    RHYTHM_NOTE_COLORS=RHYTHM_NOTE_PALETTES[key];
+    let r=rhythmPreviewRenderers.get(key);
+    if(!r){r=rhythmBuildCanvasRenderer();rhythmPreviewRenderers.set(key,r);}
+    return r.drawSwatch(c,kind,w,h);
+  }catch(e){return false;}finally{RHYTHM_NOTE_COLORS=prev;}
+};
 // ノーツ1つの見本の絵を描く(2026-10-21)。c … 2D の描き込み先(呼ぶ側が画面の細かさの倍率をかけておく)/ kind … RHYTHM_NOTE_SWATCH_KINDS の id / w,h … 描く大きさ(CSS px)。
 // 描けたら true。ヘルプの表・助手のおしゃべり・ノーツ図鑑はこれを使う(絵を手で描いたり写真を貼ったりしない)
 const rhythmDrawNoteSwatch=(c,kind,w,h)=>RHYTHM_CANVAS_RENDERER.drawSwatch(c,kind,w,h);

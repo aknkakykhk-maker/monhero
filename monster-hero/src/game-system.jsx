@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: afa1e2a069ae56d1
+// generated-sha256: 1db40d3bd6a27c39
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -21504,7 +21504,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
   </div>;
   // onPick … 選んだ直後に呼ぶ(タップ音の種類は、選んだその場で鳴らして聞き比べられるようにする)
   // 6つ(タップ音のセット)は3つずつ2段。5つ並べると1つだけ次の段へこぼれる
-  const segments=(key,items,onPick=null)=><div className={`grid ${items.length===6?'grid-cols-3 [&>button:nth-child(3n)]:border-r-0 [&>button:nth-child(-n+3)]:border-b [&>button:nth-child(-n+3)]:border-b-white/10':items.length>=5?'grid-cols-5':items.length>=4?'grid-cols-4':items.length===2?'grid-cols-2':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} data-rhythm-option-choice={`${key}:${id}`} aria-pressed={draft[key]===id} onClick={()=>{set(key,id);if(onPick)onPick(id);}} className={`break-keep border-r border-white/10 ${items.length>=5?'px-0 tracking-tight':'px-1'} text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
+  const segments=(key,items,onPick=null)=><div className={`grid ${items.length===4&&items.some(([,text])=>String(text).length>=4)?'grid-cols-2 [&>button:nth-child(2n)]:border-r-0 [&>button:nth-child(-n+2)]:border-b [&>button:nth-child(-n+2)]:border-b-white/10':items.length===6?'grid-cols-3 [&>button:nth-child(3n)]:border-r-0 [&>button:nth-child(-n+3)]:border-b [&>button:nth-child(-n+3)]:border-b-white/10':items.length>=5?'grid-cols-5':items.length>=4?'grid-cols-4':items.length===2?'grid-cols-2':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} data-rhythm-option-choice={`${key}:${id}`} aria-pressed={draft[key]===id} onClick={()=>{set(key,id);if(onPick)onPick(id);}} className={`break-keep border-r border-white/10 ${items.length>=5?'px-0 tracking-tight':'px-1'} text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
   // HELL の設定の選び方(segments と同じ見た目で、下書き hellDraft を書き換える)
   const hellSegments=(name,items)=><div className={`grid ${items.length===2?'grid-cols-2':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} data-rhythm-option-choice={`hell-${name}:${id}`} aria-pressed={hellDraft[name]===id} onClick={()=>{setHellDraft(cur=>({...cur,[name]:id}));setMessage('');}} className={`border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${hellDraft[name]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
   // 1項目=1枠。頭に帯のラベルを置く(参考にした画面と同じ形)。
@@ -21859,7 +21859,13 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 {!wide&&<button type="button" data-rhythm-fx-group-head="note" aria-expanded={fxGroup==='note'} onClick={()=>setFxGroup(cur=>cur==='note'?null:'note')} className={`flex w-full items-center gap-2 text-left ${head}`}><span aria-hidden="true" className="text-cyan-300/80">{fxGroup==='note'?'▼':'▶'}</span>🎵 ノーツ<span data-rhythm-fx-group-badge className="rounded-full bg-fuchsia-500/25 px-2 py-0.5 text-[10px] font-black text-fuchsia-100">{fxGroupSummary('note')}</span><small className="ml-auto text-[10px] font-bold text-slate-400">{fxGroupCount('note')}項目</small></button>}
 {(wide||fxGroup==='note')&&<div className={wide?`mt-1 ${fxGrid}`:`mt-3 ${fxGrid}`}>
 {/* ノーツの色の組(B5・2026-11-07 社長「4つとも入れる」)。種類ごとの色分けはそのままで、色味だけ替える */}
-{field('ノーツの色',segments('notePalette',RHYTHM_NOTE_PALETTE_CHOICES),
+{field('ノーツの色',<>{segments('notePalette',RHYTHM_NOTE_PALETTE_CHOICES)}
+  {/* 選んでいる色で、ノーツの種類ごとの見本を並べる(2026-11-07 社長「各ノーツごとにどうかわるか」)。描き手はゲームと同じ。選びかえるとその場で描き直す */}
+  <div data-rhythm-note-look-preview={draft.notePalette||'STANDARD'} className="mt-1 grid grid-cols-3 gap-1 rounded-lg bg-slate-950/70 p-1">
+    {[['TAP','TAP'],['HOLD','HOLD'],['SLIDE','SLIDE'],['FLICK','FLICK'],['FLICK_LEFT','横(左)'],['FLICK_RIGHT','横(右)']].map(([kind,label])=><div key={kind} className="flex min-w-0 flex-col items-center">
+      <RhythmNoteSwatch kind={kind} width={46} height={30} look={{palette:draft.notePalette||'STANDARD'}}/>
+      <small className="truncate text-[8px] font-bold leading-tight text-slate-400">{label}</small></div>)}
+  </div></>,
               'ノーツの色の組み合わせです。既定は「標準」（これまでの色）です。判定・スコアは変わりません。\n「パステル」＝やわらかい色。「ネオン」＝くっきり光る色。「見分けやすい」＝色の見え方に左右されにくい組み合わせで、ノーツのまわりの光を出しません。\nTAP・HOLD・SLIDE・FLICK などの種類ごとに色が分かれているのは、どれを選んでも同じです。次に演奏を始めたときから変わります。')}
 {field('ノーツの動き',toggle('noteMotionFx'),
               'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。')}
@@ -35468,7 +35474,8 @@ const CompactCount = ({ value, className = '', style }) => {
 };
 // ノーツの見本の絵(2026-10-21 社長「見た目とかちゃんとわかるようにしてほしい」)。ヘルプの表と助手のおしゃべりで使う。
 // 絵は演奏画面と同じ描き方(data/rhythm-mode.js の rhythmDrawNoteSwatch)で描く。手描きの絵や写真は使わない。kind は RHYTHM_NOTE_SWATCH_KINDS の id
-const RhythmNoteSwatch = ({ kind, width = 54, height = 42, className = '' }) => {
+// look を渡すと、その見た目(ノーツの色の組など)で描く(オプションの見本・2026-11-07)。渡さなければいまの見た目
+const RhythmNoteSwatch = ({ kind, width = 54, height = 42, className = '', look = null }) => {
   const ref = React.useRef(null);
   React.useEffect(() => {
     const c = ref.current;
@@ -35478,8 +35485,9 @@ const RhythmNoteSwatch = ({ kind, width = 54, height = 42, className = '' }) => 
     const g = c.getContext('2d');
     if (!g) return;
     g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, width, height);
-    rhythmDrawNoteSwatch(g, kind, width, height);
-  }, [kind, width, height]);
+    if (look && typeof rhythmDrawNoteSwatchWith === 'function') rhythmDrawNoteSwatchWith(look, g, kind, width, height);
+    else rhythmDrawNoteSwatch(g, kind, width, height);
+  }, [kind, width, height, look ? JSON.stringify(look) : '']);
   const label = ((typeof RHYTHM_NOTE_SWATCH_KINDS !== 'undefined' ? RHYTHM_NOTE_SWATCH_KINDS : []).find(k => k.id === kind) || {}).label || kind;
   return <canvas ref={ref} data-rhythm-note-swatch={kind} role="img" aria-label={`${label}の見た目`} className={className} style={{ display: 'block', width, height }} />;
 };
