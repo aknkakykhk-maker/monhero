@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c59eaaaa78b68613
+// generated-sha256: 867300ccebe0474e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -58486,7 +58486,7 @@ const normalizeAssistantPeerGen = (raw) => {
   const ids = typeof ASSISTANT_PEER_CALLS !== 'undefined' ? Object.keys(ASSISTANT_PEER_CALLS) : [];
   const talks = (Array.isArray(raw.talks) ? raw.talks : []).filter(t => t && typeof t.id === 'string' && Array.isArray(t.pair) && t.pair.length === 2
     && t.pair.every(id => ids.includes(id)) && t.pair[0] !== t.pair[1] && Array.isArray(t.lines) && t.lines.length >= 2 && t.lines.length <= 4
-    && t.lines.every(l => l && t.pair.includes(l.who) && ASSISTANT_PEER_GEN_EXPRESSIONS.includes(l.e) && typeof l.t === 'string' && l.t.length > 0 && l.t.length <= 80 && !/[{}]/.test(l.t.replace(/\{c\}/g, ''))))
+    && t.lines.every(l => l && t.pair.includes(l.who) && ASSISTANT_PEER_GEN_EXPRESSIONS.includes(l.e) && typeof l.t === 'string' && l.t.length > 0 && l.t.length <= 80 && !/[{}]/.test(l.t.replace(/\{c\}|\{name\}/g, ''))))
     .slice(0, 16).map(t => ({ id: t.id, pair: [...t.pair].sort(), lv: 1, scene: 'any', gen: true, lines: t.lines.map(l => ({ who: l.who, e: l.e, t: l.t })) }));
   return { day: raw.day, asked: Number.isFinite(raw.asked) ? Math.max(0, Math.floor(raw.asked)) : 0, talks };
 };
@@ -58595,6 +58595,10 @@ const assistantPeerGainSwitch = (prev, next) => { if (prev && next && prev !== n
 // 60-app.jsx が addAssistantBondFor(助手id, 行動) を渡しておく。行動は data/assistants.js の ASSISTANT_BOND_ACTIONS の peer*
 let assistantPeerPlayerBondAdder = null;
 const assistantPeerSetPlayerBondAdder = (fn) => { assistantPeerPlayerBondAdder = typeof fn === 'function' ? fn : null; };
+// 台本の {name} を、話している助手がプレイヤーを呼ぶ呼び方にする(60-app.jsx が assistantCallName を渡す)。渡される前は「あなた」
+let assistantPeerPlayerCaller = null;
+const assistantPeerSetPlayerCaller = (fn) => { assistantPeerPlayerCaller = typeof fn === 'function' ? fn : null; };
+const assistantPeerPlayerCall = (who) => { try { const c = assistantPeerPlayerCaller ? assistantPeerPlayerCaller(who) : ''; return c || 'あなた'; } catch { return 'あなた'; } };
 const assistantPeerAddPlayerBond = (ids, action) => {
   if (!assistantPeerEnabled() || !assistantPeerPlayerBondAdder) return;
   for (const id of [...new Set(ids || [])]) { try { assistantPeerPlayerBondAdder(id, action); } catch {} }
@@ -58898,7 +58902,10 @@ const assistantPeerLineText = (line, talk) => {
   const members = talk && talk.anyTrio && Array.isArray(talk.pair) ? talk.pair : assistantPeerMembers(talk);
   const partner = members.find(id => id !== line.who) || members[0];
   const callOf = (to) => (typeof assistantPeerCall === 'function' ? assistantPeerCall(line.who, to) : to);
-  const text = String(line.t || '').replace(/\{c:([a-z]+)\}/g, (m, id) => callOf(id)).replace(/\{c\}/g, callOf(partner));
+  // 前に端末へ保存した AI 版の掛け合い(gen)は「ブリーダー」と書いてあるので、表示のときに呼び名へ直す
+  const raw0 = String(line.t || '');
+  const raw = talk && talk.gen ? raw0.replace(/ブリーダー(さん)?(?!Lv|P|ランク|ポイント|レベル|経験|の教え|アイコン)/g, '{name}') : raw0;
+  const text = raw.replace(/\{c:([a-z]+)\}/g, (m, id) => callOf(id)).replace(/\{c\}/g, callOf(partner)).replace(/\{name\}/g, () => assistantPeerPlayerCall(line.who));
   // 助手たちの今の台本の穴 {place}・{doing}・{doing_te}(いまの様子の場所・していること。56-assistant-life.jsx)
   return text.includes('{') && typeof assistantLifeFillHoles === 'function' ? assistantLifeFillHoles(text, talk) : text;
 };
@@ -88843,6 +88850,11 @@ function MonsterHeroGame() {
   }, [grantProfileFrames, deliverAssistantBondRewards]);
   // 助手どうしの掛け合い・今日のペアで、出てきた助手それぞれの仲良し度を増やす(2026-11-07・56-assistant-peer.jsx)
   useEffect(() => { if (typeof assistantPeerSetPlayerBondAdder === 'function') assistantPeerSetPlayerBondAdder(addAssistantBondFor); }, [addAssistantBondFor]);
+  // 助手どうし・助手ライフの台本の {name} を、話している助手がいまプレイヤーを呼ぶ呼び方にする(仲良し度の段・性別・選んだ呼び方。2026-11-07 社長「ブリーダーとか呼び方がおかしい」)
+  useEffect(() => {
+    if (typeof assistantPeerSetPlayerCaller !== 'function') return;
+    assistantPeerSetPlayerCaller((id) => assistantCallName(breederName, assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points), assistantCallStyles[id] || null, id));
+  }, [breederName, assistantCallStyles, assistantBonds]);
   // 行動に応じて助手との仲良し度を増やす。
   // 増えるのは「いま選んでいる助手」のぶんだけ。もう片方の助手の値には触れない
   const addAssistantBond = useCallback((actionKey) => {

@@ -9,7 +9,7 @@
 #   quarrel <人> <人> seed=snack/order/look/plan/late/noise/peek/score  言い合い || 距離をおく || 仲直り(「||」で3つに分ける)
 #   breeder <人>              ブリーダーが見に来たときのひとこと
 # 鍵: place=home/plaza/cafe/studio/ranch/cardroom/library/market/hill/garden・mood=happy/lonely/restless/sulky/sleepy/eager・why=lonely/mypace/distance
-# 穴: {c}(相手の呼び方。2人のとき)・{c:id}(3人のとき)・{place}・{doing}・{doing_te}(穴は1本に1つまで)
+# 穴: {name}(プレイヤー。「ブリーダー」と直に書かない)・{c}(相手の呼び方。2人のとき)・{c:id}(3人のとき)・{place}・{doing}・{doing_te}(穴は1本に1つまで)
 # 表情: normal happy wink surprise troubled angry crying excited。1行60字まで
 # 守り: 2人きりの place=home・doing=sleep は書かない(仕組みで出ない)/恋愛・悪口・ないしょの話なし/モンスターを「子」と呼ばない
 # 書き方: 「{c}、」で始める行は3割まで。締めを「これからも〜」にしない。同じ台詞を3本以上で使わない
@@ -58,5 +58,5 @@ trio dra erubin momosuke doing=walk | momosuke happy {c:dra}、膝だいじょ�
 quarrel momosuke mua seed=order | momosuke angry {c}、鏡の前ずっと使ってる！！ | mua angry だってまだ前髪決まってないもん！ || momosuke troubled ……ふーん、べつにいいもん || mua happy さっきはごめんね。いっしょに鏡使お！ | momosuke wink …しょうがないなぁ。前髪、ももがやってあげる♡
 
 ## ブリーダーへのひとこと
-breeder dra place=home | dra surprise お、ブリーダーか。……べつに、さみしくなんてなかったぞ。えへへ
-breeder kiki place=library | kiki happy ブリーダーさん、静かにどうぞ。今いいところなんでつ♪♪
+breeder dra place=home | dra surprise お、{name}か。……べつに、さみしくなんてなかったぞ。えへへ
+breeder kiki place=library | kiki happy {name}、静かにどうぞ。今いいところなんでつ♪♪

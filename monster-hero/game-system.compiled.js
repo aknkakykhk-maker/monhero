@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d005fbc30d3cb5d0
+// source-sha256: ad07655c29a811c4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -97579,7 +97579,7 @@ const normalizeAssistantPeerGen = raw => {
   };
   if (!raw || typeof raw !== 'object' || Array.isArray(raw) || typeof raw.day !== 'string') return empty;
   const ids = typeof ASSISTANT_PEER_CALLS !== 'undefined' ? Object.keys(ASSISTANT_PEER_CALLS) : [];
-  const talks = (Array.isArray(raw.talks) ? raw.talks : []).filter(t => t && typeof t.id === 'string' && Array.isArray(t.pair) && t.pair.length === 2 && t.pair.every(id => ids.includes(id)) && t.pair[0] !== t.pair[1] && Array.isArray(t.lines) && t.lines.length >= 2 && t.lines.length <= 4 && t.lines.every(l => l && t.pair.includes(l.who) && ASSISTANT_PEER_GEN_EXPRESSIONS.includes(l.e) && typeof l.t === 'string' && l.t.length > 0 && l.t.length <= 80 && !/[{}]/.test(l.t.replace(/\{c\}/g, '')))).slice(0, 16).map(t => ({
+  const talks = (Array.isArray(raw.talks) ? raw.talks : []).filter(t => t && typeof t.id === 'string' && Array.isArray(t.pair) && t.pair.length === 2 && t.pair.every(id => ids.includes(id)) && t.pair[0] !== t.pair[1] && Array.isArray(t.lines) && t.lines.length >= 2 && t.lines.length <= 4 && t.lines.every(l => l && t.pair.includes(l.who) && ASSISTANT_PEER_GEN_EXPRESSIONS.includes(l.e) && typeof l.t === 'string' && l.t.length > 0 && l.t.length <= 80 && !/[{}]/.test(l.t.replace(/\{c\}|\{name\}/g, '')))).slice(0, 16).map(t => ({
     id: t.id,
     pair: [...t.pair].sort(),
     lv: 1,
@@ -97793,6 +97793,18 @@ const assistantPeerGainSwitch = (prev, next) => {
 let assistantPeerPlayerBondAdder = null;
 const assistantPeerSetPlayerBondAdder = fn => {
   assistantPeerPlayerBondAdder = typeof fn === 'function' ? fn : null;
+};
+let assistantPeerPlayerCaller = null;
+const assistantPeerSetPlayerCaller = fn => {
+  assistantPeerPlayerCaller = typeof fn === 'function' ? fn : null;
+};
+const assistantPeerPlayerCall = who => {
+  try {
+    const c = assistantPeerPlayerCaller ? assistantPeerPlayerCaller(who) : '';
+    return c || 'あなた';
+  } catch {
+    return 'あなた';
+  }
 };
 const assistantPeerAddPlayerBond = (ids, action) => {
   if (!assistantPeerEnabled() || !assistantPeerPlayerBondAdder) return;
@@ -98254,7 +98266,9 @@ const assistantPeerLineText = (line, talk) => {
   const members = talk && talk.anyTrio && Array.isArray(talk.pair) ? talk.pair : assistantPeerMembers(talk);
   const partner = members.find(id => id !== line.who) || members[0];
   const callOf = to => typeof assistantPeerCall === 'function' ? assistantPeerCall(line.who, to) : to;
-  const text = String(line.t || '').replace(/\{c:([a-z]+)\}/g, (m, id) => callOf(id)).replace(/\{c\}/g, callOf(partner));
+  const raw0 = String(line.t || '');
+  const raw = talk && talk.gen ? raw0.replace(/ブリーダー(さん)?(?!Lv|P|ランク|ポイント|レベル|経験|の教え|アイコン)/g, '{name}') : raw0;
+  const text = raw.replace(/\{c:([a-z]+)\}/g, (m, id) => callOf(id)).replace(/\{c\}/g, callOf(partner)).replace(/\{name\}/g, () => assistantPeerPlayerCall(line.who));
   return text.includes('{') && typeof assistantLifeFillHoles === 'function' ? assistantLifeFillHoles(text, talk) : text;
 };
 function AssistantPeerTalk({
@@ -146289,6 +146303,10 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (typeof assistantPeerSetPlayerBondAdder === 'function') assistantPeerSetPlayerBondAdder(addAssistantBondFor);
   }, [addAssistantBondFor]);
+  useEffect(() => {
+    if (typeof assistantPeerSetPlayerCaller !== 'function') return;
+    assistantPeerSetPlayerCaller(id => assistantCallName(breederName, assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points), assistantCallStyles[id] || null, id));
+  }, [breederName, assistantCallStyles, assistantBonds]);
   const addAssistantBond = useCallback(actionKey => {
     const id = selectedAssistantIdRef.current;
     addAssistantBondFor(id, actionKey);

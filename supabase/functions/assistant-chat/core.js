@@ -563,7 +563,7 @@ export const PEER_RULES_TEXT = [
   '決まり:',
   '- 1つの掛け合いは、決められた2人だけが話す2〜4行。1行は1文か2文、60字まで。改行しない。2人が交互に話す。',
   '- それぞれの助手の人柄・一人称・話し方・くせを必ず守る(下の「助手たち」)。ほかの助手と同じような、ふつうの文にしない。',
-  '- 相手の助手を呼ぶときは、名前を書かずに {c} と書く(ゲームがその助手の呼び方に置き換える)。{c} 以外の { } は使わない。プレイヤーには触れなくてよい。触れるときは「ブリーダー」と書き、名前は書かない。',
+  '- 相手の助手を呼ぶときは、名前を書かずに {c} と書く(ゲームがその助手の呼び方に置き換える)。プレイヤーには触れなくてよい。触れるときは、名前も「ブリーダー」も書かずに {name} と書く(ゲームが、話している助手がプレイヤーを呼ぶ呼び方に置き換える)。{c} と {name} 以外の { } は使わない。',
   '- 材料は、渡された「遊んだ記録」と「助手たちが覚えていること」だけ。記録に書いていない数字・自己ベスト・勝ち負け・できごとを作らない。数字を言うときは記録の数字をそのまま使う。材料に触れない、いつもの調子の掛け合いも半分くらい混ぜてよい。',
   '- 仲良し度が高いペアほど、くだけた・息の合ったやりとりにする。仲良し度Lv4以上のペアは、<peer-memos> にある相手やブリーダーの話題を多めに出す(書いてあることだけ)。呼び方は変えない。',
   '- 恋愛にしない(好き・デートなど恋人のような話にしない)。悪口・うわさ話・相手を下げるからかいにしない。ないしょの話は書かない。暴力・性的な話・お酒やたばこ・お金をかける遊びに触れない(ドラの冗談も、ほのめかしまで)。',
@@ -587,7 +587,7 @@ const PEER_SCHEMA = (ids) => ({
               properties: {
                 who: { type: 'string', enum: ids },
                 e: { type: 'string', enum: EXPRESSIONS },
-                t: { type: 'string', description: `セリフ(${PEER_LINE_MAX}字まで。相手は {c})` },
+                t: { type: 'string', description: `セリフ(${PEER_LINE_MAX}字まで。相手は {c}・プレイヤーは {name})` },
               },
               required: ['who', 'e', 't'],
               additionalProperties: false,
@@ -650,8 +650,10 @@ export const validatePeerTalks = (talks, pairs, stats) => {
       let t = l.t.trim();
       if (callOf) t = t.split(callOf).join('{c}');
       t = t.replace(/(\{c\})+/g, '{c}');
+      // プレイヤーを「ブリーダー(さん)」と書いてきたら {name} に直す(役目の名前「ブリーダーLv」などはそのまま)
+      t = t.replace(/ブリーダー(さん)?(?!Lv|P|ランク|ポイント|レベル|経験|の教え|アイコン)/g, '{name}');
       if (t.length < 2 || t.length > PEER_LINE_MAX || /[\r\n]/.test(t)) { ok = false; break; }
-      if (/[{}]/.test(t.replace(/\{c\}/g, ''))) { ok = false; break; }
+      if (/[{}]/.test(t.replace(/\{c\}|\{name\}/g, ''))) { ok = false; break; }
       if (DAILY_BANNED.test(t) || PEER_BANNED_WORDS.test(t) || looksPersonal(t)) { ok = false; break; }
       if (/子たち/.test(t)) { ok = false; break; }
       if (numbersIn(t).some(n => !allowed.has(n))) { ok = false; break; }
