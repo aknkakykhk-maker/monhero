@@ -414,7 +414,13 @@ function ProfileScreen({
                   <div className="mt-1 text-[10px] text-slate-400">仲良し度は助手ごとに別々に貯まります。切り替えても消えません。</div>
                   {/* 助手どうしの関係図(2026-11-07)。公開の印 assistantPeer の後ろ。特別なお話の見返しは 60-app が流す */}
                   {typeof AssistantPeerMap==='function'&&assistantPeerEnabled()&&(
-                    <div className="mt-3"><AssistantPeerMap metIds={assistantChoices.map(w=>w.id)} onReplay={onReplayPeerTalk} peerItems={peerItems} onUseItem={onUsePeerItem}/></div>
+                    <div className="mt-3">
+                      {/* 助手たちの今(公開の印 assistantLife)の入口 */}
+                      {typeof assistantLifeEnabled==='function'&&assistantLifeEnabled()&&(
+                        <button type="button" data-assistant-life-open-profile onClick={assistantLifeOpenScreen}
+                          className="mb-2 min-h-[44px] w-full rounded-xl border border-pink-300/50 bg-pink-400/10 px-3 text-left text-[12px] font-black text-pink-100 active:scale-[.98]">👥 助手たちの今を見る ▸</button>)}
+                      <AssistantPeerMap metIds={assistantChoices.map(w=>w.id)} onReplay={onReplayPeerTalk} peerItems={peerItems} onUseItem={onUsePeerItem}/>
+                    </div>
                   )}
                 </div>
               )}
