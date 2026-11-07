@@ -180,5 +180,5 @@
 - 社長の答え(がっつり案の4問): 顔の丸/HOME の施設の顔は全部出す/最初の公開は段階1だけ/専用ページはもっと作り込む
 - そのあと社長「専用ページは助手たちの家みたいな感じ」→ 町の地図が真ん中の案(#4779)は置きかえた。町の地図は「📋 みんなの居場所」の先へ
 - 案 `LIFE-HOUSE-PLAN.md`・止め絵 `ux/life-house-mock-tate.jpg`(縦)・`ux/life-house-mock-yoko.jpg`(横)・`ux/life-house-mock-ab.png`(A/B 5つ)。窓口へ送った
-- セッションとのつなぎ: マモリ(2)(session_0113GBaBXVrsDeVzvjC9ndFy)に要るものを返した(OnLive の知らせ・Invite の入口はプライベート・券なしは段階2で assistantLifeBeatFree/Use・段の名前は assistantPeerStageName・暮らしの経験値は入れない)
-- 待っていること: 社長の A/B(❶ 家の絵 ❷ 下の作り ❸ 入場 ❹ 曲 ❺ 券なしの線引き)と「これで作る」→ 段階1を作る
+- セッションとのつなぎ: マモリ(2)(session_0113GBaBXVrsDeVzvjC9ndFy)に要るものを返した(OnLive の知らせ・Invite の入口はプライベート・券なしは段階2。こちらは assistantLifeAtBeat・assistantLifeBeatIds を出し、マモリ側が呼んだ時点で paid:visit を付ける。線引きはマモリ案に合わせ A=出かけているあいだ何回でも/B=1日1回/C=その日ずっと・段の名前は assistantPeerStageName・暮らしの経験値は入れない)
+- 待っていること: 社長の A/B(❶ 家の絵 ❷ 下の作り ❸ 入場 ❹ 曲 ❺ 券なしの線引き A/B/C)と「これで作る」→ 段階1を作る
