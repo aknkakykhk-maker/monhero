@@ -1,0 +1,176 @@
+# 助手とのセッション デュオの掛け合いの下書き(28ペア) — マモリ 2026-11-07
+# 見直し: ナカヨシ(4)(ペアの関係・距離感)とコトバ(口調)。直した行はそのまま書き換えて返してください
+# 書き方は ASSISTANT_PEER_TALKS に合わせる: `話す人 台詞` を ` | ` でつなぐ。相手の呼び方は {c}(さん・ちゃんは付けない)
+# 場面:
+#   play   … デュオの演奏中(仲良し度 Lv3 から。1曲に最大3回。ここでは1ペア2つの掛け合い)
+#   result … デュオの結果の2人のひとこと(仲良し度 Lv4 から)
+#   gattai … サビの合体の演出(仲良し度 Lv5・特別なお話を見たあと。1曲1回)
+# 守り: 恋愛にしない・悪口なし・からかっても下げない・呼び方は今のまま
+
+## mua kiki
+play | mua {c}、サビ前そろえよ！ | kiki はい、合わせまつ♪
+play | kiki {c}、いい流れでつね♪ | mua でしょ！このままいこ♪
+result | mua 今日のあたしたち、まぢぴったりぢゃん♪ | kiki ふふ、また一緒に演奏しましょうね♪
+gattai | mua {c}、いくよ！ | kiki せーの、でつ♪
+
+## mua momosuke
+play | momosuke {c}、ももについてきてね！！ | mua えー、あたしが先頭なんだけど♪
+play | mua {c}、キラキラしてるぢゃん♪ | momosuke 当然！！ももだもんw
+result | momosuke 2人でセンターだったね♡ | mua それな！最高のステージぢゃん♪
+gattai | mua {c}、ここで決めよ！ | momosuke ダブルセンターいくよ！！
+
+## mua dra
+play | mua {c}、のってる〜？ | dra のってるくさ、えへへ
+play | dra {c}、元気いっぱいだな | mua {c}といると楽しいもん♪
+result | dra 楽しかったな、{c} | mua また一緒に叩こうね♪
+gattai | mua {c}、いっくよ〜！ | dra おでも全力だからな！
+
+## mua atsu
+play | atsu {c}、走りすぎるなよ笑 | mua 走ってないもん！ちょっとだけ♪
+play | mua {c}、ここ合わせて！ | atsu おう、任せとけ！
+result | atsu とりあえず、いいセッションだったな笑 | mua でしょ！また組も♪
+gattai | atsu {c}、ここ決めるぞ笑 | mua りょ！いっくよ〜♪
+
+## mua kyuko
+play | kyuko {c}、サビ前で一回引くよ〜 | mua おっけ！あたし合わせる♪
+play | mua {c}、余裕そうぢゃん！ | kyuko ほい、構成は読めてるよ〜
+result | kyuko いい流れだったね〜、ありがとん笑 | mua こっちこそ！楽しかった♪
+gattai | kyuko {c}、ここだよ〜 | mua まかせて！せーの♪
+
+## mua sorashido
+play | sorashido {c}、ここから密度が上がるぜ・・・！ | mua まぢ！？がんばる♪
+play | mua {c}、計算どおり？ | sorashido 計算以上だぜ笑
+result | sorashido 今日の2人、表にしたら最高値だぜ・・・！ | mua すごっ！また一緒にやろ♪
+gattai | sorashido うぉぉぉ！{c}、いくぜ・・・！ | mua いっくよ〜♪
+
+## mua erubin
+play | erubin {c}、楽しそうだね | mua {c}も一緒に楽しも♪
+play | mua {c}、ついてこれてる？ | erubin うん、ちょうどいいよ
+result | erubin 楽しかったね、おつかれさま | mua おつかれ〜！またやろ♪
+gattai | mua {c}、いくよ！ | erubin うん、一緒にね
+
+## kiki momosuke
+play | momosuke {c}、ももの踊り見てて！！ | kiki はい、とってもかわいいでつ♪
+play | kiki {c}、ここは息をそろえましょう | momosuke まかせて！！
+result | kiki とってもいいステージでした♪ | momosuke ももと{c}なら当然だよ♡
+gattai | momosuke {c}、ここだよ！！ | kiki はい、思いきっていきまつ♪
+
+## kiki dra
+play | dra {c}、落ち着いてるな | kiki {c}がいてくれるからでつ♪
+play | kiki {c}、ここから盛り上がりまつ | dra おう、任せとけだな
+result | dra いい演奏だったな、えへへ | kiki ありがとうございまつ♪
+gattai | kiki {c}、いきましょう♪ | dra おう、全力だからな
+
+## kiki atsu
+play | atsu {c}、テンポ安定してるな | kiki ありがとうございます♪
+play | kiki {c}、次のサビ、思いきっていきましょう | atsu いいな、攻めるか笑
+result | atsu 今日はいい締めだったな！ | kiki はい、気持ちよかったでつ♪
+gattai | atsu {c}、ここ決めるぞ！ | kiki はい、全力でいきまつ♪
+
+## kiki kyuko
+play | kyuko {c}、ここから盛り上がるよ〜 | kiki ありがとうございまつ、気をつけますね
+play | kiki {c}、よく曲を見ていますね | kyuko 曲を読むのは得意なんだよね〜
+result | kyuko 構成どおりきれいにいけたね〜 | kiki {c}のおかげでつ♪
+gattai | kyuko {c}、せーので〜 | kiki はい、せーの♪
+
+## kiki sorashido
+play | sorashido {c}、ここの判定、ぴったりだぜ・・・！ | kiki ほんとですか？うれしいでつ♪
+play | kiki {c}、次はどう来ますか？ | sorashido 計算済みだぜ、右から来るぜ笑
+result | sorashido 2人の数字、きれいにそろったぜ・・・！ | kiki 計算どおりでしたか？♪
+gattai | sorashido うぉぉぉ！{c}、ここだぜ・・・！ | kiki はい、いきまつ♪
+
+## kiki erubin
+play | erubin {c}、無理してないかな？ | kiki 大丈夫でつ、楽しいです♪
+play | kiki {c}、ここは静かにきれいにいきましょう | erubin うん、そうしよう
+result | erubin 落ち着いたいい演奏だったね | kiki はい、ほっとしました♪
+gattai | kiki {c}、いきましょう♪ | erubin うん、一緒にね
+
+## momosuke dra
+play | momosuke {c}、ももの後ろでがんばって！！ | dra おう、ついていくからな
+play | dra {c}、元気だな、えへへ | momosuke アイドルは体力勝負なの！！
+result | momosuke {c}、ちゃんとついてこれたじゃん♡ | dra えへへ、楽しかったんだな
+gattai | momosuke {c}、ここ合わせて！！ | dra おう、いくくさ！
+
+## momosuke atsu
+play | atsu {c}、そこ走りすぎな笑 | momosuke ももは走ってないもん！！
+play | momosuke {c}、ちゃんと見ててよね！！ | atsu 見てるって笑
+result | atsu とりあえず、いいステージだったな笑 | momosuke でしょ！！もものおかげ♡
+gattai | momosuke {c}、ここだよ！！ | atsu よし、決めるぞ！
+
+## momosuke kyuko
+play | kyuko {c}、ここサビ前だよ〜 | momosuke 知ってる！！ももが一番かわいくなるとこ♡
+play | momosuke {c}、もものダンスどう？ | kyuko ほい、リズムぴったりだよ〜
+result | kyuko 2人でいい流れだったね〜 | momosuke {c}、ももについてこれてえらい♡
+gattai | momosuke {c}、いくよ！！ | kyuko おけ〜、せーの！
+
+## momosuke sorashido
+play | sorashido {c}、ここの盛り上がり、計算済みだぜ・・・！ | momosuke ももが盛り上げるから計算いらないよw
+play | momosuke {c}、ちゃんとついてきてる？ | sorashido 誤差ゼロでついてるぜ笑
+result | sorashido 今日のステージ、表にしたら満点だぜ・・・！ | momosuke 当然でしょ！！♡
+gattai | sorashido うぉぉぉ！{c}、いくぜ・・・！ | momosuke ももの見せ場だよ！！
+
+## momosuke erubin
+play | erubin {c}、元気だね | momosuke {c}ももっと盛り上がって！！
+play | momosuke {c}、ペース大丈夫？ | erubin うん、ちょうどいいよ
+result | erubin にぎやかで楽しかったよ | momosuke {c}もいい感じだったよ♡
+gattai | momosuke {c}、ここだよ！！ | erubin うん、いこうか
+
+## dra atsu
+play | atsu {c}、気合い入ってるな笑 | dra おう、負けないからな
+play | dra {c}、ここ決めるんだな | atsu おう、任せとけ！
+result | atsu いい勝負だったな笑 | dra えへへ、楽しかったな
+gattai | atsu {c}、いくぞ！ | dra おう、全力だからな！
+
+## dra kyuko
+play | kyuko {c}、ここからが山場だよ〜 | dra わかったな、気合い入れるくさ
+play | dra {c}、よく先が読めるな | kyuko 構成を見てるからね〜
+result | kyuko いい流れだったね〜、ありがとん笑 | dra こっちこそだな、えへへ
+gattai | kyuko {c}、いくよ〜 | dra おう、いくからな
+
+## dra sorashido
+play | sorashido {c}、ここの密度、すごいぜ・・・！ | dra おでも負けないからな
+play | dra {c}、楽しそうだな | sorashido 楽しいぜ笑
+result | sorashido 2人の数字、いい感じだぜ・・・！ | dra えへへ、うれしいな
+gattai | sorashido うぉぉぉ！{c}、いくぜ・・・！ | dra おう、ワイもいくくさ！
+
+## dra erubin
+play | erubin {c}、無理しないでね | dra 大丈夫だな、楽しいからな
+play | dra {c}、落ち着いてるな | erubin ゆっくりが好きなんだよね
+result | erubin いい演奏だったね | dra えへへ、またやろうな
+gattai | dra {c}、いくからな | erubin うん、一緒に
+
+## atsu kyuko
+play | atsu {c}、次どう来る？ | kyuko サビ前で一回引くよ〜
+play | kyuko {c}、締め方きれいだね〜 | atsu だろ笑
+result | atsu とりあえず、いい流れだったな笑 | kyuko ありがとん笑
+gattai | atsu {c}、ここ決めるぞ！ | kyuko おけ〜、いくよ〜
+
+## atsu sorashido
+play | sorashido {c}、ここのノーツ、計算済みだぜ・・・！ | atsu さすがだな笑
+play | atsu {c}、テンション高いな笑 | sorashido うぉぉぉ！いつもだぜ・・・！
+result | sorashido 2人で最高値だぜ・・・！ | atsu いい数字だったな笑
+gattai | atsu {c}、いくぞ！ | sorashido うぉぉぉ！ここだぜ・・・！
+
+## atsu erubin
+play | erubin {c}、いい感じだね | atsu だろ笑
+play | atsu {c}、ペース合ってるか？ | erubin うん、ちょうどいいよ
+result | atsu いいセッションだったな！ | erubin うん、おつかれさま
+gattai | atsu {c}、ここ決めるぞ！ | erubin うん、いこうか
+
+## kyuko sorashido
+play | sorashido {c}、ここの構成、計算どおりだぜ・・・！ | kyuko 読みどおりだね〜
+play | kyuko {c}、ここから音が増えるよ〜 | sorashido 計算済みだぜ笑
+result | kyuko 構成も計算もぴったりだったね〜 | sorashido うぉぉぉ！最高のデータだぜ・・・！
+gattai | kyuko {c}、いくよ〜 | sorashido うぉぉぉ！いくぜ・・・！
+
+## kyuko erubin
+play | erubin {c}、よく曲を見てるね | kyuko 構成を見るのが好きなんだよね〜
+play | kyuko {c}、ここは落ち着いていこ〜 | erubin うん、そうしよう
+result | erubin 気持ちのいい演奏だったね | kyuko ありがとん笑
+gattai | kyuko {c}、せーので〜 | erubin うん、せーの
+
+## sorashido erubin
+play | sorashido {c}、ここの盛り上がり、計算済みだぜ・・・！ | erubin 頼もしいね
+play | erubin {c}、楽しそうだね | sorashido 楽しいぜ笑
+result | sorashido 2人のデータ、最高だぜ・・・！ | erubin うん、おつかれさま
+gattai | sorashido うぉぉぉ！{c}、いくぜ・・・！ | erubin うん、一緒にね
