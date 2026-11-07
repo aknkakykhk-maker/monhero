@@ -35,10 +35,17 @@ const seed = (clears) => {
   localStorage.setItem('mh_inherited_unique_level_compensation_v1', JSON.stringify(true));
   localStorage.setItem('mh_inherited_unique_level_compensation_pending_v1', JSON.stringify(false));
   Object.entries(clears).forEach(([k, v]) => localStorage.setItem(`mh_clears_${k}`, JSON.stringify(v)));
+  // クイック・AUTO設定・裏周回の案内と誘導(2026-11-07・56-quick-guide.jsx)。クリアの記録があるとバトルの入口で重なるので、見たことにする
+  localStorage.setItem('mh_quick_guide_seen_v1', JSON.stringify({ v: 1, seen: ['g1a', 'g1b', 'g2', 'g3a', 'g3b', 'g3c', 'auto'] }));
+  localStorage.setItem('mh_quick_nudge_v1', JSON.stringify({ v: 1, n: 3, day: '' }));
 };
 
 async function openBattle(page, clears) {
   await page.addInitScript(seed, clears);
+  // 起動直後のお話・お知らせ・助手の告知を見たことにする(告知が何枚も続くと、下のくり返しの回数ではバトルの入口へ届かなかった・2026-11-07)
+  const { quietBootSeed, updateNoticeSeed } = require('../boot/quiet-boot-seed');
+  await page.addInitScript(quietBootSeed());
+  await page.addInitScript(updateNoticeSeed());
   await page.goto(PAGE_URL, { waitUntil: 'load', timeout: 60000 });
   await page.waitForFunction(() => document.getElementById('root')?.children.length > 0, { timeout: 60000 });
   const pointerDown = (sel) => page.evaluate((s) => {
@@ -65,7 +72,7 @@ async function openBattle(page, clears) {
   }
   // お詫び配布などの重なりは「バトル」を押したあとに出ることもあるので、
   // BATTLE MODE が出るまで「重なりを閉じる → バトルを押す」を繰り返す
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 10; i++) {
     await page.evaluate(() => {
       const overlay = [...document.querySelectorAll('button')]
         .find(x => /受け取|閉じる|あとで|スキップ/.test(x.textContent));
