@@ -536,6 +536,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       <div className="flex items-start gap-2">
         <button type="button" data-assistant-life-close onClick={close} aria-label="閉じる" className="h-9 w-8 shrink-0 text-[19px] text-slate-100">←</button>
         <div className="min-w-0 flex-1"><p className="mhl-en whitespace-nowrap" style={land ? { letterSpacing: '.06em', fontSize: 8 } : undefined}>ASSISTANT LIFE · {tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : 'HOUSE'}</p><p className="mhl-ti whitespace-nowrap" style={land ? { fontSize: 18 } : undefined}>助手ライフ</p></div>
+        {/* いまの時刻の札(ハナビの共通部品 44-time-of-day.jsx。設定の「いまの時刻を出す」が切なら出ない) */}
+        {!land && typeof TimeOfDayClock === 'function' && <div className="shrink-0 self-center"><TimeOfDayClock/></div>}
         <div className="mhl-clock shrink-0" data-assistant-life-clock><p className="whitespace-nowrap text-[11px] font-black">{{ morning: '🌅 朝', noon: '☀ 昼', evening: '🌇 夕方', night: '🌙 夜' }[look]}</p><p data-assistant-life-next-slot className="whitespace-nowrap text-[9.5px] font-bold text-slate-300">{assistantLifeNextSlotText().replace(/で.+?\(みんなが動きます\)/, 'でみんなが動く')}</p></div>
       </div>
       <div className="mt-1.5 flex items-center gap-1.5" data-assistant-life-tier={tier.id} title={ASSISTANT_LIFE_TIER_NOTES[tier.id]}>
