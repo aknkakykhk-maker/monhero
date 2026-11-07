@@ -79,7 +79,7 @@ const pairKey = (a, b) => [a, b].sort().join('-');
 
 // ② 口調
 {
-  const lines = (who) => TALKS.flatMap(t => t.lines.filter(l => l.who === who).map(l => ({ id: t.id, t: l.t })));
+  const lines = (who) => TALKS.flatMap(t => [...t.lines, ...(t.choice || []).flatMap(o => o.reply)].filter(l => l.who === who).map(l => ({ id: t.id, t: l.t })));
   const ng = (who, re) => lines(who).filter(x => re.test(x.t)).map(x => `${x.id}「${x.t}」`);
   check('② みゅあは「じゃん」「まじ」を使わない(「ぢゃん」「まぢ」・2026-10-25 社長)', ng('mua', /じゃん|まじ/).length === 0, ng('mua', /じゃん|まじ/).join(' / '));
   const atsuBad = lines('atsu').filter(x => !/(笑|[！？!?…。]|[)）ノ])$/.test(x.t.trim()));
@@ -90,12 +90,12 @@ const pairKey = (a, b) => [a, b].sort().join('-');
   check('② ドラは「俺」「僕」「私」を使わない', ng('dra', /俺|僕|私/).length === 0, ng('dra', /俺|僕|私/).join(' / '));
   check('② みゅあは「あたし」(「私」「俺」を使わない)', ng('mua', /私|俺/).length === 0, ng('mua', /私|俺/).join(' / '));
   check('② ききはタメ口の語尾(「だよ」「だね」「してよ」)を使わない', ng('kiki', /だよ|だね|してよ/).length === 0, ng('kiki', /だよ|だね|してよ/).join(' / '));
-  check('② あつは自分で「リーダー」と言わない・だれも「S」と言わない', ng('atsu', /リーダー/).length === 0 && IDS.every(id => ng(id, /ドS|[^A-Za-z]S[^A-Za-z]/).length === 0));
+  check('② あつは自分で「リーダー」と言わない・だれも「S」と言わない', ng('atsu', /(^|[^ブ])リーダー/).length === 0 && IDS.every(id => ng(id, /ドS|[^A-Za-z]S[^A-Za-z]/).length === 0));
 }
 
 // ③ 守り
 {
-  const all = TALKS.flatMap(t => t.lines.map(l => ({ id: t.id, t: l.t })));
+  const all = TALKS.flatMap(t => [...t.lines, ...(t.choice || []).flatMap(o => o.reply), ...(t.choice || []).map(o => ({ t: o.label }))].map(l => ({ id: t.id, t: l.t })));
   const ko = all.filter(x => /(この|あの|その|うちの|いい|強い)子|子たち/.test(x.t));
   check('③ モンスターを「子」と呼ばない(2026-11-06 社長)', ko.length === 0, ko.map(x => x.id).join(','));
   const love = all.filter(x => /恋|デート|付き合|キス|彼氏|彼女|結婚|ラブ/.test(x.t));
@@ -118,7 +118,7 @@ const pairKey = (a, b) => [a, b].sort().join('-');
 // ⑤ 仲良し度
 (async () => {
   const gain = G('assistantPeerGainState');
-  const empty = () => ({ loaded: true, bond: {}, bondDay: { day: null, got: {} }, log: [], talkDay: { day: null, home: 0, other: 0 }, special: [], lastShownAt: 0 });
+  const empty = () => ({ loaded: true, bond: {}, bondDay: { day: null, got: {} }, log: [], talkDay: { day: null, home: 0, other: 0 }, special: [], gen: { day: null, asked: 0, talks: [] }, daily: { day: null, pair: null, seen: 0, done: false, lastDay: null, streak: 0 }, choice: {}, album: {}, lastShownAt: 0 });
   let st = empty();
   let r = gain(st, 'mua', 'kiki', 'story', '2026-11-07'); st = r.st;
   check('⑤ お話に2人が出ると +6(ペアは名前順のキー "kiki-mua")', r.gained === 6 && st.bond['kiki-mua'] === 6);
@@ -126,15 +126,19 @@ const pairKey = (a, b) => [a, b].sort().join('-');
   check('⑤ お話はペアごとに1日6まで', r.gained === 0);
   for (let i = 0; i < 5; i++) { r = gain(st, 'mua', 'kiki', 'talk', '2026-11-07'); st = r.st; }
   r = gain(st, 'mua', 'kiki', 'switch', '2026-11-07'); st = r.st;
-  check('⑤ ペアごとの1日の合計は12で止まる(お話6+掛け合い6で切り替えは0)', st.bond['kiki-mua'] === 12 && r.gained === 0, String(st.bond['kiki-mua']));
+  r = gain(st, 'mua', 'kiki', 'choice', '2026-11-07'); st = r.st; r = gain(st, 'mua', 'kiki', 'choice', '2026-11-07'); st = r.st;
+  r = gain(st, 'mua', 'kiki', 'choice', '2026-11-07');
+  check('⑤ ペアごとの1日の合計は20で止まる(お話6+掛け合い6+切り替え3+返事5で止まる)', st.bond['kiki-mua'] === 20 && r.gained === 0, String(st.bond['kiki-mua']));
+  r = gain(st, 'mua', 'kiki', 'daily', '2026-11-07'); st = r.st;
+  check('⑤ 今日のペアの達成(+10)は1日20の上限の外で数える', r.gained === 10 && st.bond['kiki-mua'] === 30);
   r = gain(st, 'mua', 'dra', 'switch', '2026-11-07');
   check('⑤ ほかのペアは別に数える', r.gained === 3);
   r = gain(st, 'mua', 'kiki', 'switch', '2026-11-08'); st = r.st;
-  check('⑤ 日付が変わると数え直す', r.gained === 3 && st.bond['kiki-mua'] === 15);
+  check('⑤ 日付が変わると数え直す', r.gained === 3 && st.bond['kiki-mua'] === 33);
   check('⑤ 同じ助手どうし・知らない行動は上がらない', gain(st, 'mua', 'mua', 'talk', 'x').gained === 0 && gain(st, 'mua', 'kiki', 'nope', 'x').gained === 0);
   const lv = G('assistantPeerBondLevel');
-  check('⑤ Lv の境目(0/30/90/180/320)', [0, 29, 30, 89, 90, 179, 180, 319, 320, 9999].map(lv).join('') === '1122334455');
-  const r2 = gain({ ...empty(), bond: { 'kiki-mua': 28 } }, 'mua', 'kiki', 'story', 'd');
+  check('⑤ Lv の境目(0/40/120/250/450/700/1000/1400/1900/2500・2026-11-07)', [0, 39, 40, 119, 120, 249, 250, 449, 450, 699, 700, 999, 1000, 1399, 1400, 1899, 1900, 2499, 2500, 99999].map(lv).join(',') === '1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10');
+  const r2 = gain({ ...empty(), bond: { 'kiki-mua': 38 } }, 'mua', 'kiki', 'story', 'd');
   check('⑤ 上がったときは Lv の前と後を返す(Lv2 になった)', r2.levelBefore === 1 && r2.levelAfter === 2);
 
   // ⑥ 選び方
@@ -155,7 +159,7 @@ const pairKey = (a, b) => [a, b].sort().join('-');
   check('⑥ HOME は1日5回まで', pick({ ...base, talkDay: { day, home: 5, other: 0 } }, { scene: 'home', metIds: met, selectedId: 'mua', now: Date.now(), rand: () => 0 }) === null);
   check('⑥ ほかの画面は1日3回まで', pick({ ...base, talkDay: { day, home: 0, other: 3 } }, { scene: 'market', metIds: met, selectedId: 'mua', now: Date.now(), rand: () => 0 }) === null);
   check('⑥ 続けて流さない(前に流してから90秒)', pick({ ...base, lastShownAt: Date.now() - 1000 }, { scene: 'home', metIds: met, selectedId: 'mua', now: Date.now(), rand: () => 0 }) === null);
-  const lv5 = { ...base, bond: { 'kiki-mua': 400 } };
+  const lv5 = { ...base, bond: { 'kiki-mua': 500 } };
   p = pick(lv5, { scene: 'home', metIds: met, selectedId: 'momosuke', now: 1e13, rand: () => 0.99 });
   check('⑥ Lv5 になったペアの特別なお話は、割合に関係なく HOME で先に流す', p && p.special && p.talk.id === 'kiki-mua-sp');
   p = pick({ ...lv5, special: ['kiki-mua'] }, { scene: 'home', metIds: met, selectedId: 'momosuke', now: 1e13, rand: () => 0.99 });
@@ -182,6 +186,65 @@ const pairKey = (a, b) => [a, b].sort().join('-');
   check('⑥ 会っていない助手の入った作った掛け合いは出さない', p && !p.talk.gen, p && p.talk.id);
   check('⑥ API 版の公開の印(assistantPeerApi)が偽なら頼まない', (ctx.RELEASE_FLAGS.assistantPeerApi = false, G('assistantPeerApiEnabled')()) === false);
 
+  // ⑧ 返事を選ぶ掛け合い・その日の出来事(2026-11-07)
+  const pairsAll = [];
+  for (let i = 0; i < IDS.length; i++) for (let j = i + 1; j < IDS.length; j++) pairsAll.push(pairKey(IDS[i], IDS[j]));
+  const noChoice = pairsAll.filter(pk => !TALKS.some(t => pairKey(t.pair[0], t.pair[1]) === pk && Array.isArray(t.choice)));
+  check('⑧ 全28ペアに返事を選ぶ掛け合いがある', noChoice.length === 0, noChoice.join(','));
+  const badChoice = TALKS.filter(t => t.choice && !(t.choice.length === 3 && t.choice.every(o => typeof o.label === 'string' && o.label.length <= 16 && o.reply.length >= 1 && o.reply.every(l => t.pair.includes(l.who) && EXPR.includes(l.e)))));
+  check('⑧ 返事は3つ・16字まで・反応はペアの2人だけ', badChoice.length === 0, badChoice.map(t => t.id).join(','));
+  const WHEN = G('ASSISTANT_PEER_WHEN');
+  const badWhen = TALKS.filter(t => t.when && !WHEN[t.when]);
+  check('⑧ その日の出来事は決まった種類だけ', badWhen.length === 0, badWhen.map(t => t.id).join(','));
+  check('⑧ その日の出来事は、どの種類にも4本以上', Object.keys(WHEN).every(w => TALKS.filter(t => t.when === w).length >= 4));
+  const wok = G('assistantPeerWhenOk');
+  const jst = (s) => Date.parse(`${s}+09:00`);
+  check('⑧ 時間・季節の判定(日本時間)', wok('morning', { now: jst('2026-11-07T07:00:00') }) && !wok('morning', { now: jst('2026-11-07T12:00:00') })
+    && wok('night', { now: jst('2026-11-07T23:30:00') }) && wok('christmas', { now: jst('2026-12-24T12:00:00') }) && !wok('christmas', { now: jst('2026-12-26T12:00:00') })
+    && wok('newyear', { now: jst('2027-01-03T12:00:00') }) && wok('winter', { now: jst('2027-02-10T12:00:00') }) && !wok('winter', { now: jst('2026-11-07T12:00:00') }));
+  check('⑧ その日の遊び方・連続ログインの判定', wok('battle', { today: { battles: 1 } }) && !wok('battle', { today: {} }) && wok('clear', { today: { clears: 2 } }) && wok('streak', { streak: 3 }) && !wok('streak', { streak: 2 }));
+  let leakWhen = 0;
+  for (let i = 0; i < 200; i++) { const q = pick(base, { scene: 'home', metIds: IDS, selectedId: 'mua', now: jst('2026-11-07T13:00:00') + 1e3, rand: Math.random, today: {} }); if (q && q.talk.when && !['winter'].includes(q.talk.when)) leakWhen++; }
+  check('⑧ 合わない日の出来事の掛け合いは出ない', leakWhen === 0, String(leakWhen));
+
+  // ⑨ 今日のペア・アルバム・プレイヤーの親密度
+  const store = G('ASSISTANT_PEER_STORE');
+  const added = [];
+  G('assistantPeerSetPlayerBondAdder')((id, act) => added.push(`${id}:${act}`));
+  ctx.RELEASE_FLAGS.assistantPeer = true;
+  store.set({ ...empty(), daily: { day: '2026-11-06', pair: 'dra-mua', seen: 3, done: true, lastDay: '2026-11-06', streak: 2 } });
+  dayNow = '2026-11-07';
+  const d1 = G('assistantPeerEnsureDaily')(['mua', 'kiki', 'dra'], Date.parse('2026-11-07T03:00:00Z'));
+  check('⑨ 日が変わると今日のペアを決め直し、続けてログインした日数を数える', d1 && d1.day === '2026-11-07' && /^[a-z]+-[a-z]+$/.test(d1.pair) && d1.seen === 0 && d1.streak === 3);
+  check('⑨ 今日のペアは会った助手のペアから、日付で決まる', G('assistantPeerTodayPairOf')(['mua', 'kiki', 'dra'], '2026-11-07') === d1.pair && ['dra-kiki', 'dra-mua', 'kiki-mua'].includes(d1.pair));
+  const dt = TALKS.find(t => pairKey(t.pair[0], t.pair[1]) === d1.pair && !t.special);
+  await G('assistantPeerDailyProgress')(dt); await G('assistantPeerDailyProgress')(dt);
+  const before3 = store.state.bond[d1.pair] || 0;
+  const p3 = await G('assistantPeerDailyProgress')(dt);
+  check('⑨ 今日のペアの掛け合いを3回見ると達成。ペア +10・2人それぞれの親密度(peerDaily)', p3.done === true && store.state.daily.done === true && (store.state.bond[d1.pair] || 0) - before3 === 10
+    && dt.pair.every(id => added.includes(`${id}:peerDaily`)), added.join(','));
+  const p4 = await G('assistantPeerDailyProgress')(dt);
+  check('⑨ 達成は1日1回', p4.done === false);
+  const other = TALKS.find(t => pairKey(t.pair[0], t.pair[1]) !== d1.pair);
+  check('⑨ 今日のペアでない掛け合いは数えない', (await G('assistantPeerDailyProgress')(other)).done === false);
+  G('assistantPeerAlbumAdd')(dt); G('assistantPeerAlbumAdd')(dt);
+  G('assistantPeerAlbumAdd')({ id: 'gen-x', pair: dt.pair, gen: true, lines: [] });
+  const al = store.state.album[pairKey(dt.pair[0], dt.pair[1])] || [];
+  check('⑨ アルバムには見た台本が1回だけ入り、API 版で作ったものは入らない', al.length === 1 && al[0] === dt.id);
+  const PH = G('ASSISTANT_PEER_PHOTOS');
+  check('⑨ ツーショット写真は Lv3・5・8・10 の4枚', JSON.stringify(PH.map(x => x.lv)) === '[3,5,8,10]' && PH.every(x => x.e.every(e => EXPR.includes(e))));
+  const BA = G('ASSISTANT_BOND_ACTIONS');
+  check('⑨ プレイヤーの親密度の新しい行動(掛け合いを見る+2/10・返事+5/15・今日のペア+20/20)は公開の印 assistantPeer の後ろ',
+    BA.peerTalk.amount === 2 && BA.peerTalk.dailyMax === 10 && BA.peerChoice.amount === 5 && BA.peerChoice.dailyMax === 15 && BA.peerDaily.amount === 20 && BA.peerDaily.dailyMax === 20
+    && ['peerTalk', 'peerChoice', 'peerDaily'].every(k => BA[k].releaseFlag === 'assistantPeer'));
+  added.length = 0;
+  ctx.RELEASE_FLAGS.assistantPeer = false;
+  G('assistantPeerAddPlayerBond')(['mua', 'kiki'], 'peerTalk');
+  check('⑨ 公開の印が偽ならプレイヤーの親密度も増やさない', added.length === 0);
+  ctx.RELEASE_FLAGS.assistantPeer = true;
+  // ⑦ で保存から読み直すので、置き場を読み込む前に戻す
+  store.state = { ...empty(), loaded: false }; store.loading = null;
+
   // ⑦ 保存
   writes.length = 0;
   mem.mh_assistant_peer_bond_v1 = { 'kiki-mua': 'x', 'BAD KEY': 5, 'dra-mua': 40 };
@@ -191,7 +254,7 @@ const pairKey = (a, b) => [a, b].sort().join('-');
   dayNow = '2026-11-07';
   await G('assistantPeerGain')('mua', 'dra', 'talk');
   G('assistantPeerMarkShown')(TALKS[0], { scene: 'home', special: false });
-  check('⑦ 書くのは mh_assistant_peer_* の新しいキーだけ', writes.length > 0 && writes.every(k => /^mh_assistant_peer_(bond|bond_day|talk_log|talk_day|special_seen|talk_gen)_v1$/.test(k)), writes.join(','));
+  check('⑦ 書くのは mh_assistant_peer_* の新しいキーだけ', writes.length > 0 && writes.every(k => /^mh_assistant_peer_(bond|bond_day|talk_log|talk_day|special_seen|talk_gen|daily|choice|album)_v1$/.test(k)), writes.join(','));
   check('⑦ 上がった点数が保存される', mem.mh_assistant_peer_bond_v1['dra-mua'] === 42);
   ctx.RELEASE_FLAGS.assistantPeer = false;
   const off = await G('assistantPeerGain')('mua', 'dra', 'talk');

@@ -8369,6 +8369,8 @@ function MonsterHeroGame() {
     // Lvが上がったら、そのLvのごほうびをギフトで届ける
     if (after > before) void deliverAssistantBondRewards();
   }, [grantProfileFrames, deliverAssistantBondRewards]);
+  // 助手どうしの掛け合い・今日のペアで、出てきた助手それぞれの仲良し度を増やす(2026-11-07・56-assistant-peer.jsx)
+  useEffect(() => { if (typeof assistantPeerSetPlayerBondAdder === 'function') assistantPeerSetPlayerBondAdder(addAssistantBondFor); }, [addAssistantBondFor]);
   // 行動に応じて助手との仲良し度を増やす。
   // 増えるのは「いま選んでいる助手」のぶんだけ。もう片方の助手の値には触れない
   const addAssistantBond = useCallback((actionKey) => {
@@ -18771,8 +18773,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const metIds=assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag).map(who=>who.id);
           const busy=!!eventReplay||assistantChatOpen||showAssistantPicker||kikiIntroStep!=null||momosukeIntroStep!=null||!assistantChosen;
           const scene=busy?null:(ASSISTANT_PEER_SCENES[gameState]||null);
+          // その日の遊び方(その日の出来事の掛け合いに使う)。ミッションの今日の数から読むだけ
+          const md=normalizeMissions(missions).daily||{};
+          const today={battles:md.battles||0,clears:md.challengeClears||0,enhances:md.enhances||0};
           return <AssistantPeerTalk scene={peerReplay?null:scene} metIds={metIds} selectedId={selectedAssistantId}
-            replay={peerReplay} onReplayEnd={()=>setPeerReplay(null)}/>;
+            replay={peerReplay} onReplayEnd={()=>setPeerReplay(null)} today={today}/>;
         })()}
 
         {/* モンヒロビート(音ゲー)の準備中の案内。公開フラグが立つまでHOMEのモンヒロビートはここへ来る。

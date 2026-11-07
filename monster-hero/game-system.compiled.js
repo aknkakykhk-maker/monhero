@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 525275dcdfe8a474
+// source-sha256: 749fdc1e7da04ba7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93505,7 +93505,11 @@ const ASSISTANT_PEER_TALK_LOG_KEY = 'mh_assistant_peer_talk_log_v1';
 const ASSISTANT_PEER_TALK_DAY_KEY = 'mh_assistant_peer_talk_day_v1';
 const ASSISTANT_PEER_SPECIAL_SEEN_KEY = 'mh_assistant_peer_special_seen_v1';
 const ASSISTANT_PEER_TALK_GEN_KEY = 'mh_assistant_peer_talk_gen_v1';
+const ASSISTANT_PEER_DAILY_KEY = 'mh_assistant_peer_daily_v1';
+const ASSISTANT_PEER_CHOICE_KEY = 'mh_assistant_peer_choice_v1';
+const ASSISTANT_PEER_ALBUM_KEY = 'mh_assistant_peer_album_v1';
 const ASSISTANT_PEER_TALK_LOG_MAX = 30;
+const ASSISTANT_PEER_DAILY_GOAL = 3;
 const ASSISTANT_PEER_GEN_ASK_MAX = 100;
 const ASSISTANT_PEER_GEN_RATE = 0.6;
 const ASSISTANT_PEER_GEN_EXPRESSIONS = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];
@@ -93578,6 +93582,37 @@ const normalizeAssistantPeerTalkDay = raw => {
   };
 };
 const normalizeAssistantPeerSpecialSeen = raw => Array.isArray(raw) ? raw.filter(x => typeof x === 'string') : [];
+const normalizeAssistantPeerDaily = raw => {
+  const n = v => Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 0;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {
+    day: null,
+    pair: null,
+    seen: 0,
+    done: false,
+    lastDay: null,
+    streak: 0
+  };
+  return {
+    day: typeof raw.day === 'string' ? raw.day : null,
+    pair: typeof raw.pair === 'string' && /^[a-z]+-[a-z]+$/.test(raw.pair) ? raw.pair : null,
+    seen: n(raw.seen),
+    done: raw.done === true,
+    lastDay: typeof raw.lastDay === 'string' ? raw.lastDay : null,
+    streak: n(raw.streak)
+  };
+};
+const normalizeAssistantPeerChoice = raw => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [k, v] of Object.entries(raw)) if (typeof k === 'string' && Number.isInteger(v) && v >= 0 && v < 3) out[k] = v;
+  return out;
+};
+const normalizeAssistantPeerAlbum = raw => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [k, v] of Object.entries(raw)) if (/^[a-z]+-[a-z]+$/.test(k) && Array.isArray(v)) out[k] = [...new Set(v.filter(x => typeof x === 'string'))].slice(0, 200);
+  return out;
+};
 const normalizeAssistantPeerGen = raw => {
   const empty = {
     day: null,
@@ -93624,6 +93659,16 @@ const ASSISTANT_PEER_STORE = {
       asked: 0,
       talks: []
     },
+    daily: {
+      day: null,
+      pair: null,
+      seen: 0,
+      done: false,
+      lastDay: null,
+      streak: 0
+    },
+    choice: {},
+    album: {},
     lastShownAt: 0
   },
   loading: null,
@@ -93646,7 +93691,7 @@ const ASSISTANT_PEER_STORE = {
     if (this.state.loaded) return Promise.resolve(this.state);
     if (this.loading) return this.loading;
     this.loading = (async () => {
-      const [bond, bondDay, log, talkDay, special, gen] = await Promise.all([storeGet(ASSISTANT_PEER_BOND_STORE_KEY, {}, false), storeGet(ASSISTANT_PEER_BOND_DAY_KEY, null, false), storeGet(ASSISTANT_PEER_TALK_LOG_KEY, [], false), storeGet(ASSISTANT_PEER_TALK_DAY_KEY, null, false), storeGet(ASSISTANT_PEER_SPECIAL_SEEN_KEY, [], false), storeGet(ASSISTANT_PEER_TALK_GEN_KEY, null, false)].map(p => Promise.resolve(p).catch(() => null)));
+      const [bond, bondDay, log, talkDay, special, gen, daily, choice, album] = await Promise.all([storeGet(ASSISTANT_PEER_BOND_STORE_KEY, {}, false), storeGet(ASSISTANT_PEER_BOND_DAY_KEY, null, false), storeGet(ASSISTANT_PEER_TALK_LOG_KEY, [], false), storeGet(ASSISTANT_PEER_TALK_DAY_KEY, null, false), storeGet(ASSISTANT_PEER_SPECIAL_SEEN_KEY, [], false), storeGet(ASSISTANT_PEER_TALK_GEN_KEY, null, false), storeGet(ASSISTANT_PEER_DAILY_KEY, null, false), storeGet(ASSISTANT_PEER_CHOICE_KEY, {}, false), storeGet(ASSISTANT_PEER_ALBUM_KEY, {}, false)].map(p => Promise.resolve(p).catch(() => null)));
       this.set({
         loaded: true,
         bond: normalizeAssistantPeerBond(bond),
@@ -93654,7 +93699,10 @@ const ASSISTANT_PEER_STORE = {
         log: normalizeAssistantPeerTalkLog(log),
         talkDay: normalizeAssistantPeerTalkDay(talkDay),
         special: normalizeAssistantPeerSpecialSeen(special),
-        gen: normalizeAssistantPeerGen(gen)
+        gen: normalizeAssistantPeerGen(gen),
+        daily: normalizeAssistantPeerDaily(daily),
+        choice: normalizeAssistantPeerChoice(choice),
+        album: normalizeAssistantPeerAlbum(album)
       });
       return this.state;
     })();
@@ -93690,9 +93738,9 @@ const assistantPeerGainState = (st, a, b, action, day) => {
     ...(bondDay.got[pair] || {})
   };
   const usedAct = got[action] || 0;
-  const usedAll = Object.values(got).reduce((s, v) => s + v, 0);
-  const pairMax = typeof ASSISTANT_PEER_BOND_DAILY_MAX !== 'undefined' && ASSISTANT_PEER_BOND_DAILY_MAX || 12;
-  const gain = Math.max(0, Math.min(act.amount, act.dailyMax - usedAct, pairMax - usedAll));
+  const pairMax = typeof ASSISTANT_PEER_BOND_DAILY_MAX !== 'undefined' && ASSISTANT_PEER_BOND_DAILY_MAX || 20;
+  const usedCapped = Object.entries(got).filter(([k]) => !(actions[k] && actions[k].uncapped)).reduce((s, [, v]) => s + v, 0);
+  const gain = Math.max(0, Math.min(act.amount, act.dailyMax - usedAct, act.uncapped ? Infinity : pairMax - usedCapped));
   if (gain <= 0) return {
     st,
     gained: 0
@@ -93748,15 +93796,162 @@ const assistantPeerGainStory = ids => {
 const assistantPeerGainSwitch = (prev, next) => {
   if (prev && next && prev !== next) void assistantPeerGain(prev, next, 'switch');
 };
+let assistantPeerPlayerBondAdder = null;
+const assistantPeerSetPlayerBondAdder = fn => {
+  assistantPeerPlayerBondAdder = typeof fn === 'function' ? fn : null;
+};
+const assistantPeerAddPlayerBond = (ids, action) => {
+  if (!assistantPeerEnabled() || !assistantPeerPlayerBondAdder) return;
+  for (const id of [...new Set(ids || [])]) {
+    try {
+      assistantPeerPlayerBondAdder(id, action);
+    } catch {}
+  }
+};
+const assistantPeerWhenOk = (when, {
+  now = Date.now(),
+  today = {},
+  streak = 0
+} = {}) => {
+  if (!when) return true;
+  const d = new Date(Number(now) + 9 * 3600000);
+  const h = d.getUTCHours(),
+    m = d.getUTCMonth() + 1,
+    day = d.getUTCDate();
+  switch (when) {
+    case 'morning':
+      return h >= 5 && h <= 10;
+    case 'night':
+      return h >= 21 || h <= 4;
+    case 'winter':
+      return m === 12 || m <= 2;
+    case 'christmas':
+      return m === 12 && day >= 20 && day <= 25;
+    case 'newyear':
+      return m === 1 && day <= 7;
+    case 'battle':
+      return (Number(today.battles) || 0) > 0;
+    case 'clear':
+      return (Number(today.clears) || 0) > 0;
+    case 'enhance':
+      return (Number(today.enhances) || 0) > 0;
+    case 'streak':
+      return streak >= 3;
+    default:
+      return false;
+  }
+};
+const assistantPeerDayBefore = day => new Date(Date.parse(`${day}T00:00:00Z`) - 86400000).toISOString().slice(0, 10);
+const assistantPeerTodayPairOf = (metIds, day) => {
+  const ids = [...new Set(metIds || [])].filter(id => typeof ASSISTANT_PEER_CALLS !== 'undefined' && ASSISTANT_PEER_CALLS[id]).sort();
+  const pairs = [];
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) pairs.push(`${ids[i]}-${ids[j]}`);
+  if (!pairs.length) return null;
+  let h = 0;
+  for (const ch of String(day)) h = h * 31 + ch.charCodeAt(0) >>> 0;
+  return pairs[h % pairs.length];
+};
+const assistantPeerEnsureDaily = (metIds, now = Date.now()) => {
+  if (!assistantPeerEnabled()) return null;
+  const st = ASSISTANT_PEER_STORE.state;
+  const day = assistantBubbleDayKey(now);
+  if (st.daily.day === day && st.daily.pair) return st.daily;
+  const pair = assistantPeerTodayPairOf(metIds, day);
+  if (!pair) return null;
+  const streak = st.daily.lastDay === assistantPeerDayBefore(day) ? st.daily.streak + 1 : 1;
+  const daily = {
+    day,
+    pair,
+    seen: 0,
+    done: false,
+    lastDay: day,
+    streak
+  };
+  ASSISTANT_PEER_STORE.set({
+    daily
+  });
+  try {
+    storeSet(ASSISTANT_PEER_DAILY_KEY, daily, false);
+  } catch {}
+  if (streak >= 2) {
+    const [a, b] = pair.split('-');
+    void assistantPeerGain(a, b, 'streak');
+  }
+  return daily;
+};
+const assistantPeerDailyProgress = async talk => {
+  const st = ASSISTANT_PEER_STORE.state;
+  const day = assistantBubbleDayKey();
+  const pair = assistantPeerPairKey(talk.pair[0], talk.pair[1]);
+  if (st.daily.day !== day || st.daily.pair !== pair || st.daily.done) return {
+    done: false
+  };
+  const seen = st.daily.seen + 1;
+  const done = seen >= ASSISTANT_PEER_DAILY_GOAL;
+  const daily = {
+    ...st.daily,
+    seen,
+    done
+  };
+  ASSISTANT_PEER_STORE.set({
+    daily
+  });
+  try {
+    storeSet(ASSISTANT_PEER_DAILY_KEY, daily, false);
+  } catch {}
+  if (done) {
+    await assistantPeerGain(talk.pair[0], talk.pair[1], 'daily');
+    assistantPeerAddPlayerBond(talk.pair, 'peerDaily');
+  }
+  return {
+    done,
+    seen
+  };
+};
+const assistantPeerAlbumAdd = talk => {
+  if (!talk || talk.gen) return;
+  const st = ASSISTANT_PEER_STORE.state;
+  const pair = assistantPeerPairKey(talk.pair[0], talk.pair[1]);
+  const list = st.album[pair] || [];
+  if (list.includes(talk.id)) return;
+  const album = {
+    ...st.album,
+    [pair]: [...list, talk.id]
+  };
+  ASSISTANT_PEER_STORE.set({
+    album
+  });
+  try {
+    storeSet(ASSISTANT_PEER_ALBUM_KEY, album, false);
+  } catch {}
+};
+const assistantPeerSaveChoice = (talkId, index) => {
+  const choice = {
+    ...ASSISTANT_PEER_STORE.state.choice,
+    [talkId]: index
+  };
+  ASSISTANT_PEER_STORE.set({
+    choice
+  });
+  try {
+    storeSet(ASSISTANT_PEER_CHOICE_KEY, choice, false);
+  } catch {}
+};
 const assistantPeerPickTalk = (st, {
   scene,
   metIds,
   selectedId,
   now = Date.now(),
-  rand = Math.random
+  rand = Math.random,
+  today = {}
 }) => {
   const met = new Set(metIds || []);
-  const ok = t => t && Array.isArray(t.pair) && t.pair.length === 2 && t.pair.every(id => met.has(id));
+  const whenCtx = {
+    now,
+    today,
+    streak: st.daily && st.daily.streak || 0
+  };
+  const ok = t => t && Array.isArray(t.pair) && t.pair.length === 2 && t.pair.every(id => met.has(id)) && assistantPeerWhenOk(t.when, whenCtx);
   const all = assistantPeerTalkList().filter(ok);
   if (scene === 'home') {
     const sp = all.find(t => t.special && assistantPeerLevel(st, t.pair[0], t.pair[1]) >= 5 && !st.special.includes(assistantPeerPairKey(t.pair[0], t.pair[1])));
@@ -93793,7 +93988,8 @@ const assistantPeerPickTalk = (st, {
   const recent = st.log.map(x => x.id);
   const fresh = pool.filter(t => !recent.includes(t.id));
   if (fresh.length) pool = fresh;else pool = [...pool].sort((x, y) => recent.indexOf(x.id) - recent.indexOf(y.id)).slice(0, Math.max(1, Math.ceil(pool.length / 3)));
-  const weight = t => (t.pair.includes(selectedId) ? 3 : 1) * (1 + 0.5 * (assistantPeerLevel(st, t.pair[0], t.pair[1]) - 1));
+  const dailyPair = st.daily && st.daily.day === day && !st.daily.done ? st.daily.pair : null;
+  const weight = t => (t.pair.includes(selectedId) ? 3 : 1) * (1 + 0.5 * (assistantPeerLevel(st, t.pair[0], t.pair[1]) - 1)) * (dailyPair && assistantPeerPairKey(t.pair[0], t.pair[1]) === dailyPair ? 4 : 1) * (t.when ? 6 : 1);
   const sum = pool.reduce((s, t) => s + weight(t), 0);
   let r = rand() * sum;
   for (const t of pool) {
@@ -93853,30 +94049,35 @@ function AssistantPeerTalk({
   metIds,
   selectedId,
   replay = null,
-  onReplayEnd = null
+  onReplayEnd = null,
+  today = null
 }) {
   const st = useAssistantPeerState();
   const [cur, setCur] = React.useState(null);
   const decidedRef = React.useRef('');
+  const metKey = (metIds || []).join(',');
   React.useEffect(() => {
     if (replay) {
       setCur({
         talk: replay,
         special: !!replay.special,
         step: 0,
-        level: assistantPeerLevel(ASSISTANT_PEER_STORE.state, replay.pair[0], replay.pair[1]),
+        phase: 'lines',
+        pick: null,
         replay: true
       });
       return;
     }
     if (!assistantPeerEnabled() || !st.loaded || !scene) return;
+    assistantPeerEnsureDaily(metIds);
     const key = `${scene}:${selectedId}`;
     if (decidedRef.current === key) return;
     decidedRef.current = key;
     const picked = assistantPeerPickTalk(ASSISTANT_PEER_STORE.state, {
       scene,
       metIds,
-      selectedId
+      selectedId,
+      today: today || {}
     });
     if (!picked) return;
     assistantPeerMarkShown(picked.talk, {
@@ -93887,14 +94088,15 @@ function AssistantPeerTalk({
       talk: picked.talk,
       special: picked.special,
       step: 0,
-      level: assistantPeerLevel(ASSISTANT_PEER_STORE.state, picked.talk.pair[0], picked.talk.pair[1])
+      phase: 'lines',
+      pick: null
     });
-  }, [scene, selectedId, st.loaded, replay]);
+  }, [scene, selectedId, st.loaded, replay, metKey]);
   React.useEffect(() => {
     decidedRef.current = decidedRef.current.startsWith(`${scene}:`) ? decidedRef.current : '';
     setCur(c => c && !c.replay ? null : c);
   }, [scene]);
-  const [levelUp, setLevelUp] = React.useState(null);
+  const [toast, setToast] = React.useState(null);
   const finish = React.useCallback(async c => {
     setCur(null);
     if (c.replay) {
@@ -93902,26 +94104,64 @@ function AssistantPeerTalk({
       return;
     }
     const r = await assistantPeerGain(c.talk.pair[0], c.talk.pair[1], 'talk');
-    if (r && r.gained > 0 && r.levelAfter > r.levelBefore) setLevelUp({
+    assistantPeerAddPlayerBond(c.talk.pair, 'peerTalk');
+    assistantPeerAlbumAdd(c.talk);
+    const d = await assistantPeerDailyProgress(c.talk);
+    if (d.done) setToast({
+      kind: 'daily',
+      pair: c.talk.pair
+    });else if (r && r.gained > 0 && r.levelAfter > r.levelBefore) setToast({
+      kind: 'level',
       pair: c.talk.pair,
       level: r.levelAfter
     });
   }, [onReplayEnd]);
+  const choose = index => {
+    const c = cur;
+    if (!c || c.phase !== 'choice') return;
+    if (!c.replay) {
+      assistantPeerSaveChoice(c.talk.id, index);
+      void assistantPeerGain(c.talk.pair[0], c.talk.pair[1], 'choice');
+      assistantPeerAddPlayerBond(c.talk.pair, 'peerChoice');
+    }
+    setCur({
+      ...c,
+      phase: 'reply',
+      pick: index,
+      step: 0
+    });
+  };
+  const linesOf = c => c.phase === 'reply' ? c.talk.choice[c.pick].reply : c.talk.lines;
+  const advance = React.useCallback(c => {
+    if (!c) return;
+    const list = linesOf(c);
+    if (c.phase === 'choice') return;
+    if (c.step + 1 < list.length) {
+      setCur(x => x && {
+        ...x,
+        step: x.step + 1
+      });
+      return;
+    }
+    if (c.phase === 'lines' && Array.isArray(c.talk.choice) && c.talk.choice.length) {
+      setCur(x => x && {
+        ...x,
+        phase: 'choice'
+      });
+      return;
+    }
+    finish(c);
+  }, [finish]);
   React.useEffect(() => {
-    if (!cur) return undefined;
-    const t = setTimeout(() => {
-      if (cur.step + 1 < cur.talk.lines.length) setCur(c => c && {
-        ...c,
-        step: c.step + 1
-      });else finish(cur);
-    }, ASSISTANT_PEER_LINE_MS + (cur.special ? 1200 : 0));
+    if (!cur || cur.phase === 'choice') return undefined;
+    const t = setTimeout(() => advance(cur), ASSISTANT_PEER_LINE_MS + (cur.special ? 1200 : 0));
     return () => clearTimeout(t);
-  }, [cur, finish]);
+  }, [cur, advance]);
   React.useEffect(() => {
-    if (!levelUp) return undefined;
-    const t = setTimeout(() => setLevelUp(null), 3200);
+    if (!toast) return undefined;
+    const t = setTimeout(() => setToast(null), 3200);
     return () => clearTimeout(t);
-  }, [levelUp]);
+  }, [toast]);
   const wrap = (children, attrs = {}) => React.createElement("div", _extends({
     className: "fixed inset-x-0 flex justify-center px-2 pointer-events-none",
     style: {
@@ -93932,28 +94172,24 @@ function AssistantPeerTalk({
     className: "pointer-events-auto w-full max-w-md"
   }, children));
   if (!cur) {
-    if (!levelUp) return null;
-    const [a, b] = levelUp.pair.map(id => assistantById(id));
-    const stage = (typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' ? ASSISTANT_PEER_BOND_LEVELS : []).find(s => s.level === levelUp.level);
+    if (!toast) return null;
+    const [a, b] = toast.pair.map(id => assistantById(id));
+    const stage = (typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' ? ASSISTANT_PEER_BOND_LEVELS : []).find(s => s.level === toast.level);
     return wrap(React.createElement("div", {
-      "data-assistant-peer-levelup": levelUp.level,
+      "data-assistant-peer-toast": toast.kind,
       className: "mx-auto w-fit rounded-full border border-pink-300/60 bg-slate-950/90 px-4 py-1.5 text-[11px] font-black text-pink-200 shadow-xl"
-    }, a.name, "と", b.name, "の仲良し度が Lv", levelUp.level, stage ? `「${stage.name}」` : '', "になりました"));
+    }, toast.kind === 'daily' ? `今日のペア達成！ ${a.name}と${b.name}がもっと仲良くなりました` : `${a.name}と${b.name}の仲良し度が Lv${toast.level}${stage ? `「${stage.name}」` : ''}になりました`));
   }
   const {
-    talk,
-    step
+    talk
   } = cur;
-  const line = talk.lines[step];
+  const list = linesOf(cur);
+  const line = cur.phase === 'choice' ? talk.lines[talk.lines.length - 1] : list[cur.step];
   const left = assistantById(talk.lines[0].who);
   const right = assistantById(talk.pair.find(id => id !== left.id));
   const speaker = assistantById(line.who);
-  const next = () => {
-    if (step + 1 < talk.lines.length) setCur(c => c && {
-      ...c,
-      step: c.step + 1
-    });else finish(cur);
-  };
+  const pairKey = assistantPeerPairKey(talk.pair[0], talk.pair[1]);
+  const daily = st.daily && st.daily.day === assistantBubbleDayKey() && st.daily.pair === pairKey ? st.daily : null;
   const face = who => {
     const speaking = who.id === line.who;
     return React.createElement("div", {
@@ -93966,27 +94202,33 @@ function AssistantPeerTalk({
       expression: speaking ? line.e : 'normal'
     }));
   };
+  const total = talk.lines.length + (cur.phase === 'reply' ? list.length : 0);
+  const pos = cur.phase === 'reply' ? talk.lines.length + cur.step + 1 : cur.phase === 'choice' ? talk.lines.length : cur.step + 1;
   return wrap(React.createElement("div", {
     "data-assistant-peer-talk": talk.id,
-    "data-assistant-peer-step": step,
+    "data-assistant-peer-step": cur.step,
+    "data-assistant-peer-phase": cur.phase,
     role: "button",
     tabIndex: 0,
-    onClick: next,
+    onClick: () => advance(cur),
     onKeyDown: ev => {
       if (ev.key === 'Enter' || ev.key === ' ') {
         ev.preventDefault();
-        next();
+        advance(cur);
       }
     },
     className: "relative rounded-2xl border-2 bg-slate-950/92 px-2 py-2 shadow-2xl cursor-pointer select-none",
     style: {
       borderColor: speaker.accent || '#f472b6',
-      backgroundColor: 'rgba(2,6,23,.92)'
+      backgroundColor: '#020617'
     }
   }, cur.special && React.createElement("p", {
     "data-assistant-peer-special": true,
     className: "mb-1 text-center text-[10px] font-black tracking-wider text-amber-200"
-  }, "✦ ", left.name, "と", right.name, "の特別なお話 ✦"), React.createElement("div", {
+  }, "✦ ", left.name, "と", right.name, "の特別なお話 ✦"), daily && !cur.replay && React.createElement("p", {
+    "data-assistant-peer-daily-chip": true,
+    className: "mb-1 w-fit rounded-full bg-amber-400/15 px-2 py-0.5 text-[9px] font-black text-amber-200"
+  }, "今日のペア ", daily.done ? '達成！' : `${Math.min(daily.seen + 1, ASSISTANT_PEER_DAILY_GOAL)}/${ASSISTANT_PEER_DAILY_GOAL}`), React.createElement("div", {
     className: "flex items-center gap-2"
   }, face(left), React.createElement("div", {
     className: "min-w-0 flex-1"
@@ -93998,23 +94240,138 @@ function AssistantPeerTalk({
   }, speaker.name), React.createElement("p", {
     "data-assistant-peer-line": true,
     className: "mt-1 text-[12px] font-bold leading-snug text-white"
-  }, helpWrap(assistantPeerLineText(line, talk)))), face(right)), React.createElement("div", {
+  }, helpWrap(assistantPeerLineText(line, talk)))), face(right)), cur.phase === 'choice' && React.createElement("div", {
+    "data-assistant-peer-choices": true,
+    className: "mt-2 grid gap-1.5"
+  }, talk.choice.map((o, i) => React.createElement("button", {
+    key: i,
+    type: "button",
+    "data-assistant-peer-choice": i,
+    onClick: ev => {
+      ev.stopPropagation();
+      choose(i);
+    },
+    className: "min-h-[40px] rounded-xl border border-pink-300/50 bg-[#2a1030] px-3 py-1.5 text-left text-[12px] font-black text-pink-100 active:scale-[.98]"
+  }, o.label))), React.createElement("div", {
     className: "mt-1 flex items-center justify-between"
   }, React.createElement("span", {
     className: "text-[9px] font-bold text-slate-500"
-  }, step + 1, "/", talk.lines.length, "・タップで次へ"), React.createElement("button", {
+  }, cur.phase === 'choice' ? '返事をえらんでね' : `${pos}/${total}・タップで次へ`), React.createElement("button", {
     type: "button",
     "data-assistant-peer-close": true,
     "aria-label": "閉じる",
     onClick: ev => {
       ev.stopPropagation();
-      finish({
-        ...cur,
-        step: talk.lines.length - 1
-      });
+      finish(cur);
     },
     className: "h-7 w-7 rounded-full border border-slate-600 text-[13px] font-black text-slate-300 active:scale-95"
   }, "×"))));
+}
+function AssistantPeerPhoto({
+  pair,
+  photo,
+  open
+}) {
+  const [a, b] = pair.map(id => assistantById(id));
+  return React.createElement("div", {
+    "data-assistant-peer-photo": photo.lv,
+    "data-assistant-peer-photo-open": open ? '1' : '0',
+    className: "relative overflow-hidden rounded-xl border-2",
+    style: {
+      aspectRatio: '4 / 3',
+      borderColor: open ? '#fcd34d' : 'rgba(255,255,255,.12)',
+      background: open ? `linear-gradient(135deg, ${a.accent}55, ${b.accent}55)` : 'rgba(15,23,42,.8)'
+    }
+  }, open ? React.createElement(React.Fragment, null, React.createElement("img", {
+    src: assistantFullImage(a, photo.e[0]),
+    alt: "",
+    loading: "lazy",
+    decoding: "async",
+    className: "absolute left-[-2%] top-[6%] h-[170%] w-[56%]",
+    style: {
+      objectFit: 'cover',
+      objectPosition: '50% 0%'
+    }
+  }), React.createElement("img", {
+    src: assistantFullImage(b, photo.e[1]),
+    alt: "",
+    loading: "lazy",
+    decoding: "async",
+    className: "absolute right-[-2%] top-[6%] h-[170%] w-[56%]",
+    style: {
+      objectFit: 'cover',
+      objectPosition: '50% 0%'
+    }
+  }), React.createElement("span", {
+    className: "absolute inset-x-0 bottom-0 bg-black/55 px-1 py-0.5 text-center text-[9px] font-black text-amber-100"
+  }, photo.title)) : React.createElement("span", {
+    className: "absolute inset-0 flex flex-col items-center justify-center text-[10px] font-bold text-slate-500"
+  }, React.createElement("span", {
+    className: "text-lg",
+    "aria-hidden": "true"
+  }, "🔒"), "Lv", photo.lv, "で貼られます"));
+}
+function AssistantPeerAlbum({
+  pair,
+  onClose,
+  onReplay
+}) {
+  const st = useAssistantPeerState();
+  const [a, b] = pair.map(id => assistantById(id));
+  const key = assistantPeerPairKey(pair[0], pair[1]);
+  const lv = assistantPeerLevel(st, pair[0], pair[1]);
+  const photos = typeof ASSISTANT_PEER_PHOTOS !== 'undefined' ? ASSISTANT_PEER_PHOTOS : [];
+  const seen = new Set(st.album[key] || []);
+  const talks = assistantPeerTalkList().filter(t => assistantPeerPairKey(t.pair[0], t.pair[1]) === key && (seen.has(t.id) || t.special && st.special.includes(key)));
+  const all = assistantPeerTalkList().filter(t => assistantPeerPairKey(t.pair[0], t.pair[1]) === key).length;
+  const firstLine = t => assistantPeerLineText(t.lines[0], t);
+  return React.createElement("div", {
+    "data-assistant-peer-album": key,
+    className: "fixed inset-0 flex items-end sm:items-center justify-center bg-black/70 p-2",
+    style: {
+      zIndex: 9100
+    },
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "w-full max-w-md max-h-[85vh] overflow-y-auto mh-scroll rounded-2xl border-2 border-amber-300/60 bg-slate-950 p-3",
+    onClick: ev => ev.stopPropagation()
+  }, React.createElement("div", {
+    className: "mb-2 flex items-center gap-2"
+  }, React.createElement("p", {
+    className: "min-w-0 flex-1 text-[13px] font-black text-amber-200"
+  }, a.name, "と", b.name, "の思い出アルバム"), React.createElement("button", {
+    type: "button",
+    "data-assistant-peer-album-close": true,
+    onClick: onClose,
+    "aria-label": "閉じる",
+    className: "h-8 w-8 rounded-full border border-slate-600 text-[14px] font-black text-slate-300 active:scale-95"
+  }, "×")), React.createElement("p", {
+    className: "mb-2 text-[10px] text-slate-400"
+  }, "仲良し度 Lv", lv, "・見た掛け合い ", talks.length, "/", all), React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, photos.map(ph => React.createElement(AssistantPeerPhoto, {
+    key: ph.lv,
+    pair: pair,
+    photo: ph,
+    open: lv >= ph.lv
+  }))), React.createElement("p", {
+    className: "mb-1 mt-3 text-[11px] font-black text-pink-200"
+  }, "見た掛け合い"), talks.length === 0 && React.createElement("p", {
+    className: "text-[10px] text-slate-500"
+  }, "2人の掛け合いを見ると、ここに集まります。"), React.createElement("div", {
+    className: "space-y-1"
+  }, talks.map(t => React.createElement("button", {
+    key: t.id,
+    type: "button",
+    "data-assistant-peer-replay": t.id,
+    onClick: () => onReplay && onReplay(t),
+    className: "flex w-full items-center gap-2 rounded-lg bg-slate-900/80 px-2 py-1.5 text-left active:scale-[.98]"
+  }, React.createElement("span", {
+    className: "shrink-0 text-[10px]",
+    "aria-hidden": "true"
+  }, t.special ? '✦' : t.choice ? '💬' : '▶'), React.createElement("span", {
+    className: "min-w-0 flex-1 truncate text-[10px] font-bold text-slate-200"
+  }, t.special ? '特別なお話' : firstLine(t)))))));
 }
 function AssistantPeerMap({
   metIds,
@@ -94022,6 +94379,7 @@ function AssistantPeerMap({
 }) {
   const st = useAssistantPeerState();
   const [showAll, setShowAll] = React.useState(false);
+  const [albumPair, setAlbumPair] = React.useState(null);
   const ids = (metIds || []).filter(id => assistantById(id) && assistantById(id).id === id);
   if (ids.length < 2) return null;
   const size = 260,
@@ -94038,14 +94396,15 @@ function AssistantPeerMap({
   const pairs = [];
   for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) pairs.push([ids[i], ids[j]]);
   const levels = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' ? ASSISTANT_PEER_BOND_LEVELS : [];
-  const lineColor = ['', '', '', '#93c5fd', '#f9a8d4', '#fcd34d'];
+  const lineColor = lv => lv >= 9 ? '#fde68a' : lv >= 7 ? '#fcd34d' : lv >= 5 ? '#f9a8d4' : lv >= 4 ? '#c4b5fd' : '#93c5fd';
   const rows = pairs.map(([a, b]) => ({
     a,
     b,
     pts: assistantPeerPoints(st, a, b),
     lv: assistantPeerLevel(st, a, b)
   })).sort((x, y) => y.pts - x.pts);
-  const specials = assistantPeerTalkList().filter(t => t.special && st.special.includes(assistantPeerPairKey(t.pair[0], t.pair[1])));
+  const daily = st.daily && st.daily.day === assistantBubbleDayKey() && st.daily.pair ? st.daily : null;
+  const dailyPair = daily ? daily.pair.split('-') : null;
   return React.createElement("div", {
     "data-assistant-peer-map": true,
     className: "rounded-2xl border border-white/10 bg-slate-950/60 p-3"
@@ -94053,7 +94412,18 @@ function AssistantPeerMap({
     className: "text-[12px] font-black text-pink-200"
   }, "助手どうしの関係図"), React.createElement("p", {
     className: "mb-2 text-[9px] leading-tight text-slate-400"
-  }, "助手どうしも仲良くなります。仲良し度 Lv3 になった2人は線で結ばれます。"), React.createElement("div", {
+  }, "助手どうしも仲良くなります。仲良し度 Lv3 になった2人は線で結ばれます。ペアを押すと思い出アルバムが開きます。"), dailyPair && dailyPair.every(id => ids.includes(id)) && React.createElement("button", {
+    type: "button",
+    "data-assistant-peer-daily": true,
+    onClick: () => setAlbumPair(dailyPair),
+    className: "mb-2 flex w-full items-center gap-2 rounded-xl border border-amber-300/50 bg-amber-400/10 px-2 py-1.5 text-left active:scale-[.98]"
+  }, React.createElement("span", {
+    className: "text-[10px] font-black text-amber-200"
+  }, "今日のペア"), React.createElement("span", {
+    className: "min-w-0 flex-1 truncate text-[11px] font-black text-white"
+  }, assistantById(dailyPair[0]).name, " × ", assistantById(dailyPair[1]).name), React.createElement("span", {
+    className: "text-[10px] font-black text-amber-200"
+  }, daily.done ? '達成！' : `掛け合い ${daily.seen}/${ASSISTANT_PEER_DAILY_GOAL}`)), React.createElement("div", {
     className: "relative mx-auto",
     style: {
       width: size,
@@ -94071,8 +94441,8 @@ function AssistantPeerMap({
     y1: pos[x.a].y,
     x2: pos[x.b].x,
     y2: pos[x.b].y,
-    stroke: lineColor[x.lv],
-    strokeWidth: x.lv * 1.2,
+    stroke: lineColor(x.lv),
+    strokeWidth: Math.min(10, x.lv * 0.9),
     strokeLinecap: "round",
     opacity: "0.85"
   }))), ids.map(id => {
@@ -94099,16 +94469,18 @@ function AssistantPeerMap({
       B = assistantById(x.b);
     const stage = levels.find(s => s.level === x.lv);
     const nextStage = levels.find(s => s.level === x.lv + 1);
-    return React.createElement("div", {
+    return React.createElement("button", {
       key: `${x.a}-${x.b}`,
+      type: "button",
       "data-assistant-peer-row": assistantPeerPairKey(x.a, x.b),
-      className: "flex items-center gap-2 rounded-lg bg-slate-900/70 px-2 py-1"
+      onClick: () => setAlbumPair([x.a, x.b]),
+      className: "flex w-full items-center gap-2 rounded-lg bg-slate-900/70 px-2 py-1 text-left active:scale-[.98]"
     }, React.createElement("span", {
       className: "min-w-0 flex-1 truncate text-[10px] font-bold text-slate-200"
     }, A.name, " × ", B.name), React.createElement("span", {
-      className: "text-[10px] font-black text-pink-200"
+      className: "whitespace-nowrap text-[10px] font-black text-pink-200"
     }, "Lv", x.lv, stage ? ` ${stage.name}` : ''), React.createElement("span", {
-      className: "w-14 h-1.5 overflow-hidden rounded-full bg-slate-700",
+      className: "w-14 h-1.5 shrink-0 overflow-hidden rounded-full bg-slate-700",
       "aria-hidden": "true"
     }, React.createElement("span", {
       className: "block h-full bg-pink-400",
@@ -94121,19 +94493,14 @@ function AssistantPeerMap({
     "data-assistant-peer-more": true,
     onClick: () => setShowAll(v => !v),
     className: "w-full rounded-lg border border-white/10 py-1.5 text-[10px] font-bold text-slate-300 active:scale-[.98]"
-  }, showAll ? 'たたむ' : `全部のペアを見る(${rows.length}組)`)), specials.length > 0 && React.createElement("div", {
-    className: "mt-3"
-  }, React.createElement("p", {
-    className: "mb-1 text-[10px] font-black text-amber-200"
-  }, "特別なお話を見返す"), React.createElement("div", {
-    className: "flex flex-wrap gap-1.5"
-  }, specials.map(t => React.createElement("button", {
-    key: t.id,
-    type: "button",
-    "data-assistant-peer-replay": t.id,
-    onClick: () => onReplay && onReplay(t),
-    className: "rounded-full border border-amber-300/50 px-2.5 py-1 text-[10px] font-bold text-amber-100 active:scale-95"
-  }, assistantById(t.lines[0].who).name, " × ", assistantById(t.pair.find(id => id !== t.lines[0].who)).name)))));
+  }, showAll ? 'たたむ' : `全部のペアを見る(${rows.length}組)`)), albumPair && React.createElement(AssistantPeerAlbum, {
+    pair: albumPair,
+    onClose: () => setAlbumPair(null),
+    onReplay: t => {
+      setAlbumPair(null);
+      if (onReplay) onReplay(t);
+    }
+  }));
 }
 let assistantPeerGenBusy = false;
 const assistantPeerRequestGen = async ({
@@ -139173,6 +139540,9 @@ function MonsterHeroGame() {
     } catch {}
     if (after > before) void deliverAssistantBondRewards();
   }, [grantProfileFrames, deliverAssistantBondRewards]);
+  useEffect(() => {
+    if (typeof assistantPeerSetPlayerBondAdder === 'function') assistantPeerSetPlayerBondAdder(addAssistantBondFor);
+  }, [addAssistantBondFor]);
   const addAssistantBond = useCallback(actionKey => {
     const id = selectedAssistantIdRef.current;
     addAssistantBondFor(id, actionKey);
@@ -153847,12 +154217,19 @@ function MonsterHeroGame() {
       const metIds = assistantsUnlockedFrom(rhythmEventStorySeen).filter(who => who.id !== 'momosuke' || momosukeIntroSeenFlag).map(who => who.id);
       const busy = !!eventReplay || assistantChatOpen || showAssistantPicker || kikiIntroStep != null || momosukeIntroStep != null || !assistantChosen;
       const scene = busy ? null : ASSISTANT_PEER_SCENES[gameState] || null;
+      const md = normalizeMissions(missions).daily || {};
+      const today = {
+        battles: md.battles || 0,
+        clears: md.challengeClears || 0,
+        enhances: md.enhances || 0
+      };
       return React.createElement(AssistantPeerTalk, {
         scene: peerReplay ? null : scene,
         metIds: metIds,
         selectedId: selectedAssistantId,
         replay: peerReplay,
-        onReplayEnd: () => setPeerReplay(null)
+        onReplayEnd: () => setPeerReplay(null),
+        today: today
       });
     })(), gameState === 'RHYTHM_INFO' && React.createElement(RhythmInfoScreen, {
       returnToHome: returnToHome
