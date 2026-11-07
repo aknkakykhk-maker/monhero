@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 98faf557195c87c7
+// source-sha256: d005fbc30d3cb5d0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -61136,15 +61136,17 @@ const growthFxDropSheet = id => {
   GROWTH_FX_STORE.sheets = GROWTH_FX_STORE.sheets.filter(s => s.id !== id);
   growthFxEmit();
 };
+const growthFxAssistantOf = assistantId => {
+  if (typeof assistantReleased === 'function' && !assistantReleased(assistantId)) return null;
+  return (typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST) ? ASSISTANT_LIST : []).filter(a => a && (typeof assistantReleased !== 'function' || assistantReleased(a.id))).find(a => a.id === assistantId) || null;
+};
 const growthFxAssistantFace = (assistantId, expression = 'happy') => {
-  const list = typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST) ? ASSISTANT_LIST : [];
-  const who = list.find(a => a && a.id === assistantId);
+  const who = growthFxAssistantOf(assistantId);
   if (!who || !who.imageDir || !who.imagePrefix) return null;
   return `${who.imageDir}/${who.imagePrefix}_${expression}.PNG`;
 };
 const growthFxAssistantName = assistantId => {
-  const list = typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST) ? ASSISTANT_LIST : [];
-  const who = list.find(a => a && a.id === assistantId);
+  const who = growthFxAssistantOf(assistantId);
   return who && who.name || '';
 };
 const growthFxAssistantBondPct = points => {
@@ -61159,7 +61161,7 @@ const growthFxAssistantBondPct = points => {
 const growthFxAssistantBond = (assistantId, beforePoints, afterPoints) => {
   const before = growthFxNum(beforePoints),
     after = growthFxNum(afterPoints);
-  if (!(after > before)) return;
+  if (!(after > before) || !growthFxAssistantOf(assistantId)) return;
   const name = growthFxAssistantName(assistantId);
   const lvOf = p => typeof assistantBondLevel === 'function' ? assistantBondLevel(p) : 1;
   const levelFrom = lvOf(before),
@@ -61282,6 +61284,7 @@ const growthFxPeerLevel = ({
   levelAfter
 } = {}) => {
   if (!Array.isArray(pair) || pair.length !== 2 || !(growthFxNum(levelAfter) > growthFxNum(levelBefore))) return;
+  if (!growthFxAssistantOf(pair[0]) || !growthFxAssistantOf(pair[1])) return;
   const [a, b] = pair;
   const stage = growthFxPeerLevelName(levelAfter);
   growthFxPush({
@@ -61306,7 +61309,7 @@ const growthFxPeerItem = ({
   reaction = null,
   playerGain = 0
 } = {}) => {
-  if (!Array.isArray(pair) || pair.length !== 2) return;
+  if (!Array.isArray(pair) || pair.length !== 2 || !growthFxAssistantOf(pair[0]) || !growthFxAssistantOf(pair[1])) return;
   const gain = growthFxNum(pointsAfter) - growthFxNum(pointsBefore);
   if (!(gain > 0) && !(growthFxNum(playerGain) > 0)) return;
   const items = typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : [];
@@ -61341,7 +61344,7 @@ const growthFxPeerItem = ({
   });
 };
 const growthFxSessionLevel = (list = []) => {
-  const ups = (Array.isArray(list) ? list : []).filter(u => u && growthFxNum(u.levelAfter) > growthFxNum(u.levelBefore));
+  const ups = (Array.isArray(list) ? list : []).filter(u => u && growthFxNum(u.levelAfter) > growthFxNum(u.levelBefore) && growthFxAssistantOf(u.assistantId));
   if (!ups.length) return;
   const top = ups[0];
   const gains = ups.map(u => ({
