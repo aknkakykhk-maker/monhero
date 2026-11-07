@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5a54ab156de6b7cd
+// source-sha256: 810658137c2b8243
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -100821,6 +100821,15 @@ const ASSISTANT_LIFE_REASON_LABEL = Object.freeze({
   mypace: 'マイペース',
   distance: '距離をおいている'
 });
+const assistantLifeNextSlotText = (now = Date.now()) => {
+  const cur = assistantLifeSlotAt(now);
+  const h = new Date(Number(now) + 9 * 3600000);
+  const slot = ASSISTANT_LIFE_SLOTS[cur.i];
+  const mins = Math.max(1, slot.to * 60 - (h.getUTCHours() * 60 + h.getUTCMinutes()));
+  const next = ASSISTANT_LIFE_SLOTS[(cur.i + 1) % ASSISTANT_LIFE_SLOTS.length];
+  const t = mins >= 60 ? `${Math.floor(mins / 60)}時間${mins % 60 ? `${mins % 60}分` : ''}` : `${mins}分`;
+  return `あと${t}で${next.label}(みんなが動きます)`;
+};
 const assistantLifeSlotRange = id => {
   const s = ASSISTANT_LIFE_SLOTS.find(x => x.id === id);
   return s ? `${s.label}(${s.from}〜${s.to}時)` : '';
@@ -100904,7 +100913,7 @@ function AssistantLifeBand({
   }, text || sub), text && sub ? React.createElement("span", {
     className: "block text-[10px] font-bold leading-tight text-slate-300"
   }, sub) : null, React.createElement("span", {
-    className: "block text-[9px] font-bold leading-tight text-pink-200"
+    className: "block text-[10px] font-bold leading-tight text-pink-200"
   }, "にぎわい「", tier.label, "」・みんなの様子 ▸"))), React.createElement("button", {
     type: "button",
     "data-assistant-life-band-close": true,
@@ -101036,8 +101045,11 @@ function AssistantLifeScreenBody({
   }, React.createElement("p", {
     className: "min-w-0 flex-1 text-[15px] font-black text-pink-200"
   }, "助手たちの今"), React.createElement("span", {
-    className: "whitespace-nowrap text-[10px] font-bold text-slate-400"
-  }, "いまは", assistantLifeSlotRange(slot.id)), React.createElement("button", {
+    className: "text-right text-[10px] font-bold leading-tight text-slate-400"
+  }, "いまは", assistantLifeSlotRange(slot.id), React.createElement("br", null), React.createElement("span", {
+    "data-assistant-life-next-slot": true,
+    className: "text-slate-300"
+  }, assistantLifeNextSlotText())), React.createElement("button", {
     type: "button",
     "data-assistant-life-close": true,
     onClick: assistantLifeCloseScreen,
@@ -101065,9 +101077,13 @@ function AssistantLifeScreenBody({
   })), React.createElement("p", {
     className: "mt-1 text-[11px] font-bold text-white"
   }, ASSISTANT_LIFE_TIER_NOTES[tier.id]), React.createElement("p", {
-    className: "text-[10px] text-slate-300"
-  }, "友情Lv の上がり方 ×", tier.mult, "・1組の1日の上限 ", tier.cap, "・今日見守れるのは あと", watchLeft, "回"), React.createElement("p", {
-    className: "text-[9px] text-slate-400"
+    className: "mt-0.5 text-[11px] text-slate-200"
+  }, React.createElement("span", {
+    className: "text-orange-300"
+  }, "🤝 友情Lv の上がり方 ×", tier.mult), "(1組1日 ", tier.cap, " まで)・👀 今日見守れるのは あと", React.createElement("b", {
+    className: "text-white"
+  }, watchLeft), "回"), React.createElement("p", {
+    className: "text-[10px] text-slate-400"
   }, "モンヒロビート・バトル・MFバトルカード・おしゃべりで遊ぶと、にぎわいがたまります(朝4時に新しくなります)")), React.createElement("div", {
     className: "mt-2 flex gap-1",
     role: "tablist"
@@ -101104,10 +101120,10 @@ function AssistantLifeScreenBody({
     className: "text-[10px] leading-snug text-slate-300"
   }, x.what.split('。')[0], "。", React.createElement("span", {
     className: "text-orange-300"
-  }, "友情Lv +", x.peerAmt), "・2人との", React.createElement("span", {
+  }, "🤝 友情Lv +", x.peerAmt), "・2人との", React.createElement("span", {
     className: "text-pink-200"
-  }, "仲良し度 +", x.playerAmt), "・2人のひとこと")))), React.createElement("p", {
-    className: "mt-1.5 text-[9px] leading-snug text-slate-400"
+  }, "💗 仲良し度 +", x.playerAmt), "・2人のひとこと")))), React.createElement("p", {
+    className: "mt-1.5 text-[10px] leading-snug text-slate-400"
   }, "手に入れる:モンヒロビートの「ビートP交換所」(", itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・'), ")/渡す:下の組の「", itemInfos[0].emoji, " 渡す」。誘う・引き合わせるは無料で、次の時間の過ごし方が変わります")), React.createElement("div", {
     className: "mt-2 space-y-2"
   }, (life.groups || []).map(g => {
@@ -101128,9 +101144,9 @@ function AssistantLifeScreenBody({
       className: "text-[12px] font-black leading-tight text-white"
     }, g.ids.map(nameOf).join('・')), React.createElement("p", {
       className: "text-[11px] font-bold leading-tight text-pink-200"
-    }, ASSISTANT_LIFE_PLACES[g.place], "で", ASSISTANT_LIFE_DOINGS[g.doing].label))), React.createElement("p", {
-      className: "mt-1 text-[10px] text-slate-400"
-    }, g.ids.map(id => `${nameOf(id)}: ${mood(id)}`).join(' / ')), (() => {
+    }, ASSISTANT_LIFE_PLACES[g.place], "で", ASSISTANT_LIFE_DOINGS[g.doing].label))), g.ids.some(id => mood(id)) && React.createElement("p", {
+      className: "mt-1 text-[11px] text-slate-300"
+    }, g.ids.filter(id => mood(id)).map(id => `${nameOf(id)}: ${mood(id)}`).join(' / ')), (() => {
       const hints = pairsOf(g.ids).map(([a, b]) => ({
         a,
         b,
@@ -101141,8 +101157,8 @@ function AssistantLifeScreenBody({
       const who2 = h => g.ids.length > 2 ? `${nameOf(h.a)}と${nameOf(h.b)}、` : '';
       return React.createElement(React.Fragment, null, near && React.createElement("p", {
         "data-assistant-life-hint": "near",
-        className: "mt-1 w-fit rounded-full bg-orange-400/20 px-2 py-0.5 text-[9px] font-black text-orange-200"
-      }, "⬆ ", who2(near), "もうすぐ友情Lv", near.near.level, "(あと", near.near.left, ")"), near && g.ids.length === 2 && React.createElement("div", {
+        className: "mt-1 w-fit rounded-full bg-orange-400/20 px-2 py-0.5 text-[10px] font-black text-orange-200"
+      }, "🤝 ", who2(near), "もうすぐ友情Lv", near.near.level, "(あと", near.near.left, ")"), near && g.ids.length === 2 && React.createElement("div", {
         className: "mt-0.5 h-1.5 overflow-hidden rounded-full bg-slate-800",
         "aria-hidden": "true"
       }, React.createElement("div", {
@@ -101152,7 +101168,7 @@ function AssistantLifeScreenBody({
         }
       })), after && React.createElement("p", {
         "data-assistant-life-hint": "after",
-        className: "mt-1 w-fit rounded-full bg-sky-400/20 px-2 py-0.5 text-[9px] font-black text-sky-200"
+        className: "mt-1 w-fit rounded-full bg-sky-400/20 px-2 py-0.5 text-[10px] font-black text-sky-200"
       }, "💦 ", who2(after), "言い合いのあと(渡すと仲直りのきっかけに)"));
     })(), React.createElement("div", {
       className: "mt-1.5 flex gap-1.5"
@@ -101222,7 +101238,7 @@ function AssistantLifeScreenBody({
     onClick: introduce,
     className: "mt-2 min-h-[44px] w-full rounded-xl border border-sky-300/50 bg-sky-400/10 text-[12px] font-black text-sky-100 active:scale-[.98] disabled:opacity-40"
   }, introNext ? `次の時間は ${introNext.pair.split('-').map(nameOf).join('と')} を引き合わせます` : '次の時間に一緒に過ごしてもらう')), React.createElement("p", {
-    className: "mt-3 text-[9px] leading-snug text-slate-500"
+    className: "mt-3 text-[10px] leading-snug text-slate-500"
   }, "みんな、時間(朝5・昼10・午後14・夕方18・夜21・深夜0時)が変わるたびに、自分で過ごし方を決めます。")), tab === 'map' && typeof AssistantPeerMap === 'function' && React.createElement("div", {
     className: "mt-2"
   }, React.createElement(AssistantPeerMap, {
@@ -101331,9 +101347,9 @@ function AssistantLifeGiveSheet({
     className: "text-slate-200"
   }, React.createElement("span", {
     className: "text-orange-300"
-  }, "2人の友情Lv +", info.peerAmt), hint ? `(いま Lv${hint.lv}${left != null ? ` → あと${left}で Lv${hint.lv + 1}${left <= info.peerAmt ? '！' : ''}` : ''})` : '', React.createElement("br", null), React.createElement("span", {
+  }, "🤝 2人の友情Lv +", info.peerAmt), hint ? `(いま Lv${hint.lv}${left != null ? ` → あと${left}で Lv${hint.lv + 1}${left <= info.peerAmt ? '！' : ''}` : ''})` : '', React.createElement("br", null), React.createElement("span", {
     className: "text-pink-200"
-  }, "あなたと ", pair.map(nameOf).join('・'), " の仲良し度 +", info.playerAmt), React.createElement("br", null), "渡したあと、2人がひとこと"), React.createElement("dt", {
+  }, "💗 あなたと ", pair.map(nameOf).join('・'), " の仲良し度 +", info.playerAmt), React.createElement("br", null), "渡したあと、2人がひとこと"), React.createElement("dt", {
     className: "font-black text-amber-200"
   }, "使える数"), React.createElement("dd", {
     className: "text-slate-200"
@@ -101408,7 +101424,7 @@ function AssistantLifeItemIntro({
     className: "text-[14px] font-black text-amber-200"
   }, "はじめての ", info.emoji, " ", info.name, "！")), React.createElement("p", {
     className: "mt-2 text-[12px] leading-relaxed text-white"
-  }, "① 「助手たちの今」で、一緒にいる2人を選んで渡せるよ", React.createElement("br", null), "② 2人の友情Lv と、あなたとの仲良し度が上がる", React.createElement("br", null), "③ 1日1回。⬆ の印がついた2人に渡すと、Lv が上がりやすい！"), React.createElement("div", {
+  }, "① 「助手たちの今」で、一緒にいる2人を選んで渡せるよ", React.createElement("br", null), "② 2人の友情Lv と、あなたとの仲良し度が上がる", React.createElement("br", null), "③ 1日1回。「🤝 もうすぐ友情Lv」の印がついた2人に渡すと、Lv が上がりやすい！"), React.createElement("div", {
     className: "mt-2 flex gap-2"
   }, React.createElement("button", {
     type: "button",
