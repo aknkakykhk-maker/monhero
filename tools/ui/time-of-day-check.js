@@ -46,7 +46,7 @@ if (keys.some(k => k !== "'mh_time_of_day_v1'")) ng(`ほかの保存キーに触
 // 4) 時刻の札の置き場所(HOME・プロフィールだけ)
 const where = fs.readdirSync(PARTS).filter(f => f.endsWith('.jsx') && f !== '44-time-of-day.jsx')
   .filter(f => /<TimeOfDayClock\b/.test(fs.readFileSync(path.join(PARTS, f), 'utf8')));
-const allowed = new Set(['69-screen-home.jsx', '56-screen-profile.jsx', '56-assistant-life.jsx']); // 家(助手ライフ)はナカヨシ5が置く
+const allowed = new Set(['69-screen-home.jsx', '56-screen-profile.jsx', '56-assistant-life.jsx', '56-assistant-life-house.jsx']); // 家(助手ライフ)はナカヨシ5が置く(家の画面は 56-assistant-life-house.jsx)
 where.filter(f => !allowed.has(f)).forEach(f => ng(`時刻の札を置いてよい画面の外に置いている: ${f}`));
 if (!where.includes('69-screen-home.jsx')) ng('HOME に時刻の札が無い');
 const app = fs.readFileSync(path.join(PARTS, '60-app.jsx'), 'utf8');

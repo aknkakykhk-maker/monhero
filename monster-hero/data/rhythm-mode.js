@@ -1074,7 +1074,7 @@ const RHYTHM_VIEW_ROTATION=(()=>{
   const vh=()=>size.h;
   const get=()=>angle;
   const active=()=>angle===90||angle===270;
-  const set=next=>{
+  const set=next=>{if(typeof MH_SCREEN_TRAIL!=='undefined')MH_SCREEN_TRAIL.push('rot',String(next));
     const value=(next===90||next===270)?next:0;
     if(value===angle)return angle;
     angle=value;
