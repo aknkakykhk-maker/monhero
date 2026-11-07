@@ -316,10 +316,13 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
         const opened = await C.evaluate(() => ({ layer: !!document.querySelector('[data-rhythm-multi-options-layer] [data-rhythm-options]'), room: typeof RHYTHM_MULTI !== 'undefined' && !!RHYTHM_MULTI.view(), calib: !!document.querySelector('[data-rhythm-multi-options-layer] [data-rhythm-line-adjust-open],[data-rhythm-multi-options-layer] [data-rhythm-calibrator-open]') }));
         check(`オプション(${label}): ソロと同じオプションが部屋の上に開き、部屋は抜けない(演奏を始める項目は出さない)`, opened.layer && opened.room && !opened.calib, JSON.stringify(opened));
         // オプションは中を上下にすべらせる作りなので、左右のはみ出しと、文字の切れだけを見る
-        const out = await C.evaluate(() => [...document.querySelectorAll('[data-rhythm-multi-options-layer] button')].filter((el) => {
+        // オプションは中を上下にすべらせる作りなので、見た目の左右のはみ出しと、文字の切れだけを見る。
+        // ★回したときは見た目の上下が端末の左右になる。すべらせた先の中身を「左右へはみ出し」と数えないよう、端末の上下で測る
+        const out = await C.evaluate((rot) => [...document.querySelectorAll('[data-rhythm-multi-options-layer] button')].filter((el) => {
           const r = el.getBoundingClientRect();
-          return r.width > 0 && (r.right > innerWidth + 1 || r.left < -1 || el.scrollWidth > el.clientWidth + 1);
-        }).map((el) => (el.innerText || el.getAttribute('aria-label') || '').trim().slice(0, 12)));
+          const side = rot ? (r.bottom > innerHeight + 1 || r.top < -1) : (r.right > innerWidth + 1 || r.left < -1);
+          return r.width > 0 && (side || el.scrollWidth > el.clientWidth + 1);
+        }).map((el) => `${(el.innerText || el.getAttribute('aria-label') || '').trim().slice(0, 12)}(${el.scrollWidth}/${el.clientWidth})`), !!rotated);
         check(`オプション(${label}): ボタンが左右へはみ出さず、字が切れない`, out.length === 0, out.slice(0, 8).join(' / '));
         await C.evaluate(() => document.querySelector('[data-rhythm-multi-options-layer] button[aria-label="戻る"]')?.click());
         await C.waitForTimeout(500);

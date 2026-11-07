@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2542311981763f77
+// source-sha256: 47af1b33a6311ebb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -90990,6 +90990,8 @@ function RhythmMultiScreen({
     onClick: () => setInviteSheet(false),
     className: "min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 text-sm font-black"
   }, "✕")), inviteListBody));
+  const askBuddy = view ? (view.myCpus || []).map(c => view.members.find(m => m.id === c.id)).find(m => m && !m.as) : null;
+  const askBuddyName = askBuddy ? askBuddy.name || 'マスモン' : '';
   const chatSheet = chatOpen && view && React.createElement("div", {
     className: "absolute inset-0 z-[80000]"
   }, React.createElement("button", {
@@ -91009,8 +91011,8 @@ function RhythmMultiScreen({
     members: view.members,
     resolveIconUrl: resolveIconUrl,
     onClose: () => setChatOpen(false),
-    askName: (view.myCpus || []).length > 0 ? (view.members.find(m => m.id === view.myCpus[0].id) || {}).name || 'マスモン' : '',
-    talkTip: !talkTipSeen && (view.myCpus || []).length > 0 ? (view.members.find(m => m.id === view.myCpus[0].id) || {}).name || 'マスモン' : '',
+    askName: askBuddyName,
+    talkTip: !talkTipSeen && askBuddyName ? askBuddyName : '',
     onTalkTipClose: closeTalkTip
   })));
   const countdownLayer = countdown && React.createElement("div", {
