@@ -38,3 +38,4 @@
 - secret は「ないしょ」「秘密」の言葉を使わず「（ひそひそ）」の話として書いた(VOICE.md・台帳の守りに合わせる)。中身はぼかし、{name} から聞いたことは話さない
 - woken の lv は助手と {name} の仲良し度(1-4 / 5-10。呼び方が変わる Lv5 で分けた)
 - 検査: `peer-lines-variety-check.js` に新しい種類(fight mend mend3 jealous secret consult tease rival awkward sleep owl home rhythm)と鍵(cause how game slot shift、line=talk/woken、lv=1-4/5-10)を足した。取り込み道具はナカヨシ側
+- 追加(ナカヨシ5): 決まった3人 trio 36本(まだ台本の無い36組のうち、ツムギと id 順で交互に分けたコトバの18組 × 2本)。「4人」とは書かない。これでコトバ分は404本
