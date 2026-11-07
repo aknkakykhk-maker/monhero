@@ -1360,6 +1360,31 @@
     "subdivisionsPerBeat": 4,
     "source": "command"
    }
+  },
+  "humanoid": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-humanoid.mp3",
+   "chartRevision": 35,
+   "audioSha256": "763466fbbf97a7ab31edcf79b9a8b1fd5e145868b2a263455f8783f396afcc09",
+   "durationMs": 98847,
+   "analyzedTiming": {
+    "bpm": 159.005,
+    "beatZeroMs": 1267.2,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "chartIntensity": "extreme",
+   "chartIntensityByDifficulty": {
+    "EXPERT": "mild"
+   },
+   "masterDensity": 1.6,
+   "hellDensity": 1.6,
+   "sustainScale": {
+    "EXPERT": 0.8,
+    "MASTER": 0.3,
+    "HELL": 0.3
+   }
   }
  }
 }
