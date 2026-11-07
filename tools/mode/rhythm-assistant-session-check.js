@@ -202,5 +202,25 @@ check('助手のスコアをランキングへ送らない(助手の計算の部
   check('「切る」なら部屋のチャットも演奏中のふきだしも出さない(合体の光は出す)', /if \(mode === 'off'\) return '';/.test(SCREEN) && /if \(queue\.length \|\| hideAt \|\| mode === 'off'\) return;/.test(SCREEN) && /const rows = mode === 'off' \? null : rhythmAssistSessionPickPair\(g, 'gattai', usedPair\);/.test(SCREEN));
   check('結果のカード: Lv.45 で枠が助手の色・Lv.90 で名前入りの背景(MVP のカードは今のまま)', /const RHYTHM_ASSIST_SESSION_FRAME_LEVEL = 45;/.test(SESSION) && /const RHYTHM_ASSIST_SESSION_BACK_LEVEL = 90;/.test(SESSION) && /if \(!who \|\| isMvp\) return undefined;/.test(SCREEN) && /style=\{rhythmAssistSessionCardStyle\(r\.m, isMvp\)\}/.test(MULTI));
 }
+// ---- 得意の応援(Lv.25) ----
+{
+  const sb5 = { Math, Date, Object, Number, String, Array, JSON, console };
+  vm.createContext(sb5);
+  vm.runInContext(`${BUDDY}\n${SESSION}\n;globalThis.__c={cheer:rhythmAssistSessionCheer,apply:rhythmAssistSessionApplyLive};`, sb5);
+  const c = sb5.__c;
+  const base = { level: 25, fc: false, marvRate: 0.5, ratio: 0.8, cleared: true, firstSong: false, diffId: 'NORMAL' };
+  check('得意の応援は Lv.25 から(Lv.24 では出ない)', c.cheer('dra', { ...base, level: 24 }) === null && !!c.cheer('dra', base));
+  check('みゅあ: フルコンでビートP+3 / ももすけ: 9割以上でビートP+3 / あつ: 95%以上でビートP+3 / えるびん: 7割未満でビートP+3',
+    c.cheer('mua', { ...base, fc: true }).points === 3 && c.cheer('mua', base) === null && c.cheer('momosuke', { ...base, ratio: 0.9 }).points === 3
+    && c.cheer('atsu', { ...base, ratio: 0.95 }).points === 3 && c.cheer('atsu', { ...base, ratio: 0.94 }) === null && c.cheer('erubin', { ...base, ratio: 0.6 }).points === 3);
+  check('きき: MARVELOUS 9割で経験値+10% / ドラ: クリアで+10% / きゅうこ: はじめての曲で+20% / ソラシド: HARD 以上で+10%',
+    c.cheer('kiki', { ...base, marvRate: 0.9 }).exp === 0.1 && c.cheer('dra', base).exp === 0.1 && c.cheer('kyuko', { ...base, firstSong: true }).exp === 0.2
+    && c.cheer('sorashido', { ...base, diffId: 'HARD' }).exp === 0.1 && c.cheer('sorashido', base) === null);
+  check('途中でやめた・クリアしていない曲では応援しない', c.cheer('dra', { ...base, cleared: false }) === null);
+  const args = { round: 'r', songId: 'evans', diffId: 'MASTER', durationMs: 1, teamRank: 'S', dayKey: 'd', nowMs: 1, score: 1, maxScore: 1000000 };
+  const plain = c.apply(null, 'dra', args).gain; const up = c.apply(null, 'dra', { ...args, expBonus: 0.1 }).gain; const capped = c.apply(null, 'dra', { ...args, expBonus: 5 }).gain;
+  check('経験値の上乗せは足すだけ(上限 +20%)', up === Math.round(plain * 1.1) && capped === Math.round(plain * 1.2), `${plain}→${up}・${capped}`);
+  check('ビートP は育ちが数えた回だけ(同じ回は2度足さない)', /if \(outcome && outcome\.cheer && outcome\.cheer\.points > 0 && typeof addRhythmEventPoints === 'function'\)/.test(SCREEN));
+}
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

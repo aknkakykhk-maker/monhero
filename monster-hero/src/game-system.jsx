@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 162ff2963861f3b9
+// generated-sha256: c83660b48ffe9a26
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -30880,7 +30880,7 @@ const rhythmAssistSessionPlay = ({ state, assistantId, songId, diffId, totalNote
 };
 
 // 1ライブぶん育てる(同じ回は2度数えない)。{ next, gain, levelUp, likeUp, like, familiarUp }。数えなかったら next は null
-const rhythmAssistSessionApplyLive = (state, assistantId, { round, songId, diffId, durationMs, teamRank, dayKey, nowMs, score, maxScore, chartLevel = 0, humans = 1 }) => {
+const rhythmAssistSessionApplyLive = (state, assistantId, { round, songId, diffId, durationMs, teamRank, dayKey, nowMs, score, maxScore, chartLevel = 0, humans = 1, expBonus = 0 }) => {
   const st = rhythmAssistSessionNormalize(state);
   if (!RHYTHM_ASSIST_SESSION_IDS.includes(assistantId)) return { next: null, gain: 0, levelUp: 0, likeUp: 0, like: 0, familiarUp: false, tickets: 0 };
   const before = rhythmAssistSessionMon(st, assistantId);
@@ -30888,7 +30888,8 @@ const rhythmAssistSessionApplyLive = (state, assistantId, { round, songId, diffI
   // 育ち方はマスモンと同じ(調子なし)。性格は付けない
   const r = rhythmBuddyApplyLive(before, { round, songId, diffId, durationMs, teamRank, dayKey, lean: '', nowMs, score, maxScore, chartLevel, humans, moodId: '' });
   if (!r.gain) return { next: null, gain: 0, levelUp: 0, likeUp: 0, like: likeBefore, familiarUp: false, tickets: 0 };
-  const gain = Math.max(1, Math.round(r.gain * rhythmAssistSessionExpScale(likeBefore)));
+  // expBonus … 得意の応援の上乗せ(0〜0.2)
+  const gain = Math.max(1, Math.round(r.gain * (rhythmAssistSessionExpScale(likeBefore) + Math.max(0, Math.min(0.2, Number(expBonus) || 0)))));
   const sid = rhythmBuddyStr(songId, 60);
   const likes = { ...before.likes };
   if (sid) likes[sid] = (likes[sid] || 0) + 1;
@@ -30970,6 +30971,28 @@ const rhythmAssistSessionDuos = (ids, levelOf, seenOf) => {
 };
 // デュオのビートP の上乗せ(友情Lv4 以上のデュオ1組につき +5%)
 const rhythmAssistSessionDuoBonus = (duos) => (Array.isArray(duos) ? duos : []).filter((d) => d && d.result).length * RHYTHM_ASSIST_SESSION_DUO_P_BONUS;
+
+// ---- 得意の応援(セッションLv.25 から・PLAN.md 2章。報酬と見た目だけで、スコア・判定には効かない) ----
+// 呼んだ人のこの1曲の結果で決まる。{ exp: 経験値の上乗せの割合, points: ビートP, label: 結果の行に出す文 }。当たらなければ null
+//   みゅあ(コンボ): フルコンでビートP +3 / きき(正確さ): MARVELOUS 9割以上で経験値 +10% / ももすけ(ライブ感): S(9割)以上でビートP +3
+//   ドラ(ねばり): クリアで経験値 +10% / あつ(締め): 95%以上でビートP +3 / きゅうこ(曲を読む): はじめての曲をクリアで経験値 +20%
+//   ソラシド(計算): HARD 以上で経験値 +10% / えるびん(気づかい): 7割に届かなかったときビートP +3
+const RHYTHM_ASSIST_SESSION_CHEER_LEVEL = 25;
+const rhythmAssistSessionCheer = (assistantId, { level = 1, fc = false, marvRate = 0, ratio = 0, cleared = true, firstSong = false, diffId = '' } = {}) => {
+  if (level < RHYTHM_ASSIST_SESSION_CHEER_LEVEL || !cleared) return null;
+  const hard = RHYTHM_BUDDY_DIFF_IDS.indexOf(diffId) >= RHYTHM_BUDDY_DIFF_IDS.indexOf('HARD');
+  switch (assistantId) {
+    case 'mua': return fc ? { exp: 0, points: 3, label: 'フルコンの応援 ビートP+3' } : null;
+    case 'kiki': return marvRate >= 0.9 ? { exp: 0.1, points: 0, label: '正確さの応援 経験値+10%' } : null;
+    case 'momosuke': return ratio >= 0.9 ? { exp: 0, points: 3, label: 'ライブの応援 ビートP+3' } : null;
+    case 'dra': return { exp: 0.1, points: 0, label: 'ねばりの応援 経験値+10%' };
+    case 'atsu': return ratio >= 0.95 ? { exp: 0, points: 3, label: '締めの応援 ビートP+3' } : null;
+    case 'kyuko': return firstSong ? { exp: 0.2, points: 0, label: 'はじめての曲の応援 経験値+20%' } : null;
+    case 'sorashido': return hard ? { exp: 0.1, points: 0, label: '計算の応援 経験値+10%' } : null;
+    case 'erubin': return ratio < 0.7 ? { exp: 0, points: 3, label: '気づかいの応援 ビートP+3' } : null;
+    default: return null;
+  }
+};
 
 // ---- part: 33-rhythm-assistant-session-lines.jsx ----
 // ===== 助手とのセッションの台詞(生成物。手で直さない) =====
@@ -54406,7 +54429,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               humans={team.rows.filter((row) => !row.m.cpu).length}
               score={cpuRow.res.score} maxScore={((typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === cpuRow.res.diffId) || {}).maxScore || 0} />
             ) : (
-            <RhythmAssistSessionGrowth key={assistantId} assistantId={assistantId} onTickets={(n) => { for (let i = 0; i < n; i += 1) { if (onRefundBuddyTicket) void onRefundBuddyTicket(); } }} round={room.round} songId={room.songId} diffId={cpuRow.res.diffId} durationMs={song ? Number(song.playDurationMs) || 0 : 0} teamRank={team.rank}
+            <RhythmAssistSessionGrowth key={assistantId} assistantId={assistantId} ownerRes={myRow.res} onTickets={(n) => { for (let i = 0; i < n; i += 1) { if (onRefundBuddyTicket) void onRefundBuddyTicket(); } }} round={room.round} songId={room.songId} diffId={cpuRow.res.diffId} durationMs={song ? Number(song.playDurationMs) || 0 : 0} teamRank={team.rank}
               chartLevel={song && song.difficulties && song.difficulties[cpuRow.res.diffId] ? Number(song.difficulties[cpuRow.res.diffId].level) || 0 : 0}
               humans={team.rows.filter((row) => !row.m.cpu).length}
               score={cpuRow.res.score} maxScore={((typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === cpuRow.res.diffId) || {}).maxScore || 0} />
@@ -55990,7 +56013,7 @@ const rhythmAssistSessionQueueFx = (item) => {
   }, 500);
 };
 // 結果画面で、呼んだ助手を育てる(1ライブ1回。同じ回は2度数えない)。マスモンの RhythmBuddyGrowth と同じ作り
-function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, durationMs, teamRank, score = 0, maxScore = 0, chartLevel = 0, humans = 1, onTickets = null }) {
+function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, durationMs, teamRank, score = 0, maxScore = 0, chartLevel = 0, humans = 1, onTickets = null, ownerRes = null }) {
   const [shown, setShown] = React.useState(null);
   React.useEffect(() => {
     if (!assistantId || !round) return undefined;
@@ -55998,13 +56021,25 @@ function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, duratio
     let outcome = null;
     const dayKey = rhythmBuddyDayKey(Date.now());
     RHYTHM_ASSIST_SESSION_STORE.update((st) => {
-      const r = rhythmAssistSessionApplyLive(st, assistantId, { round, songId, diffId, durationMs, teamRank, dayKey, nowMs: Date.now(), score, maxScore, chartLevel, humans });
+      // 得意の応援(Lv.25 から)。呼んだ人のこの1曲の結果で決まる
+      const before = rhythmAssistSessionMon(st, assistantId);
+      const j = ownerRes && Array.isArray(ownerRes.j) ? ownerRes.j : null;
+      const total = j ? j.reduce((a, b) => a + (Number(b) || 0), 0) : 0;
+      const ownerDiff = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find((d) => d.id === (ownerRes && ownerRes.diffId));
+      const cheer = rhythmAssistSessionEnabled() && ownerRes ? rhythmAssistSessionCheer(assistantId, {
+        level: rhythmBuddyLevelInfo(before.exp).level, fc: Number(ownerRes.fc) > 0, marvRate: total > 0 ? (Number(j[0]) || 0) / total : 0,
+        ratio: Number(ownerRes.score) / ((ownerDiff && ownerDiff.maxScore) || 1000000), cleared: ownerRes.cleared !== false && !ownerRes.quit,
+        firstSong: !(before.songs && before.songs[songId]), diffId: ownerRes.diffId || diffId,
+      }) : null;
+      const r = rhythmAssistSessionApplyLive(st, assistantId, { round, songId, diffId, durationMs, teamRank, dayKey, nowMs: Date.now(), score, maxScore, chartLevel, humans, expBonus: cheer ? cheer.exp : 0 });
       if (!r.next) return null;
-      outcome = r;
+      outcome = { ...r, cheer };
       return r.next;
     }).then(() => {
       // 節目のセッション券は、渡した印を保存したあとで渡す(画面を閉じても二重にならない)
       if (outcome && outcome.tickets > 0 && typeof onTickets === 'function') { try { onTickets(outcome.tickets); } catch (_) { /* 渡せなくても続ける */ } }
+      // 得意の応援のビートP(同じ回は育ちが2度数えないので、ここも1回だけ)
+      if (outcome && outcome.cheer && outcome.cheer.points > 0 && typeof addRhythmEventPoints === 'function') { try { void addRhythmEventPoints(outcome.cheer.points); } catch (_) { /* 足せなくても続ける */ } }
       if (outcome && outcome.levelUp > 0) {
         const after = rhythmBuddyLevelInfo((outcome.next.mons[assistantId] || {}).exp).level;
         rhythmAssistSessionQueueFx({ assistantId, levelBefore: after - outcome.levelUp, levelAfter: after, tickets: outcome.tickets || 0 });
@@ -56027,6 +56062,7 @@ function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, duratio
       {shown.levelUp > 0 && <span data-rhythm-assist-levelup className="rounded bg-amber-300 px-1 text-slate-950">セッションLv.UP! Lv.{level}</span>}
       {shown.likeUp > 0 && <span className="text-amber-200">好み度+{shown.likeUp}</span>}
       {shown.tickets > 0 && <span data-rhythm-assist-ticket className="text-lime-200">セッション券+{shown.tickets}</span>}
+      {shown.cheer && <span data-rhythm-assist-cheer className="text-violet-200">{shown.cheer.label}</span>}
     </p>
   );
 }

@@ -100,7 +100,7 @@ const rhythmAssistSessionPlay = ({ state, assistantId, songId, diffId, totalNote
 };
 
 // 1ライブぶん育てる(同じ回は2度数えない)。{ next, gain, levelUp, likeUp, like, familiarUp }。数えなかったら next は null
-const rhythmAssistSessionApplyLive = (state, assistantId, { round, songId, diffId, durationMs, teamRank, dayKey, nowMs, score, maxScore, chartLevel = 0, humans = 1 }) => {
+const rhythmAssistSessionApplyLive = (state, assistantId, { round, songId, diffId, durationMs, teamRank, dayKey, nowMs, score, maxScore, chartLevel = 0, humans = 1, expBonus = 0 }) => {
   const st = rhythmAssistSessionNormalize(state);
   if (!RHYTHM_ASSIST_SESSION_IDS.includes(assistantId)) return { next: null, gain: 0, levelUp: 0, likeUp: 0, like: 0, familiarUp: false, tickets: 0 };
   const before = rhythmAssistSessionMon(st, assistantId);
@@ -108,7 +108,8 @@ const rhythmAssistSessionApplyLive = (state, assistantId, { round, songId, diffI
   // 育ち方はマスモンと同じ(調子なし)。性格は付けない
   const r = rhythmBuddyApplyLive(before, { round, songId, diffId, durationMs, teamRank, dayKey, lean: '', nowMs, score, maxScore, chartLevel, humans, moodId: '' });
   if (!r.gain) return { next: null, gain: 0, levelUp: 0, likeUp: 0, like: likeBefore, familiarUp: false, tickets: 0 };
-  const gain = Math.max(1, Math.round(r.gain * rhythmAssistSessionExpScale(likeBefore)));
+  // expBonus … 得意の応援の上乗せ(0〜0.2)
+  const gain = Math.max(1, Math.round(r.gain * (rhythmAssistSessionExpScale(likeBefore) + Math.max(0, Math.min(0.2, Number(expBonus) || 0)))));
   const sid = rhythmBuddyStr(songId, 60);
   const likes = { ...before.likes };
   if (sid) likes[sid] = (likes[sid] || 0) + 1;
@@ -190,3 +191,25 @@ const rhythmAssistSessionDuos = (ids, levelOf, seenOf) => {
 };
 // デュオのビートP の上乗せ(友情Lv4 以上のデュオ1組につき +5%)
 const rhythmAssistSessionDuoBonus = (duos) => (Array.isArray(duos) ? duos : []).filter((d) => d && d.result).length * RHYTHM_ASSIST_SESSION_DUO_P_BONUS;
+
+// ---- 得意の応援(セッションLv.25 から・PLAN.md 2章。報酬と見た目だけで、スコア・判定には効かない) ----
+// 呼んだ人のこの1曲の結果で決まる。{ exp: 経験値の上乗せの割合, points: ビートP, label: 結果の行に出す文 }。当たらなければ null
+//   みゅあ(コンボ): フルコンでビートP +3 / きき(正確さ): MARVELOUS 9割以上で経験値 +10% / ももすけ(ライブ感): S(9割)以上でビートP +3
+//   ドラ(ねばり): クリアで経験値 +10% / あつ(締め): 95%以上でビートP +3 / きゅうこ(曲を読む): はじめての曲をクリアで経験値 +20%
+//   ソラシド(計算): HARD 以上で経験値 +10% / えるびん(気づかい): 7割に届かなかったときビートP +3
+const RHYTHM_ASSIST_SESSION_CHEER_LEVEL = 25;
+const rhythmAssistSessionCheer = (assistantId, { level = 1, fc = false, marvRate = 0, ratio = 0, cleared = true, firstSong = false, diffId = '' } = {}) => {
+  if (level < RHYTHM_ASSIST_SESSION_CHEER_LEVEL || !cleared) return null;
+  const hard = RHYTHM_BUDDY_DIFF_IDS.indexOf(diffId) >= RHYTHM_BUDDY_DIFF_IDS.indexOf('HARD');
+  switch (assistantId) {
+    case 'mua': return fc ? { exp: 0, points: 3, label: 'フルコンの応援 ビートP+3' } : null;
+    case 'kiki': return marvRate >= 0.9 ? { exp: 0.1, points: 0, label: '正確さの応援 経験値+10%' } : null;
+    case 'momosuke': return ratio >= 0.9 ? { exp: 0, points: 3, label: 'ライブの応援 ビートP+3' } : null;
+    case 'dra': return { exp: 0.1, points: 0, label: 'ねばりの応援 経験値+10%' };
+    case 'atsu': return ratio >= 0.95 ? { exp: 0, points: 3, label: '締めの応援 ビートP+3' } : null;
+    case 'kyuko': return firstSong ? { exp: 0.2, points: 0, label: 'はじめての曲の応援 経験値+20%' } : null;
+    case 'sorashido': return hard ? { exp: 0.1, points: 0, label: '計算の応援 経験値+10%' } : null;
+    case 'erubin': return ratio < 0.7 ? { exp: 0, points: 3, label: '気づかいの応援 ビートP+3' } : null;
+    default: return null;
+  }
+};

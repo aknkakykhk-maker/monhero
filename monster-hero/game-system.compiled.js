@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 255f31d11ec1bf34
+// source-sha256: 95ee38ad630dab33
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -50208,7 +50208,8 @@ const rhythmAssistSessionApplyLive = (state, assistantId, {
   score,
   maxScore,
   chartLevel = 0,
-  humans = 1
+  humans = 1,
+  expBonus = 0
 }) => {
   const st = rhythmAssistSessionNormalize(state);
   if (!RHYTHM_ASSIST_SESSION_IDS.includes(assistantId)) return {
@@ -50246,7 +50247,7 @@ const rhythmAssistSessionApplyLive = (state, assistantId, {
     familiarUp: false,
     tickets: 0
   };
-  const gain = Math.max(1, Math.round(r.gain * rhythmAssistSessionExpScale(likeBefore)));
+  const gain = Math.max(1, Math.round(r.gain * (rhythmAssistSessionExpScale(likeBefore) + Math.max(0, Math.min(0.2, Number(expBonus) || 0)))));
   const sid = rhythmBuddyStr(songId, 60);
   const likes = {
     ...before.likes
@@ -50363,6 +50364,71 @@ const rhythmAssistSessionDuos = (ids, levelOf, seenOf) => {
   }));
 };
 const rhythmAssistSessionDuoBonus = duos => (Array.isArray(duos) ? duos : []).filter(d => d && d.result).length * RHYTHM_ASSIST_SESSION_DUO_P_BONUS;
+const RHYTHM_ASSIST_SESSION_CHEER_LEVEL = 25;
+const rhythmAssistSessionCheer = (assistantId, {
+  level = 1,
+  fc = false,
+  marvRate = 0,
+  ratio = 0,
+  cleared = true,
+  firstSong = false,
+  diffId = ''
+} = {}) => {
+  if (level < RHYTHM_ASSIST_SESSION_CHEER_LEVEL || !cleared) return null;
+  const hard = RHYTHM_BUDDY_DIFF_IDS.indexOf(diffId) >= RHYTHM_BUDDY_DIFF_IDS.indexOf('HARD');
+  switch (assistantId) {
+    case 'mua':
+      return fc ? {
+        exp: 0,
+        points: 3,
+        label: 'フルコンの応援 ビートP+3'
+      } : null;
+    case 'kiki':
+      return marvRate >= 0.9 ? {
+        exp: 0.1,
+        points: 0,
+        label: '正確さの応援 経験値+10%'
+      } : null;
+    case 'momosuke':
+      return ratio >= 0.9 ? {
+        exp: 0,
+        points: 3,
+        label: 'ライブの応援 ビートP+3'
+      } : null;
+    case 'dra':
+      return {
+        exp: 0.1,
+        points: 0,
+        label: 'ねばりの応援 経験値+10%'
+      };
+    case 'atsu':
+      return ratio >= 0.95 ? {
+        exp: 0,
+        points: 3,
+        label: '締めの応援 ビートP+3'
+      } : null;
+    case 'kyuko':
+      return firstSong ? {
+        exp: 0.2,
+        points: 0,
+        label: 'はじめての曲の応援 経験値+20%'
+      } : null;
+    case 'sorashido':
+      return hard ? {
+        exp: 0.1,
+        points: 0,
+        label: '計算の応援 経験値+10%'
+      } : null;
+    case 'erubin':
+      return ratio < 0.7 ? {
+        exp: 0,
+        points: 3,
+        label: '気づかいの応援 ビートP+3'
+      } : null;
+    default:
+      return null;
+  }
+};
 const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
   mua: {
     join: [['happy', 'やっほ〜！あたしも一緒に叩くね♪'], ['happy', 'ブリーダー、今日もセッションしよ！']],
@@ -91374,6 +91440,7 @@ function RhythmMultiScreen({
       }) : React.createElement(RhythmAssistSessionGrowth, {
         key: assistantId,
         assistantId: assistantId,
+        ownerRes: myRow.res,
         onTickets: n => {
           for (let i = 0; i < n; i += 1) {
             if (onRefundBuddyTicket) void onRefundBuddyTicket();
@@ -94063,7 +94130,8 @@ function RhythmAssistSessionGrowth({
   maxScore = 0,
   chartLevel = 0,
   humans = 1,
-  onTickets = null
+  onTickets = null,
+  ownerRes = null
 }) {
   const [shown, setShown] = React.useState(null);
   React.useEffect(() => {
@@ -94072,6 +94140,19 @@ function RhythmAssistSessionGrowth({
     let outcome = null;
     const dayKey = rhythmBuddyDayKey(Date.now());
     RHYTHM_ASSIST_SESSION_STORE.update(st => {
+      const before = rhythmAssistSessionMon(st, assistantId);
+      const j = ownerRes && Array.isArray(ownerRes.j) ? ownerRes.j : null;
+      const total = j ? j.reduce((a, b) => a + (Number(b) || 0), 0) : 0;
+      const ownerDiff = (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : []).find(d => d.id === (ownerRes && ownerRes.diffId));
+      const cheer = rhythmAssistSessionEnabled() && ownerRes ? rhythmAssistSessionCheer(assistantId, {
+        level: rhythmBuddyLevelInfo(before.exp).level,
+        fc: Number(ownerRes.fc) > 0,
+        marvRate: total > 0 ? (Number(j[0]) || 0) / total : 0,
+        ratio: Number(ownerRes.score) / (ownerDiff && ownerDiff.maxScore || 1000000),
+        cleared: ownerRes.cleared !== false && !ownerRes.quit,
+        firstSong: !(before.songs && before.songs[songId]),
+        diffId: ownerRes.diffId || diffId
+      }) : null;
       const r = rhythmAssistSessionApplyLive(st, assistantId, {
         round,
         songId,
@@ -94083,15 +94164,24 @@ function RhythmAssistSessionGrowth({
         score,
         maxScore,
         chartLevel,
-        humans
+        humans,
+        expBonus: cheer ? cheer.exp : 0
       });
       if (!r.next) return null;
-      outcome = r;
+      outcome = {
+        ...r,
+        cheer
+      };
       return r.next;
     }).then(() => {
       if (outcome && outcome.tickets > 0 && typeof onTickets === 'function') {
         try {
           onTickets(outcome.tickets);
+        } catch (_) {}
+      }
+      if (outcome && outcome.cheer && outcome.cheer.points > 0 && typeof addRhythmEventPoints === 'function') {
+        try {
+          void addRhythmEventPoints(outcome.cheer.points);
         } catch (_) {}
       }
       if (outcome && outcome.levelUp > 0) {
@@ -94133,7 +94223,10 @@ function RhythmAssistSessionGrowth({
   }, "好み度+", shown.likeUp), shown.tickets > 0 && React.createElement("span", {
     "data-rhythm-assist-ticket": true,
     className: "text-lime-200"
-  }, "セッション券+", shown.tickets));
+  }, "セッション券+", shown.tickets), shown.cheer && React.createElement("span", {
+    "data-rhythm-assist-cheer": true,
+    className: "text-violet-200"
+  }, shown.cheer.label));
 }
 const rhythmAssistSessionPeerLevel = (a, b) => {
   if (typeof assistantPeerEnabled !== 'function' || !assistantPeerEnabled() || typeof ASSISTANT_PEER_STORE === 'undefined') return 0;
