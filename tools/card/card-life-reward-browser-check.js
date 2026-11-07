@@ -1,11 +1,11 @@
-// MFバトルカード: カード部屋にいる助手と対戦すると、ごほうびが 1.5倍(2026-11-07 社長・カード部ルールくん)。本物の画面を縦・横・🔄横で触る。
+// MFバトルカード: カード部屋にいる助手と対戦すると、ごほうびが 1.5倍(2026-11-07 社長・カード部ルールくん)。本物の画面を縦・横で触る。
 //
 //   node tools/card/card-life-reward-browser-check.js        (SHOT_DIR=<フォルダ> で止め絵を残す)
 //
 // 助手ライフ段階2の本物の口(assistantLifeCardIds・assistantLifeAtCard・assistantLifeOnCardMatch)を使う。
 // 助手ライフの様子を書きかえて、ソラシド・えるびんだけをカード部屋に置いた状態で見る
 //
-// 見ているもの(縦 390×844・横 844×390・🔄横 の3つ)
+// 見ているもの(縦 390×844・横 844×390 の2つ。🔄横(絵を回す)はモンヒロビートの中だけで、HOME・カードの画面は回らない。2026-11-07 ナカヨシ7)
 //   ① HOME: MFバトルカードの札の横の顔の並びに「UP」。画面の中に入っている
 //   ② 顔を押した助手の部屋に「🃏 カード部屋で対戦する」。画面の中に入っていて、押すとMFバトルカードの相手えらびがその助手で開く
 //   ③ 相手えらび: カード部屋にいる助手の札だけに「🃏UP」。札の左上の角で、名前・「勝」の印に重ならず、札からはみ出さない。下に説明の帯(いる助手の名前)
@@ -39,7 +39,6 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 const MODES = [
   { id: 'tate', label: '縦', view: { width: 390, height: 844 } },
   { id: 'yoko', label: '横', view: { width: 844, height: 390 } },
-  { id: 'rot', label: '🔄横', view: { width: 390, height: 844 }, rot: true },
 ];
 const LIFE = ['sorashido', 'erubin'];
 
@@ -66,7 +65,11 @@ const run = async (browser, mode, errors) => {
     for (const x of ids) solo[x] = { place: 'cardroom', doing: 'cards' };
     ASSISTANT_LIFE_STORE.set({ life: { ...life, abs, groups, solo } }); // eslint-disable-line no-undef
   }, ids);
-  const rotate = async () => { if (mode.rot) { await page.evaluate(() => RHYTHM_VIEW_ROTATION.set(90)); await page.waitForTimeout(1000); } }; // eslint-disable-line no-undef
+  // モンヒロビートの外では絵が回っていない(🔄横はモンヒロビートの中だけ。外へ出ると 60-app の releaseScreenOrientation で戻る)
+  const notRotated = async (where) => {
+    const r = await page.evaluate(() => (typeof RHYTHM_VIEW_ROTATION === 'undefined' ? 'なし' : RHYTHM_VIEW_ROTATION.active())); // eslint-disable-line no-undef
+    check(`${mode.label} ${where}: 絵は回っていない(🔄横はモンヒロビートの中だけ)`, r === false || r === 'なし', String(r));
+  };
   // 対戦の前の画面(デッキの確かめ・対戦開始の演出)を進める
   const pass = async () => {
     const b = page.getByRole('button', { name: /対戦へ|このデッキで|はじめる|スタート|タップ/ }).first();
@@ -111,7 +114,7 @@ const run = async (browser, mode, errors) => {
       localStorage.setItem('mh_card_daily_v1', JSON.stringify({ day: cardTodayJst(), cpuPoint: 0, pvpPoint: 0, firstWin: true, foes: {}, quickLoops: 0 })); }); // eslint-disable-line no-undef
     await boot();
     // ① HOME
-    await rotate();
+    await notRotated('HOME');
     await force(); await page.waitForTimeout(1500);
     const ids = await page.evaluate(() => (typeof assistantLifeCardIds === 'function' ? assistantLifeCardIds() : null)); // eslint-disable-line no-undef
     check(`① ${mode.label} 助手ライフの口で、カード部屋にいるのがソラシド・えるびんだと読める`, Array.isArray(ids) && ids.slice().sort().join() === LIFE.slice().sort().join(), JSON.stringify(ids));
@@ -131,14 +134,14 @@ const run = async (browser, mode, errors) => {
     await page.locator('[data-assistant-life-room-act="card"]').dispatchEvent('click');
     await page.locator('[data-card-top="foe"]').waitFor({ timeout: 30000 });
     await dismiss();
-    await rotate();
+    await notRotated('相手えらび');
     await page.waitForTimeout(600);
     const picked = await page.evaluate(() => { const b = document.querySelector('[data-card-foe="sorashido"]'); return !!b && /bg-white\/10/.test(b.className); });
     check(`② ${mode.label} 押すと相手えらびがソラシドを選んだ形で開く`, picked);
     // ③ 相手えらび
     await page.getByRole('button', { name: /MASTER/ }).first().click();
     await page.waitForTimeout(400);
-    await rotate();
+    await notRotated('相手えらび(強さを選んだあと)');
     const pick = await page.evaluate((ids) => {
       const out = [];
       const chips = [...document.querySelectorAll('[data-card-foe-life-chip]')];
@@ -170,7 +173,7 @@ const run = async (browser, mode, errors) => {
     }
     await page.locator('[data-card-top="result"]').waitFor({ timeout: 20000 });
     await closeUp();
-    await rotate();
+    await notRotated('結果');
     const res = await page.evaluate(() => {
       const top = document.querySelector('[data-card-top="result"]');
       const band = document.querySelector('[data-card-result-life-up]');
