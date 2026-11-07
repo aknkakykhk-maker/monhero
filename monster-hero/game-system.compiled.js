@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d6c4db797194137a
+// source-sha256: 81e6a9ccbfc192ba
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -21878,12 +21878,12 @@ const buildAttackHits = ({
   globalComboRate = 0,
   mainCanCrit = true,
   kenshiExtraCombos = 0,
-  boostExtraCombos = 0,
   comboFinalMultiplier = 1,
   swordSkill = true,
   hitRepeat = 1,
   exCombos = null,
-  critDmgMult = 1
+  critDmgMult = 1,
+  boostExtraCombos = 0
 }) => {
   const hits = [];
   const critMult = 1.5 + critDmgBonus;
