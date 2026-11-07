@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 75886cf51c891301
+// source-sha256: 9fb7091952dd5136
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -50561,6 +50561,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', 'あたしたち、もうセッションLv.50ぢゃん！まぢ最強コンビかも♪'], ['wink', '{name}とならどんな曲でも楽しいの、ほんとだよ♪']],
     'sp80': [['excited', 'Lv.80！ここまで来たら、もう息ぴったりぢゃん♪'], ['happy', 'あたしの一番のセッション相手は、{name}だよｗ']],
     'sp100': [['excited', 'セッションLv.100！あたしたち、セッションマスターぢゃん！'], ['happy', 'ここまで一緒に叩いてくれて、まぢありがと♪']],
+    woke: [['troubled', 'ふぁ…{name}？ 起こされたけど、行く〜'], ['happy', 'ん〜…目、半分閉じてるけど叩くｗ'], ['wink', '寝ぐせのままだけど、来ちゃった♪']],
+    refuse: [['normal', 'むにゃ…あと5曲…ぢゃなくて5分…'], ['normal', '…ん…あしたなら、まぢで行く…'], ['happy', 'すぅ…{name}…またあとでね…']],
     'listen:mf_ichika_mix': [['excited', 'サビは1:48から！ そこからテンションまぢ上がるやつ♪']],
     'listen:monster_hero': [['excited', '1:50からずーっといちばん強いの！ 最後までアゲてこ♪']],
     'listen:monster_hero_another': [['excited', 'こっちもサビは1:49から！ 最後までずっと盛り上がるの♪']],
@@ -50632,6 +50634,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', '{name}とのセッション、Lv.50になりました♪'], ['wink', '指が覚えてくれている気がしまつ♪']],
     'sp80': [['happy', 'Lv.80でつ。目を閉じても合わせられそうです♪'], ['normal', '{name}の音、ちゃんと聞こえていますよ']],
     'sp100': [['excited', 'Lv.100でつ！セッションマスターですね♪'], ['happy', 'たくさん一緒に演奏してくれて、ありがとうございまつ♪']],
+    woke: [['troubled', '…ふぁ。起きまつ。お供しまつね'], ['wink', '眠いでつが、ちから全開でいきまつ♪'], ['happy', '早寝の私を呼ぶなんて、大胆でつね']],
+    refuse: [['normal', '…すぅ…明日の朝なら、ぜひ…'], ['normal', '…むにゃ…お茶は…あとで…'], ['troubled', '…ごめんなさい…もう、夢の中でつ…']],
     'listen:mf_ichika_mix': [['normal', '2分25秒の曲でつ。終わりの手前の盛り上がりまで、ていねいにいきましょう']],
     'listen:monster_hero': [['normal', '最初の45秒くらいは静かなんでつ。そこから少しずつ強くなっていきます']],
     'listen:monster_hero_another': [['normal', '0:48までは、静かな時間が長いんでつ。そこが好きです']],
@@ -50703,6 +50707,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['excited', 'Lv.50！！ももと{name}、もう名コンビだね♡'], ['wink', 'ここまで来たら、ももの専属だよw']],
     'sp80': [['excited', 'Lv.80！！ステージの上で一番息が合うの、{name}かも♡'], ['happy', 'ももについてこれるの、{name}くらいだよ！！']],
     'sp100': [['excited', 'Lv.100！！セッションマスターはもものおかげだよね♡'], ['happy', 'ずっと一緒にステージ立ってくれて、ありがと！！']],
+    woke: [['angry', 'ふぁ…ももを起こすなんて！ でも行く！！'], ['excited', '寝起きでもセンターは、もも！！'], ['wink', '目こすりながら叩くねw']],
+    refuse: [['normal', '…むにゃ…アンコールは…あした…'], ['happy', '…もも、いま夢でライブ中…♡'], ['normal', '…すぅ…起こさないで…w']],
     'listen:mf_ichika_mix': [['excited', '1:48からがいちばん盛り上がるとこ！！ そこでももが決めるね♡']],
     'listen:monster_hero': [['excited', '1:50からいちばん強いとこが続くの！！ 最高に盛り上がるやつ♡']],
     'listen:monster_hero_another': [['excited', '1:49からの盛り上がり、もとの曲に負けてないよ！！']],
@@ -50774,6 +50780,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', 'セッションLv.50だな。おで、うれしいくさ'], ['normal', 'ここまで来たの、ちょっとした冒険だったな']],
     'sp80': [['happy', 'Lv.80だな。もう目をつぶっても合わせられるからな'], ['happy', '{name}と叩くの、おで好きなんだな、えへへ']],
     'sp100': [['excited', 'Lv.100だな！セッションマスターだからな！'], ['happy', '長い冒険だったな。ありがとうな、えへへ']],
+    woke: [['troubled', '…ぐぅ…はっ、起きたぞ。行くからな'], ['normal', '寝ぼけてるが、叩くのはできるぞ'], ['happy', 'おでを起こすとは…しょうがないな']],
+    refuse: [['normal', '…ぐぅ…あと10時間…'], ['happy', '…むにゃ…グジラ…でっかい…'], ['troubled', '…すまん…膝が、まだ寝てる…']],
     'listen:mf_ichika_mix': [['happy', 'サビは1:48から2:14までだな。そこまでは体力をとっとけよ']],
     'listen:monster_hero': [['happy', '静かに始まって、だんだん強くなる。冒険の始まりみたいな曲だな']],
     'listen:monster_hero_another': [['normal', '0:48で急に強くなるからな。そこで置いていかれるなよ']],
@@ -50845,6 +50853,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', 'とりあえずLv.50だな笑'], ['wink', 'てか、だいぶ息合ってきたな！']],
     'sp80': [['happy', 'Lv.80か。普通にいいコンビだろ笑'], ['normal', 'ここまで来たら、締めも任せていいよな！']],
     'sp100': [['excited', 'Lv.100！セッションマスターだな笑'], ['happy', 'ここまで付き合ってくれて、ありがとな！']],
+    woke: [['surprise', '…ん！？ 起きた起きた！ 行くぞ笑'], ['happy', '寝起きだけど、とりあえずやる！'], ['happy', '眠いけど、{name}の頼みなら！']],
+    refuse: [['normal', '…朝練…6時…だから…！'], ['troubled', '…わり…明日な…笑'], ['normal', '…すぅ…ノーカン…だろ…']],
     'listen:mf_ichika_mix': [['wink', '自分の大会の曲はちょっと照れる笑 でも1:48からのサビは全力でいくよ！']],
     'listen:monster_hero': [['happy', '最後の2:30でいきなり静かになるから、きれいに締めよ笑']],
     'listen:monster_hero_another': [['happy', 'サビは2:34まで続くから、最後の1秒までちゃんと締めよ！']],
@@ -50916,6 +50926,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', 'Lv.50だね〜。合わせ方が分かってきたよ'], ['wink', '{name}の癖、だいたい読めるようになったよ〜笑']],
     'sp80': [['happy', 'Lv.80〜。構成を読まなくても合うね〜'], ['normal', 'ここまでの記録、きれいに積み上がってるよ〜']],
     'sp100': [['excited', 'Lv.100〜！セッションマスターだね、ありがとん笑'], ['happy', 'ここまでの全部、いい流れだったよ〜']],
+    woke: [['troubled', 'ぇ…起こされたぁ。ほい、行くよぉ'], ['happy', 'ふぁ…ありがとん。目、さめたかも笑'], ['normal', '寝ぼけてても、だいたい叩けるっしょ笑']],
+    refuse: [['normal', '…むにゃ…あと1章…だけぇ…'], ['troubled', '…ぐぬぬぬ…眠い…またあとでぇ…'], ['happy', '…すぅ…{name}…おやすみぃ…']],
     'listen:mf_ichika_mix': [['normal', 'サビは1:48から2:14。終わりの近くに山があるから、前半はためていこ']],
     'listen:monster_hero': [['normal', '0:46でふつう、0:57で強め、1:50でいちばん強い。段の上がり方がきれいなんだよねぇ']],
     'listen:monster_hero_another': [['normal', '0:48で強くなって、1:14で一回ふつうに戻るんだよねぇ。そこが休みどころ']],
@@ -50987,6 +50999,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['excited', 'セッションLv.50だぜ！表に太字で書いとくぜ笑'], ['happy', 'ここまでの演奏回数、ちゃんと数えてあるぜ・・・！']],
     'sp80': [['excited', 'Lv.80！誤差がほとんど無くなってきたぜ！'], ['happy', 'この伸び方、グラフにしたらきれいだぜ笑']],
     'sp100': [['excited', 'うぉぉぉ！Lv.100、セッションマスターだぜ・・・！'], ['happy', 'ここまでの記録、全部宝物だぜ笑']],
+    woke: [['surprise', '…うぉっ！？ 起きたぜ、行くさ！'], ['normal', '寝起きの指でも、計算どおり叩くぜ'], ['happy', 'ふぁ…目ざましより効いたさ笑']],
+    refuse: [['normal', '…表の…3行目…むにゃ…'], ['troubled', '…すまん…朝は弱いのさ…'], ['happy', '…なんくるないさ…すぅ…']],
     'listen:mf_ichika_mix': [['excited', 'いちばん上はLv.23で434ノーツだぜ・・・！ サビは1:48からな笑']],
     'listen:monster_hero': [['excited', '強く打つ音が62%、軽い音は3%だぜ・・・！ 553ノーツ、全部数えたい笑']],
     'listen:monster_hero_another': [['happy', 'BPMはおよそ171。もとの曲より少しだけゆっくりだぜ笑']],
@@ -51058,6 +51072,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', 'セッションLv.50になったね。ありがとね'], ['normal', '一緒に演奏する時間、落ち着くんだよね']],
     'sp80': [['happy', 'Lv.80か。ずいぶん合うようになったね'], ['normal', '無理しないで、これからもゆっくりいこうね']],
     'sp100': [['excited', 'Lv.100だね。セッションマスター、すごいよ'], ['happy', 'ここまで一緒にいてくれて、ありがとね']],
+    woke: [['surprise', '…あ、呼ばれた？ うん、行くよ'], ['happy', 'ふぁ…起こされちゃった笑 いいよ'], ['happy', '眠いけど、{name}と叩きたいしね']],
+    refuse: [['troubled', '…ごめんね…今日はもう寝るね…'], ['normal', '…すぅ…また明日、いっしょにね…'], ['happy', '…むにゃ…デュラハン…いけ…']],
     'listen:mf_ichika_mix': [['happy', '2分半くらいの曲だね。サビの1:48までは、落ち着いて合わせようか']],
     'listen:monster_hero': [['normal', 'はじめの静かなところで、気持ちを落ち着けておくといいよ']],
     'listen:monster_hero_another': [['happy', '1:14から少し落ち着く所があるね。そこでひと息つこうか']],
@@ -90123,7 +90139,7 @@ function RhythmMultiMemberCards({
     }, React.createElement(RhythmMultiAvatar, {
       m: m,
       resolveIconUrl: resolveIconUrl,
-      sizeClass: tall ? 'h-12 w-12 landscape:h-16 landscape:w-16' : 'h-7 w-7',
+      sizeClass: tall ? 'h-12 w-12 landscape:h-16 landscape:w-16 [@media(max-height:440px)]:h-11 [@media(max-height:440px)]:w-11 [[data-mh-view-rotation=true]_&]:h-11 [[data-mh-view-rotation=true]_&]:w-11' : 'h-7 w-7',
       small: !tall
     }), m.id === hostId && React.createElement("span", {
       "aria-hidden": "true",
@@ -90744,6 +90760,7 @@ function RhythmMultiScreen({
     void RHYTHM_BUDDY_STORE.update(st => rhythmBuddyMarkStarted(st, callId));
   };
   const [buddyBumped, setBuddyBumped] = React.useState(false);
+  const [buddyRefused, setBuddyRefused] = React.useState(null);
   React.useEffect(() => {
     RHYTHM_MULTI.setCpuBrain({
       ...rhythmAssistSessionWrapBrain(rhythmBuddyMakeBrain(songs), songs),
@@ -90812,6 +90829,17 @@ function RhythmMultiScreen({
       assistantId: who.id
     };
     let paid = rhythmAssistSessionVisitFree(who.id) ? 'visit' : '';
+    if (!paid && rhythmAssistSessionAsleep(who.id)) {
+      const woke = rhythmAssistSessionTryWake(who.id);
+      if (!woke.came) {
+        setBuddyRefused({
+          id: who.id,
+          line: woke.line,
+          at: Date.now()
+        });
+        return 'refused';
+      }
+    }
     if (!paid) paid = (await RHYTHM_BUDDY_STORE.update(st => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
     if (!paid && onUseBuddyTicket) {
       try {
@@ -90879,6 +90907,9 @@ function RhythmMultiScreen({
   React.useEffect(() => {
     if (buddyInfoPhase === 'playing') setBuddyInfoId('');
   }, [buddyInfoPhase]);
+  React.useEffect(() => {
+    if (buddyRefused && !buddySheet) setBuddySheet('pick');
+  }, [buddyRefused, buddySheet]);
   const buddySheetLayer = buddySheet === 'pick' ? React.createElement(RhythmBuddySheet, {
     masuMons: masuMons,
     masuPicker: masuPicker,
@@ -90890,7 +90921,11 @@ function RhythmMultiScreen({
     songName: buddySongName,
     tickets: buddyTickets,
     pick: callBuddy,
-    onClose: () => setBuddySheet(''),
+    onClose: () => {
+      setBuddySheet('');
+      setBuddyRefused(null);
+    },
+    refused: buddyRefused,
     calledIds: (view && view.myCpus ? view.myCpus : []).map(c => c.masuId)
   }) : null;
   const buddyCallButton = (extra = '') => view && RHYTHM_MULTI.canSummon() && (masuMons.length > 0 || sessionAssistantsOn) ? React.createElement("button", {
@@ -91293,9 +91328,11 @@ function RhythmMultiScreen({
     className: "block whitespace-nowrap text-base font-black italic tracking-wider text-cyan-200"
   }, "MULTI LIVE"), React.createElement("small", {
     className: "mt-0.5 block break-keep text-[10px] font-black leading-tight text-fuchsia-200"
-  }, "▶ ", step, view ? React.createElement(React.Fragment, null, " ・ ", React.createElement("span", {
+  }, React.createElement("span", {
     className: "whitespace-nowrap"
-  }, view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode], " ", view.code)) : ''), view && room && room.round && React.createElement("small", {
+  }, "▶ ", step), view ? React.createElement(React.Fragment, null, " ", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "・", view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode], " ", view.code)) : ''), view && room && room.round && React.createElement("small", {
     "data-rhythm-multi-streak-next": true,
     className: "mt-0.5 inline-block whitespace-nowrap rounded-full bg-gradient-to-r from-orange-500 to-rose-500 px-1.5 text-[9px] font-black leading-4 text-white"
   }, "🔥 ", rhythmMultiStreakNextText(view.streak))), quickRunInfo && React.createElement(RhythmQuickRunPill, {
@@ -92183,7 +92220,7 @@ function RhythmMultiScreen({
       className: "min-h-[48px] rounded-xl bg-fuchsia-700 px-2 text-sm font-black disabled:opacity-40"
     }, "メンバー確定")), friendsOn && view && React.createElement("section", {
       "data-rhythm-multi-friend-invite": true,
-      className: card
+      className: `${card} landscape:hidden`
     }, React.createElement("button", {
       "data-rhythm-multi-friend-invite-toggle": true,
       type: "button",
@@ -92192,7 +92229,12 @@ function RhythmMultiScreen({
     }, invitePanel ? 'フレンドの招待を閉じる' : 'フレンドを招待する'), invitePanel && inviteListBody), buddyBumped && React.createElement("p", {
       "data-rhythm-buddy-bumped": true,
       className: "text-[11px] font-black leading-snug text-amber-200"
-    }, "人が入ってきたので、呼んだマスモンは席をゆずって帰りました(使った回数・券は戻りました)"), buddyCallButton(), view && !publicRoom && !view.full && onStepAway && React.createElement("button", {
+    }, "人が入ってきたので、呼んだマスモンは席をゆずって帰りました(使った回数・券は戻りました)"), React.createElement("div", {
+      className: "landscape:hidden"
+    }, buddyCallButton()), React.createElement("div", {
+      "data-rhythm-multi-exit-row": true,
+      className: "space-y-2 landscape:grid landscape:grid-flow-col landscape:auto-cols-fr landscape:gap-2 landscape:space-y-0"
+    }, view && !publicRoom && !view.full && onStepAway && React.createElement("button", {
       "data-rhythm-multi-step-away": true,
       type: "button",
       className: `${btn} w-full bg-cyan-800`,
@@ -92203,7 +92245,7 @@ function RhythmMultiScreen({
       type: "button",
       className: `${btn} w-full bg-slate-700`,
       onClick: leaveRoomAfterTap
-    }, view ? 'ルームを出る' : 'やめる'), message && React.createElement("p", {
+    }, view ? 'ルームを出る' : 'やめる')), message && React.createElement("p", {
       className: "text-[12px] font-black text-rose-300"
     }, message)))), chatSheet, inviteSheetLayer, rankingLayer, buddyInfoLayer, buddySheetLayer);
   }
@@ -94186,7 +94228,8 @@ function RhythmBuddySheet({
   assistants = [],
   pickAssistant = null,
   guideAssistantId = '',
-  freeSeats = 4
+  freeSeats = 4,
+  refused = null
 }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
@@ -94218,12 +94261,13 @@ function RhythmBuddySheet({
     setPickNote('');
   };
   const assistOn = rhythmAssistSessionEnabled() && typeof pickAssistant === 'function' && (assistants || []).length > 0;
-  const [tab, setTab] = React.useState(() => (masuMons || []).length ? 'masu' : 'assistant');
+  const [tab, setTab] = React.useState(() => (masuMons || []).length && !refused ? 'masu' : 'assistant');
   const tabNow = assistOn ? tab : 'masu';
   const masuPicks = picks.filter(p => p.kind === 'masu');
   const singleMasu = masuPicks.length === 1 && picks.length === 1 ? (masuMons || []).find(x => x && x.id === masuPicks[0].id) : null;
   const visitPicks = picks.filter(p => p.kind === 'assistant' && rhythmAssistSessionVisitFree(p.id)).length;
   const paidPicks = picks.length - visitPicks;
+  const asleepPicks = picks.filter(p => p.kind === 'assistant' && !rhythmAssistSessionVisitFree(p.id) && rhythmAssistSessionAsleep(p.id)).length;
   const useFree = Math.min(freeLeft, paidPicks);
   const useTickets = paidPicks - useFree;
   const shortTickets = Math.max(0, useTickets - tickets);
@@ -94280,7 +94324,11 @@ function RhythmBuddySheet({
     "data-rhythm-buddy-multi-cost": true,
     className: "text-[10px] font-bold leading-snug text-slate-300",
     style: JA_WRAP_STYLE
-  }, jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。${paidPicks ? `無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います` : '回数は使いません'}${visitPicks ? `(モンビーにいる助手 ${visitPicks}人は回数なし)` : ''}`)), shortTickets > 0 && React.createElement("p", {
+  }, jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。${paidPicks ? `無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います` : '回数は使いません'}${visitPicks ? `(モンビーにいる助手 ${visitPicks}人は回数なし)` : ''}`)), asleepPicks > 0 && React.createElement("p", {
+    "data-rhythm-buddy-multi-asleep": true,
+    className: "text-[10px] font-bold text-indigo-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap('💤 寝ている助手は、来ないこともあります(来なければ回数は使いません)')), shortTickets > 0 && React.createElement("p", {
     "data-rhythm-buddy-multi-short": true,
     className: "text-[10px] font-black text-rose-300",
     style: JA_WRAP_STYLE
@@ -94354,7 +94402,11 @@ function RhythmBuddySheet({
     className: "hidden landscape:block"
   }, multiBar)), tabNow === 'assistant' ? React.createElement("div", {
     className: "flex min-h-0 flex-1 flex-col"
-  }, React.createElement(RhythmAssistSessionPicker, {
+  }, refused && refused.id && React.createElement("p", {
+    "data-rhythm-assist-refused": refused.id,
+    className: "mb-2 shrink-0 rounded-xl border border-indigo-300/50 bg-indigo-950/70 px-2 py-1 text-[11px] font-black leading-snug text-indigo-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`💤 ${rhythmAssistSessionName(refused.id)}${refused.line ? `「${refused.line}」……来てくれませんでした` : 'は起きませんでした'}(回数は使っていません)。もう一度呼ぶと、起きやすくなります`)), React.createElement(RhythmAssistSessionPicker, {
     assistants: assistants,
     calledIds: calledIds,
     guideAssistantId: guideAssistantId,
@@ -94974,7 +95026,13 @@ const rhythmAssistSessionTalk = ({
     const open = [[100, 'sp100'], [80, 'sp80'], [50, 'sp50']].filter(([n]) => lv >= n).map(([, sc]) => sc);
     return open.length && rand() < 0.3 ? say(open[Math.floor(rand() * open.length)]) : '';
   };
-  if (kind === 'join') return special() || say('join');
+  if (kind === 'join') {
+    if (RHYTHM_ASSIST_SESSION_WAKE.woke.delete(assistantId)) {
+      const w = say('woke');
+      if (w) return w;
+    }
+    return special() || say('join');
+  }
   if (kind === 'combo' || kind === 'miss' || kind === 'climax' || kind === 'last') return say(kind);
   if (kind === 'lvUp') return say('levelup');
   if (kind === 'likeUp') return say('likeup');
@@ -95122,7 +95180,10 @@ function RhythmAssistSessionPicker({
       className: "w-full truncate text-center text-[9px] font-bold text-slate-300"
     }, "♡ ", rhythmAssistSessionLikedNames(who.id).join('・')), calledOf(who.id) && React.createElement("span", {
       className: "rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950"
-    }, "呼んでいる"), !calledOf(who.id) && rhythmAssistSessionVisitFree(who.id) && React.createElement("span", {
+    }, "呼んでいる"), !calledOf(who.id) && !rhythmAssistSessionVisitFree(who.id) && rhythmAssistSessionAsleep(who.id) && React.createElement("span", {
+      "data-rhythm-assist-asleep": true,
+      className: "w-full rounded-xl bg-indigo-300/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"
+    }, "💤 寝ている"), !calledOf(who.id) && rhythmAssistSessionVisitFree(who.id) && React.createElement("span", {
       "data-rhythm-assist-visit": true,
       "aria-label": "🎵 いまモンビーにいる・回数なし",
       className: "flex w-full flex-wrap justify-center rounded-xl bg-sky-400/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"
@@ -95213,6 +95274,74 @@ const rhythmAssistSessionVisitFree = id => {
   } catch (_) {
     return false;
   }
+};
+const RHYTHM_ASSIST_SESSION_WAKE = {
+  refused: {},
+  woke: new Set()
+};
+const rhythmAssistSessionAsleep = id => {
+  if (!rhythmAssistSessionEnabled() || typeof assistantLifeCurrent !== 'function' || typeof assistantLifeWhereOf !== 'function') return false;
+  try {
+    const w = assistantLifeWhereOf(assistantLifeCurrent(), id);
+    return !!(w && w.doing === 'sleep');
+  } catch (_) {
+    return false;
+  }
+};
+const rhythmAssistSessionWakeChance = ({
+  nightOwl = false,
+  bondLevel = 1,
+  bondMax = 1,
+  retries = 0
+} = {}) => {
+  const bond = bondMax > 1 ? Math.max(0, Math.min(1, (Number(bondLevel) - 1) / (bondMax - 1))) : 0;
+  const p = 0.5 + (nightOwl ? 0.2 : 0) + 0.2 * bond + 0.2 * Math.max(0, Math.floor(Number(retries) || 0));
+  return Math.min(0.9, Math.round(p * 100) / 100);
+};
+const rhythmAssistSessionWakeKey = id => {
+  let slot = '';
+  try {
+    slot = typeof assistantLifeSlotAt === 'function' ? String(assistantLifeSlotAt().abs) : '';
+  } catch (_) {
+    slot = '';
+  }
+  return `${slot}:${id}`;
+};
+const rhythmAssistSessionWakeChanceOf = id => {
+  const rhythm = typeof ASSISTANT_LIFE_RHYTHM !== 'undefined' ? ASSISTANT_LIFE_RHYTHM[id] : null;
+  const bed = rhythm && Number.isFinite(rhythm.bed) ? rhythm.bed : 22;
+  const c = RHYTHM_ASSIST_SESSION_CALL;
+  let lv = 1;
+  try {
+    lv = typeof c.levelOf === 'function' ? Number(c.levelOf(id)) || 1 : 1;
+  } catch (_) {
+    lv = 1;
+  }
+  const max = typeof ASSISTANT_BOND_LEVELS !== 'undefined' && Array.isArray(ASSISTANT_BOND_LEVELS) ? ASSISTANT_BOND_LEVELS.length : 1;
+  return rhythmAssistSessionWakeChance({
+    nightOwl: bed < 12,
+    bondLevel: lv,
+    bondMax: max,
+    retries: RHYTHM_ASSIST_SESSION_WAKE.refused[rhythmAssistSessionWakeKey(id)] || 0
+  });
+};
+const rhythmAssistSessionTryWake = (id, rand = Math.random) => {
+  const came = rand() < rhythmAssistSessionWakeChanceOf(id);
+  const key = rhythmAssistSessionWakeKey(id);
+  if (came) {
+    delete RHYTHM_ASSIST_SESSION_WAKE.refused[key];
+    RHYTHM_ASSIST_SESSION_WAKE.woke.add(id);
+    return {
+      came: true,
+      line: ''
+    };
+  }
+  RHYTHM_ASSIST_SESSION_WAKE.refused[key] = (RHYTHM_ASSIST_SESSION_WAKE.refused[key] || 0) + 1;
+  const hit = rhythmAssistSessionPickLine(id, 'refuse', rand);
+  return {
+    came: false,
+    line: hit ? hit[1] : ''
+  };
 };
 const rhythmAssistSessionCanPayNow = () => {
   const app = RHYTHM_ASSIST_SESSION_INVITE.app;
@@ -112148,7 +112277,7 @@ const cardTourRewardOf = (rewards, place, wins) => {
     point: base + t.perWin * Math.max(0, Math.floor(Number(wins) || 0))
   };
 };
-const CARD_LINE_SCENES = Object.freeze(['challenge', 'start', 'big', 'bigHit', 'guardMine', 'guardTheirs', 'myKo', 'theirKo', 'lastMine', 'lastTheirs', 'deckMine', 'deckTheirs', 'win', 'lose']);
+const CARD_LINE_SCENES = Object.freeze(['challenge', 'start', 'big', 'bigHit', 'guardMine', 'guardTheirs', 'myKo', 'theirKo', 'lastMine', 'lastTheirs', 'deckMine', 'deckTheirs', 'win', 'lose', 'winQuick']);
 const CARD_LINE_FACE = Object.freeze({
   challenge: 'wink',
   start: 'happy',
@@ -112163,7 +112292,8 @@ const CARD_LINE_FACE = Object.freeze({
   deckMine: 'surprise',
   deckTheirs: 'wink',
   win: 'happy',
-  lose: 'crying'
+  lose: 'crying',
+  winQuick: 'wink'
 });
 const CARD_BATTLE_LINES = Object.freeze({
   mua: {
@@ -112180,7 +112310,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: ['山札、あと少しぢゃん…！ 急がなきゃ！', 'カード残り少ない…早く決めなきゃ！'],
     deckTheirs: ['そっちの山札、もう少ないよ？ 大丈夫？', 'カード足りる…？ あたしまでﾄﾞｷﾄﾞｷしてきた！'],
     win: ['あたしの勝ちー！ めっちゃ楽しかった♪', 'やったー！ またいつでも相手するよ！', '勝っちゃった！ 次も全力でいこ！'],
-    lose: [['負けたー！ でも、まぢ楽しかったよ！', 'happy'], ['強すぎぢゃんｗ もう1回やろ！', 'excited'], ['くやしー！ 次は絶対負けないからね♪', 'crying']]
+    lose: [['負けたー！ でも、まぢ楽しかったよ！', 'happy'], ['強すぎぢゃんｗ もう1回やろ！', 'excited'], ['くやしー！ 次は絶対負けないからね♪', 'crying']],
+    winQuick: [['あれ、もう終わり？ 次はもっと長く遊ぼ♪', 'surprise'], ['まだまだこれからだったのにー！ もう1回やろ！', 'wink']]
   },
   kiki: {
     challenge: ['カードで勝負でつか？ 喜んでお相手しまつ♪♪', '私、こう見えて火力で押すタイプなんです( ˘ω˘)', 'よろしくお願いします。全力でいきますね', '準備はいいですか？ 私はガッツをためて待ってまつ'],
@@ -112196,7 +112327,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: ['山札が少なくなってきました…急がないと', 'あれま、カードがもう残りわずかでつ'],
     deckTheirs: ['あれま、そちらの山札、もうそんなに減ったんでつね', 'このまま押し切りまつね( ˘ω˘)'],
     win: ['私の勝ちでつ。ありがとうございました♪♪', '火力で押し切れました( ˘ω˘)9グッ!', 'いい勝負でした。またお相手してくださいね'],
-    lose: [['負けちゃいました…お強いですね', 'troubled'], ['あれま…悔しいでつ。もう一度お願いしまつ', 'crying'], ['完敗です。次はもっとためてから挑みますね(´ー`*)', 'normal']]
+    lose: [['負けちゃいました…お強いですね', 'troubled'], ['あれま…悔しいでつ。もう一度お願いしまつ', 'crying'], ['完敗です。次はもっとためてから挑みますね(´ー`*)', 'normal']],
+    winQuick: [['あれま、もう終わりでつか？ 次はゆっくりお相手しまつ♪', 'surprise'], ['今日は手札がかみ合わなかったでつか？ またいつでもどうぞ( ˘ω˘)', 'normal']]
   },
   momosuke: {
     challenge: ['カードでももに勝てると思ってる？w', 'いいよ、相手してあげる♡ 泣いても知らないよ？', '手札、ぜーんぶ見えちゃうかもよ？w', 'ももと勝負！？ 楽しませてよね♡'],
@@ -112212,7 +112344,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: ['え、ももの山札もう少ない！？', 'カードなくなる前に決めちゃお！！'],
     deckTheirs: ['山札、あとちょっとじゃん？w', 'カードなくなりそうでかわいそ〜♡ 早く降参する？w'],
     win: ['ももの勝ち〜♡ 楽しかったよ！', 'ね、言ったでしょ？ ももはずるいって！w', '勝った！！ でもけっこう強かったよ、えらいえらい♡'],
-    lose: [['うそでしょ！？ …強いじゃん、すご', 'surprise'], ['むかつく〜！！ もう1回！！', 'angry'], ['負けた…今日だけは認めてあげる♡', 'wink']]
+    lose: [['うそでしょ！？ …強いじゃん、すご', 'surprise'], ['むかつく〜！！ もう1回！！', 'angry'], ['負けた…今日だけは認めてあげる♡', 'wink']],
+    winQuick: [['え、もう降参？ ももの勝ち〜♡ つまんないの〜w', 'wink'], ['ちょっと〜、まだ1体も倒されてないんだけど？w 次は本気で来てよね♡', 'angry']]
   },
   kyuko: {
     challenge: ['ほい！ カード勝負だねぇ。組み方なら負けないよ笑', '先まで読むタイプなんで、よろしくぅ', 'おけ〜、相手するよ。お手柔らかにね笑', '俺のデッキ、安い技ばっかりだけど強いよぉ'],
@@ -112228,7 +112361,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: ['山札、思ったより減ってるなぁ笑', 'カード切れ、気をつけないとだぁ'],
     deckTheirs: ['そっちの山札、もう少ないねぇ', '山札が切れたら負けだから、数えといたほうがいいよw'],
     win: ['ほい、俺の勝ち！ ありがとん笑', '計算どおり…ってことにしといて笑', 'いい勝負だったねぇ。またやろw'],
-    lose: [['ぐぬぬぬ…負けたぁ', 'angry'], ['見立てがずれてたかぁ🥲 強いねぇ', 'troubled'], ['おけ、組み方から考え直すよw', 'normal']]
+    lose: [['ぐぬぬぬ…負けたぁ', 'angry'], ['見立てがずれてたかぁ🥲 強いねぇ', 'troubled'], ['おけ、組み方から考え直すよw', 'normal']],
+    winQuick: [['ほい、今回は早かったねぇ。組み直してまたおいで笑', 'normal'], ['あらら、まだ序盤だったのに〜。次はゆっくりやろw', 'wink']]
   },
   dra: {
     challenge: ['おでとカード勝負か。守りの固さ、見せてやるからな', 'ふむ、いいよ。膝以外も固いってとこ見せるわ', 'よろしくな。カードの組み合わせで勝つのが、おでのやり方だよ', 'えへへ、手札は見せないよ。隠しごとは得意なんだ'],
@@ -112244,7 +112378,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: ['山札が心もとないな…', 'わぁ、カードが残り少ないわ。急がないとな'],
     deckTheirs: ['そっちの山札、もう少ないよ。数えといたほうがいいぞ', '山札切れも負けだからな。覚えとくといいよ'],
     win: ['おでの勝ちだな。えへへ、ありがとな', 'ふむ、守り勝ちってやつだな', 'いい勝負だったよ。また相手してくれよな'],
-    lose: [['わぁ、負けたか…強いな、ほんとに', 'surprise'], ['負けたわ…おでなんか膝しか取り柄ないからな。えへへ', 'troubled'], ['たしかに、今日はそっちが一枚上だったな', 'normal']]
+    lose: [['わぁ、負けたか…強いな、ほんとに', 'surprise'], ['負けたわ…おでなんか膝しか取り柄ないからな。えへへ', 'troubled'], ['たしかに、今日はそっちが一枚上だったな', 'normal']],
+    winQuick: [['ふむ、今日はここまでか。また相手してくれよな', 'normal'], ['えへへ、おでの守り、まだ崩されてないぞ。次はがんばれよな', 'happy']]
   },
   atsu: {
     challenge: ['カード勝負ね。とりあえず全力でいこ笑', 'いいね、受けて立つよ( *\'ω\'*)ノ', '今日は最後まで本気な笑', 'まとめて押し込むのが俺のやり方だから笑', 'これでもモンスター甲子園に出たことあるんだよね笑'],
@@ -112260,7 +112395,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: ['山札少ないな…急ぐか笑', 'カードもう残りわずかじゃん…！'],
     deckTheirs: ['山札、もう少ないじゃん…焦ってる？笑', 'そろそろ山札が尽きるな！ 押し込むぞ！'],
     win: ['俺の勝ち！ いい勝負だった笑', '楽しかった！ 次は上の難易度でやろうぜ笑', 'いいね、また相手してな！'],
-    lose: [['負けた…まじで強いじゃん笑', 'happy'], ['やるね！ 次は俺が勝つからな笑', 'excited'], ['しゃあない、俺の負け！ もう1回やろ！', 'wink']]
+    lose: [['負けた…まじで強いじゃん笑', 'happy'], ['やるね！ 次は俺が勝つからな笑', 'excited'], ['しゃあない、俺の負け！ もう1回やろ！', 'wink']],
+    winQuick: [['え、もう終わり？ 次は最後までやろうぜ笑', 'surprise'], ['今日は俺のペースだったな笑 また相手してな！', 'wink']]
   },
   sorashido: {
     challenge: [['カード勝負か。受けて立つぜ・・・！', 'wink'], ['対戦しよ！ 攻略まとめ、もう頭に入ってる笑', 'happy'], ['手加減なしでいくぜ・・・！ 勝ち負けは本気笑', 'excited'], ['どんなデッキでくるか、楽しみすぎる笑', 'wink']],
@@ -112276,7 +112412,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: [['なに！？ 山札やば…急がないと笑', 'surprise'], ['ガッツにしすぎた…計算ミス笑', 'troubled']],
     deckTheirs: [['そっちの山札、もう少ないな？ 笑', 'wink'], ['山札切れも勝ち筋のひとつだぜ・・・！', 'happy']],
     win: [['うぉぉぉ！ 読み通り！ いい勝負だった笑', 'happy'], ['作戦がきれいにはまった！ もう1戦だけやろ笑', 'excited'], ['楽しかった！ 気づいたら朝になりそう笑', 'wink'], ['うぉぉぉ！ オリヒメにも見せたかった笑', 'excited']],
-    lose: [['なに！？ そこでそれ！？…悔しいけど、今のはうまいぜ・・・！', 'crying'], ['完敗！ 今の対戦、攻略まとめにして研究する笑', 'troubled'], ['なんくるないさ〜。次はデッキ組み直してくる笑', 'happy']]
+    lose: [['なに！？ そこでそれ！？…悔しいけど、今のはうまいぜ・・・！', 'crying'], ['完敗！ 今の対戦、攻略まとめにして研究する笑', 'troubled'], ['なんくるないさ〜。次はデッキ組み直してくる笑', 'happy']],
+    winQuick: [['え、もう終わり！？ ここからが本番だったのに笑', 'surprise'], ['今回は手札がかみ合わなかった感じか・・・！ 次はがっつりやろうぜ笑', 'wink']]
   },
   erubin: {
     challenge: [['カード勝負、いいね！ こっちに来てから、すっかりはまってるんだよね笑', 'happy'], ['今日はどの組み方でいこうかな🤔 いくつか持ってきたんだよね', 'wink'], ['対戦しよっか。手加減はしないけど、それでもよいかな？笑', 'wink'], ['デュラハンの出番だね。よろしくお願いします☺️', 'happy']],
@@ -112292,7 +112429,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: [['あれ、山札がもう少ないね💦 ちょっと急がないと', 'surprise'], ['ガッツにしすぎたかな…計算ミスだw', 'troubled']],
     deckTheirs: [['そっちの山札、だいぶ減ってるけど大丈夫かな？', 'wink'], ['山札の残りも、ちゃんと見てるからね笑', 'happy']],
     win: [['楽しかったー！ いい勝負だったね☺️', 'happy'], ['勝てた！ 組み方がうまくはまったね笑', 'excited'], ['またやろうね。次はどの組み方でいこうかな🤔', 'wink']],
-    lose: [['負けちゃった笑 さすがだね、強かった！', 'happy'], ['くやしいなぁ。デッキ、組み直してくるね', 'troubled'], ['お見事！ 今の勝ち方、勉強になったよ', 'normal']]
+    lose: [['負けちゃった笑 さすがだね、強かった！', 'happy'], ['くやしいなぁ。デッキ、組み直してくるね', 'troubled'], ['お見事！ 今の勝ち方、勉強になったよ', 'normal']],
+    winQuick: [['あれ、もう終わり？ 次はゆっくり遊ぼうね☺️', 'surprise'], ['今日は手札がきびしかったかな🤔 またやろうね', 'normal']]
   }
 });
 const CARD_LINE_PER_TURN = 2;
@@ -115452,6 +115590,7 @@ const CardResultVsRow = ({
   "data-card-result-vs-outcome": true,
   className: `shrink-0 rounded-md px-1.5 py-0.5 text-[12px] font-black ${outcome === '勝ち' ? 'bg-amber-300 text-slate-950' : 'bg-slate-700 text-slate-100'}`
 }, outcome));
+const cardResultLineQuick = result => !!(result && result.outcome !== 'win' && result.facts && Number.isFinite(result.facts.kos) && result.facts.kos === 0);
 const CardResultTalk = ({
   a,
   lineScene,
@@ -119399,6 +119538,135 @@ const cardNormalizeCpuOpen = v => {
   };
 };
 const cardBattleLevelLabel = (level, share) => (share && typeof cardShareSmartLevel === 'function' ? CARD_SHARE_SMART_LABEL[cardShareSmartLevel(share.tactics)] : CARD_LEVEL_LABEL[level]) || '';
+const CardAutoRewardBar = ({
+  info,
+  tickets,
+  onAdd,
+  note = ''
+}) => {
+  if (!info || !Number.isInteger(info.left)) return null;
+  const total = CARD_AUTO_REWARD_DAY_MAX + (Number.isInteger(info.extra) ? info.extra : 0);
+  const empty = info.left <= 0;
+  const why = cardAutoTicketBlock({
+    left: info.left,
+    tickets,
+    extraLeft: info.extraLeft
+  });
+  return React.createElement("div", {
+    "data-card-auto-reward-bar": empty ? 'empty' : 'left',
+    className: "mt-2"
+  }, React.createElement("div", {
+    className: "flex items-stretch gap-1.5"
+  }, React.createElement("div", {
+    "data-card-auto-reward-left": info.left,
+    className: `flex min-w-0 flex-1 flex-col justify-center rounded-xl border px-2 py-1 ${empty ? 'border-rose-300 bg-rose-950/70 shadow-[0_0_12px_rgba(251,113,133,.45)]' : 'border-white/15 bg-slate-900/70'}`
+  }, React.createElement("small", {
+    className: `block text-[10px] font-black leading-tight ${empty ? 'text-rose-200' : 'text-slate-400'}`
+  }, "🤖 オートのごほうび"), React.createElement("b", {
+    className: `block whitespace-nowrap font-black leading-tight tabular-nums ${empty ? 'text-[17px] text-white' : 'text-[14px] text-slate-200'}`
+  }, "残り ", info.left, React.createElement("span", {
+    className: "text-[11px] text-slate-400"
+  }, " / ", total, "回"))), React.createElement("button", {
+    type: "button",
+    "data-card-auto-ticket": true,
+    disabled: !!why,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      if (typeof onAdd === 'function') onAdd();
+    },
+    className: `flex min-h-[44px] shrink-0 flex-col items-center justify-center rounded-xl border px-2 text-[12px] font-black leading-tight active:scale-[.98] disabled:opacity-45 ${empty ? 'border-emerald-300 bg-emerald-900/80 text-emerald-100 shadow-[0_0_10px_rgba(52,211,153,.45)]' : 'border-white/15 bg-slate-800 text-slate-300'}`
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "🎫 セッション券で"), React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "ふやす"))), why && React.createElement("span", {
+    "data-card-auto-ticket-why": true,
+    className: "mt-1 block text-right text-[10px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap(why)), note && React.createElement("span", {
+    "data-card-auto-ticket-note": true,
+    className: "mt-1 block text-[11px] font-black text-emerald-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(note)));
+};
+const CardAutoTicketSheet = ({
+  info,
+  tickets,
+  busy = false,
+  onUse,
+  onClose
+}) => {
+  const have = Number.isInteger(tickets) && tickets > 0 ? tickets : 0;
+  const extraLeft = info && Number.isInteger(info.extraLeft) ? Math.max(0, info.extraLeft) : 0;
+  const left = info && Number.isInteger(info.left) ? info.left : 0;
+  const max = Math.min(have, extraLeft);
+  const [count, setCount] = React.useState(1);
+  const k = Math.min(Math.max(1, count), Math.max(1, max));
+  const why = cardAutoTicketBlock({
+    left,
+    tickets: have,
+    extraLeft
+  });
+  const wide = typeof orientationIsLandscape === 'function' && orientationIsLandscape();
+  return React.createElement(ModalFrame, {
+    label: "セッション券でごほうびをふやす",
+    onClose: busy ? undefined : onClose,
+    zIndex: MODAL_Z.confirm
+  }, React.createElement("div", {
+    "data-card-auto-ticket-ask": wide ? 'wide' : 'tall'
+  }, React.createElement("h3", {
+    className: "text-center text-base font-black leading-snug text-amber-200",
+    style: JA_LABEL_STYLE
+  }, jaWrap('セッション券でごほうびをふやす')), !wide && React.createElement("p", {
+    className: "mt-2 text-[12px] font-bold leading-relaxed text-slate-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap('1枚で、オートで挑むの今日のごほうびが1回ふえます。ふやしたぶんは今日(朝4時まで)だけ使えます。')), React.createElement("div", {
+    className: `${wide ? 'mt-1.5' : 'mt-3'} grid grid-cols-2 gap-2 text-center`
+  }, React.createElement("div", {
+    className: `rounded-xl bg-slate-900 ${wide ? 'px-2 py-1' : 'p-2'}`
+  }, React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, "持っているセッション券"), React.createElement("b", {
+    "data-card-auto-ticket-count": have,
+    className: `${wide ? 'text-[14px]' : 'text-[16px]'} font-black tabular-nums`
+  }, have, "枚")), React.createElement("div", {
+    className: `rounded-xl bg-slate-900 ${wide ? 'px-2 py-1' : 'p-2'}`
+  }, React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, "今日あとふやせる"), React.createElement("b", {
+    "data-card-auto-ticket-extra-left": extraLeft,
+    className: `${wide ? 'text-[14px]' : 'text-[16px]'} font-black tabular-nums`
+  }, extraLeft, "回"))), why ? React.createElement("p", {
+    "data-card-auto-ticket-why": true,
+    className: "mt-3 text-center text-[12px] font-black text-rose-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(why)) : React.createElement(React.Fragment, null, React.createElement("div", {
+    "data-card-auto-ticket-pick": k
+  }, React.createElement(QuantityStepper, {
+    value: k,
+    max: max,
+    onChange: setCount,
+    unit: "枚"
+  })), React.createElement("p", {
+    "data-card-auto-ticket-preview": true,
+    className: "mt-2 rounded-xl border border-emerald-300/40 bg-emerald-950/60 px-2 py-1.5 text-center text-[13px] font-black text-emerald-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`券 ${k}枚 → オートのごほうび +${k}回(残り ${left + k}回になります)`))), React.createElement("div", {
+    className: `${wide ? 'mt-2' : 'mt-3'} grid ${wide && !why ? 'grid-cols-2' : 'grid-cols-1'} gap-2`
+  }, !why && React.createElement("button", {
+    type: "button",
+    "data-card-auto-ticket-use": k,
+    disabled: busy,
+    onClick: () => {
+      if (typeof onUse === 'function') onUse(k);
+    },
+    className: "mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98] disabled:opacity-50"
+  }, `${k}枚使って+${k}回`), React.createElement(ModalCloseButton, {
+    onClick: onClose,
+    disabled: busy,
+    label: "やめる"
+  }))));
+};
 const CardBattleScreen = ({
   screen,
   onNavigate,
@@ -119475,9 +119743,21 @@ const CardBattleScreen = ({
   const [shareQuick, setShareQuick] = useState(false);
   const [autoLeft, setAutoLeft] = useState(null);
   const [autoExtraLeft, setAutoExtraLeft] = useState(null);
+  const [autoExtra, setAutoExtra] = useState(0);
   const [autoTicketAsk, setAutoTicketAsk] = useState(false);
   const [autoTicketBusy, setAutoTicketBusy] = useState(false);
   const [autoTicketNote, setAutoTicketNote] = useState('');
+  const applyAutoLoaded = r => {
+    if (!r) return;
+    setAutoLeft(r.left);
+    setAutoExtraLeft(Number.isInteger(r.extraLeft) ? r.extraLeft : null);
+    setAutoExtra(Number.isInteger(r.extra) ? r.extra : 0);
+  };
+  const autoInfo = Number.isInteger(autoLeft) ? {
+    left: autoLeft,
+    extra: autoExtra,
+    extraLeft: autoExtraLeft
+  } : null;
   useEffect(() => {
     if (view !== 'deckPick' || !(deckPick && deckPick.pick && deckPick.pick.share) || typeof cardAutoRewardLoad !== 'function') return undefined;
     let alive = true;
@@ -119485,29 +119765,33 @@ const CardBattleScreen = ({
     setAutoExtraLeft(null);
     setAutoTicketNote('');
     void cardAutoRewardLoad().then(r => {
-      if (alive) {
-        setAutoLeft(r.left);
-        setAutoExtraLeft(Number.isInteger(r.extraLeft) ? r.extraLeft : null);
-      }
+      if (alive) applyAutoLoaded(r);
     }).catch(() => {});
     return () => {
       alive = false;
     };
   }, [view, deckPick]);
-  const useAutoTicket = async () => {
+  const autoTicketSheet = autoTicketAsk && typeof CardAutoTicketSheet === 'function' ? React.createElement(CardAutoTicketSheet, {
+    info: autoInfo,
+    tickets: Number.isInteger(sessionTickets) ? sessionTickets : 0,
+    busy: autoTicketBusy,
+    onUse: k => {
+      void useAutoTicket(k);
+    },
+    onClose: () => setAutoTicketAsk(false)
+  }) : null;
+  const useAutoTicket = async (count = 1) => {
     if (autoTicketBusy || typeof cardAutoRewardAddExtra !== 'function') return;
     setAutoTicketBusy(true);
     try {
       const res = await cardAutoRewardAddExtra({
         consume: onUseSessionTicket,
-        refund: onRefundSessionTicket
+        refund: onRefundSessionTicket,
+        count
       });
       const l = res && res.loaded;
-      if (l) {
-        setAutoLeft(l.left);
-        setAutoExtraLeft(l.extraLeft);
-      }
-      setAutoTicketNote(res && res.ok ? 'ごほうびが1回ぶん戻りました' : res && res.why === 'limit' ? '今日はこれ以上ふやせません' : res && res.why === 'noTicket' ? 'セッション券がありません' : res && res.why === 'notEmpty' ? 'まだ今日のごほうびが残っています' : '保存できなかったので、セッション券は戻しました');
+      if (l) applyAutoLoaded(l);
+      setAutoTicketNote(res && res.ok ? `ごほうびが${res.count}回ぶん戻りました` : res && res.why === 'limit' ? '今日はこれ以上ふやせません' : res && res.why === 'noTicket' ? 'セッション券が足りません' : res && res.why === 'notEmpty' ? 'まだ今日のごほうびが残っています' : '保存できなかったので、セッション券は戻しました');
     } finally {
       setAutoTicketBusy(false);
       setAutoTicketAsk(false);
@@ -119555,6 +119839,17 @@ const CardBattleScreen = ({
   }, [save]);
   const [game, setGame] = useState(null);
   const [result, setResult] = useState(null);
+  useEffect(() => {
+    if (view !== 'result' || !(result && result.auto) || typeof cardAutoRewardLoad !== 'function') return undefined;
+    let alive = true;
+    setAutoTicketNote('');
+    void cardAutoRewardLoad().then(r => {
+      if (alive) applyAutoLoaded(r);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [view, result]);
   const [notice, setNotice] = useState('');
   const [confirmReset, setConfirmReset] = useState(false);
   const [detail, setDetail] = useState(null);
@@ -121318,6 +121613,7 @@ const CardBattleScreen = ({
         on: shareAuto,
         onChange: setShareAuto,
         left: autoLeft,
+        info: autoInfo,
         quick: shareQuick,
         extraLeft: autoExtraLeft,
         tickets: Number.isInteger(sessionTickets) ? sessionTickets : null,
@@ -121369,55 +121665,7 @@ const CardBattleScreen = ({
           }
         } : {});
       }
-    }), autoTicketAsk && React.createElement(ModalFrame, {
-      label: "セッション券を使う確認",
-      onClose: autoTicketBusy ? undefined : () => setAutoTicketAsk(false),
-      zIndex: MODAL_Z.confirm
-    }, React.createElement("div", {
-      "data-card-auto-ticket-ask": true
-    }, React.createElement("h3", {
-      className: "text-center text-base font-black leading-snug text-amber-200",
-      style: JA_LABEL_STYLE
-    }, jaWrap('セッション券を1枚使いますか？')), React.createElement("p", {
-      className: "mt-3 text-[12px] font-bold leading-relaxed text-slate-200",
-      style: JA_WRAP_STYLE
-    }, jaWrap('オートで挑むの今日のごほうびが1回ぶん戻ります。')), React.createElement("div", {
-      className: "mt-3 grid grid-cols-2 gap-2 text-center"
-    }, React.createElement("div", {
-      className: "rounded-xl bg-slate-900 p-2"
-    }, React.createElement("small", {
-      className: "block text-[10px] font-bold text-slate-400"
-    }, "セッション券"), React.createElement("b", {
-      "data-card-auto-ticket-count": true,
-      className: "text-[16px] font-black tabular-nums"
-    }, Number.isInteger(sessionTickets) ? sessionTickets : 0, " → ", React.createElement("span", {
-      className: "text-amber-200"
-    }, Math.max(0, (Number.isInteger(sessionTickets) ? sessionTickets : 0) - 1)), "枚")), React.createElement("div", {
-      className: "rounded-xl bg-slate-900 p-2"
-    }, React.createElement("small", {
-      className: "block text-[10px] font-bold text-slate-400"
-    }, "今日のごほうび"), React.createElement("b", {
-      className: "text-[16px] font-black tabular-nums"
-    }, Number.isInteger(autoLeft) ? autoLeft : 0, " → ", React.createElement("span", {
-      className: "text-emerald-200"
-    }, (Number.isInteger(autoLeft) ? autoLeft : 0) + 1), "回"))), React.createElement("p", {
-      className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400",
-      style: JA_WRAP_STYLE
-    }, jaWrap(`ふやしたぶんは今日(朝4時まで)だけ使えます。今日ふやせるのはあと${Number.isInteger(autoExtraLeft) ? autoExtraLeft : 0}回です。`)), React.createElement("div", {
-      className: "mt-4 grid grid-cols-1 gap-2"
-    }, React.createElement("button", {
-      type: "button",
-      "data-card-auto-ticket-use": true,
-      disabled: autoTicketBusy,
-      onClick: () => {
-        void useAutoTicket();
-      },
-      className: "mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98] disabled:opacity-50"
-    }, "1枚使って1回ふやす"), React.createElement(ModalCloseButton, {
-      onClick: () => setAutoTicketAsk(false),
-      disabled: autoTicketBusy,
-      label: "やめる"
-    })))));
+    }), autoTicketSheet);
   }
   if (view === 'pvp') {
     const pvpReward = async r => {
@@ -121899,7 +122147,7 @@ const CardBattleScreen = ({
       gain: result.rankGain
     }), a && React.createElement(CardResultTalk, {
       a: a,
-      lineScene: win ? 'lose' : 'win',
+      lineScene: win ? 'lose' : cardResultLineQuick(result) ? 'winQuick' : 'win',
       talkFacts: result.talk
     }), result.share && React.createElement("p", {
       "data-card-result-share": true,
@@ -121954,7 +122202,15 @@ const CardBattleScreen = ({
       "data-card-result-auto": result.auto.paid ? 'paid' : 'free',
       className: "mt-1 text-[12px] font-black text-sky-200",
       style: JA_LABEL_STYLE
-    }, jaWrap(result.auto.paid ? `🤖 オートで挑みました(ごほうびは自分で戦うときの半分)。今日のごほうびはあと${result.auto.left}回` : '🤖 オートで挑みました。今日のごほうびは終わっています(ごほうびなしで遊べます)')), React.createElement("div", {
+    }, jaWrap(result.auto.paid ? '🤖 オートで挑みました(ごほうびは自分で戦うときの半分)' : '🤖 オートで挑みました(今日のごほうびは終わっていたので、ごほうびなし)')), result.auto && !result.demo && typeof CardAutoRewardBar === 'function' && React.createElement(CardAutoRewardBar, {
+      info: autoInfo,
+      tickets: Number.isInteger(sessionTickets) ? sessionTickets : 0,
+      onAdd: typeof onUseSessionTicket === 'function' && typeof cardAutoRewardAddExtra === 'function' ? () => {
+        setAutoTicketNote('');
+        setAutoTicketAsk(true);
+      } : null,
+      note: autoTicketNote
+    }), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
     }, "いまのビートP: ", save.point), result.opened && React.createElement("div", {
       className: "mt-1 text-[13px] font-black text-emerald-300"
@@ -122013,7 +122269,7 @@ const CardBattleScreen = ({
       type: "button",
       className: `${btn} mh-button-secondary border border-white/20 bg-slate-800`,
       onClick: () => setView(result.share ? 'share' : 'foe')
-    }, "相手をえらぶ")));
+    }, "相手をえらぶ")), autoTicketSheet);
   }
   if (view === 'replays') return React.createElement(CardReplayList, {
     onOpen: id => {
@@ -125554,28 +125810,12 @@ const CardDeckPick = ({
   }, jaWrap('選んだデッキの戦術カードで、あなたの側も自動で戦います。試合の途中で「自分で」に切り替えられます'), React.createElement("span", {
     "data-card-deck-pick-auto-left": auto.left === null ? '' : auto.left,
     className: `mt-1 block ${auto.left ? 'text-emerald-200' : 'text-amber-200'}`
-  }, auto.left === null ? '' : auto.left > 0 ? `今日のごほうびはあと${auto.left}回(自分で戦うときの半分)` : '今日のごほうびは終わりました。ごほうびなしで遊べます'), auto.left === 0 && typeof auto.onExtra === 'function' && Number.isInteger(auto.extraLeft) && (auto.extraLeft > 0 ? React.createElement(React.Fragment, null, React.createElement("button", {
-    type: "button",
-    "data-card-auto-ticket": true,
-    disabled: !(auto.tickets > 0),
-    onClick: () => {
-      Audio_.fgSe.tap();
-      auto.onExtra();
-    },
-    className: "mt-2 flex min-h-[44px] w-full items-center justify-center gap-1 rounded-xl border border-emerald-300 bg-emerald-900/70 px-2 text-[12px] font-black text-emerald-100 shadow-[0_0_10px_rgba(52,211,153,.45)] active:scale-[.98] disabled:border-slate-600 disabled:bg-slate-800 disabled:text-slate-400 disabled:shadow-none",
-    style: JA_WRAP_STYLE
-  }, jaWrap('🎫 セッション券1枚でごほうびを1回ふやす')), React.createElement("span", {
-    "data-card-auto-ticket-left": auto.extraLeft,
-    className: "mt-1 block text-right text-[10px] text-slate-400",
-    style: JA_WRAP_STYLE
-  }, jaWrap(auto.tickets > 0 ? `持っているセッション券 ${auto.tickets}枚・今日ふやせるのはあと${auto.extraLeft}回` : 'セッション券がありません(モンヒロビートのランクが上がるともらえます)'))) : React.createElement("span", {
-    "data-card-auto-ticket-left": "0",
-    className: "mt-1 block text-[10px] text-slate-400"
-  }, "今日はこれ以上ふやせません")), auto.ticketNote && React.createElement("span", {
-    "data-card-auto-ticket-note": true,
-    className: "mt-1 block text-[11px] text-emerald-200",
-    style: JA_WRAP_STYLE
-  }, jaWrap(auto.ticketNote)))), note && tab === 'own' && React.createElement("p", {
+  }, auto.left === null ? '' : auto.left > 0 ? `今日のごほうびはあと${auto.left}回(自分で戦うときの半分)` : '今日のごほうびは終わりました。ごほうびなしで遊べます')), auto.on && auto.info && typeof auto.onExtra === 'function' && typeof CardAutoRewardBar === 'function' && React.createElement(CardAutoRewardBar, {
+    info: auto.info,
+    tickets: auto.tickets,
+    onAdd: auto.onExtra,
+    note: auto.ticketNote
+  })), note && tab === 'own' && React.createElement("p", {
     className: "text-[11px] font-bold text-slate-400",
     style: JA_WRAP_STYLE
   }, note), choices.map(c => {
@@ -135187,51 +135427,74 @@ const cardAutoRewardEntry = loaded => ({
 });
 const cardAutoRewardAddExtra = async ({
   consume,
-  refund
+  refund,
+  count = 1
 } = {}) => {
+  const k = Number.isInteger(count) && count > 0 ? count : 1;
   const loaded = await cardAutoRewardLoad();
-  if (loaded.extra >= CARD_AUTO_REWARD_EXTRA_MAX) return {
+  if (loaded.extra + k > CARD_AUTO_REWARD_EXTRA_MAX) return {
     ok: false,
     why: 'limit',
+    count: k,
     loaded
   };
   if (loaded.left > 0) return {
     ok: false,
     why: 'notEmpty',
+    count: k,
     loaded
   };
-  if (typeof consume !== 'function' || !(await consume())) return {
-    ok: false,
-    why: 'noTicket',
-    loaded
+  const giveBack = async n => {
+    for (let i = 0; i < n; i++) {
+      if (typeof refund !== 'function') return;
+      try {
+        await refund();
+      } catch (__) {}
+    }
   };
+  let used = 0;
+  if (typeof consume === 'function') {
+    while (used < k && (await consume())) used++;
+  }
+  if (used < k) {
+    await giveBack(used);
+    return {
+      ok: false,
+      why: 'noTicket',
+      count: k,
+      loaded
+    };
+  }
   let saved = false;
   try {
     saved = (await storeSet(CARD_AUTO_REWARD_KEY, cardAutoRewardValue(loaded, {
       n: loaded.n,
-      extra: loaded.extra + 1
+      extra: loaded.extra + k
     }))) !== false;
   } catch (_) {
     saved = false;
   }
   if (!saved) {
-    if (typeof refund === 'function') {
-      try {
-        await refund();
-      } catch (__) {}
-    }
+    await giveBack(k);
     return {
       ok: false,
       why: 'save',
+      count: k,
       loaded
     };
   }
   return {
     ok: true,
     why: '',
+    count: k,
     loaded: await cardAutoRewardLoad()
   };
 };
+const cardAutoTicketBlock = ({
+  left,
+  tickets,
+  extraLeft
+}) => Number.isInteger(left) && left > 0 ? 'ごほうびを使い切ると、ふやせます' : !(Number.isInteger(extraLeft) && extraLeft > 0) ? `今日はこれ以上ふやせません(1日${CARD_AUTO_REWARD_EXTRA_MAX}回まで)` : !(Number.isInteger(tickets) && tickets > 0) ? 'セッション券がありません(モンヒロビートのランクが上がるともらえます)' : '';
 const cardLevelEntries = async ({
   kind,
   level,

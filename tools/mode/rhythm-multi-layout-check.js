@@ -366,6 +366,33 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
     await B.locator('[data-rhythm-multi-join]').click();
     await A.waitForFunction(() => typeof RHYTHM_MULTI !== "undefined" && RHYTHM_MULTI.view() && RHYTHM_MULTI.view().members.length === 2, null, { timeout: 20000 });
     check('偽の通信で、2人が同じ部屋に入れる', true, code);
+    // 待合いの部屋(2026-11-07 検査部ミハリ B1〜B3): 出る2つがなでずに見える・札の「Lv.」が切れない・見出しが「・」で行を終えない
+    for (const [w, h, rotated, label] of [[390, 844, false, '縦画面'], [844, 390, false, '横画面'], [667, 375, false, '小さい横画面'], [390, 844, true, '回転(横)']]) {
+      await A.setViewportSize({ width: w, height: h });
+      await A.evaluate((on) => RHYTHM_VIEW_ROTATION.set(on ? 90 : 0), !!rotated);
+      await A.waitForTimeout(rotated ? 1000 : 600);
+      const r = await A.evaluate((rot) => {
+        const inView = (el) => { if (!el) return false; const b = el.getBoundingClientRect(); return b.width > 0 && b.left >= -1 && b.top >= -1 && b.right <= innerWidth + 1 && b.bottom <= innerHeight + 1; };
+        const leave = document.querySelector('[data-rhythm-multi-leave]');
+        const cut = [...document.querySelectorAll('[data-rhythm-multi-member]')].filter((li) => {
+          const box = li.getBoundingClientRect();
+          const sub = [...li.querySelectorAll('small')].find((x) => /^Lv\./.test((x.innerText || '').trim()));
+          if (!sub) return false;
+          const b = sub.getBoundingClientRect();
+          return rot ? (b.left < box.left - 1 || b.right > box.right + 1) : (b.bottom > box.bottom + 1 || b.top < box.top - 1);
+        }).length;
+        const head = document.querySelector('[data-rhythm-multi] header small');
+        let dotEnd = false;
+        if (head) { const range = document.createRange(); range.selectNodeContents(head); const rects = [...range.getClientRects()]; const lines = new Set(rects.map((x) => Math.round(rot ? x.left : x.top))).size; dotEnd = lines > 1 && /・\s*$/.test((head.innerText || '').split('\n')[0]); }
+        return { leave: inView(leave), cut, dotEnd };
+      }, !!rotated);
+      if (process.env.MH_SHOT_DIR) await A.screenshot({ path: path.join(process.env.MH_SHOT_DIR, `wait-${label}.png`) });
+      check(`待合いの部屋(${label}): 「ルームを出る」がなでずに見える`, r.leave, JSON.stringify(r));
+      check(`待合いの部屋(${label}): メンバーの札の「Lv.」が切れない`, r.cut === 0, `${r.cut}枚`);
+      check(`待合いの部屋(${label}): 見出しが「・」で行を終えない`, !r.dotEnd);
+    }
+    await A.evaluate(() => RHYTHM_VIEW_ROTATION.set(0));
+    await A.setViewportSize({ width: 844, height: 390 });
     await A.locator('[data-rhythm-multi-confirm]').click();
     const step = (p) => p.evaluate(() => document.querySelector('[data-rhythm-multi]')?.getAttribute('data-rhythm-multi-step') || '');
     await A.waitForFunction(() => document.querySelector('[data-rhythm-multi]')?.getAttribute('data-rhythm-multi-step') === 'select', null, { timeout: 15000 });
