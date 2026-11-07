@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ac6aa07902c6a597
+// source-sha256: cf0bcd0ebe24206f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115710,6 +115710,216 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
     who: 'kiki',
     e: 'happy',
     t: 'はい。私も、ごめんなさいでつ'
+  }]
+}, {
+  id: 'rel-mend3-atsu-dra-mua-1',
+  kind: 'mend3',
+  ppl: ['atsu', 'dra', 'mua'],
+  keys: {},
+  lines: [{
+    who: 'atsu',
+    e: 'happy',
+    t: '{c:dra}、{c:mua}、HARDで一曲いこ笑 膝にやさしいやつ！'
+  }, {
+    who: 'mua',
+    e: 'troubled',
+    t: '……{c:dra}と一緒に？'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '……おでもか'
+  }, {
+    who: 'atsu',
+    e: 'wink',
+    t: '一緒に叩いたら、すぐ戻るって笑'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '……しょうがないなぁ。{c:dra}、さっきはごめんね'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'おう。おでも悪かった。えへへ'
+  }]
+}, {
+  id: 'rel-mend3-mua-kiki-momosuke-1',
+  kind: 'mend3',
+  ppl: ['mua', 'kiki', 'momosuke'],
+  keys: {},
+  lines: [{
+    who: 'mua',
+    e: 'excited',
+    t: '{c:kiki}、{c:momosuke}、3人でおそろいのリボンつけよ♪'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '……いまでつか'
+  }, {
+    who: 'momosuke',
+    e: 'troubled',
+    t: '……うん、いま？'
+  }, {
+    who: 'mua',
+    e: 'wink',
+    t: 'おそろいにしたら、もうけんかできないぢゃん♪'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '……{c:kiki}、ごめんね！！'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'はい。私も、ごめんなさい♪'
+  }]
+}, {
+  id: 'rel-mend3-kyuko-kiki-sorashido-1',
+  kind: 'mend3',
+  ppl: ['kyuko', 'kiki', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '{c:kiki}、{c:sorashido}、二人とも同じ表を見てるのに、黙ってるねぇ'
+  }, {
+    who: 'sorashido',
+    e: 'troubled',
+    t: '……話すきっかけがなくてな'
+  }, {
+    who: 'kiki',
+    e: 'troubled',
+    t: '……私もでつ'
+  }, {
+    who: 'kyuko',
+    e: 'wink',
+    t: 'じゃあ俺が質問ねぇ。この表、どこがいちばんいい？'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '……{c:kiki}の攻めの列だな'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '……では、私も。{c:sorashido}、さっきはすみませんでした'
+  }]
+}, {
+  id: 'rel-mend3-mua-momosuke-sorashido-1',
+  kind: 'mend3',
+  ppl: ['mua', 'momosuke', 'sorashido'],
+  keys: {},
+  lines: [{
+    who: 'mua',
+    e: 'happy',
+    t: '{c:momosuke}、{c:sorashido}、今日はあたしが記録係やる♪'
+  }, {
+    who: 'momosuke',
+    e: 'surprise',
+    t: '{c:mua}が？'
+  }, {
+    who: 'sorashido',
+    e: 'surprise',
+    t: '……数え方、分かるのか？'
+  }, {
+    who: 'mua',
+    e: 'wink',
+    t: '分かんないから、二人で教えて！ｗ'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '……しょうがないなぁ。{c:sorashido}、一緒に教えよ！！'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: 'おう。{c:momosuke}、さっきは悪かったな'
+  }]
+}, {
+  id: 'rel-mend3-dra-erubin-momosuke-1',
+  kind: 'mend3',
+  ppl: ['dra', 'erubin', 'momosuke'],
+  keys: {},
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '{c:erubin}、{c:momosuke}、二人がしゃべらないと、おでの膝が痛むらしい'
+  }, {
+    who: 'momosuke',
+    e: 'surprise',
+    t: 'なにそれw'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '……それは大変だね笑'
+  }, {
+    who: 'dra',
+    e: 'wink',
+    t: 'だから、早く仲直りしてくれ'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '……{c:erubin}、ごめんね！！ {c:dra}の膝のために！！'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'うん、俺もごめんね。膝のためにね笑'
+  }]
+}, {
+  id: 'rel-mend3-erubin-dra-kyuko-1',
+  kind: 'mend3',
+  ppl: ['erubin', 'dra', 'kyuko'],
+  keys: {},
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '{c:dra}、{c:kyuko}、二人とも、同じデッキの前で黙ってるね'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '……1枚、どっちにするかで、ちょっとねぇ'
+  }, {
+    who: 'dra',
+    e: 'troubled',
+    t: '……おでも、ゆずれなくてな'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'じゃあ、両方入れて試してみようか。決めるのは、そのあとでいいよ'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '……それ、いちばんいい答えだねぇ。{c:dra}、ごめんねぇ'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'おう。おでも悪かったな'
+  }]
+}, {
+  id: 'rel-mend3-kiki-erubin-kyuko-1',
+  kind: 'mend3',
+  ppl: ['kiki', 'erubin', 'kyuko'],
+  keys: {},
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '{c:erubin}、{c:kyuko}。お茶をいれたので、並んで座ってください'
+  }, {
+    who: 'erubin',
+    e: 'troubled',
+    t: '……うん。いい香りだね'
+  }, {
+    who: 'kyuko',
+    e: 'troubled',
+    t: '……ほい'
+  }, {
+    who: 'kiki',
+    e: 'wink',
+    t: '並んで座ったら、もう半分は仲直りでつ♪'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '……{c:erubin}、さっきはごめんねぇ'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: 'ううん。俺こそ、ごめんね'
   }]
 }, {
   id: 'rel-jealous-dra-momosuke-erubin-1',

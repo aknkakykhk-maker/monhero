@@ -70,7 +70,7 @@ const TALKS = G('ASSISTANT_LIFE_REL_TALKS');
   check('① 28組それぞれに、原因つきけんか3本と謝る・差し入れ・取り持つ', !miss.length, miss.slice(0, 4).join(' / '));
   // 間に入るの台本が無い組は、謝る・けんか自身の仲直りに戻る(⑦で確かめる)。いまある組の数だけ出す
   const mend3 = new Set(by('mend3').map(t => pairKey(t.ppl[1], t.ppl[2])));
-  console.log(`   (間に入るの台本がある組: ${mend3.size}/28)`);
+  check('① 間に入るの台本が28組すべてにある', mend3.size === 28, `${mend3.size}組`);
   const text = (t) => [...t.lines, ...(t.distance || []), ...(t.makeup || [])].map(l => l.t).join('\n');
   const BAD = /バカ|ばか(?!り)|馬鹿|アホ|あほ(?!う)|うざ|ウザ|きもい|キモ|最低|クズ|ブス|死ね|(?<![るだ])しね(?![ぇえ])|消えろ|大嫌い|だいきらい|嫌い(だ|！|!)|むかつく|ムカつく/;
   const bad = TALKS.filter(t => BAD.test(text(t)));
