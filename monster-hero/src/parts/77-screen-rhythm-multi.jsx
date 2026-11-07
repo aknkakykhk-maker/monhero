@@ -1217,6 +1217,10 @@ const rhythmMultiPickDifficulty = (available, wishId, orderIds) => {
 // 部屋の中の状態は React の外(RHYTHM_MULTI)にあるので、画面を行き来しても部屋は切れない。
 // チャット欄(2026-10-03・ユーザー指摘「チャットが使いにくい」で作り直し)。
 // 上に見出しと✕、真ん中に発言の一覧(高さいっぱい)、下に定型文(折り返して全部見せる)と入力欄
+// チャットの「◯◯に聞く」の札を開いておくか(2026-11-07)。新しいキーで端末に覚える。無い・壊れていれば畳む
+const RHYTHM_MULTI_ASK_OPEN_KEY = 'mh_rhythm_multi_ask_open_v1';
+const rhythmMultiAskOpenLoad = () => { try { return localStorage.getItem(RHYTHM_MULTI_ASK_OPEN_KEY) === '1'; } catch (_) { return false; } };
+const rhythmMultiAskOpenSave = (on) => { try { localStorage.setItem(RHYTHM_MULTI_ASK_OPEN_KEY, on ? '1' : '0'); } catch (_) { /* 保存できなくても、その場では開け閉めできる */ } };
 function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl = null, onClose = null, talkTip = '', onTalkTipClose = null, askName = '' }) {
   const [chatText, setChatText] = React.useState('');
   const [waitNote, setWaitNote] = React.useState(false);
@@ -1234,6 +1238,8 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
   };
   const submit = () => { if (send(chatText)) setChatText(''); };
   const memberOf = (id) => members.find((m) => m.id === id) || null;
+  const [askOpen, setAskOpen] = React.useState(() => rhythmMultiAskOpenLoad());
+  const toggleAsk = () => setAskOpen((v) => { const next = !v; rhythmMultiAskOpenSave(next); return next; });
   return (
     <section data-rhythm-multi-chat className="flex h-full min-h-0 flex-col">
       <div className="flex shrink-0 items-center gap-2 pb-1.5">
@@ -1270,9 +1276,11 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
           (チャットの発言と自由入力の欄を押しつぶさない。2026-10-08・ユーザー報告「定型文のゾーンが動かせず、下の自由入力が出せない」) */}
       <div data-rhythm-multi-chat-quick className="mt-2 flex max-h-[8.5rem] shrink-0 flex-col gap-2 overflow-y-auto landscape:max-h-none landscape:flex-row landscape:items-center landscape:gap-1.5 landscape:overflow-x-auto landscape:overflow-y-hidden landscape:[scrollbar-width:none]">
         {askName && (
-          <div data-rhythm-buddy-ask className="flex shrink-0 flex-wrap items-center gap-1.5 landscape:flex-nowrap">
-            <b className="shrink-0 text-[10px] font-black text-lime-300">🎵 {askName}に聞く</b>
-            {RHYTHM_BUDDY_ASK_CHIPS.map((chip) => (
+          <div data-rhythm-buddy-ask={askOpen ? 'open' : 'closed'} className="flex shrink-0 flex-wrap items-center gap-1.5 landscape:flex-nowrap [[data-mh-view-rotation=true]_&]:flex-nowrap">
+            {/* 2026-11-07 社長「みゅあにきくみたいなやつは閉じたりできるようにしたい」。はじめは畳み、押すと開く。開いたかどうかは端末に覚える */}
+            <button type="button" data-rhythm-buddy-ask-toggle aria-expanded={askOpen} onClick={toggleAsk}
+              className="min-h-[34px] shrink-0 whitespace-nowrap rounded-full border border-lime-300/40 bg-slate-900 px-2.5 text-[11px] font-black text-lime-300 active:scale-95">🎵 {askName}に聞く {askOpen ? '◂' : '▸'}</button>
+            {askOpen && RHYTHM_BUDDY_ASK_CHIPS.map((chip) => (
               <button key={chip.label} data-rhythm-buddy-ask-chip type="button" onClick={() => send(`${askName}、${chip.text}`)}
                 className="min-h-[34px] shrink-0 whitespace-nowrap rounded-full border border-lime-300/50 bg-lime-950/70 px-2.5 text-[11px] font-black text-lime-100 transition active:scale-95">{chip.label}</button>
             ))}
