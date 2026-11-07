@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 645527b63e14acc6
+// source-sha256: a4e1b09f811a7c35
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -125122,10 +125122,12 @@ const cardTacticsAutoOf = async (db, deck) => {
 };
 const CARD_AUTO_REWARD_KEY = 'mh_card_auto_reward_v1';
 const CARD_AUTO_REWARD_DAY_MAX = 3;
-const cardAutoRewardNormalize = (raw, today0) => {
+const CARD_AUTO_REWARD_RESET_DAY = '2026-11-07';
+const CARD_AUTO_REWARD_RESET_MARK = '20261107';
+const cardAutoRewardNormalize = (raw, today) => {
   const day = raw && typeof raw === 'object' && typeof raw.day === 'string' ? raw.day : '';
-  const today = cardDayCarry(day, today0);
-  const n = raw && Number.isInteger(raw.n) && raw.n >= 0 && raw.n < 10000 ? raw.n : 0;
+  let n = raw && Number.isInteger(raw.n) && raw.n >= 0 && raw.n < 10000 ? raw.n : 0;
+  if (day === CARD_AUTO_REWARD_RESET_DAY && today === CARD_AUTO_REWARD_RESET_DAY && raw.r !== CARD_AUTO_REWARD_RESET_MARK) n = 0;
   return {
     day: today,
     n: day === today ? n : 0
@@ -125151,7 +125153,10 @@ const cardAutoRewardEntry = loaded => ({
   next: {
     v: 1,
     day: loaded.today,
-    n: loaded.n + 1
+    n: loaded.n + 1,
+    ...(loaded.today === CARD_AUTO_REWARD_RESET_DAY ? {
+      r: CARD_AUTO_REWARD_RESET_MARK
+    } : {})
   }
 });
 const cardLevelEntries = async ({
