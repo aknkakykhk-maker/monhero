@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 02e2cf701883c6a8
+// source-sha256: 9c02c3fc872b9b15
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -82699,7 +82699,7 @@ function RhythmHistoryScreen({
     compact: true
   })), list.length === 0 ? React.createElement("p", {
     className: "rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400"
-  }, "終わった週やイベントがまだありません。", React.createElement("br", null), "週間ランキングは毎週 月曜 5:00 に切り替わります。") : React.createElement(React.Fragment, null, React.createElement("div", {
+  }, "終わった週やイベントがまだありません。", React.createElement("br", null), "週間ランキングは毎週 月曜 4:00 に切り替わります。") : React.createElement(React.Fragment, null, React.createElement("div", {
     "data-rhythm-history-tabs": true,
     className: "sticky top-0 z-10 -mx-3 bg-slate-950 px-3 pt-1"
   }, React.createElement(ScreenTabs, {
@@ -82717,7 +82717,7 @@ function RhythmHistoryScreen({
   })), shownList.length === 0 ? React.createElement("p", {
     "data-rhythm-history-empty": listTab,
     className: "rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400"
-  }, listTab === 'limited' ? '終わったイベントはまだありません。' : '終わった週はまだありません。', React.createElement("br", null), listTab === 'limited' ? 'イベントが終わると、ここに順位が残ります。' : '週間ランキングは毎週 月曜 5:00 に切り替わります。') : React.createElement("div", {
+  }, listTab === 'limited' ? '終わったイベントはまだありません。' : '終わった週はまだありません。', React.createElement("br", null), listTab === 'limited' ? 'イベントが終わると、ここに順位が残ります。' : '週間ランキングは毎週 月曜 4:00 に切り替わります。') : React.createElement("div", {
     className: "flex flex-col gap-2"
   }, shownList.map(entry => React.createElement("button", {
     key: entry.id,
@@ -97744,9 +97744,12 @@ const cardNormalizeLevelCounts = v => {
   const r = cardIsPlainObject(v) ? v : {};
   return Object.fromEntries(CARD_LEVEL_ORDER.map(lv => [lv, cardNormalizePoint(r[lv])]));
 };
-const CARD_WEEK_START_HOUR_JST = 5;
+const CARD_WEEK_START_HOUR_JST = 4;
+const CARD_WEEK_START_HOUR_JST_OLD = 5;
+const CARD_WEEK_SWITCH_MS = Date.UTC(2026, 10, 8, 19, 0, 0);
+const cardWeekStartHourAt = now => Number(now) >= CARD_WEEK_SWITCH_MS ? CARD_WEEK_START_HOUR_JST : CARD_WEEK_START_HOUR_JST_OLD;
 const cardWeekKeyJst = now => {
-  const d = new Date(Number(now) + (9 - CARD_WEEK_START_HOUR_JST) * 3600 * 1000);
+  const d = new Date(Number(now) + (9 - cardWeekStartHourAt(now)) * 3600 * 1000);
   d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7);
   return d.toISOString().slice(0, 10);
 };
@@ -114197,16 +114200,19 @@ const cardWeeklyRewardForPlace = place => {
   };
 };
 const cardNormalizeWeeklyClaims = v => v === null || v === undefined ? [] : Array.isArray(v) ? v.filter(x => typeof x === 'string' && x) : null;
-const cardWeekStartMs = now => Date.parse(`${cardWeekKeyJst(now)}T${String(CARD_WEEK_START_HOUR_JST).padStart(2, '0')}:00:00+09:00`);
+const cardWeekStartOfKey = key => Date.parse(`${key}T0${key >= cardWeekKeyJst(CARD_WEEK_SWITCH_MS) ? CARD_WEEK_START_HOUR_JST : CARD_WEEK_START_HOUR_JST_OLD}:00:00+09:00`);
+const cardWeekStartMs = now => cardWeekStartOfKey(cardWeekKeyJst(now));
+const cardWeekEndMs = startMs => cardWeekStartMs(startMs + CARD_WEEK_MS + 2 * 3600 * 1000);
 const cardWeeklyClaimId = weekKey => `card_weekly_${weekKey}`;
 const cardWeeksAwaitingReward = (nowMs, claims) => {
   if (!Array.isArray(claims)) return [];
   const now = Number(nowMs) || 0;
   const thisStart = cardWeekStartMs(now);
+  const prev1 = cardWeekStartMs(thisStart - 1),
+    prev2 = cardWeekStartMs(prev1 - 1);
   const out = [];
-  for (let back = 2; back >= 1; back--) {
-    const startMs = thisStart - back * CARD_WEEK_MS;
-    const endMs = startMs + CARD_WEEK_MS;
+  for (const startMs of [prev2, prev1]) {
+    const endMs = cardWeekEndMs(startMs);
     if (startMs < CARD_WEEKLY_REWARD_FROM_MS || now < endMs || now >= endMs + CARD_WEEKLY_CLAIM_MS) continue;
     const key = cardWeekKeyJst(startMs);
     const id = cardWeeklyClaimId(key);
@@ -114777,7 +114783,7 @@ const CardRankingBoard = ({
     className: chip(period === id)
   }, label)), React.createElement("small", {
     className: "ml-auto self-center text-[10px] font-bold text-slate-400"
-  }, period === 'week' ? '月曜 5:00 から' : 'フリー対戦で勝った数')), React.createElement("div", {
+  }, period === 'week' ? '月曜 4:00 から' : 'フリー対戦で勝った数')), React.createElement("div", {
     className: "grid grid-cols-5 gap-1"
   }, CARD_LEVEL_ORDER.map(lv => React.createElement("button", {
     key: lv,
