@@ -34,8 +34,8 @@ for (const sel of ['[data-event-story]', '[data-story-stage]', '[data-player-ran
 // 4) 中身の動き(貯め方・まとめ方・出してよいか)を、部品の外側だけ取り出して確かめる
 const head = SRC.slice(0, SRC.indexOf('// ---------- 見た目 ----------'));
 const vis = SRC.match(/const growthFxVisible = [\s\S]*?\n};\n/);
-const ctx = { console, ASSISTANT_LIST: [{ id: 'mua', name: 'みゅあ', imageDir: 'images/assistant', imagePrefix: 'myua' }, { id: 'kiki', name: 'きき', imageDir: 'images/assistant', imagePrefix: 'kiki' }],
-  BREEDER_MARKET_ITEMS: [{ id: 'peer_gift', name: 'テストの品', emoji: '🧺' }], ASSISTANT_PEER_BOND_LEVELS: [{ level: 1, min: 0, name: 'a' }, { level: 2, min: 40, name: 'b' }],
+const ctx = { console, ASSISTANT_LIST: [{ id: 'secret', name: 'ひみつ', imageDir: 'x', imagePrefix: 'x' }, { id: 'mua', name: 'みゅあ', imageDir: 'images/assistant', imagePrefix: 'myua' }, { id: 'kiki', name: 'きき', imageDir: 'images/assistant', imagePrefix: 'kiki' }],
+  assistantReleased: (id) => id !== 'secret', BREEDER_MARKET_ITEMS: [{ id: 'peer_gift', name: 'テストの品', emoji: '🧺' }], ASSISTANT_PEER_BOND_LEVELS: [{ level: 1, min: 0, name: 'a' }, { level: 2, min: 40, name: 'b' }],
   assistantBondStage: (p) => ({ level: p >= 100 ? 2 : 1, need: p >= 100 ? 100 : 0 }), assistantBondNext: (p) => (p < 100 ? { level: 2, need: 100 } : { level: 3, need: 300 }),
   assistantBondLevel: (p) => (p >= 100 ? 2 : 1), assistantBondStageByLevel: () => ({ title: '' }), assistantBondRewardRows: () => [{ level: 2, rewards: ['ダイヤ×10'], frames: [], callStyle: false }] };
 vm.createContext(ctx);
@@ -71,6 +71,10 @@ ctx.peerLevel({ pair: ['kiki', 'mua'], levelBefore: 1, levelAfter: 2 }); ctx.pee
 if (ctx.S.sheets.filter(s => s.kind === 'friend' && s.tier === 'level').length !== 1) ng('同じ2人の友情Lvアップが続いたら1つにまとめる');
 ctx.session([{ assistantId: 'mua', levelBefore: 4, levelAfter: 5 }, { assistantId: 'kiki', levelBefore: 9, levelAfter: 10, tickets: 2 }]);
 if (ctx.S.sheets.filter(s => s.kind === 'session').length !== 1) ng('何人も一度にセッションLvが上がったら1回にまとめる');
+
+ctx.S.sheets = []; ctx.S.small = [];
+ctx.bond('secret', 0, 200); ctx.peerLevel({ pair: ['secret', 'mua'], levelBefore: 1, levelAfter: 2 }); ctx.session([{ assistantId: 'secret', levelBefore: 1, levelAfter: 2 }]);
+if (ctx.S.small.length || ctx.S.sheets.length) ng('まだ公開していない助手の演出を出した(名前・顔が漏れる)');
 
 // 5) 60-app.jsx からの呼び出し
 const calls = [...APP.matchAll(/growthFx[A-Za-z]+\(/g)].map(m => m.index);

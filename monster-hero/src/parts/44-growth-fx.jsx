@@ -77,15 +77,19 @@ const growthFxDropSheet = (id) => { GROWTH_FX_STORE.sheets = GROWTH_FX_STORE.she
 
 // ---------- 値ごとの呼び方 ----------
 // 助手の顔の絵(表情つき)。登録が無ければ null
+// 公開済みの助手だけを引く(まだ公開していない助手は、名前も顔も演出に出さない。unreleased-assistant-hidden-check.js)
+const growthFxAssistantOf = (assistantId) => {
+  if (typeof assistantReleased === 'function' && !assistantReleased(assistantId)) return null;
+  return ((typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST)) ? ASSISTANT_LIST : [])
+    .filter(a => a && (typeof assistantReleased !== 'function' || assistantReleased(a.id))).find(a => a.id === assistantId) || null;
+};
 const growthFxAssistantFace = (assistantId, expression = 'happy') => {
-  const list = typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST) ? ASSISTANT_LIST : [];
-  const who = list.find(a => a && a.id === assistantId);
+  const who = growthFxAssistantOf(assistantId);
   if (!who || !who.imageDir || !who.imagePrefix) return null;
   return `${who.imageDir}/${who.imagePrefix}_${expression}.PNG`;
 };
 const growthFxAssistantName = (assistantId) => {
-  const list = typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST) ? ASSISTANT_LIST : [];
-  const who = list.find(a => a && a.id === assistantId);
+  const who = growthFxAssistantOf(assistantId);
   return (who && who.name) || '';
 };
 // 仲良し度の、いまの段の中での位置(0〜100)。段の表は助手ごとに同じ点数(ASSISTANT_BOND_LEVELS)
@@ -101,7 +105,7 @@ const growthFxAssistantBondPct = (points) => {
 // 助手の仲良し度が上がった(60-app.jsx の addAssistantBondFor から。値と保存はそちらで済んでいる)
 const growthFxAssistantBond = (assistantId, beforePoints, afterPoints) => {
   const before = growthFxNum(beforePoints), after = growthFxNum(afterPoints);
-  if (!(after > before)) return;
+  if (!(after > before) || !growthFxAssistantOf(assistantId)) return;
   const name = growthFxAssistantName(assistantId);
   const lvOf = (p) => (typeof assistantBondLevel === 'function' ? assistantBondLevel(p) : 1);
   const levelFrom = lvOf(before), levelTo = lvOf(after);
@@ -158,6 +162,7 @@ const growthFxPeerLevelName = (level, lifeName = true) => {
 // 2人の友情Lvが上がった(どの道で上がっても、assistantPeerGain の結果 { pair, levelBefore, levelAfter } を渡せばよい)
 const growthFxPeerLevel = ({ pair, levelBefore, levelAfter } = {}) => {
   if (!Array.isArray(pair) || pair.length !== 2 || !(growthFxNum(levelAfter) > growthFxNum(levelBefore))) return;
+  if (!growthFxAssistantOf(pair[0]) || !growthFxAssistantOf(pair[1])) return;
   const [a, b] = pair;
   const stage = growthFxPeerLevelName(levelAfter);
   growthFxPush({ tier: 'level', kind: 'friend', who: [a, b].sort().join('-'), levelFrom: levelBefore, levelTo: levelAfter,
@@ -167,7 +172,7 @@ const growthFxPeerLevel = ({ pair, levelBefore, levelAfter } = {}) => {
 // 2人に品物を渡した。名前と絵は持ち物のデータ(BREEDER_MARKET_ITEMS の name・emoji)から取る(種類・名前はあとで変わるため書き込まない)
 //   reaction … 'like' | 'dislike' | null(好き嫌いが入ったら渡す) / playerGain … あなたとの仲良し度の増えた量(2人それぞれ)
 const growthFxPeerItem = ({ pair, itemId, pointsBefore, pointsAfter, levelBefore, levelAfter, reaction = null, playerGain = 0 } = {}) => {
-  if (!Array.isArray(pair) || pair.length !== 2) return;
+  if (!Array.isArray(pair) || pair.length !== 2 || !growthFxAssistantOf(pair[0]) || !growthFxAssistantOf(pair[1])) return;
   const gain = growthFxNum(pointsAfter) - growthFxNum(pointsBefore);
   if (!(gain > 0) && !(growthFxNum(playerGain) > 0)) return;
   const items = typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : [];
@@ -184,7 +189,7 @@ const growthFxPeerItem = ({ pair, itemId, pointsBefore, pointsAfter, levelBefore
 // セッションLv(モンヒロビートの助手・マモリ)。マルチの結果で決まるが、マルチの最中は出さず、出してよい画面へ戻ってから出す。
 //   何人も一度に上がったら1回にまとめる(list に [{ assistantId, levelBefore, levelAfter, tickets }] を全部入れて呼ぶ)
 const growthFxSessionLevel = (list = []) => {
-  const ups = (Array.isArray(list) ? list : []).filter(u => u && growthFxNum(u.levelAfter) > growthFxNum(u.levelBefore));
+  const ups = (Array.isArray(list) ? list : []).filter(u => u && growthFxNum(u.levelAfter) > growthFxNum(u.levelBefore) && growthFxAssistantOf(u.assistantId));
   if (!ups.length) return;
   const top = ups[0];
   const gains = ups.map(u => ({ icon: '🎤', text: `${growthFxAssistantName(u.assistantId)} セッションLv.${u.levelAfter}`,
