@@ -1,0 +1,95 @@
+# 助手ライフ 段階2(二歩目)「遊び場」— ツムギの台詞(2026-11-08)。注文書 docs/progress/assistant-peer/LIFE-STAGE2-LINES-ORDER.md
+# pair: 28組 × 主な遊び2つ(その2人の好みで選んだ)/lure: 8人 × to=song/deck/temple/market(押すとその入口へ飛ぶので言い切り)
+# 相手は {c}、プレイヤーは {name}。時間帯の言葉とほかの場所の名前は入れない。音ゲーは台詞なら愛称(みゅあ・ドラ「モンビー」/ももすけ「モンビート」/きき「モンヒロビート」)
+## 2人の掛け合い 28組 × 主な遊び2つ(doing=practice モンヒロビート/cards MFバトルカード/training M/B管理/temple お参り/shopping お買い物)
+pair mua kiki doing=shopping lv=1-3 | mua excited {c}、この髪かざり、おそろいにしない？ | kiki happy かわいいでつね。私は、色ちがいにしまつ | mua wink 色ちがいのおそろい、いちばんおしゃれぢゃん♪
+pair mua kiki doing=temple lv=4-6 | kiki normal {c}、お参りでは静かに手を合わせましょう | mua troubled 静かに…がんばる！ | kiki happy ……はい、上手にできましたね♪ | mua excited {c}にほめられた！ｗ
+pair mua momosuke doing=practice lv=4-6 | momosuke excited {c}、モンビートで一緒に踊りながら叩こ！！ | mua happy いいね！ モンビーで踊るの、まぢ楽しいもん♪ | momosuke wink ミスしても、ポーズが決まってれば勝ちね♡
+pair mua momosuke doing=shopping lv=7-10 | mua excited {c}、このリボン、ぜったい似合う！ | momosuke happy {c}が選んでくれたなら、まちがいないね！！ | mua wink ぢゃあ、あたしの分は{c}が選んで♪
+pair mua dra doing=shopping lv=1-3 | dra normal {c}、それ全部買うのか？ | mua wink 見るだけ！ …たぶんｗ | dra happy おでは、おかきだけ買って帰るぞ
+pair mua dra doing=practice lv=4-6 | mua excited {c}、モンビー勝負しよ！ | dra happy おう。おでのリズム感、なめるなよ | mua surprise え、意外とうまい！？ | dra wink えへへ、膝でリズムとってるからな
+pair mua atsu doing=practice lv=4-6 | atsu excited {c}、一曲だけね笑 | mua wink それ、もう信じてないからｗ | atsu happy じゃあ二曲！ 正直に言った笑
+pair mua atsu doing=training lv=7-10 | mua happy {c}、モッチーとドラゴン、並べて育てよ♪ | atsu happy いいね！ ドラゴン、モッチーにやさしいんだよね笑 | mua excited ぢゃあ、仲良しコンビで強くなろ！
+pair mua kyuko doing=cards lv=1-3 | kyuko normal {c}、このカード、どこに置く？ | mua happy なんかいい場所！ | kyuko happy ……ほんとに、そこがいちばんだねぇ笑
+pair mua kyuko doing=shopping lv=4-6 | mua excited {c}、この帽子かぶってみて！ | kyuko troubled えぇ、似合うかなぁ | mua wink 似合う似合う！ まぢでかわいいｗ | kyuko happy ……じゃあ、買っちゃおっかなぁ笑
+pair mua sorashido doing=practice lv=1-3 | sorashido excited {c}、今のスコア、自己ベストだぞ！ | mua surprise え、まぢ！？ 気づかなかった！ | sorashido happy ちゃんと記録しといたぜ・・・！
+pair mua sorashido doing=cards lv=7-10 | mua normal あたしの勘と、ソラシドの計算、合わせたら最強ぢゃない？ | sorashido excited それ、前から試したかったんだ！ | mua happy ぢゃあ今日は、ふたりでひとつのデッキね♪
+pair mua erubin doing=shopping lv=4-6 | mua excited {c}、このシャツ、ぜったい似合う！ | erubin troubled 少し派手じゃないかな？ | mua wink 派手くらいがちょうどいいの♪ | erubin happy ……{c}が言うなら、着てみるね
+pair mua erubin doing=temple lv=7-10 | erubin normal {c}、何をお願いしたの？ | mua wink えへへ、みんなが元気でいられますように、だよ♪ | erubin happy 俺も、同じことをお願いしたよ
+pair kiki momosuke doing=training lv=1-3 | momosuke excited {c}、メタルナーとゴーレム、どっちが強くなるか勝負！！ | kiki happy いいですね。私はちからに全部振りまつ | momosuke surprise やっぱり全部！？
+pair kiki momosuke doing=temple lv=7-10 | momosuke normal {c}、もも、お守り買ったの！！ | kiki happy あれま、{c}らしい、ピンクのお守りでつね | momosuke wink {c}の分も買ったよ♡ おそろい！！
+pair kiki dra doing=temple lv=4-6 | dra normal {c}、お参りのときくらい、ギャグはやめておくぞ | kiki surprise あれま、えらいでつね | dra wink ……出口で1回だけ言う。えへへ
+pair kiki dra doing=training lv=7-10 | kiki normal {c}、グジラの体力、私も少し参考にしまつ | dra surprise {c}が、守りを！？ | kiki wink ほんの少しだけでつよ♪
+pair kiki atsu doing=training lv=1-3 | atsu happy {c}、ゴーレムも今日も全振り？笑 | kiki happy もちろんでつ | atsu wink ドラゴンも、ちょっと見習おうかな笑
+pair kiki atsu doing=cards lv=4-6 | kiki normal {c}、今日の対戦、最初から攻めてもいいですか | atsu excited 望むところ！ 俺も最初から全力！ | kiki happy では、全力と全力でつね♪
+pair kiki kyuko doing=temple lv=4-6 | kyuko normal {c}と神殿に来ると、静かで落ち着くねぇ | kiki happy はい。考えごとにもちょうどいいでつ | kyuko happy 次の作戦、ここで思いつきそうだなぁ笑
+pair kiki kyuko doing=cards lv=7-10 | kyuko wink {c}、作戦はいつもの分担でいい？ | kiki happy はい。攻めは私、考えるのは{c}で♪ | kyuko happy ほい。いちばん勝てる分担だねぇ
+pair kiki sorashido doing=cards lv=1-3 | sorashido excited {c}、攻めのカードだけの勝率、出してみたぞ！ | kiki surprise どうでしたか？ | sorashido happy 意外と高い！ 表にも書いとくぜ笑
+pair kiki sorashido doing=training lv=4-6 | kiki normal {c}、ゴーレムの伸び方、表にしてもらえますか | sorashido happy まかせろ。ちからの線だけ、まっすぐ上だな笑 | kiki wink それが、ゴーレムの正しい育ち方でつ♪
+pair kiki erubin doing=temple lv=4-6 | erubin normal {c}、神殿の中は、静かでいいね | kiki happy はい。見守り係のお休みに、ちょうどいいでつ | erubin happy ここでは、俺たちも見守られてる気がするね
+pair kiki erubin doing=shopping lv=7-10 | kiki normal {c}、このお茶葉、どちらがいいでしょう | erubin happy 右のほうが香りがやさしいかな | kiki happy では、両方買って、飲みくらべしましょう♪ | erubin wink それがいちばんだね笑
+pair momosuke dra doing=practice lv=1-3 | momosuke excited {c}、モンビートで勝負！！ | dra happy モンビーなら、おで、粘り強いからな | momosuke wink ホールドで負けたら、おやつおごりね♡
+pair momosuke dra doing=shopping lv=4-6 | dra normal {c}、そのキラキラのやつ、買うのか？ | momosuke excited メタルナーにつけたら、もっと光るの！！ | dra happy ……そうか。じゃあ、おでが半分出すか
+pair momosuke atsu doing=practice lv=4-6 | atsu wink {c}、今日こそHELLでフルコンとる？笑 | momosuke angry とるもん！！ 見てて！！ | atsu happy 見てる！ 取れたら一番に拍手するから笑
+pair momosuke atsu doing=cards lv=7-10 | momosuke excited {c}、ももの新しいデッキ、強くなったよ！！ | atsu surprise まじ！？ 見せて！ | momosuke wink 見せたら負けちゃうから、対戦で見せる♡ | atsu excited いいね、受けて立つ笑
+pair momosuke kyuko doing=training lv=1-3 | momosuke excited {c}、ドリーミィ、抱っこしてもいい！？ | kyuko happy ほい。やさしくねぇ | momosuke happy ふわふわ〜！！ 育成どころじゃないよ〜♡
+pair momosuke kyuko doing=practice lv=4-6 | kyuko normal {c}、その曲は右手から入ると楽だよぉ | momosuke surprise ほんとだ！！ {c}、天才！？ | kyuko wink 譜面を見てたら、だいたいねぇ笑
+pair momosuke sorashido doing=practice lv=1-3 | sorashido normal {c}、ミスの数、今日はいくつだ？ | momosuke wink 数えないで〜！！ …でも、2つだけw | sorashido excited うぉぉぉ！ 新記録だぞ！
+pair momosuke sorashido doing=cards lv=7-10 | momosuke excited {c}の表、ももがシールでかわいくしといた！！ | sorashido surprise ……見やすくなってる！？ | momosuke wink かわいいは、見やすいの♡
+pair momosuke erubin doing=shopping lv=1-3 | momosuke excited {c}、ライブの衣装、一緒に見て！！ | erubin happy うん。どれも似合いそうだね | momosuke wink 「どれも」はだめ！！ ひとつ選んで♡
+pair momosuke erubin doing=temple lv=7-10 | erubin normal {c}、さっき長く手を合わせてたね | momosuke happy ステージがうまくいきますようにって、いっぱいお願いしたの！！ | erubin happy きっと届いてるよ。俺も応援してるね
+pair dra atsu doing=cards lv=4-6 | atsu excited {c}、一戦やろ笑 | dra happy おう。今日のおでのデッキは、ちょっと重いぞ | atsu wink それ、毎回言うよね笑
+pair dra atsu doing=practice lv=7-10 | dra normal {c}、今日はおでの好きな曲にしてくれ | atsu happy いいよ！ {c}の曲で勝負笑 | dra excited モンビーでも、負けないからな
+pair dra kyuko doing=cards lv=1-3 | kyuko normal {c}、このデッキ、1枚だけ迷ってるんだぁ | dra happy どれ、見せてくれ。……攻めの1枚だな | kyuko happy それだぁ。ありがとん笑
+pair dra kyuko doing=training lv=4-6 | dra normal {c}、ニャー、また強くなったな | kyuko wink {c}のグジラも、のんびり強いよねぇ | dra happy のんびり強いのが、おでの理想だからな
+pair dra sorashido doing=cards lv=4-6 | sorashido excited {c}、今日の対戦の表、12ページだぜ・・・！ | dra happy よし、全部読む。座れ | sorashido happy {c}だけだよ、最後まで読んでくれるの笑
+pair dra sorashido doing=temple lv=7-10 | dra normal {c}、お参りのときくらい、計算はやめとけ | sorashido troubled ……いや、お賽銭の角度を… | dra wink やめとけ。えへへ
+pair dra erubin doing=cards lv=1-3 | dra normal {c}、デュラハンはここに置くといい | erubin happy なるほど。守りが固くなるね | dra happy カードの説明は、おでに任せろ
+pair dra erubin doing=temple lv=4-6 | erubin normal {c}、膝のお守り、売ってたよ | dra surprise 膝のお守り！？ そんなのがあるのか | erubin wink 足腰のお守りだけどね笑 一緒に買おうか
+pair atsu kyuko doing=training lv=1-3 | kyuko normal {c}、ドラゴン、すばやさが少し足りないかもねぇ | atsu surprise え、分かるの！？ | kyuko happy 数字を見ればねぇ。少しいじってみる？ | atsu excited お願い！
+pair atsu kyuko doing=cards lv=7-10 | atsu happy {c}、ランキング、一緒にてっぺん行こ笑 | kyuko wink ほい。作戦はもうできてるよぉ | atsu excited さすが！ あとは俺が走るだけ！
+pair atsu sorashido doing=practice lv=4-6 | sorashido excited {c}、昨日の差は2点だったぜ・・・！ | atsu wink じゃあ今日で逆転笑 | sorashido happy 記録は全部とっておくからな
+pair atsu sorashido doing=cards lv=7-10 | atsu happy {c}、今日は勝負じゃなくて協力しよ笑 | sorashido surprise なに！？ 組むのか！ | atsu wink 数字は{c}、攻めは俺！ | sorashido excited 最強の組み合わせだな！
+pair atsu erubin doing=training lv=4-6 | erubin happy {c}のドラゴン、本当に大きくなったね | atsu excited でしょ！ 毎日育ててるから笑 | erubin happy アークも、少し見習わせようかな
+pair atsu erubin doing=temple lv=7-10 | atsu normal {c}、何お願いした？笑 | erubin happy みんなが無理をしませんように、かな | atsu troubled それ、俺のことでしょ笑 | erubin wink どうだろうね笑
+pair kyuko sorashido doing=cards lv=1-3 | sorashido excited {c}、メモを表にしといたぞ！ | kyuko happy え、もう？ はやぁ笑 | sorashido happy だいたいで書いてあるから、埋めるのが楽しいんだ
+pair kyuko sorashido doing=shopping lv=4-6 | kyuko normal {c}、ノート、どっちにする？ | sorashido normal マス目の多いほうだな。表が書きやすい | kyuko wink じゃあ俺は、真っ白なほうにするよぉ笑
+pair kyuko erubin doing=temple lv=1-3 | erubin normal {c}、神殿は初めてかな？ | kyuko happy ほい。静かで、本を読みたくなるねぇ | erubin happy 読書は、出てからにしようね笑
+pair kyuko erubin doing=cards lv=4-6 | kyuko normal {c}、このデッキ、1枚入れ替えたら強くなりそう | erubin happy どれかな？ | kyuko wink この1枚。デュラハンがもっと活きるよぉ | erubin surprise 本当だ。さすがだね
+pair sorashido erubin doing=cards lv=4-6 | sorashido excited {c}、デュラハンの使われ方、新しく表にしたぞ | erubin happy ありがとう。人気、上がってたかな？ | sorashido happy 上がってたぜ・・・！
+pair sorashido erubin doing=temple lv=7-10 | erubin normal {c}、神殿では静かにね | sorashido troubled ……小声で、うぉぉぉ | erubin happy それなら、いいかな笑
+
+## 遊びへ誘う 8人 × 4(押すとその入口へ飛ぶので、言い切りで終える)
+lure mua to=song | mua excited {name}、この曲まぢでアガるの！ モンビーで一緒に叩こ♪
+lure mua to=deck | mua happy 見て見て、あたしのデッキ、色をそろえてみたの♪ 一戦やろ！
+lure mua to=temple | mua normal {name}、神殿にお参り行こ！ お願いごと、いっしょにしよ♪
+lure mua to=market | mua excited マーケットに新しい服が並んでるの！ のぞきに行こ♪
+lure kiki to=song | kiki happy {name}、この曲、静かな所がきれいなんでつ。モンヒロビートで聞いてみてください
+lure kiki to=deck | kiki normal 攻撃のカードだけのデッキ、組んでみました。{name}、お相手お願いしまつ
+lure kiki to=temple | kiki happy {name}、神殿へお参りに行きましょう。心が落ち着きまつよ
+lure kiki to=market | kiki normal マーケットに、いいお茶葉が入ったそうです。見に行きましょう♪
+lure momosuke to=song | momosuke excited {name}、この曲ももの推し！！ モンビートでやろ！！
+lure momosuke to=deck | momosuke wink ももの新しいデッキ、キラキラなの♡ {name}、対戦しよ！！
+lure momosuke to=temple | momosuke happy {name}、神殿のお守り、かわいいのがあるんだよ！！ 一緒に行こ♡
+lure momosuke to=market | momosuke excited マーケットにライブの衣装を見に行くの！！ {name}も来て！！
+lure dra to=song | dra happy {name}、この曲、冒険って感じでいいんだ。モンビーでやろうぜ
+lure dra to=deck | dra normal おでのデッキ、組み直したんだ。{name}、一戦どうだ
+lure dra to=temple | dra normal {name}、神殿に行こう。膝のお願いを、もう一回しておきたいんだ
+lure dra to=market | dra happy マーケットに、うまいおかきが並んでるらしいぞ。見に行こう
+lure atsu to=song | atsu excited {name}、この曲いいよ笑 一曲だけ、一緒にやろ！
+lure atsu to=deck | atsu happy 新しいデッキ組んだ！ {name}、一戦やろ笑
+lure atsu to=temple | atsu normal {name}、神殿行こ！ 勝負に勝てるように、お願いしとこ笑
+lure atsu to=market | atsu happy マーケットのぞこ！ ドラゴンのおやつ、買いたいんだよね笑
+lure kyuko to=song | kyuko normal {name}、この曲、構成がきれいなんだぁ。一回やってみてよぉ
+lure kyuko to=deck | kyuko wink 新しい組み方、考えたんだぁ。{name}、試しに対戦しよぉ
+lure kyuko to=temple | kyuko happy {name}、神殿は静かで考えごとにいいんだよねぇ。行こっか
+lure kyuko to=market | kyuko normal マーケットに、新しい本が入ったみたいだよぉ。のぞきに行こ
+lure sorashido to=song | sorashido excited {name}、この曲のノーツ、全部数えたぜ・・・！ 叩いてみてくれ
+lure sorashido to=deck | sorashido happy 勝率の高いデッキ、表で見つけたんだ。{name}、対戦しよう
+lure sorashido to=temple | sorashido normal {name}、神殿に行こう。次の勝負の前に、お願いしておきたいんだ笑
+lure sorashido to=market | sorashido happy マーケットに、マス目の多いノートがあったんだ。見に行こう
+lure erubin to=song | erubin happy {name}、この曲、落ち着く所がいいんだよね。一緒に聞いてみよう
+lure erubin to=deck | erubin normal デュラハンのデッキ、少し組み直したんだ。{name}、相手してくれるかな
+lure erubin to=temple | erubin happy {name}、神殿へお参りに行こう。みんなの分も、お願いしておきたいんだ
+lure erubin to=market | erubin normal マーケットに、いいお茶があったよ。{name}も一緒に見に行こう
+
