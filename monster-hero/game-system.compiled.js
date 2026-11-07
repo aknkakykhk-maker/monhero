@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 53c8056e9233a38f
+// source-sha256: ba5a76df17190b45
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -58823,6 +58823,11 @@ const MODAL_Z = Object.freeze({
   dialog: 42000,
   confirm: 43000
 });
+const rotationAwarePortalTarget = () => {
+  if (typeof document === 'undefined') return null;
+  const rotated = typeof RHYTHM_VIEW_ROTATION === 'object' && !!RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.active === 'function' && RHYTHM_VIEW_ROTATION.active();
+  return rotated && document.querySelector('[data-mh-view-rotation="true"]') || document.body;
+};
 const ModalFrame = ({
   label,
   border = 'border-amber-400/70',
@@ -100829,11 +100834,7 @@ const quickGuideView = () => {
     h: window.innerHeight || 0
   };
 };
-const quickGuidePortalTarget = () => {
-  if (typeof document === 'undefined') return null;
-  if (quickGuideRotated()) return document.querySelector('[data-mh-view-rotation="true"]') || document.body;
-  return document.body;
-};
+const quickGuidePortalTarget = () => typeof rotationAwarePortalTarget === 'function' ? rotationAwarePortalTarget() : typeof document !== 'undefined' ? document.body : null;
 const quickGuideSpotRect = selector => {
   if (!selector || typeof document === 'undefined') return null;
   try {
@@ -165310,7 +165311,7 @@ function MonsterHeroGame() {
     "aria-label": "この知らせを閉じる",
     onClick: () => setStorageTrouble(null),
     className: "shrink-0 w-11 min-h-[44px] flex items-center justify-center rounded-xl bg-red-800 text-red-50 font-black"
-  }, "×"))), document.body) : null;
+  }, "×"))), rotationAwarePortalTarget()) : null;
   const updateNotice = updateNoticeVisible && updateNoticeMode !== 'OFF' && !updateNoticeOnPlay ? ReactDOM.createPortal(React.createElement(WaitForOverlayClose, null, updateNoticeSmall ? React.createElement("div", {
     "aria-live": "assertive",
     "data-update-notice": "mini",
@@ -165360,7 +165361,7 @@ function MonsterHeroGame() {
     className: "shrink-0 w-12 min-h-[48px] flex items-center justify-center rounded-2xl border border-amber-200/80 bg-amber-500/90 text-slate-950 shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"
   }, React.createElement(X, {
     size: 18
-  })))), document.body) : null;
+  })))), rotationAwarePortalTarget()) : null;
   const titleModal = showChangelog ? React.createElement("div", _extends({
     className: "mh-title-modal"
   }, settingsBackdropProps(closeChangelog)), React.createElement("div", {

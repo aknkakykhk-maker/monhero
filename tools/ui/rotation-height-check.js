@@ -33,7 +33,7 @@ const REVIEWED = {
   '24-sorashido-copy-view.jsx|94dvh|1': 'outside ソラシドのAIコピー(バトルの中だけ)',
   '56-assistant-chat.jsx|85vh|1': 'todo:助手部 おしゃべり(助手の吹き出しから。モンヒロビートの中でも開ける)',
   '56-assistant-peer.jsx|85vh|1': 'todo:助手部 助手たちの今の窓',
-  '56-screen-profile.jsx|58vh|1': 'todo:窓口 プロフィールのごほうびの一覧(モンヒロビートの中から開けるか確かめる)',
+  '56-screen-profile.jsx|58vh|1': 'outside プロフィールの仲良し度のごほうびの一覧(gameState が PROFILE のときだけ。モンヒロビートの外)',
   '60-app.jsx|86vh|1': 'outside バトルのモードの説明(バトルのモードえらび)',
   '60-app.jsx|75vh|1': 'outside バトルの技えらび',
   '84-screen-card-battle.jsx|60vh|1': 'outside MFバトルカード',
@@ -44,9 +44,8 @@ const REVIEWED = {
   '95-card-deck-share.jsx|86vh|1': 'outside MFバトルカードのデッキの共有',
   // ③ document.body へ直に出す窓
   '24-battle-fx.jsx|portal|1': 'outside バトルの演出',
-  '60-app.jsx|portal|1': 'todo:窓口 保存できない知らせ(どの画面でも出す。回したときは絵と一緒に回らない)',
-  '60-app.jsx|portal|2': 'todo:窓口 新しい版の知らせ(どの画面でも出す。回したときは絵と一緒に回らない)',
-  '60-app.jsx|portal|3': 'todo:窓口 「ゲームをやめる」の確認(設定から。モンヒロビートの中から開けるか確かめる)',
+  // 保存できない知らせ・新しい版の知らせ(どの画面でも出す)は、rotationAwarePortalTarget() で回した器へ出すので、ここには出てこない(2026-11-07)
+  '60-app.jsx|portal|1': 'outside 「ゲームをやめる」の確認(バトルのメニューからだけ開く。71-screen-battle.jsx の data-battle-quit)',
   '57-screen-monster-dex.jsx|75dvh|1': 'outside モンスター図鑑(M/B管理から)',
   '24-battle-fx.jsx|portal|2': 'outside バトルの演出', '24-battle-fx.jsx|portal|3': 'outside バトルの演出',
   '71-screen-battle.jsx|portal|1': 'outside バトル', '71-screen-battle.jsx|portal|2': 'outside バトル', '71-screen-battle.jsx|portal|3': 'outside バトル',
@@ -95,6 +94,13 @@ for (const f of files) {
   };
   visit(ast.program);
 }
+// ④ どの画面でも出る窓(保存できない知らせ・新しい版の知らせ)は、回しているとき回した器へ出す
+const app = fs.readFileSync(path.join(partsDir, '60-app.jsx'), 'utf8');
+const ui41 = fs.readFileSync(path.join(partsDir, '41-screen-ui.jsx'), 'utf8');
+check('④ 出し先の部品 rotationAwarePortalTarget が、回しているときは回した器・ふだんは body を返す', /const rotationAwarePortalTarget = \(\) => \{[\s\S]{0,400}RHYTHM_VIEW_ROTATION\.active\(\)[\s\S]{0,120}data-mh-view-rotation="true"[\s\S]{0,40}document\.body/.test(ui41));
+check('④ 保存できない知らせ・新しい版の知らせは rotationAwarePortalTarget() へ出す',
+  /const storageTroubleNotice = storageTrouble \? ReactDOM\.createPortal\([\s\S]{0,4000}?\n\s*rotationAwarePortalTarget\(\)\n\s*\) : null;/.test(app)
+  && /const updateNotice = [^\n]*ReactDOM\.createPortal\([\s\S]{0,6000}?\n\s*rotationAwarePortalTarget\(\)\n\s*\) : null;/.test(app));
 const unknown = found.filter((x) => !REVIEWED[x.key]);
 check('② ③ 回したときにはみ出しうる窓(46vh を超える vh・document.body へ直に出す物)は、全部確かめてある', unknown.length === 0,
   unknown.map((x) => `${x.f}:${x.line} ${x.extra}(一覧のキー '${x.key}')`).join(' / '));
