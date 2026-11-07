@@ -268,3 +268,174 @@ solo atsu mood=restless line=scene | atsu surprise イベントの告知、ま�
 solo atsu mood=restless line=feel | atsu excited そわそわするー笑
 solo atsu mood=sulky line=scene | atsu troubled 今日はちょっとうまくいかないなー笑
 solo atsu mood=sulky line=feel | atsu normal ちなみに、悔しいのは本気だかららしい笑
+
+## ひとりごと きゅうこ
+solo kyuko place=library mood=happy why=mypace line=scene | kyuko normal 図書室、今日は俺ひとりだぁ。貸し切りっしょ笑
+solo kyuko place=library mood=happy why=mypace line=scene | kyuko happy いちばん奥の席、空いてた。ここが落ち着くんだよねぇ
+solo kyuko place=library mood=happy why=mypace line=scene | kyuko normal ニャーの育成記録、ノート3冊目に入ったぁ
+solo kyuko place=library mood=happy why=mypace line=scene | kyuko happy イヤホンで小さく音楽流しながら、編成メモ書いてる笑
+solo kyuko place=library mood=happy why=mypace line=scene | kyuko normal 古い攻略本見つけた。今でも使えるとこあるなぁ
+solo kyuko place=library mood=happy why=mypace line=scene | kyuko wink ページの端に、だれかの落書き発見w
+solo kyuko place=library mood=happy why=mypace line=scene | kyuko normal イルミネとドリーミィの相性、表にしてみたぁ
+solo kyuko place=library mood=happy why=mypace line=feel | kyuko happy 静かだと、編成の答えがすぐ見えるんだよねぇ
+solo kyuko place=library mood=happy why=mypace line=feel | kyuko normal ひとりの時間って、大事だよね笑
+solo kyuko place=library mood=happy why=mypace line=feel | kyuko happy この組み方、たぶん課金しなくても勝てるやつだぁ
+solo kyuko place=library mood=happy why=mypace line=feel | kyuko wink まあ、なんとかなるっしょ笑
+solo kyuko place=library mood=happy why=mypace line=feel | kyuko normal あとでだれかに見せよっと。まずは自分で試してからね
+solo kyuko place=library mood=happy why=mypace line=feel | kyuko happy 今日はいい答えが出そうな気がするよぉ
+solo kyuko place=library mood=eager why=mypace line=scene | kyuko excited 新しい組み方、3つ思いついた！
+solo kyuko place=library mood=eager why=mypace line=scene | kyuko normal 素早さに振るか、かしこさに振るか…数字で比べてるとこ
+solo kyuko place=library mood=eager why=mypace line=scene | kyuko happy メモの字が、だんだん速くなってきたw
+solo kyuko place=library mood=eager why=mypace line=scene | kyuko normal ランキング上位の編成、全部書き出してみたぁ
+solo kyuko place=library mood=eager why=mypace line=feel | kyuko excited これ、いけるかも。早く試したいなぁ
+solo kyuko place=library mood=eager why=mypace line=feel | kyuko happy 頭を使って勝つの、やっぱ楽しいよね笑
+solo kyuko place=library mood=eager why=mypace line=feel | kyuko wink 今日は本気出しちゃおっかなぁw
+solo kyuko place=library mood=eager why=mypace line=feel | kyuko normal ちゃんと理由が分かると、迷わなくなるんだよね
+solo kyuko place=library mood=sleepy line=scene | kyuko troubled 本、顔の上にのせたまま寝てたぁ
+solo kyuko place=library mood=sleepy line=scene | kyuko normal 文字がにじんで見えるよぉ笑
+solo kyuko place=library mood=sleepy line=feel | kyuko happy 夜ふかしの分、ここで取りかえそ…
+solo kyuko place=library mood=lonely why=lonely line=scene | kyuko normal 作戦できたのに、見せる人がいないなぁ
+solo kyuko place=library mood=lonely why=lonely line=feel | kyuko troubled だれか来たら、いちばんに話したいのにぃ🥺
+solo kyuko place=library mood=restless line=scene | kyuko surprise 新しいモンスターの数字、早く見たいなぁ
+solo kyuko place=library mood=restless line=feel | kyuko excited 気になって、本の内容が入ってこないw
+solo kyuko place=library mood=sulky line=scene | kyuko troubled 作戦、ぜんぶ外れたぁ…ぐぬぬぬ
+solo kyuko place=library mood=sulky line=feel | kyuko normal まあ、なんとかなるっしょ。次いこ次
+solo kyuko place=home mood=happy why=mypace line=scene | kyuko happy 好きな曲かけながら、ごろごろしてる笑
+solo kyuko place=home mood=happy why=mypace line=scene | kyuko normal ドリーミィの写真、整理してたらこんな時間だぁ
+solo kyuko place=home mood=happy why=mypace line=feel | kyuko happy 家でのんびりするの、最高だよねぇ
+solo kyuko place=home mood=happy why=mypace line=feel | kyuko wink このあとどうしよっかな。まあ、あとで考えよw
+solo kyuko place=home mood=happy why=mypace line=feel | kyuko normal こういう日があるから、またがんばれるんだよね
+solo kyuko place=home mood=sleepy line=scene | kyuko troubled 昨日も夜中まで育成してたぁ😭
+solo kyuko place=home mood=sleepy line=scene | kyuko normal ふとんから出たくないよぉ
+solo kyuko place=home mood=sleepy line=scene | kyuko troubled 目覚まし、3回止めたっぽい笑
+solo kyuko place=home mood=sleepy line=feel | kyuko happy 寝るのも作戦のうち…ってことで
+solo kyuko place=home mood=sleepy line=feel | kyuko normal 今日はゆるく動こ。そういう日もあるっしょ
+solo kyuko place=home mood=eager line=scene | kyuko excited 新しいデッキ、机の上に並べてみた！
+solo kyuko place=home mood=eager line=feel | kyuko happy 組み直したら、ぜんぜん違う顔になったね
+solo kyuko place=home mood=eager line=feel | kyuko wink 次の対戦、ちょっと楽しみだなぁ笑
+solo kyuko place=home mood=lonely why=lonely line=scene | kyuko normal 家、今日はやけに静かだなぁ
+solo kyuko place=home mood=lonely why=lonely line=feel | kyuko troubled …たまには、だれかとしゃべりたいかも
+solo kyuko place=home mood=restless line=scene | kyuko surprise 新しい曲、出たって！？
+solo kyuko place=home mood=restless line=feel | kyuko excited 聞きたいけど、今は育成もしたい…どっちもやろ笑
+solo kyuko place=home mood=sulky line=scene | kyuko troubled 布団にくるまってる。今日はもう動かないよぉ
+solo kyuko place=home mood=sulky line=feel | kyuko normal …ちょっとしたら、また考えよ
+solo kyuko mood=happy why=mypace line=scene | kyuko happy 育成場で、ニャーがいい動きしてくれたぁ
+solo kyuko mood=happy why=mypace line=scene | kyuko normal 散歩のとちゅうで、いい曲思いついた笑
+solo kyuko mood=happy why=mypace line=scene | kyuko happy おやつ屋さんの新作、甘いのと辛いの両方いけた
+solo kyuko mood=happy why=mypace line=scene | kyuko normal カード部屋で、昔の対戦を見返してたぁ
+solo kyuko mood=happy why=mypace line=feel | kyuko happy 今日はなんか、ぜんぶうまくいく気がするよぉ
+solo kyuko mood=happy why=mypace line=feel | kyuko wink 自分のペースが一番だよね笑
+solo kyuko mood=happy why=mypace line=feel | kyuko normal お腹すいてればなんでもおいしい。今日もそれ
+solo kyuko mood=eager why=mypace line=scene | kyuko excited 育成場で試したら、思ったとおりの数字が出た！
+solo kyuko mood=eager why=mypace line=scene | kyuko normal カード部屋で、新しい組み方をひとりで試し打ち中
+solo kyuko mood=eager why=mypace line=scene | kyuko happy 歩きながら、頭の中で編成を組んでるw
+solo kyuko mood=eager why=mypace line=feel | kyuko excited ランキング、もうひとつ上いけそう！
+solo kyuko mood=eager why=mypace line=feel | kyuko normal 理屈どおりに勝てると、気持ちいいんだよねぇ
+solo kyuko mood=eager why=mypace line=feel | kyuko happy 課金しなくても、組み方しだいでいけるってとこ見せたいな
+solo kyuko mood=sleepy line=scene | kyuko normal ベンチで、ちょっとだけ目をつぶってた笑
+solo kyuko mood=sleepy line=feel | kyuko troubled 帰って寝よぉ…
+solo kyuko mood=lonely why=lonely line=scene | kyuko normal みんな、どこにいるのかなぁ
+solo kyuko mood=lonely why=lonely line=feel | kyuko happy 見つけたら、さっきの作戦話そっと
+solo kyuko mood=restless line=scene | kyuko surprise え、新しいカード出てる！？
+solo kyuko mood=restless line=feel | kyuko excited 数字、早く見たい…！
+solo kyuko mood=sulky line=scene | kyuko troubled ランキング、ひとつ落ちてたぁ…ぐぬぬぬ
+solo kyuko mood=sulky line=feel | kyuko normal ま、組み直せばいいだけだし
+
+## ひとりごと ソラシド
+solo sorashido place=cardroom mood=eager line=scene | sorashido excited 新しい表、あと3列で完成だ笑
+solo sorashido place=cardroom mood=eager line=scene | sorashido normal キュービの使われ方、きのうより増えてるな笑
+solo sorashido place=cardroom mood=eager line=feel | sorashido happy 終わったら、だれかに見せたいな。まずはきゅうこちゃんかな笑
+solo sorashido place=cardroom mood=eager line=feel | sorashido excited 今日は答えまでたどりつけるぜ・・・！
+solo sorashido place=cardroom mood=happy line=scene | sorashido happy オリヒメのカード、ずっとながめてても飽きないんだよな笑
+solo sorashido place=cardroom mood=happy line=scene | sorashido normal 山札を並べかえたら、なんかきれいになった
+solo sorashido place=cardroom mood=happy line=feel | sorashido happy ここにいると時間が早いんだよなー笑
+solo sorashido place=cardroom mood=happy line=feel | sorashido wink 好きなことしてると、疲れないんだよね
+solo sorashido place=cardroom mood=sleepy line=scene | sorashido troubled 机につっぷして寝てた…表に顔のあとがついてる笑
+solo sorashido place=cardroom mood=sleepy line=scene | sorashido normal 数字が二重に見えてきた。そろそろ限界かも
+solo sorashido place=cardroom mood=sleepy line=feel | sorashido happy ちょっと寝てから続きやろ。なんくるないさ〜
+solo sorashido place=cardroom mood=lonely why=lonely line=scene | sorashido normal 表できたけど、見てくれる人いないな笑
+solo sorashido place=cardroom mood=lonely why=lonely line=feel | sorashido troubled ……だれか通らないかな。説明したくてしかたない
+solo sorashido place=cardroom mood=restless line=scene | sorashido surprise なに！？ 新カードの情報きてる！
+solo sorashido place=cardroom mood=restless line=feel | sorashido excited うぉぉぉ、早く数字ほしい！
+solo sorashido place=cardroom mood=sulky line=scene | sorashido crying 計算まちがえてた…全部やり直しだ笑
+solo sorashido place=cardroom mood=sulky line=feel | sorashido normal くっそー。でも、まちがいが分かったのは前進だな
+solo sorashido place=home mood=sleepy line=scene | sorashido normal 夜中まで計算してたから、さすがに眠い笑
+solo sorashido place=home mood=sleepy line=scene | sorashido troubled パソコンつけたまま寝落ちしてた…
+solo sorashido place=home mood=sleepy line=scene | sorashido normal あくびが止まらない笑 いちばん寝てないの、たぶん俺
+solo sorashido place=home mood=sleepy line=feel | sorashido happy 今日はちゃんと寝よう。……あと1列だけやったら
+solo sorashido place=home mood=sleepy line=feel | sorashido normal 寝るのも検証のうちってことで
+solo sorashido place=home mood=happy line=scene | sorashido happy ソーキそば作った！ 今日のはでーじうまい笑
+solo sorashido place=home mood=happy line=scene | sorashido normal AIに表を読ませたら、ちゃんとほめてくれた笑
+solo sorashido place=home mood=happy line=scene | sorashido wink オリヒメのポスター、まっすぐ貼りなおした
+solo sorashido place=home mood=happy line=feel | sorashido happy いい一日だった。あしたも計算しよ笑
+solo sorashido place=home mood=happy line=feel | sorashido normal 好きなものに囲まれてると、元気出るんだよな
+solo sorashido place=home mood=eager line=scene | sorashido excited 対戦の記録、全部まとめなおしてる笑
+solo sorashido place=home mood=eager line=feel | sorashido happy 今日はいける気しかしないぜ・・・！
+solo sorashido place=home mood=lonely why=lonely line=scene | sorashido normal ひとりでごはん。……表を見ながら食べるか笑
+solo sorashido place=home mood=lonely why=lonely line=feel | sorashido troubled たまには、だれかとしゃべりながら食べたいな
+solo sorashido place=home mood=restless line=scene | sorashido surprise ランキングの更新、あと10分！
+solo sorashido place=home mood=restless line=feel | sorashido excited 待ちきれなくて、部屋うろうろしてる笑
+solo sorashido mood=happy line=scene | sorashido happy 散歩してたら、いい形の雲見つけた。ニャーに似てる笑
+solo sorashido mood=happy line=scene | sorashido normal おやつ屋さんで、新作を全部数えてきた笑
+solo sorashido mood=happy line=scene | sorashido happy 育成場の数字、今日はいい感じに伸びてる
+solo sorashido mood=happy line=feel | sorashido happy なんか今日は、全部うまくいく気がするな笑
+solo sorashido mood=eager line=scene | sorashido excited 歩きながら、さっきの対戦を頭の中で検証してる
+solo sorashido mood=eager line=scene | sorashido normal 次の大会まで、あと何回練習できるか数えてる笑
+solo sorashido mood=eager line=feel | sorashido happy ちばりよー、俺！
+solo sorashido mood=sleepy line=scene | sorashido normal 歩きながらうとうとしてた…危ない笑
+solo sorashido mood=sleepy line=feel | sorashido troubled 今日は早めに帰ろう。たぶん無理だけど笑
+solo sorashido mood=lonely why=lonely line=scene | sorashido normal 広場、だれもいないな笑
+solo sorashido mood=lonely why=lonely line=feel | sorashido happy なんくるないさ〜。そのうちだれか来るっしょ
+solo sorashido mood=restless line=scene | sorashido surprise なに！？ キュービの新しい絵が出たって！？
+solo sorashido mood=restless line=feel | sorashido excited 見に行くしかないだろ笑
+solo sorashido mood=sulky line=scene | sorashido crying 2点差で負けたの、まだ引きずってる笑
+solo sorashido mood=sulky line=feel | sorashido normal …組み直せばいいだけだ。次は勝つ
+
+## ひとりごと えるびん
+solo erubin place=cardroom mood=happy line=scene | erubin happy デュラハンの新しい組み方、思いついたよ
+solo erubin place=cardroom mood=happy line=scene | erubin normal アークのカードを、つい手に取っちゃうんだよね笑
+solo erubin place=cardroom mood=happy line=feel | erubin happy カード部屋は、いつ来ても落ち着くね☺️
+solo erubin place=cardroom mood=eager line=scene | erubin excited 守りを固めて、じっくり勝つ形。試してみようかな
+solo erubin place=cardroom mood=eager line=scene | erubin normal いろんな組み方を並べて、くらべてるところ
+solo erubin place=cardroom mood=eager line=feel | erubin happy 新しい形がうまくいくと、うれしいんだよね
+solo erubin place=cardroom mood=sleepy line=scene | erubin normal カードを並べたまま、うとうとしてたかな笑
+solo erubin place=cardroom mood=sleepy line=feel | erubin happy 少し休んでから、続きにしようか
+solo erubin place=cardroom mood=lonely why=lonely line=scene | erubin normal 今日は、対戦の相手がいないみたいだね
+solo erubin place=cardroom mood=lonely why=lonely line=feel | erubin troubled みんな忙しいのかな。また声をかけてみよう
+solo erubin place=cardroom mood=restless line=scene | erubin surprise 新しいカードが出たって聞いたよ
+solo erubin place=cardroom mood=restless line=feel | erubin happy どんな組み方ができるか、ちょっとわくわくするね
+solo erubin place=cardroom mood=sulky line=scene | erubin troubled 3回つづけて負けちゃった…そっかぁ笑
+solo erubin place=cardroom mood=sulky line=feel | erubin normal 負けたぶん、学べることもあるよね
+solo erubin place=home mood=happy line=scene | erubin happy 部屋の窓から、中庭がよく見えるんだよね
+solo erubin place=home mood=happy line=scene | erubin normal みゅあちゃんが選んでくれた服、ちゃんとたたんでおいたよ
+solo erubin place=home mood=happy line=feel | erubin happy こっちの暮らしにも、だいぶ慣れてきたかな☺️
+solo erubin place=home mood=happy line=feel | erubin normal 静かな時間も、いいものだね
+solo erubin place=home mood=sleepy line=scene | erubin normal 本を読みながら、まぶたが重くなってきたよ
+solo erubin place=home mood=sleepy line=scene | erubin troubled つい長くカードを考えちゃって、寝不足かな💦
+solo erubin place=home mood=sleepy line=feel | erubin happy 今日は早めに休もうかな
+solo erubin place=home mood=sleepy line=feel | erubin normal ちゃんと寝るのも大事だしね
+solo erubin place=home mood=eager line=scene | erubin excited 明日の対戦にそなえて、デッキを見直してるよ
+solo erubin place=home mood=eager line=feel | erubin happy 今日はなんだか、いける気がするね
+solo erubin place=home mood=eager line=feel | erubin normal よし、もうひとがんばりしようか
+solo erubin place=home mood=lonely why=lonely line=scene | erubin normal 部屋が、いつもより静かに感じるね
+solo erubin place=home mood=lonely why=lonely line=feel | erubin troubled だれか、元気にしてるかな。顔を見に行こうかな
+solo erubin place=home mood=restless line=scene | erubin surprise 知らない場所の話を聞いて、気になってるんだ
+solo erubin place=home mood=restless line=feel | erubin happy 今度だれかに、案内してもらおうかな🤔
+solo erubin mood=happy line=scene | erubin happy 中庭の花が、きれいに咲いてたよ
+solo erubin mood=happy line=scene | erubin normal ベンチに座って、みんなの様子を見てたんだ
+solo erubin mood=happy line=scene | erubin happy 散歩のとちゅうで、知らない道を見つけたよ
+solo erubin mood=happy line=feel | erubin happy この世界のこと、少しずつ好きになってるかな☺️
+solo erubin mood=happy line=feel | erubin normal みんなが元気だと、それだけでうれしいね
+solo erubin mood=eager line=scene | erubin excited 育成場で、アークがいい動きをしてくれたよ
+solo erubin mood=eager line=scene | erubin normal 今日は散歩のあと、カード研究もしようかな
+solo erubin mood=eager line=feel | erubin happy おけ！ 今日はいろいろやってみよう
+solo erubin mood=eager line=feel | erubin normal できることが増えると、楽しいよね
+solo erubin mood=sleepy line=scene | erubin normal ひなたで、ついうとうとしちゃった笑
+solo erubin mood=sleepy line=scene | erubin troubled 歩きながらあくびが出ちゃったよ
+solo erubin mood=sleepy line=feel | erubin happy 少し休んだら、また歩こうか
+solo erubin mood=lonely why=lonely line=scene | erubin normal みんな、どこにいるのかな
+solo erubin mood=lonely why=lonely line=feel | erubin happy さみしそうにしてる人がいたら、声をかけよう
+solo erubin mood=restless line=scene | erubin surprise あそこ、人が集まってるね。何かあったのかな
+solo erubin mood=restless line=feel | erubin happy ちょっとのぞいてみようか
+solo erubin mood=sulky line=scene | erubin troubled 「石油王」って呼ばれるの、まだ慣れないなぁ笑
+solo erubin mood=sulky line=feel | erubin normal まあ、みんな楽しそうだからいいかな
