@@ -1,6 +1,6 @@
 # 助手たちの家 — ツムギの台詞(2026-11-07)。注文書 ORDER-HOUSE.md・形は SAMPLE.txt と同じ1行1本
 # けんか・謝る/差し入れ/{name}が取り持つは、前の2人の掛け合いと同じ受け持ちの14組(みゅあ×ソラシド・あつ×みゅあ・ドラ×えるびん・あつ×きき・もも×ソラシド・ドラ×きき・あつ×きゅうこ・
-#   もも×みゅあ・きゅうこ×もも・あつ×もも・えるびん×みゅあ・あつ×ドラ・えるびん×きき・あつ×えるびん)。間に入る・やきもち・ライバル心・久しぶりの気まずさ・帰ってきた は28組・8人から
+#   もも×みゅあ・きゅうこ×もも・あつ×もも・えるびん×みゅあ・あつ×ドラ・えるびん×きき・あつ×えるびん)。間に入る・やきもち・ライバル心・久しぶりの気まずさ・帰ってきた・リズムが変わった(気づく) は28組・8人から
 # 相手の呼び方は {c}/{c:id}、プレイヤーは {name}。重くしない(悪口なし・最後は戻れる空気)・恋愛にしない(やきもちは友だちとして)
 ## けんか(原因つき)14組 × 3
 fight mua sorashido cause=tidy | sorashido troubled ……あれ、ここに置いてた表がない | mua normal 散らかってたから、まとめて棚に入れといたよ♪ | sorashido angry 順番どおりに並べてたんだよ！ 全部ばらばらだ… | mua angry えー！ 片づけてあげたのに！ || mua troubled ……よかれと思ったんだけどな | sorashido normal ……並べ直すか || sorashido troubled さっきは大きい声出して悪かった。片づけてくれたのは助かったよ | mua happy あたしも、勝手にさわってごめん | sorashido happy じゃあ、一緒に並べ直そう。順番を教えるよ笑 | mua excited 覚えたら、次からはちゃんと並べるね♪
@@ -249,4 +249,31 @@ home erubin slot=evening | erubin happy ただいま。今日もみんな元気�
 home erubin slot=evening | erubin normal ただいま。夕方の中庭、きれいだったよ
 home erubin slot=night | erubin normal ただいま。23時には寝るから、少しだけ本を読もうかな
 home erubin slot=night | erubin happy ただいま。{name}も、無理しないで休んでね。また明日
+
+
+## リズムが変わった(気づく)24本(夜型になった12・朝型になった12。からかう程度で、心配しすぎ・責める感じにしない)
+rhythm2 erubin kiki shift=night | erubin surprise 最近{c}、夜もベンチにいるね。めずらしいな | kiki wink {name}と夜のお散歩をするようになって、少し夜ふかしでつ♪
+rhythm2 atsu dra shift=night | atsu wink {c}、最近21時に寝てなくない？笑 | dra troubled ……{name}と夜に遊ぶとな、膝まで目をさますんだよ
+rhythm2 momosuke kiki shift=night | momosuke surprise {c}、夜中に起きてるの初めて見た！！ | kiki happy 最近、{name}と夜のお茶をしてまして。{c}の時間に近づきました
+rhythm2 kyuko atsu shift=night | kyuko wink {c}、最近23時すぎても起きてるねぇ笑 | atsu troubled {name}に誘われると、つい！ 朝の育成、ちょっとねむい笑
+rhythm2 mua erubin shift=night | mua surprise {c}、最近夜おそくまで起きてない？ めずらしいぢゃん | erubin happy {name}と話してると、時間を忘れちゃうんだよね
+rhythm2 sorashido dra shift=night | sorashido happy {c}、最近カード部屋に夜もいるな。表に書いとくぞ笑 | dra wink {name}と夜の対戦をするようになってな。……眠いけどな
+rhythm2 kiki atsu shift=night | kiki normal {c}、最近、朝の育成に少し遅れてきまつね | atsu troubled バレた！？ {name}と夜に一曲やってるからかも笑
+rhythm2 dra erubin shift=night | dra surprise {c}、夜もデュラハンの研究してるのか | erubin happy うん。{name}と話してたら、夜が楽しくなっちゃって
+rhythm2 erubin atsu shift=night | erubin normal {c}、最近ちょっと眠そうだね。夜ふかしかな？ | atsu happy {name}と遊んでると楽しくて笑 でも、ほどほどにする！
+rhythm2 kyuko kiki shift=night | kyuko surprise {c}と2時に図書室で会うとは、思わなかったなぁ | kiki wink {name}のせいでつ。……いえ、おかげ、でつね♪
+rhythm2 momosuke dra shift=night | momosuke wink {c}、夜の練習スタジオにいる！？ めずらし〜w | dra troubled ……{name}に誘われたら、断れないだろ
+rhythm2 mua kiki shift=night | mua excited {c}が夜にいる！ レアすぎぢゃんｗ | kiki happy {name}と夜のお茶が、くせになってしまいました
+rhythm2 atsu mua shift=morning | atsu surprise {c}、最近朝早くない！？ 6時に会うとか笑 | mua wink {name}と朝の散歩してるの♪ ……まだちょっとねむいけどｗ
+rhythm2 kiki momosuke shift=morning | kiki surprise {c}、朝の散歩で会うなんて、はじめてでつね | momosuke happy {name}と朝の練習してるの！！ 早起き、えらいでしょ♡
+rhythm2 erubin kyuko shift=morning | erubin happy {c}、最近朝から図書室にいるね | kyuko troubled {name}に朝誘われるから、夜の読書、少し減らしたんだぁ
+rhythm2 dra sorashido shift=morning | dra surprise {c}、朝からいるのか。めずらしいな | sorashido happy {name}と朝の対戦をしてるんだ。朝の頭も悪くないぞ笑
+rhythm2 mua momosuke shift=morning | mua surprise {c}、最近朝ごはん一緒に食べられるぢゃん！ | momosuke wink {name}が朝に来るから、ももも早起きになったの♡
+rhythm2 atsu kyuko shift=morning | atsu happy {c}、朝の育成に来るようになったじゃん笑 | kyuko normal {name}が「一緒にやろ」って言うからねぇ。眠いけど、楽しいよぉ
+rhythm2 sorashido mua shift=morning | sorashido surprise {c}が朝8時に起きてるのは、記録してから初めてだ | mua happy {name}と朝のおやつ食べてるの♪ ……記録しないでｗ
+rhythm2 kiki sorashido shift=morning | kiki happy {c}が朝のお茶にいらっしゃるなんて、うれしいでつ | sorashido normal {name}と朝に計算するのが、くせになってな
+rhythm2 momosuke kyuko shift=morning | momosuke excited {c}が朝からいる！！ どうしたの！？ | kyuko happy {name}と朝の散歩を始めたんだぁ。ちょっと早寝もしてるよぉ
+rhythm2 dra mua shift=morning | dra wink {c}、最近朝に強くなったな | mua excited {name}が起こしに来てくれるの♪ もう9時まで寝てないよｗ
+rhythm2 erubin sorashido shift=morning | erubin happy {c}、最近夜はちゃんと寝てるみたいだね | sorashido happy {name}と朝に会う約束があるからな。3時は、もうやめた笑
+rhythm2 atsu momosuke shift=morning | atsu happy {c}、最近6時に会うよね笑 早起き仲間じゃん！ | momosuke excited {name}と朝のダンス練習してるの！！ {c}にも見せたげる♡
 
