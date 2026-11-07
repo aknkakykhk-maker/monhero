@@ -1,285 +1,757 @@
-# 今の台詞の書き直し(ツムギ 2026-11-07)。元は data/assistants.js の ASSISTANT_PEER_TALKS のうち、特別なお話・choice・when を除く普通の掛け合い 168本
-# 置きかえ: lv1・2 → lv=1-3 / lv4 → lv=4-6 / lv7・9 → lv=7-10。scene の rhythm→practice・masu→training・card→cards。any と market は中身で決め、どれにも寄らないものは doing を書かない(どれでもよい)
-# 直したこと: 「{c}、」の書き出しを減らした(呼ぶのは要る所だけ)/ドラの「思わん」「言わん」「〜わ」「見せてみ」を標準語に/えるびんの「ふふ」を消した/
-#   ソラシドの「ぜ・・・」を減らした/みゅあの半角「w」を「ｗ」・「じゃあ」を「ぢゃあ」に/あつの文の終わりの「。」を記号か「笑」に/
-#   同じ言い回し(ききの「倒される前に倒せば」・「( ˘ω˘)9グッ!」・ドラの「何がとは言わないけど」)の重なりを散らした/「ひみつ」を消した
-# 捨てた 5本: kyuko-mua-2(「お得」が、けちっぽい台詞にあたりそう)・atsu-kiki-1・kyuko-momosuke-1・atsu-kyuko-2・atsu-erubin-2(新しい台本 tsumugi.txt とほぼ同じ)
-# 各ペアの「# 元:」は、下の行の順の元の id
+# 今の台詞の書き直し(ツムギ 2026-11-07)。ナカヨシ(3)の形: 今のデータの id を変えずに、その場で直す(思い出アルバムが id で覚えているため)
+#   edit <id> <行の番号> | <話す人> <表情> <セリフ>   … 話す人は変えていない(機械で照らし合わせた)。直していない行は書かない
+#   edit <id> makeup<行> | …                         … けんかの仲直りの行
+#   tag <id> doing=… lv=…                             … 新しい仕組みで引くための鍵(scene の rhythm→practice・masu→training・card→cards。any と market は中身で決め、寄らないものは lv だけ)
+#   tag <id> similar=<ひとこと>                        … 新しい台本(lines/tsumugi.txt)とほぼ同じもの。捨てずに印だけ
+#   add <id> distance<行> | <話す人> <表情> <セリフ>   … けんかの「距離をおく」の行の案(今のデータには段が無い。取り込むかはナカヨシ(3)が決める)
+# 直したこと: 「{c}、」の書き出しを減らした/ドラの「思わん」「言わん」「〜わ」「見せてみ」を標準語に/えるびんの「ふふ」を消した/ソラシドの「ぜ・・・」を減らした/
+#   みゅあの半角「w」を「ｗ」・「じゃあ」を「ぢゃあ」に/あつの文の終わりの「。」を記号か「笑」に/「ひみつ」を消した/同じ言い回しを散らした
+# 鍵付きの形で書いた見比べ用の版は、この枝の前のコミット(96e1ad4)の同じファイルにある
 
-## みゅあ × きき
-# 元: kiki-mua-1, kiki-mua-2, kiki-mua-3, kiki-mua-4, kiki-mua-7, kiki-mua-9
-pair kiki mua doing=snack lv=1-3 | mua happy 今日のおやつ何にする？ あたしはいちごのやつ一択ぢゃん♪ | kiki happy 私はチョコがいいでつ♪ 半分こしましょうか | mua excited さすが{c}、わかってる〜！
-pair kiki mua lv=1-3 | kiki normal マーケットに新しいものが並んでますよ | mua excited えっ見る見る！ あたし全部ほしくなっちゃうかも！ | kiki wink ほどほどに、ですよ？ …私もちょっと見たいですけど♪
-pair kiki mua lv=1-3 | mua troubled {c}ってさ、おとなしいのにバトルだと急にガンガンいくよね | kiki happy 倒される前に倒せば、守らなくていいので♪ | mua surprise まぢで言ってる…？ ちょっとこわ〜ｗ
-pair kiki mua lv=4-6 | kiki wink 今日もあれ、やりますか？ | mua excited やるやる！ せーの、 | kiki happy 「全力でいこう♪」…ぴったりでつね
-pair kiki mua lv=7-10 | mua happy 聞いて！ 今日ね、いいことあったの！ | kiki wink その顔は、ほしかった服が手に入った顔でつね？ | mua surprise なんでわかるの！？ {c}、エスパーぢゃんｗ
-pair kiki mua lv=7-10 | kiki normal 次のバトル、前は私が出まつ | mua excited ぢゃあ、あたしが後ろでガンガン盛り上げる！ | kiki happy それが私たちの必勝パターンでつ ( ˘ω˘)9グッ!
+## A 普通の掛け合い・F けんか・G 3人
+tag kiki-mua-1 doing=snack lv=1-3
+edit kiki-mua-2 1 | kiki normal マーケットに新しいものが並んでますよ
+tag kiki-mua-2 lv=1-3
+edit kiki-mua-3 3 | mua surprise まぢで言ってる…？ ちょっとこわ〜ｗ
+tag kiki-mua-3 lv=1-3
+edit kiki-mua-4 1 | kiki wink {c}、今日もあれ、やりますか？
+edit kiki-mua-4 3 | kiki happy 「全力でいこう♪」…ぴったりでつね
+tag kiki-mua-4 lv=4-6
+edit kiki-mua-7 1 | mua happy 聞いて！ 今日ね、いいことあったの！
+tag kiki-mua-7 lv=7-10
+edit kiki-mua-9 1 | kiki normal 次のバトル、前は私が出まつ
+edit kiki-mua-9 2 | mua excited ぢゃあ、あたしが後ろでガンガン盛り上げる！
+tag kiki-mua-9 lv=7-10
+edit momosuke-mua-1 1 | momosuke excited 見て見て、メタルナーがピカピカなの！！
+tag momosuke-mua-1 doing=training lv=1-3
+edit momosuke-mua-2 2 | momosuke wink いいよ〜？ でもこの前ミスってたよね？w
+tag momosuke-mua-2 doing=practice lv=1-3
+edit momosuke-mua-3 1 | momosuke troubled ねぇ{c}、ももの髪、今日ちょっとはねてない？
+tag momosuke-mua-3 lv=1-3
+edit momosuke-mua-4 1 | mua happy 今日のおそろいポーズ考えた！
+tag momosuke-mua-4 doing=practice lv=4-6
+edit momosuke-mua-7 1 | momosuke excited ももね、新しいダンス覚えたの！！ 見て！！
+tag momosuke-mua-7 doing=practice lv=7-10
+edit momosuke-mua-9 1 | mua excited ステージの準備できた？
+tag momosuke-mua-9 doing=practice lv=7-10
+edit dra-mua-1 1 | dra happy 今日の育成どうだった？ おでは寝坊したくさ
+edit dra-mua-1 2 | mua troubled {c}、それ毎日言ってない？ｗ
+tag dra-mua-1 doing=training lv=1-3
+edit dra-mua-2 3 | dra happy {c}はほめるとすぐ得意になるからな
+tag dra-mua-2 doing=training lv=1-3
+edit dra-mua-3 1 | dra wink おでのグジラ、最近たくましくなったと思わないか？ どこがとは言わないけどな
+tag dra-mua-3 lv=1-3
+edit dra-mua-4 1 | dra wink さっきのおでのギャグ、どうだった？
+edit dra-mua-4 3 | dra excited 過去最高だ！ よし、次は8点をねらうぞ
+tag dra-mua-4 lv=4-6
+edit dra-mua-7 1 | dra troubled おで、今日はちょっと元気ないんだよ
+edit dra-mua-7 3 | dra happy ……ばれてたか
+tag dra-mua-7 lv=7-10
+edit dra-mua-9 1 | mua excited さっきの作戦、うまくいったね！
+tag dra-mua-9 doing=cards lv=7-10
+edit atsu-mua-1 1 | atsu happy 今日HELLいこ！ とりあえず一曲だけ笑
+tag atsu-mua-1 doing=practice lv=1-3
+edit atsu-mua-2 1 | mua excited さっきのフルコン見てたよ！ まぢすごい！
+edit atsu-mua-2 2 | atsu normal てか{c}もいけるでしょ！ 次の難易度、上げてみ？笑
+tag atsu-mua-2 doing=practice lv=1-3
+edit atsu-mua-3 3 | atsu happy 無理〜！ しばらくネタにする笑
+tag atsu-mua-3 lv=1-3
+edit atsu-mua-4 1 | atsu happy 次のイベント、二人で上位とろ笑
+edit atsu-mua-4 3 | atsu wink できるって！ 俺ら組んだら強いから！
+tag atsu-mua-4 lv=4-6
+edit atsu-mua-7 1 | mua troubled さっきのバトル、作戦まちがえちゃった…
+tag atsu-mua-7 lv=7-10
+edit atsu-mua-9 3 | mua wink 一緒なら怖くないもん♪ 二人でフルコンとろ！
+tag atsu-mua-9 doing=practice lv=7-10
+edit kyuko-mua-1 1 | kyuko normal それ持ちすぎじゃない？ 半分持つよぉ
+tag kyuko-mua-1 doing=walk lv=1-3
+edit kyuko-mua-3 3 | mua excited えへへ、ほめ言葉として受け取っとく♪
+tag kyuko-mua-3 lv=1-3
+edit kyuko-mua-4 1 | mua happy 今日も作戦会議しよ！
+tag kyuko-mua-4 doing=cards lv=4-6
+edit kyuko-mua-7 1 | kyuko troubled 編成の相談のってぇ🥺
+tag kyuko-mua-7 doing=cards lv=7-10
+edit kyuko-mua-9 1 | kyuko normal 作戦できたよ。あとは勢いだけ
+tag kyuko-mua-9 doing=cards lv=7-10
+edit mua-sorashido-1 1 | sorashido excited 聞いてくれ！ 今日の勝率、計算したら7割超えてたぜ・・・！
+edit mua-sorashido-1 2 | mua happy すご〜い！ …で、7割ってどのくらい？
+tag mua-sorashido-1 doing=cards lv=1-3
+edit mua-sorashido-2 1 | mua excited 今日の曲、何がいいと思う？
+tag mua-sorashido-2 doing=practice lv=1-3
+edit mua-sorashido-3 2 | mua happy 声でっか〜ｗ でも次は勝てるって！
+tag mua-sorashido-3 lv=1-3
+edit mua-sorashido-4 1 | sorashido happy 今日も記録つけといたぞ
+tag mua-sorashido-4 lv=4-6
+edit mua-sorashido-7 1 | sorashido excited 今日のバトル、全部記録しといた！
+tag mua-sorashido-7 doing=cards lv=7-10
+edit mua-sorashido-9 1 | mua excited 次のイベント、どこから回る？
+edit mua-sorashido-9 3 | mua happy さっすが！ ぢゃあ、あたしは応援係やる！
+tag mua-sorashido-9 lv=7-10
+edit erubin-mua-1 1 | erubin normal 今日は少し眠そうだね。大丈夫かな？
+edit erubin-mua-1 2 | mua troubled ばれた？ 夜ふかししちゃった〜
+tag erubin-mua-1 lv=1-3
+tag erubin-mua-2 doing=cards lv=1-3
+tag erubin-mua-3 lv=1-3
+edit erubin-mua-4 1 | erubin happy いつもの紅茶、いれておいたよ
+edit erubin-mua-4 3 | erubin wink そう言ってくれると思ったよ😊
+tag erubin-mua-4 doing=snack lv=4-6
+edit erubin-mua-7 1 | erubin normal さっき少し元気なかったよね。大丈夫かな？
+tag erubin-mua-7 lv=7-10
+edit erubin-mua-9 1 | erubin normal さっきの対戦、いい流れだったね
+tag erubin-mua-9 doing=cards lv=7-10
+edit kiki-momosuke-1 1 | momosuke excited 今日のお洋服かわいいね！！
+tag kiki-momosuke-1 lv=1-3
+edit kiki-momosuke-2 1 | kiki normal そのマスモン、ちからをもっと上げましょう
+edit kiki-momosuke-2 3 | kiki wink 攻撃は最大の防御、でつ♪
+tag kiki-momosuke-2 doing=training lv=1-3
+tag kiki-momosuke-3 lv=1-3
+edit kiki-momosuke-4 1 | momosuke wink 今日もいっしょにおやつ食べよ！！
+tag kiki-momosuke-4 doing=snack lv=4-6
+edit kiki-momosuke-7 1 | momosuke troubled ももね、ちょっと失敗しちゃった…
+tag kiki-momosuke-7 lv=7-10
+edit kiki-momosuke-9 1 | kiki wink 今日も二人でいきまつか
+edit kiki-momosuke-9 3 | kiki happy 先手必勝、でつね♪
+tag kiki-momosuke-9 lv=7-10
+edit dra-kiki-1 1 | dra happy 今日のコーデもきまってるな
+tag dra-kiki-1 lv=1-3
+edit dra-kiki-2 1 | dra normal 守りも少しは上げたほうがいいんじゃないか？
+edit dra-kiki-2 2 | kiki happy 守りより先に、ちからでつ♪ 倒せば同じことですから
+edit dra-kiki-2 3 | dra surprise 物静かに言うことじゃないんだよなぁ
+tag dra-kiki-2 doing=training lv=1-3
+edit dra-kiki-3 1 | dra wink おでの説明、ちゃんと聞いてたか？
+edit dra-kiki-3 3 | dra crying ……ギャグのせいだったか
+tag dra-kiki-3 lv=1-3
+edit dra-kiki-4 1 | dra happy 今日も説明してやろうか？
+tag dra-kiki-4 lv=4-6
+edit dra-kiki-7 1 | dra normal 今日の説明、どうだった？
+tag dra-kiki-7 lv=7-10
+edit dra-kiki-9 1 | kiki normal 作戦の説明をお願いしまつ
+tag dra-kiki-9 doing=cards lv=7-10
+edit atsu-kiki-2 1 | kiki troubled HELLって本当に私にもできるんでしょうか
+edit atsu-kiki-2 2 | atsu normal できるでしょ！ {c}、押しの強さはピカイチだし笑
+tag atsu-kiki-2 doing=practice lv=1-3
+edit atsu-kiki-3 1 | atsu wink さっきの勝ち方、えげつなかったね笑
+edit atsu-kiki-3 3 | atsu happy ほめてるほめてる！ こわいけど笑
+tag atsu-kiki-3 lv=1-3
+edit atsu-kiki-4 1 | atsu wink 次も全力でいく？笑
+edit atsu-kiki-4 3 | atsu happy 最高！ じゃ、いこ！
+tag atsu-kiki-4 lv=4-6
+edit atsu-kiki-7 1 | kiki troubled ちからに振りすぎて、守りがすかすかになってしまいました…
+tag atsu-kiki-7 doing=training lv=7-10
+edit atsu-kiki-9 1 | atsu excited 次のボス、二人で一気にいこ！
+edit atsu-kiki-9 2 | kiki happy はい。{c}が道を開けて、私が押し切ります
+tag atsu-kiki-9 lv=7-10
+edit kiki-kyuko-1 1 | kyuko normal 今日のおすすめの育て方ある？
+edit kiki-kyuko-1 2 | kiki happy ちからを上げましょう♪
+tag kiki-kyuko-1 doing=training lv=1-3
+edit kiki-kyuko-2 1 | kiki normal {c}は、いつもどうやって育成の順番を決めてるんですか？
+edit kiki-kyuko-2 2 | kyuko wink イベントの日から逆に数えてるだけだよぉ笑
+tag kiki-kyuko-2 lv=1-3
+edit kiki-kyuko-3 1 | kyuko troubled ぐぬぬぬ…また負けた
+edit kiki-kyuko-3 2 | kiki happy もう一回やりましょう。次は私がちから全開で手伝いますよ♪
+tag kiki-kyuko-3 lv=1-3
+edit kiki-kyuko-4 1 | kyuko normal いつもの作戦でいい？
+tag kiki-kyuko-4 doing=cards lv=4-6
+edit kiki-kyuko-7 1 | kyuko troubled 昨日の編成、だいたいで組んだら負けたぁ😭
+tag kiki-kyuko-7 doing=cards lv=7-10
+edit kiki-kyuko-9 1 | kiki normal 今日の作戦はどうしまつか？
+tag kiki-kyuko-9 doing=cards lv=7-10
+edit kiki-sorashido-1 1 | sorashido excited 攻撃に全部振ったときのダメージ、計算してみたぜ・・・！
+tag kiki-sorashido-1 doing=training lv=1-3
+edit kiki-sorashido-2 1 | kiki normal このマスモンの伸び方、表にできますか？
+edit kiki-sorashido-2 2 | sorashido happy まかせて！ 5分で作るぞ笑
+tag kiki-sorashido-2 doing=training lv=1-3
+edit kiki-sorashido-3 1 | sorashido crying 俺の計算、また外れた…
+edit kiki-sorashido-3 2 | kiki happy 外れても、ちからで押し切ればいいんですよ♪
+tag kiki-sorashido-3 lv=1-3
+edit kiki-sorashido-4 1 | sorashido excited 新しい表、まっさきに見せに来た！
+tag kiki-sorashido-4 doing=cards lv=4-6
+edit kiki-sorashido-7 1 | sorashido excited 表にまとめたら、{c}のちから振りは正解だった！
+edit kiki-sorashido-7 3 | sorashido happy どう並べても、倒す速さがいちばんだったぜ・・・！
+tag kiki-sorashido-7 doing=training lv=7-10
+edit kiki-sorashido-9 1 | kiki normal 次の相手の数字、出てまつか？
+edit kiki-sorashido-9 2 | sorashido excited もちろんだ！ 3手で押し切れる計算だ笑
+tag kiki-sorashido-9 doing=cards lv=7-10
+edit erubin-kiki-1 1 | erubin normal お茶をいれたんだけど、飲むかな？
+tag erubin-kiki-1 doing=snack lv=1-3
+edit erubin-kiki-2 1 | kiki troubled カードの組み方、私も覚えたいです
+tag erubin-kiki-2 doing=cards lv=1-3
+edit erubin-kiki-3 1 | kiki wink 今日はどちらの服なんですか？
+tag erubin-kiki-3 lv=1-3
+edit erubin-kiki-4 1 | erubin normal 今日はどこで見守ろうか
+tag erubin-kiki-4 doing=walk lv=4-6
+edit erubin-kiki-7 1 | erubin normal 今日は風が気持ちいいね
+tag erubin-kiki-7 doing=walk lv=7-10
+edit erubin-kiki-9 1 | kiki normal さっきの対戦、後ろから見ててくれましたか
+edit erubin-kiki-9 3 | kiki happy 声をかけてもらえると、安心して押し切れまつ
+tag erubin-kiki-9 doing=cards lv=7-10
+edit dra-momosuke-1 1 | dra happy 今日も元気だな。見てるだけで元気が出るぞ
+tag dra-momosuke-1 lv=1-3
+edit dra-momosuke-2 1 | momosuke excited ホールドで勝負しよ！！
+edit dra-momosuke-2 2 | dra happy お、言ったな。おでは粘り強いからな、くさ
+tag dra-momosuke-2 doing=practice lv=1-3
+edit dra-momosuke-3 1 | dra crying メタルナーの話ばっかりで、おでのグジラの話も聞いてくれよ〜
+edit dra-momosuke-3 2 | momosuke happy しょうがないなぁw 3分だけね！
+tag dra-momosuke-3 lv=1-3
+edit dra-momosuke-4 1 | momosuke excited 今日のギャグ、もも採点するね！！
+edit dra-momosuke-4 2 | dra wink おう。おでの本気を見せてやるからな
+tag dra-momosuke-4 lv=4-6
+edit dra-momosuke-7 1 | dra happy 新しいギャグ考えたぞ
+tag dra-momosuke-7 lv=7-10
+edit dra-momosuke-9 1 | momosuke excited 今日のステージ、前説お願い！！
+tag dra-momosuke-9 doing=practice lv=7-10
+edit atsu-momosuke-1 1 | momosuke wink 今日もHELLやってるの？ 好きすぎでしょw
+edit atsu-momosuke-1 2 | atsu happy 好きだよ笑 {c}もやる？
+tag atsu-momosuke-1 doing=practice lv=1-3
+edit atsu-momosuke-2 1 | atsu wink さっきのスコア見たよ！ まあまあじゃん笑
+edit atsu-momosuke-2 2 | momosuke angry まあまあって何！？ ちゃんとほめて！！
+edit atsu-momosuke-2 3 | atsu happy うそうそ！ かなりよかった笑
+tag atsu-momosuke-2 doing=practice lv=1-3
+edit atsu-momosuke-3 1 | momosuke excited メタルナーとドラゴン、どっちが強いか勝負しよ！！
+edit atsu-momosuke-3 2 | atsu wink いいね！ 手加減しないよ？笑
+tag atsu-momosuke-3 doing=training lv=1-3
+edit atsu-momosuke-4 1 | atsu wink 次のライブ、ちょっと見に行こうかな笑
+tag atsu-momosuke-4 lv=4-6
+edit atsu-momosuke-7 1 | momosuke wink 今日もHELL？ え、まだフルコンできてないの？w
+tag atsu-momosuke-7 doing=practice lv=7-10
+edit atsu-momosuke-9 1 | atsu happy ライブの前に一回合わせとこ笑
+tag atsu-momosuke-9 doing=practice lv=7-10
+edit kyuko-momosuke-2 1 | kyuko normal そのマスモン、すばやさをもう少し上げると化けると思う
+tag kyuko-momosuke-2 doing=training lv=1-3
+tag kyuko-momosuke-3 lv=1-3
+edit kyuko-momosuke-4 1 | momosuke wink 今日もドリーミィに会いに来たよ！！
+edit kyuko-momosuke-4 3 | momosuke excited 最高！！ ここ、ももの大好きな場所なんだ！！
+tag kyuko-momosuke-4 doing=training lv=4-6
+edit kyuko-momosuke-7 1 | momosuke excited 今日もドリーミィ見せて！！
+tag kyuko-momosuke-7 doing=training lv=7-10
+edit kyuko-momosuke-9 1 | kyuko normal 今日の作戦、二人で考えよっか
+edit kyuko-momosuke-9 3 | kyuko happy {c}の思いつきは、けっこう当たるんだよね。だから聞きたい笑
+tag kyuko-momosuke-9 doing=cards lv=7-10
+edit momosuke-sorashido-1 1 | sorashido happy メタルナーの強さを表にしたぞ笑
+tag momosuke-sorashido-1 doing=training lv=1-3
+edit momosuke-sorashido-2 1 | momosuke wink さっきの曲、ミスいくつだった？w
+tag momosuke-sorashido-2 doing=practice lv=1-3
+edit momosuke-sorashido-3 1 | sorashido excited うぉぉぉ！ 見てくれ、新記録だ！
+tag momosuke-sorashido-3 doing=practice lv=1-3
+edit momosuke-sorashido-4 1 | sorashido happy ミスの数、今日はいくつだった？笑
+edit momosuke-sorashido-4 2 | momosuke wink 3つ！！ 減ったでしょw
+edit momosuke-sorashido-4 3 | sorashido excited うぉぉぉ！ 前の4分の1だ！
+tag momosuke-sorashido-4 doing=practice lv=4-6
+edit momosuke-sorashido-7 1 | sorashido excited 今日のミス、とうとう1つだったぜ・・・！
+tag momosuke-sorashido-7 doing=practice lv=7-10
+edit momosuke-sorashido-9 1 | momosuke excited 今日のスコア勝負、負けないからね！！
+edit momosuke-sorashido-9 2 | sorashido happy 俺もだ！ でも負けたほうは、表で反省会な笑
+tag momosuke-sorashido-9 doing=practice lv=7-10
+edit atsu-dra-1 1 | dra happy 今日もカードの対戦するか？
+edit atsu-dra-1 2 | atsu wink いいね！ 手加減なしでね笑
+tag atsu-dra-1 doing=cards lv=1-3
+edit atsu-dra-2 1 | atsu normal モンスター甲子園の話、またしてよ笑
+edit atsu-dra-2 3 | atsu happy いいよ！ 全部聞く！
+tag atsu-dra-2 doing=cards lv=1-3
+edit atsu-dra-3 1 | dra wink おでのデッキ、最近ちょっと重くなっただろ。何がとは言わないけどな
+tag atsu-dra-3 doing=cards lv=1-3
+edit atsu-dra-4 1 | atsu happy 今日も一戦いこ笑
+edit atsu-dra-4 2 | dra wink おう。言われなくても、もう準備してたぞ
+edit atsu-dra-4 3 | atsu wink さすが！ 分かってるね！
+tag atsu-dra-4 doing=cards lv=4-6
+edit atsu-dra-7 1 | dra normal さっきのカード、ちょっと攻めすぎだったな
+edit atsu-dra-7 3 | dra wink {c}らしいな。次はおでが、守りの組み方を教えてやるからな
+tag atsu-dra-7 doing=cards lv=7-10
+edit atsu-dra-9 1 | atsu excited 二人で組んだら、甲子園の決勝いけそうじゃない？笑
+tag atsu-dra-9 doing=cards lv=7-10
+edit dra-kyuko-1 1 | kyuko normal またお昼寝してたでしょ笑
+edit dra-kyuko-1 2 | dra wink なんで分かったんだよ
+tag dra-kyuko-1 lv=1-3
+edit dra-kyuko-2 1 | dra normal そのニャーの育て方、すごいな。無課金でここまでいくのか
+tag dra-kyuko-2 doing=training lv=1-3
+edit dra-kyuko-3 1 | dra wink 見た目はかわいいのに、中身は男前だよな
+edit dra-kyuko-3 2 | kyuko happy よく言われるぅ笑 {c}は、見た目より中身がかわいいよねぇ
+edit dra-kyuko-3 3 | dra surprise おでが！？ ……照れるな
+tag dra-kyuko-3 lv=1-3
+edit dra-kyuko-4 1 | kyuko happy また寝ぐせついてるよぉ🤣
+tag dra-kyuko-4 lv=4-6
+edit dra-kyuko-7 1 | kyuko troubled カードのデッキ、どうしても1枚決まらないんだぁ
+edit dra-kyuko-7 2 | dra happy ふむ、攻めの1枚だな。{c}の組み方なら、それで活きるぞ
+tag dra-kyuko-7 doing=cards lv=7-10
+edit dra-kyuko-9 1 | dra wink 今日もおでの寝ぐせと山札、チェックしてくれるか？
+edit dra-kyuko-9 3 | dra happy おでたち、もう負ける気がしないな
+tag dra-kyuko-9 doing=cards lv=7-10
+edit dra-sorashido-1 1 | sorashido excited 昨日の対戦、全部の手を表にまとめたぜ・・・！
+edit dra-sorashido-1 2 | dra surprise まじかよ。おで寝てたぞ
+tag dra-sorashido-1 doing=cards lv=1-3
+edit dra-sorashido-2 1 | dra normal カードの勝率、どうなってる？
+edit dra-sorashido-2 2 | sorashido happy 計算したら、先に攻めたほうが勝ちやすいって出た笑
+tag dra-sorashido-2 doing=cards lv=1-3
+edit dra-sorashido-3 1 | dra wink {c}、ちょっと大きいんだよな。……声が
+edit dra-sorashido-3 2 | sorashido surprise 声かよ！ 笑
+tag dra-sorashido-3 lv=1-3
+edit dra-sorashido-4 1 | dra happy 今日の表は何ページだ？
+tag dra-sorashido-4 doing=cards lv=4-6
+edit dra-sorashido-7 1 | sorashido excited 俺の表、今日は誤字なしだ！
+edit dra-sorashido-7 2 | dra happy ほんとか？ ……ふむ、ほんとだな。えらいぞ
+tag dra-sorashido-7 doing=cards lv=7-10
+edit dra-sorashido-9 1 | dra normal 次の相手の山札、数字で出せるか？
+edit dra-sorashido-9 3 | dra happy さすがだな。数字は{c}、説明はおで。これで負けないな
+tag dra-sorashido-9 doing=cards lv=7-10
+edit dra-erubin-1 2 | erubin troubled その呼び方、だんだん慣れてきたよ笑
+tag dra-erubin-1 lv=1-3
+edit dra-erubin-2 1 | erubin happy デュラハンのカード、引けたんだ
+edit dra-erubin-2 2 | dra surprise お、{c}の好きなやつか。見せてくれ
+tag dra-erubin-2 doing=cards lv=1-3
+edit dra-erubin-3 1 | dra wink 石油王ってほんとか？ おでにもちょっと分けてくれよ
+edit dra-erubin-3 2 | erubin happy 何もないよ…笑
+tag dra-erubin-3 lv=1-3
+edit dra-erubin-4 1 | dra wink 今日もカード一戦いくか？
+edit dra-erubin-4 3 | dra excited 言うようになったな！
+tag dra-erubin-4 doing=cards lv=4-6
+edit dra-erubin-7 1 | erubin happy 今日のカード、デュラハンで新しく組んでみたよ
+tag dra-erubin-7 doing=cards lv=7-10
+edit dra-erubin-9 1 | dra excited 二人で組んだデッキ、今日も勝ったな！
+edit dra-erubin-9 3 | dra happy おでたち、もう敵なしかもしれないな
+tag dra-erubin-9 doing=cards lv=7-10
+edit atsu-kyuko-1 1 | kyuko happy 今日もランキングの上のほうにいたね笑
+edit atsu-kyuko-1 2 | atsu wink {c}もでしょ！ 無課金でそれはやばいって笑
+tag atsu-kyuko-1 lv=1-3
+edit atsu-kyuko-3 1 | atsu wink さっきの判断、えぐかったね笑
+edit atsu-kyuko-3 3 | atsu happy 次も期待してる！
+tag atsu-kyuko-3 lv=1-3
+edit atsu-kyuko-4 1 | kyuko wink 今日の作戦、もう考えといたよぉ
+edit atsu-kyuko-4 2 | atsu happy さすが{c}！ それでいこ笑
+tag atsu-kyuko-4 doing=cards lv=4-6
+edit atsu-kyuko-7 1 | kyuko troubled ランキング、あと少しで抜かれそう…ぐぬぬぬ
+tag atsu-kyuko-7 lv=7-10
+edit atsu-kyuko-9 1 | atsu excited 次のイベント、てっぺん取ろ！
+tag atsu-kyuko-9 doing=cards lv=7-10
+edit atsu-sorashido-1 1 | sorashido excited HELLのノーツ数、全部数えたぜ・・・！
+edit atsu-sorashido-1 2 | atsu happy それ数える？笑
+tag atsu-sorashido-1 doing=practice lv=1-3
+edit atsu-sorashido-2 1 | atsu wink 俺のスコア、計算で抜けそう？笑
+tag atsu-sorashido-2 doing=practice lv=1-3
+edit atsu-sorashido-3 2 | atsu wink いつでも相手するよ笑
+edit atsu-sorashido-3 3 | sorashido happy 次は勝つぞ！
+tag atsu-sorashido-3 lv=1-3
+edit atsu-sorashido-4 1 | sorashido excited 昨日の差、計算したら2点だったぜ・・・！
+edit atsu-sorashido-4 3 | sorashido happy 本気でいくぞ！
+tag atsu-sorashido-4 lv=4-6
+edit atsu-sorashido-7 1 | sorashido crying また2点差で負けた…くっそー！笑
+edit atsu-sorashido-7 3 | sorashido excited 次こそ勝つ！ 計算はもう始めてる笑
+tag atsu-sorashido-7 lv=7-10
+edit atsu-sorashido-9 1 | atsu happy 今日は勝負じゃなくて、二人で協力しよ笑
+tag atsu-sorashido-9 lv=7-10
+edit atsu-erubin-1 1 | erubin normal 今日も元気だね
+edit atsu-erubin-1 2 | atsu happy {c}もでしょ！ てか、いつも落ち着いてるよね笑
+tag atsu-erubin-1 lv=1-3
+edit atsu-erubin-3 1 | atsu wink また石油王っぽい服着てる笑
+tag atsu-erubin-3 lv=1-3
+edit atsu-erubin-4 1 | atsu happy 今日もみんなのこと頼むね笑
+tag atsu-erubin-4 lv=4-6
+edit atsu-erubin-7 1 | atsu troubled ちょっとだけ疲れたかも…
+edit atsu-erubin-7 3 | atsu happy …{c}にはすぐバレるね笑 少し休む！
+tag atsu-erubin-7 lv=7-10
+edit atsu-erubin-9 1 | erubin normal 今日のみんなの様子、どうだった？
+tag atsu-erubin-9 lv=7-10
+edit kyuko-sorashido-1 1 | sorashido excited 育成の計算、手伝ってくれないか！
+tag kyuko-sorashido-1 doing=training lv=1-3
+edit kyuko-sorashido-2 1 | kyuko normal この曲好きなんだぁ
+tag kyuko-sorashido-2 doing=practice lv=1-3
+edit kyuko-sorashido-3 1 | sorashido crying 計算どおりにいかないんだ…
+edit kyuko-sorashido-3 2 | kyuko normal 運のところは計算できないからね。だから試すのが大事だと思う
+tag kyuko-sorashido-3 lv=1-3
+edit kyuko-sorashido-4 1 | kyuko normal 続きの計算、やろっか
+tag kyuko-sorashido-4 doing=cards lv=4-6
+edit kyuko-sorashido-7 1 | sorashido excited 昨日のメモ、俺のほうで表にしといた！
+tag kyuko-sorashido-7 doing=cards lv=7-10
+edit kyuko-sorashido-9 1 | kyuko normal 新しい編成、数字で確かめてくれる？
+tag kyuko-sorashido-9 doing=cards lv=7-10
+edit erubin-kyuko-1 1 | erubin normal 目が半分だね。夜ふかしかな？
+edit erubin-kyuko-1 2 | kyuko troubled 夜中まで育成してたぁ😭
+tag erubin-kyuko-1 lv=1-3
+edit erubin-kyuko-2 1 | kyuko normal カードのデッキ、見てもいい？
+tag erubin-kyuko-2 doing=cards lv=1-3
+tag erubin-kyuko-3 lv=1-3
+edit erubin-kyuko-4 1 | erubin normal 今日も遅くまでがんばるのかな？
+edit erubin-kyuko-4 3 | erubin wink ちゃんと休むときは休もうね😊
+tag erubin-kyuko-4 lv=4-6
+edit erubin-kyuko-7 1 | kyuko troubled 今日、ちょっとだけ寝坊したぁ
+edit erubin-kyuko-7 2 | erubin happy そう思ってたよ。夜ふかしで育成してたんでしょ？
+tag erubin-kyuko-7 lv=7-10
+edit erubin-kyuko-9 1 | erubin normal さっきの対戦、どこで勝ちが決まったと思う？
+edit erubin-kyuko-9 3 | erubin surprise やっぱり、そこだよね。さすがの読みだね笑
+tag erubin-kyuko-9 doing=cards lv=7-10
+edit erubin-sorashido-1 1 | sorashido excited MFバトルカードの勝率、表にしたぜ・・・！
+tag erubin-sorashido-1 doing=cards lv=1-3
+edit erubin-sorashido-2 1 | erubin normal デュラハンのカードって、どのくらい使われてるのかな
+edit erubin-sorashido-2 2 | sorashido happy ちょうど数えたとこだ笑 {c}、けっこう人気だったよ！
+tag erubin-sorashido-2 doing=cards lv=1-3
+edit erubin-sorashido-3 1 | sorashido crying 負けた…くやしい！
+tag erubin-sorashido-3 lv=1-3
+edit erubin-sorashido-4 1 | erubin happy 今日の表、もう見せてもらえるかな？
+edit erubin-sorashido-4 2 | sorashido excited もちろんだ！ {c}のために一番分かりやすく作ったからな笑
+tag erubin-sorashido-4 doing=cards lv=4-6
+edit erubin-sorashido-7 1 | sorashido excited デュラハンの使われ方、新しく表にしたぜ・・・！
+tag erubin-sorashido-7 doing=cards lv=7-10
+edit erubin-sorashido-9 1 | erubin normal 次の対戦、どの形でいこうか
+edit erubin-sorashido-9 2 | sorashido excited 計算だと、{c}の守りの形がいちばんだ！
+tag erubin-sorashido-9 doing=cards lv=7-10
+edit erubin-momosuke-1 1 | erubin normal 今日の髪型、すてきだね
+edit erubin-momosuke-1 3 | erubin happy いつも元気をもらってるよ😊
+tag erubin-momosuke-1 lv=1-3
+edit erubin-momosuke-2 1 | momosuke wink デュラハンばっかり使ってるでしょw
+edit erubin-momosuke-2 2 | erubin troubled ばれちゃったかな…笑 気に入ってるんだよね
+tag erubin-momosuke-2 doing=cards lv=1-3
+tag erubin-momosuke-3 doing=walk lv=1-3
+edit erubin-momosuke-4 1 | erubin happy 今日もたくさん話そうか
+edit erubin-momosuke-4 2 | momosuke excited うん！！ 今日はね、話したいことが3つあるの！！
+edit erubin-momosuke-4 3 | erubin wink ちゃんと全部聞くよ笑
+tag erubin-momosuke-4 doing=walk lv=4-6
+edit erubin-momosuke-7 1 | momosuke excited 聞いて聞いて！！ 今日ね、3回もほめられたの！！
+tag erubin-momosuke-7 lv=7-10
+edit erubin-momosuke-9 1 | erubin normal 今日もステージ、見に行っていいかな
+edit erubin-momosuke-9 3 | erubin happy じゃあ、いちばんいい席で応援するね☺️
+tag erubin-momosuke-9 doing=practice lv=7-10
+edit atsu-dra-q 2 | atsu troubled え、さっき{c}がやってたじゃん！ 次も俺でしょ！
+edit kiki-kyuko-q 1 | kiki normal 次のバトルは、攻撃に全部振りましょう
+edit erubin-sorashido-q 1 | sorashido excited カードは番号順に並べるのがいちばんだぜ・・・！
+edit erubin-sorashido-q 3 | sorashido angry 番号順のほうが探すのが速いって、計算が出てるんだ！
+edit erubin-sorashido-q makeup2 | sorashido troubled 俺こそ、数字ばっかり押しつけてた。ごめんな
+edit erubin-sorashido-q makeup4 | sorashido excited それだ！ 最強の並べ方だな笑
+edit dra-mua-q makeup3 | mua wink ぢゃあ、昼寝のあとは明るい曲ね♪
+edit dra-mua-q makeup4 | dra excited それでいこう。目覚ましにちょうどいいな
+edit atsu-sorashido-q 1 | sorashido excited ランキングの表、色をいっぱい使って見やすくしたぜ笑
+edit atsu-sorashido-q makeup1 | atsu troubled {c}、さっきは言いすぎた！ せっかく作ってくれたのにごめん！
+edit atsu-sorashido-q makeup2 | sorashido troubled 俺も、意地になってた。ごめんな
+edit atsu-sorashido-q makeup4 | sorashido excited それだ！ でーじ見やすくなったぜ・・・！
+edit kyuko-mua-q makeup3 | mua wink ぢゃあ今日は{c}が真ん中！ あたしは横で盛るね♪
+tag trio-kiki-momosuke-mua-1 doing=snack
+tag trio-kiki-momosuke-mua-2 doing=cards
+edit trio-atsu-dra-erubin-1 4 | atsu wink じゃあ勝ち抜き戦ね！ 最後まで残った人がジュースおごってもらえる笑
+tag trio-atsu-dra-erubin-1 doing=cards
+tag trio-atsu-dra-erubin-2 doing=snack
+edit trio-kyuko-mua-sorashido-1 4 | sorashido happy 天気も計算ずみだ。明日は晴れ笑
+edit trio-kyuko-mua-sorashido-1 5 | mua wink ぢゃあ、あたしは写真担当ね♪
+edit trio-kyuko-mua-sorashido-2 3 | sorashido excited あとAIの話だな！ 今度{c:mua}にも教えるぜ笑
+tag trio-kyuko-mua-sorashido-2 doing=cards
+edit trio-kiki-kyuko-sorashido-1 1 | sorashido excited {c:kiki}、{c:kyuko}、作戦会議だ！ 表を作ってきたぜ・・・！
+edit trio-kiki-kyuko-sorashido-1 5 | sorashido happy いや、それも1列足しとくよ笑
+tag trio-kiki-kyuko-sorashido-1 doing=cards
+edit trio-kiki-kyuko-sorashido-2 5 | kiki wink では、最初の一手から押していきまつ♪
+tag trio-kiki-kyuko-sorashido-2 doing=cards
+tag trio-atsu-dra-momosuke-1 doing=practice
+tag trio-atsu-dra-momosuke-2 doing=training
+edit trio-dra-kyuko-mua-2 5 | mua happy あはは！ ぢゃあ3人で、そーっと見てよ♪
+tag trio-dra-kyuko-mua-2 doing=training
+tag trio-erubin-kiki-momosuke-2 doing=training
+edit trio-atsu-erubin-sorashido-1 4 | sorashido happy もちろんだ笑 負けから学ぶのがいちばんだからな
+edit trio-atsu-erubin-sorashido-1 5 | erubin wink {c:atsu}の勝ちも、ちゃんと多いね😊
+tag trio-atsu-erubin-sorashido-1 doing=cards
+tag trio-atsu-erubin-sorashido-2 doing=cards
 
-## みゅあ × もも
-# 元: momosuke-mua-1, momosuke-mua-2, momosuke-mua-3, momosuke-mua-4, momosuke-mua-7, momosuke-mua-9
-pair momosuke mua doing=training lv=1-3 | momosuke excited 見て見て、メタルナーがピカピカなの！！ | mua happy ほんとだ！ {c}が毎日みがいてるもんね♪ | momosuke wink でしょでしょ〜♡ ももの自慢なんだからw
-pair momosuke mua doing=practice lv=1-3 | mua excited {c}、モンヒロビートで勝負しよ！ | momosuke wink いいよ〜？ でもこの前ミスってたよね？w | mua angry あれは指がすべっただけだし！ 今日は本気出すかんね！
-pair momosuke mua lv=1-3 | momosuke troubled ねぇ{c}、ももの髪、今日ちょっとはねてない？ | mua happy え〜全然かわいいよ？ むしろそれがいいぢゃん♪ | momosuke excited ほんと！？ {c}に言われたら自信出た！！
-pair momosuke mua doing=practice lv=4-6 | mua happy 今日のおそろいポーズ考えた！ | momosuke excited え、見せて！！ …あ、ももも同じこと考えてた！！ | mua wink まぢで！？ やっぱあたしたち最強ぢゃん！
-pair momosuke mua doing=practice lv=7-10 | momosuke excited ももね、新しいダンス覚えたの！！ 見て！！ | mua happy かわいすぎる！ …あれ、それあたしが前に教えたやつぢゃん？ｗ | momosuke wink ばれた？w {c}のやつを、ももがアレンジしたの♡
-pair momosuke mua doing=practice lv=7-10 | mua excited ステージの準備できた？ | momosuke wink ばっちり！！ 歌はもも、盛り上げは{c}ね♡ | mua happy まかせて！ 二人で会場ぜんぶ笑顔にしちゃお♪
+## A のうち、前の版で「捨てる」にした5本(残して直す)
+edit kyuko-mua-2 1 | mua troubled ねぇ{c}、新しい服、どっちがいいと思う？
+edit kyuko-mua-2 2 | kyuko normal 右のほうかなぁ。色が{c}の元気さに合ってると思う笑
+edit kyuko-mua-2 3 | mua excited さすが！ 理由まであるとか、まぢ天才ぢゃん！
+tag kyuko-mua-2 lv=1-3
+edit atsu-kiki-1 1 | atsu happy 今日もパワー型でいく？笑
+tag atsu-kiki-1 doing=training lv=1-3 similar=tsumugi.txtのあつ×きき育成1-3(今日も全振り？)
+edit kyuko-momosuke-1 1 | momosuke excited ドリーミィ見せて！！ かわいすぎるの！！
+tag kyuko-momosuke-1 doing=training lv=1-3 similar=tsumugi.txtのきゅうこ×もも育成1-3(ドリーミィ見せて)
+edit atsu-kyuko-2 1 | atsu normal HELL一緒にいこ！
+edit atsu-kyuko-2 3 | atsu happy 大丈夫！ {c}ならいけるって笑
+tag atsu-kyuko-2 doing=practice lv=1-3 similar=tsumugi.txtのあつ×きゅうこ練習1-3(上の難易度いこ)
+edit atsu-erubin-2 1 | atsu wink カード勝負しよ！ 手加減しないよ？笑
+tag atsu-erubin-2 doing=cards lv=1-3 similar=tsumugi.txtのあつ×えるびんカード1-3(デュラハンで一戦)
 
-## みゅあ × ドラ
-# 元: dra-mua-1, dra-mua-2, dra-mua-3, dra-mua-4, dra-mua-7, dra-mua-9
-pair dra mua doing=training lv=1-3 | dra happy 今日の育成どうだった？ おでは寝坊したくさ | mua troubled {c}、それ毎日言ってない？ｗ | dra wink えへへ、ばれたか
-pair dra mua doing=training lv=1-3 | dra normal このマスモン、能力の伸び方がいいな。育て方がうまいんだよ | mua happy でしょ！ あたしも手伝ったもん♪ | dra happy {c}はほめるとすぐ得意になるからな
-pair dra mua lv=1-3 | dra wink おでのグジラ、最近たくましくなったと思わないか？ どこがとは言わないけどな | mua troubled {c}、それ以上言ったら怒るかんね | dra happy えへへ、ごめんごめん
-pair dra mua lv=4-6 | dra wink さっきのおでのギャグ、どうだった？ | mua happy 10点中…7点！ | dra excited 過去最高だ！ よし、次は8点をねらうぞ
-pair dra mua lv=7-10 | dra troubled おで、今日はちょっと元気ないんだよ | mua wink はいはい、話しかけてほしいだけでしょｗ わかってるよ♪ | dra happy ……ばれてたか
-pair dra mua doing=cards lv=7-10 | mua excited さっきの作戦、うまくいったね！ | dra happy おでが説明して、{c}が突っこむ。いつものやつだな | mua wink 説明は完ぺきなのに、そのあとのギャグがいらないんだよねｗ
+## F けんかの「距離をおく」の案
+add momosuke-mua-q distance1 | mua normal ……べつにー。あたし、あっちでコーデ考えてるし
+add atsu-dra-q distance1 | atsu normal まぁ〜、しゃあない笑 ちょっと外で練習してくる！
+add atsu-dra-q distance2 | dra troubled ……おでは膝でもさすってるか
+add kiki-kyuko-q distance1 | kyuko normal ……ちょっと図書室で、頭を冷やしてくるねぇ
+add kiki-kyuko-q distance2 | kiki normal ……そうですか。わかりました
+add erubin-sorashido-q distance1 | erubin troubled ……そっかぁ笑 じゃあ、少しあとでまた話そうか
+add erubin-sorashido-q distance2 | sorashido normal ……おう
+add dra-mua-q distance1 | dra troubled ……どうせおでなんか、昼寝しか取りえないし
+add dra-mua-q distance2 | mua normal ……そこまで言ってないもん
+add kiki-momosuke-q distance1 | momosuke troubled ……ももは、あっちの席でいいもん
+add kiki-momosuke-q distance2 | kiki normal ……そうですか。どうぞ
+add atsu-sorashido-q distance1 | atsu normal ……ちょっと頭冷やしてくる笑
+add atsu-sorashido-q distance2 | sorashido troubled くっそー、配色はいいと思うんだけどな…
+add kyuko-mua-q distance1 | kyuko normal まあ、なんとかなるっしょ…ちょっと散歩してくるねぇ
+add kyuko-mua-q distance2 | mua troubled ……べつに、真ん中ぢゃなくてもいいけどさ
 
-## みゅあ × あつ
-# 元: atsu-mua-1, atsu-mua-2, atsu-mua-3, atsu-mua-4, atsu-mua-7, atsu-mua-9
-pair atsu mua doing=practice lv=1-3 | atsu happy 今日HELLいこ！ とりあえず一曲だけ笑 | mua surprise {c}の『一曲だけ』って絶対一曲で終わんないぢゃん！ | atsu wink ばれた？笑
-pair atsu mua doing=practice lv=1-3 | mua excited さっきのフルコン見てたよ！ まぢすごい！ | atsu normal てか{c}もいけるでしょ！ 次の難易度、上げてみ？笑 | mua troubled えぇ〜…でも{c}が言うならやってみる！
-pair atsu mua lv=1-3 | atsu wink {c}、さっき転びそうになってたよね笑 | mua angry 見てたの！？ 忘れて！ | atsu happy 無理〜！ しばらくネタにする笑
-pair atsu mua lv=4-6 | atsu happy 次のイベント、二人で上位とろ笑 | mua excited のった！ {c}が言うと本当にできそうな気がする！ | atsu wink できるって！ 俺ら組んだら強いから！
-pair atsu mua lv=7-10 | mua troubled さっきのバトル、作戦まちがえちゃった… | atsu wink うんうん笑 でも{c}はミスってからが強いの、知ってるから！ | mua surprise え、見てたの！？ もー、{c}にはかなわないなぁ
-pair atsu mua doing=practice lv=7-10 | mua excited {c}、HELLいこ！ 今日のあたし、いける気しかしない！ | atsu surprise まじで？ {c}から誘ってくるの初めてじゃない？笑 | mua wink 一緒なら怖くないもん♪ 二人でフルコンとろ！
+## B 選ぶ返事つき(choice)。返事の反応は reply<返事の番号>-<行>
+edit kiki-mua-c1 1 | mua happy 今日のおやつ、いちごタルトとチョコケーキどっちにする？
+tag kiki-mua-c1 doing=snack lv=1-3
+edit momosuke-mua-c1 1 | momosuke excited 今日のライブ衣装、ピンクと白どっちがいいかな！？
+tag momosuke-mua-c1 doing=practice lv=1-3
+edit dra-mua-c1 1 | dra wink 新しいギャグ考えたんだけど、聞くか？
+edit dra-mua-c1 reply1-2 | mua troubled …やっぱ外れたぢゃんｗ
+edit dra-mua-c1 reply2-1 | dra crying そうか…おで、さみしいな
+edit dra-mua-c1 reply3-1 | mua wink ぢゃ、あたしが採点するね！
+edit dra-mua-c1 reply3-2 | dra happy おう、甘めで頼むぞ。えへへ
+tag dra-mua-c1 lv=1-3
+edit atsu-mua-c1 1 | atsu happy 今日HELL何曲いける？笑
+edit atsu-mua-c1 reply1-2 | atsu happy いいね！ まずそこからね！
+tag atsu-mua-c1 doing=practice lv=1-3
+edit kyuko-mua-c1 1 | mua troubled 育成でダイヤ使うか迷ってる〜
+edit kyuko-mua-c1 reply2-2 | mua happy ぢゃ、イベントまで楽しみにとっとく！
+tag kyuko-mua-c1 doing=training lv=1-3
+edit mua-sorashido-c1 1 | sorashido excited 勝率を上げる表を作ったぜ・・・！ 3ページだ！
+edit mua-sorashido-c1 reply1-1 | sorashido happy まじめだな！ うれしいよ笑
+tag mua-sorashido-c1 doing=cards lv=1-3
+edit erubin-mua-c1 1 | erubin normal 紅茶とココア、どっちがいいかな？
+tag erubin-mua-c1 doing=snack lv=1-3
+edit kiki-momosuke-c1 1 | momosuke excited マスモンの育て方で勝負しよ！！
+edit kiki-momosuke-c1 reply1-1 | kiki happy ありがとうございます♪ 先手必勝でつね
+tag kiki-momosuke-c1 doing=training lv=1-3
+edit dra-kiki-c1 1 | dra normal 守りも少しは上げたほうがいいって
+edit dra-kiki-c1 2 | kiki happy 先に倒せば、守りはいらないんですよ♪
+tag dra-kiki-c1 doing=training lv=1-3
+edit atsu-kiki-c1 1 | atsu happy 次の対戦、どっちが先に攻める？笑
+edit atsu-kiki-c1 2 | kiki happy もちろん私でつ
+edit atsu-kiki-c1 reply1-2 | atsu happy いいね！ あとは任せて！
+edit atsu-kiki-c1 reply2-1 | atsu wink 了解！ 道は作っとくね笑
+tag atsu-kiki-c1 doing=cards lv=1-3
+edit kiki-kyuko-c1 1 | kyuko normal 今日の作戦、攻めと守りどっちでいく？
+tag kiki-kyuko-c1 doing=cards lv=1-3
+edit kiki-sorashido-c1 1 | sorashido excited 攻撃全振りのダメージ、もう一回計算するか？
+edit kiki-sorashido-c1 reply1-1 | sorashido wink 了解、一発で出すよ笑
+tag kiki-sorashido-c1 doing=training lv=1-3
+edit erubin-kiki-c1 1 | erubin normal お茶のおかわり、いるかな？
+tag erubin-kiki-c1 doing=snack lv=1-3
+edit dra-momosuke-c1 1 | dra wink 今日のおでのギャグ、採点してくれよ
+edit dra-momosuke-c1 reply2-1 | dra troubled 半分か…まあ、半分でもうれしいくさ
+edit dra-momosuke-c1 reply3-2 | dra happy おで、それでも幸せだな
+tag dra-momosuke-c1 lv=1-3
+edit atsu-momosuke-c1 1 | atsu wink 次のライブ、俺のほうが盛り上げられるかもね笑
+tag atsu-momosuke-c1 doing=practice lv=1-3
+edit kyuko-momosuke-c1 1 | momosuke excited ドリーミィとメタルナー、どっちがかわいい！？
+tag kyuko-momosuke-c1 doing=training lv=1-3
+edit momosuke-sorashido-c1 1 | sorashido happy ミスを減らす練習メニューを作ったぞ笑
+edit momosuke-sorashido-c1 reply1-2 | sorashido happy ちょうどいいな笑
+tag momosuke-sorashido-c1 doing=practice lv=1-3
+edit erubin-momosuke-c1 1 | erubin normal 今日はどんな話をしてくれるのかな？
+edit erubin-momosuke-c1 2 | momosuke excited 話したいこと、いっぱいある！！
+tag erubin-momosuke-c1 doing=walk lv=1-3
+edit atsu-dra-c1 1 | atsu happy 今日のカードの対戦、どっちのデッキでいく？笑
+edit atsu-dra-c1 reply1-2 | atsu happy いいね！ 本気で行く！
+edit atsu-dra-c1 reply2-1 | atsu wink 了解！ 手加減なしね笑
+tag atsu-dra-c1 doing=cards lv=1-3
+edit dra-kyuko-c1 1 | kyuko normal そのグジラ、育て方を変えたら強くなると思う
+edit dra-kyuko-c1 2 | dra surprise まじか。{c}、教えてくれよ
+edit dra-kyuko-c1 reply1-2 | dra happy なるほどな、助かるぞ
+edit dra-kyuko-c1 reply2-1 | dra wink じゃ、おでが先に聞いておくな
+tag dra-kyuko-c1 doing=training lv=1-3
+edit dra-sorashido-c1 1 | sorashido excited 昨日の対戦、20ページの表にしたぜ・・・！
+edit dra-sorashido-c1 reply1-2 | dra happy おでも読むぞ、くさ
+edit dra-sorashido-c1 reply2-1 | sorashido troubled 3行か…やってみるよ笑
+edit dra-sorashido-c1 reply2-2 | dra wink それが一番ありがたいな
+edit dra-sorashido-c1 reply3-2 | sorashido happy 頼んだぞ笑
+tag dra-sorashido-c1 doing=cards lv=1-3
+edit dra-erubin-c1 1 | dra wink デュラハンのカード、ちょっと貸してくれよ
+edit dra-erubin-c1 reply1-2 | dra happy おう、約束するぞ
+tag dra-erubin-c1 doing=cards lv=1-3
+edit atsu-kyuko-c1 1 | kyuko normal 次のランキング、どっちが上に行くか勝負しよ
+edit atsu-kyuko-c1 2 | atsu wink いいよ！ 負けないけど笑
+edit atsu-kyuko-c1 reply2-2 | kyuko troubled ぐぬぬぬ…見ててよぉ
+tag atsu-kyuko-c1 lv=1-3
+edit atsu-sorashido-c1 1 | sorashido excited HELLのノーツ、全部数えてきたぜ・・・！
+edit atsu-sorashido-c1 2 | atsu happy また数えたの？笑
+edit atsu-sorashido-c1 reply1-1 | sorashido wink いい読みだ！
+tag atsu-sorashido-c1 doing=practice lv=1-3
+edit atsu-erubin-c1 1 | erubin normal 今日はちょっと休んだほうがいいかな？
+tag atsu-erubin-c1 lv=1-3
+edit kyuko-sorashido-c1 1 | sorashido happy 育成の計算、手でやるか機械でやるか…
+edit kyuko-sorashido-c1 2 | kyuko normal どっちでもいいと思うよぉ
+edit kyuko-sorashido-c1 reply1-1 | sorashido excited だよな！ 手で計算するのが楽しいんだ！
+tag kyuko-sorashido-c1 doing=training lv=1-3
+edit erubin-kyuko-c1 1 | erubin normal 夜ふかしは体に悪いよ？
+edit erubin-kyuko-c1 2 | kyuko troubled 分かってるけど、育成が楽しくてぇ😭
+tag erubin-kyuko-c1 lv=1-3
+edit erubin-sorashido-c1 1 | sorashido excited 新しい表、どこから説明しよう！
+edit erubin-sorashido-c1 reply3-2 | sorashido happy 頼んだよ笑
+tag erubin-sorashido-c1 doing=cards lv=1-3
 
-## みゅあ × きゅうこ
-# 元: kyuko-mua-1, kyuko-mua-3, kyuko-mua-4, kyuko-mua-7, kyuko-mua-9(kyuko-mua-2 は捨てた)
-pair kyuko mua doing=walk lv=1-3 | kyuko normal それ持ちすぎじゃない？ 半分持つよぉ | mua happy ありがと{c}！ やさし〜♪ | kyuko wink おけ〜。どういたしまして笑
-pair kyuko mua lv=1-3 | mua wink {c}って見た目かわいいのに、中身は落ち着いてるよね | kyuko happy よく言われるぅ笑 {c}は見た目も中身も元気だよね | mua excited えへへ、ほめ言葉として受け取っとく♪
-pair kyuko mua doing=cards lv=4-6 | mua happy 今日も作戦会議しよ！ | kyuko wink ほい！ もうメモ用意してあるよぉ笑 | mua excited さすが〜！ 準備よすぎぢゃん！
-pair kyuko mua doing=cards lv=7-10 | kyuko troubled 編成の相談のってぇ🥺 | mua surprise え、{c}があたしに？ 逆ぢゃない？ｗ | kyuko happy {c}の「なんかいい」が、いちばん当たるんだよね笑
-pair kyuko mua doing=cards lv=7-10 | kyuko normal 作戦できたよ。あとは勢いだけ | mua excited 勢いならまかせて！ いっくよー！ | kyuko wink ほい！ 頭は俺、元気は{c}。負ける気しないねぇw
+## C その日の出来事(when)。今の仕組みのまま。when の中身に合う言い回しにした
+edit kiki-mua-w-morning 1 | mua happy おはよ〜！ 朝の空気、気持ちいいね♪
+edit atsu-dra-w-morning 1 | dra troubled 朝はつらいな…膝もまだ寝てる
+edit kyuko-momosuke-w-morning 1 | momosuke excited おはよ！！ 朝ごはん食べた！？
+edit erubin-sorashido-w-morning 1 | erubin happy おはよう、{c}。今日も早いね
+edit erubin-sorashido-w-morning 2 | sorashido excited 朝のうちに、表を1枚作っといたぞ笑
+edit erubin-kyuko-w-night 1 | erubin normal もう遅いね。そろそろ寝る時間じゃないかな？
+edit erubin-kyuko-w-night 2 | kyuko troubled あと1回だけぇ😭 {c}、見逃してぇ
+edit momosuke-mua-w-night 1 | mua troubled 夜ふかしするとお肌に悪いって〜
+edit kiki-sorashido-w-night 1 | sorashido happy 夜は計算がはかどるんだよな笑
+edit atsu-dra-w-night 1 | atsu wink 夜のほうが調子いいでしょ、{c}笑
+edit atsu-dra-w-night 2 | dra happy ばれたか。おでは夜型なんだよ、くさ
+edit erubin-mua-w-winter 1 | mua troubled 寒すぎ〜！ 手がこおる〜
+edit erubin-mua-w-winter 2 | erubin happy あたたかい紅茶をいれようか、{c}
+edit dra-momosuke-w-winter 1 | momosuke excited 雪が降ったら、雪合戦しよ！！
+edit dra-momosuke-w-winter 2 | dra wink おでは雪だるま係だな。膝にやさしいからな
+edit kiki-kyuko-w-winter 1 | kiki normal 寒い日は、こたつでゆっくりしたいでつね
+edit kiki-kyuko-w-winter 2 | kyuko happy 分かるぅ。こたつで育成が最強だよぉ笑
+edit atsu-sorashido-w-winter 1 | sorashido surprise 寒い…！ 沖縄はこんなに寒くないぞ
+edit atsu-sorashido-w-winter 2 | atsu happy 上着貸そうか？笑
+edit momosuke-mua-w-christmas 1 | mua excited もうすぐクリスマスぢゃん！ {c}、プレゼント何がいい？
+edit momosuke-mua-w-christmas 2 | momosuke excited キラキラのやつ！！ {c}は？
+edit erubin-kiki-w-christmas 1 | erubin happy ツリーの飾りつけ、一緒にやろうか
+edit dra-kyuko-w-christmas 1 | dra happy クリスマスのケーキは、おでが切ってやるからな
+edit dra-kyuko-w-christmas 2 | kyuko wink 大きさ、ちゃんとそろえてねぇ笑
+edit atsu-sorashido-w-christmas 1 | atsu happy クリスマスもHELLやる？笑
+edit atsu-sorashido-w-christmas 2 | sorashido excited もちろんだぜ・・・！ サンタも驚く記録を出すぞ！
+edit kiki-mua-w-newyear 1 | mua happy あけおめ〜！ {c}、今年もよろしくね♪
+edit kiki-mua-w-newyear 2 | kiki happy あけましておめでとうございまつ。今年もよろしくお願いしまつ♪
+edit atsu-momosuke-w-newyear 1 | momosuke excited おみくじ、大吉だった！！
+edit atsu-momosuke-w-newyear 2 | atsu wink 俺も大吉笑 今年はいけるね！
+edit dra-sorashido-w-newyear 1 | dra happy お正月のおもち、何個食べた？
+edit dra-sorashido-w-newyear 2 | sorashido happy 8個だ！ ちゃんと数えてたからな笑
+edit erubin-kyuko-w-newyear 1 | kyuko happy 今年の目標、決めた？
+edit erubin-kyuko-w-newyear 2 | erubin normal みんなが楽しく遊べること、かな
+edit atsu-mua-w-battle 1 | atsu happy 今日のブリーダーのバトル見た？笑
+edit atsu-mua-w-battle 2 | mua excited 見た見た！ けっこういい動きだったよね！
+edit dra-kiki-w-battle 1 | dra normal 今日のブリーダー、バトルで攻めてたな
+edit dra-kiki-w-battle 2 | kiki happy はい。ちから全開でしたね♪
+edit momosuke-sorashido-w-battle 1 | sorashido excited 今日のバトルの記録、もう表にしたぜ・・・！
+edit momosuke-sorashido-w-battle 2 | momosuke wink はや！！w {c}、仕事早すぎ
+edit erubin-kyuko-w-battle 1 | erubin happy 今日のブリーダーのバトル、落ち着いてたね
+edit erubin-kyuko-w-battle 2 | kyuko normal 判断がよかったよねぇ。見てて楽しかった笑
+edit momosuke-mua-w-clear 1 | mua excited 今日、ブリーダーがチャレンジクリアしたって！
+edit momosuke-mua-w-clear 2 | momosuke excited ほんと！？ すごすぎ！！
+edit atsu-kiki-w-clear 1 | atsu happy 今日のクリア、ちゃんと見てたよ笑
+edit atsu-kiki-w-clear 2 | kiki happy 私もでつ。うれしいですね♪
+edit dra-erubin-w-clear 1 | erubin happy ブリーダー、チャレンジをクリアしたんだって
+edit dra-erubin-w-clear 2 | dra excited おでもうれしいぞ、えへへ
+edit kyuko-sorashido-w-clear 1 | sorashido excited クリアおめでとうの表、作るか！
+edit kyuko-sorashido-w-clear 2 | kyuko happy それ作るの！？笑 いいねぇ
+edit kyuko-mua-w-enhance 1 | kyuko normal 今日のブリーダーの強化、いい選び方だったねぇ
+edit kyuko-mua-w-enhance 2 | mua happy {c}がほめるなら、間違いないぢゃん！
+edit kiki-sorashido-w-enhance 1 | kiki happy 今日の強化、ちからに振ってましたよ♪
+edit kiki-sorashido-w-enhance 2 | sorashido happy ダメージ、計算しとくよ笑
+edit erubin-momosuke-w-enhance 1 | momosuke excited マスモンがまた強くなってた！！
+edit erubin-momosuke-w-enhance 2 | erubin happy ブリーダーは毎日がんばってるもんね
+edit atsu-dra-w-enhance 1 | dra normal 今日の強化、悪くないな
+edit atsu-dra-w-enhance 2 | atsu wink もう一段いけるよね笑
+edit dra-mua-w-streak 1 | mua excited ブリーダー、毎日来てくれてるね！
+edit dra-mua-w-streak 2 | dra happy おでもうれしいぞ。えへへ
+edit kiki-momosuke-w-streak 1 | momosuke excited ブリーダー、連続で来てるよ！！
+edit kiki-momosuke-w-streak 2 | kiki happy ほんとですね。ありがとうございまつ♪
+edit atsu-kyuko-w-streak 1 | atsu happy ブリーダー、毎日えらいね笑
+edit atsu-kyuko-w-streak 2 | kyuko wink 続けるのが一番大事だからねぇ笑
+edit erubin-sorashido-w-streak 1 | sorashido excited 連続ログインの日数、記録してるぜ・・・！
+edit erubin-sorashido-w-streak 2 | erubin happy それは大事な記録だね
 
-## みゅあ × ソラシド
-# 元: mua-sorashido-1, mua-sorashido-2, mua-sorashido-3, mua-sorashido-4, mua-sorashido-7, mua-sorashido-9
-pair mua sorashido doing=cards lv=1-3 | sorashido excited 聞いてくれ！ 今日の勝率、計算したら7割超えてたぜ・・・！ | mua happy すご〜い！ …で、7割ってどのくらい？ | sorashido happy 10回やって7回勝つってことさ笑
-pair mua sorashido doing=practice lv=1-3 | mua excited 今日の曲、何がいいと思う？ | sorashido normal 判定の平均から出すと、{c}はBPM150くらいが一番伸びると思うよ笑 | mua surprise そこまで計算してんの！？ まぢエンジニアぢゃん！
-pair mua sorashido lv=1-3 | sorashido crying うぉぉぉ！ 負けたぁ！ くやしい！ | mua happy 声でっか〜ｗ でも次は勝てるって！ | sorashido happy なんくるないさ〜、だな笑 ありがとう{c}
-pair mua sorashido lv=4-6 | sorashido happy 今日も記録つけといたぞ | mua excited ありがと〜！ あたしのことよく見てるね！ | sorashido wink 仲間の記録は全部とってるからな笑
-pair mua sorashido doing=cards lv=7-10 | sorashido excited 今日のバトル、全部記録しといた！ | mua happy えー見せて！ …あたし、思ってたより勝ってるぢゃん！ | sorashido happy だろ？ 数字は正直だからな笑 自信もっていいよ
-pair mua sorashido lv=7-10 | mua excited 次のイベント、どこから回る？ | sorashido happy もう計算してあるぜ・・・！ いちばん効率いい順でな笑 | mua happy さっすが！ ぢゃあ、あたしは応援係やる！
+## D 特別なお話(Lv5 の -sp・Lv10 の -sp2)。締めの「これからも」を、そのペアらしい次の約束やひとことに言いかえた
+edit kiki-mua-sp 5 | mua excited …もー！ そういうのずるいぢゃん！ あたしも、{c}がいると安心するんだよ
+edit kiki-mua-sp 6 | kiki happy では、明日も一緒に遊びましょうね♪
+edit momosuke-mua-sp 6 | mua happy うん！ 笑ってる！ だって{c}の自慢なんでしょ？ｗ
+edit dra-mua-sp 6 | dra happy えへへ。……まあ、聞きたくなったら、いつでも来いよ、{c}
+edit atsu-mua-sp 3 | atsu happy そう！ あれ、けっこう助かってんだよ笑 みんなも、俺も！
+edit atsu-mua-sp 5 | atsu wink たまにはね笑 その笑顔、頼りにしてる( *'ω'*)ノ
+edit atsu-mua-sp 6 | mua excited まかせて！ 明日も元気でいるから！
+edit kyuko-mua-sp 5 | kyuko wink ほい！ じゃあ次も一緒に上目指そ笑
+edit mua-sorashido-sp 5 | sorashido wink 次のイベントも、一緒に勝ちにいこうぜ・・・！
+edit erubin-mua-sp 5 | erubin wink みんなのことは、俺がちゃんと見守ってるからね
+edit erubin-mua-sp 6 | mua excited うん！ ぢゃあ、{c}が疲れたら、あたしが元気を分けるね！
+edit kiki-momosuke-sp 5 | kiki wink 明日も、たくさん話しかけてくださいね♪
+edit dra-kiki-sp 4 | dra happy 半分かよ！ でも、うれしいな
+edit dra-kiki-sp 5 | kiki wink 説明のほうは、ちゃんと頼りにしてますね
+edit atsu-kiki-sp 3 | atsu happy 見える！ あの強さ、俺けっこう尊敬してるんだよ！
+edit atsu-kiki-sp 5 | atsu wink 次のボスも、頼りにしてる笑
+edit kiki-kyuko-sp 4 | kyuko happy あはは。でも、{c}といると安心するのはほんと
+edit kiki-kyuko-sp 5 | kiki wink では、このままゆっくり一緒にいきましょう♪
+edit kiki-sorashido-sp 4 | kiki wink 次の新しい表も、楽しみにしてますね♪
+edit erubin-kiki-sp 5 | erubin wink そういうこと笑 二人なら、見落としも減りそうだね
+edit erubin-kiki-sp 6 | kiki happy はい。頼りにしてまつ
+edit dra-momosuke-sp 6 | dra happy えへへ。じゃあ、ずっと笑っててやるからな、{c}
+edit atsu-momosuke-sp 5 | atsu wink そういうこと！ 次のライブも一緒に盛り上げよ、{c}！
+edit kyuko-momosuke-sp 6 | momosuke excited こちらこそ！！ 明日もドリーミィに会いに来るね、{c}！！
+edit atsu-dra-sp 1 | atsu normal 俺さ、カードで本気を出せる相手、{c}くらいなんだよね笑
+edit atsu-dra-sp 4 | dra happy …おでもだよ、{c}。おまえとやるのが一番楽しいんだ
+edit atsu-dra-sp 5 | atsu wink じゃ、ずっとライバルってことで笑
+edit dra-kyuko-sp 5 | kyuko wink それでもありがとん！ また教えてね、{c}
+edit dra-sorashido-sp 1 | sorashido normal 俺の表、いつも最後まで読んでくれるの、{c}だけなんだよな笑
+edit dra-sorashido-sp 4 | dra wink {c}は熱いからな。おでは、そういうやつが好きなんだ
+edit dra-sorashido-sp 5 | sorashido excited うぉぉぉ！ 次の攻略も、一緒にやろうぜ・・・！
+edit dra-erubin-sp 5 | erubin wink 泣いてもいいよ笑 またカード、教えてね
+edit atsu-kyuko-sp 1 | atsu normal 俺、{c}の育て方、けっこう参考にしてるんだよ笑
+edit atsu-kyuko-sp 3 | atsu happy ほんと！ 頭使って強くなるの、かっこいいと思う！
+edit atsu-kyuko-sp 5 | atsu wink じゃ、二人で上の順位いこ笑
+edit atsu-sorashido-sp 1 | sorashido normal 俺さ、{c}の打ち方、全部表にまとめたことあるんだ
+edit atsu-sorashido-sp 6 | atsu wink じゃ、一緒に上いこ、{c}( *'ω'*)ノ
+edit atsu-erubin-sp 3 | erubin happy うん。だから、{c}がみんなを引っぱってるのも、ちゃんと分かってるよ
+edit atsu-erubin-sp 5 | erubin wink 後ろのことは任せて、前を向いててね
+edit kyuko-sorashido-sp 2 | sorashido happy {c}のおかげだ！ 俺だけだと表ばっかりになるからな笑
+edit kyuko-sorashido-sp 5 | kyuko wink ほい！ 次のメモも、二人で作ろうねぇ
+edit erubin-kyuko-sp 5 | erubin wink 二人で、みんなを支えていこうね
+edit erubin-sorashido-sp 5 | sorashido excited うぉぉぉ！ 表、もっと作りまくるぜ・・・！
+edit erubin-momosuke-sp 5 | momosuke excited えへへ…！！ じゃあ明日も、ももがいっぱい話しかけてあげるね！！
+edit kiki-mua-sp2 6 | kiki happy はい♪♪ 二人で、いっぱい笑いましょう
+edit dra-mua-sp2 5 | dra happy えへへ。おでが教えて、{c}が強くなる。この感じでいこうな
+edit atsu-mua-sp2 5 | atsu wink それね笑 その笑顔に、また頼らせて！
+edit erubin-mua-sp2 6 | erubin troubled それは目立ちすぎるかな笑 でも、{c}の選ぶ服なら着てみたいね
+edit kiki-momosuke-sp2 5 | momosuke wink え、そう？w じゃあ、いっぱいしゃべりかけちゃう！！
+edit dra-kiki-sp2 4 | dra excited まじか！ {c}から頼まれる日が来るとはな……とっておきのを教えてやるぞ
+edit dra-kiki-sp2 6 | dra happy それでいいんだよ。一緒に笑ってくれたら、おでは満足だ
+edit atsu-kiki-sp2 6 | kiki wink では、おたがいに背中をあずけましょう♪♪
+edit kiki-kyuko-sp2 6 | kiki wink 二人でゆっくり、でも火力は全開でいきましょう♪♪
+edit kiki-sorashido-sp2 5 | sorashido wink だから俺が数えとく。この表、もっと長くしていこうな笑
+edit erubin-kiki-sp2 6 | kiki happy 私もです。たまには、見守り係もお茶の時間ですね
+edit dra-momosuke-sp2 6 | dra happy ももぉ〜……！ よし、ネタ帳作るぞ。二人でみんなを笑わせような
+edit atsu-momosuke-sp2 6 | atsu wink 約束！ 二人で、会場ごと盛り上げよ笑
+edit kyuko-momosuke-sp2 6 | momosuke happy やったー！！ ずっとその名前で勝とうね、{c}♡
+edit momosuke-sorashido-sp2 6 | sorashido happy よし、勝って一緒に歌おう笑 その日まで、よろしくな、{c}！
+edit atsu-dra-sp2 5 | dra happy だからさ、{c}。また、あれ以上の勝負しような
+edit dra-kyuko-sp2 6 | dra happy えへへ。いい名前つけて、ずっと使おうな、{c}
+edit dra-sorashido-sp2 6 | dra happy ……のった。二人で、いちばん分かりやすい本にしような
+edit dra-erubin-sp2 6 | erubin happy うん、俺もだよ。次も、いい勝負しようね
+edit atsu-kyuko-sp2 6 | atsu happy 上等！ 一緒に、てっぺんいこ笑
+edit atsu-sorashido-sp2 5 | sorashido wink そういうこと。また、どっちが勝つか分からない勝負しような笑
+edit atsu-erubin-sp2 6 | erubin wink そういうこと笑 安心して前に出てね、{c}
+edit kyuko-sorashido-sp2 6 | sorashido happy なんくるないさ〜。こういう日も、たまにはいいな笑
+edit erubin-kyuko-sp2 6 | erubin happy いいね。二人で、みんなの居場所を増やしていこうね
+edit erubin-sorashido-sp2 4 | erubin happy 数字にならないことも、あるよね☺️
+edit erubin-sorashido-sp2 6 | erubin wink それなら十分かな笑 また表、見せてね、{c}
+edit erubin-momosuke-sp2 6 | erubin happy おけ！ {c}がいちばん輝けるように、手伝うね
 
-## みゅあ × えるびん
-# 元: erubin-mua-1, erubin-mua-2, erubin-mua-3, erubin-mua-4, erubin-mua-7, erubin-mua-9
-pair erubin mua lv=1-3 | erubin normal 今日は少し眠そうだね。大丈夫かな？ | mua troubled ばれた？ 夜ふかししちゃった〜 | erubin happy 無理しないでね。休むのも大事だしね
-pair erubin mua doing=cards lv=1-3 | mua excited {c}、MFバトルカード教えて！ | erubin happy いいよ。まずはデッキの組み方からかな。{c}なら、すぐ覚えられると思うよ | mua wink やった！ 先生よろしく〜♪
-pair erubin mua lv=1-3 | mua wink {c}って、ほんとに石油王なの？ | erubin troubled どうしてみんな、そう思うのかな…笑 | mua happy なんか、余裕がある感じするもん！
-pair erubin mua doing=snack lv=4-6 | erubin happy いつもの紅茶、いれておいたよ | mua excited わーい！ {c}の紅茶、一番好き！ | erubin wink そう言ってくれると思ったよ😊
-pair erubin mua lv=7-10 | erubin normal さっき少し元気なかったよね。大丈夫かな？ | mua surprise え、{c}、気づいてたの？ | erubin happy うん。みんなが気づかなくても、俺は見てるからね☺️
-pair erubin mua doing=cards lv=7-10 | erubin normal さっきの対戦、いい流れだったね | mua excited {c}が後ろで落ち着いてくれてたからだよ！ 安心してつっこめた！ | erubin happy {c}が前で元気だから、俺も落ち着いていられるんだよね
+## E ミニイベント(ASSISTANT_PEER_EVENTS)
+edit kiki-mua-ev1 1 | mua excited クッキー対決しよ！ ブリーダーに食べ比べてもらうの！
+edit dra-momosuke-ev1 1 | momosuke excited モンヒロビートで勝負しよ！！ 負けたらジュースおごりね！
+edit kyuko-sorashido-ev1 1 | sorashido excited うぉぉぉ！ どっちのデッキ案が強いか勝負だ！
+edit kyuko-sorashido-ev1 3 | sorashido happy 俺は計算した。先に攻めきる型が、勝率いちばん高いぜ笑
+edit kyuko-sorashido-ev1 7 | sorashido normal ブリーダー、判定たのむ！ どっちの作戦が好きだ？
+edit kyuko-sorashido-ev1 reply2-1 | sorashido excited よっしゃー！ 計算どおりだ！
+edit kyuko-sorashido-ev1 reply3-2 | sorashido excited 最強の作戦ができたな！ さっそく表にするぜ笑
+edit atsu-dra-ev1 1 | atsu happy どっちのモンスターがかっこいいか勝負しよ笑
+edit erubin-kiki-ev1 1 | erubin normal マーケットにおつかいに行ってきたよ。おやつの材料ね
+edit momosuke-mua-ev1 1 | momosuke excited 新しい振り付け考えたから、勝負しよ！！
+edit atsu-kyuko-ev1 1 | kyuko happy モンスタークイズで早押し勝負しよぉ
+edit dra-sorashido-ev1 1 | sorashido excited 海で釣り勝負だ！ 潮の時間は計算ずみだぜ笑
+edit dra-sorashido-ev1 3 | sorashido happy お、かかった！ …小さいけど、でーじかわいい魚だな笑
+edit dra-sorashido-ev1 7 | sorashido normal ブリーダー、これ、どっちの勝ちだ…？
+edit dra-sorashido-ev1 reply3-1 | sorashido happy それだ！ 楽しかったなら全部勝ちだぜ・・・！
+edit erubin-momosuke-ev1 1 | momosuke excited お部屋の飾りつけ対決しよ！！
+edit kiki-kyuko-ev1 1 | kyuko happy お絵かき対決しよぉ。お題は好きなモンスター〜
+edit mua-sorashido-ev1 1 | mua excited マスモンの写真対決しよ！ いちばんいい1枚を撮った方が勝ち♪
+edit mua-sorashido-ev1 4 | sorashido happy 俺は夕方の浜で、シルエットを撮った。でーじきれいだぜ笑
+edit mua-sorashido-ev1 6 | sorashido wink {c}のモッチー写真も、反則級にかわいいな
+edit mua-sorashido-ev1 reply1-2 | sorashido happy 負けた！ あのほっぺは計算できないぜ笑
+edit atsu-erubin-ev1 1 | erubin happy 新しいデッキを組んだんだ。見てくれるかな
 
-## きき × もも
-# 元: kiki-momosuke-1, kiki-momosuke-2, kiki-momosuke-3, kiki-momosuke-4, kiki-momosuke-7, kiki-momosuke-9
-pair kiki momosuke lv=1-3 | momosuke excited 今日のお洋服かわいいね！！ | kiki happy ありがとうございます♪ {c}もとってもすてきですよ | momosuke wink えへ、知ってる〜w
-pair kiki momosuke doing=training lv=1-3 | kiki normal そのマスモン、ちからをもっと上げましょう | momosuke surprise {c}、また攻撃に振るの！？ 守りは！？ | kiki wink 攻撃は最大の防御、でつ♪
-pair kiki momosuke lv=1-3 | momosuke wink {c}ってさ、怒ったら一番こわいタイプでしょw | kiki happy ふふ、試してみますか？ | momosuke crying ごめんなさい！！ 冗談です！！
-pair kiki momosuke doing=snack lv=4-6 | momosuke wink 今日もいっしょにおやつ食べよ！！ | kiki happy はい♪ {c}のぶんも持ってきましたよ | momosuke excited さすが！！ もう言わなくても分かってくれる〜！！
-pair kiki momosuke lv=7-10 | momosuke troubled ももね、ちょっと失敗しちゃった… | kiki normal あれま。でも、{c}ならすぐ取り返せまつよ | momosuke excited ほんと！？ {c}が言うなら、もうひとがんばりする！！
-pair kiki momosuke lv=7-10 | kiki wink 今日も二人でいきまつか | momosuke excited いく！！ {c}が倒して、ももが盛り上げる！！ | kiki happy 先手必勝、でつね♪
+## H 差し入れ・友情のしるし・遊んだあとの反応(ASSISTANT_PEER_REACTIONS)
+edit reaction-dra-gift | happy 差し入れか、ありがたいな。{c}、分けような
+edit reaction-atsu-gift | happy 差し入れありがと笑 {c}と食べる！
+edit reaction-atsu-token | wink 友情のしるしね！ {c}とおそろいだ笑
+edit reaction-sorashido-gift | excited 差し入れ！？ ありがとう！ {c}と分けるぜ笑
+edit reaction-sorashido-token | happy 友情のしるし…でーじうれしいぜ・・・！ {c}、ありがとな
 
-## きき × ドラ
-# 元: dra-kiki-1, dra-kiki-2, dra-kiki-3, dra-kiki-4, dra-kiki-7, dra-kiki-9
-pair dra kiki lv=1-3 | dra happy 今日のコーデもきまってるな | kiki wink ありがとうございます、{c}。今日の靴下はしましまでつ♪ | dra happy おしゃれだな、くさ
-pair dra kiki doing=training lv=1-3 | dra normal 守りも少しは上げたほうがいいんじゃないか？ | kiki happy 守りより先に、ちからでつ♪ 倒せば同じことですから | dra surprise 物静かに言うことじゃないんだよなぁ
-pair dra kiki lv=1-3 | dra wink おでの説明、ちゃんと聞いてたか？ | kiki troubled 途中でおやじギャグが入ったので、そこから覚えてないでつ | dra crying ……ギャグのせいだったか
-pair dra kiki lv=4-6 | dra happy 今日も説明してやろうか？ | kiki wink はい。ただし、おやじギャグは3回までで | dra surprise 回数を決められた…くさ
-pair dra kiki lv=7-10 | dra normal 今日の説明、どうだった？ | kiki happy とても分かりやすかったでつ。おやじギャグも、今日は2回で済みましたね | dra wink {c}のために減らしたんだよ。えへへ
-pair dra kiki doing=cards lv=7-10 | kiki normal 作戦の説明をお願いしまつ | dra happy おう。守りは後回しで、先に攻める。{c}の得意なやつだ | kiki wink さすがでつ。私の考え、全部ばれてまつね ( ˘ω˘)
-
-## きき × あつ
-# 元: atsu-kiki-2, atsu-kiki-3, atsu-kiki-4, atsu-kiki-7, atsu-kiki-9(atsu-kiki-1 は捨てた)
-pair atsu kiki doing=practice lv=1-3 | kiki troubled HELLって本当に私にもできるんでしょうか | atsu normal できるでしょ！ {c}、押しの強さはピカイチだし笑 | kiki happy では、ちからいっぱい押してきまつ
-pair atsu kiki lv=1-3 | atsu wink さっきの勝ち方、えげつなかったね笑 | kiki happy ほめ言葉として受け取っておきますね♪ | atsu happy ほめてるほめてる！ こわいけど笑
-pair atsu kiki lv=4-6 | atsu wink 次も全力でいく？笑 | kiki happy はい。{c}となら、ちから全開でいけまつ | atsu happy 最高！ じゃ、いこ！
-pair atsu kiki doing=training lv=7-10 | kiki troubled ちからに振りすぎて、守りがすかすかになってしまいました… | atsu wink それ{c}らしくていいじゃん笑 守りは俺が見るから！ | kiki happy ありがとうございまつ。では、そのまま押し切りまつ
-pair atsu kiki lv=7-10 | atsu excited 次のボス、二人で一気にいこ！ | kiki happy はい。{c}が道を開けて、私が押し切ります | atsu happy いいね、それ完ぺきじゃん笑
-
-## きき × きゅうこ
-# 元: kiki-kyuko-1, kiki-kyuko-2, kiki-kyuko-3, kiki-kyuko-4, kiki-kyuko-7, kiki-kyuko-9
-pair kiki kyuko doing=training lv=1-3 | kyuko normal 今日のおすすめの育て方ある？ | kiki happy ちからを上げましょう♪ | kyuko happy だよねぇ笑 聞く前から分かってた
-pair kiki kyuko lv=1-3 | kiki normal {c}は、いつもどうやって育成の順番を決めてるんですか？ | kyuko wink イベントの日から逆に数えてるだけだよぉ笑 | kiki surprise なるほど…さすがでつ
-pair kiki kyuko lv=1-3 | kyuko troubled ぐぬぬぬ…また負けた | kiki happy もう一回やりましょう。次は私がちから全開で手伝いますよ♪ | kyuko happy ありがとん笑 心強いよぉ
-pair kiki kyuko doing=cards lv=4-6 | kyuko normal いつもの作戦でいい？ | kiki happy はい。攻撃は私、考えるのは{c}で♪ | kyuko wink おけ！ いい組み合わせだよねぇ笑
-pair kiki kyuko doing=cards lv=7-10 | kyuko troubled 昨日の編成、だいたいで組んだら負けたぁ😭 | kiki happy あれま。眠いときの{c}は、いつもそうでつね | kyuko wink ばれてるぅ笑 今日はちゃんと考える
-pair kiki kyuko doing=cards lv=7-10 | kiki normal 今日の作戦はどうしまつか？ | kyuko happy {c}が最初に全力で押して、残りは俺が片づける。これで勝てるよぉ | kiki wink 分かりやすいでつ。では、いきまつよ ( ˘ω˘)9グッ!
-
-## きき × ソラシド
-# 元: kiki-sorashido-1, kiki-sorashido-2, kiki-sorashido-3, kiki-sorashido-4, kiki-sorashido-7, kiki-sorashido-9
-pair kiki sorashido doing=training lv=1-3 | sorashido excited 攻撃に全部振ったときのダメージ、計算してみたぜ・・・！ | kiki happy どうでした、{c}？ | sorashido surprise でーじ強かった…！ 理にかなってたんだな笑
-pair kiki sorashido doing=training lv=1-3 | kiki normal このマスモンの伸び方、表にできますか？ | sorashido happy まかせて！ 5分で作るぞ笑 | kiki wink 助かりまつ♪
-pair kiki sorashido lv=1-3 | sorashido crying 俺の計算、また外れた… | kiki happy 外れても、ちからで押し切ればいいんですよ♪ | sorashido surprise 計算の意味…！ でも元気出た笑
-pair kiki sorashido doing=cards lv=4-6 | sorashido excited 新しい表、まっさきに見せに来た！ | kiki happy うれしいです。{c}の表、楽しみにしてました♪ | sorashido happy そう言われると、また作りたくなるな笑
-pair kiki sorashido doing=training lv=7-10 | sorashido excited 表にまとめたら、{c}のちから振りは正解だった！ | kiki wink ほら、火力は正義でつ♪♪ | sorashido happy どう並べても、倒す速さがいちばんだったぜ・・・！
-pair kiki sorashido doing=cards lv=7-10 | kiki normal 次の相手の数字、出てまつか？ | sorashido excited もちろんだ！ 3手で押し切れる計算だ笑 | kiki happy では、2手で押し切りまつね ( ˘ω˘)9グッ!
-
-## きき × えるびん
-# 元: erubin-kiki-1, erubin-kiki-2, erubin-kiki-3, erubin-kiki-4, erubin-kiki-7, erubin-kiki-9
-pair erubin kiki doing=snack lv=1-3 | erubin normal お茶をいれたんだけど、飲むかな？ | kiki happy ありがとうございます、{c}。いただきまつ♪ | erubin happy 熱いから気をつけてね
-pair erubin kiki doing=cards lv=1-3 | kiki troubled カードの組み方、私も覚えたいです | erubin happy いいよ。{c}なら、攻撃のカードを多めにしたいよね | kiki surprise どうして分かったんですか？
-pair erubin kiki lv=1-3 | kiki wink 今日はどちらの服なんですか？ | erubin troubled どっちでもいいんだけど…みんなが石油王の服をすすめてくるんだよね笑 | kiki happy 似合ってるからですよ♪
-pair erubin kiki doing=walk lv=4-6 | erubin normal 今日はどこで見守ろうか | kiki happy いつもの場所にしましょう、{c}♪ | erubin happy うん。あそこは落ち着くよね
-pair erubin kiki doing=walk lv=7-10 | erubin normal {place}、今日は風が気持ちいいね | kiki happy はい。こういう日は、のんびり見守るのにちょうどいいでつ | erubin happy 見守り係のお休みの日、ってことにしようか笑
-pair erubin kiki doing=cards lv=7-10 | kiki normal さっきの対戦、後ろから見ててくれましたか | erubin happy うん。{c}が前で押して、俺が声をかける。いい流れだったね | kiki happy 声をかけてもらえると、安心して押し切れまつ
-
-## もも × ドラ
-# 元: dra-momosuke-1, dra-momosuke-2, dra-momosuke-3, dra-momosuke-4, dra-momosuke-7, dra-momosuke-9
-pair dra momosuke lv=1-3 | dra happy 今日も元気だな。見てるだけで元気が出るぞ | momosuke wink でしょ〜w {c}、わかってるぅ〜 | dra happy えへへ、正解
-pair dra momosuke doing=practice lv=1-3 | momosuke excited ホールドで勝負しよ！！ | dra happy お、言ったな。おでは粘り強いからな、くさ | momosuke wink 出た〜w 負けないもんね！！
-pair dra momosuke lv=1-3 | dra crying メタルナーの話ばっかりで、おでのグジラの話も聞いてくれよ〜 | momosuke happy しょうがないなぁw 3分だけね！ | dra excited ももぉ〜！ ありがとな！
-pair dra momosuke lv=4-6 | momosuke excited 今日のギャグ、もも採点するね！！ | dra wink おう。おでの本気を見せてやるからな | momosuke happy …うん、ちょっと笑ったから合格！！w
-pair dra momosuke lv=7-10 | dra happy 新しいギャグ考えたぞ | momosuke wink はいはい、どうせ膝のやつでしょw | dra surprise なんで分かったんだよ…くさ
-pair dra momosuke doing=practice lv=7-10 | momosuke excited 今日のステージ、前説お願い！！ | dra happy おう。おでがすべって、{c}が拾う。いつもの流れだな | momosuke wink すべる前提なのウケるw でもそれで会場あったまるんだよね！！
-
-## もも × あつ
-# 元: atsu-momosuke-1, atsu-momosuke-2, atsu-momosuke-3, atsu-momosuke-4, atsu-momosuke-7, atsu-momosuke-9
-pair atsu momosuke doing=practice lv=1-3 | momosuke wink 今日もHELLやってるの？ 好きすぎでしょw | atsu happy 好きだよ笑 {c}もやる？ | momosuke surprise え、ももが！？ …ちょっとだけなら！！
-pair atsu momosuke doing=practice lv=1-3 | atsu wink さっきのスコア見たよ！ まあまあじゃん笑 | momosuke angry まあまあって何！？ ちゃんとほめて！！ | atsu happy うそうそ！ かなりよかった笑
-pair atsu momosuke doing=training lv=1-3 | momosuke excited メタルナーとドラゴン、どっちが強いか勝負しよ！！ | atsu wink いいね！ 手加減しないよ？笑 | momosuke wink こっちのセリフだしw
-pair atsu momosuke lv=4-6 | atsu wink 次のライブ、ちょっと見に行こうかな笑 | momosuke excited えっ！！ {c}が来るなら、ももいつもより張り切っちゃう！！ | atsu happy 楽しみにしてる！
-pair atsu momosuke doing=practice lv=7-10 | momosuke wink 今日もHELL？ え、まだフルコンできてないの？w | atsu happy うるさいって笑 今日こそ取るから！ | momosuke excited じゃあ見てる！！ 取れたら、いっぱいほめてあげる♡
-pair atsu momosuke doing=practice lv=7-10 | atsu happy ライブの前に一回合わせとこ笑 | momosuke excited うん！！ {c}のリズム、ももにぴったりなんだよね！！ | atsu wink {c}が走りそうになったら、俺が止めるから笑
-
-## もも × きゅうこ
-# 元: kyuko-momosuke-2, kyuko-momosuke-3, kyuko-momosuke-4, kyuko-momosuke-7, kyuko-momosuke-9(kyuko-momosuke-1 は捨てた)
-pair kyuko momosuke doing=training lv=1-3 | kyuko normal そのマスモン、すばやさをもう少し上げると化けると思う | momosuke surprise ほんと！？ {c}が言うなら上げる！！ | kyuko wink おけ！ 結果教えてね笑
-pair kyuko momosuke lv=1-3 | momosuke wink {c}って、見た目もものライバルなんだけどw | kyuko troubled えぇ、俺そういうつもりないよぉ笑 | momosuke happy わかってるって！！ でも、かわいいのはもものほうだからね♡
-pair kyuko momosuke doing=training lv=4-6 | momosuke wink 今日もドリーミィに会いに来たよ！！ | kyuko happy 知ってた笑 もう準備してあるよぉ | momosuke excited 最高！！ ここ、ももの大好きな場所なんだ！！
-pair kyuko momosuke doing=training lv=7-10 | momosuke excited 今日もドリーミィ見せて！！ | kyuko happy ほい！ でも今日は、イルミネもいっしょだよぉ | momosuke surprise え、まって、2体そろってるの！？ 最高すぎる！！
-pair kyuko momosuke doing=cards lv=7-10 | kyuko normal 今日の作戦、二人で考えよっか | momosuke wink ももも考えるの！？ むずかしいのは{c}にまかせたいw | kyuko happy {c}の思いつきは、けっこう当たるんだよね。だから聞きたい笑
-
-## もも × ソラシド
-# 元: momosuke-sorashido-1, momosuke-sorashido-2, momosuke-sorashido-3, momosuke-sorashido-4, momosuke-sorashido-7, momosuke-sorashido-9
-pair momosuke sorashido doing=training lv=1-3 | sorashido happy メタルナーの強さを表にしたぞ笑 | momosuke excited 見せて見せて！！ {c}、すご！！ | sorashido wink グラフもつけといたぜ・・・！
-pair momosuke sorashido doing=practice lv=1-3 | momosuke wink さっきの曲、ミスいくつだった？w | sorashido crying …数えたら12だった | momosuke happy 数えたんだ！？ えらいw 次は半分にしよ！！
-pair momosuke sorashido doing=practice lv=1-3 | sorashido excited うぉぉぉ！ 見てくれ、新記録だ！ | momosuke surprise え！！ ほんとだ！！ {c}やるじゃん！！ | sorashido happy でーじうれしい笑
-pair momosuke sorashido doing=practice lv=4-6 | sorashido happy ミスの数、今日はいくつだった？笑 | momosuke wink 3つ！！ 減ったでしょw | sorashido excited うぉぉぉ！ 前の4分の1だ！
-pair momosuke sorashido doing=practice lv=7-10 | sorashido excited 今日のミス、とうとう1つだったぜ・・・！ | momosuke wink ほらね！！ ももだってやればできるんだから！！w | sorashido happy 表にしたら、ずっと右肩下がりだった笑 でーじがんばったな
-pair momosuke sorashido doing=practice lv=7-10 | momosuke excited 今日のスコア勝負、負けないからね！！ | sorashido happy 俺もだ！ でも負けたほうは、表で反省会な笑 | momosuke wink 反省会っていうか、{c}が悔しがるのを見る会でしょw
-
-## ドラ × あつ
-# 元: atsu-dra-1, atsu-dra-2, atsu-dra-3, atsu-dra-4, atsu-dra-7, atsu-dra-9
-pair atsu dra doing=cards lv=1-3 | dra happy 今日もカードの対戦するか？ | atsu wink いいね！ 手加減なしでね笑 | dra wink おでもガチでいくからな、くさ
-pair atsu dra doing=cards lv=1-3 | atsu normal モンスター甲子園の話、またしてよ笑 | dra happy おう。あのときの決勝はな…長くなるぞ？ | atsu happy いいよ！ 全部聞く！
-pair atsu dra doing=cards lv=1-3 | dra wink おでのデッキ、最近ちょっと重くなっただろ。何がとは言わないけどな | atsu happy カードの枚数でしょ笑 {c}、それ毎回言うよね笑 | dra happy えへへ
-pair atsu dra doing=cards lv=4-6 | atsu happy 今日も一戦いこ笑 | dra wink おう。言われなくても、もう準備してたぞ | atsu wink さすが！ 分かってるね！
-pair atsu dra doing=cards lv=7-10 | dra normal さっきのカード、ちょっと攻めすぎだったな | atsu happy それね笑 わかってたけど、いきたかったんだよね！ | dra wink {c}らしいな。次はおでが、守りの組み方を教えてやるからな
-pair atsu dra doing=cards lv=7-10 | atsu excited 二人で組んだら、甲子園の決勝いけそうじゃない？笑 | dra happy おでもそう思ってた。{c}が攻めて、おでが受ける。完ぺきだな | atsu wink じゃ、作戦会議は今夜ね！
-
-## ドラ × きゅうこ
-# 元: dra-kyuko-1, dra-kyuko-2, dra-kyuko-3, dra-kyuko-4, dra-kyuko-7, dra-kyuko-9
-pair dra kyuko lv=1-3 | kyuko normal またお昼寝してたでしょ笑 | dra wink なんで分かったんだよ | kyuko happy 顔に跡ついてるよぉ🤣
-pair dra kyuko doing=training lv=1-3 | dra normal そのニャーの育て方、すごいな。無課金でここまでいくのか | kyuko happy 頭を使えばいけるよぉ。ありがとん笑 | dra happy おでも見習わないとな、くさ
-pair dra kyuko lv=1-3 | dra wink 見た目はかわいいのに、中身は男前だよな | kyuko happy よく言われるぅ笑 {c}は、見た目より中身がかわいいよねぇ | dra surprise おでが！？ ……照れるな
-pair dra kyuko lv=4-6 | kyuko happy また寝ぐせついてるよぉ🤣 | dra troubled {c}にはいつもバレるな | kyuko wink 毎日見てるからねぇ笑
-pair dra kyuko doing=cards lv=7-10 | kyuko troubled カードのデッキ、どうしても1枚決まらないんだぁ | dra happy ふむ、攻めの1枚だな。{c}の組み方なら、それで活きるぞ | kyuko excited それだぁ！ ありがとん、{c}笑
-pair dra kyuko doing=cards lv=7-10 | dra wink 今日もおでの寝ぐせと山札、チェックしてくれるか？ | kyuko happy もちろん笑 {c}が安心して攻められるようにね | dra happy おでたち、もう負ける気がしないな
-
-## ドラ × ソラシド
-# 元: dra-sorashido-1, dra-sorashido-2, dra-sorashido-3, dra-sorashido-4, dra-sorashido-7, dra-sorashido-9
-pair dra sorashido doing=cards lv=1-3 | sorashido excited 昨日の対戦、全部の手を表にまとめたぜ・・・！ | dra surprise まじかよ。おで寝てたぞ | sorashido happy 読んでくれよ笑
-pair dra sorashido doing=cards lv=1-3 | dra normal カードの勝率、どうなってる？ | sorashido happy 計算したら、先に攻めたほうが勝ちやすいって出た笑 | dra wink おでの読みどおりだな、くさ
-pair dra sorashido lv=1-3 | dra wink {c}、ちょっと大きいんだよな。……声が | sorashido surprise 声かよ！ 笑 | dra happy えへへ
-pair dra sorashido doing=cards lv=4-6 | dra happy 今日の表は何ページだ？ | sorashido excited 12ページだぜ・・・！ | dra wink おで、今日も最後まで読むからな、くさ
-pair dra sorashido doing=cards lv=7-10 | sorashido excited 俺の表、今日は誤字なしだ！ | dra happy ほんとか？ ……ふむ、ほんとだな。えらいぞ | sorashido happy {c}が毎回見つけてくれるから、気をつけるようになったんだよ笑
-pair dra sorashido doing=cards lv=7-10 | dra normal 次の相手の山札、数字で出せるか？ | sorashido excited まかせろ！ もう出てるぜ・・・！ | dra happy さすがだな。数字は{c}、説明はおで。これで負けないな
-
-## ドラ × えるびん
-# 元: dra-erubin-1, dra-erubin-2, dra-erubin-3, dra-erubin-4, dra-erubin-7, dra-erubin-9
-pair dra erubin lv=1-3 | dra happy {c}、今日もきまってるな | erubin troubled その呼び方、だんだん慣れてきたよ笑 | dra wink えへへ、いい名前だろ
-pair dra erubin doing=cards lv=1-3 | erubin happy デュラハンのカード、引けたんだ | dra surprise お、{c}の好きなやつか。見せてくれ | erubin wink ちょっとだけね。大事にしてるんだよね
-pair dra erubin lv=1-3 | dra wink 石油王ってほんとか？ おでにもちょっと分けてくれよ | erubin happy 何もないよ…笑 | dra crying なんだよ〜
-pair dra erubin doing=cards lv=4-6 | dra wink 今日もカード一戦いくか？ | erubin happy もちろん。{c}とやるのが一番楽しいからね | dra excited 言うようになったな！
-pair dra erubin doing=cards lv=7-10 | erubin happy 今日のカード、デュラハンで新しく組んでみたよ | dra normal ふむ、また新しい形か。{c}は組み方の幅が広いな | erubin wink {c}に教わったことを、少しずつ混ぜてるんだよね笑
-pair dra erubin doing=cards lv=7-10 | dra excited 二人で組んだデッキ、今日も勝ったな！ | erubin happy うん。{c}の攻めと、俺の守りがうまくかみ合ったね | dra happy おでたち、もう敵なしかもしれないな
-
-## あつ × きゅうこ
-# 元: atsu-kyuko-1, atsu-kyuko-3, atsu-kyuko-4, atsu-kyuko-7, atsu-kyuko-9(atsu-kyuko-2 は捨てた)
-pair atsu kyuko lv=1-3 | kyuko happy 今日もランキングの上のほうにいたね笑 | atsu wink {c}もでしょ！ 無課金でそれはやばいって笑 | kyuko wink ありがとん笑
-pair atsu kyuko lv=1-3 | atsu wink さっきの判断、えぐかったね笑 | kyuko happy {c}に言われるとうれしい🤣 | atsu happy 次も期待してる！
-pair atsu kyuko doing=cards lv=4-6 | kyuko wink 今日の作戦、もう考えといたよぉ | atsu happy さすが{c}！ それでいこ笑 | kyuko happy ほい！ 任せて笑
-pair atsu kyuko lv=7-10 | kyuko troubled ランキング、あと少しで抜かれそう…ぐぬぬぬ | atsu happy でも{c}なら、組み直したらすぐ戻れるでしょ笑 | kyuko happy …だよねぇ。{c}はいつも、俺より俺のこと分かってるなぁw
-pair atsu kyuko doing=cards lv=7-10 | atsu excited 次のイベント、てっぺん取ろ！ | kyuko wink ほい！ もう計画は立ててあるよぉ。{c}は全力で走ってくれればいい笑 | atsu happy 分かりやすくて最高じゃん笑
-
-## あつ × ソラシド
-# 元: atsu-sorashido-1, atsu-sorashido-2, atsu-sorashido-3, atsu-sorashido-4, atsu-sorashido-7, atsu-sorashido-9
-pair atsu sorashido doing=practice lv=1-3 | sorashido excited HELLのノーツ数、全部数えたぜ・・・！ | atsu happy それ数える？笑 | sorashido happy 数えたら安心するんだよ笑
-pair atsu sorashido doing=practice lv=1-3 | atsu wink 俺のスコア、計算で抜けそう？笑 | sorashido surprise …計算上はあと3回ってとこだな！ | atsu happy ほんとに計算してる！
-pair atsu sorashido lv=1-3 | sorashido crying {c}に負けた〜！ くやしい！ | atsu wink いつでも相手するよ笑 | sorashido happy 次は勝つぞ！
-pair atsu sorashido lv=4-6 | sorashido excited 昨日の差、計算したら2点だったぜ・・・！ | atsu wink まじ？ じゃ今日は抜かれるかもね笑 | sorashido happy 本気でいくぞ！
-pair atsu sorashido lv=7-10 | sorashido crying また2点差で負けた…くっそー！笑 | atsu happy ナイスファイト笑 てか、ほぼ同じじゃん！ | sorashido excited 次こそ勝つ！ 計算はもう始めてる笑
-pair atsu sorashido lv=7-10 | atsu happy 今日は勝負じゃなくて、二人で協力しよ笑 | sorashido surprise なに！？ {c}と組むのか…それは強すぎるぜ・・・！ | atsu wink {c}が数字を出して、俺が攻める！ それでいこ笑
-
-## あつ × えるびん
-# 元: atsu-erubin-1, atsu-erubin-3, atsu-erubin-4, atsu-erubin-7, atsu-erubin-9(atsu-erubin-2 は捨てた)
-pair atsu erubin lv=1-3 | erubin normal 今日も元気だね | atsu happy {c}もでしょ！ てか、いつも落ち着いてるよね笑 | erubin happy そうかな？ ありがとう
-pair atsu erubin lv=1-3 | atsu wink また石油王っぽい服着てる笑 | erubin troubled {c}まで…これ、ふつうの服なんだけどね笑 | atsu happy 似合ってるからいいじゃん！
-pair atsu erubin lv=4-6 | atsu happy 今日もみんなのこと頼むね笑 | erubin happy 任せて。{c}も、無理しすぎないでね | atsu wink りょ！ ありがと！
-pair atsu erubin lv=7-10 | atsu troubled ちょっとだけ疲れたかも… | erubin normal うん、顔に出てるよ。{c}はがんばりすぎるからね | atsu happy …{c}にはすぐバレるね笑 少し休む！
-pair atsu erubin lv=7-10 | erubin normal 今日のみんなの様子、どうだった？ | atsu happy 元気だったよ笑 {c}が後ろで見てくれてるからだね！ | erubin wink {c}が前で引っぱってるからだよ。いい組み合わせだね☺️
-
-## きゅうこ × ソラシド
-# 元: kyuko-sorashido-1, kyuko-sorashido-2, kyuko-sorashido-3, kyuko-sorashido-4, kyuko-sorashido-7, kyuko-sorashido-9
-pair kyuko sorashido doing=training lv=1-3 | sorashido excited 育成の計算、手伝ってくれないか！ | kyuko happy いいよぉ。{c}の表、見せて笑 | sorashido happy 助かるぜ・・・！
-pair kyuko sorashido doing=practice lv=1-3 | kyuko normal この曲好きなんだぁ | sorashido happy {c}、音楽好きだもんな。BPMは…175だな笑 | kyuko wink すぐ数字にする〜🤣
-pair kyuko sorashido lv=1-3 | sorashido crying 計算どおりにいかないんだ… | kyuko normal 運のところは計算できないからね。だから試すのが大事だと思う | sorashido happy なるほど…でーじ深い！
-pair kyuko sorashido doing=cards lv=4-6 | kyuko normal 続きの計算、やろっか | sorashido happy おう、{c}！ いつものやり方でな笑 | kyuko wink ほい！ 二人ならすぐ終わるよぉ
-pair kyuko sorashido doing=cards lv=7-10 | sorashido excited 昨日のメモ、俺のほうで表にしといた！ | kyuko happy え、もう？ はやぁ笑 ありがとん | sorashido happy {c}のメモ、だいたいで書いてあるから、埋めるのが楽しいんだよ笑
-pair kyuko sorashido doing=cards lv=7-10 | kyuko normal 新しい編成、数字で確かめてくれる？ | sorashido excited まかせろ！ ……うぉぉぉ！ 勝率、前より上がってるぜ・・・！ | kyuko happy やったぁ！ 考えたのは俺、確かめたのは{c}。最強だねぇw
-
-## きゅうこ × えるびん
-# 元: erubin-kyuko-1, erubin-kyuko-2, erubin-kyuko-3, erubin-kyuko-4, erubin-kyuko-7, erubin-kyuko-9
-pair erubin kyuko lv=1-3 | erubin normal 目が半分だね。夜ふかしかな？ | kyuko troubled 夜中まで育成してたぁ😭 | erubin happy {c}らしいね。少し休もうか
-pair erubin kyuko doing=cards lv=1-3 | kyuko normal カードのデッキ、見てもいい？ | erubin happy いいよ。{c}なら、何か気づくかもね | kyuko wink …この1枚、入れ替えたら強くなると思う笑
-pair erubin kyuko lv=1-3 | kyuko happy {c}って、頼れるお兄さんって感じだよね | erubin happy そうかな？ {c}も、しっかりしてるよね | kyuko wink いいかげんなときもあるけどね笑
-pair erubin kyuko lv=4-6 | erubin normal 今日も遅くまでがんばるのかな？ | kyuko happy うん。でも{c}が見てくれてるから安心だよぉ | erubin wink ちゃんと休むときは休もうね😊
-pair erubin kyuko lv=7-10 | kyuko troubled 今日、ちょっとだけ寝坊したぁ | erubin happy そう思ってたよ。夜ふかしで育成してたんでしょ？ | kyuko wink ばれてるぅ笑 {c}にはかなわないなぁ
-pair erubin kyuko doing=cards lv=7-10 | erubin normal さっきの対戦、どこで勝ちが決まったと思う？ | kyuko happy {c}が4ターン目で守りに入ったとこ。あれで流れが変わったんだぁ | erubin surprise やっぱり、そこだよね。さすがの読みだね笑
-
-## ソラシド × えるびん
-# 元: erubin-sorashido-1, erubin-sorashido-2, erubin-sorashido-3, erubin-sorashido-4, erubin-sorashido-7, erubin-sorashido-9
-pair erubin sorashido doing=cards lv=1-3 | sorashido excited MFバトルカードの勝率、表にしたぜ・・・！ | erubin happy すごいね、{c}。見せてくれるかな？ | sorashido happy もちろん笑
-pair erubin sorashido doing=cards lv=1-3 | erubin normal デュラハンのカードって、どのくらい使われてるのかな | sorashido happy ちょうど数えたとこだ笑 {c}、けっこう人気だったよ！ | erubin surprise そうなんだ。うれしいね
-pair erubin sorashido lv=1-3 | sorashido crying 負けた…くやしい！ | erubin happy {c}は本気だから悔しいんだよね。それって大事なことだと思うよ | sorashido happy …なんくるないさ〜。ありがとう笑
-pair erubin sorashido doing=cards lv=4-6 | erubin happy 今日の表、もう見せてもらえるかな？ | sorashido excited もちろんだ！ {c}のために一番分かりやすく作ったからな笑 | erubin happy ありがとう。いつも助かってるよ
-pair erubin sorashido doing=cards lv=7-10 | sorashido excited デュラハンの使われ方、新しく表にしたぜ・・・！ | erubin happy ありがとう、{c}。また人気が上がってるといいな | sorashido happy 上がってたよ笑 {c}が使うから、みんなまねしてるんじゃないか？
-pair erubin sorashido doing=cards lv=7-10 | erubin normal 次の対戦、どの形でいこうか | sorashido excited 計算だと、{c}の守りの形がいちばんだ！ | erubin happy おけ！ じゃあ、細かいところは{c}に任せるね
-
-## もも × えるびん
-# 元: erubin-momosuke-1, erubin-momosuke-2, erubin-momosuke-3, erubin-momosuke-4, erubin-momosuke-7, erubin-momosuke-9
-pair erubin momosuke lv=1-3 | erubin normal 今日の髪型、すてきだね | momosuke excited でしょ！！ {c}、わかってる〜♡ | erubin happy いつも元気をもらってるよ😊
-pair erubin momosuke doing=cards lv=1-3 | momosuke wink デュラハンばっかり使ってるでしょw | erubin troubled ばれちゃったかな…笑 気に入ってるんだよね | momosuke happy いいと思う！！ ももはメタルナーで勝負するから！！
-pair erubin momosuke doing=walk lv=1-3 | momosuke troubled {c}〜、ももの話、ちゃんと聞いてる？ | erubin happy 聞いてるよ。{c}の話は楽しいからね | momosuke excited ほんと！？ じゃあもっと話す！！
-pair erubin momosuke doing=walk lv=4-6 | erubin happy 今日もたくさん話そうか | momosuke excited うん！！ 今日はね、話したいことが3つあるの！！ | erubin wink ちゃんと全部聞くよ笑
-pair erubin momosuke lv=7-10 | momosuke excited 聞いて聞いて！！ 今日ね、3回もほめられたの！！ | erubin happy すごいね。{c}ががんばってるの、みんな分かってるんだよ | momosuke wink やった！！ {c}にほめられたから、これで4回目だね♡
-pair erubin momosuke doing=practice lv=7-10 | erubin normal 今日もステージ、見に行っていいかな | momosuke excited もちろん！！ {c}が見てると、ももいつもより声が出るの！！ | erubin happy じゃあ、いちばんいい席で応援するね☺️
-
-# ── 言い合い(元: ASSISTANT_PEER_QUARRELS 8本)。今の「言い合い・仲直り」の間に「距離をおく」を足した。けんかのたねは FEELINGS.md の8つから
-# 元: momosuke-mua-q, atsu-dra-q, kiki-kyuko-q, erubin-sorashido-q, dra-mua-q, kiki-momosuke-q, atsu-sorashido-q, kyuko-mua-q
-quarrel momosuke mua seed=snack | mua surprise あーっ！ 最後のいちごマカロン、{c}が食べたでしょ！ | momosuke troubled え、だって名前書いてなかったもん！！ | mua angry あたしが楽しみにとっといたやつぢゃん！ もー！ | momosuke angry ももだって食べたかったもん！！ || mua normal ……べつにー。あたし、あっちでコーデ考えてるし || momosuke troubled {c}…さっきはごめんね。これ、新しいマカロン買ってきた！！ | mua surprise え、わざわざ？ …あたしこそ、大きい声出してごめん | momosuke happy じゃあ一緒に食べよ！！ はんぶんこ♡ | mua happy うん！ やっぱ{c}といると楽しいぢゃん♪
-quarrel atsu dra seed=order | dra happy 次はおでの番だからな。コントローラー貸してくれ | atsu troubled え、さっき{c}がやってたじゃん！ 次も俺でしょ！ | dra angry いや、今のは練習だから数えないぞ | atsu angry それはずるいって！ || atsu normal まぁ〜、しゃあない笑 ちょっと外で練習してくる！ | dra troubled ……おでは膝でもさすってるか || atsu troubled {c}、さっきはムキになってごめん笑 | dra troubled おでも、練習とか言ってずるかったな。ごめんな | atsu happy てか、2人で協力するやつやろうぜ！ | dra excited それなら順番いらないな！ えへへ
-quarrel kiki kyuko seed=plan | kiki normal 次のバトルは、攻撃に全部振りましょう | kyuko troubled えぇ、守りも少しは入れたほうがいいって。相手が速いからさ | kiki angry 守っているあいだに、倒してしまえばいいんでつ | kyuko angry ぐぬぬぬ…そこはゆずれないよぉ || kyuko normal ……ちょっと図書室で、頭を冷やしてくるねぇ | kiki normal ……そうですか。わかりました || kyuko troubled {c}、さっきはむきになってごめんねぇ | kiki troubled 私も、言いすぎました。ごめんなさい | kyuko happy じゃあ、攻め7で守り3。間を取ろ〜 | kiki wink いい作戦でつね♪ さすが{c}です
-quarrel erubin sorashido seed=plan | sorashido excited カードは番号順に並べるのがいちばんだぜ・・・！ | erubin troubled えー、俺は好きなモンスターごとに並べたいかな | sorashido angry 番号順のほうが探すのが速いって、計算が出てるんだ！ | erubin angry でも、それじゃ並べてて楽しくないよ || erubin troubled ……そっかぁ笑 じゃあ、少しあとでまた話そうか | sorashido normal ……おう || erubin troubled {c}、さっきはごめんね。楽しいかどうかだけで言っちゃった | sorashido troubled 俺こそ、数字ばっかり押しつけてた。ごめんな | erubin happy じゃあ、モンスターごとに分けて、その中は番号順にしようか | sorashido excited それだ！ 最強の並べ方だな笑
-quarrel dra mua seed=noise | mua happy {c}、お部屋のBGM、明るい曲にしよ♪ | dra troubled いや、今は落ち着いた曲がいいな。昼寝したいからな | mua angry えー！ 昼寝はあとでいいぢゃん！ | dra angry おでの昼寝は大事なんだぞ || dra troubled ……どうせおでなんか、昼寝しか取りえないし | mua normal ……そこまで言ってないもん || mua troubled {c}、さっきはごめんね。昼寝、じゃましちゃった | dra happy いいんだ。おでも意地をはってたな。ごめんな | mua wink ぢゃあ、昼寝のあとは明るい曲ね♪ | dra excited それでいこう。目覚ましにちょうどいいな
-quarrel kiki momosuke seed=order | momosuke excited ここ、ももの席！！ 窓ぎわで、いちばん日当たりいいとこ！ | kiki troubled そこは、私がさっきから座ってた席でつよ | momosuke angry ちょっと立っただけじゃん！！ もうももの！ | kiki angry ゆずりません。ゴーレムみたいに動きませんよ || momosuke troubled ……ももは、あっちの席でいいもん | kiki normal ……そうですか。どうぞ || kiki troubled {c}、さっきはごめんなさい。大人げなかったでつ | momosuke troubled ももも、わがまま言ってごめんね… | kiki happy 2人で並んで座れば、どっちも日当たりのいい席ですね♪ | momosuke excited ほんとだ！！ {c}、くっついて座ろ！！
-quarrel atsu sorashido seed=plan | sorashido excited ランキングの表、色をいっぱい使って見やすくしたぜ笑 | atsu troubled てか、色が多すぎて逆に見にくくない？笑 | sorashido angry これは計算された配色だぜ・・・！ | atsu angry いや、シンプルでいいって！ || atsu normal ……ちょっと頭冷やしてくる笑 | sorashido troubled くっそー、配色はいいと思うんだけどな… || atsu troubled {c}、さっきは言いすぎた！ せっかく作ってくれたのにごめん！ | sorashido troubled 俺も、意地になってた。ごめんな | atsu happy とりあえず、大事なとこだけ色をつけるのはどう？笑 | sorashido excited それだ！ でーじ見やすくなったぜ・・・！
-quarrel kyuko mua seed=order | mua excited {c}、写真撮ろ！ あたし真ん中ね♪ | kyuko troubled えぇ、前も{c}が真ん中だったよぉ | mua angry だって、真ん中がいちばん盛れるんだもん！ | kyuko angry ぐぬぬぬ…今日は俺の番だと思うなぁ || kyuko normal まあ、なんとかなるっしょ…ちょっと散歩してくるねぇ | mua troubled ……べつに、真ん中ぢゃなくてもいいけどさ || mua troubled {c}、さっきはごめんね。毎回真ん中は、ずるかったね | kyuko happy ううん、俺もムキになってごめん〜 | mua wink ぢゃあ今日は{c}が真ん中！ あたしは横で盛るね♪ | kyuko excited ほい！ ありがとん笑 いい写真になりそう〜
-
-# ── 3人(元: ASSISTANT_PEER_TRIO_TALKS 16本)。doing は中身で決め、場所が決まった話(浜・お買い物)は書かない
-# 直したこと: えるびんの「ふふ」を消した/みゅあの「じゃあ」/あつの「。」/ソラシドの「ぜ」を減らした/ききの「攻撃全振り」が4本続くので1本を言いかえた
-# 元: trio-kiki-momosuke-mua-1, -2, trio-atsu-dra-erubin-1, -2, trio-kyuko-mua-sorashido-1, -2, trio-kiki-kyuko-sorashido-1, -2, trio-atsu-dra-momosuke-1, -2, trio-dra-kyuko-mua-1, -2, trio-erubin-kiki-momosuke-1, -2, trio-atsu-erubin-sorashido-1, -2
-trio mua kiki momosuke doing=snack | mua excited {c:kiki}、{c:momosuke}！ 3人でお茶会しよ♪ | momosuke excited さんせーい！！ ももはケーキ担当ね！！ | kiki happy では、私は紅茶をいれまつね♪ | mua happy あたしは…食べる担当！ | momosuke surprise {c:mua}、それずるい！！
-trio mua kiki momosuke doing=cards | kiki normal {c:mua}、{c:momosuke}、明日のバトルの作戦を考えましょう | momosuke wink ももは、かわいく勝つ作戦がいい！！ | mua happy あたしは楽しく勝つ作戦♪ | kiki wink では、攻撃全振りで、かわいく楽しく勝ちましょう♪ | mua surprise {c:kiki}、さらっとこわいこと言った！
-trio atsu dra erubin doing=cards | atsu happy {c:dra}、{c:erubin}、今日カードの対戦会やろ笑 | erubin happy いいね。俺、新しいデッキ持ってきたよ | dra excited おでもグジラで行くからな。負けないぞ | atsu wink じゃあ勝ち抜き戦ね！ 最後まで残った人がジュースおごってもらえる笑 | erubin wink それ、{c:atsu}がいちばん飲みたいだけだよね
-trio atsu dra erubin doing=snack | dra happy {c:atsu}、{c:erubin}、夜食に何か食べないか？ | erubin normal いいね。軽いものにしようか | atsu excited てか、ラーメン一択でしょ！ | dra excited えへへ、おでも同じこと考えてた | erubin happy じゃあ3人でラーメンだね。軽くないけど、まあいいか
-trio kyuko mua sorashido | sorashido excited {c:kyuko}、{c:mua}！ 浜でバーベキューしようぜ・・・！ | mua excited えっ行く行く！ 海とか最高ぢゃん♪ | kyuko happy ほい！ 俺は火の番する〜。焼きかげんは任せて | sorashido happy 天気も計算ずみだ。明日は晴れ笑 | mua wink ぢゃあ、あたしは写真担当ね♪
-trio kyuko mua sorashido doing=cards | mua happy {c:kyuko}と{c:sorashido}って、いつも何の話してるの？ | kyuko wink カードの確率の話かなぁ | sorashido excited あとAIの話だな！ 今度{c:mua}にも教えるぜ笑 | mua troubled え、むずかしそう…でもちょっと聞きたいかも！ | kyuko happy {c:mua}なら、すぐ分かるよぉ
-trio kiki kyuko sorashido doing=cards | sorashido excited {c:kiki}、{c:kyuko}、作戦会議だ！ 表を作ってきたぜ・・・！ | kyuko happy ほい！ 見せて〜 | kiki normal ふむふむ…でも、攻撃に全部振れば、表はいりませんよ？ | kyuko surprise えぇ…{c:kiki}、それ作戦なのぉ？ | sorashido happy いや、それも1列足しとくよ笑
-trio kiki kyuko sorashido doing=cards | kyuko normal {c:kiki}、{c:sorashido}、次のMFバトルカード、3人で練習しよぉ | kiki happy いいですね。順番に対戦しましょう♪ | sorashido excited うぉぉぉ！ 勝ち負けは全部、表に記録するぜ・・・！ | kyuko wink 負けた人は、おやつ係ね〜 | kiki wink では、最初の一手から押していきまつ♪
-trio atsu dra momosuke doing=practice | momosuke excited {c:dra}、{c:atsu}、ももの新曲の応援練習して！！ | dra happy いいぞ。おで、声は大きいからな | atsu wink とりあえず、うちわ作ってきた笑 | momosuke surprise えっ、もう！？ ありがと！！ | dra excited せーの、{c:momosuke}ー！
-trio atsu dra momosuke doing=training | atsu happy {c:dra}、{c:momosuke}、ドラゴンとグジラとメタルナー、どれが一番強いと思う？笑 | momosuke excited メタルナーに決まってるじゃん！！ かっこいいし！！ | dra wink グジラだな。おでは迷わないぞ | atsu excited 俺はドラゴン！ …てか全員ゆずる気ないね笑 | momosuke happy じゃあ3体でチーム組めばいいじゃん！！
-trio dra kyuko mua | dra wink {c:mua}、{c:kyuko}、新しいギャグ考えたぞ。聞くか？ | mua troubled え〜、また？ …一応聞いてあげる | kyuko happy ほい、どうぞ〜 | dra excited イルカは…いるか！？ | mua surprise …古っ！ でもちょっと笑っちゃったぢゃん | kyuko happy あはは、ベタだけど好きだなぁ
-trio dra kyuko mua doing=training | kyuko normal {c:mua}、{c:dra}、ニャーが昼寝してるよぉ。静かにね | mua happy かわいい〜！ 写真撮っていい？ 音は消すから | dra troubled おでのいびきのほうが、うるさいかもな | kyuko wink {c:dra}は、いっしょに昼寝しないでねぇ | mua happy あはは！ ぢゃあ3人で、そーっと見てよ♪
-trio erubin kiki momosuke | momosuke excited {c:kiki}、{c:erubin}、3人でお買い物いこ！！ | erubin happy いいね。荷物は俺が持つよ | kiki happy {c:erubin}、やさしいでつね♪ | momosuke wink じゃあ、いっぱい買っちゃおっと！！ | erubin troubled …ほどほどにね
-trio erubin kiki momosuke doing=training | kiki normal {c:erubin}、{c:momosuke}、ゴーレムとデュラハンとメタルナー、並べると強そうですね | erubin happy うん。かたい3体だね。守りなら負けなさそうだ | momosuke excited メタルナーがいちばん光ってる！！ | kiki wink では、守ったあとは攻撃全振りで♪ | erubin surprise {c:kiki}、そこはぶれないね…
-trio atsu erubin sorashido doing=cards | sorashido excited {c:atsu}、{c:erubin}！ カードの勝率、表にまとめたぜ・・・！ | erubin happy すごいね。見せてくれる？ | atsu surprise てか、俺の負けも全部のってるじゃん笑 | sorashido happy もちろんだ笑 負けから学ぶのがいちばんだからな | erubin wink {c:atsu}の勝ちも、ちゃんと多いね😊
-trio atsu erubin sorashido doing=cards | atsu happy {c:sorashido}、{c:erubin}、3人でMFバトルカードの大会ごっこしよ笑 | erubin happy いいね。賞品は何にしようか | sorashido excited 優勝したら、ほかの2人がジュースおごりだぜ・・・！ | atsu wink それ、もう3回目の気がする笑 | erubin happy まあいいか。楽しければね
+## 取り残しの直し(当てたあとに拾った分)
+edit dra-mua-sp 5 | mua wink あ、照れてる〜ｗ
+edit atsu-momosuke-sp 3 | atsu happy わかるよ！ 俺も似たようなことしてるから笑
+edit atsu-erubin-sp 2 | atsu surprise {c}もでしょ！ 俺よりずっと笑
+edit atsu-erubin-sp 6 | atsu happy ありがと、{c}！ 頼りにしてる！
+edit atsu-kyuko-c1 reply1-2 | atsu happy お、言ったね！ 燃えてきた笑
+edit atsu-erubin-c1 reply1-1 | atsu troubled …分かった！ 少しだけね！
+edit mua-sorashido-sp2 3 | mua happy ぢゃあ今日は逆！ あたしにも表の作り方、教えて！
+edit erubin-mua-sp2 3 | mua happy ぢゃあ今日は、二人でおそろいコーデしよ！ 砂の色入れるね♪
+edit atsu-dra-ev1 5 | atsu wink てか、決めてもらおうぜ！ ブリーダーに！
+edit mua-sorashido-ev1 reply3-1 | mua happy ぢゃあアルバム作ろ！ 2人の写真集♪
+edit reaction-atsu-play | happy {c}と見てたよ！ いい感じだったね！
