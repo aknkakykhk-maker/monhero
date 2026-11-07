@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5b4b02cff93ec8c7
+// generated-sha256: 188af0982bca5e9c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -2630,6 +2630,10 @@ const resetMasuForRebirth = (masu, { rebirthCount, reincarnateCount, reincarnate
   else if (masu?.color != null) reset.color = masu.color;
   if (Array.isArray(masu?.inheritedUniques)) reset.inheritedUniques = masu.inheritedUniques.map(unique => ({ ...unique }));
   if (Array.isArray(masu?.fusionHistory)) reset.fusionHistory = masu.fusionHistory.map(entry => ({ ...entry }));
+  // 固有技設定(並び順・初期技)も転生で失われない(2026-11-07。ここに無かったので、転生のたびに初期状態へ戻っていた)。
+  //   保存されているときだけ、そのまま持ち越す(読むときに normalizeUniqueOrder / normalizeInitialUniqueKey が今の技に合わせる)
+  if (Array.isArray(masu?.uniqueOrder)) reset.uniqueOrder = masu.uniqueOrder.filter(key => typeof key === 'string');
+  if (typeof masu?.initialUniqueKey === 'string' && masu.initialUniqueKey) reset.initialUniqueKey = masu.initialUniqueKey;
   if (masu?.individualStats && typeof masu.individualStats === 'object') reset.individualStats = { ...masu.individualStats };
   if (masu?.individualStatOffsets && typeof masu.individualStatOffsets === 'object') reset.individualStatOffsets = { ...masu.individualStatOffsets };
   if (Array.isArray(masu?.distAptBoosts)) reset.distAptBoosts = [0,0,0,0];
@@ -21518,7 +21522,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
     const sign=amount=>`${amount>0?'+':''}${decimals>0?Number(amount).toFixed(decimals):amount}`;
     const button=(amount,dim)=><button type="button" aria-label={`${key}を${sign(amount)}`} data-rhythm-option-nudge={`${key}${sign(amount)}`}
       disabled={amount<0?value<=min:value>=max} onClick={()=>nudge(amount)}
-      className={`${wide?'min-h-[38px]':'min-h-[46px]'} rounded-xl border ${dim?'border-white/25 bg-slate-300 text-slate-900':'border-white/40 bg-slate-100 text-slate-900'} px-0.5 text-[11px] font-black tabular-nums shadow-[0_2px_0_rgba(2,6,23,.55)] active:translate-y-[1px] active:shadow-none disabled:opacity-35`}>{sign(amount)}</button>;
+      className={`${wide?'min-h-[38px]':'min-h-[46px]'} rounded-xl border ${dim?'border-white/25 bg-slate-300 text-slate-900':'border-white/40 bg-slate-100 text-slate-900'} min-w-0 whitespace-nowrap px-0.5 text-[11px] font-black tabular-nums tracking-tight shadow-[0_2px_0_rgba(2,6,23,.55)] active:translate-y-[1px] active:shadow-none disabled:opacity-35`}>{sign(amount)}</button>;
     return <div data-rhythm-option-stepper={key} className={wide?'':'space-y-1.5'}>
       {label&&<div data-rhythm-option-stepper-label={key} className="flex items-baseline justify-between gap-2 px-0.5 pb-0.5 leading-none">
         <small className="text-[10px] font-black text-cyan-200">{label}</small>
@@ -21563,7 +21567,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
   //   横向き(3列)は1列が広いので1つぶんに収める。
   // ★横向きは高さが足りないので、帯と余白を詰め、説明(▸ くわしく)は出さない。
   //   説明は縦向きで読めるので、消したわけではない。
-  const field=(title,control,description=null,{full=false}={})=><div data-rhythm-option-field className={`${full&&!wide?'col-span-2':''} rounded-xl border border-cyan-400/20 bg-slate-950/55 ${wide?'p-1.5':'p-2.5'}`}>
+  // wideFull … 横のときだけ行いっぱい(3列ぶん)に広げる(中身が縦に長い欄で、同じ行の欄が引き伸ばされて空の枠にならないように・2026-11-07)
+  const field=(title,control,description=null,{full=false,wideFull=false}={})=><div data-rhythm-option-field className={`${full&&!wide?'col-span-2':''}${wideFull&&wide?'col-span-3':''} rounded-xl border border-cyan-400/20 bg-slate-950/55 ${wide?'p-1.5':'p-2.5'}`}>
     <p className={`rounded-lg bg-cyan-700/70 px-2 text-center ${label} ${wide?'mb-1 py-0.5 text-[11px]':'mb-2 py-1'}`} style={JA_WRAP_STYLE}>{typeof title==='string'?jaWrap(title):title}</p>
     {control}
     {description&&!wide&&<details data-rhythm-option-help className="mt-2">
@@ -21572,7 +21577,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
     </details>}
   </div>;
   // 横向きは幅が広いので3列。縦向きは2列のまま(1列にすると1つずつしか見えない)
-  const grid=`grid gap-2.5 ${wide?'grid-cols-3 gap-2':'grid-cols-2'}`;
+  // 横は上ぞろえ(items-start): 同じ行に中身の多い欄があると、ほかの欄が同じ高さまで引き伸ばされて空の枠になっていた(2026-11-07 社長「モンビーの画面ひどくなってる」)
+  const grid=`grid gap-2.5 ${wide?'grid-cols-3 items-start gap-2':'grid-cols-2'}`;
   // 演出の組(背景・道・ノーツ・判定・コンボ)。縦は開いている組(null は全部閉じる)、横は右に出す組。設定ではないので保存しない
   const [fxGroup,setFxGroup]=useState(null);
   const fxGroupNow=fxGroup||'stage';
@@ -21580,7 +21586,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
   const fxGroupCount=id=>RHYTHM_FX_ITEMS.filter(item=>item.group===id).length;
   const fxGroupSummary=id=>{const n=rhythmFxChangedCount(draft,RHYTHM_FX_ITEMS.filter(item=>item.group===id).map(item=>item.key));return n?`${n}つ変更`:'おまかせ';};
   // 横は2列。段の多い項目(4つ以上)は1列ぶち抜きにする(2026-11-01 社長「横で段の多い項目は1列」)
-  const fxGrid=`grid gap-2.5 ${wide?'grid-cols-2 gap-2':'grid-cols-2'}`;
+  const fxGrid=`grid gap-2.5 ${wide?'grid-cols-2 items-start gap-2':'grid-cols-2'}`;
   const FX_WEIGHT={l:['軽','bg-emerald-500/25 text-emerald-200'],m:['中','bg-amber-500/25 text-amber-200'],h:['重','bg-rose-500/25 text-rose-200']};
   const fxPicked=key=>(draft.fx&&draft.fx[key])||'AUTO';
   const fxSegments=item=><div className={`grid ${item.options.length>=5?'grid-cols-5':item.options.length===4?'grid-cols-4':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{item.options.map(([id,text])=><button type="button" key={id} data-rhythm-option-choice={`fx-${item.key}:${id}`} aria-pressed={fxPicked(item.key)===id}
@@ -21633,7 +21639,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
               `1.0〜12.0を0.1刻みで調整できます。変わるのはノーツが流れてくる見た目の速さだけで、譜面のタイミング・判定窓・スコアは変わりません（現在 約${rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString()}ms）。`,{full:true})}
 {field('タイミング調整',<>
               {stepper('judgmentTimingOffsetMs',-RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_STEP_MS,{fine:1,coarse:10,suffix:'ms'})}
-              <button type="button" data-rhythm-calibrator-open onClick={goCalibrate} className="mt-2 min-h-[46px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-[12px] font-black text-cyan-100">🎯 実際の画面で合わせる</button>
+              {onCalibrate&&<button type="button" data-rhythm-calibrator-open onClick={goCalibrate} className="mt-2 min-h-[46px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-[12px] font-black text-cyan-100">🎯 実際の画面で合わせる</button>}
               {/* 合わせ終わって戻ってきたときのお知らせ。値はもう入っているので、ここは報告だけ
                   (2026-09-13・ユーザー指摘「設定にもなってない」。決めるのは測り終わった画面) */}
               {calibrationResult&&<div data-rhythm-calibrator-result className="mt-2 rounded-xl border border-amber-300/50 bg-amber-950/30 p-2 text-[11px] leading-relaxed text-amber-100">
@@ -21660,7 +21666,10 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
               const L=1-(Number(draft.judgmentLineHeight)||0)/100,base=wide?.39:rhythmSkyLiftPortrait(),skyOn=hellReleased;
               const ratio=rhythmSkyLiftWith(base,skyOn?hellDraft.skyLine:0,L),skyY=L-ratio,skyRange=rhythmSkyLineOffsetRange(base,L),top=rhythmSkyAcceptTopWith(L,ratio,skyOn?hellDraft.skyTop:100),lim=rhythmSkyAcceptLimitWith(L,base,ratio,0,skyOn?hellDraft.skyW:100),from=rhythmGroundAcceptFromWith(L,base,skyOn?hellDraft.groundW:100);
               const pct=v=>`${(Math.max(0,Math.min(1,v))*100).toFixed(2)}%`;
-              return <div data-rhythm-line-position className="space-y-2">
+              // 横(2026-11-07 社長「モンビーの画面ひどくなってる」): 縦に長くなり、同じ行の欄が空の枠に引き伸ばされていた。
+              // 行いっぱいに広げ、左に道の見本と説明・右に数字の欄を2列で並べる。縦はこれまでどおり上から順に
+              return <div data-rhythm-line-position className={wide?'grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-start gap-3':'space-y-2'}>
+                <div data-rhythm-line-position-side className="space-y-2">
                 <div data-rhythm-line-preview className={`relative mx-auto overflow-hidden rounded-xl border border-white/15 bg-slate-950 ${wide?'h-[120px] w-full':'h-[210px] w-[64%]'}`}>
                   <div className="absolute inset-0" style={{clipPath:'polygon(41% 0,59% 0,100% 100%,0 100%)',background:'rgba(76,29,149,.5)'}}>
                     <div data-rhythm-line-preview-ground-band className="absolute inset-x-0 bottom-0" style={{top:pct(skyOn?from:0),background:'rgba(34,211,238,.26)'}}/>
@@ -21676,14 +21685,17 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
                   {skyOn&&<span><i className="mr-1 inline-block h-2 w-3 rounded-sm align-middle" style={{background:'repeating-linear-gradient(135deg,rgba(244,114,182,.8) 0 3px,rgba(34,211,238,.8) 3px 6px)'}}/>両方(近いほうを取る)</span>}
                 </p>
                 {onLineAdjust&&<button type="button" data-rhythm-line-adjust-open onClick={goLineAdjust} className="min-h-[46px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-[12px] font-black text-cyan-100">🎯 実際の画面で合わせる</button>}
+                </div>
+                <div data-rhythm-line-position-steppers className={wide?'grid grid-cols-2 gap-x-3 gap-y-2':'space-y-2'}>
                 {stepper('judgmentLineHeight',RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,{fine:RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,coarse:RHYTHM_JUDGMENT_LINE_HEIGHT_STEP*4,suffix:'%',label:'地上の判定ライン(画面の下からの高さ)',slider:true})}
                 {skyOn&&stepper('groundW',RHYTHM_ACCEPT_WIDTH_MIN_PCT,100,RHYTHM_ACCEPT_WIDTH_STEP_PCT,{fine:RHYTHM_ACCEPT_WIDTH_STEP_PCT,coarse:RHYTHM_ACCEPT_WIDTH_STEP_PCT*2,suffix:'%',label:'地上を受け付ける範囲の広さ(線より上のはみ出し・100%が今の広さ)',source:hellDraft,onSet:v=>setHellDraft(d=>({...d,groundW:rhythmNormalizeAcceptWidth(v)})),slider:true})}
                 {skyOn&&stepper('skyLine',skyRange.min,skyRange.max,RHYTHM_SKY_LINE_OFFSET_STEP_PCT,{fine:RHYTHM_SKY_LINE_OFFSET_STEP_PCT,coarse:2,suffix:'%',decimals:1,label:'空中の判定ライン(上が＋・0が今の位置)',source:hellDraft,onSet:v=>setHellDraft(d=>({...d,skyLine:rhythmNormalizeSkyLineOffset(v)})),slider:true})}
                 {skyOn&&stepper('skyW',RHYTHM_ACCEPT_WIDTH_MIN_PCT,100,RHYTHM_ACCEPT_WIDTH_STEP_PCT,{fine:RHYTHM_ACCEPT_WIDTH_STEP_PCT,coarse:RHYTHM_ACCEPT_WIDTH_STEP_PCT*2,suffix:'%',label:'空中を受け付ける範囲の広さ(線より下のはみ出し・100%が今の広さ)',source:hellDraft,onSet:v=>setHellDraft(d=>({...d,skyW:rhythmNormalizeAcceptWidth(v)})),slider:true})}
                 {skyOn&&stepper('skyTop',RHYTHM_SKY_ACCEPT_TOP_MIN_PCT,RHYTHM_SKY_ACCEPT_TOP_MAX_PCT,RHYTHM_SKY_ACCEPT_TOP_STEP_PCT,{fine:RHYTHM_SKY_ACCEPT_TOP_STEP_PCT,coarse:RHYTHM_SKY_ACCEPT_TOP_STEP_PCT*5,suffix:'%',label:'空中を受け付ける上の端(線より上の幅・100%が既定)',source:hellDraft,onSet:v=>setHellDraft(d=>({...d,skyTop:rhythmNormalizeSkyAcceptTop(v)})),slider:true})}
+                </div>
               </div>;
             })(),
-              'タップする判定ラインを、画面の下から何％の高さに置くかです。大きくするほど上へ上がり、指が届きやすくなります（12％が2026-09-13より前の位置です）。ノーツも弾ける光も判定文字も一緒に上がります。判定の幅（秒数）・スコア・譜面は変わりません。ただしレーンは奥へ行くほど狭くなるので、上げすぎると横の幅が狭く感じられます。'+(hellReleased?'\n空中の判定ライン(HELL)は、地上の判定ラインからの高さを上下にずらします。空中の線・空中のノーツ・空中を受け付ける範囲が一緒に動きます(地上を受け付ける範囲は変わりません)。上へずらしすぎると、空中を受け付ける範囲が地上の範囲に届いたところで止まります。空中を受け付けるのは、空中の線から上へ一定の幅(画面の高さの20%×「上の端」の値)までです。それより上を押しても空中のノーツは取れません。「実際の画面で合わせる」を押すと、演奏画面に切り替わり、本番と同じ大きさのレーン・判定ライン・受け付ける範囲を見ながら、時間を気にせず合わせられます(合わせているあいだはノーツは流れません)。「保存して試す」で保存すると、ノーツがくり返し流れる画面になり、ふつうに叩いて試せます。右上の「位置を直す」でまた合わせ直せて、「終わる」でこの画面へ戻ります。「受け付ける範囲の広さ」は、地上と空中の境目の側だけを狭めます(空中は線より下へのはみ出し、地上は線より上へのはみ出し。100%が今の広さで、50%まで)。狭めると、境目のあたりを押したときにもう一方のノーツを取り違えにくくなりますが、線から離れた所を押すと空振りになります。地上の判定ラインを動かすと、空中の線も一緒に動きます。押す時刻(判定の幅)とスコアは変わりません。':''),{full:true})}
+              'タップする判定ラインを、画面の下から何％の高さに置くかです。大きくするほど上へ上がり、指が届きやすくなります（12％が2026-09-13より前の位置です）。ノーツも弾ける光も判定文字も一緒に上がります。判定の幅（秒数）・スコア・譜面は変わりません。ただしレーンは奥へ行くほど狭くなるので、上げすぎると横の幅が狭く感じられます。'+(hellReleased?'\n空中の判定ライン(HELL)は、地上の判定ラインからの高さを上下にずらします。空中の線・空中のノーツ・空中を受け付ける範囲が一緒に動きます(地上を受け付ける範囲は変わりません)。上へずらしすぎると、空中を受け付ける範囲が地上の範囲に届いたところで止まります。空中を受け付けるのは、空中の線から上へ一定の幅(画面の高さの20%×「上の端」の値)までです。それより上を押しても空中のノーツは取れません。「実際の画面で合わせる」を押すと、演奏画面に切り替わり、本番と同じ大きさのレーン・判定ライン・受け付ける範囲を見ながら、時間を気にせず合わせられます(合わせているあいだはノーツは流れません)。「保存して試す」で保存すると、ノーツがくり返し流れる画面になり、ふつうに叩いて試せます。右上の「位置を直す」でまた合わせ直せて、「終わる」でこの画面へ戻ります。「受け付ける範囲の広さ」は、地上と空中の境目の側だけを狭めます(空中は線より下へのはみ出し、地上は線より上へのはみ出し。100%が今の広さで、50%まで)。狭めると、境目のあたりを押したときにもう一方のノーツを取り違えにくくなりますが、線から離れた所を押すと空振りになります。地上の判定ラインを動かすと、空中の線も一緒に動きます。押す時刻(判定の幅)とスコアは変わりません。':''),{full:true,wideFull:true})}
 {/* 【2026-09-05・ユーザー指示】「ノーツの開始位置（奥行き）もオプションで調整できるようにしたい」 */}
 {field('ノーツの出る位置',stepper('noteStartPosition',-100,100,5,{fine:5,coarse:25}),
               'ノーツが画面のどのあたりから出てくるかを変えます。マイナスにすると奥（画面の上の外側）から、プラスにすると手前寄りから出てきます。判定ラインの位置・判定のタイミング・判定窓・スコアは変わりません。ノーツが流れてくる時間も変わらないので、手前から出すほど見えているあいだの動きは速く見えます。',{full:true})}
@@ -52006,6 +52018,12 @@ const rhythmMultiStreakBonus = (streak) => {
   const n = Number.isFinite(v) ? Math.max(1, Math.floor(v)) : 1;
   return Math.min(RHYTHM_MULTI_STREAK_MAX_BONUS, Math.round(RHYTHM_MULTI_STREAK_STEP * (n - 1) * 100) / 100);
 };
+// 部屋の見出しに出す回数ボーナスの文(2026-11-07)。いまの連続の曲数と、同じメンバーで続けたときの次の曲のごほうび
+const rhythmMultiStreakNextText = (streak) => {
+  const n = Math.max(1, Math.floor(Number(streak) || 1));
+  const next = Math.round(rhythmMultiStreakBonus(n + 1) * 100);
+  return n >= 2 ? `連続${n}曲 ・ 次の曲+${next}%` : `次の曲も続けると+${next}%`;
+};
 // 人数ボーナス × 連続ボーナス。表示に使うので小数2けたで丸める
 const rhythmMultiTotalScale = (count, streak, cpus = 0) => Math.round(rhythmMultiRewardScale(count, cpus) * (1 + rhythmMultiStreakBonus(streak)) * 100) / 100;
 // 「メンバーの成績」に出す判定の並び(演奏側の RHYTHM_JUDGMENT_IDS と同じ順)
@@ -53084,6 +53102,10 @@ const rhythmMultiPickDifficulty = (available, wishId, orderIds) => {
 // 部屋の中の状態は React の外(RHYTHM_MULTI)にあるので、画面を行き来しても部屋は切れない。
 // チャット欄(2026-10-03・ユーザー指摘「チャットが使いにくい」で作り直し)。
 // 上に見出しと✕、真ん中に発言の一覧(高さいっぱい)、下に定型文(折り返して全部見せる)と入力欄
+// チャットの「◯◯に聞く」の札を開いておくか(2026-11-07)。新しいキーで端末に覚える。無い・壊れていれば畳む
+const RHYTHM_MULTI_ASK_OPEN_KEY = 'mh_rhythm_multi_ask_open_v1';
+const rhythmMultiAskOpenLoad = () => { try { return localStorage.getItem(RHYTHM_MULTI_ASK_OPEN_KEY) === '1'; } catch (_) { return false; } };
+const rhythmMultiAskOpenSave = (on) => { try { localStorage.setItem(RHYTHM_MULTI_ASK_OPEN_KEY, on ? '1' : '0'); } catch (_) { /* 保存できなくても、その場では開け閉めできる */ } };
 function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl = null, onClose = null, talkTip = '', onTalkTipClose = null, askName = '' }) {
   const [chatText, setChatText] = React.useState('');
   const [waitNote, setWaitNote] = React.useState(false);
@@ -53101,6 +53123,8 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
   };
   const submit = () => { if (send(chatText)) setChatText(''); };
   const memberOf = (id) => members.find((m) => m.id === id) || null;
+  const [askOpen, setAskOpen] = React.useState(() => rhythmMultiAskOpenLoad());
+  const toggleAsk = () => setAskOpen((v) => { const next = !v; rhythmMultiAskOpenSave(next); return next; });
   return (
     <section data-rhythm-multi-chat className="flex h-full min-h-0 flex-col">
       <div className="flex shrink-0 items-center gap-2 pb-1.5">
@@ -53135,17 +53159,19 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
       </ul>
       {/* 「マスモンに聞く」札と定型文。縦は高さを抑えて中だけ上下にすべらせ、横向きは1行で横にすべらせる
           (チャットの発言と自由入力の欄を押しつぶさない。2026-10-08・ユーザー報告「定型文のゾーンが動かせず、下の自由入力が出せない」) */}
-      <div data-rhythm-multi-chat-quick className="mt-2 flex max-h-[8.5rem] shrink-0 flex-col gap-2 overflow-y-auto landscape:max-h-none landscape:flex-row landscape:items-center landscape:gap-1.5 landscape:overflow-x-auto landscape:overflow-y-hidden landscape:[scrollbar-width:none]">
+      <div data-rhythm-multi-chat-quick className="mt-2 flex max-h-[8.5rem] shrink-0 flex-col gap-2 overflow-y-auto landscape:max-h-none [[data-mh-view-rotation=true]_&]:max-h-none landscape:flex-row [[data-mh-view-rotation=true]_&]:flex-row landscape:items-center [[data-mh-view-rotation=true]_&]:items-center landscape:gap-1.5 [[data-mh-view-rotation=true]_&]:gap-1.5 landscape:overflow-x-auto [[data-mh-view-rotation=true]_&]:overflow-x-auto landscape:overflow-y-hidden [[data-mh-view-rotation=true]_&]:overflow-y-hidden landscape:[scrollbar-width:none] [[data-mh-view-rotation=true]_&]:[scrollbar-width:none]">
         {askName && (
-          <div data-rhythm-buddy-ask className="flex shrink-0 flex-wrap items-center gap-1.5 landscape:flex-nowrap">
-            <b className="shrink-0 text-[10px] font-black text-lime-300">🎵 {askName}に聞く</b>
-            {RHYTHM_BUDDY_ASK_CHIPS.map((chip) => (
+          <div data-rhythm-buddy-ask={askOpen ? 'open' : 'closed'} className="flex shrink-0 flex-wrap items-center gap-1.5 landscape:flex-nowrap [[data-mh-view-rotation=true]_&]:flex-nowrap">
+            {/* 2026-11-07 社長「みゅあにきくみたいなやつは閉じたりできるようにしたい」。はじめは畳み、押すと開く。開いたかどうかは端末に覚える */}
+            <button type="button" data-rhythm-buddy-ask-toggle aria-expanded={askOpen} onClick={toggleAsk}
+              className="min-h-[34px] shrink-0 whitespace-nowrap rounded-full border border-lime-300/40 bg-slate-900 px-2.5 text-[11px] font-black text-lime-300 active:scale-95">🎵 {askName}に聞く {askOpen ? '◂' : '▸'}</button>
+            {askOpen && RHYTHM_BUDDY_ASK_CHIPS.map((chip) => (
               <button key={chip.label} data-rhythm-buddy-ask-chip type="button" onClick={() => send(`${askName}、${chip.text}`)}
                 className="min-h-[34px] shrink-0 whitespace-nowrap rounded-full border border-lime-300/50 bg-lime-950/70 px-2.5 text-[11px] font-black text-lime-100 transition active:scale-95">{chip.label}</button>
             ))}
           </div>
         )}
-        <RhythmMultiStampBar phase={phase} onSend={send} wrap limit={10} className="shrink-0 landscape:flex-nowrap" />
+        <RhythmMultiStampBar phase={phase} onSend={send} wrap limit={10} className="shrink-0 landscape:flex-nowrap [[data-mh-view-rotation=true]_&]:flex-nowrap" />
       </div>
       {waitNote && <small data-rhythm-multi-chat-wait className="mt-1 block shrink-0 text-[11px] font-black text-amber-300">続けて送るときは、少し待ってね</small>}
       <form className="mt-2 flex shrink-0 gap-2" onSubmit={(e) => { e.preventDefault(); submit(); }}>
@@ -53872,7 +53898,7 @@ function RhythmQuickRunPill({ info, onRestart = null, onResume = null, widthClas
     </small>
   );
 }
-function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onRestartQuickRun = null, onResumeQuickRun = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null, onStepAway = null, sessionAssistants = [], guideAssistantId = '' }) {
+function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onRestartQuickRun = null, onResumeQuickRun = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null, onStepAway = null, sessionAssistants = [], guideAssistantId = '', onOpenOptions = null, onCloseOptions = null }) {
   const view = useRhythmMultiView();
   useModeSelectStageCss();
   const difficultyIds = difficultyList.map((d) => d.id);
@@ -53887,6 +53913,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   const [message, setMessage] = React.useState('');
   const [searching, setSearching] = React.useState(null);
   const [countdown, setCountdown] = React.useState(null);
+  // 曲が始まる(カウントダウン)ときは、部屋の上に開いたオプションを閉じる(2026-11-07 社長「マルチでもオプションボタン」)
+  React.useEffect(() => { if (countdown && onCloseOptions) onCloseOptions(); }, [!!countdown]);
   const [copied, setCopied] = React.useState(false);
   const [chatOpen, setChatOpen] = React.useState(false);
   // 未読の数(チャットを閉じているあいだに届いた、ほかの人の発言)。開いたら既読にする
@@ -54323,6 +54351,9 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
       <div className="min-w-[7.5rem] flex-1 leading-none">
         <b className="block whitespace-nowrap text-base font-black italic tracking-wider text-cyan-200">MULTI LIVE</b>
         <small className="mt-0.5 block break-keep text-[10px] font-black leading-tight text-fuchsia-200">▶ {step}{view ? <> ・ <span className="whitespace-nowrap">{view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode]} {view.code}</span></> : ''}</small>
+        {/* 回数ボーナス(連続ボーナス)を部屋の中でも(2026-11-07 社長「回数ボーナスの表示がクリアにしか見れないから不便」)。
+            同じメンバーで続けると、次の曲のごほうびが上がる。結果画面の「🔥 連続◯曲目」と同じ数え方 */}
+        {view && room && room.round && <small data-rhythm-multi-streak-next className="mt-0.5 inline-block whitespace-nowrap rounded-full bg-gradient-to-r from-orange-500 to-rose-500 px-1.5 text-[9px] font-black leading-4 text-white">🔥 {rhythmMultiStreakNextText(view.streak)}</small>}
       </div>
       {/* クイック∞周回を裏で回しているときの進み具合(曲えらびの帯と同じ中身)。対戦の待ち時間も周回は進む */}
       {quickRunInfo && <RhythmQuickRunPill info={quickRunInfo} onRestart={onRestartQuickRun} onResume={onResumeQuickRun} widthClass="max-w-[38%] max-[480px]:max-w-[24%]" />}
@@ -54335,10 +54366,17 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
       {opts.timer != null && <b data-rhythm-multi-timer className={`shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`}>⏱ {opts.timer}</b>}
       {/* 縦⇄横の切り替え(曲えらびと同じボタン。2026-10-03・ユーザー報告「縦横が変えられない」) */}
       <RhythmOrientationButton/>
+      {view && optionsButton()}
       {view && rankingButton()}
       {view && inviteButton()}
       {view && chatButton()}
     </header>
+  );
+  // ⚙ オプション(2026-11-07 社長「マルチでもオプションボタンつけて」)。ソロと同じ画面を部屋の上に重ねて開く(画面は移らないので、部屋の知らせは止まらない)。
+  // 保存もソロと同じ。演奏を始める項目(タイミング調整・判定ラインを実際の画面で合わせる)は、部屋の中では出さない
+  const optionsButton = (extra = '') => onOpenOptions && (
+    <button data-rhythm-multi-options-open type="button" aria-label="オプション" onClick={() => { setChatOpen(false); onOpenOptions(); }}
+      className={`min-h-[44px] min-w-[44px] max-[380px]:min-w-[38px] shrink-0 rounded-xl border border-slate-400/50 bg-slate-800/60 text-lg ${extra}`}>⚙</button>
   );
   // 💬 ボタン。閉じているあいだに届いた発言の数を赤い丸で出す
   const chatButton = (extra = '') => (
@@ -54442,11 +54480,14 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     </div>
   );
   // チャット欄。外側(暗いところ)を押しても閉じる。縦画面は下から8割、横画面は右半分を高さいっぱい
+  // 「◯◯に聞く」の相手は、呼んだマスモンだけ。助手(m.as がある)には、そこで答える会話が無いので外す(2026-11-07 マモリと決めた)
+  const askBuddy = view ? (view.myCpus || []).map((c) => view.members.find((m) => m.id === c.id)).find((m) => m && !m.as) : null;
+  const askBuddyName = askBuddy ? (askBuddy.name || 'マスモン') : '';
   const chatSheet = chatOpen && view && (
     <div className="absolute inset-0 z-[80000]">
       <button type="button" aria-label="チャットを閉じる" className="absolute inset-0 bg-slate-950/55" onClick={() => setChatOpen(false)} />
-      <div data-rhythm-multi-chat-sheet className="absolute inset-x-0 bottom-0 flex h-[80%] flex-col rounded-t-2xl border-t border-cyan-400/40 bg-slate-900 p-2.5 shadow-2xl landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:h-full landscape:w-[50%] landscape:rounded-none landscape:rounded-l-2xl landscape:border-l landscape:border-t-0 landscape:pt-[calc(.6rem+var(--mh-sa-top))]" style={{ paddingBottom: 'calc(.6rem + var(--mh-sa-bottom))' }}>
-        <RhythmMultiChatPanel view={view} phase={room ? room.phase : ''} members={view.members} resolveIconUrl={resolveIconUrl} onClose={() => setChatOpen(false)} askName={(view.myCpus || []).length > 0 ? ((view.members.find((m) => m.id === view.myCpus[0].id) || {}).name || 'マスモン') : ''} talkTip={!talkTipSeen && (view.myCpus || []).length > 0 ? ((view.members.find((m) => m.id === view.myCpus[0].id) || {}).name || 'マスモン') : ''} onTalkTipClose={closeTalkTip} />
+      <div data-rhythm-multi-chat-sheet className="absolute inset-x-0 bottom-0 flex h-[80%] flex-col rounded-t-2xl border-t border-cyan-400/40 bg-slate-900 p-2.5 shadow-2xl landscape:inset-y-0 [[data-mh-view-rotation=true]_&]:inset-y-0 landscape:left-auto [[data-mh-view-rotation=true]_&]:left-auto landscape:right-0 [[data-mh-view-rotation=true]_&]:right-0 landscape:h-full [[data-mh-view-rotation=true]_&]:h-full landscape:w-[50%] [[data-mh-view-rotation=true]_&]:w-[50%] landscape:rounded-none [[data-mh-view-rotation=true]_&]:rounded-none landscape:rounded-l-2xl [[data-mh-view-rotation=true]_&]:rounded-l-2xl landscape:border-l [[data-mh-view-rotation=true]_&]:border-l landscape:border-t-0 [[data-mh-view-rotation=true]_&]:border-t-0 landscape:pt-[calc(.6rem+var(--mh-sa-top))] [[data-mh-view-rotation=true]_&]:pt-[calc(.6rem+var(--mh-sa-top))]" style={{ paddingBottom: 'calc(.6rem + var(--mh-sa-bottom))' }}>
+        <RhythmMultiChatPanel view={view} phase={room ? room.phase : ''} members={view.members} resolveIconUrl={resolveIconUrl} onClose={() => setChatOpen(false)} askName={askBuddyName} talkTip={!talkTipSeen && askBuddyName ? askBuddyName : ''} onTalkTipClose={closeTalkTip} />
       </div>
     </div>
   );
@@ -59549,11 +59590,18 @@ const normalizeQuickNudge = (v) => {
 // 今日の誘導を出してよいか(1日1回・合計3回まで)
 const quickNudgeAllowed = (nudge, today) => { const s = normalizeQuickNudge(nudge); return s.n < QUICK_GUIDE_NUDGE_MAX && s.day !== today; };
 const quickNudgeAfter = (nudge, today) => { const s = normalizeQuickNudge(nudge); return { v: 1, n: s.n + 1, day: today }; };
-// いまの画面で出す案内。ctx … { gameState, busy, seen, quickUnlocked, quickEverCleared, quickSelect, quickRun, autoRepeat, battleTutorial, raidJack, backgroundRun, nudgeOk }
+// クイックの∞では、WAVE とWAVE のあいだに画面が一瞬だけ次の状態を通る(1 WAVE が3秒ほどなので、3秒ごと)。
+//   ここで案内を消すと作り直されて1ページ目へ戻り、「あとで」も取り消される(2026-11-07 レフェリーくんの止め絵)。
+//   出している ∞ の案内(g3a)は、このあいだも出したままにし、「あとで」もバトルの画面と同じに扱う
+const QUICK_GUIDE_RUN_BETWEEN = Object.freeze(['WAVE_RESULT', 'QUICK_GROWTH', 'PICK_ALLY', 'QUICK_JOIN']);
+const quickGuideScreenKey = (gameState, quickRun, autoRepeat) => (quickRun === true && autoRepeat === true && QUICK_GUIDE_RUN_BETWEEN.includes(gameState) ? 'BATTLE' : gameState);
+// いまの画面で出す案内。ctx … { gameState, busy, seen, quickUnlocked, quickEverCleared, quickSelect, quickRun, autoRepeat, battleTutorial, raidJack, backgroundRun, nudgeOk, showing }
+//   showing … いま出している案内(WAVE のあいだも ∞ の案内を出したままにするため)
 const quickGuidePick = (ctx) => {
   const c = ctx || {};
   if (c.busy || !Array.isArray(c.seen)) return null;
   const not = (id) => !c.seen.includes(id);
+  if (c.showing === 'g3a' && c.quickRun === true && c.autoRepeat === true && QUICK_GUIDE_RUN_BETWEEN.includes(c.gameState) && not('g3a')) return 'g3a';
   const nudge = c.nudgeOk === true && c.quickUnlocked === true && c.quickEverCleared !== true;
   switch (c.gameState) {
     case 'BATTLE_SYSTEM_SELECT':
@@ -59677,7 +59725,9 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
     if (!atTop && roomBottom < panelH) { const bottom = vh - panelH - gap - pad - 10; ring = { ...rect, height: Math.max(0, Math.min(rect.bottom, bottom) - rect.top) }; }
   }
   const face = assistant && typeof assistantFaceImage === 'function' ? assistantFaceImage(assistant, line.e || 'normal') : null;
-  return (
+  // 画面のいちばん外(document.body)へ出す。バトルの技の名前の札なども body へ出ているので、画面の中に描くと、
+  //   重なり順の数字が大きくても札の下になる(横画面で窓の題に重なった・2026-11-07 レフェリーくんの止め絵)
+  const overlay = (
     <div data-quick-guide={guideId} data-quick-guide-page={page.id} className="fixed inset-0 z-[100050]" style={{ pointerEvents: 'auto' }}>
       {/* 案内のあいだは、画面にもとからある助手の吹き出しを隠す(光らせた所と窓のすきまからのぞいて、ごちゃつく) */}
       <style>{'[data-assistant-bubble]{visibility:hidden !important}'}</style>
@@ -59708,6 +59758,7 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
       </div>
     </div>
   );
+  return typeof document !== 'undefined' && document.body && typeof ReactDOM === 'object' && ReactDOM.createPortal ? ReactDOM.createPortal(overlay, document.body) : overlay;
 };
 
 // ---- part: 56-assistant-life.jsx ----
@@ -81075,6 +81126,9 @@ function MonsterHeroGame() {
   // 体験版で遊べるのは Monster Hero 1曲・EASY/NORMAL/HARD だけで、デバッグ用の曲は出さない。
   // 音ゲー設定はデバッグ画面と体験版ホームの両方から開く。閉じたとき元の画面へ戻すため覚えておく
   const [rhythmOptionsBack,setRhythmOptionsBack]=useState('RHYTHM_DEBUG');
+  // マルチの部屋の上に重ねて開くオプション(2026-11-07 社長「マルチでもオプションボタンつけて」)。画面(gameState)は部屋のまま
+  const [rhythmMultiOptionsOpen,setRhythmMultiOptionsOpen]=useState(false);
+  useEffect(()=>{if(gameState!=='RHYTHM_MULTI')setRhythmMultiOptionsOpen(false);},[gameState]);
   // 曲えらびで選んでいる曲・難易度。画面(RhythmSongSelect)の中ではなくここで持つ。
   // ・ランキングやマスモン設定を開いて戻ってきても、選んでいた曲がそのまま残る
   // ・選んでいる曲を、曲えらび以外の画面でも鳴らし続けられる
@@ -86068,6 +86122,8 @@ function MonsterHeroGame() {
   const [quickGuideSeen, setQuickGuideSeen] = useState(null);
   const [quickNudge, setQuickNudge] = useState(null);
   const [quickGuideReplay, setQuickGuideReplay] = useState(null);
+  // いま出している案内(前の描画の分)。クイックの∞の WAVE のあいだも案内を出したままにするため(56 の quickGuidePick の showing)
+  const quickGuideShowingRef = useRef(null);
   const quickGuideOpenedDetailRef = useRef(false);   // 案内が曲えらびの周回の帯を開いたか(閉じるときに元へ戻す)
   const QUICK_RHYTHM_INTRO_KEY = 'mh_quick_rhythm_intro_seen_v1';
   const QUICK_RHYTHM_BACKGROUND_KEY = 'mh_quick_rhythm_bg_seen_v1';
@@ -92373,13 +92429,15 @@ function MonsterHeroGame() {
     gameState, busy: quickGuideBusy, seen: quickGuideSeen, quickUnlocked: quickGuideQuickUnlocked, quickEverCleared: quickGuideEverCleared,
     quickSelect: isQuickMode(battleMode), quickRun: isQuickMode(runMode), autoRepeat: autoRepeat === true,
     battleTutorial: battleTutorialStep != null || !!battleScenarioRef.current, raidJack: isRaidJackMode(runMode), backgroundRun: !!rhythmBackgroundRun,
-    nudgeOk: !!quickNudge && quickNudgeAllowed(quickNudge, quickGuideToday),
+    nudgeOk: !!quickNudge && quickNudgeAllowed(quickNudge, quickGuideToday), showing: quickGuideShowingRef.current,
   }) : null;
   // 「あとで」を押した案内は、その画面を出ているあいだは出し直さない(画面を開き直したら、また最初から)
   const [quickGuideLater, setQuickGuideLater] = useState(null);
   // 出している誘導(数えたあとも、閉じるまで出しておく)
   const [quickNudgeShowing, setQuickNudgeShowing] = useState(null);
-  useEffect(() => { setQuickGuideLater(null); setQuickNudgeShowing(null); }, [gameState]);
+  //   クイックの∞の WAVE のあいだ(一瞬だけ通る画面)はバトルの画面と同じに数える(56 の quickGuideScreenKey)
+  const quickGuideScreen = typeof quickGuideScreenKey === 'function' ? quickGuideScreenKey(gameState, isQuickMode(runMode), autoRepeat) : gameState;
+  useEffect(() => { setQuickGuideLater(null); setQuickNudgeShowing(null); }, [quickGuideScreen]);
   // 誘導は出すと決めたときに数える(閉じる・読み込み直しでも同じ日に繰り返さない)
   useEffect(() => {
     if (quickGuidePicked !== 'nudgeHome' && quickGuidePicked !== 'nudgeBattle') return;
@@ -92392,6 +92450,7 @@ function MonsterHeroGame() {
   const quickGuideActive = quickGuideReplay ? `replay:${quickGuideReplay}`
     : quickNudgeShowing && !quickGuideBusy ? quickNudgeShowing
     : quickGuidePicked && quickGuidePicked !== quickGuideLater && quickGuidePicked !== 'nudgeHome' && quickGuidePicked !== 'nudgeBattle' ? quickGuidePicked : null;
+  quickGuideShowingRef.current = quickGuideActive;
   // 案内を閉じる。done … 最後まで見た(見た印を付ける)。誘導とヘルプからの見返しは印を付けない
   const finishQuickGuide = (guideId, done) => {
     if (quickGuideReplay) { setQuickGuideReplay(null); return; }
@@ -92937,13 +92996,18 @@ function MonsterHeroGame() {
     if (saved && grant.granted) setGifts(grant.gifts);
     return saved;
   };
-  const claimGiftIds = async (ids, { baseGifts = null, title = 'ギフトを受け取りました' } = {}) => {
+  // ★ギフトの受け取りも、ほかのギフトの書き足し(仲良し度のごほうび・おみやげなど)と同じ列で順番に走らせる(runGiftWrite)。
+  //   2026-11-07: 「すべて受け取る」で仲良し度が上がると、ごほうびの書き足しが受け取る前の一覧を読み、受け取ったあとで書き戻していた。
+  //   ダイヤは入ったのにギフトが受け取り待ちへ戻り、もう一度受け取れた(二重取り)。inGiftWrite … すでに列の中から呼ぶとき(ミッションの受け取り)
+  const claimGiftIds = async (ids, { baseGifts = null, title = 'ギフトを受け取りました', inGiftWrite = false } = {}) => {
     // ミッションの受け取り中は動かない(古いギフト一覧で保存し直さないため)。ミッションの中から呼ぶときは baseGifts を渡す
     if (giftClaimingRef.current || (!baseGifts && missionClaimingRef.current)) return null;
     giftClaimingRef.current = true;
-    try {
+    const run = async () => { try {
       const wanted = new Set(ids);
-      const sourceGifts = Array.isArray(baseGifts) ? baseGifts : gifts;
+      // 列の順番が来てから、保存から読み直す(画面の控えは、ほかの書き足しのぶんが入る前の古い一覧のことがある)
+      const storedGifts = Array.isArray(baseGifts) ? null : await storeGet('mh_gifts', null, false);
+      const sourceGifts = Array.isArray(baseGifts) ? baseGifts : Array.isArray(storedGifts) ? storedGifts : gifts;
       const claimedGifts = [];
       // ブリーダー経験値の報酬もあるので、経験値も一緒に持って回る。
       // プロフィールフレームの報酬(2026-10-20・ハロウィン・妖)もあるので、持っている枠も一緒に持って回る(保存から読み直した値)
@@ -93007,7 +93071,8 @@ function MonsterHeroGame() {
       setRewardReceipt({ title, rewards, count:claimedCount });
       try { Audio_.se.levelUp(); } catch {}
       return { count:claimedCount, rewards };
-    } finally { giftClaimingRef.current = false; }
+    } finally { giftClaimingRef.current = false; } };
+    return inGiftWrite ? run() : runGiftWrite(run);
   };
   // タブに出す赤い丸バッジ。0件なら何も出さない。
   // Tailwindの動的クラス生成に頼らず色と形はinline styleで指定する(生成に失敗して透明になるのを避ける)
@@ -93084,7 +93149,9 @@ function MonsterHeroGame() {
   const sendMissionGroupsToGiftBox = async (groups) => {
     {
       const state=normalizeMissions(missionsRef.current);
-      let nextGifts=Array.isArray(gifts)?[...gifts]:[];
+      // ギフト一覧は保存から読み直す(画面の控えは、ほかの書き足しのぶんが入る前の古い一覧のことがある。runGiftWrite の列の中で呼ぶ)
+      const storedGifts=await storeGet('mh_gifts',null,false);
+      let nextGifts=Array.isArray(storedGifts)?[...storedGifts]:Array.isArray(gifts)?[...gifts]:[];
       const giftIds=[];
       let count=0;
       ['daily','weekly','monthly'].forEach(type=>{
@@ -93129,15 +93196,19 @@ function MonsterHeroGame() {
     if (missionClaimingRef.current || giftClaimingRef.current) return null;
     missionClaimingRef.current = true;
     try {
-      const sent = await sendMissionGroupsToGiftBox(groups);
-      const baseGifts = sent ? sent.gifts : (Array.isArray(gifts) ? gifts : []);
-      const ids = sent ? [...sent.giftIds] : [];
-      if (includeBacklog) {
-        const now = Date.now();
-        baseGifts.forEach(g => { if (g?.source === 'mission' && !g.claimedAt && giftIsClaimable(g, now) && !ids.includes(g.id)) ids.push(g.id); });
-      }
-      if (!ids.length) return null;
-      return await claimGiftIds(ids, { baseGifts, title:'ミッション報酬を受け取りました' });
+      // 送る → 受け取るを、ほかのギフトの書き足しと同じ列で1つの順番として走らせる(あいだに書き戻されない)
+      return await runGiftWrite(async () => {
+        const sent = await sendMissionGroupsToGiftBox(groups);
+        const stored = sent ? null : await storeGet('mh_gifts', null, false);
+        const baseGifts = sent ? sent.gifts : (Array.isArray(stored) ? stored : Array.isArray(gifts) ? gifts : []);
+        const ids = sent ? [...sent.giftIds] : [];
+        if (includeBacklog) {
+          const now = Date.now();
+          baseGifts.forEach(g => { if (g?.source === 'mission' && !g.claimedAt && giftIsClaimable(g, now) && !ids.includes(g.id)) ids.push(g.id); });
+        }
+        if (!ids.length) return null;
+        return await claimGiftIds(ids, { baseGifts, title:'ミッション報酬を受け取りました', inGiftWrite:true });
+      });
     } finally { missionClaimingRef.current = false; }
   };
   const claimMission = (type,mission) => claimMissionRewards({ [type]:[mission] });
@@ -101612,6 +101683,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           onBack={gameState==='RHYTHM_MODE_SELECT'?exitRhythmSongSelect:()=>setGameState('RHYTHM_MODE_SELECT')}
           onRoomEntered={()=>setGameState('RHYTHM_MULTI')}
           onStepAway={exitRhythmSongSelect}
+          onOpenOptions={()=>setRhythmMultiOptionsOpen(true)} onCloseOptions={()=>setRhythmMultiOptionsOpen(false)}
           rankingSupport={{
             breederIcon:rankingBreederIcon,
             // 部屋の中から全国ランキングを見る(2026-10-04・ユーザー指示「マルチ中にもランキングボタンいれて」)。
@@ -101656,6 +101728,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }:null}
           onStartPlay={(song,difficulty,startId,count,streak,cpus)=>{if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();setRhythmPlay({song,difficulty,from:'multi',multiStartId:startId,multiCount:count,multiStreak:streak,multiCpus:cpus||0});setGameState('RHYTHM_PLAY');}}/>}
 
+        {rhythmMultiOptionsOpen&&gameState==='RHYTHM_MULTI'&&<div data-rhythm-multi-options-layer className="fixed inset-0 flex flex-col bg-slate-950" style={{zIndex:89000}}>
+          {/* 部屋の上に重ねるソロと同じオプション。タイミング調整・判定ラインを実際の画面で合わせる、は演奏を始めるので部屋の中では出さない */}
+          <RhythmOptions value={rhythmSettings} onBack={()=>setRhythmMultiOptionsOpen(false)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);rhythmResetAutoEffect();return saved;}}/>
+        </div>}
         {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onCalibrate={startRhythmCalibration} onLineAdjust={startRhythmLineAdjust} calibrationResult={rhythmCalibrationResult} onClearCalibration={()=>setRhythmCalibrationResult(null)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);rhythmResetAutoEffect();return saved;}}/>}
 
         {/* 音ゲー体験版のホーム。デバッグ画面をそのまま公開しないために作った、正式導線の最小構成。

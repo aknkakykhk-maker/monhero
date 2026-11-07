@@ -32,7 +32,7 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 検査(`tools/ui/screen-effects-check.js`)は本体と切り出した画面を合わせて数えるので、
 移しただけでは落ちない。落ちるのは「表に書き忘れた」「表から消えた」ときだけ。
 
-## 画面専用(`screen`)— 22 箇所
+## 画面専用(`screen`)— 73 箇所
 
 | 目印 | 分類 | 現状 | 何をしているか / 判断の理由 |
 | --- | --- | --- | --- |
@@ -81,8 +81,18 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setTimeout(() => step({ type: 'reveal' })` | screen | 止める | MFバトルカードの相手の死神の力で見せる段を、少しおいて進める |
 | `setTimeout(() => step({ type: 'pass' })` | screen | 止める | MFバトルカードの守れるカードが無いとき、少しおいて「守らない」で進める(オプションの自動) |
 | `d.timer = setTimeout(() => { if (!d.active) { d.long = true; setDetail(no); } }, pressMs)` | screen | 止める | MFバトルカードの手札の長押し(指で運ぶ操作の中)。指を離すと止める・画面を離れたら止める |
+| `setBeatRankFx((f) => (f && !f.ready` | screen | 止める | モンヒロビートのランクの演出を5秒で「閉じてよい」にする。演出を出している画面の中だけ(2026-11-07 表に足した) |
+| `timersRef.current.push(setTimeout(f, ms))` | screen | 止める(`clearTimers`) | バトル画面の演出(71-screen-battle.jsx)の段取りを順に出す。画面を離れたら止めてよい(2026-11-07 表に足した) |
+| `setTimeout(() => onDone && onDone(fx.id), dur)` | screen | 止める | バトル画面(71)の演出が終わったら一覧から外す(2026-11-07 表に足した) |
+| `setTimeout(()=>setHeldLuckBanners([]),2400)` | screen | 止める | バトル画面(71)の運の帯を消す(2026-11-07 表に足した) |
+| `setTimeout(() => setFxDone(true), COCYTUS_REVIVE_FX_MS)` | screen | 止める | バトル画面(71)のコキュートスの復活の演出の終わり(2026-11-07 表に足した) |
+| `setTimeout(() => { el.src = cardArtRetryUrl(url); }, 500)` | screen | 投げっぱなし | MFバトルカード(84)の表示中の絵を読み直す。その画像の要素の中だけ(2026-11-07 表に足した) |
+| `setTimeout(() => setTacGlow(null), 2400)` | screen | 止める | MFバトルカード(84)の戦術カードの光を消す(2026-11-07 表に足した) |
+| `setTimeout(() => setCutIn((cur) => (cur && cur.key === mv.key` | screen | 止める(`motionTimers`) | MFバトルカード(84)の技のカットインを消す(2026-11-07 表に足した) |
+| `motionTimers.current.push(setTimeout(fn, lead))` | screen | 止める(`motionTimers`) | MFバトルカード(84)の技の動きを少し遅らせて出す(2026-11-07 表に足した) |
+| `cardShopScrollMemo.pending=false; },1500)` | screen | 投げっぱなし(`mountedRef` で守る) | マーケット(55)で買ったあと、一覧の位置の控えを外す(2026-11-07 表に足した) |
 
-## 進行(`progress`)— 30 箇所
+## 進行(`progress`)— 46 箇所
 
 止めると何が起きるかを「壊れ方」に書いた。**ここを画面専用にしてはいけない。**
 
@@ -120,8 +130,11 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setTacticsExCutin(null); }, ms` | progress | 止める(次を出すとき) | EXのカットイン(教えカードの演出もここへまとまった)を消す。止めると出たまま |
 | `setEffect(null), TRANSCEND_ENHANCE_FX_MS` | progress | 投げっぱなし | 超越強化の演出を消す。止めると出たまま |
 | `const t = setTimeout(go, CARD_RESULT_WAIT_MS` | progress | 止める(画面を閉じたとき) | MFバトルカードの勝ち負けを少し見せてから結果へ進め、記録とカードポイントを保存する。止めると記録が残らない |
+| `new Promise((r) => setTimeout(r, capMs))` | progress | await | MFバトルカード(84)の絵の先読みを待つ上限。止めると対戦の始まりが待ちっぱなしになる(2026-11-07 表に足した) |
+| `const pols = [cardSharePolicy(game.auto.tactics` | progress | 止める | MFバトルカード(84)のオートで挑む対戦を、少し待ってから自動で進める。止めると対戦が始まらない(2026-11-07 表に足した) |
+| `const act = cardAiChooseAction(db, st, autoPolicy);` | progress | 止める | MFバトルカード(84)のオートで自分の側の手を進める。止めるとオートの対戦が止まる(2026-11-07 表に足した) |
 
-## 対象外 — 16 箇所
+## 対象外 — 33 箇所
 
 画面(`gameState`)ではなく、起動経路やアプリ全体に紐づくもの。**登録簿には載せない**。
 起動経路は `REGRESSION_RISK_MAP.md` §4-6 の「触らない領域」でもある。
@@ -169,6 +182,9 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `const loop = () => { timer = setTimeout(` | screen | 止める | HOMEのジャックが「ときどき両腕ポーズ」を取る間隔(約5.6秒おき)。画面を離れたら止める(`alive`・`clearTimeout`) |
 | `setPose(false); loop(); }, 1400)` | screen | 止める | 両腕ポーズを戻して次の間隔へ(1.4秒)。画面を離れたら止める |
 | `setRaidGrowthBanner(null), 3200` | screen | 止める | レイドバトルの「強化が入ったターン」の帯を消す(3.2秒)。後始末で `clearTimeout` |
+| `setThemeSeasonArm(n => n + 1)` | 対象外 | 止める | 季節の見た目(テーマ)が切り替わる時刻を待つ。画面ではなくアプリ全体の見た目(2026-11-07 表に足した) |
+| `setTimeout(() => go(cardArtRetryUrl(url), left - 1), 600)` | 対象外 | 投げっぱなし | MFバトルカード(84)の絵の読み込み直し。画面をまたぐ絵の控え(`CARD_ART_STATE`)を埋める(2026-11-07 表に足した) |
+| `growthFxSessionLevel(list)` | 対象外 | 投げっぱなし | 助手とのセッション(80)の祝いの演出をまとめて出す待ち。部品の外(モジュールの待ち行列)(2026-11-07 表に足した) |
 <!-- 2026-10-22 開発部: 表から漏れていた16か所(レイド・ハムのカウンター・まとめて転生・クイックの自動周回・切り出した画面)を足した -->
 | `setTimeout(() => { void syncBuddyRanksLive(); }, wait)` | 対象外 | 止める | 相棒ランキングの裏での送り直し(起動中ずっと)。effect の後始末で `clearTimeout` |
 | `const totals = await Promise.race([sbFetchRaidJackTierTotals(RAID_JACK_EVENT.id)` | 対象外 | await | 大王が倒されたかを確かめる通信の時間切れ(4秒で null。届かなければ「まだ」) |
