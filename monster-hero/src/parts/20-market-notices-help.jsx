@@ -1027,7 +1027,7 @@ const HELP_DATA_TITLES = {
   rhythmDifficultyRanks: 'モンヒロビートの難易度別の満点と上限ランク',
   rhythmHellEntry: 'はじめての HELL の目安',
   rhythmHellSongs: 'HELL がある曲',
-  rhythmDemoSongLevels: '体験版で遊べる難易度とレベル',
+  rhythmDemoSongLevels: '遊べる難易度とレベル',
   rhythmDemoSongList: '先行公開している曲',
   rhythmDifficultySpread: '同じ難易度でも曲でどれだけ違うか',
   rhythmSongArtwork: '曲えらびに絵が出る曲',

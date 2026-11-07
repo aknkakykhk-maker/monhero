@@ -50,5 +50,8 @@ ok('予告の助手の告知は、本オープンの時刻で止まる', /id:'up
 const app = read('monster-hero/src/parts/60-app.jsx');
 ok('HOME のお話は、そのときの印で本編/予告を決める', /const open = RELEASE_FLAGS\.rhythmGrandOpen === true;\n\s*const id = open \? RHYTHM_GRAND_OPEN_STORY_ID : \(RELEASE_FLAGS\.rhythmGrandOpenTeaser === true \? RHYTHM_GRAND_OPEN_TEASER_STORY_ID : null\);/.test(app));
 ok('新しく始めた人へ本オープン記念を配ったら、全員向けの記念ギフトの印も立てる(時刻で判断)', /if \(rhythmGrandOpenReleased\(\)\) await storeSet\(GRAND_OPEN_ALL_GIFT_KEY, true, false\);/.test(app));
+// 本オープンのあとは、曲えらびに「体験版」の札を出さない(2026-11-08 ミハリ S1)
+const scr = read('monster-hero/src/parts/58-screen-rhythm.jsx');
+ok('曲えらびの「体験版」の札は、本オープンのあとは出さない(デバッグの「記録しない」は出す)', /\{\(debugAll\|\|!\(typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS\.rhythmGrandOpen===true\)\)&&<span data-rhythm-demo-badge/.test(scr));
 console.log(failed ? `${failed}件のNGがあります` : 'すべてOK');
 process.exit(failed ? 1 : 0);

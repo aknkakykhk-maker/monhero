@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b8bf8678dcc9e193
+// source-sha256: b650c1589252fbe5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -19508,7 +19508,7 @@ const HELP_DATA_TITLES = {
   rhythmDifficultyRanks: 'モンヒロビートの難易度別の満点と上限ランク',
   rhythmHellEntry: 'はじめての HELL の目安',
   rhythmHellSongs: 'HELL がある曲',
-  rhythmDemoSongLevels: '体験版で遊べる難易度とレベル',
+  rhythmDemoSongLevels: '遊べる難易度とレベル',
   rhythmDemoSongList: '先行公開している曲',
   rhythmDifficultySpread: '同じ難易度でも曲でどれだけ違うか',
   rhythmSongArtwork: '曲えらびに絵が出る曲',
@@ -34849,8 +34849,9 @@ const RhythmOptions = ({
       "data-rhythm-option-stepper-label": key,
       className: "flex items-baseline justify-between gap-2 px-0.5 pb-0.5 leading-none"
     }, React.createElement("small", {
-      className: "text-[10px] font-black text-cyan-200"
-    }, label), React.createElement("small", {
+      className: "min-w-0 text-[10px] font-black text-cyan-200",
+      style: JA_WRAP_STYLE
+    }, jaWrap(label)), React.createElement("small", {
       className: "text-[10px] font-bold tabular-nums text-slate-400"
     }, decimals > 0 ? min.toFixed(decimals) : min, "〜", decimals > 0 ? max.toFixed(decimals) : max, suffix)), React.createElement("div", {
       className: "grid grid-cols-[1fr_1fr_minmax(52px,1.3fr)_1fr_1fr] items-center gap-1"
@@ -66957,7 +66958,7 @@ function RhythmSongSelectScreen({
     className: "flex items-center gap-1.5 text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
   }, React.createElement("span", {
     className: "max-[359px]:hidden"
-  }, "MONBEAT"), React.createElement("span", {
+  }, "MONBEAT"), (debugAll || !(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmGrandOpen === true)) && React.createElement("span", {
     "data-rhythm-demo-badge": true,
     "data-rhythm-debug-select-badge": debugAll ? true : undefined,
     className: "rounded-full border border-amber-300/60 bg-amber-500/15 px-1.5 py-px text-[8px] tracking-normal text-amber-200"
