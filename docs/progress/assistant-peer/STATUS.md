@@ -182,3 +182,4 @@
 - 案 `LIFE-HOUSE-PLAN.md`・止め絵 `ux/life-house-mock-tate.jpg`(縦)・`ux/life-house-mock-yoko.jpg`(横)・`ux/life-house-mock-ab.png`(A/B 5つ)。窓口へ送った
 - セッションとのつなぎ: マモリ(2)(session_0113GBaBXVrsDeVzvjC9ndFy)に要るものを返した(OnLive の知らせ・Invite の入口はプライベート・券なしは段階2。こちらは assistantLifeAtBeat・assistantLifeBeatIds を出し、マモリ側が呼んだ時点で paid:visit を付ける。線引きはマモリ案に合わせ A=出かけているあいだ何回でも/B=1日1回/C=その日ずっと・段の名前は assistantPeerStageName・暮らしの経験値は入れない)
 - 待っていること: 社長の A/B(❶ 家の絵 ❷ 下の作り ❸ 入場 ❹ 曲 ❺ 券なしの線引き A/B/C)と「これで作る」→ 段階1を作る
+- 2026-11-07 社長の答え: ❶ B(家の絵は描き下ろし。届くまでは図形の形)/❷ A 札4つ+アイコンの列/❸ A 毎回/❹ A「風がそよぐ場所」/❺ 出かけているあいだは何回でも券なし(段階2)。注文書 `HOUSE-ART-ORDER.md`(縦 1080×1680・横 1560×1080・部屋の位置の表)。→ 段階1を作り始めた(枝 claude/assistant-life-stage1)
