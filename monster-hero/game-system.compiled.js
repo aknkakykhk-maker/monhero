@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1e268e3aab2a80fa
+// source-sha256: b54d965e6a9ebd3c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -51051,7 +51051,7 @@ const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
     gattai: [[['atsu', 'excited', '{c}、いくぞ！'], ['sorashido', 'excited', 'うぉぉぉ！ここだぜ！']]]
   },
   'dra-erubin': {
-    play: [[['erubin', 'happy', '{c}、無理しないでね'], ['dra', 'happy', '大丈夫だな、楽しいからな']], [['dra', 'happy', '{c}、カードと同じで、リズムも慣れだからな'], ['erubin', 'happy', 'ありがとね、先生']]],
+    play: [[['erubin', 'happy', '{c}、無理しないでね'], ['dra', 'happy', '大丈夫だぞ、楽しいからな']], [['dra', 'happy', '{c}、カードと同じで、リズムも慣れだからな'], ['erubin', 'happy', 'ありがとね、先生']]],
     result: [[['erubin', 'happy', 'いい演奏だったね'], ['dra', 'wink', 'えへへ、またやろうな']]],
     gattai: [[['dra', 'excited', '{c}、いくからな'], ['erubin', 'excited', 'うん、一緒に']]]
   },
@@ -51091,7 +51091,7 @@ const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
     gattai: [[['kyuko', 'excited', '{c}、せーので〜'], ['erubin', 'excited', 'うん、せーの']]]
   },
   'erubin-momosuke': {
-    play: [[['erubin', 'happy', '{c}、元気だね'], ['momosuke', 'happy', '{c}ももっと盛り上がって！！']], [['momosuke', 'happy', '{c}、ペース大丈夫？'], ['erubin', 'happy', 'うん、いいペースだよ']]],
+    play: [[['erubin', 'happy', '{c}、元気だね'], ['momosuke', 'happy', '{c}も、もっと盛り上がって！！']], [['momosuke', 'happy', '{c}、ペース大丈夫？'], ['erubin', 'happy', 'うん、いいペースだよ']]],
     result: [[['erubin', 'happy', 'にぎやかで楽しかったよ'], ['momosuke', 'wink', '{c}もいい感じだったよ♡']]],
     gattai: [[['momosuke', 'excited', '{c}、見せ場だよ！！'], ['erubin', 'excited', 'うん、いこうか']]]
   },
@@ -51106,7 +51106,7 @@ const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
     gattai: [[['sorashido', 'excited', 'うぉぉぉ！{c}、合わせるぜ！'], ['erubin', 'excited', 'うん、一緒にいこう']]]
   },
   'kiki-kyuko': {
-    play: [[['kyuko', 'happy', '{c}、ここから盛り上がるよ〜'], ['kiki', 'happy', 'ありがとうございまつ、気をつけますね']], [['kiki', 'happy', '叩くのは私、読むのは{c}でつ♪'], ['kyuko', 'happy', 'おけ〜、次はサビ前だよ〜']]],
+    play: [[['kyuko', 'happy', '{c}、ここから盛り上がるよ〜'], ['kiki', 'happy', 'はい、ついていきまつ♪']], [['kiki', 'happy', '叩くのは私、読むのは{c}でつ♪'], ['kyuko', 'happy', 'おけ〜、次はサビ前だよ〜']]],
     result: [[['kyuko', 'happy', '構成どおりきれいにいけたね〜'], ['kiki', 'wink', '{c}のおかげでつ♪']]],
     gattai: [[['kyuko', 'excited', '{c}、せーので〜'], ['kiki', 'excited', 'はい、せーの♪']]]
   },
@@ -51117,7 +51117,7 @@ const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
   },
   'kiki-mua': {
     play: [[['mua', 'happy', '{c}、サビ前そろえよ！'], ['kiki', 'happy', 'はい、合わせまつ♪']], [['kiki', 'happy', '{c}、いい流れでつね♪'], ['mua', 'happy', 'でしょ！このままいこ♪']]],
-    result: [[['mua', 'happy', '今日のあたしたち、まぢぴったりぢゃん♪'], ['kiki', 'wink', 'ふふ、また一緒に演奏しましょうね♪']]],
+    result: [[['mua', 'happy', '今日のあたしたち、まぢぴったりぢゃん♪'], ['kiki', 'wink', 'はい、また一緒に演奏しましょうね♪']]],
     gattai: [[['mua', 'excited', '{c}、いくよ！'], ['kiki', 'excited', 'せーの、でつ♪']]]
   },
   'kiki-sorashido': {
