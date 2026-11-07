@@ -18927,6 +18927,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       <TapRippleLayer spawnRef={rippleSpawnRef}/>
       {/* 上がる値の演出(44-growth-fx.jsx)。見た目だけ。出してよい画面でだけ出し、演奏中・バトル中・お話の最中は貯めておく */}
       <GrowthFxLayer screen={gameState} load={battleFxSettings.load}/>
+      {/* 時間帯で変わる雰囲気(44-time-of-day.jsx)。<html data-mh-tod> を付け替えるだけ */}
+      <TimeOfDayRoot/>
       {updateNotice}{storageTroubleNotice}
       {/* ランの途中ならどの画面でも出し続ける。gameState==='BATTLE' に限っていたため、
           敵を倒してWAVE_RESULTへ移った瞬間に消えて、曲を選べなくなっていた */}
