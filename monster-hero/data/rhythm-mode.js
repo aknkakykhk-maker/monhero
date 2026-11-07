@@ -51760,8 +51760,15 @@ const RHYTHM_NOTE_SWATCH_KINDS=Object.freeze([
   Object.freeze({id:'SKY_SLIDE_R',label:'SKY SLIDE(右手)',words:Object.freeze(['SKY SLIDE','SKYSLIDE','スカイスライド','空のスライド','空中のスライド'])}),
   Object.freeze({id:'SKY_LINE',label:'空の判定ライン',words:Object.freeze(['空の判定ライン','上の判定ライン','空中の判定ライン'])}),
 ]);
-// 描き手を作る。色の組(RHYTHM_NOTE_COLORS)は作るときに読み込むので、色を替えたら作り直す(rhythmApplyNotePalette)
+// ノーツの形(2026-11-07 社長「本オープンにむけて、ノーツの形も何種類か作って選べるようにしたい」)。演奏の設定 noteShape で選ぶ。
+//   既定は STANDARD(これまでの形)。変えるのは粒(ノーツの板)の輪郭と飾りだけで、幅・高さ・位置・当たり判定・色分けは変えない。
+//   マスモンのノーツ・終わりの横棒・帯は、どの形でも今のまま(マスモンのノーツは形でも見分けられるように残す)
+//   ROUND … 両端が丸い / CUT … 両端を斜めに切った六角 / FRAME … 白いふちが太い / STRIPE … 斜めのしま
+const RHYTHM_NOTE_SHAPE_IDS=Object.freeze(['STANDARD','ROUND','CUT','FRAME','STRIPE']);
+let RHYTHM_NOTE_SHAPE_ID='STANDARD';
+// 描き手を作る。色の組(RHYTHM_NOTE_COLORS)と形(RHYTHM_NOTE_SHAPE_ID)は作るときに読み込むので、替えたら作り直す(rhythmApplyNotePalette・rhythmApplyNoteShape)
 const rhythmBuildCanvasRenderer=()=>{
+  const SHAPE=RHYTHM_NOTE_SHAPE_ID;
   const HEAD_H=12;          // 粒の高さ(ノーツ要素 20px から inset 4px 0 を引いた値)
   const GLOW=20;            // 光の画像の余白(px)。いちばん広い光(18px)が収まる
   const CAP=28;             // 3分割画像の両端の幅(角丸7px + 縁取り + 余白)
@@ -51833,6 +51840,25 @@ const rhythmBuildCanvasRenderer=()=>{
     c.beginPath();c.moveTo(x+rr,y);c.lineTo(x+w-rr,y);c.arcTo(x+w,y,x+w,y+rr,rr);c.lineTo(x+w,y+h-rr);c.arcTo(x+w,y+h,x+w-rr,y+h,rr);
     c.lineTo(x+rr,y+h);c.arcTo(x,y+h,x,y+h-rr,rr);c.lineTo(x,y+rr);c.arcTo(x,y,x+rr,y,rr);c.closePath();
   };
+  // 粒の輪郭。STANDARD はこれまでと同じ角丸の四角(roundRectPath そのもの)。r は角の丸み、h は粒の高さ
+  const headPath=(c,x,y,w,h,r)=>{
+    if(SHAPE==='ROUND')return roundRectPath(c,x,y,w,h,h/2);
+    if(SHAPE==='CUT'){const k=Math.max(0,Math.min(h*.5,w/4));c.beginPath();c.moveTo(x+k,y);c.lineTo(x+w-k,y);c.lineTo(x+w,y+h/2);c.lineTo(x+w-k,y+h);c.lineTo(x+k,y+h);c.lineTo(x,y+h/2);c.closePath();return;}
+    if(SHAPE==='FRAME'||SHAPE==='STRIPE')return roundRectPath(c,x,y,w,h,Math.max(r,h*.34));
+    return roundRectPath(c,x,y,w,h,r);
+  };
+  const headEdgeInset=(w,h,r,d)=>{
+    const dd=Math.max(0,Math.min(h/2,d));
+    if(SHAPE==='CUT'){const k=Math.max(0,Math.min(h*.5,w/4));return k*(1-dd/(h/2));}
+    const R=SHAPE==='ROUND'?h/2:(SHAPE==='FRAME'||SHAPE==='STRIPE')?Math.max(r,h*.34):r;
+    return dd>=R?0:R-Math.sqrt(Math.max(0,R*R-(R-dd)*(R-dd)));
+  };
+  // 横の帯(y0〜y1)を、輪郭の内側に収まる台形で塗る(芯の白い帯に使う)
+  const headInnerBand=(c,x,y,w,h,r,y0,y1)=>{
+    const a=headEdgeInset(w,h,r,Math.min(y0-y,y+h-y0))+.5,b=headEdgeInset(w,h,r,Math.min(y1-y,y+h-y1))+.5;
+    if(w-a*2<=0||w-b*2<=0)return;
+    c.beginPath();c.moveTo(x+a,y0);c.lineTo(x+w-a,y0);c.lineTo(x+w-b,y1);c.lineTo(x+b,y1);c.closePath();c.fill();
+  };
   const makeSpriteCanvas=(w,h)=>{const c=document.createElement('canvas');c.width=Math.max(1,Math.ceil(w*dpr));c.height=Math.max(1,Math.ceil(h*dpr));const g=c.getContext('2d');g.scale(dpr,dpr);return {canvas:c,ctx:g,w,h};};
   // 光の画像(3分割)。角丸の四角の外側へ box-shadow 相当のぼかしを一度だけ描く。
   // 高さは HEAD_H(+余白)で固定し、貼るときに奥行きぶんだけ縦へ伸縮する。
@@ -51842,7 +51868,8 @@ const rhythmBuildCanvasRenderer=()=>{
     const w=CAP*2+MID,h=HEAD_H+GLOW*2,s=makeSpriteCanvas(w,h);
     const c=s.ctx;
     // 形は余白(GLOW)の内側に置く。貼るときは「粒の左端 - GLOW」から貼るので、形が粒にぴったり重なる
-    const shape=()=>roundRectPath(c,GLOW-outsetX,GLOW-outsetY,w-GLOW*2+outsetX*2,HEAD_H+outsetY*2,radius+outsetX);
+    const shaped=SHAPE!=='STANDARD'&&!/^(end:|MONSTER)/.test(String(key));
+    const shape=()=>(shaped?headPath:roundRectPath)(c,GLOW-outsetX,GLOW-outsetY,w-GLOW*2+outsetX*2,HEAD_H+outsetY*2,radius+outsetX);
     for(const [blur,color] of glows){
       c.save();c.shadowBlur=blur;c.shadowColor=color;c.fillStyle=color;shape();c.fill();c.restore();
     }
@@ -52013,7 +52040,9 @@ const rhythmBuildCanvasRenderer=()=>{
     // デバッグの「スライドの帯の描き方(検証用)」→ GPU のときは、板の本体(下の縁取り〜押さえている最中の白)を GPU で1回で描く(rhythmCreateGpuPlate)
     // 試作(floor3d): 地上の粒は床に貼り付けた台形で描く(空中・マスモンの粒は今まで)
     const floorHead=floor3d&&!isSkyPlate(note)&&!monster;
-    const plate=geo.gpu&&gpuBandWanted&&backend==='webgl'&&!floorHead?ctx.plate:null;
+    const shaped=SHAPE!=='STANDARD'&&!monster;
+    const plate=geo.gpu&&gpuBandWanted&&backend==='webgl'&&!floorHead&&!shaped?ctx.plate:null;
+    const hp=shaped?headPath:roundRectPath;
     // 光の絵も板のシェーダーで描く(2026-10-12・発熱の手当て④)。ノーツ1つごとに「光(GL2D)→ 板 → 矢印(GL2D)」と描き方が切り替わり、
     // そのたびに GL2D の状態の送り直しが起きていたため。にじむ光(ブルーム)が入っているときは GL2D の足し算の光を覚えて使うので、今までどおり
     const fuseGlow=!!plate&&plateGlowWanted&&headGlowCount>0&&!ctx.bloomActive;
@@ -52048,26 +52077,41 @@ const rhythmBuildCanvasRenderer=()=>{
       if(!failed){
         const outline=RHYTHM_NOTE_OUTLINE_PX*sizeMul;
         ctx.lineWidth=outline;ctx.strokeStyle=RHYTHM_NOTE_OUTLINE_COLOR;
-        roundRectPath(ctx,x-outline/2,y-outline/2,w+outline,h+outline,radius+outline/2);ctx.stroke();
+        hp(ctx,x-outline/2,y-outline/2,w+outline,h+outline,radius+outline/2);ctx.stroke();
       }
       if(style.ring){ctx.lineWidth=2*sizeMul;ctx.strokeStyle=style.ring;roundRectPath(ctx,x-1*sizeMul,y-1*sizeMul,w+2*sizeMul,h+2*sizeMul,radius+1);ctx.stroke();}
-      roundRectPath(ctx,x,y,w,h,radius);
+      hp(ctx,x,y,w,h,radius);
       ctx.fillStyle=fillGradient(x,y,h,style.gradient);ctx.fill();
       ctx.lineWidth=1;ctx.strokeStyle=style.border;ctx.stroke();
+      // 形を変えたときは、芯・飾り・幅広の印を輪郭の内側だけに描く(六角の角から芯がはみ出さない)。
+      // ★WebGL の描き先(GL2D)には clip が無いので、切り抜かずに内側の位置を計算して描く
+      if(shaped&&SHAPE==='STRIPE'&&!failed){
+        // 斜めのしま。間隔と太さは粒の高さに合わせる(奥の小さいノーツでも同じ見え方)。丸い両端にかからない所だけに引く
+        const gap=h*.62,bw=h*.24,e=headEdgeInset(w,h,radius,0)+1,xl=x+e,xr=x+w-e;ctx.fillStyle='rgba(255,255,255,.34)';ctx.beginPath();
+        for(let sx=xl;sx+h+bw<=xr;sx+=gap){ctx.moveTo(sx,y+h);ctx.lineTo(sx+bw,y+h);ctx.lineTo(sx+bw+h,y);ctx.lineTo(sx+h,y);ctx.closePath();}
+        ctx.fill();
+      }
       // 上端の白い筋(inset 0 1px 0)
       // 上半分の白い芯(以前は上端の白い筋1本だった)
       // 白い芯は半透明の四角を2段塗るだけにする(ノーツごとにグラデーションを作らない。上と同じ実測で JS が重かった)
-      if(!failed){ctx.fillStyle='rgba(255,255,255,.62)';ctx.fillRect(x+radius/2,y+1,Math.max(0,w-radius),Math.max(1,h*.22));ctx.fillStyle='rgba(255,255,255,.26)';ctx.fillRect(x+radius/2,y+1+h*.22,Math.max(0,w-radius),Math.max(1,h*.22));}
+      if(shaped&&!failed){ctx.fillStyle='rgba(255,255,255,.62)';headInnerBand(ctx,x,y,w,h,radius,y+1,y+1+Math.max(1,h*.22));ctx.fillStyle='rgba(255,255,255,.26)';headInnerBand(ctx,x,y,w,h,radius,y+1+h*.22,y+1+h*.22+Math.max(1,h*.22));}
+      else if(!failed){ctx.fillStyle='rgba(255,255,255,.62)';ctx.fillRect(x+radius/2,y+1,Math.max(0,w-radius),Math.max(1,h*.22));ctx.fillStyle='rgba(255,255,255,.26)';ctx.fillRect(x+radius/2,y+1+h*.22,Math.max(0,w-radius),Math.max(1,h*.22));}
+      else if(shaped){ctx.fillStyle=style.inset;headInnerBand(ctx,x,y,w,h,radius,y+1,y+2);}
       else{ctx.fillStyle=style.inset;ctx.fillRect(x+radius/2,y+1,Math.max(0,w-radius),1);}
       if(wide&&!monster){
         const bar=ctx.createLinearGradient(0,y,0,y+h);bar.addColorStop(0,'rgba(255,255,255,.95)');bar.addColorStop(1,'rgba(255,255,255,.55)');
-        ctx.fillStyle=bar;ctx.fillRect(x+1,y+1,3,h-2);ctx.fillRect(x+w-4,y+1,3,h-2);
+        const bx=shaped?headEdgeInset(w,h,radius,1)+.5:1;
+        ctx.fillStyle=bar;ctx.fillRect(x+bx,y+1,3,h-2);ctx.fillRect(x+w-bx-3,y+1,3,h-2);
       }
       if(rhythmNoteIsHold(note)&&!monster){ctx.fillStyle='rgba(8,47,73,.55)';ctx.fillRect(x+w*.24,cy-1,w*.52,2);}
+      if(shaped){
+        // 白いふちを太く(FRAME)。外の暗い縁取りの内側へ引くので、粒の大きさは変わらない
+        if(SHAPE==='FRAME'&&!failed){const lw=Math.max(1.2,h*.13);ctx.lineWidth=lw;ctx.strokeStyle='rgba(255,255,255,.92)';hp(ctx,x+lw/2,y+lw/2,w-lw,h-lw,Math.max(0,radius-lw/2));ctx.stroke();}
+      }
       // 奥ほど暗い(filter:brightness 相当。不透明な粒の上では黒を (1-明るさ) の濃さで重ねると同じ色になる)
-      if(brightness<1){roundRectPath(ctx,x,y,w,h,radius);ctx.fillStyle=`rgba(2,6,23,${(1-brightness).toFixed(3)})`;ctx.fill();}
+      if(brightness<1){hp(ctx,x,y,w,h,radius);ctx.fillStyle=`rgba(2,6,23,${(1-brightness).toFixed(3)})`;ctx.fill();}
       // 押さえている最中は粒を白く明るくする(以前は .22)
-      if(pressed){roundRectPath(ctx,x,y,w,h,radius);ctx.fillStyle='rgba(255,255,255,.4)';ctx.fill();}
+      if(pressed){hp(ctx,x,y,w,h,radius);ctx.fillStyle='rgba(255,255,255,.4)';ctx.fill();}
     }
     const sideDir=rhythmNoteVisualType(note)==='FLICK'&&!failed?rhythmFlickDir(note):'';
     if(sideDir){
@@ -53881,9 +53925,31 @@ const rhythmApplyNotePalette=(id)=>{
   try{RHYTHM_NOTE_COLORS=RHYTHM_NOTE_PALETTES[next];RHYTHM_NOTE_PALETTE_ID=next;RHYTHM_CANVAS_RENDERER=rhythmBuildCanvasRenderer();return true;}
   catch(e){RHYTHM_NOTE_COLORS=prevColors;RHYTHM_NOTE_PALETTE_ID=prevId;RHYTHM_CANVAS_RENDERER=prevRenderer;return false;}
 };
+// 演奏の設定のノーツの形(noteShape)を描き手へ当てる。同じ形なら何もしない。当て方の決まりは rhythmApplyNotePalette と同じ
+// (★演奏を始めるとき・描き先を取り付ける前だけ呼ぶ)
+const rhythmApplyNoteShape=(id)=>{
+  const next=RHYTHM_NOTE_SHAPE_IDS.includes(id)?id:'STANDARD';
+  if(next===RHYTHM_NOTE_SHAPE_ID)return false;
+  const prevId=RHYTHM_NOTE_SHAPE_ID,prevRenderer=RHYTHM_CANVAS_RENDERER;
+  try{RHYTHM_NOTE_SHAPE_ID=next;RHYTHM_CANVAS_RENDERER=rhythmBuildCanvasRenderer();return true;}
+  catch(e){RHYTHM_NOTE_SHAPE_ID=prevId;RHYTHM_CANVAS_RENDERER=prevRenderer;return false;}
+};
 // ノーツ1つの見本の絵を描く(2026-10-21)。c … 2D の描き込み先(呼ぶ側が画面の細かさの倍率をかけておく)/ kind … RHYTHM_NOTE_SWATCH_KINDS の id / w,h … 描く大きさ(CSS px)。
 // 描けたら true。ヘルプの表・助手のおしゃべり・ノーツ図鑑はこれを使う(絵を手で描いたり写真を貼ったりしない)
 const rhythmDrawNoteSwatch=(c,kind,w,h)=>RHYTHM_CANVAS_RENDERER.drawSwatch(c,kind,w,h);
+// 色の組と形を指定して見本を描く(2026-11-07 社長「各ノーツごとにどうかわるか」の見本を設定の欄に出す)。
+// 組ごとに描き手を作って取っておき、演奏用の描き手(RHYTHM_CANVAS_RENDERER)には触らない(設定画面で選び替えても演奏の描き手は作り直さない)
+const RHYTHM_SWATCH_RENDERERS=new Map();
+const rhythmDrawNoteSwatchLook=(c,kind,w,h,look)=>{
+  const palette=RHYTHM_NOTE_PALETTES[look?.palette]?look.palette:'STANDARD',shape=RHYTHM_NOTE_SHAPE_IDS.includes(look?.shape)?look.shape:'STANDARD';
+  if(palette===RHYTHM_NOTE_PALETTE_ID&&shape===RHYTHM_NOTE_SHAPE_ID)return rhythmDrawNoteSwatch(c,kind,w,h);
+  const key=palette+'|'+shape;let r=RHYTHM_SWATCH_RENDERERS.get(key);
+  if(!r){const prevColors=RHYTHM_NOTE_COLORS,prevShape=RHYTHM_NOTE_SHAPE_ID;
+    try{RHYTHM_NOTE_COLORS=RHYTHM_NOTE_PALETTES[palette];RHYTHM_NOTE_SHAPE_ID=shape;r=rhythmBuildCanvasRenderer();}
+    catch(e){r=null;}finally{RHYTHM_NOTE_COLORS=prevColors;RHYTHM_NOTE_SHAPE_ID=prevShape;}
+    if(!r)return false;RHYTHM_SWATCH_RENDERERS.set(key,r);}
+  return r.drawSwatch(c,kind,w,h);
+};
 // 文に出たノーツの名前から、見本の絵の種類を選ぶ(助手の答えの吹き出し用)。長い言葉から照らし、照らした所は消して短い言葉と二重に数えない。
 // 出てきた順に並べ、同じ種類は1回だけ
 const rhythmNoteSwatchKindsInText=(text)=>{
