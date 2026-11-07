@@ -160,7 +160,7 @@ const ASSISTANT_LIFE_PLAY_POINTS = Object.freeze({
   battle: { amount: 2, dailyMax: null, label: 'バトルを1回' },
   card:   { amount: 3, dailyMax: null, label: 'MFバトルカードを1戦' },
   chat:   { amount: 1, dailyMax: 20,   label: '助手とおしゃべり1往復' },
-  peer:   { amount: 2, dailyMax: 30,   label: '助手どうしを見守る・誘う・差し入れ' },
+  peer:   { amount: 2, dailyMax: 30,   label: '助手どうしを見守る・誘う・道具を贈る' },
 });
 // 続けて遊んだ日数の上乗せ(その日の始まりのにぎわい)
 const ASSISTANT_LIFE_STREAK_BONUS = Object.freeze([{ days: 7, points: 10 }, { days: 3, points: 5 }]);
@@ -806,20 +806,17 @@ const assistantLifePickInviteTalk = (id, life = ASSISTANT_LIFE_STORE.state.life,
 // ---------- 2人にあげる道具(差し入れ・友情のしるし)を分かりやすく(2026-11-07 社長「この見本で作る」 ux/items-mock.png) ----------
 // 名前・絵・値段・上がる量は書き込まず、持ち物(ITEMS)・交換所(RHYTHM_EVENT_POINT_SHOP_OFFERS)・上がり方の表から読む(あとで名前や種類が変わってもずれない)
 // 誘う・引き合わせる … 無料。次の時間の過ごし方が変わる/道具 … 今すぐ2人の友情Lv とあなたとの仲良し度が上がる
-const ASSISTANT_LIFE_ITEM_KINDS = Object.freeze([
-  { kind: 'gift', itemId: 'peer_gift', what: '2人にあげるおやつ。2人でおやつの時間をすごします', player: 'peerGift' },
-  { kind: 'token', itemId: 'peer_token', what: '2人の友情を深める記念の品。2人の友情がぐっと深まります', player: 'peerToken' },
-]);
+// 道具の種類は assistants.js の ASSISTANT_LIFE_GIFTS(10種類・2026-11-08)。印 assistantLife が偽のときは今までの2つ(🧺🤝)だけ(56-assistant-life-gifts.jsx)
+const ASSISTANT_LIFE_ITEM_KINDS = Object.freeze((typeof ASSISTANT_LIFE_GIFTS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_GIFTS) ? ASSISTANT_LIFE_GIFTS : [])
+  .map(g => Object.freeze({ kind: g.kind, itemId: g.itemId, what: g.what })));
 const ASSISTANT_LIFE_ITEM_INTRO_KEY = 'mh_assistant_life_item_intro_v1';
 const assistantLifeItemInfo = (kind) => {
-  const k = ASSISTANT_LIFE_ITEM_KINDS.find(x => x.kind === kind);
-  if (!k) return null;
-  const item = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : []).find(x => x.id === k.itemId) || {};
-  const offer = (typeof RHYTHM_EVENT_POINT_SHOP_OFFERS !== 'undefined' ? RHYTHM_EVENT_POINT_SHOP_OFFERS : []).find(x => x.itemId === k.itemId) || {};
-  const peerAmt = (typeof ASSISTANT_PEER_BOND_ACTIONS !== 'undefined' && ASSISTANT_PEER_BOND_ACTIONS[kind]) ? ASSISTANT_PEER_BOND_ACTIONS[kind].amount : 0;
-  const playerAmt = (typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS[k.player]) ? ASSISTANT_BOND_ACTIONS[k.player].amount : 0;
-  return { ...k, name: item.name || offer.name || '', emoji: item.emoji || offer.emoji || '🎁', cost: Number.isFinite(offer.cost) ? offer.cost : null, peerAmt, playerAmt };
+  const g = typeof assistantLifeGiftOf === 'function' ? assistantLifeGiftOf(kind) : null;
+  if (!g) return null;
+  // 上がる量は「ふつう」のとき(好きなら多め・苦手なら少なめ)。今の2つ(🧺🤝)は今と同じ数
+  return { kind: g.kind, itemId: g.itemId, what: g.what, name: g.name, emoji: g.emoji, cost: g.cost, peerAmt: g.peer, playerAmt: g.player };
 };
+const assistantLifeItemInfos = () => (typeof assistantLifeGiftKinds === 'function' ? assistantLifeGiftKinds() : []).map(g => assistantLifeItemInfo(g.kind)).filter(Boolean);
 // 持ち物・交換所の説明(印が真のときだけ「何が起きるか」中心の文。偽なら今の desc)
 const assistantLifeItemDesc = (item) => {
   if (!item) return '';
@@ -827,7 +824,7 @@ const assistantLifeItemDesc = (item) => {
   const k = ASSISTANT_LIFE_ITEM_KINDS.find(x => x.itemId === item.id);
   if (!k) return item.desc || '';
   const info = assistantLifeItemInfo(k.kind);
-  return `${k.what.split('。')[0]}。助手2人に使うと、2人の友情Lv +${info.peerAmt}・2人それぞれとあなたの仲良し度 +${info.playerAmt}・2人のひとこと。HOME の「🏡 助手ライフ」で、一緒にいる2人に渡す。1日1回まで(朝4時に戻る)。ビートP交換所で手に入る。`;
+  return `${k.what}。助手2人に贈ると、2人の友情Lv +${info.peerAmt}・2人それぞれとあなたの仲良し度 +${info.playerAmt}(好きな物なら多め・苦手な物なら少なめ)・2人のひとこと。HOME の「🏡 助手ライフ」で、一緒にいる2人に贈る。同じ道具は1日1回・合わせて1日3回まで(朝4時に戻る)。ビートP交換所で手に入る。`;
 };
 // 道具を渡すとよさそうな2人の印(もうすぐ友情Lv が上がる/言い合いのあと)
 const assistantLifePairHint = (peerSt, life, a, b) => {
@@ -1035,9 +1032,9 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
   const mood = (id) => ASSISTANT_LIFE_MOODS[(life.moods || {})[id]] || '';
   // 2人にあげる道具
   const canGive = !!(peerItems && onUseItem);
-  const itemInfos = ASSISTANT_LIFE_ITEM_KINDS.map(k => assistantLifeItemInfo(k.kind));
+  const itemInfos = assistantLifeItemInfos();
   const haveOf = (kind) => (peerItems && Number(peerItems[kind])) || 0;
-  const usedOf = (kind) => !!(peerSt && typeof assistantPeerItemUsedToday === 'function' && assistantPeerItemUsedToday(peerSt, kind));
+  const usedOf = (kind) => !!(typeof assistantLifeGiftReason === 'function' && assistantLifeGiftReason(kind, peerSt, 1));
   const pairsOf = (gids) => { const o = []; for (let i = 0; i < gids.length; i++) for (let j = i + 1; j < gids.length; j++) o.push([gids[i], gids[j]]); return o; };
   const openGive = (g) => {
     const kind = itemInfos.find(x => haveOf(x.kind) > 0 && !usedOf(x.kind))?.kind || 'gift';
@@ -1050,7 +1047,7 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
     if (!give || !give.pair) return;
     const talk = await onUseItem(give.kind, give.pair);
     const info = assistantLifeItemInfo(give.kind);
-    if (!talk) { setNote(`${info.name}は、いまは渡せません(1日1回・持っている数を見てください)`); setGive(null); return; }
+    if (!talk) { setNote(`${info.name}は、いまは贈れません(同じ道具は1日1回・合わせて1日3回・持っている数を見てください)`); setGive(null); return; }
     const g = (life.groups || []).find(x => give.pair.every(id => x.ids.includes(id)));
     setGive(null);
     playTalk(talk, { ids: give.pair, place: g ? g.place : null });
@@ -1088,16 +1085,16 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
           {tab === 'now' && (<>
             {canGive && !embedded && (
               <div data-assistant-life-items className="mt-2 rounded-2xl border border-amber-300/40 bg-amber-400/5 p-2">
-                <p className="text-[12px] font-black text-amber-200">🎁 2人にあげる道具(今日あと:{itemInfos.map(x => `${x.emoji}${usedOf(x.kind) ? 0 : 1}回`).join('・')})</p>
+                <p className="text-[12px] font-black text-amber-200">🎁 2人に贈る道具(今日あと {typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0}回・同じ道具は1日1回)</p>
                 {itemInfos.map(x => (
                   <div key={x.kind} data-assistant-life-item={x.kind} className="mt-1.5 flex items-center gap-2">
                     <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 text-[24px]" aria-hidden="true">{x.emoji}</span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[12px] font-black text-white">{x.name} <span className="text-[10px] text-slate-400">持っている {haveOf(x.kind)}個</span></p>
+                      <p className="text-[12px] font-black text-white">{x.name} <span className="text-[10px] text-slate-400">持っている {haveOf(x.kind)}個{usedOf(x.kind) && haveOf(x.kind) > 0 ? ' ・ 今日は贈れない' : ''}</span></p>
                       <p className="text-[10px] leading-snug text-slate-300">{x.what.split('。')[0]}。<span className="text-orange-300">🤝 友情Lv +{x.peerAmt}</span>・2人との<span className="text-pink-200">💗 仲良し度 +{x.playerAmt}</span>・2人のひとこと</p>
                     </div>
                   </div>))}
-                <p className="mt-1.5 text-[10px] leading-snug text-slate-400">手に入れる:モンヒロビートの「ビートP交換所」({itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・')})/渡す:下の組の「{itemInfos[0].emoji} 渡す」。誘う・引き合わせるは無料で、次の時間の過ごし方が変わります</p>
+                <p className="mt-1.5 text-[10px] leading-snug text-slate-400">手に入れる:モンヒロビートの「ビートP交換所」({itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・')})/贈る:下の組の「🎁 贈る」。誘う・引き合わせるは無料で、次の時間の過ごし方が変わります</p>
               </div>)}
             <div className="mt-2 space-y-2">
               {(life.groups || []).map(g => { const key = assistantLifeGroupKey(g); const done = (life.watched || []).includes(key); return (
@@ -1130,7 +1127,7 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
                     {canGive && (
                       <button type="button" data-assistant-life-give={key} onClick={() => openGive(g)}
                         className="min-h-[44px] flex-1 rounded-xl border border-amber-300/60 bg-amber-400/15 px-2 text-[12px] font-black text-amber-100 active:scale-[.98]">
-                        {itemInfos[0].emoji} {g.ids.length === 2 ? '渡す' : 'だれに渡す？'}
+                        🎁 {g.ids.length === 2 ? '贈る' : 'だれに贈る？'}
                       </button>)}
                   </div>
                 </div>); })}
@@ -1172,61 +1169,10 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
             <div className="mt-2"><AssistantPeerMap metIds={metIds} onReplay={(t) => { assistantLifeCloseScreen(); if (onReplay) onReplay(t); }} peerItems={peerItems} onUseItem={onUseItem}/></div>)}
         </div>
       </div>
-      {give && <AssistantLifeGiveSheet give={give} setGive={setGive} life={life} peerSt={peerSt} itemInfos={itemInfos} haveOf={haveOf} usedOf={usedOf} nameOf={nameOf} onGive={doGive}/>}
+      {give && <AssistantLifeGiftSheet give={give} setGive={setGive} life={life} peerSt={peerSt} haveOf={haveOf} nameOf={nameOf} onGive={doGive}/>}
     </div>);
 }
-// 渡す前の確かめ(何の道具か・起きること・使える数・手に入れる所・このあと を1枚で)
-function AssistantLifeGiveSheet({ give, setGive, life, peerSt, itemInfos, haveOf, usedOf, nameOf, onGive }) {
-  const info = itemInfos.find(x => x.kind === give.kind) || itemInfos[0];
-  const pair = give.pair || [];
-  const hint = pair.length === 2 ? assistantLifePairHint(peerSt, life, pair[0], pair[1]) : null;
-  const left = hint && hint.next ? hint.next.min - hint.pts : null;
-  const have = haveOf(info.kind);
-  const used = usedOf(info.kind);
-  const reason = used ? '今日はもう使いました(朝4時に戻ります)' : have <= 0 ? `持っていません(ビートP交換所で手に入ります)` : '';
-  const pairs = [];
-  for (let i = 0; i < give.ids.length; i++) for (let j = i + 1; j < give.ids.length; j++) pairs.push([give.ids[i], give.ids[j]]);
-  const samePair = (p) => pair.length === 2 && p.every(id => pair.includes(id));
-  return (
-    <div data-assistant-life-give-sheet={info.kind} className="absolute inset-0 flex items-end justify-center bg-black/70" style={{ zIndex: 2 }} onClick={() => setGive(null)}>
-      <div className="w-full max-w-md rounded-t-3xl border-t-2 border-amber-300/60 bg-slate-900 p-3" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }} onClick={ev => ev.stopPropagation()}>
-        <div className="flex gap-1.5" role="tablist">
-          {itemInfos.map(x => (
-            <button key={x.kind} type="button" role="tab" aria-selected={x.kind === info.kind} data-assistant-life-give-kind={x.kind} onClick={() => setGive({ ...give, kind: x.kind })}
-              className={`min-h-[40px] flex-1 rounded-xl border px-1 text-[12px] font-black active:scale-[.98] ${x.kind === info.kind ? 'border-amber-300 bg-amber-400/20 text-amber-100' : 'border-white/10 text-slate-400'}`}>{x.emoji} {x.name}({haveOf(x.kind)})</button>))}
-        </div>
-        {pairs.length > 1 && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {pairs.map(p => (
-              <button key={p.join('-')} type="button" data-assistant-life-give-pair={p.join('-')} aria-pressed={samePair(p)} onClick={() => setGive({ ...give, pair: p })}
-                className={`min-h-[36px] rounded-full border px-2.5 text-[11px] font-black active:scale-95 ${samePair(p) ? 'border-amber-300 bg-amber-400/25 text-white' : 'border-white/15 text-slate-300'}`}>{p.map(nameOf).join('と')}</button>))}
-          </div>)}
-        <div className="mt-2 flex items-center gap-2">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/5 text-[30px]" aria-hidden="true">{info.emoji}</span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[15px] font-black text-white">{info.name}を渡す</p>
-            <p className="text-[11px] text-slate-300">{pair.map(nameOf).join(' と ')} へ</p>
-          </div>
-          <AssistantLifeFaces ids={pair} size={40}/>
-        </div>
-        <dl className="mt-2 grid grid-cols-[4.5rem_1fr] gap-x-2 gap-y-1 text-[11px]">
-          <dt className="font-black text-amber-200">何の道具？</dt><dd className="text-slate-200">{info.what}</dd>
-          <dt className="font-black text-amber-200">起きること</dt>
-          <dd className="text-slate-200"><span className="text-orange-300">🤝 2人の友情Lv +{info.peerAmt}</span>{hint ? `(いま Lv${hint.lv}${left != null ? ` → あと${left}で Lv${hint.lv + 1}${left <= info.peerAmt ? '！' : ''}` : ''})` : ''}<br/>
-            <span className="text-pink-200">💗 あなたと {pair.map(nameOf).join('・')} の仲良し度 +{info.playerAmt}</span><br/>渡したあと、2人がひとこと</dd>
-          <dt className="font-black text-amber-200">使える数</dt><dd className="text-slate-200">1日1回(朝4時に戻る)・持っている {have}個</dd>
-          <dt className="font-black text-amber-200">手に入れる</dt><dd className="text-slate-200">ビートP交換所{info.cost != null ? `(${info.cost}P)` : ''}</dd>
-          <dt className="font-black text-amber-200">このあと</dt><dd className="text-slate-200">{hint && hint.after ? '仲直りのきっかけになり、2人がまた一緒にすごしやすくなります' : '2人はしばらくごきげんで、一緒にすごしやすくなります'}</dd>
-        </dl>
-        {reason && <p data-assistant-life-give-reason className="mt-2 rounded-xl bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-300">{reason}</p>}
-        <div className="mt-2 flex gap-2">
-          <button type="button" data-assistant-life-give-cancel onClick={() => setGive(null)} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">やめる</button>
-          <button type="button" data-assistant-life-give-go disabled={!!reason || pair.length !== 2} onClick={onGive}
-            className="min-h-[44px] flex-[2] rounded-xl border border-amber-300/70 bg-amber-400/20 text-[14px] font-black text-amber-100 active:scale-[.98] disabled:opacity-40">{info.emoji} 渡す</button>
-        </div>
-      </div>
-    </div>);
-}
+// 渡す前の確かめ(道具10種類・2人の好み・上がる量)は 56-assistant-life-gifts.jsx の AssistantLifeGiftSheet
 // はじめて道具を手に入れたときの案内(HOME で1回だけ。mh_assistant_life_item_intro_v1)
 function AssistantLifeItemIntro({ peerItems }) {
   const [state, setState] = React.useState('loading'); // loading | show | done
@@ -1250,7 +1196,7 @@ function AssistantLifeItemIntro({ peerItems }) {
           {guide && <AssistantFace who={guide} size={44} accent={guide.accent} expression="wink"/>}
           <p className="text-[14px] font-black text-amber-200">はじめての {info.emoji} {info.name}！</p>
         </div>
-        <p className="mt-2 text-[12px] leading-relaxed text-white">① 「🏡 助手ライフ」で、一緒にいる2人に渡せるよ<br/>② 2人の<span className="whitespace-nowrap">友情Lv と</span>、あなたとの仲良し度が上がる<br/>③ 1日1回。<span className="whitespace-nowrap">「🤝 もうすぐ友情Lv」</span>の印がついた2人に渡すと、<span className="whitespace-nowrap">Lv が上がりやすい！</span></p>
+        <p className="mt-2 text-[12px] leading-relaxed text-white">① 「🏡 助手ライフ」で、一緒にいる2人に贈れるよ<br/>② 2人の<span className="whitespace-nowrap">友情Lv と</span>、あなたとの仲良し度が上がる<br/>③ 好きな物だと多めに上がるよ。好みは<span className="whitespace-nowrap">贈ると分かる！</span><br/>④ 同じ道具は1日1回・<span className="whitespace-nowrap">合わせて1日3回まで</span></p>
         <div className="mt-2 flex gap-2">
           <button type="button" data-assistant-life-item-intro-close onClick={() => close(false)} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">あとで</button>
           <button type="button" data-assistant-life-item-intro-open onClick={() => close(true)} className="min-h-[44px] flex-[2] rounded-xl border border-amber-300/70 bg-amber-400/20 text-[12px] font-black text-amber-100 active:scale-[.98]">「助手ライフ」を開く</button>

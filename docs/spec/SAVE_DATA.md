@@ -69,6 +69,9 @@
 | `mh_assistant_life_play_v1` | object | 助手たちの今のにぎわい `{ day(朝4時区切り), points, counts:{rhythm,battle,card,chat,peer}, lastDay, streak }`。段(静か/ふつう/にぎやか/お祭り)で助手どうしの仲良くなり方と1日の上限が変わる。助手どうしの点 `mh_assistant_peer_bond_v1` は書き換えない(上がる量が変わるだけ) |
 | `mh_assistant_peer_seen14_v1` | object | 助手たちの今で見た台本 `{ [台本の id]: 見た日(朝4時区切り) }`。見た台本は14日のあいだ出しにくくする(全部見ていたら前に見たものから)。14日より前の記録・壊れた値は読むときに捨てる(最大4000件)。公開の印 `assistantLife` が真のときだけ書く |
 | `mh_assistant_life_item_intro_v1` | boolean | 2人にあげる道具(差し入れ・友情のしるし)を初めて持ったときの案内を出したか。true なら2度出さない。公開の印 `assistantLife` が真のときだけ書く |
+| `mh_assistant_life_gift_day_v1` | object | 助手ライフで、その日に2人へ贈った道具(2026-11-08)。`{ day, used: { [kind]: ペア } }`。同じ道具は1日1回・合わせて1日3回を数える。🧺🤝 は前からの `mh_assistant_peer_gift_v1` にも書く |
+| `mh_assistant_life_likes_v1` | object | 分かった助手の好み(2026-11-08)。`{ known: { [助手]: { [道具の key]: 'gift'(贈って分かった) \| 'told'(教えてくれた) } }, told: [{ who, key, day, lv }] }`。told は部屋のシートで見るまで残る知らせ(8件まで)。好みそのものは `ASSISTANT_LIFE_GIFT_LIKES` |
+| `mh_assistant_life_cheki_v1` | object | 思い出チェキを撮った日(2026-11-08)。`{ [ペア]: ['YYYY-MM-DD', …] }`(ペアごとに60枚まで)。思い出アルバムに出す |
 | `mh_assistant_life_diary_v1` | object | 助手ライフ「助手たちの家」の今日あったこと `{ day(朝4時区切り), items:[{ t('HH:MM'), text, ids, kind }], slots:[書いた時間の番号] }`。日が変わると空から始める。40件まで。公開の印 `assistantLife` が真のときだけ書く(2026-11-07) |
 | `mh_assistant_life_intro_v1` | string | 助手ライフの入場の演出を長く見せた日(朝4時区切りの日付)。同じ日の2回目からは短くする。公開の印 `assistantLife` が真のときだけ書く(2026-11-07) |
 | `mh_assistant_life_rhythm_v1` | object | 助手ライフの生活のリズムの変わり方 `{ [助手id]: { shift(-1 朝型〜+1 夜型), day(最後に動いた日), dayGain(その日に動いた量) } }`。夜・朝に誘って遊ぶと少しずつ動き、誘わない日は 0 へ戻る。性格ごとの上限あり。公開の印 `assistantLife` が真のときだけ書く(2026-11-07) |

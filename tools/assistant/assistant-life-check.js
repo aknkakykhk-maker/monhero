@@ -40,14 +40,15 @@ load('monster-hero/data/assistants.js');
 // 2人にあげる道具の検査用に、持ち物(breeder.js)と交換所(rhythm-event.js)から2品の行だけを切り出して読む(ファイル丸ごとはほかの定義に頼っているため)
 {
   const pick = (rel, re) => fs.readFileSync(path.join(root, rel), 'utf8').split('\n').filter(l => re.test(l));
-  const items = fs.readFileSync(path.join(root, 'monster-hero/data/breeder.js'), 'utf8').match(/\{ id:'peer_(gift|token)'[\s\S]*?desc:"[^"]*" \}/g) || [];
-  const offers = pick('monster-hero/data/rhythm-event.js', /Object\.freeze\(\{ id:'peer_(gift|token)'/).map(l => l.trim().replace(/,$/, ''));
+  const items = fs.readFileSync(path.join(root, 'monster-hero/data/breeder.js'), 'utf8').match(/\{ id:'peer_[a-z]+'[\s\S]*?desc:"[^"]*" \}/g) || [];
+  const offers = pick('monster-hero/data/rhythm-event.js', /Object\.freeze\(\{ id:'peer_[a-z]+'/).map(l => l.trim().replace(/,$/, ''));
   vm.runInContext(`var BREEDER_MARKET_ITEMS = [${items.join(',')}]; var RHYTHM_EVENT_POINT_SHOP_OFFERS = [${offers.join(',')}];`, ctx);
 }
 let dayNow = '2026-11-07';
 vm.runInContext('var assistantBubbleDayKey = () => __day(); var assistantPeerDayKey = () => __day(); var jstDayKey4 = () => __day(); var assistantById = (id) => ASSISTANTS.find(a => a.id === id);', Object.assign(ctx, { __day: () => dayNow }));
 load('monster-hero/src/parts/56-assistant-peer.jsx');
 load('monster-hero/src/parts/56-assistant-life.jsx');
+load('monster-hero/src/parts/56-assistant-life-gifts.jsx');
 const G = (expr) => vm.runInContext(expr, ctx);
 
 const PREFS = G('ASSISTANT_LIFE_PREFS');
@@ -486,7 +487,7 @@ if (process.argv.includes('--stats')) {
   // 2人にあげる道具: 数字は表から読む/渡すとよさそうな印
   {
     const g = G("assistantLifeItemInfo('gift')"), t = G("assistantLifeItemInfo('token')");
-    check('⑧ 道具の名前・値段・上がる量は表から読む(差し入れ 200P・友情Lv +15/しるし 500P・+30)', g.name === '差し入れ' && g.cost === 200 && g.peerAmt === 15 && g.playerAmt > 0 && t.cost === 500 && t.peerAmt === 30, `${g.name} ${g.cost} ${g.peerAmt}/${g.playerAmt}・${t.name} ${t.cost} ${t.peerAmt}/${t.playerAmt}`);
+    check('⑧ 道具の名前・値段・上がる量は表から読む(おやつバスケット 200P・友情Lv +15/おそろいのミサンガ 500P・+30)', g.name === 'おやつバスケット' && t.name === 'おそろいのミサンガ' && g.cost === 200 && g.peerAmt === 15 && g.playerAmt > 0 && t.cost === 500 && t.peerAmt === 30, `${g.name} ${g.cost} ${g.peerAmt}/${g.playerAmt}・${t.name} ${t.cost} ${t.peerAmt}/${t.playerAmt}`);
     const hint = G('assistantLifePairHint');
     const h1 = hint({ bond: { 'kiki-mua': 440 }, quarrel: {} }, lifeBase, 'kiki', 'mua');
     const h2 = hint({ bond: { 'kiki-mua': 300 }, quarrel: { pending: { pair: 'kiki-mua' } } }, lifeBase, 'kiki', 'mua');

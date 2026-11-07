@@ -12,7 +12,7 @@
 //   ④ 関係とアルバム: 名前は「友情Lv」「友だち」。今日のペアは出ない
 //   ⑤ 帯は HOME だけ(モンヒロビートの画面へ行くと消える)。画面を閉じているあいだは様子を書き換えない
 //   ⑥ 印が偽のときは帯も入口も出ない
-//   ⑧ 2人にあげる道具: 道具の欄(持っている数・起きること)/「渡す」で5つが分かる確かめ → 渡すと2人のひとこと・持ち物が1つ減る・2回目は理由が出る/
+//   ⑧ 2人に贈る道具(10種類・好み): 道具の欄(持っている数・起きること)/「贈る」で好みと上がる量が分かる確かめ → 渡すと2人のひとこと・持ち物が1つ減る・2回目は理由が出る/
 //      はじめて手に入れたときの案内は HOME で1回だけ(止め絵 life-8-give・life-9-intro)
 //   ⑨ 演出(44-growth-fx.jsx): 渡すと品物の演出/見守って友情Lv が上がると Lv アップの演出(トーストは重ねない)。止め絵 life-10・life-11
 //   ⑭ カード部とのつなぎ口: カード部屋にいる助手を読むだけ・対戦の知らせで今日あったことに1件
@@ -147,6 +147,8 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     await page.locator('[data-assistant-life-room="atsu"]').click(); await page.waitForTimeout(300);
     const sheetText = await page.locator('[data-assistant-life-room-sheet="atsu"]').innerText().catch(() => '');
     check('⑩ 部屋を押すと、その助手のこと(いまどこ・仲良し度・友情Lv・セッション・今日あったこと)', ['あつの部屋', '仲良し度', '友情Lv', 'セッション', '今日あったこと'].every(w => sheetText.includes(w)), sheetText.replace(/\s+/g, ' ').slice(0, 80));
+    check('⑩ 部屋を押すと「🎁 好きなもの」(10種類・分かっていない物は ?)', /好きなもの/.test(sheetText) && (await page.locator('[data-assistant-life-room-sheet="atsu"] [data-assistant-life-gift-like]').count()) === 10
+      && (await page.locator('[data-assistant-life-room-sheet="atsu"] [data-assistant-life-gift-like$=":unknown"]').count()) === 10);
     if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-13-room.png') });
     // ⑪ 声をかける(2026-11-07 社長「声をかけにいったら俺とじゃなくて別の助手と喋ってる」): その助手だけが {name} に話す・場面にいない助手が出ない
     await page.locator('[data-assistant-life-room-sheet="atsu"] [data-assistant-life-room-act="invite"]').click().catch(() => {});
@@ -290,13 +292,16 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     if (await giveBtn.count()) {
       await giveBtn.click(); await page.waitForTimeout(300);
       const sheet = await page.locator('[data-assistant-life-give-sheet]').innerText().catch(() => '');
-      check('⑧ 「渡す」で、何の道具か・起きること・使える数・手に入れる所・このあと が1枚で出る', ['何の道具', '起きること', '使える数', '手に入れる', 'このあと'].every(w => sheet.includes(w)) && /1日1回/.test(sheet));
+      check('⑧ 「贈る」で、道具の名前と中身・2人の好み・上がる量・回数・手に入れる所が1枚で出る(2026-11-08 10種類)', ['仲良し度', '友情Lv', '好み', '同じ道具は1日1回', 'ビートP交換所'].every(w => sheet.includes(w)) && (await page.locator('[data-assistant-life-give-kind]').count()) === 10, sheet.replace(/\s+/g, ' ').slice(0, 80));
+      check('⑧ 贈るシートの道具の名前が、枠からはみ出さない', await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-give-kind]')].every(b => b.scrollWidth <= b.clientWidth + 1)));
       check('⑧ 確かめの1枚もはみ出さない(縦 390)', await page.evaluate(() => { const el = document.querySelector('[data-assistant-life-give-sheet] > div'); const r = el && el.getBoundingClientRect(); return !!r && r.left >= -1 && r.right <= window.innerWidth + 1 && r.top >= -1; }));
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-8-give.png') });
       await page.locator('[data-assistant-life-give-go]').click(); await page.waitForTimeout(800);
       const owned = await ls(page, 'mh_owned_items');
       const info = await talkInfo(page);
-      check('⑧ 渡すと、2人のひとことが流れて差し入れが1つ減る', owned && owned.peer_gift === 1 && !!info, info ? info.id : 'なし');
+      check('⑧ 贈ると、2人のひとことが流れておやつバスケットが1つ減る', owned && owned.peer_gift === 1 && !!info, info ? info.id : 'なし');
+      const likesSaved = await ls(page, 'mh_assistant_life_likes_v1');
+      check('⑧ 贈った2人の好みが分かり、新しいキーに残る(mh_assistant_life_likes_v1)', !!(likesSaved && likesSaved.known && likesSaved.known.kiki && likesSaved.known.kiki.basket && likesSaved.known.mua && likesSaved.known.mua.basket));
       // 品物を渡した演出(44-growth-fx.jsx)。演出は1つずつ出るので、前の札が出ていればその後に出る(数秒で閉じる)
       await page.locator('[data-growth-fx-sheet="item"]').waitFor({ timeout: 10000 }).catch(() => {});
       check('⑨ 渡すと、品物の演出(2人の友情Lv・仲良し度)が出る', (await page.locator('[data-growth-fx-sheet="item"]').count()) > 0);
@@ -311,7 +316,7 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
       await page.locator('[data-assistant-life-give]').first().click(); await page.waitForTimeout(300);
       await page.locator('[data-assistant-life-give-kind="gift"]').click().catch(() => {});
       const reason = await page.locator('[data-assistant-life-give-reason]').innerText().catch(() => '');
-      check('⑧ 同じ日に2回目は、理由が出て渡せない', /今日はもう使いました/.test(reason) && await page.locator('[data-assistant-life-give-go]').isDisabled());
+      check('⑧ 同じ道具を同じ日に2回目は、理由が出て贈れない', /今日はもうこの道具を贈りました/.test(reason) && await page.locator('[data-assistant-life-give-go]').isDisabled(), reason);
       await page.locator('[data-assistant-life-give-cancel]').click();
     } else check('⑧ 渡せる組がある', false);
     // ④ 関係とアルバム
