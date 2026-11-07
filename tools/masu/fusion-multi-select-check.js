@@ -9,7 +9,7 @@ const required = [
   ['uniqueSubIds.size!==requestedSubIds.length', '重複IDの拒否'],
   ['uniqueSubIds.has(fusionMainId)', '主混入の拒否'],
   ['subs.some(sub=>!sub)', '存在しない副の拒否'],
-  ['buildFusionInheritancePlan({ main, subs, selectedSubIds:fusionInheritUniqueIds })', '保存前の継承再計算'],
+  ['buildFusionInheritancePlan({ main, subs, selectedSubIds:fusionInheritUniqueIds, choiceBySubId:fusionInheritSkillKeys })', '保存前の継承再計算'],
   ['inheritancePlan.entries.some(entry=>entry.requested&&!entry.eligible)', '保存前の継承条件検証'],
   ['fusionInheritUniqueIds.some(id=>!uniqueSubIds.has(id))', '選択外IDの拒否'],
   ['inheritCount:inheritancePlan.inheritCount', '実継承数による費用計算'],

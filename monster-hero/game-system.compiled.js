@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 70d267967f544e44
+// source-sha256: 08652483471c3b30
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -1927,6 +1927,374 @@ const moveUniqueOrderKey = (order, key, delta) => {
   list.splice(to, 0, list.splice(from, 1)[0]);
   return list;
 };
+const UNIQUE_BOOST_STEP_COST = 100;
+const UNIQUE_BOOST_COMBO_IDS = Object.freeze(['Zan', 'Eiki', 'KenshiMocchi', 'Ark', 'Iblis', 'Ghost', 'Spooky', 'Illumine']);
+const UNIQUE_BOOST_EFFECT_IDS = Object.freeze(['Mocchi', 'Mitarashi', 'Golem', 'Tiger', 'Monol', 'Zan', 'Eiki', 'KenshiMocchi', 'Illumine', 'Dreamy', 'Yggdrasil', 'MelWhip', 'Melody', 'Kuromy']);
+const UNIQUE_BOOST_HEAL_IDS = Object.freeze(['Suezo', 'Oboro', 'Plant', 'Yggdrasil', 'MelWhip', 'Melody', 'Kuromy']);
+const UNIQUE_BOOST_DURATION_IDS = Object.freeze(['Pandora', 'Dreamy', 'Kyubi', 'Orihime', 'Spooky', 'Snegurochka', 'Undine', 'Yaobikuni']);
+const UNIQUE_BOOST_CHANCE_IDS = Object.freeze(['Ghost', 'Spooky']);
+const UNIQUE_BOOST_TABS = Object.freeze([Object.freeze({
+  id: 'attack',
+  label: '攻撃'
+}), Object.freeze({
+  id: 'slayer',
+  label: '特攻'
+}), Object.freeze({
+  id: 'support',
+  label: '補助'
+})]);
+const UNIQUE_BOOST_DEFINITIONS = Object.freeze([Object.freeze({
+  id: 'power',
+  tab: 'attack',
+  name: '威力',
+  unit: '%',
+  perStep: 0.1,
+  stepCost: 100,
+  maxValue: null,
+  desc: 'この技のダメージが上がります。'
+}), Object.freeze({
+  id: 'critDamage',
+  tab: 'attack',
+  name: '会心ダメージ',
+  unit: '%',
+  perStep: 0.13,
+  stepCost: 100,
+  maxValue: null,
+  desc: 'この技が会心になったときのダメージが上がります。'
+}), Object.freeze({
+  id: 'critRate',
+  tab: 'attack',
+  name: '会心率',
+  unit: 'pt',
+  perStep: 0.1,
+  stepCost: 100,
+  maxValue: 50,
+  desc: 'この技の会心率が上がります。'
+}), Object.freeze({
+  id: 'comboDamage',
+  tab: 'attack',
+  name: '連撃ダメージ',
+  unit: '%',
+  perStep: 0.1,
+  stepCost: 100,
+  maxValue: null,
+  only: UNIQUE_BOOST_COMBO_IDS,
+  desc: 'この技で出る連撃1本1本のダメージが上がります。'
+}), Object.freeze({
+  id: 'comboCount',
+  tab: 'attack',
+  name: '連撃数',
+  unit: '本',
+  perStep: 1,
+  stepCost: 10000,
+  maxValue: 3,
+  only: UNIQUE_BOOST_COMBO_IDS,
+  desc: 'この技で攻撃するたびに、元のダメージの10%の連撃が1本増えます。'
+}), Object.freeze({
+  id: 'mooSlayer',
+  tab: 'slayer',
+  name: 'ムー特攻',
+  unit: '%',
+  perStep: 0.2,
+  stepCost: 100,
+  maxValue: null,
+  desc: '相手がムー・覚醒ムーのとき、この技のダメージが上がります。'
+}), Object.freeze({
+  id: 'eventBossSlayer',
+  tab: 'slayer',
+  name: 'イベボス特攻',
+  unit: '%',
+  perStep: 0.2,
+  stepCost: 100,
+  maxValue: null,
+  desc: '相手が期間イベントのボス(ジャックなど)のとき、この技のダメージが上がります。'
+}), Object.freeze({
+  id: 'chargeBreak',
+  tab: 'slayer',
+  name: '溜めくずし',
+  unit: '%',
+  perStep: 0.2,
+  stepCost: 100,
+  maxValue: null,
+  desc: '相手が必殺技を溜めているとき、この技のダメージが上がります。'
+}), Object.freeze({
+  id: 'immobileSlayer',
+  tab: 'slayer',
+  name: '動けない敵へ',
+  unit: '%',
+  perStep: 0.2,
+  stepCost: 100,
+  maxValue: null,
+  desc: '相手がスタン・絶氷の楔で動けないとき、この技のダメージが上がります。'
+}), Object.freeze({
+  id: 'finisher',
+  tab: 'slayer',
+  name: 'とどめ',
+  unit: '%',
+  perStep: 0.2,
+  stepCost: 100,
+  maxValue: null,
+  desc: '相手のライフが3割以下のとき、この技のダメージが上がります。'
+}), Object.freeze({
+  id: 'rangeMatch',
+  tab: 'slayer',
+  name: '間合いの極意',
+  unit: '%',
+  perStep: 0.15,
+  stepCost: 100,
+  maxValue: null,
+  desc: '相手と同じ距離から撃ったとき、この技のダメージが上がります。'
+}), Object.freeze({
+  id: 'heroPride',
+  tab: 'slayer',
+  name: '勇者の誇り',
+  unit: '%',
+  perStep: 0.15,
+  stepCost: 100,
+  maxValue: null,
+  desc: 'この技を使ったのが勇者モンのとき、この技のダメージが上がります。'
+}), Object.freeze({
+  id: 'extremeChallenge',
+  tab: 'slayer',
+  name: '極限への挑戦',
+  unit: '%',
+  perStep: 0.15,
+  stepCost: 100,
+  maxValue: null,
+  desc: '極限チャレンジで戦うとき、この技のダメージが上がります。'
+}), Object.freeze({
+  id: 'gutsSave',
+  tab: 'support',
+  name: '省気',
+  unit: '%',
+  sign: -1,
+  perStep: 0.04,
+  stepCost: 100,
+  maxValue: 50,
+  desc: 'この技の消費ガッツが減ります。'
+}), Object.freeze({
+  id: 'effectPower',
+  tab: 'support',
+  name: '効果の強さ',
+  unit: '%',
+  perStep: 0.1,
+  stepCost: 100,
+  maxValue: 100,
+  only: UNIQUE_BOOST_EFFECT_IDS,
+  desc: 'この技の効果の数字(被ダメ軽減・ちから・連撃ダメージなど)が、元の数字に対して強くなります。'
+}), Object.freeze({
+  id: 'healAmount',
+  tab: 'support',
+  name: '回復の量',
+  unit: '%',
+  perStep: 0.1,
+  stepCost: 100,
+  maxValue: 100,
+  only: UNIQUE_BOOST_HEAL_IDS,
+  desc: 'この技で回復するライフ・ガッツの量が、元の量に対して増えます。'
+}), Object.freeze({
+  id: 'effectDuration',
+  tab: 'support',
+  name: '効果の長さ',
+  unit: 'ターン',
+  perStep: 1,
+  stepCost: 5000,
+  maxValue: 1,
+  only: UNIQUE_BOOST_DURATION_IDS,
+  desc: 'この技の効果が続くターンが長くなります。'
+}), Object.freeze({
+  id: 'effectChance',
+  tab: 'support',
+  name: '効果の確率',
+  unit: 'pt',
+  perStep: 0.05,
+  stepCost: 100,
+  maxValue: 25,
+  only: UNIQUE_BOOST_CHANCE_IDS,
+  desc: 'この技の当たり(コインの表・運命の輪のダメージ3倍)が出やすくなります。'
+}), Object.freeze({
+  id: 'evade',
+  tab: 'support',
+  name: '見切り',
+  unit: 'pt',
+  perStep: 0.05,
+  stepCost: 100,
+  maxValue: 20,
+  desc: 'この技を使ったターン、敵の攻撃をよける率が上がります。'
+})]);
+const UNIQUE_BOOST_BY_ID = Object.freeze(Object.fromEntries(UNIQUE_BOOST_DEFINITIONS.map(def => [def.id, def])));
+const uniqueBoostMaxSteps = def => def && def.maxValue != null && Number.isFinite(Number(def.maxValue)) ? Math.floor(Number(def.maxValue) / def.perStep + 1e-9) : Infinity;
+const uniqueBoostAppliesTo = (def, monId) => !!def && (!Array.isArray(def.only) || def.only.includes(String(monId || '')));
+const normalizeUniqueBoostSteps = raw => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  UNIQUE_BOOST_DEFINITIONS.forEach(def => {
+    const n = Math.floor(Number(raw[def.id]));
+    if (!Number.isFinite(n) || n <= 0) return;
+    out[def.id] = Math.min(n, uniqueBoostMaxSteps(def));
+  });
+  return out;
+};
+const normalizeUniqueSkillBoosts = masuOrBoosts => {
+  const raw = masuOrBoosts && typeof masuOrBoosts === 'object' && !Array.isArray(masuOrBoosts) && Object.prototype.hasOwnProperty.call(masuOrBoosts, 'uniqueSkillBoosts') ? masuOrBoosts.uniqueSkillBoosts : masuOrBoosts;
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  Object.entries(raw).forEach(([key, steps]) => {
+    if (typeof key !== 'string' || !key) return;
+    const normalized = normalizeUniqueBoostSteps(steps);
+    if (Object.keys(normalized).length) out[key] = normalized;
+  });
+  return out;
+};
+const uniqueBoostStepsOf = (masu, key) => normalizeUniqueSkillBoosts(masu)[String(key || '')] || {};
+const uniqueBoostSpentOfSteps = steps => Object.entries(normalizeUniqueBoostSteps(steps)).reduce((sum, [id, n]) => sum + n * (UNIQUE_BOOST_BY_ID[id]?.stepCost || UNIQUE_BOOST_STEP_COST), 0);
+const uniqueSkillBoostSpentPoints = masu => {
+  const all = normalizeUniqueSkillBoosts(masu);
+  const owned = new Set([OWN_UNIQUE_KEY, ...(Array.isArray(masu?.inheritedUniques) ? masu.inheritedUniques : []).map(unique => inheritedUniqueLevelKey(unique)).filter(Boolean)]);
+  return Object.entries(all).reduce((sum, [key, steps]) => sum + (owned.has(key) ? uniqueBoostSpentOfSteps(steps) : 0), 0);
+};
+const uniqueBoostValue = (def, steps) => Math.max(0, Math.floor(Number(steps) || 0)) * (def?.perStep || 0);
+const formatUniqueBoostValue = (def, steps) => {
+  if (!def) return '';
+  const value = uniqueBoostValue(def, steps);
+  const sign = def.sign === -1 ? '−' : '+';
+  if (def.unit === '本' || def.unit === 'ターン') return `${sign}${Math.round(value)}${def.unit}`;
+  const digits = Math.round(def.perStep * 100) % 10 === 0 ? 1 : 2;
+  return `${sign}${value.toFixed(digits)}${def.unit}`;
+};
+const uniqueBoostSummaryText = (steps, max = 2) => {
+  const normalized = normalizeUniqueBoostSteps(steps);
+  const parts = UNIQUE_BOOST_DEFINITIONS.filter(def => normalized[def.id] > 0).map(def => `${def.name}${formatUniqueBoostValue(def, normalized[def.id])}`);
+  if (!parts.length) return '';
+  return parts.length > max ? `${parts.slice(0, max).join('・')} ほか` : parts.join('・');
+};
+const uniqueBoostMonIdOfKey = (masu, key) => {
+  if (key === OWN_UNIQUE_KEY) {
+    const base = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[masu?.baseId] : null;
+    return base?.unique?.monId || masu?.baseId || null;
+  }
+  const found = (Array.isArray(masu?.inheritedUniques) ? masu.inheritedUniques : []).find(unique => inheritedUniqueLevelKey(unique) === key);
+  return found?.monId || null;
+};
+const uniqueBoostSkillLevelOf = (masu, key) => {
+  if (key === OWN_UNIQUE_KEY) return Math.max(0, Math.min(MAX_UNIQUE_SKILL_LEVEL, Math.floor(Number(masu?.uniqueSkillLevels?.own) || 0)));
+  const list = Array.isArray(masu?.inheritedUniques) ? masu.inheritedUniques : [];
+  const index = list.findIndex(unique => inheritedUniqueLevelKey(unique) === key);
+  return index < 0 ? 0 : resolveInheritedUniqueLevel(masu, list[index], index);
+};
+const applyUniqueBoostPlan = (masu, key, plan) => {
+  if (!masu || typeof key !== 'string' || !plan || typeof plan !== 'object') return null;
+  const normalized = normalizeMasuProgression(masu);
+  const monId = uniqueBoostMonIdOfKey(normalized, key);
+  if (!monId || uniqueBoostSkillLevelOf(normalized, key) < MAX_UNIQUE_SKILL_LEVEL) return null;
+  const all = normalizeUniqueSkillBoosts(normalized);
+  const current = all[key] || {};
+  const next = {
+    ...current
+  };
+  let cost = 0;
+  for (const [id, rawTarget] of Object.entries(plan)) {
+    const def = UNIQUE_BOOST_BY_ID[id];
+    const target = Math.floor(Number(rawTarget));
+    if (!def || !Number.isFinite(target)) return null;
+    const have = current[id] || 0;
+    if (target === have) continue;
+    if (target < have || target > uniqueBoostMaxSteps(def) || !uniqueBoostAppliesTo(def, monId)) return null;
+    cost += (target - have) * def.stepCost;
+    next[id] = target;
+  }
+  if (cost <= 0 || cost > normalized.uniqueSkillPoints) return null;
+  return {
+    cost,
+    nextMasu: {
+      ...normalized,
+      uniqueSkillBoosts: {
+        ...all,
+        [key]: next
+      },
+      uniqueSkillPoints: normalized.uniqueSkillPoints - cost
+    }
+  };
+};
+const withInheritedUniqueBoosts = (masu, newKey, steps) => {
+  const normalized = normalizeUniqueBoostSteps(steps);
+  if (!masu || !newKey || !Object.keys(normalized).length) return masu;
+  return {
+    ...masu,
+    uniqueSkillBoosts: {
+      ...normalizeUniqueSkillBoosts(masu),
+      [newKey]: normalized
+    }
+  };
+};
+const uniqueBoostKeyOfCard = card => {
+  if (!card || card.type !== 'unique') return null;
+  const id = typeof card.inheritedUniqueId === 'string' ? card.inheritedUniqueId.trim() : '';
+  return id ? `${INHERITED_UNIQUE_LEVEL_KEY_PREFIX}${id}` : OWN_UNIQUE_KEY;
+};
+const UNIQUE_BOOST_EMPTY_PROFILE = Object.freeze({
+  damagePct: 0,
+  comboFinalPct: 0,
+  comboExtra: 0,
+  critRatePoints: 0,
+  critDamagePct: 0,
+  gutsSavePct: 0,
+  effectPct: 0,
+  healPct: 0,
+  durationTurns: 0,
+  chancePoints: 0,
+  evadePoints: 0
+});
+const uniqueBoostIsEventBoss = enemyId => typeof EVENT_BOSS_IDS !== 'undefined' && EVENT_BOSS_IDS.includes(String(enemyId || ''));
+const uniqueBoostProfile = (masu, card, ctx = {}) => {
+  const key = uniqueBoostKeyOfCard(card);
+  if (!masu || !key) return UNIQUE_BOOST_EMPTY_PROFILE;
+  const steps = uniqueBoostStepsOf(masu, key);
+  if (!Object.keys(steps).length) return UNIQUE_BOOST_EMPTY_PROFILE;
+  const monId = card.monId || uniqueBoostMonIdOfKey(masu, key);
+  const v = id => uniqueBoostAppliesTo(UNIQUE_BOOST_BY_ID[id], monId) ? uniqueBoostValue(UNIQUE_BOOST_BY_ID[id], steps[id]) : 0;
+  const c = ctx && typeof ctx === 'object' ? ctx : {};
+  const eventBoss = !!c.eventBattle || uniqueBoostIsEventBoss(c.enemyId);
+  const moo = !eventBoss && ['Moo', 'AwakenedMoo'].includes(String(c.enemyId || ''));
+  const ratio = Number(c.enemyHpRatio);
+  let damagePct = v('power');
+  if (moo) damagePct += v('mooSlayer');
+  if (eventBoss) damagePct += v('eventBossSlayer');
+  if (c.enemyCharging) damagePct += v('chargeBreak');
+  if (c.enemyImmobile) damagePct += v('immobileSlayer');
+  if (Number.isFinite(ratio) && ratio > 0 && ratio <= 0.3) damagePct += v('finisher');
+  if (c.sameDistance) damagePct += v('rangeMatch');
+  if (c.isHero) damagePct += v('heroPride');
+  if (c.extreme) damagePct += v('extremeChallenge');
+  return {
+    damagePct,
+    comboFinalPct: v('comboDamage'),
+    comboExtra: Math.round(v('comboCount')),
+    critRatePoints: v('critRate'),
+    critDamagePct: v('critDamage'),
+    gutsSavePct: Math.min(50, v('gutsSave')),
+    effectPct: v('effectPower'),
+    healPct: v('healAmount'),
+    durationTurns: Math.round(v('effectDuration')),
+    chancePoints: v('effectChance'),
+    evadePoints: v('evade')
+  };
+};
+const attackBoostProfile = (masu, card, slotIdx = null, ctx = {}) => {
+  const soul = soulTraitAttackProfile(masu, card, slotIdx);
+  const ub = uniqueBoostProfile(masu, card, ctx);
+  return {
+    ...soul,
+    soulDamagePct: soul.damagePct,
+    damagePct: soul.damagePct + ub.damagePct,
+    damageMultiplier: soul.damageMultiplier * (1 + ub.damagePct / 100),
+    comboFinalMultiplier: soul.comboFinalMultiplier * (1 + ub.comboFinalPct / 100),
+    critRateBonus: soul.critRateBonus + ub.critRatePoints / 100,
+    critDamageBonus: soul.critDamageBonus + ub.critDamagePct / 100,
+    gutsCostMultiplier: soul.gutsCostMultiplier * Math.max(0, 1 - ub.gutsSavePct / 100),
+    uniqueBoost: ub
+  };
+};
 const migrateInheritedUniqueLevelIds = (masuMons, makeId = createInheritedUniqueId) => {
   let changed = false;
   const usedIds = new Set();
@@ -2688,14 +3056,22 @@ const buildUniqueSkillPointReset = masu => {
     const stableShadowExists = legacyMatch && inheritedUniqueLevelKey(normalized.inheritedUniques?.[Number(legacyMatch[1])]) && Object.prototype.hasOwnProperty.call(normalized.uniqueSkillLevels, inheritedUniqueLevelKey(normalized.inheritedUniques[Number(legacyMatch[1])]));
     return sum + (stableShadowExists ? 0 : Math.max(0, Math.floor(Number(level) || 0)));
   }, 0);
-  if (refundedPoints <= 0) return null;
+  const boosts = normalizeUniqueSkillBoosts(normalized);
+  const refundedBoostPoints = Object.values(boosts).reduce((sum, steps) => sum + uniqueBoostSpentOfSteps(steps), 0);
+  const levelPoints = refundedPoints;
+  const total = levelPoints + refundedBoostPoints;
+  if (total <= 0) return null;
+  const nextMasu = {
+    ...normalized,
+    uniqueSkillLevels: Object.fromEntries(Object.keys(normalized.uniqueSkillLevels).map(key => [key, 0])),
+    uniqueSkillPoints: normalized.uniqueSkillPoints + total
+  };
+  if (Object.prototype.hasOwnProperty.call(normalized, 'uniqueSkillBoosts')) nextMasu.uniqueSkillBoosts = {};
   return {
-    refundedPoints,
-    nextMasu: {
-      ...normalized,
-      uniqueSkillLevels: Object.fromEntries(Object.keys(normalized.uniqueSkillLevels).map(key => [key, 0])),
-      uniqueSkillPoints: normalized.uniqueSkillPoints + refundedPoints
-    }
+    refundedPoints: total,
+    refundedLevelPoints: levelPoints,
+    refundedBoostPoints,
+    nextMasu
   };
 };
 const resetMasuForRebirth = (masu, {
@@ -2754,6 +3130,10 @@ const resetMasuForRebirth = (masu, {
   }));
   if (Array.isArray(masu?.uniqueOrder)) reset.uniqueOrder = masu.uniqueOrder.filter(key => typeof key === 'string');
   if (typeof masu?.initialUniqueKey === 'string' && masu.initialUniqueKey) reset.initialUniqueKey = masu.initialUniqueKey;
+  {
+    const boosts = normalizeUniqueSkillBoosts(masu);
+    if (Object.keys(boosts).length) reset.uniqueSkillBoosts = boosts;
+  }
   if (masu?.individualStats && typeof masu.individualStats === 'object') reset.individualStats = {
     ...masu.individualStats
   };
@@ -2931,7 +3311,8 @@ const mergeMasuIntoMon = masu => {
     initialUniqueKey: normalizeInitialUniqueKey(masu),
     soulRankStage: normalizeSoulRankStage(masu?.soulRankStage),
     soulPointMaxReachedLevel: normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel),
-    soulTraitLevels: normalizeSoulTraitLevels(masu?.soulTraitLevels)
+    soulTraitLevels: normalizeSoulTraitLevels(masu?.soulTraitLevels),
+    uniqueSkillBoosts: normalizeUniqueSkillBoosts(masu)
   };
 };
 const masuGrowthBreakdown = (masu, mergedMon) => {
@@ -3135,6 +3516,8 @@ const monsterPowerParts = mon => {
     aptitude: 0,
     unique: 0,
     soul: 0,
+    boost: 0,
+    boostSpent: 0,
     total: 0
   };
   const num = v => Number.isFinite(Number(v)) ? Number(v) : 0;
@@ -3143,12 +3526,16 @@ const monsterPowerParts = mon => {
   const uniques = monsterPowerUniques(mon);
   const uniquePower = uniques.length * MONSTER_POWER_UNIQUE_OWNED + uniques.reduce((sum, u) => sum + Math.max(0, Math.floor(num(u.evoLevel))), 0) * MONSTER_POWER_UNIQUE_PER_LEVEL;
   const soulPower = soulTraitSpentPoints(mon) * 10;
+  const boostSpent = uniqueSkillBoostSpentPoints(mon);
+  const boostPower = boostSpent * 10;
   return {
     stat,
     aptitude: apt,
     unique: uniquePower,
     soul: soulPower,
-    total: stat + apt + uniquePower + soulPower
+    boost: boostPower,
+    boostSpent,
+    total: stat + apt + uniquePower + soulPower + boostPower
   };
 };
 const monsterPowerOf = mon => Math.round(monsterPowerParts(mon).total);
@@ -4130,18 +4517,45 @@ const buildFusionDiamondSummary = ({
 const buildFusionInheritancePlan = ({
   main,
   subs,
-  selectedSubIds
+  selectedSubIds,
+  choiceBySubId = null
 }) => {
   const selected = new Set(Array.isArray(selectedSubIds) ? selectedSubIds : []);
+  const choices = choiceBySubId && typeof choiceBySubId === 'object' ? choiceBySubId : {};
   const mainBase = main ? ALL_PLAYER_MONSTERS[main.baseId] : null;
   const ownedLineageIds = new Set([uniqueLineageId(mainBase?.unique, mainBase?.id), ...(Array.isArray(main?.inheritedUniques) ? main.inheritedUniques : []).map(unique => uniqueLineageId(unique))].filter(Boolean));
   const entries = (Array.isArray(subs) ? subs : []).map(sub => {
     const subBase = sub ? ALL_PLAYER_MONSTERS[sub.baseId] : null;
-    const lineageId = uniqueLineageId(subBase?.unique, subBase?.id);
-    const eligible = !!sub && masuBondLevelInfo(sub).level >= FUSION_INHERIT_MIN_SUB_LEVEL && !!subBase?.unique;
+    const options = !sub ? [] : [...(subBase?.unique ? [{
+      key: OWN_UNIQUE_KEY,
+      unique: subBase.unique,
+      monId: subBase.id,
+      lineageId: uniqueLineageId(subBase.unique, subBase.id),
+      own: true,
+      level: Math.max(0, Math.min(MAX_UNIQUE_SKILL_LEVEL, Math.floor(Number(sub.uniqueSkillLevels?.own) || Number(subBase.unique.evoLevel) || 0)))
+    }] : []), ...(Array.isArray(sub.inheritedUniques) ? sub.inheritedUniques : []).map((unique, index) => {
+      const key = inheritedUniqueLevelKey(unique);
+      if (!key || !isValidInheritedUnique(unique)) return null;
+      return {
+        key,
+        unique,
+        monId: unique.monId || null,
+        lineageId: uniqueLineageId(unique),
+        own: false,
+        level: resolveInheritedUniqueLevel(sub, unique, index)
+      };
+    }).filter(Boolean)].map(option => ({
+      ...option,
+      boosts: uniqueBoostStepsOf(sub, option.key),
+      duplicate: !!option.lineageId && ownedLineageIds.has(option.lineageId)
+    }));
+    const chosenKey = typeof choices[sub?.id] === 'string' && options.some(o => o.key === choices[sub?.id]) ? choices[sub?.id] : OWN_UNIQUE_KEY;
+    const chosen = options.find(o => o.key === chosenKey) || null;
+    const lineageId = chosen ? chosen.lineageId : uniqueLineageId(subBase?.unique, subBase?.id);
+    const eligible = !!sub && masuBondLevelInfo(sub).level >= FUSION_INHERIT_MIN_SUB_LEVEL && options.length > 0;
     const requested = !!sub && selected.has(sub.id);
     const duplicate = !!lineageId && ownedLineageIds.has(lineageId);
-    const inherited = requested && eligible && !!lineageId && !duplicate;
+    const inherited = requested && eligible && !!chosen && !!lineageId && !duplicate;
     if (inherited) ownedLineageIds.add(lineageId);
     return {
       sub,
@@ -4150,7 +4564,10 @@ const buildFusionInheritancePlan = ({
       eligible,
       requested,
       duplicate,
-      inherited
+      inherited,
+      options,
+      chosenKey,
+      chosen
     };
   });
   const inheritedEntries = entries.filter(entry => entry.inherited);
@@ -12520,6 +12937,9 @@ const rankingMasuDetail = masu => {
     ...(soulTraitSpentPoints(masu) > 0 ? {
       soulSpentPoints: soulTraitSpentPoints(masu)
     } : {}),
+    ...(uniqueSkillBoostSpentPoints(masu) > 0 ? {
+      uniqueBoostSpent: uniqueSkillBoostSpentPoints(masu)
+    } : {}),
     statPoints: {
       hp: num(sp.hp),
       atk: num(sp.atk),
@@ -12583,6 +13003,7 @@ const rankingDetailToMasu = (baseId, detail, colors) => {
     soulRankStage: normalizeSoulRankStage(detail.soulRankStage),
     soulTraitLevels: normalizeSoulTraitLevels(detail.soulTraitLevels),
     soulSpentPointsSnapshot: Number.isFinite(Number(detail.soulSpentPoints)) ? num(detail.soulSpentPoints) : 0,
+    uniqueBoostSpentSnapshot: num(detail.uniqueBoostSpent),
     statPoints: {
       hp: num(sp.hp),
       atk: num(sp.atk),
@@ -19939,6 +20360,8 @@ const difficultyStyle = (setting, selected) => selected ? {
 };
 const MOO_BOSS_IDS = ['Moo', 'AwakenedMoo', 'Jack'];
 const isMooBoss = id => MOO_BOSS_IDS.includes(String(id || ''));
+const EVENT_BOSS_IDS = Object.freeze(['Jack']);
+const isEventBossId = id => EVENT_BOSS_IDS.includes(String(id || ''));
 const ENEMY_ART_LAYOUT = {
   default: {
     scanScale: 1,
@@ -21237,9 +21660,13 @@ const FATE_WHEEL_OUTCOMES = Object.freeze([Object.freeze({
   id: 'atk',
   label: 'ちから+15%'
 })]);
-const rollFateCoin = (rnd = Math.random) => rnd() < 0.5 ? 'heads' : 'tails';
+const rollFateCoin = (rnd = Math.random, bonusPoints = 0) => rnd() < 0.5 + Math.max(0, Math.min(25, Number(bonusPoints) || 0)) / 100 ? 'heads' : 'tails';
 const fateCoinDmgMult = side => side === 'heads' ? FATE_COIN_HEADS_MULT : FATE_COIN_TAILS_MULT;
-const rollFateWheel = (rnd = Math.random) => FATE_WHEEL_OUTCOMES[Math.min(FATE_WHEEL_OUTCOMES.length - 1, Math.max(0, Math.floor(rnd() * FATE_WHEEL_OUTCOMES.length)))];
+const rollFateWheel = (rnd = Math.random, bonusPoints = 0) => {
+  const bonus = Math.max(0, Math.min(25, Number(bonusPoints) || 0)) / 100;
+  if (bonus > 0 && rnd() < bonus) return FATE_WHEEL_OUTCOMES.find(o => o.id === 'dmg3');
+  return FATE_WHEEL_OUTCOMES[Math.min(FATE_WHEEL_OUTCOMES.length - 1, Math.max(0, Math.floor(rnd() * FATE_WHEEL_OUTCOMES.length)))];
+};
 const fateCount = v => Math.max(0, Math.floor(Number(v) || 0));
 const fateSlotStacksOf = (fateStacks, slotIdx) => {
   const raw = fateStacks && typeof fateStacks === 'object' && fateStacks.bySlot && typeof fateStacks.bySlot === 'object' ? fateStacks.bySlot[String(slotIdx)] : null;
@@ -21437,6 +21864,7 @@ const ATTACK_COMBO_RULES = Object.freeze({
   atonement: 0.2
 });
 const KENSHI_COMBO_POWER_MAX = 3;
+const UNIQUE_BOOST_EXTRA_COMBO_RATE = 0.1;
 const buildAttackHits = ({
   d,
   card,
@@ -21454,7 +21882,8 @@ const buildAttackHits = ({
   swordSkill = true,
   hitRepeat = 1,
   exCombos = null,
-  critDmgMult = 1
+  critDmgMult = 1,
+  boostExtraCombos = 0
 }) => {
   const hits = [];
   const critMult = 1.5 + critDmgBonus;
@@ -21500,6 +21929,10 @@ const buildAttackHits = ({
   if (swordSkill && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiUnique) combo(rate + comboDmgBonus);
   if (attackerId === 'KenshiMocchi') {
     for (let i = 0; i < kenshiExtraCombos; i++) combo(ATTACK_COMBO_RULES.kenshiExtraCombo + comboDmgBonus);
+  }
+  if (card.type === 'unique') {
+    const n = Math.max(0, Math.min(10, Math.floor(Number(boostExtraCombos) || 0)));
+    for (let i = 0; i < n; i++) combo(UNIQUE_BOOST_EXTRA_COMBO_RATE);
   }
   for (const ec of Array.isArray(exCombos) ? exCombos : [exCombos]) {
     if (ec && ec.count > 0 && ec.rate > 0) {
@@ -50561,6 +50994,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', 'あたしたち、もうセッションLv.50ぢゃん！まぢ最強コンビかも♪'], ['wink', '{name}とならどんな曲でも楽しいの、ほんとだよ♪']],
     'sp80': [['excited', 'Lv.80！ここまで来たら、もう息ぴったりぢゃん♪'], ['happy', 'あたしの一番のセッション相手は、{name}だよｗ']],
     'sp100': [['excited', 'セッションLv.100！あたしたち、セッションマスターぢゃん！'], ['happy', 'ここまで一緒に叩いてくれて、まぢありがと♪']],
+    woke: [['troubled', 'ふぁ…{name}？ 起こされたけど、行く〜'], ['happy', 'ん〜…目、半分閉じてるけど叩くｗ'], ['wink', '寝ぐせのままだけど、来ちゃった♪']],
+    refuse: [['normal', 'むにゃ…あと5曲…ぢゃなくて5分…'], ['normal', '…ん…あしたなら、まぢで行く…'], ['happy', 'すぅ…{name}…またあとでね…']],
     'listen:mf_ichika_mix': [['excited', 'サビは1:48から！ そこからテンションまぢ上がるやつ♪']],
     'listen:monster_hero': [['excited', '1:50からずーっといちばん強いの！ 最後までアゲてこ♪']],
     'listen:monster_hero_another': [['excited', 'こっちもサビは1:49から！ 最後までずっと盛り上がるの♪']],
@@ -50632,6 +51067,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', '{name}とのセッション、Lv.50になりました♪'], ['wink', '指が覚えてくれている気がしまつ♪']],
     'sp80': [['happy', 'Lv.80でつ。目を閉じても合わせられそうです♪'], ['normal', '{name}の音、ちゃんと聞こえていますよ']],
     'sp100': [['excited', 'Lv.100でつ！セッションマスターですね♪'], ['happy', 'たくさん一緒に演奏してくれて、ありがとうございまつ♪']],
+    woke: [['troubled', '…ふぁ。起きまつ。お供しまつね'], ['wink', '眠いでつが、ちから全開でいきまつ♪'], ['happy', '早寝の私を呼ぶなんて、大胆でつね']],
+    refuse: [['normal', '…すぅ…明日の朝なら、ぜひ…'], ['normal', '…むにゃ…お茶は…あとで…'], ['troubled', '…ごめんなさい…もう、夢の中でつ…']],
     'listen:mf_ichika_mix': [['normal', '2分25秒の曲でつ。終わりの手前の盛り上がりまで、ていねいにいきましょう']],
     'listen:monster_hero': [['normal', '最初の45秒くらいは静かなんでつ。そこから少しずつ強くなっていきます']],
     'listen:monster_hero_another': [['normal', '0:48までは、静かな時間が長いんでつ。そこが好きです']],
@@ -50703,6 +51140,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['excited', 'Lv.50！！ももと{name}、もう名コンビだね♡'], ['wink', 'ここまで来たら、ももの専属だよw']],
     'sp80': [['excited', 'Lv.80！！ステージの上で一番息が合うの、{name}かも♡'], ['happy', 'ももについてこれるの、{name}くらいだよ！！']],
     'sp100': [['excited', 'Lv.100！！セッションマスターはもものおかげだよね♡'], ['happy', 'ずっと一緒にステージ立ってくれて、ありがと！！']],
+    woke: [['angry', 'ふぁ…ももを起こすなんて！ でも行く！！'], ['excited', '寝起きでもセンターは、もも！！'], ['wink', '目こすりながら叩くねw']],
+    refuse: [['normal', '…むにゃ…アンコールは…あした…'], ['happy', '…もも、いま夢でライブ中…♡'], ['normal', '…すぅ…起こさないで…w']],
     'listen:mf_ichika_mix': [['excited', '1:48からがいちばん盛り上がるとこ！！ そこでももが決めるね♡']],
     'listen:monster_hero': [['excited', '1:50からいちばん強いとこが続くの！！ 最高に盛り上がるやつ♡']],
     'listen:monster_hero_another': [['excited', '1:49からの盛り上がり、もとの曲に負けてないよ！！']],
@@ -50774,6 +51213,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', 'セッションLv.50だな。おで、うれしいくさ'], ['normal', 'ここまで来たの、ちょっとした冒険だったな']],
     'sp80': [['happy', 'Lv.80だな。もう目をつぶっても合わせられるからな'], ['happy', '{name}と叩くの、おで好きなんだな、えへへ']],
     'sp100': [['excited', 'Lv.100だな！セッションマスターだからな！'], ['happy', '長い冒険だったな。ありがとうな、えへへ']],
+    woke: [['troubled', '…ぐぅ…はっ、起きたぞ。行くからな'], ['normal', '寝ぼけてるが、叩くのはできるぞ'], ['happy', 'おでを起こすとは…しょうがないな']],
+    refuse: [['normal', '…ぐぅ…あと10時間…'], ['happy', '…むにゃ…グジラ…でっかい…'], ['troubled', '…すまん…膝が、まだ寝てる…']],
     'listen:mf_ichika_mix': [['happy', 'サビは1:48から2:14までだな。そこまでは体力をとっとけよ']],
     'listen:monster_hero': [['happy', '静かに始まって、だんだん強くなる。冒険の始まりみたいな曲だな']],
     'listen:monster_hero_another': [['normal', '0:48で急に強くなるからな。そこで置いていかれるなよ']],
@@ -50845,6 +51286,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', 'とりあえずLv.50だな笑'], ['wink', 'てか、だいぶ息合ってきたな！']],
     'sp80': [['happy', 'Lv.80か。普通にいいコンビだろ笑'], ['normal', 'ここまで来たら、締めも任せていいよな！']],
     'sp100': [['excited', 'Lv.100！セッションマスターだな笑'], ['happy', 'ここまで付き合ってくれて、ありがとな！']],
+    woke: [['surprise', '…ん！？ 起きた起きた！ 行くぞ笑'], ['happy', '寝起きだけど、とりあえずやる！'], ['happy', '眠いけど、{name}の頼みなら！']],
+    refuse: [['normal', '…朝練…6時…だから…！'], ['troubled', '…わり…明日な…笑'], ['normal', '…すぅ…ノーカン…だろ…']],
     'listen:mf_ichika_mix': [['wink', '自分の大会の曲はちょっと照れる笑 でも1:48からのサビは全力でいくよ！']],
     'listen:monster_hero': [['happy', '最後の2:30でいきなり静かになるから、きれいに締めよ笑']],
     'listen:monster_hero_another': [['happy', 'サビは2:34まで続くから、最後の1秒までちゃんと締めよ！']],
@@ -50916,6 +51359,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', 'Lv.50だね〜。合わせ方が分かってきたよ'], ['wink', '{name}の癖、だいたい読めるようになったよ〜笑']],
     'sp80': [['happy', 'Lv.80〜。構成を読まなくても合うね〜'], ['normal', 'ここまでの記録、きれいに積み上がってるよ〜']],
     'sp100': [['excited', 'Lv.100〜！セッションマスターだね、ありがとん笑'], ['happy', 'ここまでの全部、いい流れだったよ〜']],
+    woke: [['troubled', 'ぇ…起こされたぁ。ほい、行くよぉ'], ['happy', 'ふぁ…ありがとん。目、さめたかも笑'], ['normal', '寝ぼけてても、だいたい叩けるっしょ笑']],
+    refuse: [['normal', '…むにゃ…あと1章…だけぇ…'], ['troubled', '…ぐぬぬぬ…眠い…またあとでぇ…'], ['happy', '…すぅ…{name}…おやすみぃ…']],
     'listen:mf_ichika_mix': [['normal', 'サビは1:48から2:14。終わりの近くに山があるから、前半はためていこ']],
     'listen:monster_hero': [['normal', '0:46でふつう、0:57で強め、1:50でいちばん強い。段の上がり方がきれいなんだよねぇ']],
     'listen:monster_hero_another': [['normal', '0:48で強くなって、1:14で一回ふつうに戻るんだよねぇ。そこが休みどころ']],
@@ -50987,6 +51432,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['excited', 'セッションLv.50だぜ！表に太字で書いとくぜ笑'], ['happy', 'ここまでの演奏回数、ちゃんと数えてあるぜ・・・！']],
     'sp80': [['excited', 'Lv.80！誤差がほとんど無くなってきたぜ！'], ['happy', 'この伸び方、グラフにしたらきれいだぜ笑']],
     'sp100': [['excited', 'うぉぉぉ！Lv.100、セッションマスターだぜ・・・！'], ['happy', 'ここまでの記録、全部宝物だぜ笑']],
+    woke: [['surprise', '…うぉっ！？ 起きたぜ、行くさ！'], ['normal', '寝起きの指でも、計算どおり叩くぜ'], ['happy', 'ふぁ…目ざましより効いたさ笑']],
+    refuse: [['normal', '…表の…3行目…むにゃ…'], ['troubled', '…すまん…朝は弱いのさ…'], ['happy', '…なんくるないさ…すぅ…']],
     'listen:mf_ichika_mix': [['excited', 'いちばん上はLv.23で434ノーツだぜ・・・！ サビは1:48からな笑']],
     'listen:monster_hero': [['excited', '強く打つ音が62%、軽い音は3%だぜ・・・！ 553ノーツ、全部数えたい笑']],
     'listen:monster_hero_another': [['happy', 'BPMはおよそ171。もとの曲より少しだけゆっくりだぜ笑']],
@@ -51058,6 +51505,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp50': [['happy', 'セッションLv.50になったね。ありがとね'], ['normal', '一緒に演奏する時間、落ち着くんだよね']],
     'sp80': [['happy', 'Lv.80か。ずいぶん合うようになったね'], ['normal', '無理しないで、これからもゆっくりいこうね']],
     'sp100': [['excited', 'Lv.100だね。セッションマスター、すごいよ'], ['happy', 'ここまで一緒にいてくれて、ありがとね']],
+    woke: [['surprise', '…あ、呼ばれた？ うん、行くよ'], ['happy', 'ふぁ…起こされちゃった笑 いいよ'], ['happy', '眠いけど、{name}と叩きたいしね']],
+    refuse: [['troubled', '…ごめんね…今日はもう寝るね…'], ['normal', '…すぅ…また明日、いっしょにね…'], ['happy', '…むにゃ…デュラハン…いけ…']],
     'listen:mf_ichika_mix': [['happy', '2分半くらいの曲だね。サビの1:48までは、落ち着いて合わせようか']],
     'listen:monster_hero': [['normal', 'はじめの静かなところで、気持ちを落ち着けておくといいよ']],
     'listen:monster_hero_another': [['happy', '1:14から少し落ち着く所があるね。そこでひと息つこうか']],
@@ -61217,6 +61666,11 @@ html[data-mh-tod="night"] .mh-title-gate img.mh-title-visual{filter:brightness(.
 html[data-mh-tod="morning"] :is([data-mh-theme-category="menu"],[data-mh-theme-category="market"],[data-mh-theme-category="temple"]) .mh-screen-shell,html[data-mh-tod="morning"] .mhms-stage{box-shadow:inset 0 0 0 100vmax rgba(190,215,255,.05)}
 html[data-mh-tod="evening"] :is([data-mh-theme-category="menu"],[data-mh-theme-category="market"],[data-mh-theme-category="temple"]) .mh-screen-shell,html[data-mh-tod="evening"] .mhms-stage{box-shadow:inset 0 0 0 100vmax rgba(255,120,48,.07)}
 html[data-mh-tod="night"] :is([data-mh-theme-category="menu"],[data-mh-theme-category="market"],[data-mh-theme-category="temple"]) .mh-screen-shell,html[data-mh-tod="night"] .mhms-stage{box-shadow:inset 0 0 0 100vmax rgba(6,10,40,.24)}
+.mh-tod-tint{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity 2.4s ease;border-radius:inherit}
+html[data-mh-tod="morning"] .mh-tod-tint{opacity:var(--tod-k,1);background:linear-gradient(180deg,rgba(186,214,255,.30) 0%,rgba(214,236,255,.16) 50%,rgba(255,236,214,.10) 100%)}
+html[data-mh-tod="evening"] .mh-tod-tint{opacity:var(--tod-k,1);background:linear-gradient(180deg,rgba(255,128,48,.34) 0%,rgba(255,110,64,.24) 45%,rgba(120,40,30,.34) 100%)}
+html[data-mh-tod="night"] .mh-tod-tint{opacity:var(--tod-k,1);background:linear-gradient(180deg,rgba(5,8,34,.84) 0%,rgba(10,16,52,.70) 50%,rgba(6,10,34,.76) 100%)}
+@media (prefers-reduced-motion:reduce){.mh-tod-tint{transition:none!important}}
 @media (prefers-reduced-motion:reduce){.mh-home-background::after,.mh-home-background::before,.mh-title-gate img,.mh-screen-shell,.mhms-stage{transition:none!important}}
 .mh-tod-clock{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border:1px solid #eed99566;border-radius:999px;background:#0f1d2ad9;color:#f9eac2;font-size:11px;font-weight:900;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap;box-shadow:0 2px 6px #0007;pointer-events:none}
 .mh-tod-clock i{font-style:normal;font-size:12px}
@@ -61302,6 +61756,24 @@ const TimeOfDayClockText = ({
     }
   }, prefix, st.minute);
 };
+const TimeOfDayTint = ({
+  strength = 1,
+  className = ''
+}) => {
+  useEffect(() => {
+    ensureTimeOfDayCss();
+  }, []);
+  const k = Math.max(0, Math.min(1, Number(strength)));
+  return React.createElement("span", {
+    "aria-hidden": "true",
+    "data-time-of-day-tint": true,
+    className: `mh-tod-tint ${className}`,
+    style: {
+      '--tod-k': Number.isFinite(k) ? k : 1
+    }
+  });
+};
+const timeOfDayLabelAt = (now = Date.now()) => timeOfDayAt(now).label;
 const TimeOfDaySettingsPanel = () => {
   const st = useTimeOfDay();
   const row = (key, title, desc) => React.createElement("div", {
@@ -70683,6 +71155,212 @@ function MasuSoulTraitsScreen({
     className: "mh-button mh-button-primary min-h-[48px] rounded-xl bg-cyan-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30"
   }, "1冊使って再編")))));
 }
+function UniqueBoostSheet({
+  masu,
+  skillKey,
+  onClose,
+  onCommit
+}) {
+  const [tab, setTab] = useState('attack');
+  const [draft, setDraft] = useState({});
+  const [helpId, setHelpId] = useState(null);
+  if (!masu || !skillKey) return null;
+  const normalized = normalizeMasuProgression(masu);
+  const monId = uniqueBoostMonIdOfKey(normalized, skillKey);
+  const level = uniqueBoostSkillLevelOf(normalized, skillKey);
+  const base = ALL_PLAYER_MONSTERS[normalized.baseId];
+  const uniqueDef = skillKey === OWN_UNIQUE_KEY ? base?.unique : (normalized.inheritedUniques || []).find(u => inheritedUniqueLevelKey(u) === skillKey);
+  const skillName = uniqueSkillAtLevel(uniqueDef, level)?.name || uniqueDef?.name || '固有技';
+  const current = uniqueBoostStepsOf(normalized, skillKey);
+  const targetOf = id => Math.max(current[id] || 0, Math.floor(Number(draft[id]) || 0));
+  const draftCost = UNIQUE_BOOST_DEFINITIONS.reduce((sum, def) => sum + (targetOf(def.id) - (current[def.id] || 0)) * def.stepCost, 0);
+  const remaining = normalized.uniqueSkillPoints - draftCost;
+  const setTarget = (def, target) => setDraft(prev => {
+    const have = current[def.id] || 0;
+    const now = Math.max(have, Math.floor(Number(prev[def.id]) || 0));
+    const otherCost = draftCost - (now - have) * def.stepCost;
+    const byPoints = have + Math.floor(Math.max(0, normalized.uniqueSkillPoints - otherCost) / def.stepCost);
+    const next = Math.max(have, Math.min(target, uniqueBoostMaxSteps(def), byPoints));
+    const out = {
+      ...prev
+    };
+    if (next > have) out[def.id] = next;else delete out[def.id];
+    return out;
+  });
+  const helpDef = helpId ? UNIQUE_BOOST_BY_ID[helpId] : null;
+  const capText = def => def.maxValue != null && Number.isFinite(Number(def.maxValue)) ? `・最大${def.sign === -1 ? '−' : '+'}${def.maxValue}${def.unit}` : '';
+  const stepText = def => `${def.stepCost.toLocaleString()}Pで${formatUniqueBoostValue(def, 1)}${capText(def)}`;
+  const rows = UNIQUE_BOOST_DEFINITIONS.filter(def => def.tab === tab);
+  return React.createElement("div", {
+    className: "fixed inset-0 flex items-end sm:items-center justify-center",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(2,6,23,0.78)',
+      zIndex: 31600
+    },
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": `${skillName}のオリジナル強化`,
+    "data-unique-boost-sheet": true
+  }, React.createElement("div", {
+    className: "w-full max-w-md bg-slate-900 border-2 border-amber-500/80 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden",
+    style: {
+      maxHeight: 'calc(var(--mh-vh) - env(safe-area-inset-top) - 12px)',
+      paddingBottom: 'env(safe-area-inset-bottom)'
+    }
+  }, React.createElement("div", {
+    "data-unique-boost-head": true,
+    className: "shrink-0 px-4 pt-3 pb-2 border-b border-white/10 [@media(orientation:landscape)_and_(max-height:520px)]:pt-2 [@media(orientation:landscape)_and_(max-height:520px)]:pb-1.5"
+  }, React.createElement("div", {
+    className: "flex items-center justify-between gap-2 min-w-0"
+  }, React.createElement("div", {
+    className: "min-w-0 flex items-baseline gap-1.5"
+  }, React.createElement("span", {
+    className: "truncate text-[15px] font-black text-white"
+  }, skillName), React.createElement("span", {
+    className: "shrink-0 text-[11px] font-mono font-black text-amber-300"
+  }, "Lv.", level)), React.createElement("div", {
+    className: "shrink-0 flex items-center gap-1 text-[11px] font-black text-amber-300"
+  }, React.createElement(Sparkles, {
+    size: 12
+  }), "未使用 固有技P ", normalized.uniqueSkillPoints.toLocaleString())), React.createElement("div", {
+    className: "mt-1.5 text-[12px] font-black text-amber-200 [@media(orientation:landscape)_and_(max-height:520px)]:hidden"
+  }, "✨ オリジナル強化(この技だけに効きます)"), React.createElement("div", {
+    className: "mt-0.5 text-[10px] font-bold leading-relaxed text-slate-400 [@media(orientation:landscape)_and_(max-height:520px)]:hidden"
+  }, "Lv.8 になった固有技に、余った固有技Pで強化を積めます。合体でこの技を引き継ぐと、強化も一緒に引き継ぎます。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-3 gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1",
+    role: "tablist"
+  }, UNIQUE_BOOST_TABS.map(t => React.createElement("button", {
+    key: t.id,
+    type: "button",
+    role: "tab",
+    "aria-selected": tab === t.id,
+    "data-unique-boost-tab": t.id,
+    onClick: () => setTab(t.id),
+    className: `min-h-[40px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[34px] rounded-xl text-[12px] font-black border ${tab === t.id ? 'bg-amber-500 text-slate-950 border-amber-300' : 'bg-slate-800 text-slate-300 border-white/10'}`
+  }, t.label)))), React.createElement("div", {
+    "data-unique-boost-rows": true,
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll px-3 py-2 space-y-2"
+  }, rows.map(def => {
+    const applies = uniqueBoostAppliesTo(def, monId);
+    const have = current[def.id] || 0;
+    const target = targetOf(def.id);
+    const maxSteps = uniqueBoostMaxSteps(def);
+    const canAdd = applies && target < maxSteps && remaining >= def.stepCost;
+    return React.createElement("div", {
+      key: def.id,
+      "data-unique-boost-row": def.id,
+      "data-unique-boost-applies": applies ? '1' : '0',
+      className: `rounded-2xl border px-3 py-2 ${!applies ? 'border-white/5 bg-slate-900/60 opacity-50' : target > have ? 'border-amber-400/80 bg-amber-950/20' : 'border-white/10 bg-slate-800/50'}`
+    }, React.createElement("div", {
+      className: "flex items-start justify-between gap-2 min-w-0"
+    }, React.createElement("div", {
+      className: "min-w-0"
+    }, React.createElement("div", {
+      className: "flex items-center gap-1"
+    }, React.createElement("span", {
+      className: `text-[13px] font-black ${applies ? 'text-white' : 'text-slate-500'}`
+    }, def.name), React.createElement("button", {
+      type: "button",
+      "aria-label": `${def.name}の説明`,
+      onClick: () => setHelpId(def.id),
+      className: "shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-slate-300 active:scale-90"
+    }, React.createElement(HelpCircle, {
+      size: 14
+    }))), applies && React.createElement("div", {
+      className: "text-[9px] font-bold text-slate-500"
+    }, stepText(def))), React.createElement("div", {
+      className: "shrink-0 text-right text-[12px] font-mono font-black"
+    }, applies ? React.createElement("span", {
+      className: target > have ? 'text-amber-300' : 'text-slate-300'
+    }, formatUniqueBoostValue(def, have), " → ", formatUniqueBoostValue(def, target)) : React.createElement("span", {
+      className: "text-[10px] font-sans text-slate-500"
+    }, "この技には効果がありません"))), applies && React.createElement("div", {
+      className: "mt-1.5 flex items-center justify-end gap-1.5"
+    }, React.createElement("button", {
+      type: "button",
+      "aria-label": `${def.name}を1つ戻す`,
+      disabled: target <= have,
+      onClick: () => setTarget(def, target - 1),
+      className: "min-w-[44px] min-h-[38px] px-2 rounded-xl bg-slate-800 border border-white/10 text-[12px] font-black text-white disabled:opacity-30"
+    }, "−1"), React.createElement("button", {
+      type: "button",
+      "aria-label": `${def.name}を1つ上げる`,
+      disabled: !canAdd,
+      onClick: () => setTarget(def, target + 1),
+      className: "min-w-[44px] min-h-[38px] px-2 rounded-xl bg-slate-800 border border-white/10 text-[12px] font-black text-white disabled:opacity-30"
+    }, "+1"), maxSteps >= 10 && React.createElement("button", {
+      type: "button",
+      "aria-label": `${def.name}を10上げる`,
+      disabled: !canAdd,
+      onClick: () => setTarget(def, target + 10),
+      className: "min-w-[44px] min-h-[38px] px-2 rounded-xl bg-slate-800 border border-white/10 text-[12px] font-black text-white disabled:opacity-30"
+    }, "+10"), React.createElement("button", {
+      type: "button",
+      "aria-label": `${def.name}を上げられるだけ上げる`,
+      disabled: !canAdd,
+      onClick: () => setTarget(def, Infinity),
+      className: "min-w-[44px] min-h-[38px] px-2 rounded-xl bg-slate-800 border border-white/10 text-[12px] font-black text-white disabled:opacity-30"
+    }, "MAX")));
+  })), React.createElement("div", {
+    className: "shrink-0 px-4 pt-2 pb-3 border-t border-white/10 [@media(orientation:landscape)_and_(max-height:520px)]:pt-1 [@media(orientation:landscape)_and_(max-height:520px)]:pb-2"
+  }, React.createElement("div", {
+    className: "flex items-center justify-between text-[12px] font-black"
+  }, React.createElement("span", {
+    className: "text-slate-400"
+  }, "残りP"), React.createElement("span", {
+    className: "text-amber-300"
+  }, remaining.toLocaleString())), React.createElement("div", {
+    className: "mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: onClose,
+    className: "min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] rounded-2xl bg-slate-800 text-[13px] font-black text-white"
+  }, "やめる"), React.createElement("button", {
+    type: "button",
+    "data-unique-boost-commit": true,
+    disabled: draftCost <= 0,
+    onClick: () => {
+      const plan = {};
+      UNIQUE_BOOST_DEFINITIONS.forEach(def => {
+        if (targetOf(def.id) > (current[def.id] || 0)) plan[def.id] = targetOf(def.id);
+      });
+      if (onCommit(plan)) {
+        setDraft({});
+        onClose();
+      }
+    },
+    className: "min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] rounded-2xl bg-gradient-to-b from-amber-500 to-orange-700 text-[13px] font-black text-white disabled:opacity-40"
+  }, "強化を確定")))), helpDef && React.createElement("div", {
+    className: "fixed inset-0 flex items-center justify-center p-6",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(2,6,23,0.6)',
+      zIndex: 31700
+    },
+    onClick: () => setHelpId(null),
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": `${helpDef.name}の説明`
+  }, React.createElement("div", {
+    className: "w-full max-w-xs rounded-2xl border border-amber-400/70 bg-slate-900 p-4",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "text-[14px] font-black text-amber-200"
+  }, helpDef.name), React.createElement("div", {
+    className: "mt-1 text-[12px] font-bold leading-relaxed text-slate-200"
+  }, helpDef.desc), React.createElement("div", {
+    className: "mt-1 text-[11px] font-bold text-slate-400"
+  }, stepText(helpDef)), !uniqueBoostAppliesTo(helpDef, monId) && React.createElement("div", {
+    className: "mt-1 text-[11px] font-bold text-slate-500"
+  }, "この技には効果がありません。"), React.createElement("button", {
+    type: "button",
+    onClick: () => setHelpId(null),
+    className: "mt-3 w-full min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black text-white"
+  }, "閉じる"))));
+}
 function MasuTranscendEnhanceScreen({
   commitTranscendExchange,
   commitTranscendFruit,
@@ -71973,7 +72651,9 @@ function MasuFusionScreen({
   setFusionSubId,
   setFusionSubIds,
   setMasuMonDetail,
-  lockedMasuIds = []
+  lockedMasuIds = [],
+  fusionInheritSkillKeys = {},
+  setFusionInheritSkillKeys = () => {}
 }) {
   const closeFusion = onClose;
   const fusedBorder = masu => (masu.fusionHistory || []).length > 0 ? 'border-amber-400 ring-1 ring-amber-400' : 'border-violet-400/40';
@@ -72114,6 +72794,7 @@ function MasuFusionScreen({
       if (selectedSubs.length === 0) return;
       setFusionSubId(selectedSubs[0].id);
       setFusionInheritUniqueIds([]);
+      setFusionInheritSkillKeys({});
       setFusionStep('confirm');
     };
     return React.createElement("div", {
@@ -72239,7 +72920,8 @@ function MasuFusionScreen({
     const inheritancePlan = buildFusionInheritancePlan({
       main,
       subs: selectedSubs,
-      selectedSubIds: fusionInheritUniqueIds
+      selectedSubIds: fusionInheritUniqueIds,
+      choiceBySubId: fusionInheritSkillKeys
     });
     const soulInheritancePreview = buildFusionSoulRankInheritancePlan({
       main,
@@ -72523,7 +73205,7 @@ function MasuFusionScreen({
       className: "text-slate-400 shrink-0"
     }, "継承対象"), React.createElement("span", {
       className: "text-amber-200 font-black text-right"
-    }, inheritancePlan.inheritedEntries.length ? inheritancePlan.inheritedEntries.map(entry => `${entry.sub.name}「${entry.subBase.unique.name}」`).join('、') : 'なし')), React.createElement("div", {
+    }, inheritancePlan.inheritedEntries.length ? inheritancePlan.inheritedEntries.map(entry => `${entry.sub.name}「${entry.chosen?.unique?.name || entry.subBase.unique.name}」`).join('、') : 'なし')), React.createElement("div", {
       className: "flex justify-between text-[11px] font-bold"
     }, React.createElement("span", {
       className: "text-slate-400"
@@ -72553,24 +73235,76 @@ function MasuFusionScreen({
       className: "space-y-2 mb-2"
     }, inheritancePlan.entries.map(entry => {
       const selected = fusionInheritUniqueIds.includes(entry.sub.id);
-      const disabled = !entry.eligible || entry.duplicate && !selected;
-      const reason = !entry.eligible ? `絆Lv${FUSION_INHERIT_MIN_SUB_LEVEL}以上と継承可能な固有技が必要です` : entry.duplicate ? '同じ系統の固有技が主または先の副から継承されます' : '';
-      return React.createElement("button", {
+      const pick = key => {
+        if (key == null) {
+          setFusionInheritUniqueIds(prev => prev.filter(id => id !== entry.sub.id));
+          return;
+        }
+        setFusionInheritSkillKeys(prev => ({
+          ...prev,
+          [entry.sub.id]: key
+        }));
+        setFusionInheritUniqueIds(prev => prev.includes(entry.sub.id) ? prev : [...prev, entry.sub.id]);
+      };
+      const unusedPoints = normalizeMasuProgression(entry.sub).uniqueSkillPoints;
+      const radio = on => React.createElement("span", {
+        className: `shrink-0 mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center ${on ? 'border-amber-400' : 'border-slate-500'}`
+      }, on && React.createElement("span", {
+        className: "w-2.5 h-2.5 rounded-full bg-amber-400"
+      }));
+      return React.createElement("div", {
         key: entry.sub.id,
-        disabled: disabled,
-        onClick: () => setFusionInheritUniqueIds(prev => prev.includes(entry.sub.id) ? prev.filter(id => id !== entry.sub.id) : [...prev, entry.sub.id]),
-        role: "switch",
-        "aria-checked": selected && !disabled,
-        className: `w-full min-h-[44px] flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border active:scale-95 disabled:opacity-60 ${selected && !disabled ? 'bg-amber-950/50 border-amber-500/60' : 'bg-slate-900 border-white/10'}`
-      }, React.createElement("span", {
-        className: "text-[12px] font-black text-left text-white"
-      }, entry.sub.name, "：", entry.subBase?.unique ? `固有技「${entry.subBase.unique.name}」を引き継ぐ` : '継承可能な固有技なし', reason && React.createElement(React.Fragment, null, React.createElement("br", null), React.createElement("span", {
-        className: "text-[10px] leading-relaxed text-slate-400 font-bold"
-      }, reason, selected && entry.duplicate ? '（選択中ですが費用・継承対象には含みません）' : ''))), React.createElement("div", {
-        className: `w-10 h-6 rounded-full shrink-0 relative ${selected && !disabled ? 'bg-amber-500' : 'bg-slate-700'}`
+        "data-fusion-inherit-pick": true,
+        className: "rounded-2xl border border-amber-500/50 bg-slate-950/40 p-3 space-y-1.5"
       }, React.createElement("div", {
-        className: `absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${selected && !disabled ? 'left-5' : 'left-1'}`
-      })));
+        className: "text-[12px] font-black text-white"
+      }, entry.sub.name, " から引き継ぐ技を選ぶ"), React.createElement("div", {
+        className: "text-[10px] font-bold text-slate-400"
+      }, "1つだけ選べます(副1体につき1つ・", FUSION_INHERIT_COST.toLocaleString(), "ダイヤ)"), !entry.eligible && React.createElement("div", {
+        className: "text-[10px] leading-relaxed text-slate-400 font-bold"
+      }, "絆Lv", FUSION_INHERIT_MIN_SUB_LEVEL, "以上と継承可能な固有技が必要です"), entry.eligible && React.createElement(React.Fragment, null, React.createElement("button", {
+        type: "button",
+        role: "radio",
+        "aria-checked": !selected,
+        onClick: () => pick(null),
+        className: `w-full min-h-[44px] flex items-center gap-2 px-3 py-2 rounded-xl border text-left active:scale-[0.99] ${!selected ? 'bg-slate-800/80 border-slate-400/60' : 'bg-slate-900 border-white/10'}`
+      }, radio(!selected), React.createElement("span", {
+        className: "text-[12px] font-black text-white"
+      }, "引き継がない")), entry.options.map(option => {
+        const on = selected && entry.chosenKey === option.key;
+        const summary = uniqueBoostSummaryText(option.boosts);
+        const name = uniqueSkillAtLevel(option.unique, option.level)?.name || option.unique?.name || '固有技';
+        return React.createElement("button", {
+          key: option.key,
+          type: "button",
+          role: "radio",
+          "aria-checked": on,
+          "data-fusion-inherit-option": option.key,
+          disabled: option.duplicate,
+          onClick: () => pick(option.key),
+          className: `w-full min-h-[44px] flex items-start gap-2 px-3 py-2 rounded-xl border text-left active:scale-[0.99] disabled:opacity-50 ${on ? 'bg-amber-950/50 border-amber-400/80' : 'bg-slate-900 border-white/10'}`
+        }, radio(on), React.createElement("span", {
+          className: "min-w-0 flex-1"
+        }, React.createElement("span", {
+          className: "flex items-baseline justify-between gap-2"
+        }, React.createElement("span", {
+          className: "min-w-0 truncate text-[12px] font-black text-white"
+        }, name), React.createElement("span", {
+          className: "shrink-0 text-[10px] font-mono font-black text-amber-300"
+        }, "Lv.", option.level)), React.createElement("span", {
+          className: "block text-[10px] font-bold text-indigo-300"
+        }, option.own ? '自前' : `引き継ぎ${option.unique?.sourceMasuName ? `(${option.unique.sourceMasuName})` : ''}`), option.duplicate ? React.createElement("span", {
+          className: "block text-[10px] font-bold text-rose-300/80"
+        }, "同じ系統の固有技を主がすでに持っています") : React.createElement("span", {
+          className: "block text-[10px] font-bold text-amber-200"
+        }, "オリジナル強化:", summary || (option.level >= MAX_UNIQUE_SKILL_LEVEL ? 'なし' : `なし(Lv.${MAX_UNIQUE_SKILL_LEVEL} から積めます)`))));
+      }), selected && entry.inherited && React.createElement("div", {
+        className: "rounded-lg bg-amber-900/30 px-2 py-1.5 text-[11px] font-black text-amber-200"
+      }, "Lv とオリジナル強化も一緒に引き継ぎます"), selected && !entry.inherited && React.createElement("div", {
+        className: "rounded-lg bg-slate-800/60 px-2 py-1.5 text-[10px] font-bold text-slate-300"
+      }, "選んだ技は同じ系統の固有技が主または先の副から継承されるため、引き継ぎません(費用もかかりません)")), unusedPoints > 0 && React.createElement("div", {
+        className: "rounded-lg bg-rose-950/40 px-2 py-1.5 text-[11px] font-black text-rose-300"
+      }, "副の未使用固有技P ", unusedPoints.toLocaleString(), " は消えます"));
     })), React.createElement("div", {
       className: "mb-2 rounded-2xl border border-red-500/60 bg-red-950/40 p-3"
     }, React.createElement("div", {
@@ -90100,7 +90834,7 @@ function RhythmMultiMemberCards({
     }, React.createElement(RhythmMultiAvatar, {
       m: m,
       resolveIconUrl: resolveIconUrl,
-      sizeClass: tall ? 'h-12 w-12 landscape:h-16 landscape:w-16' : 'h-7 w-7',
+      sizeClass: tall ? 'h-12 w-12 landscape:h-16 landscape:w-16 [@media(max-height:440px)]:h-11 [@media(max-height:440px)]:w-11 [[data-mh-view-rotation=true]_&]:h-11 [[data-mh-view-rotation=true]_&]:w-11' : 'h-7 w-7',
       small: !tall
     }), m.id === hostId && React.createElement("span", {
       "aria-hidden": "true",
@@ -90721,6 +91455,7 @@ function RhythmMultiScreen({
     void RHYTHM_BUDDY_STORE.update(st => rhythmBuddyMarkStarted(st, callId));
   };
   const [buddyBumped, setBuddyBumped] = React.useState(false);
+  const [buddyRefused, setBuddyRefused] = React.useState(null);
   React.useEffect(() => {
     RHYTHM_MULTI.setCpuBrain({
       ...rhythmAssistSessionWrapBrain(rhythmBuddyMakeBrain(songs), songs),
@@ -90788,7 +91523,19 @@ function RhythmMultiScreen({
       kind: 'assistant',
       assistantId: who.id
     };
-    let paid = (await RHYTHM_BUDDY_STORE.update(st => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
+    let paid = rhythmAssistSessionVisitFree(who.id) ? 'visit' : '';
+    if (!paid && rhythmAssistSessionAsleep(who.id)) {
+      const woke = rhythmAssistSessionTryWake(who.id);
+      if (!woke.came) {
+        setBuddyRefused({
+          id: who.id,
+          line: woke.line,
+          at: Date.now()
+        });
+        return 'refused';
+      }
+    }
+    if (!paid) paid = (await RHYTHM_BUDDY_STORE.update(st => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
     if (!paid && onUseBuddyTicket) {
       try {
         paid = (await onUseBuddyTicket()) === true ? 'ticket' : '';
@@ -90855,6 +91602,9 @@ function RhythmMultiScreen({
   React.useEffect(() => {
     if (buddyInfoPhase === 'playing') setBuddyInfoId('');
   }, [buddyInfoPhase]);
+  React.useEffect(() => {
+    if (buddyRefused && !buddySheet) setBuddySheet('pick');
+  }, [buddyRefused, buddySheet]);
   const buddySheetLayer = buddySheet === 'pick' ? React.createElement(RhythmBuddySheet, {
     masuMons: masuMons,
     masuPicker: masuPicker,
@@ -90866,7 +91616,12 @@ function RhythmMultiScreen({
     songName: buddySongName,
     tickets: buddyTickets,
     pick: callBuddy,
-    onClose: () => setBuddySheet(''),
+    onClose: () => {
+      setBuddySheet('');
+      setBuddyRefused(null);
+    },
+    refused: buddyRefused,
+    onCallStart: () => setBuddyRefused(null),
     calledIds: (view && view.myCpus ? view.myCpus : []).map(c => c.masuId)
   }) : null;
   const buddyCallButton = (extra = '') => view && RHYTHM_MULTI.canSummon() && (masuMons.length > 0 || sessionAssistantsOn) ? React.createElement("button", {
@@ -91269,9 +92024,11 @@ function RhythmMultiScreen({
     className: "block whitespace-nowrap text-base font-black italic tracking-wider text-cyan-200"
   }, "MULTI LIVE"), React.createElement("small", {
     className: "mt-0.5 block break-keep text-[10px] font-black leading-tight text-fuchsia-200"
-  }, "▶ ", step, view ? React.createElement(React.Fragment, null, " ・ ", React.createElement("span", {
+  }, React.createElement("span", {
     className: "whitespace-nowrap"
-  }, view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode], " ", view.code)) : ''), view && room && room.round && React.createElement("small", {
+  }, "▶ ", step), view ? React.createElement(React.Fragment, null, " ", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "・", view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode], " ", view.code)) : ''), view && room && room.round && React.createElement("small", {
     "data-rhythm-multi-streak-next": true,
     className: "mt-0.5 inline-block whitespace-nowrap rounded-full bg-gradient-to-r from-orange-500 to-rose-500 px-1.5 text-[9px] font-black leading-4 text-white"
   }, "🔥 ", rhythmMultiStreakNextText(view.streak))), quickRunInfo && React.createElement(RhythmQuickRunPill, {
@@ -92159,7 +92916,7 @@ function RhythmMultiScreen({
       className: "min-h-[48px] rounded-xl bg-fuchsia-700 px-2 text-sm font-black disabled:opacity-40"
     }, "メンバー確定")), friendsOn && view && React.createElement("section", {
       "data-rhythm-multi-friend-invite": true,
-      className: card
+      className: `${card} landscape:hidden`
     }, React.createElement("button", {
       "data-rhythm-multi-friend-invite-toggle": true,
       type: "button",
@@ -92168,7 +92925,12 @@ function RhythmMultiScreen({
     }, invitePanel ? 'フレンドの招待を閉じる' : 'フレンドを招待する'), invitePanel && inviteListBody), buddyBumped && React.createElement("p", {
       "data-rhythm-buddy-bumped": true,
       className: "text-[11px] font-black leading-snug text-amber-200"
-    }, "人が入ってきたので、呼んだマスモンは席をゆずって帰りました(使った回数・券は戻りました)"), buddyCallButton(), view && !publicRoom && !view.full && onStepAway && React.createElement("button", {
+    }, "人が入ってきたので、呼んだマスモンは席をゆずって帰りました(使った回数・券は戻りました)"), React.createElement("div", {
+      className: "landscape:hidden"
+    }, buddyCallButton()), React.createElement("div", {
+      "data-rhythm-multi-exit-row": true,
+      className: "space-y-2 landscape:grid landscape:grid-flow-col landscape:auto-cols-fr landscape:gap-2 landscape:space-y-0"
+    }, view && !publicRoom && !view.full && onStepAway && React.createElement("button", {
       "data-rhythm-multi-step-away": true,
       type: "button",
       className: `${btn} w-full bg-cyan-800`,
@@ -92179,7 +92941,7 @@ function RhythmMultiScreen({
       type: "button",
       className: `${btn} w-full bg-slate-700`,
       onClick: leaveRoomAfterTap
-    }, view ? 'ルームを出る' : 'やめる'), message && React.createElement("p", {
+    }, view ? 'ルームを出る' : 'やめる')), message && React.createElement("p", {
       className: "text-[12px] font-black text-rose-300"
     }, message)))), chatSheet, inviteSheetLayer, rankingLayer, buddyInfoLayer, buddySheetLayer);
   }
@@ -94162,7 +94924,9 @@ function RhythmBuddySheet({
   assistants = [],
   pickAssistant = null,
   guideAssistantId = '',
-  freeSeats = 4
+  freeSeats = 4,
+  refused = null,
+  onCallStart = null
 }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
@@ -94194,18 +94958,26 @@ function RhythmBuddySheet({
     setPickNote('');
   };
   const assistOn = rhythmAssistSessionEnabled() && typeof pickAssistant === 'function' && (assistants || []).length > 0;
-  const [tab, setTab] = React.useState(() => (masuMons || []).length ? 'masu' : 'assistant');
+  const [tab, setTab] = React.useState(() => (masuMons || []).length && !refused ? 'masu' : 'assistant');
   const tabNow = assistOn ? tab : 'masu';
   const masuPicks = picks.filter(p => p.kind === 'masu');
   const singleMasu = masuPicks.length === 1 && picks.length === 1 ? (masuMons || []).find(x => x && x.id === masuPicks[0].id) : null;
-  const useFree = Math.min(freeLeft, picks.length);
-  const useTickets = picks.length - useFree;
+  const visitPicks = picks.filter(p => p.kind === 'assistant' && rhythmAssistSessionVisitFree(p.id)).length;
+  const paidPicks = picks.length - visitPicks;
+  const asleepPicks = picks.filter(p => p.kind === 'assistant' && !rhythmAssistSessionVisitFree(p.id) && rhythmAssistSessionAsleep(p.id)).length;
+  const useFree = Math.min(freeLeft, paidPicks);
+  const useTickets = paidPicks - useFree;
   const shortTickets = Math.max(0, useTickets - tickets);
   const pickedAssistantIds = picks.filter(p => p.kind === 'assistant').map(p => p.id);
   const duoNow = assistOn && pickedAssistantIds.length && typeof rhythmAssistSessionDuosNow === 'function' ? rhythmAssistSessionDuosNow([...calledIds.map(c => rhythmAssistSessionIdOf(c)).filter(Boolean), ...pickedAssistantIds]).filter(d => pickedAssistantIds.includes(d.a) || pickedAssistantIds.includes(d.b)) : [];
   const callAll = async () => {
     if (busy || !picks.length || shortTickets > 0) return;
     setBusy(true);
+    if (typeof onCallStart === 'function') {
+      try {
+        onCallStart();
+      } catch (_) {}
+    }
     const list = picks.slice();
     try {
       for (const p of list) {
@@ -94254,7 +95026,11 @@ function RhythmBuddySheet({
     "data-rhythm-buddy-multi-cost": true,
     className: "text-[10px] font-bold leading-snug text-slate-300",
     style: JA_WRAP_STYLE
-  }, jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います`)), shortTickets > 0 && React.createElement("p", {
+  }, jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。${paidPicks ? `無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います` : '回数は使いません'}${visitPicks ? `(モンヒロビートにいる助手 ${visitPicks}人は回数なし)` : ''}`)), asleepPicks > 0 && React.createElement("p", {
+    "data-rhythm-buddy-multi-asleep": true,
+    className: "text-[10px] font-bold text-indigo-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap('💤 寝ている助手は、来ないこともあります(来なければ回数は使いません)')), shortTickets > 0 && React.createElement("p", {
     "data-rhythm-buddy-multi-short": true,
     className: "text-[10px] font-black text-rose-300",
     style: JA_WRAP_STYLE
@@ -94328,7 +95104,11 @@ function RhythmBuddySheet({
     className: "hidden landscape:block"
   }, multiBar)), tabNow === 'assistant' ? React.createElement("div", {
     className: "flex min-h-0 flex-1 flex-col"
-  }, React.createElement(RhythmAssistSessionPicker, {
+  }, refused && refused.id && React.createElement("p", {
+    "data-rhythm-assist-refused": refused.id,
+    className: "mb-2 shrink-0 rounded-xl border border-indigo-300/50 bg-indigo-950/70 px-2 py-1 text-[11px] font-black leading-snug text-indigo-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`💤 ${rhythmAssistSessionName(refused.id)}${refused.line ? `「${refused.line}」……来てくれませんでした` : 'は起きませんでした'}(回数は使っていません)。もう一度呼ぶと、起きやすくなります`)), React.createElement(RhythmAssistSessionPicker, {
     assistants: assistants,
     calledIds: calledIds,
     guideAssistantId: guideAssistantId,
@@ -94948,7 +95728,13 @@ const rhythmAssistSessionTalk = ({
     const open = [[100, 'sp100'], [80, 'sp80'], [50, 'sp50']].filter(([n]) => lv >= n).map(([, sc]) => sc);
     return open.length && rand() < 0.3 ? say(open[Math.floor(rand() * open.length)]) : '';
   };
-  if (kind === 'join') return special() || say('join');
+  if (kind === 'join') {
+    if (RHYTHM_ASSIST_SESSION_WAKE.woke.delete(assistantId)) {
+      const w = say('woke');
+      if (w) return w;
+    }
+    return special() || say('join');
+  }
   if (kind === 'combo' || kind === 'miss' || kind === 'climax' || kind === 'last') return say(kind);
   if (kind === 'lvUp') return say('levelup');
   if (kind === 'likeUp') return say('likeup');
@@ -95096,7 +95882,20 @@ function RhythmAssistSessionPicker({
       className: "w-full truncate text-center text-[9px] font-bold text-slate-300"
     }, "♡ ", rhythmAssistSessionLikedNames(who.id).join('・')), calledOf(who.id) && React.createElement("span", {
       className: "rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950"
-    }, "呼んでいる"));
+    }, "呼んでいる"), !calledOf(who.id) && !rhythmAssistSessionVisitFree(who.id) && rhythmAssistSessionAsleep(who.id) && React.createElement("span", {
+      "data-rhythm-assist-asleep": true,
+      className: "w-full rounded-xl bg-indigo-300/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"
+    }, "💤 寝ている"), !calledOf(who.id) && rhythmAssistSessionVisitFree(who.id) && React.createElement("span", {
+      "data-rhythm-assist-visit": true,
+      "aria-label": "🎵 いまモンヒロビートにいる・回数なし",
+      className: "flex w-full flex-wrap justify-center rounded-xl bg-sky-400/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"
+    }, React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "🎵 いま"), React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "モンヒロビート"), React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "にいる・回数なし")));
   }))));
 }
 const RHYTHM_ASSIST_SESSION_FX_QUEUE = {
@@ -95170,6 +95969,82 @@ const rhythmAssistSessionSetApp = app => {
   RHYTHM_ASSIST_SESSION_INVITE.app = app && typeof app === 'object' ? app : null;
   if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.beatInvite = id => rhythmAssistSessionInvite(id);
 };
+const rhythmAssistSessionVisitFree = id => {
+  if (!rhythmAssistSessionEnabled() || typeof assistantLifeAtBeat !== 'function') return false;
+  try {
+    return assistantLifeAtBeat(id) === true;
+  } catch (_) {
+    return false;
+  }
+};
+const RHYTHM_ASSIST_SESSION_WAKE = {
+  refused: {},
+  woke: new Set()
+};
+const rhythmAssistSessionAsleep = id => {
+  if (!rhythmAssistSessionEnabled() || typeof assistantLifeCurrent !== 'function' || typeof assistantLifeWhereOf !== 'function') return false;
+  try {
+    const w = assistantLifeWhereOf(assistantLifeCurrent(), id);
+    return !!(w && w.doing === 'sleep');
+  } catch (_) {
+    return false;
+  }
+};
+const rhythmAssistSessionWakeChance = ({
+  nightOwl = false,
+  bondLevel = 1,
+  bondMax = 1,
+  retries = 0
+} = {}) => {
+  const bond = bondMax > 1 ? Math.max(0, Math.min(1, (Number(bondLevel) - 1) / (bondMax - 1))) : 0;
+  const p = 0.5 + (nightOwl ? 0.2 : 0) + 0.2 * bond + 0.2 * Math.max(0, Math.floor(Number(retries) || 0));
+  return Math.min(0.9, Math.round(p * 100) / 100);
+};
+const rhythmAssistSessionWakeKey = id => {
+  let slot = '';
+  try {
+    slot = typeof assistantLifeSlotAt === 'function' ? String(assistantLifeSlotAt().abs) : '';
+  } catch (_) {
+    slot = '';
+  }
+  return `${slot}:${id}`;
+};
+const rhythmAssistSessionWakeChanceOf = id => {
+  const rhythm = typeof ASSISTANT_LIFE_RHYTHM !== 'undefined' ? ASSISTANT_LIFE_RHYTHM[id] : null;
+  const bed = rhythm && Number.isFinite(rhythm.bed) ? rhythm.bed : 22;
+  const c = RHYTHM_ASSIST_SESSION_CALL;
+  let lv = 1;
+  try {
+    lv = typeof c.levelOf === 'function' ? Number(c.levelOf(id)) || 1 : 1;
+  } catch (_) {
+    lv = 1;
+  }
+  const max = typeof ASSISTANT_BOND_LEVELS !== 'undefined' && Array.isArray(ASSISTANT_BOND_LEVELS) ? ASSISTANT_BOND_LEVELS.length : 1;
+  return rhythmAssistSessionWakeChance({
+    nightOwl: bed < 12,
+    bondLevel: lv,
+    bondMax: max,
+    retries: RHYTHM_ASSIST_SESSION_WAKE.refused[rhythmAssistSessionWakeKey(id)] || 0
+  });
+};
+const rhythmAssistSessionTryWake = (id, rand = Math.random) => {
+  const came = rand() < rhythmAssistSessionWakeChanceOf(id);
+  const key = rhythmAssistSessionWakeKey(id);
+  if (came) {
+    delete RHYTHM_ASSIST_SESSION_WAKE.refused[key];
+    RHYTHM_ASSIST_SESSION_WAKE.woke.add(id);
+    return {
+      came: true,
+      line: ''
+    };
+  }
+  RHYTHM_ASSIST_SESSION_WAKE.refused[key] = (RHYTHM_ASSIST_SESSION_WAKE.refused[key] || 0) + 1;
+  const hit = rhythmAssistSessionPickLine(id, 'refuse', rand);
+  return {
+    came: false,
+    line: hit ? hit[1] : ''
+  };
+};
 const rhythmAssistSessionCanPayNow = () => {
   const app = RHYTHM_ASSIST_SESSION_INVITE.app;
   const free = typeof RHYTHM_BUDDY_STORE !== 'undefined' ? rhythmBuddyFreeLeft(RHYTHM_BUDDY_STORE.get(), rhythmBuddyDayKey(Date.now())) : 0;
@@ -95195,7 +96070,7 @@ const rhythmAssistSessionInvite = (id, opts = {}) => {
     ok: false,
     reason: 'unknown'
   });
-  if (!rhythmAssistSessionCanPayNow()) return rhythmAssistSessionInviteDone(onResult, {
+  if (!rhythmAssistSessionVisitFree(id) && !rhythmAssistSessionCanPayNow()) return rhythmAssistSessionInviteDone(onResult, {
     ok: false,
     reason: 'no_ticket'
   });
@@ -100157,7 +101032,7 @@ const ASSISTANT_LIFE_DOINGS = Object.freeze({
     label: 'おやつ',
     te: 'おやつを食べて',
     group: true,
-    places: ['cafe', 'plaza', 'home']
+    places: ['cafe', 'home']
   },
   practice: {
     label: '練習',
@@ -100963,14 +101838,15 @@ const assistantLifeDecide = ({
     }
     const p = ASSISTANT_LIFE_PREFS[id];
     const quarrel = ids.some(o => o !== id && quarrelNow(id, o) && !introduced.includes(assistantLifePairKey(id, o)));
-    const reason = quarrel ? 'distance' : wants[id] ? 'lonely' : 'mypace';
+    const d = doing[id] === 'sleep' && wants[id] && !quarrel ? 'idle' : doing[id];
+    const reason = quarrel ? 'distance' : wants[id] && d !== 'sleep' ? 'lonely' : 'mypace';
     if (reason === 'lonely') {
       moods[id] = 'lonely';
       lonely.push(id);
     }
-    const d = doing[id];
+    if (d === 'sleep') moods[id] = 'sleepy';
     const places = ASSISTANT_LIFE_DOINGS[d].places;
-    const favOk = places.includes(p.fav) || (d === 'idle' || d === 'walk') && rand() < 0.6;
+    const favOk = places.includes(p.fav);
     let place = favOk ? p.fav : places[Math.floor(rand() * places.length)];
     if (reason === 'lonely' && (d === 'idle' || d === 'sleep')) place = 'home';
     solo[id] = {
@@ -101085,6 +101961,13 @@ const normalizeAssistantLife = v => {
     place: s.place,
     reason: ['lonely', 'mypace', 'distance'].includes(s.reason) ? s.reason : 'mypace'
   };
+  for (const [id, s] of Object.entries(solo)) {
+    if (s.doing === 'sleep') {
+      if (s.reason === 'lonely') s.reason = 'mypace';
+      moods[id] = 'sleepy';
+    }
+    if (!ASSISTANT_LIFE_DOINGS[s.doing].places.includes(s.place)) s.place = ASSISTANT_LIFE_DOINGS[s.doing].places[0];
+  }
   const recent = Array.isArray(o.recent) ? o.recent.filter(r => r && typeof r.kind === 'string' && Number.isFinite(r.abs)).slice(-40) : [];
   const nudgeList = x => Array.isArray(x) ? x.filter(n => n && Number.isFinite(n.abs)).slice(-20) : [];
   const nudges = {
@@ -101098,7 +101981,7 @@ const normalizeAssistantLife = v => {
     moods,
     groups,
     solo,
-    lonely: Array.isArray(o.lonely) ? o.lonely.filter(ok) : [],
+    lonely: Array.isArray(o.lonely) ? o.lonely.filter(id => ok(id) && !(solo[id] && solo[id].doing === 'sleep')) : [],
     recent,
     nudges,
     watched: Array.isArray(o.watched) ? o.watched.filter(k => typeof k === 'string').slice(-30) : []
@@ -101666,6 +102549,43 @@ const assistantLifePickSoloTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, p
     scene: 'any'
   }, ctx);
 };
+const assistantLifePickCallTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, rand = Math.random) => {
+  const seen = ASSISTANT_LIFE_STORE.state.seen || {};
+  const g = life && (life.groups || []).find(x => x.ids.includes(id));
+  const s = life && life.solo && life.solo[id] || (g ? {
+    place: g.place,
+    doing: g.doing
+  } : {
+    place: 'home',
+    doing: 'idle'
+  });
+  const ctx = {
+    place: s.place,
+    doing: s.doing
+  };
+  const keysOf = t => ({
+    pt: t.keys && t.keys.place ? assistantLifePlaceType(id, t.keys.place) : null,
+    mood: t.keys && t.keys.mood || null,
+    why: t.keys && t.keys.why || null,
+    doing: t.keys && t.keys.doing || null
+  });
+  const want = {
+    pt: assistantLifePlaceType(id, s.place),
+    mood: (life && life.moods || {})[id] || null,
+    why: s.reason && s.reason !== 'distance' ? s.reason : null,
+    doing: s.doing
+  };
+  const cands = assistantLifeTalkSet().breeder.filter(t => t.who === id && (t.lines || []).every(l => l.who === id)).map(t => ({
+    talk: t,
+    keys: keysOf(t)
+  }));
+  if (!cands.length) return null;
+  const t = assistantLifeChoose(cands, want, ['doing', 'why', 'mood', 'pt'], seen, rand);
+  return t ? assistantLifeWithCtx({
+    ...t,
+    pair: Array.isArray(t.pair) && t.pair.length ? t.pair : [id]
+  }, ctx) : null;
+};
 const assistantLifePickInviteTalk = (id, life = ASSISTANT_LIFE_STORE.state.life, peerSt = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null, rand = Math.random) => {
   const s = life && life.solo && life.solo[id];
   if (!s) return null;
@@ -101856,13 +102776,12 @@ const assistantLifeNextSlotText = (now = Date.now()) => {
   const h = new Date(Number(now) + 9 * 3600000);
   const slot = ASSISTANT_LIFE_SLOTS[cur.i];
   const mins = Math.max(1, slot.to * 60 - (h.getUTCHours() * 60 + h.getUTCMinutes()));
-  const next = ASSISTANT_LIFE_SLOTS[(cur.i + 1) % ASSISTANT_LIFE_SLOTS.length];
   const t = mins >= 60 ? `${Math.floor(mins / 60)}時間${mins % 60 ? `${mins % 60}分` : ''}` : `${mins}分`;
-  return `あと${t}で${next.label}(みんなが動きます)`;
+  return `あと${t}でみんなが動きます`;
 };
 const assistantLifeSlotRange = id => {
   const s = ASSISTANT_LIFE_SLOTS.find(x => x.id === id);
-  return s ? `${s.label}(${s.from}〜${s.to}時)` : '';
+  return s ? `${s.from}〜${s.to % 24}時` : '';
 };
 const useAssistantLifeNow = metIds => {
   const st = useAssistantLifeState();
@@ -101998,22 +102917,33 @@ function AssistantLifeScreenBody({
       place: g.place
     });
   };
+  const sleepingOf = id => {
+    const x = (life.solo || {})[id];
+    return !!(x && x.doing === 'sleep');
+  };
   const invite = async id => {
-    const talk = assistantLifePickInviteTalk(id, life);
+    const talk = sleepingOf(id) && typeof assistantLifePickSleepTalk === 'function' ? assistantLifePickSleepTalk(id, {
+      wake: true,
+      place: 'home'
+    }) : assistantLifePickCallTalk(id, life);
     if (!(await assistantLifeNudge('invite', id))) return;
-    setNote(`${nameOf(id)}を誘いました。次の時間に、だれかのところへ行きます`);
+    setNote(`${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
     if (talk) {
-      assistantLifeMarkSeen(talk);
+      if (!sleepingOf(id)) assistantLifeMarkSeen(talk);
       playTalk(talk, {
         ids: [id],
-        place: ((life.solo || {})[id] || {}).place
+        place: ((life.solo || {})[id] || {}).place,
+        sleep: sleepingOf(id)
       });
     }
   };
   const peek = id => {
     const key = `solo:${id}`;
     if ((life.watched || []).includes(key)) return;
-    const talk = assistantLifePickSoloTalk(id, life);
+    const talk = sleepingOf(id) && typeof assistantLifePickSleepTalk === 'function' ? assistantLifePickSleepTalk(id, {
+      wake: false,
+      place: 'home'
+    }) : typeof assistantLifeOnlyPresent === 'function' ? assistantLifeOnlyPresent(assistantLifePickSoloTalk(id, life), [id]) : assistantLifePickSoloTalk(id, life);
     if (!talk) {
       setNote(`${nameOf(id)}は、いまは静かに過ごしています`);
       return;
@@ -102025,10 +102955,11 @@ function AssistantLifeScreenBody({
       }
     });
     assistantLifeSaveLife();
-    assistantLifeMarkSeen(talk);
+    if (!sleepingOf(id)) assistantLifeMarkSeen(talk);
     playTalk(talk, {
       ids: [id],
-      place: ((life.solo || {})[id] || {}).place
+      place: ((life.solo || {})[id] || {}).place,
+      sleep: sleepingOf(id)
     });
   };
   const introduce = async () => {
@@ -102094,7 +103025,7 @@ function AssistantLifeScreenBody({
     className: "min-w-0 flex-1 text-[15px] font-black text-pink-200"
   }, "助手ライフ"), React.createElement("span", {
     className: "text-right text-[10px] font-bold leading-tight text-slate-400"
-  }, "いまは", assistantLifeSlotRange(slot.id), React.createElement("br", null), React.createElement("span", {
+  }, "いまは", assistantLifeSlotRange(slot.id), "の過ごし方", React.createElement("br", null), React.createElement("span", {
     "data-assistant-life-next-slot": true,
     className: "text-slate-300"
   }, assistantLifeNextSlotText())), React.createElement("button", {
@@ -102472,7 +103403,13 @@ function AssistantLifeItemIntro({
     className: "text-[14px] font-black text-amber-200"
   }, "はじめての ", info.emoji, " ", info.name, "！")), React.createElement("p", {
     className: "mt-2 text-[12px] leading-relaxed text-white"
-  }, "① 「🏡 助手ライフ」で、一緒にいる2人に渡せるよ", React.createElement("br", null), "② 2人の友情Lv と、あなたとの仲良し度が上がる", React.createElement("br", null), "③ 1日1回。「🤝 もうすぐ友情Lv」の印がついた2人に渡すと、Lv が上がりやすい！"), React.createElement("div", {
+  }, "① 「🏡 助手ライフ」で、一緒にいる2人に渡せるよ", React.createElement("br", null), "② 2人の", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "友情Lv と"), "、あなたとの仲良し度が上がる", React.createElement("br", null), "③ 1日1回。", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "「🤝 もうすぐ友情Lv」"), "の印がついた2人に渡すと、", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "Lv が上がりやすい！")), React.createElement("div", {
     className: "mt-2 flex gap-2"
   }, React.createElement("button", {
     type: "button",
@@ -102562,6 +103499,953 @@ const ASSISTANT_LIFE_VIEW = Object.freeze({
   night: ['images/story-bg/monhero_night.jpg', 'images/story-bg/forest_night.jpg']
 });
 const ASSISTANT_LIFE_BGM_TRACK = 'kaze_ga_soyogu';
+const ASSISTANT_LIFE_SLEEP_TALKS = Object.freeze([{
+  id: 'life-sleep-mua-001',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'mua',
+    e: 'happy',
+    t: '…むにゃ…プリン、もう1個だけぇ…'
+  }]
+}, {
+  id: 'life-sleep-mua-002',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'mua',
+    e: 'happy',
+    t: '…んふふ…このコーデ、まぢ優勝…'
+  }]
+}, {
+  id: 'life-sleep-mua-003',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'mua',
+    e: 'normal',
+    t: '…あと5分…いや、あと5曲…'
+  }]
+}, {
+  id: 'life-sleep-mua-004',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'mua',
+    e: 'happy',
+    t: '…モッチー…ふわふわ…ぢゃん…'
+  }]
+}, {
+  id: 'life-sleep-mua-005',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'mua',
+    e: 'normal',
+    t: '…{name}…いっしょに、広場いこ…'
+  }]
+}, {
+  id: 'life-sleep-mua-006',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'mua',
+    e: 'excited',
+    t: '…フルコン…きた…！ …すぅ…'
+  }]
+}, {
+  id: 'life-sleep-kiki-001',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '…すぅ…火力は…ぜんぶ攻撃に…'
+  }]
+}, {
+  id: 'life-sleep-kiki-002',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kiki',
+    e: 'happy',
+    t: '…お茶が…はいりましたよ…むにゃ'
+  }]
+}, {
+  id: 'life-sleep-kiki-003',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '…ゴーレムさん…今日も、かたいでつね…'
+  }]
+}, {
+  id: 'life-sleep-kiki-004',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kiki',
+    e: 'happy',
+    t: '…{name}…おはようございまつ…すぅ'
+  }]
+}, {
+  id: 'life-sleep-kiki-005',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '…しおりは…ここに…はさんで…'
+  }]
+}, {
+  id: 'life-sleep-kiki-006',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kiki',
+    e: 'happy',
+    t: '…ちから…全開…でつ…'
+  }]
+}, {
+  id: 'life-sleep-momosuke-001',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'momosuke',
+    e: 'happy',
+    t: '…むにゃ…もも、センター…♡'
+  }]
+}, {
+  id: 'life-sleep-momosuke-002',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '…HELL…もう1回…'
+  }]
+}, {
+  id: 'life-sleep-momosuke-003',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'momosuke',
+    e: 'happy',
+    t: '…メタルナー…ぴかぴか…w'
+  }]
+}, {
+  id: 'life-sleep-momosuke-004',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '…アンコール…ありがと…すぅ'
+  }]
+}, {
+  id: 'life-sleep-momosuke-005',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'momosuke',
+    e: 'happy',
+    t: '…{name}…見ててね…♡'
+  }]
+}, {
+  id: 'life-sleep-momosuke-006',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'momosuke',
+    e: 'normal',
+    t: '…ミス…ゼロ…！！ …すぅ'
+  }]
+}, {
+  id: 'life-sleep-dra-001',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'dra',
+    e: 'happy',
+    t: '…ぐぅ…グジラ…でっかいな…'
+  }]
+}, {
+  id: 'life-sleep-dra-002',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '…ふとんが…むにゃ…'
+  }]
+}, {
+  id: 'life-sleep-dra-003',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'dra',
+    e: 'happy',
+    t: '…アルミ缶の…上に…すぅ'
+  }]
+}, {
+  id: 'life-sleep-dra-004',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '…おで…まだ…食べられるぞ…'
+  }]
+}, {
+  id: 'life-sleep-dra-005',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'dra',
+    e: 'happy',
+    t: '…{name}…膝…だいじょうぶか…'
+  }]
+}, {
+  id: 'life-sleep-dra-006',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '…あと10時間…寝かせてくれ…'
+  }]
+}, {
+  id: 'life-sleep-atsu-001',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '…ドラゴン…もう1周…！'
+  }]
+}, {
+  id: 'life-sleep-atsu-002',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'atsu',
+    e: 'happy',
+    t: '…勝った…笑 …すぅ…'
+  }]
+}, {
+  id: 'life-sleep-atsu-003',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '…とりあえず…突っこむ…'
+  }]
+}, {
+  id: 'life-sleep-atsu-004',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '…てか…ノーカン…だろ…'
+  }]
+}, {
+  id: 'life-sleep-atsu-005',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'atsu',
+    e: 'happy',
+    t: '…{name}…ナイス…！'
+  }]
+}, {
+  id: 'life-sleep-atsu-006',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '…朝練…6時…！'
+  }]
+}, {
+  id: 'life-sleep-kyuko-001',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '…むにゃ…その本、あと1章だけぇ…'
+  }]
+}, {
+  id: 'life-sleep-kyuko-002',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kyuko',
+    e: 'happy',
+    t: '…ニャー…ふかふかぁ…'
+  }]
+}, {
+  id: 'life-sleep-kyuko-003',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '…ぐぬぬぬ…あと1枚…'
+  }]
+}, {
+  id: 'life-sleep-kyuko-004',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kyuko',
+    e: 'happy',
+    t: '…ほい…ありがとん…すぅ'
+  }]
+}, {
+  id: 'life-sleep-kyuko-005',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '…だいたい…97点…'
+  }]
+}, {
+  id: 'life-sleep-kyuko-006',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'kyuko',
+    e: 'happy',
+    t: '…{name}…イルミネ、きれいだねぇ…'
+  }]
+}, {
+  id: 'life-sleep-sorashido-001',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '…表の…3行目…ずれてる…'
+  }]
+}, {
+  id: 'life-sleep-sorashido-002',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'sorashido',
+    e: 'happy',
+    t: '…うぉぉぉ…新記録…むにゃ'
+  }]
+}, {
+  id: 'life-sleep-sorashido-003',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '…なんくるないさ…すぅ…'
+  }]
+}, {
+  id: 'life-sleep-sorashido-004',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'sorashido',
+    e: 'happy',
+    t: '…確率…でーじ…高い…'
+  }]
+}, {
+  id: 'life-sleep-sorashido-005',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'sorashido',
+    e: 'normal',
+    t: '…攻略本…完成…だぜ…'
+  }]
+}, {
+  id: 'life-sleep-sorashido-006',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'sorashido',
+    e: 'happy',
+    t: '…{name}…ちばりよー…'
+  }]
+}, {
+  id: 'life-sleep-erubin-001',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '…すぅ…デュラハン…いけ…'
+  }]
+}, {
+  id: 'life-sleep-erubin-002',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'erubin',
+    e: 'happy',
+    t: '…みんな…おやすみ…'
+  }]
+}, {
+  id: 'life-sleep-erubin-003',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '…もう1戦…いいね…'
+  }]
+}, {
+  id: 'life-sleep-erubin-004',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'erubin',
+    e: 'happy',
+    t: '…お茶…おいしいね…'
+  }]
+}, {
+  id: 'life-sleep-erubin-005',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '…ちがうよ…石油王じゃ…ないって…'
+  }]
+}, {
+  id: 'life-sleep-erubin-006',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'talk',
+  lv: null,
+  lines: [{
+    who: 'erubin',
+    e: 'happy',
+    t: '…{name}…今日も、ありがとう…'
+  }]
+}, {
+  id: 'life-sleep-mua-007',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'mua',
+    e: 'surprise',
+    t: 'ふぇっ！？ {name}！？ …あ、寝ぐせ見ないで〜！'
+  }]
+}, {
+  id: 'life-sleep-mua-008',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'mua',
+    e: 'troubled',
+    t: '…ん…まだ朝？ あたし、朝ほんとに弱くて…ごめんね'
+  }]
+}, {
+  id: 'life-sleep-mua-009',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'mua',
+    e: 'troubled',
+    t: 'んー…{name}…あと5分だけぇ…'
+  }, {
+    who: 'mua',
+    e: 'happy',
+    t: '…しょうがないなぁ、起きるぢゃん♪'
+  }]
+}, {
+  id: 'life-sleep-mua-010',
+  kind: 'life-sleep',
+  who: 'mua',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'mua',
+    e: 'angry',
+    t: 'もう！ いい夢見てたのに〜！ …で、なに？ｗ'
+  }]
+}, {
+  id: 'life-sleep-kiki-007',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'kiki',
+    e: 'surprise',
+    t: '…まあ、{name}。私、うとうとしていましたか'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: 'お見苦しいところを。お茶でもいれまつね'
+  }]
+}, {
+  id: 'life-sleep-kiki-008',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'kiki',
+    e: 'normal',
+    t: '…はい、起きまつ。早寝なので、少しぼんやりしていまつ'
+  }]
+}, {
+  id: 'life-sleep-kiki-009',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'kiki',
+    e: 'troubled',
+    t: '…{name}…もう22時すぎでつよ…'
+  }, {
+    who: 'kiki',
+    e: 'happy',
+    t: '…でも、来てくれたのはうれしいでつ♪'
+  }]
+}, {
+  id: 'life-sleep-kiki-010',
+  kind: 'life-sleep',
+  who: 'kiki',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'kiki',
+    e: 'happy',
+    t: '…ふふ、起こされてしまいました。少しだけ、お話ししまつか'
+  }]
+}, {
+  id: 'life-sleep-momosuke-007',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'momosuke',
+    e: 'surprise',
+    t: 'わっ！！ な、なに！？ もも寝てないよ！！'
+  }]
+}, {
+  id: 'life-sleep-momosuke-008',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '…ん…いま何時…？ 朝は、もも苦手なの…'
+  }]
+}, {
+  id: 'life-sleep-momosuke-009',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'momosuke',
+    e: 'angry',
+    t: 'ちょっとー！！ 寝起きの顔見ないで！！'
+  }, {
+    who: 'momosuke',
+    e: 'happy',
+    t: '…まあ、{name}ならいっか♡'
+  }]
+}, {
+  id: 'life-sleep-momosuke-010',
+  kind: 'life-sleep',
+  who: 'momosuke',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'momosuke',
+    e: 'troubled',
+    t: '…むにゃ…起こすなら、おやつ持ってきてw'
+  }]
+}, {
+  id: 'life-sleep-dra-007',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'dra',
+    e: 'surprise',
+    t: '…ん、おお、{name}か。寝てたぞ'
+  }]
+}, {
+  id: 'life-sleep-dra-008',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '…すまん、もうちょっとだけ寝かせてくれるか…'
+  }]
+}, {
+  id: 'life-sleep-dra-009',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'dra',
+    e: 'troubled',
+    t: '…{name}…いま、いい夢だったんだがな…'
+  }, {
+    who: 'dra',
+    e: 'happy',
+    t: 'まあ、起こされたなら起きるか'
+  }]
+}, {
+  id: 'life-sleep-dra-010',
+  kind: 'life-sleep',
+  who: 'dra',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'dra',
+    e: 'normal',
+    t: '…ぐぅ……はっ、起きてるぞ。目は閉じてるけどな'
+  }]
+}, {
+  id: 'life-sleep-atsu-007',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'atsu',
+    e: 'surprise',
+    t: '…ん！？ あ、{name}か！ 寝てた笑'
+  }]
+}, {
+  id: 'life-sleep-atsu-008',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'atsu',
+    e: 'normal',
+    t: '…おう…朝練の前に、もうちょい寝る…'
+  }]
+}, {
+  id: 'life-sleep-atsu-009',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'atsu',
+    e: 'troubled',
+    t: '…{name}かよ… 夜は寝かせろって笑'
+  }, {
+    who: 'atsu',
+    e: 'happy',
+    t: '…まあいいや、起きた！ なんだ？'
+  }]
+}, {
+  id: 'life-sleep-atsu-010',
+  kind: 'life-sleep',
+  who: 'atsu',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'atsu',
+    e: 'happy',
+    t: '…ふぁ…起こしたなら、朝いっしょに走るぞ笑'
+  }]
+}, {
+  id: 'life-sleep-kyuko-007',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'kyuko',
+    e: 'surprise',
+    t: '…ぇ、あ、{name}…？ 寝ぼけてたぁ'
+  }]
+}, {
+  id: 'life-sleep-kyuko-008',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '…ん…朝はまだ、むりぃ…'
+  }]
+}, {
+  id: 'life-sleep-kyuko-009',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'kyuko',
+    e: 'troubled',
+    t: '…{name}ぉ…いま、本の夢見てたのにぃ'
+  }, {
+    who: 'kyuko',
+    e: 'happy',
+    t: '…ま、いっか。ほい、起きたよ笑'
+  }]
+}, {
+  id: 'life-sleep-kyuko-010',
+  kind: 'life-sleep',
+  who: 'kyuko',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'kyuko',
+    e: 'normal',
+    t: '…ぐぬぬぬ…起こされたぁ。ありがとん…なのかなぁ'
+  }]
+}, {
+  id: 'life-sleep-sorashido-007',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'sorashido',
+    e: 'surprise',
+    t: '…うぉっ！？ {name}か…寝ぼけてたぜ'
+  }]
+}, {
+  id: 'life-sleep-sorashido-008',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '…まだ10時前だろ…朝は弱いのさ…'
+  }]
+}, {
+  id: 'life-sleep-sorashido-009',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'sorashido',
+    e: 'troubled',
+    t: '…{name}…いま、表の夢の途中だったんだぜ…'
+  }, {
+    who: 'sorashido',
+    e: 'happy',
+    t: '…まあいいさ。起きたからには、計算するぜ'
+  }]
+}, {
+  id: 'life-sleep-sorashido-010',
+  kind: 'life-sleep',
+  who: 'sorashido',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'sorashido',
+    e: 'happy',
+    t: '…ふぁ…{name}の声なら、目ざましより効くさ'
+  }]
+}, {
+  id: 'life-sleep-erubin-007',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'erubin',
+    e: 'surprise',
+    t: '…あ、{name}。ごめんね、寝てたみたい'
+  }]
+}, {
+  id: 'life-sleep-erubin-008',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'woken',
+  lv: '1-4',
+  lines: [{
+    who: 'erubin',
+    e: 'normal',
+    t: '…ん…どうしたの？ 何かあった？'
+  }]
+}, {
+  id: 'life-sleep-erubin-009',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'erubin',
+    e: 'troubled',
+    t: '…{name}…もう23時すぎてるよ…'
+  }, {
+    who: 'erubin',
+    e: 'happy',
+    t: '…でも、顔見られてよかった。少しだけ話そっか'
+  }]
+}, {
+  id: 'life-sleep-erubin-010',
+  kind: 'life-sleep',
+  who: 'erubin',
+  line: 'woken',
+  lv: '5-10',
+  lines: [{
+    who: 'erubin',
+    e: 'happy',
+    t: '…ふぁ…起こされちゃった笑 どうしたの？'
+  }]
+}]);
+const assistantLifePickSleepTalk = (id, {
+  wake = true,
+  bondLv = 1,
+  place = 'home'
+} = {}) => {
+  const all = (typeof ASSISTANT_LIFE_SLEEP_TALKS !== 'undefined' ? ASSISTANT_LIFE_SLEEP_TALKS : []).filter(t => t.who === id);
+  const band = bondLv >= 5 ? '5-10' : '1-4';
+  const talk = all.filter(t => t.line === 'talk'),
+    woken = all.filter(t => t.line === 'woken' && (!t.lv || t.lv === band));
+  const list = wake && woken.length && Math.random() < 0.4 ? woken : talk.length ? talk : woken;
+  if (!list.length) return null;
+  const t = list[Math.floor(Math.random() * list.length)];
+  return {
+    ...t,
+    pair: [id],
+    lv: 1,
+    scene: 'any',
+    lifePlace: place,
+    lifeDoing: 'sleep'
+  };
+};
+const assistantLifeOnlyPresent = (talk, ids) => {
+  if (!talk || !Array.isArray(talk.lines)) return talk;
+  if (talk.lines.every(l => ids.includes(l.who))) return talk;
+  const lines = talk.lines.filter(l => ids.includes(l.who));
+  return lines.length ? {
+    ...talk,
+    lines
+  } : null;
+};
 const assistantLifeWhereOf = (life, id) => {
   if (!life) return null;
   const g = (life.groups || []).find(x => x.ids.includes(id));
@@ -102592,6 +104476,14 @@ const assistantLifeCurrent = () => {
 const assistantLifeAtBeat = id => {
   const w = assistantLifeWhereOf(assistantLifeCurrent(), id);
   return !!(w && w.doing === 'practice');
+};
+const assistantLifeAsleep = id => {
+  try {
+    const w = assistantLifeWhereOf(assistantLifeCurrent(), id);
+    return !!(w && w.doing === 'sleep');
+  } catch (_) {
+    return false;
+  }
 };
 const assistantLifeBeatIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLifeAtBeat);
 const assistantLifeHostOf = ids => ids.find(id => ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav === 'home') || [...ids].sort((a, b) => ASSISTANT_LIFE_HOUSE_ORDER.indexOf(a) - ASSISTANT_LIFE_HOUSE_ORDER.indexOf(b))[0];
@@ -102675,11 +104567,22 @@ const assistantLifeGroupNames = (ids, max = 4) => {
   const list = [...ids].sort((a, b) => ASSISTANT_LIFE_HOUSE_ORDER.indexOf(a) - ASSISTANT_LIFE_HOUSE_ORDER.indexOf(b)).map(assistantLifeName);
   return list.length > max ? `${list.slice(0, max - 1).join('・')} ほか${list.length - max + 1}人` : list.join('・');
 };
+const assistantLifeTodLabel = (now = Date.now()) => {
+  try {
+    if (typeof timeOfDayLabelAt === 'function') return timeOfDayLabelAt(now);
+  } catch (_) {}
+  return {
+    morning: '朝',
+    noon: '昼',
+    evening: '夕',
+    night: '夜'
+  }[assistantLifeTimeLook(now)];
+};
 const assistantLifeDiaryOnSlot = (life, slot, now = Date.now()) => {
   const gs = (life.groups || []).slice(0, 3);
   if (!gs.length) return;
   const text = gs.map(g => `${g.ids.map(assistantLifeName).join('・')} ${ASSISTANT_LIFE_PLACES[g.place]}で${ASSISTANT_LIFE_DOINGS[g.doing].label}`).join(' / ');
-  void assistantLifeDiaryAdd(`${slot.label}: ${text}`, gs.flatMap(g => g.ids), {
+  void assistantLifeDiaryAdd(`${assistantLifeTodLabel(now)}: ${text}`, gs.flatMap(g => g.ids), {
     kind: 'slot',
     now,
     slotAbs: slot.abs
@@ -102696,6 +104599,14 @@ const assistantLifeHouseCardIds = () => {
   } catch {
     return [];
   }
+};
+const assistantLifeOnWoken = ev => {
+  if (!ev || !ev.assistantId || !ASSISTANT_LIFE_PREFS[ev.assistantId]) return;
+  if (!ev.came) return;
+  assistantLifeRhythmPlay(ev.assistantId, ev.at || Date.now());
+  void assistantLifeDiaryAdd(`${assistantLifeName(ev.assistantId)} 起こされてモンヒロビートへ`, [ev.assistantId], {
+    kind: 'woken'
+  });
 };
 const assistantLifeOnSessionLive = ev => {
   if (!ev || !ev.assistantId) return;
@@ -102773,11 +104684,11 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-room .off{position:absolute;inset:0;z-index:3;background:rgba(6,9,24,.5)}
 .mhl-room .lamp{position:absolute;inset:0;z-index:3;background:radial-gradient(circle at 60% 40%,rgba(255,214,140,.45),transparent 70%);mix-blend-mode:screen;pointer-events:none}
 .mhl-room .tag{position:absolute;left:50%;top:50%;z-index:6;transform:translate(-50%,-38%) rotate(-3deg);max-width:92%;text-align:center;padding:3px 8px 4px;border-radius:7px;background:linear-gradient(#fef3c7,#fde68a);color:#422006;border:1.5px solid #b45309;box-shadow:0 3px 6px #0009}
-.mhl-room .tag b{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mhl-room .tag small[data-assistant-life-room-with]{white-space:normal;line-height:1.15}.mhl-room .tag small{display:block;font-size:9px;font-weight:800;color:#7c2d12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mhl-room .tag b{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mhl-room .tag small[data-assistant-life-room-with]{white-space:normal;line-height:1.15}[data-assistant-life-land="1"] .mhl-room .tag{padding:2px 5px 3px}[data-assistant-life-land="1"] .mhl-room .tag b{font-size:9.5px}[data-assistant-life-land="1"] .mhl-room .tag small{font-size:8px}.mhl-room .tag small{display:block;font-size:9px;font-weight:800;color:#7c2d12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mhl-room .lock{position:absolute;inset:0;z-index:6;display:grid;place-items:center;background:rgba(15,23,42,.78);font-size:11px;font-weight:900;color:#cbd5e1}
 .mhl-liv{position:absolute;overflow:hidden;border-radius:3px;background:linear-gradient(#f3e3c4,#e7cfa2)}
 .mhl-board{position:absolute;left:8px;top:6px;bottom:6px;border-radius:5px;background:#c08a52;border:3px solid #7c4a22;padding:3px 6px;overflow:hidden}
-.mhl-board b{display:block;font-size:9.5px;color:#fff}.mhl-board p{font-size:9px;font-weight:800;color:#1e293b;background:#fffbeb;border-radius:3px;padding:1px 4px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mhl-board b{display:block;font-size:9.5px;color:#fff}.mhl-board p{font-size:9px;font-weight:800;line-height:1.25;color:#1e293b;background:#fffbeb;border-radius:3px;padding:1px 4px;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .mhl-door{position:absolute;bottom:0;width:38px;border-radius:18px 18px 0 0;background:linear-gradient(#8b5a2b,#6b4423);border:2px solid #3b2412}
 .mhl-find{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:900;padding:6px 10px;border-radius:999px;background:linear-gradient(135deg,#7c3aed,#db2777);border:1.5px solid #fff9;box-shadow:0 4px 12px #0009}
 .mhl-tile{position:relative;display:block;min-height:58px;border-radius:12px;padding:6px 6px 4px;text-align:left;clip-path:polygon(0 0,88% 0,100% 20%,100% 100%,0 100%);overflow:hidden;box-shadow:inset 0 -4px 0 #0003;color:#fff}
@@ -102807,6 +104718,17 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 `;
 function AssistantLifeHouseStyle() {
   return React.createElement("style", null, ASSISTANT_LIFE_HOUSE_CSS);
+}
+function AssistantLifeNames({
+  text
+}) {
+  const parts = String(text || '').split('・');
+  return React.createElement(React.Fragment, null, parts.map((n, i) => React.createElement(React.Fragment, {
+    key: i
+  }, i ? '・' : '', React.createElement("span", {
+    "data-assistant-life-name": true,
+    className: "whitespace-nowrap"
+  }, n), i < parts.length - 1 ? React.createElement("wbr", null) : null)));
 }
 function AssistantLifeRoom({
   id,
@@ -102899,7 +104821,9 @@ function AssistantLifeRoom({
     "data-assistant-life-room-away": id
   }, React.createElement("b", null, state.tag[0]), React.createElement("small", null, state.tag[1]), state.tag[2] && React.createElement("small", {
     "data-assistant-life-room-with": true
-  }, state.tag[2])), !met && React.createElement("span", {
+  }, React.createElement(AssistantLifeNames, {
+    text: state.tag[2]
+  }))), !met && React.createElement("span", {
     className: "lock"
   }, "まだ会っていない"));
 }
@@ -102911,7 +104835,8 @@ function AssistantLifeHouseArt({
   metSet,
   onOpen,
   diary,
-  pop
+  pop,
+  onBoard
 }) {
   const wall = 6,
     cols = land ? 4 : 2,
@@ -102943,13 +104868,7 @@ function AssistantLifeHouseArt({
     style: {
       height: roofH
     }
-  }), !land && React.createElement("div", {
-    className: "mhl-attic",
-    style: {
-      top: roofH - 52
-    },
-    "aria-label": "屋根裏(まだ開いていません)"
-  }, "🔒"), React.createElement("span", {
+  }), React.createElement("span", {
     className: "mhl-hname",
     style: {
       top: roofH - (land ? 22 : 14)
@@ -102986,14 +104905,18 @@ function AssistantLifeHouseArt({
       height: lh,
       filter: night ? 'brightness(.62)' : undefined
     }
-  }, React.createElement("div", {
-    className: "mhl-board",
+  }, React.createElement("button", {
+    type: "button",
+    className: "mhl-board text-left",
     "data-assistant-life-board": true,
+    onClick: onBoard,
     style: {
-      width: Math.min(width * (land ? .42 : .5), 240)
-    }
-  }, React.createElement("b", null, "📌 今日あったこと"), items.length ? items.slice(0, land ? 2 : 3).map((x, i) => React.createElement("p", {
-    key: i
+      width: Math.min(width * (land ? .42 : .52), 240)
+    },
+    "aria-label": "今日あったことを全部見る"
+  }, React.createElement("b", null, "📌 今日あったこと", items.length ? ' ›' : ''), items.length ? items.slice(0, land ? 1 : 2).map((x, i) => React.createElement("p", {
+    key: i,
+    "data-assistant-life-board-item": true
   }, x.t, " ", x.text)) : React.createElement("p", null, "まだ何もありません")), React.createElement("div", {
     className: "mhl-door",
     style: {
@@ -103046,7 +104969,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
           in: [host, ...ids.filter(x => x !== host)],
           lonely,
           sleep: w.doing === 'sleep',
-          bub: w.doing === 'sleep' ? '💤 おやすみ中' : lonely ? '💭 だれか来ないかな…' : ids.length > 1 ? `${ASSISTANT_LIFE_PLACE_ICON.home} ${ids.length}人で${doing.label}` : doing.label
+          bub: w.doing === 'sleep' ? '💤 おやすみ中' : lonely ? '💭 だれか来ないかな…' : ids.length > 1 ? `部屋で${ids.length}人で${doing.label}` : `部屋で${doing.label}`
         };
       } else rooms[id] = {
         tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)]
@@ -103113,9 +105036,11 @@ function AssistantLifeRoomSheet({
   const groupKey = w && w.group ? assistantLifeGroupKey(w.group) : null;
   const canWatch = groupKey ? !watched.includes(groupKey) : !watched.includes(`solo:${id}`);
   const atBeat = w && w.doing === 'practice';
+  const asleep = !!(w && w.doing === 'sleep');
   const slotDef = ASSISTANT_LIFE_SLOTS[slot.i];
-  const groupText = w && w.group ? ` ・ ${w.group.ids.length}人(${assistantLifeGroupNames(w.group.ids, 8)})` : ' ・ ひとり';
-  const where = !w ? '🏡 部屋で過ごしている' : home ? `🏡 ${doing}${groupText}` : `${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${ASSISTANT_LIFE_PLACES[w.place]}で${doing}${groupText}`;
+  const groupNames = w && w.group ? assistantLifeGroupNames(w.group.ids, 8) : null;
+  const groupText = w && w.group ? '' : ' ・ ひとり';
+  const where = !w ? '🏡 部屋で過ごしている' : home ? `🏡 部屋で${doing}${groupText}` : `${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${ASSISTANT_LIFE_PLACES[w.place]}で${doing}${groupText}`;
   return React.createElement("div", {
     className: "absolute inset-0",
     style: {
@@ -103150,16 +105075,21 @@ function AssistantLifeRoomSheet({
   }, who.name, "の部屋"), React.createElement("p", {
     className: "mt-1 max-w-[62%] text-[12px] font-bold",
     "data-assistant-life-room-where": true
-  }, where), !home && React.createElement("p", {
+  }, where, groupNames && React.createElement(React.Fragment, null, " ・ ", w.group.ids.length, "人(", React.createElement(AssistantLifeNames, {
+    text: groupNames
+  }), ")")), !home && React.createElement("p", {
     className: "text-[11px] font-bold text-violet-200"
-  }, "⏱ ", slotDef ? `${ASSISTANT_LIFE_SLOTS[(slot.i + 1) % 6].label}(${slotDef.to}時)まで` : '', "いる"), (() => {
+  }, "⏱ ", slotDef ? `${slotDef.to % 24}時まで` : '', "いる"), (() => {
     const sh = assistantLifeRhythmShiftOn((ASSISTANT_LIFE_STORE.state.rhythm || {})[id], assistantLifeDayKey());
     const rh = ASSISTANT_LIFE_RHYTHM[id];
     return React.createElement("p", {
       className: "text-[10.5px] font-bold text-sky-200",
       "data-assistant-life-room-rhythm": assistantLifeRhythmLabel(sh)
     }, "🕰 生活のリズム: ", rh ? rh.label : '', Math.abs(sh) >= 0.3 ? `(いまは ${assistantLifeRhythmLabel(sh)})` : '');
-  })(), w && w.reason === 'lonely' ? React.createElement("p", {
+  })(), asleep ? React.createElement("p", {
+    className: "text-[11px] font-bold text-indigo-200",
+    "data-assistant-life-room-asleep": true
+  }, "💤 ぐっすり寝ている") : w && w.reason === 'lonely' ? React.createElement("p", {
     className: "text-[11px] font-bold text-amber-200"
   }, "💭 さみしそう(だれか来てほしい)") : mood ? React.createElement("p", {
     className: "text-[11px] font-bold text-pink-200"
@@ -103217,7 +105147,7 @@ function AssistantLifeRoomSheet({
     "data-assistant-life-room-act": "invite",
     disabled: w && w.reason === 'distance',
     onClick: () => onInvite(id)
-  }, "💬 声をかける") : React.createElement("button", {
+  }, asleep ? '💤 そっと声をかける' : '💬 声をかける') : React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-give",
     "data-assistant-life-room-act": "give",
@@ -103228,7 +105158,7 @@ function AssistantLifeRoomSheet({
     className: "mhl-btn mhl-beat col-span-2",
     "data-assistant-life-room-act": "beat",
     onClick: () => onBeat(id)
-  }, "🎵 一緒にモンビー", atBeat ? '(いまモンビーにいる)' : ''), typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && assistantLifeHouseCardIds().includes(id) && React.createElement("button", {
+  }, asleep ? '🎵 起こしてモンヒロビートに誘う' : `🎵 一緒にモンヒロビート${atBeat ? '(いまモンヒロビートにいる)' : ''}`), typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id) && React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-card col-span-2",
     "data-assistant-life-room-act": "card",
@@ -103262,6 +105192,13 @@ const assistantLifeSceneBg = (place, look) => {
     tint: look
   };
   return null;
+};
+const assistantLifeTodOn = () => {
+  try {
+    return !!document.documentElement.getAttribute('data-mh-tod');
+  } catch (_) {
+    return false;
+  }
 };
 const ASSISTANT_LIFE_TINT = Object.freeze({
   morning: 'linear-gradient(180deg,rgba(255,190,190,.25),transparent 60%)',
@@ -103319,12 +105256,12 @@ function AssistantLifeScene({
   })), room && React.createElement("span", {
     className: "absolute bottom-[24%] left-3 text-[46px] opacity-90",
     "aria-hidden": "true"
-  }, room.furn)), bg && bg.tint && React.createElement("div", {
+  }, room.furn)), bg && bg.tint && (assistantLifeTodOn() && typeof TimeOfDayTint === 'function' ? React.createElement(TimeOfDayTint, null) : React.createElement("div", {
     className: "absolute inset-0",
     style: {
       background: ASSISTANT_LIFE_TINT[bg.tint]
     }
-  }), !bg && look === 'night' && React.createElement("div", {
+  })), !bg && look === 'night' && React.createElement("div", {
     className: "absolute inset-0",
     style: {
       background: 'rgba(10,15,50,.35)'
@@ -103339,19 +105276,31 @@ function AssistantLifeScene({
     if (!who) return null;
     const n = ids.length;
     const cx = n === 1 ? 50 : n === 2 ? i ? 66 : 34 : n === 3 ? [22, 50, 78][i] : [16, 38, 62, 84][i];
-    return React.createElement("img", {
-      key: pid,
+    const zz = (scene.sleep || []).includes(pid);
+    return React.createElement(React.Fragment, {
+      key: pid
+    }, React.createElement("img", {
       className: "st",
-      src: assistantFullImage(who, 'happy'),
+      "data-assistant-life-scene-stand": pid,
+      "data-assistant-life-scene-sleep": zz ? '1' : '0',
+      src: assistantFullImage(who, zz ? 'normal' : 'happy'),
       alt: "",
       style: {
         left: `${cx}%`,
         transform: 'translateX(-50%)',
         height: n >= 4 ? '50%' : '58%',
         width: n === 1 ? '90%' : n >= 4 ? '46%' : '70%',
-        bottom: '22%'
+        bottom: '22%',
+        filter: zz ? 'brightness(.45) saturate(.6) drop-shadow(0 6px 12px #0008)' : undefined
       }
-    });
+    }), zz && React.createElement("span", {
+      className: "absolute text-[34px]",
+      style: {
+        left: `${cx + 8}%`,
+        top: '30%'
+      },
+      "aria-hidden": "true"
+    }, "💤"));
   }), React.createElement("div", {
     className: "mhl-hdr absolute inset-x-0 top-0",
     style: {
@@ -103380,7 +105329,9 @@ function AssistantLifeScene({
     style: {
       background: 'linear-gradient(90deg,#0ea5e9,#a855f7)'
     }
-  }, "👥 ", ids.length, "人で ・ ", assistantLifeGroupNames(ids, 8)), hint && ids.length === 2 && React.createElement("p", {
+  }, "👥 ", ids.length, "人で ・ ", React.createElement(AssistantLifeNames, {
+    text: assistantLifeGroupNames(ids, 8)
+  })), hint && ids.length === 2 && React.createElement("p", {
     className: "mt-1 w-fit rounded-full px-2 py-0.5 text-[10px] font-black",
     style: {
       background: 'linear-gradient(90deg,#db2777,#a855f7)'
@@ -103433,6 +105384,7 @@ function AssistantLifeHouse({
   const [note, setNote] = React.useState('');
   const [give, setGive] = React.useState(null);
   const [intro, setIntro] = React.useState(null);
+  const [boardOpen, setBoardOpen] = React.useState(false);
   const [vw, setVw] = React.useState(() => typeof window !== 'undefined' ? window.innerWidth : 390);
   React.useEffect(() => {
     const f = () => setVw(window.innerWidth);
@@ -103464,6 +105416,9 @@ function AssistantLifeHouse({
     };
   }, []);
   React.useEffect(() => {
+    if (roomId) setNote('');
+  }, [roomId]);
+  React.useEffect(() => {
     if (st.focus) {
       setRoomId(st.focus);
       ASSISTANT_LIFE_STORE.set({
@@ -103490,12 +105445,16 @@ function AssistantLifeHouse({
   };
   const playTalk = (talk, ctx) => {
     if (!talk) return;
-    const sceneIds = ctx && ctx.ids && ctx.ids.length ? ctx.ids : typeof assistantPeerMembers === 'function' ? assistantPeerMembers(talk) : [];
+    const speakers = [...new Set((talk.lines || []).map(l => l && l.who).filter(Boolean))];
+    const sceneIds = [...new Set([...(ctx && ctx.ids || []), ...speakers])];
+    const sleepIds = ctx && ctx.sleep ? ctx.ids || [] : [];
     setRoomId(null);
+    setNote('');
     setScene({
       ids: sceneIds,
       place: ctx && ctx.place || 'home',
-      key: talk.id
+      key: `${talk.id}-${Date.now()}`,
+      sleep: sleepIds
     });
     if (onReplay) onReplay(talk);
     if (sceneIds.length >= 2) void assistantLifeDiaryAdd(`${sceneIds.map(nameOf).join('・')}の様子を見守った`, sceneIds, {
@@ -103516,7 +105475,12 @@ function AssistantLifeHouse({
   const peek = id => {
     const key = `solo:${id}`;
     if ((life.watched || []).includes(key)) return;
-    const talk = assistantLifePickSoloTalk(id, life);
+    const w = assistantLifeWhereOf(life, id);
+    const sleeping = !!(w && w.doing === 'sleep');
+    const talk = sleeping ? assistantLifePickSleepTalk(id, {
+      wake: false,
+      place: w.place
+    }) : assistantLifeOnlyPresent(assistantLifePickSoloTalk(id, life), [id]);
     if (!talk) {
       setNote(`${nameOf(id)}は、いまは静かに過ごしています`);
       return;
@@ -103528,25 +105492,31 @@ function AssistantLifeHouse({
       }
     });
     assistantLifeSaveLife();
-    assistantLifeMarkSeen(talk);
-    const w = assistantLifeWhereOf(life, id);
+    if (!sleeping) assistantLifeMarkSeen(talk);
     playTalk(talk, {
       ids: [id],
-      place: w ? w.place : 'home'
+      place: w ? w.place : 'home',
+      sleep: sleeping
     });
   };
   const invite = async id => {
-    const talk = assistantLifePickInviteTalk(id, life);
+    const w = assistantLifeWhereOf(life, id);
+    const sleeping = !!(w && w.doing === 'sleep');
+    const talk = sleeping ? assistantLifePickSleepTalk(id, {
+      wake: true,
+      bondLv: typeof bondLevelOf === 'function' ? bondLevelOf(id) : 1,
+      place: w.place
+    }) : assistantLifePickCallTalk(id, life);
     if (!(await assistantLifeNudge('invite', id))) return;
-    setNote(`${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
     if (talk) {
-      assistantLifeMarkSeen(talk);
-      const w = assistantLifeWhereOf(life, id);
+      if (!sleeping) assistantLifeMarkSeen(talk);
       playTalk(talk, {
         ids: [id],
-        place: w ? w.place : 'home'
+        place: w ? w.place : 'home',
+        sleep: sleeping
       });
     }
+    setNote(sleeping ? `${nameOf(id)}は寝ています。次の時間に、起きてだれかのところへ行きます` : `${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
   };
   const canGive = !!(peerItems && onUseItem);
   const itemInfos = ASSISTANT_LIFE_ITEM_KINDS.map(k => assistantLifeItemInfo(k.kind));
@@ -103561,6 +105531,7 @@ function AssistantLifeHouse({
     const best = ps.find(([a, b]) => assistantLifePairHint(peerSt, life, a, b).near) || ps.find(([a, b]) => assistantLifePairHint(peerSt, life, a, b).after) || ps[0];
     setRoomId(null);
     setScene(null);
+    setNote('');
     setGive({
       ids: list,
       pair: list.length === 2 ? [...list] : best,
@@ -103646,7 +105617,7 @@ function AssistantLifeHouse({
       if (beatIds[0]) setRoomId(beatIds[0]);
     },
     disabled: !beatIds.length
-  }, React.createElement("i", null, "🎵"), React.createElement("b", null, "モンビー"), React.createElement("small", null, beatIds.length ? `${beatIds.length}人が練習中` : 'いまはだれも')));
+  }, React.createElement("i", null, "🎵"), React.createElement("b", null, "モンヒロビート"), React.createElement("small", null, beatIds.length ? `${beatIds.length}人が練習中` : 'いまはだれも')));
   const icons = React.createElement("div", {
     className: "mhl-icons",
     role: "tablist",
@@ -103677,7 +105648,8 @@ function AssistantLifeHouse({
     "aria-label": "閉じる",
     className: "h-9 w-8 shrink-0 text-[19px] text-slate-100"
   }, "←"), React.createElement("div", {
-    className: "min-w-0 flex-1"
+    className: "min-w-0 shrink-0",
+    "data-assistant-life-title": true
   }, React.createElement("p", {
     className: "mhl-en whitespace-nowrap",
     style: land ? {
@@ -103689,23 +105661,18 @@ function AssistantLifeHouse({
     style: land ? {
       fontSize: 18
     } : undefined
-  }, "助手ライフ")), !land && typeof TimeOfDayClock === 'function' && React.createElement("div", {
+  }, "助手ライフ")), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }), typeof TimeOfDayClock === 'function' && React.createElement("div", {
     className: "shrink-0 self-center"
-  }, React.createElement(TimeOfDayClock, null)), React.createElement("div", {
-    className: "mhl-clock shrink-0",
+  }, React.createElement(TimeOfDayClock, null))), React.createElement("p", {
+    className: "mt-0.5 text-[10px] font-bold text-slate-200",
     "data-assistant-life-clock": true
-  }, React.createElement("p", {
-    className: "whitespace-nowrap text-[11px] font-black"
-  }, {
-    morning: '🌅 朝',
-    noon: '☀ 昼',
-    evening: '🌇 夕方',
-    night: '🌙 夜'
-  }[look]), React.createElement("p", {
+  }, assistantLifeTodLabel(), " ・ ", React.createElement("span", {
     "data-assistant-life-next-slot": true,
-    className: "whitespace-nowrap text-[9.5px] font-bold text-slate-300"
-  }, assistantLifeNextSlotText().replace(/で.+?\(みんなが動きます\)/, 'でみんなが動く')))), React.createElement("div", {
-    className: "mt-1.5 flex items-center gap-1.5",
+    className: "whitespace-nowrap"
+  }, assistantLifeNextSlotText().replace(/みんなが動きます$/, 'みんなが動く'))), React.createElement("div", {
+    className: "mt-1 flex items-center gap-1.5",
     "data-assistant-life-tier": tier.id,
     title: ASSISTANT_LIFE_TIER_NOTES[tier.id]
   }, React.createElement("span", {
@@ -103741,7 +105708,8 @@ function AssistantLifeHouse({
     metSet: metSet,
     onOpen: setRoomId,
     diary: diary,
-    pop: !!intro
+    pop: !!intro,
+    onBoard: () => setBoardOpen(true)
   }));
   const tabBody = tab === 'house' ? houseView : tab === 'where' ? React.createElement("div", {
     className: "px-3 pb-3",
@@ -103862,7 +105830,42 @@ function AssistantLifeHouse({
     onGive: g => openGive(g.ids),
     onBeat: beat,
     onCard: card
-  }), scene && React.createElement(AssistantLifeScene, {
+  }), boardOpen && React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      zIndex: 25
+    },
+    "data-assistant-life-diary": true
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    className: "absolute inset-0 bg-black/60",
+    onClick: () => setBoardOpen(false)
+  }), React.createElement("div", {
+    className: "mhl-sheet",
+    style: land ? {
+      left: 'auto',
+      width: '42%',
+      top: 0,
+      maxHeight: '100%',
+      borderRadius: '22px 0 0 22px'
+    } : undefined
+  }, React.createElement("p", {
+    className: "mhl-en"
+  }, "TODAY"), React.createElement("p", {
+    className: "text-[18px] font-black"
+  }, "📌 今日あったこと"), (diary.items || []).length ? [...diary.items].reverse().map((x, i) => React.createElement("p", {
+    key: i,
+    className: "mt-1.5 text-[12px] font-bold leading-snug text-slate-100"
+  }, React.createElement("b", {
+    className: "mr-1.5 text-amber-200"
+  }, x.t), x.text)) : React.createElement("p", {
+    className: "mt-2 text-[12px] text-slate-400"
+  }, "まだ何もありません"), React.createElement("button", {
+    type: "button",
+    className: "mhl-btn mt-3 w-full bg-slate-700",
+    onClick: () => setBoardOpen(false)
+  }, "閉じる"))), scene && React.createElement(AssistantLifeScene, {
     key: scene.key,
     scene: scene,
     look: look,
@@ -103916,17 +105919,21 @@ function AssistantLifeHouse({
     onGive: doGive
   }));
 }
+const ASSISTANT_LIFE_MAP_CROP = Object.freeze({
+  y0: 120,
+  h: 1440
+});
 const ASSISTANT_LIFE_MAP_POS = Object.freeze({
-  studio: [24, 22],
-  ranch: [10, 38],
-  library: [81, 25],
-  garden: [68, 34],
-  plaza: [51, 47],
-  cafe: [16, 53],
-  market: [86, 56],
-  home: [8, 65],
-  cardroom: [49, 82],
-  hill: [85, 10]
+  ranch: [23.4, 30.6],
+  library: [69.1, 22.9],
+  studio: [83.5, 27.8],
+  garden: [69.1, 33.3],
+  plaza: [51.0, 48.6],
+  cafe: [14.9, 61.8],
+  market: [85.0, 64.6],
+  home: [9.6, 78.5],
+  cardroom: [49.9, 91.7],
+  hill: [80.8, 5.6]
 });
 function AssistantLifeTownMap({
   life,
@@ -103940,6 +105947,25 @@ function AssistantLifeTownMap({
     const p = w ? w.place : 'home';
     (at[p] = at[p] || []).push(id);
   }
+  const mapRef = useRef(null);
+  React.useLayoutEffect(() => {
+    const fit = () => {
+      const m = mapRef.current;
+      if (!m) return;
+      const mr = m.getBoundingClientRect();
+      for (const el of m.querySelectorAll('[data-assistant-life-map-place]')) {
+        el.style.translate = '';
+        const r = el.getBoundingClientRect();
+        const dx = r.left < mr.left + 3 ? mr.left + 3 - r.left : r.right > mr.right - 3 ? mr.right - 3 - r.right : 0;
+        const dy = r.top < mr.top + 3 ? mr.top + 3 - r.top : r.bottom > mr.bottom - 3 ? mr.bottom - 3 - r.bottom : 0;
+        if (dx || dy) el.style.translate = `${dx}px ${dy}px`;
+      }
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  });
+  const tod = assistantLifeTodOn() && typeof TimeOfDayTint === 'function';
   const filter = {
     morning: 'saturate(.85) brightness(1.05) sepia(.18)',
     noon: 'none',
@@ -103948,9 +105974,9 @@ function AssistantLifeTownMap({
   }[look];
   return React.createElement("div", {
     className: "relative mb-2 overflow-hidden rounded-2xl border border-white/15",
+    ref: mapRef,
     style: {
-      aspectRatio: '941 / 1000',
-      maxHeight: 340
+      aspectRatio: `941 / ${ASSISTANT_LIFE_MAP_CROP.h}`
     },
     "data-assistant-life-map": true
   }, React.createElement("img", {
@@ -103958,10 +105984,10 @@ function AssistantLifeTownMap({
     alt: "",
     className: "absolute left-0 top-0 w-full",
     style: {
-      filter,
-      transform: 'translateY(-14%)'
+      filter: tod ? 'none' : filter,
+      transform: `translateY(-${(100 * ASSISTANT_LIFE_MAP_CROP.y0 / 1672).toFixed(2)}%)`
     }
-  }), Object.entries(ASSISTANT_LIFE_MAP_POS).map(([place, [x, y]]) => {
+  }), tod && React.createElement(TimeOfDayTint, null), Object.entries(ASSISTANT_LIFE_MAP_POS).map(([place, [x, y]]) => {
     const who = at[place] || [];
     return React.createElement("div", {
       key: place,
@@ -103987,7 +106013,7 @@ function AssistantLifeTownMap({
       })) : null;
     })), React.createElement("span", {
       className: `mt-0.5 whitespace-nowrap rounded-md border px-1.5 text-[9.5px] font-black ${who.length ? 'border-amber-300 bg-amber-950/90 text-amber-50' : 'border-slate-500/60 bg-slate-950/70 text-slate-300'}`
-    }, ASSISTANT_LIFE_PLACE_ICON[place], " ", ASSISTANT_LIFE_PLACES[place]));
+    }, ASSISTANT_LIFE_PLACE_ICON[place], " ", place === 'home' ? '助手の家' : ASSISTANT_LIFE_PLACES[place]));
   }));
 }
 const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({
@@ -104060,8 +106086,8 @@ function AssistantLifeHomeFaces({
   const after = new Set(q && q.pair ? String(q.pair).split('-') : []);
   return React.createElement(React.Fragment, null, Object.entries(by).map(([f, list]) => {
     const r = rects[f];
-    const side = r.gap < 15;
-    const size = side ? 20 : Math.max(12, Math.min(20, r.gap - 3));
+    const side = false;
+    const size = Math.max(12, Math.min(20, r.gap - 3));
     const step = size - 4;
     const upW = f === 'card' && cardUp ? Math.round(size * 1.25) + 2 : 0;
     const rowW = size + (list.length - 1) * step + 6 + upW;
@@ -111060,7 +113086,7 @@ const cardTourRewardOf = (rewards, place, wins) => {
     point: base + t.perWin * Math.max(0, Math.floor(Number(wins) || 0))
   };
 };
-const CARD_LINE_SCENES = Object.freeze(['challenge', 'start', 'big', 'bigHit', 'guardMine', 'guardTheirs', 'myKo', 'theirKo', 'lastMine', 'lastTheirs', 'deckMine', 'deckTheirs', 'win', 'lose']);
+const CARD_LINE_SCENES = Object.freeze(['challenge', 'start', 'big', 'bigHit', 'guardMine', 'guardTheirs', 'myKo', 'theirKo', 'lastMine', 'lastTheirs', 'deckMine', 'deckTheirs', 'win', 'lose', 'winQuick']);
 const CARD_LINE_FACE = Object.freeze({
   challenge: 'wink',
   start: 'happy',
@@ -111075,7 +113101,8 @@ const CARD_LINE_FACE = Object.freeze({
   deckMine: 'surprise',
   deckTheirs: 'wink',
   win: 'happy',
-  lose: 'crying'
+  lose: 'crying',
+  winQuick: 'wink'
 });
 const CARD_BATTLE_LINES = Object.freeze({
   mua: {
@@ -111092,7 +113119,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: ['山札、あと少しぢゃん…！ 急がなきゃ！', 'カード残り少ない…早く決めなきゃ！'],
     deckTheirs: ['そっちの山札、もう少ないよ？ 大丈夫？', 'カード足りる…？ あたしまでﾄﾞｷﾄﾞｷしてきた！'],
     win: ['あたしの勝ちー！ めっちゃ楽しかった♪', 'やったー！ またいつでも相手するよ！', '勝っちゃった！ 次も全力でいこ！'],
-    lose: [['負けたー！ でも、まぢ楽しかったよ！', 'happy'], ['強すぎぢゃんｗ もう1回やろ！', 'excited'], ['くやしー！ 次は絶対負けないからね♪', 'crying']]
+    lose: [['負けたー！ でも、まぢ楽しかったよ！', 'happy'], ['強すぎぢゃんｗ もう1回やろ！', 'excited'], ['くやしー！ 次は絶対負けないからね♪', 'crying']],
+    winQuick: [['あれ、もう終わり？ 次はもっと長く遊ぼ♪', 'surprise'], ['まだまだこれからだったのにー！ もう1回やろ！', 'wink']]
   },
   kiki: {
     challenge: ['カードで勝負でつか？ 喜んでお相手しまつ♪♪', '私、こう見えて火力で押すタイプなんです( ˘ω˘)', 'よろしくお願いします。全力でいきますね', '準備はいいですか？ 私はガッツをためて待ってまつ'],
@@ -111108,7 +113136,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: ['山札が少なくなってきました…急がないと', 'あれま、カードがもう残りわずかでつ'],
     deckTheirs: ['あれま、そちらの山札、もうそんなに減ったんでつね', 'このまま押し切りまつね( ˘ω˘)'],
     win: ['私の勝ちでつ。ありがとうございました♪♪', '火力で押し切れました( ˘ω˘)9グッ!', 'いい勝負でした。またお相手してくださいね'],
-    lose: [['負けちゃいました…お強いですね', 'troubled'], ['あれま…悔しいでつ。もう一度お願いしまつ', 'crying'], ['完敗です。次はもっとためてから挑みますね(´ー`*)', 'normal']]
+    lose: [['負けちゃいました…お強いですね', 'troubled'], ['あれま…悔しいでつ。もう一度お願いしまつ', 'crying'], ['完敗です。次はもっとためてから挑みますね(´ー`*)', 'normal']],
+    winQuick: [['あれま、もう終わりでつか？ 次はゆっくりお相手しまつ♪', 'surprise'], ['今日は手札がかみ合わなかったでつか？ またいつでもどうぞ( ˘ω˘)', 'normal']]
   },
   momosuke: {
     challenge: ['カードでももに勝てると思ってる？w', 'いいよ、相手してあげる♡ 泣いても知らないよ？', '手札、ぜーんぶ見えちゃうかもよ？w', 'ももと勝負！？ 楽しませてよね♡'],
@@ -111124,7 +113153,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: ['え、ももの山札もう少ない！？', 'カードなくなる前に決めちゃお！！'],
     deckTheirs: ['山札、あとちょっとじゃん？w', 'カードなくなりそうでかわいそ〜♡ 早く降参する？w'],
     win: ['ももの勝ち〜♡ 楽しかったよ！', 'ね、言ったでしょ？ ももはずるいって！w', '勝った！！ でもけっこう強かったよ、えらいえらい♡'],
-    lose: [['うそでしょ！？ …強いじゃん、すご', 'surprise'], ['むかつく〜！！ もう1回！！', 'angry'], ['負けた…今日だけは認めてあげる♡', 'wink']]
+    lose: [['うそでしょ！？ …強いじゃん、すご', 'surprise'], ['むかつく〜！！ もう1回！！', 'angry'], ['負けた…今日だけは認めてあげる♡', 'wink']],
+    winQuick: [['え、もう降参？ ももの勝ち〜♡ つまんないの〜w', 'wink'], ['ちょっと〜、まだ1体も倒されてないんだけど？w 次は本気で来てよね♡', 'angry']]
   },
   kyuko: {
     challenge: ['ほい！ カード勝負だねぇ。組み方なら負けないよ笑', '先まで読むタイプなんで、よろしくぅ', 'おけ〜、相手するよ。お手柔らかにね笑', '俺のデッキ、安い技ばっかりだけど強いよぉ'],
@@ -111140,7 +113170,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: ['山札、思ったより減ってるなぁ笑', 'カード切れ、気をつけないとだぁ'],
     deckTheirs: ['そっちの山札、もう少ないねぇ', '山札が切れたら負けだから、数えといたほうがいいよw'],
     win: ['ほい、俺の勝ち！ ありがとん笑', '計算どおり…ってことにしといて笑', 'いい勝負だったねぇ。またやろw'],
-    lose: [['ぐぬぬぬ…負けたぁ', 'angry'], ['見立てがずれてたかぁ🥲 強いねぇ', 'troubled'], ['おけ、組み方から考え直すよw', 'normal']]
+    lose: [['ぐぬぬぬ…負けたぁ', 'angry'], ['見立てがずれてたかぁ🥲 強いねぇ', 'troubled'], ['おけ、組み方から考え直すよw', 'normal']],
+    winQuick: [['ほい、今回は早かったねぇ。組み直してまたおいで笑', 'normal'], ['あらら、まだ序盤だったのに〜。次はゆっくりやろw', 'wink']]
   },
   dra: {
     challenge: ['おでとカード勝負か。守りの固さ、見せてやるからな', 'ふむ、いいよ。膝以外も固いってとこ見せるわ', 'よろしくな。カードの組み合わせで勝つのが、おでのやり方だよ', 'えへへ、手札は見せないよ。隠しごとは得意なんだ'],
@@ -111156,7 +113187,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: ['山札が心もとないな…', 'わぁ、カードが残り少ないわ。急がないとな'],
     deckTheirs: ['そっちの山札、もう少ないよ。数えといたほうがいいぞ', '山札切れも負けだからな。覚えとくといいよ'],
     win: ['おでの勝ちだな。えへへ、ありがとな', 'ふむ、守り勝ちってやつだな', 'いい勝負だったよ。また相手してくれよな'],
-    lose: [['わぁ、負けたか…強いな、ほんとに', 'surprise'], ['負けたわ…おでなんか膝しか取り柄ないからな。えへへ', 'troubled'], ['たしかに、今日はそっちが一枚上だったな', 'normal']]
+    lose: [['わぁ、負けたか…強いな、ほんとに', 'surprise'], ['負けたわ…おでなんか膝しか取り柄ないからな。えへへ', 'troubled'], ['たしかに、今日はそっちが一枚上だったな', 'normal']],
+    winQuick: [['ふむ、今日はここまでか。また相手してくれよな', 'normal'], ['えへへ、おでの守り、まだ崩されてないぞ。次はがんばれよな', 'happy']]
   },
   atsu: {
     challenge: ['カード勝負ね。とりあえず全力でいこ笑', 'いいね、受けて立つよ( *\'ω\'*)ノ', '今日は最後まで本気な笑', 'まとめて押し込むのが俺のやり方だから笑', 'これでもモンスター甲子園に出たことあるんだよね笑'],
@@ -111172,7 +113204,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: ['山札少ないな…急ぐか笑', 'カードもう残りわずかじゃん…！'],
     deckTheirs: ['山札、もう少ないじゃん…焦ってる？笑', 'そろそろ山札が尽きるな！ 押し込むぞ！'],
     win: ['俺の勝ち！ いい勝負だった笑', '楽しかった！ 次は上の難易度でやろうぜ笑', 'いいね、また相手してな！'],
-    lose: [['負けた…まじで強いじゃん笑', 'happy'], ['やるね！ 次は俺が勝つからな笑', 'excited'], ['しゃあない、俺の負け！ もう1回やろ！', 'wink']]
+    lose: [['負けた…まじで強いじゃん笑', 'happy'], ['やるね！ 次は俺が勝つからな笑', 'excited'], ['しゃあない、俺の負け！ もう1回やろ！', 'wink']],
+    winQuick: [['え、もう終わり？ 次は最後までやろうぜ笑', 'surprise'], ['今日は俺のペースだったな笑 また相手してな！', 'wink']]
   },
   sorashido: {
     challenge: [['カード勝負か。受けて立つぜ・・・！', 'wink'], ['対戦しよ！ 攻略まとめ、もう頭に入ってる笑', 'happy'], ['手加減なしでいくぜ・・・！ 勝ち負けは本気笑', 'excited'], ['どんなデッキでくるか、楽しみすぎる笑', 'wink']],
@@ -111188,7 +113221,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: [['なに！？ 山札やば…急がないと笑', 'surprise'], ['ガッツにしすぎた…計算ミス笑', 'troubled']],
     deckTheirs: [['そっちの山札、もう少ないな？ 笑', 'wink'], ['山札切れも勝ち筋のひとつだぜ・・・！', 'happy']],
     win: [['うぉぉぉ！ 読み通り！ いい勝負だった笑', 'happy'], ['作戦がきれいにはまった！ もう1戦だけやろ笑', 'excited'], ['楽しかった！ 気づいたら朝になりそう笑', 'wink'], ['うぉぉぉ！ オリヒメにも見せたかった笑', 'excited']],
-    lose: [['なに！？ そこでそれ！？…悔しいけど、今のはうまいぜ・・・！', 'crying'], ['完敗！ 今の対戦、攻略まとめにして研究する笑', 'troubled'], ['なんくるないさ〜。次はデッキ組み直してくる笑', 'happy']]
+    lose: [['なに！？ そこでそれ！？…悔しいけど、今のはうまいぜ・・・！', 'crying'], ['完敗！ 今の対戦、攻略まとめにして研究する笑', 'troubled'], ['なんくるないさ〜。次はデッキ組み直してくる笑', 'happy']],
+    winQuick: [['え、もう終わり！？ ここからが本番だったのに笑', 'surprise'], ['今回は手札がかみ合わなかった感じか・・・！ 次はがっつりやろうぜ笑', 'wink']]
   },
   erubin: {
     challenge: [['カード勝負、いいね！ こっちに来てから、すっかりはまってるんだよね笑', 'happy'], ['今日はどの組み方でいこうかな🤔 いくつか持ってきたんだよね', 'wink'], ['対戦しよっか。手加減はしないけど、それでもよいかな？笑', 'wink'], ['デュラハンの出番だね。よろしくお願いします☺️', 'happy']],
@@ -111204,7 +113238,8 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: [['あれ、山札がもう少ないね💦 ちょっと急がないと', 'surprise'], ['ガッツにしすぎたかな…計算ミスだw', 'troubled']],
     deckTheirs: [['そっちの山札、だいぶ減ってるけど大丈夫かな？', 'wink'], ['山札の残りも、ちゃんと見てるからね笑', 'happy']],
     win: [['楽しかったー！ いい勝負だったね☺️', 'happy'], ['勝てた！ 組み方がうまくはまったね笑', 'excited'], ['またやろうね。次はどの組み方でいこうかな🤔', 'wink']],
-    lose: [['負けちゃった笑 さすがだね、強かった！', 'happy'], ['くやしいなぁ。デッキ、組み直してくるね', 'troubled'], ['お見事！ 今の勝ち方、勉強になったよ', 'normal']]
+    lose: [['負けちゃった笑 さすがだね、強かった！', 'happy'], ['くやしいなぁ。デッキ、組み直してくるね', 'troubled'], ['お見事！ 今の勝ち方、勉強になったよ', 'normal']],
+    winQuick: [['あれ、もう終わり？ 次はゆっくり遊ぼうね☺️', 'surprise'], ['今日は手札がきびしかったかな🤔 またやろうね', 'normal']]
   }
 });
 const CARD_LINE_PER_TURN = 2;
@@ -114364,6 +116399,7 @@ const CardResultVsRow = ({
   "data-card-result-vs-outcome": true,
   className: `shrink-0 rounded-md px-1.5 py-0.5 text-[12px] font-black ${outcome === '勝ち' ? 'bg-amber-300 text-slate-950' : 'bg-slate-700 text-slate-100'}`
 }, outcome));
+const cardResultLineQuick = result => !!(result && result.outcome !== 'win' && result.facts && Number.isFinite(result.facts.kos) && result.facts.kos === 0);
 const CardResultTalk = ({
   a,
   lineScene,
@@ -118355,6 +120391,135 @@ const cardNormalizeCpuOpen = v => {
   };
 };
 const cardBattleLevelLabel = (level, share) => (share && typeof cardShareSmartLevel === 'function' ? CARD_SHARE_SMART_LABEL[cardShareSmartLevel(share.tactics)] : CARD_LEVEL_LABEL[level]) || '';
+const CardAutoRewardBar = ({
+  info,
+  tickets,
+  onAdd,
+  note = ''
+}) => {
+  if (!info || !Number.isInteger(info.left)) return null;
+  const total = CARD_AUTO_REWARD_DAY_MAX + (Number.isInteger(info.extra) ? info.extra : 0);
+  const empty = info.left <= 0;
+  const why = cardAutoTicketBlock({
+    left: info.left,
+    tickets,
+    extraLeft: info.extraLeft
+  });
+  return React.createElement("div", {
+    "data-card-auto-reward-bar": empty ? 'empty' : 'left',
+    className: "mt-2"
+  }, React.createElement("div", {
+    className: "flex items-stretch gap-1.5"
+  }, React.createElement("div", {
+    "data-card-auto-reward-left": info.left,
+    className: `flex min-w-0 flex-1 flex-col justify-center rounded-xl border px-2 py-1 ${empty ? 'border-rose-300 bg-rose-950/70 shadow-[0_0_12px_rgba(251,113,133,.45)]' : 'border-white/15 bg-slate-900/70'}`
+  }, React.createElement("small", {
+    className: `block text-[10px] font-black leading-tight ${empty ? 'text-rose-200' : 'text-slate-400'}`
+  }, "🤖 オートのごほうび"), React.createElement("b", {
+    className: `block whitespace-nowrap font-black leading-tight tabular-nums ${empty ? 'text-[17px] text-white' : 'text-[14px] text-slate-200'}`
+  }, "残り ", info.left, React.createElement("span", {
+    className: "text-[11px] text-slate-400"
+  }, " / ", total, "回"))), React.createElement("button", {
+    type: "button",
+    "data-card-auto-ticket": true,
+    disabled: !!why,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      if (typeof onAdd === 'function') onAdd();
+    },
+    className: `flex min-h-[44px] shrink-0 flex-col items-center justify-center rounded-xl border px-2 text-[12px] font-black leading-tight active:scale-[.98] disabled:opacity-45 ${empty ? 'border-emerald-300 bg-emerald-900/80 text-emerald-100 shadow-[0_0_10px_rgba(52,211,153,.45)]' : 'border-white/15 bg-slate-800 text-slate-300'}`
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "🎫 セッション券で"), React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "ふやす"))), why && React.createElement("span", {
+    "data-card-auto-ticket-why": true,
+    className: "mt-1 block text-right text-[10px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap(why)), note && React.createElement("span", {
+    "data-card-auto-ticket-note": true,
+    className: "mt-1 block text-[11px] font-black text-emerald-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(note)));
+};
+const CardAutoTicketSheet = ({
+  info,
+  tickets,
+  busy = false,
+  onUse,
+  onClose
+}) => {
+  const have = Number.isInteger(tickets) && tickets > 0 ? tickets : 0;
+  const extraLeft = info && Number.isInteger(info.extraLeft) ? Math.max(0, info.extraLeft) : 0;
+  const left = info && Number.isInteger(info.left) ? info.left : 0;
+  const max = Math.min(have, extraLeft);
+  const [count, setCount] = React.useState(1);
+  const k = Math.min(Math.max(1, count), Math.max(1, max));
+  const why = cardAutoTicketBlock({
+    left,
+    tickets: have,
+    extraLeft
+  });
+  const wide = typeof orientationIsLandscape === 'function' && orientationIsLandscape();
+  return React.createElement(ModalFrame, {
+    label: "セッション券でごほうびをふやす",
+    onClose: busy ? undefined : onClose,
+    zIndex: MODAL_Z.confirm
+  }, React.createElement("div", {
+    "data-card-auto-ticket-ask": wide ? 'wide' : 'tall'
+  }, React.createElement("h3", {
+    className: "text-center text-base font-black leading-snug text-amber-200",
+    style: JA_LABEL_STYLE
+  }, jaWrap('セッション券でごほうびをふやす')), !wide && React.createElement("p", {
+    className: "mt-2 text-[12px] font-bold leading-relaxed text-slate-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap('1枚で、オートで挑むの今日のごほうびが1回ふえます。ふやしたぶんは今日(朝4時まで)だけ使えます。')), React.createElement("div", {
+    className: `${wide ? 'mt-1.5' : 'mt-3'} grid grid-cols-2 gap-2 text-center`
+  }, React.createElement("div", {
+    className: `rounded-xl bg-slate-900 ${wide ? 'px-2 py-1' : 'p-2'}`
+  }, React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, "持っているセッション券"), React.createElement("b", {
+    "data-card-auto-ticket-count": have,
+    className: `${wide ? 'text-[14px]' : 'text-[16px]'} font-black tabular-nums`
+  }, have, "枚")), React.createElement("div", {
+    className: `rounded-xl bg-slate-900 ${wide ? 'px-2 py-1' : 'p-2'}`
+  }, React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, "今日あとふやせる"), React.createElement("b", {
+    "data-card-auto-ticket-extra-left": extraLeft,
+    className: `${wide ? 'text-[14px]' : 'text-[16px]'} font-black tabular-nums`
+  }, extraLeft, "回"))), why ? React.createElement("p", {
+    "data-card-auto-ticket-why": true,
+    className: "mt-3 text-center text-[12px] font-black text-rose-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(why)) : React.createElement(React.Fragment, null, React.createElement("div", {
+    "data-card-auto-ticket-pick": k
+  }, React.createElement(QuantityStepper, {
+    value: k,
+    max: max,
+    onChange: setCount,
+    unit: "枚"
+  })), React.createElement("p", {
+    "data-card-auto-ticket-preview": true,
+    className: "mt-2 rounded-xl border border-emerald-300/40 bg-emerald-950/60 px-2 py-1.5 text-center text-[13px] font-black text-emerald-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`券 ${k}枚 → オートのごほうび +${k}回(残り ${left + k}回になります)`))), React.createElement("div", {
+    className: `${wide ? 'mt-2' : 'mt-3'} grid ${wide && !why ? 'grid-cols-2' : 'grid-cols-1'} gap-2`
+  }, !why && React.createElement("button", {
+    type: "button",
+    "data-card-auto-ticket-use": k,
+    disabled: busy,
+    onClick: () => {
+      if (typeof onUse === 'function') onUse(k);
+    },
+    className: "mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98] disabled:opacity-50"
+  }, `${k}枚使って+${k}回`), React.createElement(ModalCloseButton, {
+    onClick: onClose,
+    disabled: busy,
+    label: "やめる"
+  }))));
+};
 const CardBattleScreen = ({
   screen,
   onNavigate,
@@ -118431,9 +120596,21 @@ const CardBattleScreen = ({
   const [shareQuick, setShareQuick] = useState(false);
   const [autoLeft, setAutoLeft] = useState(null);
   const [autoExtraLeft, setAutoExtraLeft] = useState(null);
+  const [autoExtra, setAutoExtra] = useState(0);
   const [autoTicketAsk, setAutoTicketAsk] = useState(false);
   const [autoTicketBusy, setAutoTicketBusy] = useState(false);
   const [autoTicketNote, setAutoTicketNote] = useState('');
+  const applyAutoLoaded = r => {
+    if (!r) return;
+    setAutoLeft(r.left);
+    setAutoExtraLeft(Number.isInteger(r.extraLeft) ? r.extraLeft : null);
+    setAutoExtra(Number.isInteger(r.extra) ? r.extra : 0);
+  };
+  const autoInfo = Number.isInteger(autoLeft) ? {
+    left: autoLeft,
+    extra: autoExtra,
+    extraLeft: autoExtraLeft
+  } : null;
   useEffect(() => {
     if (view !== 'deckPick' || !(deckPick && deckPick.pick && deckPick.pick.share) || typeof cardAutoRewardLoad !== 'function') return undefined;
     let alive = true;
@@ -118441,29 +120618,33 @@ const CardBattleScreen = ({
     setAutoExtraLeft(null);
     setAutoTicketNote('');
     void cardAutoRewardLoad().then(r => {
-      if (alive) {
-        setAutoLeft(r.left);
-        setAutoExtraLeft(Number.isInteger(r.extraLeft) ? r.extraLeft : null);
-      }
+      if (alive) applyAutoLoaded(r);
     }).catch(() => {});
     return () => {
       alive = false;
     };
   }, [view, deckPick]);
-  const useAutoTicket = async () => {
+  const autoTicketSheet = autoTicketAsk && typeof CardAutoTicketSheet === 'function' ? React.createElement(CardAutoTicketSheet, {
+    info: autoInfo,
+    tickets: Number.isInteger(sessionTickets) ? sessionTickets : 0,
+    busy: autoTicketBusy,
+    onUse: k => {
+      void useAutoTicket(k);
+    },
+    onClose: () => setAutoTicketAsk(false)
+  }) : null;
+  const useAutoTicket = async (count = 1) => {
     if (autoTicketBusy || typeof cardAutoRewardAddExtra !== 'function') return;
     setAutoTicketBusy(true);
     try {
       const res = await cardAutoRewardAddExtra({
         consume: onUseSessionTicket,
-        refund: onRefundSessionTicket
+        refund: onRefundSessionTicket,
+        count
       });
       const l = res && res.loaded;
-      if (l) {
-        setAutoLeft(l.left);
-        setAutoExtraLeft(l.extraLeft);
-      }
-      setAutoTicketNote(res && res.ok ? 'ごほうびが1回ぶん戻りました' : res && res.why === 'limit' ? '今日はこれ以上ふやせません' : res && res.why === 'noTicket' ? 'セッション券がありません' : res && res.why === 'notEmpty' ? 'まだ今日のごほうびが残っています' : '保存できなかったので、セッション券は戻しました');
+      if (l) applyAutoLoaded(l);
+      setAutoTicketNote(res && res.ok ? `ごほうびが${res.count}回ぶん戻りました` : res && res.why === 'limit' ? '今日はこれ以上ふやせません' : res && res.why === 'noTicket' ? 'セッション券が足りません' : res && res.why === 'notEmpty' ? 'まだ今日のごほうびが残っています' : '保存できなかったので、セッション券は戻しました');
     } finally {
       setAutoTicketBusy(false);
       setAutoTicketAsk(false);
@@ -118522,6 +120703,17 @@ const CardBattleScreen = ({
   }, [save]);
   const [game, setGame] = useState(null);
   const [result, setResult] = useState(null);
+  useEffect(() => {
+    if (view !== 'result' || !(result && result.auto) || typeof cardAutoRewardLoad !== 'function') return undefined;
+    let alive = true;
+    setAutoTicketNote('');
+    void cardAutoRewardLoad().then(r => {
+      if (alive) applyAutoLoaded(r);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [view, result]);
   const [notice, setNotice] = useState('');
   const [confirmReset, setConfirmReset] = useState(false);
   const [detail, setDetail] = useState(null);
@@ -120297,6 +122489,7 @@ const CardBattleScreen = ({
         on: shareAuto,
         onChange: setShareAuto,
         left: autoLeft,
+        info: autoInfo,
         quick: shareQuick,
         extraLeft: autoExtraLeft,
         tickets: Number.isInteger(sessionTickets) ? sessionTickets : null,
@@ -120348,55 +122541,7 @@ const CardBattleScreen = ({
           }
         } : {});
       }
-    }), autoTicketAsk && React.createElement(ModalFrame, {
-      label: "セッション券を使う確認",
-      onClose: autoTicketBusy ? undefined : () => setAutoTicketAsk(false),
-      zIndex: MODAL_Z.confirm
-    }, React.createElement("div", {
-      "data-card-auto-ticket-ask": true
-    }, React.createElement("h3", {
-      className: "text-center text-base font-black leading-snug text-amber-200",
-      style: JA_LABEL_STYLE
-    }, jaWrap('セッション券を1枚使いますか？')), React.createElement("p", {
-      className: "mt-3 text-[12px] font-bold leading-relaxed text-slate-200",
-      style: JA_WRAP_STYLE
-    }, jaWrap('オートで挑むの今日のごほうびが1回ぶん戻ります。')), React.createElement("div", {
-      className: "mt-3 grid grid-cols-2 gap-2 text-center"
-    }, React.createElement("div", {
-      className: "rounded-xl bg-slate-900 p-2"
-    }, React.createElement("small", {
-      className: "block text-[10px] font-bold text-slate-400"
-    }, "セッション券"), React.createElement("b", {
-      "data-card-auto-ticket-count": true,
-      className: "text-[16px] font-black tabular-nums"
-    }, Number.isInteger(sessionTickets) ? sessionTickets : 0, " → ", React.createElement("span", {
-      className: "text-amber-200"
-    }, Math.max(0, (Number.isInteger(sessionTickets) ? sessionTickets : 0) - 1)), "枚")), React.createElement("div", {
-      className: "rounded-xl bg-slate-900 p-2"
-    }, React.createElement("small", {
-      className: "block text-[10px] font-bold text-slate-400"
-    }, "今日のごほうび"), React.createElement("b", {
-      className: "text-[16px] font-black tabular-nums"
-    }, Number.isInteger(autoLeft) ? autoLeft : 0, " → ", React.createElement("span", {
-      className: "text-emerald-200"
-    }, (Number.isInteger(autoLeft) ? autoLeft : 0) + 1), "回"))), React.createElement("p", {
-      className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400",
-      style: JA_WRAP_STYLE
-    }, jaWrap(`ふやしたぶんは今日(朝4時まで)だけ使えます。今日ふやせるのはあと${Number.isInteger(autoExtraLeft) ? autoExtraLeft : 0}回です。`)), React.createElement("div", {
-      className: "mt-4 grid grid-cols-1 gap-2"
-    }, React.createElement("button", {
-      type: "button",
-      "data-card-auto-ticket-use": true,
-      disabled: autoTicketBusy,
-      onClick: () => {
-        void useAutoTicket();
-      },
-      className: "mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98] disabled:opacity-50"
-    }, "1枚使って1回ふやす"), React.createElement(ModalCloseButton, {
-      onClick: () => setAutoTicketAsk(false),
-      disabled: autoTicketBusy,
-      label: "やめる"
-    })))));
+    }), autoTicketSheet);
   }
   if (view === 'pvp') {
     const pvpReward = async r => {
@@ -120895,7 +123040,7 @@ const CardBattleScreen = ({
       gain: result.rankGain
     }), a && React.createElement(CardResultTalk, {
       a: a,
-      lineScene: win ? 'lose' : 'win',
+      lineScene: win ? 'lose' : cardResultLineQuick(result) ? 'winQuick' : 'win',
       talkFacts: result.talk
     }), result.share && React.createElement("p", {
       "data-card-result-share": true,
@@ -120959,7 +123104,15 @@ const CardBattleScreen = ({
       "data-card-result-auto": result.auto.paid ? 'paid' : 'free',
       className: "mt-1 text-[12px] font-black text-sky-200",
       style: JA_LABEL_STYLE
-    }, jaWrap(result.auto.paid ? `🤖 オートで挑みました(ごほうびは自分で戦うときの半分)。今日のごほうびはあと${result.auto.left}回` : '🤖 オートで挑みました。今日のごほうびは終わっています(ごほうびなしで遊べます)')), React.createElement("div", {
+    }, jaWrap(result.auto.paid ? '🤖 オートで挑みました(ごほうびは自分で戦うときの半分)' : '🤖 オートで挑みました(今日のごほうびは終わっていたので、ごほうびなし)')), result.auto && !result.demo && typeof CardAutoRewardBar === 'function' && React.createElement(CardAutoRewardBar, {
+      info: autoInfo,
+      tickets: Number.isInteger(sessionTickets) ? sessionTickets : 0,
+      onAdd: typeof onUseSessionTicket === 'function' && typeof cardAutoRewardAddExtra === 'function' ? () => {
+        setAutoTicketNote('');
+        setAutoTicketAsk(true);
+      } : null,
+      note: autoTicketNote
+    }), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
     }, "いまのビートP: ", save.point), result.opened && React.createElement("div", {
       className: "mt-1 text-[13px] font-black text-emerald-300"
@@ -121018,7 +123171,7 @@ const CardBattleScreen = ({
       type: "button",
       className: `${btn} mh-button-secondary border border-white/20 bg-slate-800`,
       onClick: () => setView(result.share ? 'share' : 'foe')
-    }, "相手をえらぶ")));
+    }, "相手をえらぶ")), autoTicketSheet);
   }
   if (view === 'replays') return React.createElement(CardReplayList, {
     onOpen: id => {
@@ -124559,28 +126712,12 @@ const CardDeckPick = ({
   }, jaWrap('選んだデッキの戦術カードで、あなたの側も自動で戦います。試合の途中で「自分で」に切り替えられます'), React.createElement("span", {
     "data-card-deck-pick-auto-left": auto.left === null ? '' : auto.left,
     className: `mt-1 block ${auto.left ? 'text-emerald-200' : 'text-amber-200'}`
-  }, auto.left === null ? '' : auto.left > 0 ? `今日のごほうびはあと${auto.left}回(自分で戦うときの半分)` : '今日のごほうびは終わりました。ごほうびなしで遊べます'), auto.left === 0 && typeof auto.onExtra === 'function' && Number.isInteger(auto.extraLeft) && (auto.extraLeft > 0 ? React.createElement(React.Fragment, null, React.createElement("button", {
-    type: "button",
-    "data-card-auto-ticket": true,
-    disabled: !(auto.tickets > 0),
-    onClick: () => {
-      Audio_.fgSe.tap();
-      auto.onExtra();
-    },
-    className: "mt-2 flex min-h-[44px] w-full items-center justify-center gap-1 rounded-xl border border-emerald-300 bg-emerald-900/70 px-2 text-[12px] font-black text-emerald-100 shadow-[0_0_10px_rgba(52,211,153,.45)] active:scale-[.98] disabled:border-slate-600 disabled:bg-slate-800 disabled:text-slate-400 disabled:shadow-none",
-    style: JA_WRAP_STYLE
-  }, jaWrap('🎫 セッション券1枚でごほうびを1回ふやす')), React.createElement("span", {
-    "data-card-auto-ticket-left": auto.extraLeft,
-    className: "mt-1 block text-right text-[10px] text-slate-400",
-    style: JA_WRAP_STYLE
-  }, jaWrap(auto.tickets > 0 ? `持っているセッション券 ${auto.tickets}枚・今日ふやせるのはあと${auto.extraLeft}回` : 'セッション券がありません(モンヒロビートのランクが上がるともらえます)'))) : React.createElement("span", {
-    "data-card-auto-ticket-left": "0",
-    className: "mt-1 block text-[10px] text-slate-400"
-  }, "今日はこれ以上ふやせません")), auto.ticketNote && React.createElement("span", {
-    "data-card-auto-ticket-note": true,
-    className: "mt-1 block text-[11px] text-emerald-200",
-    style: JA_WRAP_STYLE
-  }, jaWrap(auto.ticketNote)))), note && tab === 'own' && React.createElement("p", {
+  }, auto.left === null ? '' : auto.left > 0 ? `今日のごほうびはあと${auto.left}回(自分で戦うときの半分)` : '今日のごほうびは終わりました。ごほうびなしで遊べます')), auto.on && auto.info && typeof auto.onExtra === 'function' && typeof CardAutoRewardBar === 'function' && React.createElement(CardAutoRewardBar, {
+    info: auto.info,
+    tickets: auto.tickets,
+    onAdd: auto.onExtra,
+    note: auto.ticketNote
+  })), note && tab === 'own' && React.createElement("p", {
     className: "text-[11px] font-bold text-slate-400",
     style: JA_WRAP_STYLE
   }, note), choices.map(c => {
@@ -134197,51 +136334,74 @@ const cardAutoRewardEntry = loaded => ({
 });
 const cardAutoRewardAddExtra = async ({
   consume,
-  refund
+  refund,
+  count = 1
 } = {}) => {
+  const k = Number.isInteger(count) && count > 0 ? count : 1;
   const loaded = await cardAutoRewardLoad();
-  if (loaded.extra >= CARD_AUTO_REWARD_EXTRA_MAX) return {
+  if (loaded.extra + k > CARD_AUTO_REWARD_EXTRA_MAX) return {
     ok: false,
     why: 'limit',
+    count: k,
     loaded
   };
   if (loaded.left > 0) return {
     ok: false,
     why: 'notEmpty',
+    count: k,
     loaded
   };
-  if (typeof consume !== 'function' || !(await consume())) return {
-    ok: false,
-    why: 'noTicket',
-    loaded
+  const giveBack = async n => {
+    for (let i = 0; i < n; i++) {
+      if (typeof refund !== 'function') return;
+      try {
+        await refund();
+      } catch (__) {}
+    }
   };
+  let used = 0;
+  if (typeof consume === 'function') {
+    while (used < k && (await consume())) used++;
+  }
+  if (used < k) {
+    await giveBack(used);
+    return {
+      ok: false,
+      why: 'noTicket',
+      count: k,
+      loaded
+    };
+  }
   let saved = false;
   try {
     saved = (await storeSet(CARD_AUTO_REWARD_KEY, cardAutoRewardValue(loaded, {
       n: loaded.n,
-      extra: loaded.extra + 1
+      extra: loaded.extra + k
     }))) !== false;
   } catch (_) {
     saved = false;
   }
   if (!saved) {
-    if (typeof refund === 'function') {
-      try {
-        await refund();
-      } catch (__) {}
-    }
+    await giveBack(k);
     return {
       ok: false,
       why: 'save',
+      count: k,
       loaded
     };
   }
   return {
     ok: true,
     why: '',
+    count: k,
     loaded: await cardAutoRewardLoad()
   };
 };
+const cardAutoTicketBlock = ({
+  left,
+  tickets,
+  extraLeft
+}) => Number.isInteger(left) && left > 0 ? 'ごほうびを使い切ると、ふやせます' : !(Number.isInteger(extraLeft) && extraLeft > 0) ? `今日はこれ以上ふやせません(1日${CARD_AUTO_REWARD_EXTRA_MAX}回まで)` : !(Number.isInteger(tickets) && tickets > 0) ? 'セッション券がありません(モンヒロビートのランクが上がるともらえます)' : '';
 const cardLevelEntries = async ({
   kind,
   level,
@@ -143467,6 +145627,8 @@ function MonsterHeroGame() {
   const [masuRegisteredThisRun, setMasuRegisteredThisRun] = useState(false);
   const [masuMonDetail, setMasuMonDetail] = useState(null);
   const [uniqueSettingMasuId, setUniqueSettingMasuId] = useState(null);
+  const [uniqueBoostTarget, setUniqueBoostTarget] = useState(null);
+  const [powerBreakdownMasuId, setPowerBreakdownMasuId] = useState(null);
   const [dexLineageFilter, setDexLineageFilter] = useState('all');
   const [dexMonsterId, setDexMonsterId] = useState(null);
   const [dexTab, setDexTab] = useState('basic');
@@ -143508,6 +145670,7 @@ function MonsterHeroGame() {
   const [fusionSubId, setFusionSubId] = useState(null);
   const [fusionSubIds, setFusionSubIds] = useState([]);
   const [fusionInheritUniqueIds, setFusionInheritUniqueIds] = useState([]);
+  const [fusionInheritSkillKeys, setFusionInheritSkillKeys] = useState({});
   const [fusionInheritSoulRank, setFusionInheritSoulRank] = useState(false);
   const [fusionAnimPhase, setFusionAnimPhase] = useState(0);
   const [fusionResultData, setFusionResultData] = useState(null);
@@ -151158,6 +153321,18 @@ function MonsterHeroGame() {
     Audio_.se.levelUp();
     return updatedMasu;
   };
+  const commitUniqueBoostPlan = (masuId, skillKey, plan) => {
+    const masu = getMasuMon(masuId);
+    const result = masu ? applyUniqueBoostPlan(masu, skillKey, plan) : null;
+    if (!result) return null;
+    setMasuMons(prev => {
+      const next = prev.map(m => String(m.id) === String(masuId) ? result.nextMasu : m);
+      storeSet('mh_masu_mons', next, false);
+      return next;
+    });
+    Audio_.se.levelUp();
+    return result.nextMasu;
+  };
   const commitSoulTraitUpgrade = async (masuId, traitId, levels) => {
     if (soulTraitProcessingRef.current) return null;
     const beforeMasuMons = masuMonsRef.current;
@@ -151921,7 +154096,8 @@ function MonsterHeroGame() {
     const inheritancePlan = buildFusionInheritancePlan({
       main,
       subs,
-      selectedSubIds: fusionInheritUniqueIds
+      selectedSubIds: fusionInheritUniqueIds,
+      choiceBySubId: fusionInheritSkillKeys
     });
     if (inheritancePlan.entries.some(entry => entry.requested && !entry.eligible) || fusionInheritUniqueIds.some(id => !uniqueSubIds.has(id))) {
       fusionProcessingRef.current = false;
@@ -151969,13 +154145,28 @@ function MonsterHeroGame() {
       const subBase = ALL_PLAYER_MONSTERS[sub.baseId];
       const subUniqueLineageId = uniqueLineageId(subBase?.unique, subBase?.id);
       const canInherit = !!inheritancePlan.entries[subIndex]?.inherited;
-      const inheritedLevel = Math.max(0, Number(sub.uniqueSkillLevels?.own) || Number(subBase?.unique?.evoLevel) || 0);
-      const inheritedUnique = canInherit ? {
-        ...uniqueSkillAtLevel(subBase.unique, inheritedLevel),
-        monId: subBase.id,
-        lineageId: subUniqueLineageId,
-        sourceMasuName: sub.name
-      } : null;
+      const chosenOption = canInherit ? inheritancePlan.entries[subIndex].chosen : null;
+      const inheritedLevel = chosenOption ? chosenOption.level : 0;
+      let inheritedUnique = null;
+      if (chosenOption && chosenOption.own) {
+        inheritedUnique = {
+          ...uniqueSkillAtLevel(subBase.unique, inheritedLevel),
+          monId: subBase.id,
+          lineageId: subUniqueLineageId,
+          sourceMasuName: sub.name
+        };
+      } else if (chosenOption) {
+        const {
+          inheritedUniqueId: _oldInheritedId,
+          ...rest
+        } = uniqueSkillAtLevel(chosenOption.unique, inheritedLevel);
+        inheritedUnique = {
+          ...rest,
+          monId: chosenOption.monId || rest.monId,
+          lineageId: chosenOption.lineageId,
+          sourceMasuName: chosenOption.unique.sourceMasuName || sub.name
+        };
+      }
       const transfer = transferableReincarnateBonus(sub);
       const advanced = applyBondXpGain(nextMain, gainedXp);
       nextMain = {
@@ -151994,7 +154185,11 @@ function MonsterHeroGame() {
           timestamp: Date.now()
         }]
       };
-      if (inheritedUnique) nextMain = appendInheritedUnique(nextMain, inheritedUnique, inheritedLevel);
+      if (inheritedUnique) {
+        nextMain = appendInheritedUnique(nextMain, inheritedUnique, inheritedLevel);
+        const added = nextMain.inheritedUniques[nextMain.inheritedUniques.length - 1];
+        nextMain = withInheritedUniqueBoosts(nextMain, inheritedUniqueLevelKey(added), chosenOption.boosts);
+      }
       inherited ||= !!inheritedUnique;
       inheritedReincarnatePoints += transfer.points;
       inheritedReincarnateCount += transfer.count;
@@ -152071,6 +154266,7 @@ function MonsterHeroGame() {
     setFusionSubId(null);
     setFusionSubIds([]);
     setFusionInheritUniqueIds([]);
+    setFusionInheritSkillKeys({});
     setFusionInheritSoulRank(false);
     setFusionAnimPhase(0);
     setFusionResultData(null);
@@ -152081,6 +154277,7 @@ function MonsterHeroGame() {
     setFusionSubId(null);
     setFusionSubIds([]);
     setFusionInheritUniqueIds([]);
+    setFusionInheritSkillKeys({});
     setFusionInheritSoulRank(false);
     setFusionAnimPhase(0);
     setFusionResultData(null);
@@ -153685,7 +155882,7 @@ function MonsterHeroGame() {
     if (cost > 0 && (getTurnBuff('pandoraResonanceTurns', 0) > 0 || tacticsSlotTurns(slotBuffs, slotIdx, 'pandoraResonanceTurns') > 0)) cost = Math.floor(cost * 0.5);
     cost = Math.floor(cost * Math.max(0.1, 1 - 0.03 * getPermaBuff('snegurochkaGutsDiscountStacks')));
     const soulOwner = Number.isInteger(slotIdx) && slots[slotIdx]?.masuId ? getMasuMon(slots[slotIdx].masuId) : null;
-    const soulGutsMultiplier = soulTraitAttackProfile(soulOwner, card, slotIdx).gutsCostMultiplier;
+    const soulGutsMultiplier = attackBoostProfile(soulOwner, card, slotIdx).gutsCostMultiplier;
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
     if (extremeWaveStage(specialRuleDifficulty)) return Math.floor(cost * effectiveExtremeSpecialRule(specialRuleDifficulty, 'gutsCost', wave) * soulGutsMultiplier);
     return applyExtremeIntegerRule(cost * soulGutsMultiplier, specialRuleDifficulty, 'gutsCost');
@@ -156265,9 +158462,16 @@ function MonsterHeroGame() {
     '全体': '立っている味方ぜんぶに効きます',
     '敵へ': '置いたモンスターのちからで殴ります'
   };
+  const uniqueBoostOfCardInRun = (card, slotIdx = null) => {
+    if (!card || card.type !== 'unique') return UNIQUE_BOOST_EMPTY_PROFILE;
+    const si = Number.isInteger(card.ownerSlotIdx) ? card.ownerSlotIdx : slotIdx;
+    const owner = Number.isInteger(si) ? slots[si] : null;
+    return uniqueBoostProfile(owner?.masuId ? getMasuMon(owner.masuId) : null, card);
+  };
   const cardEffectMultiplier = (card, halved = false) => {
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-    return isAssistCard(card) && specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty, 'assistCardEffect') : halved ? 0.5 : 1;
+    const base = isAssistCard(card) && specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty, 'assistCardEffect') : halved ? 0.5 : 1;
+    return base * (1 + uniqueBoostOfCardInRun(card).effectPct / 100);
   };
   const cardHalveGroup = slotIdx => isTacticsMode(runMode) ? `slot${Number.isInteger(slotIdx) ? slotIdx : 'none'}` : 'turn';
   const makeHalveCounter = () => makeCardHalveCounter(cardHalveGroup, isAssistCard);
@@ -156424,6 +158628,21 @@ function MonsterHeroGame() {
       }, pendingCard, pendingHalved)
     };
   };
+  const uniqueBoostCtxFor = (mon, slotIdx, attackStartDist = enemyDist) => {
+    const sr = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
+    const maxHp = Number(enemy?.maxHp) || 0;
+    const heroOf = m => m?.masuId && mainHero?.masuId ? m.masuId === mainHero.masuId : !!m && m.id === mainHero?.id;
+    return {
+      enemyId: enemy?.id,
+      enemyHpRatio: maxHp > 0 ? Math.max(0, Number(enemy?.hp) || 0) / maxHp : null,
+      enemyCharging: ['CHARGE', 'PIERCE_CHARGE'].includes(enemyIntent?.type),
+      enemyImmobile: !!getTurnBuff('stunEnemy', false) || getWaveBuff('iceLockTurns') > 0 && !getWaveBuff('iceLockPreparing', false),
+      sameDistance: Number.isInteger(Number(slotIdx)) && Number(slotIdx) === Number(attackStartDist),
+      isHero: isTacticsMode(runMode) ? false : heroOf(mon),
+      extreme: !!sr && isExtremeDifficultyId(sr),
+      eventBattle: isRaidJackMode(runMode)
+    };
+  };
   const getDmg = useCallback((card, slotIdx, mon, additionalOryo = 0, additionalDmgMod = 0, isSecondOrLaterAtk = false, attackStartDist = enemyDist, skillDmgMult = 1) => {
     if (!mon || !card || ['guard', 'draw', 'buff', 'heal', 'weak_guard'].includes(card.type)) return 0;
     const distDiff = Math.abs(slotIdx - attackStartDist);
@@ -156446,7 +158665,7 @@ function MonsterHeroGame() {
     if (attackHeroId === 'Pandora' && card.type === 'unique' && card.monId !== 'Pandora') traitMult *= 1.5;
     const aptForSlot = isTacticsMode(runMode) && mon ? getMonsterAptPct(mon, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty), wave) : distAptPct;
     const distBonusMult = 1.0 + (distDmgBonus[slotIdx] || 0) + (aptForSlot[slotIdx] || 0);
-    const soulAttack = soulTraitAttackProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, slotIdx);
+    const soulAttack = attackBoostProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, slotIdx, uniqueBoostCtxFor(mon, slotIdx, attackStartDist));
     const totalBuffMult = traitMult * cookieEffectNow().dmgMult * blackNoteEffectAt(slotIdx, mon?.id).dmgMult * kyubiAttackAt(slotIdx, mon?.id, card).dmgMult * orihimeDmgMultAt(slotIdx) * bowAtkMultAt(slotIdx) * tacticsExMultiBuffNow(slotIdx).dmg * (card.type === 'unique' ? tacticsExPandoraDevilNow(slotIdx, false).dmg : 1) * getTurnBuff('atkMult', 1.0) * tacticsSlotAtkMult(slotIdx) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
     const attackerAtk = (isTacticsMode(runMode) && tacticsUnitsRef.current[slotIdx] ? Math.max(0, normalizeTacticsUnit(tacticsBattleUnit(slotIdx)).atk) : atk) * trickStartAtkMult(trickStartStacksAt(slotIdx)) * fateAtkMult(livePermaBuff('fateStacks', null), slotIdx);
     let finalDmg = Math.floor(attackerAtk * distMult * baseDmgMult * (Number(skillDmgMult) > 0 ? Number(skillDmgMult) : 1) * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + fateWheelEnemyTakenBonus(fateWheelRef.current) + tacticsExPsychoLockNow().enemyTakenBonus + additionalDmgMod + dreamPainTakenBonus(dreamPainRef.current)));
@@ -156461,10 +158680,10 @@ function MonsterHeroGame() {
       distanceBrokenDmg = applyUltimateDistanceBreak(turnPressedDmg, slotIdx, ultimateDistanceBreakLevels, specialRuleDifficulty, card.type);
     }
     return applyExtremeIntegerRule(distanceBrokenDmg, specialRuleDifficulty, 'damageDealt');
-  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, ultimateDistanceBreakLevels, totalTurnCount, turnCount, runMode, difficulty, extremeDifficulty]);
+  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, ultimateDistanceBreakLevels, totalTurnCount, turnCount, runMode, difficulty, extremeDifficulty, enemy, enemyIntent]);
   const getAttackPredictedDmg = useCallback((card, mon, baseDmg, additionalGlobalCombo = 0, slotIdx = null, halved = false) => {
     if (baseDmg <= 0) return 0;
-    const soulAttack = soulTraitAttackProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, null);
+    const soulAttack = attackBoostProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, null);
     const hits = buildAttackHits({
       d: baseDmg,
       card,
@@ -156474,6 +158693,7 @@ function MonsterHeroGame() {
       comboDmgBonus: getPermaBuff('comboDmgPct'),
       critDmgBonus: getPermaBuff('critDmgPct') + soulAttack.critDamageBonus + erubinIsshenCritDmg(card),
       kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
+      boostExtraCombos: soulAttack.uniqueBoost.comboExtra,
       guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit') || tacticsCritFixedNow(slotIdx, card) || erubinIsshenOn(card),
       rollCrit: () => false,
       globalComboRate: getPermaBuff('globalComboDmgPct') + additionalGlobalCombo,
@@ -156799,7 +159019,8 @@ function MonsterHeroGame() {
         const defenseSlot = aimedSlots && aimedSlots.length ? aimedSlots[Math.floor(Math.random() * aimedSlots.length)] : null;
         const defenseHeroId = !isTacticsMode(runMode) ? mainHero?.id : defenseSlot != null ? tacticsUnitsRef.current[defenseSlot]?.id || null : null;
         const kusabiDefenseKey = !isTacticsMode(runMode) ? 'party' : defenseSlot != null ? String(defenseSlot) : null;
-        const kusabiEvasion = (hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiAt(defenseSlot)) : 0) + reikonEvasionNow();
+        const boostEvade = !isTacticsMode(runMode) ? Number(immediateEffects.boostEvade) || 0 : defenseSlot != null ? Number(immediateEffects.boostEvadeBySlot?.[defenseSlot]) || 0 : 0;
+        const kusabiEvasion = (hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiAt(defenseSlot)) : 0) + reikonEvasionNow() + boostEvade;
         const defenseTable = !isTacticsMode(runMode) && kusabiEvasion <= 0 ? unifiedSpecialDefense : buildUnifiedSpecialDefense({
           soulEvasion: soulBattleParty.evasion,
           soulReflect: soulBattleParty.reflect,
@@ -158070,6 +160291,8 @@ function MonsterHeroGame() {
       currentTurnGuardMult = 0;
     let immediateTakenMult = 1;
     const immediateTakenMultBySlot = {};
+    let boostEvadeThisTurn = 0;
+    const boostEvadeBySlot = {};
     const guardBySlot = {};
     const addGuardForSlot = (idx, flat, mult, weight) => {
       if (!Number.isInteger(idx)) return;
@@ -158151,9 +160374,16 @@ function MonsterHeroGame() {
       }
       const halved = entry.aiCopy ? false : halveCounter.take(card, entry.slotIdx);
       const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-      const effMul = isBreeder && specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty, 'assistCardEffect') : halved ? 0.5 : 1;
+      const effMulBase = isBreeder && specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty, 'assistCardEffect') : halved ? 0.5 : 1;
       if (halved) addPopup(isTacticsMode(runMode) ? '同じモンスターの2枚目 効果半減' : '2枚目以降 効果半減', 'hero', 'text-slate-300 text-sm font-black');
       const slotIdx = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
+      const cardBoost = entry.aiCopy ? UNIQUE_BOOST_EMPTY_PROFILE : uniqueBoostOfCardInRun(card, slotIdx);
+      const effMul = effMulBase * (1 + cardBoost.effectPct / 100);
+      const healMul = effMulBase * (1 + cardBoost.healPct / 100);
+      if (cardBoost.evadePoints > 0) {
+        boostEvadeThisTurn = Math.max(boostEvadeThisTurn, cardBoost.evadePoints);
+        boostEvadeBySlot[slotIdx] = Math.max(boostEvadeBySlot[slotIdx] || 0, cardBoost.evadePoints);
+      }
       lastType = card.type;
       if (isTacticsMode(runMode) && !isBreeder && entry.slotIdx != null) {
         pdTag();
@@ -158471,7 +160701,7 @@ function MonsterHeroGame() {
               addPopup(`ソードスキル! 連撃パワー ${nextPower}/${KENSHI_COMBO_POWER_MAX}`, 'hero', 'text-violet-300 text-lg font-bold');
             }
           } else if (card.monId === FATE_COIN_MONSTER_ID) {
-            const side = rollFateCoin();
+            const side = rollFateCoin(Math.random, cardBoost.chancePoints);
             fateDmgMult = fateCoinDmgMult(side);
             if (side === 'heads') {
               writePermaBuffs(p => ({
@@ -158497,14 +160727,14 @@ function MonsterHeroGame() {
               });
             }
           } else if (card.monId === FATE_WHEEL_MONSTER_ID) {
-            fateWheelPick = rollFateWheel();
+            fateWheelPick = rollFateWheel(Math.random, cardBoost.chancePoints);
             if (fateWheelPick.dmgMult) fateDmgMult = fateWheelPick.dmgMult;
           }
         }
         const attackStartDist = attackDistance;
         const d = getDmg(card, slotIdx, activeMon, localOryoAdd, localDmgModAdd, halved, attackStartDist, fateDmgMult * copyDmgScale);
         attackCount++;
-        const soulAttack = soulTraitAttackProfile(activeMon?.masuId ? getMasuMon(activeMon.masuId) : null, card, slotIdx);
+        const soulAttack = attackBoostProfile(activeMon?.masuId ? getMasuMon(activeMon.masuId) : null, card, slotIdx);
         const critRateBonus = getPermaBuff('critRatePct') + soulAttack.critRateBonus;
         const critDmgBonus = getPermaBuff('critDmgPct') + soulAttack.critDamageBonus + erubinIsshenCritDmg(card);
         const hits = buildAttackHits({
@@ -158516,6 +160746,7 @@ function MonsterHeroGame() {
           comboDmgBonus: getPermaBuff('comboDmgPct'),
           critDmgBonus,
           kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
+          boostExtraCombos: soulAttack.uniqueBoost.comboExtra,
           guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit') || tacticsCritFixedNow(slotIdx, card) || erubinIsshenOn(card),
           rollCrit: () => Math.random() < Math.min(1, ((card.crit || 0.1) + critRateBonus + (tacticsExMultiBuffNow(slotIdx).critAdd || 0) + blackNoteEffectAt(slotIdx, activeMon?.id).critAdd + kyubiAttackAt(slotIdx, activeMon?.id, card).critAdd) * tacticsExMultiBuffNow(slotIdx).critRate),
           globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
@@ -158617,20 +160848,24 @@ function MonsterHeroGame() {
           if (card.monId === DREAM_PAIN_MONSTER_ID) {
             const dp = writeDreamPain({
               ...startDreamPain(kusabiBeforeAttack),
+              turns: DREAM_PAIN_TURNS + cardBoost.durationTurns,
               bonus: dreamPainTakenOf(kusabiBeforeAttack) * effMul
             });
             addPopup(`💤 ドリームペイン 被ダメ+${Math.round(dp.bonus * 100)}%`, 'enemy', 'text-fuchsia-300 text-lg font-bold');
           }
           if (hasReikon(card.monId)) {
-            writeReikonKey(trickStartKeyOf(slotIdx), startReikon());
-            addPopup(`👻 霊魂 次のターンから${REIKON_TURNS}ターン 消費ガッツ−${Math.round((1 - REIKON_GUTS_MULT) * 100)}%・回避+${REIKON_EVASION_UP}%`, 'hero', 'text-violet-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
+            writeReikonKey(trickStartKeyOf(slotIdx), {
+              ...startReikon(),
+              turns: REIKON_TURNS + cardBoost.durationTurns
+            });
+            addPopup(`👻 霊魂 次のターンから${REIKON_TURNS + cardBoost.durationTurns}ターン 消費ガッツ−${Math.round((1 - REIKON_GUTS_MULT) * 100)}%・回避+${REIKON_EVASION_UP}%`, 'hero', 'text-violet-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
           }
           if (card.monId === 'Ham') {
             immediateStun = true;
             setImmediateTurnBuff('stunEnemy', true);
             addPopup('スタン!', 'enemy', 'text-yellow-400 text-lg font-bold');
           } else if (card.monId === 'Suezo') {
-            const gRec = gainGutsByRate(slotIdx, 0.5 * effMul);
+            const gRec = gainGutsByRate(slotIdx, 0.5 * healMul);
             if (gRec > 0) addPopup(`⚡ ガッツ +${gRec}`, 'guts', 'text-amber-400 text-xl font-black drop-shadow-md');
           } else if (card.monId === 'Pixie' || card.monId === 'Mia') {
             if (isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx, 'zeroGuts', true);else setNextTurnBuff('zeroGuts', true);
@@ -158648,8 +160883,9 @@ function MonsterHeroGame() {
             addPopup('丈夫さUP!', 'hero', 'text-emerald-400 text-lg font-bold');
             addPopup('次ターン反射！', 'hero', 'text-purple-400 text-lg font-bold');
           } else if (card.monId === 'Oboro' || card.monId === 'Plant') {
-            const hRec = Math.floor(finalD * 0.5);
-            const gRec = Math.floor(finalD * 0.05);
+            const healBoost = 1 + cardBoost.healPct / 100;
+            const hRec = Math.floor(finalD * 0.5 * healBoost);
+            const gRec = Math.floor(finalD * 0.05 * healBoost);
             if (isTacticsMode(runMode)) hpBeforeEnemyAttack = commitTacticsUnits(healTacticsAt(tacticsUnitsRef.current, slotIdx, hRec));else {
               hpBeforeEnemyAttack = Math.min(liveEffectiveMaxHp(), hpBeforeEnemyAttack + hRec);
               setHp(hpBeforeEnemyAttack);
@@ -158682,14 +160918,14 @@ function MonsterHeroGame() {
             addPopup('次ターン被ダメ50%減!', 'hero', 'text-pink-400 text-lg font-bold');
           } else if (isLifeTreeGuardCard(card)) {
             const guardFx = lifeTreeGuardEffectOf(card.monId);
-            const gRec = gainGutsByRate(slotIdx, guardFx.guts * effMul);
+            const gRec = gainGutsByRate(slotIdx, guardFx.guts * healMul);
             const guardMult = lifeTreeGuardMult(effMul, card.monId);
             if (guardFx.hp > 0) {
               if (isTacticsMode(runMode)) {
-                const healed = tacticsRateHealAt(slotIdx, guardFx.hp * effMul, 0);
+                const healed = tacticsRateHealAt(slotIdx, guardFx.hp * healMul, 0);
                 if (healed) hpBeforeEnemyAttack = healed.total;
               } else {
-                const heal = Math.floor(liveEffectiveMaxHp() * guardFx.hp * effMul);
+                const heal = Math.floor(liveEffectiveMaxHp() * guardFx.hp * healMul);
                 if (heal > 0) {
                   hpBeforeEnemyAttack = Math.min(liveEffectiveMaxHp(), hpBeforeEnemyAttack + heal);
                   setHp(hpBeforeEnemyAttack);
@@ -158731,10 +160967,10 @@ function MonsterHeroGame() {
               const id = fateWheelPick.id;
               if (id === 'enemyAtkDown') writeFateWheel({
                 ...fateWheelRef.current,
-                atkDown: FATE_WHEEL_DEBUFF_TURNS
+                atkDown: FATE_WHEEL_DEBUFF_TURNS + cardBoost.durationTurns
               });else if (id === 'enemyTakenUp') writeFateWheel({
                 ...fateWheelRef.current,
-                takenUp: FATE_WHEEL_DEBUFF_TURNS
+                takenUp: FATE_WHEEL_DEBUFF_TURNS + cardBoost.durationTurns
               });else if (id === 'combo') writePermaBuffs(p => ({
                 ...p,
                 fateStacks: withFateSlotStack(p.fateStacks, slotIdx, 'combo')
@@ -158750,17 +160986,19 @@ function MonsterHeroGame() {
               });
             }
           } else if (card.monId === 'Pandora') {
-            if (isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx, 'pandoraResonanceTurns', 2);else setNextTurnBuff('pandoraResonanceTurns', 2);
-            addPopup('双極共振！ 次の2ターン消費半減', 'hero', 'text-fuchsia-300 text-lg font-bold');
+            const resonanceTurns = 2 + cardBoost.durationTurns;
+            if (isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx, 'pandoraResonanceTurns', resonanceTurns);else setNextTurnBuff('pandoraResonanceTurns', resonanceTurns);
+            addPopup(`双極共振！ 次の${resonanceTurns}ターン消費半減`, 'hero', 'text-fuchsia-300 text-lg font-bold');
           } else if (isIceLockMonster(card.monId)) {
             activatedIceLockThisTurn = true;
+            const iceTurns = 5 + cardBoost.durationTurns;
             setWaveBuffs(p => ({
               ...p,
-              iceLockTurns: 5,
+              iceLockTurns: 5 + cardBoost.durationTurns,
               iceLockPreparing: (p.iceLockTurns || 0) <= 0
             }));
             addPermaBuff('snegurochkaGutsDiscountStacks', 1);
-            addPopup('絶氷の楔！ 5ターン移動封印', 'enemy', 'text-cyan-200 text-lg font-bold');
+            addPopup(`絶氷の楔！ ${iceTurns}ターン移動封印`, 'enemy', 'text-cyan-200 text-lg font-bold');
             addPopup('消費ガッツ3%減！', 'hero', 'text-cyan-300 text-sm font-bold');
           }
         }
@@ -159145,7 +161383,9 @@ function MonsterHeroGame() {
       forcedMoveTarget,
       iceLockRefreshed: activatedIceLockThisTurn,
       takenMult: immediateTakenMult,
-      takenMultBySlot: immediateTakenMultBySlot
+      takenMultBySlot: immediateTakenMultBySlot,
+      boostEvade: boostEvadeThisTurn,
+      boostEvadeBySlot
     }, executedIntent, hpBeforeEnemyAttack, enemyHpAfterOurAttacks);
     kyukoRedirectRef.current = null;
     writePermaBuffs(p => p.kyukoCutTurns > 0 ? {
@@ -162403,6 +164643,8 @@ function MonsterHeroGame() {
     const remaining = Math.max(0, normalized.uniqueSkillPoints - allocated);
     const resetTicketCount = ownedItemCount(ownedItems, 'unique_skill_reset_ticket');
     const resetPointCount = Object.values(normalized.uniqueSkillLevels).reduce((sum, level) => sum + Math.max(0, Math.floor(Number(level) || 0)), 0);
+    const boostPointCount = Object.values(normalizeUniqueSkillBoosts(normalized)).reduce((sum, steps) => sum + uniqueBoostSpentOfSteps(steps), 0);
+    const hasMaxedSkill = choices.some(choice => choice.level >= MAX_UNIQUE_SKILL_LEVEL);
     const changeDraft = (skillKey, delta) => setUniqueSkillPointDrafts(prev => {
       const id = String(masu.id),
         current = {
@@ -162437,7 +164679,7 @@ function MonsterHeroGame() {
       className: `text-[10px] font-black flex items-center gap-1 ${normalized.uniqueSkillPoints > 0 ? 'text-amber-300' : 'text-slate-500'}`
     }, React.createElement(Sparkles, {
       size: 10
-    }), "未使用 固有技P：", normalized.uniqueSkillPoints)), normalized.uniqueSkillPoints > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
+    }), "未使用 固有技P：", normalized.uniqueSkillPoints)), (normalized.uniqueSkillPoints > 0 || hasMaxedSkill) && React.createElement(React.Fragment, null, normalized.uniqueSkillPoints > 0 && React.createElement("div", {
       className: "text-[8px] text-slate-400 font-bold mb-1.5 leading-tight"
     }, "＋／－で仮配分し、「強化を確定」で反映します。"), React.createElement("div", {
       className: "space-y-1.5"
@@ -162469,8 +164711,25 @@ function MonsterHeroGame() {
         disabled: remaining <= 0 || after >= MAX_UNIQUE_SKILL_LEVEL,
         onClick: () => changeDraft(choice.key, 1),
         className: "w-9 min-h-[36px] rounded-lg bg-amber-700 text-base font-black disabled:opacity-30"
-      }, "＋")));
-    })), React.createElement("div", {
+      }, "＋")), maxed && (() => {
+        const summary = uniqueBoostSummaryText(uniqueBoostStepsOf(normalized, choice.key));
+        return React.createElement("div", {
+          className: "mt-1 flex items-center justify-between gap-2 min-w-0"
+        }, React.createElement("span", {
+          "data-unique-boost-summary": true,
+          className: `min-w-0 text-[9px] font-black leading-tight ${summary ? 'text-amber-200' : 'text-slate-500'}`
+        }, summary ? `✨ ${summary}` : 'オリジナル強化:なし'), React.createElement("button", {
+          type: "button",
+          "data-unique-boost-open": true,
+          "aria-label": `${current?.name || choice.name}のオリジナル強化を開く`,
+          onClick: () => setUniqueBoostTarget({
+            masuId: masu.id,
+            skillKey: choice.key
+          }),
+          className: "shrink-0 min-h-[40px] px-2.5 rounded-xl bg-gradient-to-b from-amber-500 to-orange-700 text-white text-[10px] font-black active:scale-95"
+        }, "✨ オリジナル強化"));
+      })());
+    })), normalized.uniqueSkillPoints > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
       className: "mt-2 flex items-center justify-between text-[10px] font-black"
     }, React.createElement("span", {
       className: "text-slate-400"
@@ -162492,7 +164751,7 @@ function MonsterHeroGame() {
         }
       },
       className: "min-h-[42px] rounded-xl bg-amber-600 text-[11px] font-black disabled:opacity-30"
-    }, "強化を確定"))), React.createElement("div", {
+    }, "強化を確定")))), React.createElement("div", {
       className: "mt-2 border-t border-white/10 pt-2"
     }, React.createElement("button", {
       type: "button",
@@ -162513,11 +164772,11 @@ function MonsterHeroGame() {
     }, "スキルポイントリセット券"), React.createElement("span", {
       className: resetTicketCount > 0 ? 'text-cyan-300' : 'text-slate-500'
     }, "所持 ", resetTicketCount, "枚")), React.createElement("button", {
-      disabled: resetTicketCount <= 0 || resetPointCount <= 0,
+      disabled: resetTicketCount <= 0 || resetPointCount + boostPointCount <= 0,
       onClick: async () => {
         if (!(await askConfirm({
           title: '配分済み固有技Pをリセットしますか？',
-          message: `このマスモンの固有技に配分した${resetPointCount}ポイントをリセットし、未使用の固有技Pへ戻します。スキルポイントリセット券を1枚消費します。`,
+          message: boostPointCount > 0 ? `固有技Lv とオリジナル強化をすべて戻し、使った固有技P(Lv ${resetPointCount.toLocaleString()}P・オリジナル強化 ${boostPointCount.toLocaleString()}P)をすべて返します。スキルポイントリセット券を1枚消費します。` : `このマスモンの固有技に配分した${resetPointCount}ポイントをリセットし、未使用の固有技Pへ戻します。スキルポイントリセット券を1枚消費します。`,
           confirmLabel: 'リセットする'
         }))) return;
         const result = useUniqueSkillResetTicket(masu.id);
@@ -162527,7 +164786,7 @@ function MonsterHeroGame() {
         }
       },
       className: "w-full min-h-[42px] px-2 rounded-xl bg-cyan-700 text-[10px] font-black leading-tight disabled:opacity-30 disabled:bg-slate-700"
-    }, "配分済み固有技Pをリセット"), resetPointCount <= 0 && React.createElement("div", {
+    }, "配分済み固有技Pをリセット"), resetPointCount + boostPointCount <= 0 && React.createElement("div", {
       className: "text-[8px] text-slate-500 font-bold text-center"
     }, "配分済み固有技Pがないため使用できません")));
   };
@@ -162684,7 +164943,38 @@ function MonsterHeroGame() {
       className: "mh-hit-expand relative p-2 -m-1 bg-white/5 rounded-full active:scale-90 shrink-0"
     }, React.createElement(X, {
       size: 16
-    }))), renderPowerBadge(power, {
+    }))), masu && powerOverride === undefined ? (() => {
+      const open = String(powerBreakdownMasuId) === String(masu.id);
+      const parts = monsterPowerParts(mon);
+      const row = (label, value, extra = null) => React.createElement("div", {
+        className: `flex items-start justify-between gap-2 text-[11px] font-black ${extra ? 'rounded-lg bg-amber-900/40 px-1.5 py-1 text-amber-200' : 'text-slate-200'}`
+      }, React.createElement("span", {
+        className: "min-w-0"
+      }, label, extra), React.createElement("span", {
+        className: "shrink-0 font-mono tabular-nums"
+      }, Math.round(value) < 0 ? '' : '+', formatMonsterPower(Math.round(value))));
+      return React.createElement(React.Fragment, null, React.createElement("button", {
+        type: "button",
+        "data-power-breakdown-toggle": true,
+        "aria-expanded": open,
+        "aria-label": "総合力の内わけを開く",
+        onClick: () => setPowerBreakdownMasuId(open ? null : masu.id),
+        className: "block w-full text-left active:scale-[0.99]"
+      }, renderPowerBadge(power, {
+        note: powerNote
+      })), open && React.createElement("div", {
+        "data-power-breakdown": true,
+        className: "rounded-xl border border-amber-400/40 bg-black/40 px-2.5 py-2 space-y-1"
+      }, React.createElement("div", {
+        className: "text-[10px] font-black text-amber-300"
+      }, "総合力の内わけ"), row('能力', parts.stat), row('適性', parts.aptitude), row('固有技', parts.unique), row('魂格特性', parts.soul), parts.boostSpent > 0 && row('✨ オリジナル強化', parts.boost, React.createElement("span", {
+        className: "block text-[10px] font-bold"
+      }, "使った固有技P ", parts.boostSpent.toLocaleString())), React.createElement("div", {
+        className: "flex items-center justify-between gap-2 border-t border-white/15 pt-1 text-[12px] font-black text-white"
+      }, React.createElement("span", null, "合計"), React.createElement("span", {
+        className: "font-mono tabular-nums"
+      }, formatMonsterPower(power)))));
+    })() : renderPowerBadge(power, {
       note: powerNote
     }), extraLine, masu && !compact && React.createElement(React.Fragment, null, React.createElement("div", {
       className: "flex items-center justify-between gap-2 text-[10px] font-black"
@@ -171722,6 +174012,8 @@ function MonsterHeroGame() {
       resetFusionFlow: resetFusionFlow,
       setFusionInheritSoulRank: setFusionInheritSoulRank,
       setFusionInheritUniqueIds: setFusionInheritUniqueIds,
+      fusionInheritSkillKeys: fusionInheritSkillKeys,
+      setFusionInheritSkillKeys: setFusionInheritSkillKeys,
       setFusionMainId: setFusionMainId,
       setFusionResultData: setFusionResultData,
       setFusionSortDir: setFusionSortDir,
@@ -172473,6 +174765,16 @@ function MonsterHeroGame() {
         onClick: () => setUniqueSettingMasuId(null),
         className: "w-full min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase active:scale-95"
       }, "閉じる"))));
+    })(), uniqueBoostTarget && (() => {
+      const masu = getMasuMon(uniqueBoostTarget.masuId);
+      if (!masu) return null;
+      return React.createElement(UniqueBoostSheet, {
+        key: `${uniqueBoostTarget.masuId}:${uniqueBoostTarget.skillKey}`,
+        masu: masu,
+        skillKey: uniqueBoostTarget.skillKey,
+        onClose: () => setUniqueBoostTarget(null),
+        onCommit: plan => !!commitUniqueBoostPlan(uniqueBoostTarget.masuId, uniqueBoostTarget.skillKey, plan)
+      });
     })(), gameState === 'MASU_TRANSCEND_ENHANCE' && masuMonDetail && React.createElement(MasuTranscendEnhanceScreen, {
       commitTranscendExchange: commitTranscendExchange,
       commitTranscendFruit: commitTranscendFruit,
@@ -176624,7 +178926,14 @@ function MonsterHeroGame() {
           }, current?.name || skill.name), React.createElement("span", {
             className: "text-amber-300 shrink-0"
           }, "Lv.", skill.level));
-        }))),
+        }), masu.uniqueBoostSpentSnapshot > 0 && React.createElement("div", {
+          "data-ranking-unique-boost": true,
+          className: "mt-1 pt-1 border-t border-white/10 w-full flex items-center justify-between text-[10px] font-black"
+        }, React.createElement("span", {
+          className: "text-amber-200"
+        }, "✨ オリジナル強化に使った固有技P"), React.createElement("span", {
+          className: "text-amber-300 shrink-0"
+        }, masu.uniqueBoostSpentSnapshot.toLocaleString())))),
         footer: React.createElement("div", {
           className: "shrink-0"
         }, React.createElement(ModalCloseButton, {
@@ -183187,7 +185496,7 @@ const createAnimationStyle = () => {
     .mh-gift-list{display:flex;flex-direction:column;gap:8px}.mh-gift-card{display:flex;flex:none;flex-direction:column;gap:4px;min-height:88px;padding:10px 12px}.mh-gift-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;min-width:0;min-height:20px}.mh-gift-heading h3{display:flex;align-items:flex-start;gap:4px;min-width:0;font-size:14px;line-height:19px;color:#fff}.mh-gift-heading h3 span{flex:none;margin-top:1px;padding:1px 6px;border-radius:6px;background:#78350f;color:#fde68a;font-size:10px;line-height:16px}.mh-gift-heading h3 b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-width:0;white-space:normal;overflow-wrap:anywhere}.mh-gift-heading>em{flex:none;padding:2px 8px;border-radius:999px;font-size:10px;line-height:16px;font-style:normal;font-weight:900}.mh-gift-main{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px}.mh-gift-rewards{display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:2px 7px;min-width:0;color:#fde68a;font-size:11px;line-height:15px;font-weight:900}.mh-gift-rewards span{overflow-wrap:anywhere}.mh-gift-main>button{flex:none;min-width:84px;height:44px;padding:0 12px;border-radius:12px;background:#0891b2;color:#fff;font-size:12px;font-weight:900;white-space:nowrap;transition:transform .12s ease-out}.mh-gift-main>button:active{transform:scale(.95)}.mh-gift-main>button:disabled{opacity:.4;transform:none}.mh-gift-deadline{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#94a3b8;font-size:10px;line-height:14px}
     @media(max-height:620px){.mh-home-mission{top:64%}.mh-home-gift{top:73%}}
     /* 横画面(#146・2026-09-05)。コラムが画面いっぱいになるので、左右の余白へ施設を振り分ける。左＝吹き出し・M/B管理・モンヒロビート、右＝更新履歴・神殿・マーケット、右下＝ミッションとギフトを横並び、下中央＝バトル。上の max-height:620px は横画面のスマホにも当たるので、この行はそれより後ろに置いて上書きする */
-    @media(orientation:landscape) and (max-height:600px){.mh-home-assistant{left:2%;width:36%;top:calc(70px + env(safe-area-inset-top))}.mh-home-facility>span{padding:6px 12px}.mh-home-facility.management{left:2.4%;top:max(calc(146px + env(safe-area-inset-top)),calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.rhythm{left:2.4%;top:64.8%}.mh-home-facility.temple{right:2.4%;top:35.76%}.mh-home-facility.market{right:2.4%;top:59.76%}.mh-home-scene .mh-home-facility.life{left:auto;right:calc(2.4% + 118px);top:59.76%}.mh-home-mission{right:calc(5% + 120px);top:78%}.mh-home-gift{top:78%}.mh-home-facility.battle>span{padding:8px 16px;font-size:18px;animation:none}.mh-home-masumon-layer{left:30%;right:30%;top:30%;bottom:34%}}
+    @media(orientation:landscape) and (max-height:600px){.mh-home-assistant{left:2%;width:36%;top:calc(70px + env(safe-area-inset-top))}.mh-home-facility>span{padding:6px 12px}.mh-home-facility.management{left:2.4%;top:max(calc(146px + env(safe-area-inset-top)),calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.rhythm{left:2.4%;top:64.8%}.mh-home-facility.temple{right:2.4%;top:35.76%}.mh-home-facility.market{right:2.4%;top:59.76%}.mh-home-scene .mh-home-facility.life{left:auto;right:calc(2.4% + 118px);top:59.76%}.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle,.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle.raised,.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle.below-tour{bottom:32px}.mh-home-scene:has(.mh-home-facility.life) .mh-home-event-banner{bottom:72px}.mh-home-mission{right:calc(5% + 120px);top:78%}.mh-home-gift{top:78%}.mh-home-facility.battle>span{padding:8px 16px;font-size:18px;animation:none}.mh-home-masumon-layer{left:30%;right:30%;top:30%;bottom:34%}}
     /* 横画面でも幅が 760px までの端末(667×375 など)では、ミッションがモンヒロバトルの札に33px重なっていた。ミッション・ギフトを細く、バトルの札を小さくして、すき間をあける(2026-10-27) */
     @media(orientation:landscape) and (max-height:600px) and (max-width:760px){.mh-home-mission{width:104px;padding:7px 5px;right:calc(3% + 104px);white-space:nowrap}.mh-home-gift{width:96px;padding:7px 5px;right:3%}.mh-home-facility.battle>span{min-width:120px;padding:8px 8px;font-size:15px}}
     .mh-boot-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom));color:#fff;text-align:center;background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%);isolation:isolate}
@@ -183223,7 +185532,7 @@ const createAnimationStyle = () => {
     @media(max-width:350px){.mh-title-actions button{width:46px;height:46px}.mh-mocchi-wrap{width:130px;height:130px}.mh-title-header{padding-left:9px;padding-right:9px}}
     @media(max-height:620px){.mh-mocchi-wrap{width:105px;height:105px;margin-bottom:5px}.mh-boot-copy h2{margin-bottom:10px}.mh-boot-copy p{margin-top:5px}}
     @media(prefers-reduced-motion:reduce){.mh-mocchi-wrap img,.mh-mocchi-wrap span,.mh-mocchi-wrap i{animation:none!important}.mh-entering>img{animation:mhReducedFade .85s ease both}.mh-gate-core,.mh-gate-particles{display:none}.mh-gate-flash{animation:mhReducedFlash .85s ease both}}@keyframes mhReducedFade{to{opacity:.4}}@keyframes mhReducedFlash{0%,55%{opacity:0}100%{opacity:1}}
-    .mh-home-facility.rhythm{left:1.9%;top:55.25%}.mh-home-facility.life{left:2.52%;top:46.4%}.mh-home-facility.life>span{border-color:#f9a8d4dd;background:linear-gradient(135deg,#4a1d3bf2,#1e1b4bf2);box-shadow:0 3px 12px #0009,0 0 15px #f472b666}.mh-home-facility.rhythm>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#0e7490ee,#4c1d95ee);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66}
+    .mh-home-facility.rhythm{left:1.9%;top:55.25%}.mh-home-facility.life{left:2.52%;top:37%}@media (orientation:portrait){.mh-home-facilities:has(.mh-home-facility.life) .mh-home-facility.rhythm{top:49.5%}}@media (orientation:portrait) and (max-height:620px){.mh-home-facility.life{top:39%}.mh-home-facilities:has(.mh-home-facility.life) .mh-home-facility.rhythm{top:52%}}.mh-home-facility.life>span{border-color:#f9a8d4dd;background:linear-gradient(135deg,#4a1d3bf2,#1e1b4bf2);box-shadow:0 3px 12px #0009,0 0 15px #f472b666}.mh-home-facility.rhythm>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#0e7490ee,#4c1d95ee);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66}
     .mh-debug-banner{flex:none;text-align:center;background:#be123c;color:white;padding:5px;font-size:9px;font-weight:1000;letter-spacing:.04em}.mh-home-facility.rhythm small{display:block;font-size:7px;color:#fde68a}.mh-rule-button{width:100%;margin-top:18px;padding:13px;border-radius:14px;background:#4338ca;font-weight:900}.mh-node-map{position:relative;flex:1;min-height:250px;overflow:hidden;border:1px solid #ffffff33;border-radius:15px;background:radial-gradient(circle,#164e63,#020617);transition:.4s}.mh-node-map>i{position:absolute;height:3px;background:#94a3b8;transform-origin:0 50%;z-index:0}.mh-node-map>button{position:absolute;z-index:2;width:52px;height:52px;margin:-26px;border:3px solid #ffffff88;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;transition:.25s}.mh-node-map>button span{font-size:17px}.mh-node-map>button small{font-size:6px;font-weight:900}.mh-node-map>button.current{border-color:#fff700;box-shadow:0 0 18px #fff700}.mh-node-map>button.destination{animation:trainingGlow .7s infinite alternate;pointer-events:auto}.mh-node-map>button:not(.destination){pointer-events:auto}.mh-node-map img,.mh-node-map>button>div{position:absolute;width:48px;height:48px;object-fit:contain;z-index:3}.mh-board-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:5px}.mh-board-buttons button{min-height:34px;border-radius:8px;background:#334155;font-size:8px;font-weight:900}@keyframes trainingGlow{to{transform:scale(1.2);border-color:#fff;box-shadow:0 0 24px #fde047}}.mh-training-debug{position:absolute;right:8px;bottom:82px;z-index:30;width:min(270px,82vw);max-height:55vh;overflow:auto;padding:10px;border:2px solid #e879f9;border-radius:14px;background:#0f172ff5;font-size:8px}.mh-training-debug button,.mh-training-debug select{margin:3px;padding:6px;border-radius:6px;background:#334155}.mh-training-debug button.active{background:#db2777}.mh-training-debug pre{max-height:110px;overflow:auto;white-space:pre-wrap;background:#000;padding:5px}.mh-training-modal{position:fixed;z-index:50000;inset:0;display:flex;align-items:center;padding:16px;background:#020617e8}.mh-training-modal>div{width:100%;max-height:85vh;overflow:auto;padding:18px;border:1px solid #a78bfa;border-radius:20px;background:#111827}.mh-training-modal h3{margin:8px 0;font-size:17px;font-weight:1000}.mh-training-modal p{margin:7px 0;color:#cbd5e1;font-size:10px}.mh-rules-list p{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #ffffff22;padding:7px}.mh-rules-list b{font-size:10px}.mh-rules-list span{font-size:8px;text-align:right}.mh-route-choice,.mh-modal-close{display:block;width:100%;margin-top:8px;padding:12px;border-radius:10px;background:#4338ca;font-size:10px;font-weight:900}.mh-modal-close{background:#475569}.mh-training-result>div>button+button{margin-top:7px;background:#334155;color:white}
     .mh-training-screen{height:100%;display:flex;flex-direction:column;overflow:hidden;padding:calc(10px + env(safe-area-inset-top)) 12px calc(10px + env(safe-area-inset-bottom));background:radial-gradient(circle at top,#312e81,#07101f 60%)}.mh-training-head{display:grid;grid-template-columns:46px 1fr 46px;align-items:center;flex:none}.mh-training-head>button{min-height:44px;display:flex;align-items:center;justify-content:center}.mh-training-head div{text-align:center}.mh-training-head small{display:block;color:#f9a8d4;font:900 8px monospace;letter-spacing:.25em}.mh-training-head h2{font-size:18px;font-weight:1000}.mh-training-selected{display:flex;align-items:center;gap:10px;margin:9px 0;padding:10px;border:1px solid #f9a8d477;border-radius:18px;background:#3b076455}.mh-training-selected>img,.mh-training-selected>div:first-child{width:56px;height:56px;object-fit:contain;flex:none}.mh-training-selected>div{display:flex;flex:1;min-width:0;flex-direction:column}.mh-training-selected b{font-size:14px}.mh-training-selected span{color:#fbcfe8;font-size:9px}.mh-training-selected button{padding:9px;border-radius:10px;background:#7e22ce;font-size:9px;font-weight:900}.mh-training-note{font-size:9px;color:#cbd5e1;padding:2px 3px 8px}.mh-training-mon-list{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;overflow-y:auto;padding:2px 1px 90px}.mh-training-mon-list>button{position:relative;min-width:0;padding:7px 4px;border:2px solid #334155;border-radius:16px;background:#0f172acc}.mh-training-mon-list>button.active{border-color:#f472b6;background:#83184377;box-shadow:0 0 13px #ec489966}.mh-training-mon-list img,.mh-training-mon-list>button>div:first-child{width:54px;height:54px;object-fit:contain;margin:auto}.mh-training-mon-list b,.mh-training-mon-list small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-training-mon-list b{font-size:10px}.mh-training-mon-list small{font-size:7px;color:#94a3b8}.mh-training-mon-list span{position:absolute;right:5px;top:4px;color:#fde68a;font-size:8px}.mh-training-empty{grid-column:1/-1;text-align:center;margin-top:50px;color:#64748b}.mh-training-footer{position:absolute;z-index:6;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));padding-top:20px;background:linear-gradient(transparent,#07101f 24%)}.mh-training-footer button{width:100%;min-height:52px;border-radius:18px;background:linear-gradient(90deg,#db2777,#7c3aed);font-weight:1000;box-shadow:0 6px 20px #0008}.mh-training-footer button:disabled{background:#334155;color:#64748b}.mh-training-difficulties{overflow:auto;padding:10px 1px 95px}.mh-training-difficulties>button{display:block;width:100%;margin-bottom:10px;padding:14px;text-align:left;border:2px solid #334155;border-radius:20px;background:#0f172acc}.mh-training-difficulties>button.active{border-color:#f472b6}.mh-training-difficulties>button.soon{opacity:.72}.mh-training-difficulties>button>div{display:flex;justify-content:space-between}.mh-training-difficulties b{font-size:18px}.mh-training-difficulties em{padding:4px 8px;border-radius:999px;background:#475569;font-size:8px;font-style:normal}.mh-training-difficulties p{margin:8px 0;color:#cbd5e1;font-size:10px}.mh-training-difficulties dl{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}.mh-training-difficulties dl span{padding:5px;border-radius:7px;background:#02061788;text-align:center;font-size:8px}.mh-training-confirm{overflow:auto;padding:12px 2px 100px}.mh-training-confirm h3{margin:10px 0 2px;color:#f9a8d4;font-size:26px;font-weight:1000}.mh-training-confirm h4{margin-top:16px;color:#c4b5fd;font-size:11px;font-weight:1000}.mh-training-confirm p{color:#cbd5e1;font-size:10px}.mh-training-ticket{display:flex;flex-wrap:wrap;justify-content:space-between;margin-top:16px;padding:14px;border:1px solid #fbbf24aa;border-radius:16px;background:#78350f55}.mh-training-ticket b{color:#fde68a}.mh-training-ticket small{width:100%;margin-top:5px;color:#fef3c7;font-size:8px}
     .mh-training-board{height:100%;display:flex;flex-direction:column;padding:calc(8px + env(safe-area-inset-top)) 9px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(#0c4a6e,#082f49 44%,#052e16)}.mh-training-board>header{display:flex;align-items:center;justify-content:space-between}.mh-training-board>header div{display:flex;flex-direction:column}.mh-training-board>header b{font-size:14px}.mh-training-board>header span{font-size:8px;color:#bae6fd}.mh-training-board>header button{min-height:40px;padding:0 10px;border-radius:10px;background:#7f1d1d;font-size:9px;font-weight:900}.mh-training-hud{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:7px 0}.mh-training-hud span{padding:6px 2px;border-radius:8px;background:#020617aa;text-align:center;font-size:8px;font-weight:900}.mh-training-map{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;flex:1;min-height:0;padding:7px;overflow:auto;border:1px solid #ffffff22;border-radius:16px;background:#0005}.mh-training-map>div{position:relative;aspect-ratio:1;border:2px solid #64748b;border-radius:10px;background:#334155;display:flex;align-items:center;justify-content:center}.mh-training-map>div.passed{opacity:.52}.mh-training-map>div.current{border-color:#fde047;background:#854d0e;box-shadow:0 0 14px #fde047}.mh-training-map span{font-size:17px}.mh-training-map small{position:absolute;left:3px;top:1px;font-size:6px}.mh-training-map img,.mh-training-map>div.current>div{position:absolute;width:45px;height:45px;object-fit:contain;filter:drop-shadow(0 3px 3px #000);z-index:2}.mh-training-message{min-height:28px;padding:7px;text-align:center;font-size:10px;font-weight:900}.mh-training-tools{display:flex;min-height:54px;gap:5px}.mh-training-tools button{flex:1;display:flex;align-items:center;justify-content:center;gap:3px;padding:4px;border:1px solid #a78bfa;border-radius:10px;background:#312e81}.mh-training-tools button span{font-size:17px}.mh-training-tools button small{font-size:7px}.mh-training-tools p{margin:auto;color:#94a3b8;font-size:8px}.mh-training-board>footer{margin-top:7px}.mh-roll-button{width:100%;min-height:58px;border-radius:19px;background:linear-gradient(#fbbf24,#d97706);color:#451a03;font-size:17px;font-weight:1000}.mh-roll-button small{display:block;font-size:7px}.mh-fixed-dice{display:grid;grid-template-columns:1fr repeat(3,58px);gap:5px;align-items:center}.mh-fixed-dice button{height:54px;border-radius:14px;background:#fbbf24;color:#422006;font-size:20px;font-weight:1000}.mh-training-branch{position:fixed;z-index:40000;inset:0;display:flex;align-items:center;padding:20px;background:#020617dd}.mh-training-branch>div{width:100%;padding:18px;border:1px solid #c4b5fd;border-radius:22px;background:#111827}.mh-training-branch h3{text-align:center;font-size:18px;font-weight:1000}.mh-training-branch button{display:flex;justify-content:space-between;width:100%;margin-top:8px;padding:14px;border-radius:12px;background:#312e81}.mh-training-branch span{font-size:9px;color:#cbd5e1}.mh-training-board{position:relative;background:linear-gradient(160deg,#082f49,#0f172a 52%,#14532d)}.mh-training-board>header{gap:8px}.mh-training-board>header b small{margin-left:5px;color:#facc15;font-size:7px}.mh-debug-toggle{background:#be185d!important;letter-spacing:.08em}.mh-training-hud{grid-template-columns:repeat(3,1fr)}.mh-training-hud span{display:flex;flex-direction:column;gap:2px}.mh-training-hud b{color:white;font-size:11px}.mh-tile-viewport{position:relative;flex:1;min-height:250px;overflow:auto;scroll-behavior:smooth;border:2px solid #67e8f966;border-radius:18px;background:linear-gradient(#0c4a6e99,#052e1699),repeating-linear-gradient(45deg,#ffffff08 0 8px,transparent 8px 16px);box-shadow:inset 0 0 30px #020617}.mh-tile-board{position:relative;width:720px;height:520px;transform-origin:center;transition:transform .3s}.mh-tile-viewport.overview{overflow:hidden}.mh-tile-viewport.overview .mh-tile-board{transform:scale(.46) translate(-58%,-58%)}.mh-tile-board>i{position:absolute;height:13px;border:2px solid #dbeafe99;background:#64748b;box-shadow:0 2px 0 #0f172a;transform-origin:0 50%;z-index:0}.mh-training-tile{position:absolute;z-index:2;width:68px;height:68px;margin:-34px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:4px solid #e2e8f0;border-radius:12px;color:white;background:var(--tile-color);box-shadow:0 5px 0 #0f172a,0 8px 14px #0008;transition:left .25s,top .25s,transform .2s}.mh-training-tile>span{font-size:23px;line-height:1}.mh-training-tile>small{max-width:62px;font-size:7px;font-weight:1000;text-shadow:0 1px 2px #000}.mh-training-tile.branch:after{content:'分岐';position:absolute;right:-9px;top:-10px;padding:2px 4px;border-radius:6px;background:#f97316;font-size:6px;font-weight:1000}.mh-training-tile.start{border-color:#86efac}.mh-training-tile.goal{border-color:#fde047;box-shadow:0 0 22px #facc15,0 5px 0 #713f12}.mh-training-tile.current{z-index:8;border-color:#fff;box-shadow:0 0 0 4px #facc15,0 8px 18px #000;transform:scale(1.05)}.mh-training-tile.branch-choice{z-index:9;animation:trainingGlow .55s infinite alternate;pointer-events:auto}.mh-training-piece{position:absolute;left:50%;bottom:34px;width:62px;height:73px;transform:translateX(-50%);pointer-events:none;filter:drop-shadow(0 5px 3px #000)}.mh-training-piece img,.mh-training-piece>div{width:58px!important;height:58px!important;object-fit:contain}.mh-training-piece b{position:absolute;bottom:0;left:50%;max-width:75px;transform:translateX(-50%);padding:2px 5px;border-radius:8px;background:#020617e8;white-space:nowrap;font-size:7px}.mh-training-message{color:#fef3c7}.mh-training-tools{align-items:stretch}.mh-training-tools>strong{display:flex;align-items:center;font-size:8px}.mh-training-tools button{min-width:0}.mh-training-tools button small{line-height:1.25}.mh-training-debug{right:8px;top:calc(52px + env(safe-area-inset-top));bottom:auto;box-shadow:0 14px 30px #000}.mh-debug-close{float:right;background:#be123c!important}.mh-training-board>footer{flex:none}.mh-roll-button:disabled{filter:grayscale(.7);opacity:.65}.mh-training-tools button.waiting{border-color:#fde047;box-shadow:inset 0 0 12px #facc1544}.mh-roll-decision{display:grid;grid-template-columns:1fr 2fr;gap:7px;align-items:center;min-height:58px;padding:6px 8px;border:2px solid #fbbf24;border-radius:19px;background:#451a03}.mh-roll-decision b{text-align:center;color:#fde68a}.mh-roll-decision button{height:44px;border-radius:13px;background:#fbbf24;color:#451a03;font-weight:1000}.mh-tool-unavailable{padding:9px;border:1px solid #f8717177;border-radius:10px;background:#450a0a;color:#fecaca!important}@media(max-width:380px){.mh-training-piece{transform:translateX(-50%) scale(.85)}.mh-training-tools{min-height:48px}.mh-training-message{min-height:24px;padding:4px}.mh-tile-viewport{min-height:220px}}

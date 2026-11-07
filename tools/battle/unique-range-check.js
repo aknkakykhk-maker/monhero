@@ -62,7 +62,9 @@ check('今回専用の移行フラグを使う', source.includes("mh_unique_line
 //   いまは buildFusionInheritancePlan が1か所で決め、両方がその結果(entries[].inherited)を
 //   読むだけになっている(そちらのほうが食い違いようがない)。判定の一本化を見る形へ改めた。
 check('合体の継承判定は1か所(buildFusionInheritancePlan)で決める',
-  source.includes('const buildFusionInheritancePlan = ({ main, subs, selectedSubIds }) => {')
+  // 2026-11-07: 副が引き継ぐ技を選べるよう choiceBySubId を足した(判定は今も1か所)
+  (source.includes('const buildFusionInheritancePlan = ({ main, subs, selectedSubIds }) => {')
+    || source.includes('const buildFusionInheritancePlan = ({ main, subs, selectedSubIds, choiceBySubId = null }) => {'))
   && (source.match(/buildFusionInheritancePlan\(\{ main/g) || []).length === 2);
 check('候補表示も実行もその結果を読む',
   source.includes('inheritancePlan.entries[subIndex]?.inherited')
