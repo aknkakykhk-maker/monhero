@@ -2,10 +2,11 @@
 // 判定ラインの高さ(オプション)を変えても、本物のゲームで「ノーツがラインに着く」「ラインで叩くと最上の判定になる」かを確かめる(2026-11-07)。
 //
 //   python3 tools/serve.py を起動した状態で
-//   node tools/mode/rhythm-judgment-line-height-play-check.js                 # 地上の譜面: 高さ 12/20/35/50% × 4つの向き
-//   HEIGHTS=20 MODES=縦 node tools/mode/rhythm-judgment-line-height-play-check.js   # 一部だけ
-//   SKY=1 node tools/mode/rhythm-judgment-line-height-play-check.js           # 空中の判定線のある譜面(HELL)も見る
+//   node tools/mode/rhythm-judgment-line-height-play.js                 # 地上の譜面: 高さ 12/20/35/50% × 4つの向き
+//   HEIGHTS=20 MODES=縦 node tools/mode/rhythm-judgment-line-height-play.js   # 一部だけ
+//   SKY=1 node tools/mode/rhythm-judgment-line-height-play.js           # 空中の判定線のある譜面(HELL)も見る
 //
+// ★1組(高さ×向き)に約10分かかる(曲の時計を16msずつ進めて本物のコマを描かせるため)。毎回の検査(run-checks)には入れず、手で回す。
 // 【なぜ要るか】社長「モンビーのオプションの判定ラインの位置変更ってちゃんと機能してるか確認して」。
 // rhythm-judgment-line-height-check.js は、作った小さなページでラインの置き場所を測るだけで、本物のゲームで叩いてはいない。
 // ゲームは、判定ラインの実測(RHYTHM_JUDGMENT_LINE_Y.ratio)を、ノーツの走る先・押した点の読み替え(道は奥ほど細い)・

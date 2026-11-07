@@ -2,7 +2,9 @@
 // ノーツの絵が、ノーツの時刻ちょうどに判定ラインの「見た目の中心」に重なっているかを、本物のゲームの画面を撮って画素で測る(2026-11-07)。
 //
 //   python3 tools/serve.py を起動した状態で
-//   node tools/mode/rhythm-judgment-line-visual-check.js                  # 高さ 12/20/35/50% × 縦・横 と、描き方・演出量・速さ・色の違い
+//   node tools/mode/rhythm-judgment-line-visual-check.js                  # ふだんの2組(20%縦・50%横)
+//   ALL=1 node tools/mode/rhythm-judgment-line-visual-check.js            # 高さ 12/20/35/50% × 縦・横 と、描き方・演出量・速さ・色・大きさの違い
+// run-checks-timeout: 900
 //   ONLY=20%縦 node tools/mode/rhythm-judgment-line-visual-check.js      # 1つだけ(名前の一部)
 //   SHOT_DIR=<フォルダ> …                                                # ノーツがラインに着いた瞬間の絵を書き出す
 //
@@ -11,7 +13,7 @@
 // 「描いた粒が、判定の時刻にラインのどこに来ているか」は画面を撮らないと分からない。
 //
 // 【測り方】
-// ・曲の時計(と performance.now)をこちらが進め、地上の TAP の時刻ちょうどで止める(rhythm-judgment-line-height-play-check.js と同じ仕掛け)
+// ・曲の時計(と performance.now)をこちらが進め、地上の TAP の時刻ちょうどで止める(rhythm-judgment-line-height-play.js と同じ仕掛け)
 // ・同じ瞬間を2枚撮る: ふつうの画面と、ノーツだけ描かない画面。2枚の差の強い所 = 粒の本体(光のにじみは差が弱いので入れない)
 // ・ノーツの無い1枚から、ノーツの横の列の明るさを行ごとに足し、ライン付近でいちばん明るい行 = ラインの見た目の中心
 // ・出す数字(px・画面の CSS px):
@@ -40,8 +42,10 @@ const ALL=[
   V('20%縦 ノーツの色 ネオン',{settings:{notePalette:'NEON'}}),
   V('20%縦 ノーツの大きさ 130',{settings:{noteSize:130}}),
 ];
+// ふだん(run-checks)は「20%縦」と「50%横」の2組だけ(1組に1分半ほどかかる)。ALL=1 で全部の組
 // ONLY … 名前の一部 / NAMES … 名前をそのまま(カンマ区切り)
-const LIST=process.env.NAMES?ALL.filter(v=>process.env.NAMES.split(',').includes(v.name)):process.env.ONLY?ALL.filter(v=>v.name.includes(process.env.ONLY)):ALL;
+const DEFAULT_NAMES=['20%縦','50%横'];
+const LIST=process.env.ALL==='1'?ALL:process.env.NAMES?ALL.filter(v=>process.env.NAMES.split(',').includes(v.name)):process.env.ONLY?ALL.filter(v=>v.name.includes(process.env.ONLY)):ALL.filter(v=>DEFAULT_NAMES.includes(v.name));
 let failed=0;
 const ok=(label,cond,detail='')=>{console.log(`${cond?'OK':'NG'}: ${label}${detail?` — ${detail}`:''}`);if(!cond)failed++;};
 
