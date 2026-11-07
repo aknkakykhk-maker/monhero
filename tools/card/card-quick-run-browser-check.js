@@ -221,9 +221,13 @@ const seed = () => {
     await click('[data-card-market-open]');
     await page.waitForSelector('[data-card-shop]', { timeout: 10000 }).catch(() => {});
     check('③ カードから開いたマーケットにいるあいだ、画面がバトルへ飛ばない', await stayOn('[data-card-shop]', WATCH_MS));
-    await dismissOverlays(); // 裏の周回で上がった値の演出が戻るボタンを覆うことがある
-    await page.locator('[data-mh-screen] button').first().click().catch(() => {});
-    await page.waitForSelector('[data-card-top="top"]', { timeout: 10000 }).catch(() => {});
+    // 裏の周回で上がった値の演出(#4743)が、ちょうど押す瞬間に出て「戻る」を覆うことがある(2026-11-07 ジン: たまに③以降が9件落ちた)。
+    //   演出を閉じてから押し、トップに戻れていなければ、閉じて押し直す(4回まで)
+    for (let i = 0; i < 4 && !(await has('[data-card-top="top"]')); i++) {
+      await dismissOverlays();
+      await page.locator('[data-mh-screen] button').first().click().catch(() => {});
+      await page.waitForSelector('[data-card-top="top"]', { timeout: 2500 }).catch(() => {});
+    }
     check('③ マーケットから戻ると、カードのトップ(帯つき)へ戻る', await has('[data-card-top="top"]') && await has('[data-card-quick-run="live"]'));
 
     // ③④ 助手と対戦(CARD_BATTLE)
