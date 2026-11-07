@@ -52,6 +52,66 @@ for (const n of names) {
   walk(val, n, false);
 }
 
+// 書きかけの台本(docs/progress/assistant-peer/lines/*.txt の新しい形)も「新しい形」として読む。形・鍵・口調の基本はここで止める
+const KINDS = { solo: 1, invite: 2, pair: 2, trio: 3, quarrel: 2, breeder: 1 };
+const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'];
+const FACES = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];
+const KEYS = {
+  place: ['home', 'plaza', 'cafe', 'studio', 'ranch', 'cardroom', 'library', 'market', 'hill', 'garden'],
+  mood: ['happy', 'lonely', 'restless', 'sulky', 'sleepy', 'eager'], why: ['lonely', 'mypace', 'distance'],
+  doing: ['snack', 'practice', 'training', 'cards', 'walk', 'idle', 'sleep', 'read'], lv: ['1-3', '4-6', '7-10'],
+  air: ['normal', 'after', 'makeup'], answer: ['glad', 'decline', 'shy'], line: ['scene', 'feel'],
+  // けんかのたね(lines/FEELINGS.md): おやつ・順番・寝ぐせや服・作戦の好み・遅れた・うるさい/夜ふかし・メモを見た・勝負の結果
+  seed: ['snack', 'order', 'look', 'plan', 'late', 'noise', 'peek', 'score'],
+};
+const txtProblems = [];
+const linesDir = path.join(root, 'docs', 'progress', 'assistant-peer', 'lines');
+const txtFiles = fs.existsSync(linesDir) ? fs.readdirSync(linesDir).filter(f => f.endsWith('.txt')).sort() : [];
+for (const f of txtFiles) {
+  fs.readFileSync(path.join(linesDir, f), 'utf8').split('\n').forEach((raw, i) => {
+    const l = raw.trim();
+    const where = `${f}:${i + 1}`;
+    const head = l.split(/\s+/)[0];
+    if (!KINDS[head]) return; // 見出し・注記・前の形(kotoba.txt)は読まない
+    const parts = l.split(/\s+\|\|?\s+/);
+    const words = parts[0].split(/\s+/).slice(1);
+    const who = words.filter(w => !w.includes('='));
+    const keys = Object.fromEntries(words.filter(w => w.includes('=')).map(w => w.split('=')));
+    const bad = (m) => txtProblems.push(`${where} ${m}`);
+    if (who.length !== KINDS[head] || !who.every(w => IDS.includes(w)) || new Set(who).size !== who.length) bad(`人の数・名前がおかしい(${who.join(' ')})`);
+    for (const [k, v] of Object.entries(keys)) if (!KEYS[k] || !KEYS[k].includes(v)) bad(`鍵 ${k}=${v} が無い`);
+    if (who.length === 2 && head !== 'invite' && (keys.place === 'home' || keys.doing === 'sleep')) bad('2人きりの home・sleep は書かない');
+    const rows = [];
+    for (const p of parts.slice(1)) {
+      const m = p.match(/^(\S+) (\S+) (.+)$/);
+      if (!m) { bad(`行の形がおかしい「${p}」`); continue; }
+      const [, w, e, t] = m;
+      if (!who.includes(w)) bad(`話す人 ${w} がこの台本にいない`);
+      if (!FACES.includes(e)) bad(`表情 ${e} が無い`);
+      if ([...t.replace(/\{[^}]+\}/g, '')].length > 60) bad(`60字をこえる「${t}」`);
+      const holes = (t.match(/\{(place|doing|doing_te)\}/g) || []).length;
+      if (holes > 1) bad(`穴は1本に1つまで「${t}」`);
+      if (head === 'trio' && /\{c\}/.test(t)) bad('3人の台本は {c:id} で呼ぶ');
+      if (/\{c:([a-z]+)\}/.test(t) && !who.includes(t.match(/\{c:([a-z]+)\}/)[1])) bad(`{c:id} の相手がいない「${t}」`);
+      if (/\{c\}(さん|ちゃん|くん)/.test(t)) bad(`{c} のあとに敬称を付けない「${t}」`);
+      if (/(?<!様)子(?!園|供)/.test(t.replace(/調子|様子|子ども/g, ''))) bad(`「子」を使っている(モンスターを子と呼ばない)「${t}」`);
+      if (/恋人|デート|付き合っ|ないしょ|秘密/.test(t)) bad(`守りの言葉「${t}」`);
+      if (w === 'mua' && /じゃん|まじ(?!め)|あたし以外|[^ｗ]w(?![A-Za-z])|(?<![あ])私|俺/.test(t)) bad(`みゅあの口調「${t}」`);
+      if (w === 'kiki' && /だよ|だね|してよ|あたし|俺/.test(t)) bad(`ききの口調「${t}」`);
+      if (w === 'momosuke' && /私|あたし|ｗ/.test(t)) bad(`ももの口調「${t}」`);
+      if (w === 'dra' && /んよ|ほんま|やな|やで|ええ(?!っ)|へん|とる|とんだ|俺|私/.test(t)) bad(`ドラの口調「${t}」`);
+      if (w === 'sorashido' && (/w(?![A-Za-z])/.test(t) || (t.match(/ぜ・・・/g) || []).length > 1)) bad(`ソラシドの口調「${t}」`);
+      if (w === 'atsu') {
+        if (/リーダー/.test(t)) bad(`あつは自分でリーダーと言わない「${t}」`);
+        for (const seg of t.split(/(?<=。)|\s+/).filter(Boolean)) if (!/(笑|[！？…!?]|\)ノ)$/.test(seg)) { bad(`あつの文の終わりは「笑」か記号「${t}」`); break; }
+      }
+      if ((w === 'kyuko' || w === 'erubin') && t.split(/\s+/).some(s => /w(?![A-Za-z])/.test(s) && /笑/.test(s))) bad(`1つの文に「笑」と「w」の両方「${t}」`);
+      rows.push({ who: w, t });
+    }
+    talks.push({ id: where, special: false, fresh: true, rows, last: rows[rows.length - 1] });
+  });
+}
+
 let ng = 0;
 const out = (ok, label, detail, enforce) => {
   const mark = ok ? 'OK' : (enforce ? 'NG' : '(参考)×');
@@ -104,7 +164,7 @@ const measure = (set, label, enforce) => {
   // (参考)
   const ng6 = new Map();
   for (const r of rows) {
-    const x = r.t.replace(/\{c(?::[a-z]+)?\}/g, '').replace(/ブリーダー(さん)?/g, '');
+    const x = r.t.replace(/\{[a-z_:]+\}/g, '').replace(/ブリーダー(さん)?/g, '');
     const local = new Set();
     for (let p = 0; p + 6 <= x.length; p += 1) {
       const g = x.slice(p, p + 6);
@@ -117,7 +177,9 @@ const measure = (set, label, enforce) => {
   console.log(`   (参考)よく出る言い回し: ${top}`);
 };
 
-measure(talks.filter(t => t.fresh), '新しい形(状況の鍵つき)', true);
+console.log(`== 書きかけの台本(lines/*.txt): ${txtFiles.join('・') || 'なし'}`);
+out(txtProblems.length === 0, '形・鍵・表情・60字・口調の基本', txtProblems.slice(0, 12).join(' / ') + (txtProblems.length > 12 ? ` …ほか${txtProblems.length - 12}件` : ''), true);
+measure(talks.filter(t => t.fresh), '新しい形(状況の鍵つき・書きかけの台本を含む)', true);
 measure(talks, '全部の台本', strictAll);
 
 console.log('');
