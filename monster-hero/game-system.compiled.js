@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 48c8996fe05906b8
+// source-sha256: 045fad89638b22b7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91525,8 +91525,10 @@ function RhythmMultiScreen({
       assistantId: who.id
     };
     let paid = rhythmAssistSessionVisitFree(who.id) ? 'visit' : '';
+    let wokeUp = false;
     if (!paid && rhythmAssistSessionAsleep(who.id)) {
       const woke = rhythmAssistSessionTryWake(who.id);
+      wokeUp = woke.came;
       if (!woke.came) {
         setBuddyRefused({
           id: who.id,
@@ -91560,7 +91562,7 @@ function RhythmMultiScreen({
       colors: [],
       assistantId: who.id
     });
-    if (!joined) endBuddy(key, call.id);
+    if (!joined) endBuddy(key, call.id);else if (wokeUp) rhythmAssistSessionNoteWoken(who.id);
     setBuddySheet('');
     return joined ? 'ok' : 'full';
   };
@@ -95983,13 +95985,22 @@ const RHYTHM_ASSIST_SESSION_WAKE = {
   woke: new Set()
 };
 const rhythmAssistSessionAsleep = id => {
-  if (!rhythmAssistSessionEnabled() || typeof assistantLifeCurrent !== 'function' || typeof assistantLifeWhereOf !== 'function') return false;
+  if (!rhythmAssistSessionEnabled() || typeof assistantLifeAsleep !== 'function') return false;
   try {
-    const w = assistantLifeWhereOf(assistantLifeCurrent(), id);
-    return !!(w && w.doing === 'sleep');
+    return assistantLifeAsleep(id) === true;
   } catch (_) {
     return false;
   }
+};
+const rhythmAssistSessionNoteWoken = id => {
+  if (typeof assistantLifeOnWoken !== 'function') return;
+  try {
+    assistantLifeOnWoken({
+      assistantId: id,
+      came: true,
+      at: Date.now()
+    });
+  } catch (_) {}
 };
 const rhythmAssistSessionWakeChance = ({
   nightOwl = false,

@@ -2168,8 +2168,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     // モンビーに出かけている助手は回数を使わない(社長の決定 2026-11-07)。払っていないので控えも残さない(返すものが無い)
     let paid = rhythmAssistSessionVisitFree(who.id) ? 'visit' : '';
     // 寝ている助手は、来てくれるときと断られるときがある(社長 2026-11-07)。断られたら払わずに、シートに一言を出して呼ばない
+    let wokeUp = false;
     if (!paid && rhythmAssistSessionAsleep(who.id)) {
       const woke = rhythmAssistSessionTryWake(who.id);
+      wokeUp = woke.came;
       if (!woke.came) { setBuddyRefused({ id: who.id, line: woke.line, at: Date.now() }); return 'refused'; }
     }
     if (!paid) paid = (await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
@@ -2181,6 +2183,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     setBuddyBumped(false);
     const joined = RHYTHM_MULTI.summon({ masuId: key, callId: call.id, name: rhythmAssistSessionName(who.id), level: rhythmAssistSessionLevel(RHYTHM_ASSIST_SESSION_STORE.get(), who.id), baseId: '', colors: [], assistantId: who.id });
     if (!joined) endBuddy(key, call.id);
+    else if (wokeUp) rhythmAssistSessionNoteWoken(who.id);
     setBuddySheet('');
     return joined ? 'ok' : 'full';
   };
