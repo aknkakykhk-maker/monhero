@@ -501,10 +501,12 @@ check('公開するモードは1か所で決めている', has('const PUBLIC_BAT
 check('プロの助手コメントが場面として用意されている', assistantsSrc.includes('battlePro: {'));
 check('プロの助手コメントが5件以上ある',
   (assistantsSrc.match(/battlePro: \[|battlePro: \{/g) || []).length >= 2);
-check('プロの親密度行動があり、既存の獲得量は変わっていない',
-  assistantsSrc.includes("pro:       { amount:4, dailyMax:20, label:'プロモード' },")
-    && assistantsSrc.includes("challenge: { amount:4, dailyMax:20, label:'チャレンジモード' },")
-    && assistantsSrc.includes("quick:     { amount:2, dailyMax:12, label:'クイックモード' },")
+// 2026-11-07 社長の決定で、今ある行動の1回の量と1日の上限を増やした(9af1771 の助手部の改修。チャレンジ・プロ 8/40・クイック 4/24)。
+//   決めごとは「プロはチャレンジと同じ量」「クイックはその半分」なので、数そのものより釣り合いを見る
+check('プロの親密度行動があり、チャレンジと同じ量・クイックはその半分',
+  assistantsSrc.includes("pro:       { amount:8, dailyMax:40, label:'プロモード' },")
+    && assistantsSrc.includes("challenge: { amount:8, dailyMax:40, label:'チャレンジモード' },")
+    && assistantsSrc.includes("quick:     { amount:4, dailyMax:24, label:'クイックモード' },")
     && assistantsSrc.includes('const ASSISTANT_BOND_DAILY_MAX = Object.values(ASSISTANT_BOND_ACTIONS).reduce'));
 check('遊んだモードに応じて親密度の行動を切り替える',
   m.modeBondAction('challenge') === 'challenge' && m.modeBondAction('quick') === 'quick' && m.modeBondAction('pro') === 'pro'
