@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 205ba4a62e894421
+// generated-sha256: a1be04b484d15433
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -54722,8 +54722,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     // モンビーに出かけている助手は回数を使わない(社長の決定 2026-11-07)。払っていないので控えも残さない(返すものが無い)
     let paid = rhythmAssistSessionVisitFree(who.id) ? 'visit' : '';
     // 寝ている助手は、来てくれるときと断られるときがある(社長 2026-11-07)。断られたら払わずに、シートに一言を出して呼ばない
+    let wokeUp = false;
     if (!paid && rhythmAssistSessionAsleep(who.id)) {
       const woke = rhythmAssistSessionTryWake(who.id);
+      wokeUp = woke.came;
       if (!woke.came) { setBuddyRefused({ id: who.id, line: woke.line, at: Date.now() }); return 'refused'; }
     }
     if (!paid) paid = (await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
@@ -54735,6 +54737,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     setBuddyBumped(false);
     const joined = RHYTHM_MULTI.summon({ masuId: key, callId: call.id, name: rhythmAssistSessionName(who.id), level: rhythmAssistSessionLevel(RHYTHM_ASSIST_SESSION_STORE.get(), who.id), baseId: '', colors: [], assistantId: who.id });
     if (!joined) endBuddy(key, call.id);
+    else if (wokeUp) rhythmAssistSessionNoteWoken(who.id);
     setBuddySheet('');
     return joined ? 'ok' : 'full';
   };
@@ -57354,9 +57357,15 @@ const rhythmAssistSessionVisitFree = (id) => {
 //     同じ時間帯に断られた助手を呼び直すと1回ごとに+2割(9割まで)。断られた回数は起動の中だけ覚える(保存しない)
 //   断られたら回数もセッション券も使わない。来てくれたら、部屋に来たときの一言を「起こされた」一言にする
 const RHYTHM_ASSIST_SESSION_WAKE = { refused: {}, woke: new Set() };
+// 寝ているかの正本は助手ライフの assistantLifeAsleep(ナカヨシ5・#4862。印が偽・失敗なら偽)
 const rhythmAssistSessionAsleep = (id) => {
-  if (!rhythmAssistSessionEnabled() || typeof assistantLifeCurrent !== 'function' || typeof assistantLifeWhereOf !== 'function') return false;
-  try { const w = assistantLifeWhereOf(assistantLifeCurrent(), id); return !!(w && w.doing === 'sleep'); } catch (_) { return false; }
+  if (!rhythmAssistSessionEnabled() || typeof assistantLifeAsleep !== 'function') return false;
+  try { return assistantLifeAsleep(id) === true; } catch (_) { return false; }
+};
+// 起こして部屋に入れたことを助手ライフへ知らせる(家の「今日あったこと」と生活のリズムの「誘って遊んだ」)。入れたときだけ呼ぶ
+const rhythmAssistSessionNoteWoken = (id) => {
+  if (typeof assistantLifeOnWoken !== 'function') return;
+  try { assistantLifeOnWoken({ assistantId: id, came: true, at: Date.now() }); } catch (_) { /* 受け手の失敗で止めない */ }
 };
 const rhythmAssistSessionWakeChance = ({ nightOwl = false, bondLevel = 1, bondMax = 1, retries = 0 } = {}) => {
   const bond = bondMax > 1 ? Math.max(0, Math.min(1, (Number(bondLevel) - 1) / (bondMax - 1))) : 0;
