@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7f049b66e2fa597f
+// source-sha256: 8e1dc2a4110af809
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -62688,7 +62688,12 @@ function ProfileScreen({
       className: "mt-1 text-[10px] text-slate-400"
     }, "仲良し度は助手ごとに別々に貯まります。切り替えても消えません。"), typeof AssistantPeerMap === 'function' && assistantPeerEnabled() && React.createElement("div", {
       className: "mt-3"
-    }, React.createElement(AssistantPeerMap, {
+    }, typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() && React.createElement("button", {
+      type: "button",
+      "data-assistant-life-open-profile": true,
+      onClick: assistantLifeOpenScreen,
+      className: "mb-2 min-h-[44px] w-full rounded-xl border border-pink-300/50 bg-pink-400/10 px-3 text-left text-[12px] font-black text-pink-100 active:scale-[.98]"
+    }, "👥 助手たちの今を見る ▸"), React.createElement(AssistantPeerMap, {
       metIds: assistantChoices.map(w => w.id),
       onReplay: onReplayPeerTalk,
       peerItems: peerItems,
@@ -94333,6 +94338,10 @@ const ASSISTANT_PEER_SCENES = Object.freeze({
 const assistantPeerEnabled = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantPeer === true;
 const assistantPeerApiEnabled = () => assistantPeerEnabled() && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantPeerApi === true;
 const assistantPeerPairKey = (a, b) => [String(a), String(b)].sort().join('-');
+const assistantPeerLifeOn = () => typeof assistantLifeEnabled === 'function' && assistantLifeEnabled();
+const assistantPeerStageName = stage => stage ? assistantPeerLifeOn() && stage.lifeName ? stage.lifeName : stage.name : '';
+const assistantPeerPhotoTitle = photo => photo ? assistantPeerLifeOn() && photo.lifeTitle ? photo.lifeTitle : photo.title : '';
+const assistantPeerLvLabel = lv => assistantPeerLifeOn() ? `友情Lv${lv}` : `仲良し度 Lv${lv}`;
 const assistantPeerTalkList = () => typeof ASSISTANT_PEER_TALKS !== 'undefined' && Array.isArray(ASSISTANT_PEER_TALKS) ? ASSISTANT_PEER_TALKS : [];
 let assistantPeerExtraCache = null;
 const assistantPeerExtraTalks = () => {
@@ -94765,7 +94774,7 @@ const assistantPeerTodayPairOf = (metIds, day) => {
   return pairs[h % pairs.length];
 };
 const assistantPeerEnsureDaily = (metIds, now = Date.now()) => {
-  if (!assistantPeerEnabled()) return null;
+  if (!assistantPeerEnabled() || assistantPeerLifeOn()) return null;
   const st = ASSISTANT_PEER_STORE.state;
   const day = assistantPeerDayKey(now);
   if (st.daily.day === day && st.daily.pair) return st.daily;
@@ -95021,16 +95030,18 @@ const assistantPeerPickTalk = (st, {
   const recent = st.log.map(x => x.id);
   const fresh = pool.filter(t => !recent.includes(t.id));
   if (fresh.length) pool = fresh;else pool = [...pool].sort((x, y) => recent.indexOf(x.id) - recent.indexOf(y.id)).slice(0, Math.max(1, Math.ceil(pool.length / 3)));
-  const dailyPair = st.daily && st.daily.day === day && !st.daily.done ? st.daily.pair : null;
+  const dailyPair = !assistantPeerLifeOn() && st.daily && st.daily.day === day && !st.daily.done ? st.daily.pair : null;
+  const lifeGroups = assistantPeerLifeOn() && typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.life && ASSISTANT_LIFE_STORE.state.life.groups || [];
+  const together = ms => lifeGroups.some(g => ms.every(id => g.ids.includes(id)));
   const evBoost = typeof ASSISTANT_PEER_EVENT_BOOST_LV !== 'undefined' ? ASSISTANT_PEER_EVENT_BOOST_LV : 6;
   const trioBoost = typeof ASSISTANT_PEER_TRIO_BOOST_LV !== 'undefined' ? ASSISTANT_PEER_TRIO_BOOST_LV : 7;
   const weight = t => {
     const lvs = pairLvs(t);
     const lv = Math.min(...lvs);
     const base = (assistantPeerMembers(t).includes(selectedId) ? 3 : 1) * (1 + 0.5 * (lv - 1));
-    if (t.kind === 'trio') return base * (lvs.some(x => x >= trioBoost) ? 6 : 1);
+    if (t.kind === 'trio') return base * (lvs.some(x => x >= trioBoost) ? 6 : 1) * (together(assistantPeerMembers(t)) ? 6 : 1);
     const pk = assistantPeerPairKey(t.pair[0], t.pair[1]);
-    return base * (dailyPair && pk === dailyPair ? 4 : 1) * (t.when ? 6 : 1) * (t.kind === 'event' && lv >= evBoost ? 3 : 1) * (t.kind === 'quarrel' ? 0.5 : 1);
+    return base * (dailyPair && pk === dailyPair ? 4 : 1) * (t.when ? 6 : 1) * (together(t.pair) ? 6 : 1) * (t.kind === 'event' && lv >= evBoost ? 3 : 1) * (t.kind === 'quarrel' ? 0.5 : 1);
   };
   const sum = pool.reduce((s, t) => s + weight(t), 0);
   let r = rand() * sum;
@@ -95150,6 +95161,11 @@ function AssistantPeerTalk({
 }) {
   const st = useAssistantPeerState();
   const [cur, setCur] = React.useState(null);
+  React.useEffect(() => {
+    if (ASSISTANT_PEER_STORE.state.talking !== !!cur) ASSISTANT_PEER_STORE.set({
+      talking: !!cur
+    });
+  }, [!!cur]);
   const decidedRef = React.useRef('');
   const metKey = (metIds || []).join(',');
   React.useEffect(() => {
@@ -95324,7 +95340,7 @@ function AssistantPeerTalk({
     return wrap(React.createElement("div", {
       "data-assistant-peer-toast": toast.kind,
       className: "mx-auto w-fit rounded-full border border-pink-300/60 bg-slate-950/90 px-4 py-1.5 text-[11px] font-black text-pink-200 shadow-xl"
-    }, toast.kind === 'daily' ? `今日のペア達成！ ${a.name}と${b.name}がもっと仲良くなりました` : toast.kind === 'makeup' ? `${a.name}と${b.name}が仲直りしました` : `${a.name}と${b.name}の仲良し度が Lv${toast.level}${stage ? `「${stage.name}」` : ''}になりました`));
+    }, toast.kind === 'daily' ? `今日のペア達成！ ${a.name}と${b.name}がもっと仲良くなりました` : toast.kind === 'makeup' ? `${a.name}と${b.name}が仲直りしました` : assistantPeerLifeOn() ? `${a.name}と${b.name}の友情Lvが ${toast.level}${stage ? `「${assistantPeerStageName(stage)}」` : ''}になりました` : `${a.name}と${b.name}の仲良し度が Lv${toast.level}${stage ? `「${stage.name}」` : ''}になりました`));
   }
   const {
     talk
@@ -95461,7 +95477,7 @@ function AssistantPeerPhoto({
     }
   }), React.createElement("span", {
     className: "absolute inset-x-0 bottom-0 bg-black/55 px-1 py-0.5 text-center text-[9px] font-black text-amber-100"
-  }, photo.title)) : React.createElement("span", {
+  }, assistantPeerPhotoTitle(photo))) : React.createElement("span", {
     className: "absolute inset-0 flex flex-col items-center justify-center text-[10px] font-bold text-slate-500"
   }, React.createElement("span", {
     className: "text-lg",
@@ -95511,7 +95527,7 @@ function AssistantPeerAlbum({
     className: "h-8 w-8 rounded-full border border-slate-600 text-[14px] font-black text-slate-300 active:scale-95"
   }, "×")), React.createElement("p", {
     className: "mb-2 text-[10px] text-slate-400"
-  }, "仲良し度 Lv", lv, "・見た掛け合い ", talks.length, "/", all), React.createElement("div", {
+  }, assistantPeerLvLabel(lv), "・見た掛け合い ", talks.length, "/", all), React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, photos.map(ph => React.createElement(AssistantPeerPhoto, {
     key: ph.lv,
@@ -95614,7 +95630,7 @@ function AssistantPeerMap({
     className: "text-[12px] font-black text-pink-200"
   }, "助手どうしの関係図"), React.createElement("p", {
     className: "mb-2 text-[9px] leading-tight text-slate-400"
-  }, "助手どうしも仲良くなります。仲良し度 Lv3 になった2人は線で結ばれます。ペアを押すと思い出アルバムが開きます。"), dailyPair && dailyPair.every(id => ids.includes(id)) && React.createElement("button", {
+  }, "助手どうしも仲良くなります。", assistantPeerLvLabel(3), " になった2人は線で結ばれます。ペアを押すと思い出アルバムが開きます。"), !assistantPeerLifeOn() && dailyPair && dailyPair.every(id => ids.includes(id)) && React.createElement("button", {
     type: "button",
     "data-assistant-peer-daily": true,
     onClick: () => setAlbumPair(dailyPair),
@@ -95684,7 +95700,10 @@ function AssistantPeerMap({
       className: "min-w-0 flex-1 truncate text-[10px] font-bold text-slate-200"
     }, A.name, " × ", B.name), React.createElement("span", {
       className: "whitespace-nowrap text-[10px] font-black text-pink-200"
-    }, "Lv", x.lv, stage ? ` ${stage.name}` : ''), React.createElement("span", {
+    }, "Lv", x.lv, stage ? ` ${assistantPeerStageName(stage)}` : ''), assistantPeerLifeOn() && nextStage && React.createElement("span", {
+      "data-assistant-peer-next": true,
+      className: "whitespace-nowrap text-[9px] font-bold text-slate-400"
+    }, "あと", nextStage.min - x.pts), React.createElement("span", {
       className: "w-14 h-1.5 shrink-0 overflow-hidden rounded-full bg-slate-700",
       "aria-hidden": "true"
     }, React.createElement("span", {
@@ -96539,7 +96558,7 @@ const normalizeAssistantLifePlay = v => {
     streak: 0
   };
   const counts = {};
-  if (v.counts && typeof v.counts === 'object' && !Array.isArray(v.counts)) for (const [k, n] of Object.entries(v.counts)) if (ASSISTANT_LIFE_PLAY_POINTS[k] && Number.isFinite(n) && n >= 0) counts[k] = Math.floor(n);
+  if (v.counts && typeof v.counts === 'object' && !Array.isArray(v.counts)) for (const [k, n] of Object.entries(v.counts)) if ((ASSISTANT_LIFE_PLAY_POINTS[k] || k === 'watch') && Number.isFinite(n) && n >= 0) counts[k] = Math.floor(n);
   return {
     day: v.day,
     points: Number.isFinite(v.points) && v.points >= 0 ? Math.floor(v.points) : 0,
@@ -96579,12 +96598,14 @@ const normalizeAssistantLife = v => {
     solo,
     lonely: Array.isArray(o.lonely) ? o.lonely.filter(ok) : [],
     recent,
-    nudges
+    nudges,
+    watched: Array.isArray(o.watched) ? o.watched.filter(k => typeof k === 'string').slice(-10) : []
   };
 };
 const ASSISTANT_LIFE_STORE = {
   state: {
     loaded: false,
+    open: false,
     life: normalizeAssistantLife(null),
     play: normalizeAssistantLifePlay(null)
   },
@@ -96665,6 +96686,7 @@ const assistantLifeNow = async ({
   const life = {
     ...cur,
     ...decided,
+    watched: [],
     recent: cur.recent.filter(r => slot.abs - r.abs <= ASSISTANT_LIFE_RECENT_SLOTS),
     nudges: {
       invite: cur.nudges.invite.filter(keep),
@@ -96758,6 +96780,380 @@ const useAssistantLifeState = () => {
   }, []);
   return st;
 };
+const assistantLifeWatchLeft = (play, day) => {
+  const p = assistantLifePlayForDay(play, day);
+  const tier = assistantLifeTierOf(p.points);
+  return Math.max(0, tier.moves - (p.counts && p.counts.watch || 0));
+};
+const assistantLifePickWatchTalk = (group, peerSt) => {
+  if (!group || typeof assistantPeerAllTalks !== 'function') return null;
+  const ids = group.ids;
+  const lvOf = (a, b) => typeof assistantPeerLevel === 'function' ? assistantPeerLevel(peerSt, a, b) : 1;
+  const pool = assistantPeerAllTalks().filter(t => {
+    if (t.special || t.kind === 'quarrel' || t.kind === 'makeup' || t.when || t.gen) return false;
+    const m = assistantPeerMembers(t);
+    if (!m.length || !m.every(id => ids.includes(id))) return false;
+    if (t.scene && t.scene !== 'any' && t.scene !== 'home') return false;
+    const pairs = assistantPeerPairsOf(t);
+    return pairs.every(([a, b]) => lvOf(a, b) >= (t.lv || 1));
+  });
+  if (!pool.length) return null;
+  const recent = (peerSt && peerSt.log || []).map(x => x.id);
+  const fresh = pool.filter(t => !recent.includes(t.id));
+  const list = fresh.length ? fresh : pool;
+  return list[Math.floor(Math.random() * list.length)];
+};
+const assistantLifeGroupKey = g => g && g.ids ? g.ids.join('+') : '';
+const assistantLifeWatch = async (group, now = Date.now()) => {
+  if (!assistantLifeEnabled() || !group) return null;
+  await ASSISTANT_LIFE_STORE.load();
+  if (typeof ASSISTANT_PEER_STORE !== 'undefined') await ASSISTANT_PEER_STORE.load();
+  const day = assistantLifeDayKey(now);
+  const life = ASSISTANT_LIFE_STORE.state.life;
+  const key = assistantLifeGroupKey(group);
+  if ((life.watched || []).includes(key) || assistantLifeWatchLeft(ASSISTANT_LIFE_STORE.state.play, day) <= 0) return null;
+  const talk = assistantLifePickWatchTalk(group, ASSISTANT_PEER_STORE.state);
+  if (!talk) return null;
+  const p = assistantLifePlayForDay(ASSISTANT_LIFE_STORE.state.play, day);
+  ASSISTANT_LIFE_STORE.set({
+    life: {
+      ...life,
+      watched: [...(life.watched || []), key]
+    },
+    play: {
+      ...p,
+      counts: {
+        ...(p.counts || {}),
+        watch: (p.counts && p.counts.watch || 0) + 1
+      }
+    }
+  });
+  assistantLifeSaveLife();
+  assistantLifeSavePlay();
+  try {
+    assistantPeerMarkShown(talk, {
+      scene: 'life',
+      special: false,
+      now
+    });
+  } catch {}
+  try {
+    assistantPeerAlbumAdd(talk);
+  } catch {}
+  for (const [a, b] of assistantPeerPairsOf(talk)) await assistantPeerGain(a, b, 'talk');
+  assistantPeerAddPlayerBond(assistantPeerMembers(talk), talk.kind === 'trio' ? 'peerTrio' : 'peerTalk');
+  return talk;
+};
+const assistantLifeOpenScreen = () => {
+  if (assistantLifeEnabled()) ASSISTANT_LIFE_STORE.set({
+    open: true
+  });
+};
+const assistantLifeCloseScreen = () => ASSISTANT_LIFE_STORE.set({
+  open: false
+});
+const ASSISTANT_LIFE_TIER_NOTES = Object.freeze({
+  quiet: 'のんびりした一日。遊ぶほど、みんなの動きが増えます',
+  normal: 'いつもどおりの一日。みんな、それぞれ過ごしています',
+  lively: 'よく遊んでくれたから、みんな元気！',
+  festival: 'お祭りみたいににぎやか！ 友情Lv がぐんぐん上がります'
+});
+const ASSISTANT_LIFE_REASON_LABEL = Object.freeze({
+  lonely: 'さみしそう',
+  mypace: 'マイペース',
+  distance: '距離をおいている'
+});
+const assistantLifeSlotRange = id => {
+  const s = ASSISTANT_LIFE_SLOTS.find(x => x.id === id);
+  return s ? `${s.label}(${s.from}〜${s.to}時)` : '';
+};
+const useAssistantLifeNow = metIds => {
+  const st = useAssistantLifeState();
+  const key = (metIds || []).join(',');
+  const [tick, setTick] = React.useState(0);
+  React.useEffect(() => {
+    if (!assistantLifeEnabled()) return;
+    void assistantLifeNow({
+      members: metIds
+    });
+    const t = setInterval(() => {
+      setTick(n => n + 1);
+      void assistantLifeNow({
+        members: metIds
+      });
+    }, 60000);
+    return () => clearInterval(t);
+  }, [key]);
+  return st;
+};
+function AssistantLifeFaces({
+  ids,
+  size = 32
+}) {
+  return React.createElement("span", {
+    className: "flex shrink-0 -space-x-2"
+  }, ids.map(id => {
+    const who = assistantById(id);
+    return who ? React.createElement("span", {
+      key: id,
+      className: "rounded-full ring-2 ring-slate-950"
+    }, React.createElement(AssistantFace, {
+      who: who,
+      size: size,
+      accent: who.accent
+    })) : null;
+  }));
+}
+function AssistantLifeBand({
+  metIds
+}) {
+  const st = useAssistantLifeNow(metIds);
+  const peer = typeof useAssistantPeerState === 'function' ? useAssistantPeerState() : null;
+  const [hidden, setHidden] = React.useState(false);
+  if (!assistantLifeEnabled() || !st.loaded || hidden || st.open || peer && peer.talking) return null;
+  const life = st.life;
+  if (!life || !life.groups.length && !Object.keys(life.solo).length) return null;
+  const nameOf = id => (assistantById(id) || {}).name || id;
+  const g = life.groups[0];
+  const lonely = Object.entries(life.solo).find(([, s]) => s.reason === 'lonely');
+  const text = g ? `${g.ids.map(nameOf).join('・')}が${ASSISTANT_LIFE_PLACES[g.place]}で${ASSISTANT_LIFE_DOINGS[g.doing].label}` : '';
+  const sub = lonely ? `${nameOf(lonely[0])}は${ASSISTANT_LIFE_PLACES[lonely[1].place]}でさみしそう` : life.groups.length > 1 ? `ほかに${life.groups.length - 1}組` : '';
+  const tier = assistantLifeTierOf(assistantLifePlayForDay(st.play, assistantLifeDayKey()).points);
+  return React.createElement("div", {
+    "data-assistant-life-band": true,
+    className: "fixed inset-x-0 flex justify-center px-2 pointer-events-none",
+    style: {
+      zIndex: 8400,
+      bottom: 'calc(5.5rem + env(safe-area-inset-bottom))'
+    }
+  }, React.createElement("div", {
+    className: "pointer-events-auto flex w-full max-w-md items-center gap-2 rounded-2xl border border-pink-300/40 bg-slate-950/90 px-2 py-1.5 shadow-xl"
+  }, React.createElement("button", {
+    type: "button",
+    "data-assistant-life-open": true,
+    onClick: assistantLifeOpenScreen,
+    className: "flex min-h-[44px] min-w-0 flex-1 items-center gap-2 text-left active:scale-[.98]"
+  }, g ? React.createElement(AssistantLifeFaces, {
+    ids: g.ids,
+    size: 28
+  }) : lonely ? React.createElement(AssistantLifeFaces, {
+    ids: [lonely[0]],
+    size: 28
+  }) : null, React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("span", {
+    className: "block text-[11px] font-black leading-tight text-white"
+  }, text || sub), text && sub ? React.createElement("span", {
+    className: "block text-[10px] font-bold leading-tight text-slate-300"
+  }, sub) : null, React.createElement("span", {
+    className: "block text-[9px] font-bold leading-tight text-pink-200"
+  }, "にぎわい「", tier.label, "」・みんなの様子 ▸"))), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-band-close": true,
+    onClick: () => setHidden(true),
+    "aria-label": "閉じる",
+    className: "h-8 w-8 shrink-0 rounded-full border border-slate-600 text-[13px] font-black text-slate-300 active:scale-95"
+  }, "×")));
+}
+function AssistantLifeScreen(props) {
+  const st = useAssistantLifeState();
+  if (!assistantLifeEnabled() || !st.open) return null;
+  return React.createElement(AssistantLifeScreenBody, props);
+}
+function AssistantLifeScreenBody({
+  metIds,
+  onReplay,
+  peerItems = null,
+  onUseItem = null
+}) {
+  const st = useAssistantLifeNow(metIds);
+  const [tab, setTab] = React.useState('now');
+  const [pick, setPick] = React.useState([]);
+  const [note, setNote] = React.useState('');
+  if (!assistantLifeEnabled() || !st.loaded || !st.open) return null;
+  const life = st.life || {};
+  const day = assistantLifeDayKey();
+  const play = assistantLifePlayForDay(st.play, day);
+  const tier = assistantLifeTierOf(play.points);
+  const next = ASSISTANT_LIFE_TIERS[assistantLifeTierIndex(tier) + 1] || null;
+  const watchLeft = assistantLifeWatchLeft(st.play, day);
+  const slot = assistantLifeSlotAt();
+  const nameOf = id => (assistantById(id) || {}).name || id;
+  const invitedNext = new Set((life.nudges && life.nudges.invite || []).filter(n => n.abs === slot.abs + 1).map(n => n.id));
+  const introNext = (life.nudges && life.nudges.introduce || []).find(n => n.abs === slot.abs + 1);
+  const ids = (metIds || []).filter(id => ASSISTANT_LIFE_PREFS[id]);
+  const watch = async g => {
+    const talk = await assistantLifeWatch(g);
+    if (!talk) {
+      setNote('この組の掛け合いは、いまは見られません');
+      return;
+    }
+    assistantLifeCloseScreen();
+    if (onReplay) onReplay(talk);
+  };
+  const invite = async id => {
+    if (await assistantLifeNudge('invite', id)) setNote(`${nameOf(id)}を誘いました。次の時間に、だれかのところへ行きます`);
+  };
+  const introduce = async () => {
+    if (pick.length === 2 && (await assistantLifeNudge('introduce', pick))) {
+      setNote(`${nameOf(pick[0])}と${nameOf(pick[1])}が、次の時間に一緒に過ごしやすくなりました`);
+      setPick([]);
+    }
+  };
+  const mood = id => ASSISTANT_LIFE_MOODS[(life.moods || {})[id]] || '';
+  return React.createElement("div", {
+    "data-assistant-life-screen": true,
+    className: "fixed inset-0 flex justify-center bg-black/80",
+    style: {
+      zIndex: 9000
+    }
+  }, React.createElement("div", {
+    className: "flex h-full w-full max-w-md flex-col bg-slate-950",
+    style: {
+      paddingTop: 'env(safe-area-inset-top)',
+      paddingBottom: 'env(safe-area-inset-bottom)'
+    }
+  }, React.createElement("div", {
+    className: "flex items-center gap-2 border-b border-white/10 px-3 py-2"
+  }, React.createElement("p", {
+    className: "min-w-0 flex-1 text-[15px] font-black text-pink-200"
+  }, "助手たちの今"), React.createElement("span", {
+    className: "whitespace-nowrap text-[10px] font-bold text-slate-400"
+  }, "いまは", assistantLifeSlotRange(slot.id)), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-close": true,
+    onClick: assistantLifeCloseScreen,
+    "aria-label": "閉じる",
+    className: "h-9 w-9 rounded-full border border-slate-600 text-[15px] font-black text-slate-300 active:scale-95"
+  }, "×")), React.createElement("div", {
+    className: "min-h-0 flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-2"
+  }, React.createElement("div", {
+    "data-assistant-life-tier": tier.id,
+    className: "rounded-2xl border border-pink-300/40 bg-pink-400/10 p-2.5"
+  }, React.createElement("div", {
+    className: "flex items-baseline gap-2"
+  }, React.createElement("p", {
+    className: "text-[12px] font-black text-pink-100"
+  }, "今日のにぎわい「", tier.label, "」"), React.createElement("p", {
+    className: "ml-auto whitespace-nowrap text-[10px] font-bold text-pink-200"
+  }, next ? `あと${next.min - play.points}で「${next.label}」` : 'いちばん上の段')), React.createElement("div", {
+    className: "mt-1 h-2 overflow-hidden rounded-full bg-slate-800",
+    "aria-hidden": "true"
+  }, React.createElement("div", {
+    className: "h-full bg-pink-400",
+    style: {
+      width: `${next ? Math.min(100, Math.round(100 * (play.points - tier.min) / (next.min - tier.min))) : 100}%`
+    }
+  })), React.createElement("p", {
+    className: "mt-1 text-[11px] font-bold text-white"
+  }, ASSISTANT_LIFE_TIER_NOTES[tier.id]), React.createElement("p", {
+    className: "text-[10px] text-slate-300"
+  }, "友情Lv の上がり方 ×", tier.mult, "・1組の1日の上限 ", tier.cap, "・今日見守れるのは あと", watchLeft, "回"), React.createElement("p", {
+    className: "text-[9px] text-slate-400"
+  }, "モンヒロビート・バトル・MFバトルカード・おしゃべりで遊ぶと、にぎわいがたまります(朝4時に新しくなります)")), React.createElement("div", {
+    className: "mt-2 flex gap-1",
+    role: "tablist"
+  }, [['now', 'いまの様子'], ['map', '関係とアルバム']].map(([k, label]) => React.createElement("button", {
+    key: k,
+    type: "button",
+    role: "tab",
+    "aria-selected": tab === k,
+    "data-assistant-life-tab": k,
+    onClick: () => setTab(k),
+    className: `min-h-[40px] flex-1 rounded-xl border text-[12px] font-black active:scale-[.98] ${tab === k ? 'border-pink-300 bg-pink-400/20 text-pink-100' : 'border-white/10 text-slate-400'}`
+  }, label))), note && React.createElement("p", {
+    "data-assistant-life-note": true,
+    className: "mt-2 rounded-xl bg-sky-400/10 px-2 py-1.5 text-[11px] font-bold text-sky-100"
+  }, note), tab === 'now' && React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "mt-2 space-y-2"
+  }, (life.groups || []).map(g => {
+    const key = assistantLifeGroupKey(g);
+    const done = (life.watched || []).includes(key);
+    return React.createElement("div", {
+      key: key,
+      "data-assistant-life-group": key,
+      className: "rounded-2xl border border-white/10 bg-slate-900/80 p-2"
+    }, React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, React.createElement(AssistantLifeFaces, {
+      ids: g.ids,
+      size: 36
+    }), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("p", {
+      className: "text-[12px] font-black leading-tight text-white"
+    }, g.ids.map(nameOf).join('・')), React.createElement("p", {
+      className: "text-[11px] font-bold leading-tight text-pink-200"
+    }, ASSISTANT_LIFE_PLACES[g.place], "で", ASSISTANT_LIFE_DOINGS[g.doing].label))), React.createElement("p", {
+      className: "mt-1 text-[10px] text-slate-400"
+    }, g.ids.map(id => `${nameOf(id)}: ${mood(id)}`).join(' / ')), React.createElement("button", {
+      type: "button",
+      "data-assistant-life-watch": key,
+      disabled: done || watchLeft <= 0,
+      onClick: () => watch(g),
+      className: "mt-1.5 min-h-[44px] w-full rounded-xl border border-pink-300/50 bg-pink-400/10 px-2 text-[12px] font-black text-pink-100 active:scale-[.98] disabled:opacity-40"
+    }, done ? '見守りました' : watchLeft <= 0 ? '今日はもう見守れません' : '👀 見守る(友情Lv・仲良し度が上がる)'));
+  }), Object.entries(life.solo || {}).map(([id, s]) => React.createElement("div", {
+    key: id,
+    "data-assistant-life-solo": id,
+    "data-assistant-life-reason": s.reason,
+    className: "flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-900/60 p-2"
+  }, React.createElement(AssistantLifeFaces, {
+    ids: [id],
+    size: 36
+  }), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "text-[12px] font-black leading-tight text-white"
+  }, nameOf(id), React.createElement("span", {
+    className: `ml-1 text-[10px] ${s.reason === 'lonely' ? 'text-amber-200' : 'text-slate-400'}`
+  }, ASSISTANT_LIFE_REASON_LABEL[s.reason])), React.createElement("p", {
+    className: "text-[11px] font-bold leading-tight text-slate-300"
+  }, ASSISTANT_LIFE_PLACES[s.place], "で", ASSISTANT_LIFE_DOINGS[s.doing].label, "・", mood(id))), s.reason !== 'distance' && React.createElement("button", {
+    type: "button",
+    "data-assistant-life-invite": id,
+    disabled: invitedNext.has(id),
+    onClick: () => invite(id),
+    className: "min-h-[44px] shrink-0 rounded-xl border border-amber-300/50 bg-amber-400/10 px-2 text-[11px] font-black text-amber-100 active:scale-[.98] disabled:opacity-40"
+  }, invitedNext.has(id) ? '誘った' : '誘う')))), ids.length >= 2 && React.createElement("div", {
+    "data-assistant-life-introduce": true,
+    className: "mt-3 rounded-2xl border border-sky-300/30 bg-sky-400/5 p-2"
+  }, React.createElement("p", {
+    className: "text-[12px] font-black text-sky-100"
+  }, "引き合わせる"), React.createElement("p", {
+    className: "mb-1.5 text-[10px] text-slate-400"
+  }, "2人を選ぶと、次の時間に一緒に過ごしやすくなります。言い合いのあとなら、仲直りのきっかけに。"), React.createElement("div", {
+    className: "flex flex-wrap gap-1.5"
+  }, ids.map(id => {
+    const on = pick.includes(id);
+    return React.createElement("button", {
+      key: id,
+      type: "button",
+      "data-assistant-life-pick": id,
+      "aria-pressed": on,
+      onClick: () => setPick(p => on ? p.filter(x => x !== id) : [...p, id].slice(-2)),
+      className: `min-h-[40px] rounded-full border px-2.5 text-[11px] font-black active:scale-95 ${on ? 'border-sky-300 bg-sky-400/25 text-white' : 'border-white/15 text-slate-300'}`
+    }, nameOf(id));
+  })), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-introduce-go": true,
+    disabled: pick.length !== 2 || !!introNext,
+    onClick: introduce,
+    className: "mt-2 min-h-[44px] w-full rounded-xl border border-sky-300/50 bg-sky-400/10 text-[12px] font-black text-sky-100 active:scale-[.98] disabled:opacity-40"
+  }, introNext ? `次の時間は ${introNext.pair.split('-').map(nameOf).join('と')} を引き合わせます` : '次の時間に一緒に過ごしてもらう')), React.createElement("p", {
+    className: "mt-3 text-[9px] leading-snug text-slate-500"
+  }, "みんな、時間(朝5・昼10・午後14・夕方18・夜21・深夜0時)が変わるたびに、自分で過ごし方を決めます。")), tab === 'map' && typeof AssistantPeerMap === 'function' && React.createElement("div", {
+    className: "mt-2"
+  }, React.createElement(AssistantPeerMap, {
+    metIds: metIds,
+    onReplay: t => {
+      assistantLifeCloseScreen();
+      if (onReplay) onReplay(t);
+    },
+    peerItems: peerItems,
+    onUseItem: onUseItem
+  })))));
+}
 const CARD_BATTLE_HAND_MAX = 5;
 const CARD_BATTLE_DECK_SIZE = 50;
 const CARD_BATTLE_SETUP_GUTS_MAX = 2;
@@ -156683,14 +157079,24 @@ function MonsterHeroGame() {
         clears: md.challengeClears || 0,
         enhances: md.enhances || 0
       };
-      return React.createElement(AssistantPeerTalk, {
+      return React.createElement(React.Fragment, null, React.createElement(AssistantPeerTalk, {
         scene: peerReplay ? null : scene,
         metIds: metIds,
         selectedId: selectedAssistantId,
         replay: peerReplay,
         onReplayEnd: () => setPeerReplay(null),
         today: today
-      });
+      }), typeof AssistantLifeBand === 'function' && gameState === 'HOME' && !busy && !peerReplay && React.createElement(AssistantLifeBand, {
+        metIds: metIds
+      }), typeof AssistantLifeScreen === 'function' && React.createElement(AssistantLifeScreen, {
+        metIds: metIds,
+        onReplay: talk => setPeerReplay(talk),
+        peerItems: {
+          gift: ownedItemCount(ownedItems, 'peer_gift'),
+          token: ownedItemCount(ownedItems, 'peer_token')
+        },
+        onUseItem: useAssistantPeerItem
+      }));
     })(), gameState === 'RHYTHM_INFO' && React.createElement(RhythmInfoScreen, {
       returnToHome: returnToHome
     }), gameState === 'TRAINING_INFO' && React.createElement("main", {
