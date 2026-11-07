@@ -39,7 +39,7 @@ const code = [
   want('35-raid-jack.jsx', ['raidJackDayKey']),
   want('82-card-battle-core.jsx', ['cardIsPlainObject', 'cardNormalizePoint', 'cardDayCarry', 'cardNormalizeDaily']),
   want('84-screen-card-battle.jsx', ['cardTodayJst']),
-  want('96-card-tactics.jsx', ['cardAutoRewardNormalize']),
+  want('96-card-tactics.jsx', ['CARD_AUTO_REWARD_RESET_DAY', 'CARD_AUTO_REWARD_RESET_MARK', 'cardAutoRewardNormalize']),
 ].join('\n');
 const ctx = { Date: class extends Date { static now() { return ctx.__now; } } };
 ctx.__now = 0;
@@ -99,14 +99,21 @@ for (const [name, fn] of Object.entries(carries)) {
   check('壊れた保存は今日の空の記録になる', E.cardNormalizeDaily('x', '2026-11-07').day === '2026-11-07' && E.cardNormalizeDaily({ day: 3 }, '2026-11-07').cpuPoint === 0);
 }
 // オートのごほうび(1日3回)
+//   2026-11-07: 切り替えの夜に0時区切りで書いた「11/7」の回数が、4:00 を過ぎても今日の分として残った(社長「リセットされてない」)。
+//   持ち越しをやめ、11/7 のあいだだけ印 r の無い 11/7 の回数を0として読む(一度きり。数えると印が付く)
 {
-  const night = { v: 1, day: '2026-11-08', n: 3 };
-  const a = E.cardAutoRewardNormalize(night, '2026-11-07');
-  check('オートのごほうび: 0時区切りで書いた次の日の3回は、切り替えの夜も使い切ったまま', a.day === '2026-11-08' && a.n === 3, JSON.stringify(a));
-  const b = E.cardAutoRewardNormalize(night, '2026-11-08');
-  check('オートのごほうび: 4:00 のあとも同じ日の3回のまま(二重にもらえない)', b.n === 3);
-  const c = E.cardAutoRewardNormalize(night, '2026-11-09');
-  check('オートのごほうび: 次の日は0回から(取り逃さない)', c.n === 0 && c.day === '2026-11-09');
+  const old7 = { v: 1, day: '2026-11-07', n: 3 };
+  const a = E.cardAutoRewardNormalize(old7, '2026-11-07');
+  check('オートのごほうび: 11/7 は、印の無い 11/7 の回数を0に戻す(今日の分を全員リセット)', a.day === '2026-11-07' && a.n === 0, JSON.stringify(a));
+  const marked = { v: 1, day: '2026-11-07', n: 2, r: '20261107' };
+  check('オートのごほうび: 戻したあとに数えた分(印あり)はそのまま(二重に戻らない)', E.cardAutoRewardNormalize(marked, '2026-11-07').n === 2);
+  const c = E.cardAutoRewardNormalize(old7, '2026-11-08');
+  check('オートのごほうび: 次の日は0回から', c.n === 0 && c.day === '2026-11-08');
+  const d8 = { v: 1, day: '2026-11-08', n: 3 };
+  check('オートのごほうび: 11/8 からは戻しをしない(同じ日の3回はそのまま)', E.cardAutoRewardNormalize(d8, '2026-11-08').n === 3);
+  check('オートのごほうび: 11/8 は印が無くても戻さない', E.cardAutoRewardNormalize({ v: 1, day: '2026-11-08', n: 1 }, '2026-11-08').n === 1);
+  check('オートのごほうび: 次の日の日付が残っていても持ち越さない(今日の0回)', E.cardAutoRewardNormalize(d8, '2026-11-07').n === 0 && E.cardAutoRewardNormalize(d8, '2026-11-07').day === '2026-11-07');
+  check('オートのごほうび: 壊れた保存は0回', E.cardAutoRewardNormalize('x', '2026-11-07').n === 0 && E.cardAutoRewardNormalize({ day: '2026-11-07', n: -1, r: '20261107' }, '2026-11-07').n === 0);
 }
 
 // ③ 持ち越しを通す所と、前の区切りの式が戻っていないか(本文を見る)
