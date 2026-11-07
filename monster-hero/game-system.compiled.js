@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 277076344b76ff9f
+// source-sha256: 3dc097442df7b78a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -20064,7 +20064,8 @@ const AssistantBubble = ({
   footerSpace = 0,
   maxLines = 0,
   collapseKey = null,
-  collapseHidden = false
+  collapseHidden = false,
+  oneLine = false
 }) => {
   const [open, setOpen] = useState(defaultOpen);
   const [collapsed, setCollapsed] = useBubbleCollapse(collapseKey);
@@ -20179,7 +20180,8 @@ const AssistantBubble = ({
   }
   return React.createElement(React.Fragment, null, React.createElement("div", {
     "data-assistant-bubble": true,
-    className: `w-full flex items-end gap-2 ${collapseKey ? 'relative' : ''}`
+    "data-bubble-one-line": oneLine ? '' : undefined,
+    className: `w-full flex ${oneLine ? 'items-center' : 'items-end'} gap-2 ${collapseKey ? 'relative' : ''}`
   }, React.createElement("button", {
     type: "button",
     onClick: onFaceTap,
@@ -20194,12 +20196,58 @@ const AssistantBubble = ({
     onClick: () => setOpen(true),
     'aria-label': `${who.name}の説明を開く`
   } : {}, {
-    className: `relative flex-1 min-w-0 text-left rounded-2xl border-2 ${compact ? 'px-2.5 py-1.5' : 'px-3 py-2'} ${hasDetail ? 'active:scale-[.99]' : ''}`,
+    className: `relative flex-1 min-w-0 text-left rounded-2xl border-2 ${oneLine ? 'flex items-center gap-1.5 px-2.5 py-1 max-h-[36px]' : compact ? 'px-2.5 py-1.5' : 'px-3 py-2'} ${hasDetail ? 'active:scale-[.99]' : ''}`,
     style: {
       borderColor: color,
       backgroundColor: 'var(--mh-bubble-bg, rgba(15,23,42,0.92))'
     }
+  }), oneLine ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "absolute",
+    style: {
+      left: '-9px',
+      top: '50%',
+      marginTop: '-7px',
+      width: 0,
+      height: 0,
+      borderTop: '7px solid transparent',
+      borderBottom: '7px solid transparent',
+      borderRight: `9px solid ${color}`
+    }
   }), React.createElement("span", {
+    className: "absolute",
+    style: {
+      left: '-6px',
+      top: '50%',
+      marginTop: '-7px',
+      width: 0,
+      height: 0,
+      borderTop: '7px solid transparent',
+      borderBottom: '7px solid transparent',
+      borderRight: '9px solid rgba(15,23,42,0.92)'
+    }
+  }), React.createElement("span", {
+    className: "shrink-0 text-[9px] font-black tracking-widest",
+    style: {
+      color
+    }
+  }, who.name), React.createElement("span", {
+    "data-bubble-text": true,
+    "data-bubble-max-lines": 1,
+    className: "min-w-0 flex-1 truncate text-[10px] leading-snug text-white",
+    style: {
+      whiteSpace: 'nowrap',
+      textWrap: 'nowrap'
+    }
+  }, text), hasDetail && React.createElement("span", {
+    "data-bubble-more-text": true,
+    "aria-hidden": "true",
+    className: "shrink-0",
+    style: {
+      color
+    }
+  }, React.createElement(ChevronRight, {
+    size: 12
+  }))) : React.createElement(React.Fragment, null, React.createElement("span", {
     className: "absolute",
     style: {
       left: '-9px',
@@ -20251,7 +20299,7 @@ const AssistantBubble = ({
     "data-bubble-more-text": true
   }, "タップで詳しく"), React.createElement(ChevronRight, {
     size: 11
-  })))), collapseKey && React.createElement("button", {
+  }))))), collapseKey && React.createElement("button", {
     type: "button",
     onClick: () => setCollapsed(true),
     "aria-label": "ひとことをたたむ",
