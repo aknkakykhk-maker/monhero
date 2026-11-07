@@ -39,7 +39,9 @@ const factsOf = (id) => {
   if (auth) {
     const j = JSON.parse(fs.readFileSync(auth, 'utf8'));
     if (j.timing && j.timing.bpm) lines.push(`- テンポ: およそ BPM ${Math.round(j.timing.bpm)}`);
-    const secs = (j.structure && j.structure.sections) || [];
+    // 音源が譜面より長い曲(デュラハンの2曲は音源をバトルと共用)は、譜面の長さを越えた区間を出さない(2026-11-07 コトバの指摘)
+    const limit = Number(top.durationMs) || Infinity;
+    const secs = ((j.structure && j.structure.sections) || []).filter((x) => Number(x.startMs) < limit);
     if (secs.length) {
       const max = Math.max(...secs.map((x) => x.intensity || 0)) || 1;
       const word = (v) => (v / max >= 0.85 ? 'いちばん強い' : v / max >= 0.55 ? '強め' : v / max >= 0.3 ? 'ふつう' : '静か');
