@@ -53937,19 +53937,6 @@ const rhythmApplyNoteShape=(id)=>{
 // ノーツ1つの見本の絵を描く(2026-10-21)。c … 2D の描き込み先(呼ぶ側が画面の細かさの倍率をかけておく)/ kind … RHYTHM_NOTE_SWATCH_KINDS の id / w,h … 描く大きさ(CSS px)。
 // 描けたら true。ヘルプの表・助手のおしゃべり・ノーツ図鑑はこれを使う(絵を手で描いたり写真を貼ったりしない)
 const rhythmDrawNoteSwatch=(c,kind,w,h)=>RHYTHM_CANVAS_RENDERER.drawSwatch(c,kind,w,h);
-// 色の組と形を指定して見本を描く(2026-11-07 社長「各ノーツごとにどうかわるか」の見本を設定の欄に出す)。
-// 組ごとに描き手を作って取っておき、演奏用の描き手(RHYTHM_CANVAS_RENDERER)には触らない(設定画面で選び替えても演奏の描き手は作り直さない)
-const RHYTHM_SWATCH_RENDERERS=new Map();
-const rhythmDrawNoteSwatchLook=(c,kind,w,h,look)=>{
-  const palette=RHYTHM_NOTE_PALETTES[look?.palette]?look.palette:'STANDARD',shape=RHYTHM_NOTE_SHAPE_IDS.includes(look?.shape)?look.shape:'STANDARD';
-  if(palette===RHYTHM_NOTE_PALETTE_ID&&shape===RHYTHM_NOTE_SHAPE_ID)return rhythmDrawNoteSwatch(c,kind,w,h);
-  const key=palette+'|'+shape;let r=RHYTHM_SWATCH_RENDERERS.get(key);
-  if(!r){const prevColors=RHYTHM_NOTE_COLORS,prevShape=RHYTHM_NOTE_SHAPE_ID;
-    try{RHYTHM_NOTE_COLORS=RHYTHM_NOTE_PALETTES[palette];RHYTHM_NOTE_SHAPE_ID=shape;r=rhythmBuildCanvasRenderer();}
-    catch(e){r=null;}finally{RHYTHM_NOTE_COLORS=prevColors;RHYTHM_NOTE_SHAPE_ID=prevShape;}
-    if(!r)return false;RHYTHM_SWATCH_RENDERERS.set(key,r);}
-  return r.drawSwatch(c,kind,w,h);
-};
 // 文に出たノーツの名前から、見本の絵の種類を選ぶ(助手の答えの吹き出し用)。長い言葉から照らし、照らした所は消して短い言葉と二重に数えない。
 // 出てきた順に並べ、同じ種類は1回だけ
 const rhythmNoteSwatchKindsInText=(text)=>{
