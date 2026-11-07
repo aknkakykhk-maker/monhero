@@ -261,24 +261,32 @@ const cardAutoRewardValue = (loaded, { n, extra }) => ({
 });
 // ごほうびをもらった1回を数える項目(結果の取引に足す)。券でふやした回数(extra)はそのまま引き継ぐ
 const cardAutoRewardEntry = (loaded) => ({ key: CARD_AUTO_REWARD_KEY, before: loaded.raw, next: cardAutoRewardValue(loaded, { n: loaded.n + 1, extra: loaded.extra || 0 }) });
-// セッション券1枚でごほうびを1回ふやす。consume は券を1枚減らす関数(60 の consumeBuddyTicket。持っていなければ false)、
-//   refund は返す関数(60 の refundBuddyTicket)。上限20は、画面の値ではなく、ここで読み直した保存の値で数える。
-//   順番: 読み直す → 上限・残りを確かめる → 券を1枚減らす → extra+1 を書く。書けなければ券を返す(券だけ減ってごほうびが戻らない、を作らない)
-//   返すのは { ok, why, loaded }。why … 'limit'(今日はもう20回ふやした)・'notEmpty'(まだごほうびが残っている)・'noTicket'(券が無い)・'save'(書けなかった。券は返した)
-const cardAutoRewardAddExtra = async ({ consume, refund } = {}) => {
+// セッション券でごほうびをふやす(1枚で1回。2026-11-07 社長、11/7 夕方「複数枚できるようにして」)。consume は券を1枚減らす関数
+//   (60 の consumeBuddyTicket。持っていなければ false)、refund は1枚返す関数(60 の refundBuddyTicket)。count は使う枚数(1以上の整数。既定1)。
+//   上限20は、画面の値ではなく、ここで読み直した保存の値で数える(extra + count が20を超えるなら使わない)。
+//   順番: 読み直す → 上限・残りを確かめる → 券を count 枚減らす(途中で足りなくなったら、減らした分を返して止める) → extra+count を書く。
+//   書けなければ券を全部返す(券だけ減ってごほうびが戻らない、を作らない)。保存の形は #4720 のまま(extra の数がふえるだけ)
+//   返すのは { ok, why, count, loaded }。why … 'limit'(今日の20回を超える)・'notEmpty'(まだごほうびが残っている)・'noTicket'(券が足りない)・'save'(書けなかった。券は返した)
+const cardAutoRewardAddExtra = async ({ consume, refund, count = 1 } = {}) => {
+  const k = Number.isInteger(count) && count > 0 ? count : 1;
   const loaded = await cardAutoRewardLoad();
-  if (loaded.extra >= CARD_AUTO_REWARD_EXTRA_MAX) return { ok: false, why: 'limit', loaded };
-  if (loaded.left > 0) return { ok: false, why: 'notEmpty', loaded };
-  if (typeof consume !== 'function' || !(await consume())) return { ok: false, why: 'noTicket', loaded };
+  if (loaded.extra + k > CARD_AUTO_REWARD_EXTRA_MAX) return { ok: false, why: 'limit', count: k, loaded };
+  if (loaded.left > 0) return { ok: false, why: 'notEmpty', count: k, loaded };
+  const giveBack = async (n) => { for (let i = 0; i < n; i++) { if (typeof refund !== 'function') return; try { await refund(); } catch (__) { /* 返せなくても遊びは止めない */ } } };
+  let used = 0;
+  if (typeof consume === 'function') { while (used < k && (await consume())) used++; }
+  if (used < k) { await giveBack(used); return { ok: false, why: 'noTicket', count: k, loaded }; }
   // storeSet は書けなかったとき false を返す(例外は出さない。25-storage.jsx)
   let saved = false;
-  try { saved = (await storeSet(CARD_AUTO_REWARD_KEY, cardAutoRewardValue(loaded, { n: loaded.n, extra: loaded.extra + 1 }))) !== false; } catch (_) { saved = false; }
-  if (!saved) {
-    if (typeof refund === 'function') { try { await refund(); } catch (__) { /* 返せなくても遊びは止めない */ } }
-    return { ok: false, why: 'save', loaded };
-  }
-  return { ok: true, why: '', loaded: await cardAutoRewardLoad() };
+  try { saved = (await storeSet(CARD_AUTO_REWARD_KEY, cardAutoRewardValue(loaded, { n: loaded.n, extra: loaded.extra + k }))) !== false; } catch (_) { saved = false; }
+  if (!saved) { await giveBack(k); return { ok: false, why: 'save', count: k, loaded }; }
+  return { ok: true, why: '', count: k, loaded: await cardAutoRewardLoad() };
 };
+// 券でふやせないわけ(押せないときのひとこと)。left … 今日のごほうびの残り、tickets … 持っている券、extraLeft … 今日あとふやせる回数
+const cardAutoTicketBlock = ({ left, tickets, extraLeft }) => (
+  Number.isInteger(left) && left > 0 ? 'ごほうびを使い切ると、ふやせます'
+    : !(Number.isInteger(extraLeft) && extraLeft > 0) ? `今日はこれ以上ふやせません(1日${CARD_AUTO_REWARD_EXTRA_MAX}回まで)`
+      : !(Number.isInteger(tickets) && tickets > 0) ? 'セッション券がありません(モンヒロビートのランクが上がるともらえます)' : '');
 // 1試合ぶんの経験値の保存の項目(84 の結果の取引に足す)。経験値を入れない人(公開前・デバッグでない)は空
 const cardLevelEntries = async ({ kind, level, outcome, debug = false, auto = false }) => {
   if (!cardTacticsOpen() && !debug) return { entries: [], gain: null };
