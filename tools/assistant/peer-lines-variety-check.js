@@ -22,10 +22,11 @@ const root = path.join(__dirname, '..', '..');
 const strictAll = process.argv.includes('--all');
 const ctx = vm.createContext({ console, Math, Date, JSON, Object, Array, String, Number, Set, Map });
 vm.runInContext(fs.readFileSync(path.join(root, 'monster-hero', 'data', 'assistants.js'), 'utf8'), ctx);
-const names = vm.runInContext('Object.keys(this)', ctx).filter(n => /^ASSISTANT_(PEER|LIFE)_/.test(n));
+// ASSISTANT_LIFE_TALKS は lines/*.txt から作るので、テキストのほうを数える(同じかどうかは life-talks-import.js --check が見る)
+const names = vm.runInContext('Object.keys(this)', ctx).filter(n => /^ASSISTANT_(PEER|LIFE)_/.test(n) && n !== 'ASSISTANT_LIFE_TALKS');
 // const で宣言したものは this に乗らないので、名前を直接たずねる
 const src = fs.readFileSync(path.join(root, 'monster-hero', 'data', 'assistants.js'), 'utf8');
-for (const m of src.matchAll(/^const (ASSISTANT_(?:PEER|LIFE)_[A-Z0-9_]+)\s*=/gm)) if (!names.includes(m[1])) names.push(m[1]);
+for (const m of src.matchAll(/^const (ASSISTANT_(?:PEER|LIFE)_[A-Z0-9_]+)\s*=/gm)) if (!names.includes(m[1]) && m[1] !== 'ASSISTANT_LIFE_TALKS') names.push(m[1]);
 
 // 台本(lines を持つもの)ごとに行を集める。keys を持つ台本(とその中の行)は「新しい形」
 const talks = [];
@@ -108,7 +109,8 @@ for (const f of txtFiles) {
       if ((w === 'kyuko' || w === 'erubin') && t.split(/\s+/).some(s => /w(?![A-Za-z])/.test(s) && /笑/.test(s))) bad(`1つの文に「笑」と「w」の両方「${t}」`);
       rows.push({ who: w, t });
     }
-    talks.push({ id: where, special: false, fresh: true, rows, last: rows[rows.length - 1] });
+    // お手本(SAMPLE.txt)は形だけ見て、重なり・割合には数えない(本番の台本と同じ台詞があるため)
+    if (f !== 'SAMPLE.txt') talks.push({ id: where, special: false, fresh: true, rows, last: rows[rows.length - 1] });
   });
 }
 

@@ -147,7 +147,7 @@ solo kiki place=library mood=sleepy line=feel | kiki happy ここで眠ったら
 solo kiki place=library mood=lonely why=lonely line=scene | kiki normal 向かいの席が、ずっと空いたままでつ
 solo kiki place=library mood=lonely why=lonely line=feel | kiki troubled だれか、となりで本を読んでくれたらいいのに
 solo kiki place=library mood=restless line=scene | kiki surprise 新しい本が入ったみたいでつ。早く読みたい…
-solo kiki place=library mood=restless line=feel | kiki normal 静かにしなきゃいけないのに、そわそわしてしまいます
+solo kiki place=library mood=restless line=feel | kiki normal 図書室なのに、そわそわが止まりません
 solo kiki place=library mood=sulky line=scene | kiki normal 本で顔をかくしています。いまは話しかけないでください
 solo kiki place=library mood=sulky line=feel | kiki troubled …と言いつつ、だれか気づいてくれないかと待っていまつ
 solo kiki mood=happy line=scene | kiki happy 朝の散歩で、きれいな花を見つけました
@@ -186,7 +186,7 @@ solo momosuke place=home mood=happy line=feel | momosuke happy ももって、�
 solo momosuke place=home mood=eager line=scene | momosuke excited 新しい振り付け、ノートに書き出してる！！
 solo momosuke place=home mood=eager line=feel | momosuke happy 今日はいっぱい練習して、いっぱいほめてもらうんだ♡
 solo momosuke place=home mood=eager line=feel | momosuke wink 本気のももを見せちゃうから！！
-solo momosuke place=home mood=lonely why=lonely line=scene | momosuke troubled だれもほめてくれないから、鏡にほめてもらってる…
+solo momosuke place=home mood=lonely why=lonely line=scene | momosuke troubled ほめてくれる人がいないので、鏡にほめてもらってる…
 solo momosuke place=home mood=lonely why=lonely line=scene | momosuke normal メタルナーに話しかけてみた。…返事はないけどw
 solo momosuke place=home mood=lonely why=lonely line=feel | momosuke troubled べつに、さみしくなんてないし。…ちょっとだけだし
 solo momosuke place=home mood=restless line=scene | momosuke surprise 新曲の話、聞いた！？ 聞いてないの、ももだけ！？
@@ -350,7 +350,7 @@ solo kyuko mood=sulky line=feel | kyuko normal ま、組み直せばいいだけ
 solo sorashido place=cardroom mood=eager line=scene | sorashido excited 新しい表、あと3列で完成だ笑
 solo sorashido place=cardroom mood=eager line=scene | sorashido normal キュービの使われ方、きのうより増えてるな笑
 solo sorashido place=cardroom mood=eager line=feel | sorashido happy 終わったら、だれかに見せたいな。まずはきゅうこちゃんかな笑
-solo sorashido place=cardroom mood=eager line=feel | sorashido excited 今日は答えまでたどりつけるぜ・・・！
+solo sorashido place=cardroom mood=eager line=feel | sorashido excited 今日こそ答えが出るぜ・・・！
 solo sorashido place=cardroom mood=happy line=scene | sorashido happy オリヒメのカード、ずっとながめてても飽きないんだよな笑
 solo sorashido place=cardroom mood=happy line=scene | sorashido normal 山札を並べかえたら、なんかきれいになった
 solo sorashido place=cardroom mood=happy line=feel | sorashido happy ここにいると時間が早いんだよなー笑
