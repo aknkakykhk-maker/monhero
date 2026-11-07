@@ -5210,17 +5210,27 @@ function MonsterHeroGame() {
   // ★公開フラグが false のあいだは、ヘルプ・更新履歴・告知と同じくこれも出さない。
   // ★useState(true) は「読み込みが終わるまで出さない」ためのもの。実際に出すかどうかは
   //   読み込みのときに保存値から決め直す(保存が無いうちは「まだ見ていない」)。
+  // ---- クイック・AUTO設定・裏周回の案内(56-quick-guide.jsx。2026-11-07 社長) ----
+  // quickGuideSeen … 見終えた案内の id(null は読み込み前。読み込むまで何も出さない)/ quickNudge … 誘導の回数と最後の日
+  // quickGuideReplay … ヘルプから見返している案内のまとまり('g1' 'g2' 'g3')。保存は新しいキーだけ(CLAUDE.md ⑦)
+  const [quickGuideSeen, setQuickGuideSeen] = useState(null);
+  const [quickNudge, setQuickNudge] = useState(null);
+  const [quickGuideReplay, setQuickGuideReplay] = useState(null);
+  const quickGuideOpenedDetailRef = useRef(false);   // 案内が曲えらびの周回の帯を開いたか(閉じるときに元へ戻す)
   const QUICK_RHYTHM_INTRO_KEY = 'mh_quick_rhythm_intro_seen_v1';
   const QUICK_RHYTHM_BACKGROUND_KEY = 'mh_quick_rhythm_bg_seen_v1';
   const [quickRhythmIntroSeen, setQuickRhythmIntroSeen] = useState(true);
   const [quickRhythmBackgroundSeen, setQuickRhythmBackgroundSeen] = useState(true);
   const quickRhythmGuideReleased = RELEASE_FLAGS.quickRhythmLink === true;
   // ∞周回にしたバトル画面で1度だけ。周回中のあいだ出し、閉じるか一度見たら二度と出さない
-  const quickRhythmIntroVisible = quickRhythmGuideReleased && !quickRhythmIntroSeen
+  // ★2026-11-07 から、ここで言っていたことは裏周回の案内(56-quick-guide.jsx の g3a・g3b)が全員に一度流す。
+  //   同じことを2回言わないよう、この吹き出しは案内の部品が無いときだけ出す(案内を見た人にも、見ている人にも出ない)
+  const quickGuideAvailable = typeof QuickGuideOverlay === 'function';
+  const quickRhythmIntroVisible = quickRhythmGuideReleased && !quickRhythmIntroSeen && !quickGuideAvailable
     && gameState === 'BATTLE' && isQuickMode(runMode) && autoRepeat === true;
   const dismissQuickRhythmIntro = () => { setQuickRhythmIntroSeen(true); storeSet(QUICK_RHYTHM_INTRO_KEY, true, false); };
   // 裏で周回したままモンビーを開いた最初の1回だけ
-  const quickRhythmBackgroundVisible = quickRhythmGuideReleased && !quickRhythmBackgroundSeen && rhythmBackgroundRun;
+  const quickRhythmBackgroundVisible = quickRhythmGuideReleased && !quickRhythmBackgroundSeen && !quickGuideAvailable && rhythmBackgroundRun;
   const dismissQuickRhythmBackground = () => { setQuickRhythmBackgroundSeen(true); storeSet(QUICK_RHYTHM_BACKGROUND_KEY, true, false); };
   // ---- モンヒロビートの6レーン化の案内(CLAUDE.md ⑤。2026-09-26) ----
   // 道が6レーンになり、MASTERに左右へ払う横フリックが出るようになった。横フリックは
@@ -8468,6 +8478,11 @@ function MonsterHeroGame() {
   }, [grantProfileFrames, deliverAssistantBondRewards]);
   // 助手どうしの掛け合い・今日のペアで、出てきた助手それぞれの仲良し度を増やす(2026-11-07・56-assistant-peer.jsx)
   useEffect(() => { if (typeof assistantPeerSetPlayerBondAdder === 'function') assistantPeerSetPlayerBondAdder(addAssistantBondFor); }, [addAssistantBondFor]);
+  // 助手どうし・助手ライフの台本の {name} を、話している助手がいまプレイヤーを呼ぶ呼び方にする(仲良し度の段・性別・選んだ呼び方。2026-11-07 社長「ブリーダーとか呼び方がおかしい」)
+  useEffect(() => {
+    if (typeof assistantPeerSetPlayerCaller !== 'function') return;
+    assistantPeerSetPlayerCaller((id) => assistantCallName(breederName, assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points), assistantCallStyles[id] || null, id));
+  }, [breederName, assistantCallStyles, assistantBonds]);
   // 行動に応じて助手との仲良し度を増やす。
   // 増えるのは「いま選んでいる助手」のぶんだけ。もう片方の助手の値には触れない
   const addAssistantBond = useCallback((actionKey) => {
@@ -11472,6 +11487,61 @@ function MonsterHeroGame() {
 
   // 自動案内の優先順位判定でも使うため、描画部より前で確定する。
   const updateNoticeVisible = updateAvailable && (!latestBuild || latestBuild !== dismissedUpdateBuild);
+  // ---- クイック・AUTO設定・裏周回の案内(56-quick-guide.jsx)。どの案内を出すかは quickGuidePick が決める ----
+  // 読み込みは一度だけ。保存が無い・壊れているときは「どれもまだ見ていない」「誘導は0回」
+  useEffect(() => {
+    if (!dataLoaded || typeof normalizeQuickGuideSeen !== 'function') return;
+    let cancelled = false;
+    (async () => {
+      let seenRaw = null, nudgeRaw = null;
+      try { [seenRaw, nudgeRaw] = await Promise.all([storeGet(QUICK_GUIDE_SEEN_KEY, null, false), storeGet(QUICK_GUIDE_NUDGE_KEY, null, false)]); } catch (_) { /* 読めなければ既定 */ }
+      if (cancelled) return;
+      setQuickGuideSeen(normalizeQuickGuideSeen(seenRaw));
+      setQuickNudge(normalizeQuickNudge(nudgeRaw));
+    })();
+    return () => { cancelled = true; };
+  }, [dataLoaded]);
+  // 割り込まない場面。お話・おしゃべり・ほかの案内・小窓・演奏中・れんしゅう中・はじめの設定がすむ前
+  const quickGuideBusy = bootPhase !== 'GAME' || !dataLoaded || !onboarded || !assistantChosen || tutorialStep != null || battleTutorialStep != null
+    || !!eventReplay || assistantChatOpen || showAssistantPicker || kikiIntroStep != null || momosukeIntroStep != null || !!rhythmPlay
+    || updateGuideQueue.length > 0 || updateNoticeVisible || !!loginBonusPopup || !!levelCapCompensation || !!inheritedUniqueCompensation || !!dailyMasuAdvice
+    || !!cardTeaserOpen || !!peerReplay;
+  const quickGuideQuickUnlocked = typeof QUICK_DIFFICULTY_SETTINGS === 'object'
+    && Object.keys(QUICK_DIFFICULTY_SETTINGS).some((d) => isQuickDifficultyUnlocked(d, clearCounts, proClearCounts, extremeDifficultyClearCounts));
+  const quickGuideEverCleared = Object.values(quickClearCounts || {}).some((n) => Number(n) > 0);
+  const quickGuideToday = jstDayKey4();
+  const quickGuidePicked = typeof quickGuidePick === 'function' && !quickGuideReplay ? quickGuidePick({
+    gameState, busy: quickGuideBusy, seen: quickGuideSeen, quickUnlocked: quickGuideQuickUnlocked, quickEverCleared: quickGuideEverCleared,
+    quickSelect: isQuickMode(battleMode), quickRun: isQuickMode(runMode), autoRepeat: autoRepeat === true,
+    battleTutorial: battleTutorialStep != null || !!battleScenarioRef.current, raidJack: isRaidJackMode(runMode), backgroundRun: !!rhythmBackgroundRun,
+    nudgeOk: !!quickNudge && quickNudgeAllowed(quickNudge, quickGuideToday),
+  }) : null;
+  // 「あとで」を押した案内は、その画面を出ているあいだは出し直さない(画面を開き直したら、また最初から)
+  const [quickGuideLater, setQuickGuideLater] = useState(null);
+  // 出している誘導(数えたあとも、閉じるまで出しておく)
+  const [quickNudgeShowing, setQuickNudgeShowing] = useState(null);
+  useEffect(() => { setQuickGuideLater(null); setQuickNudgeShowing(null); }, [gameState]);
+  // 誘導は出すと決めたときに数える(閉じる・読み込み直しでも同じ日に繰り返さない)
+  useEffect(() => {
+    if (quickGuidePicked !== 'nudgeHome' && quickGuidePicked !== 'nudgeBattle') return;
+    const next = quickNudgeAfter(quickNudge, quickGuideToday);
+    setQuickNudge(next);
+    setQuickNudgeShowing(quickGuidePicked);
+    storeSet(QUICK_GUIDE_NUDGE_KEY, next, false);
+  }, [quickGuidePicked]);
+  // いま出す案内。ヘルプからの見返し → 出している誘導 → この画面の案内(「あとで」を押したものは除く)
+  const quickGuideActive = quickGuideReplay ? `replay:${quickGuideReplay}`
+    : quickNudgeShowing && !quickGuideBusy ? quickNudgeShowing
+    : quickGuidePicked && quickGuidePicked !== quickGuideLater && quickGuidePicked !== 'nudgeHome' && quickGuidePicked !== 'nudgeBattle' ? quickGuidePicked : null;
+  // 案内を閉じる。done … 最後まで見た(見た印を付ける)。誘導とヘルプからの見返しは印を付けない
+  const finishQuickGuide = (guideId, done) => {
+    if (quickGuideReplay) { setQuickGuideReplay(null); return; }
+    if (guideId === 'nudgeHome' || guideId === 'nudgeBattle') { setQuickNudgeShowing(null); return; }
+    if (!done) { setQuickGuideLater(guideId); return; }
+    const next = quickGuideSeenAfter(quickGuideSeen, guideId);
+    setQuickGuideSeen(next.seen);
+    storeSet(QUICK_GUIDE_SEEN_KEY, next, false);
+  };
 
   // 初回チュートリアル。HOMEを最初に開いたときだけ自動で始める。
   // デバッグから何度でも呼べるよう、開始と終了を関数に分けている
@@ -18907,6 +18977,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </>;
         })()}
 
+        {/* クイック・AUTO設定・裏周回の案内(56-quick-guide.jsx。2026-11-07 社長)。画面ごとに一度きり・ヘルプから見返せる */}
+        {typeof QuickGuideOverlay==='function'&&quickGuideActive&&activeAssistant&&(()=>{
+          const replay=quickGuideActive.startsWith('replay:')?quickGuideActive.slice(7):null;
+          const pages=replay?quickGuideReplayPages(replay):(QUICK_GUIDE_PAGES[quickGuideActive]||[]);
+          if(!pages.length)return null;
+          const lv=assistantBondLevelNow;
+          return <QuickGuideOverlay key={quickGuideActive} guideId={quickGuideActive} pages={pages} assistant={activeAssistant}
+            callName={assistantCallName(breederName,lv,assistantCallStyles[activeAssistant.id]||null,activeAssistant.id)}
+            onDone={(done)=>{ if(quickGuideOpenedDetailRef.current){ quickGuideOpenedDetailRef.current=false; setQuickRunDetailOpen(false); } finishQuickGuide(quickGuideActive,done); }}
+            onGoAutoSettings={replay?null:openAutoSettings}
+            onPage={replay?null:(p)=>{ if(p&&p.openDetail&&!quickRunDetailOpen){ quickGuideOpenedDetailRef.current=true; setQuickRunDetailOpen(true); } }}/>;
+        })()}
+
         {/* モンヒロビート(音ゲー)の準備中の案内。公開フラグが立つまでHOMEのモンヒロビートはここへ来る。
             見た目は体験版ホームに合わせ、修行のCSSは借りない(別の機能の見た目に引きずられないため) */}
         {gameState==='RHYTHM_INFO'&&(
@@ -19071,13 +19154,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           return <div data-mh-screen className={SCREEN_SHELL_CLASS}>
             <ScreenHead title="AUTO設定" accent="text-indigo-300" note="AUTOで戦うときの方針と供モンを決めておく" onBack={()=>setGameState('MB_MANAGEMENT')} backLabel="M/B管理へ戻る"/>
             <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-3`}>
-              <section className={SCREEN_PANEL_CLASS}><h3 className="text-[13px] font-black text-indigo-200 mb-2">1. AUTO方針</h3><div className="grid grid-cols-2 gap-2">{strategies.map(([key,label,description])=><button key={key} aria-pressed={draftAutoSettings.strategy===key} onClick={()=>setDraftAutoSettings(current=>({...current,strategy:key}))} className={`min-h-[68px] min-w-0 rounded-xl border p-2 text-left active:scale-[.98] ${draftAutoSettings.strategy===key?'border-cyan-300 bg-indigo-600 ring-2 ring-cyan-300/50':'border-white/10 bg-slate-950/60'}`}><span className="block text-[12px] font-black">{label}</span><span className="block mt-1 text-[10px] leading-snug text-slate-300">{description}</span></button>)}</div></section>
-              <section className="space-y-3"><div><h3 className="text-[13px] font-black text-indigo-200">2. 供モン事前設定</h3><p className="text-[11px] leading-relaxed text-slate-400 mt-1">WAVE2・4・6の順に対応します。設定した供モンが候補にいない場合はAUTO時にランダムで補完されます。</p></div>{draftAutoSettings.allies.map((ally,index)=><div key={index} className={`${SCREEN_PANEL_CLASS} space-y-2`}><label className="block text-[12px] font-black text-white" htmlFor={`auto-ally-${index}`}>供モン{['①','②','③'][index]}</label><select id={`auto-ally-${index}`} value={ally.rosterEntry||''} onChange={event=>updateDraftAutoAlly(index,{rosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">おまかせ（AUTOがランダムに選ぶ）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry} disabled={selectedEntries.includes(entry)&&ally.rosterEntry!==entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(ally.rosterEntry)}<div><div className="text-[11px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-5 gap-1">{ranges.map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoAlly(index,{slot})} aria-pressed={ally.slot===slot} className={`min-h-[44px] min-w-0 rounded-xl border text-[10px] font-black active:scale-95 ${slot===null?'bg-slate-700 border-slate-500 text-white':`${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`} ${ally.slot===slot?'ring-2 ring-white border-white':'opacity-50'}`}>{ally.slot===slot&&'✓'}{label}</button>)}</div></div></div>)}</section>
+              <section data-auto-settings-section="policy" className={SCREEN_PANEL_CLASS}><h3 className="text-[13px] font-black text-indigo-200 mb-2">1. AUTO方針</h3><div className="grid grid-cols-2 gap-2">{strategies.map(([key,label,description])=><button key={key} aria-pressed={draftAutoSettings.strategy===key} onClick={()=>setDraftAutoSettings(current=>({...current,strategy:key}))} className={`min-h-[68px] min-w-0 rounded-xl border p-2 text-left active:scale-[.98] ${draftAutoSettings.strategy===key?'border-cyan-300 bg-indigo-600 ring-2 ring-cyan-300/50':'border-white/10 bg-slate-950/60'}`}><span className="block text-[12px] font-black">{label}</span><span className="block mt-1 text-[10px] leading-snug text-slate-300">{description}</span></button>)}</div></section>
+              <section data-auto-settings-section="ally" className="space-y-3"><div><h3 className="text-[13px] font-black text-indigo-200">2. 供モン事前設定</h3><p className="text-[11px] leading-relaxed text-slate-400 mt-1">WAVE2・4・6の順に対応します。設定した供モンが候補にいない場合はAUTO時にランダムで補完されます。</p></div>{draftAutoSettings.allies.map((ally,index)=><div key={index} className={`${SCREEN_PANEL_CLASS} space-y-2`}><label className="block text-[12px] font-black text-white" htmlFor={`auto-ally-${index}`}>供モン{['①','②','③'][index]}</label><select id={`auto-ally-${index}`} value={ally.rosterEntry||''} onChange={event=>updateDraftAutoAlly(index,{rosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">おまかせ（AUTOがランダムに選ぶ）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry} disabled={selectedEntries.includes(entry)&&ally.rosterEntry!==entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(ally.rosterEntry)}<div><div className="text-[11px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-5 gap-1">{ranges.map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoAlly(index,{slot})} aria-pressed={ally.slot===slot} className={`min-h-[44px] min-w-0 rounded-xl border text-[10px] font-black active:scale-95 ${slot===null?'bg-slate-700 border-slate-500 text-white':`${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`} ${ally.slot===slot?'ring-2 ring-white border-white':'opacity-50'}`}>{ally.slot===slot&&'✓'}{label}</button>)}</div></div></div>)}</section>
               {/* モンヒロビートから∞周回を始めるための事前設定(docs/spec/QUICK_RHYTHM_LINK.md PR5)。
                   3つとも決めたときだけ使う。決めていないあいだは、これまでどおり
                   「1周目に自分で組んだ編成」をそのまま繰り返す */}
-              <section className="space-y-3"><div><h3 className="text-[13px] font-black text-indigo-200">3. モンヒロビート中に回すクイック周回</h3><p className="text-[11px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。難易度は「クイックでクリア済み」のものだけ選べます（演奏したぶんが周回クリアとして入るのも同じ条件のため）。</p></div><div className={`${SCREEN_PANEL_CLASS} space-y-2`}><label className="block text-[12px] font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">使わない（まだ決めていない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[11px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-xl border text-[10px] font-black active:scale-95 ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border} ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':'opacity-50'}`}>{draftAutoSettings.quickRun?.distance===slot&&'✓'}{label}</button>)}</div></div><div><label className="block text-[11px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isAutoQuickRunDifficultyAllowed(key,quickClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（クイック未クリア）'}</option>;})}</select></div><div><div className="text-[11px] font-black text-slate-300 mb-1.5">モンヒロビートを開いたら自動で始める</div><button type="button" data-auto-quick-run-autostart aria-pressed={draftAutoSettings.quickRun?.autoStart===true} disabled={!autoQuickRunConfigured(draftAutoSettings)} onClick={()=>updateDraftAutoQuickRun({autoStart:!(draftAutoSettings.quickRun?.autoStart===true)})} className={`flex min-h-[48px] w-full items-center justify-between gap-2 rounded-xl border px-3 text-left active:scale-[.99] disabled:opacity-40 ${draftAutoSettings.quickRun?.autoStart===true?'border-fuchsia-300 bg-fuchsia-900/50':'border-white/10 bg-slate-950'}`}><span className="min-w-0 flex-1 text-[11px] font-black text-white">{draftAutoSettings.quickRun?.autoStart===true?'ON（開いたらすぐ回しはじめる）':'OFF（自分で「始める」を押す）'}</span><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${draftAutoSettings.quickRun?.autoStart===true?'bg-fuchsia-500 text-white':'bg-slate-700 text-slate-300'}`}>{draftAutoSettings.quickRun?.autoStart===true?'ON':'OFF'}</span></button><p className="mt-1 text-[10px] leading-relaxed text-slate-400">ONにすると、HOMEなどからモンヒロビートを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲えらびの上の帯から、いつでも止められます。</p></div><div className="pt-1"><AssistantBubble scene="autoQuickRunSettings" compact/></div><p className="text-[11px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
-              <section data-auto-breakthrough-bulk-settings className={`${SCREEN_PANEL_CLASS} space-y-3`}>
+              <section data-auto-settings-section="quickRun" className="space-y-3"><div><h3 className="text-[13px] font-black text-indigo-200">3. モンヒロビート中に回すクイック周回</h3><p className="text-[11px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。難易度は「クイックでクリア済み」のものだけ選べます（演奏したぶんが周回クリアとして入るのも同じ条件のため）。</p></div><div className={`${SCREEN_PANEL_CLASS} space-y-2`}><label className="block text-[12px] font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">使わない（まだ決めていない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[11px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-xl border text-[10px] font-black active:scale-95 ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border} ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':'opacity-50'}`}>{draftAutoSettings.quickRun?.distance===slot&&'✓'}{label}</button>)}</div></div><div><label className="block text-[11px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isAutoQuickRunDifficultyAllowed(key,quickClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（クイック未クリア）'}</option>;})}</select></div><div><div className="text-[11px] font-black text-slate-300 mb-1.5">モンヒロビートを開いたら自動で始める</div><button type="button" data-auto-quick-run-autostart aria-pressed={draftAutoSettings.quickRun?.autoStart===true} disabled={!autoQuickRunConfigured(draftAutoSettings)} onClick={()=>updateDraftAutoQuickRun({autoStart:!(draftAutoSettings.quickRun?.autoStart===true)})} className={`flex min-h-[48px] w-full items-center justify-between gap-2 rounded-xl border px-3 text-left active:scale-[.99] disabled:opacity-40 ${draftAutoSettings.quickRun?.autoStart===true?'border-fuchsia-300 bg-fuchsia-900/50':'border-white/10 bg-slate-950'}`}><span className="min-w-0 flex-1 text-[11px] font-black text-white">{draftAutoSettings.quickRun?.autoStart===true?'ON（開いたらすぐ回しはじめる）':'OFF（自分で「始める」を押す）'}</span><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${draftAutoSettings.quickRun?.autoStart===true?'bg-fuchsia-500 text-white':'bg-slate-700 text-slate-300'}`}>{draftAutoSettings.quickRun?.autoStart===true?'ON':'OFF'}</span></button><p className="mt-1 text-[10px] leading-relaxed text-slate-400">ONにすると、HOMEなどからモンヒロビートを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲えらびの上の帯から、いつでも止められます。</p></div><div className="pt-1"><AssistantBubble scene="autoQuickRunSettings" compact/></div><p className="text-[11px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
+              <section data-auto-breakthrough-bulk-settings data-auto-settings-section="breakthrough" className={`${SCREEN_PANEL_CLASS} space-y-3`}>
                 <div><h3 className="text-[13px] font-black text-cyan-200">4. AUTO∞ 自動限界突破</h3><p className="mt-1 text-[11px] font-bold leading-relaxed text-slate-400">現在所有しているマスモンをまとめて設定し、限界突破で使い切らないようダイヤと虹のプシュケーを残せます。</p></div>
                 <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3 space-y-2">
                   <div className="text-[11px] font-black text-cyan-200">所有マスモンへ一括設定</div>
@@ -19885,7 +19968,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="w-full max-w-md [@media(orientation:landscape)_and_(max-height:520px)]:max-w-2xl mx-auto flex-1 min-h-0 flex flex-col pt-1">
               <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
                 <div className="mhbs-hint mt-auto mb-1 shrink-0">左右にスワイプして難易度をえらぶ</div>
-                {quick&&<fieldset className="shrink-0 mx-1 mb-1 rounded-2xl border border-teal-400/30 bg-slate-900/80 p-1">
+                {quick&&<fieldset data-quick-reward-policy className="shrink-0 mx-1 mb-1 rounded-2xl border border-teal-400/30 bg-slate-900/80 p-1">
                   <legend className="px-1 text-[9px] font-black text-teal-200">報酬方針</legend>
                   <div className="grid grid-cols-3 gap-1">
                     {[[QUICK_REWARD_POLICY_GROWTH,'育成','経験値あり'],[QUICK_REWARD_POLICY_PSYCHE,'プシュケー優先','経験値0・虹×2'],[QUICK_REWARD_POLICY_DIAMOND,'ダイヤ優先','経験値0・ダイヤ×2']].map(([id,label,detail])=>{const selected=quickRewardPolicy===id;return <button key={id} type="button" aria-pressed={selected} onClick={()=>setQuickRewardPolicy(id)} className={`min-h-[44px] rounded-xl border-2 px-1 py-0.5 font-black leading-tight active:scale-[.98] ${selected?'border-teal-300 bg-teal-600 text-white shadow-[0_0_14px_rgba(45,212,191,.3)]':'border-white/10 bg-slate-950 text-slate-400'}`}><span className="block text-[10px]">{label}</span><small className="block text-[8px]">{detail}</small></button>;})}
@@ -24342,6 +24425,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {/* 本文の描き方は助手の詳細と共通(renderHelpBlocks) */}
                 {renderHelpBlocks(topic.blocks, cat.color)}
                 {/* 読むだけでなくその場で始められる項目(いまはバトルのれんしゅう) */}
+                {/* クイック・AUTO設定・裏周回の案内を見返す(56-quick-guide.jsx)。光らせる所は無しで、ページだけ流す。見た印は動かさない */}
+                {topic.launch==='quickGuides'&&typeof QUICK_GUIDE_REPLAYS==='object'&&(
+                  <div data-quick-guide-replays className="grid gap-2">
+                    {[['g1','🎓 クイックの案内をもう一度見る'],['g2','🎓 AUTO設定の案内をもう一度見る'],['g3','🎓 裏周回の案内をもう一度見る']].map(([id,label])=>(
+                      <button key={id} type="button" data-quick-guide-replay={id} onClick={()=>setQuickGuideReplay(id)} className="w-full rounded-2xl py-3 text-[12px] font-black text-black active:scale-95" style={{backgroundColor:cat.color}}>{label}</button>
+                    ))}
+                  </div>
+                )}
                 {topic.launch==='battleTutorial'&&(
                   <button onClick={()=>startBattleTutorial('HOME')} className="w-full rounded-2xl py-3.5 text-[12px] font-black text-black active:scale-95" style={{backgroundColor:cat.color}}>🎓 バトルのれんしゅうを始める</button>
                 )}

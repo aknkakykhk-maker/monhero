@@ -481,7 +481,7 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
   }
   return (
     <>
-      <div className={`w-full flex items-end gap-2 ${collapseKey?'relative':''}`}>
+      <div data-assistant-bubble className={`w-full flex items-end gap-2 ${collapseKey?'relative':''}`}>
         {/* 顔をタップすると次のセリフへ。詳細は吹き出し側をタップする(操作を分けている) */}
         <button type="button" onClick={onFaceTap} aria-label={`${who.name}に話しかける`} className="shrink-0 active:scale-90 transition-transform">
           <AssistantFace who={who} size={size} accent={color} expression={face}/>

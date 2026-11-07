@@ -12411,7 +12411,19 @@ const assistantRhythmTutorialPages = (assistantId) =>
   ASSISTANT_RHYTHM_TUTORIAL_SETS[assistantId] || ASSISTANT_RHYTHM_TUTORIAL;
 
 const assistantIntroPages = (assistantId) => ASSISTANT_INTRO_SETS[assistantId] || ASSISTANT_INTRO;
-const assistantTutorialPages = (assistantId) => ASSISTANT_TUTORIAL_SETS[assistantId] || ASSISTANT_TUTORIAL;
+// 村の案内に「AUTOとクイック」の1ページを足す(2026-11-07 社長「はじめてやる人のチュートリアルに、こういうものがあるって説明を追加」)。
+//   置き場所は、建物「バトル」を光らせる最後のページのすぐあと。文は ASSISTANT_QUICK_GUIDE_LINES の tour.autoQuick(無い助手はみゅあの文)
+const assistantTutorialWithAutoQuick = (pages, assistantId) => {
+  const lines = typeof ASSISTANT_QUICK_GUIDE_LINES === 'object' && ASSISTANT_QUICK_GUIDE_LINES ? ASSISTANT_QUICK_GUIDE_LINES : {};
+  const line = (lines[assistantId] && lines[assistantId]['tour.autoQuick']) || (lines.mua && lines.mua['tour.autoQuick']);
+  if (!line || !Array.isArray(pages)) return pages;
+  let at = -1;
+  pages.forEach((p, i) => { if (p && p.spot === 'battle') at = i; });
+  if (at < 0) return pages;
+  const page = { e: line.e || 'normal', t: line.t, title: line.title || 'AUTOとクイック', help: 'battle/quick-auto-guide', spot: 'battle', autoQuick: true };
+  return [...pages.slice(0, at + 1), page, ...pages.slice(at + 1)];
+};
+const assistantTutorialPages = (assistantId) => assistantTutorialWithAutoQuick(ASSISTANT_TUTORIAL_SETS[assistantId] || ASSISTANT_TUTORIAL, assistantId);
 
 // ---------- バトルチュートリアルの初回案内 ----------
 // バトルの練習を未完了の人へ、ログイン後のHOMEで一度だけ見せる。
@@ -12629,7 +12641,7 @@ const ASSISTANT_BATTLE_TUTORIAL_OUTRO_V2 = [
   { id:'ally',         at:'*',             e:'normal',  title:'このあとは', t:'WAVE2・4・6では供モンが合流するよ。ステータスがそのまま足されるんだ！', wait:'next' },
   { id:'unique',       at:'*',             e:'happy',   title:'固有技のこと', t:'勇者モンの固有技は、レベルが上がるほど強くなるよ。育てるほど頼りになる♪', wait:'next' },
   { id:'modeAfter',    at:'*',             e:'normal',  title:'モードの使い分け', t:'クラシックの中は、スコアに挑むチャレンジ、腕だめしの種族チャレンジ、しばりのプロだよ。', wait:'next' },
-  { id:'modeLater',    at:'*',             e:'wink',    title:'早く育てたいときは', t:'入口でクイックを選ぶと、さくさく回せて経験値も1.5倍。いつでも選べるからね♪', wait:'next' },
+  { id:'modeLater',    at:'*',             e:'wink',    title:'早く育てたいときは', t:'早く育てたいときはクイック！ チャレンジでクリアした難易度から、クイックでも遊べるようになるよ♪', wait:'next' },
   { id:'wrapUp',       at:'*',             e:'excited', title:'おつかれさま！', t:'これでバトルのれんしゅうは終わり！ 一連の流れはバッチリだね♪', wait:'next' },
   { id:'end',          at:'*',             e:'happy',   title:'いってらっしゃい！', t:'困ったらヘルプからいつでもこの練習をやり直せるよ。がんばってね{name}！', wait:'end' },
 ];
@@ -13830,7 +13842,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'kiki-mua-c1', pair:['kiki', 'mua'], lv:1, scene:'any', lines:[
     { who:'mua', e:'happy', t:'{c}、今日のおやつ、いちごタルトとチョコケーキどっちにする？' },
     { who:'kiki', e:'troubled', t:'迷いまつね…' },
-    { who:'kiki', e:'normal', t:'ブリーダーさんは、どっちがいいと思いますか？' },
+    { who:'kiki', e:'normal', t:'{name}は、どっちがいいと思いますか？' },
   ], choice:[
     { label:'いちごタルト', reply:[
       { who:'mua', e:'excited', t:'でしょ！ やっぱいちごぢゃん♪' },
@@ -13848,7 +13860,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'momosuke-mua-c1', pair:['momosuke', 'mua'], lv:1, scene:'any', lines:[
     { who:'momosuke', e:'excited', t:'{c}！ 今日のライブ衣装、ピンクと白どっちがいいかな！？' },
     { who:'mua', e:'happy', t:'{c}ならどっちも似合うよ〜' },
-    { who:'momosuke', e:'wink', t:'ブリーダーはどっちがいいと思う！？' },
+    { who:'momosuke', e:'wink', t:'{name}はどっちがいいと思う！？' },
   ], choice:[
     { label:'ピンク', reply:[
       { who:'momosuke', e:'excited', t:'だよね！！ ももといえばピンク！！' },
@@ -13866,7 +13878,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'dra-mua-c1', pair:['dra', 'mua'], lv:1, scene:'any', lines:[
     { who:'dra', e:'wink', t:'{c}、新しいギャグ考えたんだけど聞くか？' },
     { who:'mua', e:'troubled', t:'え〜、{c}のギャグ、ほぼ外れるぢゃん' },
-    { who:'dra', e:'happy', t:'なあ、ブリーダーはどう思う？ 聞きたいよな？' },
+    { who:'dra', e:'happy', t:'なあ、{name}はどう思う？ 聞きたいよな？' },
   ], choice:[
     { label:'聞きたい', reply:[
       { who:'dra', e:'excited', t:'さすが！ アルミ缶の上にある…ミカン！' },
@@ -13884,7 +13896,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'atsu-mua-c1', pair:['atsu', 'mua'], lv:1, scene:'any', lines:[
     { who:'atsu', e:'happy', t:'{c}、今日HELL何曲いける？笑' },
     { who:'mua', e:'troubled', t:'えー、{c}基準で聞かないでよ〜' },
-    { who:'atsu', e:'wink', t:'ブリーダーはどう思う？ 何曲いけそう？笑' },
+    { who:'atsu', e:'wink', t:'{name}はどう思う？ 何曲いけそう？笑' },
   ], choice:[
     { label:'1曲', reply:[
       { who:'mua', e:'happy', t:'1曲なら、まぢでがんばれる！' },
@@ -13902,7 +13914,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'kyuko-mua-c1', pair:['kyuko', 'mua'], lv:1, scene:'any', lines:[
     { who:'mua', e:'troubled', t:'{c}、育成でダイヤ使うか迷ってる〜' },
     { who:'kyuko', e:'normal', t:'急ぎじゃないなら、待ってもいいと思うよぉ' },
-    { who:'kyuko', e:'happy', t:'ブリーダーはどう思う？' },
+    { who:'kyuko', e:'happy', t:'{name}はどう思う？' },
   ], choice:[
     { label:'今すぐ使う', reply:[
       { who:'mua', e:'excited', t:'だよね！ 思い立ったら今ぢゃん！' },
@@ -13920,7 +13932,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'mua-sorashido-c1', pair:['mua', 'sorashido'], lv:1, scene:'any', lines:[
     { who:'sorashido', e:'excited', t:'{c}、勝率を上げる表を作ったぜ・・・！ 3ページだ！' },
     { who:'mua', e:'surprise', t:'3ページも！？' },
-    { who:'sorashido', e:'happy', t:'ブリーダー、どれから読む？笑' },
+    { who:'sorashido', e:'happy', t:'{name}、どれから読む？笑' },
   ], choice:[
     { label:'1ページ目から', reply:[
       { who:'sorashido', e:'happy', t:'まじめだな！ うれしいぜ笑' },
@@ -13938,7 +13950,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'erubin-mua-c1', pair:['erubin', 'mua'], lv:1, scene:'any', lines:[
     { who:'erubin', e:'normal', t:'{c}、紅茶とココア、どっちがいいかな？' },
     { who:'mua', e:'happy', t:'{c}がいれてくれるなら、どっちもうれしい！' },
-    { who:'erubin', e:'happy', t:'ブリーダーは、どっちが好きかな？' },
+    { who:'erubin', e:'happy', t:'{name}は、どっちが好きかな？' },
   ], choice:[
     { label:'紅茶', reply:[
       { who:'erubin', e:'wink', t:'いいね。ちょうどいい葉っぱがあるんだ' },
@@ -13956,7 +13968,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'kiki-momosuke-c1', pair:['kiki', 'momosuke'], lv:1, scene:'any', lines:[
     { who:'momosuke', e:'excited', t:'{c}！ マスモンの育て方で勝負しよ！！' },
     { who:'kiki', e:'happy', t:'いいですよ。私はもちろん、ちから全振りでつ♪' },
-    { who:'momosuke', e:'wink', t:'ブリーダーはどっちの育て方が好き！？' },
+    { who:'momosuke', e:'wink', t:'{name}はどっちの育て方が好き！？' },
   ], choice:[
     { label:'ちから全振り', reply:[
       { who:'kiki', e:'happy', t:'ありがとうございます♪ 倒される前に倒しましょう' },
@@ -13974,10 +13986,10 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'dra-kiki-c1', pair:['dra', 'kiki'], lv:1, scene:'any', lines:[
     { who:'dra', e:'normal', t:'{c}、守りも少しは上げたほうがいいって' },
     { who:'kiki', e:'happy', t:'{c}、倒される前に倒せばいいんですよ♪' },
-    { who:'dra', e:'troubled', t:'ブリーダー、どっちが正しいと思う？' },
+    { who:'dra', e:'troubled', t:'{name}、どっちが正しいと思う？' },
   ], choice:[
     { label:'攻撃が大事', reply:[
-      { who:'kiki', e:'wink', t:'ほら、ブリーダーさんもそう言ってます♪' },
+      { who:'kiki', e:'wink', t:'ほら、{name}もそう言ってます♪' },
       { who:'dra', e:'crying', t:'おでの負けかよ〜' },
     ] },
     { label:'守りが大事', reply:[
@@ -13992,7 +14004,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'atsu-kiki-c1', pair:['atsu', 'kiki'], lv:1, scene:'any', lines:[
     { who:'atsu', e:'happy', t:'{c}、次の対戦、どっちが先に攻める？笑' },
     { who:'kiki', e:'happy', t:'もちろん私でつ、{c}' },
-    { who:'atsu', e:'wink', t:'ブリーダー、決めてよ笑' },
+    { who:'atsu', e:'wink', t:'{name}、決めてよ笑' },
   ], choice:[
     { label:'ききが先', reply:[
       { who:'kiki', e:'happy', t:'では、ちから全開でいってきまつ♪' },
@@ -14010,7 +14022,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'kiki-kyuko-c1', pair:['kiki', 'kyuko'], lv:1, scene:'any', lines:[
     { who:'kyuko', e:'normal', t:'{c}、今日の作戦、攻めと守りどっちでいく？' },
     { who:'kiki', e:'happy', t:'攻めましょう、{c}♪' },
-    { who:'kyuko', e:'happy', t:'ブリーダーはどっちがいい？笑' },
+    { who:'kyuko', e:'happy', t:'{name}はどっちがいい？笑' },
   ], choice:[
     { label:'攻め', reply:[
       { who:'kiki', e:'excited', t:'やりましたね♪' },
@@ -14028,7 +14040,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'kiki-sorashido-c1', pair:['kiki', 'sorashido'], lv:1, scene:'any', lines:[
     { who:'sorashido', e:'excited', t:'{c}、攻撃全振りのダメージ、もう一回計算するか？' },
     { who:'kiki', e:'happy', t:'お願いしまつ、{c}' },
-    { who:'sorashido', e:'happy', t:'ブリーダー、何回ぶん計算する？笑' },
+    { who:'sorashido', e:'happy', t:'{name}、何回ぶん計算する？笑' },
   ], choice:[
     { label:'1回でいい', reply:[
       { who:'sorashido', e:'wink', t:'了解、一発で出すぜ・・・！' },
@@ -14046,7 +14058,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'erubin-kiki-c1', pair:['erubin', 'kiki'], lv:1, scene:'any', lines:[
     { who:'erubin', e:'normal', t:'{c}、お茶のおかわり、いるかな？' },
     { who:'kiki', e:'happy', t:'はい、いただきまつ、{c}' },
-    { who:'erubin', e:'happy', t:'ブリーダーも、いっしょにどうかな？' },
+    { who:'erubin', e:'happy', t:'{name}も、いっしょにどうかな？' },
   ], choice:[
     { label:'いただきます', reply:[
       { who:'erubin', e:'happy', t:'よかった。三人でお茶にしようね' },
@@ -14064,7 +14076,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'dra-momosuke-c1', pair:['dra', 'momosuke'], lv:1, scene:'any', lines:[
     { who:'dra', e:'wink', t:'{c}、今日のおでのギャグ、採点してくれよ' },
     { who:'momosuke', e:'wink', t:'いいよ〜？ でも{c}、もも辛口だからねw' },
-    { who:'momosuke', e:'happy', t:'ブリーダーも一緒に採点して！！' },
+    { who:'momosuke', e:'happy', t:'{name}も一緒に採点して！！' },
   ], choice:[
     { label:'100点', reply:[
       { who:'dra', e:'excited', t:'100点！？ やったぁ、えへへ' },
@@ -14082,7 +14094,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'atsu-momosuke-c1', pair:['atsu', 'momosuke'], lv:1, scene:'any', lines:[
     { who:'atsu', e:'wink', t:'{c}、次のライブ、俺のほうが盛り上げられるかもね笑' },
     { who:'momosuke', e:'angry', t:'は！？ ライブはももの担当だし！！' },
-    { who:'momosuke', e:'excited', t:'ブリーダー、どっちのほうが盛り上がると思う！？' },
+    { who:'momosuke', e:'excited', t:'{name}、どっちのほうが盛り上がると思う！？' },
   ], choice:[
     { label:'もも', reply:[
       { who:'momosuke', e:'excited', t:'でしょ！！ 当然！！' },
@@ -14100,7 +14112,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'kyuko-momosuke-c1', pair:['kyuko', 'momosuke'], lv:1, scene:'any', lines:[
     { who:'momosuke', e:'excited', t:'{c}、ドリーミィとメタルナー、どっちがかわいい！？' },
     { who:'kyuko', e:'troubled', t:'えぇ、どっちもかわいいよぉ笑' },
-    { who:'momosuke', e:'wink', t:'ブリーダーはどっち！？' },
+    { who:'momosuke', e:'wink', t:'{name}はどっち！？' },
   ], choice:[
     { label:'ドリーミィ', reply:[
       { who:'kyuko', e:'happy', t:'ありがとん笑 ドリーミィも喜んでるよ' },
@@ -14118,7 +14130,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'momosuke-sorashido-c1', pair:['momosuke', 'sorashido'], lv:1, scene:'any', lines:[
     { who:'sorashido', e:'happy', t:'{c}、ミスを減らす練習メニューを作ったぜ笑' },
     { who:'momosuke', e:'surprise', t:'え、もものために！？' },
-    { who:'sorashido', e:'wink', t:'ブリーダー、どれくらいやらせる？笑' },
+    { who:'sorashido', e:'wink', t:'{name}、どれくらいやらせる？笑' },
   ], choice:[
     { label:'1日10分', reply:[
       { who:'momosuke', e:'happy', t:'それならできる！！' },
@@ -14130,13 +14142,13 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
     ] },
     { label:'楽しくやる', reply:[
       { who:'sorashido', e:'excited', t:'それが一番だぜ・・・！' },
-      { who:'momosuke', e:'excited', t:'さすがブリーダー！！' },
+      { who:'momosuke', e:'excited', t:'さすが{name}！！' },
     ] },
   ] },
   { id:'erubin-momosuke-c1', pair:['erubin', 'momosuke'], lv:1, scene:'any', lines:[
     { who:'erubin', e:'normal', t:'{c}、今日はどんな話をしてくれるのかな？' },
     { who:'momosuke', e:'excited', t:'{c}、話したいこといっぱいある！！' },
-    { who:'momosuke', e:'wink', t:'ブリーダー、どの話がいいと思う！？' },
+    { who:'momosuke', e:'wink', t:'{name}、どの話がいいと思う！？' },
   ], choice:[
     { label:'ライブの話', reply:[
       { who:'momosuke', e:'excited', t:'だよね！！ じゃあライブの話から！！' },
@@ -14154,7 +14166,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'atsu-dra-c1', pair:['atsu', 'dra'], lv:1, scene:'any', lines:[
     { who:'atsu', e:'happy', t:'{c}、今日のカードの対戦、どっちのデッキでいく？笑' },
     { who:'dra', e:'happy', t:'おでのいつものやつだな、{c}' },
-    { who:'atsu', e:'wink', t:'ブリーダーが決めて笑' },
+    { who:'atsu', e:'wink', t:'{name}が決めて笑' },
   ], choice:[
     { label:'ドラのデッキ', reply:[
       { who:'dra', e:'excited', t:'おう、任せとけ、くさ' },
@@ -14172,7 +14184,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'dra-kyuko-c1', pair:['dra', 'kyuko'], lv:1, scene:'any', lines:[
     { who:'kyuko', e:'normal', t:'{c}、そのグジラ、育て方を変えたら強くなると思う' },
     { who:'dra', e:'surprise', t:'まじか、{c}。教えてくれよ' },
-    { who:'kyuko', e:'happy', t:'ブリーダーも聞く？笑' },
+    { who:'kyuko', e:'happy', t:'{name}も聞く？笑' },
   ], choice:[
     { label:'聞く', reply:[
       { who:'kyuko', e:'wink', t:'おけ！ すばやさを少し上げるのがコツだよぉ' },
@@ -14190,7 +14202,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'dra-sorashido-c1', pair:['dra', 'sorashido'], lv:1, scene:'any', lines:[
     { who:'sorashido', e:'excited', t:'{c}、昨日の対戦、20ページの表にしたぜ・・・！' },
     { who:'dra', e:'surprise', t:'20ページ…{c}、まじかよ' },
-    { who:'sorashido', e:'happy', t:'ブリーダー、読む？笑' },
+    { who:'sorashido', e:'happy', t:'{name}、読む？笑' },
   ], choice:[
     { label:'全部読む', reply:[
       { who:'sorashido', e:'excited', t:'うぉぉぉ！ ありがとう笑' },
@@ -14208,7 +14220,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'dra-erubin-c1', pair:['dra', 'erubin'], lv:1, scene:'any', lines:[
     { who:'dra', e:'wink', t:'{c}、デュラハンのカード、ちょっと貸してくれよ' },
     { who:'erubin', e:'troubled', t:'えぇ、{c}、大事にしてるんだよね…笑' },
-    { who:'erubin', e:'normal', t:'ブリーダーは、どうしたらいいと思うかな？' },
+    { who:'erubin', e:'normal', t:'{name}は、どうしたらいいと思うかな？' },
   ], choice:[
     { label:'貸してあげる', reply:[
       { who:'erubin', e:'happy', t:'じゃあ、大事に使ってね' },
@@ -14226,7 +14238,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'atsu-kyuko-c1', pair:['atsu', 'kyuko'], lv:1, scene:'any', lines:[
     { who:'kyuko', e:'normal', t:'{c}、次のランキング、どっちが上に行くか勝負しよ' },
     { who:'atsu', e:'wink', t:'いいよ、{c}。負けないけど笑' },
-    { who:'kyuko', e:'happy', t:'ブリーダーはどっちが勝つと思う？' },
+    { who:'kyuko', e:'happy', t:'{name}はどっちが勝つと思う？' },
   ], choice:[
     { label:'きゅうこ', reply:[
       { who:'kyuko', e:'excited', t:'ありがとん！ がんばる🤣' },
@@ -14244,7 +14256,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'atsu-sorashido-c1', pair:['atsu', 'sorashido'], lv:1, scene:'any', lines:[
     { who:'sorashido', e:'excited', t:'{c}、HELLのノーツ、全部数えてきたぜ・・・！' },
     { who:'atsu', e:'happy', t:'{c}、また数えたの？笑' },
-    { who:'sorashido', e:'happy', t:'ブリーダー、何個あったと思う？笑' },
+    { who:'sorashido', e:'happy', t:'{name}、何個あったと思う？笑' },
   ], choice:[
     { label:'1000個くらい', reply:[
       { who:'sorashido', e:'wink', t:'いい読みだぜ・・・！' },
@@ -14262,7 +14274,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'atsu-erubin-c1', pair:['atsu', 'erubin'], lv:1, scene:'any', lines:[
     { who:'erubin', e:'normal', t:'{c}、今日はちょっと休んだほうがいいかな？' },
     { who:'atsu', e:'happy', t:'え、俺？ まだいけるよ笑' },
-    { who:'erubin', e:'happy', t:'ブリーダーは、どう思うかな？' },
+    { who:'erubin', e:'happy', t:'{name}は、どう思うかな？' },
   ], choice:[
     { label:'休もう', reply:[
       { who:'atsu', e:'troubled', t:'…分かった。少しだけね！' },
@@ -14280,7 +14292,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'kyuko-sorashido-c1', pair:['kyuko', 'sorashido'], lv:1, scene:'any', lines:[
     { who:'sorashido', e:'happy', t:'{c}、育成の計算、手でやるか機械でやるか…' },
     { who:'kyuko', e:'normal', t:'{c}、どっちでもいいと思うよぉ' },
-    { who:'sorashido', e:'wink', t:'ブリーダーならどうする？笑' },
+    { who:'sorashido', e:'wink', t:'{name}ならどうする？笑' },
   ], choice:[
     { label:'手で計算', reply:[
       { who:'sorashido', e:'excited', t:'だよな！ 手で計算するのが楽しいんだぜ・・・！' },
@@ -14298,7 +14310,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'erubin-kyuko-c1', pair:['erubin', 'kyuko'], lv:1, scene:'any', lines:[
     { who:'erubin', e:'normal', t:'{c}、夜ふかしは体に悪いよ？' },
     { who:'kyuko', e:'troubled', t:'{c}、分かってるけど、育成が楽しくてぇ😭' },
-    { who:'erubin', e:'happy', t:'ブリーダーは、どう思うかな？' },
+    { who:'erubin', e:'happy', t:'{name}は、どう思うかな？' },
   ], choice:[
     { label:'早く寝よう', reply:[
       { who:'kyuko', e:'troubled', t:'…おけ、今日は早く寝る' },
@@ -14316,7 +14328,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'erubin-sorashido-c1', pair:['erubin', 'sorashido'], lv:1, scene:'any', lines:[
     { who:'sorashido', e:'excited', t:'{c}、新しい表、どこから説明しよう！' },
     { who:'erubin', e:'happy', t:'{c}が話しやすいところからでいいよ' },
-    { who:'sorashido', e:'happy', t:'ブリーダー、どこから聞きたい？笑' },
+    { who:'sorashido', e:'happy', t:'{name}、どこから聞きたい？笑' },
   ], choice:[
     { label:'結論から', reply:[
       { who:'sorashido', e:'wink', t:'結論、攻めたほうが勝つぜ・・・！' },
@@ -14412,11 +14424,11 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
     { who:'erubin', e:'normal', t:'{c}、みんなが楽しく遊べることかな' },
   ] },
   { id:'atsu-mua-w-battle', pair:['atsu', 'mua'], lv:1, scene:'any', when:'battle', lines:[
-    { who:'atsu', e:'happy', t:'{c}、今日のブリーダーのバトル見た？笑' },
+    { who:'atsu', e:'happy', t:'{c}、今日の{name}のバトル見た？笑' },
     { who:'mua', e:'excited', t:'見た見た！ {c}、けっこういい動きだったよね！' },
   ] },
   { id:'dra-kiki-w-battle', pair:['dra', 'kiki'], lv:1, scene:'any', when:'battle', lines:[
-    { who:'dra', e:'normal', t:'{c}、今日のブリーダー、攻めてたな' },
+    { who:'dra', e:'normal', t:'{c}、今日の{name}、攻めてたな' },
     { who:'kiki', e:'happy', t:'はい、{c}。ちから全開でしたね♪' },
   ] },
   { id:'momosuke-sorashido-w-battle', pair:['momosuke', 'sorashido'], lv:1, scene:'any', when:'battle', lines:[
@@ -14424,11 +14436,11 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
     { who:'momosuke', e:'wink', t:'{c}、はや！！w' },
   ] },
   { id:'erubin-kyuko-w-battle', pair:['erubin', 'kyuko'], lv:1, scene:'any', when:'battle', lines:[
-    { who:'erubin', e:'happy', t:'{c}、今日のブリーダーのバトル、落ち着いてたね' },
+    { who:'erubin', e:'happy', t:'{c}、今日の{name}のバトル、落ち着いてたね' },
     { who:'kyuko', e:'normal', t:'{c}、判断がよかったよねぇ' },
   ] },
   { id:'momosuke-mua-w-clear', pair:['momosuke', 'mua'], lv:1, scene:'any', when:'clear', lines:[
-    { who:'mua', e:'excited', t:'{c}、今日ブリーダーがチャレンジクリアしたって！' },
+    { who:'mua', e:'excited', t:'{c}、今日{name}がチャレンジクリアしたって！' },
     { who:'momosuke', e:'excited', t:'{c}、ほんと！？ すごすぎ！！' },
   ] },
   { id:'atsu-kiki-w-clear', pair:['atsu', 'kiki'], lv:1, scene:'any', when:'clear', lines:[
@@ -14436,7 +14448,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
     { who:'kiki', e:'happy', t:'{c}、私もでつ。うれしいですね♪' },
   ] },
   { id:'dra-erubin-w-clear', pair:['dra', 'erubin'], lv:1, scene:'any', when:'clear', lines:[
-    { who:'erubin', e:'happy', t:'{c}、ブリーダー、クリアしたんだって' },
+    { who:'erubin', e:'happy', t:'{c}、{name}、クリアしたんだって' },
     { who:'dra', e:'excited', t:'{c}、おでもうれしいわ、えへへ' },
   ] },
   { id:'kyuko-sorashido-w-clear', pair:['kyuko', 'sorashido'], lv:1, scene:'any', when:'clear', lines:[
@@ -14444,7 +14456,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
     { who:'kyuko', e:'happy', t:'{c}、それ作るの！？笑 いいねぇ' },
   ] },
   { id:'kyuko-mua-w-enhance', pair:['kyuko', 'mua'], lv:1, scene:'any', when:'enhance', lines:[
-    { who:'kyuko', e:'normal', t:'{c}、今日のブリーダーの強化、いい選び方だった' },
+    { who:'kyuko', e:'normal', t:'{c}、今日の{name}の強化、いい選び方だった' },
     { who:'mua', e:'happy', t:'{c}がほめるなら間違いないぢゃん！' },
   ] },
   { id:'kiki-sorashido-w-enhance', pair:['kiki', 'sorashido'], lv:1, scene:'any', when:'enhance', lines:[
@@ -14453,22 +14465,22 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   ] },
   { id:'erubin-momosuke-w-enhance', pair:['erubin', 'momosuke'], lv:1, scene:'any', when:'enhance', lines:[
     { who:'momosuke', e:'excited', t:'{c}、マスモンがまた強くなってた！！' },
-    { who:'erubin', e:'happy', t:'{c}、ブリーダーは毎日がんばってるもんね' },
+    { who:'erubin', e:'happy', t:'{c}、{name}は毎日がんばってるもんね' },
   ] },
   { id:'atsu-dra-w-enhance', pair:['atsu', 'dra'], lv:1, scene:'any', when:'enhance', lines:[
     { who:'dra', e:'normal', t:'{c}、今日の強化、悪くないな' },
     { who:'atsu', e:'wink', t:'{c}、もう一段いけるよね笑' },
   ] },
   { id:'dra-mua-w-streak', pair:['dra', 'mua'], lv:1, scene:'any', when:'streak', lines:[
-    { who:'mua', e:'excited', t:'{c}、ブリーダー、毎日来てくれてるね！' },
+    { who:'mua', e:'excited', t:'{c}、{name}、毎日来てくれてるね！' },
     { who:'dra', e:'happy', t:'{c}、おでもうれしいわ。えへへ' },
   ] },
   { id:'kiki-momosuke-w-streak', pair:['kiki', 'momosuke'], lv:1, scene:'any', when:'streak', lines:[
-    { who:'momosuke', e:'excited', t:'{c}、ブリーダー、連続で来てるよ！！' },
+    { who:'momosuke', e:'excited', t:'{c}、{name}、連続で来てるよ！！' },
     { who:'kiki', e:'happy', t:'{c}、ほんとですね。ありがとうございまつ♪' },
   ] },
   { id:'atsu-kyuko-w-streak', pair:['atsu', 'kyuko'], lv:1, scene:'any', when:'streak', lines:[
-    { who:'atsu', e:'happy', t:'{c}、ブリーダー、毎日えらいね笑' },
+    { who:'atsu', e:'happy', t:'{c}、{name}、毎日えらいね笑' },
     { who:'kyuko', e:'wink', t:'{c}、続けるのが一番大事だからねぇ笑' },
   ] },
   { id:'erubin-sorashido-w-streak', pair:['erubin', 'sorashido'], lv:1, scene:'any', when:'streak', lines:[
@@ -15002,13 +15014,13 @@ const ASSISTANT_PEER_EVENT_LV = 3;
 const ASSISTANT_PEER_EVENT_BOOST_LV = 6;
 const ASSISTANT_PEER_EVENTS = Object.freeze([
   { id:'kiki-mua-ev1', pair:['kiki', 'mua'], title:'クッキー対決', lines:[
-    { who:'mua', e:'excited', t:'{c}、クッキー対決しよ！ ブリーダーに食べ比べてもらうの！' },
+    { who:'mua', e:'excited', t:'{c}、クッキー対決しよ！ {name}に食べ比べてもらうの！' },
     { who:'kiki', e:'happy', t:'いいですね♪ 負けませんよ' },
     { who:'mua', e:'happy', t:'あたしのは、いちごチョコをたっぷりのせたやつ！ 見た目もかわいいっしょ♪' },
     { who:'kiki', e:'normal', t:'私のは、バターをしっかりきかせた、さくさくのプレーンでつ' },
     { who:'mua', e:'wink', t:'{c}、シンプルで攻めてきたね〜' },
     { who:'kiki', e:'wink', t:'シンプルがいちばん強いんでつよ♪' },
-    { who:'kiki', e:'normal', t:'ブリーダーさん、どちらがおいしかったですか？' },
+    { who:'kiki', e:'normal', t:'{name}、どちらがおいしかったですか？' },
   ], choice:[
     { label:'みゅあのいちごチョコ', reply:[
       { who:'mua', e:'excited', t:'やったー！ かわいいは正義ぢゃん♪' },
@@ -15019,7 +15031,7 @@ const ASSISTANT_PEER_EVENTS = Object.freeze([
       { who:'mua', e:'troubled', t:'え〜！ …でも{c}のさくさく、まぢおいしかったもん' },
     ] },
     { label:'どっちも最高', reply:[
-      { who:'mua', e:'surprise', t:'引き分け！？ ブリーダーやさし〜！' },
+      { who:'mua', e:'surprise', t:'引き分け！？ {name}やさし〜！' },
       { who:'kiki', e:'wink', t:'では、次は2人で一緒に焼きましょうか♪' },
     ] },
   ] },
@@ -15030,7 +15042,7 @@ const ASSISTANT_PEER_EVENTS = Object.freeze([
     { who:'dra', e:'excited', t:'よーし、いくぞ！ …うぉっ、速いな、この曲' },
     { who:'momosuke', e:'surprise', t:'えっ、{c}、意外とうまい！？' },
     { who:'dra', e:'wink', t:'えへへ、こっそり練習してたからな' },
-    { who:'momosuke', e:'normal', t:'ブリーダー、見てたでしょ！？ どっちがうまかった！？' },
+    { who:'momosuke', e:'normal', t:'{name}、見てたでしょ！？ どっちがうまかった！？' },
   ], choice:[
     { label:'ももの勝ち', reply:[
       { who:'momosuke', e:'excited', t:'やったー！！ ジュースごちそうさま♡' },
@@ -15052,7 +15064,7 @@ const ASSISTANT_PEER_EVENTS = Object.freeze([
     { who:'kyuko', e:'wink', t:'表まで作ってきたの？ さすが{c}だねぇ' },
     { who:'sorashido', e:'wink', t:'数字はうそつかないからな！' },
     { who:'kyuko', e:'normal', t:'でも相手が守りなら、攻めきれないこともあるよぉ' },
-    { who:'sorashido', e:'normal', t:'ブリーダー、判定たのむぜ・・・！ どっちの作戦が好きだ？' },
+    { who:'sorashido', e:'normal', t:'{name}、判定たのむぜ・・・！ どっちの作戦が好きだ？' },
   ], choice:[
     { label:'きゅうこの守り', reply:[
       { who:'kyuko', e:'happy', t:'ありがとん笑 じっくり型もいいでしょ〜' },
@@ -15072,8 +15084,8 @@ const ASSISTANT_PEER_EVENTS = Object.freeze([
     { who:'dra', e:'wink', t:'おではもちろんグジラだな。あの大きさ、たまらないぞ' },
     { who:'atsu', e:'excited', t:'俺はドラゴン一択！ 翼を広げたところ、最高でしょ！' },
     { who:'dra', e:'happy', t:'グジラのしっぽの一撃、見たことあるか？ 迫力すごいからな' },
-    { who:'atsu', e:'wink', t:'てか、決めてもらおうぜ。ブリーダーに！' },
-    { who:'dra', e:'normal', t:'そうだな。ブリーダー、どっちがかっこいい？' },
+    { who:'atsu', e:'wink', t:'てか、決めてもらおうぜ。{name}に！' },
+    { who:'dra', e:'normal', t:'そうだな。{name}、どっちがかっこいい？' },
   ], choice:[
     { label:'ドラゴン', reply:[
       { who:'atsu', e:'excited', t:'だよね！ ドラゴン最高笑' },
@@ -15095,7 +15107,7 @@ const ASSISTANT_PEER_EVENTS = Object.freeze([
     { who:'kiki', e:'normal', t:'私は、安いものをしっかり選んできましたよ' },
     { who:'erubin', e:'happy', t:'俺は、おいしそうなのを選んだかな。少し高かったけどね' },
     { who:'kiki', e:'wink', t:'ふふ、作戦がちがいまつね♪' },
-    { who:'erubin', e:'normal', t:'ブリーダー、どっちのおつかいがいいと思う？' },
+    { who:'erubin', e:'normal', t:'{name}、どっちのおつかいがいいと思う？' },
   ], choice:[
     { label:'ききのお得な買い物', reply:[
       { who:'kiki', e:'happy', t:'やりくり上手でしょう？ えっへん♪' },
@@ -15117,7 +15129,7 @@ const ASSISTANT_PEER_EVENTS = Object.freeze([
     { who:'mua', e:'happy', t:'あたしは、ジャンプしてピースで決めるよ♪' },
     { who:'momosuke', e:'excited', t:'せーの！！' },
     { who:'mua', e:'surprise', t:'{c}のターン、まぢキレッキレぢゃん！' },
-    { who:'momosuke', e:'normal', t:'ブリーダー、どっちのダンスがよかった！？' },
+    { who:'momosuke', e:'normal', t:'{name}、どっちのダンスがよかった！？' },
   ], choice:[
     { label:'ももの回転ウインク', reply:[
       { who:'momosuke', e:'excited', t:'やったー！！ アイドルの本気だよ♡' },
@@ -15135,11 +15147,11 @@ const ASSISTANT_PEER_EVENTS = Object.freeze([
   { id:'atsu-kyuko-ev1', pair:['atsu', 'kyuko'], title:'早押しクイズ', lines:[
     { who:'kyuko', e:'happy', t:'{c}、モンスタークイズで早押し勝負しよぉ' },
     { who:'atsu', e:'wink', t:'いいね！ 負けた方がジュースね笑' },
-    { who:'kyuko', e:'normal', t:'ほい！ 問題はブリーダーに出してもらお〜' },
+    { who:'kyuko', e:'normal', t:'ほい！ 問題は{name}に出してもらお〜' },
     { who:'atsu', e:'excited', t:'てか、もう指が準備できてる笑' },
     { who:'kyuko', e:'wink', t:'俺、図鑑は全部読んでるからねぇ' },
     { who:'atsu', e:'happy', t:'まじか笑 でもスピードなら負けない！' },
-    { who:'kyuko', e:'normal', t:'ブリーダー、どっちが早かったぁ？' },
+    { who:'kyuko', e:'normal', t:'{name}、どっちが早かったぁ？' },
   ], choice:[
     { label:'あつが早かった', reply:[
       { who:'atsu', e:'excited', t:'よっしゃ！ スピード勝ち笑' },
@@ -15161,7 +15173,7 @@ const ASSISTANT_PEER_EVENTS = Object.freeze([
     { who:'dra', e:'surprise', t:'こっちもきたぞ！ …うぉっ、重い！' },
     { who:'sorashido', e:'surprise', t:'まさかの大物！？' },
     { who:'dra', e:'wink', t:'えへへ、長靴だったな' },
-    { who:'sorashido', e:'normal', t:'ブリーダー、これどっちの勝ちだ・・・？' },
+    { who:'sorashido', e:'normal', t:'{name}、これどっちの勝ちだ・・・？' },
   ], choice:[
     { label:'ソラシドの魚', reply:[
       { who:'sorashido', e:'excited', t:'よっしゃー！ 計算の勝利だぜ笑' },
@@ -15183,7 +15195,7 @@ const ASSISTANT_PEER_EVENTS = Object.freeze([
     { who:'erubin', e:'surprise', t:'わ、すごく明るい部屋になったね' },
     { who:'momosuke', e:'happy', t:'{c}のも、かっこいいじゃん！！ カードがきらきらしてる！' },
     { who:'erubin', e:'happy', t:'ありがとう。並べるの、楽しかったよ' },
-    { who:'momosuke', e:'normal', t:'ブリーダー、どっちのお部屋がいい！？' },
+    { who:'momosuke', e:'normal', t:'{name}、どっちのお部屋がいい！？' },
   ], choice:[
     { label:'ももの部屋', reply:[
       { who:'momosuke', e:'excited', t:'やったー！！ かわいいは最強！！' },
@@ -15205,7 +15217,7 @@ const ASSISTANT_PEER_EVENTS = Object.freeze([
     { who:'kiki', e:'normal', t:'ゴーレムは、ごつごつ感が大事なんでつ' },
     { who:'kyuko', e:'surprise', t:'うわ、{c}のゴーレム、すごい迫力…' },
     { who:'kiki', e:'wink', t:'ふふ。{c}のニャーも、ふわふわでかわいいですよ♪' },
-    { who:'kiki', e:'normal', t:'ブリーダーさん、どちらの絵が好きですか？' },
+    { who:'kiki', e:'normal', t:'{name}、どちらの絵が好きですか？' },
   ], choice:[
     { label:'ききのゴーレム', reply:[
       { who:'kiki', e:'happy', t:'ありがとうございまつ♪ ごつごつに力を入れました' },
@@ -15227,7 +15239,7 @@ const ASSISTANT_PEER_EVENTS = Object.freeze([
     { who:'sorashido', e:'happy', t:'俺は夕方の浜で、シルエットを撮ったぜ。でーじきれいだぜ笑' },
     { who:'mua', e:'surprise', t:'え、それエモすぎぢゃん…' },
     { who:'sorashido', e:'wink', t:'{c}のモッチー写真も、反則級にかわいいぜ' },
-    { who:'mua', e:'normal', t:'ブリーダー、どっちの写真がいい？' },
+    { who:'mua', e:'normal', t:'{name}、どっちの写真がいい？' },
   ], choice:[
     { label:'もちもちほっぺ', reply:[
       { who:'mua', e:'excited', t:'やった〜♪ モッチーのかわいさの勝ち！' },
@@ -15247,8 +15259,8 @@ const ASSISTANT_PEER_EVENTS = Object.freeze([
     { who:'atsu', e:'excited', t:'お、見せて！ 俺のも見せるわ笑' },
     { who:'erubin', e:'normal', t:'俺のは、デュラハンを真ん中にした守りのデッキだよ' },
     { who:'atsu', e:'happy', t:'俺はドラゴンで一気にいく型！ とりあえず攻める笑' },
-    { who:'erubin', e:'wink', t:'{c}らしいね。どっちが好きか、ブリーダーに見てもらおうか' },
-    { who:'atsu', e:'wink', t:'いいね！ ブリーダー、どっちのデッキが好き？' },
+    { who:'erubin', e:'wink', t:'{c}らしいね。どっちが好きか、{name}に見てもらおうか' },
+    { who:'atsu', e:'wink', t:'いいね！ {name}、どっちのデッキが好き？' },
   ], choice:[
     { label:'えるびんの守り', reply:[
       { who:'erubin', e:'happy', t:'ありがとう。組むのに時間かけたから、うれしいな' },
@@ -15479,6 +15491,208 @@ const ASSISTANT_PEER_TRIO_TALKS = Object.freeze([
     { who:'erubin', e:'happy', t:'まあいいか。楽しければね' },
   ] },
 ]);
+
+// ---------- クイック・AUTO設定・裏周回の案内(2026-11-07 社長「モンバトのオート設定や他コンテンツのクイックの誘導やチュートリアルや説明をつけたい」) ----------
+// ★台詞はここ1か所だけ。形は { 助手id: { ページid: { e:表情, title:見出し, t:本文 } } }。
+//   ページが無い助手は、みゅあ(mua)の同じページで出す(quickGuideLine)。ページid を増やす・変えるときは
+//   src/parts/56-quick-guide.jsx の QUICK_GUIDE_PAGES も直す(検査 tools/assistant/quick-guide-check.js が突き合わせる)。
+//   {name} はプレイヤーの呼び方に置き換わる。モンスターを「子」と呼ばない。口調は docs/progress/assistant-peer/VOICE.md
+// ページid:
+//   tour.autoQuick … 村の案内(バトルのページのあと)
+//   g1.1〜g1.5 …… クイックの案内(バトルの選び方 → クイックの難易度えらび)
+//   g2.1〜g2.5 …… AUTO設定の案内(M/B管理 → AUTO設定)
+//   g3.1〜g3.3 …… 裏周回の案内・前半(クイックで∞にしたバトル画面)
+//   g3.4〜g3.5 …… 裏周回の案内・曲えらび / g3.6 … 裏周回の案内・モードえらび
+//   auto.first …… チャレンジ等のふつうのバトルの1戦目(AUTOボタン)
+//   card.auto …… MFバトルカードのデッキえらびで🤖オートを選んだとき
+//   nudge.home / nudge.battle … クイックをまだ使っていない人への誘導(HOME / バトルの選び方)
+const ASSISTANT_QUICK_GUIDE_LINES = {
+  mua: {
+    'tour.autoQuick': { e:'excited', title:'AUTOとクイック', t:'バトルには、勝手に戦ってくれる「AUTO」と、さくさく育てる「クイック」もあるよ♪ クイックが使えるようになったら、裏で周回させる方法も教えるね！' },
+    'g1.1': { e:'excited', title:'クイックで遊べるよ', t:'クイックで遊べるようになったよ！ 強化を選ばないぶん1周が速くて、経験値とダイヤが1.5倍なんだ♪' },
+    'g1.2': { e:'normal',  title:'遊べる難易度', t:'チャレンジでクリアした難易度が、ここで遊べるの。上をクリアすれば、上も開くよ' },
+    'g1.3': { e:'happy',   title:'報酬方針', t:'「育成」「プシュケー優先」「ダイヤ優先」から、ほしい物を選んでね。スキップチケットは「育成」のときだけ使えるよ' },
+    'g1.4': { e:'wink',    title:'AUTOをもう1回で∞', t:'バトルが始まったら、AUTOをもう1回押すと「∞」。10WAVEが終わっても、ずっと周回してくれるの！' },
+    'g1.5': { e:'happy',   title:'記録は気にしないでOK', t:'クイックの記録はランキングに載らないし、チャレンジの自己ベストも変わらないよ。周回の決めごとは「AUTO設定」でできるから、見に行こ！' },
+    'g2.1': { e:'excited', title:'ここがAUTO設定', t:'ここがAUTO設定！ AUTOや∞周回のときの動き方を、まとめて決めておけるよ♪' },
+    'g2.2': { e:'normal',  title:'AUTO方針', t:'AUTOがどのカードを選ぶか。迷ったら「ランダム」、押し切りたいなら「火力重視」だよ' },
+    'g2.3': { e:'normal',  title:'供モン事前設定', t:'WAVE2・4・6で入る供モンを先に決めておけるの。AUTOのとき、勝手に入ってくれるよ' },
+    'g2.4': { e:'excited', title:'モンヒロビート中の周回', t:'いちばん大事なのがここ！ 勇者モン・配置・難易度を決めて「開いたら自動で始める」をONにすると、モンヒロビートを開くだけで裏の周回が始まるよ♪' },
+    'g2.5': { e:'happy',   title:'自動限界突破', t:'∞周回で上限まで育ったら、自動で限界突破してくれる設定。残しておくダイヤも決められるから安心してね' },
+    'g3.1': { e:'excited', title:'∞周回にしたね', t:'∞にしたね！ これで周回はずっと続くよ。しかも、モンヒロビートで遊んでるあいだも裏で回り続けるの♪' },
+    'g3.2': { e:'happy',   title:'モンヒロビートへ', t:'ここから移ると、周回を止めずにモンヒロビートを開けるよ。曲を最後まで叩くと、曲の長さぶんの周回も入るんだ' },
+    'g3.3': { e:'troubled', title:'止まるとき', t:'アプリを閉じたり別のアプリへ移ると、周回は止まっちゃうから気をつけてね…！' },
+    'g3.4': { e:'normal',  title:'周回の帯', t:'ここが周回の帯。タップすると、何周めか・どれだけ貯まったかが見られるよ。「⚔ バトルへ戻る」で様子も見に行けるの' },
+    'g3.5': { e:'wink',    title:'負けちゃったら', t:'もし裏の周回で負けちゃっても、帯の中の「⚔ 1周目から新しく始める」ですぐ始め直せるよ。止まっただけなら「周回を再開する」で続きからね。周回していないときは、ここに出る「裏でクイックの∞周回を始める」からも始められるよ♪' },
+    'g3.6': { e:'happy',   title:'やめるとき', t:'周回をやめてHOMEへ戻るときは、ここの「⏹ 終了」を押してね。そこまでのWAVEぶんの報酬はちゃんと入るよ♪' },
+    'auto.first': { e:'wink', title:'AUTO', t:'ここを押すと、あたしが決めた方針で勝手に戦うよ。方針はM/B管理の「AUTO設定」で変えられるの♪' },
+    'card.auto': { e:'happy', title:'オートで挑む', t:'オートは、戦術カードで勝手に戦ってくれるよ。ごほうびは1日3回まで手で戦う半分で、「⏩ 結果だけ見る」なら一瞬で終わるんだ♪' },
+    'nudge.home': { e:'wink', title:'クイック', t:'育てたいときはクイックが早いよ〜♪ モンヒロビートで遊んでる裏でも周回できるんだ！' },
+    'nudge.battle': { e:'happy', title:'クイック', t:'クイックなら経験値が1.5倍だよ。試してみる？' },
+  },
+  // ほかの助手はレフェリーくんが VOICE.md に合わせて書き入れる(ページが無いあいだは、みゅあの文で出る)
+  kiki: {
+    'tour.autoQuick': { e:'excited', title:'AUTOとクイック', t:'バトルには、自動で戦ってくれる「AUTO」と、さくさく育てられる「クイック」もありまつ♪ クイックが使えるようになったら、裏で周回させる方法もお教えしますね' },
+    'g1.1': { e:'excited', title:'クイックで遊べるよ', t:'クイックで遊べるようになりました！ 強化を選ばないぶん1周が速くて、経験値とダイヤが1.5倍なんです♪' },
+    'g1.2': { e:'normal', title:'遊べる難易度', t:'チャレンジでクリアした難易度が、ここで遊べます。上をクリアすれば、上も開きますよ' },
+    'g1.3': { e:'happy', title:'報酬方針', t:'「育成」「プシュケー優先」「ダイヤ優先」から、ほしい物を選んでくださいね。スキップチケットは「育成」のときだけ使えます' },
+    'g1.4': { e:'wink', title:'AUTOをもう1回で∞', t:'バトルが始まったら、AUTOをもう1回押すと「∞」です。10WAVEが終わっても、ずっと周回してくれますよ♪' },
+    'g1.5': { e:'happy', title:'記録は気にしないでOK', t:'クイックの記録はランキングに載りませんし、チャレンジの自己ベストも変わりません。周回の決めごとは「AUTO設定」でできるので、見に行きましょう♪' },
+    'g2.1': { e:'excited', title:'ここがAUTO設定', t:'ここがAUTO設定でつ。AUTOや∞周回のときの動き方を、まとめて決めておけますよ♪' },
+    'g2.2': { e:'normal', title:'AUTO方針', t:'AUTOがどのカードを選ぶかです。迷ったら「ランダム」、押し切りたいなら「火力重視」。私はもちろん火力重視でつ' },
+    'g2.3': { e:'normal', title:'供モン事前設定', t:'WAVE2・4・6で入る供モンを、先に決めておけます。AUTOのとき、自動で入ってくれますよ' },
+    'g2.4': { e:'excited', title:'モンヒロビート中の周回', t:'いちばん大事なのはここです。勇者モン・配置・難易度を決めて「開いたら自動で始める」をONにすると、モンヒロビートを開くだけで裏の周回が始まります♪' },
+    'g2.5': { e:'happy', title:'自動限界突破', t:'∞周回で上限まで育ったら、自動で限界突破してくれる設定です。残しておくダイヤも決められるので、安心してくださいね' },
+    'g3.1': { e:'excited', title:'∞周回にしたね', t:'∞にしましたね。これで周回はずっと続きます。しかも、モンヒロビートで遊んでいるあいだも止まらないんですよ♪' },
+    'g3.2': { e:'happy', title:'モンヒロビートへ', t:'ここから移ると、周回を止めずにモンヒロビートを開けます。曲を最後まで叩くと、曲の長さぶんの周回も入りますよ' },
+    'g3.3': { e:'troubled', title:'止まるとき', t:'アプリを閉じたり別のアプリへ移ると、周回は止まってしまいます。気をつけてくださいね…' },
+    'g3.4': { e:'normal', title:'周回の帯', t:'ここが周回の帯です。タップすると、何周めか・どれだけ貯まったかが見られます。「⚔ バトルへ戻る」で様子も見に行けますよ' },
+    'g3.5': { e:'wink', title:'負けちゃったら', t:'もし裏の周回で負けてしまっても、帯の中の「⚔ 1周目から新しく始める」ですぐ始め直せます。止まっただけなら「周回を再開する」で続きからです。周回していないときは、ここに出る「裏でクイックの∞周回を始める」からも始められますよ♪' },
+    'g3.6': { e:'happy', title:'やめるとき', t:'周回をやめてHOMEへ戻るときは、ここの「⏹ 終了」を押してください。そこまでのWAVEぶんの報酬は、ちゃんと入りまつ♪' },
+    'auto.first': { e:'wink', title:'AUTO', t:'ここを押すと、私が決めた方針で自動で戦います。方針はM/B管理の「AUTO設定」で変えられますよ♪' },
+    'card.auto': { e:'happy', title:'オートで挑む', t:'オートは、戦術カードで自動で戦ってくれます。ごほうびは1日3回まで手で戦う半分で、「⏩ 結果だけ見る」なら一瞬で終わりますよ♪' },
+    'nudge.home': { e:'wink', title:'クイック', t:'育てたいときはクイックが早いですよ♪ モンヒロビートで遊んでいる裏でも周回できるんです' },
+    'nudge.battle': { e:'happy', title:'クイック', t:'クイックなら経験値が1.5倍です。試してみますか？' },
+  },
+  momosuke: {
+    'tour.autoQuick': { e:'excited', title:'AUTOとクイック', t:'バトルには、勝手に戦ってくれる「AUTO」と、さくさく育てる「クイック」もあるんだよ！！ クイックが使えるようになったら、裏で周回させる方法も、ももが教えてあげる♡' },
+    'g1.1': { e:'excited', title:'クイックで遊べるよ', t:'クイックで遊べるようになったよ！！ 強化を選ばないぶん1周が速くて、経験値とダイヤが1.5倍なの♡' },
+    'g1.2': { e:'normal', title:'遊べる難易度', t:'チャレンジでクリアした難易度が、ここで遊べるんだよ。上をクリアすれば上も開くから、がんばってね♡' },
+    'g1.3': { e:'happy', title:'報酬方針', t:'「育成」「プシュケー優先」「ダイヤ優先」から、ほしい物を選んでね！ スキップチケットは「育成」のときだけだよ〜w' },
+    'g1.4': { e:'wink', title:'AUTOをもう1回で∞', t:'バトルが始まったら、AUTOをもう1回押すと「∞」！！ 10WAVEが終わっても、ずーっと周回してくれるんだよ♡' },
+    'g1.5': { e:'happy', title:'記録は気にしないでOK', t:'クイックの記録はランキングに載らないし、チャレンジの自己ベストも変わらないよ。周回の決めごとは「AUTO設定」でできるから、ももと見に行こ！！' },
+    'g2.1': { e:'excited', title:'ここがAUTO設定', t:'ここがAUTO設定！！ AUTOや∞周回のときの動き方、まとめて決めちゃお♡' },
+    'g2.2': { e:'normal', title:'AUTO方針', t:'AUTOがどのカードを選ぶか、だよ。迷ったら「ランダム」、押し切りたいなら「火力重視」。ももは断然、火力重視w' },
+    'g2.3': { e:'normal', title:'供モン事前設定', t:'WAVE2・4・6で入る供モンを、先に決めておけるの。AUTOのとき、勝手に入ってくれるよ♡' },
+    'g2.4': { e:'excited', title:'モンヒロビート中の周回', t:'いちばん大事なのはここ！！ 勇者モン・配置・難易度を決めて「開いたら自動で始める」をONにすると、モンヒロビートを開くだけで裏の周回が始まるんだよ♡' },
+    'g2.5': { e:'happy', title:'自動限界突破', t:'∞周回で上限まで育ったら、自動で限界突破してくれる設定！ 残しておくダイヤも決められるから、うっかりさんでも安心だねw' },
+    'g3.1': { e:'excited', title:'∞周回にしたね', t:'∞にしたね！！ これで周回はずっと続くよ。しかも、モンヒロビートで遊んでるあいだも止まらないの♡' },
+    'g3.2': { e:'happy', title:'モンヒロビートへ', t:'ここから移ると、周回を止めずにモンヒロビートを開けるよ！ 曲を最後まで叩くと、曲の長さぶんの周回も入るんだから♡' },
+    'g3.3': { e:'troubled', title:'止まるとき', t:'アプリを閉じたり別のアプリへ移ると、周回は止まっちゃうの！！ 気をつけてよね〜' },
+    'g3.4': { e:'normal', title:'周回の帯', t:'ここが周回の帯！ タップすると、何周めか・どれだけ貯まったかが見られるよ。「⚔ バトルへ戻る」で様子も見に行けるからね♡' },
+    'g3.5': { e:'wink', title:'負けちゃったら', t:'もし裏の周回で負けちゃっても、帯の中の「⚔ 1周目から新しく始める」ですぐ始め直せるよ！ 止まっただけなら「周回を再開する」で続きから。周回していないときは、ここに出る「裏でクイックの∞周回を始める」からも始められるんだよ♡' },
+    'g3.6': { e:'happy', title:'やめるとき', t:'周回をやめてHOMEへ戻るときは、ここの「⏹ 終了」を押してね！ そこまでのWAVEぶんの報酬は、ちゃんと入るよ♡' },
+    'auto.first': { e:'wink', title:'AUTO', t:'ここを押すと、ももが決めた方針で勝手に戦うよ！ 方針はM/B管理の「AUTO設定」で変えられるの♡' },
+    'card.auto': { e:'happy', title:'オートで挑む', t:'オートは、戦術カードで勝手に戦ってくれるよ！ ごほうびは1日3回まで手で戦う半分で、「⏩ 結果だけ見る」なら一瞬で終わるの♡' },
+    'nudge.home': { e:'wink', title:'クイック', t:'育てたいならクイックが早いよ〜w モンヒロビートで遊んでる裏でも周回できるんだから♡' },
+    'nudge.battle': { e:'happy', title:'クイック', t:'クイックなら経験値が1.5倍だよ！！ 試してみたら？♡' },
+  },
+  dra: {
+    'tour.autoQuick': { e:'excited', title:'AUTOとクイック', t:'バトルには、勝手に戦ってくれる「AUTO」と、さくさく育てる「クイック」もあるんだな。クイックが使えるようになったら、裏で周回させるやり方も教えてやるからな' },
+    'g1.1': { e:'excited', title:'クイックで遊べるよ', t:'クイックで遊べるようになったぞ！ 強化を選ばないぶん1周が速くて、経験値とダイヤが1.5倍なんだな。えへへ' },
+    'g1.2': { e:'normal', title:'遊べる難易度', t:'チャレンジでクリアした難易度が、ここで遊べるんだな。上をクリアすりゃ、上も開くからな' },
+    'g1.3': { e:'happy', title:'報酬方針', t:'「育成」「プシュケー優先」「ダイヤ優先」から、ほしい物を選ぶんだな。スキップチケットは「育成」のときしか使えないからな' },
+    'g1.4': { e:'wink', title:'AUTOをもう1回で∞', t:'バトルが始まったら、AUTOをもう1回押すと「∞」だな。10WAVEが終わっても、ずっと周回してくれるからな' },
+    'g1.5': { e:'happy', title:'記録は気にしないでOK', t:'クイックの記録はランキングに載らないし、チャレンジの自己ベストも変わらないぞ。周回の決めごとは「AUTO設定」でできるから、見に行くか！' },
+    'g2.1': { e:'excited', title:'ここがAUTO設定', t:'ここがAUTO設定だな。AUTOや∞周回のときの動き方を、まとめて決めておけるぞ' },
+    'g2.2': { e:'normal', title:'AUTO方針', t:'AUTOがどのカードを選ぶか、だな。迷ったら「ランダム」、押し切りたいなら「火力重視」がいいくさ' },
+    'g2.3': { e:'normal', title:'供モン事前設定', t:'WAVE2・4・6で入る供モンを、先に決めておけるんだな。AUTOのとき、勝手に入ってくれるからな' },
+    'g2.4': { e:'excited', title:'モンヒロビート中の周回', t:'いちばん大事なのはここだな！ 勇者モン・配置・難易度を決めて「開いたら自動で始める」をONにすると、モンヒロビートを開くだけで裏の周回が始まるぞ' },
+    'g2.5': { e:'happy', title:'自動限界突破', t:'∞周回で上限まで育ったら、自動で限界突破してくれる設定だな。残しておくダイヤも決められるから、安心していいからな' },
+    'g3.1': { e:'excited', title:'∞周回にしたね', t:'∞にしたな！ これで周回はずっと続くぞ。しかも、モンヒロビートで遊んでるあいだも止まらないんだな' },
+    'g3.2': { e:'happy', title:'モンヒロビートへ', t:'ここから移ると、周回を止めずにモンヒロビートを開けるぞ。曲を最後まで叩くと、曲の長さぶんの周回も入るんだな' },
+    'g3.3': { e:'troubled', title:'止まるとき', t:'アプリを閉じたり別のアプリへ移ると、周回は止まっちまうからな…気をつけるんだな' },
+    'g3.4': { e:'normal', title:'周回の帯', t:'ここが周回の帯だな。タップすると、何周めか・どれだけ貯まったかが見られるぞ。「⚔ バトルへ戻る」で様子も見に行けるからな' },
+    'g3.5': { e:'wink', title:'負けちゃったら', t:'もし裏の周回で負けちまっても、帯の中の「⚔ 1周目から新しく始める」ですぐ始め直せるぞ。止まっただけなら「周回を再開する」で続きからだな。周回していないときは、ここに出る「裏でクイックの∞周回を始める」からも始められるからな' },
+    'g3.6': { e:'happy', title:'やめるとき', t:'周回をやめてHOMEへ戻るときは、ここの「⏹ 終了」を押すんだな。そこまでのWAVEぶんの報酬は、ちゃんと入るからな。えへへ' },
+    'auto.first': { e:'wink', title:'AUTO', t:'ここを押すと、おでが決めた方針で勝手に戦うぞ。方針はM/B管理の「AUTO設定」で変えられるからな' },
+    'card.auto': { e:'happy', title:'オートで挑む', t:'オートは、戦術カードで勝手に戦ってくれるんだな。ごほうびは1日3回まで手で戦う半分で、「⏩ 結果だけ見る」なら一瞬で終わるぞ' },
+    'nudge.home': { e:'wink', title:'クイック', t:'育てたいときはクイックが早いくさ。モンヒロビートで遊んでる裏でも周回できるんだな' },
+    'nudge.battle': { e:'happy', title:'クイック', t:'クイックなら経験値が1.5倍だぞ。試してみるか？' },
+  },
+  atsu: {
+    'tour.autoQuick': { e:'excited', title:'AUTOとクイック', t:'バトルには、勝手に戦う「AUTO」と、さくさく育てる「クイック」もあるぞ。クイックが使えるようになったら、裏で周回させる方法も教えるわ笑' },
+    'g1.1': { e:'excited', title:'クイックで遊べるよ', t:'クイックで遊べるようになったぞ！ 強化を選ばないぶん1周が速くて、経験値とダイヤが1.5倍な笑' },
+    'g1.2': { e:'normal', title:'遊べる難易度', t:'チャレンジでクリアした難易度が、ここで遊べる。上をクリアすれば上も開くぞ！' },
+    'g1.3': { e:'happy', title:'報酬方針', t:'「育成」「プシュケー優先」「ダイヤ優先」から、ほしい物を選べ。スキップチケットは「育成」のときだけな！' },
+    'g1.4': { e:'wink', title:'AUTOをもう1回で∞', t:'バトルが始まったら、AUTOをもう1回押すと「∞」。10WAVEが終わっても、ずっと周回してくれる笑' },
+    'g1.5': { e:'happy', title:'記録は気にしないでOK', t:'クイックの記録はランキングに載らないし、チャレンジの自己ベストも変わらない。周回の決めごとは「AUTO設定」でできるから、とりあえず見に行こうぜ！' },
+    'g2.1': { e:'excited', title:'ここがAUTO設定', t:'ここがAUTO設定。AUTOや∞周回のときの動き方を、まとめて決めておける！' },
+    'g2.2': { e:'normal', title:'AUTO方針', t:'AUTOがどのカードを選ぶか。迷ったら「ランダム」、押し切りたいなら「火力重視」。俺は火力一択笑' },
+    'g2.3': { e:'normal', title:'供モン事前設定', t:'WAVE2・4・6で入る供モンを先に決めておける。AUTOのとき、勝手に入ってくれるぞ！' },
+    'g2.4': { e:'excited', title:'モンヒロビート中の周回', t:'てか、いちばん大事なのはここ！ 勇者モン・配置・難易度を決めて「開いたら自動で始める」をONにすると、モンヒロビートを開くだけで裏の周回が始まる笑' },
+    'g2.5': { e:'happy', title:'自動限界突破', t:'∞周回で上限まで育ったら、自動で限界突破してくれる設定。残しておくダイヤも決められるから安心な！' },
+    'g3.1': { e:'excited', title:'∞周回にしたね', t:'∞にしたな！ これで周回はずっと続く。しかもモンヒロビートで遊んでるあいだも止まらないぞ笑' },
+    'g3.2': { e:'happy', title:'モンヒロビートへ', t:'ここから移ると、周回を止めずにモンヒロビートを開ける。曲を最後まで叩くと、曲の長さぶんの周回も入るぞ！' },
+    'g3.3': { e:'troubled', title:'止まるとき', t:'アプリを閉じたり別のアプリへ移ると、周回は止まる。そこだけ気をつけてな…！' },
+    'g3.4': { e:'normal', title:'周回の帯', t:'ここが周回の帯。タップすると、何周めか・どれだけ貯まったかが見られる。「⚔ バトルへ戻る」で様子も見に行けるぞ！' },
+    'g3.5': { e:'wink', title:'負けちゃったら', t:'もし裏の周回で負けても、帯の中の「⚔ 1周目から新しく始める」ですぐ始め直せる。止まっただけなら「周回を再開する」で続きから。周回していないときは、ここに出る「裏でクイックの∞周回を始める」からも始められるぞ！' },
+    'g3.6': { e:'happy', title:'やめるとき', t:'周回をやめてHOMEへ戻るときは、ここの「⏹ 終了」。そこまでのWAVEぶんの報酬は、ちゃんと入るから安心しろ笑' },
+    'auto.first': { e:'wink', title:'AUTO', t:'ここを押すと、俺が決めた方針で勝手に戦う。方針はM/B管理の「AUTO設定」で変えられるぞ！' },
+    'card.auto': { e:'happy', title:'オートで挑む', t:'オートは、戦術カードで勝手に戦ってくれる。ごほうびは1日3回まで手で戦う半分で、「⏩ 結果だけ見る」なら一瞬で終わる笑' },
+    'nudge.home': { e:'wink', title:'クイック', t:'育てるならクイックが早いぞ。モンヒロビートで遊んでる裏でも周回できるし笑' },
+    'nudge.battle': { e:'happy', title:'クイック', t:'クイックなら経験値1.5倍。とりあえず試してみ？' },
+  },
+  kyuko: {
+    'tour.autoQuick': { e:'excited', title:'AUTOとクイック', t:'バトルには、勝手に戦ってくれる「AUTO」と、さくさく育てる「クイック」もあるんだ。クイックが使えるようになったら、裏で周回させる方法も教えるねぇ' },
+    'g1.1': { e:'excited', title:'クイックで遊べるよ', t:'ほい！ クイックで遊べるようになったよ。強化を選ばないぶん1周が速くて、経験値とダイヤが1.5倍なんだ' },
+    'g1.2': { e:'normal', title:'遊べる難易度', t:'チャレンジでクリアした難易度が、ここで遊べるよ。上をクリアすれば上も開くから、順番に進めるのが早いねぇ' },
+    'g1.3': { e:'happy', title:'報酬方針', t:'「育成」「プシュケー優先」「ダイヤ優先」から、ほしい物を選んでね。スキップチケットは「育成」のときだけ使えるよ' },
+    'g1.4': { e:'wink', title:'AUTOをもう1回で∞', t:'バトルが始まったら、AUTOをもう1回押すと「∞」。10WAVEが終わっても、ずっと周回してくれるんだ' },
+    'g1.5': { e:'happy', title:'記録は気にしないでOK', t:'クイックの記録はランキングに載らないし、チャレンジの自己ベストも変わらないよ。周回の決めごとは「AUTO設定」でできるから、見に行こっか' },
+    'g2.1': { e:'excited', title:'ここがAUTO設定', t:'ここがAUTO設定。AUTOや∞周回のときの動き方を、まとめて決めておけるよ' },
+    'g2.2': { e:'normal', title:'AUTO方針', t:'AUTOがどのカードを選ぶか、だね。迷ったら「ランダム」、押し切りたいなら「火力重視」かなぁ' },
+    'g2.3': { e:'normal', title:'供モン事前設定', t:'WAVE2・4・6で入る供モンを先に決めておけるよ。AUTOのとき勝手に入るから、手間がはぶけるねぇ' },
+    'g2.4': { e:'excited', title:'モンヒロビート中の周回', t:'いちばん大事なのがここ！ 勇者モン・配置・難易度を決めて「開いたら自動で始める」をONにすると、モンヒロビートを開くだけで裏の周回が始まるよ' },
+    'g2.5': { e:'happy', title:'自動限界突破', t:'∞周回で上限まで育ったら、自動で限界突破してくれる設定。残しておくダイヤも決められるから、使いすぎの心配もないよ' },
+    'g3.1': { e:'excited', title:'∞周回にしたね', t:'∞にしたね！ これで周回はずっと続くよ。しかも、モンヒロビートで遊んでるあいだも止まらないんだ' },
+    'g3.2': { e:'happy', title:'モンヒロビートへ', t:'ここから移ると、周回を止めずにモンヒロビートを開けるよ。曲を最後まで叩くと、曲の長さぶんの周回も入るんだ。一石二鳥だねぇ' },
+    'g3.3': { e:'troubled', title:'止まるとき', t:'アプリを閉じたり別のアプリへ移ると、周回は止まっちゃうんだ…ぐぬぬぬ。そこだけ気をつけてね' },
+    'g3.4': { e:'normal', title:'周回の帯', t:'ここが周回の帯。タップすると、何周めか・どれだけ貯まったかが見られるよ。「⚔ バトルへ戻る」で様子も見に行けるからね' },
+    'g3.5': { e:'wink', title:'負けちゃったら', t:'もし裏の周回で負けちゃっても、帯の中の「⚔ 1周目から新しく始める」ですぐ始め直せるよ。止まっただけなら「周回を再開する」で続きから。周回していないときは、ここに出る「裏でクイックの∞周回を始める」からも始められるよ' },
+    'g3.6': { e:'happy', title:'やめるとき', t:'周回をやめてHOMEへ戻るときは、ここの「⏹ 終了」を押してね。そこまでのWAVEぶんの報酬はちゃんと入るよ。おけ〜？' },
+    'auto.first': { e:'wink', title:'AUTO', t:'ここを押すと、俺が決めた方針で勝手に戦うよ。方針はM/B管理の「AUTO設定」で変えられるからね' },
+    'card.auto': { e:'happy', title:'オートで挑む', t:'オートは、戦術カードで勝手に戦ってくれるよ。ごほうびは1日3回まで手で戦う半分で、「⏩ 結果だけ見る」なら一瞬で終わるんだ' },
+    'nudge.home': { e:'wink', title:'クイック', t:'育てたいときはクイックが早いよ〜。モンヒロビートで遊んでる裏でも周回できるんだ' },
+    'nudge.battle': { e:'happy', title:'クイック', t:'クイックなら経験値が1.5倍だよ。試してみる？' },
+  },
+  sorashido: {
+    'tour.autoQuick': { e:'excited', title:'AUTOとクイック', t:'バトルには、勝手に戦ってくれる「AUTO」と、さくさく育てる「クイック」もあるんだぜ！ クイックが使えるようになったら、裏で周回させる方法も教えるからな笑' },
+    'g1.1': { e:'excited', title:'クイックで遊べるよ', t:'うぉぉぉ！ クイックで遊べるようになったぜ！ 強化を選ばないぶん1周が速くて、経験値とダイヤが1.5倍だ！' },
+    'g1.2': { e:'normal', title:'遊べる難易度', t:'チャレンジでクリアした難易度が、ここで遊べるぜ。上をクリアすれば上も開く。順番に攻めていこう笑' },
+    'g1.3': { e:'happy', title:'報酬方針', t:'「育成」「プシュケー優先」「ダイヤ優先」から、ほしい物を選ぶんだ。スキップチケットは「育成」のときだけ使えるぜ' },
+    'g1.4': { e:'wink', title:'AUTOをもう1回で∞', t:'バトルが始まったら、AUTOをもう1回押すと「∞」！ 10WAVEが終わっても、ずっと周回してくれるぜ・・・！' },
+    'g1.5': { e:'happy', title:'記録は気にしないでOK', t:'クイックの記録はランキングに載らないし、チャレンジの自己ベストも変わらないぜ。周回の決めごとは「AUTO設定」でできるから、見に行こう！' },
+    'g2.1': { e:'excited', title:'ここがAUTO設定', t:'ここがAUTO設定だ！ AUTOや∞周回のときの動き方を、まとめて決めておけるぜ' },
+    'g2.2': { e:'normal', title:'AUTO方針', t:'AUTOがどのカードを選ぶか、だ。迷ったら「ランダム」、押し切りたいなら「火力重視」だぜ' },
+    'g2.3': { e:'normal', title:'供モン事前設定', t:'WAVE2・4・6で入る供モンを、先に決めておけるぜ。AUTOのとき、勝手に入ってくれるんだ' },
+    'g2.4': { e:'excited', title:'モンヒロビート中の周回', t:'いちばん大事なのがここだ！ 勇者モン・配置・難易度を決めて「開いたら自動で始める」をONにすると、モンヒロビートを開くだけで裏の周回が始まるんだぜ・・・！' },
+    'g2.5': { e:'happy', title:'自動限界突破', t:'∞周回で上限まで育ったら、自動で限界突破してくれる設定だ。残しておくダイヤも決められるから、なんくるないさ〜笑' },
+    'g3.1': { e:'excited', title:'∞周回にしたね', t:'∞にしたな！ うぉぉぉ！ これで周回はずっと続くぜ。しかも、モンヒロビートで遊んでるあいだも止まらないんだ！' },
+    'g3.2': { e:'happy', title:'モンヒロビートへ', t:'ここから移ると、周回を止めずにモンヒロビートを開けるぜ。曲を最後まで叩くと、曲の長さぶんの周回も入る。計算すると、かなりおいしいぜ笑' },
+    'g3.3': { e:'troubled', title:'止まるとき', t:'アプリを閉じたり別のアプリへ移ると、周回は止まっちまうんだ…。そこだけは気をつけてくれよ' },
+    'g3.4': { e:'normal', title:'周回の帯', t:'ここが周回の帯だ。タップすると、何周めか・どれだけ貯まったかが見られるぜ。「⚔ バトルへ戻る」で様子も見に行けるんだ' },
+    'g3.5': { e:'wink', title:'負けちゃったら', t:'もし裏の周回で負けちまっても、帯の中の「⚔ 1周目から新しく始める」ですぐ始め直せるぜ。止まっただけなら「周回を再開する」で続きからだ。周回していないときは、ここに出る「裏でクイックの∞周回を始める」からも始められるぜ・・・！' },
+    'g3.6': { e:'happy', title:'やめるとき', t:'周回をやめてHOMEへ戻るときは、ここの「⏹ 終了」を押すんだ。そこまでのWAVEぶんの報酬は、ちゃんと入るぜ笑' },
+    'auto.first': { e:'wink', title:'AUTO', t:'ここを押すと、俺が決めた方針で勝手に戦うぜ。方針はM/B管理の「AUTO設定」で変えられるんだ！' },
+    'card.auto': { e:'happy', title:'オートで挑む', t:'オートは、戦術カードで勝手に戦ってくれるぜ。ごほうびは1日3回まで手で戦う半分で、「⏩ 結果だけ見る」なら一瞬で終わるんだ！' },
+    'nudge.home': { e:'wink', title:'クイック', t:'育てたいときはクイックが早いぜ！ モンヒロビートで遊んでる裏でも周回できるんだ笑' },
+    'nudge.battle': { e:'happy', title:'クイック', t:'クイックなら経験値が1.5倍だぜ！ 試してみるか？' },
+  },
+  erubin: {
+    'tour.autoQuick': { e:'excited', title:'AUTOとクイック', t:'バトルには、勝手に戦ってくれる「AUTO」と、さくさく育てる「クイック」もあるんだ。クイックが使えるようになったら、裏で周回させる方法も教えるね' },
+    'g1.1': { e:'excited', title:'クイックで遊べるよ', t:'クイックで遊べるようになったね。強化を選ばないぶん1周が速くて、経験値とダイヤが1.5倍なんだ' },
+    'g1.2': { e:'normal', title:'遊べる難易度', t:'チャレンジでクリアした難易度が、ここで遊べるよ。上をクリアすれば、上も開くからね' },
+    'g1.3': { e:'happy', title:'報酬方針', t:'「育成」「プシュケー優先」「ダイヤ優先」から、ほしい物を選んでね。スキップチケットは「育成」のときだけ使えるよ' },
+    'g1.4': { e:'wink', title:'AUTOをもう1回で∞', t:'バトルが始まったら、AUTOをもう1回押すと「∞」。10WAVEが終わっても、ずっと周回してくれるよ' },
+    'g1.5': { e:'happy', title:'記録は気にしないでOK', t:'クイックの記録はランキングに載らないし、チャレンジの自己ベストも変わらないよ。周回の決めごとは「AUTO設定」でできるから、一緒に見に行こうか' },
+    'g2.1': { e:'excited', title:'ここがAUTO設定', t:'ここがAUTO設定。AUTOや∞周回のときの動き方を、まとめて決めておけるよ' },
+    'g2.2': { e:'normal', title:'AUTO方針', t:'AUTOがどのカードを選ぶか、だね。迷ったら「ランダム」、押し切りたいなら「火力重視」かな' },
+    'g2.3': { e:'normal', title:'供モン事前設定', t:'WAVE2・4・6で入る供モンを、先に決めておけるよ。AUTOのとき、勝手に入ってくれるからね' },
+    'g2.4': { e:'excited', title:'モンヒロビート中の周回', t:'いちばん大事なのがここかな。勇者モン・配置・難易度を決めて「開いたら自動で始める」をONにすると、モンヒロビートを開くだけで裏の周回が始まるよ' },
+    'g2.5': { e:'happy', title:'自動限界突破', t:'∞周回で上限まで育ったら、自動で限界突破してくれる設定。残しておくダイヤも決められるし、安心して任せられるね' },
+    'g3.1': { e:'excited', title:'∞周回にしたね', t:'∞にしたね。これで周回はずっと続くよ。しかも、モンヒロビートで遊んでるあいだも止まらないんだ' },
+    'g3.2': { e:'happy', title:'モンヒロビートへ', t:'ここから移ると、周回を止めずにモンヒロビートを開けるよ。曲を最後まで叩くと、曲の長さぶんの周回も入るんだ' },
+    'g3.3': { e:'troubled', title:'止まるとき', t:'アプリを閉じたり別のアプリへ移ると、周回は止まっちゃうんだ。そこだけ気をつけてね' },
+    'g3.4': { e:'normal', title:'周回の帯', t:'ここが周回の帯。タップすると、何周めか・どれだけ貯まったかが見られるよ。「⚔ バトルへ戻る」で様子も見に行けるからね' },
+    'g3.5': { e:'wink', title:'負けちゃったら', t:'もし裏の周回で負けちゃっても、帯の中の「⚔ 1周目から新しく始める」ですぐ始め直せるよ。止まっただけなら「周回を再開する」で続きから。周回していないときは、ここに出る「裏でクイックの∞周回を始める」からも始められるからね' },
+    'g3.6': { e:'happy', title:'やめるとき', t:'周回をやめてHOMEへ戻るときは、ここの「⏹ 終了」を押してね。そこまでのWAVEぶんの報酬は、ちゃんと入るから大丈夫だよ' },
+    'auto.first': { e:'wink', title:'AUTO', t:'ここを押すと、俺が決めた方針で勝手に戦うよ。方針はM/B管理の「AUTO設定」で変えられるからね' },
+    'card.auto': { e:'happy', title:'オートで挑む', t:'オートは、戦術カードで勝手に戦ってくれるよ。ごほうびは1日3回まで手で戦う半分で、「⏩ 結果だけ見る」なら一瞬で終わるんだ' },
+    'nudge.home': { e:'wink', title:'クイック', t:'育てたいときはクイックが早いよ。モンヒロビートで遊んでる裏でも周回できるしね' },
+    'nudge.battle': { e:'happy', title:'クイック', t:'クイックなら経験値が1.5倍だよ。試してみるのはどうかな？' },
+  },
+};
 
 // ===== ASSISTANT_LIFE_TALKS ここから(tools で生成・手で直さない) =====
 // 元: docs/progress/assistant-peer/lines/(kotoba-life.txt・tsumugi.txt)。取り込み: node tools/assistant/life-talks-import.js
@@ -19712,7 +19926,7 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'sorashido', e:'happy', t:'……何本咲いてるか、数えに行こう笑' },
   ] },
   { id:'life-breeder-mua-001', kind:'breeder', who:'mua', keys:{ place:'plaza', mood:'happy' }, lines:[
-    { who:'mua', e:'excited', t:'あ、ブリーダー！ ちょうど会いたかったの♪' },
+    { who:'mua', e:'excited', t:'あ、{name}！ ちょうど会いたかったの♪' },
   ] },
   { id:'life-breeder-mua-002', kind:'breeder', who:'mua', keys:{ place:'plaza', mood:'happy' }, lines:[
     { who:'mua', e:'wink', t:'見て見て、今日のコーデ！ どう？ｗ' },
@@ -19721,7 +19935,7 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'mua', e:'happy', t:'広場、人多くて楽しいよ！ いっしょに歩こ！' },
   ] },
   { id:'life-breeder-mua-004', kind:'breeder', who:'mua', keys:{ mood:'lonely', why:'lonely' }, lines:[
-    { who:'mua', e:'surprise', t:'ブリーダー！ 来てくれたの！？ まぢうれしい！' },
+    { who:'mua', e:'surprise', t:'{name}！ 来てくれたの！？ まぢうれしい！' },
   ] },
   { id:'life-breeder-mua-005', kind:'breeder', who:'mua', keys:{ mood:'lonely', why:'lonely' }, lines:[
     { who:'mua', e:'troubled', t:'ちょうど、だれか来ないかなって思ってたとこ…' },
@@ -19730,7 +19944,7 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'mua', e:'happy', t:'ひとりで暇だったの！ なにして遊ぶ？' },
   ] },
   { id:'life-breeder-mua-007', kind:'breeder', who:'mua', keys:{ doing:'snack' }, lines:[
-    { who:'mua', e:'excited', t:'ブリーダーも食べる？ いちごのやつ、おいしいよ♪' },
+    { who:'mua', e:'excited', t:'{name}も食べる？ いちごのやつ、おいしいよ♪' },
   ] },
   { id:'life-breeder-mua-008', kind:'breeder', who:'mua', keys:{ doing:'practice' }, lines:[
     { who:'mua', e:'happy', t:'今の見てた？ けっこういい感じぢゃない？ｗ' },
@@ -19739,7 +19953,7 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'mua', e:'wink', t:'いっしょに歩く？ 今日いい天気だよ！' },
   ] },
   { id:'life-breeder-mua-010', kind:'breeder', who:'mua', keys:{ mood:'sleepy' }, lines:[
-    { who:'mua', e:'normal', t:'ふぁ〜…ブリーダー？ ちょっとうとうとしてたｗ' },
+    { who:'mua', e:'normal', t:'ふぁ〜…{name}？ ちょっとうとうとしてたｗ' },
   ] },
   { id:'life-breeder-mua-011', kind:'breeder', who:'mua', keys:{ mood:'sulky' }, lines:[
     { who:'mua', e:'angry', t:'……べつにすねてないし。…でも来てくれてうれしい' },
@@ -19748,7 +19962,7 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'mua', e:'troubled', t:'寝ぐせ見ないで〜！ 今直すから！' },
   ] },
   { id:'life-breeder-kiki-001', kind:'breeder', who:'kiki', keys:{ place:'library', mood:'happy' }, lines:[
-    { who:'kiki', e:'happy', t:'ブリーダーさん、静かにどうぞ。今いいところなんでつ♪♪' },
+    { who:'kiki', e:'happy', t:'{name}、静かにどうぞ。今いいところなんでつ♪♪' },
   ] },
   { id:'life-breeder-kiki-002', kind:'breeder', who:'kiki', keys:{ place:'library', mood:'happy' }, lines:[
     { who:'kiki', e:'normal', t:'この本、おすすめですよ。育成の話がたくさんあります' },
@@ -19757,7 +19971,7 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'kiki', e:'wink', t:'窓ぎわの席、空いていますよ。いっしょにどうですか' },
   ] },
   { id:'life-breeder-kiki-004', kind:'breeder', who:'kiki', keys:{ mood:'lonely', why:'lonely' }, lines:[
-    { who:'kiki', e:'surprise', t:'あれま、ブリーダーさん。来てくださったんですね' },
+    { who:'kiki', e:'surprise', t:'あれま、{name}。来てくださったんですね' },
   ] },
   { id:'life-breeder-kiki-005', kind:'breeder', who:'kiki', keys:{ mood:'lonely', why:'lonely' }, lines:[
     { who:'kiki', e:'happy', t:'少しだけ、だれかと話したかったんです。ちょうどよかったでつ' },
@@ -19769,7 +19983,7 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'kiki', e:'happy', t:'ゴーレム、今日もちからを上げました。見てくださいね' },
   ] },
   { id:'life-breeder-kiki-008', kind:'breeder', who:'kiki', keys:{ doing:'snack' }, lines:[
-    { who:'kiki', e:'normal', t:'ブリーダーさんの分のおやつも、とってありまつよ' },
+    { who:'kiki', e:'normal', t:'{name}の分のおやつも、とってありまつよ' },
   ] },
   { id:'life-breeder-kiki-009', kind:'breeder', who:'kiki', keys:{ doing:'cards' }, lines:[
     { who:'kiki', e:'wink', t:'今日のデッキも、攻撃のカードばかりです ( ˘ω˘)9グッ!' },
@@ -19781,19 +19995,19 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'kiki', e:'normal', t:'…今は、少しひとりにしてほしいです。…でも、来てくれてありがとう' },
   ] },
   { id:'life-breeder-kiki-012', kind:'breeder', who:'kiki', keys:{ mood:'eager' }, lines:[
-    { who:'kiki', e:'excited', t:'ブリーダーさん、次のバトルはいつですか。準備はできていまつ' },
+    { who:'kiki', e:'excited', t:'{name}、次のバトルはいつですか。準備はできていまつ' },
   ] },
   { id:'life-breeder-momosuke-001', kind:'breeder', who:'momosuke', keys:{ place:'studio', mood:'happy' }, lines:[
-    { who:'momosuke', e:'excited', t:'ブリーダー！！ ももの練習、見に来てくれたの！？' },
+    { who:'momosuke', e:'excited', t:'{name}！！ ももの練習、見に来てくれたの！？' },
   ] },
   { id:'life-breeder-momosuke-002', kind:'breeder', who:'momosuke', keys:{ place:'studio', mood:'happy' }, lines:[
     { who:'momosuke', e:'wink', t:'今のステップ、ちゃんと見てた？ 見てたよね！？w' },
   ] },
   { id:'life-breeder-momosuke-003', kind:'breeder', who:'momosuke', keys:{ place:'studio', mood:'happy' }, lines:[
-    { who:'momosuke', e:'happy', t:'いちばん前の席、ブリーダーのために空けといたよ♡' },
+    { who:'momosuke', e:'happy', t:'いちばん前の席、{name}のために空けといたよ♡' },
   ] },
   { id:'life-breeder-momosuke-004', kind:'breeder', who:'momosuke', keys:{ mood:'lonely', why:'lonely' }, lines:[
-    { who:'momosuke', e:'surprise', t:'ブリーダー！！ もう、来るの遅いんだから！！' },
+    { who:'momosuke', e:'surprise', t:'{name}！！ もう、来るの遅いんだから！！' },
   ] },
   { id:'life-breeder-momosuke-005', kind:'breeder', who:'momosuke', keys:{ mood:'lonely', why:'lonely' }, lines:[
     { who:'momosuke', e:'troubled', t:'…べつにさみしくなかったし。ちょっとだけだし' },
@@ -19805,7 +20019,7 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'momosuke', e:'excited', t:'見て！！ メタルナー、今日もピッカピカ！！' },
   ] },
   { id:'life-breeder-momosuke-008', kind:'breeder', who:'momosuke', keys:{ doing:'snack' }, lines:[
-    { who:'momosuke', e:'wink', t:'いちごは最後に食べるの。ブリーダーにもひとつあげよっか？' },
+    { who:'momosuke', e:'wink', t:'いちごは最後に食べるの。{name}にもひとつあげよっか？' },
   ] },
   { id:'life-breeder-momosuke-009', kind:'breeder', who:'momosuke', keys:{ doing:'walk' }, lines:[
     { who:'momosuke', e:'happy', t:'いっしょに歩こ！！ ももが前ね！！' },
@@ -19820,7 +20034,7 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'momosuke', e:'excited', t:'今日のもも、本気モードだから！！ 見ててね！！' },
   ] },
   { id:'life-breeder-dra-001', kind:'breeder', who:'dra', keys:{ place:'home', mood:'lonely', why:'lonely' }, lines:[
-    { who:'dra', e:'surprise', t:'お、ブリーダーか。……べつに、さみしくなんてなかったぞ。えへへ' },
+    { who:'dra', e:'surprise', t:'お、{name}か。……べつに、さみしくなんてなかったぞ。えへへ' },
   ] },
   { id:'life-breeder-dra-002', kind:'breeder', who:'dra', keys:{ place:'home', mood:'lonely', why:'lonely' }, lines:[
     { who:'dra', e:'happy', t:'来てくれたのか。いいせんべいがあるんだ、食ってけ' },
@@ -19835,7 +20049,7 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'dra', e:'wink', t:'今日の膝の調子は上々だぞ。何でも説明してやる' },
   ] },
   { id:'life-breeder-dra-006', kind:'breeder', who:'dra', keys:{ place:'home', mood:'sleepy' }, lines:[
-    { who:'dra', e:'normal', t:'ふぁ〜…ブリーダーか。いま昼寝の2回目に入るとこだった' },
+    { who:'dra', e:'normal', t:'ふぁ〜…{name}か。いま昼寝の2回目に入るとこだった' },
   ] },
   { id:'life-breeder-dra-007', kind:'breeder', who:'dra', keys:{ doing:'cards' }, lines:[
     { who:'dra', e:'happy', t:'カードのこと、聞きたいことあるか？ 3分で説明するぞ' },
@@ -19844,19 +20058,19 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'dra', e:'troubled', t:'ちょうど休けいしたかったんだ。膝がな' },
   ] },
   { id:'life-breeder-dra-009', kind:'breeder', who:'dra', keys:{ doing:'snack' }, lines:[
-    { who:'dra', e:'normal', t:'プリン、もうひとつあるぞ。ブリーダーの分だ' },
+    { who:'dra', e:'normal', t:'プリン、もうひとつあるぞ。{name}の分だ' },
   ] },
   { id:'life-breeder-dra-010', kind:'breeder', who:'dra', keys:{ mood:'sulky' }, lines:[
     { who:'dra', e:'troubled', t:'……ふとんから出ないぞ。今日は出ないからな。…ちょっとだけなら出る' },
   ] },
   { id:'life-breeder-dra-011', kind:'breeder', who:'dra', keys:{ mood:'eager' }, lines:[
-    { who:'dra', e:'excited', t:'ブリーダー、いいとこに来た。新しい組み方、説明させてくれ' },
+    { who:'dra', e:'excited', t:'{name}、いいとこに来た。新しい組み方、説明させてくれ' },
   ] },
   { id:'life-breeder-dra-012', kind:'breeder', who:'dra', keys:{ mood:'restless' }, lines:[
-    { who:'dra', e:'surprise', t:'なんかそわそわするんだよ。ブリーダー、何かいいことあったか？' },
+    { who:'dra', e:'surprise', t:'なんかそわそわするんだよ。{name}、何かいいことあったか？' },
   ] },
   { id:'life-breeder-atsu-001', kind:'breeder', who:'atsu', keys:{ place:'studio', mood:'happy' }, lines:[
-    { who:'atsu', e:'happy', t:'お、ブリーダー！ 一曲いこ笑' },
+    { who:'atsu', e:'happy', t:'お、{name}！ 一曲いこ笑' },
   ] },
   { id:'life-breeder-atsu-002', kind:'breeder', who:'atsu', keys:{ place:'studio', mood:'happy' }, lines:[
     { who:'atsu', e:'wink', t:'いいとこ来たね！ 今フルコン出たとこ！' },
@@ -19892,7 +20106,7 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'atsu', e:'excited', t:'いいね、来てくれたなら上いくしかないじゃん！' },
   ] },
   { id:'life-breeder-kyuko-001', kind:'breeder', who:'kyuko', keys:{ place:'library', mood:'happy', why:'mypace' }, lines:[
-    { who:'kyuko', e:'normal', t:'あ、ブリーダー。今いいとこ考えてたんだぁ' },
+    { who:'kyuko', e:'normal', t:'あ、{name}。今いいとこ考えてたんだぁ' },
   ] },
   { id:'life-breeder-kyuko-002', kind:'breeder', who:'kyuko', keys:{ place:'library', mood:'happy', why:'mypace' }, lines:[
     { who:'kyuko', e:'happy', t:'静かに見ててくれるなら、ここにいていいよぉ笑' },
@@ -19901,7 +20115,7 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'kyuko', e:'wink', t:'新しい組み方、あとでいちばんに見せてあげる' },
   ] },
   { id:'life-breeder-kyuko-004', kind:'breeder', who:'kyuko', keys:{ mood:'lonely', why:'lonely' }, lines:[
-    { who:'kyuko', e:'surprise', t:'ブリーダー？ ちょうど作戦を見せたかったんだぁ' },
+    { who:'kyuko', e:'surprise', t:'{name}？ ちょうど作戦を見せたかったんだぁ' },
   ] },
   { id:'life-breeder-kyuko-005', kind:'breeder', who:'kyuko', keys:{ mood:'lonely', why:'lonely' }, lines:[
     { who:'kyuko', e:'happy', t:'来てくれてありがとん笑' },
@@ -19925,10 +20139,10 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'kyuko', e:'normal', t:'……ランキング落ちたぁ。ぐぬぬぬ。まあ、なんとかなるっしょ' },
   ] },
   { id:'life-breeder-kyuko-012', kind:'breeder', who:'kyuko', keys:{ mood:'eager' }, lines:[
-    { who:'kyuko', e:'excited', t:'ブリーダー、いいとこ来た！ 今の数字見て！' },
+    { who:'kyuko', e:'excited', t:'{name}、いいとこ来た！ 今の数字見て！' },
   ] },
   { id:'life-breeder-sorashido-001', kind:'breeder', who:'sorashido', keys:{ place:'cardroom', mood:'eager' }, lines:[
-    { who:'sorashido', e:'excited', t:'ブリーダー！ 新しい表、できたとこだぜ・・・！' },
+    { who:'sorashido', e:'excited', t:'{name}！ 新しい表、できたとこだぜ・・・！' },
   ] },
   { id:'life-breeder-sorashido-002', kind:'breeder', who:'sorashido', keys:{ place:'cardroom', mood:'eager' }, lines:[
     { who:'sorashido', e:'happy', t:'ちょうどいい。この数字、いっしょに見てくれ笑' },
@@ -19937,7 +20151,7 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'sorashido', e:'normal', t:'カード部屋、今日も落ち着くわ。ゆっくりしてってくれ' },
   ] },
   { id:'life-breeder-sorashido-004', kind:'breeder', who:'sorashido', keys:{ mood:'lonely', why:'lonely' }, lines:[
-    { who:'sorashido', e:'surprise', t:'なに！？ ブリーダー！ 表を見てくれる人、待ってたんだ笑' },
+    { who:'sorashido', e:'surprise', t:'なに！？ {name}！ 表を見てくれる人、待ってたんだ笑' },
   ] },
   { id:'life-breeder-sorashido-005', kind:'breeder', who:'sorashido', keys:{ mood:'lonely', why:'lonely' }, lines:[
     { who:'sorashido', e:'happy', t:'来てくれてありがとな。でーじうれしい' },
@@ -22357,17 +22571,17 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
   'kiki-mua-c1': { doing:'snack', lv:'1-3', lines:[
       { who:'mua', e:'happy', t:'今日のおやつ、いちごタルトとチョコケーキどっちにする？' },
       { who:'kiki', e:'troubled', t:'迷いまつね…' },
-      { who:'kiki', e:'normal', t:'ブリーダーさんは、どっちがいいと思いますか？' },
+      { who:'kiki', e:'normal', t:'{name}は、どっちがいいと思いますか？' },
     ] },
   'momosuke-mua-c1': { doing:'practice', lv:'1-3', lines:[
       { who:'momosuke', e:'excited', t:'今日のライブ衣装、ピンクと白どっちがいいかな！？' },
       { who:'mua', e:'happy', t:'{c}ならどっちも似合うよ〜' },
-      { who:'momosuke', e:'wink', t:'ブリーダーはどっちがいいと思う！？' },
+      { who:'momosuke', e:'wink', t:'{name}はどっちがいいと思う！？' },
     ] },
   'dra-mua-c1': { lv:'1-3', lines:[
       { who:'dra', e:'wink', t:'新しいギャグ考えたんだけど、聞くか？' },
       { who:'mua', e:'troubled', t:'え〜、{c}のギャグ、ほぼ外れるぢゃん' },
-      { who:'dra', e:'happy', t:'なあ、ブリーダーはどう思う？ 聞きたいよな？' },
+      { who:'dra', e:'happy', t:'なあ、{name}はどう思う？ 聞きたいよな？' },
     ], reply:{ 0:[
       { who:'dra', e:'excited', t:'さすが！ アルミ缶の上にある…ミカン！' },
       { who:'mua', e:'troubled', t:'…やっぱ外れたぢゃんｗ' },
@@ -22381,7 +22595,7 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
   'atsu-mua-c1': { doing:'practice', lv:'1-3', lines:[
       { who:'atsu', e:'happy', t:'今日HELL何曲いける？笑' },
       { who:'mua', e:'troubled', t:'えー、{c}基準で聞かないでよ〜' },
-      { who:'atsu', e:'wink', t:'ブリーダーはどう思う？ 何曲いけそう？笑' },
+      { who:'atsu', e:'wink', t:'{name}はどう思う？ 何曲いけそう？笑' },
     ], reply:{ 0:[
       { who:'mua', e:'happy', t:'1曲なら、まぢでがんばれる！' },
       { who:'atsu', e:'happy', t:'いいね！ まずそこからね！' },
@@ -22389,7 +22603,7 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
   'kyuko-mua-c1': { doing:'training', lv:'1-3', lines:[
       { who:'mua', e:'troubled', t:'育成でダイヤ使うか迷ってる〜' },
       { who:'kyuko', e:'normal', t:'急ぎじゃないなら、待ってもいいと思うよぉ' },
-      { who:'kyuko', e:'happy', t:'ブリーダーはどう思う？' },
+      { who:'kyuko', e:'happy', t:'{name}はどう思う？' },
     ], reply:{ 1:[
       { who:'kyuko', e:'happy', t:'さすが、分かってるぅ笑' },
       { who:'mua', e:'happy', t:'ぢゃ、イベントまで楽しみにとっとく！' },
@@ -22397,7 +22611,7 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
   'mua-sorashido-c1': { doing:'cards', lv:'1-3', lines:[
       { who:'sorashido', e:'excited', t:'勝率を上げる表を作ったぜ・・・！ 3ページだ！' },
       { who:'mua', e:'surprise', t:'3ページも！？' },
-      { who:'sorashido', e:'happy', t:'ブリーダー、どれから読む？笑' },
+      { who:'sorashido', e:'happy', t:'{name}、どれから読む？笑' },
     ], reply:{ 0:[
       { who:'sorashido', e:'happy', t:'まじめだな！ うれしいよ笑' },
       { who:'mua', e:'happy', t:'あたしもいっしょに読む！' },
@@ -22405,12 +22619,12 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
   'erubin-mua-c1': { doing:'snack', lv:'1-3', lines:[
       { who:'erubin', e:'normal', t:'紅茶とココア、どっちがいいかな？' },
       { who:'mua', e:'happy', t:'{c}がいれてくれるなら、どっちもうれしい！' },
-      { who:'erubin', e:'happy', t:'ブリーダーは、どっちが好きかな？' },
+      { who:'erubin', e:'happy', t:'{name}は、どっちが好きかな？' },
     ] },
   'kiki-momosuke-c1': { doing:'training', lv:'1-3', lines:[
       { who:'momosuke', e:'excited', t:'マスモンの育て方で勝負しよ！！' },
       { who:'kiki', e:'happy', t:'いいですよ。私はもちろん、ちから全振りでつ♪' },
-      { who:'momosuke', e:'wink', t:'ブリーダーはどっちの育て方が好き！？' },
+      { who:'momosuke', e:'wink', t:'{name}はどっちの育て方が好き！？' },
     ], reply:{ 0:[
       { who:'kiki', e:'happy', t:'ありがとうございます♪ 先手必勝でつね' },
       { who:'momosuke', e:'surprise', t:'えー！ ももの負け！？' },
@@ -22418,12 +22632,12 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
   'dra-kiki-c1': { doing:'training', lv:'1-3', lines:[
       { who:'dra', e:'normal', t:'守りも少しは上げたほうがいいって' },
       { who:'kiki', e:'happy', t:'先に倒せば、守りはいらないんですよ♪' },
-      { who:'dra', e:'troubled', t:'ブリーダー、どっちが正しいと思う？' },
+      { who:'dra', e:'troubled', t:'{name}、どっちが正しいと思う？' },
     ] },
   'atsu-kiki-c1': { doing:'cards', lv:'1-3', lines:[
       { who:'atsu', e:'happy', t:'次の対戦、どっちが先に攻める？笑' },
       { who:'kiki', e:'happy', t:'もちろん私でつ' },
-      { who:'atsu', e:'wink', t:'ブリーダー、決めてよ笑' },
+      { who:'atsu', e:'wink', t:'{name}、決めてよ笑' },
     ], reply:{ 0:[
       { who:'kiki', e:'happy', t:'では、ちから全開でいってきまつ♪' },
       { who:'atsu', e:'happy', t:'いいね！ あとは任せて！' },
@@ -22434,12 +22648,12 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
   'kiki-kyuko-c1': { doing:'cards', lv:'1-3', lines:[
       { who:'kyuko', e:'normal', t:'今日の作戦、攻めと守りどっちでいく？' },
       { who:'kiki', e:'happy', t:'攻めましょう、{c}♪' },
-      { who:'kyuko', e:'happy', t:'ブリーダーはどっちがいい？笑' },
+      { who:'kyuko', e:'happy', t:'{name}はどっちがいい？笑' },
     ] },
   'kiki-sorashido-c1': { doing:'training', lv:'1-3', lines:[
       { who:'sorashido', e:'excited', t:'攻撃全振りのダメージ、もう一回計算するか？' },
       { who:'kiki', e:'happy', t:'お願いしまつ、{c}' },
-      { who:'sorashido', e:'happy', t:'ブリーダー、何回ぶん計算する？笑' },
+      { who:'sorashido', e:'happy', t:'{name}、何回ぶん計算する？笑' },
     ], reply:{ 0:[
       { who:'sorashido', e:'wink', t:'了解、一発で出すよ笑' },
       { who:'kiki', e:'happy', t:'助かりまつ♪' },
@@ -22447,12 +22661,12 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
   'erubin-kiki-c1': { doing:'snack', lv:'1-3', lines:[
       { who:'erubin', e:'normal', t:'お茶のおかわり、いるかな？' },
       { who:'kiki', e:'happy', t:'はい、いただきまつ、{c}' },
-      { who:'erubin', e:'happy', t:'ブリーダーも、いっしょにどうかな？' },
+      { who:'erubin', e:'happy', t:'{name}も、いっしょにどうかな？' },
     ] },
   'dra-momosuke-c1': { lv:'1-3', lines:[
       { who:'dra', e:'wink', t:'今日のおでのギャグ、採点してくれよ' },
       { who:'momosuke', e:'wink', t:'いいよ〜？ でも{c}、もも辛口だからねw' },
-      { who:'momosuke', e:'happy', t:'ブリーダーも一緒に採点して！！' },
+      { who:'momosuke', e:'happy', t:'{name}も一緒に採点して！！' },
     ], reply:{ 1:[
       { who:'dra', e:'troubled', t:'半分か…まあ、半分でもうれしいくさ' },
       { who:'momosuke', e:'happy', t:'ちょうどいいとこだねw' },
@@ -22463,17 +22677,17 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
   'atsu-momosuke-c1': { doing:'practice', lv:'1-3', lines:[
       { who:'atsu', e:'wink', t:'次のライブ、俺のほうが盛り上げられるかもね笑' },
       { who:'momosuke', e:'angry', t:'は！？ ライブはももの担当だし！！' },
-      { who:'momosuke', e:'excited', t:'ブリーダー、どっちのほうが盛り上がると思う！？' },
+      { who:'momosuke', e:'excited', t:'{name}、どっちのほうが盛り上がると思う！？' },
     ] },
   'kyuko-momosuke-c1': { doing:'training', lv:'1-3', lines:[
       { who:'momosuke', e:'excited', t:'ドリーミィとメタルナー、どっちがかわいい！？' },
       { who:'kyuko', e:'troubled', t:'えぇ、どっちもかわいいよぉ笑' },
-      { who:'momosuke', e:'wink', t:'ブリーダーはどっち！？' },
+      { who:'momosuke', e:'wink', t:'{name}はどっち！？' },
     ] },
   'momosuke-sorashido-c1': { doing:'practice', lv:'1-3', lines:[
       { who:'sorashido', e:'happy', t:'ミスを減らす練習メニューを作ったぞ笑' },
       { who:'momosuke', e:'surprise', t:'え、もものために！？' },
-      { who:'sorashido', e:'wink', t:'ブリーダー、どれくらいやらせる？笑' },
+      { who:'sorashido', e:'wink', t:'{name}、どれくらいやらせる？笑' },
     ], reply:{ 0:[
       { who:'momosuke', e:'happy', t:'それならできる！！' },
       { who:'sorashido', e:'happy', t:'ちょうどいいな笑' },
@@ -22481,12 +22695,12 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
   'erubin-momosuke-c1': { doing:'walk', lv:'1-3', lines:[
       { who:'erubin', e:'normal', t:'今日はどんな話をしてくれるのかな？' },
       { who:'momosuke', e:'excited', t:'話したいこと、いっぱいある！！' },
-      { who:'momosuke', e:'wink', t:'ブリーダー、どの話がいいと思う！？' },
+      { who:'momosuke', e:'wink', t:'{name}、どの話がいいと思う！？' },
     ] },
   'atsu-dra-c1': { doing:'cards', lv:'1-3', lines:[
       { who:'atsu', e:'happy', t:'今日のカードの対戦、どっちのデッキでいく？笑' },
       { who:'dra', e:'happy', t:'おでのいつものやつだな、{c}' },
-      { who:'atsu', e:'wink', t:'ブリーダーが決めて笑' },
+      { who:'atsu', e:'wink', t:'{name}が決めて笑' },
     ], reply:{ 0:[
       { who:'dra', e:'excited', t:'おう、任せとけ、くさ' },
       { who:'atsu', e:'happy', t:'いいね！ 本気で行く！' },
@@ -22497,7 +22711,7 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
   'dra-kyuko-c1': { doing:'training', lv:'1-3', lines:[
       { who:'kyuko', e:'normal', t:'そのグジラ、育て方を変えたら強くなると思う' },
       { who:'dra', e:'surprise', t:'まじか。{c}、教えてくれよ' },
-      { who:'kyuko', e:'happy', t:'ブリーダーも聞く？笑' },
+      { who:'kyuko', e:'happy', t:'{name}も聞く？笑' },
     ], reply:{ 0:[
       { who:'kyuko', e:'wink', t:'おけ！ すばやさを少し上げるのがコツだよぉ' },
       { who:'dra', e:'happy', t:'なるほどな、助かるぞ' },
@@ -22508,7 +22722,7 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
   'dra-sorashido-c1': { doing:'cards', lv:'1-3', lines:[
       { who:'sorashido', e:'excited', t:'昨日の対戦、20ページの表にしたぜ・・・！' },
       { who:'dra', e:'surprise', t:'20ページ…{c}、まじかよ' },
-      { who:'sorashido', e:'happy', t:'ブリーダー、読む？笑' },
+      { who:'sorashido', e:'happy', t:'{name}、読む？笑' },
     ], reply:{ 0:[
       { who:'sorashido', e:'excited', t:'うぉぉぉ！ ありがとう笑' },
       { who:'dra', e:'happy', t:'おでも読むぞ、くさ' },
@@ -22522,7 +22736,7 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
   'dra-erubin-c1': { doing:'cards', lv:'1-3', lines:[
       { who:'dra', e:'wink', t:'デュラハンのカード、ちょっと貸してくれよ' },
       { who:'erubin', e:'troubled', t:'えぇ、{c}、大事にしてるんだよね…笑' },
-      { who:'erubin', e:'normal', t:'ブリーダーは、どうしたらいいと思うかな？' },
+      { who:'erubin', e:'normal', t:'{name}は、どうしたらいいと思うかな？' },
     ], reply:{ 0:[
       { who:'erubin', e:'happy', t:'じゃあ、大事に使ってね' },
       { who:'dra', e:'happy', t:'おう、約束するぞ' },
@@ -22530,7 +22744,7 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
   'atsu-kyuko-c1': { lv:'1-3', lines:[
       { who:'kyuko', e:'normal', t:'次のランキング、どっちが上に行くか勝負しよ' },
       { who:'atsu', e:'wink', t:'いいよ！ 負けないけど笑' },
-      { who:'kyuko', e:'happy', t:'ブリーダーはどっちが勝つと思う？' },
+      { who:'kyuko', e:'happy', t:'{name}はどっちが勝つと思う？' },
     ], reply:{ 0:[
       { who:'kyuko', e:'excited', t:'ありがとん！ がんばる🤣' },
       { who:'atsu', e:'happy', t:'お、言ったね！ 燃えてきた笑' },
@@ -22541,7 +22755,7 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
   'atsu-sorashido-c1': { doing:'practice', lv:'1-3', lines:[
       { who:'sorashido', e:'excited', t:'HELLのノーツ、全部数えてきたぜ・・・！' },
       { who:'atsu', e:'happy', t:'また数えたの？笑' },
-      { who:'sorashido', e:'happy', t:'ブリーダー、何個あったと思う？笑' },
+      { who:'sorashido', e:'happy', t:'{name}、何個あったと思う？笑' },
     ], reply:{ 0:[
       { who:'sorashido', e:'wink', t:'いい読みだ！' },
       { who:'atsu', e:'happy', t:'当てるのすごいね笑' },
@@ -22549,7 +22763,7 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
   'atsu-erubin-c1': { lv:'1-3', lines:[
       { who:'erubin', e:'normal', t:'今日はちょっと休んだほうがいいかな？' },
       { who:'atsu', e:'happy', t:'え、俺？ まだいけるよ笑' },
-      { who:'erubin', e:'happy', t:'ブリーダーは、どう思うかな？' },
+      { who:'erubin', e:'happy', t:'{name}は、どう思うかな？' },
     ], reply:{ 0:[
       { who:'atsu', e:'troubled', t:'…分かった！ 少しだけね！' },
       { who:'erubin', e:'happy', t:'うん、それがいいよ' },
@@ -22557,7 +22771,7 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
   'kyuko-sorashido-c1': { doing:'training', lv:'1-3', lines:[
       { who:'sorashido', e:'happy', t:'育成の計算、手でやるか機械でやるか…' },
       { who:'kyuko', e:'normal', t:'どっちでもいいと思うよぉ' },
-      { who:'sorashido', e:'wink', t:'ブリーダーならどうする？笑' },
+      { who:'sorashido', e:'wink', t:'{name}ならどうする？笑' },
     ], reply:{ 0:[
       { who:'sorashido', e:'excited', t:'だよな！ 手で計算するのが楽しいんだ！' },
       { who:'kyuko', e:'happy', t:'{c}らしいねぇ笑' },
@@ -22565,12 +22779,12 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
   'erubin-kyuko-c1': { lv:'1-3', lines:[
       { who:'erubin', e:'normal', t:'夜ふかしは体に悪いよ？' },
       { who:'kyuko', e:'troubled', t:'分かってるけど、育成が楽しくてぇ😭' },
-      { who:'erubin', e:'happy', t:'ブリーダーは、どう思うかな？' },
+      { who:'erubin', e:'happy', t:'{name}は、どう思うかな？' },
     ] },
   'erubin-sorashido-c1': { doing:'cards', lv:'1-3', lines:[
       { who:'sorashido', e:'excited', t:'新しい表、どこから説明しよう！' },
       { who:'erubin', e:'happy', t:'{c}が話しやすいところからでいいよ' },
-      { who:'sorashido', e:'happy', t:'ブリーダー、どこから聞きたい？笑' },
+      { who:'sorashido', e:'happy', t:'{name}、どこから聞きたい？笑' },
     ], reply:{ 2:[
       { who:'erubin', e:'troubled', t:'俺かぁ…笑 がんばるね' },
       { who:'sorashido', e:'happy', t:'頼んだよ笑' },
@@ -22656,11 +22870,11 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
       { who:'erubin', e:'normal', t:'みんなが楽しく遊べること、かな' },
     ] },
   'atsu-mua-w-battle': { lines:[
-      { who:'atsu', e:'happy', t:'今日のブリーダーのバトル見た？笑' },
+      { who:'atsu', e:'happy', t:'今日の{name}のバトル見た？笑' },
       { who:'mua', e:'excited', t:'見た見た！ けっこういい動きだったよね！' },
     ] },
   'dra-kiki-w-battle': { lines:[
-      { who:'dra', e:'normal', t:'今日のブリーダー、バトルで攻めてたな' },
+      { who:'dra', e:'normal', t:'今日の{name}、バトルで攻めてたな' },
       { who:'kiki', e:'happy', t:'はい。ちから全開でしたね♪' },
     ] },
   'momosuke-sorashido-w-battle': { lines:[
@@ -22668,11 +22882,11 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
       { who:'momosuke', e:'wink', t:'はや！！w {c}、仕事早すぎ' },
     ] },
   'erubin-kyuko-w-battle': { lines:[
-      { who:'erubin', e:'happy', t:'今日のブリーダーのバトル、落ち着いてたね' },
+      { who:'erubin', e:'happy', t:'今日の{name}のバトル、落ち着いてたね' },
       { who:'kyuko', e:'normal', t:'判断がよかったよねぇ。見てて楽しかった笑' },
     ] },
   'momosuke-mua-w-clear': { lines:[
-      { who:'mua', e:'excited', t:'今日、ブリーダーがチャレンジクリアしたって！' },
+      { who:'mua', e:'excited', t:'今日、{name}がチャレンジクリアしたって！' },
       { who:'momosuke', e:'excited', t:'ほんと！？ すごすぎ！！' },
     ] },
   'atsu-kiki-w-clear': { lines:[
@@ -22680,7 +22894,7 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
       { who:'kiki', e:'happy', t:'私もでつ。うれしいですね♪' },
     ] },
   'dra-erubin-w-clear': { lines:[
-      { who:'erubin', e:'happy', t:'ブリーダー、チャレンジをクリアしたんだって' },
+      { who:'erubin', e:'happy', t:'{name}、チャレンジをクリアしたんだって' },
       { who:'dra', e:'excited', t:'おでもうれしいぞ、えへへ' },
     ] },
   'kyuko-sorashido-w-clear': { lines:[
@@ -22688,7 +22902,7 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
       { who:'kyuko', e:'happy', t:'それ作るの！？笑 いいねぇ' },
     ] },
   'kyuko-mua-w-enhance': { lines:[
-      { who:'kyuko', e:'normal', t:'今日のブリーダーの強化、いい選び方だったねぇ' },
+      { who:'kyuko', e:'normal', t:'今日の{name}の強化、いい選び方だったねぇ' },
       { who:'mua', e:'happy', t:'{c}がほめるなら、間違いないぢゃん！' },
     ] },
   'kiki-sorashido-w-enhance': { lines:[
@@ -22697,22 +22911,22 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
     ] },
   'erubin-momosuke-w-enhance': { lines:[
       { who:'momosuke', e:'excited', t:'マスモンがまた強くなってた！！' },
-      { who:'erubin', e:'happy', t:'ブリーダーは毎日がんばってるもんね' },
+      { who:'erubin', e:'happy', t:'{name}は毎日がんばってるもんね' },
     ] },
   'atsu-dra-w-enhance': { lines:[
       { who:'dra', e:'normal', t:'今日の強化、悪くないな' },
       { who:'atsu', e:'wink', t:'もう一段いけるよね笑' },
     ] },
   'dra-mua-w-streak': { lines:[
-      { who:'mua', e:'excited', t:'ブリーダー、毎日来てくれてるね！' },
+      { who:'mua', e:'excited', t:'{name}、毎日来てくれてるね！' },
       { who:'dra', e:'happy', t:'おでもうれしいぞ。えへへ' },
     ] },
   'kiki-momosuke-w-streak': { lines:[
-      { who:'momosuke', e:'excited', t:'ブリーダー、連続で来てるよ！！' },
+      { who:'momosuke', e:'excited', t:'{name}、連続で来てるよ！！' },
       { who:'kiki', e:'happy', t:'ほんとですね。ありがとうございまつ♪' },
     ] },
   'atsu-kyuko-w-streak': { lines:[
-      { who:'atsu', e:'happy', t:'ブリーダー、毎日えらいね笑' },
+      { who:'atsu', e:'happy', t:'{name}、毎日えらいね笑' },
       { who:'kyuko', e:'wink', t:'続けるのが一番大事だからねぇ笑' },
     ] },
   'erubin-sorashido-w-streak': { lines:[
@@ -23208,13 +23422,13 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
       { who:'erubin', e:'happy', t:'おけ！ {c}がいちばん輝けるように、手伝うね' },
     ] },
   'kiki-mua-ev1': { lines:[
-      { who:'mua', e:'excited', t:'クッキー対決しよ！ ブリーダーに食べ比べてもらうの！' },
+      { who:'mua', e:'excited', t:'クッキー対決しよ！ {name}に食べ比べてもらうの！' },
       { who:'kiki', e:'happy', t:'いいですね♪ 負けませんよ' },
       { who:'mua', e:'happy', t:'あたしのは、いちごチョコをたっぷりのせたやつ！ 見た目もかわいいっしょ♪' },
       { who:'kiki', e:'normal', t:'私のは、バターをしっかりきかせた、さくさくのプレーンでつ' },
       { who:'mua', e:'wink', t:'{c}、シンプルで攻めてきたね〜' },
       { who:'kiki', e:'wink', t:'シンプルがいちばん強いんでつよ♪' },
-      { who:'kiki', e:'normal', t:'ブリーダーさん、どちらがおいしかったですか？' },
+      { who:'kiki', e:'normal', t:'{name}、どちらがおいしかったですか？' },
     ] },
   'dra-momosuke-ev1': { lines:[
       { who:'momosuke', e:'excited', t:'モンヒロビートで勝負しよ！！ 負けたらジュースおごりね！' },
@@ -23223,7 +23437,7 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
       { who:'dra', e:'excited', t:'よーし、いくぞ！ …うぉっ、速いな、この曲' },
       { who:'momosuke', e:'surprise', t:'えっ、{c}、意外とうまい！？' },
       { who:'dra', e:'wink', t:'えへへ、こっそり練習してたからな' },
-      { who:'momosuke', e:'normal', t:'ブリーダー、見てたでしょ！？ どっちがうまかった！？' },
+      { who:'momosuke', e:'normal', t:'{name}、見てたでしょ！？ どっちがうまかった！？' },
     ] },
   'kyuko-sorashido-ev1': { lines:[
       { who:'sorashido', e:'excited', t:'うぉぉぉ！ どっちのデッキ案が強いか勝負だ！' },
@@ -23232,7 +23446,7 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
       { who:'kyuko', e:'wink', t:'表まで作ってきたの？ さすが{c}だねぇ' },
       { who:'sorashido', e:'wink', t:'数字はうそつかないからな！' },
       { who:'kyuko', e:'normal', t:'でも相手が守りなら、攻めきれないこともあるよぉ' },
-      { who:'sorashido', e:'normal', t:'ブリーダー、判定たのむ！ どっちの作戦が好きだ？' },
+      { who:'sorashido', e:'normal', t:'{name}、判定たのむ！ どっちの作戦が好きだ？' },
     ], reply:{ 1:[
       { who:'sorashido', e:'excited', t:'よっしゃー！ 計算どおりだ！' },
       { who:'kyuko', e:'troubled', t:'ぐぬぬぬ… 次は数字で勝ってみせるよぉ' },
@@ -23245,8 +23459,8 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
       { who:'dra', e:'wink', t:'おではもちろんグジラだな。あの大きさ、たまらないぞ' },
       { who:'atsu', e:'excited', t:'俺はドラゴン一択！ 翼を広げたところ、最高でしょ！' },
       { who:'dra', e:'happy', t:'グジラのしっぽの一撃、見たことあるか？ 迫力すごいからな' },
-      { who:'atsu', e:'wink', t:'てか、決めてもらおうぜ！ ブリーダーに！' },
-      { who:'dra', e:'normal', t:'そうだな。ブリーダー、どっちがかっこいい？' },
+      { who:'atsu', e:'wink', t:'てか、決めてもらおうぜ！ {name}に！' },
+      { who:'dra', e:'normal', t:'そうだな。{name}、どっちがかっこいい？' },
     ] },
   'erubin-kiki-ev1': { lines:[
       { who:'erubin', e:'normal', t:'マーケットにおつかいに行ってきたよ。おやつの材料ね' },
@@ -23255,7 +23469,7 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
       { who:'kiki', e:'normal', t:'私は、安いものをしっかり選んできましたよ' },
       { who:'erubin', e:'happy', t:'俺は、おいしそうなのを選んだかな。少し高かったけどね' },
       { who:'kiki', e:'wink', t:'ふふ、作戦がちがいまつね♪' },
-      { who:'erubin', e:'normal', t:'ブリーダー、どっちのおつかいがいいと思う？' },
+      { who:'erubin', e:'normal', t:'{name}、どっちのおつかいがいいと思う？' },
     ] },
   'momosuke-mua-ev1': { lines:[
       { who:'momosuke', e:'excited', t:'新しい振り付け考えたから、勝負しよ！！' },
@@ -23264,16 +23478,16 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
       { who:'mua', e:'happy', t:'あたしは、ジャンプしてピースで決めるよ♪' },
       { who:'momosuke', e:'excited', t:'せーの！！' },
       { who:'mua', e:'surprise', t:'{c}のターン、まぢキレッキレぢゃん！' },
-      { who:'momosuke', e:'normal', t:'ブリーダー、どっちのダンスがよかった！？' },
+      { who:'momosuke', e:'normal', t:'{name}、どっちのダンスがよかった！？' },
     ] },
   'atsu-kyuko-ev1': { lines:[
       { who:'kyuko', e:'happy', t:'モンスタークイズで早押し勝負しよぉ' },
       { who:'atsu', e:'wink', t:'いいね！ 負けた方がジュースね笑' },
-      { who:'kyuko', e:'normal', t:'ほい！ 問題はブリーダーに出してもらお〜' },
+      { who:'kyuko', e:'normal', t:'ほい！ 問題は{name}に出してもらお〜' },
       { who:'atsu', e:'excited', t:'てか、もう指が準備できてる笑' },
       { who:'kyuko', e:'wink', t:'俺、図鑑は全部読んでるからねぇ' },
       { who:'atsu', e:'happy', t:'まじか笑 でもスピードなら負けない！' },
-      { who:'kyuko', e:'normal', t:'ブリーダー、どっちが早かったぁ？' },
+      { who:'kyuko', e:'normal', t:'{name}、どっちが早かったぁ？' },
     ] },
   'dra-sorashido-ev1': { lines:[
       { who:'sorashido', e:'excited', t:'海で釣り勝負だ！ 潮の時間は計算ずみだぜ笑' },
@@ -23282,7 +23496,7 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
       { who:'dra', e:'surprise', t:'こっちもきたぞ！ …うぉっ、重い！' },
       { who:'sorashido', e:'surprise', t:'まさかの大物！？' },
       { who:'dra', e:'wink', t:'えへへ、長靴だったな' },
-      { who:'sorashido', e:'normal', t:'ブリーダー、これ、どっちの勝ちだ…？' },
+      { who:'sorashido', e:'normal', t:'{name}、これ、どっちの勝ちだ…？' },
     ], reply:{ 2:[
       { who:'sorashido', e:'happy', t:'それだ！ 楽しかったなら全部勝ちだぜ・・・！' },
       { who:'dra', e:'happy', t:'また来ような、{c}' },
@@ -23294,7 +23508,7 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
       { who:'erubin', e:'surprise', t:'わ、すごく明るい部屋になったね' },
       { who:'momosuke', e:'happy', t:'{c}のも、かっこいいじゃん！！ カードがきらきらしてる！' },
       { who:'erubin', e:'happy', t:'ありがとう。並べるの、楽しかったよ' },
-      { who:'momosuke', e:'normal', t:'ブリーダー、どっちのお部屋がいい！？' },
+      { who:'momosuke', e:'normal', t:'{name}、どっちのお部屋がいい！？' },
     ] },
   'kiki-kyuko-ev1': { lines:[
       { who:'kyuko', e:'happy', t:'お絵かき対決しよぉ。お題は好きなモンスター〜' },
@@ -23303,7 +23517,7 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
       { who:'kiki', e:'normal', t:'ゴーレムは、ごつごつ感が大事なんでつ' },
       { who:'kyuko', e:'surprise', t:'うわ、{c}のゴーレム、すごい迫力…' },
       { who:'kiki', e:'wink', t:'ふふ。{c}のニャーも、ふわふわでかわいいですよ♪' },
-      { who:'kiki', e:'normal', t:'ブリーダーさん、どちらの絵が好きですか？' },
+      { who:'kiki', e:'normal', t:'{name}、どちらの絵が好きですか？' },
     ] },
   'mua-sorashido-ev1': { lines:[
       { who:'mua', e:'excited', t:'マスモンの写真対決しよ！ いちばんいい1枚を撮った方が勝ち♪' },
@@ -23312,7 +23526,7 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
       { who:'sorashido', e:'happy', t:'俺は夕方の浜で、シルエットを撮った。でーじきれいだぜ笑' },
       { who:'mua', e:'surprise', t:'え、それエモすぎぢゃん…' },
       { who:'sorashido', e:'wink', t:'{c}のモッチー写真も、反則級にかわいいな' },
-      { who:'mua', e:'normal', t:'ブリーダー、どっちの写真がいい？' },
+      { who:'mua', e:'normal', t:'{name}、どっちの写真がいい？' },
     ], reply:{ 0:[
       { who:'mua', e:'excited', t:'やった〜♪ モッチーのかわいさの勝ち！' },
       { who:'sorashido', e:'happy', t:'負けた！ あのほっぺは計算できないぜ笑' },
@@ -23325,8 +23539,8 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
       { who:'atsu', e:'excited', t:'お、見せて！ 俺のも見せるわ笑' },
       { who:'erubin', e:'normal', t:'俺のは、デュラハンを真ん中にした守りのデッキだよ' },
       { who:'atsu', e:'happy', t:'俺はドラゴンで一気にいく型！ とりあえず攻める笑' },
-      { who:'erubin', e:'wink', t:'{c}らしいね。どっちが好きか、ブリーダーに見てもらおうか' },
-      { who:'atsu', e:'wink', t:'いいね！ ブリーダー、どっちのデッキが好き？' },
+      { who:'erubin', e:'wink', t:'{c}らしいね。どっちが好きか、{name}に見てもらおうか' },
+      { who:'atsu', e:'wink', t:'いいね！ {name}、どっちのデッキが好き？' },
     ] },
   'atsu-dra-q': { lines:[
       { who:'dra', e:'happy', t:'次はおでの番だからな。コントローラー貸してくれ' },

@@ -1,0 +1,115 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>助手ライフの形</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0b1020;font-family:"Noto Sans JP","Hiragino Sans",sans-serif;color:#fff;padding:16px}
+.row{display:flex;gap:16px;align-items:flex-start;margin-bottom:16px}
+.cap{font-size:14px;font-weight:900;color:#fde68a;margin-bottom:6px}
+.ph{width:390px;height:844px;border-radius:28px;border:2px solid #334155;overflow:hidden;position:relative;background:#020617}
+.ld{width:844px;height:390px;border-radius:24px;border:2px solid #334155;overflow:hidden;position:relative;background:#020617}
+.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.strip{position:absolute;left:8px;right:8px;display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:16px;background:#020617e6;border:1px solid #f9a8d466}
+.strip .t{font-size:10px;font-weight:900;color:#fbcfe8;white-space:nowrap}
+.fc{position:relative;width:34px;height:34px;flex:none}.fc img{width:34px;height:34px;border-radius:50%;border:2px solid #0f172a;background:#334155}
+.fc i{position:absolute;right:-4px;bottom:-3px;font-style:normal;font-size:12px;background:#0f172a;border-radius:8px;padding:0 2px;line-height:15px}
+.fc.lonely img{border-color:#fbbf24}.pair{display:flex;align-items:center;background:#ffffff10;border-radius:999px;padding:1px 4px 1px 1px}.pair .fc+.fc{margin-left:-10px}
+.cover{position:absolute;left:0;right:0;background:#000c;display:grid;place-items:center;font-size:11px;color:#94a3b8;font-weight:900}
+.facility{position:absolute;padding:8px 12px;border-radius:16px;background:#1e1b4bf0;border:2px solid #f9a8d4;font-weight:900;font-size:15px;display:flex;gap:6px;align-items:center;box-shadow:0 0 16px #f472b680}
+.facility small{display:block;font-size:9px;color:#fbcfe8}
+.pg{position:absolute;inset:0;background:#020617;padding:10px}
+.hd{display:flex;align-items:center;gap:8px;border-bottom:1px solid #ffffff1a;padding-bottom:6px}.hd b{flex:1;font-size:16px;color:#fbcfe8}.back{font-size:12px;color:#cbd5e1;border:1px solid #475569;border-radius:10px;padding:5px 8px}
+.tabs{display:flex;gap:4px;margin-top:6px}.tab{flex:1;text-align:center;font-size:11px;font-weight:900;padding:7px 0;border-radius:10px;border:1px solid #ffffff1a;color:#94a3b8}.tab.on{border-color:#f9a8d4;background:#f472b622;color:#fce7f3}.tab.lock{opacity:.45}
+.card{border-radius:14px;border:1px solid #ffffff1a;background:#0f172a;padding:7px;margin-top:6px}
+.k{font-size:11px;font-weight:900}.s{font-size:10px;color:#cbd5e1;line-height:1.45}.m{font-size:9px;color:#94a3b8}
+.todo{border-color:#fcd34d77;background:#f59e0b12}.todo li{list-style:none;font-size:11px;margin-top:3px}
+.b{display:inline-block;font-size:10px;font-weight:900;border-radius:9px;padding:4px 8px;margin-top:4px}.bp{border:1px solid #f9a8d4;color:#fce7f3}.ba{border:1px solid #fcd34d;color:#fef3c7}
+.heart{color:#f9a8d4}.hand{color:#fdba74}
+.diagram{width:860px;background:#0f172a;border-radius:20px;border:2px solid #334155;padding:14px}
+.lv{display:flex;gap:10px;align-items:stretch;margin-top:8px}.box{flex:1;border-radius:12px;border:1px solid #475569;padding:8px;font-size:11px;line-height:1.5}
+.arrow{align-self:center;color:#f9a8d4;font-weight:900}
+.box h4{font-size:12px;color:#fde68a;margin-bottom:3px}.new{border-style:dashed;border-color:#64748b;color:#94a3b8}
+.legend span{display:inline-block;margin-right:10px;font-size:11px}
+</style></head><body>
+<!-- 全体の形 -->
+<div class="row"><div class="diagram">
+ <p class="cap">① 全体の形(1枚)— 入口は2つ、中は「いま/友情/道具」の3つだけ。家・遊び場は後から同じ場所に入る</p>
+ <div class="lv">
+  <div class="box"><h4>HOME の上: 居場所の帯</h4>助手の顔が並び、右下に居場所の小さな印(🍰おやつ屋・🎵スタジオ・🃏カード部屋・🏠家…)。<br>一緒にいる2人は顔をくっつける/さみしそうな助手は黄色の縁。<br><b>押すと、助手ライフのその組へ</b></div>
+  <div class="arrow">▶</div>
+  <div class="box"><h4>HOME の施設: 🏡 助手ライフ</h4>モンヒロビート・MFバトルカードと同じ並びの入口(左の列)。<br>プロフィールの入口は近道として残す(同じページへ)</div>
+  <div class="arrow">▶</div>
+  <div class="box"><h4>助手ライフ(専用のページ)</h4>上: 見出し「助手ライフ」・戻る・にぎわい1行<br>タブ: <b>いま</b>/<b>友情</b>/<b>道具</b><br>いま = 今日やれること(1か所) + 組とひとりの一覧</div>
+ </div>
+ <div class="lv">
+  <div class="box"><h4>いま(はじめから)</h4>・今日やれること: 見守る あと◯回/誘える助手/渡せる道具<br>・組のカード: 顔・場所・していること → 見守る/渡す<br>・ひとり: ようすを見る/誘う<br>・引き合わせるは「今日やれること」から開く(1段奥)</div>
+  <div class="box"><h4>友情(友情Lv3 のペアができたら開く)</h4>関係図・ペアの一覧(あと◯)・思い出アルバム</div>
+  <div class="box"><h4>道具(道具を初めて持ったら開く)</h4>差し入れ・友情のしるし(持っている数・起きること・手に入れる所)。あとで増える道具・好き嫌いもここ</div>
+ </div>
+ <div class="lv">
+  <div class="box new"><h4>あとで: 遊び場</h4>「いま」の組の場所が、ゲームの遊び(モンヒロビート・カード対戦…)にもなる。HOME の施設のアイコンにも顔の印 → 開くとその遊びの掛け合い。タブは増やさない</div>
+  <div class="box new"><h4>あとで: 家</h4>「いま」のひとり/組の場所に「◯◯の家」が入る。家のカードを押すと、その家(訪ねる・一緒に遊ぶ)。8人の家がそろったらタブ「家」を足す(4つまで)</div>
+  <div class="box new"><h4>あとで: 行事・お出かけ</h4>「いま」の上に、その日だけの札(お花見・夏祭り…)を1枚。終わったら消える</div>
+ </div>
+ <p class="legend" style="margin-top:10px"><span class="heart">💗 仲良し度(あなたと助手)= ピンクのハート</span><span class="hand">🤝 友情Lv(助手どうし)= オレンジの手</span><span>🎉 にぎわい(その日に遊んだ量)= 帯の1行だけ</span><span>🧺🤝 道具はデータの名前と絵</span></p>
+</div></div>
+
+<div class="row">
+<!-- ② HOME の上(縦) -->
+<div><p class="cap">② HOME の上に居場所の帯(縦)</p><div class="ph">
+ <img class="bg" src="../shots/life-1-home-band.png">
+ <div class="strip" style="top:122px">
+  <span class="t">助手ライフ</span>
+  <span class="pair"><span class="fc"><img src="../../../../monster-hero/images/assistant/face/kiki_normal.PNG"></span><span class="fc"><img src="../../../../monster-hero/images/assistant/face/myua_normal.PNG"><i>🍰</i></span></span>
+  <span class="pair"><span class="fc"><img src="../../../../monster-hero/images/assistant/face/dra_normal.PNG"></span><span class="fc"><img src="../../../../monster-hero/images/assistant/face/erubin_normal.PNG"><i>🃏</i></span></span>
+  <span class="fc lonely"><img src="../../../../monster-hero/images/assistant/face/momosuke_normal.PNG"><i>🎵</i></span>
+  <span class="fc"><img src="../../../../monster-hero/images/assistant/face/atsu_normal.PNG"><i>🏠</i></span>
+  <span class="fc"><img src="../../../../monster-hero/images/assistant/face/kyuko_normal.PNG"><i>📚</i></span>
+  <span class="t" style="margin-left:auto">▸</span>
+ </div>
+ <div class="facility" style="left:16px;top:560px">🏡<span>助手ライフ<small>みんなの様子</small></span></div>
+ <div class="cover" style="bottom:88px;height:120px">今の下の帯はなくす</div>
+</div></div>
+<!-- ③ 専用ページ(縦) -->
+<div><p class="cap">③ 専用ページ「助手ライフ」(縦)</p><div class="ph"><div class="pg">
+ <div class="hd"><span class="back">◀ HOME</span><b>🏡 助手ライフ</b><span class="m">午後(〜18時)</span></div>
+ <p class="s" style="margin-top:5px">🎉 にぎわい「にぎやか」 友情Lv の上がり ×1.5 ・あと48で「お祭り」</p>
+ <div class="tabs"><span class="tab on">いま</span><span class="tab">🤝 友情</span><span class="tab">🧺 道具</span></div>
+ <div class="card todo"><p class="k" style="color:#fde68a">今日やれること</p><ul>
+  <li>👀 見守る あと<b>14</b>回</li><li>💬 ももすけがさみしそう → <span class="b ba">誘う</span></li><li>🧺 差し入れ 1回 (2個)</li><li class="m">🤝 引き合わせる ▸</li></ul></div>
+ <div class="card"><div style="display:flex;gap:6px;align-items:center"><span class="pair"><span class="fc"><img src="../../../../monster-hero/images/assistant/face/kiki_happy.PNG"></span><span class="fc"><img src="../../../../monster-hero/images/assistant/face/myua_happy.PNG"></span></span><div><p class="k">きき・みゅあ</p><p class="s">🍰 おやつ屋さんでおやつ</p></div></div>
+  <p class="m hand">🤝 友情Lv5 → あと8で Lv6</p><span class="b bp">👀 見守る</span> <span class="b ba">🧺 渡す</span></div>
+ <div class="card"><div style="display:flex;gap:6px;align-items:center"><span class="pair"><span class="fc"><img src="../../../../monster-hero/images/assistant/face/dra_happy.PNG"></span><span class="fc"><img src="../../../../monster-hero/images/assistant/face/erubin_happy.PNG"></span></span><div><p class="k">ドラ・えるびん</p><p class="s">🃏 カード部屋でカード研究</p></div></div>
+  <span class="b bp">👀 見守る</span> <span class="b ba">🧺 渡す</span></div>
+ <p class="m" style="margin-top:8px">ひとりの助手</p>
+ <div class="card" style="display:flex;gap:6px;align-items:center"><span class="fc lonely"><img src="../../../../monster-hero/images/assistant/face/momosuke_troubled.PNG"></span><div style="flex:1"><p class="k">ももすけ <span class="m" style="color:#fbbf24">さみしそう</span></p><p class="s">🎵 練習スタジオ</p></div><span class="b bp">ようす</span><span class="b ba">誘う</span></div>
+ <div class="card" style="display:flex;gap:6px;align-items:center"><span class="fc"><img src="../../../../monster-hero/images/assistant/face/atsu_normal.PNG"></span><div style="flex:1"><p class="k">あつ</p><p class="s">🏠 家でごろごろ</p></div><span class="b bp">ようす</span></div>
+</div></div></div>
+</div>
+
+<div class="row">
+<!-- ④ 横 -->
+<div><p class="cap">④ HOME の上(横)</p><div class="ld">
+ <img class="bg" src="../shots/life-5-home-band-land.png">
+ <div class="strip" style="top:58px;left:auto;right:12px;width:420px">
+  <span class="t">助手ライフ</span>
+  <span class="pair"><span class="fc"><img src="../../../../monster-hero/images/assistant/face/kiki_normal.PNG"></span><span class="fc"><img src="../../../../monster-hero/images/assistant/face/myua_normal.PNG"><i>🍰</i></span></span>
+  <span class="pair"><span class="fc"><img src="../../../../monster-hero/images/assistant/face/dra_normal.PNG"></span><span class="fc"><img src="../../../../monster-hero/images/assistant/face/erubin_normal.PNG"><i>🃏</i></span></span>
+  <span class="fc lonely"><img src="../../../../monster-hero/images/assistant/face/momosuke_normal.PNG"><i>🎵</i></span>
+  <span class="fc"><img src="../../../../monster-hero/images/assistant/face/atsu_normal.PNG"><i>🏠</i></span>
+  <span class="t" style="margin-left:auto">▸</span>
+ </div>
+ <div class="cover" style="top:244px;height:74px;left:200px;right:200px">今の下の帯はなくす</div>
+</div></div>
+<!-- ⑤ 専用ページ 横 -->
+<div><p class="cap">⑤ 専用ページ(横)— 左に今日やれること、右に一覧</p><div class="ld"><div class="pg" style="display:grid;grid-template-columns:260px 1fr;gap:10px">
+ <div><div class="hd"><span class="back">◀</span><b>🏡 助手ライフ</b></div>
+  <p class="s" style="margin-top:5px">🎉 にぎやか ×1.5 ・午後(〜18時)</p>
+  <div class="tabs"><span class="tab on">いま</span><span class="tab">🤝 友情</span><span class="tab">🧺 道具</span></div>
+  <div class="card todo"><p class="k" style="color:#fde68a">今日やれること</p><ul><li>👀 見守る あと<b>14</b>回</li><li>💬 ももすけがさみしそう</li><li>🧺 差し入れ 1回</li><li class="m">🤝 引き合わせる ▸</li></ul></div></div>
+ <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-content:start">
+  <div class="card"><p class="k">きき・みゅあ</p><p class="s">🍰 おやつ屋さんでおやつ</p><span class="b bp">👀 見守る</span> <span class="b ba">🧺 渡す</span></div>
+  <div class="card"><p class="k">ドラ・えるびん</p><p class="s">🃏 カード部屋でカード研究</p><span class="b bp">👀 見守る</span> <span class="b ba">🧺 渡す</span></div>
+  <div class="card"><p class="k">ももすけ <span class="m" style="color:#fbbf24">さみしそう</span></p><p class="s">🎵 練習スタジオ</p><span class="b bp">ようす</span> <span class="b ba">誘う</span></div>
+  <div class="card"><p class="k">あつ</p><p class="s">🏠 家でごろごろ</p><span class="b bp">ようす</span></div>
+ </div>
+</div></div></div>
+</div>
+</body></html>

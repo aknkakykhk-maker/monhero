@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b54d965e6a9ebd3c
+// source-sha256: 4fe3e073939059d4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -19682,6 +19682,7 @@ const AssistantBubble = ({
     }, "💬 ", who.name, "のひとこと ▾"));
   }
   return React.createElement(React.Fragment, null, React.createElement("div", {
+    "data-assistant-bubble": true,
     className: `w-full flex items-end gap-2 ${collapseKey ? 'relative' : ''}`
   }, React.createElement("button", {
     type: "button",
@@ -80939,6 +80940,7 @@ function BattleScreen({
   }, "BGM")), quickToRhythmButtonNode), quickToCardButtonNode, React.createElement("div", {
     className: "w-[44px] shrink-0 flex flex-col gap-0.5"
   }, React.createElement("button", {
+    "data-battle-auto-button": true,
     type: "button",
     disabled: !!battleScenarioRef.current || battleTutorialStep != null,
     onClick: cycleBattleAuto,
@@ -83265,6 +83267,7 @@ function BattleScreen({
   }, quickToRhythmButtonNode, quickToCardButtonNode), React.createElement("div", {
     className: "w-[44px] shrink-0 flex flex-col gap-0.5"
   }, React.createElement("button", {
+    "data-battle-auto-button": true,
     type: "button",
     disabled: !!battleScenarioRef.current || battleTutorialStep != null,
     onClick: cycleBattleAuto,
@@ -97664,7 +97667,7 @@ const normalizeAssistantPeerGen = raw => {
   };
   if (!raw || typeof raw !== 'object' || Array.isArray(raw) || typeof raw.day !== 'string') return empty;
   const ids = typeof ASSISTANT_PEER_CALLS !== 'undefined' ? Object.keys(ASSISTANT_PEER_CALLS) : [];
-  const talks = (Array.isArray(raw.talks) ? raw.talks : []).filter(t => t && typeof t.id === 'string' && Array.isArray(t.pair) && t.pair.length === 2 && t.pair.every(id => ids.includes(id)) && t.pair[0] !== t.pair[1] && Array.isArray(t.lines) && t.lines.length >= 2 && t.lines.length <= 4 && t.lines.every(l => l && t.pair.includes(l.who) && ASSISTANT_PEER_GEN_EXPRESSIONS.includes(l.e) && typeof l.t === 'string' && l.t.length > 0 && l.t.length <= 80 && !/[{}]/.test(l.t.replace(/\{c\}/g, '')))).slice(0, 16).map(t => ({
+  const talks = (Array.isArray(raw.talks) ? raw.talks : []).filter(t => t && typeof t.id === 'string' && Array.isArray(t.pair) && t.pair.length === 2 && t.pair.every(id => ids.includes(id)) && t.pair[0] !== t.pair[1] && Array.isArray(t.lines) && t.lines.length >= 2 && t.lines.length <= 4 && t.lines.every(l => l && t.pair.includes(l.who) && ASSISTANT_PEER_GEN_EXPRESSIONS.includes(l.e) && typeof l.t === 'string' && l.t.length > 0 && l.t.length <= 80 && !/[{}]/.test(l.t.replace(/\{c\}|\{name\}/g, '')))).slice(0, 16).map(t => ({
     id: t.id,
     pair: [...t.pair].sort(),
     lv: 1,
@@ -97878,6 +97881,18 @@ const assistantPeerGainSwitch = (prev, next) => {
 let assistantPeerPlayerBondAdder = null;
 const assistantPeerSetPlayerBondAdder = fn => {
   assistantPeerPlayerBondAdder = typeof fn === 'function' ? fn : null;
+};
+let assistantPeerPlayerCaller = null;
+const assistantPeerSetPlayerCaller = fn => {
+  assistantPeerPlayerCaller = typeof fn === 'function' ? fn : null;
+};
+const assistantPeerPlayerCall = who => {
+  try {
+    const c = assistantPeerPlayerCaller ? assistantPeerPlayerCaller(who) : '';
+    return c || 'あなた';
+  } catch {
+    return 'あなた';
+  }
 };
 const assistantPeerAddPlayerBond = (ids, action) => {
   if (!assistantPeerEnabled() || !assistantPeerPlayerBondAdder) return;
@@ -98339,7 +98354,9 @@ const assistantPeerLineText = (line, talk) => {
   const members = talk && talk.anyTrio && Array.isArray(talk.pair) ? talk.pair : assistantPeerMembers(talk);
   const partner = members.find(id => id !== line.who) || members[0];
   const callOf = to => typeof assistantPeerCall === 'function' ? assistantPeerCall(line.who, to) : to;
-  const text = String(line.t || '').replace(/\{c:([a-z]+)\}/g, (m, id) => callOf(id)).replace(/\{c\}/g, callOf(partner));
+  const raw0 = String(line.t || '');
+  const raw = talk && talk.gen ? raw0.replace(/ブリーダー(さん)?(?!Lv|P|ランク|ポイント|レベル|経験|の教え|アイコン)/g, '{name}') : raw0;
+  const text = raw.replace(/\{c:([a-z]+)\}/g, (m, id) => callOf(id)).replace(/\{c\}/g, callOf(partner)).replace(/\{name\}/g, () => assistantPeerPlayerCall(line.who));
   return text.includes('{') && typeof assistantLifeFillHoles === 'function' ? assistantLifeFillHoles(text, talk) : text;
 };
 function AssistantPeerTalk({
@@ -99010,6 +99027,374 @@ const assistantPeerRequestGen = async ({
   } finally {
     assistantPeerGenBusy = false;
   }
+};
+const QUICK_GUIDE_SEEN_KEY = 'mh_quick_guide_seen_v1';
+const QUICK_GUIDE_NUDGE_KEY = 'mh_quick_nudge_v1';
+const CARD_AUTO_INTRO_SEEN_KEY = 'mh_card_auto_intro_seen_v1';
+const QUICK_GUIDE_NUDGE_MAX = 3;
+const QUICK_GUIDE_IDS = Object.freeze(['g1a', 'g1b', 'g2', 'g3a', 'g3b', 'g3c', 'auto']);
+const QUICK_GUIDE_PAGES = Object.freeze({
+  g1a: [{
+    id: 'g1.1',
+    spot: '[data-battle-system-card="systemQuick"]',
+    must: '[data-battle-system="systemQuick"]'
+  }],
+  g1b: [{
+    id: 'g1.2',
+    spot: '[data-difficulty-carousel]',
+    must: '[data-difficulty-card]'
+  }, {
+    id: 'g1.3',
+    spot: '[data-quick-reward-policy]',
+    must: '[data-quick-reward-policy] button'
+  }, {
+    id: 'g1.4'
+  }, {
+    id: 'g1.5',
+    goAutoSettings: true
+  }],
+  g2: [{
+    id: 'g2.1'
+  }, {
+    id: 'g2.2',
+    spot: '[data-auto-settings-section="policy"]',
+    must: '[data-auto-settings-section="policy"] h3'
+  }, {
+    id: 'g2.3',
+    spot: '[data-auto-settings-section="ally"]',
+    must: '[data-auto-settings-section="ally"] h3'
+  }, {
+    id: 'g2.4',
+    spot: '[data-auto-quick-run-autostart]',
+    must: '[data-auto-quick-run-autostart]'
+  }, {
+    id: 'g2.5',
+    spot: '[data-auto-settings-section="breakthrough"]',
+    must: '[data-auto-settings-section="breakthrough"] h3'
+  }],
+  g3a: [{
+    id: 'g3.1'
+  }, {
+    id: 'g3.2',
+    spot: 'button[aria-label="周回を続けたままモンヒロビートへ"]',
+    must: 'button[aria-label="周回を続けたままモンヒロビートへ"]'
+  }, {
+    id: 'g3.3'
+  }],
+  g3b: [{
+    id: 'g3.4',
+    spot: '[data-quick-run-band]',
+    must: '[data-quick-run-band]'
+  }, {
+    id: 'g3.5',
+    spot: '[data-quick-run-progress-detail]',
+    must: '[data-quick-run-progress-detail] button',
+    openDetail: true
+  }],
+  g3c: [{
+    id: 'g3.6',
+    spot: '[data-rhythm-mode-select] [data-rhythm-back]',
+    must: '[data-rhythm-mode-select] [data-rhythm-back]'
+  }],
+  auto: [{
+    id: 'auto.first',
+    spot: '[data-battle-auto-button]',
+    must: '[data-battle-auto-button]'
+  }],
+  nudgeHome: [{
+    id: 'nudge.home'
+  }],
+  nudgeBattle: [{
+    id: 'nudge.battle'
+  }]
+});
+const QUICK_GUIDE_REPLAYS = Object.freeze({
+  g1: ['g1a', 'g1b'],
+  g2: ['g2'],
+  g3: ['g3a', 'g3b', 'g3c']
+});
+const quickGuideReplayPages = replayId => (QUICK_GUIDE_REPLAYS[replayId] || []).flatMap(g => QUICK_GUIDE_PAGES[g].map(p => ({
+  id: p.id
+})));
+const quickGuideLine = (assistantId, pageId) => {
+  const all = typeof ASSISTANT_QUICK_GUIDE_LINES === 'object' && ASSISTANT_QUICK_GUIDE_LINES ? ASSISTANT_QUICK_GUIDE_LINES : {};
+  const own = all[assistantId] && all[assistantId][pageId];
+  const line = own && typeof own.t === 'string' && own.t ? own : all.mua && all.mua[pageId] || null;
+  return line && typeof line.t === 'string' ? line : null;
+};
+const normalizeQuickGuideSeen = v => {
+  const list = v && typeof v === 'object' && Array.isArray(v.seen) ? v.seen : [];
+  return QUICK_GUIDE_IDS.filter(id => list.includes(id));
+};
+const quickGuideSeenAfter = (seen, id) => ({
+  v: 1,
+  seen: normalizeQuickGuideSeen({
+    seen: [...(Array.isArray(seen) ? seen : []), id]
+  })
+});
+const normalizeQuickNudge = v => {
+  const r = v && typeof v === 'object' ? v : {};
+  const n = Number.isInteger(r.n) && r.n >= 0 ? Math.min(r.n, 1000) : 0;
+  return {
+    v: 1,
+    n,
+    day: typeof r.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.day) ? r.day : ''
+  };
+};
+const quickNudgeAllowed = (nudge, today) => {
+  const s = normalizeQuickNudge(nudge);
+  return s.n < QUICK_GUIDE_NUDGE_MAX && s.day !== today;
+};
+const quickNudgeAfter = (nudge, today) => {
+  const s = normalizeQuickNudge(nudge);
+  return {
+    v: 1,
+    n: s.n + 1,
+    day: today
+  };
+};
+const quickGuidePick = ctx => {
+  const c = ctx || {};
+  if (c.busy || !Array.isArray(c.seen)) return null;
+  const not = id => !c.seen.includes(id);
+  const nudge = c.nudgeOk === true && c.quickUnlocked === true && c.quickEverCleared !== true;
+  switch (c.gameState) {
+    case 'BATTLE_SYSTEM_SELECT':
+      if (c.quickUnlocked === true && not('g1a')) return 'g1a';
+      return nudge ? 'nudgeBattle' : null;
+    case 'BATTLE_DIFFICULTY_SELECT':
+      return c.quickSelect === true && c.quickUnlocked === true && not('g1b') ? 'g1b' : null;
+    case 'AUTO_SETTINGS':
+      return not('g2') ? 'g2' : null;
+    case 'BATTLE':
+      if (c.battleTutorial || c.raidJack === true) return null;
+      if (c.quickRun === true && c.autoRepeat === true && not('g3a')) return 'g3a';
+      return not('auto') ? 'auto' : null;
+    case 'RHYTHM_DEMO_HOME':
+      return c.backgroundRun === true && not('g3b') ? 'g3b' : null;
+    case 'RHYTHM_MODE_SELECT':
+      return c.backgroundRun === true && not('g3c') ? 'g3c' : null;
+    case 'HOME':
+      return nudge ? 'nudgeHome' : null;
+    default:
+      return null;
+  }
+};
+const quickGuideSpotRect = selector => {
+  if (!selector || typeof document === 'undefined') return null;
+  try {
+    let best = null,
+      bestArea = -1;
+    for (const el of document.querySelectorAll(selector)) {
+      const r = el.getBoundingClientRect();
+      if (!(r.width > 0 && r.height > 0)) continue;
+      const area = Math.max(0, Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0)) * Math.max(0, Math.min(r.right, window.innerWidth) - Math.max(r.left, 0));
+      if (area > bestArea) {
+        bestArea = area;
+        best = {
+          el,
+          top: r.top,
+          left: r.left,
+          width: r.width,
+          height: r.height,
+          bottom: r.bottom
+        };
+      }
+    }
+    if (best) return best;
+  } catch (_) {}
+  return null;
+};
+const quickGuideScrollTo = (el, top) => {
+  if (!el || typeof window === 'undefined') return;
+  let box = el.parentElement;
+  while (box && box !== document.body) {
+    const oy = getComputedStyle(box).overflowY;
+    if ((oy === 'auto' || oy === 'scroll') && box.scrollHeight > box.clientHeight + 1) break;
+    box = box.parentElement;
+  }
+  if (!box || box === document.body) return;
+  const r = el.getBoundingClientRect(),
+    b = box.getBoundingClientRect();
+  if (top) box.scrollTop += r.top - b.top - 8;else if (r.top < b.top) box.scrollTop += r.top - b.top - 8;else if (r.bottom > b.bottom) box.scrollTop += r.bottom - b.bottom + 8;
+};
+const quickGuideNoBreak = t => String(t).replace(/(\p{Extended_Pictographic}\uFE0F?) /gu, '$1\u00a0');
+const QuickGuideOverlay = ({
+  guideId,
+  pages,
+  assistant,
+  callName,
+  onDone,
+  onGoAutoSettings,
+  onPage = null
+}) => {
+  const [step, setStep] = useState(0);
+  const [rect, setRect] = useState(null);
+  const [panelH, setPanelH] = useState(150);
+  const panelRef = useRef(null);
+  useEffect(() => {
+    setStep(0);
+  }, [guideId]);
+  const page = pages[Math.min(step, pages.length - 1)] || null;
+  useEffect(() => {
+    if (onPage && page) onPage(page);
+  }, [guideId, step]);
+  useEffect(() => {
+    try {
+      const h = panelRef.current && panelRef.current.getBoundingClientRect().height;
+      if (h > 0) setPanelH(Math.ceil(h));
+    } catch (_) {}
+  });
+  useEffect(() => {
+    if (!page || !page.spot) {
+      setRect(null);
+      return undefined;
+    }
+    const first = quickGuideSpotRect(page.spot);
+    const vh0 = window.innerHeight || 0;
+    try {
+      if (first && first.el) quickGuideScrollTo(first.el, first.height > vh0 - panelH - 40);
+      const must = page.must ? quickGuideSpotRect(page.must) : null;
+      if (must && must.el && (must.top < 0 || must.bottom > vh0 - panelH - 24)) quickGuideScrollTo(must.el, true);
+    } catch (_) {}
+    const measure = () => {
+      let r = quickGuideSpotRect(page.spot);
+      const vh = window.innerHeight || 0;
+      if (r && page.must && r.height > vh - panelH - 40) {
+        const m = quickGuideSpotRect(page.must);
+        if (m) r = m;
+      }
+      setRect(r ? {
+        top: r.top,
+        left: r.left,
+        width: r.width,
+        height: r.height,
+        bottom: r.bottom
+      } : null);
+    };
+    measure();
+    const t = setInterval(measure, 300);
+    window.addEventListener('resize', measure);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener('resize', measure);
+    };
+  }, [guideId, step, page && page.spot, panelH]);
+  if (!page) return null;
+  const line = quickGuideLine(assistant && assistant.id, page.id);
+  if (!line) return null;
+  const text = quickGuideNoBreak(String(line.t).split('{name}').join(callName || 'ブリーダー'));
+  const last = step >= pages.length - 1;
+  const vh = typeof window !== 'undefined' ? window.innerHeight || 0 : 0;
+  const pad = rect && Math.min(rect.width, rect.height) < 56 ? 3 : 6,
+    gap = 12;
+  const roomTop = rect ? rect.top - pad - gap : 0,
+    roomBottom = rect ? vh - rect.bottom - pad - gap : 0;
+  const atTop = !!rect && vh > 0 && roomBottom < panelH && roomTop >= panelH;
+  const vw = typeof window !== 'undefined' ? window.innerWidth || 0 : 0;
+  const roomLeft = rect ? rect.left - pad - gap : 0,
+    roomRight = rect ? vw - (rect.left + rect.width) - pad - gap : 0;
+  const side = !!rect && vh > 0 && vw > vh && !atTop && roomBottom < panelH && Math.max(roomLeft, roomRight) >= 170 ? roomRight >= roomLeft ? 'right' : 'left' : null;
+  const sideWidth = side ? Math.min(300, Math.max(roomLeft, roomRight) - 4) : 0;
+  const sideTop = side ? Math.max(8, Math.min(vh - panelH - 8, rect.top + rect.height / 2 - panelH / 2)) : 0;
+  let ring = rect;
+  if (rect && vh > 0 && !side) {
+    if (atTop && roomTop < panelH) {
+      const top = panelH + gap + pad + 10;
+      ring = {
+        ...rect,
+        top,
+        height: Math.max(0, rect.bottom - top)
+      };
+    }
+    if (!atTop && roomBottom < panelH) {
+      const bottom = vh - panelH - gap - pad - 10;
+      ring = {
+        ...rect,
+        height: Math.max(0, Math.min(rect.bottom, bottom) - rect.top)
+      };
+    }
+  }
+  const face = assistant && typeof assistantFaceImage === 'function' ? assistantFaceImage(assistant, line.e || 'normal') : null;
+  return React.createElement("div", {
+    "data-quick-guide": guideId,
+    "data-quick-guide-page": page.id,
+    className: "fixed inset-0 z-[100050]",
+    style: {
+      pointerEvents: 'auto'
+    }
+  }, React.createElement("style", null, '[data-assistant-bubble]{visibility:hidden !important}'), ring && ring.height > 0 ? React.createElement("div", {
+    "data-quick-guide-spot": true,
+    "aria-hidden": "true",
+    className: "pointer-events-none fixed rounded-xl border-2 border-amber-300",
+    style: {
+      top: ring.top - pad,
+      left: ring.left - pad,
+      width: ring.width + pad * 2,
+      height: ring.height + pad * 2,
+      boxShadow: '0 0 0 9999px rgba(2,6,23,0.62), 0 0 18px rgba(252,211,77,0.75)'
+    }
+  }) : React.createElement("div", {
+    "aria-hidden": "true",
+    className: "pointer-events-none fixed inset-0 bg-slate-950/60"
+  }), React.createElement("div", {
+    ref: panelRef,
+    "data-quick-guide-panel": true,
+    "data-quick-guide-side": side || undefined,
+    className: `fixed rounded-2xl border-2 border-fuchsia-300/70 bg-slate-950/95 p-3 shadow-2xl landscape:max-[500px]:p-2 ${side ? '' : 'left-1/2 w-[min(560px,calc(100vw-24px))] -translate-x-1/2'}`,
+    style: side ? {
+      top: sideTop,
+      width: sideWidth,
+      ...(side === 'right' ? {
+        right: 8
+      } : {
+        left: 8
+      })
+    } : atTop ? {
+      top: 'calc(10px + var(--mh-sa-top, 0px))'
+    } : {
+      bottom: 'calc(10px + var(--mh-sa-bottom, 0px))'
+    }
+  }, React.createElement("div", {
+    className: "flex items-start gap-2.5"
+  }, face && React.createElement("img", {
+    src: face,
+    alt: "",
+    "aria-hidden": "true",
+    className: "h-12 w-12 shrink-0 rounded-full border-2 border-fuchsia-300/70 bg-slate-900 object-cover object-top landscape:max-[500px]:h-9 landscape:max-[500px]:w-9"
+  }), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, React.createElement("b", {
+    className: `min-w-0 flex-1 text-[13px] font-black text-amber-100 ${side ? 'leading-snug' : 'truncate'}`
+  }, line.title || ''), pages.length > 1 && React.createElement("span", {
+    className: "shrink-0 text-[10px] font-black tabular-nums text-slate-400"
+  }, step + 1, " / ", pages.length)), React.createElement("p", {
+    "data-quick-guide-text": true,
+    className: "mt-1 text-[12px] font-bold leading-relaxed text-slate-100",
+    style: typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined
+  }, text))), React.createElement("div", {
+    className: "mt-2 flex flex-wrap items-center justify-end gap-2 landscape:max-[500px]:mt-1"
+  }, !last && React.createElement("button", {
+    type: "button",
+    "data-quick-guide-later": true,
+    onClick: () => onDone(false),
+    className: "min-h-[40px] rounded-xl border border-slate-500/60 px-3 text-[11px] font-black text-slate-300 active:scale-[.97]"
+  }, "あとで"), last && page.goAutoSettings && onGoAutoSettings && React.createElement("button", {
+    type: "button",
+    "data-quick-guide-go-auto": true,
+    onClick: () => {
+      onDone(true);
+      onGoAutoSettings();
+    },
+    className: "min-h-[40px] rounded-xl border border-cyan-300/70 bg-cyan-800/70 px-3 text-[11px] font-black text-cyan-50 active:scale-[.97]"
+  }, "AUTO設定を見に行く"), React.createElement("button", {
+    type: "button",
+    "data-quick-guide-next": true,
+    onClick: () => last ? onDone(true) : setStep(step + 1),
+    className: "min-h-[40px] min-w-[84px] rounded-xl border border-fuchsia-300/70 bg-fuchsia-700/80 px-3 text-[12px] font-black text-white active:scale-[.97]"
+  }, last ? pages.length > 1 ? 'わかった！' : 'OK' : '次へ'))));
 };
 const ASSISTANT_LIFE_STORE_KEY = 'mh_assistant_life_v1';
 const ASSISTANT_LIFE_PLAY_KEY = 'mh_assistant_life_play_v1';
@@ -100521,6 +100906,15 @@ const ASSISTANT_LIFE_REASON_LABEL = Object.freeze({
   mypace: 'マイペース',
   distance: '距離をおいている'
 });
+const assistantLifeNextSlotText = (now = Date.now()) => {
+  const cur = assistantLifeSlotAt(now);
+  const h = new Date(Number(now) + 9 * 3600000);
+  const slot = ASSISTANT_LIFE_SLOTS[cur.i];
+  const mins = Math.max(1, slot.to * 60 - (h.getUTCHours() * 60 + h.getUTCMinutes()));
+  const next = ASSISTANT_LIFE_SLOTS[(cur.i + 1) % ASSISTANT_LIFE_SLOTS.length];
+  const t = mins >= 60 ? `${Math.floor(mins / 60)}時間${mins % 60 ? `${mins % 60}分` : ''}` : `${mins}分`;
+  return `あと${t}で${next.label}(みんなが動きます)`;
+};
 const assistantLifeSlotRange = id => {
   const s = ASSISTANT_LIFE_SLOTS.find(x => x.id === id);
   return s ? `${s.label}(${s.from}〜${s.to}時)` : '';
@@ -100604,7 +100998,7 @@ function AssistantLifeBand({
   }, text || sub), text && sub ? React.createElement("span", {
     className: "block text-[10px] font-bold leading-tight text-slate-300"
   }, sub) : null, React.createElement("span", {
-    className: "block text-[9px] font-bold leading-tight text-pink-200"
+    className: "block text-[10px] font-bold leading-tight text-pink-200"
   }, "にぎわい「", tier.label, "」・みんなの様子 ▸"))), React.createElement("button", {
     type: "button",
     "data-assistant-life-band-close": true,
@@ -100736,8 +101130,11 @@ function AssistantLifeScreenBody({
   }, React.createElement("p", {
     className: "min-w-0 flex-1 text-[15px] font-black text-pink-200"
   }, "助手たちの今"), React.createElement("span", {
-    className: "whitespace-nowrap text-[10px] font-bold text-slate-400"
-  }, "いまは", assistantLifeSlotRange(slot.id)), React.createElement("button", {
+    className: "text-right text-[10px] font-bold leading-tight text-slate-400"
+  }, "いまは", assistantLifeSlotRange(slot.id), React.createElement("br", null), React.createElement("span", {
+    "data-assistant-life-next-slot": true,
+    className: "text-slate-300"
+  }, assistantLifeNextSlotText())), React.createElement("button", {
     type: "button",
     "data-assistant-life-close": true,
     onClick: assistantLifeCloseScreen,
@@ -100765,9 +101162,13 @@ function AssistantLifeScreenBody({
   })), React.createElement("p", {
     className: "mt-1 text-[11px] font-bold text-white"
   }, ASSISTANT_LIFE_TIER_NOTES[tier.id]), React.createElement("p", {
-    className: "text-[10px] text-slate-300"
-  }, "友情Lv の上がり方 ×", tier.mult, "・1組の1日の上限 ", tier.cap, "・今日見守れるのは あと", watchLeft, "回"), React.createElement("p", {
-    className: "text-[9px] text-slate-400"
+    className: "mt-0.5 text-[11px] text-slate-200"
+  }, React.createElement("span", {
+    className: "text-orange-300"
+  }, "🤝 友情Lv の上がり方 ×", tier.mult), "(1組1日 ", tier.cap, " まで)・👀 今日見守れるのは あと", React.createElement("b", {
+    className: "text-white"
+  }, watchLeft), "回"), React.createElement("p", {
+    className: "text-[10px] text-slate-400"
   }, "モンヒロビート・バトル・MFバトルカード・おしゃべりで遊ぶと、にぎわいがたまります(朝4時に新しくなります)")), React.createElement("div", {
     className: "mt-2 flex gap-1",
     role: "tablist"
@@ -100804,10 +101205,10 @@ function AssistantLifeScreenBody({
     className: "text-[10px] leading-snug text-slate-300"
   }, x.what.split('。')[0], "。", React.createElement("span", {
     className: "text-orange-300"
-  }, "友情Lv +", x.peerAmt), "・2人との", React.createElement("span", {
+  }, "🤝 友情Lv +", x.peerAmt), "・2人との", React.createElement("span", {
     className: "text-pink-200"
-  }, "仲良し度 +", x.playerAmt), "・2人のひとこと")))), React.createElement("p", {
-    className: "mt-1.5 text-[9px] leading-snug text-slate-400"
+  }, "💗 仲良し度 +", x.playerAmt), "・2人のひとこと")))), React.createElement("p", {
+    className: "mt-1.5 text-[10px] leading-snug text-slate-400"
   }, "手に入れる:モンヒロビートの「ビートP交換所」(", itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・'), ")/渡す:下の組の「", itemInfos[0].emoji, " 渡す」。誘う・引き合わせるは無料で、次の時間の過ごし方が変わります")), React.createElement("div", {
     className: "mt-2 space-y-2"
   }, (life.groups || []).map(g => {
@@ -100828,9 +101229,9 @@ function AssistantLifeScreenBody({
       className: "text-[12px] font-black leading-tight text-white"
     }, g.ids.map(nameOf).join('・')), React.createElement("p", {
       className: "text-[11px] font-bold leading-tight text-pink-200"
-    }, ASSISTANT_LIFE_PLACES[g.place], "で", ASSISTANT_LIFE_DOINGS[g.doing].label))), React.createElement("p", {
-      className: "mt-1 text-[10px] text-slate-400"
-    }, g.ids.map(id => `${nameOf(id)}: ${mood(id)}`).join(' / ')), (() => {
+    }, ASSISTANT_LIFE_PLACES[g.place], "で", ASSISTANT_LIFE_DOINGS[g.doing].label))), g.ids.some(id => mood(id)) && React.createElement("p", {
+      className: "mt-1 text-[11px] text-slate-300"
+    }, g.ids.filter(id => mood(id)).map(id => `${nameOf(id)}: ${mood(id)}`).join(' / ')), (() => {
       const hints = pairsOf(g.ids).map(([a, b]) => ({
         a,
         b,
@@ -100841,8 +101242,8 @@ function AssistantLifeScreenBody({
       const who2 = h => g.ids.length > 2 ? `${nameOf(h.a)}と${nameOf(h.b)}、` : '';
       return React.createElement(React.Fragment, null, near && React.createElement("p", {
         "data-assistant-life-hint": "near",
-        className: "mt-1 w-fit rounded-full bg-orange-400/20 px-2 py-0.5 text-[9px] font-black text-orange-200"
-      }, "⬆ ", who2(near), "もうすぐ友情Lv", near.near.level, "(あと", near.near.left, ")"), near && g.ids.length === 2 && React.createElement("div", {
+        className: "mt-1 w-fit rounded-full bg-orange-400/20 px-2 py-0.5 text-[10px] font-black text-orange-200"
+      }, "🤝 ", who2(near), "もうすぐ友情Lv", near.near.level, "(あと", near.near.left, ")"), near && g.ids.length === 2 && React.createElement("div", {
         className: "mt-0.5 h-1.5 overflow-hidden rounded-full bg-slate-800",
         "aria-hidden": "true"
       }, React.createElement("div", {
@@ -100852,7 +101253,7 @@ function AssistantLifeScreenBody({
         }
       })), after && React.createElement("p", {
         "data-assistant-life-hint": "after",
-        className: "mt-1 w-fit rounded-full bg-sky-400/20 px-2 py-0.5 text-[9px] font-black text-sky-200"
+        className: "mt-1 w-fit rounded-full bg-sky-400/20 px-2 py-0.5 text-[10px] font-black text-sky-200"
       }, "💦 ", who2(after), "言い合いのあと(渡すと仲直りのきっかけに)"));
     })(), React.createElement("div", {
       className: "mt-1.5 flex gap-1.5"
@@ -100922,7 +101323,7 @@ function AssistantLifeScreenBody({
     onClick: introduce,
     className: "mt-2 min-h-[44px] w-full rounded-xl border border-sky-300/50 bg-sky-400/10 text-[12px] font-black text-sky-100 active:scale-[.98] disabled:opacity-40"
   }, introNext ? `次の時間は ${introNext.pair.split('-').map(nameOf).join('と')} を引き合わせます` : '次の時間に一緒に過ごしてもらう')), React.createElement("p", {
-    className: "mt-3 text-[9px] leading-snug text-slate-500"
+    className: "mt-3 text-[10px] leading-snug text-slate-500"
   }, "みんな、時間(朝5・昼10・午後14・夕方18・夜21・深夜0時)が変わるたびに、自分で過ごし方を決めます。")), tab === 'map' && typeof AssistantPeerMap === 'function' && React.createElement("div", {
     className: "mt-2"
   }, React.createElement(AssistantPeerMap, {
@@ -101031,9 +101432,9 @@ function AssistantLifeGiveSheet({
     className: "text-slate-200"
   }, React.createElement("span", {
     className: "text-orange-300"
-  }, "2人の友情Lv +", info.peerAmt), hint ? `(いま Lv${hint.lv}${left != null ? ` → あと${left}で Lv${hint.lv + 1}${left <= info.peerAmt ? '！' : ''}` : ''})` : '', React.createElement("br", null), React.createElement("span", {
+  }, "🤝 2人の友情Lv +", info.peerAmt), hint ? `(いま Lv${hint.lv}${left != null ? ` → あと${left}で Lv${hint.lv + 1}${left <= info.peerAmt ? '！' : ''}` : ''})` : '', React.createElement("br", null), React.createElement("span", {
     className: "text-pink-200"
-  }, "あなたと ", pair.map(nameOf).join('・'), " の仲良し度 +", info.playerAmt), React.createElement("br", null), "渡したあと、2人がひとこと"), React.createElement("dt", {
+  }, "💗 あなたと ", pair.map(nameOf).join('・'), " の仲良し度 +", info.playerAmt), React.createElement("br", null), "渡したあと、2人がひとこと"), React.createElement("dt", {
     className: "font-black text-amber-200"
   }, "使える数"), React.createElement("dd", {
     className: "text-slate-200"
@@ -101108,7 +101509,7 @@ function AssistantLifeItemIntro({
     className: "text-[14px] font-black text-amber-200"
   }, "はじめての ", info.emoji, " ", info.name, "！")), React.createElement("p", {
     className: "mt-2 text-[12px] leading-relaxed text-white"
-  }, "① 「助手たちの今」で、一緒にいる2人を選んで渡せるよ", React.createElement("br", null), "② 2人の友情Lv と、あなたとの仲良し度が上がる", React.createElement("br", null), "③ 1日1回。⬆ の印がついた2人に渡すと、Lv が上がりやすい！"), React.createElement("div", {
+  }, "① 「助手たちの今」で、一緒にいる2人を選んで渡せるよ", React.createElement("br", null), "② 2人の友情Lv と、あなたとの仲良し度が上がる", React.createElement("br", null), "③ 1日1回。「🤝 もうすぐ友情Lv」の印がついた2人に渡すと、Lv が上がりやすい！"), React.createElement("div", {
     className: "mt-2 flex gap-2"
   }, React.createElement("button", {
     type: "button",
@@ -121454,7 +121855,7 @@ const CardDeckPick = ({
   }, auto.quick ? '✓' : ''), React.createElement("span", {
     className: "min-w-0 flex-1",
     style: JA_WRAP_STYLE
-  }, jaWrap('⏩ 結果だけ見る(対戦の画面を出さずに、一瞬で最後まで戦う)'))), auto.on && React.createElement("p", {
+  }, jaWrap('⏩ 結果だけ見る(対戦の画面を出さずに、一瞬で最後まで戦う)'))), auto.on && React.createElement(CardAutoIntro, null), auto.on && React.createElement("p", {
     "data-card-deck-pick-auto-note": true,
     className: "rounded-xl bg-slate-900/80 px-2.5 py-2 text-[11px] font-bold leading-snug text-slate-200",
     style: JA_WRAP_STYLE
@@ -121604,6 +122005,52 @@ const CardDeckPick = ({
     },
     className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40"
   }, "対戦へ")));
+};
+const CardAutoIntro = () => {
+  const bond = typeof useAssistantBond === 'function' ? useAssistantBond() : null;
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (typeof CARD_AUTO_INTRO_SEEN_KEY !== 'string') return undefined;
+    let cancelled = false;
+    (async () => {
+      let seen = false;
+      try {
+        seen = await storeGet(CARD_AUTO_INTRO_SEEN_KEY, false, false);
+      } catch (_) {
+        seen = false;
+      }
+      if (!cancelled && seen !== true) setShow(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  if (!show || typeof quickGuideLine !== 'function') return null;
+  const id = bond && bond.assistantId ? bond.assistantId : 'mua';
+  const line = quickGuideLine(id, 'card.auto');
+  if (!line) return null;
+  const who = typeof assistantById === 'function' ? assistantById(id) : null;
+  const face = who && typeof assistantFaceImage === 'function' ? assistantFaceImage(who, line.e || 'normal') : null;
+  return React.createElement("div", {
+    "data-card-auto-intro": true,
+    className: "flex items-start gap-2 rounded-xl border-2 border-fuchsia-300/70 bg-slate-950/90 px-2.5 py-2"
+  }, face && React.createElement("img", {
+    src: face,
+    alt: "",
+    "aria-hidden": "true",
+    className: "h-10 w-10 shrink-0 rounded-full border border-fuchsia-300/60 bg-slate-900 object-cover object-top"
+  }), React.createElement("p", {
+    className: "min-w-0 flex-1 text-[11px] font-bold leading-snug text-slate-100",
+    style: JA_WRAP_STYLE
+  }, typeof quickGuideNoBreak === 'function' ? quickGuideNoBreak(line.t) : line.t), React.createElement("button", {
+    type: "button",
+    "data-card-auto-intro-ok": true,
+    onClick: () => {
+      setShow(false);
+      storeSet(CARD_AUTO_INTRO_SEEN_KEY, true, false);
+    },
+    className: "min-h-[36px] shrink-0 self-center rounded-lg border border-fuchsia-300/70 bg-fuchsia-700/80 px-2.5 text-[11px] font-black text-white active:scale-[.97]"
+  }, "OK"));
 };
 const CARD_RANK_TABLE = 'card_battle_ranks';
 const CARD_RANK_TABLE_V2 = 'card_battle_ranks_v2';
@@ -143205,17 +143652,22 @@ function MonsterHeroGame() {
       baseLoops: Math.max(0, Math.trunc(Number(baseLoops) || 0)) || count
     };
   };
+  const [quickGuideSeen, setQuickGuideSeen] = useState(null);
+  const [quickNudge, setQuickNudge] = useState(null);
+  const [quickGuideReplay, setQuickGuideReplay] = useState(null);
+  const quickGuideOpenedDetailRef = useRef(false);
   const QUICK_RHYTHM_INTRO_KEY = 'mh_quick_rhythm_intro_seen_v1';
   const QUICK_RHYTHM_BACKGROUND_KEY = 'mh_quick_rhythm_bg_seen_v1';
   const [quickRhythmIntroSeen, setQuickRhythmIntroSeen] = useState(true);
   const [quickRhythmBackgroundSeen, setQuickRhythmBackgroundSeen] = useState(true);
   const quickRhythmGuideReleased = RELEASE_FLAGS.quickRhythmLink === true;
-  const quickRhythmIntroVisible = quickRhythmGuideReleased && !quickRhythmIntroSeen && gameState === 'BATTLE' && isQuickMode(runMode) && autoRepeat === true;
+  const quickGuideAvailable = typeof QuickGuideOverlay === 'function';
+  const quickRhythmIntroVisible = quickRhythmGuideReleased && !quickRhythmIntroSeen && !quickGuideAvailable && gameState === 'BATTLE' && isQuickMode(runMode) && autoRepeat === true;
   const dismissQuickRhythmIntro = () => {
     setQuickRhythmIntroSeen(true);
     storeSet(QUICK_RHYTHM_INTRO_KEY, true, false);
   };
-  const quickRhythmBackgroundVisible = quickRhythmGuideReleased && !quickRhythmBackgroundSeen && rhythmBackgroundRun;
+  const quickRhythmBackgroundVisible = quickRhythmGuideReleased && !quickRhythmBackgroundSeen && !quickGuideAvailable && rhythmBackgroundRun;
   const dismissQuickRhythmBackground = () => {
     setQuickRhythmBackgroundSeen(true);
     storeSet(QUICK_RHYTHM_BACKGROUND_KEY, true, false);
@@ -146374,6 +146826,10 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (typeof assistantPeerSetPlayerBondAdder === 'function') assistantPeerSetPlayerBondAdder(addAssistantBondFor);
   }, [addAssistantBondFor]);
+  useEffect(() => {
+    if (typeof assistantPeerSetPlayerCaller !== 'function') return;
+    assistantPeerSetPlayerCaller(id => assistantCallName(breederName, assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points), assistantCallStyles[id] || null, id));
+  }, [breederName, assistantCallStyles, assistantBonds]);
   const addAssistantBond = useCallback(actionKey => {
     const id = selectedAssistantIdRef.current;
     addAssistantBondFor(id, actionKey);
@@ -150877,6 +151333,72 @@ function MonsterHeroGame() {
     };
   };
   const updateNoticeVisible = updateAvailable && (!latestBuild || latestBuild !== dismissedUpdateBuild);
+  useEffect(() => {
+    if (!dataLoaded || typeof normalizeQuickGuideSeen !== 'function') return;
+    let cancelled = false;
+    (async () => {
+      let seenRaw = null,
+        nudgeRaw = null;
+      try {
+        [seenRaw, nudgeRaw] = await Promise.all([storeGet(QUICK_GUIDE_SEEN_KEY, null, false), storeGet(QUICK_GUIDE_NUDGE_KEY, null, false)]);
+      } catch (_) {}
+      if (cancelled) return;
+      setQuickGuideSeen(normalizeQuickGuideSeen(seenRaw));
+      setQuickNudge(normalizeQuickNudge(nudgeRaw));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [dataLoaded]);
+  const quickGuideBusy = bootPhase !== 'GAME' || !dataLoaded || !onboarded || !assistantChosen || tutorialStep != null || battleTutorialStep != null || !!eventReplay || assistantChatOpen || showAssistantPicker || kikiIntroStep != null || momosukeIntroStep != null || !!rhythmPlay || updateGuideQueue.length > 0 || updateNoticeVisible || !!loginBonusPopup || !!levelCapCompensation || !!inheritedUniqueCompensation || !!dailyMasuAdvice || !!cardTeaserOpen || !!peerReplay;
+  const quickGuideQuickUnlocked = typeof QUICK_DIFFICULTY_SETTINGS === 'object' && Object.keys(QUICK_DIFFICULTY_SETTINGS).some(d => isQuickDifficultyUnlocked(d, clearCounts, proClearCounts, extremeDifficultyClearCounts));
+  const quickGuideEverCleared = Object.values(quickClearCounts || {}).some(n => Number(n) > 0);
+  const quickGuideToday = jstDayKey4();
+  const quickGuidePicked = typeof quickGuidePick === 'function' && !quickGuideReplay ? quickGuidePick({
+    gameState,
+    busy: quickGuideBusy,
+    seen: quickGuideSeen,
+    quickUnlocked: quickGuideQuickUnlocked,
+    quickEverCleared: quickGuideEverCleared,
+    quickSelect: isQuickMode(battleMode),
+    quickRun: isQuickMode(runMode),
+    autoRepeat: autoRepeat === true,
+    battleTutorial: battleTutorialStep != null || !!battleScenarioRef.current,
+    raidJack: isRaidJackMode(runMode),
+    backgroundRun: !!rhythmBackgroundRun,
+    nudgeOk: !!quickNudge && quickNudgeAllowed(quickNudge, quickGuideToday)
+  }) : null;
+  const [quickGuideLater, setQuickGuideLater] = useState(null);
+  const [quickNudgeShowing, setQuickNudgeShowing] = useState(null);
+  useEffect(() => {
+    setQuickGuideLater(null);
+    setQuickNudgeShowing(null);
+  }, [gameState]);
+  useEffect(() => {
+    if (quickGuidePicked !== 'nudgeHome' && quickGuidePicked !== 'nudgeBattle') return;
+    const next = quickNudgeAfter(quickNudge, quickGuideToday);
+    setQuickNudge(next);
+    setQuickNudgeShowing(quickGuidePicked);
+    storeSet(QUICK_GUIDE_NUDGE_KEY, next, false);
+  }, [quickGuidePicked]);
+  const quickGuideActive = quickGuideReplay ? `replay:${quickGuideReplay}` : quickNudgeShowing && !quickGuideBusy ? quickNudgeShowing : quickGuidePicked && quickGuidePicked !== quickGuideLater && quickGuidePicked !== 'nudgeHome' && quickGuidePicked !== 'nudgeBattle' ? quickGuidePicked : null;
+  const finishQuickGuide = (guideId, done) => {
+    if (quickGuideReplay) {
+      setQuickGuideReplay(null);
+      return;
+    }
+    if (guideId === 'nudgeHome' || guideId === 'nudgeBattle') {
+      setQuickNudgeShowing(null);
+      return;
+    }
+    if (!done) {
+      setQuickGuideLater(guideId);
+      return;
+    }
+    const next = quickGuideSeenAfter(quickGuideSeen, guideId);
+    setQuickGuideSeen(next.seen);
+    storeSet(QUICK_GUIDE_SEEN_KEY, next, false);
+  };
   const startOnboardingPreview = () => {
     onboardingPreviewBackupRef.current = {
       name: breederName,
@@ -161110,6 +161632,32 @@ function MonsterHeroGame() {
         },
         onUseItem: useAssistantPeerItem
       }));
+    })(), typeof QuickGuideOverlay === 'function' && quickGuideActive && activeAssistant && (() => {
+      const replay = quickGuideActive.startsWith('replay:') ? quickGuideActive.slice(7) : null;
+      const pages = replay ? quickGuideReplayPages(replay) : QUICK_GUIDE_PAGES[quickGuideActive] || [];
+      if (!pages.length) return null;
+      const lv = assistantBondLevelNow;
+      return React.createElement(QuickGuideOverlay, {
+        key: quickGuideActive,
+        guideId: quickGuideActive,
+        pages: pages,
+        assistant: activeAssistant,
+        callName: assistantCallName(breederName, lv, assistantCallStyles[activeAssistant.id] || null, activeAssistant.id),
+        onDone: done => {
+          if (quickGuideOpenedDetailRef.current) {
+            quickGuideOpenedDetailRef.current = false;
+            setQuickRunDetailOpen(false);
+          }
+          finishQuickGuide(quickGuideActive, done);
+        },
+        onGoAutoSettings: replay ? null : openAutoSettings,
+        onPage: replay ? null : p => {
+          if (p && p.openDetail && !quickRunDetailOpen) {
+            quickGuideOpenedDetailRef.current = true;
+            setQuickRunDetailOpen(true);
+          }
+        }
+      });
     })(), gameState === 'RHYTHM_INFO' && React.createElement(RhythmInfoScreen, {
       returnToHome: returnToHome
     }), gameState === 'TRAINING_INFO' && React.createElement("main", {
@@ -161660,6 +162208,7 @@ function MonsterHeroGame() {
       }), React.createElement("div", {
         className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-3`
       }, React.createElement("section", {
+        "data-auto-settings-section": "policy",
         className: SCREEN_PANEL_CLASS
       }, React.createElement("h3", {
         className: "text-[13px] font-black text-indigo-200 mb-2"
@@ -161678,6 +162227,7 @@ function MonsterHeroGame() {
       }, label), React.createElement("span", {
         className: "block mt-1 text-[10px] leading-snug text-slate-300"
       }, description))))), React.createElement("section", {
+        "data-auto-settings-section": "ally",
         className: "space-y-3"
       }, React.createElement("div", null, React.createElement("h3", {
         className: "text-[13px] font-black text-indigo-200"
@@ -161714,6 +162264,7 @@ function MonsterHeroGame() {
         "aria-pressed": ally.slot === slot,
         className: `min-h-[44px] min-w-0 rounded-xl border text-[10px] font-black active:scale-95 ${slot === null ? 'bg-slate-700 border-slate-500 text-white' : `${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`} ${ally.slot === slot ? 'ring-2 ring-white border-white' : 'opacity-50'}`
       }, ally.slot === slot && '✓', label))))))), React.createElement("section", {
+        "data-auto-settings-section": "quickRun",
         className: "space-y-3"
       }, React.createElement("div", null, React.createElement("h3", {
         className: "text-[13px] font-black text-indigo-200"
@@ -161792,6 +162343,7 @@ function MonsterHeroGame() {
         className: "text-[11px] leading-relaxed text-slate-400"
       }, autoQuickRunConfigured(draftAutoSettings) ? '✅ 3つとも決まっています。モンヒロビートから周回を始められます。' : 'まだ使えません（3つとも決めると使えます）。'))), React.createElement("section", {
         "data-auto-breakthrough-bulk-settings": true,
+        "data-auto-settings-section": "breakthrough",
         className: `${SCREEN_PANEL_CLASS} space-y-3`
       }, React.createElement("div", null, React.createElement("h3", {
         className: "text-[13px] font-black text-cyan-200"
@@ -163464,6 +164016,7 @@ function MonsterHeroGame() {
       }, React.createElement("div", {
         className: "mhbs-hint mt-auto mb-1 shrink-0"
       }, "左右にスワイプして難易度をえらぶ"), quick && React.createElement("fieldset", {
+        "data-quick-reward-policy": true,
         className: "shrink-0 mx-1 mb-1 rounded-2xl border border-teal-400/30 bg-slate-900/80 p-1"
       }, React.createElement("legend", {
         className: "px-1 text-[9px] font-black text-teal-200"
@@ -172938,7 +173491,19 @@ function MonsterHeroGame() {
         className: "shrink-0 text-slate-500"
       }))))), cat && topic && React.createElement("div", {
         className: "space-y-3.5 pb-2"
-      }, renderHelpBlocks(topic.blocks, cat.color), topic.launch === 'battleTutorial' && React.createElement("button", {
+      }, renderHelpBlocks(topic.blocks, cat.color), topic.launch === 'quickGuides' && typeof QUICK_GUIDE_REPLAYS === 'object' && React.createElement("div", {
+        "data-quick-guide-replays": true,
+        className: "grid gap-2"
+      }, [['g1', '🎓 クイックの案内をもう一度見る'], ['g2', '🎓 AUTO設定の案内をもう一度見る'], ['g3', '🎓 裏周回の案内をもう一度見る']].map(([id, label]) => React.createElement("button", {
+        key: id,
+        type: "button",
+        "data-quick-guide-replay": id,
+        onClick: () => setQuickGuideReplay(id),
+        className: "w-full rounded-2xl py-3 text-[12px] font-black text-black active:scale-95",
+        style: {
+          backgroundColor: cat.color
+        }
+      }, label))), topic.launch === 'battleTutorial' && React.createElement("button", {
         onClick: () => startBattleTutorial('HOME'),
         className: "w-full rounded-2xl py-3.5 text-[12px] font-black text-black active:scale-95",
         style: {
