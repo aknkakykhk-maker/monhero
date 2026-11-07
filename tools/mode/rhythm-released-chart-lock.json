@@ -276,6 +276,11 @@
   "evans/hard": "1780c09268004a89",
   "evans/expert": "c6c42c7a4b313c53",
   "evans/master": "d36c317caeb688b3",
+  "humanoid/easy": "4f8f542e0616d2aa",
+  "humanoid/normal": "15f5fc66aab420ac",
+  "humanoid/hard": "88bebe892fe7f858",
+  "humanoid/expert": "63343c73c6ca6a76",
+  "humanoid/master": "6d39c192acf3edf7",
   "mf_ichika_mix/hell": "fb44abd7b8b62f15",
   "monster_hero/hell": "5e9db00bf41b8e59",
   "monster_hero_another/hell": "5dc329f75601a73e",
@@ -330,7 +335,8 @@
   "rebellion_short/hell": "afe6b5390d7d8392",
   "altar_world_tree/hell": "7a17297ddcf051e7",
   "altar_world_tree_short/hell": "02d22507dcb0689c",
-  "evans/hell": "c6f47f64d053a04d"
+  "evans/hell": "c6f47f64d053a04d",
+  "humanoid/hell": "ee7be8fbe5d11239"
  },
  "history": [
   {
@@ -638,6 +644,18 @@
    "reason": "新曲 Evans を公開(EXPERT のモンスターノーツ枠2を足した後)",
    "changed": [
     "evans/expert"
+   ]
+  },
+  {
+   "at": "2026-11-07 11:57",
+   "reason": "新曲 ヒューマノイド を公開",
+   "changed": [
+    "humanoid/easy",
+    "humanoid/normal",
+    "humanoid/hard",
+    "humanoid/expert",
+    "humanoid/master",
+    "humanoid/hell"
    ]
   }
  ]
