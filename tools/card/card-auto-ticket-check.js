@@ -15,7 +15,7 @@
 //   ⑧ 券は 60 の consumeBuddyTicket・refundBuddyTicket を通す(別の減らし方を作らない)
 //   ⑨ まとめて何枚か使える(2026-11-07 社長「複数枚できるようにして」): 3枚で+3回。途中で券が足りなくなったら減らした分を返す。
 //      20回を超える枚数は1枚も使わない。保存に失敗したら使った枚数ぶん返す
-//   ⑩ 画面: 残りの札とボタン(96 の CardAutoRewardBar)を結果の画面とデッキえらびで使い回す。何枚使うかの窓(CardAutoTicketSheet)は
+//   ⑩ 画面: 残りの札とボタン(84 の CardAutoRewardBar)を結果の画面とデッキえらびで使い回す。何枚使うかの窓(CardAutoTicketSheet)は
 //      ゲーム共通の QuantityStepper(打ち込み欄つき)で、最大は「持っている券」と「今日あとふやせる回数」の小さいほう
 'use strict';
 const fs = require('fs');
@@ -82,8 +82,11 @@ const reset = (raw, tickets) => { box.store = raw ? { [KEY]: raw } : {}; box.tic
   r = await E.cardAutoRewardAddExtra({ consume, refund });
   check('③ 券が0枚ならふやさない', !r.ok && r.why === 'noTicket' && !box.store[KEY].extra, r.why);
   const pick = P('src/parts/87-card-deck-pick.jsx');
-  const ui = src.slice(src.indexOf('// 券でふやせないわけ'), src.indexOf('// 1試合ぶんの経験値の保存の項目'));
-  check('③ 券が0枚・今日の上限・まだ残っているときはボタンを押せず、わけを出す(96 の cardAutoTicketBlock)', /data-card-auto-ticket disabled=\{!!why\}/.test(ui) && /data-card-auto-ticket-why/.test(ui)
+  // わけ(cardAutoTicketBlock)は 96、画面の部品(CardAutoRewardBar・CardAutoTicketSheet)は 84(96 はブラウザなしで動かす検査があるので JSX を置かない)
+  const card84 = P('src/parts/84-screen-card-battle.jsx');
+  const ui = src.slice(src.indexOf('// 券でふやせないわけ'), src.indexOf('// 1試合ぶんの経験値の保存の項目'))
+    + card84.slice(card84.indexOf('// オートのごほうびの残りの札と'), card84.indexOf('const CardBattleScreen = ('));
+  check('③ 券が0枚・今日の上限・まだ残っているときはボタンを押せず、わけを出す(96 の cardAutoTicketBlock・84 の札)', /data-card-auto-ticket disabled=\{!!why\}/.test(ui) && /data-card-auto-ticket-why/.test(ui)
     && /left > 0 \?/.test(ui) && /extraLeft > 0\) \?/.test(ui) && /tickets > 0\) \?/.test(ui));
   check('⑥ デッキえらび(87)は共通の札とボタン(CardAutoRewardBar)を使う', /<CardAutoRewardBar info=\{auto\.info\}/.test(pick) && !/セッション券1枚でごほうびを1回ふやす/.test(pick));
 

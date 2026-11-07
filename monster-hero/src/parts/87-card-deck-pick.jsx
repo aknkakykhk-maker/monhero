@@ -100,7 +100,7 @@ const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', 
               <span data-card-deck-pick-auto-left={auto.left === null ? '' : auto.left} className={`mt-1 block ${auto.left ? 'text-emerald-200' : 'text-amber-200'}`}>
                 {auto.left === null ? '' : auto.left > 0 ? `今日のごほうびはあと${auto.left}回(自分で戦うときの半分)` : '今日のごほうびは終わりました。ごほうびなしで遊べます'}</span>
             </p>}
-            {/* オートのごほうびの残りの札と、セッション券でふやすボタン(96 の CardAutoRewardBar。結果の画面と同じ部品・2026-11-07 社長)。
+            {/* オートのごほうびの残りの札と、セッション券でふやすボタン(84 の CardAutoRewardBar。結果の画面と同じ部品・2026-11-07 社長)。
                 押すと、何枚使うかを選ぶ窓(84 の CardAutoTicketSheet) */}
             {auto.on && auto.info && typeof auto.onExtra === 'function' && typeof CardAutoRewardBar === 'function' && <CardAutoRewardBar info={auto.info} tickets={auto.tickets} onAdd={auto.onExtra} note={auto.ticketNote}/>}
           </div>
