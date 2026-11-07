@@ -18369,7 +18369,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {row('適性', parts.aptitude)}
                 {row('固有技', parts.unique)}
                 {row('魂格特性', parts.soul)}
-                {parts.boostSpent > 0 && row('✨ オリジナル強化', parts.boost, <span className="font-bold">(使った固有技P {parts.boostSpent.toLocaleString()})</span>)}
+                {parts.boostSpent > 0 && row('✨ オリジナル強化', parts.boost, <span className="block text-[10px] font-bold">使った固有技P {parts.boostSpent.toLocaleString()}</span>)}
                 <div className="flex items-center justify-between gap-2 border-t border-white/15 pt-1 text-[12px] font-black text-white"><span>合計</span><span className="font-mono tabular-nums">{formatMonsterPower(power)}</span></div>
               </div>}
             </>);

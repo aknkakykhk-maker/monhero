@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f0c2048cbf424a5b
+// source-sha256: b9bd32526a66de6f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -71171,7 +71171,8 @@ function UniqueBoostSheet({
       paddingBottom: 'env(safe-area-inset-bottom)'
     }
   }, React.createElement("div", {
-    className: "shrink-0 px-4 pt-3 pb-2 border-b border-white/10"
+    "data-unique-boost-head": true,
+    className: "shrink-0 px-4 pt-3 pb-2 border-b border-white/10 [@media(orientation:landscape)_and_(max-height:520px)]:pt-2 [@media(orientation:landscape)_and_(max-height:520px)]:pb-1.5"
   }, React.createElement("div", {
     className: "flex items-center justify-between gap-2 min-w-0"
   }, React.createElement("div", {
@@ -71185,11 +71186,11 @@ function UniqueBoostSheet({
   }, React.createElement(Sparkles, {
     size: 12
   }), "未使用 固有技P ", normalized.uniqueSkillPoints.toLocaleString())), React.createElement("div", {
-    className: "mt-1.5 text-[12px] font-black text-amber-200"
+    className: "mt-1.5 text-[12px] font-black text-amber-200 [@media(orientation:landscape)_and_(max-height:520px)]:hidden"
   }, "✨ オリジナル強化(この技だけに効きます)"), React.createElement("div", {
-    className: "mt-0.5 text-[10px] font-bold leading-relaxed text-slate-400"
+    className: "mt-0.5 text-[10px] font-bold leading-relaxed text-slate-400 [@media(orientation:landscape)_and_(max-height:520px)]:hidden"
   }, "Lv.8 になった固有技に、余った固有技Pで強化を積めます。合体でこの技を引き継ぐと、強化も一緒に引き継ぎます。"), React.createElement("div", {
-    className: "mt-2 grid grid-cols-3 gap-2",
+    className: "mt-2 grid grid-cols-3 gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1",
     role: "tablist"
   }, UNIQUE_BOOST_TABS.map(t => React.createElement("button", {
     key: t.id,
@@ -71198,8 +71199,9 @@ function UniqueBoostSheet({
     "aria-selected": tab === t.id,
     "data-unique-boost-tab": t.id,
     onClick: () => setTab(t.id),
-    className: `min-h-[40px] rounded-xl text-[12px] font-black border ${tab === t.id ? 'bg-amber-500 text-slate-950 border-amber-300' : 'bg-slate-800 text-slate-300 border-white/10'}`
+    className: `min-h-[40px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[34px] rounded-xl text-[12px] font-black border ${tab === t.id ? 'bg-amber-500 text-slate-950 border-amber-300' : 'bg-slate-800 text-slate-300 border-white/10'}`
   }, t.label)))), React.createElement("div", {
+    "data-unique-boost-rows": true,
     className: "flex-1 min-h-0 overflow-y-auto mh-scroll px-3 py-2 space-y-2"
   }, rows.map(def => {
     const applies = uniqueBoostAppliesTo(def, monId);
@@ -71263,7 +71265,7 @@ function UniqueBoostSheet({
       className: "min-w-[44px] min-h-[38px] px-2 rounded-xl bg-slate-800 border border-white/10 text-[12px] font-black text-white disabled:opacity-30"
     }, "MAX")));
   })), React.createElement("div", {
-    className: "shrink-0 px-4 pt-2 pb-3 border-t border-white/10"
+    className: "shrink-0 px-4 pt-2 pb-3 border-t border-white/10 [@media(orientation:landscape)_and_(max-height:520px)]:pt-1 [@media(orientation:landscape)_and_(max-height:520px)]:pb-2"
   }, React.createElement("div", {
     className: "flex items-center justify-between text-[12px] font-black"
   }, React.createElement("span", {
@@ -71271,11 +71273,11 @@ function UniqueBoostSheet({
   }, "残りP"), React.createElement("span", {
     className: "text-amber-300"
   }, remaining.toLocaleString())), React.createElement("div", {
-    className: "mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2"
+    className: "mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1"
   }, React.createElement("button", {
     type: "button",
     onClick: onClose,
-    className: "min-h-[48px] rounded-2xl bg-slate-800 text-[13px] font-black text-white"
+    className: "min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] rounded-2xl bg-slate-800 text-[13px] font-black text-white"
   }, "やめる"), React.createElement("button", {
     type: "button",
     "data-unique-boost-commit": true,
@@ -71290,7 +71292,7 @@ function UniqueBoostSheet({
         onClose();
       }
     },
-    className: "min-h-[48px] rounded-2xl bg-gradient-to-b from-amber-500 to-orange-700 text-[13px] font-black text-white disabled:opacity-40"
+    className: "min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] rounded-2xl bg-gradient-to-b from-amber-500 to-orange-700 text-[13px] font-black text-white disabled:opacity-40"
   }, "強化を確定")))), helpDef && React.createElement("div", {
     className: "fixed inset-0 flex items-center justify-center p-6",
     style: {
@@ -163347,8 +163349,8 @@ function MonsterHeroGame() {
       }, React.createElement("div", {
         className: "text-[10px] font-black text-amber-300"
       }, "総合力の内わけ"), row('能力', parts.stat), row('適性', parts.aptitude), row('固有技', parts.unique), row('魂格特性', parts.soul), parts.boostSpent > 0 && row('✨ オリジナル強化', parts.boost, React.createElement("span", {
-        className: "font-bold"
-      }, "(使った固有技P ", parts.boostSpent.toLocaleString(), ")")), React.createElement("div", {
+        className: "block text-[10px] font-bold"
+      }, "使った固有技P ", parts.boostSpent.toLocaleString())), React.createElement("div", {
         className: "flex items-center justify-between gap-2 border-t border-white/15 pt-1 text-[12px] font-black text-white"
       }, React.createElement("span", null, "合計"), React.createElement("span", {
         className: "font-mono tabular-nums"

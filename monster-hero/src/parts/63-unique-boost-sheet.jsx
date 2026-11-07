@@ -41,21 +41,22 @@ function UniqueBoostSheet({ masu, skillKey, onClose, onCommit }) {
       role="dialog" aria-modal="true" aria-label={`${skillName}のオリジナル強化`} data-unique-boost-sheet>
       <div className="w-full max-w-md bg-slate-900 border-2 border-amber-500/80 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden"
         style={{ maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - 12px)', paddingBottom:'env(safe-area-inset-bottom)' }}>
-        <div className="shrink-0 px-4 pt-3 pb-2 border-b border-white/10">
+        <div data-unique-boost-head className="shrink-0 px-4 pt-3 pb-2 border-b border-white/10 [@media(orientation:landscape)_and_(max-height:520px)]:pt-2 [@media(orientation:landscape)_and_(max-height:520px)]:pb-1.5">
           <div className="flex items-center justify-between gap-2 min-w-0">
             <div className="min-w-0 flex items-baseline gap-1.5"><span className="truncate text-[15px] font-black text-white">{skillName}</span><span className="shrink-0 text-[11px] font-mono font-black text-amber-300">Lv.{level}</span></div>
             <div className="shrink-0 flex items-center gap-1 text-[11px] font-black text-amber-300"><Sparkles size={12}/>未使用 固有技P {normalized.uniqueSkillPoints.toLocaleString()}</div>
           </div>
-          <div className="mt-1.5 text-[12px] font-black text-amber-200">✨ オリジナル強化(この技だけに効きます)</div>
-          <div className="mt-0.5 text-[10px] font-bold leading-relaxed text-slate-400">Lv.8 になった固有技に、余った固有技Pで強化を積めます。合体でこの技を引き継ぐと、強化も一緒に引き継ぎます。</div>
-          <div className="mt-2 grid grid-cols-3 gap-2" role="tablist">
+          <div className="mt-1.5 text-[12px] font-black text-amber-200 [@media(orientation:landscape)_and_(max-height:520px)]:hidden">✨ オリジナル強化(この技だけに効きます)</div>
+          {/* 横で背が低いときは説明を畳み、行が見える場所を広くする(2026-11-07 実画面で1行しか見えなかった) */}
+          <div className="mt-0.5 text-[10px] font-bold leading-relaxed text-slate-400 [@media(orientation:landscape)_and_(max-height:520px)]:hidden">Lv.8 になった固有技に、余った固有技Pで強化を積めます。合体でこの技を引き継ぐと、強化も一緒に引き継ぎます。</div>
+          <div className="mt-2 grid grid-cols-3 gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1" role="tablist">
             {UNIQUE_BOOST_TABS.map(t => (
               <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} data-unique-boost-tab={t.id} onClick={() => setTab(t.id)}
-                className={`min-h-[40px] rounded-xl text-[12px] font-black border ${tab === t.id ? 'bg-amber-500 text-slate-950 border-amber-300' : 'bg-slate-800 text-slate-300 border-white/10'}`}>{t.label}</button>
+                className={`min-h-[40px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[34px] rounded-xl text-[12px] font-black border ${tab === t.id ? 'bg-amber-500 text-slate-950 border-amber-300' : 'bg-slate-800 text-slate-300 border-white/10'}`}>{t.label}</button>
             ))}
           </div>
         </div>
-        <div className="flex-1 min-h-0 overflow-y-auto mh-scroll px-3 py-2 space-y-2">
+        <div data-unique-boost-rows className="flex-1 min-h-0 overflow-y-auto mh-scroll px-3 py-2 space-y-2">
           {rows.map(def => {
             const applies = uniqueBoostAppliesTo(def, monId);
             const have = current[def.id] || 0;
@@ -87,14 +88,14 @@ function UniqueBoostSheet({ masu, skillKey, onClose, onCommit }) {
             );
           })}
         </div>
-        <div className="shrink-0 px-4 pt-2 pb-3 border-t border-white/10">
+        <div className="shrink-0 px-4 pt-2 pb-3 border-t border-white/10 [@media(orientation:landscape)_and_(max-height:520px)]:pt-1 [@media(orientation:landscape)_and_(max-height:520px)]:pb-2">
           <div className="flex items-center justify-between text-[12px] font-black"><span className="text-slate-400">残りP</span><span className="text-amber-300">{remaining.toLocaleString()}</span></div>
-          <div className="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2">
-            <button type="button" onClick={onClose} className="min-h-[48px] rounded-2xl bg-slate-800 text-[13px] font-black text-white">やめる</button>
+          <div className="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1">
+            <button type="button" onClick={onClose} className="min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] rounded-2xl bg-slate-800 text-[13px] font-black text-white">やめる</button>
             <button type="button" data-unique-boost-commit disabled={draftCost <= 0} onClick={() => {
               const plan = {}; UNIQUE_BOOST_DEFINITIONS.forEach(def => { if (targetOf(def.id) > (current[def.id] || 0)) plan[def.id] = targetOf(def.id); });
               if (onCommit(plan)) { setDraft({}); onClose(); }
-            }} className="min-h-[48px] rounded-2xl bg-gradient-to-b from-amber-500 to-orange-700 text-[13px] font-black text-white disabled:opacity-40">強化を確定</button>
+            }} className="min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] rounded-2xl bg-gradient-to-b from-amber-500 to-orange-700 text-[13px] font-black text-white disabled:opacity-40">強化を確定</button>
           </div>
         </div>
       </div>
