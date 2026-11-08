@@ -1136,6 +1136,8 @@ const RHYTHM_VIEW_ROTATION=(()=>{
       // 器の中では「画面の高さ」= 回した器の高さ(端末の幅)。--mh-vh を高さの上限に使う窓・シートが、回した画面からはみ出さないように
       // (2026-11-07 レフェリーくん・テンポくんと確認済み。ビートの画面は --mh-vh を回したとき用に分けて持っているので変わらない)
       '--mh-vh':`${vw()}px`,
+      // 幅も同じく、回した器の幅(端末の高さ)。お話の立ち絵の大きさ(70-bootstrap.jsx の🔄横の決まり)が使う(2026-11-08 レフェリーくん)
+      '--mh-vw':`${vh()}px`,
       // 大きさは画面ぴったりのまま、内側だけ削る(box-sizing:border-box)
       boxSizing:'border-box',
       paddingLeft:safeInset(forLeft),paddingRight:safeInset(forRight),
