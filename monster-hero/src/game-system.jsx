@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9f2c16e9fb13c05c
+// generated-sha256: 5499b927446a03f5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67716,6 +67716,8 @@ const alfBuildHouse = (life, metIds) => {
     if (!w) continue;
     const m = life && life.moods ? life.moods[id] : null;
     r[id] = { at: w.place === 'home' ? 'home' : 'out', d: ASSISTANT_LIFE_DOINGS[w.doing] ? w.doing : 'idle', m: ASSISTANT_LIFE_MOODS[m] ? m : 'happy' };
+    // 出かけている先(2026-11-08 社長「8部屋とも留守なのはなぜ」→ 行き先を札に出す)。町の場所の id だけ
+    if (w.place !== 'home' && typeof ASSISTANT_LIFE_PLACES !== 'undefined' && ASSISTANT_LIFE_PLACES[w.place]) r[id].p = w.place;
     // 部屋に置いている家具(key だけ)。2026-11-08 社長「その人の色々見れるように」
     try { const put = typeof assistantLifeRoomOf === 'function' ? assistantLifeRoomOf(id).put : null; const fu = {}; for (const [k, s] of [['c', 'ceil'], ['w', 'wall'], ['f', 'floor']]) if (put && typeof put[s] === 'string') fu[k] = put[s]; if (Object.keys(fu).length) r[id].fu = fu; } catch {}
   }
@@ -67815,6 +67817,7 @@ const assistantLifeFriendNormalizeHouse = (raw) => {
     const x = raw.r && typeof raw.r === 'object' ? raw.r[id] : null;
     if (!x || typeof x !== 'object') continue;
     r[id] = { at: x.at === 'out' ? 'out' : 'home', d: typeof x.d === 'string' && ASSISTANT_LIFE_DOINGS[x.d] ? x.d : 'idle', m: typeof x.m === 'string' && ASSISTANT_LIFE_MOODS[x.m] ? x.m : 'happy' };
+    if (r[id].at === 'out' && typeof x.p === 'string' && x.p !== 'home' && typeof ASSISTANT_LIFE_PLACES !== 'undefined' && ASSISTANT_LIFE_PLACES[x.p]) r[id].p = x.p;
     const furn = typeof ASSISTANT_LIFE_FURNITURE !== 'undefined' && Array.isArray(ASSISTANT_LIFE_FURNITURE) ? ASSISTANT_LIFE_FURNITURE : [];
     if (x.fu && typeof x.fu === 'object') { const fu = {}; for (const [k, slot] of [['c', 'ceil'], ['w', 'wall'], ['f', 'floor']]) { const f = furn.find(y => y.key === x.fu[k]); if (f && f.slot === slot) fu[k] = f.key; } if (Object.keys(fu).length) r[id].fu = fu; }
   }
@@ -68540,13 +68543,17 @@ const ALF_PLAYER_REPLIES = Object.freeze(['こんにちは！', 'おじゃまし
 //   自分の助手ライフの家と同じ家の絵(56-assistant-life-house の AssistantLifeHouseArt)に、その人の家の控えを描く。
 //   部屋を押すと、その助手のシート(話す・置き手紙)。おでかけ中・おやすみ中の部屋も見られる。
 //   下(横は右)に「この家でできること」。置き手紙を残すと何が届くかを1行で出す
+// 「。」で区切った文を、言葉の途中で折らずに並べる(ミハリ「部屋は見られ/ます」)
+const alfNoBreak = (text) => { const parts = String(text || '').split('。').filter(Boolean); return parts.map((x, i) => <span key={i} className="whitespace-nowrap">{x}{i < parts.length - 1 || /。$/.test(text) ? '。' : ''}</span>); };
 const alfRoomsOf = (house) => {
   const rooms = {};
   for (const id of ALF_IDS) {
     const r = house && house.r[id];
     if (!r) { rooms[id] = null; continue; }
     const doing = (ASSISTANT_LIFE_DOINGS[r.d] || {}).label || 'のんびり';
-    if (r.at !== 'home') rooms[id] = { tag: ['🚶 おでかけ中', 'いまは家にいない'] };
+    if (r.at !== 'home') rooms[id] = r.p && typeof assistantLifePlaceShow === 'function'
+      ? { tag: [`${(typeof ASSISTANT_LIFE_PLACE_ICON !== 'undefined' && ASSISTANT_LIFE_PLACE_ICON[r.p]) || '🚶'} ${assistantLifePlaceShow(r.p)}へ`, doing] }
+      : { tag: ['🚶 おでかけ中', 'いまは家にいない'] };
     else if (r.d === 'sleep') rooms[id] = { in: [id], sleep: true, bub: ['💤 おやすみ中'] };
     else rooms[id] = { in: [id], bub: ['部屋で', doing] };
   }
@@ -68660,11 +68667,11 @@ function AlfFriendHouseView({ friend, onClose }) {
           <AlfFace id={roomId} size={46}/>
           <div className="min-w-0 flex-1">
             <p className="text-[16px] font-black text-white">{alfTheirLabel(friend.name, roomId)}の部屋</p>
-            <p className="text-[11px] font-bold text-slate-200" data-alf-visit-room-state={roomState}>{roomState === 'out' ? '🚶 いまはおでかけ中。部屋は見られます' : roomState === 'sleep' ? '💤 すやすや…起こさないように、そっと見るだけ' : `🏠 部屋で${(ASSISTANT_LIFE_DOINGS[r0.d] || {}).label || 'のんびり'}`}</p>
+            <p className="text-[11px] font-bold text-slate-200" data-alf-visit-room-state={roomState}>{alfNoBreak(roomState === 'out' ? (r0.p && typeof assistantLifePlaceShow === 'function' ? `${(typeof ASSISTANT_LIFE_PLACE_ICON !== 'undefined' && ASSISTANT_LIFE_PLACE_ICON[r0.p]) || '🚶'} ${assistantLifePlaceShow(r0.p)}へおでかけ中。部屋は見られます` : '🚶 いまはおでかけ中。部屋は見られます') : roomState === 'sleep' ? '💤 すやすや…起こさないように、そっと見るだけ' : `🏠 部屋で${(ASSISTANT_LIFE_DOINGS[r0.d] || {}).label || 'のんびり'}`)}</p>
           </div>
           <button type="button" data-mhl-sheet-close className="shrink-0 rounded-xl border border-slate-500 px-3 py-1.5 text-[12px] font-black text-slate-100" onClick={() => { setRoomId(null); setTalk(null); }}>とじる</button>
         </div>
-        <p className="mt-2 text-[11px] font-bold text-slate-200" data-alf-visit-furn>🪑 置いている家具: {furnNames(roomId).length ? furnNames(roomId).join('・') : 'まだ無し'}</p>
+        <p className="mt-2 text-[11px] font-bold text-slate-200" data-alf-visit-furn>🪑 贈られた家具: {furnNames(roomId).length ? furnNames(roomId).join('・') : 'まだありません'}</p>
         {keptNames(roomId).length > 0 && <p className="mt-0.5 text-[10.5px] text-slate-300" data-alf-visit-kept>📦 押し入れ: {keptNames(roomId).join('・')}</p>}
         {masmonOf(roomId).length > 0 && <p className="mt-0.5 text-[10.5px] text-slate-300" data-alf-visit-masmon>🐾 マスモン: {masmonOf(roomId).join('・')}</p>}
         {talk && talk.aid === roomId ? (

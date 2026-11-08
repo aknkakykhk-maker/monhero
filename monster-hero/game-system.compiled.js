@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f52961f4df859718
+// source-sha256: e897e22af8082da1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -127186,6 +127186,7 @@ const alfBuildHouse = (life, metIds) => {
       d: ASSISTANT_LIFE_DOINGS[w.doing] ? w.doing : 'idle',
       m: ASSISTANT_LIFE_MOODS[m] ? m : 'happy'
     };
+    if (w.place !== 'home' && typeof ASSISTANT_LIFE_PLACES !== 'undefined' && ASSISTANT_LIFE_PLACES[w.place]) r[id].p = w.place;
     try {
       const put = typeof assistantLifeRoomOf === 'function' ? assistantLifeRoomOf(id).put : null;
       const fu = {};
@@ -127387,6 +127388,7 @@ const assistantLifeFriendNormalizeHouse = raw => {
       d: typeof x.d === 'string' && ASSISTANT_LIFE_DOINGS[x.d] ? x.d : 'idle',
       m: typeof x.m === 'string' && ASSISTANT_LIFE_MOODS[x.m] ? x.m : 'happy'
     };
+    if (r[id].at === 'out' && typeof x.p === 'string' && x.p !== 'home' && typeof ASSISTANT_LIFE_PLACES !== 'undefined' && ASSISTANT_LIFE_PLACES[x.p]) r[id].p = x.p;
     const furn = typeof ASSISTANT_LIFE_FURNITURE !== 'undefined' && Array.isArray(ASSISTANT_LIFE_FURNITURE) ? ASSISTANT_LIFE_FURNITURE : [];
     if (x.fu && typeof x.fu === 'object') {
       const fu = {};
@@ -128892,6 +128894,13 @@ function AlfSceneSheet({
   }, "とじる"))));
 }
 const ALF_PLAYER_REPLIES = Object.freeze(['こんにちは！', 'おじゃましてます', 'すてきな部屋だね']);
+const alfNoBreak = text => {
+  const parts = String(text || '').split('。').filter(Boolean);
+  return parts.map((x, i) => React.createElement("span", {
+    key: i,
+    className: "whitespace-nowrap"
+  }, x, i < parts.length - 1 || /。$/.test(text) ? '。' : ''));
+};
 const alfRoomsOf = house => {
   const rooms = {};
   for (const id of ALF_IDS) {
@@ -128901,7 +128910,9 @@ const alfRoomsOf = house => {
       continue;
     }
     const doing = (ASSISTANT_LIFE_DOINGS[r.d] || {}).label || 'のんびり';
-    if (r.at !== 'home') rooms[id] = {
+    if (r.at !== 'home') rooms[id] = r.p && typeof assistantLifePlaceShow === 'function' ? {
+      tag: [`${typeof ASSISTANT_LIFE_PLACE_ICON !== 'undefined' && ASSISTANT_LIFE_PLACE_ICON[r.p] || '🚶'} ${assistantLifePlaceShow(r.p)}へ`, doing]
+    } : {
       tag: ['🚶 おでかけ中', 'いまは家にいない']
     };else if (r.d === 'sleep') rooms[id] = {
       in: [id],
@@ -129220,7 +129231,7 @@ function AlfFriendHouseView({
   }, alfTheirLabel(friend.name, roomId), "の部屋"), React.createElement("p", {
     className: "text-[11px] font-bold text-slate-200",
     "data-alf-visit-room-state": roomState
-  }, roomState === 'out' ? '🚶 いまはおでかけ中。部屋は見られます' : roomState === 'sleep' ? '💤 すやすや…起こさないように、そっと見るだけ' : `🏠 部屋で${(ASSISTANT_LIFE_DOINGS[r0.d] || {}).label || 'のんびり'}`)), React.createElement("button", {
+  }, alfNoBreak(roomState === 'out' ? r0.p && typeof assistantLifePlaceShow === 'function' ? `${typeof ASSISTANT_LIFE_PLACE_ICON !== 'undefined' && ASSISTANT_LIFE_PLACE_ICON[r0.p] || '🚶'} ${assistantLifePlaceShow(r0.p)}へおでかけ中。部屋は見られます` : '🚶 いまはおでかけ中。部屋は見られます' : roomState === 'sleep' ? '💤 すやすや…起こさないように、そっと見るだけ' : `🏠 部屋で${(ASSISTANT_LIFE_DOINGS[r0.d] || {}).label || 'のんびり'}`))), React.createElement("button", {
     type: "button",
     "data-mhl-sheet-close": true,
     className: "shrink-0 rounded-xl border border-slate-500 px-3 py-1.5 text-[12px] font-black text-slate-100",
@@ -129231,7 +129242,7 @@ function AlfFriendHouseView({
   }, "とじる")), React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-200",
     "data-alf-visit-furn": true
-  }, "🪑 置いている家具: ", furnNames(roomId).length ? furnNames(roomId).join('・') : 'まだ無し'), keptNames(roomId).length > 0 && React.createElement("p", {
+  }, "🪑 贈られた家具: ", furnNames(roomId).length ? furnNames(roomId).join('・') : 'まだありません'), keptNames(roomId).length > 0 && React.createElement("p", {
     className: "mt-0.5 text-[10.5px] text-slate-300",
     "data-alf-visit-kept": true
   }, "📦 押し入れ: ", keptNames(roomId).join('・')), masmonOf(roomId).length > 0 && React.createElement("p", {
