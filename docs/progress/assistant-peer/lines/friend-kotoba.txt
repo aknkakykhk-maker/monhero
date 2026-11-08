@@ -1,0 +1,83 @@
+# 助手ライフ「フレンドの家との行き来」の台本(コトバ 2026-11-08)。注文: lines/ORDER-FRIEND.md(オトズレ3)
+# みゅあ・きき・ももすけ・ドラ × 16本。穴は {name}・{h}さん・{f} を1本に1つまで
+# よその家なので、けんか・言い合い・体に触れる話・数字・モードの名前は書かない
+
+## mua
+visit mua line=greet | mua surprise はじめましてー！ {h}さんのお友だち？
+visit mua line=greet | mua happy わ、お客さんだ！ ゆっくりしてってよー✨
+visit mua line=greet | mua happy {name}って言うの？ よろしくね♪
+visit mua line=greet doing=snack | mua happy いま、おやつ食べてたとこー！ いっしょにどう？
+visit mua line=greet doing=practice | mua excited ちょうど練習してたの！ 見てってよー♪
+visit mua line=greet doing=training | mua happy モッチーのお世話中だったの！ かわいいでしょ？
+visit mua line=greet doing=cards | mua wink カード並べてたとこ！ どれがかわいいと思う？
+visit mua line=greet doing=read | mua happy 雑誌見てたの！ コーデ決めてたとこ♪
+visit mua line=greet doing=idle | mua excited ちょうどヒマしてたの！ ナイスタイミングぢゃん👍
+visit mua line=reply | mua happy ありがとー！ 来てくれて、まぢうれしい♪
+visit mua line=reply | mua wink うんうん(●ﾟｪﾟ))ｺｸｺｸ 楽しんでってね！
+visit mua line=reply | mua happy そう言ってもらえると、照れるぢゃんｗ
+visit mua line=sleep | mua normal …むにゃ…このリボン…かわいー…
+visit mua line=sleep | mua normal …すぅ…いらっしゃーい…むにゃ…
+go mua | mua excited {h}さんの家、おしゃれすぎぢゃない！？
+go mua | mua happy {f}の部屋、見せてもらってもいい？
+welcome mua | mua excited {f}だ！ 来てくれたの、まぢうれしい♪
+welcome mua | mua happy あたしの部屋、こっちだよー！ ゆっくりしてってね✨
+
+## kiki
+visit kiki line=greet | kiki happy まあ、お客さまでつね。ようこそいらっしゃいました
+visit kiki line=greet | kiki normal はじめまして。{h}さんのところの、ききでつ
+visit kiki line=greet | kiki happy {name}、どうぞお入りくださいな♪
+visit kiki line=greet doing=snack | kiki happy ちょうど、お茶菓子をいただいていたところでつ。おひとついかが？
+visit kiki line=greet doing=practice | kiki wink モンヒロビートの練習中でした。ちから全開でいきまつよ♪
+visit kiki line=greet doing=training | kiki happy ゴーレムさんのお世話をしていました。立派でしょう？
+visit kiki line=greet doing=cards | kiki wink カードを並べていたところでつ。攻撃のカードばかりですね♪
+visit kiki line=greet doing=read | kiki normal 本を読んでいました。静かな時間は、いいものでつね
+visit kiki line=greet doing=idle | kiki happy ぼんやりお茶を飲んでいたところでした。ゆっくりしていってくださいね
+visit kiki line=reply | kiki happy ありがとうございます。くつろいでくださいね♪
+visit kiki line=reply | kiki happy そう言っていただけると、うれしいでつ
+visit kiki line=reply | kiki normal どうぞ、お茶でもいれましょうか
+visit kiki line=sleep | kiki normal …すぅ…お茶が…さめてしまいまつ…
+visit kiki line=sleep | kiki normal …むにゃ…火力は…こちらに…
+go kiki | kiki happy {h}さんのお家、落ち着いたすてきなお部屋でつね
+go kiki | kiki wink {f}、おじゃましまつ。お茶をお持ちしました♪
+welcome kiki | kiki happy {f}、ようこそ。お茶をおいれしまつね
+welcome kiki | kiki normal 遠いところ、ありがとうございまつ。ゆっくりしていってくださいな
+
+## momosuke
+visit momosuke line=greet | momosuke excited わ、お客さん！！ ももの部屋へようこそ♡
+visit momosuke line=greet | momosuke happy はじめまして！！ {h}さんちの、ももだよ！！
+visit momosuke line=greet | momosuke excited {name}、来てくれたの！？ うれしい！！
+visit momosuke line=greet doing=snack | momosuke wink おやつタイム中！！ ひと口あげるw
+visit momosuke line=greet doing=practice | momosuke excited いま練習中！！ ももの音、聞いてって♡
+visit momosuke line=greet doing=training | momosuke happy メタルナーみがいてたとこ！！ ぴかぴかでしょ？
+visit momosuke line=greet doing=cards | momosuke wink カード並べてた！！ かわいいのばっかでしょw
+visit momosuke line=greet doing=read | momosuke normal 楽譜見てたの！！ 次の曲、どれにしよっかな
+visit momosuke line=greet doing=idle | momosuke excited ちょうどヒマだったの！！ 遊ぼ遊ぼ！！
+visit momosuke line=reply | momosuke wink でしょ！？ ももの自慢の部屋だもん♡
+visit momosuke line=reply | momosuke happy ありがと！！ ゆっくりしてってねw
+visit momosuke line=reply | momosuke excited えっへん！！ もっとほめていいよw
+visit momosuke line=sleep | momosuke normal …すぅ…ライブ…まだ終わらない…
+visit momosuke line=sleep | momosuke normal …むにゃ…ぴかぴか…w
+go momosuke | momosuke excited {h}さんちの部屋、かわいいじゃん！！
+go momosuke | momosuke happy {f}、遊びに来たよ！！ 練習見せて♡
+welcome momosuke | momosuke excited {f}だ！！ ももの部屋、案内するね♡
+welcome momosuke | momosuke happy いらっしゃい！！ おやつ用意してあるよw
+
+## dra
+visit dra line=greet | dra surprise お、お客さんか。よく来たな
+visit dra line=greet | dra normal はじめましてだな。{h}さんのところのドラだ
+visit dra line=greet | dra happy {name}か。ゆっくりしていけよ
+visit dra line=greet doing=snack | dra happy ちょうどおやつ中だ。ひとつ食うか？
+visit dra line=greet doing=practice | dra normal モンビーの練習してたとこだ。リズムきざむぞ
+visit dra line=greet doing=training | dra happy グジラの世話してたんだ。でっかいだろ
+visit dra line=greet doing=cards | dra normal 山札を確かめてたとこだ。見ていくか？
+visit dra line=greet doing=read | dra normal 説明書きを読んでたんだ。わかりやすく書いてあるな
+visit dra line=greet doing=idle | dra happy ぼーっとしてたとこだ。ちょうどよかったな、えへへ
+visit dra line=reply | dra happy そうか、ありがとな。くつろいでいけ
+visit dra line=reply | dra wink おでの部屋、気に入ったか？
+visit dra line=reply | dra normal まあ、座ってくれ。おやつもあるぞ
+visit dra line=sleep | dra normal …ぐぅ…グジラ…まだ食べるのか…
+visit dra line=sleep | dra normal …すぅ…いらっしゃい…むにゃ…
+go dra | dra happy {h}さんの家か。いい部屋だな
+go dra | dra normal {f}、おじゃまするぞ。おやつ持ってきた
+welcome dra | dra happy {f}か、よく来たな。ゆっくりしていけ
+welcome dra | dra wink おでの部屋はこっちだ。散らかってるけどな
