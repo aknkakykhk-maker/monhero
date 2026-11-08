@@ -1319,6 +1319,11 @@ const assistantCallnameShy = (assistantId, level, dayKey) => {
 // ★みゅあは「ぢゃん」「まぢ」、ききは敬語(ときどき「でつ」「まつ」)、あつは文末に必ず笑・顔文字・記号
 const ASSISTANT_CALLNAME_LINES = Object.freeze({
   mua: {
+    // 助手ライフの部屋(2026-11-08 社長 ❼〜❿): 声をかけたあとのひとこと(呼び方の話/持ちかけ/ふつう)と、起こしたときの寝起きのひとこと
+    lifeAsk: ['ねえねえ、{name}の呼び方、そろそろ決めちゃわない？ おしゃべりしよ♪'],
+    lifeOffer: ['{name}のこと、「{call}」って呼んでみてもいい？ ちょっと話そ♪'],
+    lifePlain: ['{name}、来てくれたんだ！ ちょっとおしゃべりしてかない？'],
+    wake: ['ふぁ……{name}？ 寝てたぁ……でも来てくれたなら、うれしいかも♪'],
     ask: ['ねえねえ、仲良くなったし……{name}のこと、これからなんて呼んだらいい？ 好きなの選んでもいいし、書いてくれてもOKだよ♪'],
     confirm: ['えっ、「{call}」って呼んでほしいの？ いいぢゃん、呼んでみたい♪'],
     accept: ['じゃあ……{call}！ ふふ、なんか照れるけど、うれしいかも♪'],
@@ -1329,6 +1334,11 @@ const ASSISTANT_CALLNAME_LINES = Object.freeze({
     nickShy: ['えー、まだ照れるってば！ もうちょっと仲良くなってからね♪'],
   },
   kiki: {
+    // 助手ライフの部屋(2026-11-08 社長 ❼〜❿): 声をかけたあとのひとこと(呼び方の話/持ちかけ/ふつう)と、起こしたときの寝起きのひとこと
+    lifeAsk: ['{name}、そろそろ呼び方を決めませんか？ 少しお話ししましょう。'],
+    lifeOffer: ['{name}のこと、「{call}」とお呼びしてもいいでしょうか？'],
+    lifePlain: ['{name}、来てくださったんですね。少しお話ししていきませんか？'],
+    wake: ['ん……{name}？ すみません、うとうとしていまつた……。でも、お話しできるのはうれしいです。'],
     ask: ['あの……ずいぶん仲良くなれた気がするので、{name}のこと、これからどうお呼びしたらいいでしょう？ 選んでも、書いてくださってもいいですよ。'],
     confirm: ['「{call}」とお呼びしてもいいんですか？ ……うれしいです。'],
     accept: ['では……{call}。ふふ、少し照れまつね。これからもよろしくお願いします。'],
@@ -1339,6 +1349,11 @@ const ASSISTANT_CALLNAME_LINES = Object.freeze({
     nickShy: ['ええと……それはまだ照れてしまいまつ。もう少しあとで、お願いしますね。'],
   },
   momosuke: {
+    // 助手ライフの部屋(2026-11-08 社長 ❼〜❿): 声をかけたあとのひとこと(呼び方の話/持ちかけ/ふつう)と、起こしたときの寝起きのひとこと
+    lifeAsk: ['ねえ{name}、そろそろ呼び方決めようよ！！ ちょっと話そ！'],
+    lifeOffer: ['{name}のこと「{call}」って呼んでみてもいい？w'],
+    lifePlain: ['お、{name}じゃん！ ちょっとしゃべってく？w'],
+    wake: ['んあ……{name}？ もも、寝てた……！ でも起こしてくれてよかったかも！！w'],
     ask: ['ねえねえ、ももたちもう仲良しじゃん！ {name}のこと、なんて呼んだらいい？ 選んでも書いてもいいよ！！'],
     confirm: ['「{call}」って呼んでいいの？ まじで？ やったー！！'],
     accept: ['{call}！ よーし、ももはこれからそう呼ぶからね！！w'],
@@ -1349,6 +1364,11 @@ const ASSISTANT_CALLNAME_LINES = Object.freeze({
     nickShy: ['えーっ、それはまだ照れるってw もうちょっと仲良くなってからね！！'],
   },
   dra: {
+    // 助手ライフの部屋(2026-11-08 社長 ❼〜❿): 声をかけたあとのひとこと(呼び方の話/持ちかけ/ふつう)と、起こしたときの寝起きのひとこと
+    lifeAsk: ['おう{name}。そろそろ呼び方、決めとかないか？ ちょっと話そう'],
+    lifeOffer: ['{name}のこと「{call}」って呼んでもいいか？'],
+    lifePlain: ['お、{name}。ちょっと話していくか？'],
+    wake: ['ん……{name}か。おで、寝てたわ……でも来てくれたなら起きるよ'],
     ask: ['なあ、おでたち結構仲良くなったよな。{name}のこと、これからなんて呼べばいい？ 選んでも書いてもいいぞ'],
     confirm: ['「{call}」って呼んでいいのか？ いいね、そうしよう'],
     accept: ['よし、{call}な。おで、ちゃんと覚えたからな'],
@@ -1359,6 +1379,11 @@ const ASSISTANT_CALLNAME_LINES = Object.freeze({
     nickShy: ['いやー、それはまだ照れるわ。もう少しあとでな'],
   },
   atsu: {
+    // 助手ライフの部屋(2026-11-08 社長 ❼〜❿): 声をかけたあとのひとこと(呼び方の話/持ちかけ/ふつう)と、起こしたときの寝起きのひとこと
+    lifeAsk: ['てか、だいぶ仲いいよね笑 呼び方、そろそろ決めない？'],
+    lifeOffer: ['{name}のこと「{call}」って呼んでもいい？笑'],
+    lifePlain: ['お、来てくれたんだ笑 ちょっと話してく？'],
+    wake: ['ん……寝てたわ笑 {name}か、起こしてくれてありがとね！'],
     ask: ['てか、もう結構仲いいよね笑 {name}のこと、これからなんて呼べばいい？ 選んでも書いてもいいよ！'],
     confirm: ['「{call}」って呼んでいいの？ まじで？笑'],
     accept: ['じゃあ{call}で！ 俺もちゃんと覚えたよ笑'],
@@ -1369,6 +1394,11 @@ const ASSISTANT_CALLNAME_LINES = Object.freeze({
     nickShy: ['いやいや、まだ照れるって笑 もうちょっとあとでね！'],
   },
   kyuko: {
+    // 助手ライフの部屋(2026-11-08 社長 ❼〜❿): 声をかけたあとのひとこと(呼び方の話/持ちかけ/ふつう)と、起こしたときの寝起きのひとこと
+    lifeAsk: ['ねぇ{name}、そろそろ呼び方決めちゃおうよ笑 ちょっと話そ'],
+    lifeOffer: ['{name}のこと「{call}」って呼んでみてもいい？w'],
+    lifePlain: ['あ、{name}だ笑 ちょっと話してくぅ？'],
+    wake: ['んぁ……寝てた笑 {name}が来たなら起きるよぉ'],
     ask: ['ねぇ、だいぶ仲良くなったよね笑 {name}のこと、これからなんて呼んだらいいかなぁ？ 選んでも書いてもいいよ'],
     confirm: ['「{call}」って呼んでいいの？ ありがとうございます笑'],
     accept: ['じゃあ{call}で。ちゃんと覚えたよw'],
@@ -1379,6 +1409,11 @@ const ASSISTANT_CALLNAME_LINES = Object.freeze({
     nickShy: ['それはまだ照れるなぁw もうちょっとあとでね'],
   },
   sorashido: {
+    // 助手ライフの部屋(2026-11-08 社長 ❼〜❿): 声をかけたあとのひとこと(呼び方の話/持ちかけ/ふつう)と、起こしたときの寝起きのひとこと
+    lifeAsk: ['なあ{name}、そろそろ呼び方決めようぜ笑 ちょっと話そう'],
+    lifeOffer: ['{name}のこと「{call}」って呼んでもいいか？笑'],
+    lifePlain: ['おっ、{name}！ ちょっと話してくか？笑'],
+    wake: ['ん……うぉっ、{name}!? 寝てたわ笑 よし、起きたぜ・・・！'],
     ask: ['なあ、だいぶ仲良くなったよな笑 {name}のこと、これからなんて呼べばいい？ 選んでも書いてもいいぜ'],
     confirm: ['「{call}」って呼んでいいのか!? うぉぉぉ、いいね笑'],
     accept: ['よし、{call}な！ 俺の頭にしっかり刻んだぜ・・・！'],
@@ -1389,6 +1424,11 @@ const ASSISTANT_CALLNAME_LINES = Object.freeze({
     nickShy: ['それはまだ照れるわ笑 もうちょいあとでな！'],
   },
   erubin: {
+    // 助手ライフの部屋(2026-11-08 社長 ❼〜❿): 声をかけたあとのひとこと(呼び方の話/持ちかけ/ふつう)と、起こしたときの寝起きのひとこと
+    lifeAsk: ['{name}、そろそろ呼び方を決めてもいいかなって思うんだよね。少し話そうか'],
+    lifeOffer: ['{name}のこと「{call}」って呼んでもいいかな？'],
+    lifePlain: ['{name}、来てくれたんだね。少し話していこうか'],
+    wake: ['ん……寝ちゃってたね笑 {name}が来てくれたなら、起きるよ'],
     ask: ['だいぶ仲良くなれたよね。{name}のこと、これからなんて呼んだらいいかな？ 選んでも書いてもいいよ'],
     confirm: ['「{call}」って呼んでいいのかな？ うれしいね'],
     accept: ['じゃあ{call}って呼ぶね。そういうことです笑'],
@@ -1403,6 +1443,24 @@ const assistantCallnameLine = (assistantId, kind) => {
   const set = ASSISTANT_CALLNAME_LINES[assistantId] || ASSISTANT_CALLNAME_LINES.mua;
   const list = set[kind] || ASSISTANT_CALLNAME_LINES.mua[kind] || [''];
   return list[Math.floor(Math.random() * list.length)] || '';
+};
+// 助手ライフの部屋で、声をかけたあとに出すひとこと(社長 ❾A「呼び方の話の日を作る」)。
+//   ask   … Lv6 から、まだ聞いていない・呼び方を決めていない助手(おしゃべりを開くと「なんて呼んだらいい？」が続く)
+//   offer … Lv3 から、7日に1回。具体的な呼び方を1つ持ちかける(おしゃべりを開くと確かめるカードが出る)
+//   plain … ほかの日。ふつうのひとこと
+// st = { level, asked, current, customStyle, offeredAt, callName, fill:(型)=>名前入り, now }
+const assistantCallnameLifePick = (assistantId, st) => {
+  const lv = Number(st && st.level) || 1;
+  const now = Number.isFinite(st && st.now) ? st.now : Date.now();
+  const say = (kind, vars = {}) => assistantCallnameLine(assistantId, kind)
+    .replace(/\{call\}/g, vars.call || '').replace(/\{name\}/g, (st && st.callName) || '');
+  if (lv >= ASSISTANT_CALLNAME_ASK_LEVEL && !(st && st.asked) && !(st && st.current) && !(st && st.customStyle)) return { kind: 'ask', text: say('lifeAsk') };
+  if (lv >= 3 && now - ((st && st.offeredAt) || 0) >= ASSISTANT_CALLNAME_OFFER_DAYS * 86400000) {
+    const fill = (st && typeof st.fill === 'function') ? st.fill : (t) => t;
+    const value = assistantCallnameChoices(assistantId, (st && (st.current || st.customStyle)) || null).find(t => fill(t) !== (st && st.callName));
+    if (value) return { kind: 'offer', value, text: say('lifeOffer', { call: fill(value) }) };
+  }
+  return { kind: 'plain', text: say('lifePlain') };
 };
 // 候補のボタン(Lv6 で聞くとき)。その助手の選べる呼び方の例・性別の くん/ちゃん から3つ(いまの呼び方と同じものは外す)
 const assistantCallnameChoices = (assistantId, currentTemplate) => {

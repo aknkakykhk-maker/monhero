@@ -2867,6 +2867,8 @@ function MonsterHeroGame() {
   const [callnameToast, setCallnameToast] = useState(null);
   // 助手とおしゃべりの窓(2026-10-14)。開いているあいだだけ真。公開の印 assistantChat が立つまではデバッグ設定からだけ開ける
   const [assistantChatOpen, setAssistantChatOpen] = useState(false);
+  // おしゃべりの相手(2026-11-08 社長 ❼〜❿)。null のときは、いま選んでいる助手。助手ライフの部屋から開いたときは { id, opening, fromLife }
+  const [assistantChatWith, setAssistantChatWith] = useState(null);
   // 関係図から見返す助手どうしの特別なお話(台本)。null なら見返していない
   const [peerReplay, setPeerReplay] = useState(null);
   // ふだんの吹き出しを1日1回まとめて作る(2026-10-14)。この起動で頼んだ「日付|助手」を覚え、二重に頼まない
@@ -8910,6 +8912,33 @@ function MonsterHeroGame() {
       return all;
     });
   }, []);
+  // 助手ライフの部屋からのおしゃべり(2026-11-08 社長 ❼A〜❿A)。部屋のシートは ASSISTANT_LIFE_LINKS を typeof で見て、ボタンと続きのカードを出す
+  //   chatWith … その助手とのおしゃべりを助手ライフの上に開く(助手ライフは閉じない=閉じると同じ部屋のシートに戻る)。寝ていれば寝起きのひとことから
+  //   chatFollowLine … 声をかけたあとのひとこと(呼び方の話/持ちかけ/ふつう。assistantCallnameLifePick)
+  useEffect(() => {
+    if (typeof ASSISTANT_LIFE_LINKS === 'undefined' || !ASSISTANT_LIFE_LINKS) return;
+    const on = RELEASE_FLAGS.assistantCallname === true && RELEASE_FLAGS.assistantChat === true && typeof assistantCallnameLifePick === 'function';
+    const levelOf = (id) => assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points);
+    const callOf = (id) => assistantCallName(breederNameRef.current, levelOf(id), assistantCallStyles[id] || null, id);
+    ASSISTANT_LIFE_LINKS.chatFollowLine = on ? (id) => assistantCallnameLifePick(id, {
+      level: levelOf(id), asked: !!(assistantCallnameAsk[id] && assistantCallnameAsk[id].asked),
+      current: (assistantCallnames[id] && assistantCallnames[id].call) || null, customStyle: assistantCallStyles[id] || null,
+      offeredAt: (assistantCallnameAsk[id] && assistantCallnameAsk[id].offeredAt) || 0, callName: callOf(id),
+      fill: (t) => assistantFillCallTemplate(assistantGenderCallOf(t, id), breederNameRef.current),
+    }) : null;
+    ASSISTANT_LIFE_LINKS.chatWith = on ? (id, opts = {}) => {
+      if (!ASSISTANT_LIST.some(a => a.id === id)) return;
+      const f = opts && opts.follow;
+      const fill = (line, vars = {}) => String(line || '').replace(/\{call\}/g, vars.call || '').replace(/\{name\}/g, callOf(id));
+      let opening = null;
+      if (opts && opts.asleep) opening = { text: fill(assistantCallnameLine(id, 'wake')), e: 'troubled' };
+      else if (f && f.kind === 'offer' && f.value) opening = { text: f.text, e: 'wink', card: { kind: 'call', value: f.value, from: 'assistant' } };
+      else if (f && f.kind === 'plain') opening = { text: f.text, e: 'happy' };
+      // f.kind === 'ask' は、窓の中の Lv6 の問いかけがそのまま続く(同じことを2回言わない)
+      setAssistantChatWith({ id, opening, fromLife: true });
+      setAssistantChatOpen(true);
+    } : null;
+  }, [assistantCallnames, assistantCallnameAsk, assistantCallStyles, assistantBonds, breederName]);
   // 吹き出しへ配る値。画面側は <AssistantBubble scene="…"/> のままでよい
   const assistantBondValue = useMemo(() => ({
     points: assistantBond.points,
@@ -19204,10 +19233,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         )}
         {/* 助手とおしゃべり(2026-10-14)。話す相手は、いま選んでいる助手。返事が来た1往復ごとにその助手の仲良し度(chat)が増える */}
         {assistantChatOpen&&activeAssistant&&(()=>{
-          const id=activeAssistant.id;
-          const lv=assistantBondLevelNow;
+          // 助手ライフの部屋から開いたときは、その助手(選んでいない助手でもよい)。仲良し度もその助手のぶん(社長 ❿A)
+          const chatWho=(assistantChatWith&&ASSISTANT_LIST.find(a=>a.id===assistantChatWith.id))||activeAssistant;
+          const id=chatWho.id;
+          const lv=id===activeAssistant.id?assistantBondLevelNow:assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points);
           const stage=assistantBondStageByLevel(lv,id)||{};
-          return <AssistantChatWindow assistant={activeAssistant} playerName={breederName}
+          return <AssistantChatWindow key={id} assistant={chatWho} playerName={breederName}
+            opening={(assistantChatWith&&assistantChatWith.opening)||null} zIndex={assistantChatWith&&assistantChatWith.fromLife?9300:9000}
             callName={assistantCallName(breederName,lv,assistantCallStyles[id]||null,id)}
             bondLevel={lv} bondTitle={stage.title||''} bondTone={stage.tone||''}
             callnameKit={RELEASE_FLAGS.assistantCallname===true?{
@@ -19218,11 +19250,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               asked:!!(assistantCallnameAsk[id]&&assistantCallnameAsk[id].asked),
               offeredAt:(assistantCallnameAsk[id]&&assistantCallnameAsk[id].offeredAt)||0,
               fill:(t)=>assistantFillCallTemplate(assistantGenderCallOf(t,id),breederName),
-              setCall:(call,by)=>{const g=setAssistantCallnameFor(id,call,by);if(g)setCallnameToast({id,text:`${activeAssistant.name}の呼び方：${assistantFillCallTemplate(g,breederName)}`});return g;},
+              setCall:(call,by)=>{const g=setAssistantCallnameFor(id,call,by);if(g)setCallnameToast({id,text:`${chatWho.name}の呼び方：${assistantFillCallTemplate(g,breederName)}`});return g;},
               setNick:(nick)=>setAssistantNicknameFor(id,nick),
               markAsk:(patch)=>markAssistantCallnameAsk(id,patch),
             }:null}
-            onExchange={()=>addAssistantBondFor(id,'chat')} onClose={()=>setAssistantChatOpen(false)}/>;
+            onExchange={()=>addAssistantBondFor(id,'chat')} onClose={()=>{setAssistantChatOpen(false);setAssistantChatWith(null);}}/>;
         })()}
         {/* 呼び方が決まったあと、つぎの画面で1回だけ出す知らせ(2026-11-08)。🔄横では回した器の中へ出す */}
         {callnameToast&&!assistantChatOpen&&typeof AssistantCallnameToast==='function'&&(()=>{
@@ -22790,8 +22822,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         )}
 
         {showCallStylePicker&&(
-          <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
-            <div className="bg-slate-900 rounded-3xl p-6 w-full max-w-xs shadow-2xl" style={{border:`1px solid ${activeAssistant.accent}`}}>
+          // 低い画面(横667×375 など)で上がはみ出さないよう、外側を縦に流せるようにして、窓は高さが足りるときだけ真ん中へ(ミハリ 2026-11-08)
+          <div data-call-style-picker className="fixed inset-0 flex flex-col items-center overflow-y-auto mh-scroll p-6 [@media(max-height:520px)]:p-3" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
+            <div className="bg-slate-900 rounded-3xl p-6 [@media(max-height:520px)]:p-4 w-full max-w-xs shadow-2xl my-auto shrink-0" style={{border:`1px solid ${activeAssistant.accent}`}}>
               <h3 className="text-lg font-black text-white mb-1 text-center">{activeAssistant.name}の呼び方</h3>
               {/* 会話で決めた呼び方・助手のあだ名(2026-11-08)。Lv6 より前でもここで外せる。外すのは新しいキーの行だけ */}
               {(()=>{const talked=assistantCallnames[selectedAssistantId]&&assistantCallnames[selectedAssistantId].call;const nick=assistantNicknames[selectedAssistantId]&&assistantNicknames[selectedAssistantId].nick;
@@ -22803,7 +22836,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <button type="button" data-nickname-reset onClick={()=>setAssistantNicknameFor(selectedAssistantId,null)} className="shrink-0 min-h-[36px] rounded-xl border border-slate-600 bg-slate-800 px-2.5 text-[10px] font-black text-slate-200 active:scale-95">外す</button></div>}
                 </div>);})()}
               {assistantBondLevelNow>=ASSISTANT_CALL_STYLE_UNLOCK_LEVEL?(<>
-              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">仲良し度がLv6になったので、呼び方を自由に決められます。「{'{name}'}」と書くと、そこがあなたの名前に置き換わります。</p>
+              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight" style={JA_WRAP_STYLE}>{jaWrap('仲良し度がLv6になったので、呼び方を自由に決められます。')}<span className="whitespace-nowrap">「{'{name}'}」</span>{jaWrap('と書くと、そこがあなたの名前に置き換わります。')}</p>
               <input type="text" value={tempCallStyle} onChange={e=>setTempCallStyle(e.target.value)} maxLength={(typeof ASSISTANT_CALL_STYLE_MAX_LEN!=='undefined'&&ASSISTANT_CALL_STYLE_MAX_LEN)||16} placeholder={`例: {name}さん`} className="w-full bg-black/50 border border-slate-700 rounded-xl p-3 text-white font-bold text-center mb-2"/>
               <div className="flex flex-wrap gap-1.5 justify-center mb-4">
                 {((typeof assistantCallStylesOf==='function'&&assistantCallStylesOf(selectedAssistantId))||[]).map(style=>(
