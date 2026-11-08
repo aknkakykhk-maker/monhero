@@ -5456,6 +5456,8 @@ function MonsterHeroGame() {
   const cardOriginBackRef = useRef(null); // MFバトルカードを閉じたときの戻り先(プロフィール・フレンドの「バトルカードのデッキ」から来たとき)
   // MFバトルカードの「マーケットへ」から入ったときだけ、マーケットに「MFバトルカード」の売り場を出す(デバッグ専用のあいだ。区切り2)
   const [cardMarketEntry, setCardMarketEntryRaw] = useState(false);
+  // 助手ライフの「🛒 交換所で手に入れる」から入ったとき: ビートP交換所のどの棚を開くか('item' | 'furniture')。戻ると助手ライフへ(56-assistant-life-gifts.jsx)
+  const [lifeShopEntry, setLifeShopEntry] = useState(null);
   // ★控え(冒頭の cardMarketEntryRef)も同時に入れる。setGameState('BREEDER_MARKET') がすぐあとに読むので、描画を待たない
   const setCardMarketEntry = (next) => { cardMarketEntryRef.current = next === true; setCardMarketEntryRaw(next === true); };
   const [cardShopState, setCardShopState] = useState(null); // { point, starter, shop }(売り場に出す分だけ。保存の正本は mh_card_*)
@@ -7230,7 +7232,17 @@ function MonsterHeroGame() {
         }
         await storeSet(LOGIN_PT_TO_XP_KEY, true, false);
       }
-      let missionState = normalizeMissions(await storeGet('mh_missions', null, false));
+      // ミッションの作り直し(2026-11-08)の切り替えの印。一度だけ書く(mh_mission_renew_v1)。
+      //   今までミッションの保存がある人は、書いた日・週・月だけ「切り替えの数え方」(前の項目を残す・コンプリートは少ないほうの目安)をする。
+      //   はじめて遊ぶ人は切り替えが無いので、どの期間にも当たらない印('-')を書く
+      const storedMissions = await storeGet('mh_missions', null, false);
+      let renewMark = normalizeMissionRenewMark(await storeGet(MISSION_RENEW_KEY, null, false));
+      if (!renewMark) {
+        renewMark = storedMissions && typeof storedMissions === 'object' ? missionRenewMarkAt() : { at: Date.now(), daily: '-', weekly: '-', monthly: '-' };
+        await storeSet(MISSION_RENEW_KEY, renewMark, false);
+      }
+      setMissionRenewMark(renewMark);
+      let missionState = normalizeMissions(storedMissions);
       const loginDay = missionDailyPeriod();
       missionState.daily.login = 1;
       if (!missionState.weeklyLoginDays.includes(loginDay)) missionState.weeklyLoginDays.push(loginDay);
@@ -8536,6 +8548,10 @@ function MonsterHeroGame() {
   }, [grantProfileFrames, deliverAssistantBondRewards]);
   // 助手どうしの掛け合い・今日のペアで、出てきた助手それぞれの仲良し度を増やす(2026-11-07・56-assistant-peer.jsx)
   useEffect(() => { if (typeof assistantPeerSetPlayerBondAdder === 'function') assistantPeerSetPlayerBondAdder(addAssistantBondFor); }, [addAssistantBondFor]);
+  // 助手ライフの贈るシートの「数字の重み」(次の段まで)に、助手ごとの仲良し度の点を読ませる(読むだけ)
+  useEffect(() => { if (typeof assistantLifeSetBondPointsReader === 'function') assistantLifeSetBondPointsReader((id) => normalizeAssistantBond(assistantBondsRef.current[normalizeAssistantId(id)]).points); }, []);
+  // 助手ライフから交換所の道具・家具の棚を開く
+  useEffect(() => { if (typeof assistantLifeSetShopOpener === 'function') assistantLifeSetShopOpener((tab) => { setLifeShopEntry(tab === 'furniture' ? 'furniture' : 'item'); setMarketExchangeError(''); setGameState('BREEDER_MARKET'); }); }, []);
   // 助手ライフのフレンドの家のおみやげ(ビートP)をギフトで届ける(2026-11-08・56-assistant-life-friend.jsx)。
   //   id は「日付+家」で1つに決まるので、同じおみやげは二度届かない(grantGiftOnce)。1日300Pまでは向こうで数える
   useEffect(() => {
@@ -10794,6 +10810,7 @@ function MonsterHeroGame() {
     && !runResultFinishedRef.current && !!quickRunProgressRef.current && !quickRunProgressRef.current.finished;
   // カードから開いたマーケットの印は、カードとマーケットの外へ出たら下ろす(ふつうにマーケットへ来たときにカードの中と数えない)
   useEffect(() => { if (gameState !== 'BREEDER_MARKET' && !isCardScreen(gameState) && cardMarketEntryRef.current) setCardMarketEntry(false); }, [gameState]);
+  useEffect(() => { if (gameState !== 'BREEDER_MARKET') setLifeShopEntry(null); }, [gameState]);
   // MFバトルカードの「戻る」。裏で周回を回したまま来ていたら、モンヒロビートの「戻る」(exitRhythmSongSelect)と同じく、
   // そこまでの報酬を入れて周回を締めてから出る(締めずに出ると、ランが宙ぶらりんのまま残る)
   const cardExitingRunRef = useRef(false);
@@ -12316,11 +12333,17 @@ function MonsterHeroGame() {
       // ビートPの報酬(2026-10-27 ソラシドのおみやげ)もあるので、ビートPの残高も保存から読み直して持って回る
       const storedBeatBefore = await storeGet(RHYTHM_EVENT_POINTS_KEY, 0, false);
       const beatBefore = normalizeRhythmEventPoints(storedBeatBefore);
-      let balances = { gold, breederPoints, ownedItems, breederXp, ownedProfileFrames: normalizeOwnedProfileFrames([...storedFramesBefore, ...ownedProfileFramesRef.current]), beatPoints: beatBefore };
+      // カードパック券の報酬(2026-11-08 ミッションの作り直し)もあるので、MFバトルカードの持ち物(mh_card_tactics_v1)の券の枚数も保存から読み直して持って回る
+      const hasCardPack = sourceGifts.some(g => wanted.has(g?.id) && Array.isArray(g?.rewards) && g.rewards.some(r => r?.type === 'cardPackTicket'));
+      const storedCardBefore = hasCardPack && typeof CARD_TACTICS_KEY !== 'undefined' ? await storeGet(CARD_TACTICS_KEY, null, false) : null;
+      const cardBefore = hasCardPack && typeof cardNormalizeTactics === 'function' ? cardNormalizeTactics(storedCardBefore) : null;
+      let balances = { gold, breederPoints, ownedItems, breederXp, ownedProfileFrames: normalizeOwnedProfileFrames([...storedFramesBefore, ...ownedProfileFramesRef.current]), beatPoints: beatBefore, cardPackTickets: cardBefore ? cardBefore.tickets : 0 };
       let claimedCount = 0;
       const now = Date.now();
       const nextGifts = sourceGifts.map(gift => {
         if (!wanted.has(gift?.id)) return gift;
+        // カードの持ち物が読めないときは、カードパック券のギフトは受け取らずに残す(券を落とさない)
+        if (!cardBefore && Array.isArray(gift?.rewards) && gift.rewards.some(r => r?.type === 'cardPackTicket')) return gift;
         const result = buildGiftClaim(gift, balances, now);
         if (!result.ok) return gift;
         balances = result.balances; claimedCount++;
@@ -12357,6 +12380,8 @@ function MonsterHeroGame() {
       // ビートPが増えたときだけ、同じ取引でビートPも保存する
       const beatAfter = normalizeRhythmEventPoints(balances.beatPoints);
       if (beatAfter !== beatBefore) entries.push({ key:RHYTHM_EVENT_POINTS_KEY, before:storedBeatBefore, next:beatAfter });
+      // カードパック券が増えたときだけ、同じ取引でカードの持ち物も保存する(券の数だけ変える。ほかの項目はそのまま)
+      if (cardBefore && balances.cardPackTickets !== cardBefore.tickets) entries.push({ key:CARD_TACTICS_KEY, before:storedCardBefore, next:{ ...cardBefore, tickets:balances.cardPackTickets } });
       // 受け取ったぶんだけ「受取済み」が増えるので、ここでも古い控えを落とす
       const keptGifts = pruneGiftHistory(nextGifts);
       entries.push({ key:'mh_gifts', before:sourceGifts, next:keptGifts });
@@ -12410,12 +12435,15 @@ function MonsterHeroGame() {
   const saveMissionProgress = async (event,amount=1) => {
     // 記録を残さない戦い(バトルのれんしゅう・デバッグ戦)ではミッションも進めない。
     // 正式実装前のモンスターを連れた周回も同じ扱いにする
-    if (debugBattleRef.current || runHasDebugOnlyMonster()) return;
+    // ビート・カード・助手・フレンドの数(2026-11-08)はバトルの周回と関係ないので、ここでは止めない
+    const battleEvent=!['beatPlay','beatClear','cardPlay','cardWin','assistantTouch','friendVisit'].includes(event);
+    if (battleEvent && (debugBattleRef.current || runHasDebugOnlyMonster())) return;
     const n=Math.max(0,Math.floor(Number(amount)||0));
     if(n<=0)return;
     const rule={
       battle:{key:'battles',daily:true,weekly:true,monthly:true},
-      win:{key:'wins',daily:false,weekly:false,monthly:true},
+      // バトルの勝ち。2026-11-08 から日・週も数える(「バトルで10回勝つ」の別の道)
+      win:{key:'wins',daily:true,weekly:true,monthly:true},
       enhance:{key:'enhances',daily:true,weekly:true,monthly:true},
       market:{key:'marketTrades',daily:false,weekly:true,monthly:true},
       challengeRun:{key:'challengeRuns',daily:false,weekly:false,monthly:true},
@@ -12424,10 +12452,17 @@ function MonsterHeroGame() {
       challengeClear:{key:'challengeClears',daily:true,weekly:true},
       quickClear:{key:'quickClears',daily:true,weekly:true},
       proClear:{key:'proClears',daily:true,weekly:true,monthly:true},
-      extremeClear:{key:'extremeClears',daily:false,weekly:true},
+      extremeClear:{key:'extremeClears',daily:true,weekly:true},
       itemUse:{key:'itemUses',daily:true,weekly:true},
       // 種族チャレンジのクリア(2026-09-26)
       speciesClear:{key:'speciesClears',daily:true,weekly:true,monthly:true},
+      // ミッションの作り直し(2026-11-08)。モンヒロビートの1曲・クリア/MFバトルカードの1戦・勝ち/助手とふれあう/フレンドの家へ行く
+      beatPlay:{key:'beatPlays',daily:true,weekly:true,monthly:true},
+      beatClear:{key:'beatClears',daily:true,weekly:true,monthly:true},
+      cardPlay:{key:'cardPlays',daily:true,weekly:true,monthly:true},
+      cardWin:{key:'cardWins',daily:true,weekly:true,monthly:true},
+      assistantTouch:{key:'assistantTouches',daily:true,weekly:true,monthly:true},
+      friendVisit:{key:'friendVisits',daily:true,weekly:true,monthly:true},
     }[event];
     if(!rule)return;
     const next=normalizeMissions(missionsRef.current);
@@ -12435,12 +12470,23 @@ function MonsterHeroGame() {
     if(rule.weekly)next.weekly[rule.key]=(Number(next.weekly[rule.key])||0)+n;
     if(rule.monthly)next.monthly[rule.key]=(Number(next.monthly[rule.key])||0)+n;
     if(['challengeRun','quickRun','modeRun'].includes(event)&&rule.key!=='modeRuns')next.monthly.modeRuns=(Number(next.monthly.modeRuns)||0)+n;
+    // 助手とふれあった日(週・月は「◯日」で数える。同じ日は1回)
+    if(event==='assistantTouch'){ const day=missionDailyPeriod(); if(!next.weeklyAssistantDays.includes(day))next.weeklyAssistantDays=[...next.weeklyAssistantDays,day]; if(!next.monthlyAssistantDays.includes(day))next.monthlyAssistantDays=[...next.monthlyAssistantDays,day]; }
     const reconciled=reconcileMonthlyMissionCompletions(next);
     missionsRef.current=reconciled; setMissions(reconciled); await storeSet('mh_missions',reconciled,false);
   };
+  // ほかの部品(ビート・カード・助手ライフ・フレンド)からの「ミッションが進んだ」(missionNotify)。数えるのは上の saveMissionProgress だけ
+  const saveMissionProgressRef = useRef(saveMissionProgress);
+  saveMissionProgressRef.current = saveMissionProgress;
+  useEffect(() => {
+    const onProgress = (e) => { const d = e && e.detail; if (d && typeof d.event === 'string') void saveMissionProgressRef.current(d.event, d.amount); };
+    window.addEventListener(MISSION_PROGRESS_EVENT, onProgress);
+    return () => window.removeEventListener(MISSION_PROGRESS_EVENT, onProgress);
+  }, []);
   // ミッション報酬のギフト。IDは「種別+期間+ミッションID」で固定なので、
   // 何度実行しても同じミッションのギフトが二重に増えることはない
-  const buildMissionGift = (type,period,mission) => ({id:`gift_mission_${type}_${period}_${mission.id}`,source:'mission',missionId:mission.id,missionType:type,periodId:period,title:`ミッション報酬「${mission.name}」`,description:`${mission.condition}の達成報酬です。`,rewards:mission.rewards.map(r=>({...r})),createdAt:new Date().toISOString(),expiresAt:new Date(Date.now()+30*24*60*60*1000).toISOString(),claimedAt:null});
+  // rewards … 家具をビートPに替えたあとの報酬(missionRewardsFor)。渡さなければ定義のまま
+  const buildMissionGift = (type,period,mission,rewards=null) => ({id:`gift_mission_${type}_${period}_${mission.id}`,source:'mission',missionId:mission.id,missionType:type,periodId:period,title:`ミッション報酬「${mission.name}」`,description:`${mission.condition}の達成報酬です。`,rewards:(Array.isArray(rewards)?rewards:mission.rewards).map(({swappedFrom,...r})=>({...r})),createdAt:new Date().toISOString(),expiresAt:new Date(Date.now()+30*24*60*60*1000).toISOString(),claimedAt:null});
   // 達成済み・未受取のミッションをまとめてギフトへ送る共通処理(1つ・1タブ・3タブすべてが同じ道を通る)。
   // groups は { daily, weekly, monthly } で、値はミッションの配列、または 'all'(その時点の達成済み・未受取を全部)。
   // 'all' はデイリー→ウィークリー→マンスリーの順に数え直すので、デイリーを受け取った結果でウィークリーが達成になっても取りこぼさない。
@@ -12450,6 +12496,9 @@ function MonsterHeroGame() {
   const sendMissionGroupsToGiftBox = async (groups) => {
     {
       const state=normalizeMissions(missionsRef.current);
+      // 家具の報酬は、持っている(助手みんなに贈り終えた)ならビートPに替える。部屋の様子は助手ライフの保存から読む
+      let room=null;
+      try{ if(typeof ASSISTANT_LIFE_GIFT_STORE!=='undefined') room=(await ASSISTANT_LIFE_GIFT_STORE.load()).room||null; }catch{ room=null; }
       // ギフト一覧は保存から読み直す(画面の控えは、ほかの書き足しのぶんが入る前の古い一覧のことがある。runGiftWrite の列の中で呼ぶ)
       const storedGifts=await storeGet('mh_gifts',null,false);
       let nextGifts=Array.isArray(storedGifts)?[...storedGifts]:Array.isArray(gifts)?[...gifts]:[];
@@ -12466,7 +12515,7 @@ function MonsterHeroGame() {
         const period=type==='daily'?state.dailyPeriod:type==='weekly'?state.weeklyPeriod:state.monthlyPeriod;
         const sent=[...state[sentKey]];
         targets.forEach(mission=>{
-          const gift=buildMissionGift(type,period,mission);
+          const gift=buildMissionGift(type,period,mission,missionRewardsFor(mission.rewards,{ownedItems,room}));
           if(!nextGifts.some(g=>g?.id===gift.id)) nextGifts=[gift,...nextGifts];
           giftIds.push(gift.id);
           if(!sent.includes(mission.id)) sent.push(mission.id);
@@ -19355,6 +19404,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onBack={returnToHome}
             onClaim={claimMission}
             onClaimAll={claimAllMissions}
+            ownedItems={ownedItems}
           />
         )}
         {/* ギフトボックスから開く、7日ぶんのログインボーナス一覧 */}
@@ -21021,6 +21071,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(result?.assist===true)return;
           // ビートランクの経験値(2026-10-29)。ソロ・みんなで対戦・レイドを最後まで遊んだときだけ(ここは最後まで遊んだときしか通らない)
           if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')await grantBeatRankForResult(result,rhythmPlay);
+          // ミッション(2026-11-08): モンヒロビートを1曲遊んだ・クリアした(ソロ・みんなで対戦・レイドを最後まで遊んだとき)
+          if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid'){ await saveMissionProgress('beatPlay'); if(result?.cleared!==false)await saveMissionProgress('beatClear'); }
           // 助手どうし: 遊びに連れていくペアがいれば、2人が仲良くなる(ソロ・みんなで対戦・レイドを最後まで遊んだとき)
           if((rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')&&typeof assistantPeerOnPlay==='function')void assistantPeerOnPlay('rhythm');
           // 通算クリア回数を数える(スエゾービートのフレームの条件)。ライフを残して終えたときだけ。
@@ -21930,7 +21982,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             isItemOwned={isMarketItemOwned}
             frameConditionOf={(frameId,shop)=>profileFrameConditionStatus(profileFrameById(frameId),rhythmClearTotal,shop)}
             previewIcon={{ src:resolveIconUrl(breederIcon), id:breederIcon }}
-            onBack={cardMarketEntry?()=>{setCardMarketEntry(false);setMarketExchangeError('');setGameState('CARD_TOP');}:returnToHome}
+            onBack={cardMarketEntry?()=>{setCardMarketEntry(false);setMarketExchangeError('');setGameState('CARD_TOP');}
+              :lifeShopEntry?()=>{setLifeShopEntry(null);setMarketExchangeError('');returnToHome();if(typeof assistantLifeBackFromShop==='function')assistantLifeBackFromShop();}:returnToHome}
             onSelectTab={(key)=>{setMarketTab(key);setMarketExchangeError('');}}
             onZoomIcon={setMarketIconZoom}
             onBuy={buyMarketItem}
@@ -21945,7 +21998,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onReadLegendPassLetter={()=>{ if(!eventReplay) setEventReplay({ id: LEGEND_BREEDER_PASS_STORY_ID, step: 0, live: true }); }}
             onOpenUpcomingDetail={setUpcomingMonsterDetail}
             cardShop={cardMarketEntry&&cardShopState?{ ...cardShopState, busy:false, onBuyPack:buyCardPacks, onBuyStarter:buyCardStarter, onExchange:exchangeCardPoints, onExchangeCatalog:exchangeCardCatalog, onUseCatalog:spendCardCatalog, onBuyTactics:buyTacticsPacks, onExchangeTactics:exchangeTacticsShard }:null}
-            initialSection={cardMarketEntry?'card':null}
+            initialSection={cardMarketEntry?'card':lifeShopEntry?'event':null}
+            initialTab={!cardMarketEntry&&lifeShopEntry?lifeShopEntry:null}
           />
         )}
         {/* MFバトルカード: パックを開ける(区切り2)。買うのはマーケットの「MFバトルカード」の売り場 */}

@@ -49,7 +49,11 @@ const REVIEWED = {
   '71-screen-battle.jsx|portal|4': 'outside バトル', '71-screen-battle.jsx|portal|5': 'outside バトル', '71-screen-battle.jsx|portal|6': 'outside バトル',
   '71-screen-battle.jsx|portal|7': 'outside バトル', '71-screen-battle.jsx|portal|8': 'outside バトル',
   ...Object.fromEntries([9, 10, 11, 12, 13, 14].map((i) => [`71-screen-battle.jsx|portal|${i}`, 'outside バトル'])),
+<<<<<<< HEAD
   '56-assistant-life-friend.jsx|portal|1': 'outside フレンドのプロフィールの「🏘 家へ遊びに行く」から開く訪ねた家(フレンドの画面だけで出す。回すのはモンヒロビートの中だけ・2026-11-08 オトズレ3 が確かめた)',
+=======
+  '56-assistant-life-friend.jsx|portal|1': 'outside フレンドのプロフィールの「🏘 家へ遊びに行く」(75-screen-friends.jsx。gameState が FRIENDS のときだけ。#5037・2026-11-08 レフェリーくんが確かめた)',
+>>>>>>> origin/main
   '77-screen-rhythm-multi.jsx|portal|1': 'outside HOME の招待の帯(RhythmInviteHomeBar。gameState が HOME のときだけ出す。回すのはモンヒロビートの中だけ・2026-11-07 テンポが確かめた)',
   '84-screen-card-battle.jsx|portal|1': 'outside MFバトルカード', '84-screen-card-battle.jsx|portal|2': 'outside MFバトルカード', '84-screen-card-battle.jsx|portal|3': 'outside MFバトルカード',
 };
