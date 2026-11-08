@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 89326089b2e81b75
+// generated-sha256: 2dc936d9e50962fd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -75107,7 +75107,7 @@ const cardAiFaceDiverseOk = (db, who, slot, plan, w, side, style = null) => {
 };
 // ---- 遊ぶ人の提案(助手部キズナ4の「助手にデッキを提案する」。2026-11-08) ----
 // 読むだけの口 assistantLifeDeckWish(id) → { face: 'oshi'|'like'|'sugao', name: 2〜12字か空, plan: 'attack'|'guard'|'normal'|'', day: 'YYYY-MM-DD' } か null。
-//   すぐには組み直さない。次に組み直すとき、その顔を1回だけ組み直して使う(使った印は新しいキー mh_card_ai_deck_wish_v1 に助手ごと「顔:日」で持つ)
+//   すぐには組み直さない。次に組み直すとき、その顔を1回だけ組み直して使う(使った印は新しいキー mh_card_ai_deck_wish_v1 に助手ごと「顔:日:中身の指紋」で持つ)
 //   name は名前の見張りを全部通す(主役の種族名が無ければ「種族名+の+name」)。通らなければ使わない(いつもの付け方)
 //   plan は見出しに出さず、その顔の組み方(型)を寄せるだけ。主役の種・振り分け・ほかの組み方は変えない
 const CARD_AI_WISH_KEY = 'mh_card_ai_deck_wish_v1';
@@ -75140,7 +75140,12 @@ const cardAiWishOf = (who) => {
   const day = typeof w.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(w.day) ? w.day : null;
   if (!face || !day) return null;
   const nm = cardAiDeckText(w.name, CARD_AI_DECK_NAME_MAX);
-  return { face, name: nm && nm.length >= 2 ? nm : null, plan: cardAiStyleOf(w.plan), day, mark: `${face}:${day}` };
+  const name = nm && nm.length >= 2 ? nm : null;
+  const plan = cardAiStyleOf(w.plan);
+  // 使った印は「顔:日:中身の指紋」。同じ日に同じ顔へ別の提案をしても、新しい提案として1回使う(2026-11-08 ミハリ)
+  let h = 5381;
+  for (const ch of `${plan || ''}|${name || ''}`) h = ((h * 33) ^ ch.codePointAt(0)) >>> 0;
+  return { face, name, plan, day, mark: `${face}:${day}:${h.toString(36)}` };
 };
 //   fought … 提案の名前のデッキと初めて戦った印(助手ごとにデッキの名前。2026-11-08 社長「やる」。前からある used の形はそのまま)
 const cardNormalizeAiWish = (raw) => {
@@ -75154,7 +75159,8 @@ const cardNormalizeAiWish = (raw) => {
     }
     return out;
   };
-  const used = pick('used', (x) => typeof x === 'string' && /^(oshi|suki|sugao):\d{4}-\d{2}-\d{2}$/.test(x));
+  // 印は「顔:日:指紋」(前の形「顔:日」も読む)
+  const used = pick('used', (x) => typeof x === 'string' && /^(oshi|suki|sugao):\d{4}-\d{2}-\d{2}(:[0-9a-z]{1,8})?$/.test(x));
   const fought = pick('fought', (x) => typeof x === 'string' && x.length > 0 && x.length <= CARD_AI_DECK_NAME_MAX);
   return { v: 1, used, ...(Object.keys(fought).length ? { fought } : {}) };
 };

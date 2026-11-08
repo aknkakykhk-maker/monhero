@@ -142,7 +142,7 @@ const run = async (browser, mode, scene, errors) => {
       await page.waitForTimeout(1500);
       const saved = await page.evaluate(() => { const v = JSON.parse(localStorage.getItem('mh_card_ai_recipe_v2') || 'null'); const u = JSON.parse(localStorage.getItem('mh_card_ai_deck_wish_v1') || 'null'); return { oshi: v && v.perWho.kiki && v.perWho.kiki.decks.oshi, used: u }; });
       const okG = await page.evaluate(() => cardAiWishPlanOk('kiki', 'oshi', 'guard')); // eslint-disable-line no-undef
-      check(`⑧ ${label}: 提案は次の組み直しで1回だけ使い、推しのデッキの名前になる(型は表で寄せてよいときだけ)・使った印を残す`, !!saved.oshi && saved.oshi.name === 'ゴーレムのまったり作戦' && (okG ? saved.oshi.style === 'guard' : saved.oshi.style === undefined) && !!saved.used && JSON.stringify(saved.used.used.kiki) === JSON.stringify(['oshi:2026-11-08']), JSON.stringify(saved));
+      check(`⑧ ${label}: 提案は次の組み直しで1回だけ使い、推しのデッキの名前になる(型は表で寄せてよいときだけ)・使った印を残す`, !!saved.oshi && saved.oshi.name === 'ゴーレムのまったり作戦' && (okG ? saved.oshi.style === 'guard' : saved.oshi.style === undefined) && !!saved.used && Array.isArray(saved.used.used.kiki) && saved.used.used.kiki.length === 1 && saved.used.used.kiki[0].startsWith('oshi:2026-11-08:'), JSON.stringify(saved));
       // 今日のデッキを推しにして、相手えらびの札を見る(83 の cardAiDeckNextMemo)
       await page.evaluate(() => { cardAiDeckNextMemo.kiki = 'oshi'; }); // eslint-disable-line no-undef
       await page.locator('[data-card-foe="mua"]').click(); await page.locator(`[data-card-foe="${WHO}"]`).click(); await page.waitForTimeout(500);

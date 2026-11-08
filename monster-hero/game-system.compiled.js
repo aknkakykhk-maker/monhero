@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 333ec4b43482226f
+// source-sha256: b0d369c9d5d0b7e0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -141125,12 +141125,16 @@ const cardAiWishOf = who => {
   const day = typeof w.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(w.day) ? w.day : null;
   if (!face || !day) return null;
   const nm = cardAiDeckText(w.name, CARD_AI_DECK_NAME_MAX);
+  const name = nm && nm.length >= 2 ? nm : null;
+  const plan = cardAiStyleOf(w.plan);
+  let h = 5381;
+  for (const ch of `${plan || ''}|${name || ''}`) h = (h * 33 ^ ch.codePointAt(0)) >>> 0;
   return {
     face,
-    name: nm && nm.length >= 2 ? nm : null,
-    plan: cardAiStyleOf(w.plan),
+    name,
+    plan,
     day,
-    mark: `${face}:${day}`
+    mark: `${face}:${day}:${h.toString(36)}`
   };
 };
 const cardNormalizeAiWish = raw => {
@@ -141144,7 +141148,7 @@ const cardNormalizeAiWish = raw => {
     }
     return out;
   };
-  const used = pick('used', x => typeof x === 'string' && /^(oshi|suki|sugao):\d{4}-\d{2}-\d{2}$/.test(x));
+  const used = pick('used', x => typeof x === 'string' && /^(oshi|suki|sugao):\d{4}-\d{2}-\d{2}(:[0-9a-z]{1,8})?$/.test(x));
   const fought = pick('fought', x => typeof x === 'string' && x.length > 0 && x.length <= CARD_AI_DECK_NAME_MAX);
   return {
     v: 1,

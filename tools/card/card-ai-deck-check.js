@@ -437,7 +437,7 @@ const MASMON = (() => {
       const th = makeBox({ wish: () => { throw new Error('x'); } });
       check('W 壊れた提案・投げる口は使わない(null)', ok && th.E.cardAiWishOf('kiki') === null);
       const g = makeBox({ wish: () => ({ face: 'like', name: 'まったり作戦', plan: 'guard', day }) }).E.cardAiWishOf('kiki');
-      check('W 提案の読み方: like は好き・印は「顔:日」', g && g.face === 'suki' && g.plan === 'guard' && g.name === 'まったり作戦' && g.mark === `suki:${day}`, J(g));
+      check('W 提案の読み方: like は好き・印は「顔:日:中身の指紋」', g && g.face === 'suki' && g.plan === 'guard' && g.name === 'まったり作戦' && new RegExp(`^suki:${day}:[0-9a-z]{1,8}$`).test(g.mark), J(g));
     }
     // 名前の形
     {
@@ -456,10 +456,10 @@ const MASMON = (() => {
       const st = JSON.parse(b.store.get(KEY2)).perWho.kiki.decks;
       const used = JSON.parse(b.store.get(WK) || 'null');
       const hist = JSON.parse(b.store.get(E.CARD_SAVE_KEYS.aiDeckHistory) || 'null');
-      check('W 提案があれば、いちばん古い顔ではなく提案の顔(好き)を組み直す', r1 && r1.slot === 'suki' && r1.wish === `suki:${day}` && r1.wishName === true, J(r1));
+      check('W 提案があれば、いちばん古い顔ではなく提案の顔(好き)を組み直す', r1 && r1.slot === 'suki' && String(r1.wish).startsWith(`suki:${day}:`) && r1.wishName === true, J(r1));
       const okG = E.cardAiWishPlanOk('kiki', 'suki', 'guard');
       check('W 提案の名前を持ち、型は表で寄せてよいときだけ寄せる(主役は変えない)', st.suki.name === 'ライガーのまったり作戦' && (okG ? st.suki.style === 'guard' : st.suki.style === undefined) && st.suki.since === 2000 && r1.wishStyle === okG, J({ suki: st.suki, okG }));
-      check('W 使った印を新しいキーに「顔:日」で持つ', used && JSON.stringify(used.used.kiki) === JSON.stringify([`suki:${day}`]), J(used));
+      check('W 使った印を新しいキーに「顔:日:指紋」で持つ', used && used.used.kiki.length === 1 && used.used.kiki[0] === b.E.cardAiWishOf('kiki').mark && used.used.kiki[0].startsWith(`suki:${day}:`), J(used));
       check('W 前のデッキ(既定の名前)は「これまでのデッキ」に残る', hist && hist.perWho.kiki[0].slot === 'suki' && hist.perWho.kiki[0].name === 'ライガーの桜吹雪', J(hist && hist.perWho.kiki[0]));
       const p = b.E.cardAssistantDeckPick('kiki', E.cardAiSeededRand('w'), 'master', {}, 'suki');
       check('W 対戦でも提案の名前で出て、主役は表のまま(ライガー)', p && p.name === 'ライガーのまったり作戦' && E.cardAiFaceLineOf(db.monsters[p.deck.monsters[0]]) === 'tiger', J(p && { name: p.name, lead: p.deck.monsters[0] }));
@@ -473,7 +473,7 @@ const MASMON = (() => {
       const p2 = b.E.cardAssistantDeckPick('kiki', E.cardAiSeededRand('w3'), 'master', {}, 'suki');
       const ws = JSON.parse(b.store.get(WK));
       check('W 2回目は今の台詞(初めて戦った印を同じキーの fought に足す・used はそのまま)', p2 && !p2.wishFirst && J(b.E.cardAiDeckVsLine('kiki', p2)) === J({ t: '今日は『ライガーのまったり作戦』でお相手しまつ( ˘ω˘)', e: 'happy' })
-        && J(ws.used.kiki) === J([`suki:${day}`]) && J(ws.fought.kiki) === J(['ライガーのまったり作戦']), J(ws));
+        && ws.used.kiki.length === 1 && ws.used.kiki[0].startsWith(`suki:${day}:`) && J(ws.fought.kiki) === J(['ライガーのまったり作戦']), J(ws));
       check('W 初めて戦うときの台詞は8人ぶん・{name} を1つ持つ', WHO.every((w) => typeof E.CARD_AI_DECK_WISH_LINES[w] === 'string' && E.CARD_AI_DECK_WISH_LINES[w].split('{name}').length === 2));
       const r2 = await b.E.cardAiDeckRebuild('kiki', 'games', { now: 3000 });
       check('W 同じ提案は2回使わない(次はいちばん古い顔=推し)', r2 && r2.slot === 'oshi' && !r2.wish, J(r2));
@@ -482,6 +482,19 @@ const MASMON = (() => {
       const g1 = E.cardAiFaceBuild(db, 'kiki', 'suki', 'master', E.cardAiSeededRand('wg'), {}, null, 'guard');
       const guards = (d) => d.cards.filter((no) => ['blk', 'dge'].includes((db.cards[no] || {}).kind)).length;
       check('W 提案の型「守り」で組むと、守りの札が増える(主役・3体の決め方は同じ)', guards(g1) > guards(g0) && E.cardAiFaceLineOf(db.monsters[g1.monsters[0]]) === 'tiger', `${guards(g0)} → ${guards(g1)}`);
+    }
+    // 同じ日に同じ顔へ、別の提案をもう一度(2026-11-08 ミハリ): 2回目の提案も1回使う。同じ提案は使わない
+    {
+      let cur = { face: 'oshi', name: '', plan: 'attack', day };
+      const b = makeBox({ fetchImpl: sorry, store: seed(), wish: () => cur });
+      await b.E.cardLoadAiRecipe();
+      const a1 = await b.E.cardAiDeckRebuild('kiki', 'games', { now: 5000 });
+      cur = { face: 'oshi', name: 'ずんずん行進', plan: '', day };
+      const a2 = await b.E.cardAiDeckRebuild('kiki', 'games', { now: 6000 });
+      const st2 = JSON.parse(b.store.get(KEY2)).perWho.kiki.decks.oshi;
+      const a3 = await b.E.cardAiDeckRebuild('kiki', 'games', { now: 7000 });
+      check('W 同じ日に同じ顔へ別の提案をしても、新しい提案として1回使う(同じ提案は2回使わない)', a1 && a1.slot === 'oshi' && !!a1.wish && a2 && a2.slot === 'oshi' && !!a2.wish && a2.wish !== a1.wish && st2.name === 'ゴーレムのずんずん行進' && a3 && !a3.wish,
+        J({ a1: a1 && a1.wish, a2: a2 && a2.wish, name: st2.name, a3: a3 && { slot: a3.slot, wish: a3.wish } }));
     }
     // 名前が通らない提案: 型だけ寄せて、名前はいつもの付け方
     {
@@ -514,7 +527,9 @@ const MASMON = (() => {
     // 保存の読み方
     {
       const n = E.cardNormalizeAiWish({ used: { kiki: ['suki:2026-11-08', 'zz', 'suki:2026-11-08', 'oshi:2026-11-09'], nobody: ['oshi:2026-11-08'], mua: 'x' } });
-      check('W 印の読み方: 壊れた値・知らない助手・重なりは捨てる', JSON.stringify(n) === JSON.stringify({ v: 1, used: { kiki: ['suki:2026-11-08', 'oshi:2026-11-09'] } }), J(n));
+      check('W 印の読み方: 壊れた値・知らない助手・重なりは捨てる(前の形「顔:日」も読む)', JSON.stringify(n) === JSON.stringify({ v: 1, used: { kiki: ['suki:2026-11-08', 'oshi:2026-11-09'] } }), J(n));
+      const n3 = E.cardNormalizeAiWish({ used: { kiki: ['suki:2026-11-08:1a2b3c', 'suki:2026-11-08:ZZ!', 'suki:2026-11-08:123456789'] } });
+      check('W 印の読み方: 「顔:日:指紋」を読み、形の違う指紋は捨てる', JSON.stringify(n3.used.kiki) === JSON.stringify(['suki:2026-11-08:1a2b3c']), J(n3));
       const n2 = E.cardNormalizeAiWish({ v: 1, used: { kiki: ['suki:2026-11-08'] }, fought: { kiki: ['ライガーのまったり作戦', 3, 'ライガーのまったり作戦', 'あ'.repeat(20)], nobody: ['x'] } });
       check('W 初めて戦った印(fought)の読み方: 壊れた値・長すぎる名前・知らない助手は捨てる・used は前の形のまま', JSON.stringify(n2) === JSON.stringify({ v: 1, used: { kiki: ['suki:2026-11-08'] }, fought: { kiki: ['ライガーのまったり作戦'] } }), J(n2));
       check('W 84: 提案のデッキで始めたら、初めて戦った印を残す', /if \(aiPick && aiPick\.wishFirst && typeof cardAiDeckWishFought === 'function'\) void Promise\.resolve\(cardAiDeckWishFought\(pick\.who, aiPick\.name\)\)/.test(src('src/parts/84-screen-card-battle.jsx')));
