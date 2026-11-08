@@ -20,6 +20,8 @@ const BASE = process.env.LIFE_BASE ? process.env.LIFE_BASE.replace(/\/?$/, '/') 
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 const VIEWS = [{ id: 'p', name: '縦 390×844', w: 390, h: 844 }, { id: 'l', name: '横 844×390', w: 844, h: 390 }, { id: 'r', name: '🔄横から戻った 390×844', w: 390, h: 844, rot: true }];
+// iPhone SE/8 の横(667×375)も見る(2026-11-08 ミハリ: 667 では歩くマスモンが1部屋しか出なかった)
+VIEWS.push({ id: 's', name: '横 667×375', w: 667, h: 375 });
 const WHOS = process.env.MASMON_WHO ? [process.env.MASMON_WHO] : process.env.MASMON_ALL ? ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'] : ['kiki'];
 const TABS = ['mons', 'team', 'deck', 'taste'];
 
@@ -126,7 +128,8 @@ const layoutProblems = (page) => page.evaluate(() => {
         check(`${T}口 assistantLifeCardStyle が8人ぶん attack/guard/normal`, hooks.every(h => ['attack', 'guard', 'normal'].includes(h.s)), hooks.map(h => `${h.id}:${h.s}`).join(' '));
         check(`${T}口 assistantLifeTasteOf が8人ぶん(好きは1つ以上・名前で)`, hooks.every(h => h.t && h.t.likes.length >= 1 && h.t.likes.every(n => typeof n === 'string' && n)), hooks.map(h => `${h.id}:${h.t ? h.t.likes.join('・') : 'null'}`).join(' / '));
       }
-      for (const WHO of WHOS) {
+      // 667×375 は部屋のマスモンだけを見る(シートの字の切れは、作り直し中のシート claude/kizuna2-grow で直す)
+      for (const WHO of (v.id === 's' ? [] : WHOS)) {
       const T = `${T0}${WHO} `;
       const want = await page.evaluate((id) => { const p = ASSISTANT_MASMON_PLAN.find(a => a.id === id); return { deck: p.deck.name, colors: p.favColors.length, dis: p.dislikeMon.length }; }, WHO);
       await page.locator(`[data-assistant-life-room="${WHO}"]`).first().click({ timeout: 8000 });

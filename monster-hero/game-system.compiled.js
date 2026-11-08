@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bc98dcbd2f888c71
+// source-sha256: 9c127b97b3e985c4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -122343,7 +122343,7 @@ const ASSISTANT_MASMON_PET_MARK = Object.freeze({
   borderRadius: 999,
   padding: '0 2px'
 });
-const assistantMasmonPetSize = h => Math.round(Math.min(40, h * .44));
+const assistantMasmonPetSize = h => Math.round(Math.min(40, h * .44, h - 37 - 9 - 3));
 const ASSISTANT_MASMON_PET_FLOOR = 9;
 const ASSISTANT_MASMON_PET_MW = 2,
   ASSISTANT_MASMON_PET_MH = 3;
@@ -122465,7 +122465,7 @@ function AssistantMasmonRoomPet({
       clearTimeout(timer);
     };
   }, [plan]);
-  if (!t || where.kind === 'out') return null;
+  if (!t || where.kind === 'out' || size < 16) return null;
   const mon = assistantMasmonMon(t.monster);
   if (!mon) return null;
   const mark = where.kind === 'stay' ? '🏠' : where.w && ASSISTANT_MASMON_DOING_MARK[where.w.doing] || '✨';
