@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 48c8203839968125
+// source-sha256: 4ff8ef6c4d0e49f2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91122,7 +91122,7 @@ function RhythmBeatPresenceStrip({
   }, React.createElement("span", {
     className: "min-w-0 break-keep truncate"
   }, "🎵 いまモンヒロビートにいる人"), React.createElement("small", {
-    className: "ml-auto text-[9.5px] font-bold text-slate-300"
+    className: "ml-auto text-[10.5px] font-bold text-slate-200 max-[359px]:text-[9.5px]"
   }, "押すと一緒に遊べる所")), React.createElement("div", {
     className: "mt-1.5 flex gap-2 overflow-x-auto pb-0.5"
   }, assistants.map(a => React.createElement("button", {
