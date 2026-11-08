@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5ea927e160561f3f
+// source-sha256: 703991fcb7010a42
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -130865,8 +130865,8 @@ const cardAiPickIndex = (weights, rand) => {
 const CARD_AI_FAVORITE_EXTRA = Object.freeze({
   sorashido: ['kyubi']
 });
-const cardAiFavoriteCandidates = (db, who) => {
-  const favs = [CARD_AI_FAVORITE[who] || CARD_AI_FAVORITE.mua, ...(CARD_AI_FAVORITE_EXTRA[who] || [])];
+const cardAiFavoriteCandidates = (db, who, lead = null) => {
+  const favs = typeof lead === 'string' && lead ? [lead] : [CARD_AI_FAVORITE[who] || CARD_AI_FAVORITE.mua, ...(CARD_AI_FAVORITE_EXTRA[who] || [])];
   return Object.values(db.monsters).filter(m => m.ready !== false && !m.dexOnly && favs.some(fav => String(m.wave) === 'hybrid' ? m.main === fav : m.species === fav)).map(m => m.no).sort();
 };
 const cardAiMonWave = (db, m, card) => {
@@ -130886,14 +130886,24 @@ const cardAiMonScore = (db, who, m, maxWave, levelId = null) => {
 const CARD_AI_MILL_BLOODS = Object.freeze(['joker', 'jell', 'mew']);
 const CARD_AI_MILL_MON_BONUS = 6;
 const cardAiMillMonBonus = (habit, m) => habit && habit.mill && m && CARD_AI_MILL_BLOODS.includes(cardAiBloodOf(m)) ? CARD_AI_MILL_MON_BONUS * habit.mill : 0;
-const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
+const cardAiPickTrio = (db, who, levelId, rand, playerDeck, face = null) => {
   const cfg = CARD_AI_BUILD[levelId] || CARD_AI_BUILD.normal;
-  const favs = cardAiFavoriteCandidates(db, who).map(no => cardMonsterOf(db, no));
+  const lead = face && typeof face.lead === 'string' ? face.lead : null;
+  const avoid = new Set(face && Array.isArray(face.avoid) ? face.avoid.filter(x => typeof x === 'string' && x !== lead) : []);
+  const keep = new Set(face && Array.isArray(face.keep) ? face.keep.filter(x => typeof x === 'string' && x !== lead) : [...avoid]);
+  const free = face && Number.isInteger(face.free) && face.free > 0 ? face.free : 0;
+  const avoidAt = (k, m) => {
+    const set = k < free ? keep : avoid;
+    return set.has(m.species) || String(m.wave) === 'hybrid' && set.has(m.main);
+  };
+  const favs0 = cardAiFavoriteCandidates(db, who, lead).map(no => cardMonsterOf(db, no));
+  const favs = lead && !favs0.length ? cardAiFavoriteCandidates(db, who).map(no => cardMonsterOf(db, no)) : favs0;
   if (!favs.length) return [];
   const favScore = favs.map(m => cardAiMonScore(db, who, m, cfg.maxWave, levelId) * (cardIsHybridMon(m) ? 0.9 : 1));
   const favW = favs.map(m => String(m.wave) === 'hybrid' ? 1.5 : !m.variant ? 3 : /別絵/.test(m.variant) ? 1 : 2);
   const fav = cfg.best ? favs[favScore.indexOf(Math.max(...favScore))] : favs[cardAiPickIndex(favW, rand)];
-  const cands = Object.values(db.monsters).filter(m => m.ready !== false && !m.dexOnly && !m.variant && m.species !== fav.species && m.species !== CARD_AI_FAVORITE[who] && (String(m.wave) === 'hybrid' ? cfg.maxWave >= 99 && m.main !== CARD_AI_FAVORITE[who] : Number(m.wave) <= cfg.maxWave));
+  const favSp = lead && favs0.length ? lead : CARD_AI_FAVORITE[who];
+  const cands = Object.values(db.monsters).filter(m => m.ready !== false && !m.dexOnly && !m.variant && m.species !== fav.species && m.species !== favSp && !keep.has(m.species) && !(String(m.wave) === 'hybrid' && keep.has(m.main)) && (String(m.wave) === 'hybrid' ? cfg.maxWave >= 99 && m.main !== favSp : Number(m.wave) <= cfg.maxWave));
   let counter = () => 0;
   if (cfg.best && playerDeck && Array.isArray(playerDeck.cards) && playerDeck.cards.length) {
     const pc = playerDeck.cards.map(no => cardOf(db, no)).filter(Boolean);
@@ -130904,7 +130914,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
       ko: false
     })).length * 1.2;
   }
-  const family = favs.filter(m => m.species !== fav.species);
+  const family = favs.filter(m => m.species !== fav.species && !keep.has(m.species));
   const familySize = new Set(favs.map(m => m.species)).size;
   const byScore = !CARD_AI_SAME_BLOOD[levelId];
   const sameRate = byScore ? 0 : (CARD_AI_SAME_BLOOD[levelId] || 0) * cardAiSameBloodScale(familySize);
@@ -130943,7 +130953,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
       continue;
     }
     const team = out.map(no => cardMonsterOf(db, no));
-    const left = scored.filter(x => !usedNos.has(x.m.species) && (isFamily.has(x.m.no) || !usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)))).map(x => isFamily.has(x.m.no) ? {
+    const left = scored.filter(x => !usedNos.has(x.m.species) && !avoidAt(k, x.m) && (isFamily.has(x.m.no) || !usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)))).map(x => isFamily.has(x.m.no) ? {
       ...x,
       v: cardAiTeamValue(db, who, team, x.m, cfg.maxWave, levelId) + counter(x.m)
     } : x);
@@ -130973,7 +130983,7 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   const recipeAll = CARD_AI_DECKS[who] || CARD_AI_DECKS.mua;
   const cfg = CARD_AI_BUILD[levelId] || CARD_AI_BUILD.normal;
   const rnd = typeof rand === 'function' ? rand : cardAiSeededRand(`${who}:${levelId}`);
-  const monsters = cardAiPickTrio(db, who, levelId, rnd, opts && opts.playerDeck);
+  const monsters = cardAiPickTrio(db, who, levelId, rnd, opts && opts.playerDeck, opts && opts.face);
   const style = cardAiStyleOf(opts && opts.style);
   const drawn = Array.isArray(recipeAll.variants) && recipeAll.variants.length ? recipeAll.variants[Math.min(recipeAll.variants.length - 1, Math.floor(rnd() * recipeAll.variants.length))] : null;
   const variant = drawn && style ? recipeAll.variants.find(v => v.id === CARD_AI_STYLE_VARIANT[style]) || drawn : drawn;
@@ -131263,6 +131273,7 @@ const CARD_SAVE_KEYS = Object.freeze({
   weeklyReward: 'mh_card_weekly_reward_v1',
   aiTalk: 'mh_card_ai_talk_v1',
   aiRecipe: 'mh_card_ai_recipe_v1',
+  aiRecipe2: 'mh_card_ai_recipe_v2',
   aiDeck: 'mh_card_ai_deck_v1'
 });
 const CARD_POINT_STORE_KEY = typeof RHYTHM_EVENT_POINTS_KEY !== 'undefined' ? RHYTHM_EVENT_POINTS_KEY : 'mh_rhythm_event_points_v1';
@@ -135025,6 +135036,7 @@ const cardTalkCheckPicks = (db, deck, collection, picks) => {
   }));
 };
 const CARD_AI_RECIPE_KEY = CARD_SAVE_KEYS.aiRecipe;
+const CARD_AI_RECIPE2_KEY = CARD_SAVE_KEYS.aiRecipe2;
 const CARD_AI_DECK_KEY = CARD_SAVE_KEYS.aiDeck;
 const CARD_AI_DECK_GAMES = 10;
 const CARD_AI_DECK_SLOTS = 3;
@@ -135033,6 +135045,207 @@ const CARD_AI_DECK_MAIN = 0.6;
 const CARD_AI_DECK_JITTER = 0.25;
 const CARD_AI_DECK_NAME_MAX = 12;
 const CARD_AI_DECK_LINE_MAX = 60;
+const CARD_AI_FACE_SHARE_MAX = 0.4;
+const CARD_AI_FACE_TRIO_DIFF = 2;
+const CARD_AI_FACE_IDS = Object.freeze(['oshi', 'suki', 'sugao']);
+const CARD_AI_FACE_SLOTS = Object.freeze(['oshi', 'suki', 'yoso', 'honne']);
+const CARD_AI_FACE_LABEL = Object.freeze({
+  oshi: '推し',
+  suki: '好き',
+  sugao: '素顔'
+});
+const cardAiFaceOf = s => typeof s === 'string' && CARD_AI_FACE_IDS.includes(s) ? s : null;
+const CARD_AI_FACES = Object.freeze({
+  mua: {
+    oshi: {
+      lead: 'mocchi',
+      nick: 'もち隊長',
+      style: 'normal',
+      name: 'もち隊長の一番乗り'
+    },
+    suki: {
+      lead: 'joker',
+      nick: 'イブちゃん',
+      style: 'normal',
+      name: 'イブちゃんとちょい悪ナイト'
+    },
+    yoso: {
+      lead: null,
+      style: 'normal'
+    },
+    honne: {
+      lead: null,
+      style: 'attack',
+      name: 'ノリだけで全力突破'
+    }
+  },
+  kiki: {
+    oshi: {
+      lead: 'golem',
+      nick: 'ごろべえ',
+      style: 'normal',
+      name: 'ごろべえの一撃'
+    },
+    suki: {
+      lead: 'tiger',
+      nick: null,
+      words: ['はやわざ', 'ざんざん', 'エイキ'],
+      style: 'normal',
+      name: 'はやわざ桜吹雪'
+    },
+    yoso: {
+      lead: null,
+      style: 'normal'
+    },
+    honne: {
+      lead: null,
+      style: 'attack',
+      name: 'ぜんぶ必殺技でつ'
+    }
+  },
+  momosuke: {
+    oshi: {
+      lead: 'metalner',
+      nick: null,
+      style: 'normal',
+      name: 'メタルナーの銀ピカライブ'
+    },
+    suki: {
+      lead: 'mew',
+      nick: 'ゆめっち',
+      style: 'normal',
+      name: 'ゆめっちとおやすみソング'
+    },
+    yoso: {
+      lead: null,
+      style: 'normal'
+    },
+    honne: {
+      lead: null,
+      style: 'attack',
+      name: 'ぜんぶ見せ場♡'
+    }
+  },
+  dra: {
+    oshi: {
+      lead: 'zilla',
+      nick: null,
+      style: 'normal',
+      name: 'グジラとどっしり行進'
+    },
+    suki: {
+      lead: 'suezo',
+      nick: 'メダマ焼き',
+      style: 'normal',
+      name: 'メダマ焼きのギャグ劇場'
+    },
+    yoso: {
+      lead: null,
+      style: 'normal'
+    },
+    honne: {
+      lead: 'golem',
+      nick: 'ゴロ助',
+      style: 'attack',
+      name: 'ゴロ助とおでの大ぶり勝負'
+    }
+  },
+  atsu: {
+    oshi: {
+      lead: 'dragon',
+      nick: null,
+      style: 'normal',
+      name: 'ドラゴンで正面突破'
+    },
+    suki: {
+      lead: 'mocchi',
+      nick: '師匠',
+      style: 'normal',
+      name: '師匠に続け'
+    },
+    yoso: {
+      lead: null,
+      style: 'normal'
+    },
+    honne: {
+      lead: 'ghost',
+      nick: 'スプ',
+      style: 'normal',
+      name: 'スプとこっそり奇襲'
+    }
+  },
+  kyuko: {
+    oshi: {
+      lead: 'mew',
+      nick: null,
+      style: 'normal',
+      name: 'ニャーの気まぐれ一手'
+    },
+    suki: {
+      lead: 'pixie',
+      nick: 'ぴぃ',
+      style: 'normal',
+      name: 'ぴぃのわがまま作戦'
+    },
+    yoso: {
+      lead: null,
+      style: 'normal'
+    },
+    honne: {
+      lead: null,
+      style: 'attack',
+      name: '直感だけで全部いく'
+    }
+  },
+  sorashido: {
+    oshi: {
+      lead: 'hare',
+      nick: null,
+      style: 'normal',
+      name: 'ハムで大混乱'
+    },
+    suki: {
+      lead: 'kyubi',
+      nick: 'コン太',
+      style: 'normal',
+      name: 'コン太とヒメの推し活'
+    },
+    yoso: {
+      lead: null,
+      style: 'normal'
+    },
+    honne: {
+      lead: null,
+      style: 'attack',
+      name: 'ソロバン抜きの一発勝負'
+    }
+  },
+  erubin: {
+    oshi: {
+      lead: 'durahan',
+      nick: null,
+      style: 'guard',
+      name: 'デュラハンの盾の陣'
+    },
+    suki: {
+      lead: 'pixie',
+      nick: 'つばさ',
+      style: 'normal',
+      name: 'つばさの応援団'
+    },
+    yoso: {
+      lead: null,
+      style: 'normal'
+    },
+    honne: {
+      lead: null,
+      style: 'attack',
+      name: 'たまには剣だけで'
+    }
+  }
+});
+const CARD_AI_HONNE_LV = 3;
+const CARD_AI_MOOD_FACE = Object.freeze({});
 const cardAiDeckIsObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
 const cardAiDeckText = (v, max) => {
   if (typeof v !== 'string') return null;
@@ -135065,6 +135278,7 @@ const cardAiDeckEntryOf = (raw, db) => {
     ai: raw.ai === true
   };
 };
+const cardAiDeckCount = (x, max) => Number.isInteger(x) && x >= 0 ? Math.min(max, x) : 0;
 const cardNormalizeAiRecipe = (raw, today, db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null) => {
   const v = cardAiDeckIsObj(raw) ? raw : {};
   const sameDay = typeof v.day === 'string' && v.day === today;
@@ -135079,16 +135293,56 @@ const cardNormalizeAiRecipe = (raw, today, db = typeof CARD_BATTLE_DATA !== 'und
       const e = cardAiDeckEntryOf(ds[st], db);
       if (e) decks[st] = e;
     }
-    const n = (x, max) => Number.isInteger(x) && x >= 0 ? Math.min(max, x) : 0;
     perWho[who] = {
       met: w.met === true,
-      gamesSince: n(w.gamesSince, 9999),
-      slotsDone: sameDay ? n(w.slotsDone, CARD_AI_DECK_SLOTS) : 0,
+      gamesSince: cardAiDeckCount(w.gamesSince, 9999),
+      slotsDone: sameDay ? cardAiDeckCount(w.slotsDone, CARD_AI_DECK_SLOTS) : 0,
       decks
     };
   }
   return {
     v: 1,
+    day: typeof today === 'string' ? today : '',
+    perWho
+  };
+};
+const cardNormalizeAiRecipe2 = (raw, today, v1raw = null, db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null) => {
+  if (!cardAiDeckIsObj(raw)) {
+    const old = cardNormalizeAiRecipe(v1raw, today, db);
+    const perWho = {};
+    for (const [who, w] of Object.entries(old.perWho)) perWho[who] = {
+      met: w.met,
+      gamesSince: w.gamesSince,
+      slotsDone: w.slotsDone,
+      decks: {}
+    };
+    return {
+      v: 2,
+      day: typeof today === 'string' ? today : '',
+      perWho
+    };
+  }
+  const sameDay = typeof raw.day === 'string' && raw.day === today;
+  const perWho = {};
+  const src = cardAiDeckIsObj(raw.perWho) ? raw.perWho : {};
+  for (const who of Object.keys(src)) {
+    if (!CARD_AI_DECKS[who] || !cardAiDeckIsObj(src[who])) continue;
+    const w = src[who];
+    const decks = {};
+    const ds = cardAiDeckIsObj(w.decks) ? w.decks : {};
+    for (const slot of CARD_AI_FACE_SLOTS) {
+      const e = cardAiDeckEntryOf(ds[slot], db);
+      if (e) decks[slot] = e;
+    }
+    perWho[who] = {
+      met: w.met === true,
+      gamesSince: cardAiDeckCount(w.gamesSince, 9999),
+      slotsDone: sameDay ? cardAiDeckCount(w.slotsDone, CARD_AI_DECK_SLOTS) : 0,
+      decks
+    };
+  }
+  return {
+    v: 2,
     day: typeof today === 'string' ? today : '',
     perWho
   };
@@ -135110,9 +135364,10 @@ const cardAiDeckDue = (w, passed) => {
   if (w.slotsDone < passed) return 'slot';
   return null;
 };
-const cardAiDeckOldest = w => {
+const cardAiDeckOldest = (w, sugao = 'yoso') => {
   const decks = w && w.decks || {};
-  return CARD_AI_STYLE_IDS.slice().sort((a, b) => (decks[a] && decks[a].at || 0) - (decks[b] && decks[b].at || 0))[0];
+  const slots = ['oshi', 'suki', sugao === 'honne' ? 'honne' : 'yoso'];
+  return slots.slice().sort((a, b) => (decks[a] && decks[a].at || 0) - (decks[b] && decks[b].at || 0))[0];
 };
 const cardAiDeckJitter = (prev, {
   cands,
@@ -135146,28 +135401,203 @@ const cardAiDeckJitter = (prev, {
     habit
   };
 };
-const cardAiDeckPickStyle = (main, rnd) => {
+const cardAiFaceMaterial = who => {
+  let m = null;
+  try {
+    m = typeof assistantLifeCardMaterial === 'function' ? assistantLifeCardMaterial(who) : null;
+  } catch (_) {
+    m = null;
+  }
+  const ok = cardAiDeckIsObj(m);
+  return {
+    friendLv: ok && Number.isFinite(m.friendLv) ? m.friendLv : null,
+    mood: ok && typeof m.mood === 'string' ? m.mood : null,
+    face: ok ? cardAiFaceOf(m.face) : null
+  };
+};
+const cardAiFaceSugaoSide = mat => mat && Number.isFinite(mat.friendLv) && mat.friendLv >= CARD_AI_HONNE_LV ? 'honne' : 'yoso';
+const cardAiFaceMain = mat => mat ? mat.face || cardAiFaceOf(CARD_AI_MOOD_FACE[mat.mood]) || null : null;
+const cardAiFaceSlotOf = (face, side = 'yoso') => face === 'sugao' ? side === 'honne' ? 'honne' : 'yoso' : cardAiFaceOf(face);
+const cardAiFaceLineOf = m => String(m.wave) === 'hybrid' ? m.main : m.species;
+const cardAiFaceGroupsMemo = {};
+const cardAiFaceGroups = (db, who) => {
+  const key = `${who}:${Object.keys(db.monsters).length}`;
+  if (cardAiFaceGroupsMemo[key]) return cardAiFaceGroupsMemo[key];
+  const t = CARD_AI_FACES[who] || CARD_AI_FACES.mua;
+  const mons = Object.values(db.monsters).filter(m => m.ready !== false && !m.dexOnly && !m.variant && String(m.wave) !== 'hybrid');
+  const lines = [...new Set(mons.map(m => m.species))];
+  const fixed = {
+    oshi: [t.oshi.lead],
+    suki: [t.suki.lead],
+    sugao: [t.yoso.lead, t.honne.lead].filter(Boolean)
+  };
+  const groups = {
+    oshi: [],
+    suki: [],
+    sugao: []
+  };
+  const placed = new Set();
+  for (const g of CARD_AI_FACE_IDS) for (const sp of fixed[g]) if (sp && lines.includes(sp) && !placed.has(sp)) {
+    groups[g].push(sp);
+    placed.add(sp);
+  }
+  const score = sp => Math.max(...mons.filter(m => m.species === sp).map(m => cardAiMonScore(db, who, m, 99, 'master')));
+  const rest = lines.filter(sp => !placed.has(sp)).map(sp => ({
+    sp,
+    v: score(sp)
+  })).sort((a, b) => b.v - a.v || (a.sp < b.sp ? -1 : 1));
+  const order = ['sugao', 'oshi', 'suki', 'suki', 'oshi', 'sugao'];
+  rest.forEach((x, i) => {
+    groups[order[i % order.length]].push(x.sp);
+  });
+  const v = Object.fromEntries(lines.map(sp => [sp, score(sp)]));
+  for (const g of CARD_AI_FACE_IDS) groups[g].sort((a, b) => v[b] - v[a] || (a < b ? -1 : 1));
+  cardAiFaceGroupsMemo[key] = groups;
+  return groups;
+};
+const cardAiFaceSpec = (db, who, slot, freeIn = null) => {
+  const t = CARD_AI_FACES[who] || CARD_AI_FACES.mua;
+  const row = t[slot] || t.oshi;
+  const face = slot === 'yoso' || slot === 'honne' ? 'sugao' : slot;
+  const groups = cardAiFaceGroups(db, who);
+  const mine = groups[face] || [];
+  const lead = row.lead && mine.includes(row.lead) ? row.lead : mine[0] || null;
+  const avoid = CARD_AI_FACE_IDS.filter(g => g !== face).flatMap(g => groups[g]);
+  const keep = CARD_AI_FACE_IDS.filter(g => g !== face).flatMap(g => g === 'sugao' ? [t.yoso.lead || groups.sugao[0], t.honne.lead || groups.sugao[0]] : [t[g].lead]).filter(Boolean);
+  const free = Number.isInteger(freeIn) ? freeIn : cardAiFaceFreeMap(db, who)[slot] || 0;
+  return {
+    face,
+    slot,
+    lead,
+    avoid,
+    keep: [...new Set(keep)],
+    free,
+    style: cardAiStyleOf(row.style) || 'normal',
+    nick: row.nick || null
+  };
+};
+const CARD_AI_FACE_RANK = Object.freeze(['oshi', 'yoso', 'suki', 'honne']);
+const CARD_AI_FACE_PAIRS = Object.freeze([['oshi', 'suki'], ['oshi', 'yoso'], ['suki', 'yoso'], ['oshi', 'honne'], ['suki', 'honne']]);
+const cardAiFaceFreeMemo = {};
+const cardAiFaceFreeMap = (db, who) => {
+  const key = `${who}:${Object.keys(db.monsters).length}`;
+  if (cardAiFaceFreeMemo[key]) return cardAiFaceFreeMemo[key];
+  const free = {
+    oshi: 1,
+    suki: 1,
+    yoso: 1,
+    honne: 1
+  };
+  const deckOf = slot => cardAiFaceBuildWith(db, who, cardAiFaceSpec(db, who, slot, free[slot]), 'master', cardAiSeededRand(`face:${who}:${slot}:master`), {}, null);
+  for (let round = 0; round < 8; round++) {
+    const d = Object.fromEntries(CARD_AI_FACE_SLOTS.map(sl => [sl, deckOf(sl)]));
+    const bad = CARD_AI_FACE_PAIRS.find(([a, b]) => cardAiFaceShare(d[a], d[b]) > CARD_AI_FACE_SHARE_MAX || cardAiFaceTrioDiff(d[a], d[b]) < CARD_AI_FACE_TRIO_DIFF);
+    if (!bad) break;
+    const loser = [...bad].sort((x, y) => CARD_AI_FACE_RANK.indexOf(y) - CARD_AI_FACE_RANK.indexOf(x)).find(sl => free[sl]);
+    if (!loser) break;
+    free[loser] = 0;
+  }
+  cardAiFaceFreeMemo[key] = free;
+  return free;
+};
+const cardAiFaceDefaultName = (who, slot) => {
+  const t = CARD_AI_FACES[who];
+  if (!t) return null;
+  if (slot === 'yoso') return CARD_AI_STYLE_NAMES[who] || null;
+  return t[slot] && t[slot].name || null;
+};
+const cardAiFaceShareWord = (a, b) => {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  for (let i = 0; i < a.length; i++) {
+    for (let n = 2; i + n <= a.length; n++) {
+      const w = a.slice(i, i + n);
+      if (/^[ぁ-ゟ]+$/.test(w) && w.length < 3) continue;
+      if (/^[\s・!！?？♪♡〜ー]+$/.test(w)) continue;
+      if (b.includes(w)) return true;
+    }
+  }
+  return false;
+};
+const cardAiFaceNameOk = (db, who, slot, name, others = []) => {
+  if (typeof name !== 'string' || !name) return false;
+  const base = CARD_AI_STYLE_NAMES[who];
+  if (/攻め|守り|ふつう/.test(name) || base && name.startsWith(`${base}・`)) return false;
+  if (others.some(o => cardAiFaceShareWord(name, o))) return false;
+  if (slot === 'oshi' || slot === 'suki') {
+    const spec = cardAiFaceSpec(db, who, slot);
+    const mon = Object.values(db.monsters).find(m => m.species === spec.lead && !m.variant);
+    const row = (CARD_AI_FACES[who] || {})[slot] || {};
+    const words = [spec.nick, mon && mon.name, ...(Array.isArray(row.words) ? row.words : [])].filter(Boolean);
+    if (!words.some(w => name.includes(w))) return false;
+  }
+  return true;
+};
+const cardAiFaceNameOf = (w, who, slot) => w && w.decks && w.decks[slot] && w.decks[slot].name || cardAiFaceDefaultName(who, slot);
+const cardAiFaceOtherNames = (w, who, slot) => CARD_AI_FACE_SLOTS.filter(s => s !== slot && !(slot === 'yoso' && s === 'honne' || slot === 'honne' && s === 'yoso')).map(s => cardAiFaceNameOf(w, who, s)).filter(Boolean);
+const cardAiDeckPickFace = (main, rnd) => {
   const r = rnd();
-  const m = cardAiStyleOf(main);
-  if (!m) return CARD_AI_STYLE_IDS[Math.min(CARD_AI_STYLE_IDS.length - 1, Math.floor(r * CARD_AI_STYLE_IDS.length))];
+  const m = cardAiFaceOf(main);
+  if (!m) return CARD_AI_FACE_IDS[Math.min(CARD_AI_FACE_IDS.length - 1, Math.floor(r * CARD_AI_FACE_IDS.length))];
   if (r < CARD_AI_DECK_MAIN) return m;
-  const others = CARD_AI_STYLE_IDS.filter(s => s !== m);
+  const others = CARD_AI_FACE_IDS.filter(s => s !== m);
   return others[r - CARD_AI_DECK_MAIN < (1 - CARD_AI_DECK_MAIN) / 2 ? 0 : 1];
 };
-const cardAiDeckDefaultName = (who, style) => cardAiStyleDefaultName(who, style);
-const cardAiDeckFacts = (db, who, style) => {
-  const trio = cardAiBuildDeck(db, who, 'master', cardAiSeededRand(`preview:${who}:${style}:master`), {
-    style
-  }).monsters;
+const cardAiFaceBuild = (db, who, slot, level, rnd, extra = {}, plan = null) => cardAiFaceBuildWith(db, who, cardAiFaceSpec(db, who, slot), level, rnd, extra, plan);
+const cardAiFaceBuildWith = (db, who, spec, level, rnd, extra = {}, plan = null) => {
+  const lv = CARD_AI_BUILD[level] ? level : 'normal';
+  const opts = avoid => ({
+    ...extra,
+    style: spec.style,
+    face: {
+      lead: spec.lead,
+      avoid,
+      keep: spec.keep,
+      free: spec.free
+    },
+    ...(plan ? {
+      plan
+    } : {})
+  });
+  const deck = cardAiBuildDeck(db, who, lv, rnd, opts(spec.avoid));
+  if (deck.monsters.length >= 3) return deck;
+  return cardAiBuildDeck(db, who, lv, rnd, opts(spec.keep));
+};
+const cardAiFacePreviewDeck = (db, who, slot, plan = null, level = 'master') => cardAiFaceBuild(db, who, slot, level, cardAiSeededRand(`face:${who}:${slot}:${level}`), {}, plan);
+const cardAiFaceShare = (a, b) => {
+  const cnt = cards => cards.reduce((m, no) => {
+    m[no] = (m[no] || 0) + 1;
+    return m;
+  }, {});
+  const ca = cnt(a.cards),
+    cb = cnt(b.cards);
+  const same = Object.keys(ca).reduce((s, no) => s + Math.min(ca[no], cb[no] || 0), 0);
+  return same / Math.max(1, Math.max(a.cards.length, b.cards.length));
+};
+const cardAiFaceTrioDiff = (a, b) => a.monsters.filter(no => !b.monsters.includes(no)).length;
+const CARD_AI_FACE_POLICY = Object.freeze({
+  oshi: '推しのモンスターが主役。推しが活躍できるカードを優先する',
+  suki: '好きなモンスターが主役。そのモンスターらしさが出るカードを優先する',
+  yoso: 'よそいきの組み方。ふだんどおりの、無難で強い組み方',
+  honne: '本音の組み方。ふだんはやらないけれど、ほんとはやってみたい組み方'
+});
+const cardAiDeckFacts = (db, who, slot) => {
+  const spec = cardAiFaceSpec(db, who, slot);
+  const trio = cardAiFacePreviewDeck(db, who, slot).monsters;
   const cands = cardAiPlanCandidates(db, who, 'master', trio);
   const fields = Object.values(db.cards).filter(c => c.ready && c.kind === 'fld').map(c => c.name);
+  const leadMon = trio.map(no => db.monsters[no]).find(m => m && cardAiFaceLineOf(m) === spec.lead);
   return {
     trio,
     cands,
     fields,
-    range: cardAiPlanHabitRange(who, 'master', style),
+    spec,
+    range: cardAiPlanHabitRange(who, 'master', spec.style),
     facts: {
-      style,
+      style: spec.style,
+      face: spec.face,
+      side: slot === 'yoso' || slot === 'honne' ? slot : null,
+      lead: spec.nick || leadMon && leadMon.name || null,
+      policy: CARD_AI_FACE_POLICY[slot] || null,
       favorites: trio.map(no => (db.monsters[no] || {}).name).filter(Boolean).slice(0, 5),
       cards: cands.map(c => ({
         no: c.no,
@@ -135179,7 +135609,7 @@ const cardAiDeckFacts = (db, who, style) => {
         area: !!cardHasEff(c, 'area')
       })),
       fields,
-      habit: cardAiPlanHabitRange(who, 'master', style),
+      habit: cardAiPlanHabitRange(who, 'master', spec.style),
       prefer: CARD_AI_PLAN_RANGE.prefer.slice()
     }
   };
@@ -135196,11 +135626,16 @@ let cardAiDeckSetting = {
   on: true
 };
 const cardAiDeckToday = () => typeof cardTodayJst === 'function' ? cardTodayJst() : new Date(Date.now() + 5 * 3600 * 1000).toISOString().slice(0, 10);
+const cardAiRecipeRead = async () => {
+  const raw = await storeGet(CARD_AI_RECIPE2_KEY, null).catch(() => null);
+  const v1 = cardAiDeckIsObj(raw) ? null : await storeGet(CARD_AI_RECIPE_KEY, null).catch(() => null);
+  return cardNormalizeAiRecipe2(raw, cardAiDeckToday(), v1);
+};
 const cardLoadAiRecipe = async () => {
   try {
-    cardAiRecipeState = cardNormalizeAiRecipe(await storeGet(CARD_AI_RECIPE_KEY, null), cardAiDeckToday());
+    cardAiRecipeState = await cardAiRecipeRead();
   } catch (_) {
-    cardAiRecipeState = cardNormalizeAiRecipe(null, cardAiDeckToday());
+    cardAiRecipeState = cardNormalizeAiRecipe2(null, cardAiDeckToday());
   }
   try {
     cardAiDeckSetting = cardNormalizeAiDeck(await storeGet(CARD_AI_DECK_KEY, null));
@@ -135214,7 +135649,7 @@ const cardLoadAiRecipe = async () => {
 const cardSaveAiRecipe = async next => {
   cardAiRecipeState = next;
   try {
-    return await storeSet(CARD_AI_RECIPE_KEY, next);
+    return await storeSet(CARD_AI_RECIPE2_KEY, next);
   } catch (_) {
     return false;
   }
@@ -135269,34 +135704,51 @@ const cardAiDeckFetch = async (who, facts) => {
     clearTimeout(timer);
   }
 };
+const cardAiFaceDiverseOk = (db, who, slot, plan, w, side) => {
+  const mine = cardAiFacePreviewDeck(db, who, slot, plan);
+  const others = ['oshi', 'suki', side === 'honne' ? 'honne' : 'yoso'].filter(s => s !== slot && !((slot === 'yoso' || slot === 'honne') && (s === 'yoso' || s === 'honne')));
+  return others.every(s => {
+    const e = w && w.decks && w.decks[s];
+    const d = cardAiFacePreviewDeck(db, who, s, e && e.plan);
+    return cardAiFaceShare(mine, d) <= CARD_AI_FACE_SHARE_MAX && cardAiFaceTrioDiff(mine, d) >= CARD_AI_FACE_TRIO_DIFF;
+  });
+};
 const cardAiDeckBusy = new Set();
 const cardAiDeckRebuild = async (who, reason, opts = {}) => {
-  if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who] || cardAiDeckBusy.has(who) || typeof CARD_BATTLE_DATA === 'undefined') return null;
+  if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who] || !CARD_AI_FACES[who] || cardAiDeckBusy.has(who) || typeof CARD_BATTLE_DATA === 'undefined') return null;
   cardAiDeckBusy.add(who);
   try {
     const db = CARD_BATTLE_DATA;
     const now = Number.isFinite(opts.now) ? opts.now : Date.now();
-    const before = cardNormalizeAiRecipe(await storeGet(CARD_AI_RECIPE_KEY, null).catch(() => null), cardAiDeckToday());
-    const style = cardAiDeckOldest(before.perWho[who] || null);
-    const f = cardAiDeckFacts(db, who, style);
+    const side = cardAiFaceSugaoSide(cardAiFaceMaterial(who));
+    const before = await cardAiRecipeRead();
+    const slot = cardAiDeckOldest(before.perWho[who] || null, side);
+    const f = cardAiDeckFacts(db, who, slot);
     const got = await cardAiDeckFetch(who, f.facts);
-    const cur = cardNormalizeAiRecipe(await storeGet(CARD_AI_RECIPE_KEY, null).catch(() => null), cardAiDeckToday());
+    const cur = await cardAiRecipeRead();
     const w = cur.perWho[who] || {
       met: true,
       gamesSince: 0,
       slotsDone: 0,
       decks: {}
     };
-    const prev = w.decks[style] || null;
-    const plan = got && cardAiPlanClean(db, got.plan) ? got.plan : cardAiDeckJitter(prev && prev.plan, {
+    const prev = w.decks[slot] || null;
+    const jitter = () => cardAiDeckJitter(prev && prev.plan, {
       cands: f.cands,
       fields: f.fields,
       range: f.range,
-      rnd: cardAiSeededRand(`jitter:${who}:${style}:${now}`)
+      rnd: cardAiSeededRand(`jitter:${who}:${slot}:${now}`)
     });
+    let plan = got && cardAiPlanClean(db, got.plan) ? got.plan : jitter();
+    if (!cardAiFaceDiverseOk(db, who, slot, plan, w, side)) {
+      const j = jitter();
+      plan = cardAiFaceDiverseOk(db, who, slot, j, w, side) ? j : prev && prev.plan || null;
+    }
+    const others = cardAiFaceOtherNames(w, who, slot);
+    const name = got && cardAiFaceNameOk(db, who, slot, got.name, others) ? got.name : prev && prev.name && cardAiFaceNameOk(db, who, slot, prev.name, others) ? prev.name : null;
     const entry = cardAiDeckEntryOf({
       plan,
-      name: got ? got.name : prev && prev.name,
+      name,
       line: got ? got.line : prev && prev.line,
       at: now,
       ai: !!got
@@ -135307,22 +135759,21 @@ const cardAiDeckRebuild = async (who, reason, opts = {}) => {
       met: true,
       decks: {
         ...w.decks,
-        [style]: entry
+        [slot]: entry
       },
       gamesSince: reason === 'games' ? 0 : w.gamesSince,
       slotsDone: reason === 'slot' ? Math.max(w.slotsDone, passed) : w.slotsDone
     };
-    const next = {
+    await cardSaveAiRecipe({
       ...cur,
       perWho: {
         ...cur.perWho,
         [who]: nextW
       }
-    };
-    await cardSaveAiRecipe(next);
+    });
     return {
       who,
-      style,
+      slot,
       ai: !!got
     };
   } catch (_) {
@@ -135357,9 +135808,9 @@ const cardAiDeckRunDue = async (opts = {}) => {
 };
 const cardAiDeckMarkMet = async who => {
   if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who]) return false;
-  const cur = cardNormalizeAiRecipe(await storeGet(CARD_AI_RECIPE_KEY, null).catch(() => null), cardAiDeckToday());
+  const cur = await cardAiRecipeRead();
   const w = cur.perWho[who];
-  if (w && w.met) {
+  if (w && w.met && Object.keys(w.decks).length) {
     cardAiRecipeState = cur;
     return true;
   }
@@ -135368,14 +135819,11 @@ const cardAiDeckMarkMet = async who => {
     perWho: {
       ...cur.perWho,
       [who]: {
-        met: true,
         gamesSince: 0,
         slotsDone: 0,
         decks: {},
         ...(w || {}),
-        ...{
-          met: true
-        }
+        met: true
       }
     }
   });
@@ -135384,7 +135832,7 @@ const cardAiDeckMarkMet = async who => {
 };
 const cardAiDeckAfterMatch = async who => {
   if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who]) return null;
-  const cur = cardNormalizeAiRecipe(await storeGet(CARD_AI_RECIPE_KEY, null).catch(() => null), cardAiDeckToday());
+  const cur = await cardAiRecipeRead();
   const w = cur.perWho[who] || {
     met: true,
     gamesSince: 0,
@@ -135406,58 +135854,71 @@ const cardAiDeckAfterMatch = async who => {
   if (nextW.gamesSince >= CARD_AI_DECK_GAMES) void cardAiDeckRebuild(who, 'games');
   return nextW.gamesSince;
 };
-const cardAiDeckLifeStyle = who => {
-  try {
-    return typeof assistantLifeCardStyle === 'function' ? cardAiStyleOf(assistantLifeCardStyle(who)) : null;
-  } catch (_) {
-    return null;
-  }
-};
 const cardAiDeckNextMemo = {};
 const cardAiDeckNextStyle = who => {
-  if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who]) return null;
-  if (!cardAiDeckNextMemo[who]) cardAiDeckNextMemo[who] = cardAiDeckPickStyle(cardAiDeckLifeStyle(who), Math.random);
+  if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who] || !CARD_AI_FACES[who]) return null;
+  if (!cardAiDeckNextMemo[who]) cardAiDeckNextMemo[who] = cardAiDeckPickFace(cardAiFaceMain(cardAiFaceMaterial(who)), Math.random);
   return cardAiDeckNextMemo[who];
 };
+const cardAiFaceName = (who, face) => {
+  const slot = cardAiFaceSlotOf(face, cardAiFaceSugaoSide(cardAiFaceMaterial(who)));
+  if (!slot) return null;
+  return cardAiFaceNameOf(cardAiRecipeState && cardAiRecipeState.perWho[who], who, slot);
+};
 const cardAiDeckNextName = who => {
-  const st = cardAiDeckNextStyle(who);
-  if (!st) return null;
-  const e = cardAiRecipeState && cardAiRecipeState.perWho[who] && cardAiRecipeState.perWho[who].decks[st];
-  return e && e.name || cardAiDeckDefaultName(who, st);
+  const face = cardAiDeckNextStyle(who);
+  return face ? cardAiFaceName(who, face) : null;
 };
 const cardAiDeckNextDone = who => {
   delete cardAiDeckNextMemo[who];
 };
-const cardAssistantDeckPick = (who, rand = Math.random, level = 'normal', extra = {}, styleIn = null) => {
-  if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who] || typeof CARD_BATTLE_DATA === 'undefined') return null;
+const cardAssistantDeckPick = (who, rand = Math.random, level = 'normal', extra = {}, faceIn = null) => {
+  if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who] || !CARD_AI_FACES[who] || typeof CARD_BATTLE_DATA === 'undefined') return null;
   const rnd = typeof rand === 'function' ? rand : Math.random;
-  const styleId = cardAiStyleOf(styleIn) || cardAiDeckPickStyle(cardAiDeckLifeStyle(who), rnd);
-  const e = cardAiRecipeState && cardAiRecipeState.perWho[who] && cardAiRecipeState.perWho[who].decks[styleId] || null;
+  const mat = cardAiFaceMaterial(who);
+  const face = cardAiFaceOf(faceIn) || cardAiDeckPickFace(cardAiFaceMain(mat), rnd);
+  const slot = cardAiFaceSlotOf(face, cardAiFaceSugaoSide(mat));
+  const w = cardAiRecipeState && cardAiRecipeState.perWho[who];
+  const e = w && w.decks[slot] || null;
   const plan = e && e.plan ? e.plan : null;
-  const deck = cardAiBuildDeck(CARD_BATTLE_DATA, who, CARD_AI_BUILD[level] ? level : 'normal', rnd, {
-    ...extra,
-    style: styleId,
-    ...(plan ? {
-      plan
-    } : {})
-  });
+  const deck = cardAiFaceBuild(CARD_BATTLE_DATA, who, slot, level, rnd, extra, plan);
   return {
-    styleId,
-    name: e && e.name || cardAiDeckDefaultName(who, styleId),
+    styleId: face,
+    slot,
+    name: cardAiFaceNameOf(w, who, slot),
     line: e && e.line || null,
     plan,
     deck
   };
 };
-const cardAiRecipeOf = (who, styleId) => {
+const cardAiRecipeOf = (who, face) => {
   if (!cardAiDeckFlagOn() || !cardAiRecipeState) return null;
-  const e = cardAiRecipeState.perWho[who] && cardAiRecipeState.perWho[who].decks[styleId];
+  const slot = cardAiFaceSlotOf(face, cardAiFaceSugaoSide(cardAiFaceMaterial(who)));
+  const e = slot && cardAiRecipeState.perWho[who] && cardAiRecipeState.perWho[who].decks[slot];
   return e ? {
     plan: e.plan,
     name: e.name,
     line: e.line,
     at: e.at
   } : null;
+};
+const cardAssistantFacePreview = (who, face, level = 'normal') => {
+  if (!cardAiDeckFlagOn() || !CARD_AI_FACES[who] || typeof CARD_BATTLE_DATA === 'undefined') return null;
+  const f = cardAiFaceOf(face) || 'oshi';
+  const side = cardAiFaceSugaoSide(cardAiFaceMaterial(who));
+  const slot = cardAiFaceSlotOf(f, side);
+  const e = cardAiRecipeState && cardAiRecipeState.perWho[who] && cardAiRecipeState.perWho[who].decks[slot];
+  const deck = cardAiFacePreviewDeck(CARD_BATTLE_DATA, who, slot, e && e.plan, CARD_AI_BUILD[level] ? level : 'normal');
+  return {
+    monsters: deck.monsters.slice(),
+    cards: deck.cards.slice(),
+    styleId: f,
+    slot,
+    side: f === 'sugao' ? side : null,
+    name: cardAiFaceNameOf(cardAiRecipeState && cardAiRecipeState.perWho[who], who, slot),
+    line: e && e.line || null,
+    at: e && e.at || 0
+  };
 };
 const CARD_AI_DECK_VS_LINES = Object.freeze({
   mua: '今日は『{name}』でいくよ♪ まぢ全力だからね！',
