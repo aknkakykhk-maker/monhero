@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "f6b3e48a6e33",
-  "packs": {"beat":{"bytes":136587687,"count":103},"battle":{"bytes":125534505,"count":800},"card":{"bytes":36015185,"count":1010},"all":{"bytes":298137377,"count":1913},"core":{"bytes":18715419,"count":22}},
+  "id": "b0dd41078b3f",
+  "packs": {"beat":{"bytes":136587687,"count":103},"battle":{"bytes":125534505,"count":800},"card":{"bytes":36015185,"count":1010},"all":{"bytes":298137377,"count":1913},"core":{"bytes":18718588,"count":22}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"a58782a4c46f","size":1889175,"pack":"beat"},
@@ -1918,7 +1918,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"da604f2675fa","size":292214,"pack":"core"},
+    "tailwind.css": {"v":"8dc89117081c","size":292060,"pack":"core"},
     "data/images/images-ally.js": {"v":"177cb856f129","size":73210,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"a8ec2b581a8b","size":60761,"pack":"core"},
@@ -1932,11 +1932,11 @@
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
     "data/rhythm-event.js": {"v":"5640c2091a81","size":90434,"pack":"core"},
     "data/changelog.js": {"v":"463b8aaf3142","size":1610616,"pack":"core"},
-    "data/help.js": {"v":"5d9a0413a2ca","size":744264,"pack":"core"},
+    "data/help.js": {"v":"8c82b0d72f00","size":744231,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":9047,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
     "data/assistants.js": {"v":"65e6751ee3fc","size":1984227,"pack":"core"},
     "data/card-battle-cards.js": {"v":"3888c3d627a6","size":120016,"pack":"core"},
-    "game-system.compiled.js": {"v":"8aba0f3aba0c","size":8959508,"pack":"core"}
+    "game-system.compiled.js": {"v":"1fd9cec50066","size":8962864,"pack":"core"}
   }
 }
