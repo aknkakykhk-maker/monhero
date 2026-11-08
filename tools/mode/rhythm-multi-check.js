@@ -260,6 +260,37 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
   check('だれかが抜けると連続は1曲目に戻る', s5 === 1, `${s5}`);
   leaveAll([h, a, b]);
 }
+{
+  // 途中でやめた曲(リスタートしてから中断・ふつうの中断)は連続ボーナスに数えない(2026-11-08 社長「やり直しして途中で曲をやめても連続ボーナスが増えてる」)
+  const [h, a] = ['h', 'a'].map(makeClient);
+  joinRoom([h, a], 'QT8Z');
+  h.M.confirmMembers(); clock.advance(2500);
+  const playRound = (cs, quitters = []) => {
+    cs.forEach((c) => c.M.pick('songC')); clock.advance(3000);
+    clock.advance(h.K.SHUFFLE + 500); cs.forEach((c) => c.M.ready()); clock.advance(3000);
+    const round = view(h).room.round;
+    cs.forEach((c) => (quitters.includes(c)
+      ? c.M.reportResult(round, null, true, { diffId: 'NORMAL' })
+      : c.M.reportResult(round, { score: 800000, cleared: true, maxCombo: 10 }, false, { diffId: 'NORMAL' })));
+    // 2度目の知らせ(画面を離れるときにもう一度送る)では、もう戻さない
+    quitters.forEach((c) => c.M.reportResult(round, null, true, { diffId: 'NORMAL' }));
+    clock.advance(3000);
+    h.M.nextFromResult(round); clock.advance(3000);
+  };
+  playRound([h, a]);
+  const q1 = view(h).streak;
+  playRound([h, a], [h]);
+  const q2 = view(h).streak;
+  playRound([h, a]);
+  const q3 = view(h).streak;
+  playRound([h, a], [h]); playRound([h, a], [h]);
+  const q4 = view(h).streak;
+  playRound([h, a]);
+  const q5 = view(h).streak;
+  check('途中でやめた曲は連続に数えない(やめた次の曲は、やめた曲の前から続く)', q1 === 1 && q2 === 1 && q3 === 2, `${q1},${q2},${q3}`);
+  check('続けてやめても増えない・減りすぎない', q4 === 2 && q5 === 3, `${q4},${q5}`);
+  leaveAll([h, a]);
+}
 
 // ===== ⑥ ホストの「待たずに進む」 =====
 {
