@@ -31,13 +31,17 @@ const route = (posted) => async (r) => {
   const url = r.request().url(); const method = r.request().method();
   const json = (body, status = 200) => r.fulfill({ status, contentType: 'application/json', body: typeof body === 'string' ? body : JSON.stringify(body) });
   if (/assistant_life_friend_switch/.test(url)) return json([{ mode: 'on' }]);
+  if (/assistant_life_friend_house_more/.test(url)) {
+    if (method !== 'GET') { try { posted.push({ more: JSON.parse(r.request().postData()) }); } catch {} return json('', 201); }
+    return json(/aoi-0001/.test(url) ? [{ more: { v: 1, fu: { mua: { p: { c: 'lantern', w: 'starpic', f: 'sofa' }, k: ['bear', 'plant'] }, dra: { p: { w: 'trophy', f: 'bear' }, k: [] } }, dy: [{ t: '11:00', x: '昼: ももすけ・あつが練習スタジオで練習' }, { t: '10:10', x: '朝: みゅあ・ききが居間でおやつ' }, { t: '09:00', x: 'ドラ セッション → 🎵Lv2' }] }, updated_at: fresh }] : []);
+  }
   if (/assistant_life_friend_houses/.test(url)) return method === 'GET' ? json(HOUSES) : json('', 201);
   if (/assistant_life_friend_visits/.test(url)) {
     if (method === 'POST') { try { posted.push(JSON.parse(r.request().postData())); } catch {} return json('', 201); }
     if (method === 'PATCH') return json('', 204);
     const self = (url.match(/host_id\.eq\.([^,)]+)/) || [])[1] || 'x';
     return json([
-      { id: 11, kind: 'player', visitor_id: 'aoi-0001', host_id: self, day: dayKey, assistants: ['dra'], word: 1, thanks: null, created_at: new Date(Date.now() - 40 * 60000).toISOString() },
+      { id: 11, kind: 'player', visitor_id: 'aoi-0001', host_id: self, day: dayKey, assistants: ['dra'], word: 1, thanks: null, note: 'ソファふかふかでよかった！', note_to: null, created_at: new Date(Date.now() - 40 * 60000).toISOString() },
       { id: 12, kind: 'go', visitor_id: 'yuto-0001', host_id: self, day: dayKey, assistants: ['momosuke'], word: 4, thanks: 0, created_at: new Date(Date.now() - 90 * 60000).toISOString() },
     ]);
   }
@@ -141,10 +145,11 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.locator('[data-alf-page="on"]').waitFor({ timeout: 8000 });
       await page.locator('[data-alf-house]').first().waitFor({ timeout: 8000 }).catch(() => {});
       await page.locator('[data-alf-note]').first().waitFor({ timeout: 8000 }).catch(() => {});
-      check(`③ ページにいまの行き来・置き手紙2通・フレンドの家2軒・設定3つ(${v.id})`, (await page.locator('[data-alf-now-out]').count()) === 1 && (await page.locator('[data-alf-note]').count()) === 2 && (await page.locator('[data-alf-house]').count()) === 2 && (await page.locator('[data-alf-setting]').count()) === 3);
+      check(`③ ページにいまの行き来・置き手紙2通・フレンドの家2軒・設定4つ(${v.id})`, (await page.locator('[data-alf-now-out]').count()) === 1 && (await page.locator('[data-alf-note]').count()) === 2 && (await page.locator('[data-alf-house]').count()) === 2 && (await page.locator('[data-alf-setting]').count()) === 4);
       { const ng = await textProblems(page, '[data-alf-page]'); check(`③ ページがはみ出さない・字が切れない・言葉の途中で折れない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
       check(`③ 置き手紙に「訪ねてくれた」「ドラと話した」とお礼の3択(${v.id})`, /訪ねてくれた/.test(await page.locator('[data-alf-notes]').innerText()) && /ドラと話した/.test(await page.locator('[data-alf-notes]').innerText()) && (await page.locator('[data-alf-thanks]').count()) === 3);
       check(`③ 家が届いていないフレンド(みお)は薄く並び「みおさんが助手ライフを開くと遊びに行けます」(${v.id})`, (await page.locator('[data-alf-house-waiting="mio-0001"]').count()) === 1 && /みおさんが助手ライフを開くと遊びに行けます/.test(await page.locator('[data-alf-house-waiting="mio-0001"]').innerText().catch(() => '')));
+      check(`⑫ 届いた置き手紙に自由文が出て、「この人の自由文を見ない」がある(${v.id})`, /ソファふかふかでよかった/.test(await page.locator('[data-alf-notes]').innerText()) && (await page.locator('[data-alf-note-off="aoi-0001"]').count()) === 1);
       await shot(page, `${v.id}-3-page`);
       await page.evaluate(() => { const el = document.querySelector('[data-alf-houses]'); if (el) el.scrollIntoView({ block: 'start' }); });
       await shot(page, `${v.id}-3b-page-houses`);
@@ -167,6 +172,7 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.locator('[data-alf-visit] [data-assistant-life-room="kiki"]').click();
       await page.locator('[data-alf-visit-sheet="kiki"]').waitFor({ timeout: 3000 });
       check(`⑥ おでかけ中の部屋も押せて、「おでかけ中」と分かる(${v.id})`, (await page.locator('[data-alf-visit-room-state="out"]').count()) === 1);
+      check(`⑫ くわしい控えから、今日あったこと(3つ)が出る(${v.id})`, /練習スタジオ/.test(await page.locator('[data-alf-visit]').innerText()));
       await shot(page, `${v.id}-5b-visit-out`);
       await page.locator('[data-alf-visit-sheet] .mhl-sheet button:has-text("とじる")').click();
       await page.locator('[data-alf-visit] [data-assistant-life-room="dra"]').click();
@@ -178,8 +184,13 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.locator('[data-alf-visit-room-note="dra"]').click();
       await page.locator('[data-alf-visit-words]').waitFor({ timeout: 3000 });
       await shot(page, `${v.id}-6b-visit-words`);
+      await page.locator('[data-alf-note-free]').fill('ID: aoi_1234567 で');
+      check(`⑫ 自由文に連絡先を書くと理由が出て、一言を押せない(${v.id})`, (await page.locator('[data-alf-note-warn]').count()) === 1 && await page.locator('[data-alf-word="1"]').isDisabled());
+      await page.locator('[data-alf-note-free]').fill('ソファふかふかでよかった！');
+      await shot(page, `${v.id}-6c-visit-free`);
       await page.locator('[data-alf-word="1"]').click();
       await page.locator('[data-alf-visit-note="done"]').waitFor({ timeout: 5000 });
+      { const pl2 = posted.filter(p => p.kind === 'player'); check(`⑫ 置き手紙に自由文が乗る(あて先はドラ・家にいるのであて先つき)(${v.id})`, pl2.length === 1 && pl2[0].note === 'ソファふかふかでよかった！' && pl2[0].note_to === 'dra', JSON.stringify(pl2)); }
       const pl = posted.filter(p => p.kind === 'player');
       check(`⑥ 声をかける→返事→一言を選んで置き手紙(player・ドラ・一言1)(${v.id})`, pl.length === 1 && JSON.stringify(pl[0].assistants) === '["dra"]' && pl[0].word === 1, JSON.stringify(pl) + ' ' + calls.filter(c => /visits/.test(c)).map(c => c.slice(0, 60)).join(' | '));
       { const ng = await textProblems(page, '[data-alf-visit]'); check(`⑥ 置き手紙のあとも字が切れない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
