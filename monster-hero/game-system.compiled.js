@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fa36411b71eafdfd
+// source-sha256: fe17b5e179cb5f8f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -122899,14 +122899,21 @@ const assistantMasmonPlanOf = id => {
     made = null;
   }
   if (!Array.isArray(made) || made.length < 3) return base;
+  let st = null;
+  try {
+    st = ASSISTANT_MASMON_STORE.state;
+  } catch (_) {
+    st = null;
+  }
   const row = t => ({
     monster: t.monster,
     nick: t.nick,
     why: t.why,
     lv: t.lv,
     grow: t.grow,
+    slot: t.slot,
     dye: {
-      colors: [...t.colors]
+      colors: [...assistantMasmonDyeNowOf(st, id, t.slot, t.colors)]
     }
   });
   return {
@@ -122964,12 +122971,14 @@ const normalizeAssistantMasmonSave = raw => {
     seed: '',
     made: {},
     named: false,
-    noticed: {}
+    noticed: {},
+    dyes: {}
   };
   if (raw && typeof raw === 'object') {
     if (typeof raw.seed === 'string' && /^[\w-]{4,60}$/.test(raw.seed)) out.seed = raw.seed;
     out.made = normalizeAssistantMasmonMade(raw.made);
     out.named = raw.named === true;
+    out.dyes = normalizeAssistantMasmonDyes(raw.dyes);
     if (raw.noticed && typeof raw.noticed === 'object') for (const [k, v] of Object.entries(raw.noticed)) if (v === true && assistantMasmonBasePlanOf(k)) out.noticed[k] = true;
   }
   const w = raw && typeof raw === 'object' && raw.welcomed && typeof raw.welcomed === 'object' ? raw.welcomed : {};
@@ -123147,6 +123156,625 @@ const assistantMasmonDyeMake = (aid, p, monster, style, rnd) => {
   if (!cols.some(Boolean)) cols[0] = tpl.find(Boolean);
   return cols;
 };
+const ASSISTANT_MASMON_HUE = Object.freeze({
+  red: 355,
+  orange: 28,
+  yellow: 48,
+  lime: 78,
+  green: 135,
+  teal: 168,
+  cyan: 190,
+  sky: 200,
+  blue: 220,
+  purple: 265,
+  magenta: 300,
+  pink: 330
+});
+const ASSISTANT_MASMON_TONE = Object.freeze({
+  pale: [18, 97, '淡い'],
+  deep: [80, 42, '深い'],
+  dull: [32, 60, 'くすんだ'],
+  vivid: [95, 90, 'あざやかな']
+});
+const ASSISTANT_MASMON_TONE_ACHRO = Object.freeze({
+  black: {
+    base: 'black',
+    light: 'gray',
+    pale: 'gray',
+    deep: 'black',
+    dull: 'custom:0:0:30',
+    vivid: 'black'
+  },
+  white: {
+    base: 'white',
+    light: 'white',
+    pale: 'white',
+    deep: 'gray',
+    dull: 'custom:30:8:85',
+    vivid: 'white'
+  },
+  gray: {
+    base: 'gray',
+    light: 'white',
+    pale: 'white',
+    deep: 'custom:0:0:40',
+    dull: 'gray',
+    vivid: 'gray'
+  }
+});
+const ASSISTANT_MASMON_ACHRO_NAME = Object.freeze({
+  'custom:0:0:30': '炭色',
+  'custom:30:8:85': '生成り',
+  'custom:0:0:40': '濃い灰'
+});
+const assistantMasmonBaseOf = c => String(c || '').split('@')[0].replace(/_light$/, '');
+const assistantMasmonTone = (c, tone, jit = 0) => {
+  const b = assistantMasmonBaseOf(c);
+  if (ASSISTANT_MASMON_TONE_ACHRO[b]) return ASSISTANT_MASMON_TONE_ACHRO[b][tone] || b;
+  if (!Number.isFinite(ASSISTANT_MASMON_HUE[b])) return null;
+  if (tone === 'base') return b;
+  if (tone === 'light') return `${b}_light`;
+  const tv = ASSISTANT_MASMON_TONE[tone];
+  if (!tv) return b;
+  return `custom:${(ASSISTANT_MASMON_HUE[b] + Math.round(jit) + 360) % 360}:${tv[0]}:${tv[1]}`;
+};
+const assistantMasmonToneName = c => {
+  const id = String(c || '').split('@')[0];
+  if (ASSISTANT_MASMON_ACHRO_NAME[id]) return ASSISTANT_MASMON_ACHRO_NAME[id];
+  const m = /^custom:(\d+):(\d+):(\d+)$/.exec(id);
+  if (!m) return typeof MASU_COLOR_LABELS !== 'undefined' && MASU_COLOR_LABELS[id] || id;
+  const h = Number(m[1]),
+    s = Number(m[2]),
+    v = Number(m[3]);
+  let best = 'red',
+    bd = 999;
+  for (const [k, hh] of Object.entries(ASSISTANT_MASMON_HUE)) {
+    const d = Math.min(Math.abs(h - hh), 360 - Math.abs(h - hh));
+    if (d < bd) {
+      bd = d;
+      best = k;
+    }
+  }
+  const tone = Object.values(ASSISTANT_MASMON_TONE).find(t => t[0] === s && t[1] === v);
+  const label = typeof MASU_COLOR_LABELS !== 'undefined' && MASU_COLOR_LABELS[best] || best;
+  return tone ? `${tone[2]}${label}` : `${label}っぽい色`;
+};
+const ASSISTANT_MASMON_DYE_HABIT = Object.freeze({
+  mua: {
+    say: 'ふんわり明るい色をノリで重ねる。キラキラが好き',
+    tones: {
+      light: 3,
+      pale: 2,
+      vivid: 2,
+      base: 1
+    },
+    avoid: ['black', 'gray'],
+    alpha: [55, 85],
+    keep: 0.3,
+    parts: 'mix',
+    grad: true,
+    gloss: true,
+    odd: 0.1,
+    roles: ['grad', 'accent', 'bold', 'contrast', 'season']
+  },
+  kiki: {
+    say: '落ち着いた色を差し色に少しだけ。強い色は控えめ',
+    tones: {
+      base: 2,
+      dull: 3,
+      deep: 1
+    },
+    avoid: ['yellow', 'lime', 'cyan'],
+    alpha: [40, 65],
+    keep: 0.6,
+    parts: 'accent',
+    grad: false,
+    gloss: false,
+    odd: 0,
+    roles: ['accent', 'natural', 'grad', 'accent', 'contrast']
+  },
+  momosuke: {
+    say: 'ステージ映えする派手な色を全部の部位に。濃いめ',
+    tones: {
+      vivid: 3,
+      base: 2,
+      light: 1
+    },
+    avoid: ['gray', 'black'],
+    alpha: [70, 90],
+    keep: 0.1,
+    parts: 'wide',
+    grad: true,
+    gloss: true,
+    odd: 0.15,
+    roles: ['bold', 'grad', 'contrast', 'season', 'bold']
+  },
+  dra: {
+    say: '大きい所をざっくり。ときどき思いがけない色にする(変な色の人)',
+    tones: {
+      base: 2,
+      dull: 2,
+      deep: 1,
+      vivid: 1
+    },
+    avoid: [],
+    alpha: [55, 90],
+    keep: 0.2,
+    parts: 'wide',
+    grad: false,
+    gloss: false,
+    odd: 0.45,
+    roles: ['odd', 'odd', 'natural', 'bold', 'contrast']
+  },
+  atsu: {
+    say: '勝負の赤と締めの黒。大きい所は濃く、反対色ははっきり',
+    tones: {
+      base: 3,
+      deep: 2,
+      vivid: 1
+    },
+    avoid: ['pink_light', 'purple_light'],
+    alpha: [70, 90],
+    keep: 0.2,
+    parts: 'wide',
+    grad: false,
+    gloss: true,
+    odd: 0.1,
+    roles: ['contrast', 'bold', 'accent', 'grad', 'contrast']
+  },
+  kyuko: {
+    say: '夜の灯りのような淡い色を小さい所に。元の色をよく残す',
+    tones: {
+      light: 3,
+      pale: 3,
+      dull: 1
+    },
+    avoid: ['lime', 'yellow', 'magenta'],
+    alpha: [30, 55],
+    keep: 0.6,
+    parts: 'accent',
+    grad: true,
+    gloss: false,
+    odd: 0,
+    roles: ['natural', 'grad', 'accent', 'season', 'natural']
+  },
+  sorashido: {
+    say: '青の濃淡を決まった順に。濃さのばらつきが小さい',
+    tones: {
+      base: 2,
+      light: 2,
+      deep: 2
+    },
+    avoid: ['magenta', 'lime', 'pink'],
+    alpha: [50, 62],
+    keep: 0.4,
+    parts: 'even',
+    grad: true,
+    gloss: false,
+    odd: 0,
+    roles: ['grad', 'accent', 'natural', 'contrast', 'grad']
+  },
+  erubin: {
+    say: '黒・茶・灰の落ち着いた色で全体をまとめる',
+    tones: {
+      dull: 3,
+      deep: 2,
+      base: 1
+    },
+    avoid: ['magenta', 'lime', 'yellow'],
+    alpha: [50, 75],
+    keep: 0.3,
+    parts: 'wide',
+    grad: false,
+    gloss: false,
+    odd: 0.05,
+    roles: ['natural', 'accent', 'grad', 'season', 'bold']
+  }
+});
+const ASSISTANT_MASMON_ROLE_NAME = Object.freeze({
+  main: '好きな色が主役',
+  accent: '差し色だけ',
+  grad: '同じ色の濃淡',
+  contrast: '反対色を差す',
+  natural: '元の色に近い',
+  bold: '全部の部位を思い切って',
+  odd: '思いがけない色',
+  season: '季節の色'
+});
+const ASSISTANT_MASMON_SEASON = Object.freeze({
+  spring: ['pink_light', 'lime_light', 'yellow_light'],
+  summer: ['sky', 'cyan', 'yellow'],
+  autumn: ['orange', 'red', 'yellow'],
+  winter: ['white', 'blue_light', 'red']
+});
+const ASSISTANT_MASMON_SEASON_NAME = Object.freeze({
+  spring: '春',
+  summer: '夏',
+  autumn: '秋',
+  winter: '冬'
+});
+const assistantMasmonSeasonKey = day => {
+  const m = /^(\d{4})-(\d{2})/.exec(String(day || ''));
+  if (!m) return '';
+  const y = Number(m[1]),
+    mo = Number(m[2]);
+  const s = mo >= 3 && mo <= 5 ? 'spring' : mo >= 6 && mo <= 8 ? 'summer' : mo >= 9 && mo <= 11 ? 'autumn' : 'winter';
+  return `${mo <= 2 ? y - 1 : y}-${s}`;
+};
+const ASSISTANT_MASMON_DYE_PARTS = Object.freeze({
+  KenshiMocchi: [['肌', 'skin', 26], ['コート・ブーツ', 'wide dark', 54], ['髪', 'dark', 22], ['左の剣', '', 12], ['右の剣', '', 12]],
+  MelWhip: [['イチゴ・赤い実', '', 10], ['服・スカート', '', 25], ['フリル', '', 16], ['ケーキ・クリーム', 'white', 42], ['髪', '', 14]],
+  Iblis: [['白い毛', 'wide white', 43], ['紫のパーツ', '', 27], ['翼', 'dark', 14]],
+  Mocchi: [['体', 'wide skin', 84], ['頭の葉', '', 12], ['口ばし', '', 10]],
+  Ghost: [['帽子', 'dark', 41], ['体', 'wide white clear skin', 59], ['リボン', '', 6]],
+  Monol: [['上', 'dark', 32], ['中', 'dark', 39], ['下', 'dark', 33]],
+  Golem: [['頭・胴・脚', 'wide', 58], ['両腕', '', 42], ['足元の石', '', 11]],
+  Eiki: [['髪・リボン', '', 37], ['刀・オーラ', 'clear', 33], ['鎧', 'wide', 77]],
+  Zan: [['体', 'wide', 61], ['目', 'face', 4], ['腕の刃', '', 40]],
+  Tiger: [['毛', 'wide', 58], ['胸元・おなか', 'white', 32], ['角', '', 10]],
+  Pandora: [['靴下', '', 5], ['黒い服・翼', 'dark', 26], ['白い服・翼', 'white', 29], ['紫の髪', '', 8], ['白い髪', 'white', 9]],
+  Oboro: [['花', 'wide', 48], ['茎・葉・足', '', 39], ['本体', 'white skin', 21]],
+  Plant: [['花', 'wide', 50], ['葉・茎', '', 34], ['本体', 'white skin', 17]],
+  Yggdrasil: [['髪・葉', '', 42], ['カエルの体', '', 38], ['角・杖・マント', '', 22]],
+  Dreamy: [['体の毛', 'white skin', 22], ['雲', 'wide white', 54], ['縞の帽子', '', 12], ['玉の飾り', '', 11], ['ピンクと水色の飾り', '', 6]],
+  Illumine: [['黒い体', 'dark skin', 38], ['後ろの髪', 'dark', 18], ['光る髪', 'wide clear', 54], ['金の飾り', '', 10], ['目と模様', 'face', 7]],
+  Suezo: [['体', 'wide', 59], ['瞳', 'face', 25], ['口', '', 15]],
+  Mitarashi: [['体', 'wide', 58], ['お腹・翼の金', '', 39], ['口元', 'face', 9]],
+  Ark: [['体・翼', 'wide', 79], ['白い羽・紋章', 'white', 20], ['王冠・輪', '', 6]],
+  Mia: [['髪', '', 16], ['服・ブーツ', '', 28], ['服の模様', '', 7]],
+  Melody: [['傘の羊毛・玉', '', 23], ['帽子', '', 16], ['顔・体の白', 'white skin', 20], ['象の体', 'wide', 55], ['象の耳の内側', '', 23]],
+  Spooky: [['帽子・服', 'wide', 47], ['手・しっぽ', 'white clear', 32], ['かぼちゃの顔', 'skin', 19], ['リボン・飾り', '', 15], ['しっぽの先の枝', '', 10]],
+  Kuromy: [['傘のピンク・リボン', '', 27], ['傘のフリル', '', 22], ['黒い帽子・ケープ', 'dark', 24], ['上に乗った方の白', 'white', 20], ['下の生き物', 'wide', 55]],
+  Snegurochka: [['髪・ヒレ', '', 40], ['帽子・衣装', '', 21], ['腕・おなか・尾', 'white skin', 36]],
+  Pixie: [['髪', '', 20], ['肌', 'white skin', 48], ['服・翼', '', 44]],
+  Ham: [['体の毛', 'wide', 59], ['おなかの白', 'white', 34], ['耳の内側', '', 14]],
+  Kyubi: [['髪', '', 25], ['しっぽ・耳の毛', 'white', 42], ['服の白・襟', 'white', 30], ['胸の紫・下駄', '', 16], ['手袋・脚', '', 19]],
+  Orihime: [['髪・耳', '', 22], ['しっぽ・羽衣', 'wide white', 45], ['上の着物', '', 8], ['外の羽織', 'dark', 23], ['手袋・靴下', '', 11]]
+});
+const assistantMasmonPartRule = (mon, i) => {
+  const row = (ASSISTANT_MASMON_DYE_PARTS[mon] || [])[i];
+  const tags = new Set(String(row ? row[1] : '').split(' ').filter(Boolean));
+  const area = row && Number.isFinite(row[2]) ? row[2] / 100 : 0.3;
+  let cap = 90;
+  if (tags.has('wide')) cap = 75;
+  if (tags.has('dark')) cap = Math.min(cap, 70);
+  if (tags.has('white')) cap = Math.min(cap, 60);
+  if (tags.has('clear')) cap = Math.min(cap, 50);
+  if (tags.has('skin')) cap = Math.min(cap, 55);
+  return {
+    i,
+    name: row ? row[0] : `部位${i + 1}`,
+    keep: tags.has('face'),
+    skin: tags.has('skin'),
+    white: tags.has('white'),
+    dark: tags.has('dark'),
+    clear: tags.has('clear'),
+    wide: tags.has('wide'),
+    cap,
+    area
+  };
+};
+const assistantMasmonDyeLimit = (plan, role) => {
+  let odd = 0;
+  const list = [];
+  for (const e of plan) {
+    if (!e || !e.p || e.p.keep || !e.c) continue;
+    if (e.odd) {
+      if (odd >= 2) continue;
+      odd += 1;
+    }
+    let tone = e.tone;
+    const achro = !!ASSISTANT_MASMON_TONE_ACHRO[assistantMasmonBaseOf(e.c)];
+    if (e.p.white && (tone === 'deep' || assistantMasmonBaseOf(e.c) === 'black')) {
+      tone = 'light';
+      if (assistantMasmonBaseOf(e.c) === 'black') e.c = 'gray';
+    }
+    if (e.p.skin && (tone === 'deep' || tone === 'vivid')) tone = 'light';
+    let a = Math.round(e.a);
+    if (e.p.dark && (tone === 'light' || tone === 'pale' || achro && assistantMasmonBaseOf(e.c) === 'white')) a = Math.min(a, 55);
+    if (e.odd && e.p.wide) a = Math.min(a, 60);
+    if (tone === 'deep' && !e.p.dark) a = Math.min(a, 65);
+    a = Math.max(20, Math.min(e.p.cap, a));
+    const id = assistantMasmonTone(e.c, tone, e.jit || 0);
+    if (!id) continue;
+    const prev = list.findIndex(x => x.p.i === e.p.i);
+    if (prev >= 0) list.splice(prev, 1);
+    list.push({
+      ...e,
+      tone,
+      a,
+      id
+    });
+  }
+  const limit = role === 'bold' ? 0.9 : 0.75;
+  for (let guard = 0; guard < 40; guard++) {
+    const cov = list.reduce((s, x) => s + x.p.area * x.a / 100, 0);
+    if (cov <= limit) break;
+    const big = [...list].filter(x => x.a > 35).sort((x, y) => y.p.area * y.a - x.p.area * x.a)[0];
+    if (!big) break;
+    big.a -= 5;
+  }
+  const hueOf = x => {
+    const m = /^custom:(\d+)/.exec(x.id);
+    return m ? Number(m[1]) : ASSISTANT_MASMON_HUE[assistantMasmonBaseOf(x.id)];
+  };
+  for (const x of list) for (const y of list) {
+    if (x === y || x.tone !== 'vivid' || y.tone !== 'vivid' || x.a < 80 || y.a < 80) continue;
+    const hx = hueOf(x),
+      hy = hueOf(y);
+    if (!Number.isFinite(hx) || !Number.isFinite(hy)) continue;
+    const d = Math.min(Math.abs(hx - hy), 360 - Math.abs(hx - hy));
+    if (d > 150) (x.p.area < y.p.area ? x : y).a = 65;
+  }
+  return list;
+};
+const assistantMasmonDyeMake2 = (aid, p, monster, role, rnd, base = null) => {
+  const H = ASSISTANT_MASMON_DYE_HABIT[aid] || ASSISTANT_MASMON_DYE_HABIT.mua;
+  const n = assistantMasmonRegions(monster) || 3;
+  const parts = Array.from({
+    length: n
+  }, (_, i) => assistantMasmonPartRule(monster, i));
+  const can = parts.filter(x => !x.keep);
+  const out = base ? Array.from({
+    length: n
+  }, (_, i) => base[i] || null) : Array(n).fill(null);
+  if (!can.length) return out;
+  const avoid = new Set(H.avoid);
+  const okC = c => c && !avoid.has(c) && !avoid.has(assistantMasmonBaseOf(c));
+  const fav0 = (p.favColors || []).map(x => x.color).filter(Boolean);
+  let fav = fav0.filter(okC);
+  if (!fav.length) fav = fav0.length ? fav0 : ['pink'];
+  if (role !== 'main' && fav.length > 1) {
+    const r0 = Math.floor(rnd() * fav.length);
+    fav = [...fav.slice(r0), ...fav.slice(0, r0)];
+  } else if (fav.length > 1 && rnd() < 0.35) fav = [fav[1], fav[0], ...fav.slice(2)];
+  const tw = Object.entries(H.tones);
+  const tsum = tw.reduce((s, [, w]) => s + w, 0);
+  const pickTone = () => {
+    let r = rnd() * tsum;
+    for (const [t, w] of tw) {
+      r -= w;
+      if (r < 0) return !H.gloss && t === 'vivid' ? 'base' : t;
+    }
+    return tw[0][0];
+  };
+  const jit = () => (rnd() - 0.5) * 8;
+  const al = (f = 1) => (H.alpha[0] + (H.alpha[1] - H.alpha[0]) * rnd()) * f;
+  const wide = [...can].sort((a, b) => b.area - a.area),
+    small = [...can].sort((a, b) => a.area - b.area);
+  const orderOf = H.parts === 'even' ? can : null;
+  const opp = c => {
+    const o = ASSISTANT_MASMON_OPP[assistantMasmonBaseOf(c)] || 'gray';
+    return okC(o) ? o : fav[fav.length - 1];
+  };
+  const oddColor = () => {
+    const hs = Object.keys(ASSISTANT_MASMON_HUE).filter(h => !fav.map(assistantMasmonBaseOf).includes(h) && okC(h));
+    return hs.length ? hs[Math.floor(rnd() * hs.length)] : opp(fav[0]);
+  };
+  const ladder = H.tones.deep ? ['deep', 'base', 'light', 'pale'] : ['base', 'light', 'pale', 'pale'];
+  const plan = [];
+  const put = (pp, c, tone, a, extra = {}) => {
+    if (pp) plan.push({
+      p: pp,
+      c,
+      tone,
+      a,
+      jit: jit(),
+      ...extra
+    });
+  };
+  const keepIt = () => rnd() < H.keep;
+  const seq = orderOf || wide;
+  switch (role) {
+    case 'main':
+      put(seq[0], fav[0], pickTone(), Math.max(al(1.05), 45));
+      seq.slice(1).forEach((x, k) => {
+        if (!keepIt()) put(x, fav[(k + 1) % fav.length], H.grad ? ladder[Math.min(k + 1, 3)] : pickTone(), al(0.9));
+      });
+      break;
+    case 'accent':
+      {
+        const cnt = small.length > 2 && rnd() < 0.5 ? 2 : 1;
+        small.slice(0, cnt).forEach((x, k) => put(x, fav[k % fav.length], pickTone(), Math.max(al(1.1), 55)));
+        break;
+      }
+    case 'grad':
+      {
+        const use = seq.filter((x, k) => k < 2 || !keepIt());
+        const gf = fav.find(c => !ASSISTANT_MASMON_TONE_ACHRO[assistantMasmonBaseOf(c)]) || fav[0];
+        use.forEach((x, k) => put(x, gf, ladder[Math.min(k, 3)], al(1 - k * 0.08)));
+        break;
+      }
+    case 'contrast':
+      put(wide[0], fav[0], pickTone(), al());
+      if (small[0] && small[0] !== wide[0]) put(small[0], opp(fav[0]), H.gloss ? 'vivid' : 'base', Math.max(al(1.05), 60));
+      break;
+    case 'natural':
+      put(wide[Math.floor(rnd() * Math.min(2, wide.length))], fav[Math.floor(rnd() * fav.length)], H.tones.deep && !H.tones.light ? 'dull' : 'light', 25 + rnd() * 15);
+      break;
+    case 'bold':
+      seq.forEach((x, k) => put(x, k % 3 === 2 ? opp(fav[0]) : fav[k % fav.length], H.gloss ? k % 2 ? 'base' : 'vivid' : pickTone(), Math.max(al(1.05), 75)));
+      break;
+    case 'odd':
+      put(wide[0], oddColor(), rnd() < 0.5 ? 'vivid' : 'deep', al(), {
+        odd: true
+      });
+      if (small[0] && small[0] !== wide[0]) put(small[0], rnd() < 0.5 ? oddColor() : fav[0], pickTone(), al(), {
+        odd: rnd() < 0.6
+      });
+      if (wide[1] && wide[1] !== small[0] && !keepIt()) put(wide[1], fav[0], pickTone(), al(0.9));
+      break;
+    case 'season':
+      {
+        const sk = String(base && base.__season || assistantMasmonSeasonKey(typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '')).split('-')[1] || 'autumn';
+        const sc = (ASSISTANT_MASMON_SEASON[sk] || ASSISTANT_MASMON_SEASON.autumn).filter(okC);
+        const c = sc.length ? sc[Math.floor(rnd() * sc.length)] : `${assistantMasmonBaseOf(fav[0])}`;
+        put(small[0], c, pickTone(), Math.max(al(), 55));
+        if (!base && wide[0] !== small[0] && !keepIt()) put(wide[0], fav[0], 'light', al(0.8));
+        break;
+      }
+    default:
+      put(wide[0], fav[0], pickTone(), al());
+  }
+  const free = small.filter(x => !plan.some(e => e.p === x));
+  if (role !== 'odd' && H.odd > 0 && rnd() < H.odd && free.length) put(free[0], oddColor(), 'vivid', al(), {
+    odd: true
+  });
+  if (!plan.length) put(wide[0], fav[0], 'light', 40);
+  for (const x of assistantMasmonDyeLimit(plan, role)) out[x.p.i] = x.a >= 100 ? x.id : `${x.id}@${x.a}`;
+  return out;
+};
+const ASSISTANT_MASMON_DYE_V = 2;
+const ASSISTANT_MASMON_DYE_RE = /^([a-z_]{2,16}|custom:\d{1,3}:\d{1,3}:\d{1,3})(@(100|[1-9]\d))?$/;
+const assistantMasmonFavSig = p => (p && p.favColors || []).map(x => x.color).join(',');
+const normalizeAssistantMasmonDyes = raw => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [aid, list] of Object.entries(raw)) {
+    if (!assistantMasmonBasePlanOf(aid) || !Array.isArray(list)) continue;
+    const rows = [];
+    for (const e of list.slice(-40)) {
+      if (!e || typeof e !== 'object' || !Number.isInteger(e.v) || !['remake', 'season', 'like'].includes(e.why) || !e.slots || typeof e.slots !== 'object') continue;
+      const slots = {};
+      for (const [s, cs] of Object.entries(e.slots)) {
+        const k = Number(s);
+        if (Number.isInteger(k) && k >= 1 && k <= 5 && Array.isArray(cs)) slots[k] = cs.slice(0, 8).map(c => typeof c === 'string' && ASSISTANT_MASMON_DYE_RE.test(c) ? c : null);
+      }
+      const roles = {};
+      if (e.roles && typeof e.roles === 'object') for (const [s, r] of Object.entries(e.roles)) if (ASSISTANT_MASMON_ROLE_NAME[r]) roles[Number(s)] = r;
+      rows.push({
+        v: e.v,
+        why: e.why,
+        at: typeof e.at === 'string' ? e.at.slice(0, 10) : '',
+        season: typeof e.season === 'string' ? e.season.slice(0, 16) : '',
+        fav: typeof e.fav === 'string' ? e.fav.slice(0, 120) : '',
+        roles,
+        slots
+      });
+    }
+    if (rows.length) out[aid] = rows;
+  }
+  return out;
+};
+const assistantMasmonDyeNowOf = (state, aid, slot, fallback) => {
+  const hist = state && state.dyes && state.dyes[aid];
+  if (Array.isArray(hist)) for (let k = hist.length - 1; k >= 0; k--) {
+    const cs = hist[k].slots && hist[k].slots[slot];
+    if (Array.isArray(cs)) return cs;
+  }
+  return fallback;
+};
+const assistantMasmonDyeLog = (aid, slot) => {
+  const st = ASSISTANT_MASMON_STORE.state,
+    hist = st.dyes && st.dyes[aid] || [];
+  const made = (st.made[aid] || []).find(t => t.slot === slot);
+  let before = made ? made.colors : [];
+  const out = [];
+  for (const e of hist) {
+    const cs = e.slots[slot];
+    if (!Array.isArray(cs)) continue;
+    out.push({
+      why: e.why,
+      at: e.at,
+      season: e.season,
+      role: e.roles[slot] || '',
+      colors: cs,
+      before
+    });
+    before = cs;
+  }
+  return out.reverse();
+};
+const assistantMasmonDyeEnsure = (state, day) => {
+  const season = assistantMasmonSeasonKey(day);
+  const dyes = {
+    ...(state.dyes || {})
+  };
+  let changed = false;
+  for (const [aid, list] of Object.entries(state.made || {})) {
+    const p = assistantMasmonBasePlanOf(aid);
+    if (!p || !Array.isArray(list)) continue;
+    const H = ASSISTANT_MASMON_DYE_HABIT[aid] || ASSISTANT_MASMON_DYE_HABIT.mua;
+    const hist = Array.isArray(dyes[aid]) ? [...dyes[aid]] : [];
+    const sig = assistantMasmonFavSig(p);
+    const cur = slot => assistantMasmonDyeNowOf({
+      dyes: {
+        [aid]: hist
+      }
+    }, aid, slot, (list.find(t => t.slot === slot) || {}).colors || []);
+    if (!hist.some(e => e.why === 'remake' && e.v === ASSISTANT_MASMON_DYE_V)) {
+      const rnd = assistantMasmonRng(`${state.seed}|${aid}|dye-v${ASSISTANT_MASMON_DYE_V}`);
+      const rest = assistantMasmonShuffle(H.roles, rnd);
+      const roles = {},
+        slots = {};
+      list.forEach(t => {
+        const r = t.slot === 1 ? 'main' : rest[(t.slot - 2) % rest.length];
+        roles[t.slot] = r;
+        slots[t.slot] = assistantMasmonDyeMake2(aid, p, t.monster, r, rnd);
+      });
+      hist.push({
+        v: ASSISTANT_MASMON_DYE_V,
+        why: 'remake',
+        at: day,
+        season,
+        fav: sig,
+        roles,
+        slots
+      });
+      changed = true;
+    } else {
+      const last = hist[hist.length - 1];
+      const lastFav = [...hist].reverse().find(e => e.fav) || {};
+      if (lastFav.fav && lastFav.fav !== sig) {
+        const lead = list.find(t => t.slot === 1);
+        if (lead) {
+          const rnd = assistantMasmonRng(`${state.seed}|${aid}|like|${sig}`);
+          hist.push({
+            v: ASSISTANT_MASMON_DYE_V,
+            why: 'like',
+            at: day,
+            season,
+            fav: sig,
+            roles: {
+              1: 'main'
+            },
+            slots: {
+              1: assistantMasmonDyeMake2(aid, p, lead.monster, 'main', rnd)
+            }
+          });
+          changed = true;
+        }
+      } else if (season && last && last.season !== season) {
+        const rnd = assistantMasmonRng(`${state.seed}|${aid}|${season}`);
+        const lastSeasonSlot = Number(Object.keys(([...hist].reverse().find(e => e.why === 'season') || {}).slots || {})[0]);
+        const pool = list.filter(t => t.slot !== lastSeasonSlot);
+        const t = pool[Math.floor(rnd() * pool.length)] || list[0];
+        const b = [...cur(t.slot)];
+        b.__season = season;
+        hist.push({
+          v: ASSISTANT_MASMON_DYE_V,
+          why: 'season',
+          at: day,
+          season,
+          fav: sig,
+          roles: {
+            [t.slot]: 'season'
+          },
+          slots: {
+            [t.slot]: assistantMasmonDyeMake2(aid, p, t.monster, 'season', rnd, b)
+          }
+        });
+        changed = true;
+      }
+    }
+    if (hist.length > 40) hist.splice(1, hist.length - 40);
+    dyes[aid] = hist;
+  }
+  return changed ? {
+    ...state,
+    dyes
+  } : state;
+};
 const assistantMasmonMakeFor = (aid, seed) => {
   const p = assistantMasmonBasePlanOf(aid);
   if (!p) return null;
@@ -123213,6 +123841,17 @@ const assistantMasmonEnsureMade = async () => {
       if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false);
     } catch (_) {}
   }
+  try {
+    const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '';
+    const st = ASSISTANT_MASMON_STORE.state;
+    const next = st.seed ? assistantMasmonDyeEnsure(st, day) : st;
+    if (next !== st) {
+      ASSISTANT_MASMON_STORE.set(next);
+      try {
+        if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false);
+      } catch (_) {}
+    }
+  } catch (_) {}
   void assistantMasmonAskNames();
 };
 let _assistantMasmonNamesBusy = false;
@@ -123488,8 +124127,8 @@ const assistantMasmonStats = t => {
   }
   return out;
 };
-const assistantMasmonSwatch = c => typeof MASU_COLOR_SWATCH !== 'undefined' && MASU_COLOR_SWATCH[c] || '#94a3b8';
-const assistantMasmonColorName = c => typeof MASU_COLOR_LABELS !== 'undefined' && MASU_COLOR_LABELS[c] || c;
+const assistantMasmonSwatch = c => typeof MASU_COLOR_SWATCH !== 'undefined' && MASU_COLOR_SWATCH[c] || (typeof getColorSwatchHex === 'function' && /^custom:/.test(String(c)) ? getColorSwatchHex(c) : '#94a3b8');
+const assistantMasmonColorName = c => assistantMasmonToneName(c);
 const assistantMasmonRegions = mid => typeof MASU_COLOR_REGION_HUES !== 'undefined' && Array.isArray(MASU_COLOR_REGION_HUES[mid]) ? MASU_COLOR_REGION_HUES[mid].length : 0;
 const assistantMasmonFavCard = id => {
   try {
@@ -124195,8 +124834,32 @@ function AssistantMasmonDetail({
       }
     }) : React.createElement("i", {
       className: "inline-block h-[12px] w-[12px] rounded-full border border-dashed border-white/70"
-    }), b ? `${assistantMasmonColorName(b)}${al < 100 ? `(うすめ ${al}%)` : ''}` : '元の色');
-  }))), React.createElement("div", {
+    }), React.createElement("small", {
+      className: "text-slate-400"
+    }, assistantMasmonPartRule(t.monster, i).name), b ? `${assistantMasmonColorName(b)}${al < 100 ? `(うすめ ${al}%)` : ''}` : '元の色');
+  })), (() => {
+    const e = who && who.id && Number.isInteger(t.slot) ? assistantMasmonDyeLog(who.id, t.slot)[0] : null;
+    if (!e) return null;
+    const why = e.why === 'season' ? `${ASSISTANT_MASMON_SEASON_NAME[String(e.season).split('-')[1]] || '季節'}の色に染め直しました` : e.why === 'like' ? '好きな色が変わって、染め直しました' : '染め方を見直しました';
+    const before = (e.before || []).slice(0, n || 5);
+    return React.createElement("p", {
+      className: "mt-1.5 flex flex-wrap items-center gap-1 text-[10px] font-bold text-slate-300",
+      "data-assistant-masmon-dye-log": e.why
+    }, React.createElement("span", null, "🎨 ", e.at ? `${e.at.slice(5).replace('-', '/')} ` : '', why, ASSISTANT_MASMON_ROLE_NAME[e.role] ? `(${ASSISTANT_MASMON_ROLE_NAME[e.role]})` : ''), React.createElement("span", {
+      className: "inline-flex items-center gap-[3px] text-slate-400"
+    }, "前の色", before.map((c, i) => c ? React.createElement("i", {
+      key: i,
+      title: assistantMasmonColorName(String(c).split('@')[0]),
+      className: "inline-block h-[8px] w-[8px] rounded-full border border-white/40",
+      style: {
+        background: assistantMasmonSwatch(String(c).split('@')[0])
+      }
+    }) : React.createElement("i", {
+      key: i,
+      title: "元の色",
+      className: "inline-block h-[8px] w-[8px] rounded-full border border-dashed border-white/50"
+    }))));
+  })()), React.createElement("div", {
     className: "mhm-card mt-2",
     "data-assistant-masmon-detail-talk": true
   }, like && React.createElement("p", {

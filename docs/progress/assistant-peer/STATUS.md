@@ -371,3 +371,10 @@
 - 追記(キズナ3・2026-11-08 夕): 部屋を歩くマスモンは公開済み(#5064・667×375 では縮めて全部の部屋に出す・568×320 では出さない)。デッキのタブはルールくんへ渡した(claude/kizuna3-decktab c62b1ba・36b597e → claude/card-ai-deck)。assistant-chat v22 が配られ、本番で masmon_names を1回呼んで名前が返るのを確かめ、印 assistantMasmonNamesApi を真にした(この枝)。667 の横でシートの名前・育ち方が切れていたのを折り返しに直し、検査に 667×375 を足した(シートも見る)
 - この枝(claude/kizuna2-grow)の公開待ち: 社長の「この文で」(5体・迎える・詳細・人ごと・台詞16行・更新履歴とヘルプの文案。文案は窓口へ送った文を使う)。出すときは更新履歴・ヘルプを入れて PR(フレンドの家の1行はオトズレ3の公開に合わせる)
 - まだ: 染め方の作り込み(助手ごとのくせの表・部位ごとの決まり・止め絵)
+
+## キズナ4(2026-11-08〜・キズナ3の後任)染め方の作り込み
+- 枝 claude/kizuna4-dye。染め方 v2(助手8人のくせ・30体の部位の表・歯止め・季節/好きな色の染め直し)。表と決まりは DYE-DETAIL.md
+- 保存は mh_assistant_life_masmon_v1 に dyes を足すだけ(made の v1 の色は書き換えない・版の印 v:2)。SAVE_DATA.md にキーを書いた
+- 止め絵 masmon-life/dye2/(sheet-1・sheet-2・players・season・zoom-*・game/)。撮り直しは masmon-life/dye2-shoot.js
+- 検査: run-checks --changed は 409/413。NG のうち「子」の言い方・保存キーの載せ忘れは直した。残りの2本(assistant-life-friend-browser-check の仲良し度の知らせ・sheet-close-check の AssistantMasmonDetail「もどる」)は main でも出る前からのもの
+- 待ち: 窓口経由で社長の確認(止め絵・更新履歴とヘルプの文案)→ ミハリの確認 → 更新履歴・ヘルプを入れて PR・マージ
