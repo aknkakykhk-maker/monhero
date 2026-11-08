@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b338ddc4136a333c
+// generated-sha256: b76d8a3cb8436754
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -66351,7 +66351,7 @@ function AssistantMasmonDetail({ who, p, t, land = false, onClose }) {
           <div className="min-w-0 flex-1"><p className="mhl-en">MASMON · {String(who.id).toUpperCase()}</p>
             <p className="truncate text-[19px] font-black text-white">{t.nick}<em className={`mhm-lead ml-1.5 ${t.bench ? 'mhm-bench' : ''}`}>{role}</em></p>
             <p className="truncate text-[11px] font-bold text-slate-300">{m.name} ・ Lv.{t.lv} ・ {who.name}のマスモン</p></div>
-          <button type="button" className="mhl-btn shrink-0 bg-slate-700 px-3" data-assistant-masmon-detail-close onClick={onClose}>もどる</button>
+          <button type="button" className="mhl-btn shrink-0 bg-slate-700 px-3" data-assistant-masmon-detail-close data-mhl-sheet-close onClick={onClose}>閉じる</button>
         </div>
         <div className="mhm-body mt-2">
           {land
