@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b8260573784b736d
+// source-sha256: 927117e9deeb17af
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -122773,8 +122773,12 @@ function AssistantMasmonRow({
   }, "先頭"), t.bench && React.createElement("em", {
     className: "mhm-lead mhm-bench"
   }, "控え")), land ? React.createElement(React.Fragment, null, React.createElement("p", {
-    className: "truncate text-[10.5px] font-bold text-slate-300"
-  }, m.name, " ・ Lv.", t.lv), React.createElement("p", {
+    className: "flex flex-wrap gap-x-1 text-[10.5px] font-bold leading-tight text-slate-300"
+  }, React.createElement("span", {
+    className: "break-all"
+  }, m.name), React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "・ Lv.", t.lv)), React.createElement("p", {
     className: "text-[10px]"
   }, React.createElement(AssistantMasmonDots, {
     t: t

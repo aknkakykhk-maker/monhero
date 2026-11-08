@@ -150,7 +150,7 @@ const layoutProblems = (page) => page.evaluate(() => {
         check(`${T}口 assistantLifeCardStyle が8人ぶん attack/guard/normal`, hooks.every(h => ['attack', 'guard', 'normal'].includes(h.s)), hooks.map(h => `${h.id}:${h.s}`).join(' '));
         check(`${T}口 assistantLifeTasteOf が8人ぶん(好きは1つ以上・名前で)`, hooks.every(h => h.t && h.t.likes.length >= 1 && h.t.likes.every(n => typeof n === 'string' && n)), hooks.map(h => `${h.id}:${h.t ? h.t.likes.join('・') : 'null'}`).join(' / '));
       }
-      // 667×375 は部屋のマスモンだけを見る(シートの字の切れは、作り直し中のシート claude/kizuna2-grow で直す)
+      // 667×375 もシートまで見る(細い札で種類名・名前・育ち方を切らずに折り返すか)
       for (const WHO of WHOS) {
       const T = `${T0}${WHO} `;
       const low = !!process.env.MASMON_LOW_BOND; // 仲良し度が低い(まだ迎えていない)ときの確かめ

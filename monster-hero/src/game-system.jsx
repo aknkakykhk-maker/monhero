@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9ca321e3d08475dc
+// generated-sha256: bd28cce8ccbf53c9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -65616,7 +65616,7 @@ function AssistantMasmonRow({ t, land = false, onOpen = null }) {
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-x-1.5 text-[15px] font-black leading-tight text-white"><span className="break-all">{t.nick}</span>{t.lead && <em className="mhm-lead">先頭</em>}{t.bench && <em className="mhm-lead mhm-bench">控え</em>}</p>
         {land
-          ? <><p className="truncate text-[10.5px] font-bold text-slate-300">{m.name} ・ Lv.{t.lv}</p><p className="text-[10px]"><AssistantMasmonDots t={t}/></p></>
+          ? <><p className="flex flex-wrap gap-x-1 text-[10.5px] font-bold leading-tight text-slate-300"><span className="break-all">{m.name}</span><span className="whitespace-nowrap">・ Lv.{t.lv}</span></p><p className="text-[10px]"><AssistantMasmonDots t={t}/></p></>
           : <p className="truncate text-[10.5px] font-bold text-slate-300">{m.name} ・ Lv.{t.lv} <AssistantMasmonDots t={t}/></p>}
         <p className="text-[11px] font-black leading-tight text-amber-200">📈 {t.grow}</p>
         <div className={`mt-0.5 grid gap-x-3 gap-y-0.5 ${land ? 'grid-cols-1' : 'grid-cols-2'}`}>
