@@ -12305,10 +12305,13 @@ const PANDORA_WINGS_EP8 = [
   { who:'atsu',     e:'happy',    atsu:'with',    t:'いいもん見た笑' },
   { who:'dra',      e:'happy',    atsu:'without', t:'いいもん見たな、えへへ' },
   { who:'sorashido', e:'wink',    t:'この瞬間、保存しとこ笑 ……あ、心のほうにね😊' },
+  // えるびん(2026-11-08 社長「パンドラの最後のイベントだけでもえるびん出して」)。イベントの途中(11/5)に来た新入りとして、見守る一言
+  { who:'erubin',   e:'happy',    t:'みんな、いい顔してるね☺️ 見てるこっちまで、あったかくなるよ' },
   { who:'momosuke', e:'normal',   t:'パンドラちゃん、これから、どうするの？' },
   { who:'pandora',  e:'normal',   t:'……わからない。でも、もう箱には戻らない' },
   { who:'pandora',  e:'normal',   t:'……ここに、ときどき遊びにきても、いい？' },
   { who:'mua',      e:'excited',  t:'ときどきじゃなくて、いつでも！' },
+  { who:'erubin',   e:'wink',     t:'うん、いつでもおいで。俺もこの世界に来たばっかりだし、いっしょに覚えていこう笑' },
   { who:'pandora',  e:'normal',   monsters:[{ id:'Pandora', pose:'hop' }], t:'……ふふ' },
   { who:'pandora',  e:'normal',   monsters:[{ id:'Pandora', pose:'idle' }], t:'……{name}も。いっしょに、叩いてくれて、ありがとう' },
   { who:'pandora',  e:'normal',   monsters:[{ id:'Pandora', pose:'front' }], fx:'rankup', fxText:'ふたつの翼が、ひとつの空へ', t:'……' },
@@ -12318,7 +12321,7 @@ const PANDORA_WINGS_EP8 = [
   { who:'momosuke', e:'happy',    t:'お話は、プロフィールの「イベント回想」からいつでも見返せるよ！ パンドラちゃんに会いたくなったら、いつでも！' },
   { who:'dra',      e:'happy',    t:'またな、{name}。次の曲でも、いっしょに叩こう' },
 ];
-const PANDORA_WINGS_EP8_CALLS = { mua: 'パンドラ／きゅきゅ', kiki: 'パンドラさん', momosuke: 'パンドラちゃん', dra: 'パンドラ', atsu: 'パンドラ', kyuko: 'パンドラ', sorashido: 'パンドラ', pandora: 'きゅうこ' };
+const PANDORA_WINGS_EP8_CALLS = { mua: 'パンドラ／きゅきゅ', kiki: 'パンドラさん', momosuke: 'パンドラちゃん', dra: 'パンドラ', atsu: 'パンドラ', kyuko: 'パンドラ', sorashido: 'パンドラ', pandora: 'きゅうこ', erubin: 'パンドラちゃん' };
 const EVENT_REPLAYS = [
   // ぱんぷきん×ジャックのストーリー(2026-10-04・台本は docs/spec/RAID_JACK_STORY.md)。**公開するまでは回想にも出さない**(releaseFlag)。
   // 第1部(halloween_night_2026_part1)は時刻で流れる既存のもの。ここは第1.5部から終章まで。
