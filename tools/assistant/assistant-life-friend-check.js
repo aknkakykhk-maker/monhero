@@ -185,10 +185,17 @@ const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'er
   calls.length = 0; await G('alfFetchHouses(true)');
   check('⑥ 読み直すときは前のあとで変わった家だけ(updated_at=gt.)', calls.some(c => /updated_at=gt\./.test(c.url)));
   // プレイヤーが訪ねる: 1日3軒(on)・同じ家1回
+  // 本番の失敗(2026-11-08): 自分の控えが一度も送られていないまま訪ねると、表に断られた。置き手紙の前に必ず控えを送る
+  G('alfSaveSt')({ ...G('alfToday()'), sentAt: 0, sentSig: '' });
+  calls.length = 0;
   const r1 = await G('assistantLifeFriendLeaveNote("aoi-0001", { word: 1, talked: ["dra", "evil"], name: "あおい" })');
+  const order = calls.filter(c => c.method === 'POST').map(c => (/houses/.test(c.url) ? 'house' : /visits/.test(c.url) ? 'visit' : 'x'));
+  check('② 置き手紙の前に、自分の家の控えを先に送る(一度も送っていなくても)', order[0] === 'house' && order.includes('visit'), order.join(','));
   const r2 = await G('assistantLifeFriendLeaveNote("aoi-0001", { word: 2, talked: ["dra"], name: "あおい" })');
   const pl = posted.filter(p => p.kind === 'player');
-  check('② プレイヤーが訪ねると置き手紙(player・話した助手だけ・一言の番号)を同じ家へは1日1回だけ残す', r1 && !r2 && pl.length === 1 && JSON.stringify(pl[0].assistants) === '["dra"]' && pl[0].word === 1, JSON.stringify(pl));
+  check('② プレイヤーが訪ねると置き手紙(player・話した助手だけ・一言の番号)を同じ家へは1日1回だけ残す', r1 && r1.ok && r2 && !r2.ok && /もう置き手紙/.test(r2.reason) && pl.length === 1 && JSON.stringify(pl[0].assistants) === '["dra"]' && pl[0].word === 1, JSON.stringify(pl));
+  { const t = G('alfRefusalText');
+    check('② 断られた理由を分かる文にする(切・上限・フレンドでない・お休み・重なり)', /切/.test(t({ body: '行き来を切にしています' })) && /朝4時/.test(t({ body: '今日はもう行けません' })) && /フレンドではなく/.test(t({ body: 'フレンドではありません' })) && /お休み/.test(t({ body: '行き来はいま止めています' })) && /もう置き手紙/.test(t({ status: 409, body: '' }))); }
   check('② 初めての家なら写真1枚', r1 && r1.photo === true && G('ALF_STORE.state.st.photos.length') === 1);
   check('② ビートPはギフトの渡し口が無いと0(勝手に増えない)', r1 && r1.beatP === 0);
   // ギフトの渡し口: 1日300Pまで
@@ -251,10 +258,15 @@ const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'er
   check('⑨ 作った場面を使い、{f}・{h}・{name} を端末で差しこむ', sc.lines[0].text === 'あおいさんのドラ、来たよ♪ あおいさんの家まぢかわいい！' && sc.lines[1].guest && sc.lines[1].text.startsWith('みゅあ、') && !/[{}]/.test(sc.lines.map(l => l.text).join('')), sc.lines.map(l => l.text).join(' / '));
   const sc2 = G('assistantLifeFriendGoScene')({ ids: ['mua'], theirs: ['dra'], name: 'あおい', host: 'aoi-0001' });
   check('⑨ 同じ組の作った場面は1回だけ(2回目は台本)', sc2.lines[0].text !== sc.lines[0].text && sc2.lines[1].text === 'おやつ、半分こしような', sc2.lines.map(l => l.text).join(' / '));
+  { const ok = G('alfApiLineOk');
+    check('⑨ 作った文の口調: みゅあの「じゃん/まじ」は「ぢゃん/まぢ」へ', ok('mua', 'それ椅子あつかいじゃん、まじで') === 'それ椅子あつかいぢゃん、まぢで');
+    check('⑨ 作った文の口調: 体に触れる言葉・あつの文末・ドラの関西弁・ききのタメ口・ほかの助手の「ぢゃん」は使わない',
+      ok('dra', 'おでの膝、いまならあいてるぞ') === null && ok('atsu', 'いらっしゃい') === null && ok('atsu', 'いらっしゃい笑') === 'いらっしゃい笑'
+      && ok('dra', 'ほんまによう来たな') === null && ok('kiki', '来てくれてうれしいよ。また遊ぼうだね') === null && ok('momosuke', 'かわいいぢゃん') === null && ok('kiki', 'いらっしゃいませ♪') === 'いらっしゃいませ♪'); }
   flags.assistantLifeFriendApi = false;
   G('alfSaveSt')({ ...G('alfToday()'), api: null });
   asked = []; await G('assistantLifeFriendRequestScenes')(lifeApi);
-  check('⑨ 印 assistantLifeFriendApi が偽なら頼まない', asked.length === 0 && /\n\s*assistantLifeFriendApi:\s*false,/.test(fs.readFileSync(path.join(root, 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8')));
+  check('⑨ 印 assistantLifeFriendApi が偽なら頼まない', asked.length === 0 && /\n\s*assistantLifeFriendApi:\s*(true|false),/.test(fs.readFileSync(path.join(root, 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8')));
   fakeServer = base;
 
   // ⑧ 公開の印

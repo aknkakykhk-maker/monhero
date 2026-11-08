@@ -79,6 +79,7 @@
   "boot/new-player-onboarding-check.js",
   "boot/onboarding-preview-check.js",
   "boot/parts-purity-check.js",
+  "boot/rhythm-grand-open-campaign-check.js",
   "boot/rhythm-screen-prefix-check.js",
   "boot/root-redirect-check.js",
   "boot/save-keys-check.js",
