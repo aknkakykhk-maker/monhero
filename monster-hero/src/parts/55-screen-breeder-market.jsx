@@ -37,6 +37,8 @@ function BreederMarketScreen({
   // MFバトルカードの「MFバトルカード」の売り場(区切り2)。いまはMFバトルカードのトップの「マーケットへ」から入ったときだけ渡す(デバッグ専用のあいだ)。
   // { point, starter, shop, busy, onBuyPack(packId,count), onBuyStarter(kit), onExchange(offer) }。initialSection … 最初に開く売り場
   cardShop=null, initialSection=null,
+  // initialTab … 最初に開く売り場のタブ(助手ライフの「🛒 交換所で手に入れる」から: 'item' 道具の棚 / 'furniture' 家具の棚)
+  initialTab=null,
 }) {
   // 2026-09-14・マーケットのタブ乱立を避けるため、最初に用途別の入口を選ぶ。
   // 入口だけこの画面のローカル状態で持ち、購入・交換・商品タブの既存stateは親側をそのまま使う。
@@ -52,8 +54,15 @@ function BreederMarketScreen({
   // ダイヤショップ以外の売り場のタブ(2026-10-01 ユーザー指示「ビートPの商品をタブわけして / マーケット全体的に統一させて」)。
   // ダイヤショップのタブは本体の marketTab のまま。ほかはこの画面の中だけで持つ(マーケットを出たら最初のタブへ戻る)
   // 開ける画面から戻ったときは、買ったときのタブで開く(cardShopScrollMemo)
-  const [sectionTabs,setSectionTabs]=useState(()=>initialSection==='card'&&cardShopScrollMemo.pending&&cardShopScrollMemo.tab?{card:cardShopScrollMemo.tab}:{});
+  const [sectionTabs,setSectionTabs]=useState(()=>initialSection==='card'&&cardShopScrollMemo.pending&&cardShopScrollMemo.tab?{card:cardShopScrollMemo.tab}:(initialSection&&initialTab?{[initialSection]:initialTab}:{}));
   const cardListRef = React.useRef(null);
+  // 助手ライフの「🛒 交換所で手に入れる」から「アイテム」タブで開いたときは、2人に贈る道具の所まで送る(1回だけ)
+  React.useEffect(()=>{
+    if(!(initialSection==='event'&&initialTab==='item')) return;
+    let n=0; const t=setInterval(()=>{ const el=document.querySelector('[data-event-point-life-gift]'); n++;
+      if(el){ clearInterval(t); try{ el.scrollIntoView({block:'center'}); }catch{} } else if(n>40) clearInterval(t); },50);
+    return ()=>clearInterval(t);
+  },[]);
   const cardPressedRowRef = React.useRef(null); // 一覧で最後に押した行 { attr, value }(確認の窓の「買う」は行の外なので上書きしない)
   const mountedRef = React.useRef(true);
   React.useEffect(()=>()=>{ mountedRef.current=false; },[]);
@@ -437,7 +446,7 @@ function BreederMarketScreen({
               <span data-legend-pass-offer className="whitespace-nowrap text-[9px] font-bold text-slate-400 line-through tabular-nums">{offer.baseCost.toLocaleString()}P→{offer.baseGrantAmount.toLocaleString()}{offer.unit}</span>
               <span className="whitespace-nowrap text-[10px] max-[359px]:text-[9px] font-black text-amber-200 tabular-nums">{offer.cost.toLocaleString()}P→{offer.grantAmount.toLocaleString()}{offer.unit}</span>
             </>:null;
-            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-offer':offer.id}}
+            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-offer':offer.id,...(/^peer_/.test(String(offer.itemId||''))?{'data-event-point-life-gift':offer.itemId}:{})}}
               item={item} owned={false} comingSoon={false}
               noteSlot={legendPassSlot} note={passNote}
               canBuy={safeEventPoints>=offer.cost&&!busy}
