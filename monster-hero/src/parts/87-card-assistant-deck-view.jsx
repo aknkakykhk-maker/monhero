@@ -52,13 +52,14 @@ const cardAssistantDeckSummary = (who, styleId) => {
     const monsters = d.monsters.map((no) => cardMonsterOf(db, no)).filter(Boolean);
     const name = cardAssistantDeckDisplayName(who, sid, typeof d.name === 'string' ? d.name : null);
     const line = typeof d.line === 'string' && d.line ? d.line : null;
-    const at = Number.isFinite(d.at) ? d.at : null;
+    // 時刻が無いとき、ルールの口は at: 0 を返す。0 を時刻と読むと「AI が 0:00 に組み直しました」と出た(2026-11-08 止め絵)
+    const at = Number.isFinite(d.at) && d.at > 0 ? d.at : null;
     return { styleId: sid, monsters, count, ace, groups, total: d.cards.length, name, line, at };
   } catch (_) { return null; }
 };
 // 組み直した時刻(4:00 など)。無ければ空
 const cardAssistantDeckAtText = (at) => {
-  if (!Number.isFinite(at)) return '';
+  if (!Number.isFinite(at) || at <= 0) return '';
   const t = new Date(at);
   return Number.isNaN(t.getTime()) ? '' : `${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`;
 };
@@ -120,8 +121,10 @@ function CardAssistantDeckView({ who, styleId, land = false }) {
 function CardFoeDeckChip({ name, styleId, kind = 'foe', compact = false }) {
   if (!cardAssistantDeckViewOn() || !CARD_DECK_STYLE_LABEL[styleId]) return null;
   return (
-    <div data-card-foe-deck-chip={kind} data-card-foe-deck-style={styleId} className={`mx-auto flex max-w-full items-center justify-center gap-1.5 rounded-full border border-amber-300/70 bg-slate-950/80 px-3 font-black leading-tight text-amber-100 ${compact ? 'py-0.5 text-[11px]' : 'py-1 text-[12px]'}`}>
-      <small className="shrink-0 rounded-full bg-amber-300 px-1.5 py-px text-[10px] font-black text-slate-950">今日のデッキ</small>
+    <div data-card-foe-deck-chip={kind} data-card-foe-deck-style={styleId} className={`mx-auto flex max-w-full items-center justify-center border border-amber-300/70 bg-slate-950/80 font-black leading-tight text-amber-100 ${compact ? 'gap-1 rounded-2xl px-1.5 py-0.5 text-[11px]' : 'gap-1.5 rounded-full px-3 py-1 text-[12px]'}`}>
+      {/* compact … 相手えらびの型の欄(横では幅が約210px)。詰めないと既定の名前「のんびり長期戦・守り」が2行に折れ、丸い帯が崩れた(2026-11-08 止め絵)。
+          長い名前は折れてよいので、角は丸めすぎない(rounded-2xl) */}
+      <small className={`shrink-0 rounded-full bg-amber-300 py-px text-[10px] font-black text-slate-950 ${compact ? 'px-1' : 'px-1.5'}`}>今日のデッキ</small>
       <span className="min-w-0" style={JA_WRAP_STYLE}><span aria-hidden="true">{CARD_DECK_STYLE_ICON[styleId]} </span>{name || `${CARD_DECK_STYLE_LABEL[styleId]}のデッキ`}</span>
     </div>
   );

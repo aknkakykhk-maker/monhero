@@ -77,12 +77,12 @@ const STYLES = ['attack', 'guard', 'normal'];
             const base = CARD_AI_STYLE_NAMES[who]; const wantName = s === 'normal' ? base : `${base}・${{ attack: '攻め', guard: '守り' }[s]}`;
             return { nameOk: ((document.querySelector('[data-card-assistant-deck-name]') || {}).textContent || '').includes(wantName), note: !!document.querySelector('[data-card-assistant-deck-mon-note]') && /よく使う3体/.test(v.textContent),
               style: v && v.getAttribute('data-card-assistant-deck-view'), name: (document.querySelector('[data-card-assistant-deck-name]') || {}).textContent || '',
-              mons: document.querySelectorAll('[data-card-assistant-deck-mon]').length, ace: !!document.querySelector('[data-card-assistant-deck-ace]'), sum, total: p.cards.length, xOk: xs.every(Boolean) };
+              atOk: (Number(p.at) > 0) === /AI が \d+:\d\d に組み直しました/.test(v.textContent), mons: document.querySelectorAll('[data-card-assistant-deck-mon]').length, ace: !!document.querySelector('[data-card-assistant-deck-ace]'), sum, total: p.cards.length, xOk: xs.every(Boolean) };
           }, [who, s]);
-          if (!(r.style === s && r.nameOk && r.note && r.mons === 3 && r.ace && r.sum === 50 && r.total === 50 && r.xOk)) bad.push(`${who}/${s}: ${JSON.stringify(r)}`);
+          if (!(r.style === s && r.nameOk && r.note && r.mons === 3 && r.ace && r.sum === 50 && r.total === 50 && r.xOk && r.atOk)) bad.push(`${who}/${s}: ${JSON.stringify(r)}`);
         }
       }
-      check(`② ${view}: 8人 × 3つの型で、名前(既定は「名前・型」)・よく使う3体と注記・切り札が出て、一覧の合計が50枚・×N がデッキの枚数と同じ`, bad.length === 0, bad.slice(0, 2).join(' / '));
+      check(`② ${view}: 8人 × 3つの型で、名前(既定は「名前・型」)・よく使う3体と注記・切り札が出て、一覧の合計が50枚・×N がデッキの枚数と同じ・組み直した時刻は AI が組んだときだけ(at が 0 なら出さない)`, bad.length === 0, bad.slice(0, 2).join(' / '));
       // ④ 字が切れない・はみ出さない・端にくっつかない(ドラの守りと、名前の長い助手で)
       const fitBad = [];
       for (const [who, s] of [['dra', 'guard'], ['momosuke', 'attack'], ['erubin', 'normal']]) {
@@ -169,11 +169,11 @@ const STYLES = ['attack', 'guard', 'normal'];
         await page.locator('[data-card-top] button').filter({ hasText: 'フリー対戦' }).first().click();
         await page.locator('[data-card-foe="dra"]').click();
         await page.locator('[data-card-foe-style="dra"] [data-card-foe-deck-chip="foe"]').waitFor({ timeout: 5000 }).catch(() => {});
-        const foe = await page.evaluate(() => { const els = [...document.querySelectorAll('[data-card-foe-deck-chip]')]; const e = els[0]; return { n: els.length, inPanel: !!(e && e.closest('[data-card-foe-style="dra"]')), chip: e ? e.textContent : '', style: e ? e.getAttribute('data-card-foe-deck-style') : '' }; });
+        const foe = await page.evaluate(() => { const els = [...document.querySelectorAll('[data-card-foe-deck-chip]')]; const e = els[0]; const t = e && e.querySelector('span'); const lh = t ? parseFloat(getComputedStyle(t).lineHeight) || 14 : 0; return { n: els.length, inPanel: !!(e && e.closest('[data-card-foe-style="dra"]')), chip: e ? e.textContent : '', style: e ? e.getAttribute('data-card-foe-deck-style') : '', lines: t ? Math.round(t.getBoundingClientRect().height / lh) : 0 }; });
         const foeClip = await clipped('[data-card-foe-style="dra"]');
         await page.locator('[data-card-foe-style="dra"]').scrollIntoViewIfNeeded().catch(() => {});
         await shot('real-foe');
-        check(`⑧ ${view}: 相手えらびの型の欄に今日のデッキが1つ出て、はみ出さず、切れない`, foe.n === 1 && foe.inPanel && /^今日のデッキ(⚔️|🛡️|⚖️) /.test(foe.chip) && !foeClip.length, [JSON.stringify(foe), ...foeClip].slice(0, 3).join(' / '));
+        check(`⑧ ${view}: 相手えらびの型の欄に今日のデッキが1つ出て、既定の名前が1行に収まり(折れると帯が崩れる)、はみ出さず、切れない`, foe.n === 1 && foe.inPanel && /^今日のデッキ(⚔️|🛡️|⚖️) /.test(foe.chip) && foe.lines === 1 && !foeClip.length, [JSON.stringify(foe), ...foeClip].slice(0, 3).join(' / '));
         await page.locator('[data-card-start]').click();
         await page.locator('[data-card-deck-pick-go]').click();
         await page.locator('[data-card-vs-style]').waitFor({ timeout: 10000 });
