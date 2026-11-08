@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4cd2cc6408dfedd4
+// generated-sha256: c6bbcf9228461012
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9612,7 +9612,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   //   表 assistant_life_friend_* を流し、画面を撮って確かめ、社長の「この文で」が出たら真にする。偽のあいだは通信もしない(56-assistant-life-friend.jsx)
   assistantLifeFriend: true, // 2026-11-08 社長「この文で」・表を流した(窓口)
   // その場面の台詞を Claude API で1日1回まとめて作る(assistant-chat の kind:'friend_scenes')。中継役を配ってから真にする。偽・thin・off・失敗のときは台本だけ
-  assistantLifeFriendApi: false,
+  assistantLifeFriendApi: true, // 2026-11-08 assistant-chat v17(窓口が配った)を端末の形で1回呼んで確かめた。スイッチが thin/off のあいだは頼まない
   // モンヒロビートの助手とのセッション(2026-11-07 社長の決定・ビート部マモリ)。全部そろって社長の「この文で」が出るまで偽
   rhythmAssistantSession: true, // 2026-11-07 社長「この文で公開」
   // 7人目の助手ソラシド(2026-10-27 社長の決定)。絵・お話・お知らせがそろって、社長が「公開」と言ったら真にする。
@@ -65213,6 +65213,19 @@ const assistantLifeFriendRequestScenes = async (life) => {
     return next && next.list.length ? 'ok' : 'failed';
   } catch { return 'failed'; } finally { _alfApiBusy = false; }
 };
+// 作った文を、助手ごとの口調の決まりに合わせる。合わせられない文は null(場面ごと台本へ)。
+//   2026-11-08 本番の試しで「みゅあの じゃん」「膝に座る」が返ってきたため(docs/progress/assistant-peer/VOICE.md の決まり)
+const ALF_API_BODY_WORDS = /膝|ひざ|抱き|だっこ|キス|ちゅー|添い寝|くっつ|手をつな|お風呂|ベッド|恋|デート|付き合|好きだよ|大好き/;
+const alfApiLineOk = (who, t) => {
+  let x = String(t || '');
+  if (who === 'mua') x = x.replace(/じゃん/g, 'ぢゃん').replace(/まじ/g, 'まぢ').replace(/マジ/g, 'マヂ');
+  if (ALF_API_BODY_WORDS.test(x) || /(この|あの|その)子|子たち/.test(x)) return null;
+  if (who === 'atsu' && !/(笑|[！？!?…♪w]|[)）]|[\u3000-\u303f]?[\uff08(][^)）]*[)）])$/.test(x.trim())) return null;
+  if (who === 'dra' && /ほんま|やで|とる|とんだ|へん[。、！]|やろ|あかん/.test(x)) return null;
+  if (who === 'kiki' && /(だよ|だね|してよ|じゃん)([。！!？?♪]|$)/.test(x)) return null;
+  if (who !== 'mua' && /ぢゃん|まぢ/.test(x)) return null;
+  return x;
+};
 // 作った場面があれば使う(その組で1回だけ)。無ければ null(台本へ)
 const alfApiSceneFor = (kind, a, b, hostName) => {
   if (!alfApiEnabled()) return null;
@@ -65226,7 +65239,8 @@ const alfApiSceneFor = (kind, a, b, hostName) => {
     const who = l.side === 'a' ? a : b;
     const t = String(l.t).replace(/\{f\}/g, l.side === 'a' ? alfTheirLabel(hostName, b) : assistantLifeName(a)).replace(/\{h\}/g, hostName)
       .replace(/\{name\}/g, () => (l.side === 'a' && typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(a) : 'あなた'));
-    return /[{}]/.test(t) || t.length > 80 ? null : { who, guest: l.side === 'b', text: t };
+    const ok = alfApiLineOk(who, t);
+    return !ok || /[{}]/.test(ok) || ok.length > 80 ? null : { who, guest: l.side === 'b', text: ok };
   });
   if (lines.some(x => !x)) return null;
   alfSaveSt({ ...st, api: { ...api, used: [...api.used, key].slice(-12) } });
