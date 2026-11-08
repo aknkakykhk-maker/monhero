@@ -51,7 +51,7 @@ const sandbox = {
 // 通信層を、指定した fetch(偽サーバー)で新しく読み込む。第2の読み込みは「列がまだ無い環境」の検査に使う
 const EXPORTS_SOURCE = `${source}\n;globalThis.__api = { friendsMakeCode, friendsNormalizeCode, friendsFormatCode, friendsSafeId, friendLinkView, friendsGroup, friendsLastSeenText, friendsIdOfRankingEntry,
   sbEnsureFriendCode, sbFindBreederIdByCode, sbFetchFriendLinks, sbFetchFriendProfiles, sbSendFriendRequest, sbRespondFriendRequest, sbCancelFriendRequest,
-  sbRemoveFriend, sbBlockFriendUser, sbUnblockFriendUser, sbSendRoomInvite, sbFetchRoomInvites, sbFetchFriendRoster, friendsPlaceOfScreen, friendsPresenceText, friendsPlaytimeText, friendsBuildSummary, friendsNormalizeRecent, friendsMergeRecent, friendsCleanNote, friendsNormalizeNotes, friendsInviteLink, friendsCodeFromSearch, friendsCompareScores, friendsCleanMessage, friendsNormalizeRecords, friendsRhythmSummary, friendsRhythmAchievements, friendsCollectionSummary, friendsArrangeList, friendsNormalizeFavorites, sbUpsertFriendProfile, sbFetchFriendSummaries, sbCountIncomingFriendRequests, FRIEND_INVITE_TTL_MS, FRIENDS_MAX, FRIENDS_PENDING_MAX, friendsUnavailable };`;
+  sbRemoveFriend, sbBlockFriendUser, sbUnblockFriendUser, sbSendRoomInvite, sbFetchRoomInvites, sbFetchFriendRoster, friendsPlaceOfScreen, friendsSetRoomPrivate, friendsPresenceText, friendsPlaytimeText, friendsBuildSummary, friendsNormalizeRecent, friendsMergeRecent, friendsCleanNote, friendsNormalizeNotes, friendsInviteLink, friendsCodeFromSearch, friendsCompareScores, friendsCleanMessage, friendsNormalizeRecords, friendsRhythmSummary, friendsRhythmAchievements, friendsCollectionSummary, friendsArrangeList, friendsNormalizeFavorites, sbUpsertFriendProfile, sbFetchFriendSummaries, sbCountIncomingFriendRequests, FRIEND_INVITE_TTL_MS, FRIENDS_MAX, FRIENDS_PENDING_MAX, friendsUnavailable };`;
 const loadApi = (fetchImpl) => {
   const box = { ...sandbox, fetch: fetchImpl };
   vm.createContext(box);
@@ -198,6 +198,10 @@ const statusOf = (a, b) => {
     check('いまの状態: 10分以上操作なしは「⚡ オート周回中」+「モンヒロビートを開いたまま 12分 操作なし」', a2.auto && a2.sub === 'モンヒロビートを開いたまま 12分 操作なし', JSON.stringify(a2));
     check('いまの状態: 演奏中は操作がなくても変えない・5分を過ぎた知らせは「◯分前」・9分は変えない', !a3.auto && /演奏中/.test(a3.text) && !a4.online && !a4.auto && !a5.auto, JSON.stringify([a3, a4, a5]));
     const sum = api.friendsBuildSummary({ place: 'rhythm', masuMons: [], playtime: {}, auto: true, show: false });
+    api.friendsSetRoomPrivate(true);
+    const rp = [api.friendsPlaceOfScreen('RHYTHM_MULTI'), api.friendsPlaceOfScreen('RHYTHM_PLAY')];
+    api.friendsSetRoomPrivate(false);
+    check('いまの状態: 合言葉の部屋は「🔑 プライベート中」、その中の演奏は「演奏中」(テンポと決めた)', rp[0] === 'roomPrivate' && rp[1] === 'rhythmPlay' && api.friendsPresenceText('roomPrivate', tN - 60000, tN).text === '🔑 プライベート中' && api.friendsPlaceOfScreen('RHYTHM_MULTI') === 'multi', JSON.stringify(rp));
     check('いまの状態: 「いまの状態をフレンドに見せる」が切なら、場所は other・周回の印も送らない', sum.place === 'other' && sum.au === 0 && sum.im === 0, JSON.stringify(sum).slice(0, 120)); }
   const t0 = 1700000000000;
   check('5分以内なら「いまの場所」、それより前なら「◯分前」', api.friendsPresenceText('rhythm', t0 - 60 * 1000, t0).online === true

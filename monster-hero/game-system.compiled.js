@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3b10c0eedfe77f2d
+// source-sha256: 74627271e01b2c2f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -56529,7 +56529,8 @@ const FRIEND_PLACE_TEXT = Object.freeze({
   cardBattle: 'MFバトルカードで対戦中',
   room: '部屋で待ち中',
   rhythmPlay: '🎵 モンヒロビートで演奏中',
-  life: '🏡 助手ライフ'
+  life: '🏡 助手ライフ',
+  roomPrivate: '🔑 プライベート中'
 });
 const FRIEND_AUTO_TEXT = '⚡ オート周回中';
 const FRIEND_IDLE_AUTO_MIN = 10;
@@ -56538,6 +56539,7 @@ const FRIEND_IDLE_OPEN_TEXT = Object.freeze({
   rhythm: 'モンヒロビート',
   multi: 'モンヒロビート',
   room: '部屋',
+  roomPrivate: '合言葉の部屋',
   card: 'MFバトルカード',
   masu: 'マスモンの画面',
   market: 'マーケット',
@@ -56556,10 +56558,14 @@ if (typeof window !== 'undefined' && window.addEventListener) {
 }
 const friendsIdleMinutes = (now = Date.now()) => Math.max(0, Math.floor((now - _friendsLastInputAt) / 60000));
 const FRIEND_PRESENCE_SHOW_KEY = 'mh_friend_presence_show_v1';
-const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle', 'room', 'rhythmPlay', 'life']);
+const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle', 'room', 'rhythmPlay', 'life', 'roomPrivate']);
 let _friendsRoomWaiting = false;
 const friendsSetRoomWaiting = on => {
   _friendsRoomWaiting = !!on;
+};
+let _friendsRoomPrivate = false;
+const friendsSetRoomPrivate = on => {
+  _friendsRoomPrivate = !!on;
 };
 const friendsPlaceFromRow = (place, records) => {
   if (place === 'other' && records && FRIEND_SUB_PLACES.includes(records.pl)) return records.pl;
@@ -56568,8 +56574,9 @@ const friendsPlaceFromRow = (place, records) => {
 const FRIEND_HEARTBEAT_MS = 2 * 60 * 1000;
 const FRIEND_PUBLISH_MIN_MS = 15 * 1000;
 const friendsPlaceOfScreen = gameState => {
-  if (_friendsRoomWaiting) return 'room';
   const name = typeof gameState === 'string' ? gameState : '';
+  if (_friendsRoomPrivate && name !== 'RHYTHM_PLAY') return 'roomPrivate';
+  if (_friendsRoomWaiting) return 'room';
   if (name === 'HOME' && typeof document !== 'undefined' && document.querySelector && document.querySelector('[data-assistant-life-screen]')) return 'life';
   if (name === 'HOME') return 'home';
   if (name === 'CARD_BATTLE') return 'cardBattle';

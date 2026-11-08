@@ -534,12 +534,14 @@ const FRIEND_PLACE_TEXT = Object.freeze({
   room: '部屋で待ち中',
   // 2026-11-08 社長「モンビーとかバトルカードとかオート周回中も分かるようにしたい」(FRIEND-PRESENCE-PLAN.md・オトズレ3)
   rhythmPlay: '🎵 モンヒロビートで演奏中', life: '🏡 助手ライフ',
+  // モンヒロビートの合言葉(プライベート)の部屋にいる(2026-11-08 社長・ビート部テンポが friendsSetRoomPrivate を呼ぶ)
+  roomPrivate: '🔑 プライベート中',
 });
 // オート周回中・長く操作なし(10分)のときの文。place は今いる画面のまま、records.au(周回中)・records.im(操作なしの分)で足す(バトル部ジンとすり合わせ)
 const FRIEND_AUTO_TEXT = '⚡ オート周回中';
 const FRIEND_IDLE_AUTO_MIN = 10;
 // 長く操作がないときに「◯◯を開いたまま」と書く場所。演奏中・対戦中は変えない
-const FRIEND_IDLE_OPEN_TEXT = Object.freeze({ home: 'ホーム', rhythm: 'モンヒロビート', multi: 'モンヒロビート', room: '部屋', card: 'MFバトルカード', masu: 'マスモンの画面', market: 'マーケット', life: '助手ライフ', battle: 'バトル', other: 'ゲーム' });
+const FRIEND_IDLE_OPEN_TEXT = Object.freeze({ home: 'ホーム', rhythm: 'モンヒロビート', multi: 'モンヒロビート', room: '部屋', roomPrivate: '合言葉の部屋', card: 'MFバトルカード', masu: 'マスモンの画面', market: 'マーケット', life: '助手ライフ', battle: 'バトル', other: 'ゲーム' });
 // 最後に画面へ触れた時刻(端末の中だけ。送るのは「何分たったか」の数だけ)
 let _friendsLastInputAt = Date.now();
 if (typeof window !== 'undefined' && window.addEventListener) {
@@ -549,10 +551,13 @@ const friendsIdleMinutes = (now = Date.now()) => Math.max(0, Math.floor((now - _
 // 「いまの状態をフレンドに見せる」(2026-11-08 社長・既定は入)。切なら place は 'other'(ログイン中)だけを送る
 const FRIEND_PRESENCE_SHOW_KEY = 'mh_friend_presence_show_v1';
 // 表(friend_profiles.place)の決まり(check)に無い場所。表へは 'other' で送り、records.pl に本当の場所を載せる
-const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle', 'room', 'rhythmPlay', 'life']);
+const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle', 'room', 'rhythmPlay', 'life', 'roomPrivate']);
 // マルチの部屋で相手を待っているあいだ真(モンヒロビート・MFバトルカードの部屋が立てる)。次にフレンドへ知らせるとき、場所を「部屋で待ち中」にする
 let _friendsRoomWaiting = false;
 const friendsSetRoomWaiting = (on) => { _friendsRoomWaiting = !!on; };
+// 合言葉(プライベート)の部屋にいるあいだ真(ビート部が部屋の出入りで呼ぶ)。演奏中(RHYTHM_PLAY)は「演奏中」を先にする(テンポと決めた)
+let _friendsRoomPrivate = false;
+const friendsSetRoomPrivate = (on) => { _friendsRoomPrivate = !!on; };
 // 受け取った行の場所。place が 'other' で records.pl があれば、そちら
 const friendsPlaceFromRow = (place, records) => {
   if (place === 'other' && records && FRIEND_SUB_PLACES.includes(records.pl)) return records.pl;
@@ -562,8 +567,9 @@ const FRIEND_HEARTBEAT_MS = 2 * 60 * 1000;   // 開いているあいだ、こ�
 const FRIEND_PUBLISH_MIN_MS = 15 * 1000;     // 場所や中身が変わっても、これより短い間隔では送らない
 // 画面(gameState)から、見せる場所の大分類へ。細かい画面名や曲名は見せない
 const friendsPlaceOfScreen = (gameState) => {
-  if (_friendsRoomWaiting) return 'room';
   const name = typeof gameState === 'string' ? gameState : '';
+  if (_friendsRoomPrivate && name !== 'RHYTHM_PLAY') return 'roomPrivate';
+  if (_friendsRoomWaiting) return 'room';
   // 助手ライフは HOME の上に開く器(56-assistant-life の data-assistant-life-screen)
   if (name === 'HOME' && typeof document !== 'undefined' && document.querySelector && document.querySelector('[data-assistant-life-screen]')) return 'life';
   if (name === 'HOME') return 'home';
