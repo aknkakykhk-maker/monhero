@@ -339,6 +339,12 @@ const unit = async (core) => {
     check('㉗ 全員の上限・専用の上限(ASSISTANT_FRIEND_DAILY_LIMIT)・0 で止める・数えられないときは Claude を呼ばずに tired', [r3, r4, r5, r6].every(x => x.json.kind === 'tired') && client.calls.length === before);
     const r7 = await core.handleRequest({ body: { kind: 'friend_scenes', breederId: 'b1', pairs: [{ kind: 'go', a: 'x', b: 'y' }] }, digest: DIGEST, client, take, refund });
     check('㉗ 組が無い頼みは 400', r7.status === 400);
+    const tone = core.friendLineTone;
+    check('㉗ 口調の見張り: みゅあの じゃん/まじ→ぢゃん/まぢ・あつの文末・ドラの関西弁・ききのタメ口・ほかの助手の ぢゃん', tone('mua', 'それ椅子じゃん、まじで') === 'それ椅子ぢゃん、まぢで' && tone('atsu', 'いらっしゃい') === null && tone('atsu', 'いらっしゃい笑') === 'いらっしゃい笑' && tone('dra', 'ほんまによう来たな') === null && tone('kiki', 'うれしいだよ') === null && tone('sorashido', 'いいぢゃん') === null);
+    { const bad = fakeClient(() => okResponse({ scenes: [{ kind: 'go', a: 'mua', b: 'dra', lines: [{ side: 'a', e: 'happy', t: '来たよ♪' }, { side: 'b', e: 'happy', t: 'おでの膝、いまならあいてるぞ' }] }] }));
+      const r8 = await core.handleRequest({ body: { kind: 'friend_scenes', breederId: 'b1', pairs }, digest: DIGEST, client: bad, take, refund, friendUsed: async () => 0 });
+      check('㉗ 体に触れる話(膝など)の場面は捨てる', r8.json.ok === false); }
+    check('㉗ 決まりの文に、助手ごとの必ず守ること・体に触れない・見本が入っている', /必ず守ること/.test(core.FRIEND_RULES_TEXT) && /ぢゃん/.test(core.FRIEND_RULES_TEXT) && /体に触れる話をしない/.test(core.FRIEND_RULES_TEXT) && /見本/.test(core.FRIEND_RULES_TEXT));
   }
   // ⑰ ふだんの吹き出しを1日1回まとめて作る(kind:'daily_lines'・2026-10-14)
   {
