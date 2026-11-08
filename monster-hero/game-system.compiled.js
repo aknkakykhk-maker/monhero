@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d0b3eca23280fe93
+// source-sha256: 8a8c4a32ba75bdb4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -63980,7 +63980,7 @@ const missionDailyLineFacts = (now = Date.now()) => {
     reward
   };
 };
-const missionDailyLineValid = t => typeof t === 'string' && t.length > 0 && t.length <= 80 && t.split('{task}').length === 2 && t.split('{reward}').length === 2 && !/[0-9０-９]/.test(t) && !/[\r\n]/.test(t) && !/https?:|www\./i.test(t) && !/[<>]/.test(t);
+const missionDailyLineValid = t => typeof t === 'string' && t.length > 0 && t.length <= 90 && t.split('{task}').length === 2 && t.split('{reward}').length === 2 && !/[0-9０-９]/.test(t) && !/[\r\n]/.test(t) && !/https?:|www\./i.test(t) && !/[<>]/.test(t);
 const missionDailyLineFill = (template, facts) => String(template).split('{day}').join(facts.day).split('{task}').join(facts.task).split('{reward}').join(facts.reward);
 const missionDailyLineFor = (who, aiLines, facts = missionDailyLineFacts()) => {
   const id = MISSION_DAILY_LINE_IDS.includes(who) ? who : 'mua';

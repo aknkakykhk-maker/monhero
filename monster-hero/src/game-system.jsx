@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a41d07dfea6177e2
+// generated-sha256: c332ce338757fac5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -39544,8 +39544,8 @@ const missionDailyLineFacts = (now = Date.now()) => {
   const reward = m ? m.rewards.map(missionLineRewardText).filter(Boolean).join('と') : '';
   return { weekday: wd, day: MISSION_WEEKDAY_NAMES[wd] || '', task: MISSION_DAILY_LINE_TASKS[wd] || '', reward };
 };
-// AI の文として使ってよいか。{task}・{reward} が1つずつ・数字なし・短い・1行・リンクなし
-const missionDailyLineValid = (t) => typeof t === 'string' && t.length > 0 && t.length <= 80
+// AI の文として使ってよいか。{task}・{reward} が1つずつ・数字なし・90字まで・1行・リンクなし
+const missionDailyLineValid = (t) => typeof t === 'string' && t.length > 0 && t.length <= 90
   && t.split('{task}').length === 2 && t.split('{reward}').length === 2
   && !/[0-9０-９]/.test(t) && !/[\r\n]/.test(t) && !/https?:|www\./i.test(t) && !/[<>]/.test(t);
 const missionDailyLineFill = (template, facts) => String(template).split('{day}').join(facts.day).split('{task}').join(facts.task).split('{reward}').join(facts.reward);

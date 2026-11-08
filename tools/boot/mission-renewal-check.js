@@ -174,7 +174,7 @@ check('AI の文は、数字が入っていたら使わない(決まった台詞
   return !r.ai && r.text === fb('mua');
 })());
 check('AI の文は、{reward} が無い・2つある・長すぎる・リンクがあると使わない', !m.missionDailyLineValid('{task}だよ') && !m.missionDailyLineValid('{task}と{reward}{reward}')
-  && !m.missionDailyLineValid(`{task}と{reward}${'あ'.repeat(80)}`) && !m.missionDailyLineValid('{task}と{reward} https://x'));
+  && !m.missionDailyLineValid(`{task}と{reward}${'あ'.repeat(90)}`) && !m.missionDailyLineValid('{task}と{reward} https://x'));
 check('使える AI の文は、その助手の行に穴埋めして出す', (() => { const r = m.missionDailyLineFor('atsu', { atsu: 'てか{task}で{reward}な笑' }, facts); return r.ai && r.text === 'てかモンヒロビートを1曲クリアするでビートP150な笑'; })());
 check('知らない助手は、みゅあの台詞にする', m.missionDailyLineFor('nobody', {}, facts).who === 'mua');
 check('呼ぶのは1人1日1回(届いていれば同じ日は呼ばない)・届かなければ10分あけて3回まで', (() => {
@@ -209,8 +209,41 @@ check('ミッション画面のデイリーで、選んでいる助手が話す'
   const r4 = await run({ state: 'claimed', day: '2026-11-09' }, 'ごめんなさい');
   check('中継役: 返事が使えなければ failed として置き、ok:false を返す', r4.json.ok === false && put && put.ok === false);
   check('中継役: Claude に報酬の数を渡さない・数字を書かせない', (() => { const p = c.buildPrompt('2026-11-09'); return !/[0-9０-９]/.test(p.user) && /数字(.*)書かない/.test(p.system); })());
-  check('中継役: ゲームと同じ見張り(数字・{task}{reward}・長さ)', !c.lineValid('{task}{reward}1') && c.lineValid('{task}と{reward}だよ') && !c.lineValid('この子と{task}{reward}'));
+  check('中継役: ゲームと同じ見張り(数字・{task}{reward}・長さ)', !c.lineValid('{task}{reward}1') && c.lineValid('{task}と{reward}だよ') && !c.lineValid('この子と{task}{reward}') && c.LINE_MAX === 90);
   check('中継役: モデルは claude-haiku-5-5', c.MODEL === 'claude-haiku-5-5');
+  // 崩れた返事(2026-11-08 本番の1回目で「返事は来たが使える行が0本」だった)。どれも0本にならず、数字の文は捨てる
+  const L8 = (f) => Object.fromEntries(c.IDS.map((id, i) => [id, f(id, i)]));
+  const base = (id) => `${id === 'atsu' ? 'とりあえず' : ''}今日は月曜日！{task}と{reward}がもらえるよ`;
+  const shapes = {
+    '前後に説明と```json の囲み': `はい、作りました！\n\`\`\`json\n${JSON.stringify(L8(base), null, 2)}\n\`\`\`\nどうでしょう？`,
+    '配列で返る': JSON.stringify(c.IDS.map((id) => ({ id, line: base(id) }))),
+    'キーが日本語の名前': JSON.stringify({ 'みゅあ': base('mua'), 'きき': base('kiki'), 'ももすけ': base('momosuke'), 'ドラ': base('dra'), 'あつ': base('atsu'), 'きゅうこ': base('kyuko'), 'ソラシド': base('sorashido'), 'えるびん': base('erubin') }),
+    '中に包まれている': JSON.stringify({ lines: L8(base) }),
+    '途中で切れた JSON': JSON.stringify(L8(base)).slice(0, 260),
+    '{task}・{reward} を書かない': JSON.stringify(L8(() => '今日もいっしょにがんばろ！')),
+    '{task}・{reward} を2回書く': JSON.stringify(L8(() => '{task}と{reward}！ {task}で{reward}だよ')),
+    '全角のかっこ・【】で書く': JSON.stringify(L8(() => '今日は｛task｝で【reward】がもらえるよ')),
+    '曜日や日付を数字で書く(一部)': JSON.stringify(L8((id, i) => (i % 2 ? '11月9日は{task}で{reward}！' : base(id)))),
+    '長すぎる(一部)': JSON.stringify(L8((id, i) => (i < 3 ? `{task}と{reward}${'あ'.repeat(95)}` : base(id)))),
+    '見張りの語に当たる(一部)': JSON.stringify(L8((id, i) => (i === 0 ? 'この子と{task}で{reward}' : base(id)))),
+  };
+  for (const [name, text] of Object.entries(shapes)) {
+    const d = c.parseLinesDetail(text);
+    const n = Object.keys(d.lines).length;
+    check(`中継役: 崩れた返事でも0本にならない(${name})`, n >= 3 && Object.values(d.lines).every((t) => c.lineValid(t) && !/[0-9０-９]/.test(t)), JSON.stringify({ n, reasons: d.reasons }));
+  }
+  check('中継役: 穴の無い行は後ろに「({task}と{reward})」を足す・2回目の穴は消す', c.tidyLine('がんばろ！') === 'がんばろ！({task}と{reward})' && c.tidyLine('{task}と{reward}！{task}') === '{task}と{reward}！');
+  check('中継役: 数字の入った文は捨て、理由を数える(本文は出さない)', (() => { const d = c.parseLinesDetail(JSON.stringify(L8(() => '3回{task}で{reward}'))); return Object.keys(d.lines).length === 0 && d.reasons.number === 8; })());
+  check('中継役: 返事が文だけ(JSON なし)なら理由を no_reply / no_json で数える', c.parseLinesDetail('ごめんなさい').reasons.no_reply === 1 && c.parseLinesDetail('{ こわれた').reasons.no_json === 1);
+  {
+    const logs = [];
+    put = null;
+    const r = await c.handleRequest({ claim: async () => ({ state: 'claimed', day: '2026-11-09' }), put: async (d, l, ok) => { put = { d, l, ok }; },
+      client: fake('```json\n' + JSON.stringify(L8((id, i) => (i === 0 ? base(id) : '9時に{task}で{reward}'))) + '\n```'), log: (e) => logs.push(e) });
+    const made = logs.find((e) => e.event === 'made');
+    check('中継役: 1行でも使えれば ready にして、その行を返す', r.json.ok && Object.keys(r.json.lines).length === 1 && put && put.ok === true);
+    check('中継役: ログは使えた数と落ちた理由の数だけ(本文を出さない)', !!made && made.count === 1 && made.reasons.number === 7 && !JSON.stringify(logs).includes('{task}'));
+  }
   const sql = fs.readFileSync(path.join(ROOT, 'supabase', 'migrations', '202611080002_mission_daily_lines.sql'), 'utf8');
   check('SQL は足すだけ(drop・delete・truncate・alter column なし)・ゲームから読めない', !/\bdrop\b|\bdelete\b|\btruncate\b|alter\s+table\s+\S+\s+(?:drop|alter)\s/i.test(sql)
     && /enable row level security/.test(sql) && /revoke all on table public\.mission_daily_lines from anon, authenticated/.test(sql));
