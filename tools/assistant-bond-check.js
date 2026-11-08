@@ -174,10 +174,12 @@ const WANT_AMOUNTS = {
   peerGift: [30, 30], peerToken: [25, 25], peerPlay: [6, 24],
   // ③ 3人の掛け合い・ミニイベント・仲直り(2026-11-07 社長)
   peerTrio: [3, 6], peerEvent: [8, 16], peerMakeup: [8, 8],
+  // 助手ライフで2人に道具を贈る(2026-11-08 社長 GIFT-PLAN.md)。1回ぶんは道具と好みで呼ぶ側が決める(いちばん多くて 40×1.5=60・1日3回)。公開の印 assistantLife
+  lifeGift: [60, 180],
   // 助手ライフのフレンドの家との行き来(2026-11-08 社長。公開の印 assistantLifeFriend)
   friendGo: [10, 30], friendWelcome: [6, 12],
 };
-const PEER_KEYS = ['peerTalk', 'peerChoice', 'peerDaily', 'peerGift', 'peerToken', 'peerPlay', 'peerTrio', 'peerEvent', 'peerMakeup', 'friendGo', 'friendWelcome'];
+const PEER_KEYS = ['peerTalk', 'peerChoice', 'peerDaily', 'peerGift', 'peerToken', 'peerPlay', 'peerTrio', 'peerEvent', 'peerMakeup', 'lifeGift', 'friendGo', 'friendWelcome'];
 const wrongAmounts = Object.entries(WANT_AMOUNTS)
   .filter(([k, [amount, dailyMax]]) => !actions[k] || actions[k].amount !== amount || actions[k].dailyMax !== dailyMax)
   .map(([k, [amount, dailyMax]]) => `${k}: ${actions[k] ? `${actions[k].amount}/${actions[k].dailyMax}` : 'なし'} (期待 ${amount}/${dailyMax})`);
@@ -428,7 +430,7 @@ check('通常の加算で増えるのは選んでいる助手のぶんだけ',
     && has('setAssistantBonds(prev => ({ ...prev, [id]: result.state }));')
     && has('try { storeSet(assistantBondKeyFor(id), result.state, false); } catch {}'));
 check('指定した助手へ加算できる共通処理がある(既存処理はこれを使い回す)',
-  has('const addAssistantBondFor = useCallback((assistantId, actionKey) => {')
+  has('const addAssistantBondFor = useCallback((assistantId, actionKey, amount = null) => {')
     && has('const id = normalizeAssistantId(assistantId);'));
 // 選んでいない助手のLvが上がっても「Lvが上がった」とは言わせない(本人以外が言ってしまうため)
 check('Lvアップの通知は、いま選んでいる助手のときだけ出す',

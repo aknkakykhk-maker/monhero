@@ -2214,10 +2214,13 @@ function MonsterHeroGame() {
   // 助手どうしの差し入れ・友情のしるしを1個使う(2026-11-07)。今日まだ使っていないかを先に確かめ、持ち物を1個減らして保存できたときだけ
   //   2人の仲良し度を上げる(56-assistant-peer.jsx の assistantPeerUseItem)。返すのは2人のひとことの台本(使えなければ null)
   const useAssistantPeerItem = async (kind, pair) => {
-    const itemId = kind === 'gift' ? 'peer_gift' : kind === 'token' ? 'peer_token' : null;
+    // 助手ライフの道具は10種類(56-assistant-life-gifts.jsx・2026-11-08)。贈れるか(同じ道具は1日1回・合わせて3回)は先に確かめる
+    const giftDef = typeof assistantLifeGiftOf === 'function' ? assistantLifeGiftOf(kind) : null;
+    const itemId = giftDef ? giftDef.itemId : kind === 'gift' ? 'peer_gift' : kind === 'token' ? 'peer_token' : null;
     if (!itemId || typeof assistantPeerUseItem !== 'function' || RELEASE_FLAGS.assistantPeer !== true) return null;
     await ASSISTANT_PEER_STORE.load();
-    if (assistantPeerItemUsedToday(ASSISTANT_PEER_STORE.state, kind)) return null;
+    if (typeof assistantLifeGiftReason === 'function') { await ASSISTANT_LIFE_GIFT_STORE.load(); if (assistantLifeGiftReason(kind, ASSISTANT_PEER_STORE.state, 1)) return null; }
+    else if (assistantPeerItemUsedToday(ASSISTANT_PEER_STORE.state, kind)) return null;
     const have = ownedItemCount(ownedItemsRef.current, itemId);
     if (have <= 0) return null;
     const nextItems = { ...ownedItemsRef.current, [itemId]: have - 1 };
@@ -8473,7 +8476,8 @@ function MonsterHeroGame() {
   // 続けて呼ばれても取りこぼさないよう、いまの値は ref から読む。
   // 触るのは渡された助手のぶんだけで、もう片方の助手の値には一切触れない。
   // 助手のアシストカードのように「いま選んでいる助手とは別の本人へ入れたい」場面から使う
-  const addAssistantBondFor = useCallback((assistantId, actionKey) => {
+  // amount … 1回ぶんを呼ぶ側が決める行動(助手ライフの道具は好みで量が変わる・lifeGift)。その行動の1回の上限は超えない
+  const addAssistantBondFor = useCallback((assistantId, actionKey, amount = null) => {
     const id = normalizeAssistantId(assistantId);
     // ★まだ解放していない助手(加入のお話を見ていない あつ・ドラ)の仲良し度は増やさない(2026-10-23 社長「あつが加入してないのにあつの親密度が上がる」)。
     //   カード「あつの挑発」は加入より前から持てるので、カード本人へ入れる道(assistantCardUse)から貯まっていた。
@@ -8481,12 +8485,13 @@ function MonsterHeroGame() {
     if (typeof assistantUnlockedBy === 'function' && !assistantUnlockedBy(id, rhythmEventStorySeenRef.current)) return;
     const current = normalizeAssistantBond(assistantBondsRef.current[id]);
     const before = assistantBondLevelOf(current.points);
-    const result = gainAssistantBond(current, actionKey);
+    const result = gainAssistantBond(current, actionKey, Date.now(), amount);
     if (!result.changed) return;
     assistantBondsRef.current = { ...assistantBondsRef.current, [id]: result.state };
     setAssistantBonds(prev => ({ ...prev, [id]: result.state }));
     // 上がった瞬間の演出(見た目だけ。値と保存はこの前後のまま)
-    if (typeof growthFxAssistantBond === 'function') growthFxAssistantBond(id, current.points, result.state.points);
+    // 道具を贈ったぶん(lifeGift)は、道具の演出の中に2人それぞれの量を出すので、小さな札は重ねない(2026-11-08 窓口「通知が下の文字を隠す」)
+    if (actionKey !== 'lifeGift' && typeof growthFxAssistantBond === 'function') growthFxAssistantBond(id, current.points, result.state.points);
     // Lvが上がったら、次にHOMEを開いたときに助手がそのことに触れる。
     // ただし、いま選んでいる助手のときだけ(選んでいない助手のLvアップを本人以外に言わせない)
     const after = assistantBondLevelOf(result.state.points);
@@ -8494,6 +8499,8 @@ function MonsterHeroGame() {
     // Lvが上がったぶんの飾り枠を配る。選んでいない助手のLvが上がったときも、その助手の枠がもらえる
     // (アシストカードで本人の仲良し度が増える経路があるため)
     if (after > before) grantProfileFrames(id, after);
+    // 段が上がったら、助手ライフでその助手が好きな道具を1つ教えてくれる(2026-11-08 社長 ❻・56-assistant-life-gifts.jsx)
+    if (after > before && typeof assistantLifeGiftOnBondLevel === 'function') void assistantLifeGiftOnBondLevel(id, after);
     try { storeSet(assistantBondKeyFor(id), result.state, false); } catch {}
     // Lvが上がったら、そのLvのごほうびをギフトで届ける
     if (after > before) void deliverAssistantBondRewards();
@@ -19172,10 +19179,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {/* 助手たちの今(2026-11-07・公開の印 assistantLife)。帯は HOME だけ(演奏中・マルチ中・お話の最中は出さない)。画面は帯とプロフィールから開く */}
             {/* 2026-11-07 社長: 帯はやめて、HOME の施設の横に顔だけ(56-assistant-life-house.jsx) */}
             {typeof AssistantLifeHomeFaces==='function'&&gameState==='HOME'&&!busy&&!peerReplay&&<AssistantLifeHomeFaces metIds={metIds}/>}
-            {/* はじめて差し入れ・友情のしるしを手に入れたときの案内(HOME で1回だけ・公開の印 assistantLife) */}
-            {typeof AssistantLifeItemIntro==='function'&&gameState==='HOME'&&!busy&&!peerReplay&&<AssistantLifeItemIntro peerItems={{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}}/>}
+            {/* はじめて2人に贈る道具を手に入れたときの案内(HOME で1回だけ・公開の印 assistantLife) */}
+            {typeof AssistantLifeItemIntro==='function'&&gameState==='HOME'&&!busy&&!peerReplay&&<AssistantLifeItemIntro peerItems={typeof assistantLifeGiftCounts==='function'?assistantLifeGiftCounts(ownedItems):{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}}/>}
             {typeof AssistantLifeScreen==='function'&&<AssistantLifeScreen metIds={metIds} onReplay={(talk)=>setPeerReplay(talk)} bondLevelOf={(id)=>assistantBondLevel(normalizeAssistantBond(assistantBonds[id]).points)}
-              peerItems={{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}} onUseItem={useAssistantPeerItem}/>}
+              peerItems={typeof assistantLifeGiftCounts==='function'?assistantLifeGiftCounts(ownedItems):{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}} onUseItem={useAssistantPeerItem}/>}
           </>;
         })()}
 
@@ -21766,7 +21773,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                ももすけは最初の会話を見たか(momosukeIntroSeenFlag)、あつなどは加入のお話を見たか(assistantsUnlockedFrom) */
             unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag)}
             onReplayPeerTalk={(talk)=>setPeerReplay(talk)}
-            peerItems={{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}}
+            peerItems={typeof assistantLifeGiftCounts==='function'?assistantLifeGiftCounts(ownedItems):{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}}
             onUsePeerItem={useAssistantPeerItem}
             onOpenRhythmHistory={openRhythmHistory}
             friendsEnabled={RELEASE_FLAGS.friends===true}

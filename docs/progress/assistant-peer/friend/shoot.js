@@ -84,6 +84,42 @@ html.visit = (land) => `
   <div class="fv-say"><u style="color:#7c3aed">きき</u>おじゃましました。テストさんにも、楽しかったと伝えておきますね。</div>
   <div class="fv-note">相手の家の部屋・家具・助手の気分は、相手が最後に開いたときの控え。見るだけで、相手の家は変わらない。</div>
 </div>`;
+html.pvisit = (land) => `
+<div class="fv-banner" style="${land ? 'top:12px;left:300px' : 'top:118px'}">🚪 訪ねている ・ 📷 きのう 21:10 の控え</div>
+<div class="fv-sheet" style="${land ? 'left:auto;right:6px;top:auto;bottom:6px;width:430px' : ''}">
+  <div class="fv-h"><i>🏘</i><div><b>あおいさんの家を訪ねている</b><small>部屋を押すと、家にいる助手に声をかけられる ・ 今日あと2軒</small></div></div>
+  <div class="fv-cols"><span class="fv-btn gray" style="text-align:center">📒 家の写真</span><span class="fv-btn orange" style="text-align:center;background:linear-gradient(#fb923c,#ea580c)">✉️ 置き手紙を残して帰る</span></div>
+</div>`;
+html.ptalk = (land) => `
+<div class="fv-sheet" style="${land ? 'left:auto;right:6px;top:6px;width:430px' : ''}">
+  <div class="fv-h">${face('dra').replace('<img', '<img class="fv-av" style="padding:0"')}<div><b>あおいさんのドラ</b><small>カードの本を読んでいる ・ 顔なじみ 2回目</small></div></div>
+  <div class="fv-say"><u style="color:#ea580c">あおいさんのドラ</u>おっ、テストか！ あおいなら今いないぞ。オレの新しいデッキでも見ていくか？</div>
+  <div style="font-size:11px;font-weight:900;color:#f9a8d4;margin:6px 0 4px">返事を選ぶ</div>
+  <div class="fv-row" style="margin-bottom:4px"><div class="fv-mid"><b>見せて！</b></div></div>
+  <div class="fv-row" style="margin-bottom:4px"><div class="fv-mid"><b>あおいさんによろしくね</b></div></div>
+  <div class="fv-row" style="margin-bottom:4px"><div class="fv-mid"><b>うちのドラも元気だよ</b></div></div>
+  <div class="fv-note">返事は決まった文だけ。相手の助手の仲良し度は変わらない(相手のセーブには書かない)。</div>
+</div>`;
+html.pleave = (land) => `
+<div class="fv-sheet" style="${land ? 'left:auto;right:6px;top:6px;width:430px' : ''}">
+  <div class="fv-h"><i>✉️</i><div><b>置き手紙を残して帰る</b><small>あおいさんが次に開いたとき「テストさんが訪ねてくれた」と出る</small></div></div>
+  <div class="fv-chips">
+    <span class="fv-chip on" style="width:auto;padding:5px 9px">また来るね！</span><span class="fv-chip" style="width:auto;padding:5px 9px">お部屋すてき！</span>
+    <span class="fv-chip" style="width:auto;padding:5px 9px">ドラによろしく</span><span class="fv-chip" style="width:auto;padding:5px 9px">こんど一緒に遊ぼう</span>
+  </div>
+  <div style="margin-top:8px">
+    <div class="fv-gain"><span><em style="background:#38bdf833" class="fv-sky">📷 写真</em>「あおいさんの家で」(初めての家)</span><span class="fv-sky">1枚</span></div>
+    <div class="fv-gain"><span><em style="background:#fde04733" class="fv-yel">🎁 おみやげ</em>ビートP(助手の分と合わせて1日300Pまで)</span><span class="fv-yel">50P</span></div>
+  </div>
+  <span class="fv-big orange">「また来るね！」を残して帰る</span>
+</div>`;
+html.pletters = (land) => `
+<div class="fv-sheet" style="${land ? 'left:auto;right:6px;top:6px;width:430px' : ''}">
+  <div class="fv-h"><i>✉️</i><div><b>留守のあいだに来てくれた</b><small>相手の画面(あおいさん側)・ 今日 2件</small></div></div>
+  <div class="fv-row">${av('テ', '#f59e0b')}<div class="fv-mid"><b>テストさんが訪ねてくれた</b><small>21:40 ・「また来るね！」・ドラと話した</small></div><span class="fv-btn">お礼</span></div>
+  <div class="fv-row">${face('mua').replace('<img', '<img class="fv-av" style="padding:0"')}<div class="fv-mid"><b>テストさんのみゅあ・きき</b><small>19:10 ・ 自分で遊びに来た</small></div><span class="fv-btn gray">済み</span></div>
+  <div class="fv-note">お礼は決まった文から選ぶだけ。訪ねた人には、次に開いたとき「あおいさんからお礼が届いた」と出る。</div>
+</div>`;
 html.back = (land) => `
 <div class="fv-sheet" style="${land ? 'left:auto;right:6px;top:6px;width:430px' : ''}">
   <div class="fv-h"><i>🏡</i><div><b>おかえり！</b><small>みゅあ と きき が 自分で あおいさんの家へ行っていた</small></div></div>
@@ -201,10 +237,17 @@ async function main() {
     }, F);
     await page.evaluate(() => document.querySelectorAll('[data-fv-icon]').forEach(e => e.style.display = 'none'));
     await overlay(page, fill('<span class="fv-tag">④ 場面: フレンドの家(控え)で</span>' + html.visit(v.land), F)); await shot(page, `${v.id}-4-visit`);
+    // プレイヤーが自分で訪ねる(P1〜P3)
+    await page.evaluate(() => { const liv = document.querySelector('[data-assistant-life-living]'); if (liv) { liv.querySelectorAll('.fv-room,div[style*="flex-direction:column"],div[style*="flex-direction: column"]').forEach(e => e.style.display = 'none'); const bp = liv.querySelector('[data-assistant-life-board] p'); if (bp) bp.textContent = '🚪 テストさんが訪ねている'; } const r = document.querySelector('[data-assistant-life-room="dra"]'); if (r) r.style.outline = '3px solid #fde047'; });
+    await overlay(page, fill('<span class="fv-tag">P1 自分で訪ねる(控えの家)</span>' + html.pvisit(v.land), F)); await shot(page, `${v.id}-p1-visit`);
+    await overlay(page, fill(dim + '<span class="fv-tag">P2 相手の助手に声をかける</span>' + html.ptalk(v.land), F)); await shot(page, `${v.id}-p2-talk`);
+    await overlay(page, fill(dim + '<span class="fv-tag">P3 置き手紙を残して帰る</span>' + html.pleave(v.land), F)); await shot(page, `${v.id}-p3-leave`);
+    await page.evaluate(() => { const r = document.querySelector('[data-assistant-life-room="dra"]'); if (r) r.style.outline = ''; });
     await page.evaluate(() => { for (const [e, v, k] of window.__fvKeep || []) { if (k === 'html') e.innerHTML = v; else if (k === 'disp') e.style.display = v; else e.textContent = v; } document.querySelectorAll('.fv-room').forEach(e => e.remove()); document.querySelectorAll('[data-fv-icon]').forEach(e => e.style.display = ''); });
     await overlay(page, fill(dim + '<span class="fv-tag">⑥ 帰ってきた・おみやげ</span>' + html.back(v.land), F)); await shot(page, `${v.id}-6-back`);
     await overlay(page, fill(dim + '<span class="fv-tag">⑦ 置き手紙(来てくれた人)</span>' + html.letters(v.land), F)); await shot(page, `${v.id}-7-letters`);
     await overlay(page, fill(dim + '<span class="fv-tag">⑧ 守り(設定)</span>' + html.guard(v.land), F)); await shot(page, `${v.id}-8-guard`);
+    await overlay(page, fill(dim + '<span class="fv-tag">P4 訪ねられた側の置き手紙</span>' + html.pletters(v.land), F)); await shot(page, `${v.id}-p4-letters`);
     await page.close();
   }
   // 🔄横: モンヒロビートの中で回したときの知らせ(器の中に出す)
@@ -217,6 +260,8 @@ async function main() {
     console.log('rot frame', ok);
     await overlay(page, fill(`<span class="fv-tag">🔄横: モンヒロビートの中の知らせ</span><div class="fv-toast" style="top:46px">${face('momosuke')}ゆうとさんのももすけが遊びに来ています</div>`, F), { rotFrame: true });
     await shot(page, `${v.id}-beat-toast`);
+    await overlay(page, fill(`<span class="fv-tag">🔄横: 訪ねてくれた知らせ</span><div class="fv-toast" style="top:46px"><span class="fv-av" style="width:28px;height:28px;background:#f472b6;font-size:13px">あ</span>あおいさんが訪ねてくれました</div>`, F), { rotFrame: true });
+    await shot(page, `${v.id}-beat-toast2`);
     // 戻ると HOME は回さずに描く(家も回らない)
     await page.getByRole('button', { name: '戻る' }).first().click({ timeout: 5000 });
     await page.locator('.mh-home-player').waitFor({ timeout: 15000 }); await page.waitForTimeout(800);

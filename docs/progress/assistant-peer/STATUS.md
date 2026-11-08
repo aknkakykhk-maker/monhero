@@ -262,3 +262,14 @@
 - 案 `FRIEND-VISIT-PLAN.md`・止め絵 `friend/friend-tate.jpg`(縦8枚)・`friend/friend-yoko.jpg`(横8枚)・`friend/friend-rot.jpg`(🔄横の知らせ)。撮り直しは `friend/shoot.js`
 - 形: 相手がオフラインでも「家の控え」を訪ねる/行き来の記録は新しい表2つ(足すだけ・SQL は案のまま未実行)/新しいキー4つ/相手のセーブには書かない
 - 2026-11-08 社長の選び ❶A ❷B(助手が自分で行く) ❸A ❹A ❺A ❻A・「これで作る」。止め絵②③を作り直した。作るのは次の会話から: 引き継ぎ `FRIEND-VISIT-BUILD.md`
+
+### キズナの続き(2026-11-08 09:30ごろ・育つ助手を作り始める前)
+- 社長: 育つ助手は「直しながら作る」でOK。API は「使う」(grow_consult・grow_report)
+- 案の正本: `GROW-PLAN.md`(6 マスモン・好き苦手・デッキ/7 API と オトズレ2との取り決め)・データ `masmon-plan.json`・表 `ux/masmon-table.png`・見本 `ux/masmon-screen.png`
+  - 染めた絵はゲームの部品で作る: `python3 -m http.server 9291`(リポジトリの一番上)→ `node docs/progress/assistant-peer/ux/masmon-dye-shots.js` → `node docs/progress/assistant-peer/ux/masmon-mock.js`
+  - 検査: `tools/assistant/assistant-masmon-plan-check.js`(未実装のモンスター・染色の枠数・好き苦手の決まり)
+- 未確定: 好き・苦手のモンスター(4候補ずつ)と好きな色(4候補)を、窓口が社長に1人ずつ聞いている。決まるまで作る中では masmon-plan.json の今の値を仮に置き、決まったら差し替える
+- 見本の直し(作るときに本物で確かめる): 助手ライフは🔄横でも回らない(回るのはモンヒロビートの画面だけ)。デッキのタブも縦と同じ見た目。左の列のカードが枠の端にくっつかないように
+- すり合わせ中(返事待ち): ビート部マモリ(腕前の元にセッションLvを読む・結果のひとことの口)/カード部ソランド(CARD_AI_DECKS に型2〜3・assistantLifeCardStyle・デッキ名)/バトル部ジン(能力の伸び方の関数・DyedMonsterImage・神殿の応援の口 assistantLifeCheerOf)
+- API: オトズレ2の friend_scenes が先にデプロイ → そのあと main を取り込んで grow_consult・grow_report を足す(同じ日にデプロイしない)
+- 作る順(案): ①データとマスモンの画面(部屋の「🐾 マスモン」・一覧・編成・デッキ・好き苦手。縦・横・🔄横)②成長(育成場・練習スタジオ・カード部屋に行った回数で Lv)③相談(部屋の「？」・台本で先に作り、API はあと)④神殿の応援 ⑤API。どれも作る前に止め絵と更新履歴の文案を窓口へ
