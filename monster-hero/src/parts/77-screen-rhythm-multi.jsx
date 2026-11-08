@@ -1138,6 +1138,13 @@ const RHYTHM_MULTI = (() => {
         fs: result && result.fast, sl: result && result.slow,
       });
       me.playing = false;
+      // 途中でやめた曲は連続ボーナスに数えない(2026-11-08 社長「やり直しして途中で曲をやめても連続ボーナスが増えてる」)。
+      //   ライブの開始で足した1つを戻す。顔ぶれ(liveIds)はそのままなので、次の曲を最後まで演奏すれば、やめた曲の前から続く。
+      //   部屋の中の数だけで、保存はしていない(すでに増えた分の記録は書き換えない)
+      if (quit === true && round === s.startedRound && s.liveStreak > 0 && s.streakQuitRound !== round) {
+        s.liveStreak -= 1;
+        s.streakQuitRound = round;
+      }
       // 演奏中に溜めておいた知らせを、ここでまとめて処理する
       const queued = s.queue;
       s.queue = [];
