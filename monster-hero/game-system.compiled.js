@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5429f5edd11362a5
+// source-sha256: e897e22af8082da1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -122093,6 +122093,21 @@ const assistantLifeSoloLine = (who, g, like, rand = Math.random) => {
     t: String(pick.t).split('{item}').join(g.name)
   } : null;
 };
+const assistantLifeAddBondWithFx = (who, actionKey, amount) => {
+  if (typeof assistantPeerPlayerBondAdder === 'undefined' || !assistantPeerPlayerBondAdder) return;
+  const before = assistantLifeBondPointsOf(who);
+  try {
+    assistantPeerPlayerBondAdder(who, actionKey, amount);
+  } catch {
+    return;
+  }
+  const after = assistantLifeBondPointsOf(who);
+  if (Number.isFinite(before) && Number.isFinite(after) && after > before && typeof growthFxAssistantBond === 'function') {
+    try {
+      growthFxAssistantBond(who, before, after);
+    } catch {}
+  }
+};
 const assistantLifeSoloGive = async (who, kind, rand = Math.random) => {
   await ASSISTANT_LIFE_GIFT_STORE.load();
   const g = assistantLifeGiftOf(kind);
@@ -122139,11 +122154,7 @@ const assistantLifeSoloGive = async (who, kind, rand = Math.random) => {
   }
   const like = assistantLifeGiftLike(who, g.key);
   const amount = assistantLifeSoloAmount(who, g.key);
-  if (typeof assistantPeerPlayerBondAdder !== 'undefined' && assistantPeerPlayerBondAdder) {
-    try {
-      assistantPeerPlayerBondAdder(who, 'lifeGift', amount);
-    } catch {}
-  }
+  assistantLifeAddBondWithFx(who, 'lifeGift', amount);
   if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`${typeof assistantLifeName === 'function' ? assistantLifeName(who) : who}に${g.name}を贈った`, [who], {
     kind: 'give'
   });
@@ -123078,11 +123089,7 @@ const assistantLifeFurnGive = async (who, key) => {
     storeSet(ASSISTANT_LIFE_GIFT_LIKES_KEY, likes, false);
   } catch {}
   const amount = assistantLifeFurnAmount(who, key);
-  if (typeof assistantPeerPlayerBondAdder !== 'undefined' && assistantPeerPlayerBondAdder) {
-    try {
-      assistantPeerPlayerBondAdder(who, 'lifeFurn', amount);
-    } catch {}
-  }
+  assistantLifeAddBondWithFx(who, 'lifeFurn', amount);
   const f = assistantLifeFurnOf(key);
   if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`${typeof assistantLifeName === 'function' ? assistantLifeName(who) : who}の部屋に${f.name}を贈った`, [who], {
     kind: 'give'
