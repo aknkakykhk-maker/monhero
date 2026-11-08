@@ -457,6 +457,11 @@ const RHYTHM_EVENT_POINT_SHOP_OFFERS = Object.freeze([
   Object.freeze({ id:'peer_sleeve', name:'おそろいスリーブ', emoji:'🃏', kind:'item', itemId:'peer_sleeve', grantAmount:1, unit:'個', cost:400, releaseFlag:'assistantLife' }),
   Object.freeze({ id:'peer_cheki', name:'思い出チェキ', emoji:'📸', kind:'item', itemId:'peer_cheki', grantAmount:1, unit:'個', cost:450, releaseFlag:'assistantLife' }),
   Object.freeze({ id:'peer_flower', name:'ちいさな花束', emoji:'🌷', kind:'item', itemId:'peer_flower', grantAmount:1, unit:'個', cost:250, releaseFlag:'assistantLife' }),
+  // 助手1人に贈る道具(2026-11-08 社長 SOLO-GIFT-PLAN.md)。公開の印 assistantLifeSolo が立つまで並べない
+  Object.freeze({ id:'solo_letter', name:'手書きの手紙', emoji:'✉️', kind:'item', itemId:'solo_letter', grantAmount:1, unit:'個', cost:100, releaseFlag:'assistantLifeSolo' }),
+  Object.freeze({ id:'solo_candy', name:'ひとつぶキャンディ', emoji:'🍬', kind:'item', itemId:'solo_candy', grantAmount:1, unit:'個', cost:80, releaseFlag:'assistantLifeSolo' }),
+  Object.freeze({ id:'solo_keyholder', name:'キーホルダー', emoji:'🔑', kind:'item', itemId:'solo_keyholder', grantAmount:1, unit:'個', cost:250, releaseFlag:'assistantLifeSolo' }),
+  Object.freeze({ id:'solo_omamori', name:'小さなおまもり', emoji:'🧿', kind:'item', itemId:'solo_omamori', grantAmount:1, unit:'個', cost:300, releaseFlag:'assistantLifeSolo' }),
   // 助手ライフの家具(2026-11-08 社長「交換所に家具の段を足すだけ」)。交換所の「家具」タブに並ぶ。公開の印 assistantLifeFurniture が立つまで並べない
   Object.freeze({ id:'furn_sofa', name:'ふかふかソファ', emoji:'🛋️', kind:'item', itemId:'furn_sofa', grantAmount:1, unit:'個', cost:1200, releaseFlag:'assistantLifeFurniture' }),
   Object.freeze({ id:'furn_bear', name:'くまのぬいぐるみ', emoji:'🧸', kind:'item', itemId:'furn_bear', grantAmount:1, unit:'個', cost:600, releaseFlag:'assistantLifeFurniture' }),

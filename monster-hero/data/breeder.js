@@ -650,6 +650,10 @@ const BREEDER_MARKET_ITEMS = [
   { id:'peer_puzzle', name:"ふたりで解くパズル", type:'item', emoji:"🧩", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る絵のパズル。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
   { id:'peer_sleeve', name:"おそろいスリーブ", type:'item', emoji:"🃏", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る、カードを入れるおそろいのスリーブ。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
   { id:'peer_cheki', name:"思い出チェキ", type:'item', emoji:"📸", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る、その場で写真が出るカメラ。2人の思い出アルバムに1枚増える。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
+  { id:'solo_letter', name:"手書きの手紙", type:'item', emoji:"✉️", cost:0, shop:false, usage:'assistantPeer', desc:"助手1人に贈る手紙。「🏡 助手ライフ」の部屋で、その助手だけに贈る。" },
+  { id:'solo_candy', name:"ひとつぶキャンディ", type:'item', emoji:"🍬", cost:0, shop:false, usage:'assistantPeer', desc:"助手1人に贈るキャンディ。「🏡 助手ライフ」の部屋で、その助手だけに贈る。" },
+  { id:'solo_keyholder', name:"キーホルダー", type:'item', emoji:"🔑", cost:0, shop:false, usage:'assistantPeer', desc:"助手1人に贈るキーホルダー。「🏡 助手ライフ」の部屋で、その助手だけに贈る。" },
+  { id:'solo_omamori', name:"小さなおまもり", type:'item', emoji:"🧿", cost:0, shop:false, usage:'assistantPeer', desc:"助手1人に贈るおまもり。「🏡 助手ライフ」の部屋で、その助手だけに贈る。" },
   { id:'peer_flower', name:"ちいさな花束", type:'item', emoji:"🌷", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る小さな花束。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
   // 助手ライフで1人に贈る家具(2026-11-08 社長・段階B)。ビートP交換所の「家具」で手に入る。マーケットでは売らない。好み・置き場所は assistants.js の ASSISTANT_LIFE_FURNITURE
   { id:'furn_sofa', name:"ふかふかソファ", type:'item', emoji:"🛋️", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
