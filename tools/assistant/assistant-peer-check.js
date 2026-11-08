@@ -12,6 +12,8 @@
 //      Lv5 の特別なお話を HOME で先に流す・ほかの画面はその画面の台本を先に出す
 //   ⑥ API 版で作った掛け合い: 崩れたものは捨てる・HOME で台本より先に出す・見たもの/会っていない助手のものは出さない
 //   ⑦ 保存: 新しいキー(mh_assistant_peer_*)だけに書く。壊れた値でも空として読む
+//   ⑫ 自動で進める(2026-11-08 社長「勝手にコメントが進むのやめてほしい」): 既定は切・壊れた値も切・
+//      入れると mh_assistant_peer_auto_v1 に true。掛け合いの次の行へ進むタイマーは「入」のときだけ動く
 //   ⑪ ③ ミニイベント・3人の掛け合い・けんか→仲直り・Lv10 の2本目の特別なお話(台本の形・出る条件・増え方)
 const fs = require('fs');
 const path = require('path');
@@ -413,6 +415,21 @@ const pairKey = (a, b) => [a, b].sort().join('-');
   const off = await G('assistantPeerGain')('mua', 'dra', 'talk');
   check('⑦ 公開の印が偽なら上がらない', off.gained === 0);
 
+  {
+    const S = G('ASSISTANT_PEER_AUTO_STORE');
+    mem.mh_assistant_peer_auto_v1 = 'こわれた';
+    await S.load();
+    check('⑫ 自動で進める: 既定・壊れた値は切', S.get().on === false);
+    S.setOn(true);
+    check('⑫ 入れると mh_assistant_peer_auto_v1 に true', mem.mh_assistant_peer_auto_v1 === true && S.get().on === true);
+    S.setOn(false);
+    const src = fs.readFileSync(path.join(root, 'monster-hero', 'src', 'parts', '56-assistant-peer.jsx'), 'utf8');
+    const timers = src.split('\n').filter(l => /setTimeout\(\(\) => advance\(/.test(l));
+    const guard = /if \(!cur \|\| cur\.phase === 'choice' \|\| !auto\.on\) return undefined;\s*\n\s*const t = setTimeout\(\(\) => advance\(cur\)/.test(src);
+    check('⑫ 次の行へ進むタイマーは「入」のときだけ(ほかに advance を呼ぶタイマーが無い)', timers.length === 1 && guard, `タイマー ${timers.length}本`);
+    const set = fs.readFileSync(path.join(root, 'monster-hero', 'src', 'parts', '51-screen-settings.jsx'), 'utf8');
+    check('⑫ 設定画面に「助手どうしの会話を自動で進める」がある', set.includes('助手どうしの会話を自動で進める') && set.includes('ASSISTANT_PEER_AUTO_STORE.setOn'));
+  }
   console.log(failed ? `\n${failed}件 NG` : '\nすべてOK');
   process.exit(failed ? 1 : 0);
 })();

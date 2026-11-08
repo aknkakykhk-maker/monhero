@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: aded578008ac8195
+// source-sha256: 4643113f0ede0f0e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13743,6 +13743,7 @@ const RELEASE_FLAGS = {
   assistantErubin: true,
   cardBattle: true,
   cardAssistantTalk: true,
+  missionDailyLine: true,
   cardGrowStyle: true,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   tacticsHate: true,
@@ -14087,7 +14088,8 @@ const GIFT_REWARD_LABELS = {
   skipTicketJo: 'スキップチケット・序',
   skipTicketHa: 'スキップチケット・破',
   skipTicketKyu: 'スキップチケット・急',
-  beatPoint: 'ビートP'
+  beatPoint: 'ビートP',
+  cardPackTicket: 'カードパック券'
 };
 const LOGIN_BONUS_DEFAULT = {
   currentDay: 1,
@@ -14807,7 +14809,8 @@ const buildGiftClaim = (gift, balances, now = Date.now()) => {
       ...(balances?.ownedItems || {})
     },
     ownedProfileFrames: Array.isArray(balances?.ownedProfileFrames) ? [...balances.ownedProfileFrames] : [],
-    beatPoints: Math.max(0, Math.floor(Number(balances?.beatPoints)) || 0)
+    beatPoints: Math.max(0, Math.floor(Number(balances?.beatPoints)) || 0),
+    cardPackTickets: Math.max(0, Math.floor(Number(balances?.cardPackTickets)) || 0)
   };
   const itemIds = {
     dyeMock: 'dye_mock',
@@ -14831,7 +14834,7 @@ const buildGiftClaim = (gift, balances, now = Date.now()) => {
       if (!next.ownedProfileFrames.includes(frameId)) next.ownedProfileFrames.push(frameId);
       return;
     }
-    if (type === 'diamond') next.gold += amount;else if (type === 'breederPoint') next.breederPoints += amount;else if (type === 'breederXp') next.breederXp += amount;else if (type === 'beatPoint') next.beatPoints += amount;else {
+    if (type === 'diamond') next.gold += amount;else if (type === 'breederPoint') next.breederPoints += amount;else if (type === 'breederXp') next.breederXp += amount;else if (type === 'beatPoint') next.beatPoints += amount;else if (type === 'cardPackTicket') next.cardPackTickets += amount;else {
       const id = type === GIFT_ITEM_REWARD_TYPE ? itemId : itemIds[type];
       next.ownedItems[id] = (next.ownedItems[id] || 0) + amount;
     }
@@ -15034,11 +15037,18 @@ const missionWeeklyPeriod = (now = Date.now()) => {
 const missionMonthlyPeriod = (now = Date.now()) => new Date(Number(now) + 5 * 60 * 60 * 1000).toISOString().slice(0, 7);
 const MISSION_WEEK_ROTATION_EPOCH = '2026-08-24';
 const missionPeriodWeekday = (now = Date.now()) => new Date(`${missionDailyPeriod(now)}T00:00:00Z`).getUTCDay();
-const missionWeekRotationIndex = (now = Date.now()) => {
+const missionWeekRotationIndex = (now = Date.now(), n = MISSION_WEEKLY_ROTATION_COUNT) => {
   const periodMs = Date.parse(`${missionWeeklyPeriod(now)}T00:00:00Z`),
     epochMs = Date.parse(`${MISSION_WEEK_ROTATION_EPOCH}T00:00:00Z`);
   const index = Math.floor((periodMs - epochMs) / (7 * 24 * 60 * 60 * 1000));
-  return (index % 4 + 4) % 4;
+  return (index % n + n) % n;
+};
+const MISSION_MONTH_ROTATION_EPOCH = '2026-11';
+const missionMonthRotationIndex = (now = Date.now(), n = 12) => {
+  const [y, m] = missionMonthlyPeriod(now).split('-').map(Number),
+    [ey, em] = MISSION_MONTH_ROTATION_EPOCH.split('-').map(Number);
+  const index = (y - ey) * 12 + (m - em);
+  return (index % n + n) % n;
 };
 const MISSION_BATTLE_BOTH = '（クラシック・タクティクスどちらでも）';
 const missionItemReward = (itemId, amount) => ({
@@ -15046,52 +15056,82 @@ const missionItemReward = (itemId, amount) => ({
   itemId,
   amount
 });
+const MISSION_TAG_ANY = '⚔️🎵🃏',
+  MISSION_TAG_BATTLE = '⚔️',
+  MISSION_TAG_BEAT = '🎵 または ⚔️',
+  MISSION_TAG_CARD = '🃏 または ⚔️',
+  MISSION_TAG_ASSIST = '🏡',
+  MISSION_TAG_FRIEND = '🤝';
+const MISSION_DAILY_ASSIST_ITEMS = Object.freeze(['peer_tea', 'peer_onigiri', 'peer_tea', 'peer_flower', 'peer_cake', 'peer_gift', 'peer_onigiri']);
+const MISSION_WEEKLY_ASSIST_ITEMS = Object.freeze(['peer_cake', 'peer_puzzle', 'peer_earphone', 'peer_cheki', 'peer_sleeve']);
+const MISSION_MONTHLY_FURNITURE = Object.freeze(['furn_sofa', 'furn_bear', 'furn_plant', 'furn_record', 'furn_nyacushion', 'furn_starpic', 'furn_trophy', 'furn_bookshelf', 'furn_heartmirror', 'furn_lantern', 'furn_mirrorball', 'furn_windbell']);
 const DAILY_ROTATION_MISSIONS = Object.freeze({
   1: {
     id: 'daily_rotation',
     name: '本日のミッション',
-    condition: 'クイックモードを1回クリアする',
-    key: 'quickClears',
+    tag: MISSION_TAG_BEAT,
+    condition: 'モンヒロビートを1曲クリアする(またはバトルを1回クリア)',
+    key: 'beatClears',
+    alt: {
+      key: 'battleClears',
+      target: 1
+    },
     target: 1,
     rewards: [{
-      type: 'diamond',
-      amount: 300
+      type: 'beatPoint',
+      amount: 150
     }]
   },
   2: {
     id: 'daily_rotation',
     name: '本日のミッション',
-    condition: 'アイテムを1個使う',
-    key: 'itemUses',
+    tag: MISSION_TAG_CARD,
+    condition: 'MFバトルカードで1回勝つ(またはバトルを1回クリア)',
+    key: 'cardWins',
+    alt: {
+      key: 'battleClears',
+      target: 1
+    },
     target: 1,
     rewards: [{
-      type: 'trainingTicket',
-      amount: 3
+      type: 'cardPackTicket',
+      amount: 1
     }]
   },
   3: {
     id: 'daily_rotation',
     name: '本日のミッション',
-    condition: `プロモードを1回クリアする${MISSION_BATTLE_BOTH}`,
-    key: 'proClears',
+    tag: MISSION_TAG_BATTLE,
+    condition: 'クイックモードを1回クリアする',
+    key: 'quickClears',
     target: 1,
     rewards: [{
-      type: 'trainingTicketLarge',
-      amount: 1
+      type: 'diamond',
+      amount: 3000
     }]
   },
   4: {
     id: 'daily_rotation',
     name: '本日のミッション',
+    tag: MISSION_TAG_BATTLE,
+    condition: `プロモードを1回クリアする${MISSION_BATTLE_BOTH}`,
+    key: 'proClears',
+    target: 1,
+    rewards: [missionItemReward('hero_proof_shard', 2)]
+  },
+  5: {
+    id: 'daily_rotation',
+    name: '本日のミッション',
+    tag: MISSION_TAG_BATTLE,
     condition: `種族チャレンジを1回クリアする${MISSION_BATTLE_BOTH}`,
     key: 'speciesClears',
     target: 1,
     rewards: [{
       type: 'rainbowPsyche',
-      amount: 5
+      amount: 15
     }]
   },
-  5: {
+  6: {
     id: 'daily_rotation',
     name: '本日のミッション',
     condition: 'アイテムを1個使う',
@@ -15099,32 +15139,27 @@ const DAILY_ROTATION_MISSIONS = Object.freeze({
     target: 1,
     rewards: [{
       type: 'dyeMock',
-      amount: 1
+      amount: 2
     }]
-  },
-  6: {
-    id: 'daily_rotation',
-    name: '本日のミッション',
-    condition: `プロモードを1回クリアする${MISSION_BATTLE_BOTH}`,
-    key: 'proClears',
-    target: 1,
-    rewards: [missionItemReward('hero_proof_shard', 1)]
   },
   0: {
     id: 'daily_rotation',
     name: '本日のミッション',
-    condition: 'クイックモードを1回クリアする',
-    key: 'quickClears',
+    tag: MISSION_TAG_FRIEND,
+    condition: 'フレンドの家へ行く(または助手と1回ふれあう)',
+    key: 'friendVisits',
+    alt: {
+      key: 'assistantTouches',
+      target: 1
+    },
     target: 1,
-    rewards: [{
-      type: 'trainingTicketLarge',
-      amount: 1
-    }]
+    rewards: [missionItemReward('session_ticket', 1)]
   }
 });
 const WEEKLY_ROTATION_MISSIONS = Object.freeze([{
   id: 'weekly_rotation',
   name: '今週のミッション',
+  tag: MISSION_TAG_BATTLE,
   condition: `プロモードを3回クリアする${MISSION_BATTLE_BOTH}`,
   key: 'proClears',
   target: 3,
@@ -15132,6 +15167,7 @@ const WEEKLY_ROTATION_MISSIONS = Object.freeze([{
 }, {
   id: 'weekly_rotation',
   name: '今週のミッション',
+  tag: MISSION_TAG_BATTLE,
   condition: '極限チャレンジを1回クリアする（未解放ならクイックモードを10回クリア）',
   key: 'extremeOrQuick',
   target: 1,
@@ -15140,8 +15176,19 @@ const WEEKLY_ROTATION_MISSIONS = Object.freeze([{
     amount: 30
   }]
 }, {
+  id: 'weekly_market',
+  name: '今週のミッション',
+  condition: 'マーケットで3回買う',
+  key: 'marketTrades',
+  target: 3,
+  rewards: [{
+    type: 'dyeMock',
+    amount: 2
+  }]
+}, {
   id: 'weekly_rotation',
   name: '今週のミッション',
+  tag: MISSION_TAG_BATTLE,
   condition: `種族チャレンジを3回クリアする${MISSION_BATTLE_BOTH}`,
   key: 'speciesClears',
   target: 3,
@@ -15152,6 +15199,14 @@ const WEEKLY_ROTATION_MISSIONS = Object.freeze([{
 }, {
   id: 'weekly_rotation',
   name: '今週のミッション',
+  tag: MISSION_TAG_FRIEND,
+  condition: 'フレンドの家へ3回行く',
+  key: 'friendVisits',
+  target: 3,
+  rewards: [missionItemReward('peer_token', 1)]
+}, {
+  id: 'weekly_rotation',
+  name: '今週のミッション',
   condition: 'アイテムを10個使う',
   key: 'itemUses',
   target: 10,
@@ -15159,8 +15214,105 @@ const WEEKLY_ROTATION_MISSIONS = Object.freeze([{
     type: 'bondPointReset',
     amount: 1
   }]
+}, {
+  id: 'weekly_daily_claims',
+  name: '今週のミッション',
+  condition: 'アイテムを5個使う',
+  key: 'itemUses',
+  target: 5,
+  rewards: [{
+    type: 'uniqueSkillResetTicket',
+    amount: 1
+  }]
 }]);
-const missionDailyDefinitions = (now = Date.now()) => [{
+const MISSION_WEEKLY_ROTATION_COUNT = WEEKLY_ROTATION_MISSIONS.length;
+const MISSION_SWITCH_KEPT = Object.freeze({
+  weekly: Object.freeze([{
+    id: 'weekly_market',
+    name: 'マーケット常連',
+    condition: 'マーケットで3回買う',
+    key: 'marketTrades',
+    target: 3,
+    rewards: [{
+      type: 'dyeMock',
+      amount: 2
+    }]
+  }, {
+    id: 'weekly_daily_claims',
+    name: 'アイテム活用',
+    condition: 'アイテムを5個使う',
+    key: 'itemUses',
+    target: 5,
+    rewards: [{
+      type: 'uniqueSkillResetTicket',
+      amount: 1
+    }]
+  }]),
+  monthly: Object.freeze([{
+    id: 'monthly_market',
+    name: 'マーケット月間',
+    condition: 'マーケットで10回買い物する',
+    key: 'marketTrades',
+    target: 10,
+    rewards: [{
+      type: 'dyeMock',
+      amount: 5
+    }]
+  }, {
+    id: 'monthly_mode_runs',
+    name: 'モードプレイヤー',
+    condition: 'どのモードでも合わせて30回遊ぶ',
+    key: 'modeRuns',
+    target: 30,
+    rewards: [{
+      type: 'bondPointReset',
+      amount: 2
+    }]
+  }])
+});
+const MISSION_SWITCH_OLD_COMPLETE = Object.freeze({
+  daily: 4,
+  weekly: 6,
+  monthly: 8
+});
+const MISSION_RENEW_KEY = 'mh_mission_renew_v1';
+let missionRenewMark = null;
+const normalizeMissionRenewMark = v => v && typeof v === 'object' && !Array.isArray(v) && typeof v.daily === 'string' && typeof v.weekly === 'string' && typeof v.monthly === 'string' ? {
+  at: Number.isFinite(Number(v.at)) ? Number(v.at) : 0,
+  daily: v.daily,
+  weekly: v.weekly,
+  monthly: v.monthly
+} : null;
+const missionRenewMarkAt = (now = Date.now()) => ({
+  at: Number(now),
+  daily: missionDailyPeriod(now),
+  weekly: missionWeeklyPeriod(now),
+  monthly: missionMonthlyPeriod(now)
+});
+const setMissionRenewMark = v => {
+  missionRenewMark = normalizeMissionRenewMark(v);
+  return missionRenewMark;
+};
+const missionPeriodOf = (type, now = Date.now()) => type === 'daily' ? missionDailyPeriod(now) : type === 'weekly' ? missionWeeklyPeriod(now) : missionMonthlyPeriod(now);
+const missionInSwitch = (type, now = Date.now(), mark = missionRenewMark) => !!mark && mark[type] === missionPeriodOf(type, now);
+const missionWithComplete = (type, normal, complete, now) => {
+  const inSwitch = missionInSwitch(type, now);
+  const list = [...normal];
+  if (inSwitch) (MISSION_SWITCH_KEPT[type] || []).forEach(m => {
+    if (!list.some(x => x.id === m.id)) list.push({
+      ...m
+    });
+  });
+  const target = inSwitch ? Math.min(complete.target, MISSION_SWITCH_OLD_COMPLETE[type]) : complete.target;
+  const label = type === 'daily' ? 'デイリー' : type === 'weekly' ? 'ウィークリー' : 'マンスリー';
+  const when = type === 'daily' ? '日' : type === 'weekly' ? '週' : '月';
+  return [...list, {
+    ...complete,
+    target,
+    condition: `通常${label}${list.length}個のうち${target}個を達成する${inSwitch ? `(切り替えの${when}だけ)` : ''}`
+  }];
+};
+const missionDailyDefinitions = (now = Date.now()) => missionWithComplete('daily', [{
   id: 'daily_login',
   name: '今日もMonster Hero！',
   condition: 'その期間中にログインする',
@@ -15168,27 +15320,29 @@ const missionDailyDefinitions = (now = Date.now()) => [{
   target: 1,
   rewards: [{
     type: 'diamond',
-    amount: 200
+    amount: 2000
   }]
 }, {
   id: 'daily_battles',
-  name: 'バトルに挑戦',
-  condition: 'バトルを3回遊ぶ',
-  key: 'battles',
+  name: '好きな遊びを3回',
+  tag: MISSION_TAG_ANY,
+  condition: 'バトル・モンヒロビート1曲・カード1戦のどれでも',
+  key: 'anyPlays',
   target: 3,
   rewards: [{
-    type: 'trainingTicket',
-    amount: 3
+    type: 'beatPoint',
+    amount: 50
   }]
 }, {
   id: 'daily_wins',
   name: 'デイリーチャレンジ',
+  tag: MISSION_TAG_BATTLE,
   condition: `チャレンジモードを1回クリアする${MISSION_BATTLE_BOTH}`,
   key: 'challengeClears',
   target: 1,
   rewards: [{
     type: 'rainbowPsyche',
-    amount: 5
+    amount: 10
   }]
 }, {
   id: 'daily_enhance',
@@ -15198,30 +15352,36 @@ const missionDailyDefinitions = (now = Date.now()) => [{
   target: 1,
   rewards: [{
     type: 'diamond',
-    amount: 300
+    amount: 3000
   }]
 }, {
-  ...DAILY_ROTATION_MISSIONS[missionPeriodWeekday(now)]
+  id: 'daily_assistant',
+  name: '助手とふれあう',
+  tag: MISSION_TAG_ASSIST,
+  condition: '助手と1回ふれあう(助手ライフで誘う・会う・渡す/おしゃべり/フレンドの家 のどれか)',
+  key: 'assistantTouches',
+  target: 1,
+  rewards: [missionItemReward(MISSION_DAILY_ASSIST_ITEMS[missionPeriodWeekday(now)], 1)]
 }, {
+  ...DAILY_ROTATION_MISSIONS[missionPeriodWeekday(now)]
+}], {
   id: 'daily_complete',
   name: 'デイリーコンプリート',
-  condition: '通常デイリー5個のうち4個を達成する',
   key: 'complete',
-  target: 4,
+  target: 5,
   rewards: [{
     type: 'diamond',
-    amount: 500
+    amount: 5000
+  }, {
+    type: 'beatPoint',
+    amount: 100
   }, {
     type: 'skipTicketHa',
     amount: 1
-  }, {
-    type: 'gameItem',
-    itemId: 'session_ticket',
-    amount: 1
-  }],
+  }, missionItemReward('session_ticket', 1)],
   complete: true
-}];
-const missionWeeklyDefinitions = (now = Date.now()) => [{
+}, now);
+const missionWeeklyDefinitions = (now = Date.now()) => missionWithComplete('weekly', [{
   id: 'weekly_logins',
   name: '継続は力なり',
   condition: '5日ログインする(同じ日は1回)',
@@ -15229,17 +15389,21 @@ const missionWeeklyDefinitions = (now = Date.now()) => [{
   target: 5,
   rewards: [{
     type: 'diamond',
-    amount: 1000
+    amount: 10000
   }]
 }, {
   id: 'weekly_battles',
-  name: 'バトル週間',
-  condition: 'バトルを20回遊ぶ',
-  key: 'battles',
+  name: '好きな遊び週間',
+  tag: MISSION_TAG_ANY,
+  condition: '好きな遊びを20回(バトル・モンヒロビート1曲・カード1戦のどれでも)',
+  key: 'anyPlays',
   target: 20,
   rewards: [{
     type: 'diamond',
-    amount: 1000
+    amount: 10000
+  }, {
+    type: 'beatPoint',
+    amount: 500
   }]
 }, {
   id: 'weekly_enhance',
@@ -15249,73 +15413,88 @@ const missionWeeklyDefinitions = (now = Date.now()) => [{
   target: 10,
   rewards: [{
     type: 'trainingTicketLarge',
-    amount: 2
+    amount: 3
   }]
 }, {
   id: 'weekly_wins',
   name: 'クイック育成',
+  tag: MISSION_TAG_BATTLE,
   condition: 'クイックモードを5回クリアする',
   key: 'quickClears',
   target: 5,
   rewards: [{
     type: 'rainbowPsyche',
-    amount: 20
+    amount: 50
   }]
 }, {
   id: 'weekly_donations',
   name: 'チャレンジャー',
+  tag: MISSION_TAG_BATTLE,
   condition: `チャレンジモードを3回クリアする${MISSION_BATTLE_BOTH}`,
   key: 'challengeClears',
   target: 3,
+  rewards: [missionItemReward('hero_proof_shard', 3)]
+}, {
+  id: 'weekly_beat',
+  name: 'モンヒロビート週間',
+  tag: MISSION_TAG_BEAT,
+  condition: 'モンヒロビートを10曲遊ぶ(またはバトルを10回)',
+  key: 'beatPlays',
+  alt: {
+    key: 'battles',
+    target: 10
+  },
+  target: 10,
   rewards: [{
-    type: 'breederXp',
-    amount: 300
+    type: 'beatPoint',
+    amount: 500
   }]
 }, {
-  id: 'weekly_market',
-  name: 'マーケット常連',
-  condition: 'マーケットで3回買う',
-  key: 'marketTrades',
-  target: 3,
+  id: 'weekly_card',
+  name: 'カード週間',
+  tag: MISSION_TAG_CARD,
+  condition: 'MFバトルカードで5回勝つ(またはバトルで10回勝つ)',
+  key: 'cardWins',
+  alt: {
+    key: 'wins',
+    target: 10
+  },
+  target: 5,
   rewards: [{
-    type: 'dyeMock',
+    type: 'cardPackTicket',
     amount: 2
   }]
 }, {
-  id: 'weekly_daily_claims',
-  name: 'アイテム活用',
-  condition: 'アイテムを5個使う',
-  key: 'itemUses',
+  id: 'weekly_assistant',
+  name: 'ふれあい週間',
+  tag: MISSION_TAG_ASSIST,
+  condition: '助手と5日ふれあう(同じ日は1回)',
+  key: 'assistantDays',
   target: 5,
-  rewards: [{
-    type: 'uniqueSkillResetTicket',
-    amount: 1
-  }]
+  rewards: [missionItemReward(MISSION_WEEKLY_ASSIST_ITEMS[missionWeekRotationIndex(now, MISSION_WEEKLY_ASSIST_ITEMS.length)], 1)]
 }, {
   ...WEEKLY_ROTATION_MISSIONS[missionWeekRotationIndex(now)]
-}, {
+}], {
   id: 'weekly_complete',
   name: 'ウィークリーコンプリート',
-  condition: '通常ウィークリー8個のうち6個を達成する',
   key: 'complete',
-  target: 6,
+  target: 7,
   rewards: [{
     type: 'diamond',
-    amount: 3000
+    amount: 30000
   }, {
-    type: 'skipTicketKyu',
-    amount: 1
+    type: 'beatPoint',
+    amount: 1000
   }, {
     type: 'rainbowPsyche',
-    amount: 30
+    amount: 50
   }, missionItemReward('hero_proof_shard', 5), {
-    type: 'gameItem',
-    itemId: 'session_ticket',
-    amount: 3
-  }],
+    type: 'skipTicketKyu',
+    amount: 1
+  }, missionItemReward('session_ticket', 3)],
   complete: true
-}];
-const missionMonthlyDefinitions = () => [{
+}, now);
+const missionMonthlyDefinitions = (now = Date.now()) => missionWithComplete('monthly', [{
   id: 'monthly_logins',
   name: '月間ログイン',
   condition: '20日ログインする(同じ日は1回)',
@@ -15323,27 +15502,29 @@ const missionMonthlyDefinitions = () => [{
   target: 20,
   rewards: [{
     type: 'diamond',
-    amount: 5000
+    amount: 50000
   }]
 }, {
   id: 'monthly_battles',
-  name: '月間バトル',
-  condition: 'バトルを100回遊ぶ',
-  key: 'battles',
+  name: '月間プレイ',
+  tag: MISSION_TAG_ANY,
+  condition: '好きな遊びを100回(バトル・モンヒロビート1曲・カード1戦のどれでも)',
+  key: 'anyPlays',
   target: 100,
   rewards: [{
     type: 'rainbowPsyche',
-    amount: 50
+    amount: 100
   }]
 }, {
   id: 'monthly_wins',
   name: '月間勝利',
-  condition: 'バトルで200回勝つ',
-  key: 'wins',
+  tag: MISSION_TAG_ANY,
+  condition: '好きな遊びで200回勝つ(バトル・カードの勝ち・モンヒロビートのクリア)',
+  key: 'anyWins',
   target: 200,
   rewards: [{
     type: 'trainingTicketLarge',
-    amount: 5
+    amount: 10
   }]
 }, {
   id: 'monthly_daily_completes',
@@ -15353,7 +15534,7 @@ const missionMonthlyDefinitions = () => [{
   target: 20,
   rewards: [{
     type: 'diamond',
-    amount: 5000
+    amount: 50000
   }]
 }, {
   id: 'monthly_weekly_completes',
@@ -15363,11 +15544,12 @@ const missionMonthlyDefinitions = () => [{
   target: 3,
   rewards: [{
     type: 'rainbowPsyche',
-    amount: 100
+    amount: 200
   }]
 }, {
   id: 'monthly_quick_runs',
   name: 'クイック月間',
+  tag: MISSION_TAG_BATTLE,
   condition: 'クイックモードを20回遊ぶ',
   key: 'quickRuns',
   target: 20,
@@ -15378,16 +15560,18 @@ const missionMonthlyDefinitions = () => [{
 }, {
   id: 'monthly_challenge_runs',
   name: 'チャレンジ月間',
+  tag: MISSION_TAG_BATTLE,
   condition: `チャレンジモードを10回プレイする${MISSION_BATTLE_BOTH}`,
   key: 'challengeRuns',
   target: 10,
   rewards: [{
     type: 'rainbowPsyche',
-    amount: 50
+    amount: 100
   }]
 }, {
   id: 'monthly_pro_clears',
   name: 'プロ月間',
+  tag: MISSION_TAG_BATTLE,
   condition: `プロモードを10回クリアする${MISSION_BATTLE_BOTH}`,
   key: 'proClears',
   target: 10,
@@ -15403,47 +15587,63 @@ const missionMonthlyDefinitions = () => [{
     amount: 2
   }]
 }, {
-  id: 'monthly_market',
-  name: 'マーケット月間',
-  condition: 'マーケットで10回買い物する',
-  key: 'marketTrades',
-  target: 10,
+  id: 'monthly_beat',
+  name: 'モンヒロビート月間',
+  tag: MISSION_TAG_BEAT,
+  condition: 'モンヒロビートを50曲遊ぶ(またはバトルを50回)',
+  key: 'beatPlays',
+  alt: {
+    key: 'battles',
+    target: 50
+  },
+  target: 50,
   rewards: [{
-    type: 'dyeMock',
+    type: 'beatPoint',
+    amount: 2000
+  }]
+}, {
+  id: 'monthly_card',
+  name: 'カード月間',
+  tag: MISSION_TAG_CARD,
+  condition: 'MFバトルカードで20回勝つ(またはバトルで50回勝つ)',
+  key: 'cardWins',
+  alt: {
+    key: 'wins',
+    target: 50
+  },
+  target: 20,
+  rewards: [{
+    type: 'cardPackTicket',
     amount: 5
   }]
 }, {
-  id: 'monthly_mode_runs',
-  name: 'モードプレイヤー',
-  condition: 'どのモードでも合わせて30回遊ぶ',
-  key: 'modeRuns',
-  target: 30,
-  rewards: [{
-    type: 'bondPointReset',
-    amount: 2
-  }]
-}, {
+  id: 'monthly_assistant',
+  name: 'ふれあい月間',
+  tag: MISSION_TAG_ASSIST,
+  condition: '助手と20日ふれあう(同じ日は1回)',
+  key: 'assistantDays',
+  target: 20,
+  rewards: [missionItemReward('buddy_trait_seed', 1)]
+}], {
   id: 'monthly_complete',
   name: 'マンスリーコンプリート',
-  condition: '通常マンスリー11個のうち8個を達成する',
   key: 'complete',
-  target: 8,
+  target: 9,
   rewards: [{
     type: 'diamond',
-    amount: 10000
+    amount: 100000
+  }, {
+    type: 'beatPoint',
+    amount: 3000
   }, {
     type: 'rainbowPsyche',
-    amount: 200
+    amount: 300
   }, {
     type: 'rainbowTranscendFruit',
     amount: 1
-  }, missionItemReward('skip_ticket_kiwami', 1), {
-    type: 'gameItem',
-    itemId: 'session_ticket',
-    amount: 10
-  }],
+  }, missionItemReward('skip_ticket_kiwami', 1), missionItemReward('session_ticket', 10), missionItemReward(MISSION_MONTHLY_FURNITURE[missionMonthRotationIndex(now, MISSION_MONTHLY_FURNITURE.length)], 1)],
   complete: true
-}];
+}, now);
 const MISSION_DEFS = {
   get daily() {
     return missionDailyDefinitions();
@@ -15473,8 +15673,15 @@ const emptyMissionCounts = () => ({
   proClears: 0,
   extremeClears: 0,
   itemUses: 0,
-  speciesClears: 0
+  speciesClears: 0,
+  beatPlays: 0,
+  beatClears: 0,
+  cardPlays: 0,
+  cardWins: 0,
+  assistantTouches: 0,
+  friendVisits: 0
 });
+const missionDayList = (same, v) => same && Array.isArray(v) ? v.filter(d => typeof d === 'string') : [];
 const normalizeMissions = (value, now = Date.now()) => {
   const dailyPeriod = missionDailyPeriod(now),
     weeklyPeriod = missionWeeklyPeriod(now),
@@ -15483,60 +15690,104 @@ const normalizeMissions = (value, now = Date.now()) => {
   const dailySame = old.dailyPeriod === dailyPeriod,
     weeklySame = old.weeklyPeriod === weeklyPeriod,
     monthlySame = old.monthlyPeriod === monthlyPeriod;
+  const counts = (same, v) => {
+    const base = emptyMissionCounts();
+    if (!same || !v || typeof v !== 'object') return base;
+    const o = {
+      ...base,
+      ...v
+    };
+    Object.keys(base).forEach(k => {
+      const n = Number(o[k]);
+      o[k] = Number.isFinite(n) && n > 0 ? n : 0;
+    });
+    return o;
+  };
   const state = {
     version: 2,
     dailyPeriod,
     weeklyPeriod,
     monthlyPeriod,
-    daily: dailySame ? {
-      ...emptyMissionCounts(),
-      ...(old.daily || {})
-    } : emptyMissionCounts(),
-    weekly: weeklySame ? {
-      ...emptyMissionCounts(),
-      ...(old.weekly || {})
-    } : emptyMissionCounts(),
-    monthly: monthlySame ? {
-      ...emptyMissionCounts(),
-      ...(old.monthly || {})
-    } : emptyMissionCounts(),
+    daily: counts(dailySame, old.daily),
+    weekly: counts(weeklySame, old.weekly),
+    monthly: counts(monthlySame, old.monthly),
     sentDaily: dailySame && Array.isArray(old.sentDaily) ? old.sentDaily : [],
     sentWeekly: weeklySame && Array.isArray(old.sentWeekly) ? old.sentWeekly : [],
     sentMonthly: monthlySame && Array.isArray(old.sentMonthly) ? old.sentMonthly : [],
-    weeklyLoginDays: weeklySame && Array.isArray(old.weeklyLoginDays) ? old.weeklyLoginDays : [],
-    monthlyLoginDays: monthlySame && Array.isArray(old.monthlyLoginDays) ? old.monthlyLoginDays : [],
-    monthlyDailyCompletePeriods: monthlySame && Array.isArray(old.monthlyDailyCompletePeriods) ? old.monthlyDailyCompletePeriods : [],
-    monthlyWeeklyCompletePeriods: monthlySame && Array.isArray(old.monthlyWeeklyCompletePeriods) ? old.monthlyWeeklyCompletePeriods : []
+    weeklyLoginDays: missionDayList(weeklySame, old.weeklyLoginDays),
+    monthlyLoginDays: missionDayList(monthlySame, old.monthlyLoginDays),
+    monthlyDailyCompletePeriods: missionDayList(monthlySame, old.monthlyDailyCompletePeriods),
+    monthlyWeeklyCompletePeriods: missionDayList(monthlySame, old.monthlyWeeklyCompletePeriods),
+    weeklyAssistantDays: missionDayList(weeklySame, old.weeklyAssistantDays),
+    monthlyAssistantDays: missionDayList(monthlySame, old.monthlyAssistantDays)
   };
   if (!monthlySame) {
     const completed = type => {
-      const defs = MISSION_DEFS[type],
-        normal = defs.filter(m => !m.complete),
-        target = defs.find(m => m.complete)?.target || Infinity;
-      const sent = type === 'daily' ? state.sentDaily : state.sentWeekly;
-      return normal.filter(m => {
-        if (sent.includes(m.id)) return true;
-        if (m.key === 'loginDays') return state.weeklyLoginDays.length >= m.target;
-        if (type === 'weekly' && m.key === 'extremeOrQuick') return state.weekly.extremeClears >= 1 || state.weekly.quickClears >= 10;
-        return (Number(state[type]?.[m.key]) || 0) >= m.target;
-      }).length >= target;
+      const defs = missionDefsAt(type, now),
+        c = defs.find(m => m.complete);
+      return !!c && missionValue(state, type, c, defs) >= c.target;
     };
     if (dailySame && completed('daily')) state.monthlyDailyCompletePeriods = [dailyPeriod];
     if (weeklySame && completed('weekly')) state.monthlyWeeklyCompletePeriods = [weeklyPeriod];
   }
   return state;
 };
-const missionValue = (state, type, mission) => {
+const missionDefsAt = (type, now = Date.now()) => type === 'daily' ? missionDailyDefinitions(now) : type === 'weekly' ? missionWeeklyDefinitions(now) : missionMonthlyDefinitions(now);
+const missionCountOf = (state, type, key) => {
+  const c = state && state[type] || {};
+  const n = k => {
+    const v = Number(c[k]);
+    return Number.isFinite(v) && v > 0 ? v : 0;
+  };
+  if (key === 'loginDays') return ((type === 'monthly' ? state.monthlyLoginDays : state.weeklyLoginDays) || []).length;
+  if (key === 'assistantDays') return ((type === 'monthly' ? state.monthlyAssistantDays : state.weeklyAssistantDays) || []).length;
+  if (key === 'anyPlays') return n('battles') + n('beatPlays') + n('cardPlays');
+  if (key === 'anyWins') return n('wins') + n('cardWins') + n('beatClears');
+  if (key === 'battleClears') return n('challengeClears') + n('quickClears') + n('proClears') + n('speciesClears') + n('extremeClears');
+  return n(key);
+};
+const missionValue = (state, type, mission, defs = null) => {
   if (mission.complete) {
-    const normal = MISSION_DEFS[type].filter(m => !m.complete);
+    const normal = (defs || MISSION_DEFS[type]).filter(m => !m.complete);
     return normal.filter(m => missionValue(state, type, m) >= m.target).length;
   }
-  if (mission.key === 'loginDays') return type === 'monthly' ? state.monthlyLoginDays.length : state.weeklyLoginDays.length;
   const sent = type === 'daily' ? state.sentDaily : type === 'weekly' ? state.sentWeekly : state.sentMonthly;
   if (Array.isArray(sent) && sent.includes(mission.id)) return mission.target;
   if (type === 'weekly' && mission.key === 'extremeOrQuick') return (Number(state.weekly?.extremeClears) || 0) >= 1 || (Number(state.weekly?.quickClears) || 0) >= 10 ? 1 : 0;
-  return Number(state[type]?.[mission.key]) || 0;
+  const own = missionCountOf(state, type, mission.key);
+  if (mission.alt && Number(mission.alt.target) > 0) {
+    const alt = missionCountOf(state, type, mission.alt.key);
+    return Math.max(own, Math.floor(alt * mission.target / mission.alt.target));
+  }
+  return own;
 };
+const missionFurnitureSwap = (itemId, ownedItems, room) => {
+  if (typeof itemId !== 'string' || !itemId.startsWith('furn_')) return null;
+  const offer = (typeof RHYTHM_EVENT_POINT_SHOP_OFFERS !== 'undefined' ? RHYTHM_EVENT_POINT_SHOP_OFFERS : []).find(o => o && o.itemId === itemId);
+  const cost = offer && Number.isFinite(offer.cost) && offer.cost > 0 ? offer.cost : 0;
+  if (!cost) return null;
+  const owned = ownedItems && typeof ownedItems === 'object' ? Number(ownedItems[itemId]) : 0;
+  const ids = typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' && Array.isArray(ASSISTANT_LIFE_HOUSE_ORDER) ? ASSISTANT_LIFE_HOUSE_ORDER : [];
+  const key = itemId.slice(5);
+  const allGot = !!room && typeof room === 'object' && ids.length > 0 && ids.every(who => room[who] && room[who].got && room[who].got[key]);
+  return Number.isFinite(owned) && owned > 0 || allGot ? {
+    type: 'beatPoint',
+    amount: cost
+  } : null;
+};
+const missionRewardsFor = (rewards, {
+  ownedItems = null,
+  room = null
+} = {}) => (Array.isArray(rewards) ? rewards : []).map(r => {
+  const swap = r && r.type === 'gameItem' ? missionFurnitureSwap(r.itemId, ownedItems, room) : null;
+  return swap ? {
+    ...swap,
+    amount: swap.amount * Math.max(1, Math.floor(Number(r.amount) || 1)),
+    swappedFrom: r.itemId
+  } : {
+    ...r
+  };
+});
 const missionClaimableList = (state, type) => {
   const sent = type === 'daily' ? state.sentDaily : type === 'weekly' ? state.sentWeekly : state.sentMonthly;
   return MISSION_DEFS[type].filter(m => missionValue(state, type, m) >= m.target && !sent.includes(m.id));
@@ -15549,14 +15800,16 @@ const missionNextReset = (type, now = Date.now()) => {
   return shifted.getTime() - 5 * 60 * 60 * 1000;
 };
 const reconcileMonthlyMissionCompletions = (value, now = Date.now()) => {
+  const dailyDefs = missionDefsAt('daily', now),
+    weeklyDefs = missionDefsAt('weekly', now);
   const state = normalizeMissions(value, now),
-    dailyComplete = MISSION_DEFS.daily.find(m => m.complete),
-    weeklyComplete = MISSION_DEFS.weekly.find(m => m.complete);
-  if (dailyComplete && missionValue(state, 'daily', dailyComplete) >= dailyComplete.target && !state.monthlyDailyCompletePeriods.includes(state.dailyPeriod)) {
+    dailyComplete = dailyDefs.find(m => m.complete),
+    weeklyComplete = weeklyDefs.find(m => m.complete);
+  if (dailyComplete && missionValue(state, 'daily', dailyComplete, dailyDefs) >= dailyComplete.target && !state.monthlyDailyCompletePeriods.includes(state.dailyPeriod)) {
     state.monthlyDailyCompletePeriods = [...state.monthlyDailyCompletePeriods, state.dailyPeriod];
     state.monthly.dailyCompletes = (Number(state.monthly.dailyCompletes) || 0) + 1;
   }
-  if (weeklyComplete && missionValue(state, 'weekly', weeklyComplete) >= weeklyComplete.target && !state.monthlyWeeklyCompletePeriods.includes(state.weeklyPeriod)) {
+  if (weeklyComplete && missionValue(state, 'weekly', weeklyComplete, weeklyDefs) >= weeklyComplete.target && !state.monthlyWeeklyCompletePeriods.includes(state.weeklyPeriod)) {
     state.monthlyWeeklyCompletePeriods = [...state.monthlyWeeklyCompletePeriods, state.weeklyPeriod];
     state.monthly.weeklyCompletes = (Number(state.monthly.weeklyCompletes) || 0) + 1;
   }
@@ -61986,7 +62239,10 @@ const growthFxPush = ev => {
     const sheets = GROWTH_FX_STORE.sheets;
     const mergeKey = tier === 'level' ? String(ev.key || `${ev.kind}:${ev.who || ''}`) : null;
     const prev = mergeKey ? sheets.find((s, i) => i > 0 && s.tier === 'level' && s.key === mergeKey) : null;
-    if (prev) Object.assign(prev, {
+    if (prev && Array.isArray(prev.sessionUps) && Array.isArray(ev.sessionUps)) Object.assign(prev, growthFxSessionSheet([...prev.sessionUps, ...ev.sessionUps]), {
+      tier,
+      key: mergeKey
+    });else if (prev) Object.assign(prev, {
       ...ev,
       tier,
       key: mergeKey,
@@ -62234,25 +62490,82 @@ const growthFxPeerItem = ({
     rows
   });
 };
-const growthFxSessionLevel = (list = []) => {
+const GROWTH_FX_SESSION_ROWS_MAX = 4;
+const growthFxSessionUnlocks = () => {
+  const L = (v, d) => typeof v !== 'undefined' && Number.isFinite(Number(v)) ? Number(v) : d;
+  const rows = [[L(typeof RHYTHM_ASSIST_SESSION_TASTE_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_TASTE_LEVEL : undefined, 10), '好きな曲が見える'], [L(typeof RHYTHM_ASSIST_SESSION_GLOW_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_GLOW_LEVEL : undefined, 15), 'サビで顔が光る'], [L(typeof RHYTHM_ASSIST_SESSION_CHEER_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_CHEER_LEVEL : undefined, 25), '得意の応援'], [L(typeof RHYTHM_ASSIST_SESSION_FRAME_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_FRAME_LEVEL : undefined, 45), '結果の枠が助手の色に'], [L(typeof RHYTHM_ASSIST_SESSION_BADGE_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_BADGE_LEVEL : undefined, 50), 'プロフィールに札'], [L(typeof RHYTHM_ASSIST_SESSION_LISTEN_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_LISTEN_LEVEL : undefined, 75), '曲の聞きどころ'], [L(typeof RHYTHM_ASSIST_SESSION_BACK_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_BACK_LEVEL : undefined, 90), '名前入りの背景'], [L(typeof RHYTHM_ASSIST_SESSION_MASTER_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_MASTER_LEVEL : undefined, 100), '称号「セッションマスター」']];
+  const bonus = typeof RHYTHM_ASSIST_SESSION_P_BONUS !== 'undefined' && Array.isArray(RHYTHM_ASSIST_SESSION_P_BONUS) ? RHYTHM_ASSIST_SESSION_P_BONUS : [];
+  bonus.forEach(([lv, rate]) => rows.push([Number(lv), `ビートP +${Math.round(Number(rate) * 100)}%`]));
+  return rows.filter(r => Number.isFinite(r[0])).sort((a, b) => a[0] - b[0]);
+};
+const growthFxSessionSheet = (list = []) => {
   const ups = (Array.isArray(list) ? list : []).filter(u => u && growthFxNum(u.levelAfter) > growthFxNum(u.levelBefore) && growthFxAssistantOf(u.assistantId));
-  if (!ups.length) return;
-  const top = ups[0];
-  const gains = ups.map(u => ({
-    icon: '🎤',
-    text: `${growthFxAssistantName(u.assistantId)} セッションLv.${u.levelAfter}`,
-    note: growthFxNum(u.tickets) > 0 ? `セッション券 ×${growthFxNum(u.tickets)}` : ''
-  }));
+  const by = new Map();
+  ups.forEach(u => {
+    const id = u.assistantId,
+      b = growthFxNum(u.levelBefore),
+      a = growthFxNum(u.levelAfter),
+      t = growthFxNum(u.tickets);
+    const cur = by.get(id);
+    if (!cur) by.set(id, {
+      assistantId: id,
+      levelBefore: b,
+      levelAfter: a,
+      tickets: t > 0 ? t : 0
+    });else {
+      cur.levelBefore = Math.min(cur.levelBefore, b);
+      cur.levelAfter = Math.max(cur.levelAfter, a);
+      cur.tickets += t > 0 ? t : 0;
+    }
+  });
+  const rows = [...by.values()].map((r, i) => ({
+    ...r,
+    i
+  })).sort((a, b) => b.levelAfter - b.levelBefore - (a.levelAfter - a.levelBefore) || a.i - b.i);
+  const unlocks = growthFxSessionUnlocks();
+  const gainOf = r => {
+    const opened = unlocks.filter(([lv]) => lv > r.levelBefore && lv <= r.levelAfter).map(([lv, text]) => `Lv.${lv} ${text}`);
+    const notes = [...(r.tickets > 0 ? [`セッション券 ×${r.tickets}`] : []), ...opened];
+    const note = notes.length > 3 ? `${notes.slice(0, 3).join('・\u200b')}・\u200bほか${notes.length - 3}つ` : notes.join('・\u200b');
+    return {
+      icon: '🎤',
+      text: `${growthFxAssistantName(r.assistantId)} セッションLv.${r.levelBefore} → ${r.levelAfter}`,
+      up: `+${r.levelAfter - r.levelBefore}`,
+      note,
+      session: true
+    };
+  };
+  const shown = rows.length > GROWTH_FX_SESSION_ROWS_MAX ? rows.slice(0, GROWTH_FX_SESSION_ROWS_MAX - 1) : rows;
+  const gains = shown.map(gainOf);
+  if (shown.length < rows.length) {
+    const rest = rows.slice(shown.length);
+    gains.push({
+      icon: '🎤',
+      text: `ほか${rest.length}人`,
+      note: rest.map(r => `${growthFxAssistantName(r.assistantId)} Lv.${r.levelAfter}`).join('・'),
+      session: true
+    });
+  }
+  const top = rows[0] || null;
+  return {
+    sessionUps: ups,
+    levelFrom: top ? top.levelBefore : 0,
+    levelTo: top ? top.levelAfter : 0,
+    sub: rows.length > 1 ? 'いっしょに演奏した\u200b助手の\u200bセッションLvが\u200b上がった' : top ? `${growthFxAssistantName(top.assistantId)} とのセッションLvが Lv.${top.levelAfter} になった` : '',
+    face: top ? growthFxAssistantFace(top.assistantId, 'excited') : null,
+    gains: rows.length > 1 || gains[0] && (gains[0].note || rows[0].levelAfter - rows[0].levelBefore > 1) ? gains : []
+  };
+};
+const growthFxSessionLevel = (list = []) => {
+  const sheet = growthFxSessionSheet(list);
+  if (!sheet.sessionUps.length) return;
   growthFxPush({
     tier: 'level',
     kind: 'session',
-    who: ups.map(u => u.assistantId).join('+'),
-    levelFrom: top.levelBefore,
-    levelTo: top.levelAfter,
+    key: 'session:all',
+    who: 'session',
     title: 'セッションLv UP!',
-    sub: ups.length > 1 ? 'いっしょに演奏した助手のセッションLvが上がった' : `${growthFxAssistantName(top.assistantId)} とのセッションLvが Lv.${top.levelAfter} になった`,
-    face: growthFxAssistantFace(top.assistantId, 'excited'),
-    gains: ups.length > 1 || gains[0].note ? gains : []
+    ...sheet
   });
 };
 const GROWTH_FX_CSS = `
@@ -62318,7 +62631,11 @@ const GROWTH_FX_CSS = `
 .mh-gfx-gains{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;width:min(300px,82vw)}
 .mh-gfx-gains li{display:flex;align-items:center;gap:8px;background:#0f172ae0;border:1px solid color-mix(in srgb,var(--gc) 60%,transparent);border-radius:12px;padding:6px 10px;font-size:12px;font-weight:900;text-align:left;
   animation:mhGfxGain .4s var(--d) cubic-bezier(.2,1.5,.4,1) both}
-.mh-gfx-gains li small{display:block;font-size:10px;color:#94a3b8;font-weight:700}
+/* 添え書き・説明は言葉の途中で折らない(空白・「・」・U+200B の所だけで折る) */
+.mh-gfx-lv .sub{word-break:keep-all;overflow-wrap:anywhere}
+.mh-gfx-gains li small{word-break:keep-all;overflow-wrap:anywhere;display:block;font-size:10px;color:#94a3b8;font-weight:700;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+/* 行が多くても画面の外へ出さない(2026-11-08 社長のスクショ: セッションLv の行が20行以上並び、見出しも下も切れた)。入りきらない分は中で送る */
+.mh-gfx-gains{max-height:calc(var(--mh-vh) - 400px);min-height:0;overflow-y:auto;overscroll-behavior:contain}
 .mh-gfx-gains li .new{margin-left:auto;font-size:9px;background:var(--gc);color:#111;border-radius:6px;padding:1px 5px}
 .mh-gfx-face{position:absolute;height:32vh;left:50%;margin-left:-21vh;bottom:0;z-index:1;pointer-events:none;animation:mhGfxRise .6s .85s cubic-bezier(.2,1.4,.4,1) both;filter:drop-shadow(0 0 20px #000a)}
 .mh-gfx-lv-hint{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);left:0;right:0;text-align:center;font-size:10px;color:#cbd5e1;z-index:3;animation:mhGfxFade .3s 1.6s both}
@@ -62334,9 +62651,15 @@ const GROWTH_FX_CSS = `
   .mh-gfx-lv{flex-direction:row;gap:22px;margin-top:0}
   .mh-gfx-sheet.has-face .mh-gfx-lv{margin-left:min(36vw,300px)}
   .mh-gfx-lv .sub{max-width:240px}
-  .mh-gfx-gains{margin-top:0;width:290px}
+  .mh-gfx-gains{margin-top:0;width:290px;max-height:calc(var(--mh-vh) - 48px)}
   .mh-gfx-face{left:0;margin-left:0;height:62vh}
 }
+/* 🔄 横(端末は縦のまま、アプリが画面を回す)でも横画面の並びにする(2026-11-08)。回っているとき vh は回した後の横幅・vw は高さになる */
+[data-mh-view-rotation="true"] .mh-gfx-lv{flex-direction:row;gap:22px;margin-top:0}
+[data-mh-view-rotation="true"] .mh-gfx-sheet.has-face .mh-gfx-lv{margin-left:min(36vh,300px)}
+[data-mh-view-rotation="true"] .mh-gfx-lv .sub{max-width:240px}
+[data-mh-view-rotation="true"] .mh-gfx-gains{margin-top:0;width:290px;max-height:calc(100vw - 48px)}
+[data-mh-view-rotation="true"] .mh-gfx-face{left:0;margin-left:0;height:62vw}
 /* 最後の形(押して飛ばした・軽い設定): 動きを終わらせた状態で見せる */
 .mh-gfx-done *,.mh-gfx-done{animation-delay:0s !important;animation-duration:.01s !important}
 .mh-gfx-done .mh-gfx-rays{animation:none !important}
@@ -62746,13 +63069,17 @@ const GrowthFxLevelUp = ({
     "aria-hidden": "true"
   }, cardIconNode(g.icon || '✨', 14)), React.createElement("span", {
     className: "min-w-0"
-  }, React.createElement("b", null, String(g.text || '')), g.note && React.createElement("small", null, String(g.note))), g.isNew && React.createElement("span", {
+  }, React.createElement("b", null, String(g.text || '')), g.note && React.createElement("small", null, String(g.note))), g.up && React.createElement("span", {
+    className: "new",
+    "data-gfx-session-up": true
+  }, String(g.up)), g.isNew && React.createElement("span", {
     className: "new"
   }, "NEW"))))), React.createElement("div", {
     className: "mh-gfx-lv-hint"
   }, done ? '押すと閉じる' : '押すと先へ'));
 };
 const GROWTH_FX_CHIP_TOPS = [52, 8, 96, 140];
+const GROWTH_FX_CHIP_BUSY_SEL = 'button,a,input,[role="tab"],[role="button"],[data-assistant-bubble],img,svg,p,span,b,small,strong,em,h1,h2,h3,h4,li,label,[data-alf-face]';
 const growthFxChipSpotBusy = box => {
   if (typeof document === 'undefined' || !document.elementsFromPoint) return false;
   const r = box.getBoundingClientRect();
@@ -62763,6 +63090,25 @@ const growthFxChipSpotBusy = box => {
     if (!under) continue;
     if (under.closest('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]')) return true;
     if ([...under.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return true;
+  }
+  const vw = window.innerWidth,
+    vh = window.innerHeight;
+  for (const el of document.querySelectorAll(GROWTH_FX_CHIP_BUSY_SEL)) {
+    if (box.contains(el)) continue;
+    const e = el.getBoundingClientRect();
+    if (!e.width || !e.height || e.width > vw * 0.9 || e.height > vh * 0.5) continue;
+    if (Math.min(r.right, e.right) - Math.max(r.left, e.left) <= 1 || Math.min(r.bottom, e.bottom) - Math.max(r.top, e.top) <= 1) continue;
+    const cs = getComputedStyle(el);
+    if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
+    const isPic = /^(IMG|SVG)$/i.test(el.tagName) || el.hasAttribute('data-alf-face');
+    const isAct = el.matches('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]');
+    const hasText = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+    if (!isPic && !isAct && !hasText) continue;
+    const cx = Math.max(r.left, e.left) + 1,
+      cy = Math.max(r.top, e.top) + 1;
+    const top = document.elementsFromPoint(cx, cy).find(x => !box.contains(x));
+    if (top && !(top === el || el.contains(top) || top.contains(el))) continue;
+    return true;
   }
   return false;
 };
@@ -63265,6 +63611,7 @@ function SettingsScreen({
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
   const [assetDownloadOpen, setAssetDownloadOpen] = useState(false);
   const assistantBubble = useAssistantBubbleState();
+  const peerAuto = typeof useAssistantPeerAuto === 'function' ? useAssistantPeerAuto() : null;
   const [battleCardLook, setBattleCardLook] = useState(() => BATTLE_CARD_LOOK.value);
   if (assetDownloadOpen) return React.createElement(AssetDownloadPage, {
     onBack: () => setAssetDownloadOpen(false)
@@ -63471,6 +63818,34 @@ function SettingsScreen({
     className: "block"
   }, option.label), React.createElement("small", {
     className: "mt-0.5 block text-[10px] font-bold opacity-80"
+  }, option.note))))), peerAuto && typeof assistantPeerEnabled === 'function' && assistantPeerEnabled() && React.createElement("div", {
+    "data-assistant-peer-auto-setting": true,
+    className: `${SCREEN_PANEL_CLASS} w-full text-left`
+  }, React.createElement("b", {
+    className: "block text-[13px] font-black text-slate-200"
+  }, "助手どうしの会話を自動で進める"), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
+  }, "助手たちの掛け合いや特別なお話、助手ライフの場面のことばの進め方です。「切」のときは、タップするまで次へ進みません。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, [{
+    on: false,
+    label: '切',
+    note: 'タップで次へ'
+  }, {
+    on: true,
+    label: '入',
+    note: '自動で進む'
+  }].map(option => React.createElement("button", {
+    key: option.label,
+    type: "button",
+    "data-assistant-peer-auto": option.on ? 'on' : 'off',
+    "aria-pressed": peerAuto.on === option.on,
+    onClick: () => ASSISTANT_PEER_AUTO_STORE.setOn(option.on),
+    className: `flex min-h-[52px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight active:scale-95 ${peerAuto.on === option.on ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
+  }, React.createElement("span", {
+    className: "block"
+  }, option.label), React.createElement("small", {
+    className: "mt-0.5 block text-[10px] font-bold opacity-80"
   }, option.note))))), React.createElement("div", {
     className: "border-t border-white/10 pt-6 space-y-3"
   }, React.createElement("div", {
@@ -63641,6 +64016,168 @@ function ScreenThemeModal({
     onClick: onClose
   }, "決定")));
 }
+const MISSION_PROGRESS_EVENT = 'mh:mission-progress';
+const missionNotify = (event, amount = 1) => {
+  try {
+    if (typeof window !== 'undefined' && typeof CustomEvent === 'function') window.dispatchEvent(new CustomEvent(MISSION_PROGRESS_EVENT, {
+      detail: {
+        event,
+        amount
+      }
+    }));
+  } catch (_) {}
+};
+const MISSION_DAILY_LINE_URL = `${typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : ''}/functions/v1/mission-daily-line`;
+const MISSION_DAILY_LINE_KEY = 'mh_mission_daily_line_v1';
+const MISSION_DAILY_LINE_IDS = Object.freeze(['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']);
+const MISSION_DAILY_LINE_TRIES = 3,
+  MISSION_DAILY_LINE_RETRY_MS = 10 * 60 * 1000,
+  MISSION_DAILY_LINE_WAIT_MS = 8000;
+const MISSION_WEEKDAY_NAMES = Object.freeze(['日', '月', '火', '水', '木', '金', '土']);
+const MISSION_DAILY_LINE_TASKS = Object.freeze({
+  0: 'フレンドの家へ行く',
+  1: 'モンヒロビートを1曲クリアする',
+  2: 'MFバトルカードで1回勝つ',
+  3: 'クイックモードを1回クリアする',
+  4: 'プロモードを1回クリアする',
+  5: '種族チャレンジを1回クリアする',
+  6: 'アイテムを1個使う'
+});
+const MISSION_DAILY_LINE_FALLBACK = Object.freeze({
+  mua: '今日は{day}曜日！{task}と、{reward}がもらえるよ♪',
+  kiki: '今日は{day}曜日でつ。{task}と、{reward}がもらえまつよ♪',
+  momosuke: '今日は{day}曜日！！ {task}と{reward}もらえるよ♡ ももと一緒にやろ！！',
+  dra: '今日は{day}曜日だな。{task}と、{reward}がもらえるからな。えへへ',
+  atsu: '今日は{day}曜日！ とりあえず{task}と{reward}もらえるよ笑',
+  kyuko: 'ほい！ 今日は{day}曜日ぃ。{task}と{reward}もらえるよ〜',
+  sorashido: 'うぉぉぉ！ 今日は{day}曜日だぜ・・・！ {task}と{reward}がもらえるぜ笑',
+  erubin: '今日は{day}曜日だね。{task}と、{reward}がもらえるよ。無理しない程度にね'
+});
+const missionLineRewardText = r => {
+  const n = Math.max(0, Math.floor(Number(r && r.amount) || 0)).toLocaleString();
+  if (!r) return '';
+  if (r.type === 'diamond') return `ダイヤ${n}`;
+  if (r.type === 'beatPoint') return `ビートP${n}`;
+  const name = r.type === 'gameItem' ? (typeof giftItemRewardInfo === 'function' && giftItemRewardInfo(r.itemId) || {}).name || '' : typeof GIFT_REWARD_LABELS !== 'undefined' && GIFT_REWARD_LABELS[r.type] || '';
+  if (!name) return '';
+  return `${name}${n}${/(券|チケット)$/.test(name) ? '枚' : '個'}`;
+};
+const missionDailyLineFacts = (now = Date.now()) => {
+  const wd = typeof missionPeriodWeekday === 'function' ? missionPeriodWeekday(now) : new Date(Number(now) + 5 * 3600000).getUTCDay();
+  const m = typeof DAILY_ROTATION_MISSIONS !== 'undefined' ? DAILY_ROTATION_MISSIONS[wd] : null;
+  const reward = m ? m.rewards.map(missionLineRewardText).filter(Boolean).join('と') : '';
+  return {
+    weekday: wd,
+    day: MISSION_WEEKDAY_NAMES[wd] || '',
+    task: MISSION_DAILY_LINE_TASKS[wd] || '',
+    reward
+  };
+};
+const missionDailyLineValid = t => typeof t === 'string' && t.length > 0 && t.length <= 90 && t.split('{task}').length === 2 && t.split('{reward}').length === 2 && !/[0-9０-９]/.test(t) && !/[\r\n]/.test(t) && !/https?:|www\./i.test(t) && !/[<>]/.test(t);
+const missionDailyLineFill = (template, facts) => String(template).split('{day}').join(facts.day).split('{task}').join(facts.task).split('{reward}').join(facts.reward);
+const missionDailyLineFor = (who, aiLines, facts = missionDailyLineFacts()) => {
+  const id = MISSION_DAILY_LINE_IDS.includes(who) ? who : 'mua';
+  if (!facts.task || !facts.reward) return null;
+  const ai = aiLines && typeof aiLines === 'object' ? aiLines[id] : null;
+  return {
+    who: id,
+    text: missionDailyLineFill(missionDailyLineValid(ai) ? ai : MISSION_DAILY_LINE_FALLBACK[id], facts),
+    ai: missionDailyLineValid(ai)
+  };
+};
+const normalizeMissionDailyLine = v => {
+  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  const lines = {};
+  if (r.lines && typeof r.lines === 'object' && !Array.isArray(r.lines)) MISSION_DAILY_LINE_IDS.forEach(id => {
+    if (missionDailyLineValid(r.lines[id])) lines[id] = r.lines[id];
+  });
+  const tries = Number.isFinite(Number(r.tries)) ? Math.max(0, Math.floor(Number(r.tries))) : 0;
+  return {
+    day: typeof r.day === 'string' ? r.day : '',
+    lines,
+    tries,
+    at: Number.isFinite(Number(r.at)) ? Number(r.at) : 0
+  };
+};
+const missionDailyLineShouldFetch = (saved, today, now = Date.now()) => {
+  const s = normalizeMissionDailyLine(saved);
+  if (s.day !== today) return true;
+  if (Object.keys(s.lines).length) return false;
+  return s.tries < MISSION_DAILY_LINE_TRIES && now - s.at >= MISSION_DAILY_LINE_RETRY_MS;
+};
+const missionDailyLineOpen = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.missionDailyLine === true;
+const missionDailyLineFetch = async () => {
+  if (!missionDailyLineOpen() || typeof fetch === 'undefined') return null;
+  const ac = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = setTimeout(() => {
+    if (ac) ac.abort();
+  }, MISSION_DAILY_LINE_WAIT_MS);
+  try {
+    const r = await fetch(MISSION_DAILY_LINE_URL, {
+      method: 'POST',
+      headers: typeof SB_HEADERS !== 'undefined' ? SB_HEADERS : {
+        'Content-Type': 'application/json'
+      },
+      body: '{}',
+      signal: ac ? ac.signal : undefined
+    });
+    const res = r.ok ? await r.json() : null;
+    return res && res.ok === true && res.lines && typeof res.lines === 'object' ? normalizeMissionDailyLine({
+      lines: res.lines
+    }).lines : null;
+  } catch (e) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const useMissionDailyLines = () => {
+  const [lines, setLines] = useState({});
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      const today = typeof jstDayKey4 === 'function' ? jstDayKey4() : '';
+      let saved = null;
+      try {
+        saved = await storeGet(MISSION_DAILY_LINE_KEY, null, false);
+      } catch (e) {
+        saved = null;
+      }
+      const s = normalizeMissionDailyLine(saved);
+      if (s.day === today && live) setLines(s.lines);
+      if (!missionDailyLineOpen() || !missionDailyLineShouldFetch(saved, today)) return;
+      const got = await missionDailyLineFetch();
+      const next = got && Object.keys(got).length ? {
+        day: today,
+        lines: got,
+        tries: (s.day === today ? s.tries : 0) + 1,
+        at: Date.now()
+      } : {
+        day: today,
+        lines: {},
+        tries: (s.day === today ? s.tries : 0) + 1,
+        at: Date.now()
+      };
+      try {
+        await storeSet(MISSION_DAILY_LINE_KEY, next, false);
+      } catch (e) {}
+      if (live) setLines(next.lines);
+    })();
+    return () => {
+      live = false;
+    };
+  }, []);
+  return lines;
+};
+const MISSION_CHIP_EMOJI = Object.freeze({
+  beatPoint: '🎟️',
+  cardPackTicket: '🎫'
+});
+const missionRewardChipText = r => {
+  const t = giftRewardText(r);
+  const e = MISSION_CHIP_EMOJI[r && r.type];
+  return e ? `${e} ${t}` : t;
+};
 function MissionsScreen({
   gifts,
   missions,
@@ -63648,10 +64185,24 @@ function MissionsScreen({
   onSelectTab,
   onBack,
   onClaim,
-  onClaimAll
+  onClaimAll,
+  ownedItems = null
 }) {
   const state = normalizeMissions(missions),
     defs = MISSION_DEFS[missionTab];
+  const bond = typeof useAssistantBond === 'function' ? useAssistantBond() : null;
+  const aiLines = useMissionDailyLines();
+  const dailyLine = missionDailyLineFor(bond && bond.assistantId, aiLines);
+  const [room, setRoom] = useState(() => typeof ASSISTANT_LIFE_GIFT_STORE !== 'undefined' && ASSISTANT_LIFE_GIFT_STORE.loaded ? ASSISTANT_LIFE_GIFT_STORE.state.room : null);
+  useEffect(() => {
+    let live = true;
+    if (typeof ASSISTANT_LIFE_GIFT_STORE !== 'undefined') void ASSISTANT_LIFE_GIFT_STORE.load().then(st => {
+      if (live) setRoom(st.room || null);
+    }).catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
   const sent = missionTab === 'daily' ? state.sentDaily : missionTab === 'weekly' ? state.sentWeekly : state.sentMonthly;
   const resetAt = missionNextReset(missionTab);
   const periodNow = missionTab === 'daily' ? state.dailyPeriod : missionTab === 'weekly' ? state.weeklyPeriod : state.monthlyPeriod;
@@ -63673,7 +64224,15 @@ function MissionsScreen({
     const allDone = ['daily', 'weekly', 'monthly'].every(t => MISSION_DEFS[t].every(m => missionValue(state, t, m) >= m.target));
     return React.createElement("div", {
       className: "shrink-0 w-full max-w-md mx-auto mb-2"
+    }, dailyLine && missionTab === 'daily' ? React.createElement("div", {
+      "data-mission-daily-line": true
     }, React.createElement(AssistantBubble, {
+      key: `line-${dailyLine.who}`,
+      assistantId: dailyLine.who,
+      line: dailyLine.text,
+      expression: "happy",
+      compact: true
+    })) : React.createElement(AssistantBubble, {
       key: claimable ? 'claim' : 'normal',
       scene: claimable ? 'missionsClaimable' : 'missionsNormal',
       condition: claimable && allDone ? 'allDone' : null,
@@ -63723,7 +64282,12 @@ function MissionsScreen({
     emoji: "🗒️",
     lines: ['このタブのミッションはありません', 'ほかのタブに受け取れるものがあるかもしれません']
   }) : defs.map(m => {
-    const value = missionValue(state, missionTab, m),
+    const shownRewards = missionRewardsFor(m.rewards, {
+        ownedItems,
+        room
+      }),
+      swapped = shownRewards.filter(r => r.swappedFrom),
+      value = missionValue(state, missionTab, m),
       done = value >= m.target,
       isSent = sent.includes(m.id),
       pct = Math.min(100, Math.floor(value / m.target * 100));
@@ -63735,8 +64299,13 @@ function MissionsScreen({
     }, React.createElement("div", {
       className: "min-w-0"
     }, React.createElement("h3", {
-      className: "font-black text-sm text-white break-words"
-    }, m.name), React.createElement("p", {
+      className: "flex flex-wrap items-center gap-1.5 font-black text-sm text-white break-words"
+    }, m.tag && React.createElement("span", {
+      "data-mission-tag": true,
+      className: "shrink-0 whitespace-nowrap rounded-full border border-white/10 bg-slate-800 px-2 py-0.5 text-[11px] font-black text-slate-200"
+    }, m.tag), React.createElement("span", {
+      className: "min-w-0"
+    }, m.name)), React.createElement("p", {
       className: "mt-0.5 text-[11px] font-bold leading-snug text-slate-400 break-words"
     }, m.condition)), React.createElement("b", {
       className: "shrink-0 text-[12px] text-amber-200"
@@ -63750,8 +64319,20 @@ function MissionsScreen({
     })), React.createElement("div", {
       className: "flex items-center justify-between gap-2"
     }, React.createElement("div", {
-      className: "min-w-0 text-[11px] font-black text-cyan-200 break-words"
-    }, "報酬: ", m.rewards.map(giftRewardText).join(' / ')), isSent ? React.createElement("button", {
+      className: "min-w-0 flex-1",
+      "data-mission-rewards": true
+    }, React.createElement("div", {
+      className: "flex flex-wrap items-center gap-1"
+    }, React.createElement("span", {
+      className: "shrink-0 text-[11px] font-black text-cyan-200"
+    }, "報酬:"), shownRewards.map((r, i) => React.createElement("span", {
+      key: i,
+      "data-mission-reward-chip": true,
+      className: `whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-black ${r.type === 'beatPoint' ? 'border-violet-300/50 bg-violet-900/60 text-violet-50' : 'border-white/10 bg-slate-800/80 text-cyan-200'}`
+    }, missionRewardChipText(r)))), swapped.length > 0 && React.createElement("p", {
+      "data-mission-furniture-swap": true,
+      className: "mt-1 text-[10px] font-bold leading-snug text-slate-400"
+    }, swapped.map(r => giftItemRewardInfo(r.swappedFrom)?.name || '家具').join('・'), "は持っているので、ビートPに替えて届きます")), isSent ? React.createElement("button", {
       type: "button",
       disabled: true,
       className: "shrink-0 min-h-[44px] px-3 rounded-xl bg-amber-500 text-[11px] font-black text-black disabled:opacity-40"
@@ -63962,7 +64543,8 @@ function BreederMarketScreen({
   onOpenUpcomingDetail,
   frameConditionOf = null,
   cardShop = null,
-  initialSection = null
+  initialSection = null,
+  initialTab = null
 }) {
   const [marketSection, setMarketSection] = useState(initialSection);
   const [cardShopLine] = useState(() => typeof MUA_CARD_SHOP_LINES !== 'undefined' && MUA_CARD_SHOP_LINES.length ? MUA_CARD_SHOP_LINES[Math.floor(Math.random() * MUA_CARD_SHOP_LINES.length)] : {
@@ -63975,8 +64557,29 @@ function BreederMarketScreen({
   const [rebirth, setRebirth] = useState(null);
   const [sectionTabs, setSectionTabs] = useState(() => initialSection === 'card' && cardShopScrollMemo.pending && cardShopScrollMemo.tab ? {
     card: cardShopScrollMemo.tab
+  } : initialSection && initialTab ? {
+    [initialSection]: initialTab
   } : {});
   const cardListRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!(initialSection === 'event' && initialTab === 'item')) return;
+    let n = 0;
+    const t = setInterval(() => {
+      const el = document.querySelector('[data-event-point-life-gift]');
+      n++;
+      if (el) {
+        clearInterval(t);
+        let box = el.parentElement;
+        while (box && !(/(auto|scroll)/.test(getComputedStyle(box).overflowY) && box.scrollHeight > box.clientHeight)) box = box.parentElement;
+        if (box) {
+          const r = el.getBoundingClientRect(),
+            b = box.getBoundingClientRect();
+          box.scrollTop += r.top - b.top - Math.max(0, (b.height - r.height) / 2);
+        }
+      } else if (n > 40) clearInterval(t);
+    }, 50);
+    return () => clearInterval(t);
+  }, []);
   const cardPressedRowRef = React.useRef(null);
   const mountedRef = React.useRef(true);
   React.useEffect(() => () => {
@@ -64738,7 +65341,10 @@ function BreederMarketScreen({
     return React.createElement(MarketProductCard, {
       key: offer.id,
       dataAttrs: {
-        'data-event-point-offer': offer.id
+        'data-event-point-offer': offer.id,
+        ...(/^peer_/.test(String(offer.itemId || '')) ? {
+          'data-event-point-life-gift': offer.itemId
+        } : {})
       },
       item: item,
       owned: false,
@@ -99552,6 +100158,65 @@ const ASSISTANT_PEER_TALK_RATE = {
 };
 const ASSISTANT_PEER_TALK_GAP_MS = 90 * 1000;
 const ASSISTANT_PEER_LINE_MS = 3600;
+const ASSISTANT_PEER_AUTO_KEY = 'mh_assistant_peer_auto_v1';
+const ASSISTANT_PEER_AUTO_STORE = (() => {
+  let state = {
+    on: false,
+    loaded: false
+  };
+  let loading = null;
+  const listeners = new Set();
+  const emit = () => listeners.forEach(fn => {
+    try {
+      fn(state);
+    } catch (_) {}
+  });
+  return {
+    get: () => state,
+    load() {
+      if (loading) return loading;
+      loading = (async () => {
+        let on = false;
+        try {
+          on = (await storeGet(ASSISTANT_PEER_AUTO_KEY, false, false)) === true;
+        } catch (_) {
+          on = false;
+        }
+        state = {
+          on,
+          loaded: true
+        };
+        emit();
+      })();
+      return loading;
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+    setOn(next) {
+      state = {
+        ...state,
+        on: next === true,
+        loaded: true
+      };
+      emit();
+      try {
+        void Promise.resolve(storeSet(ASSISTANT_PEER_AUTO_KEY, state.on)).catch(() => {});
+      } catch (_) {}
+    }
+  };
+})();
+const useAssistantPeerAuto = () => {
+  const [state, setState] = React.useState(() => ASSISTANT_PEER_AUTO_STORE.get());
+  React.useEffect(() => {
+    const off = ASSISTANT_PEER_AUTO_STORE.subscribe(setState);
+    setState(ASSISTANT_PEER_AUTO_STORE.get());
+    void ASSISTANT_PEER_AUTO_STORE.load();
+    return off;
+  }, []);
+  return state;
+};
 const ASSISTANT_PEER_SCENES = Object.freeze({
   HOME: 'home',
   BREEDER_MARKET: 'market',
@@ -100520,6 +101185,7 @@ function AssistantPeerTalk({
   today = null
 }) {
   const st = useAssistantPeerState();
+  const auto = useAssistantPeerAuto();
   const [cur, setCur] = React.useState(null);
   React.useEffect(() => {
     if (ASSISTANT_PEER_STORE.state.talking !== !!cur) ASSISTANT_PEER_STORE.set({
@@ -100678,11 +101344,18 @@ function AssistantPeerTalk({
     }
     finish(c);
   }, [finish]);
+  const stopRef = React.useRef(st.stopTalkAt || 0);
   React.useEffect(() => {
-    if (!cur || cur.phase === 'choice') return undefined;
+    const at = st.stopTalkAt || 0;
+    if (at === stopRef.current) return;
+    stopRef.current = at;
+    if (cur) finish(cur);
+  }, [st.stopTalkAt]);
+  React.useEffect(() => {
+    if (!cur || cur.phase === 'choice' || !auto.on) return undefined;
     const t = setTimeout(() => advance(cur), ASSISTANT_PEER_LINE_MS + (cur.special ? 1200 : 0));
     return () => clearTimeout(t);
-  }, [cur, advance]);
+  }, [cur, advance, auto.on]);
   React.useEffect(() => {
     if (!toast) return undefined;
     const t = setTimeout(() => setToast(null), 3200);
@@ -102763,6 +103436,7 @@ const assistantLifeNudge = async (kind, value, now = Date.now()) => {
   return true;
 };
 const assistantLifeAddPlay = async (kind, now = Date.now()) => {
+  if ((kind === 'chat' || kind === 'peer') && typeof missionNotify === 'function') missionNotify('assistantTouch');
   if (!assistantLifeEnabled()) return {
     gained: 0
   };
@@ -103716,7 +104390,11 @@ function AssistantLifeScreenBody({
     className: "mt-2 rounded-2xl border border-amber-300/40 bg-slate-950/90 p-2"
   }, React.createElement("p", {
     className: "text-[12px] font-black text-amber-200"
-  }, "🎁 2人に贈る道具(今日あと ", typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0, "回・同じ道具は1日1回)"), itemInfos.map(x => React.createElement("div", {
+  }, "🎁 2人に贈る道具(今日あと ", typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0, "回・同じ道具は1日1回)"), typeof AssistantLifeGiftExplain === 'function' && React.createElement("div", {
+    className: "mt-1"
+  }, React.createElement(AssistantLifeGiftExplain, {
+    compact: true
+  })), itemInfos.map(x => React.createElement("div", {
     key: x.kind,
     "data-assistant-life-item": x.kind,
     className: "mt-1.5 flex items-center gap-2"
@@ -103737,7 +104415,11 @@ function AssistantLifeScreenBody({
     className: "whitespace-nowrap text-pink-200"
   }, "💗 仲良し度 ", assistantLifeItemRange(x).player), "(好みで変わる)・2人のひとこと")))), React.createElement("p", {
     className: "mt-1.5 text-[10px] leading-snug text-slate-400"
-  }, "手に入れる:モンヒロビートの「ビートP交換所」(", itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・'), ")/贈る:下の組の「🎁 贈る」。誘う・引き合わせるは無料で、次の時間の過ごし方が変わります")), React.createElement("div", {
+  }, "手に入れる:モンヒロビートの「ビートP交換所」(", itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・'), ")/贈る:下の組の「🎁 贈る」。誘う・引き合わせるは無料で、次の時間の過ごし方が変わります"), typeof AssistantLifeShopButton === 'function' && React.createElement("div", {
+    className: "mt-1.5"
+  }, React.createElement(AssistantLifeShopButton, {
+    tab: "item"
+  }))), React.createElement("div", {
     className: "mt-2 space-y-2"
   }, (life.groups || []).map(g => {
     const key = assistantLifeGroupKey(g);
@@ -105230,11 +105912,17 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-room .bb{position:absolute;right:4px;z-index:5;max-width:88%;overflow:hidden;white-space:normal;line-height:1.2;text-align:center;font-size:9.5px;font-weight:900;background:#fff;color:#1e293b;border-radius:9px;padding:1px 6px;box-shadow:0 2px 5px #0007}
 .mhl-room .off{position:absolute;inset:0;z-index:3;background:rgba(6,9,24,.5)}
 .mhl-room .lamp{position:absolute;inset:0;z-index:3;background:radial-gradient(circle at 60% 40%,rgba(255,214,140,.45),transparent 70%);mix-blend-mode:screen;pointer-events:none}
-.mhl-room .tag{position:absolute;left:50%;top:50%;z-index:6;transform:translate(-50%,-38%) rotate(-3deg);max-width:92%;text-align:center;padding:3px 8px 4px;border-radius:7px;background:linear-gradient(#fef3c7,#fde68a);color:#422006;border:1.5px solid #b45309;box-shadow:0 3px 6px #0009}
-.mhl-room .tag b{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mhl-room .tag small[data-assistant-life-room-with]{white-space:normal;line-height:1.15}[data-assistant-life-land="1"] .mhl-room .tag{padding:2px 5px 3px}[data-assistant-life-land="1"] .mhl-room .tag b{font-size:9.5px}[data-assistant-life-land="1"] .mhl-room .tag small{font-size:8px}.mhl-room .tag small{display:block;font-size:9px;font-weight:800;color:#7c2d12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mhl-room .tag{position:absolute;left:3px;right:3px;top:2px;z-index:6;text-align:left;padding:0 5px 1px;border-radius:6px;background:linear-gradient(#fef3c7,#fde68a);color:#422006;border:1.5px solid #b45309;box-shadow:0 2px 4px #0008}
+.mhl-room .tag small{display:block;height:19px;font-size:8.5px;line-height:19px;font-weight:800;color:#7c2d12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mhl-room .tag b{display:block;font-size:10px;line-height:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mhl-room .tag i{display:none;font-style:normal}
+.mhl-room[data-assistant-life-room-tag="1"] .pl{z-index:7}.mhl-room[data-assistant-life-room-tag="1"] .lv{top:38px}
+[data-assistant-life-land="1"] .mhl-room .tag{top:22px;padding:0 4px}[data-assistant-life-land="1"] .mhl-room .tag b{font-size:9px;line-height:11px}[data-assistant-life-land="1"] .mhl-room .tag small{display:none}[data-assistant-life-land="1"] .mhl-room .tag i{display:inline}[data-assistant-life-land="1"] .mhl-room .tag[data-assistant-life-room-tag-mark="1"] small{display:block;margin-left:0!important;height:11px;font-size:9px;line-height:11px}[data-assistant-life-land="1"] .mhl-room .tag[data-assistant-life-room-tag-mark="1"] b{display:none}
+[data-assistant-life-land="1"] .mhl-room[data-assistant-life-room-tag="1"] .lv{left:auto;right:3px;top:5px}
 .mhl-room .lock{position:absolute;inset:0;z-index:6;display:grid;place-items:center;background:rgba(15,23,42,.78);font-size:11px;font-weight:900;color:#cbd5e1}
 .mhl-liv{position:absolute;overflow:hidden;border-radius:3px;background:linear-gradient(#f3e3c4,#e7cfa2)}
-.mhl-board{position:absolute;left:8px;top:6px;bottom:6px;border-radius:5px;background:#c08a52;border:3px solid #7c4a22;padding:3px 6px;overflow:hidden}
+.mhl-board{position:absolute;left:8px;top:6px;bottom:6px;border-radius:5px;background:#c08a52;border:3px solid #7c4a22;padding:3px 6px;overflow:hidden;display:flex;flex-direction:column;flex-wrap:wrap;align-content:flex-start;justify-content:flex-start;column-gap:24px}
+.mhl-board>*{width:100%;flex:none}
+[data-assistant-life-land="1"] .mhl-board{top:3px;bottom:3px;padding:2px 6px}
+.mhl-board-more{margin-left:auto;flex:none;border-radius:999px;background:#fffbeb;color:#7c4a22;font-size:8.5px;font-weight:900;line-height:1;padding:2px 5px;white-space:nowrap}
 .mhl-board b{display:block;font-size:9.5px;color:#fff}.mhl-board p{font-size:9px;font-weight:800;line-height:1.25;color:#1e293b;background:#fffbeb;border-radius:3px;padding:1px 4px;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .mhl-door{position:absolute;bottom:0;width:38px;border-radius:18px 18px 0 0;background:linear-gradient(#8b5a2b,#6b4423);border:2px solid #3b2412}
 .mhl-find{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:900;padding:6px 10px;border-radius:999px;background:linear-gradient(135deg,#7c3aed,#db2777);border:1.5px solid #fff9;box-shadow:0 4px 12px #0009}
@@ -105302,6 +105990,18 @@ const assistantLifeBoardShort = (text, max = 2) => {
   const ps = String(text || '').split(' / ');
   return ps.length > max ? `${ps.slice(0, max).join(' / ')} ほか${ps.length - max}組` : String(text || '');
 };
+const assistantLifeTagNames = (text, budget) => {
+  const m = String(text || '').match(/^(.*?)(?: ほか(\d+)人)?$/);
+  const list = String(m[1] || '').split('・').filter(Boolean);
+  let rest = Number(m[2]) || 0;
+  const len = (a, r) => [...a.join('・')].length + (r ? [...` ほか${r}人`].length : 0);
+  const out = [...list];
+  while (out.length > 1 && len(out, rest) > budget) {
+    out.pop();
+    rest++;
+  }
+  return `${out.join('・')}${rest ? ` ほか${rest}人` : ''}`;
+};
 function AssistantLifeRoom({
   id,
   met,
@@ -105312,13 +106012,14 @@ function AssistantLifeRoom({
   h,
   state,
   onOpen,
-  idx
+  idx,
+  other = null
 }) {
   const L = ASSISTANT_LIFE_ROOM_LOOK[id];
   const view = ASSISTANT_LIFE_VIEW[look][idx % 2];
   const night = look === 'night';
   const ppl = state && state.in ? state.in : null;
-  const sess = assistantLifeSessionInfo(id);
+  const sess = other ? null : assistantLifeSessionInfo(id);
   return React.createElement("button", {
     type: "button",
     className: "mhl-room",
@@ -105360,6 +106061,7 @@ function AssistantLifeRoom({
     className: "fl"
   }), typeof AssistantLifeRoomFurn === 'function' && React.createElement(AssistantLifeRoomFurn, {
     id: id,
+    put: other ? other.put || {} : null,
     w: w,
     h: h,
     faces: ppl ? ppl.length : 0,
@@ -105404,14 +106106,33 @@ function AssistantLifeRoom({
   }, x)))), typeof AssistantLifeRelRoomLayer === 'function' && React.createElement(AssistantLifeRelRoomLayer, {
     state: state,
     h: h
-  }), state && state.tag && React.createElement("span", {
-    className: "tag",
-    "data-assistant-life-room-away": id
-  }, React.createElement("b", null, state.tag[0]), React.createElement("small", null, state.tag[1]), state.tag[2] && React.createElement("small", {
-    "data-assistant-life-room-with": true
-  }, React.createElement(AssistantLifeNames, {
-    text: state.tag[2]
-  }))), !met && React.createElement("span", {
+  }), state && state.tag && (() => {
+    const t = state.tag;
+    const mark = !!t[1] && /^(💢|🤝)/u.test(t[1]);
+    const n = Number((String(t[1] || '').match(/^(\d+)人で/) || [])[1]) || 0;
+    const ml = [...assistantLifeName(id)].length * 10 + 20;
+    const names = t[2] ? assistantLifeTagNames(t[2], Math.floor((w - 6 - ml - 10) / 8.8)) : null;
+    const short = [...String(t[0])].length <= 9;
+    return React.createElement("span", {
+      className: "tag",
+      "data-assistant-life-room-away": id,
+      "data-assistant-life-room-tag-mark": mark ? '1' : '0'
+    }, mark || !names ? React.createElement("small", {
+      "data-assistant-life-room-what": true,
+      style: {
+        marginLeft: ml
+      }
+    }, t[1]) : React.createElement("small", {
+      "data-assistant-life-room-with": true,
+      style: {
+        marginLeft: ml
+      }
+    }, React.createElement(AssistantLifeNames, {
+      text: names
+    })), React.createElement("b", null, t[0], React.createElement("i", {
+      "data-assistant-life-room-tag-short": true
+    }, n > 1 && short ? `・${n}人` : '', mark ? ` ${[...t[1]][0]}` : '')));
+  })(), !met && React.createElement("span", {
     className: "lock"
   }, "まだ会っていない"));
 }
@@ -105426,7 +106147,9 @@ function AssistantLifeHouseArt({
   pop,
   onBoard,
   life = null,
-  peerSt = null
+  peerSt = null,
+  hname = '🏡 助手の家',
+  other = null
 }) {
   const wall = 6,
     cols = land ? 4 : 2,
@@ -105439,6 +106162,17 @@ function AssistantLifeHouseArt({
     ly = wall + rows * (rh + wall);
   const night = look === 'night';
   const items = (diary.items || []).slice(-3).reverse();
+  const total = (diary.items || []).length;
+  const boardRef = React.useRef(null);
+  const [shownN, setShownN] = React.useState(items.length);
+  React.useLayoutEffect(() => {
+    const el = boardRef.current;
+    if (!el) return;
+    const w = el.clientWidth;
+    const n = [...el.querySelectorAll('[data-assistant-life-board-item]')].filter(p => p.offsetLeft + 1 < w).length;
+    if (n !== shownN) setShownN(n);
+  });
+  const restN = Math.max(0, total - Math.min(shownN, items.length));
   return React.createElement("div", {
     className: `mhl-house${pop ? ' mhl-pop' : ''}`,
     "data-assistant-life-house": true,
@@ -105464,7 +106198,7 @@ function AssistantLifeHouseArt({
     style: {
       top: roofH - 22
     }
-  }, "🏡 助手の家"), React.createElement("div", {
+  }, hname), React.createElement("div", {
     className: "mhl-frame",
     style: {
       top: roofH,
@@ -105484,7 +106218,8 @@ function AssistantLifeHouseArt({
       w: rw,
       h: rh,
       state: rooms[id],
-      onOpen: onOpen
+      onOpen: onOpen,
+      other: other ? other[id] || {} : null
     });
   }), React.createElement("div", {
     className: "mhl-liv",
@@ -105498,6 +106233,7 @@ function AssistantLifeHouseArt({
     }
   }, React.createElement("button", {
     type: "button",
+    ref: boardRef,
     className: "mhl-board text-left",
     "data-assistant-life-board": true,
     onClick: onBoard,
@@ -105505,7 +106241,12 @@ function AssistantLifeHouseArt({
       width: Math.min(width * (land ? .42 : .52), 240)
     },
     "aria-label": "今日あったことを全部見る"
-  }, React.createElement("b", null, "📌 今日あったこと", items.length ? ' ›' : ''), items.length ? items.slice(0, land ? 1 : 2).map((x, i) => React.createElement("p", {
+  }, React.createElement("b", {
+    className: "flex items-center gap-1"
+  }, "📌 今日あったこと", items.length > 0 && React.createElement("span", {
+    className: "mhl-board-more",
+    "data-assistant-life-board-more": restN
+  }, restN > 0 ? `ほか${restN}件 ›` : '全部 ›')), items.length ? items.slice(0, land ? 1 : 2).map((x, i) => React.createElement("p", {
     key: i,
     "data-assistant-life-board-item": true
   }, React.createElement(AssistantLifeChunks, {
@@ -105532,7 +106273,7 @@ function AssistantLifeHouseArt({
       bottom: 6
     },
     "aria-hidden": "true"
-  }, "🔥"), typeof AssistantLifeRelLiving === 'function' && React.createElement(AssistantLifeRelLiving, {
+  }, "🔥"), !other && typeof AssistantLifeRelLiving === 'function' && React.createElement(AssistantLifeRelLiving, {
     life: life,
     peerSt: peerSt,
     width: width,
@@ -105629,13 +106370,14 @@ function AssistantLifeRoomSheet({
   roomState = null,
   furnItems = null,
   onGiveFurn = null,
+  openFurn = false,
   onFurnTalk = null,
   onMasmon = null,
   onChat = null,
   follow = null,
   onFollowDone = null
 }) {
-  const [furnOpen, setFurnOpen] = React.useState(false);
+  const [furnOpen, setFurnOpen] = React.useState(!!openFurn);
   const who = assistantById(id);
   if (!who) return null;
   const w = assistantLifeWhereOf(life, id);
@@ -105845,7 +106587,13 @@ function AssistantLifeRoomSheet({
     onClick: () => onCard(id)
   }, "🃏 カード部屋で対戦する ", React.createElement("span", {
     className: "mhl-card-up"
-  }, "ごほうびアップ")))), furnOpen && typeof AssistantLifeFurnSheet === 'function' && React.createElement(AssistantLifeFurnSheet, {
+  }, "ごほうびアップ")), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-room-close": true,
+    "data-mhl-sheet-close": true,
+    onClick: onClose,
+    className: "col-span-2 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]"
+  }, "閉じる"))), furnOpen && typeof AssistantLifeFurnSheet === 'function' && React.createElement(AssistantLifeFurnSheet, {
     id: id,
     furnItems: furnItems || {},
     onGiveFurn: onGiveFurn,
@@ -105933,7 +106681,7 @@ function AssistantLifeStand({
       transform: 'translateX(-50%)',
       height: '58%',
       width: '70%',
-      bottom: '22%',
+      bottom: 'max(22%, 150px)',
       opacity: 0,
       filter
     }
@@ -105952,7 +106700,7 @@ function AssistantLifeStand({
       height: `${(h * 100).toFixed(2)}%`,
       width: 'auto',
       maxWidth: 'none',
-      bottom: `calc(22% - ${((1 - box.b) * h * 100).toFixed(2)}%)`,
+      bottom: `calc(max(22%, 150px) - ${((1 - box.b) * h * 100).toFixed(2)}%)`,
       transform: `translateX(-${((box.l + box.r) / 2 * 100).toFixed(1)}%)`,
       objectFit: 'fill',
       filter
@@ -106095,7 +106843,12 @@ function AssistantLifeScene({
   }, React.createElement("button", {
     type: "button",
     "data-assistant-life-scene-back": true,
-    onClick: onClose,
+    onClick: () => {
+      if (peer && peer.talking && typeof ASSISTANT_PEER_STORE !== 'undefined') ASSISTANT_PEER_STORE.set({
+        stopTalkAt: Date.now()
+      });
+      onClose();
+    },
     "aria-label": "家へ戻る",
     className: "h-9 w-9 text-[18px] text-slate-100"
   }, "←"), React.createElement("div", {
@@ -106235,6 +106988,19 @@ function AssistantLifeHouse({
       });
     }
   }, [st.focus]);
+  const [furnBack, setFurnBack] = React.useState(null);
+  React.useEffect(() => {
+    const b = ASSISTANT_LIFE_STORE.state.shopBack;
+    if (!b) return;
+    ASSISTANT_LIFE_STORE.set({
+      shopBack: null
+    });
+    setTab(b.tab || 'items');
+    if (b.room) {
+      setRoomId(b.room);
+      if (b.furn) setFurnBack(b.room);
+    }
+  }, []);
   if (!assistantLifeEnabled() || !st.loaded || !st.open) return null;
   const life = st.life || {};
   const ids = (metIds || []).filter(id => ASSISTANT_LIFE_PREFS[id]);
@@ -106505,7 +107271,7 @@ function AssistantLifeHouse({
       paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))'
     }
   }, React.createElement("div", {
-    className: "flex items-start gap-2"
+    className: "flex flex-wrap items-start gap-x-2"
   }, React.createElement("button", {
     type: "button",
     "data-assistant-life-close": true,
@@ -106513,10 +107279,10 @@ function AssistantLifeHouse({
     "aria-label": "閉じる",
     className: "h-9 w-8 shrink-0 text-[19px] text-slate-100"
   }, "←"), React.createElement("div", {
-    className: "min-w-0 shrink-0",
+    className: "min-w-0 shrink overflow-hidden",
     "data-assistant-life-title": true
   }, React.createElement("p", {
-    className: "mhl-en whitespace-nowrap",
+    className: "mhl-en truncate whitespace-nowrap",
     style: land ? {
       letterSpacing: '.06em',
       fontSize: 8
@@ -106529,7 +107295,8 @@ function AssistantLifeHouse({
   }, "助手ライフ")), React.createElement("div", {
     className: "min-w-0 flex-1"
   }), typeof TimeOfDayClock === 'function' && React.createElement("div", {
-    className: "shrink-0 self-center"
+    className: "ml-auto shrink-0 self-center",
+    "data-assistant-life-clock-box": true
   }, React.createElement(TimeOfDayClock, null))), React.createElement("p", {
     className: "mt-0.5 text-[10px] font-bold text-slate-200",
     "data-assistant-life-clock": true
@@ -106611,7 +107378,9 @@ function AssistantLifeHouse({
     className: "inline-block rounded-xl bg-slate-950/85 px-2 py-0.5 text-[13px] font-black text-amber-200"
   }, "🎒 2人に贈る道具 ", React.createElement("span", {
     className: "text-[10.5px] text-slate-200"
-  }, "今日あと ", typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0, "回")), itemInfos.map(x => React.createElement("div", {
+  }, "今日あと ", typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0, "回")), typeof AssistantLifeGiftExplain === 'function' && React.createElement("div", {
+    className: "mt-1.5"
+  }, React.createElement(AssistantLifeGiftExplain, null)), itemInfos.map(x => React.createElement("div", {
     key: x.kind,
     "data-assistant-life-item": x.kind,
     className: "mt-2 flex items-center gap-2 rounded-2xl border border-amber-300/30 bg-slate-900/85 p-2"
@@ -106632,9 +107401,17 @@ function AssistantLifeHouse({
     className: "whitespace-nowrap text-pink-200"
   }, "💗 仲良し度 ", assistantLifeItemRange(x).player), React.createElement("span", {
     className: "whitespace-nowrap text-slate-400"
-  }, "(好みで変わる)"))))), React.createElement("p", {
+  }, "(好みで変わる)"))), haveOf(x.kind) <= 0 && typeof AssistantLifeShopButton === 'function' && React.createElement(AssistantLifeShopButton, {
+    tab: "item",
+    small: true,
+    label: `🛒 ${x.cost != null ? `${x.cost}P` : '交換所'}`
+  }))), React.createElement("p", {
     className: "mt-2 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] leading-snug text-slate-200"
-  }, "手に入れる: モンヒロビートの「ビートP交換所」(", itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・'), ")。贈る: 部屋や場面の「🎁 贈る」。好きな物なら多め・苦手な物なら少なめに上がり、好みは贈ると分かります。同じ道具は1日1回・合わせて1日3回。声をかける・見守るは無料です"));
+  }, "手に入れる: モンヒロビートの「ビートP交換所」(", itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・'), ")。贈る: 部屋や場面の「🎁 贈る」。好きな物なら多め・苦手な物なら少なめに上がり、好みは贈ると分かります。同じ道具は1日1回・合わせて1日3回。声をかける・見守るは無料です。次の段まであと何点・この道具で段の何割進むかは、「🎁 贈る」で2人を選ぶと出ます"), typeof AssistantLifeShopButton === 'function' && React.createElement("div", {
+    className: "mt-2"
+  }, React.createElement(AssistantLifeShopButton, {
+    tab: "item"
+  })));
   return React.createElement("div", {
     className: "mhl-root",
     style: {
@@ -106688,7 +107465,9 @@ function AssistantLifeHouse({
   }, "朝4時に戻る")), tiles), React.createElement("div", {
     className: "mt-1.5"
   }, icons))), roomId && React.createElement(AssistantLifeRoomSheet, {
+    key: roomId,
     id: roomId,
+    openFurn: furnBack === roomId,
     life: life,
     peerSt: peerSt,
     bondLevelOf: bondLevelOf,
@@ -106709,6 +107488,7 @@ function AssistantLifeHouse({
     onClose: () => {
       setRoomId(null);
       setFollow(null);
+      setFurnBack(null);
     },
     onPeek: peek,
     onInvite: invite,
@@ -106750,7 +107530,10 @@ function AssistantLifeHouse({
     className: "mhl-en"
   }, "TODAY"), React.createElement("p", {
     className: "text-[18px] font-black"
-  }, "📌 今日あったこと"), (diary.items || []).length ? [...diary.items].reverse().map((x, i) => React.createElement("p", {
+  }, "📌 今日あったこと"), React.createElement("p", {
+    className: "text-[10.5px] font-bold text-slate-400",
+    "data-assistant-life-diary-count": true
+  }, "全部で", (diary.items || []).length, "件・新しい順"), (diary.items || []).length ? [...diary.items].reverse().map((x, i) => React.createElement("p", {
     key: i,
     className: "mt-1.5 text-[12px] font-bold leading-snug text-slate-100"
   }, React.createElement("b", {
@@ -106761,8 +107544,10 @@ function AssistantLifeHouse({
     className: "mt-2 text-[12px] text-slate-400"
   }, "まだ何もありません"), React.createElement("button", {
     type: "button",
-    className: "mhl-btn mt-3 w-full bg-slate-700",
-    onClick: () => setBoardOpen(false)
+    "data-assistant-life-diary-close": true,
+    "data-mhl-sheet-close": true,
+    onClick: () => setBoardOpen(false),
+    className: "mt-3 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]"
   }, "閉じる"))), scene && React.createElement(AssistantLifeScene, {
     key: scene.key,
     scene: scene,
@@ -119576,6 +120361,159 @@ function AssistantLifeGiftLikesRow({
     }, g.emoji), s === 'like' ? '💗' : s === 'bad' ? '💧' : s === 'unknown' ? '?' : '');
   })));
 }
+let assistantLifeBondPointsReader = null;
+const assistantLifeSetBondPointsReader = fn => {
+  assistantLifeBondPointsReader = typeof fn === 'function' ? fn : null;
+};
+const assistantLifeBondPointsOf = id => {
+  try {
+    const p = assistantLifeBondPointsReader ? assistantLifeBondPointsReader(id) : null;
+    return Number.isFinite(p) ? p : null;
+  } catch {
+    return null;
+  }
+};
+const ASSISTANT_LIFE_PEER_LV_GAIN = Object.freeze({
+  2: '2人のおしゃべりが増える',
+  3: '関係図で線が結ばれ、ミニイベントが起きる',
+  4: '息の合ったおしゃべりが加わる',
+  5: '2人の特別なお話が流れる',
+  6: 'ミニイベントが起きやすくなる',
+  7: '3人のおしゃべりに出やすくなる',
+  8: 'おしゃべりがさらに増える',
+  9: 'おしゃべりがさらに増える',
+  10: '特別なお話の続きが流れる'
+});
+const assistantLifeBondLvGain = lv => lv === 3 ? '呼び方が変わり、ごほうびが届く' : lv === 6 ? '呼び方を選べるようになり、ごほうびが届く' : '話し方が近くなり、ごほうびが届く';
+const assistantLifeWeightOf = (pts, lo, hi, levels, key) => {
+  if (!Number.isFinite(pts) || !Array.isArray(levels) || !levels.length) return null;
+  let cur = levels[0];
+  for (const s of levels) if (pts >= s[key]) cur = s;
+  const next = levels.find(s => s.level === cur.level + 1);
+  if (!next) return {
+    lv: cur.level,
+    max: true
+  };
+  const span = Math.max(1, next[key] - cur[key]),
+    left = Math.max(0, next[key] - pts);
+  const pct = v => Math.max(1, Math.round(Math.min(v, span) / span * 100));
+  return {
+    lv: cur.level,
+    next: next.level,
+    left,
+    now: Math.max(0, Math.min(1, (pts - cur[key]) / span)),
+    add: Math.min(lo, left) / span,
+    reach: lo >= left,
+    maybe: hi >= left && lo < left,
+    pct: pct(lo) === pct(hi) ? `${pct(lo)}%` : `${pct(lo)}〜${pct(hi)}%`
+  };
+};
+function AssistantLifeGiftWeight({
+  w,
+  tone,
+  gainText,
+  kind
+}) {
+  if (!w) return null;
+  const col = tone === 'peer' ? ['bg-orange-400', 'bg-orange-200'] : ['bg-pink-500', 'bg-pink-200'];
+  if (w.max) return React.createElement("p", {
+    "data-assistant-life-give-weight": `${kind}:max`,
+    className: "mt-0.5 text-[10px] font-bold leading-snug text-slate-300"
+  }, "Lv", w.lv, "(いちばん上の段)");
+  return React.createElement("div", {
+    "data-assistant-life-give-weight": `${kind}:${w.lv}`,
+    className: "mt-0.5"
+  }, React.createElement("div", {
+    className: "flex h-[6px] overflow-hidden rounded-full bg-slate-950/80",
+    "aria-hidden": "true"
+  }, React.createElement("span", {
+    className: col[0],
+    style: {
+      width: `${w.now * 100}%`
+    }
+  }), React.createElement("span", {
+    className: `${col[1]} animate-pulse`,
+    style: {
+      width: `${Math.min(1 - w.now, w.add) * 100}%`
+    }
+  })), React.createElement("p", {
+    className: "mt-0.5 text-[10px] font-bold leading-snug text-slate-300",
+    style: {
+      wordBreak: 'keep-all',
+      overflowWrap: 'anywhere'
+    }
+  }, w.reach ? React.createElement("b", {
+    className: "text-amber-200"
+  }, "この1回で Lv", w.next, " に！") : React.createElement("span", {
+    className: "inline-block"
+  }, "Lv", w.lv, "→", w.next, " まで あと", w.left, "・", React.createElement("wbr", null), "この1回で段の", w.pct, w.maybe ? '(好きなら届く)' : ''), gainText ? React.createElement(React.Fragment, null, ' ', React.createElement("span", {
+    className: "inline-block text-slate-400"
+  }, "／ Lv", w.next, ": ", gainText)) : null));
+}
+let assistantLifeShopOpener = null;
+const assistantLifeSetShopOpener = fn => {
+  assistantLifeShopOpener = typeof fn === 'function' ? fn : null;
+};
+const assistantLifeCanOpenShop = () => !!assistantLifeShopOpener;
+const assistantLifeOpenShop = (tab = 'item', who = null) => {
+  if (!assistantLifeShopOpener) return;
+  const back = tab === 'furniture' && who ? {
+    tab: 'house',
+    room: who,
+    furn: true
+  } : {
+    tab: 'items'
+  };
+  if (typeof ASSISTANT_LIFE_STORE !== 'undefined') ASSISTANT_LIFE_STORE.set({
+    open: false,
+    shopBack: back
+  });
+  assistantLifeShopOpener(tab === 'furniture' ? 'furniture' : 'item');
+};
+const assistantLifeBackFromShop = () => {
+  if (typeof ASSISTANT_LIFE_STORE === 'undefined' || !ASSISTANT_LIFE_STORE.state.shopBack) return false;
+  ASSISTANT_LIFE_STORE.set({
+    open: true
+  });
+  return true;
+};
+function AssistantLifeShopButton({
+  tab = 'item',
+  who = null,
+  label = '🛒 交換所で手に入れる',
+  small = false
+}) {
+  if (!assistantLifeCanOpenShop()) return null;
+  return React.createElement("button", {
+    type: "button",
+    "data-assistant-life-shop": tab,
+    onClick: ev => {
+      ev.stopPropagation();
+      assistantLifeOpenShop(tab, who);
+    },
+    className: `${small ? 'min-h-[32px] px-2 text-[10.5px]' : 'min-h-[40px] w-full px-3 text-[12px]'} shrink-0 whitespace-nowrap rounded-xl border border-violet-300/70 bg-[#2e1065] font-black text-violet-100 shadow-md active:scale-[.97]`
+  }, label);
+}
+function AssistantLifeGiftExplain({
+  compact = false
+}) {
+  return React.createElement("div", {
+    "data-assistant-life-gift-explain": true,
+    className: `rounded-xl bg-slate-950/85 px-2 py-1 leading-snug ${compact ? 'text-[10px]' : 'text-[10.5px]'}`,
+    style: {
+      wordBreak: 'keep-all',
+      overflowWrap: 'anywhere'
+    }
+  }, React.createElement("p", null, React.createElement("b", {
+    className: "text-orange-300"
+  }, "🤝 友情Lv"), React.createElement("span", {
+    className: "text-slate-200"
+  }, "=贈った2人の助手どうしの仲。", React.createElement("wbr", null), "上がると2人の掛け合いや特別なお話が増える")), React.createElement("p", null, React.createElement("b", {
+    className: "text-pink-200"
+  }, "💗 仲良し度"), React.createElement("span", {
+    className: "text-slate-200"
+  }, "=あなたとその助手の仲。", React.createElement("wbr", null), "上がると呼び方や会話が変わり、ごほうびが届く")));
+}
 function AssistantLifeGiftSheet({
   give,
   setGive,
@@ -119610,6 +120548,15 @@ function AssistantLifeGiftSheet({
   const playerText = i => !amt ? '' : shown[i] === 'unknown' ? `+${amt.range.player[0]}〜${amt.range.player[1]}` : `+${amt.player[i]}`;
   const peerText = !amt ? '' : lifeOn ? assistantLifeGiftPeerShown(info, shown) : `+${amt.peer}`;
   const mark = s => s === 'like' ? '💗' : s === 'bad' ? '💧' : s === 'unknown' ? '?' : '';
+  const bondLv = typeof ASSISTANT_BOND_LEVELS !== 'undefined' ? ASSISTANT_BOND_LEVELS : [];
+  const peerLv = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' ? ASSISTANT_PEER_BOND_LEVELS : [];
+  const playerW = i => {
+    if (!amt) return null;
+    const [lo, hi] = shown[i] === 'unknown' ? amt.range.player : [amt.player[i], amt.player[i]];
+    return assistantLifeWeightOf(assistantLifeBondPointsOf(pair[i]), lo, hi, bondLv, 'need');
+  };
+  const peerNums = String(peerText).replace(/\+/g, '').split('〜').map(Number).filter(Number.isFinite);
+  const peerW = amt && hint && peerNums.length ? assistantLifeWeightOf(hint.pts, peerNums[0], peerNums[peerNums.length - 1], peerLv, 'min') : null;
   return React.createElement("div", {
     "data-assistant-life-give-sheet": info.kind,
     className: "absolute inset-0 flex items-end justify-center bg-black/70",
@@ -119633,6 +120580,10 @@ function AssistantLifeGiftSheet({
   }, "今日あと ", leftToday, "回"), React.createElement(AssistantLifeFaces, {
     ids: pair,
     size: 30
+  })), lifeOn && React.createElement("div", {
+    className: "mt-1.5"
+  }, React.createElement(AssistantLifeGiftExplain, {
+    compact: true
   })), pairs.length > 1 && React.createElement("div", {
     className: "mt-1.5 flex flex-wrap gap-1.5"
   }, pairs.map(p => React.createElement("button", {
@@ -119696,30 +120647,59 @@ function AssistantLifeGiftSheet({
     className: "mt-1.5 space-y-1 text-[11px]"
   }, pair.map((id, i) => React.createElement("div", {
     key: id,
-    className: "flex items-center gap-2 rounded-lg bg-slate-800/80 px-2 py-1",
+    className: "rounded-lg bg-slate-800/80 px-2 py-1",
     "data-assistant-life-give-person": `${id}:${shown[i]}`
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
   }, React.createElement("span", {
     className: "w-[4.5rem] shrink-0 truncate font-black text-white"
   }, nameOf(id)), lifeOn && React.createElement("span", {
     className: `shrink-0 rounded-full px-1.5 text-[10px] font-black ${tagCls[shown[i]]}`
   }, shown[i] === 'unknown' ? '好み ?' : ASSISTANT_LIFE_GIFT_LABEL[shown[i]]), React.createElement("span", {
     className: "ml-auto whitespace-nowrap font-black text-pink-200"
-  }, "💗 仲良し度 ", playerText(i)))), React.createElement("div", {
-    className: "flex items-center gap-2 rounded-lg bg-slate-800/80 px-2 py-1"
+  }, "💗 あなたとの仲良し度 ", playerText(i))), lifeOn && React.createElement(AssistantLifeGiftWeight, {
+    w: playerW(i),
+    tone: "player",
+    kind: `player-${id}`,
+    gainText: (() => {
+      const w = playerW(i);
+      return w && !w.max ? assistantLifeBondLvGain(w.next) : '';
+    })()
+  }))), React.createElement("div", {
+    className: "rounded-lg bg-slate-800/80 px-2 py-1",
+    "data-assistant-life-give-peer": true
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
   }, React.createElement("span", {
-    className: "shrink-0 font-black text-white"
-  }, "2人"), React.createElement("span", {
+    className: "min-w-0 truncate font-black text-white"
+  }, pair.length === 2 ? pair.map(nameOf).join('と') : '2人'), React.createElement("span", {
     className: "ml-auto whitespace-nowrap font-black text-orange-300"
-  }, "🤝 友情Lv ", peerText, hint && left != null ? `(あと${left}で Lv${hint.lv + 1})` : ''))), React.createElement("p", {
+  }, "🤝 2人の友情Lv ", peerText, !lifeOn && hint && left != null ? `(あと${left}で Lv${hint.lv + 1})` : '')), lifeOn && React.createElement(AssistantLifeGiftWeight, {
+    w: peerW,
+    tone: "peer",
+    kind: "peer",
+    gainText: peerW && !peerW.max ? ASSISTANT_LIFE_PEER_LV_GAIN[peerW.next] || '' : ''
+  }))), React.createElement("p", {
     className: "mt-1 text-[10px] leading-snug text-slate-400 [[data-assistant-life-land='1']_&]:hidden"
-  }, lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)・?=贈ると分かる。同じ道具は1日1回・合わせて1日3回(朝4時に戻る)' : '1日1回(朝4時に戻る)', "・持っている ", have, "個", info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''), reason && React.createElement("p", {
+  }, lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)・?=贈ると分かる。同じ道具は1⁠日1回・合わせて1⁠日3回(朝4時に戻る)' : '1⁠日1回(朝4時に戻る)', "・持っている ", have, "個", info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''), reason && React.createElement("p", {
     "data-assistant-life-give-reason": true,
     className: "mt-1.5 rounded-xl bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-300"
-  }, reason), React.createElement("div", {
-    className: "mt-2 flex gap-2"
+  }, reason), lifeOn && have <= 0 && React.createElement("div", {
+    className: "mt-1.5"
+  }, React.createElement(AssistantLifeShopButton, {
+    tab: "item"
+  })), React.createElement("div", {
+    className: "sticky -mx-3 mt-2 flex gap-2 bg-slate-900 px-3 pb-3 pt-1.5",
+    "data-assistant-life-give-actions": true,
+    style: {
+      bottom: 'calc(-0.75rem - env(safe-area-inset-bottom))',
+      marginBottom: 'calc(-0.75rem - env(safe-area-inset-bottom))',
+      paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))'
+    }
   }, React.createElement("button", {
     type: "button",
     "data-assistant-life-give-cancel": true,
+    "data-mhl-sheet-close": true,
     onClick: () => setGive(null),
     className: "min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]"
   }, "やめる"), React.createElement("button", {
@@ -119934,6 +120914,7 @@ const assistantLifeFurnGive = async (who, key) => {
   const r = assistantLifeFurnGiveState(st.room, who, key, assistantLifeGiftToday());
   if (!r) return null;
   assistantLifeRoomSave(r.room);
+  if (typeof missionNotify === 'function') missionNotify('assistantTouch');
   const known = {
     ...st.likes.known,
     [who]: {
@@ -119979,11 +120960,20 @@ function AssistantLifeRoomFurn({
   w,
   h,
   faces = 0,
-  baseCount = 2
+  baseCount = 2,
+  put = null
 }) {
   const st = useAssistantLifeGiftState();
-  if (!assistantLifeFurnEnabled()) return null;
-  const room = assistantLifeRoomOf(id, st);
+  const marker = React.useRef(null);
+  const [moved, setMoved] = React.useState({});
+  const on = assistantLifeFurnEnabled();
+  const room = put ? {
+    put: {
+      ceil: put.ceil || null,
+      wall: put.wall || null,
+      floor: put.floor || null
+    }
+  } : assistantLifeRoomOf(id, st);
   const size = Math.round(Math.max(16, Math.min(26, h * 0.26, w * 0.17)));
   const faceSize = Math.round(Math.min(40, h * 0.44));
   const faceLeft = faces > 0 ? w * 0.9 - faceSize - (faces - 1) * (faceSize - 10) : w * 0.9;
@@ -120018,33 +121008,170 @@ function AssistantLifeRoomFurn({
       top: Math.round(h * 0.13)
     };
   };
-  return React.createElement(React.Fragment, null, Object.entries(room.put).filter(([, k]) => k).map(([slot, k]) => {
+  const measure = React.useRef(null);
+  measure.current = () => {
+    if (!on) return;
+    const roomEl = marker.current && marker.current.parentElement;
+    if (!roomEl) return;
+    const rr = roomEl.getBoundingClientRect();
+    if (!rr.width) return;
+    const rel = el => {
+      const r = el.getBoundingClientRect();
+      return {
+        l: r.left - rr.left,
+        t: r.top - rr.top,
+        r: r.right - rr.left,
+        b: r.bottom - rr.top
+      };
+    };
+    const hit = (a, b) => a.l < b.r - 1 && b.l < a.r - 1 && a.t < b.b - 1 && b.t < a.b - 1;
+    const pick = sel => [...roomEl.querySelectorAll(sel)].filter(el => el.getClientRects().length).map(rel);
+    const must = pick('.pl, .lv, .pp > span, .fu, [data-assistant-life-room-bub]'),
+      soft = pick('.tag');
+    const next = {},
+      taken = [];
+    for (const el of roomEl.querySelectorAll('[data-assistant-life-room-furn]')) {
+      const slot = el.dataset.assistantLifeRoomFurn.split(':')[1];
+      const base = pos(slot);
+      const cs = moved[slot] && moved[slot].scale || 1;
+      const er = el.getBoundingClientRect(),
+        gr = (el.lastElementChild || el).getBoundingClientRect();
+      const dx0 = (gr.left - er.left) / cs,
+        dy0 = (gr.top - er.top) / cs,
+        gw0 = Math.max(g, gr.width / cs),
+        gh0 = Math.max(g, gr.height / cs);
+      let best = null,
+        scale = 1,
+        bestBox = null;
+      for (const sc of [1, 0.8, 0.65]) {
+        const dx = dx0 * sc,
+          dy = dy0 * sc,
+          gw = gw0 * sc + 2,
+          gh = gh0 * sc + 2;
+        const box = q => ({
+          l: q.left + dx - 1,
+          t: q.top + dy - 1,
+          r: q.left + dx + gw,
+          b: q.top + dy + gh
+        });
+        const freeOf = blocks => q => {
+          const bx = box(q);
+          return bx.l >= 1 && bx.t >= 1 && bx.r <= w - 1 && bx.b <= h - 8 && !blocks.some(b => hit(bx, b)) && !taken.some(b => hit(bx, b));
+        };
+        const strict = freeOf([...must, ...soft]),
+          loose = freeOf(must);
+        let found = strict(base) ? base : null;
+        if (!found) {
+          const step = Math.max(2, Math.round(g * sc / 4)),
+            cands = [];
+          for (let y = 1; y <= h; y += step) for (let x = 1; x <= w; x += step) cands.push({
+            left: x,
+            top: y
+          });
+          cands.sort((a, b) => Math.hypot(a.left - base.left, a.top - base.top) - Math.hypot(b.left - base.left, b.top - base.top));
+          found = cands.find(strict) || (loose(base) ? base : cands.find(loose)) || null;
+        }
+        if (found) {
+          best = found;
+          scale = sc;
+          bestBox = box(found);
+          break;
+        }
+        if (sc === 0.65 && !soft.length) {
+          best = base;
+          scale = 0;
+          bestBox = {
+            l: 0,
+            t: 0,
+            r: 0,
+            b: 0
+          };
+          break;
+        }
+        if (sc === 0.65) {
+          const only = freeOf([]);
+          const cands = [];
+          for (let y = 1; y <= h; y += 2) for (let x = 1; x <= w; x += 2) cands.push({
+            left: x,
+            top: y
+          });
+          cands.sort((a, b) => Math.hypot(a.left - base.left, a.top - base.top) - Math.hypot(b.left - base.left, b.top - base.top));
+          best = cands.find(only) || base;
+          scale = sc;
+          bestBox = box(best);
+        }
+      }
+      taken.push(bestBox);
+      if (best !== base || scale !== 1) next[slot] = {
+        left: Math.round(best.left),
+        top: Math.round(best.top),
+        scale
+      };
+    }
+    setMoved(prev => JSON.stringify(next) === JSON.stringify(prev) ? prev : next);
+  };
+  React.useLayoutEffect(() => {
+    if (measure.current) measure.current();
+  });
+  React.useEffect(() => {
+    if (!on) return undefined;
+    const run = () => {
+      if (measure.current) measure.current();
+    };
+    const t = setInterval(run, 700);
+    const roomEl = marker.current && marker.current.parentElement;
+    let raf = 0;
+    const mo = roomEl && typeof MutationObserver !== 'undefined' ? new MutationObserver(() => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(run);
+    }) : null;
+    if (mo) mo.observe(roomEl, {
+      childList: true,
+      subtree: true,
+      characterData: true
+    });
+    return () => {
+      clearInterval(t);
+      cancelAnimationFrame(raf);
+      if (mo) mo.disconnect();
+    };
+  }, [on]);
+  if (!on) return null;
+  return React.createElement(React.Fragment, null, React.createElement("span", {
+    ref: marker,
+    hidden: true
+  }), Object.entries(room.put).filter(([, k]) => k).map(([slot, k]) => {
     const f = assistantLifeFurnOf(k);
     if (!f || !ASSISTANT_LIFE_FURN_SLOTS[slot]) return null;
-    const p = pos(slot);
+    const p = moved[slot] || pos(slot);
+    const sc = moved[slot] && Number.isFinite(moved[slot].scale) ? moved[slot].scale : 1;
+    const sz = Math.max(1, Math.round(size * (sc || 1)));
     return React.createElement("span", {
       key: slot,
       "data-assistant-life-room-furn": `${id}:${slot}:${k}`,
+      "data-assistant-life-room-furn-moved": moved[slot] ? '1' : '0',
+      "data-assistant-life-room-furn-hidden": sc === 0 ? '1' : '0',
       "aria-hidden": "true",
       style: {
+        display: sc === 0 ? 'none' : undefined,
         position: 'absolute',
         left: p.left,
         top: p.top,
-        width: size,
-        height: size,
+        width: sz,
+        height: sz,
         zIndex: 2,
-        fontSize: size,
+        fontSize: sz,
         lineHeight: 1,
         pointerEvents: 'none',
         filter: 'drop-shadow(0 2px 2px #0006)'
       }
-    }, slot === 'ceil' && React.createElement("span", {
+    }, slot === 'ceil' && p.top <= 6 && React.createElement("span", {
       style: {
         position: 'absolute',
         bottom: '100%',
         left: '50%',
         width: 1,
-        height: Math.round(size * 0.3),
+        height: Math.round(sz * 0.3),
         background: '#7c5a3a'
       }
     }), React.createElement("span", null, f.emoji));
@@ -120151,7 +121278,11 @@ function AssistantLifeFurnSheet({
     'data-assistant-life-furn-give': f.key
   })))) : React.createElement("p", {
     className: "rounded-xl bg-slate-800/80 px-2 py-1 text-[11px] font-bold text-slate-300"
-  }, "贈れる家具がありません。モンヒロビートの「ビートP交換所」の「家具」で手に入ります")), React.createElement("p", {
+  }, "贈れる家具がありません。モンヒロビートの「ビートP交換所」の「家具」で手に入ります"), React.createElement(AssistantLifeShopButton, {
+    tab: "furniture",
+    who: id,
+    label: "🛒 交換所の家具の棚へ"
+  })), React.createElement("p", {
     className: "mt-2 text-[11px] font-black text-amber-200"
   }, "🏠 部屋に置いてある家具 ", React.createElement("span", {
     className: "text-slate-300"
@@ -120172,6 +121303,7 @@ function AssistantLifeFurnSheet({
   }))))), React.createElement("button", {
     type: "button",
     "data-assistant-life-furn-close": true,
+    "data-mhl-sheet-close": true,
     onClick: onClose,
     className: "mt-2 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]"
   }, "閉じる")));
@@ -121098,6 +122230,7 @@ function AssistantMasmonSheet({
     type: "button",
     className: "mhl-btn shrink-0 bg-slate-700 px-3",
     "data-assistant-masmon-close": true,
+    "data-mhl-sheet-close": true,
     onClick: onClose
   }, "閉じる")), React.createElement("div", {
     className: "mt-2 grid grid-cols-4 gap-1",
@@ -121356,7 +122489,9 @@ const normalizeAssistantLifeFriendSettings = v => {
     open: o.open !== false,
     show: o.show !== false,
     come: o.come !== false,
-    muted: Array.isArray(o.muted) ? [...new Set(o.muted.filter(alfSafeOther))].slice(0, 100) : []
+    muted: Array.isArray(o.muted) ? [...new Set(o.muted.filter(alfSafeOther))].slice(0, 100) : [],
+    noteShow: o.noteShow !== false,
+    noteOff: Array.isArray(o.noteOff) ? [...new Set(o.noteOff.filter(alfSafeOther))].slice(0, 100) : []
   };
 };
 const normalizeAssistantLifeFriendKnown = v => {
@@ -121397,11 +122532,85 @@ const alfBuildHouse = (life, metIds) => {
       d: ASSISTANT_LIFE_DOINGS[w.doing] ? w.doing : 'idle',
       m: ASSISTANT_LIFE_MOODS[m] ? m : 'happy'
     };
+    try {
+      const put = typeof assistantLifeRoomOf === 'function' ? assistantLifeRoomOf(id).put : null;
+      const fu = {};
+      for (const [k, s] of [['c', 'ceil'], ['w', 'wall'], ['f', 'floor']]) if (put && typeof put[s] === 'string') fu[k] = put[s];
+      if (Object.keys(fu).length) r[id].fu = fu;
+    } catch {}
   }
   return {
     v: 1,
     ids,
     r
+  };
+};
+const ALF_TABLE_MORE = 'assistant_life_friend_house_more';
+const ALF_MORE_MAX_CHARS = 6000;
+const alfDiaryShare = n => {
+  try {
+    const d = typeof ASSISTANT_LIFE_DIARY !== 'undefined' ? ASSISTANT_LIFE_DIARY.state : null;
+    return (d && Array.isArray(d.items) ? d.items : []).filter(x => x && x.kind !== 'friend' && !/さんの|さんち/.test(x.text)).slice(-n).reverse().map(x => ({
+      t: alfStr(x.t, 5),
+      x: alfStr(x.text, 40)
+    }));
+  } catch {
+    return [];
+  }
+};
+const alfBuildMore = ids => {
+  const fu = {};
+  for (const id of (ids || []).filter(alfValidId)) {
+    try {
+      const room = typeof assistantLifeRoomOf === 'function' ? assistantLifeRoomOf(id) : null;
+      if (!room) continue;
+      const p = {};
+      for (const [k, sl] of [['c', 'ceil'], ['w', 'wall'], ['f', 'floor']]) if (typeof room.put[sl] === 'string') p[k] = room.put[sl];
+      const k = (room.kept || []).filter(x => typeof x === 'string').slice(0, 12);
+      if (Object.keys(p).length || k.length) fu[id] = {
+        p,
+        k
+      };
+    } catch {}
+  }
+  const dy = alfDiaryShare(8);
+  return {
+    v: 1,
+    fu,
+    dy
+  };
+};
+const assistantLifeFriendNormalizeMore = raw => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  try {
+    if (JSON.stringify(raw).length > ALF_MORE_MAX_CHARS) return null;
+  } catch {
+    return null;
+  }
+  const furn = typeof ASSISTANT_LIFE_FURNITURE !== 'undefined' && Array.isArray(ASSISTANT_LIFE_FURNITURE) ? ASSISTANT_LIFE_FURNITURE : [];
+  const fu = {};
+  for (const id of ALF_IDS) {
+    const x = raw.fu && typeof raw.fu === 'object' ? raw.fu[id] : null;
+    if (!x || typeof x !== 'object') continue;
+    const p = {};
+    for (const [k, sl] of [['c', 'ceil'], ['w', 'wall'], ['f', 'floor']]) {
+      const f = x.p && furn.find(y => y.key === x.p[k]);
+      if (f && f.slot === sl) p[k] = f.key;
+    }
+    const k = [...new Set((Array.isArray(x.k) ? x.k : []).filter(key => furn.some(y => y.key === key)))].slice(0, 12);
+    fu[id] = {
+      p,
+      k
+    };
+  }
+  const dy = (Array.isArray(raw.dy) ? raw.dy : []).slice(0, 8).map(d => d && typeof d.x === 'string' ? {
+    t: /^\d{1,2}:\d{2}$/.test(d.t) ? d.t : '',
+    x: d.x.replace(/[{}<>]/g, '').slice(0, 40)
+  } : null).filter(d => d && d.x);
+  return {
+    v: 1,
+    fu,
+    dy
   };
 };
 const assistantLifeFriendNormalizeHouse = raw => {
@@ -121421,11 +122630,27 @@ const assistantLifeFriendNormalizeHouse = raw => {
       d: typeof x.d === 'string' && ASSISTANT_LIFE_DOINGS[x.d] ? x.d : 'idle',
       m: typeof x.m === 'string' && ASSISTANT_LIFE_MOODS[x.m] ? x.m : 'happy'
     };
+    const furn = typeof ASSISTANT_LIFE_FURNITURE !== 'undefined' && Array.isArray(ASSISTANT_LIFE_FURNITURE) ? ASSISTANT_LIFE_FURNITURE : [];
+    if (x.fu && typeof x.fu === 'object') {
+      const fu = {};
+      for (const [k, slot] of [['c', 'ceil'], ['w', 'wall'], ['f', 'floor']]) {
+        const f = furn.find(y => y.key === x.fu[k]);
+        if (f && f.slot === slot) fu[k] = f.key;
+      }
+      if (Object.keys(fu).length) r[id].fu = fu;
+    }
   }
+  const dy = (Array.isArray(raw.dy) ? raw.dy : []).slice(0, 3).map(d => d && typeof d.x === 'string' ? {
+    t: /^\d{1,2}:\d{2}$/.test(d.t) ? d.t : '',
+    x: d.x.replace(/[{}<>]/g, '').slice(0, 40)
+  } : null).filter(d => d && d.x);
   return {
     v: 1,
     ids,
-    r
+    r,
+    ...(dy.length ? {
+      dy
+    } : {})
   };
 };
 const alfHomeIds = house => house ? house.ids.filter(id => house.r[id] && house.r[id].at === 'home') : [];
@@ -121441,6 +122666,7 @@ const ALF_STORE = {
     selfId: null,
     roster: [],
     houses: {},
+    more: {},
     visits: [],
     busy: false,
     scene: null
@@ -121526,7 +122752,8 @@ let _alfUnavailable = false;
 const alfRequest = async (path, {
   method = 'GET',
   body = null,
-  prefer = null
+  prefer = null,
+  soft = false
 } = {}) => {
   if (_alfUnavailable) {
     const e = new Error('assistant life friend tables are not ready');
@@ -121553,6 +122780,11 @@ const alfRequest = async (path, {
     });
     const text = await res.text();
     if (!res.ok) {
+      if (soft && _isMissingTableError(res.status, text)) {
+        const e = new Error('alf soft table missing');
+        e.missing = true;
+        throw e;
+      }
       if (_isMissingTableError(res.status, text)) {
         _alfUnavailable = true;
         ALF_STORE.set({
@@ -121692,7 +122924,7 @@ const alfFetchVisits = async (force = false) => {
   if (!force && Date.now() - _alfVisitsAt < alfLimits().readMs) return ALF_STORE.state.visits;
   try {
     const from = alfDayShift(alfDay(), -7);
-    const rows = await alfRequest(`${ALF_TABLE_VISITS}?select=id,kind,visitor_id,host_id,day,assistants,word,thanks,created_at&or=(host_id.eq.${self},visitor_id.eq.${self})&day=gte.${from}&order=created_at.desc&limit=60`);
+    const rows = await alfRequest(`${ALF_TABLE_VISITS}?select=id,kind,visitor_id,host_id,day,assistants,word,thanks,note,note_to,created_at&or=(host_id.eq.${self},visitor_id.eq.${self})&day=gte.${from}&order=created_at.desc&limit=60`);
     const visits = (Array.isArray(rows) ? rows : []).map(r => r && Number.isFinite(r.id) && ['go', 'come', 'player'].includes(r.kind) && alfSafeOther(r.visitor_id) && alfSafeOther(r.host_id) ? {
       id: r.id,
       kind: r.kind,
@@ -121702,7 +122934,9 @@ const alfFetchVisits = async (force = false) => {
       ids: Array.isArray(r.assistants) ? r.assistants.filter(alfValidId).slice(0, 2) : [],
       word: alfInt(r.word, 0, ALF_WORDS - 1),
       thanks: r.thanks == null ? null : alfInt(r.thanks, 0, ALF_THANKS - 1),
-      at: Date.parse(r.created_at) || 0
+      at: Date.parse(r.created_at) || 0,
+      note: typeof r.note === 'string' ? alfNoteShow(r.note) : '',
+      noteTo: alfValidId(r.note_to) ? r.note_to : null
     } : null).filter(Boolean);
     _alfVisitsAt = Date.now();
     ALF_STORE.set({
@@ -121721,6 +122955,7 @@ const alfRefusalText = e => {
   if (/今日はもう/.test(b)) return '今日はもう訪ねられません(朝4時に戻ります)';
   if (/止めています/.test(b)) return 'フレンドの家との行き来は、いまお休み中です';
   if (/日付/.test(b)) return '端末の日付と時刻がずれているようです。合わせてからもう一度';
+  if (/連絡先/.test(b) || /alf_visits_note/.test(b)) return '連絡先のような文は置けません。ひとことを書き直してください';
   if (e && e.status === 409 || /23505|duplicate/.test(b)) return '今日はこの家にもう置き手紙を残しました';
   return '通信がうまくいきませんでした(時間をおいてもう一度)';
 };
@@ -121729,9 +122964,19 @@ const alfPostVisitR = async ({
   visitor,
   host,
   ids = [],
-  word = 0
+  word = 0,
+  note = '',
+  noteTo = null
 }) => {
   try {
+    const extra = {
+      ...(note ? {
+        note
+      } : {}),
+      ...(noteTo && alfValidId(noteTo) ? {
+        note_to: noteTo
+      } : {})
+    };
     await alfRequest(ALF_TABLE_VISITS, {
       method: 'POST',
       prefer: 'return=minimal',
@@ -121741,7 +122986,8 @@ const alfPostVisitR = async ({
         host_id: host,
         day: alfDay(),
         assistants: ids,
-        word
+        word,
+        ...extra
       }
     });
     return {
@@ -121795,9 +123041,52 @@ const alfPublish = async (life, metIds, now = Date.now(), {
       sentAt: now,
       sentSig: sig
     });
+    void alfPublishMore(self, settings.show ? alfBuildMore(house.ids) : {});
     return true;
   } catch {
     return false;
+  }
+};
+let _alfMoreMissing = false;
+let _alfMoreSig = '';
+const alfPublishMore = async (self, more) => {
+  if (_alfMoreMissing || !self) return false;
+  const sig = alfSig(JSON.stringify(more));
+  if (sig === _alfMoreSig) return false;
+  try {
+    await alfRequest(`${ALF_TABLE_MORE}?on_conflict=breeder_id`, {
+      method: 'POST',
+      prefer: 'resolution=merge-duplicates,return=minimal',
+      body: {
+        breeder_id: self,
+        more
+      },
+      soft: true
+    });
+    _alfMoreSig = sig;
+    return true;
+  } catch (e) {
+    if (e && e.missing) _alfMoreMissing = true;
+    return false;
+  }
+};
+const alfFetchMore = async hostId => {
+  if (_alfMoreMissing || !alfSafeOther(hostId)) return null;
+  try {
+    const rows = await alfRequest(`${ALF_TABLE_MORE}?select=more,updated_at&breeder_id=eq.${encodeURIComponent(hostId)}&limit=1`, {
+      soft: true
+    });
+    const m = Array.isArray(rows) && rows[0] ? assistantLifeFriendNormalizeMore(rows[0].more) : null;
+    ALF_STORE.set({
+      more: {
+        ...ALF_STORE.state.more,
+        [hostId]: m
+      }
+    });
+    return m;
+  } catch (e) {
+    if (e && e.missing) _alfMoreMissing = true;
+    return null;
   }
 };
 const alfEnsureHouse = async ({
@@ -122132,7 +123421,9 @@ const assistantLifeFriendCanLook = hostId => {
 const assistantLifeFriendLeaveNote = async (hostId, {
   word = 0,
   talked = [],
-  name = ''
+  name = '',
+  note = '',
+  noteTo = null
 } = {}) => {
   await ALF_STORE.load();
   alfToday();
@@ -122151,17 +123442,28 @@ const assistantLifeFriendLeaveNote = async (hostId, {
     reason: 'あなたの家の様子をまだ届けられていません。電波のよい所でもう一度'
   };
   const ids = [...new Set((talked || []).filter(alfValidId))].slice(0, 2);
+  const nc = alfNoteCheck(note);
+  if (!nc.ok) return {
+    ok: false,
+    reason: nc.reason
+  };
   const r = await alfPostVisitR({
     kind: 'player',
     visitor: self,
     host: hostId,
     ids,
-    word: alfInt(word, 0, ALF_WORDS - 1)
+    word: alfInt(word, 0, ALF_WORDS - 1),
+    note: nc.text,
+    noteTo: alfValidId(noteTo) ? noteTo : null
   });
   if (!r.ok) return {
     ok: false,
     reason: r.reason
   };
+  if (typeof missionNotify === 'function') {
+    missionNotify('friendVisit');
+    missionNotify('assistantTouch');
+  }
   const cur = alfToday();
   const firstHere = !cur.photos.some(p => p.host === hostId);
   const photos = firstHere ? [...cur.photos, {
@@ -122194,6 +123496,34 @@ const assistantLifeFriendLeaveNote = async (hostId, {
     beatP: got,
     photo: firstHere
   };
+};
+const ALF_NOTE_MAX = 40;
+const ALF_NOTE_PERSONAL = /〒|丁目|番地|住所|本名|学校|中学|高校|小学/;
+const alfNoteClean = raw => typeof cardChatClean === 'function' ? cardChatClean(raw, ALF_NOTE_MAX) : [...String(raw == null ? '' : raw).replace(/[\u0000-\u001f\u007f\u200b-\u200f\u2028-\u202e\u2060-\u2069\ufeff]/g, ' ').replace(/\s+/g, ' ').trim()].slice(0, ALF_NOTE_MAX).join('');
+const alfNoteCheck = raw => {
+  const text = alfNoteClean(raw);
+  if (!text) return {
+    ok: true,
+    text: ''
+  };
+  if (typeof cardChatContact === 'function' && cardChatContact(text) || /https?:|www\.|@[a-z0-9_]{3,}/i.test(text) || /[0-9０-９]{7,}/.test(text.replace(/[\s\-ー－]/g, ''))) return {
+    ok: false,
+    text,
+    reason: '連絡先(ID・URL・電話番号など)は書けません'
+  };
+  if (ALF_NOTE_PERSONAL.test(text)) return {
+    ok: false,
+    text,
+    reason: '住所・本名・学校など、自分のことが分かる言葉は書けません'
+  };
+  return {
+    ok: true,
+    text: typeof cardChatMask === 'function' ? cardChatMask(text) : text
+  };
+};
+const alfNoteShow = raw => {
+  const c = alfNoteCheck(raw);
+  return c.ok ? c.text : '';
 };
 const assistantLifeFriendNotes = (s = ALF_STORE.state) => {
   const self = s.selfId;
@@ -122350,6 +123680,132 @@ const ALF_TALK_LINES = Object.freeze({
   sorashido: ['うぉぉぉ！お客さんだぜ・・・！', 'ちばりよー！応援してるぜ笑', 'また来いよ笑'],
   erubin: ['いらっしゃい。来てくれてありがとう', '{h}さんの家、居心地いいでしょ', '気をつけて帰ってね']
 });
+const ALF_VISIT_LINES = Object.freeze({
+  "mua": {
+    "greet": ["はじめましてー！ {h}さんのお友だち？", "わ、お客さんだ！ ゆっくりしてってよー✨", "{name}って言うの？ よろしくね♪"],
+    "doing": {
+      "snack": "いま、おやつ食べてたとこー！ いっしょにどう？",
+      "practice": "ちょうど練習してたの！ 見てってよー♪",
+      "training": "モッチーのお世話中だったの！ かわいいでしょ？",
+      "cards": "カード並べてたとこ！ どれがかわいいと思う？",
+      "read": "雑誌見てたの！ コーデ決めてたとこ♪",
+      "idle": "ちょうどヒマしてたの！ ナイスタイミングぢゃん👍"
+    },
+    "reply": ["ありがとー！ 来てくれて、まぢうれしい♪", "うんうん(●ﾟｪﾟ))ｺｸｺｸ 楽しんでってね！", "そう言ってもらえると、照れるぢゃんｗ"],
+    "sleep": ["…むにゃ…このリボン…かわいー…", "…すぅ…いらっしゃーい…むにゃ…"]
+  },
+  "kiki": {
+    "greet": ["まあ、お客さまでつね。ようこそいらっしゃいました", "はじめまして。{h}さんのところの、ききでつ", "{name}、どうぞお入りくださいな♪"],
+    "doing": {
+      "snack": "ちょうど、お茶菓子をいただいていたところでつ。おひとついかが？",
+      "practice": "モンヒロビートの練習中でした。ちから全開でいきまつよ♪",
+      "training": "ゴーレムさんのお世話をしていました。立派でしょう？",
+      "cards": "カードを並べていたところでつ。攻撃のカードばかりですね♪",
+      "read": "本を読んでいました。静かな時間は、いいものでつね",
+      "idle": "ぼんやりお茶を飲んでいたところでした。ゆっくりしていってくださいね"
+    },
+    "reply": ["ありがとうございます。くつろいでくださいね♪", "そう言っていただけると、うれしいでつ", "どうぞ、お茶でもいれましょうか"],
+    "sleep": ["…すぅ…お茶が…さめてしまいまつ…", "…むにゃ…火力は…こちらに…"]
+  },
+  "momosuke": {
+    "greet": ["わ、お客さん！！ ももの部屋へようこそ♡", "はじめまして！！ {h}さんちの、ももだよ！！", "{name}、来てくれたの！？ うれしい！！"],
+    "doing": {
+      "snack": "おやつタイム中！！ ひと口あげるw",
+      "practice": "いま練習中！！ ももの音、聞いてって♡",
+      "training": "メタルナーみがいてたとこ！！ ぴかぴかでしょ？",
+      "cards": "カード並べてた！！ かわいいのばっかでしょw",
+      "read": "楽譜見てたの！！ 次の曲、どれにしよっかな",
+      "idle": "ちょうどヒマだったの！！ 遊ぼ遊ぼ！！"
+    },
+    "reply": ["でしょ！？ ももの自慢の部屋だもん♡", "ありがと！！ ゆっくりしてってねw", "えっへん！！ もっとほめていいよw"],
+    "sleep": ["…すぅ…ライブ…まだ終わらない…", "…むにゃ…ぴかぴか…w"]
+  },
+  "dra": {
+    "greet": ["お、お客さんか。よく来たな", "はじめましてだな。{h}さんのところのドラだ", "{name}か。ゆっくりしていけよ"],
+    "doing": {
+      "snack": "ちょうどおやつ中だ。ひとつ食うか？",
+      "practice": "モンビーの練習してたとこだ。リズムきざむぞ",
+      "training": "グジラの世話してたんだ。でっかいだろ",
+      "cards": "山札を確かめてたとこだ。見ていくか？",
+      "read": "説明書きを読んでたんだ。わかりやすく書いてあるな",
+      "idle": "ぼーっとしてたとこだ。ちょうどよかったな、えへへ"
+    },
+    "reply": ["そうか、ありがとな。くつろいでいけ", "おでの部屋、気に入ったか？", "まあ、座ってくれ。おやつもあるぞ"],
+    "sleep": ["…ぐぅ…グジラ…まだ食べるのか…", "…すぅ…いらっしゃい…むにゃ…"]
+  },
+  "atsu": {
+    "greet": ["お、いらっしゃい！ {h}さんの友だちだよね笑", "{name}、来てくれたんだ！ ゆっくりしてって笑", "おっ、お客さん笑 遠慮しないで入って！"],
+    "doing": {
+      "snack": "ちょうどおやつ食べてた笑 一個どう？",
+      "practice": "いま一曲叩いてたとこ笑 {name}も聞いてく？",
+      "training": "ドラゴンの世話してた笑 ちょっと待ってて！",
+      "cards": "デッキ組み直してたとこ笑 見ていく？",
+      "read": "本読んでたら、ちょっと寝そうだった笑 来てくれて助かる！",
+      "idle": "ぼーっとしてた笑 ちょうど話し相手ほしかった！"
+    },
+    "reply": ["ありがと笑 くつろいでって！", "そう言ってもらえると、うれしい笑", "いいって笑 {h}さんにも伝えとく！"],
+    "sleep": ["……次の一曲、いける……", "……ドラゴン、えらいぞ……( *'ω'*)ノ"]
+  },
+  "kyuko": {
+    "greet": ["ほい、いらっしゃ〜い。{name}、ようこそだよぉ", "あ、お客さんだぁ。{h}さんの友だちかな？", "ちょうどひと休みしたかったんだぁ。どうぞどうぞ"],
+    "doing": {
+      "snack": "おやつ食べてたとこ〜。一緒にどう？",
+      "practice": "いま練習してたんだぁ。ちょっと聞いてってよぉ",
+      "training": "ニャーの世話してたとこ〜。かわいいでしょ笑",
+      "cards": "新しい組み方、考えてたんだぁ。見る？",
+      "read": "本読んでたとこ〜。いいところで来たねぇ笑",
+      "idle": "ぼーっと音楽聞いてたんだぁ。座っていいよぉ"
+    },
+    "reply": ["ありがとん笑 ゆっくりしてってねぇ", "そう言ってもらえると、うれしいなぁ", "ほい、どういたしまして〜。{h}さんも喜ぶよぉ"],
+    "sleep": ["……むにゃ……あと一ページ……", "……ニャー、そこはだめだよぉ……"]
+  },
+  "sorashido": {
+    "greet": ["うぉぉぉ！ お客さんだ！ よく来てくれたな", "{name}、いらっしゃい！ くつろいでくれ笑", "{h}さんの友だちか。ゆっくりしていけよ"],
+    "doing": {
+      "snack": "ちょうどちんすこう食べてたんだ。一緒にどうだ？",
+      "practice": "いま練習してたんだ！ 聞いていくか？",
+      "training": "育成の記録をつけてたとこだ。ちょっと待っててくれ",
+      "cards": "新しい表を作ってたんだぜ・・・！ 見ていくか？",
+      "read": "本を読んでたんだ。いいところで来たな笑",
+      "idle": "考えごとしてたんだ。話し相手ができてうれしいぞ"
+    },
+    "reply": ["ありがとな！ でーじうれしいぞ笑", "そう言ってもらえると、表を作ったかいがあるな", "気をつかわなくていいぞ。ゆっくりしてくれ"],
+    "sleep": ["……うぉぉ……むにゃ……表が……", "……なんくるないさ〜……すぅ……"]
+  },
+  "erubin": {
+    "greet": ["いらっしゃい。{name}、来てくれてありがとう", "はじめまして、かな。{h}さんのお友だちだね", "ようこそ。ゆっくりしていってね☺️"],
+    "doing": {
+      "snack": "ちょうどお茶とおやつの時間だったんだ。一緒にどうかな？",
+      "practice": "いま練習してたところだよ。少し聞いていく？",
+      "training": "デュラハンのお世話をしてたんだ。おとなしいでしょ",
+      "cards": "カードの組み方を考えてたんだ。見ていく？",
+      "read": "本を読んでたんだ。静かでいい時間だね",
+      "idle": "窓の外をながめてたんだ。ちょうどよかったよ"
+    },
+    "reply": ["ありがとう。そう言ってもらえるとうれしいな", "どういたしまして。気をつかわなくていいからね", "うん、{h}さんにも伝えておくね"],
+    "sleep": ["……みんな、元気かな……", "……デュラハン、そこで守って……"]
+  }
+});
+const ALF_GO_MORE = Object.freeze({
+  "mua": ["{h}さんの家、おしゃれすぎぢゃない！？", "{f}の部屋、見せてもらってもいい？"],
+  "kiki": ["{h}さんのお家、落ち着いたすてきなお部屋でつね", "{f}、おじゃましまつ。お茶をお持ちしました♪"],
+  "momosuke": ["{h}さんちの部屋、かわいいじゃん！！", "{f}、遊びに来たよ！！ 練習見せて♡"],
+  "dra": ["{h}さんの家か。いい部屋だな", "{f}、おじゃまするぞ。おやつ持ってきた"],
+  "atsu": ["{f}、遊びに来た笑 なんかして遊ぼ！", "{h}さんの部屋、いい感じじゃん！ また来たいな笑"],
+  "kyuko": ["{f}、遊びに来たよぉ。何してたの？", "{h}さんの部屋、本がありそうで落ち着くねぇ"],
+  "sorashido": ["{f}、遊びに来たぞ！ 今日はなにする？", "{h}さんの部屋、でーじ落ち着くな笑"],
+  "erubin": ["{f}、遊びに来たよ。元気だったかな？", "{h}さんの部屋、やさしい感じがするね"]
+});
+const ALF_WELCOME_MORE = Object.freeze({
+  "mua": ["{f}だ！ 来てくれたの、まぢうれしい♪", "あたしの部屋、こっちだよー！ ゆっくりしてってね✨"],
+  "kiki": ["{f}、ようこそ。お茶をおいれしまつね", "遠いところ、ありがとうございまつ。ゆっくりしていってくださいな"],
+  "momosuke": ["{f}だ！！ ももの部屋、案内するね♡", "いらっしゃい！！ おやつ用意してあるよw"],
+  "dra": ["{f}か、よく来たな。ゆっくりしていけ", "おでの部屋はこっちだ。散らかってるけどな"],
+  "atsu": ["いらっしゃい！ 来てくれたの、まじでうれしい笑", "{f}、よく来たじゃん笑 ゆっくりしてって！"],
+  "kyuko": ["いらっしゃ〜い。{f}、待ってたよぉ", "ほい、上がって上がって〜。お茶いれるねぇ"],
+  "sorashido": ["よく来たな！ {f}、待ってたぞ", "いらっしゃい！ ゆっくりしていけよ笑"],
+  "erubin": ["いらっしゃい、{f}。ゆっくりしていってね", "来てくれてうれしいよ。お茶をいれるね"]
+});
 const ALF_WORD_TEXTS = Object.freeze(['楽しかった！', 'また来るね', 'おじゃましました', 'おやつおいしかった', 'いい部屋だったよ', 'また遊ぼうね', 'ゆっくりできた', 'ありがとう', 'お話しできてうれしかった', 'みんな元気そうだった', 'また会いたいな', 'お留守のあいだにおじゃましました']);
 const ALF_THANKS_TEXTS = Object.freeze(['来てくれてありがとう！', 'またいつでも来てね', 'うれしかったよ', '今度はこっちから行くね', 'みんな喜んでたよ', 'おつかれさま！']);
 const ALF_DOING_ROOM = Object.freeze({
@@ -122366,8 +123822,10 @@ const alfFill = (text, {
   f = '',
   h = '',
   v = '',
-  who = null
-} = {}) => String(text || '').replace(/\{f\}/g, f).replace(/\{h\}/g, h).replace(/\{v\}/g, v).replace(/\{name\}/g, () => typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(who) : 'あなた');
+  who = null,
+  name = null
+} = {}) => String(text || '').replace(/\{f\}/g, f).replace(/\{h\}/g, h).replace(/\{v\}/g, v).replace(/\{name\}/g, () => name != null ? name : typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(who) : 'あなた');
+const alfPickOne = arr => Array.isArray(arr) && arr.length ? arr[Math.floor(Math.random() * arr.length)] : '';
 const alfTheirLabel = (hostName, aid) => `${hostName}さんの${assistantLifeName(aid)}`;
 const assistantLifeFriendGoScene = (o, n = 0) => {
   if (!o) return null;
@@ -122385,7 +123843,7 @@ const assistantLifeFriendGoScene = (o, n = 0) => {
   const pick = arr => arr[(n + mine.length) % arr.length];
   lines.push({
     who: mine[0],
-    text: alfFill(pick(ALF_GO_LINES[mine[0]] || ['おじゃまします']), {
+    text: alfFill(pick([...(ALF_GO_LINES[mine[0]] || ['おじゃまします']), ...(ALF_GO_MORE[mine[0]] || [])]), {
       f: t0 ? alfTheirLabel(o.name, t0) : `${o.name}さん`,
       h: o.name,
       who: mine[0]
@@ -122455,7 +123913,8 @@ const alfComeSceneScript = c => c ? {
     })
   }, ...(c.mine ? [{
     who: c.mine,
-    text: alfFill(c.mine === c.aid ? ALF_SAME_LINES[c.mine] : ALF_WELCOME_LINES[c.mine], {
+    text: alfFill(c.mine === c.aid ? ALF_SAME_LINES[c.mine] : alfPickOne([ALF_WELCOME_LINES[c.mine], ...(ALF_WELCOME_MORE[c.mine] || [])].filter(Boolean)), {
+      f: alfTheirLabel(c.name, c.aid),
       who: c.mine
     })
   }] : [])]
@@ -122559,9 +124018,9 @@ const alfApiLineOk = (who, t) => {
   if (ALF_API_BODY_WORDS.test(x) || /(この|あの|その)子|子たち/.test(x)) return null;
   if (who === 'atsu') {
     x = x.trim().replace(/。$/, '！');
-    if (!/(笑|[！？!?…♪w]|[)）]|[\u3000-\u303f]?[\uff08(][^)）]*[)）]|\p{Extended_Pictographic}\uFE0F?)$/u.test(x)) return null;
+    if (!/(笑|[！？!?…♪w]|[)）][ノﾉｼ]?|[\u3000-\u303f]?[\uff08(][^)）]*[)）]|\p{Extended_Pictographic}\uFE0F?)$/u.test(x)) return null;
   }
-  if (who === 'dra' && /ほんま|やで|っとる|っとん|とんだ|やろ(?!う)|あかん|へん[。、！]/.test(x)) return null;
+  if (who === 'dra' && /ほんま|やで|っとる|っとん|とんだ|やろ(?!う)|あかん|へん[。、！]|ええ(な|で|やん|わ)|(草|くさ)[。！!w]*$/.test(x)) return null;
   if (who === 'kiki' && /(だよ|だね|してよ|じゃん)([。！!？?♪]|$)/.test(x)) return null;
   if (who !== 'mua' && /ぢゃん|まぢ/.test(x)) return null;
   return x;
@@ -122657,32 +124116,120 @@ function AlfSceneSheet({
     type: "button",
     className: "mt-3 w-full rounded-2xl bg-amber-300 py-2 text-[13px] font-black text-slate-950",
     "data-alf-scene-close": true,
+    "data-mhl-sheet-close": true,
     onClick: onClose
   }, "とじる"))));
 }
 const ALF_PLAYER_REPLIES = Object.freeze(['こんにちは！', 'おじゃましてます', 'すてきな部屋だね']);
+const alfRoomsOf = house => {
+  const rooms = {};
+  for (const id of ALF_IDS) {
+    const r = house && house.r[id];
+    if (!r) {
+      rooms[id] = null;
+      continue;
+    }
+    const doing = (ASSISTANT_LIFE_DOINGS[r.d] || {}).label || 'のんびり';
+    if (r.at !== 'home') rooms[id] = {
+      tag: ['🚶 おでかけ中', 'いまは家にいない']
+    };else if (r.d === 'sleep') rooms[id] = {
+      in: [id],
+      sleep: true,
+      bub: ['💤 おやすみ中']
+    };else rooms[id] = {
+      in: [id],
+      bub: ['部屋で', doing]
+    };
+  }
+  return rooms;
+};
+const alfFurnPutOf = house => {
+  const o = {};
+  for (const id of house ? house.ids : []) {
+    const fu = house.r[id] && house.r[id].fu;
+    if (fu) o[id] = {
+      put: {
+        ceil: fu.c || null,
+        wall: fu.w || null,
+        floor: fu.f || null
+      }
+    };
+  }
+  return o;
+};
 function AlfFriendHouseView({
   friend,
   onClose
 }) {
+  const fs = useAssistantLifeFriendState();
+  const [roomId, setRoomId] = React.useState(null);
+  const [noteText, setNoteText] = React.useState('');
   const [talk, setTalk] = React.useState(null);
   const [talked, setTalked] = React.useState([]);
-  const [leaving, setLeaving] = React.useState(false);
+  const [leaving, setLeaving] = React.useState(null);
   const [done, setDone] = React.useState(null);
+  const [noteWarn, setNoteWarn] = React.useState('');
+  const [boardOpen, setBoardOpen] = React.useState(false);
+  const [selfName, setSelfName] = React.useState('');
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const n = typeof storeGet === 'function' ? await storeGet('mh_breeder_name', '') : '';
+        if (alive && typeof n === 'string' && n && n !== '名無しのブリーダー') setSelfName(n.slice(0, 10));
+      } catch {}
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const [vw, setVw] = React.useState(() => typeof window !== 'undefined' ? window.innerWidth : 390);
+  const [vh, setVh] = React.useState(() => typeof window !== 'undefined' ? window.innerHeight : 844);
+  React.useEffect(() => {
+    const on = () => {
+      setVw(window.innerWidth);
+      setVh(window.innerHeight);
+    };
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  React.useEffect(() => {
+    if (friend && friend.id) void alfFetchMore(friend.id);
+  }, [friend && friend.id]);
   if (!friend || !friend.house) return null;
+  const more = (fs.more || {})[friend.id] || null;
   const h = friend.house;
   const can = assistantLifeFriendCanLook(friend.id);
-  const tall = typeof window !== 'undefined' && window.innerHeight > window.innerWidth;
-  const face = tall ? 48 : 34;
+  const land = vw > vh;
+  const look = typeof assistantLifeTimeLook === 'function' ? assistantLifeTimeLook() : 'day';
+  const rooms = alfRoomsOf(h);
+  const metSet = new Set(h.ids);
+  const home = alfHomeIds(h).filter(id => h.r[id].d !== 'sleep');
+  const pad = 12;
+  const houseW = land ? Math.min(560, Math.round(vw * 0.64) - pad * 2) : Math.min(380, vw - pad * 2);
   const lines = aid => ALF_TALK_LINES[aid] || ['いらっしゃい', 'ありがとう', 'またね'];
-  const greet = aid => setTalk({
-    aid,
-    step: 0,
-    text: alfFill(lines(aid)[0], {
-      h: friend.name,
-      who: aid
-    })
-  });
+  const visitor = `${selfName || 'お客'}さん`;
+  const vl = aid => ALF_VISIT_LINES[aid] || {
+    greet: [],
+    doing: {},
+    reply: [],
+    sleep: []
+  };
+  const greet = aid => {
+    const d = h.r[aid] && h.r[aid].d;
+    const byDoing = vl(aid).doing[d];
+    const text = byDoing && Math.random() < 0.6 ? byDoing : alfPickOne([lines(aid)[0], ...vl(aid).greet]);
+    setRoomId(aid);
+    setTalk({
+      aid,
+      step: 0,
+      text: alfFill(text, {
+        h: friend.name,
+        who: aid,
+        name: visitor
+      })
+    });
+  };
   const reply = i => {
     if (!talk) return;
     setTalked(t => [...new Set([...t, talk.aid])]);
@@ -122690,154 +124237,435 @@ function AlfFriendHouseView({
       ...talk,
       step: 1,
       mine: ALF_PLAYER_REPLIES[i],
-      text: alfFill(lines(talk.aid)[1 + i % 2], {
+      text: alfFill(alfPickOne([lines(talk.aid)[1 + i % 2], ...vl(talk.aid).reply]), {
         h: friend.name,
-        who: talk.aid
+        who: talk.aid,
+        name: visitor
       })
     });
   };
   const leave = async word => {
+    const to = leaving || null;
     const r = await assistantLifeFriendLeaveNote(friend.id, {
       word,
       talked,
-      name: friend.name
+      name: friend.name,
+      note: noteText,
+      noteTo: to
     });
-    setLeaving(false);
+    if (!(r && r.ok) && r && /書けません|書き直/.test(r.reason || '')) {
+      setDone(null);
+      setNoteWarn(r.reason);
+      return;
+    }
+    setLeaving(null);
+    setRoomId(null);
+    setTalk(null);
+    setNoteText('');
     setDone(r && r.ok ? `✉️ 置き手紙「${ALF_WORD_TEXTS[word]}」を残しました${r.photo ? '・📷 写真1枚' : ''}${r.beatP ? `・🎁 ビートP ${r.beatP}(ギフトに届きます)` : ''}` : `⚠️ ${r && r.reason || '置き手紙を残せませんでした(時間をおいてもう一度)'}`);
   };
-  return alfLayer(React.createElement("div", {
-    className: "absolute inset-0 flex flex-col bg-slate-950",
+  const noteLine = done ? done : can === 'ok' ? `✉️ 置き手紙を残すと、${friend.name}さんに「あなたが訪ねてくれた」と一言が届きます(ビートP 50)` : can === 'done' ? `✉️ この家には今日もう置き手紙を残しました。見て回るのは自由です` : `✉️ 今日はもう置き手紙を残せません(朝4時に戻ります)。見て回るのは自由です`;
+  const r0 = roomId ? h.r[roomId] : null;
+  const roomState = !r0 ? null : r0.at !== 'home' ? 'out' : r0.d === 'sleep' ? 'sleep' : 'home';
+  const putOf = id => more && more.fu[id] ? more.fu[id].p : h.r[id] && h.r[id].fu || null;
+  const fname = k => {
+    const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(k) : null;
+    return f ? `${f.emoji} ${f.name}` : null;
+  };
+  const furnNames = id => {
+    const fu = putOf(id);
+    return fu ? ['c', 'w', 'f'].map(k => fu[k] && fname(fu[k])).filter(Boolean) : [];
+  };
+  const keptNames = id => more && more.fu[id] ? more.fu[id].k.map(fname).filter(Boolean) : [];
+  const masmonOf = id => {
+    const pl = typeof assistantMasmonPlanOf === 'function' ? assistantMasmonPlanOf(id) : null;
+    return pl ? pl.team.slice(0, 3).map(t => {
+      const m = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(t.monster) : null;
+      return m ? `${t.nick}(${m.name})` : null;
+    }).filter(Boolean) : [];
+  };
+  const otherPut = (() => {
+    const o = alfFurnPutOf(h);
+    if (more) for (const id of Object.keys(more.fu)) o[id] = {
+      put: {
+        ceil: more.fu[id].p.c || null,
+        wall: more.fu[id].p.w || null,
+        floor: more.fu[id].p.f || null
+      }
+    };
+    return o;
+  })();
+  const diaryItems = more && more.dy.length ? more.dy : h.dy || [];
+  const header = React.createElement("div", {
+    className: "mhl-hdr flex items-start gap-2",
     style: {
-      zIndex: 44
-    },
-    "data-alf-visit": true
-  }, React.createElement("div", {
-    className: "flex items-center gap-2 border-b border-amber-300/30 px-3 pb-2",
-    style: {
-      paddingTop: 'calc(8px + env(safe-area-inset-top))'
+      paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))'
     }
-  }, React.createElement("div", {
-    className: "min-w-0 flex-1"
-  }, React.createElement("p", {
-    className: "truncate text-[15px] font-black text-amber-200",
-    "data-alf-visit-title": true
-  }, "🏘 ", friend.name, "さんの家"), React.createElement("p", {
-    className: "text-[10px] text-slate-400"
-  }, React.createElement("span", {
-    className: "whitespace-nowrap"
-  }, "🚪 訪ねている"), "・", React.createElement("span", {
-    className: "whitespace-nowrap"
-  }, "📷 ", alfAgoText(friend.at), " の控え"))), React.createElement("button", {
+  }, React.createElement("button", {
     type: "button",
-    className: "shrink-0 rounded-xl border border-slate-500 px-3 py-1.5 text-[12px] font-black text-slate-100",
+    className: "h-9 w-8 shrink-0 text-[19px] text-slate-100",
+    "aria-label": "もどる",
     "data-alf-visit-close": true,
     onClick: onClose
-  }, "もどる")), React.createElement("div", {
-    className: "min-h-0 flex-1 overflow-y-auto px-3 pb-3"
-  }, React.createElement("div", {
-    className: "flex items-center",
+  }, "←"), React.createElement("div", {
+    className: "min-w-0",
     style: {
-      height: 50
-    },
-    "data-alf-visit-gap": true
+      maxWidth: land ? '100%' : '48%'
+    }
   }, React.createElement("p", {
-    className: "max-w-[55%] text-[11px] leading-snug text-slate-300"
-  }, talk ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "mhl-en whitespace-nowrap"
+  }, "VISIT · FRIEND HOUSE"), React.createElement("p", {
+    className: "truncate text-[17px] font-black text-amber-100",
+    "data-alf-visit-title": true
+  }, "🏘 ", friend.name, "さんの家"), React.createElement("p", {
+    className: "text-[10px] font-bold text-slate-200"
+  }, React.createElement("span", {
     className: "whitespace-nowrap"
-  }, "返事をえらぶか、"), React.createElement("span", {
+  }, "📷 ", alfAgoText(friend.at), " の様子"), "・", React.createElement("span", {
     className: "whitespace-nowrap"
-  }, "ほかの部屋へ")) : React.createElement(React.Fragment, null, React.createElement("span", {
-    className: "whitespace-nowrap"
-  }, "黄色い枠の部屋を押して、"), React.createElement("span", {
-    className: "whitespace-nowrap"
-  }, "助手に声をかけよう")))), React.createElement("div", {
-    className: "grid grid-cols-4 gap-2",
-    "data-alf-visit-rooms": true
-  }, h.ids.map(aid => {
-    const r = h.r[aid] || {
-      at: 'home',
-      d: 'idle'
-    };
-    const home = r.at === 'home';
-    const can = home && r.d !== 'sleep';
-    return React.createElement("button", {
-      key: aid,
-      type: "button",
-      disabled: !can,
-      "data-alf-visit-room": aid,
-      onClick: () => can && greet(aid),
-      style: {
-        minHeight: tall ? 112 : 78
-      },
-      className: `flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl border p-1 ${can ? talk && talk.aid === aid ? 'border-amber-300 bg-amber-900/40' : 'border-amber-200/50 bg-slate-800/90' : 'border-slate-600/40 bg-slate-900/70 opacity-60'}`
-    }, React.createElement(AlfFace, {
-      id: aid,
-      size: face
-    }), React.createElement("span", {
-      className: `whitespace-nowrap font-black text-slate-100 ${tall ? 'text-[12px]' : 'text-[10.5px]'}`
-    }, assistantLifeName(aid)), React.createElement("span", {
-      className: "whitespace-nowrap text-[9px] text-slate-300"
-    }, home ? ALF_DOING_ROOM[r.d] || 'のんびり中' : 'おでかけ中'));
-  })), talk && React.createElement("div", {
-    className: tall ? 'mt-5' : 'mt-3',
+  }, friend.name, "さんが最後に開いたとき"))));
+  const tiles = React.createElement("div", {
+    "data-alf-visit-acts": true
+  }, React.createElement("p", {
+    className: "mb-1 text-[10px] font-black text-slate-200"
+  }, "この家でできること"), React.createElement("div", {
+    className: "grid grid-cols-3 gap-1.5"
+  }, React.createElement("button", {
+    type: "button",
+    className: "mhl-tile mhl-call",
+    disabled: !home.length,
+    "data-alf-visit-act": "talk",
+    onClick: () => home[0] && greet(home[0])
+  }, React.createElement("i", null, "💬"), React.createElement("b", null, "話す"), React.createElement("small", null, home.length ? `家にいる ${home.length}人` : 'いまはだれも')), React.createElement("button", {
+    type: "button",
+    className: "mhl-tile mhl-watch",
+    "data-alf-visit-act": "peek",
+    onClick: () => setRoomId(h.ids[0] || null)
+  }, React.createElement("i", null, "👀"), React.createElement("b", null, "部屋を見る"), React.createElement("small", null, "部屋を押す")), React.createElement("button", {
+    type: "button",
+    className: "mhl-tile mhl-give",
+    disabled: can !== 'ok' || !!done,
+    "data-alf-visit-leave": true,
+    onClick: () => {
+      setRoomId(null);
+      setNoteWarn('');
+      setLeaving('');
+    }
+  }, React.createElement("i", null, "✉️"), React.createElement("b", null, "置き手紙"), React.createElement("small", null, done ? '残した' : can === 'ok' ? '今日あと1回' : '今日は残した'))), React.createElement("p", {
+    className: "mt-1.5 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] font-bold leading-snug text-amber-100",
+    "data-alf-visit-note": done ? 'done' : can
+  }, noteLine), React.createElement("p", {
+    className: "mt-1 text-[9.5px] leading-snug text-slate-300"
+  }, friend.name, "さんのセーブや、", friend.name, "さんの助手の仲良し度は変わりません。"));
+  const board = diaryItems.length ? React.createElement("div", {
+    className: "mt-1 rounded-xl bg-amber-50/90 px-2 py-1 text-amber-950",
+    "data-alf-visit-diary": true
+  }, React.createElement("p", {
+    className: "text-[10px] font-black"
+  }, "📌 ", friend.name, "さんの家の今日あったこと"), diaryItems.slice(0, land ? 5 : 3).map((d, i) => React.createElement("p", {
+    key: i,
+    className: "text-[10px] font-bold leading-snug"
+  }, React.createElement("b", {
+    className: "mr-1"
+  }, d.t), d.x))) : null;
+  const houseView = React.createElement("div", {
+    className: "relative pt-1",
+    style: {
+      paddingInline: pad
+    },
+    "data-alf-visit-house": true
+  }, React.createElement(AssistantLifeHouseArt, {
+    width: houseW,
+    land: land,
+    look: look,
+    rooms: rooms,
+    metSet: metSet,
+    onOpen: id => {
+      setTalk(null);
+      setLeaving(null);
+      setRoomId(id);
+    },
+    diary: {
+      items: [...diaryItems].reverse().map(d => ({
+        t: d.t,
+        text: d.x
+      }))
+    },
+    pop: false,
+    onBoard: () => setBoardOpen(true),
+    hname: `🏡 ${friend.name}さんの家`,
+    other: otherPut
+  }));
+  const sheet = roomId && r0 ? React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      zIndex: 30
+    },
+    "data-alf-visit-sheet": roomId
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    className: "absolute inset-0 bg-black/55",
+    onClick: () => {
+      setRoomId(null);
+      setTalk(null);
+    }
+  }), React.createElement("div", {
+    className: "mhl-sheet",
+    style: land ? {
+      left: 'auto',
+      width: '44%',
+      top: 0,
+      maxHeight: '100%',
+      paddingTop: 92,
+      borderRadius: '22px 0 0 22px'
+    } : {
+      maxHeight: 'calc(100% - 96px)'
+    }
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, React.createElement(AlfFace, {
+    id: roomId,
+    size: 46
+  }), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "text-[16px] font-black text-white"
+  }, alfTheirLabel(friend.name, roomId), "の部屋"), React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-200",
+    "data-alf-visit-room-state": roomState
+  }, roomState === 'out' ? '🚶 いまはおでかけ中。部屋は見られます' : roomState === 'sleep' ? '💤 すやすや…起こさないように、そっと見るだけ' : `🏠 部屋で${(ASSISTANT_LIFE_DOINGS[r0.d] || {}).label || 'のんびり'}`)), React.createElement("button", {
+    type: "button",
+    "data-mhl-sheet-close": true,
+    className: "shrink-0 rounded-xl border border-slate-500 px-3 py-1.5 text-[12px] font-black text-slate-100",
+    onClick: () => {
+      setRoomId(null);
+      setTalk(null);
+    }
+  }, "とじる")), React.createElement("p", {
+    className: "mt-2 text-[11px] font-bold text-slate-200",
+    "data-alf-visit-furn": true
+  }, "🪑 置いている家具: ", furnNames(roomId).length ? furnNames(roomId).join('・') : 'まだ無し'), keptNames(roomId).length > 0 && React.createElement("p", {
+    className: "mt-0.5 text-[10.5px] text-slate-300",
+    "data-alf-visit-kept": true
+  }, "📦 押し入れ: ", keptNames(roomId).join('・')), masmonOf(roomId).length > 0 && React.createElement("p", {
+    className: "mt-0.5 text-[10.5px] text-slate-300",
+    "data-alf-visit-masmon": true
+  }, "🐾 マスモン: ", masmonOf(roomId).join('・')), talk && talk.aid === roomId ? React.createElement("div", {
+    className: "mt-2",
     "data-alf-visit-talk": true
   }, talk.mine && React.createElement("p", {
-    className: `mb-1 text-right text-pink-100 ${tall ? 'text-[13px]' : 'text-[11.5px]'}`,
+    className: "mb-1 text-right text-[12.5px] text-pink-100",
     "data-alf-visit-mine": true
   }, "あなた「", talk.mine, "」"), React.createElement("div", {
     className: "flex items-end gap-2"
   }, React.createElement(AlfFace, {
     id: talk.aid,
-    size: tall ? 60 : 40
-  }), React.createElement("div", {
-    className: `min-w-0 rounded-2xl border border-sky-300/40 bg-sky-950/70 leading-snug text-sky-50 ${tall ? 'px-3 py-2.5 text-[15px]' : 'px-2.5 py-1.5 text-[12px]'}`
-  }, React.createElement("p", {
-    className: "text-[9.5px] font-black opacity-80"
-  }, alfTheirLabel(friend.name, talk.aid)), React.createElement("p", null, talk.text))), talk.step === 0 && React.createElement("div", {
-    className: "mt-2 grid grid-cols-3 gap-1.5",
+    size: 40
+  }), React.createElement("p", {
+    className: "min-w-0 rounded-2xl border border-sky-300/40 bg-sky-950/70 px-3 py-2 text-[14px] leading-snug text-sky-50"
+  }, talk.text)), talk.step === 0 && React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "mt-2 text-[10px] font-bold text-slate-300"
+  }, "返事を押すと、", assistantLifeName(roomId), "が答えてくれます"), React.createElement("div", {
+    className: "mt-1 grid grid-cols-3 gap-1.5",
     "data-alf-visit-replies": true
   }, ALF_PLAYER_REPLIES.map((t, i) => React.createElement("button", {
     key: i,
     type: "button",
-    className: `rounded-xl border border-pink-200/50 bg-pink-950/50 px-1 font-black text-pink-50 ${tall ? 'py-3 text-[12.5px]' : 'py-1.5 text-[11px]'}`,
+    className: "rounded-xl border border-pink-200/50 bg-pink-950/50 px-1 py-2.5 text-[12px] font-black text-pink-50",
     "data-alf-reply": i,
     onClick: () => reply(i)
-  }, t)))), done ? React.createElement("p", {
-    className: "mt-3 text-[11.5px] font-black text-amber-200",
-    "data-alf-visit-note": true
-  }, done) : can === 'ok' ? leaving ? React.createElement("div", {
-    className: "mt-3 rounded-2xl border border-amber-300/40 bg-slate-900 p-2",
+  }, t))))) : roomState === 'home' ? React.createElement("button", {
+    type: "button",
+    className: "mhl-btn mt-2 w-full bg-sky-600",
+    "data-alf-visit-room": roomId,
+    onClick: () => greet(roomId)
+  }, "💬 ", assistantLifeName(roomId), "に話しかける") : React.createElement(React.Fragment, null, roomState === 'sleep' && vl(roomId).sleep.length > 0 && React.createElement("p", {
+    className: "mt-2 rounded-2xl border border-indigo-300/30 bg-indigo-950/60 px-3 py-1.5 text-[12.5px] italic text-indigo-100",
+    "data-alf-visit-sleep": true
+  }, "💤 ", alfFill(vl(roomId).sleep[(roomId.length + (friend.id || '').length) % vl(roomId).sleep.length], {
+    h: friend.name,
+    who: roomId,
+    name: visitor
+  })), React.createElement("p", {
+    className: "mt-2 text-[11px] text-slate-300"
+  }, roomState === 'out' ? '帰ってきたら話せます。' : '起きているときに話せます。')), can === 'ok' && !done && React.createElement("button", {
+    type: "button",
+    className: "mhl-btn mt-2 w-full bg-amber-500 text-slate-950",
+    "data-alf-visit-room-note": roomId,
+    onClick: () => {
+      setRoomId(null);
+      setNoteWarn('');
+      setLeaving(roomId);
+    }
+  }, "✉️ ", roomState === 'home' ? '置き手紙を残して帰る' : `${assistantLifeName(roomId)}に一言残して帰る`))) : null;
+  const words = leaving != null ? React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      zIndex: 31
+    },
     "data-alf-visit-words": true
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    className: "absolute inset-0 bg-black/55",
+    onClick: () => setLeaving(null)
+  }), React.createElement("div", {
+    className: "mhl-sheet",
+    style: land ? {
+      left: 'auto',
+      width: '44%',
+      top: 0,
+      maxHeight: '100%',
+      paddingTop: 92,
+      borderRadius: '22px 0 0 22px'
+    } : {
+      maxHeight: 'calc(100% - 96px)'
+    }
   }, React.createElement("p", {
-    className: "text-[11px] font-black text-amber-200"
-  }, "置き手紙の一言をえらぶ"), React.createElement("div", {
-    className: "mt-1 flex flex-wrap gap-1"
+    className: "text-[15px] font-black text-amber-100"
+  }, "✉️ 置き手紙の一言をえらぶ", leaving ? React.createElement("span", {
+    className: "ml-1 text-[11px] text-slate-200"
+  }, "(あて先: ", assistantLifeName(leaving), h.r[leaving] && (h.r[leaving].at !== 'home' || h.r[leaving].d === 'sleep') ? '・留守' : '', ")") : null), React.createElement("p", {
+    className: "text-[10.5px] font-bold text-slate-200"
+  }, "一言を押すと", friend.name, "さんに届いて、この家から帰ります(ビートP 50)"), React.createElement("label", {
+    className: "mt-2 block text-[10.5px] font-bold text-slate-200",
+    htmlFor: "alf-note-free"
+  }, "✏️ ひとこと(自由・", ALF_NOTE_MAX, "字まで・なくてもよい)"), React.createElement("div", {
+    className: "mt-1 flex items-center gap-1.5"
+  }, React.createElement("input", {
+    id: "alf-note-free",
+    type: "text",
+    "data-alf-note-free": true,
+    value: noteText,
+    maxLength: ALF_NOTE_MAX,
+    autoComplete: "off",
+    spellCheck: false,
+    onChange: e => {
+      setNoteText(e.target.value);
+      setNoteWarn('');
+    },
+    placeholder: "例: ソファ、ふかふかでよかった！",
+    className: "min-h-[40px] min-w-0 flex-1 rounded-xl border border-white/20 bg-black/40 px-2.5 text-[13px] font-bold text-white placeholder:text-slate-500"
+  }), React.createElement("span", {
+    className: "shrink-0 text-[10px] text-slate-400"
+  }, [...noteText].length, "/", ALF_NOTE_MAX)), (() => {
+    const c = alfNoteCheck(noteText);
+    const warn = noteWarn || (!c.ok ? c.reason : '');
+    return warn ? React.createElement("p", {
+      className: "mt-1 text-[10.5px] font-bold text-rose-300",
+      "data-alf-note-warn": true
+    }, "⚠️ ", warn) : React.createElement("p", {
+      className: "mt-1 text-[10px] text-slate-400"
+    }, "連絡先・住所・本名などは書けません。悪い言葉は●になります。", friend.name, "さんは自由文を見ないようにもできます。");
+  })(), React.createElement("div", {
+    className: "mt-2 flex flex-wrap gap-1.5"
   }, ALF_WORD_TEXTS.map((t, i) => React.createElement("button", {
     key: i,
     type: "button",
-    className: "rounded-lg border border-amber-200/40 px-1.5 py-0.5 text-[10.5px] text-amber-50",
+    className: "rounded-xl border border-amber-200/50 bg-slate-800 px-2 py-1.5 text-[12px] font-bold text-amber-50 disabled:opacity-40",
     "data-alf-word": i,
+    disabled: !alfNoteCheck(noteText).ok,
     onClick: () => leave(i)
-  }, t)))) : React.createElement("button", {
+  }, t))), React.createElement("button", {
     type: "button",
-    className: `w-full rounded-2xl bg-amber-300 font-black text-slate-950 ${tall ? 'mt-5 py-3 text-[14px]' : 'mt-3 py-2 text-[12.5px]'}`,
-    "data-alf-visit-leave": true,
-    onClick: () => setLeaving(true)
-  }, "✉️ 置き手紙を残して帰る") : React.createElement("p", {
-    className: "mt-3 text-[10.5px] text-slate-400"
-  }, can === 'done' ? '今日はこの家に置き手紙を残しました。' : '今日はもう置き手紙を残せません(朝4時に戻ります)。'), React.createElement("p", {
-    className: "mt-3 text-[10px] leading-snug text-slate-400"
-  }, friend.name, "さんには、あなたが訪ねたことが置き手紙で届きます。相手のセーブや助手の仲良し度は変わりません。"))));
+    "data-mhl-sheet-close": true,
+    className: "mhl-btn mt-3 w-full bg-slate-700",
+    onClick: () => {
+      setLeaving(null);
+      setNoteWarn('');
+    }
+  }, "やめる"))) : null;
+  const diarySheet = boardOpen ? React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      zIndex: 31
+    },
+    "data-alf-visit-diary-all": true
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    className: "absolute inset-0 bg-black/55",
+    onClick: () => setBoardOpen(false)
+  }), React.createElement("div", {
+    className: "mhl-sheet",
+    style: land ? {
+      left: 'auto',
+      width: '44%',
+      top: 0,
+      maxHeight: '100%',
+      paddingTop: 92,
+      borderRadius: '22px 0 0 22px'
+    } : {
+      maxHeight: 'calc(100% - 96px)'
+    }
+  }, React.createElement("p", {
+    className: "text-[16px] font-black text-amber-100"
+  }, "📌 ", friend.name, "さんの家の今日あったこと"), diaryItems.length ? diaryItems.map((d, i) => React.createElement("p", {
+    key: i,
+    className: "mt-1.5 text-[12px] font-bold leading-snug text-slate-100"
+  }, React.createElement("b", {
+    className: "mr-1.5 text-amber-200"
+  }, d.t), d.x)) : React.createElement("p", {
+    className: "mt-1.5 text-[12px] text-slate-300"
+  }, "まだ何もありません"), React.createElement("button", {
+    type: "button",
+    "data-mhl-sheet-close": true,
+    className: "mhl-btn mt-3 w-full bg-slate-700",
+    onClick: () => setBoardOpen(false)
+  }, "閉じる"))) : null;
+  return alfLayer(React.createElement("div", {
+    className: "mhl-root",
+    style: {
+      zIndex: 44,
+      position: 'absolute'
+    },
+    "data-alf-visit": true,
+    "data-assistant-life-look": look
+  }, typeof AssistantLifeHouseStyle === 'function' && React.createElement(AssistantLifeHouseStyle, null), React.createElement("div", {
+    className: "mhl-page",
+    style: {
+      maxWidth: land ? 'none' : 480
+    }
+  }, React.createElement("div", {
+    className: `mhl-sky t-${look}`
+  }), React.createElement("div", {
+    className: "mhl-wood",
+    style: {
+      backgroundImage: `url(${ASSISTANT_LIFE_VIEW[look][1]})`
+    }
+  }), land ? React.createElement("div", {
+    className: "relative z-[2] flex h-full min-h-0",
+    style: {
+      paddingLeft: 'env(safe-area-inset-left)',
+      paddingRight: 'env(safe-area-inset-right)'
+    }
+  }, React.createElement("div", {
+    className: "mhl-body",
+    style: {
+      flex: '0 0 64%'
+    }
+  }, houseView), React.createElement("div", {
+    className: "flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2",
+    style: {
+      paddingTop: 88
+    },
+    "data-alf-visit-side": true
+  }, header, board, tiles)) : React.createElement(React.Fragment, null, header, React.createElement("div", {
+    className: "mhl-body"
+  }, houseView), React.createElement("div", {
+    className: "relative z-[3] bg-gradient-to-t from-[#0b1020] via-[#0b1020ee] to-transparent px-3 pt-1.5",
+    style: {
+      paddingBottom: 'calc(10px + env(safe-area-inset-bottom))'
+    }
+  }, tiles)), sheet, words, diarySheet)));
 }
 const alfVisitBlockedText = (friendId, name, s = ALF_STORE.state) => {
   if (s.mode === 'off') return 'フレンドの家との行き来は、いまお休み中です。';
   if (!s.settings.open) return '「🏘 フレンド」の設定で、行き来を切にしています。';
   if (s.settings.muted.includes(friendId)) return 'この家は「来ないようにする」にしています。';
   if (!alfOpenHouses('look').some(f => f.id === friendId)) return `${name || 'このフレンド'}さんが助手ライフを開くと遊びに行けます。`;
-  const can = assistantLifeFriendCanLook(friendId);
-  if (can === 'done') return '今日はこの家にもう遊びに行きました(朝4時に戻ります)。';
-  if (can === 'max') return '今日はもう遊びに行けません(朝4時に戻ります)。';
-  return can === 'ok' ? null : 'いまは遊びに行けません。';
+  return null;
 };
 function AssistantLifeFriendProfileVisit({
   friendId,
@@ -123031,7 +124859,7 @@ function AssistantLifeFriendPage({
     className: "whitespace-nowrap"
   }, "来てくれた ", st.come, "/", lim.come), React.createElement("span", {
     className: "whitespace-nowrap"
-  }, "あなたが訪ねた ", st.look, "/", lim.look), React.createElement("span", {
+  }, "置き手紙 ", st.look, "/", lim.look), React.createElement("span", {
     className: "whitespace-nowrap"
   }, "おみやげ ", st.beatP, "/", ALF_BEAT_P.dayMax, "P"))), React.createElement("p", {
     className: sec
@@ -123052,11 +124880,29 @@ function AssistantLifeFriendPage({
     className: "whitespace-nowrap"
   }, n.name, "さんの家へ"), "遊びに行っていた") : n.kind === 'player' ? React.createElement(React.Fragment, null, React.createElement("span", {
     className: "whitespace-nowrap"
-  }, n.name, "さん"), "が訪ねてくれた「", ALF_WORD_TEXTS[n.word], "」", n.ids.length ? React.createElement("span", {
+  }, n.name, "さん"), "が", n.noteTo ? React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, assistantLifeName(n.noteTo), "あてに") : '訪ねてくれた', "「", ALF_WORD_TEXTS[n.word], "」", n.ids.length ? React.createElement("span", {
     className: "whitespace-nowrap"
   }, "・", n.ids.map(assistantLifeName).join('・'), "と話した") : null) : React.createElement(React.Fragment, null, React.createElement("span", {
     className: "whitespace-nowrap"
-  }, n.name, "さんの", n.ids.map(assistantLifeName).join('・')), "が来た「", ALF_WORD_TEXTS[n.word], "」")), n.dir === 'in' && (n.thanks == null ? React.createElement("div", {
+  }, n.name, "さんの", n.ids.map(assistantLifeName).join('・')), "が来た「", ALF_WORD_TEXTS[n.word], "」")), n.dir === 'in' && n.note ? s.settings.noteShow && !s.settings.noteOff.includes(n.who) ? React.createElement("p", {
+    className: "mt-0.5 rounded border-l-2 border-pink-300 bg-pink-950/30 px-1.5 py-0.5 text-[11px] text-pink-50",
+    "data-alf-note-text": true
+  }, "✏️ ", n.note) : React.createElement("p", {
+    className: "mt-0.5 text-[10px] text-slate-400",
+    "data-alf-note-hidden": true
+  }, "✏️ (自由文を見ないようにしています)") : null, n.dir === 'in' && n.note && s.settings.noteShow && React.createElement("button", {
+    type: "button",
+    className: "mt-0.5 text-[10px] text-rose-200 underline",
+    "data-alf-note-off": n.who,
+    onClick: () => {
+      const off = s.settings.noteOff.includes(n.who);
+      assistantLifeFriendSetSettings({
+        noteOff: off ? s.settings.noteOff.filter(x => x !== n.who) : [...s.settings.noteOff, n.who]
+      });
+    }
+  }, s.settings.noteOff.includes(n.who) ? `${n.name}さんの自由文を見る` : `${n.name}さんの自由文を見ない`), n.dir === 'in' && (n.thanks == null ? React.createElement("div", {
     className: "mt-1 flex flex-wrap gap-1"
   }, ALF_THANKS_TEXTS.slice(0, 3).map((t, k) => React.createElement("button", {
     key: k,
@@ -123084,8 +124930,24 @@ function AssistantLifeFriendPage({
     }, React.createElement("p", {
       className: "truncate text-[12px] font-black text-slate-100"
     }, f.name, "さんの家", been ? ' 📷' : ''), React.createElement("p", {
-      className: "text-[10px] text-slate-400"
-    }, alfAgoText(f.at), " の様子"), React.createElement("div", {
+      className: "text-[10px] text-slate-300",
+      "data-alf-house-sum": true
+    }, (() => {
+      const hs = f.house;
+      const at = k => hs.ids.filter(id => hs.r[id] && (k === 'sleep' ? hs.r[id].at === 'home' && hs.r[id].d === 'sleep' : k === 'home' ? hs.r[id].at === 'home' && hs.r[id].d !== 'sleep' : hs.r[id].at !== 'home')).length;
+      const fu = hs.ids.reduce((n, id) => n + Object.keys(hs.r[id] && hs.r[id].fu || {}).length, 0);
+      return React.createElement(React.Fragment, null, React.createElement("span", {
+        className: "whitespace-nowrap"
+      }, "🏠 家に", at('home'), "人"), at('out') ? React.createElement(React.Fragment, null, React.createElement("wbr", null), React.createElement("span", {
+        className: "whitespace-nowrap"
+      }, "・🚶 おでかけ", at('out'), "人")) : null, at('sleep') ? React.createElement(React.Fragment, null, React.createElement("wbr", null), React.createElement("span", {
+        className: "whitespace-nowrap"
+      }, "・💤 ", at('sleep'), "人")) : null, fu ? React.createElement(React.Fragment, null, React.createElement("wbr", null), React.createElement("span", {
+        className: "whitespace-nowrap"
+      }, "・🪑 家具", fu)) : null, React.createElement("wbr", null), React.createElement("span", {
+        className: "whitespace-nowrap text-slate-400"
+      }, "・", alfAgoText(f.at)));
+    })()), React.createElement("div", {
       className: "mt-0.5 flex gap-0.5"
     }, alfHomeIds(f.house).slice(0, 6).map(id => React.createElement(AlfFace, {
       key: id,
@@ -123131,7 +124993,7 @@ function AssistantLifeFriendPage({
   }, "⚙️ 行き来の設定"), React.createElement("div", {
     className: card,
     "data-alf-settings": true
-  }, [['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る']].map(([k, label]) => React.createElement("label", {
+  }, [['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る'], ['noteShow', '置き手紙の自由文を見る']].map(([k, label]) => React.createElement("label", {
     key: k,
     className: "flex items-center justify-between gap-2 py-1 text-[11.5px] text-slate-100",
     "data-alf-setting": k
@@ -139085,6 +140947,10 @@ const CardBattleScreen = ({
         return;
       }
       if (typeof assistantPeerOnPlay === 'function') void assistantPeerOnPlay('card');
+      if (!game.demo && !game.tutorial && !game.cup && !debug && typeof missionNotify === 'function') {
+        missionNotify('cardPlay');
+        if (outcome === 'win') missionNotify('cardWin');
+      }
       if (game.pvp) {
         CARD_PVP.finish(outcome, st);
         onBgm && onBgm(cardBgmOf(save.bgm.top));
@@ -166681,6 +168547,7 @@ function MonsterHeroGame() {
   const [cardOrigin, setCardOrigin] = useState('home');
   const cardOriginBackRef = useRef(null);
   const [cardMarketEntry, setCardMarketEntryRaw] = useState(false);
+  const [lifeShopEntry, setLifeShopEntry] = useState(null);
   const setCardMarketEntry = next => {
     cardMarketEntryRef.current = next === true;
     setCardMarketEntryRaw(next === true);
@@ -168362,7 +170229,19 @@ function MonsterHeroGame() {
         }
         await storeSet(LOGIN_PT_TO_XP_KEY, true, false);
       }
-      let missionState = normalizeMissions(await storeGet('mh_missions', null, false));
+      const storedMissions = await storeGet('mh_missions', null, false);
+      let renewMark = normalizeMissionRenewMark(await storeGet(MISSION_RENEW_KEY, null, false));
+      if (!renewMark) {
+        renewMark = storedMissions && typeof storedMissions === 'object' ? missionRenewMarkAt() : {
+          at: Date.now(),
+          daily: '-',
+          weekly: '-',
+          monthly: '-'
+        };
+        await storeSet(MISSION_RENEW_KEY, renewMark, false);
+      }
+      setMissionRenewMark(renewMark);
+      let missionState = normalizeMissions(storedMissions);
       const loginDay = missionDailyPeriod();
       missionState.daily.login = 1;
       if (!missionState.weeklyLoginDays.includes(loginDay)) missionState.weeklyLoginDays.push(loginDay);
@@ -169734,6 +171613,16 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (typeof assistantPeerSetPlayerBondAdder === 'function') assistantPeerSetPlayerBondAdder(addAssistantBondFor);
   }, [addAssistantBondFor]);
+  useEffect(() => {
+    if (typeof assistantLifeSetBondPointsReader === 'function') assistantLifeSetBondPointsReader(id => normalizeAssistantBond(assistantBondsRef.current[normalizeAssistantId(id)]).points);
+  }, []);
+  useEffect(() => {
+    if (typeof assistantLifeSetShopOpener === 'function') assistantLifeSetShopOpener(tab => {
+      setLifeShopEntry(tab === 'furniture' ? 'furniture' : 'item');
+      setMarketExchangeError('');
+      setGameState('BREEDER_MARKET');
+    });
+  }, []);
   useEffect(() => {
     if (typeof assistantLifeFriendSetGiftSender !== 'function') return;
     assistantLifeFriendSetGiftSender(gift => runGiftWrite(async () => {
@@ -173405,6 +175294,9 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (gameState !== 'BREEDER_MARKET' && !isCardScreen(gameState) && cardMarketEntryRef.current) setCardMarketEntry(false);
   }, [gameState]);
+  useEffect(() => {
+    if (gameState !== 'BREEDER_MARKET') setLifeShopEntry(null);
+  }, [gameState]);
   const cardExitingRunRef = useRef(false);
   const exitCardBattle = async () => {
     const toDebug = cardOrigin === 'debug';
@@ -175208,18 +177100,23 @@ function MonsterHeroGame() {
         const storedFramesBefore = normalizeOwnedProfileFrames(await storeGet(PROFILE_FRAME_OWNED_KEY, [], false));
         const storedBeatBefore = await storeGet(RHYTHM_EVENT_POINTS_KEY, 0, false);
         const beatBefore = normalizeRhythmEventPoints(storedBeatBefore);
+        const hasCardPack = sourceGifts.some(g => wanted.has(g?.id) && Array.isArray(g?.rewards) && g.rewards.some(r => r?.type === 'cardPackTicket'));
+        const storedCardBefore = hasCardPack && typeof CARD_TACTICS_KEY !== 'undefined' ? await storeGet(CARD_TACTICS_KEY, null, false) : null;
+        const cardBefore = hasCardPack && typeof cardNormalizeTactics === 'function' ? cardNormalizeTactics(storedCardBefore) : null;
         let balances = {
           gold,
           breederPoints,
           ownedItems,
           breederXp,
           ownedProfileFrames: normalizeOwnedProfileFrames([...storedFramesBefore, ...ownedProfileFramesRef.current]),
-          beatPoints: beatBefore
+          beatPoints: beatBefore,
+          cardPackTickets: cardBefore ? cardBefore.tickets : 0
         };
         let claimedCount = 0;
         const now = Date.now();
         const nextGifts = sourceGifts.map(gift => {
           if (!wanted.has(gift?.id)) return gift;
+          if (!cardBefore && Array.isArray(gift?.rewards) && gift.rewards.some(r => r?.type === 'cardPackTicket')) return gift;
           const result = buildGiftClaim(gift, balances, now);
           if (!result.ok) return gift;
           balances = result.balances;
@@ -175274,6 +177171,14 @@ function MonsterHeroGame() {
           key: RHYTHM_EVENT_POINTS_KEY,
           before: storedBeatBefore,
           next: beatAfter
+        });
+        if (cardBefore && balances.cardPackTickets !== cardBefore.tickets) entries.push({
+          key: CARD_TACTICS_KEY,
+          before: storedCardBefore,
+          next: {
+            ...cardBefore,
+            tickets: balances.cardPackTickets
+          }
         });
         const keptGifts = pruneGiftHistory(nextGifts);
         entries.push({
@@ -175349,7 +177254,8 @@ function MonsterHeroGame() {
     setGameState('GIFT_BOX');
   };
   const saveMissionProgress = async (event, amount = 1) => {
-    if (debugBattleRef.current || runHasDebugOnlyMonster()) return;
+    const battleEvent = !['beatPlay', 'beatClear', 'cardPlay', 'cardWin', 'assistantTouch', 'friendVisit'].includes(event);
+    if (battleEvent && (debugBattleRef.current || runHasDebugOnlyMonster())) return;
     const n = Math.max(0, Math.floor(Number(amount) || 0));
     if (n <= 0) return;
     const rule = {
@@ -175361,8 +177267,8 @@ function MonsterHeroGame() {
       },
       win: {
         key: 'wins',
-        daily: false,
-        weekly: false,
+        daily: true,
+        weekly: true,
         monthly: true
       },
       enhance: {
@@ -175413,7 +177319,7 @@ function MonsterHeroGame() {
       },
       extremeClear: {
         key: 'extremeClears',
-        daily: false,
+        daily: true,
         weekly: true
       },
       itemUse: {
@@ -175426,6 +177332,42 @@ function MonsterHeroGame() {
         daily: true,
         weekly: true,
         monthly: true
+      },
+      beatPlay: {
+        key: 'beatPlays',
+        daily: true,
+        weekly: true,
+        monthly: true
+      },
+      beatClear: {
+        key: 'beatClears',
+        daily: true,
+        weekly: true,
+        monthly: true
+      },
+      cardPlay: {
+        key: 'cardPlays',
+        daily: true,
+        weekly: true,
+        monthly: true
+      },
+      cardWin: {
+        key: 'cardWins',
+        daily: true,
+        weekly: true,
+        monthly: true
+      },
+      assistantTouch: {
+        key: 'assistantTouches',
+        daily: true,
+        weekly: true,
+        monthly: true
+      },
+      friendVisit: {
+        key: 'friendVisits',
+        daily: true,
+        weekly: true,
+        monthly: true
       }
     }[event];
     if (!rule) return;
@@ -175434,12 +177376,27 @@ function MonsterHeroGame() {
     if (rule.weekly) next.weekly[rule.key] = (Number(next.weekly[rule.key]) || 0) + n;
     if (rule.monthly) next.monthly[rule.key] = (Number(next.monthly[rule.key]) || 0) + n;
     if (['challengeRun', 'quickRun', 'modeRun'].includes(event) && rule.key !== 'modeRuns') next.monthly.modeRuns = (Number(next.monthly.modeRuns) || 0) + n;
+    if (event === 'assistantTouch') {
+      const day = missionDailyPeriod();
+      if (!next.weeklyAssistantDays.includes(day)) next.weeklyAssistantDays = [...next.weeklyAssistantDays, day];
+      if (!next.monthlyAssistantDays.includes(day)) next.monthlyAssistantDays = [...next.monthlyAssistantDays, day];
+    }
     const reconciled = reconcileMonthlyMissionCompletions(next);
     missionsRef.current = reconciled;
     setMissions(reconciled);
     await storeSet('mh_missions', reconciled, false);
   };
-  const buildMissionGift = (type, period, mission) => ({
+  const saveMissionProgressRef = useRef(saveMissionProgress);
+  saveMissionProgressRef.current = saveMissionProgress;
+  useEffect(() => {
+    const onProgress = e => {
+      const d = e && e.detail;
+      if (d && typeof d.event === 'string') void saveMissionProgressRef.current(d.event, d.amount);
+    };
+    window.addEventListener(MISSION_PROGRESS_EVENT, onProgress);
+    return () => window.removeEventListener(MISSION_PROGRESS_EVENT, onProgress);
+  }, []);
+  const buildMissionGift = (type, period, mission, rewards = null) => ({
     id: `gift_mission_${type}_${period}_${mission.id}`,
     source: 'mission',
     missionId: mission.id,
@@ -175447,7 +177404,10 @@ function MonsterHeroGame() {
     periodId: period,
     title: `ミッション報酬「${mission.name}」`,
     description: `${mission.condition}の達成報酬です。`,
-    rewards: mission.rewards.map(r => ({
+    rewards: (Array.isArray(rewards) ? rewards : mission.rewards).map(({
+      swappedFrom,
+      ...r
+    }) => ({
       ...r
     })),
     createdAt: new Date().toISOString(),
@@ -175457,6 +177417,12 @@ function MonsterHeroGame() {
   const sendMissionGroupsToGiftBox = async groups => {
     {
       const state = normalizeMissions(missionsRef.current);
+      let room = null;
+      try {
+        if (typeof ASSISTANT_LIFE_GIFT_STORE !== 'undefined') room = (await ASSISTANT_LIFE_GIFT_STORE.load()).room || null;
+      } catch {
+        room = null;
+      }
       const storedGifts = await storeGet('mh_gifts', null, false);
       let nextGifts = Array.isArray(storedGifts) ? [...storedGifts] : Array.isArray(gifts) ? [...gifts] : [];
       const giftIds = [];
@@ -175471,7 +177437,10 @@ function MonsterHeroGame() {
         const period = type === 'daily' ? state.dailyPeriod : type === 'weekly' ? state.weeklyPeriod : state.monthlyPeriod;
         const sent = [...state[sentKey]];
         targets.forEach(mission => {
-          const gift = buildMissionGift(type, period, mission);
+          const gift = buildMissionGift(type, period, mission, missionRewardsFor(mission.rewards, {
+            ownedItems,
+            room
+          }));
           if (!nextGifts.some(g => g?.id === gift.id)) nextGifts = [gift, ...nextGifts];
           giftIds.push(gift.id);
           if (!sent.includes(mission.id)) sent.push(mission.id);
@@ -185245,7 +187214,8 @@ function MonsterHeroGame() {
       onSelectTab: setMissionTab,
       onBack: returnToHome,
       onClaim: claimMission,
-      onClaimAll: claimAllMissions
+      onClaimAll: claimAllMissions,
+      ownedItems: ownedItems
     }), showLoginBonusList && React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-5",
       style: {
@@ -189126,6 +191096,10 @@ function MonsterHeroGame() {
         if (rhythmPlay.from === 'notedex') return;
         if (result?.assist === true) return;
         if (rhythmPlay.from === 'demo' || rhythmPlay.from === 'multi' || rhythmPlay.from === 'raid') await grantBeatRankForResult(result, rhythmPlay);
+        if (rhythmPlay.from === 'demo' || rhythmPlay.from === 'multi' || rhythmPlay.from === 'raid') {
+          await saveMissionProgress('beatPlay');
+          if (result?.cleared !== false) await saveMissionProgress('beatClear');
+        }
         if ((rhythmPlay.from === 'demo' || rhythmPlay.from === 'multi' || rhythmPlay.from === 'raid') && typeof assistantPeerOnPlay === 'function') void assistantPeerOnPlay('rhythm');
         if (result?.cleared !== false) {
           try {
@@ -191615,6 +193589,11 @@ function MonsterHeroGame() {
         setCardMarketEntry(false);
         setMarketExchangeError('');
         setGameState('CARD_TOP');
+      } : lifeShopEntry ? () => {
+        setLifeShopEntry(null);
+        setMarketExchangeError('');
+        returnToHome();
+        if (typeof assistantLifeBackFromShop === 'function') assistantLifeBackFromShop();
       } : returnToHome,
       onSelectTab: key => {
         setMarketTab(key);
@@ -191655,7 +193634,8 @@ function MonsterHeroGame() {
         onBuyTactics: buyTacticsPacks,
         onExchangeTactics: exchangeTacticsShard
       } : null,
-      initialSection: cardMarketEntry ? 'card' : null
+      initialSection: cardMarketEntry ? 'card' : lifeShopEntry ? 'event' : null,
+      initialTab: !cardMarketEntry && lifeShopEntry ? lifeShopEntry : null
     }), gameState === 'CARD_PACK_OPEN' && cardPackOpen && React.createElement(CardPackOpen, {
       db: CARD_BATTLE_DATA,
       result: cardPackOpen,
@@ -201730,6 +203710,30 @@ const createAnimationStyle = () => {
       /* 話している助手の顔も、上部ゾーンのゲストの顔と同じく 0.6倍 */
       [data-event-story][data-story-zones] [data-story-speaker] { zoom: .6; }
     }
+    /* モンヒロビートの「🔄 横」(端末は縦のまま、絵を回す)。端末は縦なので上の「縦」の決まりが効いてしまい、
+       回した画面(高さ 390 など)に縦の窓(266〜300px)とステージ(上から 130px ほど)が入りきらず、前の話し手の吹き出しが窓の題に重なっていた
+       (2026-11-08 ミハリ・レフェリーくん。tools/ui/story-zone-rotation-check.js)。回しているときは、横の低い画面と同じ決まりにする。
+       幅は器が渡す --mh-vw(回した画面の幅 = 端末の高さ。rhythm-mode.js の frameStyle)で測る */
+    [data-mh-view-rotation="true"] [data-story-sheet][data-story-sheet] { padding: .5rem .75rem; padding-bottom: calc(.5rem + env(safe-area-inset-bottom)) !important; }
+    [data-mh-view-rotation="true"] [data-story-sheet] [data-story-body] > p:first-child { margin-bottom: .25rem; }
+    [data-mh-view-rotation="true"] [data-story-sheet] [data-story-cast][data-story-cast] { margin-bottom: .375rem; zoom: .72; }
+    [data-mh-view-rotation="true"] [data-story-sheet] [data-story-buttons][data-story-buttons] { margin-top: .5rem; }
+    [data-mh-view-rotation="true"] [data-story-sheet] [data-story-buttons] > button { min-height: 44px; }
+    [data-mh-view-rotation="true"] [data-story-stage][data-story-stage] { top: calc(env(safe-area-inset-top) + 6px) !important; }
+    [data-mh-view-rotation="true"] [data-story-stage] [data-story-guest][data-story-guest] { zoom: .6; }
+    [data-mh-view-rotation="true"] [data-story-stage] [data-story-guest-bubble][data-story-guest-bubble] { margin-top: 2px !important; padding: 4px 10px; }
+    [data-mh-view-rotation="true"] [data-story-stage] [data-story-guest-bubble] > span.block { font-size: 12px; line-height: 1.45; margin-top: 2px; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-has-stage] [data-story-sheet][data-story-sheet] { max-height: calc(var(--mh-vh) - var(--story-stage-bottom, 120px) - 6px) !important; }
+    [data-mh-view-rotation="true"] [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 8px) !important; bottom: calc(env(safe-area-inset-bottom) + 8px); align-items: center; justify-content: space-between; gap: 0; padding: 0 14px; }
+    [data-mh-view-rotation="true"] [data-story-monster][data-story-monster] { height: min(70%, calc(((var(--mh-vw, 100vw) - 28rem) / 2 - 30px) / 1.14), 176px); }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-zones] [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 8px) !important; bottom: calc(env(safe-area-inset-bottom) + 8px) !important; align-items: center; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-zones] [data-story-monster][data-story-monster] { height: min(70%, calc(((var(--mh-vw, 100vw) - 28rem) / 2 - 30px) / 1.14), 176px); aspect-ratio: auto; overflow: visible; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-zones] [data-story-monster^="Erubin"] img { object-fit: contain; object-position: 50% 50%; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-zones] [data-story-stage][data-story-stage] { top: calc(env(safe-area-inset-top) + 6px) !important; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-zones] [data-story-guest-bubble][data-story-guest-bubble] { height: 84px; overflow: hidden; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-zones] [data-story-sheet][data-story-sheet] { height: calc(var(--mh-vh) - 96px - env(safe-area-inset-top)) !important; max-height: none !important; justify-content: flex-end; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-zones] [data-story-line-box][data-story-line-box] { height: 120px; flex-shrink: 0; overflow: hidden; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-zones] [data-story-speaker][data-story-speaker] { zoom: .6; }
     @media (prefers-reduced-motion: reduce) { [data-story-monster] { animation: none !important; } }
     /* お話の締め(終わりの札。2026-11-03)。暗くして、題字のように「第◯話 ～副題～ おわり」を出す。'pull' は最後の場面を引いて暗くしてから */
     @keyframes storyEndDim { 0% { background: rgba(2,6,23,0); } 100% { background: rgba(2,6,23,.9); } }

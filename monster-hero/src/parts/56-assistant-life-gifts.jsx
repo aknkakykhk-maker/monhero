@@ -285,6 +285,82 @@ function AssistantLifeGiftLikesRow({ id, compact = false }) {
     </div>);
 }
 
+// ---------- 数字の重み(2026-11-08 社長「友情Lvってなに？」「その数値がどのぐらいの影響力かがわからない」) ----------
+// 友情Lv=贈った2人の助手どうしの仲(ASSISTANT_PEER_BOND_LEVELS の min)/仲良し度=プレイヤーとその助手の仲(ASSISTANT_BOND_LEVELS の need)
+// プレイヤーとの仲良し度の点は 60-app.jsx が読み口を渡す(渡っていないときは null で、重みの段は出さない)
+let assistantLifeBondPointsReader = null;
+const assistantLifeSetBondPointsReader = (fn) => { assistantLifeBondPointsReader = typeof fn === 'function' ? fn : null; };
+const assistantLifeBondPointsOf = (id) => {
+  try { const p = assistantLifeBondPointsReader ? assistantLifeBondPointsReader(id) : null; return Number.isFinite(p) ? p : null; } catch { return null; }
+};
+// 友情Lv の段ごとに起きること(今の作りどおり。ヘルプの「助手どうしの友情Lv」と同じ)
+const ASSISTANT_LIFE_PEER_LV_GAIN = Object.freeze({ 2: '2人のおしゃべりが増える', 3: '関係図で線が結ばれ、ミニイベントが起きる', 4: '息の合ったおしゃべりが加わる', 5: '2人の特別なお話が流れる',
+  6: 'ミニイベントが起きやすくなる', 7: '3人のおしゃべりに出やすくなる', 8: 'おしゃべりがさらに増える', 9: 'おしゃべりがさらに増える', 10: '特別なお話の続きが流れる' });
+// 仲良し度の段で起きること(呼び方・話し方・ごほうび。Lv3 呼び捨て/Lv6 呼び方を選べる)
+const assistantLifeBondLvGain = (lv) => (lv === 3 ? '呼び方が変わり、ごほうびが届く' : lv === 6 ? '呼び方を選べるようになり、ごほうびが届く' : '話し方が近くなり、ごほうびが届く');
+// pts … いまの点/lo・hi … この道具で上がる量(好みが分からないときは幅)/levels … 段の表/key … 'min' か 'need'
+const assistantLifeWeightOf = (pts, lo, hi, levels, key) => {
+  if (!Number.isFinite(pts) || !Array.isArray(levels) || !levels.length) return null;
+  let cur = levels[0];
+  for (const s of levels) if (pts >= s[key]) cur = s;
+  const next = levels.find(s => s.level === cur.level + 1);
+  if (!next) return { lv: cur.level, max: true };
+  const span = Math.max(1, next[key] - cur[key]), left = Math.max(0, next[key] - pts);
+  const pct = (v) => Math.max(1, Math.round(Math.min(v, span) / span * 100));
+  return { lv: cur.level, next: next.level, left, now: Math.max(0, Math.min(1, (pts - cur[key]) / span)), add: Math.min(lo, left) / span,
+    reach: lo >= left, maybe: hi >= left && lo < left, pct: pct(lo) === pct(hi) ? `${pct(lo)}%` : `${pct(lo)}〜${pct(hi)}%` };
+};
+// 1行の重み: 段の中のいま(色)+この道具のぶん(明るい色)の棒と、次の段まで・何割進むか・上がると起きること
+function AssistantLifeGiftWeight({ w, tone, gainText, kind }) {
+  if (!w) return null;
+  const col = tone === 'peer' ? ['bg-orange-400', 'bg-orange-200'] : ['bg-pink-500', 'bg-pink-200'];
+  if (w.max) return <p data-assistant-life-give-weight={`${kind}:max`} className="mt-0.5 text-[10px] font-bold leading-snug text-slate-300">Lv{w.lv}(いちばん上の段)</p>;
+  return (
+    <div data-assistant-life-give-weight={`${kind}:${w.lv}`} className="mt-0.5">
+      <div className="flex h-[6px] overflow-hidden rounded-full bg-slate-950/80" aria-hidden="true">
+        <span className={col[0]} style={{ width: `${w.now * 100}%` }}/>
+        <span className={`${col[1]} animate-pulse`} style={{ width: `${Math.min(1 - w.now, w.add) * 100}%` }}/>
+      </div>
+      <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
+        {w.reach ? <b className="text-amber-200">この1回で Lv{w.next} に！</b> : <span className="inline-block">Lv{w.lv}→{w.next} まで あと{w.left}・<wbr/>この1回で段の{w.pct}{w.maybe ? '(好きなら届く)' : ''}</span>}
+        {gainText ? <>{' '}<span className="inline-block text-slate-400">／ Lv{w.next}: {gainText}</span></> : null}
+      </p>
+    </div>);
+}
+// ---------- 交換所へ飛ぶ入口(2026-11-08 遊ぶ人の提案「こっからショップに飛べたら楽ちん」) ----------
+// 60-app.jsx が「ビートP交換所の棚を開く」口を渡す。tab: 'item'(道具の棚)| 'furniture'(家具の棚)
+// 助手ライフを閉じて交換所を開き、交換所から戻ると助手ライフの道具タブ(家具ならその助手の部屋)へ戻る
+let assistantLifeShopOpener = null;
+const assistantLifeSetShopOpener = (fn) => { assistantLifeShopOpener = typeof fn === 'function' ? fn : null; };
+const assistantLifeCanOpenShop = () => !!assistantLifeShopOpener;
+const assistantLifeOpenShop = (tab = 'item', who = null) => {
+  if (!assistantLifeShopOpener) return;
+  const back = tab === 'furniture' && who ? { tab: 'house', room: who, furn: true } : { tab: 'items' };
+  if (typeof ASSISTANT_LIFE_STORE !== 'undefined') ASSISTANT_LIFE_STORE.set({ open: false, shopBack: back });
+  assistantLifeShopOpener(tab === 'furniture' ? 'furniture' : 'item');
+};
+// 交換所から戻ったとき(60-app.jsx の交換所の「戻る」から)。助手ライフを開き直す
+const assistantLifeBackFromShop = () => {
+  if (typeof ASSISTANT_LIFE_STORE === 'undefined' || !ASSISTANT_LIFE_STORE.state.shopBack) return false;
+  ASSISTANT_LIFE_STORE.set({ open: true });
+  return true;
+};
+function AssistantLifeShopButton({ tab = 'item', who = null, label = '🛒 交換所で手に入れる', small = false }) {
+  if (!assistantLifeCanOpenShop()) return null;
+  return (
+    <button type="button" data-assistant-life-shop={tab} onClick={(ev) => { ev.stopPropagation(); assistantLifeOpenShop(tab, who); }}
+      className={`${small ? 'min-h-[32px] px-2 text-[10.5px]' : 'min-h-[40px] w-full px-3 text-[12px]'} shrink-0 whitespace-nowrap rounded-xl border border-violet-300/70 bg-[#2e1065] font-black text-violet-100 shadow-md active:scale-[.97]`}>{label}</button>);
+}
+
+// 友情Lv・仲良し度の短い説明(道具の一覧の上と贈るシート)
+function AssistantLifeGiftExplain({ compact = false }) {
+  return (
+    <div data-assistant-life-gift-explain className={`rounded-xl bg-slate-950/85 px-2 py-1 leading-snug ${compact ? 'text-[10px]' : 'text-[10.5px]'}`} style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
+      <p><b className="text-orange-300">🤝 友情Lv</b><span className="text-slate-200">=贈った2人の助手どうしの仲。<wbr/>上がると2人の掛け合いや特別なお話が増える</span></p>
+      <p><b className="text-pink-200">💗 仲良し度</b><span className="text-slate-200">=あなたとその助手の仲。<wbr/>上がると呼び方や会話が変わり、ごほうびが届く</span></p>
+    </div>);
+}
+
 // 2人に贈るシート(道具10種類・2人の好み・上がる量)。56-assistant-life.jsx・56-assistant-life-house.jsx の両方から開く
 function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, onGive }) {
   const st = useAssistantLifeGiftState();
@@ -307,6 +383,13 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
   const playerText = (i) => (!amt ? '' : shown[i] === 'unknown' ? `+${amt.range.player[0]}〜${amt.range.player[1]}` : `+${amt.player[i]}`);
   const peerText = !amt ? '' : lifeOn ? assistantLifeGiftPeerShown(info, shown) : `+${amt.peer}`;
   const mark = (s) => (s === 'like' ? '💗' : s === 'bad' ? '💧' : s === 'unknown' ? '?' : '');
+  // 数字の重み(好みが分からない人は幅のまま。隠れた好みが数字から分からないようにする)
+  const bondLv = typeof ASSISTANT_BOND_LEVELS !== 'undefined' ? ASSISTANT_BOND_LEVELS : [];
+  const peerLv = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' ? ASSISTANT_PEER_BOND_LEVELS : [];
+  const playerW = (i) => { if (!amt) return null; const [lo, hi] = shown[i] === 'unknown' ? amt.range.player : [amt.player[i], amt.player[i]];
+    return assistantLifeWeightOf(assistantLifeBondPointsOf(pair[i]), lo, hi, bondLv, 'need'); };
+  const peerNums = String(peerText).replace(/\+/g, '').split('〜').map(Number).filter(Number.isFinite);
+  const peerW = amt && hint && peerNums.length ? assistantLifeWeightOf(hint.pts, peerNums[0], peerNums[peerNums.length - 1], peerLv, 'min') : null;
   return (
     <div data-assistant-life-give-sheet={info.kind} className="absolute inset-0 flex items-end justify-center bg-black/70" style={{ zIndex: 30 }} onClick={() => setGive(null)}>
       <div className="max-h-full w-full max-w-md overflow-y-auto rounded-t-3xl border-t-2 border-amber-300/60 bg-slate-900 p-3" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }} onClick={ev => ev.stopPropagation()}>
@@ -315,6 +398,7 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
           {leftToday != null && <span data-assistant-life-give-left={leftToday} className="shrink-0 rounded-full bg-slate-800 px-2 text-[10.5px] font-black leading-[22px] text-amber-200">今日あと {leftToday}回</span>}
           <AssistantLifeFaces ids={pair} size={30}/>
         </div>
+        {lifeOn && <div className="mt-1.5"><AssistantLifeGiftExplain compact/></div>}
         {pairs.length > 1 && (
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {pairs.map(p => (
@@ -344,20 +428,28 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
         </div>
         <div className="mt-1.5 space-y-1 text-[11px]">
           {pair.map((id, i) => (
-            <div key={id} className="flex items-center gap-2 rounded-lg bg-slate-800/80 px-2 py-1" data-assistant-life-give-person={`${id}:${shown[i]}`}>
-              <span className="w-[4.5rem] shrink-0 truncate font-black text-white">{nameOf(id)}</span>
-              {lifeOn && <span className={`shrink-0 rounded-full px-1.5 text-[10px] font-black ${tagCls[shown[i]]}`}>{shown[i] === 'unknown' ? '好み ?' : ASSISTANT_LIFE_GIFT_LABEL[shown[i]]}</span>}
-              <span className="ml-auto whitespace-nowrap font-black text-pink-200">💗 仲良し度 {playerText(i)}</span>
+            <div key={id} className="rounded-lg bg-slate-800/80 px-2 py-1" data-assistant-life-give-person={`${id}:${shown[i]}`}>
+              <div className="flex items-center gap-2">
+                <span className="w-[4.5rem] shrink-0 truncate font-black text-white">{nameOf(id)}</span>
+                {lifeOn && <span className={`shrink-0 rounded-full px-1.5 text-[10px] font-black ${tagCls[shown[i]]}`}>{shown[i] === 'unknown' ? '好み ?' : ASSISTANT_LIFE_GIFT_LABEL[shown[i]]}</span>}
+                <span className="ml-auto whitespace-nowrap font-black text-pink-200">💗 あなたとの仲良し度 {playerText(i)}</span>
+              </div>
+              {lifeOn && <AssistantLifeGiftWeight w={playerW(i)} tone="player" kind={`player-${id}`} gainText={(() => { const w = playerW(i); return w && !w.max ? assistantLifeBondLvGain(w.next) : ''; })()}/>}
             </div>))}
-          <div className="flex items-center gap-2 rounded-lg bg-slate-800/80 px-2 py-1">
-            <span className="shrink-0 font-black text-white">2人</span>
-            <span className="ml-auto whitespace-nowrap font-black text-orange-300">🤝 友情Lv {peerText}{hint && left != null ? `(あと${left}で Lv${hint.lv + 1})` : ''}</span>
+          <div className="rounded-lg bg-slate-800/80 px-2 py-1" data-assistant-life-give-peer>
+            <div className="flex items-center gap-2">
+              <span className="min-w-0 truncate font-black text-white">{pair.length === 2 ? pair.map(nameOf).join('と') : '2人'}</span>
+              <span className="ml-auto whitespace-nowrap font-black text-orange-300">🤝 2人の友情Lv {peerText}{!lifeOn && hint && left != null ? `(あと${left}で Lv${hint.lv + 1})` : ''}</span>
+            </div>
+            {lifeOn && <AssistantLifeGiftWeight w={peerW} tone="peer" kind="peer" gainText={peerW && !peerW.max ? ASSISTANT_LIFE_PEER_LV_GAIN[peerW.next] || '' : ''}/>}
           </div>
         </div>
-        <p className="mt-1 text-[10px] leading-snug text-slate-400 [[data-assistant-life-land='1']_&]:hidden">{lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)・?=贈ると分かる。同じ道具は1日1回・合わせて1日3回(朝4時に戻る)' : '1日1回(朝4時に戻る)'}・持っている {have}個{info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''}</p>
+        <p className="mt-1 text-[10px] leading-snug text-slate-400 [[data-assistant-life-land='1']_&]:hidden">{lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)・?=贈ると分かる。同じ道具は1⁠日1回・合わせて1⁠日3回(朝4時に戻る)' : '1⁠日1回(朝4時に戻る)'}・持っている {have}個{info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''}</p>
         {reason && <p data-assistant-life-give-reason className="mt-1.5 rounded-xl bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-300">{reason}</p>}
-        <div className="mt-2 flex gap-2">
-          <button type="button" data-assistant-life-give-cancel onClick={() => setGive(null)} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">やめる</button>
+        {lifeOn && have <= 0 && <div className="mt-1.5"><AssistantLifeShopButton tab="item"/></div>}
+        {/* やめる・贈るは、シートを下へ送らなくても押せるように下に貼り付ける(横で説明と重みが増えても隠れない) */}
+        <div className="sticky -mx-3 mt-2 flex gap-2 bg-slate-900 px-3 pb-3 pt-1.5" data-assistant-life-give-actions style={{ bottom: 'calc(-0.75rem - env(safe-area-inset-bottom))', marginBottom: 'calc(-0.75rem - env(safe-area-inset-bottom))', paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
+          <button type="button" data-assistant-life-give-cancel data-mhl-sheet-close onClick={() => setGive(null)} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">やめる</button>
           <button type="button" data-assistant-life-give-go disabled={!!reason || pair.length !== 2} onClick={onGive}
             className="min-h-[44px] flex-[2] rounded-xl border border-amber-300/70 bg-amber-400/20 text-[14px] font-black text-amber-100 active:scale-[.98] disabled:opacity-40">{info.emoji} 贈る</button>
         </div>
@@ -482,6 +574,8 @@ const assistantLifeFurnGive = async (who, key) => {
   const r = assistantLifeFurnGiveState(st.room, who, key, assistantLifeGiftToday());
   if (!r) return null;
   assistantLifeRoomSave(r.room);
+  // ミッションの「助手とふれあう」(2026-11-08)
+  if (typeof missionNotify === 'function') missionNotify('assistantTouch');
   const known = { ...st.likes.known, [who]: { ...(st.likes.known[who] || {}), [key]: 'gift' } };
   const likes = { ...st.likes, known };
   ASSISTANT_LIFE_GIFT_STORE.set({ likes });
@@ -503,10 +597,14 @@ const assistantLifeFurnMove = async (who, key, toPut) => {
 // 部屋の絵に置いた家具を出す(印が偽なら何も出さない)。z-index は 2(灯りを消した膜・キズナの扉・顔・吹き出しより後ろ)
 // faces … いま部屋にいる顔の数 / baseCount … もとからある家具(左下の絵文字)の数。床の家具は、もとの家具と顔のあいだに入れる。
 //   狭い部屋で入らないときは、部屋の上の真ん中へ寄せる(顔に重ねない・2026-11-08 検査で見つけた 横 844 の重なり)
-function AssistantLifeRoomFurn({ id, w, h, faces = 0, baseCount = 2 }) {
+// put … よその家(フレンドの家の控え)の置き方 { ceil, wall, floor }。渡されたら自分の部屋の家具ではなくそれを描く(56-assistant-life-friend.jsx)
+function AssistantLifeRoomFurn({ id, w, h, faces = 0, baseCount = 2, put = null }) {
   const st = useAssistantLifeGiftState();
-  if (!assistantLifeFurnEnabled()) return null;
-  const room = assistantLifeRoomOf(id, st);
+  const marker = React.useRef(null);
+  const [moved, setMoved] = React.useState({});
+  const on = assistantLifeFurnEnabled();
+  // put … フレンドの家ではその人の家具の置き方(main の作り)。無ければ自分の保存から
+  const room = put ? { put: { ceil: put.ceil || null, wall: put.wall || null, floor: put.floor || null } } : assistantLifeRoomOf(id, st);
   // 絵が届くまでは絵文字。読み取れる大きさにする(2026-11-08 窓口「小さく窮屈」)
   const size = Math.round(Math.max(16, Math.min(26, h * 0.26, w * 0.17)));
   const faceSize = Math.round(Math.min(40, h * 0.44));
@@ -527,14 +625,80 @@ function AssistantLifeRoomFurn({ id, w, h, faces = 0, baseCount = 2 }) {
     if (slot === 'ceil') return { left: Math.round(w * 0.31), top: 3 };
     return { left: Math.round(w * 0.31) + g + 2, top: Math.round(h * 0.13) };
   };
-  return (<>{Object.entries(room.put).filter(([, k]) => k).map(([slot, k]) => {
+  // 描いたあとに測って、吹き出し・名札・Lv・顔・もとの家具・出かけた札・ほかの家具に重なる家具だけ、元の場所にいちばん近い空いた所へずらす
+  //   (2026-11-08 ミハリ「縦 390 のあつの部屋で、考えごとの吹き出しがトロフィーの下半分を隠す」「横 844 で床の家具が吹き出しの後ろに半分隠れる」。
+  //    吹き出しは文の長さで高さが変わるので、決め打ちの位置では避けきれない)
+  const measure = React.useRef(null);
+  measure.current = () => {
+    if (!on) return;
+    const roomEl = marker.current && marker.current.parentElement;
+    if (!roomEl) return;
+    const rr = roomEl.getBoundingClientRect();
+    if (!rr.width) return;
+    const rel = (el) => { const r = el.getBoundingClientRect(); return { l: r.left - rr.left, t: r.top - rr.top, r: r.right - rr.left, b: r.bottom - rr.top }; };
+    const hit = (a, b) => a.l < b.r - 1 && b.l < a.r - 1 && a.t < b.b - 1 && b.t < a.b - 1;
+    const pick = (sel) => [...roomEl.querySelectorAll(sel)].filter(el => el.getClientRects().length).map(rel);
+    // 出かけた札(.tag)は部屋の真ん中を大きく使う。まず札も避けて探し、無ければ札の後ろはよいことにする(札は前に出て、部屋は暗くしてある)
+    const must = pick('.pl, .lv, .pp > span, .fu, [data-assistant-life-room-bub]'), soft = pick('.tag');
+    const next = {}, taken = [];
+    for (const el of roomEl.querySelectorAll('[data-assistant-life-room-furn]')) {
+      const slot = el.dataset.assistantLifeRoomFurn.split(':')[1];
+      const base = pos(slot);
+      // 絵文字の実際の大きさ(箱の左上からのずれも含めて)で測る。いま小さくしているぶんは戻して考える
+      const cs = (moved[slot] && moved[slot].scale) || 1;
+      const er = el.getBoundingClientRect(), gr = (el.lastElementChild || el).getBoundingClientRect();
+      const dx0 = (gr.left - er.left) / cs, dy0 = (gr.top - er.top) / cs, gw0 = Math.max(g, gr.width / cs), gh0 = Math.max(g, gr.height / cs);
+      let best = null, scale = 1, bestBox = null;
+      // 空きが無い狭い部屋では、少し小さくして探し直す(8割・6.5割)
+      for (const sc of [1, 0.8, 0.65]) {
+        const dx = dx0 * sc, dy = dy0 * sc, gw = gw0 * sc + 2, gh = gh0 * sc + 2;
+        const box = (q) => ({ l: q.left + dx - 1, t: q.top + dy - 1, r: q.left + dx + gw, b: q.top + dy + gh });
+        const freeOf = (blocks) => (q) => { const bx = box(q); return bx.l >= 1 && bx.t >= 1 && bx.r <= w - 1 && bx.b <= h - 8 && !blocks.some(b => hit(bx, b)) && !taken.some(b => hit(bx, b)); };
+        const strict = freeOf([...must, ...soft]), loose = freeOf(must);
+        let found = strict(base) ? base : null;
+        if (!found) {
+          const step = Math.max(2, Math.round(g * sc / 4)), cands = [];
+          for (let y = 1; y <= h; y += step) for (let x = 1; x <= w; x += step) cands.push({ left: x, top: y });
+          cands.sort((a, b) => Math.hypot(a.left - base.left, a.top - base.top) - Math.hypot(b.left - base.left, b.top - base.top));
+          found = cands.find(strict) || (loose(base) ? base : cands.find(loose)) || null;
+        }
+        if (found) { best = found; scale = sc; bestBox = box(found); break; }
+        // それでも無い(出かけた札が部屋を覆う狭い部屋)ときは、せめて家具どうしは重ならない所へ
+        // 人がいる部屋でどう置いても吹き出し・名札・顔・もとの家具に隠れるときは、その大きさの画面では描かない(家具のシートには並ぶ)
+        if (sc === 0.65 && !soft.length) { best = base; scale = 0; bestBox = { l: 0, t: 0, r: 0, b: 0 }; break; }
+        if (sc === 0.65) { const only = freeOf([]); const cands = []; for (let y = 1; y <= h; y += 2) for (let x = 1; x <= w; x += 2) cands.push({ left: x, top: y });
+          cands.sort((a, b) => Math.hypot(a.left - base.left, a.top - base.top) - Math.hypot(b.left - base.left, b.top - base.top));
+          best = cands.find(only) || base; scale = sc; bestBox = box(best); }
+      }
+      taken.push(bestBox);
+      if (best !== base || scale !== 1) next[slot] = { left: Math.round(best.left), top: Math.round(best.top), scale };
+    }
+    setMoved(prev => (JSON.stringify(next) === JSON.stringify(prev) ? prev : next));
+  };
+  React.useLayoutEffect(() => { if (measure.current) measure.current(); });
+  // 吹き出しの字があとから読み込まれて大きさが変わることがあるので、ときどき測り直す
+  //   部屋の中身(吹き出し・顔・札)が変わったときは、次のコマですぐ測り直す
+  React.useEffect(() => {
+    if (!on) return undefined;
+    const run = () => { if (measure.current) measure.current(); };
+    const t = setInterval(run, 700);
+    const roomEl = marker.current && marker.current.parentElement;
+    let raf = 0;
+    const mo = roomEl && typeof MutationObserver !== 'undefined' ? new MutationObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(run); }) : null;
+    if (mo) mo.observe(roomEl, { childList: true, subtree: true, characterData: true });
+    return () => { clearInterval(t); cancelAnimationFrame(raf); if (mo) mo.disconnect(); };
+  }, [on]);
+  if (!on) return null;
+  return (<><span ref={marker} hidden/>{Object.entries(room.put).filter(([, k]) => k).map(([slot, k]) => {
     const f = assistantLifeFurnOf(k);
     if (!f || !ASSISTANT_LIFE_FURN_SLOTS[slot]) return null;
-    const p = pos(slot);
+    const p = moved[slot] || pos(slot);
+    const sc = moved[slot] && Number.isFinite(moved[slot].scale) ? moved[slot].scale : 1;
+    const sz = Math.max(1, Math.round(size * (sc || 1)));
     return (
-      <span key={slot} data-assistant-life-room-furn={`${id}:${slot}:${k}`} aria-hidden="true"
-        style={{ position: 'absolute', left: p.left, top: p.top, width: size, height: size, zIndex: 2, fontSize: size, lineHeight: 1, pointerEvents: 'none', filter: 'drop-shadow(0 2px 2px #0006)' }}>
-        {slot === 'ceil' && <span style={{ position: 'absolute', bottom: '100%', left: '50%', width: 1, height: Math.round(size * 0.3), background: '#7c5a3a' }}/>}
+      <span key={slot} data-assistant-life-room-furn={`${id}:${slot}:${k}`} data-assistant-life-room-furn-moved={moved[slot] ? '1' : '0'} data-assistant-life-room-furn-hidden={sc === 0 ? '1' : '0'} aria-hidden="true"
+        style={{ display: sc === 0 ? 'none' : undefined, position: 'absolute', left: p.left, top: p.top, width: sz, height: sz, zIndex: 2, fontSize: sz, lineHeight: 1, pointerEvents: 'none', filter: 'drop-shadow(0 2px 2px #0006)' }}>
+        {slot === 'ceil' && p.top <= 6 && <span style={{ position: 'absolute', bottom: '100%', left: '50%', width: 1, height: Math.round(sz * 0.3), background: '#7c5a3a' }}/>}
         <span>{f.emoji}</span>
       </span>); })}</>);
 }
@@ -584,6 +748,7 @@ function AssistantLifeFurnSheet({ id, furnItems, onGiveFurn, onClose, onTalk, la
         <div className="mt-1 space-y-1">
           {canGive.length ? canGive.map(f => row(f, <>{<span className="shrink-0 text-[10px] font-bold text-slate-300">×{furnItems[f.key]}</span>}{btn('贈る', () => give(f.key), 'border-amber-300/70 bg-amber-400/20 text-amber-100', { 'data-assistant-life-furn-give': f.key })}</>))
             : <p className="rounded-xl bg-slate-800/80 px-2 py-1 text-[11px] font-bold text-slate-300">贈れる家具がありません。モンヒロビートの「ビートP交換所」の「家具」で手に入ります</p>}
+          <AssistantLifeShopButton tab="furniture" who={id} label="🛒 交換所の家具の棚へ"/>
         </div>
         {/* 部屋に置いてある家具と押し入れの家具を、見出しで分ける(2026-11-08 ミハリ「どちらが置いてあるか字で分からない」) */}
         <p className="mt-2 text-[11px] font-black text-amber-200">🏠 部屋に置いてある家具 <span className="text-slate-300">({mine.length}/{all.length}持っている)</span></p>
@@ -597,7 +762,7 @@ function AssistantLifeFurnSheet({ id, furnItems, onGiveFurn, onClose, onTalk, la
             {mine.filter(f => room.put[f.slot] !== f.key).map(f => row(f, btn(room.put[f.slot] ? '入れかえる' : '置く', () => assistantLifeFurnMove(id, f.key, true), 'border-pink-300/70 bg-pink-400/15 text-pink-100', { 'data-assistant-life-furn-put': f.key })))}
           </div>
         </>)}
-        <button type="button" data-assistant-life-furn-close onClick={onClose} className="mt-2 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
+        <button type="button" data-assistant-life-furn-close data-mhl-sheet-close onClick={onClose} className="mt-2 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
       </div>
     </div>);
 }

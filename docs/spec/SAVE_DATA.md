@@ -91,6 +91,8 @@
 | `mh_market_icons` | string[] / `[]` | 購入アイコンID。ブリーダーP交換所だけでなく、**ビートP交換所のハロウィンのアイコン(1000P)の交換でも**、まとまりの中身が全部ここへ足される(2026-10-04)。**同じキャラのアイコン(助手の表情・モンスターの顔と円盤石など)は、どれか1つでも入っていれば全部持っている扱い**(2026-10-03・`BREEDER_ICON_GROUPS` / `expandOwnedMarketIcons`)。広げるのは読むときだけで、保存値は書き換えない。買うと、まとめの中身が全部入る |
 | `mh_owned_items` | object / `{}` | 消耗品ID→個数 |
 | `mh_missions` | object / 期間ごとの既定値 | デイリー・ウィークリー・マンスリーの進捗、期間ID、ギフト送付済みID。旧データの欠損項目は読み込み時に補う |
+| `mh_mission_renew_v1` | object / `normalizeMissionRenewMark` | ミッションの作り直し(2026-11-08)の切り替えの印 `{ at, daily, weekly, monthly }`。一度だけ書く。今までミッションの保存があった人は書いた日・週・月の期間、はじめての人は `'-'`。印の期間と今の期間が同じあいだだけ「前の項目を残す・コンプリートは少ないほうの目安」で数える(次の期間へは持ち越さない)。`mh_missions` の形・キー名は変えていない |
+| `mh_mission_daily_line_v1` | object / `normalizeMissionDailyLine` | ミッションの助手の1日1行の案内(2026-11-08)。`{ day, lines:{ 助手id: 文 }, tries, at }`。中継役 mission-daily-line から1日1回(届かなければ10分あけて3回まで)もらった文の控え。文は {task}・{reward} の場所だけを持ち、数はゲームが入れる。無い・壊れていたら決まった台詞 |
 | `mh_unlocked_monsters` | string[] / 初期8種 | 解放済み種ID |
 | `mh_monster_roster` | string[] / 解放済み一覧 | 候補編成。種IDまたは `masu:<id>` |
 | `mh_auto_settings_v1` | object / `{strategy:'random', allies:[{rosterEntry:null,slot:null} × 3], breakthroughReserve:{gold:0,psyche:0}, quickRun:{heroRosterEntry:null,distance:null,difficulty:null,autoStart:false}}` | AUTO用の事前設定。方針・供モン・クイック周回設定に加え、AUTO∞自動限界突破で最低限残すダイヤ/虹のプシュケーを `breakthroughReserve` に保存する。`quickRun.autoStart` は「モンヒロビートを開いたら自動で∞周回を始めるか」（既定 `false`。項目の無い既存データ・壊れた値は `false` へ倒す）。欠損・不正値は0へ正規化し、0は保護なし |
@@ -350,6 +352,7 @@
 | `mh_rhythm_fix_override_v1` | object / 未設定なら `{}` | モンヒロビートの「実機でしか分からない直し方」(`RHYTHM_TOUCH_FIXES`)を、この端末だけで入れる/切る上書き(2026-10-07)。`{ 直し方の名前: boolean }`。**`storeSet` ではなく `localStorage` へ直接**書く(`rhythmTouchFixSetOverride`)。読むときは表にある名前の boolean だけ拾い、それ以外・壊れた値は捨てる(上書きなし=表のとおり)。いまゲームの画面からは書かない(検査と手で試すとき用) |
 | `mh_sky_lift_portrait_proto` | 文字列 `'25'` / `'39'` / 未設定(=16%) | **デバッグ専用**。縦画面の空中の段の高さの差(道の高さの 16%・25%・39%)を見比べる切り替え(2026-10-11・HELL の試作)。音ゲーデバッグの「プレイ」タブの切り替え(`RhythmSkyLiftSwitch`)だけが `localStorage` へ直接書き、16% を選ぶとキーを消す。読むときは `25`・`39` 以外(未設定・壊れた値)を 16% として読む(`rhythmSkyLiftPortrait`)。空中の段がある譜面(デバッグの試作の枠)だけに効き、通常プレイには何も起きない |
 | `mh_assistant_bubble_mode_v1` | `'ALWAYS'` / `'DAILY'` / `'OFF'` / 既定 `'ALWAYS'` | 助手の吹き出し(画面ごとのひとこと)の出し方(2026-10-10・改善G6)。設定画面のボタンで書く。`normalizeAssistantBubbleMode` で既定へ倒す。はじめての案内・`…Intro` の場面・HOMEの助手・助手の告知には効かない |
+| `mh_assistant_peer_auto_v1` | `true` / 未設定・`true` 以外は切 | 助手どうしの会話(掛け合い・特別なお話・助手ライフの場面・見返し)を自動で進めるか(2026-11-08 社長)。設定画面の「助手どうしの会話を自動で進める」で書く。既定は切(タップで次へ)。`ASSISTANT_PEER_AUTO_STORE`(56-assistant-peer.jsx) |
 | `mh_assistant_bubble_seen_v1` | object / 未設定なら空 | 「1日1回」のときに、その日に出した場面 `{ day:'YYYY-MM-DD'(朝5:00区切り), scenes:[場面のキー] }`。日が違う・壊れた値は空として読む(`normalizeAssistantBubbleSeen`) |
 | `mh_bubble_collapsed_v1` | object / 未設定なら空 | 助手の吹き出しを「小さくたたんだ」売り場の印 `{ 'market:event':true, 'help':true, … }`(2026-10-26 開発部 k02・e01。ヘルプの上の助手は 'help'。たたんだものだけ入れ、ひらけば消える)。キーは画面ごとの `collapseKey`。object でない・値が `true` でないものは捨てて「ひらいたまま」として読む(`normalizeBubbleCollapsed`)。既存のキーは触らない |
 
@@ -427,7 +430,7 @@
 
 ### ミッション
 
-`mh_missions` は既存のデイリー／ウィークリーに、マンスリーの項目を追加した単一オブジェクトである。既存キーの改名・削除は行わない。`normalizeMissions` が欠損を補い、日次・週次・月次の期間が変わった部分だけを初期化する。
+`mh_missions` は既存のデイリー／ウィークリーに、マンスリーの項目を追加した単一オブジェクトである。2026-11-08 のミッションの作り直しでは、数える項目(beatPlays・beatClears・cardPlays・cardWins・assistantTouches・friendVisits)と、助手とふれあった日の一覧(weeklyAssistantDays・monthlyAssistantDays)を**足しただけ**で、既存の項目・キー名・受取履歴(sent*)・ギフトの固定idは変えていない。足りない古い保存は0・空で読む。既存キーの改名・削除は行わない。`normalizeMissions` が欠損を補い、日次・週次・月次の期間が変わった部分だけを初期化する。
 
 - 日次: `dailyPeriod`, `daily`, `sentDaily`（JST 04:00更新）
 - 週次: `weeklyPeriod`, `weekly`, `sentWeekly`, `weeklyLoginDays`（月曜JST 04:00更新）

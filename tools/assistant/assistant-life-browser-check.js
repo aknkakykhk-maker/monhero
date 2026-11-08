@@ -47,6 +47,25 @@ const boardProblems = (page) => page.evaluate(() => {
   const ng = [];
   for (const c of document.querySelectorAll('[data-assistant-life-board-item] [data-assistant-life-chunk]')) if (c.getClientRects().length > 1) ng.push(`掲示板の言葉が途中で折れる: ${c.textContent}`);
   if (!document.querySelector('[data-assistant-life-board-item] [data-assistant-life-chunk]')) ng.push('掲示板に言葉が無い(検査の前提)');
+  // 掲示板の件は、全部見えるか・まったく見えないか(縦 390 で2件目が半分切れていた。2026-11-08 ナカヨシ8)
+  { const bd = document.querySelector('[data-assistant-life-board]');
+    if (bd) { const br = bd.getBoundingClientRect(), cs = getComputedStyle(bd), bt = br.top + parseFloat(cs.borderTopWidth), bb = br.bottom - parseFloat(cs.borderBottomWidth), bl = br.left, brr = br.right;
+      for (const p of bd.querySelectorAll('[data-assistant-life-board-item]')) { const r = p.getBoundingClientRect(); const inX = r.left < brr - 1 && r.right > bl + 1; const inY = r.top < bb - 1 && r.bottom > bt + 1;
+        if (inX && inY && (r.bottom > bb + 0.5 || r.top < bt - 0.5)) ng.push(`掲示板の件が半分切れる: ${p.textContent}`); } } }
+  // 出かけ札は床の帯にかけない(部屋の上から 縦36px・横37px まで。助手のマスモンが床を歩く。2026-11-08 社長・キズナ2)・名札を隠さない・字が「…」で切れない
+  { const land = !!document.querySelector('[data-assistant-life-land="1"]');
+    for (const tag of document.querySelectorAll('[data-assistant-life-room-away]')) { const room = tag.closest('[data-assistant-life-room]'), R = room.getBoundingClientRect(), T = tag.getBoundingClientRect(), id = room.dataset.assistantLifeRoom;
+      if (T.bottom - R.top > (land ? 37 : 36) + 0.5) ng.push(`出かけ札が床にかかる ${id} 下端${Math.round(T.bottom - R.top)}px`);
+      const pl = room.querySelector('.pl'); if (pl) { const p = pl.getBoundingClientRect(); const top = document.elementFromPoint(p.left + p.width / 2, p.top + p.height / 2); if (!top || !(top === pl || pl.contains(top))) ng.push(`出かけ札が名札を隠す ${id}`); }
+      for (const t of tag.querySelectorAll('b,small')) if (t.getClientRects().length && t.scrollWidth > t.clientWidth + 1) ng.push(`出かけ札の字が切れる ${id}: ${t.textContent}`); } }
+  // 見出しの「ほか◯件」= 今日あったことの全部 − 掲示板に見えている件(押すと全部読めると分かる。2026-11-08 社長)
+  { const bd = document.querySelector('[data-assistant-life-board]'); const more = bd && bd.querySelector('[data-assistant-life-board-more]');
+    const total = (typeof ASSISTANT_LIFE_DIARY !== 'undefined' && (ASSISTANT_LIFE_DIARY.state.items || []).length) || 0;
+    if (bd && total > 0) { if (!more) ng.push('掲示板に「ほか◯件／全部 ›」が無い');
+      else { const w = bd.clientWidth; const seen = [...bd.querySelectorAll('[data-assistant-life-board-item]')].filter(p => p.offsetLeft + 1 < w).length;
+        if (seen < 1) ng.push(`掲示板に件が1つも見えない(全${total}件・2026-11-08 ミハリ 横)`);
+        if (Number(more.getAttribute('data-assistant-life-board-more')) !== total - seen) ng.push(`「ほか◯件」の数が合わない: ${more.textContent} 全${total}・見えている${seen}`);
+        const mr = more.getBoundingClientRect(), br = bd.getBoundingClientRect(); if (mr.right > br.right + 0.5 || more.scrollWidth > more.clientWidth + 1) ng.push(`「${more.textContent}」が掲示板からはみ出す`); } } }
   for (const sm of document.querySelectorAll('[data-assistant-life-today] small')) if (sm.scrollWidth > sm.clientWidth + 1) ng.push(`今日やれることの字が切れる: ${sm.textContent}`);
   // 部屋の吹き出し(「💭 だれか来ないかな…」)が部屋の幅で切れない・まとまりの途中で折れない(2026-11-08 ミハリ: 横で「だれか来ない…」)
   for (const b of document.querySelectorAll('[data-assistant-life-room-bub]')) { if (b.scrollWidth > b.clientWidth + 1 || b.scrollHeight > b.clientHeight + 1) ng.push(`部屋の吹き出しが切れる: ${b.textContent}`); for (const c of b.querySelectorAll('[data-assistant-life-chunk]')) if (c.getClientRects().length > 1) ng.push(`吹き出しが途中で折れる: ${c.textContent}`); }
@@ -77,16 +96,20 @@ const standProblems = async (page, combos, label) => {
       const sc = document.querySelector('[data-assistant-life-scene]'); if (!sc) return null; const H = sc.getBoundingClientRect().height;
       const st = [...sc.querySelectorAll('[data-assistant-life-scene-stand]')].map(e => { const r = e.getBoundingClientRect(), b = ASSISTANT_LIFE_STAND_BOX.get(e.getAttribute('src')); return b ? { top: r.top + b.t * r.height, fh: (b.b - b.t) * r.height } : null; });
       const ic = sc.querySelector('[data-assistant-life-scene-icon]');
-      return { H, st, icon: !!ic && !ic.closest('.mhl-ti') && ic.getBoundingClientRect().width > 4 };
+      // 顔(見た目の上から4割)が台詞の窓に隠れていないか(2026-11-08 ミハリ: 横で窓の裏に隠れた)
+      const tw = document.querySelector('[data-assistant-peer-talk]'); const twTop = tw ? tw.getBoundingClientRect().top : Infinity;
+      const hidden = [...sc.querySelectorAll('[data-assistant-life-scene-stand]')].filter(e => { const r = e.getBoundingClientRect(), b = ASSISTANT_LIFE_STAND_BOX.get(e.getAttribute('src')); return b && r.top + (b.t + 0.4 * (b.b - b.t)) * r.height > twTop; }).map(e => e.getAttribute('data-assistant-life-scene-stand'));
+      return { H, st, hidden, icon: !!ic && !ic.closest('.mhl-ti') && ic.getBoundingClientRect().width > 4 };
     });
     if (!m) { ng.push(`${ids.join('・')}: 場面が開かない`); continue; }
     n++;
     if (m.st.length !== ids.length || m.st.some(x => !x)) ng.push(`${ids.join('・')}: 立ち絵が測れない`);
     else { const t = m.st.map(x => x.top), f = m.st.map(x => x.fh); const d = (Math.max(...t) - Math.min(...t)) / m.H, r = Math.max(...f) / Math.min(...f); if (d > 0.03 || r > 1.08) ng.push(`${ids.join('・')}: 頭の高さの差 ${(d * 100).toFixed(1)}%・大きさの比 ${r.toFixed(2)}`); }
     if (!m.icon) ng.push(`${ids.join('・')}: 見出しのアイコンが出ていない`);
+    if (m.hidden && m.hidden.length) ng.push(`${ids.join('・')}: 顔が台詞の窓に隠れる(${m.hidden.join(',')})`);
     await page.locator('[data-assistant-life-scene-back]').click({ timeout: 2000 }).catch(() => {}); await page.waitForTimeout(200);
   }
-  check(`⑰ 場面の立ち絵の頭の高さ・大きさがそろい、見出しのアイコンが出る(${label}・${n}場面)`, ng.length === 0 && n === combos.length, ng.slice(0, 4).join(' / '));
+  check(`⑰ 場面の立ち絵の頭の高さ・大きさがそろい、顔が台詞の窓に隠れず、見出しのアイコンが出る(${label}・${n}場面)`, ng.length === 0 && n === combos.length, ng.slice(0, 4).join(' / '));
 };
 const LIFE_IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'];
 const STAND_COMBOS = [...LIFE_IDS.flatMap((a, i) => LIFE_IDS.slice(i + 1).map(b => [a, b])), ['mua', 'kiki', 'kyuko'], ['dra', 'sorashido', 'erubin'], ['momosuke', 'atsu', 'kiki'], ['kiki', 'dra', 'kyuko', 'mua'], ['atsu', 'kyuko', 'sorashido', 'erubin']];
@@ -191,7 +214,7 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
       const clk = document.querySelector('[data-assistant-life-title]'); const tc = [...document.querySelectorAll('.mhl-hdr *')].find(e => /\d{1,2}:\d{2}/.test(e.textContent || '') && e.children.length === 0);
       if (clk && tc) { const a = clk.getBoundingClientRect(), b = tc.getBoundingClientRect(); if (a.right > b.left + 1 && a.top < b.bottom && b.top < a.bottom) ng.push('題と時刻の札が重なる'); }
       for (const n of document.querySelectorAll('[data-assistant-life-name]')) if (n.getClientRects().length > 1) ng.push(`名前の途中で折れる: ${n.textContent}`);
-      const cut = (b) => { const tag = b.closest('.tag'), room = b.closest('.mhl-room'), cs = getComputedStyle(tag); const room92 = room.clientWidth * 0.92 - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth); return b.scrollWidth * 1.1 > room92; }; for (const b of document.querySelectorAll('[data-assistant-life-room-away] b')) { const own = b.textContent, mark = own.split(' ')[0]; for (const name of Object.keys(ASSISTANT_LIFE_PLACES).map(assistantLifePlaceShow)) { b.textContent = `${mark} ${name}へ`; if (cut(b)) ng.push(`札が切れる: ${b.textContent}`); } b.textContent = own; } for (const b of document.querySelectorAll('[data-assistant-life-room-away] small')) if (cut(b)) ng.push(`札が切れる: ${b.textContent}`);
+      const cut = (b) => { if (!b.getClientRects().length) return false; const rg = document.createRange(); rg.selectNodeContents(b); const tw = rg.getBoundingClientRect().width; return tw * 1.1 > b.clientWidth; }; /* 札は部屋の幅いっぱいの箱(2026-11-08 ナカヨシ8)。字の幅に1割を足しても、その行の幅に収まるか */ for (const b of document.querySelectorAll('[data-assistant-life-room-away] b')) { const own = b.textContent, mark = own.split(' ')[0]; for (const name of Object.keys(ASSISTANT_LIFE_PLACES).map(assistantLifePlaceShow)) { b.textContent = `${mark} ${name}へ`; if (cut(b)) ng.push(`札が切れる: ${b.textContent}`); } b.textContent = own; } for (const b of document.querySelectorAll('[data-assistant-life-room-away] small')) if (cut(b)) ng.push(`札が切れる: ${b.textContent}`);
       for (const p of document.querySelectorAll('[data-assistant-life-board-item]')) if (p.scrollHeight > p.clientHeight + 2) ng.push(`掲示板が切れる: ${p.textContent}`);
       // ミハリ L8・L10: 時間帯の言葉は HOME の札と同じ(朝・昼・夕・夜)。区切りの名前(午後・深夜)・略称「モンビー」を画面に出さない
       const scr = document.querySelector('[data-assistant-life-screen]'); const all = scr ? scr.innerText : '';
@@ -350,7 +373,7 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     if (await giveBtn.count()) {
       await giveBtn.click(); await page.waitForTimeout(300);
       const sheet = await page.locator('[data-assistant-life-give-sheet]').innerText().catch(() => '');
-      check('⑧ 「贈る」で、道具の名前と中身・2人の好み・上がる量・回数・手に入れる所が1枚で出る(2026-11-08 10種類)', ['仲良し度', '友情Lv', '好み', '同じ道具は1日1回', 'ビートP交換所'].every(w => sheet.includes(w)) && (await page.locator('[data-assistant-life-give-kind]').count()) === 10, sheet.replace(/\s+/g, ' ').slice(0, 80));
+      check('⑧ 「贈る」で、道具の名前と中身・2人の好み・上がる量・回数・手に入れる所が1枚で出る(2026-11-08 10種類)', ['仲良し度', '友情Lv', '好み', '同じ道具は1日1回', 'ビートP交換所'].every(w => sheet.replace(/\u2060/g, '').includes(w)) && (await page.locator('[data-assistant-life-give-kind]').count()) === 10, sheet.replace(/\s+/g, ' ').slice(0, 80));
       check('⑧ 贈るシートの道具の名前が、枠からはみ出さない', await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-give-kind]')].every(b => b.scrollWidth <= b.clientWidth + 1)));
       check('⑧ 確かめの1枚もはみ出さない(縦 390)', await page.evaluate(() => { const el = document.querySelector('[data-assistant-life-give-sheet] > div'); const r = el && el.getBoundingClientRect(); return !!r && r.left >= -1 && r.right <= window.innerWidth + 1 && r.top >= -1; }));
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-8-give.png') });
@@ -425,7 +448,7 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     check('① 横 844×390 でも画面がはみ出さない(家は左・右の列に今日やれること)', await L.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1) && (await L.page.locator('[data-assistant-life-screen][data-assistant-life-land="1"]').count()) === 1 && (await L.page.locator('[data-assistant-life-room]').count()) === 8);
     if (SHOTS) await L.page.screenshot({ path: path.join(shotDir, 'life-6-house-land.png') });
     // 札の字は、端末の字体で幅が変わる(この検査のブラウザと既定のブラウザでかなの幅が1割ちがった)。字の幅に1割を足しても札に収まるかを見る。行き先はすべての場所の名前を入れて測る(2026-11-07 本番の横で「おやつ屋さ…」)
-    const textL = await L.page.evaluate(() => { const ng = []; const ti = document.querySelector('[data-assistant-life-title] .mhl-ti'); if (!ti || ti.scrollWidth > ti.clientWidth + 1) ng.push('題が切れる'); const cut = (b) => { const tag = b.closest('.tag'), room = b.closest('.mhl-room'), cs = getComputedStyle(tag); const room92 = room.clientWidth * 0.92 - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth); return b.scrollWidth * 1.1 > room92; }; for (const b of document.querySelectorAll('[data-assistant-life-room-away] b')) { const own = b.textContent, mark = own.split(' ')[0]; for (const name of Object.keys(ASSISTANT_LIFE_PLACES).map(assistantLifePlaceShow)) { b.textContent = `${mark} ${name}へ`; if (cut(b)) ng.push(`札が切れる: ${b.textContent}`); } b.textContent = own; } for (const b of document.querySelectorAll('[data-assistant-life-room-away] small')) if (cut(b)) ng.push(`札が切れる: ${b.textContent}`); for (const n of document.querySelectorAll('[data-assistant-life-name]')) if (n.getClientRects().length > 1) ng.push(`名前の途中で折れる: ${n.textContent}`); for (const bt of document.querySelectorAll('[data-assistant-life-screen] button')) if (/モンビー/.test(bt.textContent)) ng.push(`ボタンが略称: ${bt.textContent}`); for (const bt of document.querySelectorAll('[data-assistant-life-screen] button b')) if (bt.scrollWidth > bt.clientWidth + 1) ng.push(`ボタンの字が切れる: ${bt.textContent}`); return ng; });
+    const textL = await L.page.evaluate(() => { const ng = []; const ti = document.querySelector('[data-assistant-life-title] .mhl-ti'); if (!ti || ti.scrollWidth > ti.clientWidth + 1) ng.push('題が切れる'); const cut = (b) => { if (!b.getClientRects().length) return false; const rg = document.createRange(); rg.selectNodeContents(b); const tw = rg.getBoundingClientRect().width; return tw * 1.1 > b.clientWidth; }; /* 札は部屋の幅いっぱいの箱(2026-11-08 ナカヨシ8)。字の幅に1割を足しても、その行の幅に収まるか */ for (const b of document.querySelectorAll('[data-assistant-life-room-away] b')) { const own = b.textContent, mark = own.split(' ')[0]; for (const name of Object.keys(ASSISTANT_LIFE_PLACES).map(assistantLifePlaceShow)) { b.textContent = `${mark} ${name}へ`; if (cut(b)) ng.push(`札が切れる: ${b.textContent}`); } b.textContent = own; } for (const b of document.querySelectorAll('[data-assistant-life-room-away] small')) if (cut(b)) ng.push(`札が切れる: ${b.textContent}`); for (const n of document.querySelectorAll('[data-assistant-life-name]')) if (n.getClientRects().length > 1) ng.push(`名前の途中で折れる: ${n.textContent}`); for (const bt of document.querySelectorAll('[data-assistant-life-screen] button')) if (/モンビー/.test(bt.textContent)) ng.push(`ボタンが略称: ${bt.textContent}`); for (const bt of document.querySelectorAll('[data-assistant-life-screen] button b')) if (bt.scrollWidth > bt.clientWidth + 1) ng.push(`ボタンの字が切れる: ${bt.textContent}`); return ng; });
     await seedBoard(L.page); await L.page.waitForTimeout(250);
     { const ng = await boardProblems(L.page); check('⑫ 横でも掲示板の言葉が途中で折れない・今日やれることの字が切れない', ng.length === 0, ng.join(' / ')); }
     if (SHOTS) await L.page.screenshot({ path: path.join(shotDir, 'life-16-board-land.png') });

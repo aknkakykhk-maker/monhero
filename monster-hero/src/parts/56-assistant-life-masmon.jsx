@@ -220,7 +220,7 @@ function AssistantMasmonSheet({ id, land = false, onClose }) {
         <div className="flex items-center gap-2">
           {typeof AssistantFace === 'function' && <span className="shrink-0 rounded-full ring-2 ring-pink-300"><AssistantFace who={who} size={38} accent={who.accent}/></span>}
           <div className="min-w-0 flex-1"><p className="mhl-en">MASMON · {String(who.id).toUpperCase()}</p><p className="truncate text-[19px] font-black text-white">{who.name}のマスモン</p></div>
-          <button type="button" className="mhl-btn shrink-0 bg-slate-700 px-3" data-assistant-masmon-close onClick={onClose}>閉じる</button>
+          <button type="button" className="mhl-btn shrink-0 bg-slate-700 px-3" data-assistant-masmon-close data-mhl-sheet-close onClick={onClose}>閉じる</button>
         </div>
         <div className="mt-2 grid grid-cols-4 gap-1" role="tablist">
           {ASSISTANT_MASMON_TABS.map(([k, label]) => (

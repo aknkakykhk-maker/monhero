@@ -519,6 +519,8 @@ const assistantLifeNudge = async (kind, value, now = Date.now()) => {
 };
 // 遊んだとき(ビート・バトル・カード・おしゃべり・助手どうし)。段が上がったら tierUp を返す
 const assistantLifeAddPlay = async (kind, now = Date.now()) => {
+  // ミッションの「助手とふれあう」(2026-11-08)。おしゃべり・助手どうしを見守る・誘う・道具を贈る(ビート・バトル・カードは数えない)
+  if ((kind === 'chat' || kind === 'peer') && typeof missionNotify === 'function') missionNotify('assistantTouch');
   if (!assistantLifeEnabled()) return { gained: 0 };
   await ASSISTANT_LIFE_STORE.load();
   const r = assistantLifeAddPlayState(ASSISTANT_LIFE_STORE.state.play, kind, assistantLifeDayKey(now));
@@ -1101,6 +1103,7 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
             {canGive && !embedded && (
               <div data-assistant-life-items className="mt-2 rounded-2xl border border-amber-300/40 bg-slate-950/90 p-2">
                 <p className="text-[12px] font-black text-amber-200">🎁 2人に贈る道具(今日あと {typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0}回・同じ道具は1日1回)</p>
+                {typeof AssistantLifeGiftExplain === 'function' && <div className="mt-1"><AssistantLifeGiftExplain compact/></div>}
                 {itemInfos.map(x => (
                   <div key={x.kind} data-assistant-life-item={x.kind} className="mt-1.5 flex items-center gap-2">
                     <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 text-[24px]" aria-hidden="true">{x.emoji}</span>
@@ -1110,6 +1113,7 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
                     </div>
                   </div>))}
                 <p className="mt-1.5 text-[10px] leading-snug text-slate-400">手に入れる:モンヒロビートの「ビートP交換所」({itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・')})/贈る:下の組の「🎁 贈る」。誘う・引き合わせるは無料で、次の時間の過ごし方が変わります</p>
+                {typeof AssistantLifeShopButton === 'function' && <div className="mt-1.5"><AssistantLifeShopButton tab="item"/></div>}
               </div>)}
             <div className="mt-2 space-y-2">
               {(life.groups || []).map(g => { const key = assistantLifeGroupKey(g); const done = (life.watched || []).includes(key); return (

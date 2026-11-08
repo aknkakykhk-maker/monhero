@@ -3570,6 +3570,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       }
       // 助手どうし(2026-11-07・56-assistant-peer.jsx): 遊びに連れていくペアがいれば、対戦を1回終えるごとに2人が仲良くなる(見返しは除く)
       if (typeof assistantPeerOnPlay === 'function') void assistantPeerOnPlay('card');
+      // ミッション(2026-11-08): MFバトルカードの1戦と勝ち。見本・練習試合・杯の不在試合・デバッグは数えない
+      if (!game.demo && !game.tutorial && !game.cup && !debug && typeof missionNotify === 'function') { missionNotify('cardPlay'); if (outcome === 'win') missionNotify('cardWin'); }
       // マルチ対戦: 封を開けて確かめるのは 91 の CARD_PVP。結果は部屋の画面に出す(報酬は区切り2)
       if (game.pvp) {
         CARD_PVP.finish(outcome, st);
