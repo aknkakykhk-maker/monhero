@@ -188,6 +188,10 @@ const badgeProblems = (page) => page.evaluate(() => {
       check(`⑯ 出かけている助手は行き先が分かる(部屋の札「🃏 カード部屋へ」・シート)(${v.id})`, /(カード部屋|MFバトルカード)へ/.test(await page.locator('[data-alf-visit] [data-assistant-life-room="kiki"]').innerText()) && /(カード部屋|MFバトルカード)へおでかけ中/.test(await page.locator('[data-alf-visit-room-state]').innerText()));
       check(`⑱ 部屋のシートに、その人の助手のマスモン(写し)が絵つきで出る・勇者モンに⭐・「ほか3体」と列の最後に「+3」(${v.id})`, (await page.locator('[data-alf-visit-masmon-one]').count()) === 2 && /⭐ごろちゃん/.test(await page.locator('[data-alf-visit-masmon]').innerText()) && (await page.locator('[data-alf-visit-masmon-one] img').count()) >= 2 && /ほか3体/.test(await page.locator('[data-alf-visit-masmon-more]').innerText().catch(() => '')) && /\+3/.test(await page.locator('[data-alf-visit-masmon-plus]').innerText().catch(() => '')));
       { const ng = await textProblems(page, '[data-alf-visit-masmon]'); check(`⑱ マスモンの名前がはみ出さない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
+      // ⑲ フレンドの家も大きな部屋で見る(2026-11-08 社長・ナカヨシ9 の AssistantLifeRoomScene)
+      check(`⑲ 部屋を押すと大きな部屋が出る(留守の札「MFバトルカードへ」・写したマスモン2体が歩く・「← 家へ」)(${v.id})`, (await page.locator('[data-alf-visit-roomview] [data-assistant-life-roomview-masmon]').count()) === 2 && /MFバトルカードへ/.test(await page.locator('[data-alf-visit-roomview]').innerText()) && (await page.locator('[data-alf-visit-roomview-close]').count()) === 1);
+      { const ng = await page.evaluate(() => { const sc = document.querySelector('[data-alf-visit-roomview]'); const r = sc && sc.getBoundingClientRect(); return !r ? ['無い'] : (r.left < -1 || r.top < -1 || r.right > innerWidth + 1 || r.width < innerWidth * 0.45) ? [`${Math.round(r.left)},${Math.round(r.top)} ${Math.round(r.width)}×${Math.round(r.height)}`] : []; });
+        check(`⑲ 大きな部屋は画面に収まる(縦は幅いっぱい・横は左半分以上)(${v.id})`, ng.length === 0, ng.join(' / ')); }
       check(`⑯ 部屋のシートに「贈られた家具: まだありません」(${v.id})`,  /贈られた家具: まだありません/.test(await page.locator('[data-alf-visit-furn]').innerText()));
       check(`⑭ 訪ねた家の掲示板に、その人の最近(迎えたマスモン・遊んだ曲)が出る(${v.id})`, /ゴーレム/.test(await page.locator('[data-alf-visit]').innerText()));
       await shot(page, `${v.id}-5b-visit-out`);
@@ -206,6 +210,12 @@ const badgeProblems = (page) => page.evaluate(() => {
       await shot(page, `${v.id}-5c-visit-kept`);
       await page.locator('[data-alf-visit-sheet] .mhl-sheet button:has-text("とじる")').click();
       await page.locator('[data-alf-visit] [data-assistant-life-room="dra"]').click();
+      await page.locator('[data-alf-visit-roomview] [data-assistant-life-roomview-person="dra"]').waitFor({ timeout: 5000 }).catch(() => {});
+      check(`⑲ 家にいる助手の部屋は、大きな部屋に立ち絵が出て、贈られた家具(トロフィー・くま)も並ぶ(${v.id})`, (await page.locator('[data-alf-visit-roomview] [data-assistant-life-roomview-furn]').count()) === 2 && (await page.locator('[data-alf-visit-roomview] [data-assistant-life-roomview-person="dra"]').count()) === 1);
+      if (v.h > v.w) { await page.locator('[data-alf-visit-roomview-act="talk"]').click(); await page.locator('[data-alf-visit-replies]').waitFor({ timeout: 3000 });
+        check(`⑲ 縦の下の段「💬 話しかける」で声をかけられ、大きな部屋に吹き出しが出る(${v.id})`, (await page.locator('[data-alf-visit-replies]').count()) === 1);
+        await page.locator('[data-alf-visit-roomview-close]').click(); check(`⑲ 「← 家へ」で家に戻る(${v.id})`, (await page.locator('[data-alf-visit-sheet]').count()) === 0);
+        await page.locator('[data-alf-visit] [data-assistant-life-room="dra"]').click(); }
       await page.locator('[data-alf-visit-room="dra"]').click();
       await page.locator('[data-alf-visit-replies]').waitFor({ timeout: 3000 });
       { const ng = await chipNg(); check(`⑥ 仲良し度の知らせが、声をかけた吹き出し・返事を隠さない(${v.id})`, ng.length === 0, ng.join(' / ')); }

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 467854f84383118e
+// source-sha256: 81cee4de9f2072cf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -131731,6 +131731,8 @@ function AlfFriendHouseView({
     return () => friendsSetLifeVisit(false);
   }, []);
   const [roomId, setRoomId] = React.useState(null);
+  const rvScrollRef = React.useRef(null);
+  const rvSheetRef = React.useRef(null);
   const [noteText, setNoteText] = React.useState('');
   const [talk, setTalk] = React.useState(null);
   const [talked, setTalked] = React.useState([]);
@@ -131985,23 +131987,136 @@ function AlfFriendHouseView({
     hname: `🏡 ${friend.name}さんの家`,
     other: otherPut
   }));
+  const rvOk = typeof AssistantLifeRoomScene === 'function';
+  const rvToSheet = () => {
+    try {
+      const box = rvScrollRef.current,
+        el = rvSheetRef.current;
+      if (box && el) box.scrollTo({
+        top: el.offsetTop - 8,
+        behavior: 'smooth'
+      });
+    } catch (_) {}
+  };
+  const rvPlace = r0 && r0.p && typeof assistantLifePlaceShow === 'function' ? `${typeof ASSISTANT_LIFE_PLACE_ICON !== 'undefined' && ASSISTANT_LIFE_PLACE_ICON[r0.p] || '🚶'} ${assistantLifePlaceShow(r0.p)}へ` : '🚶 おでかけ中';
+  const rvFurn = !roomId ? [] : (() => {
+    const fu = putOf(roomId) || {};
+    return [['c', 'ceil'], ['w', 'wall'], ['f', 'floor']].map(([k, slot]) => {
+      const f = fu[k] && typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(fu[k]) : null;
+      return f ? {
+        slot,
+        key: fu[k],
+        emoji: f.emoji,
+        name: f.name
+      } : null;
+    }).filter(Boolean);
+  })();
+  const rvTeam = !roomId ? [] : masmonOf(roomId).map(t => ({
+    monster: t.monster,
+    nick: t.nick,
+    colors: t.dye.colors,
+    lead: t.lead
+  }));
+  const rvAct = (k, label, cls, fn, dis = false) => React.createElement("button", {
+    key: k,
+    type: "button",
+    "data-alf-visit-roomview-act": k,
+    disabled: dis,
+    onClick: fn,
+    className: `rounded-xl px-1 py-2 text-[12px] font-black text-white shadow active:scale-95 disabled:opacity-40 ${cls}`
+  }, label);
+  const rvDock = land || !roomId ? null : React.createElement("div", {
+    className: "grid grid-cols-3 gap-1.5",
+    "data-alf-visit-roomview-dock": true
+  }, rvAct('talk', roomState === 'sleep' ? '💤 おやすみ中' : '💬 話しかける', 'bg-gradient-to-br from-sky-400 to-indigo-500', () => {
+    greet(roomId);
+    setTimeout(rvToSheet, 60);
+  }, roomState !== 'home'), rvAct('sheet', '👀 くわしく', 'bg-gradient-to-br from-rose-400 to-amber-500', rvToSheet), rvAct('note', '✉️ 一言', 'bg-amber-500', () => {
+    setRoomId(null);
+    setNoteWarn('');
+    setLeaving(roomId);
+  }, can !== 'ok' || !!done));
+  const rvScene = rvOk && roomId && r0 ? React.createElement(AssistantLifeRoomScene, {
+    id: roomId,
+    look: look,
+    land: land,
+    people: roomState === 'out' ? [] : [roomId],
+    sleepIds: roomState === 'sleep' ? [roomId] : [],
+    away: roomState === 'out' ? {
+      title: rvPlace,
+      sub: 'いまは家にいない'
+    } : null,
+    team: rvTeam,
+    furn: rvFurn,
+    bubble: talk && talk.aid === roomId ? talk.text : '',
+    title: `${alfTheirLabel(friend.name, roomId)}の部屋`,
+    sub: `🏘 ${friend.name}さんの家`,
+    onPerson: roomState === 'home' ? () => {
+      greet(roomId);
+      setTimeout(rvToSheet, 60);
+    } : () => rvToSheet(),
+    dock: rvDock,
+    padLeft: 78
+  }) : null;
+  const rvSheetW = land && vw < 760 ? '50%' : '42%';
+  const closeRoom = () => {
+    setRoomId(null);
+    setTalk(null);
+  };
   const sheet = roomId && r0 ? React.createElement("div", {
     className: "absolute inset-0",
     style: {
       zIndex: 30
     },
     "data-alf-visit-sheet": roomId
-  }, React.createElement("button", {
+  }, !rvScene && React.createElement("button", {
     type: "button",
     "aria-label": "閉じる",
     className: "absolute inset-0 bg-black/55",
-    onClick: () => {
-      setRoomId(null);
-      setTalk(null);
+    onClick: closeRoom
+  }), rvScene && React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    "data-alf-visit-roomview-close": true,
+    onClick: closeRoom,
+    className: "absolute z-[40] rounded-xl border border-amber-300/60 bg-slate-950/85 px-2.5 py-1.5 text-[12px] font-black text-amber-100 active:scale-95",
+    style: {
+      left: 'calc(10px + env(safe-area-inset-left))',
+      top: land ? 6 : 'calc(8px + env(safe-area-inset-top))'
     }
-  }), React.createElement("div", {
+  }, "← 家へ"), rvScene && land && React.createElement("div", {
+    className: "absolute inset-y-0 left-0 bg-[#0b1020]",
+    style: {
+      width: rvSheetW === '42%' ? '58%' : '50%'
+    },
+    "data-alf-visit-roomview": true
+  }, rvScene), React.createElement("div", {
+    ref: rvScrollRef,
+    className: rvScene && !land ? 'absolute inset-0 overflow-y-auto overflow-x-hidden bg-[#0b1020]' : 'contents',
+    "data-alf-visit-roomview-scroll": true
+  }, rvScene && !land && React.createElement("div", {
+    style: {
+      height: 'calc(100% - 52px)',
+      minHeight: 420
+    },
+    "data-alf-visit-roomview": true
+  }, rvScene), React.createElement("div", {
+    ref: rvSheetRef,
     className: "mhl-sheet",
-    style: land ? {
+    style: rvScene ? land ? {
+      left: 'auto',
+      width: rvSheetW,
+      top: 0,
+      maxHeight: '100%',
+      borderRadius: '22px 0 0 22px',
+      borderTop: 0,
+      borderLeft: '2px solid #fcd34d',
+      paddingTop: 10
+    } : {
+      position: 'relative',
+      maxHeight: 'none',
+      zIndex: 1
+    } : land ? {
       left: 'auto',
       width: '44%',
       top: 0,
@@ -132027,10 +132142,7 @@ function AlfFriendHouseView({
     type: "button",
     "data-mhl-sheet-close": true,
     className: "shrink-0 rounded-xl border border-slate-500 px-3 py-1.5 text-[12px] font-black text-slate-100",
-    onClick: () => {
-      setRoomId(null);
-      setTalk(null);
-    }
+    onClick: closeRoom
   }, "とじる")), React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-200",
     "data-alf-visit-furn": true
@@ -132108,7 +132220,7 @@ function AlfFriendHouseView({
       setNoteWarn('');
       setLeaving(roomId);
     }
-  }, "✉️ ", roomState === 'home' ? '置き手紙を残して帰る' : `${assistantLifeName(roomId)}に一言残して帰る`))) : null;
+  }, "✉️ ", roomState === 'home' ? '置き手紙を残して帰る' : `${assistantLifeName(roomId)}に一言残して帰る`)))) : null;
   const words = leaving != null ? React.createElement("div", {
     className: "absolute inset-0",
     style: {
