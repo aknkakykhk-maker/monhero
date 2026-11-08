@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 66b07e74bf891166
+// generated-sha256: 41b3916234080d10
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -38526,6 +38526,8 @@ const growthFxPush = (ev) => {
     if (gain <= 0) return;
     const key = String(ev.key || `${ev.kind}:${ev.who || ''}`);
     const list = GROWTH_FX_STORE.small;
+    // 文の一行の札(裏クイックの結果)は、同じ中身がまだ並んでいれば足さない(止める・閉じるが続けて呼ばれても1枚。2026-11-08 ミハリ)
+    if (ev.text && list.some(c => c.kind === ev.kind && c.text === String(ev.text))) return;
     const same = list.find(c => c.key === key);
     // 続けて上がったら1枚にまとめる(数字を足し上げ、ゲージは今の位置へ)。出し直しの合図(rev)を進めて、消える時間を延ばす
     if (same) { same.gain += gain; same.pctTo = growthFxPct(ev.pctTo); same.rev += 1; }
@@ -38919,7 +38921,7 @@ const GrowthFxChip = ({ chip, level, held }) => {
   const pts = level === 'full' ? [0, 1, 2, 3] : [];
   // 文の一行だけの札(裏クイックの結果)。狭いときの小さい形(mini)でも文は消さない
   if (chip.text) return (
-    <div className={`mh-gfx-chip text${out ? ' out' : ''}`} data-growth-fx-chip={chip.kind} style={{ '--gc': k.color }}>
+    <div className={`mh-gfx-chip text${out ? ' out' : ''}`} data-growth-fx-chip={chip.kind} data-growth-fx-chip-id={chip.id} style={{ '--gc': k.color }}>
       <span className="ico beat" aria-hidden="true">{cardIconNode(k.icon, 13)}</span>
       <span className="txt"><b>{k.label}</b> {chip.text}</span>
     </div>
@@ -102557,6 +102559,7 @@ function MonsterHeroGame() {
       const running = !!runStageRef.current && isQuickMode(runMode) && !runResultFinishedRef.current;
       const before = running ? cardQuickRunView() : null;
       if (running) await handleGiveUp({ silent: true });
+      // 同じ中身の札が続けて押し込まれても、growthFxPush の側で1枚にする(止めるの二度押し・止めたあとに閉じる。2026-11-08 ミハリ)
       if (before && typeof growthFxPush === 'function') {
         const loops = Math.max(0, Math.floor(Number(before.loops) || 0)), gold = Math.max(0, Math.floor(Number(before.gold) || 0)), xp = Math.max(0, Math.floor(Number(before.xp) || 0));
         growthFxPush({ tier: 'small', kind: 'quick', key: `quick:${Date.now()}`, gain: 1, text: `${loops}周・ダイヤ+${gold.toLocaleString()}・経験値+${xp.toLocaleString()}` });

@@ -12717,6 +12717,7 @@ function MonsterHeroGame() {
       const running = !!runStageRef.current && isQuickMode(runMode) && !runResultFinishedRef.current;
       const before = running ? cardQuickRunView() : null;
       if (running) await handleGiveUp({ silent: true });
+      // 同じ中身の札が続けて押し込まれても、growthFxPush の側で1枚にする(止めるの二度押し・止めたあとに閉じる。2026-11-08 ミハリ)
       if (before && typeof growthFxPush === 'function') {
         const loops = Math.max(0, Math.floor(Number(before.loops) || 0)), gold = Math.max(0, Math.floor(Number(before.gold) || 0)), xp = Math.max(0, Math.floor(Number(before.xp) || 0));
         growthFxPush({ tier: 'small', kind: 'quick', key: `quick:${Date.now()}`, gain: 1, text: `${loops}周・ダイヤ+${gold.toLocaleString()}・経験値+${xp.toLocaleString()}` });

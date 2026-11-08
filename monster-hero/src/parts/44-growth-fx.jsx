@@ -56,6 +56,8 @@ const growthFxPush = (ev) => {
     if (gain <= 0) return;
     const key = String(ev.key || `${ev.kind}:${ev.who || ''}`);
     const list = GROWTH_FX_STORE.small;
+    // 文の一行の札(裏クイックの結果)は、同じ中身がまだ並んでいれば足さない(止める・閉じるが続けて呼ばれても1枚。2026-11-08 ミハリ)
+    if (ev.text && list.some(c => c.kind === ev.kind && c.text === String(ev.text))) return;
     const same = list.find(c => c.key === key);
     // 続けて上がったら1枚にまとめる(数字を足し上げ、ゲージは今の位置へ)。出し直しの合図(rev)を進めて、消える時間を延ばす
     if (same) { same.gain += gain; same.pctTo = growthFxPct(ev.pctTo); same.rev += 1; }
@@ -449,7 +451,7 @@ const GrowthFxChip = ({ chip, level, held }) => {
   const pts = level === 'full' ? [0, 1, 2, 3] : [];
   // 文の一行だけの札(裏クイックの結果)。狭いときの小さい形(mini)でも文は消さない
   if (chip.text) return (
-    <div className={`mh-gfx-chip text${out ? ' out' : ''}`} data-growth-fx-chip={chip.kind} style={{ '--gc': k.color }}>
+    <div className={`mh-gfx-chip text${out ? ' out' : ''}`} data-growth-fx-chip={chip.kind} data-growth-fx-chip-id={chip.id} style={{ '--gc': k.color }}>
       <span className="ico beat" aria-hidden="true">{cardIconNode(k.icon, 13)}</span>
       <span className="txt"><b>{k.label}</b> {chip.text}</span>
     </div>

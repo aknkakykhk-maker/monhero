@@ -227,14 +227,17 @@ const seed = () => {
       const b1 = await state();
       // 止めたときの結果の一言(裏クイック ◯周・ダイヤ+◯・経験値+◯)を記録する見張り。札は3秒半で消えるので出た瞬間に取る
       await page.evaluate(() => { window.__quickChips = []; const seen = new Set();
-        const grab = () => document.querySelectorAll('[data-growth-fx-chip="quick"]').forEach(el => { if (seen.has(el)) return; seen.add(el); window.__quickChips.push(el.textContent || ''); });
+        const grab = () => document.querySelectorAll('[data-growth-fx-chip="quick"]').forEach(el => { if (seen.has(el)) return; seen.add(el); window.__quickChips.push({ id: el.getAttribute('data-growth-fx-chip-id'), text: el.textContent || '' }); });
         new MutationObserver(grab).observe(document.body, { childList: true, subtree: true }); });
       await page.locator('[data-life-quick-run-stop]').click({ force: true });
       await page.waitForTimeout(3000);
       for (let i = 0; i < 4 && await closePopups(); i++) await page.waitForTimeout(300);
       const c1 = await strip(), s1 = await state();
       check('⑧ 帯の「止める」で締まり(報酬が入る)、帯が止まった形になる', !!c1 && c1.run === 'stopped' && (s1.gold > b1.gold || s1.xp > b1.xp), JSON.stringify({ c1, gold: [b1.gold, s1.gold], xp: [b1.xp, s1.xp] }));
-      const qc = await page.evaluate(() => window.__quickChips || []);
+      // 同じ札(同じ番号)が、お祝いのシートが割り込んでいったん隠れ、閉じたあとにもう一度出るのは1枚と数える
+      const qcRaw = await page.evaluate(() => window.__quickChips || []);
+      const qc = [...new Map(qcRaw.map(c => [c.id, c.text])).values()];
+      console.log(`   (結果の札の記録: ${JSON.stringify(qcRaw)})`);
       check('⑧ 止めると「裏クイック ◯周・ダイヤ+◯・経験値+◯」の小さな札が1枚出る', qc.length === 1 && /^\S*\s*裏クイック \d+周・ダイヤ\+[\d,]+・経験値\+[\d,]+$/.test(qc[0].trim()), JSON.stringify(qc));
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'strip-stopped-tate.jpg'), type: 'jpeg', quality: 78 });
       const again = page.locator('[data-assistant-life-quick-strip] [data-life-quick-run-start], [data-assistant-life-quick-strip] [data-rhythm-multi-quick-run-restart]').first();
