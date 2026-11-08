@@ -107,3 +107,13 @@
   直した: 見本と決まり(数字を書かない・相手はどちらも {f})・ドラの見張りを狭める(端末と同じ FRIEND_DRA_KANSAI)・あつの「。」は「！」へ・捨てた理由の名前だけをログ(friend_dropped)へ。配ったら同じ10組で数え直す
 - 2 プロフィールの入口 `AssistantLifeFriendProfileVisit`(75 の デッキの下)・一覧に家が届いていないフレンドを薄く(data-alf-house-waiting)。ヘルプに1行。止め絵の道具 ⑩
 - 3 の案: `FRIEND-AWAY-NOTE-PLAN.md`・止め絵 `friend/away-note-*.jpg`・SQL `docs/sql/assistant-life/FRIEND_VISIT_NOTE_ADD.sql`(窓口へ送って返事待ち)
+
+## オトズレ3 の区切り(2026-11-08 13:40)
+
+公開済み: #5007(プロフィールの入口・家が届いていない人を一覧に)/#5037(訪ねた家を自分の家と同じ絵に作り直し・くわしい控え・置き手紙の自由文とあて先・受け取る側の見ない設定・更新履歴とヘルプ)/#5038(台詞の注文書)/#5039(friend_scenes の「2人」→「ふたり」・{f} の後ろの名前を外す)。
+本番の表: assistant_life_friend_house_more(くわしい控え)・visits の note/note_to と見張り alf_visits_note_guard は窓口が流し済み。
+
+- 中継役: v19 は10/10・v20 は7/10(数字2・ドラ1)。v21(main f2a70db)を窓口が配ったら同じ10組で数え直す。試しは scratchpad の run.sh/eval.js と同じ形(ブリーダーIDは test_otozure3_* を毎回変える)。捨てた理由はログ friend_dropped
+- マスモン: キズナ2の口 assistantLifeMasmonTeamOf(id) → [{ monster, nick, colors, lead }] が main に入ったら、alfBuildMore に more.ms = { id: [{ mo, n, c, l }] } で写し、assistantLifeFriendNormalizeMore で受ける(colors は 色id / 色id@10〜100 / null)。部屋のシートの masmonOf を写したもの優先に
+- 台詞: ORDER-FRIEND.md(コトバ・ツムギへ依頼済み)。返ってきたら ALF_TALK_LINES などに入れる(doing ごとの迎え・寝言を足す口が要る)
+- 検査: assistant-life-friend-check(⑩⑪)・browser-check(⑩⑫・--shots)・assistant-chat-check --unit ㉗
