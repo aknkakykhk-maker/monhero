@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9e407b2cae408e40
+// source-sha256: 30c11349f6980f1d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -56528,12 +56528,45 @@ const FRIEND_PLACE_TEXT = Object.freeze({
   other: 'ログイン中',
   card: 'MFバトルカードで遊び中',
   cardBattle: 'MFバトルカードで対戦中',
-  room: '部屋で待ち中'
+  room: '部屋で待ち中',
+  rhythmPlay: '🎵 モンヒロビートで演奏中',
+  life: '🏡 助手ライフ',
+  roomPrivate: '🔑 プライベート中'
 });
-const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle', 'room']);
+const FRIEND_AUTO_TEXT = '⚡ オート周回中';
+const FRIEND_IDLE_AUTO_MIN = 10;
+const FRIEND_IDLE_OPEN_TEXT = Object.freeze({
+  home: 'ホーム',
+  rhythm: 'モンヒロビート',
+  multi: 'モンヒロビート',
+  room: '部屋',
+  roomPrivate: '合言葉の部屋',
+  card: 'MFバトルカード',
+  masu: 'マスモンの画面',
+  market: 'マーケット',
+  life: '助手ライフ',
+  battle: 'バトル',
+  other: 'ゲーム'
+});
+let _friendsLastInputAt = Date.now();
+if (typeof window !== 'undefined' && window.addEventListener) {
+  for (const ev of ['pointerdown', 'keydown', 'touchstart', 'wheel']) window.addEventListener(ev, () => {
+    _friendsLastInputAt = Date.now();
+  }, {
+    passive: true,
+    capture: true
+  });
+}
+const friendsIdleMinutes = (now = Date.now()) => Math.max(0, Math.floor((now - _friendsLastInputAt) / 60000));
+const FRIEND_PRESENCE_SHOW_KEY = 'mh_friend_presence_show_v1';
+const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle', 'room', 'rhythmPlay', 'life', 'roomPrivate']);
 let _friendsRoomWaiting = false;
 const friendsSetRoomWaiting = on => {
   _friendsRoomWaiting = !!on;
+};
+let _friendsRoomPrivate = false;
+const friendsSetRoomPrivate = on => {
+  _friendsRoomPrivate = !!on;
 };
 const friendsPlaceFromRow = (place, records) => {
   if (place === 'other' && records && FRIEND_SUB_PLACES.includes(records.pl)) return records.pl;
@@ -56542,20 +56575,33 @@ const friendsPlaceFromRow = (place, records) => {
 const FRIEND_HEARTBEAT_MS = 2 * 60 * 1000;
 const FRIEND_PUBLISH_MIN_MS = 15 * 1000;
 const friendsPlaceOfScreen = gameState => {
-  if (_friendsRoomWaiting) return 'room';
   const name = typeof gameState === 'string' ? gameState : '';
+  if (_friendsRoomPrivate && name !== 'RHYTHM_PLAY') return 'roomPrivate';
+  if (_friendsRoomWaiting) return 'room';
+  if (name === 'HOME' && typeof document !== 'undefined' && document.querySelector && document.querySelector('[data-assistant-life-screen]')) return 'life';
   if (name === 'HOME') return 'home';
   if (name === 'CARD_BATTLE') return 'cardBattle';
   if (name.startsWith('CARD_')) return 'card';
   if (name === 'RHYTHM_MULTI') return 'multi';
+  if (name === 'RHYTHM_PLAY') return 'rhythmPlay';
   if (name.startsWith('RHYTHM')) return 'rhythm';
   if (name === 'BREEDER_MARKET') return 'market';
   if (/^(MASU_|MB_MANAGEMENT|PASTURE_|MONSTER_|OWNED_MONSTERS)/.test(name)) return 'masu';
   if (/^(BATTLE|PICK_|QUICK_|SKIP_|WAVE_|UPGRADE_|REWARD_|CHAMPION|DEFEAT|RETIRE|TRAINING|TEACHING|AUTO_)/.test(name)) return 'battle';
   return 'other';
 };
-const friendsPresenceText = (place, updatedAtMs, nowMs) => {
+const friendsPresenceText = (place, updatedAtMs, nowMs, records = null) => {
   const online = Number.isFinite(updatedAtMs) && updatedAtMs > 0 && nowMs - updatedAtMs < FRIENDS_ONLINE_MS;
+  const playing = place === 'rhythmPlay' || place === 'cardBattle';
+  if (online && records && !playing && (records.au || records.im >= FRIEND_IDLE_AUTO_MIN)) {
+    const where = FRIEND_IDLE_OPEN_TEXT[place] || FRIEND_IDLE_OPEN_TEXT.other;
+    return {
+      online: true,
+      auto: true,
+      text: FRIEND_AUTO_TEXT,
+      sub: records.au ? place && place !== 'other' && place !== 'home' ? FRIEND_PLACE_TEXT[place] : '' : `${where}を開いたまま ${records.im}分 操作なし`
+    };
+  }
   if (online) return {
     online: true,
     text: FRIEND_PLACE_TEXT[place] || FRIEND_PLACE_TEXT.other
@@ -56577,10 +56623,12 @@ const friendsPresenceFor = async ids => {
   Object.entries(rows && typeof rows === 'object' ? rows : {}).forEach(([id, r]) => {
     if (!r) return;
     const at = Number.isFinite(r.updatedAt) ? r.updatedAt : 0;
-    const p = friendsPresenceText(r.place, at, now);
+    const p = friendsPresenceText(r.place, at, now, r.records);
     out[id] = {
       online: p.online,
       text: p.text,
+      sub: p.sub || '',
+      auto: !!p.auto,
       at,
       place: r.place || null
     };
@@ -56772,6 +56820,8 @@ const friendsNormalizeRecords = raw => {
   const c = raw.collection && typeof raw.collection === 'object' ? raw.collection : {};
   return {
     pl: FRIEND_SUB_PLACES.includes(raw.pl) ? raw.pl : null,
+    au: raw.au === 1 ? 1 : 0,
+    im: Math.min(1440, friendsInt(raw.im)),
     battle,
     rhythm: {
       played: friendsInt(raw.rhythm && raw.rhythm.played),
@@ -56795,7 +56845,9 @@ const friendsBuildSummary = ({
   favoriteMasuId,
   playtime,
   message = '',
-  records = null
+  records = null,
+  auto = false,
+  show = true
 }) => {
   let bestBond = 0,
     bestBondMon = '',
@@ -56833,7 +56885,9 @@ const friendsBuildSummary = ({
   const span = playtime && typeof playtime === 'object' ? playtime : {};
   const totalMs = Number(span.totalMs);
   return {
-    place: Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, place) ? place : 'other',
+    place: show && Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, place) ? place : 'other',
+    au: show && auto ? 1 : 0,
+    im: show && place !== 'rhythmPlay' && place !== 'cardBattle' ? Math.min(1440, friendsIdleMinutes()) : 0,
     startedOn: typeof span.since === 'string' && FRIEND_DAY_RE.test(span.since) ? span.since : null,
     playSeconds: Number.isFinite(totalMs) && totalMs >= 0 ? Math.floor(totalMs / 1000) : null,
     bestBond: bestBond > 0 ? bestBond : null,
@@ -56868,9 +56922,20 @@ const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
   });
   try {
     if (_friendProfileExtraUnavailable) await send(base);else {
-      const records = sub ? {
+      const now = {
+        ...(sub ? {
+          pl: sub
+        } : {}),
+        ...(summary.au ? {
+          au: 1
+        } : {}),
+        ...(summary.im ? {
+          im: summary.im
+        } : {})
+      };
+      const records = Object.keys(now).length ? {
         ...(summary.records || {}),
-        pl: sub
+        ...now
       } : summary.records;
       try {
         await send({
@@ -87978,6 +88043,39 @@ const FriendPresenceTag = ({
 }), React.createElement("span", {
   className: "truncate"
 }, info.text)) : null;
+function FriendPresenceShowSetting() {
+  const [on, setOn] = React.useState(true);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const v = await storeGet(FRIEND_PRESENCE_SHOW_KEY, true);
+        if (alive) setOn(v !== false);
+      } catch {}
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return React.createElement("div", {
+    className: SCREEN_PANEL_CLASS,
+    "data-friend-presence-setting": true
+  }, React.createElement("label", {
+    className: "flex items-center justify-between gap-2 text-[12px] font-black text-white"
+  }, React.createElement("span", null, "いまの状態をフレンドに見せる"), React.createElement("input", {
+    type: "checkbox",
+    checked: on,
+    onChange: e => {
+      const v = e.target.checked;
+      setOn(v);
+      try {
+        storeSet(FRIEND_PRESENCE_SHOW_KEY, v, false);
+      } catch {}
+    }
+  })), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
+  }, "「⚡ オート周回中」「🎵 モンヒロビートで演奏中」などが、フレンドの一覧に出ます。切にすると「ログイン中」とだけ出ます。"));
+}
 const FRIENDS_RESULT_TEXT = Object.freeze({
   sent: ['フレンド申請を送りました。承認されるとフレンドになります', 'ok'],
   accepted: ['フレンドになりました!', 'ok'],
@@ -88394,7 +88492,7 @@ function FriendsScreen({
       className: `${SCREEN_LIST_CLASS} pb-4`
     }, noticeBox, (() => {
       const sum = summaries[selected.otherId] || null;
-      const seen = friendsPresenceText(sum ? sum.place : null, Math.max(sum ? sum.updatedAt : 0, look.lastSeenAt || 0), now);
+      const seen = friendsPresenceText(sum ? sum.place : null, Math.max(sum ? sum.updatedAt : 0, look.lastSeenAt || 0), now, sum ? sum.records : null);
       const monName = id => id && ALL_PLAYER_MONSTERS[id] ? ALL_PLAYER_MONSTERS[id].name : '';
       const fav = sum && sum.favorite ? sum.favorite : null;
       const favBase = fav ? ALL_PLAYER_MONSTERS[fav.monsterId] : null;
@@ -88432,8 +88530,12 @@ function FriendsScreen({
         className: "max-w-full truncate text-lg font-black text-white"
       }, look.userName), React.createElement("span", {
         "data-friend-presence": seen.online ? 'online' : 'offline',
-        className: `text-[11px] font-black ${seen.online ? 'text-emerald-300' : 'text-slate-400'}`
-      }, seen.online ? '● ' : '', seen.text), sum && sum.message ? React.createElement("p", {
+        "data-friend-presence-auto": seen.auto ? '1' : undefined,
+        className: `text-[11px] font-black ${seen.auto ? 'text-amber-300' : seen.online ? 'text-emerald-300' : 'text-slate-400'}`
+      }, seen.online ? '● ' : '', seen.text), seen.sub ? React.createElement("span", {
+        "data-friend-presence-sub": true,
+        className: "text-[10px] font-bold text-slate-400"
+      }, seen.sub) : null, sum && sum.message ? React.createElement("p", {
         "data-friend-message": true,
         className: "max-w-full break-words rounded-xl bg-black/30 px-3 py-1.5 text-[12px] font-bold leading-snug text-pink-100"
       }, "「", sum.message, "」") : null, noteEdit && noteEdit.id === selected.otherId ? React.createElement("div", {
@@ -88693,11 +88795,15 @@ function FriendsScreen({
       className: "block truncate text-[9px] font-bold text-amber-200"
     }, "📝 ", notes[view.otherId]) : null, (() => {
       const sum = summaries[view.otherId];
-      const seen = friendsPresenceText(sum ? sum.place : null, Math.max(sum ? sum.updatedAt : 0, look.lastSeenAt || 0), now);
-      return React.createElement("span", {
+      const seen = friendsPresenceText(sum ? sum.place : null, Math.max(sum ? sum.updatedAt : 0, look.lastSeenAt || 0), now, sum ? sum.records : null);
+      return React.createElement(React.Fragment, null, React.createElement("span", {
         "data-friend-presence": seen.online ? 'online' : 'offline',
-        className: `block truncate text-[9px] font-bold ${seen.online ? 'text-emerald-300' : 'text-slate-400'}`
-      }, seen.online ? '● ' : '', seen.text);
+        "data-friend-presence-auto": seen.auto ? '1' : undefined,
+        className: `block truncate text-[9px] font-bold ${seen.auto ? 'text-amber-300' : seen.online ? 'text-emerald-300' : 'text-slate-400'}`
+      }, seen.online ? '● ' : '', seen.text), seen.sub ? React.createElement("span", {
+        "data-friend-presence-sub": true,
+        className: "block truncate text-[8.5px] font-bold text-slate-400"
+      }, seen.sub) : null);
     })()), right);
   };
   return React.createElement("div", {
@@ -88838,7 +88944,7 @@ function FriendsScreen({
     className: `${btn} mt-2 w-full border-sky-400/60 bg-sky-500/20 text-sky-100`
   }, "招待リンクを送る（LINEなど）"), React.createElement("p", {
     className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "このコードを伝えると、相手からフレンド申請してもらえます。コードは変わりません。")), React.createElement("div", {
+  }, "このコードを伝えると、相手からフレンド申請してもらえます。コードは変わりません。")), typeof FriendPresenceShowSetting === 'function' && React.createElement(FriendPresenceShowSetting, null), React.createElement("div", {
     className: SCREEN_PANEL_CLASS
   }, React.createElement(ScreenSectionLabel, null, "コードで申請する"), React.createElement("input", {
     type: "text",
@@ -106345,6 +106451,8 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed #ffffff1a;font-size:12px;font-weight:800}
 .mhl-row .k{width:78px;flex:none;color:#cbd5e1;font-size:10.5px}
 .mhl-btn{min-height:44px;border-radius:12px;font-size:12px;font-weight:900;color:#fff}.mhl-btn:disabled{opacity:.45}
+/* 背の低い横(🔄横 667×375 など)では、部屋のシートの下に止めたボタンの段が画面を占めて、見出しの下の行を隠していた(2026-11-08 ミハリ)。ボタンを少し低くする */
+@media (orientation:landscape) and (max-height:420px){[data-assistant-life-room-acts] .mhl-btn{min-height:34px;font-size:11.5px}[data-assistant-life-room-acts]{gap:5px}}
 .mhl-scene{position:absolute;inset:0;z-index:30;overflow:hidden;background:#000}
 .mhl-scene .bg{position:absolute;inset:0;background-size:cover;background-position:center}
 .mhl-scene .st{position:absolute;bottom:0;object-fit:contain;object-position:bottom;filter:drop-shadow(0 6px 12px #0008)}
@@ -106545,7 +106653,7 @@ function AssistantLifeRoom({
     }, n > 1 && short ? `・${n}人` : '', mark ? ` ${[...t[1]][0]}` : '')));
   })(), !met && React.createElement("span", {
     className: "lock"
-  }, "まだ会っていない"));
+  }, other ? 'まだいない' : 'まだ会っていない'));
 }
 function AssistantLifeHouseArt({
   width,
@@ -107920,7 +108028,10 @@ function AssistantLifeHouse({
       label: `🛒 ${x.cost != null ? `${x.cost}P` : '交換所'}`
     }));
   })), React.createElement("p", {
-    className: "mt-2 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] leading-snug text-slate-200"
+    className: "mt-2 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] leading-snug text-slate-200",
+    style: {
+      wordBreak: 'auto-phrase'
+    }
   }, "手に入れる: モンヒロビートの「ビートP交換所」(", itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・'), ")。贈る: 部屋や場面の「🎁 贈る」", soloOn ? '(2人に・その助手だけに)' : '', "。好きな物なら多め・苦手な物なら少なめに上がり、好みは贈ると分かります。同じ道具は1日1回・合わせて1日3回。声をかける・見守るは無料です。次の段まであと何点・この道具で段の何割進むかは、「🎁 贈る」で2人を選ぶと出ます"), typeof AssistantLifeShopButton === 'function' && React.createElement("div", {
     className: "mt-2"
   }, React.createElement(AssistantLifeShopButton, {
@@ -125249,6 +125360,16 @@ function AlfFriendHouseView({
   React.useEffect(() => {
     if (friend && friend.id) void alfFetchMore(friend.id);
   }, [friend && friend.id]);
+  const [now, setNow] = React.useState(null);
+  React.useEffect(() => {
+    let alive = true;
+    if (friend && friend.id && typeof friendsPresenceFor === 'function') void friendsPresenceFor([friend.id]).then(p => {
+      if (alive) setNow((p || {})[friend.id] || null);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [friend && friend.id]);
   if (!friend || !friend.house) return null;
   const more = (fs.more || {})[friend.id] || null;
   const h = friend.house;
@@ -125381,7 +125502,10 @@ function AlfFriendHouseView({
     className: "whitespace-nowrap"
   }, "📷 ", alfAgoText(friend.at), " の様子"), "・", React.createElement("span", {
     className: "whitespace-nowrap"
-  }, friend.name, "さんが最後に開いたとき"))));
+  }, friend.name, "さんが最後に開いたとき")), now && now.online && React.createElement("p", {
+    className: `mt-0.5 inline-block max-w-full truncate rounded-full px-2 py-0.5 text-[10.5px] font-black ${now.auto ? 'bg-amber-950/80 text-amber-200' : 'bg-emerald-950/70 text-emerald-200'}`,
+    "data-alf-visit-now": true
+  }, "いま ", now.text)));
   const tiles = React.createElement("div", {
     "data-alf-visit-acts": true
   }, React.createElement("p", {
@@ -167048,13 +167172,28 @@ function MonsterHeroGame() {
     } catch (error) {
       console.error('[friends] records build failed:', error && error.message ? error.message : error);
     }
+    let auto = false;
+    let show = true;
+    try {
+      const q = quickRunProgressRef.current;
+      auto = !!(q && !q.finished);
+    } catch (error) {
+      auto = false;
+    }
+    try {
+      show = (await storeGet(FRIEND_PRESENCE_SHOW_KEY, true)) !== false;
+    } catch (error) {
+      show = true;
+    }
     await sbUpsertFriendProfile(id, friendsBuildSummary({
       place: friendsPlaceOfScreen(latest.gameState),
       masuMons: latest.masuMons,
       favoriteMasuId: latest.favoriteMasuId,
       playtime: playtimeRef.current,
       message: latest.profileMessage,
-      records
+      records,
+      auto,
+      show
     }));
     await sbUpsertFriendPlaytimeDevice(id, playtimeDeviceRef.current);
   }, [friendsActive]);

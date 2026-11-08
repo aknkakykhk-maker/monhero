@@ -970,6 +970,9 @@ function AlfFriendHouseView({ friend, onClose }) {
   const [vh, setVh] = React.useState(() => (typeof window !== 'undefined' ? window.innerHeight : 844));
   React.useEffect(() => { const on = () => { setVw(window.innerWidth); setVh(window.innerHeight); }; window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
   React.useEffect(() => { if (friend && friend.id) void alfFetchMore(friend.id); }, [friend && friend.id]);
+  // その人のいまの状態(34-friends-api の friendsPresenceFor。訪ねたときに1回だけ読む)
+  const [now, setNow] = React.useState(null);
+  React.useEffect(() => { let alive = true; if (friend && friend.id && typeof friendsPresenceFor === 'function') void friendsPresenceFor([friend.id]).then(p => { if (alive) setNow((p || {})[friend.id] || null); }).catch(() => {}); return () => { alive = false; }; }, [friend && friend.id]);
   if (!friend || !friend.house) return null;
   const more = (fs.more || {})[friend.id] || null;
   const h = friend.house;
@@ -1024,6 +1027,7 @@ function AlfFriendHouseView({ friend, onClose }) {
         <p className="mhl-en whitespace-nowrap">VISIT · FRIEND HOUSE</p>
         <p className="truncate text-[17px] font-black text-amber-100" data-alf-visit-title>🏘 {friend.name}さんの家</p>
         <p className="text-[10px] font-bold text-slate-200"><span className="whitespace-nowrap">📷 {alfAgoText(friend.at)} の様子</span>・<span className="whitespace-nowrap">{friend.name}さんが最後に開いたとき</span></p>
+        {now && now.online && <p className={`mt-0.5 inline-block max-w-full truncate rounded-full px-2 py-0.5 text-[10.5px] font-black ${now.auto ? 'bg-amber-950/80 text-amber-200' : 'bg-emerald-950/70 text-emerald-200'}`} data-alf-visit-now>いま {now.text}</p>}
       </div>
     </div>);
   const tiles = (
