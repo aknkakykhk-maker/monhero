@@ -1389,11 +1389,13 @@ const RHYTHM_BEAT_PRESENCE_KIND = Object.freeze({
   // 合言葉(プライベート)の部屋にいる(2026-11-08 オトズレ3の roomPrivate)。いまは入れない
   private: { tag: '🔑 プライベート中', color: '#fbbf24' },
 });
-// フレンドの顔をプロフィールのフレームつきで出せるか(アイコンとフレームが届いている人だけ。届かない人は今の枠)
-const rhythmBeatFriendFramed = (f, resolve) => !!(f && f.icon && f.profileFrame && f.profileFrame !== 'none'
-  && typeof ProfileAvatar === 'function' && typeof resolve === 'function');
+// フレンド(プレイヤー)の顔は、ほかの画面(フレンド一覧・プロフィール)と同じ部品 ProfileAvatar で出す(顔アイコン+プロフィールのフレーム)。
+// フレームの無い人・まだ届いていない人も同じ部品(丸い顔だけ)。自前の四角い枠は使わない(2026-11-08 社長「顔アイコンとフレームと他の出し方と同じ作りにして」)
+const rhythmBeatFriendFramed = (f, resolve) => !!(f && typeof ProfileAvatar === 'function' && typeof resolve === 'function');
+const rhythmBeatFriendFrameId = (f) => (f && f.profileFrame && f.profileFrame !== 'none' ? f.profileFrame : null);
+const rhythmBeatFriendFace = (f) => <span className="grid h-full w-full place-items-center rounded-full bg-slate-800 text-xs" aria-hidden="true">🙂</span>;
 function RhythmBeatPresenceStrip({ assistants = [], friends = [], onPick, resolveIconUrl }) {
-  // 助手は丸い枠、フレンド(プレイヤー)は角の丸い四角の枠
+  // 助手は丸い枠(ここの face)。フレンド(プレイヤー)はほかの画面と同じ ProfileAvatar
   const face = (src, color, label, who) => (
     <span data-rhythm-beat-presence-face={who} className={`relative block h-11 w-11 overflow-hidden border-2 bg-slate-900 ${who === 'assistant' ? 'rounded-full' : 'rounded-lg'}`} style={{ borderColor: color }}>
       {src ? <img src={src} alt="" draggable={false} className="h-full w-full object-cover" /> : <span className="grid h-full w-full place-items-center text-lg" aria-hidden="true">{label}</span>}
@@ -1432,8 +1434,8 @@ function RhythmBeatPresenceStrip({ assistants = [], friends = [], onPick, resolv
                 <button key={`f-${f.otherId}`} type="button" data-rhythm-beat-presence-friend={f.otherId} data-rhythm-beat-presence-kind={f.kind} onClick={() => onPick({ kind: 'friend', id: f.otherId })}
                   className="flex w-[58px] shrink-0 flex-col items-center rounded-xl bg-sky-500/10 pt-1 text-center active:scale-95">
                   {rhythmBeatFriendFramed(f, resolveIconUrl) ? (
-                    <span data-rhythm-beat-presence-face="friend" data-rhythm-beat-presence-framed={f.profileFrame} className="block h-11 w-11 shrink-0">
-                      <ProfileAvatar src={resolveIconUrl(f.icon)} id={f.icon} frameId={f.profileFrame} small fit alt="" className="h-11 w-11" fallback={null} />
+                    <span data-rhythm-beat-presence-face="friend" data-rhythm-beat-presence-framed={rhythmBeatFriendFrameId(f) || undefined} className="block h-11 w-11 shrink-0">
+                      <ProfileAvatar src={f.icon ? resolveIconUrl(f.icon) : ''} id={f.icon} frameId={rhythmBeatFriendFrameId(f)} small fit alt="" className="h-11 w-11" fallback={rhythmBeatFriendFace(f)} />
                     </span>
                   ) : face(f.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(f.icon) : '', k.color, '🙂', 'friend')}
                   <b data-rhythm-beat-presence-mark="friend" className="mt-0.5 block whitespace-nowrap rounded bg-sky-300 px-1 text-[8px] font-black leading-tight text-slate-950">フレンド</b>
@@ -1474,8 +1476,8 @@ function RhythmBeatVisitorFaces({ assistants = [], friends = [], max = 3, size =
           className={`relative shrink-0 cursor-pointer active:scale-90 ${names ? 'flex flex-col items-center' : 'block'}`} style={names ? { width: `${size + 18}px` } : { width: px, height: px }}>
           <span className="relative block shrink-0" style={{ width: px, height: px }}>
           {it.kind === 'friend' && rhythmBeatFriendFramed(it.f, resolveIconUrl) ? (
-            <span data-rhythm-beat-presence-face="friend" data-rhythm-beat-presence-framed={it.f.profileFrame} className="block h-full w-full">
-              <ProfileAvatar src={it.src} id={it.f.icon} frameId={it.f.profileFrame} small fit alt="" className="h-full w-full" fallback={null} />
+            <span data-rhythm-beat-presence-face="friend" data-rhythm-beat-presence-framed={rhythmBeatFriendFrameId(it.f) || undefined} className="block h-full w-full">
+              <ProfileAvatar src={it.src} id={it.f.icon} frameId={rhythmBeatFriendFrameId(it.f)} small fit alt="" className="h-full w-full" fallback={rhythmBeatFriendFace(it.f)} />
             </span>
           ) : (
             <span data-rhythm-beat-presence-face={it.kind} className={`block h-full w-full overflow-hidden border-2 bg-slate-900 shadow ${it.kind === 'assistant' ? 'rounded-full' : 'rounded-md'}`} style={{ borderColor: it.color }}>
@@ -1533,8 +1535,8 @@ function RhythmBeatPresenceSheet({ pick, friend = null, onClose, onCallAssistant
       <div className="relative w-full max-w-sm rounded-2xl border-2 bg-slate-900 p-3.5 text-white shadow-2xl" style={{ borderColor: accent }}>
         <div className="flex items-center gap-2.5">
           {!isAssistant && rhythmBeatFriendFramed(friend, resolveIconUrl) ? (
-            <span data-rhythm-beat-presence-sheet-framed={friend.profileFrame} className="block h-[52px] w-[52px] shrink-0">
-              <ProfileAvatar src={src} id={friend.icon} frameId={friend.profileFrame} fit alt="" className="h-[52px] w-[52px]" fallback={null} />
+            <span data-rhythm-beat-presence-sheet-framed={rhythmBeatFriendFrameId(friend) || 'none'} className="block h-[52px] w-[52px] shrink-0">
+              <ProfileAvatar src={src} id={friend.icon} frameId={rhythmBeatFriendFrameId(friend)} fit alt="" className="h-[52px] w-[52px]" fallback={rhythmBeatFriendFace(friend)} />
             </span>
           ) : (
             <span className="block h-[52px] w-[52px] shrink-0 overflow-hidden rounded-full border-2 bg-slate-950" style={{ borderColor: accent }}>

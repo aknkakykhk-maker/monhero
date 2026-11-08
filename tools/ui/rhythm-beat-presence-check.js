@@ -202,7 +202,9 @@ const json = (route, body) => route.fulfill({ status: 200, contentType: 'applica
         const bad = [];
         const piyo = of('friendroom01'); if (!piyo || piyo.getAttribute('data-rhythm-beat-presence-framed') !== 'gold' || !piyo.querySelector('.mh-profile-frame-ring')) bad.push('ぴよ(ゴールド)の輪が無い');
         const taro = of('friendhere01'); if (!taro || taro.getAttribute('data-rhythm-beat-presence-framed') !== 'frame_mocchi' || !taro.querySelector('img.mh-profile-frame-image')) bad.push('タロウ(モッチーの絵)の枠が無い');
-        const hana = of('friendbusy01'); if (!hana || hana.hasAttribute('data-rhythm-beat-presence-framed') || hana.querySelector('.mh-profile-frame')) bad.push('ハナ(フレームなし)が今の枠でない');
+        // フレームの無い人も、ほかの画面と同じ部品(丸い顔だけ)。自前の四角い枠は使わない(2026-11-08 社長)
+        const hana = of('friendbusy01'); if (!hana || hana.hasAttribute('data-rhythm-beat-presence-framed') || hana.querySelector('.mh-profile-frame') || !hana.querySelector('.mh-profile-avatar')) bad.push('ハナ(フレームなし)がほかの画面と同じ部品でない');
+        document.querySelectorAll('[data-rhythm-beat-presence-friend] [data-rhythm-beat-presence-face], [data-rhythm-beat-visitor="friend"] [data-rhythm-beat-presence-face]').forEach((e) => { if (!e.querySelector('.mh-profile-avatar')) bad.push('フレンドの顔に自前の枠が残っている'); });
         document.querySelectorAll('[data-rhythm-beat-presence-assistant] .mh-profile-frame').forEach(() => bad.push('助手にフレームが付いた'));
         // 枠ごと顔の大きさ(44px)に収まる
         [piyo, taro].forEach((e) => { if (!e) return; const r = e.getBoundingClientRect(); if (r.width > 46 || r.height > 46) bad.push(`顔の枠が大きすぎる ${Math.round(r.width)}px`); });
@@ -231,6 +233,7 @@ const json = (route, body) => route.fulfill({ status: 200, contentType: 'applica
       await page.evaluate(() => { const x = [...document.querySelectorAll('[data-rhythm-beat-presence-sheet] button')].find((e) => /とじる/.test(e.innerText)); x && x.click(); });
       await tapFace(page, '[data-rhythm-beat-presence-friend="friendpriv01"]');
       await page.waitForTimeout(400);
+      check(`${name}: 窓のフレンドの顔も、ほかの画面と同じ部品`, await page.evaluate(() => !!document.querySelector('[data-rhythm-beat-presence-sheet] [data-rhythm-beat-presence-sheet-framed] .mh-profile-avatar')));
       check(`${name}: 合言葉の部屋の人は「🔑 プライベート中」でボタンなし`, await page.evaluate(() => !document.querySelector('[data-rhythm-beat-presence-go]') && /合言葉/.test((document.querySelector('[data-rhythm-beat-presence-line]') || {}).innerText || '') && /プライベート中/.test((document.querySelector('[data-rhythm-beat-presence-sheet]') || {}).innerText || '')));
       if (name === 'tate') await shot(page, 'presence-private-tate');
       await page.evaluate(() => { const x = [...document.querySelectorAll('[data-rhythm-beat-presence-sheet] button')].find((e) => /とじる/.test(e.innerText)); x && x.click(); });

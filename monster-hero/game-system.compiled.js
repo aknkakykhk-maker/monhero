@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9a2f0460525f4b19
+// source-sha256: 7d0e1654dade7a36
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91217,7 +91217,12 @@ const RHYTHM_BEAT_PRESENCE_KIND = Object.freeze({
     color: '#fbbf24'
   }
 });
-const rhythmBeatFriendFramed = (f, resolve) => !!(f && f.icon && f.profileFrame && f.profileFrame !== 'none' && typeof ProfileAvatar === 'function' && typeof resolve === 'function');
+const rhythmBeatFriendFramed = (f, resolve) => !!(f && typeof ProfileAvatar === 'function' && typeof resolve === 'function');
+const rhythmBeatFriendFrameId = f => f && f.profileFrame && f.profileFrame !== 'none' ? f.profileFrame : null;
+const rhythmBeatFriendFace = f => React.createElement("span", {
+  className: "grid h-full w-full place-items-center rounded-full bg-slate-800 text-xs",
+  "aria-hidden": "true"
+}, "🙂");
 function RhythmBeatPresenceStrip({
   assistants = [],
   friends = [],
@@ -91296,17 +91301,17 @@ function RhythmBeatPresenceStrip({
       className: "flex w-[58px] shrink-0 flex-col items-center rounded-xl bg-sky-500/10 pt-1 text-center active:scale-95"
     }, rhythmBeatFriendFramed(f, resolveIconUrl) ? React.createElement("span", {
       "data-rhythm-beat-presence-face": "friend",
-      "data-rhythm-beat-presence-framed": f.profileFrame,
+      "data-rhythm-beat-presence-framed": rhythmBeatFriendFrameId(f) || undefined,
       className: "block h-11 w-11 shrink-0"
     }, React.createElement(ProfileAvatar, {
-      src: resolveIconUrl(f.icon),
+      src: f.icon ? resolveIconUrl(f.icon) : '',
       id: f.icon,
-      frameId: f.profileFrame,
+      frameId: rhythmBeatFriendFrameId(f),
       small: true,
       fit: true,
       alt: "",
       className: "h-11 w-11",
-      fallback: null
+      fallback: rhythmBeatFriendFace(f)
     })) : face(f.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(f.icon) : '', k.color, '🙂', 'friend'), React.createElement("b", {
       "data-rhythm-beat-presence-mark": "friend",
       className: "mt-0.5 block whitespace-nowrap rounded bg-sky-300 px-1 text-[8px] font-black leading-tight text-slate-950"
@@ -91394,17 +91399,17 @@ function RhythmBeatVisitorFaces({
     }
   }, it.kind === 'friend' && rhythmBeatFriendFramed(it.f, resolveIconUrl) ? React.createElement("span", {
     "data-rhythm-beat-presence-face": "friend",
-    "data-rhythm-beat-presence-framed": it.f.profileFrame,
+    "data-rhythm-beat-presence-framed": rhythmBeatFriendFrameId(it.f) || undefined,
     className: "block h-full w-full"
   }, React.createElement(ProfileAvatar, {
     src: it.src,
     id: it.f.icon,
-    frameId: it.f.profileFrame,
+    frameId: rhythmBeatFriendFrameId(it.f),
     small: true,
     fit: true,
     alt: "",
     className: "h-full w-full",
-    fallback: null
+    fallback: rhythmBeatFriendFace(it.f)
   })) : React.createElement("span", {
     "data-rhythm-beat-presence-face": it.kind,
     className: `block h-full w-full overflow-hidden border-2 bg-slate-900 shadow ${it.kind === 'assistant' ? 'rounded-full' : 'rounded-md'}`,
@@ -91512,16 +91517,16 @@ function RhythmBeatPresenceSheet({
   }, React.createElement("div", {
     className: "flex items-center gap-2.5"
   }, !isAssistant && rhythmBeatFriendFramed(friend, resolveIconUrl) ? React.createElement("span", {
-    "data-rhythm-beat-presence-sheet-framed": friend.profileFrame,
+    "data-rhythm-beat-presence-sheet-framed": rhythmBeatFriendFrameId(friend) || 'none',
     className: "block h-[52px] w-[52px] shrink-0"
   }, React.createElement(ProfileAvatar, {
     src: src,
     id: friend.icon,
-    frameId: friend.profileFrame,
+    frameId: rhythmBeatFriendFrameId(friend),
     fit: true,
     alt: "",
     className: "h-[52px] w-[52px]",
-    fallback: null
+    fallback: rhythmBeatFriendFace(friend)
   })) : React.createElement("span", {
     className: "block h-[52px] w-[52px] shrink-0 overflow-hidden rounded-full border-2 bg-slate-950",
     style: {
