@@ -201,12 +201,16 @@ const layoutProblems = (page) => page.evaluate(() => {
           check(`${T}「${tab}」: 中身が見える高さの75%以上を使う(空き枠が少ない)`, fill >= 0.75, `${Math.round(fill * 100)}%`);
         }
           if (tab === 'deck' && (await page.locator('[data-assistant-masmon-deck-styles]').count())) {
-            // カード部の3つのデッキ(印 cardGrowStyle が真): 切りかえ3つ・その助手の型に「よく使う」・押すと中身が切りかわる・名前が出る
-            const fav = await page.evaluate((id) => ASSISTANT_MASMON_CARD_STYLE[id] || 'normal', WHO);
-            const favOk = (await page.locator(`[data-assistant-masmon-deck-style="${fav}"] [data-assistant-masmon-deck-fav]`).count()) === 1 && (await page.locator('[data-assistant-masmon-deck-fav]').count()) === 1;
-            check(`${T}デッキの切りかえ3つ・「よく使う」は ${fav} だけ`, (await page.locator('[data-assistant-masmon-deck-style]').count()) === 3 && favOk);
+            // カード部の3つのデッキ(印 cardGrowStyle が真)。2026-11-08 推し・好き・素顔に作り直し(カード部ルールくん):
+            //   切りかえ3つ(推し/好き/素顔)・「よく使う」は今の気分に合う顔だけ(カード部の口 cardAiDeckMainFace。分からなければ印なし)・押すと中身が切りかわる・名前が出る
+            const faces = await page.evaluate(() => typeof cardAssistantFacePreview === 'function');
+            const ids = faces ? ['oshi', 'suki', 'sugao'] : ['attack', 'guard', 'normal'];
+            const fav = await page.evaluate(([id, f]) => (f ? (typeof cardAiDeckMainFace === 'function' ? cardAiDeckMainFace(id) : null) : (ASSISTANT_MASMON_CARD_STYLE[id] || 'normal')), [WHO, faces]);
+            const favOk = fav ? (await page.locator(`[data-assistant-masmon-deck-style="${fav}"] [data-assistant-masmon-deck-fav]`).count()) === 1 && (await page.locator('[data-assistant-masmon-deck-fav]').count()) === 1
+              : (await page.locator('[data-assistant-masmon-deck-fav]').count()) === 0;
+            check(`${T}デッキの切りかえ3つ(${ids.join('/')})・「よく使う」は ${fav || '無し'}`, (await page.locator('[data-assistant-masmon-deck-style]').count()) === 3 && ids.every(Boolean) && favOk);
             const seen = [];
-            for (const sid of ['attack', 'guard', 'normal']) {
+            for (const sid of ids) {
               await page.locator(`[data-assistant-masmon-deck-style="${sid}"]`).click();
               await page.waitForTimeout(300);
               const name = await page.locator('[data-card-assistant-deck-name]').innerText().catch(() => '');

@@ -19,6 +19,8 @@
 //   M. 名前(社長 Q2 A): 既定の名前32がそろう・3つ(素顔は よそいき・本音 の両方)で同じことばを使わない・見張りを通る/
 //      見張りは「攻め・守り・ふつう」「◯◯・攻め」の形・ほかと同じことば・推しと好きで主役の無い名前を落とす
 //   N. 材料の口(assistantLifeCardMaterial): 無ければ よそいき・均等/仲良し度で本音・face で6割の顔/壊れた値は無視
+//   P. 組み直しの名前(社長 2026-11-08): 1つ目は既定・中身が変われば新しい名前(AI → 種+遊び方の言葉。一覧の名前は使わない)・前のデッキを「これまで」に10個まで・マスモンの愛称を使わない
+//   Q. 選び方(これまでのデッキがあれば 5:1.5:1.5 + 2割を新しい順に)・遊ぶ人の選び口(昔のデッキとも戦える)・記録に deckId・deckFrom
 //   O. 82 は face を渡さなければ今と同じ(大会・サーバーと同じ組み方。同じ種なら同じデッキ)
 const fs = require('fs');
 const path = require('path');
@@ -35,7 +37,7 @@ const SLOTS = ['oshi', 'suki', 'yoso', 'honne'];
 const PAIRS = [['oshi', 'suki'], ['oshi', 'yoso'], ['suki', 'yoso'], ['oshi', 'honne'], ['suki', 'honne']];
 
 // 1つの箱で 82・戦術・83 を読む。保存・中継役・印・助手ライフの口は箱の外から差し替える
-const makeBox = ({ flag = true, talkOpen = true, material = null, fetchImpl = null, store: init = null } = {}) => {
+const makeBox = ({ flag = true, talkOpen = true, material = null, fetchImpl = null, store: init = null, masmon = MASMON } = {}) => {
   const store = new Map(init || []);
   const calls = [];
   const writes = [];
@@ -52,6 +54,7 @@ const makeBox = ({ flag = true, talkOpen = true, material = null, fetchImpl = nu
     cardTalkSamples: () => ['見本'],
     fetch: fetchImpl ? async (url, init2) => { calls.push(JSON.parse(init2.body)); return fetchImpl(JSON.parse(init2.body)); } : undefined,
     ...(material ? { assistantLifeCardMaterial: material } : {}),
+    ...(masmon ? { ASSISTANT_MASMON_PLAN: masmon } : {}),
   };
   const ctx = vm.createContext(box);
   vm.runInContext(`${src('data/card-battle-cards.js')}\n;\n${src('src/parts/82-card-battle-core.jsx')}\n;\n${src('src/parts/82-card-tactics-core.jsx')}\n;\n${src('src/parts/83-card-ai-deck.jsx')}\n;\n`
@@ -60,10 +63,16 @@ const makeBox = ({ flag = true, talkOpen = true, material = null, fetchImpl = nu
     + ' cardNormalizeAiRecipe, cardNormalizeAiRecipe2, cardNormalizeAiDeck, cardAiDeckSlotTimes, cardAiDeckSlotsPassed, cardAiDeckDue, cardAiDeckOldest, cardAiDeckJitter, cardAiDeckPickFace, cardAiDeckFacts,'
     + ' cardLoadAiRecipe, cardSaveAiDeck, cardAiDeckRebuild, cardAiDeckRunDue, cardAiDeckMarkMet, cardAiDeckAfterMatch, cardAssistantDeckPick, cardAiRecipeOf, cardAiDeckVsLine, cardAiDeckNextStyle, cardAiDeckNextName, cardAiDeckNextDone,'
     + ' cardAiFaceGroups, cardAiFaceSpec, cardAiFaceBuild, cardAiFacePreviewDeck, cardAiFaceShare, cardAiFaceTrioDiff, cardAiFaceDefaultName, cardAiFaceNameOk, cardAiFaceShareWord, cardAiFaceOtherNames, cardAiFaceLineOf, cardAiFaceLayout,'
-    + ' cardAiFaceMaterial, cardAiFaceSugaoSide, cardAiFaceMain, cardAiDeckMainFace, cardAssistantFacePreview, cardAiFaceName };', ctx);
+    + ' cardAiFaceMaterial, cardAiFaceSugaoSide, cardAiFaceMain, cardAiDeckMainFace, cardAssistantFacePreview, cardAiFaceName,'
+    + ' CARD_AI_HISTORY_MAX, CARD_AI_PLAY_WORDS, cardAiFaceNicks, cardNormalizeAiHistory, cardAiHistoryRead, cardAiDeckPickId, cardAiDeckNextId, cardAiDeckChoose, cardAiDeckChosen, cardAiDeckChoices, cardAiDeckPeriodText, cardAiFaceMakeName, cardAiDeckIdFace };', ctx);
   return { E: ctx.E, store, calls, writes };
 };
 const ok200 = (body) => ({ ok: true, json: async () => body });
+// 助手部のマスモンの表(56 の ASSISTANT_MASMON_PLAN)から、愛称だけを持った写し(名前の見張りで使う)
+const MASMON = (() => {
+  const m = src('src/parts/56-assistant-life-masmon.jsx').match(/const ASSISTANT_MASMON_PLAN = (\[[\s\S]*?\n\]);/);
+  try { return m ? vm.runInNewContext(`(${m[1]})`) : null; } catch (_) { return null; }
+})();
 
 (async () => {
   const { E } = makeBox();
@@ -164,34 +173,20 @@ const ok200 = (body) => ({ ok: true, json: async () => body });
   }
   // ---- G ----
   {
-    const reply = (body) => { const no = body.facts.cards.map((c) => c.no); return ok200({ ok: true, kind: 'plan', name: 'ごろべえ大暴れ', line: '組んでみまちた( ˘ω˘)', prefer: no.slice(0, 6), field: [body.facts.fields[0]], habit: { big: body.facts.habit.big[1] } }); };
+    const reply = (body) => { const no = body.facts.cards.map((c) => c.no); return ok200({ ok: true, kind: 'plan', name: 'ゴーレム大暴れ', line: '組んでみまちた( ˘ω˘)', prefer: no.slice(0, 6), field: [body.facts.fields[0]], habit: { big: body.facts.habit.big[1] } }); };
     const b = makeBox({ fetchImpl: reply });
     await b.E.cardLoadAiRecipe();
     await b.E.cardAiDeckMarkMet('kiki');
     await new Promise((r) => setTimeout(r, 30));
     const s = JSON.parse(b.store.get(KEY2));
     const e = s.perWho.kiki.decks.oshi;
-    check('G 会った助手は裏で推しから1つ組む(AI の返事)', !!e && e.ai === true && e.name === 'ごろべえ大暴れ' && e.line === '組んでみまちた( ˘ω˘)' && e.plan && e.plan.prefer.length > 0, J(e));
-    check('G 中継役へは deckPlan で聞く(顔・主役つき)', b.calls.length === 1 && b.calls[0].kind === 'deckPlan' && b.calls[0].assistantId === 'kiki' && b.calls[0].facts.face === 'oshi' && b.calls[0].facts.lead === 'ごろべえ', J(b.calls[0] && b.calls[0].facts && { face: b.calls[0].facts.face, lead: b.calls[0].facts.lead }));
-    // 決まりに合わない名前 → 既定の名前(保存は null・見せるのは既定)
-    const badName = (name) => (body) => { const no = body.facts.cards.map((c) => c.no); return ok200({ ok: true, kind: 'plan', name, line: 'ひとこと', prefer: no.slice(0, 6), field: [], habit: {} }); };
-    for (const [nm, why] of [['ずっしり火力・攻め', '「◯◯・攻め」の形'], ['攻めのごろべえ', '型のことば'], ['ごろべえの一撃パンチ', 'ほかのデッキと同じことば(一撃)'], ['大きい岩のチーム', '主役が無い']]) {
-      const c = makeBox({ fetchImpl: badName(nm) });
-      await c.E.cardLoadAiRecipe();
-      await c.E.cardAiDeckMarkMet('kiki');
-      await new Promise((r) => setTimeout(r, 30));
-      const ee = JSON.parse(c.store.get(KEY2)).perWho.kiki.decks.oshi;
-      // 「ごろべえの一撃パンチ」は推しの既定と同じことばだが、推し自身は自分の既定とくらべない。くらべるのは好き・よそいき・本音
-      const want = nm === 'ごろべえの一撃パンチ' ? 'ok' : null;
-      check(`G 名前の見張り: ${why}は既定の名前にする`, want === 'ok' ? ee.name === nm : ee.name === null && ee.ai === true, J(ee.name));
-    }
-    {
-      const c = makeBox({ fetchImpl: badName('ずっしり一撃ごろべえ') });
-      await c.E.cardLoadAiRecipe();
-      await c.E.cardAiDeckMarkMet('kiki');
-      await new Promise((r) => setTimeout(r, 30));
-      const ee = JSON.parse(c.store.get(KEY2)).perWho.kiki.decks.oshi;
-      check('G 名前の見張り: よそいきと同じことば(ずっしり)は既定の名前にする', ee.name === null, J(ee.name));
+    check('G 会った助手は裏で推しから1つ組む(AI の返事の方針・ひとこと。1つ目の名前は既定=保存は null)', !!e && e.ai === true && e.name === null && e.line === '組んでみまちた( ˘ω˘)' && e.plan && e.plan.prefer.length > 0, J(e));
+    check('G 中継役へは deckPlan で聞く(顔・主役つき)', b.calls.length === 1 && b.calls[0].kind === 'deckPlan' && b.calls[0].assistantId === 'kiki' && b.calls[0].facts.face === 'oshi' && b.calls[0].facts.lead === 'ゴーレム', J(b.calls[0] && b.calls[0].facts && { face: b.calls[0].facts.face, lead: b.calls[0].facts.lead }));
+    // 名前の見張り(AI の名前・自動で作る名前にかける)
+    const others = E.cardAiFaceOtherNames({ decks: {} }, 'kiki', 'oshi');
+    for (const [nm, why, want] of [['ずっしり火力・攻め', '「◯◯・攻め」の形', false], ['攻めのゴーレム', '型のことば', false], ['ゴーレムの一撃パンチ', '自分の既定と同じことば(一撃)は通す', true],
+      ['大きい岩のチーム', '主役が無い', false], ['ごろべえの大行進', 'マスモンの愛称', false], ['ずっしりゴーレム', 'よそいきと同じことば(ずっしり)', false], ['ゴーレム大暴れ', '主役の種の名前', true]]) {
+      check(`G 名前の見張り: ${why}`, E.cardAiFaceNameOk(db, 'kiki', 'oshi', nm, others) === want, nm);
     }
     for (const [label, impl, talk] of [['遅れ(sorry)', () => ok200({ ok: true, kind: 'sorry', text: null }), true], ['上限(tired)', () => ok200({ ok: true, kind: 'tired', text: null }), true], ['失敗', () => { throw new Error('x'); }, true], ['AI を呼べない端末', () => ok200({}), false]]) {
       const c = makeBox({ fetchImpl: impl, talkOpen: talk });
@@ -255,7 +250,7 @@ const ok200 = (body) => ({ ok: true, json: async () => body });
     check('J 場のカード・くせの幅・prefer [5,8]・型', f.facts.fields.length > 0 && Object.keys(f.facts.habit).length === 3 && J(f.facts.prefer) === J(E.CARD_AI_PLAN_RANGE.prefer) && f.facts.style === 'attack');
     check('J 顔・素顔の側・方針を送る', f.facts.face === 'sugao' && f.facts.side === 'honne' && typeof f.facts.policy === 'string' && /本音/.test(f.facts.policy));
     const g = E.cardAiDeckFacts(db, 'mua', 'suki');
-    check('J 主役は愛称で送る(みゅあの好き=イブちゃん)', g.facts.lead === 'イブちゃん' && g.facts.face === 'suki' && g.facts.side === null);
+    check('J 主役は種の名前で送る・マスモンの愛称は送らない(みゅあの好き=ジョーカー)', g.facts.lead === 'ジョーカー' && !JSON.stringify(g.facts).includes('イブちゃん') && !JSON.stringify(g.facts).includes('もち隊長') && g.facts.face === 'suki' && g.facts.side === null);
   }
   // ---- L ----
   {
@@ -285,12 +280,14 @@ const ok200 = (body) => ({ ok: true, json: async () => body });
   }
   // ---- M ----
   {
+    const { E: E0 } = makeBox({ masmon: null });
     let missing = [], shared = [], guard = [];
     for (const w of WHO) {
       const names = Object.fromEntries(SLOTS.map((sl) => [sl, E.cardAiFaceDefaultName(w, sl)]));
       SLOTS.forEach((sl) => { if (!names[sl]) missing.push(`${w}/${sl}`); });
       PAIRS.forEach(([a, b]) => { if (E.cardAiFaceShareWord(names[a], names[b]) || E.cardAiFaceShareWord(names[b], names[a])) shared.push(`${w}: ${names[a]} / ${names[b]}`); });
-      SLOTS.forEach((sl) => { if (!E.cardAiFaceNameOk(db, w, sl, names[sl], E.cardAiFaceOtherNames({ decks: {} }, w, sl))) guard.push(`${w}/${sl}:${names[sl]}`); });
+      // 既定の名前は社長が決めた名前。愛称の見張り(AI・自動の名前にかける)は除いてくらべる(愛称の表の無い箱で見る)
+      SLOTS.forEach((sl) => { if (!E0.cardAiFaceNameOk(db, w, sl, names[sl], E0.cardAiFaceOtherNames({ decks: {} }, w, sl))) guard.push(`${w}/${sl}:${names[sl]}`); });
       check(`M ${w}: よそいきの名前は今の8つの名前`, names.yoso === E.CARD_AI_STYLE_NAMES[w]);
     }
     check('M 既定の名前32がそろう', missing.length === 0, missing.join(' '));
@@ -300,8 +297,8 @@ const ok200 = (body) => ({ ok: true, json: async () => body });
     check('M 「の」「と」など、ひらがな2文字までは同じことばに数えない', !E.cardAiFaceShareWord('もちの一番', 'ゴロ助の勝負') && E.cardAiFaceShareWord('ぜんぶ必殺', 'ぜんぶ見せ場') && E.cardAiFaceShareWord('大混乱', '大混乱だ'));
     check('M 名前の見張り: 「ステージ・オン」の形(今の名前の中の ・)は通す・「ステージ・オン・攻め」は落とす',
       E.cardAiFaceNameOk(db, 'momosuke', 'yoso', 'ステージ・オン', []) && !E.cardAiFaceNameOk(db, 'momosuke', 'yoso', 'ステージ・オン・攻め', []));
-    check('M 名前の見張り: 推しは主役の愛称か種の名前・好きは表の遊び方のことばも通す',
-      E.cardAiFaceNameOk(db, 'kiki', 'oshi', 'ゴーレム大行進', []) && E.cardAiFaceNameOk(db, 'kiki', 'suki', 'はやわざ乱れ打ち', []) && !E.cardAiFaceNameOk(db, 'kiki', 'suki', '桜と氷のチーム', []));
+    check('M 名前の見張り: 推し・好きは主役の種の名前(みゅあの好きは表のことば「イブリス」も)',
+      E.cardAiFaceNameOk(db, 'kiki', 'oshi', 'ゴーレム大行進', []) && E.cardAiFaceNameOk(db, 'kiki', 'suki', 'ライガー乱れ打ち', []) && !E.cardAiFaceNameOk(db, 'kiki', 'suki', '桜と氷のチーム', []) && E.cardAiFaceNameOk(db, 'mua', 'suki', 'イブリスの夜遊び', []));
   }
   // ---- N ----
   {
@@ -315,6 +312,99 @@ const ok200 = (body) => ({ ok: true, json: async () => body });
     await m1.E.cardLoadAiRecipe();
     const p = m1.E.cardAssistantDeckPick('kiki', E.cardAiSeededRand('n'), 'master', {}, 'sugao');
     check('N 本音のときは本音の枠で組み、名前も本音', p && p.slot === 'honne' && p.name === 'ぜんぶ必殺技でつ', J(p && { slot: p.slot, name: p.name }));
+  }
+  // ---- P: 組み直しの名前と、これまでのデッキ(社長 2026-11-08) ----
+  {
+    check('P マスモンの愛称を読める(助手部の表)・名前の見張りで落とす', MASMON && E.cardAiFaceNicks('kiki').includes('ごろべえ') && !E.cardAiFaceNameOk(db, 'kiki', 'oshi', 'ごろべえのゴーレム', []), J(E.cardAiFaceNicks('kiki')));
+    check('P 遊び方の言葉にマスモンの愛称が入らない', WHO.every((w) => { const nicks = E.cardAiFaceNicks(w); return (E.CARD_AI_PLAY_WORDS[w] || []).every((n) => !nicks.some((k) => n.includes(k))); }));
+    check('P 同じことばの見分け: まとまりの切れ目をまたがない(ハムの/ゴーレムの・ライガー/ライブは別)・漢字2字・カタカナのまとまり・ひらがな3字は同じ',
+      !E.cardAiFaceShareWord('ハムの力くらべ', 'ゴーレムの一撃') && !E.cardAiFaceShareWord('ライガーの大歓声', 'メタルナーの銀ピカライブ') && E.cardAiFaceShareWord('ジョーカーの全力ダッシュ', 'ノリだけで全力突破') && E.cardAiFaceShareWord('キラキラ隊', 'キラキラ速攻') && E.cardAiFaceShareWord('ずっしりゴーレム', 'ずっしり火力'));
+    check('P 遊び方の言葉は8人 × 5〜6個', WHO.every((w) => (E.CARD_AI_PLAY_WORDS[w] || []).length >= 5 && E.CARD_AI_PLAY_WORDS[w].length <= 6));
+    // 名前づくり(AI なし): 種の名前+の+言葉。決まりに合い、使った名前は使わない
+    const used = [];
+    let made = 0, badMade = [];
+    for (const w of WHO) for (const sl of SLOTS) {
+      const others = E.cardAiFaceOtherNames({ decks: {} }, w, sl);
+      const n = E.cardAiFaceMakeName(db, w, sl, others, used, E.cardAiSeededRand(`mk:${w}:${sl}`));
+      if (!n) { badMade.push(`${w}/${sl}`); continue; }
+      made++;
+      if (!E.cardAiFaceNameOk(db, w, sl, n, others) || n.length > 12) badMade.push(`${w}/${sl}:${n}`);
+    }
+    check('P AI なしの新しい名前は、どの顔でも作れて決まりに合う(12字まで)', badMade.length === 0 && made === 32, badMade.slice(0, 4).join(' '));
+    const hraw = { perWho: { kiki: [...Array(13).keys()].map((i) => ({ id: `oshi-${i + 1}`, slot: 'oshi', name: `名前${i}`, spec: { lead: 'golem', avoid: ['dragon'], keep: [], free: 1, style: 'normal' }, monsters: ['C-003'], top: ['zz', '100'], from: i * 10 + 1, to: i * 10 + 5 })), nobody: [], mua: 'x' } };
+    const h = E.cardNormalizeAiHistory(hraw);
+    check('P これまでのデッキは助手ごとに新しい順で10個まで・壊れたものは捨てる', h.perWho.kiki.length === E.CARD_AI_HISTORY_MAX && h.perWho.kiki[0].id === 'oshi-13' && !h.perWho.mua && !h.perWho.nobody && J(h.perWho.kiki[0].top) === J(['100']), J(h.perWho.kiki.map((e) => e.id).slice(0, 3)));
+    check('P これまでのデッキの壊れた1つ(名前・主役が無い・知らない枠)は捨てる', E.cardNormalizeAiHistory({ perWho: { kiki: [{ id: 'a', slot: 'oshi', spec: { lead: 'golem' } }, { id: 'b', slot: 'zzz', name: 'x', spec: { lead: 'golem' } }, { id: 'c', slot: 'oshi', name: 'x', spec: {} }] } }).perWho.kiki === undefined);
+    // 本物の組み直し: 1つ目は既定の名前 → 中身が変わったら新しい名前・前のデッキを残す
+    const reply = (name) => (body) => { const no = body.facts.cards.map((c) => c.no); return ok200({ ok: true, kind: 'plan', name, line: 'ひとこと', prefer: no.slice(0, 6), field: [body.facts.fields[0]], habit: { big: body.facts.habit.big[1] } }); };
+    const b = makeBox({ fetchImpl: reply('ゴーレム大暴れ') });
+    await b.E.cardLoadAiRecipe();
+    await b.E.cardAiDeckMarkMet('kiki');
+    await new Promise((r) => setTimeout(r, 30));
+    let s2 = JSON.parse(b.store.get(KEY2)).perWho.kiki.decks.oshi;
+    check('P 1つ目(まだ前が無い)は AI の名前を使わず既定の名前', s2.name === null && b.E.cardAiFaceName('kiki', 'oshi') === 'ゴーレムの一撃', J(s2.name));
+    // 推しの前の方針を、今と大きく違うものに置きかえてから組み直す(札が2割以上入れかわる)
+    const st = JSON.parse(b.store.get(KEY2));
+    st.perWho.kiki.decks = { oshi: { ...st.perWho.kiki.decks.oshi, plan: { prefer: [], field: [], habit: { big: 0.8, saveGuts: 0.8, keepGuard: 1.1 } }, at: 1, since: 1 }, suki: { at: 50, since: 50, plan: null, name: null, line: null, ai: false }, yoso: { at: 60, since: 60, plan: null, name: null, line: null, ai: false } };
+    b.store.set(KEY2, JSON.stringify(st));
+    await b.E.cardAiDeckRebuild('kiki', 'games', { now: 1000 });
+    s2 = JSON.parse(b.store.get(KEY2)).perWho.kiki.decks.oshi;
+    const hist = JSON.parse(b.store.get(E.CARD_SAVE_KEYS.aiDeckHistory) || 'null');
+    const h0 = hist && hist.perWho.kiki && hist.perWho.kiki[0];
+    check('P 中身が変わった組み直しは新しい名前(AI の名前)・前のデッキは「これまで」に名前と時期つきで残る', s2.name === 'ゴーレム大暴れ' && s2.since === 1000 && !!h0 && h0.name === 'ゴーレムの一撃' && h0.slot === 'oshi' && h0.from === 1 && h0.to === 1000 && h0.monsters.length === 3 && h0.spec.lead === 'golem', J({ name: s2.name, h0 }));
+    // 同じ名前は使わない: もう一度変わったとき、AI が同じ名前を返したら 種+遊び方の言葉
+    const st2 = JSON.parse(b.store.get(KEY2));
+    st2.perWho.kiki.decks.oshi = { ...st2.perWho.kiki.decks.oshi, plan: { prefer: [], field: [], habit: { big: 1.25, saveGuts: 1.25, keepGuard: 0.8 } }, at: 2 };
+    b.store.set(KEY2, JSON.stringify(st2));
+    await b.E.cardAiDeckRebuild('kiki', 'games', { now: 2000 });
+    const s3 = JSON.parse(b.store.get(KEY2)).perWho.kiki.decks.oshi;
+    const hist2 = (JSON.parse(b.store.get(E.CARD_SAVE_KEYS.aiDeckHistory) || 'null') || { perWho: {} }).perWho.kiki || [];
+    check('P 一覧にある名前(今・これまで)は使わず、種+遊び方の言葉で新しい名前', s3.name !== 'ゴーレム大暴れ' && /^ゴーレムの/.test(s3.name || '') && E.CARD_AI_PLAY_WORDS.kiki.some((w) => s3.name === `ゴーレムの${w}`) && hist2.length === 2 && hist2[0].name === 'ゴーレム大暴れ', J({ name: s3.name, hist: hist2.map((e) => e.name) }));
+    // 中身がほとんど変わらない組み直しは名前のまま・残さない
+    const before = JSON.parse(b.store.get(KEY2)).perWho.kiki.decks.oshi;
+    const st3 = JSON.parse(b.store.get(KEY2)); st3.perWho.kiki.decks.suki.at = 99999; st3.perWho.kiki.decks.yoso.at = 99999; b.store.set(KEY2, JSON.stringify(st3));
+    const c = makeBox({ fetchImpl: (body) => ok200({ ok: true, kind: 'plan', name: 'ゴーレム別名', line: 'x', prefer: before.plan.prefer, field: before.plan.field, habit: before.plan.habit }), store: [...b.store.entries()] });
+    await c.E.cardLoadAiRecipe();
+    await c.E.cardAiDeckRebuild('kiki', 'games', { now: 3000 });
+    const s4 = JSON.parse(c.store.get(KEY2)).perWho.kiki.decks.oshi;
+    check('P 中身が同じ組み直しは名前のまま・これまでのデッキに足さない', s4.name === before.name && s4.since === before.since && ((JSON.parse(c.store.get(E.CARD_SAVE_KEYS.aiDeckHistory) || 'null') || { perWho: {} }).perWho.kiki || []).length === 2, J({ name: s4.name, since: s4.since }));
+  }
+  // ---- Q: 選び方と、遊ぶ人の選び口(社長 Q1・Q2) ----
+  {
+    const hist = [{ id: 'oshi-1' }, { id: 'suki-2' }, { id: 'yoso-3' }];
+    const count = (main, h) => { const c = {}; const r = E.cardAiSeededRand(`q:${main}:${h.length}`); for (let i = 0; i < 40000; i++) { const k = E.cardAiDeckPickId(main, h, r); c[k] = (c[k] || 0) + 1; } return Object.fromEntries(Object.entries(c).map(([k, v]) => [k, v / 40000])); };
+    const a = count('suki', hist);
+    const pastAll = (a['h:oshi-1'] || 0) + (a['h:suki-2'] || 0) + (a['h:yoso-3'] || 0);
+    check('Q これまでのデッキがあれば 今の合う顔5割・ほか1.5割ずつ・これまで2割', Math.abs(a.suki - 0.5) < 0.015 && Math.abs(a.oshi - 0.15) < 0.015 && Math.abs(a.sugao - 0.15) < 0.015 && Math.abs(pastAll - 0.2) < 0.015, J(a));
+    check('Q これまでのデッキは新しいものほど重い(10:9:8)', Math.abs(a['h:oshi-1'] / pastAll - 10 / 27) < 0.03 && Math.abs(a['h:yoso-3'] / pastAll - 8 / 27) < 0.03, J(a));
+    const z = count('suki', []);
+    check('Q これまでのデッキが無ければ今までどおり 6:2:2', Math.abs(z.suki - 0.6) < 0.015 && Math.abs(z.oshi - 0.2) < 0.015, J(z));
+    check('Q デッキの id から顔', E.cardAiDeckIdFace('oshi') === 'oshi' && E.cardAiDeckIdFace('h:yoso-3') === 'sugao' && E.cardAiDeckIdFace('h:suki-2') === 'suki' && E.cardAiDeckIdFace('x') === null);
+    check('Q 使っていた時期の書き方', E.cardAiDeckPeriodText(Date.parse('2026-11-08T10:00:00+09:00'), Date.parse('2026-11-09T10:00:00+09:00')).length > 0 && /〜/.test(E.cardAiDeckPeriodText(Date.parse('2026-11-08T10:00:00+09:00'), Date.parse('2026-11-10T10:00:00+09:00'))) && E.cardAiDeckPeriodText(0, 0) === '');
+    // 選び口: 今の3つと、これまでのデッキ。選んだら使い続ける(1戦しても)・おまかせで戻す
+    const hEntry = { id: 'oshi-5', slot: 'oshi', name: 'ゴーレム大暴れ', plan: null, spec: { lead: 'golem', avoid: E.cardAiFaceSpec(db, 'kiki', 'oshi').avoid, keep: E.cardAiFaceSpec(db, 'kiki', 'oshi').keep, free: 1, style: 'normal' }, monsters: [], top: [], from: 5, to: 9 };
+    const b = makeBox({ store: [[E.CARD_SAVE_KEYS.aiDeckHistory, JSON.stringify({ v: 1, perWho: { kiki: [hEntry] } })]] });
+    await b.E.cardLoadAiRecipe();
+    const ch = b.E.cardAiDeckChoices('kiki');
+    check('Q 選び口の一覧は 今の3つ+これまでのデッキ(名前・時期)', ch.length === 4 && J(ch.slice(0, 3).map((c) => c.id)) === J(['oshi', 'suki', 'sugao']) && ch[3].id === 'h:oshi-5' && ch[3].past === true && ch[3].name === 'ゴーレム大暴れ' && ch[3].face === 'oshi', J(ch));
+    check('Q はじめは おまかせ', b.E.cardAiDeckChosen('kiki') === null);
+    b.E.cardAiDeckChoose('kiki', 'h:oshi-5');
+    check('Q 昔のデッキを選ぶと、今日のデッキの名前・顔もそれになる', b.E.cardAiDeckChosen('kiki') === 'h:oshi-5' && b.E.cardAiDeckNextId('kiki') === 'h:oshi-5' && b.E.cardAiDeckNextName('kiki') === 'ゴーレム大暴れ' && b.E.cardAiDeckNextStyle('kiki') === 'oshi');
+    const p = b.E.cardAssistantDeckPick('kiki', E.cardAiSeededRand('qq'), 'master', {}, b.E.cardAiDeckNextId('kiki'));
+    check('Q 昔のデッキと戦える(同じ組み方で3体・50枚・記録に deckId と past)', p && p.deckId === 'h:oshi-5' && p.deckFrom === 'past' && p.name === 'ゴーレム大暴れ' && p.styleId === 'oshi' && p.deck.monsters.length === 3 && p.deck.cards.length === 50 && E.cardAiFaceLineOf(db.monsters[p.deck.monsters[0]]) === 'golem', J(p && { id: p.deckId, from: p.deckFrom, n: p.deck.cards.length }));
+    b.E.cardAiDeckNextDone('kiki');
+    check('Q 選んだデッキは1戦しても使い続ける', b.E.cardAiDeckNextId('kiki') === 'h:oshi-5');
+    b.E.cardAiDeckChoose('kiki', 'nanika');
+    check('Q 一覧に無い id は選べない', b.E.cardAiDeckChosen('kiki') === 'h:oshi-5');
+    b.E.cardAiDeckChoose('kiki', null);
+    check('Q おまかせに戻すと選び直す', b.E.cardAiDeckChosen('kiki') === null && !!b.E.cardAiDeckNextId('kiki'));
+    const q = b.E.cardAssistantDeckPick('kiki', E.cardAiSeededRand('qn'), 'master', {}, 'suki');
+    check('Q 今のデッキは deckFrom now', q && q.deckId === 'suki' && q.deckFrom === 'now');
+    const s93 = src('src/parts/93-card-replay.jsx');
+    const s84 = src('src/parts/84-screen-card-battle.jsx');
+    check('Q 記録: リプレイの相手に deckId・deckFrom を残す(84 が game.aiDeck から渡す・93 が見張って持つ)',
+      /deckId: aiPick\.deckId \|\| aiPick\.styleId, deckFrom: aiPick\.deckFrom === 'past' \? 'past' : 'now'/.test(s84) && /deckId: game\.aiDeck\.deckId, deckFrom: game\.aiDeck\.deckFrom/.test(s84) && /const cardReplayFoeDeckOf = /.test(s93));
+    check('Q 84: 対戦は相手えらびで見せたデッキ(cardAiDeckNextId)で始める', /typeof cardAiDeckNextId === 'function' \? cardAiDeckNextId\(pick\.who\)/.test(s84));
   }
   // ---- O ----
   {

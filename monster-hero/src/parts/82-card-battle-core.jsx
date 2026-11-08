@@ -2550,6 +2550,7 @@ const CARD_SAVE_KEYS = Object.freeze({
   weeklyReward: 'mh_card_weekly_reward_v1', // 受け取った週間報酬の週の一覧 ['card_weekly_2026-11-02', …](90 の cardWeeksAwaitingReward。壊れているときは何も配らない)
   aiTalk: 'mh_card_ai_talk_v1',       // 助手のおしゃべり(AI)の入/切 { on }(無ければ入。83-card-battle-talk-ai.jsx の cardNormalizeAiTalk)
   aiRecipe: 'mh_card_ai_recipe_v1',   // 助手の3つのデッキ(型ごとの方針・名前・ひとこと・組んだ時刻)と組み直しの数(83-card-ai-deck.jsx の cardNormalizeAiRecipe。2026-11-08)
+  aiDeckHistory: 'mh_card_ai_deck_history_v1', // 助手の「これまでのデッキ」(組み直す前のデッキ。助手ごとに新しい順で10個まで。83-card-ai-deck.jsx の cardNormalizeAiHistory。2026-11-08)
   aiRecipe2: 'mh_card_ai_recipe_v2',  // 助手の推し・好き・素顔のデッキ(顔ごとの方針・名前・ひとこと・組んだ時刻)と組み直しの数(83-card-ai-deck.jsx。2026-11-08。v1 は読むだけで残す)
   aiDeck: 'mh_card_ai_deck_v1',       // 助手のデッキを AI で組むかの入/切 { on }(無ければ入。83-card-ai-deck.jsx の cardNormalizeAiDeck)
 });

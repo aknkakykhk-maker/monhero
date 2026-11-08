@@ -740,9 +740,45 @@ const CARD_FOE_BUILD_NOTE = Object.freeze({
   expert: '戦い方に合うモンスターと、全部の弾の強いカードで、しっかり組んでくる',
   master: '全部の弾から本気で組んでくる。あなたのデッキを見て、モンスターを選び直すことも',
 });
+// 相手えらびの「デッキ」の選び口(2026-11-08 社長「昔のデッキとも戦える」)。既定は おまかせ(その日の気分)。
+//   押すと今の3つ(推し・好き・素顔)と「これまでのデッキ」(名前・使っていた時期)から選べる。ルールの口(83 の cardAiDeckChoices・cardAiDeckChoose)が無ければ出さない
+const CardFoeDeckPicker = ({ who, onChange }) => {
+  const [open, setOpen] = React.useState(false);
+  if (typeof cardAiDeckChoices !== 'function' || typeof cardAiDeckChoose !== 'function') return null;
+  const list = cardAiDeckChoices(who);
+  if (!list.length) return null;
+  const chosen = typeof cardAiDeckChosen === 'function' ? cardAiDeckChosen(who) : null;
+  const icon = (f) => (typeof CARD_DECK_STYLE_ICON !== 'undefined' && CARD_DECK_STYLE_ICON[f]) || '';
+  const pick = (id) => { if (typeof Audio_ !== 'undefined') Audio_.fgSe.tap(); cardAiDeckChoose(who, id); setOpen(false); if (onChange) onChange(); };
+  const cur = chosen ? list.find((c) => c.id === chosen) : null;
+  const row = (c) => (
+    <button key={c.id} type="button" data-card-foe-deck-choice={c.id} aria-pressed={chosen === c.id} onClick={() => pick(c.id)}
+      className={`flex w-full items-center gap-1.5 rounded-lg border px-2 py-1 text-left text-[11.5px] font-black ${chosen === c.id ? 'border-amber-300 bg-amber-400 text-slate-950' : 'border-white/15 bg-slate-800 text-slate-100'}`}>
+      <span aria-hidden="true">{icon(c.face)}</span><span className="min-w-0 flex-1" style={JA_LABEL_STYLE}>{c.name}</span>
+      {c.past && <small data-card-foe-deck-period className="shrink-0 text-[10px] font-bold opacity-80">{typeof cardAiDeckPeriodText === 'function' ? cardAiDeckPeriodText(c.from, c.to) : ''}</small>}
+    </button>);
+  const now = list.filter((c) => !c.past), past = list.filter((c) => c.past);
+  return (
+    <div data-card-foe-deck-picker={who}>
+      <button type="button" data-card-foe-deck-picker-open aria-expanded={open} onClick={() => { if (typeof Audio_ !== 'undefined') Audio_.fgSe.tap(); setOpen(!open); }}
+        className="flex w-full items-center justify-between gap-2 rounded-lg border border-white/15 bg-slate-800/80 px-2 py-1 text-[11.5px] font-black text-slate-100">
+        <span className="min-w-0" style={JA_LABEL_STYLE}><small className="mr-1 text-[10px] text-slate-400">デッキ</small>{cur ? `${icon(cur.face)} ${cur.name}` : 'おまかせ(その日の気分)'}</span>
+        <span aria-hidden="true" className="shrink-0 text-slate-400">{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div data-card-foe-deck-picker-list className="mt-1 space-y-1">
+          <button type="button" data-card-foe-deck-choice="auto" aria-pressed={!chosen} onClick={() => pick(null)}
+            className={`w-full rounded-lg border px-2 py-1 text-left text-[11.5px] font-black ${!chosen ? 'border-amber-300 bg-amber-400 text-slate-950' : 'border-white/15 bg-slate-800 text-slate-100'}`}>おまかせ(その日の気分)</button>
+          {now.map(row)}
+          {past.length > 0 && <p className="pt-0.5 text-[10px] font-black text-slate-400">これまでのデッキ</p>}
+          {past.map(row)}
+        </div>)}
+    </div>);
+};
 const CardFoeStyle = ({ db, who, level }) => {
   const style = cardFoeStyle(who);
   const recipe = CARD_AI_DECKS[who];
+  const [, setTick] = React.useState(0);
   if (!style || !recipe) return null;
   // 好きなモンスター(主血統で決める。82 の CARD_AI_FAVORITE)。名前と顔だけ出す(社長 2026-10-25「余計な文消しといて」)
   const favSpecies = CARD_AI_FAVORITE[who];
@@ -755,6 +791,7 @@ const CardFoeStyle = ({ db, who, level }) => {
   return (
     <div data-card-foe-style={who} className="space-y-1.5 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
       {nextStyle && typeof CardFoeDeckChip === 'function' && <CardFoeDeckChip name={nextName} styleId={nextStyle} kind="foe" compact/>}
+      {nextStyle && <CardFoeDeckPicker who={who} onChange={() => setTick((n) => n + 1)}/>}
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span data-card-foe-style-label className="shrink-0 rounded-full bg-amber-300 px-2.5 py-0.5 text-[12px] font-black text-slate-950">{style.label}</span>
         <span className="min-w-0 text-[11px] font-bold text-slate-200" style={JA_WRAP_STYLE}>{jaWrap(style.note)}</span>
@@ -3789,7 +3826,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       // 過去の対戦を見る(93): この試合の手の一覧。先に作っておき、保存は結果を書いたあと(使った技を数えるのにも使う)
       const log = cpuLogRef.current;
       const replayRec = log && log.id === game.key ? cardReplayFromCpu(db, { id: `c${log.id}`, at: Date.now(), myDeck: log.decks[0], cpuDeck: log.decks[1], seed: log.seed, first: log.first, history: log.acts,
-        foe: { name: log.foeName, who: game.who, deckName: log.deckName, style: log.style, styleName: log.styleName }, outcome, reason: '', level: game.level }) : null;
+        foe: { name: log.foeName, who: game.who, deckName: log.deckName, style: log.style, styleName: log.styleName, ...(game.aiDeck ? { deckId: game.aiDeck.deckId, deckFrom: game.aiDeck.deckFrom } : {}) }, outcome, reason: '', level: game.level }) : null;
       if (log && log.id === game.key) cpuLogRef.current = null;
       // 記録をくわしく(90 の mh_card_record_detail_v1。見本の対戦は数えない)。デッキ・場の3体・使った技も足す
       const usedDeck = save.decks.decks.find((d) => d.id === save.decks.active) || null;
@@ -3884,7 +3921,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const share = pick.share || null;
     // 育つ助手の型(助手部の口 assistantLifeCardStyle。2026-11-08)。助手と対戦だけ(杯・みんなのデッキは今のまま)。口が無い・知らない値は型なし(今どおり)
     // 印が真なら、3つのデッキから今日のデッキを選ぶ(83-card-ai-deck.jsx の cardAssistantDeckPick: 今の型6割・ほか2割ずつ。保存した方針で組む)
-    const aiPick = !share && !(opts && opts.cup) && cardGrowStyleOn() && typeof cardAssistantDeckPick === 'function' ? cardAssistantDeckPick(pick.who, Math.random, pick.level, { playerDeck: activeDeck }, typeof cardAiDeckNextStyle === 'function' ? cardAiDeckNextStyle(pick.who) : null) : null;
+    const aiPick = !share && !(opts && opts.cup) && cardGrowStyleOn() && typeof cardAssistantDeckPick === 'function' ? cardAssistantDeckPick(pick.who, Math.random, pick.level, { playerDeck: activeDeck }, typeof cardAiDeckNextId === 'function' ? cardAiDeckNextId(pick.who) : typeof cardAiDeckNextStyle === 'function' ? cardAiDeckNextStyle(pick.who) : null) : null;
     if (aiPick && typeof cardAiDeckNextDone === 'function') cardAiDeckNextDone(pick.who); // 次の対戦の型は決め直す
     const foeStyle = aiPick ? aiPick.styleId : null;
     // 毎試合、好きなモンスター ベスト4から3体を選んで組み直す(MASTER はこちらのデッキも見る)
@@ -3903,14 +3940,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const intro = share ? { mode: 'assistant', foe: { who: null, name: share.name, icon: share.icon, frame: share.frame, line: null, deckName: share.tactics.name || null, monsters: vsMons(st, CARD_CPU) },
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } } : { mode: 'assistant',
       foe: { who: pick.who, name: assistant ? assistant.name : 'あいて', line: (aiPick && cardAiDeckVsLine(pick.who, aiPick)) || (CARD_VS_LINES[pick.who] || {})[pick.level] || null, deckName: cardAssistantDeckName(db, cpuDeck, pick.who, pick.level), monsters: vsMons(st, CARD_CPU),
-        ...(aiPick && aiPick.name ? { styleName: aiPick.name, styleId: aiPick.styleId } : {}) },
+        ...(aiPick && aiPick.name ? { styleName: aiPick.name, styleId: aiPick.styleId, deckId: aiPick.deckId || aiPick.styleId, deckFrom: aiPick.deckFrom === 'past' ? 'past' : 'now' } : {}) },
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } };
     const auto = autoIn ? { tactics: autoIn.tactics, level: typeof cardShareFightLevel === 'function' ? cardShareFightLevel(autoIn.tactics) : 'master', sameBlood: !!cardShareSameBlood(db, activeDeck), quick: !!autoIn.quick } : null;
     // カード部屋にいる助手と対戦: 始めた時点でいたかで決める(手で遊ぶ助手と対戦だけ。みんなのデッキ・杯・オートは上げない)
     //   1つの時間帯で助手1人につき1回まで(cardLifeRewardLeft。2026-11-08 社長)。数える時間帯も始めた時点のもの(lifeSlot)
     const lifeUp = !share && !cup && !auto && cardLifeAtCard(pick.who) && cardLifeRewardLeft(pick.who);
     const lifeSlot = lifeUp ? (cardLifeSlotNow() || {}).abs : null;
-    setGame({ key: gameKey, st, who: pick.who, level: pick.level, settings: save.settings, intro: auto && auto.quick ? null : intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(lifeUp ? { lifeUp: true, lifeSlot } : {}), ...(aiPick ? { aiDeck: { style: aiPick.styleId, name: aiPick.name, team: intro.foe.deckName || null } } : {}), ...(share ? { share } : {}), ...(cup ? { cup } : {}), ...(auto ? { auto } : {}),
+    setGame({ key: gameKey, st, who: pick.who, level: pick.level, settings: save.settings, intro: auto && auto.quick ? null : intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(lifeUp ? { lifeUp: true, lifeSlot } : {}), ...(aiPick ? { aiDeck: { style: aiPick.styleId, name: aiPick.name, team: intro.foe.deckName || null, deckId: aiPick.deckId || aiPick.styleId, deckFrom: aiPick.deckFrom === 'past' ? 'past' : 'now' } } : {}), ...(share ? { share } : {}), ...(cup ? { cup } : {}), ...(auto ? { auto } : {}),
       ...(rented ? { rented: { ownerId: rented.ownerId, version: rented.version, name: rented.owner } } : {}) });
     const scene = typeof window !== 'undefined' && typeof window.__mhCardScene === 'function';
     cpuLogRef.current = scene ? null : { id: gameKey, style: foeStyle || 'normal', styleName: (aiPick && aiPick.name) || null, seed, first, decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], foeName: intro.foe.name, deckName: intro.foe.deckName || null, acts: [] };

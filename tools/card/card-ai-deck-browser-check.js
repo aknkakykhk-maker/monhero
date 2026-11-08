@@ -52,7 +52,7 @@ const run = async (browser, mode, scene, errors) => {
       asked.push(body.assistantId);
       if (scene.ai) {
         const cands = body.facts.cards.map((c) => c.no);
-        return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, kind: 'plan', name: 'ごろべえ大暴れ', line: 'ためしに組んでみたよ!', prefer: cands.slice(0, 6), field: [body.facts.fields[0]], habit: { big: body.facts.habit.big[1] }, remainingToday: 9 }) });
+        return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, kind: 'plan', name: 'ゴーレム大暴れ', line: 'ためしに組んでみたよ!', prefer: cands.slice(0, 6), field: [body.facts.fields[0]], habit: { big: body.facts.habit.big[1] }, remainingToday: 9 }) });
       }
     }
     return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, kind: 'sorry', text: null }) });
@@ -65,6 +65,10 @@ const run = async (browser, mode, scene, errors) => {
   // おしゃべり AI を呼べる端末にする(公開の印 cardAssistantTalk は main で真)。デッキの印は検査の中だけ
   // 自動操作のブラウザの書き込みの守り(26-supabase.jsx)は、中継役だけ偽物へ通す(差し替えた口だけ)
   await page.addInitScript((on) => { window.__aiDeckFlag = on; window.__mhSupabaseStubbed = ['card-assistant-talk']; }, scene.flag);
+  // ⑥ これまでのデッキ: きき の昔のデッキを1つ置いておく(推しの枠・主役ゴーレム)。選び口で選び、VS・結果にその名前が出るか
+  if (scene.past) await page.addInitScript(() => { if (sessionStorage.getItem('h')) return; sessionStorage.setItem('h', '1');
+    localStorage.setItem('mh_card_ai_deck_history_v1', JSON.stringify({ v: 1, perWho: { kiki: [{ id: 'oshi-1700000000000', slot: 'oshi', name: 'ゴーレムの力くらべ', plan: null,
+      spec: { lead: 'golem', avoid: ['dragon', 'zilla'], keep: ['tiger', 'hare'], free: 1, style: 'normal' }, monsters: [], top: [], from: 1700000000000, to: 1700300000000 }] } })); });
   const dismiss = async () => { for (let i = 0; i < 16; i++) { const did = await page.evaluate(() => { const inO = (el) => { for (let e = el; e && e !== document.body; e = e.parentElement) { const s = getComputedStyle(e); if (s.position === 'fixed' || (s.position === 'absolute' && Number(s.zIndex) >= 40)) return true; } return false; };
     const l = [...document.querySelectorAll('button')].filter((b) => inO(b) && /^(確認|閉じる|OK|受け取る|次へ|わかった|はい|スキップ|あとで読む|あとで)$/.test((b.innerText || '').replace(/\s+/g, ' ').trim())); if (!l.length) return false; l[0].click(); return true; }); if (!did) break; await page.waitForTimeout(400); } };
   // 対戦の前の画面(デッキの確かめ・対戦開始の演出)を進める
@@ -124,6 +128,21 @@ const run = async (browser, mode, scene, errors) => {
     await page.locator(`[data-card-foe="${WHO}"]`).click();
     await page.getByRole('button', { name: /MASTER/ }).first().click();
     await page.waitForTimeout(2500);
+    if (scene.past) {
+      const pk = page.locator(`[data-card-foe-deck-picker="${WHO}"] [data-card-foe-deck-picker-open]`);
+      const first = (await pk.innerText().catch(() => '')).replace(/\s+/g, '');
+      check(`⑥ ${label}: 相手えらびに「デッキ おまかせ(その日の気分)」の選び口`, /^デッキおまかせ\(その日の気分\)/.test(first), first);
+      await pk.click();
+      const list = await page.evaluate(() => [...document.querySelectorAll('[data-card-foe-deck-choice]')].map((e) => e.getAttribute('data-card-foe-deck-choice')));
+      const pastHead = await page.locator('[data-card-foe-deck-picker-list]').innerText().catch(() => '');
+      check(`⑥ ${label}: 選び口に おまかせ・今の3つ・これまでのデッキ(名前と時期)`, JSON.stringify(list) === JSON.stringify(['auto', 'oshi', 'suki', 'sugao', 'h:oshi-1700000000000']) && /これまでのデッキ/.test(pastHead) && /ゴーレムの力くらべ/.test(pastHead) && /11\/1[5-9]/.test(pastHead), `${JSON.stringify(list)} / ${pastHead.replace(/\s+/g, ' ').slice(0, 80)}`);
+      await snap('0-picker');
+      await page.locator('[data-card-foe-deck-choice="h:oshi-1700000000000"]').click();
+      const chip = await page.evaluate((w) => { const c = document.querySelector(`[data-card-foe-style="${w}"] [data-card-foe-deck-chip-name]`); return c ? c.textContent.trim() : ''; }, WHO);
+      check(`⑥ ${label}: 選ぶと、今日のデッキの札がそのデッキの名前になる`, /ゴーレムの力くらべ$/.test(chip), chip);
+      const clip = await inView(`[data-card-foe-style="${WHO}"]`);
+      check(`⑥ ${label}: 選び口を開いても型の欄が画面に入る`, clip === true, String(clip));
+    }
     const saved0 = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_ai_recipe_v2') || 'null'));
     if (!scene.flag) check(`① ${label}: 保存を書かない・中継役を呼ばない`, saved0 === null && asked.length === 0, JSON.stringify({ saved0, asked }));
     else check(`${scene.ai ? '②' : '③'} ${label}: 相手えらびで選ぶと、裏で1つ組む`, !!saved0 && !!saved0.perWho && !!saved0.perWho[WHO] && Object.keys(saved0.perWho[WHO].decks).length === 1 && asked.includes(WHO) && Object.values(saved0.perWho[WHO].decks)[0].ai === scene.ai, JSON.stringify(saved0 && saved0.perWho && saved0.perWho[WHO]));
@@ -153,7 +172,7 @@ const run = async (browser, mode, scene, errors) => {
     else {
       const styleIn = await inView('[data-card-vs-style]');
       // 3つのうち組んだのは1つだけ。ほかの型が選ばれたときは既定の名前(どちらでも「型: 名前」とひとことが出る)
-      const okName = !!vs && (names.includes(vs.style) || (scene.ai && vs.style === 'ごろべえ大暴れ')) && !!vs.team;
+      const okName = !!vs && (scene.past ? vs.style === 'ゴーレムの力くらべ' : (names.includes(vs.style) || (scene.ai && vs.style === 'ゴーレム大暴れ'))) && !!vs.team;
       check(`${scene.ai ? '②' : '③'} ${label}: VS に「チーム」と「今日のデッキ」の名前・ひとこと(画面の中)`, okName && !!vs.line && styleIn === true, `${JSON.stringify(vs)} / ${styleIn}`);
     }
     for (let i = 0; i < 40; i++) { if (await page.locator('[data-card-top="result"]').count()) break; await pass(); }
@@ -178,7 +197,7 @@ const run = async (browser, mode, scene, errors) => {
   const server = await serve();
   const browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const errors = [];
-  const SCENES = [{ id: 'off', label: '印が偽', flag: false, ai: false }, { id: 'ai', label: 'AI あり', flag: true, ai: true }, { id: 'noai', label: 'AI なし', flag: true, ai: false }];
+  const SCENES = [{ id: 'off', label: '印が偽', flag: false, ai: false }, { id: 'ai', label: 'AI あり', flag: true, ai: true }, { id: 'noai', label: 'AI なし', flag: true, ai: false }, { id: 'past', label: '昔のデッキ', flag: true, ai: false, past: true }];
   try {
     for (const mode of MODES) for (const scene of SCENES) {
       try { await run(browser, mode, scene, errors); } catch (e) { check(`${mode.label}・${scene.label} 最後まで触れる`, false, String(e).slice(0, 300)); }

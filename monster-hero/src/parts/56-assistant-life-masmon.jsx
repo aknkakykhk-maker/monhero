@@ -868,6 +868,23 @@ function AssistantMasmonDeckTab({ id, land = false }) {
           {label}{s === fav && <em data-assistant-masmon-deck-fav className="whitespace-nowrap rounded-full bg-emerald-400 px-1.5 py-px text-[9px] font-black not-italic text-emerald-950">よく使う</em>}
         </button>))}
     </div>
+    {faceOn && (() => {
+      // これまでのデッキ(カード部の口 83 の cardAiDeckChoices の past。組み直して名前が変わる前のデッキ。10個まで)。押すと中身を下に出す
+      let past = [];
+      try { past = typeof cardAiDeckChoices === 'function' ? cardAiDeckChoices(id).filter(c => c.past) : []; } catch (_) { past = []; }
+      if (!past.length) return null;
+      return (
+        <div data-assistant-masmon-deck-past className="mt-2">
+          <p className="text-[10.5px] font-black text-slate-400">これまでのデッキ</p>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {past.map(c => (
+              <button key={c.id} type="button" data-assistant-masmon-deck-past-item={c.id} aria-pressed={sid === c.id} onClick={() => { if (typeof Audio_ !== 'undefined') Audio_.fgSe.tap(); setSid(c.id); }}
+                className={`rounded-lg border px-2 py-1 text-[11px] font-black ${sid === c.id ? 'border-amber-300 bg-amber-400 text-slate-950' : 'border-white/15 bg-slate-800 text-slate-200'}`}>
+                {c.name}{typeof cardAiDeckPeriodText === 'function' && <small className="ml-1 text-[9.5px] font-bold opacity-80">{cardAiDeckPeriodText(c.from, c.to)}</small>}
+              </button>))}
+          </div>
+        </div>);
+    })()}
     <div className="mt-2" data-assistant-masmon-deck-view={sid}><CardAssistantDeckView who={id} styleId={sid} land={land}/></div>
   </>);
 }
