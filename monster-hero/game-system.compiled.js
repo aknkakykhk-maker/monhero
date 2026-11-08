@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fa36411b71eafdfd
+// source-sha256: e4878ef4e5f082bb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -92084,9 +92084,17 @@ function RhythmMultiMemberCards({
       className: `absolute -bottom-1 -right-1.5 flex items-center justify-center rounded-full bg-lime-300 font-black leading-none text-slate-950 ${tall ? 'h-4 w-4 text-[10px]' : 'h-3 w-3 text-[8px]'}`
     }, "i")), React.createElement("span", {
       className: `min-w-0 ${tall ? 'mt-1 w-full text-center' : 'mt-0.5 w-full text-center landscape:mt-0 landscape:flex-1 landscape:text-left'}`
-    }, React.createElement("span", {
-      className: `block font-black leading-tight ${tall ? 'line-clamp-2 break-all text-[11px] landscape:text-sm' : 'truncate text-[10px]'}`
-    }, m.cpu && (m.as ? React.createElement("b", {
+    }, m.cpu && tall && (m.as ? React.createElement("b", {
+      "data-rhythm-multi-cpu-mark": true,
+      "data-rhythm-multi-assist-mark": true,
+      className: "mx-auto mb-0.5 block w-fit rounded bg-pink-300 px-0.5 text-[8px] font-black leading-[12px] text-slate-950"
+    }, "助手") : React.createElement("b", {
+      "data-rhythm-multi-cpu-mark": true,
+      className: "mx-auto mb-0.5 block w-fit rounded bg-lime-300 px-0.5 text-[8px] font-black leading-[12px] text-slate-950"
+    }, "CPU")), React.createElement("span", {
+      "data-rhythm-multi-member-name": true,
+      className: `block font-black leading-tight ${tall ? m.cpu ? 'whitespace-nowrap text-[11px] max-[359px]:text-[9.5px] max-[359px]:tracking-[-0.04em] landscape:text-sm' : 'line-clamp-2 break-all text-[11px] landscape:text-sm' : 'truncate text-[10px]'}`
+    }, m.cpu && !tall && (m.as ? React.createElement("b", {
       "data-rhythm-multi-cpu-mark": true,
       "data-rhythm-multi-assist-mark": true,
       className: "mr-0.5 rounded bg-pink-300 px-0.5 text-[8px] font-black text-slate-950"
@@ -94278,7 +94286,8 @@ function RhythmMultiScreen({
         sub: `Lv.${m.level}`
       })
     }), React.createElement("div", {
-      className: "max-h-[70%] shrink-0 overflow-y-auto border-t border-white/10 bg-slate-950/90 p-2 landscape:mt-auto landscape:grid landscape:max-h-[58%] landscape:grid-cols-2 landscape:gap-2",
+      "data-rhythm-multi-wait-panel": true,
+      className: "max-h-[70%] min-h-0 shrink overflow-y-auto border-t border-white/10 bg-slate-950/90 p-2 landscape:mt-auto landscape:grid landscape:max-h-[58%] landscape:grid-cols-2 landscape:gap-2",
       style: {
         paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))'
       }
