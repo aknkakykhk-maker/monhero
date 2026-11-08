@@ -3,10 +3,10 @@
 //   node tools/assistant/assistant-life-scene-stand-browser-check.js           検査
 //   node tools/assistant/assistant-life-scene-stand-browser-check.js --shots   止め絵も撮る(docs/progress/assistant-peer/gifts/stagec/stand/)
 //   大きさは、絵の寸法ではなく透けていない画素の範囲(見えている体)と、その中の目・顎の高さ(ASSISTANT_LIFE_STAND_FACE)で測る
-//   ① 2人の「目から顎まで」(頭の大きさ)が同じ(差 5% まで)
+//   ① 2人の頭の大きさが同じ(差 5% まで)。「目から顎まで」を、並び絵で目で決めた補正(scale)で割って比べる
 //   ② 2人の見えている体が左右に分かれる(重なりは細いほうの幅の 2割まで)・画面からはみ出さない
 //   ③ 顔(見えている体の上から顎まで)が、上の見出し・下の台詞の箱に隠れない
-//   ④ 体の下端が床の線にそろう(差 3px まで。上半身で切れている絵が宙に浮かない)
+//   ④ 目の高さがそろい、顔が場面の上から3割〜5割5分に来る(2026-11-08 社長「画面の下に小さく固まり、上半分が空いている」)
 //   縦 390・横 844・🔄横 667・小さい縦 375×667 で、4組(みゅあ・ももすけ/きき・ドラ/あつ・ソラシド/きゅうこ・えるびん)
 const http = require('http'), path = require('path'), fs = require('fs');
 const root = path.resolve(__dirname, '..', '..'), PORT = 9259;
@@ -60,7 +60,7 @@ const PAIRS = [['mua', 'momosuke'], ['kiki', 'dra'], ['atsu', 'sorashido'], ['ky
       if (!box) return { id, missing: true };
       const vt = r.top + box.t * r.height, vb = r.top + box.b * r.height, vl = r.left + box.l * r.width, vr = r.left + box.r * r.width;
       const vh = vb - vt;
-      return { id, head: !!f.head, vt, vb, vl, vr, face: f.head ? null : (f.chin - f.eye) * vh, eyeY: f.head ? null : vt + f.eye * vh, chinY: f.head ? vb : vt + f.chin * vh };
+      return { id, head: !!f.head, vt, vb, vl, vr, face: f.head ? null : (f.chin - f.eye) * vh / (f.scale || 1), eyeY: vt + (f.eye || 0.4) * vh, chinY: f.head ? vb : vt + f.chin * vh };
     });
     const title = sc.querySelector('[data-assistant-life-scene-title]'), talk = document.querySelector('[data-assistant-peer-talk] > div, [data-assistant-peer-talk]');
     const tb = title ? title.getBoundingClientRect().bottom : S.top;
@@ -85,11 +85,11 @@ const PAIRS = [['mua', 'momosuke'], ['kiki', 'dra'], ['atsu', 'sorashido'], ['ky
           if (faces.length === 2) check(`① ${label}: 頭の大きさ(目から顎)が同じ`, Math.abs(faces[0] - faces[1]) <= Math.max(faces[0], faces[1]) * 0.05, faces.map(Math.round).join(' / '));
           const ov = Math.max(0, Math.min(a.vr, b.vr) - Math.max(a.vl, b.vl)), narrow = Math.min(a.vr - a.vl, b.vr - b.vl);
           check(`② ${label}: 左右に分かれる(重なり ${Math.round(ov / narrow * 100)}%)・はみ出さない`, ov <= narrow * 0.2 && m.stands.every(x => x.vl >= m.S.l - 2 && x.vr <= m.S.r + 2));
-          const eyeOf = (x) => (x.eyeY != null ? x.eyeY : x.vt + (x.vb - x.vt) * 0.45);
+          const eyeOf = (x) => x.eyeY;
           const hidden = m.stands.filter(x => eyeOf(x) < m.titleBottom + 2 || x.chinY > m.talkTop + 2);
           check(`③ ${label}: 顔が見出し・台詞の箱に隠れない`, hidden.length === 0, hidden.map(x => `${x.id} 目 ${Math.round(eyeOf(x))}・顎 ${Math.round(x.chinY)}・上 ${Math.round(x.vt)}〜${Math.round(x.chinY)} 見出し下 ${Math.round(m.titleBottom)} 台詞上 ${Math.round(m.talkTop)}`).join(' / '));
-          const floor = m.S.b - Math.max((m.S.b - m.S.t) * 0.22, Math.min(150, (m.S.b - m.S.t) * 0.3));
-          check(`④ ${label}: 体の下端が床の線にそろう(宙に浮かない)`, m.stands.every(x => Math.abs(x.vb - floor) <= 3), m.stands.map(x => Math.round(x.vb)).join(' / ') + ` 床 ${Math.round(floor)}`);
+          const hh = m.S.b - m.S.t, rel = m.stands.map(x => (x.eyeY - m.S.t) / hh);
+          check(`④ ${label}: 目の高さがそろい、顔が上から3割〜5割5分`, Math.abs(m.stands[0].eyeY - m.stands[1].eyeY) <= 3 && rel.every(r => r >= 0.3 && r <= 0.55), rel.map(r => `${Math.round(r * 100)}%`).join(' / '));
           if (SHOTS) await page.screenshot({ path: path.join(shotDir, `${file}-${a.id}-${b.id}.png`) });
         }
         await finishTalk(page); await page.locator('[data-assistant-life-scene-back]').click({ timeout: 3000 }).catch(() => {}); await page.waitForTimeout(350);

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d7fce68107002fac
+// source-sha256: b1bc5a1c08ace727
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -107406,34 +107406,43 @@ const assistantLifeStandBox = src => new Promise(res => {
 const ASSISTANT_LIFE_STAND_FACE = Object.freeze({
   mua: {
     eye: 0.34,
-    chin: 0.46
+    chin: 0.46,
+    scale: 1.12
   },
   kiki: {
     eye: 0.46,
-    chin: 0.58
+    chin: 0.58,
+    scale: 1
   },
   momosuke: {
     eye: 0.44,
-    chin: 0.55
+    chin: 0.55,
+    scale: 0.85
   },
   dra: {
-    head: true
+    head: true,
+    eye: 0.46,
+    scale: 1.3
   },
   atsu: {
     eye: 0.29,
-    chin: 0.43
+    chin: 0.43,
+    scale: 1.12
   },
   kyuko: {
     eye: 0.33,
-    chin: 0.47
+    chin: 0.47,
+    scale: 0.92
   },
   sorashido: {
     eye: 0.31,
-    chin: 0.47
+    chin: 0.47,
+    scale: 0.98
   },
   erubin: {
     eye: 0.31,
-    chin: 0.47
+    chin: 0.47,
+    scale: 1.05
   }
 });
 const assistantLifeStandFace = (pid, src) => {
@@ -107447,7 +107456,6 @@ const assistantLifeStandFace = (pid, src) => {
 const assistantLifeStandLayout = (items, W, H) => {
   const n = items.length;
   if (!n || !W || !H || items.some(x => !x.box)) return null;
-  const floor = H - Math.max(H * 0.22, Math.min(150, H * 0.3));
   const sw = W * 0.92 / n;
   const fh = H * {
     1: 0.085,
@@ -107455,8 +107463,9 @@ const assistantLifeStandLayout = (items, W, H) => {
     3: 0.064,
     4: 0.055
   }[Math.min(4, n)];
-  const visH = (x, F) => x.face.head ? F * 2.4 : F / (x.face.chin - x.face.eye);
+  const visH = (x, F) => (x.face.head ? F * 2.4 : F / (x.face.chin - x.face.eye)) * (x.face.scale || 1);
   const visW = (x, F) => visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
+  const eyeY = H * (W > H ? 0.36 : 0.42);
   let F = fh;
   for (const x of items) {
     const w1 = visW(x, 1);
@@ -107466,17 +107475,19 @@ const assistantLifeStandLayout = (items, W, H) => {
     const vh = visH(x, F),
       ih = vh / (x.box.b - x.box.t),
       iw = ih * x.box.ar;
-    const visTop = floor - vh;
+    const visTop = eyeY - (x.face.eye || 0.4) * vh;
     const cx = W * 0.04 + sw * (i + 0.5);
+    const fade = x.face.head ? null : [x.box.t + Math.min(0.95, (x.face.chin || 0.5) + 0.18) * (x.box.b - x.box.t), x.box.b];
     return {
       top: visTop - x.box.t * ih,
       height: ih,
       left: cx - (x.box.l + x.box.r) / 2 * iw,
       width: iw,
       cx,
-      face: F,
+      face: F * (x.face.scale || 1),
       visTop,
-      visBottom: visTop + vh
+      visBottom: visTop + vh,
+      fade
     };
   });
 };
@@ -107550,7 +107561,11 @@ function AssistantLifeStands({
         maxWidth: 'none',
         bottom: 'auto',
         objectFit: 'fill',
-        filter
+        filter,
+        ...(p.fade ? {
+          WebkitMaskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)`,
+          maskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)`
+        } : {})
       } : {
         opacity: 0,
         height: '50%',

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 91519eee12f5df90
+// generated-sha256: 5c0fdf420cb9ba45
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -63569,9 +63569,10 @@ const assistantLifeStandBox = (src) => new Promise((res) => {
 //   (docs/progress/assistant-peer/gifts/stagec/STAND-MEASURE.md)。「目から顎まで」を全員同じ長さにして、頭の大きさをそろえる
 //   eye・chin … 見えている体の上を0・下を1とした目・顎の高さ / head … 顔だけの絵(ドラ)。頭ひとつぶんの大きさで床に置く
 const ASSISTANT_LIFE_STAND_FACE = Object.freeze({
-  mua: { eye: 0.34, chin: 0.46 }, kiki: { eye: 0.46, chin: 0.58 }, momosuke: { eye: 0.44, chin: 0.55 }, dra: { head: true },
-  atsu: { eye: 0.29, chin: 0.43 }, kyuko: { eye: 0.33, chin: 0.47 }, sorashido: { eye: 0.31, chin: 0.47 }, erubin: { eye: 0.31, chin: 0.47 },
+  mua: { eye: 0.34, chin: 0.46, scale: 1.12 }, kiki: { eye: 0.46, chin: 0.58, scale: 1 }, momosuke: { eye: 0.44, chin: 0.55, scale: 0.85 }, dra: { head: true, eye: 0.46, scale: 1.3 },
+  atsu: { eye: 0.29, chin: 0.43, scale: 1.12 }, kyuko: { eye: 0.33, chin: 0.47, scale: 0.92 }, sorashido: { eye: 0.31, chin: 0.47, scale: 0.98 }, erubin: { eye: 0.31, chin: 0.47, scale: 1.05 },
 });
+//   scale … 8人を同じ床に並べた並び絵(gifts/stagec/lineup.png)を目で見て、顔の幅(髪を除く)がそろうように手で決めた補正(2026-11-08 社長「まだサイズバランスがあってない」。測った数字は目安)
 // 着替えなど表に無い絵は、8人のふつうの形で見る
 const assistantLifeStandFace = (pid, src) => {
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
@@ -63580,22 +63581,25 @@ const assistantLifeStandFace = (pid, src) => {
 };
 // 場面の大きさ(W×H px)と、並ぶ人の絵の見えている範囲から、1人ずつの置き場所を決める(px)
 //   ・目から顎までの長さ F を全員同じに。F は人数で決める高さの割合と、1人の見えている幅が受け持ちの幅を大きく超えない長さの小さいほう
-//   ・体の下端を床の線にそろえる(上半身で切れている絵が宙に浮かない。背丈の差はそのまま出る)
+//   ・顔(目の高さ)を、縦は場面の上から4割あたり・横は3割5分あたりにそろえる(2026-11-08 社長「画面の下に小さく固まり、上半分が空いている」)
+//   ・体の下のほうは、なめらかに消す(上半身で切れている絵の切れ目が宙に浮いて見えない)
 const assistantLifeStandLayout = (items, W, H) => {
   const n = items.length;
   if (!n || !W || !H || items.some(x => !x.box)) return null;
-  const floor = H - Math.max(H * 0.22, Math.min(150, H * 0.3));
   const sw = (W * 0.92) / n;
   const fh = H * ({ 1: 0.085, 2: 0.075, 3: 0.064, 4: 0.055 }[Math.min(4, n)]);
-  const visH = (x, F) => (x.face.head ? F * 2.4 : F / (x.face.chin - x.face.eye));
+  const visH = (x, F) => (x.face.head ? F * 2.4 : F / (x.face.chin - x.face.eye)) * (x.face.scale || 1);
   const visW = (x, F) => visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
+  const eyeY = H * (W > H ? 0.36 : 0.42);
   let F = fh;
   for (const x of items) { const w1 = visW(x, 1); if (w1 > 0) F = Math.min(F, (sw * 1.08) / w1); }
   return items.map((x, i) => {
     const vh = visH(x, F), ih = vh / (x.box.b - x.box.t), iw = ih * x.box.ar;
-    const visTop = floor - vh;
+    const visTop = eyeY - (x.face.eye || 0.4) * vh;
     const cx = W * 0.04 + sw * (i + 0.5);
-    return { top: visTop - x.box.t * ih, height: ih, left: cx - ((x.box.l + x.box.r) / 2) * iw, width: iw, cx, face: F, visTop, visBottom: visTop + vh };
+    // 体の下のほうを消す所(絵の高さに対する割合)。顎の少し下から見えている下端まで
+    const fade = x.face.head ? null : [x.box.t + Math.min(0.95, (x.face.chin || 0.5) + 0.18) * (x.box.b - x.box.t), x.box.b];
+    return { top: visTop - x.box.t * ih, height: ih, left: cx - ((x.box.l + x.box.r) / 2) * iw, width: iw, cx, face: F * (x.face.scale || 1), visTop, visBottom: visTop + vh, fade };
   });
 };
 function AssistantLifeStands({ ids, sleepIds = [] }) {
@@ -63623,7 +63627,8 @@ function AssistantLifeStands({ ids, sleepIds = [] }) {
     return (<React.Fragment key={x.pid}>
       <img className="st" data-assistant-life-scene-stand={x.pid} data-assistant-life-scene-sleep={zz ? '1' : '0'} src={x.src} alt=""
         data-assistant-life-scene-face={p ? Math.round(p.face) : ''} data-assistant-life-scene-vis={p ? `${Math.round(p.visTop)},${Math.round(p.visBottom)}` : ''}
-        style={p ? { left: p.left, top: p.top, height: p.height, width: p.width, maxWidth: 'none', bottom: 'auto', objectFit: 'fill', filter } : { opacity: 0, height: '50%', filter }}/>
+        style={p ? { left: p.left, top: p.top, height: p.height, width: p.width, maxWidth: 'none', bottom: 'auto', objectFit: 'fill', filter,
+          ...(p.fade ? { WebkitMaskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)`, maskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)` } : {}) } : { opacity: 0, height: '50%', filter }}/>
       {zz && p && <span className="absolute text-[34px]" style={{ left: p.cx + 20, top: Math.max(40, p.visTop) }} aria-hidden="true">💤</span>}
     </React.Fragment>); })}</>);
 }
