@@ -49,6 +49,14 @@ const CHANGELOG = [
     ],
   },
   {
+    date: "2026-11-08 13:58", type:'update', title:'助手のマスモンが、助手の部屋にいるようになりました', status:'new', group:'assistant',
+    items:[
+      '助手の部屋に、その日の当番のマスモンが1体いて、部屋の中を歩き回ります。当番は日ごとに交代します',
+      '助手が出かけているときは、一緒に出かけたり、部屋でるすばんしたりします',
+      '部屋を押すと「🐾 マスモン」の行の「🐾 いま」で、マスモンがどこにいるかが分かります',
+    ],
+  },
+  {
     date: "2026-11-08 13:04", type:'update', title:'ミッションが、いまの遊びに合わせて新しくなりました', status:'new', group:'other',
     assistantNotice:{ id:'update_notice_mission_renewal_v1', type:'content' },
     items:[
