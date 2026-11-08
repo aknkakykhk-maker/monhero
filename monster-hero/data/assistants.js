@@ -1271,6 +1271,8 @@ const ASSISTANT_BOND_ACTIONS = {
   peerDaily:  { amount:20, dailyMax:20, label:'今日のペアを達成する', releaseFlag:'assistantPeer' },
   peerGift:   { amount:30, dailyMax:30, label:'助手どうしに差し入れをする', releaseFlag:'assistantPeer' },
   peerToken:  { amount:25, dailyMax:25, label:'助手どうしに友情のしるしを使う', releaseFlag:'assistantPeer' },
+  // 助手ライフで2人に道具を贈る(2026-11-08 社長 GIFT-PLAN.md)。量は道具と好みで変わるので、1回ぶんは呼ぶ側が渡す(いちばん多くて 40×1.5=60・1日3回)
+  lifeGift:   { amount:60, dailyMax:180, label:'助手ライフで道具を贈る', releaseFlag:'assistantLife' },
   peerPlay:   { amount:6,  dailyMax:24, label:'ペアを連れて遊ぶ', releaseFlag:'assistantPeer' },
   // ③ 3人の掛け合いは3人それぞれ・ミニイベントと仲直りは2人それぞれ(2026-11-07 社長)
   peerTrio:   { amount:3,  dailyMax:6,  label:'助手3人の掛け合いを見る', releaseFlag:'assistantPeer' },
@@ -13025,6 +13027,8 @@ const ASSISTANT_PEER_BOND_ACTIONS = Object.freeze({
   // ② 差し入れ・友情のしるし(ビートP交換所の品物。どちらも全体で1日1回)・ペアで遊ぶ(2026-11-07 社長)
   gift:   { amount:15, dailyMax:15, label:'差し入れをもらった', uncapped:true },
   token:  { amount:30, dailyMax:30, label:'友情のしるしを使った', uncapped:true },
+  // 助手ライフの道具(2026-11-08)。量は道具と2人の好みで変わるので呼ぶ側が渡す(いちばん多くて 30×1.5=45・1日3回)
+  lifeItem: { amount:45, dailyMax:135, label:'道具をもらった', uncapped:true },
   play:   { amount:4, dailyMax:12, label:'いっしょに遊びに行った' },
   // モンヒロビートの助手とのセッション: 2人で部屋に呼ばれて1曲終えた(2026-11-07 社長の決定・ビート部マモリ。公開の印 rhythmAssistantSession の後ろで足す)
   session: { amount:3, dailyMax:12, label:'2人でセッションをした' },
@@ -15009,6 +15013,64 @@ const ASSISTANT_PEER_REACTIONS = Object.freeze({
   kyuko:     { gift:{ e:'happy', t:'差し入れだぁ、ありがとん笑 {c}と分けるね' }, token:{ e:'wink', t:'友情のしるし、うれしいなぁ🥺 {c}、よろしくね' }, play:{ e:'happy', t:'{c}と応援してたよぉ。おつかれさま笑' } },
   sorashido: { gift:{ e:'excited', t:'差し入れ！？ ありがとうだぜ・・・！ {c}と分けるぜ笑' }, token:{ e:'happy', t:'友情のしるし…でーじうれしいぜ！ {c}、これからも頼むな' }, play:{ e:'excited', t:'{c}と記録とってたぜ・・・！ いい結果だったな笑' } },
   erubin:    { gift:{ e:'happy', t:'差し入れ、ありがとう。{c}と一緒にいただくね' }, token:{ e:'wink', t:'友情のしるし、大切にするね。{c}もよろしくね' }, play:{ e:'happy', t:'{c}と見守ってたよ。おつかれさまだね' } },
+});
+
+// ===== 助手ライフの道具(2人に贈る)・好み(2026-11-08 社長 docs/progress/assistant-peer/GIFT-PLAN.md) =====
+// key … 好みの表・台詞で使う名前 / kind … 渡す処理の名前(今の2つは gift・token のまま) / itemId … 持ち物の id(今の2つは peer_gift・peer_token のまま)
+// peer … 2人の友情Lv(ふつうのとき) / player … あなたとの仲良し度(1人ずつ・ふつうのとき)。今の2つは今と同じ数
+// 名前・絵・値段は持ち物(BREEDER_MARKET_ITEMS)と交換所(RHYTHM_EVENT_POINT_SHOP_OFFERS)が正本
+const ASSISTANT_LIFE_GIFTS = Object.freeze([
+  Object.freeze({ key:'basket',   kind:'gift',     itemId:'peer_gift',     peer:15, player:30, what:'2人でつまむおやつのかご。2人でおやつの時間をすごします' }),
+  Object.freeze({ key:'misanga',  kind:'token',    itemId:'peer_token',    peer:30, player:25, what:'2人でつけるおそろいのミサンガ。2人の友情がぐっと深まります' }),
+  Object.freeze({ key:'cake',     kind:'cake',     itemId:'peer_cake',     peer:20, player:40, what:'ふたり分のショートケーキ。はんぶんこして食べます' }),
+  Object.freeze({ key:'onigiri',  kind:'onigiri',  itemId:'peer_onigiri',  peer:10, player:25, what:'具だくさんのおにぎり。おなかが空いたときの元気のもと' }),
+  Object.freeze({ key:'tea',      kind:'tea',      itemId:'peer_tea',      peer:15, player:35, what:'紅茶とお菓子のセット。のんびりお茶の時間をすごします' }),
+  Object.freeze({ key:'earphone', kind:'earphone', itemId:'peer_earphone', peer:25, player:40, what:'1つのイヤホンを片耳ずつ。2人で同じ曲を聴きます' }),
+  Object.freeze({ key:'puzzle',   kind:'puzzle',   itemId:'peer_puzzle',   peer:25, player:35, what:'2人で解く絵のパズル。じっくり考える時間をすごします' }),
+  Object.freeze({ key:'sleeve',   kind:'sleeve',   itemId:'peer_sleeve',   peer:25, player:40, what:'カードを入れるおそろいのスリーブ。カードの話がはずみます' }),
+  Object.freeze({ key:'cheki',    kind:'cheki',    itemId:'peer_cheki',    peer:25, player:40, what:'その場で写真が出るカメラ。思い出アルバムに2人の1枚が増えます' }),
+  Object.freeze({ key:'flower',   kind:'flower',   itemId:'peer_flower',   peer:15, player:35, what:'小さな花束を2つ。部屋に飾って、2人で花をながめます' }),
+]);
+// 好み(社長 OK の表のまま)。書いていないものは「ふつう」。1人に好き3つ・苦手2つ(tools/assistant/assistant-life-gift-check.js が数える)
+const ASSISTANT_LIFE_GIFT_LIKES = Object.freeze({
+  mua:       Object.freeze({ like:['misanga','cake','cheki'],    bad:['puzzle','sleeve'] }),
+  kiki:      Object.freeze({ like:['tea','puzzle','flower'],     bad:['onigiri','earphone'] }),
+  momosuke:  Object.freeze({ like:['cake','earphone','cheki'],   bad:['tea','puzzle'] }),
+  dra:       Object.freeze({ like:['basket','cake','onigiri'],   bad:['puzzle','flower'] }),
+  atsu:      Object.freeze({ like:['misanga','onigiri','earphone'], bad:['tea','flower'] }),
+  kyuko:     Object.freeze({ like:['tea','earphone','puzzle'],   bad:['basket','cheki'] }),
+  sorashido: Object.freeze({ like:['onigiri','puzzle','sleeve'], bad:['tea','flower'] }),
+  erubin:    Object.freeze({ like:['tea','sleeve','flower'],     bad:['cake','earphone'] }),
+});
+// 好みで変わる量(仲良し度は1人ずつ・友情Lv は2人の平均)。苦手でも必ず上がる
+const ASSISTANT_LIFE_GIFT_MULT = Object.freeze({ like:1.5, mid:1, bad:0.5 });
+// 1日に贈れる回数(同じ道具は1日1回・合わせてこの回数まで。朝4時に戻る)
+const ASSISTANT_LIFE_GIFT_DAILY_MAX = 3;
+// 贈ったときのひとこと(仮)。コトバ・ツムギの台詞(lines/ORDER-GIFT.md の gift)が届くまで、好み別に1つずつ。{item} は道具の名前、{c} は相手、{name} はプレイヤー
+const ASSISTANT_LIFE_GIFT_TEMP_LINES = Object.freeze({
+  mua:       { like:{ e:'excited', t:'え、{item}！？ {name}わかってるぢゃん♪ {c}、一緒に使お！' }, mid:{ e:'happy', t:'{item}ありがと♪ {c}と半分こするね！' }, bad:{ e:'troubled', t:'{item}かぁ…あたしにはむずいかも。でも気持ちはうれしいよ♪' } },
+  kiki:      { like:{ e:'happy', t:'{item}…！ 好きなものでつ。{c}といただきまつね♪' }, mid:{ e:'happy', t:'{item}、ありがとうございまつ。{c}と大事にしますね' }, bad:{ e:'troubled', t:'あら、{item}でつか…。{c}に多めにお任せしまつね。お気持ちはうれしいです' } },
+  momosuke:  { like:{ e:'excited', t:'{item}！？ ももの好きなやつじゃん！！ さすがっ♡' }, mid:{ e:'happy', t:'{item}だ！ {c}、一緒に使お！！' }, bad:{ e:'troubled', t:'うーん、{item}はももにはちょっと渋いかもw でもありがと♡' } },
+  dra:       { like:{ e:'excited', t:'おお、{item}！ これ好きなんだよな、えへへ。{c}、分けような' }, mid:{ e:'happy', t:'{item}か、ありがたいな。{c}と使うわ' }, bad:{ e:'troubled', t:'{item}…どうすりゃいいんだ、これ。まあ、気持ちはうれしいからな' } },
+  atsu:      { like:{ e:'excited', t:'{item}じゃん！ わかってるね笑 {c}、使お！' }, mid:{ e:'happy', t:'{item}ありがと笑 {c}と使うわ！' }, bad:{ e:'troubled', t:'{item}か…ちょっと照れるな笑 でもありがとね！' } },
+  kyuko:     { like:{ e:'excited', t:'ほい！ {item}だぁ、好きなやつ笑 {c}、一緒に使おぉ' }, mid:{ e:'happy', t:'{item}、ありがとん笑 {c}と分けるね' }, bad:{ e:'troubled', t:'{item}かぁ…ちょっと苦手かもぉ。でも気持ちはうれしいよ笑' } },
+  sorashido: { like:{ e:'excited', t:'うぉぉぉ！ {item}！ でーじうれしいぜ・・・！ {c}、使おうぜ笑' }, mid:{ e:'happy', t:'{item}、ありがとうだぜ！ {c}と分けるぜ笑' }, bad:{ e:'troubled', t:'{item}か・・・俺にはちょっと落ち着かないな笑 でもありがとな' } },
+  erubin:    { like:{ e:'happy', t:'{item}だ、うれしいな。{c}と一緒に使うね' }, mid:{ e:'happy', t:'{item}、ありがとう。{c}と大事にするね' }, bad:{ e:'troubled', t:'{item}か…俺は控えめにしとこうかな。気持ちはうれしいよ' } },
+});
+// 贈ったときの台詞(コトバ・ツムギ。lines/ORDER-GIFT.md の gift・hint を取り込んだもの)。{ [助手]: { [key]: [{ like, e, t }] } } / { [助手]: { [key]: { e, t } } }
+// 空のあいだは上の仮の1行(TEMP)を使う
+const ASSISTANT_LIFE_GIFT_LINES = Object.freeze({"atsu":{"basket":[{"like":"mid","e":"happy","t":"おやつバスケットだ！ {c}、一緒に食べよ笑"},{"like":"mid","e":"normal","t":"バスケットいっぱいじゃん！ {name}、ありがと笑"}],"misanga":[{"like":"like","e":"excited","t":"おそろいのミサンガ！？ {c}、今すぐつけよ笑"},{"like":"like","e":"happy","t":"これ、勝負のお守りにする！ {name}、まじでありがと笑"}],"cake":[{"like":"mid","e":"happy","t":"はんぶんこケーキね笑 {c}、半分ずつね！"},{"like":"mid","e":"normal","t":"ケーキだ！ 練習のあとに食べよ笑"}],"onigiri":[{"like":"like","e":"excited","t":"ほかほかおにぎり！ 腹へってたんだよね笑"},{"like":"like","e":"happy","t":"{name}、わかってる！ {c}、具はどっちにする？笑"}],"tea":[{"like":"bad","e":"troubled","t":"ティーセットか…俺、飲み方わかんないかも笑 {c}、教えて！"},{"like":"bad","e":"normal","t":"気持ちはうれしい！ {c}にいれてもらお笑"}],"earphone":[{"like":"like","e":"excited","t":"かたみみイヤホン！ {c}と同じ曲、聞きながら練習しよ笑"},{"like":"like","e":"happy","t":"これいい！ {name}、ありがと( *'ω'*)ノ"}],"puzzle":[{"like":"mid","e":"normal","t":"パズルか笑 {c}、どっちが早く解けるか勝負ね！"},{"like":"mid","e":"happy","t":"ふたりで解くパズル…勢いでいけるかな笑"}],"sleeve":[{"like":"mid","e":"happy","t":"おそろいのスリーブ！ {c}、次の対戦これで出よ笑"},{"like":"mid","e":"normal","t":"スリーブね！ デッキが引きしまる感じする笑"}],"cheki":[{"like":"mid","e":"happy","t":"チェキだ！ {c}、一枚撮ろ笑"},{"like":"mid","e":"normal","t":"思い出チェキね笑 勝ったときに撮ろ！"}],"flower":[{"like":"bad","e":"troubled","t":"花束…俺、枯らさないか心配笑 {c}、水やり手伝って！"},{"like":"bad","e":"normal","t":"ちいさな花束かぁ！ 気持ちはうれしい、ありがと笑"}]},"erubin":{"basket":[{"like":"mid","e":"happy","t":"おやつバスケット、ありがとう。{c}、一緒に選ぼうか"},{"like":"mid","e":"normal","t":"いろいろ入ってるね。みんなの分もありそうだね"}],"misanga":[{"like":"mid","e":"happy","t":"おそろいのミサンガ、うれしいね。{c}、つけてみようか"},{"like":"mid","e":"normal","t":"ミサンガ、ありがとう。大事にするね"}],"cake":[{"like":"bad","e":"troubled","t":"はんぶんこケーキか…甘いのは少しだけでいいかな。{c}、多めに食べてくれる？"},{"like":"bad","e":"normal","t":"気持ちはうれしいよ。{c}と分ければ、ちょうどいいかな"}],"onigiri":[{"like":"mid","e":"happy","t":"ほかほかおにぎり、ありがとう。{c}、あたたかいうちに食べよう"},{"like":"mid","e":"normal","t":"おにぎり、うれしいね。ベンチで食べようか"}],"tea":[{"like":"like","e":"excited","t":"ティーセット！ {name}、ありがとう。{c}、さっそくいれてみようか"},{"like":"like","e":"happy","t":"いい香りだね。こういうのが一番うれしいんだ☺️"}],"earphone":[{"like":"bad","e":"troubled","t":"かたみみイヤホンか…まだ慣れてないけど、{c}が教えてくれるかな"},{"like":"bad","e":"normal","t":"気持ちはうれしいよ。{c}のおすすめの曲、聞いてみようかな"}],"puzzle":[{"like":"mid","e":"normal","t":"ふたりで解くパズル、いいね。{c}、ゆっくり解こうか"},{"like":"mid","e":"happy","t":"パズルか。のんびり考えるのも楽しいね"}],"sleeve":[{"like":"like","e":"excited","t":"おそろいスリーブ！ デュラハンのカードに使おうかな"},{"like":"like","e":"happy","t":"{name}、ありがとう。{c}、次の対戦で一緒に使おうね😊"}],"cheki":[{"like":"mid","e":"happy","t":"思い出チェキ、いいね。{c}、一枚撮ろうか"},{"like":"mid","e":"normal","t":"チェキ、ありがとう。いい思い出になるね"}],"flower":[{"like":"like","e":"excited","t":"ちいさな花束！ {name}、ありがとう。部屋に飾るね"},{"like":"like","e":"happy","t":"きれいだね。{c}も、一本どうかな？☺️"}]},"kyuko":{"basket":[{"like":"bad","e":"troubled","t":"おやつバスケット…いっぱいで迷っちゃうなぁ。{c}、先に選んでよぉ"},{"like":"bad","e":"normal","t":"気持ちはうれしいよぉ。{c}と分けたら、ちょうどいいかもねぇ"}],"misanga":[{"like":"mid","e":"happy","t":"おそろいのミサンガかぁ。{c}、つけてみよっか笑"},{"like":"mid","e":"normal","t":"ほい、ミサンガ。切れたら願いがかなうんだっけぇ"}],"cake":[{"like":"mid","e":"happy","t":"はんぶんこケーキだぁ。{c}、きっちり半分ねぇ笑"},{"like":"mid","e":"normal","t":"ケーキ、ありがとん笑 甘いの食べると頭が回るんだよねぇ"}],"onigiri":[{"like":"mid","e":"normal","t":"ほかほかおにぎり、ありがとん笑"},{"like":"mid","e":"happy","t":"{c}、具は何かなぁ。当てっこしよ笑"}],"tea":[{"like":"like","e":"excited","t":"ティーセット！ {name}、わかってるぅ笑 {c}、本を読みながら飲も"},{"like":"like","e":"happy","t":"これ、ほしかったやつだぁ。ありがとん、{name}🥺"}],"earphone":[{"like":"like","e":"excited","t":"かたみみイヤホン！ {c}、俺のおすすめの曲、聞いてよぉ"},{"like":"like","e":"happy","t":"音楽、ふたりで聞けるのいいねぇ。ありがとん笑"}],"puzzle":[{"like":"like","e":"excited","t":"ふたりで解くパズル！ {c}、作戦立ててから始めよぉ"},{"like":"like","e":"happy","t":"パズル、たまらないんだよねぇ。{name}、さすがだぁ笑"}],"sleeve":[{"like":"mid","e":"normal","t":"おそろいスリーブ、いいねぇ。{c}、デッキ見せ合お笑"},{"like":"mid","e":"happy","t":"ほい。カードが長持ちしそうだぁ"}],"cheki":[{"like":"bad","e":"troubled","t":"チェキかぁ…写るの、ちょっと照れるんだよねぇ"},{"like":"bad","e":"normal","t":"気持ちはうれしいよぉ。{c}が撮ってくれるなら、写ってもいいかなぁ"}],"flower":[{"like":"mid","e":"happy","t":"ちいさな花束、かわいいねぇ。{c}、どこに飾ろっか"},{"like":"mid","e":"normal","t":"ほい、花束。本の横に置くと、いい感じだねぇ"}]},"sorashido":{"basket":[{"like":"mid","e":"happy","t":"おやつバスケット！ 中身、数えてもいいか？笑"},{"like":"mid","e":"normal","t":"{c}、バスケットの中、半分ずつ分けよう"}],"misanga":[{"like":"mid","e":"happy","t":"おそろいのミサンガか。{c}、勝負の日につけよう"},{"like":"mid","e":"normal","t":"ミサンガ、ありがとう。結び目の数、ちょうど7つだな笑"}],"cake":[{"like":"mid","e":"happy","t":"はんぶんこケーキ！ 半分の角度は計算済みだぞ笑"},{"like":"mid","e":"normal","t":"{c}、ケーキはちょうど半分にしよう"}],"onigiri":[{"like":"like","e":"excited","t":"ほかほかおにぎり！ うぉぉぉ、ありがとう！"},{"like":"like","e":"happy","t":"{name}、腹ぺこなのを計算されてたな笑 {c}、一緒に食べよう"}],"tea":[{"like":"bad","e":"troubled","t":"ティーセットか…ゆっくり飲むの、そわそわしちゃうんだよな笑"},{"like":"bad","e":"normal","t":"気持ちはうれしいぞ。{c}、いれ方を教えてくれるか？"}],"earphone":[{"like":"mid","e":"normal","t":"かたみみイヤホン！ {c}、同じ曲のBPM、当てっこしよう"},{"like":"mid","e":"happy","t":"イヤホン、ありがとう。曲を聞きながら表を作れるな"}],"puzzle":[{"like":"like","e":"excited","t":"ふたりで解くパズル！ これは燃えるぜ・・・！"},{"like":"like","e":"happy","t":"{c}、解く順番を表にしてから始めよう笑"}],"sleeve":[{"like":"like","e":"excited","t":"おそろいスリーブ！ デッキがでーじかっこよくなるぜ・・・！"},{"like":"like","e":"happy","t":"{name}、ありがとな！ {c}、次の対戦はこれで出よう"}],"cheki":[{"like":"mid","e":"happy","t":"思い出チェキか。{c}、勝った記念に一枚撮ろう"},{"like":"mid","e":"normal","t":"チェキ、ありがとう。表に貼っておくぞ笑"}],"flower":[{"like":"bad","e":"troubled","t":"花束か…どう飾ればいいか、計算が出ないな笑"},{"like":"bad","e":"normal","t":"気持ちはうれしいぞ。{c}、飾り方を教えてくれないか"}]}});
+const ASSISTANT_LIFE_GIFT_HINT_LINES = Object.freeze({});
+// 仲良し度の段が上がったとき、好きなものを1つ教えてくれるひとこと(仮。lines/ORDER-GIFT.md の hint が届くまで)
+const ASSISTANT_LIFE_GIFT_HINT_TEMP = Object.freeze({
+  mua:       { e:'wink', t:'最近ね〜、{item}が気になってるんだよね。{name}、覚えといて♪' },
+  kiki:      { e:'wink', t:'そういえば…{item}をいただくと、私うれしいでつ♪' },
+  momosuke:  { e:'wink', t:'ねぇ{name}、ももね、{item}好きなんだ〜♡ 覚えといて！' },
+  dra:       { e:'happy', t:'そういや、おで{item}が好きなんだよな。えへへ' },
+  atsu:      { e:'wink', t:'てか、俺{item}好きなんだよね笑' },
+  kyuko:     { e:'wink', t:'ほい、ひとつ教えとくね。{item}、けっこう好きなんだぁ笑' },
+  sorashido: { e:'excited', t:'俺の好きなもの、教えとくぜ・・・！ {item}だ笑' },
+  erubin:    { e:'happy', t:'実はね、{item}が好きなんだ。{name}には言っとこうかな' },
 });
 
 // ===== ③ ミニイベント・3人の掛け合い・けんか→仲直り(2026-11-07 社長が選んだ作りこみ・ナカヨシ) =====
