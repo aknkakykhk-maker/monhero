@@ -7,7 +7,7 @@
 //   LIFE_BASE=https://aknkakykhk-maker.github.io/monhero/ で本番の版を見る(公開後の確かめ)
 // 見るもの:
 //   ① 部屋のシートに「🐾 マスモン」の1行があり、押すとシートが開く/4つのタブ(マスモン・編成・デッキ・好き苦手)が全部出る
-//   ② マスモンは3体・先頭が1体・染めた絵が出ている(絵の読み込みに失敗していない)
+//   ② マスモンは仲良し度 Lv までの数(引き直し: Lv1 で1体・Lv2 ごとに1体・最大8体)・勇者モンが1体・染めた絵が出ている(絵の読み込みに失敗していない)
 //   ③ 枠の端にカードがくっつかない(パネルの左右から 6px 以上あける)・横にはみ出さない・名前が「…」で切れない
 //   ④ 口: assistantLifeCardStyle・assistantLifeTasteOf が8人ぶん返る(印が偽なら null)
 //   ⑤ 部屋にいるマスモン: 札・顔・吹き出し・扉・名札に重ならない/部屋からはみ出さない/一緒に出かけたマスモンは部屋に出ない/歩く/動きを減らす設定では止まる
@@ -94,8 +94,8 @@ const layoutProblems = (page) => page.evaluate(() => {
         await page.evaluate(() => window.dispatchEvent(new Event('resize')));
       }
       if (process.env.MASMON_REAL_NAMES && v.id === 'p') {
-        await page.waitForFunction(() => ASSISTANT_MASMON_STORE.state.named === true, null, { timeout: 40000 }).catch(() => {});
-        const r = await page.evaluate(() => { const st = ASSISTANT_MASMON_STORE.state; const all = Object.values(st.made).flat(); return { named: st.named, ai: all.filter(t => t.ai).length, n: all.length, kiki: (st.made.kiki || []).map(t => t.nick).join('・') }; });
+        await page.waitForFunction(() => ASSISTANT_MASMON_STORE.state.draw.named === true, null, { timeout: 40000 }).catch(() => {});
+        const r = await page.evaluate(() => { const st = ASSISTANT_MASMON_STORE.state; const all = Object.values(st.draw.made).flat(); return { named: st.draw.named, ai: all.filter(t => t.ai).length, n: all.length, kiki: (st.draw.made.kiki || []).map(t => t.nick).join('・') }; });
         check(`${T0}本番の関数で AI の名前が入る(印 assistantMasmonNamesApi)`, r.named && r.ai >= r.n * 0.7, `${r.ai}/${r.n}体 きき: ${r.kiki}`);
       }
       { // ⑤ 部屋にいるマスモン(染めた絵ができるのを待つ)
@@ -155,7 +155,8 @@ const layoutProblems = (page) => page.evaluate(() => {
       for (const WHO of WHOS) {
       const T = `${T0}${WHO} `;
       const low = !!process.env.MASMON_LOW_BOND; // 仲良し度が低い(まだ迎えていない)ときの確かめ
-      const want = await page.evaluate(({ id, low }) => { const p = ASSISTANT_MASMON_PLAN.find(a => a.id === id); const n = low ? 0 : (p.extra || []).length; return { deck: p.deck.name, colors: p.favColors.length, dis: p.dislikeMon.length, all: p.team.length + n, bench: n }; }, { id: WHO, low });
+      // 引き直し(draw v:2): 仲良し度 Lv1 で1体・Lv2 ごとに1体(最大8体)。迎える場面は、まとめて迎えた最後の1体だけ
+      const want = await page.evaluate(({ id, low }) => { const p = ASSISTANT_MASMON_PLAN.find(a => a.id === id); const key = id === 'mua' ? 'mh_assistant_bond_v1' : `mh_assistant_bond_${id}_v1`; let pts = 0; try { pts = normalizeAssistantBond(JSON.parse(localStorage.getItem(key))).points; } catch (_) {} const lv = low ? 1 : assistantBondLevel(pts); const made = (ASSISTANT_MASMON_STORE.state.draw.made[id] || []); const all = made.filter(t => t.welcome <= lv).length; return { deck: p.deck.name, colors: p.favColors.length, dis: p.dislikeMon.length, all, bench: all > 1 ? 1 : 0, total: made.length, lv }; }, { id: WHO, low });
       await page.locator(`[data-assistant-life-room="${WHO}"]`).first().click({ timeout: 8000 });
         await page.locator('[data-assistant-life-room-sheet]').waitFor({ timeout: 5000 });
         const row = page.locator('[data-assistant-life-room-masmon]');
@@ -169,7 +170,7 @@ const layoutProblems = (page) => page.evaluate(() => {
           const sc = page.locator('[data-assistant-masmon-welcome]');
           await sc.waitFor({ timeout: 4000 }).catch(() => {});
           const line = await page.locator('[data-assistant-masmon-welcome-line]').innerText().catch(() => '');
-          check(`${T}迎える場面 ${k + 1}体目(ひとこと・名前入り)`, (await sc.count()) === 1 && line.length > 10 && !/\{(name|mon|nick)\}/.test(line), line.slice(0, 40));
+          check(`${T}迎える場面(まとめて迎えた最後の1体・ひとこと・名前入り)`, (await sc.count()) === 1 && line.length > 10 && !/\{(name|mon|nick)\}/.test(line), line.slice(0, 40));
           if (SHOTS && k === 0) { await page.waitForTimeout(2500); await page.screenshot({ path: path.join(shotDir, `masmon-7-welcome-${v.id}${WHO !== 'kiki' ? '-' + WHO : ''}.jpg`), type: 'jpeg', quality: 80 }); }
           await page.locator('[data-assistant-masmon-welcome-ok]').click({ timeout: 3000 }).catch(() => {});
           await page.locator('[data-assistant-masmon-close]').click({ timeout: 3000 }).catch(() => {});
@@ -185,7 +186,7 @@ const layoutProblems = (page) => page.evaluate(() => {
           if (tab === 'mons') {
             const n = await page.locator('[data-assistant-masmon-row]').count();
             const leads = await page.locator('[data-assistant-masmon-row] .mhm-lead:not(.mhm-bench)').count();
-            check(`${T}マスモンは編成3体+迎えた${want.bench}体・先頭は1体`, n === want.all && leads === 1, `${n}体・先頭${leads}`);
+            check(`${T}マスモンは仲良し度 Lv${want.lv} までの${want.all}体・勇者モンは1体`, n === want.all && leads === 1, `${n}体・勇者モン${leads}`);
             // 押すと詳細画面(見るだけ)
             await page.locator('[data-assistant-masmon-row]').first().click();
             await page.locator('[data-assistant-masmon-detail]').waitFor({ timeout: 3000 }).catch(() => {});
@@ -195,7 +196,7 @@ const layoutProblems = (page) => page.evaluate(() => {
             if (SHOTS) await page.screenshot({ path: path.join(shotDir, `masmon-6-detail-${v.id}${WHO !== 'kiki' ? '-' + WHO : ''}.jpg`), type: 'jpeg', quality: 80 });
             await page.locator('[data-assistant-masmon-detail-close]').click({ timeout: 3000 }).catch(() => {});
           }
-          if (tab === 'team') check(`${T}編成に3体・迎えた${want.bench}体(控え)・編成の型`, (await page.locator('[data-assistant-masmon-team]').count()) === 3 && (await page.locator('[data-assistant-masmon-bench-mon]').count()) === want.bench && (await page.locator('[data-assistant-masmon-team-info]').count()) === 1);
+          if (tab === 'team') check(`${T}編成: 勇者モン1体・編成${want.all}/8・まだの枠${want.total - want.all}・道中で仲間にしやすい3体`, (await page.locator('[data-assistant-masmon-hero]').count()) === 1 && (await page.locator('[data-assistant-masmon-team]').count()) === want.all && (await page.locator('[data-assistant-masmon-formation] [data-assistant-masmon-wait]').count()) === want.total - want.all && (await page.locator('[data-assistant-masmon-allies]').count()) === 1, `勇者モン${await page.locator('[data-assistant-masmon-hero]').count()}・編成${await page.locator('[data-assistant-masmon-team]').count()}`);
         if (tab !== 'deck') { // 空いた枠: タブの中身が、見える高さの 75% 以上を使う(社長「ページの空き枠をもっと活用して」)。デッキはカード部の部品が入ってから
           const fill = await page.evaluate(() => { const b = document.querySelector('.mhm-body'); if (!b) return 0; const br = b.getBoundingClientRect(); let bottom = br.top; for (const el of b.querySelectorAll('*')) { const r = el.getBoundingClientRect(); if (r.height && r.bottom > bottom) bottom = r.bottom; } return Math.min(1, (bottom - br.top + b.scrollTop) / b.clientHeight); });
           check(`${T}「${tab}」: 中身が見える高さの75%以上を使う(空き枠が少ない)`, fill >= 0.75, `${Math.round(fill * 100)}%`);

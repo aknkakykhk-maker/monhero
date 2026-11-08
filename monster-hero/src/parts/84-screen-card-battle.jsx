@@ -3035,7 +3035,8 @@ const CardPlaylistRows = ({ list, onChange, bgmPreview, tag }) => {
 // バトルカードのトップの上の帯(60-app の renderCardQuickRunStrip)の「詳細」を押したときの窓(2026-10-26 社長「横の経験値とかを詳細ボタンの中に入れればいいよ」)。
 // 数は帯・対戦の盤と同じ所(60-app の cardQuickRunView)から読む。描くのは 60-app(帯と同じ所)
 // quickRun … { live, loops, stopped, xp, gold, difficulty, info:{ wave, reason } } か null(一度も回していない)
-const CardQuickRunDetail = ({ quickRun, autoReady, autoDifficulty, todayLoops = 0, onClose }) => {
+// 助手ライフの裏クイック(2026-11-08)でも同じ窓を使う。todayLoops に null を渡すと「今日バトルカードで足した周回」の行を出さず、note を渡すと下の説明を差し替える(カードからは今までどおり)
+const CardQuickRunDetail = ({ quickRun, autoReady, autoDifficulty, todayLoops = 0, onClose, note = null }) => {
   const live = !!quickRun && !quickRun.stopped;
   const row = (label, value, tone = 'text-white') => (
     <div className="flex items-baseline justify-between gap-3 border-b border-white/10 py-1.5 last:border-b-0">
@@ -3059,11 +3060,11 @@ const CardQuickRunDetail = ({ quickRun, autoReady, autoDifficulty, todayLoops = 
           {quickRun && row('何周目', `${quickRun.loops}周目`)}
           {quickRun && row('この周回でふえたダイヤ', `+${(quickRun.gold || 0).toLocaleString()}`, 'text-emerald-200')}
           {quickRun && row('この周回でふえた経験値', `+${(quickRun.xp || 0).toLocaleString()}`, 'text-emerald-200')}
-          {row('今日バトルカードで足した周回', `${(todayLoops || 0).toLocaleString()}周ぶん`, 'text-sky-100')}
+          {todayLoops !== null && row('今日バトルカードで足した周回', `${(todayLoops || 0).toLocaleString()}周ぶん`, 'text-sky-100')}
         </div>
-        <p className="mt-2 text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(autoReady || quickRun
+        <p className="mt-2 text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(note || (autoReady || quickRun
           ? 'フリー対戦・マルチで戦うと、その分がクイック周回として足されます。裏で回しているときは、いまの周回が進みます。'
-          : 'AUTO設定で、勇者モン・配置距離・難易度の3つを決めると、戦った分がクイック周回として足されます。')}</p>
+          : 'AUTO設定で、勇者モン・配置距離・難易度の3つを決めると、戦った分がクイック周回として足されます。'))}</p>
         <button type="button" data-card-quick-detail-close onClick={onClose} className="mh-button mt-3 min-h-[44px] w-full rounded-2xl border border-white/15 bg-slate-800 text-[14px] font-black text-white active:scale-[.98]">閉じる</button>
       </div>
     </div>
