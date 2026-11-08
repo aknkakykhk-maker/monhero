@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5ed468ab27e52153
+// source-sha256: b8e158a806236871
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -62753,6 +62753,7 @@ const GrowthFxLevelUp = ({
   }, done ? '押すと閉じる' : '押すと先へ'));
 };
 const GROWTH_FX_CHIP_TOPS = [52, 8, 96, 140];
+const GROWTH_FX_CHIP_BUSY_SEL = 'button,a,input,[role="tab"],[role="button"],[data-assistant-bubble],img,svg,p,span,b,small,strong,em,h1,h2,h3,h4,li,label,[data-alf-face]';
 const growthFxChipSpotBusy = box => {
   if (typeof document === 'undefined' || !document.elementsFromPoint) return false;
   const r = box.getBoundingClientRect();
@@ -62763,6 +62764,25 @@ const growthFxChipSpotBusy = box => {
     if (!under) continue;
     if (under.closest('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]')) return true;
     if ([...under.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return true;
+  }
+  const vw = window.innerWidth,
+    vh = window.innerHeight;
+  for (const el of document.querySelectorAll(GROWTH_FX_CHIP_BUSY_SEL)) {
+    if (box.contains(el)) continue;
+    const e = el.getBoundingClientRect();
+    if (!e.width || !e.height || e.width > vw * 0.9 || e.height > vh * 0.5) continue;
+    if (Math.min(r.right, e.right) - Math.max(r.left, e.left) <= 1 || Math.min(r.bottom, e.bottom) - Math.max(r.top, e.top) <= 1) continue;
+    const cs = getComputedStyle(el);
+    if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
+    const isPic = /^(IMG|SVG)$/i.test(el.tagName) || el.hasAttribute('data-alf-face');
+    const isAct = el.matches('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]');
+    const hasText = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+    if (!isPic && !isAct && !hasText) continue;
+    const cx = Math.max(r.left, e.left) + 1,
+      cy = Math.max(r.top, e.top) + 1;
+    const top = document.elementsFromPoint(cx, cy).find(x => !box.contains(x));
+    if (top && !(top === el || el.contains(top) || top.contains(el))) continue;
+    return true;
   }
   return false;
 };
