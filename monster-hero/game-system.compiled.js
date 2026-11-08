@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e73cf7a3ce5f3a70
+// source-sha256: 23c59aba8bb0c4af
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -36089,7 +36089,8 @@ const RhythmSongSelect = ({
   playLabel = '決定',
   playDisabled = false,
   hideRandom = false,
-  unlockAll = false
+  unlockAll = false,
+  songLock = null
 }) => {
   const spot = name => typeof spotClass === 'function' ? spotClass(name) : '';
   useEffect(() => {
@@ -36105,6 +36106,13 @@ const RhythmSongSelect = ({
   const [sortOpen, setSortOpen] = React.useState(false);
   const [genreOpen, setGenreOpen] = React.useState(false);
   const [artZoom, setArtZoom] = React.useState(false);
+  const songLocked = id => !!(songLock && typeof songLock.isLocked === 'function' && songLock.isLocked(id));
+  const songPaid = id => !!(songLock && typeof songLock.isPaid === 'function' && songLock.isPaid(id));
+  const songPrice = id => songLock && typeof songLock.price === 'function' ? songLock.price(id) : 0;
+  const [buyOpen, setBuyOpen] = React.useState(false);
+  const [buyBusy, setBuyBusy] = React.useState(false);
+  const [buyError, setBuyError] = React.useState('');
+  const buyingRef = React.useRef(false);
   const [artPage, setArtPage] = React.useState(0);
   const [lyricFull, setLyricFull] = React.useState(null);
   const artPagesRef = React.useRef(null);
@@ -36193,6 +36201,7 @@ const RhythmSongSelect = ({
     let pick = null;
     for (const entry of playable) {
       if (!entry || rhythmSongVersionHead(entry.songId) !== entry.songId || !rhythmChartPlayable(entry, 'EASY')) continue;
+      if (songPaid(entry.songId)) continue;
       const lv = Number(entry.difficulties.EASY.level);
       const ms = rhythmSongDurationMs(entry, difficulties);
       if (!Number.isFinite(lv) || lv <= 0) continue;
@@ -36242,8 +36251,9 @@ const RhythmSongSelect = ({
     if (song && song.songId !== songId) setSongId(song.songId);
   }, [song ? song.songId : '', songId]);
   const pickRandom = () => {
-    if (!list.length) return;
-    const nextSong = list[Math.floor(Math.random() * list.length)];
+    const pool = list.filter(item => !songLocked(item.songId));
+    if (!pool.length) return;
+    const nextSong = pool[Math.floor(Math.random() * pool.length)];
     const ids = (difficulties || []).filter(item => rhythmChartPlayable(nextSong, item.id) && rhythmDifficultyUnlocked(nextSong.songId, item.id, bestRecords));
     setSongId(nextSong.songId);
     if (ids.length) setDifficultyId(ids[Math.floor(Math.random() * ids.length)].id);
@@ -36518,7 +36528,11 @@ const RhythmSongSelect = ({
       'data-rhythm-song-first': firstSongId
     } : {}, {
       className: "ml-auto shrink-0 rounded-md border border-emerald-300/60 bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-black text-emerald-200"
-    }), "🔰 はじめての1曲"), eventSong && React.createElement("small", _extends({}, main ? {
+    }), "🔰 はじめての1曲"), songLocked(entry.songId) && React.createElement("small", _extends({}, main ? {
+      'data-rhythm-song-locked': entry.songId
+    } : {}, {
+      className: "ml-auto shrink-0 whitespace-nowrap rounded-md border border-violet-300/60 bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-black text-violet-200"
+    }), "🔒 ", songPrice(entry.songId).toLocaleString(), "P"), eventSong && React.createElement("small", _extends({}, main ? {
       'data-rhythm-song-event': entry.songId
     } : {}, {
       className: "ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200"
@@ -36710,7 +36724,17 @@ const RhythmSongSelect = ({
     "data-rhythm-song-random": true,
     onClick: pickRandom,
     className: "min-h-[46px] w-[38%] rounded-xl border border-white/20 bg-slate-900 text-xs font-black text-slate-200 landscape:min-h-[42px]"
-  }, "ランダム"), React.createElement("button", {
+  }, "ランダム"), songLocked(song.songId) ? React.createElement("button", {
+    type: "button",
+    "data-rhythm-song-buy": song.songId,
+    onClick: () => {
+      setBuyError('');
+      setBuyOpen(true);
+      if (songLock && typeof songLock.refresh === 'function') songLock.refresh();
+    },
+    className: "min-h-[46px] flex-1 rounded-xl border border-violet-300/60 bg-gradient-to-r from-violet-600 to-fuchsia-600 px-2 text-sm font-black leading-tight text-white landscape:min-h-[42px]",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`🔒 ${songPrice(song.songId).toLocaleString()} ビートPで買う`)) : React.createElement("button", {
     type: "button",
     "data-rhythm-demo-start": difficulty.id,
     disabled: playDisabled,
@@ -36731,7 +36755,89 @@ const RhythmSongSelect = ({
   }, React.isValidElement(notice) ? React.cloneElement(notice, {
     oneLine: true,
     faceSize: 28
-  }) : notice)), artZoom && song && (() => {
+  }) : notice)), buyOpen && song && songLocked(song.songId) && (() => {
+    const price = songPrice(song.songId);
+    const have = Math.max(0, Math.floor(Number(songLock && songLock.beatPoints) || 0));
+    const short = have < price;
+    return React.createElement("div", {
+      "data-rhythm-song-buy-confirm": true,
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-label": "曲を買う",
+      className: "fixed inset-0 z-[9000] flex items-center justify-center overflow-y-auto bg-black/70 p-4",
+      style: {
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,.7)'
+      },
+      onClick: () => {
+        if (!buyBusy) setBuyOpen(false);
+      }
+    }, React.createElement("div", {
+      className: "w-full max-w-sm rounded-2xl border border-violet-300/50 bg-slate-950 p-4 text-center shadow-2xl",
+      onClick: e => e.stopPropagation()
+    }, React.createElement("p", {
+      className: "text-[11px] font-black text-violet-200"
+    }, "ビートPで曲を買う"), React.createElement("p", {
+      className: "mt-1 text-base font-black leading-snug text-white",
+      style: JA_WRAP_STYLE
+    }, jaWrap(rhythmSongFullName(song))), React.createElement("p", {
+      className: "mt-2 text-[12px] font-bold leading-relaxed text-slate-300",
+      style: JA_WRAP_STYLE
+    }, jaWrap('買うと、この曲を全部の難易度で遊べるようになります。')), React.createElement("div", {
+      className: "mt-3 grid grid-cols-2 gap-2 text-[12px] font-black"
+    }, React.createElement("div", {
+      className: "rounded-lg bg-slate-900 px-2 py-1.5 text-slate-300"
+    }, "ねだん", React.createElement("br", null), React.createElement("b", {
+      "data-rhythm-song-buy-price": true,
+      className: "text-lg text-violet-200"
+    }, price.toLocaleString(), "P")), React.createElement("div", {
+      className: "rounded-lg bg-slate-900 px-2 py-1.5 text-slate-300"
+    }, "持っているビートP", React.createElement("br", null), React.createElement("b", {
+      "data-rhythm-song-buy-have": true,
+      className: `text-lg ${short ? 'text-rose-300' : 'text-white'}`
+    }, have.toLocaleString(), "P"))), (short || buyError) && React.createElement("p", {
+      "data-rhythm-song-buy-error": true,
+      className: "mt-2 text-[12px] font-black text-rose-300",
+      style: JA_WRAP_STYLE
+    }, jaWrap(buyError || 'ビートPが足りません。曲を遊ぶとたまります。')), React.createElement("div", {
+      className: "mt-3 grid grid-cols-2 gap-2"
+    }, React.createElement("button", {
+      type: "button",
+      "data-rhythm-song-buy-cancel": true,
+      disabled: buyBusy,
+      onClick: () => setBuyOpen(false),
+      className: "min-h-[44px] rounded-xl border border-white/20 bg-slate-900 text-sm font-black text-slate-200 disabled:opacity-40"
+    }, "やめる"), React.createElement("button", {
+      type: "button",
+      "data-rhythm-song-buy-ok": true,
+      disabled: buyBusy || short,
+      onClick: async () => {
+        if (buyingRef.current) return;
+        buyingRef.current = true;
+        setBuyBusy(true);
+        setBuyError('');
+        let r = null;
+        try {
+          r = await songLock.onBuy(song.songId);
+        } catch (e) {
+          r = {
+            ok: false,
+            reason: 'save'
+          };
+        }
+        buyingRef.current = false;
+        setBuyBusy(false);
+        if (r && r.ok) {
+          setBuyOpen(false);
+          return;
+        }
+        const reason = r && r.reason;
+        setBuyError(reason === 'points' ? 'ビートPが足りません。曲を遊ぶとたまります。' : reason === 'owned' ? 'この曲はもう持っています。' : reason === 'free' ? 'この曲はいま無料で遊べます。' : reason === 'busy' ? 'ほかの交換を保存しています。少し待ってから押してください。' : '買えませんでした。ビートPは減っていません。');
+      },
+      className: "min-h-[44px] rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-sm font-black text-white disabled:opacity-40"
+    }, buyBusy ? '保存中…' : '買う'))));
+  })(), artZoom && song && (() => {
     const reserve = 150 + (song.credit && song.credit.text ? 44 : 0) + (song.credit && changelogSafeLink(song.credit.link) ? 52 : 0);
     return React.createElement("div", {
       "data-rhythm-song-art-modal": true,
@@ -63903,7 +64009,8 @@ function BreederMarketScreen({
   onOpenUpcomingDetail,
   frameConditionOf = null,
   cardShop = null,
-  initialSection = null
+  initialSection = null,
+  ownedSongs = []
 }) {
   const [marketSection, setMarketSection] = useState(initialSection);
   const [cardShopLine] = useState(() => typeof MUA_CARD_SHOP_LINES !== 'undefined' && MUA_CARD_SHOP_LINES.length ? MUA_CARD_SHOP_LINES[Math.floor(Math.random() * MUA_CARD_SHOP_LINES.length)] : {
@@ -64073,7 +64180,10 @@ function BreederMarketScreen({
     },
     event: {
       color: '#7c3aed',
-      tabs: [{
+      tabs: [...(typeof rhythmSongShopOffers === 'function' && rhythmSongShopOffers().length ? [{
+        key: 'song',
+        label: '新曲'
+      }] : []), {
         key: 'disc',
         label: '円盤石'
       }, {
@@ -64672,6 +64782,36 @@ function BreederMarketScreen({
         confirm: count => onExchangeEventPoints ? onExchangeEventPoints(offer, count) : false
       }),
       middle: middle
+    });
+  }), eventTab === 'song' && typeof rhythmSongShopOffers === 'function' && rhythmSongShopOffers().map(offer => {
+    const song = (typeof RHYTHM_SONGS !== 'undefined' && Array.isArray(RHYTHM_SONGS) ? RHYTHM_SONGS : []).find(item => item.songId === offer.songId) || null;
+    const item = {
+      id: offer.id,
+      name: song ? rhythmSongFullName(song) : offer.songId,
+      emoji: '🎵',
+      icon: song ? rhythmSongArtSrc(song) : '',
+      type: 'song',
+      currency: 'beatPoint',
+      cost: offer.cost
+    };
+    const owned = normalizeRhythmOwnedSongs(ownedSongs).includes(offer.songId);
+    const free = !owned && !rhythmSongIsPaid(offer.songId);
+    return React.createElement(MarketProductCard, {
+      key: offer.id,
+      dataAttrs: {
+        'data-event-point-song': offer.songId
+      },
+      item: item,
+      owned: owned,
+      comingSoon: free,
+      comingSoonLabel: "いまは無料",
+      canBuy: !owned && !free && safeEventPoints >= offer.cost && !busy,
+      disabled: purchaseProcessing,
+      onZoom: () => onZoomIcon(item),
+      onBuy: () => openSheet({
+        item,
+        confirm: () => onExchangeEventPoints ? onExchangeEventPoints(offer, 1) : false
+      })
     });
   }), eventTab === 'disc' && RHYTHM_EVENT_POINT_SHOP_DISC_OFFERS.map(offer => {
     const disc = BREEDER_MARKET_ITEMS.find(item => item.id === offer.monsterId && item.type === 'disc');
@@ -66787,6 +66927,7 @@ const rhythmDebugSelectSongs = filter => {
 };
 const rhythmDebugSelectRowCount = filter => new Set(rhythmDebugSelectSongs(filter).map(song => rhythmSongVersionHead(song.songId))).size;
 function RhythmSongSelectScreen({
+  songLock = null,
   catchingUp,
   difficulty,
   dismissQuickRhythmBackground,
@@ -66899,7 +67040,7 @@ function RhythmSongSelectScreen({
     return () => {
       alive = false;
     };
-  }, [beatPointReleased]);
+  }, [beatPointReleased, songLock ? songLock.beatPoints : null]);
   const quickRunBandLabel = quickRunProgress ? quickRunProgress.finished ? `${quickRunFinishReasonText(quickRunProgress.reason)}（タップで結果へ）` : `WAVE ${wave}/10 ・ ${quickRunProgress.loops}周目${catchingUp ? ' ・ 追いつき中' : ''}` : '';
   const quickRunBandButton = quickRunProgress ? React.createElement("button", {
     type: "button",
@@ -67325,6 +67466,7 @@ function RhythmSongSelectScreen({
     style: JA_WRAP_STYLE,
     className: "mt-1 text-[9px] font-black text-red-300"
   }, jaWrap('いま周回を始められませんでした。編成のモンスターが見当たらないか、難易度がまだ解放されていません。'))), React.createElement(RhythmSongSelect, {
+    songLock: debugAll ? null : songLock,
     songs: songs,
     difficulties: difficulties,
     bestRecords: rhythmBestRecords,
@@ -88915,7 +89057,8 @@ const RHYTHM_MULTI = (() => {
     const r = s.room;
     const pickOf = list => list.filter(m => m.pickRound === r.round && m.pick && m.pick !== RHYTHM_MULTI_OMAKASE && catalog.includes(m.pick)).map(m => m.pick);
     const picks = pickOf(members.filter(m => !m.cpu));
-    const pool = picks.length ? picks : catalog;
+    const freeCatalog = catalog.filter(id => !(typeof rhythmSongLockedNow === 'function' && rhythmSongLockedNow(id)));
+    const pool = picks.length ? picks : freeCatalog.length ? freeCatalog : catalog;
     if (!pool.length) return;
     const songId = pool[Math.floor(Math.random() * pool.length)];
     if (socket) socket.send({
@@ -89328,7 +89471,8 @@ const RHYTHM_MULTI = (() => {
       let pick = '';
       let why = '';
       try {
-        const r = cpuBrain && cpuBrain.pick ? cpuBrain.pick(catalog, x.masuId) : '';
+        const cpuCatalog = catalog.filter(id => !(typeof rhythmSongLockedNow === 'function' && rhythmSongLockedNow(id)));
+        const r = cpuBrain && cpuBrain.pick ? cpuBrain.pick(cpuCatalog.length ? cpuCatalog : catalog, x.masuId) : '';
         if (r && typeof r === 'object') {
           pick = String(r.songId || '');
           why = String(r.why || '');
@@ -91456,7 +91600,8 @@ function RhythmMultiScreen({
   sessionAssistants = [],
   guideAssistantId = '',
   onOpenOptions = null,
-  onCloseOptions = null
+  onCloseOptions = null,
+  songLock = null
 }) {
   const view = useRhythmMultiView();
   useModeSelectStageCss();
@@ -93631,7 +93776,9 @@ function RhythmMultiScreen({
     onDifficultyId: id => RHYTHM_MULTI.setDiff(id),
     view: selectView,
     onView: setSelectView,
+    songLock: songLock,
     onPlay: (song, difficulty) => {
+      if (songLock && songLock.isLocked && songLock.isLocked(song.songId)) return;
       RHYTHM_MULTI.setDiff(difficulty.id);
       RHYTHM_MULTI.pick(song.songId);
     },
@@ -156308,6 +156455,20 @@ function MonsterHeroGame() {
   const DAILY_MASU_SHORTCUT_MIN_QUICK_CLEARS = 3;
   const [marketItemDetail, setMarketItemDetail] = useState(null);
   const [rhythmEventPoints, setRhythmEventPoints] = useState(0);
+  const [rhythmOwnedSongs, setRhythmOwnedSongs] = useState([]);
+  RHYTHM_OWNED_SONGS_RUNTIME.list = rhythmOwnedSongs;
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const raw = await storeGet(RHYTHM_OWNED_SONGS_KEY, [], false);
+        if (alive) setRhythmOwnedSongs(normalizeRhythmOwnedSongs(raw));
+      } catch (_) {}
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [rhythmClearTotal, setRhythmClearTotal] = useState(0);
   const [marketIconZoom, setMarketIconZoom] = useState(null);
   const [upcomingMonsterDetail, setUpcomingMonsterDetail] = useState(null);
@@ -165432,6 +165593,9 @@ function MonsterHeroGame() {
       const isIcon = offer?.kind === 'icon';
       const storedIcons = isIcon ? await storeGet('mh_market_icons', [], false) : null;
       const beforeIcons = Array.isArray(storedIcons) ? storedIcons.filter(id => typeof id === 'string') : [];
+      const isSong = offer?.kind === 'song';
+      const storedSongs = isSong ? await storeGet(RHYTHM_OWNED_SONGS_KEY, [], false) : null;
+      const beforeSongs = normalizeRhythmOwnedSongs(storedSongs);
       if (isFrame) {
         const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal(), 'beatPoint', await loadRhythmBuddyForFrames(), await refreshRaidJackBossDown());
         if (frameStatus && !frameStatus.met) {
@@ -165452,10 +165616,12 @@ function MonsterHeroGame() {
         unlockedTeachingIds: beforeTeachings,
         ownedProfileFrames: beforeFrames,
         ownedAssistantCostumes: beforeCostumes,
-        ownedMarketIcons: expandOwnedMarketIcons(beforeIcons)
+        ownedMarketIcons: expandOwnedMarketIcons(beforeIcons),
+        ownedSongs: beforeSongs,
+        songNowMs: Date.now()
       });
       if (!exchange.ok) {
-        setMarketExchangeError(exchange.reason === 'points' ? 'ビートPが足りません。' : exchange.reason === 'owned' ? isAssist ? 'このアシストカードはもう持っています。' : isFrame ? 'このフレームはもう持っています。' : isIcon ? 'このアイコンはもう持っています。' : isCostume ? 'この着替えはもう持っています。' : 'このモンスターはもう持っています。' : 'この商品は交換できません。');
+        setMarketExchangeError(exchange.reason === 'points' ? 'ビートPが足りません。' : exchange.reason === 'free' ? 'この曲はいま無料で遊べます。' : exchange.reason === 'owned' ? isSong ? 'この曲はもう持っています。' : isAssist ? 'このアシストカードはもう持っています。' : isFrame ? 'このフレームはもう持っています。' : isIcon ? 'このアイコンはもう持っています。' : isCostume ? 'この着替えはもう持っています。' : 'このモンスターはもう持っています。' : 'この商品は交換できません。');
         return exchange;
       }
       const saved = await saveStoredValuesOrRollback([{
@@ -165490,6 +165656,10 @@ function MonsterHeroGame() {
         key: 'mh_market_icons',
         before: storedIcons,
         next: exchange.ownedMarketIcons
+      }] : []), ...(isSong ? [{
+        key: RHYTHM_OWNED_SONGS_KEY,
+        before: storedSongs,
+        next: exchange.ownedSongs
       }] : [])], storeGet, storeSet);
       if (!saved) {
         setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
@@ -165518,6 +165688,7 @@ function MonsterHeroGame() {
         markProfileFrameNoticed(exchange.frameId);
       }
       if (isIcon) setOwnedMarketIcons(prev => [...new Set([...prev, ...exchange.ownedMarketIcons])]);
+      if (isSong) setRhythmOwnedSongs(exchange.ownedSongs);
       if (isCostume) {
         ownedAssistantCostumesRef.current = exchange.ownedAssistantCostumes;
         setOwnedAssistantCostumes(exchange.ownedAssistantCostumes);
@@ -165541,6 +165712,31 @@ function MonsterHeroGame() {
       };
     } finally {
       marketPurchaseProcessingRef.current = false;
+    }
+  };
+  const rhythmSongLock = {
+    isPaid: songId => rhythmSongIsPaid(songId),
+    isLocked: songId => rhythmSongLocked(songId, rhythmOwnedSongs),
+    price: songId => rhythmSongPrice(songId),
+    beatPoints: rhythmEventPoints,
+    refresh: async () => {
+      try {
+        setRhythmEventPoints(await loadRhythmEventPoints());
+      } catch (_) {}
+    },
+    onBuy: async songId => {
+      const price = rhythmSongPrice(songId);
+      if (!price) return {
+        ok: false,
+        reason: 'invalidOffer'
+      };
+      return exchangeRhythmEventPoints({
+        id: `song:${songId}`,
+        kind: 'song',
+        songId,
+        cost: price,
+        grantAmount: 1
+      }, 1);
     }
   };
   const loadCardShop = async () => {
@@ -183978,6 +184174,7 @@ function MonsterHeroGame() {
       }
     }), (gameState === 'RHYTHM_MULTI' || gameState === 'RHYTHM_MODE_SELECT') && React.createElement(RhythmMultiScreen, {
       key: gameState,
+      songLock: rhythmSongLock,
       profile: {
         name: breederName,
         level: breederLevel.level,
@@ -184140,6 +184337,7 @@ function MonsterHeroGame() {
         return saved;
       }
     }), gameState === 'RHYTHM_DEMO_HOME' && React.createElement(RhythmSongSelectScreen, {
+      songLock: rhythmSongLock,
       monsterSlots: rhythmMonsterSlots,
       rhythmSettings: rhythmSettings,
       onToggleRhythmSetting: async key => {
@@ -184199,6 +184397,7 @@ function MonsterHeroGame() {
         setGameState('RHYTHM_RANKING');
       },
       onPlaySong: (song, difficulty) => {
+        if (song && rhythmSongLocked(song.songId, rhythmOwnedSongs)) return;
         if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
         if (raidRhythm) {
           void startRaidJackRhythmPlay(song, difficulty);
@@ -186368,6 +186567,7 @@ function MonsterHeroGame() {
         setGameState('CARD_TOP');
       }
     }), gameState === 'BREEDER_MARKET' && React.createElement(BreederMarketScreen, {
+      ownedSongs: rhythmOwnedSongs,
       gold: gold,
       breederPoints: breederPoints,
       ownedItems: ownedItems,

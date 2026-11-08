@@ -55,6 +55,7 @@ const rhythmDebugSelectSongs=(filter)=>{
 // 切り替えに出す曲の数。一覧は同じ曲の版(full・short など)を1行にまとめるので、その行の数で数える
 const rhythmDebugSelectRowCount=(filter)=>new Set(rhythmDebugSelectSongs(filter).map(song=>rhythmSongVersionHead(song.songId))).size;
 function RhythmSongSelectScreen({
+  songLock = null,
   catchingUp, difficulty, dismissQuickRhythmBackground, dismissRhythmEventNotice, dismissRhythmSixLaneIntro, rhythmSixLaneIntroVisible, dismissRhythmLookIntro, rhythmLookIntroVisible, onTryRhythmLook, exitingQuickRun, handleGiveUp, mainHero,
   onExit, onOpenEventRanking, onOpenHelp, onOpenMulti = null, onOpenMonsterSlots, onOpenOptions, onOpenRanking,
   onPlaySong, onToggleRhythmSetting, quickClearCounts, quickRhythmBackgroundVisible, quickRunDetailOpen, quickRunFinishReasonText,
@@ -118,7 +119,8 @@ function RhythmSongSelectScreen({
         let alive=true;
         loadRhythmEventPoints().then(value=>{if(alive)setBeatPointBalance(value);}).catch(()=>{});
         return ()=>{alive=false;};
-      },[beatPointReleased]);
+        // 曲を買ったとき(App の残高が変わったとき)も読み直す(2026-11-08)
+      },[beatPointReleased,songLock?songLock.beatPoints:null]);
       // ===== クイック∞周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
       // 1行の帯は、縦持ちならヘッダーの下、横持ちならヘッダーの空きへ入れる。
       // 横は上のタブに余白があるので、そこを使えば曲の一覧を押し下げずに済む
@@ -432,6 +434,7 @@ function RhythmSongSelectScreen({
             曲を選ぶ画面でいちばん要るのは曲の並びで、読み物は場所を取りすぎるため
             (2026-09-05・ユーザー指示)。同じ内容はチュートリアルと「📖 遊びかた」にある。 */}
         <RhythmSongSelect
+          songLock={debugAll?null:songLock}
           songs={songs}
           difficulties={difficulties}
           bestRecords={rhythmBestRecords}

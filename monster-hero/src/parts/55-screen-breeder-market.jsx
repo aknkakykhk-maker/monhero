@@ -37,6 +37,8 @@ function BreederMarketScreen({
   // MFバトルカードの「MFバトルカード」の売り場(区切り2)。いまはMFバトルカードのトップの「マーケットへ」から入ったときだけ渡す(デバッグ専用のあいだ)。
   // { point, starter, shop, busy, onBuyPack(packId,count), onBuyStarter(kit), onExchange(offer) }。initialSection … 最初に開く売り場
   cardShop=null, initialSection=null,
+  // ビートPで買った曲(2026-11-08)。ビートP交換所の「新曲」の棚で「所持済み」を出すのに使う
+  ownedSongs=[],
 }) {
   // 2026-09-14・マーケットのタブ乱立を避けるため、最初に用途別の入口を選ぶ。
   // 入口だけこの画面のローカル状態で持ち、購入・交換・商品タブの既存stateは親側をそのまま使う。
@@ -135,7 +137,7 @@ function BreederMarketScreen({
     breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},...(hasDiscIconCards?[{key:'disc',label:'円盤石アイコン'}]:[]),...(breederFrameItems.length?[{key:'frame',label:'フレーム'}]:[])] },
     exchange:{ color:'#059669', tabs:[{key:'psyche',label:'プシュケー'},{key:'proof',label:'勇者の証'}] },
     card:{ color:'#ea580c', tabs:[{key:'pack',label:'パック'},{key:'tactics',label:'戦術カード'},{key:'starter',label:'スターター'},{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'}] },
-    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer=>offer.available!==false)?[{key:'costume',label:'着替え'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.some(offer=>offer.available!==false)?[{key:'icon',label:'アイコン'}]:[]),{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
+    event:{ color:'#7c3aed', tabs:[...(typeof rhythmSongShopOffers==='function'&&rhythmSongShopOffers().length?[{key:'song',label:'新曲'}]:[]),{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer=>offer.available!==false)?[{key:'costume',label:'着替え'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.some(offer=>offer.available!==false)?[{key:'icon',label:'アイコン'}]:[]),{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
   };
   const activeSectionTab = (section) => {
     const tabs=SECTION_TABS[section]?.tabs||[];
@@ -443,6 +445,21 @@ function BreederMarketScreen({
           {/* 交換できる円盤石(2026-09-29 ユーザー指示「進めて」で予告から交換へ)。1体につき1回。
               持っていれば「所持済み」になる(ダイヤショップの円盤石と同じ見え方)。
               絵と詳細はマーケットの円盤石(monsterId と同じid)とモンスター本体から引く */}
+          {/* モンヒロビートの新曲(2026-11-08 社長「本オープン実装以降は新曲はビートPで500で1曲買う」)。1曲につき1回。
+              持っていれば「所持済み」。期間限定イベントなどでいま無料の曲は「いまは無料」(買えない)。曲えらびの「買う」と同じ取引 */}
+          {eventTab==='song'&&typeof rhythmSongShopOffers==='function'&&rhythmSongShopOffers().map(offer=>{
+            const song=(typeof RHYTHM_SONGS!=='undefined'&&Array.isArray(RHYTHM_SONGS)?RHYTHM_SONGS:[]).find(item=>item.songId===offer.songId)||null;
+            const item={ id:offer.id, name:song?rhythmSongFullName(song):offer.songId, emoji:'🎵', icon:song?rhythmSongArtSrc(song):'', type:'song', currency:'beatPoint', cost:offer.cost };
+            const owned=normalizeRhythmOwnedSongs(ownedSongs).includes(offer.songId);
+            const free=!owned&&!rhythmSongIsPaid(offer.songId);
+            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-song':offer.songId}}
+              item={item} owned={owned} comingSoon={free} comingSoonLabel="いまは無料"
+              canBuy={!owned&&!free&&safeEventPoints>=offer.cost&&!busy}
+              disabled={purchaseProcessing}
+              onZoom={()=>onZoomIcon(item)}
+              onBuy={()=>openSheet({ item, confirm:()=>onExchangeEventPoints?onExchangeEventPoints(offer,1):false })}
+            />;
+          })}
           {eventTab==='disc'&&RHYTHM_EVENT_POINT_SHOP_DISC_OFFERS.map(offer=>{
             const disc=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.monsterId&&item.type==='disc');
             const mon=ALL_PLAYER_MONSTERS[offer.monsterId]||null;

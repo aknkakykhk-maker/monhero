@@ -487,7 +487,9 @@ const RHYTHM_MULTI = (() => {
     // (2026-10-07・ユーザー指示「マスモンが曲を選んでくるのは演出として残して、実際は自分が選んだ曲に」)。
     // 人がだれも曲を選んでいない(おまかせ)ときは、全曲から引く
     const picks = pickOf(members.filter((m) => !m.cpu));
-    const pool = picks.length ? picks : catalog;
+    // おまかせのときは、この端末で鍵のかかっていない曲から引く(2026-11-08 ビートPで買う曲。持っていない買う曲は選ばない)
+    const freeCatalog = catalog.filter((id) => !(typeof rhythmSongLockedNow === 'function' && rhythmSongLockedNow(id)));
+    const pool = picks.length ? picks : (freeCatalog.length ? freeCatalog : catalog);
     if (!pool.length) return;
     const songId = pool[Math.floor(Math.random() * pool.length)];
     if (socket) socket.send({ t: 'draw', id: s.selfId, round: r.round, songId });
@@ -739,7 +741,9 @@ const RHYTHM_MULTI = (() => {
       let pick = '';
       let why = '';
       try {
-        const r = cpuBrain && cpuBrain.pick ? cpuBrain.pick(catalog, x.masuId) : '';
+        // マスモン・助手は、無料の曲と、呼んだ人が持っている曲から選ぶ(2026-11-08 ビートPで買う曲)
+        const cpuCatalog = catalog.filter((id) => !(typeof rhythmSongLockedNow === 'function' && rhythmSongLockedNow(id)));
+        const r = cpuBrain && cpuBrain.pick ? cpuBrain.pick(cpuCatalog.length ? cpuCatalog : catalog, x.masuId) : '';
         if (r && typeof r === 'object') { pick = String(r.songId || ''); why = String(r.why || ''); } else pick = String(r || '');
       } catch (_) { pick = ''; why = ''; }
       c.pick = pick && catalog.includes(pick) ? pick : RHYTHM_MULTI_OMAKASE;
@@ -2032,7 +2036,7 @@ function RhythmQuickRunPill({ info, onRestart = null, onResume = null, widthClas
     </small>
   );
 }
-function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onRestartQuickRun = null, onResumeQuickRun = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null, onStepAway = null, sessionAssistants = [], guideAssistantId = '', onOpenOptions = null, onCloseOptions = null }) {
+function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onRestartQuickRun = null, onResumeQuickRun = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null, onStepAway = null, sessionAssistants = [], guideAssistantId = '', onOpenOptions = null, onCloseOptions = null, songLock = null }) {
   const view = useRhythmMultiView();
   useModeSelectStageCss();
   const difficultyIds = difficultyList.map((d) => d.id);
@@ -3306,7 +3310,9 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         onDifficultyId={(id) => RHYTHM_MULTI.setDiff(id)}
         view={selectView}
         onView={setSelectView}
-        onPlay={(song, difficulty) => { RHYTHM_MULTI.setDiff(difficulty.id); RHYTHM_MULTI.pick(song.songId); }}
+        songLock={songLock}
+        // 曲を選べるのは、その曲を持っている人だけ(買う曲。2026-11-08)。ほかの人が選んだ曲は、持っていなくてもその回だけ一緒に遊べる
+        onPlay={(song, difficulty) => { if (songLock && songLock.isLocked && songLock.isLocked(song.songId)) return; RHYTHM_MULTI.setDiff(difficulty.id); RHYTHM_MULTI.pick(song.songId); }}
         playLabel={myPick ? 'この曲に変更' : 'この曲で決定'}
         hideRandom
         notice={(

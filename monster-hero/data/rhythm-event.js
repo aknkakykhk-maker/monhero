@@ -558,7 +558,7 @@ const RHYTHM_EVENT_POINT_SHOP_COMING_SOON = Object.freeze([]);
 // ownedProfileFrames … 持っているフレームid(フレームの交換のときだけ使う)
 // ownedAssistantCostumes … 持っている着替えのid(着替えの交換のときだけ使う)
 // ownedMarketIcons … 持っているアイコンのid(アイコンの交換のときだけ使う。まとめを広げた形で渡してよい)
-const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedItems={}, quantity=1, unlockedMonsterIds=[], unlockedTeachingIds=[], ownedProfileFrames=[], ownedAssistantCostumes=[], ownedMarketIcons=[] } = {}) => {
+const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedItems={}, quantity=1, unlockedMonsterIds=[], unlockedTeachingIds=[], ownedProfileFrames=[], ownedAssistantCostumes=[], ownedMarketIcons=[], ownedSongs=[], songNowMs=Date.now() } = {}) => {
   const max = Number.MAX_SAFE_INTEGER;
   const safeInt = (value) => {
     const n = Number(value);
@@ -570,8 +570,20 @@ const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedIt
   const sourceItems = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
   const unitCost = safeInt(offer?.cost);
   const grantAmount = safeInt(offer?.grantAmount);
-  if (!offer || !unitCost || !grantAmount || !['diamond','item','disc','assist','frame','costume','icon'].includes(offer.kind)) {
+  if (!offer || !unitCost || !grantAmount || !['diamond','item','disc','assist','frame','costume','icon','song'].includes(offer.kind)) {
     return { ok:false, reason:'invalidOffer', quantity:q, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+  }
+  // 曲(2026-11-08): 1回に1曲。持っている曲・いま無料の曲は買えない。値段は表(RHYTHM_PAID_SONGS)から決め直す(画面から来た値段は使わない)。ダイヤ・所持品は変えない
+  if (offer.kind === 'song') {
+    const songId = typeof offer.songId === 'string' ? offer.songId : '';
+    const owned = normalizeRhythmOwnedSongs(ownedSongs);
+    const price = typeof rhythmSongPrice === 'function' ? rhythmSongPrice(songId) : 0;
+    if (!songId || !price || price !== unitCost) return { ok:false, reason:'invalidOffer', quantity:1, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    if (owned.includes(songId)) return { ok:false, reason:'owned', quantity:1, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    if (!rhythmSongIsPaid(songId, songNowMs)) return { ok:false, reason:'free', quantity:1, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    if (points < price) return { ok:false, reason:'points', quantity:1, cost:price, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    return { ok:true, reason:null, quantity:1, cost:price, eventPoints:points-price, gold:beforeGold, ownedItems:sourceItems,
+      songId, ownedSongs:[...owned, songId] };
   }
   // 円盤石: 1回に1つ。持っているモンスターは交換できない。ダイヤ・所持品は変えない
   if (offer.kind === 'disc') {
@@ -1170,3 +1182,58 @@ const rhythmHistoryName = (entry) => {
 // 期間の文。終わった回なので、始まりと終わりの両方を出す
 const rhythmHistoryPeriodText = (entry) =>
   entry ? `${rhythmHistoryDateText(entry.startMs)} 〜 ${rhythmHistoryDateText(entry.endMs)}` : '—';
+
+// ==== ビートPで買う曲(2026-11-08 社長「本オープン実装以降は新曲はビートPで500で1曲買うようになる」・決めごとは全部 A) ====
+// ★ここに書いた曲だけが「買う曲」になる。書いていない曲(本オープン時点の曲を含む)はずっと無料のまま。
+// ★新曲を入れるときの手順は rhythm-song-add スキル。ショート版・フル版など版ちがいも、買う曲にするなら1つずつ書く
+//   (別の曲として扱う。原曲を買っても版ちがいは開かない)。
+//   songId: { price(省略で既定500), freeFrom / freeUntil(この間は無料。'2026-12-01T10:00:00+09:00' の形。どちらか一方だけでもよい) }
+// 期間限定イベントの対象曲は、イベントのあいだ無料になる(イベントの定義を書けば済む。ここは触らない)。
+// 買った曲は mh_rhythm_owned_songs_v1(曲の id の配列)。足すだけで、消す・減らすことはしない。
+const RHYTHM_SONG_PRICE_DEFAULT = 500;
+const RHYTHM_PAID_SONGS = Object.freeze({
+});
+const RHYTHM_OWNED_SONGS_KEY = 'mh_rhythm_owned_songs_v1';
+// 保存値を、曲の id の配列(重複なし)にそろえる。壊れていれば空
+const normalizeRhythmOwnedSongs = (raw) => {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const id of raw) if (typeof id === 'string' && id && id.length <= 80 && !out.includes(id)) out.push(id);
+  return out;
+};
+const rhythmPaidSongEntry = (songId) => {
+  if (typeof songId !== 'string' || !songId) return null;
+  const table = typeof RHYTHM_PAID_SONGS === 'object' && RHYTHM_PAID_SONGS ? RHYTHM_PAID_SONGS : {};
+  return Object.prototype.hasOwnProperty.call(table, songId) && table[songId] && typeof table[songId] === 'object' ? table[songId] : null;
+};
+// その曲の値段(ビートP)。買う曲でなければ0
+const rhythmSongPrice = (songId) => {
+  const entry = rhythmPaidSongEntry(songId);
+  if (!entry) return 0;
+  const n = Number(entry.price);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : RHYTHM_SONG_PRICE_DEFAULT;
+};
+// いま買わないと遊べない曲か(無料の期間・期間限定イベントの対象のあいだは false)
+const rhythmSongIsPaid = (songId, nowMs = Date.now()) => {
+  if (!rhythmSongPrice(songId)) return false;
+  const entry = rhythmPaidSongEntry(songId);
+  const now = Number(nowMs);
+  const from = entry.freeFrom ? Date.parse(entry.freeFrom) : NaN;
+  const until = entry.freeUntil ? Date.parse(entry.freeUntil) : NaN;
+  if (Number.isFinite(from) || Number.isFinite(until)) {
+    if ((!Number.isFinite(from) || now >= from) && (!Number.isFinite(until) || now < until)) return false;
+  }
+  try { const ev = rhythmLimitedEventAt(now); if (ev && rhythmEventHasSong(ev, songId)) return false; } catch (e) {}
+  return true;
+};
+// 鍵がかかっているか(買う曲で、まだ持っていない)
+const rhythmSongLocked = (songId, ownedSongIds, nowMs = Date.now()) =>
+  rhythmSongIsPaid(songId, nowMs) && !normalizeRhythmOwnedSongs(ownedSongIds).includes(songId);
+// ビートP交換所の「新曲」の棚に並べる品(買う曲ぜんぶ。曲の名前は画面側で付ける)
+const rhythmSongShopOffers = () => Object.keys(typeof RHYTHM_PAID_SONGS === 'object' && RHYTHM_PAID_SONGS ? RHYTHM_PAID_SONGS : {})
+  .filter(songId => rhythmSongPrice(songId) > 0)
+  .map(songId => ({ id: `song:${songId}`, kind: 'song', songId, cost: rhythmSongPrice(songId), grantAmount: 1 }));
+// この端末で持っている曲(画面の state と同じもの。App が読み込み・買ったときに入れ直す)。
+// マルチの「おまかせ」や、マスモン・助手が自分で曲を選ぶところ(画面の外の処理)から、鍵を見るのに使う
+const RHYTHM_OWNED_SONGS_RUNTIME = { list: [] };
+const rhythmSongLockedNow = (songId) => rhythmSongLocked(songId, RHYTHM_OWNED_SONGS_RUNTIME.list);
