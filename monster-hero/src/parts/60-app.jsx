@@ -2246,6 +2246,21 @@ function MonsterHeroGame() {
     try { await storeSet('mh_owned_items', nextItems, false); } catch { return null; }
     return assistantLifeFurnGive(who, key);
   };
+  // 助手1人に道具を贈る(2026-11-08 社長 SOLO-GIFT-PLAN.md)。贈れるか確かめてから持ち物を1つ減らし、減らせたときだけ記録・仲良し度を入れる
+  const giveAssistantLifeSolo = async (who, kind) => {
+    if (typeof assistantLifeSoloGive !== 'function' || typeof assistantLifeSoloOn !== 'function' || !assistantLifeSoloOn()) return null;
+    const def = assistantLifeGiftOf(kind);
+    if (!def) return null;
+    await ASSISTANT_LIFE_GIFT_STORE.load();
+    const have = ownedItemCount(ownedItemsRef.current, def.itemId);
+    const peerSt = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null;
+    if (assistantLifeSoloReason(kind, peerSt, have)) return null;
+    const nextItems = { ...ownedItemsRef.current, [def.itemId]: have - 1 };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    try { await storeSet('mh_owned_items', nextItems, false); } catch { return null; }
+    return assistantLifeSoloGive(who, kind);
+  };
   // 性格のたねを1個使って、マスモンの性格を選び直す(2026-11-06 社長の決定 C)。
   // 先に相棒の保存(mh_rhythm_buddy_v1)を書き換え、できたときだけたねを1個減らす(減ったのに性格が変わらない、を作らない)
   const useBuddyTraitSeed = async (masuId, traitId) => {
@@ -2838,10 +2853,14 @@ function MonsterHeroGame() {
         ownedIconIds: latest.ownedMarketIcons, ownedFrameIds: latest.ownedProfileFrames,
       });
     } catch (error) { console.error('[friends] records build failed:', error && error.message ? error.message : error); }
+    // オート周回中(クイックの∞周回が回っている・裏に回って止まっているときは finished)と「いまの状態をフレンドに見せる」(2026-11-08・34-friends-api)
+    let auto = false; let show = true;
+    try { const q = quickRunProgressRef.current; auto = !!(q && !q.finished); } catch (error) { auto = false; }
+    try { show = (await storeGet(FRIEND_PRESENCE_SHOW_KEY, true)) !== false; } catch (error) { show = true; }
     await sbUpsertFriendProfile(id, friendsBuildSummary({
       place: friendsPlaceOfScreen(latest.gameState), masuMons: latest.masuMons,
       favoriteMasuId: latest.favoriteMasuId, playtime: playtimeRef.current,
-      message: latest.profileMessage, records,
+      message: latest.profileMessage, records, auto, show,
     }));
     // 端末ごとのプレイ時間(2台で遊ぶ人の合計を出すため)。表がまだ無ければ何もしない
     await sbUpsertFriendPlaytimeDevice(id, playtimeDeviceRef.current);
@@ -19346,7 +19365,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {typeof AssistantLifeItemIntro==='function'&&gameState==='HOME'&&!busy&&!peerReplay&&<AssistantLifeItemIntro peerItems={typeof assistantLifeGiftCounts==='function'?assistantLifeGiftCounts(ownedItems):{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}}/>}
             {typeof AssistantLifeScreen==='function'&&<AssistantLifeScreen metIds={metIds} onReplay={(talk)=>setPeerReplay(talk)} bondLevelOf={(id)=>assistantBondLevel(normalizeAssistantBond(assistantBonds[id]).points)}
               peerItems={typeof assistantLifeGiftCounts==='function'?assistantLifeGiftCounts(ownedItems):{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}} onUseItem={useAssistantPeerItem}
-              furnItems={typeof assistantLifeFurnCounts==='function'?assistantLifeFurnCounts(ownedItems):null} onGiveFurn={giveAssistantLifeFurn}/>}
+              furnItems={typeof assistantLifeFurnCounts==='function'?assistantLifeFurnCounts(ownedItems):null} onGiveFurn={giveAssistantLifeFurn} onGiveSolo={giveAssistantLifeSolo}/>}
           </>;
         })()}
 

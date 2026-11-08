@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 927117e9deeb17af
+// source-sha256: bcba2bbb48e6fb33
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13736,6 +13736,7 @@ const RELEASE_FLAGS = {
   assistantCallname: true,
   assistantLife: true,
   assistantLifeFurniture: true,
+  assistantLifeSolo: true,
   assistantLifeFriend: true,
   assistantMasmonNamesApi: true,
   assistantLifeFriendApi: true,
@@ -13745,7 +13746,7 @@ const RELEASE_FLAGS = {
   cardBattle: true,
   cardAssistantTalk: true,
   missionDailyLine: true,
-  cardGrowStyle: false,
+  cardGrowStyle: true,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   tacticsHate: true,
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE,
@@ -41889,6 +41890,11 @@ const RhythmTapTest = ({
       mirror: mirrorOn,
       cleared: !failed
     });
+    if (!debugPlay && !tutorial && !calibrating && typeof assistantLifeFriendNoteActivity === 'function' && typeof RHYTHM_DEMO_SONG_IDS !== 'undefined' && RHYTHM_DEMO_SONG_IDS.includes(song?.songId)) {
+      try {
+        void assistantLifeFriendNoteActivity('beat', song?.displayName || '');
+      } catch {}
+    }
     if (!debugPlay && !tutorial && !calibrating) {
       try {
         RHYTHM_TIMING_DIAG.meta(run.audio?.info?.());
@@ -56509,7 +56515,8 @@ const sbFetchFriendRoster = async selfIdRaw => {
   return groups.friends.map(view => ({
     otherId: view.otherId,
     userName: (looks[view.otherId] || {}).userName || '名無しのブリーダー',
-    lastSeenAt: (looks[view.otherId] || {}).lastSeenAt || 0
+    lastSeenAt: (looks[view.otherId] || {}).lastSeenAt || 0,
+    icon: (looks[view.otherId] || {}).icon ?? null
   })).sort((a, b) => b.lastSeenAt - a.lastSeenAt);
 };
 const FRIEND_PLACE_TEXT = Object.freeze({
@@ -56522,12 +56529,45 @@ const FRIEND_PLACE_TEXT = Object.freeze({
   other: 'ログイン中',
   card: 'MFバトルカードで遊び中',
   cardBattle: 'MFバトルカードで対戦中',
-  room: '部屋で待ち中'
+  room: '部屋で待ち中',
+  rhythmPlay: '🎵 モンヒロビートで演奏中',
+  life: '🏡 助手ライフ',
+  roomPrivate: '🔑 プライベート中'
 });
-const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle', 'room']);
+const FRIEND_AUTO_TEXT = '⚡ オート周回中';
+const FRIEND_IDLE_AUTO_MIN = 10;
+const FRIEND_IDLE_OPEN_TEXT = Object.freeze({
+  home: 'ホーム',
+  rhythm: 'モンヒロビート',
+  multi: 'モンヒロビート',
+  room: '部屋',
+  roomPrivate: '合言葉の部屋',
+  card: 'MFバトルカード',
+  masu: 'マスモンの画面',
+  market: 'マーケット',
+  life: '助手ライフ',
+  battle: 'バトル',
+  other: 'ゲーム'
+});
+let _friendsLastInputAt = Date.now();
+if (typeof window !== 'undefined' && window.addEventListener) {
+  for (const ev of ['pointerdown', 'keydown', 'touchstart', 'wheel']) window.addEventListener(ev, () => {
+    _friendsLastInputAt = Date.now();
+  }, {
+    passive: true,
+    capture: true
+  });
+}
+const friendsIdleMinutes = (now = Date.now()) => Math.max(0, Math.floor((now - _friendsLastInputAt) / 60000));
+const FRIEND_PRESENCE_SHOW_KEY = 'mh_friend_presence_show_v1';
+const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle', 'room', 'rhythmPlay', 'life', 'roomPrivate']);
 let _friendsRoomWaiting = false;
 const friendsSetRoomWaiting = on => {
   _friendsRoomWaiting = !!on;
+};
+let _friendsRoomPrivate = false;
+const friendsSetRoomPrivate = on => {
+  _friendsRoomPrivate = !!on;
 };
 const friendsPlaceFromRow = (place, records) => {
   if (place === 'other' && records && FRIEND_SUB_PLACES.includes(records.pl)) return records.pl;
@@ -56536,20 +56576,33 @@ const friendsPlaceFromRow = (place, records) => {
 const FRIEND_HEARTBEAT_MS = 2 * 60 * 1000;
 const FRIEND_PUBLISH_MIN_MS = 15 * 1000;
 const friendsPlaceOfScreen = gameState => {
-  if (_friendsRoomWaiting) return 'room';
   const name = typeof gameState === 'string' ? gameState : '';
+  if (_friendsRoomPrivate && name !== 'RHYTHM_PLAY') return 'roomPrivate';
+  if (_friendsRoomWaiting) return 'room';
+  if (name === 'HOME' && typeof document !== 'undefined' && document.querySelector && document.querySelector('[data-assistant-life-screen]')) return 'life';
   if (name === 'HOME') return 'home';
   if (name === 'CARD_BATTLE') return 'cardBattle';
   if (name.startsWith('CARD_')) return 'card';
   if (name === 'RHYTHM_MULTI') return 'multi';
+  if (name === 'RHYTHM_PLAY') return 'rhythmPlay';
   if (name.startsWith('RHYTHM')) return 'rhythm';
   if (name === 'BREEDER_MARKET') return 'market';
   if (/^(MASU_|MB_MANAGEMENT|PASTURE_|MONSTER_|OWNED_MONSTERS)/.test(name)) return 'masu';
   if (/^(BATTLE|PICK_|QUICK_|SKIP_|WAVE_|UPGRADE_|REWARD_|CHAMPION|DEFEAT|RETIRE|TRAINING|TEACHING|AUTO_)/.test(name)) return 'battle';
   return 'other';
 };
-const friendsPresenceText = (place, updatedAtMs, nowMs) => {
+const friendsPresenceText = (place, updatedAtMs, nowMs, records = null) => {
   const online = Number.isFinite(updatedAtMs) && updatedAtMs > 0 && nowMs - updatedAtMs < FRIENDS_ONLINE_MS;
+  const playing = place === 'rhythmPlay' || place === 'cardBattle';
+  if (online && records && !playing && (records.au || records.im >= FRIEND_IDLE_AUTO_MIN)) {
+    const where = FRIEND_IDLE_OPEN_TEXT[place] || FRIEND_IDLE_OPEN_TEXT.other;
+    return {
+      online: true,
+      auto: true,
+      text: FRIEND_AUTO_TEXT,
+      sub: records.au ? place && place !== 'other' && place !== 'home' ? FRIEND_PLACE_TEXT[place] : '' : `${where}を開いたまま ${records.im}分 操作なし`
+    };
+  }
   if (online) return {
     online: true,
     text: FRIEND_PLACE_TEXT[place] || FRIEND_PLACE_TEXT.other
@@ -56571,11 +56624,14 @@ const friendsPresenceFor = async ids => {
   Object.entries(rows && typeof rows === 'object' ? rows : {}).forEach(([id, r]) => {
     if (!r) return;
     const at = Number.isFinite(r.updatedAt) ? r.updatedAt : 0;
-    const p = friendsPresenceText(r.place, at, now);
+    const p = friendsPresenceText(r.place, at, now, r.records);
     out[id] = {
       online: p.online,
       text: p.text,
-      at
+      sub: p.sub || '',
+      auto: !!p.auto,
+      at,
+      place: r.place || null
     };
   });
   return out;
@@ -56765,6 +56821,8 @@ const friendsNormalizeRecords = raw => {
   const c = raw.collection && typeof raw.collection === 'object' ? raw.collection : {};
   return {
     pl: FRIEND_SUB_PLACES.includes(raw.pl) ? raw.pl : null,
+    au: raw.au === 1 ? 1 : 0,
+    im: Math.min(1440, friendsInt(raw.im)),
     battle,
     rhythm: {
       played: friendsInt(raw.rhythm && raw.rhythm.played),
@@ -56788,7 +56846,9 @@ const friendsBuildSummary = ({
   favoriteMasuId,
   playtime,
   message = '',
-  records = null
+  records = null,
+  auto = false,
+  show = true
 }) => {
   let bestBond = 0,
     bestBondMon = '',
@@ -56826,7 +56886,9 @@ const friendsBuildSummary = ({
   const span = playtime && typeof playtime === 'object' ? playtime : {};
   const totalMs = Number(span.totalMs);
   return {
-    place: Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, place) ? place : 'other',
+    place: show && Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, place) ? place : 'other',
+    au: show && auto ? 1 : 0,
+    im: show && place !== 'rhythmPlay' && place !== 'cardBattle' ? Math.min(1440, friendsIdleMinutes()) : 0,
     startedOn: typeof span.since === 'string' && FRIEND_DAY_RE.test(span.since) ? span.since : null,
     playSeconds: Number.isFinite(totalMs) && totalMs >= 0 ? Math.floor(totalMs / 1000) : null,
     bestBond: bestBond > 0 ? bestBond : null,
@@ -56861,9 +56923,20 @@ const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
   });
   try {
     if (_friendProfileExtraUnavailable) await send(base);else {
-      const records = sub ? {
+      const now = {
+        ...(sub ? {
+          pl: sub
+        } : {}),
+        ...(summary.au ? {
+          au: 1
+        } : {}),
+        ...(summary.im ? {
+          im: summary.im
+        } : {})
+      };
+      const records = Object.keys(now).length ? {
         ...(summary.records || {}),
-        pl: sub
+        ...now
       } : summary.records;
       try {
         await send({
@@ -77831,11 +77904,16 @@ function HomeScreen({
       if (rh && rh.offsetParent) {
         const rb = offTop(rh) + rh.offsetHeight + 22,
           rr = offLeft(rh) + rh.offsetWidth;
+        let room = Infinity;
         for (const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle')) {
           if (!el.offsetParent) continue;
           const t = offTop(el);
-          if (t > offTop(rh) && offLeft(el) < rr) push = Math.max(push, rb - t);
+          if (t > offTop(rh) && offLeft(el) < rr) {
+            push = Math.max(push, rb - t);
+            room = Math.min(room, scene.clientHeight - (t + el.offsetHeight) - (el.classList.contains('mh-home-card-battle') ? 24 : 4));
+          }
         }
+        push = Math.min(push, Math.max(0, room));
       }
       scene.style.setProperty('--mh-home-left-push', `${Math.max(0, Math.ceil(push))}px`);
     };
@@ -87966,6 +88044,39 @@ const FriendPresenceTag = ({
 }), React.createElement("span", {
   className: "truncate"
 }, info.text)) : null;
+function FriendPresenceShowSetting() {
+  const [on, setOn] = React.useState(true);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const v = await storeGet(FRIEND_PRESENCE_SHOW_KEY, true);
+        if (alive) setOn(v !== false);
+      } catch {}
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return React.createElement("div", {
+    className: SCREEN_PANEL_CLASS,
+    "data-friend-presence-setting": true
+  }, React.createElement("label", {
+    className: "flex items-center justify-between gap-2 text-[12px] font-black text-white"
+  }, React.createElement("span", null, "いまの状態をフレンドに見せる"), React.createElement("input", {
+    type: "checkbox",
+    checked: on,
+    onChange: e => {
+      const v = e.target.checked;
+      setOn(v);
+      try {
+        storeSet(FRIEND_PRESENCE_SHOW_KEY, v, false);
+      } catch {}
+    }
+  })), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
+  }, "「⚡ オート周回中」「🎵 モンヒロビートで演奏中」などが、フレンドの一覧に出ます。切にすると「ログイン中」とだけ出ます。"));
+}
 const FRIENDS_RESULT_TEXT = Object.freeze({
   sent: ['フレンド申請を送りました。承認されるとフレンドになります', 'ok'],
   accepted: ['フレンドになりました!', 'ok'],
@@ -88382,7 +88493,7 @@ function FriendsScreen({
       className: `${SCREEN_LIST_CLASS} pb-4`
     }, noticeBox, (() => {
       const sum = summaries[selected.otherId] || null;
-      const seen = friendsPresenceText(sum ? sum.place : null, Math.max(sum ? sum.updatedAt : 0, look.lastSeenAt || 0), now);
+      const seen = friendsPresenceText(sum ? sum.place : null, Math.max(sum ? sum.updatedAt : 0, look.lastSeenAt || 0), now, sum ? sum.records : null);
       const monName = id => id && ALL_PLAYER_MONSTERS[id] ? ALL_PLAYER_MONSTERS[id].name : '';
       const fav = sum && sum.favorite ? sum.favorite : null;
       const favBase = fav ? ALL_PLAYER_MONSTERS[fav.monsterId] : null;
@@ -88420,8 +88531,12 @@ function FriendsScreen({
         className: "max-w-full truncate text-lg font-black text-white"
       }, look.userName), React.createElement("span", {
         "data-friend-presence": seen.online ? 'online' : 'offline',
-        className: `text-[11px] font-black ${seen.online ? 'text-emerald-300' : 'text-slate-400'}`
-      }, seen.online ? '● ' : '', seen.text), sum && sum.message ? React.createElement("p", {
+        "data-friend-presence-auto": seen.auto ? '1' : undefined,
+        className: `text-[11px] font-black ${seen.auto ? 'text-amber-300' : seen.online ? 'text-emerald-300' : 'text-slate-400'}`
+      }, seen.online ? '● ' : '', seen.text), seen.sub ? React.createElement("span", {
+        "data-friend-presence-sub": true,
+        className: "text-[10px] font-bold text-slate-400"
+      }, seen.sub) : null, sum && sum.message ? React.createElement("p", {
         "data-friend-message": true,
         className: "max-w-full break-words rounded-xl bg-black/30 px-3 py-1.5 text-[12px] font-bold leading-snug text-pink-100"
       }, "「", sum.message, "」") : null, noteEdit && noteEdit.id === selected.otherId ? React.createElement("div", {
@@ -88681,11 +88796,15 @@ function FriendsScreen({
       className: "block truncate text-[9px] font-bold text-amber-200"
     }, "📝 ", notes[view.otherId]) : null, (() => {
       const sum = summaries[view.otherId];
-      const seen = friendsPresenceText(sum ? sum.place : null, Math.max(sum ? sum.updatedAt : 0, look.lastSeenAt || 0), now);
-      return React.createElement("span", {
+      const seen = friendsPresenceText(sum ? sum.place : null, Math.max(sum ? sum.updatedAt : 0, look.lastSeenAt || 0), now, sum ? sum.records : null);
+      return React.createElement(React.Fragment, null, React.createElement("span", {
         "data-friend-presence": seen.online ? 'online' : 'offline',
-        className: `block truncate text-[9px] font-bold ${seen.online ? 'text-emerald-300' : 'text-slate-400'}`
-      }, seen.online ? '● ' : '', seen.text);
+        "data-friend-presence-auto": seen.auto ? '1' : undefined,
+        className: `block truncate text-[9px] font-bold ${seen.auto ? 'text-amber-300' : seen.online ? 'text-emerald-300' : 'text-slate-400'}`
+      }, seen.online ? '● ' : '', seen.text), seen.sub ? React.createElement("span", {
+        "data-friend-presence-sub": true,
+        className: "block truncate text-[8.5px] font-bold text-slate-400"
+      }, seen.sub) : null);
     })()), right);
   };
   return React.createElement("div", {
@@ -88826,7 +88945,7 @@ function FriendsScreen({
     className: `${btn} mt-2 w-full border-sky-400/60 bg-sky-500/20 text-sky-100`
   }, "招待リンクを送る（LINEなど）"), React.createElement("p", {
     className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "このコードを伝えると、相手からフレンド申請してもらえます。コードは変わりません。")), React.createElement("div", {
+  }, "このコードを伝えると、相手からフレンド申請してもらえます。コードは変わりません。")), typeof FriendPresenceShowSetting === 'function' && React.createElement(FriendPresenceShowSetting, null), React.createElement("div", {
     className: SCREEN_PANEL_CLASS
   }, React.createElement(ScreenSectionLabel, null, "コードで申請する"), React.createElement("input", {
     type: "text",
@@ -89296,7 +89415,8 @@ const rhythmMultiCleanRoomNotice = raw => {
     hn: rhythmMultiText(raw.hn, 12),
     hi: rhythmMultiText(raw.hi, 60),
     hr: rhythmMultiInt(raw.hr, 9999),
-    ph: raw.ph === 'select' ? 'select' : raw.ph === 'matching' ? 'matching' : ''
+    ph: raw.ph === 'select' ? 'select' : raw.ph === 'matching' ? 'matching' : '',
+    hb: rhythmMultiText(raw.hb, 64).replace(/[^A-Za-z0-9_-]/g, '')
   };
 };
 const rhythmMultiRoomList = (rooms, now = Date.now(), freshMs = 8000, exceptCode = '') => Object.entries(rooms || {}).filter(([code, info]) => code !== exceptCode && info && now - info.seen <= freshMs).map(([code, info]) => ({
@@ -89305,7 +89425,8 @@ const rhythmMultiRoomList = (rooms, now = Date.now(), freshMs = 8000, exceptCode
   hn: info.hn || '',
   hi: info.hi || '',
   hr: info.hr || 0,
-  ph: info.ph || ''
+  ph: info.ph || '',
+  hb: info.hb || ''
 })).sort((a, b) => b.n - a.n || (a.code < b.code ? -1 : 1));
 const rhythmMultiBestRoom = (rooms, exceptCode) => {
   const now = Date.now();
@@ -90099,7 +90220,8 @@ const RHYTHM_MULTI = (() => {
         hn: me.name,
         hi: me.icon,
         hr: me.level,
-        ph: s.room.phase
+        ph: s.room.phase,
+        hb: me.bid || undefined
       });
     }
     const recentlySawOthers = Object.values(s.members).some(m => m.id !== s.selfId && Date.now() - m.seen < RHYTHM_MULTI_MERGE_QUIET_MS);
@@ -91047,6 +91169,199 @@ function RhythmMultiResultBubble({
     "aria-hidden": "true",
     className: "absolute -bottom-[6px] left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-b-2 border-r-2 border-sky-300 bg-white"
   })));
+}
+const RHYTHM_MULTI_PRESENCE_PENDING = {
+  call: '',
+  invite: '',
+  at: 0
+};
+const rhythmMultiTakePresencePending = () => {
+  const p = RHYTHM_MULTI_PRESENCE_PENDING;
+  const fresh = Date.now() - p.at < 60000;
+  const out = fresh ? {
+    call: p.call,
+    invite: p.invite
+  } : {
+    call: '',
+    invite: ''
+  };
+  p.call = '';
+  p.invite = '';
+  p.at = 0;
+  return out;
+};
+const rhythmBeatAssistantFace = id => {
+  try {
+    const who = typeof assistantById === 'function' ? assistantById(id) : null;
+    return who && typeof assistantFaceSrc === 'function' ? assistantFaceSrc(who, 'happy') || '' : '';
+  } catch (_) {
+    return '';
+  }
+};
+const RHYTHM_BEAT_PRESENCE_KIND = Object.freeze({
+  room: {
+    tag: '🏠 部屋あり',
+    color: '#34d399'
+  },
+  here: {
+    tag: '💌 誘える',
+    color: '#38bdf8'
+  },
+  busy: {
+    tag: '🎮 部屋で遊び中',
+    color: '#a78bfa'
+  }
+});
+function RhythmBeatPresenceStrip({
+  assistants = [],
+  friends = [],
+  onPick,
+  resolveIconUrl
+}) {
+  const face = (src, color, label) => React.createElement("span", {
+    className: "relative block h-11 w-11 overflow-hidden rounded-full border-2 bg-slate-900",
+    style: {
+      borderColor: color
+    }
+  }, src ? React.createElement("img", {
+    src: src,
+    alt: "",
+    draggable: false,
+    className: "h-full w-full object-cover"
+  }) : React.createElement("span", {
+    className: "grid h-full w-full place-items-center text-lg",
+    "aria-hidden": "true"
+  }, label));
+  return React.createElement("section", {
+    "data-rhythm-beat-presence": true,
+    className: "rounded-2xl border-[1.5px] border-amber-300/60 bg-gradient-to-r from-indigo-950/95 to-slate-900/95 px-2.5 py-2"
+  }, React.createElement("div", {
+    className: "flex items-center gap-1.5 text-[11px] font-black text-amber-200"
+  }, React.createElement("span", {
+    className: "min-w-0 break-keep truncate"
+  }, "🎵 いまモンヒロビートにいる人"), React.createElement("small", {
+    className: "ml-auto text-[10.5px] font-bold text-slate-200 max-[359px]:text-[9.5px]"
+  }, "押すと一緒に遊べる所")), React.createElement("div", {
+    className: "mt-1.5 flex gap-2 overflow-x-auto pb-0.5"
+  }, assistants.map(a => React.createElement("button", {
+    key: `a-${a.id}`,
+    type: "button",
+    "data-rhythm-beat-presence-assistant": a.id,
+    onClick: () => onPick({
+      kind: 'assistant',
+      id: a.id
+    }),
+    className: "flex w-[58px] shrink-0 flex-col items-center text-center active:scale-95"
+  }, face(rhythmBeatAssistantFace(a.id), '#f472b6', '🎤'), React.createElement("b", {
+    className: "mt-0.5 block w-full truncate text-[10px] font-black leading-tight text-white"
+  }, a.name), React.createElement("small", {
+    className: "block whitespace-nowrap text-[8.5px] font-black text-pink-300"
+  }, "🎤 呼べる"))), assistants.length > 0 && friends.length > 0 && React.createElement("span", {
+    "aria-hidden": "true",
+    className: "my-1 w-px shrink-0 bg-white/20"
+  }), friends.map(f => {
+    const k = RHYTHM_BEAT_PRESENCE_KIND[f.kind] || RHYTHM_BEAT_PRESENCE_KIND.here;
+    return React.createElement("button", {
+      key: `f-${f.otherId}`,
+      type: "button",
+      "data-rhythm-beat-presence-friend": f.otherId,
+      "data-rhythm-beat-presence-kind": f.kind,
+      onClick: () => onPick({
+        kind: 'friend',
+        id: f.otherId
+      }),
+      className: "flex w-[58px] shrink-0 flex-col items-center text-center active:scale-95"
+    }, face(f.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(f.icon) : '', k.color, '🙂'), React.createElement("b", {
+      className: "mt-0.5 block w-full truncate text-[10px] font-black leading-tight text-white"
+    }, f.userName), React.createElement("small", {
+      className: "block whitespace-nowrap text-[8.5px] font-black",
+      style: {
+        color: k.color
+      }
+    }, k.tag));
+  })));
+}
+function RhythmBeatPresenceSheet({
+  pick,
+  friend = null,
+  onClose,
+  onCallAssistant,
+  onJoinRoom,
+  onInvite,
+  resolveIconUrl
+}) {
+  if (!pick) return null;
+  const isAssistant = pick.kind === 'assistant';
+  const who = isAssistant && typeof assistantById === 'function' ? assistantById(pick.id) : null;
+  const name = isAssistant ? who && who.name || '助手' : friend && friend.userName || 'フレンド';
+  const k = !isAssistant && friend ? RHYTHM_BEAT_PRESENCE_KIND[friend.kind] || RHYTHM_BEAT_PRESENCE_KIND.here : null;
+  const src = isAssistant ? rhythmBeatAssistantFace(pick.id) : friend && friend.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(friend.icon) : '';
+  const title = isAssistant ? `${name} は いま練習中` : friend && friend.kind === 'room' ? `${name} さんが部屋を開いています` : friend && friend.kind === 'busy' ? `${name} さんは部屋で遊び中` : `${name} さんが いまモンヒロビートにいます`;
+  const sub = isAssistant ? 'モンヒロビートにいるあいだは券なし' : friend && friend.kind === 'room' && friend.room ? `フリーマッチ ${friend.room.n}/${RHYTHM_MULTI_ROOM_MAX}人${friend.room.ph === 'select' ? '・曲えらび中' : '・待合い'}` : k ? k.tag : '';
+  const line = isAssistant ? 'フリーマッチかプライベートの部屋で「呼ぶ」と、セッション券なしで一緒に演奏できます(何曲でも)。ソロライブには来られません。' : friend && friend.kind === 'room' ? '「入る」で、その部屋へ入れます。' : friend && friend.kind === 'busy' ? '合言葉の部屋か、演奏中の部屋にいるので、いまは入れません。部屋に誘ってもらうか、終わってから誘ってみましょう。' : '部屋を作って 💌 で誘うと、一緒に遊べます。';
+  const action = isAssistant ? {
+    label: '部屋を作って呼ぶ',
+    go: () => onCallAssistant(pick.id)
+  } : friend && friend.kind === 'room' && friend.room ? {
+    label: '入る',
+    go: () => onJoinRoom(friend.room.code)
+  } : friend && friend.kind === 'here' ? {
+    label: '部屋を作って誘う',
+    go: () => onInvite(pick.id)
+  } : null;
+  const accent = isAssistant ? '#f472b6' : k ? k.color : '#38bdf8';
+  return React.createElement("div", {
+    className: "absolute inset-0 z-[85500] flex items-end justify-center p-3 landscape:items-center",
+    "data-rhythm-beat-presence-sheet": pick.kind
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    className: "absolute inset-0 bg-slate-950/70",
+    onClick: onClose
+  }), React.createElement("div", {
+    className: "relative w-full max-w-sm rounded-2xl border-2 bg-slate-900 p-3.5 text-white shadow-2xl",
+    style: {
+      borderColor: accent
+    }
+  }, React.createElement("div", {
+    className: "flex items-center gap-2.5"
+  }, React.createElement("span", {
+    className: "block h-[52px] w-[52px] shrink-0 overflow-hidden rounded-full border-2 bg-slate-950",
+    style: {
+      borderColor: accent
+    }
+  }, src ? React.createElement("img", {
+    src: src,
+    alt: "",
+    draggable: false,
+    className: "h-full w-full object-cover"
+  }) : React.createElement("span", {
+    className: "grid h-full w-full place-items-center text-xl",
+    "aria-hidden": "true"
+  }, "🙂")), React.createElement("span", {
+    className: "min-w-0 flex-1 leading-tight"
+  }, React.createElement("b", {
+    className: "block text-[14px] font-black",
+    style: JA_WRAP_STYLE
+  }, jaWrap(title)), sub && React.createElement("small", {
+    className: "mt-0.5 block text-[11px] font-bold text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap(sub)))), React.createElement("p", {
+    "data-rhythm-beat-presence-line": true,
+    className: "mt-2.5 rounded-xl bg-slate-800 px-2.5 py-2 text-[12px] font-bold leading-relaxed text-slate-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(line)), React.createElement("div", {
+    className: `mt-2.5 grid gap-2 ${action ? 'grid-cols-2' : 'grid-cols-1'}`
+  }, React.createElement("button", {
+    type: "button",
+    onClick: onClose,
+    className: "min-h-[44px] rounded-xl border border-white/20 text-sm font-black"
+  }, "とじる"), action && React.createElement("button", {
+    type: "button",
+    "data-rhythm-beat-presence-go": true,
+    onClick: action.go,
+    className: "min-h-[44px] rounded-xl bg-gradient-to-r from-pink-600 to-violet-600 text-sm font-black"
+  }, action.label))));
 }
 function RhythmMultiLobbyCount() {
   const [count, setCount] = React.useState(null);
@@ -92411,6 +92726,7 @@ function RhythmMultiScreen({
     const song = songs.find(x => x.songId === id);
     return song ? rhythmSongFullName(song) : '(曲)';
   };
+  const [callPreselect, setCallPreselect] = React.useState('');
   const [buddyInfoId, setBuddyInfoId] = React.useState('');
   const openBuddyInfo = m => {
     if (m && m.cpu) setBuddyInfoId(m.id);
@@ -92437,6 +92753,7 @@ function RhythmMultiScreen({
     assistants: sessionAssistants,
     pickAssistant: callAssistant,
     guideAssistantId: guideAssistantId,
+    preselectAssistant: callPreselect,
     freeSeats: view ? Math.max(0, RHYTHM_MULTI_ROOM_MAX - (view.members || []).length) : 0,
     breederName: profile && profile.name,
     songName: buddySongName,
@@ -92686,6 +93003,109 @@ function RhythmMultiScreen({
     return RHYTHM_MULTI.watchRooms('free', setFreeRooms);
   }, [freeOpen]);
   const freeRoomCount = Array.isArray(freeRooms) ? freeRooms.length : null;
+  const modeSelectShown = !view && !searching && !!modeSelect;
+  const [beatTick, setBeatTick] = React.useState(0);
+  const [beatPresence, setBeatPresence] = React.useState({});
+  const [beatRooms, setBeatRooms] = React.useState([]);
+  const [beatPick, setBeatPick] = React.useState(null);
+  const [inviteFirstId, setInviteFirstId] = React.useState('');
+  const rosterIds = (roster || []).map(f => f.otherId).join(',');
+  React.useEffect(() => {
+    if (!modeSelectShown) return undefined;
+    const t = setInterval(() => setBeatTick(x => x + 1), 60000);
+    return () => clearInterval(t);
+  }, [modeSelectShown]);
+  React.useEffect(() => {
+    if (!modeSelectShown || !friendsOn || !rosterIds || typeof friendsPresenceFor !== 'function') return undefined;
+    let alive = true;
+    void friendsPresenceFor(rosterIds.split(',')).then(p => {
+      if (alive) setBeatPresence(p || {});
+    });
+    return () => {
+      alive = false;
+    };
+  }, [modeSelectShown, friendsOn, rosterIds, beatTick]);
+  const BEAT_PLACES = ['rhythm', 'rhythmPlay', 'multi', 'room'];
+  const beatFriendNear = modeSelectShown && friendsOn && (roster || []).some(f => {
+    const p = beatPresence[f.otherId];
+    return !!(p && p.online && BEAT_PLACES.includes(p.place));
+  });
+  React.useEffect(() => {
+    if (!beatFriendNear) {
+      setBeatRooms([]);
+      return undefined;
+    }
+    return RHYTHM_MULTI.watchRooms('free', list => setBeatRooms(Array.isArray(list) ? list : []));
+  }, [beatFriendNear]);
+  const beatAssistants = (() => {
+    void beatTick;
+    if (!modeSelectShown || !sessionAssistantsOn || typeof assistantLifeBeatIds !== 'function') return [];
+    try {
+      const ids = assistantLifeBeatIds();
+      return (sessionAssistants || []).filter(a => a && ids.includes(a.id)).sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
+    } catch (_) {
+      return [];
+    }
+  })();
+  const friendRoomsBy = list => {
+    const by = {};
+    (list || []).forEach(r => {
+      if (r && r.hb && !by[r.hb]) by[r.hb] = r;
+    });
+    return by;
+  };
+  const beatFriendsOf = rooms => {
+    if (!friendsOn) return [];
+    const by = friendRoomsBy(rooms);
+    const order = {
+      room: 0,
+      here: 1,
+      busy: 2
+    };
+    return (roster || []).map(f => {
+      const room = by[f.otherId];
+      if (room) return {
+        ...f,
+        kind: 'room',
+        room
+      };
+      const p = beatPresence[f.otherId];
+      if (!p || !p.online) return null;
+      if (p.place === 'rhythm') return {
+        ...f,
+        kind: 'here'
+      };
+      if (p.place === 'multi' || p.place === 'rhythmPlay') return {
+        ...f,
+        kind: 'busy'
+      };
+      return null;
+    }).filter(Boolean).map((f, i) => [f, i]).sort(([a, ia], [b, ib]) => order[a.kind] - order[b.kind] || ia - ib).map(([f]) => f);
+  };
+  const beatFriends = modeSelectShown ? beatFriendsOf(beatRooms) : [];
+  const beatPickFriend = beatPick && beatPick.kind === 'friend' ? beatFriendsOf(freeOpen && Array.isArray(freeRooms) ? freeRooms : beatRooms).find(f => f.otherId === beatPick.id) || null : null;
+  const beatCallAssistant = id => {
+    setBeatPick(null);
+    Object.assign(RHYTHM_MULTI_PRESENCE_PENDING, {
+      call: id,
+      invite: '',
+      at: Date.now()
+    });
+    createFree();
+  };
+  const beatInviteFriend = id => {
+    setBeatPick(null);
+    Object.assign(RHYTHM_MULTI_PRESENCE_PENDING, {
+      call: '',
+      invite: id,
+      at: Date.now()
+    });
+    createFree();
+  };
+  const beatJoinRoom = code => {
+    setBeatPick(null);
+    joinFreeRoom(code);
+  };
   const rejoinTarget = !view ? rhythmMultiRejoinTarget() : null;
   const rejoinButton = rejoinTarget && React.createElement("button", {
     type: "button",
@@ -92955,7 +93375,7 @@ function RhythmMultiScreen({
     className: "text-[11px] font-bold text-slate-400"
   }, "フレンドを読み込んでいます…"), roster !== null && roster.length === 0 && React.createElement("p", {
     className: "text-[11px] font-bold leading-relaxed text-slate-400"
-  }, "まだフレンドがいません。プロフィールの「フレンド」から、フレンドコードで申請できます。"), (typeof friendsPresenceSort === 'function' ? friendsPresenceSort(roster || [], presence) : roster || []).map(friend => React.createElement("div", {
+  }, "まだフレンドがいません。プロフィールの「フレンド」から、フレンドコードで申請できます。"), (list => inviteFirstId ? [...list.filter(f => f.otherId === inviteFirstId), ...list.filter(f => f.otherId !== inviteFirstId)] : list)(typeof friendsPresenceSort === 'function' ? friendsPresenceSort(roster || [], presence) : roster || []).map(friend => React.createElement("div", {
     key: friend.otherId,
     "data-rhythm-multi-friend-row": true,
     className: "flex items-center gap-2 rounded-lg bg-slate-950/60 px-2 py-1.5"
@@ -92985,6 +93405,25 @@ function RhythmMultiScreen({
     setInviteSheet(true);
     if (friendSelfId) loadRoster(friendSelfId);
   };
+  const viewSelfId = view ? view.selfId : '';
+  React.useEffect(() => {
+    if (!viewSelfId || modeSelect) return;
+    const p = rhythmMultiTakePresencePending();
+    if (p.call) {
+      setCallPreselect(p.call);
+      setBuddySheet('pick');
+    } else if (p.invite) {
+      setInviteFirstId(p.invite);
+      openInviteSheet();
+    }
+  }, [viewSelfId]);
+  const buddySheetWasOpen = React.useRef(false);
+  React.useEffect(() => {
+    if (buddySheet) buddySheetWasOpen.current = true;else if (buddySheetWasOpen.current) {
+      buddySheetWasOpen.current = false;
+      setCallPreselect('');
+    }
+  }, [buddySheet]);
   const inviteButton = (extra = '') => friendsOn && view && React.createElement("button", {
     "data-rhythm-multi-invite-open": true,
     type: "button",
@@ -93140,7 +93579,7 @@ function RhythmMultiScreen({
       showComment: ms.showComment,
       onToggle: ms.onToggleAssistant
     }), React.createElement("div", {
-      className: "shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2"
+      className: `shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2 ${ms.multi && (beatAssistants.length > 0 || beatFriends.length > 0) ? 'landscape:justify-start' : 'landscape:justify-center'}`
     }, !(ms.assistant && (ms.showArt || ms.showComment)) && assistToggles('justify-end', true), friendsOn && friendInvites.length > 0 && React.createElement("section", {
       "data-rhythm-multi-friend-invites": true,
       className: `${card} space-y-2 border-pink-400/60`
@@ -93156,7 +93595,12 @@ function RhythmMultiScreen({
       type: "button",
       className: `${btn} shrink-0 bg-pink-700 text-xs`,
       onClick: () => joinFromInvite(invite)
-    }, "参加する")))), React.createElement("div", {
+    }, "参加する")))), ms.multi && (beatAssistants.length > 0 || beatFriends.length > 0) && React.createElement(RhythmBeatPresenceStrip, {
+      assistants: beatAssistants,
+      friends: beatFriends,
+      onPick: setBeatPick,
+      resolveIconUrl: resolveIconUrl
+    }), React.createElement("div", {
       className: `grid gap-2 ${ms.multi ? 'grid-cols-2' : 'grid-cols-1'}`
     }, React.createElement("button", {
       "data-rhythm-mode-solo": true,
@@ -93383,7 +93827,15 @@ function RhythmMultiScreen({
       style: {
         marginTop: 'var(--mh-sa-top)'
       }
-    }, buddyRefundNote), freeOpen && React.createElement("div", {
+    }, buddyRefundNote), React.createElement(RhythmBeatPresenceSheet, {
+      pick: beatPick,
+      friend: beatPickFriend,
+      onClose: () => setBeatPick(null),
+      onCallAssistant: beatCallAssistant,
+      onJoinRoom: beatJoinRoom,
+      onInvite: beatInviteFriend,
+      resolveIconUrl: resolveIconUrl
+    }), freeOpen && React.createElement("div", {
       className: "absolute inset-0 z-[85000]"
     }, React.createElement("button", {
       type: "button",
@@ -93418,7 +93870,50 @@ function RhythmMultiScreen({
         setFreeList(false);
       },
       className: "min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 text-sm font-black"
-    }, "✕")), rejoinButton, freeList ? React.createElement(RhythmMultiRoomList, {
+    }, "✕")), rejoinButton, !freeList && (() => {
+      const list = beatFriendsOf(Array.isArray(freeRooms) ? freeRooms : []).filter(f => f.kind === 'room' || f.kind === 'here');
+      if (!list.length) return null;
+      return React.createElement("section", {
+        "data-rhythm-free-friends": true,
+        className: "rounded-2xl border-2 border-emerald-400/80 bg-emerald-950/60 px-3 py-2"
+      }, React.createElement("b", {
+        className: "block text-[11px] font-black text-emerald-300"
+      }, "🤝 フレンドがいます"), list.map(f => React.createElement("div", {
+        key: f.otherId,
+        "data-rhythm-free-friend": f.otherId,
+        "data-rhythm-free-friend-kind": f.kind,
+        className: "mt-1.5 flex items-center gap-2"
+      }, React.createElement("span", {
+        className: "block h-[34px] w-[34px] shrink-0 overflow-hidden rounded-full border-2 bg-slate-950",
+        style: {
+          borderColor: f.kind === 'room' ? '#34d399' : '#38bdf8'
+        }
+      }, f.icon && typeof resolveIconUrl === 'function' ? React.createElement("img", {
+        src: resolveIconUrl(f.icon),
+        alt: "",
+        draggable: false,
+        className: "h-full w-full object-cover"
+      }) : React.createElement("span", {
+        className: "grid h-full w-full place-items-center",
+        "aria-hidden": "true"
+      }, "🙂")), React.createElement("span", {
+        className: "min-w-0 flex-1 leading-tight"
+      }, React.createElement("b", {
+        className: "block truncate text-[13px] font-black text-white"
+      }, f.kind === 'room' ? `${f.userName} さんの部屋` : `${f.userName} さん`), React.createElement("small", {
+        className: "block truncate text-[10px] font-bold text-slate-300"
+      }, f.kind === 'room' ? `${f.room.n}/${RHYTHM_MULTI_ROOM_MAX}人${f.room.ph === 'select' ? '・曲えらび中' : '・待合い'}` : 'モンヒロビートにいる・部屋はまだ')), f.kind === 'room' ? React.createElement("button", {
+        type: "button",
+        "data-rhythm-free-friend-join": f.room.code,
+        onClick: () => joinFreeRoom(f.room.code),
+        className: "min-h-[40px] shrink-0 rounded-xl bg-emerald-500 px-4 text-[13px] font-black text-white"
+      }, "入る") : React.createElement("button", {
+        type: "button",
+        "data-rhythm-free-friend-invite": f.otherId,
+        onClick: () => beatInviteFriend(f.otherId),
+        className: "min-h-[40px] shrink-0 whitespace-nowrap rounded-xl bg-sky-600 px-3 text-[13px] font-black text-white"
+      }, "作って誘う"))));
+    })(), freeList ? React.createElement(RhythmMultiRoomList, {
       onJoin: joinFreeRoom,
       onCreate: createFree,
       onBack: () => setFreeList(false),
@@ -95752,7 +96247,8 @@ function RhythmBuddySheet({
   guideAssistantId = '',
   freeSeats = 4,
   refused = null,
-  onCallStart = null
+  onCallStart = null,
+  preselectAssistant = ''
 }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
@@ -95762,7 +96258,10 @@ function RhythmBuddySheet({
   const detail = detailId ? (masuMons || []).find(x => x && x.id === detailId) : null;
   const canPay = freeLeft > 0 || tickets > 0;
   const listControls = useRhythmBuddyListControls();
-  const [picks, setPicks] = React.useState([]);
+  const [picks, setPicks] = React.useState(() => preselectAssistant && (assistants || []).some(a => a && a.id === preselectAssistant) && !calledIds.includes(rhythmAssistSessionKey(preselectAssistant)) && freeSeats > 0 ? [{
+    kind: 'assistant',
+    id: preselectAssistant
+  }] : []);
   const [pickNote, setPickNote] = React.useState('');
   const isPicked = (kind, id) => picks.some(p => p.kind === kind && p.id === id);
   const togglePick = (kind, id) => {
@@ -95784,7 +96283,7 @@ function RhythmBuddySheet({
     setPickNote('');
   };
   const assistOn = rhythmAssistSessionEnabled() && typeof pickAssistant === 'function' && (assistants || []).length > 0;
-  const [tab, setTab] = React.useState(() => (masuMons || []).length && !refused ? 'masu' : 'assistant');
+  const [tab, setTab] = React.useState(() => (masuMons || []).length && !refused && !preselectAssistant ? 'masu' : 'assistant');
   const tabNow = assistOn ? tab : 'masu';
   const masuPicks = picks.filter(p => p.kind === 'masu');
   const singleMasu = masuPicks.length === 1 && picks.length === 1 ? (masuMons || []).find(x => x && x.id === masuPicks[0].id) : null;
@@ -105829,6 +106328,13 @@ const assistantLifeHouseCardIds = () => {
     return [];
   }
 };
+const assistantLifeCardSpent = id => {
+  try {
+    return typeof cardLifeRewardSpent === 'function' ? cardLifeRewardSpent(id) : null;
+  } catch {
+    return null;
+  }
+};
 const assistantLifeOnWoken = ev => {
   if (!ev || !ev.assistantId || !ASSISTANT_LIFE_PREFS[ev.assistantId]) return;
   if (!ev.came) return;
@@ -105946,6 +106452,8 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed #ffffff1a;font-size:12px;font-weight:800}
 .mhl-row .k{width:78px;flex:none;color:#cbd5e1;font-size:10.5px}
 .mhl-btn{min-height:44px;border-radius:12px;font-size:12px;font-weight:900;color:#fff}.mhl-btn:disabled{opacity:.45}
+/* 背の低い横(🔄横 667×375 など)では、部屋のシートの下に止めたボタンの段が画面を占めて、見出しの下の行を隠していた(2026-11-08 ミハリ)。ボタンを少し低くする */
+@media (orientation:landscape) and (max-height:420px){[data-assistant-life-room-acts] .mhl-btn{min-height:34px;font-size:11.5px}[data-assistant-life-room-acts]{gap:5px}}
 .mhl-scene{position:absolute;inset:0;z-index:30;overflow:hidden;background:#000}
 .mhl-scene .bg{position:absolute;inset:0;background-size:cover;background-position:center}
 .mhl-scene .st{position:absolute;bottom:0;object-fit:contain;object-position:bottom;filter:drop-shadow(0 6px 12px #0008)}
@@ -106150,7 +106658,7 @@ function AssistantLifeRoom({
     }, n > 1 && short ? `・${n}人` : '', mark ? ` ${[...t[1]][0]}` : '')));
   })(), !met && React.createElement("span", {
     className: "lock"
-  }, "まだ会っていない"));
+  }, other ? 'まだいない' : 'まだ会っていない'));
 }
 function AssistantLifeHouseArt({
   width,
@@ -106391,9 +106899,12 @@ function AssistantLifeRoomSheet({
   onMasmon = null,
   onChat = null,
   follow = null,
-  onFollowDone = null
+  onFollowDone = null,
+  onGiveSolo = null,
+  canGiveSolo = false
 }) {
   const [furnOpen, setFurnOpen] = React.useState(!!openFurn);
+  const soloOn = typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn() && !!onGiveSolo;
   const who = assistantById(id);
   if (!who) return null;
   const w = assistantLifeWhereOf(life, id);
@@ -106504,6 +107015,8 @@ function AssistantLifeRoomSheet({
   }), typeof AssistantMasmonRoomRow === 'function' && React.createElement(AssistantMasmonRoomRow, {
     id: id,
     onOpen: onMasmon
+  }), soloOn && typeof AssistantLifeChekiRow === 'function' && React.createElement(AssistantLifeChekiRow, {
+    pair: [id]
   }), sess && React.createElement("div", {
     className: "mhl-row",
     "data-assistant-life-room-session-row": true
@@ -106566,19 +107079,28 @@ function AssistantLifeRoomSheet({
     "data-assistant-life-room-act": "peek",
     disabled: !canWatch,
     onClick: () => onPeek(id)
-  }, canWatch ? '👀 ようすを見る' : '見た'), !w || !w.group ? React.createElement("button", {
+  }, canWatch ? '👀 ようすを見る' : '見た'), (!w || !w.group || soloOn) && React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-call",
     "data-assistant-life-room-act": "invite",
     disabled: w && w.reason === 'distance',
     onClick: () => onInvite(id)
-  }, asleep ? '💤 そっと声をかける' : '💬 声をかける') : React.createElement("button", {
+  }, asleep ? '💤 そっと声をかける' : '💬 声をかける'), w && w.group && React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-give",
     "data-assistant-life-room-act": "give",
     disabled: !canGive,
     onClick: () => onGive(w.group)
-  }, "🎁 贈る"), onChat && !follow && React.createElement("button", {
+  }, soloOn ? '🎁 2人に贈る' : '🎁 贈る'), soloOn && React.createElement("button", {
+    type: "button",
+    className: `mhl-btn mhl-give ${w && w.group ? '' : 'col-span-2'}`,
+    "data-assistant-life-room-act": "give-solo",
+    disabled: !canGiveSolo,
+    onClick: () => onGiveSolo(id, w && w.group ? w.group.ids : [id]),
+    style: {
+      background: 'linear-gradient(90deg,#db2777,#be185d)'
+    }
+  }, w && w.group ? `🎁 ${who.name}だけに贈る` : `🎁 ${who.name}に贈る`), onChat && !follow && React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-call col-span-2",
     "data-assistant-life-room-act": "chat",
@@ -106596,14 +107118,19 @@ function AssistantLifeRoomSheet({
     className: "mhl-btn col-span-2 bg-gradient-to-r from-amber-500 to-orange-600",
     "data-assistant-life-room-act": "furn",
     onClick: () => setFurnOpen(true)
-  }, "🪑 部屋の家具"), typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id) && React.createElement("button", {
+  }, "🪑 部屋の家具"), typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id) && (assistantLifeCardSpent(id) ? React.createElement("button", {
+    type: "button",
+    disabled: true,
+    className: "mhl-btn col-span-2 cursor-not-allowed bg-slate-600 text-slate-200 opacity-80",
+    "data-assistant-life-room-act": "card-spent"
+  }, typeof cardLifeSpentText === 'function' ? cardLifeSpentText(assistantLifeCardSpent(id)) : '🃏 ごほうびアップは使い切りました') : React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-card col-span-2",
     "data-assistant-life-room-act": "card",
     onClick: () => onCard(id)
   }, "🃏 カード部屋で対戦する ", React.createElement("span", {
     className: "mhl-card-up"
-  }, "ごほうびアップ")), React.createElement("button", {
+  }, "ごほうびアップ"))), React.createElement("button", {
     type: "button",
     "data-assistant-life-room-close": true,
     "data-mhl-sheet-close": true,
@@ -106934,7 +107461,8 @@ function AssistantLifeHouse({
   onUseItem = null,
   bondLevelOf = null,
   furnItems = null,
-  onGiveFurn = null
+  onGiveFurn = null,
+  onGiveSolo = null
 }) {
   const st = useAssistantLifeNow(metIds);
   const diary = useAssistantLifeDiary();
@@ -107145,8 +107673,31 @@ function AssistantLifeHouse({
   const itemInfos = assistantLifeItemInfos();
   const haveOf = kind => peerItems && Number(peerItems[kind]) || 0;
   const usedOf = kind => !!(typeof assistantLifeGiftReason === 'function' && assistantLifeGiftReason(kind, peerSt, 1));
+  const soloOn = typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn() && !!onGiveSolo;
+  const soloLeft = soloOn ? assistantLifeSoloLeft() : 0;
+  const openGiveSolo = (who, ids) => {
+    if (!soloOn || !who) return;
+    const usable = assistantLifeSoloKinds().filter(g => haveOf(g.kind) > 0 && !assistantLifeSoloReason(g.kind, peerSt, haveOf(g.kind)));
+    const kind = (usable[0] || assistantLifeSoloKinds()[0] || {}).kind;
+    const list = Array.isArray(ids) && ids.length ? ids : [who];
+    const ps = [];
+    for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) ps.push([list[i], list[j]]);
+    setRoomId(null);
+    setScene(null);
+    setNote('');
+    setGive({
+      ids: list,
+      pair: ps[0] || null,
+      solo: who,
+      kind
+    });
+  };
   const openGive = gids => {
     const list = Array.isArray(gids) ? gids : gids && gids.ids || [];
+    if (list.length === 1 && soloOn) {
+      openGiveSolo(list[0], list);
+      return;
+    }
     if (list.length < 2) return;
     const kind = itemInfos.find(x => haveOf(x.kind) > 0 && !usedOf(x.kind))?.kind || 'gift';
     const ps = [];
@@ -107162,6 +107713,26 @@ function AssistantLifeHouse({
     });
   };
   const doGive = async () => {
+    if (give && give.solo && soloOn) {
+      const who = give.solo,
+        kind = give.kind;
+      const talk = await onGiveSolo(who, kind);
+      const info = assistantLifeItemInfo(kind);
+      setGive(null);
+      if (!talk) {
+        setNote(`${info ? info.name : '道具'}は、いまは贈れません(1人には1日3回・同じ道具は1日1回・持っている数を見てください)`);
+        return;
+      }
+      const w = assistantLifeWhereOf(life, who);
+      const likeText = talk.like === 'like' ? ' ・ 💗 好きなもの！' : talk.like === 'bad' ? ' ・ 💧 ちょっと苦手…' : '';
+      playTalk(talk, {
+        ids: [who],
+        place: w ? w.place : 'home',
+        gift: true
+      });
+      setNote(`${nameOf(who)}に${info ? `${info.emoji} ${info.name}` : ''}を贈った。💗 仲良し度 +${talk.amount}${likeText}`);
+      return;
+    }
     if (!give || !give.pair) return;
     const talk = await onUseItem(give.kind, give.pair);
     const info = assistantLifeItemInfo(give.kind);
@@ -107224,8 +107795,10 @@ function AssistantLifeHouse({
     return w && w.doing === 'practice';
   });
   const itemsLeft = Math.min(typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0, itemInfos.filter(x => !usedOf(x.kind) && haveOf(x.kind) > 0).length);
-  const itemsHave = itemInfos.reduce((n, x) => n + haveOf(x.kind), 0);
+  const soloInfos = soloOn ? assistantLifeSoloDefs().map(g => assistantLifeItemInfo(g.kind)).filter(Boolean) : [];
+  const itemsHave = [...itemInfos, ...soloInfos].reduce((n, x) => n + haveOf(x.kind), 0);
   const giveGroup = (life.groups || [])[0];
+  const giveSoloId = soloOn ? Object.keys(life.solo || {}).find(id => !awayFriend(id)) || giveGroup && giveGroup.ids[0] || null : null;
   const pad = 12;
   const houseW = land ? Math.min(560, Math.round(vw * 0.64) - pad * 2) : Math.min(380, vw - pad * 2);
   const tiles = React.createElement("div", {
@@ -107252,11 +107825,11 @@ function AssistantLifeHouse({
     type: "button",
     className: "mhl-tile mhl-give flex-1",
     "data-assistant-life-today-act": "give",
-    disabled: !canGive || !giveGroup,
+    disabled: !canGive || !giveGroup && !giveSoloId,
     onClick: () => {
-      if (itemsLeft > 0 && giveGroup) openGive(giveGroup.ids);else setTab('items');
+      if (itemsLeft > 0 && giveGroup) openGive(giveGroup.ids);else if (soloLeft > 0 && giveSoloId) openGiveSolo(giveSoloId, giveGroup && giveGroup.ids.includes(giveSoloId) ? giveGroup.ids : [giveSoloId]);else setTab('items');
     }
-  }, React.createElement("em", null, itemsLeft, "回"), React.createElement("i", null, "🎁"), React.createElement("b", null, "贈る"), React.createElement("small", null, "道具 ", itemsHave, "個")), React.createElement("button", {
+  }, React.createElement("em", null, soloOn ? itemsLeft + soloLeft : itemsLeft, "回"), React.createElement("i", null, "🎁"), React.createElement("b", null, "贈る"), React.createElement("small", null, "道具 ", itemsHave, "個")), React.createElement("button", {
     type: "button",
     className: "mhl-tile mhl-beat flex-1",
     "data-assistant-life-today-act": "beat",
@@ -107417,13 +107990,54 @@ function AssistantLifeHouse({
     className: "whitespace-nowrap text-pink-200"
   }, "💗 仲良し度 ", assistantLifeItemRange(x).player), React.createElement("span", {
     className: "whitespace-nowrap text-slate-400"
-  }, "(好みで変わる)"))), haveOf(x.kind) <= 0 && typeof AssistantLifeShopButton === 'function' && React.createElement(AssistantLifeShopButton, {
+  }, "(好みで変わる)")), soloOn && React.createElement("p", {
+    className: "text-[10px] leading-snug text-slate-400",
+    "data-assistant-life-item-solo-amt": true
+  }, "1人に贈ると: ", React.createElement("span", {
+    className: "whitespace-nowrap text-pink-200"
+  }, "💗 仲良し度 ", assistantLifeItemRange(x).player), "(友情Lv は上がらない)")), haveOf(x.kind) <= 0 && typeof AssistantLifeShopButton === 'function' && React.createElement(AssistantLifeShopButton, {
     tab: "item",
     small: true,
     label: `🛒 ${x.cost != null ? `${x.cost}P` : '交換所'}`
-  }))), React.createElement("p", {
-    className: "mt-2 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] leading-snug text-slate-200"
-  }, "手に入れる: モンヒロビートの「ビートP交換所」(", itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・'), ")。贈る: 部屋や場面の「🎁 贈る」。好きな物なら多め・苦手な物なら少なめに上がり、好みは贈ると分かります。同じ道具は1日1回・合わせて1日3回。声をかける・見守るは無料です。次の段まであと何点・この道具で段の何割進むかは、「🎁 贈る」で2人を選ぶと出ます"), typeof AssistantLifeShopButton === 'function' && React.createElement("div", {
+  }))), soloOn && soloInfos.length > 0 && React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "mt-3 inline-block rounded-xl bg-slate-950/85 px-2 py-0.5 text-[13px] font-black text-pink-200",
+    "data-assistant-life-items-solo": true
+  }, "💗 1人に贈る道具 ", React.createElement("span", {
+    className: "text-[10.5px] text-slate-200"
+  }, "今日あと ", soloLeft, "回")), soloInfos.map(x => {
+    const g = assistantLifeGiftOf(x.kind);
+    const lo = Math.round(g.player * assistantLifeGiftMult('bad')),
+      hi = Math.round(g.player * assistantLifeGiftMult('like'));
+    return React.createElement("div", {
+      key: x.kind,
+      "data-assistant-life-item": x.kind,
+      className: "mt-2 flex items-center gap-2 rounded-2xl border border-pink-300/30 bg-slate-900/85 p-2"
+    }, React.createElement("span", {
+      className: "grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/5 text-[26px]",
+      "aria-hidden": "true"
+    }, x.emoji), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("p", {
+      className: "text-[12px] font-black text-white"
+    }, x.name, " ", React.createElement("span", {
+      className: "text-[10px] text-slate-400"
+    }, "持っている ", haveOf(x.kind), "個")), React.createElement("p", {
+      className: "text-[10.5px] leading-snug text-slate-300"
+    }, x.what.split('。')[0], "。", React.createElement("span", {
+      className: "whitespace-nowrap text-pink-200"
+    }, "💗 仲良し度 +", lo, "〜", hi), React.createElement("span", {
+      className: "whitespace-nowrap text-slate-400"
+    }, "(好みで変わる)"))), haveOf(x.kind) <= 0 && typeof AssistantLifeShopButton === 'function' && React.createElement(AssistantLifeShopButton, {
+      tab: "item",
+      small: true,
+      label: `🛒 ${x.cost != null ? `${x.cost}P` : '交換所'}`
+    }));
+  })), React.createElement("p", {
+    className: "mt-2 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] leading-snug text-slate-200",
+    style: {
+      wordBreak: 'auto-phrase'
+    }
+  }, "手に入れる: モンヒロビートの「ビートP交換所」(", itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・'), ")。贈る: 部屋や場面の「🎁 贈る」", soloOn ? '(2人に・その助手だけに)' : '', "。好きな物なら多め・苦手な物なら少なめに上がり、好みは贈ると分かります。同じ道具は1日1回・合わせて1日3回。声をかける・見守るは無料です。次の段まであと何点・この道具で段の何割進むかは、「🎁 贈る」で2人を選ぶと出ます"), typeof AssistantLifeShopButton === 'function' && React.createElement("div", {
     className: "mt-2"
   }, React.createElement(AssistantLifeShopButton, {
     tab: "item"
@@ -107484,6 +108098,8 @@ function AssistantLifeHouse({
     key: roomId,
     id: roomId,
     openFurn: furnBack === roomId,
+    onGiveSolo: soloOn ? openGiveSolo : null,
+    canGiveSolo: soloOn && soloLeft > 0,
     life: life,
     peerSt: peerSt,
     bondLevelOf: bondLevelOf,
@@ -107814,6 +108430,7 @@ function AssistantLifeHomeFaces({
   for (const id of ASSISTANT_LIFE_HOUSE_ORDER) {
     if (!ids.includes(id)) continue;
     let f = assistantLifeFacilityOf(assistantLifeWhereOf(life, id));
+    if (f === 'card' && assistantLifeCardSpent(id)) continue;
     if (!rects[f]) f = 'life';
     if (!rects[f]) continue;
     (by[f] = by[f] || []).push(id);
@@ -119959,6 +120576,7 @@ const ASSISTANT_LIFE_GIFT_DAY_KEY = 'mh_assistant_life_gift_day_v1';
 const ASSISTANT_LIFE_GIFT_LIKES_KEY = 'mh_assistant_life_likes_v1';
 const ASSISTANT_LIFE_GIFT_CHEKI_KEY = 'mh_assistant_life_cheki_v1';
 const ASSISTANT_LIFE_GIFT_CHEKI_MAX = 60;
+const ASSISTANT_LIFE_SOLO_GIFT_KEY = 'mh_assistant_life_solo_gift_v1';
 const ASSISTANT_LIFE_GIFT_WRAP = Object.freeze({
   basket: ['おやつ', 'バスケット'],
   misanga: ['おそろいの', 'ミサンガ'],
@@ -119969,7 +120587,10 @@ const ASSISTANT_LIFE_GIFT_WRAP = Object.freeze({
   puzzle: ['ふたりで解く', 'パズル'],
   sleeve: ['おそろい', 'スリーブ'],
   cheki: ['思い出', 'チェキ'],
-  flower: ['ちいさな', '花束']
+  flower: ['ちいさな', '花束'],
+  letter: ['手書きの', '手紙'],
+  candy: ['ひとつぶ', 'キャンディ'],
+  omamori: ['小さな', 'おまもり']
 });
 const assistantLifeGiftWrapName = g => {
   const w = g && ASSISTANT_LIFE_GIFT_WRAP[g.key];
@@ -119982,17 +120603,23 @@ const ASSISTANT_LIFE_GIFT_LABEL = Object.freeze({
   unknown: '?'
 });
 const assistantLifeGiftDefs = () => typeof ASSISTANT_LIFE_GIFTS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_GIFTS) ? ASSISTANT_LIFE_GIFTS : [];
+const assistantLifeSoloDefs = () => typeof ASSISTANT_LIFE_SOLO_GIFTS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_SOLO_GIFTS) ? ASSISTANT_LIFE_SOLO_GIFTS : [];
+const assistantLifeSoloOn = () => typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeSolo === true;
+const assistantLifeAnyGiftDef = kindOrKey => assistantLifeGiftDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey) || assistantLifeSoloDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey) || null;
+const assistantLifeIsSoloOnly = kindOrKey => !!assistantLifeSoloDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey);
+const assistantLifeSoloKinds = () => assistantLifeSoloOn() ? [...assistantLifeGiftDefs(), ...assistantLifeSoloDefs()] : [];
 const assistantLifeGiftKinds = () => {
   const all = assistantLifeGiftDefs();
   return typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() ? all : all.filter(g => g.kind === 'gift' || g.kind === 'token');
 };
 const assistantLifeGiftOf = kindOrKey => {
-  const g = assistantLifeGiftDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey);
+  const g = assistantLifeAnyGiftDef(kindOrKey);
   if (!g) return null;
   const item = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : []).find(x => x && x.id === g.itemId) || {};
   const offer = (typeof RHYTHM_EVENT_POINT_SHOP_OFFERS !== 'undefined' ? RHYTHM_EVENT_POINT_SHOP_OFFERS : []).find(x => x.itemId === g.itemId) || {};
   return {
     ...g,
+    solo: assistantLifeIsSoloOnly(g.key),
     name: item.name || offer.name || '',
     emoji: item.emoji || offer.emoji || '🎁',
     cost: Number.isFinite(offer.cost) ? offer.cost : null
@@ -120000,15 +120627,16 @@ const assistantLifeGiftOf = kindOrKey => {
 };
 const assistantLifeGiftCounts = ownedItems => {
   const o = {};
-  for (const g of assistantLifeGiftDefs()) {
+  for (const g of [...assistantLifeGiftDefs(), ...assistantLifeSoloDefs()]) {
     const n = ownedItems && typeof ownedItems === 'object' ? Number(ownedItems[g.itemId]) : 0;
     o[g.kind] = Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
   }
   return o;
 };
 const assistantLifeGiftLike = (who, kindOrKey) => {
-  const g = assistantLifeGiftDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey);
-  const t = typeof ASSISTANT_LIFE_GIFT_LIKES !== 'undefined' ? ASSISTANT_LIFE_GIFT_LIKES[who] : null;
+  const g = assistantLifeAnyGiftDef(kindOrKey);
+  const solo = g && assistantLifeIsSoloOnly(g.key);
+  const t = solo ? typeof ASSISTANT_LIFE_SOLO_LIKES !== 'undefined' ? ASSISTANT_LIFE_SOLO_LIKES[who] : null : typeof ASSISTANT_LIFE_GIFT_LIKES !== 'undefined' ? ASSISTANT_LIFE_GIFT_LIKES[who] : null;
   if (!g || !t) return 'mid';
   if ((t.like || []).includes(g.key)) return 'like';
   if ((t.bad || []).includes(g.key)) return 'bad';
@@ -120085,6 +120713,7 @@ const normalizeAssistantLifeGiftCheki = raw => {
 const ASSISTANT_LIFE_GIFT_STORE = {
   state: {
     day: normalizeAssistantLifeGiftDay(null),
+    solo: normalizeAssistantLifeGiftDay(null),
     likes: normalizeAssistantLifeGiftLikes(null),
     cheki: {},
     room: {}
@@ -120110,9 +120739,10 @@ const ASSISTANT_LIFE_GIFT_STORE = {
     if (this.loaded) return Promise.resolve(this.state);
     if (!this.loading) this.loading = (async () => {
       try {
-        const [d, l, c, r] = await Promise.all([storeGet(ASSISTANT_LIFE_GIFT_DAY_KEY, null, false), storeGet(ASSISTANT_LIFE_GIFT_LIKES_KEY, null, false), storeGet(ASSISTANT_LIFE_GIFT_CHEKI_KEY, null, false), storeGet('mh_assistant_life_room_v1', null, false)]);
+        const [d, l, c, r, so] = await Promise.all([storeGet(ASSISTANT_LIFE_GIFT_DAY_KEY, null, false), storeGet(ASSISTANT_LIFE_GIFT_LIKES_KEY, null, false), storeGet(ASSISTANT_LIFE_GIFT_CHEKI_KEY, null, false), storeGet('mh_assistant_life_room_v1', null, false), storeGet(ASSISTANT_LIFE_SOLO_GIFT_KEY, null, false)]);
         this.state = {
           day: normalizeAssistantLifeGiftDay(d),
+          solo: normalizeAssistantLifeGiftDay(so),
           likes: normalizeAssistantLifeGiftLikes(l),
           cheki: normalizeAssistantLifeGiftCheki(c),
           room: normalizeAssistantLifeRoom(r)
@@ -120160,13 +120790,14 @@ const assistantLifeGiftReason = (kind, peerSt, have = 1, st = ASSISTANT_LIFE_GIF
   const usedOld = typeof assistantPeerItemUsedToday === 'function' && peerSt && (kind === 'gift' || kind === 'token') && assistantPeerItemUsedToday(peerSt, kind);
   if (!lifeOn) return usedOld ? '今日はもう使いました(朝4時に戻ります)' : have <= 0 ? '持っていません(ビートP交換所で手に入ります)' : '';
   const used = assistantLifeGiftUsedMap(peerSt, st);
-  if (used[kind] || usedOld) return '今日はもうこの道具を贈りました(朝4時に戻ります)';
+  const usedSolo = st.solo && st.solo.day === assistantLifeGiftToday() && st.solo.used && st.solo.used[kind];
+  if (used[kind] || usedOld || usedSolo) return '今日はもうこの道具を贈りました(朝4時に戻ります)';
   if (assistantLifeGiftLeft(peerSt, st) <= 0) return '今日はもう3回贈りました(朝4時に戻ります)';
   if (have <= 0) return '持っていません(ビートP交換所で手に入ります)';
   return '';
 };
 const assistantLifeGiftKeyOf = kindOrKey => {
-  const g = assistantLifeGiftDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey);
+  const g = assistantLifeAnyGiftDef(kindOrKey);
   if (g) return {
     key: g.key,
     furniture: false
@@ -120259,6 +120890,110 @@ const assistantLifeGiftTalk = (kind, pair, rand = Math.random) => {
     lines
   } : null;
 };
+const assistantLifeSoloUsedMap = (st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  const day = assistantLifeGiftToday();
+  return st.solo && st.solo.day === day ? {
+    ...st.solo.used
+  } : {};
+};
+const assistantLifeSoloLeft = (st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  const max = typeof ASSISTANT_LIFE_SOLO_DAILY_MAX !== 'undefined' && Number.isFinite(ASSISTANT_LIFE_SOLO_DAILY_MAX) ? ASSISTANT_LIFE_SOLO_DAILY_MAX : 3;
+  return Math.max(0, max - Object.keys(assistantLifeSoloUsedMap(st)).length);
+};
+const assistantLifeSoloReason = (kind, peerSt, have = 1, st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  if (!assistantLifeSoloOn() || !assistantLifeSoloKinds().some(g => g.kind === kind)) return 'この道具はまだ贈れません';
+  if (assistantLifeSoloUsedMap(st)[kind] || assistantLifeGiftUsedMap(peerSt, st)[kind]) return '今日はもうこの道具を贈りました(朝4時に戻ります)';
+  if (assistantLifeSoloLeft(st) <= 0) return '今日はもう1人に3回贈りました(朝4時に戻ります)';
+  if (have <= 0) return '持っていません(ビートP交換所で手に入ります)';
+  return '';
+};
+const assistantLifeSoloAmount = (who, kindOrKey) => {
+  const g = assistantLifeAnyGiftDef(kindOrKey);
+  return g ? Math.round(g.player * assistantLifeGiftMult(assistantLifeGiftLike(who, g.key))) : 0;
+};
+const assistantLifeSoloLine = (who, g, like, rand = Math.random) => {
+  const real = typeof ASSISTANT_LIFE_SOLO_LINES !== 'undefined' && ASSISTANT_LIFE_SOLO_LINES[who] && ASSISTANT_LIFE_SOLO_LINES[who][g.key];
+  const list = Array.isArray(real) ? real.filter(x => x && x.t) : [];
+  const temp = typeof ASSISTANT_LIFE_SOLO_TEMP_LINES !== 'undefined' && ASSISTANT_LIFE_SOLO_TEMP_LINES[who] ? ASSISTANT_LIFE_SOLO_TEMP_LINES[who][like] : null;
+  const pick = list.length ? list[Math.floor(rand() * list.length) % list.length] : temp;
+  return pick ? {
+    who,
+    e: pick.e || 'happy',
+    t: String(pick.t).split('{item}').join(g.name)
+  } : null;
+};
+const assistantLifeSoloGive = async (who, kind, rand = Math.random) => {
+  await ASSISTANT_LIFE_GIFT_STORE.load();
+  const g = assistantLifeGiftOf(kind);
+  if (!g || !who) return null;
+  const st = ASSISTANT_LIFE_GIFT_STORE.state;
+  const day = assistantLifeGiftToday();
+  const solo = {
+    day,
+    used: {
+      ...assistantLifeSoloUsedMap(st),
+      [kind]: String(who)
+    }
+  };
+  const known = {
+    ...st.likes.known,
+    [who]: {
+      ...(st.likes.known[who] || {}),
+      [g.key]: 'gift'
+    }
+  };
+  const likes = {
+    ...st.likes,
+    known
+  };
+  const patch = {
+    solo,
+    likes
+  };
+  if (g.key === 'cheki') patch.cheki = {
+    ...st.cheki,
+    [who]: [...(st.cheki[who] || []), day].slice(-ASSISTANT_LIFE_GIFT_CHEKI_MAX)
+  };
+  ASSISTANT_LIFE_GIFT_STORE.set(patch);
+  try {
+    storeSet(ASSISTANT_LIFE_SOLO_GIFT_KEY, solo, false);
+  } catch {}
+  try {
+    storeSet(ASSISTANT_LIFE_GIFT_LIKES_KEY, likes, false);
+  } catch {}
+  if (patch.cheki) {
+    try {
+      storeSet(ASSISTANT_LIFE_GIFT_CHEKI_KEY, patch.cheki, false);
+    } catch {}
+  }
+  const like = assistantLifeGiftLike(who, g.key);
+  const amount = assistantLifeSoloAmount(who, g.key);
+  if (typeof assistantPeerPlayerBondAdder !== 'undefined' && assistantPeerPlayerBondAdder) {
+    try {
+      assistantPeerPlayerBondAdder(who, 'lifeGift', amount);
+    } catch {}
+  }
+  if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`${typeof assistantLifeName === 'function' ? assistantLifeName(who) : who}に${g.name}を贈った`, [who], {
+    kind: 'give'
+  });
+  const line = assistantLifeSoloLine(who, g, like, rand);
+  const call = typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(who) : 'あなた';
+  return line ? {
+    id: `solo-${g.key}-${who}`,
+    pair: [who],
+    lv: 1,
+    scene: 'any',
+    reaction: kind,
+    gift: g.key,
+    solo: true,
+    like,
+    amount,
+    lines: [{
+      ...line,
+      t: line.t.split('{name}').join(call)
+    }]
+  } : null;
+};
 const assistantLifeGiftOnBondLevel = async (who, level, rand = Math.random) => {
   if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled()) return null;
   const t = typeof ASSISTANT_LIFE_GIFT_LIKES !== 'undefined' ? ASSISTANT_LIFE_GIFT_LIKES[who] : null;
@@ -120266,7 +121001,8 @@ const assistantLifeGiftOnBondLevel = async (who, level, rand = Math.random) => {
   await ASSISTANT_LIFE_GIFT_STORE.load();
   const st = ASSISTANT_LIFE_GIFT_STORE.state;
   const ft = assistantLifeFurnEnabled() && typeof ASSISTANT_LIFE_FURN_LIKES !== 'undefined' ? ASSISTANT_LIFE_FURN_LIKES[who] : null;
-  const left = [...(t.like || []), ...(ft && ft.like || [])].filter(k => !(st.likes.known[who] && st.likes.known[who][k]));
+  const so = assistantLifeSoloOn() && typeof ASSISTANT_LIFE_SOLO_LIKES !== 'undefined' ? ASSISTANT_LIFE_SOLO_LIKES[who] : null;
+  const left = [...(t.like || []), ...(so && so.like || []), ...(ft && ft.like || [])].filter(k => !(st.likes.known[who] && st.likes.known[who][k]));
   if (!left.length) return null;
   const key = left[Math.floor(rand() * left.length) % left.length];
   const known = {
@@ -120331,7 +121067,7 @@ function AssistantLifeGiftLikesRow({
   const st = useAssistantLifeGiftState();
   const [open, setOpen] = React.useState(false);
   if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled()) return null;
-  const gifts = assistantLifeGiftKinds().map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
+  const gifts = [...assistantLifeGiftKinds(), ...(assistantLifeSoloOn() ? assistantLifeSoloDefs() : [])].map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
   const known = gifts.filter(g => assistantLifeGiftKnown(id, g.key, st)).length;
   const liked = gifts.filter(g => assistantLifeGiftShownLike(id, g.key, st) === 'like');
   const told = st.likes.told.filter(x => x.who === id).slice(-1)[0] || null;
@@ -120541,33 +121277,52 @@ function AssistantLifeGiftSheet({
   onGive
 }) {
   const st = useAssistantLifeGiftState();
-  const gifts = assistantLifeGiftKinds().map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
+  const soloOn = assistantLifeSoloOn();
+  const soloWho = soloOn && give.solo ? give.solo : null;
+  const gifts = (soloWho ? assistantLifeSoloKinds() : assistantLifeGiftKinds()).map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
   const info = gifts.find(x => x.kind === give.kind) || gifts[0];
   if (!info) return null;
-  const pair = give.pair || [];
+  const pair = soloWho ? [] : give.pair || [];
+  const people = soloWho ? [soloWho] : pair;
   const hint = pair.length === 2 && typeof assistantLifePairHint === 'function' ? assistantLifePairHint(peerSt, life, pair[0], pair[1]) : null;
   const left = hint && hint.next ? hint.next.min - hint.pts : null;
   const have = haveOf(info.kind);
-  const reason = assistantLifeGiftReason(info.kind, peerSt, have, st);
+  const reason = soloWho ? assistantLifeSoloReason(info.kind, peerSt, have, st) : assistantLifeGiftReason(info.kind, peerSt, have, st);
   const lifeOn = typeof assistantLifeEnabled === 'function' && assistantLifeEnabled();
-  const leftToday = lifeOn ? assistantLifeGiftLeft(peerSt, st) : null;
+  const leftToday = lifeOn ? soloWho ? assistantLifeSoloLeft(st) : assistantLifeGiftLeft(peerSt, st) : null;
   const pairs = [];
   for (let i = 0; i < give.ids.length; i++) for (let j = i + 1; j < give.ids.length; j++) pairs.push([give.ids[i], give.ids[j]]);
-  const samePair = p => pair.length === 2 && p.every(id => pair.includes(id));
+  const samePair = p => !soloWho && pair.length === 2 && p.every(id => pair.includes(id));
+  const toPair = p => setGive({
+    ...give,
+    pair: p,
+    solo: null,
+    kind: assistantLifeIsSoloOnly(give.kind) ? (assistantLifeGiftKinds()[0] || {}).kind : give.kind
+  });
+  const toSolo = id => setGive({
+    ...give,
+    solo: id
+  });
   const amt = pair.length === 2 ? assistantLifeGiftAmounts(info.kind, pair) : null;
-  const shown = pair.map(id => lifeOn ? assistantLifeGiftShownLike(id, info.key, st) : 'mid');
+  const shown = people.map(id => lifeOn ? assistantLifeGiftShownLike(id, info.key, st) : 'mid');
+  const soloRange = [Math.round(info.player * assistantLifeGiftMult('bad')), Math.round(info.player * assistantLifeGiftMult('like'))];
   const tagCls = {
     like: 'bg-pink-600 text-white',
     mid: 'bg-slate-600 text-white',
     bad: 'bg-cyan-700 text-white',
     unknown: 'bg-slate-700 text-slate-200'
   };
-  const playerText = i => !amt ? '' : shown[i] === 'unknown' ? `+${amt.range.player[0]}〜${amt.range.player[1]}` : `+${amt.player[i]}`;
+  const playerText = i => soloWho ? shown[i] === 'unknown' ? `+${soloRange[0]}〜${soloRange[1]}` : `+${assistantLifeSoloAmount(soloWho, info.key)}` : !amt ? '' : shown[i] === 'unknown' ? `+${amt.range.player[0]}〜${amt.range.player[1]}` : `+${amt.player[i]}`;
   const peerText = !amt ? '' : lifeOn ? assistantLifeGiftPeerShown(info, shown) : `+${amt.peer}`;
   const mark = s => s === 'like' ? '💗' : s === 'bad' ? '💧' : s === 'unknown' ? '?' : '';
   const bondLv = typeof ASSISTANT_BOND_LEVELS !== 'undefined' ? ASSISTANT_BOND_LEVELS : [];
   const peerLv = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' ? ASSISTANT_PEER_BOND_LEVELS : [];
   const playerW = i => {
+    if (soloWho) {
+      const n = assistantLifeSoloAmount(soloWho, info.key);
+      const [lo, hi] = shown[i] === 'unknown' ? soloRange : [n, n];
+      return assistantLifeWeightOf(assistantLifeBondPointsOf(soloWho), lo, hi, bondLv, 'need');
+    }
     if (!amt) return null;
     const [lo, hi] = shown[i] === 'unknown' ? amt.range.player : [amt.player[i], amt.player[i]];
     return assistantLifeWeightOf(assistantLifeBondPointsOf(pair[i]), lo, hi, bondLv, 'need');
@@ -120590,36 +121345,42 @@ function AssistantLifeGiftSheet({
   }, React.createElement("div", {
     className: "flex items-center gap-2"
   }, React.createElement("p", {
-    className: "min-w-0 flex-1 text-[14px] font-black text-white"
-  }, "🎁 2人に贈る"), leftToday != null && React.createElement("span", {
+    className: "min-w-0 flex-1 text-[14px] font-black text-white",
+    "data-assistant-life-give-title": true
+  }, soloWho ? `🎁 ${nameOf(soloWho)}に贈る` : '🎁 2人に贈る'), leftToday != null && React.createElement("span", {
     "data-assistant-life-give-left": leftToday,
     className: "shrink-0 rounded-full bg-slate-800 px-2 text-[10.5px] font-black leading-[22px] text-amber-200"
   }, "今日あと ", leftToday, "回"), React.createElement(AssistantLifeFaces, {
-    ids: pair,
+    ids: people,
     size: 30
   })), lifeOn && React.createElement("div", {
     className: "mt-1.5"
   }, React.createElement(AssistantLifeGiftExplain, {
     compact: true
-  })), pairs.length > 1 && React.createElement("div", {
-    className: "mt-1.5 flex flex-wrap gap-1.5"
+  })), (pairs.length > 1 || soloOn && give.ids.length >= 1 && (pairs.length || give.ids.length > 1)) && React.createElement("div", {
+    className: "mt-1.5 flex flex-wrap gap-1.5",
+    "data-assistant-life-give-who": true
   }, pairs.map(p => React.createElement("button", {
     key: p.join('-'),
     type: "button",
     "data-assistant-life-give-pair": p.join('-'),
     "aria-pressed": samePair(p),
-    onClick: () => setGive({
-      ...give,
-      pair: p
-    }),
+    onClick: () => toPair(p),
     className: `min-h-[34px] rounded-full border px-2.5 text-[11px] font-black active:scale-95 ${samePair(p) ? 'border-amber-300 bg-amber-400/25 text-white' : 'border-white/15 text-slate-300'}`
-  }, p.map(nameOf).join('と')))), React.createElement("div", {
+  }, "🤝 ", p.map(nameOf).join('と'), "に")), soloOn && give.ids.map(id => React.createElement("button", {
+    key: id,
+    type: "button",
+    "data-assistant-life-give-solo": id,
+    "aria-pressed": soloWho === id,
+    onClick: () => toSolo(id),
+    className: `min-h-[34px] rounded-full border px-2.5 text-[11px] font-black active:scale-95 ${soloWho === id ? 'border-pink-300 bg-pink-400/25 text-white' : 'border-white/15 text-slate-300'}`
+  }, "💗 ", nameOf(id), "だけに"))), React.createElement("div", {
     className: "mt-2 grid grid-cols-5 gap-1",
     role: "tablist"
   }, gifts.map(x => {
     const on = x.kind === info.kind;
     const n = haveOf(x.kind);
-    const ls = pair.map(id => lifeOn ? assistantLifeGiftShownLike(id, x.key, st) : 'mid');
+    const ls = people.map(id => lifeOn ? assistantLifeGiftShownLike(id, x.key, st) : 'mid');
     return React.createElement("button", {
       key: x.kind,
       type: "button",
@@ -120645,7 +121406,7 @@ function AssistantLifeGiftSheet({
       key: i
     }, i > 0 && React.createElement("wbr", null), w))), React.createElement("span", {
       className: "block text-[9px] font-black leading-tight text-slate-300"
-    }, lifeOn && pair.length === 2 ? ls.map(mark).map(m => m || '・').join(' ') : ''), React.createElement("em", {
+    }, lifeOn && people.length ? ls.map(mark).map(m => m || '・').join(' ') : ''), React.createElement("em", {
       className: "absolute right-0.5 top-0.5 rounded-full bg-slate-950/90 px-1 text-[8.5px] font-black not-italic text-slate-200"
     }, "×", n));
   })), React.createElement("div", {
@@ -120662,7 +121423,7 @@ function AssistantLifeGiftSheet({
     className: "text-[10.5px] leading-snug text-slate-300 [[data-assistant-life-land='1']_&]:hidden"
   }, info.what))), React.createElement("div", {
     className: "mt-1.5 space-y-1 text-[11px]"
-  }, pair.map((id, i) => React.createElement("div", {
+  }, people.map((id, i) => React.createElement("div", {
     key: id,
     className: "rounded-lg bg-slate-800/80 px-2 py-1",
     "data-assistant-life-give-person": `${id}:${shown[i]}`
@@ -120682,7 +121443,7 @@ function AssistantLifeGiftSheet({
       const w = playerW(i);
       return w && !w.max ? assistantLifeBondLvGain(w.next) : '';
     })()
-  }))), React.createElement("div", {
+  }))), !soloWho && React.createElement("div", {
     className: "rounded-lg bg-slate-800/80 px-2 py-1",
     "data-assistant-life-give-peer": true
   }, React.createElement("div", {
@@ -120698,7 +121459,7 @@ function AssistantLifeGiftSheet({
     gainText: peerW && !peerW.max ? ASSISTANT_LIFE_PEER_LV_GAIN[peerW.next] || '' : ''
   }))), React.createElement("p", {
     className: "mt-1 text-[10px] leading-snug text-slate-400 [[data-assistant-life-land='1']_&]:hidden"
-  }, lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)・?=贈ると分かる。同じ道具は1⁠日1回・合わせて1⁠日3回(朝4時に戻る)' : '1⁠日1回(朝4時に戻る)', "・持っている ", have, "個", info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''), reason && React.createElement("p", {
+  }, soloWho ? '1人に贈ると、その助手の好みで仲良し度だけが上がります(友情Lv は上がりません)。1人には1⁠日3回・同じ道具は1⁠日1回(朝4時に戻る)' : lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)・?=贈ると分かる。同じ道具は1⁠日1回・合わせて1⁠日3回(朝4時に戻る)' : '1⁠日1回(朝4時に戻る)', "・持っている ", have, "個", info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''), reason && React.createElement("p", {
     "data-assistant-life-give-reason": true,
     className: "mt-1.5 rounded-xl bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-300"
   }, reason), lifeOn && have <= 0 && React.createElement("div", {
@@ -120722,7 +121483,7 @@ function AssistantLifeGiftSheet({
   }, "やめる"), React.createElement("button", {
     type: "button",
     "data-assistant-life-give-go": true,
-    disabled: !!reason || pair.length !== 2,
+    disabled: !!reason || !soloWho && pair.length !== 2,
     onClick: onGive,
     className: "min-h-[44px] flex-[2] rounded-xl border border-amber-300/70 bg-amber-400/20 text-[14px] font-black text-amber-100 active:scale-[.98] disabled:opacity-40"
   }, info.emoji, " 贈る"))));
@@ -120731,8 +121492,8 @@ function AssistantLifeChekiRow({
   pair
 }) {
   const st = useAssistantLifeGiftState();
-  if (!Array.isArray(pair) || pair.length !== 2) return null;
-  const pk = typeof assistantPeerPairKey === 'function' ? assistantPeerPairKey(pair[0], pair[1]) : [...pair].sort().join('-');
+  if (!Array.isArray(pair) || pair.length !== 2 && pair.length !== 1) return null;
+  const pk = pair.length === 1 ? String(pair[0]) : typeof assistantPeerPairKey === 'function' ? assistantPeerPairKey(pair[0], pair[1]) : [...pair].sort().join('-');
   const days = st.cheki && st.cheki[pk] || [];
   if (!days.length) return null;
   const show = days.slice(-6).reverse();
@@ -122987,6 +123748,11 @@ function AssistantMasmonSheet({
     })(), React.createElement("p", {
       className: "mt-2 text-[10.5px] font-bold leading-snug text-slate-400"
     }, "⚔ 編成は", who.name, "が決めています。押すと詳しく見られます。"));
+  } else if (tab === 'deck' && assistantMasmonDeckTabOn()) {
+    body = React.createElement(AssistantMasmonDeckTab, {
+      id: id,
+      land: land
+    });
   } else if (tab === 'deck') {
     body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "mhm-card",
@@ -123673,6 +124439,60 @@ const assistantMasmonNowText = (id, life) => {
   }
   return where.w && where.w.doing === 'sleep' ? `${t.nick}は${name}のそばで眠っている` : `${t.nick}は部屋で${name}のそばにいる`;
 };
+const ASSISTANT_MASMON_DECK_STYLES = Object.freeze([['attack', '攻め'], ['guard', '守り'], ['normal', 'ふつう']]);
+const assistantMasmonDeckTabOn = () => {
+  try {
+    return typeof cardGrowStyleOn === 'function' && cardGrowStyleOn() && typeof CardAssistantDeckView === 'function';
+  } catch (_) {
+    return false;
+  }
+};
+function AssistantMasmonDeckTab({
+  id,
+  land = false
+}) {
+  const fav = ASSISTANT_MASMON_CARD_STYLE[id] || 'normal';
+  const [sid, setSid] = React.useState(fav);
+  const [, setLoaded] = React.useState(0);
+  React.useEffect(() => {
+    let alive = true;
+    try {
+      if (typeof cardAiDeckMarkMet === 'function') void Promise.resolve(cardAiDeckMarkMet(id)).catch(() => {});
+    } catch (_) {}
+    try {
+      if (typeof cardLoadAiRecipe === 'function') void Promise.resolve(cardLoadAiRecipe()).then(() => {
+        if (alive) setLoaded(n => n + 1);
+      }).catch(() => {});
+    } catch (_) {}
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+  return React.createElement(React.Fragment, null, React.createElement("div", {
+    "data-assistant-masmon-deck-styles": true,
+    className: "grid grid-cols-3 gap-1.5"
+  }, ASSISTANT_MASMON_DECK_STYLES.map(([s, label]) => React.createElement("button", {
+    key: s,
+    type: "button",
+    "data-assistant-masmon-deck-style": s,
+    "aria-pressed": sid === s,
+    onClick: () => {
+      if (typeof Audio_ !== 'undefined') Audio_.fgSe.tap();
+      setSid(s);
+    },
+    className: `flex min-h-[40px] items-center justify-center gap-1 rounded-xl border px-1 py-1 text-[13px] font-black ${sid === s ? 'border-amber-300 bg-amber-400 text-slate-950' : 'border-white/15 bg-slate-800 text-slate-200'}`
+  }, label, s === fav && React.createElement("em", {
+    "data-assistant-masmon-deck-fav": true,
+    className: "whitespace-nowrap rounded-full bg-emerald-400 px-1.5 py-px text-[9px] font-black not-italic text-emerald-950"
+  }, "よく使う")))), React.createElement("div", {
+    className: "mt-2",
+    "data-assistant-masmon-deck-view": sid
+  }, React.createElement(CardAssistantDeckView, {
+    who: id,
+    styleId: sid,
+    land: land
+  })));
+}
 const ASSISTANT_MASMON_CSS = `
 .mhm-panel{position:absolute;left:0;right:0;bottom:0;top:5%;display:flex;flex-direction:column;background:linear-gradient(180deg,#1f1640,#0b1020 70%);border-top:2px solid #f9a8d4;border-radius:22px 22px 0 0;padding:12px 14px calc(12px + env(safe-area-inset-bottom));color:#fff}
 .mhm-panel.is-land{top:0;left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));border:2px solid #f9a8d4;border-bottom:0;padding:8px 14px 8px}
@@ -123842,7 +124662,8 @@ const normalizeAssistantLifeFriendSettings = v => {
     come: o.come !== false,
     muted: Array.isArray(o.muted) ? [...new Set(o.muted.filter(alfSafeOther))].slice(0, 100) : [],
     noteShow: o.noteShow !== false,
-    noteOff: Array.isArray(o.noteOff) ? [...new Set(o.noteOff.filter(alfSafeOther))].slice(0, 100) : []
+    noteOff: Array.isArray(o.noteOff) ? [...new Set(o.noteOff.filter(alfSafeOther))].slice(0, 100) : [],
+    act: o.act !== false
   };
 };
 const normalizeAssistantLifeFriendKnown = v => {
@@ -123890,13 +124711,27 @@ const alfBuildHouse = (life, metIds) => {
       if (Object.keys(fu).length) r[id].fu = fu;
     } catch {}
   }
+  const ac1 = _alfActCache && _alfActCache[0] && ALF_STORE.state.settings.act ? {
+    k: _alfActCache[0].k,
+    x: _alfActCache[0].x,
+    at: _alfActCache[0].at
+  } : null;
   return {
     v: 1,
     ids,
-    r
+    r,
+    ...(ac1 ? {
+      ac1
+    } : {})
   };
 };
+let _alfActCache = null;
 const ALF_TABLE_MORE = 'assistant_life_friend_house_more';
+const alfNormalizeAc = v => (Array.isArray(v) ? v : []).slice(0, 6).map(a => a && ['beat', 'card', 'masmon', 'furn'].includes(a.k) && typeof a.x === 'string' && Number.isFinite(a.at) ? {
+  k: a.k,
+  x: a.x.replace(/[{}<>]/g, '').slice(0, 40),
+  at: a.at
+} : null).filter(Boolean);
 const ALF_MORE_MAX_CHARS = 6000;
 const alfDiaryShare = n => {
   try {
@@ -123931,6 +124766,94 @@ const alfBuildMore = ids => {
     dy
   };
 };
+const ALF_ACT_KEY = 'mh_assistant_life_friend_activity_v1';
+const ALF_ACT_MAX = 6;
+const ALF_ACT_KINDS = Object.freeze({
+  beat: 'モンヒロビート',
+  card: 'MFバトルカード',
+  masmon: 'マスモン',
+  furn: 'お部屋'
+});
+const ALF_ACT_ICON = Object.freeze({
+  beat: '🎵',
+  card: '🃏',
+  masmon: '🐾',
+  furn: '🪑'
+});
+const normalizeAlfActivity = v => (Array.isArray(v) ? v : []).filter(x => x && x.k === 'beat' && typeof x.x === 'string' && x.x && Number.isFinite(x.at)).map(x => ({
+  k: 'beat',
+  x: alfStr(x.x, 30),
+  at: x.at
+})).slice(0, ALF_ACT_MAX);
+const assistantLifeFriendNoteActivity = async (k, x) => {
+  if (k !== 'beat' || typeof x !== 'string' || !x.trim() || typeof storeGet !== 'function') return;
+  try {
+    const cur = normalizeAlfActivity(await storeGet(ALF_ACT_KEY, []));
+    const t = alfStr(x.trim(), 30);
+    storeSet(ALF_ACT_KEY, [{
+      k,
+      x: t,
+      at: Date.now()
+    }, ...cur.filter(y => y.x !== t)].slice(0, ALF_ACT_MAX), false);
+  } catch {}
+};
+const alfCollectActivity = async (now = Date.now()) => {
+  const out = [];
+  const week = 7 * 86400000;
+  const get = async (key, def) => {
+    try {
+      return typeof storeGet === 'function' ? await storeGet(key, def) : def;
+    } catch {
+      return def;
+    }
+  };
+  for (const a of normalizeAlfActivity(await get(ALF_ACT_KEY, []))) out.push({
+    k: 'beat',
+    x: `「${a.x}」を遊んだ`,
+    at: a.at
+  });
+  const rec = await get('mh_card_record_v1', null);
+  for (const r of (rec && Array.isArray(rec.recent) ? rec.recent : []).filter(r => r && r.outcome === 'win' && Number.isFinite(r.at)).slice(0, 2)) out.push({
+    k: 'card',
+    x: alfValidId(r.who) ? `${assistantLifeName(r.who)}に対戦で勝った` : '対戦で勝った',
+    at: r.at
+  });
+  const hist = await get('mh_card_pvp_history_v1', []);
+  const w = (Array.isArray(hist) ? hist : []).find(m => m && m.outcome === 'win' && Number.isFinite(m.at));
+  if (w) out.push({
+    k: 'card',
+    x: 'マルチ対戦で勝った',
+    at: w.at
+  });
+  const ms = await get('mh_masu_mons', []);
+  const m = (Array.isArray(ms) ? ms : []).filter(x => x && Number.isFinite(x.createdAt)).sort((a, b) => b.createdAt - a.createdAt)[0];
+  const mon = m && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[m.baseId] : null;
+  if (mon && mon.name) out.push({
+    k: 'masmon',
+    x: `新しいマスモン「${alfStr(mon.name, 16)}」を迎えた`,
+    at: m.createdAt
+  });
+  for (const id of ALF_IDS) {
+    try {
+      const room = typeof assistantLifeRoomOf === 'function' ? assistantLifeRoomOf(id) : null;
+      for (const key of Object.values(room && room.put || {}).filter(Boolean)) {
+        const day = room.got && room.got[key];
+        const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(key) : null;
+        const at = typeof day === 'string' ? Date.parse(`${day}T12:00:00+09:00`) : NaN;
+        if (f && f.name && Number.isFinite(at)) out.push({
+          k: 'furn',
+          x: `${assistantLifeName(id)}の部屋に「${f.name}」を置いた`,
+          at
+        });
+      }
+    } catch {}
+  }
+  return out.filter(a => now - a.at <= week && a.at <= now + 60000).sort((a, b) => b.at - a.at).slice(0, ALF_ACT_MAX).map(a => ({
+    k: a.k,
+    x: alfStr(a.x, 40),
+    at: a.at
+  }));
+};
 const assistantLifeFriendNormalizeMore = raw => {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   try {
@@ -123961,7 +124884,8 @@ const assistantLifeFriendNormalizeMore = raw => {
   return {
     v: 1,
     fu,
-    dy
+    dy,
+    ac: alfNormalizeAc(raw.ac)
   };
 };
 const assistantLifeFriendNormalizeHouse = raw => {
@@ -123995,12 +124919,16 @@ const assistantLifeFriendNormalizeHouse = raw => {
     t: /^\d{1,2}:\d{2}$/.test(d.t) ? d.t : '',
     x: d.x.replace(/[{}<>]/g, '').slice(0, 40)
   } : null).filter(d => d && d.x);
+  const ac1 = alfNormalizeAc(raw.ac1 ? [raw.ac1] : [])[0] || null;
   return {
     v: 1,
     ids,
     r,
     ...(dy.length ? {
       dy
+    } : {}),
+    ...(ac1 ? {
+      ac1
     } : {})
   };
 };
@@ -124371,6 +125299,11 @@ const alfPublish = async (life, metIds, now = Date.now(), {
   if (!self) return false;
   const st = alfToday();
   const settings = ALF_STORE.state.settings;
+  try {
+    _alfActCache = settings.act ? await alfCollectActivity(now) : [];
+  } catch {
+    _alfActCache = [];
+  }
   const house = settings.show ? alfBuildHouse(life, metIds) : {};
   const sig = alfSig(`${alfDay(now)}|${settings.open ? 1 : 0}|${JSON.stringify(house)}`);
   if (!force && st.sentAt) {
@@ -124392,7 +125325,12 @@ const alfPublish = async (life, metIds, now = Date.now(), {
       sentAt: now,
       sentSig: sig
     });
-    void alfPublishMore(self, settings.show ? alfBuildMore(house.ids) : {});
+    void alfPublishMore(self, settings.show ? {
+      ...alfBuildMore(house.ids),
+      ...(settings.act ? {
+        ac: _alfActCache || []
+      } : {})
+    } : {});
     return true;
   } catch {
     return false;
@@ -125547,6 +126485,16 @@ function AlfFriendHouseView({
   React.useEffect(() => {
     if (friend && friend.id) void alfFetchMore(friend.id);
   }, [friend && friend.id]);
+  const [now, setNow] = React.useState(null);
+  React.useEffect(() => {
+    let alive = true;
+    if (friend && friend.id && typeof friendsPresenceFor === 'function') void friendsPresenceFor([friend.id]).then(p => {
+      if (alive) setNow((p || {})[friend.id] || null);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [friend && friend.id]);
   if (!friend || !friend.house) return null;
   const more = (fs.more || {})[friend.id] || null;
   const h = friend.house;
@@ -125646,7 +126594,12 @@ function AlfFriendHouseView({
     };
     return o;
   })();
-  const diaryItems = more && more.dy.length ? more.dy : h.dy || [];
+  const actItems = more && more.ac ? more.ac.map(a => ({
+    t: alfAgoText(a.at).replace(/^今日 /, ''),
+    x: `${ALF_ACT_ICON[a.k] || '✨'} ${a.x}`,
+    act: a.k
+  })) : [];
+  const diaryItems = [...actItems, ...(more && more.dy.length ? more.dy : h.dy || [])].slice(0, 10);
   const header = React.createElement("div", {
     className: "mhl-hdr flex items-start gap-2",
     style: {
@@ -125674,7 +126627,10 @@ function AlfFriendHouseView({
     className: "whitespace-nowrap"
   }, "📷 ", alfAgoText(friend.at), " の様子"), "・", React.createElement("span", {
     className: "whitespace-nowrap"
-  }, friend.name, "さんが最後に開いたとき"))));
+  }, friend.name, "さんが最後に開いたとき")), now && now.online && React.createElement("p", {
+    className: `mt-0.5 inline-block max-w-full truncate rounded-full px-2 py-0.5 text-[10.5px] font-black ${now.auto ? 'bg-amber-950/80 text-amber-200' : 'bg-emerald-950/70 text-emerald-200'}`,
+    "data-alf-visit-now": true
+  }, "いま ", now.text)));
   const tiles = React.createElement("div", {
     "data-alf-visit-acts": true
   }, React.createElement("p", {
@@ -125713,7 +126669,7 @@ function AlfFriendHouseView({
     "data-alf-visit-diary": true
   }, React.createElement("p", {
     className: "text-[10px] font-black"
-  }, "📌 ", friend.name, "さんの家の今日あったこと"), diaryItems.slice(0, land ? 5 : 3).map((d, i) => React.createElement("p", {
+  }, "📌 ", friend.name, "さんの家の最近"), diaryItems.slice(0, land ? 5 : 3).map((d, i) => React.createElement("p", {
     key: i,
     className: "text-[10px] font-bold leading-snug"
   }, React.createElement("b", {
@@ -125952,12 +126908,16 @@ function AlfFriendHouseView({
     }
   }, React.createElement("p", {
     className: "text-[16px] font-black text-amber-100"
-  }, "📌 ", friend.name, "さんの家の今日あったこと"), diaryItems.length ? diaryItems.map((d, i) => React.createElement("p", {
-    key: i,
+  }, "📌 ", friend.name, "さんの家の最近"), diaryItems.length ? diaryItems.map((d, i) => React.createElement(React.Fragment, {
+    key: i
+  }, !d.act && (i === 0 || diaryItems[i - 1].act) && React.createElement("p", {
+    className: "mt-2.5 border-t border-slate-600/60 pt-1.5 text-[11px] font-black text-sky-200",
+    "data-alf-visit-diary-sep": true
+  }, "🏠 助手たちの今日"), React.createElement("p", {
     className: "mt-1.5 text-[12px] font-bold leading-snug text-slate-100"
   }, React.createElement("b", {
     className: "mr-1.5 text-amber-200"
-  }, d.t), d.x)) : React.createElement("p", {
+  }, d.t), d.x))) : React.createElement("p", {
     className: "mt-1.5 text-[12px] text-slate-300"
   }, "まだ何もありません"), React.createElement("button", {
     type: "button",
@@ -126298,7 +127258,10 @@ function AssistantLifeFriendPage({
       }, "・🪑 家具", fu)) : null, React.createElement("wbr", null), React.createElement("span", {
         className: "whitespace-nowrap text-slate-400"
       }, "・", alfAgoText(f.at)));
-    })()), React.createElement("div", {
+    })()), f.house.ac1 && React.createElement("p", {
+      className: "truncate text-[10.5px] font-bold text-amber-200",
+      "data-alf-house-act": true
+    }, ALF_ACT_ICON[f.house.ac1.k] || '✨', " ", f.house.ac1.x), React.createElement("div", {
       className: "mt-0.5 flex gap-0.5"
     }, alfHomeIds(f.house).slice(0, 6).map(id => React.createElement(AlfFace, {
       key: id,
@@ -126344,7 +127307,7 @@ function AssistantLifeFriendPage({
   }, "⚙️ 行き来の設定"), React.createElement("div", {
     className: card,
     "data-alf-settings": true
-  }, [['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る'], ['noteShow', '置き手紙の自由文を見る']].map(([k, label]) => React.createElement("label", {
+  }, [['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る'], ['act', '最近の遊びをフレンドに見せる'], ['noteShow', '置き手紙の自由文を見る']].map(([k, label]) => React.createElement("label", {
     key: k,
     className: "flex items-center justify-between gap-2 py-1 text-[11.5px] text-slate-100",
     "data-alf-setting": k
@@ -129394,6 +130357,16 @@ const CARD_AI_STYLE_NAMES = Object.freeze({
   sorashido: '計算ずく',
   erubin: 'みんなで守る'
 });
+const CARD_AI_STYLE_SUFFIX = Object.freeze({
+  attack: '・攻め',
+  guard: '・守り',
+  normal: ''
+});
+const cardAiStyleDefaultName = (who, styleId) => {
+  const n = CARD_AI_STYLE_NAMES[who];
+  const s = cardAiStyleOf(styleId) || 'normal';
+  return n ? `${n}${CARD_AI_STYLE_SUFFIX[s]}` : null;
+};
 const CARD_AI_STYLE_VARIANT = Object.freeze({
   attack: 'blade',
   guard: 'shield',
@@ -130005,15 +130978,25 @@ const cardAssistantDeckPreview = (who, styleId = 'normal', level = 'normal') => 
   const sid = cardAiStyleOf(styleId) || 'normal';
   const lv = CARD_AI_BUILD[level] ? level : 'normal';
   const db = CARD_BATTLE_DATA;
+  let saved = null;
+  try {
+    saved = typeof cardAiRecipeOf === 'function' ? cardAiRecipeOf(who, sid) : null;
+  } catch (_) {
+    saved = null;
+  }
   const deck = cardAiBuildDeck(db, who, lv, cardAiSeededRand(`preview:${who}:${sid}:${lv}`), {
-    style: sid
+    style: sid,
+    ...(saved && saved.plan ? {
+      plan: saved.plan
+    } : {})
   });
   return {
     monsters: deck.monsters.slice(),
     cards: deck.cards.slice(),
     styleId: sid,
-    name: CARD_AI_STYLE_NAMES[who] || null,
-    line: null
+    name: saved && saved.name || cardAiStyleDefaultName(who, sid),
+    line: saved && saved.line || null,
+    at: saved && saved.at || 0
   };
 };
 const cardDeckProblems = (db, deck) => {
@@ -130133,7 +131116,9 @@ const CARD_SAVE_KEYS = Object.freeze({
   gacha: 'mh_card_gacha_points_v1',
   catalogs: 'mh_card_catalogs_v1',
   weeklyReward: 'mh_card_weekly_reward_v1',
-  aiTalk: 'mh_card_ai_talk_v1'
+  aiTalk: 'mh_card_ai_talk_v1',
+  aiRecipe: 'mh_card_ai_recipe_v1',
+  aiDeck: 'mh_card_ai_deck_v1'
 });
 const CARD_POINT_STORE_KEY = typeof RHYTHM_EVENT_POINTS_KEY !== 'undefined' ? RHYTHM_EVENT_POINTS_KEY : 'mh_rhythm_event_points_v1';
 const CARD_POINT_MIGRATED_KEY = 'mh_card_points_to_beatp_migrated_v1';
@@ -133894,6 +134879,463 @@ const cardTalkCheckPicks = (db, deck, collection, picks) => {
     reason: String(p.reason || '').slice(0, 30)
   }));
 };
+const CARD_AI_RECIPE_KEY = CARD_SAVE_KEYS.aiRecipe;
+const CARD_AI_DECK_KEY = CARD_SAVE_KEYS.aiDeck;
+const CARD_AI_DECK_GAMES = 10;
+const CARD_AI_DECK_SLOTS = 3;
+const CARD_AI_DECK_WAIT_MS = 16000;
+const CARD_AI_DECK_MAIN = 0.6;
+const CARD_AI_DECK_JITTER = 0.25;
+const CARD_AI_DECK_NAME_MAX = 12;
+const CARD_AI_DECK_LINE_MAX = 60;
+const cardAiDeckIsObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+const cardAiDeckText = (v, max) => {
+  if (typeof v !== 'string') return null;
+  const t = v.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, max);
+  return t || null;
+};
+const cardAiDeckEntryOf = (raw, db) => {
+  if (!cardAiDeckIsObj(raw)) return null;
+  const at = Number.isFinite(raw.at) && raw.at > 0 ? Math.floor(raw.at) : 0;
+  let plan = null;
+  if (db && cardAiDeckIsObj(raw.plan)) {
+    const c = cardAiPlanClean(db, raw.plan);
+    if (c) {
+      const nos = (Array.isArray(raw.plan.prefer) ? raw.plan.prefer : []).filter(no => typeof no === 'string' && db.cards[no] && c.prefer.includes(db.cards[no].name));
+      const seen = new Set();
+      plan = {
+        prefer: nos.filter(no => !seen.has(db.cards[no].name) && seen.add(db.cards[no].name)),
+        field: c.field.slice(),
+        habit: {
+          ...c.habit
+        }
+      };
+    }
+  }
+  return {
+    plan,
+    name: cardAiDeckText(raw.name, CARD_AI_DECK_NAME_MAX),
+    line: cardAiDeckText(raw.line, CARD_AI_DECK_LINE_MAX),
+    at,
+    ai: raw.ai === true
+  };
+};
+const cardNormalizeAiRecipe = (raw, today, db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null) => {
+  const v = cardAiDeckIsObj(raw) ? raw : {};
+  const sameDay = typeof v.day === 'string' && v.day === today;
+  const perWho = {};
+  const src = cardAiDeckIsObj(v.perWho) ? v.perWho : {};
+  for (const who of Object.keys(src)) {
+    if (!CARD_AI_DECKS[who] || !cardAiDeckIsObj(src[who])) continue;
+    const w = src[who];
+    const decks = {};
+    const ds = cardAiDeckIsObj(w.decks) ? w.decks : {};
+    for (const st of CARD_AI_STYLE_IDS) {
+      const e = cardAiDeckEntryOf(ds[st], db);
+      if (e) decks[st] = e;
+    }
+    const n = (x, max) => Number.isInteger(x) && x >= 0 ? Math.min(max, x) : 0;
+    perWho[who] = {
+      met: w.met === true,
+      gamesSince: n(w.gamesSince, 9999),
+      slotsDone: sameDay ? n(w.slotsDone, CARD_AI_DECK_SLOTS) : 0,
+      decks
+    };
+  }
+  return {
+    v: 1,
+    day: typeof today === 'string' ? today : '',
+    perWho
+  };
+};
+const cardNormalizeAiDeck = v => ({
+  on: !(cardAiDeckIsObj(v) && v.on === false)
+});
+const cardAiDeckSlotTimes = (day, seedKey = '') => {
+  const start = Date.parse(`${day}T04:00:00+09:00`);
+  if (!Number.isFinite(start)) return [];
+  const rnd = cardAiSeededRand(`aideck:${seedKey}:${day}`);
+  const span = 8 * 3600 * 1000;
+  return [...Array(CARD_AI_DECK_SLOTS).keys()].map(i => start + i * span + Math.floor(rnd() * span));
+};
+const cardAiDeckSlotsPassed = (times, now) => times.filter(t => t <= now).length;
+const cardAiDeckDue = (w, passed) => {
+  if (!w || !w.met) return null;
+  if (w.gamesSince >= CARD_AI_DECK_GAMES) return 'games';
+  if (w.slotsDone < passed) return 'slot';
+  return null;
+};
+const cardAiDeckOldest = w => {
+  const decks = w && w.decks || {};
+  return CARD_AI_STYLE_IDS.slice().sort((a, b) => (decks[a] && decks[a].at || 0) - (decks[b] && decks[b].at || 0))[0];
+};
+const cardAiDeckJitter = (prev, {
+  cands,
+  fields,
+  range,
+  rnd
+}) => {
+  const R = CARD_AI_PLAN_RANGE;
+  const habit = {};
+  for (const [k, [lo, hi]] of Object.entries(range || {})) {
+    const base = prev && prev.habit && Number.isFinite(prev.habit[k]) ? prev.habit[k] : (lo + hi) / 2;
+    const v = base + (rnd() * 2 - 1) * CARD_AI_DECK_JITTER * (hi - lo);
+    habit[k] = Math.round(Math.min(hi, Math.max(lo, v)) * 100) / 100;
+  }
+  const pool = (cands || []).map(c => c.no);
+  let prefer = (prev && Array.isArray(prev.prefer) ? prev.prefer : []).filter(no => pool.includes(no));
+  if (!prefer.length) prefer = pool.slice(0, Math.min(R.prefer[1], 6));
+  const swaps = 1 + Math.floor(rnd() * 2);
+  for (let i = 0; i < swaps; i++) {
+    const out = pool.filter(no => !prefer.includes(no));
+    if (!out.length || !prefer.length) break;
+    prefer[Math.floor(rnd() * prefer.length)] = out[Math.floor(rnd() * out.length)];
+  }
+  prefer = [...new Set(prefer)].slice(0, R.prefer[1]);
+  const fs = fields || [];
+  let field = prev && Array.isArray(prev.field) ? prev.field.filter(n => fs.includes(n)).slice(0, R.field[1]) : [];
+  if (fs.length && (!field.length || rnd() < 0.3)) field = [fs[Math.floor(rnd() * fs.length)]];
+  return {
+    prefer,
+    field,
+    habit
+  };
+};
+const cardAiDeckPickStyle = (main, rnd) => {
+  const r = rnd();
+  const m = cardAiStyleOf(main);
+  if (!m) return CARD_AI_STYLE_IDS[Math.min(CARD_AI_STYLE_IDS.length - 1, Math.floor(r * CARD_AI_STYLE_IDS.length))];
+  if (r < CARD_AI_DECK_MAIN) return m;
+  const others = CARD_AI_STYLE_IDS.filter(s => s !== m);
+  return others[r - CARD_AI_DECK_MAIN < (1 - CARD_AI_DECK_MAIN) / 2 ? 0 : 1];
+};
+const cardAiDeckDefaultName = (who, style) => cardAiStyleDefaultName(who, style);
+const cardAiDeckFacts = (db, who, style) => {
+  const trio = cardAiBuildDeck(db, who, 'master', cardAiSeededRand(`preview:${who}:${style}:master`), {
+    style
+  }).monsters;
+  const cands = cardAiPlanCandidates(db, who, 'master', trio);
+  const fields = Object.values(db.cards).filter(c => c.ready && c.kind === 'fld').map(c => c.name);
+  return {
+    trio,
+    cands,
+    fields,
+    range: cardAiPlanHabitRange(who, 'master', style),
+    facts: {
+      style,
+      favorites: trio.map(no => (db.monsters[no] || {}).name).filter(Boolean).slice(0, 5),
+      cards: cands.map(c => ({
+        no: c.no,
+        name: c.name,
+        kind: c.kind,
+        guts: c.guts,
+        damage: Number.isFinite(c.damage) ? c.damage : null,
+        user: c.user,
+        area: !!cardHasEff(c, 'area')
+      })),
+      fields,
+      habit: cardAiPlanHabitRange(who, 'master', style),
+      prefer: CARD_AI_PLAN_RANGE.prefer.slice()
+    }
+  };
+};
+const cardAiDeckFlagOn = () => {
+  try {
+    return typeof cardGrowStyleOn === 'function' && cardGrowStyleOn() === true;
+  } catch (_) {
+    return false;
+  }
+};
+let cardAiRecipeState = null;
+let cardAiDeckSetting = {
+  on: true
+};
+const cardAiDeckToday = () => typeof cardTodayJst === 'function' ? cardTodayJst() : new Date(Date.now() + 5 * 3600 * 1000).toISOString().slice(0, 10);
+const cardLoadAiRecipe = async () => {
+  try {
+    cardAiRecipeState = cardNormalizeAiRecipe(await storeGet(CARD_AI_RECIPE_KEY, null), cardAiDeckToday());
+  } catch (_) {
+    cardAiRecipeState = cardNormalizeAiRecipe(null, cardAiDeckToday());
+  }
+  try {
+    cardAiDeckSetting = cardNormalizeAiDeck(await storeGet(CARD_AI_DECK_KEY, null));
+  } catch (_) {
+    cardAiDeckSetting = {
+      on: true
+    };
+  }
+  return cardAiRecipeState;
+};
+const cardSaveAiRecipe = async next => {
+  cardAiRecipeState = next;
+  try {
+    return await storeSet(CARD_AI_RECIPE_KEY, next);
+  } catch (_) {
+    return false;
+  }
+};
+const cardSaveAiDeck = async on => {
+  cardAiDeckSetting = {
+    on: !!on
+  };
+  try {
+    await storeSet(CARD_AI_DECK_KEY, cardAiDeckSetting);
+  } catch (_) {}
+  return cardAiDeckSetting;
+};
+const cardAiDeckAskOn = () => cardAiDeckFlagOn() && cardAiDeckSetting.on !== false && typeof cardTalkOpen === 'function' && cardTalkOpen();
+const cardAiDeckFetch = async (who, facts) => {
+  if (!cardAiDeckAskOn() || typeof fetch === 'undefined') return null;
+  const ac = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = setTimeout(() => {
+    if (ac) ac.abort();
+  }, CARD_AI_DECK_WAIT_MS);
+  try {
+    const breederId = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
+    const samples = typeof cardTalkSamples === 'function' ? cardTalkSamples(who, 'challenge') : [];
+    const r = await fetch(CARD_TALK_URL, {
+      method: 'POST',
+      headers: typeof SB_HEADERS !== 'undefined' ? SB_HEADERS : {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        kind: 'deckPlan',
+        breederId: breederId || 'unknown',
+        assistantId: who,
+        samples,
+        facts
+      }),
+      signal: ac ? ac.signal : undefined
+    });
+    const res = r.ok ? await r.json() : null;
+    if (!res || res.ok !== true || res.kind !== 'plan') return null;
+    return {
+      plan: {
+        prefer: Array.isArray(res.prefer) ? res.prefer : [],
+        field: Array.isArray(res.field) ? res.field : [],
+        habit: cardAiDeckIsObj(res.habit) ? res.habit : {}
+      },
+      name: cardAiDeckText(res.name, CARD_AI_DECK_NAME_MAX),
+      line: cardAiDeckText(res.line, CARD_AI_DECK_LINE_MAX)
+    };
+  } catch (_) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const cardAiDeckBusy = new Set();
+const cardAiDeckRebuild = async (who, reason, opts = {}) => {
+  if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who] || cardAiDeckBusy.has(who) || typeof CARD_BATTLE_DATA === 'undefined') return null;
+  cardAiDeckBusy.add(who);
+  try {
+    const db = CARD_BATTLE_DATA;
+    const now = Number.isFinite(opts.now) ? opts.now : Date.now();
+    const before = cardNormalizeAiRecipe(await storeGet(CARD_AI_RECIPE_KEY, null).catch(() => null), cardAiDeckToday());
+    const style = cardAiDeckOldest(before.perWho[who] || null);
+    const f = cardAiDeckFacts(db, who, style);
+    const got = await cardAiDeckFetch(who, f.facts);
+    const cur = cardNormalizeAiRecipe(await storeGet(CARD_AI_RECIPE_KEY, null).catch(() => null), cardAiDeckToday());
+    const w = cur.perWho[who] || {
+      met: true,
+      gamesSince: 0,
+      slotsDone: 0,
+      decks: {}
+    };
+    const prev = w.decks[style] || null;
+    const plan = got && cardAiPlanClean(db, got.plan) ? got.plan : cardAiDeckJitter(prev && prev.plan, {
+      cands: f.cands,
+      fields: f.fields,
+      range: f.range,
+      rnd: cardAiSeededRand(`jitter:${who}:${style}:${now}`)
+    });
+    const entry = cardAiDeckEntryOf({
+      plan,
+      name: got ? got.name : prev && prev.name,
+      line: got ? got.line : prev && prev.line,
+      at: now,
+      ai: !!got
+    }, db);
+    const passed = Number.isFinite(opts.passed) ? opts.passed : w.slotsDone;
+    const nextW = {
+      ...w,
+      met: true,
+      decks: {
+        ...w.decks,
+        [style]: entry
+      },
+      gamesSince: reason === 'games' ? 0 : w.gamesSince,
+      slotsDone: reason === 'slot' ? Math.max(w.slotsDone, passed) : w.slotsDone
+    };
+    const next = {
+      ...cur,
+      perWho: {
+        ...cur.perWho,
+        [who]: nextW
+      }
+    };
+    await cardSaveAiRecipe(next);
+    return {
+      who,
+      style,
+      ai: !!got
+    };
+  } catch (_) {
+    return null;
+  } finally {
+    cardAiDeckBusy.delete(who);
+  }
+};
+const cardAiDeckRunDue = async (opts = {}) => {
+  if (!cardAiDeckFlagOn()) return [];
+  await cardLoadAiRecipe();
+  const now = Number.isFinite(opts.now) ? opts.now : Date.now();
+  let seedKey = '';
+  try {
+    seedKey = typeof ensureBreederId === 'function' ? String(await ensureBreederId()) : '';
+  } catch (_) {
+    seedKey = '';
+  }
+  const passed = cardAiDeckSlotsPassed(cardAiDeckSlotTimes(cardAiRecipeState.day, seedKey), now);
+  const done = [];
+  for (const who of Object.keys(cardAiRecipeState.perWho)) {
+    const w = cardAiRecipeState.perWho[who];
+    const why = cardAiDeckDue(w, passed) || (w.met && !Object.keys(w.decks).length ? 'first' : null);
+    if (!why) continue;
+    const r = await cardAiDeckRebuild(who, why === 'first' ? 'slot' : why, {
+      now,
+      passed
+    });
+    if (r) done.push(r);
+  }
+  return done;
+};
+const cardAiDeckMarkMet = async who => {
+  if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who]) return false;
+  const cur = cardNormalizeAiRecipe(await storeGet(CARD_AI_RECIPE_KEY, null).catch(() => null), cardAiDeckToday());
+  const w = cur.perWho[who];
+  if (w && w.met) {
+    cardAiRecipeState = cur;
+    return true;
+  }
+  await cardSaveAiRecipe({
+    ...cur,
+    perWho: {
+      ...cur.perWho,
+      [who]: {
+        met: true,
+        gamesSince: 0,
+        slotsDone: 0,
+        decks: {},
+        ...(w || {}),
+        ...{
+          met: true
+        }
+      }
+    }
+  });
+  void cardAiDeckRebuild(who, 'slot');
+  return true;
+};
+const cardAiDeckAfterMatch = async who => {
+  if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who]) return null;
+  const cur = cardNormalizeAiRecipe(await storeGet(CARD_AI_RECIPE_KEY, null).catch(() => null), cardAiDeckToday());
+  const w = cur.perWho[who] || {
+    met: true,
+    gamesSince: 0,
+    slotsDone: 0,
+    decks: {}
+  };
+  const nextW = {
+    ...w,
+    met: true,
+    gamesSince: w.gamesSince + 1
+  };
+  await cardSaveAiRecipe({
+    ...cur,
+    perWho: {
+      ...cur.perWho,
+      [who]: nextW
+    }
+  });
+  if (nextW.gamesSince >= CARD_AI_DECK_GAMES) void cardAiDeckRebuild(who, 'games');
+  return nextW.gamesSince;
+};
+const cardAiDeckLifeStyle = who => {
+  try {
+    return typeof assistantLifeCardStyle === 'function' ? cardAiStyleOf(assistantLifeCardStyle(who)) : null;
+  } catch (_) {
+    return null;
+  }
+};
+const cardAiDeckNextMemo = {};
+const cardAiDeckNextStyle = who => {
+  if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who]) return null;
+  if (!cardAiDeckNextMemo[who]) cardAiDeckNextMemo[who] = cardAiDeckPickStyle(cardAiDeckLifeStyle(who), Math.random);
+  return cardAiDeckNextMemo[who];
+};
+const cardAiDeckNextName = who => {
+  const st = cardAiDeckNextStyle(who);
+  if (!st) return null;
+  const e = cardAiRecipeState && cardAiRecipeState.perWho[who] && cardAiRecipeState.perWho[who].decks[st];
+  return e && e.name || cardAiDeckDefaultName(who, st);
+};
+const cardAiDeckNextDone = who => {
+  delete cardAiDeckNextMemo[who];
+};
+const cardAssistantDeckPick = (who, rand = Math.random, level = 'normal', extra = {}, styleIn = null) => {
+  if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who] || typeof CARD_BATTLE_DATA === 'undefined') return null;
+  const rnd = typeof rand === 'function' ? rand : Math.random;
+  const styleId = cardAiStyleOf(styleIn) || cardAiDeckPickStyle(cardAiDeckLifeStyle(who), rnd);
+  const e = cardAiRecipeState && cardAiRecipeState.perWho[who] && cardAiRecipeState.perWho[who].decks[styleId] || null;
+  const plan = e && e.plan ? e.plan : null;
+  const deck = cardAiBuildDeck(CARD_BATTLE_DATA, who, CARD_AI_BUILD[level] ? level : 'normal', rnd, {
+    ...extra,
+    style: styleId,
+    ...(plan ? {
+      plan
+    } : {})
+  });
+  return {
+    styleId,
+    name: e && e.name || cardAiDeckDefaultName(who, styleId),
+    line: e && e.line || null,
+    plan,
+    deck
+  };
+};
+const cardAiRecipeOf = (who, styleId) => {
+  if (!cardAiDeckFlagOn() || !cardAiRecipeState) return null;
+  const e = cardAiRecipeState.perWho[who] && cardAiRecipeState.perWho[who].decks[styleId];
+  return e ? {
+    plan: e.plan,
+    name: e.name,
+    line: e.line,
+    at: e.at
+  } : null;
+};
+const CARD_AI_DECK_VS_LINES = Object.freeze({
+  mua: '今日は『{name}』でいくよ♪ まぢ全力だからね！',
+  kiki: '今日は『{name}』でお相手しまつ( ˘ω˘)',
+  momosuke: '今日のももは『{name}』だよ♡ 勝てるかな〜？w',
+  kyuko: 'ほい、今日は『{name}』でいくよぉ笑',
+  dra: 'おでは今日『{name}』でいくぞ。えへへ、手加減しないからな',
+  atsu: '今日は『{name}』でいくわ笑 全力な！',
+  sorashido: '今日は『{name}』でいくぜ・・・！ 計算済み笑',
+  erubin: '今日は『{name}』でいこうかな🤔 よろしくね笑'
+});
+const cardAiDeckVsLine = (who, pick) => {
+  if (!pick) return null;
+  if (pick.line) return {
+    t: pick.line,
+    e: 'happy'
+  };
+  const tpl = CARD_AI_DECK_VS_LINES[who];
+  return tpl && pick.name ? {
+    t: tpl.replace('{name}', pick.name),
+    e: 'happy'
+  } : null;
+};
 const CARD_DECK_NAME_TAILS = Object.freeze({
   mua: ['まっしぐら隊', '全力ダッシュ団', 'ガンガン突撃隊', '先手必勝隊'],
   momosuke: ['いじわる劇場', 'ちくちく作戦', 'こまらせ隊', 'ずるっこ団'],
@@ -134470,7 +135912,16 @@ const CardVsIntro = ({
     "data-card-vs-line": true,
     className: "mt-1 rounded-2xl rounded-bl-sm bg-white px-2.5 py-1.5 text-[12px] font-bold leading-snug text-slate-900",
     style: JA_WRAP_STYLE
-  }, cardRuleLine(foe.line.t)))), React.createElement(CardVsDeckName, {
+  }, cardRuleLine(foe.line.t)))), foe.styleName && typeof CardFoeDeckChip === 'function' ? React.createElement("div", {
+    "data-card-vs-style": true,
+    className: "mh-vs-fade flex max-w-full flex-col items-center gap-1"
+  }, React.createElement(CardFoeTeamName, {
+    text: foe.deckName
+  }), React.createElement(CardFoeDeckChip, {
+    name: foe.styleName,
+    styleId: foe.styleId,
+    kind: "vs"
+  })) : React.createElement(CardVsDeckName, {
     text: foe.deckName,
     tone: "foe"
   }), React.createElement(CardVsMonsters, {
@@ -136921,19 +138372,83 @@ const cardLifeAtCard = id => {
     return false;
   }
 };
+const CARD_LIFE_REWARD_KEY = 'mh_card_life_reward_v1';
+const CARD_LIFE_REWARD_MAX = 1;
+const cardLifeSlotNow = (now = Date.now()) => {
+  try {
+    const v = typeof assistantLifeSlotAt === 'function' ? assistantLifeSlotAt(now) : null;
+    return v && Number.isFinite(v.abs) && Number.isFinite(v.i) ? v : null;
+  } catch (_) {
+    return null;
+  }
+};
+const cardLifeRewardNorm = (raw, slot) => {
+  const used = {};
+  if (Number.isFinite(slot) && raw && typeof raw === 'object' && !Array.isArray(raw) && raw.slot === slot && raw.used && typeof raw.used === 'object' && !Array.isArray(raw.used)) {
+    for (const [k, v] of Object.entries(raw.used)) {
+      const n = Math.trunc(Number(v));
+      if (k && Number.isFinite(n) && n > 0) used[k] = Math.min(n, 99);
+    }
+  }
+  return {
+    slot: Number.isFinite(slot) ? slot : null,
+    used
+  };
+};
+const cardLifeRewardAfter = (raw, slot, who) => {
+  if (!Number.isFinite(slot) || typeof who !== 'string' || !who) return null;
+  if (raw && typeof raw === 'object' && Number.isFinite(raw.slot) && raw.slot > slot) return null;
+  const cur = cardLifeRewardNorm(raw, slot);
+  return {
+    slot,
+    used: {
+      ...cur.used,
+      [who]: (cur.used[who] || 0) + 1
+    }
+  };
+};
+const CARD_LIFE_REWARD_MEM = {
+  raw: null
+};
+const cardLifeRewardLoad = async () => {
+  try {
+    CARD_LIFE_REWARD_MEM.raw = await storeGet(CARD_LIFE_REWARD_KEY, null);
+  } catch (_) {}
+  return CARD_LIFE_REWARD_MEM.raw;
+};
+const cardLifeRewardLeft = (id, now = Date.now()) => {
+  const s = cardLifeSlotNow(now);
+  return !!s && typeof id === 'string' && !!id && (cardLifeRewardNorm(CARD_LIFE_REWARD_MEM.raw, s.abs).used[id] || 0) < CARD_LIFE_REWARD_MAX;
+};
+const cardLifeRewardSpent = (id, now = Date.now()) => {
+  const s = cardLifeSlotNow(now);
+  if (!s || typeof id !== 'string' || !id || cardLifeRewardLeft(id, now)) return null;
+  const list = typeof ASSISTANT_LIFE_SLOTS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_SLOTS) ? ASSISTANT_LIFE_SLOTS : null;
+  const nx = list && list.length ? list[(s.i + 1) % list.length] : null;
+  return {
+    next: nx && Number.isFinite(nx.from) ? nx.from : null
+  };
+};
+const cardLifeSpentText = (sp, name = '') => `🃏 ${name ? `${name}の` : ''}ごほうびアップは使い切りました…次は${sp && Number.isFinite(sp.next) ? `${sp.next}時` : '次の時間'}から`;
+const cardLifeRewardEntry = async (who, slot) => {
+  let before = null;
+  try {
+    before = await storeGet(CARD_LIFE_REWARD_KEY, null);
+  } catch (_) {
+    return null;
+  }
+  const next = cardLifeRewardAfter(before, slot, who);
+  return next ? {
+    key: CARD_LIFE_REWARD_KEY,
+    next,
+    before
+  } : null;
+};
 const cardGrowStyleOn = () => {
   try {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardGrowStyle === true;
   } catch (_) {
     return false;
-  }
-};
-const cardLifeCardStyle = id => {
-  if (!cardGrowStyleOn()) return null;
-  try {
-    return typeof assistantLifeCardStyle === 'function' ? cardAiStyleOf(assistantLifeCardStyle(id)) : null;
-  } catch (_) {
-    return null;
   }
 };
 const cardLifeOnMatch = x => {
@@ -136948,6 +138463,7 @@ const CARD_LIFE_INVITE = {
 const CARD_LIFE_INVITE_TTL_MS = 60 * 1000;
 const cardLifeSetApp = app => {
   CARD_LIFE_INVITE.app = app && typeof app === 'object' ? app : null;
+  void cardLifeRewardLoad();
   if (typeof ASSISTANT_LIFE_LINKS === 'undefined' || !ASSISTANT_LIFE_LINKS) return;
   ASSISTANT_LIFE_LINKS.cardInvite = CARD_LIFE_INVITE.app && typeof CARD_LIFE_INVITE.app.open === 'function' && (!CARD_LIFE_INVITE.app.visible || CARD_LIFE_INVITE.app.visible()) ? id => {
     CARD_LIFE_INVITE.pending = {
@@ -136990,10 +138506,17 @@ const CardFoeStyle = ({
   const fav = Object.values(db.monsters).find(m => m.species === favSpecies && !m.variant && String(m.wave) !== 'hybrid') || null;
   const lv = CARD_LEVEL_LABEL[level] || '';
   const upper = level === 'hard' || level === 'expert' || level === 'master';
+  const nextStyle = typeof cardAiDeckNextStyle === 'function' ? cardAiDeckNextStyle(who) : null;
+  const nextName = nextStyle && typeof cardAssistantDeckDisplayName === 'function' ? cardAssistantDeckDisplayName(who, nextStyle, typeof cardAiDeckNextName === 'function' ? cardAiDeckNextName(who) : null) : null;
   return React.createElement("div", {
     "data-card-foe-style": who,
     className: "space-y-1.5 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
-  }, React.createElement("div", {
+  }, nextStyle && typeof CardFoeDeckChip === 'function' && React.createElement(CardFoeDeckChip, {
+    name: nextName,
+    styleId: nextStyle,
+    kind: "foe",
+    compact: true
+  }), React.createElement("div", {
     className: "flex flex-wrap items-center gap-x-2 gap-y-1"
   }, React.createElement("span", {
     "data-card-foe-style-label": true,
@@ -141001,6 +142524,12 @@ const CardBattleScreen = ({
     if (view === 'top' && typeof cardTacticsLoad === 'function') void cardTacticsLoad().then(d => setRankXp(d.level.xp)).catch(() => {});
   }, [view]);
   useEffect(() => {
+    if (view === 'top' && cardGrowStyleOn() && typeof cardAiDeckRunDue === 'function') void cardAiDeckRunDue().catch(() => {});
+  }, [view]);
+  useEffect(() => {
+    if (view === 'foe' && cardGrowStyleOn() && typeof cardLoadAiRecipe === 'function') void cardLoadAiRecipe().catch(() => {});
+  }, [view]);
+  useEffect(() => {
     const go = c => {
       if (c) {
         setDeckPick({
@@ -141180,6 +142709,16 @@ const CardBattleScreen = ({
     setAiTalk(next);
     void cardSaveAiTalk(next);
   };
+  const [aiDeckOn, setAiDeckOn] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    if (cardGrowStyleOn()) void cardLoadAiRecipe().then(() => {
+      if (alive) setAiDeckOn(cardAiDeckSetting.on !== false);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
   const toggleAssist = key => {
     if (key !== 'modeSelectArt' && key !== 'modeSelectComment') return;
     const next = {
@@ -141193,6 +142732,9 @@ const CardBattleScreen = ({
     const K = CARD_SAVE_KEYS;
     try {
       await cardMigratePointsOnce(storeGet, storeSet, saveStoredValuesOrRollback);
+    } catch (_) {}
+    try {
+      if (typeof cardPvpFix20261108Once === 'function') await cardPvpFix20261108Once(storeGet, storeSet, saveStoredValuesOrRollback);
     } catch (_) {}
     const [collection, decks, point, starter, daily, record, unlocked, tutorial, bgm, settings, cpuPlaylist] = await Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null), storeGet(K.tutorial, null), storeGet(K.bgm, null), storeGet(K.settings, null), storeGet(K.cpuPlaylist, null)]);
     const next = {
@@ -142064,6 +143606,7 @@ const CardBattleScreen = ({
       const fresh = await freshCardSave();
       const lifeMult = game.lifeUp && !game.demo ? CARD_LIFE_UP_MULT : 1;
       const reward = cardCpuReward(fresh.daily, game.level, outcome, facts, lifeMult);
+      const lifeEntry = lifeMult > 1 && reward.lifeUp === true && Number.isFinite(game.lifeSlot) ? await cardLifeRewardEntry(game.who, game.lifeSlot) : null;
       const loops = cardCpuLoops(game.level, outcome, facts, lifeMult);
       const rankable = !!(rank && rank.send) && !debug;
       const nextRecord = cardRecordAfter(fresh.record, {
@@ -142088,7 +143631,8 @@ const CardBattleScreen = ({
           name: log.foeName,
           who: game.who,
           deckName: log.deckName,
-          style: log.style
+          style: log.style,
+          styleName: log.styleName
         },
         outcome,
         reason: '',
@@ -142125,7 +143669,8 @@ const CardBattleScreen = ({
         daily: reward.daily,
         record: nextRecord,
         unlocked: nextUnlocked
-      }, fresh.raw, [...openExtra, ...(detailEntry ? [detailEntry] : []), ...levelGain.entries]);
+      }, fresh.raw, [...openExtra, ...(detailEntry ? [detailEntry] : []), ...levelGain.entries, ...(lifeEntry ? [lifeEntry] : [])]);
+      if (ok && lifeEntry) CARD_LIFE_REWARD_MEM.raw = lifeEntry.next;
       if (ok && openExtra.length) {
         openIdRef.current = null;
         openRef.current = null;
@@ -142188,6 +143733,7 @@ const CardBattleScreen = ({
         won: outcome === 'win',
         at: Date.now()
       });
+      if (ok && !game.demo && game.aiDeck && typeof cardAiDeckAfterMatch === 'function') void cardAiDeckAfterMatch(game.who);
       setResult({
         outcome,
         reward,
@@ -142201,7 +143747,8 @@ const CardBattleScreen = ({
         talk: talkFacts,
         replay: replayId,
         rankGain: ok ? levelGain.gain : null,
-        lifeUp: lifeMult > 1
+        lifeUp: lifeMult > 1,
+        aiDeck: game.aiDeck || null
       });
       onBgm && onBgm(cardBgmOf(save.bgm.top));
       onNavigate('CARD_TOP');
@@ -142303,16 +143850,17 @@ const CardBattleScreen = ({
     }
     const activeDeck = deck;
     const share = pick.share || null;
-    const foeStyle = !share && !(opts && opts.cup) ? cardLifeCardStyle(pick.who) : null;
+    const aiPick = !share && !(opts && opts.cup) && cardGrowStyleOn() && typeof cardAssistantDeckPick === 'function' ? cardAssistantDeckPick(pick.who, Math.random, pick.level, {
+      playerDeck: activeDeck
+    }, typeof cardAiDeckNextStyle === 'function' ? cardAiDeckNextStyle(pick.who) : null) : null;
+    if (aiPick && typeof cardAiDeckNextDone === 'function') cardAiDeckNextDone(pick.who);
+    const foeStyle = aiPick ? aiPick.styleId : null;
     const cpuDeck = share ? {
       monsters: share.deck.monsters.slice(),
       cards: share.deck.cards.slice(),
       sameBlood: cardShareSameBlood(db, share.deck)
-    } : cardAiBuildDeck(db, pick.who, pick.level, Math.random, {
-      playerDeck: activeDeck,
-      ...(foeStyle ? {
-        style: foeStyle
-      } : {})
+    } : aiPick ? aiPick.deck : cardAiBuildDeck(db, pick.who, pick.level, Math.random, {
+      playerDeck: activeDeck
     });
     const seed = cup ? cup.seed : (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
     const gameKey = cup ? `cup-${cup.matchId}-${Date.now().toString(36)}` : `${seed}`;
@@ -142354,9 +143902,13 @@ const CardBattleScreen = ({
       foe: {
         who: pick.who,
         name: assistant ? assistant.name : 'あいて',
-        line: (CARD_VS_LINES[pick.who] || {})[pick.level] || null,
+        line: aiPick && cardAiDeckVsLine(pick.who, aiPick) || (CARD_VS_LINES[pick.who] || {})[pick.level] || null,
         deckName: cardAssistantDeckName(db, cpuDeck, pick.who, pick.level),
-        monsters: vsMons(st, CARD_CPU)
+        monsters: vsMons(st, CARD_CPU),
+        ...(aiPick && aiPick.name ? {
+          styleName: aiPick.name,
+          styleId: aiPick.styleId
+        } : {})
       },
       me: {
         name: myName,
@@ -142370,7 +143922,8 @@ const CardBattleScreen = ({
       sameBlood: !!cardShareSameBlood(db, activeDeck),
       quick: !!autoIn.quick
     } : null;
-    const lifeUp = !share && !cup && !auto && cardLifeAtCard(pick.who);
+    const lifeUp = !share && !cup && !auto && cardLifeAtCard(pick.who) && cardLifeRewardLeft(pick.who);
+    const lifeSlot = lifeUp ? (cardLifeSlotNow() || {}).abs : null;
     setGame({
       key: gameKey,
       st,
@@ -142380,7 +143933,15 @@ const CardBattleScreen = ({
       intro: auto && auto.quick ? null : intro,
       cpuSameBlood: !!cpuDeck.sameBlood,
       ...(lifeUp ? {
-        lifeUp: true
+        lifeUp: true,
+        lifeSlot
+      } : {}),
+      ...(aiPick ? {
+        aiDeck: {
+          style: aiPick.styleId,
+          name: aiPick.name,
+          team: intro.foe.deckName || null
+        }
       } : {}),
       ...(share ? {
         share
@@ -142403,6 +143964,7 @@ const CardBattleScreen = ({
     cpuLogRef.current = scene ? null : {
       id: gameKey,
       style: foeStyle || 'normal',
+      styleName: aiPick && aiPick.name || null,
       seed,
       first,
       decks: [{
@@ -143136,6 +144698,8 @@ const CardBattleScreen = ({
     const a = allAssistants.find(x => x.id === foe.who) || foes[0];
     const lifeIds = cardLifeCardIds();
     const lifeFoes = foes.filter(x => lifeIds.includes(x.id));
+    const lifeSpent = Object.fromEntries(lifeFoes.map(x => [x.id, cardLifeRewardSpent(x.id)]).filter(e => e[1]));
+    const lifeUpFoes = lifeFoes.filter(x => !lifeSpent[x.id]);
     const line = a ? cardPickLine(a.id, 'challenge', null, () => 0.0) : null;
     return React.createElement("div", {
       "data-mh-screen": true,
@@ -143161,6 +144725,7 @@ const CardBattleScreen = ({
           ...f,
           who: x.id
         }));
+        if (cardGrowStyleOn() && typeof cardAiDeckMarkMet === 'function') void cardAiDeckMarkMet(x.id);
       },
       className: `relative flex flex-col items-center rounded-xl border-2 ${foes.length >= 7 ? 'p-1 landscape:p-0.5' : 'p-1'} ${foe.who === x.id ? 'bg-white/10' : 'border-white/10 bg-slate-900/70'}`,
       style: {
@@ -143189,16 +144754,13 @@ const CardBattleScreen = ({
       }
     }, x.name)), save.record.beaten[x.id] && React.createElement("span", {
       className: "absolute right-1 top-1 rounded bg-amber-400 px-1 text-[10px] font-black text-slate-900"
-    }, "勝"), lifeIds.includes(x.id) && React.createElement("span", {
+    }, "勝"), lifeIds.includes(x.id) && (lifeSpent[x.id] ? React.createElement("span", {
+      "data-card-foe-life-chip": "spent",
+      className: "absolute left-0.5 top-0.5 rounded-full bg-slate-500 px-1 text-[9px] font-black leading-[14px] text-slate-100 shadow landscape:text-[8px] landscape:leading-[12px]"
+    }, "🃏済") : React.createElement("span", {
       "data-card-foe-life-chip": true,
       className: "absolute left-0.5 top-0.5 rounded-full bg-gradient-to-r from-amber-200 to-amber-400 px-1 text-[9px] font-black leading-[14px] text-slate-950 shadow landscape:text-[8px] landscape:leading-[12px]"
-    }, "🃏UP")))), lifeFoes.length > 0 && React.createElement("div", {
-      "data-card-foe-life-band": true,
-      className: "rounded-xl border-2 border-amber-300 bg-amber-950/80 px-2.5 py-1.5 text-[13px] font-black leading-snug text-amber-200",
-      style: JA_LABEL_STYLE
-    }, React.createElement("p", null, jaWrap(`🃏 いまカード部屋にいる助手: ${lifeFoes.map(x => x.name).join('・')}`)), React.createElement("p", {
-      className: "text-[12px] text-white"
-    }, jaWrap('この助手と対戦すると、ビートP・カードランクの経験値・クイック周回が 1.5倍'))), React.createElement("div", {
+    }, "🃏UP"))))), React.createElement("div", {
       className: "flex items-baseline gap-2 px-0.5 pt-1"
     }, React.createElement("span", {
       className: "text-[10px] font-black uppercase tracking-widest text-slate-300"
@@ -143236,7 +144798,17 @@ const CardBattleScreen = ({
       }, open ? `勝ち${CARD_AI_LEVELS[lv].point}` : '🔒'));
     })), debug && React.createElement("p", {
       className: "text-[11px] font-bold text-slate-400"
-    }, "(デバッグ: まだ開いていない強さも選べます。開いた印は勝ったときだけ付きます)"), React.createElement("div", {
+    }, "(デバッグ: まだ開いていない強さも選べます。開いた印は勝ったときだけ付きます)"), lifeFoes.length > 0 && React.createElement("div", {
+      "data-card-foe-life-band": lifeUpFoes.length ? 'up' : 'spent',
+      className: `rounded-xl border-2 px-2.5 py-1.5 text-[13px] font-black leading-snug ${lifeUpFoes.length ? 'border-amber-300 bg-amber-950/80 text-amber-200' : 'border-slate-500 bg-slate-800/90 text-slate-200'}`,
+      style: JA_LABEL_STYLE
+    }, lifeUpFoes.length > 0 && React.createElement(React.Fragment, null, React.createElement("p", null, jaWrap(`🃏 いまカード部屋にいる助手: ${lifeUpFoes.map(x => x.name).join('・')}`)), React.createElement("p", {
+      className: "text-[12px] text-white"
+    }, jaWrap('この助手と対戦すると、ビートP・カードランクの経験値・クイック周回が 1.5倍'))), lifeFoes.filter(x => lifeSpent[x.id]).map(x => React.createElement("p", {
+      key: x.id,
+      "data-card-foe-life-spent": x.id,
+      className: `text-[12px] text-slate-300 ${lifeUpFoes.length ? 'mt-0.5' : ''}`
+    }, jaWrap(cardLifeSpentText(lifeSpent[x.id], x.name))))), React.createElement("div", {
       className: "space-y-2 landscape:grid landscape:grid-cols-2 landscape:items-stretch landscape:gap-2 landscape:space-y-0"
     }, a && React.createElement("div", {
       className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2 landscape:items-center"
@@ -143496,7 +145068,17 @@ const CardBattleScreen = ({
       }),
       foeName: a.name,
       outcome: win ? '勝ち' : result.outcome === 'surrender' ? '投了' : '負け'
-    }), React.createElement("div", {
+    }), result.aiDeck && result.aiDeck.name && typeof CardFoeDeckChip === 'function' && React.createElement("div", {
+      "data-card-result-ai-deck": true,
+      className: "flex flex-col items-center gap-1"
+    }, React.createElement(CardFoeTeamName, {
+      text: result.aiDeck.team,
+      compact: true
+    }), React.createElement(CardFoeDeckChip, {
+      name: result.aiDeck.name,
+      styleId: result.aiDeck.style,
+      kind: "result"
+    })), React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, !result.demo && r.total > 0 && React.createElement("div", {
       "data-card-gain-count": true,
@@ -143977,7 +145559,28 @@ const CardBattleScreen = ({
     }, aiTalk ? 'ON' : 'OFF')), React.createElement("p", {
       className: "mt-1.5 text-[10px] font-bold leading-snug text-slate-400",
       style: JA_WRAP_STYLE
-    }, jaWrap('ONにすると、対戦のあと・対戦の山場・デッキ相談で、助手がその場に合わせたひとことを話します。うまく届かないときは、いつものセリフになります'))), CARD_SETTING_GROUPS.map(g => React.createElement(React.Fragment, {
+    }, jaWrap('ONにすると、対戦のあと・対戦の山場・デッキ相談で、助手がその場に合わせたひとことを話します。うまく届かないときは、いつものセリフになります'))), cardGrowStyleOn() && cardTalkOpen() && React.createElement("div", {
+      "data-card-ai-deck-panel": true,
+      className: SCREEN_PANEL_CLASS
+    }, React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, React.createElement("b", {
+      className: "min-w-0 flex-1 text-[13px] font-black text-white"
+    }, "助手のデッキ(AI)"), React.createElement("button", {
+      type: "button",
+      "data-card-ai-deck": true,
+      "aria-pressed": aiDeckOn,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        const next = !aiDeckOn;
+        setAiDeckOn(next);
+        void cardSaveAiDeck(next);
+      },
+      className: `min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${aiDeckOn ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`
+    }, aiDeckOn ? 'ON' : 'OFF')), React.createElement("p", {
+      className: "mt-1.5 text-[10px] font-bold leading-snug text-slate-400",
+      style: JA_WRAP_STYLE
+    }, jaWrap('ONにすると、助手がときどき自分でデッキを組み直します。OFFでも助手のデッキは少しずつ変わります'))), CARD_SETTING_GROUPS.map(g => React.createElement(React.Fragment, {
       key: g.title
     }, g.title === '表示' && bgmPanel, React.createElement("div", {
       "data-card-setting-group": g.title,
@@ -146973,6 +148576,205 @@ const CardShopStarters = ({
     }
   }));
 };
+const CARD_DECK_STYLE_LABEL = Object.freeze({
+  attack: '攻め',
+  guard: '守り',
+  normal: 'ふつう'
+});
+const CARD_DECK_STYLE_ICON = Object.freeze({
+  attack: '⚔️',
+  guard: '🛡️',
+  normal: '⚖️'
+});
+const CARD_DECK_KIND_GROUPS = Object.freeze([['技', ['pow', 'int']], ['防御', ['blk']], ['回避', ['dge']], ['特殊', ['spe']], ['場', ['fld']]]);
+const cardAssistantDeckViewOn = () => typeof cardGrowStyleOn === 'function' && cardGrowStyleOn();
+const cardAssistantDeckDisplayName = (who, styleId, name = null) => {
+  const sid = CARD_DECK_STYLE_LABEL[styleId] ? styleId : 'normal';
+  if (typeof name === 'string' && name) return name;
+  if (typeof cardAiStyleDefaultName === 'function') return cardAiStyleDefaultName(who, sid);
+  const base = typeof CARD_AI_STYLE_NAMES !== 'undefined' ? CARD_AI_STYLE_NAMES[who] : null;
+  if (!base) return null;
+  return sid === 'normal' ? base : `${base}・${CARD_DECK_STYLE_LABEL[sid]}`;
+};
+const cardAssistantDeckSummary = (who, styleId) => {
+  try {
+    if (typeof cardAssistantDeckPreview !== 'function' || typeof CARD_BATTLE_DATA === 'undefined') return null;
+    const sid = CARD_DECK_STYLE_LABEL[styleId] ? styleId : 'normal';
+    const d = cardAssistantDeckPreview(who, sid, 'normal');
+    if (!d || !Array.isArray(d.monsters) || !Array.isArray(d.cards)) return null;
+    const db = CARD_BATTLE_DATA;
+    const count = {};
+    d.cards.forEach(no => {
+      count[no] = (count[no] || 0) + 1;
+    });
+    const uniq = [...new Set(d.cards)].map(no => cardOf(db, no)).filter(Boolean);
+    const byGuts = (a, b) => (b.guts || 0) - (a.guts || 0) || (b.damage || 0) - (a.damage || 0) || (a.no < b.no ? -1 : 1);
+    const ace = uniq.filter(c => c.kind === 'pow' || c.kind === 'int').sort(byGuts)[0] || null;
+    const groups = CARD_DECK_KIND_GROUPS.map(([label, kinds]) => [label, uniq.filter(c => kinds.includes(c.kind)).sort(byGuts)]).filter(g => g[1].length);
+    const monsters = d.monsters.map(no => cardMonsterOf(db, no)).filter(Boolean);
+    const name = cardAssistantDeckDisplayName(who, sid, typeof d.name === 'string' ? d.name : null);
+    const line = typeof d.line === 'string' && d.line ? d.line : null;
+    const at = Number.isFinite(d.at) && d.at > 0 ? d.at : null;
+    return {
+      styleId: sid,
+      monsters,
+      count,
+      ace,
+      groups,
+      total: d.cards.length,
+      name,
+      line,
+      at
+    };
+  } catch (_) {
+    return null;
+  }
+};
+const cardAssistantDeckAtText = at => {
+  if (!Number.isFinite(at) || at <= 0) return '';
+  const t = new Date(at);
+  return Number.isNaN(t.getTime()) ? '' : `${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`;
+};
+function CardAssistantDeckView({
+  who,
+  styleId,
+  land = false
+}) {
+  const [detail, setDetail] = React.useState(null);
+  if (!cardAssistantDeckViewOn()) return null;
+  const s = cardAssistantDeckSummary(who, styleId);
+  const a = typeof assistantById === 'function' ? assistantById(who) : null;
+  if (!s) return React.createElement("div", {
+    className: "mhm-card",
+    "data-card-assistant-deck-view": "none"
+  }, React.createElement("p", {
+    className: "text-[11.5px] font-bold text-slate-300"
+  }, "デッキを読めませんでした"));
+  const db = CARD_BATTLE_DATA;
+  const label = CARD_DECK_STYLE_LABEL[s.styleId];
+  const tile = (c, big = false) => React.createElement("button", {
+    key: c.no,
+    type: "button",
+    "data-card-assistant-deck-card": c.no,
+    "aria-label": `${c.name}を大きく見る`,
+    onClick: () => {
+      if (typeof Audio_ !== 'undefined') Audio_.fgSe.tap();
+      setDetail(c.no);
+    },
+    className: `relative block ${big ? land ? 'w-[70px]' : 'w-[96px]' : 'w-full'} active:scale-95`
+  }, React.createElement("img", {
+    src: CARD_IMG(c.img),
+    alt: c.name,
+    draggable: false,
+    className: "w-full rounded-[5px] shadow"
+  }), s.count[c.no] > 1 && React.createElement("b", {
+    className: "absolute bottom-0.5 right-0.5 rounded bg-black/80 px-1 text-[11px] font-black text-amber-200"
+  }, "×", s.count[c.no]));
+  const at = cardAssistantDeckAtText(s.at);
+  const top = React.createElement("div", {
+    className: "mhm-card",
+    "data-card-assistant-deck-head": s.styleId
+  }, React.createElement("p", {
+    className: "text-[10px] font-black text-slate-400"
+  }, "MFバトルカード・", label, "のデッキ"), React.createElement("p", {
+    "data-card-assistant-deck-name": true,
+    className: "text-[18px] font-black leading-tight text-amber-200",
+    style: JA_LABEL_STYLE
+  }, CARD_DECK_STYLE_ICON[s.styleId], " ", s.name || `${label}のデッキ`), s.line && React.createElement("p", {
+    "data-card-assistant-deck-line": true,
+    className: "mt-1 rounded-lg bg-black/30 px-2 py-1 text-[11.5px] font-bold leading-snug text-slate-100",
+    style: JA_WRAP_STYLE
+  }, a ? `${a.name}「${s.line}」` : s.line), React.createElement("div", {
+    className: "mt-2 flex items-end gap-2"
+  }, React.createElement("div", {
+    className: `flex-1 ${land ? 'max-w-[190px]' : ''}`
+  }, React.createElement("p", {
+    className: "text-[10px] font-black text-slate-400"
+  }, "よく使う3体"), React.createElement("div", {
+    className: "grid grid-cols-3 gap-1"
+  }, s.monsters.map(m => React.createElement("div", {
+    key: m.no,
+    className: "min-w-0 text-center",
+    "data-card-assistant-deck-mon": m.no
+  }, React.createElement("img", {
+    src: CARD_IMG(m.img),
+    alt: m.name,
+    draggable: false,
+    className: "w-full rounded-[5px]"
+  }), React.createElement("p", {
+    className: "text-[10px] font-black leading-tight text-white",
+    style: JA_LABEL_STYLE
+  }, m.name))))), s.ace && React.createElement("div", {
+    className: `${land ? 'w-[70px]' : 'w-[96px]'} shrink-0 text-center`,
+    "data-card-assistant-deck-ace": s.ace.no
+  }, React.createElement("p", {
+    className: "text-[10px] font-black text-rose-200"
+  }, "切り札"), tile(s.ace, true))), React.createElement("p", {
+    "data-card-assistant-deck-mon-note": true,
+    className: "mt-1 text-[10.5px] font-bold text-slate-400"
+  }, "3体は対戦のたびに変わります"));
+  const list = React.createElement("div", {
+    className: "mhm-card",
+    "data-card-assistant-deck-list": true
+  }, s.groups.map(([g, cs]) => React.createElement("div", {
+    key: g,
+    className: "mt-1.5 first:mt-0",
+    "data-card-assistant-deck-group": g
+  }, React.createElement("p", {
+    className: "text-[11px] font-black text-slate-300"
+  }, g, " ", React.createElement("small", {
+    className: "text-slate-500"
+  }, cs.reduce((n, c) => n + s.count[c.no], 0), "枚")), React.createElement("div", {
+    className: `mt-1 grid ${land ? 'grid-cols-10' : 'grid-cols-6'} gap-1`
+  }, cs.map(c => tile(c))))), React.createElement("p", {
+    className: "mt-2 text-[10.5px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, `🤖 ${at ? `AI が ${at} に組み直しました。` : ''}対戦では毎回少し入れかわります`));
+  return React.createElement("div", {
+    "data-card-assistant-deck-view": s.styleId,
+    className: land ? 'grid grid-cols-[minmax(0,5fr)_minmax(0,7fr)] items-start gap-2' : 'flex flex-col gap-2'
+  }, top, list, detail && typeof CardDetailModal === 'function' && React.createElement(CardDetailModal, {
+    db: db,
+    no: detail,
+    onClose: () => setDetail(null)
+  }));
+}
+function CardFoeDeckChip({
+  name,
+  styleId,
+  kind = 'foe',
+  compact = false
+}) {
+  if (!cardAssistantDeckViewOn() || !CARD_DECK_STYLE_LABEL[styleId]) return null;
+  return React.createElement("div", {
+    "data-card-foe-deck-chip": kind,
+    "data-card-foe-deck-style": styleId,
+    className: `mx-auto flex max-w-full flex-wrap items-center justify-center gap-y-0.5 border border-amber-300/70 bg-slate-950/80 font-black leading-tight text-amber-100 ${compact ? 'gap-1 rounded-2xl px-1.5 py-0.5 text-[11px]' : 'gap-1.5 rounded-full px-3 py-1 text-[12px]'}`
+  }, React.createElement("small", {
+    className: `shrink-0 rounded-full bg-amber-300 py-px text-[10px] font-black text-slate-950 ${compact ? 'px-1' : 'px-1.5'}`
+  }, "今日のデッキ"), React.createElement("span", {
+    "data-card-foe-deck-chip-name": true,
+    className: "whitespace-nowrap"
+  }, React.createElement("span", {
+    "aria-hidden": "true"
+  }, CARD_DECK_STYLE_ICON[styleId], " "), name || `${CARD_DECK_STYLE_LABEL[styleId]}のデッキ`));
+}
+function CardFoeTeamName({
+  text,
+  tone = 'foe',
+  compact = false
+}) {
+  if (!cardAssistantDeckViewOn() || !text) return null;
+  return React.createElement("div", {
+    "data-card-foe-team-name": true,
+    className: `mx-auto flex max-w-full items-center justify-center gap-1.5 rounded-2xl px-3 font-black leading-tight ${tone === 'foe' ? 'bg-rose-950/80 text-rose-100' : 'bg-sky-950/80 text-sky-100'} ${compact ? 'py-0.5 text-[11px]' : 'py-0.5 text-[13px]'}`
+  }, React.createElement("small", {
+    className: "shrink-0 rounded-full bg-white/20 px-1.5 py-px text-[10px] font-black"
+  }, "チーム"), React.createElement("span", {
+    className: "min-w-0",
+    style: JA_WRAP_STYLE
+  }, text));
+}
 const cardDeckPickChoices = (db, decks, collection, opts = {}) => {
   const own = (decks && decks.decks || []).map(d => ({
     id: d.id,
@@ -152466,6 +154268,58 @@ const cardPvpHistoryWhen = at => {
   const p = n => String(n).padStart(2, '0');
   return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
 };
+const CARD_PVP_FIX_20261108_KEY = 'mh_card_pvp_fix_20261108_v1';
+const CARD_PVP_FIX_20261108_MATCHES = Object.freeze(['mmw7e6d8i6v7uxd', 'mmw7ecam4ptfvzi']);
+const cardPvpFix20261108Plan = (history, record) => {
+  const list = cardPvpNormalizeHistory(history);
+  const hits = list.filter(e => CARD_PVP_FIX_20261108_MATCHES.includes(e.match) && e.outcome === 'lose' && e.reason === '投了');
+  const rec = typeof cardNormalizeRecord === 'function' ? cardNormalizeRecord(record) : null;
+  if (!rec || !hits.length) return {
+    undone: 0,
+    record: null,
+    matches: []
+  };
+  const undone = Math.min(hits.length, rec.pvp.lose);
+  return {
+    undone,
+    record: undone > 0 ? {
+      ...rec,
+      pvp: {
+        ...rec.pvp,
+        lose: rec.pvp.lose - undone
+      }
+    } : null,
+    matches: hits.map(e => e.match)
+  };
+};
+const cardPvpFix20261108Once = async (getValue, setValue, saveAll) => {
+  const done = await getValue(CARD_PVP_FIX_20261108_KEY, null, false);
+  if (done && typeof done === 'object') return {
+    undone: 0,
+    saved: false
+  };
+  const [history, record] = await Promise.all([getValue(CARD_PVP_HISTORY_KEY, [], false), getValue(CARD_SAVE_KEYS.record, null, false)]);
+  const plan = cardPvpFix20261108Plan(history, record);
+  const entries = [{
+    key: CARD_PVP_FIX_20261108_KEY,
+    before: done,
+    next: {
+      at: Date.now(),
+      undone: plan.undone,
+      matches: plan.matches
+    }
+  }];
+  if (plan.record) entries.push({
+    key: CARD_SAVE_KEYS.record,
+    before: record,
+    next: plan.record
+  });
+  const saved = await saveAll(entries, getValue, setValue);
+  return {
+    undone: saved ? plan.undone : 0,
+    saved
+  };
+};
 const cardPvpHistoryLoad = async () => {
   try {
     return cardPvpNormalizeHistory(await storeGet(CARD_PVP_HISTORY_KEY, [], false));
@@ -152860,7 +154714,8 @@ const cardReplayNormalizeOne = raw => {
       deckName: typeof foe.deckName === 'string' ? foe.deckName.slice(0, 30) || null : null,
       who: typeof foe.who === 'string' ? foe.who.slice(0, 20) : null,
       ...(raw.kind === 'cpu' ? {
-        style: cardReplayStyleOf(foe.style)
+        style: cardReplayStyleOf(foe.style),
+        styleName: cardReplayText(foe.styleName, 12) || null
       } : {})
     },
     outcome: outcomes.includes(raw.outcome) ? raw.outcome : null,
@@ -153062,7 +154917,8 @@ const cardReplayMake = (db, {
       deckName: foe && foe.deckName || null,
       who: foe && foe.who || null,
       ...(kind === 'cpu' ? {
-        style: cardReplayStyleOf(foe && foe.style)
+        style: cardReplayStyleOf(foe && foe.style),
+        styleName: cardReplayText(foe && foe.styleName, 12) || null
       } : {})
     },
     outcome,
@@ -165848,6 +167704,27 @@ function MonsterHeroGame() {
     }
     return assistantLifeFurnGive(who, key);
   };
+  const giveAssistantLifeSolo = async (who, kind) => {
+    if (typeof assistantLifeSoloGive !== 'function' || typeof assistantLifeSoloOn !== 'function' || !assistantLifeSoloOn()) return null;
+    const def = assistantLifeGiftOf(kind);
+    if (!def) return null;
+    await ASSISTANT_LIFE_GIFT_STORE.load();
+    const have = ownedItemCount(ownedItemsRef.current, def.itemId);
+    const peerSt = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null;
+    if (assistantLifeSoloReason(kind, peerSt, have)) return null;
+    const nextItems = {
+      ...ownedItemsRef.current,
+      [def.itemId]: have - 1
+    };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    try {
+      await storeSet('mh_owned_items', nextItems, false);
+    } catch {
+      return null;
+    }
+    return assistantLifeSoloGive(who, kind);
+  };
   const useBuddyTraitSeed = async (masuId, traitId) => {
     const have = ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TRAIT_SEED_ITEM_ID);
     if (have <= 0) return false;
@@ -166420,13 +168297,28 @@ function MonsterHeroGame() {
     } catch (error) {
       console.error('[friends] records build failed:', error && error.message ? error.message : error);
     }
+    let auto = false;
+    let show = true;
+    try {
+      const q = quickRunProgressRef.current;
+      auto = !!(q && !q.finished);
+    } catch (error) {
+      auto = false;
+    }
+    try {
+      show = (await storeGet(FRIEND_PRESENCE_SHOW_KEY, true)) !== false;
+    } catch (error) {
+      show = true;
+    }
     await sbUpsertFriendProfile(id, friendsBuildSummary({
       place: friendsPlaceOfScreen(latest.gameState),
       masuMons: latest.masuMons,
       favoriteMasuId: latest.favoriteMasuId,
       playtime: playtimeRef.current,
       message: latest.profileMessage,
-      records
+      records,
+      auto,
+      show
     }));
     await sbUpsertFriendPlaytimeDevice(id, playtimeDeviceRef.current);
   }, [friendsActive]);
@@ -187459,7 +189351,8 @@ function MonsterHeroGame() {
         },
         onUseItem: useAssistantPeerItem,
         furnItems: typeof assistantLifeFurnCounts === 'function' ? assistantLifeFurnCounts(ownedItems) : null,
-        onGiveFurn: giveAssistantLifeFurn
+        onGiveFurn: giveAssistantLifeFurn,
+        onGiveSolo: giveAssistantLifeSolo
       }));
     })(), typeof QuickGuideOverlay === 'function' && quickGuideActive && activeAssistant && (() => {
       const replay = quickGuideActive.startsWith('replay:') ? quickGuideActive.slice(7) : null;

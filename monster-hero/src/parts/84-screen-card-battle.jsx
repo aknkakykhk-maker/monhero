@@ -638,7 +638,7 @@ const cardBubbleMs = (text) => Math.min(7000, Math.max(3000, 1800 + 150 * [...St
 // 結果の画面: 負け・投了で満額より減ったか(r は cardCpuReward の返り値。古い形・マルチの形には full が無いので出さない)
 // 助手ライフ: いまカード部屋にいる助手(2026-11-07 社長・カード部ルールくん)。読むのは助手ライフ段階2の口だけ(assistantLifeAtCard・assistantLifeCardIds)。
 //   口がまだ無い・こわれているときは「だれもいない」(ごほうびアップなし)。この画面から assistantLifeNow は呼ばない(様子を決め直して保存してしまうため)
-//   保存のキーは増やさない。上がるかどうかは対戦を始めた時点で決め、game.lifeUp に持つ(試合中に出ていっても、その試合は上げる)
+//   上がるかどうかは対戦を始めた時点で決め、game.lifeUp に持つ(試合中に出ていっても、その試合は上げる)。回数は下の mh_card_life_reward_v1(2026-11-08)
 const cardLifeCardIds = () => {
   try {
     const v = typeof assistantLifeCardIds === 'function' ? assistantLifeCardIds() : [];
@@ -649,14 +649,60 @@ const cardLifeAtCard = (id) => {
   if (typeof id !== 'string' || !id) return false;
   try { return typeof assistantLifeAtCard === 'function' ? assistantLifeAtCard(id) === true : false; } catch (_) { return false; }
 };
+// カード部屋の 1.5倍の回数(2026-11-08 社長 Q1 A: 1つの時間帯で、助手1人につき1回。助手たちが動く時間=朝5時・昼10時・午後14時・夕方18時・夜21時・深夜0時に数え直し)
+//   新しいキー mh_card_life_reward_v1 = { slot: 時間帯の通し番号(56 の assistantLifeSlotAt().abs), used: { 助手id: 回数 } }。
+//   読むときに slot が今と違えば used は空(書き換えは対戦のあとだけ)。数えるのは 1.5倍で本当に増えた試合だけで、結果と同じ取引で書く
+//   ランキング・杯・マルチ・みんなのデッキ・助手の3つのデッキには関係しない(上がるかどうかは今までどおり startBattle の lifeUp が決める)
+const CARD_LIFE_REWARD_KEY = 'mh_card_life_reward_v1';
+const CARD_LIFE_REWARD_MAX = 1;
+const cardLifeSlotNow = (now = Date.now()) => {
+  try { const v = typeof assistantLifeSlotAt === 'function' ? assistantLifeSlotAt(now) : null; return v && Number.isFinite(v.abs) && Number.isFinite(v.i) ? v : null; } catch (_) { return null; }
+};
+// 保存の値を今の時間帯で読む(壊れている・形が違う・時間帯が違う → 空)
+const cardLifeRewardNorm = (raw, slot) => {
+  const used = {};
+  if (Number.isFinite(slot) && raw && typeof raw === 'object' && !Array.isArray(raw) && raw.slot === slot && raw.used && typeof raw.used === 'object' && !Array.isArray(raw.used)) {
+    for (const [k, v] of Object.entries(raw.used)) {
+      const n = Math.trunc(Number(v));
+      if (k && Number.isFinite(n) && n > 0) used[k] = Math.min(n, 99);
+    }
+  }
+  return { slot: Number.isFinite(slot) ? slot : null, used };
+};
+// 1回足した次の値。保存がもっと新しい時間帯なら null(試合中に時間帯が変わったとき、新しい時間帯の数を上書きしない)
+const cardLifeRewardAfter = (raw, slot, who) => {
+  if (!Number.isFinite(slot) || typeof who !== 'string' || !who) return null;
+  if (raw && typeof raw === 'object' && Number.isFinite(raw.slot) && raw.slot > slot) return null;
+  const cur = cardLifeRewardNorm(raw, slot);
+  return { slot, used: { ...cur.used, [who]: (cur.used[who] || 0) + 1 } };
+};
+// 画面(HOME の顔・部屋のボタン・相手えらび)はすぐ読みたいので、保存の写しを持つ。起動時(cardLifeSetApp)に読み、書けたら差しかえる
+const CARD_LIFE_REWARD_MEM = { raw: null };
+const cardLifeRewardLoad = async () => { try { CARD_LIFE_REWARD_MEM.raw = await storeGet(CARD_LIFE_REWARD_KEY, null); } catch (_) { /* 読めなければ、まだ使っていない扱い */ } return CARD_LIFE_REWARD_MEM.raw; };
+const cardLifeRewardLeft = (id, now = Date.now()) => {
+  const s = cardLifeSlotNow(now);
+  return !!s && typeof id === 'string' && !!id && (cardLifeRewardNorm(CARD_LIFE_REWARD_MEM.raw, s.abs).used[id] || 0) < CARD_LIFE_REWARD_MAX;
+};
+// 使い切ったときは { next: 次の時間帯の始まりの時(0〜23) }、まだなら null。56(HOME の顔・部屋のボタン)も typeof で確かめて読む
+const cardLifeRewardSpent = (id, now = Date.now()) => {
+  const s = cardLifeSlotNow(now);
+  if (!s || typeof id !== 'string' || !id || cardLifeRewardLeft(id, now)) return null;
+  const list = typeof ASSISTANT_LIFE_SLOTS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_SLOTS) ? ASSISTANT_LIFE_SLOTS : null;
+  const nx = list && list.length ? list[(s.i + 1) % list.length] : null;
+  return { next: nx && Number.isFinite(nx.from) ? nx.from : null };
+};
+// 使い切ったときの言い方(部屋のボタン・相手えらびの帯で同じ。社長 Q2 A)
+const cardLifeSpentText = (sp, name = '') => `🃏 ${name ? `${name}の` : ''}ごほうびアップは使い切りました…次は${sp && Number.isFinite(sp.next) ? `${sp.next}時` : '次の時間'}から`;
+// 結果を書く取引に足す1件(数えないときは null)
+const cardLifeRewardEntry = async (who, slot) => {
+  let before = null;
+  try { before = await storeGet(CARD_LIFE_REWARD_KEY, null); } catch (_) { return null; }
+  const next = cardLifeRewardAfter(before, slot, who);
+  return next ? { key: CARD_LIFE_REWARD_KEY, next, before } : null;
+};
 // 育つ助手の型を使うか(公開の印 RELEASE_FLAGS.cardGrowStyle)。助手部の部屋のデッキの画面も、偽のあいだは normal を見せるのに使う
 const cardGrowStyleOn = () => { try { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardGrowStyle === true; } catch (_) { return false; } };
-// 育つ助手の型(助手部の口 assistantLifeCardStyle(id) → 'attack'/'guard'/'normal'/null)。印が偽なら読まない(=型なし。今とまったく同じ)
-//   家の部品はカードより後に読み込まれるので、呼ぶ時に typeof で確かめる
-const cardLifeCardStyle = (id) => {
-  if (!cardGrowStyleOn()) return null;
-  try { return typeof assistantLifeCardStyle === 'function' ? cardAiStyleOf(assistantLifeCardStyle(id)) : null; } catch (_) { return null; }
-};
+// 育つ助手の型と3つのデッキは 83-card-ai-deck.jsx(cardAssistantDeckPick)。印が偽なら読まない(=今とまったく同じ)
 // 対戦のあと、助手ライフへ「この助手と対戦した」と知らせる(今日あったこと・生活のリズム)。口が無ければ何もしない
 const cardLifeOnMatch = (x) => { try { if (typeof assistantLifeOnCardMatch === 'function') assistantLifeOnCardMatch(x); } catch (_) { /* 知らせられなくても対戦の結果はそのまま */ } };
 // 家の部屋の「🃏 カード部屋で対戦する」から来たとき、相手えらびをその助手で開く(60-app が cardLifeSetApp で開く道を渡す)
@@ -664,6 +710,7 @@ const CARD_LIFE_INVITE = { pending: null, app: null };
 const CARD_LIFE_INVITE_TTL_MS = 60 * 1000;
 const cardLifeSetApp = (app) => {
   CARD_LIFE_INVITE.app = app && typeof app === 'object' ? app : null;
+  void cardLifeRewardLoad(); // 1.5倍の回数の写しを読んでおく(HOME の顔・部屋のボタンが使う)
   if (typeof ASSISTANT_LIFE_LINKS === 'undefined' || !ASSISTANT_LIFE_LINKS) return;
   ASSISTANT_LIFE_LINKS.cardInvite = CARD_LIFE_INVITE.app && typeof CARD_LIFE_INVITE.app.open === 'function' && (!CARD_LIFE_INVITE.app.visible || CARD_LIFE_INVITE.app.visible())
     ? (id) => { CARD_LIFE_INVITE.pending = { who: id, at: Date.now() }; CARD_LIFE_INVITE.app.open(); }
@@ -702,8 +749,12 @@ const CardFoeStyle = ({ db, who, level }) => {
   const fav = Object.values(db.monsters).find((m) => m.species === favSpecies && !m.variant && String(m.wave) !== 'hybrid') || null;
   const lv = CARD_LEVEL_LABEL[level] || '';
   const upper = level === 'hard' || level === 'expert' || level === 'master';
+  // 今日のデッキ(ルールの cardAiDeckNextStyle で先に決めた型。対戦ではこの型で出る)。印が偽なら札は出ない(87 の CardFoeDeckChip)
+  const nextStyle = typeof cardAiDeckNextStyle === 'function' ? cardAiDeckNextStyle(who) : null;
+  const nextName = nextStyle && typeof cardAssistantDeckDisplayName === 'function' ? cardAssistantDeckDisplayName(who, nextStyle, typeof cardAiDeckNextName === 'function' ? cardAiDeckNextName(who) : null) : null;
   return (
     <div data-card-foe-style={who} className="space-y-1.5 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
+      {nextStyle && typeof CardFoeDeckChip === 'function' && <CardFoeDeckChip name={nextName} styleId={nextStyle} kind="foe" compact/>}
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span data-card-foe-style-label className="shrink-0 rounded-full bg-amber-300 px-2.5 py-0.5 text-[12px] font-black text-slate-950">{style.label}</span>
         <span className="min-w-0 text-[11px] font-bold text-slate-200" style={JA_WRAP_STYLE}>{jaWrap(style.note)}</span>
@@ -3095,6 +3146,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const [rankXp, setRankXp] = useState(null);
   const [rankOpen, setRankOpen] = useState(false);
   useEffect(() => { if (view === 'top' && typeof cardTacticsLoad === 'function') void cardTacticsLoad().then((d) => setRankXp(d.level.xp)).catch(() => {}); }, [view]);
+  // 助手の3つのデッキ(83-card-ai-deck.jsx): トップを開いたとき、時期が来た助手を裏で組み直す(対戦の前・待たせない所)。印が偽なら何もしない
+  useEffect(() => { if (view === 'top' && cardGrowStyleOn() && typeof cardAiDeckRunDue === 'function') void cardAiDeckRunDue().catch(() => {}); }, [view]);
+  // 相手えらびを開いたら、保存した3つのデッキを読んでおく(家の部屋から直に来たときも、対戦の前に読み終える)
+  useEffect(() => { if (view === 'foe' && cardGrowStyleOn() && typeof cardLoadAiRecipe === 'function') void cardLoadAiRecipe().catch(() => {}); }, [view]);
   // ほかの画面の招待の知らせで「参加する」を押してきたら、マルチの入口を開く(入口が合言葉の部屋へ入る。91 の CARD_PVP_JOIN)
   //   入る前にデッキを選ぶ画面を挟む(2026-10-29 社長 案C)。知らせの番号は CARD_PVP_JOIN に残っていて、入口を開いたときに入口が拾う
   useEffect(() => { const go = (c) => { if (c) { setDeckPick({ next: 'pvp' }); setView('deckPick'); } }; go(CARD_PVP_JOIN.peek()); return CARD_PVP_JOIN.on(go); }, []);
@@ -3206,6 +3261,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const [aiTalk, setAiTalk] = useState(cardAiTalkState.on);
   useEffect(() => { let alive = true; void cardLoadAiTalk().then((v) => { if (alive) setAiTalk(v.on); }); return () => { alive = false; }; }, []);
   const toggleAiTalk = () => { const next = !aiTalk; setAiTalk(next); void cardSaveAiTalk(next); };
+  // 助手のデッキを AI で組むかの入/切(mh_card_ai_deck_v1。無い・壊れていたら入)。出すのは印が真で、AI を呼べる端末だけ
+  const [aiDeckOn, setAiDeckOn] = useState(true);
+  useEffect(() => { let alive = true; if (cardGrowStyleOn()) void cardLoadAiRecipe().then(() => { if (alive) setAiDeckOn(cardAiDeckSetting.on !== false); }).catch(() => {}); return () => { alive = false; }; }, []);
   const toggleAssist = (key) => {
     if (key !== 'modeSelectArt' && key !== 'modeSelectComment') return;
     const next = { ...assist, [key]: assist[key] === false };
@@ -3217,6 +3275,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const K = CARD_SAVE_KEYS;
     // 前のカードポイントの残りを、ビートPへ1回だけ移す(印つき。82 の cardMigratePointsOnce)。失敗しても遊びは止めない
     try { await cardMigratePointsOnce(storeGet, storeSet, saveStoredValuesOrRollback); } catch (_) { /* 次に開いたときにやり直す */ }
+    // 2026-11-08 マルチが止まった不具合の投了の負けを1回だけ戻す(92 の cardPvpFix20261108Once・印 mh_card_pvp_fix_20261108_v1)。記録を読む前に当てる
+    try { if (typeof cardPvpFix20261108Once === 'function') await cardPvpFix20261108Once(storeGet, storeSet, saveStoredValuesOrRollback); } catch (_) { /* 次に開いたときにやり直す */ }
     const [collection, decks, point, starter, daily, record, unlocked, tutorial, bgm, settings, cpuPlaylist] = await Promise.all([
       storeGet(K.collection, null), storeGet(K.decks, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null),
       storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null), storeGet(K.tutorial, null),
@@ -3703,6 +3763,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const fresh = await freshCardSave();
       const lifeMult = game.lifeUp && !game.demo ? CARD_LIFE_UP_MULT : 1; // カード部屋にいた助手と対戦: ビートP・経験値・周回を 1.5倍
       const reward = cardCpuReward(fresh.daily, game.level, outcome, facts, lifeMult);
+      // カード部屋の 1.5倍を1回使った(本当に増えた試合だけ。始めた時点の時間帯で数える)。結果と同じ取引で書く
+      const lifeEntry = lifeMult > 1 && reward.lifeUp === true && Number.isFinite(game.lifeSlot) ? await cardLifeRewardEntry(game.who, game.lifeSlot) : null;
       const loops = cardCpuLoops(game.level, outcome, facts, lifeMult);
       // ランキングに数えるのは、公開後に、デバッグでない人がふつうの入口から戦ったぶんだけ(rank.send。60-app が決める)
       //   借りたデッキ(みんなのデッキ・95)で戦った試合も数える(2026-10-29 社長「数える」)
@@ -3713,7 +3775,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       // 過去の対戦を見る(93): この試合の手の一覧。先に作っておき、保存は結果を書いたあと(使った技を数えるのにも使う)
       const log = cpuLogRef.current;
       const replayRec = log && log.id === game.key ? cardReplayFromCpu(db, { id: `c${log.id}`, at: Date.now(), myDeck: log.decks[0], cpuDeck: log.decks[1], seed: log.seed, first: log.first, history: log.acts,
-        foe: { name: log.foeName, who: game.who, deckName: log.deckName, style: log.style }, outcome, reason: '', level: game.level }) : null;
+        foe: { name: log.foeName, who: game.who, deckName: log.deckName, style: log.style, styleName: log.styleName }, outcome, reason: '', level: game.level }) : null;
       if (log && log.id === game.key) cpuLogRef.current = null;
       // 記録をくわしく(90 の mh_card_record_detail_v1。見本の対戦は数えない)。デッキ・場の3体・使った技も足す
       const usedDeck = save.decks.decks.find((d) => d.id === save.decks.active) || null;
@@ -3724,7 +3786,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const levelGain = !game.demo && typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: game.level, outcome, debug, mult: lifeMult }) : { entries: [] };
       // カードランクのごほうびのビートP(ランクが上がったときだけ)も、同じ取引で足す
       const rankPoint = (levelGain.gain && levelGain.gain.points) || 0;
-      const ok = await persist({ point: save.point + reward.total + rankPoint, daily: reward.daily, record: nextRecord, unlocked: nextUnlocked }, fresh.raw, [...openExtra, ...(detailEntry ? [detailEntry] : []), ...levelGain.entries]);
+      const ok = await persist({ point: save.point + reward.total + rankPoint, daily: reward.daily, record: nextRecord, unlocked: nextUnlocked }, fresh.raw, [...openExtra, ...(detailEntry ? [detailEntry] : []), ...levelGain.entries, ...(lifeEntry ? [lifeEntry] : [])]);
+      if (ok && lifeEntry) CARD_LIFE_REWARD_MEM.raw = lifeEntry.next;
       if (ok && openExtra.length) { openIdRef.current = null; openRef.current = null; }
       // 借りたデッキで戦った: 表へ「借りて使った」(試合の番号ごとに1回だけ数えられる。貸した人の次の日の報酬になる)
       if (ok && game.rented && typeof cardShareReportUse === 'function') {
@@ -3753,7 +3816,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       let replayId = null;
       if (replayRec && await cardReplaySave(replayRec)) replayId = replayRec.id;
       if (ok && !game.demo) cardLifeOnMatch({ assistantId: game.who, won: outcome === 'win', at: Date.now() });
-      setResult({ outcome, reward, opened, saved: ok, who: game.who, level: game.level, loops, quick, facts, talk: talkFacts, replay: replayId, rankGain: ok ? levelGain.gain : null, lifeUp: lifeMult > 1 });
+      if (ok && !game.demo && game.aiDeck && typeof cardAiDeckAfterMatch === 'function') void cardAiDeckAfterMatch(game.who);
+      setResult({ outcome, reward, opened, saved: ok, who: game.who, level: game.level, loops, quick, facts, talk: talkFacts, replay: replayId, rankGain: ok ? levelGain.gain : null, lifeUp: lifeMult > 1, aiDeck: game.aiDeck || null });
       onBgm && onBgm(cardBgmOf(save.bgm.top));
       onNavigate('CARD_TOP');
       setView('result');
@@ -3805,10 +3869,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     // みんなのデッキ(95): 登録デッキがそのまま相手。打ち方は登録した戦い方(盤面の policy)・名前とアイコンは登録した人
     const share = pick.share || null;
     // 育つ助手の型(助手部の口 assistantLifeCardStyle。2026-11-08)。助手と対戦だけ(杯・みんなのデッキは今のまま)。口が無い・知らない値は型なし(今どおり)
-    const foeStyle = !share && !(opts && opts.cup) ? cardLifeCardStyle(pick.who) : null;
+    // 印が真なら、3つのデッキから今日のデッキを選ぶ(83-card-ai-deck.jsx の cardAssistantDeckPick: 今の型6割・ほか2割ずつ。保存した方針で組む)
+    const aiPick = !share && !(opts && opts.cup) && cardGrowStyleOn() && typeof cardAssistantDeckPick === 'function' ? cardAssistantDeckPick(pick.who, Math.random, pick.level, { playerDeck: activeDeck }, typeof cardAiDeckNextStyle === 'function' ? cardAiDeckNextStyle(pick.who) : null) : null;
+    if (aiPick && typeof cardAiDeckNextDone === 'function') cardAiDeckNextDone(pick.who); // 次の対戦の型は決め直す
+    const foeStyle = aiPick ? aiPick.styleId : null;
     // 毎試合、好きなモンスター ベスト4から3体を選んで組み直す(MASTER はこちらのデッキも見る)
     const cpuDeck = share ? { monsters: share.deck.monsters.slice(), cards: share.deck.cards.slice(), sameBlood: cardShareSameBlood(db, share.deck) }
-      : cardAiBuildDeck(db, pick.who, pick.level, Math.random, { playerDeck: activeDeck, ...(foeStyle ? { style: foeStyle } : {}) });
+      : aiPick ? aiPick.deck : cardAiBuildDeck(db, pick.who, pick.level, Math.random, { playerDeck: activeDeck });
     const seed = cup ? cup.seed : (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
     const gameKey = cup ? `cup-${cup.matchId}-${Date.now().toString(36)}` : `${seed}`; // 試合の番号(手の記録と同じにする)
     // 杯の first は 0 = a が先攻。自分が b 側(side 1)なら向きを入れかえる
@@ -3821,15 +3888,18 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     // 対戦開始の画面: 相手の助手のひとこと(助手ごと・難易度ごと)と、組んだ中身から付けたデッキ名
     const intro = share ? { mode: 'assistant', foe: { who: null, name: share.name, icon: share.icon, frame: share.frame, line: null, deckName: share.tactics.name || null, monsters: vsMons(st, CARD_CPU) },
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } } : { mode: 'assistant',
-      foe: { who: pick.who, name: assistant ? assistant.name : 'あいて', line: (CARD_VS_LINES[pick.who] || {})[pick.level] || null, deckName: cardAssistantDeckName(db, cpuDeck, pick.who, pick.level), monsters: vsMons(st, CARD_CPU) },
+      foe: { who: pick.who, name: assistant ? assistant.name : 'あいて', line: (aiPick && cardAiDeckVsLine(pick.who, aiPick)) || (CARD_VS_LINES[pick.who] || {})[pick.level] || null, deckName: cardAssistantDeckName(db, cpuDeck, pick.who, pick.level), monsters: vsMons(st, CARD_CPU),
+        ...(aiPick && aiPick.name ? { styleName: aiPick.name, styleId: aiPick.styleId } : {}) },
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } };
     const auto = autoIn ? { tactics: autoIn.tactics, level: typeof cardShareFightLevel === 'function' ? cardShareFightLevel(autoIn.tactics) : 'master', sameBlood: !!cardShareSameBlood(db, activeDeck), quick: !!autoIn.quick } : null;
     // カード部屋にいる助手と対戦: 始めた時点でいたかで決める(手で遊ぶ助手と対戦だけ。みんなのデッキ・杯・オートは上げない)
-    const lifeUp = !share && !cup && !auto && cardLifeAtCard(pick.who);
-    setGame({ key: gameKey, st, who: pick.who, level: pick.level, settings: save.settings, intro: auto && auto.quick ? null : intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(lifeUp ? { lifeUp: true } : {}), ...(share ? { share } : {}), ...(cup ? { cup } : {}), ...(auto ? { auto } : {}),
+    //   1つの時間帯で助手1人につき1回まで(cardLifeRewardLeft。2026-11-08 社長)。数える時間帯も始めた時点のもの(lifeSlot)
+    const lifeUp = !share && !cup && !auto && cardLifeAtCard(pick.who) && cardLifeRewardLeft(pick.who);
+    const lifeSlot = lifeUp ? (cardLifeSlotNow() || {}).abs : null;
+    setGame({ key: gameKey, st, who: pick.who, level: pick.level, settings: save.settings, intro: auto && auto.quick ? null : intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(lifeUp ? { lifeUp: true, lifeSlot } : {}), ...(aiPick ? { aiDeck: { style: aiPick.styleId, name: aiPick.name, team: intro.foe.deckName || null } } : {}), ...(share ? { share } : {}), ...(cup ? { cup } : {}), ...(auto ? { auto } : {}),
       ...(rented ? { rented: { ownerId: rented.ownerId, version: rented.version, name: rented.owner } } : {}) });
     const scene = typeof window !== 'undefined' && typeof window.__mhCardScene === 'function';
-    cpuLogRef.current = scene ? null : { id: gameKey, style: foeStyle || 'normal', seed, first, decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], foeName: intro.foe.name, deckName: intro.foe.deckName || null, acts: [] };
+    cpuLogRef.current = scene ? null : { id: gameKey, style: foeStyle || 'normal', styleName: (aiPick && aiPick.name) || null, seed, first, decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], foeName: intro.foe.name, deckName: intro.foe.deckName || null, acts: [] };
     // 途中で閉じたときに投了として数えるための印(CARD_CPU_OPEN_KEY)。書けなかったら、終わりにも印を見ない
     //   みんなのデッキの対戦は数えない(途中で閉じても投了の記録は付かない・ビートPも入らない)
     if (!share) void writeCpuOpen({ id: `${seed}`, who: pick.who, level: pick.level, rankable: !!(rank && rank.send) && !debug, at: Date.now(), beat: Date.now(), facts: cardResultFacts(st, CARD_ME) }, true);
@@ -4124,6 +4194,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     // いまカード部屋にいる助手(読むだけ・口が無ければだれもいない)。並びは相手えらびの順
     const lifeIds = cardLifeCardIds();
     const lifeFoes = foes.filter((x) => lifeIds.includes(x.id));
+    // 1.5倍を使い切った助手(この時間帯ではもう上がらない)。助手は消さず、印を灰色の「済」にする(2026-11-08 社長 Q2 A)
+    const lifeSpent = Object.fromEntries(lifeFoes.map((x) => [x.id, cardLifeRewardSpent(x.id)]).filter((e) => e[1]));
+    const lifeUpFoes = lifeFoes.filter((x) => !lifeSpent[x.id]);
     const line = a ? cardPickLine(a.id, 'challenge', null, () => 0.0) : null;
     return (
       <div data-mh-screen data-card-top="foe" className={SCREEN_SHELL_CLASS}>
@@ -4134,20 +4207,18 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               7列は横の小さい画面(568×320)で名前の字が小さくなりすぎた(5.9px)ので、すき間と札の内側を詰めて、いまの6列と同じくらいにする */}
           <div data-card-foe-grid={foes.length >= 7 ? 7 : 6} className={`grid ${foes.length >= 7 ? 'grid-cols-4 gap-1.5 landscape:grid-cols-7 landscape:gap-1' : 'grid-cols-3 gap-1.5 landscape:grid-cols-6'}`}>
             {foes.map((x) => (
-              <button key={x.id} type="button" data-card-foe={x.id} onClick={() => { Audio_.fgSe.tap(); setFoe((f) => ({ ...f, who: x.id })); }} className={`relative flex flex-col items-center rounded-xl border-2 ${foes.length >= 7 ? 'p-1 landscape:p-0.5' : 'p-1'} ${foe.who === x.id ? 'bg-white/10' : 'border-white/10 bg-slate-900/70'}`} style={{ ...(foe.who === x.id ? { borderColor: x.accent } : {}), ...(lifeIds.includes(x.id) ? { boxShadow: 'inset 0 0 0 2px #fcd34d' } : {}) }} data-card-foe-life={lifeIds.includes(x.id) ? '' : undefined}>
+              <button key={x.id} type="button" data-card-foe={x.id} onClick={() => { Audio_.fgSe.tap(); setFoe((f) => ({ ...f, who: x.id })); if (cardGrowStyleOn() && typeof cardAiDeckMarkMet === 'function') void cardAiDeckMarkMet(x.id); }} className={`relative flex flex-col items-center rounded-xl border-2 ${foes.length >= 7 ? 'p-1 landscape:p-0.5' : 'p-1'} ${foe.who === x.id ? 'bg-white/10' : 'border-white/10 bg-slate-900/70'}`} style={{ ...(foe.who === x.id ? { borderColor: x.accent } : {}), ...(lifeIds.includes(x.id) ? { boxShadow: 'inset 0 0 0 2px #fcd34d' } : {}) }} data-card-foe-life={lifeIds.includes(x.id) ? '' : undefined}>
                 <img src={assistantFaceImage(x, 'normal')} alt={x.name} className="h-[52px] w-[52px] rounded-lg object-cover object-top landscape:h-[34px] landscape:w-[34px]"/>
                 {/* 名前は折らない。横の小さい画面(568×320)では札が細く「みゅ/あ」「もも/すけ」と折れたので、入らなければ字を小さくする(2026-10-26 ソランドくん) */}
                 <span className="block w-full" style={{ containerType: 'inline-size' }}><span data-card-foe-name className="block whitespace-nowrap text-center font-black" style={{ fontSize: `min(13px, calc(100cqw / ${[...x.name].length + 0.3}))` }}>{x.name}</span></span>
                 {save.record.beaten[x.id] && <span className="absolute right-1 top-1 rounded bg-amber-400 px-1 text-[10px] font-black text-slate-900">勝</span>}
                 {/* カード部屋にいる助手の印は左上の角(右上は「勝」の印の場所。名前には重ねない) */}
-                {lifeIds.includes(x.id) && <span data-card-foe-life-chip className="absolute left-0.5 top-0.5 rounded-full bg-gradient-to-r from-amber-200 to-amber-400 px-1 text-[9px] font-black leading-[14px] text-slate-950 shadow landscape:text-[8px] landscape:leading-[12px]">🃏UP</span>}
+                {lifeIds.includes(x.id) && (lifeSpent[x.id]
+                  ? <span data-card-foe-life-chip="spent" className="absolute left-0.5 top-0.5 rounded-full bg-slate-500 px-1 text-[9px] font-black leading-[14px] text-slate-100 shadow landscape:text-[8px] landscape:leading-[12px]">🃏済</span>
+                  : <span data-card-foe-life-chip className="absolute left-0.5 top-0.5 rounded-full bg-gradient-to-r from-amber-200 to-amber-400 px-1 text-[9px] font-black leading-[14px] text-slate-950 shadow landscape:text-[8px] landscape:leading-[12px]">🃏UP</span>)}
               </button>
             ))}
           </div>
-          {lifeFoes.length > 0 && <div data-card-foe-life-band className="rounded-xl border-2 border-amber-300 bg-amber-950/80 px-2.5 py-1.5 text-[13px] font-black leading-snug text-amber-200" style={JA_LABEL_STYLE}>
-            <p>{jaWrap(`🃏 いまカード部屋にいる助手: ${lifeFoes.map((x) => x.name).join('・')}`)}</p>
-            <p className="text-[12px] text-white">{jaWrap('この助手と対戦すると、ビートP・カードランクの経験値・クイック周回が 1.5倍')}</p>
-          </div>}
           {/* 強さのボタンは助手の顔のすぐ下(紹介の欄が長いと、下の「対戦する」の帯に潜っていた。2026-10-25 社長の実機) */}
           {/* 見出しの部品(ScreenSectionLabel)の注記は9pxで小さすぎた(見回り #16)。ほかの画面は変えず、ここだけ11pxで書く */}
           <div className="flex items-baseline gap-2 px-0.5 pt-1">
@@ -4171,6 +4242,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             })}
           </div>
           {debug && <p className="text-[11px] font-bold text-slate-400">(デバッグ: まだ開いていない強さも選べます。開いた印は勝ったときだけ付きます)</p>}
+          {/* カード部屋の帯は強さのボタンの下(上に置くと、帯が3行になる 320×568 で強さのボタンが「対戦する」の帯に潜った。2026-11-08 ツナグ) */}
+          {lifeFoes.length > 0 && <div data-card-foe-life-band={lifeUpFoes.length ? 'up' : 'spent'} className={`rounded-xl border-2 px-2.5 py-1.5 text-[13px] font-black leading-snug ${lifeUpFoes.length ? 'border-amber-300 bg-amber-950/80 text-amber-200' : 'border-slate-500 bg-slate-800/90 text-slate-200'}`} style={JA_LABEL_STYLE}>
+            {lifeUpFoes.length > 0 && <>
+              <p>{jaWrap(`🃏 いまカード部屋にいる助手: ${lifeUpFoes.map((x) => x.name).join('・')}`)}</p>
+              <p className="text-[12px] text-white">{jaWrap('この助手と対戦すると、ビートP・カードランクの経験値・クイック周回が 1.5倍')}</p>
+            </>}
+            {lifeFoes.filter((x) => lifeSpent[x.id]).map((x) => <p key={x.id} data-card-foe-life-spent={x.id} className={`text-[12px] text-slate-300 ${lifeUpFoes.length ? 'mt-0.5' : ''}`}>{jaWrap(cardLifeSpentText(lifeSpent[x.id], x.name))}</p>)}
+          </div>}
           {/* 横の画面は、紹介と型の欄を左右に並べる(縦に積むと強さのボタンが下へ出た。landscape-screens-check) */}
           <div className="space-y-2 landscape:grid landscape:grid-cols-2 landscape:items-stretch landscape:gap-2 landscape:space-y-0">
           {a && (
@@ -4283,6 +4362,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           {result.share && <p data-card-result-share className="text-center text-[13px] font-black text-emerald-200">{result.share.name}さんのデッキと対戦しました</p>}
           {a && <CardResultVsRow meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meName={(rank && rank.profile && rank.profile.name) || 'あなた'}
             foeNode={<img src={assistantFaceImage(a, 'normal')} alt="" className="h-8 w-8 rounded-lg border-2 bg-black object-cover object-top" style={{ borderColor: a.accent }}/>} foeName={a.name} outcome={win ? '勝ち' : result.outcome === 'surrender' ? '投了' : '負け'}/>}
+          {/* 対戦で出したデッキ(公開の印 cardGrowStyle が真のときだけ)。社長 2026-11-08 Q1 B: 自動の名前に「チーム」、3つのデッキの名前に「今日のデッキ」の見出しを付けて両方(87 の部品) */}
+          {result.aiDeck && result.aiDeck.name && typeof CardFoeDeckChip === 'function' && (
+            <div data-card-result-ai-deck className="flex flex-col items-center gap-1">
+              <CardFoeTeamName text={result.aiDeck.team} compact/>
+              <CardFoeDeckChip name={result.aiDeck.name} styleId={result.aiDeck.style} kind="result"/>
+            </div>
+          )}
           <div className={SCREEN_PANEL_CLASS}>
             {/* もらったビートPは大きく数え上げる(下の行が本当の数。数え上げは飾り) */}
             {!result.demo && r.total > 0 && <div data-card-gain-count className="mb-1 text-center text-[32px] font-black leading-none text-amber-200 [text-shadow:0_0_16px_rgba(251,191,36,.55)]">+<CardCountUp to={r.total}/><span className="ml-1 text-[14px]">ビートP</span></div>}
@@ -4496,6 +4582,17 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                   className={`min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${aiTalk ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`}>{aiTalk ? 'ON' : 'OFF'}</button>
               </div>
               <p className="mt-1.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ONにすると、対戦のあと・対戦の山場・デッキ相談で、助手がその場に合わせたひとことを話します。うまく届かないときは、いつものセリフになります')}</p>
+            </div>
+          )}
+          {cardGrowStyleOn() && cardTalkOpen() && (
+            <div data-card-ai-deck-panel className={SCREEN_PANEL_CLASS}>
+              <div className="flex items-center gap-2">
+                <b className="min-w-0 flex-1 text-[13px] font-black text-white">助手のデッキ(AI)</b>
+                <button type="button" data-card-ai-deck aria-pressed={aiDeckOn} onClick={() => { Audio_.fgSe.tap(); const next = !aiDeckOn; setAiDeckOn(next); void cardSaveAiDeck(next); }}
+                  className={`min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${aiDeckOn ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`}>{aiDeckOn ? 'ON' : 'OFF'}</button>
+              </div>
+              {/* ★見出し・説明は社長の「この文で」待ちの案 */}
+              <p className="mt-1.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ONにすると、助手がときどき自分でデッキを組み直します。OFFでも助手のデッキは少しずつ変わります')}</p>
             </div>
           )}
           {/* 対戦中の設定(社長 2026-10-25「オプションでバトル中の設定関係を各種作って」)。並べ方・名前はモンヒロバトルの「バトルの見た目」と同じ形(題・説明・選択肢の名前と一言)。
