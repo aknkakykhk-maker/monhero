@@ -29,7 +29,9 @@ const GROWTH_FX_CALM_SCREENS = Object.freeze(new Set([
 ]));
 // 画面の上にこれが出ているあいだは出さない(お話・ほかの大きな演出・案内)。中・大の段だけ止める目印もある(おしゃべりの画面)
 const GROWTH_FX_HOLD_ALL_SELECTOR = '[data-event-story],[data-story-stage],[data-story-sheet],[data-player-rank-up-fx]';
-const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat]';
+// 助手ライフで裏クイックが回っているあいだ(帯 data-life-quick-run="live")も、全面のお祝いは貯めておく。止めたり閉じたりしたら出す
+//   (モンヒロビート・カードの画面では裏の周回のお祝いは出ない作りなのに、助手ライフは HOME の上なので毎回全面で出ていた。2026-11-08 社長「中途半端」)
+const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat],[data-life-quick-run="live"]';
 const GROWTH_FX_SMALL_MS = 1900;
 const GROWTH_FX_ITEM_MS = 3400;
 const GROWTH_FX_SMALL_MAX = 3;       // 一度に並べる札の数

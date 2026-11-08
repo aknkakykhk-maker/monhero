@@ -12,6 +12,7 @@
 //   ⑥ どこでも実行時エラーが出ない
 //   ⑦ AUTO設定の「モンヒロビート・助手ライフを開いたら自動で始める」が ON なら、開いた瞬間に始まる(OFF なら始まらない=①)。
 //      止めたあとは、開いたままでは始め直さない。閉じてもう一度開けば、また始まる(2026-11-08 社長)
+//   ⑨ 回しているあいだ、助手ライフが揺れない・お祝いの全面シートは貯めておく(止めると出る)
 //   ⑧ 本物の帯で(ナカヨシ8): ほかのモードと同じ帯(RhythmQuickRunPill・詳細・止める)の「◯周目」が進む・縦/横/タブレット/🔄横で重ならない・
 //      🔄横で助手ライフが回した画面いっぱいに出る・詳細の窓が上に出る・止めると締まる・止めたあと始め直せる(--shots で shots/lifequick/strip-*.jpg)
 // 札(ボタン)がまだ無くても動くよう、AssistantLifeScreen に渡る props を横から受け取って押す(札ができたらそのボタンでも同じ道を通る)
@@ -162,6 +163,14 @@ const seed = () => {
     await page.waitForTimeout(2500);
     s = await state();
     check('⑦ 閉じてもう一度開けば、また自動で始まる', !!s.q && s.q.live === true, JSON.stringify(s.q));
+    // ⑨ 回しているあいだ、助手ライフが揺れない(裏のバトルの画面の揺れが効かない)・お祝いの全面シートは貯めておく(2026-11-08 社長「画面がめちゃくちゃ動く」「中途半端」)
+    {
+      await page.evaluate(() => { window.__q9 = { moves: 0, sheets: 0, n: 0 }; let prev = null; window.__q9T = setInterval(() => { const r = document.querySelector('.mhl-root'); if (!r) return; const b = r.getBoundingClientRect(); const k = `${Math.round(b.left)},${Math.round(b.top)},${Math.round(b.width)}`; if (prev && prev !== k) window.__q9.moves++; prev = k; if (document.querySelector('[data-growth-fx-sheet]')) window.__q9.sheets++; window.__q9.n++; }, 100); });
+      await page.waitForTimeout(25000);
+      const q9 = await page.evaluate(() => { clearInterval(window.__q9T); return window.__q9; });
+      check('⑨ 回しているあいだ、助手ライフの画面が揺れない(裏のバトルの揺れが効かない)', q9.n > 100 && q9.moves === 0, JSON.stringify(q9));
+      check('⑨ 回しているあいだ、お祝いの全面シートは出さずに貯めておく', q9.sheets === 0, JSON.stringify(q9));
+    }
     // ⑧ 本物の帯で(ナカヨシ8。社長「他のモードと同じような表示に」: ビート・カードと同じ RhythmQuickRunPill の帯)
     {
       const SHOTS = process.argv.includes('--shots');
