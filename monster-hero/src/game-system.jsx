@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5b079210633180e8
+// generated-sha256: da5ca228dacf1aeb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -63569,18 +63569,21 @@ const assistantLifeStandBox = (src) => new Promise((res) => {
 //   (docs/progress/assistant-peer/gifts/stagec/STAND-MEASURE.md)。「目から顎まで」を全員同じ長さにして、頭の大きさをそろえる
 //   eye・chin … 見えている体の上を0・下を1とした目・顎の高さ / head … 顔だけの絵(ドラ)。頭ひとつぶんの大きさで床に置く
 const ASSISTANT_LIFE_STAND_FACE = Object.freeze({
-  mua: { top: 0.14, eye: 0.34, chin: 0.46 }, kiki: { top: 0.18, eye: 0.46, chin: 0.58 }, momosuke: { top: 0.08, eye: 0.44, chin: 0.55 }, dra: { head: true, top: 0.10, eye: 0.46 },
-  atsu: { top: 0.06, eye: 0.29, chin: 0.43 }, kyuko: { top: 0.02, eye: 0.33, chin: 0.47 }, sorashido: { top: 0.02, eye: 0.31, chin: 0.47 }, erubin: { top: 0.03, eye: 0.31, chin: 0.47 },
+  mua: { top: 0.145, eye: 0.3275, chin: 0.425, m: 0.724 }, kiki: { top: 0.195, eye: 0.46, chin: 0.595, m: 0.847 }, momosuke: { top: 0.075, eye: 0.3925, chin: 0.535, m: 1.022 },
+  dra: { head: true, top: 0.10, eye: 0.46, m: 2.017 }, atsu: { top: 0.09, eye: 0.31, chin: 0.435, m: 0.895 }, kyuko: { top: 0.01, eye: 0.40, chin: 0.56, m: 1.040 },
+  sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 }, erubin: { top: 0.01, eye: 0.2325, chin: 0.46, m: 1.224 },
 });
-//   top … 頭のてっぺん(髪の上端。うさ耳・リボン・羽・王冠などの飾りは含めない)
-//   2026-11-08 社長「顔のサイズで合わせて頭のてっぺんをあわせた縮尺と位置にすればあわない？」: 縮尺は顔(目から顎)だけで決め、頭のてっぺんの高さをそろえて置く(手で決めた補正はやめた)
-//   ドラは顔だけの絵なので、ほかの7人の頭の高さ(髪の上端から顎まで)の平均(目から顎の約3.1倍)を、ドラの頭(見えている体の上1割から下まで)の高さにする
-const ASSISTANT_LIFE_STAND_HEAD_PER_FACE = 3.1;
+//   2026-11-08 社長「顔のサイズがまだあってない」「ちゃんとはかってるの？」: 絵を見て手で点を置き直した(測り絵 gifts/stagec/marks.png・STAND-MEASURE.md の4回目)
+//   top … 頭のてっぺん(髪の上端。うさ耳・リボン・羽・王冠などの飾りは含めない)/eye … 目の線(目を閉じた絵はまぶたの線)/chin … 顎の先(見えている体の上を0・下を1)
+//   m … 顔の大きさ。「目の線から顎の先」と「頬の幅」を、それぞれ7人の平均で割って2つを平均したもの。見えている体の高さは m に反比例させる(顔がそろう)
+//   ドラは顔だけの絵なので、7人の頭の高さ(てっぺんから顎)の平均とドラの頭の高さがそろう m
+// 目から顎の長さの平均(見えている体の高さに対する割合)。m=1 の人の「目から顎」が F になる
+const ASSISTANT_LIFE_STAND_EC = 0.1639;
 // 着替えなど表に無い絵は、8人のふつうの形で見る
 const assistantLifeStandFace = (pid, src) => {
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   const own = who && who.imagePrefix && String(src || '').includes(`/${who.imagePrefix}_`);
-  return (own && ASSISTANT_LIFE_STAND_FACE[pid]) || { top: 0.05, eye: 0.33, chin: 0.47 };
+  return (own && ASSISTANT_LIFE_STAND_FACE[pid]) || { top: 0.05, eye: 0.33, chin: 0.47, m: 1 };
 };
 // 場面の大きさ(W×H px)と、並ぶ人の絵の見えている範囲から、1人ずつの置き場所を決める(px)
 //   ・目から顎までの長さ F を全員同じに。F は人数で決める高さの割合と、1人の見えている幅が受け持ちの幅を大きく超えない長さの小さいほう
@@ -63591,7 +63594,7 @@ const assistantLifeStandLayout = (items, W, H) => {
   if (!n || !W || !H || items.some(x => !x.box)) return null;
   const sw = (W * 0.92) / n;
   const fh = H * ({ 1: 0.085, 2: 0.075, 3: 0.064, 4: 0.055 }[Math.min(4, n)]);
-  const visH = (x, F) => (x.face.head ? F * ASSISTANT_LIFE_STAND_HEAD_PER_FACE / (1 - x.face.top) : F / (x.face.chin - x.face.eye));
+  const visH = (x, F) => F / (ASSISTANT_LIFE_STAND_EC * (x.face.m || 1));
   const visW = (x, F) => visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
   let F = fh;
   for (const x of items) { const w1 = visW(x, 1); if (w1 > 0) F = Math.min(F, (sw * 1.08) / w1); }

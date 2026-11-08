@@ -3,7 +3,7 @@
 //   node tools/assistant/assistant-life-scene-stand-browser-check.js           検査
 //   node tools/assistant/assistant-life-scene-stand-browser-check.js --shots   止め絵も撮る(docs/progress/assistant-peer/gifts/stagec/stand/)
 //   大きさは、絵の寸法ではなく透けていない画素の範囲(見えている体)と、その中の目・顎の高さ(ASSISTANT_LIFE_STAND_FACE)で測る
-//   ① 2人の顔の大きさ(目から顎まで)が同じ(差 5% まで。2026-11-08 社長「顔のサイズで合わせて頭のてっぺんをあわせた縮尺と位置に」)
+//   ① 2人の顔の大きさが同じ(差 5% まで。顔の大きさ m は「目の線から顎の先」と「頬の幅」の平均・手で測った表。2026-11-08 社長「顔のサイズで合わせて頭のてっぺんをあわせた縮尺と位置に」)
 //   ② 2人の見えている体が左右に分かれる(重なりは細いほうの幅の 2割まで)・画面からはみ出さない
 //   ③ 顔(見えている体の上から顎まで)が、上の見出し・下の台詞の箱に隠れない
 //   ④ 頭のてっぺん(髪の上端・飾りは除く)の高さがそろい、目が場面の上から2割5分〜5割5分に来る(社長「画面の下に小さく固まり、上半分が空いている」)
@@ -60,7 +60,7 @@ const PAIRS = [['mua', 'momosuke'], ['kiki', 'dra'], ['atsu', 'sorashido'], ['ky
       if (!box) return { id, missing: true };
       const vt = r.top + box.t * r.height, vb = r.top + box.b * r.height, vl = r.left + box.l * r.width, vr = r.left + box.r * r.width;
       const vh = vb - vt;
-      return { id, head: !!f.head, vt, vb, vl, vr, face: f.head ? null : (f.chin - f.eye) * vh, topY: vt + (f.top || 0) * vh, eyeY: vt + (f.eye || 0.4) * vh, chinY: f.head ? vb : vt + f.chin * vh };
+      return { id, head: !!f.head, vt, vb, vl, vr, face: vh * ASSISTANT_LIFE_STAND_EC * (f.m || 1), topY: vt + (f.top || 0) * vh, eyeY: vt + (f.eye || 0.4) * vh, chinY: f.head ? vb : vt + f.chin * vh };
     });
     const title = sc.querySelector('[data-assistant-life-scene-title]'), talk = document.querySelector('[data-assistant-peer-talk] > div, [data-assistant-peer-talk]');
     const tb = title ? title.getBoundingClientRect().bottom : S.top;
@@ -82,7 +82,7 @@ const PAIRS = [['mua', 'momosuke'], ['kiki', 'dra'], ['atsu', 'sorashido'], ['ky
         else {
           const [a, b] = m.stands, label = `${tag} ${a.id}・${b.id}`;
           const faces = m.stands.filter(x => x.face != null).map(x => x.face);
-          if (faces.length === 2) check(`① ${label}: 頭の大きさ(目から顎)が同じ`, Math.abs(faces[0] - faces[1]) <= Math.max(faces[0], faces[1]) * 0.05, faces.map(Math.round).join(' / '));
+          if (faces.length === 2) check(`① ${label}: 顔の大きさ(目から顎・頬の幅)が同じ`, Math.abs(faces[0] - faces[1]) <= Math.max(faces[0], faces[1]) * 0.05, faces.map(Math.round).join(' / '));
           const ov = Math.max(0, Math.min(a.vr, b.vr) - Math.max(a.vl, b.vl)), narrow = Math.min(a.vr - a.vl, b.vr - b.vl);
           check(`② ${label}: 左右に分かれる(重なり ${Math.round(ov / narrow * 100)}%)・はみ出さない`, ov <= narrow * 0.2 && m.stands.every(x => x.vl >= m.S.l - 2 && x.vr <= m.S.r + 2));
           const eyeOf = (x) => x.eyeY;

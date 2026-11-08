@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 41b879485e900893
+// source-sha256: 6b7c5301033f20df
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -107405,54 +107405,63 @@ const assistantLifeStandBox = src => new Promise(res => {
 });
 const ASSISTANT_LIFE_STAND_FACE = Object.freeze({
   mua: {
-    top: 0.14,
-    eye: 0.34,
-    chin: 0.46
+    top: 0.145,
+    eye: 0.3275,
+    chin: 0.425,
+    m: 0.724
   },
   kiki: {
-    top: 0.18,
+    top: 0.195,
     eye: 0.46,
-    chin: 0.58
+    chin: 0.595,
+    m: 0.847
   },
   momosuke: {
-    top: 0.08,
-    eye: 0.44,
-    chin: 0.55
+    top: 0.075,
+    eye: 0.3925,
+    chin: 0.535,
+    m: 1.022
   },
   dra: {
     head: true,
     top: 0.10,
-    eye: 0.46
+    eye: 0.46,
+    m: 2.017
   },
   atsu: {
-    top: 0.06,
-    eye: 0.29,
-    chin: 0.43
+    top: 0.09,
+    eye: 0.31,
+    chin: 0.435,
+    m: 0.895
   },
   kyuko: {
-    top: 0.02,
-    eye: 0.33,
-    chin: 0.47
+    top: 0.01,
+    eye: 0.40,
+    chin: 0.56,
+    m: 1.040
   },
   sorashido: {
-    top: 0.02,
-    eye: 0.31,
-    chin: 0.47
+    top: 0.015,
+    eye: 0.345,
+    chin: 0.55,
+    m: 1.248
   },
   erubin: {
-    top: 0.03,
-    eye: 0.31,
-    chin: 0.47
+    top: 0.01,
+    eye: 0.2325,
+    chin: 0.46,
+    m: 1.224
   }
 });
-const ASSISTANT_LIFE_STAND_HEAD_PER_FACE = 3.1;
+const ASSISTANT_LIFE_STAND_EC = 0.1639;
 const assistantLifeStandFace = (pid, src) => {
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   const own = who && who.imagePrefix && String(src || '').includes(`/${who.imagePrefix}_`);
   return own && ASSISTANT_LIFE_STAND_FACE[pid] || {
     top: 0.05,
     eye: 0.33,
-    chin: 0.47
+    chin: 0.47,
+    m: 1
   };
 };
 const assistantLifeStandLayout = (items, W, H) => {
@@ -107465,7 +107474,7 @@ const assistantLifeStandLayout = (items, W, H) => {
     3: 0.064,
     4: 0.055
   }[Math.min(4, n)];
-  const visH = (x, F) => x.face.head ? F * ASSISTANT_LIFE_STAND_HEAD_PER_FACE / (1 - x.face.top) : F / (x.face.chin - x.face.eye);
+  const visH = (x, F) => F / (ASSISTANT_LIFE_STAND_EC * (x.face.m || 1));
   const visW = (x, F) => visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
   let F = fh;
   for (const x of items) {
