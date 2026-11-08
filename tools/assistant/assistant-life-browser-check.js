@@ -18,7 +18,7 @@
 //   ⑭ カード部とのつなぎ口: カード部屋にいる助手を読むだけ・対戦の知らせで今日あったことに1件
 //   ⑮ 読みやすさ: 朝・昼・夕・夜で、居場所・友情・道具の字が濃い面の上にあり、明るさの差が足りている
 //   ⑯ 地図は HOME にそろえる: 施設と結びつく場所が HOME の札と同じ建物
-//   ⑰ 場面の立ち絵: 2人・3人・4人で頭の高さと大きさがそろう・見出しのアイコンが字の塗りの外に出る
+//   ⑰ 場面の立ち絵: 2人・3人・4人で頭の高さと大きさがそろう・見出しのアイコンが字の塗りの外に出る・顔が台詞の窓や見出しに隠れない
 //   ⑦ 段階3: 見守ると組の中の人だけが話す様子の台本が流れる(穴が残らない)/ひとりの助手の「ようすを見る」で、その人のひとりごとが流れる
 const http = require('http'), path = require('path'), fs = require('fs');
 const root = path.resolve(__dirname, '..', '..'), PORT = 9231;
@@ -80,7 +80,11 @@ const standProblems = async (page, combos, label) => {
     await page.waitForTimeout(700);
     const m = await page.evaluate(() => {
       const sc = document.querySelector('[data-assistant-life-scene]'); if (!sc) return null; const H = sc.getBoundingClientRect().height;
-      const st = [...sc.querySelectorAll('[data-assistant-life-scene-stand]')].map(e => { const r = e.getBoundingClientRect(), b = ASSISTANT_LIFE_STAND_BOX.get(e.getAttribute('src')); return b ? { top: r.top + b.t * r.height, fh: (b.b - b.t) * r.height } : null; });
+      const st = [...sc.querySelectorAll('[data-assistant-life-scene-stand]')].map(e => { const r = e.getBoundingClientRect(), b = ASSISTANT_LIFE_STAND_BOX.get(e.getAttribute('src')); if (!b) return null;
+        // 顔の位置(描かれている範囲の上から 12%)で、台詞の窓・見出しより立ち絵が手前か(横で窓の裏に隠れていた。2026-11-08 ミハリ)
+        const fx = r.left + ((b.l + b.r) / 2) * r.width, fy = r.top + (b.t + (b.b - b.t) * 0.12) * r.height;
+        const hit = document.elementsFromPoint(fx, fy).find(x => x === e || x.closest('[data-assistant-peer-talk],.mhl-hdr,[data-assistant-life-scene-done]'));
+        return { top: r.top + b.t * r.height, fh: (b.b - b.t) * r.height, face: fy >= 0 && fy <= innerHeight && fx >= 0 && fx <= innerWidth && hit === e, id: e.getAttribute('data-assistant-life-scene-stand') }; });
       const ic = sc.querySelector('[data-assistant-life-scene-icon]');
       return { H, st, icon: !!ic && !ic.closest('.mhl-ti') && ic.getBoundingClientRect().width > 4 };
     });
@@ -89,6 +93,7 @@ const standProblems = async (page, combos, label) => {
     if (m.st.length !== ids.length || m.st.some(x => !x)) ng.push(`${ids.join('・')}: 立ち絵が測れない`);
     else { const t = m.st.map(x => x.top), f = m.st.map(x => x.fh); const d = (Math.max(...t) - Math.min(...t)) / m.H, r = Math.max(...f) / Math.min(...f); if (d > 0.03 || r > 1.08) ng.push(`${ids.join('・')}: 頭の高さの差 ${(d * 100).toFixed(1)}%・大きさの比 ${r.toFixed(2)}`); }
     if (!m.icon) ng.push(`${ids.join('・')}: 見出しのアイコンが出ていない`);
+    if (m.st.length && m.st.every(Boolean) && m.st.some(x => !x.face)) ng.push(`${ids.join('・')}: 顔が台詞の窓・見出しに隠れる(${m.st.filter(x => !x.face).map(x => x.id).join('・')})`);
     await page.locator('[data-assistant-life-scene-back]').click({ timeout: 2000 }).catch(() => {}); await page.waitForTimeout(200);
   }
   check(`⑰ 場面の立ち絵の頭の高さ・大きさがそろい、見出しのアイコンが出る(${label}・${n}場面)`, ng.length === 0 && n === combos.length, ng.slice(0, 4).join(' / '));
