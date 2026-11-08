@@ -49,6 +49,16 @@ const CHANGELOG = [
     ],
   },
   {
+    // 2026-11-08 育つ助手の一歩目(助手部キズナ2)。社長「この文で」・助手の告知あり(みゅあの台本は data/assistants.js)
+    date: "2026-11-08 10:31", type:'content', group:'assistant', title:'助手ライフで、助手の部屋から「🐾 マスモン」が見られるようになりました', status:'new', releaseFlag:'assistantLife',
+    items:[
+      '助手たちもそれぞれ自分のマスモンを3体育てています。ニックネーム・Lv・育ち方と、自分の好きな色に染めた姿が見られます',
+      '「⚔ 編成」で先頭のマスモン、「🃏 デッキ」でMFバトルカードのデッキの型(みゅあの「キラキラ速攻」など)が見られます',
+      '「💗 好き・苦手」で、助手ごとの好きなモンスター・苦手なモンスター・好きな色が分かります',
+      '助手のマスモンは助手が自分で育てているもので、あなたのマスモンやセーブには影響しません',
+    ],
+    assistantNotice:{ id:'update_notice_assistant_masmon_v1', type:'content' },
+  },  {
     date: "2026-11-08 09:55", type:'content', group:'assistant', title:'フレンドの家と行き来できるようになりました', status:'new', releaseFlag:'assistantLifeFriend',
     assistantNotice:{ id:'update_notice_assistant_life_friend_v1', type:'content' },
     items:[
@@ -60,17 +70,7 @@ const CHANGELOG = [
       '相手のセーブデータや助手の仲良し度は変わりません。フレンドの家の様子は、フレンドが最後に助手ライフを開いたときのものです',
     ],
   },
-  {
-    // 2026-11-08 育つ助手の一歩目(助手部キズナ2)。社長「この文で」・助手の告知あり(みゅあの台本は data/assistants.js)
-    date: "2026-11-08 10:31", type:'content', group:'assistant', title:'助手ライフで、助手の部屋から「🐾 マスモン」が見られるようになりました', status:'new', releaseFlag:'assistantLife',
-    items:[
-      '助手たちもそれぞれ自分のマスモンを3体育てています。ニックネーム・Lv・育ち方と、自分の好きな色に染めた姿が見られます',
-      '「⚔ 編成」で先頭のマスモン、「🃏 デッキ」でMFバトルカードのデッキの型(みゅあの「キラキラ速攻」など)が見られます',
-      '「💗 好き・苦手」で、助手ごとの好きなモンスター・苦手なモンスター・好きな色が分かります',
-      '助手のマスモンは助手が自分で育てているもので、あなたのマスモンやセーブには影響しません',
-    ],
-    assistantNotice:{ id:'update_notice_assistant_masmon_v1', type:'content' },
-  },
+
   {
     date: "2026-11-08 09:07", type:'update', group:'assistant', title:'助手ライフで、2人に贈る道具が10種類になりました', status:'new',
     items:[
