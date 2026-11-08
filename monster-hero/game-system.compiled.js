@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2ec71a13c2c416cd
+// source-sha256: 7aabb2d322f3e78c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -63209,6 +63209,15 @@ const growthFxChipSpotScore = (box, first = false) => {
       return !top || top === el || el.contains(top) || top.contains(el);
     });
   };
+  for (const sh of document.querySelectorAll('.mhl-sheet,[data-mhl-sheet],[role="dialog"]')) {
+    if (box.contains(sh) || sh.contains(box)) continue;
+    const e = sh.getBoundingClientRect();
+    if (!e.width || !e.height || !hit(e)) continue;
+    const cs = getComputedStyle(sh);
+    if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
+    score += 3;
+    if (first) return score;
+  }
   for (const el of document.querySelectorAll(GROWTH_FX_CHIP_BUSY_SEL)) {
     if (box.contains(el)) continue;
     const e = el.getBoundingClientRect();
