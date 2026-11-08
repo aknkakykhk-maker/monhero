@@ -368,6 +368,14 @@
       "role": "助手ライフの専用ページ「助手たちの家」(AssistantLifeHouse: 8人の部屋・部屋を押す・場面・みんなの居場所・入場・今日やれること)と、HOME の施設の横の顔(AssistantLifeHomeFaces)。ビート部とのつなぎ口 assistantLifeAtBeat・assistantLifeBeatIds。公開の印 assistantLife の後ろ。保存は mh_assistant_life_diary_v1・mh_assistant_life_intro_v1 の新しいキーだけ"
     },
     {
+      "file": "56-assistant-life-rel.jsx",
+      "role": "助手ライフの人間らしい関係の出来事(けんか・仲直り・やきもち・ないしょ話・相談・からかう・ライバル心・久しぶりの気まずさ)と家での見せ方(扉を閉める・居間で離れて座る・仲直りの札)。台本は tools/assistant/life-rel-talks-import.js が書く。公開の印 assistantLife の後ろ。保存は mh_assistant_life_rel_v1 の新しいキーだけ"
+    },
+    {
+      "file": "56-assistant-life-gifts.jsx",
+      "role": "部品: 助手ライフの道具(2人に贈る10種類)・好み(好き・ふつう・苦手。贈ると分かる・仲良し度の段で教えてくれる)・贈るシート・部屋の「好きなもの」。保存 mh_assistant_life_gift_day_v1・mh_assistant_life_likes_v1・mh_assistant_life_cheki_v1。2026-11-08 GIFT-PLAN.md"
+    },
+    {
       "file": "82-card-battle-core.jsx",
       "role": "MFバトルカードのルールの本体とコンピューターの考え方(ゲームの始まり・できる操作・操作を進める・守り・勝ち負け・くせと難易度)。カードの表は data/card-battle-cards.js",
       "pure": true

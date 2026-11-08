@@ -12,7 +12,7 @@
 //   ④ 関係とアルバム: 名前は「友情Lv」「友だち」。今日のペアは出ない
 //   ⑤ 帯は HOME だけ(モンヒロビートの画面へ行くと消える)。画面を閉じているあいだは様子を書き換えない
 //   ⑥ 印が偽のときは帯も入口も出ない
-//   ⑧ 2人にあげる道具: 道具の欄(持っている数・起きること)/「渡す」で5つが分かる確かめ → 渡すと2人のひとこと・持ち物が1つ減る・2回目は理由が出る/
+//   ⑧ 2人に贈る道具(10種類・好み): 道具の欄(持っている数・起きること)/「贈る」で好みと上がる量が分かる確かめ → 渡すと2人のひとこと・持ち物が1つ減る・2回目は理由が出る/
 //      はじめて手に入れたときの案内は HOME で1回だけ(止め絵 life-8-give・life-9-intro)
 //   ⑨ 演出(44-growth-fx.jsx): 渡すと品物の演出/見守って友情Lv が上がると Lv アップの演出(トーストは重ねない)。止め絵 life-10・life-11
 //   ⑭ カード部とのつなぎ口: カード部屋にいる助手を読むだけ・対戦の知らせで今日あったことに1件
@@ -204,6 +204,8 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     await page.locator('[data-assistant-life-room="atsu"]').click(); await page.waitForTimeout(300);
     const sheetText = await page.locator('[data-assistant-life-room-sheet="atsu"]').innerText().catch(() => '');
     check('⑩ 部屋を押すと、その助手のこと(いまどこ・仲良し度・友情Lv・セッション・今日あったこと)', ['あつの部屋', '仲良し度', '友情Lv', 'セッション', '今日あったこと'].every(w => sheetText.includes(w)), sheetText.replace(/\s+/g, ' ').slice(0, 80));
+    check('⑩ 部屋を押すと「🎁 好きなもの」(10種類・分かっていない物は ?)', /好きなもの/.test(sheetText) && (await page.locator('[data-assistant-life-room-sheet="atsu"] [data-assistant-life-gift-like]').count()) === 10
+      && (await page.locator('[data-assistant-life-room-sheet="atsu"] [data-assistant-life-gift-like$=":unknown"]').count()) === 10);
     if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-13-room.png') });
     // ⑪ 声をかける(2026-11-07 社長「声をかけにいったら俺とじゃなくて別の助手と喋ってる」): その助手だけが {name} に話す・場面にいない助手が出ない
     await page.locator('[data-assistant-life-room-sheet="atsu"] [data-assistant-life-room-act="invite"]').click().catch(() => {});
@@ -341,19 +343,24 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     // ⑧ 2人にあげる道具(家の「🎒 道具」)
     await page.locator('[data-assistant-life-icon="items"]').click().catch(() => {}); await page.waitForTimeout(250);
     const itemsText = await page.locator('[data-assistant-life-items]').innerText().catch(() => '');
-    check('⑧ 道具の欄に、持っている数・起きること・手に入れる所が出る', /持っている 2個/.test(itemsText) && /友情Lv \+15/.test(itemsText) && /仲良し度 \+\d+/.test(itemsText) && /ビートP交換所/.test(itemsText), itemsText.replace(/\s+/g, ' ').slice(0, 80));
+    check('⑧ 道具の欄の「仲良し度」「友情Lv」が言葉の途中で折れず、贈るシートと同じ幅(好みで変わる)で出る(2026-11-08 ミハリ)', await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-items] .whitespace-nowrap')].filter(x => /仲良し度|友情Lv/.test(x.textContent)).every(x => x.getBoundingClientRect().height <= parseFloat(getComputedStyle(x).fontSize) * 1.9)) && /仲良し度 \+15〜45/.test(itemsText), itemsText.replace(/\s+/g, ' ').slice(0, 120));
+    check('⑧ 道具の欄に、持っている数・起きること・手に入れる所が出る', /持っている 2個/.test(itemsText) && /友情Lv \+8〜23/.test(itemsText) && /仲良し度 \+\d+/.test(itemsText) && /ビートP交換所/.test(itemsText), itemsText.replace(/\s+/g, ' ').slice(0, 80));
     await toWhere(page);
     const giveBtn = page.locator('[data-assistant-life-give]').first();
     if (await giveBtn.count()) {
       await giveBtn.click(); await page.waitForTimeout(300);
       const sheet = await page.locator('[data-assistant-life-give-sheet]').innerText().catch(() => '');
-      check('⑧ 「渡す」で、何の道具か・起きること・使える数・手に入れる所・このあと が1枚で出る', ['何の道具', '起きること', '使える数', '手に入れる', 'このあと'].every(w => sheet.includes(w)) && /1日1回/.test(sheet));
+      check('⑧ 「贈る」で、道具の名前と中身・2人の好み・上がる量・回数・手に入れる所が1枚で出る(2026-11-08 10種類)', ['仲良し度', '友情Lv', '好み', '同じ道具は1日1回', 'ビートP交換所'].every(w => sheet.includes(w)) && (await page.locator('[data-assistant-life-give-kind]').count()) === 10, sheet.replace(/\s+/g, ' ').slice(0, 80));
+      check('⑧ 贈るシートの道具の名前が、枠からはみ出さない', await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-give-kind]')].every(b => b.scrollWidth <= b.clientWidth + 1)));
       check('⑧ 確かめの1枚もはみ出さない(縦 390)', await page.evaluate(() => { const el = document.querySelector('[data-assistant-life-give-sheet] > div'); const r = el && el.getBoundingClientRect(); return !!r && r.left >= -1 && r.right <= window.innerWidth + 1 && r.top >= -1; }));
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-8-give.png') });
       await page.locator('[data-assistant-life-give-go]').click(); await page.waitForTimeout(800);
       const owned = await ls(page, 'mh_owned_items');
       const info = await talkInfo(page);
-      check('⑧ 渡すと、2人のひとことが流れて差し入れが1つ減る', owned && owned.peer_gift === 1 && !!info, info ? info.id : 'なし');
+      check('⑧ 贈ったとき、仲良し度の小さな札は重ねない(道具の演出の中に2人それぞれの量が出る・2026-11-08 窓口)', (await page.locator('.mh-gfx-chip').count()) === 0);
+      check('⑧ 贈ると、2人のひとことが流れておやつバスケットが1つ減る', owned && owned.peer_gift === 1 && !!info, info ? info.id : 'なし');
+      const likesSaved = await ls(page, 'mh_assistant_life_likes_v1');
+      check('⑧ 贈った2人の好みが分かり、新しいキーに残る(mh_assistant_life_likes_v1)', !!(likesSaved && likesSaved.known && likesSaved.known.kiki && likesSaved.known.kiki.basket && likesSaved.known.mua && likesSaved.known.mua.basket));
       // 品物を渡した演出(44-growth-fx.jsx)。演出は1つずつ出るので、前の札が出ていればその後に出る(数秒で閉じる)
       await page.locator('[data-growth-fx-sheet="item"]').waitFor({ timeout: 10000 }).catch(() => {});
       check('⑨ 渡すと、品物の演出(2人の友情Lv・仲良し度)が出る', (await page.locator('[data-growth-fx-sheet="item"]').count()) > 0);
@@ -368,7 +375,7 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
       await page.locator('[data-assistant-life-give]').first().click(); await page.waitForTimeout(300);
       await page.locator('[data-assistant-life-give-kind="gift"]').click().catch(() => {});
       const reason = await page.locator('[data-assistant-life-give-reason]').innerText().catch(() => '');
-      check('⑧ 同じ日に2回目は、理由が出て渡せない', /今日はもう使いました/.test(reason) && await page.locator('[data-assistant-life-give-go]').isDisabled());
+      check('⑧ 同じ道具を同じ日に2回目は、理由が出て贈れない', /今日はもうこの道具を贈りました/.test(reason) && await page.locator('[data-assistant-life-give-go]').isDisabled(), reason);
       await page.locator('[data-assistant-life-give-cancel]').click();
     } else check('⑧ 渡せる組がある', false);
     // ④ 関係とアルバム
@@ -424,7 +431,11 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     if (SHOTS) await L.page.screenshot({ path: path.join(shotDir, 'life-16-board-land.png') });
     check('⑫ 横でも家の文字(題・部屋の札・ボタン)が切れない・名前の途中で折れない・ボタンは正式名称(モンヒロビート)', textL.length === 0, textL.join(' / '));
     await toWhere(L.page); await standProblems(L.page, STAND_COMBOS.slice(0, 8).concat(STAND_COMBOS.slice(-5)), '横'); await L.page.locator('[data-assistant-life-icon="house"]').click().catch(() => {}); await L.page.waitForTimeout(250);
+    // 好きな物を教えてくれた知らせ(いちばん長いひとこと)を入れてから開く(2026-11-08 窓口: 横で「…」と切れていた)
+    await L.page.evaluate(async () => { await ASSISTANT_LIFE_GIFT_STORE.load(); const st = ASSISTANT_LIFE_GIFT_STORE.state; ASSISTANT_LIFE_GIFT_STORE.set({ likes: { ...st.likes, told: [{ who: 'atsu', key: 'misanga', day: '2026-11-08' }] } }); });
     await L.page.locator('[data-assistant-life-room="atsu"]').click().catch(() => {}); await L.page.waitForTimeout(300);
+    check('⑧ 横: 教えてくれた知らせは「…」で切らずに全文が見える(届いた台詞の全文と同じ)', await L.page.evaluate(() => { const b = document.querySelector('[data-assistant-life-gift-told]'); return !!b && b.scrollWidth <= b.clientWidth + 1 && b.scrollHeight <= b.clientHeight + 1 && getComputedStyle(b).textOverflow !== 'ellipsis' && b.innerText.replace(/\s+/g, '').includes(String(assistantLifeGiftHintLine('atsu', 'misanga').t).replace(/\s+/g, '')); }), await L.page.evaluate(() => { const b = document.querySelector('[data-assistant-life-gift-told]'); return b ? `${b.scrollWidth}/${b.clientWidth} ${b.scrollHeight}/${b.clientHeight} ${b.innerText}` : 'なし'; }));
+    check('⑩ 横: 部屋のシートの下のボタンは、いつも全部見える(画面の下で切れない)', await L.page.evaluate(() => { const bs = [...document.querySelectorAll('[data-assistant-life-room-sheet] [data-assistant-life-room-act]')]; return bs.length > 0 && bs.every(b => { const r = b.getBoundingClientRect(); return r.top >= 0 && r.bottom <= window.innerHeight + 0.5; }); }));
     check('⑩ 横: 部屋を押すと右にその助手のこと(はみ出さない)', await L.page.evaluate(() => { const el = document.querySelector('[data-assistant-life-room-sheet] .mhl-sheet'); const r = el && el.getBoundingClientRect(); return !!r && r.left > window.innerWidth / 2 - 1 && r.right <= window.innerWidth + 1; }));
     if (SHOTS) await L.page.screenshot({ path: path.join(shotDir, 'life-14-room-land.png') });
     await L.page.close();

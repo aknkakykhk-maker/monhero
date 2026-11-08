@@ -171,7 +171,8 @@ const growthFxPeerLevel = ({ pair, levelBefore, levelAfter } = {}) => {
 };
 // 2人に品物を渡した。名前と絵は持ち物のデータ(BREEDER_MARKET_ITEMS の name・emoji)から取る(種類・名前はあとで変わるため書き込まない)
 //   reaction … 'like' | 'dislike' | null(好き嫌いが入ったら渡す) / playerGain … あなたとの仲良し度の増えた量(2人それぞれ)
-const growthFxPeerItem = ({ pair, itemId, pointsBefore, pointsAfter, levelBefore, levelAfter, reaction = null, playerGain = 0 } = {}) => {
+//   playerGains … 1人ずつの仲良し度の量 [a, b](助手ライフの道具は好みで変わる・2026-11-08)/ likes … 1人ずつの好み ['like'|'mid'|'bad', …](顔の表情)
+const growthFxPeerItem = ({ pair, itemId, pointsBefore, pointsAfter, levelBefore, levelAfter, reaction = null, playerGain = 0, playerGains = null, likes = null } = {}) => {
   if (!Array.isArray(pair) || pair.length !== 2 || !growthFxAssistantOf(pair[0]) || !growthFxAssistantOf(pair[1])) return;
   const gain = growthFxNum(pointsAfter) - growthFxNum(pointsBefore);
   if (!(gain > 0) && !(growthFxNum(playerGain) > 0)) return;
@@ -181,8 +182,11 @@ const growthFxPeerItem = ({ pair, itemId, pointsBefore, pointsAfter, levelBefore
   const rows = [];
   if (gain > 0) rows.push({ kind: 'friend', label: '2人の友情Lv', levelFrom: levelBefore, levelTo: levelAfter,
     pctFrom: growthFxPeerPct(pointsBefore), pctTo: growthFxPeerPct(pointsAfter), gain });
-  if (growthFxNum(playerGain) > 0) rows.push({ kind: 'bond', label: 'あなたとの仲良し度(2人とも)', pctFrom: 0, pctTo: 100, gain: growthFxNum(playerGain) });
-  const face = (id) => growthFxAssistantFace(id, reaction === 'dislike' ? 'troubled' : reaction === 'like' ? 'excited' : 'happy');
+  const each = Array.isArray(playerGains) && playerGains.length === 2 && playerGains[0] !== playerGains[1];
+  if (each) pair.forEach((id, i) => { if (growthFxNum(playerGains[i]) > 0) rows.push({ kind: 'bond', label: `あなたとの仲良し度(${growthFxAssistantName(id)})`, pctFrom: 0, pctTo: 100, gain: growthFxNum(playerGains[i]) }); });
+  else if (growthFxNum(playerGain) > 0) rows.push({ kind: 'bond', label: 'あなたとの仲良し度(2人とも)', pctFrom: 0, pctTo: 100, gain: growthFxNum(playerGain) });
+  const faceOf = (i) => { const l = Array.isArray(likes) ? likes[i] : null; return l === 'bad' ? 'troubled' : l === 'like' ? 'excited' : l === 'mid' ? 'happy' : (reaction === 'dislike' ? 'troubled' : reaction === 'like' ? 'excited' : 'happy'); };
+  const face = (id) => growthFxAssistantFace(id, faceOf(pair.indexOf(id)));
   growthFxPush({ tier: 'item', kind: 'friend', title: `${growthFxAssistantName(a)} と ${growthFxAssistantName(b)} に ${item.name || ''}！`,
     item: `${item.emoji || ''} ${item.name || ''} ×1`, faces: [face(a), face(b)].filter(Boolean), reaction, rows });
 };

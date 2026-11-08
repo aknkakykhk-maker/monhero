@@ -230,9 +230,65 @@
 - 段階2(一歩目)は枝 claude/assistant-life-stage2-step1(未公開)。止め絵 shots/stage2/・文案 LIFE-STAGE2-RELEASE.md を窓口へ送った。窓口の「この文で」待ち
 - 🔄横(rotation-height-check #4874 の助手部3件): 仲良し度のシート・おしゃべり・助手たちの今のアルバムに、回したとき用の上限(vw)を足した。回した器の中で 331/343px(回した画面 390px に収まる)
 - ミハリの小さい残り2件: 横の部屋の吹き出しが切れる → 狭い部屋は「💭 さみしいな…」(1行・名札に重ならない)/夕方に「朝の散歩で」→ 台本に言える時間帯(`assistantLifeTalkTods`: 朝の・寝る前・夕方にな・昼寝)。検査 assistant-life-check ⑧・browser ⑫
+
+## キズナ(2026-11-08〜・人間らしい出来事/育つ・相談・マスモンの案)
+
+- 枝 `claude/assistant-life-rel`(未公開)。窓口の「この文で」待ち。文案 `REL-RELEASE.md`・止め絵 `shots/rel-*.png`
+- 仕組み `56-assistant-life-rel.jsx`(新しい部品)。台本 396本は `tools/assistant/life-rel-talks-import.js` が kotoba-house.txt・tsumugi-house.txt から書く(fight・mend・mend3・jealous・secret・consult・tease・rival・awkward。trio・quad・home・rhythm・owl はナカヨシ7の取り込み)
+- 差し込み口(typeof で呼ぶだけ): 56-assistant-life.jsx(仲直りの形・2日はけんかしない・2人/3人の出来事・アルバム・朝4時の自分たちの仲直り)/56-assistant-peer.jsx(仲直りのあと・差し入れで仲直り・HOME でも2日はけんかしない)/56-assistant-life-house.jsx(扉・居間・シートの1行と「🤝 取り持つ」)/data/assistants.js(友情Lv の行動 mediate +3)
+- 検査: `life-rel-check.js`(決まり)・`life-rel-browser-check.js`(縦・横・🔄横 × 朝昼夕夜。文字の切れ・名前の折れ・重なり・話し手・寝ている/出かけている・色の差)
+- 間に入るの台本は28組のうち21組(残り7組は謝る・けんか自身の仲直りに戻る)。足すならツムギへ7本
+- 育つ・相談・マスモンの案: `GROW-PLAN.md`・見本 `ux/grow-mock.png`(社長に選んでもらう ❶〜❺)
 - 2026-11-08 段階2の一歩目を公開(社長「この文で公開」・告知なし)。枝は古い履歴の上だったので、main から claude/assistant-life-stage2-step1b に載せ直した。カード部の「🃏 カード部屋で対戦する」と並ぶ
 - 二歩目の台詞をコトバ(solo 120・visit 32 → lines/kotoba-stage2.txt)・ツムギ(pair 56・lure 32 → lines/tsumugi-stage2.txt)へ注文。注文書 LIFE-STAGE2-LINES-ORDER.md。届いたら取り込み道具に temple/shopping・visit・lure を足し、抜き出しを窓口へ
 - AssistantBubble に oneLine(#4888)。ビート部が曲えらびの横につないだ(#4889)
+
+## オクリモノ(2026-11-08〜・道具の種類・好み・家具のプレゼント)
+- 案 `GIFT-PLAN.md`・表 `gifts/tables.png`・止め絵 `gifts/gifts-tate.jpg`・`gifts/gifts-yoko.jpg`(本物の家の画面に案の部品を重ねて撮った)を窓口へ送った
+- 道具10種類(今の2つは id・数そのまま)・8人の好み(好き3・苦手2)・家具12種類(置き場所は天井・壁・床の3つ。顔・吹き出し・札とぶつからない所)・新しいキー3つ・段階A/B/C・A/B 6つ
+- 待っていること: 社長の A/B → 好みの表が決まったら台詞(約350本)をコトバ・ツムギへ。作るときはナカヨシ7と、渡す画面・部屋・地図の建物をすり合わせる
+
+### キズナの続き(2026-11-08 朝・次の会話へ)
+- 公開済み: けんか・仲直り #4915(本番 build 2026-11-08 08:41 で life-rel-browser-check 135項目OK)。ミハリの小さい4件も直して公開。ミハリに本番の撮り直しを依頼中
+- 候補表を実装済みの血統だけに直した #4920(`ux/masmon-candidates.png`)。台帳 #4914「助手のマスモンは実装済み(ALL_PLAYER_MONSTERS)からだけ」
+- 待ち: ツムギに間に入る7組(dra-mua・kiki-momosuke・kiki-sorashido・momosuke-sorashido・erubin-momosuke・dra-kyuko・erubin-kyuko)を注文。届いたら `node tools/assistant/life-rel-talks-import.js` → life-rel-check
+- 待ち: オクリモノの改名(🧺おやつバスケット)のとき、更新履歴 08:33 の3行目とヘルプ「けんかと仲直り」の「差し入れ」を直してもらう約束(画面は道具の表から読む)
+- 次にやること(窓口から・社長の追加の指示「助手のバトルカードやマスモンはちゃんと名前とか考えて作らせて、助手にもマスモン一覧とか編成とかもプレイヤーと同じように存在すると面白い」):
+  8人ぶんの「マスモン一覧(ニックネーム・血統の候補・わけ)・編成・デッキ名と中身の方針」の表と、見る画面の止め絵(縦・横・🔄横)を作って窓口へ。血統は実装済みだけ。名前はコトバ・ツムギに頼んでよい。デッキはカード部ソランドとすり合わせ。プレイヤーのセーブ・ランキングには触らない・保存は新しいキー
+- 社長の選び(育つ助手)は全部 A(台帳 2026-11-08)。作り始めはこの案が決まってから。オトズレ(フレンド)には★の保存キー予定 mh_assistant_life_grow_v1 と見せてよい項目(★と得意)を伝えた
+
+## オトズレ(2026-11-08〜・フレンドの家との行き来)
+- 社長「助手ライフの機能を拡張してフレンドのとこに遊びに行けたりフレンドが遊びに来たりとかもいれたい」→ 先に案と止め絵(社長の選択)
+- 案 `FRIEND-VISIT-PLAN.md`・止め絵 `friend/friend-tate.jpg`(縦8枚)・`friend/friend-yoko.jpg`(横8枚)・`friend/friend-rot.jpg`(🔄横の知らせ)。撮り直しは `friend/shoot.js`
+- 形: 相手がオフラインでも「家の控え」を訪ねる/行き来の記録は新しい表2つ(足すだけ・SQL は案のまま未実行)/新しいキー4つ/相手のセーブには書かない
+- 2026-11-08 社長の選び ❶A ❷B(助手が自分で行く) ❸A ❹A ❺A ❻A・「これで作る」。止め絵②③を作り直した。作るのは次の会話から: 引き継ぎ `FRIEND-VISIT-BUILD.md`
+
+### キズナの続き(2026-11-08 09:30ごろ・育つ助手を作り始める前)
+- 社長: 育つ助手は「直しながら作る」でOK。API は「使う」(grow_consult・grow_report)
+- 案の正本: `GROW-PLAN.md`(6 マスモン・好き苦手・デッキ/7 API と オトズレ2との取り決め)・データ `masmon-plan.json`・表 `ux/masmon-table.png`・見本 `ux/masmon-screen.png`
+  - 染めた絵はゲームの部品で作る: `python3 -m http.server 9291`(リポジトリの一番上)→ `node docs/progress/assistant-peer/ux/masmon-dye-shots.js` → `node docs/progress/assistant-peer/ux/masmon-mock.js`
+  - 検査: `tools/assistant/assistant-masmon-plan-check.js`(未実装のモンスター・染色の枠数・好き苦手の決まり)
+- 未確定: 好き・苦手のモンスター(4候補ずつ)と好きな色(4候補)を、窓口が社長に1人ずつ聞いている。決まるまで作る中では masmon-plan.json の今の値を仮に置き、決まったら差し替える
+- 見本の直し(作るときに本物で確かめる): 助手ライフは🔄横でも回らない(回るのはモンヒロビートの画面だけ)。デッキのタブも縦と同じ見た目。左の列のカードが枠の端にくっつかないように
+- すり合わせ中(返事待ち): ビート部マモリ(腕前の元にセッションLvを読む・結果のひとことの口)/カード部ソランド(CARD_AI_DECKS に型2〜3・assistantLifeCardStyle・デッキ名)/バトル部ジン(能力の伸び方の関数・DyedMonsterImage・神殿の応援の口 assistantLifeCheerOf)
+- API: オトズレ2の friend_scenes が先にデプロイ → そのあと main を取り込んで grow_consult・grow_report を足す(同じ日にデプロイしない)
+- 作る順(案): ①データとマスモンの画面(部屋の「🐾 マスモン」・一覧・編成・デッキ・好き苦手。縦・横・🔄横)②成長(育成場・練習スタジオ・カード部屋に行った回数で Lv)③相談(部屋の「？」・台本で先に作り、API はあと)④神殿の応援 ⑤API。どれも作る前に止め絵と更新履歴の文案を窓口へ
+- 2026-11-08 段階A(道具10種類・好み)を公開: #4940(本体・更新履歴・告知・ヘルプ)/#4946(コトバの台詞)/#4952(検査の直し)。本番で assistant-life-browser-check すべて OK・ミハリの撮り直し OK(#4945)
+- 次: 段階B(家具)。交換所に「家具」の段・部屋の天井・壁・床・贈ったときの反応(furn 96本は届いている)。家具は z-index 3 以下(キズナの扉が前)。オトズレの控えには put の3つ
+
+### キズナ → キズナ2 への引き継ぎ(2026-11-08 10時ごろ・ここで区切り)
+- 決まったこと(社長): デッキ名は A(今の自動のデッキ名は残し「型: キラキラ速攻」のように添える)・8つの名前は「この文で」/好き・苦手・好きな色は確定(masmon-plan.json・表 ux/masmon-table.png・#4950)
+- 社長の選び待ち: 好き嫌いが変わる仕組み(GROW-PLAN 8 の ❶〜❹)
+- すり合わせ済みの口(作るときに足す。どれも typeof で確かめて呼ぶ・数字には効かせない):
+  - ビート部マモリ: 読むだけ rhythmAssistSessionLevel・rhythmAssistSessionMon().lives/.songs・rhythmAssistSessionOnLive。こちらが出す口 assistantLifeGrowBeatOf(id) → { stars 1〜5, style 'accuracy'|'fast'|'slide' }(main に入ったらマモリへ知らせる。マモリが結果のひとことに3割で使う。台詞 grow:<style> はコトバに注文)
+  - カード部ソランド: こちらが出す口 assistantLifeCardStyle(id) → 'attack'|'guard'|'normal'|null(えるびんは blade/shield/mind に対応)。カード部が 84 で読み cardAiBuildDeck に渡す(フリー対戦だけ)。カード部の読むだけの口 cardAssistantDeckPreview(who, styleId, level)(部屋では NORMAL・「対戦では毎回少し入れかわります」)
+  - バトル部ジン: 能力は助手ライフ側の見た目用の伸び方(基礎値は読むだけ)/染色は DyedMonsterImage・色はゲームの色の名前・プレイヤーの染色の保存は触らない/神殿の応援 assistantLifeCheerOf() → { id, line } を神殿の入口(合体・転生の画面の上)の小さな札とひとことだけ・バトル中は出さない・try で包む。足したら PR 番号をジンへ
+  - ココロ(AI 会話): こちらが出す口 assistantLifeTasteOnTalk({ assistantId, monsterId, positive })(false も受けて今は無視・1日1回 +4 はこちらで数える)・assistantLifeTasteOf(id) → { likes:[表示名≤5], dislikes:[≤5], changed:[{ name, to }≤3] }(血統は「○○種」・印が偽なら null)
+  - オトズレ2: assistant-chat は friend_scenes が先にデプロイ → main 取り込みのあと grow_consult・grow_report(GROW-PLAN 7-(4))
+  - オクリモノ: 差し入れの改名(🧺おやつバスケット)で、けんか・仲直りの更新履歴 08:33 の3行目とヘルプ「けんかと仲直り」の「差し入れ」を直してもらう約束。仲直りに使える道具は食べ物・飲み物の4つ(gift・cake・onigiri・tea)の案 → 決まったら assistantLifeRelOnGift の頭(kind !== 'gift')を直す
+- 公開済み(キズナ): けんか・仲直り #4915・間に入る28組 #4925。検査 life-rel-check・life-rel-browser-check・assistant-masmon-plan-check
+- 追記(ココロ・2026-11-08): まだ main に無い関数名は typeof で確かめても undefined-reference-check に止められるので、ココロは受け口の入れ物 `ASSISTANT_CHAT_TASTE_HOOKS = { of:null, onTalk:null }` を 56-assistant-chat.jsx に置き、それ経由で呼ぶ。キズナ2は自分の部品(56-assistant-chat.jsx より後ろの parts)のトップレベルに次を足す: `if (typeof ASSISTANT_CHAT_TASTE_HOOKS === 'object' && ASSISTANT_CHAT_TASTE_HOOKS) { ASSISTANT_CHAT_TASTE_HOOKS.of = assistantLifeTasteOf; ASSISTANT_CHAT_TASTE_HOOKS.onTalk = assistantLifeTasteOnTalk; }`。ココロの PR が先に main へ入る(入ったら知らせが来る)。ほかの部(マモリ・ソランド・ジン)の口も、相手より先に名前を書けないときは同じ「入れ物」の形にそろえる
+- 追記(オトズレ2): friend_scenes のデプロイは社長の「この文で」→ main → 窓口へ知らせてから。PR 番号はキズナ2か窓口へ
 - 2026-11-08 社長の指摘3つを直した(枝 claude/assistant-life-readable)
   - 居場所タブが朝に読めない → 札・枠・説明・道具の欄・友情の関係図を濃い面に(bg-slate-950/85〜90)。済んだボタンは「✓ 見た」「✓ 誘った」「✓ 見守りました」で灰色の面。下の説明は時刻だけ(5時・10時…)。ヘルプも「6つの時刻」に。検査 browser ⑮(朝・昼・夕・夜 × 縦・横で、字が濃い面の上にあり明るさの比 4.5 以上)
   - 場面の立ち絵の大きさがばらばら → `AssistantLifeStand`: 絵の透けていない範囲を一度測り(`ASSISTANT_LIFE_STAND_BOX`)、見た目の高さを人数ごとに(1人40%・2人36%・3人32%・4人28%)そろえる。床は下から22%。見出しのアイコンは字の塗り(background-clip:text)の外へ(中だと iPhone で白い四角)。検査 browser ⑰(28組+3人・4人で頭の高さの差3%以内・大きさの比1.08以内・アイコン)

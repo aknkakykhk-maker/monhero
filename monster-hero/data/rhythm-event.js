@@ -432,8 +432,17 @@ const RHYTHM_EVENT_POINT_SHOP_OFFERS = Object.freeze([
   // 性格のたね(2026-11-06 社長・マスモンの性格 案1)。マスモンの性格を19個から選び直す。何個でも交換できる
   Object.freeze({ id:'buddy_trait_seed', name:'性格のたね', emoji:'🌱', kind:'item', itemId:'buddy_trait_seed', grantAmount:1, unit:'個', cost:1000 }),
   // 助手どうしの差し入れ・友情のしるし(2026-11-07 社長)。公開の印 assistantPeer が立つまで並べない(releaseFlag)
-  Object.freeze({ id:'peer_gift', name:'差し入れ', emoji:'🧺', kind:'item', itemId:'peer_gift', grantAmount:1, unit:'個', cost:200, releaseFlag:'assistantPeer' }),
-  Object.freeze({ id:'peer_token', name:'友情のしるし', emoji:'🤝', kind:'item', itemId:'peer_token', grantAmount:1, unit:'個', cost:500, releaseFlag:'assistantPeer' }),
+  Object.freeze({ id:'peer_gift', name:'おやつバスケット', emoji:'🧺', kind:'item', itemId:'peer_gift', grantAmount:1, unit:'個', cost:200, releaseFlag:'assistantPeer' }),
+  Object.freeze({ id:'peer_token', name:'おそろいのミサンガ', emoji:'🤝', kind:'item', itemId:'peer_token', grantAmount:1, unit:'個', cost:500, releaseFlag:'assistantPeer' }),
+  // 助手ライフで2人に贈る道具(2026-11-08 社長「交換所に10種類全部」)。公開の印 assistantLife が立つまで並べない
+  Object.freeze({ id:'peer_cake', name:'はんぶんこケーキ', emoji:'🍰', kind:'item', itemId:'peer_cake', grantAmount:1, unit:'個', cost:300, releaseFlag:'assistantLife' }),
+  Object.freeze({ id:'peer_onigiri', name:'ほかほかおにぎり', emoji:'🍙', kind:'item', itemId:'peer_onigiri', grantAmount:1, unit:'個', cost:150, releaseFlag:'assistantLife' }),
+  Object.freeze({ id:'peer_tea', name:'午後のティーセット', emoji:'🫖', kind:'item', itemId:'peer_tea', grantAmount:1, unit:'個', cost:250, releaseFlag:'assistantLife' }),
+  Object.freeze({ id:'peer_earphone', name:'かたみみイヤホン', emoji:'🎧', kind:'item', itemId:'peer_earphone', grantAmount:1, unit:'個', cost:400, releaseFlag:'assistantLife' }),
+  Object.freeze({ id:'peer_puzzle', name:'ふたりで解くパズル', emoji:'🧩', kind:'item', itemId:'peer_puzzle', grantAmount:1, unit:'個', cost:350, releaseFlag:'assistantLife' }),
+  Object.freeze({ id:'peer_sleeve', name:'おそろいスリーブ', emoji:'🃏', kind:'item', itemId:'peer_sleeve', grantAmount:1, unit:'個', cost:400, releaseFlag:'assistantLife' }),
+  Object.freeze({ id:'peer_cheki', name:'思い出チェキ', emoji:'📸', kind:'item', itemId:'peer_cheki', grantAmount:1, unit:'個', cost:450, releaseFlag:'assistantLife' }),
+  Object.freeze({ id:'peer_flower', name:'ちいさな花束', emoji:'🌷', kind:'item', itemId:'peer_flower', grantAmount:1, unit:'個', cost:250, releaseFlag:'assistantLife' }),
   Object.freeze({ id:'hero_proof_shard', name:'勇者の証片', emoji:'🎖️', kind:'item', itemId:'hero_proof_shard', grantAmount:1, unit:'個', cost:75 }),
   Object.freeze({ id:'transcend_fruit_rainbow', name:'虹の超越の実', emoji:'🍇', kind:'item', itemId:'transcend_fruit_rainbow', grantAmount:1, unit:'個', cost:3000 }),
   Object.freeze({ id:'hero_proof', name:'勇者の証', emoji:'🏅', kind:'item', itemId:'hero_proof', grantAmount:1, unit:'個', cost:1500 }),
