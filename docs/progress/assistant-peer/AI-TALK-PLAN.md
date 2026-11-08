@@ -176,3 +176,17 @@
 4. core.js: REPLY_SCHEMA に `call`・決まり文・`value` の見張り。`tools/assistant/assistant-chat-check.js` に偽の Claude で確かめる行を足す
 5. 検査 `callname-guard-check.js`・縦/横/🔄横の止め絵・更新履歴とヘルプと助手の告知(文は社長の「この文で」のあと)
 6. 台本: 各助手(8人)の「なんて呼べばいい？」2行・決まったあとのひとこと2行・断り1行・API が止まったときの返事3行
+
+## 10. 作ったもの(2026-11-08・社長の選択 ❶Lv6から ❷いつでも/Lv1〜2は性格で照れる ❸カード ❹あり ❺残す ❻あだ名も)
+
+公開の印 `RELEASE_FLAGS.assistantCallname`(偽)。中継役を窓口が配り、社長が更新履歴の文に「この文で」と言ったら真にする。
+
+| 置き場所 | 中身 |
+| --- | --- |
+| `data/assistants.js` | 新しいキー3つの読み書きと正規化・入れない言葉(`ASSISTANT_CALLNAME_BANNED_SOURCE`)・見張り・`assistantCallName` が会話の呼び方を先に見る・照れる日(性格ごとの割合・日と助手で決まる・Lv3 から照れない)・台本(8人×8場面)・候補・端末の読み取り |
+| `src/parts/56-assistant-chat.jsx` | 確かめるカード(呼び方/あだ名/元に戻す/Lv6 の候補)・送る決まり(`ctx.callname`・`ctx.tastes`)・AI の印が無いときの端末の読み取りと台本・つぎの画面での知らせ(🔄横は回した器へ)・好き嫌いの口 `ASSISTANT_CHAT_TASTE_HOOKS`(キズナが関数を入れる) |
+| `src/parts/60-app.jsx` | 状態・保存の口・プロフィールの小窓(会話で決めた呼び方/あだ名を外す。Lv6 より前でも開ける)。入力欄で決めたものも新しいキーへ(最後に決めたものが使われる) |
+| `supabase/functions/assistant-chat/core.js` | 返事の形に `call`・`nick`・`taste`。決まり文。`<callname>`・`<tastes>`。値の見張りと、照れる日・持ちかけてよいかに合わないものを none にする |
+| 検査 | `tools/assistant/callname-check.js`(前半: 見張り・決まる順・読み取り・照れる日・台本の口調・中継役/後半: 本物の画面でカード→保存→元に戻す・API が止まったとき・Lv6 の問いかけ・印が偽のとき) |
+
+止め絵(本物): `shots/callname-real-1〜6`(縦・横・縦320・横667・プロフィール・🔄横)。撮り方 `shots/callname-real-shots.js`

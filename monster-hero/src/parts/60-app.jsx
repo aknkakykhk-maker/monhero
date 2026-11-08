@@ -2138,6 +2138,8 @@ function MonsterHeroGame() {
   const [quickJoin, setQuickJoin] = useState(null);     // { name, stats:[...], unique:{monName,skillName,before,after} }
   const quickAdvanceRef = useRef(null); // 連打・自動送りの二重実行を防ぐ
   const [breederName, setBreederName] = useState('名無しのブリーダー');
+  // 呼び方の見張り(assistantCallnameGuard)が、名前をそのまま書いた呼び方を {name} へ戻すために読む
+  const breederNameRef = useRef('名無しのブリーダー'); breederNameRef.current = breederName;
   const [breederXp, setBreederXp] = useState(0); // 累計経験値(WAVEクリア数ベース・端末保存)
   const [gold, setGold] = useState(0); // 累計ゴールド(WAVEクリア数ベース・端末保存)
   const goldRef = useRef(gold);
@@ -2857,6 +2859,12 @@ function MonsterHeroGame() {
   // 呼び方の上書き(絆Lv6から自由入力)。助手ごとに分けて持つので、みゅあとききで別々に決められる
   const [assistantCallStyles, setAssistantCallStylesState] = useState({});
   const assistantCallStyle = assistantCallStyles[selectedAssistantId] || null;
+  // 会話で決まる呼び方・助手へのあだ名・Lv6 で聞いたか(2026-11-08 社長・AI-TALK-PLAN)。どれも新しいキーで、今の呼び方のキーには触らない
+  const [assistantCallnames, setAssistantCallnamesState] = useState({});
+  const [assistantNicknames, setAssistantNicknamesState] = useState({});
+  const [assistantCallnameAsk, setAssistantCallnameAskState] = useState({});
+  // 呼び方が決まったあと、つぎの画面で1回だけ出す知らせ({ id, text })。shown は出し始めた時刻
+  const [callnameToast, setCallnameToast] = useState(null);
   // 助手とおしゃべりの窓(2026-10-14)。開いているあいだだけ真。公開の印 assistantChat が立つまではデバッグ設定からだけ開ける
   const [assistantChatOpen, setAssistantChatOpen] = useState(false);
   // 関係図から見返す助手どうしの特別なお話(台本)。null なら見返していない
@@ -6833,6 +6841,10 @@ function MonsterHeroGame() {
         if (typeof saved === 'string' && saved.trim()) loadedCallStyles[who.id] = saved;
       }
       setAssistantCallStylesState(loadedCallStyles);
+      { const cn = typeof assistantSetCallnames === 'function' ? assistantSetCallnames(await storeGet(ASSISTANT_CALLNAME_KEY, {}, false)) : {};
+        setAssistantCallnamesState(cn);
+        if (typeof normalizeAssistantNicknames === 'function') setAssistantNicknamesState(normalizeAssistantNicknames(await storeGet(ASSISTANT_NICKNAME_KEY, {}, false)));
+        if (typeof normalizeAssistantCallnameAsk === 'function') setAssistantCallnameAskState(normalizeAssistantCallnameAsk(await storeGet(ASSISTANT_CALLNAME_ASK_KEY, {}, false))); }
       const savedXp = await storeGet('mh_breeder_xp', 0, false);
       setBreederXp(savedXp);
       const savedGold = await storeGet('mh_gold', 0, false);
@@ -8843,6 +8855,44 @@ function MonsterHeroGame() {
     const next = trimmed || null;
     setAssistantCallStylesState(prev => ({ ...prev, [id]: next }));
     try { storeSet(assistantCallStyleKeyFor(id), next, false); } catch {}
+    // 入力欄で決めたものも「最後に決めた呼び方」として新しいキーへ(社長 ❺)。空にしたら会話で決めた呼び方も外す
+    setAssistantCallnameFor(id, next && typeof assistantCallnameGuard === 'function' && assistantCallnameGuard(next, breederNameRef.current) ? next : null, 'profile');
+  }, []);
+  // 会話で決まる呼び方を保存する(call が空なら外す=段や今の呼び方へ戻る)。新しいキー mh_assistant_callname_v1 だけを書く
+  const setAssistantCallnameFor = useCallback((id, call, by) => {
+    if (!id || typeof assistantSetCallnames !== 'function') return null;
+    const cur = assistantCallnamesNow || {};
+    const all = { ...cur };
+    const guarded = call ? assistantCallnameGuard(call, breederNameRef.current) : null;
+    if (call && !guarded) return null;
+    if (guarded) all[id] = { call: guarded, by, at: Date.now(), prev: (cur[id] && cur[id].call) || null };
+    else delete all[id];
+    const next = assistantSetCallnames(all);
+    setAssistantCallnamesState(next);
+    // 呼び方を使う所(吹き出し・掛け合い・おしゃべり)は assistantCallStyles を見て作り直すので、入れ物を新しくして知らせる
+    setAssistantCallStylesState(prev => ({ ...prev }));
+    try { storeSet(ASSISTANT_CALLNAME_KEY, next, false); } catch {}
+    return guarded;
+  }, []);
+  const setAssistantNicknameFor = useCallback((id, nick) => {
+    if (!id || typeof assistantNicknameGuard !== 'function') return null;
+    const guarded = nick ? assistantNicknameGuard(nick) : null;
+    if (nick && !guarded) return null;
+    setAssistantNicknamesState(prev => {
+      const all = { ...prev };
+      if (guarded) all[id] = { nick: guarded, at: Date.now() }; else delete all[id];
+      try { storeSet(ASSISTANT_NICKNAME_KEY, all, false); } catch {}
+      return all;
+    });
+    return guarded;
+  }, []);
+  const markAssistantCallnameAsk = useCallback((id, patch) => {
+    if (!id) return;
+    setAssistantCallnameAskState(prev => {
+      const all = { ...prev, [id]: { asked: false, offeredAt: 0, ...(prev[id] || {}), ...patch } };
+      try { storeSet(ASSISTANT_CALLNAME_ASK_KEY, all, false); } catch {}
+      return all;
+    });
   }, []);
   // 吹き出しへ配る値。画面側は <AssistantBubble scene="…"/> のままでよい
   const assistantBondValue = useMemo(() => ({
@@ -19144,7 +19194,24 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           return <AssistantChatWindow assistant={activeAssistant} playerName={breederName}
             callName={assistantCallName(breederName,lv,assistantCallStyles[id]||null,id)}
             bondLevel={lv} bondTitle={stage.title||''} bondTone={stage.tone||''}
+            callnameKit={RELEASE_FLAGS.assistantCallname===true?{
+              current:(assistantCallnames[id]&&assistantCallnames[id].call)||null,
+              prev:(assistantCallnames[id]&&assistantCallnames[id].prev)||null,
+              customStyle:assistantCallStyles[id]||null,
+              nick:(assistantNicknames[id]&&assistantNicknames[id].nick)||null,
+              asked:!!(assistantCallnameAsk[id]&&assistantCallnameAsk[id].asked),
+              offeredAt:(assistantCallnameAsk[id]&&assistantCallnameAsk[id].offeredAt)||0,
+              fill:(t)=>assistantFillCallTemplate(assistantGenderCallOf(t,id),breederName),
+              setCall:(call,by)=>{const g=setAssistantCallnameFor(id,call,by);if(g)setCallnameToast({id,text:`${activeAssistant.name}の呼び方：${assistantFillCallTemplate(g,breederName)}`});return g;},
+              setNick:(nick)=>setAssistantNicknameFor(id,nick),
+              markAsk:(patch)=>markAssistantCallnameAsk(id,patch),
+            }:null}
             onExchange={()=>addAssistantBondFor(id,'chat')} onClose={()=>setAssistantChatOpen(false)}/>;
+        })()}
+        {/* 呼び方が決まったあと、つぎの画面で1回だけ出す知らせ(2026-11-08)。🔄横では回した器の中へ出す */}
+        {callnameToast&&!assistantChatOpen&&typeof AssistantCallnameToast==='function'&&(()=>{
+          const who=ASSISTANT_LIST.find(a=>a.id===callnameToast.id);
+          return who?<AssistantCallnameToast key={callnameToast.id+callnameToast.text} assistant={who} text={callnameToast.text} screen={gameState} onDone={()=>setCallnameToast(null)}/>:null;
         })()}
 
         {/* 助手どうしの掛け合い(2026-11-07)。HOME・マーケット・モンヒロビート・マスモン一覧・MFバトルカードの入口で、ときどき2人が話す。
@@ -21747,7 +21814,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             wornCostume={assistantCostumeWornFor(selectedAssistantId)}
             onOpenCostumePicker={()=>{setCostumeAssistantId(selectedAssistantId);setShowCostumePicker(true);}}
             onOpenItems={()=>setGameState('ITEM_INVENTORY')}
-            onOpenCallStylePicker={()=>{setTempCallStyle(assistantCallStyle||'');setShowCallStylePicker(true);}}
+            talkedCallname={(assistantCallnames[selectedAssistantId]&&assistantCallnames[selectedAssistantId].call)||null}
+            onOpenCallStylePicker={()=>{setTempCallStyle((assistantCallnames[selectedAssistantId]&&assistantCallnames[selectedAssistantId].call)||assistantCallStyle||'');setShowCallStylePicker(true);}}
             onOpenAssistantPicker={()=>setShowAssistantPicker(true)}
             onSelectBattleMode={setProfileBattleMode}
             onOpenEventReplayList={()=>{setEventReplayGroupId(null);setShowEventReplayList(true);}}
@@ -22709,6 +22777,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
             <div className="bg-slate-900 rounded-3xl p-6 w-full max-w-xs shadow-2xl" style={{border:`1px solid ${activeAssistant.accent}`}}>
               <h3 className="text-lg font-black text-white mb-1 text-center">{activeAssistant.name}の呼び方</h3>
+              {/* 会話で決めた呼び方・助手のあだ名(2026-11-08)。Lv6 より前でもここで外せる。外すのは新しいキーの行だけ */}
+              {(()=>{const talked=assistantCallnames[selectedAssistantId]&&assistantCallnames[selectedAssistantId].call;const nick=assistantNicknames[selectedAssistantId]&&assistantNicknames[selectedAssistantId].nick;
+                if(!talked&&!nick)return null;
+                return(<div data-callname-profile className="mb-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/40 p-2.5">
+                  {talked&&<div className="flex items-center gap-2"><p className="min-w-0 flex-1 text-[11px] font-bold leading-snug text-slate-300 [word-break:keep-all] [overflow-wrap:anywhere]">会話で決めた呼び方：<span className="font-black" style={{color:activeAssistant.accent}}>{assistantFillCallTemplate(talked,breederName)}</span></p>
+                    <button type="button" data-callname-reset onClick={()=>{setAssistantCallnameFor(selectedAssistantId,null,'chat');setTempCallStyle(assistantCallStyle||'');}} className="shrink-0 min-h-[36px] rounded-xl border border-slate-600 bg-slate-800 px-2.5 text-[10px] font-black text-slate-200 active:scale-95">元に戻す</button></div>}
+                  {nick&&<div className="flex items-center gap-2"><p className="min-w-0 flex-1 text-[11px] font-bold leading-snug text-slate-300 [word-break:keep-all] [overflow-wrap:anywhere]">{activeAssistant.name}のあだ名：<span className="font-black text-white">{nick}</span></p>
+                    <button type="button" data-nickname-reset onClick={()=>setAssistantNicknameFor(selectedAssistantId,null)} className="shrink-0 min-h-[36px] rounded-xl border border-slate-600 bg-slate-800 px-2.5 text-[10px] font-black text-slate-200 active:scale-95">外す</button></div>}
+                </div>);})()}
+              {assistantBondLevelNow>=ASSISTANT_CALL_STYLE_UNLOCK_LEVEL?(<>
               <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">絆Lv6になったので、呼び方を自由に決められます。「{'{name}'}」と書くと、そこがあなたの名前に置き換わります。</p>
               <input type="text" value={tempCallStyle} onChange={e=>setTempCallStyle(e.target.value)} maxLength={(typeof ASSISTANT_CALL_STYLE_MAX_LEN!=='undefined'&&ASSISTANT_CALL_STYLE_MAX_LEN)||16} placeholder={`例: {name}さん`} className="w-full bg-black/50 border border-slate-700 rounded-xl p-3 text-white font-bold text-center mb-2"/>
               <div className="flex flex-wrap gap-1.5 justify-center mb-4">
@@ -22722,6 +22800,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <button onClick={()=>{chooseAssistantCallStyle(tempCallStyle);setShowCallStylePicker(false);}} className="flex-1 text-white py-3 rounded-xl font-black text-xs" style={{backgroundColor:activeAssistant.accent}}>保存</button>
               </div>
               <button onClick={()=>{chooseAssistantCallStyle('');setTempCallStyle('');setShowCallStylePicker(false);}} className="w-full text-[10px] text-slate-500 font-bold py-1 active:scale-95">絆Lvの呼び方に戻す</button>
+              </>):(
+                <button onClick={()=>setShowCallStylePicker(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
+              )}
             </div>
           </div>
         )}

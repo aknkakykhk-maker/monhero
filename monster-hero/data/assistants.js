@@ -1216,13 +1216,218 @@ const assistantCallName = (name, level, customCall, assistantId) => {
   const raw = String(name || '').trim();
   if (!raw) return ASSISTANT_NO_NAME;
   const lv = Number.isFinite(level) ? level : ASSISTANT_BOND_MIN_LEVEL;
+  // 会話で決めた呼び方(2026-11-08)がいちばん先。Lv に関係なく使う(Lv1 から「こう呼んで」と言えるため)
+  const talked = (typeof assistantCallnameOf === 'function' && assistantId) ? assistantCallnameOf(assistantId) : null;
+  if (talked) return talked.includes('{name}') ? assistantFillCallTemplate(talked, raw) : talked;
   const custom = (lv >= ASSISTANT_CALL_STYLE_UNLOCK_LEVEL && typeof customCall === 'string') ? customCall.trim() : '';
   if (custom) return custom.includes('{name}') ? assistantFillCallTemplate(custom, raw) : custom;
   const stage = assistantBondStageByLevel(lv, assistantId);
   return assistantFillCallTemplate(assistantGenderCallOf(stage.call || '{name}', assistantId), raw);
 };
+// ---------- 会話で決まる呼び方・プレイヤーから助手へのあだ名(2026-11-08 社長・AI-TALK-PLAN) ----------
+// 保存は新しいキーだけ。今の mh_assistant_call_style_* は読むだけ(下地)で、書きかえない・消さない。
+//   mh_assistant_callname_v1     … { [助手id]: { call:'{name}ちゃん'|'あっちゃん', by:'chat'|'offer'|'ask'|'profile', at:ミリ秒, prev:1つ前|null } }
+//   mh_assistant_callname_ask_v1 … { [助手id]: { asked:true|false, offeredAt:ミリ秒 } }(Lv6の「なんて呼んだらいい？」を聞いたか・持ちかけた日)
+//   mh_assistant_nickname_v1     … { [助手id]: { nick:'みゅあたん', at:ミリ秒 } }(プレイヤーが助手を呼ぶあだ名。おしゃべりの中だけで使う)
+// 決まる順: 新しい呼び方 → Lv6 からの呼び方(今のキー) → 段の呼び方(性別込み)。プロフィールの入力欄で決めたものも新しい呼び方へ入れる(最後に決めたものが使われる)
+const ASSISTANT_CALLNAME_KEY = 'mh_assistant_callname_v1';
+const ASSISTANT_CALLNAME_ASK_KEY = 'mh_assistant_callname_ask_v1';
+const ASSISTANT_NICKNAME_KEY = 'mh_assistant_nickname_v1';
+const ASSISTANT_CALLNAME_FILLED_MAX = 12;      // 名前を入れたあとの長さ(吹き出しで切れないため)
+const ASSISTANT_NICKNAME_MAX = 10;
+const ASSISTANT_CALLNAME_ASK_LEVEL = ASSISTANT_CALL_STYLE_UNLOCK_LEVEL; // 助手から聞くのは今と同じ Lv6 から(社長)
+const ASSISTANT_CALLNAME_SHY_MAX_LEVEL = 2;    // Lv1〜2 は性格によって断ることがある。Lv3 からは断らない(社長)
+const ASSISTANT_CALLNAME_OFFER_DAYS = 7;       // 会話の流れで助手から持ちかけるのは、助手ごとに7日に1回まで
+// 呼び方・あだ名に入れない言葉。中継役(supabase/functions/assistant-chat/core.js の CALLNAME_BANNED_SOURCE)と同じ並び(検査が見張る)
+const ASSISTANT_CALLNAME_BANNED_SOURCE = 'ダーリン|ハニー|ベイビー|ベイベ|彼氏|彼女|カレシ|カノジョ|旦那|だんな|ダンナ|嫁|奥さん|ご主人|恋人|こいびと|あなた様|バカ|ばか|馬鹿|アホ|あほ|クズ|カス|ブス|デブ|ハゲ|ゴミ|ごみ|ザコ|ざこ|雑魚|死|殺|うんこ|うんち|ちんこ|ちんちん|まんこ|おっぱい|エロ|えろ|変態|へんたい|童貞|キモ|きもい|ガイジ|池沼|奴隷|どれい|ペット|下僕|本名|この子|うちの子|その子|あの子';
+const ASSISTANT_CALLNAME_BANNED_RE = new RegExp(ASSISTANT_CALLNAME_BANNED_SOURCE, 'i');
+// 個人情報らしいもの(電話・メール・郵便番号・URL・数字の並び)
+const ASSISTANT_CALLNAME_PERSONAL_RE = /\d{4,}|[0-9０-９]{4,}|@|https?:|www\.|〒|[-‐ー−]\d{3,}/;
+// 呼び方の型を確かめる。通れば保存してよい形('{name}' 入りか、名前を含まない呼び方)、通らなければ null
+const assistantCallnameGuard = (raw, playerName) => {
+  let t = String(raw == null ? '' : raw).normalize('NFKC').trim();
+  if (!t) return null;
+  const name = String(playerName || '').trim();
+  // AI が名前をそのまま書いてきたら {name} に戻す(名前を変えたときも呼び方が追いつくように)
+  if (name && !t.includes('{name}') && t.includes(name)) t = t.replace(name, '{name}');
+  if (/[<>\[\]\\`"]/.test(t.replace('{name}', ''))) return null;
+  if ((t.match(/\{name\}/g) || []).length > 1 || /[{}]/.test(t.replace('{name}', ''))) return null;
+  if (/\s/.test(t)) return null;
+  if (t.length > ASSISTANT_CALL_STYLE_MAX_LEN) return null;
+  const filled = t.replace('{name}', name || 'キミ');
+  if (filled.length > ASSISTANT_CALLNAME_FILLED_MAX && t !== '{name}') return null;
+  const body = t.replace('{name}', '');
+  if (ASSISTANT_CALLNAME_BANNED_RE.test(body) || ASSISTANT_CALLNAME_PERSONAL_RE.test(body)) return null;
+  // 名前だけでも、名前そのものに悪い言葉が入っていることはあるので、入れたあとでも見る(名前はプレイヤーが決めたものなので、名前だけの '{name}' は通す)
+  if (t !== '{name}' && ASSISTANT_CALLNAME_BANNED_RE.test(filled.replace(name, ''))) return null;
+  return t;
+};
+const assistantNicknameGuard = (raw) => {
+  const t = String(raw == null ? '' : raw).normalize('NFKC').trim();
+  if (!t || /\s|[<>{}\[\]\\`"]/.test(t) || t.length > ASSISTANT_NICKNAME_MAX) return null;
+  if (ASSISTANT_CALLNAME_BANNED_RE.test(t) || ASSISTANT_CALLNAME_PERSONAL_RE.test(t)) return null;
+  return t;
+};
+// 保存値をそろえる(無い・壊れているときは空。見張りを通らない値は捨てる)
+const normalizeAssistantCallnames = (raw) => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [id, v] of Object.entries(raw)) {
+    if (!v || typeof v !== 'object' || typeof v.call !== 'string') continue;
+    const call = assistantCallnameGuard(v.call, '');
+    if (!call) continue;
+    const prev = typeof v.prev === 'string' ? assistantCallnameGuard(v.prev, '') : null;
+    out[id] = { call, by: ['chat', 'offer', 'ask', 'profile'].includes(v.by) ? v.by : 'chat', at: Number.isFinite(v.at) ? v.at : 0, prev: prev || null };
+  }
+  return out;
+};
+const normalizeAssistantCallnameAsk = (raw) => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [id, v] of Object.entries(raw)) {
+    if (!v || typeof v !== 'object') continue;
+    out[id] = { asked: v.asked === true, offeredAt: Number.isFinite(v.offeredAt) ? v.offeredAt : 0 };
+  }
+  return out;
+};
+const normalizeAssistantNicknames = (raw) => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [id, v] of Object.entries(raw)) {
+    const nick = v && typeof v === 'object' ? assistantNicknameGuard(v.nick) : null;
+    if (nick) out[id] = { nick, at: Number.isFinite(v.at) ? v.at : 0 };
+  }
+  return out;
+};
+// いま使う新しい呼び方(画面側が読み込んだら入れる。性別と同じ形で、assistantCallName が先に見る)
+let assistantCallnamesNow = {};
+const assistantSetCallnames = (v) => { assistantCallnamesNow = normalizeAssistantCallnames(v); return assistantCallnamesNow; };
+const assistantCallnameOf = (assistantId) => (assistantCallnamesNow[assistantId] && assistantCallnamesNow[assistantId].call) || null;
+// Lv1〜2 で「こう呼んで」を断るか(性格しだい)。日と助手で決まるので、同じ日に何度頼んでも答えは同じ。Lv3 からは断らない
+//   断る割合: みゅあ・ドラはノリで受ける(0)/ききは「まだ早いでつ」/もも・あつは照れ/きゅうこ・ソラシド・えるびんは慎重め
+const ASSISTANT_CALLNAME_SHY_RATE = Object.freeze({ mua: 0, dra: 0, kiki: 0.6, momosuke: 0.35, atsu: 0.35, kyuko: 0.5, sorashido: 0.3, erubin: 0.5 });
+const assistantCallnameShy = (assistantId, level, dayKey) => {
+  if (!(Number(level) <= ASSISTANT_CALLNAME_SHY_MAX_LEVEL)) return false;
+  const rate = ASSISTANT_CALLNAME_SHY_RATE[assistantId] ?? 0.3;
+  if (rate <= 0) return false;
+  let h = 2166136261; const s = `callname|${assistantId}|${dayKey || ''}`;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  h ^= h >>> 15; h = Math.imul(h, 2246822507) >>> 0; h ^= h >>> 13;
+  return ((h >>> 0) % 10000) / 10000 < rate;
+};
+// 台本(API が止まっているとき・端末の読み取りで出すとき、Lv6 で聞くとき)。{call} = 新しい呼び方(名前入り)、{nick} = あだ名、{name} = いまの呼び方
+// ★みゅあは「ぢゃん」「まぢ」、ききは敬語(ときどき「でつ」「まつ」)、あつは文末に必ず笑・顔文字・記号
+const ASSISTANT_CALLNAME_LINES = Object.freeze({
+  mua: {
+    ask: ['ねえねえ、仲良くなったし……{name}のこと、これからなんて呼んだらいい？ 好きなの選んでもいいし、書いてくれてもOKだよ♪'],
+    confirm: ['えっ、「{call}」って呼んでほしいの？ いいぢゃん、呼んでみたい♪'],
+    accept: ['じゃあ……{call}！ ふふ、なんか照れるけど、うれしいかも♪'],
+    keep: ['りょーかい！ いまのまま{name}って呼ぶね♪'],
+    shy: ['えへへ、まだちょっと照れちゃうかも！ もっと仲良くなったら、そう呼ばせてね♪'],
+    nickConfirm: ['あたしのこと「{nick}」って呼びたいの？ かわいいぢゃん♪'],
+    nickAccept: ['「{nick}」……うん、気に入った！ これからそう呼んでね♪'],
+    nickShy: ['えー、まだ照れるってば！ もうちょっと仲良くなってからね♪'],
+  },
+  kiki: {
+    ask: ['あの……ずいぶん仲良くなれた気がするので、{name}のこと、これからどうお呼びしたらいいでしょう？ 選んでも、書いてくださってもいいですよ。'],
+    confirm: ['「{call}」とお呼びしてもいいんですか？ ……うれしいです。'],
+    accept: ['では……{call}。ふふ、少し照れまつね。これからもよろしくお願いします。'],
+    keep: ['わかりました。いまのまま{name}とお呼びしますね。'],
+    shy: ['ふふ、まだちょっと早い気がしまつ……。もう少し仲良くなれたら、そう呼ばせてくださいね。'],
+    nickConfirm: ['私のことを「{nick}」と呼んでくださるんですか？'],
+    nickAccept: ['「{nick}」……なんだか新鮮です。どうぞ、そう呼んでくださいね。'],
+    nickShy: ['ええと……それはまだ照れてしまいまつ。もう少しあとで、お願いしますね。'],
+  },
+  momosuke: {
+    ask: ['ねえねえ、ももたちもう仲良しじゃん！ {name}のこと、なんて呼んだらいい？ 選んでも書いてもいいよ！！'],
+    confirm: ['「{call}」って呼んでいいの？ まじで？ やったー！！'],
+    accept: ['{call}！ よーし、ももはこれからそう呼ぶからね！！w'],
+    keep: ['おっけー！ いまのまま{name}でいくね！'],
+    shy: ['えーっ、まだ早くない？w もうちょっと仲良くなったら呼んであげる！！'],
+    nickConfirm: ['もものこと「{nick}」って呼びたいの？ ふーん、いいセンスじゃん！'],
+    nickAccept: ['「{nick}」ね！ 気に入った！！ いっぱい呼んでいいよw'],
+    nickShy: ['えーっ、それはまだ照れるってw もうちょっと仲良くなってからね！！'],
+  },
+  dra: {
+    ask: ['なあ、おでたち結構仲良くなったよな。{name}のこと、これからなんて呼べばいい？ 選んでも書いてもいいぞ'],
+    confirm: ['「{call}」って呼んでいいのか？ いいね、そうしよう'],
+    accept: ['よし、{call}な。おで、ちゃんと覚えたからな'],
+    keep: ['わかった。いまのまま{name}って呼ぶわ'],
+    shy: ['お、おう……まだちょっと照れるな。もう少し仲良くなったら呼ばせてくれよ'],
+    nickConfirm: ['おでのこと「{nick}」って呼びたいのか？'],
+    nickAccept: ['「{nick}」か。悪くないな、そう呼んでくれていいぞ'],
+    nickShy: ['いやー、それはまだ照れるわ。もう少しあとでな'],
+  },
+  atsu: {
+    ask: ['てか、もう結構仲いいよね笑 {name}のこと、これからなんて呼べばいい？ 選んでも書いてもいいよ！'],
+    confirm: ['「{call}」って呼んでいいの？ まじで？笑'],
+    accept: ['じゃあ{call}で！ 俺もちゃんと覚えたよ笑'],
+    keep: ['おけ！ いまのまま{name}って呼ぶね笑'],
+    shy: ['いや、それはまだ照れるって笑 もうちょっと仲良くなったら呼ぶわ！'],
+    nickConfirm: ['俺のこと「{nick}」って呼びたいの？笑'],
+    nickAccept: ['「{nick}」ね、いいじゃん笑 そう呼んでよ！'],
+    nickShy: ['いやいや、まだ照れるって笑 もうちょっとあとでね！'],
+  },
+  kyuko: {
+    ask: ['ねぇ、だいぶ仲良くなったよね笑 {name}のこと、これからなんて呼んだらいいかなぁ？ 選んでも書いてもいいよ'],
+    confirm: ['「{call}」って呼んでいいの？ ありがとうございます笑'],
+    accept: ['じゃあ{call}で。ちゃんと覚えたよw'],
+    keep: ['おけ〜、いまのまま{name}って呼ぶね笑'],
+    shy: ['んー、まだちょっと早いかなぁ笑 もう少し仲良くなったら呼ばせてね'],
+    nickConfirm: ['俺のこと「{nick}」って呼びたいの？w'],
+    nickAccept: ['「{nick}」ね、いいと思う笑 そう呼んでいいよ'],
+    nickShy: ['それはまだ照れるなぁw もうちょっとあとでね'],
+  },
+  sorashido: {
+    ask: ['なあ、だいぶ仲良くなったよな笑 {name}のこと、これからなんて呼べばいい？ 選んでも書いてもいいぜ'],
+    confirm: ['「{call}」って呼んでいいのか!? うぉぉぉ、いいね笑'],
+    accept: ['よし、{call}な！ 俺の頭にしっかり刻んだぜ・・・！'],
+    keep: ['了解！ いまのまま{name}って呼ぶわ笑'],
+    shy: ['いや、まだちょっと照れるって笑 もうちょい仲良くなったら呼ばせてくれ！'],
+    nickConfirm: ['俺のこと「{nick}」って呼びたいのか？笑'],
+    nickAccept: ['「{nick}」か……悪くないぜ・・・！ そう呼んでくれ笑'],
+    nickShy: ['それはまだ照れるわ笑 もうちょいあとでな！'],
+  },
+  erubin: {
+    ask: ['だいぶ仲良くなれたよね。{name}のこと、これからなんて呼んだらいいかな？ 選んでも書いてもいいよ'],
+    confirm: ['「{call}」って呼んでいいのかな？ うれしいね'],
+    accept: ['じゃあ{call}って呼ぶね。そういうことです笑'],
+    keep: ['わかった、いまのまま{name}って呼ぶね'],
+    shy: ['うーん、まだちょっと早いかなって思うんだよね。もう少し仲良くなったら、そう呼ばせてね'],
+    nickConfirm: ['俺のこと「{nick}」って呼びたいのかな？'],
+    nickAccept: ['「{nick}」か、いいね。そう呼んでもらえるとうれしいよ笑'],
+    nickShy: ['それはまだ照れちゃうかな笑 もう少しあとでね'],
+  },
+});
+const assistantCallnameLine = (assistantId, kind) => {
+  const set = ASSISTANT_CALLNAME_LINES[assistantId] || ASSISTANT_CALLNAME_LINES.mua;
+  const list = set[kind] || ASSISTANT_CALLNAME_LINES.mua[kind] || [''];
+  return list[Math.floor(Math.random() * list.length)] || '';
+};
+// 候補のボタン(Lv6 で聞くとき)。その助手の選べる呼び方の例・性別の くん/ちゃん から3つ(いまの呼び方と同じものは外す)
+const assistantCallnameChoices = (assistantId, currentTemplate) => {
+  const pool = [
+    ...assistantCallStylesOf(assistantId).map(s => s.template),
+    assistantGenderCallOf('{name}', assistantId, 'male'), assistantGenderCallOf('{name}', assistantId, 'female'),
+    '{name}ちゃん', '{name}くん', '{name}',
+  ];
+  const seen = new Set([currentTemplate]);
+  return pool.filter(t => typeof t === 'string' && !seen.has(t) && seen.add(t)).slice(0, 4);
+};
+// 端末の読み取り(AI の印が無いとき・API が止まっているとき)。「◯◯って呼んで」=呼び方 /「◯◯って呼んでいい？」=助手のあだ名 /「前の呼び方に戻して」
+const assistantCallnameDetect = (text) => {
+  const s = String(text || '').normalize('NFKC');
+  if (/(前|まえ|元|もと)の呼び方に(戻|もど)して/.test(s)) return { kind: 'reset' };
+  const q = '[「『]?([^「」『』、。!?！？\\s]{1,12}?)[」』]?';
+  const nick = s.match(new RegExp(`(?:きみ|キミ|君|あなた|お前|おまえ)?(?:のこと)?(?:を)?${q}(?:って|と)(?:呼|よ)んで(?:も)?(?:いい|良い)`));
+  if (nick) return { kind: 'nick', value: nick[1] };
+  const call = s.match(new RegExp(`(?:これから|今度から|次から)?(?:は)?(?:俺|おれ|僕|ぼく|私|わたし|あたし|うち|自分)?(?:のこと)?(?:を|は)?${q}(?:って|と)(?:呼|よ)(?:んで(?:ほしい|欲しい|くれ|ね|よ|！|!|$)|んでください|んで$)`));
+  if (call) return { kind: 'call', value: call[1] };
+  return null;
+};
+
 // セリフの中の {name} を、そのときの呼び方へ置き換える
-const assistantSpeak = (text, name, level, customCall, assistantId) =>
+const assistantSpeak =(text, name, level, customCall, assistantId) =>
   String(text == null ? '' : text).replace(/\{name\}/g, assistantCallName(name, level, customCall, assistantId));
 
 // 仲良し度が増える行動。1日に増える量は行動ごとと合計の両方で頭打ちにする。
