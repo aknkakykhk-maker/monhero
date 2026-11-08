@@ -65,6 +65,9 @@ const seed = ({ storyIds }) => {
       await page.waitForTimeout(200);
     }
     await page.waitForTimeout(600);
+    // お話の頭の題の札(「タップで始まります」・data-story-opening-card)は、数秒で消えるか押すと消える演出。窓のボタンの上に重なるので、
+    // 消えるのを待ってから測る(共通の種でハロウィン・ナイト終章の流し直しを済みにすると、回想でも札が出る。2026-11-08 ミハリ)
+    for (let i = 0; i < 20 && await page.locator('[data-story-opening-card]').count(); i++) { await page.locator('[data-story-opening-card]').first().click({ timeout: 500 }).catch(() => {}); await page.waitForTimeout(250); }
     let worst = { over: -1e9 }, at38 = null, total = 0, miss = null;
     for (let i = 0; i < 80; i++) {
       const m = await page.evaluate(() => {
