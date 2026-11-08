@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 34e2b51fa9225b6a
+// source-sha256: 25d1a2f03dc3748c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -105837,7 +105837,8 @@ function AssistantLifeHouse({
     } catch {}
   };
   const unwatched = (life.groups || []).filter(g => !(life.watched || []).includes(assistantLifeGroupKey(g)));
-  const lonely = Object.entries(life.solo || {}).find(([, s]) => s.reason === 'lonely');
+  const awayFriend = id => typeof assistantLifeFriendAwayOf === 'function' && !!assistantLifeFriendAwayOf(id);
+  const lonely = Object.entries(life.solo || {}).find(([id, s]) => s.reason === 'lonely' && !awayFriend(id));
   const beatIds = ids.filter(id => {
     const w = assistantLifeWhereOf(life, id);
     return w && w.doing === 'practice';
@@ -105860,9 +105861,9 @@ function AssistantLifeHouse({
     type: "button",
     className: "mhl-tile mhl-call flex-1",
     "data-assistant-life-today-act": "call",
-    disabled: !Object.keys(life.solo || {}).length,
+    disabled: !Object.keys(life.solo || {}).filter(id => !awayFriend(id)).length,
     onClick: () => {
-      const id = lonely ? lonely[0] : Object.keys(life.solo || {})[0];
+      const id = lonely ? lonely[0] : Object.keys(life.solo || {}).filter(id => !awayFriend(id))[0];
       if (id) setRoomId(id);
     }
   }, React.createElement("em", null, "無料"), React.createElement("i", null, "💬"), React.createElement("b", null, "声をかける"), React.createElement("small", {
@@ -120950,12 +120951,17 @@ function AssistantLifeFriendHomeBadge({
       left: rect.x + rect.w - 14,
       top: rect.y - 8
     }
-  }, "🏘 ", n), toast && React.createElement("div", {
-    className: "pointer-events-none fixed left-1/2 max-w-[92vw] -translate-x-1/2 truncate rounded-full border border-sky-200/60 bg-slate-950/90 px-3 py-1 text-[11.5px] font-black text-sky-50 shadow-lg",
+  }, "🏘 ", n), toast && rect && React.createElement("div", {
+    className: "pointer-events-none fixed whitespace-nowrap rounded-full border border-sky-200/60 bg-slate-950/90 px-2.5 text-[11px] font-black leading-[20px] text-sky-50 shadow-lg",
     "data-alf-toast": true,
     style: {
       zIndex: 60,
-      top: 'calc(64px + env(safe-area-inset-top))'
+      top: Math.max(4, rect.y - 26),
+      ...(rect.right ? {
+        right: Math.max(4, (typeof window !== 'undefined' ? window.innerWidth : 390) - rect.x - rect.w)
+      } : {
+        left: Math.max(4, rect.x)
+      })
     }
   }, toast));
 }

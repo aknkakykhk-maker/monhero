@@ -120,6 +120,9 @@ const badgeProblems = (page) => page.evaluate(() => {
       await waitFaces(page);
       await page.locator('[data-alf-badge]').waitFor({ timeout: 8000 }).catch(() => {});
       { const ng = await badgeProblems(page); check(`① HOME の「🏘 n」が札の右上にあり、字・顔・ほかの札に重ならない(${v.w}×${v.h})`, ng.length === 0, ng.join(' / ')); }
+      { await page.evaluate(() => { const s = ALF_STORE.state; ALF_STORE.set({ st: { ...s.st, seen: [] }, visits: s.visits.map(x => x) }); });
+        const ng = await page.evaluate(async () => { for (let i = 0; i < 30 && !document.querySelector('[data-alf-toast]'); i++) await new Promise(r => setTimeout(r, 100)); const t = document.querySelector('[data-alf-toast]'); if (!t) return ['帯が出ない(この場では出なくてもよい)']; const r = t.getBoundingClientRect(); const hit = (a, c) => Math.min(a.right, c.right) - Math.max(a.left, c.left) > 1 && Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top) > 1; const out = []; if (r.left < 0 || r.right > window.innerWidth || r.top < 0) out.push('帯が画面の外'); for (const o of document.querySelectorAll('.mh-home-facility>span,.mh-home-card-battle,.mh-home-assistant,.mh-home-mission,.mh-home-gift,.mh-home-event-badge,.mh-home-event-banner,.mh-home-player,[data-assistant-life-home-faces] > div')) if (o.offsetParent && hit(r, o.getBoundingClientRect())) out.push(`帯が重なる(${(o.className || '').toString().split(' ')[0] || 'faces'})`); return out; });
+        check(`① HOME の帯は札のすぐ上に出て、吹き出し・札・顔に重ならない(${v.w}×${v.h})`, ng.length === 0 || /出ない/.test(ng[0]), ng.join(' / ')); }
       { const ng = await homeFacesProblems(page); check(`① 顔の列も今のまま崩れない(${v.w}×${v.h})`, ng.length === 0, ng.join(' / ')); }
       check(`① 印は見ていない置き手紙の数(2)`, /🏘 2/.test(await page.locator('[data-alf-badge]').innerText().catch(() => '')));
       await shot(page, `${v.id}-1-home`);
@@ -131,6 +134,7 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.waitForTimeout(300);
       const tag = await page.locator('[data-assistant-life-room-away="atsu"]').innerText().catch(() => '');
       check(`④ 部屋の札「🏘 あおいさんの家へ」(${v.id})`, /🏘 あおいさんの家へ/.test(tag), tag.replace(/\n/g, ' '));
+      { const sub = await page.locator('[data-assistant-life-today-sub]').innerText().catch(() => ''); check(`④ 出かけている助手を「声をかける」の相手にしない(${v.id})`, !/あつ/.test(sub), sub); }
       { const ng = await page.evaluate(() => { const el = document.querySelector('[data-assistant-life-room-away="atsu"] b'); if (!el) return ['札が無い']; const r = el.getBoundingClientRect(); const room = el.closest('[data-assistant-life-room]').getBoundingClientRect(); return [...(el.getClientRects().length > 1 ? ['札の字が折れる'] : []), ...(r.right > room.right + 1 || r.left < room.left - 1 ? ['札の字が部屋からはみ出す'] : []), ...(el.scrollWidth > el.clientWidth + 1 ? ['札の字が切れる'] : [])]; }); check(`④ 札の字が折れない・切れない(${v.id})`, ng.length === 0, ng.join(' / ')); }
       await shot(page, `${v.id}-2-room-tag`);
       await page.locator('[data-assistant-life-icon="visit"]').click();

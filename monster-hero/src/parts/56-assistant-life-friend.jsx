@@ -884,7 +884,8 @@ const assistantLifeFriendDecorateRooms = (rooms) => {
   return rooms;
 };
 // HOME: 施設「🏡 助手ライフ」の札の右上に「🏘 n」(札の字にかからないよう、札の角の外側に半分出す)。
-//   新しい置き手紙・来ている助手が増えたら、HOME の上に1行の帯を3秒(HOME だけ。演奏中・バトル中などには出さない)
+//   新しい置き手紙・来ている助手が増えたら、札のすぐ上に1行の帯を3秒(HOME だけ。演奏中・バトル中などには出さない。
+//   画面の上に出すと助手の吹き出しの名前に重なった・2026-11-08 ミハリ)
 function AssistantLifeFriendHomeBadge({ rect }) {
   const s = useAssistantLifeFriendState();
   const [toast, setToast] = React.useState('');
@@ -906,6 +907,7 @@ function AssistantLifeFriendHomeBadge({ rect }) {
   if (!n && !toast) return null;
   return (<>
     {n > 0 && rect && <span className="pointer-events-none fixed rounded-full border border-white/70 bg-sky-300 px-1 text-[9.5px] font-black leading-[15px] text-slate-950 shadow" data-alf-badge style={{ zIndex: 41, left: rect.x + rect.w - 14, top: rect.y - 8 }}>🏘 {n}</span>}
-    {toast && <div className="pointer-events-none fixed left-1/2 max-w-[92vw] -translate-x-1/2 truncate rounded-full border border-sky-200/60 bg-slate-950/90 px-3 py-1 text-[11.5px] font-black text-sky-50 shadow-lg" data-alf-toast style={{ zIndex: 60, top: 'calc(64px + env(safe-area-inset-top))' }}>{toast}</div>}
+    {toast && rect && <div className="pointer-events-none fixed whitespace-nowrap rounded-full border border-sky-200/60 bg-slate-950/90 px-2.5 text-[11px] font-black leading-[20px] text-sky-50 shadow-lg" data-alf-toast
+      style={{ zIndex: 60, top: Math.max(4, rect.y - 26), ...(rect.right ? { right: Math.max(4, (typeof window !== 'undefined' ? window.innerWidth : 390) - rect.x - rect.w) } : { left: Math.max(4, rect.x) }) }}>{toast}</div>}
   </>);
 }
