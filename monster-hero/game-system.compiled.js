@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 191c0bb819fd504b
+// source-sha256: 71bf3adc8b5a7d01
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13733,7 +13733,7 @@ const RELEASE_FLAGS = {
   assistantKyuko: true,
   assistantPeer: true,
   assistantPeerApi: true,
-  assistantCallname: false,
+  assistantCallname: true,
   assistantLife: true,
   assistantLifeFurniture: true,
   assistantLifeFriend: true,
@@ -13743,6 +13743,7 @@ const RELEASE_FLAGS = {
   assistantErubin: true,
   cardBattle: true,
   cardAssistantTalk: true,
+  cardGrowStyle: false,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   tacticsHate: true,
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE,
@@ -87914,7 +87915,10 @@ function FriendsScreen({
       }, React.createElement(CardShareDeckActions, {
         breederId: selected.otherId,
         onGo: onCardShareGo
-      })), fold('overview', '遊んだ記録'), profileTab === 'overview' && React.createElement(React.Fragment, null, React.createElement("div", {
+      })), typeof AssistantLifeFriendProfileVisit === 'function' && React.createElement(AssistantLifeFriendProfileVisit, {
+        friendId: selected.otherId,
+        friendName: look.userName
+      }), fold('overview', '遊んだ記録'), profileTab === 'overview' && React.createElement(React.Fragment, null, React.createElement("div", {
         className: `${SCREEN_PANEL_FLAT_CLASS} mt-1`
       }, !sum && React.createElement("p", {
         className: "text-[11px] font-bold text-slate-400"
@@ -105893,10 +105897,9 @@ function AssistantLifeRoomSheet({
     className: "col-span-2 rounded-2xl border-2 border-pink-300 bg-slate-950/95 px-3 py-2",
     "data-assistant-life-room-follow": follow.kind
   }, React.createElement("p", {
-    className: "text-[12px] font-bold leading-relaxed text-pink-50 [word-break:keep-all] [overflow-wrap:anywhere]"
-  }, who.name, "「", React.createElement(AssistantLifeChunks, {
-    text: follow.text
-  }), "」"), React.createElement("div", {
+    className: `${land ? 'text-[11px]' : 'text-[12px]'} font-bold leading-snug text-pink-50`,
+    style: JA_WRAP_STYLE
+  }, jaWrap(`${who.name}「${follow.text}」`)), React.createElement("div", {
     className: "mt-1.5 grid grid-cols-2 gap-1.5"
   }, React.createElement("button", {
     type: "button",
@@ -105932,7 +105935,7 @@ function AssistantLifeRoomSheet({
     "data-assistant-life-room-act": "give",
     disabled: !canGive,
     onClick: () => onGive(w.group)
-  }, "🎁 贈る"), onChat && React.createElement("button", {
+  }, "🎁 贈る"), onChat && !follow && React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-call col-span-2",
     "data-assistant-life-room-act": "chat",
@@ -122629,8 +122632,11 @@ const alfApiLineOk = (who, t) => {
   let x = String(t || '');
   if (who === 'mua') x = x.replace(/じゃん/g, 'ぢゃん').replace(/まじ/g, 'まぢ').replace(/マジ/g, 'マヂ');
   if (ALF_API_BODY_WORDS.test(x) || /(この|あの|その)子|子たち/.test(x)) return null;
-  if (who === 'atsu' && !/(笑|[！？!?…♪w]|[)）]|[\u3000-\u303f]?[\uff08(][^)）]*[)）])$/.test(x.trim())) return null;
-  if (who === 'dra' && /ほんま|やで|とる|とんだ|へん[。、！]|やろ|あかん/.test(x)) return null;
+  if (who === 'atsu') {
+    x = x.trim().replace(/。$/, '！');
+    if (!/(笑|[！？!?…♪w]|[)）]|[\u3000-\u303f]?[\uff08(][^)）]*[)）]|\p{Extended_Pictographic}\uFE0F?)$/u.test(x)) return null;
+  }
+  if (who === 'dra' && /ほんま|やで|っとる|っとん|とんだ|やろ(?!う)|あかん|へん[。、！]/.test(x)) return null;
   if (who === 'kiki' && /(だよ|だね|してよ|じゃん)([。！!？?♪]|$)/.test(x)) return null;
   if (who !== 'mua' && /ぢゃん|まぢ/.test(x)) return null;
   return x;
@@ -122899,6 +122905,63 @@ function AlfFriendHouseView({
     className: "mt-3 text-[10px] leading-snug text-slate-400"
   }, friend.name, "さんには、あなたが訪ねたことが置き手紙で届きます。相手のセーブや助手の仲良し度は変わりません。"))));
 }
+const alfVisitBlockedText = (friendId, name, s = ALF_STORE.state) => {
+  if (s.mode === 'off') return 'フレンドの家との行き来は、いまお休み中です。';
+  if (!s.settings.open) return '「🏘 フレンド」の設定で、行き来を切にしています。';
+  if (s.settings.muted.includes(friendId)) return 'この家は「来ないようにする」にしています。';
+  if (!alfOpenHouses('look').some(f => f.id === friendId)) return `${name || 'このフレンド'}さんが助手ライフを開くと遊びに行けます。`;
+  const can = assistantLifeFriendCanLook(friendId);
+  if (can === 'done') return '今日はこの家にもう遊びに行きました(朝4時に戻ります)。';
+  if (can === 'max') return '今日はもう遊びに行けません(朝4時に戻ります)。';
+  return can === 'ok' ? null : 'いまは遊びに行けません。';
+};
+function AssistantLifeFriendProfileVisit({
+  friendId,
+  friendName
+}) {
+  const s = useAssistantLifeFriendState();
+  const [open, setOpen] = React.useState(false);
+  React.useEffect(() => {
+    if (alfEnabled() && alfSafeOther(friendId)) void (async () => {
+      await ALF_STORE.load();
+      await alfFetchHouses();
+    })();
+  }, [friendId]);
+  if (!alfEnabled() || !alfSafeOther(friendId)) return null;
+  const blocked = s.ready ? alfVisitBlockedText(friendId, friendName, s) : '読み込んでいます…';
+  const house = blocked ? null : alfOpenHouses('look').find(f => f.id === friendId);
+  return React.createElement("div", {
+    className: "mt-2",
+    "data-alf-profile-visit": blocked ? 'blocked' : 'ok'
+  }, React.createElement("button", {
+    type: "button",
+    disabled: !house,
+    className: "min-h-[44px] w-full rounded-xl border-2 border-amber-300/70 bg-amber-300 px-3 text-[13px] font-black text-slate-950 active:scale-95 disabled:border-slate-600 disabled:bg-slate-800 disabled:text-slate-400",
+    "data-alf-profile-visit-go": true,
+    onClick: () => house && setOpen(true)
+  }, "🏘 家へ遊びに行く"), blocked && React.createElement("p", {
+    className: "mt-1 text-center text-[10.5px] font-bold leading-snug text-slate-400",
+    "data-alf-profile-visit-why": true
+  }, blocked), open && house && (typeof ReactDOM !== 'undefined' && ReactDOM.createPortal && typeof document !== 'undefined' ? ReactDOM.createPortal(React.createElement("div", {
+    className: "fixed inset-0",
+    style: {
+      zIndex: 70
+    },
+    "data-alf-profile-layer": true
+  }, React.createElement(AlfFriendHouseView, {
+    friend: house,
+    onClose: () => setOpen(false)
+  })), document.body) : React.createElement("div", {
+    className: "fixed inset-0",
+    style: {
+      zIndex: 70
+    },
+    "data-alf-profile-layer": true
+  }, React.createElement(AlfFriendHouseView, {
+    friend: house,
+    onClose: () => setOpen(false)
+  }))));
+}
 function AssistantLifeFriendPage({
   life
 }) {
@@ -122926,6 +122989,7 @@ function AssistantLifeFriendPage({
     "data-alf-page": "off"
   }, "🏘 フレンドの家との行き来は、いまお休み中です。");
   const houses = alfOpenHouses('look');
+  const waiting = s.roster.filter(f => !houses.some(h => h.id === f.id) && !s.settings.muted.includes(f.id)).slice(0, 30);
   const notes = assistantLifeFriendNotes(s);
   const openScene = async (kind, i) => {
     if (kind === 'out') {
@@ -123124,9 +123188,21 @@ function AssistantLifeFriendPage({
         setMenu(null);
       }
     }, "来ないようにする"));
-  }) : React.createElement("p", {
+  }) : !waiting.length && React.createElement("p", {
     className: `${card} text-[11px] text-slate-400`
-  }, "遊びに行けるフレンドの家はまだありません(フレンドが助手ライフを開くと、ここに並びます)。")), React.createElement("p", {
+  }, "遊びに行けるフレンドの家はまだありません(フレンドが助手ライフを開くと、ここに並びます)。"), waiting.map(f => React.createElement("div", {
+    key: f.id,
+    className: `${card} flex items-center gap-2 border-dashed border-slate-500/60`,
+    "data-alf-house-waiting": f.id
+  }, React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "truncate text-[12px] font-black text-slate-300"
+  }, f.name, "さんの家"), React.createElement("p", {
+    className: "text-[10px] leading-snug text-slate-300"
+  }, f.name, "さんが助手ライフを開くと遊びに行けます")), React.createElement("span", {
+    className: "shrink-0 rounded-xl border border-slate-500 bg-slate-800 px-2.5 py-1.5 text-[11px] font-black text-slate-300"
+  }, "🚪 まだ")))), React.createElement("p", {
     className: sec
   }, "⚙️ 行き来の設定"), React.createElement("div", {
     className: card,
@@ -126155,6 +126231,87 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   }
   return cardAiFillBind(db, st, scored[0].o, policy);
 };
+const CARD_AI_STYLE_IDS = Object.freeze(['attack', 'guard', 'normal']);
+const CARD_AI_STYLE_TUNE = Object.freeze({
+  attack: {
+    mul: {
+      attack: 1.3,
+      keepGuard: 0.75,
+      big: 1.1
+    }
+  },
+  guard: {
+    add: {
+      keepGuard: 0.3
+    },
+    mul: {
+      attack: 0.95
+    }
+  }
+});
+const CARD_AI_STYLE_NAMES = Object.freeze({
+  mua: 'キラキラ速攻',
+  kiki: 'ずっしり火力',
+  momosuke: 'ステージ・オン',
+  dra: 'のんびり長期戦',
+  atsu: '真っ向勝負',
+  kyuko: '夜の読み筋',
+  sorashido: '計算ずく',
+  erubin: 'みんなで守る'
+});
+const CARD_AI_STYLE_VARIANT = Object.freeze({
+  attack: 'blade',
+  guard: 'shield',
+  normal: 'mind'
+});
+const CARD_AI_PLAN_RANGE = Object.freeze({
+  habitMul: Object.freeze({
+    big: [0.8, 1.25],
+    saveGuts: [0.8, 1.25],
+    keepGuard: [0.8, 1.1]
+  }),
+  prefer: [5, 8],
+  preferTop: 24,
+  field: [1, 2]
+});
+const cardAiPlanHabitRangeOf = base => Object.fromEntries(Object.entries(CARD_AI_PLAN_RANGE.habitMul).map(([k, [lo, hi]]) => {
+  const b = Number.isFinite(base && base[k]) ? base[k] : 1;
+  return [k, [Math.round(b * lo * 100) / 100, Math.round(b * hi * 100) / 100]];
+}));
+const cardAiPlanHabitClamp = (base, habit) => {
+  const r = cardAiPlanHabitRangeOf(base);
+  return Object.fromEntries(Object.entries(habit || {}).filter(([k, v]) => r[k] && Number.isFinite(v)).map(([k, v]) => [k, Math.min(r[k][1], Math.max(r[k][0], v))]));
+};
+const cardAiPlanHabitRange = (who, levelId = 'normal', styleId = null) => {
+  const style = cardAiStyleOf(styleId);
+  const recipeAll = CARD_AI_DECKS[who] || CARD_AI_DECKS.mua;
+  const variant = style && Array.isArray(recipeAll.variants) ? recipeAll.variants.find(v => v.id === CARD_AI_STYLE_VARIANT[style]) : null;
+  const h0 = variant && variant.deckHabit ? {
+    ...cardAiDeckHabit(who, levelId),
+    ...variant.deckHabit
+  } : cardAiDeckHabit(who, levelId);
+  const tune = style && !variant && !Array.isArray(recipeAll.variants) ? CARD_AI_STYLE_TUNE[style] : null;
+  const h = tune ? Object.fromEntries(Object.entries(h0).map(([k, v]) => [k, typeof v === 'number' ? v * ((tune.mul || {})[k] || 1) + ((tune.add || {})[k] || 0) : v])) : h0;
+  return cardAiPlanHabitRangeOf(h);
+};
+const cardAiPlanClean = (db, plan) => {
+  if (!plan || typeof plan !== 'object' || !db || !db.cards) return null;
+  const R = CARD_AI_PLAN_RANGE;
+  const seen = new Set();
+  const prefer = (Array.isArray(plan.prefer) ? plan.prefer : []).map(no => typeof no === 'string' ? db.cards[no] : null).filter(c => c && c.ready && c.kind !== 'fld' && !seen.has(c.name) && seen.add(c.name)).slice(0, R.prefer[1]).map(c => c.name);
+  const fields = new Set(Object.values(db.cards).filter(c => c.ready && c.kind === 'fld').map(c => c.name));
+  const field = [...new Set((Array.isArray(plan.field) ? plan.field : []).map(f => f && typeof f === 'object' ? f.name : f).filter(n => typeof n === 'string' && fields.has(n)))].slice(0, R.field[1]);
+  const habit = {};
+  const h = plan.habit && typeof plan.habit === 'object' ? plan.habit : {};
+  for (const k of Object.keys(R.habitMul)) if (Number.isFinite(h[k])) habit[k] = Math.min(5, Math.max(0, h[k]));
+  if (!prefer.length && !field.length && !Object.keys(habit).length) return null;
+  return {
+    prefer,
+    field,
+    habit
+  };
+};
+const cardAiStyleOf = s => typeof s === 'string' && CARD_AI_STYLE_IDS.includes(s) ? s : null;
 const CARD_AI_DECKS = Object.freeze({
   mua: {
     kit: 'speed',
@@ -126564,16 +126721,31 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   const cfg = CARD_AI_BUILD[levelId] || CARD_AI_BUILD.normal;
   const rnd = typeof rand === 'function' ? rand : cardAiSeededRand(`${who}:${levelId}`);
   const monsters = cardAiPickTrio(db, who, levelId, rnd, opts && opts.playerDeck);
-  const variant = Array.isArray(recipeAll.variants) && recipeAll.variants.length ? recipeAll.variants[Math.min(recipeAll.variants.length - 1, Math.floor(rnd() * recipeAll.variants.length))] : null;
-  const recipe = variant ? {
+  const style = cardAiStyleOf(opts && opts.style);
+  const drawn = Array.isArray(recipeAll.variants) && recipeAll.variants.length ? recipeAll.variants[Math.min(recipeAll.variants.length - 1, Math.floor(rnd() * recipeAll.variants.length))] : null;
+  const variant = drawn && style ? recipeAll.variants.find(v => v.id === CARD_AI_STYLE_VARIANT[style]) || drawn : drawn;
+  const plan = cardAiPlanClean(db, opts && opts.plan);
+  const recipe0 = variant ? {
     ...recipeAll,
     ...variant
   } : recipeAll;
+  const recipe = plan ? {
+    ...recipe0,
+    ...(plan.field.length ? {
+      field: plan.field
+    } : {})
+  } : recipe0;
   const maxWave = cfg.maxWave;
-  const habit = variant && variant.deckHabit ? {
+  const habit0 = variant && variant.deckHabit ? {
     ...cardAiDeckHabit(who, levelId),
     ...variant.deckHabit
   } : cardAiDeckHabit(who, levelId);
+  const tune = style && !variant ? CARD_AI_STYLE_TUNE[style] : null;
+  const habit1 = tune ? Object.fromEntries(Object.entries(habit0).map(([k, v]) => [k, typeof v === 'number' ? v * ((tune.mul || {})[k] || 1) + ((tune.add || {})[k] || 0) : v])) : habit0;
+  const habit = plan ? {
+    ...habit1,
+    ...cardAiPlanHabitClamp(habit1, plan.habit)
+  } : habit1;
   const mons = monsters.map(no => cardMonsterOf(db, no));
   const pool = Object.values(db.cards).filter(c => c.ready && (c.user === 'any' || c.user === 'breeder' ? c.wave <= maxWave : mons.some(m => cardUsableBy(c, {
     ...m,
@@ -126590,6 +126762,8 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   });
   const ranked = Object.values(byName).sort((a, b) => b.v - a.v || (a.c.no < b.c.no ? -1 : 1));
   const preferOn = levelId === 'hard' || levelId === 'expert' || levelId === 'master';
+  const planTop = new Set(ranked.slice(0, CARD_AI_PLAN_RANGE.preferTop).map(x => x.c.name));
+  const preferNames = [...(recipe.prefer || []), ...(plan ? plan.prefer.filter(n => planTop.has(n) && !(recipe.prefer || []).includes(n)) : [])];
   const guardTarget = Math.round(12 + 6 * Math.min(1.5, habit.keepGuard));
   const cards = [];
   const heavyMax = Math.round(8 * habit.big);
@@ -126631,7 +126805,7 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   })));
   const shared = attacks.filter(x => x.c.user === 'any' || x.c.user === 'breeder');
   const used = new Set();
-  (preferOn ? recipe.prefer || [] : []).forEach(name => {
+  (preferOn ? preferNames : []).forEach(name => {
     const x = byName[name];
     if (x && !used.has(name)) {
       used.add(name);
@@ -126671,6 +126845,40 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
     monsters: monsters.slice(),
     cards,
     sameBlood
+  };
+};
+const cardAiPlanCandidates = (db, who, levelId = 'normal', monsters = []) => {
+  const cfg = CARD_AI_BUILD[levelId] || CARD_AI_BUILD.normal;
+  const mons = (Array.isArray(monsters) ? monsters : []).map(no => cardMonsterOf(db, no)).filter(Boolean);
+  if (!mons.length) return [];
+  const habit = cardAiDeckHabit(who, levelId);
+  const byName = {};
+  Object.values(db.cards).filter(c => c.ready && c.kind !== 'fld' && (c.user === 'any' || c.user === 'breeder' ? c.wave <= cfg.maxWave : mons.some(m => cardUsableBy(c, {
+    ...m,
+    ko: false
+  }) && c.wave <= Math.max(cfg.maxWave, cardAiMonWave(db, m, c))))).forEach(c => {
+    const v = cardAiCardValue(c, habit);
+    if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = {
+      c,
+      v
+    };
+  });
+  return Object.values(byName).sort((a, b) => b.v - a.v || (a.c.no < b.c.no ? -1 : 1)).slice(0, CARD_AI_PLAN_RANGE.preferTop).map(x => x.c);
+};
+const cardAssistantDeckPreview = (who, styleId = 'normal', level = 'normal') => {
+  if (typeof CARD_BATTLE_DATA === 'undefined' || !CARD_AI_DECKS[who]) return null;
+  const sid = cardAiStyleOf(styleId) || 'normal';
+  const lv = CARD_AI_BUILD[level] ? level : 'normal';
+  const db = CARD_BATTLE_DATA;
+  const deck = cardAiBuildDeck(db, who, lv, cardAiSeededRand(`preview:${who}:${sid}:${lv}`), {
+    style: sid
+  });
+  return {
+    monsters: deck.monsters.slice(),
+    cards: deck.cards.slice(),
+    styleId: sid,
+    name: CARD_AI_STYLE_NAMES[who] || null,
+    line: null
   };
 };
 const cardDeckProblems = (db, deck) => {
@@ -133578,6 +133786,21 @@ const cardLifeAtCard = id => {
     return false;
   }
 };
+const cardGrowStyleOn = () => {
+  try {
+    return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardGrowStyle === true;
+  } catch (_) {
+    return false;
+  }
+};
+const cardLifeCardStyle = id => {
+  if (!cardGrowStyleOn()) return null;
+  try {
+    return typeof assistantLifeCardStyle === 'function' ? cardAiStyleOf(assistantLifeCardStyle(id)) : null;
+  } catch (_) {
+    return null;
+  }
+};
 const cardLifeOnMatch = x => {
   try {
     if (typeof assistantLifeOnCardMatch === 'function') assistantLifeOnCardMatch(x);
@@ -138725,7 +138948,8 @@ const CardBattleScreen = ({
         foe: {
           name: log.foeName,
           who: game.who,
-          deckName: log.deckName
+          deckName: log.deckName,
+          style: log.style
         },
         outcome,
         reason: '',
@@ -138940,12 +139164,16 @@ const CardBattleScreen = ({
     }
     const activeDeck = deck;
     const share = pick.share || null;
+    const foeStyle = !share && !(opts && opts.cup) ? cardLifeCardStyle(pick.who) : null;
     const cpuDeck = share ? {
       monsters: share.deck.monsters.slice(),
       cards: share.deck.cards.slice(),
       sameBlood: cardShareSameBlood(db, share.deck)
     } : cardAiBuildDeck(db, pick.who, pick.level, Math.random, {
-      playerDeck: activeDeck
+      playerDeck: activeDeck,
+      ...(foeStyle ? {
+        style: foeStyle
+      } : {})
     });
     const seed = cup ? cup.seed : (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
     const gameKey = cup ? `cup-${cup.matchId}-${Date.now().toString(36)}` : `${seed}`;
@@ -139035,6 +139263,7 @@ const CardBattleScreen = ({
     const scene = typeof window !== 'undefined' && typeof window.__mhCardScene === 'function';
     cpuLogRef.current = scene ? null : {
       id: gameKey,
+      style: foeStyle || 'normal',
       seed,
       first,
       decks: [{
@@ -149457,6 +149686,7 @@ const cardReplayDeckOf = raw => {
   };
 };
 const cardReplayText = (v, max) => typeof v === 'string' ? v.slice(0, max) : '';
+const cardReplayStyleOf = s => s === 'attack' || s === 'guard' || s === 'normal' ? s : 'normal';
 const cardReplayNormalizeOne = raw => {
   if (!raw || typeof raw !== 'object' || raw.v !== 1) return null;
   if (typeof raw.id !== 'string' || !CARD_REPLAY_ID_RE.test(raw.id)) return null;
@@ -149489,7 +149719,10 @@ const cardReplayNormalizeOne = raw => {
       icon: cardReplayText(foe.icon, 64),
       frame: typeof foe.frame === 'string' ? foe.frame.slice(0, 40) : null,
       deckName: typeof foe.deckName === 'string' ? foe.deckName.slice(0, 30) || null : null,
-      who: typeof foe.who === 'string' ? foe.who.slice(0, 20) : null
+      who: typeof foe.who === 'string' ? foe.who.slice(0, 20) : null,
+      ...(raw.kind === 'cpu' ? {
+        style: cardReplayStyleOf(foe.style)
+      } : {})
     },
     outcome: outcomes.includes(raw.outcome) ? raw.outcome : null,
     reason: cardReplayText(raw.reason, 40),
@@ -149688,7 +149921,10 @@ const cardReplayMake = (db, {
       icon: foe && foe.icon || '',
       frame: foe && foe.frame || null,
       deckName: foe && foe.deckName || null,
-      who: foe && foe.who || null
+      who: foe && foe.who || null,
+      ...(kind === 'cpu' ? {
+        style: cardReplayStyleOf(foe && foe.style)
+      } : {})
     },
     outcome,
     reason: reason || '',

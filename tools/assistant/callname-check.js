@@ -143,7 +143,7 @@ const PORT = 8987;
 const browser = async () => {
   let chromium;
   try { ({ chromium } = require('playwright')); } catch { console.log('SKIP: playwright が入っていないので実ブラウザの確認は飛ばします'); return; }
-  const { MIME, STORY_IDS, seed, toHome, finishTalk } = require(path.resolve(__dirname, 'life-browser-shared'));
+  const { MIME, STORY_IDS, INTRO_KEYS, seed, toHome, finishTalk } = require(path.resolve(__dirname, 'life-browser-shared'));
   const { quietBootSeed, updateNoticeSeed, oneTimeNoticeSeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
   const core = await import(CORE);
   const server = http.createServer((req, res) => {
@@ -166,7 +166,7 @@ const browser = async () => {
     const errors = []; page.on('pageerror', e => errors.push(String(e)));
     await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
     await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(oneTimeNoticeSeed());
-    await page.addInitScript(seed, { storyIds: STORY_IDS, life: true });
+    await page.addInitScript(seed, { storyIds: STORY_IDS, introKeys: INTRO_KEYS, life: true });
     await page.addInitScript(({ flag, bond, extra }) => {
       if (!localStorage.getItem('cn_check_seeded')) {
         localStorage.setItem('cn_check_seeded', '1');

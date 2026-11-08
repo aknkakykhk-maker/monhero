@@ -376,6 +376,8 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
               </div>
               {/* 札の下(2枚並びの外・全幅)に「このデッキと戦う」「借りる」。登録していない人は出ない(95 の CardShareDeckActions) */}
               {typeof CardShareDeckActions === 'function' && <div className="mt-2"><CardShareDeckActions breederId={selected.otherId} onGo={onCardShareGo}/></div>}
+              {/* 「🏘 家へ遊びに行く」(56-assistant-life-friend の AssistantLifeFriendProfileVisit・2026-11-08 社長)。助手ライフが開いていない人には出ない */}
+              {typeof AssistantLifeFriendProfileVisit === 'function' && <AssistantLifeFriendProfileVisit friendId={selected.otherId} friendName={look.userName}/>}
               {/* 記録は1行ずつにたたむ(2026-10-29 案B。前はタブ4つ)。押した行だけ開く。もう一度押すと閉じる */}
               {fold('overview', '遊んだ記録')}
               {profileTab === 'overview' && (<>

@@ -27,7 +27,7 @@ const SHOTS = process.argv.includes('--shots');
 const shotDir = path.join(root, 'docs/progress/assistant-peer/shots');
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
-const { MIME, STORY_IDS, seed, toHome, finishTalk, homeFacesProblems, waitFaces } = require(path.resolve(__dirname, "life-browser-shared"));
+const { MIME, STORY_IDS, INTRO_KEYS, seed, toHome, finishTalk, homeFacesProblems, waitFaces } = require(path.resolve(__dirname, "life-browser-shared"));
 // 家を開く(施設「🏡 助手ライフ」)→ 入場の演出が終わるのを待つ → 「📋 居場所」の一覧へ
 const openHouse = async (page) => { await page.locator('[data-home-assistant-life]').click({ timeout: 20000 }).catch(() => {}); await page.locator('[data-assistant-life-screen]').waitFor({ timeout: 5000 }).catch(() => {}); await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 4000 }).catch(() => {}); };
 const toWhere = async (page) => { await page.locator('[data-assistant-life-icon="where"]').click({ timeout: 5000 }).catch(() => {}); await page.waitForTimeout(250); };
@@ -122,7 +122,7 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     await page.addInitScript(quietBootSeed());
     await page.addInitScript(updateNoticeSeed());
     await page.addInitScript(oneTimeNoticeSeed());
-    await page.addInitScript(seed, { storyIds: STORY_IDS, life, intro, bondAll });
+    await page.addInitScript(seed, { storyIds: STORY_IDS, introKeys: INTRO_KEYS, life, intro, bondAll });
     await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
     await page.goto(`${process.env.LIFE_BASE ? process.env.LIFE_BASE.replace(/\/?$/, '/') : `http://localhost:${PORT}/`}monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     await toHome(page);

@@ -72,6 +72,8 @@ const MEMO = { likes: '', goals: '', events: '', topics: '', summary: '', secret
     { name: 'callname-life-real-2-room-landscape', w: 844, h: 390, mode: 'room' },
     { name: 'callname-life-real-3-follow-portrait', w: 390, h: 844, mode: 'follow' },
     { name: 'callname-life-real-4-follow-landscape', w: 844, h: 390, mode: 'follow' },
+    { name: 'callname-life-real-4b-follow-667', w: 667, h: 375, mode: 'follow' },
+    { name: 'callname-life-real-4c-follow-320', w: 320, h: 568, mode: 'follow' },
     { name: 'callname-life-real-5-offer-portrait', w: 390, h: 844, mode: 'offer' },
     { name: 'callname-life-real-6-chat-landscape', w: 844, h: 390, mode: 'chat' },
     { name: 'callname-life-real-7-wake-portrait', w: 390, h: 844, mode: 'wake' },
