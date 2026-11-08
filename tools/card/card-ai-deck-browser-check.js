@@ -132,11 +132,18 @@ const run = async (browser, mode, scene, errors) => {
       const pk = page.locator(`[data-card-foe-deck-picker="${WHO}"] [data-card-foe-deck-picker-open]`);
       const first = (await pk.innerText().catch(() => '')).replace(/\s+/g, '');
       check(`⑥ ${label}: 相手えらびに「デッキ おまかせ(その日の気分)」の選び口`, /^デッキおまかせ\(その日の気分\)/.test(first), first);
+      await page.waitForTimeout(1500);
+      await snap('0-picker-closed'); // 選び口を閉じたまま(今までの画面とくらべる)
       await pk.click();
+      await page.waitForTimeout(1200); // 押したときの波紋が消えてから撮る
       const list = await page.evaluate(() => [...document.querySelectorAll('[data-card-foe-deck-choice]')].map((e) => e.getAttribute('data-card-foe-deck-choice')));
       const pastHead = await page.locator('[data-card-foe-deck-picker-list]').innerText().catch(() => '');
       check(`⑥ ${label}: 選び口に おまかせ・今の3つ・これまでのデッキ(名前と時期)`, JSON.stringify(list) === JSON.stringify(['auto', 'oshi', 'suki', 'sugao', 'h:oshi-1700000000000']) && /これまでのデッキ/.test(pastHead) && /ゴーレムの力くらべ/.test(pastHead) && /11\/1[5-9]/.test(pastHead), `${JSON.stringify(list)} / ${pastHead.replace(/\s+/g, ' ').slice(0, 80)}`);
       await snap('0-picker');
+      await page.locator('[data-card-foe-deck-choice="h:oshi-1700000000000"]').scrollIntoViewIfNeeded();
+      await page.waitForTimeout(400);
+      check(`⑥ ${label}: 選び口の「これまでのデッキ」の行まで動かすと、画面に入る`, (await inView('[data-card-foe-deck-choice="h:oshi-1700000000000"]')) === true);
+      await snap('0-picker-past');
       await page.locator('[data-card-foe-deck-choice="h:oshi-1700000000000"]').click();
       const chip = await page.evaluate((w) => { const c = document.querySelector(`[data-card-foe-style="${w}"] [data-card-foe-deck-chip-name]`); return c ? c.textContent.trim() : ''; }, WHO);
       check(`⑥ ${label}: 選ぶと、今日のデッキの札がそのデッキの名前になる`, /ゴーレムの力くらべ$/.test(chip), chip);

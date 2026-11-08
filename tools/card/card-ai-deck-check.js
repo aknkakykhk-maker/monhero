@@ -319,6 +319,14 @@ const MASMON = (() => {
     check('P 遊び方の言葉にマスモンの愛称が入らない', WHO.every((w) => { const nicks = E.cardAiFaceNicks(w); return (E.CARD_AI_PLAY_WORDS[w] || []).every((n) => !nicks.some((k) => n.includes(k))); }));
     check('P 同じことばの見分け: まとまりの切れ目をまたがない(ハムの/ゴーレムの・ライガー/ライブは別)・漢字2字・カタカナのまとまり・ひらがな3字は同じ',
       !E.cardAiFaceShareWord('ハムの力くらべ', 'ゴーレムの一撃') && !E.cardAiFaceShareWord('ライガーの大歓声', 'メタルナーの銀ピカライブ') && E.cardAiFaceShareWord('ジョーカーの全力ダッシュ', 'ノリだけで全力突破') && E.cardAiFaceShareWord('キラキラ隊', 'キラキラ速攻') && E.cardAiFaceShareWord('ずっしりゴーレム', 'ずっしり火力'));
+    check('P 遊び方の言葉は頭が「ど」でない(「〇〇のど…」が「のど」と読める。部長 2026-11-08)', WHO.every((w) => (E.CARD_AI_PLAY_WORDS[w] || []).every((x) => !/^ど/.test(x))), WHO.map((w) => (E.CARD_AI_PLAY_WORDS[w] || []).filter((x) => /^ど/.test(x)).join(',')).join(' '));
+    {
+      // チームの自動の名前のしめ(83-card-battle-vs.jsx の CARD_DECK_NAME_TAILS)と同じことばを使わない(VS で並んでまぎらわしい。部長 2026-11-08)
+      const m = src('src/parts/83-card-battle-vs.jsx').match(/const CARD_DECK_NAME_TAILS = Object\.freeze\((\{[\s\S]*?\})\);/);
+      const tails = m ? vm.runInNewContext(`(${m[1]})`) : null;
+      const clash = tails ? WHO.flatMap((w) => (E.CARD_AI_PLAY_WORDS[w] || []).filter((x) => (tails[w] || []).some((t) => E.cardAiFaceShareWord(x, t))).map((x) => `${w}:${x}`)) : ['表が読めない'];
+      check('P 遊び方の言葉は、チームの自動の名前のしめと同じことばを使わない', clash.length === 0, clash.join(' '));
+    }
     check('P 遊び方の言葉は8人 × 5〜6個', WHO.every((w) => (E.CARD_AI_PLAY_WORDS[w] || []).length >= 5 && E.CARD_AI_PLAY_WORDS[w].length <= 6));
     // 名前づくり(AI なし): 種の名前+の+言葉。決まりに合い、使った名前は使わない
     const used = [];

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c50fe9edf487b9ed
+// generated-sha256: a5a2c819839d4e72
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -72899,16 +72899,17 @@ const cardNormalizeAiHistory = (raw, db = (typeof CARD_BATTLE_DATA !== 'undefine
   }
   return { v: 1, perWho };
 };
+// ★頭が「ど」の言葉は入れない(「〇〇のど根性」が「のど」と読める。2026-11-08 部長)。チームの自動の名前(83-card-battle-vs.jsx の CARD_DECK_NAME_TAILS)と同じことばも避ける
 // 助手ごとの遊び方の言葉(AI が使えないとき、2つ目からの名前「主役の種の名前+の+言葉」に使う。部長・社長の確認待ちの案)
 const CARD_AI_PLAY_WORDS = Object.freeze({
-  mua: ['はしゃぎ組', 'ぴかぴか突撃', 'るんるん隊', 'ときめき作戦', 'ダッシュ組', 'きゅんきゅん隊'],
-  kiki: ['大技まつり', '力くらべ', 'ねばり腰', 'どっしり陣', 'ぽかぽか隊', 'ど根性'],
+  mua: ['はしゃぎ組', 'ぴかぴか組', 'るんるん隊', 'ときめき作戦', 'わくわく隊', 'きゅんきゅん隊'],
+  kiki: ['ぶちかまし', '力くらべ', 'ねばり腰', 'ひと押し', 'ぽかぽか隊', '根性勝負'],
   momosuke: ['センター', 'きらめき舞台', 'アンコール', '大歓声', 'ラストサビ', 'ファンサ'],
   dra: ['ゆるっと隊', 'ひなたぼっこ', 'じっくり作戦', 'まったり組', 'おひるね隊', 'ぽてぽて歩き'],
   atsu: ['全力投球', '再戦上等', '熱血組', '一直線', '真剣一本', '燃える魂'],
-  kyuko: ['夜ふかし', 'どんでん返し', '月あかり', 'ひらめき', 'ないしょ話', 'ねこの目'],
-  sorashido: ['必勝の表', '勝ち筋', 'データ戦', '方程式', '最適解', '記録どおり'],
-  erubin: ['仲間の輪', '支え合い', '見守り組', 'ぬくもり隊', 'あったか隊', 'ひだまり組'],
+  kyuko: ['夜ふかし', '大逆転', '月あかり', 'ひらめき', 'ないしょ話', 'ねこの目'],
+  sorashido: ['必勝の表', '勝ち筋', 'データ戦', '方程式', '答え合わせ', '分析班'],
+  erubin: ['仲間の輪', '支え合い', 'ほっこり組', 'ぬくもり隊', 'あったか隊', 'ひだまり組'],
 });
 // 2つ目からの名前(AI が使えない・決まりに合わないとき)。主役の種の名前+の+遊び方の言葉で、決まりに合い、その助手の一覧(今・これまで)に無いもの。作れなければ null
 const cardAiFaceMakeName = (db, who, slot, others, used, rnd = Math.random) => {
@@ -78832,7 +78833,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           {/* 横の画面は、紹介と型の欄を左右に並べる(縦に積むと強さのボタンが下へ出た。landscape-screens-check) */}
           <div className="space-y-2 landscape:grid landscape:grid-cols-2 landscape:items-stretch landscape:gap-2 landscape:space-y-0">
           {a && (
-            <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2 landscape:items-center">
+            {/* 横の画面は中身を上に寄せる(真ん中寄せだと、右の欄の「デッキ」の選び口を開いて欄が伸びたとき、絵と吹き出しが画面の下へ押し出された。2026-11-08 部長の止め絵) */}
+            <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2 landscape:items-start">
               {/* 背の低い画面(SE)では絵を低くして、下の「あなたのデッキ」の欄まで1画面に入れる(2026-10-24 改善部の点検 V2) */}
               {/* 横画面: 前は絵を外していた(2026-10-25 カゲあつくん「EASY〜が下で切れている」)が、この欄は右の欄と同じ高さに伸びるので、
                   上が空白になっていた(2026-10-26 巡回)。強さのボタンはこの欄より上にあるので、欄の高さに収まる大きさで出す。
