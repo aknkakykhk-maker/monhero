@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cce5baca68137878
+// source-sha256: fe744e5bf0f531b7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -62578,7 +62578,7 @@ const growthFxSessionLevel = (list = []) => {
 };
 const GROWTH_FX_CSS = `
 .mh-gfx-chips{position:fixed;top:calc(env(safe-area-inset-top,0px) + 52px);right:10px;z-index:44000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
-.mh-gfx-chips.left{right:auto;left:10px;align-items:flex-start}
+.mh-gfx-chips.left{right:auto;left:10px;align-items:flex-start}.mh-gfx-chips.one .mh-gfx-chip:not(:first-child){display:none}.mh-gfx-chips.one .mh-gfx-chip:first-child::after{content:attr(data-more);margin-left:2px;border-radius:999px;background:#ffffff26;padding:0 5px;font-size:10px;font-weight:900}.mh-gfx-chips.row{flex-direction:row;align-items:flex-start;max-width:calc(100% - 20px);flex-wrap:nowrap}
 .mh-gfx-chips.mini .mh-gfx-chip>.min-w-0{display:none}.mh-gfx-chips.mini .mh-gfx-chip{padding:3px 8px 3px 4px;gap:4px}
 .mh-gfx-chip{position:relative;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;border-radius:999px;background:linear-gradient(90deg,#1e1b2ef0,#0f172af0);
   border:1.5px solid var(--gc);box-shadow:0 0 14px color-mix(in srgb,var(--gc) 40%,transparent);font-weight:900;font-size:11px;color:#fff;
@@ -63088,39 +63088,97 @@ const GrowthFxLevelUp = ({
   }, done ? '押すと閉じる' : '押すと先へ'));
 };
 const GROWTH_FX_CHIP_TOPS = [52, 8, 96, 140];
-const GROWTH_FX_CHIP_BUSY_SEL = 'button,a,input,[role="tab"],[role="button"],[data-assistant-bubble],img,svg,p,span,b,small,strong,em,h1,h2,h3,h4,li,label,[data-alf-face]';
-const growthFxChipSpotBusy = box => {
-  if (typeof document === 'undefined' || !document.elementsFromPoint) return false;
-  const r = box.getBoundingClientRect();
+const GROWTH_FX_CHIP_BUSY_SEL = 'button,a,input,[role="tab"],[role="button"],[data-assistant-bubble],img,svg,p,span,b,small,strong,em,h1,h2,h3,h4,li,label,div,[data-alf-face]';
+const growthFxChipSpotScore = (box, first = false) => {
+  if (typeof document === 'undefined' || !document.elementsFromPoint) return 0;
+  const r = [...box.querySelectorAll('.mh-gfx-chip')].reduce((a, c) => {
+    const q = c.getBoundingClientRect();
+    if (!q.width || !q.height) return a;
+    return {
+      left: Math.min(a.left, q.left),
+      top: Math.min(a.top, q.top - 12),
+      right: Math.max(a.right, q.right),
+      bottom: Math.max(a.bottom, q.bottom + 4)
+    };
+  }, (() => {
+    const b = box.getBoundingClientRect();
+    return {
+      left: b.left,
+      top: b.top,
+      right: b.right,
+      bottom: b.bottom
+    };
+  })());
+  r.width = r.right - r.left;
+  r.height = r.bottom - r.top;
+  let score = 0;
   for (const fx of [0.15, 0.5, 0.85]) for (const fy of [0.25, 0.75]) {
     const x = r.left + r.width * fx,
       y = r.top + r.height * fy;
-    const under = document.elementsFromPoint(x, y).find(el => !box.contains(el));
+    const under = document.elementsFromPoint(x, y).find(el => !box.contains(el) && !el.contains(box));
     if (!under) continue;
-    if (under.closest('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]')) return true;
-    if ([...under.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return true;
+    if (under.closest('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]')) {
+      score += 3;
+      if (first) return score;
+    } else if ([...under.childNodes].some(n => {
+      if (n.nodeType !== 3 || !n.textContent.trim()) return false;
+      const rg = document.createRange();
+      rg.selectNodeContents(n);
+      return [...rg.getClientRects()].some(q => x >= q.left - 2 && x <= q.right + 2 && y >= q.top - 2 && y <= q.bottom + 2);
+    })) {
+      score += 2;
+      if (first) return score;
+    }
   }
   const vw = window.innerWidth,
     vh = window.innerHeight;
+  const hit = e => Math.min(r.right, e.right) - Math.max(r.left, e.left) > 1 && Math.min(r.bottom, e.bottom) - Math.max(r.top, e.top) > 1;
+  const seen = (el, e) => {
+    const x0 = Math.max(r.left, e.left),
+      y0 = Math.max(r.top, e.top),
+      x1 = Math.min(r.right, e.right),
+      y1 = Math.min(r.bottom, e.bottom);
+    return [[x0 + 1, y0 + 1], [(x0 + x1) / 2, (y0 + y1) / 2]].some(([cx, cy]) => {
+      const top = document.elementsFromPoint(cx, cy).find(x => !box.contains(x) && !x.contains(box));
+      return !top || top === el || el.contains(top) || top.contains(el);
+    });
+  };
   for (const el of document.querySelectorAll(GROWTH_FX_CHIP_BUSY_SEL)) {
     if (box.contains(el)) continue;
     const e = el.getBoundingClientRect();
-    if (!e.width || !e.height || e.width > vw * 0.9 || e.height > vh * 0.5) continue;
-    if (Math.min(r.right, e.right) - Math.max(r.left, e.left) <= 1 || Math.min(r.bottom, e.bottom) - Math.max(r.top, e.top) <= 1) continue;
+    if (!e.width || !e.height || !hit(e)) continue;
     const cs = getComputedStyle(el);
     if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
     const isPic = /^(IMG|SVG)$/i.test(el.tagName) || el.hasAttribute('data-alf-face');
     const isAct = el.matches('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]');
-    const hasText = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
-    if (!isPic && !isAct && !hasText) continue;
-    const cx = Math.max(r.left, e.left) + 1,
-      cy = Math.max(r.top, e.top) + 1;
-    const top = document.elementsFromPoint(cx, cy).find(x => !box.contains(x));
-    if (top && !(top === el || el.contains(top) || top.contains(el))) continue;
-    return true;
+    const texts = [...el.childNodes].filter(n => n.nodeType === 3 && n.textContent.trim());
+    if (texts.length) {
+      let on = null;
+      for (const t of texts) {
+        const rg = document.createRange();
+        rg.selectNodeContents(t);
+        for (const q of rg.getClientRects()) if (hit(q)) {
+          on = q;
+          break;
+        }
+        if (on) break;
+      }
+      if (on && seen(el, on)) {
+        score += isAct ? 3 : 2;
+        if (first) return score;
+        continue;
+      }
+      if (!isAct) continue;
+    }
+    if (!isPic && !isAct) continue;
+    if (e.width > vw * 0.9 || e.height > vh * 0.5) continue;
+    if (!seen(el, e)) continue;
+    score += isAct ? 3 : 1;
+    if (first) return score;
   }
-  return false;
+  return score;
 };
+const growthFxChipSpotBusy = box => growthFxChipSpotScore(box, true) > 0;
 const GrowthFxChipsBox = ({
   level,
   count,
@@ -63135,29 +63193,68 @@ const GrowthFxChipsBox = ({
       const steps = [];
       for (let y = window.innerHeight - 10 - box.offsetHeight; y >= 8; y -= 24) steps.push(Math.round(y));
       const tops = [...new Set([...GROWTH_FX_CHIP_TOPS, Math.max(60, window.innerHeight - 120 - box.offsetHeight), ...steps])];
-      for (const mini of [false, true]) {
+      const chipEls = box.querySelectorAll('.mh-gfx-chip');
+      const more = Math.max(0, chipEls.length - 1);
+      if (chipEls[0]) chipEls[0].setAttribute('data-more', more ? `ほか${more}` : '');
+      for (const [mini, row, one] of [[false, false, false], [true, false, false], [true, true, false], ...(more ? [[true, false, true]] : [])]) {
         box.classList.toggle('mini', mini);
+        box.classList.toggle('row', row);
+        box.classList.toggle('one', one);
         for (const left of [false, true]) {
           box.classList.toggle('left', left);
           for (const t of tops) {
             box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`;
             if (!growthFxChipSpotBusy(box)) {
-              box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${left ? 'left-' : ''}${t}`;
+              box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${row ? 'row-' : ''}${one ? 'one-' : ''}${left ? 'left-' : ''}${t}`;
               return;
             }
           }
         }
       }
-      box.classList.remove('left');
-      box.style.top = `calc(env(safe-area-inset-top, 0px) + ${GROWTH_FX_CHIP_TOPS[1]}px)`;
-      box.dataset.growthFxChipsTop = 'mini-busy';
+      let best = null;
+      for (const [row, one] of [[false, false], [true, false], ...(more ? [[false, true]] : [])]) for (const left of [false, true]) {
+        box.classList.toggle('row', row);
+        box.classList.toggle('one', one);
+        box.classList.toggle('left', left);
+        for (const t of tops) {
+          box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`;
+          const sc = growthFxChipSpotScore(box);
+          if (!best || sc < best.sc) best = {
+            sc,
+            left,
+            t,
+            row,
+            one
+          };
+        }
+      }
+      box.classList.toggle('row', !!(best && best.row));
+      box.classList.toggle('one', !!(best && best.one));
+      box.classList.toggle('left', !!(best && best.left));
+      box.style.top = `calc(env(safe-area-inset-top, 0px) + ${best ? best.t : GROWTH_FX_CHIP_TOPS[1]}px)`;
+      box.dataset.growthFxChipsTop = `mini-busy${best ? `-${best.left ? 'left-' : ''}${best.t}` : ''}`;
     };
     place();
+    let tm = null;
+    const mo = typeof MutationObserver === 'function' ? new MutationObserver(list => {
+      if (list.every(m => ref.current && ref.current.contains(m.target))) return;
+      if (tm) return;
+      tm = setTimeout(() => {
+        tm = null;
+        place();
+      }, 150);
+    }) : null;
+    if (mo && document.body) mo.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
     const t1 = setTimeout(place, 500),
       t2 = setTimeout(place, 1500);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
+      if (tm) clearTimeout(tm);
+      if (mo) mo.disconnect();
     };
   }, [count]);
   return React.createElement("div", {
