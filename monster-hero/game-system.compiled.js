@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9f21f486cb2ecd61
+// source-sha256: 9f08da98753b0c16
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -63987,11 +63987,13 @@ function BreederMarketScreen({
       n++;
       if (el) {
         clearInterval(t);
-        try {
-          el.scrollIntoView({
-            block: 'center'
-          });
-        } catch {}
+        let box = el.parentElement;
+        while (box && !(/(auto|scroll)/.test(getComputedStyle(box).overflowY) && box.scrollHeight > box.clientHeight)) box = box.parentElement;
+        if (box) {
+          const r = el.getBoundingClientRect(),
+            b = box.getBoundingClientRect();
+          box.scrollTop += r.top - b.top - Math.max(0, (b.height - r.height) / 2);
+        }
       } else if (n > 40) clearInterval(t);
     }, 50);
     return () => clearInterval(t);

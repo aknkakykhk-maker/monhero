@@ -60,7 +60,11 @@ function BreederMarketScreen({
   React.useEffect(()=>{
     if(!(initialSection==='event'&&initialTab==='item')) return;
     let n=0; const t=setInterval(()=>{ const el=document.querySelector('[data-event-point-life-gift]'); n++;
-      if(el){ clearInterval(t); try{ el.scrollIntoView({block:'center'}); }catch{} } else if(n>40) clearInterval(t); },50);
+      if(el){ clearInterval(t);
+        // 縦に送れる入れ物だけを動かす(画面全体を動かさない。viewport-height-check の決まり)
+        let box=el.parentElement; while(box&&!(/(auto|scroll)/.test(getComputedStyle(box).overflowY)&&box.scrollHeight>box.clientHeight)) box=box.parentElement;
+        if(box){ const r=el.getBoundingClientRect(), b=box.getBoundingClientRect(); box.scrollTop+=r.top-b.top-Math.max(0,(b.height-r.height)/2); } }
+      else if(n>40) clearInterval(t); },50);
     return ()=>clearInterval(t);
   },[]);
   const cardPressedRowRef = React.useRef(null); // 一覧で最後に押した行 { attr, value }(確認の窓の「買う」は行の外なので上書きしない)
