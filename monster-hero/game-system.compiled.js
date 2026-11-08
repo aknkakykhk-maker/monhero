@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f65e574e68878e5d
+// source-sha256: 9dcd49ad9d90f3d0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -124670,12 +124670,16 @@ function AlfFriendHouseView({
     }
   }, React.createElement("p", {
     className: "text-[16px] font-black text-amber-100"
-  }, "📌 ", friend.name, "さんの家の最近"), diaryItems.length ? diaryItems.map((d, i) => React.createElement("p", {
-    key: i,
+  }, "📌 ", friend.name, "さんの家の最近"), diaryItems.length ? diaryItems.map((d, i) => React.createElement(React.Fragment, {
+    key: i
+  }, !d.act && (i === 0 || diaryItems[i - 1].act) && React.createElement("p", {
+    className: "mt-2.5 border-t border-slate-600/60 pt-1.5 text-[11px] font-black text-sky-200",
+    "data-alf-visit-diary-sep": true
+  }, "🏠 助手たちの今日"), React.createElement("p", {
     className: "mt-1.5 text-[12px] font-bold leading-snug text-slate-100"
   }, React.createElement("b", {
     className: "mr-1.5 text-amber-200"
-  }, d.t), d.x)) : React.createElement("p", {
+  }, d.t), d.x))) : React.createElement("p", {
     className: "mt-1.5 text-[12px] text-slate-300"
   }, "まだ何もありません"), React.createElement("button", {
     type: "button",
