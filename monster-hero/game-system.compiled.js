@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2f63dedac77b3227
+// source-sha256: 44a4c6977e4d9637
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -106737,10 +106737,6 @@ function AssistantLifeRoom({
   }, x)))), typeof AssistantLifeRelRoomLayer === 'function' && React.createElement(AssistantLifeRelRoomLayer, {
     state: state,
     h: h
-  }), met && typeof AssistantMasmonRoomPet === 'function' && React.createElement(AssistantMasmonRoomPet, {
-    id: id,
-    h: h,
-    life: typeof assistantLifeCurrent === 'function' ? assistantLifeCurrent() : null
   }), met && !other && typeof AssistantMasmonRoomPet === 'function' && React.createElement(AssistantMasmonRoomPet, {
     id: id,
     h: h,
@@ -124876,10 +124872,28 @@ const alfBuildMore = ids => {
     } catch {}
   }
   const dy = alfDiaryShare(8);
+  const ms = {};
+  for (const id of (ids || []).filter(alfValidId)) {
+    try {
+      const team = typeof assistantLifeMasmonTeamOf === 'function' ? assistantLifeMasmonTeamOf(id) : [];
+      const one = (Array.isArray(team) ? team : []).slice(0, 3).map(t => t && typeof t.monster === 'string' ? {
+        mo: t.monster,
+        n: alfStr(t.nick, 16),
+        c: (Array.isArray(t.colors) ? t.colors : []).slice(0, 5),
+        ...(t.lead ? {
+          l: 1
+        } : {})
+      } : null).filter(Boolean);
+      if (one.length) ms[id] = one;
+    } catch {}
+  }
   return {
     v: 1,
     fu,
-    dy
+    dy,
+    ...(Object.keys(ms).length ? {
+      ms
+    } : {})
   };
 };
 const ALF_ACT_KEY = 'mh_assistant_life_friend_activity_v1';
@@ -124997,11 +125011,29 @@ const assistantLifeFriendNormalizeMore = raw => {
     t: /^\d{1,2}:\d{2}$/.test(d.t) ? d.t : '',
     x: d.x.replace(/[{}<>]/g, '').slice(0, 40)
   } : null).filter(d => d && d.x);
+  const ms = {};
+  for (const id of ALF_IDS) {
+    const list = raw.ms && typeof raw.ms === 'object' && Array.isArray(raw.ms[id]) ? raw.ms[id] : null;
+    if (!list) continue;
+    const one = list.slice(0, 3).map(t => {
+      if (!t || typeof t.mo !== 'string' || typeof ALL_PLAYER_MONSTERS === 'undefined' || !ALL_PLAYER_MONSTERS[t.mo]) return null;
+      const n = typeof t.n === 'string' ? alfNoteShow(t.n.slice(0, 16)) : '';
+      const c = (Array.isArray(t.c) ? t.c : []).slice(0, 5).map(x => x === null ? null : typeof x === 'string' && /^[a-z][a-z0-9_]{0,20}(@(100|[1-9][0-9]))?$/.test(x) ? x : undefined).filter(x => x !== undefined);
+      return {
+        mo: t.mo,
+        n,
+        c,
+        l: t.l === 1 ? 1 : 0
+      };
+    }).filter(Boolean);
+    if (one.length) ms[id] = one;
+  }
   return {
     v: 1,
     fu,
     dy,
-    ac: alfNormalizeAc(raw.ac)
+    ac: alfNormalizeAc(raw.ac),
+    ms
   };
 };
 const assistantLifeFriendNormalizeHouse = raw => {
@@ -126696,6 +126728,21 @@ function AlfFriendHouseView({
   };
   const keptNames = id => more && more.fu[id] ? more.fu[id].k.map(fname).filter(Boolean) : [];
   const masmonTeamOf = id => {
+    const mine = more && more.ms && more.ms[id];
+    if (mine && mine.length) return mine.map(t => {
+      const m = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(t.mo) : null;
+      return m ? {
+        monster: t.mo,
+        nick: t.n || m.name,
+        name: m.name,
+        dye: {
+          colors: t.c
+        }
+      } : null;
+    }).filter(Boolean);
+    return masmonTeamPlan(id);
+  };
+  const masmonTeamPlan = id => {
     const pl = typeof assistantMasmonPlanOf === 'function' ? assistantMasmonPlanOf(id) : null;
     return pl ? pl.team.slice(0, 3).map(t => {
       const m = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(t.monster) : null;

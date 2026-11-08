@@ -322,6 +322,11 @@ const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'er
   { const h = G('assistantLifeFriendNormalizeHouse')({ v: 1, ids: ['kiki', 'mua', 'dra'], r: { kiki: { at: 'out', d: 'cards', m: 'happy', p: 'cardroom' }, mua: { at: 'home', d: 'idle', m: 'happy', p: 'cardroom' }, dra: { at: 'out', d: 'idle', m: 'happy', p: 'nowhere' } } });
     check('⑯ 行き先は、出かけている助手の町の場所だけ読む', h.r.kiki.p === 'cardroom' && !h.r.mua.p && !h.r.dra.p, JSON.stringify(h.r)); }
 
+  // ⑰ その人の助手のマスモン(キズナ3の口を写したもの): 実装済みのモンスターだけ・名前の見張り・色の形
+  { vm.runInContext("var ALL_PLAYER_MONSTERS = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : { Golem: { name: 'ゴーレム' }, Ark: { name: 'アーク' } };", ctx);
+    const m = G('assistantLifeFriendNormalizeMore')({ v: 1, ms: { kiki: [{ mo: 'Golem', n: 'ごろちゃん', c: ['red@50', null, 'BAD COLOR', 'pink'], l: 1 }, { mo: 'NoSuchMon', n: 'x' }, { mo: 'Ark', n: 'ID: abc_1234567' }], zz: [{ mo: 'Golem' }] } });
+    check('⑰ マスモンは実装済みだけ・色は「色id」「色id@濃さ」「null」だけ・連絡先らしい名前は空・知らない助手は捨てる', m && m.ms.kiki.length === 2 && m.ms.kiki[0].n === 'ごろちゃん' && JSON.stringify(m.ms.kiki[0].c) === '["red@50",null,"pink"]' && m.ms.kiki[0].l === 1 && m.ms.kiki[1].n === '' && !m.ms.zz, JSON.stringify(m && m.ms)); }
+
   // ⑧ 公開の印
   const rel = fs.readFileSync(path.join(root, 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8');
   check('⑧ 公開の印 assistantLifeFriend がある(真/偽どちらでも、偽なら通信しないことを下で見る)', /\n\s*assistantLifeFriend:\s*(true|false),/.test(rel));

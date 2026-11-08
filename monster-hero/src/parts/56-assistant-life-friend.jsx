@@ -146,7 +146,16 @@ const alfBuildMore = (ids) => {
     } catch {}
   }
   const dy = alfDiaryShare(8);
-  return { v: 1, fu, dy };
+  // その人の助手のマスモン(キズナ3の assistantLifeMasmonTeamOf・2026-11-08 社長「プレイヤーごとに名前とか色々変えて」)。1人3体・数は写さない
+  const ms = {};
+  for (const id of (ids || []).filter(alfValidId)) {
+    try {
+      const team = typeof assistantLifeMasmonTeamOf === 'function' ? assistantLifeMasmonTeamOf(id) : [];
+      const one = (Array.isArray(team) ? team : []).slice(0, 3).map(t => (t && typeof t.monster === 'string' ? { mo: t.monster, n: alfStr(t.nick, 16), c: (Array.isArray(t.colors) ? t.colors : []).slice(0, 5), ...(t.lead ? { l: 1 } : {}) } : null)).filter(Boolean);
+      if (one.length) ms[id] = one;
+    } catch {}
+  }
+  return { v: 1, fu, dy, ...(Object.keys(ms).length ? { ms } : {}) };
 };
 // ---------- フレンドの最近(2026-11-08 社長「フレンドで相手の行動見えるバリエーションも増やして」・FRIEND-ACTIVITY-PLAN.md) ----------
 // 端末の記録から組み立てる(曲名・勝ったこと・迎えたマスモンの種類・置いた家具だけ。スコア・数・相手の名前は入れない)。
@@ -202,7 +211,20 @@ const assistantLifeFriendNormalizeMore = (raw) => {
     fu[id] = { p, k };
   }
   const dy = (Array.isArray(raw.dy) ? raw.dy : []).slice(0, 8).map(d => (d && typeof d.x === 'string' ? { t: /^\d{1,2}:\d{2}$/.test(d.t) ? d.t : '', x: d.x.replace(/[{}<>]/g, '').slice(0, 40) } : null)).filter(d => d && d.x);
-  return { v: 1, fu, dy, ac: alfNormalizeAc(raw.ac) };
+  // マスモン: 実装済みのモンスターだけ・名前は16字まで(置き手紙と同じ見張り)・色は「色id」「色id@10〜100」「null」だけ
+  const ms = {};
+  for (const id of ALF_IDS) {
+    const list = raw.ms && typeof raw.ms === 'object' && Array.isArray(raw.ms[id]) ? raw.ms[id] : null;
+    if (!list) continue;
+    const one = list.slice(0, 3).map(t => {
+      if (!t || typeof t.mo !== 'string' || typeof ALL_PLAYER_MONSTERS === 'undefined' || !ALL_PLAYER_MONSTERS[t.mo]) return null;
+      const n = typeof t.n === 'string' ? alfNoteShow(t.n.slice(0, 16)) : '';
+      const c = (Array.isArray(t.c) ? t.c : []).slice(0, 5).map(x => (x === null ? null : typeof x === 'string' && /^[a-z][a-z0-9_]{0,20}(@(100|[1-9][0-9]))?$/.test(x) ? x : undefined)).filter(x => x !== undefined);
+      return { mo: t.mo, n, c, l: t.l === 1 ? 1 : 0 };
+    }).filter(Boolean);
+    if (one.length) ms[id] = one;
+  }
+  return { v: 1, fu, dy, ac: alfNormalizeAc(raw.ac), ms };
 };
 // 相手の控えを読むとき(知らない id・種類・長い値は捨てる)
 const assistantLifeFriendNormalizeHouse = (raw) => {
@@ -1020,7 +1042,12 @@ function AlfFriendHouseView({ friend, onClose }) {
   const furnNames = (id) => { const fu = putOf(id); return fu ? ['c', 'w', 'f'].map(k => fu[k] && fname(fu[k])).filter(Boolean) : []; };
   const keptNames = (id) => (more && more.fu[id] ? more.fu[id].k.map(fname).filter(Boolean) : []);
   // マスモン(絵つき)。キズナ3の口(その人のマスモン)が入るまでは全員共通の表
-  const masmonTeamOf = (id) => { const pl = typeof assistantMasmonPlanOf === 'function' ? assistantMasmonPlanOf(id) : null; return pl ? pl.team.slice(0, 3).map(t => { const m = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(t.monster) : null; return m ? { monster: t.monster, nick: t.nick, name: m.name, dye: t.dye } : null; }).filter(Boolean) : []; };
+  const masmonTeamOf = (id) => {
+    const mine = more && more.ms && more.ms[id];
+    if (mine && mine.length) return mine.map(t => { const m = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(t.mo) : null; return m ? { monster: t.mo, nick: t.n || m.name, name: m.name, dye: { colors: t.c } } : null; }).filter(Boolean);
+    return masmonTeamPlan(id);
+  };
+  const masmonTeamPlan = (id) => { const pl = typeof assistantMasmonPlanOf === 'function' ? assistantMasmonPlanOf(id) : null; return pl ? pl.team.slice(0, 3).map(t => { const m = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(t.monster) : null; return m ? { monster: t.monster, nick: t.nick, name: m.name, dye: t.dye } : null; }).filter(Boolean) : []; };
   const masmonOf = (id) => { const pl = typeof assistantMasmonPlanOf === 'function' ? assistantMasmonPlanOf(id) : null; return pl ? pl.team.slice(0, 3).map(t => { const m = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(t.monster) : null; return m ? `${t.nick}(${m.name})` : null; }).filter(Boolean) : []; };
   const otherPut = (() => { const o = alfFurnPutOf(h); if (more) for (const id of Object.keys(more.fu)) o[id] = { put: { ceil: more.fu[id].p.c || null, wall: more.fu[id].p.w || null, floor: more.fu[id].p.f || null } }; return o; })();
   // 掲示板: 助手の今日(dy)と、その人の最近の遊び(ac)を混ぜる(最近は先に。時刻は「今日 10:10」などの形)
