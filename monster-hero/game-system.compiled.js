@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ae5a1869da9a4ecc
+// source-sha256: d0503c7246310df7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -106630,6 +106630,7 @@ function AssistantLifeHouse({
   }), masmonId && typeof AssistantMasmonSheet === 'function' && React.createElement(AssistantMasmonSheet, {
     id: masmonId,
     land: land,
+    bondLv: typeof bondLevelOf === 'function' ? bondLevelOf(masmonId) : null,
     onClose: () => setMasmonId(null)
   }), boardOpen && React.createElement("div", {
     className: "absolute inset-0",
@@ -120088,7 +120089,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 24,
     "grow": "すばやさ型(ノリで決めた)",
     "dye": {
-      "colors": ["pink_light", "sky", "pink", "pink_light", "sky"]
+      "colors": ["pink_light@85", "sky@65", null, "pink_light@70", null]
     }
   }, {
     "monster": "MelWhip",
@@ -120098,7 +120099,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 16,
     "grow": "ライフ型",
     "dye": {
-      "colors": ["sky", "pink", "pink_light", "sky", "pink"]
+      "colors": [null, "pink_light@90", null, null, null]
     }
   }, {
     "monster": "Iblis",
@@ -120108,7 +120109,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 14,
     "grow": "攻撃型",
     "dye": {
-      "colors": ["pink", "pink_light", "sky"]
+      "colors": ["green_light@70", null, "orange@55"]
     }
   }],
   "extra": [{
@@ -120117,8 +120118,9 @@ const ASSISTANT_MASMON_PLAN = [{
     "why": "剣士モッチーの仲間。まるくてかわいい",
     "lv": 12,
     "grow": "ライフ型",
+    "welcome": 4,
     "dye": {
-      "colors": ["sky", "pink", "pink_light"]
+      "colors": ["sky@35", null, null]
     }
   }, {
     "monster": "Melody",
@@ -120126,17 +120128,9 @@ const ASSISTANT_MASMON_PLAN = [{
     "why": "メルホイップの仲間。歌うと一緒に踊ってくれる",
     "lv": 10,
     "grow": "ガッツ型",
+    "welcome": 7,
     "dye": {
-      "colors": ["pink", "pink_light", "sky", "pink", "pink_light"]
-    }
-  }, {
-    "monster": "Pixie",
-    "nick": "ぴくぴく",
-    "why": "キラキラしててかわいい",
-    "lv": 9,
-    "grow": "すばやさ型",
-    "dye": {
-      "colors": ["pink_light", "sky", "pink"]
+      "colors": ["pink_light@90", "pink@90", "sky@90", "orange@85", "pink_light@90"]
     }
   }],
   "deck": {
@@ -120183,7 +120177,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 26,
     "grow": "攻撃型(ちからに振る)",
     "dye": {
-      "colors": ["pink", "red", "pink_light"]
+      "colors": ["pink@64", "red@49", null]
     }
   }, {
     "monster": "Eiki",
@@ -120193,7 +120187,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 17,
     "grow": "攻撃型",
     "dye": {
-      "colors": ["red", "pink_light", "pink"]
+      "colors": [null, "pink@68", null]
     }
   }, {
     "monster": "Zan",
@@ -120203,7 +120197,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 15,
     "grow": "すばやさ型",
     "dye": {
-      "colors": ["pink_light", "pink", "red"]
+      "colors": ["green@53", null, "orange@41"]
     }
   }],
   "extra": [{
@@ -120212,8 +120206,9 @@ const ASSISTANT_MASMON_PLAN = [{
     "why": "ちからが強くて頼もしい",
     "lv": 14,
     "grow": "攻撃型",
+    "welcome": 4,
     "dye": {
-      "colors": ["red", "pink_light", "pink"]
+      "colors": ["red@35", null, null]
     }
   }, {
     "monster": "Pandora",
@@ -120221,17 +120216,9 @@ const ASSISTANT_MASMON_PLAN = [{
     "why": "一撃が重くてかっこいい",
     "lv": 11,
     "grow": "攻撃型",
+    "welcome": 7,
     "dye": {
-      "colors": ["red", "pink_light", "pink", "red", "pink_light"]
-    }
-  }, {
-    "monster": "Ghost",
-    "nick": "ゴーくん",
-    "why": "ふわふわなのに力持ち",
-    "lv": 9,
-    "grow": "攻撃型",
-    "dye": {
-      "colors": ["pink", "red", "pink_light"]
+      "colors": ["pink@90", "pink_light@90", "red@90", "cyan@85", "pink@90"]
     }
   }],
   "deck": {
@@ -120278,7 +120265,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 22,
     "grow": "ガッツ型(ステージ映え)",
     "dye": {
-      "colors": ["magenta", "pink", "purple_light", "yellow", "magenta"]
+      "colors": ["magenta@90", "pink@73", null, "magenta@78", null]
     }
   }, {
     "monster": "Yggdrasil",
@@ -120288,7 +120275,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 15,
     "grow": "ライフ型",
     "dye": {
-      "colors": ["pink", "purple_light", "yellow"]
+      "colors": [null, "magenta@90", null]
     }
   }, {
     "monster": "Dreamy",
@@ -120298,7 +120285,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 13,
     "grow": "すばやさ型",
     "dye": {
-      "colors": ["purple_light", "yellow", "magenta", "pink", "purple_light"]
+      "colors": ["green@78", null, "orange@62", null, "green@67"]
     }
   }],
   "extra": [{
@@ -120307,17 +120294,9 @@ const ASSISTANT_MASMON_PLAN = [{
     "why": "ユグドラシル種だから大好き",
     "lv": 12,
     "grow": "ライフ型",
+    "welcome": 4,
     "dye": {
-      "colors": ["pink", "purple_light", "yellow", "magenta", "pink"]
-    }
-  }, {
-    "monster": "Kuromy",
-    "nick": "クロちゃん",
-    "why": "ユグドラシル種。ステージ衣装みたい",
-    "lv": 10,
-    "grow": "ガッツ型",
-    "dye": {
-      "colors": ["purple_light", "yellow", "magenta", "pink", "purple_light"]
+      "colors": ["pink@35", null, null, null, null]
     }
   }, {
     "monster": "Illumine",
@@ -120325,8 +120304,9 @@ const ASSISTANT_MASMON_PLAN = [{
     "why": "ドリーミィの仲間。スポットライトみたい",
     "lv": 9,
     "grow": "ガッツ型",
+    "welcome": 7,
     "dye": {
-      "colors": ["yellow", "magenta", "pink", "purple_light", "yellow"]
+      "colors": ["magenta@90", "purple_light@90", "pink@90", "green@85", "magenta@90"]
     }
   }],
   "deck": {
@@ -120376,7 +120356,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 18,
     "grow": "ライフ型(のんびり)",
     "dye": {
-      "colors": ["green", "orange", "black"]
+      "colors": ["green@90", "orange@73", null]
     }
   }, {
     "monster": "Golem",
@@ -120386,7 +120366,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 20,
     "grow": "攻撃型",
     "dye": {
-      "colors": ["orange", "black", "green"]
+      "colors": [null, "green@90", null]
     }
   }, {
     "monster": "Oboro",
@@ -120396,7 +120376,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 14,
     "grow": "防御型",
     "dye": {
-      "colors": ["black", "green", "orange"]
+      "colors": ["pink@78", null, "orange@62"]
     }
   }],
   "extra": [{
@@ -120405,8 +120385,9 @@ const ASSISTANT_MASMON_PLAN = [{
     "why": "ひなたの丘で一緒に昼寝",
     "lv": 11,
     "grow": "ライフ型",
+    "welcome": 4,
     "dye": {
-      "colors": ["orange", "black", "green"]
+      "colors": ["orange@35", null, null]
     }
   }, {
     "monster": "Mitarashi",
@@ -120414,17 +120395,9 @@ const ASSISTANT_MASMON_PLAN = [{
     "why": "のんびりしてて気が合う",
     "lv": 10,
     "grow": "防御型",
+    "welcome": 7,
     "dye": {
-      "colors": ["black", "green", "orange"]
-    }
-  }, {
-    "monster": "Monol",
-    "nick": "くろいた",
-    "why": "黒くて落ち着く。どっしり",
-    "lv": 8,
-    "grow": "防御型",
-    "dye": {
-      "colors": ["green", "orange", "black"]
+      "colors": ["green@90", "black@90", "orange@90"]
     }
   }],
   "deck": {
@@ -120465,7 +120438,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 27,
     "grow": "攻撃型(朝の育成)",
     "dye": {
-      "colors": ["red", "black", "red", "black", "red"]
+      "colors": ["red@90", "black@73", null, "red@78", null]
     }
   }, {
     "monster": "Zan",
@@ -120475,7 +120448,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 19,
     "grow": "すばやさ型",
     "dye": {
-      "colors": ["black", "red", "black"]
+      "colors": [null, "red@90", null]
     }
   }, {
     "monster": "Spooky",
@@ -120485,7 +120458,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 16,
     "grow": "攻撃型",
     "dye": {
-      "colors": ["red", "black", "red", "black", "red"]
+      "colors": ["cyan@78", null, "orange@62", null, "cyan@67"]
     }
   }],
   "extra": [{
@@ -120494,8 +120467,9 @@ const ASSISTANT_MASMON_PLAN = [{
     "why": "ゴースト種は強くてかっこいい",
     "lv": 15,
     "grow": "攻撃型",
+    "welcome": 4,
     "dye": {
-      "colors": ["black", "red", "black"]
+      "colors": ["black@35", null, null]
     }
   }, {
     "monster": "Mocchi",
@@ -120503,17 +120477,9 @@ const ASSISTANT_MASMON_PLAN = [{
     "why": "モッチー種は特別",
     "lv": 12,
     "grow": "攻撃型",
+    "welcome": 7,
     "dye": {
-      "colors": ["red", "black", "red"]
-    }
-  }, {
-    "monster": "Eiki",
-    "nick": "センくん",
-    "why": "ザンの仲間。速くて強い",
-    "lv": 11,
-    "grow": "すばやさ型",
-    "dye": {
-      "colors": ["black", "red", "black"]
+      "colors": ["red@90", "red@90", "black@90"]
     }
   }],
   "deck": {
@@ -120548,7 +120514,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 21,
     "grow": "ガッツ型(夜ふかしで育成)",
     "dye": {
-      "colors": ["red_light", "white", "orange_light", "red_light", "white"]
+      "colors": ["red_light@64", "white@49", null, "red_light@53", null]
     }
   }, {
     "monster": "Dreamy",
@@ -120558,7 +120524,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 15,
     "grow": "ガッツ型",
     "dye": {
-      "colors": ["white", "orange_light", "red_light", "white", "orange_light"]
+      "colors": [null, "red_light@68", null, null, null]
     }
   }, {
     "monster": "Pixie",
@@ -120568,7 +120534,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 14,
     "grow": "すばやさ型",
     "dye": {
-      "colors": ["orange_light", "red_light", "white"]
+      "colors": ["cyan_light@53", null, "orange@41"]
     }
   }],
   "extra": [{
@@ -120577,8 +120543,9 @@ const ASSISTANT_MASMON_PLAN = [{
     "why": "ピクシー種。歌声で本がはかどる",
     "lv": 12,
     "grow": "すばやさ型",
+    "welcome": 4,
     "dye": {
-      "colors": ["white", "orange_light", "red_light"]
+      "colors": ["white@35", null, null]
     }
   }, {
     "monster": "Pandora",
@@ -120586,17 +120553,9 @@ const ASSISTANT_MASMON_PLAN = [{
     "why": "ピクシー種。夜のお話が似合う",
     "lv": 10,
     "grow": "ガッツ型",
+    "welcome": 7,
     "dye": {
-      "colors": ["white", "orange_light", "red_light", "white", "orange_light"]
-    }
-  }, {
-    "monster": "Snegurochka",
-    "nick": "ゆきの",
-    "why": "静かで、夜の読書のおともに",
-    "lv": 8,
-    "grow": "ガッツ型",
-    "dye": {
-      "colors": ["red_light", "white", "orange_light"]
+      "colors": ["red_light@90", "orange_light@90", "white@90", "black@85", "red_light@90"]
     }
   }],
   "deck": {
@@ -120643,7 +120602,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 25,
     "grow": "すばやさ型(記録どおり)",
     "dye": {
-      "colors": ["blue", "sky", "white", "blue", "sky"]
+      "colors": ["blue@64", "sky@49", null, "blue@53", null]
     }
   }, {
     "monster": "Orihime",
@@ -120653,7 +120612,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 18,
     "grow": "ガッツ型",
     "dye": {
-      "colors": ["sky", "white", "blue", "sky", "white"]
+      "colors": [null, "blue@68", null, null, null]
     }
   }, {
     "monster": "Monol",
@@ -120663,7 +120622,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 15,
     "grow": "防御型",
     "dye": {
-      "colors": ["white", "blue", "sky"]
+      "colors": ["orange@53", null, "orange@41"]
     }
   }],
   "extra": [{
@@ -120672,8 +120631,9 @@ const ASSISTANT_MASMON_PLAN = [{
     "why": "大声で場をかき回す。計算に入れやすい",
     "lv": 12,
     "grow": "すばやさ型",
+    "welcome": 4,
     "dye": {
-      "colors": ["sky", "white", "blue"]
+      "colors": ["sky@35", null, null]
     }
   }, {
     "monster": "Golem",
@@ -120681,17 +120641,9 @@ const ASSISTANT_MASMON_PLAN = [{
     "why": "数字が安定していて計算しやすい",
     "lv": 11,
     "grow": "防御型",
+    "welcome": 7,
     "dye": {
-      "colors": ["white", "blue", "sky"]
-    }
-  }, {
-    "monster": "Eiki",
-    "nick": "サクラ",
-    "why": "手の内がはっきりしていて読みやすい",
-    "lv": 9,
-    "grow": "攻撃型",
-    "dye": {
-      "colors": ["blue", "sky", "white"]
+      "colors": ["blue@90", "white@90", "sky@90"]
     }
   }],
   "deck": {
@@ -120735,7 +120687,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 23,
     "grow": "防御型(みんなを守る)",
     "dye": {
-      "colors": ["black", "orange", "gray"]
+      "colors": ["black@85", "orange@65", null]
     }
   }, {
     "monster": "Kuromy",
@@ -120745,7 +120697,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 20,
     "grow": "攻撃型",
     "dye": {
-      "colors": ["orange", "gray", "black", "orange", "gray"]
+      "colors": [null, "black@90", null, null, null]
     }
   }, {
     "monster": "Mia",
@@ -120755,7 +120707,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "lv": 17,
     "grow": "すばやさ型",
     "dye": {
-      "colors": ["gray", "black", "orange"]
+      "colors": ["white@70", null, "orange@55"]
     }
   }],
   "extra": [{
@@ -120764,17 +120716,9 @@ const ASSISTANT_MASMON_PLAN = [{
     "why": "アーク種。みんなを守る",
     "lv": 13,
     "grow": "防御型",
+    "welcome": 4,
     "dye": {
-      "colors": ["orange", "gray", "black"]
-    }
-  }, {
-    "monster": "Orihime",
-    "nick": "ほしの",
-    "why": "強いのについ目がいく",
-    "lv": 10,
-    "grow": "ガッツ型",
-    "dye": {
-      "colors": ["orange", "gray", "black", "orange", "gray"]
+      "colors": ["orange@35", null, null]
     }
   }, {
     "monster": "Yggdrasil",
@@ -120782,8 +120726,9 @@ const ASSISTANT_MASMON_PLAN = [{
     "why": "よぞらと同じ木の仲間",
     "lv": 9,
     "grow": "ライフ型",
+    "welcome": 7,
     "dye": {
-      "colors": ["black", "orange", "gray"]
+      "colors": ["black@90", "gray@90", "orange@90"]
     }
   }],
   "deck": {
@@ -120824,10 +120769,104 @@ const ASSISTANT_MASMON_PLAN = [{
 const assistantMasmonPlanOf = id => ASSISTANT_MASMON_PLAN.find(a => a && a.id === id) || null;
 const assistantMasmonMonOk = t => !!(t && typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[t.monster]);
 const assistantMasmonTeam = p => p ? [...p.team].sort((a, b) => (b.lead ? 1 : 0) - (a.lead ? 1 : 0)).filter(assistantMasmonMonOk) : [];
-const assistantMasmonBench = p => p && Array.isArray(p.extra) ? p.extra.filter(assistantMasmonMonOk).map(t => ({
+const ASSISTANT_MASMON_KEY = 'mh_assistant_life_masmon_v1';
+const normalizeAssistantMasmonSave = raw => {
+  const out = {
+    v: 1,
+    welcomed: {}
+  };
+  const w = raw && typeof raw === 'object' && raw.welcomed && typeof raw.welcomed === 'object' ? raw.welcomed : {};
+  for (const [aid, mons] of Object.entries(w)) {
+    if (!mons || typeof mons !== 'object' || Array.isArray(mons)) continue;
+    const m = {};
+    for (const [mid, day] of Object.entries(mons)) if (typeof day === 'string' && day) m[mid] = day;
+    out.welcomed[aid] = m;
+  }
+  return out;
+};
+const ASSISTANT_MASMON_STORE = {
+  state: normalizeAssistantMasmonSave(null),
+  loaded: false,
+  subs: new Set(),
+  set(next) {
+    this.state = next;
+    this.subs.forEach(f => {
+      try {
+        f(next);
+      } catch (_) {}
+    });
+  },
+  async load() {
+    if (this.loaded) return this.state;
+    let raw = null;
+    try {
+      raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_KEY, null, false) : null;
+    } catch (_) {}
+    this.loaded = true;
+    this.set(normalizeAssistantMasmonSave(raw));
+    return this.state;
+  }
+};
+const useAssistantMasmonSave = () => {
+  const [st, setSt] = React.useState(ASSISTANT_MASMON_STORE.state);
+  React.useEffect(() => {
+    ASSISTANT_MASMON_STORE.subs.add(setSt);
+    void ASSISTANT_MASMON_STORE.load();
+    return () => {
+      ASSISTANT_MASMON_STORE.subs.delete(setSt);
+    };
+  }, []);
+  return st;
+};
+const assistantMasmonWelcomed = (aid, st = ASSISTANT_MASMON_STORE.state) => st && st.welcomed && st.welcomed[aid] || {};
+const assistantMasmonBench = (p, st = ASSISTANT_MASMON_STORE.state) => p && Array.isArray(p.extra) ? p.extra.filter(t => assistantMasmonMonOk(t) && assistantMasmonWelcomed(p.id, st)[t.monster]).map(t => ({
   ...t,
   bench: true
 })) : [];
+const assistantMasmonToWelcome = (p, bondLv, st = ASSISTANT_MASMON_STORE.state) => {
+  if (!p || !Array.isArray(p.extra) || !Number.isFinite(bondLv)) return null;
+  const done = assistantMasmonWelcomed(p.id, st);
+  return p.extra.find(t => assistantMasmonMonOk(t) && !done[t.monster] && Number.isFinite(t.welcome) && bondLv >= t.welcome) || null;
+};
+const assistantMasmonWelcome = async (aid, t) => {
+  await ASSISTANT_MASMON_STORE.load();
+  const cur = ASSISTANT_MASMON_STORE.state;
+  if (assistantMasmonWelcomed(aid, cur)[t.monster]) return false;
+  const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : new Date().toISOString().slice(0, 10);
+  const next = {
+    ...cur,
+    welcomed: {
+      ...cur.welcomed,
+      [aid]: {
+        ...assistantMasmonWelcomed(aid, cur),
+        [t.monster]: day
+      }
+    }
+  };
+  ASSISTANT_MASMON_STORE.set(next);
+  try {
+    if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false);
+  } catch (_) {}
+  try {
+    if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`${assistantLifeName(aid)}が新しいマスモン「${t.nick}」を迎えた`, [aid]);
+  } catch (_) {}
+  return true;
+};
+const ASSISTANT_MASMON_WELCOME_LINES = Object.freeze({
+  mua: '{name}、見て見て！ 新しいマスモンを迎えたよ〜！ {mon}の「{nick}」！ よろしくね♪',
+  kiki: '{name}、新しいマスモンを迎えまちた。{mon}の「{nick}」でつ。いっぱいちからに振りまつ',
+  momosuke: '{name}〜！ ももの新しい仲間、{mon}の「{nick}」だよ♡ 一緒にステージに立とうね！',
+  dra: 'おう{name}。新しいマスモンが来たぞ。{mon}の「{nick}」だ。のんびり育てるよ',
+  atsu: '{name}！ 新しい仲間だ。{mon}の「{nick}」。明日から一緒に朝練するぞ！',
+  kyuko: '{name}……新しいマスモンを迎えたの。{mon}の「{nick}」。夜の読書のおともが増えたわ',
+  sorashido: '{name}、新しいマスモンを迎えたさー。{mon}の「{nick}」。表に1行足しておくね',
+  erubin: '{name}、新しい仲間を迎えたよ。{mon}の「{nick}」。みんなで守っていこう'
+});
+const assistantMasmonWelcomeLine = (aid, t) => {
+  const m = assistantMasmonMon(t.monster);
+  const call = typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(aid) : 'あなた';
+  return String(ASSISTANT_MASMON_WELCOME_LINES[aid] || '{name}、新しいマスモンを迎えたよ。{mon}の「{nick}」').split('{name}').join(call).split('{mon}').join(m ? m.name : '').split('{nick}').join(t.nick);
+};
 const assistantMasmonAll = p => [...assistantMasmonTeam(p), ...assistantMasmonBench(p)];
 const assistantMasmonMon = mid => typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[mid] || null;
 const assistantMasmonLineage = mid => {
@@ -120953,6 +120992,59 @@ const assistantMasmonFavCard = id => {
     return null;
   }
 };
+const assistantMasmonWaiting = (p, st = ASSISTANT_MASMON_STORE.state) => p && Array.isArray(p.extra) ? p.extra.filter(t => assistantMasmonMonOk(t) && !assistantMasmonWelcomed(p.id, st)[t.monster]) : [];
+function AssistantMasmonWaitCard({
+  t,
+  land = false,
+  small = false
+}) {
+  const m = assistantMasmonMon(t.monster);
+  if (!m) return null;
+  const size = small ? land ? 60 : 84 : 78;
+  const pic = React.createElement("div", {
+    className: "mhm-pic",
+    style: {
+      width: size,
+      height: size
+    }
+  }, React.createElement("img", {
+    src: m.imgUrl,
+    alt: "",
+    draggable: false,
+    style: {
+      width: '100%',
+      height: '100%',
+      objectFit: 'contain',
+      filter: 'brightness(0) opacity(.55)'
+    }
+  }));
+  if (small) return React.createElement("div", {
+    className: "text-center",
+    "data-assistant-masmon-wait": t.monster
+  }, React.createElement("div", {
+    className: "mhm-stage"
+  }, pic), React.createElement("p", {
+    className: "mt-0.5 text-[11px] font-black text-slate-300"
+  }, "？？？"), React.createElement("p", {
+    className: "text-[9.5px] font-bold text-sky-200"
+  }, "仲良し度 Lv", t.welcome));
+  return React.createElement("div", {
+    className: "mhm-card flex items-center gap-2.5",
+    style: {
+      borderStyle: 'dashed'
+    },
+    "data-assistant-masmon-wait": t.monster
+  }, pic, React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "text-[15px] font-black text-slate-300"
+  }, "？？？"), React.createElement("p", {
+    className: "text-[11px] font-bold leading-snug text-sky-200",
+    style: {
+      wordBreak: 'auto-phrase'
+    }
+  }, "🔒 仲良し度 Lv", t.welcome, " になると、新しいマスモンを迎えます")));
+}
 const ASSISTANT_MASMON_TABS = Object.freeze([['mons', '🐾 マスモン'], ['team', '⚔ 編成'], ['deck', '🃏 デッキ'], ['taste', '💗 好き・苦手']]);
 function AssistantMasmonPic({
   t,
@@ -120997,14 +121089,23 @@ function AssistantMasmonDots({
   return React.createElement("span", {
     className: "inline-flex items-center gap-[3px] align-middle",
     "data-assistant-masmon-dye": cs.join(',')
-  }, cs.map((c, i) => React.createElement("i", {
-    key: i,
-    title: assistantMasmonColorName(c),
-    className: "inline-block h-[9px] w-[9px] rounded-full border border-white/40",
-    style: {
-      background: assistantMasmonSwatch(c)
-    }
-  })), n > 0 && React.createElement("small", {
+  }, cs.map((c, i) => {
+    const b = c ? String(c).split('@')[0] : null;
+    const al = c && String(c).includes('@') ? Number(String(c).split('@')[1]) / 100 : 1;
+    return b ? React.createElement("i", {
+      key: i,
+      title: assistantMasmonColorName(b),
+      className: "inline-block h-[9px] w-[9px] rounded-full border border-white/40",
+      style: {
+        background: assistantMasmonSwatch(b),
+        opacity: Math.max(.35, al)
+      }
+    }) : React.createElement("i", {
+      key: i,
+      title: "元の色",
+      className: "inline-block h-[9px] w-[9px] rounded-full border border-dashed border-white/60"
+    });
+  }), n > 0 && React.createElement("small", {
     className: "ml-0.5 text-[9px] font-bold text-slate-400"
   }, n, "枠"));
 }
@@ -121062,16 +121163,32 @@ function AssistantMasmonRow({
 function AssistantMasmonSheet({
   id,
   land = false,
-  onClose
+  onClose,
+  bondLv = null
 }) {
   const [tab, setTab] = React.useState('mons');
   const [detail, setDetail] = React.useState(null);
+  const save = useAssistantMasmonSave();
+  const [welcome, setWelcome] = React.useState(null);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      await ASSISTANT_MASMON_STORE.load();
+      const p0 = assistantMasmonPlanOf(id),
+        t = assistantMasmonToWelcome(p0, Number(bondLv));
+      if (t && (await assistantMasmonWelcome(id, t)) && alive) setWelcome(t);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [id, bondLv]);
   const who = typeof assistantById === 'function' ? assistantById(id) : null;
   const p = assistantMasmonPlanOf(id);
   if (!who || !p) return null;
   const team = assistantMasmonTeam(p),
-    bench = assistantMasmonBench(p),
-    all = [...team, ...bench];
+    bench = assistantMasmonBench(p, save),
+    all = [...team, ...bench],
+    waiting = assistantMasmonWaiting(p, save);
   const fav = tab === 'deck' ? assistantMasmonFavCard(id) : null;
   let body = null;
   if (tab === 'mons') {
@@ -121082,6 +121199,10 @@ function AssistantMasmonSheet({
       t: t,
       land: land,
       onOpen: setDetail
+    })), waiting.map(t => React.createElement(AssistantMasmonWaitCard, {
+      key: t.monster,
+      t: t,
+      land: land
     }))), React.createElement("p", {
       className: "mt-2 text-[10.5px] font-bold leading-snug text-slate-400"
     }, "🐾 ", who.name, "が自分で育てて、自分の好きな色に染めているマスモンです。押すと詳しく見られます。"));
@@ -121169,7 +121290,7 @@ function AssistantMasmonSheet({
         style: {
           wordBreak: 'auto-phrase'
         }
-      }, "💬 ", who.name, "「先頭は", lead.nick, "。", lead.why, "」")), bench.length > 0 && React.createElement("div", {
+      }, "💬 ", who.name, "「先頭は", lead.nick, "。", lead.why, "」")), (bench.length > 0 || waiting.length > 0) && React.createElement("div", {
         className: "mhm-card",
         "data-assistant-masmon-bench": true
       }, React.createElement("p", {
@@ -121191,7 +121312,12 @@ function AssistantMasmonSheet({
         className: "mt-0.5 truncate text-[11px] font-black text-white"
       }, t.nick), React.createElement("p", {
         className: "truncate text-[9.5px] font-bold text-amber-200"
-      }, "Lv.", t.lv))))));
+      }, "Lv.", t.lv))), waiting.map(t => React.createElement(AssistantMasmonWaitCard, {
+        key: t.monster,
+        t: t,
+        land: land,
+        small: true
+      })))));
     })(), React.createElement("p", {
       className: "mt-2 text-[10.5px] font-bold leading-snug text-slate-400"
     }, "⚔ 編成は", who.name, "が決めています。押すと詳しく見られます。"));
@@ -121369,7 +121495,62 @@ function AssistantMasmonSheet({
     t: detail,
     land: land,
     onClose: () => setDetail(null)
-  }));
+  }), welcome && React.createElement("div", {
+    className: "absolute inset-0 grid place-items-center",
+    style: {
+      zIndex: 34
+    },
+    "data-assistant-masmon-welcome": welcome.monster
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    className: "absolute inset-0 bg-black/75",
+    onClick: () => setWelcome(null)
+  }), React.createElement("div", {
+    className: "mhm-card relative mx-4 w-[min(92%,420px)] text-center",
+    style: {
+      background: 'linear-gradient(180deg,#2a1d55,#0b1020)',
+      borderColor: '#f9a8d4'
+    }
+  }, React.createElement("p", {
+    className: "mhl-en"
+  }, "NEW MASMON"), React.createElement("p", {
+    className: "text-[17px] font-black text-amber-200"
+  }, "🎉 新しいマスモンを迎えました"), React.createElement("div", {
+    className: "mhm-stage mt-1"
+  }, React.createElement(AssistantMasmonPic, {
+    t: welcome,
+    size: land ? 120 : 170
+  })), React.createElement("p", {
+    className: "mt-1 text-[16px] font-black text-white"
+  }, welcome.nick, React.createElement("span", {
+    className: "ml-1.5 text-[11px] text-slate-300"
+  }, (assistantMasmonMon(welcome.monster) || {}).name, " ・ Lv.", welcome.lv)), React.createElement("div", {
+    className: "mt-2 flex items-start gap-2 text-left"
+  }, typeof AssistantFace === 'function' && React.createElement("span", {
+    className: "shrink-0"
+  }, React.createElement(AssistantFace, {
+    who: who,
+    size: 40,
+    accent: who.accent
+  })), React.createElement("p", {
+    className: "rounded-xl bg-white px-2.5 py-1.5 text-[12px] font-bold leading-snug text-slate-800",
+    style: {
+      wordBreak: 'auto-phrase'
+    },
+    "data-assistant-masmon-welcome-line": true
+  }, assistantMasmonWelcomeLine(id, welcome))), React.createElement("button", {
+    type: "button",
+    className: "mhl-btn mt-3 w-full",
+    style: {
+      background: 'linear-gradient(90deg,#f472b6,#fb923c)'
+    },
+    "data-assistant-masmon-welcome-ok": true,
+    onClick: () => {
+      setWelcome(null);
+      setTab('mons');
+    }
+  }, "よろしくね"))));
 }
 const ASSISTANT_MASMON_GROW_TEXT = Object.freeze({
   '攻撃型': 'ちからを伸ばして、一撃で決めるのが得意',
@@ -121452,15 +121633,22 @@ function AssistantMasmonDetail({
     className: "text-[10px] font-black text-slate-400"
   }, "染めた色(", n, "か所)"), React.createElement("div", {
     className: "mt-1 flex flex-wrap gap-x-3 gap-y-1"
-  }, cols.map((c, i) => React.createElement("span", {
-    key: i,
-    className: "inline-flex items-center gap-1 text-[10.5px] font-bold text-slate-100"
-  }, React.createElement("i", {
-    className: "inline-block h-[12px] w-[12px] rounded-full border border-white/50",
-    style: {
-      background: assistantMasmonSwatch(String(c).split('@')[0])
-    }
-  }), assistantMasmonColorName(String(c).split('@')[0]))))), React.createElement("div", {
+  }, cols.map((c, i) => {
+    const b = c ? String(c).split('@')[0] : null;
+    const al = c && String(c).includes('@') ? Number(String(c).split('@')[1]) : 100;
+    return React.createElement("span", {
+      key: i,
+      className: "inline-flex items-center gap-1 text-[10.5px] font-bold text-slate-100"
+    }, b ? React.createElement("i", {
+      className: "inline-block h-[12px] w-[12px] rounded-full border border-white/50",
+      style: {
+        background: assistantMasmonSwatch(b),
+        opacity: Math.max(.35, al / 100)
+      }
+    }) : React.createElement("i", {
+      className: "inline-block h-[12px] w-[12px] rounded-full border border-dashed border-white/70"
+    }), b ? `${assistantMasmonColorName(b)}${al < 100 ? `(うすめ ${al}%)` : ''}` : '元の色');
+  }))), React.createElement("div", {
     className: "mhm-card mt-2",
     "data-assistant-masmon-detail-talk": true
   }, like && React.createElement("p", {
@@ -121524,6 +121712,7 @@ function AssistantMasmonRoomRow({
   id,
   onOpen
 }) {
+  const save = useAssistantMasmonSave();
   const p = assistantMasmonPlanOf(id);
   if (!p || typeof onOpen !== 'function') return null;
   const lead = p.team.find(t => t.lead) || p.team[0];
@@ -121544,7 +121733,7 @@ function AssistantMasmonRoomRow({
     className: "min-w-0 text-[11px] font-bold"
   }, React.createElement("span", {
     className: "block truncate"
-  }, React.createElement("b", null, lead.nick), "(", m.name, " Lv.", lead.lv, ") ほか", Math.max(0, assistantMasmonAll(p).length - 1), "体"), now && React.createElement("span", {
+  }, React.createElement("b", null, lead.nick), "(", m.name, " Lv.", lead.lv, ") ほか", Math.max(0, assistantMasmonTeam(p).length + assistantMasmonBench(p, save).length - 1), "体"), now && React.createElement("span", {
     className: "block text-[10px] text-sky-200",
     "data-assistant-life-room-masmon-now": true
   }, "🐾 いま: ", now)), React.createElement("span", {

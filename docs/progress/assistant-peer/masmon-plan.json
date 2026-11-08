@@ -1,5 +1,5 @@
 {
- "_": "助手のマスモン(一覧・編成・成長・染色)と好き/苦手(モンスター単位→その血統にも少し)・MFバトルカードのデッキ(マスモンとは別のカード)の案(2026-11-08 助手部キズナ・2026-11-08 社長が1人ずつ選んだ好き・苦手・好きな色で確定)。monster は ALL_PLAYER_MONSTERS の id。デッキのカードの中身は今のカード部の表(CARD_AI_DECKS)が元で、ソランドとすり合わせる。検査 tools/assistant/assistant-masmon-plan-check.js / extra: 2026-11-08 社長「空いてる枠にほかのますもんもふやす」で足した3体(今の3体 team はそのまま。控え)",
+ "_": "助手のマスモン(一覧・編成・成長・染色)と好き/苦手(モンスター単位→その血統にも少し)・MFバトルカードのデッキ(マスモンとは別のカード)の案(2026-11-08 助手部キズナ・2026-11-08 社長が1人ずつ選んだ好き・苦手・好きな色で確定)。monster は ALL_PLAYER_MONSTERS の id。デッキのカードの中身は今のカード部の表(CARD_AI_DECKS)が元で、ソランドとすり合わせる。検査 tools/assistant/assistant-masmon-plan-check.js / extra: 2026-11-08 社長「空いてる枠にほかのますもんもふやす」で足した2体(今の3体 team はそのまま。仲良し度 Lv4・Lv7 で迎える。2026-11-08 社長の選び B=5体) / dye: 2026-11-08 社長「好き色はあるけどバリエーションをもっとだしてほしい」で、マスモンごとに染め方を変えた(masmon-life/dye-vary.js が書く)",
  "assistants": [
   {
    "id": "mua",
@@ -14,12 +14,13 @@
      "grow": "すばやさ型(ノリで決めた)",
      "dye": {
       "colors": [
-       "pink_light",
-       "sky",
-       "pink",
-       "pink_light",
-       "sky"
-      ]
+       "pink_light@85",
+       "sky@65",
+       null,
+       "pink_light@70",
+       null
+      ],
+      "style": "濃いめ"
      }
     },
     {
@@ -31,12 +32,13 @@
      "grow": "ライフ型",
      "dye": {
       "colors": [
-       "sky",
-       "pink",
-       "pink_light",
-       "sky",
-       "pink"
-      ]
+       null,
+       "pink_light@90",
+       null,
+       null,
+       null
+      ],
+      "style": "差し色"
      }
     },
     {
@@ -48,10 +50,11 @@
      "grow": "攻撃型",
      "dye": {
       "colors": [
-       "pink",
-       "pink_light",
-       "sky"
-      ]
+       "green_light@70",
+       null,
+       "orange@55"
+      ],
+      "style": "反対色と秋の色"
      }
     }
    ],
@@ -113,11 +116,13 @@
      "grow": "ライフ型",
      "dye": {
       "colors": [
-       "sky",
-       "pink",
-       "pink_light"
-      ]
-     }
+       "sky@35",
+       null,
+       null
+      ],
+      "style": "元の色に近い"
+     },
+     "welcome": 4
     },
     {
      "monster": "Melody",
@@ -127,27 +132,15 @@
      "grow": "ガッツ型",
      "dye": {
       "colors": [
-       "pink",
-       "pink_light",
-       "sky",
-       "pink",
-       "pink_light"
-      ]
-     }
-    },
-    {
-     "monster": "Pixie",
-     "nick": "ぴくぴく",
-     "why": "キラキラしててかわいい",
-     "lv": 9,
-     "grow": "すばやさ型",
-     "dye": {
-      "colors": [
-       "pink_light",
-       "sky",
-       "pink"
-      ]
-     }
+       "pink_light@90",
+       "pink@90",
+       "sky@90",
+       "orange@85",
+       "pink_light@90"
+      ],
+      "style": "思い切った色"
+     },
+     "welcome": 7
     }
    ]
   },
@@ -164,10 +157,11 @@
      "grow": "攻撃型(ちからに振る)",
      "dye": {
       "colors": [
-       "pink",
-       "red",
-       "pink_light"
-      ]
+       "pink@64",
+       "red@49",
+       null
+      ],
+      "style": "濃いめ"
      }
     },
     {
@@ -179,10 +173,11 @@
      "grow": "攻撃型",
      "dye": {
       "colors": [
-       "red",
-       "pink_light",
-       "pink"
-      ]
+       null,
+       "pink@68",
+       null
+      ],
+      "style": "差し色"
      }
     },
     {
@@ -194,10 +189,11 @@
      "grow": "すばやさ型",
      "dye": {
       "colors": [
-       "pink_light",
-       "pink",
-       "red"
-      ]
+       "green@53",
+       null,
+       "orange@41"
+      ],
+      "style": "反対色と秋の色"
      }
     }
    ],
@@ -259,11 +255,13 @@
      "grow": "攻撃型",
      "dye": {
       "colors": [
-       "red",
-       "pink_light",
-       "pink"
-      ]
-     }
+       "red@35",
+       null,
+       null
+      ],
+      "style": "元の色に近い"
+     },
+     "welcome": 4
     },
     {
      "monster": "Pandora",
@@ -273,27 +271,15 @@
      "grow": "攻撃型",
      "dye": {
       "colors": [
-       "red",
-       "pink_light",
-       "pink",
-       "red",
-       "pink_light"
-      ]
-     }
-    },
-    {
-     "monster": "Ghost",
-     "nick": "ゴーくん",
-     "why": "ふわふわなのに力持ち",
-     "lv": 9,
-     "grow": "攻撃型",
-     "dye": {
-      "colors": [
-       "pink",
-       "red",
-       "pink_light"
-      ]
-     }
+       "pink@90",
+       "pink_light@90",
+       "red@90",
+       "cyan@85",
+       "pink@90"
+      ],
+      "style": "思い切った色"
+     },
+     "welcome": 7
     }
    ]
   },
@@ -310,12 +296,13 @@
      "grow": "ガッツ型(ステージ映え)",
      "dye": {
       "colors": [
-       "magenta",
-       "pink",
-       "purple_light",
-       "yellow",
-       "magenta"
-      ]
+       "magenta@90",
+       "pink@73",
+       null,
+       "magenta@78",
+       null
+      ],
+      "style": "濃いめ"
      }
     },
     {
@@ -327,10 +314,11 @@
      "grow": "ライフ型",
      "dye": {
       "colors": [
-       "pink",
-       "purple_light",
-       "yellow"
-      ]
+       null,
+       "magenta@90",
+       null
+      ],
+      "style": "差し色"
      }
     },
     {
@@ -342,12 +330,13 @@
      "grow": "すばやさ型",
      "dye": {
       "colors": [
-       "purple_light",
-       "yellow",
-       "magenta",
-       "pink",
-       "purple_light"
-      ]
+       "green@78",
+       null,
+       "orange@62",
+       null,
+       "green@67"
+      ],
+      "style": "反対色と秋の色"
      }
     }
    ],
@@ -413,29 +402,15 @@
      "grow": "ライフ型",
      "dye": {
       "colors": [
-       "pink",
-       "purple_light",
-       "yellow",
-       "magenta",
-       "pink"
-      ]
-     }
-    },
-    {
-     "monster": "Kuromy",
-     "nick": "クロちゃん",
-     "why": "ユグドラシル種。ステージ衣装みたい",
-     "lv": 10,
-     "grow": "ガッツ型",
-     "dye": {
-      "colors": [
-       "purple_light",
-       "yellow",
-       "magenta",
-       "pink",
-       "purple_light"
-      ]
-     }
+       "pink@35",
+       null,
+       null,
+       null,
+       null
+      ],
+      "style": "元の色に近い"
+     },
+     "welcome": 4
     },
     {
      "monster": "Illumine",
@@ -445,13 +420,15 @@
      "grow": "ガッツ型",
      "dye": {
       "colors": [
-       "yellow",
-       "magenta",
-       "pink",
-       "purple_light",
-       "yellow"
-      ]
-     }
+       "magenta@90",
+       "purple_light@90",
+       "pink@90",
+       "green@85",
+       "magenta@90"
+      ],
+      "style": "思い切った色"
+     },
+     "welcome": 7
     }
    ]
   },
@@ -468,10 +445,11 @@
      "grow": "ライフ型(のんびり)",
      "dye": {
       "colors": [
-       "green",
-       "orange",
-       "black"
-      ]
+       "green@90",
+       "orange@73",
+       null
+      ],
+      "style": "濃いめ"
      }
     },
     {
@@ -483,10 +461,11 @@
      "grow": "攻撃型",
      "dye": {
       "colors": [
-       "orange",
-       "black",
-       "green"
-      ]
+       null,
+       "green@90",
+       null
+      ],
+      "style": "差し色"
      }
     },
     {
@@ -498,10 +477,11 @@
      "grow": "防御型",
      "dye": {
       "colors": [
-       "black",
-       "green",
-       "orange"
-      ]
+       "pink@78",
+       null,
+       "orange@62"
+      ],
+      "style": "反対色と秋の色"
      }
     }
    ],
@@ -558,11 +538,13 @@
      "grow": "ライフ型",
      "dye": {
       "colors": [
-       "orange",
-       "black",
-       "green"
-      ]
-     }
+       "orange@35",
+       null,
+       null
+      ],
+      "style": "元の色に近い"
+     },
+     "welcome": 4
     },
     {
      "monster": "Mitarashi",
@@ -572,25 +554,13 @@
      "grow": "防御型",
      "dye": {
       "colors": [
-       "black",
-       "green",
-       "orange"
-      ]
-     }
-    },
-    {
-     "monster": "Monol",
-     "nick": "くろいた",
-     "why": "黒くて落ち着く。どっしり",
-     "lv": 8,
-     "grow": "防御型",
-     "dye": {
-      "colors": [
-       "green",
-       "orange",
-       "black"
-      ]
-     }
+       "green@90",
+       "black@90",
+       "orange@90"
+      ],
+      "style": "思い切った色"
+     },
+     "welcome": 7
     }
    ]
   },
@@ -607,12 +577,13 @@
      "grow": "攻撃型(朝の育成)",
      "dye": {
       "colors": [
-       "red",
-       "black",
-       "red",
-       "black",
-       "red"
-      ]
+       "red@90",
+       "black@73",
+       null,
+       "red@78",
+       null
+      ],
+      "style": "濃いめ"
      }
     },
     {
@@ -624,10 +595,11 @@
      "grow": "すばやさ型",
      "dye": {
       "colors": [
-       "black",
-       "red",
-       "black"
-      ]
+       null,
+       "red@90",
+       null
+      ],
+      "style": "差し色"
      }
     },
     {
@@ -639,12 +611,13 @@
      "grow": "攻撃型",
      "dye": {
       "colors": [
-       "red",
-       "black",
-       "red",
-       "black",
-       "red"
-      ]
+       "cyan@78",
+       null,
+       "orange@62",
+       null,
+       "cyan@67"
+      ],
+      "style": "反対色と秋の色"
      }
     }
    ],
@@ -689,11 +662,13 @@
      "grow": "攻撃型",
      "dye": {
       "colors": [
-       "black",
-       "red",
-       "black"
-      ]
-     }
+       "black@35",
+       null,
+       null
+      ],
+      "style": "元の色に近い"
+     },
+     "welcome": 4
     },
     {
      "monster": "Mocchi",
@@ -703,25 +678,13 @@
      "grow": "攻撃型",
      "dye": {
       "colors": [
-       "red",
-       "black",
-       "red"
-      ]
-     }
-    },
-    {
-     "monster": "Eiki",
-     "nick": "センくん",
-     "why": "ザンの仲間。速くて強い",
-     "lv": 11,
-     "grow": "すばやさ型",
-     "dye": {
-      "colors": [
-       "black",
-       "red",
-       "black"
-      ]
-     }
+       "red@90",
+       "red@90",
+       "black@90"
+      ],
+      "style": "思い切った色"
+     },
+     "welcome": 7
     }
    ]
   },
@@ -738,12 +701,13 @@
      "grow": "ガッツ型(夜ふかしで育成)",
      "dye": {
       "colors": [
-       "red_light",
-       "white",
-       "orange_light",
-       "red_light",
-       "white"
-      ]
+       "red_light@64",
+       "white@49",
+       null,
+       "red_light@53",
+       null
+      ],
+      "style": "濃いめ"
      }
     },
     {
@@ -755,12 +719,13 @@
      "grow": "ガッツ型",
      "dye": {
       "colors": [
-       "white",
-       "orange_light",
-       "red_light",
-       "white",
-       "orange_light"
-      ]
+       null,
+       "red_light@68",
+       null,
+       null,
+       null
+      ],
+      "style": "差し色"
      }
     },
     {
@@ -772,10 +737,11 @@
      "grow": "すばやさ型",
      "dye": {
       "colors": [
-       "orange_light",
-       "red_light",
-       "white"
-      ]
+       "cyan_light@53",
+       null,
+       "orange@41"
+      ],
+      "style": "反対色と秋の色"
      }
     }
    ],
@@ -837,11 +803,13 @@
      "grow": "すばやさ型",
      "dye": {
       "colors": [
-       "white",
-       "orange_light",
-       "red_light"
-      ]
-     }
+       "white@35",
+       null,
+       null
+      ],
+      "style": "元の色に近い"
+     },
+     "welcome": 4
     },
     {
      "monster": "Pandora",
@@ -851,27 +819,15 @@
      "grow": "ガッツ型",
      "dye": {
       "colors": [
-       "white",
-       "orange_light",
-       "red_light",
-       "white",
-       "orange_light"
-      ]
-     }
-    },
-    {
-     "monster": "Snegurochka",
-     "nick": "ゆきの",
-     "why": "静かで、夜の読書のおともに",
-     "lv": 8,
-     "grow": "ガッツ型",
-     "dye": {
-      "colors": [
-       "red_light",
-       "white",
-       "orange_light"
-      ]
-     }
+       "red_light@90",
+       "orange_light@90",
+       "white@90",
+       "black@85",
+       "red_light@90"
+      ],
+      "style": "思い切った色"
+     },
+     "welcome": 7
     }
    ]
   },
@@ -888,12 +844,13 @@
      "grow": "すばやさ型(記録どおり)",
      "dye": {
       "colors": [
-       "blue",
-       "sky",
-       "white",
-       "blue",
-       "sky"
-      ]
+       "blue@64",
+       "sky@49",
+       null,
+       "blue@53",
+       null
+      ],
+      "style": "濃いめ"
      }
     },
     {
@@ -905,12 +862,13 @@
      "grow": "ガッツ型",
      "dye": {
       "colors": [
-       "sky",
-       "white",
-       "blue",
-       "sky",
-       "white"
-      ]
+       null,
+       "blue@68",
+       null,
+       null,
+       null
+      ],
+      "style": "差し色"
      }
     },
     {
@@ -922,10 +880,11 @@
      "grow": "防御型",
      "dye": {
       "colors": [
-       "white",
-       "blue",
-       "sky"
-      ]
+       "orange@53",
+       null,
+       "orange@41"
+      ],
+      "style": "反対色と秋の色"
      }
     }
    ],
@@ -983,11 +942,13 @@
      "grow": "すばやさ型",
      "dye": {
       "colors": [
-       "sky",
-       "white",
-       "blue"
-      ]
-     }
+       "sky@35",
+       null,
+       null
+      ],
+      "style": "元の色に近い"
+     },
+     "welcome": 4
     },
     {
      "monster": "Golem",
@@ -997,25 +958,13 @@
      "grow": "防御型",
      "dye": {
       "colors": [
-       "white",
-       "blue",
-       "sky"
-      ]
-     }
-    },
-    {
-     "monster": "Eiki",
-     "nick": "サクラ",
-     "why": "手の内がはっきりしていて読みやすい",
-     "lv": 9,
-     "grow": "攻撃型",
-     "dye": {
-      "colors": [
-       "blue",
-       "sky",
-       "white"
-      ]
-     }
+       "blue@90",
+       "white@90",
+       "sky@90"
+      ],
+      "style": "思い切った色"
+     },
+     "welcome": 7
     }
    ]
   },
@@ -1032,10 +981,11 @@
      "grow": "防御型(みんなを守る)",
      "dye": {
       "colors": [
-       "black",
-       "orange",
-       "gray"
-      ]
+       "black@85",
+       "orange@65",
+       null
+      ],
+      "style": "濃いめ"
      }
     },
     {
@@ -1047,12 +997,13 @@
      "grow": "攻撃型",
      "dye": {
       "colors": [
-       "orange",
-       "gray",
-       "black",
-       "orange",
-       "gray"
-      ]
+       null,
+       "black@90",
+       null,
+       null,
+       null
+      ],
+      "style": "差し色"
      }
     },
     {
@@ -1064,10 +1015,11 @@
      "grow": "すばやさ型",
      "dye": {
       "colors": [
-       "gray",
-       "black",
-       "orange"
-      ]
+       "white@70",
+       null,
+       "orange@55"
+      ],
+      "style": "反対色と秋の色"
      }
     }
    ],
@@ -1129,27 +1081,13 @@
      "grow": "防御型",
      "dye": {
       "colors": [
-       "orange",
-       "gray",
-       "black"
-      ]
-     }
-    },
-    {
-     "monster": "Orihime",
-     "nick": "ほしの",
-     "why": "強いのについ目がいく",
-     "lv": 10,
-     "grow": "ガッツ型",
-     "dye": {
-      "colors": [
-       "orange",
-       "gray",
-       "black",
-       "orange",
-       "gray"
-      ]
-     }
+       "orange@35",
+       null,
+       null
+      ],
+      "style": "元の色に近い"
+     },
+     "welcome": 4
     },
     {
      "monster": "Yggdrasil",
@@ -1159,11 +1097,13 @@
      "grow": "ライフ型",
      "dye": {
       "colors": [
-       "black",
-       "orange",
-       "gray"
-      ]
-     }
+       "black@90",
+       "gray@90",
+       "orange@90"
+      ],
+      "style": "思い切った色"
+     },
+     "welcome": 7
     }
    ]
   }

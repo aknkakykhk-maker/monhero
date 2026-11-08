@@ -1,6 +1,6 @@
 // 案の止め絵: 助手のマスモンの染め方(今・案A・案B)を、ゲーム本体の染色の部品(DyedMonsterImage)で描いて並べる。
 //   node docs/progress/assistant-peer/masmon-life/dye-shoot.js → masmon-life/dye/<助手>-<now|A|B>.png・<助手>-zoom-<now|A>.png
-// 案のデータ: masmon-life/dye-plan.json。今の色: masmon-plan.json の先頭(当番の先頭)のマスモン
+// マスモンごとの染め方(masmon-plan.json・dye-vary.js が書く)を描く。前の案(今・案A・案B)は dye-plan.json と dye/<助手>-<now|A|B>.png に残してある
 const http = require('http'), path = require('path'), fs = require('fs');
 const root = path.resolve(__dirname, '..', '..', '..', '..'), PORT = 9285;
 const { MIME } = require(path.join(root, 'tools/assistant/life-browser-shared'));
@@ -22,19 +22,16 @@ const dye = JSON.parse(fs.readFileSync(path.join(__dirname, 'dye-plan.json'), 'u
   await p.goto(`http://localhost:${PORT}/monster-hero/index.html`);
   await p.waitForFunction(() => typeof DyedMonsterImage === 'function' && typeof ReactDOM !== 'undefined', null, { timeout: 90000 });
   const jobs = [];
+  // マスモンごとの染め方(masmon-plan.json の team + extra。dye-vary.js が書いたもの)
   for (const a of plan) {
-    const lead = a.team.find(t => t.lead) || a.team[0];
-    const d = dye[a.id];
-    jobs.push({ key: `${a.id}-now`, id: lead.monster, colors: lead.dye.colors, px: 240 });
-    jobs.push({ key: `${a.id}-A`, id: lead.monster, colors: d.A, px: 240 });
-    jobs.push({ key: `${a.id}-B`, id: lead.monster, colors: d.B, px: 240 });
-    jobs.push({ key: `${a.id}-orig`, id: lead.monster, colors: [], px: 240 });
+    const mons = [...a.team.filter(m => m.lead), ...a.team.filter(m => !m.lead), ...(a.extra || [])];
+    mons.forEach((m, i) => jobs.push({ key: `v-${a.id}-${i + 1}`, id: m.monster, colors: m.dye.colors, px: 220 }));
   }
-  // 原寸の拡大: ドラ(大胆)ときき(控えめ)の今と案A
-  for (const id of ['dra', 'kiki']) {
-    const a = plan.find(x => x.id === id), lead = a.team.find(t => t.lead) || a.team[0];
-    jobs.push({ key: `${id}-zoom-now`, id: lead.monster, colors: lead.dye.colors, px: 560 });
-    jobs.push({ key: `${id}-zoom-A`, id: lead.monster, colors: dye[id].A, px: 560 });
+  // 原寸の拡大: きき1体目(濃いめ・控えめな人)・ドラ5体目(思い切った色)・きゅうこ4体目(元の色に近い)
+  for (const [id, i] of [['kiki', 0], ['dra', 4], ['kyuko', 3]]) {
+    const a = plan.find(x => x.id === id), mons = [...a.team.filter(m => m.lead), ...a.team.filter(m => !m.lead), ...(a.extra || [])];
+    jobs.push({ key: `vz-${id}-${i + 1}`, id: mons[i].monster, colors: mons[i].dye.colors, px: 560 });
+    jobs.push({ key: `vz-${id}-${i + 1}-orig`, id: mons[i].monster, colors: [], px: 560 });
   }
   for (const j of jobs) {
     await p.evaluate(({ id, colors, px }) => {

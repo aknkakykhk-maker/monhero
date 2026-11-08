@@ -69,7 +69,8 @@ for (const { name, data } of sources) {
     for (const m of all) if (!IMPL.has(m.monster)) bad.push(`${a.id}:${m.monster}${upBlock.includes(`${m.monster}:`) ? '(まだ案のモンスター)' : ''}`);
     for (const l of [...(a.like || []), ...(a.dislike || [])]) if (!IMPL_LINEAGES.has(l.lineage)) bad.push(`${a.id}:血統 ${l.lineage}`);
     if (team.length !== 3 || team.filter(m => m.lead).length !== 1) teamNg.push(`${a.id}(${team.length}体・先頭${team.filter(m => m.lead).length})`);
-    if (extra.length > 3 || extra.some(m => m.lead)) teamNg.push(`${a.id}(控え${extra.length}体。3体まで・先頭にしない)`);
+    if (extra.length > 2 || extra.some(m => m.lead)) teamNg.push(`${a.id}(迎える${extra.length}体。2体まで・先頭にしない)`);
+    { const lv = extra.map(m => m.welcome); if (lv.some(x => !Number.isInteger(x) || x < 2 || x > 12) || lv.some((x, i) => i && x <= lv[i - 1])) teamNg.push(`${a.id}(迎える仲良し度 ${lv.join(',')}。2〜12で増えていく)`); }
     if (new Set(all.map(m => m.monster)).size !== all.length) teamNg.push(`${a.id}: 同じモンスターが2体`);
     for (const m of all) if (!m.nick || m.nick.length > 8 || /子/.test(m.nick) || all.filter(x => x.nick === m.nick).length > 1 || IDS_NAMES.has(m.nick)) teamNg.push(`${a.id}:${m.nick || '名前なし'}`);
     // 好き・苦手: モンスター単位か血統ごと(社長「ユグドラシル種」「アーク種」など)。モンスターの好き・苦手はその血統にも少し広がる
@@ -95,13 +96,15 @@ for (const { name, data } of sources) {
       if (!cols) dyeNg.push(`${a.id}:${m.nick} が染まっていない(どの種類も染められる)`);
       else {
         if (cols.length !== want) dyeNg.push(`${a.id}:${m.nick}(${m.monster})の色は ${cols.length}枠・プレイヤーは ${want}枠`);
-        for (const c of cols) if (!COLOR_IDS.has(c)) dyeNg.push(`${a.id}:${m.nick} の色「${c}」はゲームの色の名前にない`);
+        // 色は「色id」か「色id@濃さ(10〜100)」、null は元の色のまま(プレイヤーの染色と同じ書き方)。どこか1か所は染める
+        for (const c of cols) { if (c === null) continue; const [base, al] = String(c).split('@'); if (!COLOR_IDS.has(base) || (al !== undefined && !(Number(al) >= 10 && Number(al) <= 100))) dyeNg.push(`${a.id}:${m.nick} の色「${c}」はゲームの色・濃さの書き方にない`); }
+        if (!cols.some(Boolean)) dyeNg.push(`${a.id}:${m.nick} がどこも染まっていない`);
       }
     }
     if (a.later && [...IMPL.values()].includes(a.later.monster)) laterNg.push(`${a.id}:${a.later.monster} はもう実装済み(一覧に入れ直す)`);
   }
   check(`${T}① ② まだ実装されていないモンスター・血統が混ざっていない`, !bad.length, bad.join(' / '));
-  check(`${T}③ 3体・先頭1体・控え3体まで・同じモンスターなし・ニックネーム(助手の名前と同じにしない)`, !teamNg.length, teamNg.join(' / '));
+  check(`${T}③ 3体・先頭1体・迎える2体まで(仲良し度の段)・同じモンスターなし・ニックネーム(助手の名前と同じにしない)`, !teamNg.length, teamNg.join(' / '));
   check(`${T}④ 好き(1〜4)・苦手(0〜4)・広がる血統が重ならない・苦手なものは持たない・好きな色`, !likeNg.length, likeNg.join(' / '));
   check(`${T}⑥ 成長(Lv)と染色(プレイヤーと同じ枠数・ゲームの色)`, !dyeNg.length, dyeNg.join(' / '));
   // ⑦ 助手どうしで好き・苦手がかぶりすぎない(同じモンスター・血統を好き/苦手に入れる助手は2人まで。社長「かぶりすぎない」)
