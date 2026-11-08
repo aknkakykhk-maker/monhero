@@ -74,7 +74,7 @@ const cutProblems = (page, sel) => page.evaluate((s) => {
       const items = await page.locator('[data-assistant-life-items]').innerText().catch(() => '');
       check(`① ${tag}: 道具タブに友情Lv・仲良し度の説明と交換所の入口が出る`, /友情Lv=贈った2人の助手どうしの仲/.test(items) && /仲良し度=あなたとその助手の仲/.test(items) && (await page.locator('[data-assistant-life-items] [data-assistant-life-shop="item"]').count()) >= 2, items.replace(/\s+/g, ' ').slice(0, 80));
       // 右上の時計の札が右端で切れない(🔄横 667 の狭い欄・2026-11-08 ミハリ)
-      const clockOk = await page.evaluate(() => { const c = document.querySelector('[data-assistant-life-screen] [data-time-of-day-clock], [data-assistant-life-screen] .mhl-clock'); if (!c) return true; const r = c.getBoundingClientRect(); let p = c.parentElement; while (p && getComputedStyle(p).overflow === 'visible') p = p.parentElement; const pr = p ? p.getBoundingClientRect() : { right: innerWidth }; return r.right <= Math.min(innerWidth, pr.right) + 1; });
+      const clockOk = await page.evaluate(() => { const c = [...document.querySelectorAll('[data-assistant-life-clock-box] [data-time-of-day-clock]')].find(x => x.getClientRects().length); if (!c) return true; const r = c.getBoundingClientRect(); let p = c.parentElement; while (p && getComputedStyle(p).overflow === 'visible') p = p.parentElement; const pr = p ? p.getBoundingClientRect() : { right: innerWidth }; return r.right <= Math.min(innerWidth, pr.right) + 1; });
       check(`③ ${tag}: 右上の時計の札が右端で切れない`, clockOk);
       const cutItems = await cutProblems(page, '[data-assistant-life-items]');
       check(`③ ${tag}: 道具タブの文字が切れない・はみ出さない`, cutItems.length === 0, cutItems.join(','));

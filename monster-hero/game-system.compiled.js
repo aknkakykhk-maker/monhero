@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ef0318984e41a167
+// source-sha256: 8d38923dbb042103
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -106454,7 +106454,7 @@ function AssistantLifeHouse({
       paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))'
     }
   }, React.createElement("div", {
-    className: "flex items-start gap-2"
+    className: "flex flex-wrap items-start gap-x-2"
   }, React.createElement("button", {
     type: "button",
     "data-assistant-life-close": true,
@@ -106478,7 +106478,8 @@ function AssistantLifeHouse({
   }, "助手ライフ")), React.createElement("div", {
     className: "min-w-0 flex-1"
   }), typeof TimeOfDayClock === 'function' && React.createElement("div", {
-    className: "shrink-0 self-center"
+    className: "ml-auto shrink-0 self-center",
+    "data-assistant-life-clock-box": true
   }, React.createElement(TimeOfDayClock, null))), React.createElement("p", {
     className: "mt-0.5 text-[10px] font-bold text-slate-200",
     "data-assistant-life-clock": true
