@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a11154e0cc1bc708
+// source-sha256: 51d6be341fc734d5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -109132,9 +109132,11 @@ function AssistantLifeTownMap({
     "data-assistant-life-map-list": true,
     onClick: () => {
       try {
-        listRef.current && listRef.current.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start'
+        const l = listRef.current,
+          box = l && l.parentElement;
+        if (box) box.scrollTo({
+          top: l.offsetTop,
+          behavior: 'smooth'
         });
       } catch (_) {}
     },
