@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 93f137853e4a5d38
+// source-sha256: ec5314d40461b036
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -139928,6 +139928,12 @@ const cardAiFaceDiverseOk = (db, who, slot, plan, w, side, style = null) => {
   });
 };
 const CARD_AI_WISH_KEY = 'mh_card_ai_deck_wish_v1';
+const CARD_AI_WISH_PLAN_OK = Object.freeze({});
+const cardAiWishPlanOk = (who, slot, plan) => {
+  const row = CARD_AI_WISH_PLAN_OK[who];
+  const list = row && Array.isArray(row[slot]) ? row[slot] : [];
+  return !!cardAiStyleOf(plan) && list.includes(plan);
+};
 const CARD_AI_WISH_KEEP = 20;
 const cardAiWishOf = who => {
   let w = null;
@@ -140013,7 +140019,8 @@ const cardAiDeckRebuild = async (who, reason, opts = {}) => {
     const wish = await cardAiWishPending(who);
     const slot = wish ? cardAiFaceSlotOf(wish.face, side) : cardAiDeckOldest(before.perWho[who] || null, side);
     const prev0 = before.perWho[who] && before.perWho[who].decks[slot] || null;
-    const style = wish && wish.plan || prev0 && prev0.style || null;
+    const wishStyle = wish && wish.plan && cardAiWishPlanOk(who, slot, wish.plan) ? wish.plan : null;
+    const style = wish ? wishStyle : prev0 && prev0.style || null;
     const f = cardAiDeckFacts(db, who, slot, style);
     const got = await cardAiDeckFetch(who, f.facts);
     const cur = await cardAiRecipeRead();
@@ -140111,7 +140118,8 @@ const cardAiDeckRebuild = async (who, reason, opts = {}) => {
       ai: !!got,
       ...(wish ? {
         wish: wish.mark,
-        wishName: !!wishName
+        wishName: !!wishName,
+        wishStyle: !!wishStyle
       } : {})
     };
   } catch (_) {

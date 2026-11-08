@@ -66,7 +66,7 @@ const makeBox = ({ flag = true, talkOpen = true, material = null, fetchImpl = nu
     + ' cardLoadAiRecipe, cardSaveAiDeck, cardAiDeckRebuild, cardAiDeckRunDue, cardAiDeckMarkMet, cardAiDeckAfterMatch, cardAssistantDeckPick, cardAiRecipeOf, cardAiDeckVsLine, cardAiDeckNextStyle, cardAiDeckNextName, cardAiDeckNextDone,'
     + ' cardAiFaceGroups, cardAiFaceSpec, cardAiFaceBuild, cardAiFacePreviewDeck, cardAiFaceShare, cardAiFaceTrioDiff, cardAiFaceDefaultName, cardAiFaceNameOk, cardAiFaceShareWord, cardAiFaceOtherNames, cardAiFaceLineOf, cardAiFaceLayout,'
     + ' cardAiFaceMaterial, cardAiFaceSugaoSide, cardAiFaceMain, cardAiDeckMainFace, cardAssistantFacePreview, cardAiFaceName,'
-    + ' CARD_AI_HISTORY_MAX, CARD_AI_PLAY_WORDS, cardAiFaceNicks, cardNormalizeAiHistory, cardAiHistoryRead, cardAiDeckPickId, cardAiDeckNextId, cardAiDeckChoose, cardAiDeckChosen, cardAiDeckChoices, cardAiDeckPeriodText, cardAiFaceMakeName, cardAiDeckIdFace, cardAiWishOf, cardAiWishName, cardNormalizeAiWish };', ctx);
+    + ' CARD_AI_HISTORY_MAX, CARD_AI_PLAY_WORDS, cardAiFaceNicks, cardNormalizeAiHistory, cardAiHistoryRead, cardAiDeckPickId, cardAiDeckNextId, cardAiDeckChoose, cardAiDeckChosen, cardAiDeckChoices, cardAiDeckPeriodText, cardAiFaceMakeName, cardAiDeckIdFace, cardAiWishOf, cardAiWishName, cardNormalizeAiWish, cardAiWishPlanOk, CARD_AI_WISH_PLAN_OK };', ctx);
   return { E: ctx.E, store, calls, writes };
 };
 const ok200 = (body) => ({ ok: true, json: async () => body });
@@ -457,7 +457,8 @@ const MASMON = (() => {
       const used = JSON.parse(b.store.get(WK) || 'null');
       const hist = JSON.parse(b.store.get(E.CARD_SAVE_KEYS.aiDeckHistory) || 'null');
       check('W 提案があれば、いちばん古い顔ではなく提案の顔(好き)を組み直す', r1 && r1.slot === 'suki' && r1.wish === `suki:${day}` && r1.wishName === true, J(r1));
-      check('W 提案の名前と寄せた型を持つ(主役は変えない)', st.suki.name === 'ライガーのまったり作戦' && st.suki.style === 'guard' && st.suki.since === 2000, J(st.suki));
+      const okG = E.cardAiWishPlanOk('kiki', 'suki', 'guard');
+      check('W 提案の名前を持ち、型は表で寄せてよいときだけ寄せる(主役は変えない)', st.suki.name === 'ライガーのまったり作戦' && (okG ? st.suki.style === 'guard' : st.suki.style === undefined) && st.suki.since === 2000 && r1.wishStyle === okG, J({ suki: st.suki, okG }));
       check('W 使った印を新しいキーに「顔:日」で持つ', used && JSON.stringify(used.used.kiki) === JSON.stringify([`suki:${day}`]), J(used));
       check('W 前のデッキ(既定の名前)は「これまでのデッキ」に残る', hist && hist.perWho.kiki[0].slot === 'suki' && hist.perWho.kiki[0].name === 'ライガーの桜吹雪', J(hist && hist.perWho.kiki[0]));
       const p = b.E.cardAssistantDeckPick('kiki', E.cardAiSeededRand('w'), 'master', {}, 'suki');
@@ -476,7 +477,27 @@ const MASMON = (() => {
       await b.E.cardLoadAiRecipe();
       const r = await b.E.cardAiDeckRebuild('kiki', 'games', { now: 4000 });
       const st = JSON.parse(b.store.get(KEY2)).perWho.kiki.decks.oshi;
-      check('W 名前が見張りに落ちる提案は、名前を使わず型だけ寄せる', r && r.slot === 'oshi' && r.wishName === false && st.style === 'attack' && st.name !== '攻めまくり' && !/攻め/.test(st.name || ''), J(st));
+      const okA = E.cardAiWishPlanOk('kiki', 'oshi', 'attack');
+      check('W 名前が見張りに落ちる提案は、名前を使わない(型は表で寄せてよいときだけ)', r && r.slot === 'oshi' && r.wishName === false && (okA ? st.style === 'attack' : st.style === undefined) && st.name !== '攻めまくり' && !/攻め/.test(st.name || ''), J(st));
+    }
+    // 寄せてよい型の表(部長「A」: 強さの目安 ±10点に入る組み合わせだけ)
+    {
+      const T = E.CARD_AI_WISH_PLAN_OK;
+      const missing = WHO.flatMap((w) => SLOTS.filter((sl) => !(T[w] && Array.isArray(T[w][sl]))).map((sl) => `${w}/${sl}`));
+      check('W 寄せてよい型の表が、8人×4つの顔ぶんそろっている(助手や顔が増えたら tools/card/card-ai-wish-plan-table.js --write で作り直す)', missing.length === 0, missing.slice(0, 6).join(' '));
+      const badVal = WHO.flatMap((w) => SLOTS.flatMap((sl) => ((T[w] || {})[sl] || []).filter((p) => !['attack', 'guard', 'normal'].includes(p)).map((p) => `${w}/${sl}:${p}`)));
+      check('W 表の中身は攻め・守り・ふつうだけ', badVal.length === 0, badVal.join(' '));
+      check('W 表に無い組み合わせ(知らない助手・知らない顔・知らない型)は寄せない', !E.cardAiWishPlanOk('nobody', 'oshi', 'attack') && !E.cardAiWishPlanOk('kiki', 'zzz', 'attack') && !E.cardAiWishPlanOk('kiki', 'oshi', 'ura') && !E.cardAiWishPlanOk('kiki', 'oshi', ''));
+      const src83 = src('src/parts/83-card-ai-deck.jsx');
+      check('W 83: 組み直しは提案の型を表で確かめてから寄せる', /const wishStyle = wish && wish\.plan && cardAiWishPlanOk\(who, slot, wish\.plan\) \? wish\.plan : null;/.test(src83));
+      // 表の元の数(道具が残す)と合っているか: 寄せてよい=両方の強さで ±10点
+      let rates = null;
+      try { rates = JSON.parse(fs.readFileSync(path.resolve(GAME, '..', 'docs/progress/card-ai-faces/wish-plan-rates.json'), 'utf8')); } catch (_) { rates = null; }
+      const mismatch = rates ? rates.flatMap((m) => SLOTS.flatMap((sl) => ['attack', 'guard', 'normal'].filter((p) => {
+        const ok = ['expert', 'master'].every((lv) => Math.abs(m.rates[`${sl}:${p}:${lv}`] - m.base[lv]) <= 10);
+        return ok !== ((T[m.who] || {})[sl] || []).includes(p);
+      }).map((p) => `${m.who}/${sl}:${p}`))) : ['数の表が読めない'];
+      check('W 表は測った数(wish-plan-rates.json)のとおり(両方の強さで ±10点に入る型だけ)', mismatch.length === 0, mismatch.slice(0, 6).join(' '));
     }
     // 保存の読み方
     {

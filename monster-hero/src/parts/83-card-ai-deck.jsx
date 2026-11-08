@@ -559,6 +559,17 @@ const cardAiFaceDiverseOk = (db, who, slot, plan, w, side, style = null) => {
 //   name は名前の見張りを全部通す(主役の種族名が無ければ「種族名+の+name」)。通らなければ使わない(いつもの付け方)
 //   plan は見出しに出さず、その顔の組み方(型)を寄せるだけ。主役の種・振り分け・ほかの組み方は変えない
 const CARD_AI_WISH_KEY = 'mh_card_ai_deck_wish_v1';
+// 提案の型を寄せてよい組み合わせ(2026-11-08 部長「A」: 社長の強さの目安 ±10点を守る)。{ 助手: { 枠: [寄せてよい型] } }。
+//   EXPERT・MASTER の両方で、その型で組んだ勝率が今の組み方の ±10点に入るものだけ(1組100〜300戦。docs/progress/card-ai-faces/wish-plan-rates.json)。
+//   表に無い組み合わせ(助手や顔が増えたときも)は寄せない(名前だけ使う)。作り直し: node tools/card/card-ai-wish-plan-table.js --write
+// <<< CARD_AI_WISH_PLAN_OK(道具が書く。手で直さない)
+const CARD_AI_WISH_PLAN_OK = Object.freeze({});
+// >>> CARD_AI_WISH_PLAN_OK
+const cardAiWishPlanOk = (who, slot, plan) => {
+  const row = CARD_AI_WISH_PLAN_OK[who];
+  const list = row && Array.isArray(row[slot]) ? row[slot] : [];
+  return !!cardAiStyleOf(plan) && list.includes(plan);
+};
 const CARD_AI_WISH_KEEP = 20; // 助手ごとに残す印の数(古いものから消す)
 const cardAiWishOf = (who) => {
   let w = null;
@@ -619,7 +630,9 @@ const cardAiDeckRebuild = async (who, reason, opts = {}) => {
     const wish = await cardAiWishPending(who);
     const slot = wish ? cardAiFaceSlotOf(wish.face, side) : cardAiDeckOldest(before.perWho[who] || null, side);
     const prev0 = (before.perWho[who] && before.perWho[who].decks[slot]) || null;
-    const style = (wish && wish.plan) || (prev0 && prev0.style) || null;
+    // 提案の型は、表で寄せてよい組み合わせのときだけ(入らなければ名前だけ使う)
+    const wishStyle = wish && wish.plan && cardAiWishPlanOk(who, slot, wish.plan) ? wish.plan : null;
+    const style = wish ? wishStyle : (prev0 && prev0.style) || null;
     const f = cardAiDeckFacts(db, who, slot, style);
     const got = await cardAiDeckFetch(who, f.facts);
     // 読み直してから書く(待っているあいだにほかの所が書いたぶんを消さない)
@@ -665,7 +678,7 @@ const cardAiDeckRebuild = async (who, reason, opts = {}) => {
     const nextW = { ...w, met: true, decks: { ...w.decks, [slot]: entry }, gamesSince: reason === 'games' ? 0 : w.gamesSince, slotsDone: reason === 'slot' ? Math.max(w.slotsDone, passed) : w.slotsDone };
     await cardSaveAiRecipe({ ...cur, perWho: { ...cur.perWho, [who]: nextW } });
     if (wish) await cardAiWishMarkUsed(who, wish);
-    return { who, slot, ai: !!got, ...(wish ? { wish: wish.mark, wishName: !!wishName } : {}) };
+    return { who, slot, ai: !!got, ...(wish ? { wish: wish.mark, wishName: !!wishName, wishStyle: !!wishStyle } : {}) };
   } catch (_) { return null; } finally { cardAiDeckBusy.delete(who); }
 };
 // 時期が来た助手を、裏で1人ずつ組み直す(カードのトップを開いたとき。対戦の前・待たせない所)
