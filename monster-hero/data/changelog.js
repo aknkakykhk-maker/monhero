@@ -49,6 +49,16 @@ const CHANGELOG = [
     ],
   },
   {
+    date: "2026-11-08 10:36", type:'update', group:'assistant', title:'助手の部屋に、家具を贈れるようになりました', status:'new',
+    items:[
+      'ビートP交換所に「家具」が加わりました。ふかふかソファ・くまのぬいぐるみ・星のランタンなど、12種類の家具が手に入ります。',
+      '「🏡 助手ライフ」で部屋を押し、「🪑 部屋の家具」から助手に贈ると、その部屋の絵に家具が増えます。置けるのは天井・壁・床に1つずつです。',
+      '助手にはそれぞれ好きな家具と苦手な家具があります。好きな家具を贈ると、仲良し度が多めに上がります。',
+      '置ききれない家具は押し入れにしまわれ、いつでも入れかえられます。',
+    ],
+    assistantNotice:{ id:'update_notice_life_furniture_v1', type:'market' },
+  },
+  {
     // 2026-11-08 育つ助手の一歩目(助手部キズナ2)。社長「この文で」・助手の告知あり(みゅあの台本は data/assistants.js)
     date: "2026-11-08 10:31", type:'content', group:'assistant', title:'助手ライフで、助手の部屋から「🐾 マスモン」が見られるようになりました', status:'new', releaseFlag:'assistantLife',
     items:[
@@ -58,7 +68,8 @@ const CHANGELOG = [
       '助手のマスモンは助手が自分で育てているもので、あなたのマスモンやセーブには影響しません',
     ],
     assistantNotice:{ id:'update_notice_assistant_masmon_v1', type:'content' },
-  },  {
+  },
+  {
     date: "2026-11-08 09:55", type:'content', group:'assistant', title:'フレンドの家と行き来できるようになりました', status:'new', releaseFlag:'assistantLifeFriend',
     assistantNotice:{ id:'update_notice_assistant_life_friend_v1', type:'content' },
     items:[

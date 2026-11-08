@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a3761d44866b746d
+// source-sha256: da0ac5e52b2ecf8e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13735,8 +13735,9 @@ const RELEASE_FLAGS = {
   assistantPeerApi: true,
   assistantCallname: false,
   assistantLife: true,
+  assistantLifeFurniture: true,
   assistantLifeFriend: true,
-  assistantLifeFriendApi: false,
+  assistantLifeFriendApi: true,
   rhythmAssistantSession: true,
   assistantSorashido: true,
   assistantErubin: true,
@@ -62255,6 +62256,7 @@ const growthFxSessionLevel = (list = []) => {
 };
 const GROWTH_FX_CSS = `
 .mh-gfx-chips{position:fixed;top:calc(env(safe-area-inset-top,0px) + 52px);right:10px;z-index:44000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
+.mh-gfx-chips.mini .mh-gfx-chip>.min-w-0{display:none}.mh-gfx-chips.mini .mh-gfx-chip{padding:3px 8px 3px 4px;gap:4px}
 .mh-gfx-chip{position:relative;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;border-radius:999px;background:linear-gradient(90deg,#1e1b2ef0,#0f172af0);
   border:1.5px solid var(--gc);box-shadow:0 0 14px color-mix(in srgb,var(--gc) 40%,transparent);font-weight:900;font-size:11px;color:#fff;
   animation:mhGfxChipIn .35s cubic-bezier(.2,1.6,.4,1) both}
@@ -62749,6 +62751,60 @@ const GrowthFxLevelUp = ({
     className: "mh-gfx-lv-hint"
   }, done ? '押すと閉じる' : '押すと先へ'));
 };
+const GROWTH_FX_CHIP_TOPS = [52, 8, 96, 140];
+const growthFxChipSpotBusy = box => {
+  if (typeof document === 'undefined' || !document.elementsFromPoint) return false;
+  const r = box.getBoundingClientRect();
+  for (const fx of [0.15, 0.5, 0.85]) for (const fy of [0.25, 0.75]) {
+    const x = r.left + r.width * fx,
+      y = r.top + r.height * fy;
+    const under = document.elementsFromPoint(x, y).find(el => !box.contains(el));
+    if (!under) continue;
+    if (under.closest('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]')) return true;
+    if ([...under.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return true;
+  }
+  return false;
+};
+const GrowthFxChipsBox = ({
+  level,
+  count,
+  children
+}) => {
+  const ref = useRef(null);
+  React.useLayoutEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const place = () => {
+      const box = ref.current;
+      if (!box) return;
+      const tops = [...GROWTH_FX_CHIP_TOPS, Math.max(60, window.innerHeight - 120 - box.offsetHeight)];
+      for (const mini of [false, true]) {
+        box.classList.toggle('mini', mini);
+        for (const t of tops) {
+          box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`;
+          if (!growthFxChipSpotBusy(box)) {
+            box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${t}`;
+            return;
+          }
+        }
+      }
+      box.style.top = `calc(env(safe-area-inset-top, 0px) + ${GROWTH_FX_CHIP_TOPS[1]}px)`;
+      box.dataset.growthFxChipsTop = 'mini-busy';
+    };
+    place();
+    const t1 = setTimeout(place, 500),
+      t2 = setTimeout(place, 1500);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [count]);
+  return React.createElement("div", {
+    ref: ref,
+    className: `mh-gfx-chips mh-gfx-${level}`,
+    "data-growth-fx-chips": true,
+    "aria-live": "polite"
+  }, children);
+};
 const GrowthFxLayer = ({
   screen,
   load
@@ -62785,10 +62841,9 @@ const GrowthFxLayer = ({
   const holdSheet = !vis.sheet;
   const level = growthFxLevelOf(load);
   const sheet = !holdSheet ? sheets[0] : null;
-  return React.createElement(React.Fragment, null, !holdAll && !sheet && small.length > 0 && React.createElement("div", {
-    className: `mh-gfx-chips mh-gfx-${level}`,
-    "data-growth-fx-chips": true,
-    "aria-live": "polite"
+  return React.createElement(React.Fragment, null, !holdAll && !sheet && small.length > 0 && React.createElement(GrowthFxChipsBox, {
+    level: level,
+    count: Math.min(small.length, GROWTH_FX_SMALL_MAX)
   }, small.slice(0, GROWTH_FX_SMALL_MAX).map(c => React.createElement(GrowthFxChip, {
     key: c.id,
     chip: c,
@@ -64094,7 +64149,10 @@ function BreederMarketScreen({
       }] : []), {
         key: 'item',
         label: 'アイテム'
-      }, {
+      }, ...(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLife === true && RELEASE_FLAGS.assistantLifeFurniture === true ? [{
+        key: 'furniture',
+        label: '家具'
+      }] : []), {
         key: 'material',
         label: '強化素材'
       }]
@@ -64113,7 +64171,12 @@ function BreederMarketScreen({
   const exchangeTab = activeSectionTab('exchange');
   const eventTab = activeSectionTab('event');
   const BEAT_POINT_MATERIAL_ITEM_IDS = ['rainbow_psyche', 'hero_proof_shard', 'transcend_fruit_rainbow', 'hero_proof'];
-  const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer => !offer.releaseFlag || typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS[offer.releaseFlag] === true).filter(offer => eventTab === 'material' === BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId)).map(offer => rhythmEventPointShopOfferWithPass(offer, legendPassActive === true));
+  const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer => !offer.releaseFlag || typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS[offer.releaseFlag] === true).filter(offer => {
+    const furn = String(offer.itemId || '').startsWith('furn_');
+    if (eventTab === 'furniture') return furn;
+    if (furn) return false;
+    return eventTab === 'material' === BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId);
+  }).map(offer => rhythmEventPointShopOfferWithPass(offer, legendPassActive === true));
   const legendPassSlot = eventItemOffers.some(offer => offer.legendPass === true);
   const renderSectionTabs = (section, scroll = false) => {
     const items = SECTION_TABS[section].tabs.map(tab => ({
@@ -64123,6 +64186,24 @@ function BreederMarketScreen({
     }));
     const value = activeSectionTab(section);
     const tight = section === 'card' || section === 'event';
+    if (section === 'event' && items.length >= 6) return React.createElement("div", {
+      role: "tablist",
+      "data-market-tabs-grid": section,
+      className: `mb-2 grid w-full min-w-0 max-w-full shrink-0 gap-1 ${items.length <= 6 ? 'grid-cols-3' : 'grid-cols-4'}`
+    }, items.map(tab => {
+      const on = tab.id === value;
+      return React.createElement("button", {
+        key: tab.id,
+        type: "button",
+        role: "tab",
+        "aria-selected": on,
+        onClick: () => selectSectionTab(section, tab.id),
+        className: `mh-tab relative min-h-[40px] min-w-0 rounded-xl px-0 text-[10.5px] font-black leading-tight whitespace-nowrap active:scale-95 ${on ? 'text-white' : 'border border-white/10 bg-slate-900 text-slate-400'}`,
+        style: on ? {
+          background: tab.color
+        } : undefined
+      }, tab.label);
+    }));
     if (!scroll || items.length < (tight ? 5 : 6)) return React.createElement(ScreenTabs, {
       value: value,
       onChange: key => selectSectionTab(section, key),
@@ -64634,7 +64715,7 @@ function BreederMarketScreen({
     "data-event-point-shop": true,
     "data-event-point-tab": eventTab,
     className: MARKET_GRID_CLASS
-  }, (eventTab === 'item' || eventTab === 'material') && eventItemOffers.map(offer => {
+  }, (eventTab === 'item' || eventTab === 'material' || eventTab === 'furniture') && eventItemOffers.map(offer => {
     const item = beatPointItemOf(offer);
     const grantText = `${offer.grantAmount.toLocaleString()}${offer.unit}`;
     const middle = offer.kind === 'diamond' ? null : ownedMiddle(ownedItemCount(ownedItems, offer.itemId), item.base ? {
@@ -105249,6 +105330,12 @@ function AssistantLifeRoom({
     "aria-hidden": "true"
   }, L.furn), React.createElement("div", {
     className: "fl"
+  }), typeof AssistantLifeRoomFurn === 'function' && React.createElement(AssistantLifeRoomFurn, {
+    id: id,
+    w: w,
+    h: h,
+    faces: ppl ? ppl.length : 0,
+    baseCount: [...String(L.furn || '')].filter(c => /\p{Extended_Pictographic}/u.test(c)).length
   }), ppl && !state.sleep && (look === 'night' || look === 'evening') && React.createElement("div", {
     className: "lamp"
   }), ppl && state.sleep && React.createElement("div", {
@@ -105512,8 +105599,12 @@ function AssistantLifeRoomSheet({
   land = false,
   onMediate = null,
   roomState = null,
+  furnItems = null,
+  onGiveFurn = null,
+  onFurnTalk = null,
   onMasmon = null
 }) {
+  const [furnOpen, setFurnOpen] = React.useState(false);
   const who = assistantById(id);
   if (!who) return null;
   const w = assistantLifeWhereOf(life, id);
@@ -105688,14 +105779,29 @@ function AssistantLifeRoomSheet({
   }, asleep ? '🎵 起こしてモンヒロビートに誘う' : atBeat && beatFree ? React.createElement(React.Fragment, null, "🎵 会いに行く", React.createElement("em", {
     className: "ml-1 rounded-full bg-amber-300 px-1.5 text-[10px] not-italic text-amber-950",
     "data-assistant-life-room-free": true
-  }, "券なし")) : '🎵 一緒にモンヒロビート'), typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id) && React.createElement("button", {
+  }, "券なし")) : '🎵 一緒にモンヒロビート'), typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled() && onGiveFurn && React.createElement("button", {
+    type: "button",
+    className: "mhl-btn col-span-2 bg-gradient-to-r from-amber-500 to-orange-600",
+    "data-assistant-life-room-act": "furn",
+    onClick: () => setFurnOpen(true)
+  }, "🪑 部屋の家具"), typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id) && React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-card col-span-2",
     "data-assistant-life-room-act": "card",
     onClick: () => onCard(id)
   }, "🃏 カード部屋で対戦する ", React.createElement("span", {
     className: "mhl-card-up"
-  }, "ごほうびアップ")))));
+  }, "ごほうびアップ")))), furnOpen && typeof AssistantLifeFurnSheet === 'function' && React.createElement(AssistantLifeFurnSheet, {
+    id: id,
+    furnItems: furnItems || {},
+    onGiveFurn: onGiveFurn,
+    land: land,
+    onClose: () => setFurnOpen(false),
+    onTalk: (talk, text) => {
+      setFurnOpen(false);
+      if (onFurnTalk) onFurnTalk(talk, text);
+    }
+  }));
 }
 const ASSISTANT_LIFE_STAND_BOX = new Map();
 const assistantLifeStandBox = src => new Promise(res => {
@@ -106003,7 +106109,9 @@ function AssistantLifeHouse({
   onReplay,
   peerItems = null,
   onUseItem = null,
-  bondLevelOf = null
+  bondLevelOf = null,
+  furnItems = null,
+  onGiveFurn = null
 }) {
   const st = useAssistantLifeNow(metIds);
   const diary = useAssistantLifeDiary();
@@ -106469,12 +106577,12 @@ function AssistantLifeHouse({
     className: "flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2"
   }, header, note && React.createElement("p", {
     "data-assistant-life-note": true,
-    className: "rounded-xl bg-sky-400/15 px-2 py-1 text-[10.5px] font-bold text-sky-100"
+    className: "rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1 text-[10.5px] font-bold text-sky-100"
   }, note), tiles, icons)) : React.createElement(React.Fragment, null, header, React.createElement("div", {
     className: "mhl-body"
   }, note && React.createElement("p", {
     "data-assistant-life-note": true,
-    className: "mx-3 mb-1 rounded-xl bg-sky-400/15 px-2 py-1.5 text-[11px] font-bold text-sky-100"
+    className: "mx-3 mb-1 rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 text-[11px] font-bold text-sky-100"
   }, note), tabBody), React.createElement("div", {
     className: "relative z-[3] bg-gradient-to-t from-[#0b1020] via-[#0b1020ee] to-transparent px-3 pt-1.5",
     style: {
@@ -106493,6 +106601,16 @@ function AssistantLifeHouse({
     bondLevelOf: bondLevelOf,
     diary: diary,
     slot: slot,
+    furnItems: furnItems,
+    onGiveFurn: onGiveFurn,
+    onFurnTalk: (talk, text) => {
+      playTalk(talk, {
+        ids: [talk.pair[0]],
+        place: 'home',
+        gift: true
+      });
+      setNote(text);
+    },
     canGive: canGive && itemsLeft > 0,
     land: land,
     onClose: () => setRoomId(null),
@@ -119064,7 +119182,8 @@ const ASSISTANT_LIFE_GIFT_STORE = {
   state: {
     day: normalizeAssistantLifeGiftDay(null),
     likes: normalizeAssistantLifeGiftLikes(null),
-    cheki: {}
+    cheki: {},
+    room: {}
   },
   loaded: false,
   loading: null,
@@ -119087,11 +119206,12 @@ const ASSISTANT_LIFE_GIFT_STORE = {
     if (this.loaded) return Promise.resolve(this.state);
     if (!this.loading) this.loading = (async () => {
       try {
-        const [d, l, c] = await Promise.all([storeGet(ASSISTANT_LIFE_GIFT_DAY_KEY, null, false), storeGet(ASSISTANT_LIFE_GIFT_LIKES_KEY, null, false), storeGet(ASSISTANT_LIFE_GIFT_CHEKI_KEY, null, false)]);
+        const [d, l, c, r] = await Promise.all([storeGet(ASSISTANT_LIFE_GIFT_DAY_KEY, null, false), storeGet(ASSISTANT_LIFE_GIFT_LIKES_KEY, null, false), storeGet(ASSISTANT_LIFE_GIFT_CHEKI_KEY, null, false), storeGet('mh_assistant_life_room_v1', null, false)]);
         this.state = {
           day: normalizeAssistantLifeGiftDay(d),
           likes: normalizeAssistantLifeGiftLikes(l),
-          cheki: normalizeAssistantLifeGiftCheki(c)
+          cheki: normalizeAssistantLifeGiftCheki(c),
+          room: normalizeAssistantLifeRoom(r)
         };
       } catch {}
       this.loaded = true;
@@ -119141,11 +119261,27 @@ const assistantLifeGiftReason = (kind, peerSt, have = 1, st = ASSISTANT_LIFE_GIF
   if (have <= 0) return '持っていません(ビートP交換所で手に入ります)';
   return '';
 };
-const assistantLifeGiftKnown = (who, kindOrKey, st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+const assistantLifeGiftKeyOf = kindOrKey => {
   const g = assistantLifeGiftDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey);
-  return !!(g && st.likes.known[who] && st.likes.known[who][g.key]);
+  if (g) return {
+    key: g.key,
+    furniture: false
+  };
+  const f = (typeof ASSISTANT_LIFE_FURNITURE !== 'undefined' && Array.isArray(ASSISTANT_LIFE_FURNITURE) ? ASSISTANT_LIFE_FURNITURE : []).find(x => x.key === kindOrKey);
+  return f ? {
+    key: f.key,
+    furniture: true
+  } : null;
 };
-const assistantLifeGiftShownLike = (who, kindOrKey, st = ASSISTANT_LIFE_GIFT_STORE.state) => assistantLifeGiftKnown(who, kindOrKey, st) ? assistantLifeGiftLike(who, kindOrKey) : 'unknown';
+const assistantLifeGiftKnown = (who, kindOrKey, st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  const k = assistantLifeGiftKeyOf(kindOrKey);
+  return !!(k && st.likes.known[who] && st.likes.known[who][k.key]);
+};
+const assistantLifeGiftShownLike = (who, kindOrKey, st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  if (!assistantLifeGiftKnown(who, kindOrKey, st)) return 'unknown';
+  const k = assistantLifeGiftKeyOf(kindOrKey);
+  return k.furniture ? assistantLifeFurnLike(who, k.key) : assistantLifeGiftLike(who, kindOrKey);
+};
 const assistantLifeGiftRecord = async (kind, pair) => {
   await ASSISTANT_LIFE_GIFT_STORE.load();
   const g = assistantLifeGiftOf(kind);
@@ -119225,7 +119361,8 @@ const assistantLifeGiftOnBondLevel = async (who, level, rand = Math.random) => {
   if (!t) return null;
   await ASSISTANT_LIFE_GIFT_STORE.load();
   const st = ASSISTANT_LIFE_GIFT_STORE.state;
-  const left = (t.like || []).filter(k => !(st.likes.known[who] && st.likes.known[who][k]));
+  const ft = assistantLifeFurnEnabled() && typeof ASSISTANT_LIFE_FURN_LIKES !== 'undefined' ? ASSISTANT_LIFE_FURN_LIKES[who] : null;
+  const left = [...(t.like || []), ...(ft && ft.like || [])].filter(k => !(st.likes.known[who] && st.likes.known[who][k]));
   if (!left.length) return null;
   const key = left[Math.floor(rand() * left.length) % left.length];
   const known = {
@@ -119250,7 +119387,7 @@ const assistantLifeGiftOnBondLevel = async (who, level, rand = Math.random) => {
   try {
     storeSet(ASSISTANT_LIFE_GIFT_LIKES_KEY, likes, false);
   } catch {}
-  const g = assistantLifeGiftOf(key);
+  const g = assistantLifeGiftOf(key) || assistantLifeFurnOf(key);
   if (g && typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`${typeof assistantLifeName === 'function' ? assistantLifeName(who) : who}が好きなものを教えてくれた(${g.emoji} ${g.name})`, [who], {
     kind: 'gift'
   });
@@ -119271,7 +119408,7 @@ const assistantLifeGiftToldSeen = who => {
   } catch {}
 };
 const assistantLifeGiftHintLine = (who, key) => {
-  const g = assistantLifeGiftOf(key);
+  const g = assistantLifeGiftOf(key) || assistantLifeFurnOf(key);
   const real = typeof ASSISTANT_LIFE_GIFT_HINT_LINES !== 'undefined' && ASSISTANT_LIFE_GIFT_HINT_LINES[who] && ASSISTANT_LIFE_GIFT_HINT_LINES[who][key];
   const temp = typeof ASSISTANT_LIFE_GIFT_HINT_TEMP !== 'undefined' ? ASSISTANT_LIFE_GIFT_HINT_TEMP[who] : null;
   const pick = real && real.t ? real : temp;
@@ -119521,6 +119658,421 @@ function AssistantLifeChekiRow({
   })), React.createElement("p", {
     className: "text-center text-[9px] font-black text-slate-700"
   }, String(d).slice(5).replace('-', '/'))))));
+}
+const ASSISTANT_LIFE_ROOM_KEY = 'mh_assistant_life_room_v1';
+const ASSISTANT_LIFE_FURN_SLOTS = Object.freeze({
+  ceil: Object.freeze({
+    label: '天井',
+    x: 0.36,
+    y: 0,
+    w: 0.2,
+    h: 0.2
+  }),
+  wall: Object.freeze({
+    label: '壁',
+    x: 0.02,
+    y: 0.28,
+    w: 0.2,
+    h: 0.26
+  }),
+  floor: Object.freeze({
+    label: '床',
+    x: 0.42,
+    y: 0.56,
+    w: 0.2,
+    h: 0.32
+  })
+});
+const assistantLifeFurnEnabled = () => typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeFurniture === true;
+const assistantLifeFurnDefs = () => typeof ASSISTANT_LIFE_FURNITURE !== 'undefined' && Array.isArray(ASSISTANT_LIFE_FURNITURE) ? ASSISTANT_LIFE_FURNITURE : [];
+const assistantLifeFurnOf = key => {
+  const f = assistantLifeFurnDefs().find(x => x.key === key || x.itemId === key);
+  if (!f) return null;
+  const item = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : []).find(x => x && x.id === f.itemId) || {};
+  const offer = (typeof RHYTHM_EVENT_POINT_SHOP_OFFERS !== 'undefined' ? RHYTHM_EVENT_POINT_SHOP_OFFERS : []).find(x => x.itemId === f.itemId) || {};
+  return {
+    ...f,
+    furniture: true,
+    name: item.name || offer.name || '',
+    emoji: item.emoji || offer.emoji || '🪑',
+    cost: Number.isFinite(offer.cost) ? offer.cost : null
+  };
+};
+const assistantLifeFurnCounts = ownedItems => {
+  const o = {};
+  for (const f of assistantLifeFurnDefs()) {
+    const n = ownedItems && typeof ownedItems === 'object' ? Number(ownedItems[f.itemId]) : 0;
+    o[f.key] = Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+  }
+  return o;
+};
+const assistantLifeFurnLike = (who, key) => {
+  const t = typeof ASSISTANT_LIFE_FURN_LIKES !== 'undefined' ? ASSISTANT_LIFE_FURN_LIKES[who] : null;
+  if (!t) return 'mid';
+  return (t.like || []).includes(key) ? 'like' : (t.bad || []).includes(key) ? 'bad' : 'mid';
+};
+const assistantLifeFurnAmount = (who, key) => Math.round((typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 80) * assistantLifeGiftMult(assistantLifeFurnLike(who, key)));
+const normalizeAssistantLifeRoomOne = raw => {
+  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const keys = new Set(assistantLifeFurnDefs().map(f => f.key));
+  const slotOf = k => (assistantLifeFurnDefs().find(f => f.key === k) || {}).slot;
+  const put = {
+    ceil: null,
+    wall: null,
+    floor: null
+  };
+  if (r.put && typeof r.put === 'object') for (const s of Object.keys(put)) {
+    const k = r.put[s];
+    if (typeof k === 'string' && keys.has(k) && slotOf(k) === s) put[s] = k;
+  }
+  const got = {};
+  if (r.got && typeof r.got === 'object' && !Array.isArray(r.got)) for (const [k, d] of Object.entries(r.got)) if (keys.has(k) && typeof d === 'string') got[k] = d;
+  const placed = new Set(Object.values(put).filter(Boolean));
+  const kept = [...new Set((Array.isArray(r.kept) ? r.kept : []).filter(k => typeof k === 'string' && keys.has(k) && !placed.has(k)))];
+  return {
+    put,
+    kept,
+    got
+  };
+};
+const normalizeAssistantLifeRoom = raw => {
+  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const o = {};
+  for (const [who, v] of Object.entries(r)) if (/^[a-z]+$/.test(who)) o[who] = normalizeAssistantLifeRoomOne(v);
+  return o;
+};
+const assistantLifeRoomOf = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => normalizeAssistantLifeRoomOne((st.room || {})[who]);
+const assistantLifeFurnGiveState = (roomSt, who, key, day) => {
+  const f = assistantLifeFurnDefs().find(x => x.key === key);
+  const cur = normalizeAssistantLifeRoomOne((roomSt || {})[who]);
+  if (!f || cur.got[key]) return null;
+  const put = {
+      ...cur.put
+    },
+    kept = [...cur.kept];
+  const placed = !put[f.slot];
+  if (placed) put[f.slot] = key;else kept.push(key);
+  return {
+    room: {
+      ...(roomSt || {}),
+      [who]: {
+        put,
+        kept,
+        got: {
+          ...cur.got,
+          [key]: day
+        }
+      }
+    },
+    placed
+  };
+};
+const assistantLifeFurnMoveState = (roomSt, who, key, toPut) => {
+  const f = assistantLifeFurnDefs().find(x => x.key === key);
+  const cur = normalizeAssistantLifeRoomOne((roomSt || {})[who]);
+  if (!f || !cur.got[key]) return null;
+  const put = {
+    ...cur.put
+  };
+  let kept = cur.kept.filter(k => k !== key);
+  if (toPut) {
+    if (put[f.slot] && put[f.slot] !== key) kept.push(put[f.slot]);
+    put[f.slot] = key;
+  } else {
+    if (put[f.slot] === key) put[f.slot] = null;
+    kept.push(key);
+  }
+  return {
+    ...(roomSt || {}),
+    [who]: {
+      put,
+      kept: [...new Set(kept)],
+      got: cur.got
+    }
+  };
+};
+const assistantLifeRoomSave = room => {
+  ASSISTANT_LIFE_GIFT_STORE.set({
+    room
+  });
+  try {
+    storeSet(ASSISTANT_LIFE_ROOM_KEY, room, false);
+  } catch {}
+};
+const assistantLifeFurnTalk = (who, key, rand = Math.random) => {
+  const f = assistantLifeFurnOf(key);
+  if (!f) return null;
+  const like = assistantLifeFurnLike(who, key);
+  const real = typeof ASSISTANT_LIFE_FURN_LINES !== 'undefined' && ASSISTANT_LIFE_FURN_LINES[who] && ASSISTANT_LIFE_FURN_LINES[who][key];
+  const list = Array.isArray(real) ? real.filter(x => x && Array.isArray(x.lines) && x.lines.length) : [];
+  const pick = list.length ? list[Math.floor(rand() * list.length) % list.length].lines : null;
+  const temp = typeof ASSISTANT_LIFE_GIFT_TEMP_LINES !== 'undefined' && ASSISTANT_LIFE_GIFT_TEMP_LINES[who] ? ASSISTANT_LIFE_GIFT_TEMP_LINES[who][like] : null;
+  const lines = (pick || (temp ? [{
+    e: temp.e,
+    t: String(temp.t).split('{item}').join(f.name).replace(/\{c\}[、とに]?/g, '')
+  }] : [])).map(x => ({
+    who,
+    e: x.e || 'happy',
+    t: x.t
+  }));
+  return lines.length ? {
+    id: `furn-${key}-${who}`,
+    pair: [who],
+    lv: 1,
+    scene: 'any',
+    furniture: key,
+    like,
+    lines
+  } : null;
+};
+const assistantLifeFurnGive = async (who, key) => {
+  if (!assistantLifeFurnEnabled()) return null;
+  await ASSISTANT_LIFE_GIFT_STORE.load();
+  const st = ASSISTANT_LIFE_GIFT_STORE.state;
+  const r = assistantLifeFurnGiveState(st.room, who, key, assistantLifeGiftToday());
+  if (!r) return null;
+  assistantLifeRoomSave(r.room);
+  const known = {
+    ...st.likes.known,
+    [who]: {
+      ...(st.likes.known[who] || {}),
+      [key]: 'gift'
+    }
+  };
+  const likes = {
+    ...st.likes,
+    known
+  };
+  ASSISTANT_LIFE_GIFT_STORE.set({
+    likes
+  });
+  try {
+    storeSet(ASSISTANT_LIFE_GIFT_LIKES_KEY, likes, false);
+  } catch {}
+  const amount = assistantLifeFurnAmount(who, key);
+  if (typeof assistantPeerPlayerBondAdder !== 'undefined' && assistantPeerPlayerBondAdder) {
+    try {
+      assistantPeerPlayerBondAdder(who, 'lifeFurn', amount);
+    } catch {}
+  }
+  const f = assistantLifeFurnOf(key);
+  if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`${typeof assistantLifeName === 'function' ? assistantLifeName(who) : who}の部屋に${f.name}を贈った`, [who], {
+    kind: 'give'
+  });
+  const talk = assistantLifeFurnTalk(who, key);
+  return talk ? {
+    ...talk,
+    amount,
+    placed: r.placed
+  } : null;
+};
+const assistantLifeFurnMove = async (who, key, toPut) => {
+  await ASSISTANT_LIFE_GIFT_STORE.load();
+  const next = assistantLifeFurnMoveState(ASSISTANT_LIFE_GIFT_STORE.state.room, who, key, toPut);
+  if (next) assistantLifeRoomSave(next);
+  return !!next;
+};
+function AssistantLifeRoomFurn({
+  id,
+  w,
+  h,
+  faces = 0,
+  baseCount = 2
+}) {
+  const st = useAssistantLifeGiftState();
+  if (!assistantLifeFurnEnabled()) return null;
+  const room = assistantLifeRoomOf(id, st);
+  const size = Math.round(Math.max(16, Math.min(26, h * 0.26, w * 0.17)));
+  const faceSize = Math.round(Math.min(40, h * 0.44));
+  const faceLeft = faces > 0 ? w * 0.9 - faceSize - (faces - 1) * (faceSize - 10) : w * 0.9;
+  const baseRight = 5 + baseCount * 21 + 2;
+  const g = Math.round(size * 1.25);
+  const wide = faceLeft - baseRight >= g + 4;
+  const pos = slot => {
+    if (wide) {
+      if (slot === 'ceil') return {
+        left: Math.round(w * 0.3),
+        top: 3
+      };
+      if (slot === 'wall') return {
+        left: Math.round(w * 0.52),
+        top: Math.round(h * 0.1)
+      };
+      return {
+        left: Math.round((baseRight + faceLeft) / 2 - g / 2),
+        top: Math.round(h - 13 - g)
+      };
+    }
+    if (slot === 'wall') return {
+      left: 6,
+      top: Math.max(24, Math.round(h - 38 - g))
+    };
+    if (slot === 'ceil') return {
+      left: Math.round(w * 0.31),
+      top: 3
+    };
+    return {
+      left: Math.round(w * 0.31) + g + 2,
+      top: Math.round(h * 0.13)
+    };
+  };
+  return React.createElement(React.Fragment, null, Object.entries(room.put).filter(([, k]) => k).map(([slot, k]) => {
+    const f = assistantLifeFurnOf(k);
+    if (!f || !ASSISTANT_LIFE_FURN_SLOTS[slot]) return null;
+    const p = pos(slot);
+    return React.createElement("span", {
+      key: slot,
+      "data-assistant-life-room-furn": `${id}:${slot}:${k}`,
+      "aria-hidden": "true",
+      style: {
+        position: 'absolute',
+        left: p.left,
+        top: p.top,
+        width: size,
+        height: size,
+        zIndex: 2,
+        fontSize: size,
+        lineHeight: 1,
+        pointerEvents: 'none',
+        filter: 'drop-shadow(0 2px 2px #0006)'
+      }
+    }, slot === 'ceil' && React.createElement("span", {
+      style: {
+        position: 'absolute',
+        bottom: '100%',
+        left: '50%',
+        width: 1,
+        height: Math.round(size * 0.3),
+        background: '#7c5a3a'
+      }
+    }), React.createElement("span", null, f.emoji));
+  }));
+}
+function AssistantLifeFurnSheet({
+  id,
+  furnItems,
+  onGiveFurn,
+  onClose,
+  onTalk,
+  land = false
+}) {
+  const st = useAssistantLifeGiftState();
+  const [busy, setBusy] = React.useState(false);
+  const [msg, setMsg] = React.useState('');
+  const who = typeof assistantById === 'function' ? assistantById(id) : null;
+  if (!assistantLifeFurnEnabled() || !who) return null;
+  const room = assistantLifeRoomOf(id, st);
+  const all = assistantLifeFurnDefs().map(f => assistantLifeFurnOf(f.key)).filter(Boolean);
+  const mine = all.filter(f => room.got[f.key]);
+  const canGive = all.filter(f => !room.got[f.key] && (Number(furnItems && furnItems[f.key]) || 0) > 0);
+  const shown = k => assistantLifeGiftShownLike(id, k, st);
+  const mark = s => s === 'like' ? '💗' : s === 'bad' ? '💧' : s === 'unknown' ? '?' : '';
+  const give = async k => {
+    if (busy) return;
+    setBusy(true);
+    const talk = typeof onGiveFurn === 'function' ? await onGiveFurn(id, k) : null;
+    setBusy(false);
+    if (!talk) {
+      setMsg('いまは贈れません(持っている数を見てください)');
+      return;
+    }
+    const f = assistantLifeFurnOf(k);
+    const likeText = talk.like === 'like' ? '💗 好きな家具！' : talk.like === 'bad' ? '💧 ちょっと苦手…' : '';
+    const text = `${who.name}に${f.emoji} ${f.name}を贈った。💗 仲良し度 +${talk.amount}${likeText ? ` ・ ${likeText}` : ''}${talk.placed ? '' : `(${ASSISTANT_LIFE_FURN_SLOTS[f.slot].label}はふさがっているので押し入れへ)`}`;
+    setMsg(text);
+    if (typeof onTalk === 'function') onTalk(talk, text);
+  };
+  const row = (f, act) => React.createElement("div", {
+    key: f.key,
+    className: "flex items-center gap-2 rounded-xl bg-slate-800/80 px-2 py-1",
+    "data-assistant-life-furn-row": f.key
+  }, React.createElement("span", {
+    className: "text-[22px] leading-none",
+    "aria-hidden": "true"
+  }, f.emoji), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "truncate text-[12px] font-black text-white"
+  }, f.name, " ", React.createElement("span", {
+    className: "text-[10px] text-slate-300"
+  }, ASSISTANT_LIFE_FURN_SLOTS[f.slot].label), " ", React.createElement("span", {
+    className: "text-[10.5px]"
+  }, mark(shown(f.key))))), act);
+  const btn = (label, onClick, cls, data) => React.createElement("button", _extends({
+    type: "button"
+  }, data, {
+    disabled: busy,
+    onClick: onClick,
+    className: `min-h-[36px] shrink-0 rounded-lg border px-2 text-[11px] font-black active:scale-95 disabled:opacity-40 ${cls}`
+  }), label);
+  return React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      zIndex: 32
+    },
+    "data-assistant-life-furn-sheet": id
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    className: "absolute inset-0 bg-black/60",
+    onClick: onClose
+  }), React.createElement("div", {
+    className: "mhl-sheet",
+    style: land ? {
+      left: 'auto',
+      width: '46%',
+      top: 0,
+      maxHeight: '100%',
+      borderRadius: '22px 0 0 22px',
+      borderTop: 0,
+      borderLeft: '2px solid #fbbf24',
+      paddingTop: 10
+    } : {
+      borderTopColor: '#fbbf24'
+    }
+  }, React.createElement("p", {
+    className: "mhl-en"
+  }, "FURNITURE · ", String(id).toUpperCase()), React.createElement("p", {
+    className: "text-[18px] font-black text-white"
+  }, "🪑 ", who.name, "の部屋の家具"), React.createElement("p", {
+    className: "text-[10.5px] font-bold leading-snug text-slate-300"
+  }, "置けるのは天井・壁・床に1つずつ。ほかは押し入れにしまえます。好きな家具なら仲良し度が多めに上がります(1つの家具は1回)"), msg && React.createElement("p", {
+    "data-assistant-life-furn-msg": true,
+    className: "mt-1.5 rounded-xl bg-amber-300/15 px-2 py-1 text-[11px] font-black leading-snug text-amber-100"
+  }, msg), React.createElement("p", {
+    className: "mt-2 text-[11px] font-black text-amber-200"
+  }, "🎁 贈れる家具"), React.createElement("div", {
+    className: "mt-1 space-y-1"
+  }, canGive.length ? canGive.map(f => row(f, React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "shrink-0 text-[10px] font-bold text-slate-300"
+  }, "×", furnItems[f.key]), btn('贈る', () => give(f.key), 'border-amber-300/70 bg-amber-400/20 text-amber-100', {
+    'data-assistant-life-furn-give': f.key
+  })))) : React.createElement("p", {
+    className: "rounded-xl bg-slate-800/80 px-2 py-1 text-[11px] font-bold text-slate-300"
+  }, "贈れる家具がありません。モンヒロビートの「ビートP交換所」の「家具」で手に入ります")), React.createElement("p", {
+    className: "mt-2 text-[11px] font-black text-amber-200"
+  }, "🏠 部屋に置いてある家具 ", React.createElement("span", {
+    className: "text-slate-300"
+  }, "(", mine.length, "/", all.length, "持っている)")), React.createElement("div", {
+    className: "mt-1 space-y-1",
+    "data-assistant-life-furn-placed": true
+  }, mine.filter(f => room.put[f.slot] === f.key).length ? mine.filter(f => room.put[f.slot] === f.key).map(f => row(f, btn('しまう', () => assistantLifeFurnMove(id, f.key, false), 'border-slate-500 text-slate-200', {
+    'data-assistant-life-furn-keep': f.key
+  }))) : React.createElement("p", {
+    className: "rounded-xl bg-slate-800/80 px-2 py-1 text-[11px] font-bold text-slate-300"
+  }, "まだありません")), mine.some(f => room.put[f.slot] !== f.key) && React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "mt-2 text-[11px] font-black text-amber-200"
+  }, "📦 押し入れ"), React.createElement("div", {
+    className: "mt-1 space-y-1",
+    "data-assistant-life-furn-kept": true
+  }, mine.filter(f => room.put[f.slot] !== f.key).map(f => row(f, btn(room.put[f.slot] ? '入れかえる' : '置く', () => assistantLifeFurnMove(id, f.key, true), 'border-pink-300/70 bg-pink-400/15 text-pink-100', {
+    'data-assistant-life-furn-put': f.key
+  }))))), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-furn-close": true,
+    onClick: onClose,
+    className: "mt-2 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]"
+  }, "閉じる")));
 }
 const ASSISTANT_MASMON_PLAN = [{
   "id": "mua",
@@ -121782,6 +122334,17 @@ const assistantLifeFriendRequestScenes = async life => {
     _alfApiBusy = false;
   }
 };
+const ALF_API_BODY_WORDS = /膝|ひざ|抱き|だっこ|キス|ちゅー|添い寝|くっつ|手をつな|お風呂|ベッド|恋|デート|付き合|好きだよ|大好き/;
+const alfApiLineOk = (who, t) => {
+  let x = String(t || '');
+  if (who === 'mua') x = x.replace(/じゃん/g, 'ぢゃん').replace(/まじ/g, 'まぢ').replace(/マジ/g, 'マヂ');
+  if (ALF_API_BODY_WORDS.test(x) || /(この|あの|その)子|子たち/.test(x)) return null;
+  if (who === 'atsu' && !/(笑|[！？!?…♪w]|[)）]|[\u3000-\u303f]?[\uff08(][^)）]*[)）])$/.test(x.trim())) return null;
+  if (who === 'dra' && /ほんま|やで|とる|とんだ|へん[。、！]|やろ|あかん/.test(x)) return null;
+  if (who === 'kiki' && /(だよ|だね|してよ|じゃん)([。！!？?♪]|$)/.test(x)) return null;
+  if (who !== 'mua' && /ぢゃん|まぢ/.test(x)) return null;
+  return x;
+};
 const alfApiSceneFor = (kind, a, b, hostName) => {
   if (!alfApiEnabled()) return null;
   const st = ALF_STORE.state.st;
@@ -121793,10 +122356,11 @@ const alfApiSceneFor = (kind, a, b, hostName) => {
   const lines = sc.lines.map(l => {
     const who = l.side === 'a' ? a : b;
     const t = String(l.t).replace(/\{f\}/g, l.side === 'a' ? alfTheirLabel(hostName, b) : assistantLifeName(a)).replace(/\{h\}/g, hostName).replace(/\{name\}/g, () => l.side === 'a' && typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(a) : 'あなた');
-    return /[{}]/.test(t) || t.length > 80 ? null : {
+    const ok = alfApiLineOk(who, t);
+    return !ok || /[{}]/.test(ok) || ok.length > 80 ? null : {
       who,
       guest: l.side === 'b',
-      text: t
+      text: ok
     };
   });
   if (lines.some(x => !x)) return null;
@@ -161596,6 +162160,27 @@ function MonsterHeroGame() {
     }
     return assistantPeerUseItem(kind, pair);
   };
+  const giveAssistantLifeFurn = async (who, key) => {
+    if (typeof assistantLifeFurnGive !== 'function' || typeof assistantLifeFurnEnabled !== 'function' || !assistantLifeFurnEnabled()) return null;
+    const def = assistantLifeFurnOf(key);
+    if (!def) return null;
+    await ASSISTANT_LIFE_GIFT_STORE.load();
+    if (assistantLifeRoomOf(who).got[key]) return null;
+    const have = ownedItemCount(ownedItemsRef.current, def.itemId);
+    if (have <= 0) return null;
+    const nextItems = {
+      ...ownedItemsRef.current,
+      [def.itemId]: have - 1
+    };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    try {
+      await storeSet('mh_owned_items', nextItems, false);
+    } catch {
+      return null;
+    }
+    return assistantLifeFurnGive(who, key);
+  };
   const useBuddyTraitSeed = async (masuId, traitId) => {
     const have = ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TRAIT_SEED_ITEM_ID);
     if (have <= 0) return false;
@@ -167931,7 +168516,7 @@ function MonsterHeroGame() {
       ...prev,
       [id]: result.state
     }));
-    if (actionKey !== 'lifeGift' && typeof growthFxAssistantBond === 'function') growthFxAssistantBond(id, current.points, result.state.points);
+    if (actionKey !== 'lifeGift' && actionKey !== 'lifeFurn' && typeof growthFxAssistantBond === 'function') growthFxAssistantBond(id, current.points, result.state.points);
     const after = assistantBondLevelOf(result.state.points);
     if (id === selectedAssistantIdRef.current && after > before) setAssistantBondUp(true);
     if (after > before) grantProfileFrames(id, after);
@@ -183052,7 +183637,9 @@ function MonsterHeroGame() {
           gift: ownedItemCount(ownedItems, 'peer_gift'),
           token: ownedItemCount(ownedItems, 'peer_token')
         },
-        onUseItem: useAssistantPeerItem
+        onUseItem: useAssistantPeerItem,
+        furnItems: typeof assistantLifeFurnCounts === 'function' ? assistantLifeFurnCounts(ownedItems) : null,
+        onGiveFurn: giveAssistantLifeFurn
       }));
     })(), typeof QuickGuideOverlay === 'function' && quickGuideActive && activeAssistant && (() => {
       const replay = quickGuideActive.startsWith('replay:') ? quickGuideActive.slice(7) : null;
