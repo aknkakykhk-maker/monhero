@@ -40,10 +40,8 @@ for(const f of files){
 //   「〈形容詞・動詞〉子」で一般のモンスターを指す形を見ていなかった。それも台詞・プレイヤー向けの文の両方で見る
 const DIALOG_KO=new RegExp('子(?:たち|ら(?![しい]))|子ほど|(?:どの|ほかの|他の)子(?![供ど])|'+KO_GENERAL_SOURCE,'g');
 // 開催中のイベントのお話は、開催のあいだ触らない決まり(CLAUDE.md ⑥-4)。終わったら言い換えること(期限を過ぎると NG になる)
-const DIALOG_KO_HOLD=[
-  { text:'……あの子たちは、悪くない', until:'2026-11-09T04:00:00+09:00', why:'パンドラとふたつの翼(開催中)' },
-  { text:'……外で、あの子たちが歌ってる', until:'2026-11-09T04:00:00+09:00', why:'パンドラとふたつの翼(開催中)' },
-];
+// 開催中のイベントで見送った台詞は、2026-11-09 のイベント終了後に言い換えた(パンドラとふたつの翼 EP3・EP7)。見送りが要るときはここへ { text, until, why } を足す
+const DIALOG_KO_HOLD=[];
 const dialogFound=[],held=[];
 for(const f of DIALOG_FILES){
   if(!fs.existsSync(path.join(ROOT,f)))continue;
