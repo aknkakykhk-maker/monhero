@@ -472,6 +472,8 @@ const assistantLifeRoomsOf = (life, metIds) => {
   }
   // 扉を閉める・居間で離れて座る・仲直りの札・やきもち(56-assistant-life-rel.jsx)
   if (typeof assistantLifeRelDecorateRooms === 'function') { try { assistantLifeRelDecorateRooms(rooms, life, peer); } catch {} }
+  // フレンドの家へ遊びに行っている助手の札「🏘 〇〇さんの家へ」(56-assistant-life-friend.jsx。印が偽なら何もしない)
+  if (typeof assistantLifeFriendDecorateRooms === 'function') { try { assistantLifeFriendDecorateRooms(rooms); } catch {} }
   return rooms;
 };
 
@@ -737,14 +739,14 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
     </div>);
   const icons = (
     <div className="mhl-icons" role="tablist" data-assistant-life-icons>
-      {[['house', '🏡', '家'], ['where', '📋', '居場所'], ['friends', '🤝', '友情'], ['items', '🎒', '道具']].map(([k, ic, label]) => (
+      {[['house', '🏡', '家'], ['where', '📋', '居場所'], ['friends', '🤝', '友情'], ['items', '🎒', '道具'], ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏘', 'フレンド']] : [])].map(([k, ic, label]) => (
         <button key={k} type="button" role="tab" aria-selected={tab === k} data-assistant-life-icon={k} className={tab === k ? 'on' : ''} onClick={() => { setTab(k); setRoomId(null); }}><i>{ic}</i>{label}</button>))}
     </div>);
   const header = (
     <div className="mhl-hdr" style={{ paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>
       <div className="flex items-start gap-2">
         <button type="button" data-assistant-life-close onClick={close} aria-label="閉じる" className="h-9 w-8 shrink-0 text-[19px] text-slate-100">←</button>
-        <div className="min-w-0 shrink-0" data-assistant-life-title><p className="mhl-en whitespace-nowrap" style={land ? { letterSpacing: '.06em', fontSize: 8 } : undefined}>ASSISTANT LIFE · {tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : 'HOUSE'}</p><p className="mhl-ti whitespace-nowrap" style={land ? { fontSize: 18 } : undefined}>助手ライフ</p></div>
+        <div className="min-w-0 shrink-0" data-assistant-life-title><p className="mhl-en whitespace-nowrap" style={land ? { letterSpacing: '.06em', fontSize: 8 } : undefined}>ASSISTANT LIFE · {tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : tab === 'visit' ? 'VISIT' : 'HOUSE'}</p><p className="mhl-ti whitespace-nowrap" style={land ? { fontSize: 18 } : undefined}>助手ライフ</p></div>
         <div className="min-w-0 flex-1"/>
         {/* いまの時刻の札(ハナビの共通部品 44-time-of-day.jsx。設定の「いまの時刻を出す」が切なら出ない) */}
         {typeof TimeOfDayClock === 'function' && <div className="shrink-0 self-center"><TimeOfDayClock/></div>}
@@ -769,6 +771,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         <AssistantLifeTownMap life={life} ids={ids} look={look} onPick={(id) => { setTab('house'); setRoomId(id); }}/>
         <AssistantLifeScreenBody metIds={metIds} onReplay={playTalk} peerItems={peerItems} onUseItem={onUseItem} embedded/>
       </div>)
+    : tab === 'visit' && typeof AssistantLifeFriendPage === 'function' ? <AssistantLifeFriendPage life={life}/>
     : tab === 'friends' ? (<div className="px-3 pb-3 pt-1">{typeof AssistantPeerMap === 'function' && <AssistantPeerMap metIds={metIds} onReplay={(t) => playTalk(t, null)} peerItems={peerItems} onUseItem={onUseItem}/>}</div>)
     : (
       <div className="px-3 pb-3 pt-1" data-assistant-life-items>

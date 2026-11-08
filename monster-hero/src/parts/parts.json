@@ -372,6 +372,10 @@
       "role": "助手ライフの人間らしい関係の出来事(けんか・仲直り・やきもち・ないしょ話・相談・からかう・ライバル心・久しぶりの気まずさ)と家での見せ方(扉を閉める・居間で離れて座る・仲直りの札)。台本は tools/assistant/life-rel-talks-import.js が書く。公開の印 assistantLife の後ろ。保存は mh_assistant_life_rel_v1 の新しいキーだけ"
     },
     {
+      "file": "56-assistant-life-friend.jsx",
+      "role": "助手ライフのフレンドの家との行き来(助手が自分で行く go・フレンドの助手が来る come・プレイヤーが訪ねる look)。家の控えを送る/読む・行き来の記録・置き手紙・お礼・設定・「🏘 フレンド」のページと HOME の印。公開の印 assistantLifeFriend の後ろ。保存は mh_assistant_life_friend_v1・_settings_v1・_known_v1・_intro_v1 の新しいキーだけ。表は assistant_life_friend_switch/_houses/_visits"
+    },
+    {
       "file": "82-card-battle-core.jsx",
       "role": "MFバトルカードのルールの本体とコンピューターの考え方(ゲームの始まり・できる操作・操作を進める・守り・勝ち負け・くせと難易度)。カードの表は data/card-battle-cards.js",
       "pure": true

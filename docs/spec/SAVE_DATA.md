@@ -73,6 +73,10 @@
 | `mh_assistant_life_intro_v1` | string | 助手ライフの入場の演出を長く見せた日(朝4時区切りの日付)。同じ日の2回目からは短くする。公開の印 `assistantLife` が真のときだけ書く(2026-11-07) |
 | `mh_assistant_life_rhythm_v1` | object | 助手ライフの生活のリズムの変わり方 `{ [助手id]: { shift(-1 朝型〜+1 夜型), day(最後に動いた日), dayGain(その日に動いた量) } }`。夜・朝に誘って遊ぶと少しずつ動き、誘わない日は 0 へ戻る。性格ごとの上限あり。公開の印 `assistantLife` が真のときだけ書く(2026-11-07) |
 | `mh_assistant_life_rel_v1` | object | 助手ライフの人間らしい出来事(けんか・仲直り)の記録 `{ mended: { [ペア 'a-b']: { day(朝4時区切り), abs(時間の番号) } } }`。仲直りした日から2日は同じ組がけんかしない・同じ時間のうちは部屋に「🤝 仲直り！」を出すのに使う。壊れた値は空として読む。今のけんかの記録(`mh_assistant_peer_quarrel_v1`)は変えない。公開の印 `assistantLife` が偽なら読み書きしない(56-assistant-life-rel.jsx) |
+| `mh_assistant_life_friend_v1` | object | 助手ライフのフレンドの家との行き来(2026-11-08) `{ day(朝4時区切り), go, come, look(今日の回数), went・looked(今日行った家), beatP(今日のおみやげ・300まで), seen(見た置き手紙の番号), sentAt・sentSig(控えを送った時刻と中身の印), out・back(行っている/帰ってきた助手), came(来ている助手), photos(行ったことのある家の写真・60件まで), lastHosts, api(Claude API で作ったその日の場面) }`。壊れた値は既定値。日が変わると今日の数だけ戻す。公開の印 `assistantLifeFriend` が偽なら読み書きしない(56-assistant-life-friend.jsx) |
+| `mh_assistant_life_friend_settings_v1` | object | 行き来の設定 `{ open(行き来する), show(家の様子を見せる), come(来てもらう), muted(来ないようにした家・100軒まで) }`。無ければ全部「入」 |
+| `mh_assistant_life_friend_known_v1` | object | 顔なじみの回数 `{ '自分の助手|フレンドのID|相手の助手': 回数 }`(300組まで)。数字は増えるだけで、ほかの値は変えない |
+| `mh_assistant_life_friend_intro_v1` | boolean | 「🏘 フレンド」のはじめての案内を見たか |
 | `mh_assistant_daily_lines_v1` | object | ふだんの吹き出しを1日1回まとめて作ったひとこと(2026-10-14)。`{ day, assistantId, lines: { [場面]: [{ e, t, n }] } }`。日付が変われば使わず、次に作ったら入れ替える。n はその日に出した回数 |
 | `mh_story_assistant_chat_seen_v1` | boolean | 助手とおしゃべりのお話「話せるようになった日」を本編で見たか(飛ばしても立つ)。公開の後の最初の HOME で1回だけ流すため。回想・デバッグでは立てない |
 | `mh_beat_shop_vip_letter_seen_v1` | boolean | お話「レジェンドブリーダーへの招待状」を本編で見たか(飛ばしても立つ・2026-11-05)。ブリーダーレベル1000以上の HOME で1回だけ流す。true の人だけ、ビートP交換所のダイヤ・トレーニングチケット・重トレーニングチケットが「優待パス還元」になる(値段は data/rhythm-event.js の LEGEND_BREEDER_PASS_OFFERS。保存しない)。回想・デバッグでは立てない |
