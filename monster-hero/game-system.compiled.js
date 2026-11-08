@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a47bded6f430043f
+// source-sha256: 94ea726c4548cfce
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -140069,6 +140069,9 @@ const CardBattleScreen = ({
     try {
       await cardMigratePointsOnce(storeGet, storeSet, saveStoredValuesOrRollback);
     } catch (_) {}
+    try {
+      if (typeof cardPvpFix20261108Once === 'function') await cardPvpFix20261108Once(storeGet, storeSet, saveStoredValuesOrRollback);
+    } catch (_) {}
     const [collection, decks, point, starter, daily, record, unlocked, tutorial, bgm, settings, cpuPlaylist] = await Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null), storeGet(K.tutorial, null), storeGet(K.bgm, null), storeGet(K.settings, null), storeGet(K.cpuPlaylist, null)]);
     const next = {
       collection: cardNormalizeCollection(collection),
@@ -151340,6 +151343,58 @@ const cardPvpHistoryWhen = at => {
   const d = new Date(at + 9 * 3600 * 1000);
   const p = n => String(n).padStart(2, '0');
   return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
+};
+const CARD_PVP_FIX_20261108_KEY = 'mh_card_pvp_fix_20261108_v1';
+const CARD_PVP_FIX_20261108_MATCHES = Object.freeze(['mmw7e6d8i6v7uxd', 'mmw7ecam4ptfvzi']);
+const cardPvpFix20261108Plan = (history, record) => {
+  const list = cardPvpNormalizeHistory(history);
+  const hits = list.filter(e => CARD_PVP_FIX_20261108_MATCHES.includes(e.match) && e.outcome === 'lose' && e.reason === '投了');
+  const rec = typeof cardNormalizeRecord === 'function' ? cardNormalizeRecord(record) : null;
+  if (!rec || !hits.length) return {
+    undone: 0,
+    record: null,
+    matches: []
+  };
+  const undone = Math.min(hits.length, rec.pvp.lose);
+  return {
+    undone,
+    record: undone > 0 ? {
+      ...rec,
+      pvp: {
+        ...rec.pvp,
+        lose: rec.pvp.lose - undone
+      }
+    } : null,
+    matches: hits.map(e => e.match)
+  };
+};
+const cardPvpFix20261108Once = async (getValue, setValue, saveAll) => {
+  const done = await getValue(CARD_PVP_FIX_20261108_KEY, null, false);
+  if (done && typeof done === 'object') return {
+    undone: 0,
+    saved: false
+  };
+  const [history, record] = await Promise.all([getValue(CARD_PVP_HISTORY_KEY, [], false), getValue(CARD_SAVE_KEYS.record, null, false)]);
+  const plan = cardPvpFix20261108Plan(history, record);
+  const entries = [{
+    key: CARD_PVP_FIX_20261108_KEY,
+    before: done,
+    next: {
+      at: Date.now(),
+      undone: plan.undone,
+      matches: plan.matches
+    }
+  }];
+  if (plan.record) entries.push({
+    key: CARD_SAVE_KEYS.record,
+    before: record,
+    next: plan.record
+  });
+  const saved = await saveAll(entries, getValue, setValue);
+  return {
+    undone: saved ? plan.undone : 0,
+    saved
+  };
 };
 const cardPvpHistoryLoad = async () => {
   try {
