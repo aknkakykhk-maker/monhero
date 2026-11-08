@@ -1060,11 +1060,11 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
     const best = ps.find(([a, b]) => assistantLifePairHint(peerSt, life, a, b).near) || ps.find(([a, b]) => assistantLifePairHint(peerSt, life, a, b).after) || ps[0];
     setGive({ ids: g.ids, pair: g.ids.length === 2 ? [...g.ids] : best, kind });
   };
-  const doGive = async () => {
+  const doGive = async (opts = null) => {
     if (!give || !give.pair) return;
     const talk = await onUseItem(give.kind, give.pair);
     const info = assistantLifeItemInfo(give.kind);
-    if (!talk) { setNote(`${info.name}は、いまは贈れません(同じ道具は1日1回・合わせて1日3回・持っている数を見てください)`); setGive(null); return; }
+    if (!talk) { setNote(`${info.name}は、いまは贈れません(同じ道具は1日1回・合わせて1日3回・持っている数を見てください)${opts && opts.bought ? `。買った${info.name}は持ち物に残っています` : ''}`); setGive(null); return; }
     const g = (life.groups || []).find(x => give.pair.every(id => x.ids.includes(id)));
     setGive(null);
     playTalk(talk, { ids: give.pair, place: g ? g.place : null });
