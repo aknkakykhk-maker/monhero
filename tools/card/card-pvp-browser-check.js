@@ -177,6 +177,11 @@ const pvpGo = async (page, sel) => { await page.locator(sel).first().click(); aw
       await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
       await page.locator('footer button[aria-label=""]').dispatchEvent('click');
       await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
+      // ログインボーナスの窓は起動のあと遅れて出ることがあり、「⚔️ バトル」にかぶさって押せなかった(2026-11-08)。出ていれば閉じてから押す
+      for (let i = 0; i < 8 && await page.locator('[role="dialog"][aria-label="ログインボーナス"]').count(); i++) {
+        const b = page.locator('[role="dialog"][aria-label="ログインボーナス"]').getByRole('button', { name: '閉じる' }).first();
+        await b.dispatchEvent('click').catch(() => {}); await page.waitForTimeout(400);
+      }
       await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().click();
       await page.locator('[data-debug-card-battle]').dispatchEvent('click');
     };
