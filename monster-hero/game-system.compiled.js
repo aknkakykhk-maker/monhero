@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d04e311c3deb6887
+// source-sha256: 743bfca2d98b8060
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91111,8 +91111,9 @@ function RhythmBeatPresenceStrip({
   onPick,
   resolveIconUrl
 }) {
-  const face = (src, color, label) => React.createElement("span", {
-    className: "relative block h-11 w-11 overflow-hidden rounded-full border-2 bg-slate-900",
+  const face = (src, color, label, who) => React.createElement("span", {
+    "data-rhythm-beat-presence-face": who,
+    className: `relative block h-11 w-11 overflow-hidden border-2 bg-slate-900 ${who === 'assistant' ? 'rounded-full' : 'rounded-lg'}`,
     style: {
       borderColor: color
     }
@@ -91134,8 +91135,15 @@ function RhythmBeatPresenceStrip({
     className: "min-w-0 break-keep truncate"
   }, "🎵 いまモンヒロビートにいる人"), React.createElement("small", {
     className: "ml-auto text-[10.5px] font-bold text-slate-200 max-[359px]:text-[9.5px]"
-  }, "押すと一緒に遊べる所")), React.createElement("div", {
-    className: "mt-1.5 flex flex-wrap gap-2 pb-0.5"
+  }, "押すと一緒に遊べる所")), assistants.length > 0 && React.createElement("div", {
+    "data-rhythm-beat-presence-group": "assistant",
+    className: "mt-1.5"
+  }, React.createElement("h4", {
+    className: "text-[10px] font-black text-pink-300"
+  }, "🤖 助手 ", React.createElement("small", {
+    className: "text-[9px] font-bold text-slate-300"
+  }, "練習中・券なしで呼べる")), React.createElement("div", {
+    className: "mt-1 flex flex-wrap gap-2 pb-0.5"
   }, assistants.map(a => React.createElement("button", {
     key: `a-${a.id}`,
     type: "button",
@@ -91144,15 +91152,24 @@ function RhythmBeatPresenceStrip({
       kind: 'assistant',
       id: a.id
     }),
-    className: "flex w-[58px] shrink-0 flex-col items-center text-center active:scale-95"
-  }, face(rhythmBeatAssistantFace(a.id), '#f472b6', '🎤'), React.createElement("b", {
+    className: "flex w-[58px] shrink-0 flex-col items-center rounded-xl bg-pink-500/10 pt-1 text-center active:scale-95"
+  }, face(rhythmBeatAssistantFace(a.id), '#f472b6', '🎤', 'assistant'), React.createElement("b", {
+    "data-rhythm-beat-presence-mark": "assistant",
+    className: "mt-0.5 block whitespace-nowrap rounded bg-pink-300 px-1 text-[8px] font-black leading-tight text-slate-950"
+  }, "助手"), React.createElement("b", {
     className: "mt-0.5 block w-full truncate text-[10px] font-black leading-tight text-white"
   }, a.name), React.createElement("small", {
     className: "block whitespace-nowrap text-[8.5px] font-black text-pink-300"
-  }, "🎤 呼べる"))), assistants.length > 0 && friends.length > 0 && React.createElement("span", {
-    "aria-hidden": "true",
-    className: "my-1 w-px shrink-0 bg-white/20"
-  }), friends.map(f => {
+  }, "🎤 呼べる"))))), friends.length > 0 && React.createElement("div", {
+    "data-rhythm-beat-presence-group": "friend",
+    className: `mt-1.5 ${assistants.length > 0 ? 'border-t border-white/15 pt-1.5' : ''}`
+  }, React.createElement("h4", {
+    className: "text-[10px] font-black text-sky-300"
+  }, "👥 フレンド ", React.createElement("small", {
+    className: "text-[9px] font-bold text-slate-300"
+  }, "プレイヤー")), React.createElement("div", {
+    className: "mt-1 flex flex-wrap gap-2 pb-0.5"
+  }, friends.map(f => {
     const k = RHYTHM_BEAT_PRESENCE_KIND[f.kind] || RHYTHM_BEAT_PRESENCE_KIND.here;
     return React.createElement("button", {
       key: `f-${f.otherId}`,
@@ -91163,8 +91180,11 @@ function RhythmBeatPresenceStrip({
         kind: 'friend',
         id: f.otherId
       }),
-      className: "flex w-[58px] shrink-0 flex-col items-center text-center active:scale-95"
-    }, face(f.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(f.icon) : '', k.color, '🙂'), React.createElement("b", {
+      className: "flex w-[58px] shrink-0 flex-col items-center rounded-xl bg-sky-500/10 pt-1 text-center active:scale-95"
+    }, face(f.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(f.icon) : '', k.color, '🙂', 'friend'), React.createElement("b", {
+      "data-rhythm-beat-presence-mark": "friend",
+      className: "mt-0.5 block whitespace-nowrap rounded bg-sky-300 px-1 text-[8px] font-black leading-tight text-slate-950"
+    }, "フレンド"), React.createElement("b", {
       className: "mt-0.5 block w-full truncate text-[10px] font-black leading-tight text-white"
     }, f.userName), React.createElement("small", {
       className: "block whitespace-nowrap text-[8.5px] font-black",
@@ -91172,7 +91192,7 @@ function RhythmBeatPresenceStrip({
         color: k.color
       }
     }, k.tag));
-  })));
+  }))));
 }
 function RhythmBeatPresenceButton({
   assistants = [],
@@ -91183,11 +91203,13 @@ function RhythmBeatPresenceButton({
   const faces = [...assistants.map(a => ({
     key: `a-${a.id}`,
     src: rhythmBeatAssistantFace(a.id),
-    color: '#f472b6'
+    color: '#f472b6',
+    round: 'rounded-full'
   })), ...friends.map(f => ({
     key: `f-${f.otherId}`,
     src: f.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(f.icon) : '',
-    color: (RHYTHM_BEAT_PRESENCE_KIND[f.kind] || RHYTHM_BEAT_PRESENCE_KIND.here).color
+    color: (RHYTHM_BEAT_PRESENCE_KIND[f.kind] || RHYTHM_BEAT_PRESENCE_KIND.here).color,
+    round: 'rounded-md'
   }))];
   return React.createElement("button", {
     type: "button",
@@ -91198,9 +91220,9 @@ function RhythmBeatPresenceButton({
   }, React.createElement("span", {
     className: "flex items-center pl-1.5",
     "aria-hidden": "true"
-  }, faces.slice(0, 3).map(f => React.createElement("span", {
+  }, faces.slice(0, 3).map((f, i) => React.createElement("span", {
     key: f.key,
-    className: "-ml-1.5 block h-7 w-7 overflow-hidden rounded-full border-2 bg-slate-900",
+    className: `-ml-1.5 block h-7 w-7 overflow-hidden border-2 bg-slate-900 ${f.round} ${i >= 2 ? 'max-[359px]:hidden' : ''}`,
     style: {
       borderColor: f.color
     }
@@ -91310,6 +91332,9 @@ function RhythmBeatPresenceSheet({
   }, "🙂")), React.createElement("span", {
     className: "min-w-0 flex-1 leading-tight"
   }, React.createElement("b", {
+    "data-rhythm-beat-presence-sheet-mark": isAssistant ? 'assistant' : 'friend',
+    className: `mb-0.5 inline-block rounded px-1 text-[9px] font-black leading-tight text-slate-950 ${isAssistant ? 'bg-pink-300' : 'bg-sky-300'}`
+  }, isAssistant ? '🤖 助手' : '👥 フレンド'), React.createElement("b", {
     className: "block text-[14px] font-black",
     style: JA_WRAP_STYLE
   }, jaWrap(title)), sub && React.createElement("small", {

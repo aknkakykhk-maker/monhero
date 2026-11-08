@@ -103,13 +103,16 @@ const json = (route, body) => route.fulfill({ status: 200, contentType: 'applica
   };
   const tapFace = async (page, sel) => { await openList(page); await page.evaluate((q) => { const e = document.querySelector(q); e && e.click(); }, sel); };
   try {
-    for (const [vp, name, rot] of [[{ width: 390, height: 844 }, 'tate', false], [{ width: 844, height: 390 }, 'yoko', false], [{ width: 390, height: 844 }, 'rot', true]]) {
+    for (const [vp, name, rot] of [[{ width: 390, height: 844 }, 'tate', false], [{ width: 844, height: 390 }, 'yoko', false], [{ width: 390, height: 844 }, 'rot', true], [{ width: 320, height: 568 }, 'small', false]]) {
       const page = await open(vp);
       if (rot) { await page.evaluate(() => { try { RHYTHM_VIEW_ROTATION.set(90); } catch (e) {} }); await page.waitForTimeout(1200); }
       // 検査のあいだに助手ライフの様子が作り直されることがあるので、読む直前にもう一度合わせる
       await patchLife(page, true); await page.waitForTimeout(600);
       check(`${name}: 見出しの「いる人」ボタンが画面の中に入る`, await inside(page, '[data-rhythm-beat-presence-open]'));
       check(`${name}: 「いる人」ボタンの数が一覧の人数と同じ(助手2+フレンド3)`, await page.evaluate(() => /5/.test((document.querySelector('[data-rhythm-beat-presence-open]') || {}).innerText || '')));
+      // 「いる人」ボタンで見出しの「モードえらび」が切れない(320幅で「モードえ…」になった)
+      const titleCut = await page.evaluate(() => { const t = document.querySelector('[data-rhythm-mode-select] .mhms-title'); return t ? t.scrollWidth > t.clientWidth + 1 : true; });
+      check(`${name}: 見出しの「モードえらび」が切れない`, !titleCut);
       await shot(page, `presence-button-${name}`);
       await openList(page);
       const strip = await page.evaluate(() => ({
@@ -119,12 +122,34 @@ const json = (route, body) => route.fulfill({ status: 200, contentType: 'applica
       check(`${name}: 帯に練習中の助手が出る(🎤 呼べる)`, strip.a.join(',') === 'mua,kiki', strip.a.join(','));
       check(`${name}: フレンドは「部屋あり → 誘える → 部屋で遊び中」の順。部屋で待ち中だけ・ホームの人は出ない`, strip.f.join(',') === 'friendroom01:room,friendhere01:here,friendbusy01:busy', strip.f.join(','));
       check(`${name}: 一覧の窓が画面の中に入る`, await inside(page, '[data-rhythm-beat-presence-list] > div'));
+      // 助手とフレンド(プレイヤー)は見出し・札・枠の形で見分けられる(2026-11-08 社長「助手とプレイヤーで区別つくようにして」。同じ名前の人がいる)
+      const marks = await page.evaluate(() => {
+        const g = (k) => document.querySelector(`[data-rhythm-beat-presence-group="${k}"]`);
+        const bad = [];
+        if (!g('assistant') || !/助手/.test(g('assistant').querySelector('h4')?.innerText || '')) bad.push('助手の見出しが無い');
+        if (!g('friend') || !/フレンド/.test(g('friend').querySelector('h4')?.innerText || '')) bad.push('フレンドの見出しが無い');
+        document.querySelectorAll('[data-rhythm-beat-presence-assistant]').forEach((b) => {
+          if (!g('assistant')?.contains(b)) bad.push(`助手${b.dataset.rhythmBeatPresenceAssistant}がフレンドの側にいる`);
+          if ((b.querySelector('[data-rhythm-beat-presence-mark]')?.innerText || '') !== '助手') bad.push(`助手${b.dataset.rhythmBeatPresenceAssistant}に「助手」の札が無い`);
+          if (b.querySelector('[data-rhythm-beat-presence-face]')?.getAttribute('data-rhythm-beat-presence-face') !== 'assistant') bad.push('助手の枠が助手用でない');
+        });
+        document.querySelectorAll('[data-rhythm-beat-presence-friend]').forEach((b) => {
+          if (!g('friend')?.contains(b)) bad.push(`フレンド${b.dataset.rhythmBeatPresenceFriend}が助手の側にいる`);
+          if ((b.querySelector('[data-rhythm-beat-presence-mark]')?.innerText || '') !== 'フレンド') bad.push(`フレンド${b.dataset.rhythmBeatPresenceFriend}に「フレンド」の札が無い`);
+          if (b.querySelector('[data-rhythm-beat-presence-face]')?.getAttribute('data-rhythm-beat-presence-face') !== 'friend') bad.push('フレンドの枠がフレンド用でない');
+        });
+        // 札と名前が顔の幅からはみ出さない
+        document.querySelectorAll('[data-rhythm-beat-presence-mark]').forEach((m) => { const r = m.getBoundingClientRect(); const p = m.parentElement.getBoundingClientRect(); if (r.left < p.left - 1 || r.right > p.right + 1) bad.push(`札「${m.innerText}」が枠からはみ出す`); });
+        return bad.join(' / ');
+      });
+      check(`${name}: 助手とフレンドに印が付いている(見出し・札・枠)`, marks === '', marks);
       await shot(page, `presence-strip-${name}`);
       // 助手の顔
       await tapFace(page, '[data-rhythm-beat-presence-assistant="mua"]');
       await page.waitForTimeout(500);
       const line = await page.evaluate(() => (document.querySelector('[data-rhythm-beat-presence-line]') || {}).innerText || '');
       check(`${name}: 助手の窓に「どこで一緒に演奏できるか」の1行`, /フリーマッチかプライベートの部屋で「呼ぶ」と/.test(line.replace(/\s+/g, '')) && /ソロライブには来られません/.test(line.replace(/\s+/g, '')), line.slice(0, 80));
+      check(`${name}: 助手の窓に「🤖 助手」の札`, await page.evaluate(() => /助手/.test(document.querySelector('[data-rhythm-beat-presence-sheet-mark="assistant"]')?.innerText || '')));
       check(`${name}: 助手の窓が画面の中に入る`, await inside(page, '[data-rhythm-beat-presence-sheet] > div'));
       await shot(page, `presence-assistant-${name}`);
       await page.evaluate(() => { const x = [...document.querySelectorAll('[data-rhythm-beat-presence-sheet] button')].find((e) => /とじる/.test(e.innerText)); x && x.click(); });
