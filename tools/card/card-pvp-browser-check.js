@@ -90,7 +90,12 @@ const FAKE_WS = () => {
 const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, `${name}.png`), style: 'div[style*="2147483647"] > span { display: none !important; }' }).catch(() => {}); } };
 
 // カードランクが上がったときの演出(43 の PlayerRankUpFx)は、押すまで画面を覆う。開いていたら2回押して閉じる(演出を飛ばす → 閉じる)
-const closeRankFx = async (page) => { for (let i = 0; i < 3 && await page.locator('[data-player-rank-up-fx]').count(); i++) { await page.locator('[data-player-rank-up-fx]').click({ position: { x: 10, y: 10 } }).catch(() => {}); await page.waitForTimeout(400); } };
+// ランクアップの演出(43。1回目に押すと出し切り、2回目で閉じる)は、結果のあと少し遅れて出ることがある。
+//   すぐ閉じに行くと、閉じたあとに出た演出が「部屋を出る」の上にかぶさって押せなかった(2026-11-08 ソランド)。少し待ってから、出ていれば何度でも閉じる
+const closeRankFx = async (page) => {
+  await page.waitForTimeout(900);
+  for (let i = 0; i < 10 && await page.locator('[data-player-rank-up-fx]').count(); i++) { await page.locator('[data-player-rank-up-fx]').first().click({ position: { x: 10, y: 10 } }).catch(() => {}); await page.waitForTimeout(400); }
+};
 // マルチの入口で相手を決めるボタンを押し、続くデッキ選びで「対戦へ」を押す(2026-10-30 社長「相手を選んだあとにデッキ選択」。前に使ったデッキが選ばれている)
 const pvpGo = async (page, sel) => { await page.locator(sel).first().click(); await page.locator('[data-card-deck-pick-go]').click({ timeout: 10000 }); };
 
