@@ -215,7 +215,7 @@ const run = async (browser, mode, errors) => {
     check(`④ ${mode.label} カードランクの経験値: 数える版なら 27(はじめての勝ちなら 57)`, !after.lv || xpAdd === 27 || xpAdd === 57, String(xpAdd));
     await page.waitForTimeout(800);
     const diary = await page.evaluate(() => (ASSISTANT_LIFE_DIARY.state.items || []).map((x) => x.text)); // eslint-disable-line no-undef
-    check(`④ ${mode.label} 助手ライフの「今日あったこと」に「ソラシドとカード部屋で対戦して勝った」が入る`, diary.some((t) => /ソラシドとカード部屋で対戦して勝った/.test(t)), JSON.stringify(diary.slice(-3)));
+    check(`④ ${mode.label} 助手ライフの「今日あったこと」に「ソラシドとMFバトルカードで対戦して勝った」が入る`, diary.some((t) => /ソラシドとMFバトルカードで対戦して勝った/.test(t)), JSON.stringify(diary.slice(-3)));
     // ⑤ すぐ投了(0)
     await page.evaluate(() => { window.__mhCardScene = null; });
     await closeUp();

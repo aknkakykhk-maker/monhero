@@ -7,7 +7,7 @@
 //   B 1回足す: 同じ時間帯なら足し、違う時間帯なら数え直して1。保存のほうが新しい時間帯なら書かない(新しい時間帯の数を上書きしない)
 //   C 使い切ったか: 1回使ったら使い切り。時間帯が変わると戻る。「次は◯時から」は次の時間帯の始まり(夜21時の次は0時)
 //   D 書き方(84): 始めた時点で決める(cardLifeRewardLeft)・時間帯も始めた時点(lifeSlot)・数えるのは 1.5倍で本当に増えた試合だけ・結果と同じ取引で書く
-//   E 56: HOME の顔から外す・部屋のボタンを灰色にするのは、カード部の口(cardLifeRewardSpent)を typeof で確かめて読む
+//   E 56: HOME の顔に「済」の印(2026-11-08 社長「HOMEも地図も出す」)・部屋のボタンを灰色にするのは、カード部の口(cardLifeRewardSpent)を typeof で確かめて読む
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -75,7 +75,8 @@ const E = ctx.E;
   check('D 相手えらび: 使い切った助手は消さず「🃏済」・帯に言い方', /data-card-foe-life-chip="spent"[^>]*>🃏済</.test(s84) && /data-card-foe-life-spent=\{x\.id\}/.test(s84) && /cardLifeSpentText\(lifeSpent\[x\.id\], x\.name\)/.test(s84));
   // E
   check('E 56 はカード部の口を typeof で確かめて読む', /const assistantLifeCardSpent = \(id\) => \{ try \{ return typeof cardLifeRewardSpent === 'function' \? cardLifeRewardSpent\(id\) : null; \} catch \{ return null; \} \};/.test(s56));
-  check('E 56 HOME: 使い切った助手は MFバトルカードの横の顔から外す', /if \(f === 'card' && assistantLifeCardSpent\(id\)\) continue;/.test(s56));
+  // 2026-11-08 社長「HOMEも地図も出す」: 顔は外さず「済」の印(前の「外す」を改めた)。「UP」は使い切っていない助手がいるときだけ
+  check('E 56 HOME: 使い切った助手も MFバトルカードの横に顔を出し「済」の印・「UP」からは外す', !/if \(f === 'card' && assistantLifeCardSpent\(id\)\) continue;/.test(s56) && /const spent = f === 'card' && !!assistantLifeCardSpent\(id\);/.test(s56) && /\{spent && <AssistantLifeSpentMark/.test(s56) && /includes\(id\) && !assistantLifeCardSpent\(id\)\)/.test(s56));
   check('E 56 部屋: 使い切ったら灰色の押せないボタン', /disabled[^>]*data-assistant-life-room-act="card-spent"/.test(s56));
 
   if (failed) { console.log(`カード部屋の 1.5倍の回数: NG ${failed}件(OK ${passed}件)`); process.exit(1); }

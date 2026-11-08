@@ -372,6 +372,10 @@
       "role": "助手ライフの専用ページ「助手たちの家」(AssistantLifeHouse: 8人の部屋・部屋を押す・場面・みんなの居場所・入場・今日やれること)と、HOME の施設の横の顔(AssistantLifeHomeFaces)。ビート部とのつなぎ口 assistantLifeAtBeat・assistantLifeBeatIds。公開の印 assistantLife の後ろ。保存は mh_assistant_life_diary_v1・mh_assistant_life_intro_v1 の新しいキーだけ"
     },
     {
+      "file": "56-assistant-life-map.jsx",
+      "role": "助手ライフの「📋 みんなの居場所」の地図(案A・2026-11-08 社長): HOME の画面そのもの(同じ絵・同じ札の部品と位置)に、助手が小さな全身で立つ。町だけの場所は同じ形の札を絵の中の建物に。場所を押すと、いる助手とできることのシート。公開の印 assistantLife の後ろ。何も保存しない"
+    },
+    {
       "file": "56-assistant-life-rel.jsx",
       "role": "助手ライフの人間らしい関係の出来事(けんか・仲直り・やきもち・ないしょ話・相談・からかう・ライバル心・久しぶりの気まずさ)と家での見せ方(扉を閉める・居間で離れて座る・仲直りの札)。台本は tools/assistant/life-rel-talks-import.js が書く。公開の印 assistantLife の後ろ。保存は mh_assistant_life_rel_v1 の新しいキーだけ"
     },
