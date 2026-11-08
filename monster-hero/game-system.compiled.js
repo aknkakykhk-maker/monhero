@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ceca8ead1c5eaffa
+// source-sha256: d1be44ef9c125157
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -56516,7 +56516,8 @@ const sbFetchFriendRoster = async selfIdRaw => {
     otherId: view.otherId,
     userName: (looks[view.otherId] || {}).userName || '名無しのブリーダー',
     lastSeenAt: (looks[view.otherId] || {}).lastSeenAt || 0,
-    icon: (looks[view.otherId] || {}).icon ?? null
+    icon: (looks[view.otherId] || {}).icon ?? null,
+    profileFrame: (looks[view.otherId] || {}).profileFrame || null
   })).sort((a, b) => b.lastSeenAt - a.lastSeenAt);
 };
 const FRIEND_PLACE_TEXT = Object.freeze({
@@ -91239,8 +91240,18 @@ const RHYTHM_BEAT_PRESENCE_KIND = Object.freeze({
   busy: {
     tag: '🎮 部屋で遊び中',
     color: '#a78bfa'
+  },
+  private: {
+    tag: '🔑 プライベート中',
+    color: '#fbbf24'
   }
 });
+const rhythmBeatFriendFramed = (f, resolve) => !!(f && typeof ProfileAvatar === 'function' && typeof resolve === 'function');
+const rhythmBeatFriendFrameId = f => f && f.profileFrame && f.profileFrame !== 'none' ? f.profileFrame : null;
+const rhythmBeatFriendFace = f => React.createElement("span", {
+  className: "grid h-full w-full place-items-center rounded-full bg-slate-800 text-xs",
+  "aria-hidden": "true"
+}, "🙂");
 function RhythmBeatPresenceStrip({
   assistants = [],
   friends = [],
@@ -91317,7 +91328,20 @@ function RhythmBeatPresenceStrip({
         id: f.otherId
       }),
       className: "flex w-[58px] shrink-0 flex-col items-center rounded-xl bg-sky-500/10 pt-1 text-center active:scale-95"
-    }, face(f.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(f.icon) : '', k.color, '🙂', 'friend'), React.createElement("b", {
+    }, rhythmBeatFriendFramed(f, resolveIconUrl) ? React.createElement("span", {
+      "data-rhythm-beat-presence-face": "friend",
+      "data-rhythm-beat-presence-framed": rhythmBeatFriendFrameId(f) || undefined,
+      className: "block h-11 w-11 shrink-0"
+    }, React.createElement(ProfileAvatar, {
+      src: f.icon ? resolveIconUrl(f.icon) : '',
+      id: f.icon,
+      frameId: rhythmBeatFriendFrameId(f),
+      small: true,
+      fit: true,
+      alt: "",
+      className: "h-11 w-11",
+      fallback: rhythmBeatFriendFace(f)
+    })) : face(f.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(f.icon) : '', k.color, '🙂', 'friend'), React.createElement("b", {
       "data-rhythm-beat-presence-mark": "friend",
       className: "mt-0.5 block whitespace-nowrap rounded bg-sky-300 px-1 text-[8px] font-black leading-tight text-slate-950"
     }, "フレンド"), React.createElement("b", {
@@ -91330,52 +91354,121 @@ function RhythmBeatPresenceStrip({
     }, k.tag));
   }))));
 }
-function RhythmBeatPresenceButton({
+function RhythmBeatVisitorFaces({
   assistants = [],
   friends = [],
-  onOpen,
-  resolveIconUrl
+  max = 3,
+  size = 26,
+  where = '',
+  names = false,
+  onPick,
+  onMore,
+  resolveIconUrl,
+  className = ''
 }) {
-  const faces = [...assistants.map(a => ({
-    key: `a-${a.id}`,
+  const items = [...assistants.map(a => ({
+    kind: 'assistant',
+    id: a.id,
+    name: a.name,
     src: rhythmBeatAssistantFace(a.id),
-    color: '#f472b6',
-    round: 'rounded-full'
+    color: '#f472b6'
   })), ...friends.map(f => ({
-    key: `f-${f.otherId}`,
+    kind: 'friend',
+    id: f.otherId,
+    name: f.userName,
+    f,
     src: f.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(f.icon) : '',
-    color: (RHYTHM_BEAT_PRESENCE_KIND[f.kind] || RHYTHM_BEAT_PRESENCE_KIND.here).color,
-    round: 'rounded-md'
+    color: (RHYTHM_BEAT_PRESENCE_KIND[f.kind] || RHYTHM_BEAT_PRESENCE_KIND.here).color
   }))];
-  return React.createElement("button", {
-    type: "button",
-    "data-rhythm-beat-presence-open": true,
-    "aria-label": `いまモンヒロビートにいる人(${faces.length}人)を見る`,
-    onClick: onOpen,
-    className: "flex min-h-[44px] shrink-0 items-center gap-1 rounded-xl border border-amber-300/60 bg-indigo-950/80 px-1.5 active:scale-95"
-  }, React.createElement("span", {
-    className: "flex items-center pl-1.5",
-    "aria-hidden": "true"
-  }, faces.slice(0, 3).map((f, i) => React.createElement("span", {
-    key: f.key,
-    className: `-ml-1.5 block h-7 w-7 overflow-hidden border-2 bg-slate-900 ${f.round} ${i >= 2 ? 'max-[359px]:hidden' : ''}`,
-    style: {
-      borderColor: f.color
+  if (!items.length) return null;
+  const shown = items.slice(0, max);
+  const rest = items.length - shown.length;
+  const tap = fn => e => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (typeof Audio_ !== 'undefined' && Audio_.fgSe) Audio_.fgSe.tap();
+    fn();
+  };
+  const key = fn => e => {
+    if (e.key === 'Enter' || e.key === ' ') tap(fn)(e);
+  };
+  const px = `${size}px`;
+  return React.createElement("span", {
+    "data-rhythm-beat-visitors": where,
+    className: `flex items-center ${className}`,
+    onClick: e => e.stopPropagation()
+  }, shown.map(it => React.createElement("span", {
+    key: `${it.kind}-${it.id}`,
+    role: "button",
+    tabIndex: 0,
+    "aria-label": `${it.kind === 'assistant' ? '助手' : 'フレンド'} ${it.name}`,
+    "data-rhythm-beat-visitor": it.kind,
+    "data-rhythm-beat-visitor-id": it.id,
+    "data-rhythm-beat-visitor-kind": it.kind === 'friend' ? it.f.kind : 'practice',
+    onClick: tap(() => onPick({
+      kind: it.kind,
+      id: it.id
+    })),
+    onKeyDown: key(() => onPick({
+      kind: it.kind,
+      id: it.id
+    })),
+    className: `relative shrink-0 cursor-pointer active:scale-90 ${names ? 'flex flex-col items-center' : 'block'}`,
+    style: names ? {
+      width: `${size + 18}px`
+    } : {
+      width: px,
+      height: px
     }
-  }, f.src ? React.createElement("img", {
-    src: f.src,
+  }, React.createElement("span", {
+    className: "relative block shrink-0",
+    style: {
+      width: px,
+      height: px
+    }
+  }, it.kind === 'friend' && rhythmBeatFriendFramed(it.f, resolveIconUrl) ? React.createElement("span", {
+    "data-rhythm-beat-presence-face": "friend",
+    "data-rhythm-beat-presence-framed": rhythmBeatFriendFrameId(it.f) || undefined,
+    className: "block h-full w-full"
+  }, React.createElement(ProfileAvatar, {
+    src: it.src,
+    id: it.f.icon,
+    frameId: rhythmBeatFriendFrameId(it.f),
+    small: true,
+    fit: true,
+    alt: "",
+    className: "h-full w-full",
+    fallback: rhythmBeatFriendFace(it.f)
+  })) : React.createElement("span", {
+    "data-rhythm-beat-presence-face": it.kind,
+    className: `block h-full w-full overflow-hidden border-2 bg-slate-900 shadow ${it.kind === 'assistant' ? 'rounded-full' : 'rounded-md'}`,
+    style: {
+      borderColor: it.color
+    }
+  }, it.src ? React.createElement("img", {
+    src: it.src,
     alt: "",
     draggable: false,
     className: "h-full w-full object-cover"
   }) : React.createElement("span", {
-    className: "grid h-full w-full place-items-center text-xs"
-  }, "🙂")))), React.createElement("span", {
-    className: "flex flex-col items-center leading-none"
-  }, React.createElement("small", {
-    className: "block whitespace-nowrap text-[8.5px] font-black text-amber-200"
-  }, "いる人"), React.createElement("b", {
-    className: "block whitespace-nowrap text-[13px] font-black text-white"
-  }, faces.length)));
+    className: "grid h-full w-full place-items-center text-xs",
+    "aria-hidden": "true"
+  }, "🙂"))), names && React.createElement("b", {
+    "data-rhythm-beat-visitor-name": true,
+    className: "block w-full truncate text-center text-[8px] font-black leading-[9px] text-slate-950"
+  }, it.name))), rest > 0 && React.createElement("span", {
+    role: "button",
+    tabIndex: 0,
+    "data-rhythm-beat-visitors-more": where,
+    "aria-label": `ほか${rest}人を見る`,
+    onClick: tap(onMore),
+    onKeyDown: key(onMore),
+    className: "grid shrink-0 cursor-pointer place-items-center rounded-full border-2 border-white/70 bg-slate-900/90 text-[10px] font-black text-white active:scale-90",
+    style: {
+      width: px,
+      height: px
+    }
+  }, "+", rest));
 }
 function RhythmBeatPresenceList({
   open,
@@ -91423,9 +91516,9 @@ function RhythmBeatPresenceSheet({
   const name = isAssistant ? who && who.name || '助手' : friend && friend.userName || 'フレンド';
   const k = !isAssistant && friend ? RHYTHM_BEAT_PRESENCE_KIND[friend.kind] || RHYTHM_BEAT_PRESENCE_KIND.here : null;
   const src = isAssistant ? rhythmBeatAssistantFace(pick.id) : friend && friend.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(friend.icon) : '';
-  const title = isAssistant ? `${name} は いま練習中` : friend && friend.kind === 'room' ? `${name} さんが部屋を開いています` : friend && friend.kind === 'busy' ? `${name} さんは部屋で遊び中` : `${name} さんが いまモンヒロビートにいます`;
+  const title = isAssistant ? `${name} は いま練習中` : friend && friend.kind === 'room' ? `${name} さんが部屋を開いています` : friend && friend.kind === 'busy' ? `${name} さんは部屋で遊び中` : friend && friend.kind === 'private' ? `${name} さんは合言葉の部屋にいます` : `${name} さんが いまモンヒロビートにいます`;
   const sub = isAssistant ? 'モンヒロビートにいるあいだは券なし' : friend && friend.kind === 'room' && friend.room ? `フリーマッチ ${friend.room.n}/${RHYTHM_MULTI_ROOM_MAX}人${friend.room.ph === 'select' ? '・曲えらび中' : '・待合い'}` : k ? k.tag : '';
-  const line = isAssistant ? 'フリーマッチかプライベートの部屋で「呼ぶ」と、セッション券なしで一緒に演奏できます(何曲でも)。ソロライブには来られません。' : friend && friend.kind === 'room' ? '「入る」で、その部屋へ入れます。' : friend && friend.kind === 'busy' ? '合言葉の部屋か、演奏中の部屋にいるので、いまは入れません。部屋に誘ってもらうか、終わってから誘ってみましょう。' : '部屋を作って 💌 で誘うと、一緒に遊べます。';
+  const line = isAssistant ? 'フリーマッチかプライベートの部屋で「呼ぶ」と、セッション券なしで一緒に演奏できます(何曲でも)。ソロライブには来られません。' : friend && friend.kind === 'room' ? '「入る」で、その部屋へ入れます。' : friend && friend.kind === 'busy' ? '合言葉の部屋か、演奏中の部屋にいるので、いまは入れません。部屋に誘ってもらうか、終わってから誘ってみましょう。' : friend && friend.kind === 'private' ? '合言葉(プライベート)の部屋にいるので、いまは入れません。合言葉を教えてもらうか、終わってから誘ってみましょう。' : '部屋を作って 💌 で誘うと、一緒に遊べます。';
   const action = isAssistant ? {
     label: '部屋を作って呼ぶ',
     go: () => onCallAssistant(pick.id)
@@ -91452,7 +91545,18 @@ function RhythmBeatPresenceSheet({
     }
   }, React.createElement("div", {
     className: "flex items-center gap-2.5"
-  }, React.createElement("span", {
+  }, !isAssistant && rhythmBeatFriendFramed(friend, resolveIconUrl) ? React.createElement("span", {
+    "data-rhythm-beat-presence-sheet-framed": rhythmBeatFriendFrameId(friend) || 'none',
+    className: "block h-[52px] w-[52px] shrink-0"
+  }, React.createElement(ProfileAvatar, {
+    src: src,
+    id: friend.icon,
+    frameId: rhythmBeatFriendFrameId(friend),
+    fit: true,
+    alt: "",
+    className: "h-[52px] w-[52px]",
+    fallback: rhythmBeatFriendFace(friend)
+  })) : React.createElement("span", {
     className: "block h-[52px] w-[52px] shrink-0 overflow-hidden rounded-full border-2 bg-slate-950",
     style: {
       borderColor: accent
@@ -91693,6 +91797,11 @@ function RhythmMultiAwayBar({
       roomWaitingSetRef.current = false;
     }
   }, [roomWaiting]);
+  const inPrivate = !!view && view.mode === 'private';
+  React.useEffect(() => {
+    if (typeof friendsSetRoomPrivate !== 'function') return;
+    friendsSetRoomPrivate(inPrivate);
+  }, [inPrivate]);
   React.useEffect(() => {
     if (!shown) {
       seenRef.current = null;
@@ -92453,7 +92562,8 @@ function ModeSelectAssistantPanel({
   assistant,
   showArt,
   showComment,
-  onToggle
+  onToggle,
+  artCorner = null
 }) {
   const [artRatio, setArtRatio] = React.useState(null);
   const artSrc = assistant && assistant.image;
@@ -92482,7 +92592,7 @@ function ModeSelectAssistantPanel({
     onToggle: onToggle,
     cls: "mhms-art-toggles absolute bottom-1.5 right-1.5 z-20",
     withLabel: false
-  }), React.createElement("div", {
+  }), artCorner, React.createElement("div", {
     className: "mhms-float pointer-events-none absolute inset-0"
   }, RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id] ? (() => {
     const fr = RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id];
@@ -93199,7 +93309,8 @@ function RhythmMultiScreen({
     const order = {
       room: 0,
       here: 1,
-      busy: 2
+      busy: 2,
+      private: 3
     };
     return (roster || []).map(f => {
       const room = by[f.otherId];
@@ -93217,6 +93328,10 @@ function RhythmMultiScreen({
       if (p.place === 'multi' || p.place === 'rhythmPlay') return {
         ...f,
         kind: 'busy'
+      };
+      if (p.place === 'roomPrivate') return {
+        ...f,
+        kind: 'private'
       };
       return null;
     }).filter(Boolean).map((f, i) => [f, i]).sort(([a, ia], [b, ib]) => order[a.kind] - order[b.kind] || ia - ib).map(([f]) => f);
@@ -93665,7 +93780,7 @@ function RhythmMultiScreen({
     }, "⏹", React.createElement("br", null), "終了") : '←'), React.createElement("div", {
       className: "min-w-0 flex-1 leading-none"
     }, React.createElement("small", {
-      className: "block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300"
+      className: "block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300 max-[359px]:tracking-normal"
     }, "MONBEAT ・ SELECT MODE"), React.createElement("b", {
       className: "mhms-title block truncate text-lg font-black leading-tight tracking-wider"
     }, "モードえらび"), (ms.beatPointText || Number.isFinite(ms.beatRankXp)) && React.createElement("div", {
@@ -93694,15 +93809,7 @@ function RhythmMultiScreen({
       kind: "beat",
       xp: ms.beatRankXp,
       size: "xs"
-    })))), ms.multi && (beatAssistants.length > 0 || beatFriends.length > 0) && React.createElement(RhythmBeatPresenceButton, {
-      assistants: beatAssistants,
-      friends: beatFriends,
-      resolveIconUrl: resolveIconUrl,
-      onOpen: () => {
-        Audio_.fgSe.tap();
-        setBeatListOpen(true);
-      }
-    }), quickRunInfo && React.createElement(RhythmQuickRunPill, {
+    })))), quickRunInfo && React.createElement(RhythmQuickRunPill, {
       info: quickRunInfo,
       onRestart: onRestartQuickRun,
       onResume: onResumeQuickRun,
@@ -93724,7 +93831,21 @@ function RhythmMultiScreen({
       assistant: ms.assistant,
       showArt: ms.showArt,
       showComment: ms.showComment,
-      onToggle: ms.onToggleAssistant
+      onToggle: ms.onToggleAssistant,
+      artCorner: ms.multi && beatAssistants.length > 0 && ms.assistant && ms.showArt ? React.createElement("span", {
+        "data-rhythm-beat-art-corner": true,
+        className: "absolute left-1.5 top-1.5 z-20 flex flex-col items-start gap-0.5"
+      }, React.createElement("small", {
+        className: "rounded-full bg-pink-500/90 px-1.5 text-[9px] font-black leading-[14px] text-white shadow"
+      }, "🎤 練習中"), React.createElement(RhythmBeatVisitorFaces, {
+        where: "art",
+        assistants: beatAssistants,
+        max: 3,
+        size: 32,
+        className: "flex-col gap-1",
+        onPick: setBeatPick,
+        onMore: () => setBeatListOpen(true)
+      })) : null
     }), React.createElement("div", {
       className: "shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2"
     }, !(ms.assistant && (ms.showArt || ms.showComment)) && assistToggles('justify-end', true), friendsOn && friendInvites.length > 0 && React.createElement("section", {
@@ -93779,7 +93900,18 @@ function RhythmMultiScreen({
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "mhms-mark"
-    }, "FREE MATCH"), React.createElement("span", {
+    }, "FREE MATCH"), React.createElement(RhythmBeatVisitorFaces, {
+      where: "free",
+      assistants: ms.assistant && ms.showArt ? [] : beatAssistants,
+      friends: beatFriends,
+      max: 2,
+      size: 20,
+      names: true,
+      className: "absolute right-1 top-0.5 z-10 items-start landscape:hidden",
+      onPick: setBeatPick,
+      onMore: () => setBeatListOpen(true),
+      resolveIconUrl: resolveIconUrl
+    }), React.createElement("span", {
       "aria-hidden": "true",
       className: "mhms-ico relative text-3xl leading-none max-[359px]:text-2xl"
     }, "🎮"), React.createElement("span", {
@@ -93788,7 +93920,18 @@ function RhythmMultiScreen({
       className: "block text-[18px] font-black italic leading-tight"
     }, "フリーマッチ"), React.createElement("small", {
       className: "block text-[10px] font-black leading-tight text-slate-900/80"
-    }, "だれとでも最大", RHYTHM_MULTI_ROOM_MAX, "人で協力"), React.createElement(RhythmMultiLobbyCount, null))), ms.multi && React.createElement("button", {
+    }, "だれとでも最大", RHYTHM_MULTI_ROOM_MAX, "人で協力"), React.createElement(RhythmMultiLobbyCount, null), React.createElement(RhythmBeatVisitorFaces, {
+      where: "free-row",
+      assistants: ms.assistant && ms.showArt ? [] : beatAssistants,
+      friends: beatFriends,
+      max: 3,
+      size: 22,
+      names: true,
+      className: "relative z-10 mt-0.5 hidden items-start landscape:flex",
+      onPick: setBeatPick,
+      onMore: () => setBeatListOpen(true),
+      resolveIconUrl: resolveIconUrl
+    }))), ms.multi && React.createElement("button", {
       "data-rhythm-mode-private": true,
       "data-rhythm-mode-private-open": true,
       type: "button",
