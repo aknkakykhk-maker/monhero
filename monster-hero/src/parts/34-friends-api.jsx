@@ -518,6 +518,8 @@ const sbFetchFriendRoster = async (selfIdRaw) => {
     lastSeenAt: (looks[view.otherId] || {}).lastSeenAt || 0,
     // アイコン(2026-11-08 ビート部の「いまモンヒロビートにいる人」で顔を出す。足すだけ)
     icon: (looks[view.otherId] || {}).icon ?? null,
+    // プロフィールのフレーム(2026-11-08 社長「プレイヤー側は顔アイコンとフレームもリンクさせて」。足すだけ)
+    profileFrame: (looks[view.otherId] || {}).profileFrame || null,
   })).sort((a, b) => b.lastSeenAt - a.lastSeenAt);
 };
 
