@@ -816,7 +816,7 @@ function RhythmBuddyList({ masuMons, state, dayKey, onOpen, onPick = null, busy 
 }
 
 // 部屋の中の「マスモンを呼ぶ」(下から出る選択の画面)
-function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [], breederName = '', assistants = [], pickAssistant = null, guideAssistantId = '', freeSeats = 4, refused = null, onCallStart = null }) {
+function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [], breederName = '', assistants = [], pickAssistant = null, guideAssistantId = '', freeSeats = 4, refused = null, onCallStart = null, preselectAssistant = '' }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
   const [detailId, setDetailId] = React.useState('');
@@ -828,7 +828,8 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
   // M/B管理の「マスモン一覧(バトル)」と同じ並べ替え・カードで選ぶ(2026-10-07・ユーザー指示「マスモン呼び出しも管理画面と同じものに」)
   // 何人かに印を付けて、まとめて呼ぶ(2026-11-07 社長「1人ずつじゃなくて複数選択がほしい」)。タブ(マスモン/助手)をまたいで選べる。
   // picks = [{ kind:'masu'|'assistant', id }](選んだ順)。部屋の空き席(freeSeats)より多くは選べない
-  const [picks, setPicks] = React.useState([]);
+  // preselectAssistant … モードえらびの「いまモンヒロビートにいる人」から来たときは、その助手に最初から印を付けて開く(2026-11-08)
+  const [picks, setPicks] = React.useState(() => (preselectAssistant && (assistants || []).some((a) => a && a.id === preselectAssistant) && !calledIds.includes(rhythmAssistSessionKey(preselectAssistant)) && freeSeats > 0 ? [{ kind: 'assistant', id: preselectAssistant }] : []));
   const [pickNote, setPickNote] = React.useState('');
   const isPicked = (kind, id) => picks.some((p) => p.kind === kind && p.id === id);
   const togglePick = (kind, id) => {
@@ -840,7 +841,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
   };
   // 助手のタブ(2026-11-07 助手とのセッション・80-screen-rhythm-assistant-session.jsx)。公開の印が偽のあいだは出さない
   const assistOn = rhythmAssistSessionEnabled() && typeof pickAssistant === 'function' && (assistants || []).length > 0;
-  const [tab, setTab] = React.useState(() => ((masuMons || []).length && !refused ? 'masu' : 'assistant'));
+  const [tab, setTab] = React.useState(() => ((masuMons || []).length && !refused && !preselectAssistant ? 'masu' : 'assistant'));
   const tabNow = assistOn ? tab : 'masu';
   const masuPicks = picks.filter((p) => p.kind === 'masu');
   const singleMasu = masuPicks.length === 1 && picks.length === 1 ? (masuMons || []).find((x) => x && x.id === masuPicks[0].id) : null;

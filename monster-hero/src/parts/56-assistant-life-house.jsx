@@ -421,6 +421,7 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, othe
       {typeof AssistantLifeRelRoomLayer === 'function' && <AssistantLifeRelRoomLayer state={state} h={h}/>}
       {/* 出かけ札は床にかけない(2026-11-08 社長: 助手のマスモンが部屋の床を歩く。キズナ2)。縦は名札の右に2行(行き先/一緒の全員の名前・ひとりなら何をしているか・けんかや仲直りの印)、
           横は名札の下に1行(行き先・人数・印)。どちらも部屋の上から 36px までに収める */}
+      {met && !other && typeof AssistantMasmonRoomPet === 'function' && <AssistantMasmonRoomPet id={id} h={h} life={typeof assistantLifeCurrent === 'function' ? assistantLifeCurrent() : null}/>}
       {state && state.tag && (() => { const t = state.tag; const mark = !!t[1] && /^(💢|🤝)/u.test(t[1]); const n = Number((String(t[1] || '').match(/^(\d+)人で/) || [])[1]) || 0;
         // 縦: 上の行(名札の右)に一緒の全員の名前か、ひとりなら何をしているか・印。下の行(札の幅いっぱい)に行き先。名前は札に入る数まで(残りは「ほか◯人」)
         const ml = [...assistantLifeName(id)].length * 10 + 20; // 名札の幅(字10px+余白)。上の行はその右から
@@ -521,8 +522,9 @@ const assistantLifeRoomsOf = (life, metIds) => {
 };
 
 // 部屋を押したとき(その助手のこと・その場でできること)
-function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose, onPeek, onInvite, onWatch, onGive, onBeat, onCard, canGive, slot, land = false, onMediate = null, roomState = null, furnItems = null, onGiveFurn = null, openFurn = false, onFurnTalk = null, onMasmon = null, onChat = null, follow = null, onFollowDone = null }) {
+function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose, onPeek, onInvite, onWatch, onGive, onBeat, onCard, canGive, slot, land = false, onMediate = null, roomState = null, furnItems = null, onGiveFurn = null, openFurn = false, onFurnTalk = null, onMasmon = null, onChat = null, follow = null, onFollowDone = null, onGiveSolo = null, canGiveSolo = false }) {
   const [furnOpen, setFurnOpen] = React.useState(!!openFurn);
+  const soloOn = typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn() && !!onGiveSolo;
   const who = assistantById(id);
   if (!who) return null;
   const w = assistantLifeWhereOf(life, id);
@@ -562,6 +564,8 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
           <div className="mhl-row"><span className="k">🤝 友情Lv</span><span className="flex flex-wrap gap-x-3 text-[11px]">{friends.map(f => <span key={f.id}>{assistantLifeName(f.id)} <b className={f.lv >= 5 ? 'text-pink-300' : f.lv >= 3 ? 'text-amber-300' : ''}>Lv{f.lv}</b></span>)}</span></div>
           {typeof AssistantLifeGiftLikesRow === 'function' && <AssistantLifeGiftLikesRow id={id} compact={land}/>}
           {typeof AssistantMasmonRoomRow === 'function' && <AssistantMasmonRoomRow id={id} onOpen={onMasmon}/>}
+          {/* 1人に贈ったチェキ(❸A)。その助手ひとりの1枚 */}
+          {soloOn && typeof AssistantLifeChekiRow === 'function' && <AssistantLifeChekiRow pair={[id]}/>}
           {sess && <div className="mhl-row" data-assistant-life-room-session-row><span className="k">🎵 セッション</span><b>セッションLv{sess.level}</b><span className="ml-auto text-[10px] text-slate-300">一緒に {sess.lives}回</span></div>}
           <div className="py-1.5"><p className="text-[10.5px] font-black text-slate-300">今日あったこと</p>
             {items.length ? items.map((x, i) => <p key={i} className="text-[11px] font-bold text-slate-100"><b className="mr-1.5 text-amber-200">{x.t}</b><AssistantLifeChunks text={x.text}/></p>) : <p className="text-[11px] text-slate-400">まだありません</p>}
@@ -582,9 +586,11 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
           {w && w.group
             ? <button type="button" className="mhl-btn mhl-watch" data-assistant-life-room-act="watch" disabled={!canWatch} onClick={() => onWatch(w.group)}>{canWatch ? (home ? '👀 見守る' : '👀 見守りに行く') : '見守りました'}</button>
             : <button type="button" className="mhl-btn mhl-watch" data-assistant-life-room-act="peek" disabled={!canWatch} onClick={() => onPeek(id)}>{canWatch ? '👀 ようすを見る' : '見た'}</button>}
-          {!w || !w.group
-            ? <button type="button" className="mhl-btn mhl-call" data-assistant-life-room-act="invite" disabled={w && w.reason === 'distance'} onClick={() => onInvite(id)}>{asleep ? '💤 そっと声をかける' : '💬 声をかける'}</button>
-            : <button type="button" className="mhl-btn mhl-give" data-assistant-life-room-act="give" disabled={!canGive} onClick={() => onGive(w.group)}>🎁 贈る</button>}
+          {/* 助手1人に贈る(2026-11-08 社長 SOLO-GIFT-PLAN.md ❺A): 一緒にいる助手にも声をかけられる。贈るは「2人に」と「◯◯だけに」に分ける */}
+          {(!w || !w.group || soloOn) && <button type="button" className="mhl-btn mhl-call" data-assistant-life-room-act="invite" disabled={w && w.reason === 'distance'} onClick={() => onInvite(id)}>{asleep ? '💤 そっと声をかける' : '💬 声をかける'}</button>}
+          {w && w.group && <button type="button" className="mhl-btn mhl-give" data-assistant-life-room-act="give" disabled={!canGive} onClick={() => onGive(w.group)}>{soloOn ? '🎁 2人に贈る' : '🎁 贈る'}</button>}
+          {soloOn && <button type="button" className={`mhl-btn mhl-give ${w && w.group ? '' : 'col-span-2'}`} data-assistant-life-room-act="give-solo" disabled={!canGiveSolo} onClick={() => onGiveSolo(id, w && w.group ? w.group.ids : [id])}
+            style={{ background: 'linear-gradient(90deg,#db2777,#be185d)' }}>{w && w.group ? `🎁 ${who.name}だけに贈る` : `🎁 ${who.name}に贈る`}</button>}
           {/* その助手とおしゃべり(社長 ❼A・寝ていれば起こして ❽B)。選んでいない助手とも話せる */}
           {/* 続きのカードが出ているあいだは、同じことをするボタンを2つ並べない(ミハリ 2026-11-08) */}
           {onChat && !follow && <button type="button" className="mhl-btn mhl-call col-span-2" data-assistant-life-room-act="chat" onClick={() => onChat(id, null)}>{asleep ? '💤 起こしておしゃべり' : '💬 おしゃべりする'}</button>}
@@ -741,7 +747,7 @@ function AssistantLifeQuickChip({ quickRun, onStop, onStart, land }) {
   }
   return null;
 }
-function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = null, bondLevelOf = null, furnItems = null, onGiveFurn = null, quickRun = null, onQuickRunStop = null, onQuickRunStart = null, quickRunStrip = null }) {
+function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = null, bondLevelOf = null, furnItems = null, onGiveFurn = null, onGiveSolo = null, quickRun = null, onQuickRunStop = null, onQuickRunStart = null, quickRunStrip = null }) {
   const st = useAssistantLifeNow(metIds);
   const diary = useAssistantLifeDiary();
   const peerSt = (typeof useAssistantPeerState === 'function') ? useAssistantPeerState() : null;
@@ -854,8 +860,21 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const itemInfos = assistantLifeItemInfos();
   const haveOf = (kind) => (peerItems && Number(peerItems[kind])) || 0;
   const usedOf = (kind) => !!(typeof assistantLifeGiftReason === 'function' && assistantLifeGiftReason(kind, peerSt, 1));
+  // 1人に贈る(2026-11-08 社長 SOLO-GIFT-PLAN.md)。印 assistantLifeSolo の後ろ
+  const soloOn = typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn() && !!onGiveSolo;
+  const soloLeft = soloOn ? assistantLifeSoloLeft() : 0;
+  const openGiveSolo = (who, ids) => {
+    if (!soloOn || !who) return;
+    const usable = assistantLifeSoloKinds().filter(g => haveOf(g.kind) > 0 && !assistantLifeSoloReason(g.kind, peerSt, haveOf(g.kind)));
+    const kind = (usable[0] || assistantLifeSoloKinds()[0] || {}).kind;
+    const list = Array.isArray(ids) && ids.length ? ids : [who];
+    const ps = []; for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) ps.push([list[i], list[j]]);
+    setRoomId(null); setScene(null); setNote('');
+    setGive({ ids: list, pair: ps[0] || null, solo: who, kind });
+  };
   const openGive = (gids) => {
     const list = Array.isArray(gids) ? gids : (gids && gids.ids) || [];
+    if (list.length === 1 && soloOn) { openGiveSolo(list[0], list); return; }
     if (list.length < 2) return;
     const kind = itemInfos.find(x => haveOf(x.kind) > 0 && !usedOf(x.kind))?.kind || 'gift';
     const ps = []; for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) ps.push([list[i], list[j]]);
@@ -864,6 +883,18 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
     setGive({ ids: list, pair: list.length === 2 ? [...list] : best, kind });
   };
   const doGive = async () => {
+    if (give && give.solo && soloOn) {
+      const who = give.solo, kind = give.kind;
+      const talk = await onGiveSolo(who, kind);
+      const info = assistantLifeItemInfo(kind);
+      setGive(null);
+      if (!talk) { setNote(`${info ? info.name : '道具'}は、いまは贈れません(1人には1日3回・同じ道具は1日1回・持っている数を見てください)`); return; }
+      const w = assistantLifeWhereOf(life, who);
+      const likeText = talk.like === 'like' ? ' ・ 💗 好きなもの！' : talk.like === 'bad' ? ' ・ 💧 ちょっと苦手…' : '';
+      playTalk(talk, { ids: [who], place: w ? w.place : 'home', gift: true }); // 場面を流すと帯が消えるので、帯はそのあと(家具と同じ)
+      setNote(`${nameOf(who)}に${info ? `${info.emoji} ${info.name}` : ''}を贈った。💗 仲良し度 +${talk.amount}${likeText}`);
+      return;
+    }
     if (!give || !give.pair) return;
     const talk = await onUseItem(give.kind, give.pair);
     const info = assistantLifeItemInfo(give.kind);
@@ -895,8 +926,11 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const lonely = Object.entries(life.solo || {}).find(([id, s]) => s.reason === 'lonely' && !awayFriend(id));
   const beatIds = ids.filter(id => { const w = assistantLifeWhereOf(life, id); return w && w.doing === 'practice'; });
   const itemsLeft = Math.min(typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0, itemInfos.filter(x => !usedOf(x.kind) && haveOf(x.kind) > 0).length);
-  const itemsHave = itemInfos.reduce((n, x) => n + haveOf(x.kind), 0);
+  const soloInfos = soloOn ? assistantLifeSoloDefs().map(g => assistantLifeItemInfo(g.kind)).filter(Boolean) : [];
+  const itemsHave = [...itemInfos, ...soloInfos].reduce((n, x) => n + haveOf(x.kind), 0);
   const giveGroup = (life.groups || [])[0];
+  // ひとりの助手しかいない時間も、1人に贈れる(❶B: 1人には別に1日3回)
+  const giveSoloId = soloOn ? (Object.keys(life.solo || {}).find(id => !awayFriend(id)) || (giveGroup && giveGroup.ids[0]) || null) : null;
   const pad = 12;
   const houseW = land ? Math.min(560, Math.round(vw * 0.64) - pad * 2) : Math.min(380, vw - pad * 2);
   const tiles = (
@@ -905,8 +939,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         <em>あと{watchLeft}</em><i>👀</i><b>見守る</b><small>{unwatched.length ? `${unwatched.length}か所` : 'いまは無し'}</small></button>
       <button type="button" className="mhl-tile mhl-call flex-1" data-assistant-life-today-act="call" disabled={!Object.keys(life.solo || {}).filter(id => !awayFriend(id)).length} onClick={() => { const id = lonely ? lonely[0] : Object.keys(life.solo || {}).filter(id => !awayFriend(id))[0]; if (id) setRoomId(id); }}>
         <em>無料</em><i>💬</i><b>声をかける</b><small data-assistant-life-today-sub>{lonely ? `💭 ${nameOf(lonely[0])}` : 'ひとりの助手に'}</small></button>
-      <button type="button" className="mhl-tile mhl-give flex-1" data-assistant-life-today-act="give" disabled={!canGive || !giveGroup} onClick={() => { if (itemsLeft > 0 && giveGroup) openGive(giveGroup.ids); else setTab('items'); }}>
-        <em>{itemsLeft}回</em><i>🎁</i><b>贈る</b><small>道具 {itemsHave}個</small></button>
+      <button type="button" className="mhl-tile mhl-give flex-1" data-assistant-life-today-act="give" disabled={!canGive || (!giveGroup && !giveSoloId)} onClick={() => { if (itemsLeft > 0 && giveGroup) openGive(giveGroup.ids); else if (soloLeft > 0 && giveSoloId) openGiveSolo(giveSoloId, giveGroup && giveGroup.ids.includes(giveSoloId) ? giveGroup.ids : [giveSoloId]); else setTab('items'); }}>
+        <em>{soloOn ? itemsLeft + soloLeft : itemsLeft}回</em><i>🎁</i><b>贈る</b><small>道具 {itemsHave}個</small></button>
       <button type="button" className="mhl-tile mhl-beat flex-1" data-assistant-life-today-act="beat" onClick={() => { if (beatIds[0]) setRoomId(beatIds[0]); }} disabled={!beatIds.length}>
         <i>🎵</i><b>モンヒロビート</b><small>{beatIds.length ? `${beatIds.length}人 ・ 券なし` : 'いまはだれも'}</small></button>
     </div>);
@@ -960,10 +994,23 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
             <div className="min-w-0 flex-1">
               <p className="text-[12px] font-black text-white">{x.name} <span className="text-[10px] text-slate-400">持っている {haveOf(x.kind)}個{usedOf(x.kind) && haveOf(x.kind) > 0 ? ' ・ 今日は贈れない' : ''}</span></p>
               <p className="text-[10.5px] leading-snug text-slate-300">{x.what.split('。')[0]}。<span className="whitespace-nowrap text-orange-300">🤝 友情Lv {assistantLifeItemRange(x).peer}</span>・<span className="whitespace-nowrap text-pink-200">💗 仲良し度 {assistantLifeItemRange(x).player}</span><span className="whitespace-nowrap text-slate-400">(好みで変わる)</span></p>
+              {soloOn && <p className="text-[10px] leading-snug text-slate-400" data-assistant-life-item-solo-amt>1人に贈ると: <span className="whitespace-nowrap text-pink-200">💗 仲良し度 {assistantLifeItemRange(x).player}</span>(友情Lv は上がらない)</p>}
             </div>
             {haveOf(x.kind) <= 0 && typeof AssistantLifeShopButton === 'function' && <AssistantLifeShopButton tab="item" small label={`🛒 ${x.cost != null ? `${x.cost}P` : '交換所'}`}/>}
           </div>))}
-        <p className="mt-2 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] leading-snug text-slate-200">手に入れる: モンヒロビートの「ビートP交換所」({itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・')})。贈る: 部屋や場面の「🎁 贈る」。好きな物なら多め・苦手な物なら少なめに上がり、好みは贈ると分かります。同じ道具は1日1回・合わせて1日3回。声をかける・見守るは無料です。次の段まであと何点・この道具で段の何割進むかは、「🎁 贈る」で2人を選ぶと出ます</p>
+        {soloOn && soloInfos.length > 0 && (<>
+          <p className="mt-3 inline-block rounded-xl bg-slate-950/85 px-2 py-0.5 text-[13px] font-black text-pink-200" data-assistant-life-items-solo>💗 1人に贈る道具 <span className="text-[10.5px] text-slate-200">今日あと {soloLeft}回</span></p>
+          {soloInfos.map(x => { const g = assistantLifeGiftOf(x.kind); const lo = Math.round(g.player * assistantLifeGiftMult('bad')), hi = Math.round(g.player * assistantLifeGiftMult('like')); return (
+            <div key={x.kind} data-assistant-life-item={x.kind} className="mt-2 flex items-center gap-2 rounded-2xl border border-pink-300/30 bg-slate-900/85 p-2">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/5 text-[26px]" aria-hidden="true">{x.emoji}</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[12px] font-black text-white">{x.name} <span className="text-[10px] text-slate-400">持っている {haveOf(x.kind)}個</span></p>
+                <p className="text-[10.5px] leading-snug text-slate-300">{x.what.split('。')[0]}。<span className="whitespace-nowrap text-pink-200">💗 仲良し度 +{lo}〜{hi}</span><span className="whitespace-nowrap text-slate-400">(好みで変わる)</span></p>
+              </div>
+              {haveOf(x.kind) <= 0 && typeof AssistantLifeShopButton === 'function' && <AssistantLifeShopButton tab="item" small label={`🛒 ${x.cost != null ? `${x.cost}P` : '交換所'}`}/>}
+            </div>); })}
+        </>)}
+        <p className="mt-2 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] leading-snug text-slate-200">手に入れる: モンヒロビートの「ビートP交換所」({itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・')})。贈る: 部屋や場面の「🎁 贈る」{soloOn ? '(2人に・その助手だけに)' : ''}。好きな物なら多め・苦手な物なら少なめに上がり、好みは贈ると分かります。同じ道具は1日1回・合わせて1日3回。声をかける・見守るは無料です。次の段まであと何点・この道具で段の何割進むかは、「🎁 贈る」で2人を選ぶと出ます</p>
         {typeof AssistantLifeShopButton === 'function' && <div className="mt-2"><AssistantLifeShopButton tab="item"/></div>}
       </div>);
   return (
@@ -996,7 +1043,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
             <div className="mt-1.5">{icons}</div>
           </div>
         </>)}
-        {roomId && <AssistantLifeRoomSheet key={roomId} id={roomId} openFurn={furnBack === roomId} life={life} peerSt={peerSt} bondLevelOf={bondLevelOf} diary={diary} slot={slot} furnItems={furnItems} onGiveFurn={onGiveFurn} onFurnTalk={(talk, text) => { playTalk(talk, { ids: [talk.pair[0]], place: 'home', gift: true }); setNote(text); }} canGive={canGive && itemsLeft > 0}
+        {roomId && <AssistantLifeRoomSheet key={roomId} id={roomId} openFurn={furnBack === roomId} onGiveSolo={soloOn ? openGiveSolo : null} canGiveSolo={soloOn && soloLeft > 0} life={life} peerSt={peerSt} bondLevelOf={bondLevelOf} diary={diary} slot={slot} furnItems={furnItems} onGiveFurn={onGiveFurn} onFurnTalk={(talk, text) => { playTalk(talk, { ids: [talk.pair[0]], place: 'home', gift: true }); setNote(text); }} canGive={canGive && itemsLeft > 0}
           land={land} onClose={() => { setRoomId(null); setFollow(null); setFurnBack(null); }} onPeek={peek} onInvite={invite} onWatch={watch} onGive={(g) => openGive(g.ids)} onBeat={beat} onCard={card} onMediate={mediate} roomState={rooms[roomId]} onMasmon={setMasmonId}
           onChat={chatOn ? chat : null} follow={follow && follow.id === roomId ? follow : null} onFollowDone={() => setFollow(null)}/>}
         {masmonId && typeof AssistantMasmonSheet === 'function' && <AssistantMasmonSheet id={masmonId} land={land} onClose={() => setMasmonId(null)}/>}

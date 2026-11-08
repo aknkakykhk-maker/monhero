@@ -259,6 +259,7 @@ const growthFxSessionLevel = (list = []) => {
 // ---------- 見た目 ----------
 const GROWTH_FX_CSS = `
 .mh-gfx-chips{position:fixed;top:calc(env(safe-area-inset-top,0px) + 52px);right:10px;z-index:44000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
+.mh-gfx-chips.left{right:auto;left:10px;align-items:flex-start}
 .mh-gfx-chips.mini .mh-gfx-chip>.min-w-0{display:none}.mh-gfx-chips.mini .mh-gfx-chip{padding:3px 8px 3px 4px;gap:4px}
 .mh-gfx-chip{position:relative;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;border-radius:999px;background:linear-gradient(90deg,#1e1b2ef0,#0f172af0);
   border:1.5px solid var(--gc);box-shadow:0 0 14px color-mix(in srgb,var(--gc) 40%,transparent);font-weight:900;font-size:11px;color:#fff;
@@ -547,6 +548,9 @@ const GrowthFxLevelUp = ({ sheet, level, onClose }) => {
 // 小さな札の置き場所(2026-11-08 窓口「通知が下の文字を隠さない位置に」)。右上のいつもの高さ(52px)で、下に文字やボタンがあれば、
 //   上の帯(8px)→ 少し下(96・140px)→ 下のほう の順に、下に文字もボタンもない高さを探して置く。どこも空いていなければいつもの高さ
 const GROWTH_FX_CHIP_TOPS = [52, 8, 96, 140];
+//   2026-11-08 窓口「フレンドの家で、知らせが部屋の名前・顔・声をかけた吹き出しを隠す」: 6つの点だけでは、点のあいだの短い名前や顔の絵を見逃していた。
+//   点で見たあとに、札の四角に重なる 文字・ボタン・絵(顔) を全部見る(見えているものだけ。画面いっぱいの入れ物や背景は数えない)
+const GROWTH_FX_CHIP_BUSY_SEL = 'button,a,input,[role="tab"],[role="button"],[data-assistant-bubble],img,svg,p,span,b,small,strong,em,h1,h2,h3,h4,li,label,[data-alf-face]';
 const growthFxChipSpotBusy = (box) => {
   if (typeof document === 'undefined' || !document.elementsFromPoint) return false;
   const r = box.getBoundingClientRect();
@@ -556,6 +560,25 @@ const growthFxChipSpotBusy = (box) => {
     if (!under) continue;
     if (under.closest('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]')) return true;
     if ([...under.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return true;
+  }
+  const vw = window.innerWidth, vh = window.innerHeight;
+  for (const el of document.querySelectorAll(GROWTH_FX_CHIP_BUSY_SEL)) {
+    if (box.contains(el)) continue;
+    const e = el.getBoundingClientRect();
+    if (!e.width || !e.height || e.width > vw * 0.9 || e.height > vh * 0.5) continue;
+    if (Math.min(r.right, e.right) - Math.max(r.left, e.left) <= 1 || Math.min(r.bottom, e.bottom) - Math.max(r.top, e.top) <= 1) continue;
+    const cs = getComputedStyle(el);
+    if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
+    // 文字のある要素・押せるもの・絵だけ(中身の無い飾りの span などは数えない)
+    const isPic = /^(IMG|SVG)$/i.test(el.tagName) || el.hasAttribute('data-alf-face');
+    const isAct = el.matches('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]');
+    const hasText = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+    if (!isPic && !isAct && !hasText) continue;
+    // ほかの画面の下に隠れている(手前に別のものが重なっている)要素は数えない
+    const cx = Math.max(r.left, e.left) + 1, cy = Math.max(r.top, e.top) + 1;
+    const top = document.elementsFromPoint(cx, cy).find(x => !box.contains(x));
+    if (top && !(top === el || el.contains(top) || top.contains(el))) continue;
+    return true;
   }
   return false;
 };
@@ -568,11 +591,18 @@ const GrowthFxChipsBox = ({ level, count, children }) => {
     const place = () => {
       const box = ref.current;
       if (!box) return;
-      const tops = [...GROWTH_FX_CHIP_TOPS, Math.max(60, window.innerHeight - 120 - box.offsetHeight)];
+      // いつもの高さのあとに、画面の下から上へ24pxおきの高さも試す(詰まった横の画面で、空いた所を見つける)
+      const steps = []; for (let y = window.innerHeight - 10 - box.offsetHeight; y >= 8; y -= 24) steps.push(Math.round(y));
+      const tops = [...new Set([...GROWTH_FX_CHIP_TOPS, Math.max(60, window.innerHeight - 120 - box.offsetHeight), ...steps])];
+      // 右寄せで空きが無ければ左寄せでも探す(横のビートP交換所は右の列が品物で埋まり、左の列の下が空いている・2026-11-08)
       for (const mini of [false, true]) {
         box.classList.toggle('mini', mini);
-        for (const t of tops) { box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`; if (!growthFxChipSpotBusy(box)) { box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${t}`; return; } }
+        for (const left of [false, true]) {
+          box.classList.toggle('left', left);
+          for (const t of tops) { box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`; if (!growthFxChipSpotBusy(box)) { box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${left ? 'left-' : ''}${t}`; return; } }
+        }
       }
+      box.classList.remove('left');
       box.style.top = `calc(env(safe-area-inset-top, 0px) + ${GROWTH_FX_CHIP_TOPS[1]}px)`; box.dataset.growthFxChipsTop = 'mini-busy';
     };
     place();
