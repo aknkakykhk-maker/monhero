@@ -230,12 +230,30 @@ const cardAiFaceSpec = (db, who, slot, freeIn = null, groupsIn = null) => {
 //   選べると強くなるが、ほかの顔と重なりやすい。MASTER で組んでみて、見える組み合わせ(推し・好き・素顔の今の側)が
 //   「カード4割まで・主役2体以上ちがう」を破れば、大事な順の低い側を 0 にする(推し → よそいき → 好き → 本音)。全部守れた最初の振り分けを使う
 //   返り値 { groups, free, order, ok }。同じ db・同じ助手ならいつも同じ(保存しない)
+// 強さのそろえ(社長の案B・最後の手)。振り分けで ±10点に入らなかった顔だけ、組み方の雑さ(82 の noise)を足す。{ 助手: { 枠: { 強さ: 足す数 } } }。
+//   足すと弱くなる。0.05 は MASTER の雑さと同じくらい。表は docs/progress/card-ai-faces/README.md
+const CARD_AI_FACE_NOISE = Object.freeze({});
+// 決めた振り分け(2026-11-08 自動で探した結果。EXPERT・MASTER で、どの顔もその助手の今の勝率に近い物。docs/progress/card-ai-faces/README.md の強さの表)
+//   探し方: 蛇行6通り+混ぜた割り当てから始め、2つの組の種を1つずつ入れかえて、いちばんずれの小さい物を残した(作業場所の道具。1組60戦)
+//   使う前に、決まり(重なり4割まで・主役2体以上ちがう)と、カードの種と合っているかを確かめる。合わなければ、下の手順で探し直す
+const CARD_AI_FACE_LAYOUTS = Object.freeze({
+  mua: { oshi: ['mocchi', 'metalner', 'golem', 'hare', 'centaur', 'worm', 'mew', 'arrowhead', 'zilla'], suki: ['joker', 'henger', 'dino', 'dragon', 'kyubi', 'ghost', 'gali', 'colorpandora', 'plant'], sugao: ['tiger', 'durahan', 'naga', 'phoenix', 'pixie', 'jell', 'monol', 'suezo'], free: { oshi: 0, suki: 0, yoso: 0, honne: 1 } },
+  kiki: { oshi: ['golem', 'durahan', 'gali', 'phoenix', 'mew', 'metalner', 'suezo', 'monol', 'ghost'], suki: ['dragon', 'worm', 'henger', 'tiger', 'zilla', 'centaur', 'mocchi', 'pixie', 'joker'], sugao: ['hare', 'dino', 'naga', 'kyubi', 'jell', 'arrowhead', 'colorpandora', 'plant'], free: { oshi: 1, suki: 0, yoso: 0, honne: 0 } },
+  momosuke: { oshi: ['durahan', 'metalner', 'ghost', 'dino', 'mocchi', 'dragon', 'naga', 'monol', 'joker'], suki: ['tiger', 'centaur', 'kyubi', 'phoenix', 'colorpandora', 'mew', 'worm', 'jell', 'gali'], sugao: ['henger', 'hare', 'golem', 'plant', 'suezo', 'pixie', 'arrowhead', 'zilla'], free: { oshi: 0, suki: 0, yoso: 1, honne: 1 } },
+  dra: { oshi: ['tiger', 'phoenix', 'hare', 'worm', 'mew', 'jell', 'plant', 'zilla', 'monol'], suki: ['dragon', 'durahan', 'dino', 'kyubi', 'centaur', 'arrowhead', 'suezo', 'ghost', 'colorpandora'], sugao: ['henger', 'golem', 'metalner', 'mocchi', 'pixie', 'gali', 'naga', 'joker'], free: { oshi: 1, suki: 1, yoso: 1, honne: 1 } },
+  atsu: { oshi: ['dragon', 'golem', 'henger', 'worm', 'centaur', 'suezo', 'naga', 'colorpandora', 'monol'], suki: ['tiger', 'hare', 'dino', 'mew', 'gali', 'mocchi', 'pixie', 'zilla'], sugao: ['durahan', 'metalner', 'phoenix', 'kyubi', 'jell', 'arrowhead', 'ghost', 'plant', 'joker'], free: { oshi: 0, suki: 0, yoso: 0, honne: 0 } },
+  kyuko: { oshi: ['durahan', 'henger', 'hare', 'dino', 'centaur', 'mew', 'mocchi', 'naga', 'monol'], suki: ['dragon', 'golem', 'phoenix', 'worm', 'jell', 'suezo', 'pixie', 'plant', 'colorpandora'], sugao: ['tiger', 'metalner', 'kyubi', 'gali', 'arrowhead', 'ghost', 'zilla', 'joker'], free: { oshi: 1, suki: 1, yoso: 1, honne: 1 } },
+  sorashido: { oshi: ['henger', 'mew', 'joker', 'metalner', 'hare', 'phoenix', 'mocchi', 'gali', 'naga'], suki: ['tiger', 'durahan', 'dragon', 'plant', 'centaur', 'kyubi', 'worm', 'arrowhead', 'monol'], sugao: ['jell', 'suezo', 'golem', 'dino', 'ghost', 'zilla', 'pixie', 'colorpandora'], free: { oshi: 1, suki: 0, yoso: 0, honne: 1 } },
+  erubin: { oshi: ['durahan', 'dragon', 'golem', 'hare', 'metalner', 'gali', 'naga', 'mocchi', 'plant'], suki: ['monol', 'phoenix', 'dino', 'mew', 'centaur', 'suezo', 'pixie', 'zilla', 'joker'], sugao: ['tiger', 'henger', 'worm', 'kyubi', 'jell', 'arrowhead', 'colorpandora', 'ghost'], free: { oshi: 1, suki: 0, yoso: 0, honne: 0 } },
+});
 const CARD_AI_FACE_RANK = Object.freeze(['oshi', 'yoso', 'suki', 'honne']);
 const CARD_AI_FACE_PAIRS = Object.freeze([['oshi', 'suki'], ['oshi', 'yoso'], ['suki', 'yoso'], ['oshi', 'honne'], ['suki', 'honne']]);
 const cardAiFaceLayoutMemo = {};
 const cardAiFaceLayout = (db, who) => {
   const key = `${who}:${Object.keys(db.monsters).length}`;
   if (cardAiFaceLayoutMemo[key]) return cardAiFaceLayoutMemo[key];
+  const fixedLay = cardAiFaceFixedLayout(db, who);
+  if (fixedLay) { cardAiFaceLayoutMemo[key] = fixedLay; return fixedLay; }
   let last = null;
   for (let oi = 0; oi < CARD_AI_FACE_ORDERS.length; oi++) {
     const groups = cardAiFaceGroupsBy(db, who, CARD_AI_FACE_ORDERS[oi]);
@@ -255,6 +273,23 @@ const cardAiFaceLayout = (db, who) => {
   }
   cardAiFaceLayoutMemo[key] = last;
   return last;
+};
+// 決めた振り分けを使えるか(カードの種とぴったり合う・主役の種が自分の組にある・決まりを守る)。使えなければ null
+const cardAiFaceFixedLayout = (db, who) => {
+  const L = CARD_AI_FACE_LAYOUTS[who];
+  const t = CARD_AI_FACES[who];
+  if (!L || !t) return null;
+  const lines = [...new Set(Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && !m.variant && String(m.wave) !== 'hybrid').map((m) => m.species))].sort();
+  const all = [...L.oshi, ...L.suki, ...L.sugao];
+  if (JSON.stringify(all.slice().sort()) !== JSON.stringify(lines)) return null;
+  if (!L.oshi.includes(t.oshi.lead) || !L.suki.includes(t.suki.lead) || [t.yoso.lead, t.honne.lead].some((x) => x && !L.sugao.includes(x))) return null;
+  const v = Object.fromEntries(lines.map((sp) => [sp, Math.max(...Object.values(db.monsters).filter((m) => m.species === sp && !m.variant && String(m.wave) !== 'hybrid').map((m) => cardAiMonScore(db, who, m, 99, 'master')))]));
+  const groups = Object.fromEntries(CARD_AI_FACE_IDS.map((g) => [g, L[g].slice().sort((a, b) => v[b] - v[a] || (a < b ? -1 : 1))]));
+  const free = { ...L.free };
+  const deckOf = (slot) => cardAiFaceBuildWith(db, who, cardAiFaceSpec(db, who, slot, free[slot], groups), 'master', cardAiSeededRand(`face:${who}:${slot}:master`), {}, null);
+  const d = Object.fromEntries(CARD_AI_FACE_SLOTS.map((sl) => [sl, deckOf(sl)]));
+  const ok = !CARD_AI_FACE_PAIRS.some(([a, b]) => cardAiFaceShare(d[a], d[b]) > CARD_AI_FACE_SHARE_MAX || cardAiFaceTrioDiff(d[a], d[b]) < CARD_AI_FACE_TRIO_DIFF);
+  return ok ? { groups, free, order: 'fixed', ok: true } : null;
 };
 const cardAiFaceGroups = (db, who) => cardAiFaceLayout(db, who).groups;
 const cardAiFaceFreeMap = (db, who) => cardAiFaceLayout(db, who).free;
@@ -390,7 +425,8 @@ const cardAiDeckPickFace = (main, rnd) => {
 const cardAiFaceBuild = (db, who, slot, level, rnd, extra = {}, plan = null) => cardAiFaceBuildWith(db, who, cardAiFaceSpec(db, who, slot), level, rnd, extra, plan);
 const cardAiFaceBuildWith = (db, who, spec, level, rnd, extra = {}, plan = null) => {
   const lv = CARD_AI_BUILD[level] ? level : 'normal';
-  const opts = (avoid) => ({ ...extra, style: spec.style, face: { lead: spec.lead, avoid, keep: spec.keep, free: spec.free }, ...(plan ? { plan } : {}) });
+  const nz = (((CARD_AI_FACE_NOISE[who] || {})[spec.slot] || {})[lv]) || 0;
+  const opts = (avoid) => ({ ...extra, style: spec.style, face: { lead: spec.lead, avoid, keep: spec.keep, free: spec.free, ...(nz ? { noise: nz } : {}) }, ...(plan ? { plan } : {}) });
   const deck = cardAiBuildDeck(db, who, lv, rnd, opts(spec.avoid));
   if (deck.monsters.length >= 3) return deck;
   return cardAiBuildDeck(db, who, lv, rnd, opts(spec.keep));

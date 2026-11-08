@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f9bb32d6c93379b0
+// source-sha256: 4e6ccb0649ee3a9b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -131390,7 +131390,8 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
     ko: false
   }) && c.wave <= Math.max(maxWave, cardAiMonWave(db, m, c)))));
   const byName = {};
-  const noise = Math.max(0, cfg.noise + ((CARD_AI_DECK_TUNE[who] || {})[levelId] || 0));
+  const faceNoise = opts && opts.face && Number.isFinite(opts.face.noise) ? Math.max(-0.3, Math.min(0.6, opts.face.noise)) : 0;
+  const noise = Math.max(0, cfg.noise + ((CARD_AI_DECK_TUNE[who] || {})[levelId] || 0) + faceNoise);
   pool.forEach(c => {
     const v = cardAiCardValue(c, habit) + noise * (rnd() * 2 - 1);
     if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = {
@@ -135838,12 +135839,108 @@ const cardAiFaceSpec = (db, who, slot, freeIn = null, groupsIn = null) => {
     style: cardAiStyleOf(row.style) || 'normal'
   };
 };
+const CARD_AI_FACE_NOISE = Object.freeze({});
+const CARD_AI_FACE_LAYOUTS = Object.freeze({
+  mua: {
+    oshi: ['mocchi', 'metalner', 'golem', 'hare', 'centaur', 'worm', 'mew', 'arrowhead', 'zilla'],
+    suki: ['joker', 'henger', 'dino', 'dragon', 'kyubi', 'ghost', 'gali', 'colorpandora', 'plant'],
+    sugao: ['tiger', 'durahan', 'naga', 'phoenix', 'pixie', 'jell', 'monol', 'suezo'],
+    free: {
+      oshi: 0,
+      suki: 0,
+      yoso: 0,
+      honne: 1
+    }
+  },
+  kiki: {
+    oshi: ['golem', 'durahan', 'gali', 'phoenix', 'mew', 'metalner', 'suezo', 'monol', 'ghost'],
+    suki: ['dragon', 'worm', 'henger', 'tiger', 'zilla', 'centaur', 'mocchi', 'pixie', 'joker'],
+    sugao: ['hare', 'dino', 'naga', 'kyubi', 'jell', 'arrowhead', 'colorpandora', 'plant'],
+    free: {
+      oshi: 1,
+      suki: 0,
+      yoso: 0,
+      honne: 0
+    }
+  },
+  momosuke: {
+    oshi: ['durahan', 'metalner', 'ghost', 'dino', 'mocchi', 'dragon', 'naga', 'monol', 'joker'],
+    suki: ['tiger', 'centaur', 'kyubi', 'phoenix', 'colorpandora', 'mew', 'worm', 'jell', 'gali'],
+    sugao: ['henger', 'hare', 'golem', 'plant', 'suezo', 'pixie', 'arrowhead', 'zilla'],
+    free: {
+      oshi: 0,
+      suki: 0,
+      yoso: 1,
+      honne: 1
+    }
+  },
+  dra: {
+    oshi: ['tiger', 'phoenix', 'hare', 'worm', 'mew', 'jell', 'plant', 'zilla', 'monol'],
+    suki: ['dragon', 'durahan', 'dino', 'kyubi', 'centaur', 'arrowhead', 'suezo', 'ghost', 'colorpandora'],
+    sugao: ['henger', 'golem', 'metalner', 'mocchi', 'pixie', 'gali', 'naga', 'joker'],
+    free: {
+      oshi: 1,
+      suki: 1,
+      yoso: 1,
+      honne: 1
+    }
+  },
+  atsu: {
+    oshi: ['dragon', 'golem', 'henger', 'worm', 'centaur', 'suezo', 'naga', 'colorpandora', 'monol'],
+    suki: ['tiger', 'hare', 'dino', 'mew', 'gali', 'mocchi', 'pixie', 'zilla'],
+    sugao: ['durahan', 'metalner', 'phoenix', 'kyubi', 'jell', 'arrowhead', 'ghost', 'plant', 'joker'],
+    free: {
+      oshi: 0,
+      suki: 0,
+      yoso: 0,
+      honne: 0
+    }
+  },
+  kyuko: {
+    oshi: ['durahan', 'henger', 'hare', 'dino', 'centaur', 'mew', 'mocchi', 'naga', 'monol'],
+    suki: ['dragon', 'golem', 'phoenix', 'worm', 'jell', 'suezo', 'pixie', 'plant', 'colorpandora'],
+    sugao: ['tiger', 'metalner', 'kyubi', 'gali', 'arrowhead', 'ghost', 'zilla', 'joker'],
+    free: {
+      oshi: 1,
+      suki: 1,
+      yoso: 1,
+      honne: 1
+    }
+  },
+  sorashido: {
+    oshi: ['henger', 'mew', 'joker', 'metalner', 'hare', 'phoenix', 'mocchi', 'gali', 'naga'],
+    suki: ['tiger', 'durahan', 'dragon', 'plant', 'centaur', 'kyubi', 'worm', 'arrowhead', 'monol'],
+    sugao: ['jell', 'suezo', 'golem', 'dino', 'ghost', 'zilla', 'pixie', 'colorpandora'],
+    free: {
+      oshi: 1,
+      suki: 0,
+      yoso: 0,
+      honne: 1
+    }
+  },
+  erubin: {
+    oshi: ['durahan', 'dragon', 'golem', 'hare', 'metalner', 'gali', 'naga', 'mocchi', 'plant'],
+    suki: ['monol', 'phoenix', 'dino', 'mew', 'centaur', 'suezo', 'pixie', 'zilla', 'joker'],
+    sugao: ['tiger', 'henger', 'worm', 'kyubi', 'jell', 'arrowhead', 'colorpandora', 'ghost'],
+    free: {
+      oshi: 1,
+      suki: 0,
+      yoso: 0,
+      honne: 0
+    }
+  }
+});
 const CARD_AI_FACE_RANK = Object.freeze(['oshi', 'yoso', 'suki', 'honne']);
 const CARD_AI_FACE_PAIRS = Object.freeze([['oshi', 'suki'], ['oshi', 'yoso'], ['suki', 'yoso'], ['oshi', 'honne'], ['suki', 'honne']]);
 const cardAiFaceLayoutMemo = {};
 const cardAiFaceLayout = (db, who) => {
   const key = `${who}:${Object.keys(db.monsters).length}`;
   if (cardAiFaceLayoutMemo[key]) return cardAiFaceLayoutMemo[key];
+  const fixedLay = cardAiFaceFixedLayout(db, who);
+  if (fixedLay) {
+    cardAiFaceLayoutMemo[key] = fixedLay;
+    return fixedLay;
+  }
   let last = null;
   for (let oi = 0; oi < CARD_AI_FACE_ORDERS.length; oi++) {
     const groups = cardAiFaceGroupsBy(db, who, CARD_AI_FACE_ORDERS[oi]);
@@ -135876,6 +135973,29 @@ const cardAiFaceLayout = (db, who) => {
   }
   cardAiFaceLayoutMemo[key] = last;
   return last;
+};
+const cardAiFaceFixedLayout = (db, who) => {
+  const L = CARD_AI_FACE_LAYOUTS[who];
+  const t = CARD_AI_FACES[who];
+  if (!L || !t) return null;
+  const lines = [...new Set(Object.values(db.monsters).filter(m => m.ready !== false && !m.dexOnly && !m.variant && String(m.wave) !== 'hybrid').map(m => m.species))].sort();
+  const all = [...L.oshi, ...L.suki, ...L.sugao];
+  if (JSON.stringify(all.slice().sort()) !== JSON.stringify(lines)) return null;
+  if (!L.oshi.includes(t.oshi.lead) || !L.suki.includes(t.suki.lead) || [t.yoso.lead, t.honne.lead].some(x => x && !L.sugao.includes(x))) return null;
+  const v = Object.fromEntries(lines.map(sp => [sp, Math.max(...Object.values(db.monsters).filter(m => m.species === sp && !m.variant && String(m.wave) !== 'hybrid').map(m => cardAiMonScore(db, who, m, 99, 'master')))]));
+  const groups = Object.fromEntries(CARD_AI_FACE_IDS.map(g => [g, L[g].slice().sort((a, b) => v[b] - v[a] || (a < b ? -1 : 1))]));
+  const free = {
+    ...L.free
+  };
+  const deckOf = slot => cardAiFaceBuildWith(db, who, cardAiFaceSpec(db, who, slot, free[slot], groups), 'master', cardAiSeededRand(`face:${who}:${slot}:master`), {}, null);
+  const d = Object.fromEntries(CARD_AI_FACE_SLOTS.map(sl => [sl, deckOf(sl)]));
+  const ok = !CARD_AI_FACE_PAIRS.some(([a, b]) => cardAiFaceShare(d[a], d[b]) > CARD_AI_FACE_SHARE_MAX || cardAiFaceTrioDiff(d[a], d[b]) < CARD_AI_FACE_TRIO_DIFF);
+  return ok ? {
+    groups,
+    free,
+    order: 'fixed',
+    ok: true
+  } : null;
 };
 const cardAiFaceGroups = (db, who) => cardAiFaceLayout(db, who).groups;
 const cardAiFaceFreeMap = (db, who) => cardAiFaceLayout(db, who).free;
@@ -136024,6 +136144,7 @@ const cardAiDeckPickFace = (main, rnd) => {
 const cardAiFaceBuild = (db, who, slot, level, rnd, extra = {}, plan = null) => cardAiFaceBuildWith(db, who, cardAiFaceSpec(db, who, slot), level, rnd, extra, plan);
 const cardAiFaceBuildWith = (db, who, spec, level, rnd, extra = {}, plan = null) => {
   const lv = CARD_AI_BUILD[level] ? level : 'normal';
+  const nz = ((CARD_AI_FACE_NOISE[who] || {})[spec.slot] || {})[lv] || 0;
   const opts = avoid => ({
     ...extra,
     style: spec.style,
@@ -136031,7 +136152,10 @@ const cardAiFaceBuildWith = (db, who, spec, level, rnd, extra = {}, plan = null)
       lead: spec.lead,
       avoid,
       keep: spec.keep,
-      free: spec.free
+      free: spec.free,
+      ...(nz ? {
+        noise: nz
+      } : {})
     },
     ...(plan ? {
       plan
