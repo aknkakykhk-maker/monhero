@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 743bfca2d98b8060
+// source-sha256: 210b8a4fddf1f186
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13745,7 +13745,7 @@ const RELEASE_FLAGS = {
   cardBattle: true,
   cardAssistantTalk: true,
   missionDailyLine: true,
-  cardGrowStyle: false,
+  cardGrowStyle: true,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   tacticsHate: true,
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE,
@@ -56528,12 +56528,45 @@ const FRIEND_PLACE_TEXT = Object.freeze({
   other: 'ログイン中',
   card: 'MFバトルカードで遊び中',
   cardBattle: 'MFバトルカードで対戦中',
-  room: '部屋で待ち中'
+  room: '部屋で待ち中',
+  rhythmPlay: '🎵 モンヒロビートで演奏中',
+  life: '🏡 助手ライフ',
+  roomPrivate: '🔑 プライベート中'
 });
-const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle', 'room']);
+const FRIEND_AUTO_TEXT = '⚡ オート周回中';
+const FRIEND_IDLE_AUTO_MIN = 10;
+const FRIEND_IDLE_OPEN_TEXT = Object.freeze({
+  home: 'ホーム',
+  rhythm: 'モンヒロビート',
+  multi: 'モンヒロビート',
+  room: '部屋',
+  roomPrivate: '合言葉の部屋',
+  card: 'MFバトルカード',
+  masu: 'マスモンの画面',
+  market: 'マーケット',
+  life: '助手ライフ',
+  battle: 'バトル',
+  other: 'ゲーム'
+});
+let _friendsLastInputAt = Date.now();
+if (typeof window !== 'undefined' && window.addEventListener) {
+  for (const ev of ['pointerdown', 'keydown', 'touchstart', 'wheel']) window.addEventListener(ev, () => {
+    _friendsLastInputAt = Date.now();
+  }, {
+    passive: true,
+    capture: true
+  });
+}
+const friendsIdleMinutes = (now = Date.now()) => Math.max(0, Math.floor((now - _friendsLastInputAt) / 60000));
+const FRIEND_PRESENCE_SHOW_KEY = 'mh_friend_presence_show_v1';
+const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle', 'room', 'rhythmPlay', 'life', 'roomPrivate']);
 let _friendsRoomWaiting = false;
 const friendsSetRoomWaiting = on => {
   _friendsRoomWaiting = !!on;
+};
+let _friendsRoomPrivate = false;
+const friendsSetRoomPrivate = on => {
+  _friendsRoomPrivate = !!on;
 };
 const friendsPlaceFromRow = (place, records) => {
   if (place === 'other' && records && FRIEND_SUB_PLACES.includes(records.pl)) return records.pl;
@@ -56542,20 +56575,33 @@ const friendsPlaceFromRow = (place, records) => {
 const FRIEND_HEARTBEAT_MS = 2 * 60 * 1000;
 const FRIEND_PUBLISH_MIN_MS = 15 * 1000;
 const friendsPlaceOfScreen = gameState => {
-  if (_friendsRoomWaiting) return 'room';
   const name = typeof gameState === 'string' ? gameState : '';
+  if (_friendsRoomPrivate && name !== 'RHYTHM_PLAY') return 'roomPrivate';
+  if (_friendsRoomWaiting) return 'room';
+  if (name === 'HOME' && typeof document !== 'undefined' && document.querySelector && document.querySelector('[data-assistant-life-screen]')) return 'life';
   if (name === 'HOME') return 'home';
   if (name === 'CARD_BATTLE') return 'cardBattle';
   if (name.startsWith('CARD_')) return 'card';
   if (name === 'RHYTHM_MULTI') return 'multi';
+  if (name === 'RHYTHM_PLAY') return 'rhythmPlay';
   if (name.startsWith('RHYTHM')) return 'rhythm';
   if (name === 'BREEDER_MARKET') return 'market';
   if (/^(MASU_|MB_MANAGEMENT|PASTURE_|MONSTER_|OWNED_MONSTERS)/.test(name)) return 'masu';
   if (/^(BATTLE|PICK_|QUICK_|SKIP_|WAVE_|UPGRADE_|REWARD_|CHAMPION|DEFEAT|RETIRE|TRAINING|TEACHING|AUTO_)/.test(name)) return 'battle';
   return 'other';
 };
-const friendsPresenceText = (place, updatedAtMs, nowMs) => {
+const friendsPresenceText = (place, updatedAtMs, nowMs, records = null) => {
   const online = Number.isFinite(updatedAtMs) && updatedAtMs > 0 && nowMs - updatedAtMs < FRIENDS_ONLINE_MS;
+  const playing = place === 'rhythmPlay' || place === 'cardBattle';
+  if (online && records && !playing && (records.au || records.im >= FRIEND_IDLE_AUTO_MIN)) {
+    const where = FRIEND_IDLE_OPEN_TEXT[place] || FRIEND_IDLE_OPEN_TEXT.other;
+    return {
+      online: true,
+      auto: true,
+      text: FRIEND_AUTO_TEXT,
+      sub: records.au ? place && place !== 'other' && place !== 'home' ? FRIEND_PLACE_TEXT[place] : '' : `${where}を開いたまま ${records.im}分 操作なし`
+    };
+  }
   if (online) return {
     online: true,
     text: FRIEND_PLACE_TEXT[place] || FRIEND_PLACE_TEXT.other
@@ -56577,10 +56623,12 @@ const friendsPresenceFor = async ids => {
   Object.entries(rows && typeof rows === 'object' ? rows : {}).forEach(([id, r]) => {
     if (!r) return;
     const at = Number.isFinite(r.updatedAt) ? r.updatedAt : 0;
-    const p = friendsPresenceText(r.place, at, now);
+    const p = friendsPresenceText(r.place, at, now, r.records);
     out[id] = {
       online: p.online,
       text: p.text,
+      sub: p.sub || '',
+      auto: !!p.auto,
       at,
       place: r.place || null
     };
@@ -56772,6 +56820,8 @@ const friendsNormalizeRecords = raw => {
   const c = raw.collection && typeof raw.collection === 'object' ? raw.collection : {};
   return {
     pl: FRIEND_SUB_PLACES.includes(raw.pl) ? raw.pl : null,
+    au: raw.au === 1 ? 1 : 0,
+    im: Math.min(1440, friendsInt(raw.im)),
     battle,
     rhythm: {
       played: friendsInt(raw.rhythm && raw.rhythm.played),
@@ -56795,7 +56845,9 @@ const friendsBuildSummary = ({
   favoriteMasuId,
   playtime,
   message = '',
-  records = null
+  records = null,
+  auto = false,
+  show = true
 }) => {
   let bestBond = 0,
     bestBondMon = '',
@@ -56833,7 +56885,9 @@ const friendsBuildSummary = ({
   const span = playtime && typeof playtime === 'object' ? playtime : {};
   const totalMs = Number(span.totalMs);
   return {
-    place: Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, place) ? place : 'other',
+    place: show && Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, place) ? place : 'other',
+    au: show && auto ? 1 : 0,
+    im: show && place !== 'rhythmPlay' && place !== 'cardBattle' ? Math.min(1440, friendsIdleMinutes()) : 0,
     startedOn: typeof span.since === 'string' && FRIEND_DAY_RE.test(span.since) ? span.since : null,
     playSeconds: Number.isFinite(totalMs) && totalMs >= 0 ? Math.floor(totalMs / 1000) : null,
     bestBond: bestBond > 0 ? bestBond : null,
@@ -56868,9 +56922,20 @@ const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
   });
   try {
     if (_friendProfileExtraUnavailable) await send(base);else {
-      const records = sub ? {
+      const now = {
+        ...(sub ? {
+          pl: sub
+        } : {}),
+        ...(summary.au ? {
+          au: 1
+        } : {}),
+        ...(summary.im ? {
+          im: summary.im
+        } : {})
+      };
+      const records = Object.keys(now).length ? {
         ...(summary.records || {}),
-        pl: sub
+        ...now
       } : summary.records;
       try {
         await send({
@@ -87978,6 +88043,39 @@ const FriendPresenceTag = ({
 }), React.createElement("span", {
   className: "truncate"
 }, info.text)) : null;
+function FriendPresenceShowSetting() {
+  const [on, setOn] = React.useState(true);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const v = await storeGet(FRIEND_PRESENCE_SHOW_KEY, true);
+        if (alive) setOn(v !== false);
+      } catch {}
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return React.createElement("div", {
+    className: SCREEN_PANEL_CLASS,
+    "data-friend-presence-setting": true
+  }, React.createElement("label", {
+    className: "flex items-center justify-between gap-2 text-[12px] font-black text-white"
+  }, React.createElement("span", null, "いまの状態をフレンドに見せる"), React.createElement("input", {
+    type: "checkbox",
+    checked: on,
+    onChange: e => {
+      const v = e.target.checked;
+      setOn(v);
+      try {
+        storeSet(FRIEND_PRESENCE_SHOW_KEY, v, false);
+      } catch {}
+    }
+  })), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
+  }, "「⚡ オート周回中」「🎵 モンヒロビートで演奏中」などが、フレンドの一覧に出ます。切にすると「ログイン中」とだけ出ます。"));
+}
 const FRIENDS_RESULT_TEXT = Object.freeze({
   sent: ['フレンド申請を送りました。承認されるとフレンドになります', 'ok'],
   accepted: ['フレンドになりました!', 'ok'],
@@ -88394,7 +88492,7 @@ function FriendsScreen({
       className: `${SCREEN_LIST_CLASS} pb-4`
     }, noticeBox, (() => {
       const sum = summaries[selected.otherId] || null;
-      const seen = friendsPresenceText(sum ? sum.place : null, Math.max(sum ? sum.updatedAt : 0, look.lastSeenAt || 0), now);
+      const seen = friendsPresenceText(sum ? sum.place : null, Math.max(sum ? sum.updatedAt : 0, look.lastSeenAt || 0), now, sum ? sum.records : null);
       const monName = id => id && ALL_PLAYER_MONSTERS[id] ? ALL_PLAYER_MONSTERS[id].name : '';
       const fav = sum && sum.favorite ? sum.favorite : null;
       const favBase = fav ? ALL_PLAYER_MONSTERS[fav.monsterId] : null;
@@ -88432,8 +88530,12 @@ function FriendsScreen({
         className: "max-w-full truncate text-lg font-black text-white"
       }, look.userName), React.createElement("span", {
         "data-friend-presence": seen.online ? 'online' : 'offline',
-        className: `text-[11px] font-black ${seen.online ? 'text-emerald-300' : 'text-slate-400'}`
-      }, seen.online ? '● ' : '', seen.text), sum && sum.message ? React.createElement("p", {
+        "data-friend-presence-auto": seen.auto ? '1' : undefined,
+        className: `text-[11px] font-black ${seen.auto ? 'text-amber-300' : seen.online ? 'text-emerald-300' : 'text-slate-400'}`
+      }, seen.online ? '● ' : '', seen.text), seen.sub ? React.createElement("span", {
+        "data-friend-presence-sub": true,
+        className: "text-[10px] font-bold text-slate-400"
+      }, seen.sub) : null, sum && sum.message ? React.createElement("p", {
         "data-friend-message": true,
         className: "max-w-full break-words rounded-xl bg-black/30 px-3 py-1.5 text-[12px] font-bold leading-snug text-pink-100"
       }, "「", sum.message, "」") : null, noteEdit && noteEdit.id === selected.otherId ? React.createElement("div", {
@@ -88693,11 +88795,15 @@ function FriendsScreen({
       className: "block truncate text-[9px] font-bold text-amber-200"
     }, "📝 ", notes[view.otherId]) : null, (() => {
       const sum = summaries[view.otherId];
-      const seen = friendsPresenceText(sum ? sum.place : null, Math.max(sum ? sum.updatedAt : 0, look.lastSeenAt || 0), now);
-      return React.createElement("span", {
+      const seen = friendsPresenceText(sum ? sum.place : null, Math.max(sum ? sum.updatedAt : 0, look.lastSeenAt || 0), now, sum ? sum.records : null);
+      return React.createElement(React.Fragment, null, React.createElement("span", {
         "data-friend-presence": seen.online ? 'online' : 'offline',
-        className: `block truncate text-[9px] font-bold ${seen.online ? 'text-emerald-300' : 'text-slate-400'}`
-      }, seen.online ? '● ' : '', seen.text);
+        "data-friend-presence-auto": seen.auto ? '1' : undefined,
+        className: `block truncate text-[9px] font-bold ${seen.auto ? 'text-amber-300' : seen.online ? 'text-emerald-300' : 'text-slate-400'}`
+      }, seen.online ? '● ' : '', seen.text), seen.sub ? React.createElement("span", {
+        "data-friend-presence-sub": true,
+        className: "block truncate text-[8.5px] font-bold text-slate-400"
+      }, seen.sub) : null);
     })()), right);
   };
   return React.createElement("div", {
@@ -88838,7 +88944,7 @@ function FriendsScreen({
     className: `${btn} mt-2 w-full border-sky-400/60 bg-sky-500/20 text-sky-100`
   }, "招待リンクを送る（LINEなど）"), React.createElement("p", {
     className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "このコードを伝えると、相手からフレンド申請してもらえます。コードは変わりません。")), React.createElement("div", {
+  }, "このコードを伝えると、相手からフレンド申請してもらえます。コードは変わりません。")), typeof FriendPresenceShowSetting === 'function' && React.createElement(FriendPresenceShowSetting, null), React.createElement("div", {
     className: SCREEN_PANEL_CLASS
   }, React.createElement(ScreenSectionLabel, null, "コードで申請する"), React.createElement("input", {
     type: "text",
@@ -106460,6 +106566,8 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed #ffffff1a;font-size:12px;font-weight:800}
 .mhl-row .k{width:78px;flex:none;color:#cbd5e1;font-size:10.5px}
 .mhl-btn{min-height:44px;border-radius:12px;font-size:12px;font-weight:900;color:#fff}.mhl-btn:disabled{opacity:.45}
+/* 背の低い横(🔄横 667×375 など)では、部屋のシートの下に止めたボタンの段が画面を占めて、見出しの下の行を隠していた(2026-11-08 ミハリ)。ボタンを少し低くする */
+@media (orientation:landscape) and (max-height:420px){[data-assistant-life-room-acts] .mhl-btn{min-height:34px;font-size:11.5px}[data-assistant-life-room-acts]{gap:5px}}
 .mhl-scene{position:absolute;inset:0;z-index:30;overflow:hidden;background:#000}
 .mhl-scene .bg{position:absolute;inset:0;background-size:cover;background-position:center}
 .mhl-scene .st{position:absolute;bottom:0;object-fit:contain;object-position:bottom;filter:drop-shadow(0 6px 12px #0008)}
@@ -106660,7 +106768,7 @@ function AssistantLifeRoom({
     }, n > 1 && short ? `・${n}人` : '', mark ? ` ${[...t[1]][0]}` : '')));
   })(), !met && React.createElement("span", {
     className: "lock"
-  }, "まだ会っていない"));
+  }, other ? 'まだいない' : 'まだ会っていない'));
 }
 function AssistantLifeHouseArt({
   width,
@@ -108035,7 +108143,10 @@ function AssistantLifeHouse({
       label: `🛒 ${x.cost != null ? `${x.cost}P` : '交換所'}`
     }));
   })), React.createElement("p", {
-    className: "mt-2 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] leading-snug text-slate-200"
+    className: "mt-2 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] leading-snug text-slate-200",
+    style: {
+      wordBreak: 'auto-phrase'
+    }
   }, "手に入れる: モンヒロビートの「ビートP交換所」(", itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・'), ")。贈る: 部屋や場面の「🎁 贈る」", soloOn ? '(2人に・その助手だけに)' : '', "。好きな物なら多め・苦手な物なら少なめに上がり、好みは贈ると分かります。同じ道具は1日1回・合わせて1日3回。声をかける・見守るは無料です。次の段まであと何点・この道具で段の何割進むかは、「🎁 贈る」で2人を選ぶと出ます"), typeof AssistantLifeShopButton === 'function' && React.createElement("div", {
     className: "mt-2"
   }, React.createElement(AssistantLifeShopButton, {
@@ -122872,6 +122983,11 @@ function AssistantMasmonSheet({
     }, "Lv.", t.lv, " ・ ", assistantMasmonGrowKind(t.grow))))), React.createElement("p", {
       className: "mt-2 text-[10.5px] font-bold leading-snug text-slate-400"
     }, "⚔ 編成は", who.name, "が決めています。"));
+  } else if (tab === 'deck' && assistantMasmonDeckTabOn()) {
+    body = React.createElement(AssistantMasmonDeckTab, {
+      id: id,
+      land: land
+    });
   } else if (tab === 'deck') {
     body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "mhm-card",
@@ -123314,6 +123430,60 @@ const assistantMasmonNowText = (id, life) => {
   }
   return where.w && where.w.doing === 'sleep' ? `${t.nick}は${name}のそばで眠っている` : `${t.nick}は部屋で${name}のそばにいる`;
 };
+const ASSISTANT_MASMON_DECK_STYLES = Object.freeze([['attack', '攻め'], ['guard', '守り'], ['normal', 'ふつう']]);
+const assistantMasmonDeckTabOn = () => {
+  try {
+    return typeof cardGrowStyleOn === 'function' && cardGrowStyleOn() && typeof CardAssistantDeckView === 'function';
+  } catch (_) {
+    return false;
+  }
+};
+function AssistantMasmonDeckTab({
+  id,
+  land = false
+}) {
+  const fav = ASSISTANT_MASMON_CARD_STYLE[id] || 'normal';
+  const [sid, setSid] = React.useState(fav);
+  const [, setLoaded] = React.useState(0);
+  React.useEffect(() => {
+    let alive = true;
+    try {
+      if (typeof cardAiDeckMarkMet === 'function') void Promise.resolve(cardAiDeckMarkMet(id)).catch(() => {});
+    } catch (_) {}
+    try {
+      if (typeof cardLoadAiRecipe === 'function') void Promise.resolve(cardLoadAiRecipe()).then(() => {
+        if (alive) setLoaded(n => n + 1);
+      }).catch(() => {});
+    } catch (_) {}
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+  return React.createElement(React.Fragment, null, React.createElement("div", {
+    "data-assistant-masmon-deck-styles": true,
+    className: "grid grid-cols-3 gap-1.5"
+  }, ASSISTANT_MASMON_DECK_STYLES.map(([s, label]) => React.createElement("button", {
+    key: s,
+    type: "button",
+    "data-assistant-masmon-deck-style": s,
+    "aria-pressed": sid === s,
+    onClick: () => {
+      if (typeof Audio_ !== 'undefined') Audio_.fgSe.tap();
+      setSid(s);
+    },
+    className: `flex min-h-[40px] items-center justify-center gap-1 rounded-xl border px-1 py-1 text-[13px] font-black ${sid === s ? 'border-amber-300 bg-amber-400 text-slate-950' : 'border-white/15 bg-slate-800 text-slate-200'}`
+  }, label, s === fav && React.createElement("em", {
+    "data-assistant-masmon-deck-fav": true,
+    className: "whitespace-nowrap rounded-full bg-emerald-400 px-1.5 py-px text-[9px] font-black not-italic text-emerald-950"
+  }, "よく使う")))), React.createElement("div", {
+    className: "mt-2",
+    "data-assistant-masmon-deck-view": sid
+  }, React.createElement(CardAssistantDeckView, {
+    who: id,
+    styleId: sid,
+    land: land
+  })));
+}
 const ASSISTANT_MASMON_CSS = `
 .mhm-panel{position:absolute;left:0;right:0;bottom:0;top:5%;display:flex;flex-direction:column;background:linear-gradient(180deg,#1f1640,#0b1020 70%);border-top:2px solid #f9a8d4;border-radius:22px 22px 0 0;padding:12px 14px calc(12px + env(safe-area-inset-bottom));color:#fff}
 .mhm-panel.is-land{top:0;left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));border:2px solid #f9a8d4;border-bottom:0;padding:8px 14px 8px}
@@ -125305,6 +125475,16 @@ function AlfFriendHouseView({
   React.useEffect(() => {
     if (friend && friend.id) void alfFetchMore(friend.id);
   }, [friend && friend.id]);
+  const [now, setNow] = React.useState(null);
+  React.useEffect(() => {
+    let alive = true;
+    if (friend && friend.id && typeof friendsPresenceFor === 'function') void friendsPresenceFor([friend.id]).then(p => {
+      if (alive) setNow((p || {})[friend.id] || null);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [friend && friend.id]);
   if (!friend || !friend.house) return null;
   const more = (fs.more || {})[friend.id] || null;
   const h = friend.house;
@@ -125437,7 +125617,10 @@ function AlfFriendHouseView({
     className: "whitespace-nowrap"
   }, "📷 ", alfAgoText(friend.at), " の様子"), "・", React.createElement("span", {
     className: "whitespace-nowrap"
-  }, friend.name, "さんが最後に開いたとき"))));
+  }, friend.name, "さんが最後に開いたとき")), now && now.online && React.createElement("p", {
+    className: `mt-0.5 inline-block max-w-full truncate rounded-full px-2 py-0.5 text-[10.5px] font-black ${now.auto ? 'bg-amber-950/80 text-amber-200' : 'bg-emerald-950/70 text-emerald-200'}`,
+    "data-alf-visit-now": true
+  }, "いま ", now.text)));
   const tiles = React.createElement("div", {
     "data-alf-visit-acts": true
   }, React.createElement("p", {
@@ -129164,6 +129347,16 @@ const CARD_AI_STYLE_NAMES = Object.freeze({
   sorashido: '計算ずく',
   erubin: 'みんなで守る'
 });
+const CARD_AI_STYLE_SUFFIX = Object.freeze({
+  attack: '・攻め',
+  guard: '・守り',
+  normal: ''
+});
+const cardAiStyleDefaultName = (who, styleId) => {
+  const n = CARD_AI_STYLE_NAMES[who];
+  const s = cardAiStyleOf(styleId) || 'normal';
+  return n ? `${n}${CARD_AI_STYLE_SUFFIX[s]}` : null;
+};
 const CARD_AI_STYLE_VARIANT = Object.freeze({
   attack: 'blade',
   guard: 'shield',
@@ -129775,15 +129968,25 @@ const cardAssistantDeckPreview = (who, styleId = 'normal', level = 'normal') => 
   const sid = cardAiStyleOf(styleId) || 'normal';
   const lv = CARD_AI_BUILD[level] ? level : 'normal';
   const db = CARD_BATTLE_DATA;
+  let saved = null;
+  try {
+    saved = typeof cardAiRecipeOf === 'function' ? cardAiRecipeOf(who, sid) : null;
+  } catch (_) {
+    saved = null;
+  }
   const deck = cardAiBuildDeck(db, who, lv, cardAiSeededRand(`preview:${who}:${sid}:${lv}`), {
-    style: sid
+    style: sid,
+    ...(saved && saved.plan ? {
+      plan: saved.plan
+    } : {})
   });
   return {
     monsters: deck.monsters.slice(),
     cards: deck.cards.slice(),
     styleId: sid,
-    name: CARD_AI_STYLE_NAMES[who] || null,
-    line: null
+    name: saved && saved.name || cardAiStyleDefaultName(who, sid),
+    line: saved && saved.line || null,
+    at: saved && saved.at || 0
   };
 };
 const cardDeckProblems = (db, deck) => {
@@ -129903,7 +130106,9 @@ const CARD_SAVE_KEYS = Object.freeze({
   gacha: 'mh_card_gacha_points_v1',
   catalogs: 'mh_card_catalogs_v1',
   weeklyReward: 'mh_card_weekly_reward_v1',
-  aiTalk: 'mh_card_ai_talk_v1'
+  aiTalk: 'mh_card_ai_talk_v1',
+  aiRecipe: 'mh_card_ai_recipe_v1',
+  aiDeck: 'mh_card_ai_deck_v1'
 });
 const CARD_POINT_STORE_KEY = typeof RHYTHM_EVENT_POINTS_KEY !== 'undefined' ? RHYTHM_EVENT_POINTS_KEY : 'mh_rhythm_event_points_v1';
 const CARD_POINT_MIGRATED_KEY = 'mh_card_points_to_beatp_migrated_v1';
@@ -133664,6 +133869,463 @@ const cardTalkCheckPicks = (db, deck, collection, picks) => {
     reason: String(p.reason || '').slice(0, 30)
   }));
 };
+const CARD_AI_RECIPE_KEY = CARD_SAVE_KEYS.aiRecipe;
+const CARD_AI_DECK_KEY = CARD_SAVE_KEYS.aiDeck;
+const CARD_AI_DECK_GAMES = 10;
+const CARD_AI_DECK_SLOTS = 3;
+const CARD_AI_DECK_WAIT_MS = 16000;
+const CARD_AI_DECK_MAIN = 0.6;
+const CARD_AI_DECK_JITTER = 0.25;
+const CARD_AI_DECK_NAME_MAX = 12;
+const CARD_AI_DECK_LINE_MAX = 60;
+const cardAiDeckIsObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+const cardAiDeckText = (v, max) => {
+  if (typeof v !== 'string') return null;
+  const t = v.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, max);
+  return t || null;
+};
+const cardAiDeckEntryOf = (raw, db) => {
+  if (!cardAiDeckIsObj(raw)) return null;
+  const at = Number.isFinite(raw.at) && raw.at > 0 ? Math.floor(raw.at) : 0;
+  let plan = null;
+  if (db && cardAiDeckIsObj(raw.plan)) {
+    const c = cardAiPlanClean(db, raw.plan);
+    if (c) {
+      const nos = (Array.isArray(raw.plan.prefer) ? raw.plan.prefer : []).filter(no => typeof no === 'string' && db.cards[no] && c.prefer.includes(db.cards[no].name));
+      const seen = new Set();
+      plan = {
+        prefer: nos.filter(no => !seen.has(db.cards[no].name) && seen.add(db.cards[no].name)),
+        field: c.field.slice(),
+        habit: {
+          ...c.habit
+        }
+      };
+    }
+  }
+  return {
+    plan,
+    name: cardAiDeckText(raw.name, CARD_AI_DECK_NAME_MAX),
+    line: cardAiDeckText(raw.line, CARD_AI_DECK_LINE_MAX),
+    at,
+    ai: raw.ai === true
+  };
+};
+const cardNormalizeAiRecipe = (raw, today, db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null) => {
+  const v = cardAiDeckIsObj(raw) ? raw : {};
+  const sameDay = typeof v.day === 'string' && v.day === today;
+  const perWho = {};
+  const src = cardAiDeckIsObj(v.perWho) ? v.perWho : {};
+  for (const who of Object.keys(src)) {
+    if (!CARD_AI_DECKS[who] || !cardAiDeckIsObj(src[who])) continue;
+    const w = src[who];
+    const decks = {};
+    const ds = cardAiDeckIsObj(w.decks) ? w.decks : {};
+    for (const st of CARD_AI_STYLE_IDS) {
+      const e = cardAiDeckEntryOf(ds[st], db);
+      if (e) decks[st] = e;
+    }
+    const n = (x, max) => Number.isInteger(x) && x >= 0 ? Math.min(max, x) : 0;
+    perWho[who] = {
+      met: w.met === true,
+      gamesSince: n(w.gamesSince, 9999),
+      slotsDone: sameDay ? n(w.slotsDone, CARD_AI_DECK_SLOTS) : 0,
+      decks
+    };
+  }
+  return {
+    v: 1,
+    day: typeof today === 'string' ? today : '',
+    perWho
+  };
+};
+const cardNormalizeAiDeck = v => ({
+  on: !(cardAiDeckIsObj(v) && v.on === false)
+});
+const cardAiDeckSlotTimes = (day, seedKey = '') => {
+  const start = Date.parse(`${day}T04:00:00+09:00`);
+  if (!Number.isFinite(start)) return [];
+  const rnd = cardAiSeededRand(`aideck:${seedKey}:${day}`);
+  const span = 8 * 3600 * 1000;
+  return [...Array(CARD_AI_DECK_SLOTS).keys()].map(i => start + i * span + Math.floor(rnd() * span));
+};
+const cardAiDeckSlotsPassed = (times, now) => times.filter(t => t <= now).length;
+const cardAiDeckDue = (w, passed) => {
+  if (!w || !w.met) return null;
+  if (w.gamesSince >= CARD_AI_DECK_GAMES) return 'games';
+  if (w.slotsDone < passed) return 'slot';
+  return null;
+};
+const cardAiDeckOldest = w => {
+  const decks = w && w.decks || {};
+  return CARD_AI_STYLE_IDS.slice().sort((a, b) => (decks[a] && decks[a].at || 0) - (decks[b] && decks[b].at || 0))[0];
+};
+const cardAiDeckJitter = (prev, {
+  cands,
+  fields,
+  range,
+  rnd
+}) => {
+  const R = CARD_AI_PLAN_RANGE;
+  const habit = {};
+  for (const [k, [lo, hi]] of Object.entries(range || {})) {
+    const base = prev && prev.habit && Number.isFinite(prev.habit[k]) ? prev.habit[k] : (lo + hi) / 2;
+    const v = base + (rnd() * 2 - 1) * CARD_AI_DECK_JITTER * (hi - lo);
+    habit[k] = Math.round(Math.min(hi, Math.max(lo, v)) * 100) / 100;
+  }
+  const pool = (cands || []).map(c => c.no);
+  let prefer = (prev && Array.isArray(prev.prefer) ? prev.prefer : []).filter(no => pool.includes(no));
+  if (!prefer.length) prefer = pool.slice(0, Math.min(R.prefer[1], 6));
+  const swaps = 1 + Math.floor(rnd() * 2);
+  for (let i = 0; i < swaps; i++) {
+    const out = pool.filter(no => !prefer.includes(no));
+    if (!out.length || !prefer.length) break;
+    prefer[Math.floor(rnd() * prefer.length)] = out[Math.floor(rnd() * out.length)];
+  }
+  prefer = [...new Set(prefer)].slice(0, R.prefer[1]);
+  const fs = fields || [];
+  let field = prev && Array.isArray(prev.field) ? prev.field.filter(n => fs.includes(n)).slice(0, R.field[1]) : [];
+  if (fs.length && (!field.length || rnd() < 0.3)) field = [fs[Math.floor(rnd() * fs.length)]];
+  return {
+    prefer,
+    field,
+    habit
+  };
+};
+const cardAiDeckPickStyle = (main, rnd) => {
+  const r = rnd();
+  const m = cardAiStyleOf(main);
+  if (!m) return CARD_AI_STYLE_IDS[Math.min(CARD_AI_STYLE_IDS.length - 1, Math.floor(r * CARD_AI_STYLE_IDS.length))];
+  if (r < CARD_AI_DECK_MAIN) return m;
+  const others = CARD_AI_STYLE_IDS.filter(s => s !== m);
+  return others[r - CARD_AI_DECK_MAIN < (1 - CARD_AI_DECK_MAIN) / 2 ? 0 : 1];
+};
+const cardAiDeckDefaultName = (who, style) => cardAiStyleDefaultName(who, style);
+const cardAiDeckFacts = (db, who, style) => {
+  const trio = cardAiBuildDeck(db, who, 'master', cardAiSeededRand(`preview:${who}:${style}:master`), {
+    style
+  }).monsters;
+  const cands = cardAiPlanCandidates(db, who, 'master', trio);
+  const fields = Object.values(db.cards).filter(c => c.ready && c.kind === 'fld').map(c => c.name);
+  return {
+    trio,
+    cands,
+    fields,
+    range: cardAiPlanHabitRange(who, 'master', style),
+    facts: {
+      style,
+      favorites: trio.map(no => (db.monsters[no] || {}).name).filter(Boolean).slice(0, 5),
+      cards: cands.map(c => ({
+        no: c.no,
+        name: c.name,
+        kind: c.kind,
+        guts: c.guts,
+        damage: Number.isFinite(c.damage) ? c.damage : null,
+        user: c.user,
+        area: !!cardHasEff(c, 'area')
+      })),
+      fields,
+      habit: cardAiPlanHabitRange(who, 'master', style),
+      prefer: CARD_AI_PLAN_RANGE.prefer.slice()
+    }
+  };
+};
+const cardAiDeckFlagOn = () => {
+  try {
+    return typeof cardGrowStyleOn === 'function' && cardGrowStyleOn() === true;
+  } catch (_) {
+    return false;
+  }
+};
+let cardAiRecipeState = null;
+let cardAiDeckSetting = {
+  on: true
+};
+const cardAiDeckToday = () => typeof cardTodayJst === 'function' ? cardTodayJst() : new Date(Date.now() + 5 * 3600 * 1000).toISOString().slice(0, 10);
+const cardLoadAiRecipe = async () => {
+  try {
+    cardAiRecipeState = cardNormalizeAiRecipe(await storeGet(CARD_AI_RECIPE_KEY, null), cardAiDeckToday());
+  } catch (_) {
+    cardAiRecipeState = cardNormalizeAiRecipe(null, cardAiDeckToday());
+  }
+  try {
+    cardAiDeckSetting = cardNormalizeAiDeck(await storeGet(CARD_AI_DECK_KEY, null));
+  } catch (_) {
+    cardAiDeckSetting = {
+      on: true
+    };
+  }
+  return cardAiRecipeState;
+};
+const cardSaveAiRecipe = async next => {
+  cardAiRecipeState = next;
+  try {
+    return await storeSet(CARD_AI_RECIPE_KEY, next);
+  } catch (_) {
+    return false;
+  }
+};
+const cardSaveAiDeck = async on => {
+  cardAiDeckSetting = {
+    on: !!on
+  };
+  try {
+    await storeSet(CARD_AI_DECK_KEY, cardAiDeckSetting);
+  } catch (_) {}
+  return cardAiDeckSetting;
+};
+const cardAiDeckAskOn = () => cardAiDeckFlagOn() && cardAiDeckSetting.on !== false && typeof cardTalkOpen === 'function' && cardTalkOpen();
+const cardAiDeckFetch = async (who, facts) => {
+  if (!cardAiDeckAskOn() || typeof fetch === 'undefined') return null;
+  const ac = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = setTimeout(() => {
+    if (ac) ac.abort();
+  }, CARD_AI_DECK_WAIT_MS);
+  try {
+    const breederId = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
+    const samples = typeof cardTalkSamples === 'function' ? cardTalkSamples(who, 'challenge') : [];
+    const r = await fetch(CARD_TALK_URL, {
+      method: 'POST',
+      headers: typeof SB_HEADERS !== 'undefined' ? SB_HEADERS : {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        kind: 'deckPlan',
+        breederId: breederId || 'unknown',
+        assistantId: who,
+        samples,
+        facts
+      }),
+      signal: ac ? ac.signal : undefined
+    });
+    const res = r.ok ? await r.json() : null;
+    if (!res || res.ok !== true || res.kind !== 'plan') return null;
+    return {
+      plan: {
+        prefer: Array.isArray(res.prefer) ? res.prefer : [],
+        field: Array.isArray(res.field) ? res.field : [],
+        habit: cardAiDeckIsObj(res.habit) ? res.habit : {}
+      },
+      name: cardAiDeckText(res.name, CARD_AI_DECK_NAME_MAX),
+      line: cardAiDeckText(res.line, CARD_AI_DECK_LINE_MAX)
+    };
+  } catch (_) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const cardAiDeckBusy = new Set();
+const cardAiDeckRebuild = async (who, reason, opts = {}) => {
+  if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who] || cardAiDeckBusy.has(who) || typeof CARD_BATTLE_DATA === 'undefined') return null;
+  cardAiDeckBusy.add(who);
+  try {
+    const db = CARD_BATTLE_DATA;
+    const now = Number.isFinite(opts.now) ? opts.now : Date.now();
+    const before = cardNormalizeAiRecipe(await storeGet(CARD_AI_RECIPE_KEY, null).catch(() => null), cardAiDeckToday());
+    const style = cardAiDeckOldest(before.perWho[who] || null);
+    const f = cardAiDeckFacts(db, who, style);
+    const got = await cardAiDeckFetch(who, f.facts);
+    const cur = cardNormalizeAiRecipe(await storeGet(CARD_AI_RECIPE_KEY, null).catch(() => null), cardAiDeckToday());
+    const w = cur.perWho[who] || {
+      met: true,
+      gamesSince: 0,
+      slotsDone: 0,
+      decks: {}
+    };
+    const prev = w.decks[style] || null;
+    const plan = got && cardAiPlanClean(db, got.plan) ? got.plan : cardAiDeckJitter(prev && prev.plan, {
+      cands: f.cands,
+      fields: f.fields,
+      range: f.range,
+      rnd: cardAiSeededRand(`jitter:${who}:${style}:${now}`)
+    });
+    const entry = cardAiDeckEntryOf({
+      plan,
+      name: got ? got.name : prev && prev.name,
+      line: got ? got.line : prev && prev.line,
+      at: now,
+      ai: !!got
+    }, db);
+    const passed = Number.isFinite(opts.passed) ? opts.passed : w.slotsDone;
+    const nextW = {
+      ...w,
+      met: true,
+      decks: {
+        ...w.decks,
+        [style]: entry
+      },
+      gamesSince: reason === 'games' ? 0 : w.gamesSince,
+      slotsDone: reason === 'slot' ? Math.max(w.slotsDone, passed) : w.slotsDone
+    };
+    const next = {
+      ...cur,
+      perWho: {
+        ...cur.perWho,
+        [who]: nextW
+      }
+    };
+    await cardSaveAiRecipe(next);
+    return {
+      who,
+      style,
+      ai: !!got
+    };
+  } catch (_) {
+    return null;
+  } finally {
+    cardAiDeckBusy.delete(who);
+  }
+};
+const cardAiDeckRunDue = async (opts = {}) => {
+  if (!cardAiDeckFlagOn()) return [];
+  await cardLoadAiRecipe();
+  const now = Number.isFinite(opts.now) ? opts.now : Date.now();
+  let seedKey = '';
+  try {
+    seedKey = typeof ensureBreederId === 'function' ? String(await ensureBreederId()) : '';
+  } catch (_) {
+    seedKey = '';
+  }
+  const passed = cardAiDeckSlotsPassed(cardAiDeckSlotTimes(cardAiRecipeState.day, seedKey), now);
+  const done = [];
+  for (const who of Object.keys(cardAiRecipeState.perWho)) {
+    const w = cardAiRecipeState.perWho[who];
+    const why = cardAiDeckDue(w, passed) || (w.met && !Object.keys(w.decks).length ? 'first' : null);
+    if (!why) continue;
+    const r = await cardAiDeckRebuild(who, why === 'first' ? 'slot' : why, {
+      now,
+      passed
+    });
+    if (r) done.push(r);
+  }
+  return done;
+};
+const cardAiDeckMarkMet = async who => {
+  if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who]) return false;
+  const cur = cardNormalizeAiRecipe(await storeGet(CARD_AI_RECIPE_KEY, null).catch(() => null), cardAiDeckToday());
+  const w = cur.perWho[who];
+  if (w && w.met) {
+    cardAiRecipeState = cur;
+    return true;
+  }
+  await cardSaveAiRecipe({
+    ...cur,
+    perWho: {
+      ...cur.perWho,
+      [who]: {
+        met: true,
+        gamesSince: 0,
+        slotsDone: 0,
+        decks: {},
+        ...(w || {}),
+        ...{
+          met: true
+        }
+      }
+    }
+  });
+  void cardAiDeckRebuild(who, 'slot');
+  return true;
+};
+const cardAiDeckAfterMatch = async who => {
+  if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who]) return null;
+  const cur = cardNormalizeAiRecipe(await storeGet(CARD_AI_RECIPE_KEY, null).catch(() => null), cardAiDeckToday());
+  const w = cur.perWho[who] || {
+    met: true,
+    gamesSince: 0,
+    slotsDone: 0,
+    decks: {}
+  };
+  const nextW = {
+    ...w,
+    met: true,
+    gamesSince: w.gamesSince + 1
+  };
+  await cardSaveAiRecipe({
+    ...cur,
+    perWho: {
+      ...cur.perWho,
+      [who]: nextW
+    }
+  });
+  if (nextW.gamesSince >= CARD_AI_DECK_GAMES) void cardAiDeckRebuild(who, 'games');
+  return nextW.gamesSince;
+};
+const cardAiDeckLifeStyle = who => {
+  try {
+    return typeof assistantLifeCardStyle === 'function' ? cardAiStyleOf(assistantLifeCardStyle(who)) : null;
+  } catch (_) {
+    return null;
+  }
+};
+const cardAiDeckNextMemo = {};
+const cardAiDeckNextStyle = who => {
+  if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who]) return null;
+  if (!cardAiDeckNextMemo[who]) cardAiDeckNextMemo[who] = cardAiDeckPickStyle(cardAiDeckLifeStyle(who), Math.random);
+  return cardAiDeckNextMemo[who];
+};
+const cardAiDeckNextName = who => {
+  const st = cardAiDeckNextStyle(who);
+  if (!st) return null;
+  const e = cardAiRecipeState && cardAiRecipeState.perWho[who] && cardAiRecipeState.perWho[who].decks[st];
+  return e && e.name || cardAiDeckDefaultName(who, st);
+};
+const cardAiDeckNextDone = who => {
+  delete cardAiDeckNextMemo[who];
+};
+const cardAssistantDeckPick = (who, rand = Math.random, level = 'normal', extra = {}, styleIn = null) => {
+  if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who] || typeof CARD_BATTLE_DATA === 'undefined') return null;
+  const rnd = typeof rand === 'function' ? rand : Math.random;
+  const styleId = cardAiStyleOf(styleIn) || cardAiDeckPickStyle(cardAiDeckLifeStyle(who), rnd);
+  const e = cardAiRecipeState && cardAiRecipeState.perWho[who] && cardAiRecipeState.perWho[who].decks[styleId] || null;
+  const plan = e && e.plan ? e.plan : null;
+  const deck = cardAiBuildDeck(CARD_BATTLE_DATA, who, CARD_AI_BUILD[level] ? level : 'normal', rnd, {
+    ...extra,
+    style: styleId,
+    ...(plan ? {
+      plan
+    } : {})
+  });
+  return {
+    styleId,
+    name: e && e.name || cardAiDeckDefaultName(who, styleId),
+    line: e && e.line || null,
+    plan,
+    deck
+  };
+};
+const cardAiRecipeOf = (who, styleId) => {
+  if (!cardAiDeckFlagOn() || !cardAiRecipeState) return null;
+  const e = cardAiRecipeState.perWho[who] && cardAiRecipeState.perWho[who].decks[styleId];
+  return e ? {
+    plan: e.plan,
+    name: e.name,
+    line: e.line,
+    at: e.at
+  } : null;
+};
+const CARD_AI_DECK_VS_LINES = Object.freeze({
+  mua: '今日は『{name}』でいくよ♪ まぢ全力だからね！',
+  kiki: '今日は『{name}』でお相手しまつ( ˘ω˘)',
+  momosuke: '今日のももは『{name}』だよ♡ 勝てるかな〜？w',
+  kyuko: 'ほい、今日は『{name}』でいくよぉ笑',
+  dra: 'おでは今日『{name}』でいくぞ。えへへ、手加減しないからな',
+  atsu: '今日は『{name}』でいくわ笑 全力な！',
+  sorashido: '今日は『{name}』でいくぜ・・・！ 計算済み笑',
+  erubin: '今日は『{name}』でいこうかな🤔 よろしくね笑'
+});
+const cardAiDeckVsLine = (who, pick) => {
+  if (!pick) return null;
+  if (pick.line) return {
+    t: pick.line,
+    e: 'happy'
+  };
+  const tpl = CARD_AI_DECK_VS_LINES[who];
+  return tpl && pick.name ? {
+    t: tpl.replace('{name}', pick.name),
+    e: 'happy'
+  } : null;
+};
 const CARD_DECK_NAME_TAILS = Object.freeze({
   mua: ['まっしぐら隊', '全力ダッシュ団', 'ガンガン突撃隊', '先手必勝隊'],
   momosuke: ['いじわる劇場', 'ちくちく作戦', 'こまらせ隊', 'ずるっこ団'],
@@ -134240,7 +134902,16 @@ const CardVsIntro = ({
     "data-card-vs-line": true,
     className: "mt-1 rounded-2xl rounded-bl-sm bg-white px-2.5 py-1.5 text-[12px] font-bold leading-snug text-slate-900",
     style: JA_WRAP_STYLE
-  }, cardRuleLine(foe.line.t)))), React.createElement(CardVsDeckName, {
+  }, cardRuleLine(foe.line.t)))), foe.styleName && typeof CardFoeDeckChip === 'function' ? React.createElement("div", {
+    "data-card-vs-style": true,
+    className: "mh-vs-fade flex max-w-full flex-col items-center gap-1"
+  }, React.createElement(CardFoeTeamName, {
+    text: foe.deckName
+  }), React.createElement(CardFoeDeckChip, {
+    name: foe.styleName,
+    styleId: foe.styleId,
+    kind: "vs"
+  })) : React.createElement(CardVsDeckName, {
     text: foe.deckName,
     tone: "foe"
   }), React.createElement(CardVsMonsters, {
@@ -136770,14 +137441,6 @@ const cardGrowStyleOn = () => {
     return false;
   }
 };
-const cardLifeCardStyle = id => {
-  if (!cardGrowStyleOn()) return null;
-  try {
-    return typeof assistantLifeCardStyle === 'function' ? cardAiStyleOf(assistantLifeCardStyle(id)) : null;
-  } catch (_) {
-    return null;
-  }
-};
 const cardLifeOnMatch = x => {
   try {
     if (typeof assistantLifeOnCardMatch === 'function') assistantLifeOnCardMatch(x);
@@ -136833,10 +137496,17 @@ const CardFoeStyle = ({
   const fav = Object.values(db.monsters).find(m => m.species === favSpecies && !m.variant && String(m.wave) !== 'hybrid') || null;
   const lv = CARD_LEVEL_LABEL[level] || '';
   const upper = level === 'hard' || level === 'expert' || level === 'master';
+  const nextStyle = typeof cardAiDeckNextStyle === 'function' ? cardAiDeckNextStyle(who) : null;
+  const nextName = nextStyle && typeof cardAssistantDeckDisplayName === 'function' ? cardAssistantDeckDisplayName(who, nextStyle, typeof cardAiDeckNextName === 'function' ? cardAiDeckNextName(who) : null) : null;
   return React.createElement("div", {
     "data-card-foe-style": who,
     className: "space-y-1.5 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
-  }, React.createElement("div", {
+  }, nextStyle && typeof CardFoeDeckChip === 'function' && React.createElement(CardFoeDeckChip, {
+    name: nextName,
+    styleId: nextStyle,
+    kind: "foe",
+    compact: true
+  }), React.createElement("div", {
     className: "flex flex-wrap items-center gap-x-2 gap-y-1"
   }, React.createElement("span", {
     "data-card-foe-style-label": true,
@@ -138294,6 +138964,13 @@ const CardBattleBoard = ({
       onEnd: end => setWatchEnd(end || null),
       onEyes: n => setWatchEyes(Number.isInteger(n) ? n : 0)
     });
+  }, []);
+  const [pvpVoid, setPvpVoid] = useState(false);
+  useEffect(() => {
+    if (!pvpLive) return undefined;
+    const look = r => setPvpVoid(!!r && r.phase === 'void');
+    look(CARD_PVP.get());
+    return CARD_PVP.subscribe(look);
   }, []);
   useCardPvpAuto(db, pvpLive, st, step, paused);
   const pvpClock = useCardPvpClock(pvpLive, st, step);
@@ -140201,6 +140878,14 @@ const CardBattleBoard = ({
     confirmLabel: confirm.kind === 'use' ? '使う' : '終わる',
     onCancel: () => setConfirm(null),
     onConfirm: confirmYes
+  }), pvpVoid && React.createElement(CardPvpVoidDialog, {
+    onExit: () => {
+      finished.current = true;
+      onFinish({
+        outcome: 'void',
+        st: stRef.current
+      });
+    }
   }), quit && !tutorial && React.createElement(ConfirmSheet, {
     title: "投了しますか？",
     message: pvp ? '投了すると負けになります' : '投了すると負けになります(ビートPとクイック周回は、倒した相手のモンスターの数に応じて少しだけ)',
@@ -140844,6 +141529,12 @@ const CardBattleScreen = ({
     if (view === 'top' && typeof cardTacticsLoad === 'function') void cardTacticsLoad().then(d => setRankXp(d.level.xp)).catch(() => {});
   }, [view]);
   useEffect(() => {
+    if (view === 'top' && cardGrowStyleOn() && typeof cardAiDeckRunDue === 'function') void cardAiDeckRunDue().catch(() => {});
+  }, [view]);
+  useEffect(() => {
+    if (view === 'foe' && cardGrowStyleOn() && typeof cardLoadAiRecipe === 'function') void cardLoadAiRecipe().catch(() => {});
+  }, [view]);
+  useEffect(() => {
     const go = c => {
       if (c) {
         setDeckPick({
@@ -141023,6 +141714,16 @@ const CardBattleScreen = ({
     setAiTalk(next);
     void cardSaveAiTalk(next);
   };
+  const [aiDeckOn, setAiDeckOn] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    if (cardGrowStyleOn()) void cardLoadAiRecipe().then(() => {
+      if (alive) setAiDeckOn(cardAiDeckSetting.on !== false);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
   const toggleAssist = key => {
     if (key !== 'modeSelectArt' && key !== 'modeSelectComment') return;
     const next = {
@@ -141036,6 +141737,9 @@ const CardBattleScreen = ({
     const K = CARD_SAVE_KEYS;
     try {
       await cardMigratePointsOnce(storeGet, storeSet, saveStoredValuesOrRollback);
+    } catch (_) {}
+    try {
+      if (typeof cardPvpFix20261108Once === 'function') await cardPvpFix20261108Once(storeGet, storeSet, saveStoredValuesOrRollback);
     } catch (_) {}
     const [collection, decks, point, starter, daily, record, unlocked, tutorial, bgm, settings, cpuPlaylist] = await Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null), storeGet(K.tutorial, null), storeGet(K.bgm, null), storeGet(K.settings, null), storeGet(K.cpuPlaylist, null)]);
     const next = {
@@ -141635,6 +142339,14 @@ const CardBattleScreen = ({
         setView(back);
         return;
       }
+      if (outcome === 'void' && game.pvp) {
+        const wasCup = !!CARD_PVP.get().cup;
+        CARD_PVP.leave();
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
+        onNavigate('CARD_TOP');
+        setView(wasCup ? 'cup' : 'pvp');
+        return;
+      }
       if (typeof assistantPeerOnPlay === 'function') void assistantPeerOnPlay('card');
       if (!game.demo && !game.tutorial && !game.cup && !debug && typeof missionNotify === 'function') {
         missionNotify('cardPlay');
@@ -141932,7 +142644,8 @@ const CardBattleScreen = ({
           name: log.foeName,
           who: game.who,
           deckName: log.deckName,
-          style: log.style
+          style: log.style,
+          styleName: log.styleName
         },
         outcome,
         reason: '',
@@ -142033,6 +142746,7 @@ const CardBattleScreen = ({
         won: outcome === 'win',
         at: Date.now()
       });
+      if (ok && !game.demo && game.aiDeck && typeof cardAiDeckAfterMatch === 'function') void cardAiDeckAfterMatch(game.who);
       setResult({
         outcome,
         reward,
@@ -142046,7 +142760,8 @@ const CardBattleScreen = ({
         talk: talkFacts,
         replay: replayId,
         rankGain: ok ? levelGain.gain : null,
-        lifeUp: lifeMult > 1
+        lifeUp: lifeMult > 1,
+        aiDeck: game.aiDeck || null
       });
       onBgm && onBgm(cardBgmOf(save.bgm.top));
       onNavigate('CARD_TOP');
@@ -142148,16 +142863,17 @@ const CardBattleScreen = ({
     }
     const activeDeck = deck;
     const share = pick.share || null;
-    const foeStyle = !share && !(opts && opts.cup) ? cardLifeCardStyle(pick.who) : null;
+    const aiPick = !share && !(opts && opts.cup) && cardGrowStyleOn() && typeof cardAssistantDeckPick === 'function' ? cardAssistantDeckPick(pick.who, Math.random, pick.level, {
+      playerDeck: activeDeck
+    }, typeof cardAiDeckNextStyle === 'function' ? cardAiDeckNextStyle(pick.who) : null) : null;
+    if (aiPick && typeof cardAiDeckNextDone === 'function') cardAiDeckNextDone(pick.who);
+    const foeStyle = aiPick ? aiPick.styleId : null;
     const cpuDeck = share ? {
       monsters: share.deck.monsters.slice(),
       cards: share.deck.cards.slice(),
       sameBlood: cardShareSameBlood(db, share.deck)
-    } : cardAiBuildDeck(db, pick.who, pick.level, Math.random, {
-      playerDeck: activeDeck,
-      ...(foeStyle ? {
-        style: foeStyle
-      } : {})
+    } : aiPick ? aiPick.deck : cardAiBuildDeck(db, pick.who, pick.level, Math.random, {
+      playerDeck: activeDeck
     });
     const seed = cup ? cup.seed : (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
     const gameKey = cup ? `cup-${cup.matchId}-${Date.now().toString(36)}` : `${seed}`;
@@ -142199,9 +142915,13 @@ const CardBattleScreen = ({
       foe: {
         who: pick.who,
         name: assistant ? assistant.name : 'あいて',
-        line: (CARD_VS_LINES[pick.who] || {})[pick.level] || null,
+        line: aiPick && cardAiDeckVsLine(pick.who, aiPick) || (CARD_VS_LINES[pick.who] || {})[pick.level] || null,
         deckName: cardAssistantDeckName(db, cpuDeck, pick.who, pick.level),
-        monsters: vsMons(st, CARD_CPU)
+        monsters: vsMons(st, CARD_CPU),
+        ...(aiPick && aiPick.name ? {
+          styleName: aiPick.name,
+          styleId: aiPick.styleId
+        } : {})
       },
       me: {
         name: myName,
@@ -142229,6 +142949,13 @@ const CardBattleScreen = ({
         lifeUp: true,
         lifeSlot
       } : {}),
+      ...(aiPick ? {
+        aiDeck: {
+          style: aiPick.styleId,
+          name: aiPick.name,
+          team: intro.foe.deckName || null
+        }
+      } : {}),
       ...(share ? {
         share
       } : {}),
@@ -142250,6 +142977,7 @@ const CardBattleScreen = ({
     cpuLogRef.current = scene ? null : {
       id: gameKey,
       style: foeStyle || 'normal',
+      styleName: aiPick && aiPick.name || null,
       seed,
       first,
       decks: [{
@@ -143010,6 +143738,7 @@ const CardBattleScreen = ({
           ...f,
           who: x.id
         }));
+        if (cardGrowStyleOn() && typeof cardAiDeckMarkMet === 'function') void cardAiDeckMarkMet(x.id);
       },
       className: `relative flex flex-col items-center rounded-xl border-2 ${foes.length >= 7 ? 'p-1 landscape:p-0.5' : 'p-1'} ${foe.who === x.id ? 'bg-white/10' : 'border-white/10 bg-slate-900/70'}`,
       style: {
@@ -143352,7 +144081,17 @@ const CardBattleScreen = ({
       }),
       foeName: a.name,
       outcome: win ? '勝ち' : result.outcome === 'surrender' ? '投了' : '負け'
-    }), React.createElement("div", {
+    }), result.aiDeck && result.aiDeck.name && typeof CardFoeDeckChip === 'function' && React.createElement("div", {
+      "data-card-result-ai-deck": true,
+      className: "flex flex-col items-center gap-1"
+    }, React.createElement(CardFoeTeamName, {
+      text: result.aiDeck.team,
+      compact: true
+    }), React.createElement(CardFoeDeckChip, {
+      name: result.aiDeck.name,
+      styleId: result.aiDeck.style,
+      kind: "result"
+    })), React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, !result.demo && r.total > 0 && React.createElement("div", {
       "data-card-gain-count": true,
@@ -143833,7 +144572,28 @@ const CardBattleScreen = ({
     }, aiTalk ? 'ON' : 'OFF')), React.createElement("p", {
       className: "mt-1.5 text-[10px] font-bold leading-snug text-slate-400",
       style: JA_WRAP_STYLE
-    }, jaWrap('ONにすると、対戦のあと・対戦の山場・デッキ相談で、助手がその場に合わせたひとことを話します。うまく届かないときは、いつものセリフになります'))), CARD_SETTING_GROUPS.map(g => React.createElement(React.Fragment, {
+    }, jaWrap('ONにすると、対戦のあと・対戦の山場・デッキ相談で、助手がその場に合わせたひとことを話します。うまく届かないときは、いつものセリフになります'))), cardGrowStyleOn() && cardTalkOpen() && React.createElement("div", {
+      "data-card-ai-deck-panel": true,
+      className: SCREEN_PANEL_CLASS
+    }, React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, React.createElement("b", {
+      className: "min-w-0 flex-1 text-[13px] font-black text-white"
+    }, "助手のデッキ(AI)"), React.createElement("button", {
+      type: "button",
+      "data-card-ai-deck": true,
+      "aria-pressed": aiDeckOn,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        const next = !aiDeckOn;
+        setAiDeckOn(next);
+        void cardSaveAiDeck(next);
+      },
+      className: `min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${aiDeckOn ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`
+    }, aiDeckOn ? 'ON' : 'OFF')), React.createElement("p", {
+      className: "mt-1.5 text-[10px] font-bold leading-snug text-slate-400",
+      style: JA_WRAP_STYLE
+    }, jaWrap('ONにすると、助手がときどき自分でデッキを組み直します。OFFでも助手のデッキは少しずつ変わります'))), CARD_SETTING_GROUPS.map(g => React.createElement(React.Fragment, {
       key: g.title
     }, g.title === '表示' && bgmPanel, React.createElement("div", {
       "data-card-setting-group": g.title,
@@ -146829,6 +147589,205 @@ const CardShopStarters = ({
     }
   }));
 };
+const CARD_DECK_STYLE_LABEL = Object.freeze({
+  attack: '攻め',
+  guard: '守り',
+  normal: 'ふつう'
+});
+const CARD_DECK_STYLE_ICON = Object.freeze({
+  attack: '⚔️',
+  guard: '🛡️',
+  normal: '⚖️'
+});
+const CARD_DECK_KIND_GROUPS = Object.freeze([['技', ['pow', 'int']], ['防御', ['blk']], ['回避', ['dge']], ['特殊', ['spe']], ['場', ['fld']]]);
+const cardAssistantDeckViewOn = () => typeof cardGrowStyleOn === 'function' && cardGrowStyleOn();
+const cardAssistantDeckDisplayName = (who, styleId, name = null) => {
+  const sid = CARD_DECK_STYLE_LABEL[styleId] ? styleId : 'normal';
+  if (typeof name === 'string' && name) return name;
+  if (typeof cardAiStyleDefaultName === 'function') return cardAiStyleDefaultName(who, sid);
+  const base = typeof CARD_AI_STYLE_NAMES !== 'undefined' ? CARD_AI_STYLE_NAMES[who] : null;
+  if (!base) return null;
+  return sid === 'normal' ? base : `${base}・${CARD_DECK_STYLE_LABEL[sid]}`;
+};
+const cardAssistantDeckSummary = (who, styleId) => {
+  try {
+    if (typeof cardAssistantDeckPreview !== 'function' || typeof CARD_BATTLE_DATA === 'undefined') return null;
+    const sid = CARD_DECK_STYLE_LABEL[styleId] ? styleId : 'normal';
+    const d = cardAssistantDeckPreview(who, sid, 'normal');
+    if (!d || !Array.isArray(d.monsters) || !Array.isArray(d.cards)) return null;
+    const db = CARD_BATTLE_DATA;
+    const count = {};
+    d.cards.forEach(no => {
+      count[no] = (count[no] || 0) + 1;
+    });
+    const uniq = [...new Set(d.cards)].map(no => cardOf(db, no)).filter(Boolean);
+    const byGuts = (a, b) => (b.guts || 0) - (a.guts || 0) || (b.damage || 0) - (a.damage || 0) || (a.no < b.no ? -1 : 1);
+    const ace = uniq.filter(c => c.kind === 'pow' || c.kind === 'int').sort(byGuts)[0] || null;
+    const groups = CARD_DECK_KIND_GROUPS.map(([label, kinds]) => [label, uniq.filter(c => kinds.includes(c.kind)).sort(byGuts)]).filter(g => g[1].length);
+    const monsters = d.monsters.map(no => cardMonsterOf(db, no)).filter(Boolean);
+    const name = cardAssistantDeckDisplayName(who, sid, typeof d.name === 'string' ? d.name : null);
+    const line = typeof d.line === 'string' && d.line ? d.line : null;
+    const at = Number.isFinite(d.at) && d.at > 0 ? d.at : null;
+    return {
+      styleId: sid,
+      monsters,
+      count,
+      ace,
+      groups,
+      total: d.cards.length,
+      name,
+      line,
+      at
+    };
+  } catch (_) {
+    return null;
+  }
+};
+const cardAssistantDeckAtText = at => {
+  if (!Number.isFinite(at) || at <= 0) return '';
+  const t = new Date(at);
+  return Number.isNaN(t.getTime()) ? '' : `${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`;
+};
+function CardAssistantDeckView({
+  who,
+  styleId,
+  land = false
+}) {
+  const [detail, setDetail] = React.useState(null);
+  if (!cardAssistantDeckViewOn()) return null;
+  const s = cardAssistantDeckSummary(who, styleId);
+  const a = typeof assistantById === 'function' ? assistantById(who) : null;
+  if (!s) return React.createElement("div", {
+    className: "mhm-card",
+    "data-card-assistant-deck-view": "none"
+  }, React.createElement("p", {
+    className: "text-[11.5px] font-bold text-slate-300"
+  }, "デッキを読めませんでした"));
+  const db = CARD_BATTLE_DATA;
+  const label = CARD_DECK_STYLE_LABEL[s.styleId];
+  const tile = (c, big = false) => React.createElement("button", {
+    key: c.no,
+    type: "button",
+    "data-card-assistant-deck-card": c.no,
+    "aria-label": `${c.name}を大きく見る`,
+    onClick: () => {
+      if (typeof Audio_ !== 'undefined') Audio_.fgSe.tap();
+      setDetail(c.no);
+    },
+    className: `relative block ${big ? land ? 'w-[70px]' : 'w-[96px]' : 'w-full'} active:scale-95`
+  }, React.createElement("img", {
+    src: CARD_IMG(c.img),
+    alt: c.name,
+    draggable: false,
+    className: "w-full rounded-[5px] shadow"
+  }), s.count[c.no] > 1 && React.createElement("b", {
+    className: "absolute bottom-0.5 right-0.5 rounded bg-black/80 px-1 text-[11px] font-black text-amber-200"
+  }, "×", s.count[c.no]));
+  const at = cardAssistantDeckAtText(s.at);
+  const top = React.createElement("div", {
+    className: "mhm-card",
+    "data-card-assistant-deck-head": s.styleId
+  }, React.createElement("p", {
+    className: "text-[10px] font-black text-slate-400"
+  }, "MFバトルカード・", label, "のデッキ"), React.createElement("p", {
+    "data-card-assistant-deck-name": true,
+    className: "text-[18px] font-black leading-tight text-amber-200",
+    style: JA_LABEL_STYLE
+  }, CARD_DECK_STYLE_ICON[s.styleId], " ", s.name || `${label}のデッキ`), s.line && React.createElement("p", {
+    "data-card-assistant-deck-line": true,
+    className: "mt-1 rounded-lg bg-black/30 px-2 py-1 text-[11.5px] font-bold leading-snug text-slate-100",
+    style: JA_WRAP_STYLE
+  }, a ? `${a.name}「${s.line}」` : s.line), React.createElement("div", {
+    className: "mt-2 flex items-end gap-2"
+  }, React.createElement("div", {
+    className: `flex-1 ${land ? 'max-w-[190px]' : ''}`
+  }, React.createElement("p", {
+    className: "text-[10px] font-black text-slate-400"
+  }, "よく使う3体"), React.createElement("div", {
+    className: "grid grid-cols-3 gap-1"
+  }, s.monsters.map(m => React.createElement("div", {
+    key: m.no,
+    className: "min-w-0 text-center",
+    "data-card-assistant-deck-mon": m.no
+  }, React.createElement("img", {
+    src: CARD_IMG(m.img),
+    alt: m.name,
+    draggable: false,
+    className: "w-full rounded-[5px]"
+  }), React.createElement("p", {
+    className: "text-[10px] font-black leading-tight text-white",
+    style: JA_LABEL_STYLE
+  }, m.name))))), s.ace && React.createElement("div", {
+    className: `${land ? 'w-[70px]' : 'w-[96px]'} shrink-0 text-center`,
+    "data-card-assistant-deck-ace": s.ace.no
+  }, React.createElement("p", {
+    className: "text-[10px] font-black text-rose-200"
+  }, "切り札"), tile(s.ace, true))), React.createElement("p", {
+    "data-card-assistant-deck-mon-note": true,
+    className: "mt-1 text-[10.5px] font-bold text-slate-400"
+  }, "3体は対戦のたびに変わります"));
+  const list = React.createElement("div", {
+    className: "mhm-card",
+    "data-card-assistant-deck-list": true
+  }, s.groups.map(([g, cs]) => React.createElement("div", {
+    key: g,
+    className: "mt-1.5 first:mt-0",
+    "data-card-assistant-deck-group": g
+  }, React.createElement("p", {
+    className: "text-[11px] font-black text-slate-300"
+  }, g, " ", React.createElement("small", {
+    className: "text-slate-500"
+  }, cs.reduce((n, c) => n + s.count[c.no], 0), "枚")), React.createElement("div", {
+    className: `mt-1 grid ${land ? 'grid-cols-10' : 'grid-cols-6'} gap-1`
+  }, cs.map(c => tile(c))))), React.createElement("p", {
+    className: "mt-2 text-[10.5px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, `🤖 ${at ? `AI が ${at} に組み直しました。` : ''}対戦では毎回少し入れかわります`));
+  return React.createElement("div", {
+    "data-card-assistant-deck-view": s.styleId,
+    className: land ? 'grid grid-cols-[minmax(0,5fr)_minmax(0,7fr)] items-start gap-2' : 'flex flex-col gap-2'
+  }, top, list, detail && typeof CardDetailModal === 'function' && React.createElement(CardDetailModal, {
+    db: db,
+    no: detail,
+    onClose: () => setDetail(null)
+  }));
+}
+function CardFoeDeckChip({
+  name,
+  styleId,
+  kind = 'foe',
+  compact = false
+}) {
+  if (!cardAssistantDeckViewOn() || !CARD_DECK_STYLE_LABEL[styleId]) return null;
+  return React.createElement("div", {
+    "data-card-foe-deck-chip": kind,
+    "data-card-foe-deck-style": styleId,
+    className: `mx-auto flex max-w-full flex-wrap items-center justify-center gap-y-0.5 border border-amber-300/70 bg-slate-950/80 font-black leading-tight text-amber-100 ${compact ? 'gap-1 rounded-2xl px-1.5 py-0.5 text-[11px]' : 'gap-1.5 rounded-full px-3 py-1 text-[12px]'}`
+  }, React.createElement("small", {
+    className: `shrink-0 rounded-full bg-amber-300 py-px text-[10px] font-black text-slate-950 ${compact ? 'px-1' : 'px-1.5'}`
+  }, "今日のデッキ"), React.createElement("span", {
+    "data-card-foe-deck-chip-name": true,
+    className: "whitespace-nowrap"
+  }, React.createElement("span", {
+    "aria-hidden": "true"
+  }, CARD_DECK_STYLE_ICON[styleId], " "), name || `${CARD_DECK_STYLE_LABEL[styleId]}のデッキ`));
+}
+function CardFoeTeamName({
+  text,
+  tone = 'foe',
+  compact = false
+}) {
+  if (!cardAssistantDeckViewOn() || !text) return null;
+  return React.createElement("div", {
+    "data-card-foe-team-name": true,
+    className: `mx-auto flex max-w-full items-center justify-center gap-1.5 rounded-2xl px-3 font-black leading-tight ${tone === 'foe' ? 'bg-rose-950/80 text-rose-100' : 'bg-sky-950/80 text-sky-100'} ${compact ? 'py-0.5 text-[11px]' : 'py-0.5 text-[13px]'}`
+  }, React.createElement("small", {
+    className: "shrink-0 rounded-full bg-white/20 px-1.5 py-px text-[10px] font-black"
+  }, "チーム"), React.createElement("span", {
+    className: "min-w-0",
+    style: JA_WRAP_STYLE
+  }, text));
+}
 const cardDeckPickChoices = (db, decks, collection, opts = {}) => {
   const own = (decks && decks.decks || []).map(d => ({
     id: d.id,
@@ -149082,6 +150041,11 @@ const cardPvpCleanMessage = raw => {
     t: raw.t,
     from
   };
+  if (raw.t === 'void') return typeof raw.match === 'string' && raw.match ? {
+    t: 'void',
+    from,
+    match: raw.match.slice(0, 40)
+  } : null;
   return null;
 };
 const CARD_PVP_RESULT_LINES = Object.freeze({
@@ -149936,18 +150900,19 @@ const CARD_PVP = (() => {
     });
   };
   const deliver = () => {
-    while (board && s.inbox[s.theirSeq + 1]) {
+    while (board && s.phase === 'playing' && s.inbox[s.theirSeq + 1]) {
       const msg = s.inbox[s.theirSeq + 1];
       const inbox = {
         ...s.inbox
       };
       delete inbox[s.theirSeq + 1];
-      const next = board.onAct(msg);
+      const next = typeof window !== 'undefined' && window.__mhCardPvpDesyncTest === true ? null : board.onAct(msg);
       if (!next) {
-        set({
-          inbox,
-          broken: '相手の手がルールに合いませんでした。この試合は続けられません'
-        });
+        s = {
+          ...s,
+          inbox
+        };
+        goVoid();
         return;
       }
       s = {
@@ -149987,6 +150952,33 @@ const CARD_PVP = (() => {
   };
   const forceEnd = outcome => {
     if (s && s.phase === 'playing' && board) board.onForceEnd(outcome);
+  };
+  const goVoid = () => {
+    if (!s || !s.match || !(s.phase === 'playing' || s.phase === 'over' && s.result && !s.result.rewarded && !s.cupSent)) return;
+    if (isHost()) cardPvpWatchHost().stop();
+    const cup = s.cup && !s.cupSent ? s.cup : null;
+    set({
+      phase: 'void',
+      result: null,
+      outbox: [],
+      again: null,
+      foeAgain: null,
+      ...(cup ? {
+        cupSent: true
+      } : {})
+    });
+    send({
+      t: 'void',
+      match: s.match
+    });
+    if (cup) void (async () => {
+      const key = typeof cardShareOwnerKey === 'function' ? await cardShareOwnerKey(false).catch(() => null) : null;
+      if (key && typeof cardTourRpc === 'function') await cardTourRpc('card_cup_live_void', {
+        p_match: cup.matchId,
+        p_owner: cup.selfId,
+        p_key: key
+      }).catch(() => null);
+    })();
   };
   const cupSend = async () => {
     if (!s || !s.cup || s.cupSent || !s.result || s.result.verify === 'wait') return;
@@ -150162,6 +151154,10 @@ const CARD_PVP = (() => {
     };
     if (msg.t === 'start') {
       if (!isHost() && msg.guest === s.me.id) begin(msg);
+      return;
+    }
+    if (msg.t === 'void') {
+      if (msg.match === s.match && !(typeof window !== 'undefined' && window.__mhCardPvpOldTest === true)) goVoid();
       return;
     }
     if (msg.t === 'act') {
@@ -150487,6 +151483,10 @@ const CARD_PVP = (() => {
         rd: s.again.rd,
         seal: s.again.seal
       });
+      if (s.phase === 'void' && s.match) send({
+        t: 'void',
+        match: s.match
+      });
       if (s.phase === 'playing' && s.foe && alive && Date.now() - s.foe.seen > CARD_PVP_ALIVE_MS) forceEnd('foeLeft');
       if (s.phase === 'over' && s.foe && alive && !s.foeGone && Date.now() - s.foe.seen > CARD_PVP_ALIVE_MS) set({
         foeGone: true,
@@ -150496,7 +151496,7 @@ const CARD_PVP = (() => {
   };
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && inGame() && !alive) connect();
+      if (document.visibilityState === 'visible' && (inGame() || s && s.phase === 'void') && !alive) connect();
     });
   }
   if (typeof window !== 'undefined') {
@@ -150564,7 +151564,7 @@ const CARD_PVP = (() => {
         });
       }
       if (s && s.phase === 'playing') penalize();
-      if (s && socket) send({
+      if (s && socket && s.phase !== 'void') send({
         t: 'bye'
       });
       stop();
@@ -150911,6 +151911,35 @@ const cardPvpPhrases = text => String(text).split(/(?<=、)/).map((x, i) => Reac
   key: i,
   className: "inline-block"
 }, x));
+const CardPvpVoidDialog = ({
+  onExit
+}) => React.createElement("div", {
+  "data-card-pvp-void": true,
+  role: "dialog",
+  "aria-modal": "true",
+  "aria-labelledby": "mh-card-pvp-void-title",
+  className: "fixed inset-0 flex items-center justify-center overflow-y-auto p-4",
+  style: {
+    ...(typeof cardSafePad === 'function' ? cardSafePad('1rem') : {}),
+    zIndex: MODAL_Z.dialog + 200,
+    backgroundColor: 'rgba(2,6,23,0.88)'
+  }
+}, React.createElement("div", {
+  className: "w-full max-w-sm rounded-2xl border border-rose-300/40 bg-slate-900 p-5 text-center shadow-2xl"
+}, React.createElement("p", {
+  id: "mh-card-pvp-void-title",
+  className: "text-[17px] font-black text-rose-100"
+}, "この試合は続けられません"), React.createElement("p", {
+  className: "mt-3 text-left text-[13px] font-bold leading-relaxed text-slate-200 [word-break:keep-all]"
+}, "通信のずれで、", React.createElement("wbr", null), "相手と場が", React.createElement("wbr", null), "合わなく", React.createElement("wbr", null), "なりました。", React.createElement("wbr", null), "この試合は", React.createElement("wbr", null), "記録に", React.createElement("wbr", null), "残さずに", React.createElement("wbr", null), "終わります。", React.createElement("wbr", null), "ビートPと", React.createElement("wbr", null), "強さの点数は、", React.createElement("wbr", null), "増えも", React.createElement("wbr", null), "減りも", React.createElement("wbr", null), "しません。"), React.createElement("button", {
+  type: "button",
+  "data-card-pvp-void-exit": true,
+  onClick: () => {
+    Audio_.fgSe.tap();
+    onExit();
+  },
+  className: "mh-button mt-4 min-h-[52px] w-full rounded-2xl bg-amber-400 font-black text-slate-950 active:scale-[.98]"
+}, "試合を終える")));
 const CardPvpLobby = ({
   meIcon = null,
   meFrame = null,
@@ -151155,6 +152184,20 @@ const CardPvpLobby = ({
     meIcon: meIcon,
     meName: profile.name
   });
+  if (room.phase === 'void') {
+    const exitVoid = () => {
+      const wasCup = !!CARD_PVP.get().cup;
+      CARD_PVP.leave();
+      if (wasCup) onBack(true);
+    };
+    return React.createElement("div", {
+      "data-mh-screen": true,
+      "data-card-pvp": "void",
+      className: SCREEN_SHELL_CLASS
+    }, React.createElement(CardPvpVoidDialog, {
+      onExit: exitVoid
+    }));
+  }
   if (room.phase === 'over' && r) {
     const noAgain = !!room.cup || room.foeGone || r.reason === '相手が抜けた' || r.reason === '相手の時間切れ' || r.reason === '通信が切れた';
     const win = r.outcome === 'win';
@@ -151646,7 +152689,7 @@ const useCardPvpClock = (pvp, st, step) => {
   }
   const left = pvp ? cardPvpLimitMs(st) - (now - startRef.current - pauseRef.current.ms) : 0;
   useEffect(() => {
-    if (!pvp || st.winner !== null) return;
+    if (!pvp || st.winner !== null || CARD_PVP.get().phase !== 'playing') return;
     if (decider === 0 && st.phase === 'guts' && !st.pending && gutsRef.current === st.turn) {
       gutsRef.current = -1;
       CARD_PVP.auto(() => step({
@@ -152322,6 +153365,58 @@ const cardPvpHistoryWhen = at => {
   const p = n => String(n).padStart(2, '0');
   return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
 };
+const CARD_PVP_FIX_20261108_KEY = 'mh_card_pvp_fix_20261108_v1';
+const CARD_PVP_FIX_20261108_MATCHES = Object.freeze(['mmw7e6d8i6v7uxd', 'mmw7ecam4ptfvzi']);
+const cardPvpFix20261108Plan = (history, record) => {
+  const list = cardPvpNormalizeHistory(history);
+  const hits = list.filter(e => CARD_PVP_FIX_20261108_MATCHES.includes(e.match) && e.outcome === 'lose' && e.reason === '投了');
+  const rec = typeof cardNormalizeRecord === 'function' ? cardNormalizeRecord(record) : null;
+  if (!rec || !hits.length) return {
+    undone: 0,
+    record: null,
+    matches: []
+  };
+  const undone = Math.min(hits.length, rec.pvp.lose);
+  return {
+    undone,
+    record: undone > 0 ? {
+      ...rec,
+      pvp: {
+        ...rec.pvp,
+        lose: rec.pvp.lose - undone
+      }
+    } : null,
+    matches: hits.map(e => e.match)
+  };
+};
+const cardPvpFix20261108Once = async (getValue, setValue, saveAll) => {
+  const done = await getValue(CARD_PVP_FIX_20261108_KEY, null, false);
+  if (done && typeof done === 'object') return {
+    undone: 0,
+    saved: false
+  };
+  const [history, record] = await Promise.all([getValue(CARD_PVP_HISTORY_KEY, [], false), getValue(CARD_SAVE_KEYS.record, null, false)]);
+  const plan = cardPvpFix20261108Plan(history, record);
+  const entries = [{
+    key: CARD_PVP_FIX_20261108_KEY,
+    before: done,
+    next: {
+      at: Date.now(),
+      undone: plan.undone,
+      matches: plan.matches
+    }
+  }];
+  if (plan.record) entries.push({
+    key: CARD_SAVE_KEYS.record,
+    before: record,
+    next: plan.record
+  });
+  const saved = await saveAll(entries, getValue, setValue);
+  return {
+    undone: saved ? plan.undone : 0,
+    saved
+  };
+};
 const cardPvpHistoryLoad = async () => {
   try {
     return cardPvpNormalizeHistory(await storeGet(CARD_PVP_HISTORY_KEY, [], false));
@@ -152716,7 +153811,8 @@ const cardReplayNormalizeOne = raw => {
       deckName: typeof foe.deckName === 'string' ? foe.deckName.slice(0, 30) || null : null,
       who: typeof foe.who === 'string' ? foe.who.slice(0, 20) : null,
       ...(raw.kind === 'cpu' ? {
-        style: cardReplayStyleOf(foe.style)
+        style: cardReplayStyleOf(foe.style),
+        styleName: cardReplayText(foe.styleName, 12) || null
       } : {})
     },
     outcome: outcomes.includes(raw.outcome) ? raw.outcome : null,
@@ -152918,7 +154014,8 @@ const cardReplayMake = (db, {
       deckName: foe && foe.deckName || null,
       who: foe && foe.who || null,
       ...(kind === 'cpu' ? {
-        style: cardReplayStyleOf(foe && foe.style)
+        style: cardReplayStyleOf(foe && foe.style),
+        styleName: cardReplayText(foe && foe.styleName, 12) || null
       } : {})
     },
     outcome,
@@ -166297,13 +167394,28 @@ function MonsterHeroGame() {
     } catch (error) {
       console.error('[friends] records build failed:', error && error.message ? error.message : error);
     }
+    let auto = false;
+    let show = true;
+    try {
+      const q = quickRunProgressRef.current;
+      auto = !!(q && !q.finished);
+    } catch (error) {
+      auto = false;
+    }
+    try {
+      show = (await storeGet(FRIEND_PRESENCE_SHOW_KEY, true)) !== false;
+    } catch (error) {
+      show = true;
+    }
     await sbUpsertFriendProfile(id, friendsBuildSummary({
       place: friendsPlaceOfScreen(latest.gameState),
       masuMons: latest.masuMons,
       favoriteMasuId: latest.favoriteMasuId,
       playtime: playtimeRef.current,
       message: latest.profileMessage,
-      records
+      records,
+      auto,
+      show
     }));
     await sbUpsertFriendPlaytimeDevice(id, playtimeDeviceRef.current);
   }, [friendsActive]);

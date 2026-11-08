@@ -150,7 +150,21 @@ const layoutProblems = (page) => page.evaluate(() => {
             check(`${T}マスモンは3体・先頭は1体`, n === 3 && leads === 1, `${n}体・先頭${leads}`);
           }
           if (tab === 'team') check(`${T}編成に3体`, (await page.locator('[data-assistant-masmon-team]').count()) === 3);
-          if (tab === 'deck') check(`${T}デッキの型の名前「${want.deck}」`, (await page.locator('[data-assistant-masmon-deck]').innerText().catch(() => '')).includes(want.deck));
+          if (tab === 'deck' && (await page.locator('[data-assistant-masmon-deck-styles]').count())) {
+            // カード部の3つのデッキ(印 cardGrowStyle が真): 切りかえ3つ・その助手の型に「よく使う」・押すと中身が切りかわる・名前が出る
+            const fav = await page.evaluate((id) => ASSISTANT_MASMON_CARD_STYLE[id] || 'normal', WHO);
+            const favOk = (await page.locator(`[data-assistant-masmon-deck-style="${fav}"] [data-assistant-masmon-deck-fav]`).count()) === 1 && (await page.locator('[data-assistant-masmon-deck-fav]').count()) === 1;
+            check(`${T}デッキの切りかえ3つ・「よく使う」は ${fav} だけ`, (await page.locator('[data-assistant-masmon-deck-style]').count()) === 3 && favOk);
+            const seen = [];
+            for (const sid of ['attack', 'guard', 'normal']) {
+              await page.locator(`[data-assistant-masmon-deck-style="${sid}"]`).click();
+              await page.waitForTimeout(300);
+              const name = await page.locator('[data-card-assistant-deck-name]').innerText().catch(() => '');
+              seen.push(`${sid}:${(await page.locator(`[data-card-assistant-deck-view="${sid}"]`).count())}:${name.slice(0, 12)}`);
+              if (SHOTS) await page.screenshot({ path: path.join(shotDir, `masmon-3-deck-${sid}-${v.id}.jpg`), type: 'jpeg', quality: 80 });
+            }
+            check(`${T}押すと3つのデッキの中身が切りかわり、名前が出る`, seen.every(x => /:1:.+/.test(x)), seen.join(' / '));
+          } else if (tab === 'deck') check(`${T}デッキの型の名前「${want.deck}」`, (await page.locator('[data-assistant-masmon-deck]').innerText().catch(() => '')).includes(want.deck));
           if (tab === 'taste') check(`${T}好き・苦手・好きな色が出る`, (await page.locator('[data-assistant-masmon-taste^="like:"]').count()) >= 1 && ((await page.locator('[data-assistant-masmon-taste^="dislike:"]').count()) >= 1) === (want.dis > 0) && (await page.locator('[data-assistant-masmon-color]').count()) === want.colors);
           const ng = await layoutProblems(page);
           check(`${T}「${tab}」: 端にくっつかない・はみ出さない・切れない・絵が出る`, !ng.length, ng.slice(0, 4).join(' / '));

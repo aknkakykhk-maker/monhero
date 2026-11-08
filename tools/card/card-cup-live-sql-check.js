@@ -21,6 +21,7 @@ const { execFileSync, spawnSync } = require('child_process');
 const ROOT = path.resolve(__dirname, '..', '..');
 const LIVE = fs.readFileSync(path.join(ROOT, 'docs/sql/card-cup/CARD_CUP_LIVE_APPLY.sql'), 'utf8');
 const AUTO = fs.readFileSync(path.join(ROOT, 'docs/sql/card-cup/CARD_CUP_LIVE_AUTO_APPLY.sql'), 'utf8');
+const VOID = fs.readFileSync(path.join(ROOT, 'docs/sql/card-cup/CARD_CUP_LIVE_VOID_APPLY.sql'), 'utf8');
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 
@@ -41,6 +42,11 @@ check('A2 足すだけ(DELETE・DROP・ALTER・TRUNCATE が無い)', !/\b(delete
 const granted2 = [...code2.matchAll(/grant execute on function public\.(\w+)\([^)]*\) to (\w+);/g)].map((m) => `${m[1]}:${m[2]}`);
 check('A2 サーバだけが呼べる(service_role だけに2つ)', JSON.stringify(granted2.sort()) === JSON.stringify(['card_cup_live_server_decide:service_role', 'card_cup_live_server_due:service_role']), granted2.join('・'));
 check('A2 待ち時間はサーバの関数の1か所(CUP_LIVE_IDLE_MS = 30分)', /export const CUP_LIVE_IDLE_MS = 30 \* 60000;/.test(fs.readFileSync(path.join(ROOT, 'supabase/functions/card-tournament-run/cup.js'), 'utf8')) && !/interval '30 minutes'/.test(code2));
+// A3: 無効試合(CARD_CUP_LIVE_VOID_APPLY.sql・2026-11-08)
+const code3 = VOID.split('\n').filter((l) => !/^\s*--/.test(l)).join('\n');
+check('A3 足すだけ(DELETE・DROP・ALTER・TRUNCATE が無い)', !/\b(delete\s+from|drop\s+(table|function|index)|alter\s+table|truncate)\b/i.test(code3));
+const granted3 = [...code3.matchAll(/grant execute on function public\.(\w+)\([^)]*\) to ([\w, ]+);/g)].map((m) => `${m[1]}:${m[2]}`);
+check('A3 ゲームから呼べるのは card_cup_live_void の1つだけ', JSON.stringify(granted3) === JSON.stringify(['card_cup_live_void:anon, authenticated']), granted3.join('・'));
 
 // ---- B ----
 const pgBin = ['/usr/lib/postgresql/16/bin', '/usr/lib/postgresql/15/bin', '/usr/lib/postgresql/17/bin'].find((d) => fs.existsSync(path.join(d, 'initdb')));
@@ -64,6 +70,7 @@ if (!pgBin || !canSu) {
     psql(null, path.join(ROOT, 'docs/sql/card-cup/CARD_CUP_APPLY.sql'));
     psql(null, path.join(ROOT, 'docs/sql/card-cup/CARD_CUP_LIVE_APPLY.sql'));
     psql(null, path.join(ROOT, 'docs/sql/card-cup/CARD_CUP_LIVE_AUTO_APPLY.sql'));
+    psql(null, path.join(ROOT, 'docs/sql/card-cup/CARD_CUP_LIVE_VOID_APPLY.sql'));
     const K = (o) => `'k_${o}_xxxxxxxxxxxxxxxxxxxxxxxx'`;
     psql(`insert into card_deck_entries (owner_id, key_hash, user_name, deck) select 'p'||i, md5('k_p'||i||'_xxxxxxxxxxxxxxxxxxxxxxxx'), 'P'||i, '{"monsters":["C-001"]}'::jsonb from generate_series(1,8) i;`);
     const one = (sql) => psql(sql).split('\n')[0];
@@ -164,6 +171,25 @@ if (!pgBin || !canSu) {
     check('B4 ごほうび杯は、確かめていない答えが2台そろっても決まらず食い違いになる', w1 === 'wait' && w2 === 'wait' && one(`select (live->>'dispute') from card_cup_matches where id=${mw}`) === 'true', `${w1}・${w2}`);
     check('B4 ごほうび杯でも、なぞり直しが合った答えなら決まる', one(`select card_cup_live_report(${mw},'p5',${K('p5')},0,'pvp',true,'{3,1}',null,6)`) === 'ok');
     psql(`create or replace function public.card_cup_live_reward(c public.card_cups) returns boolean language sql immutable as $$ select false $$`);
+
+    // B5 無効試合(2026-11-08 社長): 場がずれた試合は、どちらの負けにもせず食い違いの印 → 登録デッキどうしの auto で決まる
+    psql(`insert into card_deck_entries (owner_id, key_hash, user_name, deck) select o, md5('k_'||o||'_xxxxxxxxxxxxxxxxxxxxxxxx'), o, '{"monsters":["C-001"]}'::jsonb from unnest(array['pA','pB','pC']) o`);
+    const cupV = JSON.parse(one(`select card_cup_create('pA',${K('pA')},'無効杯','P1',null,'live','ko',4,true,null, date_trunc('hour', now()) + interval '2 hours')`)).id;
+    one(`select card_cup_join('${cupV}','pB',${K('pB')},'pB',null)`);
+    one(`select card_cup_join('${cupV}','pC',${K('pC')},'pC',null)`);
+    psql(`update card_cups set start_at = now() - interval '1 minute', entry_until = now() - interval '1 minute' where id = '${cupV}'`);
+    for (const o of ['pA', 'pB', 'pC']) one(`select card_cup_live_checkin('${cupV}','${o}',${K(o)})`);
+    one(`select card_cup_live_start('${cupV}','pA',${K('pA')})`);
+    const mv = psql(`select m.id||':'||ea.owner_id||':'||eb.owner_id from card_cup_matches m join card_cup_entries ea on ea.cup_id=m.cup_id and ea.seat=m.a_seat join card_cup_entries eb on eb.cup_id=m.cup_id and eb.seat=m.b_seat where m.cup_id='${cupV}' and m.winner is null and (m.live->>'ready_at') is not null limit 1`).split(':');
+    const [vid, va, vb] = mv;
+    const outsider = ['pA', 'pB', 'pC'].find((o) => o !== va && o !== vb);
+    check('B5 試合に出ていない人は無効の印を付けられない', one(`select card_cup_live_void(${vid},'${outsider}',${K(outsider)})`) === 'none');
+    check('B5 鍵が違うと付けられない', one(`select card_cup_live_void(${vid},'${va}','wrongkeyxxxxxxxxxxxxxxxxxxxx')`) === 'none');
+    check('B5 試合の席の人は印を付けられる・2人目も ok', one(`select card_cup_live_void(${vid},'${va}',${K(va)})`) === 'ok' && one(`select card_cup_live_void(${vid},'${vb}',${K(vb)})`) === 'ok');
+    check('B5 印を付けても勝ち負けは付かない', one(`select coalesce(winner::text,'null')||':'||(live->>'dispute') from card_cup_matches where id=${vid}`) === 'null:true');
+    check('B5 印の付いた試合は settle で決まらない', one(`select card_cup_live_settle('${cupV}')`) === '0');
+    check('B5 印の付いた試合は auto で決まる', one(`select card_cup_live_report(${vid},'${va}',${K(va)},1,'auto',false,'{1,3}','[[1,{"type":"auto"}]]',6)`) === 'ok' && one(`select decided from card_cup_matches where id=${vid}`) === 'auto');
+    check('B5 決まったあとは done', one(`select card_cup_live_void(${vid},'${va}',${K(va)})`) === 'done');
   } catch (e) {
     check('B 筋書きが最後まで進む', false, String(e.stderr || e.message).slice(0, 400));
   } finally {
