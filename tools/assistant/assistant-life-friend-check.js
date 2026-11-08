@@ -282,7 +282,7 @@ const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'er
     const friends = fs.readFileSync(path.join(root, 'monster-hero/src/parts/75-screen-friends.jsx'), 'utf8');
     const page = fs.readFileSync(path.join(root, 'monster-hero/src/parts/56-assistant-life-friend.jsx'), 'utf8');
     check('⑩ フレンドのプロフィールに入口がある(デッキの「このデッキと戦う」の下)', /CardShareDeckActions[\s\S]{0,400}<AssistantLifeFriendProfileVisit friendId=\{selected\.otherId\}/.test(friends));
-    check('⑩ 「🏘 フレンド」の一覧に、家が届いていないフレンドを薄く並べる(押せない)', /data-alf-house-waiting/.test(page) && /opacity-55/.test(page)); }
+    check('⑩ 「🏘 フレンド」の一覧に、家が届いていないフレンドを薄く並べる(押せない)', /data-alf-house-waiting/.test(page) && /border-dashed/.test(page)); }
 
   // ⑧ 公開の印
   const rel = fs.readFileSync(path.join(root, 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8');

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4d1857294be3c9bd
+// source-sha256: 0e56ef5c613c02ef
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -122958,16 +122958,16 @@ function AssistantLifeFriendPage({
     className: `${card} text-[11px] text-slate-400`
   }, "遊びに行けるフレンドの家はまだありません(フレンドが助手ライフを開くと、ここに並びます)。"), waiting.map(f => React.createElement("div", {
     key: f.id,
-    className: `${card} flex items-center gap-2 opacity-55`,
+    className: `${card} flex items-center gap-2 border-dashed border-slate-500/60`,
     "data-alf-house-waiting": f.id
   }, React.createElement("div", {
     className: "min-w-0 flex-1"
   }, React.createElement("p", {
-    className: "truncate text-[12px] font-black text-slate-200"
+    className: "truncate text-[12px] font-black text-slate-300"
   }, f.name, "さんの家"), React.createElement("p", {
-    className: "text-[10px] leading-snug text-slate-400"
+    className: "text-[10px] leading-snug text-slate-300"
   }, f.name, "さんが助手ライフを開くと遊びに行けます")), React.createElement("span", {
-    className: "shrink-0 rounded-xl border border-slate-600 px-2.5 py-1.5 text-[11px] font-black text-slate-400"
+    className: "shrink-0 rounded-xl border border-slate-500 bg-slate-800 px-2.5 py-1.5 text-[11px] font-black text-slate-300"
   }, "🚪 まだ")))), React.createElement("p", {
     className: sec
   }, "⚙️ 行き来の設定"), React.createElement("div", {

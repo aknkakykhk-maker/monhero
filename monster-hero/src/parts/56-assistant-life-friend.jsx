@@ -944,12 +944,12 @@ function AssistantLifeFriendPage({ life }) {
           : !waiting.length && <p className={`${card} text-[11px] text-slate-400`}>遊びに行けるフレンドの家はまだありません(フレンドが助手ライフを開くと、ここに並びます)。</p>}
         {/* まだ家が届いていないフレンドも薄く並べる(2026-11-08 社長)。押せない */}
         {waiting.map(f => (
-          <div key={f.id} className={`${card} flex items-center gap-2 opacity-55`} data-alf-house-waiting={f.id}>
+          <div key={f.id} className={`${card} flex items-center gap-2 border-dashed border-slate-500/60`} data-alf-house-waiting={f.id}>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] font-black text-slate-200">{f.name}さんの家</p>
-              <p className="text-[10px] leading-snug text-slate-400">{f.name}さんが助手ライフを開くと遊びに行けます</p>
+              <p className="truncate text-[12px] font-black text-slate-300">{f.name}さんの家</p>
+              <p className="text-[10px] leading-snug text-slate-300">{f.name}さんが助手ライフを開くと遊びに行けます</p>
             </div>
-            <span className="shrink-0 rounded-xl border border-slate-600 px-2.5 py-1.5 text-[11px] font-black text-slate-400">🚪 まだ</span>
+            <span className="shrink-0 rounded-xl border border-slate-500 bg-slate-800 px-2.5 py-1.5 text-[11px] font-black text-slate-300">🚪 まだ</span>
           </div>))}
       </div>
       <p className={sec}>⚙️ 行き来の設定</p>
