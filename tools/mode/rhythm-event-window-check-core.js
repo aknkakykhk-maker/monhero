@@ -735,9 +735,11 @@ check('STEP2の更新履歴は開発メモとして残し、未完成機能を�
 // ★2026-11-07 助手どうしの差し入れ(200P)・友情のしるし(500P)を足した(社長の決定・公開の印 assistantPeer の後ろ)
 // ★2026-11-08 助手ライフの道具(peer_cake など8種類・印 assistantLife)と家具(furn_*・印 assistantLifeFurniture)は、
 //   tools/assistant/assistant-life-gift-check.js が値段・印まで見張るので、ここでは除いて見る(オクリモノ)
-const BEAT_SHOP_FIXED=(O.RHYTHM_EVENT_POINT_SHOP_OFFERS||[]).filter(o=>o.releaseFlag!=='assistantLife'&&o.releaseFlag!=='assistantLifeFurniture');
+// ★2026-11-08 助手1人に贈る道具(solo_*・印 assistantLifeSolo)も同じく除く(オクリモノ2・assistant-life-solo-browser-check が見る)
+const LIFE_SHOP_FLAGS=['assistantLife','assistantLifeFurniture','assistantLifeSolo'];
+const BEAT_SHOP_FIXED=(O.RHYTHM_EVENT_POINT_SHOP_OFFERS||[]).filter(o=>!LIFE_SHOP_FLAGS.includes(o.releaseFlag));
 check('助手ライフの道具・家具は、それぞれの公開の印の後ろにあり、助手ライフの持ち物だけ',
-  (O.RHYTHM_EVENT_POINT_SHOP_OFFERS||[]).filter(o=>o.releaseFlag==='assistantLife'||o.releaseFlag==='assistantLifeFurniture').every(o=>o.kind==='item'&&/^(peer|furn)_[a-z]+$/.test(o.itemId||'')));
+  (O.RHYTHM_EVENT_POINT_SHOP_OFFERS||[]).filter(o=>LIFE_SHOP_FLAGS.includes(o.releaseFlag)).every(o=>o.kind==='item'&&/^(peer|furn|solo)_[a-z]+$/.test(o.itemId||'')));
 check('ビートP交換所は対象確定済みの固定16商品だけ(助手ライフの道具・家具は除く)',(()=>{
   const got=BEAT_SHOP_FIXED.map(o=>[o.id,o.itemId||'',o.grantAmount,o.cost]);
   const want=[
