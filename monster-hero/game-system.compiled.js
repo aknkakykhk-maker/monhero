@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ac55227381a517e6
+// source-sha256: a50502cfffc1f5de
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -110622,11 +110622,14 @@ function AssistantLifeRoomBed({
     const headLeft = pillow.left + 2,
       cy = pillow.top + pillow.h * 0.6 - cw / 2;
     const qx = items.length ? headLeft + 0.8 * U : pillow.left + pillow.w * 0.62;
-    const qTop = items.length ? cy - cw * 0.32 : mattTop - 14;
+    const qTop = items.length ? cy - cw * 0.42 : mattTop - 30;
     const qw = Math.max(60, left + bw - 14 - qx),
-      qh = Math.max(40, mattTop + 34 - qTop);
+      qh = Math.max(50, mattTop + 34 - qTop);
     const pid = `mhlq-${id}`;
-    const d = `M0,${qh} L0,${qh * 0.3} Q0,0 ${qw * 0.1},${qh * 0.04} C${qw * 0.2},${qh * 0.08} ${qw * 0.24},${qh * 0.3} ${qw * 0.36},${qh * 0.36}` + ` C${qw * 0.55},${qh * 0.42} ${qw * 0.68},${qh * 0.36} ${qw * 0.8},${qh * 0.44} C${qw * 0.86},${qh * 0.48} ${qw * 0.88},${qh * 0.28} ${qw * 0.95},${qh * 0.34}` + ` Q${qw},${qh * 0.38} ${qw},${qh * 0.62} L${qw},${qh} Z`;
+    const X = r => (qw * r).toFixed(1),
+      Y = r => (qh * r).toFixed(1);
+    const d = `M0,${qh} L0,${Y(0.42)} Q0,${Y(0.3)} ${X(0.05)},${Y(0.28)}` + ` C${X(0.1)},${Y(0.26)} ${X(0.12)},${Y(0.06)} ${X(0.22)},${Y(0.02)}` + ` C${X(0.32)},${Y(-0.01)} ${X(0.4)},${Y(0.04)} ${X(0.46)},${Y(0.16)}` + ` C${X(0.5)},${Y(0.24)} ${X(0.54)},${Y(0.26)} ${X(0.58)},${Y(0.22)}` + ` C${X(0.64)},${Y(0.12)} ${X(0.7)},${Y(0.1)} ${X(0.75)},${Y(0.18)}` + ` C${X(0.79)},${Y(0.26)} ${X(0.83)},${Y(0.34)} ${X(0.87)},${Y(0.3)}` + ` C${X(0.9)},${Y(0.18)} ${X(0.96)},${Y(0.14)} ${X(0.99)},${Y(0.3)}` + ` L${qw},${Y(0.62)} L${qw},${qh} Z`;
+    const folds = [[0.5, 0.24, 0.47, 0.75], [0.8, 0.3, 0.82, 0.8], [0.6, 0.2, 0.66, 0.6], [0.2, 0.06, 0.16, 0.5]];
     return React.createElement("svg", {
       "data-assistant-life-roomview-quilt": true,
       width: qw,
@@ -110637,7 +110640,7 @@ function AssistantLifeRoomBed({
         left: qx,
         top: qTop,
         overflow: 'visible',
-        filter: 'drop-shadow(0 3px 4px #0005)'
+        filter: 'drop-shadow(0 4px 5px #0006)'
       }
     }, React.createElement("defs", null, React.createElement("pattern", {
       id: pid,
@@ -110663,23 +110666,49 @@ function AssistantLifeRoomBed({
     }, React.createElement("stop", {
       offset: "0",
       stopColor: "#fff",
-      stopOpacity: ".35"
+      stopOpacity: ".42"
     }), React.createElement("stop", {
-      offset: ".7",
-      stopColor: "#000",
+      offset: ".45",
+      stopColor: "#fff",
       stopOpacity: "0"
+    }), React.createElement("stop", {
+      offset: ".8",
+      stopColor: "#000",
+      stopOpacity: ".12"
     }), React.createElement("stop", {
       offset: "1",
       stopColor: "#000",
-      stopOpacity: ".22"
+      stopOpacity: ".3"
     }))), React.createElement("path", {
       d: d,
       fill: `url(#${pid})`
     }), React.createElement("path", {
       d: d,
       fill: `url(#${pid}-s)`
+    }), folds.map(([x1, y1, x2, y2], i) => React.createElement("path", {
+      key: i,
+      d: `M${X(x1)},${Y(y1)} Q${X((x1 + x2) / 2 + 0.02)},${Y((y1 + y2) / 2)} ${X(x2)},${Y(y2)}`,
+      fill: "none",
+      stroke: "#000",
+      strokeOpacity: ".16",
+      strokeWidth: "3",
+      strokeLinecap: "round"
+    })), React.createElement("path", {
+      d: `M${X(0.18)},${Y(0.07)} C${X(0.26)},${Y(0.02)} ${X(0.36)},${Y(0.03)} ${X(0.42)},${Y(0.1)}`,
+      fill: "none",
+      stroke: "#fff",
+      strokeOpacity: ".5",
+      strokeWidth: "3",
+      strokeLinecap: "round"
     }), React.createElement("path", {
-      d: `M3,${qh} L3,${qh * 0.3} Q3,3 ${qw * 0.1},${qh * 0.06}`,
+      d: `M${X(0.66)},${Y(0.15)} C${X(0.69)},${Y(0.12)} ${X(0.72)},${Y(0.13)} ${X(0.74)},${Y(0.17)}`,
+      fill: "none",
+      stroke: "#fff",
+      strokeOpacity: ".45",
+      strokeWidth: "2.5",
+      strokeLinecap: "round"
+    }), React.createElement("path", {
+      d: `M3,${qh} L3,${Y(0.42)} Q3,${Y(0.31)} ${X(0.05)},${Y(0.3)}`,
       fill: "none",
       stroke: "#ffffff",
       strokeOpacity: ".85",

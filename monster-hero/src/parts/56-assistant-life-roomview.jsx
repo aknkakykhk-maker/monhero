@@ -164,22 +164,35 @@ function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
         const U = U0(F), ch = U * 1.32, cw = U * 1.2;
         const headLeft = pillow.left + 2, cy = pillow.top + pillow.h * 0.6 - cw / 2;
         const qx = items.length ? headLeft + 0.8 * U : pillow.left + pillow.w * 0.62; // 目のあたりから右(顎の側)を覆う
-        const qTop = items.length ? cy - cw * 0.32 : mattTop - 14;
-        const qw = Math.max(60, left + bw - 14 - qx), qh = Math.max(40, mattTop + 34 - qTop);
+        // 胴体(胸〜腰)がいちばん高く、腰で少し下がり、ひざの山・すねで下がり・足先でまたふくらむ(2026-11-08 社長「足の方とか胴体分を意識して膨らませたい」)
+        const qTop = items.length ? cy - cw * 0.42 : mattTop - 30; // 胴体のいちばん高い所は頭の上の端くらい
+        const qw = Math.max(60, left + bw - 14 - qx), qh = Math.max(50, mattTop + 34 - qTop);
         const pid = `mhlq-${id}`;
-        const d = `M0,${qh} L0,${qh * 0.3} Q0,0 ${qw * 0.1},${qh * 0.04} C${qw * 0.2},${qh * 0.08} ${qw * 0.24},${qh * 0.3} ${qw * 0.36},${qh * 0.36}`
-          + ` C${qw * 0.55},${qh * 0.42} ${qw * 0.68},${qh * 0.36} ${qw * 0.8},${qh * 0.44} C${qw * 0.86},${qh * 0.48} ${qw * 0.88},${qh * 0.28} ${qw * 0.95},${qh * 0.34}`
-          + ` Q${qw},${qh * 0.38} ${qw},${qh * 0.62} L${qw},${qh} Z`;
+        const X = (r) => (qw * r).toFixed(1), Y = (r) => (qh * r).toFixed(1);
+        const d = `M0,${qh} L0,${Y(0.42)} Q0,${Y(0.3)} ${X(0.05)},${Y(0.28)}`
+          + ` C${X(0.1)},${Y(0.26)} ${X(0.12)},${Y(0.06)} ${X(0.22)},${Y(0.02)}`   // 肩から胸へ
+          + ` C${X(0.32)},${Y(-0.01)} ${X(0.4)},${Y(0.04)} ${X(0.46)},${Y(0.16)}`  // 胸〜腰のいちばん高いふくらみ
+          + ` C${X(0.5)},${Y(0.24)} ${X(0.54)},${Y(0.26)} ${X(0.58)},${Y(0.22)}`   // 腰のくぼみ
+          + ` C${X(0.64)},${Y(0.12)} ${X(0.7)},${Y(0.1)} ${X(0.75)},${Y(0.18)}`    // ひざの山
+          + ` C${X(0.79)},${Y(0.26)} ${X(0.83)},${Y(0.34)} ${X(0.87)},${Y(0.3)}`   // すね
+          + ` C${X(0.9)},${Y(0.18)} ${X(0.96)},${Y(0.14)} ${X(0.99)},${Y(0.3)}`    // 足先のふくらみ
+          + ` L${qw},${Y(0.62)} L${qw},${qh} Z`;
+        // しわ(くぼみから下へ流れる影)
+        const folds = [[0.5, 0.24, 0.47, 0.75], [0.8, 0.3, 0.82, 0.8], [0.6, 0.2, 0.66, 0.6], [0.2, 0.06, 0.16, 0.5]];
         return (
-          <svg data-assistant-life-roomview-quilt width={qw} height={qh} viewBox={`0 0 ${qw} ${qh}`} style={{ position: 'absolute', left: qx, top: qTop, overflow: 'visible', filter: 'drop-shadow(0 3px 4px #0005)' }}>
+          <svg data-assistant-life-roomview-quilt width={qw} height={qh} viewBox={`0 0 ${qw} ${qh}`} style={{ position: 'absolute', left: qx, top: qTop, overflow: 'visible', filter: 'drop-shadow(0 4px 5px #0006)' }}>
             <defs>
               <pattern id={pid} width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="14" height="14" fill={quilt[0]}/><rect width="2" height="14" fill={quilt[1]} opacity=".45"/></pattern>
-              <linearGradient id={`${pid}-s`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff" stopOpacity=".35"/><stop offset=".7" stopColor="#000" stopOpacity="0"/><stop offset="1" stopColor="#000" stopOpacity=".22"/></linearGradient>
+              <linearGradient id={`${pid}-s`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff" stopOpacity=".42"/><stop offset=".45" stopColor="#fff" stopOpacity="0"/><stop offset=".8" stopColor="#000" stopOpacity=".12"/><stop offset="1" stopColor="#000" stopOpacity=".3"/></linearGradient>
             </defs>
             <path d={d} fill={`url(#${pid})`}/>
             <path d={d} fill={`url(#${pid}-s)`}/>
+            {folds.map(([x1, y1, x2, y2], i) => <path key={i} d={`M${X(x1)},${Y(y1)} Q${X((x1 + x2) / 2 + 0.02)},${Y((y1 + y2) / 2)} ${X(x2)},${Y(y2)}`} fill="none" stroke="#000" strokeOpacity=".16" strokeWidth="3" strokeLinecap="round"/>)}
+            {/* ふくらみの上の光 */}
+            <path d={`M${X(0.18)},${Y(0.07)} C${X(0.26)},${Y(0.02)} ${X(0.36)},${Y(0.03)} ${X(0.42)},${Y(0.1)}`} fill="none" stroke="#fff" strokeOpacity=".5" strokeWidth="3" strokeLinecap="round"/>
+            <path d={`M${X(0.66)},${Y(0.15)} C${X(0.69)},${Y(0.12)} ${X(0.72)},${Y(0.13)} ${X(0.74)},${Y(0.17)}`} fill="none" stroke="#fff" strokeOpacity=".45" strokeWidth="2.5" strokeLinecap="round"/>
             {/* 顔の側の折り返し */}
-            <path d={`M3,${qh} L3,${qh * 0.3} Q3,3 ${qw * 0.1},${qh * 0.06}`} fill="none" stroke="#ffffff" strokeOpacity=".85" strokeWidth="9" strokeLinecap="round"/>
+            <path d={`M3,${qh} L3,${Y(0.42)} Q3,${Y(0.31)} ${X(0.05)},${Y(0.3)}`} fill="none" stroke="#ffffff" strokeOpacity=".85" strokeWidth="9" strokeLinecap="round"/>
           </svg>); })()}
       {items.length > 0 && <span style={{ position: 'absolute', left: pillow.left + pillow.w * 0.3, top: pillow.top - U0(F) * 1.2, fontSize: 22 }}>💤</span>}
     </div>);
