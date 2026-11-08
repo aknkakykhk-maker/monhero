@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fcc87073fe36571f
+// generated-sha256: b8c50c5a5fa79d5f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -115267,6 +115267,30 @@ const createAnimationStyle = () => {
       /* 話している助手の顔も、上部ゾーンのゲストの顔と同じく 0.6倍 */
       [data-event-story][data-story-zones] [data-story-speaker] { zoom: .6; }
     }
+    /* モンヒロビートの「🔄 横」(端末は縦のまま、絵を回す)。端末は縦なので上の「縦」の決まりが効いてしまい、
+       回した画面(高さ 390 など)に縦の窓(266〜300px)とステージ(上から 130px ほど)が入りきらず、前の話し手の吹き出しが窓の題に重なっていた
+       (2026-11-08 ミハリ・レフェリーくん。tools/ui/story-zone-rotation-check.js)。回しているときは、横の低い画面と同じ決まりにする。
+       幅は器が渡す --mh-vw(回した画面の幅 = 端末の高さ。rhythm-mode.js の frameStyle)で測る */
+    [data-mh-view-rotation="true"] [data-story-sheet][data-story-sheet] { padding: .5rem .75rem; padding-bottom: calc(.5rem + env(safe-area-inset-bottom)) !important; }
+    [data-mh-view-rotation="true"] [data-story-sheet] [data-story-body] > p:first-child { margin-bottom: .25rem; }
+    [data-mh-view-rotation="true"] [data-story-sheet] [data-story-cast][data-story-cast] { margin-bottom: .375rem; zoom: .72; }
+    [data-mh-view-rotation="true"] [data-story-sheet] [data-story-buttons][data-story-buttons] { margin-top: .5rem; }
+    [data-mh-view-rotation="true"] [data-story-sheet] [data-story-buttons] > button { min-height: 44px; }
+    [data-mh-view-rotation="true"] [data-story-stage][data-story-stage] { top: calc(env(safe-area-inset-top) + 6px) !important; }
+    [data-mh-view-rotation="true"] [data-story-stage] [data-story-guest][data-story-guest] { zoom: .6; }
+    [data-mh-view-rotation="true"] [data-story-stage] [data-story-guest-bubble][data-story-guest-bubble] { margin-top: 2px !important; padding: 4px 10px; }
+    [data-mh-view-rotation="true"] [data-story-stage] [data-story-guest-bubble] > span.block { font-size: 12px; line-height: 1.45; margin-top: 2px; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-has-stage] [data-story-sheet][data-story-sheet] { max-height: calc(var(--mh-vh) - var(--story-stage-bottom, 120px) - 6px) !important; }
+    [data-mh-view-rotation="true"] [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 8px) !important; bottom: calc(env(safe-area-inset-bottom) + 8px); align-items: center; justify-content: space-between; gap: 0; padding: 0 14px; }
+    [data-mh-view-rotation="true"] [data-story-monster][data-story-monster] { height: min(70%, calc(((var(--mh-vw, 100vw) - 28rem) / 2 - 30px) / 1.14), 176px); }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-zones] [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 8px) !important; bottom: calc(env(safe-area-inset-bottom) + 8px) !important; align-items: center; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-zones] [data-story-monster][data-story-monster] { height: min(70%, calc(((var(--mh-vw, 100vw) - 28rem) / 2 - 30px) / 1.14), 176px); aspect-ratio: auto; overflow: visible; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-zones] [data-story-monster^="Erubin"] img { object-fit: contain; object-position: 50% 50%; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-zones] [data-story-stage][data-story-stage] { top: calc(env(safe-area-inset-top) + 6px) !important; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-zones] [data-story-guest-bubble][data-story-guest-bubble] { height: 84px; overflow: hidden; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-zones] [data-story-sheet][data-story-sheet] { height: calc(var(--mh-vh) - 96px - env(safe-area-inset-top)) !important; max-height: none !important; justify-content: flex-end; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-zones] [data-story-line-box][data-story-line-box] { height: 120px; flex-shrink: 0; overflow: hidden; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-zones] [data-story-speaker][data-story-speaker] { zoom: .6; }
     @media (prefers-reduced-motion: reduce) { [data-story-monster] { animation: none !important; } }
     /* お話の締め(終わりの札。2026-11-03)。暗くして、題字のように「第◯話 ～副題～ おわり」を出す。'pull' は最後の場面を引いて暗くしてから */
     @keyframes storyEndDim { 0% { background: rgba(2,6,23,0); } 100% { background: rgba(2,6,23,.9); } }
