@@ -9,7 +9,9 @@ import {
   DEFAULT_ALLOWED_ORIGINS,
   handleRequest,
   loadDigest,
+  PLAN_TOTAL_DAILY_LIMIT,
   TOTAL_DAILY_LIMIT,
+  USER_PLAN_DAILY_LIMIT,
   USER_DECK_DAILY_LIMIT,
   USER_TALK_DAILY_LIMIT,
 } from "./core.js";
@@ -30,6 +32,9 @@ const limits = {
   talk: envInt("CARD_TALK_USER_DAILY_LIMIT", USER_TALK_DAILY_LIMIT),
   deck: envInt("CARD_TALK_DECK_DAILY_LIMIT", USER_DECK_DAILY_LIMIT),
   total: envInt("CARD_TALK_TOTAL_DAILY_LIMIT", TOTAL_DAILY_LIMIT),
+  // デッキを組む(deckPlan)。全員合わせて1日100回(社長の決定)・1人1日40回。Secrets で後から変えられる
+  plan: envInt("CARD_DECK_PLAN_USER_DAILY_LIMIT", USER_PLAN_DAILY_LIMIT),
+  planTotal: envInt("CARD_DECK_PLAN_TOTAL_DAILY_LIMIT", PLAN_TOTAL_DAILY_LIMIT),
 };
 const allowedOrigins = (Deno.env.get("CARD_TALK_ALLOWED_ORIGINS") ?? "")
   .split(",").map((s) => s.trim()).filter(Boolean);
@@ -42,15 +47,19 @@ const corsHeaders = (origin: string | null) => ({
   "Vary": "Origin",
 });
 
+// デッキを組む(bucket 'plan')は別の表で数える(全員の合計をひとこと・デッキ相談と混ぜない)。
+//   supabase/migrations/202611080001_card_deck_plan_usage.sql の card_deck_plan_take / card_deck_plan_refund
 const take = async (breederId: string, bucket: string, userLimit: number, totalLimit: number) => {
-  const { data, error } = await supabase.rpc("card_assistant_talk_take", {
-    p_breeder: breederId, p_bucket: bucket, p_user_limit: userLimit, p_total_limit: totalLimit,
-  });
+  const { data, error } = bucket === "plan"
+    ? await supabase.rpc("card_deck_plan_take", { p_breeder: breederId, p_user_limit: userLimit, p_total_limit: totalLimit })
+    : await supabase.rpc("card_assistant_talk_take", { p_breeder: breederId, p_bucket: bucket, p_user_limit: userLimit, p_total_limit: totalLimit });
   if (error) throw new Error("take");
   return data;
 };
 const refund = async (breederId: string, bucket: string) => {
-  const { error } = await supabase.rpc("card_assistant_talk_refund", { p_breeder: breederId, p_bucket: bucket });
+  const { error } = bucket === "plan"
+    ? await supabase.rpc("card_deck_plan_refund", { p_breeder: breederId })
+    : await supabase.rpc("card_assistant_talk_refund", { p_breeder: breederId, p_bucket: bucket });
   if (error) throw new Error("refund");
 };
 // 本文を含まない記録だけ
