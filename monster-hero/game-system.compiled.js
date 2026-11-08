@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c2c9a4583d36a8ee
+// source-sha256: 467854f84383118e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -110443,6 +110443,95 @@ const ASSISTANT_LIFE_ROOM_QUILT = Object.freeze({
   sorashido: ['#fef08a', '#facc15'],
   erubin: ['#e2e8f0', '#94a3b8']
 });
+const ASSISTANT_LIFE_SLEEP_EYES = Object.freeze({
+  kiki: {
+    ang: -3,
+    line: '#4a2030',
+    eyes: [[0.4492, 0.4868, 0.0579, 0.0703, '#fccfc3'], [0.5592, 0.4766, 0.0579, 0.0664, '#fddbcf']]
+  },
+  momosuke: {
+    ang: -17,
+    line: '#5a3a28',
+    eyes: [[0.4254, 0.4363, 0.0918, 0.0781, '#e8b8b2'], [0.5967, 0.3836, 0.0918, 0.0859, '#fcece4']]
+  },
+  atsu: {
+    ang: -27,
+    line: '#3a1f2a',
+    eyes: [[0.4188, 0.3125, 0.0768, 0.0391, '#efa696'], [0.5661, 0.2553, 0.0911, 0.0342, '#f9ccb8']]
+  }
+});
+function AssistantLifeSleepEyes({
+  pid,
+  src,
+  w,
+  h,
+  style
+}) {
+  const def = ASSISTANT_LIFE_SLEEP_EYES[pid];
+  const who = typeof assistantById === 'function' ? assistantById(pid) : null;
+  if (!def || !who || !who.imagePrefix || !String(src || '').includes(`/${who.imagePrefix}_normal`)) return null;
+  const fid = `mhlse-${pid}`;
+  return React.createElement("svg", {
+    "data-assistant-life-roomview-sleep-eyes": pid,
+    width: w,
+    height: h,
+    viewBox: `0 0 ${w} ${h}`,
+    style: {
+      position: 'absolute',
+      overflow: 'visible',
+      pointerEvents: 'none',
+      ...style
+    }
+  }, React.createElement("defs", null, React.createElement("filter", {
+    id: fid,
+    x: "-50%",
+    y: "-50%",
+    width: "200%",
+    height: "200%"
+  }, React.createElement("feGaussianBlur", {
+    stdDeviation: Math.max(0.6, w * 0.006)
+  }))), def.eyes.map(([fx, fy, fw, fh, skin], i) => {
+    const cx = fx * w,
+      cy = fy * h,
+      ew = fw * w,
+      eh = fh * h;
+    const outer = i === 0 ? -1 : 1;
+    const lw = Math.max(1.1, eh * 0.11);
+    const lid = `M${cx - ew * 0.5},${cy} Q${cx},${cy + eh * 0.42} ${cx + ew * 0.5},${cy}`;
+    const ox = cx + outer * ew * 0.42,
+      oy = cy + eh * 0.08;
+    return React.createElement("g", {
+      key: i,
+      transform: `rotate(${def.ang} ${cx} ${cy})`
+    }, React.createElement("ellipse", {
+      cx: cx,
+      cy: cy + eh * 0.04,
+      rx: ew * 0.6,
+      ry: eh * 0.62,
+      fill: skin,
+      filter: `url(#${fid})`
+    }), React.createElement("ellipse", {
+      cx: cx,
+      cy: cy + eh * 0.04,
+      rx: ew * 0.54,
+      ry: eh * 0.54,
+      fill: skin
+    }), React.createElement("path", {
+      d: lid,
+      fill: "none",
+      stroke: def.line,
+      strokeWidth: lw,
+      strokeLinecap: "round"
+    }), [0, 1, 2].map(k => React.createElement("path", {
+      key: k,
+      d: `M${ox - outer * k * ew * 0.12},${oy + k * eh * 0.07} l${outer * ew * (0.14 - k * 0.02)},${eh * (0.16 + k * 0.03)}`,
+      fill: "none",
+      stroke: def.line,
+      strokeWidth: lw * 0.8,
+      strokeLinecap: "round"
+    })));
+  }));
+}
 function AssistantLifeRoomBed({
   id,
   W,
@@ -110494,7 +110583,7 @@ function AssistantLifeRoomBed({
       alive = false;
     };
   }, [key]);
-  const F = Math.min(25, W * 0.066);
+  const F = Math.min(30, W * 0.078);
   const night = look === 'night';
   return React.createElement("div", {
     "aria-hidden": "true",
@@ -110615,6 +110704,16 @@ function AssistantLifeRoomBed({
         maxWidth: 'none',
         filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})`
       }
+    }), React.createElement(AssistantLifeSleepEyes, {
+      pid: x.pid,
+      src: x.src,
+      w: r.width,
+      h: r.height,
+      style: {
+        left: r.left + cw / 2,
+        top: r.top - y0,
+        filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})`
+      }
     }));
   }), (() => {
     const U = U0(F),
@@ -110622,7 +110721,7 @@ function AssistantLifeRoomBed({
       cw = U * 1.2;
     const headLeft = pillow.left + 2,
       cy = pillow.top + pillow.h * 0.6 - cw / 2;
-    const qx = items.length ? headLeft + 0.8 * U : pillow.left + pillow.w * 0.62;
+    const qx = items.length ? headLeft + 1.0 * U : pillow.left + pillow.w * 0.62;
     const qTop = items.length ? cy - cw * 0.42 : mattTop - 30;
     const qw = Math.max(60, left + bw - 14 - qx),
       qh = Math.max(50, mattTop + 34 - qTop);
