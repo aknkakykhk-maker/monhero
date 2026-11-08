@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1be88a81542f9325
+// generated-sha256: b3b96bb092716f4f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -63957,7 +63957,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
             <div className="mhl-body" style={{ flex: '0 0 64%' }}>{tabBody}</div>
             <div className="flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2">
               {header}
-              {quickRunStrip && <div className="-mx-2.5 shrink-0" data-assistant-life-quick-strip>{quickRunStrip}</div>}
+              {quickRunStrip && <div className="shrink-0" data-assistant-life-quick-strip>{quickRunStrip}</div>}
               {note && <p data-assistant-life-note className="rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1 text-[10.5px] font-bold text-sky-100">{note}</p>}
               {tiles}
               {icons}
