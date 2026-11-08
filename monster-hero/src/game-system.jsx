@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2dc936d9e50962fd
+// generated-sha256: 4d6266b43b943610
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -64841,6 +64841,40 @@ function AssistantLifeRoomFront({ kind, cx, top, w, items = [] }) {
 // 寝ているときのベッド(2026-11-08 社長「寝ている感じがしない」): 横から見たベッド(頭板・枕・掛け布団・脚)に、頭を横にして枕にのせる。
 //   頭は立ち絵から「頭のてっぺんの少し上〜顎の少し下」だけを切り出して倒す(目の下で切らない)。首から下は掛け布団の下
 const ASSISTANT_LIFE_ROOM_QUILT = Object.freeze({ mua: ['#fbcfe8', '#f472b6'], kiki: ['#ddd6fe', '#a78bfa'], momosuke: ['#fed7aa', '#fb923c'], dra: ['#bbf7d0', '#4ade80'], atsu: ['#fecaca', '#ef4444'], kyuko: ['#bae6fd', '#38bdf8'], sorashido: ['#fef08a', '#facc15'], erubin: ['#e2e8f0', '#94a3b8'] });
+// 寝ているときの閉じた目(2026-11-08 社長「寝てるときは目を閉じるようにできないの？ どらちゃんは眼鏡だからそのままでいい」)。
+//   寝顔の絵は無いので、ふつうの顔(normal)の絵の上に、まわりの肌の色で目をふさぎ、閉じたまぶたの線(下向きの弧)とまつ毛を描く。
+//   描くのは目を開いた絵の きき・ももすけ・あつ だけ(みゅあ・きゅうこ・ソラシド・えるびんは元から目を閉じた絵、ドラは眼鏡)。
+//   eyes … [x, y, 幅, 高さ, 肌の色](絵の幅・高さに対する割合。左右の目)/ang … 顔の傾き(度)/line … まぶたの線の色。測り方: 絵を目盛りつきで切り出して手で読んだ
+const ASSISTANT_LIFE_SLEEP_EYES = Object.freeze({
+  kiki: { ang: -3, line: '#4a2030', eyes: [[0.4492, 0.4868, 0.0579, 0.0703, '#fccfc3'], [0.5592, 0.4766, 0.0579, 0.0664, '#fddbcf']] },
+  momosuke: { ang: -17, line: '#5a3a28', eyes: [[0.4254, 0.4363, 0.0918, 0.0781, '#e8b8b2'], [0.5967, 0.3836, 0.0918, 0.0859, '#fcece4']] },
+  atsu: { ang: -27, line: '#3a1f2a', eyes: [[0.4188, 0.3125, 0.0768, 0.0391, '#efa696'], [0.5661, 0.2553, 0.0911, 0.0342, '#f9ccb8']] },
+});
+function AssistantLifeSleepEyes({ pid, src, w, h, style }) {
+  const def = ASSISTANT_LIFE_SLEEP_EYES[pid];
+  const who = typeof assistantById === 'function' ? assistantById(pid) : null;
+  // 着替えなど別の絵では目の位置がちがうので描かない(その助手のふつうの顔の絵のときだけ)
+  if (!def || !who || !who.imagePrefix || !String(src || '').includes(`/${who.imagePrefix}_normal`)) return null;
+  const fid = `mhlse-${pid}`;
+  return (
+    <svg data-assistant-life-roomview-sleep-eyes={pid} width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ position: 'absolute', overflow: 'visible', pointerEvents: 'none', ...style }}>
+      <defs><filter id={fid} x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation={Math.max(0.6, w * 0.006)}/></filter></defs>
+      {def.eyes.map(([fx, fy, fw, fh, skin], i) => {
+        const cx = fx * w, cy = fy * h, ew = fw * w, eh = fh * h;
+        const outer = i === 0 ? -1 : 1; // 外側(見て左の目は左・右の目は右)
+        const lw = Math.max(1.1, eh * 0.11);
+        const lid = `M${cx - ew * 0.5},${cy} Q${cx},${cy + eh * 0.42} ${cx + ew * 0.5},${cy}`;
+        const ox = cx + outer * ew * 0.42, oy = cy + eh * 0.08;
+        return (
+          <g key={i} transform={`rotate(${def.ang} ${cx} ${cy})`}>
+            <ellipse cx={cx} cy={cy + eh * 0.04} rx={ew * 0.6} ry={eh * 0.62} fill={skin} filter={`url(#${fid})`}/>
+            <ellipse cx={cx} cy={cy + eh * 0.04} rx={ew * 0.54} ry={eh * 0.54} fill={skin}/>
+            <path d={lid} fill="none" stroke={def.line} strokeWidth={lw} strokeLinecap="round"/>
+            {[0, 1, 2].map(k => <path key={k} d={`M${ox - outer * k * ew * 0.12},${oy + k * eh * 0.07} l${outer * ew * (0.14 - k * 0.02)},${eh * (0.16 + k * 0.03)}`} fill="none" stroke={def.line} strokeWidth={lw * 0.8} strokeLinecap="round"/>)}
+          </g>); })}
+    </svg>);
+}
+
 function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
   const bw = Math.min(W * 0.8, 340), left = W / 2 - bw / 2, bottom = floorY + 58, mattTop = bottom - 50;
   const quilt = ASSISTANT_LIFE_ROOM_QUILT[id] || ASSISTANT_LIFE_ROOM_QUILT.mua;
@@ -64849,7 +64883,7 @@ function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
   const items = sleepers.map(pid => { const a = assistantById(pid); if (!a) return null; const src = assistantFullImage(a, 'normal'); return { pid, who: a, src, face: assistantLifeRoomFaceOf(pid, src) }; }).filter(Boolean);
   const key = items.map(x => x.src).join('|');
   React.useEffect(() => { let alive = true; Promise.all(items.map(x => (typeof assistantLifeStandBox === 'function' ? assistantLifeStandBox(x.src) : Promise.resolve(null)))).then(bs => { if (!alive) return; const o = {}; items.forEach((x, i) => { o[x.src] = bs[i] || { t: 0, b: 1, l: 0, r: 1, ar: 0.7 }; }); setBoxes(o); }); return () => { alive = false; }; }, [key]);
-  const F = Math.min(25, W * 0.066); // 顔の大きさ(m=1 の人の目から顎)
+  const F = Math.min(30, W * 0.078); // 顔の大きさ(m=1 の人の目から顎)。閉じた目が見える大きさ
   const night = look === 'night';
   return (
     <div aria-hidden="true" data-assistant-life-roomview-front="bed" className="pointer-events-none absolute inset-0">
@@ -64876,12 +64910,13 @@ function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
           <div key={x.pid} data-assistant-life-roomview-sleeper={x.pid} style={{ position: 'absolute', left: cx - cw / 2, top: cy - ch / 2, width: cw, height: ch, transform: 'rotate(-78deg)', transformOrigin: '50% 50%', overflow: 'hidden',
             WebkitMaskImage: 'linear-gradient(#000 82%,transparent)', maskImage: 'linear-gradient(#000 82%,transparent)' }}>
             <img src={x.src} alt="" draggable={false} style={{ position: 'absolute', left: r.left + cw / 2, top: r.top - y0, width: r.width, height: r.height, maxWidth: 'none', filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})` }}/>
+            <AssistantLifeSleepEyes pid={x.pid} src={x.src} w={r.width} h={r.height} style={{ left: r.left + cw / 2, top: r.top - y0, filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})` }}/>
           </div>); })}
       {/* 掛け布団(2026-11-08 社長「布団を膨らませて顔にちょっとかかる感じに」): 肩・体・足のふくらみのある形で、顔の下半分〜目のあたりまでかぶせる(髪と頭のてっぺんは見せる) */}
       {(() => {
         const U = U0(F), ch = U * 1.32, cw = U * 1.2;
         const headLeft = pillow.left + 2, cy = pillow.top + pillow.h * 0.6 - cw / 2;
-        const qx = items.length ? headLeft + 0.8 * U : pillow.left + pillow.w * 0.62; // 目のあたりから右(顎の側)を覆う
+        const qx = items.length ? headLeft + 1.0 * U : pillow.left + pillow.w * 0.62; // 閉じた目が見える所から右(顎の側)を覆う(2026-11-08 社長「目を閉じる」)
         // 胴体(胸〜腰)がいちばん高く、腰で少し下がり、ひざの山・すねで下がり・足先でまたふくらむ(2026-11-08 社長「足の方とか胴体分を意識して膨らませたい」)
         const qTop = items.length ? cy - cw * 0.42 : mattTop - 30; // 胴体のいちばん高い所は頭の上の端くらい
         const qw = Math.max(60, left + bw - 14 - qx), qh = Math.max(50, mattTop + 34 - qTop);
@@ -69638,6 +69673,9 @@ function AlfFriendHouseView({ friend, onClose }) {
   // 訪ねているあいだは、自分の「いまの状態」を「🏘 フレンドの家に遊びに行っている」にする(持ち主の名前は送らない・34-friends-api)
   React.useEffect(() => { if (typeof friendsSetLifeVisit !== 'function') return undefined; friendsSetLifeVisit(true); return () => friendsSetLifeVisit(false); }, []);
   const [roomId, setRoomId] = React.useState(null);
+  // 部屋を大きく見る(2026-11-08 社長「フレンドの家も同じ大きな部屋で見る」・ナカヨシ9 の AssistantLifeRoomScene)。縦は下へ送ると今までの中身
+  const rvScrollRef = React.useRef(null);
+  const rvSheetRef = React.useRef(null);
   const [noteText, setNoteText] = React.useState('');
   const [talk, setTalk] = React.useState(null); // { aid, text, step }  step 0=あいさつ(返事を選ぶ) 1=反応
   const [talked, setTalked] = React.useState([]);
@@ -69732,17 +69770,44 @@ function AlfFriendHouseView({ friend, onClose }) {
       <AssistantLifeHouseArt width={houseW} land={land} look={look} rooms={rooms} metSet={metSet} onOpen={(id) => { setTalk(null); setLeaving(null); setRoomId(id); }}
         diary={{ items: [...diaryItems].reverse().map(d => ({ t: d.t, text: d.x })) }} pop={false} onBoard={() => setBoardOpen(true)} hname={`🏡 ${friend.name}さんの家`} other={otherPut}/>
     </div>);
+  // 大きな部屋に渡すもの: いる助手・寝ている・留守の札・贈られた家具・写したマスモン・話しかけたときの吹き出し
+  const rvOk = typeof AssistantLifeRoomScene === 'function';
+  const rvToSheet = () => { try { const box = rvScrollRef.current, el = rvSheetRef.current; if (box && el) box.scrollTo({ top: el.offsetTop - 8, behavior: 'smooth' }); } catch (_) {} };
+  const rvPlace = r0 && r0.p && typeof assistantLifePlaceShow === 'function' ? `${(typeof ASSISTANT_LIFE_PLACE_ICON !== 'undefined' && ASSISTANT_LIFE_PLACE_ICON[r0.p]) || '🚶'} ${assistantLifePlaceShow(r0.p)}へ` : '🚶 おでかけ中';
+  const rvFurn = !roomId ? [] : (() => { const fu = putOf(roomId) || {}; return [['c', 'ceil'], ['w', 'wall'], ['f', 'floor']].map(([k, slot]) => { const f = fu[k] && typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(fu[k]) : null; return f ? { slot, key: fu[k], emoji: f.emoji, name: f.name } : null; }).filter(Boolean); })();
+  const rvTeam = !roomId ? [] : masmonOf(roomId).map(t => ({ monster: t.monster, nick: t.nick, colors: t.dye.colors, lead: t.lead }));
+  const rvAct = (k, label, cls, fn, dis = false) => <button key={k} type="button" data-alf-visit-roomview-act={k} disabled={dis} onClick={fn} className={`rounded-xl px-1 py-2 text-[12px] font-black text-white shadow active:scale-95 disabled:opacity-40 ${cls}`}>{label}</button>;
+  const rvDock = land || !roomId ? null : (
+    <div className="grid grid-cols-3 gap-1.5" data-alf-visit-roomview-dock>
+      {rvAct('talk', roomState === 'sleep' ? '💤 おやすみ中' : '💬 話しかける', 'bg-gradient-to-br from-sky-400 to-indigo-500', () => { greet(roomId); setTimeout(rvToSheet, 60); }, roomState !== 'home')}
+      {rvAct('sheet', '👀 くわしく', 'bg-gradient-to-br from-rose-400 to-amber-500', rvToSheet)}
+      {rvAct('note', '✉️ 一言', 'bg-amber-500', () => { setRoomId(null); setNoteWarn(''); setLeaving(roomId); }, can !== 'ok' || !!done)}
+    </div>);
+  const rvScene = rvOk && roomId && r0 ? (
+    <AssistantLifeRoomScene id={roomId} look={look} land={land} people={roomState === 'out' ? [] : [roomId]} sleepIds={roomState === 'sleep' ? [roomId] : []}
+      away={roomState === 'out' ? { title: rvPlace, sub: 'いまは家にいない' } : null} team={rvTeam} furn={rvFurn}
+      bubble={talk && talk.aid === roomId ? talk.text : ''} title={`${alfTheirLabel(friend.name, roomId)}の部屋`} sub={`🏘 ${friend.name}さんの家`}
+      onPerson={roomState === 'home' ? () => { greet(roomId); setTimeout(rvToSheet, 60); } : () => rvToSheet()} dock={rvDock} padLeft={78}/>) : null;
+  const rvSheetW = land && vw < 760 ? '50%' : '42%';
+  const closeRoom = () => { setRoomId(null); setTalk(null); };
   const sheet = roomId && r0 ? (
     <div className="absolute inset-0" style={{ zIndex: 30 }} data-alf-visit-sheet={roomId}>
-      <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/55" onClick={() => { setRoomId(null); setTalk(null); }}/>
-      <div className="mhl-sheet" style={land ? { left: 'auto', width: '44%', top: 0, maxHeight: '100%', paddingTop: 92, borderRadius: '22px 0 0 22px' } : { maxHeight: 'calc(100% - 96px)' }}>
+      {!rvScene && <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/55" onClick={closeRoom}/>}
+      {rvScene && <button type="button" aria-label="閉じる" data-alf-visit-roomview-close onClick={closeRoom} className="absolute z-[40] rounded-xl border border-amber-300/60 bg-slate-950/85 px-2.5 py-1.5 text-[12px] font-black text-amber-100 active:scale-95"
+        style={{ left: 'calc(10px + env(safe-area-inset-left))', top: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>← 家へ</button>}
+      {rvScene && land && <div className="absolute inset-y-0 left-0 bg-[#0b1020]" style={{ width: rvSheetW === '42%' ? '58%' : '50%' }} data-alf-visit-roomview>{rvScene}</div>}
+      <div ref={rvScrollRef} className={rvScene && !land ? 'absolute inset-0 overflow-y-auto overflow-x-hidden bg-[#0b1020]' : 'contents'} data-alf-visit-roomview-scroll>
+      {rvScene && !land && <div style={{ height: 'calc(100% - 52px)', minHeight: 420 }} data-alf-visit-roomview>{rvScene}</div>}
+      <div ref={rvSheetRef} className="mhl-sheet" style={rvScene
+        ? (land ? { left: 'auto', width: rvSheetW, top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px', borderTop: 0, borderLeft: '2px solid #fcd34d', paddingTop: 10 } : { position: 'relative', maxHeight: 'none', zIndex: 1 })
+        : (land ? { left: 'auto', width: '44%', top: 0, maxHeight: '100%', paddingTop: 92, borderRadius: '22px 0 0 22px' } : { maxHeight: 'calc(100% - 96px)' })}>
         <div className="flex items-center gap-2">
           <AlfFace id={roomId} size={46}/>
           <div className="min-w-0 flex-1">
             <p className="text-[16px] font-black text-white">{alfTheirLabel(friend.name, roomId)}の部屋</p>
             <p className="text-[11px] font-bold text-slate-200" data-alf-visit-room-state={roomState}>{alfNoBreak(roomState === 'out' ? (r0.p && typeof assistantLifePlaceShow === 'function' ? `${(typeof ASSISTANT_LIFE_PLACE_ICON !== 'undefined' && ASSISTANT_LIFE_PLACE_ICON[r0.p]) || '🚶'} ${assistantLifePlaceShow(r0.p)}へおでかけ中。部屋は見られます` : '🚶 いまはおでかけ中。部屋は見られます') : roomState === 'sleep' ? '💤 すやすや…起こさないように、そっと見るだけ' : `🏠 部屋で${(ASSISTANT_LIFE_DOINGS[r0.d] || {}).label || 'のんびり'}`)}</p>
           </div>
-          <button type="button" data-mhl-sheet-close className="shrink-0 rounded-xl border border-slate-500 px-3 py-1.5 text-[12px] font-black text-slate-100" onClick={() => { setRoomId(null); setTalk(null); }}>とじる</button>
+          <button type="button" data-mhl-sheet-close className="shrink-0 rounded-xl border border-slate-500 px-3 py-1.5 text-[12px] font-black text-slate-100" onClick={closeRoom}>とじる</button>
         </div>
         <p className="mt-2 text-[11px] font-bold text-slate-200" data-alf-visit-furn>🪑 贈られた家具: {furnNames(roomId).length ? furnNames(roomId).join('・') : 'まだありません'}</p>
         {keptNames(roomId).length > 0 && <p className="mt-0.5 text-[10.5px] text-slate-300" data-alf-visit-kept>📦 押し入れ: {keptNames(roomId).join('・')}</p>}
@@ -69773,6 +69838,7 @@ function AlfFriendHouseView({ friend, onClose }) {
           : <>{roomState === 'sleep' && vl(roomId).sleep.length > 0 && <p className="mt-2 rounded-2xl border border-indigo-300/30 bg-indigo-950/60 px-3 py-1.5 text-[12.5px] italic text-indigo-100" data-alf-visit-sleep>💤 {alfFill(vl(roomId).sleep[(roomId.length + (friend.id || '').length) % vl(roomId).sleep.length], { h: friend.name, who: roomId, name: visitor })}</p>}
             <p className="mt-2 text-[11px] text-slate-300">{roomState === 'out' ? '帰ってきたら話せます。' : '起きているときに話せます。'}</p></>}
         {can === 'ok' && !done && <button type="button" className="mhl-btn mt-2 w-full bg-amber-500 text-slate-950" data-alf-visit-room-note={roomId} onClick={() => { setRoomId(null); setNoteWarn(''); setLeaving(roomId); }}>✉️ {roomState === 'home' ? '置き手紙を残して帰る' : `${assistantLifeName(roomId)}に一言残して帰る`}</button>}
+      </div>
       </div>
     </div>) : null;
   const words = leaving != null ? (

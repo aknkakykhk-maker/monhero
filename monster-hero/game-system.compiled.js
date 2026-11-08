@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b0d369c9d5d0b7e0
+// source-sha256: 97c2efa303ff6953
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -110443,6 +110443,95 @@ const ASSISTANT_LIFE_ROOM_QUILT = Object.freeze({
   sorashido: ['#fef08a', '#facc15'],
   erubin: ['#e2e8f0', '#94a3b8']
 });
+const ASSISTANT_LIFE_SLEEP_EYES = Object.freeze({
+  kiki: {
+    ang: -3,
+    line: '#4a2030',
+    eyes: [[0.4492, 0.4868, 0.0579, 0.0703, '#fccfc3'], [0.5592, 0.4766, 0.0579, 0.0664, '#fddbcf']]
+  },
+  momosuke: {
+    ang: -17,
+    line: '#5a3a28',
+    eyes: [[0.4254, 0.4363, 0.0918, 0.0781, '#e8b8b2'], [0.5967, 0.3836, 0.0918, 0.0859, '#fcece4']]
+  },
+  atsu: {
+    ang: -27,
+    line: '#3a1f2a',
+    eyes: [[0.4188, 0.3125, 0.0768, 0.0391, '#efa696'], [0.5661, 0.2553, 0.0911, 0.0342, '#f9ccb8']]
+  }
+});
+function AssistantLifeSleepEyes({
+  pid,
+  src,
+  w,
+  h,
+  style
+}) {
+  const def = ASSISTANT_LIFE_SLEEP_EYES[pid];
+  const who = typeof assistantById === 'function' ? assistantById(pid) : null;
+  if (!def || !who || !who.imagePrefix || !String(src || '').includes(`/${who.imagePrefix}_normal`)) return null;
+  const fid = `mhlse-${pid}`;
+  return React.createElement("svg", {
+    "data-assistant-life-roomview-sleep-eyes": pid,
+    width: w,
+    height: h,
+    viewBox: `0 0 ${w} ${h}`,
+    style: {
+      position: 'absolute',
+      overflow: 'visible',
+      pointerEvents: 'none',
+      ...style
+    }
+  }, React.createElement("defs", null, React.createElement("filter", {
+    id: fid,
+    x: "-50%",
+    y: "-50%",
+    width: "200%",
+    height: "200%"
+  }, React.createElement("feGaussianBlur", {
+    stdDeviation: Math.max(0.6, w * 0.006)
+  }))), def.eyes.map(([fx, fy, fw, fh, skin], i) => {
+    const cx = fx * w,
+      cy = fy * h,
+      ew = fw * w,
+      eh = fh * h;
+    const outer = i === 0 ? -1 : 1;
+    const lw = Math.max(1.1, eh * 0.11);
+    const lid = `M${cx - ew * 0.5},${cy} Q${cx},${cy + eh * 0.42} ${cx + ew * 0.5},${cy}`;
+    const ox = cx + outer * ew * 0.42,
+      oy = cy + eh * 0.08;
+    return React.createElement("g", {
+      key: i,
+      transform: `rotate(${def.ang} ${cx} ${cy})`
+    }, React.createElement("ellipse", {
+      cx: cx,
+      cy: cy + eh * 0.04,
+      rx: ew * 0.6,
+      ry: eh * 0.62,
+      fill: skin,
+      filter: `url(#${fid})`
+    }), React.createElement("ellipse", {
+      cx: cx,
+      cy: cy + eh * 0.04,
+      rx: ew * 0.54,
+      ry: eh * 0.54,
+      fill: skin
+    }), React.createElement("path", {
+      d: lid,
+      fill: "none",
+      stroke: def.line,
+      strokeWidth: lw,
+      strokeLinecap: "round"
+    }), [0, 1, 2].map(k => React.createElement("path", {
+      key: k,
+      d: `M${ox - outer * k * ew * 0.12},${oy + k * eh * 0.07} l${outer * ew * (0.14 - k * 0.02)},${eh * (0.16 + k * 0.03)}`,
+      fill: "none",
+      stroke: def.line,
+      strokeWidth: lw * 0.8,
+      strokeLinecap: "round"
+    })));
+  }));
+}
 function AssistantLifeRoomBed({
   id,
   W,
@@ -110494,7 +110583,7 @@ function AssistantLifeRoomBed({
       alive = false;
     };
   }, [key]);
-  const F = Math.min(25, W * 0.066);
+  const F = Math.min(30, W * 0.078);
   const night = look === 'night';
   return React.createElement("div", {
     "aria-hidden": "true",
@@ -110615,6 +110704,16 @@ function AssistantLifeRoomBed({
         maxWidth: 'none',
         filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})`
       }
+    }), React.createElement(AssistantLifeSleepEyes, {
+      pid: x.pid,
+      src: x.src,
+      w: r.width,
+      h: r.height,
+      style: {
+        left: r.left + cw / 2,
+        top: r.top - y0,
+        filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})`
+      }
     }));
   }), (() => {
     const U = U0(F),
@@ -110622,7 +110721,7 @@ function AssistantLifeRoomBed({
       cw = U * 1.2;
     const headLeft = pillow.left + 2,
       cy = pillow.top + pillow.h * 0.6 - cw / 2;
-    const qx = items.length ? headLeft + 0.8 * U : pillow.left + pillow.w * 0.62;
+    const qx = items.length ? headLeft + 1.0 * U : pillow.left + pillow.w * 0.62;
     const qTop = items.length ? cy - cw * 0.42 : mattTop - 30;
     const qw = Math.max(60, left + bw - 14 - qx),
       qh = Math.max(50, mattTop + 34 - qTop);
@@ -131632,6 +131731,8 @@ function AlfFriendHouseView({
     return () => friendsSetLifeVisit(false);
   }, []);
   const [roomId, setRoomId] = React.useState(null);
+  const rvScrollRef = React.useRef(null);
+  const rvSheetRef = React.useRef(null);
   const [noteText, setNoteText] = React.useState('');
   const [talk, setTalk] = React.useState(null);
   const [talked, setTalked] = React.useState([]);
@@ -131886,23 +131987,136 @@ function AlfFriendHouseView({
     hname: `🏡 ${friend.name}さんの家`,
     other: otherPut
   }));
+  const rvOk = typeof AssistantLifeRoomScene === 'function';
+  const rvToSheet = () => {
+    try {
+      const box = rvScrollRef.current,
+        el = rvSheetRef.current;
+      if (box && el) box.scrollTo({
+        top: el.offsetTop - 8,
+        behavior: 'smooth'
+      });
+    } catch (_) {}
+  };
+  const rvPlace = r0 && r0.p && typeof assistantLifePlaceShow === 'function' ? `${typeof ASSISTANT_LIFE_PLACE_ICON !== 'undefined' && ASSISTANT_LIFE_PLACE_ICON[r0.p] || '🚶'} ${assistantLifePlaceShow(r0.p)}へ` : '🚶 おでかけ中';
+  const rvFurn = !roomId ? [] : (() => {
+    const fu = putOf(roomId) || {};
+    return [['c', 'ceil'], ['w', 'wall'], ['f', 'floor']].map(([k, slot]) => {
+      const f = fu[k] && typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(fu[k]) : null;
+      return f ? {
+        slot,
+        key: fu[k],
+        emoji: f.emoji,
+        name: f.name
+      } : null;
+    }).filter(Boolean);
+  })();
+  const rvTeam = !roomId ? [] : masmonOf(roomId).map(t => ({
+    monster: t.monster,
+    nick: t.nick,
+    colors: t.dye.colors,
+    lead: t.lead
+  }));
+  const rvAct = (k, label, cls, fn, dis = false) => React.createElement("button", {
+    key: k,
+    type: "button",
+    "data-alf-visit-roomview-act": k,
+    disabled: dis,
+    onClick: fn,
+    className: `rounded-xl px-1 py-2 text-[12px] font-black text-white shadow active:scale-95 disabled:opacity-40 ${cls}`
+  }, label);
+  const rvDock = land || !roomId ? null : React.createElement("div", {
+    className: "grid grid-cols-3 gap-1.5",
+    "data-alf-visit-roomview-dock": true
+  }, rvAct('talk', roomState === 'sleep' ? '💤 おやすみ中' : '💬 話しかける', 'bg-gradient-to-br from-sky-400 to-indigo-500', () => {
+    greet(roomId);
+    setTimeout(rvToSheet, 60);
+  }, roomState !== 'home'), rvAct('sheet', '👀 くわしく', 'bg-gradient-to-br from-rose-400 to-amber-500', rvToSheet), rvAct('note', '✉️ 一言', 'bg-amber-500', () => {
+    setRoomId(null);
+    setNoteWarn('');
+    setLeaving(roomId);
+  }, can !== 'ok' || !!done));
+  const rvScene = rvOk && roomId && r0 ? React.createElement(AssistantLifeRoomScene, {
+    id: roomId,
+    look: look,
+    land: land,
+    people: roomState === 'out' ? [] : [roomId],
+    sleepIds: roomState === 'sleep' ? [roomId] : [],
+    away: roomState === 'out' ? {
+      title: rvPlace,
+      sub: 'いまは家にいない'
+    } : null,
+    team: rvTeam,
+    furn: rvFurn,
+    bubble: talk && talk.aid === roomId ? talk.text : '',
+    title: `${alfTheirLabel(friend.name, roomId)}の部屋`,
+    sub: `🏘 ${friend.name}さんの家`,
+    onPerson: roomState === 'home' ? () => {
+      greet(roomId);
+      setTimeout(rvToSheet, 60);
+    } : () => rvToSheet(),
+    dock: rvDock,
+    padLeft: 78
+  }) : null;
+  const rvSheetW = land && vw < 760 ? '50%' : '42%';
+  const closeRoom = () => {
+    setRoomId(null);
+    setTalk(null);
+  };
   const sheet = roomId && r0 ? React.createElement("div", {
     className: "absolute inset-0",
     style: {
       zIndex: 30
     },
     "data-alf-visit-sheet": roomId
-  }, React.createElement("button", {
+  }, !rvScene && React.createElement("button", {
     type: "button",
     "aria-label": "閉じる",
     className: "absolute inset-0 bg-black/55",
-    onClick: () => {
-      setRoomId(null);
-      setTalk(null);
+    onClick: closeRoom
+  }), rvScene && React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    "data-alf-visit-roomview-close": true,
+    onClick: closeRoom,
+    className: "absolute z-[40] rounded-xl border border-amber-300/60 bg-slate-950/85 px-2.5 py-1.5 text-[12px] font-black text-amber-100 active:scale-95",
+    style: {
+      left: 'calc(10px + env(safe-area-inset-left))',
+      top: land ? 6 : 'calc(8px + env(safe-area-inset-top))'
     }
-  }), React.createElement("div", {
+  }, "← 家へ"), rvScene && land && React.createElement("div", {
+    className: "absolute inset-y-0 left-0 bg-[#0b1020]",
+    style: {
+      width: rvSheetW === '42%' ? '58%' : '50%'
+    },
+    "data-alf-visit-roomview": true
+  }, rvScene), React.createElement("div", {
+    ref: rvScrollRef,
+    className: rvScene && !land ? 'absolute inset-0 overflow-y-auto overflow-x-hidden bg-[#0b1020]' : 'contents',
+    "data-alf-visit-roomview-scroll": true
+  }, rvScene && !land && React.createElement("div", {
+    style: {
+      height: 'calc(100% - 52px)',
+      minHeight: 420
+    },
+    "data-alf-visit-roomview": true
+  }, rvScene), React.createElement("div", {
+    ref: rvSheetRef,
     className: "mhl-sheet",
-    style: land ? {
+    style: rvScene ? land ? {
+      left: 'auto',
+      width: rvSheetW,
+      top: 0,
+      maxHeight: '100%',
+      borderRadius: '22px 0 0 22px',
+      borderTop: 0,
+      borderLeft: '2px solid #fcd34d',
+      paddingTop: 10
+    } : {
+      position: 'relative',
+      maxHeight: 'none',
+      zIndex: 1
+    } : land ? {
       left: 'auto',
       width: '44%',
       top: 0,
@@ -131928,10 +132142,7 @@ function AlfFriendHouseView({
     type: "button",
     "data-mhl-sheet-close": true,
     className: "shrink-0 rounded-xl border border-slate-500 px-3 py-1.5 text-[12px] font-black text-slate-100",
-    onClick: () => {
-      setRoomId(null);
-      setTalk(null);
-    }
+    onClick: closeRoom
   }, "とじる")), React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-200",
     "data-alf-visit-furn": true
@@ -132009,7 +132220,7 @@ function AlfFriendHouseView({
       setNoteWarn('');
       setLeaving(roomId);
     }
-  }, "✉️ ", roomState === 'home' ? '置き手紙を残して帰る' : `${assistantLifeName(roomId)}に一言残して帰る`))) : null;
+  }, "✉️ ", roomState === 'home' ? '置き手紙を残して帰る' : `${assistantLifeName(roomId)}に一言残して帰る`)))) : null;
   const words = leaving != null ? React.createElement("div", {
     className: "absolute inset-0",
     style: {
