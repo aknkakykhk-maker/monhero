@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b6532ab1ed202cff
+// source-sha256: f96d254bab433312
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -62377,7 +62377,7 @@ const GROWTH_FX_CSS = `
   animation:mhGfxGain .4s var(--d) cubic-bezier(.2,1.5,.4,1) both}
 .mh-gfx-gains li small{display:block;font-size:10px;color:#94a3b8;font-weight:700;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
 /* 行が多くても画面の外へ出さない(2026-11-08 社長のスクショ: セッションLv の行が20行以上並び、見出しも下も切れた)。入りきらない分は中で送る */
-.mh-gfx-gains{max-height:calc(100dvh - 400px);min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.mh-gfx-gains{max-height:calc(var(--mh-vh) - 400px);min-height:0;overflow-y:auto;overscroll-behavior:contain}
 .mh-gfx-gains li .new{margin-left:auto;font-size:9px;background:var(--gc);color:#111;border-radius:6px;padding:1px 5px}
 .mh-gfx-face{position:absolute;height:32vh;left:50%;margin-left:-21vh;bottom:0;z-index:1;pointer-events:none;animation:mhGfxRise .6s .85s cubic-bezier(.2,1.4,.4,1) both;filter:drop-shadow(0 0 20px #000a)}
 .mh-gfx-lv-hint{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);left:0;right:0;text-align:center;font-size:10px;color:#cbd5e1;z-index:3;animation:mhGfxFade .3s 1.6s both}
@@ -62393,7 +62393,7 @@ const GROWTH_FX_CSS = `
   .mh-gfx-lv{flex-direction:row;gap:22px;margin-top:0}
   .mh-gfx-sheet.has-face .mh-gfx-lv{margin-left:min(36vw,300px)}
   .mh-gfx-lv .sub{max-width:240px}
-  .mh-gfx-gains{margin-top:0;width:290px;max-height:calc(100dvh - 48px)}
+  .mh-gfx-gains{margin-top:0;width:290px;max-height:calc(var(--mh-vh) - 48px)}
   .mh-gfx-face{left:0;margin-left:0;height:62vh}
 }
 /* 🔄 横(端末は縦のまま、アプリが画面を回す)でも横画面の並びにする(2026-11-08)。回っているとき vh は回した後の横幅・vw は高さになる */
