@@ -1,0 +1,130 @@
+# 助手1人に贈る — ツムギの台詞(2026-11-08)。注文書 lines/ORDER-SOLO.md・好みは注文書の表のとおり
+# ツムギの分: atsu kyuko sorashido erubin の solo 112(14種類 × 2本)と hint 4(1人用の好きなもの)
+# 1人だけに、自分のために選んでもらった場面。{c} は使わない。苦手な物でも嫌がらない(「気持ちはうれしい」まで)
+# あつは SPEECH-STYLE.md の特徴(短く言い切る・軽く提案する・敬語なし)も入れた。文末は今までどおり笑・記号
+
+## solo あつ(好き misanga onigiri earphone omamori/苦手 tea flower letter)
+solo atsu item=basket like=mid | happy おやつバスケット、俺だけに？笑 ありがと！
+solo atsu item=basket like=mid | normal これ、練習の合間に食べよ！ {name}も一個どう？笑
+solo atsu item=misanga like=like | excited ミサンガ！ {name}とおそろいにしよ笑
+solo atsu item=misanga like=like | happy これつけて、次の勝負勝つ！ まじでうれしい笑
+solo atsu item=cake like=mid | happy はんぶんこケーキ…{name}と半分ずつ食べるとかは？笑
+solo atsu item=cake like=mid | normal ケーキだ！ あとでちゃんと食べる笑
+solo atsu item=onigiri like=like | excited おにぎり！ ちょうど腹へってた、{name}わかってる笑
+solo atsu item=onigiri like=like | happy ほかほかじゃん！ これで午後も走れる笑
+solo atsu item=tea like=bad | troubled ティーセットか…飲み方、ちゃんと覚えるわ笑 ありがと！
+solo atsu item=tea like=bad | normal 気持ちはうれしい！ {name}、一回いれ方見せてよ笑
+solo atsu item=earphone like=like | excited イヤホン！ {name}、かたっぽ使う？ 同じ曲聞こ笑
+solo atsu item=earphone like=like | happy これで練習の曲、ずっと聞ける！ ありがと( *'ω'*)ノ
+solo atsu item=puzzle like=mid | normal パズルか笑 {name}、一緒に解くとかは？
+solo atsu item=puzzle like=mid | happy ふたりで解くやつね！ 勢いでいける気がする笑
+solo atsu item=sleeve like=mid | happy スリーブ！ デッキに入れたら面白いな笑
+solo atsu item=sleeve like=mid | normal おそろいスリーブ、{name}の分もある？笑
+solo atsu item=cheki like=mid | happy チェキ！ ひとりで撮られるの、ちょっと照れる笑
+solo atsu item=cheki like=mid | normal 思い出チェキね！ 勝ったときの顔で撮ろ笑
+solo atsu item=flower like=bad | troubled 花束…ちゃんと水やりするから、心配しないで笑
+solo atsu item=flower like=bad | normal 花かぁ！ 俺に似合うかな笑 気持ちはうれしい！
+solo atsu item=letter like=bad | troubled 手紙！？ 照れるって笑 …あとでちゃんと読む！
+solo atsu item=letter like=bad | normal 字で書かれると、なんか緊張する笑 ありがと！
+solo atsu item=candy like=mid | happy キャンディひとつぶ笑 練習の前に食べる！
+solo atsu item=candy like=mid | normal あまっ笑 元気出た、ありがと！
+solo atsu item=keyholder like=mid | happy キーホルダー！ 部屋のカギにつけよ笑
+solo atsu item=keyholder like=mid | normal これいいね！ ドラゴンっぽい色じゃん笑
+solo atsu item=omamori like=like | excited おまもり！ 次の勝負、これで勝てる笑
+solo atsu item=omamori like=like | happy {name}、ちゃんと持ち歩くから！ まじでありがと笑
+
+## solo きゅうこ(好き tea earphone puzzle letter/苦手 basket cheki keyholder)
+solo kyuko item=basket like=bad | troubled おやつバスケット…一人だと、食べきれるかなぁ笑
+solo kyuko item=basket like=bad | normal 気持ちはうれしいよぉ。少しずつ、本のおともにするねぇ
+solo kyuko item=misanga like=mid | normal ミサンガかぁ。{name}とおそろい、ってことかなぁ笑
+solo kyuko item=misanga like=mid | happy ほい。つけてみると、意外と似合うかもねぇ
+solo kyuko item=cake like=mid | happy はんぶんこケーキ…{name}と半分こしよっかぁ
+solo kyuko item=cake like=mid | normal ケーキ、ありがとん笑 甘いのは頭がよく回るんだぁ
+solo kyuko item=onigiri like=mid | normal おにぎり、ありがとん。読書の前に食べるねぇ
+solo kyuko item=onigiri like=mid | happy ほかほかだぁ。具は何かなぁ、当ててみよっか笑
+solo kyuko item=tea like=like | excited ティーセット！ {name}、わかってるぅ笑 さっそく一杯いれよっ
+solo kyuko item=tea like=like | happy 本とお茶。これで最強の時間だねぇ🥺 ありがとん
+solo kyuko item=earphone like=like | excited イヤホン！ {name}、かたっぽ使ってみる？ おすすめ流すよぉ
+solo kyuko item=earphone like=like | happy これで音楽に集中できるねぇ。ありがとん笑
+solo kyuko item=puzzle like=like | excited パズル！ {name}、一緒に解こ。作戦はもう考えてあるよぉ
+solo kyuko item=puzzle like=like | happy こういうの、たまらないんだよねぇ。さすが{name}だぁ笑
+solo kyuko item=sleeve like=mid | normal スリーブ、ありがとん。カードが長持ちしそうだねぇ
+solo kyuko item=sleeve like=mid | happy おそろい…{name}の分もあるのかなぁ笑
+solo kyuko item=cheki like=bad | troubled チェキかぁ…ひとりで撮られるの、ちょっと照れるなぁ
+solo kyuko item=cheki like=bad | normal 気持ちはうれしいよぉ。{name}が撮ってくれるなら、がんばる笑
+solo kyuko item=flower like=mid | happy ちいさな花束、かわいいねぇ。本の横に飾るよぉ
+solo kyuko item=flower like=mid | normal ほい、花束。部屋が少し明るくなるねぇ
+solo kyuko item=letter like=like | excited 手紙！？ {name}の字、ゆっくり読ませてもらうねぇ🥺
+solo kyuko item=letter like=like | happy 手書きって、いいよねぇ。大事にしまっとく、ありがとん
+solo kyuko item=candy like=mid | normal キャンディ、ありがとん笑 考えごとのおともにするねぇ
+solo kyuko item=candy like=mid | happy ひとつぶって、ちょうどいいねぇ。あまぁい
+solo kyuko item=keyholder like=bad | troubled キーホルダーかぁ…どこにつけるか、ちょっと迷うなぁ
+solo kyuko item=keyholder like=bad | normal 気持ちはうれしいよぉ。本のかばんにつけてみるねぇ
+solo kyuko item=omamori like=mid | normal おまもり、ありがとん。ランキングの日に持っていくねぇ
+solo kyuko item=omamori like=mid | happy 小さくてかわいいねぇ。ちゃんと持ち歩くよぉ
+
+## solo ソラシド(好き onigiri puzzle sleeve keyholder/苦手 tea flower letter)
+solo sorashido item=basket like=mid | happy おやつバスケット！ 中身、数えてみてもいいか？笑
+solo sorashido item=basket like=mid | normal ありがとう。表づくりの合間に食べるよ
+solo sorashido item=misanga like=mid | happy おそろいのミサンガか。{name}とおそろいにしようか
+solo sorashido item=misanga like=mid | normal ミサンガ、ありがとう。勝負の日につけるぞ
+solo sorashido item=cake like=mid | happy はんぶんこケーキ…{name}と半分にするか。角度は任せろ笑
+solo sorashido item=cake like=mid | normal ケーキ、ありがとう。計算のあとに食べるよ
+solo sorashido item=onigiri like=like | excited おにぎり！ うぉぉぉ、ちょうど腹ぺこだったんだ！
+solo sorashido item=onigiri like=like | happy {name}、ありがとな！ これで夜まで計算できるぞ笑
+solo sorashido item=tea like=bad | troubled ティーセットか…ゆっくり飲むの、そわそわするんだよな笑
+solo sorashido item=tea like=bad | normal 気持ちはうれしいぞ。いれ方、表にして覚えるよ笑
+solo sorashido item=earphone like=mid | normal イヤホン、ありがとう。{name}、かたっぽ使うか？
+solo sorashido item=earphone like=mid | happy これで曲のBPM、もっと正確に数えられるな笑
+solo sorashido item=puzzle like=like | excited パズル！ {name}、一緒に解こう。これは燃えるぜ・・・！
+solo sorashido item=puzzle like=like | happy 解く順番、もう頭の中で表にしてるぞ笑 ありがとう！
+solo sorashido item=sleeve like=like | excited スリーブ！ デッキがでーじかっこよくなるぞ！
+solo sorashido item=sleeve like=like | happy {name}、ありがとな！ さっそくカードに入れてみる
+solo sorashido item=cheki like=mid | happy チェキか。ひとりで撮られるのは、ちょっと照れるな笑
+solo sorashido item=cheki like=mid | normal 思い出チェキ、表に貼っておくよ
+solo sorashido item=flower like=bad | troubled 花束か…どう飾るか、計算が出ないな笑
+solo sorashido item=flower like=bad | normal 気持ちはうれしいぞ。水やりの日、表にしておく
+solo sorashido item=letter like=bad | troubled 手紙！？ 読むの、ちょっと照れるな笑 …あとでちゃんと読むよ
+solo sorashido item=letter like=bad | normal 文字が多いのは表で慣れてるが…手紙は緊張するな笑
+solo sorashido item=candy like=mid | happy キャンディひとつぶか。糖分の補給にちょうどいいな笑
+solo sorashido item=candy like=mid | normal ありがとう。計算の合間になめるよ
+solo sorashido item=keyholder like=like | excited キーホルダー！ カード部屋のカギにつけるぜ・・・！
+solo sorashido item=keyholder like=like | happy {name}、ありがとな。毎日持ち歩くよ笑
+solo sorashido item=omamori like=mid | normal おまもり、ありがとう。次の勝負に持っていく
+solo sorashido item=omamori like=mid | happy 確率は変わらないが…気持ちはでーじ上がるな笑
+
+## solo えるびん(好き tea sleeve flower letter/苦手 cake earphone candy)
+solo erubin item=basket like=mid | happy おやつバスケット、ありがとう。いろいろ入ってるね
+solo erubin item=basket like=mid | normal 一人だと多いかな。みんなにも分けていいかな？
+solo erubin item=misanga like=mid | happy おそろいのミサンガ、{name}とおそろいにしようか
+solo erubin item=misanga like=mid | normal ミサンガ、ありがとう。大事につけるね
+solo erubin item=cake like=bad | troubled はんぶんこケーキか…甘いのは少しでいいから、{name}と半分にしようかな
+solo erubin item=cake like=bad | normal 気持ちはうれしいよ。少しずつ、いただくね
+solo erubin item=onigiri like=mid | happy ほかほかおにぎり、ありがとう。あたたかいね
+solo erubin item=onigiri like=mid | normal おにぎり、うれしいな。ベンチで食べようかな
+solo erubin item=tea like=like | excited ティーセット！ {name}、ありがとう。さっそくいれてみるね
+solo erubin item=tea like=like | happy いい香りだね。{name}にも一杯いれようか☺️
+solo erubin item=earphone like=bad | troubled かたみみイヤホンか…まだ慣れてないけど、使ってみるね
+solo erubin item=earphone like=bad | normal 気持ちはうれしいよ。{name}のおすすめの曲、教えてくれるかな
+solo erubin item=puzzle like=mid | normal ふたりで解くパズル…{name}、一緒に解いてくれるかな
+solo erubin item=puzzle like=mid | happy パズルか。ベンチでゆっくり解いてみるね
+solo erubin item=sleeve like=like | excited おそろいスリーブ！ デュラハンのカードに使うね
+solo erubin item=sleeve like=like | happy {name}、ありがとう。次の対戦で、さっそく使うよ😊
+solo erubin item=cheki like=mid | happy 思い出チェキ…ひとりで写るの、少し照れるかな笑
+solo erubin item=cheki like=mid | normal チェキ、ありがとう。アルバムに入れておくね
+solo erubin item=flower like=like | excited 花束！ 俺のために選んでくれたんだね。{name}、ありがとう
+solo erubin item=flower like=like | happy きれいだね。毎日、水をかえるよ☺️
+solo erubin item=letter like=like | excited 手紙！？ {name}、ありがとう。ゆっくり読ませてもらうね
+solo erubin item=letter like=like | happy 手書きの文字って、あたたかいね。大事にしまっておくよ
+solo erubin item=candy like=bad | troubled キャンディか…甘いのは少しだけど、ひとつぶならいただくね
+solo erubin item=candy like=bad | normal 気持ちはうれしいよ。疲れたときに、なめてみるね
+solo erubin item=keyholder like=mid | happy キーホルダー、かわいいね。かばんにつけようかな
+solo erubin item=keyholder like=mid | normal ありがとう。なくさないように気をつけるね
+solo erubin item=omamori like=mid | normal 小さなおまもり、ありがとう。みんなの分もお願いしておくね
+solo erubin item=omamori like=mid | happy 持っていると、なんだか落ち着くね
+
+## hint 仲良し度の段が上がったときに、1人用の好きなもの1つをそれとなく教える
+hint atsu item=omamori | wink 勝負の前ってさ、なんかおまもりとかほしくなるんだよね笑
+hint kyuko item=letter | normal 手書きの文字って、なんか落ち着くんだよねぇ。{name}の字、見てみたいなぁ
+hint sorashido item=keyholder | happy 毎日持ち歩けるものって、いいよな。カギにつけるやつとか笑
+hint erubin item=letter | normal 手紙って、いいよね。{name}から届いたら、うれしいかもしれないな
