@@ -8,7 +8,7 @@ const start = source.indexOf('const LOGIN_BONUS_REWARDS');
 const end = source.indexOf('const STAT_POINT_GAIN');
 const context = {};
 vm.createContext(context);
-vm.runInContext(`${source.slice(start,end)}\nglobalThis.__m={LOGIN_BONUS_REWARDS,MISSION_DEFS,missionDailyPeriod,missionWeeklyPeriod,missionMonthlyPeriod,missionPeriodWeekday,missionWeekRotationIndex,normalizeMissions,missionValue,missionClaimableCount,missionNextReset,reconcileMonthlyMissionCompletions,buildGiftClaim,emptyMissionCounts,WEEKLY_ROTATION_MISSIONS,DAILY_ROTATION_MISSIONS};`,context);
+vm.runInContext(`${source.slice(start,end)}\nglobalThis.__m={LOGIN_BONUS_REWARDS,MISSION_DEFS,missionDailyPeriod,missionWeeklyPeriod,missionMonthlyPeriod,missionPeriodWeekday,missionWeekRotationIndex,normalizeMissions,missionValue,missionClaimableCount,missionNextReset,reconcileMonthlyMissionCompletions,buildGiftClaim,emptyMissionCounts,WEEKLY_ROTATION_MISSIONS,DAILY_ROTATION_MISSIONS,missionDailyDefinitions,missionWeeklyDefinitions};`,context);
 const m=context.__m;
 let failed=0;
 const check=(name,ok)=>{console.log(`${ok?'OK':'NG'}: ${name}`);if(!ok)failed++;};
@@ -24,7 +24,10 @@ check('デイリーは通常6個(日替わりを含む)+コンプリート6個�
 const dailyChallenge=daily.find(x=>x.id==='daily_wins');
 check('旧daily_wins IDを通常チャレンジ1クリアへ再利用',dailyChallenge?.key==='challengeClears'&&dailyChallenge?.target===1&&dailyChallenge?.rewards?.some(r=>r.type==='rainbowPsyche'&&r.amount===10));
 let state=m.normalizeMissions(null,at('2026-08-29T05:00:00Z'));state.daily={...state.daily,login:1,battles:3,challengeClears:1,enhances:1};
-check('デイリーは達成した数を数える(6個のうち4個)',m.missionValue(state,'daily',m.MISSION_DEFS.daily.find(x=>x.complete))===4);
+// ★日替わり・週替わりは曜日・週で中身が変わるので、状態と同じ日(2026-08-29 土曜・アイテム1個)の定義で数える。
+//   「今日」の定義で数えると、月曜(ビート1曲・またはバトル1回クリア)の日だけ達成が1つ増えて落ちていた(2026-11-09 4:00 から本番の公開が止まった)
+const dailyAt0829=m.missionDailyDefinitions(at('2026-08-29T05:00:00Z')),weeklyAt0829=m.missionWeeklyDefinitions(at('2026-08-29T05:00:00Z'));
+check('デイリーは達成した数を数える(6個のうち4個)',m.missionValue(state,'daily',dailyAt0829.find(x=>x.complete),dailyAt0829)===4);
 check('日替わりは曜日で共通固定',m.missionPeriodWeekday(at('2026-08-24T05:00:00Z'))===1&&m.missionPeriodWeekday(at('2026-08-30T05:00:00Z'))===0);
 check('ウィークリーは通常9個(週替わりを含む)+コンプリート9個のうち7個(2026-11-08)',weekly.filter(x=>!x.complete).length===9&&weekly.find(x=>x.complete)?.target===7);
 const quick=weekly.find(x=>x.id==='weekly_wins'),challenge=weekly.find(x=>x.id==='weekly_donations'),items=m.WEEKLY_ROTATION_MISSIONS.find(x=>x.id==='weekly_daily_claims');
@@ -33,7 +36,7 @@ check('旧weekly_donations IDを通常チャレンジ3クリアへ再利用(報�
 check('週アイテム5個使用は週替わりへ移した(idはそのまま)',items?.key==='itemUses'&&items?.target===5&&items?.rewards?.some(r=>r.type==='uniqueSkillResetTicket'&&r.amount===1));
 check('週間ローテーションは7週周期',m.WEEKLY_ROTATION_MISSIONS.length===7&&m.missionWeekRotationIndex(at('2026-08-24T05:00:00Z'))===0&&m.missionWeekRotationIndex(at('2026-08-31T05:00:00Z'))===1&&m.missionWeekRotationIndex(at('2026-10-12T05:00:00Z'))===0);
 state.weekly={...state.weekly,battles:20,enhances:10,quickClears:5,challengeClears:3,marketTrades:3,itemUses:5,proClears:3,wins:10};state.weeklyLoginDays=['a','b','c','d','e'];
-check('ウィークリー7/9でコンプリート可能(カード週間はバトル10勝の別の道)',m.missionValue(state,'weekly',m.MISSION_DEFS.weekly.find(x=>x.complete))>=7);
+check('ウィークリー7/9でコンプリート可能(カード週間はバトル10勝の別の道)',m.missionValue(state,'weekly',weeklyAt0829.find(x=>x.complete),weeklyAt0829)>=7);
 check('マンスリーは通常12個+9個達成コンプリート(2026-11-08)',monthly.filter(x=>!x.complete).length===12&&monthly.find(x=>x.complete)?.target===9);
 const monthlyComplete=monthly.find(x=>x.complete);
 check('月次コンプリート報酬が指定どおり(ダイヤ100,000・ビートP3,000・プシュケー300・虹の超越の実・極・セッション券10・家具)',monthlyComplete.rewards.some(r=>r.type==='diamond'&&r.amount===100000)&&monthlyComplete.rewards.some(r=>r.type==='beatPoint'&&r.amount===3000)&&monthlyComplete.rewards.some(r=>r.type==='rainbowPsyche'&&r.amount===300)&&monthlyComplete.rewards.some(r=>r.type==='rainbowTranscendFruit'&&r.amount===1)&&monthlyComplete.rewards.some(r=>r.itemId==='skip_ticket_kiwami')&&monthlyComplete.rewards.some(r=>r.itemId==='session_ticket'&&r.amount===10)&&monthlyComplete.rewards.some(r=>/^furn_/.test(r.itemId||'')));
