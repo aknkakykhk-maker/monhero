@@ -66,6 +66,9 @@ const measureResult = (page) => page.evaluate(() => {
     const e = document.querySelector(q); if (!e) return;
     if (stamps.some((b) => hit(R(b), R(e)))) out.stamps.push(`${q.includes('ranking') ? '🏆' : 'チャット'}があいさつに重なる`);
   });
+  // 要素の見えている四角(送る欄の中なら、欄の見えている所で切る)
+  const clipOf = (el) => { const r = R(el); let x = { left: r.left, right: r.right, top: r.top, bottom: r.bottom }; const body = el.closest('[data-rhythm-multi-result-body]');
+    if (body && getComputedStyle(body).overflowY !== 'visible') { const b = R(body); x = { left: Math.max(x.left, b.left), right: Math.min(x.right, b.right), top: Math.max(x.top, b.top), bottom: Math.min(x.bottom, b.bottom) }; } return x; };
   // ③ 育ちの札・友情Lv の行: 画面(部屋の枠)の幅からはみ出さない
   const main = document.querySelector('[data-rhythm-multi]');
   document.querySelectorAll('[data-rhythm-buddy-growth-list] > *').forEach((e) => {
@@ -75,11 +78,25 @@ const measureResult = (page) => page.evaluate(() => {
     // 回しているときは画面の上下が枠の左右にあたる
     const sideRot = a.top < m.top - 1 || a.bottom > m.bottom + 1;
     if (rot ? sideRot : side) out.growth.push(`「${e.innerText.trim().slice(0, 12)}」がはみ出す`);
+    // 下の「メンバーの成績・次へ」の段に重ならない(横 844 で友情Lv の行が半分隠れていた・2026-11-08 ミハリ)
+    const bar = document.querySelector('[data-rhythm-multi-result-next]');
+    const barRow = bar && bar.parentElement;
+    // 欄の端で半分だけ見えている行が無い(横 844 で友情Lv の行の字の下半分しか見えなかった・2026-11-08 ミハリ)
+    { const l = R(e.parentElement); const shown = Math.min(a.bottom, l.bottom) - Math.max(a.top, l.top); const shownX = Math.min(a.right, l.right) - Math.max(a.left, l.left);
+      const rotNow = !!document.querySelector('[data-mh-view-rotation="true"]'); const part = rotNow ? (shownX > 2 && shownX < a.width - 2) : (shown > 2 && shown < a.height - 2);
+      if (part) out.growth.push(`「${e.innerText.trim().slice(0, 12)}」が欄の端で半分隠れる`); }
+    // 欄の中で送る行は、欄の見えている所だけで比べる
+    // 縦の小さい画面は、カード〜育ちの札をまとめた欄(data-rhythm-multi-result-body)でも切られる。その見えている所だけで比べる
+    const list = clipOf(e.parentElement);
+    const v = { left: Math.max(a.left, list.left), right: Math.min(a.right, list.right), top: Math.max(a.top, list.top), bottom: Math.min(a.bottom, list.bottom) };
+    if (barRow && v.right > v.left && v.bottom > v.top && Math.min(v.right, R(barRow).right) - Math.max(v.left, R(barRow).left) > 1 && Math.min(v.bottom, R(barRow).bottom) - Math.max(v.top, R(barRow).top) > 1) out.growth.push(`「${e.innerText.trim().slice(0, 12)}」が下の段に隠れる`);
     if (e.scrollWidth > e.clientWidth + 1) out.growth.push(`「${e.innerText.trim().slice(0, 12)}」の中身が切れる`);
   });
   // ⑤ カードの上の吹き出しが、送る欄で切れていない(横向きは欄が切らない作り)
   const body = document.querySelector('[data-rhythm-multi-result-body]');
   if (body && getComputedStyle(body).overflowY !== 'visible') document.querySelectorAll('[data-rhythm-multi-result-bubble]').forEach((b) => { if (!inBox(R(b), R(body))) out.mvp.push(`吹き出し「${b.innerText.trim().slice(0, 8)}」が欄で切れる`); });
+  const gl = document.querySelector('[data-rhythm-buddy-growth-list]'); const nb = document.querySelector('[data-rhythm-multi-result-next]');
+  if (gl && nb) { const g = clipOf(gl); const b = R(nb.parentElement); if (g.right > g.left && g.bottom > g.top) if (Math.min(g.right, b.right) - Math.max(g.left, b.left) > 1 && Math.min(g.bottom, b.bottom) - Math.max(g.top, b.top) > 1) out.growth.push('育ちの札の欄が下の段に重なる'); }
   // ④ いちばん下の「メンバーの成績」「次へ」が部屋の枠の中に見える(押し出されない)
   ['[data-rhythm-multi-member-stats]', '[data-rhythm-multi-result-next]'].forEach((q) => { const e = document.querySelector(q); if (!inBox(R(e), R(main))) out.growth.push(`${q.includes('next') ? '「次へ」' : '「メンバーの成績」'}が画面の外`); });
   return { mvp: out.mvp.join(' / '), stamps: out.stamps.join(' / '), growth: out.growth.join(' / ') };
@@ -151,6 +168,7 @@ const measureResult = (page) => page.evaluate(() => {
       check(`${name}: 助手の結果もそろう`, all);
       await page.waitForTimeout(4000);
       if (SHOT_DIR) await page.screenshot({ path: path.join(SHOT_DIR, `result-${name}.png`) });
+      if (process.env.DEBUG_GROWTH) console.log('GROWTH ' + await page.evaluate(() => { const g = document.querySelector('[data-rhythm-buddy-growth-list]'); const body = document.querySelector('[data-rhythm-multi-result-body]'); return JSON.stringify({ g: g && [g.clientHeight, g.scrollHeight, getComputedStyle(g).rowGap], kids: g && [...g.children].map((c) => c.offsetHeight), body: body && [body.clientHeight, body.scrollHeight], ul: document.querySelector('[data-rhythm-multi-result-row]')?.parentElement.offsetHeight, chat: document.querySelector('[data-rhythm-multi-result-chat]')?.offsetHeight }); }));
       const res = await measureResult(page);
       check(`${name}: 結果の MVP の枠で顔と難易度が切れない`, res.mvp === '', res.mvp);
       check(`${name}: 定型のあいさつが切れずに並び、🏆・チャットと重ならない`, res.stamps === '', res.stamps);
