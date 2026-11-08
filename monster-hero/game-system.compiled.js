@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5978982740f834c7
+// source-sha256: 39a88996adaffe55
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -105311,13 +105311,14 @@ function AssistantLifeRoom({
   h,
   state,
   onOpen,
-  idx
+  idx,
+  other = null
 }) {
   const L = ASSISTANT_LIFE_ROOM_LOOK[id];
   const view = ASSISTANT_LIFE_VIEW[look][idx % 2];
   const night = look === 'night';
   const ppl = state && state.in ? state.in : null;
-  const sess = assistantLifeSessionInfo(id);
+  const sess = other ? null : assistantLifeSessionInfo(id);
   return React.createElement("button", {
     type: "button",
     className: "mhl-room",
@@ -105359,6 +105360,7 @@ function AssistantLifeRoom({
     className: "fl"
   }), typeof AssistantLifeRoomFurn === 'function' && React.createElement(AssistantLifeRoomFurn, {
     id: id,
+    put: other ? other.put || {} : null,
     w: w,
     h: h,
     faces: ppl ? ppl.length : 0,
@@ -105425,7 +105427,9 @@ function AssistantLifeHouseArt({
   pop,
   onBoard,
   life = null,
-  peerSt = null
+  peerSt = null,
+  hname = '🏡 助手の家',
+  other = null
 }) {
   const wall = 6,
     cols = land ? 4 : 2,
@@ -105463,7 +105467,7 @@ function AssistantLifeHouseArt({
     style: {
       top: roofH - 22
     }
-  }, "🏡 助手の家"), React.createElement("div", {
+  }, hname), React.createElement("div", {
     className: "mhl-frame",
     style: {
       top: roofH,
@@ -105483,7 +105487,8 @@ function AssistantLifeHouseArt({
       w: rw,
       h: rh,
       state: rooms[id],
-      onOpen: onOpen
+      onOpen: onOpen,
+      other: other ? other[id] || {} : null
     });
   }), React.createElement("div", {
     className: "mhl-liv",
@@ -105531,7 +105536,7 @@ function AssistantLifeHouseArt({
       bottom: 6
     },
     "aria-hidden": "true"
-  }, "🔥"), typeof AssistantLifeRelLiving === 'function' && React.createElement(AssistantLifeRelLiving, {
+  }, "🔥"), !other && typeof AssistantLifeRelLiving === 'function' && React.createElement(AssistantLifeRelLiving, {
     life: life,
     peerSt: peerSt,
     width: width,
@@ -119979,11 +119984,18 @@ function AssistantLifeRoomFurn({
   w,
   h,
   faces = 0,
-  baseCount = 2
+  baseCount = 2,
+  put = null
 }) {
   const st = useAssistantLifeGiftState();
   if (!assistantLifeFurnEnabled()) return null;
-  const room = assistantLifeRoomOf(id, st);
+  const room = put ? {
+    put: {
+      ceil: put.ceil || null,
+      wall: put.wall || null,
+      floor: put.floor || null
+    }
+  } : assistantLifeRoomOf(id, st);
   const size = Math.round(Math.max(16, Math.min(26, h * 0.26, w * 0.17)));
   const faceSize = Math.round(Math.min(40, h * 0.44));
   const faceLeft = faces > 0 ? w * 0.9 - faceSize - (faces - 1) * (faceSize - 10) : w * 0.9;
@@ -121338,11 +121350,28 @@ const alfBuildHouse = (life, metIds) => {
       d: ASSISTANT_LIFE_DOINGS[w.doing] ? w.doing : 'idle',
       m: ASSISTANT_LIFE_MOODS[m] ? m : 'happy'
     };
+    try {
+      const put = typeof assistantLifeRoomOf === 'function' ? assistantLifeRoomOf(id).put : null;
+      const fu = {};
+      for (const [k, s] of [['c', 'ceil'], ['w', 'wall'], ['f', 'floor']]) if (put && typeof put[s] === 'string') fu[k] = put[s];
+      if (Object.keys(fu).length) r[id].fu = fu;
+    } catch {}
   }
+  let dy = [];
+  try {
+    const d = typeof ASSISTANT_LIFE_DIARY !== 'undefined' ? ASSISTANT_LIFE_DIARY.state : null;
+    dy = (d && Array.isArray(d.items) ? d.items : []).filter(x => x && x.kind !== 'friend' && !/さんの/.test(x.text)).slice(-3).reverse().map(x => ({
+      t: alfStr(x.t, 5),
+      x: alfStr(x.text, 40)
+    }));
+  } catch {}
   return {
     v: 1,
     ids,
-    r
+    r,
+    ...(dy.length ? {
+      dy
+    } : {})
   };
 };
 const assistantLifeFriendNormalizeHouse = raw => {
@@ -121362,11 +121391,27 @@ const assistantLifeFriendNormalizeHouse = raw => {
       d: typeof x.d === 'string' && ASSISTANT_LIFE_DOINGS[x.d] ? x.d : 'idle',
       m: typeof x.m === 'string' && ASSISTANT_LIFE_MOODS[x.m] ? x.m : 'happy'
     };
+    const furn = typeof ASSISTANT_LIFE_FURNITURE !== 'undefined' && Array.isArray(ASSISTANT_LIFE_FURNITURE) ? ASSISTANT_LIFE_FURNITURE : [];
+    if (x.fu && typeof x.fu === 'object') {
+      const fu = {};
+      for (const [k, slot] of [['c', 'ceil'], ['w', 'wall'], ['f', 'floor']]) {
+        const f = furn.find(y => y.key === x.fu[k]);
+        if (f && f.slot === slot) fu[k] = f.key;
+      }
+      if (Object.keys(fu).length) r[id].fu = fu;
+    }
   }
+  const dy = (Array.isArray(raw.dy) ? raw.dy : []).slice(0, 3).map(d => d && typeof d.x === 'string' ? {
+    t: /^\d{1,2}:\d{2}$/.test(d.t) ? d.t : '',
+    x: d.x.replace(/[{}<>]/g, '').slice(0, 40)
+  } : null).filter(d => d && d.x);
   return {
     v: 1,
     ids,
-    r
+    r,
+    ...(dy.length ? {
+      dy
+    } : {})
   };
 };
 const alfHomeIds = house => house ? house.ids.filter(id => house.r[id] && house.r[id].at === 'home') : [];
@@ -122602,28 +122647,83 @@ function AlfSceneSheet({
   }, "とじる"))));
 }
 const ALF_PLAYER_REPLIES = Object.freeze(['こんにちは！', 'おじゃましてます', 'すてきな部屋だね']);
+const alfRoomsOf = house => {
+  const rooms = {};
+  for (const id of ALF_IDS) {
+    const r = house && house.r[id];
+    if (!r) {
+      rooms[id] = null;
+      continue;
+    }
+    const doing = (ASSISTANT_LIFE_DOINGS[r.d] || {}).label || 'のんびり';
+    if (r.at !== 'home') rooms[id] = {
+      tag: ['🚶 おでかけ中', 'いまは家にいない']
+    };else if (r.d === 'sleep') rooms[id] = {
+      in: [id],
+      sleep: true,
+      bub: ['💤 おやすみ中']
+    };else rooms[id] = {
+      in: [id],
+      bub: ['部屋で', doing]
+    };
+  }
+  return rooms;
+};
+const alfFurnPutOf = house => {
+  const o = {};
+  for (const id of house ? house.ids : []) {
+    const fu = house.r[id] && house.r[id].fu;
+    if (fu) o[id] = {
+      put: {
+        ceil: fu.c || null,
+        wall: fu.w || null,
+        floor: fu.f || null
+      }
+    };
+  }
+  return o;
+};
 function AlfFriendHouseView({
   friend,
   onClose
 }) {
+  const [roomId, setRoomId] = React.useState(null);
   const [talk, setTalk] = React.useState(null);
   const [talked, setTalked] = React.useState([]);
-  const [leaving, setLeaving] = React.useState(false);
+  const [leaving, setLeaving] = React.useState(null);
   const [done, setDone] = React.useState(null);
+  const [vw, setVw] = React.useState(() => typeof window !== 'undefined' ? window.innerWidth : 390);
+  const [vh, setVh] = React.useState(() => typeof window !== 'undefined' ? window.innerHeight : 844);
+  React.useEffect(() => {
+    const on = () => {
+      setVw(window.innerWidth);
+      setVh(window.innerHeight);
+    };
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
   if (!friend || !friend.house) return null;
   const h = friend.house;
   const can = assistantLifeFriendCanLook(friend.id);
-  const tall = typeof window !== 'undefined' && window.innerHeight > window.innerWidth;
-  const face = tall ? 48 : 34;
+  const land = vw > vh;
+  const look = typeof assistantLifeTimeLook === 'function' ? assistantLifeTimeLook() : 'day';
+  const rooms = alfRoomsOf(h);
+  const metSet = new Set(h.ids);
+  const home = alfHomeIds(h).filter(id => h.r[id].d !== 'sleep');
+  const pad = 12;
+  const houseW = land ? Math.min(560, Math.round(vw * 0.64) - pad * 2) : Math.min(380, vw - pad * 2);
   const lines = aid => ALF_TALK_LINES[aid] || ['いらっしゃい', 'ありがとう', 'またね'];
-  const greet = aid => setTalk({
-    aid,
-    step: 0,
-    text: alfFill(lines(aid)[0], {
-      h: friend.name,
-      who: aid
-    })
-  });
+  const greet = aid => {
+    setRoomId(aid);
+    setTalk({
+      aid,
+      step: 0,
+      text: alfFill(lines(aid)[0], {
+        h: friend.name,
+        who: aid
+      })
+    });
+  };
   const reply = i => {
     if (!talk) return;
     setTalked(t => [...new Set([...t, talk.aid])]);
@@ -122643,132 +122743,287 @@ function AlfFriendHouseView({
       talked,
       name: friend.name
     });
-    setLeaving(false);
+    setLeaving(null);
+    setRoomId(null);
+    setTalk(null);
     setDone(r && r.ok ? `✉️ 置き手紙「${ALF_WORD_TEXTS[word]}」を残しました${r.photo ? '・📷 写真1枚' : ''}${r.beatP ? `・🎁 ビートP ${r.beatP}(ギフトに届きます)` : ''}` : `⚠️ ${r && r.reason || '置き手紙を残せませんでした(時間をおいてもう一度)'}`);
   };
-  return alfLayer(React.createElement("div", {
-    className: "absolute inset-0 flex flex-col bg-slate-950",
+  const noteLine = done ? done : can === 'ok' ? `✉️ 置き手紙を残すと、${friend.name}さんに「あなたが訪ねてくれた」と一言が届きます(ビートP 50)` : can === 'done' ? `✉️ この家には今日もう置き手紙を残しました。見て回るのは自由です` : `✉️ 今日はもう置き手紙を残せません(朝4時に戻ります)。見て回るのは自由です`;
+  const r0 = roomId ? h.r[roomId] : null;
+  const roomState = !r0 ? null : r0.at !== 'home' ? 'out' : r0.d === 'sleep' ? 'sleep' : 'home';
+  const furnNames = id => {
+    const fu = h.r[id] && h.r[id].fu;
+    if (!fu || typeof assistantLifeFurnOf !== 'function') return [];
+    return ['c', 'w', 'f'].map(k => fu[k] && assistantLifeFurnOf(fu[k])).filter(Boolean).map(f => `${f.emoji} ${f.name}`);
+  };
+  const header = React.createElement("div", {
+    className: "mhl-hdr flex items-start gap-2",
     style: {
-      zIndex: 44
-    },
-    "data-alf-visit": true
-  }, React.createElement("div", {
-    className: "flex items-center gap-2 border-b border-amber-300/30 px-3 pb-2",
-    style: {
-      paddingTop: 'calc(8px + env(safe-area-inset-top))'
+      paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))'
     }
-  }, React.createElement("div", {
-    className: "min-w-0 flex-1"
-  }, React.createElement("p", {
-    className: "truncate text-[15px] font-black text-amber-200",
-    "data-alf-visit-title": true
-  }, "🏘 ", friend.name, "さんの家"), React.createElement("p", {
-    className: "text-[10px] text-slate-400"
-  }, React.createElement("span", {
-    className: "whitespace-nowrap"
-  }, "🚪 訪ねている"), "・", React.createElement("span", {
-    className: "whitespace-nowrap"
-  }, "📷 ", alfAgoText(friend.at), " の控え"))), React.createElement("button", {
+  }, React.createElement("button", {
     type: "button",
-    className: "shrink-0 rounded-xl border border-slate-500 px-3 py-1.5 text-[12px] font-black text-slate-100",
+    className: "h-9 w-8 shrink-0 text-[19px] text-slate-100",
+    "aria-label": "もどる",
     "data-alf-visit-close": true,
     onClick: onClose
-  }, "もどる")), React.createElement("div", {
-    className: "min-h-0 flex-1 overflow-y-auto px-3 pb-3"
-  }, React.createElement("div", {
-    className: "flex items-center",
+  }, "←"), React.createElement("div", {
+    className: "min-w-0",
     style: {
-      height: 50
-    },
-    "data-alf-visit-gap": true
+      maxWidth: land ? '100%' : '62%'
+    }
   }, React.createElement("p", {
-    className: "max-w-[55%] text-[11px] leading-snug text-slate-300"
-  }, talk ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "mhl-en whitespace-nowrap"
+  }, "VISIT · FRIEND HOUSE"), React.createElement("p", {
+    className: "truncate text-[17px] font-black text-amber-100",
+    "data-alf-visit-title": true
+  }, "🏘 ", friend.name, "さんの家"), React.createElement("p", {
+    className: "text-[10px] font-bold text-slate-200"
+  }, React.createElement("span", {
     className: "whitespace-nowrap"
-  }, "返事をえらぶか、"), React.createElement("span", {
+  }, "📷 ", alfAgoText(friend.at), " の様子"), "・", React.createElement("span", {
     className: "whitespace-nowrap"
-  }, "ほかの部屋へ")) : React.createElement(React.Fragment, null, React.createElement("span", {
-    className: "whitespace-nowrap"
-  }, "黄色い枠の部屋を押して、"), React.createElement("span", {
-    className: "whitespace-nowrap"
-  }, "助手に声をかけよう")))), React.createElement("div", {
-    className: "grid grid-cols-4 gap-2",
-    "data-alf-visit-rooms": true
-  }, h.ids.map(aid => {
-    const r = h.r[aid] || {
-      at: 'home',
-      d: 'idle'
-    };
-    const home = r.at === 'home';
-    const can = home && r.d !== 'sleep';
-    return React.createElement("button", {
-      key: aid,
-      type: "button",
-      disabled: !can,
-      "data-alf-visit-room": aid,
-      onClick: () => can && greet(aid),
-      style: {
-        minHeight: tall ? 112 : 78
-      },
-      className: `flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl border p-1 ${can ? talk && talk.aid === aid ? 'border-amber-300 bg-amber-900/40' : 'border-amber-200/50 bg-slate-800/90' : 'border-slate-600/40 bg-slate-900/70 opacity-60'}`
-    }, React.createElement(AlfFace, {
-      id: aid,
-      size: face
-    }), React.createElement("span", {
-      className: `whitespace-nowrap font-black text-slate-100 ${tall ? 'text-[12px]' : 'text-[10.5px]'}`
-    }, assistantLifeName(aid)), React.createElement("span", {
-      className: "whitespace-nowrap text-[9px] text-slate-300"
-    }, home ? ALF_DOING_ROOM[r.d] || 'のんびり中' : 'おでかけ中'));
-  })), talk && React.createElement("div", {
-    className: tall ? 'mt-5' : 'mt-3',
+  }, friend.name, "さんが最後に開いたとき"))));
+  const tiles = React.createElement("div", {
+    "data-alf-visit-acts": true
+  }, React.createElement("p", {
+    className: "mb-1 text-[10px] font-black text-slate-200"
+  }, "この家でできること"), React.createElement("div", {
+    className: "grid grid-cols-3 gap-1.5"
+  }, React.createElement("button", {
+    type: "button",
+    className: "mhl-tile mhl-call",
+    disabled: !home.length,
+    "data-alf-visit-act": "talk",
+    onClick: () => home[0] && greet(home[0])
+  }, React.createElement("i", null, "💬"), React.createElement("b", null, "話す"), React.createElement("small", null, home.length ? `家にいる ${home.length}人` : 'いまはだれも')), React.createElement("button", {
+    type: "button",
+    className: "mhl-tile mhl-watch",
+    "data-alf-visit-act": "peek",
+    onClick: () => setRoomId(h.ids[0] || null)
+  }, React.createElement("i", null, "👀"), React.createElement("b", null, "部屋を見る"), React.createElement("small", null, "部屋を押す")), React.createElement("button", {
+    type: "button",
+    className: "mhl-tile mhl-give",
+    disabled: can !== 'ok' || !!done,
+    "data-alf-visit-leave": true,
+    onClick: () => {
+      setRoomId(null);
+      setLeaving('');
+    }
+  }, React.createElement("i", null, "✉️"), React.createElement("b", null, "置き手紙"), React.createElement("small", null, done ? '残した' : can === 'ok' ? '今日あと1回' : '今日は残した'))), React.createElement("p", {
+    className: "mt-1.5 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] font-bold leading-snug text-amber-100",
+    "data-alf-visit-note": done ? 'done' : can
+  }, noteLine), React.createElement("p", {
+    className: "mt-1 text-[9.5px] leading-snug text-slate-300"
+  }, friend.name, "さんのセーブや、助手の仲良し度は変わりません。"));
+  const board = (h.dy || []).length ? React.createElement("div", {
+    className: "mt-1 rounded-xl bg-amber-50/90 px-2 py-1 text-amber-950",
+    "data-alf-visit-diary": true
+  }, React.createElement("p", {
+    className: "text-[10px] font-black"
+  }, "📌 ", friend.name, "さんの家の今日あったこと"), h.dy.map((d, i) => React.createElement("p", {
+    key: i,
+    className: "text-[10px] font-bold leading-snug"
+  }, React.createElement("b", {
+    className: "mr-1"
+  }, d.t), d.x))) : null;
+  const houseView = React.createElement("div", {
+    className: "relative pt-1",
+    style: {
+      paddingInline: pad
+    },
+    "data-alf-visit-house": true
+  }, React.createElement(AssistantLifeHouseArt, {
+    width: houseW,
+    land: land,
+    look: look,
+    rooms: rooms,
+    metSet: metSet,
+    onOpen: id => {
+      setTalk(null);
+      setLeaving(null);
+      setRoomId(id);
+    },
+    diary: {
+      items: (h.dy || []).map(d => ({
+        t: d.t,
+        text: d.x
+      }))
+    },
+    pop: false,
+    onBoard: () => {},
+    hname: `🏡 ${friend.name}さんの家`,
+    other: alfFurnPutOf(h)
+  }));
+  const sheet = roomId && r0 ? React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      zIndex: 30
+    },
+    "data-alf-visit-sheet": roomId
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    className: "absolute inset-0 bg-black/55",
+    onClick: () => {
+      setRoomId(null);
+      setTalk(null);
+    }
+  }), React.createElement("div", {
+    className: "mhl-sheet",
+    style: land ? {
+      left: 'auto',
+      width: '44%',
+      top: 0,
+      maxHeight: '100%',
+      paddingTop: 92,
+      borderRadius: '22px 0 0 22px'
+    } : undefined
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, React.createElement(AlfFace, {
+    id: roomId,
+    size: 46
+  }), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "text-[16px] font-black text-white"
+  }, alfTheirLabel(friend.name, roomId), "の部屋"), React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-200",
+    "data-alf-visit-room-state": roomState
+  }, roomState === 'out' ? '🚶 いまはおでかけ中。部屋は見られます' : roomState === 'sleep' ? '💤 すやすや…起こさないように、そっと見るだけ' : `🏠 部屋で${(ASSISTANT_LIFE_DOINGS[r0.d] || {}).label || 'のんびり'}`)), React.createElement("button", {
+    type: "button",
+    className: "shrink-0 rounded-xl border border-slate-500 px-3 py-1.5 text-[12px] font-black text-slate-100",
+    onClick: () => {
+      setRoomId(null);
+      setTalk(null);
+    }
+  }, "とじる")), React.createElement("p", {
+    className: "mt-2 text-[11px] font-bold text-slate-200",
+    "data-alf-visit-furn": true
+  }, "🪑 置いている家具: ", furnNames(roomId).length ? furnNames(roomId).join('・') : 'まだ無し'), talk && talk.aid === roomId ? React.createElement("div", {
+    className: "mt-2",
     "data-alf-visit-talk": true
   }, talk.mine && React.createElement("p", {
-    className: `mb-1 text-right text-pink-100 ${tall ? 'text-[13px]' : 'text-[11.5px]'}`,
+    className: "mb-1 text-right text-[12.5px] text-pink-100",
     "data-alf-visit-mine": true
   }, "あなた「", talk.mine, "」"), React.createElement("div", {
     className: "flex items-end gap-2"
   }, React.createElement(AlfFace, {
     id: talk.aid,
-    size: tall ? 60 : 40
-  }), React.createElement("div", {
-    className: `min-w-0 rounded-2xl border border-sky-300/40 bg-sky-950/70 leading-snug text-sky-50 ${tall ? 'px-3 py-2.5 text-[15px]' : 'px-2.5 py-1.5 text-[12px]'}`
-  }, React.createElement("p", {
-    className: "text-[9.5px] font-black opacity-80"
-  }, alfTheirLabel(friend.name, talk.aid)), React.createElement("p", null, talk.text))), talk.step === 0 && React.createElement("div", {
-    className: "mt-2 grid grid-cols-3 gap-1.5",
+    size: 40
+  }), React.createElement("p", {
+    className: "min-w-0 rounded-2xl border border-sky-300/40 bg-sky-950/70 px-3 py-2 text-[14px] leading-snug text-sky-50"
+  }, talk.text)), talk.step === 0 && React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "mt-2 text-[10px] font-bold text-slate-300"
+  }, "返事を押すと、", assistantLifeName(roomId), "が答えてくれます"), React.createElement("div", {
+    className: "mt-1 grid grid-cols-3 gap-1.5",
     "data-alf-visit-replies": true
   }, ALF_PLAYER_REPLIES.map((t, i) => React.createElement("button", {
     key: i,
     type: "button",
-    className: `rounded-xl border border-pink-200/50 bg-pink-950/50 px-1 font-black text-pink-50 ${tall ? 'py-3 text-[12.5px]' : 'py-1.5 text-[11px]'}`,
+    className: "rounded-xl border border-pink-200/50 bg-pink-950/50 px-1 py-2.5 text-[12px] font-black text-pink-50",
     "data-alf-reply": i,
     onClick: () => reply(i)
-  }, t)))), done ? React.createElement("p", {
-    className: "mt-3 text-[11.5px] font-black text-amber-200",
-    "data-alf-visit-note": true
-  }, done) : can === 'ok' ? leaving ? React.createElement("div", {
-    className: "mt-3 rounded-2xl border border-amber-300/40 bg-slate-900 p-2",
+  }, t))))) : roomState === 'home' ? React.createElement("button", {
+    type: "button",
+    className: "mhl-btn mt-2 w-full bg-sky-600",
+    "data-alf-visit-room": roomId,
+    onClick: () => greet(roomId)
+  }, "💬 ", assistantLifeName(roomId), "に話しかける") : React.createElement("p", {
+    className: "mt-2 text-[11px] text-slate-300"
+  }, roomState === 'out' ? '帰ってきたら話せます。' : '起きているときに話せます。'), can === 'ok' && !done && React.createElement("button", {
+    type: "button",
+    className: "mhl-btn mt-2 w-full bg-amber-500 text-slate-950",
+    "data-alf-visit-room-note": roomId,
+    onClick: () => {
+      setRoomId(null);
+      setLeaving(roomId);
+    }
+  }, "✉️ 置き手紙を残して帰る"))) : null;
+  const words = leaving != null ? React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      zIndex: 31
+    },
     "data-alf-visit-words": true
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    className: "absolute inset-0 bg-black/55",
+    onClick: () => setLeaving(null)
+  }), React.createElement("div", {
+    className: "mhl-sheet",
+    style: land ? {
+      left: 'auto',
+      width: '44%',
+      top: 0,
+      maxHeight: '100%',
+      paddingTop: 92,
+      borderRadius: '22px 0 0 22px'
+    } : undefined
   }, React.createElement("p", {
-    className: "text-[11px] font-black text-amber-200"
-  }, "置き手紙の一言をえらぶ"), React.createElement("div", {
-    className: "mt-1 flex flex-wrap gap-1"
+    className: "text-[15px] font-black text-amber-100"
+  }, "✉️ 置き手紙の一言をえらぶ"), React.createElement("p", {
+    className: "text-[10.5px] font-bold text-slate-200"
+  }, "押すと", friend.name, "さんに届いて、この家から帰ります(ビートP 50)"), React.createElement("div", {
+    className: "mt-2 flex flex-wrap gap-1.5"
   }, ALF_WORD_TEXTS.map((t, i) => React.createElement("button", {
     key: i,
     type: "button",
-    className: "rounded-lg border border-amber-200/40 px-1.5 py-0.5 text-[10.5px] text-amber-50",
+    className: "rounded-xl border border-amber-200/50 bg-slate-800 px-2 py-1.5 text-[12px] font-bold text-amber-50",
     "data-alf-word": i,
     onClick: () => leave(i)
-  }, t)))) : React.createElement("button", {
+  }, t))), React.createElement("button", {
     type: "button",
-    className: `w-full rounded-2xl bg-amber-300 font-black text-slate-950 ${tall ? 'mt-5 py-3 text-[14px]' : 'mt-3 py-2 text-[12.5px]'}`,
-    "data-alf-visit-leave": true,
-    onClick: () => setLeaving(true)
-  }, "✉️ 置き手紙を残して帰る") : React.createElement("p", {
-    className: "mt-3 text-[10.5px] text-slate-400"
-  }, can === 'done' ? '今日はこの家に置き手紙を残しました。' : '今日はもう置き手紙を残せません(朝4時に戻ります)。'), React.createElement("p", {
-    className: "mt-3 text-[10px] leading-snug text-slate-400"
-  }, friend.name, "さんには、あなたが訪ねたことが置き手紙で届きます。相手のセーブや助手の仲良し度は変わりません。"))));
+    className: "mhl-btn mt-3 w-full bg-slate-700",
+    onClick: () => setLeaving(null)
+  }, "やめる"))) : null;
+  return alfLayer(React.createElement("div", {
+    className: "mhl-root",
+    style: {
+      zIndex: 44,
+      position: 'absolute'
+    },
+    "data-alf-visit": true,
+    "data-assistant-life-look": look
+  }, typeof AssistantLifeHouseStyle === 'function' && React.createElement(AssistantLifeHouseStyle, null), React.createElement("div", {
+    className: "mhl-page",
+    style: {
+      maxWidth: land ? 'none' : 480
+    }
+  }, React.createElement("div", {
+    className: `mhl-sky t-${look}`
+  }), React.createElement("div", {
+    className: "mhl-wood",
+    style: {
+      backgroundImage: `url(${ASSISTANT_LIFE_VIEW[look][1]})`
+    }
+  }), land ? React.createElement("div", {
+    className: "relative z-[2] flex h-full min-h-0",
+    style: {
+      paddingLeft: 'env(safe-area-inset-left)',
+      paddingRight: 'env(safe-area-inset-right)'
+    }
+  }, React.createElement("div", {
+    className: "mhl-body",
+    style: {
+      flex: '0 0 64%'
+    }
+  }, houseView), React.createElement("div", {
+    className: "flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2",
+    style: {
+      paddingTop: 88
+    },
+    "data-alf-visit-side": true
+  }, header, board, tiles)) : React.createElement(React.Fragment, null, header, React.createElement("div", {
+    className: "mhl-body"
+  }, houseView), React.createElement("div", {
+    className: "relative z-[3] bg-gradient-to-t from-[#0b1020] via-[#0b1020ee] to-transparent px-3 pt-1.5",
+    style: {
+      paddingBottom: 'calc(10px + env(safe-area-inset-bottom))'
+    }
+  }, tiles)), sheet, words)));
 }
 const alfVisitBlockedText = (friendId, name, s = ALF_STORE.state) => {
   if (s.mode === 'off') return 'フレンドの家との行き来は、いまお休み中です。';
@@ -123025,8 +123280,24 @@ function AssistantLifeFriendPage({
     }, React.createElement("p", {
       className: "truncate text-[12px] font-black text-slate-100"
     }, f.name, "さんの家", been ? ' 📷' : ''), React.createElement("p", {
-      className: "text-[10px] text-slate-400"
-    }, alfAgoText(f.at), " の様子"), React.createElement("div", {
+      className: "text-[10px] text-slate-300",
+      "data-alf-house-sum": true
+    }, (() => {
+      const hs = f.house;
+      const at = k => hs.ids.filter(id => hs.r[id] && (k === 'sleep' ? hs.r[id].at === 'home' && hs.r[id].d === 'sleep' : k === 'home' ? hs.r[id].at === 'home' && hs.r[id].d !== 'sleep' : hs.r[id].at !== 'home')).length;
+      const fu = hs.ids.reduce((n, id) => n + Object.keys(hs.r[id] && hs.r[id].fu || {}).length, 0);
+      return React.createElement(React.Fragment, null, React.createElement("span", {
+        className: "whitespace-nowrap"
+      }, "🏠 家に", at('home'), "人"), at('out') ? React.createElement(React.Fragment, null, React.createElement("wbr", null), React.createElement("span", {
+        className: "whitespace-nowrap"
+      }, "・🚶 おでかけ", at('out'), "人")) : null, at('sleep') ? React.createElement(React.Fragment, null, React.createElement("wbr", null), React.createElement("span", {
+        className: "whitespace-nowrap"
+      }, "・💤 ", at('sleep'), "人")) : null, fu ? React.createElement(React.Fragment, null, React.createElement("wbr", null), React.createElement("span", {
+        className: "whitespace-nowrap"
+      }, "・🪑 家具", fu)) : null, React.createElement("wbr", null), React.createElement("span", {
+        className: "whitespace-nowrap text-slate-400"
+      }, "・", alfAgoText(f.at)));
+    })()), React.createElement("div", {
       className: "mt-0.5 flex gap-0.5"
     }, alfHomeIds(f.house).slice(0, 6).map(id => React.createElement(AlfFace, {
       key: id,
