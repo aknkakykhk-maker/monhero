@@ -1741,7 +1741,11 @@ function RhythmMultiMemberCards({ members, hostId, selfId, resolveIconUrl, badge
               {openable && <span aria-hidden="true" className={`absolute -bottom-1 -right-1.5 flex items-center justify-center rounded-full bg-lime-300 font-black leading-none text-slate-950 ${tall ? 'h-4 w-4 text-[10px]' : 'h-3 w-3 text-[8px]'}`}>i</span>}
             </span>
             <span className={`min-w-0 ${tall ? 'mt-1 w-full text-center' : 'mt-0.5 w-full text-center landscape:mt-0 landscape:flex-1 landscape:text-left'}`}>
-              <span className={`block font-black leading-tight ${tall ? 'line-clamp-2 break-all text-[11px] landscape:text-sm' : 'truncate text-[10px]'}`}>{m.cpu && (m.as
+              {/* 2026-11-08 社長「えるび/ん」: 「助手」「CPU」の札は名前の上の行へ出し、CPU(助手・マスモン)の名前は折らない(細い画面では字を少し小さく)。人の名前は今までどおり2行まで */}
+              {m.cpu && tall && (m.as
+                ? <b data-rhythm-multi-cpu-mark data-rhythm-multi-assist-mark className="mx-auto mb-0.5 block w-fit rounded bg-pink-300 px-0.5 text-[8px] font-black leading-[12px] text-slate-950">助手</b>
+                : <b data-rhythm-multi-cpu-mark className="mx-auto mb-0.5 block w-fit rounded bg-lime-300 px-0.5 text-[8px] font-black leading-[12px] text-slate-950">CPU</b>)}
+              <span data-rhythm-multi-member-name className={`block font-black leading-tight ${tall ? (m.cpu ? 'whitespace-nowrap text-[11px] max-[359px]:text-[9.5px] max-[359px]:tracking-[-0.04em] landscape:text-sm' : 'line-clamp-2 break-all text-[11px] landscape:text-sm') : 'truncate text-[10px]'}`}>{m.cpu && !tall && (m.as
                 ? <b data-rhythm-multi-cpu-mark data-rhythm-multi-assist-mark className="mr-0.5 rounded bg-pink-300 px-0.5 text-[8px] font-black text-slate-950">助手</b>
                 : <b data-rhythm-multi-cpu-mark className="mr-0.5 rounded bg-lime-300 px-0.5 text-[8px] font-black text-slate-950">CPU</b>)}{m.name}{self ? '*' : ''}</span>
               {badge.sub && <small className={`block truncate font-bold leading-tight text-slate-400 ${tall ? 'text-[9px] landscape:text-[11px]' : 'text-[8px]'}`}>{badge.sub}</small>}
@@ -2935,7 +2939,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               badgeOf={(m) => ({ text: view && m.id === view.hostId ? 'ホスト' : '入室', cls: view && m.id === view.hostId ? 'bg-amber-400 text-slate-950' : 'bg-cyan-500 text-slate-950', sub: `Lv.${m.level}` })} />
             {/* 縦向きでは、下の欄を枠のすぐ下へ寄せる(2026-10-20 改善部 M5。390 で枠と欄のあいだが約300px 空いていた)。
                 高さの上限も広げ、320×568 で「ルームを出る」が画面の外へ切れないようにする。横向きは今のまま */}
-            <div className="max-h-[70%] shrink-0 overflow-y-auto border-t border-white/10 bg-slate-950/90 p-2 landscape:mt-auto landscape:grid landscape:max-h-[58%] landscape:grid-cols-2 landscape:gap-2" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
+            {/* 下の欄は、上のメンバーの札の残りに縮む(2026-11-08 社長「下が少し切れてる」。札と欄の7割を足すと画面より高くなり、「ルームを出る」が下で切れていた)。入りきらないぶんは中で送る */}
+            <div data-rhythm-multi-wait-panel className="max-h-[70%] min-h-0 shrink overflow-y-auto border-t border-white/10 bg-slate-950/90 p-2 landscape:mt-auto landscape:grid landscape:max-h-[58%] landscape:grid-cols-2 landscape:gap-2" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
               <section data-rhythm-multi-matching className="rounded-2xl border border-white/15 bg-slate-900/85 p-2">
                 <p className="animate-pulse text-sm font-black text-amber-200">{!view ? `${RHYTHM_MULTI_MODE_LABELS[searching]}ルームをさがしています…` : 'メンバーを待っています…'}</p>
                 <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400">
