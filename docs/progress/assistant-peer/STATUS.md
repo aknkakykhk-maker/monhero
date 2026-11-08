@@ -349,3 +349,10 @@
   - 案だけ(社長の選び待ち): 染め方 A/B(masmon-life/dye-compare.jpg)。デッキのタブはカード部ツナグの CardAssistantDeckView を差しこむ(切りかえ3つはキズナ2・印 cardGrowStyleOn())。カード部の受け口 #5015 は main 入り
   - 待ち: 文案の「この文で」(部屋を歩く+6体・詳細)/ミハリの見回り/ナカヨシ8の札/ツナグの部品
   - オトズレ3へ: 口 assistantLifeMasmonLead(その日の当番・6体で回る)の PR 番号を公開後に窓口経由で
+### キズナ2 → 次の担当への引き継ぎ(2026-11-08 13時半ごろ・会話が長くなったので区切り)
+- 枝 claude/kizuna2-grow(未公開・main 取り込み済み・ナカヨシ8の札の直し claude/nakayoshi8-roomtag も取り込み済み)。検査 assistant-masmon-browser-check(MASMON_ALL=1 / MASMON_LOW_BOND=1 / MASMON_WHO=xx / --shots)は全部OK
+- 入っているもの: 部屋を歩くマスモン(A の大きさ)・5体(今の3体+仲良し度 Lv4・Lv7 で迎える2体・新しいキー mh_assistant_life_masmon_v1 の welcomed)・迎える場面・まだの枠・詳細画面・編成/好き苦手のタブの空き埋め・マスモンごとの染め方(dye-vary.js)
+- 待ち: 窓口へ送った更新履歴の文案2件(部屋を歩く/5体・迎える・詳細)の「この文で」・迎える場面の8人のひとことの確認
+- 社長の新しい依頼「プレイヤーごとに違うマスモン」: 案だけ MASMON-LIFE-PLAN.md 末尾(❶先頭・❷名前の A/B)。選びが出たら、3人ぶんの止め絵→作る。オトズレ3へ口 assistantLifeMasmonTeamOf(id) の形を伝え済み
+- デッキのタブ: カード部の公開(ルールくん・印 cardGrowStyle)が main に入ったら、切りかえ3つ+CardAssistantDeckView(ツナグ・87)+cardAiDeckMarkMet をつなぐ。助手どうしの対戦の cardAssistantDeckPick も。今回のカード部の公開には部屋のタブは乗せない(ルールくんに伝え済み)
+- オトズレ3: 公開後、口 assistantLifeMasmonLead / TeamOf の PR 番号を窓口経由で
