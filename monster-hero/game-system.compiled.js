@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 731914bb72c6726b
+// source-sha256: 9e115b65d936a574
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13735,6 +13735,8 @@ const RELEASE_FLAGS = {
   assistantPeerApi: true,
   assistantCallname: false,
   assistantLife: true,
+  assistantLifeFriend: true,
+  assistantLifeFriendApi: false,
   rhythmAssistantSession: true,
   assistantSorashido: true,
   assistantErubin: true,
@@ -102576,6 +102578,11 @@ const assistantLifeNow = async ({
       assistantLifeDiaryOnSlot(life, slot, now);
     } catch {}
   }
+  if (typeof assistantLifeFriendOnSlot === 'function') {
+    try {
+      void assistantLifeFriendOnSlot(life, slot, now);
+    } catch {}
+  }
   if (typeof assistantLifeRelTick === 'function') {
     try {
       void assistantLifeRelTick(now);
@@ -105480,6 +105487,11 @@ const assistantLifeRoomsOf = (life, metIds) => {
       assistantLifeRelDecorateRooms(rooms, life, peer);
     } catch {}
   }
+  if (typeof assistantLifeFriendDecorateRooms === 'function') {
+    try {
+      assistantLifeFriendDecorateRooms(rooms);
+    } catch {}
+  }
   return rooms;
 };
 function AssistantLifeRoomSheet({
@@ -105993,6 +106005,7 @@ function AssistantLifeHouse({
   const diary = useAssistantLifeDiary();
   const peerSt = typeof useAssistantPeerState === 'function' ? useAssistantPeerState() : null;
   const land = useAssistantLifeLand();
+  if (typeof useAssistantLifeFriendState === 'function') useAssistantLifeFriendState();
   const [tab, setTab] = React.useState('house');
   const [roomId, setRoomId] = React.useState(st.focus || null);
   const [scene, setScene] = React.useState(null);
@@ -106216,7 +106229,8 @@ function AssistantLifeHouse({
     } catch {}
   };
   const unwatched = (life.groups || []).filter(g => !(life.watched || []).includes(assistantLifeGroupKey(g)));
-  const lonely = Object.entries(life.solo || {}).find(([, s]) => s.reason === 'lonely');
+  const awayFriend = id => typeof assistantLifeFriendAwayOf === 'function' && !!assistantLifeFriendAwayOf(id);
+  const lonely = Object.entries(life.solo || {}).find(([id, s]) => s.reason === 'lonely' && !awayFriend(id));
   const beatIds = ids.filter(id => {
     const w = assistantLifeWhereOf(life, id);
     return w && w.doing === 'practice';
@@ -106239,9 +106253,9 @@ function AssistantLifeHouse({
     type: "button",
     className: "mhl-tile mhl-call flex-1",
     "data-assistant-life-today-act": "call",
-    disabled: !Object.keys(life.solo || {}).length,
+    disabled: !Object.keys(life.solo || {}).filter(id => !awayFriend(id)).length,
     onClick: () => {
-      const id = lonely ? lonely[0] : Object.keys(life.solo || {})[0];
+      const id = lonely ? lonely[0] : Object.keys(life.solo || {}).filter(id => !awayFriend(id))[0];
       if (id) setRoomId(id);
     }
   }, React.createElement("em", null, "無料"), React.createElement("i", null, "💬"), React.createElement("b", null, "声をかける"), React.createElement("small", {
@@ -106267,7 +106281,7 @@ function AssistantLifeHouse({
     className: "mhl-icons",
     role: "tablist",
     "data-assistant-life-icons": true
-  }, [['house', '🏡', '家'], ['where', '📋', '居場所'], ['friends', '🤝', '友情'], ['items', '🎒', '道具']].map(([k, ic, label]) => React.createElement("button", {
+  }, [['house', '🏡', '家'], ['where', '📋', '居場所'], ['friends', '🤝', '友情'], ['items', '🎒', '道具'], ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏘', 'フレンド']] : [])].map(([k, ic, label]) => React.createElement("button", {
     key: k,
     type: "button",
     role: "tab",
@@ -106301,7 +106315,7 @@ function AssistantLifeHouse({
       letterSpacing: '.06em',
       fontSize: 8
     } : undefined
-  }, "ASSISTANT LIFE · ", tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : 'HOUSE'), React.createElement("p", {
+  }, "ASSISTANT LIFE · ", tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : tab === 'visit' ? 'VISIT' : 'HOUSE'), React.createElement("p", {
     className: "mhl-ti whitespace-nowrap",
     style: land ? {
       fontSize: 18
@@ -106375,7 +106389,9 @@ function AssistantLifeHouse({
     peerItems: peerItems,
     onUseItem: onUseItem,
     embedded: true
-  })) : tab === 'friends' ? React.createElement("div", {
+  })) : tab === 'visit' && typeof AssistantLifeFriendPage === 'function' ? React.createElement(AssistantLifeFriendPage, {
+    life: life
+  }) : tab === 'friends' ? React.createElement("div", {
     className: "px-3 pb-3 pt-1"
   }, typeof AssistantPeerMap === 'function' && React.createElement(AssistantPeerMap, {
     metIds: metIds,
@@ -106836,6 +106852,8 @@ function AssistantLifeHomeFaces({
         padding: '0 3px'
       }
     }, "UP")));
+  }), rects.life && typeof AssistantLifeFriendHomeBadge === 'function' && React.createElement(AssistantLifeFriendHomeBadge, {
+    rect: rects.life
   }));
 }
 const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
@@ -119493,6 +119511,1878 @@ function AssistantLifeChekiRow({
   })), React.createElement("p", {
     className: "text-center text-[9px] font-black text-slate-700"
   }, String(d).slice(5).replace('-', '/'))))));
+}
+const ALF_KEY = 'mh_assistant_life_friend_v1';
+const ALF_SETTINGS_KEY = 'mh_assistant_life_friend_settings_v1';
+const ALF_KNOWN_KEY = 'mh_assistant_life_friend_known_v1';
+const ALF_INTRO_KEY = 'mh_assistant_life_friend_intro_v1';
+const ALF_TABLE_SWITCH = 'assistant_life_friend_switch';
+const ALF_TABLE_HOUSES = 'assistant_life_friend_houses';
+const ALF_TABLE_VISITS = 'assistant_life_friend_visits';
+const ALF_IDS = typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'];
+const ALF_LIMITS = Object.freeze({
+  on: Object.freeze({
+    go: 3,
+    come: 2,
+    look: 3,
+    readMs: 30 * 60000,
+    sendMs: 10 * 60000
+  }),
+  thin: Object.freeze({
+    go: 1,
+    come: 0,
+    look: 1,
+    readMs: 30 * 60000,
+    sendMs: 60 * 60000
+  })
+});
+const ALF_BEAT_P = Object.freeze({
+  go: 100,
+  look: 50,
+  dayMax: 300
+});
+const ALF_FRESH_DAYS = Object.freeze({
+  go: 14,
+  look: 14,
+  come: 7
+});
+const ALF_HOUSE_MAX_CHARS = 2000;
+const ALF_WORDS = 12;
+const ALF_THANKS = 6;
+const alfEnabled = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeFriend === true && typeof assistantLifeEnabled === 'function' && assistantLifeEnabled();
+const alfValidId = id => typeof id === 'string' && ALF_IDS.includes(id);
+const alfSafeOther = v => typeof v === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(v) ? v : null;
+const alfInt = (v, lo, hi, d = 0) => {
+  const n = Math.floor(Number(v));
+  return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d;
+};
+const alfStr = (v, max) => typeof v === 'string' ? v.slice(0, max) : '';
+const alfDay = (now = Date.now()) => typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey(now) : new Date(Number(now) + 5 * 3600000).toISOString().slice(0, 10);
+const alfDayShift = (day, n) => {
+  const t = Date.parse(`${day}T00:00:00Z`);
+  return Number.isFinite(t) ? new Date(t + n * 86400000).toISOString().slice(0, 10) : day;
+};
+const alfDefaultState = () => ({
+  day: null,
+  go: 0,
+  come: 0,
+  look: 0,
+  went: {},
+  looked: {},
+  beatP: 0,
+  seen: [],
+  sentAt: 0,
+  sentSig: '',
+  out: null,
+  back: null,
+  came: [],
+  photos: [],
+  lastHosts: [],
+  api: null
+});
+const alfNormalizeOut = o => {
+  if (!o || typeof o !== 'object') return null;
+  const ids = Array.isArray(o.ids) ? [...new Set(o.ids.filter(alfValidId))].slice(0, 2) : [];
+  const host = alfSafeOther(o.host);
+  if (!ids.length || !host || !Number.isFinite(o.abs)) return null;
+  const theirs = Array.isArray(o.theirs) ? [...new Set(o.theirs.filter(alfValidId))].slice(0, 3) : [];
+  return {
+    abs: Math.floor(o.abs),
+    ids,
+    host,
+    name: alfStr(o.name, 20) || 'フレンド',
+    theirs,
+    word: alfInt(o.word, 0, ALF_WORDS - 1),
+    day: typeof o.day === 'string' ? o.day.slice(0, 10) : null,
+    seen: o.seen === true,
+    rewarded: o.rewarded === true
+  };
+};
+const alfNormalizeApi = o => {
+  if (!o || typeof o !== 'object' || typeof o.day !== 'string') return null;
+  const okLine = l => l && (l.side === 'a' || l.side === 'b') && typeof l.t === 'string' && l.t.length >= 2 && l.t.length <= 60 && !/[{}]/.test(l.t.replace(/\{f\}|\{h\}|\{name\}/g, ''));
+  const list = Array.isArray(o.list) ? o.list.map(x => x && (x.kind === 'go' || x.kind === 'come') && alfValidId(x.a) && alfValidId(x.b) && Array.isArray(x.lines) && x.lines.length >= 2 && x.lines.every(okLine) ? {
+    kind: x.kind,
+    a: x.a,
+    b: x.b,
+    lines: x.lines.slice(0, 4).map(l => ({
+      side: l.side,
+      e: typeof l.e === 'string' ? l.e.slice(0, 12) : 'normal',
+      t: l.t
+    }))
+  } : null).filter(Boolean).slice(0, 6) : [];
+  return {
+    day: o.day.slice(0, 10),
+    asked: alfInt(o.asked, 0, 9),
+    list,
+    used: Array.isArray(o.used) ? o.used.filter(k => typeof k === 'string').slice(-12) : []
+  };
+};
+const normalizeAssistantLifeFriend = v => {
+  const d = alfDefaultState();
+  if (!v || typeof v !== 'object') return d;
+  const flags = x => {
+    const o = {};
+    if (x && typeof x === 'object') for (const [k, val] of Object.entries(x)) if (alfSafeOther(k) && val) o[k] = 1;
+    return o;
+  };
+  const came = Array.isArray(v.came) ? v.came.map(c => c && alfSafeOther(c.host) && alfValidId(c.aid) ? {
+    host: c.host,
+    name: alfStr(c.name, 20) || 'フレンド',
+    aid: c.aid,
+    mine: alfValidId(c.mine) ? c.mine : null,
+    seen: c.seen === true
+  } : null).filter(Boolean).slice(0, 2) : [];
+  const photos = Array.isArray(v.photos) ? v.photos.map(p => p && alfSafeOther(p.host) && typeof p.day === 'string' ? {
+    host: p.host,
+    name: alfStr(p.name, 20) || 'フレンド',
+    day: p.day.slice(0, 10),
+    ids: Array.isArray(p.ids) ? p.ids.filter(alfValidId).slice(0, 2) : [],
+    theirs: Array.isArray(p.theirs) ? p.theirs.filter(alfValidId).slice(0, 3) : []
+  } : null).filter(Boolean).slice(-60) : [];
+  return {
+    day: typeof v.day === 'string' ? v.day.slice(0, 10) : null,
+    go: alfInt(v.go, 0, 99),
+    come: alfInt(v.come, 0, 99),
+    look: alfInt(v.look, 0, 99),
+    went: flags(v.went),
+    looked: flags(v.looked),
+    beatP: alfInt(v.beatP, 0, ALF_BEAT_P.dayMax),
+    seen: Array.isArray(v.seen) ? v.seen.filter(n => Number.isFinite(n)).slice(-200) : [],
+    sentAt: Number.isFinite(v.sentAt) ? v.sentAt : 0,
+    sentSig: alfStr(v.sentSig, 64),
+    out: alfNormalizeOut(v.out),
+    back: alfNormalizeOut(v.back),
+    came,
+    photos,
+    lastHosts: Array.isArray(v.lastHosts) ? v.lastHosts.filter(alfSafeOther).slice(0, 10) : [],
+    api: alfNormalizeApi(v.api)
+  };
+};
+const normalizeAssistantLifeFriendSettings = v => {
+  const o = v && typeof v === 'object' ? v : {};
+  return {
+    open: o.open !== false,
+    show: o.show !== false,
+    come: o.come !== false,
+    muted: Array.isArray(o.muted) ? [...new Set(o.muted.filter(alfSafeOther))].slice(0, 100) : []
+  };
+};
+const normalizeAssistantLifeFriendKnown = v => {
+  const o = {};
+  if (v && typeof v === 'object' && !Array.isArray(v)) {
+    for (const [k, n] of Object.entries(v).slice(-300)) {
+      const p = k.split('|');
+      if (p.length === 3 && alfValidId(p[0]) && alfSafeOther(p[1]) && alfValidId(p[2]) && Number.isFinite(n) && n > 0) o[k] = Math.min(9999, Math.floor(n));
+    }
+  }
+  return o;
+};
+const alfRollDay = (st, day) => {
+  if (st.day === day) return st;
+  return {
+    ...st,
+    day,
+    go: 0,
+    come: 0,
+    look: 0,
+    went: {},
+    looked: {},
+    beatP: 0,
+    came: [],
+    api: null,
+    lastHosts: Object.keys(st.went || {}).slice(0, 10)
+  };
+};
+const alfBuildHouse = (life, metIds) => {
+  const ids = [...new Set((metIds || []).filter(alfValidId))].slice(0, 12);
+  const r = {};
+  for (const id of ids) {
+    const w = typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, id) : null;
+    if (!w) continue;
+    const m = life && life.moods ? life.moods[id] : null;
+    r[id] = {
+      at: w.place === 'home' ? 'home' : 'out',
+      d: ASSISTANT_LIFE_DOINGS[w.doing] ? w.doing : 'idle',
+      m: ASSISTANT_LIFE_MOODS[m] ? m : 'happy'
+    };
+  }
+  return {
+    v: 1,
+    ids,
+    r
+  };
+};
+const assistantLifeFriendNormalizeHouse = raw => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  try {
+    if (JSON.stringify(raw).length > ALF_HOUSE_MAX_CHARS) return null;
+  } catch {
+    return null;
+  }
+  const ids = Array.isArray(raw.ids) ? [...new Set(raw.ids.filter(alfValidId))].slice(0, 12) : [];
+  const r = {};
+  for (const id of ids) {
+    const x = raw.r && typeof raw.r === 'object' ? raw.r[id] : null;
+    if (!x || typeof x !== 'object') continue;
+    r[id] = {
+      at: x.at === 'out' ? 'out' : 'home',
+      d: typeof x.d === 'string' && ASSISTANT_LIFE_DOINGS[x.d] ? x.d : 'idle',
+      m: typeof x.m === 'string' && ASSISTANT_LIFE_MOODS[x.m] ? x.m : 'happy'
+    };
+  }
+  return {
+    v: 1,
+    ids,
+    r
+  };
+};
+const alfHomeIds = house => house ? house.ids.filter(id => house.r[id] && house.r[id].at === 'home') : [];
+const ALF_STORE = {
+  state: {
+    loaded: false,
+    st: alfDefaultState(),
+    settings: normalizeAssistantLifeFriendSettings(null),
+    known: {},
+    intro: false,
+    mode: null,
+    ready: true,
+    selfId: null,
+    roster: [],
+    houses: {},
+    visits: [],
+    busy: false,
+    scene: null
+  },
+  loading: null,
+  listeners: new Set(),
+  emit() {
+    for (const fn of this.listeners) {
+      try {
+        fn(this.state);
+      } catch {}
+    }
+  },
+  set(patch) {
+    this.state = {
+      ...this.state,
+      ...patch
+    };
+    this.emit();
+  },
+  load() {
+    if (this.state.loaded) return Promise.resolve(this.state);
+    if (this.loading) return this.loading;
+    this.loading = (async () => {
+      const [a, b, c, d] = await Promise.all([ALF_KEY, ALF_SETTINGS_KEY, ALF_KNOWN_KEY, ALF_INTRO_KEY].map(k => storeGet(k, null, false).catch(() => null)));
+      this.set({
+        loaded: true,
+        st: alfRollDay(normalizeAssistantLifeFriend(a), alfDay()),
+        settings: normalizeAssistantLifeFriendSettings(b),
+        known: normalizeAssistantLifeFriendKnown(c),
+        intro: d === true
+      });
+      return this.state;
+    })();
+    return this.loading;
+  }
+};
+const alfSaveSt = st => {
+  ALF_STORE.set({
+    st
+  });
+  try {
+    storeSet(ALF_KEY, st, false);
+  } catch {}
+};
+const alfSaveSettings = settings => {
+  ALF_STORE.set({
+    settings
+  });
+  try {
+    storeSet(ALF_SETTINGS_KEY, settings, false);
+  } catch {}
+};
+const alfSaveKnown = known => {
+  ALF_STORE.set({
+    known
+  });
+  try {
+    storeSet(ALF_KNOWN_KEY, known, false);
+  } catch {}
+};
+const alfToday = () => {
+  const day = alfDay();
+  const cur = ALF_STORE.state.st;
+  const st = alfRollDay(cur, day);
+  if (st !== cur) alfSaveSt(st);
+  return st;
+};
+const useAssistantLifeFriendState = () => {
+  const [s, setS] = React.useState(ALF_STORE.state);
+  React.useEffect(() => {
+    const fn = x => setS(x);
+    ALF_STORE.listeners.add(fn);
+    void ALF_STORE.load();
+    setS(ALF_STORE.state);
+    return () => {
+      ALF_STORE.listeners.delete(fn);
+    };
+  }, []);
+  return s;
+};
+let _alfUnavailable = false;
+const alfRequest = async (path, {
+  method = 'GET',
+  body = null,
+  prefer = null
+} = {}) => {
+  if (_alfUnavailable) {
+    const e = new Error('assistant life friend tables are not ready');
+    e.notReady = true;
+    throw e;
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), typeof FRIENDS_TIMEOUT_MS !== 'undefined' ? FRIENDS_TIMEOUT_MS : 8000);
+  try {
+    const headers = prefer ? {
+      ...SB_HEADERS,
+      'Content-Type': 'application/json',
+      'Prefer': prefer
+    } : {
+      ...SB_HEADERS,
+      'Content-Type': 'application/json'
+    };
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      method,
+      headers,
+      cache: 'no-store',
+      signal: controller.signal,
+      body: body === null ? undefined : JSON.stringify(body)
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      if (_isMissingTableError(res.status, text)) {
+        _alfUnavailable = true;
+        ALF_STORE.set({
+          ready: false
+        });
+        const e = new Error('assistant life friend tables are not ready');
+        e.notReady = true;
+        throw e;
+      }
+      const e = new Error(`alf ${method} ${path.split('?')[0]} ${res.status}`);
+      e.status = res.status;
+      e.body = text;
+      throw e;
+    }
+    return text ? JSON.parse(text) : [];
+  } catch (error) {
+    if (error && error.name === 'AbortError') throw new Error('alf request timed out');
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const alfQuoteIn = ids => ids.map(id => `"${id}"`).join(',');
+let _alfModeLoading = null;
+const alfLoadMode = () => {
+  if (ALF_STORE.state.mode) return Promise.resolve(ALF_STORE.state.mode);
+  if (_alfModeLoading) return _alfModeLoading;
+  _alfModeLoading = (async () => {
+    let mode = 'thin';
+    try {
+      const rows = await alfRequest(`${ALF_TABLE_SWITCH}?select=mode&id=eq.1`);
+      const m = Array.isArray(rows) && rows[0] ? rows[0].mode : null;
+      mode = ['on', 'thin', 'off'].includes(m) ? m : 'thin';
+    } catch (e) {
+      mode = e && e.notReady ? 'off' : 'thin';
+    }
+    ALF_STORE.set({
+      mode
+    });
+    return mode;
+  })();
+  return _alfModeLoading;
+};
+const alfLimits = () => ALF_LIMITS[ALF_STORE.state.mode === 'on' ? 'on' : 'thin'];
+const alfSelf = async () => {
+  if (ALF_STORE.state.selfId) return ALF_STORE.state.selfId;
+  const id = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
+  const safe = alfSafeOther(id);
+  if (safe) ALF_STORE.set({
+    selfId: safe
+  });
+  return safe;
+};
+let _alfRosterAt = 0;
+const alfRoster = async (force = false) => {
+  const self = await alfSelf();
+  if (!self || typeof sbFetchFriendRoster !== 'function') return [];
+  if (!force && Date.now() - _alfRosterAt < alfLimits().readMs) return ALF_STORE.state.roster;
+  try {
+    const list = await sbFetchFriendRoster(self);
+    const roster = (Array.isArray(list) ? list : []).map(f => alfSafeOther(f.otherId) ? {
+      id: f.otherId,
+      name: alfStr(f.userName, 20) || '名無しのブリーダー'
+    } : null).filter(Boolean).slice(0, 60);
+    _alfRosterAt = Date.now();
+    ALF_STORE.set({
+      roster
+    });
+    return roster;
+  } catch {
+    return ALF_STORE.state.roster;
+  }
+};
+let _alfHousesAt = 0;
+let _alfHousesDay = null;
+let _alfHousesMax = null;
+const alfFetchHouses = async (force = false) => {
+  if (_alfUnavailable) return ALF_STORE.state.houses;
+  const mode = await alfLoadMode();
+  if (mode === 'off') return {};
+  const roster = await alfRoster();
+  const muted = new Set(ALF_STORE.state.settings.muted);
+  const ids = roster.map(f => f.id).filter(id => !muted.has(id));
+  if (!ids.length) {
+    ALF_STORE.set({
+      houses: {}
+    });
+    return {};
+  }
+  const day = alfDay();
+  if (!force && Date.now() - _alfHousesAt < alfLimits().readMs) return ALF_STORE.state.houses;
+  if (!force && mode === 'thin' && _alfHousesDay === day) return ALF_STORE.state.houses;
+  try {
+    const since = _alfHousesMax ? `&updated_at=gt.${encodeURIComponent(_alfHousesMax)}` : '';
+    const rows = await alfRequest(`${ALF_TABLE_HOUSES}?select=breeder_id,open,house,updated_at&breeder_id=in.(${alfQuoteIn(ids)})${since}`);
+    const houses = {
+      ...ALF_STORE.state.houses
+    };
+    for (const row of Array.isArray(rows) ? rows : []) {
+      const id = alfSafeOther(row && row.breeder_id);
+      if (!id) continue;
+      const at = Date.parse(row.updated_at);
+      houses[id] = {
+        open: row.open !== false,
+        house: assistantLifeFriendNormalizeHouse(row.house),
+        at: Number.isFinite(at) ? at : 0
+      };
+      if (typeof row.updated_at === 'string' && (!_alfHousesMax || row.updated_at > _alfHousesMax)) _alfHousesMax = row.updated_at;
+    }
+    for (const id of Object.keys(houses)) if (!ids.includes(id)) delete houses[id];
+    _alfHousesAt = Date.now();
+    _alfHousesDay = day;
+    ALF_STORE.set({
+      houses
+    });
+    return houses;
+  } catch {
+    return ALF_STORE.state.houses;
+  }
+};
+const alfOpenHouses = (kind = 'go', now = Date.now()) => {
+  const s = ALF_STORE.state;
+  const muted = new Set(s.settings.muted);
+  const fresh = ALF_FRESH_DAYS[kind] * 86400000;
+  return s.roster.map(f => ({
+    ...f,
+    ...(s.houses[f.id] || {})
+  })).filter(f => f.open && f.house && f.house.ids.length && !muted.has(f.id) && now - (f.at || 0) <= fresh).sort((a, b) => (b.at || 0) - (a.at || 0));
+};
+let _alfVisitsAt = 0;
+const alfFetchVisits = async (force = false) => {
+  if (_alfUnavailable) return ALF_STORE.state.visits;
+  const mode = await alfLoadMode();
+  if (mode === 'off') return [];
+  const self = await alfSelf();
+  if (!self) return [];
+  if (!force && Date.now() - _alfVisitsAt < alfLimits().readMs) return ALF_STORE.state.visits;
+  try {
+    const from = alfDayShift(alfDay(), -7);
+    const rows = await alfRequest(`${ALF_TABLE_VISITS}?select=id,kind,visitor_id,host_id,day,assistants,word,thanks,created_at&or=(host_id.eq.${self},visitor_id.eq.${self})&day=gte.${from}&order=created_at.desc&limit=60`);
+    const visits = (Array.isArray(rows) ? rows : []).map(r => r && Number.isFinite(r.id) && ['go', 'come', 'player'].includes(r.kind) && alfSafeOther(r.visitor_id) && alfSafeOther(r.host_id) ? {
+      id: r.id,
+      kind: r.kind,
+      visitor: r.visitor_id,
+      host: r.host_id,
+      day: String(r.day || '').slice(0, 10),
+      ids: Array.isArray(r.assistants) ? r.assistants.filter(alfValidId).slice(0, 2) : [],
+      word: alfInt(r.word, 0, ALF_WORDS - 1),
+      thanks: r.thanks == null ? null : alfInt(r.thanks, 0, ALF_THANKS - 1),
+      at: Date.parse(r.created_at) || 0
+    } : null).filter(Boolean);
+    _alfVisitsAt = Date.now();
+    ALF_STORE.set({
+      visits
+    });
+    return visits;
+  } catch {
+    return ALF_STORE.state.visits;
+  }
+};
+const alfPostVisit = async ({
+  kind,
+  visitor,
+  host,
+  ids = [],
+  word = 0
+}) => {
+  try {
+    await alfRequest(ALF_TABLE_VISITS, {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: {
+        kind,
+        visitor_id: visitor,
+        host_id: host,
+        day: alfDay(),
+        assistants: ids,
+        word
+      }
+    });
+    return true;
+  } catch {
+    return false;
+  }
+};
+const alfSig = s => {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(36);
+};
+const alfPublish = async (life, metIds, now = Date.now()) => {
+  if (_alfUnavailable) return false;
+  const mode = await alfLoadMode();
+  if (mode === 'off') return false;
+  const self = await alfSelf();
+  if (!self) return false;
+  const st = alfToday();
+  const settings = ALF_STORE.state.settings;
+  const house = settings.show ? alfBuildHouse(life, metIds) : {};
+  const sig = alfSig(`${alfDay(now)}|${settings.open ? 1 : 0}|${JSON.stringify(house)}`);
+  if (sig === st.sentSig) return false;
+  if (now - st.sentAt < alfLimits().sendMs) return false;
+  try {
+    await alfRequest(`${ALF_TABLE_HOUSES}?on_conflict=breeder_id`, {
+      method: 'POST',
+      prefer: 'resolution=merge-duplicates,return=minimal',
+      body: {
+        breeder_id: self,
+        open: settings.open,
+        house
+      }
+    });
+    alfSaveSt({
+      ...alfToday(),
+      sentAt: now,
+      sentSig: sig
+    });
+    return true;
+  } catch {
+    return false;
+  }
+};
+const assistantLifeFriendPickOuting = ({
+  life,
+  ids,
+  houses,
+  st,
+  settings,
+  mode,
+  pendingIds = [],
+  abs,
+  salt = ''
+}) => {
+  if (!life || mode === 'off' || !settings || !settings.open) return null;
+  const lim = ALF_LIMITS[mode === 'on' ? 'on' : 'thin'];
+  if ((st.go || 0) >= lim.go) return null;
+  if (life.slot === 'late') return null;
+  const busy = new Set(pendingIds || []);
+  const cand = (ids || []).filter(id => {
+    const s = life.solo && life.solo[id];
+    return alfValidId(id) && s && s.place === 'home' && s.doing !== 'sleep' && s.reason !== 'distance' && !busy.has(id);
+  }).sort();
+  if (!cand.length) return null;
+  const rand = assistantLifeRng(`${salt}|friend|${abs}|${cand.join(',')}`);
+  const social = cand.reduce((t, id) => t + (ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].social || 0.5), 0) / cand.length;
+  const chance = Math.min(0.6, 0.15 + 0.3 * social) * (life.slot === 'night' ? 0.7 : 1);
+  if (rand() >= chance) return null;
+  const muted = new Set(settings.muted || []);
+  const went = st.went || {};
+  const last = new Set(st.lastHosts || []);
+  const w = {};
+  for (const h of houses || []) {
+    if (!h || !alfSafeOther(h.id) || went[h.id] || muted.has(h.id) || !h.house || !alfHomeIds(h.house).length) continue;
+    w[h.id] = (last.has(h.id) ? 0.3 : 1) * (1 + Math.min(1, (h.known || 0) / 10));
+  }
+  const host = assistantLifePickWeighted(w, rand);
+  if (!host) return null;
+  const order = [...cand];
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  const two = order.length >= 2 && rand() < 0.35;
+  const h = houses.find(x => x.id === host);
+  return {
+    host,
+    name: h.name,
+    ids: order.slice(0, two ? 2 : 1).sort(),
+    theirs: alfHomeIds(h.house).slice(0, 2),
+    word: Math.floor(rand() * ALF_WORDS)
+  };
+};
+const assistantLifeFriendPickCome = ({
+  houses,
+  st,
+  settings,
+  mode,
+  myHome = [],
+  seed = ''
+}) => {
+  if (mode !== 'on' || !settings || !settings.open || !settings.come) return null;
+  if ((st.come || 0) >= ALF_LIMITS.on.come) return null;
+  const done = new Set((st.came || []).map(c => c.host));
+  const muted = new Set(settings.muted || []);
+  const list = (houses || []).filter(h => h && alfSafeOther(h.id) && !done.has(h.id) && !muted.has(h.id) && alfHomeIds(h.house).length);
+  if (!list.length) return null;
+  const rand = assistantLifeRng(`${seed}|come|${st.day}|${st.come}`);
+  if (rand() >= 0.5) return null;
+  const h = list[Math.floor(rand() * list.length)];
+  const theirs = alfHomeIds(h.house);
+  const aid = theirs[Math.floor(rand() * theirs.length)];
+  const mine = myHome.length ? myHome[Math.floor(rand() * myHome.length)] : null;
+  return {
+    host: h.id,
+    name: h.name,
+    aid,
+    mine
+  };
+};
+let _alfGiftSender = null;
+const assistantLifeFriendSetGiftSender = fn => {
+  _alfGiftSender = typeof fn === 'function' ? fn : null;
+};
+const alfGiveBeatP = async (kind, giftId, st) => {
+  const want = ALF_BEAT_P[kind] || 0;
+  const amount = Math.max(0, Math.min(want, ALF_BEAT_P.dayMax - (st.beatP || 0)));
+  if (!amount || !_alfGiftSender) return 0;
+  let ok = false;
+  try {
+    ok = await _alfGiftSender({
+      id: giftId,
+      title: kind === 'look' ? 'フレンドの家へ遊びに行ったおみやげ' : '助手のフレンドの家のおみやげ',
+      source: 'assistantLifeFriend',
+      rewards: [{
+        type: 'beatPoint',
+        amount
+      }]
+    });
+  } catch {
+    ok = false;
+  }
+  return ok ? amount : 0;
+};
+const alfAddKnown = pairs => {
+  const known = {
+    ...ALF_STORE.state.known
+  };
+  for (const k of pairs) known[k] = (known[k] || 0) + 1;
+  alfSaveKnown(normalizeAssistantLifeFriendKnown(known));
+};
+const alfBond = (ids, action) => {
+  if (typeof assistantPeerAddPlayerBond === 'function') {
+    try {
+      assistantPeerAddPlayerBond(ids, action);
+    } catch {}
+  }
+};
+const assistantLifeFriendSeeOuting = async (which = 'out') => {
+  await ALF_STORE.load();
+  let st = alfToday();
+  const o = st[which];
+  if (!o || o.rewarded) {
+    if (o && !o.seen) alfSaveSt({
+      ...st,
+      [which]: {
+        ...o,
+        seen: true
+      }
+    });
+    return null;
+  }
+  const sameDay = o.day === st.day;
+  if (sameDay) {
+    alfBond(o.ids, 'friendGo');
+    if (o.ids.length === 2 && typeof assistantPeerGain === 'function') {
+      try {
+        await assistantPeerGain(o.ids[0], o.ids[1], 'friend');
+      } catch {}
+    }
+  }
+  st = alfToday();
+  const got = await alfGiveBeatP('go', `alf_go_${o.day || st.day}_${o.host.slice(0, 12)}`, st);
+  const firstHere = !st.photos.some(p => p.host === o.host);
+  const photos = firstHere ? [...st.photos, {
+    host: o.host,
+    name: o.name,
+    day: o.day || st.day,
+    ids: o.ids,
+    theirs: o.theirs
+  }].slice(-60) : st.photos;
+  alfSaveSt({
+    ...st,
+    beatP: st.beatP + got,
+    photos,
+    [which]: {
+      ...o,
+      seen: true,
+      rewarded: true
+    }
+  });
+  alfAddKnown(o.ids.flatMap(a => o.theirs.map(b => `${a}|${o.host}|${b}`)));
+  return {
+    beatP: got,
+    photo: firstHere,
+    bond: sameDay
+  };
+};
+const assistantLifeFriendSeeCome = async i => {
+  await ALF_STORE.load();
+  const st = alfToday();
+  const c = st.came[i];
+  if (!c || c.seen) return null;
+  if (c.mine) alfBond([c.mine], 'friendWelcome');
+  const came = st.came.map((x, j) => j === i ? {
+    ...x,
+    seen: true
+  } : x);
+  alfSaveSt({
+    ...st,
+    came
+  });
+  if (c.mine) alfAddKnown([`${c.mine}|${c.host}|${c.aid}`]);
+  return {
+    mine: c.mine
+  };
+};
+const assistantLifeFriendOnSlot = async (life, slot, now = Date.now()) => {
+  if (!alfEnabled() || !life) return;
+  await ALF_STORE.load();
+  let st = alfToday();
+  if (st.out && st.out.abs !== slot.abs) {
+    st = {
+      ...st,
+      back: st.out,
+      out: null
+    };
+    alfSaveSt(st);
+  }
+  const metIds = [...new Set([...(life.groups || []).flatMap(g => g.ids), ...Object.keys(life.solo || {})])];
+  void alfPublish(life, metIds, now);
+  if (st.out) return;
+  const mode = await alfLoadMode();
+  if (mode === 'off' || _alfUnavailable) return;
+  const self = await alfSelf();
+  if (!self) return;
+  await alfFetchHouses();
+  const known = ALF_STORE.state.known;
+  const houses = alfOpenHouses('go', now).map(h => ({
+    ...h,
+    known: Object.entries(known).filter(([k]) => k.split('|')[1] === h.id).reduce((t, [, n]) => t + n, 0)
+  }));
+  const pending = typeof assistantLifeRelPending === 'function' ? (assistantLifeRelPending() || {}).ids || [] : [];
+  const pick = assistantLifeFriendPickOuting({
+    life,
+    ids: metIds,
+    houses,
+    st: alfToday(),
+    settings: ALF_STORE.state.settings,
+    mode,
+    pendingIds: pending,
+    abs: slot.abs,
+    salt: life.salt || ''
+  });
+  if (!pick) return;
+  const ok = await alfPostVisit({
+    kind: 'go',
+    visitor: self,
+    host: pick.host,
+    ids: pick.ids,
+    word: pick.word
+  });
+  if (!ok) return;
+  const cur = alfToday();
+  alfSaveSt({
+    ...cur,
+    go: cur.go + 1,
+    went: {
+      ...cur.went,
+      [pick.host]: 1
+    },
+    out: {
+      abs: slot.abs,
+      day: cur.day,
+      ...pick,
+      seen: false,
+      rewarded: false
+    }
+  });
+  if (typeof assistantLifeDiaryAdd === 'function') {
+    try {
+      void assistantLifeDiaryAdd(`🏘 ${pick.ids.map(assistantLifeName).join('・')} ${pick.name}さんの家へ`, pick.ids, {
+        kind: 'friend',
+        now
+      });
+    } catch {}
+  }
+};
+const assistantLifeFriendOnOpen = async (life, now = Date.now()) => {
+  if (!alfEnabled()) return;
+  await ALF_STORE.load();
+  const mode = await alfLoadMode();
+  if (mode === 'off' || _alfUnavailable) return;
+  const self = await alfSelf();
+  if (!self) return;
+  await alfFetchHouses();
+  void alfFetchVisits();
+  void assistantLifeFriendRequestScenes(life);
+  const st = alfToday();
+  const myHome = life ? Object.entries(life.solo || {}).filter(([id, s]) => alfValidId(id) && s.place === 'home' && s.doing !== 'sleep').map(([id]) => id).filter(id => !(st.out && st.out.ids.includes(id))) : [];
+  const pick = assistantLifeFriendPickCome({
+    houses: alfOpenHouses('come', now),
+    st,
+    settings: ALF_STORE.state.settings,
+    mode,
+    myHome,
+    seed: `${self}|${life && life.abs}`
+  });
+  if (!pick) return;
+  const ok = await alfPostVisit({
+    kind: 'come',
+    visitor: pick.host,
+    host: self,
+    ids: [pick.aid]
+  });
+  if (!ok) return;
+  const cur = alfToday();
+  alfSaveSt({
+    ...cur,
+    come: cur.come + 1,
+    came: [...cur.came, {
+      ...pick,
+      seen: false
+    }].slice(0, 2)
+  });
+  if (typeof assistantLifeDiaryAdd === 'function') {
+    try {
+      void assistantLifeDiaryAdd(`🏘 ${pick.name}さんの${assistantLifeName(pick.aid)}が来た`, pick.mine ? [pick.mine] : [], {
+        kind: 'friend',
+        now
+      });
+    } catch {}
+  }
+};
+const assistantLifeFriendCanLook = hostId => {
+  const st = ALF_STORE.state.st;
+  const lim = alfLimits();
+  if (ALF_STORE.state.mode === 'off' || !ALF_STORE.state.settings.open) return 'off';
+  if (st.looked && st.looked[hostId]) return 'done';
+  if ((st.look || 0) >= lim.look) return 'max';
+  return 'ok';
+};
+const assistantLifeFriendLeaveNote = async (hostId, {
+  word = 0,
+  talked = [],
+  name = ''
+} = {}) => {
+  await ALF_STORE.load();
+  alfToday();
+  if (assistantLifeFriendCanLook(hostId) !== 'ok') return null;
+  const self = await alfSelf();
+  if (!self) return null;
+  const ids = [...new Set((talked || []).filter(alfValidId))].slice(0, 2);
+  const ok = await alfPostVisit({
+    kind: 'player',
+    visitor: self,
+    host: hostId,
+    ids,
+    word: alfInt(word, 0, ALF_WORDS - 1)
+  });
+  if (!ok) return null;
+  const cur = alfToday();
+  const firstHere = !cur.photos.some(p => p.host === hostId);
+  const photos = firstHere ? [...cur.photos, {
+    host: hostId,
+    name: alfStr(name, 20) || 'フレンド',
+    day: cur.day,
+    ids: [],
+    theirs: ids
+  }].slice(-60) : cur.photos;
+  const marked = {
+    ...cur,
+    look: cur.look + 1,
+    looked: {
+      ...cur.looked,
+      [hostId]: 1
+    },
+    photos
+  };
+  alfSaveSt(marked);
+  const got = await alfGiveBeatP('look', `alf_player_${cur.day}_${hostId.slice(0, 12)}`, marked);
+  if (got) {
+    const now2 = alfToday();
+    alfSaveSt({
+      ...now2,
+      beatP: now2.beatP + got
+    });
+  }
+  return {
+    beatP: got,
+    photo: firstHere
+  };
+};
+const assistantLifeFriendNotes = (s = ALF_STORE.state) => {
+  const self = s.selfId;
+  const names = Object.fromEntries((s.roster || []).map(f => [f.id, f.name]));
+  const muted = new Set(s.settings.muted);
+  return (s.visits || []).map(v => {
+    if (v.host === self && (v.kind === 'go' || v.kind === 'player') && names[v.visitor] && !muted.has(v.visitor)) return {
+      ...v,
+      who: v.visitor,
+      name: names[v.visitor],
+      dir: 'in'
+    };
+    if (v.visitor === self && v.kind === 'come' && names[v.host]) return {
+      ...v,
+      who: v.host,
+      name: names[v.host],
+      dir: 'away'
+    };
+    return null;
+  }).filter(Boolean);
+};
+const assistantLifeFriendUnseen = (s = ALF_STORE.state) => {
+  const seen = new Set(s.st.seen);
+  const notes = assistantLifeFriendNotes(s).filter(n => !seen.has(n.id)).length;
+  return notes + s.st.came.filter(c => !c.seen).length + (s.st.back && !s.st.back.seen ? 1 : 0);
+};
+const assistantLifeFriendMarkSeen = () => {
+  const st = alfToday();
+  const ids = assistantLifeFriendNotes().map(n => n.id);
+  const seen = [...new Set([...st.seen, ...ids])].slice(-200);
+  if (seen.length !== st.seen.length) alfSaveSt({
+    ...st,
+    seen
+  });
+};
+const assistantLifeFriendThanks = async (visitId, k) => {
+  const n = alfInt(k, 0, ALF_THANKS - 1);
+  try {
+    await alfRequest(`${ALF_TABLE_VISITS}?id=eq.${Math.floor(visitId)}`, {
+      method: 'PATCH',
+      prefer: 'return=minimal',
+      body: {
+        thanks: n
+      }
+    });
+    ALF_STORE.set({
+      visits: ALF_STORE.state.visits.map(v => v.id === visitId ? {
+        ...v,
+        thanks: n
+      } : v)
+    });
+    return true;
+  } catch {
+    return false;
+  }
+};
+const assistantLifeFriendSetSettings = patch => {
+  const settings = normalizeAssistantLifeFriendSettings({
+    ...ALF_STORE.state.settings,
+    ...patch
+  });
+  alfSaveSettings(settings);
+  const st = ALF_STORE.state.st;
+  alfSaveSt({
+    ...st,
+    sentSig: '',
+    sentAt: 0
+  });
+  if (ALF_STORE.state.loaded && typeof ASSISTANT_LIFE_STORE !== 'undefined') {
+    const life = ASSISTANT_LIFE_STORE.state.life;
+    void alfPublish(life, [...new Set([...(life.groups || []).flatMap(g => g.ids), ...Object.keys(life.solo || {})])]);
+  }
+};
+const assistantLifeFriendMute = (hostId, on) => {
+  const muted = ALF_STORE.state.settings.muted.filter(x => x !== hostId);
+  assistantLifeFriendSetSettings({
+    muted: on ? [...muted, hostId] : muted
+  });
+};
+const assistantLifeFriendAwayOf = id => {
+  if (!alfEnabled()) return null;
+  const o = ALF_STORE.state.st.out;
+  if (!o || !o.ids.includes(id)) return null;
+  const cur = typeof assistantLifeCurrent === 'function' ? assistantLifeCurrent() : null;
+  return cur && cur.abs === o.abs ? o : null;
+};
+const ALF_GO_LINES = Object.freeze({
+  mua: ['おじゃましまーす♪ {f}、遊びに来ちゃった！', '{h}さんの家、まぢかわいいぢゃん！'],
+  kiki: ['おじゃまします。{f}さん、今日はよろしくお願いしまつ♪', '{h}さんのお家、落ち着きますね。'],
+  momosuke: ['ももが遊びに来てあげたよ！！{f}、うれしいでしょw', '{h}さんの家、なかなかセンスいいじゃん♡'],
+  dra: ['よっ、{f}。遊びに来たからな、えへへ', '{h}さんの家、いい匂いするな。おやつあるか？'],
+  atsu: ['とりあえず来てみた笑 {f}、元気？', '{h}さんの家、居心地いいな笑'],
+  kyuko: ['ほい！{f}、遊びに来たよ〜', '{h}さんの家、片づいてて動きやすいねぇ。'],
+  sorashido: ['うぉぉぉ！{f}、来たぜ・・・！', '{h}さんの家、でーじいい感じだな笑'],
+  erubin: ['こんにちは、{f}。おじゃまするね', '{h}さんの家、あったかい感じがするね。']
+});
+const ALF_REPLY_LINES = Object.freeze({
+  mua: ['{v}ぢゃん！いらっしゃーい♪', 'ゆっくりしてってね！'],
+  kiki: ['{v}さん、いらっしゃいませ♪', 'お茶をいれますね。'],
+  momosuke: ['{v}！ももの家へようこそ！！', 'しかたないから遊んであげる♡'],
+  dra: ['おっ、{v}か。上がってけよな', 'おやつ、半分こしような'],
+  atsu: ['{v}じゃん、いらっしゃい笑', 'てか座って座って笑'],
+  kyuko: ['おけ〜、{v}いらっしゃい！', 'ちょうどひと息つくとこだったんだぁ。'],
+  sorashido: ['{v}！よく来たぜ・・・！', 'なんくるないさ〜、くつろいでけ笑'],
+  erubin: ['{v}、来てくれたんだね', '寒くなかった？ゆっくりしてね']
+});
+const ALF_SAME_LINES = Object.freeze({
+  mua: 'もうひとりのあたし！？まぢ！？',
+  kiki: '私がもうひとり…ふしぎな気分でつ。',
+  momosuke: 'ももが2人！？かわいさも2倍じゃん！！',
+  dra: 'おでがもうひとりいるな…えへへ',
+  atsu: '俺がいる笑 なんか照れるな笑',
+  kyuko: 'え、俺？ぐぬぬぬ、どっちが本物だぁ',
+  sorashido: 'うぉぉぉ！俺がもうひとりいるぜ・・・！',
+  erubin: '自分と会うって、なんだかくすぐったいね'
+});
+const ALF_BACK_LINES = Object.freeze({
+  mua: 'ただいま〜！{h}さんの家、楽しかったぢゃん♪',
+  kiki: 'ただいま戻りました。{h}さんのお家、素敵でしたよ。',
+  momosuke: 'ただいま！！{name}、おみやげあるよ♡',
+  dra: 'ただいまだな。{h}さんの家、また行きたいな',
+  atsu: 'ただいま笑 {h}さんの家、よかったよ笑',
+  kyuko: 'ただいまぁ。{h}さんの家で、いい話できたよ〜',
+  sorashido: 'ただいまだぜ！{h}さんの家、でーじ楽しかった笑',
+  erubin: 'ただいま。{h}さんの家の話、聞いてくれる？'
+});
+const ALF_GUEST_LINES = Object.freeze({
+  mua: '{h}さんちから遊びに来たよ♪',
+  kiki: '{h}さんのところから参りました。おじゃまします。',
+  momosuke: '{h}さんちのももだよ！！遊びに来た！',
+  dra: '{h}さんちから来たからな。おじゃまするぞ',
+  atsu: '{h}さんちから来た笑 おじゃまします笑',
+  kyuko: 'ほい！{h}さんちから来たよ〜',
+  sorashido: '{h}さんちから来たぜ・・・！',
+  erubin: '{h}さんの家から来たよ。おじゃまするね'
+});
+const ALF_WELCOME_LINES = Object.freeze({
+  mua: 'いらっしゃーい♪ ゆっくりしてってね！',
+  kiki: 'ようこそ。お茶をどうぞ♪',
+  momosuke: 'いらっしゃい！！ももの家、すごいでしょ♡',
+  dra: 'よく来たな。おやつあるぞ',
+  atsu: 'いらっしゃい笑 座って座って笑',
+  kyuko: 'いらっしゃ〜い！ちょうどお茶いれたとこ〜',
+  sorashido: 'うぉぉぉ！いらっしゃいだぜ・・・！',
+  erubin: 'いらっしゃい。来てくれてうれしいな'
+});
+const ALF_TALK_LINES = Object.freeze({
+  mua: ['あ、{h}さんのお友だちぢゃん！いらっしゃーい♪', 'あたしのこと、{h}さんから聞いてる？', 'また遊びに来てよ♪'],
+  kiki: ['いらっしゃいませ。{h}さんのお友だちですね。', 'ゆっくりしていってくださいね♪', 'またお会いできるとうれしいでつ。'],
+  momosuke: ['お客さん！？ももに会いに来たんでしょw', 'ももの家、かわいいでしょ♡', 'また来てもいいよ！！'],
+  dra: ['おっ、お客さんだな。いらっしゃい', 'おやつ食べてくか？えへへ', 'また来いよな'],
+  atsu: ['お、いらっしゃい笑', '{h}さんの友だちなら大歓迎笑', 'また来てね笑'],
+  kyuko: ['ほい！いらっしゃ〜い', '{h}さんの友だちかぁ、ありがとん笑', 'またねぇ〜'],
+  sorashido: ['うぉぉぉ！お客さんだぜ・・・！', 'ちばりよー！応援してるぜ笑', 'また来いよ笑'],
+  erubin: ['いらっしゃい。来てくれてありがとう', '{h}さんの家、居心地いいでしょ', '気をつけて帰ってね']
+});
+const ALF_WORD_TEXTS = Object.freeze(['楽しかった！', 'また来るね', 'おじゃましました', 'おやつおいしかった', 'いい部屋だったよ', 'また遊ぼうね', 'ゆっくりできた', 'ありがとう', 'お話しできてうれしかった', 'みんな元気そうだった', 'また会いたいな', 'お留守のあいだにおじゃましました']);
+const ALF_THANKS_TEXTS = Object.freeze(['来てくれてありがとう！', 'またいつでも来てね', 'うれしかったよ', '今度はこっちから行くね', 'みんな喜んでたよ', 'おつかれさま！']);
+const ALF_DOING_ROOM = Object.freeze({
+  snack: 'おやつ中',
+  practice: '練習中',
+  training: '育成中',
+  cards: 'カード研究中',
+  walk: '散歩中',
+  idle: 'のんびり中',
+  sleep: 'おやすみ中',
+  read: '読書中'
+});
+const alfFill = (text, {
+  f = '',
+  h = '',
+  v = '',
+  who = null
+} = {}) => String(text || '').replace(/\{f\}/g, f).replace(/\{h\}/g, h).replace(/\{v\}/g, v).replace(/\{name\}/g, () => typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(who) : 'あなた');
+const alfTheirLabel = (hostName, aid) => `${hostName}さんの${assistantLifeName(aid)}`;
+const assistantLifeFriendGoScene = (o, n = 0) => {
+  if (!o) return null;
+  const viaApi = o.theirs.length ? alfApiSceneFor('go', o.ids[0], o.theirs.includes(o.ids[0]) ? o.ids[0] : o.theirs[0], o.name) : null;
+  if (viaApi) return {
+    kind: 'go',
+    title: `🏘 ${o.name}さんの家`,
+    lines: viaApi,
+    host: o.name
+  };
+  const mine = o.ids;
+  const theirs = o.theirs.length ? o.theirs : [];
+  const lines = [];
+  const t0 = theirs[0];
+  const pick = arr => arr[(n + mine.length) % arr.length];
+  lines.push({
+    who: mine[0],
+    text: alfFill(pick(ALF_GO_LINES[mine[0]] || ['おじゃまします']), {
+      f: t0 ? alfTheirLabel(o.name, t0) : `${o.name}さん`,
+      h: o.name,
+      who: mine[0]
+    })
+  });
+  if (t0) lines.push({
+    who: t0,
+    guest: true,
+    text: alfFill(pick(ALF_REPLY_LINES[t0] || ['いらっしゃい']), {
+      v: mine.map(assistantLifeName).join('と'),
+      who: t0
+    })
+  });
+  const same = mine.find(id => theirs.includes(id));
+  if (same) lines.push({
+    who: same,
+    text: alfFill(ALF_SAME_LINES[same] || '', {
+      who: same
+    })
+  });
+  if (mine[1]) lines.push({
+    who: mine[1],
+    text: alfFill((ALF_GO_LINES[mine[1]] || ['', ''])[1] || 'おじゃまします', {
+      h: o.name,
+      who: mine[1]
+    })
+  });
+  return {
+    kind: 'go',
+    title: `🏘 ${o.name}さんの家`,
+    lines: lines.filter(l => l.text).slice(0, 4),
+    host: o.name
+  };
+};
+const assistantLifeFriendBackScene = o => o ? {
+  kind: 'back',
+  title: 'おかえり！',
+  host: o.name,
+  lines: o.ids.map(id => ({
+    who: id,
+    text: alfFill(ALF_BACK_LINES[id] || 'ただいま', {
+      h: o.name,
+      who: id
+    })
+  }))
+} : null;
+const assistantLifeFriendComeScene = c => {
+  const viaApi = c && c.mine ? alfApiSceneFor('come', c.mine, c.aid, c.name) : null;
+  if (viaApi) return {
+    kind: 'come',
+    title: `🏘 ${c.name}さんの${assistantLifeName(c.aid)}が来た`,
+    host: c.name,
+    lines: viaApi
+  };
+  return alfComeSceneScript(c);
+};
+const alfComeSceneScript = c => c ? {
+  kind: 'come',
+  title: `🏘 ${c.name}さんの${assistantLifeName(c.aid)}が来た`,
+  host: c.name,
+  lines: [{
+    who: c.aid,
+    guest: true,
+    text: alfFill(ALF_GUEST_LINES[c.aid] || 'おじゃまします', {
+      h: c.name,
+      who: c.aid
+    })
+  }, ...(c.mine ? [{
+    who: c.mine,
+    text: alfFill(c.mine === c.aid ? ALF_SAME_LINES[c.mine] : ALF_WELCOME_LINES[c.mine], {
+      who: c.mine
+    })
+  }] : [])]
+} : null;
+const ALF_API_ASK_MAX = 2;
+let _alfApiBusy = false;
+const alfApiEnabled = () => alfEnabled() && RELEASE_FLAGS.assistantLifeFriendApi === true && typeof ASSISTANT_CHAT_URL === 'string';
+const alfApiPairs = (life, houses) => {
+  const mine = Object.entries(life && life.solo || {}).filter(([id, s]) => alfValidId(id) && s.place === 'home' && s.doing !== 'sleep').map(([id]) => id).sort();
+  const pairs = [];
+  const seen = new Set();
+  const add = (kind, a, b) => {
+    const k = `${kind}|${a}|${b}`;
+    if (!seen.has(k) && pairs.length < 6) {
+      seen.add(k);
+      pairs.push({
+        kind,
+        a,
+        b
+      });
+    }
+  };
+  for (const h of (houses || []).slice(0, 4)) {
+    const theirs = alfHomeIds(h.house);
+    if (!theirs.length || !mine.length) continue;
+    const same = mine.find(id => theirs.includes(id));
+    add('go', mine[pairs.length % mine.length], same || theirs[0]);
+    add('come', mine[(pairs.length + 1) % mine.length], theirs[theirs.length - 1]);
+  }
+  return pairs;
+};
+const assistantLifeFriendRequestScenes = async life => {
+  if (!alfApiEnabled() || _alfApiBusy || ALF_STORE.state.mode !== 'on') return 'skip';
+  const st = alfToday();
+  const api = st.api && st.api.day === st.day ? st.api : {
+    day: st.day,
+    asked: 0,
+    list: [],
+    used: []
+  };
+  if (api.list.some(x => !api.used.includes(`${x.kind}|${x.a}|${x.b}`))) return 'cached';
+  if (api.asked >= ALF_API_ASK_MAX) return 'skip';
+  const pairs = alfApiPairs(life, alfOpenHouses('go'));
+  if (!pairs.length) return 'skip';
+  const self = await alfSelf();
+  if (!self) return 'skip';
+  _alfApiBusy = true;
+  alfSaveSt({
+    ...alfToday(),
+    api: {
+      ...api,
+      asked: api.asked + 1
+    }
+  });
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    let res = null;
+    try {
+      const r = await fetch(ASSISTANT_CHAT_URL, {
+        method: 'POST',
+        headers: SB_HEADERS,
+        signal: controller.signal,
+        body: JSON.stringify({
+          kind: 'friend_scenes',
+          breederId: self,
+          pairs
+        })
+      });
+      res = r.ok ? await r.json() : null;
+    } finally {
+      clearTimeout(timer);
+    }
+    if (!res || res.ok !== true || !Array.isArray(res.scenes)) return 'failed';
+    const cur = alfToday();
+    const base = cur.api && cur.api.day === cur.day ? cur.api : {
+      day: cur.day,
+      asked: 1,
+      list: [],
+      used: []
+    };
+    const next = alfNormalizeApi({
+      ...base,
+      list: [...base.list, ...res.scenes]
+    });
+    alfSaveSt({
+      ...cur,
+      api: next
+    });
+    return next && next.list.length ? 'ok' : 'failed';
+  } catch {
+    return 'failed';
+  } finally {
+    _alfApiBusy = false;
+  }
+};
+const alfApiSceneFor = (kind, a, b, hostName) => {
+  if (!alfApiEnabled()) return null;
+  const st = ALF_STORE.state.st;
+  const api = st.api && st.api.day === st.day ? st.api : null;
+  if (!api) return null;
+  const key = `${kind}|${a}|${b}`;
+  const sc = api.list.find(x => `${x.kind}|${x.a}|${x.b}` === key && !api.used.includes(key));
+  if (!sc) return null;
+  const lines = sc.lines.map(l => {
+    const who = l.side === 'a' ? a : b;
+    const t = String(l.t).replace(/\{f\}/g, l.side === 'a' ? alfTheirLabel(hostName, b) : assistantLifeName(a)).replace(/\{h\}/g, hostName).replace(/\{name\}/g, () => l.side === 'a' && typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(a) : 'あなた');
+    return /[{}]/.test(t) || t.length > 80 ? null : {
+      who,
+      guest: l.side === 'b',
+      text: t
+    };
+  });
+  if (lines.some(x => !x)) return null;
+  alfSaveSt({
+    ...st,
+    api: {
+      ...api,
+      used: [...api.used, key].slice(-12)
+    }
+  });
+  return lines;
+};
+const alfAgoText = (at, now = Date.now()) => {
+  if (!at) return '';
+  const d = new Date(at + 9 * 3600000);
+  const hm = `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+  const days = Math.round((Date.parse(`${alfDay(now)}T00:00:00Z`) - Date.parse(`${alfDay(at)}T00:00:00Z`)) / 86400000);
+  return days <= 0 ? `今日 ${hm}` : days === 1 ? `きのう ${hm}` : `${days}日前`;
+};
+const alfLayer = node => {
+  const host = typeof document !== 'undefined' ? document.querySelector('[data-assistant-life-screen]') : null;
+  return host && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal ? ReactDOM.createPortal(node, host) : node;
+};
+function AlfFace({
+  id,
+  size = 30
+}) {
+  const who = typeof assistantById === 'function' ? assistantById(id) : null;
+  return who ? React.createElement("span", {
+    className: "inline-flex shrink-0",
+    "data-alf-face": id
+  }, React.createElement(AssistantFace, {
+    who: who,
+    size: size,
+    accent: who.accent
+  })) : null;
+}
+function AlfSceneSheet({
+  scene,
+  onClose
+}) {
+  if (!scene) return null;
+  return alfLayer(React.createElement("div", {
+    className: "absolute inset-0 flex items-end justify-center bg-black/55 sm:items-center",
+    style: {
+      zIndex: 45
+    },
+    "data-alf-scene": scene.kind,
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "w-full max-w-[420px] rounded-t-3xl border border-amber-300/40 bg-slate-950/95 p-3 pb-[calc(12px+env(safe-area-inset-bottom))] sm:rounded-3xl",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("p", {
+    className: "text-[13px] font-black text-amber-200",
+    "data-alf-scene-title": true
+  }, scene.title), React.createElement("div", {
+    className: "mt-2 space-y-2"
+  }, scene.lines.map((l, i) => React.createElement("div", {
+    key: i,
+    className: `flex items-end gap-2 ${l.guest ? 'flex-row-reverse' : ''}`,
+    "data-alf-scene-line": true
+  }, React.createElement(AlfFace, {
+    id: l.who,
+    size: 36
+  }), React.createElement("div", {
+    className: `min-w-0 rounded-2xl border px-2.5 py-1.5 text-[12px] leading-snug ${l.guest ? 'border-sky-300/40 bg-sky-950/70 text-sky-50' : 'border-pink-300/40 bg-pink-950/60 text-pink-50'}`
+  }, React.createElement("p", {
+    className: "text-[9.5px] font-black opacity-80"
+  }, l.guest ? alfTheirLabel(scene.host, l.who) : assistantLifeName(l.who)), React.createElement("p", null, l.text))))), scene.reward && React.createElement("p", {
+    className: "mt-2 text-[11px] font-black text-amber-200",
+    "data-alf-scene-reward": true
+  }, scene.reward), React.createElement("button", {
+    type: "button",
+    className: "mt-3 w-full rounded-2xl bg-amber-300 py-2 text-[13px] font-black text-slate-950",
+    "data-alf-scene-close": true,
+    onClick: onClose
+  }, "とじる"))));
+}
+const ALF_PLAYER_REPLIES = Object.freeze(['こんにちは！', 'おじゃましてます', 'すてきな部屋だね']);
+function AlfFriendHouseView({
+  friend,
+  onClose
+}) {
+  const [talk, setTalk] = React.useState(null);
+  const [talked, setTalked] = React.useState([]);
+  const [leaving, setLeaving] = React.useState(false);
+  const [done, setDone] = React.useState(null);
+  if (!friend || !friend.house) return null;
+  const h = friend.house;
+  const can = assistantLifeFriendCanLook(friend.id);
+  const tall = typeof window !== 'undefined' && window.innerHeight > window.innerWidth;
+  const face = tall ? 48 : 34;
+  const lines = aid => ALF_TALK_LINES[aid] || ['いらっしゃい', 'ありがとう', 'またね'];
+  const greet = aid => setTalk({
+    aid,
+    step: 0,
+    text: alfFill(lines(aid)[0], {
+      h: friend.name,
+      who: aid
+    })
+  });
+  const reply = i => {
+    if (!talk) return;
+    setTalked(t => [...new Set([...t, talk.aid])]);
+    setTalk({
+      ...talk,
+      step: 1,
+      mine: ALF_PLAYER_REPLIES[i],
+      text: alfFill(lines(talk.aid)[1 + i % 2], {
+        h: friend.name,
+        who: talk.aid
+      })
+    });
+  };
+  const leave = async word => {
+    const r = await assistantLifeFriendLeaveNote(friend.id, {
+      word,
+      talked,
+      name: friend.name
+    });
+    setLeaving(false);
+    setDone(r ? `✉️ 置き手紙「${ALF_WORD_TEXTS[word]}」を残しました${r.photo ? '・📷 写真1枚' : ''}${r.beatP ? `・🎁 ビートP ${r.beatP}(ギフトに届きます)` : ''}` : '置き手紙を残せませんでした(時間をおいてもう一度)');
+  };
+  return alfLayer(React.createElement("div", {
+    className: "absolute inset-0 flex flex-col bg-slate-950",
+    style: {
+      zIndex: 44
+    },
+    "data-alf-visit": true
+  }, React.createElement("div", {
+    className: "flex items-center gap-2 border-b border-amber-300/30 px-3 pb-2",
+    style: {
+      paddingTop: 'calc(8px + env(safe-area-inset-top))'
+    }
+  }, React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "truncate text-[15px] font-black text-amber-200",
+    "data-alf-visit-title": true
+  }, "🏘 ", friend.name, "さんの家"), React.createElement("p", {
+    className: "text-[10px] text-slate-400"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "🚪 訪ねている"), "・", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "📷 ", alfAgoText(friend.at), " の控え"))), React.createElement("button", {
+    type: "button",
+    className: "shrink-0 rounded-xl border border-slate-500 px-3 py-1.5 text-[12px] font-black text-slate-100",
+    "data-alf-visit-close": true,
+    onClick: onClose
+  }, "もどる")), React.createElement("div", {
+    className: "min-h-0 flex-1 overflow-y-auto px-3 pb-3"
+  }, React.createElement("div", {
+    className: "flex items-center",
+    style: {
+      height: 50
+    },
+    "data-alf-visit-gap": true
+  }, React.createElement("p", {
+    className: "max-w-[55%] text-[11px] leading-snug text-slate-300"
+  }, talk ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "返事をえらぶか、"), React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "ほかの部屋へ")) : React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "黄色い枠の部屋を押して、"), React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "助手に声をかけよう")))), React.createElement("div", {
+    className: "grid grid-cols-4 gap-2",
+    "data-alf-visit-rooms": true
+  }, h.ids.map(aid => {
+    const r = h.r[aid] || {
+      at: 'home',
+      d: 'idle'
+    };
+    const home = r.at === 'home';
+    const can = home && r.d !== 'sleep';
+    return React.createElement("button", {
+      key: aid,
+      type: "button",
+      disabled: !can,
+      "data-alf-visit-room": aid,
+      onClick: () => can && greet(aid),
+      style: {
+        minHeight: tall ? 112 : 78
+      },
+      className: `flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl border p-1 ${can ? talk && talk.aid === aid ? 'border-amber-300 bg-amber-900/40' : 'border-amber-200/50 bg-slate-800/90' : 'border-slate-600/40 bg-slate-900/70 opacity-60'}`
+    }, React.createElement(AlfFace, {
+      id: aid,
+      size: face
+    }), React.createElement("span", {
+      className: `whitespace-nowrap font-black text-slate-100 ${tall ? 'text-[12px]' : 'text-[10.5px]'}`
+    }, assistantLifeName(aid)), React.createElement("span", {
+      className: "whitespace-nowrap text-[9px] text-slate-300"
+    }, home ? ALF_DOING_ROOM[r.d] || 'のんびり中' : 'おでかけ中'));
+  })), talk && React.createElement("div", {
+    className: tall ? 'mt-5' : 'mt-3',
+    "data-alf-visit-talk": true
+  }, talk.mine && React.createElement("p", {
+    className: `mb-1 text-right text-pink-100 ${tall ? 'text-[13px]' : 'text-[11.5px]'}`,
+    "data-alf-visit-mine": true
+  }, "あなた「", talk.mine, "」"), React.createElement("div", {
+    className: "flex items-end gap-2"
+  }, React.createElement(AlfFace, {
+    id: talk.aid,
+    size: tall ? 60 : 40
+  }), React.createElement("div", {
+    className: `min-w-0 rounded-2xl border border-sky-300/40 bg-sky-950/70 leading-snug text-sky-50 ${tall ? 'px-3 py-2.5 text-[15px]' : 'px-2.5 py-1.5 text-[12px]'}`
+  }, React.createElement("p", {
+    className: "text-[9.5px] font-black opacity-80"
+  }, alfTheirLabel(friend.name, talk.aid)), React.createElement("p", null, talk.text))), talk.step === 0 && React.createElement("div", {
+    className: "mt-2 grid grid-cols-3 gap-1.5",
+    "data-alf-visit-replies": true
+  }, ALF_PLAYER_REPLIES.map((t, i) => React.createElement("button", {
+    key: i,
+    type: "button",
+    className: `rounded-xl border border-pink-200/50 bg-pink-950/50 px-1 font-black text-pink-50 ${tall ? 'py-3 text-[12.5px]' : 'py-1.5 text-[11px]'}`,
+    "data-alf-reply": i,
+    onClick: () => reply(i)
+  }, t)))), done ? React.createElement("p", {
+    className: "mt-3 text-[11.5px] font-black text-amber-200",
+    "data-alf-visit-note": true
+  }, done) : can === 'ok' ? leaving ? React.createElement("div", {
+    className: "mt-3 rounded-2xl border border-amber-300/40 bg-slate-900 p-2",
+    "data-alf-visit-words": true
+  }, React.createElement("p", {
+    className: "text-[11px] font-black text-amber-200"
+  }, "置き手紙の一言をえらぶ"), React.createElement("div", {
+    className: "mt-1 flex flex-wrap gap-1"
+  }, ALF_WORD_TEXTS.map((t, i) => React.createElement("button", {
+    key: i,
+    type: "button",
+    className: "rounded-lg border border-amber-200/40 px-1.5 py-0.5 text-[10.5px] text-amber-50",
+    "data-alf-word": i,
+    onClick: () => leave(i)
+  }, t)))) : React.createElement("button", {
+    type: "button",
+    className: `w-full rounded-2xl bg-amber-300 font-black text-slate-950 ${tall ? 'mt-5 py-3 text-[14px]' : 'mt-3 py-2 text-[12.5px]'}`,
+    "data-alf-visit-leave": true,
+    onClick: () => setLeaving(true)
+  }, "✉️ 置き手紙を残して帰る") : React.createElement("p", {
+    className: "mt-3 text-[10.5px] text-slate-400"
+  }, can === 'done' ? '今日はこの家に置き手紙を残しました。' : '今日はもう置き手紙を残せません(朝4時に戻ります)。'), React.createElement("p", {
+    className: "mt-3 text-[10px] leading-snug text-slate-400"
+  }, friend.name, "さんには、あなたが訪ねたことが置き手紙で届きます。相手のセーブや助手の仲良し度は変わりません。"))));
+}
+function AssistantLifeFriendPage({
+  life
+}) {
+  const s = useAssistantLifeFriendState();
+  const [scene, setScene] = React.useState(null);
+  const [visit, setVisit] = React.useState(null);
+  const [menu, setMenu] = React.useState(null);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      await ALF_STORE.load();
+      await assistantLifeFriendOnOpen(life);
+      await alfFetchVisits();
+      if (alive) assistantLifeFriendMarkSeen();
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  if (!alfEnabled()) return null;
+  const st = s.st;
+  const lim = ALF_LIMITS[s.mode === 'on' ? 'on' : 'thin'];
+  if (!s.ready || s.mode === 'off') return React.createElement("div", {
+    className: "px-3 py-6 text-center text-[12px] text-slate-300",
+    "data-alf-page": "off"
+  }, "🏘 フレンドの家との行き来は、いまお休み中です。");
+  const houses = alfOpenHouses('look');
+  const notes = assistantLifeFriendNotes(s);
+  const openScene = async (kind, i) => {
+    if (kind === 'out') {
+      setScene(assistantLifeFriendGoScene(st.out));
+      const r = await assistantLifeFriendSeeOuting('out');
+      if (r && r.beatP) setScene(x => x && {
+        ...x,
+        reward: `🎁 おみやげ ビートP ${r.beatP}${r.photo ? '・写真1枚' : ''}`
+      });
+    }
+    if (kind === 'back') {
+      setScene(assistantLifeFriendBackScene(st.back));
+      const r = await assistantLifeFriendSeeOuting('back');
+      if (r && r.beatP) setScene(x => x && {
+        ...x,
+        reward: `🎁 おみやげ ビートP ${r.beatP}${r.photo ? '・写真1枚' : ''}`
+      });
+    }
+    if (kind === 'come') {
+      setScene(assistantLifeFriendComeScene(st.came[i]));
+      void assistantLifeFriendSeeCome(i);
+    }
+  };
+  const sec = 'mt-3 inline-block rounded-full bg-slate-950/85 px-2.5 py-0.5 text-[12px] font-black text-amber-200 shadow';
+  const card = 'mt-1.5 rounded-2xl border border-amber-300/25 bg-slate-900/85 p-2';
+  return React.createElement("div", {
+    className: "px-3 pb-3 pt-1",
+    "data-alf-page": "on"
+  }, !s.intro && React.createElement("div", {
+    className: card,
+    "data-alf-intro": true
+  }, React.createElement("p", {
+    className: "text-[11px] leading-snug text-slate-200",
+    "data-alf-intro-text": true
+  }, ['助手たちは、', 'ときどき自分で', 'フレンドの家へ', '遊びに行きます。', 'フレンドの助手が', '遊びに来ることも', 'あります。', 'あなたも', '「🚪 訪ねる」で', 'フレンドの家を', '見て回れます。'].map((t, i) => React.createElement("span", {
+    key: i,
+    className: "whitespace-nowrap"
+  }, t))), React.createElement("button", {
+    type: "button",
+    className: "mt-1.5 rounded-xl bg-amber-300 px-3 py-1 text-[11px] font-black text-slate-950",
+    "data-alf-intro-ok": true,
+    onClick: () => {
+      ALF_STORE.set({
+        intro: true
+      });
+      try {
+        storeSet(ALF_INTRO_KEY, true, false);
+      } catch {}
+    }
+  }, "わかった")), React.createElement("p", {
+    className: sec
+  }, "🏘 いまの行き来"), React.createElement("div", {
+    className: card,
+    "data-alf-now": true
+  }, st.out && React.createElement("div", {
+    className: "flex items-center gap-2",
+    "data-alf-now-out": true
+  }, st.out.ids.map(id => React.createElement(AlfFace, {
+    key: id,
+    id: id,
+    size: 28
+  })), React.createElement("p", {
+    className: "min-w-0 flex-1 text-[11.5px] text-slate-100"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, st.out.ids.map(assistantLifeName).join('・')), "が", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, st.out.name, "さんの家へ")), React.createElement("button", {
+    type: "button",
+    className: "shrink-0 rounded-xl bg-amber-300 px-2.5 py-1 text-[11px] font-black text-slate-950",
+    "data-alf-act": "out",
+    onClick: () => openScene('out')
+  }, "▶ 様子")), !st.out && st.back && !st.back.seen && React.createElement("div", {
+    className: "flex items-center gap-2",
+    "data-alf-now-back": true
+  }, st.back.ids.map(id => React.createElement(AlfFace, {
+    key: id,
+    id: id,
+    size: 28
+  })), React.createElement("p", {
+    className: "min-w-0 flex-1 text-[11.5px] text-slate-100"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, st.back.ids.map(assistantLifeName).join('・')), "が帰ってきた"), React.createElement("button", {
+    type: "button",
+    className: "shrink-0 rounded-xl bg-amber-300 px-2.5 py-1 text-[11px] font-black text-slate-950",
+    "data-alf-act": "back",
+    onClick: () => openScene('back')
+  }, "おかえり！")), st.came.map((c, i) => React.createElement("div", {
+    key: i,
+    className: "mt-1 flex items-center gap-2",
+    "data-alf-now-come": true
+  }, React.createElement(AlfFace, {
+    id: c.aid,
+    size: 28
+  }), React.createElement("p", {
+    className: "min-w-0 flex-1 text-[11.5px] text-slate-100"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, alfTheirLabel(c.name, c.aid)), "が遊びに来た"), !c.seen ? React.createElement("button", {
+    type: "button",
+    className: "shrink-0 rounded-xl bg-sky-300 px-2.5 py-1 text-[11px] font-black text-slate-950",
+    "data-alf-act": "come",
+    onClick: () => openScene('come', i)
+  }, "▶ 迎える") : React.createElement("span", {
+    className: "shrink-0 text-[10px] text-slate-400"
+  }, "迎えた"))), !st.out && !(st.back && !st.back.seen) && !st.came.length && React.createElement("p", {
+    className: "text-[11px] text-slate-400"
+  }, "いまは、みんな家にいます。"), React.createElement("p", {
+    className: "mt-1.5 flex flex-wrap gap-x-3 text-[10px] text-slate-300",
+    "data-alf-today": true
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "助手が行った ", st.go, "/", lim.go), React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "来てくれた ", st.come, "/", lim.come), React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "あなたが訪ねた ", st.look, "/", lim.look), React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "おみやげ ", st.beatP, "/", ALF_BEAT_P.dayMax, "P"))), React.createElement("p", {
+    className: sec
+  }, "✉️ 置き手紙"), React.createElement("div", {
+    className: card,
+    "data-alf-notes": true
+  }, notes.length ? notes.slice(0, 12).map(n => React.createElement("div", {
+    key: n.id,
+    className: "border-b border-slate-700/60 py-1 last:border-0",
+    "data-alf-note": n.kind
+  }, React.createElement("p", {
+    className: "text-[11px] leading-snug text-slate-100"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap text-slate-400"
+  }, alfAgoText(n.at)), ' ', n.dir === 'away' ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, n.ids.map(assistantLifeName).join('・')), "が", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, n.name, "さんの家へ"), "遊びに行っていた") : n.kind === 'player' ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, n.name, "さん"), "が訪ねてくれた「", ALF_WORD_TEXTS[n.word], "」", n.ids.length ? React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "・", n.ids.map(assistantLifeName).join('・'), "と話した") : null) : React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, n.name, "さんの", n.ids.map(assistantLifeName).join('・')), "が来た「", ALF_WORD_TEXTS[n.word], "」")), n.dir === 'in' && (n.thanks == null ? React.createElement("div", {
+    className: "mt-1 flex flex-wrap gap-1"
+  }, ALF_THANKS_TEXTS.slice(0, 3).map((t, k) => React.createElement("button", {
+    key: k,
+    type: "button",
+    className: "rounded-lg border border-amber-200/40 px-1.5 py-0.5 text-[10px] text-amber-100",
+    "data-alf-thanks": k,
+    onClick: () => assistantLifeFriendThanks(n.id, k)
+  }, t))) : React.createElement("p", {
+    className: "text-[10px] text-slate-400"
+  }, "お礼「", ALF_THANKS_TEXTS[n.thanks], "」を返しました")))) : React.createElement("p", {
+    className: "text-[11px] text-slate-400"
+  }, "まだ置き手紙はありません。")), React.createElement("p", {
+    className: sec
+  }, "🏠 フレンドの家"), React.createElement("div", {
+    "data-alf-houses": true
+  }, houses.length ? houses.map(f => {
+    const can = assistantLifeFriendCanLook(f.id);
+    const been = st.photos.some(p => p.host === f.id);
+    return React.createElement("div", {
+      key: f.id,
+      className: `${card} flex items-center gap-2`,
+      "data-alf-house": f.id
+    }, React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("p", {
+      className: "truncate text-[12px] font-black text-slate-100"
+    }, f.name, "さんの家", been ? ' 📷' : ''), React.createElement("p", {
+      className: "text-[10px] text-slate-400"
+    }, alfAgoText(f.at), " の様子"), React.createElement("div", {
+      className: "mt-0.5 flex gap-0.5"
+    }, alfHomeIds(f.house).slice(0, 6).map(id => React.createElement(AlfFace, {
+      key: id,
+      id: id,
+      size: 22
+    })))), React.createElement("button", {
+      type: "button",
+      disabled: can === 'off',
+      className: "shrink-0 rounded-xl bg-amber-300 px-2.5 py-1.5 text-[11px] font-black text-slate-950 disabled:opacity-40",
+      "data-alf-act": "look",
+      onClick: () => setVisit(f)
+    }, "🚪 訪ねる"), React.createElement("button", {
+      type: "button",
+      className: "shrink-0 rounded-xl border border-slate-500 px-2 py-1.5 text-[11px] text-slate-200",
+      "aria-label": "その他",
+      "data-alf-act": "menu",
+      onClick: () => setMenu(menu === f.id ? null : f.id)
+    }, "⋯"), menu === f.id && React.createElement("button", {
+      type: "button",
+      className: "shrink-0 rounded-xl border border-rose-300/60 px-2 py-1.5 text-[10px] text-rose-100",
+      "data-alf-act": "mute",
+      onClick: () => {
+        assistantLifeFriendMute(f.id, true);
+        setMenu(null);
+      }
+    }, "来ないようにする"));
+  }) : React.createElement("p", {
+    className: `${card} text-[11px] text-slate-400`
+  }, "遊びに行けるフレンドの家はまだありません(フレンドが助手ライフを開くと、ここに並びます)。")), React.createElement("p", {
+    className: sec
+  }, "⚙️ 行き来の設定"), React.createElement("div", {
+    className: card,
+    "data-alf-settings": true
+  }, [['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る']].map(([k, label]) => React.createElement("label", {
+    key: k,
+    className: "flex items-center justify-between gap-2 py-1 text-[11.5px] text-slate-100",
+    "data-alf-setting": k
+  }, React.createElement("span", null, label), React.createElement("input", {
+    type: "checkbox",
+    checked: !!s.settings[k],
+    onChange: e => assistantLifeFriendSetSettings({
+      [k]: e.target.checked
+    })
+  }))), s.settings.muted.length > 0 && React.createElement("button", {
+    type: "button",
+    className: "mt-1 text-[10.5px] text-amber-200 underline",
+    "data-alf-unmute": true,
+    onClick: () => assistantLifeFriendSetSettings({
+      muted: []
+    })
+  }, "来ないようにした家(", s.settings.muted.length, "軒)を戻す")), React.createElement(AlfSceneSheet, {
+    scene: scene,
+    onClose: () => setScene(null)
+  }), visit && React.createElement(AlfFriendHouseView, {
+    friend: visit,
+    onClose: () => setVisit(null)
+  }));
+}
+const assistantLifeFriendDecorateRooms = rooms => {
+  if (!alfEnabled() || !rooms) return rooms;
+  for (const id of Object.keys(rooms)) {
+    const o = assistantLifeFriendAwayOf(id);
+    if (!o || !rooms[id]) continue;
+    rooms[id] = {
+      tag: [`🏘 ${o.name}さんの家へ`, o.ids.length > 1 ? `${o.ids.length}人で 遊びに` : 'ひとりで 遊びに', o.ids.length > 1 ? assistantLifeGroupNames(o.ids, 4) : null]
+    };
+  }
+  return rooms;
+};
+function AssistantLifeFriendHomeBadge({
+  rect
+}) {
+  const s = useAssistantLifeFriendState();
+  const [toast, setToast] = React.useState('');
+  const lastRef = React.useRef(null);
+  React.useEffect(() => {
+    if (alfEnabled()) void (async () => {
+      await ALF_STORE.load();
+      await alfLoadMode();
+      await alfRoster();
+      await alfFetchVisits();
+    })();
+  }, []);
+  const n = alfEnabled() && s.loaded && s.mode && s.mode !== 'off' ? assistantLifeFriendUnseen(s) : 0;
+  React.useEffect(() => {
+    if (lastRef.current != null && n > lastRef.current) {
+      const seen = new Set(s.st.seen);
+      const note = assistantLifeFriendNotes(s).find(x => !seen.has(x.id));
+      setToast(note ? note.kind === 'player' ? `🏘 ${note.name}さんが訪ねてくれました` : note.dir === 'away' ? `🏘 ${note.ids.map(assistantLifeName).join('・')}が${note.name}さんの家へ行っていました` : `🏘 ${note.name}さんの${note.ids.map(assistantLifeName).join('・')}が来ました` : '🏘 フレンドの家から知らせがあります');
+      const t = setTimeout(() => setToast(''), 3000);
+      lastRef.current = n;
+      return () => clearTimeout(t);
+    }
+    lastRef.current = n;
+    return undefined;
+  }, [n]);
+  if (!n && !toast) return null;
+  return React.createElement(React.Fragment, null, n > 0 && rect && React.createElement("span", {
+    className: "pointer-events-none fixed rounded-full border border-white/70 bg-sky-300 px-1 text-[9.5px] font-black leading-[15px] text-slate-950 shadow",
+    "data-alf-badge": true,
+    style: {
+      zIndex: 41,
+      left: rect.x + rect.w - 14,
+      top: rect.y - 8
+    }
+  }, "🏘 ", n), toast && rect && React.createElement("div", {
+    className: "pointer-events-none fixed whitespace-nowrap rounded-full border border-sky-200/60 bg-slate-950/90 px-2.5 text-[11px] font-black leading-[20px] text-sky-50 shadow-lg",
+    "data-alf-toast": true,
+    style: {
+      zIndex: 60,
+      top: Math.max(4, rect.y - 26),
+      ...(rect.right ? {
+        right: Math.max(4, (typeof window !== 'undefined' ? window.innerWidth : 390) - rect.x - rect.w)
+      } : {
+        left: Math.max(4, rect.x)
+      })
+    }
+  }, toast));
 }
 const CARD_BATTLE_HAND_MAX = 5;
 const CARD_BATTLE_DECK_SIZE = 50;
@@ -165076,6 +166966,24 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (typeof assistantPeerSetPlayerBondAdder === 'function') assistantPeerSetPlayerBondAdder(addAssistantBondFor);
   }, [addAssistantBondFor]);
+  useEffect(() => {
+    if (typeof assistantLifeFriendSetGiftSender !== 'function') return;
+    assistantLifeFriendSetGiftSender(gift => runGiftWrite(async () => {
+      if (RELEASE_FLAGS.assistantLifeFriend !== true || !gift || typeof gift.id !== 'string') return false;
+      const savedGifts = await storeGet('mh_gifts', [], false);
+      const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
+      const grant = grantGiftOnce(beforeGifts, gift);
+      if (!grant.granted) return false;
+      const saved = await saveStoredValuesOrRollback([{
+        key: 'mh_gifts',
+        before: beforeGifts,
+        next: grant.gifts
+      }], storeGet, storeSet);
+      if (!saved) return false;
+      setGifts(grant.gifts);
+      return true;
+    }));
+  }, []);
   useEffect(() => {
     if (typeof assistantPeerSetPlayerCaller !== 'function') return;
     assistantPeerSetPlayerCaller(id => assistantCallName(breederName, assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points), assistantCallStyles[id] || null, id));
