@@ -480,8 +480,8 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = ''
           {trait
             ? <><p data-rhythm-buddy-trait={trait.id} className="text-sm font-black text-amber-200">{trait.label}{m.traitLock && <span data-rhythm-buddy-trait-locked className="ml-1 text-[10px] text-lime-200">🌱たねで選んだ</span>}</p><small className="block text-[9px] font-bold leading-snug text-slate-400">{trait.note}</small></>
             : sprout
-              ? <><p data-rhythm-buddy-sprout={sprout.id} className="text-sm font-black text-lime-200">🌱 {sprout.label}っぽい?</p><small className="block text-[9px] font-bold leading-snug text-slate-500">性格の芽です。ビートLv.{RHYTHM_BUDDY_TRAIT_LEVEL}で決まるまで、遊び方で入れかわります</small></>
-              : <><p className="text-sm font-black text-slate-400">まだ見えない</p><small className="block text-[9px] font-bold leading-snug text-slate-500">ビートLv.{RHYTHM_BUDDY_SPROUT_LEVEL}で芽が出て、Lv.{RHYTHM_BUDDY_TRAIT_LEVEL}で決まります。{lean ? `生まれつき${lean.label}になりやすいモンスターです` : ''}</small></>}
+              ? <><p data-rhythm-buddy-sprout={sprout.id} className="text-sm font-black text-lime-200">🌱 {sprout.label}っぽい?</p><small className="block break-keep text-[9px] font-bold leading-snug text-slate-500">性格の芽です。ビートLv.{RHYTHM_BUDDY_TRAIT_LEVEL}で決まるまで、遊び方で入れかわります</small></>
+              : <><p className="text-sm font-black text-slate-400">まだ見えない</p><small className="block break-keep text-[9px] font-bold leading-snug text-slate-500">ビートLv.{RHYTHM_BUDDY_SPROUT_LEVEL}で芽が出て、Lv.{RHYTHM_BUDDY_TRAIT_LEVEL}で決まります。{lean ? `生まれつき${lean.label}になりやすいモンスターです` : ''}</small></>}
         </section>
       </div>
       <section data-rhythm-buddy-profile className="rounded-xl border border-pink-300/30 bg-slate-950/60 p-2">
@@ -495,7 +495,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = ''
             </div>
           ))}
         </dl>
-        <small className="mt-1 block text-[9px] font-bold leading-snug text-slate-500">
+        <small className="mt-1 block break-keep text-[9px] font-bold leading-snug text-slate-500">
           話し方や好みは1体ずつ違います。{m.trait ? '' : `性格が決まると、一人称・呼び方・口ぐせが性格に合ったものへ変わることがあります。`}叩き方のくせは話すことだけで、スコアには関係しません。好きな曲・苦手な曲は一緒に遊ぶと決まります
         </small>
       </section>
@@ -509,7 +509,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = ''
             <button data-rhythm-buddy-seed-open type="button" disabled={seeds <= 0} onClick={() => { setSeedOpen((v) => !v); setSeedPick(''); }}
               className={`min-h-[34px] rounded-lg px-3 text-[11px] font-black ${seeds > 0 ? 'bg-lime-500 text-slate-950' : 'bg-slate-800 text-slate-500'}`}>{seedOpen ? 'やめる' : '性格を選び直す'}</button>
           </div>
-          <small className="mt-0.5 block text-[9px] font-bold leading-snug text-slate-400">1個使うと、性格を全部の中から選び直せます。選んだ性格は遊び方では変わりません(もう一度たねを使えば変えられます)</small>
+          <small className="mt-0.5 block break-keep text-[9px] font-bold leading-snug text-slate-400">1個使うと、性格を全部の中から選び直せます。選んだ性格は遊び方では変わりません(もう一度たねを使えば変えられます)</small>
           {seedOpen && (
             <div className="mt-1 space-y-1">
               <ul data-rhythm-buddy-seed-list className="grid grid-cols-2 gap-1">
@@ -972,7 +972,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
               : <div className="space-y-2">{listControls.bar}<RhythmBuddyList masuMons={masuMons} state={state} dayKey={dayKey} onOpen={setDetailId} onPick={choose} busy={busy} canPay={canPay} calledIds={calledIds} settings={listControls.settings} /></div>}
         </div>
         {listControls.sheet}
-        {!masuPicker && !canPay && <p data-rhythm-buddy-empty className="mt-2 text-[11px] font-black text-rose-300">今日の無料ぶんを使い切りました。セッション券があれば呼べます</p>}
+        {!masuPicker && !canPay && <p data-rhythm-buddy-empty className="mt-2 break-keep text-[11px] font-black text-rose-300">今日の無料ぶんを使い切りました。セッション券があれば呼べます</p>}
         </div>
           )}
         {/* まとめて呼ぶ帯(縦画面は下。横画面は左の列の中・上の multiBar) */}
