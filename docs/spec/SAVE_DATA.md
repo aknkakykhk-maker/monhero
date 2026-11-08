@@ -147,6 +147,8 @@
 | `mh_card_settings_v1` | object / `normalizeCardSettings` | MFバトルカードの演出 `{ speed: 'normal'|'fast', autoPass: 真偽 }`。無い人は ふつう・自動パスON |
 | `mh_card_pack_fx_v1` | string / `cardPackFxOn`('OFF' のときだけ切る) | MFバトルカードのオプション「パックを開ける演出」(2026-10-31)。'ON'(強め)か 'OFF'(短め)。無い・壊れていたら強め。見た目だけで、出るカードは変わらない |
 | `mh_card_ai_talk_v1` | object / `cardNormalizeAiTalk` | MFバトルカードの助手のおしゃべり(AI)の入/切 `{ on: 真偽 }`(2026-10-25)。無い・壊れていたら入。呼べるのは公開の印かデバッグ端末だけ(83-card-battle-talk-ai.jsx) |
+| `mh_card_ai_recipe_v1` | object / `cardNormalizeAiRecipe` | MFバトルカードの助手の3つのデッキ(2026-11-08)。`{ v:1, day, perWho: { 助手id: { met, gamesSince, slotsDone, decks: { attack/guard/normal: { plan, name, line, at, ai } } } } }`。plan は 82 の `cardAiPlanClean` を通す。無い・壊れていたら空(今の組み方)。日付が変わると slotsDone だけ0に戻す。公開の印 `cardGrowStyle` が偽のあいだは読み書きしない |
+| `mh_card_ai_deck_v1` | object / `cardNormalizeAiDeck` | 助手のデッキを AI で組むかの入/切 `{ on: 真偽 }`(2026-11-08)。無い・壊れていたら入。切なら AI に聞かず、型の中の揺らぎで組み直す |
 | `mh_raid_jack_frame_gift_v1` | object / `null` | プロフィールフレーム「ハロウィン・妖」をギフトで届けた印(`{ at, frameId }`・2026-10-20)。レイドで大王まで倒せたときの終章を見た参加者へ1回だけ届けるため。ギフトの一覧(`mh_gifts`)は古いものから消えるので、二重に届けないためにこの印を持つ。ギフトと同じ取引で保存する |
 | `mh_raid_jack_ending_replay_v1` | object / `null` | ハロウィン・ナイトの終章を一度だけ流し直した印(`{ at }`・2026-11-01)。終章にソラシドのセリフを足したあと、見終えた人へ前に見た方の終章を1回だけ流すため。終章をはじめて見た人も、見終えたところで立てる。終章を見た印(`mh_rhythm_event_story_v1`)と大王のフレームのギフトには触らない。`RAID_JACK_ENDING_REPLAY_READY` が真になるまで読みも書きもしない |
 | `mh_sorashido_gift_v1` | object / `null` | ソラシドの沖縄のおみやげ(10,000ビートP)をギフトで届けた印(`{ at, beatPoints }`・2026-10-27)。ソラシドの加入のお話を見終えた人へ1回だけ届けるため。ギフトの一覧(`mh_gifts`)は古いものから消えるので、それだけでは二重を防げない。イベント回想で見直しても届かない |

@@ -2416,15 +2416,18 @@ const cardAiPlanCandidates = (db, who, levelId = 'normal', monsters = []) => {
   return Object.values(byName).sort((a, b) => b.v - a.v || (a.c.no < b.c.no ? -1 : 1)).slice(0, CARD_AI_PLAN_RANGE.preferTop).map((x) => x.c);
 };
 // 助手のデッキのいつもの組み方(育つ助手・助手部が部屋で見せる。2026-11-08)。読むだけ
-//   助手と型と強さで決まった種で組む(毎回同じ並び)。知らない型は 'normal'。返り値 { monsters, cards, styleId, name, line }。助手でない id は null
+//   助手と型と強さで決まった種で組む(毎回同じ並び)。知らない型は 'normal'。返り値 { monsters, cards, styleId, name, line, at }。助手でない id は null
 const cardAssistantDeckPreview = (who, styleId = 'normal', level = 'normal') => {
   if (typeof CARD_BATTLE_DATA === 'undefined' || !CARD_AI_DECKS[who]) return null;
   const sid = cardAiStyleOf(styleId) || 'normal';
   const lv = CARD_AI_BUILD[level] ? level : 'normal';
   const db = CARD_BATTLE_DATA;
-  const deck = cardAiBuildDeck(db, who, lv, cardAiSeededRand(`preview:${who}:${sid}:${lv}`), { style: sid });
-  // name … 型の名前(CARD_AI_STYLE_NAMES)。line … 助手のひとこと(AI が付けるまで null)
-  return { monsters: deck.monsters.slice(), cards: deck.cards.slice(), styleId: sid, name: CARD_AI_STYLE_NAMES[who] || null, line: null };
+  // 保存した3つのデッキ(83-card-ai-deck.jsx の cardAiRecipeOf。ブラウザで印が真のときだけ返る。サーバ・検査では無いので型だけ)
+  let saved = null;
+  try { saved = typeof cardAiRecipeOf === 'function' ? cardAiRecipeOf(who, sid) : null; } catch (_) { saved = null; }
+  const deck = cardAiBuildDeck(db, who, lv, cardAiSeededRand(`preview:${who}:${sid}:${lv}`), { style: sid, ...(saved && saved.plan ? { plan: saved.plan } : {}) });
+  // name … 型の名前(保存した名前、無ければ CARD_AI_STYLE_NAMES)。line … 助手のひとこと(AI が付けるまで null)。at … 組んだ時刻(まだなら 0)
+  return { monsters: deck.monsters.slice(), cards: deck.cards.slice(), styleId: sid, name: (saved && saved.name) || CARD_AI_STYLE_NAMES[who] || null, line: (saved && saved.line) || null, at: (saved && saved.at) || 0 };
 };
 
 // デッキが決まりどおりか(3体・別々のモンスター・50枚・同じカード(番号)は3枚まで・使えないカードが無い)。だめなら理由の文の配列
@@ -2525,6 +2528,8 @@ const CARD_SAVE_KEYS = Object.freeze({
   catalogs: 'mh_card_catalogs_v1',    // 持っているバトルカードカタログの冊数(ガチャポイント500で1冊。89 の cardExchangeCatalog / cardUseCatalog)
   weeklyReward: 'mh_card_weekly_reward_v1', // 受け取った週間報酬の週の一覧 ['card_weekly_2026-11-02', …](90 の cardWeeksAwaitingReward。壊れているときは何も配らない)
   aiTalk: 'mh_card_ai_talk_v1',       // 助手のおしゃべり(AI)の入/切 { on }(無ければ入。83-card-battle-talk-ai.jsx の cardNormalizeAiTalk)
+  aiRecipe: 'mh_card_ai_recipe_v1',   // 助手の3つのデッキ(型ごとの方針・名前・ひとこと・組んだ時刻)と組み直しの数(83-card-ai-deck.jsx の cardNormalizeAiRecipe。2026-11-08)
+  aiDeck: 'mh_card_ai_deck_v1',       // 助手のデッキを AI で組むかの入/切 { on }(無ければ入。83-card-ai-deck.jsx の cardNormalizeAiDeck)
 });
 // カードで使う・もらうポイントはビートP(2026-10-26 社長「ビートPを廃止してビートポイントにして」)。
 //   保存先はビートPのもの(25-storage.jsx の RHYTHM_EVENT_POINTS_KEY・mh_rhythm_event_points_v1)。数はビートPのときのまま

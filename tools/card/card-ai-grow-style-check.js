@@ -119,21 +119,18 @@ check('助手は8人', WHO.length === 8, WHO.join(','));
   const s82 = src('src/parts/82-card-battle-core.jsx');
   const s84 = src('src/parts/84-screen-card-battle.jsx');
   check('F 82 から助手ライフの口を読まない', !/assistantLife\w*\s*\(/.test(s82));
-  check('F 84: 助手と対戦だけで型を読む(みんなのデッキ・杯は読まない)', /const foeStyle = !share && !\(opts && opts\.cup\) \? cardLifeCardStyle\(pick\.who\) : null;/.test(s84));
-  check('F 84: 組むときに style を渡す', /cardAiBuildDeck\(db, pick\.who, pick\.level, Math\.random, \{ playerDeck: activeDeck, \.\.\.\(foeStyle \? \{ style: foeStyle \} : \{\}\) \}\)/.test(s84));
-  // 印(RELEASE_FLAGS.cardGrowStyle)の真偽で、型を読む口の答えが変わるか。84 から2つの関数だけ切り出して動かす
+  check('F 84: 助手と対戦だけで3つのデッキから選ぶ(みんなのデッキ・杯は選ばない)・印が真のときだけ', /const aiPick = !share && !\(opts && opts\.cup\) && cardGrowStyleOn\(\) && typeof cardAssistantDeckPick === 'function' \? cardAssistantDeckPick\(pick\.who, Math\.random, pick\.level, \{ playerDeck: activeDeck \}\) : null;/.test(s84));
+  check('F 84: 選んだデッキで戦い、選ばないときは今の組み方', /: aiPick \? aiPick\.deck : cardAiBuildDeck\(db, pick\.who, pick\.level, Math\.random, \{ playerDeck: activeDeck \}\);/.test(s84));
   {
-    const a = s84.indexOf('const cardGrowStyleOn = '), b = s84.indexOf('const cardLifeCardStyle = ');
-    const end = s84.indexOf('\n};\n', b) + 4;
-    const code = a >= 0 && b > a ? s84.slice(a, end) : '';
-    const run = (flag, hook) => { const c = vm.createContext({ RELEASE_FLAGS: { cardGrowStyle: flag }, cardAiStyleOf: E.cardAiStyleOf, ...(hook ? { assistantLifeCardStyle: hook } : {}) }); vm.runInContext(`${code}\nthis.R = [cardGrowStyleOn(), cardLifeCardStyle('mua'), cardLifeCardStyle('dra')];`, c); return J(c.R); };
-    check('F 印が偽: 型を読まない(口が attack を返しても型なし=今と同じ)', !!code && run(false, (id) => (id === 'mua' ? 'attack' : 'guard')) === J([false, null, null]), run(false, () => 'attack'));
-    check('F 印が真: 口の型を渡す', !!code && run(true, (id) => (id === 'mua' ? 'attack' : 'guard')) === J([true, 'attack', 'guard']));
-    check('F 印が真でも、口が無い・知らない値は型なし', !!code && run(true, null) === J([true, null, null]) && run(true, () => 'mega') === J([true, null, null]));
+    const a = s84.indexOf('const cardGrowStyleOn = ');
+    const code = a >= 0 ? s84.slice(a, s84.indexOf('\n', a) + 1) : '';
+    const run = (flags) => { const c = vm.createContext({ RELEASE_FLAGS: flags }); vm.runInContext(`${code}\nthis.R = cardGrowStyleOn();`, c); return c.R; };
+    check('F 印を読む口: 真のときだけ真(無い・偽・真でない値は偽)', !!code && run({ cardGrowStyle: true }) === true && run({ cardGrowStyle: false }) === false && run({}) === false && run({ cardGrowStyle: 'yes' }) === false);
     const s17 = src('src/parts/17-release-changelog-login-missions.jsx');
     check('F 公開の印 cardGrowStyle は、いまは偽', /\n  cardGrowStyle: false,/.test(s17));
   }
-  check('F 84: 口は呼ぶ時に typeof で確かめ、知らない値は型なし', /typeof assistantLifeCardStyle === 'function' \? cardAiStyleOf\(assistantLifeCardStyle\(id\)\) : null/.test(s84));
+  const s83 = src('src/parts/83-card-ai-deck.jsx');
+  check('F 83: 助手ライフの口は呼ぶ時に typeof で確かめ、知らない値は型なし', /typeof assistantLifeCardStyle === 'function' \? cardAiStyleOf\(assistantLifeCardStyle\(who\)\) : null/.test(s83));
 }
 // ---- G ----
 {
@@ -147,7 +144,7 @@ check('助手は8人', WHO.length === 8, WHO.join(','));
   check('G 知らない値は normal', !!bad && bad.foe.style === 'normal');
   check('G マルチの記録には型を付けない', !!pvp && !('style' in pvp.foe));
   const s84 = src('src/parts/84-screen-card-battle.jsx');
-  check('G 84: 助手と対戦の記録に使った型を残す', /style: foeStyle \|\| 'normal'/.test(s84) && /deckName: log\.deckName, style: log\.style \}/.test(s84));
+  check('G 84: 助手と対戦の記録に使った型を残す', /style: foeStyle \|\| 'normal'/.test(s84) && /deckName: log\.deckName, style: log\.style, styleName: log\.styleName \}/.test(s84));
 }
 // ---- I ----
 {
