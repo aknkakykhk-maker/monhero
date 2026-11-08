@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6dc7a06b4125c671
+// source-sha256: c747e4743bf332e8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -107167,12 +107167,26 @@ function AssistantLifeRoom({
     return who ? React.createElement("span", {
       key: pid,
       className: state.lonely && pid === id ? 'lonely' : state.after ? 'after' : '',
-      "data-assistant-life-room-face": pid
+      "data-assistant-life-room-face": pid,
+      "data-assistant-life-room-face-sleep": state.sleep ? '1' : '0',
+      style: {
+        position: 'relative'
+      }
     }, React.createElement(AssistantFace, {
       who: who,
       size: Math.round(Math.min(40, h * .44)),
       accent: who.accent
-    })) : null;
+    }), state.sleep && React.createElement("span", {
+      "aria-label": "睡眠中",
+      style: {
+        position: 'absolute',
+        right: -5,
+        top: -8,
+        fontSize: 12,
+        lineHeight: 1,
+        textShadow: '0 1px 3px #000'
+      }
+    }, "💤")) : null;
   })), ppl && state.bub && React.createElement("span", {
     className: "bb",
     "data-assistant-life-room-bub": true,
