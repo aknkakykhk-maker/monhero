@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1878ef3f6872a285
+// source-sha256: 1031fc69c7b6a296
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -107910,7 +107910,10 @@ function AssistantLifeHouse({
       label: `🛒 ${x.cost != null ? `${x.cost}P` : '交換所'}`
     }));
   })), React.createElement("p", {
-    className: "mt-2 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] leading-snug text-slate-200"
+    className: "mt-2 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] leading-snug text-slate-200",
+    style: {
+      wordBreak: 'auto-phrase'
+    }
   }, "手に入れる: モンヒロビートの「ビートP交換所」(", itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・'), ")。贈る: 部屋や場面の「🎁 贈る」", soloOn ? '(2人に・その助手だけに)' : '', "。好きな物なら多め・苦手な物なら少なめに上がり、好みは贈ると分かります。同じ道具は1日1回・合わせて1日3回。声をかける・見守るは無料です。次の段まであと何点・この道具で段の何割進むかは、「🎁 贈る」で2人を選ぶと出ます"), typeof AssistantLifeShopButton === 'function' && React.createElement("div", {
     className: "mt-2"
   }, React.createElement(AssistantLifeShopButton, {

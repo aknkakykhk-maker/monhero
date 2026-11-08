@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fbf823aa841d0d05
+// generated-sha256: 8f92c20d445db633
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -63737,7 +63737,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
               {haveOf(x.kind) <= 0 && typeof AssistantLifeShopButton === 'function' && <AssistantLifeShopButton tab="item" small label={`🛒 ${x.cost != null ? `${x.cost}P` : '交換所'}`}/>}
             </div>); })}
         </>)}
-        <p className="mt-2 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] leading-snug text-slate-200">手に入れる: モンヒロビートの「ビートP交換所」({itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・')})。贈る: 部屋や場面の「🎁 贈る」{soloOn ? '(2人に・その助手だけに)' : ''}。好きな物なら多め・苦手な物なら少なめに上がり、好みは贈ると分かります。同じ道具は1日1回・合わせて1日3回。声をかける・見守るは無料です。次の段まであと何点・この道具で段の何割進むかは、「🎁 贈る」で2人を選ぶと出ます</p>
+        {/* 言葉の途中で折らない(「部/屋」と割れていた・2026-11-08 ミハリ) */}
+        <p className="mt-2 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] leading-snug text-slate-200" style={{ wordBreak: 'auto-phrase' }}>手に入れる: モンヒロビートの「ビートP交換所」({itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・')})。贈る: 部屋や場面の「🎁 贈る」{soloOn ? '(2人に・その助手だけに)' : ''}。好きな物なら多め・苦手な物なら少なめに上がり、好みは贈ると分かります。同じ道具は1日1回・合わせて1日3回。声をかける・見守るは無料です。次の段まであと何点・この道具で段の何割進むかは、「🎁 贈る」で2人を選ぶと出ます</p>
         {typeof AssistantLifeShopButton === 'function' && <div className="mt-2"><AssistantLifeShopButton tab="item"/></div>}
       </div>);
   return (
