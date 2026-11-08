@@ -507,15 +507,25 @@ function AssistantLifeRoomFurn({ id, w, h, faces = 0, baseCount = 2 }) {
   const st = useAssistantLifeGiftState();
   if (!assistantLifeFurnEnabled()) return null;
   const room = assistantLifeRoomOf(id, st);
-  const size = Math.round(Math.max(13, Math.min(24, h * 0.2, w * 0.12)));
+  // 絵が届くまでは絵文字。読み取れる大きさにする(2026-11-08 窓口「小さく窮屈」)
+  const size = Math.round(Math.max(16, Math.min(26, h * 0.26, w * 0.17)));
   const faceSize = Math.round(Math.min(40, h * 0.44));
   const faceLeft = faces > 0 ? w * 0.9 - faceSize - (faces - 1) * (faceSize - 10) : w * 0.9;
   const baseRight = 5 + baseCount * 21 + 2;
+  // 置き方(2026-11-08 撮って決めた): 部屋の空いている所は「上の真ん中(名札と窓のあいだ)」「名札の下・もとの家具の上」「床の真ん中(もとの家具と顔のあいだ)」
+  //   広い部屋: 天井=上の真ん中の左・壁=上の真ん中の右・床=床の真ん中
+  //   狭い部屋(床の真ん中に入らない): 壁=名札の下・天井=上の真ん中の左・床=上の真ん中の右
+  const g = Math.round(size * 1.25); // 絵文字の実際の大きさ(字の大きさより少し大きい)
+  const wide = faceLeft - baseRight >= g + 4;
   const pos = (slot) => {
-    const S = ASSISTANT_LIFE_FURN_SLOTS[slot];
-    if (slot !== 'floor') return { left: Math.round(S.x * w + (S.w * w - size) / 2), top: Math.round(S.y * h + (slot === 'ceil' ? size * 0.3 : (S.h * h - size) / 2)) };
-    if (faceLeft - baseRight >= size + 6) return { left: Math.round((baseRight + faceLeft) / 2 - size / 2), top: Math.round(h - 13 - size) };
-    return { left: Math.round(w * 0.26), top: Math.round(h * 0.3) };
+    if (wide) {
+      if (slot === 'ceil') return { left: Math.round(w * 0.3), top: 3 };
+      if (slot === 'wall') return { left: Math.round(w * 0.52), top: Math.round(h * 0.1) };
+      return { left: Math.round((baseRight + faceLeft) / 2 - g / 2), top: Math.round(h - 13 - g) };
+    }
+    if (slot === 'wall') return { left: 6, top: Math.max(24, Math.round(h - 38 - g)) };
+    if (slot === 'ceil') return { left: Math.round(w * 0.31), top: 3 };
+    return { left: Math.round(w * 0.31) + g + 2, top: Math.round(h * 0.13) };
   };
   return (<>{Object.entries(room.put).filter(([, k]) => k).map(([slot, k]) => {
     const f = assistantLifeFurnOf(k);

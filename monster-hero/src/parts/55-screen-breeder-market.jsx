@@ -165,6 +165,13 @@ function BreederMarketScreen({
     // カード売り場は5つ(戦術カードが増えた)で等分すると「戦術カー/ド」「スター/ター」と言葉の途中で折れるので、5つから1行にして詰める(2026-10-29)
     // ビートP交換所も5つのときに幅320で「アシ/スト」「アイ/テム」と折れたので、同じく5つから1行に詰める(2026-10-31)
     const tight=section==='card'||section==='event';
+    // ビートP交換所に「家具」が加わって8つになり、1行だと右端が「強化素杉」のように切れて見えた(2026-11-08 窓口)。2段に並べて、全部の名前が見えるようにする
+    //   6つでも幅375で右端が切れたので、6つは3列・7つ以上は4列の2段にする
+    if(section==='event'&&items.length>=6) return <div role="tablist" data-market-tabs-grid={section} className={`mb-2 grid w-full min-w-0 max-w-full shrink-0 gap-1 ${items.length<=6?'grid-cols-3':'grid-cols-4'}`}>
+      {items.map(tab=>{const on=tab.id===value;return <button key={tab.id} type="button" role="tab" aria-selected={on} onClick={()=>selectSectionTab(section,tab.id)}
+        className={`mh-tab relative min-h-[40px] min-w-0 rounded-xl px-0 text-[10.5px] font-black leading-tight whitespace-nowrap active:scale-95 ${on?'text-white':'border border-white/10 bg-slate-900 text-slate-400'}`}
+        style={on?{background:tab.color}:undefined}>{tab.label}</button>;})}
+    </div>;
     if(!scroll||items.length<(tight?5:6)) return <ScreenTabs value={value} onChange={(key)=>selectSectionTab(section,key)} items={items}/>;
     return <div role="tablist" data-market-tabs-scroll={section} className={`mb-2 flex shrink-0 overflow-x-auto pb-0.5 ${tight?'gap-1.5':'gap-2'}`}>
       {items.map(tab=>{const on=tab.id===value;return <button key={tab.id} type="button" role="tab" aria-selected={on} onClick={()=>selectSectionTab(section,tab.id)}

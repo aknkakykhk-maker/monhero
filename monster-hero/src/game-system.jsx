@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4be2fe578c735737
+// generated-sha256: b803c9283a96ba3c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -38526,6 +38526,7 @@ const growthFxSessionLevel = (list = []) => {
 // ---------- 見た目 ----------
 const GROWTH_FX_CSS = `
 .mh-gfx-chips{position:fixed;top:calc(env(safe-area-inset-top,0px) + 52px);right:10px;z-index:44000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
+.mh-gfx-chips.mini .mh-gfx-chip>.min-w-0{display:none}.mh-gfx-chips.mini .mh-gfx-chip{padding:3px 8px 3px 4px;gap:4px}
 .mh-gfx-chip{position:relative;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;border-radius:999px;background:linear-gradient(90deg,#1e1b2ef0,#0f172af0);
   border:1.5px solid var(--gc);box-shadow:0 0 14px color-mix(in srgb,var(--gc) 40%,transparent);font-weight:900;font-size:11px;color:#fff;
   animation:mhGfxChipIn .35s cubic-bezier(.2,1.6,.4,1) both}
@@ -38799,6 +38800,44 @@ const GrowthFxLevelUp = ({ sheet, level, onClose }) => {
   );
 };
 
+// 小さな札の置き場所(2026-11-08 窓口「通知が下の文字を隠さない位置に」)。右上のいつもの高さ(52px)で、下に文字やボタンがあれば、
+//   上の帯(8px)→ 少し下(96・140px)→ 下のほう の順に、下に文字もボタンもない高さを探して置く。どこも空いていなければいつもの高さ
+const GROWTH_FX_CHIP_TOPS = [52, 8, 96, 140];
+const growthFxChipSpotBusy = (box) => {
+  if (typeof document === 'undefined' || !document.elementsFromPoint) return false;
+  const r = box.getBoundingClientRect();
+  for (const fx of [0.15, 0.5, 0.85]) for (const fy of [0.25, 0.75]) {
+    const x = r.left + r.width * fx, y = r.top + r.height * fy;
+    const under = document.elementsFromPoint(x, y).find(el => !box.contains(el));
+    if (!under) continue;
+    if (under.closest('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]')) return true;
+    if ([...under.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return true;
+  }
+  return false;
+};
+//   どの高さも下に文字・ボタンがあるとき(マーケットなど詰まった画面)は、名前とゲージを省いた小さな札(印と +数 だけ)にして、もう一度探す。
+//   画面は少しあとで組み替わる(吹き出しが出るなど)ので、出してから 0.5秒・1.5秒でも探し直す
+const GrowthFxChipsBox = ({ level, count, children }) => {
+  const ref = useRef(null);
+  React.useLayoutEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const place = () => {
+      const box = ref.current;
+      if (!box) return;
+      const tops = [...GROWTH_FX_CHIP_TOPS, Math.max(60, window.innerHeight - 120 - box.offsetHeight)];
+      for (const mini of [false, true]) {
+        box.classList.toggle('mini', mini);
+        for (const t of tops) { box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`; if (!growthFxChipSpotBusy(box)) { box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${t}`; return; } }
+      }
+      box.style.top = `calc(env(safe-area-inset-top, 0px) + ${GROWTH_FX_CHIP_TOPS[1]}px)`; box.dataset.growthFxChipsTop = 'mini-busy';
+    };
+    place();
+    const t1 = setTimeout(place, 500), t2 = setTimeout(place, 1500);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [count]);
+  return <div ref={ref} className={`mh-gfx-chips mh-gfx-${level}`} data-growth-fx-chips aria-live="polite">{children}</div>;
+};
+
 // 60-app.jsx に1つだけ置く。screen … いまの gameState / load … バトル設定「画面の軽さ」
 const GrowthFxLayer = ({ screen, load }) => {
   const [, setTick] = useState(0);
@@ -38826,9 +38865,9 @@ const GrowthFxLayer = ({ screen, load }) => {
   const sheet = !holdSheet ? sheets[0] : null;
   return (
     <>
-      {!holdAll && !sheet && small.length > 0 && <div className={`mh-gfx-chips mh-gfx-${level}`} data-growth-fx-chips aria-live="polite">
+      {!holdAll && !sheet && small.length > 0 && <GrowthFxChipsBox level={level} count={Math.min(small.length, GROWTH_FX_SMALL_MAX)}>
         {small.slice(0, GROWTH_FX_SMALL_MAX).map(c => <GrowthFxChip key={c.id} chip={c} level={level} held={false}/>)}
-      </div>}
+      </GrowthFxChipsBox>}
       {sheet && (sheet.tier === 'level'
         ? <GrowthFxLevelUp key={sheet.id} sheet={sheet} level={level} onClose={() => growthFxDropSheet(sheet.id)}/>
         : <GrowthFxItemCard key={sheet.id} sheet={sheet} level={level} onClose={() => growthFxDropSheet(sheet.id)}/>)}
@@ -39676,6 +39715,13 @@ function BreederMarketScreen({
     // カード売り場は5つ(戦術カードが増えた)で等分すると「戦術カー/ド」「スター/ター」と言葉の途中で折れるので、5つから1行にして詰める(2026-10-29)
     // ビートP交換所も5つのときに幅320で「アシ/スト」「アイ/テム」と折れたので、同じく5つから1行に詰める(2026-10-31)
     const tight=section==='card'||section==='event';
+    // ビートP交換所に「家具」が加わって8つになり、1行だと右端が「強化素杉」のように切れて見えた(2026-11-08 窓口)。2段に並べて、全部の名前が見えるようにする
+    //   6つでも幅375で右端が切れたので、6つは3列・7つ以上は4列の2段にする
+    if(section==='event'&&items.length>=6) return <div role="tablist" data-market-tabs-grid={section} className={`mb-2 grid w-full min-w-0 max-w-full shrink-0 gap-1 ${items.length<=6?'grid-cols-3':'grid-cols-4'}`}>
+      {items.map(tab=>{const on=tab.id===value;return <button key={tab.id} type="button" role="tab" aria-selected={on} onClick={()=>selectSectionTab(section,tab.id)}
+        className={`mh-tab relative min-h-[40px] min-w-0 rounded-xl px-0 text-[10.5px] font-black leading-tight whitespace-nowrap active:scale-95 ${on?'text-white':'border border-white/10 bg-slate-900 text-slate-400'}`}
+        style={on?{background:tab.color}:undefined}>{tab.label}</button>;})}
+    </div>;
     if(!scroll||items.length<(tight?5:6)) return <ScreenTabs value={value} onChange={(key)=>selectSectionTab(section,key)} items={items}/>;
     return <div role="tablist" data-market-tabs-scroll={section} className={`mb-2 flex shrink-0 overflow-x-auto pb-0.5 ${tight?'gap-1.5':'gap-2'}`}>
       {items.map(tab=>{const on=tab.id===value;return <button key={tab.id} type="button" role="tab" aria-selected={on} onClick={()=>selectSectionTab(section,tab.id)}
@@ -64177,15 +64223,25 @@ function AssistantLifeRoomFurn({ id, w, h, faces = 0, baseCount = 2 }) {
   const st = useAssistantLifeGiftState();
   if (!assistantLifeFurnEnabled()) return null;
   const room = assistantLifeRoomOf(id, st);
-  const size = Math.round(Math.max(13, Math.min(24, h * 0.2, w * 0.12)));
+  // 絵が届くまでは絵文字。読み取れる大きさにする(2026-11-08 窓口「小さく窮屈」)
+  const size = Math.round(Math.max(16, Math.min(26, h * 0.26, w * 0.17)));
   const faceSize = Math.round(Math.min(40, h * 0.44));
   const faceLeft = faces > 0 ? w * 0.9 - faceSize - (faces - 1) * (faceSize - 10) : w * 0.9;
   const baseRight = 5 + baseCount * 21 + 2;
+  // 置き方(2026-11-08 撮って決めた): 部屋の空いている所は「上の真ん中(名札と窓のあいだ)」「名札の下・もとの家具の上」「床の真ん中(もとの家具と顔のあいだ)」
+  //   広い部屋: 天井=上の真ん中の左・壁=上の真ん中の右・床=床の真ん中
+  //   狭い部屋(床の真ん中に入らない): 壁=名札の下・天井=上の真ん中の左・床=上の真ん中の右
+  const g = Math.round(size * 1.25); // 絵文字の実際の大きさ(字の大きさより少し大きい)
+  const wide = faceLeft - baseRight >= g + 4;
   const pos = (slot) => {
-    const S = ASSISTANT_LIFE_FURN_SLOTS[slot];
-    if (slot !== 'floor') return { left: Math.round(S.x * w + (S.w * w - size) / 2), top: Math.round(S.y * h + (slot === 'ceil' ? size * 0.3 : (S.h * h - size) / 2)) };
-    if (faceLeft - baseRight >= size + 6) return { left: Math.round((baseRight + faceLeft) / 2 - size / 2), top: Math.round(h - 13 - size) };
-    return { left: Math.round(w * 0.26), top: Math.round(h * 0.3) };
+    if (wide) {
+      if (slot === 'ceil') return { left: Math.round(w * 0.3), top: 3 };
+      if (slot === 'wall') return { left: Math.round(w * 0.52), top: Math.round(h * 0.1) };
+      return { left: Math.round((baseRight + faceLeft) / 2 - g / 2), top: Math.round(h - 13 - g) };
+    }
+    if (slot === 'wall') return { left: 6, top: Math.max(24, Math.round(h - 38 - g)) };
+    if (slot === 'ceil') return { left: Math.round(w * 0.31), top: 3 };
+    return { left: Math.round(w * 0.31) + g + 2, top: Math.round(h * 0.13) };
   };
   return (<>{Object.entries(room.put).filter(([, k]) => k).map(([slot, k]) => {
     const f = assistantLifeFurnOf(k);
