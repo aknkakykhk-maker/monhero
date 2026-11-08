@@ -1977,6 +1977,9 @@ const CARD_AI_STYLE_NAMES = Object.freeze({
   mua: 'キラキラ速攻', kiki: 'ずっしり火力', momosuke: 'ステージ・オン', dra: 'のんびり長期戦',
   atsu: '真っ向勝負', kyuko: '夜の読み筋', sorashido: '計算ずく', erubin: 'みんなで守る',
 });
+// 型のデッキの既定の名前(2026-11-08 社長 Q4 A): 8つの名前に型を添える。攻め「◯◯・攻め」・守り「◯◯・守り」・ふつうは名前だけ。AI が名前を付けられないときもこれ
+const CARD_AI_STYLE_SUFFIX = Object.freeze({ attack: '・攻め', guard: '・守り', normal: '' });
+const cardAiStyleDefaultName = (who, styleId) => { const n = CARD_AI_STYLE_NAMES[who]; const s = cardAiStyleOf(styleId) || 'normal'; return n ? `${n}${CARD_AI_STYLE_SUFFIX[s]}` : null; };
 // えるびんの型(variants の id)へのつなぎ。style が渡されないときは今どおり毎試合ランダム
 const CARD_AI_STYLE_VARIANT = Object.freeze({ attack: 'blade', guard: 'shield', normal: 'mind' });
 // 方針の上書き(2026-11-08 社長「助手のデッキを AI で組む」)。plan = { prefer: [カード番号], field: [場のカードの名前], habit: { big, saveGuts, keepGuard } }
@@ -2436,8 +2439,8 @@ const cardAssistantDeckPreview = (who, styleId = 'normal', level = 'normal') => 
   let saved = null;
   try { saved = typeof cardAiRecipeOf === 'function' ? cardAiRecipeOf(who, sid) : null; } catch (_) { saved = null; }
   const deck = cardAiBuildDeck(db, who, lv, cardAiSeededRand(`preview:${who}:${sid}:${lv}`), { style: sid, ...(saved && saved.plan ? { plan: saved.plan } : {}) });
-  // name … 型の名前(保存した名前、無ければ CARD_AI_STYLE_NAMES)。line … 助手のひとこと(AI が付けるまで null)。at … 組んだ時刻(まだなら 0)
-  return { monsters: deck.monsters.slice(), cards: deck.cards.slice(), styleId: sid, name: (saved && saved.name) || CARD_AI_STYLE_NAMES[who] || null, line: (saved && saved.line) || null, at: (saved && saved.at) || 0 };
+  // name … 型の名前(保存した名前、無ければ cardAiStyleDefaultName: 「◯◯・攻め」など)。line … 助手のひとこと(AI が付けるまで null)。at … 組んだ時刻(まだなら 0)
+  return { monsters: deck.monsters.slice(), cards: deck.cards.slice(), styleId: sid, name: (saved && saved.name) || cardAiStyleDefaultName(who, sid), line: (saved && saved.line) || null, at: (saved && saved.at) || 0 };
 };
 
 // デッキが決まりどおりか(3体・別々のモンスター・50枚・同じカード(番号)は3枚まで・使えないカードが無い)。だめなら理由の文の配列
