@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 45bc95d8850b563c
+// source-sha256: 3f6f4bc0ccadfee4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -122765,11 +122765,13 @@ function AssistantMasmonRow({
   }), React.createElement("div", {
     className: "min-w-0 flex-1"
   }, React.createElement("p", {
-    className: "truncate text-[15px] font-black text-white"
-  }, t.nick, t.lead && React.createElement("em", {
-    className: "mhm-lead ml-1.5"
+    className: "flex flex-wrap items-center gap-x-1.5 text-[15px] font-black leading-tight text-white"
+  }, React.createElement("span", {
+    className: "break-all"
+  }, t.nick), t.lead && React.createElement("em", {
+    className: "mhm-lead"
   }, "先頭"), t.bench && React.createElement("em", {
-    className: "mhm-lead mhm-bench ml-1.5"
+    className: "mhm-lead mhm-bench"
   }, "控え")), land ? React.createElement(React.Fragment, null, React.createElement("p", {
     className: "truncate text-[10.5px] font-bold text-slate-300"
   }, m.name, " ・ Lv.", t.lv), React.createElement("p", {
@@ -122781,7 +122783,7 @@ function AssistantMasmonRow({
   }, m.name, " ・ Lv.", t.lv, " ", React.createElement(AssistantMasmonDots, {
     t: t
   })), React.createElement("p", {
-    className: "truncate text-[11px] font-black text-amber-200"
+    className: "text-[11px] font-black leading-tight text-amber-200"
   }, "📈 ", t.grow), React.createElement("div", {
     className: `mt-0.5 grid gap-x-3 gap-y-0.5 ${land ? 'grid-cols-1' : 'grid-cols-2'}`
   }, ASSISTANT_MASMON_STAT_LABEL.map(([k, label]) => React.createElement("div", {

@@ -384,11 +384,11 @@ function AssistantMasmonRow({ t, land = false, onOpen = null }) {
     <button type="button" className="mhm-card flex w-full gap-2.5 text-left" data-assistant-masmon-row={t.monster} onClick={() => onOpen && onOpen(t)}>
       <AssistantMasmonPic t={t} size={78}/>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[15px] font-black text-white">{t.nick}{t.lead && <em className="mhm-lead ml-1.5">先頭</em>}{t.bench && <em className="mhm-lead mhm-bench ml-1.5">控え</em>}</p>
+        <p className="flex flex-wrap items-center gap-x-1.5 text-[15px] font-black leading-tight text-white"><span className="break-all">{t.nick}</span>{t.lead && <em className="mhm-lead">先頭</em>}{t.bench && <em className="mhm-lead mhm-bench">控え</em>}</p>
         {land
           ? <><p className="truncate text-[10.5px] font-bold text-slate-300">{m.name} ・ Lv.{t.lv}</p><p className="text-[10px]"><AssistantMasmonDots t={t}/></p></>
           : <p className="truncate text-[10.5px] font-bold text-slate-300">{m.name} ・ Lv.{t.lv} <AssistantMasmonDots t={t}/></p>}
-        <p className="truncate text-[11px] font-black text-amber-200">📈 {t.grow}</p>
+        <p className="text-[11px] font-black leading-tight text-amber-200">📈 {t.grow}</p>
         <div className={`mt-0.5 grid gap-x-3 gap-y-0.5 ${land ? 'grid-cols-1' : 'grid-cols-2'}`}>
           {ASSISTANT_MASMON_STAT_LABEL.map(([k, label]) => (
             <div key={k} className="flex items-center gap-1.5 text-[9.5px] font-bold text-slate-300"><span className="w-[34px] shrink-0">{label}</span><span className="mhm-bar"><i style={{ width: `${Math.round(st[k] * 100)}%` }}/></span></div>))}

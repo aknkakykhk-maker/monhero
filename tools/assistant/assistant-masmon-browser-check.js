@@ -139,7 +139,7 @@ const layoutProblems = (page) => page.evaluate(() => {
         check(`${T}口 assistantLifeTasteOf が8人ぶん(好きは1つ以上・名前で)`, hooks.every(h => h.t && h.t.likes.length >= 1 && h.t.likes.every(n => typeof n === 'string' && n)), hooks.map(h => `${h.id}:${h.t ? h.t.likes.join('・') : 'null'}`).join(' / '));
       }
       // 667×375 は部屋のマスモンだけを見る(シートの字の切れは、作り直し中のシート claude/kizuna2-grow で直す)
-      for (const WHO of (v.id === 's' ? [] : WHOS)) {
+      for (const WHO of WHOS) {
       const T = `${T0}${WHO} `;
       const low = !!process.env.MASMON_LOW_BOND; // 仲良し度が低い(まだ迎えていない)ときの確かめ
       const want = await page.evaluate(({ id, low }) => { const p = ASSISTANT_MASMON_PLAN.find(a => a.id === id); const n = low ? 0 : (p.extra || []).length; return { deck: p.deck.name, colors: p.favColors.length, dis: p.dislikeMon.length, all: p.team.length + n, bench: n }; }, { id: WHO, low });
