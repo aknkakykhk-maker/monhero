@@ -146,16 +146,7 @@ const alfBuildMore = (ids) => {
     } catch {}
   }
   const dy = alfDiaryShare(8);
-  // その人の助手のマスモン(キズナ3の assistantLifeMasmonTeamOf・2026-11-08 社長「プレイヤーごとに名前とか色々変えて」)。1人3体・数は写さない
-  const ms = {};
-  for (const id of (ids || []).filter(alfValidId)) {
-    try {
-      const team = typeof assistantLifeMasmonTeamOf === 'function' ? assistantLifeMasmonTeamOf(id) : [];
-      const one = (Array.isArray(team) ? team : []).slice(0, 3).map(t => (t && typeof t.monster === 'string' ? { mo: t.monster, n: alfStr(t.nick, 16), c: (Array.isArray(t.colors) ? t.colors : []).slice(0, 5), ...(t.lead ? { l: 1 } : {}) } : null)).filter(Boolean);
-      if (one.length) ms[id] = one;
-    } catch {}
-  }
-  return { v: 1, fu, dy, ...(Object.keys(ms).length ? { ms } : {}) };
+  return { v: 1, fu, dy };
 };
 // ---------- フレンドの最近(2026-11-08 社長「フレンドで相手の行動見えるバリエーションも増やして」・FRIEND-ACTIVITY-PLAN.md) ----------
 // 端末の記録から組み立てる(曲名・勝ったこと・迎えたマスモンの種類・置いた家具だけ。スコア・数・相手の名前は入れない)。
@@ -211,20 +202,7 @@ const assistantLifeFriendNormalizeMore = (raw) => {
     fu[id] = { p, k };
   }
   const dy = (Array.isArray(raw.dy) ? raw.dy : []).slice(0, 8).map(d => (d && typeof d.x === 'string' ? { t: /^\d{1,2}:\d{2}$/.test(d.t) ? d.t : '', x: d.x.replace(/[{}<>]/g, '').slice(0, 40) } : null)).filter(d => d && d.x);
-  // マスモン: 実装済みのモンスターだけ・名前は16字まで(置き手紙と同じ見張り)・色は「色id」「色id@10〜100」「null」だけ
-  const ms = {};
-  for (const id of ALF_IDS) {
-    const list = raw.ms && typeof raw.ms === 'object' && Array.isArray(raw.ms[id]) ? raw.ms[id] : null;
-    if (!list) continue;
-    const one = list.slice(0, 3).map(t => {
-      if (!t || typeof t.mo !== 'string' || typeof ALL_PLAYER_MONSTERS === 'undefined' || !ALL_PLAYER_MONSTERS[t.mo]) return null;
-      const n = typeof t.n === 'string' ? alfNoteShow(t.n.slice(0, 16)) : '';
-      const c = (Array.isArray(t.c) ? t.c : []).slice(0, 5).map(x => (x === null ? null : typeof x === 'string' && /^[a-z][a-z0-9_]{0,20}(@(100|[1-9][0-9]))?$/.test(x) ? x : undefined)).filter(x => x !== undefined);
-      return { mo: t.mo, n, c, l: t.l === 1 ? 1 : 0 };
-    }).filter(Boolean);
-    if (one.length) ms[id] = one;
-  }
-  return { v: 1, fu, dy, ac: alfNormalizeAc(raw.ac), ms };
+  return { v: 1, fu, dy, ac: alfNormalizeAc(raw.ac) };
 };
 // 相手の控えを読むとき(知らない id・種類・長い値は捨てる)
 const assistantLifeFriendNormalizeHouse = (raw) => {
@@ -962,6 +940,8 @@ const ALF_PLAYER_REPLIES = Object.freeze(['こんにちは！', 'おじゃまし
 //   自分の助手ライフの家と同じ家の絵(56-assistant-life-house の AssistantLifeHouseArt)に、その人の家の控えを描く。
 //   部屋を押すと、その助手のシート(話す・置き手紙)。おでかけ中・おやすみ中の部屋も見られる。
 //   下(横は右)に「この家でできること」。置き手紙を残すと何が届くかを1行で出す
+// 「。」で区切った文を、言葉の途中で折らずに並べる(ミハリ「部屋は見られ/ます」)
+const alfNoBreak = (text) => { const parts = String(text || '').split('。').filter(Boolean); return parts.map((x, i) => <span key={i} className="whitespace-nowrap">{x}{i < parts.length - 1 || /。$/.test(text) ? '。' : ''}</span>); };
 const alfRoomsOf = (house) => {
   const rooms = {};
   for (const id of ALF_IDS) {
@@ -1041,13 +1021,6 @@ function AlfFriendHouseView({ friend, onClose }) {
   const fname = (k) => { const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(k) : null; return f ? `${f.emoji} ${f.name}` : null; };
   const furnNames = (id) => { const fu = putOf(id); return fu ? ['c', 'w', 'f'].map(k => fu[k] && fname(fu[k])).filter(Boolean) : []; };
   const keptNames = (id) => (more && more.fu[id] ? more.fu[id].k.map(fname).filter(Boolean) : []);
-  // マスモン(絵つき)。キズナ3の口(その人のマスモン)が入るまでは全員共通の表
-  const masmonTeamOf = (id) => {
-    const mine = more && more.ms && more.ms[id];
-    if (mine && mine.length) return mine.map(t => { const m = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(t.mo) : null; return m ? { monster: t.mo, nick: t.n || m.name, name: m.name, dye: { colors: t.c } } : null; }).filter(Boolean);
-    return masmonTeamPlan(id);
-  };
-  const masmonTeamPlan = (id) => { const pl = typeof assistantMasmonPlanOf === 'function' ? assistantMasmonPlanOf(id) : null; return pl ? pl.team.slice(0, 3).map(t => { const m = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(t.monster) : null; return m ? { monster: t.monster, nick: t.nick, name: m.name, dye: t.dye } : null; }).filter(Boolean) : []; };
   const masmonOf = (id) => { const pl = typeof assistantMasmonPlanOf === 'function' ? assistantMasmonPlanOf(id) : null; return pl ? pl.team.slice(0, 3).map(t => { const m = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(t.monster) : null; return m ? `${t.nick}(${m.name})` : null; }).filter(Boolean) : []; };
   const otherPut = (() => { const o = alfFurnPutOf(h); if (more) for (const id of Object.keys(more.fu)) o[id] = { put: { ceil: more.fu[id].p.c || null, wall: more.fu[id].p.w || null, floor: more.fu[id].p.f || null } }; return o; })();
   // 掲示板: 助手の今日(dy)と、その人の最近の遊び(ac)を混ぜる(最近は先に。時刻は「今日 10:10」などの形)
@@ -1093,24 +1066,13 @@ function AlfFriendHouseView({ friend, onClose }) {
           <AlfFace id={roomId} size={46}/>
           <div className="min-w-0 flex-1">
             <p className="text-[16px] font-black text-white">{alfTheirLabel(friend.name, roomId)}の部屋</p>
-            <p className="text-[11px] font-bold text-slate-200" data-alf-visit-room-state={roomState}>{roomState === 'out' ? (r0.p && typeof assistantLifePlaceShow === 'function' ? `${(typeof ASSISTANT_LIFE_PLACE_ICON !== 'undefined' && ASSISTANT_LIFE_PLACE_ICON[r0.p]) || '🚶'} ${assistantLifePlaceShow(r0.p)}へおでかけ中。部屋は見られます` : '🚶 いまはおでかけ中。部屋は見られます') : roomState === 'sleep' ? '💤 すやすや…起こさないように、そっと見るだけ' : `🏠 部屋で${(ASSISTANT_LIFE_DOINGS[r0.d] || {}).label || 'のんびり'}`}</p>
+            <p className="text-[11px] font-bold text-slate-200" data-alf-visit-room-state={roomState}>{alfNoBreak(roomState === 'out' ? (r0.p && typeof assistantLifePlaceShow === 'function' ? `${(typeof ASSISTANT_LIFE_PLACE_ICON !== 'undefined' && ASSISTANT_LIFE_PLACE_ICON[r0.p]) || '🚶'} ${assistantLifePlaceShow(r0.p)}へおでかけ中。部屋は見られます` : '🚶 いまはおでかけ中。部屋は見られます') : roomState === 'sleep' ? '💤 すやすや…起こさないように、そっと見るだけ' : `🏠 部屋で${(ASSISTANT_LIFE_DOINGS[r0.d] || {}).label || 'のんびり'}`)}</p>
           </div>
           <button type="button" data-mhl-sheet-close className="shrink-0 rounded-xl border border-slate-500 px-3 py-1.5 text-[12px] font-black text-slate-100" onClick={() => { setRoomId(null); setTalk(null); }}>とじる</button>
         </div>
         <p className="mt-2 text-[11px] font-bold text-slate-200" data-alf-visit-furn>🪑 贈られた家具: {furnNames(roomId).length ? furnNames(roomId).join('・') : 'まだありません'}</p>
         {keptNames(roomId).length > 0 && <p className="mt-0.5 text-[10.5px] text-slate-300" data-alf-visit-kept>📦 押し入れ: {keptNames(roomId).join('・')}</p>}
-        {masmonTeamOf(roomId).length > 0 && (
-          <div className="mt-1.5" data-alf-visit-masmon>
-            <p className="text-[10.5px] font-bold text-slate-300">🐾 マスモン</p>
-            <div className="mt-0.5 grid grid-cols-3 gap-1.5">
-              {masmonTeamOf(roomId).map((t, i) => (
-                <div key={i} className="flex min-w-0 flex-col items-center rounded-xl bg-white/5 px-1 py-1" data-alf-visit-masmon-one={t.monster}>
-                  {typeof AssistantMasmonPic === 'function' ? <AssistantMasmonPic t={t} size={44}/> : null}
-                  <span className="mt-0.5 max-w-full truncate text-[10px] font-black text-white">{t.nick}</span>
-                  <span className="max-w-full truncate text-[9px] text-slate-400">{t.name}</span>
-                </div>))}
-            </div>
-          </div>)}
+        {masmonOf(roomId).length > 0 && <p className="mt-0.5 text-[10.5px] text-slate-300" data-alf-visit-masmon>🐾 マスモン: {masmonOf(roomId).join('・')}</p>}
         {talk && talk.aid === roomId ? (
           <div className="mt-2" data-alf-visit-talk>
             {talk.mine && <p className="mb-1 text-right text-[12.5px] text-pink-100" data-alf-visit-mine>あなた「{talk.mine}」</p>}

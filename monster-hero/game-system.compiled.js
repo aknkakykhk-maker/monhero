@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 44a4c6977e4d9637
+// source-sha256: 32f299e45f1c0722
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -124872,28 +124872,10 @@ const alfBuildMore = ids => {
     } catch {}
   }
   const dy = alfDiaryShare(8);
-  const ms = {};
-  for (const id of (ids || []).filter(alfValidId)) {
-    try {
-      const team = typeof assistantLifeMasmonTeamOf === 'function' ? assistantLifeMasmonTeamOf(id) : [];
-      const one = (Array.isArray(team) ? team : []).slice(0, 3).map(t => t && typeof t.monster === 'string' ? {
-        mo: t.monster,
-        n: alfStr(t.nick, 16),
-        c: (Array.isArray(t.colors) ? t.colors : []).slice(0, 5),
-        ...(t.lead ? {
-          l: 1
-        } : {})
-      } : null).filter(Boolean);
-      if (one.length) ms[id] = one;
-    } catch {}
-  }
   return {
     v: 1,
     fu,
-    dy,
-    ...(Object.keys(ms).length ? {
-      ms
-    } : {})
+    dy
   };
 };
 const ALF_ACT_KEY = 'mh_assistant_life_friend_activity_v1';
@@ -125011,29 +124993,11 @@ const assistantLifeFriendNormalizeMore = raw => {
     t: /^\d{1,2}:\d{2}$/.test(d.t) ? d.t : '',
     x: d.x.replace(/[{}<>]/g, '').slice(0, 40)
   } : null).filter(d => d && d.x);
-  const ms = {};
-  for (const id of ALF_IDS) {
-    const list = raw.ms && typeof raw.ms === 'object' && Array.isArray(raw.ms[id]) ? raw.ms[id] : null;
-    if (!list) continue;
-    const one = list.slice(0, 3).map(t => {
-      if (!t || typeof t.mo !== 'string' || typeof ALL_PLAYER_MONSTERS === 'undefined' || !ALL_PLAYER_MONSTERS[t.mo]) return null;
-      const n = typeof t.n === 'string' ? alfNoteShow(t.n.slice(0, 16)) : '';
-      const c = (Array.isArray(t.c) ? t.c : []).slice(0, 5).map(x => x === null ? null : typeof x === 'string' && /^[a-z][a-z0-9_]{0,20}(@(100|[1-9][0-9]))?$/.test(x) ? x : undefined).filter(x => x !== undefined);
-      return {
-        mo: t.mo,
-        n,
-        c,
-        l: t.l === 1 ? 1 : 0
-      };
-    }).filter(Boolean);
-    if (one.length) ms[id] = one;
-  }
   return {
     v: 1,
     fu,
     dy,
-    ac: alfNormalizeAc(raw.ac),
-    ms
+    ac: alfNormalizeAc(raw.ac)
   };
 };
 const assistantLifeFriendNormalizeHouse = raw => {
@@ -126559,6 +126523,13 @@ function AlfSceneSheet({
   }, "とじる"))));
 }
 const ALF_PLAYER_REPLIES = Object.freeze(['こんにちは！', 'おじゃましてます', 'すてきな部屋だね']);
+const alfNoBreak = text => {
+  const parts = String(text || '').split('。').filter(Boolean);
+  return parts.map((x, i) => React.createElement("span", {
+    key: i,
+    className: "whitespace-nowrap"
+  }, x, i < parts.length - 1 || /。$/.test(text) ? '。' : ''));
+};
 const alfRoomsOf = house => {
   const rooms = {};
   for (const id of ALF_IDS) {
@@ -126727,33 +126698,6 @@ function AlfFriendHouseView({
     return fu ? ['c', 'w', 'f'].map(k => fu[k] && fname(fu[k])).filter(Boolean) : [];
   };
   const keptNames = id => more && more.fu[id] ? more.fu[id].k.map(fname).filter(Boolean) : [];
-  const masmonTeamOf = id => {
-    const mine = more && more.ms && more.ms[id];
-    if (mine && mine.length) return mine.map(t => {
-      const m = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(t.mo) : null;
-      return m ? {
-        monster: t.mo,
-        nick: t.n || m.name,
-        name: m.name,
-        dye: {
-          colors: t.c
-        }
-      } : null;
-    }).filter(Boolean);
-    return masmonTeamPlan(id);
-  };
-  const masmonTeamPlan = id => {
-    const pl = typeof assistantMasmonPlanOf === 'function' ? assistantMasmonPlanOf(id) : null;
-    return pl ? pl.team.slice(0, 3).map(t => {
-      const m = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(t.monster) : null;
-      return m ? {
-        monster: t.monster,
-        nick: t.nick,
-        name: m.name,
-        dye: t.dye
-      } : null;
-    }).filter(Boolean) : [];
-  };
   const masmonOf = id => {
     const pl = typeof assistantMasmonPlanOf === 'function' ? assistantMasmonPlanOf(id) : null;
     return pl ? pl.team.slice(0, 3).map(t => {
@@ -126919,7 +126863,7 @@ function AlfFriendHouseView({
   }, alfTheirLabel(friend.name, roomId), "の部屋"), React.createElement("p", {
     className: "text-[11px] font-bold text-slate-200",
     "data-alf-visit-room-state": roomState
-  }, roomState === 'out' ? r0.p && typeof assistantLifePlaceShow === 'function' ? `${typeof ASSISTANT_LIFE_PLACE_ICON !== 'undefined' && ASSISTANT_LIFE_PLACE_ICON[r0.p] || '🚶'} ${assistantLifePlaceShow(r0.p)}へおでかけ中。部屋は見られます` : '🚶 いまはおでかけ中。部屋は見られます' : roomState === 'sleep' ? '💤 すやすや…起こさないように、そっと見るだけ' : `🏠 部屋で${(ASSISTANT_LIFE_DOINGS[r0.d] || {}).label || 'のんびり'}`)), React.createElement("button", {
+  }, alfNoBreak(roomState === 'out' ? r0.p && typeof assistantLifePlaceShow === 'function' ? `${typeof ASSISTANT_LIFE_PLACE_ICON !== 'undefined' && ASSISTANT_LIFE_PLACE_ICON[r0.p] || '🚶'} ${assistantLifePlaceShow(r0.p)}へおでかけ中。部屋は見られます` : '🚶 いまはおでかけ中。部屋は見られます' : roomState === 'sleep' ? '💤 すやすや…起こさないように、そっと見るだけ' : `🏠 部屋で${(ASSISTANT_LIFE_DOINGS[r0.d] || {}).label || 'のんびり'}`))), React.createElement("button", {
     type: "button",
     "data-mhl-sheet-close": true,
     className: "shrink-0 rounded-xl border border-slate-500 px-3 py-1.5 text-[12px] font-black text-slate-100",
@@ -126933,25 +126877,10 @@ function AlfFriendHouseView({
   }, "🪑 贈られた家具: ", furnNames(roomId).length ? furnNames(roomId).join('・') : 'まだありません'), keptNames(roomId).length > 0 && React.createElement("p", {
     className: "mt-0.5 text-[10.5px] text-slate-300",
     "data-alf-visit-kept": true
-  }, "📦 押し入れ: ", keptNames(roomId).join('・')), masmonTeamOf(roomId).length > 0 && React.createElement("div", {
-    className: "mt-1.5",
+  }, "📦 押し入れ: ", keptNames(roomId).join('・')), masmonOf(roomId).length > 0 && React.createElement("p", {
+    className: "mt-0.5 text-[10.5px] text-slate-300",
     "data-alf-visit-masmon": true
-  }, React.createElement("p", {
-    className: "text-[10.5px] font-bold text-slate-300"
-  }, "🐾 マスモン"), React.createElement("div", {
-    className: "mt-0.5 grid grid-cols-3 gap-1.5"
-  }, masmonTeamOf(roomId).map((t, i) => React.createElement("div", {
-    key: i,
-    className: "flex min-w-0 flex-col items-center rounded-xl bg-white/5 px-1 py-1",
-    "data-alf-visit-masmon-one": t.monster
-  }, typeof AssistantMasmonPic === 'function' ? React.createElement(AssistantMasmonPic, {
-    t: t,
-    size: 44
-  }) : null, React.createElement("span", {
-    className: "mt-0.5 max-w-full truncate text-[10px] font-black text-white"
-  }, t.nick), React.createElement("span", {
-    className: "max-w-full truncate text-[9px] text-slate-400"
-  }, t.name))))), talk && talk.aid === roomId ? React.createElement("div", {
+  }, "🐾 マスモン: ", masmonOf(roomId).join('・')), talk && talk.aid === roomId ? React.createElement("div", {
     className: "mt-2",
     "data-alf-visit-talk": true
   }, talk.mine && React.createElement("p", {
