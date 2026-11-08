@@ -52,6 +52,13 @@ const boardProblems = (page) => page.evaluate(() => {
     if (bd) { const br = bd.getBoundingClientRect(), cs = getComputedStyle(bd), bt = br.top + parseFloat(cs.borderTopWidth), bb = br.bottom - parseFloat(cs.borderBottomWidth), bl = br.left, brr = br.right;
       for (const p of bd.querySelectorAll('[data-assistant-life-board-item]')) { const r = p.getBoundingClientRect(); const inX = r.left < brr - 1 && r.right > bl + 1; const inY = r.top < bb - 1 && r.bottom > bt + 1;
         if (inX && inY && (r.bottom > bb + 0.5 || r.top < bt - 0.5)) ng.push(`掲示板の件が半分切れる: ${p.textContent}`); } } }
+  // 見出しの「ほか◯件」= 今日あったことの全部 − 掲示板に見えている件(押すと全部読めると分かる。2026-11-08 社長)
+  { const bd = document.querySelector('[data-assistant-life-board]'); const more = bd && bd.querySelector('[data-assistant-life-board-more]');
+    const total = (typeof ASSISTANT_LIFE_DIARY !== 'undefined' && (ASSISTANT_LIFE_DIARY.state.items || []).length) || 0;
+    if (bd && total > 0) { if (!more) ng.push('掲示板に「ほか◯件／全部 ›」が無い');
+      else { const w = bd.clientWidth; const seen = [...bd.querySelectorAll('[data-assistant-life-board-item]')].filter(p => p.offsetLeft + 1 < w).length;
+        if (Number(more.getAttribute('data-assistant-life-board-more')) !== total - seen) ng.push(`「ほか◯件」の数が合わない: ${more.textContent} 全${total}・見えている${seen}`);
+        const mr = more.getBoundingClientRect(), br = bd.getBoundingClientRect(); if (mr.right > br.right + 0.5 || more.scrollWidth > more.clientWidth + 1) ng.push(`「${more.textContent}」が掲示板からはみ出す`); } } }
   for (const sm of document.querySelectorAll('[data-assistant-life-today] small')) if (sm.scrollWidth > sm.clientWidth + 1) ng.push(`今日やれることの字が切れる: ${sm.textContent}`);
   // 部屋の吹き出し(「💭 だれか来ないかな…」)が部屋の幅で切れない・まとまりの途中で折れない(2026-11-08 ミハリ: 横で「だれか来ない…」)
   for (const b of document.querySelectorAll('[data-assistant-life-room-bub]')) { if (b.scrollWidth > b.clientWidth + 1 || b.scrollHeight > b.clientHeight + 1) ng.push(`部屋の吹き出しが切れる: ${b.textContent}`); for (const c of b.querySelectorAll('[data-assistant-life-chunk]')) if (c.getClientRects().length > 1) ng.push(`吹き出しが途中で折れる: ${c.textContent}`); }
