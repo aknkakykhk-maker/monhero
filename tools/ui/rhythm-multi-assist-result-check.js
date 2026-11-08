@@ -77,6 +77,9 @@ const measureResult = (page) => page.evaluate(() => {
     if (rot ? sideRot : side) out.growth.push(`「${e.innerText.trim().slice(0, 12)}」がはみ出す`);
     if (e.scrollWidth > e.clientWidth + 1) out.growth.push(`「${e.innerText.trim().slice(0, 12)}」の中身が切れる`);
   });
+  // ⑤ カードの上の吹き出しが、送る欄で切れていない(横向きは欄が切らない作り)
+  const body = document.querySelector('[data-rhythm-multi-result-body]');
+  if (body && getComputedStyle(body).overflowY !== 'visible') document.querySelectorAll('[data-rhythm-multi-result-bubble]').forEach((b) => { if (!inBox(R(b), R(body))) out.mvp.push(`吹き出し「${b.innerText.trim().slice(0, 8)}」が欄で切れる`); });
   // ④ いちばん下の「メンバーの成績」「次へ」が部屋の枠の中に見える(押し出されない)
   ['[data-rhythm-multi-member-stats]', '[data-rhythm-multi-result-next]'].forEach((q) => { const e = document.querySelector(q); if (!inBox(R(e), R(main))) out.growth.push(`${q.includes('next') ? '「次へ」' : '「メンバーの成績」'}が画面の外`); });
   return { mvp: out.mvp.join(' / '), stamps: out.stamps.join(' / '), growth: out.growth.join(' / ') };
@@ -93,7 +96,8 @@ const measureResult = (page) => page.evaluate(() => {
       if (process.env.ONLY && process.env.ONLY !== name) continue;
       const page = await browser.newPage({ viewport: { width: w, height: h } });
       // iPhone の切り欠き(上 59px・ホームバー 34px)を入れて測る(env() は作れないので、index.html の --mh-safe-* で差し替える)
-      await page.addInitScript(() => { document.addEventListener('DOMContentLoaded', () => { const r = document.documentElement.style; r.setProperty('--mh-safe-top', '59px'); r.setProperty('--mh-safe-bottom', '34px'); r.setProperty('--mh-safe-left', '0px'); r.setProperty('--mh-safe-right', '0px'); }); });
+      //   端末を横に持ったとき(yoko)は、切り欠きが左右・ホームバーが下に来て、上は0(実機と同じ向きで入れる)
+      await page.addInitScript((land) => { document.addEventListener('DOMContentLoaded', () => { const r = document.documentElement.style; const v = land ? { top: '0px', bottom: '21px', left: '47px', right: '47px' } : { top: '59px', bottom: '34px', left: '0px', right: '0px' }; Object.entries(v).forEach(([k, x]) => r.setProperty(`--mh-safe-${k}`, x)); }); }, w > h);
       page.on('pageerror', (e) => errors.push(String(e && e.message || e)));
       // 偽の Realtime。本物は自分の送った知らせも返す(self:true)ので、ここでも返す(返さないと部屋主が自分の「ライブ開始」を受け取れず、演奏が始まらない)
       await page.addInitScript(() => { class FakeWS { constructor() { this.readyState = 0; this.topic = null; setTimeout(() => { this.readyState = 1; this.onopen && this.onopen({}); }, 0); } deliver(obj) { const data = JSON.stringify(obj); setTimeout(() => { if (this.readyState === 1 && this.onmessage) this.onmessage({ data }); }, 0); } send(raw) { let m = null; try { m = JSON.parse(raw); } catch (_) { return; } if (m.event === 'phx_join') { this.topic = m.topic; this.deliver({ topic: m.topic, event: 'phx_reply', ref: m.ref, payload: { status: 'ok', response: {} } }); return; } if (m.event !== 'broadcast') return; this.deliver({ topic: this.topic, event: 'broadcast', payload: { type: 'broadcast', event: 'msg', payload: m.payload && m.payload.payload } }); } close() { this.readyState = 3; setTimeout(() => this.onclose && this.onclose({}), 0); } } window.WebSocket = FakeWS; });

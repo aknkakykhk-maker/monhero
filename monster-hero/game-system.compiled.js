@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0f34fadb19a39fdc
+// source-sha256: 139aa3a7923d56c0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -94650,7 +94650,7 @@ function RhythmMultiScreen({
       className: "absolute -top-3.5 -translate-x-1/2 text-[9px] font-black text-slate-300"
     }, mk.id))))), React.createElement("div", {
       "data-rhythm-multi-result-body": true,
-      className: "flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden"
+      className: "flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden landscape:overflow-visible"
     }, React.createElement("ul", {
       className: "relative grid max-h-[300px] min-h-[184px] flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-11 landscape:min-h-[136px] landscape:pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2"
     }, React.createElement("li", {

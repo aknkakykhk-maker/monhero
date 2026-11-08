@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b1ae20f5936fafc6
+// generated-sha256: e18a884d0ed1acc3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -56474,8 +56474,9 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             ))}
           </div>
         </div>
-        {/* カード・あいさつ・育ちの札をまとめた欄。入りきらない小さい画面では、この欄の中で縦に送る(下の「メンバーの成績」「次へ」を押し出さない・2026-11-08) */}
-        <div data-rhythm-multi-result-body className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
+        {/* カード・あいさつ・育ちの札をまとめた欄。入りきらない縦の小さい画面では、この欄の中で縦に送る(下の「メンバーの成績」「次へ」を押し出さない・2026-11-08)。
+            横向き(🔄横も)は送らない: カードの上の吹き出しが欄の上で切れるため。横は育ちの札の欄が中で送る */}
+        <div data-rhythm-multi-result-body className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden landscape:overflow-visible">
         {/* カードに最低の高さを持たせる。下の育ちの札・友情Lv の欄やあいさつの段に押しつぶされて、MVP の顔と「HELL Lv.◯」が切れた(2026-11-08 社長・🔄横。320幅の縦ではカードがほぼ消えていた) */}
         <ul className="relative grid max-h-[300px] min-h-[184px] flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-11 landscape:min-h-[136px] landscape:pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2">
           {/* 吹き出しの段: カードの上の余白に、カードと同じ5列で重ねる(高さは ul の上の余白と同じ。下の端=カードの上の端) */}
