@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 90fc7f19b26affd1
+// generated-sha256: 6f227dcf44e3745c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -64841,6 +64841,40 @@ function AssistantLifeRoomFront({ kind, cx, top, w, items = [] }) {
 // 寝ているときのベッド(2026-11-08 社長「寝ている感じがしない」): 横から見たベッド(頭板・枕・掛け布団・脚)に、頭を横にして枕にのせる。
 //   頭は立ち絵から「頭のてっぺんの少し上〜顎の少し下」だけを切り出して倒す(目の下で切らない)。首から下は掛け布団の下
 const ASSISTANT_LIFE_ROOM_QUILT = Object.freeze({ mua: ['#fbcfe8', '#f472b6'], kiki: ['#ddd6fe', '#a78bfa'], momosuke: ['#fed7aa', '#fb923c'], dra: ['#bbf7d0', '#4ade80'], atsu: ['#fecaca', '#ef4444'], kyuko: ['#bae6fd', '#38bdf8'], sorashido: ['#fef08a', '#facc15'], erubin: ['#e2e8f0', '#94a3b8'] });
+// 寝ているときの閉じた目(2026-11-08 社長「寝てるときは目を閉じるようにできないの？ どらちゃんは眼鏡だからそのままでいい」)。
+//   寝顔の絵は無いので、ふつうの顔(normal)の絵の上に、まわりの肌の色で目をふさぎ、閉じたまぶたの線(下向きの弧)とまつ毛を描く。
+//   描くのは目を開いた絵の きき・ももすけ・あつ だけ(みゅあ・きゅうこ・ソラシド・えるびんは元から目を閉じた絵、ドラは眼鏡)。
+//   eyes … [x, y, 幅, 高さ, 肌の色](絵の幅・高さに対する割合。左右の目)/ang … 顔の傾き(度)/line … まぶたの線の色。測り方: 絵を目盛りつきで切り出して手で読んだ
+const ASSISTANT_LIFE_SLEEP_EYES = Object.freeze({
+  kiki: { ang: -3, line: '#4a2030', eyes: [[0.4492, 0.4868, 0.0579, 0.0703, '#fccfc3'], [0.5592, 0.4766, 0.0579, 0.0664, '#fddbcf']] },
+  momosuke: { ang: -17, line: '#5a3a28', eyes: [[0.4254, 0.4363, 0.0918, 0.0781, '#e8b8b2'], [0.5967, 0.3836, 0.0918, 0.0859, '#fcece4']] },
+  atsu: { ang: -27, line: '#3a1f2a', eyes: [[0.4188, 0.3125, 0.0768, 0.0391, '#efa696'], [0.5661, 0.2553, 0.0911, 0.0342, '#f9ccb8']] },
+});
+function AssistantLifeSleepEyes({ pid, src, w, h, style }) {
+  const def = ASSISTANT_LIFE_SLEEP_EYES[pid];
+  const who = typeof assistantById === 'function' ? assistantById(pid) : null;
+  // 着替えなど別の絵では目の位置がちがうので描かない(その助手のふつうの顔の絵のときだけ)
+  if (!def || !who || !who.imagePrefix || !String(src || '').includes(`/${who.imagePrefix}_normal`)) return null;
+  const fid = `mhlse-${pid}`;
+  return (
+    <svg data-assistant-life-roomview-sleep-eyes={pid} width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ position: 'absolute', overflow: 'visible', pointerEvents: 'none', ...style }}>
+      <defs><filter id={fid} x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation={Math.max(0.6, w * 0.006)}/></filter></defs>
+      {def.eyes.map(([fx, fy, fw, fh, skin], i) => {
+        const cx = fx * w, cy = fy * h, ew = fw * w, eh = fh * h;
+        const outer = i === 0 ? -1 : 1; // 外側(見て左の目は左・右の目は右)
+        const lw = Math.max(1.1, eh * 0.11);
+        const lid = `M${cx - ew * 0.5},${cy} Q${cx},${cy + eh * 0.42} ${cx + ew * 0.5},${cy}`;
+        const ox = cx + outer * ew * 0.42, oy = cy + eh * 0.08;
+        return (
+          <g key={i} transform={`rotate(${def.ang} ${cx} ${cy})`}>
+            <ellipse cx={cx} cy={cy + eh * 0.04} rx={ew * 0.6} ry={eh * 0.62} fill={skin} filter={`url(#${fid})`}/>
+            <ellipse cx={cx} cy={cy + eh * 0.04} rx={ew * 0.54} ry={eh * 0.54} fill={skin}/>
+            <path d={lid} fill="none" stroke={def.line} strokeWidth={lw} strokeLinecap="round"/>
+            {[0, 1, 2].map(k => <path key={k} d={`M${ox - outer * k * ew * 0.12},${oy + k * eh * 0.07} l${outer * ew * (0.14 - k * 0.02)},${eh * (0.16 + k * 0.03)}`} fill="none" stroke={def.line} strokeWidth={lw * 0.8} strokeLinecap="round"/>)}
+          </g>); })}
+    </svg>);
+}
+
 function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
   const bw = Math.min(W * 0.8, 340), left = W / 2 - bw / 2, bottom = floorY + 58, mattTop = bottom - 50;
   const quilt = ASSISTANT_LIFE_ROOM_QUILT[id] || ASSISTANT_LIFE_ROOM_QUILT.mua;
@@ -64849,7 +64883,7 @@ function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
   const items = sleepers.map(pid => { const a = assistantById(pid); if (!a) return null; const src = assistantFullImage(a, 'normal'); return { pid, who: a, src, face: assistantLifeRoomFaceOf(pid, src) }; }).filter(Boolean);
   const key = items.map(x => x.src).join('|');
   React.useEffect(() => { let alive = true; Promise.all(items.map(x => (typeof assistantLifeStandBox === 'function' ? assistantLifeStandBox(x.src) : Promise.resolve(null)))).then(bs => { if (!alive) return; const o = {}; items.forEach((x, i) => { o[x.src] = bs[i] || { t: 0, b: 1, l: 0, r: 1, ar: 0.7 }; }); setBoxes(o); }); return () => { alive = false; }; }, [key]);
-  const F = Math.min(25, W * 0.066); // 顔の大きさ(m=1 の人の目から顎)
+  const F = Math.min(30, W * 0.078); // 顔の大きさ(m=1 の人の目から顎)。閉じた目が見える大きさ
   const night = look === 'night';
   return (
     <div aria-hidden="true" data-assistant-life-roomview-front="bed" className="pointer-events-none absolute inset-0">
@@ -64876,12 +64910,13 @@ function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
           <div key={x.pid} data-assistant-life-roomview-sleeper={x.pid} style={{ position: 'absolute', left: cx - cw / 2, top: cy - ch / 2, width: cw, height: ch, transform: 'rotate(-78deg)', transformOrigin: '50% 50%', overflow: 'hidden',
             WebkitMaskImage: 'linear-gradient(#000 82%,transparent)', maskImage: 'linear-gradient(#000 82%,transparent)' }}>
             <img src={x.src} alt="" draggable={false} style={{ position: 'absolute', left: r.left + cw / 2, top: r.top - y0, width: r.width, height: r.height, maxWidth: 'none', filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})` }}/>
+            <AssistantLifeSleepEyes pid={x.pid} src={x.src} w={r.width} h={r.height} style={{ left: r.left + cw / 2, top: r.top - y0, filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})` }}/>
           </div>); })}
       {/* 掛け布団(2026-11-08 社長「布団を膨らませて顔にちょっとかかる感じに」): 肩・体・足のふくらみのある形で、顔の下半分〜目のあたりまでかぶせる(髪と頭のてっぺんは見せる) */}
       {(() => {
         const U = U0(F), ch = U * 1.32, cw = U * 1.2;
         const headLeft = pillow.left + 2, cy = pillow.top + pillow.h * 0.6 - cw / 2;
-        const qx = items.length ? headLeft + 0.8 * U : pillow.left + pillow.w * 0.62; // 目のあたりから右(顎の側)を覆う
+        const qx = items.length ? headLeft + 1.0 * U : pillow.left + pillow.w * 0.62; // 閉じた目が見える所から右(顎の側)を覆う(2026-11-08 社長「目を閉じる」)
         // 胴体(胸〜腰)がいちばん高く、腰で少し下がり、ひざの山・すねで下がり・足先でまたふくらむ(2026-11-08 社長「足の方とか胴体分を意識して膨らませたい」)
         const qTop = items.length ? cy - cw * 0.42 : mattTop - 30; // 胴体のいちばん高い所は頭の上の端くらい
         const qw = Math.max(60, left + bw - 14 - qx), qh = Math.max(50, mattTop + 34 - qTop);
