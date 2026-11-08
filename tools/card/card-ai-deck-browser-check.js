@@ -71,7 +71,9 @@ const run = async (browser, mode, scene, errors) => {
   await page.addInitScript((on) => { window.__aiDeckFlag = on; window.__mhSupabaseStubbed = ['card-assistant-talk']; }, scene.flag);
   // ⑥ これまでのデッキ: きき の昔のデッキを1つ置いておく(推しの枠・主役ゴーレム)。選び口で選び、VS・結果にその名前が出るか
   // ⑧ 遊ぶ人の提案(助手部の口 assistantLifeDeckWish の代わり): 推しのデッキ・守り・「まったり作戦」
-  if (scene.wish) await page.addInitScript(() => { window.assistantLifeDeckWish = (id) => (id === 'kiki' ? { face: 'oshi', name: 'まったり作戦', plan: 'guard', day: '2026-11-08' } : null); });
+  //    助手部の本物の口(56 の assistantLifeDeckWish)が読む保存 mh_assistant_life_masmon_v1 の mine に、提案を置いておく
+  if (scene.wish) await page.addInitScript(() => { if (sessionStorage.getItem('w')) return; sessionStorage.setItem('w', '1');
+    localStorage.setItem('mh_assistant_life_masmon_v1', JSON.stringify({ v: 1, mine: { kiki: { deck: { face: 'oshi', name: 'まったり作戦', plan: 'guard', day: '2026-11-08' } } } })); });
   if (scene.past) await page.addInitScript(() => { if (sessionStorage.getItem('h')) return; sessionStorage.setItem('h', '1');
     localStorage.setItem('mh_card_ai_deck_history_v1', JSON.stringify({ v: 1, perWho: { kiki: [{ id: 'oshi-1700000000000', slot: 'oshi', name: 'ゴーレムの力くらべ', plan: null,
       spec: { lead: 'golem', avoid: ['dragon', 'zilla'], keep: ['tiger', 'hare'], free: 1, style: 'normal' }, monsters: [], top: [], from: 1700000000000, to: 1700300000000 }] } })); });
@@ -128,6 +130,8 @@ const run = async (browser, mode, scene, errors) => {
     await page.locator('[data-home-card-battle]').first().dispatchEvent('click');
     await page.locator('[data-card-top="top"]').waitFor({ timeout: 30000 }); await dismiss();
     // 相手えらび: きき を選ぶ(会った印 → まだデッキが無いので裏で1つ組む)
+    // 助手部の保存を読みこませる(提案の口はここから読む)
+    if (scene.wish) await page.evaluate(async () => { if (typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.load) await ASSISTANT_MASMON_STORE.load(); }); // eslint-disable-line no-undef
     await page.locator('[data-card-cpu]').first().click();
     await page.locator('[data-card-mode-assistant]').click();
     await page.locator(`[data-card-foe="${WHO}"]`).waitFor({ timeout: 20000 });
@@ -235,7 +239,19 @@ const run = async (browser, mode, scene, errors) => {
         vs2 = await page.evaluate(() => { const m = document.querySelector('[data-card-vs-mark]'); const l = document.querySelector('[data-card-vs-line]'); return m && l ? l.textContent : null; });
         if (!vs2) { const go = page.getByRole('button', { name: /^対戦へ$|このデッキで/ }).first(); if (await go.count() && await go.isVisible().catch(() => false)) await go.click().catch(() => {}); await page.waitForTimeout(250); }
       }
-      await page.waitForTimeout(1300);
+      // 自分の側は相手の側より遅れて動いて出る。3体が出そろって動きが止まるまで待ってから撮る(2026-11-08 部長「2回目でナーガがピクシーに重なっている」)
+      let meSet = null;
+      for (let i = 0; i < 30; i++) {
+        meSet = await page.evaluate(() => { const side = document.querySelector('[data-card-vs-side="me"]'); if (!side) return null;
+          const ms = [...side.querySelectorAll('[data-card-vs-mon]')]; const rs = ms.map((m) => m.getBoundingClientRect());
+          const done = ms.length === 3 && ms.every((m) => Number(getComputedStyle(m).opacity) > 0.99 && getAnimationsDone(m));
+          function getAnimationsDone(m) { return !(m.getAnimations ? m.getAnimations({ subtree: true }) : []).some((a) => a.playState === 'running'); }
+          const over = []; for (let a = 0; a < rs.length; a++) for (let b = a + 1; b < rs.length; b++) { const w = Math.min(rs[a].right, rs[b].right) - Math.max(rs[a].left, rs[b].left); const h = Math.min(rs[a].bottom, rs[b].bottom) - Math.max(rs[a].top, rs[b].top); if (w > 2 && h > 2) over.push(`${a}-${b}:${Math.round(w)}px`); }
+          return { done, over }; });
+        if (meSet && meSet.done) break;
+        await page.waitForTimeout(250);
+      }
+      check(`⑨ ${label}: 2回目の VS も、自分の側の3体が出そろい(動きが止まり)、互いに重ならない`, !!meSet && meSet.done && meSet.over.length === 0, JSON.stringify(meSet));
       const fought = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_ai_deck_wish_v1') || 'null'));
       check(`⑨ ${label}: 2回目(もう一度)の VS は今の台詞・初めて戦った印が残る`, vs2 === '今日は『ゴーレムのまったり作戦』でお相手しまつ( ˘ω˘)' && !!fought && JSON.stringify(fought.fought && fought.fought.kiki) === JSON.stringify(['ゴーレムのまったり作戦']), `${vs2} / ${JSON.stringify(fought)}`);
       await snap('3-vs-2nd');
