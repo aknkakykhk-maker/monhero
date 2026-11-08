@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: defdb14038b24228
+// source-sha256: f046309d67f2d636
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -127947,6 +127947,53 @@ const alfBuildMore = ids => {
     dy
   };
 };
+const ALF_MORE_FIT = 5600;
+const ALF_COLOR_RE = /^([a-z][a-z0-9_]{0,20}|custom:\d{1,3}:\d{1,3}:\d{1,3})(@(100|[1-9][0-9]))?$/;
+const alfMasmonShare = ids => {
+  const out = {};
+  for (const id of (ids || []).filter(alfValidId)) {
+    try {
+      const team = typeof assistantLifeMasmonTeamOf === 'function' ? assistantLifeMasmonTeamOf(id) : [];
+      const one = (Array.isArray(team) ? team : []).filter(t => t && typeof t.monster === 'string').slice(0, 8).map(t => ({
+        mo: t.monster.slice(0, 40),
+        n: alfStr(t.nick, 16),
+        c: (Array.isArray(t.colors) ? t.colors : []).slice(0, 5).map(x => x == null ? null : ALF_COLOR_RE.test(String(x)) ? String(x) : null),
+        ...(t.lead ? {
+          l: 1
+        } : {})
+      }));
+      if (one.length) out[id] = one;
+    } catch {}
+  }
+  return out;
+};
+const alfMoreChars = o => {
+  const t = JSON.stringify(o);
+  return t.length + (t.match(/[:,]/g) || []).length;
+};
+const alfFitMasmon = (more, ms) => {
+  if (!ms || !Object.keys(ms).length) return more;
+  for (const [n, allColor] of [[8, true], [8, false], [4, false], [2, false], [1, false]]) {
+    const cut = {};
+    const mn = {};
+    for (const [id, list] of Object.entries(ms)) {
+      cut[id] = list.slice(0, n).map(t => allColor || t.l ? t : {
+        ...t,
+        c: []
+      });
+      if (list.length > n) mn[id] = list.length;
+    }
+    const next = {
+      ...more,
+      ms: cut,
+      ...(Object.keys(mn).length ? {
+        mn
+      } : {})
+    };
+    if (alfMoreChars(next) <= ALF_MORE_FIT) return next;
+  }
+  return more;
+};
 const ALF_ACT_KEY = 'mh_assistant_life_friend_activity_v1';
 const ALF_ACT_MAX = 6;
 const ALF_ACT_KINDS = Object.freeze({
@@ -128062,11 +128109,34 @@ const assistantLifeFriendNormalizeMore = raw => {
     t: /^\d{1,2}:\d{2}$/.test(d.t) ? d.t : '',
     x: d.x.replace(/[{}<>]/g, '').slice(0, 40)
   } : null).filter(d => d && d.x);
+  const ms = {};
+  const mn = {};
+  for (const id of ALF_IDS) {
+    const list = raw.ms && typeof raw.ms === 'object' && Array.isArray(raw.ms[id]) ? raw.ms[id] : null;
+    if (!list) continue;
+    const one = list.slice(0, 8).map(t => {
+      if (!t || typeof t.mo !== 'string' || typeof ALL_PLAYER_MONSTERS === 'undefined' || !ALL_PLAYER_MONSTERS[t.mo]) return null;
+      const n = typeof t.n === 'string' ? alfNoteShow(t.n.slice(0, 16)) : '';
+      const c = (Array.isArray(t.c) ? t.c : []).slice(0, 5).map(x => typeof x === 'string' && ALF_COLOR_RE.test(x) ? x : null);
+      return {
+        mo: t.mo,
+        n,
+        c,
+        l: t.l === 1 ? 1 : 0
+      };
+    }).filter(Boolean);
+    if (!one.length) continue;
+    ms[id] = one;
+    const k = raw.mn && typeof raw.mn === 'object' ? Number(raw.mn[id]) : NaN;
+    if (Number.isInteger(k) && k > one.length && k <= 8) mn[id] = k;
+  }
   return {
     v: 1,
     fu,
     dy,
-    ac: alfNormalizeAc(raw.ac)
+    ac: alfNormalizeAc(raw.ac),
+    ms,
+    mn
   };
 };
 const assistantLifeFriendNormalizeHouse = raw => {
@@ -128507,12 +128577,12 @@ const alfPublish = async (life, metIds, now = Date.now(), {
       sentAt: now,
       sentSig: sig
     });
-    void alfPublishMore(self, settings.show ? {
+    void alfPublishMore(self, settings.show ? alfFitMasmon({
       ...alfBuildMore(house.ids),
       ...(settings.act ? {
         ac: _alfActCache || []
       } : {})
-    } : {});
+    }, alfMasmonShare(house.ids)) : {});
     return true;
   } catch {
     return false;
@@ -129769,13 +129839,19 @@ function AlfFriendHouseView({
     return fu ? ['c', 'w', 'f'].map(k => fu[k] && fname(fu[k])).filter(Boolean) : [];
   };
   const keptNames = id => more && more.fu[id] ? more.fu[id].k.map(fname).filter(Boolean) : [];
-  const masmonOf = id => {
-    const pl = typeof assistantMasmonPlanOf === 'function' ? assistantMasmonPlanOf(id) : null;
-    return pl ? pl.team.slice(0, 3).map(t => {
-      const m = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(t.monster) : null;
-      return m ? `${t.nick}(${m.name})` : null;
-    }).filter(Boolean) : [];
-  };
+  const masmonOf = id => (more && more.ms && Array.isArray(more.ms[id]) ? more.ms[id] : []).map(t => {
+    const m = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(t.mo) : null;
+    return m ? {
+      monster: t.mo,
+      nick: t.n || m.name,
+      name: m.name,
+      lead: !!t.l,
+      dye: {
+        colors: t.c
+      }
+    } : null;
+  }).filter(Boolean);
+  const masmonMore = id => more && more.mn && more.mn[id] ? Math.max(0, more.mn[id] - masmonOf(id).length) : 0;
   const otherPut = (() => {
     const o = alfFurnPutOf(h);
     if (more) for (const id of Object.keys(more.fu)) o[id] = {
@@ -129948,10 +130024,31 @@ function AlfFriendHouseView({
   }, "🪑 贈られた家具: ", furnNames(roomId).length ? furnNames(roomId).join('・') : 'まだありません'), keptNames(roomId).length > 0 && React.createElement("p", {
     className: "mt-0.5 text-[10.5px] text-slate-300",
     "data-alf-visit-kept": true
-  }, "📦 押し入れ: ", keptNames(roomId).join('・')), masmonOf(roomId).length > 0 && React.createElement("p", {
-    className: "mt-0.5 text-[10.5px] text-slate-300",
+  }, "📦 押し入れ: ", keptNames(roomId).join('・')), masmonOf(roomId).length > 0 && React.createElement("div", {
+    className: "mt-1.5",
     "data-alf-visit-masmon": true
-  }, "🐾 マスモン: ", masmonOf(roomId).join('・')), talk && talk.aid === roomId ? React.createElement("div", {
+  }, React.createElement("p", {
+    className: "text-[10.5px] font-bold text-slate-300"
+  }, "🐾 ", alfTheirLabel(friend.name, roomId), "のマスモン", masmonMore(roomId) ? React.createElement("span", {
+    className: "ml-1 text-slate-400",
+    "data-alf-visit-masmon-more": true
+  }, "ほか", masmonMore(roomId), "体") : null), React.createElement("div", {
+    className: "mt-0.5 grid grid-cols-4 gap-1"
+  }, masmonOf(roomId).map((t, i) => React.createElement("div", {
+    key: i,
+    className: `relative flex min-w-0 flex-col items-center rounded-xl px-0.5 py-1 ${t.lead ? 'bg-amber-400/15 ring-1 ring-amber-300/60' : 'bg-white/5'}`,
+    "data-alf-visit-masmon-one": t.monster
+  }, typeof AssistantMasmonPic === 'function' ? React.createElement(AssistantMasmonPic, {
+    t: t,
+    size: 40
+  }) : null, React.createElement("span", {
+    className: "mt-0.5 max-w-full truncate text-[10px] font-black text-white"
+  }, t.lead ? '⭐' : '', t.nick), React.createElement("span", {
+    className: "max-w-full truncate text-[8.5px] text-slate-400"
+  }, t.name))), masmonMore(roomId) > 0 && React.createElement("div", {
+    className: "flex items-center justify-center rounded-xl border border-dashed border-white/25 text-[13px] font-black text-slate-300",
+    "data-alf-visit-masmon-plus": true
+  }, "+", masmonMore(roomId)))), talk && talk.aid === roomId ? React.createElement("div", {
     className: "mt-2",
     "data-alf-visit-talk": true
   }, talk.mine && React.createElement("p", {

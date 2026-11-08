@@ -34,7 +34,7 @@ const route = (posted) => async (r) => {
   if (/assistant_life_friend_switch/.test(url)) return json([{ mode: 'on' }]);
   if (/assistant_life_friend_house_more/.test(url)) {
     if (method !== 'GET') { try { posted.push({ more: JSON.parse(r.request().postData()) }); } catch {} return json('', 201); }
-    return json(/aoi-0001/.test(url) ? [{ more: { v: 1, fu: { mua: { p: { c: 'lantern', w: 'starpic', f: 'sofa' }, k: ['bear', 'plant'] }, dra: { p: { w: 'trophy', f: 'bear' }, k: [] } }, ac: [{ k: 'masmon', x: '新しいマスモン「ゴーレム」を迎えた', at: Date.now() - 1800000 }, { k: 'beat', x: '「風がそよぐ」を遊んだ', at: Date.now() - 3600000 }], dy: [{ t: '11:00', x: '昼: ももすけ・あつが練習スタジオで練習' }, { t: '10:10', x: '朝: みゅあ・ききが居間でおやつ' }, { t: '09:00', x: 'ドラ セッション → 🎵Lv2' }] }, updated_at: fresh }] : []);
+    return json(/aoi-0001/.test(url) ? [{ more: { v: 1, fu: { mua: { p: { c: 'lantern', w: 'starpic', f: 'sofa' }, k: ['bear', 'plant'] }, dra: { p: { w: 'trophy', f: 'bear' }, k: [] } }, ms: { kiki: [{ mo: 'Mocchi', n: 'ごろちゃん', c: ['custom:120:40:85@70', null], l: 1 }, { mo: 'Pandora', n: 'のあ', c: [] }] }, mn: { kiki: 5 }, ac: [{ k: 'masmon', x: '新しいマスモン「ゴーレム」を迎えた', at: Date.now() - 1800000 }, { k: 'beat', x: '「風がそよぐ」を遊んだ', at: Date.now() - 3600000 }], dy: [{ t: '11:00', x: '昼: ももすけ・あつが練習スタジオで練習' }, { t: '10:10', x: '朝: みゅあ・ききが居間でおやつ' }, { t: '09:00', x: 'ドラ セッション → 🎵Lv2' }] }, updated_at: fresh }] : []);
   }
   if (/assistant_life_friend_houses/.test(url)) return method === 'GET' ? json(HOUSES) : json('', 201);
   if (/assistant_life_friend_visits/.test(url)) {
@@ -186,6 +186,8 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.locator('[data-alf-visit-sheet="kiki"]').waitFor({ timeout: 3000 });
       check(`⑥ おでかけ中の部屋も押せて、「おでかけ中」と分かる(${v.id})`, (await page.locator('[data-alf-visit-room-state="out"]').count()) === 1);
       check(`⑯ 出かけている助手は行き先が分かる(部屋の札「🃏 カード部屋へ」・シート)(${v.id})`, /(カード部屋|MFバトルカード)へ/.test(await page.locator('[data-alf-visit] [data-assistant-life-room="kiki"]').innerText()) && /(カード部屋|MFバトルカード)へおでかけ中/.test(await page.locator('[data-alf-visit-room-state]').innerText()));
+      check(`⑱ 部屋のシートに、その人の助手のマスモン(写し)が絵つきで出る・勇者モンに⭐・「ほか3体」と列の最後に「+3」(${v.id})`, (await page.locator('[data-alf-visit-masmon-one]').count()) === 2 && /⭐ごろちゃん/.test(await page.locator('[data-alf-visit-masmon]').innerText()) && (await page.locator('[data-alf-visit-masmon-one] img').count()) >= 2 && /ほか3体/.test(await page.locator('[data-alf-visit-masmon-more]').innerText().catch(() => '')) && /\+3/.test(await page.locator('[data-alf-visit-masmon-plus]').innerText().catch(() => '')));
+      { const ng = await textProblems(page, '[data-alf-visit-masmon]'); check(`⑱ マスモンの名前がはみ出さない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
       check(`⑯ 部屋のシートに「贈られた家具: まだありません」(${v.id})`,  /贈られた家具: まだありません/.test(await page.locator('[data-alf-visit-furn]').innerText()));
       check(`⑭ 訪ねた家の掲示板に、その人の最近(迎えたマスモン・遊んだ曲)が出る(${v.id})`, /ゴーレム/.test(await page.locator('[data-alf-visit]').innerText()));
       await shot(page, `${v.id}-5b-visit-out`);
@@ -199,6 +201,7 @@ const badgeProblems = (page) => page.evaluate(() => {
         await page.locator('[data-alf-visit-diary-all] [data-mhl-sheet-close]').click(); }
       await page.locator('[data-alf-visit] [data-assistant-life-room="mua"]').click();
       await page.locator('[data-alf-visit-sheet="mua"]').waitFor({ timeout: 3000 });
+      check(`⑱ 写しの無い助手の部屋には、マスモンの段を出さない(見ている人のマスモンを出さない)(${v.id})`, (await page.locator('[data-alf-visit-masmon]').count()) === 0);
       check(`⑫ くわしい控えの押し入れが部屋のシートに出る(${v.id})`, /押し入れ/.test(await page.locator('[data-alf-visit-kept]').innerText().catch(() => '')));
       await shot(page, `${v.id}-5c-visit-kept`);
       await page.locator('[data-alf-visit-sheet] .mhl-sheet button:has-text("とじる")').click();
