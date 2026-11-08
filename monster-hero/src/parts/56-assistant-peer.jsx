@@ -899,7 +899,7 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
   const daily = st.daily && st.daily.day === assistantPeerDayKey() && st.daily.pair ? st.daily : null;
   const dailyPair = daily ? daily.pair.split('-') : null;
   return (
-    <div data-assistant-peer-map className="rounded-2xl border border-white/10 bg-slate-950/60 p-3">
+    <div data-assistant-peer-map className="rounded-2xl border border-white/10 bg-slate-950/85 p-3">
       <p className="text-[12px] font-black text-pink-200">助手どうしの関係図</p>
       <p className="mb-2 text-[9px] leading-tight text-slate-400">助手どうしも仲良くなります。{assistantPeerLvLabel(3)} になった2人は線で結ばれます。ペアを押すと思い出アルバムが開きます。</p>
       {!assistantPeerLifeOn() && dailyPair && dailyPair.every(id => ids.includes(id)) && (
