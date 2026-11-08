@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bbc010d397057652
+// generated-sha256: b6af65a5ac69085f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -64254,6 +64254,9 @@ const assistantLifeTasteOf = (id) => {
   const names = (xs) => [...new Set((xs || []).map(assistantMasmonTasteName).filter(Boolean))].slice(0, 5);
   return { likes: names(p.likeMon), dislikes: names(p.dislikeMon), changed: [] };
 };
+
+// ココロの受け口(56-assistant-chat.jsx の入れ物)へ渡す。onTalk は「好き嫌いが変わる」を作るときに足す
+if (typeof ASSISTANT_CHAT_TASTE_HOOKS === 'object' && ASSISTANT_CHAT_TASTE_HOOKS) { ASSISTANT_CHAT_TASTE_HOOKS.of = assistantLifeTasteOf; }
 
 // 能力のゲージ(見た目用)。プレイヤーと同じ4つ。基礎値 × Lv の伸び × 育ち方
 const ASSISTANT_MASMON_GROW_BIAS = Object.freeze({

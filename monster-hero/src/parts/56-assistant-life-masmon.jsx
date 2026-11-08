@@ -56,6 +56,9 @@ const assistantLifeTasteOf = (id) => {
   return { likes: names(p.likeMon), dislikes: names(p.dislikeMon), changed: [] };
 };
 
+// ココロの受け口(56-assistant-chat.jsx の入れ物)へ渡す。onTalk は「好き嫌いが変わる」を作るときに足す
+if (typeof ASSISTANT_CHAT_TASTE_HOOKS === 'object' && ASSISTANT_CHAT_TASTE_HOOKS) { ASSISTANT_CHAT_TASTE_HOOKS.of = assistantLifeTasteOf; }
+
 // 能力のゲージ(見た目用)。プレイヤーと同じ4つ。基礎値 × Lv の伸び × 育ち方
 const ASSISTANT_MASMON_GROW_BIAS = Object.freeze({
   '攻撃型': { atk: 1.18 }, '防御型': { def: 1.18 }, 'ガッツ型': { guts: 1.18 }, 'ライフ型': { hp: 1.18 }, 'すばやさ型': { atk: 1.08, guts: 1.08 },

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 106e53fd3c35ae1e
+// source-sha256: f5a2a107cb460ee8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -119971,6 +119971,9 @@ const assistantLifeTasteOf = id => {
     changed: []
   };
 };
+if (typeof ASSISTANT_CHAT_TASTE_HOOKS === 'object' && ASSISTANT_CHAT_TASTE_HOOKS) {
+  ASSISTANT_CHAT_TASTE_HOOKS.of = assistantLifeTasteOf;
+}
 const ASSISTANT_MASMON_GROW_BIAS = Object.freeze({
   '攻撃型': {
     atk: 1.18
