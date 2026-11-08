@@ -7,6 +7,7 @@
 //   ① 印が偽: VS・結果に型の札が出ない(今と同じ)・中継役を呼ばない・保存を書かない
 //   ② 印が真・AI が返す: 相手えらびで選ぶと裏で AI に組んでもらう → VS に「チーム」と「今日のデッキ」の名前・ひとこと → 結果に同じ「今日のデッキ」の名前→ その助手との10戦の数が1つ増える。札は画面の中
 //   ③ 印が真・AI なし(遅れの返事): 揺らぎで組む → VS・結果は既定の名前で同じ形(画面に違いが出ない)
+//   ⑤ VS に自分の側(3体)も出て、画面に入っている(相手の側より遅れて出るので、出そろうまで待ってから撮る)
 //   ④ 実行時エラーが無い
 const http = require('http');
 const path = require('path');
@@ -134,7 +135,17 @@ const run = async (browser, mode, scene, errors) => {
       vs = await page.evaluate(() => { const m = document.querySelector('[data-card-vs-mark]'); if (!m) return null; const s = document.querySelector('[data-card-vs-style] [data-card-foe-deck-chip-name]') || document.querySelector('[data-card-vs-style]'); const l = document.querySelector('[data-card-vs-line]'); const t = document.querySelector('[data-card-vs-style] [data-card-foe-team-name]'); return { style: s ? s.textContent.trim().replace(/^(⚔️|🛡️|⚖️)\s*/u, '') : null, line: l ? l.textContent : null, team: t ? t.textContent : null }; });
       if (!vs) { const go = page.getByRole('button', { name: /^対戦へ$|このデッキで/ }).first(); if (await go.count() && await go.isVisible().catch(() => false)) await go.click().catch(() => {}); await page.waitForTimeout(250); }
     }
-    await page.waitForTimeout(900);
+    // 自分の側(3体・名前)は相手の側より遅れて出る。出そろうまで待ってから撮る(2026-11-08 部長「止め絵に自分の側が写っていない」)
+    let me = null;
+    for (let i = 0; i < 24; i++) {
+      me = await page.evaluate(() => { const side = document.querySelector('[data-card-vs-side="me"]'); if (!side) return null;
+        const mons = [...side.querySelectorAll('[data-card-vs-mon]')]; const W = innerWidth, H = innerHeight;
+        const shown = mons.filter((m) => { const r = m.getBoundingClientRect(); return Number(getComputedStyle(m).opacity) > 0.9 && r.width > 4 && r.left >= -1 && r.right <= W + 1 && r.top >= -1 && r.bottom <= H + 1; });
+        return { mons: mons.length, shown: shown.length }; });
+      if (me && me.mons === 3 && me.shown === 3) break;
+      await page.waitForTimeout(250);
+    }
+    check(`⑤ ${label}: VS に自分の側の3体が出て、画面に入っている`, !!me && me.mons === 3 && me.shown === 3, JSON.stringify(me));
     await snap('1-vs');
     const names = await page.evaluate(() => (typeof CARD_AI_STYLE_NAMES !== 'undefined' ? CARD_AI_STYLE_NAMES : {})); // eslint-disable-line no-undef
     if (!scene.flag) check(`① ${label}: VS に型の札が出ない`, !!vs && vs.style === null, JSON.stringify(vs));

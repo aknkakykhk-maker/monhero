@@ -887,6 +887,10 @@ function AssistantPeerPhoto({ pair, photo, open }) {
 }
 function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseItem = null }) {
   const st = useAssistantPeerState();
+  // 助手ライフの道具10種類と「買って贈る」(2026-11-08)。部品はいつもあるので、フックは毎回同じ順で呼ばれる
+  const giftSt = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
+  const [buyKind, setBuyKind] = React.useState(null);
+  const [useMsg, setUseMsg] = React.useState('');
   const [a, b] = pair.map(id => assistantById(id));
   const key = assistantPeerPairKey(pair[0], pair[1]);
   const lv = assistantPeerLevel(st, pair[0], pair[1]);
@@ -914,22 +918,31 @@ function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseIt
         {typeof AssistantLifeChekiRow === 'function' && <AssistantLifeChekiRow pair={pair}/>}
         {typeof onUseItem === 'function' && (() => {
           const playing = st.play && st.play.pair === key;
-          const itemBtn = (kind, emoji, label) => {
+          // 助手ライフが開いていれば道具10種類(56-assistant-life-gifts.jsx)。持っていない道具は「🛒 ◯P で買って贈る」(確かめの窓は毎回)
+          const lifeOn = typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() && typeof assistantLifeGiftKinds === 'function' && !!giftSt;
+          const kinds = lifeOn ? assistantLifeGiftKinds().map(g => assistantLifeGiftOf(g.kind)).filter(Boolean)
+            : [{ kind: 'gift', emoji: '🧺', name: 'おやつバスケット' }, { kind: 'token', emoji: '🤝', name: 'おそろいのミサンガ' }];
+          const itemBtn = (x) => {
+            const kind = x.kind;
             const have = (peerItems && Number(peerItems[kind])) || 0;
-            const used = assistantPeerItemUsedToday(st, kind);
+            const why = lifeOn ? assistantLifeGiftReason(kind, st, 1, giftSt) : '';
+            const used = lifeOn ? !!why : assistantPeerItemUsedToday(st, kind);
+            const buy = lifeOn && !used && have <= 0 && typeof assistantLifeCanBuy === 'function' && assistantLifeCanBuy(x);
+            const words = typeof assistantLifeGiftWrapName === 'function' && x.key ? assistantLifeGiftWrapName(x) : [x.name];
             return (
-              <button type="button" data-assistant-peer-use={kind} disabled={used || have <= 0} onClick={() => onUseItem(kind, pair)}
-                className="min-h-[44px] rounded-xl border border-amber-300/50 bg-amber-400/10 px-2 py-1 text-left active:scale-[.98] disabled:opacity-40">
-                <span className="block text-[11px] font-black text-amber-100">{emoji} {label}</span>
-                <span className="block text-[9px] font-bold text-slate-400">{used ? '今日はもう使いました' : have > 0 ? `持っている ${have}個` : 'ビートP交換所で手に入ります'}</span>
+              <button key={kind} type="button" data-assistant-peer-use={kind} data-assistant-peer-buy={buy ? kind : undefined} disabled={used || (have <= 0 && !buy)}
+                onClick={() => { setUseMsg(''); if (buy) setBuyKind(kind); else void onUseItem(kind, pair); }}
+                className={`min-h-[44px] rounded-xl border px-2 py-1 text-left active:scale-[.98] disabled:opacity-40 ${buy ? 'border-violet-300/60 bg-violet-500/10' : 'border-amber-300/50 bg-amber-400/10'}`}>
+                <span className="block text-[11px] font-black leading-snug text-amber-100" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{x.emoji} {words.map((w, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}{w}</React.Fragment>)}<wbr/>を贈る</span>
+                <span className={`block text-[9px] font-bold ${buy ? 'text-violet-200' : 'text-slate-400'}`}>{used ? (lifeOn ? '今日は贈れません' : '今日はもう使いました') : have > 0 ? `持っている ${have}個` : buy ? `🛒 ${x.cost}P で買って贈る` : 'ビートP交換所で手に入ります'}</span>
               </button>);
           };
           return (
             <div data-assistant-peer-actions className="mt-3">
               <p className="mb-1 text-[11px] font-black text-amber-200">2人にしてあげる</p>
+              {useMsg && <p data-assistant-peer-use-msg className="mb-1 rounded-lg bg-slate-800 px-2 py-1 text-[10.5px] font-bold text-slate-200">{useMsg}</p>}
               <div className="grid grid-cols-2 gap-1.5">
-                {itemBtn('gift', '🧺', 'おやつバスケットを贈る')}
-                {itemBtn('token', '🤝', 'おそろいのミサンガを贈る')}
+                {kinds.map(itemBtn)}
               </div>
               <button type="button" data-assistant-peer-play={playing ? 'on' : 'off'} onClick={() => assistantPeerSetPlayPair(playing ? null : pair)}
                 className="mt-1.5 min-h-[44px] w-full rounded-xl border border-sky-300/50 bg-sky-400/10 px-2 py-1 text-left active:scale-[.98]">
@@ -951,6 +964,11 @@ function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseIt
             </button>))}
         </div>
       </div>
+      {buyKind && typeof AssistantLifeBuyConfirm === 'function' && (() => { const x = assistantLifeGiftOf(buyKind); return x ? (
+        <AssistantLifeBuyConfirm item={x} to={`${a.name}と${b.name}`} onClose={() => setBuyKind(null)}
+          gains={assistantLifeGiftGainsFor(buyKind, pair, (id) => (assistantById(id) || {}).name || id)}
+          check={() => assistantLifeGiftReason(buyKind, ASSISTANT_PEER_STORE.state, 1)}
+          give={async () => { const t = await onUseItem(buyKind, pair); if (!t) setUseMsg(`${x.name}は、いまは贈れません。買った${x.name}は持ち物に残っています`); }}/>) : null; })()}
     </div>);
 }
 
@@ -1021,7 +1039,7 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
           </button>)}
       </div>
       {albumPair && <AssistantPeerAlbum pair={albumPair} onClose={() => setAlbumPair(null)} onReplay={(t) => { setAlbumPair(null); if (onReplay) onReplay(t); }}
-        peerItems={peerItems} onUseItem={onUseItem ? async (kind, pair) => { const talk = await onUseItem(kind, pair); if (talk) { setAlbumPair(null); if (onReplay) onReplay(talk); } } : null}/>}
+        peerItems={peerItems} onUseItem={onUseItem ? async (kind, pair) => { const talk = await onUseItem(kind, pair); if (talk) { setAlbumPair(null); if (onReplay) onReplay(talk); } return talk; } : null}/>}
     </div>
   );
 }
