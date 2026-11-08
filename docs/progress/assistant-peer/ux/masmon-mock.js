@@ -40,21 +40,24 @@ h1{font-size:20px;font-weight:900}.lead{font-size:12px;color:#cbd5e1;margin:4px 
 .mon .g{font-size:9.5px;color:#fde68a;white-space:nowrap}
 .sw{display:inline-flex;gap:2px;margin-top:2px}.sw i{width:10px;height:10px;border-radius:50%;border:1px solid #0008;display:inline-block}.swn{font-size:9px;color:#94a3b8;margin-left:3px}
 .row{margin-top:5px;font-size:11px;line-height:1.5;display:flex;gap:6px}.row .k{flex:none;width:40px;font-weight:900}.row .v{flex:1}
-.lk{color:#86efac}.ds{color:#fca5a5}.lk small,.ds small{color:#94a3b8;font-size:9.5px}
+.cl{color:#fde68a}.cl .k{width:64px}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;border:1px solid #0008;margin-right:3px;vertical-align:-1px}.lk{color:#86efac}.ds{color:#fca5a5}.lk small,.ds small{color:#94a3b8;font-size:9.5px}
 .deck{margin-top:7px;background:#0b1020;border:1px dashed #a78bfa;border-radius:10px;padding:6px 8px;font-size:11px;line-height:1.5}
 .deck b{color:#c4b5fd}.deck .dn{color:#fde68a;font-weight:900}
 .later{font-size:10px;color:#94a3b8;margin-top:4px}
 `;
-const likeRow = (list, cls, label) => `<p class="row ${cls}"><span class="k">${label}</span><span class="v">${list.map(x => { const n = nameOf(x.monster), l = LIN[MAP[x.monster]]; return `<span class="nw">${n}${n === l ? '' : `<small>→ ${l}種も少し</small>`}</span>`; }).join('<wbr> ・ ')}</span></p>`;
+const LBL = { red: '赤', orange: '橙', yellow: '黄', lime: '黄緑', green: '緑', teal: '青緑', cyan: 'シアン', sky: '空色', blue: '青', purple: '紫', magenta: 'マゼンタ', pink: 'ピンク', black: '黒', white: '白', gray: '薄灰' };
+const colorName = (c) => { const [k, l] = c.split('_'); return l ? `薄${LBL[k]}` : LBL[k]; };
+const likeRow = (list, cls, label) => `<p class="row ${cls}"><span class="k">${label}</span><span class="v">${list.length ? list.map(x => { if (x.lineage) return `<span class="nw">${LIN[x.lineage]}種<small>(種ぜんぶ)</small></span>`; const n = nameOf(x.monster), l = LIN[MAP[x.monster]]; return `<span class="nw">${n}${n === l ? '' : `<small>→ ${l}種も少し</small>`}</span>`; }).join('<wbr> ・ ') : '<span class="nw">なし<small>(強いモンスターに寄る)</small></span>'}</span></p>`;
+const colorRow = (a) => `<p class="row cl"><span class="k">🎨好きな色</span><span class="v">${(a.favColors || []).map(c => `<span class="nw"><i class="dot" style="background:${swc(c.color)}"></i>${colorName(c.color)}</span>`).join('<wbr> ・ ')}</span></p>`;
 const table = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>助手のマスモン案</title><style>${CSS}</style></head><body>
 <h1>助手のマスモン(育成・染色)と、MFバトルカードのデッキ(案)</h1>
 <p class="lead" style="width:780px">${chunks('🐾 マスモンは助手が育てている個体(実装済みのモンスターだけ・1人3体)。Lv と育ち方が日々の育成と相談の答えで伸び、プレイヤーと同じ染色の仕組み・同じ枠数(種類ごとに3枠か5枠)で、助手の好みの色に染める。🃏 デッキは MFバトルカードのカードの組み方で、マスモンとは別もの(マスモンからは作らない)。💗 好き・💦 苦手はモンスター単位で、その血統にも少し広がる(「→ ○○種も少し」。モンスターと血統が同じ名前のときは書かない)。反応の台詞だけで、数字には効かない。')}</p>
 <div class="grid">${plan.map(a => `<div class="card"><div class="hd"><img src="${face(a.id)}" alt=""><b>${a.name}</b></div>
 <p class="sec">🐾 マスモン(育成・染色)</p>
 <div class="mons">${a.team.map(m => `<div class="mon">${m.lead ? '<span class="ld">先頭</span>' : ''}${mon(m, '', a.id)}<b>${m.nick}</b><i>${nameOf(m.monster)} ・ Lv.${m.lv}</i><span class="g">${m.grow.replace(/\(.*\)/, '')}</span><br>${swatch(m)}</div>`).join('')}</div>
-${likeRow(a.likeMon, 'lk', '💗好き')}${likeRow(a.dislikeMon, 'ds', '💦苦手')}
+${likeRow(a.likeMon, 'lk', '💗好き')}${likeRow(a.dislikeMon, 'ds', '💦苦手')}${colorRow(a)}
 <div class="deck"><span class="dn">🃏 ${a.deck.name}</span> <b>(MFバトルカード・マスモンとは別)</b><br>${chunks(a.deck.plan)}<br><span class="nw">好きなカード: ${a.deck.cardFavorite}(MFバトルカードのカード)</span> <span class="nw">・ よく入れるカード: ${a.deck.cards}</span></div>
-${a.later ? `<p class="later">あとで: ${a.later.monster}(実装されたらマスモンの4体目に)</p>` : ''}</div>`).join('')}</div>${DYE_JS}</body></html>`;
+${a.later ? `<p class="later">あとで: ${a.later.monster}(好き。実装されたらマスモンの4体目に)</p>` : ''}</div>`).join('')}</div>${DYE_JS}</body></html>`;
 fs.writeFileSync(path.join(__dirname, 'masmon-table.html'), table);
 // 画面の見本: 部屋のシートの「🐾 マスモン」から開く。縦=マスモン(育った様子・染めた姿)/横=編成/🔄横=デッキ(カード。マスモンとは別)
 const k = plan.find(a => a.id === 'kiki');
