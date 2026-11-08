@@ -201,13 +201,20 @@ const cardBeginTurn = (st) => {
   }
 };
 
-// 捨て札からランダムに n 枚をガッツへ(足りなければある分だけ)。選ぶのは持ち主の種(players[p].rng)。マルチの2台で同じ札になる
+// 捨て札からランダムに n 枚をガッツへ(足りなければある分だけ)。
+// ★選ぶ場所は、2台のどちらの端末でも同じに見える値(番・先攻か後攻か・捨て札とガッツの枚数・何枚目か)から決める(2026-11-08 ソランド)。
+//   前は持ち主の種(players[p].rng)で選んでいたが、マルチでは相手の種は試合が終わるまで封をされていて、こちらの端末の種は本物と違う。
+//   そのため相手の端末と違う札がガッツへ移り、2台の捨て札がずれて、届いた手をはね合い、両方が「相手の番」のまま止まった(社長が2回続けて止まった)。
+//   選ぶのは「何番目か」だけなので、相手の捨て札にまだ仮の札が混ざっていても、同じ場所の札が動く。持ち主の種は進めない(山札の切り直しの種はそのまま)
 const cardDiscardToGuts = (st, p, n) => {
   const me = st.players[p];
+  const side = p === st.first ? 'f' : 's';
   let k = 0;
-  let s = Number.isFinite(me.rng) ? me.rng : (st.seed || 1);
-  for (; k < n && me.discard.length; k++) { const r = cardRngNext(s); s = r.s; const i = Math.floor(r.v * me.discard.length); me.guts.push(me.discard.splice(i, 1)[0]); }
-  me.rng = s;
+  for (; k < n && me.discard.length; k++) {
+    const rnd = cardAiSeededRand(`dg|${st.turn}|${side}|${me.discard.length}|${me.guts.length}|${st.players[1 - p].discard.length}|${k}`);
+    const i = Math.min(me.discard.length - 1, Math.floor(rnd() * me.discard.length));
+    me.guts.push(me.discard.splice(i, 1)[0]);
+  }
   return k;
 };
 const cardPayGuts = (st, p, n) => {
