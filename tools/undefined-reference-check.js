@@ -70,7 +70,6 @@ const GLOBALS = new Set([
 //   許すのは、ソースのどこかに「typeof 名前 === 'function'」がある名前だけ(確かめずに呼ぶ書き方は、ここに載っていても落とす)。
 //   定義が入ったら、この一覧から消してよい(消し忘れても、定義があれば許しは使われない)
 const LATER_HOOKS = {
-  assistantLifeCardStyle: '育つ助手の型(助手部キズナ2が 56-assistant-life-masmon.jsx に足す。2026-11-08 カード部ルールくん)',
   assistantLifeCardMood: '育つ助手の気分の言葉(助手部キズナ2が相談を作るときに足す。2026-11-08)',
 };
 const laterOk = (name) => Object.prototype.hasOwnProperty.call(LATER_HOOKS, name) && source.includes(`typeof ${name} === 'function'`);
