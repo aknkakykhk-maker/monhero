@@ -16,35 +16,13 @@ const maskOf = (id) => { const base = (IMG[id] || '').replace(/\.(png|PNG)$/, ''
 const img = (id) => `../../../../monster-hero/images/monsters/${IMG[id] || 'mocchi.png'}`;
 const face = (id, e = 'happy') => `../../../../monster-hero/images/assistant/${id === 'mua' ? 'myua' : id}_${e}.PNG`; // みゅあの絵は myua_*
 const chunks = (t) => String(t).split(/(?<=[、。])/).map(x => `<span class="nw">${x}</span>`).join('<wbr>');
-// 染めた絵(canvas)。data-dye に3色、data-mask にマスク
-const mon = (m, cls = '') => m.dye ? `<canvas class="dy ${cls}" data-src="${img(m.monster)}" data-mask="${maskOf(m.monster)}" data-dye="${m.dye.colors.join(',')}"></canvas>` : `<img class="${cls}" src="${img(m.monster)}" alt="">`;
-const swatch = (m) => m.dye ? `<span class="sw">${m.dye.colors.map(c => `<i style="background:${c}"></i>`).join('')}</span>` : '<span class="sw0">染めない種類</span>';
-const DYE_JS = `<script>
-(async () => {
-  const load = (src) => new Promise((ok, ng) => { const i = new Image(); i.onload = () => ok(i); i.onerror = ng; i.src = src; });
-  const hex = (h) => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
-  for (const c of document.querySelectorAll('canvas.dy')) {
-    try {
-      const [im, mk] = await Promise.all([load(c.dataset.src), load(c.dataset.mask)]);
-      c.width = im.width; c.height = im.height;
-      const x = c.getContext('2d'); x.drawImage(im, 0, 0);
-      const d = x.getImageData(0, 0, c.width, c.height);
-      const t = document.createElement('canvas'); t.width = c.width; t.height = c.height; const tx = t.getContext('2d'); tx.drawImage(mk, 0, 0, c.width, c.height);
-      const m = tx.getImageData(0, 0, c.width, c.height).data;
-      const cols = c.dataset.dye.split(',').map(hex);
-      for (let p = 0; p < d.data.length; p += 4) {
-        if (m[p + 3] < 128) continue;
-        const k = m[p] >= m[p + 1] && m[p] >= m[p + 2] ? 0 : m[p + 1] >= m[p + 2] ? 1 : 2;
-        const l = (0.3 * d.data[p] + 0.59 * d.data[p + 1] + 0.11 * d.data[p + 2]) / 255;
-        const s = 0.35 + 0.9 * l;
-        for (let q = 0; q < 3; q++) d.data[p + q] = Math.min(255, cols[k][q] * s);
-      }
-      x.putImageData(d, 0, 0);
-    } catch (e) { c.dataset.err = String(e); }
-  }
-  document.body.dataset.ready = '1';
-})();
-</script>`;
+// 染めた絵は、ゲーム本体の染色の部品で作った PNG(ux/dyed/・masmon-dye-shots.js が書く)
+const mon = (m, cls = '', who = null) => `<img class="${cls}" src="dyed/${who}-${m.monster}.png" alt="">`;
+const baseImg = (m) => `<img src="dyed/${m.monster}-base.png" alt="">`;
+const SW = { red: '#ef4444', orange: '#f97316', yellow: '#eab308', lime: '#84cc16', green: '#22c55e', teal: '#14b8a6', cyan: '#06b6d4', sky: '#38bdf8', blue: '#3b82f6', purple: '#a855f7', magenta: '#d946ef', pink: '#ec4899', black: '#18181b', white: '#ffffff', gray: '#a1a1aa' };
+const swc = (c) => { const [k, l] = c.split('_'); const h = SW[k] || '#888'; return l ? `color-mix(in srgb, ${h} 45%, white)` : h; };
+const swatch = (m) => `<span class="sw">${m.dye.colors.map(c => `<i style="background:${swc(c)}"></i>`).join('')}</span><span class="swn">${m.dye.colors.length}枠</span>`;
+const DYE_JS = `<script>document.body.dataset.ready = '1';</script>`;
 const CSS = `
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#0f172a;color:#f8fafc;font-family:"Hiragino Maru Gothic ProN","M PLUS Rounded 1c","Noto Sans JP",sans-serif;padding:16px}
@@ -60,22 +38,22 @@ h1{font-size:20px;font-weight:900}.lead{font-size:12px;color:#cbd5e1;margin:4px 
 .mon b{display:block;font-size:12px;white-space:nowrap}.mon i{display:block;font-style:normal;font-size:9.5px;color:#94a3b8;white-space:nowrap}
 .mon .ld{position:absolute;left:4px;top:4px;font-size:9px;font-weight:900;background:#f472b6;border-radius:6px;padding:0 4px;z-index:1}
 .mon .g{font-size:9.5px;color:#fde68a;white-space:nowrap}
-.sw{display:inline-flex;gap:2px;margin-top:2px}.sw i{width:10px;height:10px;border-radius:50%;border:1px solid #0008;display:inline-block}.sw0{font-size:9px;color:#64748b}
+.sw{display:inline-flex;gap:2px;margin-top:2px}.sw i{width:10px;height:10px;border-radius:50%;border:1px solid #0008;display:inline-block}.swn{font-size:9px;color:#94a3b8;margin-left:3px}
 .row{margin-top:5px;font-size:11px;line-height:1.5;display:flex;gap:6px}.row .k{flex:none;width:40px;font-weight:900}.row .v{flex:1}
 .lk{color:#86efac}.ds{color:#fca5a5}.lk small,.ds small{color:#94a3b8;font-size:9.5px}
 .deck{margin-top:7px;background:#0b1020;border:1px dashed #a78bfa;border-radius:10px;padding:6px 8px;font-size:11px;line-height:1.5}
 .deck b{color:#c4b5fd}.deck .dn{color:#fde68a;font-weight:900}
 .later{font-size:10px;color:#94a3b8;margin-top:4px}
 `;
-const likeRow = (list, cls, label) => `<p class="row ${cls}"><span class="k">${label}</span><span class="v">${list.map(x => `<span class="nw">${nameOf(x.monster)}<small>(${LIN[MAP[x.monster]]}種も少し)</small></span>`).join('<wbr> ・ ')}</span></p>`;
+const likeRow = (list, cls, label) => `<p class="row ${cls}"><span class="k">${label}</span><span class="v">${list.map(x => { const n = nameOf(x.monster), l = LIN[MAP[x.monster]]; return `<span class="nw">${n}${n === l ? '' : `<small>→ ${l}種も少し</small>`}</span>`; }).join('<wbr> ・ ')}</span></p>`;
 const table = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>助手のマスモン案</title><style>${CSS}</style></head><body>
 <h1>助手のマスモン(育成・染色)と、MFバトルカードのデッキ(案)</h1>
-<p class="lead" style="width:780px">${chunks('🐾 マスモンは助手が育てている個体(実装済みのモンスターだけ・1人3体)。Lv と育ち方が日々の育成と相談の答えで伸び、プレイヤーと同じ染色のマスクで、助手の好みの色に染める(色の丸は3部位)。🃏 デッキは MFバトルカードのカードの組み方で、マスモンとは別もの(マスモンからは作らない)。💗 好き・💦 苦手はモンスター単位で、その血統にも少し広がる(反応の台詞だけ・数字には効かない)。')}</p>
+<p class="lead" style="width:780px">${chunks('🐾 マスモンは助手が育てている個体(実装済みのモンスターだけ・1人3体)。Lv と育ち方が日々の育成と相談の答えで伸び、プレイヤーと同じ染色の仕組み・同じ枠数(種類ごとに3枠か5枠)で、助手の好みの色に染める。🃏 デッキは MFバトルカードのカードの組み方で、マスモンとは別もの(マスモンからは作らない)。💗 好き・💦 苦手はモンスター単位で、その血統にも少し広がる(「→ ○○種も少し」。モンスターと血統が同じ名前のときは書かない)。反応の台詞だけで、数字には効かない。')}</p>
 <div class="grid">${plan.map(a => `<div class="card"><div class="hd"><img src="${face(a.id)}" alt=""><b>${a.name}</b></div>
 <p class="sec">🐾 マスモン(育成・染色)</p>
-<div class="mons">${a.team.map(m => `<div class="mon">${m.lead ? '<span class="ld">先頭</span>' : ''}${mon(m)}<b>${m.nick}</b><i>${nameOf(m.monster)} ・ Lv.${m.lv}</i><span class="g">${m.grow.replace(/\(.*\)/, '')}</span><br>${swatch(m)}</div>`).join('')}</div>
+<div class="mons">${a.team.map(m => `<div class="mon">${m.lead ? '<span class="ld">先頭</span>' : ''}${mon(m, '', a.id)}<b>${m.nick}</b><i>${nameOf(m.monster)} ・ Lv.${m.lv}</i><span class="g">${m.grow.replace(/\(.*\)/, '')}</span><br>${swatch(m)}</div>`).join('')}</div>
 ${likeRow(a.likeMon, 'lk', '💗好き')}${likeRow(a.dislikeMon, 'ds', '💦苦手')}
-<div class="deck"><span class="dn">🃏 ${a.deck.name}</span> <b>(MFバトルカード・マスモンとは別)</b><br>${chunks(a.deck.plan)}<br><span class="nw">好きなカードのモンスター: ${a.deck.cardFavorite}</span> <span class="nw">・ よく入れるカード: ${a.deck.cards}</span></div>
+<div class="deck"><span class="dn">🃏 ${a.deck.name}</span> <b>(MFバトルカード・マスモンとは別)</b><br>${chunks(a.deck.plan)}<br><span class="nw">好きなカード: ${a.deck.cardFavorite}(MFバトルカードのカード)</span> <span class="nw">・ よく入れるカード: ${a.deck.cards}</span></div>
 ${a.later ? `<p class="later">あとで: ${a.later.monster}(実装されたらマスモンの4体目に)</p>` : ''}</div>`).join('')}</div>${DYE_JS}</body></html>`;
 fs.writeFileSync(path.join(__dirname, 'masmon-table.html'), table);
 // 画面の見本: 部屋のシートの「🐾 マスモン」から開く。縦=マスモン(育った様子・染めた姿)/横=編成/🔄横=デッキ(カード。マスモンとは別)
@@ -95,8 +73,8 @@ const SCSS = `${CSS}
 .ba img,.ba canvas{width:70px;height:70px;object-fit:contain;background:radial-gradient(circle,#cbd5e1 0,#64748b 70%);border-radius:10px;flex:none}
 .tm{display:flex;gap:8px;padding:8px 12px}.sl{flex:1;background:#111827;border:1px solid #334155;border-radius:14px;text-align:center;padding:6px;position:relative}
 .sl img,.sl canvas{width:100%;height:110px;object-fit:contain;background:radial-gradient(circle,#cbd5e1 0,#64748b 70%);border-radius:10px;display:block}.sl b{font-size:13px;white-space:nowrap}.sl em{position:absolute;left:6px;top:6px;font-style:normal;font-size:10px;background:#f472b6;border-radius:6px;padding:0 5px;z-index:1}.sl i{display:block;font-style:normal;font-size:10px;color:#fde68a}
-.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:8px 12px}
-.cd{height:96px;border-radius:8px;background:linear-gradient(160deg,#4c1d95,#1e1b4b);border:2px solid #a78bfa;display:flex;flex-direction:column;justify-content:flex-end;padding:4px;font-size:9.5px;font-weight:900;text-align:center}
+.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:6px 14px}.cdi{width:100%;height:118px;object-fit:contain;display:block;filter:drop-shadow(0 2px 4px #0009)}
+.cd{height:118px;object-fit:contain;width:100%;padding:0;border:0;background:none;display:block;border-radius:8px;background:linear-gradient(160deg,#4c1d95,#1e1b4b);border:2px solid #a78bfa;display:flex;flex-direction:column;justify-content:flex-end;padding:4px;font-size:9.5px;font-weight:900;text-align:center}
 .cd.m{background:linear-gradient(160deg,#9a3412,#1e1b4b);border-color:#fb923c}
 .note{font-size:10.5px;color:#94a3b8;margin:6px 12px;line-height:1.5}
 .cap{font-size:12px;color:#e2e8f0;margin-top:6px;line-height:1.5}
@@ -106,16 +84,16 @@ const SCSS = `${CSS}
 `;
 const lead = k.team.find(m => m.lead);
 const portrait = `<div class="ph" style="width:390px;height:844px"><div class="top"><p class="en">MASMON · ${k.id.toUpperCase()}</p><p class="t"><img src="${face(k.id)}" alt="">${k.name}のマスモン</p></div>${tabs(0)}
-${k.team.map(m => `<div class="li">${mon(m)}<div style="flex:1;min-width:0"><b>${m.nick}${m.lead ? ' <em>先頭</em>' : ''}</b><span class="s">${nameOf(m.monster)} ・ Lv.${m.lv} ${swatch(m)}</span><span class="gg">📈 ${m.grow}</span>${bars(m)}</div></div>`).join('')}
-<div class="ba"><img src="${img(lead.monster)}" alt="">→${mon(lead)}<div>${chunks(`🎨 ${k.name}が${lead.nick}を染めた。左が元の色。染め方はプレイヤーと同じ。`)}</div></div>
+${k.team.map(m => `<div class="li">${mon(m, '', k.id)}<div style="flex:1;min-width:0"><b>${m.nick}${m.lead ? ' <em>先頭</em>' : ''}</b><span class="s">${nameOf(m.monster)} ・ Lv.${m.lv} ${swatch(m)}</span><span class="gg">📈 ${m.grow}</span>${bars(m)}</div></div>`).join('')}
+<div class="ba">${baseImg(lead)}→${mon(lead, '', k.id)}<div>${chunks(`🎨 ${k.name}が${lead.nick}を染めた。左が元の色。染め方はプレイヤーと同じ。`)}</div></div>
 <p class="note">${chunks(`🔁 育成・再生・染色は${k.name}の中だけ。プレイヤーのマスモン・セーブには触りません。`)}</p></div>`;
 const land = `<div class="ph" style="width:844px;height:390px"><div class="top"><p class="en">MASMON · ${k.id.toUpperCase()}</p><p class="t"><img src="${face(k.id)}" alt="">${k.name}のマスモン</p></div>${tabs(1)}
-<div class="tm">${k.team.map(m => `<div class="sl">${m.lead ? '<em>先頭</em>' : ''}${mon(m)}<b>${m.nick}</b><i>Lv.${m.lv} ・ ${m.grow.replace(/\(.*\)/, '')}</i></div>`).join('')}</div>
+<div class="tm">${k.team.map(m => `<div class="sl">${m.lead ? '<em>先頭</em>' : ''}${mon(m, '', k.id)}<b>${m.nick}</b><i>Lv.${m.lv} ・ ${m.grow.replace(/\(.*\)/, '')}</i></div>`).join('')}</div>
 <p class="note">${chunks(`⚔ 編成は${k.name}が決める。相談されたら変わることも。`)}</p></div>`;
-const deckCards = ['ゴーレム', '必殺技の応酬', '長期戦の予感', '竜巻アタック', '地震', '力をためる', '堅い守り', 'ゴーレム', '盾で受ける', '静の構え']; // 本物のカード名(card-battle-cards.js)。ゴーレムの技と、ききの場のカード
+const deckCards = ['C-003', 'C-003S', 'F119', 'F263', '032', '033', '034', '035', '247', '246']; // 本物のカード(card-battle-cards.js の no)。ゴーレムのカードと技・ききの場のカード // 本物のカード名(card-battle-cards.js)。ゴーレムの技と、ききの場のカード
 const rotDeck = `<div class="ph" style="width:844px;height:390px"><div class="top"><p class="en">DECK · ${k.id.toUpperCase()}</p><p class="t"><img src="${face(k.id)}" alt="">${k.name}のデッキ</p></div>${tabs(2)}
-<p class="note" style="margin-top:2px"><b style="color:#fde68a">🃏 ${k.deck.name}</b> ・ ${chunks(k.deck.plan)}<br>${chunks('MFバトルカードのカード(マスモンとは別もの)。橙がカードのモンスター、紫が技・場のカード。中身はカード部と決める。')}</p>
-<div class="cards">${deckCards.map((c, i) => `<div class="cd${i === 0 || i === 7 ? ' m' : ''}">${c}</div>`).join('')}</div></div>`;
+<p class="note" style="margin-top:2px"><b style="color:#fde68a">🃏 ${k.deck.name}</b> ・ ${chunks(k.deck.plan)}<br>${chunks('MFバトルカードのカード(マスモンとは別もの)。カードの絵はMFバトルカードの画面と同じ。中身はカード部と決める。')}</p>
+<div class="cards">${deckCards.map(c => `<img class="cdi" src="../../../../monster-hero/images/card-battle/l/${c}.jpg" alt="">`).join('')}</div></div>`;
 const screen = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>助手のマスモン画面の見本</title><style>${SCSS}</style></head><body>
 <h1>助手のマスモン・デッキ(部屋の「🐾 マスモン」から開く)見本</h1>
 <p class="lead">${chunks('見本の絵です(まだ作っていません)。プレイヤーのマスモン画面と同じ見せ方。マスモン(育てている個体)とデッキ(カード)はタブで分けます。')}</p>

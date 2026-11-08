@@ -14,9 +14,9 @@
      "grow": "すばやさ型(ノリで決めた)",
      "dye": {
       "colors": [
-       "#ffd1e8",
-       "#ff8fc7",
-       "#fff3a3"
+       "pink_light",
+       "yellow_light",
+       "sky_light"
       ]
      }
     },
@@ -26,7 +26,13 @@
      "why": "元気でおしゃれ。服好きのみゅあと気が合う",
      "lv": 16,
      "grow": "ガッツ型",
-     "dye": null
+     "dye": {
+      "colors": [
+       "yellow_light",
+       "sky_light",
+       "pink"
+      ]
+     }
     },
     {
      "monster": "MelWhip",
@@ -36,9 +42,11 @@
      "grow": "ライフ型",
      "dye": {
       "colors": [
-       "#fff4e0",
-       "#ff9fb8",
-       "#8fd3ff"
+       "sky_light",
+       "pink",
+       "white",
+       "pink_light",
+       "yellow_light"
       ]
      }
     }
@@ -92,9 +100,9 @@
      "grow": "攻撃型(ちからに振る)",
      "dye": {
       "colors": [
-       "#f3b6cf",
-       "#9b4f72",
-       "#ff6b6b"
+       "pink_light",
+       "magenta",
+       "red"
       ]
      }
     },
@@ -106,9 +114,9 @@
      "grow": "防御型",
      "dye": {
       "colors": [
-       "#9be37b",
-       "#ffd1e8",
-       "#ffffff"
+       "magenta",
+       "red",
+       "pink"
       ]
      }
     },
@@ -120,9 +128,9 @@
      "grow": "ガッツ型",
      "dye": {
       "colors": [
-       "#bfe6ff",
-       "#5aa9e6",
-       "#e8f7ff"
+       "red",
+       "pink",
+       "white"
       ]
      }
     }
@@ -176,9 +184,11 @@
      "grow": "ガッツ型(ステージ映え)",
      "dye": {
       "colors": [
-       "#ffb3d9",
-       "#c78bff",
-       "#ffe066"
+       "magenta",
+       "pink",
+       "purple_light",
+       "yellow",
+       "white"
       ]
      }
     },
@@ -188,7 +198,13 @@
      "why": "華やか。人に見てもらうのが好きなももすけと合う",
      "lv": 15,
      "grow": "すばやさ型",
-     "dye": null
+     "dye": {
+      "colors": [
+       "pink",
+       "purple_light",
+       "yellow"
+      ]
+     }
     },
     {
      "monster": "Ham",
@@ -196,7 +212,13 @@
      "why": "元気いっぱい。ほめられると跳ねる",
      "lv": 12,
      "grow": "ライフ型",
-     "dye": null
+     "dye": {
+      "colors": [
+       "purple_light",
+       "yellow",
+       "white"
+      ]
+     }
     }
    ],
    "deck": {
@@ -251,9 +273,9 @@
      "grow": "ライフ型(のんびり)",
      "dye": {
       "colors": [
-       "#ffe08a",
-       "#ff9f43",
-       "#7a5c3e"
+       "orange",
+       "yellow",
+       "orange_light"
       ]
      }
     },
@@ -263,7 +285,13 @@
      "why": "ひなたの丘で一緒に昼寝",
      "lv": 14,
      "grow": "防御型",
-     "dye": null
+     "dye": {
+      "colors": [
+       "yellow",
+       "orange_light",
+       "lime_light"
+      ]
+     }
     },
     {
      "monster": "Mitarashi",
@@ -271,7 +299,13 @@
      "why": "おやつの時間をのんびり一緒に",
      "lv": 13,
      "grow": "ライフ型",
-     "dye": null
+     "dye": {
+      "colors": [
+       "orange_light",
+       "lime_light",
+       "white"
+      ]
+     }
     }
    ],
    "deck": {
@@ -326,9 +360,9 @@
      "grow": "攻撃型(朝の育成)",
      "dye": {
       "colors": [
-       "#e8e8f0",
-       "#d63031",
-       "#2d3436"
+       "red",
+       "black",
+       "white"
       ]
      }
     },
@@ -340,9 +374,11 @@
      "grow": "攻撃型",
      "dye": {
       "colors": [
-       "#2d3436",
-       "#d63031",
-       "#f1c40f"
+       "black",
+       "white",
+       "orange",
+       "gray",
+       "red"
       ]
      }
     },
@@ -352,7 +388,13 @@
      "why": "上の難易度に挑む負けず嫌い",
      "lv": 16,
      "grow": "すばやさ型",
-     "dye": null
+     "dye": {
+      "colors": [
+       "white",
+       "orange",
+       "gray"
+      ]
+     }
     }
    ],
    "deck": {
@@ -407,9 +449,11 @@
      "grow": "ガッツ型(夜ふかしで育成)",
      "dye": {
       "colors": [
-       "#3b2d6b",
-       "#a29bfe",
-       "#ffeaa7"
+       "purple",
+       "blue",
+       "black",
+       "purple_light",
+       "white"
       ]
      }
     },
@@ -421,9 +465,11 @@
      "grow": "ガッツ型",
      "dye": {
       "colors": [
-       "#dfe6e9",
-       "#a29bfe",
-       "#fd79a8"
+       "blue",
+       "black",
+       "purple_light",
+       "white",
+       "purple"
       ]
      }
     },
@@ -435,9 +481,11 @@
      "grow": "防御型",
      "dye": {
       "colors": [
-       "#2d3436",
-       "#6c5ce7",
-       "#dfe6e9"
+       "black",
+       "purple_light",
+       "white",
+       "purple",
+       "blue"
       ]
      }
     }
@@ -494,9 +542,11 @@
      "grow": "すばやさ型(記録どおり)",
      "dye": {
       "colors": [
-       "#ffeaa7",
-       "#e17055",
-       "#2d3436"
+       "orange",
+       "black",
+       "sky",
+       "yellow",
+       "white"
       ]
      }
     },
@@ -508,9 +558,11 @@
      "grow": "ガッツ型",
      "dye": {
       "colors": [
-       "#2d3436",
-       "#0984e3",
-       "#ffeaa7"
+       "black",
+       "sky",
+       "yellow",
+       "white",
+       "orange"
       ]
      }
     },
@@ -520,7 +572,13 @@
      "why": "計算と表づくり。どっしり落ち着いている",
      "lv": 15,
      "grow": "防御型",
-     "dye": null
+     "dye": {
+      "colors": [
+       "sky",
+       "yellow",
+       "white"
+      ]
+     }
     }
    ],
    "deck": {
@@ -570,7 +628,13 @@
      "why": "好きなモンスター",
      "lv": 23,
      "grow": "防御型(みんなを守る)",
-     "dye": null
+     "dye": {
+      "colors": [
+       "green",
+       "teal_light",
+       "white"
+      ]
+     }
     },
     {
      "monster": "Yggdrasil",
@@ -580,9 +644,9 @@
      "grow": "ライフ型",
      "dye": {
       "colors": [
-       "#55efc4",
-       "#00b894",
-       "#ffeaa7"
+       "teal_light",
+       "white",
+       "lime"
       ]
      }
     },
@@ -594,9 +658,9 @@
      "grow": "ガッツ型",
      "dye": {
       "colors": [
-       "#ffffff",
-       "#2d3436",
-       "#e84393"
+       "white",
+       "lime",
+       "teal"
       ]
      }
     }
