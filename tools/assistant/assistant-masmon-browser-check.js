@@ -77,7 +77,8 @@ const layoutProblems = (page) => page.evaluate(() => {
         const c = b.ctx || {}; const replies = { yes: 'いいね、そうしてみるよ', some: '少しだけ変えてみるね', no: 'それはちょっと…ごめんね' };
         const base = { name: '', colors: [], monster: '', slot: 0, face: '', deckName: '', plan: '', replies };
         const favId = (c.colors || []).find(x => (c.fav || []).includes(x.label));
-        const result = b.from === 'masmon' ? { ...base, kind: 'color', colors: [{ part: 0, color: favId ? favId.id : 'orange' }] }
+        const result = /入れ替え/.test(b.text || '') ? { ...base, kind: 'swap', monster: ((c.cands || [])[0] || {}).id || '', name: 'あたらしい♪' }
+          : b.from === 'masmon' ? { ...base, kind: 'color', colors: [{ part: 0, color: favId ? favId.id : 'orange' }] }
           : b.from === 'hero' ? { ...base, kind: 'hero', slot: ((c.team || [])[1] || {}).slot || 1 }
           : b.from === 'welcome' ? { ...base, kind: 'welcome', monster: ((c.cands || [])[0] || {}).id || '' }
           : { ...base, kind: 'deck', face: 'oshi', plan: 'guard', deckName: 'まったり作戦' };
@@ -268,6 +269,20 @@ const layoutProblems = (page) => page.evaluate(() => {
           const logTxt = await page.locator('[data-assistant-masmon-dye-log]').innerText().catch(() => '');
           check(`${T}提案(色)を戻したら「前の色に戻しました」・戻すボタンは消える`, /前の色に戻しました/.test(logTxt) && (await page.locator('[data-assistant-masmon-undo="color"]').count()) === 0, logTxt.slice(0, 30));
           await page.locator('[data-assistant-masmon-detail-close]').click({ timeout: 2000 }).catch(() => {});
+          // 入れ替え(2026-11-09 社長「マスモン変更提案とかもほしい」): 前のマスモンは残り、「前のマスモンに戻してもらう」で戻せる
+          await page.locator('[data-assistant-masmon-row]').first().click(); await page.locator('[data-assistant-masmon-detail]').waitFor({ timeout: 3000 }).catch(() => {});
+          const m0 = await page.locator('[data-assistant-masmon-detail]').getAttribute('data-assistant-masmon-detail');
+          const sw = await send('masmon', '別のマスモンに入れ替えてみたら？名前は「あたらしい♪」で', true);
+          await page.locator('[data-assistant-masmon-detail-close]').click({ timeout: 2000 }).catch(() => {});
+          await page.locator('[data-assistant-masmon-row]').first().click(); await page.locator('[data-assistant-masmon-detail]').waitFor({ timeout: 3000 }).catch(() => {});
+          const m1 = await page.locator('[data-assistant-masmon-detail]').getAttribute('data-assistant-masmon-detail');
+          check(`${T}提案(入れ替え): 別の種類になり、「前のマスモンに戻してもらう」が出る`, sw.res !== 'yes' || (m1 !== m0 && (await page.locator('[data-assistant-masmon-undo="swap"]').count()) === 1), `${m0}→${m1} ${sw.res} ${sw.what}`);
+          if (sw.res === 'yes') {
+            await page.locator('[data-assistant-masmon-undo="swap"]').click().catch(() => {}); await page.waitForTimeout(500);
+            await page.locator('[data-assistant-masmon-row]').first().click(); await page.locator('[data-assistant-masmon-detail]').waitFor({ timeout: 3000 }).catch(() => {});
+            check(`${T}提案(入れ替え)を戻すと前のマスモンに戻る`, (await page.locator('[data-assistant-masmon-detail]').getAttribute('data-assistant-masmon-detail')) === m0);
+          }
+          await page.locator('[data-assistant-masmon-detail-close]').click({ timeout: 2000 }).catch(() => {});
           const hasWait = (await page.locator('[data-assistant-masmon-ask-open="welcome"]').count()) > 0;
           if (hasWait) { const w = await send('welcome', '次はこのモンスターを迎えてみたら？', true); check(`${T}提案(迎える): 希望が残る`, (await page.locator('[data-assistant-masmon-wish]').innerText().catch(() => '')).includes('希望') || w.res === 'no', w.res); }
           await page.locator('[data-assistant-masmon-tab-btn="team"]').click(); await page.waitForTimeout(800);
@@ -278,7 +293,7 @@ const layoutProblems = (page) => page.evaluate(() => {
           await page.locator('[data-assistant-masmon-tab-btn="deck"]').click(); await page.waitForTimeout(600);
           const d = await send('deck', '推しのデッキは守りで「まったり作戦」にしたら？', true);
           const used = await page.evaluate((id) => assistantMasmonAskUsed(id), WHO);
-          check(`${T}提案(デッキ): 希望が残る(カード部の口 assistantLifeDeckWish)。受けてもらうのは1日3回まで(4回目は押せない)`, used <= 3 && (d.res === 'limit' ? used === 3 && /あと 0回/.test(d.left) : (d.res === 'no' || (await page.evaluate((id) => !!assistantLifeDeckWish(id), WHO)))), `${d.res} 使った${used}回`);
+          check(`${T}提案(デッキ): 希望が残る(カード部の口 assistantLifeDeckWish)。受けてもらうのは1日10回まで(11回目は押せない)`, used <= 10 && (d.res === 'limit' ? used === 10 && /あと 0回/.test(d.left) : (d.res === 'no' || (await page.evaluate((id) => !!assistantLifeDeckWish(id), WHO)))), `${d.res} 使った${used}回`);
         }
         await page.locator('[data-assistant-masmon-close]').click({ timeout: 3000 }).catch(() => {});
         check(`${T}閉じると部屋のシートに戻る`, (await page.locator('[data-assistant-masmon-sheet]').count()) === 0 && (await page.locator('[data-assistant-life-room-sheet]').count()) === 1);
