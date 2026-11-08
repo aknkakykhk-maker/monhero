@@ -73,6 +73,7 @@
 | `mh_assistant_life_likes_v1` | object | 分かった助手の好み(2026-11-08)。`{ known: { [助手]: { [道具の key]: 'gift'(贈って分かった) \| 'told'(教えてくれた) } }, told: [{ who, key, day, lv }] }`。told は部屋のシートで見るまで残る知らせ(8件まで)。好みそのものは `ASSISTANT_LIFE_GIFT_LIKES` |
 | `mh_assistant_life_cheki_v1` | object | 思い出チェキを撮った日(2026-11-08)。`{ [ペア]: ['YYYY-MM-DD', …] }`(ペアごとに60枚まで)。思い出アルバムに出す |
 | `mh_assistant_life_room_v1` | object | 助手の部屋の家具(2026-11-08 段階B)。`{ [助手]: { put: { ceil, wall, floor }(家具の key か null), kept: [key…](押し入れ), got: { [key]: 'YYYY-MM-DD' }(贈った日。1つの家具は1人に1回) } }`。公開の印 `assistantLifeFurniture` の後ろ |
+| `mh_assistant_life_solo_gift_v1` | object | 助手1人に贈った道具(2026-11-08 社長 SOLO-GIFT-PLAN.md)。`{ day: 'YYYY-MM-DD', used: { [kind]: 助手 } }`。2人に贈る回数(`mh_assistant_life_gift_day_v1`)とは別に1日3回。1人に贈ったチェキは `mh_assistant_life_cheki_v1` の `{ [助手]: [日…] }` に足す(2人のキーは「a-b」なので重ならない)。公開の印 `assistantLifeSolo`。壊れていたら空として読む |
 | `mh_assistant_life_diary_v1` | object | 助手ライフ「助手たちの家」の今日あったこと `{ day(朝4時区切り), items:[{ t('HH:MM'), text, ids, kind }], slots:[書いた時間の番号] }`。日が変わると空から始める。40件まで。公開の印 `assistantLife` が真のときだけ書く(2026-11-07) |
 | `mh_assistant_life_intro_v1` | string | 助手ライフの入場の演出を長く見せた日(朝4時区切りの日付)。同じ日の2回目からは短くする。公開の印 `assistantLife` が真のときだけ書く(2026-11-07) |
 | `mh_assistant_life_rhythm_v1` | object | 助手ライフの生活のリズムの変わり方 `{ [助手id]: { shift(-1 朝型〜+1 夜型), day(最後に動いた日), dayGain(その日に動いた量) } }`。夜・朝に誘って遊ぶと少しずつ動き、誘わない日は 0 へ戻る。性格ごとの上限あり。公開の印 `assistantLife` が真のときだけ書く(2026-11-07) |
