@@ -232,8 +232,13 @@ const seed = () => {
       check('⑧ 帯の「止める」で締まり(報酬が入る)、帯が止まった形になる', !!c1 && c1.run === 'stopped' && (s1.gold > b1.gold || s1.xp > b1.xp), JSON.stringify({ c1, gold: [b1.gold, s1.gold], xp: [b1.xp, s1.xp] }));
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'strip-stopped-tate.jpg'), type: 'jpeg', quality: 78 });
       const again = page.locator('[data-assistant-life-quick-strip] [data-life-quick-run-start], [data-assistant-life-quick-strip] [data-rhythm-multi-quick-run-restart]').first();
-      await again.click({ force: true }).catch(() => {});
-      await page.waitForTimeout(2500);
+      // 止めると貯めていたお祝いが少し遅れて出るので、閉じてから押す(押しても始まらなければもう一度)
+      for (let t = 0; t < 3; t++) {
+        for (let i = 0; i < 4 && await closePopups(); i++) await page.waitForTimeout(300);
+        await again.click({ force: true }).catch(() => {});
+        await page.waitForTimeout(2500);
+        const c = await strip(); if (c && c.run === 'live') break;
+      }
       const c2 = await strip();
       check('⑧ 止めたあと、帯から始め直せる', !!c2 && c2.run === 'live', JSON.stringify(c2));
     }
