@@ -7,6 +7,8 @@
 //   ① 印が偽: VS・結果に型の札が出ない(今と同じ)・中継役を呼ばない・保存を書かない
 //   ② 印が真・AI が返す: 相手えらびで選ぶと裏で AI に組んでもらう → VS に「チーム」と「今日のデッキ」の名前・ひとこと → 結果に同じ「今日のデッキ」の名前→ その助手との10戦の数が1つ増える。札は画面の中
 //   ③ 印が真・AI なし(遅れの返事): 揺らぎで組む → VS・結果は既定の名前で同じ形(画面に違いが出ない)
+//   ⑥ これまでのデッキ: 相手えらびの選び口(おまかせ・今の3つ・これまで)で選ぶと、今日のデッキ・VS・結果の名前がそれになる
+//   ⑦ 選び口を開いても、隣の欄の立ち絵と吹き出しが画面に入る(横で下へ押し出された崩れ)
 //   ⑤ VS に自分の側(3体)も出て、画面に入っている(相手の側より遅れて出るので、出そろうまで待ってから撮る)
 //   ④ 実行時エラーが無い
 const http = require('http');
@@ -139,6 +141,18 @@ const run = async (browser, mode, scene, errors) => {
       const list = await page.evaluate(() => [...document.querySelectorAll('[data-card-foe-deck-choice]')].map((e) => e.getAttribute('data-card-foe-deck-choice')));
       const pastHead = await page.locator('[data-card-foe-deck-picker-list]').innerText().catch(() => '');
       check(`⑥ ${label}: 選び口に おまかせ・今の3つ・これまでのデッキ(名前と時期)`, JSON.stringify(list) === JSON.stringify(['auto', 'oshi', 'suki', 'sugao', 'h:oshi-1700000000000']) && /これまでのデッキ/.test(pastHead) && /ゴーレムの力くらべ/.test(pastHead) && /11\/1[5-9]/.test(pastHead), `${JSON.stringify(list)} / ${pastHead.replace(/\s+/g, ' ').slice(0, 80)}`);
+      // ⑦ 崩れの種類「選び口を開くと右の欄が伸び、隣の欄(立ち絵と吹き出し)の中身が欄の下のほうへ押し出されて画面から出る」(2026-11-08 部長の止め絵・横 844×390)。
+      //    横の画面で、開いたまま、左の欄の上の端から絵・吹き出しまでの距離が小さい(欄の上に寄っている)か。スクロールの位置に左右されないよう、欄の中の位置で見る
+      if (mode.id === 'yoko') {
+        const intro = await page.evaluate((w) => {
+          const box = document.querySelector(`[data-card-foe-intro="${w}"]`); if (!box) return 'ない';
+          const b = box.getBoundingClientRect();
+          const im = box.querySelector('img'); const ln = box.querySelector('[data-card-foe-intro-line]');
+          const right = document.querySelector(`[data-card-foe-style="${w}"]`);
+          return { art: im ? Math.round(im.getBoundingClientRect().top - b.top) : null, line: ln ? Math.round(ln.getBoundingClientRect().top - b.top) : null, boxH: Math.round(b.height), rightH: right ? Math.round(right.getBoundingClientRect().height) : null };
+        }, WHO);
+        check(`⑦ ${label}: 選び口を開いて欄が伸びても、隣の欄の立ち絵と吹き出しは欄の上に寄ったまま(下へ押し出されない)`, intro && intro.art !== null && intro.art <= 40 && intro.line !== null && intro.line <= 90 && intro.boxH > 160, JSON.stringify(intro));
+      }
       await snap('0-picker');
       await page.locator('[data-card-foe-deck-choice="h:oshi-1700000000000"]').scrollIntoViewIfNeeded();
       await page.waitForTimeout(400);

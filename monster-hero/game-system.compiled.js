@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9e2895b0da9acfc7
+// source-sha256: f9bb32d6c93379b0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -146193,6 +146193,7 @@ const CardBattleScreen = ({
     }, jaWrap(cardLifeSpentText(lifeSpent[x.id], x.name))))), React.createElement("div", {
       className: "space-y-2 landscape:grid landscape:grid-cols-2 landscape:items-stretch landscape:gap-2 landscape:space-y-0"
     }, a && React.createElement("div", {
+      "data-card-foe-intro": a.id,
       className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2 landscape:items-start"
     }, React.createElement(CardAssistantArt, {
       src: assistantFullImage(a, 'wink'),
@@ -146206,6 +146207,7 @@ const CardBattleScreen = ({
     }, React.createElement("div", {
       className: "text-[11px] font-bold text-slate-400"
     }, a.tagline), React.createElement("div", {
+      "data-card-foe-intro-line": true,
       className: "mt-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]",
       style: {
         borderColor: a.accent,
