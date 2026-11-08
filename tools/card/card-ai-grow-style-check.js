@@ -127,7 +127,7 @@ check('助手は8人', WHO.length === 8, WHO.join(','));
     const run = (flags) => { const c = vm.createContext({ RELEASE_FLAGS: flags }); vm.runInContext(`${code}\nthis.R = cardGrowStyleOn();`, c); return c.R; };
     check('F 印を読む口: 真のときだけ真(無い・偽・真でない値は偽)', !!code && run({ cardGrowStyle: true }) === true && run({ cardGrowStyle: false }) === false && run({}) === false && run({ cardGrowStyle: 'yes' }) === false);
     const s17 = src('src/parts/17-release-changelog-login-missions.jsx');
-    check('F 公開の印 cardGrowStyle は、いまは偽', /\n  cardGrowStyle: false,/.test(s17));
+    check('F 公開の印 cardGrowStyle は真(2026-11-08 社長「この文で公開」)', /\n  cardGrowStyle: true,/.test(s17));
   }
   const s83 = src('src/parts/83-card-ai-deck.jsx');
   check('F 83: 助手ライフの口は呼ぶ時に typeof で確かめ、知らない値は型なし', /typeof assistantLifeCardStyle === 'function' \? cardAiStyleOf\(assistantLifeCardStyle\(who\)\) : null/.test(s83));
