@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0450fa30bee26bfa
+// source-sha256: a3aef048798fd1b9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -184268,7 +184268,11 @@ function MonsterHeroGame() {
     }), React.createElement("div", {
       "data-life-quick-run": view.live ? 'live' : 'stopped',
       className: "relative z-20 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-400/25 bg-slate-950/95 px-2 py-1"
-    }, view.info ? React.createElement(RhythmQuickRunPill, {
+    }, lifeLoseNote && !view.live ? React.createElement("span", {
+      "data-life-quick-run-lose": lifeLoseNote,
+      role: "status",
+      className: "min-h-[32px] min-w-0 flex-1 truncate rounded-full border border-rose-300/50 bg-rose-950/80 px-2.5 text-[11px] font-black leading-[30px] text-rose-100"
+    }, "😢 ", lifeLoseNote === 'retry' ? '負けちゃった…始め直すよ' : '負けちゃった…') : view.info ? React.createElement(RhythmQuickRunPill, {
       info: view.info,
       onRestart: () => startQuickRunFromRhythm(),
       widthClass: "min-w-0 flex-1"
@@ -188419,6 +188423,20 @@ function MonsterHeroGame() {
     const timer = setTimeout(retryLife, QUICK_RUN_AUTO_RETRY_MS);
     return () => clearTimeout(timer);
   }, [quickRunProgress, gameState, resultProcessing, autoSettings, assistantLifeOpenNow]);
+  const [lifeLoseNote, setLifeLoseNote] = useState(null);
+  const lifeLoseSeenRef = useRef(null);
+  useEffect(() => {
+    const p = quickRunProgress;
+    if (!p || !p.finished || p.reason !== 'defeat' || !assistantLifeOpenNow) return undefined;
+    if (lifeLoseSeenRef.current === p) return undefined;
+    lifeLoseSeenRef.current = p;
+    setLifeLoseNote(quickRhythmGuideReleased && autoQuickRunAutoStartEnabled(autoSettings) ? 'retry' : 'lose');
+    const timer = setTimeout(() => setLifeLoseNote(null), QUICK_RUN_AUTO_RETRY_MS);
+    return () => clearTimeout(timer);
+  }, [quickRunProgress, assistantLifeOpenNow]);
+  useEffect(() => {
+    if (!assistantLifeOpenNow) setLifeLoseNote(null);
+  }, [assistantLifeOpenNow]);
   const cycleBattleAuto = () => {
     if (autoRepeatRef.current) {
       setAutoBattleEnabled(false);
