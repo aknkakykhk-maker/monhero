@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b8ec886560a9c4c9
+// source-sha256: ddd37001c17cc1cb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -105326,8 +105326,11 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-room .bb{position:absolute;right:4px;z-index:5;max-width:88%;overflow:hidden;white-space:normal;line-height:1.2;text-align:center;font-size:9.5px;font-weight:900;background:#fff;color:#1e293b;border-radius:9px;padding:1px 6px;box-shadow:0 2px 5px #0007}
 .mhl-room .off{position:absolute;inset:0;z-index:3;background:rgba(6,9,24,.5)}
 .mhl-room .lamp{position:absolute;inset:0;z-index:3;background:radial-gradient(circle at 60% 40%,rgba(255,214,140,.45),transparent 70%);mix-blend-mode:screen;pointer-events:none}
-.mhl-room .tag{position:absolute;left:50%;top:50%;z-index:6;transform:translate(-50%,-38%) rotate(-3deg);max-width:92%;text-align:center;padding:3px 8px 4px;border-radius:7px;background:linear-gradient(#fef3c7,#fde68a);color:#422006;border:1.5px solid #b45309;box-shadow:0 3px 6px #0009}
-.mhl-room .tag b{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mhl-room .tag small[data-assistant-life-room-with]{white-space:normal;line-height:1.15}[data-assistant-life-land="1"] .mhl-room .tag{padding:2px 5px 3px}[data-assistant-life-land="1"] .mhl-room .tag b{font-size:9.5px}[data-assistant-life-land="1"] .mhl-room .tag small{font-size:8px}.mhl-room .tag small{display:block;font-size:9px;font-weight:800;color:#7c2d12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mhl-room .tag{position:absolute;left:3px;right:3px;top:2px;z-index:6;text-align:left;padding:0 5px 1px;border-radius:6px;background:linear-gradient(#fef3c7,#fde68a);color:#422006;border:1.5px solid #b45309;box-shadow:0 2px 4px #0008}
+.mhl-room .tag small{display:block;height:19px;font-size:8.5px;line-height:19px;font-weight:800;color:#7c2d12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mhl-room .tag b{display:block;font-size:10px;line-height:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mhl-room .tag i{display:none;font-style:normal}
+.mhl-room[data-assistant-life-room-tag="1"] .pl{z-index:7}.mhl-room[data-assistant-life-room-tag="1"] .lv{top:38px}
+[data-assistant-life-land="1"] .mhl-room .tag{top:22px;padding:0 4px}[data-assistant-life-land="1"] .mhl-room .tag b{font-size:9px;line-height:11px}[data-assistant-life-land="1"] .mhl-room .tag small{display:none}[data-assistant-life-land="1"] .mhl-room .tag i{display:inline}[data-assistant-life-land="1"] .mhl-room .tag[data-assistant-life-room-tag-mark="1"] small{display:block;margin-left:0!important;height:11px;font-size:9px;line-height:11px}[data-assistant-life-land="1"] .mhl-room .tag[data-assistant-life-room-tag-mark="1"] b{display:none}
+[data-assistant-life-land="1"] .mhl-room[data-assistant-life-room-tag="1"] .lv{left:auto;right:3px;top:5px}
 .mhl-room .lock{position:absolute;inset:0;z-index:6;display:grid;place-items:center;background:rgba(15,23,42,.78);font-size:11px;font-weight:900;color:#cbd5e1}
 .mhl-liv{position:absolute;overflow:hidden;border-radius:3px;background:linear-gradient(#f3e3c4,#e7cfa2)}
 .mhl-board{position:absolute;left:8px;top:6px;bottom:6px;border-radius:5px;background:#c08a52;border:3px solid #7c4a22;padding:3px 6px;overflow:hidden;display:flex;flex-direction:column;flex-wrap:wrap;align-content:flex-start;justify-content:flex-start;column-gap:24px}
@@ -105399,6 +105402,18 @@ function AssistantLifeChunks({
 const assistantLifeBoardShort = (text, max = 2) => {
   const ps = String(text || '').split(' / ');
   return ps.length > max ? `${ps.slice(0, max).join(' / ')} ほか${ps.length - max}組` : String(text || '');
+};
+const assistantLifeTagNames = (text, budget) => {
+  const m = String(text || '').match(/^(.*?)(?: ほか(\d+)人)?$/);
+  const list = String(m[1] || '').split('・').filter(Boolean);
+  let rest = Number(m[2]) || 0;
+  const len = (a, r) => [...a.join('・')].length + (r ? [...` ほか${r}人`].length : 0);
+  const out = [...list];
+  while (out.length > 1 && len(out, rest) > budget) {
+    out.pop();
+    rest++;
+  }
+  return `${out.join('・')}${rest ? ` ほか${rest}人` : ''}`;
 };
 function AssistantLifeRoom({
   id,
@@ -105502,14 +105517,33 @@ function AssistantLifeRoom({
   }, x)))), typeof AssistantLifeRelRoomLayer === 'function' && React.createElement(AssistantLifeRelRoomLayer, {
     state: state,
     h: h
-  }), state && state.tag && React.createElement("span", {
-    className: "tag",
-    "data-assistant-life-room-away": id
-  }, React.createElement("b", null, state.tag[0]), React.createElement("small", null, state.tag[1]), state.tag[2] && React.createElement("small", {
-    "data-assistant-life-room-with": true
-  }, React.createElement(AssistantLifeNames, {
-    text: state.tag[2]
-  }))), !met && React.createElement("span", {
+  }), state && state.tag && (() => {
+    const t = state.tag;
+    const mark = !!t[1] && /^(💢|🤝)/u.test(t[1]);
+    const n = Number((String(t[1] || '').match(/^(\d+)人で/) || [])[1]) || 0;
+    const ml = [...assistantLifeName(id)].length * 10 + 20;
+    const names = t[2] ? assistantLifeTagNames(t[2], Math.floor((w - 6 - ml - 10) / 8.8)) : null;
+    const short = [...String(t[0])].length <= 9;
+    return React.createElement("span", {
+      className: "tag",
+      "data-assistant-life-room-away": id,
+      "data-assistant-life-room-tag-mark": mark ? '1' : '0'
+    }, mark || !names ? React.createElement("small", {
+      "data-assistant-life-room-what": true,
+      style: {
+        marginLeft: ml
+      }
+    }, t[1]) : React.createElement("small", {
+      "data-assistant-life-room-with": true,
+      style: {
+        marginLeft: ml
+      }
+    }, React.createElement(AssistantLifeNames, {
+      text: names
+    })), React.createElement("b", null, t[0], React.createElement("i", {
+      "data-assistant-life-room-tag-short": true
+    }, n > 1 && short ? `・${n}人` : '', mark ? ` ${[...t[1]][0]}` : '')));
+  })(), !met && React.createElement("span", {
     className: "lock"
   }, "まだ会っていない"));
 }
