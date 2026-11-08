@@ -3,16 +3,18 @@
 const path = require("path"), fs = require("fs");
 const root = path.resolve(__dirname, "..", "..");
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.woff2': 'font/woff2' };
-const assistantsSrc = fs.readFileSync(path.join(root, 'monster-hero/data/assistants.js'), 'utf8');
-const replaySrc = assistantsSrc.slice(assistantsSrc.indexOf('const EVENT_REPLAYS = ['));
-const STORY_IDS = [...replaySrc.matchAll(/\{ id: '([a-z0-9_]+)'/g)].map(m => m[1]);
-const seed = ({ storyIds, life, intro = false, bondAll = null }) => {
+// お話・紹介の既読は、本体から読む共通の種(quiet-boot-seed.js)と同じものを入れる。手で書き写すと、新しいお話が増えたときに先に流れて落ちる
+const { eventStoryIds, introStoryKeys } = require('../boot/quiet-boot-seed');
+const STORY_IDS = eventStoryIds();
+const INTRO_KEYS = introStoryKeys();
+const seed = ({ storyIds, introKeys = [], life, intro = false, bondAll = null }) => {
   const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
   if (localStorage.getItem('mh_breeder_name') === null) {
     put('mh_breeder_name', 'テスト'); put('mh_breeder_icon', 'Mocchi'); put('mh_onboarded', true);
     for (const k of ['mh_tutorial_seen_v1','mh_battle_tutorial_seen_v1','mh_battle_tutorial_guide_shown_v1','mh_rhythm_tutorial_seen_v1','mh_masu_migrated','mh_kiki_intro_seen_v1','mh_momosuke_intro_seen_v1','mh_tactics_intro_seen_v1','mh_rhythm_hell_story_seen_v1','mh_story_assistant_chat_seen_v1','mh_story_tactics_types_seen_v1','mh_story_card_battle_seen_v1','mh_inherited_unique_level_compensation_v1']) put(k, true);
     put('mh_inherited_unique_level_compensation_pending_v1', false);
     put('mh_assistant_selected_v1', 'mua'); put('mh_rhythm_event_story_v1', storyIds);
+    for (const k of introKeys) localStorage.setItem(k, 'true');
     const d = new Date(), pad = (n) => String(n).padStart(2, '0');
     put('mh_daily_masu_advice_date_v1', `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
     put('mh_login_bonus_last_v1', `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
@@ -82,4 +84,4 @@ const homeFacesProblems = (page) => page.evaluate(() => {
 });
 const waitFaces = async (page) => { for (let i = 0; i < 60 && !(await page.locator('[data-assistant-life-home-face]').count()); i++) { await finishTalk(page); await page.waitForTimeout(500); } };
 
-module.exports = { MIME, STORY_IDS, seed, toHome, finishTalk, homeFacesProblems, waitFaces };
+module.exports = { MIME, STORY_IDS, INTRO_KEYS, seed, toHome, finishTalk, homeFacesProblems, waitFaces };

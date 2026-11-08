@@ -13,7 +13,7 @@
 const http = require('http'), path = require('path'), fs = require('fs');
 const root = path.resolve(__dirname, '..', '..'), PORT = 9241;
 const { quietBootSeed, updateNoticeSeed, oneTimeNoticeSeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
-const { MIME, STORY_IDS, seed, toHome, finishTalk, waitFaces, homeFacesProblems } = require(path.resolve(__dirname, 'life-browser-shared'));
+const { MIME, STORY_IDS, INTRO_KEYS, seed, toHome, finishTalk, waitFaces, homeFacesProblems } = require(path.resolve(__dirname, 'life-browser-shared'));
 const shotArg = process.argv.indexOf('--shots');
 const shotDir = shotArg > 0 ? path.resolve(process.argv[shotArg + 1] || 'friend-shots') : null;
 if (shotDir) fs.mkdirSync(shotDir, { recursive: true });
@@ -106,7 +106,7 @@ const badgeProblems = (page) => page.evaluate(() => {
     await page.addInitScript(quietBootSeed());
     await page.addInitScript(updateNoticeSeed());
     await page.addInitScript(oneTimeNoticeSeed());
-    await page.addInitScript(seed, { storyIds: STORY_IDS, life: true, intro: false });
+    await page.addInitScript(seed, { storyIds: STORY_IDS, introKeys: INTRO_KEYS, life: true, intro: false });
     await page.addInitScript((flag) => { const t = setInterval(() => { try { if (typeof RELEASE_FLAGS !== 'undefined') { RELEASE_FLAGS.assistantLifeFriend = flag; RELEASE_FLAGS.assistantLifeFriendApi = flag; clearInterval(t); } } catch {} }, 2); }, on);
     await page.route(/supabase|functions\/v1/, route(posted));
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });

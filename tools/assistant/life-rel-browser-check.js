@@ -12,7 +12,7 @@
 const http = require('http'), path = require('path'), fs = require('fs');
 const root = path.resolve(__dirname, '..', '..'), PORT = 9263;
 const { quietBootSeed, updateNoticeSeed, oneTimeNoticeSeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
-const { MIME, STORY_IDS, seed, toHome, finishTalk } = require(path.resolve(__dirname, 'life-browser-shared'));
+const { MIME, STORY_IDS, INTRO_KEYS, seed, toHome, finishTalk } = require(path.resolve(__dirname, 'life-browser-shared'));
 const SHOTS = process.argv.includes('--shots');
 const shotDir = path.join(root, 'docs/progress/assistant-peer/shots');
 const BASE = process.env.LIFE_BASE ? process.env.LIFE_BASE.replace(/\/?$/, '/') : `http://localhost:${PORT}/`;
@@ -124,7 +124,7 @@ const problems = (page) => page.evaluate(() => {
       await page.clock.setFixedTime(new Date(tm.at));
       await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
       await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(oneTimeNoticeSeed());
-      await page.addInitScript(seed, { storyIds: STORY_IDS, life: true });
+      await page.addInitScript(seed, { storyIds: STORY_IDS, introKeys: INTRO_KEYS, life: true });
       await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
       await page.goto(`${BASE}monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
       await toHome(page);
