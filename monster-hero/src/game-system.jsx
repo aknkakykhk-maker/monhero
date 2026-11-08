@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3577c493b40b4346
+// generated-sha256: 4fb9030ea9b6d5ba
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -99699,7 +99699,8 @@ function MonsterHeroGame() {
     const base = cardQuickRunView();
     if (!base) return canStart ? { live: false, loops: 0, stopped: true, difficulty: ((DIFFICULTY_SETTINGS[autoSettings.quickRun.difficulty] || quickDifficultySetting(autoSettings.quickRun.difficulty) || {}).label || null), xp: 0, gold: 0, canStart } : null;
     const live = assistantLifeBackgroundRun && !quickRunProgress.finished;
-    return { live, loops: base.loops, stopped: !live, difficulty: base.difficulty, xp: base.xp, gold: base.gold, canStart };
+    // info … モンヒロビートのモードえらび・カードのトップの帯(RhythmQuickRunPill)と同じ形。札をほかのモードと同じ部品にそろえるときに使う(2026-11-08 社長「他のモードと同じような表示に」)
+    return { live, loops: base.loops, stopped: !live, difficulty: base.difficulty, xp: base.xp, gold: base.gold, canStart, info: base.info };
   };
 
   const handleRetry = () => {
