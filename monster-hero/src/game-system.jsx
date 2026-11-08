@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 649689c089b82b0a
+// generated-sha256: aaee752aeb888c53
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -38685,6 +38685,7 @@ const growthFxSessionLevel = (list = []) => {
 // ---------- 見た目 ----------
 const GROWTH_FX_CSS = `
 .mh-gfx-chips{position:fixed;top:calc(env(safe-area-inset-top,0px) + 52px);right:10px;z-index:44000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
+.mh-gfx-chips.left{right:auto;left:10px;align-items:flex-start}
 .mh-gfx-chips.mini .mh-gfx-chip>.min-w-0{display:none}.mh-gfx-chips.mini .mh-gfx-chip{padding:3px 8px 3px 4px;gap:4px}
 .mh-gfx-chip{position:relative;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;border-radius:999px;background:linear-gradient(90deg,#1e1b2ef0,#0f172af0);
   border:1.5px solid var(--gc);box-shadow:0 0 14px color-mix(in srgb,var(--gc) 40%,transparent);font-weight:900;font-size:11px;color:#fff;
@@ -38973,6 +38974,9 @@ const GrowthFxLevelUp = ({ sheet, level, onClose }) => {
 // 小さな札の置き場所(2026-11-08 窓口「通知が下の文字を隠さない位置に」)。右上のいつもの高さ(52px)で、下に文字やボタンがあれば、
 //   上の帯(8px)→ 少し下(96・140px)→ 下のほう の順に、下に文字もボタンもない高さを探して置く。どこも空いていなければいつもの高さ
 const GROWTH_FX_CHIP_TOPS = [52, 8, 96, 140];
+//   2026-11-08 窓口「フレンドの家で、知らせが部屋の名前・顔・声をかけた吹き出しを隠す」: 6つの点だけでは、点のあいだの短い名前や顔の絵を見逃していた。
+//   点で見たあとに、札の四角に重なる 文字・ボタン・絵(顔) を全部見る(見えているものだけ。画面いっぱいの入れ物や背景は数えない)
+const GROWTH_FX_CHIP_BUSY_SEL = 'button,a,input,[role="tab"],[role="button"],[data-assistant-bubble],img,svg,p,span,b,small,strong,em,h1,h2,h3,h4,li,label,[data-alf-face]';
 const growthFxChipSpotBusy = (box) => {
   if (typeof document === 'undefined' || !document.elementsFromPoint) return false;
   const r = box.getBoundingClientRect();
@@ -38982,6 +38986,25 @@ const growthFxChipSpotBusy = (box) => {
     if (!under) continue;
     if (under.closest('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]')) return true;
     if ([...under.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return true;
+  }
+  const vw = window.innerWidth, vh = window.innerHeight;
+  for (const el of document.querySelectorAll(GROWTH_FX_CHIP_BUSY_SEL)) {
+    if (box.contains(el)) continue;
+    const e = el.getBoundingClientRect();
+    if (!e.width || !e.height || e.width > vw * 0.9 || e.height > vh * 0.5) continue;
+    if (Math.min(r.right, e.right) - Math.max(r.left, e.left) <= 1 || Math.min(r.bottom, e.bottom) - Math.max(r.top, e.top) <= 1) continue;
+    const cs = getComputedStyle(el);
+    if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
+    // 文字のある要素・押せるもの・絵だけ(中身の無い飾りの span などは数えない)
+    const isPic = /^(IMG|SVG)$/i.test(el.tagName) || el.hasAttribute('data-alf-face');
+    const isAct = el.matches('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]');
+    const hasText = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+    if (!isPic && !isAct && !hasText) continue;
+    // ほかの画面の下に隠れている(手前に別のものが重なっている)要素は数えない
+    const cx = Math.max(r.left, e.left) + 1, cy = Math.max(r.top, e.top) + 1;
+    const top = document.elementsFromPoint(cx, cy).find(x => !box.contains(x));
+    if (top && !(top === el || el.contains(top) || top.contains(el))) continue;
+    return true;
   }
   return false;
 };
@@ -38994,11 +39017,18 @@ const GrowthFxChipsBox = ({ level, count, children }) => {
     const place = () => {
       const box = ref.current;
       if (!box) return;
-      const tops = [...GROWTH_FX_CHIP_TOPS, Math.max(60, window.innerHeight - 120 - box.offsetHeight)];
+      // いつもの高さのあとに、画面の下から上へ24pxおきの高さも試す(詰まった横の画面で、空いた所を見つける)
+      const steps = []; for (let y = window.innerHeight - 10 - box.offsetHeight; y >= 8; y -= 24) steps.push(Math.round(y));
+      const tops = [...new Set([...GROWTH_FX_CHIP_TOPS, Math.max(60, window.innerHeight - 120 - box.offsetHeight), ...steps])];
+      // 右寄せで空きが無ければ左寄せでも探す(横のビートP交換所は右の列が品物で埋まり、左の列の下が空いている・2026-11-08)
       for (const mini of [false, true]) {
         box.classList.toggle('mini', mini);
-        for (const t of tops) { box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`; if (!growthFxChipSpotBusy(box)) { box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${t}`; return; } }
+        for (const left of [false, true]) {
+          box.classList.toggle('left', left);
+          for (const t of tops) { box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`; if (!growthFxChipSpotBusy(box)) { box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${left ? 'left-' : ''}${t}`; return; } }
+        }
       }
+      box.classList.remove('left');
       box.style.top = `calc(env(safe-area-inset-top, 0px) + ${GROWTH_FX_CHIP_TOPS[1]}px)`; box.dataset.growthFxChipsTop = 'mini-busy';
     };
     place();
@@ -63147,6 +63177,7 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, othe
       {typeof AssistantLifeRelRoomLayer === 'function' && <AssistantLifeRelRoomLayer state={state} h={h}/>}
       {/* 出かけ札は床にかけない(2026-11-08 社長: 助手のマスモンが部屋の床を歩く。キズナ2)。縦は名札の右に2行(行き先/一緒の全員の名前・ひとりなら何をしているか・けんかや仲直りの印)、
           横は名札の下に1行(行き先・人数・印)。どちらも部屋の上から 36px までに収める */}
+      {met && !other && typeof AssistantMasmonRoomPet === 'function' && <AssistantMasmonRoomPet id={id} h={h} life={typeof assistantLifeCurrent === 'function' ? assistantLifeCurrent() : null}/>}
       {state && state.tag && (() => { const t = state.tag; const mark = !!t[1] && /^(💢|🤝)/u.test(t[1]); const n = Number((String(t[1] || '').match(/^(\d+)人で/) || [])[1]) || 0;
         // 縦: 上の行(名札の右)に一緒の全員の名前か、ひとりなら何をしているか・印。下の行(札の幅いっぱい)に行き先。名前は札に入る数まで(残りは「ほか◯人」)
         const ml = [...assistantLifeName(id)].length * 10 + 20; // 名札の幅(字10px+余白)。上の行はその右から
@@ -65639,13 +65670,157 @@ function AssistantMasmonRoomRow({ id, onOpen }) {
   const lead = p.team.find(t => t.lead) || p.team[0];
   const m = lead && assistantMasmonMon(lead.monster);
   if (!m) return null;
+  let now = ''; try { now = assistantMasmonNowText(id, typeof assistantLifeCurrent === 'function' ? assistantLifeCurrent() : null); } catch (_) {}
   return (
     <button type="button" className="mhl-row w-full text-left" data-assistant-life-room-masmon onClick={() => onOpen(id)}>
       <span className="k">🐾 マスモン</span>
-      <span className="min-w-0 truncate text-[11px] font-bold"><b>{lead.nick}</b>({m.name} Lv.{lead.lv}) ほか{Math.max(0, p.team.length - 1)}体</span>
+      <span className="min-w-0 text-[11px] font-bold"><span className="block truncate"><b>{lead.nick}</b>({m.name} Lv.{lead.lv}) ほか{Math.max(0, p.team.length - 1)}体</span>
+        {now && <span className="block text-[10px] text-sky-200" data-assistant-life-room-masmon-now>🐾 いま: {now}</span>}</span>
       <span className="ml-auto pl-1 text-[12px] font-black text-pink-300">›</span>
     </button>);
 }
+
+// ---------- 部屋にいるマスモン(2026-11-08 社長「助手のマスモンも部屋にいたりどこかにいたり」・選び ❶A ❷A ❸B) ----------
+// ❶ 部屋に出すのは1体。3体のうち、その日の当番(先頭から日ごとに交代)
+// ❷ 助手が出かけているときは、時間の区切りごとに半分くらい一緒に出かけ、残りは部屋で留守番
+// ❸ 地図・居場所タブには出さない(部屋と部屋のシートだけ)
+// 数字には効かせない・何も保存しない(当番も留守番も日付と時間の区切りから決まる)
+const assistantMasmonHash = (str) => { let h = 2166136261; for (const ch of String(str)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
+const assistantMasmonDuty = (id, day = (typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '')) => {
+  const p = assistantMasmonPlanOf(id);
+  if (!p) return null;
+  const all = [...p.team].sort((x, y) => (y.lead ? 1 : 0) - (x.lead ? 1 : 0)).filter(t => assistantMasmonMon(t.monster)); // 当番は編成の3体で回す
+  if (!all.length) return null;
+  return all[assistantMasmonHash(`${day}|${id}`) % all.length];
+};
+// オトズレ2(フレンドの家の控え)が読む口: その日の当番 { monster, nick, colors }
+const assistantLifeMasmonLead = (id) => {
+  try { if (typeof assistantLifeEnabled === 'function' && !assistantLifeEnabled()) return null; } catch (_) { return null; }
+  const t = assistantMasmonDuty(id);
+  return t ? { monster: t.monster, nick: t.nick, colors: [...((t.dye && t.dye.colors) || [])] } : null;
+};
+// いまマスモンがどこにいるか: 'with'(助手のそば・部屋)/'stay'(留守番)/'out'(助手と一緒に出かけた)
+const assistantMasmonWhere = (id, life) => {
+  const w = typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, id) : null;
+  if (!w || w.place === 'home') return { kind: 'with', w };
+  const abs = life && Number.isFinite(life.abs) ? life.abs : 0;
+  return { kind: assistantMasmonHash(`${abs}|${id}|go`) % 2 === 0 ? 'out' : 'stay', w };
+};
+const ASSISTANT_MASMON_DOING_MARK = Object.freeze({ sleep: '💤', practice: '♪', snack: '🍡', read: '📖', cards: '🃏', walk: '♪' });
+
+// 部屋の見た目は、家の画面でシートの CSS が読まれていないので、その場で書く
+const ASSISTANT_MASMON_PET_STYLE = Object.freeze({ position: 'absolute', zIndex: 4, pointerEvents: 'none', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.45))' });
+const ASSISTANT_MASMON_PET_MARK = Object.freeze({ position: 'absolute', right: -2, top: -3, whiteSpace: 'nowrap', lineHeight: '12px', fontWeight: 900, background: 'rgba(255,255,255,.92)', color: '#7c2d12', borderRadius: 999, padding: '0 2px' });
+// 部屋のマスモンの大きさ(2026-11-08 社長の選び A: どの部屋でも助手の顔の丸と見合う同じ大きさ)。顔の丸は Math.min(40, h*.44)
+// 低い部屋(iPhone SE/8 の横など)では、出かけ札の帯(上から37px)・床・印のはみ出しを引いた高さまで縮める(どの部屋も同じ高さなので、大きさはそろう)。
+//   16px より小さくなる部屋(568×320 など)では出さない(歩く区間が見つからないので出ない)
+const assistantMasmonPetSize = (h) => Math.round(Math.min(40, h * .44, h - 37 - 9 - 3));
+const ASSISTANT_MASMON_PET_FLOOR = 9;      // 床の板の高さ(.fl と同じ)
+const ASSISTANT_MASMON_PET_MW = 2, ASSISTANT_MASMON_PET_MH = 3; // 印が絵からはみ出すぶん(右・上)
+const ASSISTANT_MASMON_PET_HIT = '.tag,.pp,.bb,.pl,.lv,.lock,[data-assistant-life-rel-door],[data-assistant-life-rel-mend],[data-assistant-life-rel-sit]';
+const assistantMasmonReducedMotion = () => { try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) { return false; } };
+// 部屋の床の帯で、重なってはいけない物に当たらない x の区間(歩ける所)と、その中の止まってよい所(家具の上を除く)を測る
+const assistantMasmonFloorPlan = (room, size) => {
+  const rr = room.getBoundingClientRect();
+  const rect = (q) => q.getBoundingClientRect();
+  const obs = [...room.querySelectorAll(ASSISTANT_MASMON_PET_HIT)].map(rect).filter(r => r.width > 0 && r.height > 0);
+  const furn = [...room.querySelectorAll('.fu')].map(rect).filter(r => r.width > 0);
+  const top = rr.bottom - ASSISTANT_MASMON_PET_FLOOR - size - ASSISTANT_MASMON_PET_MH, bot = rr.bottom - ASSISTANT_MASMON_PET_FLOOR + 1;
+  const hitAt = (x, list) => { const l = rr.left + x, r = l + size + ASSISTANT_MASMON_PET_MW; return list.some(q => Math.min(r, q.right) - Math.max(l, q.left) > 0 && Math.min(bot, q.bottom) - Math.max(top, q.top) > 0); };
+  const runs = []; let st = null;
+  const maxX = Math.floor(rr.width - size - ASSISTANT_MASMON_PET_MW - 3);
+  for (let x = 3; x <= maxX; x++) {
+    const ok = !hitAt(x, obs);
+    if (ok && st == null) st = x;
+    if ((!ok || x === maxX) && st != null) { const end = ok ? x : x - 1; if (end >= st) runs.push([st, end]); st = null; }
+  }
+  runs.sort((p, q) => (q[1] - q[0]) - (p[1] - p[0]));
+  const run = runs[0] || null;
+  if (!run) return null;
+  const stops = []; for (let x = run[0]; x <= run[1]; x++) if (!hitAt(x, furn)) stops.push(x);
+  return { run, stops: stops.length ? stops : [run[0], run[1]], y: rr.height - ASSISTANT_MASMON_PET_FLOOR - size };
+};
+
+// 部屋の中(社長の選び A+歩く): どの部屋でも同じ大きさで床に立ち、床の空いている区間だけを左右に歩く。
+//   ときどき止まって様子の印を出す(歩いているあいだは出さない)。家具の上には止まらない(通るだけ)。
+//   床の帯が空いていない部屋では出さない(札の位置はナカヨシ8が床を空ける)。動きを減らす設定の人には止まった姿
+function AssistantMasmonRoomPet({ id, h, life }) {
+  const ref = React.useRef(null);
+  const [plan, setPlan] = React.useState(null);  // { run, stops, y } | false
+  const [at, setAt] = React.useState(null);      // { x, moving, dir, ms }
+  const [tick, setTick] = React.useState(0);
+  const t = assistantMasmonDuty(id);
+  const where = assistantMasmonWhere(id, life);
+  const size = assistantMasmonPetSize(h);
+  const key = `${id}|${t ? t.monster : ''}|${where.kind}|${h}`;
+  // 家が入場の動きの途中だと測り違えるので、少し待って測り直す。画面の大きさが変わったときも測り直す
+  React.useEffect(() => {
+    const re = () => setTick(n => n + 1);
+    const ts = [setTimeout(re, 450), setTimeout(re, 1300)];
+    window.addEventListener('resize', re);
+    return () => { ts.forEach(clearTimeout); window.removeEventListener('resize', re); };
+  }, [key]);
+  React.useLayoutEffect(() => {
+    const el = ref.current, room = el && el.closest('.mhl-room');
+    if (!room) return;
+    const fp = assistantMasmonFloorPlan(room, size);
+    setPlan(fp || false);
+    if (fp) setAt(prev => {
+      const x = prev && fp.stops.includes(prev.x) ? prev.x : fp.stops[assistantMasmonHash(`${id}|start`) % fp.stops.length];
+      return { x, moving: false, dir: 1, ms: 0 };
+    });
+  }, [key, tick, size]);
+  // 歩く: 止まる(3〜6秒・印を出す)→ 止まってよい所のどこかへ歩く(1秒に14px くらい)
+  React.useEffect(() => {
+    if (!plan || !at || assistantMasmonReducedMotion()) return undefined;
+    let alive = true, timer = null;
+    const step = () => {
+      if (!alive) return;
+      setAt(prev => {
+        if (!prev) return prev;
+        if (prev.moving) { timer = setTimeout(step, 3000 + Math.random() * 3000); return { ...prev, moving: false }; }
+        const far = plan.stops.filter(x => Math.abs(x - prev.x) >= 12);
+        if (!far.length) { timer = setTimeout(step, 5000); return prev; }
+        const x = far[Math.floor(Math.random() * far.length)];
+        const ms = Math.round(Math.abs(x - prev.x) / 14 * 1000);
+        timer = setTimeout(step, ms + 50);
+        return { x, moving: true, dir: x > prev.x ? 1 : -1, ms };
+      });
+    };
+    timer = setTimeout(step, 2500 + Math.random() * 2500);
+    return () => { alive = false; clearTimeout(timer); };
+  }, [plan]);
+  if (!t || where.kind === 'out' || size < 16) return null;
+  const mon = assistantMasmonMon(t.monster);
+  if (!mon) return null;
+  const mark = where.kind === 'stay' ? '🏠' : (where.w && ASSISTANT_MASMON_DOING_MARK[where.w.doing]) || '✨';
+  const show = plan && at;
+  return (
+    <span ref={ref} className="mhm-pet" data-assistant-life-room-masmon-pet={t.monster} data-assistant-life-room-masmon-where={where.kind}
+      data-assistant-life-room-masmon-walk={plan ? `${plan.run[0]}-${plan.run[1]}` : ''} data-assistant-life-room-masmon-moving={show && at.moving ? '1' : '0'}
+      style={{ ...ASSISTANT_MASMON_PET_STYLE, ...(show ? { left: at.x, top: plan.y, width: size, height: size, transition: at.moving ? `left ${at.ms}ms linear` : 'none' } : { left: 0, top: 0, width: 1, height: 1, visibility: 'hidden' }) }} aria-hidden="true">
+      {show && <>
+        <span style={{ display: 'block', width: '100%', height: '100%', transform: at.dir < 0 ? 'scaleX(-1)' : 'none', animation: at.moving ? 'mhmPetHop .5s ease-in-out infinite' : 'none' }}>
+          {typeof DyedMonsterImage === 'function'
+            ? <DyedMonsterImage baseId={t.monster} src={mon.imgUrl} masuColors={t.dye && t.dye.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>
+            : <img src={mon.imgUrl} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>}
+        </span>
+        {!at.moving && <b title={where.kind === 'stay' ? 'るすばん' : undefined} style={{ ...ASSISTANT_MASMON_PET_MARK, fontSize: size < 30 ? 8 : 10 }}>{mark}</b>}
+        <style>{'@keyframes mhmPetHop{0%,100%{translate:0 0}50%{translate:0 -2px}}'}</style>
+      </>}
+    </span>);
+}
+
+// 部屋のシートの「🐾 いま」(どこにいるか)
+const assistantMasmonNowText = (id, life) => {
+  const t = assistantMasmonDuty(id);
+  if (!t) return '';
+  const where = assistantMasmonWhere(id, life);
+  const name = typeof assistantLifeName === 'function' ? assistantLifeName(id) : id;
+  if (where.kind === 'stay') return `${t.nick}は部屋でるすばん中`;
+  if (where.kind === 'out') { const pl = where.w && typeof assistantLifePlaceShow === 'function' ? assistantLifePlaceShow(where.w.place) : ''; return pl ? `${t.nick}は${name}と一緒に${pl}` : `${t.nick}は${name}と一緒にお出かけ中`; }
+  return where.w && where.w.doing === 'sleep' ? `${t.nick}は${name}のそばで眠っている` : `${t.nick}は部屋で${name}のそばにいる`;
+};
 
 const ASSISTANT_MASMON_CSS = `
 .mhm-panel{position:absolute;left:0;right:0;bottom:0;top:5%;display:flex;flex-direction:column;background:linear-gradient(180deg,#1f1640,#0b1020 70%);border-top:2px solid #f9a8d4;border-radius:22px 22px 0 0;padding:12px 14px calc(12px + env(safe-area-inset-bottom));color:#fff}
@@ -66381,14 +66556,22 @@ const ALF_TALK_LINES = Object.freeze({
   sorashido: ['うぉぉぉ！お客さんだぜ・・・！', 'ちばりよー！応援してるぜ笑', 'また来いよ笑'],
   erubin:    ['いらっしゃい。来てくれてありがとう', '{h}さんの家、居心地いいでしょ', '気をつけて帰ってね'],
 });
+// 訪ねた家の台本(2026-11-08 コトバ・ツムギ。docs/progress/assistant-peer/lines/friend-*.txt・注文書 ORDER-FRIEND.md)
+//   greet … {name}(訪ねてきたプレイヤー)を迎える/doing … 部屋でしていることごとの迎え/reply … 返事への答え/sleep … 寝ている部屋の寝言
+const ALF_VISIT_LINES = Object.freeze({"mua": {"greet": ["はじめましてー！ {h}さんのお友だち？", "わ、お客さんだ！ ゆっくりしてってよー✨", "{name}って言うの？ よろしくね♪"], "doing": {"snack": "いま、おやつ食べてたとこー！ いっしょにどう？", "practice": "ちょうど練習してたの！ 見てってよー♪", "training": "モッチーのお世話中だったの！ かわいいでしょ？", "cards": "カード並べてたとこ！ どれがかわいいと思う？", "read": "雑誌見てたの！ コーデ決めてたとこ♪", "idle": "ちょうどヒマしてたの！ ナイスタイミングぢゃん👍"}, "reply": ["ありがとー！ 来てくれて、まぢうれしい♪", "うんうん(●ﾟｪﾟ))ｺｸｺｸ 楽しんでってね！", "そう言ってもらえると、照れるぢゃんｗ"], "sleep": ["…むにゃ…このリボン…かわいー…", "…すぅ…いらっしゃーい…むにゃ…"]}, "kiki": {"greet": ["まあ、お客さまでつね。ようこそいらっしゃいました", "はじめまして。{h}さんのところの、ききでつ", "{name}、どうぞお入りくださいな♪"], "doing": {"snack": "ちょうど、お茶菓子をいただいていたところでつ。おひとついかが？", "practice": "モンヒロビートの練習中でした。ちから全開でいきまつよ♪", "training": "ゴーレムさんのお世話をしていました。立派でしょう？", "cards": "カードを並べていたところでつ。攻撃のカードばかりですね♪", "read": "本を読んでいました。静かな時間は、いいものでつね", "idle": "ぼんやりお茶を飲んでいたところでした。ゆっくりしていってくださいね"}, "reply": ["ありがとうございます。くつろいでくださいね♪", "そう言っていただけると、うれしいでつ", "どうぞ、お茶でもいれましょうか"], "sleep": ["…すぅ…お茶が…さめてしまいまつ…", "…むにゃ…火力は…こちらに…"]}, "momosuke": {"greet": ["わ、お客さん！！ ももの部屋へようこそ♡", "はじめまして！！ {h}さんちの、ももだよ！！", "{name}、来てくれたの！？ うれしい！！"], "doing": {"snack": "おやつタイム中！！ ひと口あげるw", "practice": "いま練習中！！ ももの音、聞いてって♡", "training": "メタルナーみがいてたとこ！！ ぴかぴかでしょ？", "cards": "カード並べてた！！ かわいいのばっかでしょw", "read": "楽譜見てたの！！ 次の曲、どれにしよっかな", "idle": "ちょうどヒマだったの！！ 遊ぼ遊ぼ！！"}, "reply": ["でしょ！？ ももの自慢の部屋だもん♡", "ありがと！！ ゆっくりしてってねw", "えっへん！！ もっとほめていいよw"], "sleep": ["…すぅ…ライブ…まだ終わらない…", "…むにゃ…ぴかぴか…w"]}, "dra": {"greet": ["お、お客さんか。よく来たな", "はじめましてだな。{h}さんのところのドラだ", "{name}か。ゆっくりしていけよ"], "doing": {"snack": "ちょうどおやつ中だ。ひとつ食うか？", "practice": "モンビーの練習してたとこだ。リズムきざむぞ", "training": "グジラの世話してたんだ。でっかいだろ", "cards": "山札を確かめてたとこだ。見ていくか？", "read": "説明書きを読んでたんだ。わかりやすく書いてあるな", "idle": "ぼーっとしてたとこだ。ちょうどよかったな、えへへ"}, "reply": ["そうか、ありがとな。くつろいでいけ", "おでの部屋、気に入ったか？", "まあ、座ってくれ。おやつもあるぞ"], "sleep": ["…ぐぅ…グジラ…まだ食べるのか…", "…すぅ…いらっしゃい…むにゃ…"]}, "atsu": {"greet": ["お、いらっしゃい！ {h}さんの友だちだよね笑", "{name}、来てくれたんだ！ ゆっくりしてって笑", "おっ、お客さん笑 遠慮しないで入って！"], "doing": {"snack": "ちょうどおやつ食べてた笑 一個どう？", "practice": "いま一曲叩いてたとこ笑 {name}も聞いてく？", "training": "ドラゴンの世話してた笑 ちょっと待ってて！", "cards": "デッキ組み直してたとこ笑 見ていく？", "read": "本読んでたら、ちょっと寝そうだった笑 来てくれて助かる！", "idle": "ぼーっとしてた笑 ちょうど話し相手ほしかった！"}, "reply": ["ありがと笑 くつろいでって！", "そう言ってもらえると、うれしい笑", "いいって笑 {h}さんにも伝えとく！"], "sleep": ["……次の一曲、いける……", "……ドラゴン、えらいぞ……( *'ω'*)ノ"]}, "kyuko": {"greet": ["ほい、いらっしゃ〜い。{name}、ようこそだよぉ", "あ、お客さんだぁ。{h}さんの友だちかな？", "ちょうどひと休みしたかったんだぁ。どうぞどうぞ"], "doing": {"snack": "おやつ食べてたとこ〜。一緒にどう？", "practice": "いま練習してたんだぁ。ちょっと聞いてってよぉ", "training": "ニャーの世話してたとこ〜。かわいいでしょ笑", "cards": "新しい組み方、考えてたんだぁ。見る？", "read": "本読んでたとこ〜。いいところで来たねぇ笑", "idle": "ぼーっと音楽聞いてたんだぁ。座っていいよぉ"}, "reply": ["ありがとん笑 ゆっくりしてってねぇ", "そう言ってもらえると、うれしいなぁ", "ほい、どういたしまして〜。{h}さんも喜ぶよぉ"], "sleep": ["……むにゃ……あと一ページ……", "……ニャー、そこはだめだよぉ……"]}, "sorashido": {"greet": ["うぉぉぉ！ お客さんだ！ よく来てくれたな", "{name}、いらっしゃい！ くつろいでくれ笑", "{h}さんの友だちか。ゆっくりしていけよ"], "doing": {"snack": "ちょうどちんすこう食べてたんだ。一緒にどうだ？", "practice": "いま練習してたんだ！ 聞いていくか？", "training": "育成の記録をつけてたとこだ。ちょっと待っててくれ", "cards": "新しい表を作ってたんだぜ・・・！ 見ていくか？", "read": "本を読んでたんだ。いいところで来たな笑", "idle": "考えごとしてたんだ。話し相手ができてうれしいぞ"}, "reply": ["ありがとな！ でーじうれしいぞ笑", "そう言ってもらえると、表を作ったかいがあるな", "気をつかわなくていいぞ。ゆっくりしてくれ"], "sleep": ["……うぉぉ……むにゃ……表が……", "……なんくるないさ〜……すぅ……"]}, "erubin": {"greet": ["いらっしゃい。{name}、来てくれてありがとう", "はじめまして、かな。{h}さんのお友だちだね", "ようこそ。ゆっくりしていってね☺️"], "doing": {"snack": "ちょうどお茶とおやつの時間だったんだ。一緒にどうかな？", "practice": "いま練習してたところだよ。少し聞いていく？", "training": "デュラハンのお世話をしてたんだ。おとなしいでしょ", "cards": "カードの組み方を考えてたんだ。見ていく？", "read": "本を読んでたんだ。静かでいい時間だね", "idle": "窓の外をながめてたんだ。ちょうどよかったよ"}, "reply": ["ありがとう。そう言ってもらえるとうれしいな", "どういたしまして。気をつかわなくていいからね", "うん、{h}さんにも伝えておくね"], "sleep": ["……みんな、元気かな……", "……デュラハン、そこで守って……"]}});
+// フレンドの家へ行ったとき・迎えるときに足す台本(前からの ALF_GO_LINES・ALF_WELCOME_LINES と合わせて選ぶ)
+const ALF_GO_MORE = Object.freeze({"mua": ["{h}さんの家、おしゃれすぎぢゃない！？", "{f}の部屋、見せてもらってもいい？"], "kiki": ["{h}さんのお家、落ち着いたすてきなお部屋でつね", "{f}、おじゃましまつ。お茶をお持ちしました♪"], "momosuke": ["{h}さんちの部屋、かわいいじゃん！！", "{f}、遊びに来たよ！！ 練習見せて♡"], "dra": ["{h}さんの家か。いい部屋だな", "{f}、おじゃまするぞ。おやつ持ってきた"], "atsu": ["{f}、遊びに来た笑 なんかして遊ぼ！", "{h}さんの部屋、いい感じじゃん！ また来たいな笑"], "kyuko": ["{f}、遊びに来たよぉ。何してたの？", "{h}さんの部屋、本がありそうで落ち着くねぇ"], "sorashido": ["{f}、遊びに来たぞ！ 今日はなにする？", "{h}さんの部屋、でーじ落ち着くな笑"], "erubin": ["{f}、遊びに来たよ。元気だったかな？", "{h}さんの部屋、やさしい感じがするね"]});
+const ALF_WELCOME_MORE = Object.freeze({"mua": ["{f}だ！ 来てくれたの、まぢうれしい♪", "あたしの部屋、こっちだよー！ ゆっくりしてってね✨"], "kiki": ["{f}、ようこそ。お茶をおいれしまつね", "遠いところ、ありがとうございまつ。ゆっくりしていってくださいな"], "momosuke": ["{f}だ！！ ももの部屋、案内するね♡", "いらっしゃい！！ おやつ用意してあるよw"], "dra": ["{f}か、よく来たな。ゆっくりしていけ", "おでの部屋はこっちだ。散らかってるけどな"], "atsu": ["いらっしゃい！ 来てくれたの、まじでうれしい笑", "{f}、よく来たじゃん笑 ゆっくりしてって！"], "kyuko": ["いらっしゃ〜い。{f}、待ってたよぉ", "ほい、上がって上がって〜。お茶いれるねぇ"], "sorashido": ["よく来たな！ {f}、待ってたぞ", "いらっしゃい！ ゆっくりしていけよ笑"], "erubin": ["いらっしゃい、{f}。ゆっくりしていってね", "来てくれてうれしいよ。お茶をいれるね"]});
 // 置き手紙の決まった一言(番号は表に残す。0〜11)とお礼(0〜5)
 const ALF_WORD_TEXTS = Object.freeze(['楽しかった！', 'また来るね', 'おじゃましました', 'おやつおいしかった', 'いい部屋だったよ', 'また遊ぼうね',
   'ゆっくりできた', 'ありがとう', 'お話しできてうれしかった', 'みんな元気そうだった', 'また会いたいな', 'お留守のあいだにおじゃましました']);
 const ALF_THANKS_TEXTS = Object.freeze(['来てくれてありがとう！', 'またいつでも来てね', 'うれしかったよ', '今度はこっちから行くね', 'みんな喜んでたよ', 'おつかれさま！']);
 const ALF_DOING_ROOM = Object.freeze({ snack: 'おやつ中', practice: '練習中', training: '育成中', cards: 'カード研究中', walk: '散歩中', idle: 'のんびり中', sleep: 'おやすみ中', read: '読書中' });
-const alfFill = (text, { f = '', h = '', v = '', who = null } = {}) => String(text || '')
+// name … {name} に入れる呼び方を決めて渡すとき(よその家の助手が、訪ねてきたプレイヤーを呼ぶ: 「◯◯さん」)
+const alfFill = (text, { f = '', h = '', v = '', who = null, name = null } = {}) => String(text || '')
   .replace(/\{f\}/g, f).replace(/\{h\}/g, h).replace(/\{v\}/g, v)
-  .replace(/\{name\}/g, () => (typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(who) : 'あなた'));
+  .replace(/\{name\}/g, () => (name != null ? name : typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(who) : 'あなた'));
+const alfPickOne = (arr) => (Array.isArray(arr) && arr.length ? arr[Math.floor(Math.random() * arr.length)] : '');
 const alfTheirLabel = (hostName, aid) => `${hostName}さんの${assistantLifeName(aid)}`;
 // 行った場面(2〜4行)。lines: [{ who, guest, text }]。guest=true は相手の家の助手
 const assistantLifeFriendGoScene = (o, n = 0) => {
@@ -66399,7 +66582,7 @@ const assistantLifeFriendGoScene = (o, n = 0) => {
   const lines = [];
   const t0 = theirs[0];
   const pick = (arr) => arr[(n + mine.length) % arr.length];
-  lines.push({ who: mine[0], text: alfFill(pick(ALF_GO_LINES[mine[0]] || ['おじゃまします']), { f: t0 ? alfTheirLabel(o.name, t0) : `${o.name}さん`, h: o.name, who: mine[0] }) });
+  lines.push({ who: mine[0], text: alfFill(pick([...(ALF_GO_LINES[mine[0]] || ['おじゃまします']), ...(ALF_GO_MORE[mine[0]] || [])]), { f: t0 ? alfTheirLabel(o.name, t0) : `${o.name}さん`, h: o.name, who: mine[0] }) });
   if (t0) lines.push({ who: t0, guest: true, text: alfFill(pick(ALF_REPLY_LINES[t0] || ['いらっしゃい']), { v: mine.map(assistantLifeName).join('と'), who: t0 }) });
   const same = mine.find(id => theirs.includes(id));
   if (same) lines.push({ who: same, text: alfFill(ALF_SAME_LINES[same] || '', { who: same }) });
@@ -66415,7 +66598,7 @@ const assistantLifeFriendComeScene = (c) => {
 };
 const alfComeSceneScript = (c) => (c ? { kind: 'come', title: `🏘 ${c.name}さんの${assistantLifeName(c.aid)}が来た`, host: c.name,
   lines: [{ who: c.aid, guest: true, text: alfFill(ALF_GUEST_LINES[c.aid] || 'おじゃまします', { h: c.name, who: c.aid }) },
-    ...(c.mine ? [{ who: c.mine, text: alfFill(c.mine === c.aid ? ALF_SAME_LINES[c.mine] : ALF_WELCOME_LINES[c.mine], { who: c.mine }) }] : [])] } : null);
+    ...(c.mine ? [{ who: c.mine, text: alfFill(c.mine === c.aid ? ALF_SAME_LINES[c.mine] : alfPickOne([ALF_WELCOME_LINES[c.mine], ...(ALF_WELCOME_MORE[c.mine] || [])].filter(Boolean)), { f: alfTheirLabel(c.name, c.aid), who: c.mine }) }] : [])] } : null);
 
 // ---------- Claude API の場面(kind:'friend_scenes'・1日1回まとめて) ----------
 // 送るのは助手の id の組だけ(フレンドの呼び名・プレイヤーの呼び名・ブリーダーID以外の情報は送らない)。
@@ -66472,7 +66655,7 @@ const alfApiLineOk = (who, t) => {
   let x = String(t || '');
   if (who === 'mua') x = x.replace(/じゃん/g, 'ぢゃん').replace(/まじ/g, 'まぢ').replace(/マジ/g, 'マヂ');
   if (ALF_API_BODY_WORDS.test(x) || /(この|あの|その)子|子たち/.test(x)) return null;
-  if (who === 'atsu') { x = x.trim().replace(/。$/, '！'); if (!/(笑|[！？!?…♪w]|[)）]|[\u3000-\u303f]?[\uff08(][^)）]*[)）]|\p{Extended_Pictographic}\uFE0F?)$/u.test(x)) return null; }
+  if (who === 'atsu') { x = x.trim().replace(/。$/, '！'); if (!/(笑|[！？!?…♪w]|[)）][ノﾉｼ]?|[\u3000-\u303f]?[\uff08(][^)）]*[)）]|\p{Extended_Pictographic}\uFE0F?)$/u.test(x)) return null; }
   // ドラの関西弁(中継役の FRIEND_DRA_KANSAI と同じ。「やろう」「撮る」は通す・2026-11-08 オトズレ3)
   if (who === 'dra' && /ほんま|やで|っとる|っとん|とんだ|やろ(?!う)|あかん|へん[。、！]|ええ(な|で|やん|わ)|(草|くさ)[。！!w]*$/.test(x)) return null;
   if (who === 'kiki' && /(だよ|だね|してよ|じゃん)([。！!？?♪]|$)/.test(x)) return null;
@@ -66571,6 +66754,8 @@ function AlfFriendHouseView({ friend, onClose }) {
   const [done, setDone] = React.useState(null);
   const [noteWarn, setNoteWarn] = React.useState('');
   const [boardOpen, setBoardOpen] = React.useState(false);
+  const [selfName, setSelfName] = React.useState('');
+  React.useEffect(() => { let alive = true; (async () => { try { const n = typeof storeGet === 'function' ? await storeGet('mh_breeder_name', '') : ''; if (alive && typeof n === 'string' && n && n !== '名無しのブリーダー') setSelfName(n.slice(0, 10)); } catch {} })(); return () => { alive = false; }; }, []);
   const [vw, setVw] = React.useState(() => (typeof window !== 'undefined' ? window.innerWidth : 390));
   const [vh, setVh] = React.useState(() => (typeof window !== 'undefined' ? window.innerHeight : 844));
   React.useEffect(() => { const on = () => { setVw(window.innerWidth); setVh(window.innerHeight); }; window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
@@ -66587,8 +66772,16 @@ function AlfFriendHouseView({ friend, onClose }) {
   const pad = 12;
   const houseW = land ? Math.min(560, Math.round(vw * 0.64) - pad * 2) : Math.min(380, vw - pad * 2);
   const lines = (aid) => ALF_TALK_LINES[aid] || ['いらっしゃい', 'ありがとう', 'またね'];
-  const greet = (aid) => { setRoomId(aid); setTalk({ aid, step: 0, text: alfFill(lines(aid)[0], { h: friend.name, who: aid }) }); };
-  const reply = (i) => { if (!talk) return; setTalked(t => [...new Set([...t, talk.aid])]); setTalk({ ...talk, step: 1, mine: ALF_PLAYER_REPLIES[i], text: alfFill(lines(talk.aid)[1 + (i % 2)], { h: friend.name, who: talk.aid }) }); };
+  // よその家の助手が {name} と呼ぶのは、訪ねてきたあなたの表示名(「◯◯さん」)
+  const visitor = `${selfName || 'お客'}さん`;
+  const vl = (aid) => ALF_VISIT_LINES[aid] || { greet: [], doing: {}, reply: [], sleep: [] };
+  const greet = (aid) => {
+    const d = h.r[aid] && h.r[aid].d;
+    const byDoing = vl(aid).doing[d];
+    const text = byDoing && Math.random() < 0.6 ? byDoing : alfPickOne([lines(aid)[0], ...vl(aid).greet]);
+    setRoomId(aid); setTalk({ aid, step: 0, text: alfFill(text, { h: friend.name, who: aid, name: visitor }) });
+  };
+  const reply = (i) => { if (!talk) return; setTalked(t => [...new Set([...t, talk.aid])]); setTalk({ ...talk, step: 1, mine: ALF_PLAYER_REPLIES[i], text: alfFill(alfPickOne([lines(talk.aid)[1 + (i % 2)], ...vl(talk.aid).reply]), { h: friend.name, who: talk.aid, name: visitor }) }); };
   const leave = async (word) => {
     const to = leaving || null;
     const r = await assistantLifeFriendLeaveNote(friend.id, { word, talked, name: friend.name, note: noteText, noteTo: to });
@@ -66615,7 +66808,7 @@ function AlfFriendHouseView({ friend, onClose }) {
     <div className="mhl-hdr flex items-start gap-2" style={{ paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>
       <button type="button" className="h-9 w-8 shrink-0 text-[19px] text-slate-100" aria-label="もどる" data-alf-visit-close onClick={onClose}>←</button>
       {/* 右上は「仲良し度 +10」などの知らせ(44-growth-fx の .mh-gfx-chips)が出る所なので、題は左に寄せて右を空ける */}
-      <div className="min-w-0" style={{ maxWidth: land ? '100%' : '62%' }}>
+      <div className="min-w-0" style={{ maxWidth: land ? '100%' : '48%' }}>
         <p className="mhl-en whitespace-nowrap">VISIT · FRIEND HOUSE</p>
         <p className="truncate text-[17px] font-black text-amber-100" data-alf-visit-title>🏘 {friend.name}さんの家</p>
         <p className="text-[10px] font-bold text-slate-200"><span className="whitespace-nowrap">📷 {alfAgoText(friend.at)} の様子</span>・<span className="whitespace-nowrap">{friend.name}さんが最後に開いたとき</span></p>
@@ -66668,7 +66861,8 @@ function AlfFriendHouseView({ friend, onClose }) {
               <div className="mt-1 grid grid-cols-3 gap-1.5" data-alf-visit-replies>{ALF_PLAYER_REPLIES.map((t, i) => <button key={i} type="button" className="rounded-xl border border-pink-200/50 bg-pink-950/50 px-1 py-2.5 text-[12px] font-black text-pink-50" data-alf-reply={i} onClick={() => reply(i)}>{t}</button>)}</div></>}
           </div>)
           : roomState === 'home' ? <button type="button" className="mhl-btn mt-2 w-full bg-sky-600" data-alf-visit-room={roomId} onClick={() => greet(roomId)}>💬 {assistantLifeName(roomId)}に話しかける</button>
-          : <p className="mt-2 text-[11px] text-slate-300">{roomState === 'out' ? '帰ってきたら話せます。' : '起きているときに話せます。'}</p>}
+          : <>{roomState === 'sleep' && vl(roomId).sleep.length > 0 && <p className="mt-2 rounded-2xl border border-indigo-300/30 bg-indigo-950/60 px-3 py-1.5 text-[12.5px] italic text-indigo-100" data-alf-visit-sleep>💤 {alfFill(vl(roomId).sleep[(roomId.length + (friend.id || '').length) % vl(roomId).sleep.length], { h: friend.name, who: roomId, name: visitor })}</p>}
+            <p className="mt-2 text-[11px] text-slate-300">{roomState === 'out' ? '帰ってきたら話せます。' : '起きているときに話せます。'}</p></>}
         {can === 'ok' && !done && <button type="button" className="mhl-btn mt-2 w-full bg-amber-500 text-slate-950" data-alf-visit-room-note={roomId} onClick={() => { setRoomId(null); setNoteWarn(''); setLeaving(roomId); }}>✉️ {roomState === 'home' ? '置き手紙を残して帰る' : `${assistantLifeName(roomId)}に一言残して帰る`}</button>}
       </div>
     </div>) : null;
@@ -66727,10 +66921,9 @@ const alfVisitBlockedText = (friendId, name, s = ALF_STORE.state) => {
   if (!s.settings.open) return '「🏘 フレンド」の設定で、行き来を切にしています。';
   if (s.settings.muted.includes(friendId)) return 'この家は「来ないようにする」にしています。';
   if (!alfOpenHouses('look').some(f => f.id === friendId)) return `${name || 'このフレンド'}さんが助手ライフを開くと遊びに行けます。`;
-  const can = assistantLifeFriendCanLook(friendId);
-  if (can === 'done') return '今日はこの家にもう遊びに行きました(朝4時に戻ります)。';
-  if (can === 'max') return '今日はもう遊びに行けません(朝4時に戻ります)。';
-  return can === 'ok' ? null : 'いまは遊びに行けません。';
+  // 訪ねて見て回るのは、回数の制限なしでいつでも(2026-11-08 社長「家に遊びに行くのに制限はなしがいい」)。
+  //   1日の上限があるのは、置き手紙(届く一言・ビートP)だけ。それは訪ねた家の中で出す
+  return null;
 };
 // フレンドのプロフィールの入口「🏘 家へ遊びに行く」(2026-11-08 社長)。75-screen-friends が差しこむ。
 //   押すとその人の家(AlfFriendHouseView)を開き、もどるとそのままプロフィールへ戻る。行けないときは押せない形で理由を出す
@@ -66789,7 +66982,7 @@ function AssistantLifeFriendPage({ life }) {
         {!st.out && st.back && !st.back.seen && <div className="flex items-center gap-2" data-alf-now-back>{st.back.ids.map(id => <AlfFace key={id} id={id} size={28}/>)}<p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="whitespace-nowrap">{st.back.ids.map(assistantLifeName).join('・')}</span>が帰ってきた</p><button type="button" className="shrink-0 rounded-xl bg-amber-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="back" onClick={() => openScene('back')}>おかえり！</button></div>}
         {st.came.map((c, i) => <div key={i} className="mt-1 flex items-center gap-2" data-alf-now-come><AlfFace id={c.aid} size={28}/><p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="whitespace-nowrap">{alfTheirLabel(c.name, c.aid)}</span>が遊びに来た</p>{!c.seen ? <button type="button" className="shrink-0 rounded-xl bg-sky-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="come" onClick={() => openScene('come', i)}>▶ 迎える</button> : <span className="shrink-0 text-[10px] text-slate-400">迎えた</span>}</div>)}
         {!st.out && !(st.back && !st.back.seen) && !st.came.length && <p className="text-[11px] text-slate-400">いまは、みんな家にいます。</p>}
-        <p className="mt-1.5 flex flex-wrap gap-x-3 text-[10px] text-slate-300" data-alf-today><span className="whitespace-nowrap">助手が行った {st.go}/{lim.go}</span><span className="whitespace-nowrap">来てくれた {st.come}/{lim.come}</span><span className="whitespace-nowrap">あなたが訪ねた {st.look}/{lim.look}</span><span className="whitespace-nowrap">おみやげ {st.beatP}/{ALF_BEAT_P.dayMax}P</span></p>
+        <p className="mt-1.5 flex flex-wrap gap-x-3 text-[10px] text-slate-300" data-alf-today><span className="whitespace-nowrap">助手が行った {st.go}/{lim.go}</span><span className="whitespace-nowrap">来てくれた {st.come}/{lim.come}</span><span className="whitespace-nowrap">置き手紙 {st.look}/{lim.look}</span><span className="whitespace-nowrap">おみやげ {st.beatP}/{ALF_BEAT_P.dayMax}P</span></p>
       </div>
       <p className={sec}>✉️ 置き手紙</p>
       <div className={card} data-alf-notes>
@@ -67092,13 +67285,20 @@ const cardBeginTurn = (st) => {
   }
 };
 
-// 捨て札からランダムに n 枚をガッツへ(足りなければある分だけ)。選ぶのは持ち主の種(players[p].rng)。マルチの2台で同じ札になる
+// 捨て札からランダムに n 枚をガッツへ(足りなければある分だけ)。
+// ★選ぶ場所は、2台のどちらの端末でも同じに見える値(番・先攻か後攻か・捨て札とガッツの枚数・何枚目か)から決める(2026-11-08 ソランド)。
+//   前は持ち主の種(players[p].rng)で選んでいたが、マルチでは相手の種は試合が終わるまで封をされていて、こちらの端末の種は本物と違う。
+//   そのため相手の端末と違う札がガッツへ移り、2台の捨て札がずれて、届いた手をはね合い、両方が「相手の番」のまま止まった(社長が2回続けて止まった)。
+//   選ぶのは「何番目か」だけなので、相手の捨て札にまだ仮の札が混ざっていても、同じ場所の札が動く。持ち主の種は進めない(山札の切り直しの種はそのまま)
 const cardDiscardToGuts = (st, p, n) => {
   const me = st.players[p];
+  const side = p === st.first ? 'f' : 's';
   let k = 0;
-  let s = Number.isFinite(me.rng) ? me.rng : (st.seed || 1);
-  for (; k < n && me.discard.length; k++) { const r = cardRngNext(s); s = r.s; const i = Math.floor(r.v * me.discard.length); me.guts.push(me.discard.splice(i, 1)[0]); }
-  me.rng = s;
+  for (; k < n && me.discard.length; k++) {
+    const rnd = cardAiSeededRand(`dg|${st.turn}|${side}|${me.discard.length}|${me.guts.length}|${st.players[1 - p].discard.length}|${k}`);
+    const i = Math.min(me.discard.length - 1, Math.floor(rnd() * me.discard.length));
+    me.guts.push(me.discard.splice(i, 1)[0]);
+  }
   return k;
 };
 const cardPayGuts = (st, p, n) => {
@@ -81766,7 +81966,7 @@ const CARD_REPLAY_KEY = 'mh_card_replays_v1';
 //   7 → 8: 純血のプライドのとき、みんな下がれで派生の味方は回避できない(2026-10-27 社長)
 //   8 → 9: サブが「？？？」の子は、純血のスピード・純血のプライドで純血ではない(2026-10-27 社長 案A)
 //   9 → 10: ガッツの段から攻撃に戻る手(backToAttack)を足した(2026-10-27 社長)
-const CARD_REPLAY_RULES = 10; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン / 5: 防御でマイナスされない技に防御の札を出せない / 6: カウンター・歌う / 8: プライドとみんな下がれ / 9: サブ？？？は純血ではない / 10: 攻撃に戻る
+const CARD_REPLAY_RULES = 11; // 11: 捨て札からガッツ(なめろう・霊魂操作)を、2台で同じ札を選ぶ形に(2026-11-08。マルチが止まった直し)/ 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン / 5: 防御でマイナスされない技に防御の札を出せない / 6: カウンター・歌う / 8: プライドとみんな下がれ / 9: サブ？？？は純血ではない / 10: 攻撃に戻る
 const CARD_REPLAY_MAX = 50;               // 取っておく試合の数(お気に入りを含む)
 const CARD_REPLAY_FAV_MAX = 10;           // お気に入りの数
 const CARD_REPLAY_BYTES_MAX = 750000;     // 合わせた大きさの上限(文字数)。超えたら古い試合(お気に入りでない物)から消す
