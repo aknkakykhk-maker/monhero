@@ -37,7 +37,8 @@ const assistantMasmonPlanOf = (id) => {
     const row2 = (t) => ({ monster: t.monster, nick: t.nick, why: t.why, lv: t.lv, grow: t.grow, slot: t.slot, role: t.role, welcome: t.welcome, reason: t.reason || '', dye: { colors: [...assistantMasmonDyeNowOf(st, id, t.slot, t.colors)] } });
     const had = new Set(rows.map(t => t.slot));
     const waiting = d.filter(t => !had.has(t.slot)).map(t => ({ slot: t.slot, welcome: t.welcome, monster: `__slot${t.slot}`, nick: '？？？', unknown: true }));
-    return { ...base, v2: true, team: rows.map(t => ({ ...row2(t), lead: t.slot === 1 })), extra: waiting };
+    const hs = assistantMasmonMineOf(st, id).hero; const hero = hs && rows.some(t => t.slot === hs) ? hs : 1; // 提案で勇者モンを交代していれば、その枠
+    return { ...base, v2: true, team: rows.map(t => ({ ...row2(t), lead: t.slot === hero })), extra: waiting };
   }
   if (!Array.isArray(made) || made.length < 3) return base;
   const row = (t) => ({ monster: t.monster, nick: t.nick, why: t.why, lv: t.lv, grow: t.grow, slot: t.slot, dye: { colors: [...assistantMasmonDyeNowOf(st, id, t.slot, t.colors)] } });
@@ -123,8 +124,30 @@ const normalizeAssistantMasmonPick = (raw) => {
   }
   return out;
 };
+// 提案の記録: [{ day, a, from, text(100字), res('yes'|'some'|'no'|'none'|'fail'), what }] 新しい60件まで
+const ASSISTANT_MASMON_ASK_FROM = Object.freeze(['masmon', 'hero', 'welcome', 'deck']);
+const normalizeAssistantMasmonAsked = (raw) => (Array.isArray(raw) ? raw.slice(-60) : []).filter(x => x && typeof x === 'object' && assistantMasmonBasePlanOf(x.a) && ASSISTANT_MASMON_ASK_FROM.includes(x.from) && typeof x.day === 'string')
+  .map(x => ({ day: x.day.slice(0, 10), a: x.a, from: x.from, text: typeof x.text === 'string' ? x.text.slice(0, 100) : '', res: ['yes', 'some', 'no', 'none', 'fail'].includes(x.res) ? x.res : 'none', what: typeof x.what === 'string' ? x.what.slice(0, 60) : '', counted: x.counted === true }));
+// 提案で決まった所: { [助手]: { names:{ [slot]: [前の名前…] }, parts:{ [slot]: [部位の番号…] }, hero: slot(0=いつもの勇者モン), wish: 迎えたい種類, deck: { face, name, plan, day } } }
+const normalizeAssistantMasmonMine = (raw) => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [aid, m] of Object.entries(raw)) {
+    if (!assistantMasmonBasePlanOf(aid) || !m || typeof m !== 'object') continue;
+    const o = { names: {}, parts: {}, hero: 0, wish: '', deck: null };
+    if (m.names && typeof m.names === 'object') for (const [k, v] of Object.entries(m.names)) { const sl = Number(k); if (Number.isInteger(sl) && sl >= 1 && sl <= 8 && Array.isArray(v)) o.names[sl] = v.filter(n => typeof n === 'string' && n && n.length <= 16).slice(-8); }
+    if (m.parts && typeof m.parts === 'object') for (const [k, v] of Object.entries(m.parts)) { const sl = Number(k); if (Number.isInteger(sl) && sl >= 1 && sl <= 8 && Array.isArray(v)) o.parts[sl] = [...new Set(v.filter(i => Number.isInteger(i) && i >= 0 && i < 8))]; }
+    if (Number.isInteger(m.hero) && m.hero >= 1 && m.hero <= 8) o.hero = m.hero;
+    if (typeof m.wish === 'string' && m.wish.length <= 24) o.wish = m.wish;
+    o.wishSoft = m.wishSoft === true;
+    if (m.deck && typeof m.deck === 'object' && ['oshi', 'like', 'sugao'].includes(m.deck.face)) o.deck = { face: m.deck.face, name: typeof m.deck.name === 'string' ? m.deck.name.slice(0, 12) : '', plan: ['attack', 'guard', 'normal'].includes(m.deck.plan) ? m.deck.plan : '', day: typeof m.deck.day === 'string' ? m.deck.day.slice(0, 10) : '' };
+    out[aid] = o;
+  }
+  return out;
+};
+const assistantMasmonMineOf = (st, aid) => (st && st.mine && st.mine[aid]) || { names: {}, parts: {}, hero: 0, wish: '', deck: null };
 const normalizeAssistantMasmonSave = (raw) => {
-  const out = { v: 1, welcomed: {}, seed: '', made: {}, named: false, noticed: {}, dyes: {}, draw: normalizeAssistantMasmonDraw(null), pick: {}, pickNameDay: '', renamed2: {} };
+  const out = { v: 1, welcomed: {}, seed: '', made: {}, named: false, noticed: {}, dyes: {}, draw: normalizeAssistantMasmonDraw(null), pick: {}, pickNameDay: '', renamed2: {}, asked: [], mine: {} };
   if (raw && typeof raw === 'object') {
     if (typeof raw.seed === 'string' && /^[\w-]{4,60}$/.test(raw.seed)) out.seed = raw.seed;
     out.made = normalizeAssistantMasmonMade(raw.made);
@@ -133,6 +156,8 @@ const normalizeAssistantMasmonSave = (raw) => {
     out.draw = normalizeAssistantMasmonDraw(raw.draw);
     out.pick = normalizeAssistantMasmonPick(raw.pick); // 迎えるその時に選んだマスモン(2026-11-08 社長「迎えるときに決める」)。draw は消さない
     out.pickNameDay = typeof raw.pickNameDay === 'string' ? raw.pickNameDay.slice(0, 10) : '';
+    out.asked = normalizeAssistantMasmonAsked(raw.asked); // プレイヤーの提案の記録(2026-11-08 社長「こっちからアイディア出して誘導」)
+    out.mine = normalizeAssistantMasmonMine(raw.mine); // 提案で決まった所(名前の前の名前・色を変えた部位・勇者モン・迎えたい種類・デッキの希望)
     if (raw.renamed2 && typeof raw.renamed2 === 'object') for (const [k, v] of Object.entries(raw.renamed2)) if (assistantMasmonBasePlanOf(k) && (v === 'new' || v === 'seen')) out.renamed2[k] = v; // 名前を付け直した知らせ(1回だけ) // 引き直し(版の印 v:2)。made・welcomed(前の版)は読めるまま残す // 染め方 v2 からの色(版の印つきで足していく。made の色は書き換えない)
     if (raw.noticed && typeof raw.noticed === 'object') for (const [k, v] of Object.entries(raw.noticed)) if (v === true && assistantMasmonBasePlanOf(k)) out.noticed[k] = true;
   }
@@ -427,7 +452,7 @@ const normalizeAssistantMasmonDyes = (raw) => {
     if (!assistantMasmonBasePlanOf(aid) || !Array.isArray(list)) continue;
     const rows = [];
     for (const e of list.slice(-40)) {
-      if (!e || typeof e !== 'object' || e.d !== ASSISTANT_MASMON_DRAW_V || !['season', 'like'].includes(e.why) || !e.slots || typeof e.slots !== 'object') continue;
+      if (!e || typeof e !== 'object' || e.d !== ASSISTANT_MASMON_DRAW_V || !['season', 'like', 'ask'].includes(e.why) || !e.slots || typeof e.slots !== 'object') continue;
       const slots = {};
       for (const [s, cs] of Object.entries(e.slots)) { const k = Number(s); if (Number.isInteger(k) && k >= 1 && k <= ASSISTANT_MASMON_DRAW_MAX && Array.isArray(cs)) slots[k] = cs.slice(0, 8).map(c => (typeof c === 'string' && ASSISTANT_MASMON_DYE_RE.test(c) ? c : null)); }
       const roles = {}; if (e.roles && typeof e.roles === 'object') for (const [s, r] of Object.entries(e.roles)) if (ASSISTANT_MASMON_ROLE_NAME[r]) roles[Number(s)] = r;
@@ -466,16 +491,18 @@ const assistantMasmonDyeEnsure = (state, day) => {
     const lastFav = (last && last.fav) || state.draw.fav[aid] || sig;
     const mine = assistantMasmonRowsOf(state, aid); // 迎えたマスモンだけ染め直す
     const cur = (t) => assistantMasmonDyeNowOf({ dyes: { [aid]: hist } }, aid, t.slot, t.colors);
+    // プレイヤーの提案で決めた部位は、季節の色・好きな色の染め直しで上書きしない
+    const keepMine = (t, cs) => { const own = assistantMasmonMineOf(state, aid).parts[t.slot] || []; if (!own.length) return cs; const was = cur(t); return cs.map((c, i) => (own.includes(i) ? (was[i] || null) : c)); };
     if (lastFav !== sig) {
       const lead = mine.find(t => t.slot === 1);
-      if (lead) { const rnd = assistantMasmonRng(`${state.seed}|${aid}|like|${sig}`); hist.push({ v: ASSISTANT_MASMON_DYE_V, d: ASSISTANT_MASMON_DRAW_V, why: 'like', at: day, season, fav: sig, roles: { 1: 'main' }, slots: { 1: assistantMasmonDyeMake2(aid, p, lead.monster, 'main', rnd) } }); changed = true; }
+      if (lead) { const rnd = assistantMasmonRng(`${state.seed}|${aid}|like|${sig}`); hist.push({ v: ASSISTANT_MASMON_DYE_V, d: ASSISTANT_MASMON_DRAW_V, why: 'like', at: day, season, fav: sig, roles: { 1: 'main' }, slots: { 1: keepMine(lead, assistantMasmonDyeMake2(aid, p, lead.monster, 'main', rnd)) } }); changed = true; }
     } else if (lastSeason && lastSeason !== season && mine.length) {
       const rnd = assistantMasmonRng(`${state.seed}|${aid}|${season}`);
       const lastSeasonSlot = Number(Object.keys((([...hist].reverse().find(e => e.why === 'season')) || {}).slots || {})[0]);
       const pool = mine.length > 1 ? mine.filter(t => t.slot !== lastSeasonSlot) : mine;
       const t = pool[Math.floor(rnd() * pool.length)];
       const b = [...cur(t)]; b.__season = season;
-      hist.push({ v: ASSISTANT_MASMON_DYE_V, d: ASSISTANT_MASMON_DRAW_V, why: 'season', at: day, season, fav: sig, roles: { [t.slot]: 'season' }, slots: { [t.slot]: assistantMasmonDyeMake2(aid, p, t.monster, 'season', rnd, b) } }); changed = true;
+      hist.push({ v: ASSISTANT_MASMON_DYE_V, d: ASSISTANT_MASMON_DRAW_V, why: 'season', at: day, season, fav: sig, roles: { [t.slot]: 'season' }, slots: { [t.slot]: keepMine(t, assistantMasmonDyeMake2(aid, p, t.monster, 'season', rnd, b)) } }); changed = true;
     }
     if (hist.length > 40) hist.splice(0, hist.length - 40);
     if (hist.length) dyes[aid] = hist;
@@ -543,7 +570,7 @@ const ASSISTANT_MASMON_PICK_REASON = Object.freeze({
   gift: 'いろいろ贈ってもらったお礼に、好きなモンスターを',
   mood_happy: 'ごきげんな日に、好きなモンスターを', mood_lonely: 'さみしくて、そばにいてくれそうなモンスターを', mood_restless: 'そわそわして、いっしょに動けるモンスターを',
   mood_sulky: 'ちょっとすねて、いつもと違うモンスターを', mood_sleepy: 'ねむくて、のんびりしたモンスターを', mood_eager: 'やる気が出て、強そうなモンスターを',
-  open: '仲良くなって、意外な好みを見せたくて', like: '前から好きだったモンスターだから', lineage: '好きなモンスターの仲間だから', balance: '編成の釣り合いを考えて',
+  open: '仲良くなって、意外な好みを見せたくて', wish: 'あなたが「迎えてみたら？」と言っていたから', like: '前から好きだったモンスターだから', lineage: '好きなモンスターの仲間だから', balance: '編成の釣り合いを考えて',
 });
 const assistantMasmonPickContext = (aid, bondLv) => {
   const ctx = { lv: Number.isFinite(bondLv) ? bondLv : 1, mood: null, counts: {}, gifts: 0 };
@@ -575,6 +602,7 @@ const assistantMasmonChooseAt = (aid, slot, have, ctx, seed, day) => {
     if (mt && ((mt === 'like' && c.src === 'like') || (mt === 'rest' && c.src !== 'like') || tags.includes(mt))) { sc += 1.5; why[`mood_${ctx.mood}`] = 1.5; }
     if (ctx.gifts > 0 && c.src === 'like') { const v = Math.min(2, ctx.gifts * 0.4); sc += v; why.gift = v; }
     if (ctx.lv >= 9 && c.src !== 'like') { sc += 1; why.open = 1; }
+    if (ctx.wish && ctx.wish === m) { sc += ctx.wishBoost || 6; why.wish = 9; } // プレイヤーが「この種類を迎えてみたら?」と言ったもの
     const l = assistantMasmonLineage(m); if (l && (linCount[l] || 0) >= 2) sc *= 0.4;
     sc *= 0.6 + 0.8 * rnd();
     if (!best || sc > best.sc) best = { c, sc, why };
@@ -601,6 +629,7 @@ const assistantMasmonWelcomeDue = async (aid, bondLv) => {
   if (!due.length) return [];
   const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : new Date().toISOString().slice(0, 10);
   const ctx = assistantMasmonPickContext(aid, bondLv);
+  const mine0 = assistantMasmonMineOf(st, aid); if (mine0.wish) { ctx.wish = mine0.wish; ctx.wishBoost = mine0.wishSoft ? 3 : 6; }
   const have = assistantMasmonRowsOf(st, aid);
   const picked = {};
   for (const t of due) { const r = assistantMasmonChooseAt(aid, t.slot, [...have, ...Object.values(picked)], ctx, st.seed, day); if (r) picked[t.slot] = r; }
@@ -609,7 +638,9 @@ const assistantMasmonWelcomeDue = async (aid, bondLv) => {
   const cur = ASSISTANT_MASMON_STORE.state;
   const mine = { ...((cur.pick && cur.pick[aid]) || {}) };
   for (const r of list) if (!mine[r.slot]) mine[r.slot] = r; // すでにある枠は書き換えない
-  const next = { ...cur, pick: { ...(cur.pick || {}), [aid]: mine } };
+  // 希望の種類を迎えたら、希望は消す
+  const m0 = assistantMasmonMineOf(cur, aid); const gotWish = m0.wish && list.some(r => r.monster === m0.wish);
+  const next = { ...cur, pick: { ...(cur.pick || {}), [aid]: mine }, ...(gotWish ? { mine: { ...(cur.mine || {}), [aid]: { ...m0, wish: '' } } } : {}) };
   ASSISTANT_MASMON_STORE.set(next);
   try { if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false); } catch (_) {}
   const last = list[list.length - 1];
@@ -739,6 +770,183 @@ const assistantLifeCardMaterial = (id) => {
     return { core: core || null, likes, likeLineages, friendLv, mood };
   } catch (_) { return null; }
 };
+// ---------- 助手に「提案する」(2026-11-08 社長「こっちからアイディア出して誘導できるように」 Q1B・Q2C・Q3A・Q4・Q5A) ----------
+// プレイヤーが自由に書いた提案を AI(assistant-chat の kind:'masmon_suggest')が読み取り、ゲームが好き嫌いと仲良し度で「受ける・少し変える・断る」を決めて当てる。
+//   読み取った中身は、送った候補(色・部位・種類・枠・デッキ)の中に丸めてある。顔まわりの部位は染めない。苦手なモンスターは迎えない(Lv10 以上なら「今回だけ」)
+//   受けてもらえるのは助手1人に1日3回(断られた・読み取れなかった・つながらなかった分は数えない)。どれも「前に戻してもらう」ができる
+//   保存は asked(提案の記録)・mine(提案で決まった所)を足すだけ。色は dyes に why:'ask' で足す(季節の染め直しはプレイヤーが決めた部位を上書きしない)
+const ASSISTANT_MASMON_ASK_PER_DAY = 3;
+const ASSISTANT_MASMON_ASK_HINT = Object.freeze({
+  masmon: '名前や色について、思ったことを書いてみてください(例: 体をオレンジにしてみたら？/名前を「ひだまり」にしない？)',
+  hero: '勇者モンについて書いてみてください(例: 勇者モンはミーアにしてみたら？)',
+  welcome: '次に迎えてほしいマスモンを書いてみてください(例: 次はプラントを迎えてみたら？)',
+  deck: 'MFバトルカードのデッキについて書いてみてください(例: 推しのデッキは守りで「まったり作戦」にしたら？)',
+});
+const ASSISTANT_MASMON_DECK_FACE = Object.freeze({ oshi: '推しのデッキ', like: '好きのデッキ', sugao: '素顔のデッキ' });
+const ASSISTANT_MASMON_DECK_PLAN = Object.freeze({ attack: '攻め', guard: '守り', normal: 'ふつう' });
+const _assistantMasmonBondNow = {}; // シートを開いたときの仲良し度(提案の受け方に使う)
+const assistantMasmonSave = (next) => { ASSISTANT_MASMON_STORE.set(next); try { if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false); } catch (_) {} };
+const assistantMasmonToday = () => (typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : new Date().toISOString().slice(0, 10));
+const assistantMasmonAskUsed = (aid, st = ASSISTANT_MASMON_STORE.state) => { const d = assistantMasmonToday(); return (st.asked || []).filter(x => x.a === aid && x.day === d && x.counted).length; };
+const assistantMasmonAskOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonSuggest === true && typeof ASSISTANT_CHAT_URL !== 'undefined' && typeof SB_HEADERS !== 'undefined';
+const assistantMasmonColorIds = () => (typeof MASU_COLOR_LABELS !== 'undefined' ? Object.keys(MASU_COLOR_LABELS) : []);
+// AI に渡す材料(名前・メモなどプレイヤーのことは入れない)
+const assistantMasmonAskCtx = (aid, from, t, lv) => {
+  const st = ASSISTANT_MASMON_STORE.state, p = assistantMasmonBasePlanOf(aid);
+  const rows = assistantMasmonRowsOf(st, aid);
+  const monName = (m) => (assistantMasmonMon(m) || {}).name || m;
+  const ctx = { lv, colors: [], fav: (p.favColors || []).map(x => assistantMasmonColorName(x.color)), dislike: [], cands: [], team: rows.map(r => ({ slot: r.slot, nick: r.nick, mon: monName(r.monster) })), decks: Object.entries(ASSISTANT_MASMON_DECK_FACE).map(([face, name]) => ({ face, name })) };
+  for (const x of p.dislikeMon || []) ctx.dislike.push(x.monster ? monName(x.monster) : `${assistantMasmonLineageName(x.lineage) || x.lineage}`);
+  if (from === 'masmon' && t) {
+    const n = assistantMasmonRegions(t.monster) || 3;
+    const now = assistantMasmonDyeNowOf(st, aid, t.slot, (rows.find(r => r.slot === t.slot) || {}).colors || []);
+    ctx.mon = { slot: t.slot, name: monName(t.monster), nick: t.nick, parts: Array.from({ length: n }, (_, i) => { const r = assistantMasmonPartRule(t.monster, i); return r.keep ? `${r.name}(染めない)` : r.name; }), now: Array.from({ length: n }, (_, i) => (now[i] ? assistantMasmonColorName(String(now[i]).split('@')[0]) : '元の色')) };
+    ctx.colors = assistantMasmonColorIds().map(id => ({ id, label: assistantMasmonColorName(id) }));
+  }
+  if (from === 'welcome') {
+    const pool = assistantMasmonDrawPool(aid, p); const have = new Set(rows.map(r => r.monster));
+    const bad = (p.dislikeMon || []).map(x => x.monster).filter(Boolean);
+    ctx.cands = [...pool.likes, ...pool.more, ...pool.rest].map(x => x.monster).concat(bad).filter((m, i, a) => !have.has(m) && a.indexOf(m) === i && assistantMasmonMon(m)).map(m => ({ id: m, name: monName(m) }));
+  }
+  return ctx;
+};
+// 受け方(Q3A): 好きなもの → 受ける/どちらでもない → 仲良し度 Lv5 以上は受ける・それ未満は少し変える/苦手 → 断る(Lv10 以上なら今回だけ受ける)
+const assistantMasmonAskJudge = (aid, r, lv) => {
+  const p = assistantMasmonBasePlanOf(aid), H = ASSISTANT_MASMON_DYE_HABIT[aid] || ASSISTANT_MASMON_DYE_HABIT.mua;
+  let taste = 'mid';
+  if (r.kind === 'color') {
+    const fav = new Set([...(p.favColors || []).map(x => assistantMasmonBaseOf(x.color)), ...(H.extra || []).map(assistantMasmonBaseOf)]);
+    const avoid = new Set((H.avoid || []).flatMap(c => [c, assistantMasmonBaseOf(c)]));
+    const ts = r.colors.map(x => (avoid.has(x.color) || avoid.has(assistantMasmonBaseOf(x.color)) ? 'hate' : fav.has(assistantMasmonBaseOf(x.color)) ? 'like' : 'mid'));
+    taste = ts.includes('hate') ? 'hate' : ts.every(x => x === 'like') ? 'like' : 'mid';
+  } else if (r.kind === 'welcome') {
+    const lin = assistantMasmonLineage(r.monster);
+    const bad = (p.dislikeMon || []).some(x => x.monster === r.monster || (x.lineage && x.lineage === lin) || (x.monster && lin && assistantMasmonLineage(x.monster) === lin));
+    const good = (p.likeMon || []).some(x => x.monster === r.monster || (x.lineage && x.lineage === lin)) || (p.team || []).some(x => x.monster === r.monster);
+    taste = bad ? 'hate' : good ? 'like' : 'mid';
+  } else if (r.kind === 'hero') {
+    const row = assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, aid).find(x => x.slot === r.slot);
+    taste = row && ((p.likeMon || []).some(x => x.monster === row.monster) || (p.team || []).some(x => x.monster === row.monster)) ? 'like' : 'mid';
+  }
+  if (taste === 'like') return 'yes';
+  if (taste === 'hate') return lv >= 10 ? 'yes' : 'no';
+  return lv >= 5 ? 'yes' : 'some';
+};
+// 当てる。{ changed, what, before, after } を返す(変えなかったら changed:false)
+const assistantMasmonAskApply = (aid, r, outcome, t) => {
+  const st = ASSISTANT_MASMON_STORE.state, day = assistantMasmonToday();
+  const mine = { ...assistantMasmonMineOf(st, aid) }; mine.names = { ...mine.names }; mine.parts = { ...mine.parts };
+  const withMine = (next) => ({ ...next, mine: { ...(next.mine || {}), [aid]: mine } });
+  const monName = (m) => (assistantMasmonMon(m) || {}).name || m;
+  if (outcome === 'no') return { changed: false, what: '' };
+  if (r.kind === 'color' && t) {
+    const p = assistantMasmonBasePlanOf(aid), H = ASSISTANT_MASMON_DYE_HABIT[aid] || ASSISTANT_MASMON_DYE_HABIT.mua;
+    const before = [...assistantMasmonDyeNowOf(st, aid, t.slot, (assistantMasmonRowsOf(st, aid).find(x => x.slot === t.slot) || {}).colors || [])];
+    const n = assistantMasmonRegions(t.monster) || 3; while (before.length < n) before.push(null);
+    const want = (outcome === 'some' ? r.colors.slice(0, 1) : r.colors).map(x => ({ x, p: assistantMasmonPartRule(t.monster, x.part) })).filter(y => !y.p.keep);
+    if (!want.length) return { changed: false, what: '' };
+    const a = Math.round((H.alpha[0] + H.alpha[1]) / 2);
+    const plan = want.map(({ x, p: pr }) => ({ p: pr, c: assistantMasmonBaseOf(x.color), tone: /_light$/.test(x.color) ? 'light' : 'base', a: Math.max(a, 60) }));
+    const after = [...before];
+    for (const y of assistantMasmonDyeLimit(plan, 'main')) after[y.p.i] = y.a >= 100 ? y.id : `${y.id}@${y.a}`;
+    void p;
+    const hist = [...((st.dyes && st.dyes[aid]) || []), { v: ASSISTANT_MASMON_DYE_V, d: ASSISTANT_MASMON_DRAW_V, why: 'ask', at: day, season: assistantMasmonSeasonKey(day), fav: assistantMasmonFavSig(assistantMasmonBasePlanOf(aid)), roles: {}, slots: { [t.slot]: after } }];
+    mine.parts[t.slot] = [...new Set([...(mine.parts[t.slot] || []), ...want.map(y => y.p.i)])];
+    assistantMasmonSave(withMine({ ...st, dyes: { ...(st.dyes || {}), [aid]: hist.slice(-40) } }));
+    return { changed: true, what: want.map(y => `${y.p.name}を${assistantMasmonColorName(y.x.color)}`).join('・'), before, after, t };
+  }
+  if (r.kind === 'name' && t && outcome === 'yes') {
+    const rows = assistantMasmonRowsOf(st, aid), row = rows.find(x => x.slot === t.slot);
+    if (!row || row.nick === r.name || rows.some(x => x.nick === r.name)) return { changed: false, what: '' };
+    mine.names[t.slot] = [...(mine.names[t.slot] || []), row.nick].slice(-8);
+    const next = assistantMasmonSetNick(st, aid, t.slot, r.name);
+    assistantMasmonSave(withMine(next));
+    return { changed: true, what: `名前を「${r.name}」に` };
+  }
+  if (r.kind === 'welcome') {
+    if (assistantMasmonRowsOf(st, aid).some(x => x.monster === r.monster)) return { changed: false, what: '' };
+    mine.wish = r.monster; mine.wishSoft = outcome === 'some';
+    assistantMasmonSave(withMine(st));
+    return { changed: true, what: `次に${monName(r.monster)}を迎えたい` };
+  }
+  if (r.kind === 'hero' && outcome === 'yes') {
+    const row = assistantMasmonRowsOf(st, aid).find(x => x.slot === r.slot);
+    if (!row) return { changed: false, what: '' };
+    mine.hero = r.slot === 1 ? 0 : r.slot;
+    assistantMasmonSave(withMine(st));
+    return { changed: true, what: `勇者モンを${row.nick}に` };
+  }
+  if (r.kind === 'deck') {
+    mine.deck = { face: r.face, name: outcome === 'some' ? '' : r.deckName, plan: r.plan, day };
+    if (!mine.deck.name && !mine.deck.plan) return { changed: false, what: '' };
+    assistantMasmonSave(withMine(st));
+    return { changed: true, what: `${ASSISTANT_MASMON_DECK_FACE[r.face]}を${[mine.deck.plan && ASSISTANT_MASMON_DECK_PLAN[mine.deck.plan], mine.deck.name && `「${mine.deck.name}」`].filter(Boolean).join('の')}に` };
+  }
+  return { changed: false, what: '' };
+};
+// 名前を書きかえる(迎えた枠は pick、そうでなければ draw の行)
+const assistantMasmonSetNick = (st, aid, slot, nick) => {
+  const pk = st.pick && st.pick[aid] && st.pick[aid][slot];
+  if (pk) return { ...st, pick: { ...st.pick, [aid]: { ...st.pick[aid], [slot]: { ...pk, nick, ai: true } } } };
+  const made = (st.draw.made[aid] || []).map(x => (x.slot === slot ? { ...x, nick, ai: true } : x));
+  return { ...st, draw: { ...st.draw, made: { ...st.draw.made, [aid]: made } } };
+};
+// 提案を送る → { res: 'yes'|'some'|'no'|'none'|'fail'|'limit', line(助手の返事), note(ゲームの1行), what, before, after, t }
+let _assistantMasmonAskBusy = false;
+const assistantMasmonAsk = async (aid, from, text, t = null) => {
+  const body = String(text || '').replace(/[\n\r]/g, ' ').trim().slice(0, 100);
+  if (!body || _assistantMasmonAskBusy) return null;
+  if (assistantMasmonAskUsed(aid) >= ASSISTANT_MASMON_ASK_PER_DAY) return { res: 'limit', note: `今日は${ASSISTANT_MASMON_ASK_PER_DAY}回受けてもらいました。また明日、提案してみてください` };
+  const lv = Number.isFinite(_assistantMasmonBondNow[aid]) ? _assistantMasmonBondNow[aid] : 1;
+  const record = (res, what = '', counted = false) => { const c = ASSISTANT_MASMON_STORE.state; assistantMasmonSave({ ...c, asked: [...(c.asked || []), { day: assistantMasmonToday(), a: aid, from, text: body, res, what, counted }].slice(-60) }); };
+  let bid = null; try { bid = typeof ensureBreederId === 'function' ? await ensureBreederId() : null; } catch (_) { bid = null; }
+  if (!bid || !assistantMasmonAskOn()) { record('fail'); return { res: 'fail', note: 'いまは返事ができませんでした。少し時間をおいて試してみてください' }; }
+  _assistantMasmonAskBusy = true;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 20000);
+    let res = null;
+    try { const r = await fetch(ASSISTANT_CHAT_URL, { method: 'POST', headers: SB_HEADERS, signal: controller.signal, body: JSON.stringify({ kind: 'masmon_suggest', breederId: bid, a: aid, from, text: body, ctx: assistantMasmonAskCtx(aid, from, t, lv) }) }); res = r.ok ? await r.json() : null; } finally { clearTimeout(timer); }
+    if (!res || res.ok !== true || !res.result) { record('fail'); return { res: 'fail', note: res && res.kind === 'tired' ? '今日はもう返事ができないみたいです。また明日、提案してみてください' : 'いまは返事ができませんでした。少し時間をおいて試してみてください' }; }
+    const r = res.result;
+    // 開いた所と違うものは当てない(例: 勇者モンの所から色を言われた)。くわしい画面からは名前と色だけ
+    const fits = { masmon: ['name', 'color'], hero: ['hero'], welcome: ['welcome'], deck: ['deck'] }[from] || [];
+    if (r.kind === 'none' || !fits.includes(r.kind)) { record('none'); return { res: 'none', note: from === 'masmon' ? 'うまく読み取れませんでした。名前か色について、どう変えてほしいかを具体的に書いてみてください' : 'うまく読み取れませんでした。どう変えてほしいかを、もう少し具体的に書いてみてください' }; }
+    const outcome = assistantMasmonAskJudge(aid, r, lv);
+    const done = assistantMasmonAskApply(aid, r, outcome, t);
+    const res2 = outcome === 'no' ? 'no' : done.changed ? outcome : 'some';
+    record(res2, done.what || '', done.changed);
+    const line = outcome === 'no' ? r.replies.no : done.changed ? (outcome === 'yes' ? r.replies.yes : r.replies.some) : r.replies.some;
+    return { res: res2, line, what: done.what, before: done.before, after: done.after, t: done.t, note: done.changed ? '' : (outcome === 'no' ? '断られても、今日の回数は減りません' : '今回は考えておく、とのことでした(回数は減りません)') };
+  } catch (_) { record('fail'); return { res: 'fail', note: 'いまは返事ができませんでした。少し時間をおいて試してみてください' }; } finally { _assistantMasmonAskBusy = false; }
+};
+// 前に戻してもらう(AI は使わない・回数は減らない)
+const assistantMasmonUndoColor = (aid, slot) => {
+  const log = assistantMasmonDyeLog(aid, slot)[0];
+  if (!log || log.why !== 'ask') return false;
+  const st = ASSISTANT_MASMON_STORE.state, day = assistantMasmonToday();
+  const hist = [...((st.dyes && st.dyes[aid]) || []), { v: ASSISTANT_MASMON_DYE_V, d: ASSISTANT_MASMON_DRAW_V, why: 'ask', at: day, season: assistantMasmonSeasonKey(day), fav: assistantMasmonFavSig(assistantMasmonBasePlanOf(aid)), roles: {}, slots: { [slot]: [...log.before] } }];
+  const m = { ...assistantMasmonMineOf(st, aid) }; m.parts = { ...m.parts };
+  const back = assistantMasmonDyeLog(aid, slot); if (!back.slice(1).some(e => e.why === 'ask')) delete m.parts[slot]; // ひとつ前もプレイヤーの色でなければ、季節の色を差してよい部位に戻す
+  assistantMasmonSave({ ...st, dyes: { ...(st.dyes || {}), [aid]: hist.slice(-40) }, mine: { ...(st.mine || {}), [aid]: m } });
+  return true;
+};
+const assistantMasmonUndoName = (aid, slot) => {
+  const st = ASSISTANT_MASMON_STORE.state, m = { ...assistantMasmonMineOf(st, aid) }; m.names = { ...m.names };
+  const prev = [...(m.names[slot] || [])]; const nick = prev.pop();
+  if (!nick) return false;
+  m.names[slot] = prev;
+  assistantMasmonSave({ ...assistantMasmonSetNick(st, aid, slot, nick), mine: { ...(st.mine || {}), [aid]: m } });
+  return true;
+};
+const assistantMasmonUndoMine = (aid, key) => {
+  const st = ASSISTANT_MASMON_STORE.state, m = { ...assistantMasmonMineOf(st, aid) };
+  if (key === 'hero') m.hero = 0; else if (key === 'wish') { m.wish = ''; m.wishSoft = false; } else if (key === 'deck') m.deck = null; else return false;
+  assistantMasmonSave({ ...st, mine: { ...(st.mine || {}), [aid]: m } });
+  return true;
+};
+// カード部(推し・好き・素顔のデッキ)が読む口: プレイヤーがデッキに提案して受けてもらった希望 { face, name, plan, day } か null。読むだけ
+const assistantLifeDeckWish = (id) => { try { const d = assistantMasmonMineOf(ASSISTANT_MASMON_STORE.state, id).deck; return d ? { ...d } : null; } catch (_) { return null; } };
 // フレンドの家の控えに写す口(オトズレ3): その人のマスモン [{ monster, nick, colors, lead }](先頭が先・編成3体+迎えた控え)
 const assistantLifeMasmonTeamOf = (id) => {
   try {
@@ -913,7 +1121,9 @@ function AssistantMasmonWaitCard({ t, land = false, small = false }) {
 // 編成タブ(引き直しのあと・2026-11-08 社長 Q4A): モンヒロバトルと同じ考え方。8体の編成から勇者モンを1体連れて行き、道中で3体を仲間にして4体で戦う
 //   勇者モン(1体目)と、その理由のひとこと/編成の8枠(まだの枠は影と🔒・迎える仲良し度)/道中で仲間にしやすい3体(勇者モン以外で Lv の高い順)
 const assistantMasmonAllies = (team) => [...team].filter(t => !t.lead).sort((a, b) => (b.lv - a.lv) || (a.slot - b.slot)).slice(0, 3);
-function AssistantMasmonFormation({ who, team, waiting, land = false, onOpen }) {
+function AssistantMasmonFormation({ who, team, waiting, land = false, onOpen, onAsk = null }) {
+  const st0 = useAssistantMasmonSave();
+  const heroMine = assistantMasmonMineOf(st0, who.id).hero;
   const lead = team.find(t => t.lead) || team[0];
   const allies = assistantMasmonAllies(team);
   const slots = [...team.map(t => ({ t, ok: true })), ...waiting.map(t => ({ t, ok: false }))].sort((a, b) => (a.t.slot || 0) - (b.t.slot || 0)).slice(0, ASSISTANT_MASMON_DRAW_MAX);
@@ -956,11 +1166,77 @@ function AssistantMasmonFormation({ who, team, waiting, land = false, onOpen }) 
     </div>);
   return (<>
     <div className={`grid gap-2 ${land ? 'grid-cols-2' : 'grid-cols-1'}`}>
-      <div className="flex flex-col gap-2">{heroCard}{allyCard}</div>
+      <div className="flex flex-col gap-2">{heroCard}
+        {onAsk && assistantMasmonAskOn() && <div className="flex flex-wrap items-center gap-2" data-assistant-masmon-hero-ask>
+          <button type="button" className="mhl-btn px-3 text-[11.5px]" style={{ background: 'linear-gradient(90deg,#f472b6,#fb923c)' }} onClick={() => onAsk('hero')} data-assistant-masmon-ask-open="hero">💡 勇者モンについて提案する</button>
+          {heroMine > 0 && <button type="button" className="mhl-btn bg-slate-700 px-3 text-[11px]" onClick={() => assistantMasmonUndoMine(who.id, 'hero')} data-assistant-masmon-undo="hero">いつもの勇者モンに戻してもらう</button>}
+        </div>}
+        {allyCard}</div>
       {formCard}
     </div>
     <p className="mt-2 text-[10.5px] font-bold leading-snug text-slate-400" style={{ wordBreak: 'auto-phrase' }}>⚔ モンヒロバトルと同じく、8体の編成から勇者モンを1体連れて行き、道中で3体を仲間にして4体で戦います。編成は{who.name}が決めています。仲良し度が Lv2 上がるごとに、新しいマスモンを迎えます。</p>
   </>);
+}
+
+// デッキのタブの下: 「デッキに提案する」と、受けてもらった希望(カード部の口 assistantLifeDeckWish が読む)
+function AssistantMasmonDeckAsk({ who, onAsk }) {
+  const st = useAssistantMasmonSave();
+  if (!assistantMasmonAskOn()) return null;
+  const d = assistantMasmonMineOf(st, who.id).deck;
+  return (
+    <div className="mhm-card mt-2" data-assistant-masmon-deck-ask>
+      <button type="button" className="mhl-btn px-3 text-[11.5px]" style={{ background: 'linear-gradient(90deg,#f472b6,#fb923c)' }} onClick={onAsk} data-assistant-masmon-ask-open="deck">💡 デッキに提案する</button>
+      {d && <p className="mt-1 text-[10.5px] font-bold text-sky-200">あなたの提案: {ASSISTANT_MASMON_DECK_FACE[d.face]}{d.plan ? `・${ASSISTANT_MASMON_DECK_PLAN[d.plan]}` : ''}{d.name ? `・「${d.name}」` : ''}(次に組み直すときに使います) <button type="button" className="ml-1 underline" onClick={() => assistantMasmonUndoMine(who.id, 'deck')} data-assistant-masmon-undo="deck">取り消す</button></p>}
+    </div>);
+}
+// 提案のシート(自由に書いて送る → 助手の返事・変わった所)。印 assistantMasmonSuggest が偽のときは開くボタン自体を出さない
+function AssistantMasmonAskSheet({ who, from, t = null, land = false, onClose }) {
+  const [text, setText] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const [out, setOut] = React.useState(null);
+  useAssistantMasmonSave();
+  const left = Math.max(0, ASSISTANT_MASMON_ASK_PER_DAY - assistantMasmonAskUsed(who.id));
+  const send = async () => { if (busy || !text.trim()) return; setBusy(true); try { const r = await assistantMasmonAsk(who.id, from, text, t); setOut(r); if (r && (r.res === 'yes' || r.res === 'some')) setText(''); } finally { setBusy(false); } };
+  const title = from === 'masmon' && t ? `${t.nick}について` : from === 'hero' ? '勇者モンについて' : from === 'welcome' ? '次に迎えるマスモンについて' : 'デッキについて';
+  return (
+    <div className="absolute inset-0 grid place-items-center" style={{ zIndex: 36 }} data-assistant-masmon-ask={from}>
+      <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/75" onClick={onClose}/>
+      <div className={`mhm-card relative mx-3 ${land ? 'w-[min(94%,640px)]' : 'w-[min(94%,420px)]'}`} style={{ background: 'linear-gradient(180deg,#2a1d55,#0b1020)', borderColor: '#f9a8d4', maxHeight: '92%', overflowY: 'auto' }}>
+        <p className="mhl-en">SUGGEST</p>
+        <p className="text-[16px] font-black text-amber-200">💡 {who.name}に提案する</p>
+        <p className="text-[11px] font-bold text-slate-300">{title}</p>
+        <p className="mt-1.5 text-[10.5px] font-bold leading-snug text-slate-400" style={{ wordBreak: 'auto-phrase' }}>{ASSISTANT_MASMON_ASK_HINT[from]}</p>
+        <textarea className="mt-1.5 w-full rounded-xl border border-white/20 bg-slate-950/70 p-2 text-[13px] font-bold text-white" rows={land ? 2 : 3} maxLength={100} value={text} onChange={e => setText(e.target.value)} placeholder="ここに書く(100字まで)" data-assistant-masmon-ask-text/>
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <p className="text-[10.5px] font-bold text-sky-200" data-assistant-masmon-ask-left>今日あと {left}回 受けてもらえます</p>
+          <button type="button" className="mhl-btn shrink-0 px-4" style={{ background: 'linear-gradient(90deg,#f472b6,#fb923c)', opacity: busy || !text.trim() || !left ? 0.5 : 1 }} disabled={busy || !text.trim() || !left} onClick={send} data-assistant-masmon-ask-send>{busy ? '考え中…' : '伝える'}</button>
+        </div>
+        {out && (
+          <div className="mt-2" data-assistant-masmon-ask-result={out.res}>
+            {out.line && <div className="flex items-start gap-2 text-left">
+              {typeof AssistantFace === 'function' && <span className="shrink-0"><AssistantFace who={who} size={38} accent={who.accent}/></span>}
+              <p className="rounded-xl bg-white px-2.5 py-1.5 text-[12px] font-bold leading-snug text-slate-800" style={{ wordBreak: 'auto-phrase' }} data-assistant-masmon-ask-line>{out.line}</p>
+            </div>}
+            {out.what && <p className="mt-1 text-[11px] font-black text-amber-200" data-assistant-masmon-ask-what>✅ {out.what}</p>}
+            {out.before && out.t && <div className="mt-1 flex items-center justify-center gap-2">
+              <div className="mhm-stage"><AssistantMasmonPic t={{ ...out.t, dye: { colors: out.before } }} size={land ? 70 : 84}/></div><span className="text-[18px] text-slate-300">→</span><div className="mhm-stage"><AssistantMasmonPic t={{ ...out.t, dye: { colors: out.after } }} size={land ? 70 : 84}/></div>
+            </div>}
+            {out.note && <p className="mt-1 text-[10.5px] font-bold leading-snug text-slate-300" style={{ wordBreak: 'auto-phrase' }}>{out.note}</p>}
+          </div>)}
+        <button type="button" className="mhl-btn mt-2 w-full bg-slate-700" data-mhl-sheet-close onClick={onClose}>閉じる</button>
+      </div>
+    </div>);
+}
+// 「次に迎えてほしい」の1行(まだの枠があるときだけ)
+function AssistantMasmonWishRow({ who, onAsk }) {
+  const st = useAssistantMasmonSave();
+  if (!assistantMasmonAskOn()) return null;
+  const wish = assistantMasmonMineOf(st, who.id).wish;
+  return (
+    <div className="mhm-card mt-2 flex flex-wrap items-center gap-2" data-assistant-masmon-wish>
+      <button type="button" className="mhl-btn px-3 text-[11.5px]" style={{ background: 'linear-gradient(90deg,#f472b6,#fb923c)' }} onClick={() => onAsk('welcome')} data-assistant-masmon-ask-open="welcome">💡 次に迎えてほしいマスモンを伝える</button>
+      {wish && <p className="text-[10.5px] font-bold text-sky-200">希望: {(assistantMasmonMon(wish) || {}).name || wish} <button type="button" className="ml-1 underline" onClick={() => assistantMasmonUndoMine(who.id, 'wish')} data-assistant-masmon-undo="wish">取り消す</button></p>}
+    </div>);
 }
 
 const ASSISTANT_MASMON_TABS = Object.freeze([['mons', '🐾 マスモン'], ['team', '⚔ 編成'], ['deck', '🃏 デッキ'], ['taste', '💗 好き・苦手']]);
@@ -1015,6 +1291,8 @@ function AssistantMasmonSheet({ id, land = false, onClose, bondLv = null }) {
   const [detail, setDetail] = React.useState(null); // 押したマスモン(詳細画面)
   const save = useAssistantMasmonSave();
   const [welcome, setWelcome] = React.useState(null); // 迎える場面
+  const [ask, setAsk] = React.useState(null); // 提案のシート { from, t }
+  if (Number.isFinite(Number(bondLv))) _assistantMasmonBondNow[id] = Number(bondLv);
   const [renamed, setRenamed] = React.useState(false); // 名前を付け直したあとの1回だけの1行
   React.useEffect(() => {
     let alive = true;
@@ -1058,10 +1336,11 @@ function AssistantMasmonSheet({ id, land = false, onClose, bondLv = null }) {
     body = (<>
       {renamed && <p className="mhm-card mb-2 text-[11.5px] font-bold leading-snug text-slate-100" data-assistant-masmon-renamed>{who.name}「{assistantMasmonRenamedLine(id)}」</p>}
       <div className={land ? 'grid grid-cols-3 gap-2' : 'flex flex-col gap-2'}>{all.map(t => <AssistantMasmonRow key={t.monster} t={t} land={land} onOpen={setDetail}/>)}{waiting.map(t => <AssistantMasmonWaitCard key={t.monster} t={t} land={land}/>)}</div>
+      {p.v2 && waiting.length > 0 && <AssistantMasmonWishRow who={who} onAsk={(from) => setAsk({ from })}/>}
       <p className="mt-2 text-[10.5px] font-bold leading-snug text-slate-400">🐾 {who.name}が自分で育てて、自分の好きな色に染めているマスモンです。押すと詳しく見られます。</p>
     </>);
   } else if (tab === 'team' && p.v2) {
-    body = <AssistantMasmonFormation who={who} team={team} waiting={waiting} land={land} onOpen={setDetail}/>;
+    body = <AssistantMasmonFormation who={who} team={team} waiting={waiting} land={land} onOpen={setDetail} onAsk={(from) => setAsk({ from })}/>;
   } else if (tab === 'team') {
     body = (<>
       <div className="grid grid-cols-3 gap-2">
@@ -1111,7 +1390,7 @@ function AssistantMasmonSheet({ id, land = false, onClose, bondLv = null }) {
       <p className="mt-2 text-[10.5px] font-bold leading-snug text-slate-400">⚔ 編成は{who.name}が決めています。押すと詳しく見られます。</p>
     </>);
   } else if (tab === 'deck' && assistantMasmonDeckTabOn()) {
-    body = <AssistantMasmonDeckTab id={id} land={land}/>;
+    body = <><AssistantMasmonDeckTab id={id} land={land}/><AssistantMasmonDeckAsk who={who} onAsk={() => setAsk({ from: 'deck' })}/></>;
   } else if (tab === 'deck') {
     body = (<>
       <div className="mhm-card" data-assistant-masmon-deck>
@@ -1182,7 +1461,8 @@ function AssistantMasmonSheet({ id, land = false, onClose, bondLv = null }) {
         </div>
         <div className="mhm-body mt-2">{body}</div>
       </div>
-      {detail && <AssistantMasmonDetail who={who} p={p} t={detail} land={land} onClose={() => setDetail(null)}/>}
+      {detail && <AssistantMasmonDetail who={who} p={p} t={detail} land={land} onClose={() => setDetail(null)} onAsk={(t) => setAsk({ from: 'masmon', t })}/>}
+      {ask && <AssistantMasmonAskSheet who={who} from={ask.from} t={ask.t || null} land={land} onClose={() => setAsk(null)}/>}
       {welcome && (
         <div className="absolute inset-0 grid place-items-center" style={{ zIndex: 34 }} data-assistant-masmon-welcome={welcome.monster}>
           <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/75" onClick={() => setWelcome(null)}/>
@@ -1225,7 +1505,7 @@ const assistantMasmonSkills = (t) => {
 };
 
 // マスモンの詳細(見るだけ。プレイヤーのマスモン詳細に近い形)
-function AssistantMasmonDetail({ who, p, t, land = false, onClose }) {
+function AssistantMasmonDetail({ who, p, t, land = false, onClose, onAsk = null }) {
   const m = assistantMasmonMon(t.monster), st = assistantMasmonStats(t);
   if (!m || !st) return null;
   const n = assistantMasmonRegions(t.monster);
@@ -1261,7 +1541,7 @@ function AssistantMasmonDetail({ who, p, t, land = false, onClose }) {
       {(() => {
         const e = who && who.id && Number.isInteger(t.slot) ? assistantMasmonDyeLog(who.id, t.slot)[0] : null;
         if (!e) return null;
-        const why = e.why === 'season' ? `${ASSISTANT_MASMON_SEASON_NAME[String(e.season).split('-')[1]] || '季節'}の色に染め直しました` : e.why === 'like' ? '好きな色が変わって、染め直しました' : '染め方を見直しました';
+        const why = e.why === 'season' ? `${ASSISTANT_MASMON_SEASON_NAME[String(e.season).split('-')[1]] || '季節'}の色に染め直しました` : e.why === 'like' ? '好きな色が変わって、染め直しました' : e.why === 'ask' ? 'あなたの提案で染め直しました' : '染め方を見直しました';
         const before = (e.before || []).slice(0, n || 5);
         return (
           <p className="mt-1.5 flex flex-wrap items-center gap-1 text-[10px] font-bold text-slate-300" data-assistant-masmon-dye-log={e.why}>
@@ -1272,6 +1552,17 @@ function AssistantMasmonDetail({ who, p, t, land = false, onClose }) {
           </p>);
       })()}
     </div>
+    {onAsk && assistantMasmonAskOn() && Number.isInteger(t.slot) && (() => {
+      const st = ASSISTANT_MASMON_STORE.state;
+      const lastAsk = (assistantMasmonDyeLog(who.id, t.slot)[0] || {}).why === 'ask';
+      const prevName = (assistantMasmonMineOf(st, who.id).names[t.slot] || []).slice(-1)[0];
+      return (
+        <div className="mhm-card mt-2 flex flex-wrap items-center gap-2" data-assistant-masmon-detail-ask>
+          <button type="button" className="mhl-btn px-3 text-[11.5px]" style={{ background: 'linear-gradient(90deg,#f472b6,#fb923c)' }} onClick={() => onAsk(t)} data-assistant-masmon-ask-open="masmon">💡 {who.name}に提案する(名前・色)</button>
+          {lastAsk && <button type="button" className="mhl-btn bg-slate-700 px-3 text-[11px]" onClick={() => { assistantMasmonUndoColor(who.id, t.slot); onClose(); }} data-assistant-masmon-undo="color">🎨 前の色に戻してもらう</button>}
+          {prevName && <button type="button" className="mhl-btn bg-slate-700 px-3 text-[11px]" onClick={() => { assistantMasmonUndoName(who.id, t.slot); onClose(); }} data-assistant-masmon-undo="name">前の名前「{prevName}」に戻してもらう</button>}
+        </div>);
+    })()}
     <div className="mhm-card mt-2" data-assistant-masmon-detail-talk>
       {like && <p className="text-[11px] font-black text-pink-300">💗 {like}</p>}
       <p className="mt-0.5 text-[11.5px] font-bold leading-snug text-slate-100" style={{ wordBreak: 'auto-phrase' }}>💬 {who.name}「{t.why}」</p>

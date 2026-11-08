@@ -17,6 +17,7 @@ const root = path.resolve(__dirname, '..', '..'), PORT = 9273;
 const { quietBootSeed, updateNoticeSeed, oneTimeNoticeSeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 const { MIME, STORY_IDS, seed, toHome, finishTalk } = require(path.resolve(__dirname, 'life-browser-shared'));
 const SHOTS = process.argv.includes('--shots');
+const ASK = !!process.env.MASMON_ASK; // 「提案する」の流れも確かめる(2026-11-08 キズナ4)
 const shotDir = process.env.MASMON_SHOT_DIR ? path.resolve(process.env.MASMON_SHOT_DIR) : path.join(root, 'docs/progress/assistant-peer/shots');
 //   MASMON_SEED=◯◯ で、そのプレイヤーの種でマスモンを決めて開く(プレイヤーごとに違うマスモン ❶B の止め絵用)
 const BASE = process.env.LIFE_BASE ? process.env.LIFE_BASE.replace(/\/?$/, '/') : `http://localhost:${PORT}/`;
@@ -69,6 +70,19 @@ const layoutProblems = (page) => page.evaluate(() => {
       if (!process.env.MASMON_LOW_BOND) await page.addInitScript(() => { try { if (localStorage.getItem('mh_check_masmon_bond') === null) { localStorage.setItem('mh_check_masmon_bond', '1'); for (const id of ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']) { const key = id === 'mua' ? 'mh_assistant_bond_v1' : `mh_assistant_bond_${id}_v1`; let b = {}; try { b = JSON.parse(localStorage.getItem(key)) || {}; } catch {} localStorage.setItem(key, JSON.stringify({ ...b, points: 1800 })); } } } catch {} });
       if (process.env.MASMON_SEED) await page.addInitScript((sd) => { try { if (localStorage.getItem('mh_assistant_life_masmon_v1') === null) localStorage.setItem('mh_assistant_life_masmon_v1', JSON.stringify({ v: 1, seed: sd })); } catch (_) {} }, process.env.MASMON_SEED);
       await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+      // MASMON_ASK=1: 「提案する」(kind:'masmon_suggest')に偽物の AI で答える(色=好きな色の1つ目を部位0に/勇者モン=2番目の枠/迎える=候補の1つ目/デッキ=推し・守り・まったり作戦)
+      if (ASK) await page.route(/functions\/v1\/assistant-chat/, async (r) => {
+        let b = {}; try { b = JSON.parse(r.request().postData() || '{}'); } catch {}
+        if (b.kind !== 'masmon_suggest') return r.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+        const c = b.ctx || {}; const replies = { yes: 'いいね、そうしてみるよ', some: '少しだけ変えてみるね', no: 'それはちょっと…ごめんね' };
+        const base = { name: '', colors: [], monster: '', slot: 0, face: '', deckName: '', plan: '', replies };
+        const favId = (c.colors || []).find(x => (c.fav || []).includes(x.label));
+        const result = b.from === 'masmon' ? { ...base, kind: 'color', colors: [{ part: 0, color: favId ? favId.id : 'orange' }] }
+          : b.from === 'hero' ? { ...base, kind: 'hero', slot: ((c.team || [])[1] || {}).slot || 1 }
+          : b.from === 'welcome' ? { ...base, kind: 'welcome', monster: ((c.cands || [])[0] || {}).id || '' }
+          : { ...base, kind: 'deck', face: 'oshi', plan: 'guard', deckName: 'まったり作戦' };
+        await r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, kind: 'masmon_suggest', result }) });
+      });
       // MASMON_REAL_NAMES=1: 名前の頼み(assistant-chat)だけ本番の関数へ通して、AI の名前が入るのを確かめる(1回だけ呼ぶ・費用 約0.2円)
       if (process.env.MASMON_REAL_NAMES && v.id === 'p') await page.route(/functions\/v1\/assistant-chat/, async (r) => {
         // ブラウザ道具の通信は入れ物の中継を通らないことがあるので、curl で送る(見出しの Origin だけ本番の形に)
@@ -224,6 +238,43 @@ const layoutProblems = (page) => page.evaluate(() => {
           const ng = await layoutProblems(page);
           check(`${T}「${tab}」: 端にくっつかない・はみ出さない・切れない・絵が出る`, !ng.length, ng.slice(0, 4).join(' / '));
           if (SHOTS) await page.screenshot({ path: path.join(shotDir, `masmon-${TABS.indexOf(tab) + 1}-${tab}-${v.id}${WHO !== 'kiki' ? '-' + WHO : ''}.jpg`), type: 'jpeg', quality: 80 });
+        }
+        if (ASK) { // 「提案する」(印 assistantMasmonSuggest を真にして、偽物の AI で)
+          await page.evaluate(() => { RELEASE_FLAGS.assistantMasmonSuggest = true; });
+          const send = async (open, text, shot) => {
+            await page.locator(`[data-assistant-masmon-ask-open="${open}"]`).first().click({ timeout: 4000 });
+            await page.locator('[data-assistant-masmon-ask-text]').fill(text);
+            if (await page.locator('[data-assistant-masmon-ask-send]').isDisabled()) { const left = await page.locator('[data-assistant-masmon-ask-left]').innerText().catch(() => ''); if (SHOTS && shot) await page.screenshot({ path: path.join(shotDir, `masmon-8-ask-${open}-${v.id}${WHO !== 'kiki' ? '-' + WHO : ''}.jpg`), type: 'jpeg', quality: 80 }); await page.locator('[data-assistant-masmon-ask] [data-mhl-sheet-close]').click({ timeout: 3000 }).catch(() => {}); return { res: 'limit', what: '', left }; }
+            await page.locator('[data-assistant-masmon-ask-send]').click();
+            await page.locator('[data-assistant-masmon-ask-result]').waitFor({ timeout: 8000 }).catch(() => {});
+            await page.waitForTimeout(open === 'masmon' ? 2500 : 600);
+            const r = { res: await page.locator('[data-assistant-masmon-ask-result]').getAttribute('data-assistant-masmon-ask-result').catch(() => ''), what: await page.locator('[data-assistant-masmon-ask-what]').innerText().catch(() => '') };
+            const ng = await layoutProblems(page);
+            check(`${T}提案「${open}」: 返事が出る・切れない`, !!r.res && !ng.length, `${r.res} ${r.what} ${ng.slice(0, 2).join(' / ')}`);
+            if (SHOTS && shot) await page.screenshot({ path: path.join(shotDir, `masmon-8-ask-${open}-${v.id}${WHO !== 'kiki' ? '-' + WHO : ''}.jpg`), type: 'jpeg', quality: 80 });
+            await page.locator('[data-assistant-masmon-ask] [data-mhl-sheet-close]').click({ timeout: 3000 }).catch(() => {});
+            return r;
+          };
+          await page.locator('[data-assistant-masmon-tab-btn="mons"]').click(); await page.waitForTimeout(800);
+          await page.locator('[data-assistant-masmon-row]').first().click(); await page.locator('[data-assistant-masmon-detail]').waitFor({ timeout: 3000 }).catch(() => {});
+          const c1 = await send('masmon', '体を好きな色にしてみたら？', true);
+          check(`${T}提案(色): 好きな色は受けて、色が変わる`, c1.res === 'yes' && /を/.test(c1.what), c1.what);
+          check(`${T}提案(色)のあと「前の色に戻してもらう」が出る`, (await page.locator('[data-assistant-masmon-undo="color"]').count()) === 1);
+          if (SHOTS) await page.screenshot({ path: path.join(shotDir, `masmon-8-ask-undo-${v.id}${WHO !== 'kiki' ? '-' + WHO : ''}.jpg`), type: 'jpeg', quality: 80 });
+          await page.locator('[data-assistant-masmon-undo="color"]').click().catch(() => {});
+          await page.waitForTimeout(500);
+          await page.locator('[data-assistant-masmon-detail-close]').click({ timeout: 2000 }).catch(() => {});
+          const hasWait = (await page.locator('[data-assistant-masmon-ask-open="welcome"]').count()) > 0;
+          if (hasWait) { const w = await send('welcome', '次はこのモンスターを迎えてみたら？', true); check(`${T}提案(迎える): 希望が残る`, (await page.locator('[data-assistant-masmon-wish]').innerText().catch(() => '')).includes('希望') || w.res === 'no', w.res); }
+          await page.locator('[data-assistant-masmon-tab-btn="team"]').click(); await page.waitForTimeout(800);
+          const before = await page.locator('[data-assistant-masmon-hero]').getAttribute('data-assistant-masmon-hero');
+          const h = await send('hero', '勇者モンを2番目にしてみたら？', true);
+          const after = await page.locator('[data-assistant-masmon-hero]').getAttribute('data-assistant-masmon-hero');
+          check(`${T}提案(勇者モン): 受けたら勇者モンが変わる・戻すボタン`, h.res !== 'yes' || (before !== after && (await page.locator('[data-assistant-masmon-undo="hero"]').count()) === 1), `${before}→${after} ${h.res}`);
+          await page.locator('[data-assistant-masmon-tab-btn="deck"]').click(); await page.waitForTimeout(600);
+          const d = await send('deck', '推しのデッキは守りで「まったり作戦」にしたら？', true);
+          const used = await page.evaluate((id) => assistantMasmonAskUsed(id), WHO);
+          check(`${T}提案(デッキ): 希望が残る(カード部の口 assistantLifeDeckWish)。受けてもらうのは1日3回まで(4回目は押せない)`, used <= 3 && (d.res === 'limit' ? used === 3 && /あと 0回/.test(d.left) : (d.res === 'no' || (await page.evaluate((id) => !!assistantLifeDeckWish(id), WHO)))), `${d.res} 使った${used}回`);
         }
         await page.locator('[data-assistant-masmon-close]').click({ timeout: 3000 }).catch(() => {});
         check(`${T}閉じると部屋のシートに戻る`, (await page.locator('[data-assistant-masmon-sheet]').count()) === 0 && (await page.locator('[data-assistant-life-room-sheet]').count()) === 1);
