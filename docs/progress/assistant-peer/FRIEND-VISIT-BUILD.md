@@ -83,3 +83,27 @@
 - ミハリ「4つとも OK・残りなし」(88c36f4)。更新履歴・ヘルプは社長の「この文で」のまま書いた(d739dc3・公開の印の後ろ・必須検査17本 OK)
 - SQL: こちらも窓口も execute_sql で Supabase の確認の質問に答えが無く止まった。**表はまだ無い**(窓口が to_regclass で確認)。社長が答えられるときに窓口が流す。それまで公開しない
 - 流したあと: 印 `assistantLifeFriend` を真 → main へマージ → 窓口へ知らせて Edge Function(friend_scenes)をデプロイ(今の v16 を読んでから)→ 確かめて `assistantLifeFriendApi` を真 → 本番で確認 → 窓口と、キズナ2へ PR 番号
+
+## オトズレ2 の区切り(2026-11-08 11:20)— 次の担当へ
+
+公開済み: #4987(段階1・印 assistantLifeFriend 真)/#4993(API の場面・印 assistantLifeFriendApi 真・端末の口調の見張り)/#4998(訪ねる前・開いたときに自分の控えを必ず送る・断られた理由の文。本番で社長の置き手紙が「残せませんでした」になった件)/#4999(中継役 friend_scenes の決まりを強める。**配るのは窓口。配ってよい版は main 57db076**)。
+本番の表: 窓口が apply_migration で入れた(片づけの見張り alf_visits_tidy は無し・create or replace trigger)。スイッチは thin。
+
+### 残り(窓口 2026-11-08 の依頼。順に)
+
+1. **#4999 を配ったあと**、friend_scenes を10組ほど試して、使える場面の割合を数えて窓口へ(ゲームと同じ形で curl。Origin は github.io、公開の鍵は 26-supabase.jsx。端末の見張り alfApiLineOk も通るか数える)
+2. **フレンドのプロフィールに入口「🏘 家へ遊びに行く」**(社長決定・更新履歴は不要・ヘルプの行き来の節に1行): 「このデッキと戦う」「借りる」の近く(75-screen-friends.jsx・フレンドの画面の持ち主の部品なので差し込み口だけ)。押すとその人の家(AlfFriendHouseView)→戻ると同じプロフィール。家が届いていない・今日もう訪ねた・上限・切 のときは押せない形で理由(「◯◯さんが助手ライフを開くと遊びに行けます」)
+3. 「🏘 フレンド」の「フレンドの家」の一覧に、**まだ家が届いていないフレンドも薄く並べて**同じ説明(alfOpenHouses は届いた家だけ。roster 全員から届いていない人を足す)
+4. **案と止め絵(縦・横)を先に窓口へ**: (a) 訪ねた家の助手が全員おでかけ・おやすみでも何かできる(いない部屋も覗ける・家具/置き物・留守の助手に置き手紙・全員いないときの説明) (b) **置き手紙の自由文**(社長の依頼): 40字くらい・悪口/下品/連絡先(URL・メール・長い数字)/個人情報をはじく(マルチのチャットの言葉の見張りと同じ表)・受け取った側で「この人の置き手紙を見ない/来ないようにする」・通報は要るか案で。保存は visits に列を足す SQL(足すだけ・DROP なし)の本文を窓口へ
+5. キズナ2(session_0113GBaDtdAaLtP4k1GNgu2e)の「助手のマスモンを控えに写す」: 形は返事済み(r.<助手>.ms = { mo, c }・ニックネームは写さない・新しい SQL なし)。口 assistantLifeMasmonLead が main に入ったら alfBuildHouse / assistantLifeFriendNormalizeHouse と検査に足す
+6. 台詞の注文書(コトバ・ツムギ。PLAN 8章)
+
+検査: `tools/assistant/assistant-life-friend-check.js`・`assistant-life-friend-browser-check.js`(`--shots <出力先>`)・`assistant-chat-check.js --unit` の ㉗。
+
+## オトズレ3 の進み具合(2026-11-08)
+
+- 1 の10組の試し(v18): 頼んだ10組のうち使えたのは5組。ログでは5場面ぶん書けていて、中継役の見張りが半分捨てていた。
+  原因: 決まりの見本に「2人」「2倍」(数字は全部捨てる見張りと食い違い・同じ助手どうしが落ちる)/ドラの「やろう」「撮る」まで関西弁扱い/あつの「。」・絵文字終わり。
+  直した: 見本と決まり(数字を書かない・相手はどちらも {f})・ドラの見張りを狭める(端末と同じ FRIEND_DRA_KANSAI)・あつの「。」は「！」へ・捨てた理由の名前だけをログ(friend_dropped)へ。配ったら同じ10組で数え直す
+- 2 プロフィールの入口 `AssistantLifeFriendProfileVisit`(75 の デッキの下)・一覧に家が届いていないフレンドを薄く(data-alf-house-waiting)。ヘルプに1行。止め絵の道具 ⑩
+- 3 の案: `FRIEND-AWAY-NOTE-PLAN.md`・止め絵 `friend/away-note-*.jpg`・SQL `docs/sql/assistant-life/FRIEND_VISIT_NOTE_ADD.sql`(窓口へ送って返事待ち)

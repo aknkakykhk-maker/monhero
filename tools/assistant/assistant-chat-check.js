@@ -339,6 +339,20 @@ const unit = async (core) => {
     check('㉗ 全員の上限・専用の上限(ASSISTANT_FRIEND_DAILY_LIMIT)・0 で止める・数えられないときは Claude を呼ばずに tired', [r3, r4, r5, r6].every(x => x.json.kind === 'tired') && client.calls.length === before);
     const r7 = await core.handleRequest({ body: { kind: 'friend_scenes', breederId: 'b1', pairs: [{ kind: 'go', a: 'x', b: 'y' }] }, digest: DIGEST, client, take, refund });
     check('㉗ 組が無い頼みは 400', r7.status === 400);
+    const tone = core.friendLineTone;
+    check('㉗ 口調の見張り: みゅあの じゃん/まじ→ぢゃん/まぢ・あつの文末・ドラの関西弁・ききのタメ口・ほかの助手の ぢゃん', tone('mua', 'それ椅子じゃん、まじで') === 'それ椅子ぢゃん、まぢで' && tone('atsu', 'いらっしゃい') === null && tone('atsu', 'いらっしゃい笑') === 'いらっしゃい笑' && tone('dra', 'ほんまによう来たな') === null && tone('kiki', 'うれしいだよ') === null && tone('sorashido', 'いいぢゃん') === null);
+    { const bad = fakeClient(() => okResponse({ scenes: [{ kind: 'go', a: 'mua', b: 'dra', lines: [{ side: 'a', e: 'happy', t: '来たよ♪' }, { side: 'b', e: 'happy', t: 'おでの膝、いまならあいてるぞ' }] }] }));
+      const r8 = await core.handleRequest({ body: { kind: 'friend_scenes', breederId: 'b1', pairs }, digest: DIGEST, client: bad, take, refund, friendUsed: async () => 0 });
+      check('㉗ 体に触れる話(膝など)の場面は捨てる', r8.json.ok === false); }
+    // 2026-11-08 オトズレ3 の10組の試しで半分捨てていた原因(見本の「2人」と数字の見張りの食い違い・ドラの「やろう」・あつの「。」終わり)
+    check('㉗ ドラの「やろう」「撮る」は通し、「〜やろ？」「〜っとる」は捨てる・あつの「。」終わりは「！」へ直し、絵文字終わりは通す',
+      tone('dra', 'トランプやろうな、えへへ') !== null && tone('dra', '写真とるか？えへへ') !== null && tone('dra', 'うまいやろ？') === null && tone('dra', '待っとるぞ') === null
+      && tone('atsu', 'おじゃまします。') === 'おじゃまします！' && tone('atsu', '来たぞ☺️') === '来たぞ☺️');
+    check('㉗ 決まりの文の見本に数字が無く、数字を書かない・相手はどちらも {f} と書くと決めている', !/[0-9０-９]/.test(core.FRIEND_RULES_TEXT.slice(core.FRIEND_RULES_TEXT.indexOf('見本'))) && /数字\(「2人」「2倍」なども\)は1つも書かない/.test(core.FRIEND_RULES_TEXT) && /a も b も名前を書かずに \{f\}/.test(core.FRIEND_RULES_TEXT));
+    { const why = []; const pz = core.normalizeFriendPairs([{ kind: 'go', a: 'momosuke', b: 'momosuke' }], { assistants: { momosuke: {} } });
+      const kept = core.validateFriendScenes([{ kind: 'go', a: 'momosuke', b: 'momosuke', lines: [{ side: 'a', e: 'happy', t: 'ももが2人！？' }, { side: 'b', e: 'happy', t: 'ふふん♡' }] }], pz, (w) => why.push(w));
+      check('㉗ 捨てた場面は理由の名前だけを知らせる(台詞は渡さない)', kept.length === 0 && why.length === 1 && why[0] === 'digit', JSON.stringify(why)); }
+    check('㉗ 決まりの文に、助手ごとの必ず守ること・体に触れない・見本が入っている', /必ず守ること/.test(core.FRIEND_RULES_TEXT) && /ぢゃん/.test(core.FRIEND_RULES_TEXT) && /体に触れる話をしない/.test(core.FRIEND_RULES_TEXT) && /見本/.test(core.FRIEND_RULES_TEXT));
   }
   // ⑰ ふだんの吹き出しを1日1回まとめて作る(kind:'daily_lines'・2026-10-14)
   {
