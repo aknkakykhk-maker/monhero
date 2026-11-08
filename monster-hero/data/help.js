@@ -874,6 +874,7 @@ const HELP_CATEGORIES = [
         assistant:'どの曲もEASYからMASTERまであるよ。まずはLv.のいちばん低いところからね♪', expression:'excited',
         blocks:[
           {t:'p',text:'モンヒロビートでは、公開している曲をそれぞれEASY・NORMAL・HARD・EXPERT・MASTERの5難易度で遊べます。HELL がある曲は、その曲の MASTER をクリアすると、6つ目の難易度 HELL も遊べます（「難易度 HELL と空のノーツ」）。曲は少しずつ増えていきます。'},
+          {t:'note', releaseFlag:'rhythmPaidSongs', title:'新曲はビートPで買います', text:'本オープンのあとに加わる新曲は、500 ビートPで1曲ずつ買うと遊べます。本オープンの時点で遊べる曲は無料のままです。曲えらびの「🔒 500 ビートPで買う」か、ビートP交換所の「新曲」から買えます。買った曲は全部の難易度で遊べて、端末の引き継ぎでも移ります。マルチでほかの人が選んだ曲は、持っていなくても一緒に遊べます。期間限定イベントの対象のあいだは無料です。'},
           {t:'note', title:'Monster Hero -Another-', text:'「Monster Hero -Another-」は「Monster Hero」とは別テイクの曲です。曲えらびでは別の曲として記録されます。ジャケットは「Monster Hero」と同じ絵を使っています。'},
           {t:'data', id:'rhythmDemoSongList'},
           {t:'note', title:'曲によっては途中までを遊びます', text:'長い曲は、曲の区切りのよいところまでを遊ぶ形にしています。上の表に出ている長さが、実際に遊ぶ長さです。終わりぎわは音がすっと小さくなって終わります。バトルで流れるほうの曲は最後まで鳴るので、そちらは変わりません。'},

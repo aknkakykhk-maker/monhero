@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f87706f0dae327ff
+// generated-sha256: 79c10d24560098a6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9608,6 +9608,8 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantLife: true,
   // モンヒロビートの助手とのセッション(2026-11-07 社長の決定・ビート部マモリ)。全部そろって社長の「この文で」が出るまで偽
   rhythmAssistantSession: true, // 2026-11-07 社長「この文で公開」
+  // ビートPで買う曲が1曲でもあるか(2026-11-08)。ヘルプ・更新履歴の「新曲はビートPで買います」を、最初の買う曲を入れたときに出す
+  get rhythmPaidSongs() { try { return typeof rhythmSongShopOffers === 'function' && rhythmSongShopOffers().length > 0; } catch (e) { return false; } },
   // 7人目の助手ソラシド(2026-10-27 社長の決定)。絵・お話・お知らせがそろって、社長が「公開」と言ったら真にする。
   //   偽のあいだは、助手の一覧・おしゃべり・選ぶ画面に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS)。
   //   MFバトルカードの相手えらび・マルチ・観戦・記録・曲の並びにも出ない(82 の cardFoeReleased)

@@ -107,6 +107,12 @@ check('マルチ: マスモン・助手の選曲は鍵のない曲から', /cons
 check('マルチ: ほかの人が選んだ曲は、持っていなくても一緒に遊べる(演奏の始まりで鍵を見ない)', !/rhythmSongLocked[\s\S]{0,80}onStartPlay|onStartPlay[\s\S]{0,200}rhythmSongLocked/.test(multi));
 check('画面の外の処理が見る「持っている曲」を、画面の state と同じにする', /RHYTHM_OWNED_SONGS_RUNTIME\.list = rhythmOwnedSongs;/.test(app));
 
+// ⑥-2 お知らせ(2026-11-08 社長「この文で」)。表に1曲入るまで出さない
+const help = read('monster-hero/data/help.js');
+const release = read('monster-hero/src/parts/17-release-changelog-login-missions.jsx');
+check('ヘルプ「新曲はビートPで買います」は、買う曲が1曲でも入るまで出さない', /\{t:'note', releaseFlag:'rhythmPaidSongs', title:'新曲はビートPで買います'/.test(help)
+  && /get rhythmPaidSongs\(\) \{ try \{ return typeof rhythmSongShopOffers === 'function' && rhythmSongShopOffers\(\)\.length > 0;/.test(release));
+check('印(rhythmPaidSongs)は、表が空なら false・1曲あれば true', api.rhythmSongShopOffers().length > 0 && load('').rhythmSongShopOffers().length === 0);
 // ⑦ 表の曲
 const realBody = (eventSrc.match(TABLE_RE) || ['', ''])[1];
 const realIds = [...realBody.matchAll(/^\s*([A-Za-z0-9_]+)\s*:/gm)].map((m) => m[1]);
