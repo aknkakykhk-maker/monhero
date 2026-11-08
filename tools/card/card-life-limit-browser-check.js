@@ -289,7 +289,7 @@ const run = async (browser, mode, errors) => {
     // HOME は起動し直して見る(保存から読み直す所 cardLifeRewardLoad の確かめにもなる)
     await boot(); await force(); await page.waitForTimeout(1500);
     const h8 = await homeRow();
-    check(`⑧ ${mode.label} 時間帯が変わると戻る(起動し直して保存から読む): HOME に2人の顔と「UP」`, h8.top && h8.faces === 'erubin,sorashido' && h8.up, JSON.stringify(h8));
+    check(`⑧ ${mode.label} 時間帯が変わると戻る(起動し直して保存から読む): HOME に2人の顔と「UP」・「済」の印は消える`, h8.top && h8.faces === 'erubin,sorashido' && h8.spent === '' && h8.up, JSON.stringify(h8));
   } finally { await ctx.close(); }
 };
 
