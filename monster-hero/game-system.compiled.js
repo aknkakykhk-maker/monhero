@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 87f3538de92cb65e
+// source-sha256: 2ec71a13c2c416cd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -63308,12 +63308,22 @@ const GrowthFxChipsBox = ({
       tm = setTimeout(() => {
         tm = null;
         place();
-      }, 150);
+      }, 50);
     }) : null;
     if (mo && document.body) mo.observe(document.body, {
       childList: true,
       subtree: true
     });
+    const onAnimEnd = e => {
+      if (ref.current && ref.current.contains(e.target)) return;
+      if (tm) return;
+      tm = setTimeout(() => {
+        tm = null;
+        place();
+      }, 50);
+    };
+    document.addEventListener('animationend', onAnimEnd, true);
+    document.addEventListener('transitionend', onAnimEnd, true);
     const t1 = setTimeout(place, 500),
       t2 = setTimeout(place, 1500),
       iv = setInterval(place, 700);
@@ -63323,6 +63333,8 @@ const GrowthFxChipsBox = ({
       clearInterval(iv);
       if (tm) clearTimeout(tm);
       if (mo) mo.disconnect();
+      document.removeEventListener('animationend', onAnimEnd, true);
+      document.removeEventListener('transitionend', onAnimEnd, true);
     };
   }, [count]);
   return React.createElement("div", {

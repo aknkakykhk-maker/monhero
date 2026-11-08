@@ -636,12 +636,15 @@ const GrowthFxChipsBox = ({ level, count, children }) => {
     let tm = null;
     const mo = typeof MutationObserver === 'function' ? new MutationObserver((list) => {
       if (list.every(m => ref.current && ref.current.contains(m.target))) return;
-      if (tm) return; tm = setTimeout(() => { tm = null; place(); }, 150);
+      if (tm) return; tm = setTimeout(() => { tm = null; place(); }, 50);
     }) : null;
     if (mo && document.body) mo.observe(document.body, { childList: true, subtree: true });
+    // シートが下から出てくる動きなどが終わった瞬間にも置き直す(動きの途中で測ると、止まったあとのボタンにかぶった。2026-11-08 ミハリ フレンドの家の置き手紙)
+    const onAnimEnd = (e) => { if (ref.current && ref.current.contains(e.target)) return; if (tm) return; tm = setTimeout(() => { tm = null; place(); }, 50); }; // 何度も来るので、まとめて1回
+    document.addEventListener('animationend', onAnimEnd, true); document.addEventListener('transitionend', onAnimEnd, true);
     // 出ているあいだは 0.7秒ごとにも置き直す(画面を一瞬揺らす演出や、帯の字の変わり目で測りまちがえても戻す。探す順は決まっているので、画面が変わらなければ同じ所のまま)
     const t1 = setTimeout(place, 500), t2 = setTimeout(place, 1500), iv = setInterval(place, 700);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearInterval(iv); if (tm) clearTimeout(tm); if (mo) mo.disconnect(); };
+    return () => { clearTimeout(t1); clearTimeout(t2); clearInterval(iv); if (tm) clearTimeout(tm); if (mo) mo.disconnect(); document.removeEventListener('animationend', onAnimEnd, true); document.removeEventListener('transitionend', onAnimEnd, true); };
   }, [count]);
   return <div ref={ref} className={`mh-gfx-chips mh-gfx-${level}`} data-growth-fx-chips aria-live="polite">{children}</div>;
 };
