@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d3f7a43afb93bd03
+// generated-sha256: 5b7fe854090f8609
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -60417,6 +60417,15 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
     if (c.phase === 'lines' && Array.isArray(c.talk.choice) && c.talk.choice.length) { setCur(x => x && ({ ...x, phase: 'choice' })); return; }
     finish(c);
   }, [finish]);
+  // 場面を閉じたら、流れている掛け合いも閉じる(自動で進まないので、残ると横で部屋に重なって押せなかった)。
+  //   ASSISTANT_PEER_STORE.set({ stopTalkAt: Date.now() }) で止める(56-assistant-life-house.jsx の場面の「←」)
+  const stopRef = React.useRef(st.stopTalkAt || 0);
+  React.useEffect(() => {
+    const at = st.stopTalkAt || 0;
+    if (at === stopRef.current) return;
+    stopRef.current = at;
+    if (cur) finish(cur);
+  }, [st.stopTalkAt]);
   // 自動で進めるのは設定を入れたときだけ(既定は切=タップで次へ)
   React.useEffect(() => {
     if (!cur || cur.phase === 'choice' || !auto.on) return undefined;
@@ -62529,6 +62538,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-liv{position:absolute;overflow:hidden;border-radius:3px;background:linear-gradient(#f3e3c4,#e7cfa2)}
 .mhl-board{position:absolute;left:8px;top:6px;bottom:6px;border-radius:5px;background:#c08a52;border:3px solid #7c4a22;padding:3px 6px;overflow:hidden;display:flex;flex-direction:column;flex-wrap:wrap;align-content:flex-start;justify-content:flex-start;column-gap:24px}
 .mhl-board>*{width:100%;flex:none}
+.mhl-board-more{margin-left:auto;flex:none;border-radius:999px;background:#fffbeb;color:#7c4a22;font-size:8.5px;font-weight:900;line-height:1;padding:2px 5px;white-space:nowrap}
 .mhl-board b{display:block;font-size:9.5px;color:#fff}.mhl-board p{font-size:9px;font-weight:800;line-height:1.25;color:#1e293b;background:#fffbeb;border-radius:3px;padding:1px 4px;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .mhl-door{position:absolute;bottom:0;width:38px;border-radius:18px 18px 0 0;background:linear-gradient(#8b5a2b,#6b4423);border:2px solid #3b2412}
 .mhl-find{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:900;padding:6px 10px;border-radius:999px;background:linear-gradient(135deg,#7c3aed,#db2777);border:1.5px solid #fff9;box-shadow:0 4px 12px #0009}
@@ -62617,6 +62627,17 @@ function AssistantLifeHouseArt({ width, land, look, rooms, metSet, onOpen, diary
   const bodyH = wall + rows * (rh + wall) + lh + wall, ly = wall + rows * (rh + wall);
   const night = look === 'night';
   const items = (diary.items || []).slice(-3).reverse();
+  const total = (diary.items || []).length;
+  // 掲示板に入りきった件の数を測る(入らない件は見えない右の列へ回る .mhl-board)。残りは見出しに「ほか◯件」(2026-11-08 社長「切れてここまでしかみれない」)
+  const boardRef = React.useRef(null);
+  const [shownN, setShownN] = React.useState(items.length);
+  React.useLayoutEffect(() => {
+    const el = boardRef.current; if (!el) return;
+    const w = el.clientWidth;
+    const n = [...el.querySelectorAll('[data-assistant-life-board-item]')].filter(p => p.offsetLeft + 1 < w).length;
+    if (n !== shownN) setShownN(n);
+  });
+  const restN = Math.max(0, total - Math.min(shownN, items.length));
   return (
     <div className={`mhl-house${pop ? ' mhl-pop' : ''}`} data-assistant-life-house style={{ width, height: roofH + bodyH }}>
       <div className="mhl-chim" style={{ left: width * .72, top: roofH * .05, height: roofH * .6 }}/>
@@ -62629,8 +62650,8 @@ function AssistantLifeHouseArt({ width, land, look, rooms, metSet, onOpen, diary
           return <AssistantLifeRoom key={id} id={id} idx={i + r} met={metSet.has(id)} look={look} x={wall + c * (rw + wall)} y={wall + r * (rh + wall)} w={rw} h={rh} state={rooms[id]} onOpen={onOpen}/>;
         })}
         <div className="mhl-liv" data-assistant-life-living style={{ left: wall, top: ly, width: width - 2 * wall, height: lh, filter: night ? 'brightness(.62)' : undefined }}>
-          <button type="button" className="mhl-board text-left" data-assistant-life-board onClick={onBoard} style={{ width: Math.min(width * (land ? .42 : .52), 240) }} aria-label="今日あったことを全部見る">
-            <b>📌 今日あったこと{items.length ? ' ›' : ''}</b>
+          <button type="button" ref={boardRef} className="mhl-board text-left" data-assistant-life-board onClick={onBoard} style={{ width: Math.min(width * (land ? .42 : .52), 240) }} aria-label="今日あったことを全部見る">
+            <b className="flex items-center gap-1">📌 今日あったこと{items.length > 0 && <span className="mhl-board-more" data-assistant-life-board-more={restN}>{restN > 0 ? `ほか${restN}件 ›` : '全部 ›'}</span>}</b>
             {items.length ? items.slice(0, land ? 1 : 2).map((x, i) => <p key={i} data-assistant-life-board-item><AssistantLifeChunks text={`${x.t} ${assistantLifeBoardShort(x.text, land ? 2 : 1)}`}/></p>) : <p>まだ何もありません</p>}
           </button>
           <div className="mhl-door" style={{ left: width * (land ? .62 : .66), height: lh - 14 }}/>
@@ -62844,7 +62865,7 @@ function AssistantLifeScene({ scene, look, onClose, onGive, canGive }) {
           {zz && <span className="absolute text-[34px]" style={{ left: `${cx + 8}%`, top: '30%' }} aria-hidden="true">💤</span>}</React.Fragment>; })}
       <div className="mhl-hdr absolute inset-x-0 top-0" style={{ paddingTop: 'calc(8px + env(safe-area-inset-top))' }}>
         <div className="flex items-start gap-2">
-          <button type="button" data-assistant-life-scene-back onClick={onClose} aria-label="家へ戻る" className="h-9 w-9 text-[18px] text-slate-100">←</button>
+          <button type="button" data-assistant-life-scene-back onClick={() => { if (peer && peer.talking && typeof ASSISTANT_PEER_STORE !== 'undefined') ASSISTANT_PEER_STORE.set({ stopTalkAt: Date.now() }); onClose(); }} aria-label="家へ戻る" className="h-9 w-9 text-[18px] text-slate-100">←</button>
           <div className="min-w-0 flex-1"><p className="mhl-en">{scene.place && scene.place !== 'home' ? String(scene.place).toUpperCase() : 'ROOM'}</p>{/* アイコンは字の塗り(背景を字の形で切り抜く)の外に置く。中に入れると絵文字まで切り抜かれ、iPhone で白い四角になった(2026-11-08 社長) */}<p className="flex items-center gap-1.5" data-assistant-life-scene-title><span aria-hidden="true" data-assistant-life-scene-icon className="text-[19px] leading-none">{ASSISTANT_LIFE_PLACE_ICON[scene.place] || '🏡'}</span><span className="mhl-ti" style={{ fontSize: 19 }}>{placeName}</span></p></div>
         </div>
         {ids.length >= 3 && <p data-assistant-life-scene-group className="mt-1 w-fit rounded-full px-2 py-0.5 text-[10px] font-black" style={{ background: 'linear-gradient(90deg,#0ea5e9,#a855f7)' }}>👥 {ids.length}人で ・ <AssistantLifeNames text={assistantLifeGroupNames(ids, 8)}/></p>}
@@ -63116,7 +63137,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
           <div className="absolute inset-0" style={{ zIndex: 25 }} data-assistant-life-diary>
             <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/60" onClick={() => setBoardOpen(false)}/>
             <div className="mhl-sheet" style={land ? { left: 'auto', width: '42%', top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px' } : undefined}>
-              <p className="mhl-en">TODAY</p><p className="text-[18px] font-black">📌 今日あったこと</p>
+              <p className="mhl-en">TODAY</p><p className="text-[18px] font-black">📌 今日あったこと</p><p className="text-[10.5px] font-bold text-slate-400" data-assistant-life-diary-count>全部で{(diary.items || []).length}件・新しい順</p>
               {(diary.items || []).length ? [...diary.items].reverse().map((x, i) => <p key={i} className="mt-1.5 text-[12px] font-bold leading-snug text-slate-100"><b className="mr-1.5 text-amber-200">{x.t}</b><AssistantLifeChunks text={x.text}/></p>) : <p className="mt-2 text-[12px] text-slate-400">まだ何もありません</p>}
               <button type="button" data-assistant-life-diary-close data-mhl-sheet-close onClick={() => setBoardOpen(false)} className="mt-3 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
             </div>

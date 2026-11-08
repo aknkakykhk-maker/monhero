@@ -655,7 +655,7 @@ function AssistantLifeScene({ scene, look, onClose, onGive, canGive }) {
           {zz && <span className="absolute text-[34px]" style={{ left: `${cx + 8}%`, top: '30%' }} aria-hidden="true">💤</span>}</React.Fragment>; })}
       <div className="mhl-hdr absolute inset-x-0 top-0" style={{ paddingTop: 'calc(8px + env(safe-area-inset-top))' }}>
         <div className="flex items-start gap-2">
-          <button type="button" data-assistant-life-scene-back onClick={onClose} aria-label="家へ戻る" className="h-9 w-9 text-[18px] text-slate-100">←</button>
+          <button type="button" data-assistant-life-scene-back onClick={() => { if (peer && peer.talking && typeof ASSISTANT_PEER_STORE !== 'undefined') ASSISTANT_PEER_STORE.set({ stopTalkAt: Date.now() }); onClose(); }} aria-label="家へ戻る" className="h-9 w-9 text-[18px] text-slate-100">←</button>
           <div className="min-w-0 flex-1"><p className="mhl-en">{scene.place && scene.place !== 'home' ? String(scene.place).toUpperCase() : 'ROOM'}</p>{/* アイコンは字の塗り(背景を字の形で切り抜く)の外に置く。中に入れると絵文字まで切り抜かれ、iPhone で白い四角になった(2026-11-08 社長) */}<p className="flex items-center gap-1.5" data-assistant-life-scene-title><span aria-hidden="true" data-assistant-life-scene-icon className="text-[19px] leading-none">{ASSISTANT_LIFE_PLACE_ICON[scene.place] || '🏡'}</span><span className="mhl-ti" style={{ fontSize: 19 }}>{placeName}</span></p></div>
         </div>
         {ids.length >= 3 && <p data-assistant-life-scene-group className="mt-1 w-fit rounded-full px-2 py-0.5 text-[10px] font-black" style={{ background: 'linear-gradient(90deg,#0ea5e9,#a855f7)' }}>👥 {ids.length}人で ・ <AssistantLifeNames text={assistantLifeGroupNames(ids, 8)}/></p>}

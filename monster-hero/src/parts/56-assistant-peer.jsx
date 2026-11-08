@@ -776,6 +776,15 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
     if (c.phase === 'lines' && Array.isArray(c.talk.choice) && c.talk.choice.length) { setCur(x => x && ({ ...x, phase: 'choice' })); return; }
     finish(c);
   }, [finish]);
+  // 場面を閉じたら、流れている掛け合いも閉じる(自動で進まないので、残ると横で部屋に重なって押せなかった)。
+  //   ASSISTANT_PEER_STORE.set({ stopTalkAt: Date.now() }) で止める(56-assistant-life-house.jsx の場面の「←」)
+  const stopRef = React.useRef(st.stopTalkAt || 0);
+  React.useEffect(() => {
+    const at = st.stopTalkAt || 0;
+    if (at === stopRef.current) return;
+    stopRef.current = at;
+    if (cur) finish(cur);
+  }, [st.stopTalkAt]);
   // 自動で進めるのは設定を入れたときだけ(既定は切=タップで次へ)
   React.useEffect(() => {
     if (!cur || cur.phase === 'choice' || !auto.on) return undefined;
