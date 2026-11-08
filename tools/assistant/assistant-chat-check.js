@@ -347,7 +347,8 @@ const unit = async (core) => {
     // 2026-11-08 オトズレ3 の10組の試しで半分捨てていた原因(見本の「2人」と数字の見張りの食い違い・ドラの「やろう」・あつの「。」終わり)
     check('㉗ ドラの「やろう」「撮る」は通し、「〜やろ？」「〜っとる」は捨てる・あつの「。」終わりは「！」へ直し、絵文字終わりは通す',
       tone('dra', 'トランプやろうな、えへへ') !== null && tone('dra', '写真とるか？えへへ') !== null && tone('dra', 'うまいやろ？') === null && tone('dra', '待っとるぞ') === null
-      && tone('atsu', 'おじゃまします。') === 'おじゃまします！' && tone('atsu', '来たぞ☺️') === '来たぞ☺️');
+      && tone('atsu', 'おじゃまします。') === 'おじゃまします！' && tone('atsu', '来たぞ☺️') === '来たぞ☺️'
+      && tone('dra', 'ええな、おでも叩きたい') === null && tone('dra', '大きいのはおでが食べる分だな。くさ') === null && /難易度の名前/.test(core.FRIEND_RULES_TEXT));
     check('㉗ 決まりの文の見本に数字が無く、数字を書かない・相手はどちらも {f} と書くと決めている', !/[0-9０-９]/.test(core.FRIEND_RULES_TEXT.slice(core.FRIEND_RULES_TEXT.indexOf('見本'))) && /数字\(「2人」「2倍」なども\)は1つも書かない/.test(core.FRIEND_RULES_TEXT) && /a も b も名前を書かずに \{f\}/.test(core.FRIEND_RULES_TEXT));
     { const why = []; const pz = core.normalizeFriendPairs([{ kind: 'go', a: 'momosuke', b: 'momosuke' }], { assistants: { momosuke: {} } });
       const kept = core.validateFriendScenes([{ kind: 'go', a: 'momosuke', b: 'momosuke', lines: [{ side: 'a', e: 'happy', t: 'ももが2人！？' }, { side: 'b', e: 'happy', t: 'ふふん♡' }] }], pz, (w) => why.push(w));
