@@ -651,37 +651,42 @@ const assistantLifeStandBox = (src) => new Promise((res) => {
 //   (docs/progress/assistant-peer/gifts/stagec/STAND-MEASURE.md)。「目から顎まで」を全員同じ長さにして、頭の大きさをそろえる
 //   eye・chin … 見えている体の上を0・下を1とした目・顎の高さ / head … 顔だけの絵(ドラ)。頭ひとつぶんの大きさで床に置く
 const ASSISTANT_LIFE_STAND_FACE = Object.freeze({
-  mua: { eye: 0.34, chin: 0.46, scale: 1.12 }, kiki: { eye: 0.46, chin: 0.58, scale: 1 }, momosuke: { eye: 0.44, chin: 0.55, scale: 0.85 }, dra: { head: true, eye: 0.46, scale: 1.3 },
-  atsu: { eye: 0.29, chin: 0.43, scale: 1.12 }, kyuko: { eye: 0.33, chin: 0.47, scale: 0.92 }, sorashido: { eye: 0.31, chin: 0.47, scale: 0.98 }, erubin: { eye: 0.31, chin: 0.47, scale: 1.05 },
+  mua: { top: 0.14, eye: 0.34, chin: 0.46 }, kiki: { top: 0.18, eye: 0.46, chin: 0.58 }, momosuke: { top: 0.08, eye: 0.44, chin: 0.55 }, dra: { head: true, top: 0.10, eye: 0.46 },
+  atsu: { top: 0.06, eye: 0.29, chin: 0.43 }, kyuko: { top: 0.02, eye: 0.33, chin: 0.47 }, sorashido: { top: 0.02, eye: 0.31, chin: 0.47 }, erubin: { top: 0.03, eye: 0.31, chin: 0.47 },
 });
-//   scale … 8人を同じ床に並べた並び絵(gifts/stagec/lineup.png)を目で見て、顔の幅(髪を除く)がそろうように手で決めた補正(2026-11-08 社長「まだサイズバランスがあってない」。測った数字は目安)
+//   top … 頭のてっぺん(髪の上端。うさ耳・リボン・羽・王冠などの飾りは含めない)
+//   2026-11-08 社長「顔のサイズで合わせて頭のてっぺんをあわせた縮尺と位置にすればあわない？」: 縮尺は顔(目から顎)だけで決め、頭のてっぺんの高さをそろえて置く(手で決めた補正はやめた)
+//   ドラは顔だけの絵なので、ほかの7人の頭の高さ(髪の上端から顎まで)の平均(目から顎の約3.1倍)を、ドラの頭(見えている体の上1割から下まで)の高さにする
+const ASSISTANT_LIFE_STAND_HEAD_PER_FACE = 3.1;
 // 着替えなど表に無い絵は、8人のふつうの形で見る
 const assistantLifeStandFace = (pid, src) => {
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   const own = who && who.imagePrefix && String(src || '').includes(`/${who.imagePrefix}_`);
-  return (own && ASSISTANT_LIFE_STAND_FACE[pid]) || { eye: 0.33, chin: 0.47 };
+  return (own && ASSISTANT_LIFE_STAND_FACE[pid]) || { top: 0.05, eye: 0.33, chin: 0.47 };
 };
 // 場面の大きさ(W×H px)と、並ぶ人の絵の見えている範囲から、1人ずつの置き場所を決める(px)
 //   ・目から顎までの長さ F を全員同じに。F は人数で決める高さの割合と、1人の見えている幅が受け持ちの幅を大きく超えない長さの小さいほう
-//   ・顔(目の高さ)を、縦は場面の上から4割あたり・横は3割5分あたりにそろえる(2026-11-08 社長「画面の下に小さく固まり、上半分が空いている」)
+//   ・頭のてっぺんの高さをそろえ、目が縦は場面の上から4割あたり・横は3割5分あたりに来るように置く(2026-11-08 社長「画面の下に小さく固まり、上半分が空いている」)
 //   ・体の下のほうは、なめらかに消す(上半身で切れている絵の切れ目が宙に浮いて見えない)
 const assistantLifeStandLayout = (items, W, H) => {
   const n = items.length;
   if (!n || !W || !H || items.some(x => !x.box)) return null;
   const sw = (W * 0.92) / n;
   const fh = H * ({ 1: 0.085, 2: 0.075, 3: 0.064, 4: 0.055 }[Math.min(4, n)]);
-  const visH = (x, F) => (x.face.head ? F * 2.4 : F / (x.face.chin - x.face.eye)) * (x.face.scale || 1);
+  const visH = (x, F) => (x.face.head ? F * ASSISTANT_LIFE_STAND_HEAD_PER_FACE / (1 - x.face.top) : F / (x.face.chin - x.face.eye));
   const visW = (x, F) => visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
-  const eyeY = H * (W > H ? 0.36 : 0.42);
   let F = fh;
   for (const x of items) { const w1 = visW(x, 1); if (w1 > 0) F = Math.min(F, (sw * 1.08) / w1); }
+  // 頭のてっぺんの高さ: 目の高さの平均が、縦は場面の上から4割・横は3割5分に来るところ
+  const eyeOff = items.reduce((a, x) => a + ((x.face.eye || 0.4) - (x.face.top || 0)) * visH(x, F), 0) / n;
+  const topY = H * (W > H ? 0.36 : 0.42) - eyeOff;
   return items.map((x, i) => {
     const vh = visH(x, F), ih = vh / (x.box.b - x.box.t), iw = ih * x.box.ar;
-    const visTop = eyeY - (x.face.eye || 0.4) * vh;
+    const visTop = topY - (x.face.top || 0) * vh;
     const cx = W * 0.04 + sw * (i + 0.5);
     // 体の下のほうを消す所(絵の高さに対する割合)。顎の少し下から見えている下端まで
     const fade = x.face.head ? null : [x.box.t + Math.min(0.95, (x.face.chin || 0.5) + 0.18) * (x.box.b - x.box.t), x.box.b];
-    return { top: visTop - x.box.t * ih, height: ih, left: cx - ((x.box.l + x.box.r) / 2) * iw, width: iw, cx, face: F * (x.face.scale || 1), visTop, visBottom: visTop + vh, fade };
+    return { top: visTop - x.box.t * ih, height: ih, left: cx - ((x.box.l + x.box.r) / 2) * iw, width: iw, cx, face: F, visTop, visBottom: visTop + vh, fade };
   });
 };
 function AssistantLifeStands({ ids, sleepIds = [] }) {
