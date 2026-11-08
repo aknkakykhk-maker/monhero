@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4ad4f1eeb199aa3d
+// source-sha256: cd1dcf909f76ae99
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99227,6 +99227,7 @@ function AssistantCallnameToast({
   assistant,
   text,
   screen,
+  hidden = false,
   onDone
 }) {
   const [from] = React.useState(screen);
@@ -99245,7 +99246,7 @@ function AssistantCallnameToast({
     const t = setInterval(() => setTick(n => n + 1), 250);
     return () => clearInterval(t);
   }, [show]);
-  if (!show || !assistant) return null;
+  if (!show || !assistant || hidden) return null;
   const accent = assistant.accent || '#f472b6';
   const target = typeof rotationAwarePortalTarget === 'function' ? rotationAwarePortalTarget() : document.body;
   const body = React.createElement("div", {
@@ -180017,6 +180018,7 @@ function MonsterHeroGame() {
         assistant: who,
         text: callnameToast.text,
         screen: gameState,
+        hidden: showCallStylePicker,
         onDone: () => setCallnameToast(null)
       }) : null;
     })(), typeof AssistantPeerTalk === 'function' && RELEASE_FLAGS.assistantPeer === true && (() => {
@@ -188420,7 +188422,7 @@ function MonsterHeroGame() {
       }, "外す")));
     })(), assistantBondLevelNow >= ASSISTANT_CALL_STYLE_UNLOCK_LEVEL ? React.createElement(React.Fragment, null, React.createElement("p", {
       className: "text-[9px] text-slate-500 text-center mb-3 leading-tight"
-    }, "絆Lv6になったので、呼び方を自由に決められます。「", '{name}', "」と書くと、そこがあなたの名前に置き換わります。"), React.createElement("input", {
+    }, "仲良し度がLv6になったので、呼び方を自由に決められます。「", '{name}', "」と書くと、そこがあなたの名前に置き換わります。"), React.createElement("input", {
       type: "text",
       value: tempCallStyle,
       onChange: e => setTempCallStyle(e.target.value),
@@ -188462,7 +188464,7 @@ function MonsterHeroGame() {
         setShowCallStylePicker(false);
       },
       className: "w-full text-[10px] text-slate-500 font-bold py-1 active:scale-95"
-    }, "絆Lvの呼び方に戻す")) : React.createElement("button", {
+    }, "仲良し度の呼び方に戻す")) : React.createElement("button", {
       onClick: () => setShowCallStylePicker(false),
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
     }, "閉じる"))), showAssistantPicker && React.createElement("div", {
