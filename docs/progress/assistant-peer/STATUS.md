@@ -296,3 +296,5 @@
   - 検査・撮影: `node tools/assistant/assistant-masmon-browser-check.js [--shots]`(縦・横・🔄横から戻った。端にくっつかない・切れない・絵が出る)→ shots/masmon-*.jpg
 - 待ち: 更新履歴・ヘルプの文の「この文で」/ミハリの撮り直し/好き嫌いが変わる ❶〜❹
 - 次: ② 成長(育成場・練習スタジオ・カード部屋に行った回数で Lv。新しいキー mh_assistant_life_masmon_v1)
+- 追記(ココロ・2026-11-08): まだ main に無い関数名は typeof で確かめても undefined-reference-check に止められるので、ココロは受け口の入れ物 `ASSISTANT_CHAT_TASTE_HOOKS = { of:null, onTalk:null }` を 56-assistant-chat.jsx に置き、それ経由で呼ぶ。キズナ2は自分の部品(56-assistant-chat.jsx より後ろの parts)のトップレベルに次を足す: `if (typeof ASSISTANT_CHAT_TASTE_HOOKS === 'object' && ASSISTANT_CHAT_TASTE_HOOKS) { ASSISTANT_CHAT_TASTE_HOOKS.of = assistantLifeTasteOf; ASSISTANT_CHAT_TASTE_HOOKS.onTalk = assistantLifeTasteOnTalk; }`。ココロの PR が先に main へ入る(入ったら知らせが来る)。ほかの部(マモリ・ソランド・ジン)の口も、相手より先に名前を書けないときは同じ「入れ物」の形にそろえる
+- 追記(オトズレ2): friend_scenes のデプロイは社長の「この文で」→ main → 窓口へ知らせてから。PR 番号はキズナ2か窓口へ
