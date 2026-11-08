@@ -16339,18 +16339,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 助手ライフを開いたまま裏で負けたとき、帯に数秒だけ「負けちゃった…」を出す(2026-11-08 社長「帯に小さく出す」・ミハリの提案)。
   //   負けの幕は助手ライフの上には出さないので、これが無いと「◯周目」が1へ戻るだけで負けたことが分からない。
   //   出すのは負けた瞬間から QUICK_RUN_AUTO_RETRY_MS のあいだ(自動で始め直すまでの間と同じ長さ)。見た目だけで、周回の動きには触らない
+  //   ★消すタイマーは ref に持ち、effect の片づけでは消さない。4秒のあいだに周回の進みが変わる(始め直して1周目が始まる)と
+  //     片づけで消えて札が残り、あとで「止める」を押したときに昔の札が出ていた(2026-11-08 ミハリ)。
+  //     新しい周回が始まったとき・助手ライフを閉じたときは、すぐ札を戻す
   const [lifeLoseNote, setLifeLoseNote] = useState(null);
   const lifeLoseSeenRef = useRef(null);
+  const lifeLoseTimerRef = useRef(null);
+  const clearLifeLoseNote = () => { if (lifeLoseTimerRef.current) clearTimeout(lifeLoseTimerRef.current); lifeLoseTimerRef.current = null; setLifeLoseNote(null); };
   useEffect(() => {
     const p = quickRunProgress;
-    if (!p || !p.finished || p.reason !== 'defeat' || !assistantLifeOpenNow) return undefined;
-    if (lifeLoseSeenRef.current === p) return undefined;
+    if (!assistantLifeOpenNow || !p || !p.finished) { if (lifeLoseTimerRef.current || lifeLoseNote) clearLifeLoseNote(); return; }
+    if (p.reason !== 'defeat' || lifeLoseSeenRef.current === p) return;
     lifeLoseSeenRef.current = p;
+    if (lifeLoseTimerRef.current) clearTimeout(lifeLoseTimerRef.current);
     setLifeLoseNote(quickRhythmGuideReleased && autoQuickRunAutoStartEnabled(autoSettings) ? 'retry' : 'lose');
-    const timer = setTimeout(() => setLifeLoseNote(null), QUICK_RUN_AUTO_RETRY_MS);
-    return () => clearTimeout(timer);
+    lifeLoseTimerRef.current = setTimeout(() => { lifeLoseTimerRef.current = null; setLifeLoseNote(null); }, QUICK_RUN_AUTO_RETRY_MS);
   }, [quickRunProgress, assistantLifeOpenNow]);
-  useEffect(() => { if (!assistantLifeOpenNow) setLifeLoseNote(null); }, [assistantLifeOpenNow]);
+  useEffect(() => () => { if (lifeLoseTimerRef.current) clearTimeout(lifeLoseTimerRef.current); }, []);
   // バトル内ではAUTO系を1ボタンで循環する。表示用stateは持たず、既存の同期refから次の状態だけを決める。
   const cycleBattleAuto = () => {
     if(autoRepeatRef.current){setAutoBattleEnabled(false);return;}

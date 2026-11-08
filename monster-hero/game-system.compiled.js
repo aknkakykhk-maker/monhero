@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a3aef048798fd1b9
+// source-sha256: 17246a534e3080ba
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -188425,18 +188425,30 @@ function MonsterHeroGame() {
   }, [quickRunProgress, gameState, resultProcessing, autoSettings, assistantLifeOpenNow]);
   const [lifeLoseNote, setLifeLoseNote] = useState(null);
   const lifeLoseSeenRef = useRef(null);
+  const lifeLoseTimerRef = useRef(null);
+  const clearLifeLoseNote = () => {
+    if (lifeLoseTimerRef.current) clearTimeout(lifeLoseTimerRef.current);
+    lifeLoseTimerRef.current = null;
+    setLifeLoseNote(null);
+  };
   useEffect(() => {
     const p = quickRunProgress;
-    if (!p || !p.finished || p.reason !== 'defeat' || !assistantLifeOpenNow) return undefined;
-    if (lifeLoseSeenRef.current === p) return undefined;
+    if (!assistantLifeOpenNow || !p || !p.finished) {
+      if (lifeLoseTimerRef.current || lifeLoseNote) clearLifeLoseNote();
+      return;
+    }
+    if (p.reason !== 'defeat' || lifeLoseSeenRef.current === p) return;
     lifeLoseSeenRef.current = p;
+    if (lifeLoseTimerRef.current) clearTimeout(lifeLoseTimerRef.current);
     setLifeLoseNote(quickRhythmGuideReleased && autoQuickRunAutoStartEnabled(autoSettings) ? 'retry' : 'lose');
-    const timer = setTimeout(() => setLifeLoseNote(null), QUICK_RUN_AUTO_RETRY_MS);
-    return () => clearTimeout(timer);
+    lifeLoseTimerRef.current = setTimeout(() => {
+      lifeLoseTimerRef.current = null;
+      setLifeLoseNote(null);
+    }, QUICK_RUN_AUTO_RETRY_MS);
   }, [quickRunProgress, assistantLifeOpenNow]);
-  useEffect(() => {
-    if (!assistantLifeOpenNow) setLifeLoseNote(null);
-  }, [assistantLifeOpenNow]);
+  useEffect(() => () => {
+    if (lifeLoseTimerRef.current) clearTimeout(lifeLoseTimerRef.current);
+  }, []);
   const cycleBattleAuto = () => {
     if (autoRepeatRef.current) {
       setAutoBattleEnabled(false);

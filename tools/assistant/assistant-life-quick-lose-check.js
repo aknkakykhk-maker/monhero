@@ -4,7 +4,7 @@
 //   node tools/assistant/assistant-life-quick-lose-check.js
 //   ① 部品の中: 札は助手ライフの帯(renderLifeQuickRunStrip)の中だけ。出す長さは自動で始め直すまでの間(QUICK_RUN_AUTO_RETRY_MS)と同じ
 //   ② 実際の画面(縦 390×844): AUTO設定の難易度を Hell にして助手ライフで回し、負けると帯が「😢 負けちゃった…始め直すよ」(data-life-quick-run-lose="retry")になり、
-//      そのあと自動で始め直して札が消える(帯が live に戻る)。回っているあいだは札を出さない
+//      そのあと自動で始め直して札が消える(帯が live に戻る)。回っているあいだは札を出さない。始め直したあと「止める」を押しても前の札が出ない
 //   ③ ページのエラーが出ない
 const http = require('http');
 const path = require('path');
@@ -33,7 +33,10 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
   const uses = [...app.matchAll(/data-life-quick-run-lose/g)].length;
   const strip = app.slice(app.indexOf('const renderLifeQuickRunStrip'), app.indexOf('const handleRetry'));
   check('① 負けの札は助手ライフの帯の中だけで出す(ほかのモードには出さない)', uses === 1 && /data-life-quick-run-lose/.test(strip), `${uses}か所`);
-  check('① 札を出す長さは、自動で始め直すまでの間と同じ', /setTimeout\(\(\) => setLifeLoseNote\(null\), QUICK_RUN_AUTO_RETRY_MS\)/.test(app));
+  check('① 札を出す長さは、自動で始め直すまでの間と同じ', /lifeLoseTimerRef\.current = setTimeout\([^\n]*setLifeLoseNote\(null\); \}, QUICK_RUN_AUTO_RETRY_MS\)/.test(app));
+  // 片づけ(return () => clearTimeout)で消すと、4秒のあいだに始め直したとき札が残る(2026-11-08 ミハリ)
+  const eff = app.slice(app.indexOf('const [lifeLoseNote'), app.indexOf('// バトル内ではAUTO系を1ボタンで循環する'));
+  check('① 札を消すタイマーを、周回の進みが変わったときの片づけで消さない(新しい周回が始まったらすぐ戻す)', !/return \(\) => clearTimeout\(timer\)/.test(eff) && /!p\.finished\) \{ if \(lifeLoseTimerRef\.current \|\| lifeLoseNote\) clearLifeLoseNote\(\)/.test(eff));
 }
 
 const seed = () => {
@@ -93,6 +96,16 @@ const seed = () => {
     const back = li >= 0 ? log.slice(li + 1).find(e => /^live\|$/.test(e.x)) : null;
     check('② 数秒で自動で始め直し、札が消える(帯が live に戻る)', !!back && back.t - log[li].t >= 2.5 && back.t - log[li].t <= 7, back ? `${(back.t - log[li].t).toFixed(2)}秒` : JSON.stringify(log.slice(-4)));
     check('② 回っているあいだは札を出さない', !log.some(e => /^live\|.+/.test(e.x)), JSON.stringify(log.filter(e => /^live\|.+/.test(e.x)).slice(0, 3)));
+    // 始め直したあとに「止める」を押しても、前の負けの札が出ない(止めた帯に昔の札が残っていた。2026-11-08 ミハリ)
+    await page.waitForTimeout(1500);
+    for (let i = 0; i < 4 && await closePopups(); i++) await page.waitForTimeout(300);
+    const stopBtn = page.locator('[data-life-quick-run-stop]');
+    let afterStop = 'no-stop';
+    if (await stopBtn.count()) {
+      await stopBtn.click({ force: true }); await page.waitForTimeout(1200);
+      afterStop = await page.evaluate(() => { const s = document.querySelector('[data-life-quick-run]'); const n = s && s.querySelector('[data-life-quick-run-lose]'); return `${s ? s.dataset.lifeQuickRun : 'none'}|${n ? n.textContent : ''}`; });
+    }
+    check('② 負け→始め直し→「止める」で、前の負けの札が出ない', /^stopped\|$/.test(afterStop), afterStop);
     check('③ ページのエラーが出ない', fatal.length === 0, fatal.slice(0, 3).join(' / '));
   } finally { await browser.close(); server.close(); }
   console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
