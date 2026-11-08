@@ -57,27 +57,23 @@ const face = (id) => `<img src="${'__F_' + id}">`;
 const av = (ch, c) => `<span class="fv-av" style="background:${c}">${ch}</span>`;
 html.pick = (land) => `
 <div class="fv-sheet" style="${land ? 'left:auto;right:6px;top:6px;width:430px' : ''}">
-  <div class="fv-h"><i>🏘</i><div><b>フレンドの家へ遊びに行く</b><small>今日あと2回 ・ 朝4時に戻る ・ 同じ家は1日1回</small></div></div>
-  <div class="fv-row">${av('あ', '#f472b6')}<div class="fv-mid"><b>あおいさんの家</b><small>🟢 いま遊んでいる ・ 家に3人</small><div class="fv-faces">${face('dra')}${face('kyuko')}${face('erubin')}</div></div><span class="fv-btn">行く</span></div>
-  <div class="fv-row">${av('ゆ', '#60a5fa')}<div class="fv-mid"><b>ゆうとさんの家</b><small>📷 きのう 21:10 の様子 ・ 家に2人</small><div class="fv-faces">${face('momosuke')}${face('sorashido')}</div></div><span class="fv-btn">行く</span></div>
-  <div class="fv-row off">${av('こ', '#a78bfa')}<div class="fv-mid"><b>こはるさんの家</b><small>✓ 今日はもう遊びに行った</small></div><span class="fv-btn gray">済み</span></div>
-  ${land ? '' : `<div class="fv-row off">${av('は', '#94a3b8')}<div class="fv-mid"><b>はやてさん</b><small>助手ライフをまだ開いていない</small></div><span class="fv-btn gray">—</span></div>`}
-  <div class="fv-note">相手がいなくても、最後に開いたときの家の様子(控え)を訪ねる。相手のセーブには何も書かない。</div>
+  <div class="fv-h"><i>🏘</i><div><b>フレンドとの行き来</b><small>助手が自分で出かける ・ 今日あと1回出かけるかも</small></div></div>
+  <div style="font-size:11px;font-weight:900;color:#f9a8d4;margin:2px 0 4px">いま</div>
+  <div class="fv-row"><div class="fv-faces" style="margin:0">${face('mua')}${face('kiki')}</div><div class="fv-mid"><b>みゅあ・きき → あおいさんの家</b><small>🍰 おやつ ・ 昼の区切りで帰ってくる</small></div></div>
+  <div class="fv-row"><div class="fv-faces" style="margin:0">${face('momosuke')}</div><div class="fv-mid"><b>ゆうとさんのももすけ が来ている</b><small>居間でひと休み ・ 14:20から</small></div><span class="fv-btn">見る</span></div>
+  <div style="font-size:11px;font-weight:900;color:#f9a8d4;margin:6px 0 4px">今日の行き来</div>
+  <div class="fv-row"><div class="fv-faces" style="margin:0">${face('atsu')}</div><div class="fv-mid"><b>あつ → こはるさんの家(帰ってきた)</b><small>朝 ・ 🎁 写真1枚・100P</small></div><span class="fv-btn">場面</span></div>
+  ${land ? '' : `<div class="fv-row"><div class="fv-faces" style="margin:0">${face('sorashido')}</div><div class="fv-mid"><b>あおいさんのソラシド が来た</b><small>11:05 ・「お茶ごちそうさま」</small></div><span class="fv-btn gray">済み</span></div>`}
+  <div class="fv-note">どの家へいつ行くかは助手が決める(1日3回まで・同じ家は1日1回・寝ている助手とけんか中の助手は行かない)。</div>
 </div>`;
 html.who = (land) => `
 <div class="fv-sheet" style="${land ? 'left:auto;right:6px;top:6px;width:430px' : ''}">
-  <div class="fv-h"><i>🚪</i><div><b>あおいさんの家へ、だれが行く？</b><small>1〜2人 ・ 家にいる助手から</small></div></div>
-  <div class="fv-chips">
-    <span class="fv-chip on">${face('mua')}みゅあ</span><span class="fv-chip on">${face('kiki')}きき</span>
-    <span class="fv-chip">${face('atsu')}あつ</span><span class="fv-chip off">${face('momosuke')}💤 寝てる</span>
-    <span class="fv-chip off">${face('dra')}💢 けんか中</span>
-  </div>
-  <div style="margin-top:8px">
-    <div class="fv-gain"><span><em style="background:#f472b633" class="fv-pink">♥ 仲良し度</em>行った2人</span><span class="fv-pink">+10 ずつ</span></div>
-    <div class="fv-gain"><span><em style="background:#fb923c33" class="fv-orange">🤝 友情Lv</em>2人で行ったとき</span><span class="fv-orange">+4</span></div>
-    <div class="fv-gain"><span><em style="background:#38bdf833" class="fv-sky">🎁 おみやげ</em>写真1枚・ビートP</span><span class="fv-sky">100P</span></div>
-  </div>
-  <span class="fv-big">みゅあ と きき を送り出す</span>
+  <div class="fv-h"><i>📒</i><div><b>行ったことのある家</b><small>この7日 ・ 助手が行きたがる順</small></div></div>
+  <div class="fv-row">${av('あ', '#f472b6')}<div class="fv-mid"><b>あおいさんの家</b><small>🟢 いま遊んでいる ・ 行った4回・来た2回</small><div class="fv-faces">${face('dra')}${face('kyuko')}${face('erubin')}</div></div></div>
+  <div class="fv-row">${av('ゆ', '#60a5fa')}<div class="fv-mid"><b>ゆうとさんの家</b><small>📷 きのう 21:10 ・ 行った1回・来た3回</small><div class="fv-faces">${face('momosuke')}${face('sorashido')}</div></div></div>
+  <div class="fv-row">${av('こ', '#a78bfa')}<div class="fv-mid"><b>こはるさんの家</b><small>📷 今日 7:40 ・ 行った2回</small><div class="fv-faces">${face('mua')}</div></div></div>
+  <div class="fv-gain"><span><em style="background:#38bdf833" class="fv-sky">🤝 顔なじみ</em>みゅあ と あおいさんのドラ</span><span class="fv-sky">5回</span></div>
+  <div class="fv-note">家を押すと、その家での写真と場面を見返せる。行ってほしくない家は「⋯」から外せる。</div>
 </div>`;
 html.visit = (land) => `
 <div class="fv-banner" style="${land ? 'top:12px;left:300px' : 'top:118px'}">📷 きのう 21:10 の様子(控え)</div>
@@ -90,7 +86,7 @@ html.visit = (land) => `
 </div>`;
 html.back = (land) => `
 <div class="fv-sheet" style="${land ? 'left:auto;right:6px;top:6px;width:430px' : ''}">
-  <div class="fv-h"><i>🏡</i><div><b>おかえり！</b><small>みゅあ と きき が あおいさんの家から帰ってきた</small></div></div>
+  <div class="fv-h"><i>🏡</i><div><b>おかえり！</b><small>みゅあ と きき が 自分で あおいさんの家へ行っていた</small></div></div>
   <div class="fv-gain"><span><em style="background:#f472b633" class="fv-pink">♥ 仲良し度</em>みゅあ・きき</span><span class="fv-pink">+10 ずつ</span></div>
   <div class="fv-gain"><span><em style="background:#fb923c33" class="fv-orange">🤝 友情Lv</em>みゅあ・きき</span><span class="fv-orange">+4</span></div>
   <div class="fv-gain"><span><em style="background:#38bdf833" class="fv-sky">📷 写真</em>アルバム「あおいさんの家で」</span><span class="fv-sky">1枚</span></div>
@@ -178,8 +174,8 @@ async function main() {
     }
     await openHouse(page); await houseMods(page, F);
     await overlay(page, '<span class="fv-tag">① 家: 行き来が家に出る</span>'); await shot(page, `${v.id}-1-house`);
-    await overlay(page, fill(dim + '<span class="fv-tag">② フレンドの家を選ぶ</span>' + html.pick(v.land), F)); await shot(page, `${v.id}-2-pick`);
-    await overlay(page, fill(dim + '<span class="fv-tag">③ だれが行くかを選ぶ</span>' + html.who(v.land), F)); await shot(page, `${v.id}-3-who`);
+    await overlay(page, fill(dim + '<span class="fv-tag">② いまの行き来・今日の記録</span>' + html.pick(v.land), F)); await shot(page, `${v.id}-2-pick`);
+    await overlay(page, fill(dim + '<span class="fv-tag">③ 行ったことのある家</span>' + html.who(v.land), F)); await shot(page, `${v.id}-3-who`);
     // フレンドの家(控え): 題を差しかえ、部屋の札を相手の様子に
     const undo = await page.evaluate((F) => {
       const keep = [];
@@ -204,7 +200,7 @@ async function main() {
       window.__fvKeep = keep; return true;
     }, F);
     await page.evaluate(() => document.querySelectorAll('[data-fv-icon]').forEach(e => e.style.display = 'none'));
-    await overlay(page, fill('<span class="fv-tag">④ フレンドの家(控え)で遊ぶ</span>' + html.visit(v.land), F)); await shot(page, `${v.id}-4-visit`);
+    await overlay(page, fill('<span class="fv-tag">④ 場面: フレンドの家(控え)で</span>' + html.visit(v.land), F)); await shot(page, `${v.id}-4-visit`);
     await page.evaluate(() => { for (const [e, v, k] of window.__fvKeep || []) { if (k === 'html') e.innerHTML = v; else if (k === 'disp') e.style.display = v; else e.textContent = v; } document.querySelectorAll('.fv-room').forEach(e => e.remove()); document.querySelectorAll('[data-fv-icon]').forEach(e => e.style.display = ''); });
     await overlay(page, fill(dim + '<span class="fv-tag">⑥ 帰ってきた・おみやげ</span>' + html.back(v.land), F)); await shot(page, `${v.id}-6-back`);
     await overlay(page, fill(dim + '<span class="fv-tag">⑦ 置き手紙(来てくれた人)</span>' + html.letters(v.land), F)); await shot(page, `${v.id}-7-letters`);
