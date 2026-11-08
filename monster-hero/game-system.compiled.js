@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d48d2294c99cd274
+// source-sha256: 3909ed707d137794
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -131035,10 +131035,25 @@ const cardAiDeckLifeStyle = who => {
     return null;
   }
 };
-const cardAssistantDeckPick = (who, rand = Math.random, level = 'normal', extra = {}) => {
+const cardAiDeckNextMemo = {};
+const cardAiDeckNextStyle = who => {
+  if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who]) return null;
+  if (!cardAiDeckNextMemo[who]) cardAiDeckNextMemo[who] = cardAiDeckPickStyle(cardAiDeckLifeStyle(who), Math.random);
+  return cardAiDeckNextMemo[who];
+};
+const cardAiDeckNextName = who => {
+  const st = cardAiDeckNextStyle(who);
+  if (!st) return null;
+  const e = cardAiRecipeState && cardAiRecipeState.perWho[who] && cardAiRecipeState.perWho[who].decks[st];
+  return e && e.name || cardAiDeckDefaultName(who, st);
+};
+const cardAiDeckNextDone = who => {
+  delete cardAiDeckNextMemo[who];
+};
+const cardAssistantDeckPick = (who, rand = Math.random, level = 'normal', extra = {}, styleIn = null) => {
   if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who] || typeof CARD_BATTLE_DATA === 'undefined') return null;
   const rnd = typeof rand === 'function' ? rand : Math.random;
-  const styleId = cardAiDeckPickStyle(cardAiDeckLifeStyle(who), rnd);
+  const styleId = cardAiStyleOf(styleIn) || cardAiDeckPickStyle(cardAiDeckLifeStyle(who), rnd);
   const e = cardAiRecipeState && cardAiRecipeState.perWho[who] && cardAiRecipeState.perWho[who].decks[styleId] || null;
   const plan = e && e.plan ? e.plan : null;
   const deck = cardAiBuildDeck(CARD_BATTLE_DATA, who, CARD_AI_BUILD[level] ? level : 'normal', rnd, {
@@ -139510,7 +139525,8 @@ const CardBattleScreen = ({
     const share = pick.share || null;
     const aiPick = !share && !(opts && opts.cup) && cardGrowStyleOn() && typeof cardAssistantDeckPick === 'function' ? cardAssistantDeckPick(pick.who, Math.random, pick.level, {
       playerDeck: activeDeck
-    }) : null;
+    }, typeof cardAiDeckNextStyle === 'function' ? cardAiDeckNextStyle(pick.who) : null) : null;
+    if (aiPick && typeof cardAiDeckNextDone === 'function') cardAiDeckNextDone(pick.who);
     const foeStyle = aiPick ? aiPick.styleId : null;
     const cpuDeck = share ? {
       monsters: share.deck.monsters.slice(),
