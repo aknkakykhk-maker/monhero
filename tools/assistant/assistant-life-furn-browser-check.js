@@ -47,8 +47,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await toHome(page); await waitFaces(page);
     return page;
   };
-  // HOME の助手どうしのおしゃべりの帯が出ていると押せないので、消えるのを待ってから押す
-  const openHouse = async (page) => { for (let i = 0; i < 3; i++) { await page.locator('[data-assistant-peer-line]').waitFor({ state: 'detached', timeout: 15000 }).catch(() => {}); try { await page.locator('[data-home-assistant-life]').click({ timeout: 8000 }); break; } catch (e) { if (i === 2) throw e; await page.waitForTimeout(1500); } } await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 6000 }).catch(() => {}); await page.waitForTimeout(400); };
+  // HOME の助手どうしのおしゃべりの帯(タップで次へ・2026-11-08 社長)が出ていると押せないので、帯の「閉じる」を押してから押す
+  const openHouse = async (page) => { for (let i = 0; i < 5; i++) { const pc = page.locator('[data-assistant-peer-close]'); if (await pc.count()) await pc.first().click({ timeout: 2000 }).catch(() => {}); try { await page.locator('[data-home-assistant-life]').click({ timeout: 4000 }); break; } catch (e) { if (i === 4) throw e; await page.waitForTimeout(800); } } await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 6000 }).catch(() => {}); await page.waitForTimeout(400); };
   const openRoomFurn = async (page, id) => { await page.locator(`[data-assistant-life-room="${id}"]`).click(); await page.waitForTimeout(250); await page.locator('[data-assistant-life-room-act="furn"]').click(); await page.waitForTimeout(300); };
   const inView = (page, sel) => page.evaluate((s) => { const el = document.querySelector(s); if (!el) return false; const r = el.getBoundingClientRect(); return r.left >= -1 && r.top >= -1 && r.right <= innerWidth + 1 && r.bottom <= innerHeight + 1; }, sel);
   const give = async (page, id, key) => { await openRoomFurn(page, id); await page.locator(`[data-assistant-life-furn-give="${key}"]`).click(); await page.waitForTimeout(700); await finishTalk(page); await page.locator('[data-assistant-life-scene-back]').click({ timeout: 3000 }).catch(() => {}); await page.waitForTimeout(300); };

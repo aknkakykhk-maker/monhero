@@ -63,8 +63,8 @@ const cutProblems = (page, sel) => page.evaluate((s) => {
     await toHome(page); await waitFaces(page);
     return page;
   };
-  // HOME の助手どうしのおしゃべりの帯が出ていると押せないので、消えるのを待ってから押す
-  const openHouse = async (page) => { for (let i = 0; i < 3; i++) { await page.locator('[data-assistant-peer-line]').waitFor({ state: 'detached', timeout: 15000 }).catch(() => {}); try { await page.locator('[data-home-assistant-life]').click({ timeout: 8000 }); break; } catch (e) { if (i === 2) throw e; await page.waitForTimeout(1500); } } await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 6000 }).catch(() => {}); await page.waitForTimeout(400); };
+  // HOME の助手どうしのおしゃべりの帯(タップで次へ・2026-11-08 社長)が出ていると押せないので、帯の「閉じる」を押してから押す
+  const openHouse = async (page) => { for (let i = 0; i < 5; i++) { const pc = page.locator('[data-assistant-peer-close]'); if (await pc.count()) await pc.first().click({ timeout: 2000 }).catch(() => {}); try { await page.locator('[data-home-assistant-life]').click({ timeout: 4000 }); break; } catch (e) { if (i === 4) throw e; await page.waitForTimeout(800); } } await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 6000 }).catch(() => {}); await page.waitForTimeout(400); };
   try {
     for (const [w, h, tag, file] of [[390, 844, '縦 390', 'tate'], [375, 667, '縦 375', 'tate375'], [844, 390, '横 844', 'yoko'], [667, 375, '🔄横 667', 'yoko667']]) {
       const page = await open(w, h);
