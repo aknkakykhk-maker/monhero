@@ -1,0 +1,83 @@
+# 助手ライフ「フレンドの家との行き来」— ツムギの台詞(2026-11-08)。注文書 lines/ORDER-FRIEND.md
+# ツムギの分: あつ・きゅうこ・ソラシド・えるびん × 16本(迎える3・していること6・返事への答え3・寝言2・行った2・迎えた2)
+# 穴は {name}・{h}さん・{f} のどれか1つまで。数字・モードや難易度の名前・「攻略」は書かない。よその家なので、けんかなし・体に触れる話なし
+
+## あつ
+visit atsu line=greet | atsu happy お、いらっしゃい！ {h}さんの友だちだよね笑
+visit atsu line=greet | atsu excited {name}、来てくれたんだ！ ゆっくりしてって笑
+visit atsu line=greet | atsu normal おっ、お客さん笑 遠慮しないで入って！
+visit atsu line=greet doing=snack | atsu happy ちょうどおやつ食べてた笑 一個どう？
+visit atsu line=greet doing=practice | atsu excited いま一曲叩いてたとこ笑 {name}も聞いてく？
+visit atsu line=greet doing=training | atsu normal ドラゴンの世話してた笑 ちょっと待ってて！
+visit atsu line=greet doing=cards | atsu wink デッキ組み直してたとこ笑 見ていく？
+visit atsu line=greet doing=read | atsu troubled 本読んでたら、ちょっと寝そうだった笑 来てくれて助かる！
+visit atsu line=greet doing=idle | atsu happy ぼーっとしてた笑 ちょうど話し相手ほしかった！
+visit atsu line=reply | atsu happy ありがと笑 くつろいでって！
+visit atsu line=reply | atsu wink そう言ってもらえると、うれしい笑
+visit atsu line=reply | atsu normal いいって笑 {h}さんにも伝えとく！
+visit atsu line=sleep | atsu normal ……次の一曲、いける……
+visit atsu line=sleep | atsu happy ……ドラゴン、えらいぞ……( *'ω'*)ノ
+go atsu | atsu happy {f}、遊びに来た笑 なんかして遊ぼ！
+go atsu | atsu wink {h}さんの部屋、いい感じじゃん！ また来たいな笑
+welcome atsu | atsu excited いらっしゃい！ 来てくれたの、まじでうれしい笑
+welcome atsu | atsu happy {f}、よく来たじゃん笑 ゆっくりしてって！
+
+## きゅうこ
+visit kyuko line=greet | kyuko happy ほい、いらっしゃ〜い。{name}、ようこそだよぉ
+visit kyuko line=greet | kyuko normal あ、お客さんだぁ。{h}さんの友だちかな？
+visit kyuko line=greet | kyuko wink ちょうどひと休みしたかったんだぁ。どうぞどうぞ
+visit kyuko line=greet doing=snack | kyuko happy おやつ食べてたとこ〜。一緒にどう？
+visit kyuko line=greet doing=practice | kyuko normal いま練習してたんだぁ。ちょっと聞いてってよぉ
+visit kyuko line=greet doing=training | kyuko happy ニャーの世話してたとこ〜。かわいいでしょ笑
+visit kyuko line=greet doing=cards | kyuko wink 新しい組み方、考えてたんだぁ。見る？
+visit kyuko line=greet doing=read | kyuko normal 本読んでたとこ〜。いいところで来たねぇ笑
+visit kyuko line=greet doing=idle | kyuko happy ぼーっと音楽聞いてたんだぁ。座っていいよぉ
+visit kyuko line=reply | kyuko happy ありがとん笑 ゆっくりしてってねぇ
+visit kyuko line=reply | kyuko wink そう言ってもらえると、うれしいなぁ
+visit kyuko line=reply | kyuko normal ほい、どういたしまして〜。{h}さんも喜ぶよぉ
+visit kyuko line=sleep | kyuko normal ……むにゃ……あと一ページ……
+visit kyuko line=sleep | kyuko happy ……ニャー、そこはだめだよぉ……
+go kyuko | kyuko happy {f}、遊びに来たよぉ。何してたの？
+go kyuko | kyuko wink {h}さんの部屋、本がありそうで落ち着くねぇ
+welcome kyuko | kyuko happy いらっしゃ〜い。{f}、待ってたよぉ
+welcome kyuko | kyuko normal ほい、上がって上がって〜。お茶いれるねぇ
+
+## ソラシド
+visit sorashido line=greet | sorashido excited うぉぉぉ！ お客さんだ！ よく来てくれたな
+visit sorashido line=greet | sorashido happy {name}、いらっしゃい！ くつろいでくれ笑
+visit sorashido line=greet | sorashido normal {h}さんの友だちか。ゆっくりしていけよ
+visit sorashido line=greet doing=snack | sorashido happy ちょうどちんすこう食べてたんだ。一緒にどうだ？
+visit sorashido line=greet doing=practice | sorashido excited いま練習してたんだ！ 聞いていくか？
+visit sorashido line=greet doing=training | sorashido normal 育成の記録をつけてたとこだ。ちょっと待っててくれ
+visit sorashido line=greet doing=cards | sorashido excited 新しい表を作ってたんだぜ・・・！ 見ていくか？
+visit sorashido line=greet doing=read | sorashido normal 本を読んでたんだ。いいところで来たな笑
+visit sorashido line=greet doing=idle | sorashido happy 考えごとしてたんだ。話し相手ができてうれしいぞ
+visit sorashido line=reply | sorashido happy ありがとな！ でーじうれしいぞ笑
+visit sorashido line=reply | sorashido wink そう言ってもらえると、表を作ったかいがあるな
+visit sorashido line=reply | sorashido normal 気をつかわなくていいぞ。ゆっくりしてくれ
+visit sorashido line=sleep | sorashido normal ……うぉぉ……むにゃ……表が……
+visit sorashido line=sleep | sorashido happy ……なんくるないさ〜……すぅ……
+go sorashido | sorashido excited {f}、遊びに来たぞ！ 今日はなにする？
+go sorashido | sorashido happy {h}さんの部屋、でーじ落ち着くな笑
+welcome sorashido | sorashido excited よく来たな！ {f}、待ってたぞ
+welcome sorashido | sorashido happy いらっしゃい！ ゆっくりしていけよ笑
+
+## えるびん
+visit erubin line=greet | erubin happy いらっしゃい。{name}、来てくれてありがとう
+visit erubin line=greet | erubin normal はじめまして、かな。{h}さんのお友だちだね
+visit erubin line=greet | erubin happy ようこそ。ゆっくりしていってね☺️
+visit erubin line=greet doing=snack | erubin happy ちょうどお茶とおやつの時間だったんだ。一緒にどうかな？
+visit erubin line=greet doing=practice | erubin normal いま練習してたところだよ。少し聞いていく？
+visit erubin line=greet doing=training | erubin happy デュラハンのお世話をしてたんだ。おとなしいでしょ
+visit erubin line=greet doing=cards | erubin normal カードの組み方を考えてたんだ。見ていく？
+visit erubin line=greet doing=read | erubin happy 本を読んでたんだ。静かでいい時間だね
+visit erubin line=greet doing=idle | erubin normal 窓の外をながめてたんだ。ちょうどよかったよ
+visit erubin line=reply | erubin happy ありがとう。そう言ってもらえるとうれしいな
+visit erubin line=reply | erubin normal どういたしまして。気をつかわなくていいからね
+visit erubin line=reply | erubin happy うん、{h}さんにも伝えておくね
+visit erubin line=sleep | erubin normal ……みんな、元気かな……
+visit erubin line=sleep | erubin happy ……デュラハン、そこで守って……
+go erubin | erubin happy {f}、遊びに来たよ。元気だったかな？
+go erubin | erubin normal {h}さんの部屋、やさしい感じがするね
+welcome erubin | erubin happy いらっしゃい、{f}。ゆっくりしていってね
+welcome erubin | erubin normal 来てくれてうれしいよ。お茶をいれるね

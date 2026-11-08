@@ -574,6 +574,8 @@ const assistantLifeFurnGive = async (who, key) => {
   const r = assistantLifeFurnGiveState(st.room, who, key, assistantLifeGiftToday());
   if (!r) return null;
   assistantLifeRoomSave(r.room);
+  // ミッションの「助手とふれあう」(2026-11-08)
+  if (typeof missionNotify === 'function') missionNotify('assistantTouch');
   const known = { ...st.likes.known, [who]: { ...(st.likes.known[who] || {}), [key]: 'gift' } };
   const likes = { ...st.likes, known };
   ASSISTANT_LIFE_GIFT_STORE.set({ likes });
