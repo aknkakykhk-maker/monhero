@@ -71,6 +71,7 @@ const GLOBALS = new Set([
 //   定義が入ったら、この一覧から消してよい(消し忘れても、定義があれば許しは使われない)
 const LATER_HOOKS = {
   assistantLifeCardMood: '育つ助手の気分の言葉(助手部キズナ2が相談を作るときに足す。2026-11-08)',
+  assistantLifeCardMaterial: '推し・好き・素顔のデッキの材料 { core, likes, friendLv, mood }(助手部キズナ4と口をすり合わせ中。カード部 83 が読む。2026-11-08)',
 };
 const laterOk = (name) => Object.prototype.hasOwnProperty.call(LATER_HOOKS, name) && source.includes(`typeof ${name} === 'function'`);
 

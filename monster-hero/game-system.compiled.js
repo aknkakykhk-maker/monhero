@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 703991fcb7010a42
+// source-sha256: 93ae683ab84aba0d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -124585,6 +124585,8 @@ const assistantMasmonNowText = (id, life) => {
   return where.w && where.w.doing === 'sleep' ? `${t.nick}は${name}のそばで眠っている` : `${t.nick}は部屋で${name}のそばにいる`;
 };
 const ASSISTANT_MASMON_DECK_STYLES = Object.freeze([['attack', '攻め'], ['guard', '守り'], ['normal', 'ふつう']]);
+const ASSISTANT_MASMON_DECK_FACES = Object.freeze([['oshi', '推し'], ['suki', '好き'], ['sugao', '素顔']]);
+const assistantMasmonDeckFaceOn = () => typeof cardAssistantFacePreview === 'function';
 const assistantMasmonDeckTabOn = () => {
   try {
     return typeof cardGrowStyleOn === 'function' && cardGrowStyleOn() && typeof CardAssistantDeckView === 'function';
@@ -124596,8 +124598,16 @@ function AssistantMasmonDeckTab({
   id,
   land = false
 }) {
-  const fav = ASSISTANT_MASMON_CARD_STYLE[id] || 'normal';
-  const [sid, setSid] = React.useState(fav);
+  const faceOn = assistantMasmonDeckFaceOn();
+  const tabs = faceOn ? ASSISTANT_MASMON_DECK_FACES : ASSISTANT_MASMON_DECK_STYLES;
+  let mainFace = null;
+  try {
+    mainFace = faceOn && typeof cardAiDeckMainFace === 'function' ? cardAiDeckMainFace(id) : null;
+  } catch (_) {
+    mainFace = null;
+  }
+  const fav = faceOn ? mainFace : ASSISTANT_MASMON_CARD_STYLE[id] || 'normal';
+  const [sid, setSid] = React.useState(fav || tabs[0][0]);
   const [, setLoaded] = React.useState(0);
   React.useEffect(() => {
     let alive = true;
@@ -124616,7 +124626,7 @@ function AssistantMasmonDeckTab({
   return React.createElement(React.Fragment, null, React.createElement("div", {
     "data-assistant-masmon-deck-styles": true,
     className: "grid grid-cols-3 gap-1.5"
-  }, ASSISTANT_MASMON_DECK_STYLES.map(([s, label]) => React.createElement("button", {
+  }, tabs.map(([s, label]) => React.createElement("button", {
     key: s,
     type: "button",
     "data-assistant-masmon-deck-style": s,
@@ -135419,10 +135429,8 @@ const cardAiFaceSugaoSide = mat => mat && Number.isFinite(mat.friendLv) && mat.f
 const cardAiFaceMain = mat => mat ? mat.face || cardAiFaceOf(CARD_AI_MOOD_FACE[mat.mood]) || null : null;
 const cardAiFaceSlotOf = (face, side = 'yoso') => face === 'sugao' ? side === 'honne' ? 'honne' : 'yoso' : cardAiFaceOf(face);
 const cardAiFaceLineOf = m => String(m.wave) === 'hybrid' ? m.main : m.species;
-const cardAiFaceGroupsMemo = {};
-const cardAiFaceGroups = (db, who) => {
-  const key = `${who}:${Object.keys(db.monsters).length}`;
-  if (cardAiFaceGroupsMemo[key]) return cardAiFaceGroupsMemo[key];
+const CARD_AI_FACE_ORDERS = Object.freeze([['sugao', 'oshi', 'suki'], ['oshi', 'suki', 'sugao'], ['sugao', 'suki', 'oshi'], ['suki', 'oshi', 'sugao'], ['oshi', 'sugao', 'suki'], ['suki', 'sugao', 'oshi']]);
+const cardAiFaceGroupsBy = (db, who, order) => {
   const t = CARD_AI_FACES[who] || CARD_AI_FACES.mua;
   const mons = Object.values(db.monsters).filter(m => m.ready !== false && !m.dexOnly && !m.variant && String(m.wave) !== 'hybrid');
   const lines = [...new Set(mons.map(m => m.species))];
@@ -135441,30 +135449,26 @@ const cardAiFaceGroups = (db, who) => {
     groups[g].push(sp);
     placed.add(sp);
   }
-  const score = sp => Math.max(...mons.filter(m => m.species === sp).map(m => cardAiMonScore(db, who, m, 99, 'master')));
-  const rest = lines.filter(sp => !placed.has(sp)).map(sp => ({
-    sp,
-    v: score(sp)
-  })).sort((a, b) => b.v - a.v || (a.sp < b.sp ? -1 : 1));
-  const order = ['sugao', 'oshi', 'suki', 'suki', 'oshi', 'sugao'];
-  rest.forEach((x, i) => {
-    groups[order[i % order.length]].push(x.sp);
+  const v = Object.fromEntries(lines.map(sp => [sp, Math.max(...mons.filter(m => m.species === sp).map(m => cardAiMonScore(db, who, m, 99, 'master')))]));
+  const rest = lines.filter(sp => !placed.has(sp)).sort((a, b) => v[b] - v[a] || (a < b ? -1 : 1));
+  const snake = [...order, ...order.slice().reverse()];
+  rest.forEach((sp, i) => {
+    groups[snake[i % snake.length]].push(sp);
   });
-  const v = Object.fromEntries(lines.map(sp => [sp, score(sp)]));
   for (const g of CARD_AI_FACE_IDS) groups[g].sort((a, b) => v[b] - v[a] || (a < b ? -1 : 1));
-  cardAiFaceGroupsMemo[key] = groups;
   return groups;
 };
-const cardAiFaceSpec = (db, who, slot, freeIn = null) => {
+const cardAiFaceSpec = (db, who, slot, freeIn = null, groupsIn = null) => {
   const t = CARD_AI_FACES[who] || CARD_AI_FACES.mua;
   const row = t[slot] || t.oshi;
   const face = slot === 'yoso' || slot === 'honne' ? 'sugao' : slot;
-  const groups = cardAiFaceGroups(db, who);
+  const lay = groupsIn ? null : cardAiFaceLayout(db, who);
+  const groups = groupsIn || lay.groups;
   const mine = groups[face] || [];
   const lead = row.lead && mine.includes(row.lead) ? row.lead : mine[0] || null;
   const avoid = CARD_AI_FACE_IDS.filter(g => g !== face).flatMap(g => groups[g]);
   const keep = CARD_AI_FACE_IDS.filter(g => g !== face).flatMap(g => g === 'sugao' ? [t.yoso.lead || groups.sugao[0], t.honne.lead || groups.sugao[0]] : [t[g].lead]).filter(Boolean);
-  const free = Number.isInteger(freeIn) ? freeIn : cardAiFaceFreeMap(db, who)[slot] || 0;
+  const free = Number.isInteger(freeIn) ? freeIn : lay && lay.free[slot] || 0;
   return {
     face,
     slot,
@@ -135478,28 +135482,45 @@ const cardAiFaceSpec = (db, who, slot, freeIn = null) => {
 };
 const CARD_AI_FACE_RANK = Object.freeze(['oshi', 'yoso', 'suki', 'honne']);
 const CARD_AI_FACE_PAIRS = Object.freeze([['oshi', 'suki'], ['oshi', 'yoso'], ['suki', 'yoso'], ['oshi', 'honne'], ['suki', 'honne']]);
-const cardAiFaceFreeMemo = {};
-const cardAiFaceFreeMap = (db, who) => {
+const cardAiFaceLayoutMemo = {};
+const cardAiFaceLayout = (db, who) => {
   const key = `${who}:${Object.keys(db.monsters).length}`;
-  if (cardAiFaceFreeMemo[key]) return cardAiFaceFreeMemo[key];
-  const free = {
-    oshi: 1,
-    suki: 1,
-    yoso: 1,
-    honne: 1
-  };
-  const deckOf = slot => cardAiFaceBuildWith(db, who, cardAiFaceSpec(db, who, slot, free[slot]), 'master', cardAiSeededRand(`face:${who}:${slot}:master`), {}, null);
-  for (let round = 0; round < 8; round++) {
-    const d = Object.fromEntries(CARD_AI_FACE_SLOTS.map(sl => [sl, deckOf(sl)]));
-    const bad = CARD_AI_FACE_PAIRS.find(([a, b]) => cardAiFaceShare(d[a], d[b]) > CARD_AI_FACE_SHARE_MAX || cardAiFaceTrioDiff(d[a], d[b]) < CARD_AI_FACE_TRIO_DIFF);
-    if (!bad) break;
-    const loser = [...bad].sort((x, y) => CARD_AI_FACE_RANK.indexOf(y) - CARD_AI_FACE_RANK.indexOf(x)).find(sl => free[sl]);
-    if (!loser) break;
-    free[loser] = 0;
+  if (cardAiFaceLayoutMemo[key]) return cardAiFaceLayoutMemo[key];
+  let last = null;
+  for (let oi = 0; oi < CARD_AI_FACE_ORDERS.length; oi++) {
+    const groups = cardAiFaceGroupsBy(db, who, CARD_AI_FACE_ORDERS[oi]);
+    const free = {
+      oshi: 1,
+      suki: 1,
+      yoso: 1,
+      honne: 1
+    };
+    const deckOf = slot => cardAiFaceBuildWith(db, who, cardAiFaceSpec(db, who, slot, free[slot], groups), 'master', cardAiSeededRand(`face:${who}:${slot}:master`), {}, null);
+    let ok = false;
+    for (let round = 0; round < 8; round++) {
+      const d = Object.fromEntries(CARD_AI_FACE_SLOTS.map(sl => [sl, deckOf(sl)]));
+      const bad = CARD_AI_FACE_PAIRS.find(([a, b]) => cardAiFaceShare(d[a], d[b]) > CARD_AI_FACE_SHARE_MAX || cardAiFaceTrioDiff(d[a], d[b]) < CARD_AI_FACE_TRIO_DIFF);
+      if (!bad) {
+        ok = true;
+        break;
+      }
+      const loser = [...bad].sort((x, y) => CARD_AI_FACE_RANK.indexOf(y) - CARD_AI_FACE_RANK.indexOf(x)).find(sl => free[sl]);
+      if (!loser) break;
+      free[loser] = 0;
+    }
+    last = {
+      groups,
+      free,
+      order: oi,
+      ok
+    };
+    if (ok) break;
   }
-  cardAiFaceFreeMemo[key] = free;
-  return free;
+  cardAiFaceLayoutMemo[key] = last;
+  return last;
 };
+const cardAiFaceGroups = (db, who) => cardAiFaceLayout(db, who).groups;
+const cardAiFaceFreeMap = (db, who) => cardAiFaceLayout(db, who).free;
 const cardAiFaceDefaultName = (who, slot) => {
   const t = CARD_AI_FACES[who];
   if (!t) return null;
@@ -135860,6 +135881,7 @@ const cardAiDeckNextStyle = who => {
   if (!cardAiDeckNextMemo[who]) cardAiDeckNextMemo[who] = cardAiDeckPickFace(cardAiFaceMain(cardAiFaceMaterial(who)), Math.random);
   return cardAiDeckNextMemo[who];
 };
+const cardAiDeckMainFace = who => cardAiDeckFlagOn() && CARD_AI_FACES[who] ? cardAiFaceMain(cardAiFaceMaterial(who)) : null;
 const cardAiFaceName = (who, face) => {
   const slot = cardAiFaceSlotOf(face, cardAiFaceSugaoSide(cardAiFaceMaterial(who)));
   if (!slot) return null;
@@ -149208,18 +149230,26 @@ const CardShopStarters = ({
 const CARD_DECK_STYLE_LABEL = Object.freeze({
   attack: '攻め',
   guard: '守り',
-  normal: 'ふつう'
+  normal: 'ふつう',
+  oshi: '推し',
+  suki: '好き',
+  sugao: '素顔'
 });
 const CARD_DECK_STYLE_ICON = Object.freeze({
   attack: '⚔️',
   guard: '🛡️',
-  normal: '⚖️'
+  normal: '⚖️',
+  oshi: '💖',
+  suki: '⭐',
+  sugao: '🎭'
 });
+const cardDeckIsFace = id => id === 'oshi' || id === 'suki' || id === 'sugao';
 const CARD_DECK_KIND_GROUPS = Object.freeze([['技', ['pow', 'int']], ['防御', ['blk']], ['回避', ['dge']], ['特殊', ['spe']], ['場', ['fld']]]);
 const cardAssistantDeckViewOn = () => typeof cardGrowStyleOn === 'function' && cardGrowStyleOn();
 const cardAssistantDeckDisplayName = (who, styleId, name = null) => {
   const sid = CARD_DECK_STYLE_LABEL[styleId] ? styleId : 'normal';
   if (typeof name === 'string' && name) return name;
+  if (cardDeckIsFace(sid)) return typeof cardAiFaceName === 'function' ? cardAiFaceName(who, sid) : null;
   if (typeof cardAiStyleDefaultName === 'function') return cardAiStyleDefaultName(who, sid);
   const base = typeof CARD_AI_STYLE_NAMES !== 'undefined' ? CARD_AI_STYLE_NAMES[who] : null;
   if (!base) return null;
@@ -149229,7 +149259,7 @@ const cardAssistantDeckSummary = (who, styleId) => {
   try {
     if (typeof cardAssistantDeckPreview !== 'function' || typeof CARD_BATTLE_DATA === 'undefined') return null;
     const sid = CARD_DECK_STYLE_LABEL[styleId] ? styleId : 'normal';
-    const d = cardAssistantDeckPreview(who, sid, 'normal');
+    const d = cardDeckIsFace(sid) ? typeof cardAssistantFacePreview === 'function' ? cardAssistantFacePreview(who, sid, 'normal') : null : cardAssistantDeckPreview(who, sid, 'normal');
     if (!d || !Array.isArray(d.monsters) || !Array.isArray(d.cards)) return null;
     const db = CARD_BATTLE_DATA;
     const count = {};
@@ -149253,7 +149283,8 @@ const cardAssistantDeckSummary = (who, styleId) => {
       total: d.cards.length,
       name,
       line,
-      at
+      at,
+      side: d.side === 'honne' || d.side === 'yoso' ? d.side : null
     };
   } catch (_) {
     return null;
@@ -149305,7 +149336,7 @@ function CardAssistantDeckView({
     "data-card-assistant-deck-head": s.styleId
   }, React.createElement("p", {
     className: "text-[10px] font-black text-slate-400"
-  }, "MFバトルカード・", label, "のデッキ"), React.createElement("p", {
+  }, "MFバトルカード・", label, "のデッキ", s.side ? `(${s.side === 'honne' ? '本音' : 'よそいき'})` : ''), React.createElement("p", {
     "data-card-assistant-deck-name": true,
     className: "text-[18px] font-black leading-tight text-amber-200",
     style: JA_LABEL_STYLE
@@ -155392,7 +155423,7 @@ const cardReplayDeckOf = raw => {
   };
 };
 const cardReplayText = (v, max) => typeof v === 'string' ? v.slice(0, max) : '';
-const cardReplayStyleOf = s => s === 'attack' || s === 'guard' || s === 'normal' ? s : 'normal';
+const cardReplayStyleOf = s => s === 'attack' || s === 'guard' || s === 'normal' || s === 'oshi' || s === 'suki' || s === 'sugao' ? s : 'normal';
 const cardReplayNormalizeOne = raw => {
   if (!raw || typeof raw !== 'object' || raw.v !== 1) return null;
   if (typeof raw.id !== 'string' || !CARD_REPLAY_ID_RE.test(raw.id)) return null;

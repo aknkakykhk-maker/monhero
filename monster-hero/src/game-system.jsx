@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: af324b22060843c5
+// generated-sha256: df35299854a143e9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -66528,10 +66528,18 @@ const assistantMasmonNowText = (id, life) => {
 //   上に切りかえ3つ(攻め/守り/ふつう・その助手がいちばん出す型に「よく使う」)→ 中身はカード部ツナグの部品 CardAssistantDeckView(87)
 //   開いたときに cardAiDeckMarkMet(会った助手だけ AI で組み直す)と cardLoadAiRecipe(AI の名前・方針を読む)を呼ぶ。待たない
 const ASSISTANT_MASMON_DECK_STYLES = Object.freeze([['attack', '攻め'], ['guard', '守り'], ['normal', 'ふつう']]);
+// 2026-11-08 推し・好き・素顔に作り直し(カード部ルールくん)。カード部の口(83 の cardAssistantFacePreview)があれば顔の3つ、無ければ今の型の3つ
+//   「よく使う」は今の気分・仲良し度に合う顔(83 の cardAiDeckMainFace。分からなければ印を出さない)
+const ASSISTANT_MASMON_DECK_FACES = Object.freeze([['oshi', '推し'], ['suki', '好き'], ['sugao', '素顔']]);
+const assistantMasmonDeckFaceOn = () => typeof cardAssistantFacePreview === 'function';
 const assistantMasmonDeckTabOn = () => { try { return typeof cardGrowStyleOn === 'function' && cardGrowStyleOn() && typeof CardAssistantDeckView === 'function'; } catch (_) { return false; } };
 function AssistantMasmonDeckTab({ id, land = false }) {
-  const fav = ASSISTANT_MASMON_CARD_STYLE[id] || 'normal';
-  const [sid, setSid] = React.useState(fav);
+  const faceOn = assistantMasmonDeckFaceOn();
+  const tabs = faceOn ? ASSISTANT_MASMON_DECK_FACES : ASSISTANT_MASMON_DECK_STYLES;
+  let mainFace = null;
+  try { mainFace = faceOn && typeof cardAiDeckMainFace === 'function' ? cardAiDeckMainFace(id) : null; } catch (_) { mainFace = null; }
+  const fav = faceOn ? mainFace : (ASSISTANT_MASMON_CARD_STYLE[id] || 'normal');
+  const [sid, setSid] = React.useState(fav || tabs[0][0]);
   const [, setLoaded] = React.useState(0);
   React.useEffect(() => {
     let alive = true;
@@ -66541,7 +66549,7 @@ function AssistantMasmonDeckTab({ id, land = false }) {
   }, [id]);
   return (<>
     <div data-assistant-masmon-deck-styles className="grid grid-cols-3 gap-1.5">
-      {ASSISTANT_MASMON_DECK_STYLES.map(([s, label]) => (
+      {tabs.map(([s, label]) => (
         <button key={s} type="button" data-assistant-masmon-deck-style={s} aria-pressed={sid === s} onClick={() => { if (typeof Audio_ !== 'undefined') Audio_.fgSe.tap(); setSid(s); }}
           className={`flex min-h-[40px] items-center justify-center gap-1 rounded-xl border px-1 py-1 text-[13px] font-black ${sid === s ? 'border-amber-300 bg-amber-400 text-slate-950' : 'border-white/15 bg-slate-800 text-slate-200'}`}>
           {label}{s === fav && <em data-assistant-masmon-deck-fav className="whitespace-nowrap rounded-full bg-emerald-400 px-1.5 py-px text-[9px] font-black not-italic text-emerald-950">よく使う</em>}
@@ -72610,11 +72618,9 @@ const cardAiFaceSlotOf = (face, side = 'yoso') => (face === 'sugao' ? (side === 
 // 系統(混血はメインの系統)。カードの species
 const cardAiFaceLineOf = (m) => (String(m.wave) === 'hybrid' ? m.main : m.species);
 // 助手ごとに、系統を3つの組(推し・好き・素顔)へ振り分ける。主役の種はその組に置き、残りは強さ(MASTER の点数)の順に蛇行で配る
-//   返り値 { oshi: [系統…], suki: [...], sugao: [...] }。同じ db・同じ助手ならいつも同じ(保存しない)
-const cardAiFaceGroupsMemo = {};
-const cardAiFaceGroups = (db, who) => {
-  const key = `${who}:${Object.keys(db.monsters).length}`;
-  if (cardAiFaceGroupsMemo[key]) return cardAiFaceGroupsMemo[key];
+//   order … 蛇行の始まり(6通り)。返り値 { oshi: [系統…], suki: [...], sugao: [...] }(組の中は強い順)
+const CARD_AI_FACE_ORDERS = Object.freeze([['sugao', 'oshi', 'suki'], ['oshi', 'suki', 'sugao'], ['sugao', 'suki', 'oshi'], ['suki', 'oshi', 'sugao'], ['oshi', 'sugao', 'suki'], ['suki', 'sugao', 'oshi']]);
+const cardAiFaceGroupsBy = (db, who, order) => {
   const t = CARD_AI_FACES[who] || CARD_AI_FACES.mua;
   const mons = Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && !m.variant && String(m.wave) !== 'hybrid');
   const lines = [...new Set(mons.map((m) => m.species))];
@@ -72622,54 +72628,62 @@ const cardAiFaceGroups = (db, who) => {
   const groups = { oshi: [], suki: [], sugao: [] };
   const placed = new Set();
   for (const g of CARD_AI_FACE_IDS) for (const sp of fixed[g]) if (sp && lines.includes(sp) && !placed.has(sp)) { groups[g].push(sp); placed.add(sp); }
-  const score = (sp) => Math.max(...mons.filter((m) => m.species === sp).map((m) => cardAiMonScore(db, who, m, 99, 'master')));
-  const rest = lines.filter((sp) => !placed.has(sp)).map((sp) => ({ sp, v: score(sp) })).sort((a, b) => b.v - a.v || (a.sp < b.sp ? -1 : 1));
-  // 蛇行(素顔→推し→好き→好き→推し→素顔…)。推し・好きは主役を決めてあるので、主役を決めていない素顔(よそいき=無難で強い組み方)から取る
-  const order = ['sugao', 'oshi', 'suki', 'suki', 'oshi', 'sugao'];
-  rest.forEach((x, i) => { groups[order[i % order.length]].push(x.sp); });
+  const v = Object.fromEntries(lines.map((sp) => [sp, Math.max(...mons.filter((m) => m.species === sp).map((m) => cardAiMonScore(db, who, m, 99, 'master')))]));
+  const rest = lines.filter((sp) => !placed.has(sp)).sort((a, b) => v[b] - v[a] || (a < b ? -1 : 1));
+  const snake = [...order, ...order.slice().reverse()];
+  rest.forEach((sp, i) => { groups[snake[i % snake.length]].push(sp); });
   // 組の中は強い順(主役を決めていない顔は、組の先頭を主役にする)
-  const v = Object.fromEntries(lines.map((sp) => [sp, score(sp)]));
   for (const g of CARD_AI_FACE_IDS) groups[g].sort((a, b) => v[b] - v[a] || (a < b ? -1 : 1));
-  cardAiFaceGroupsMemo[key] = groups;
   return groups;
 };
 // その顔で組むときの主役と使わない系統(82 の cardAiBuildDeck の opts.face)・くせの型
-//   lead が null の顔(よそいき・本音の一部)は、組の中でいちばん強い系統
-const cardAiFaceSpec = (db, who, slot, freeIn = null) => {
+//   lead が null の顔(よそいき・本音の一部)は、組の中でいちばん強い系統。groups・free を渡さなければ、決めた振り分け(cardAiFaceLayout)
+const cardAiFaceSpec = (db, who, slot, freeIn = null, groupsIn = null) => {
   const t = CARD_AI_FACES[who] || CARD_AI_FACES.mua;
   const row = t[slot] || t.oshi;
   const face = slot === 'yoso' || slot === 'honne' ? 'sugao' : slot;
-  const groups = cardAiFaceGroups(db, who);
+  const lay = groupsIn ? null : cardAiFaceLayout(db, who);
+  const groups = groupsIn || lay.groups;
   const mine = groups[face] || [];
   const lead = row.lead && mine.includes(row.lead) ? row.lead : mine[0] || null;
   const avoid = CARD_AI_FACE_IDS.filter((g) => g !== face).flatMap((g) => groups[g]);
   // ほかの2つの顔の主役(素顔は よそいき・本音 の両方)。仲間の1体目はこれだけを避ける
   const keep = CARD_AI_FACE_IDS.filter((g) => g !== face).flatMap((g) => (g === 'sugao' ? [t.yoso.lead || groups.sugao[0], t.honne.lead || groups.sugao[0]] : [t[g].lead])).filter(Boolean);
-  const free = Number.isInteger(freeIn) ? freeIn : (cardAiFaceFreeMap(db, who)[slot] || 0);
+  const free = Number.isInteger(freeIn) ? freeIn : ((lay && lay.free[slot]) || 0);
   return { face, slot, lead, avoid, keep: [...new Set(keep)], free, style: cardAiStyleOf(row.style) || 'normal', nick: row.nick || null };
 };
-// 仲間の1体目を組の外からも選んでよいか(顔ごと 1/0)。選べると強くなるが、ほかの顔と重なりやすい。
-//   MASTER で組んでみて、見える組み合わせ(推し・好き・素顔の今の側)が「カード4割まで・主役2体以上ちがう」を破れば、大事な順の低い側を 0 にする(推し → よそいき → 好き → 本音)
-//   同じ db・同じ助手ならいつも同じ(保存しない)
+// 振り分けを決める(助手ごと)。蛇行の始まり6通りを順に試し、それぞれで「仲間の1体目を組の外からも選ぶか(顔ごと 1/0)」を決める。
+//   選べると強くなるが、ほかの顔と重なりやすい。MASTER で組んでみて、見える組み合わせ(推し・好き・素顔の今の側)が
+//   「カード4割まで・主役2体以上ちがう」を破れば、大事な順の低い側を 0 にする(推し → よそいき → 好き → 本音)。全部守れた最初の振り分けを使う
+//   返り値 { groups, free, order, ok }。同じ db・同じ助手ならいつも同じ(保存しない)
 const CARD_AI_FACE_RANK = Object.freeze(['oshi', 'yoso', 'suki', 'honne']);
 const CARD_AI_FACE_PAIRS = Object.freeze([['oshi', 'suki'], ['oshi', 'yoso'], ['suki', 'yoso'], ['oshi', 'honne'], ['suki', 'honne']]);
-const cardAiFaceFreeMemo = {};
-const cardAiFaceFreeMap = (db, who) => {
+const cardAiFaceLayoutMemo = {};
+const cardAiFaceLayout = (db, who) => {
   const key = `${who}:${Object.keys(db.monsters).length}`;
-  if (cardAiFaceFreeMemo[key]) return cardAiFaceFreeMemo[key];
-  const free = { oshi: 1, suki: 1, yoso: 1, honne: 1 };
-  const deckOf = (slot) => cardAiFaceBuildWith(db, who, cardAiFaceSpec(db, who, slot, free[slot]), 'master', cardAiSeededRand(`face:${who}:${slot}:master`), {}, null);
-  for (let round = 0; round < 8; round++) {
-    const d = Object.fromEntries(CARD_AI_FACE_SLOTS.map((sl) => [sl, deckOf(sl)]));
-    const bad = CARD_AI_FACE_PAIRS.find(([a, b]) => cardAiFaceShare(d[a], d[b]) > CARD_AI_FACE_SHARE_MAX || cardAiFaceTrioDiff(d[a], d[b]) < CARD_AI_FACE_TRIO_DIFF);
-    if (!bad) break;
-    const loser = [...bad].sort((x, y) => CARD_AI_FACE_RANK.indexOf(y) - CARD_AI_FACE_RANK.indexOf(x)).find((sl) => free[sl]);
-    if (!loser) break;
-    free[loser] = 0;
+  if (cardAiFaceLayoutMemo[key]) return cardAiFaceLayoutMemo[key];
+  let last = null;
+  for (let oi = 0; oi < CARD_AI_FACE_ORDERS.length; oi++) {
+    const groups = cardAiFaceGroupsBy(db, who, CARD_AI_FACE_ORDERS[oi]);
+    const free = { oshi: 1, suki: 1, yoso: 1, honne: 1 };
+    const deckOf = (slot) => cardAiFaceBuildWith(db, who, cardAiFaceSpec(db, who, slot, free[slot], groups), 'master', cardAiSeededRand(`face:${who}:${slot}:master`), {}, null);
+    let ok = false;
+    for (let round = 0; round < 8; round++) {
+      const d = Object.fromEntries(CARD_AI_FACE_SLOTS.map((sl) => [sl, deckOf(sl)]));
+      const bad = CARD_AI_FACE_PAIRS.find(([a, b]) => cardAiFaceShare(d[a], d[b]) > CARD_AI_FACE_SHARE_MAX || cardAiFaceTrioDiff(d[a], d[b]) < CARD_AI_FACE_TRIO_DIFF);
+      if (!bad) { ok = true; break; }
+      const loser = [...bad].sort((x, y) => CARD_AI_FACE_RANK.indexOf(y) - CARD_AI_FACE_RANK.indexOf(x)).find((sl) => free[sl]);
+      if (!loser) break;
+      free[loser] = 0;
+    }
+    last = { groups, free, order: oi, ok };
+    if (ok) break;
   }
-  cardAiFaceFreeMemo[key] = free;
-  return free;
+  cardAiFaceLayoutMemo[key] = last;
+  return last;
 };
+const cardAiFaceGroups = (db, who) => cardAiFaceLayout(db, who).groups;
+const cardAiFaceFreeMap = (db, who) => cardAiFaceLayout(db, who).free;
 
 // ---- 名前 ----
 // 既定の名前(AI が名前を付けられない・見張りに落ちたとき)。よそいきは今の8つの名前
@@ -72914,6 +72928,8 @@ const cardAiDeckNextStyle = (who) => {
   if (!cardAiDeckNextMemo[who]) cardAiDeckNextMemo[who] = cardAiDeckPickFace(cardAiFaceMain(cardAiFaceMaterial(who)), Math.random);
   return cardAiDeckNextMemo[who];
 };
+// 今の気分・仲良し度に合う顔(6割で出す顔。部屋のタブの「よく使う」)。分からなければ null。印が偽なら null
+const cardAiDeckMainFace = (who) => (cardAiDeckFlagOn() && CARD_AI_FACES[who] ? cardAiFaceMain(cardAiFaceMaterial(who)) : null);
 // 顔の今の名前(保存した名前、無ければ既定)。素顔は今の側(よそいき・本音)
 const cardAiFaceName = (who, face) => {
   const slot = cardAiFaceSlotOf(face, cardAiFaceSugaoSide(cardAiFaceMaterial(who)));
@@ -80138,9 +80154,11 @@ const CardShopStarters = ({ db, point, busy, starter, shop, collection = null, o
 // 中身はルールの cardAssistantDeckPreview(83-card-ai-deck・読むだけ)。印 cardGrowStyle(84 の cardGrowStyleOn)が偽のあいだは何も出さない(null)
 // ★82 は触らない(サーバの杯で同じ 82 が動くため)。画面の部品だけをここに置く
 
-// 型の言い方と印(82 の CARD_AI_STYLE_IDS と同じ3つ)
-const CARD_DECK_STYLE_LABEL = Object.freeze({ attack: '攻め', guard: '守り', normal: 'ふつう' });
-const CARD_DECK_STYLE_ICON = Object.freeze({ attack: '⚔️', guard: '🛡️', normal: '⚖️' });
+// 型の言い方と印(82 の CARD_AI_STYLE_IDS と同じ3つ)。2026-11-08 推し・好き・素顔(83 の CARD_AI_FACE_IDS)を足した(ルールくん。印は部長の確認待ち)
+//   今の口(83 の cardAssistantDeckPick・cardAiDeckNextStyle)は顔の id を返す。型の id は前のリプレイなどを読むために残す
+const CARD_DECK_STYLE_LABEL = Object.freeze({ attack: '攻め', guard: '守り', normal: 'ふつう', oshi: '推し', suki: '好き', sugao: '素顔' });
+const CARD_DECK_STYLE_ICON = Object.freeze({ attack: '⚔️', guard: '🛡️', normal: '⚖️', oshi: '💖', suki: '⭐', sugao: '🎭' });
+const cardDeckIsFace = (id) => id === 'oshi' || id === 'suki' || id === 'sugao';
 // 一覧の並び(種類ごと)。ちから技・かしこさ技は「技」にまとめる
 const CARD_DECK_KIND_GROUPS = Object.freeze([['技', ['pow', 'int']], ['防御', ['blk']], ['回避', ['dge']], ['特殊', ['spe']], ['場', ['fld']]]);
 
@@ -80149,6 +80167,7 @@ const cardAssistantDeckViewOn = () => typeof cardGrowStyleOn === 'function' && c
 const cardAssistantDeckDisplayName = (who, styleId, name = null) => {
   const sid = CARD_DECK_STYLE_LABEL[styleId] ? styleId : 'normal';
   if (typeof name === 'string' && name) return name; // ルールの口が返す名前(AI の名前か、82 の cardAiStyleDefaultName の既定)
+  if (cardDeckIsFace(sid)) return typeof cardAiFaceName === 'function' ? cardAiFaceName(who, sid) : null; // 顔は 83 の既定の名前
   if (typeof cardAiStyleDefaultName === 'function') return cardAiStyleDefaultName(who, sid);
   const base = typeof CARD_AI_STYLE_NAMES !== 'undefined' ? CARD_AI_STYLE_NAMES[who] : null;
   if (!base) return null;
@@ -80163,7 +80182,8 @@ const cardAssistantDeckSummary = (who, styleId) => {
   try {
     if (typeof cardAssistantDeckPreview !== 'function' || typeof CARD_BATTLE_DATA === 'undefined') return null;
     const sid = CARD_DECK_STYLE_LABEL[styleId] ? styleId : 'normal';
-    const d = cardAssistantDeckPreview(who, sid, 'normal');
+    // 顔(推し・好き・素顔)は 83 の cardAssistantFacePreview。素顔は今の側(よそいき・本音)を返す
+    const d = cardDeckIsFace(sid) ? (typeof cardAssistantFacePreview === 'function' ? cardAssistantFacePreview(who, sid, 'normal') : null) : cardAssistantDeckPreview(who, sid, 'normal');
     if (!d || !Array.isArray(d.monsters) || !Array.isArray(d.cards)) return null;
     const db = CARD_BATTLE_DATA;
     const count = {};
@@ -80177,7 +80197,7 @@ const cardAssistantDeckSummary = (who, styleId) => {
     const line = typeof d.line === 'string' && d.line ? d.line : null;
     // 時刻が無いとき、ルールの口は at: 0 を返す。0 を時刻と読むと「AI が 0:00 に組み直しました」と出た(2026-11-08 止め絵)
     const at = Number.isFinite(d.at) && d.at > 0 ? d.at : null;
-    return { styleId: sid, monsters, count, ace, groups, total: d.cards.length, name, line, at };
+    return { styleId: sid, monsters, count, ace, groups, total: d.cards.length, name, line, at, side: d.side === 'honne' || d.side === 'yoso' ? d.side : null };
   } catch (_) { return null; }
 };
 // 組み直した時刻(4:00 など)。無ければ空
@@ -80204,7 +80224,7 @@ function CardAssistantDeckView({ who, styleId, land = false }) {
   const at = cardAssistantDeckAtText(s.at);
   const top = (
     <div className="mhm-card" data-card-assistant-deck-head={s.styleId}>
-      <p className="text-[10px] font-black text-slate-400">MFバトルカード・{label}のデッキ</p>
+      <p className="text-[10px] font-black text-slate-400">MFバトルカード・{label}のデッキ{s.side ? `(${s.side === 'honne' ? '本音' : 'よそいき'})` : ''}</p>
       <p data-card-assistant-deck-name className="text-[18px] font-black leading-tight text-amber-200" style={JA_LABEL_STYLE}>{CARD_DECK_STYLE_ICON[s.styleId]} {s.name || `${label}のデッキ`}</p>
       {s.line && <p data-card-assistant-deck-line className="mt-1 rounded-lg bg-black/30 px-2 py-1 text-[11.5px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE}>{a ? `${a.name}「${s.line}」` : s.line}</p>}
       <div className="mt-2 flex items-end gap-2">
@@ -83693,7 +83713,8 @@ const cardReplayText = (v, max) => (typeof v === 'string' ? v.slice(0, max) : ''
 //   { v:1, id, kind:'pvp'|'cpu', at, rules, first, names:[自分, 相手], foe:{ name, icon, frame, deckName, who }, outcome, reason,
 //     decks:[自分, 相手], seeds:[自分, 相手], acts:[[by, act], …], prints:'4文字ずつ', fav }
 // 助手と対戦で使った型(育つ助手・2026-11-08)。'attack'/'guard'/'normal'。古い記録(型なし)・知らない値は 'normal'
-const cardReplayStyleOf = (s) => (s === 'attack' || s === 'guard' || s === 'normal' ? s : 'normal');
+// 型(attack/guard/normal)と、2026-11-08 からの顔(推し oshi・好き suki・素顔 sugao)。知らない値は normal
+const cardReplayStyleOf = (s) => (s === 'attack' || s === 'guard' || s === 'normal' || s === 'oshi' || s === 'suki' || s === 'sugao' ? s : 'normal');
 const cardReplayNormalizeOne = (raw) => {
   if (!raw || typeof raw !== 'object' || raw.v !== 1) return null;
   if (typeof raw.id !== 'string' || !CARD_REPLAY_ID_RE.test(raw.id)) return null;

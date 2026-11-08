@@ -15,9 +15,11 @@
 // 中身はルールの cardAssistantDeckPreview(83-card-ai-deck・読むだけ)。印 cardGrowStyle(84 の cardGrowStyleOn)が偽のあいだは何も出さない(null)
 // ★82 は触らない(サーバの杯で同じ 82 が動くため)。画面の部品だけをここに置く
 
-// 型の言い方と印(82 の CARD_AI_STYLE_IDS と同じ3つ)
-const CARD_DECK_STYLE_LABEL = Object.freeze({ attack: '攻め', guard: '守り', normal: 'ふつう' });
-const CARD_DECK_STYLE_ICON = Object.freeze({ attack: '⚔️', guard: '🛡️', normal: '⚖️' });
+// 型の言い方と印(82 の CARD_AI_STYLE_IDS と同じ3つ)。2026-11-08 推し・好き・素顔(83 の CARD_AI_FACE_IDS)を足した(ルールくん。印は部長の確認待ち)
+//   今の口(83 の cardAssistantDeckPick・cardAiDeckNextStyle)は顔の id を返す。型の id は前のリプレイなどを読むために残す
+const CARD_DECK_STYLE_LABEL = Object.freeze({ attack: '攻め', guard: '守り', normal: 'ふつう', oshi: '推し', suki: '好き', sugao: '素顔' });
+const CARD_DECK_STYLE_ICON = Object.freeze({ attack: '⚔️', guard: '🛡️', normal: '⚖️', oshi: '💖', suki: '⭐', sugao: '🎭' });
+const cardDeckIsFace = (id) => id === 'oshi' || id === 'suki' || id === 'sugao';
 // 一覧の並び(種類ごと)。ちから技・かしこさ技は「技」にまとめる
 const CARD_DECK_KIND_GROUPS = Object.freeze([['技', ['pow', 'int']], ['防御', ['blk']], ['回避', ['dge']], ['特殊', ['spe']], ['場', ['fld']]]);
 
@@ -26,6 +28,7 @@ const cardAssistantDeckViewOn = () => typeof cardGrowStyleOn === 'function' && c
 const cardAssistantDeckDisplayName = (who, styleId, name = null) => {
   const sid = CARD_DECK_STYLE_LABEL[styleId] ? styleId : 'normal';
   if (typeof name === 'string' && name) return name; // ルールの口が返す名前(AI の名前か、82 の cardAiStyleDefaultName の既定)
+  if (cardDeckIsFace(sid)) return typeof cardAiFaceName === 'function' ? cardAiFaceName(who, sid) : null; // 顔は 83 の既定の名前
   if (typeof cardAiStyleDefaultName === 'function') return cardAiStyleDefaultName(who, sid);
   const base = typeof CARD_AI_STYLE_NAMES !== 'undefined' ? CARD_AI_STYLE_NAMES[who] : null;
   if (!base) return null;
@@ -40,7 +43,8 @@ const cardAssistantDeckSummary = (who, styleId) => {
   try {
     if (typeof cardAssistantDeckPreview !== 'function' || typeof CARD_BATTLE_DATA === 'undefined') return null;
     const sid = CARD_DECK_STYLE_LABEL[styleId] ? styleId : 'normal';
-    const d = cardAssistantDeckPreview(who, sid, 'normal');
+    // 顔(推し・好き・素顔)は 83 の cardAssistantFacePreview。素顔は今の側(よそいき・本音)を返す
+    const d = cardDeckIsFace(sid) ? (typeof cardAssistantFacePreview === 'function' ? cardAssistantFacePreview(who, sid, 'normal') : null) : cardAssistantDeckPreview(who, sid, 'normal');
     if (!d || !Array.isArray(d.monsters) || !Array.isArray(d.cards)) return null;
     const db = CARD_BATTLE_DATA;
     const count = {};
@@ -54,7 +58,7 @@ const cardAssistantDeckSummary = (who, styleId) => {
     const line = typeof d.line === 'string' && d.line ? d.line : null;
     // 時刻が無いとき、ルールの口は at: 0 を返す。0 を時刻と読むと「AI が 0:00 に組み直しました」と出た(2026-11-08 止め絵)
     const at = Number.isFinite(d.at) && d.at > 0 ? d.at : null;
-    return { styleId: sid, monsters, count, ace, groups, total: d.cards.length, name, line, at };
+    return { styleId: sid, monsters, count, ace, groups, total: d.cards.length, name, line, at, side: d.side === 'honne' || d.side === 'yoso' ? d.side : null };
   } catch (_) { return null; }
 };
 // 組み直した時刻(4:00 など)。無ければ空
@@ -81,7 +85,7 @@ function CardAssistantDeckView({ who, styleId, land = false }) {
   const at = cardAssistantDeckAtText(s.at);
   const top = (
     <div className="mhm-card" data-card-assistant-deck-head={s.styleId}>
-      <p className="text-[10px] font-black text-slate-400">MFバトルカード・{label}のデッキ</p>
+      <p className="text-[10px] font-black text-slate-400">MFバトルカード・{label}のデッキ{s.side ? `(${s.side === 'honne' ? '本音' : 'よそいき'})` : ''}</p>
       <p data-card-assistant-deck-name className="text-[18px] font-black leading-tight text-amber-200" style={JA_LABEL_STYLE}>{CARD_DECK_STYLE_ICON[s.styleId]} {s.name || `${label}のデッキ`}</p>
       {s.line && <p data-card-assistant-deck-line className="mt-1 rounded-lg bg-black/30 px-2 py-1 text-[11.5px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE}>{a ? `${a.name}「${s.line}」` : s.line}</p>}
       <div className="mt-2 flex items-end gap-2">

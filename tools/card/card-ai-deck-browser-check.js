@@ -1,4 +1,4 @@
-// MFバトルカード: 助手の3つのデッキを AI で組む(83-card-ai-deck.jsx・2026-11-08 社長の決定)を、本物の画面で縦・横に触る。
+// MFバトルカード: 助手の推し・好き・素顔のデッキを AI で組む(83-card-ai-deck.jsx・2026-11-08 社長の決定)を、本物の画面で縦・横に触る。
 //   公開の印 RELEASE_FLAGS.cardGrowStyle は、この検査の中だけ真にする。中継役(card-assistant-talk)は偽物の返事
 //
 //   node tools/card/card-ai-deck-browser-check.js        (SHOT_DIR=<フォルダ> で止め絵を残す)
@@ -52,7 +52,7 @@ const run = async (browser, mode, scene, errors) => {
       asked.push(body.assistantId);
       if (scene.ai) {
         const cands = body.facts.cards.map((c) => c.no);
-        return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, kind: 'plan', name: 'ためし火力', line: 'ためしに組んでみたよ!', prefer: cands.slice(0, 6), field: [body.facts.fields[0]], habit: { big: body.facts.habit.big[1] }, remainingToday: 9 }) });
+        return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, kind: 'plan', name: 'ごろべえ大暴れ', line: 'ためしに組んでみたよ!', prefer: cands.slice(0, 6), field: [body.facts.fields[0]], habit: { big: body.facts.habit.big[1] }, remainingToday: 9 }) });
       }
     }
     return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, kind: 'sorry', text: null }) });
@@ -124,7 +124,7 @@ const run = async (browser, mode, scene, errors) => {
     await page.locator(`[data-card-foe="${WHO}"]`).click();
     await page.getByRole('button', { name: /MASTER/ }).first().click();
     await page.waitForTimeout(2500);
-    const saved0 = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_ai_recipe_v1') || 'null'));
+    const saved0 = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_ai_recipe_v2') || 'null'));
     if (!scene.flag) check(`① ${label}: 保存を書かない・中継役を呼ばない`, saved0 === null && asked.length === 0, JSON.stringify({ saved0, asked }));
     else check(`${scene.ai ? '②' : '③'} ${label}: 相手えらびで選ぶと、裏で1つ組む`, !!saved0 && !!saved0.perWho && !!saved0.perWho[WHO] && Object.keys(saved0.perWho[WHO].decks).length === 1 && asked.includes(WHO) && Object.values(saved0.perWho[WHO].decks)[0].ai === scene.ai, JSON.stringify(saved0 && saved0.perWho && saved0.perWho[WHO]));
     // 対戦: 勝ちの場面にして、VS と結果を見る
@@ -132,7 +132,7 @@ const run = async (browser, mode, scene, errors) => {
     await page.locator('[data-card-start]').click();
     let vs = null;
     for (let i = 0; i < 30 && !vs; i++) {
-      vs = await page.evaluate(() => { const m = document.querySelector('[data-card-vs-mark]'); if (!m) return null; const s = document.querySelector('[data-card-vs-style] [data-card-foe-deck-chip-name]') || document.querySelector('[data-card-vs-style]'); const l = document.querySelector('[data-card-vs-line]'); const t = document.querySelector('[data-card-vs-style] [data-card-foe-team-name]'); return { style: s ? s.textContent.trim().replace(/^(⚔️|🛡️|⚖️)\s*/u, '') : null, line: l ? l.textContent : null, team: t ? t.textContent : null }; });
+      vs = await page.evaluate(() => { const m = document.querySelector('[data-card-vs-mark]'); if (!m) return null; const s = document.querySelector('[data-card-vs-style] [data-card-foe-deck-chip-name]') || document.querySelector('[data-card-vs-style]'); const l = document.querySelector('[data-card-vs-line]'); const t = document.querySelector('[data-card-vs-style] [data-card-foe-team-name]'); return { style: s ? s.textContent.trim().replace(/^(⚔️|🛡️|⚖️|💖|⭐|🎭)\s*/u, '') : null, line: l ? l.textContent : null, team: t ? t.textContent : null }; });
       if (!vs) { const go = page.getByRole('button', { name: /^対戦へ$|このデッキで/ }).first(); if (await go.count() && await go.isVisible().catch(() => false)) await go.click().catch(() => {}); await page.waitForTimeout(250); }
     }
     // 自分の側(3体・名前)は相手の側より遅れて出る。出そろうまで待ってから撮る(2026-11-08 部長「止め絵に自分の側が写っていない」)
@@ -147,24 +147,25 @@ const run = async (browser, mode, scene, errors) => {
     }
     check(`⑤ ${label}: VS に自分の側の3体が出て、画面に入っている`, !!me && me.mons === 3 && me.shown === 3, JSON.stringify(me));
     await snap('1-vs');
-    const names = await page.evaluate(() => (typeof CARD_AI_STYLE_NAMES !== 'undefined' ? CARD_AI_STYLE_NAMES : {})); // eslint-disable-line no-undef
+    // 推し・好き・素顔の今の名前(2026-11-08 作り直し。素顔は口が無ければ よそいき)
+    const names = await page.evaluate((w) => (typeof cardAiFaceName === 'function' ? ['oshi', 'suki', 'sugao'].map((f) => cardAiFaceName(w, f)) : []), WHO); // eslint-disable-line no-undef
     if (!scene.flag) check(`① ${label}: VS に型の札が出ない`, !!vs && vs.style === null, JSON.stringify(vs));
     else {
       const styleIn = await inView('[data-card-vs-style]');
       // 3つのうち組んだのは1つだけ。ほかの型が選ばれたときは既定の名前(どちらでも「型: 名前」とひとことが出る)
-      const okName = !!vs && ([names[WHO], `${names[WHO]}・攻め`, `${names[WHO]}・守り`].includes(vs.style) || (scene.ai && vs.style === 'ためし火力')) && !!vs.team;
+      const okName = !!vs && (names.includes(vs.style) || (scene.ai && vs.style === 'ごろべえ大暴れ')) && !!vs.team;
       check(`${scene.ai ? '②' : '③'} ${label}: VS に「チーム」と「今日のデッキ」の名前・ひとこと(画面の中)`, okName && !!vs.line && styleIn === true, `${JSON.stringify(vs)} / ${styleIn}`);
     }
     for (let i = 0; i < 40; i++) { if (await page.locator('[data-card-top="result"]').count()) break; await pass(); }
     await page.locator('[data-card-top="result"]').waitFor({ timeout: 20000 });
     await closeUp();
-    const res = await page.evaluate(() => { const r = document.querySelector('[data-card-result-ai-deck] [data-card-foe-deck-chip-name]') || document.querySelector('[data-card-result-ai-deck]'); return r ? r.textContent.trim().replace(/^(⚔️|🛡️|⚖️)\s*/u, '') : null; });
+    const res = await page.evaluate(() => { const r = document.querySelector('[data-card-result-ai-deck] [data-card-foe-deck-chip-name]') || document.querySelector('[data-card-result-ai-deck]'); return r ? r.textContent.trim().replace(/^(⚔️|🛡️|⚖️|💖|⭐|🎭)\s*/u, '') : null; });
     if (!scene.flag) check(`① ${label}: 結果に型の札が出ない`, res === null, String(res));
     else {
       await page.evaluate(() => document.querySelector('[data-card-result-ai-deck]')?.scrollIntoView({ block: 'center' }));
       const resIn = await inView('[data-card-result-ai-deck]');
       check(`${scene.ai ? '②' : '③'} ${label}: 結果に VS と同じ「今日のデッキ」の名前(画面の中)`, !!res && !!vs && res === vs.style && resIn === true, `${res} / ${vs && vs.style} / ${resIn}`);
-      const n = await page.evaluate((w) => { const v = JSON.parse(localStorage.getItem('mh_card_ai_recipe_v1') || 'null'); return v && v.perWho[w] ? v.perWho[w].gamesSince : null; }, WHO);
+      const n = await page.evaluate((w) => { const v = JSON.parse(localStorage.getItem('mh_card_ai_recipe_v2') || 'null'); return v && v.perWho[w] ? v.perWho[w].gamesSince : null; }, WHO);
       check(`${scene.ai ? '②' : '③'} ${label}: その助手との10戦の数が1つ増える`, n === 1, String(n));
     }
     await snap('2-result');

@@ -130,7 +130,8 @@ check('助手は8人', WHO.length === 8, WHO.join(','));
     check('F 公開の印 cardGrowStyle は真(2026-11-08 社長「この文で公開」)', /\n  cardGrowStyle: true,/.test(s17));
   }
   const s83 = src('src/parts/83-card-ai-deck.jsx');
-  check('F 83: 助手ライフの口は呼ぶ時に typeof で確かめ、知らない値は型なし', /typeof assistantLifeCardStyle === 'function' \? cardAiStyleOf\(assistantLifeCardStyle\(who\)\) : null/.test(s83));
+  // 2026-11-08 推し・好き・素顔に作り直し: 助手ライフの材料の口(assistantLifeCardMaterial)を typeof で確かめて読む。壊れた値は無視(tools/card/card-ai-deck-check.js の N)
+  check('F 83: 助手ライフの材料の口は呼ぶ時に typeof で確かめ、投げても読めなくしない', /typeof assistantLifeCardMaterial === 'function' \? assistantLifeCardMaterial\(who\) : null/.test(s83) && /catch \(_\) \{ m = null; \}/.test(s83));
 }
 // ---- G ----
 {

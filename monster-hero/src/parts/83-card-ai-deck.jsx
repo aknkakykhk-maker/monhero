@@ -187,11 +187,9 @@ const cardAiFaceSlotOf = (face, side = 'yoso') => (face === 'sugao' ? (side === 
 // 系統(混血はメインの系統)。カードの species
 const cardAiFaceLineOf = (m) => (String(m.wave) === 'hybrid' ? m.main : m.species);
 // 助手ごとに、系統を3つの組(推し・好き・素顔)へ振り分ける。主役の種はその組に置き、残りは強さ(MASTER の点数)の順に蛇行で配る
-//   返り値 { oshi: [系統…], suki: [...], sugao: [...] }。同じ db・同じ助手ならいつも同じ(保存しない)
-const cardAiFaceGroupsMemo = {};
-const cardAiFaceGroups = (db, who) => {
-  const key = `${who}:${Object.keys(db.monsters).length}`;
-  if (cardAiFaceGroupsMemo[key]) return cardAiFaceGroupsMemo[key];
+//   order … 蛇行の始まり(6通り)。返り値 { oshi: [系統…], suki: [...], sugao: [...] }(組の中は強い順)
+const CARD_AI_FACE_ORDERS = Object.freeze([['sugao', 'oshi', 'suki'], ['oshi', 'suki', 'sugao'], ['sugao', 'suki', 'oshi'], ['suki', 'oshi', 'sugao'], ['oshi', 'sugao', 'suki'], ['suki', 'sugao', 'oshi']]);
+const cardAiFaceGroupsBy = (db, who, order) => {
   const t = CARD_AI_FACES[who] || CARD_AI_FACES.mua;
   const mons = Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && !m.variant && String(m.wave) !== 'hybrid');
   const lines = [...new Set(mons.map((m) => m.species))];
@@ -199,54 +197,62 @@ const cardAiFaceGroups = (db, who) => {
   const groups = { oshi: [], suki: [], sugao: [] };
   const placed = new Set();
   for (const g of CARD_AI_FACE_IDS) for (const sp of fixed[g]) if (sp && lines.includes(sp) && !placed.has(sp)) { groups[g].push(sp); placed.add(sp); }
-  const score = (sp) => Math.max(...mons.filter((m) => m.species === sp).map((m) => cardAiMonScore(db, who, m, 99, 'master')));
-  const rest = lines.filter((sp) => !placed.has(sp)).map((sp) => ({ sp, v: score(sp) })).sort((a, b) => b.v - a.v || (a.sp < b.sp ? -1 : 1));
-  // 蛇行(素顔→推し→好き→好き→推し→素顔…)。推し・好きは主役を決めてあるので、主役を決めていない素顔(よそいき=無難で強い組み方)から取る
-  const order = ['sugao', 'oshi', 'suki', 'suki', 'oshi', 'sugao'];
-  rest.forEach((x, i) => { groups[order[i % order.length]].push(x.sp); });
+  const v = Object.fromEntries(lines.map((sp) => [sp, Math.max(...mons.filter((m) => m.species === sp).map((m) => cardAiMonScore(db, who, m, 99, 'master')))]));
+  const rest = lines.filter((sp) => !placed.has(sp)).sort((a, b) => v[b] - v[a] || (a < b ? -1 : 1));
+  const snake = [...order, ...order.slice().reverse()];
+  rest.forEach((sp, i) => { groups[snake[i % snake.length]].push(sp); });
   // 組の中は強い順(主役を決めていない顔は、組の先頭を主役にする)
-  const v = Object.fromEntries(lines.map((sp) => [sp, score(sp)]));
   for (const g of CARD_AI_FACE_IDS) groups[g].sort((a, b) => v[b] - v[a] || (a < b ? -1 : 1));
-  cardAiFaceGroupsMemo[key] = groups;
   return groups;
 };
 // その顔で組むときの主役と使わない系統(82 の cardAiBuildDeck の opts.face)・くせの型
-//   lead が null の顔(よそいき・本音の一部)は、組の中でいちばん強い系統
-const cardAiFaceSpec = (db, who, slot, freeIn = null) => {
+//   lead が null の顔(よそいき・本音の一部)は、組の中でいちばん強い系統。groups・free を渡さなければ、決めた振り分け(cardAiFaceLayout)
+const cardAiFaceSpec = (db, who, slot, freeIn = null, groupsIn = null) => {
   const t = CARD_AI_FACES[who] || CARD_AI_FACES.mua;
   const row = t[slot] || t.oshi;
   const face = slot === 'yoso' || slot === 'honne' ? 'sugao' : slot;
-  const groups = cardAiFaceGroups(db, who);
+  const lay = groupsIn ? null : cardAiFaceLayout(db, who);
+  const groups = groupsIn || lay.groups;
   const mine = groups[face] || [];
   const lead = row.lead && mine.includes(row.lead) ? row.lead : mine[0] || null;
   const avoid = CARD_AI_FACE_IDS.filter((g) => g !== face).flatMap((g) => groups[g]);
   // ほかの2つの顔の主役(素顔は よそいき・本音 の両方)。仲間の1体目はこれだけを避ける
   const keep = CARD_AI_FACE_IDS.filter((g) => g !== face).flatMap((g) => (g === 'sugao' ? [t.yoso.lead || groups.sugao[0], t.honne.lead || groups.sugao[0]] : [t[g].lead])).filter(Boolean);
-  const free = Number.isInteger(freeIn) ? freeIn : (cardAiFaceFreeMap(db, who)[slot] || 0);
+  const free = Number.isInteger(freeIn) ? freeIn : ((lay && lay.free[slot]) || 0);
   return { face, slot, lead, avoid, keep: [...new Set(keep)], free, style: cardAiStyleOf(row.style) || 'normal', nick: row.nick || null };
 };
-// 仲間の1体目を組の外からも選んでよいか(顔ごと 1/0)。選べると強くなるが、ほかの顔と重なりやすい。
-//   MASTER で組んでみて、見える組み合わせ(推し・好き・素顔の今の側)が「カード4割まで・主役2体以上ちがう」を破れば、大事な順の低い側を 0 にする(推し → よそいき → 好き → 本音)
-//   同じ db・同じ助手ならいつも同じ(保存しない)
+// 振り分けを決める(助手ごと)。蛇行の始まり6通りを順に試し、それぞれで「仲間の1体目を組の外からも選ぶか(顔ごと 1/0)」を決める。
+//   選べると強くなるが、ほかの顔と重なりやすい。MASTER で組んでみて、見える組み合わせ(推し・好き・素顔の今の側)が
+//   「カード4割まで・主役2体以上ちがう」を破れば、大事な順の低い側を 0 にする(推し → よそいき → 好き → 本音)。全部守れた最初の振り分けを使う
+//   返り値 { groups, free, order, ok }。同じ db・同じ助手ならいつも同じ(保存しない)
 const CARD_AI_FACE_RANK = Object.freeze(['oshi', 'yoso', 'suki', 'honne']);
 const CARD_AI_FACE_PAIRS = Object.freeze([['oshi', 'suki'], ['oshi', 'yoso'], ['suki', 'yoso'], ['oshi', 'honne'], ['suki', 'honne']]);
-const cardAiFaceFreeMemo = {};
-const cardAiFaceFreeMap = (db, who) => {
+const cardAiFaceLayoutMemo = {};
+const cardAiFaceLayout = (db, who) => {
   const key = `${who}:${Object.keys(db.monsters).length}`;
-  if (cardAiFaceFreeMemo[key]) return cardAiFaceFreeMemo[key];
-  const free = { oshi: 1, suki: 1, yoso: 1, honne: 1 };
-  const deckOf = (slot) => cardAiFaceBuildWith(db, who, cardAiFaceSpec(db, who, slot, free[slot]), 'master', cardAiSeededRand(`face:${who}:${slot}:master`), {}, null);
-  for (let round = 0; round < 8; round++) {
-    const d = Object.fromEntries(CARD_AI_FACE_SLOTS.map((sl) => [sl, deckOf(sl)]));
-    const bad = CARD_AI_FACE_PAIRS.find(([a, b]) => cardAiFaceShare(d[a], d[b]) > CARD_AI_FACE_SHARE_MAX || cardAiFaceTrioDiff(d[a], d[b]) < CARD_AI_FACE_TRIO_DIFF);
-    if (!bad) break;
-    const loser = [...bad].sort((x, y) => CARD_AI_FACE_RANK.indexOf(y) - CARD_AI_FACE_RANK.indexOf(x)).find((sl) => free[sl]);
-    if (!loser) break;
-    free[loser] = 0;
+  if (cardAiFaceLayoutMemo[key]) return cardAiFaceLayoutMemo[key];
+  let last = null;
+  for (let oi = 0; oi < CARD_AI_FACE_ORDERS.length; oi++) {
+    const groups = cardAiFaceGroupsBy(db, who, CARD_AI_FACE_ORDERS[oi]);
+    const free = { oshi: 1, suki: 1, yoso: 1, honne: 1 };
+    const deckOf = (slot) => cardAiFaceBuildWith(db, who, cardAiFaceSpec(db, who, slot, free[slot], groups), 'master', cardAiSeededRand(`face:${who}:${slot}:master`), {}, null);
+    let ok = false;
+    for (let round = 0; round < 8; round++) {
+      const d = Object.fromEntries(CARD_AI_FACE_SLOTS.map((sl) => [sl, deckOf(sl)]));
+      const bad = CARD_AI_FACE_PAIRS.find(([a, b]) => cardAiFaceShare(d[a], d[b]) > CARD_AI_FACE_SHARE_MAX || cardAiFaceTrioDiff(d[a], d[b]) < CARD_AI_FACE_TRIO_DIFF);
+      if (!bad) { ok = true; break; }
+      const loser = [...bad].sort((x, y) => CARD_AI_FACE_RANK.indexOf(y) - CARD_AI_FACE_RANK.indexOf(x)).find((sl) => free[sl]);
+      if (!loser) break;
+      free[loser] = 0;
+    }
+    last = { groups, free, order: oi, ok };
+    if (ok) break;
   }
-  cardAiFaceFreeMemo[key] = free;
-  return free;
+  cardAiFaceLayoutMemo[key] = last;
+  return last;
 };
+const cardAiFaceGroups = (db, who) => cardAiFaceLayout(db, who).groups;
+const cardAiFaceFreeMap = (db, who) => cardAiFaceLayout(db, who).free;
 
 // ---- 名前 ----
 // 既定の名前(AI が名前を付けられない・見張りに落ちたとき)。よそいきは今の8つの名前
@@ -491,6 +497,8 @@ const cardAiDeckNextStyle = (who) => {
   if (!cardAiDeckNextMemo[who]) cardAiDeckNextMemo[who] = cardAiDeckPickFace(cardAiFaceMain(cardAiFaceMaterial(who)), Math.random);
   return cardAiDeckNextMemo[who];
 };
+// 今の気分・仲良し度に合う顔(6割で出す顔。部屋のタブの「よく使う」)。分からなければ null。印が偽なら null
+const cardAiDeckMainFace = (who) => (cardAiDeckFlagOn() && CARD_AI_FACES[who] ? cardAiFaceMain(cardAiFaceMaterial(who)) : null);
 // 顔の今の名前(保存した名前、無ければ既定)。素顔は今の側(よそいき・本音)
 const cardAiFaceName = (who, face) => {
   const slot = cardAiFaceSlotOf(face, cardAiFaceSugaoSide(cardAiFaceMaterial(who)));
