@@ -12,6 +12,7 @@
 //   G. 印が真: AI の返事で組む(名前・ひとことを残す)/遅れ(sorry)・上限(tired)・失敗・入切が切は揺らぎで組む(画面に違いは出さない)
 //   H. 時期の組み直し: 会った助手だけ・1回で枠を追いつく・10戦で組み直して数を0に・いちばん古い型だけ
 //   I. 対戦で出すデッキ: 保存した方針で組む・名前が無ければ既定の名前・VS のひとことは AI の line か既定の言い方
+//   K. 今日のデッキ: 相手えらびで見せた型と対戦の型がそろう・1戦し終えたら決め直す・印が偽なら無い
 //   J. 中継役へ送る材料: 候補24枚まで・場のカード・くせの幅・prefer [5,8]・型
 const fs = require('fs');
 const path = require('path');
@@ -47,7 +48,7 @@ const makeBox = ({ flag = true, talkOpen = true, lifeStyle = null, fetchImpl = n
   vm.runInContext(`${src('data/card-battle-cards.js')}\n;\n${src('src/parts/82-card-battle-core.jsx')}\n;\n${src('src/parts/82-card-tactics-core.jsx')}\n;\n${src('src/parts/83-card-ai-deck.jsx')}\n;\n`
     + 'this.E = { CARD_BATTLE_DATA, CARD_SAVE_KEYS, CARD_AI_STYLE_IDS, CARD_AI_STYLE_NAMES, CARD_AI_PLAN_RANGE, CARD_AI_DECK_SLOTS, CARD_AI_DECK_GAMES, CARD_AI_DECK_VS_LINES, cardAiBuildDeck, cardAiSeededRand, cardAiPlanCandidates, cardAiPlanHabitRange,'
     + ' cardNormalizeAiRecipe, cardNormalizeAiDeck, cardAiDeckSlotTimes, cardAiDeckSlotsPassed, cardAiDeckDue, cardAiDeckOldest, cardAiDeckJitter, cardAiDeckPickStyle, cardAiDeckFacts,'
-    + ' cardLoadAiRecipe, cardSaveAiDeck, cardAiDeckRebuild, cardAiDeckRunDue, cardAiDeckMarkMet, cardAiDeckAfterMatch, cardAssistantDeckPick, cardAiRecipeOf, cardAiDeckVsLine, cardAiDeckDefaultName };', ctx);
+    + ' cardLoadAiRecipe, cardSaveAiDeck, cardAiDeckRebuild, cardAiDeckRunDue, cardAiDeckMarkMet, cardAiDeckAfterMatch, cardAssistantDeckPick, cardAiRecipeOf, cardAiDeckVsLine, cardAiDeckDefaultName, cardAiDeckNextStyle, cardAiDeckNextName, cardAiDeckNextDone };', ctx);
   return { E: ctx.E, store, calls };
 };
 const ok200 = (body) => ({ ok: true, json: async () => body });
@@ -210,6 +211,20 @@ const ok200 = (body) => ({ ok: true, json: async () => body });
     const v2 = life.E.cardAiDeckVsLine('dra', { name: 'x', line: 'AIのことば' });
     check('I VS のひとこと: AI の line が無ければ助手ごとの既定の言い方に名前を入れる', v1.t === life.E.CARD_AI_DECK_VS_LINES.dra.replace('{name}', 'のんびり長期戦') && v2.t === 'AIのことば' && v1.e === 'happy');
     check('I 8人とも既定の言い方がある', Object.keys(life.E.CARD_AI_STYLE_NAMES).every((w) => typeof life.E.CARD_AI_DECK_VS_LINES[w] === 'string' && life.E.CARD_AI_DECK_VS_LINES[w].includes('{name}')));
+  }
+  // ---- K ----
+  {
+    const k = makeBox({ lifeStyle: () => 'attack' });
+    await k.E.cardLoadAiRecipe();
+    const a1 = k.E.cardAiDeckNextStyle('mua');
+    const same = [...Array(20)].every(() => k.E.cardAiDeckNextStyle('mua') === a1);
+    const p = k.E.cardAssistantDeckPick('mua', k.E.cardAiSeededRand('k'), 'normal', {}, a1);
+    check('K 今日のデッキ: 相手えらびで見せた型は、決め直すまで同じ・その型で対戦する', same && !!p && p.styleId === a1 && k.E.cardAiDeckNextName('mua') === p.name, J({ a1, p: p && p.styleId }));
+    let changed = false;
+    for (let i = 0; i < 30 && !changed; i++) { k.E.cardAiDeckNextDone('mua'); if (k.E.cardAiDeckNextStyle('mua') !== a1) changed = true; }
+    check('K 1戦し終えたら決め直す(ほかの型も出る)', changed);
+    const off = makeBox({ flag: false });
+    check('K 印が偽: 今日のデッキは無い(null)', off.E.cardAiDeckNextStyle('mua') === null && off.E.cardAiDeckNextName('mua') === null);
   }
   // ---- J ----
   {
