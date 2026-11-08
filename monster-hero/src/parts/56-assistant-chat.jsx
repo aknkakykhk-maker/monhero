@@ -597,7 +597,7 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
 
 // 呼び方が決まったあと、つぎの画面で1回だけ出す知らせ(2026-11-08)。決めた画面(HOME)では出さず、画面が変わったら4秒だけ出す。
 // 🔄横(モンヒロビート)では回した器の中へ出す(rotationAwarePortalTarget)。押しても消える
-function AssistantCallnameToast({ assistant, text, screen, onDone }) {
+function AssistantCallnameToast({ assistant, text, screen, hidden = false, onDone }) {
   const [from] = React.useState(screen);
   const [show, setShow] = React.useState(false);
   React.useEffect(() => { if (screen !== from) setShow(true); }, [screen, from]);
@@ -605,7 +605,8 @@ function AssistantCallnameToast({ assistant, text, screen, onDone }) {
   // 出ているあいだに🔄横へ切り替えられても、回した器へ移る(出し先を見直す)
   const [, setTick] = React.useState(0);
   React.useEffect(() => { if (!show) return undefined; const t = setInterval(() => setTick(n => n + 1), 250); return () => clearInterval(t); }, [show]);
-  if (!show || !assistant) return null;
+  // 呼び方の小窓が開いているあいだは出さない(小窓のいちばん上の行に重なるため。小窓にも同じことが出ている)
+  if (!show || !assistant || hidden) return null;
   const accent = assistant.accent || '#f472b6';
   const target = typeof rotationAwarePortalTarget === 'function' ? rotationAwarePortalTarget() : document.body;
   const body = (
