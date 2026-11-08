@@ -51,12 +51,12 @@ const base = (extra = {}) => ({ kind: 'masmon_suggest', breederId: 'b-1', player
     const sw = await run({ kind: 'swap', monster: 'Plant', name: 'はっぱ♪' });
     check('① 入れ替え: 候補の種類だけ・名前も一緒に', sw.result.kind === 'swap' && sw.result.monster === 'Plant' && sw.result.name === 'はっぱ♪' && (await run({ kind: 'swap', monster: 'Ark' })).result.kind === 'none', JSON.stringify(sw.result));
     const t = await run({ kind: 'none', replies: { yes: '', some: '', no: '', talk: '♪が大事なんだね、どこに付けよっか？' } });
-    check('③ 変えることが無いときも、talk の返事で ok を返す', t.ok === true && t.result.kind === 'none' && t.result.replies.talk.includes('♪'), JSON.stringify(t.result && t.result.replies));
+    check('③ 変えることが無いときも、talk の返事で ok を返す', t.ok === true && t.result.kind === 'none' && t.result.replies.talk.includes('♪') && t.result.replies.no === '', JSON.stringify(t.result && t.result.replies));
   }
   { // ③
     const c = counter();
     const r0 = await core.handleRequest({ body: base(), digest: DIGEST, client: fakeClient(() => okRes({ kind: 'name', name: 'ひだまり', colors: [], monster: '', slot: 0, face: '', deckName: '', plan: '', replies: { yes: 'いいね', some: '', no: '', talk: '' } })), ...counter() });
-    check('③ 返事が1つでもあれば、欠けた所を残った返事で埋める', r0.json.ok === true && r0.json.result.replies.some === 'いいね' && r0.json.result.replies.talk === 'いいね');
+    check('③ 返事が1つでもあれば ok。欠けた種類はほかの文で埋めない(空のまま・ゲームが用意した台詞で埋める)', r0.json.ok === true && r0.json.result.replies.yes === 'いいね' && r0.json.result.replies.some === '' && r0.json.result.replies.no === '' && r0.json.result.replies.talk === '');
     const r = await core.handleRequest({ body: base(), digest: DIGEST, client: fakeClient(() => okRes({ kind: 'name', name: 'ひだまり', colors: [], monster: '', slot: 0, face: '', deckName: '', plan: '', replies: { yes: '', some: '', no: '', talk: '' } })), takeSuggest: c.takeSuggest, refundSuggest: c.refundSuggest });
     check('③ 返事が全部欠けたら sorry・回数を返す', r.json.ok === false && r.json.kind === 'sorry' && c.refunded === 1);
     const c2 = counter();

@@ -1236,8 +1236,8 @@ export const validateSuggest = (raw, q, assistantNames, onDrop = () => {}) => {
   const rp = raw.replies || {};
   const got = { yes: reply(rp.yes), some: reply(rp.some), no: reply(rp.no), talk: reply(rp.talk) };
   const any = got.talk || got.some || got.yes || got.no;
-  // 返事の見張りに1つ落ちても、残った返事を使う(全部落ちたときだけ null)
-  const out = { kind, name: '', colors: [], monster: '', slot: 0, face: '', deckName: '', plan: '', replies: { yes: got.yes || got.some || any, some: got.some || got.yes || any, no: got.no || any, talk: got.talk || any } };
+  // 返事は1つでも残れば ok。足りない種類はほかの種類の文で埋めない(断ったのに「変えとくね」と出ないように)。ゲームが助手ごとの用意した台詞で埋める
+  const out = { kind, name: '', colors: [], monster: '', slot: 0, face: '', deckName: '', plan: '', replies: { yes: got.yes, some: got.some, no: got.no, talk: got.talk } };
   if (kind === 'name') { const n = String(raw.name || '').trim(); if (suggestNameOk(n, assistantNames)) out.name = n; else { onDrop('name'); out.kind = 'none'; } }
   if (kind === 'color') {
     const ids = new Set(q.ctx.colors.map(c => c.id)); const nParts = q.ctx.mon ? q.ctx.mon.parts.length : 0; const seen = new Set();
