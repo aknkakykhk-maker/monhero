@@ -77,7 +77,7 @@ const ASSISTANT_MASMON_WELCOME_LINES = Object.freeze({
   momosuke: '{name}〜！ ももの新しい仲間、{mon}の「{nick}」だよ♡ 一緒にステージに立とうね！',
   dra: 'おう{name}。新しいマスモンが来たぞ。{mon}の「{nick}」だ。のんびり育てるよ',
   atsu: '{name}！ 新しい仲間だ。{mon}の「{nick}」。明日から一緒に朝練するぞ！',
-  kyuko: '{name}……新しいマスモンを迎えたの。{mon}の「{nick}」。夜の読書のおともが増えたわ',
+  kyuko: 'ほい、{name}。新しいマスモン迎えたよ。{mon}の「{nick}」。俺の夜の読書のおともが増えた〜', // きゅうこは「俺」・おだやかなタメ口(口ぐせはコトバ・ツムギに見てもらう)
   sorashido: '{name}、新しいマスモンを迎えたさー。{mon}の「{nick}」。表に1行足しておくね',
   erubin: '{name}、新しい仲間を迎えたよ。{mon}の「{nick}」。みんなで守っていこう',
 });

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 711097d0e9b6bddc
+// generated-sha256: c4a6c8e0c7c94a98
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -64792,7 +64792,7 @@ const ASSISTANT_MASMON_WELCOME_LINES = Object.freeze({
   momosuke: '{name}〜！ ももの新しい仲間、{mon}の「{nick}」だよ♡ 一緒にステージに立とうね！',
   dra: 'おう{name}。新しいマスモンが来たぞ。{mon}の「{nick}」だ。のんびり育てるよ',
   atsu: '{name}！ 新しい仲間だ。{mon}の「{nick}」。明日から一緒に朝練するぞ！',
-  kyuko: '{name}……新しいマスモンを迎えたの。{mon}の「{nick}」。夜の読書のおともが増えたわ',
+  kyuko: 'ほい、{name}。新しいマスモン迎えたよ。{mon}の「{nick}」。俺の夜の読書のおともが増えた〜', // きゅうこは「俺」・おだやかなタメ口(口ぐせはコトバ・ツムギに見てもらう)
   sorashido: '{name}、新しいマスモンを迎えたさー。{mon}の「{nick}」。表に1行足しておくね',
   erubin: '{name}、新しい仲間を迎えたよ。{mon}の「{nick}」。みんなで守っていこう',
 });
