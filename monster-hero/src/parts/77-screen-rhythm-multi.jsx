@@ -1459,9 +1459,9 @@ function RhythmBeatPresenceButton({ assistants = [], friends = [], onOpen, resol
     <button type="button" data-rhythm-beat-presence-open aria-label={`いまモンヒロビートにいる人(${faces.length}人)を見る`} onClick={onOpen}
       className="flex min-h-[44px] shrink-0 items-center gap-1 rounded-xl border border-amber-300/60 bg-indigo-950/80 px-1.5 active:scale-95">
       <span className="flex items-center pl-1.5" aria-hidden="true">
-        {/* 小さい画面(359px以下)は2つまで。3つだと見出しの「モードえらび」が切れた */}
+        {/* 小さい画面(359px以下)は1つだけ。2つ以上だと見出しの「モードえらび」や上の英字が切れた */}
         {faces.slice(0, 3).map((f, i) => (
-          <span key={f.key} className={`-ml-1.5 block h-7 w-7 overflow-hidden border-2 bg-slate-900 ${f.round} ${i >= 2 ? 'max-[359px]:hidden' : ''}`} style={{ borderColor: f.color }}>
+          <span key={f.key} className={`-ml-1.5 block h-7 w-7 overflow-hidden border-2 bg-slate-900 ${f.round} ${i >= 1 ? 'max-[359px]:hidden' : ''}`} style={{ borderColor: f.color }}>
             {f.src ? <img src={f.src} alt="" draggable={false} className="h-full w-full object-cover" /> : <span className="grid h-full w-full place-items-center text-xs">🙂</span>}
           </span>
         ))}
@@ -2951,7 +2951,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             {ms.backgroundRun ? <span className="text-[10px] leading-tight">⏹<br />終了</span> : '←'}
           </button>
           <div className="min-w-0 flex-1 leading-none">
-            <small className="block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300">MONBEAT ・ SELECT MODE</small>
+            <small className="block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300 max-[359px]:tracking-normal">MONBEAT ・ SELECT MODE</small>
             <b className="mhms-title block truncate text-lg font-black leading-tight tracking-wider">モードえらび</b>
             {/* ビートランク(2026-10-29 社長)。立ち絵を小さくしないよう、上の帯に細い1行で出す(ボタンの列には置かない)。
                 ビートPと同じ行に、小さい札で並べる(2段にすると帯が高くなり、縦画面で立ち絵の枠が画面の半分を割った・2026-10-30)。

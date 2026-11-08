@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 564cde226782d9fe
+// source-sha256: c88e78a8f642f308
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91348,7 +91348,7 @@ function RhythmBeatPresenceButton({
     "aria-hidden": "true"
   }, faces.slice(0, 3).map((f, i) => React.createElement("span", {
     key: f.key,
-    className: `-ml-1.5 block h-7 w-7 overflow-hidden border-2 bg-slate-900 ${f.round} ${i >= 2 ? 'max-[359px]:hidden' : ''}`,
+    className: `-ml-1.5 block h-7 w-7 overflow-hidden border-2 bg-slate-900 ${f.round} ${i >= 1 ? 'max-[359px]:hidden' : ''}`,
     style: {
       borderColor: f.color
     }
@@ -93676,7 +93676,7 @@ function RhythmMultiScreen({
     }, "⏹", React.createElement("br", null), "終了") : '←'), React.createElement("div", {
       className: "min-w-0 flex-1 leading-none"
     }, React.createElement("small", {
-      className: "block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300"
+      className: "block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300 max-[359px]:tracking-normal"
     }, "MONBEAT ・ SELECT MODE"), React.createElement("b", {
       className: "mhms-title block truncate text-lg font-black leading-tight tracking-wider"
     }, "モードえらび"), (ms.beatPointText || Number.isFinite(ms.beatRankXp)) && React.createElement("div", {

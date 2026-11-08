@@ -114,6 +114,9 @@ const json = (route, body) => route.fulfill({ status: 200, contentType: 'applica
       // 「いる人」ボタンで見出しの「モードえらび」が切れない(320幅で「モードえ…」になった)
       const titleCut = await page.evaluate(() => { const t = document.querySelector('[data-rhythm-mode-select] .mhms-title'); return t ? t.scrollWidth > t.clientWidth + 1 : true; });
       check(`${name}: 見出しの「モードえらび」が切れない`, !titleCut);
+      // 上の小さい英字(MONBEAT ・ SELECT MODE)も切れない(320幅で「…」になり ja-wrap-beat-screen-check が落ちた)
+      const subCut = await page.evaluate(() => { const t = document.querySelector('[data-rhythm-mode-select] header small'); return t ? t.scrollWidth > t.clientWidth + 1 : false; });
+      check(`${name}: 見出しの上の英字が切れない`, !subCut);
       await shot(page, `presence-button-${name}`);
       await openList(page);
       const strip = await page.evaluate(() => ({
