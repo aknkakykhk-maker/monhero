@@ -1,0 +1,142 @@
+{
+  "_": "助手のマスモンの染め方の案(2026-11-08 社長「助手の染色はもう少し工夫がほしい。透明度とかも含めて。好きな色は良いんだけど変になりすぎず、かつ変にする人もいるみたいな。」)。色はプレイヤーと同じ色id。'@NN' は濃さ(透明度・%)、null は元の色のまま、custom:色相:彩度:明度 は作った色(茶色など)。A は性格で差を大きく、B は全員ほどほど。作った色(custom)はアークの体では薄く透けて出たので、えるびんはゲームの色で茶系に寄せた",
+  "brown": "custom:24:75:32",
+  "assistants": {
+    "mua": {
+      "temper": "ほどほど(かわいく)",
+      "A": [
+        "pink_light@70",
+        null,
+        null,
+        "sky@60",
+        null
+      ],
+      "B": [
+        "pink_light@80",
+        "sky@55",
+        null,
+        null,
+        null
+      ]
+    },
+    "kiki": {
+      "temper": "控えめ(1か所だけ)",
+      "A": [
+        "pink@50",
+        null,
+        null,
+        null,
+        null
+      ],
+      "B": [
+        "pink@75",
+        "red@50",
+        null,
+        null,
+        null
+      ]
+    },
+    "momosuke": {
+      "temper": "大胆(ステージ映え)",
+      "A": [
+        "magenta",
+        "yellow",
+        "purple_light",
+        "pink",
+        "magenta"
+      ],
+      "B": [
+        "magenta@80",
+        "yellow@55",
+        "purple_light@60",
+        null,
+        null
+      ]
+    },
+    "dra": {
+      "temper": "大胆(変にする人)",
+      "A": [
+        "green",
+        "custom:24:75:32",
+        "black",
+        "custom:24:75:32",
+        "green"
+      ],
+      "B": [
+        "green@80",
+        "custom:24:75:32@55",
+        null,
+        null,
+        null
+      ]
+    },
+    "atsu": {
+      "temper": "大胆(勝負色)",
+      "A": [
+        "red@90",
+        "black@85",
+        "red@90",
+        "black@85",
+        "red@90"
+      ],
+      "B": [
+        "red@80",
+        "black@55",
+        null,
+        null,
+        null
+      ]
+    },
+    "kyuko": {
+      "temper": "控えめ(髪と服の色を少し)",
+      "A": [
+        "red_light@55",
+        null,
+        "white@45",
+        null,
+        null
+      ],
+      "B": [
+        "red_light@80",
+        "white@55",
+        null,
+        null,
+        null
+      ]
+    },
+    "sorashido": {
+      "temper": "控えめ(決まった所だけ)",
+      "A": [
+        "blue@60",
+        null,
+        "sky@50",
+        null,
+        null
+      ],
+      "B": [
+        "blue@80",
+        "sky@55",
+        null,
+        null,
+        null
+      ]
+    },
+    "erubin": {
+      "temper": "ほどほど(落ち着いた色)",
+      "A": [
+        "black@85",
+        "orange@45",
+        "gray@60",
+        null,
+        null
+      ],
+      "B": [
+        "black@70",
+        null,
+        null,
+        null,
+        null
+      ]
+    }
+  }
+}
