@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8300e136136cd278
+// generated-sha256: 567529c06b635bc8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -62722,12 +62722,12 @@ const assistantLifePairHint = (peerSt, life, a, b) => {
 };
 
 // ---------- 見守る(段階2) ----------
-// その日に見守れる数は、にぎわいの段の moves(静か6・ふつう10・にぎやか16・お祭り24)。やりこむほど動きが増える(2026-11-07 社長)
-const assistantLifeWatchLeft = (play, day) => {
-  const p = assistantLifePlayForDay(play, day);
-  const tier = assistantLifeTierOf(p.points);
-  return Math.max(0, tier.moves - ((p.counts && p.counts.watch) || 0));
-};
+// 見守るの1日の上限はなくした(2026-11-08 社長「上限高くても回数縛りがあるなら意味なくない？」→「1日の上限をなくす」)。
+//   決まりは「同じ組はその時間帯に1回」(life.watched)だけ。見守った数(counts.watch)は記録として数え続ける(消さない)。
+//   前はにぎわいの段の moves(静か6・ふつう10・にぎやか16・お祭り24)が1日の上限だった。呼ぶ側のため名前は残し、上限なし(Infinity)を返す
+const assistantLifeWatchLeft = () => Infinity;
+// いま見守れる組の数(この時間帯にまだ見守っていない組)
+const assistantLifeWatchableNow = (life) => ((life && life.groups) || []).filter(g => !((life && life.watched) || []).includes(assistantLifeGroupKey(g))).length;
 // その組の掛け合いを1本選ぶ(いまある台本から。組の中の2人か3人だけが話すもの・友情Lv の足りるもの・最近見ていないもの)
 const assistantLifePickWatchTalk = (group, peerSt) => {
   if (!group || typeof assistantPeerAllTalks !== 'function') return null;
@@ -62786,7 +62786,7 @@ const assistantLifeOpenScreen = () => { if (assistantLifeEnabled()) ASSISTANT_LI
 const assistantLifeCloseScreen = () => ASSISTANT_LIFE_STORE.set({ open: false });
 // 段ごとのひとこと(上の帯)
 const ASSISTANT_LIFE_TIER_NOTES = Object.freeze({
-  quiet: 'のんびりした一日。遊ぶほど、みんなの動きが増えます',
+  quiet: 'のんびりした一日。遊ぶほど、友情Lv が上がりやすくなります', // 前は「みんなの動きが増えます」(見守れる回数)。1日の上限をなくしたので言いかえた(2026-11-08)
   normal: 'いつもどおりの一日。みんな、それぞれ過ごしています',
   lively: 'よく遊んでくれたから、みんな元気！',
   festival: 'お祭りみたいににぎやか！ 友情Lv がぐんぐん上がります',
@@ -62956,7 +62956,7 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
               <div className="h-full bg-pink-400" style={{ width: `${next ? Math.min(100, Math.round(100 * (play.points - tier.min) / (next.min - tier.min))) : 100}%` }}/>
             </div>
             <p className="mt-1 text-[11px] font-bold text-white">{ASSISTANT_LIFE_TIER_NOTES[tier.id]}</p>
-            <p className="mt-0.5 text-[11px] text-slate-200"><span className="text-orange-300">🤝 友情Lv の上がり方 ×{tier.mult}</span>(1組1日 {tier.cap} まで)・👀 今日見守れるのは あと<b className="text-white">{watchLeft}</b>回</p>
+            <p className="mt-0.5 text-[11px] text-slate-200"><span className="text-orange-300">🤝 友情Lv の上がり方 ×{tier.mult}</span>(1組1日 {tier.cap} まで)・👀 いま見守れる組 <b className="text-white">{assistantLifeWatchableNow(life)}</b>(同じ組は時間帯ごとに1回)</p>
             <p className="text-[10px] text-slate-400">モンヒロビート・バトル・MFバトルカード・おしゃべりで遊ぶと、にぎわいがたまります(朝4時に新しくなります)</p>
           </div>
           <div className="mt-2 flex gap-1" role="tablist">
@@ -63009,7 +63009,7 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
                   <div className="mt-1.5 flex gap-1.5">
                     <button type="button" data-assistant-life-watch={key} disabled={done || watchLeft <= 0} onClick={() => watch(g)}
                       className="min-h-[44px] flex-1 rounded-xl border border-pink-300/60 bg-pink-500/25 px-2 text-[12px] font-black text-pink-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400">
-                      {done ? '✓ 見守りました' : watchLeft <= 0 ? '今日はもう見守れません' : '👀 見守る'}
+                      {done ? '✓ 見守りました' : '👀 見守る'}
                     </button>
                     {canGive && (
                       <button type="button" data-assistant-life-give={key} onClick={() => openGive(g)}
@@ -64180,7 +64180,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const tiles = (
     <div className={land ? 'grid grid-cols-2 gap-1.5' : 'flex gap-1.5'} data-assistant-life-today>
       <button type="button" className="mhl-tile mhl-watch flex-1" data-assistant-life-today-act="watch" disabled={watchLeft <= 0 || !unwatched.length} onClick={() => unwatched[0] && watch(unwatched[0])}>
-        <em>あと{watchLeft}</em><i>👀</i><b>見守る</b><small>{unwatched.length ? `${unwatched.length}か所` : 'いまは無し'}</small></button>
+        {/* 1日の上限はなくした(2026-11-08 社長)。いま見守れる組の数を出す */}
+        <em data-assistant-life-today-watch-now={unwatched.length}>{unwatched.length ? `今 ${unwatched.length}組` : 'いまは無し'}</em><i>👀</i><b>見守る</b><small>{unwatched.length ? '時間帯ごとに1回' : '次の時間帯に'}</small></button>
       <button type="button" className="mhl-tile mhl-call flex-1" data-assistant-life-today-act="call" disabled={!Object.keys(life.solo || {}).filter(id => !awayFriend(id)).length} onClick={() => { const id = lonely ? lonely[0] : Object.keys(life.solo || {}).filter(id => !awayFriend(id))[0]; if (id) setRoomId(id); }}>
         <em>無料</em><i>💬</i><b>声をかける</b><small data-assistant-life-today-sub>{lonely ? `💭 ${nameOf(lonely[0])}` : 'ひとりの助手に'}</small></button>
       <button type="button" className="mhl-tile mhl-give flex-1" data-assistant-life-today-act="give" disabled={!canGive || (!giveGroup && !giveSoloId)} onClick={() => { if (itemsLeft > 0 && giveGroup) openGive(giveGroup.ids); else if (soloLeft > 0 && giveSoloId) openGiveSolo(giveSoloId, giveGroup && giveGroup.ids.includes(giveSoloId) ? giveGroup.ids : [giveSoloId]); else setTab('items'); }}>

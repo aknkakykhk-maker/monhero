@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a13eb146e0576e68
+// source-sha256: 3e4b017af618feca
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -105049,11 +105049,8 @@ const assistantLifePairHint = (peerSt, life, a, b) => {
     next
   };
 };
-const assistantLifeWatchLeft = (play, day) => {
-  const p = assistantLifePlayForDay(play, day);
-  const tier = assistantLifeTierOf(p.points);
-  return Math.max(0, tier.moves - (p.counts && p.counts.watch || 0));
-};
+const assistantLifeWatchLeft = () => Infinity;
+const assistantLifeWatchableNow = life => (life && life.groups || []).filter(g => !(life && life.watched || []).includes(assistantLifeGroupKey(g))).length;
 const assistantLifePickWatchTalk = (group, peerSt) => {
   if (!group || typeof assistantPeerAllTalks !== 'function') return null;
   const ids = group.ids;
@@ -105139,7 +105136,7 @@ const assistantLifeCloseScreen = () => ASSISTANT_LIFE_STORE.set({
   open: false
 });
 const ASSISTANT_LIFE_TIER_NOTES = Object.freeze({
-  quiet: 'のんびりした一日。遊ぶほど、みんなの動きが増えます',
+  quiet: 'のんびりした一日。遊ぶほど、友情Lv が上がりやすくなります',
   normal: 'いつもどおりの一日。みんな、それぞれ過ごしています',
   lively: 'よく遊んでくれたから、みんな元気！',
   festival: 'お祭りみたいににぎやか！ 友情Lv がぐんぐん上がります'
@@ -105437,9 +105434,9 @@ function AssistantLifeScreenBody({
     className: "mt-0.5 text-[11px] text-slate-200"
   }, React.createElement("span", {
     className: "text-orange-300"
-  }, "🤝 友情Lv の上がり方 ×", tier.mult), "(1組1日 ", tier.cap, " まで)・👀 今日見守れるのは あと", React.createElement("b", {
+  }, "🤝 友情Lv の上がり方 ×", tier.mult), "(1組1日 ", tier.cap, " まで)・👀 いま見守れる組 ", React.createElement("b", {
     className: "text-white"
-  }, watchLeft), "回"), React.createElement("p", {
+  }, assistantLifeWatchableNow(life)), "(同じ組は時間帯ごとに1回)"), React.createElement("p", {
     className: "text-[10px] text-slate-400"
   }, "モンヒロビート・バトル・MFバトルカード・おしゃべりで遊ぶと、にぎわいがたまります(朝4時に新しくなります)")), React.createElement("div", {
     className: "mt-2 flex gap-1",
@@ -105543,7 +105540,7 @@ function AssistantLifeScreenBody({
       disabled: done || watchLeft <= 0,
       onClick: () => watch(g),
       className: "min-h-[44px] flex-1 rounded-xl border border-pink-300/60 bg-pink-500/25 px-2 text-[12px] font-black text-pink-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400"
-    }, done ? '✓ 見守りました' : watchLeft <= 0 ? '今日はもう見守れません' : '👀 見守る'), canGive && React.createElement("button", {
+    }, done ? '✓ 見守りました' : '👀 見守る'), canGive && React.createElement("button", {
       type: "button",
       "data-assistant-life-give": key,
       onClick: () => openGive(g),
@@ -108722,7 +108719,9 @@ function AssistantLifeHouse({
     "data-assistant-life-today-act": "watch",
     disabled: watchLeft <= 0 || !unwatched.length,
     onClick: () => unwatched[0] && watch(unwatched[0])
-  }, React.createElement("em", null, "あと", watchLeft), React.createElement("i", null, "👀"), React.createElement("b", null, "見守る"), React.createElement("small", null, unwatched.length ? `${unwatched.length}か所` : 'いまは無し')), React.createElement("button", {
+  }, React.createElement("em", {
+    "data-assistant-life-today-watch-now": unwatched.length
+  }, unwatched.length ? `今 ${unwatched.length}組` : 'いまは無し'), React.createElement("i", null, "👀"), React.createElement("b", null, "見守る"), React.createElement("small", null, unwatched.length ? '時間帯ごとに1回' : '次の時間帯に')), React.createElement("button", {
     type: "button",
     className: "mhl-tile mhl-call flex-1",
     "data-assistant-life-today-act": "call",
