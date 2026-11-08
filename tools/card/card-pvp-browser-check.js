@@ -93,7 +93,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
 // ランクアップの演出(43。1回目に押すと出し切り、2回目で閉じる)は、結果のあと少し遅れて出ることがある。
 //   すぐ閉じに行くと、閉じたあとに出た演出が「部屋を出る」の上にかぶさって押せなかった(2026-11-08 ソランド)。少し待ってから、出ていれば何度でも閉じる
 const closeRankFx = async (page) => {
-  await page.waitForTimeout(900);
+  // 演出は経験値の棒が満タンになってから出る(合図が来ないときも5秒の保険で出る・97 CardRankResult)。出るまで最大6秒待つ
+  for (let t = 0; t < 6000 && !(await page.locator('[data-player-rank-up-fx]').count()); t += 300) await page.waitForTimeout(300);
   for (let i = 0; i < 10 && await page.locator('[data-player-rank-up-fx]').count(); i++) { await page.locator('[data-player-rank-up-fx]').first().click({ position: { x: 10, y: 10 } }).catch(() => {}); await page.waitForTimeout(400); }
 };
 // マルチの入口で相手を決めるボタンを押し、続くデッキ選びで「対戦へ」を押す(2026-10-30 社長「相手を選んだあとにデッキ選択」。前に使ったデッキが選ばれている)
