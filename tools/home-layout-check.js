@@ -304,6 +304,29 @@ const SIZES = [
       else sayJack(jack, '(みゅあが長いとき)');
       await page.close();
     }
+    // 背の低い横画面(568×320・640×360・667×375)で、HOME の札どうし・顔の列が重ならず、画面の外へ出ない(2026-11-08 統括部長: 568×320 で
+    // 「モンヒロバトル」と「ミッション」、吹き出しが長いと「M/B管理」と「鍵の向こう側へ」が重なった)。みゅあの台詞は長い文にして測る
+    {
+      const { quietBootSeed, updateNoticeSeed, oneTimeNoticeSeed } = require(path.resolve(__dirname, 'boot/quiet-boot-seed'));
+      const { STORY_IDS, seed, toHome, waitFaces, finishTalk, homeFacesProblems } = require(path.resolve(__dirname, 'assistant/life-browser-shared'));
+      for (const size of [{ name: '本物 横 568x320', width: 568, height: 320 }, { name: '本物 横 640x360', width: 640, height: 360 }, { name: '本物 横 667x375', width: 667, height: 375 }]) {
+        console.log(`--- ${size.name}`);
+        const page = await browser.newPage({ viewport: { width: size.width, height: size.height } });
+        await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
+        await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(oneTimeNoticeSeed());
+        await page.addInitScript(seed, { storyIds: STORY_IDS, life: true, intro: false, bondAll: null });
+        await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+        await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
+        await toHome(page); await waitFaces(page); await finishTalk(page);
+        for (const [label, text] of [['ふつうの台詞', null], ['長い台詞', '今日はどんな勇者モンが育つかなぁ〜٩(*´ᵕ`*)۶ワクワク まずはクイックで1周してみよっか！ あたしがついてるから大丈夫！']]) {
+          if (text) await page.evaluate((t) => { const e = document.querySelector('.mh-home-assistant [data-bubble-text]'); if (e) e.textContent = t; }, text);
+          await page.waitForTimeout(2500); // 吹き出しが伸びたぶん札が下がる(1秒ごとに測り直す)のを待つ
+          const ng = await homeFacesProblems(page);
+          check(`  (${label})札どうし・顔の列が重ならず、画面の外へ出ない`, ng.length === 0, ng.join(' / '));
+        }
+        await page.close();
+      }
+    }
     server.close();
   }
   await browser.close();

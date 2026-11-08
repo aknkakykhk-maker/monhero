@@ -117,3 +117,16 @@
 - マスモン: キズナ2の口 assistantLifeMasmonTeamOf(id) → [{ monster, nick, colors, lead }] が main に入ったら、alfBuildMore に more.ms = { id: [{ mo, n, c, l }] } で写し、assistantLifeFriendNormalizeMore で受ける(colors は 色id / 色id@10〜100 / null)。部屋のシートの masmonOf を写したもの優先に
 - 台詞: ORDER-FRIEND.md(コトバ・ツムギへ依頼済み)。返ってきたら ALF_TALK_LINES などに入れる(doing ごとの迎え・寝言を足す口が要る)
 - 検査: assistant-life-friend-check(⑩⑪)・browser-check(⑩⑫・--shots)・assistant-chat-check --unit ㉗
+
+## オトズレ3 の区切り(2026-11-08 16:30)
+
+公開済み(この区切りまで): #5056(訪ねる回数の制限なし・台本144本)/#5070(フレンドの最近)/#5077(いまの状態: ⚡ オート周回中・演奏中・助手ライフ・🔑 プライベート中・見せない設定)。
+
+- いまの状態: 34-friends-api.jsx(FRIEND_PLACE_TEXT・friendsPresenceText(place, at, now, records)・records.au/im・friendsSetRoomPrivate)/75(表示・FriendPresenceShowSetting)/60-app(上書きに auto・show)。新しいキー mh_friend_presence_show_v1
+- 最近: 56-assistant-life-friend.jsx の alfCollectActivity(端末の記録から)・30-rhythm-play の1行(曲名)・控え houses.ac1/house_more.ac。新しいキー mh_assistant_life_friend_activity_v1
+- 残り
+  - キズナ3の口 assistantLifeMasmonTeamOf(id) → [{ monster, nick, colors, lead }] が main に入ったら、alfBuildMore に ms を足して部屋のシートのマスモンを写したものにする(colors は 色id@濃さ/null)
+  - 中継役 friend_scenes: 見張りに「攻略・課金・ガチャ」、決まりに「今日の天気」(次に配るとき)
+  - 🔑 プライベート中はビート部テンポが friendsSetRoomPrivate を呼ぶと出る
+  - 訪ねたときの助手が「最近」を話題にする台本(コトバ・ツムギへの注文がまだ)
+- 手順の注意: merge-main は単独で打ち、結果を見てから次へ(ぶつかりの印が main に入った件 #5057)

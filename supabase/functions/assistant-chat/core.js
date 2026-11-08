@@ -1023,12 +1023,133 @@ export const handleFriendScenes = async ({ body, digest, client, take, refund, l
   return { status: 200, json: { ok: true, kind: 'friend_scenes', scenes } };
 };
 
+// ---------- 助手ライフ: 助手のマスモンの名前を1人1回まとめて付ける(kind:'masmon_names'・2026-11-08 社長の選び ❷B) ----------
+// ゲームがプレイヤーごとに決めたマスモン(助手ごとに最大5体)の「モンスター名・好きなわけ」だけを受け取り、助手が付けそうな名前を返す。
+//   プレイヤーの名前・メモは受け取らない。名前は 2〜8字のかな・漢字だけ。だめな名前はその1体だけ捨てる(ゲームが助手ごとの名前の表から選ぶ)
+// 回数は別の表(assistant_masmon_name_usage)。index.ts の takeMasmon/refundMasmon が数える。全員の上限を 0 にすると止まる
+export const MASMON_NAME_USER_LIMIT = 3;
+export const MASMON_NAME_TOTAL_LIMIT = 500;
+export const MASMON_NAME_MAX_TOKENS = 2500;
+export const MASMON_NAME_SLOTS_MAX = 5;
+export const MASMON_NAME_RE = /^[ぁ-ゖァ-ヺー一-龠々・]{2,8}$/u;
+// 出してはいけない言葉(MFバトルカードのチャットの禁止語と同じ考え。かな・カナは同じに見る)
+export const MASMON_NAME_NG = Object.freeze([
+  'しね', 'ころす', 'きえろ', 'ばか', 'あほ', 'まぬけ', 'ざこ', 'きもい', 'うざい', 'ぶす', 'でぶ', 'くそ', 'ごみ', 'かす',
+  'がいじ', 'ちしょう', 'ちんこ', 'ちんぽ', 'まんこ', 'せっくす', 'えっち', 'おっぱい', 'れいぷ',
+  '死', '殺', '馬鹿', '阿呆', '屑', '池沼', '障害', '雑魚', '糞', '奴隷',
+]);
+const masmonFold = (t) => String(t || '').normalize('NFKC').replace(/[ァ-ヶ]/g, (k) => String.fromCharCode(k.charCodeAt(0) - 0x60));
+export const masmonNameOk = (n, assistantNames = []) => {
+  const t = String(n || '').trim();
+  if (!MASMON_NAME_RE.test(t)) return false;
+  const f = masmonFold(t);
+  if (MASMON_NAME_NG.some(w => f.includes(masmonFold(w)))) return false;
+  if (CALLNAME_BANNED_RE.test(t)) return false;
+  if (assistantNames.some(a => a && masmonFold(a) === f)) return false;
+  return true;
+};
+// 頼みをそろえる。items: [{ a: 助手id, s: [{ slot: 1〜5, mon: モンスター名, why: 好きなわけ }] }]
+export const normalizeMasmonItems = (raw, digest) => {
+  const out = []; const seen = new Set();
+  for (const it of Array.isArray(raw) ? raw.slice(0, 12) : []) {
+    const a = str(it && it.a, 20);
+    if (!digest.assistants[a] || seen.has(a)) continue;
+    const slots = []; const ss = new Set();
+    for (const x of Array.isArray(it.s) ? it.s.slice(0, MASMON_NAME_SLOTS_MAX) : []) {
+      const slot = Number(x && x.slot);
+      const mon = str(x && x.mon, 16).replace(/[\n\r<>{}]/g, '').trim();
+      if (!Number.isInteger(slot) || slot < 1 || slot > MASMON_NAME_SLOTS_MAX || ss.has(slot) || !mon) continue;
+      ss.add(slot); slots.push({ slot, mon, why: str(x.why, 30).replace(/[\n\r<>{}]/g, '').trim() });
+    }
+    if (slots.length) { seen.add(a); out.push({ a, s: slots }); }
+  }
+  return out;
+};
+export const MASMON_NAME_RULES_TEXT = [
+  'あなたはゲーム「モンスターヒーロー」の助手たちの代わりに、助手が育てているマスモン(育成したモンスター)のニックネームを考えます。',
+  '- それぞれの助手が自分で付けそうな名前にする(助手の性格・好きなもの・口調の雰囲気に合わせる)。同じ助手の中で名前を重ねない',
+  '- 2〜8字。ひらがな・カタカナ・漢字・「ー」「・」だけ。英字・数字・記号・絵文字は使わない',
+  '- モンスターの種類名そのまま・助手の名前そのままにしない。実在の人物・作品・商品の名前にしない',
+  '- 悪口・こわい言葉・恋愛の言葉・下品な言葉は使わない。だれが見ても感じのよい名前にする',
+  '- 返すのは JSON だけ。names に { a: 助手id, slot: 番号, n: 名前 } を、頼まれた全部ぶん並べる',
+].join('\n');
+const MASMON_NAME_SCHEMA = (ids) => ({
+  type: 'object', additionalProperties: false, required: ['names'],
+  properties: { names: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['a', 'slot', 'n'],
+    properties: { a: { type: 'string', enum: ids }, slot: { type: 'integer' }, n: { type: 'string', description: '2〜8字の名前(かな・漢字)' } } } } },
+});
+export const validateMasmonNames = (list, items, assistantNames, onDrop = () => {}) => {
+  const want = new Map(items.map(it => [it.a, new Set(it.s.map(x => x.slot))]));
+  const out = {}; const used = {};
+  for (const x of Array.isArray(list) ? list : []) {
+    const a = x && x.a, slot = Number(x && x.slot), n = String((x && x.n) || '').trim();
+    if (!want.has(a) || !want.get(a).has(slot)) { onDrop('slot'); continue; }
+    if (out[a] && out[a][slot]) { onDrop('dup_slot'); continue; }
+    if (!masmonNameOk(n, assistantNames)) { onDrop('word'); continue; }
+    used[a] = used[a] || new Set();
+    if (used[a].has(n)) { onDrop('dup_name'); continue; }
+    used[a].add(n); (out[a] = out[a] || {})[slot] = n;
+  }
+  return out;
+};
+export const handleMasmonNames = async ({ body, digest, client, takeMasmon, refundMasmon, log = () => {}, limits = {} }) => {
+  const breederId = str(body && body.breederId, 80).trim();
+  if (!breederId || !digest || !digest.assistants) return { status: 400, json: { ok: false, error: 'bad_request' } };
+  const items = normalizeMasmonItems(body.items, digest);
+  if (!items.length) return { status: 400, json: { ok: false, error: 'bad_request' } };
+  if (typeof takeMasmon !== 'function') return { status: 200, json: { ok: false, kind: 'sorry' } };
+  const total = Number.isFinite(limits.masmonTotal) ? limits.masmonTotal : MASMON_NAME_TOTAL_LIMIT;
+  if (total <= 0) return { status: 200, json: { ok: false, kind: 'tired' } };
+  let ticket;
+  try { ticket = await takeMasmon(breederId, limits.masmonUser || MASMON_NAME_USER_LIMIT, total); } catch {
+    log({ event: 'masmon_take_failed' });
+    return { status: 200, json: { ok: false, kind: 'sorry' } };
+  }
+  if (!ticket || ticket.ok !== true) {
+    log({ event: 'masmon_limited', limited: ticket && ticket.reason === 'total' ? 'total' : 'user' });
+    return { status: 200, json: { ok: false, kind: 'tired' } };
+  }
+  const name = (id) => digest.assistants[id].name;
+  const ask = `次のマスモンに名前を付けて(全部で${items.reduce((t, it) => t + it.s.length, 0)}体)。\n${items.map(it => `■ ${it.a}(${name(it.a)})のマスモン\n${it.s.map(x => `・slot=${x.slot} ${x.mon}${x.why ? `(${name(it.a)}が好きなわけ: ${x.why})` : ''}`).join('\n')}`).join('\n')}`;
+  let response = null;
+  try {
+    response = await client.messages.create({
+      model: MODEL,
+      max_tokens: MASMON_NAME_MAX_TOKENS,
+      thinking: { type: 'disabled' },
+      output_config: { effort: 'low', format: { type: 'json_schema', schema: MASMON_NAME_SCHEMA(Object.keys(digest.assistants).sort()) } },
+      system: [{ type: 'text', text: MASMON_NAME_RULES_TEXT }, ...buildPeerSystem(digest).slice(2)],
+      messages: [{ role: 'user', content: [{ type: 'text', text: ask }] }],
+    });
+  } catch (e) {
+    log({ event: 'masmon_api_error', status: e && e.status ? e.status : null });
+  }
+  let names = {};
+  if (response && response.stop_reason !== 'refusal') {
+    const text = (response.content || []).filter(b => b && b.type === 'text').map(b => b.text).join('');
+    const dropped = [];
+    try { names = validateMasmonNames(JSON.parse(text).names, items, Object.keys(digest.assistants).map(name), (why) => dropped.push(why)); } catch { names = {}; dropped.push('json'); }
+    if (dropped.length) log({ event: 'masmon_dropped', reasons: dropped.slice(0, 10), count: dropped.length });
+  }
+  const n = Object.values(names).reduce((t, o) => t + Object.keys(o).length, 0);
+  if (response && response.usage) {
+    const u = response.usage;
+    log({ event: n ? 'masmon_ok' : 'masmon_empty', names: n, input: u.input_tokens, output: u.output_tokens, cacheRead: u.cache_read_input_tokens, cacheWrite: u.cache_creation_input_tokens });
+  }
+  if (!n) {
+    try { if (typeof refundMasmon === 'function') await refundMasmon(breederId); } catch { log({ event: 'masmon_refund_failed' }); }
+    return { status: 200, json: { ok: false, kind: 'sorry' } };
+  }
+  return { status: 200, json: { ok: true, kind: 'masmon_names', names } };
+};
+
 // 入口は1つ。kind で分ける
 export const handleRequest = (args) => {
   const kind = args && args.body && args.body.kind;
   if (kind === 'daily_lines') return handleDailyLines(args);
   if (kind === 'peer_talks') return handlePeerTalks(args);
   if (kind === 'friend_scenes') return handleFriendScenes(args);
+  if (kind === 'masmon_names') return handleMasmonNames(args);
   return handleChat(args);
 };
 
