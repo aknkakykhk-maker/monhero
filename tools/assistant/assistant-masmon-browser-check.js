@@ -69,6 +69,13 @@ const layoutProblems = (page) => page.evaluate(() => {
       if (!process.env.MASMON_LOW_BOND) await page.addInitScript(() => { try { if (localStorage.getItem('mh_check_masmon_bond') === null) { localStorage.setItem('mh_check_masmon_bond', '1'); for (const id of ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']) { const key = id === 'mua' ? 'mh_assistant_bond_v1' : `mh_assistant_bond_${id}_v1`; let b = {}; try { b = JSON.parse(localStorage.getItem(key)) || {}; } catch {} localStorage.setItem(key, JSON.stringify({ ...b, points: 1800 })); } } } catch {} });
       if (process.env.MASMON_SEED) await page.addInitScript((sd) => { try { if (localStorage.getItem('mh_assistant_life_masmon_v1') === null) localStorage.setItem('mh_assistant_life_masmon_v1', JSON.stringify({ v: 1, seed: sd })); } catch (_) {} }, process.env.MASMON_SEED);
       await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+      // MASMON_REAL_NAMES=1: 名前の頼み(assistant-chat)だけ本番の関数へ通して、AI の名前が入るのを確かめる(1回だけ呼ぶ・費用 約0.2円)
+      if (process.env.MASMON_REAL_NAMES && v.id === 'p') await page.route(/functions\/v1\/assistant-chat/, async (r) => {
+        // ブラウザ道具の通信は入れ物の中継を通らないことがあるので、curl で送る(見出しの Origin だけ本番の形に)
+        const req = r.request(); const h = req.headers();
+        const out = await new Promise((res) => require('child_process').execFile('curl', ['-sS', '-m', '40', '-X', 'POST', req.url(), '-H', `apikey: ${h.apikey || ''}`, '-H', 'Content-Type: application/json', '-H', 'Origin: https://aknkakykhk-maker.github.io', '--data-binary', req.postData() || '{}'], { maxBuffer: 1 << 20 }, (e, so) => res(e ? '{"ok":false}' : so)));
+        await r.fulfill({ status: 200, contentType: 'application/json', body: out });
+      });
       await page.goto(`${BASE}monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
       await toHome(page);
       if (v.rot) {
@@ -85,6 +92,11 @@ const layoutProblems = (page) => page.evaluate(() => {
       if (process.env.MASMON_TAG_MOCK) {
         await page.addStyleTag({ content: '.mhl-room .tag{top:4px!important;transform:translate(-50%,0) rotate(-2deg) scale(.82)!important;transform-origin:50% 0!important}' });
         await page.evaluate(() => window.dispatchEvent(new Event('resize')));
+      }
+      if (process.env.MASMON_REAL_NAMES && v.id === 'p') {
+        await page.waitForFunction(() => ASSISTANT_MASMON_STORE.state.named === true, null, { timeout: 40000 }).catch(() => {});
+        const r = await page.evaluate(() => { const st = ASSISTANT_MASMON_STORE.state; const all = Object.values(st.made).flat(); return { named: st.named, ai: all.filter(t => t.ai).length, n: all.length, kiki: (st.made.kiki || []).map(t => t.nick).join('・') }; });
+        check(`${T0}本番の関数で AI の名前が入る(印 assistantMasmonNamesApi)`, r.named && r.ai >= r.n * 0.7, `${r.ai}/${r.n}体 きき: ${r.kiki}`);
       }
       { // ⑤ 部屋にいるマスモン(染めた絵ができるのを待つ)
         await page.waitForTimeout(SHOTS ? 4000 : 1500);

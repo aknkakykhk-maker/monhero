@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 504c8a3d31155f7e
+// generated-sha256: 9ca321e3d08475dc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -65964,6 +65964,7 @@ const assistantMasmonFloorPlan = (room, size) => {
 //   ときどき止まって様子の印を出す(歩いているあいだは出さない)。家具の上には止まらない(通るだけ)。
 //   床の帯が空いていない部屋では出さない(札の位置はナカヨシ8が床を空ける)。動きを減らす設定の人には止まった姿
 function AssistantMasmonRoomPet({ id, h, life }) {
+  useAssistantMasmonSave(); // 家を開いたときに保存(プレイヤーごとのマスモン)を読む。読み終わったら描き直す
   const ref = React.useRef(null);
   const [plan, setPlan] = React.useState(null);  // { run, stops, y } | false
   const [at, setAt] = React.useState(null);      // { x, moving, dir, ms }
