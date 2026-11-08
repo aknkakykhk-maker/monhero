@@ -786,6 +786,48 @@ const assistantLifeFurnMove = async (who, key, toPut) => {
   return !!next;
 };
 
+// ---------- 段階C: 好きな家具を使う吹き出し・遊びに来た助手が家具に触れる(2026-11-08 社長 ❶A ❷A・docs/progress/assistant-peer/gifts/STAGE-C-PLAN.md) ----------
+// 台詞はツムギ(assistants.js の ASSISTANT_LIFE_FURNUSE_LINES・ASSISTANT_LIFE_VISITFURN_LINES)。保存は増やさない(部屋に置いてある家具を見るだけ)
+const ASSISTANT_LIFE_FURN_SHORT = Object.freeze({ sofa: 'ソファ', bear: 'くま', plant: '植物', record: 'レコード', nyacushion: 'クッション', starpic: '星空の絵',
+  trophy: 'トロフィー', bookshelf: '本棚', heartmirror: '鏡', lantern: 'ランタン', mirrorball: 'ミラーボール', windbell: '風鈴' });
+const assistantLifeFurnPlaced = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => Object.values(assistantLifeRoomOf(who, st).put).filter(Boolean);
+// 吹き出しは2行に分ける(言葉の区切り「で・を・に・の・が・と・、」のうち、真ん中にいちばん近い所で)
+const assistantLifeBubSplit = (text) => {
+  const t = String(text || '');
+  if (t.length <= 8) return [t];
+  let best = -1;
+  for (let i = 2; i < t.length - 1; i++) if ('でをにのがと、'.includes(t[i - 1]) && (best < 0 || Math.abs(i - t.length / 2) < Math.abs(best - t.length / 2))) best = i;
+  const at = best > 0 ? best : Math.ceil(t.length / 2);
+  return [t.slice(0, at), t.slice(at)];
+};
+// ❶A: 好きな家具が部屋に置いてあれば、ひとりで部屋にいるあいだはいつもこの吹き出し(家具の絵文字+ひとこと)。無ければ null
+const assistantLifeFurnUseBub = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  if (!assistantLifeFurnEnabled()) return null;
+  const lines = typeof ASSISTANT_LIFE_FURNUSE_LINES !== 'undefined' ? ASSISTANT_LIFE_FURNUSE_LINES[who] : null;
+  if (!lines) return null;
+  const key = assistantLifeFurnPlaced(who, st).find(k => lines[k] && assistantLifeFurnLike(who, k) === 'like');
+  if (!key) return null;
+  const f = assistantLifeFurnOf(key);
+  const [a, b] = assistantLifeBubSplit(lines[key]);
+  return { key, bub: [`${f ? f.emoji : ''} ${a}`, ...(b ? [b] : [])] };
+};
+// ❷A: 部屋の主(host)の部屋に、台詞のある相手(guest)がいて、その家具が置いてあるときの掛け合い。ids … 部屋にいる助手
+const assistantLifeFurnVisitOf = (host, ids, st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  if (!assistantLifeFurnEnabled() || !Array.isArray(ids) || ids.length < 2) return null;
+  const all = typeof ASSISTANT_LIFE_VISITFURN_LINES !== 'undefined' && Array.isArray(ASSISTANT_LIFE_VISITFURN_LINES) ? ASSISTANT_LIFE_VISITFURN_LINES : [];
+  const placed = assistantLifeFurnPlaced(host, st);
+  const v = all.find(x => x.host === host && x.guest !== host && ids.includes(x.guest) && placed.includes(x.item));
+  return v ? assistantLifeFurnVisitTalk(v) : null;
+};
+const assistantLifeFurnVisitTalk = (v) => ({ id: `visitfurn-${v.guest}-${v.host}-${v.item}`, pair: [v.guest, v.host], lv: 1, scene: 'any', furnVisit: v.item,
+  lines: v.lines.map(x => ({ who: x.who, e: x.e || 'happy', t: x.t })) });
+const assistantLifeFurnVisitBub = (talk) => {
+  const k = talk && talk.furnVisit, f = k && assistantLifeFurnOf(k);
+  return f ? [`${f.emoji} ${ASSISTANT_LIFE_FURN_SHORT[k] || f.name}の話を`, 'してる'] : null;
+};
+// 思い出アルバムに並べる掛け合い(家具が開いているときだけ。見たものはアルバムの記録に入る)
+const assistantLifeFurnAlbumTalks = () => (assistantLifeFurnEnabled() && typeof ASSISTANT_LIFE_VISITFURN_LINES !== 'undefined' && Array.isArray(ASSISTANT_LIFE_VISITFURN_LINES) ? ASSISTANT_LIFE_VISITFURN_LINES.map(assistantLifeFurnVisitTalk) : []);
+
 // 部屋の絵に置いた家具を出す(印が偽なら何も出さない)。z-index は 2(灯りを消した膜・キズナの扉・顔・吹き出しより後ろ)
 // faces … いま部屋にいる顔の数 / baseCount … もとからある家具(左下の絵文字)の数。床の家具は、もとの家具と顔のあいだに入れる。
 //   狭い部屋で入らないときは、部屋の上の真ん中へ寄せる(顔に重ねない・2026-11-08 検査で見つけた 横 844 の重なり)

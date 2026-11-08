@@ -78,7 +78,9 @@ const boardProblems = (page) => page.evaluate(() => {
   return ng;
 });
 // ⑰ 場面の立ち絵の釣り合い(2026-11-08 社長「サイズバランスが悪いのはわざと？」)と見出しのアイコン。
-//   組を作って「居場所」から見守り、場面の立ち絵の見た目の頭の高さの差(場面の高さの 3% 以内)と、体の大きさの比(1.08 倍以内)を測る
+//   組を作って「居場所」から見守り、場面の立ち絵の見た目の頭の高さの差(場面の高さの 3% 以内)と、大きさの比(1.08 倍以内)を測る
+//   2026-11-08 社長「顔のサイズで合わせて頭のてっぺんをあわせた縮尺と位置に」(オクリモノ3・STAND-MEASURE.md): 頭の高さは手で測った頭のてっぺん(髪の上端・飾りは除く)、
+//   大きさは体の高さではなく顔の大きさ(assistantLifeStandFace の m・fit)で比べる。顔が隠れないかは目の線で見る
 const standProblems = async (page, combos, label) => {
   const ng = []; let n = 0;
   for (const ids of combos) {
@@ -94,11 +96,14 @@ const standProblems = async (page, combos, label) => {
     await page.waitForTimeout(700);
     const m = await page.evaluate(() => {
       const sc = document.querySelector('[data-assistant-life-scene]'); if (!sc) return null; const H = sc.getBoundingClientRect().height;
-      const st = [...sc.querySelectorAll('[data-assistant-life-scene-stand]')].map(e => { const r = e.getBoundingClientRect(), b = ASSISTANT_LIFE_STAND_BOX.get(e.getAttribute('src')); return b ? { top: r.top + b.t * r.height, fh: (b.b - b.t) * r.height } : null; });
+      const faceOf = (e) => (typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(e.getAttribute('data-assistant-life-scene-stand'), e.getAttribute('src')) : { top: 0, eye: 0.4, m: 1 });
+      const EC = typeof ASSISTANT_LIFE_STAND_EC !== 'undefined' ? ASSISTANT_LIFE_STAND_EC : 1;
+      const st = [...sc.querySelectorAll('[data-assistant-life-scene-stand]')].map(e => { const r = e.getBoundingClientRect(), b = ASSISTANT_LIFE_STAND_BOX.get(e.getAttribute('src')), f = faceOf(e); if (!b) return null;
+        const vh = (b.b - b.t) * r.height; return { top: r.top + b.t * r.height + (f.top || 0) * vh, fh: vh * EC * (f.m || 1) / (f.fit || 1) }; });
       const ic = sc.querySelector('[data-assistant-life-scene-icon]');
       // 顔(見た目の上から4割)が台詞の窓に隠れていないか(2026-11-08 ミハリ: 横で窓の裏に隠れた)
       const tw = document.querySelector('[data-assistant-peer-talk]'); const twTop = tw ? tw.getBoundingClientRect().top : Infinity;
-      const hidden = [...sc.querySelectorAll('[data-assistant-life-scene-stand]')].filter(e => { const r = e.getBoundingClientRect(), b = ASSISTANT_LIFE_STAND_BOX.get(e.getAttribute('src')); return b && r.top + (b.t + 0.4 * (b.b - b.t)) * r.height > twTop; }).map(e => e.getAttribute('data-assistant-life-scene-stand'));
+      const hidden = [...sc.querySelectorAll('[data-assistant-life-scene-stand]')].filter(e => { const r = e.getBoundingClientRect(), b = ASSISTANT_LIFE_STAND_BOX.get(e.getAttribute('src')), f = faceOf(e); return b && r.top + (b.t + (f.eye || 0.4) * (b.b - b.t)) * r.height > twTop; }).map(e => e.getAttribute('data-assistant-life-scene-stand'));
       return { H, st, hidden, icon: !!ic && !ic.closest('.mhl-ti') && ic.getBoundingClientRect().width > 4 };
     });
     if (!m) { ng.push(`${ids.join('・')}: 場面が開かない`); continue; }
@@ -156,7 +161,8 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     // 入場の演出(その日の最初は長い)・家
     await page.locator('[data-home-assistant-life]').click();
     await page.locator('[data-assistant-life-screen]').waitFor({ timeout: 5000 });
-    check('⑩ 入場の演出が出る(その日の最初は長い)', (await page.locator('[data-assistant-life-intro="long"]').count()) === 1);
+    // 演出は画面が出た少しあと(保存を読んでから)に出るので、1秒まで待って数える(画面が出た瞬間に数えていて、ときどき間に合わなかった・2026-11-08)
+    check('⑩ 入場の演出が出る(その日の最初は長い)', await page.locator('[data-assistant-life-intro="long"]').waitFor({ timeout: 1000 }).then(() => true).catch(() => false));
     check('⑩ 入場を見た日を新しいキーに残す', /^\d{4}-\d{2}-\d{2}$/.test(String(await ls(page, 'mh_assistant_life_intro_v1'))));
     await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 4000 }).catch(() => {});
     check('⑩ 家に8人の部屋が出る', (await page.locator('[data-assistant-life-room]').count()) === 8);

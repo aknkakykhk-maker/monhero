@@ -31,3 +31,13 @@
 - オトズレ3(フレンドの家): 作り直した画面は上を空けてあり、札の置き場所の直しと両立する。家具の部品 AssistantLifeRoomFurn は put でフレンドの家の家具も描く
 - キズナ: assistantPeerUseItem の最後で assistantLifeRelOnGift を呼ぶ1行は残す
 - 前からある NG: unreleased-assistant-hidden-check(60-app.jsx で助手の一覧を回している)は担当が別
+
+
+## 2026-11-08 オクリモノ3 の区切り(引き継ぎの3〜5は済み)
+- #5096・#5097 買って贈るを1回で(贈るシート2人に・1人に/家具のシート「まだ持っていない家具」/道具タブの各行/思い出アルバム10種類)。確かめの窓は毎回。ビートPは exchangeRhythmEventPoints(offer,1) で1回だけ(60-app の assistantLifeSetBuyer)。検査 assistant-life-buygive-browser-check
+- 同じPR: 居場所タブのお知らせの帯を濃い下地に(朝・夕で字が沈んでいた)。検査 assistant-life-note-band-check
+- #5107 1人に贈る・家具を贈るときも仲良し度の札(assistantLifeAddBondWithFx。60-app と 44-growth-fx は触っていない)。段が上がると Lv の画面も出るので、solo・furn・buygive の検査は閉じてから進む
+- #5115 段階C(❶A 好きな家具の吹き出し・❷A 遊びに来た助手と家具の掛け合い→見守るで流す)と、場面の立ち絵(手で測った顔で縮尺・頭のてっぺんをそろえ・顔の何倍かで上下を切る・きゅうこ fit 0.95)。共通の表と関数は 56-assistant-life-house.jsx(assistantLifeStandRule ほか。ナカヨシ9 の部屋を大きく見る画面も使う)。測り方と使い方は gifts/stagec/STAND-MEASURE.md。検査 assistant-life-furn-stagec-browser-check・assistant-life-scene-stand-browser-check。assistant-life-browser-check ⑰ も新しい決まりで測る形に
+- 取り下げ: 仲良し度の知らせの札の置き場所の直し(ナカヨシ8 の裏周回の枝が 44-growth-fx を書き換えているため)。横844のフレンドの家で札がボタンに重なる件は、ナカヨシ8 へ(main でも夕方以降に assistant-life-friend-browser-check の横2件が落ちることがある)
+- 残り: 家具の描き下ろしの絵(届くまで絵文字のまま)。ほかの画面の立ち絵へ共通の決まりを当てはめるのは、社長に聞いてから
+- 社長「次のリセットまで多人数を動かさない」: ここで区切り

@@ -322,6 +322,20 @@ const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'er
   { const h = G('assistantLifeFriendNormalizeHouse')({ v: 1, ids: ['kiki', 'mua', 'dra'], r: { kiki: { at: 'out', d: 'cards', m: 'happy', p: 'cardroom' }, mua: { at: 'home', d: 'idle', m: 'happy', p: 'cardroom' }, dra: { at: 'out', d: 'idle', m: 'happy', p: 'nowhere' } } });
     check('⑯ 行き先は、出かけている助手の町の場所だけ読む', h.r.kiki.p === 'cardroom' && !h.r.mua.p && !h.r.dra.p, JSON.stringify(h.r)); }
 
+  // ⑱ その人の助手のマスモンの写し(キズナ4 #5103/#5108 の口 assistantLifeMasmonTeamOf): 実装済みだけ・名前の見張り・色の形(custom: も通す)・6000字に収める
+  { vm.runInContext("var ALL_PLAYER_MONSTERS = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : { Golem: { name: 'ゴーレム' }, Ark: { name: 'アーク' } };", ctx);
+    const m = G('assistantLifeFriendNormalizeMore')({ v: 1, ms: { kiki: [{ mo: 'Golem', n: 'ごろちゃん', c: ['red@50', null, 'BAD COLOR', 'custom:120:40:85@70'], l: 1 }, { mo: 'NoSuchMon', n: 'x' }, { mo: 'Ark', n: 'ID: abc_1234567' }], zz: [{ mo: 'Golem' }] }, mn: { kiki: 6 } });
+    check('⑱ マスモンは実装済みだけ・色は「色id」「custom:色相:彩度:明度」(@濃さ)だけ(ほかは元の色)・連絡先らしい名前は空・知らない助手は捨てる・ほかの数', m && m.ms.kiki.length === 2 && m.ms.kiki[0].n === 'ごろちゃん' && JSON.stringify(m.ms.kiki[0].c) === '["red@50",null,null,"custom:120:40:85@70"]' && m.ms.kiki[0].l === 1 && m.ms.kiki[1].n === '' && !m.ms.zz && m.mn.kiki === 6, JSON.stringify(m && [m.ms, m.mn]));
+    // 8人×8体・色5つ(custom)・家具と日記がいっぱいでも、表の決まり(6000字)に収まる。勇者モンの色は残す
+    const one = (i) => ({ mo: 'Golem', n: 'あいうえおかきくけこさしすせそた'.slice(0, 16), c: Array(5).fill('custom:359:100:100@100'), ...(i === 0 ? { l: 1 } : {}) });
+    const ms = {}; for (const id of IDS) ms[id] = Array.from({ length: 8 }, (_, i) => one(i));
+    const fu = {}; for (const id of IDS) fu[id] = { p: { c: 'lantern', w: 'starpic', f: 'sofa' }, k: Array(12).fill('plant') };
+    const base = { v: 1, fu, dy: Array(8).fill({ t: '10:10', x: 'あ'.repeat(40) }), ac: Array(8).fill({ k: 'beat', x: 'あ'.repeat(30), at: Date.now() }) };
+    const fit = G('alfFitMasmon')(base, ms); const t = JSON.stringify(fit); const chars = t.length + (t.match(/[:,]/g) || []).length;
+    check('⑱ いっぱいでも 6000字に収まる・勇者モン(先頭)の色は残す・減らした数は mn に残す', chars <= 6000 && fit.ms && fit.ms.mua[0].c.length === 5 && fit.ms.mua[0].l === 1 && (fit.ms.mua.length === 8 || fit.mn.mua === 8), `${chars}字 ${fit.ms ? fit.ms.mua.length : 0}体 mn=${JSON.stringify(fit.mn)}`);
+    const small = G('alfFitMasmon')({ v: 1, fu: {}, dy: [] }, { mua: [one(0), one(1)] });
+    check('⑱ 入るときは削らない(全員の色をそのまま)', small.ms.mua.length === 2 && small.ms.mua[1].c.length === 5 && !small.mn, JSON.stringify(small).slice(0, 120)); }
+
   // ⑧ 公開の印
   const rel = fs.readFileSync(path.join(root, 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8');
   check('⑧ 公開の印 assistantLifeFriend がある(真/偽どちらでも、偽なら通信しないことを下で見る)', /\n\s*assistantLifeFriend:\s*(true|false),/.test(rel));

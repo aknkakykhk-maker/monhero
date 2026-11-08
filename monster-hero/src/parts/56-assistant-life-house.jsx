@@ -498,6 +498,13 @@ const assistantLifeRoomsOf = (life, metIds) => {
       if (host === id) {
         const lonely = w.reason === 'lonely';
         rooms[id] = { in: [host, ...ids.filter(x => x !== host)], lonely, sleep: w.doing === 'sleep', bub: w.doing === 'sleep' ? ['💤 おやすみ中'] : lonely ? ['💭 だれか', '来ないかな…'] : ids.length > 1 ? ['部屋で', `${ids.length}人で`, doing.label] : ['部屋で', doing.label] };
+        // 段階C(2026-11-08 社長 ❶A ❷A): 好きな家具を置いた部屋にひとりでいるときは家具の吹き出し/遊びに来た助手と家具の掛け合いがあれば「◯◯の話をしてる」
+        if (w.doing !== 'sleep' && !lonely) {
+          const visit = ids.length > 1 && typeof assistantLifeFurnVisitOf === 'function' ? assistantLifeFurnVisitOf(host, ids) : null;
+          const use = ids.length === 1 && typeof assistantLifeFurnUseBub === 'function' ? assistantLifeFurnUseBub(host) : null;
+          if (visit) rooms[id] = { ...rooms[id], bub: assistantLifeFurnVisitBub(visit) || rooms[id].bub, furnVisit: visit.id };
+          else if (use) rooms[id] = { ...rooms[id], bub: use.bub, furnUse: use.key };
+        }
       } else rooms[id] = { tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)] };
       continue;
     }
@@ -549,14 +556,45 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
   const groupNames = w && w.group ? assistantLifeGroupNames(w.group.ids, 8) : null;
   const groupText = w && w.group ? '' : ' ・ ひとり';
   const where = !w ? '🏡 部屋で過ごしている' : home ? `🏡 部屋で${doing}${groupText}` : `${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}で${doing}${groupText}`;
+  // 部屋を大きく見る(2026-11-08 社長 案A・56-assistant-life-roomview.jsx): 上(横は左)に大きな部屋、下(横は右)に今までの中身。
+  //   いちばん前のボタンは「← 家へ」(閉じる)。縦は下へ送ると中身、横は右の欄が中身
+  const scrollRef = React.useRef(null);
+  const sheetRef = React.useRef(null);
+  const toSheet = () => { try { const box = scrollRef.current, el = sheetRef.current; if (box && el) box.scrollTo({ top: el.offsetTop - 8, behavior: 'smooth' }); } catch (_) {} };
+  const people = !w ? [id] : home ? (w.group ? w.group.ids.filter(x => ASSISTANT_LIFE_PREFS[x]) : [id]) : [];
+  const sleepIds = people.filter(x => { const e = assistantLifeWhereOf(life, x); return e && e.doing === 'sleep'; });
+  const friendAway = typeof assistantLifeFriendAwayOf === 'function' && !!assistantLifeFriendAwayOf(id);
+  const away = home ? null : friendAway ? { title: '🏘 フレンドの家へ', sub: '' } : { title: `${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}へ`, sub: `${w.group ? `${assistantLifeGroupNames(w.group.ids.filter(x => x !== id), 3)}と一緒 ・ ` : ''}${slotDef ? `${slotDef.to % 24}時まで` : ''}` };
+  const rvFurn = typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled() && typeof assistantLifeRoomOf === 'function'
+    ? Object.entries(assistantLifeRoomOf(id).put || {}).filter(([, k]) => k).map(([slot, k]) => { const f = assistantLifeFurnOf(k); return f ? { slot, key: k, emoji: f.emoji, name: f.name } : null; }).filter(Boolean) : [];
+  const rvTeam = typeof assistantLifeRoomMasmons === 'function' ? assistantLifeRoomMasmons(id, life) : [];
+  const rvAct = (k, label, cls, fn, dis = false) => <button key={k} type="button" data-assistant-life-roomview-act={k} disabled={dis} onClick={fn} className={`rounded-xl px-1 py-2 text-[12px] font-black text-white shadow active:scale-95 disabled:opacity-40 ${cls}`}>{label}</button>;
+  const rvDock = land ? null : (
+    <div className="grid grid-cols-3 gap-1.5" data-assistant-life-roomview-dock>
+      {rvAct('sheet', home ? '👀 ようす' : '👀 くわしく', 'bg-gradient-to-br from-rose-400 to-amber-500', toSheet)}
+      {rvAct('chat', asleep ? '💤 起こす' : '💬 おしゃべり', 'bg-gradient-to-br from-sky-400 to-indigo-500', () => (onChat ? onChat(id, null) : toSheet()), !onChat && !home)}
+      {rvAct('give', '🎁 贈る', 'bg-pink-600', () => { if (soloOn && canGiveSolo) onGiveSolo(id, w && w.group ? w.group.ids : [id]); else if (w && w.group && canGive) onGive(w.group); else toSheet(); })}
+      {rvAct('furn', '🪑 家具', 'bg-orange-600', () => setFurnOpen(true), !(typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled() && onGiveFurn))}
+      {rvAct('masmon', `🐾 マスモン ${rvTeam.length || ''}`.trim(), 'bg-teal-600', () => (onMasmon ? onMasmon(id) : toSheet()), !onMasmon)}
+      {rvAct('beat', atBeat ? '🎵 会いに行く' : '🎵 ビート', 'bg-gradient-to-br from-violet-500 to-pink-500', () => onBeat(id), typeof ASSISTANT_LIFE_LINKS.beatInvite !== 'function')}
+    </div>);
+  // 横で狭い画面(667 など)は、右の中身の欄を半分まで広げる(説明が言葉の途中で折れて、下のボタンの段に隠れた・2026-11-08 ミハリ)
+  const rvSheetW = land && typeof window !== 'undefined' && window.innerWidth < 760 ? '50%' : '42%';
+  const rvScene = typeof AssistantLifeRoomScene === 'function' ? (
+    <AssistantLifeRoomScene id={id} look={typeof assistantLifeTimeLook === 'function' ? assistantLifeTimeLook() : 'noon'} land={land} people={people} sleepIds={sleepIds} away={away} team={rvTeam} furn={rvFurn}
+      bubble={follow && follow.text ? follow.text : ''} title={`${who.name}の部屋`} sub={`${lv != null ? `💗 仲良し度 Lv${lv} ・ ` : ''}${where}`}
+      onPerson={() => toSheet()} onMasmon={onMasmon ? () => onMasmon(id) : null} dock={rvDock} padLeft={78}/>) : null;
   return (
     <div className="absolute inset-0" style={{ zIndex: 25 }} data-assistant-life-room-sheet={id}>
-      <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/60" onClick={onClose}/>
-      <div className="mhl-sheet" style={land ? { left: 'auto', width: '42%', top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px', borderTop: 0, borderLeft: '2px solid #f9a8d4', paddingTop: 10 } : undefined}>
-        <img src={assistantFullImage(who, w && w.reason === 'lonely' ? 'troubled' : 'happy')} alt="" className={`pointer-events-none absolute right-0 top-0 object-contain object-right-top opacity-95 ${land ? 'h-[96px] w-[96px]' : 'h-[150px] w-[150px]'}`}/>
+      <button type="button" aria-label="閉じる" data-assistant-life-roomview-close onClick={onClose} className="absolute z-[40] rounded-xl border border-pink-300/60 bg-slate-950/85 px-2.5 py-1.5 text-[12px] font-black text-pink-100 active:scale-95"
+        style={{ left: 'calc(10px + env(safe-area-inset-left))', top: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>← 家へ</button>
+      {land ? (rvScene && <div className="absolute inset-y-0 left-0 bg-[#0b1020]" style={{ width: rvSheetW === '42%' ? '58%' : '50%' }}>{rvScene}</div>) : null}
+      <div ref={scrollRef} className={land ? 'contents' : 'absolute inset-0 overflow-y-auto overflow-x-hidden bg-[#0b1020]'} data-assistant-life-roomview-scroll>
+      {!land && rvScene && <div style={{ height: 'calc(100% - 52px)', minHeight: 420 }}>{rvScene}</div>}
+      <div ref={sheetRef} className="mhl-sheet" style={land ? { left: 'auto', width: rvSheetW, top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px', borderTop: 0, borderLeft: '2px solid #f9a8d4', paddingTop: 10 } : { position: 'relative', maxHeight: 'none', zIndex: 1 }}>
         <p className="mhl-en">ROOM · {String(who.id).toUpperCase()}</p>
         <p className="text-[21px] font-black">{who.name}の部屋</p>
-        <p className="mt-1 max-w-[62%] text-[12px] font-bold" data-assistant-life-room-where>{where}{groupNames && <> ・ {w.group.ids.length}人(<AssistantLifeNames text={groupNames}/>)</>}</p>
+        <p className="mt-1 max-w-[62%] text-[12px] font-bold" style={{ wordBreak: 'auto-phrase', ...(land ? { maxWidth: 'none' } : {}) }} data-assistant-life-room-where>{where}{groupNames && <> ・ {w.group.ids.length}人(<AssistantLifeNames text={groupNames}/>)</>}</p>
         {!home && <p className="text-[11px] font-bold text-violet-200">⏱ {slotDef ? `${slotDef.to % 24}時まで` : ''}いる</p>}
         {(() => { const sh = assistantLifeRhythmShiftOn(((ASSISTANT_LIFE_STORE.state.rhythm || {})[id]), assistantLifeDayKey()); const rh = ASSISTANT_LIFE_RHYTHM[id]; return <p className="text-[10.5px] font-bold text-sky-200" data-assistant-life-room-rhythm={assistantLifeRhythmLabel(sh)}>🕰 生活のリズム: {rh ? rh.label : ''}{Math.abs(sh) >= 0.3 ? `(いまは ${assistantLifeRhythmLabel(sh)})` : ''}</p>; })()}
         {asleep ? <p className="text-[11px] font-bold text-indigo-200" data-assistant-life-room-asleep>💤 ぐっすり寝ている</p> : (w && w.reason === 'lonely') ? <p className="text-[11px] font-bold text-amber-200">💭 さみしそう(だれか来てほしい)</p> : mood ? <p className="text-[11px] font-bold text-pink-200">気分: {mood}</p> : null}
@@ -574,7 +612,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
           </div>
         </div>
         {/* 横は狭いので、ボタンをシートの下に止めて、いつも全部見えるようにする(2026-11-08 窓口) */}
-        <div className="mt-2 grid grid-cols-2 gap-1.5" data-assistant-life-room-acts style={land ? { position: 'sticky', bottom: -10, zIndex: 6, background: '#0b1020', paddingTop: 6, paddingBottom: 6, marginBottom: -4 } : undefined}>
+        <div className="mt-2 grid grid-cols-2 gap-1.5" data-assistant-life-room-acts style={land ? { position: 'sticky', bottom: -10, zIndex: 6, background: '#0b1020', paddingTop: 6, paddingBottom: 6, marginBottom: -4, boxShadow: '0 -14px 12px #0b1020' } : undefined}>
           {/* 声をかけたあとの続き(2026-11-08 社長 ❼A・❾A)。ボタンの段のいちばん上(横はボタンの段が下に止まるので、段の外だと隠れる) */}
           {follow && onChat && (
             <div className="col-span-2 rounded-2xl border-2 border-pink-300 bg-slate-950/95 px-3 py-2" data-assistant-life-room-follow={follow.kind}>
@@ -610,6 +648,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
           <button type="button" data-assistant-life-room-close data-mhl-sheet-close onClick={onClose} className="col-span-2 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
         </div>
       </div>
+      </div>
       {furnOpen && typeof AssistantLifeFurnSheet === 'function' && <AssistantLifeFurnSheet id={id} furnItems={furnItems || {}} onGiveFurn={onGiveFurn} land={land}
         onClose={() => setFurnOpen(false)} onTalk={(talk, text) => { setFurnOpen(false); if (onFurnTalk) onFurnTalk(talk, text); }}/>}
     </div>);
@@ -637,15 +676,104 @@ const assistantLifeStandBox = (src) => new Promise((res) => {
   im.onerror = () => { ASSISTANT_LIFE_STAND_BOX.set(src, null); res(null); };
   im.src = src;
 });
-function AssistantLifeStand({ pid, src, cx, fig, sleep }) {
-  const [box, setBox] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.get(src) || null);
-  React.useEffect(() => { let alive = true; assistantLifeStandBox(src).then(b => { if (alive) setBox(b); }); return () => { alive = false; }; }, [src]);
-  const filter = sleep ? 'brightness(.45) saturate(.6) drop-shadow(0 6px 12px #0008)' : undefined;
-  if (!box) return <img className="st" data-assistant-life-scene-stand={pid} data-assistant-life-scene-sleep={sleep ? '1' : '0'} src={src} alt="" style={{ left: `${cx}%`, transform: 'translateX(-50%)', height: '58%', width: '70%', bottom: 'max(22%, 150px)', opacity: 0, filter }}/>;
-  const span = Math.max(0.2, box.b - box.t);
-  const h = fig / span; // 場面の高さに対する絵の高さ
-  return <img className="st" data-assistant-life-scene-stand={pid} data-assistant-life-scene-sleep={sleep ? '1' : '0'} data-assistant-life-scene-fig={fig} src={src} alt=""
-    style={{ left: `${cx}%`, height: `${(h * 100).toFixed(2)}%`, width: 'auto', maxWidth: 'none', bottom: `calc(max(22%, 150px) - ${((1 - box.b) * h * 100).toFixed(2)}%)`, transform: `translateX(-${(((box.l + box.r) / 2) * 100).toFixed(1)}%)`, objectFit: 'fill', filter }}/>;
+// ===== 立ち絵の大きさと切る位置(共通の表と関数・2026-11-08 社長「この仕組みは他の立ち絵にも使えそうだね」) =====
+// ほかの画面(部屋を大きく見る画面・HOME・モンヒロビートなど)からも、名前で読んで使える。使い方は docs/progress/assistant-peer/gifts/stagec/STAND-MEASURE.md の「共通の表と関数」
+//   ASSISTANT_LIFE_STAND_FACE(手で置いた顔の点と m・fit)/ASSISTANT_LIFE_STAND_EC/ASSISTANT_LIFE_STAND_FACE_LEN/ASSISTANT_LIFE_STAND_CUT
+//   assistantLifeStandFace(pid, src) … その絵の顔の点(表に無い絵はふつうの形)
+//   assistantLifeStandRule({ face, box, F, topY, cx }) … 1人ぶんの置き場所(px)。box は assistantLifeStandBox(src) の見えている体の範囲
+// 立ち絵の見た目の大きさをそろえる(2026-11-08 社長「立ち絵サイズのバランスや配置の仕方があんまりよくない」「実際の見た目ではかって」)
+//   8人の絵は全身ではなく上半身で、どこで切れているかが絵ごとに違う。透けていない画素の範囲(見えている体)の中で、目と顎の高さを測った表
+//   (docs/progress/assistant-peer/gifts/stagec/STAND-MEASURE.md)。「目から顎まで」を全員同じ長さにして、頭の大きさをそろえる
+//   eye・chin … 見えている体の上を0・下を1とした目・顎の高さ / head … 顔だけの絵(ドラ)。頭ひとつぶんの大きさで床に置く
+const ASSISTANT_LIFE_STAND_FACE = Object.freeze({
+  mua: { top: 0.145, eye: 0.3275, chin: 0.425, m: 0.724 }, kiki: { top: 0.195, eye: 0.46, chin: 0.595, m: 0.847 }, momosuke: { top: 0.075, eye: 0.3925, chin: 0.535, m: 1.022 },
+  dra: { head: true, top: 0.10, eye: 0.46, m: 2.017 }, atsu: { top: 0.09, eye: 0.31, chin: 0.435, m: 0.895 }, kyuko: { top: 0.01, eye: 0.40, chin: 0.56, m: 1.040, fit: 0.95 },
+  sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 }, erubin: { top: 0.01, eye: 0.2325, chin: 0.46, m: 1.224 },
+});
+//   2026-11-08 社長「顔のサイズがまだあってない」「ちゃんとはかってるの？」: 絵を見て手で点を置き直した(測り絵 gifts/stagec/marks.png・STAND-MEASURE.md の4回目)
+//   top … 頭のてっぺん(髪の上端。うさ耳・リボン・羽・王冠などの飾りは含めない)/eye … 目の線(目を閉じた絵はまぶたの線)/chin … 顎の先(見えている体の上を0・下を1)
+//   m … 顔の大きさ。「目の線から顎の先」と「頬の幅」を、それぞれ7人の平均で割って2つを平均したもの。見えている体の高さは m に反比例させる(顔がそろう)
+//   ドラは顔だけの絵なので、7人の頭の高さ(てっぺんから顎)の平均とドラの頭の高さがそろう m
+//   fit … 測ったうえで、並び絵を見た社長の指示で少しだけ変えた大きさ(きゅうこ ×0.95「きゅうこが少しでかいね」)。無ければ 1
+// 目から顎の長さの平均(見えている体の高さに対する割合)。m=1 の人の「目から顎」が F になる
+const ASSISTANT_LIFE_STAND_EC = 0.1639;
+// 顔1個の長さ(頭のてっぺんから顎まで。7人の平均)を、目から顎の何倍か。2026-11-08 社長「顔のサイズを基準に縮尺合わせて上下で切る位置決めればそれなりに合う」:
+//   全員を、頭のてっぺんの上は顔0.55個ぶん(うさ耳・リボンが切れない所)・下はてっぺんから顔1.8個ぶん(顎から約0.8個。上半身の絵がいちばん短いソラシドでも絵が届く所)で切り、
+//   同じ高さの枠に入れる(下の 顔0.45個ぶんで消していく)
+const ASSISTANT_LIFE_STAND_FACE_LEN = 2.63;
+const ASSISTANT_LIFE_STAND_CUT = Object.freeze({ above: 0.55, below: 1.8, fade: 0.45 });
+// 着替えなど表に無い絵は、8人のふつうの形で見る
+const assistantLifeStandFace = (pid, src) => {
+  const who = typeof assistantById === 'function' ? assistantById(pid) : null;
+  const own = who && who.imagePrefix && String(src || '').includes(`/${who.imagePrefix}_`);
+  return (own && ASSISTANT_LIFE_STAND_FACE[pid]) || { top: 0.05, eye: 0.33, chin: 0.47, m: 1 };
+};
+// 見えている体の高さ(px)。F … m=1 の人の「目から顎」の長さ(px)。顔の大きさがそろう
+const assistantLifeStandVisH = (face, F) => (F / (ASSISTANT_LIFE_STAND_EC * ((face && face.m) || 1))) * ((face && face.fit) || 1);
+// 1人ぶんの置き場所(px)。topY … 頭のてっぺんをそろえる高さ/cx … 体の真ん中の横の位置
+//   返す値: top・height・width・left(絵の箱)/clip [上, 下](clip-path の inset に使う)/fade [始, 終](絵の高さに対する割合。mask の linear-gradient に使う。顔だけの絵は null)
+//   frameTop・frameBottom(上下で切る枠)/visTop・visBottom(見えている体)/U(顔1個の長さ)
+const assistantLifeStandRule = ({ face, box, F, topY, cx = 0 }) => {
+  if (!face || !box || !(F > 0)) return null;
+  const vh = assistantLifeStandVisH(face, F), ih = vh / (box.b - box.t), iw = ih * box.ar;
+  const visTop = topY - (face.top || 0) * vh, imgTop = visTop - box.t * ih;
+  const U = F * ASSISTANT_LIFE_STAND_FACE_LEN;
+  const frameTop = topY - ASSISTANT_LIFE_STAND_CUT.above * U, frameBottom = topY + ASSISTANT_LIFE_STAND_CUT.below * U;
+  const clip = [Math.max(0, frameTop - imgTop), Math.max(0, imgTop + ih - frameBottom)];
+  const fade = face.head ? null : [Math.max(0, (frameBottom - ASSISTANT_LIFE_STAND_CUT.fade * U - imgTop) / ih), Math.min(1, (frameBottom - imgTop) / ih)];
+  return { top: imgTop, height: ih, width: iw, left: cx - ((box.l + box.r) / 2) * iw, clip, fade, frameTop, frameBottom, visTop, visBottom: visTop + vh, U };
+};
+// 場面の大きさ(W×H px)と、並ぶ人の絵の見えている範囲から、1人ずつの置き場所を決める(px)
+//   ・目から顎までの長さ F を全員同じに。F は人数で決める高さの割合と、1人の見えている幅が受け持ちの幅を大きく超えない長さの小さいほう
+//   ・頭のてっぺんの高さをそろえ、目が縦は場面の上から4割あたり・横は3割5分あたりに来るように置く(2026-11-08 社長「画面の下に小さく固まり、上半分が空いている」)
+//   ・体の下のほうは、なめらかに消す(上半身で切れている絵の切れ目が宙に浮いて見えない)
+const assistantLifeStandLayout = (items, W, H) => {
+  const n = items.length;
+  if (!n || !W || !H || items.some(x => !x.box)) return null;
+  const sw = (W * 0.92) / n;
+  const fh = H * ({ 1: 0.085, 2: 0.075, 3: 0.064, 4: 0.055 }[Math.min(4, n)]);
+  const visH = (x, F) => assistantLifeStandVisH(x.face, F);
+  const visW = (x, F) => visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
+  let F = fh;
+  for (const x of items) { const w1 = visW(x, 1); if (w1 > 0) F = Math.min(F, (sw * 1.08) / w1); }
+  // 頭のてっぺんの高さ: 目の高さの平均が、縦は場面の上から4割・横は3割5分に来るところ
+  const eyeOff = items.reduce((a, x) => a + ((x.face.eye || 0.4) - (x.face.top || 0)) * visH(x, F), 0) / n;
+  const topY = H * (W > H ? 0.36 : 0.42) - eyeOff;
+  return items.map((x, i) => {
+    const cx = W * 0.04 + sw * (i + 0.5);
+    return { ...assistantLifeStandRule({ face: x.face, box: x.box, F, topY, cx }), cx, face: F };
+  });
+};
+function AssistantLifeStands({ ids, sleepIds = [] }) {
+  const ref = React.useRef(null);
+  const [size, setSize] = React.useState({ w: 0, h: 0 });
+  const srcs = ids.map(pid => { const who = assistantById(pid); return who ? assistantFullImage(who, sleepIds.includes(pid) ? 'normal' : 'happy') : null; });
+  const [boxes, setBoxes] = React.useState(() => srcs.map(s => (s ? ASSISTANT_LIFE_STAND_BOX.get(s) || null : null)));
+  const key = srcs.join('|');
+  React.useEffect(() => { let alive = true; Promise.all(srcs.map(s => (s ? assistantLifeStandBox(s) : Promise.resolve(null)))).then(b => { if (alive) setBoxes(b); }); return () => { alive = false; }; }, [key]);
+  React.useLayoutEffect(() => {
+    const el = ref.current && ref.current.parentElement;
+    if (!el) return undefined;
+    const f = () => setSize(prev => (prev.w === el.clientWidth && prev.h === el.clientHeight ? prev : { w: el.clientWidth, h: el.clientHeight }));
+    f();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(f) : null;
+    if (ro) ro.observe(el); else window.addEventListener('resize', f);
+    return () => { if (ro) ro.disconnect(); else window.removeEventListener('resize', f); };
+  }, []);
+  const items = ids.map((pid, i) => ({ pid, src: srcs[i], box: boxes[i], face: assistantLifeStandFace(pid, srcs[i]) })).filter(x => x.src);
+  const lay = assistantLifeStandLayout(items, size.w, size.h);
+  return (<><span ref={ref} hidden/>{items.map((x, i) => {
+    const zz = sleepIds.includes(x.pid);
+    const filter = zz ? 'brightness(.45) saturate(.6) drop-shadow(0 6px 12px #0008)' : undefined;
+    const p = lay && lay[i];
+    return (<React.Fragment key={x.pid}>
+      <img className="st" data-assistant-life-scene-stand={x.pid} data-assistant-life-scene-sleep={zz ? '1' : '0'} src={x.src} alt=""
+        data-assistant-life-scene-face={p ? Math.round(p.face) : ''} data-assistant-life-scene-vis={p ? `${Math.round(p.visTop)},${Math.round(p.visBottom)}` : ''}
+        style={p ? { left: p.left, top: p.top, height: p.height, width: p.width, maxWidth: 'none', bottom: 'auto', objectFit: 'fill', filter,
+          clipPath: `inset(${p.clip[0].toFixed(1)}px 0 ${p.clip[1].toFixed(1)}px 0)`,
+          ...(p.fade ? { WebkitMaskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)`, maskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)` } : {}) } : { opacity: 0, height: '50%', filter }}/>
+      {zz && p && <span className="absolute text-[34px]" style={{ left: p.cx + 20, top: Math.max(40, p.visTop) }} aria-hidden="true">💤</span>}
+    </React.Fragment>); })}</>);
 }
 
 // 場面(見守る・ようすを見る・渡す の掛け合いを、その場所の背景と立ち絵で流す)
@@ -687,10 +815,7 @@ function AssistantLifeScene({ scene, look, onClose, onGive, canGive }) {
         : <div className="absolute inset-0" style={{ background: ASSISTANT_LIFE_TINT[bg.tint] }}/>)}
       {!bg && look === 'night' && <div className="absolute inset-0" style={{ background: 'rgba(10,15,50,.35)' }}/>}
       <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg,transparent 45%,rgba(10,6,30,.7) 85%)' }}/>
-      {ids.map((pid, i) => { const who = assistantById(pid); if (!who) return null; const n = ids.length; const cx = n === 1 ? 50 : n === 2 ? (i ? 66 : 34) : n === 3 ? [22, 50, 78][i] : [16, 38, 62, 84][i];
-        const zz = (scene.sleep || []).includes(pid);
-        return <React.Fragment key={pid}><AssistantLifeStand pid={pid} src={assistantFullImage(who, zz ? 'normal' : 'happy')} cx={cx} fig={n >= 4 ? 0.28 : n === 3 ? 0.32 : n === 2 ? 0.36 : 0.4} sleep={zz}/>
-          {zz && <span className="absolute text-[34px]" style={{ left: `${cx + 8}%`, top: '30%' }} aria-hidden="true">💤</span>}</React.Fragment>; })}
+      <AssistantLifeStands ids={ids} sleepIds={scene.sleep || []}/>
       <div className="mhl-hdr absolute inset-x-0 top-0" style={{ paddingTop: 'calc(8px + env(safe-area-inset-top))' }}>
         <div className="flex items-start gap-2">
           <button type="button" data-assistant-life-scene-back onClick={() => { if (peer && peer.talking && typeof ASSISTANT_PEER_STORE !== 'undefined') ASSISTANT_PEER_STORE.set({ stopTalkAt: Date.now() }); onClose(); }} aria-label="家へ戻る" className="h-9 w-9 text-[18px] text-slate-100">←</button>
@@ -777,7 +902,11 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const [boardOpen, setBoardOpen] = React.useState(false); // 今日あったことを全部
   const vw = useAssistantLifeViewSize().w; // 🔄横では回した器の幅
   // 入場: その日の最初は長く(1.2秒)、2回目からは短く(0.4秒)
+  //   この部品はゲームの起動時から置かれていて、閉じているあいだは何も描かない。開くたびに決める(起動時に1回だけ決めていたので、
+  //   開いたときには演出が終わっていて出なかった・2026-11-08 オクリモノ3が見つけた assistant-life-browser-check ⑩)
+  const openNow = !!(st.open && st.loaded);
   React.useEffect(() => {
+    if (!openNow) { setIntro(null); return undefined; }
     let alive = true;
     (async () => {
       let last = null; try { last = await storeGet(ASSISTANT_LIFE_INTRO_KEY, null, false); } catch {}
@@ -789,7 +918,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       setTimeout(() => { if (alive) setIntro(null); }, kind === 'long' ? 1200 : 400);
     })();
     return () => { alive = false; };
-  }, []);
+  }, [openNow]);
   React.useEffect(() => { if (typeof assistantLifeRelTick === 'function') { try { void assistantLifeRelTick(); } catch {} } if (typeof ASSISTANT_LIFE_REL_STORE !== 'undefined') void ASSISTANT_LIFE_REL_STORE.load().then(() => { try { ASSISTANT_LIFE_STORE.emit(); } catch {} }); }, []); // 前の日からのけんかは朝4時までに仲直り(rel.jsx)
   React.useEffect(() => { if (roomId) setNote(''); }, [roomId]); // 別の部屋を開いたら前の一言を消す(ミハリ L13)
   React.useEffect(() => { if (st.focus) { setRoomId(st.focus); ASSISTANT_LIFE_STORE.set({ focus: null }); } }, [st.focus]);
