@@ -239,6 +239,9 @@
 | `mh_assistant_selected_v1` | string / 既定の助手 | 選んでいる助手(`normalizeAssistantId`) |
 | `mh_assistant_bond_v1` / `mh_assistant_bond_<id>_v1` | object / `ASSISTANT_BOND_EMPTY` | 助手ごとの親密度。みゅあは無印、ほかの助手は `<id>` 付き(`assistantBondKeyFor`) |
 | `mh_assistant_call_style` / `mh_assistant_call_style_<id>` | string | 助手の呼び方(さん付けなど)。みゅあは無印(`assistantCallStyleKeyFor`) |
+| `mh_assistant_callname_v1` | object | 会話で決まる呼び方(2026-11-08〜・AI-TALK-PLAN)。`{ [助手id]: { call, by:'chat'｜'offer'｜'ask'｜'profile', at, prev } }`。`call` は `{name}` 入りの型か名前を含まない呼び方(16字まで・名前を入れて12字まで・入れない言葉は読むときにも捨てる)。`assistantCallName` が今の `mh_assistant_call_style*` より先に見る。元に戻すとその助手の行を消す。無い人は空 |
+| `mh_assistant_callname_ask_v1` | object | `{ [助手id]: { asked, offeredAt } }`。Lv6 の「なんて呼んだらいい？」を聞いたか・会話の流れで助手が持ちかけた時刻(7日に1回)。無い人は空 |
+| `mh_assistant_nickname_v1` | object | プレイヤーが助手を呼ぶあだ名(2026-11-08〜)。`{ [助手id]: { nick, at } }`(10字まで)。おしゃべりで中継役へ渡すだけ。無い人は空 |
 | `mh_assistant_unlock_seen_v1` | object / `{}` | 助手の解放告知を見たか(`data/assistants.js` の `normalizeAssistantUnlockSeen`) |
 | `mh_extreme_hs_<難易度>` / `mh_extreme_clears_<難易度>` | number / `0` | 極限チャレンジ(`EXTREME` `NIGHTMARE` `CHAOS` `ULTIMATE` `INFINITY` `GOD` `RAGNAROK` `HELHEIM` `ETERNAL` `INFERNO` `EREBUS` `COCYTUS`)のハイスコアと完走回数。`COCYTUS` は2026-11-01に足した新しいキー(`mh_extreme_hs_COCYTUS` / `mh_extreme_clears_COCYTUS`)。`ETERNAL` は2026-10-29、`INFERNO` は2026-10-31に足した新しいキー(`mh_extreme_hs_ETERNAL` / `mh_extreme_clears_ETERNAL` / `mh_extreme_hs_INFERNO` / `mh_extreme_clears_INFERNO`)で、無ければ0から始まる |
 | `mh_cocytus_open_kept_v1` | object / 無し | `{version:1, extreme:boolean, species:string[]}`。INFERNO と COCYTUS のあいだに EREBUS(エレボス)を足したとき(2026-11-04)、すでに COCYTUS が開いていた人を閉じないための印。**公開のあと最初の読み込みで1回だけ**、いまの記録から作る(極限で INFERNO をクリアしていれば extreme、種族チャレンジ(クラシック)で INFERNO をクリアしていた種族を species)。キーがあれば読むだけで作り直さない。読めない・壊れているときは空として読む(COCYTUS の記録がある人は印が無くても開く)。新しく足したキーで、既存のキーは触らない |
