@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 36a466e8419bd099
+// generated-sha256: 73fc80de307e7939
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -34338,6 +34338,8 @@ const sbFetchFriendRoster = async (selfIdRaw) => {
     lastSeenAt: (looks[view.otherId] || {}).lastSeenAt || 0,
     // アイコン(2026-11-08 ビート部の「いまモンヒロビートにいる人」で顔を出す。足すだけ)
     icon: (looks[view.otherId] || {}).icon ?? null,
+    // プロフィールのフレーム(2026-11-08 社長「プレイヤー側は顔アイコンとフレームもリンクさせて」。足すだけ)
+    profileFrame: (looks[view.otherId] || {}).profileFrame || null,
   })).sort((a, b) => b.lastSeenAt - a.lastSeenAt);
 };
 
@@ -54471,7 +54473,12 @@ const RHYTHM_BEAT_PRESENCE_KIND = Object.freeze({
   room: { tag: '🏠 部屋あり', color: '#34d399' },
   here: { tag: '💌 誘える', color: '#38bdf8' },
   busy: { tag: '🎮 部屋で遊び中', color: '#a78bfa' },
+  // 合言葉(プライベート)の部屋にいる(2026-11-08 オトズレ3の roomPrivate)。いまは入れない
+  private: { tag: '🔑 プライベート中', color: '#fbbf24' },
 });
+// フレンドの顔をプロフィールのフレームつきで出せるか(アイコンとフレームが届いている人だけ。届かない人は今の枠)
+const rhythmBeatFriendFramed = (f, resolve) => !!(f && f.icon && f.profileFrame && f.profileFrame !== 'none'
+  && typeof ProfileAvatar === 'function' && typeof resolve === 'function');
 function RhythmBeatPresenceStrip({ assistants = [], friends = [], onPick, resolveIconUrl }) {
   // 助手は丸い枠、フレンド(プレイヤー)は角の丸い四角の枠
   const face = (src, color, label, who) => (
@@ -54511,7 +54518,11 @@ function RhythmBeatPresenceStrip({ assistants = [], friends = [], onPick, resolv
               return (
                 <button key={`f-${f.otherId}`} type="button" data-rhythm-beat-presence-friend={f.otherId} data-rhythm-beat-presence-kind={f.kind} onClick={() => onPick({ kind: 'friend', id: f.otherId })}
                   className="flex w-[58px] shrink-0 flex-col items-center rounded-xl bg-sky-500/10 pt-1 text-center active:scale-95">
-                  {face(f.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(f.icon) : '', k.color, '🙂', 'friend')}
+                  {rhythmBeatFriendFramed(f, resolveIconUrl) ? (
+                    <span data-rhythm-beat-presence-face="friend" data-rhythm-beat-presence-framed={f.profileFrame} className="block h-11 w-11 shrink-0">
+                      <ProfileAvatar src={resolveIconUrl(f.icon)} id={f.icon} frameId={f.profileFrame} small fit alt="" className="h-11 w-11" fallback={null} />
+                    </span>
+                  ) : face(f.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(f.icon) : '', k.color, '🙂', 'friend')}
                   <b data-rhythm-beat-presence-mark="friend" className="mt-0.5 block whitespace-nowrap rounded bg-sky-300 px-1 text-[8px] font-black leading-tight text-slate-950">フレンド</b>
                   <b className="mt-0.5 block w-full truncate text-[10px] font-black leading-tight text-white">{f.userName}</b>
                   <small className="block whitespace-nowrap text-[8.5px] font-black" style={{ color: k.color }}>{k.tag}</small>
@@ -54571,12 +54582,13 @@ function RhythmBeatPresenceSheet({ pick, friend = null, onClose, onCallAssistant
   const k = !isAssistant && friend ? (RHYTHM_BEAT_PRESENCE_KIND[friend.kind] || RHYTHM_BEAT_PRESENCE_KIND.here) : null;
   const src = isAssistant ? rhythmBeatAssistantFace(pick.id)
     : (friend && friend.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(friend.icon) : '');
-  const title = isAssistant ? `${name} は いま練習中` : friend && friend.kind === 'room' ? `${name} さんが部屋を開いています` : friend && friend.kind === 'busy' ? `${name} さんは部屋で遊び中` : `${name} さんが いまモンヒロビートにいます`;
+  const title = isAssistant ? `${name} は いま練習中` : friend && friend.kind === 'room' ? `${name} さんが部屋を開いています` : friend && friend.kind === 'busy' ? `${name} さんは部屋で遊び中` : friend && friend.kind === 'private' ? `${name} さんは合言葉の部屋にいます` : `${name} さんが いまモンヒロビートにいます`;
   const sub = isAssistant ? 'モンヒロビートにいるあいだは券なし' : friend && friend.kind === 'room' && friend.room ? `フリーマッチ ${friend.room.n}/${RHYTHM_MULTI_ROOM_MAX}人${friend.room.ph === 'select' ? '・曲えらび中' : '・待合い'}` : (k ? k.tag : '');
   const line = isAssistant
     ? 'フリーマッチかプライベートの部屋で「呼ぶ」と、セッション券なしで一緒に演奏できます(何曲でも)。ソロライブには来られません。'
     : friend && friend.kind === 'room' ? '「入る」で、その部屋へ入れます。'
       : friend && friend.kind === 'busy' ? '合言葉の部屋か、演奏中の部屋にいるので、いまは入れません。部屋に誘ってもらうか、終わってから誘ってみましょう。'
+        : friend && friend.kind === 'private' ? '合言葉(プライベート)の部屋にいるので、いまは入れません。合言葉を教えてもらうか、終わってから誘ってみましょう。'
         : '部屋を作って 💌 で誘うと、一緒に遊べます。';
   const action = isAssistant ? { label: '部屋を作って呼ぶ', go: () => onCallAssistant(pick.id) }
     : friend && friend.kind === 'room' && friend.room ? { label: '入る', go: () => onJoinRoom(friend.room.code) }
@@ -54587,9 +54599,15 @@ function RhythmBeatPresenceSheet({ pick, friend = null, onClose, onCallAssistant
       <button type="button" aria-label="閉じる" className="absolute inset-0 bg-slate-950/70" onClick={onClose} />
       <div className="relative w-full max-w-sm rounded-2xl border-2 bg-slate-900 p-3.5 text-white shadow-2xl" style={{ borderColor: accent }}>
         <div className="flex items-center gap-2.5">
-          <span className="block h-[52px] w-[52px] shrink-0 overflow-hidden rounded-full border-2 bg-slate-950" style={{ borderColor: accent }}>
-            {src ? <img src={src} alt="" draggable={false} className="h-full w-full object-cover" /> : <span className="grid h-full w-full place-items-center text-xl" aria-hidden="true">🙂</span>}
-          </span>
+          {!isAssistant && rhythmBeatFriendFramed(friend, resolveIconUrl) ? (
+            <span data-rhythm-beat-presence-sheet-framed={friend.profileFrame} className="block h-[52px] w-[52px] shrink-0">
+              <ProfileAvatar src={src} id={friend.icon} frameId={friend.profileFrame} fit alt="" className="h-[52px] w-[52px]" fallback={null} />
+            </span>
+          ) : (
+            <span className="block h-[52px] w-[52px] shrink-0 overflow-hidden rounded-full border-2 bg-slate-950" style={{ borderColor: accent }}>
+              {src ? <img src={src} alt="" draggable={false} className="h-full w-full object-cover" /> : <span className="grid h-full w-full place-items-center text-xl" aria-hidden="true">🙂</span>}
+            </span>
+          )}
           <span className="min-w-0 flex-1 leading-tight">
             <b data-rhythm-beat-presence-sheet-mark={isAssistant ? 'assistant' : 'friend'} className={`mb-0.5 inline-block rounded px-1 text-[9px] font-black leading-tight text-slate-950 ${isAssistant ? 'bg-pink-300' : 'bg-sky-300'}`}>{isAssistant ? '🤖 助手' : '👥 フレンド'}</b>
             <b className="block text-[14px] font-black" style={JA_WRAP_STYLE}>{jaWrap(title)}</b>
@@ -54745,6 +54763,12 @@ function RhythmMultiAwayBar({ hidden = false, busy = false, onReturn = null }) {
     if (roomWaiting) { friendsSetRoomWaiting(true); roomWaitingSetRef.current = true; }
     else if (roomWaitingSetRef.current) { friendsSetRoomWaiting(false); roomWaitingSetRef.current = false; }
   }, [roomWaiting]);
+  // 合言葉(プライベート)の部屋にいるあいだは「🔑 プライベート中」(2026-11-08 オトズレ3の friendsSetRoomPrivate)。演奏中は向こうで「演奏中」が先になる
+  const inPrivate = !!view && view.mode === 'private';
+  React.useEffect(() => {
+    if (typeof friendsSetRoomPrivate !== 'function') return;
+    friendsSetRoomPrivate(inPrivate);
+  }, [inPrivate]);
   React.useEffect(() => {
     if (!shown) { seenRef.current = null; setArrived(''); return; }
     if (!seenRef.current) { seenRef.current = new Set(others.map((m) => m.id)); return; }
@@ -55706,7 +55730,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   const beatFriendsOf = (rooms) => {
     if (!friendsOn) return [];
     const by = friendRoomsBy(rooms);
-    const order = { room: 0, here: 1, busy: 2 };
+    const order = { room: 0, here: 1, busy: 2, private: 3 };
     return (roster || []).map((f) => {
       const room = by[f.otherId];
       if (room) return { ...f, kind: 'room', room };
@@ -55714,6 +55738,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
       if (!p || !p.online) return null;
       if (p.place === 'rhythm') return { ...f, kind: 'here' };
       if (p.place === 'multi' || p.place === 'rhythmPlay') return { ...f, kind: 'busy' };
+      if (p.place === 'roomPrivate') return { ...f, kind: 'private' };
       return null;
     }).filter(Boolean).map((f, i) => [f, i]).sort(([a, ia], [b, ib]) => (order[a.kind] - order[b.kind]) || (ia - ib)).map(([f]) => f);
   };

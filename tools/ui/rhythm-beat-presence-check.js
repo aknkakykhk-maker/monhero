@@ -25,9 +25,10 @@ const PORT = 8964;
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.json': 'application/json', '.mp3': 'audio/mpeg' };
 const SELF = 'selfbreeder01';
 const FRIENDS = [
-  { id: 'friendroom01', name: 'ぴよ', place: 'rhythm' },         // 部屋を開いている(部屋の知らせで見つかる)
-  { id: 'friendhere01', name: 'タロウ', place: 'rhythm' },       // いる・部屋はまだ
-  { id: 'friendbusy01', name: 'ハナ', place: 'multi' },          // 部屋で遊び中
+  { id: 'friendroom01', name: 'ぴよ', place: 'rhythm', frame: 'gold' },          // 部屋を開いている(部屋の知らせで見つかる)・色の輪のフレーム
+  { id: 'friendhere01', name: 'タロウ', place: 'rhythm', frame: 'frame_mocchi' }, // いる・部屋はまだ・絵のフレーム
+  { id: 'friendbusy01', name: 'ハナ', place: 'multi' },          // 部屋で遊び中・フレームなし(今の枠のまま)
+  { id: 'friendpriv01', name: 'ミツ', place: 'other', pl: 'roomPrivate' }, // 合言葉の部屋にいる(🔑 プライベート中)
   { id: 'friendcard01', name: 'カード', place: 'other', pl: 'room' }, // 部屋で待ち中だけ(カードの部屋かもしれない)→ 出さない
   { id: 'friendhome01', name: 'ホーム', place: 'home' },         // ホーム → 出さない
 ];
@@ -48,7 +49,7 @@ const json = (route, body) => route.fulfill({ status: 200, contentType: 'applica
       const u = route.request().url();
       if (!friends) return json(route, []);
       if (/friend_links/.test(u)) return json(route, FRIENDS.map((f) => ({ requester_id: SELF, target_id: f.id, status: 'accepted', updated_at: now, created_at: now })));
-      if (/breeder_profiles/.test(u)) return json(route, FRIENDS.map((f) => ({ breeder_id: f.id, user_name: f.name, icon: 'Mocchi', profile_frame: null, updated_at: now })));
+      if (/breeder_profiles/.test(u)) return json(route, FRIENDS.map((f) => ({ breeder_id: f.id, user_name: f.name, icon: 'Mocchi', profile_frame: f.frame || null, updated_at: now })));
       if (/friend_profiles/.test(u) && route.request().method() === 'GET') return json(route, FRIENDS.map((f) => ({ breeder_id: f.id, place: f.place, records: f.pl ? { pl: f.pl } : null, updated_at: now })));
       return json(route, []);
     });
@@ -109,7 +110,7 @@ const json = (route, body) => route.fulfill({ status: 200, contentType: 'applica
       // 検査のあいだに助手ライフの様子が作り直されることがあるので、読む直前にもう一度合わせる
       await patchLife(page, true); await page.waitForTimeout(600);
       check(`${name}: 見出しの「いる人」ボタンが画面の中に入る`, await inside(page, '[data-rhythm-beat-presence-open]'));
-      check(`${name}: 「いる人」ボタンの数が一覧の人数と同じ(助手2+フレンド3)`, await page.evaluate(() => /5/.test((document.querySelector('[data-rhythm-beat-presence-open]') || {}).innerText || '')));
+      check(`${name}: 「いる人」ボタンの数が一覧の人数と同じ(助手2+フレンド4)`, await page.evaluate(() => /6/.test((document.querySelector('[data-rhythm-beat-presence-open]') || {}).innerText || '')));
       // 「いる人」ボタンで見出しの「モードえらび」が切れない(320幅で「モードえ…」になった)
       const titleCut = await page.evaluate(() => { const t = document.querySelector('[data-rhythm-mode-select] .mhms-title'); return t ? t.scrollWidth > t.clientWidth + 1 : true; });
       check(`${name}: 見出しの「モードえらび」が切れない`, !titleCut);
@@ -120,7 +121,7 @@ const json = (route, body) => route.fulfill({ status: 200, contentType: 'applica
         f: [...document.querySelectorAll('[data-rhythm-beat-presence-friend]')].map((e) => `${e.getAttribute('data-rhythm-beat-presence-friend')}:${e.getAttribute('data-rhythm-beat-presence-kind')}`),
       }));
       check(`${name}: 帯に練習中の助手が出る(🎤 呼べる)`, strip.a.join(',') === 'mua,kiki', strip.a.join(','));
-      check(`${name}: フレンドは「部屋あり → 誘える → 部屋で遊び中」の順。部屋で待ち中だけ・ホームの人は出ない`, strip.f.join(',') === 'friendroom01:room,friendhere01:here,friendbusy01:busy', strip.f.join(','));
+      check(`${name}: フレンドは「部屋あり → 誘える → 部屋で遊び中 → 🔑 プライベート中」の順。部屋で待ち中だけ・ホームの人は出ない`, strip.f.join(',') === 'friendroom01:room,friendhere01:here,friendbusy01:busy,friendpriv01:private', strip.f.join(','));
       check(`${name}: 一覧の窓が画面の中に入る`, await inside(page, '[data-rhythm-beat-presence-list] > div'));
       // 助手とフレンド(プレイヤー)は見出し・札・枠の形で見分けられる(2026-11-08 社長「助手とプレイヤーで区別つくようにして」。同じ名前の人がいる)
       const marks = await page.evaluate(() => {
@@ -143,6 +144,19 @@ const json = (route, body) => route.fulfill({ status: 200, contentType: 'applica
         return bad.join(' / ');
       });
       check(`${name}: 助手とフレンドに印が付いている(見出し・札・枠)`, marks === '', marks);
+      // フレンドの顔はプロフィールの顔アイコン+フレーム(2026-11-08 社長「プレイヤー側は顔アイコンとフレームもリンクさせて」)。届かない人は今の枠
+      const frames = await page.evaluate(() => {
+        const of = (id) => document.querySelector(`[data-rhythm-beat-presence-friend="${id}"] [data-rhythm-beat-presence-face]`);
+        const bad = [];
+        const piyo = of('friendroom01'); if (!piyo || piyo.getAttribute('data-rhythm-beat-presence-framed') !== 'gold' || !piyo.querySelector('.mh-profile-frame-ring')) bad.push('ぴよ(ゴールド)の輪が無い');
+        const taro = of('friendhere01'); if (!taro || taro.getAttribute('data-rhythm-beat-presence-framed') !== 'frame_mocchi' || !taro.querySelector('img.mh-profile-frame-image')) bad.push('タロウ(モッチーの絵)の枠が無い');
+        const hana = of('friendbusy01'); if (!hana || hana.hasAttribute('data-rhythm-beat-presence-framed') || hana.querySelector('.mh-profile-frame')) bad.push('ハナ(フレームなし)が今の枠でない');
+        document.querySelectorAll('[data-rhythm-beat-presence-assistant] .mh-profile-frame').forEach(() => bad.push('助手にフレームが付いた'));
+        // 枠ごと顔の大きさ(44px)に収まる
+        [piyo, taro].forEach((e) => { if (!e) return; const r = e.getBoundingClientRect(); if (r.width > 46 || r.height > 46) bad.push(`顔の枠が大きすぎる ${Math.round(r.width)}px`); });
+        return bad.join(' / ');
+      });
+      check(`${name}: フレンドの顔がプロフィールのアイコン+フレーム(なしの人は今の枠・助手はそのまま)`, frames === '', frames);
       await shot(page, `presence-strip-${name}`);
       // 助手の顔
       await tapFace(page, '[data-rhythm-beat-presence-assistant="mua"]');
@@ -162,6 +176,11 @@ const json = (route, body) => route.fulfill({ status: 200, contentType: 'applica
       await tapFace(page, '[data-rhythm-beat-presence-friend="friendbusy01"]');
       await page.waitForTimeout(400);
       check(`${name}: 部屋で遊び中のフレンドはボタンなし(いまは入れない)`, await page.evaluate(() => !document.querySelector('[data-rhythm-beat-presence-go]') && /いまは入れません/.test((document.querySelector('[data-rhythm-beat-presence-line]') || {}).innerText || '')));
+      await page.evaluate(() => { const x = [...document.querySelectorAll('[data-rhythm-beat-presence-sheet] button')].find((e) => /とじる/.test(e.innerText)); x && x.click(); });
+      await tapFace(page, '[data-rhythm-beat-presence-friend="friendpriv01"]');
+      await page.waitForTimeout(400);
+      check(`${name}: 合言葉の部屋の人は「🔑 プライベート中」でボタンなし`, await page.evaluate(() => !document.querySelector('[data-rhythm-beat-presence-go]') && /合言葉/.test((document.querySelector('[data-rhythm-beat-presence-line]') || {}).innerText || '') && /プライベート中/.test((document.querySelector('[data-rhythm-beat-presence-sheet]') || {}).innerText || '')));
+      if (name === 'tate') await shot(page, 'presence-private-tate');
       await page.evaluate(() => { const x = [...document.querySelectorAll('[data-rhythm-beat-presence-sheet] button')].find((e) => /とじる/.test(e.innerText)); x && x.click(); });
       // フリーマッチのシート
       await page.evaluate(() => document.querySelector('[data-rhythm-multi-free]').click());
@@ -188,6 +207,9 @@ const json = (route, body) => route.fulfill({ status: 200, contentType: 'applica
     const page = await open({ width: 390, height: 844 }, { friends: false, assistants: false });
     check('だれもいなければ「いる人」ボタンは出ない', await page.evaluate(() => !document.querySelector('[data-rhythm-beat-presence-open]') && !document.querySelector('[data-rhythm-beat-presence]')), await page.evaluate(() => { const e = document.querySelector('[data-rhythm-beat-presence]'); return e ? e.innerText.replace(/\s+/g, ' ').slice(0, 120) + ' / ' + JSON.stringify((ASSISTANT_LIFE_STORE.state.life || {}).groups || []).slice(0, 200) : ''; }));
     await page.close();
+    // 送る側: 合言葉の部屋にいるあいだ friendsSetRoomPrivate を立てる(フレンドの一覧で「🔑 プライベート中」になる)
+    const multiSrc = fs.readFileSync(path.join(ROOT, 'monster-hero', 'src', 'parts', '77-screen-rhythm-multi.jsx'), 'utf8');
+    check('合言葉の部屋の出入りで friendsSetRoomPrivate を呼ぶ', /view\.mode === 'private'/.test(multiSrc) && /friendsSetRoomPrivate\(inPrivate\)/.test(multiSrc));
     check('画面のエラーが無い', errors.length === 0, errors.slice(0, 3).join(' / '));
   } catch (e) { check('最後まで通る', false, String(e && e.message || e).slice(0, 300)); }
   finally { await browser.close(); server.close(); }
