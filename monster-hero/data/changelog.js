@@ -75,6 +75,8 @@ const CHANGELOG = [
     // 2026-11-07 社長「ホームで流してから本オープン。その前に予告の告知あり」。予告の印(rhythmGrandOpenTeaser)が立つまで一覧にも告知にも出さない。
     // ★予告を出すときは、date を出した時刻へ取り直し、日にちが決まっていれば items に本オープンの日時を1行足す
     date: "2026-11-08 08:14", type:'content', group:'rhythm', title:'モンヒロビートが、もうすぐ本オープンします', status:'new', releaseFlag:'rhythmGrandOpenTeaser',
+    // 2026-11-08 社長「これを予告更新に足しといて」(社長が作った予告画像・元は grand-open-teaser-kit/received/)。助手の告知にも同じ絵が出る
+    image: 'images/events/rhythm-grand-open-teaser.jpg?v=45ae90cee48b',
     assistantNotice:{ id:'update_notice_rhythm_grand_open_teaser_v1', type:'content', notifyUntil:'2026-11-09T10:00:00+09:00' },
     items:[
       'モンヒロビートは、11月9日(月)の朝10時に、プレオープンを終えて本オープンします。',
