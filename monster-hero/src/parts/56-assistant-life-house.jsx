@@ -180,6 +180,10 @@ const assistantLifeBeatIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLi
 //   カード部は assistantLifeNow を呼ばない(様子を決め直して保存するため)。ごほうびは「対戦を始めた時点でいたか」で決める(カード部の案)
 const assistantLifeAtCard = (id) => { try { const w = assistantLifeWhereOf(assistantLifeCurrent(), id); return !!(w && w.doing === 'cards' && w.place === 'cardroom'); } catch (_) { return false; } };
 const assistantLifeCardIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLifeAtCard);
+// 育つ助手: 助手と対戦のデッキの型(カード部とのつなぎ口。読むだけ。2026-11-08 社長「相談の答えでデッキの中身が変わる」)。
+//   返すのは 'attack'(攻め)/'guard'(守り)/'normal'(ふつう)か null(型なし=今どおり)。カード部が対戦を始めるときに読む(84 の cardLifeCardStyle)
+//   ★いまは受け口だけ(いつも null)。中身は助手部キズナが相談の答えから決める(名前と形はカード部とすり合わせ済み)
+const assistantLifeCardStyle = (id) => null; // eslint-disable-line no-unused-vars
 // 家にいる組は、だれかひとりの部屋に集まる(家が好きな助手 → 並びの先)
 const assistantLifeHostOf = (ids) => ids.find(id => ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav === 'home') || [...ids].sort((a, b) => ASSISTANT_LIFE_HOUSE_ORDER.indexOf(a) - ASSISTANT_LIFE_HOUSE_ORDER.indexOf(b))[0];
 

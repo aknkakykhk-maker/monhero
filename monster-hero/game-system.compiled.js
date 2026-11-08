@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e73cf7a3ce5f3a70
+// source-sha256: 7e939cfd15d46477
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -104618,6 +104618,7 @@ const assistantLifeAtCard = id => {
   }
 };
 const assistantLifeCardIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLifeAtCard);
+const assistantLifeCardStyle = id => null;
 const assistantLifeHostOf = ids => ids.find(id => ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav === 'home') || [...ids].sort((a, b) => ASSISTANT_LIFE_HOUSE_ORDER.indexOf(a) - ASSISTANT_LIFE_HOUSE_ORDER.indexOf(b))[0];
 const ASSISTANT_LIFE_DIARY_KEY = 'mh_assistant_life_diary_v1';
 const ASSISTANT_LIFE_DIARY_MAX = 40;
@@ -122031,6 +122032,30 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   }
   return cardAiFillBind(db, st, scored[0].o, policy);
 };
+const CARD_AI_STYLE_IDS = Object.freeze(['attack', 'guard', 'normal']);
+const CARD_AI_STYLE_TUNE = Object.freeze({
+  attack: {
+    mul: {
+      attack: 1.3,
+      keepGuard: 0.75,
+      big: 1.1
+    }
+  },
+  guard: {
+    add: {
+      keepGuard: 0.3
+    },
+    mul: {
+      attack: 0.95
+    }
+  }
+});
+const CARD_AI_STYLE_VARIANT = Object.freeze({
+  attack: 'blade',
+  guard: 'shield',
+  normal: 'mind'
+});
+const cardAiStyleOf = s => typeof s === 'string' && CARD_AI_STYLE_IDS.includes(s) ? s : null;
 const CARD_AI_DECKS = Object.freeze({
   mua: {
     kit: 'speed',
@@ -122440,16 +122465,20 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   const cfg = CARD_AI_BUILD[levelId] || CARD_AI_BUILD.normal;
   const rnd = typeof rand === 'function' ? rand : cardAiSeededRand(`${who}:${levelId}`);
   const monsters = cardAiPickTrio(db, who, levelId, rnd, opts && opts.playerDeck);
-  const variant = Array.isArray(recipeAll.variants) && recipeAll.variants.length ? recipeAll.variants[Math.min(recipeAll.variants.length - 1, Math.floor(rnd() * recipeAll.variants.length))] : null;
+  const style = cardAiStyleOf(opts && opts.style);
+  const drawn = Array.isArray(recipeAll.variants) && recipeAll.variants.length ? recipeAll.variants[Math.min(recipeAll.variants.length - 1, Math.floor(rnd() * recipeAll.variants.length))] : null;
+  const variant = drawn && style ? recipeAll.variants.find(v => v.id === CARD_AI_STYLE_VARIANT[style]) || drawn : drawn;
   const recipe = variant ? {
     ...recipeAll,
     ...variant
   } : recipeAll;
   const maxWave = cfg.maxWave;
-  const habit = variant && variant.deckHabit ? {
+  const habit0 = variant && variant.deckHabit ? {
     ...cardAiDeckHabit(who, levelId),
     ...variant.deckHabit
   } : cardAiDeckHabit(who, levelId);
+  const tune = style && !variant ? CARD_AI_STYLE_TUNE[style] : null;
+  const habit = tune ? Object.fromEntries(Object.entries(habit0).map(([k, v]) => [k, typeof v === 'number' ? v * ((tune.mul || {})[k] || 1) + ((tune.add || {})[k] || 0) : v])) : habit0;
   const mons = monsters.map(no => cardMonsterOf(db, no));
   const pool = Object.values(db.cards).filter(c => c.ready && (c.user === 'any' || c.user === 'breeder' ? c.wave <= maxWave : mons.some(m => cardUsableBy(c, {
     ...m,
@@ -122547,6 +122576,27 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
     monsters: monsters.slice(),
     cards,
     sameBlood
+  };
+};
+const cardAssistantDeckPreview = (who, styleId = 'normal', level = 'normal') => {
+  if (typeof CARD_BATTLE_DATA === 'undefined' || !CARD_AI_DECKS[who]) return null;
+  const sid = cardAiStyleOf(styleId) || 'normal';
+  const lv = CARD_AI_BUILD[level] ? level : 'normal';
+  const db = CARD_BATTLE_DATA;
+  const deck = cardAiBuildDeck(db, who, lv, cardAiSeededRand(`preview:${who}:${sid}:${lv}`), {
+    style: sid
+  });
+  let name = null;
+  try {
+    name = typeof cardAssistantDeckName === 'function' ? cardAssistantDeckName(db, deck, who, lv, cardAiSeededRand(`preview-name:${who}:${sid}:${lv}`)) : null;
+  } catch (_) {
+    name = null;
+  }
+  return {
+    monsters: deck.monsters.slice(),
+    cards: deck.cards.slice(),
+    styleId: sid,
+    name
   };
 };
 const cardDeckProblems = (db, deck) => {
@@ -129454,6 +129504,13 @@ const cardLifeAtCard = id => {
     return false;
   }
 };
+const cardLifeCardStyle = id => {
+  try {
+    return typeof assistantLifeCardStyle === 'function' ? cardAiStyleOf(assistantLifeCardStyle(id)) : null;
+  } catch (_) {
+    return null;
+  }
+};
 const cardLifeOnMatch = x => {
   try {
     if (typeof assistantLifeOnCardMatch === 'function') assistantLifeOnCardMatch(x);
@@ -134601,7 +134658,8 @@ const CardBattleScreen = ({
         foe: {
           name: log.foeName,
           who: game.who,
-          deckName: log.deckName
+          deckName: log.deckName,
+          style: log.style
         },
         outcome,
         reason: '',
@@ -134816,12 +134874,16 @@ const CardBattleScreen = ({
     }
     const activeDeck = deck;
     const share = pick.share || null;
+    const foeStyle = !share && !(opts && opts.cup) ? cardLifeCardStyle(pick.who) : null;
     const cpuDeck = share ? {
       monsters: share.deck.monsters.slice(),
       cards: share.deck.cards.slice(),
       sameBlood: cardShareSameBlood(db, share.deck)
     } : cardAiBuildDeck(db, pick.who, pick.level, Math.random, {
-      playerDeck: activeDeck
+      playerDeck: activeDeck,
+      ...(foeStyle ? {
+        style: foeStyle
+      } : {})
     });
     const seed = cup ? cup.seed : (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
     const gameKey = cup ? `cup-${cup.matchId}-${Date.now().toString(36)}` : `${seed}`;
@@ -134911,6 +134973,7 @@ const CardBattleScreen = ({
     const scene = typeof window !== 'undefined' && typeof window.__mhCardScene === 'function';
     cpuLogRef.current = scene ? null : {
       id: gameKey,
+      style: foeStyle || 'normal',
       seed,
       first,
       decks: [{
@@ -145333,6 +145396,7 @@ const cardReplayDeckOf = raw => {
   };
 };
 const cardReplayText = (v, max) => typeof v === 'string' ? v.slice(0, max) : '';
+const cardReplayStyleOf = s => s === 'attack' || s === 'guard' || s === 'normal' ? s : 'normal';
 const cardReplayNormalizeOne = raw => {
   if (!raw || typeof raw !== 'object' || raw.v !== 1) return null;
   if (typeof raw.id !== 'string' || !CARD_REPLAY_ID_RE.test(raw.id)) return null;
@@ -145365,7 +145429,10 @@ const cardReplayNormalizeOne = raw => {
       icon: cardReplayText(foe.icon, 64),
       frame: typeof foe.frame === 'string' ? foe.frame.slice(0, 40) : null,
       deckName: typeof foe.deckName === 'string' ? foe.deckName.slice(0, 30) || null : null,
-      who: typeof foe.who === 'string' ? foe.who.slice(0, 20) : null
+      who: typeof foe.who === 'string' ? foe.who.slice(0, 20) : null,
+      ...(raw.kind === 'cpu' ? {
+        style: cardReplayStyleOf(foe.style)
+      } : {})
     },
     outcome: outcomes.includes(raw.outcome) ? raw.outcome : null,
     reason: cardReplayText(raw.reason, 40),
@@ -145564,7 +145631,10 @@ const cardReplayMake = (db, {
       icon: foe && foe.icon || '',
       frame: foe && foe.frame || null,
       deckName: foe && foe.deckName || null,
-      who: foe && foe.who || null
+      who: foe && foe.who || null,
+      ...(kind === 'cpu' ? {
+        style: cardReplayStyleOf(foe && foe.style)
+      } : {})
     },
     outcome,
     reason: reason || '',

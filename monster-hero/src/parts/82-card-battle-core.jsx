@@ -1951,6 +1951,20 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
 // prefer … 助手らしさの札(HARD から3枚ずつ。その3体で使えるものだけ入る)
 // ★3体はここでは決めない。好きな子(CARD_AI_FAVORITE)とその仲間から cardAiPickTrio が毎試合選ぶ
 //   (前はきゅうこ・あつ・ソラシドに monsters を書いていたが、どこからも読まれていなかったので消した。2026-11-01 点検)
+// 育つ助手の型(2026-11-08 社長「助手の相談の答えで、助手と対戦のデッキの中身が変わる。強さの段・ごほうびは同じ」・助手部キズナとすり合わせ)
+//   'attack' 攻め / 'guard' 守り / 'normal' ふつう(今のデッキとまったく同じ)。8人とも同じ3つ
+//   型はデッキを組むときのくせ(CARD_AI_HABITS)へ掛ける倍率。prefer・field は今のまま(えるびんだけは型が今の variants に当たる)
+//   型を渡すのは 84 の助手と対戦だけ(82 の中から助手ライフの口は読まない。サーバの杯で同じ 82 が動くため)
+const CARD_AI_STYLE_IDS = Object.freeze(['attack', 'guard', 'normal']);
+//   mul … 掛ける倍率 / add … 足す数(もとのくせが小さい助手でも型の色が出るように。みゅあの守り 0.2 は掛け算ではほとんど動かなかった)
+const CARD_AI_STYLE_TUNE = Object.freeze({
+  attack: { mul: { attack: 1.3, keepGuard: 0.75, big: 1.1 } },   // 攻め: 攻撃の札を多めに、守りは少なめ
+  guard: { add: { keepGuard: 0.3 }, mul: { attack: 0.95 } },      // 守り: 守りの札を多めに(強くしすぎると攻め手が足りず弱くなる。2026-11-08 測った)
+});
+// えるびんの型(variants の id)へのつなぎ。style が渡されないときは今どおり毎試合ランダム
+const CARD_AI_STYLE_VARIANT = Object.freeze({ attack: 'blade', guard: 'shield', normal: 'mind' });
+// 知らない値・null は null(=型なし。今どおり)
+const cardAiStyleOf = (s) => (typeof s === 'string' && CARD_AI_STYLE_IDS.includes(s) ? s : null);
 const CARD_AI_DECKS = Object.freeze({
   mua:      { kit: 'speed', field: ['ホリィの声援', '飛び散る火花'] },     // 速攻。技を安く・特殊攻撃を強く
   momosuke: { kit: 'miracle', field: ['冷静な判断', 'がんじがらめ'] },     // 手札を整え、相手の特殊技を封じる
@@ -2251,10 +2265,16 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   const rnd = typeof rand === 'function' ? rand : cardAiSeededRand(`${who}:${levelId}`);
   const monsters = cardAiPickTrio(db, who, levelId, rnd, opts && opts.playerDeck);
   // 型をいくつも持つ助手(えるびん)は、毎試合1つ選ぶ(3体を選んだあとに引くので、ほかの助手の組み方は変わらない)
-  const variant = Array.isArray(recipeAll.variants) && recipeAll.variants.length ? recipeAll.variants[Math.min(recipeAll.variants.length - 1, Math.floor(rnd() * recipeAll.variants.length))] : null;
+  //   育つ助手の型(opts.style)が渡されたら、その型に当たる組み方に決める(引くのは今どおり1回。ほかの札の選び方の乱数をずらさない)
+  const style = cardAiStyleOf(opts && opts.style);
+  const drawn = Array.isArray(recipeAll.variants) && recipeAll.variants.length ? recipeAll.variants[Math.min(recipeAll.variants.length - 1, Math.floor(rnd() * recipeAll.variants.length))] : null;
+  const variant = drawn && style ? (recipeAll.variants.find((v) => v.id === CARD_AI_STYLE_VARIANT[style]) || drawn) : drawn;
   const recipe = variant ? { ...recipeAll, ...variant } : recipeAll;
   const maxWave = cfg.maxWave;
-  const habit = variant && variant.deckHabit ? { ...cardAiDeckHabit(who, levelId), ...variant.deckHabit } : cardAiDeckHabit(who, levelId);
+  const habit0 = variant && variant.deckHabit ? { ...cardAiDeckHabit(who, levelId), ...variant.deckHabit } : cardAiDeckHabit(who, levelId);
+  // 型の倍率(えるびんは variants が型なので掛けない。'normal' は掛けない=今と同じ)
+  const tune = style && !variant ? CARD_AI_STYLE_TUNE[style] : null;
+  const habit = tune ? Object.fromEntries(Object.entries(habit0).map(([k, v]) => [k, typeof v === 'number' ? v * ((tune.mul || {})[k] || 1) + ((tune.add || {})[k] || 0) : v])) : habit0;
   const mons = monsters.map((no) => cardMonsterOf(db, no));
   // 弾の制限は技などのカードにかける。ただし、その子が使う技は、その子の弾まで使える(後の弾の好きな子も EASY から戦えるように)
   const pool = Object.values(db.cards).filter((c) => c.ready && ((c.user === 'any' || c.user === 'breeder') ? c.wave <= maxWave
@@ -2324,6 +2344,18 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   // sameBlood … 好きな子と同じ血統の子が2体以上(相手の考え方 cardAiPolicy の opts.sameBlood に渡す)
   const sameBlood = mons.filter((m) => cardAiBloodOf(m) === cardAiBloodOf(mons[0])).length >= 2;
   return { monsters: monsters.slice(), cards, sameBlood };
+};
+// 助手のデッキのいつもの組み方(育つ助手・助手部が部屋で見せる。2026-11-08)。読むだけ
+//   助手と型と強さで決まった種で組む(毎回同じ並び)。知らない型は 'normal'。返り値 { monsters, cards, styleId, name }。助手でない id は null
+const cardAssistantDeckPreview = (who, styleId = 'normal', level = 'normal') => {
+  if (typeof CARD_BATTLE_DATA === 'undefined' || !CARD_AI_DECKS[who]) return null;
+  const sid = cardAiStyleOf(styleId) || 'normal';
+  const lv = CARD_AI_BUILD[level] ? level : 'normal';
+  const db = CARD_BATTLE_DATA;
+  const deck = cardAiBuildDeck(db, who, lv, cardAiSeededRand(`preview:${who}:${sid}:${lv}`), { style: sid });
+  let name = null;
+  try { name = typeof cardAssistantDeckName === 'function' ? cardAssistantDeckName(db, deck, who, lv, cardAiSeededRand(`preview-name:${who}:${sid}:${lv}`)) : null; } catch (_) { name = null; }
+  return { monsters: deck.monsters.slice(), cards: deck.cards.slice(), styleId: sid, name };
 };
 
 // デッキが決まりどおりか(3体・別々のモンスター・50枚・同じカード(番号)は3枚まで・使えないカードが無い)。だめなら理由の文の配列
