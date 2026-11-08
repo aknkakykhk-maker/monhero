@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 34dc8982696c29f7
+// source-sha256: 462b1168b17942e4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13736,7 +13736,7 @@ const RELEASE_FLAGS = {
   assistantCallname: false,
   assistantLife: true,
   assistantLifeFriend: true,
-  assistantLifeFriendApi: false,
+  assistantLifeFriendApi: true,
   rhythmAssistantSession: true,
   assistantSorashido: true,
   assistantErubin: true,
@@ -120691,6 +120691,17 @@ const assistantLifeFriendRequestScenes = async life => {
     _alfApiBusy = false;
   }
 };
+const ALF_API_BODY_WORDS = /膝|ひざ|抱き|だっこ|キス|ちゅー|添い寝|くっつ|手をつな|お風呂|ベッド|恋|デート|付き合|好きだよ|大好き/;
+const alfApiLineOk = (who, t) => {
+  let x = String(t || '');
+  if (who === 'mua') x = x.replace(/じゃん/g, 'ぢゃん').replace(/まじ/g, 'まぢ').replace(/マジ/g, 'マヂ');
+  if (ALF_API_BODY_WORDS.test(x) || /(この|あの|その)子|子たち/.test(x)) return null;
+  if (who === 'atsu' && !/(笑|[！？!?…♪w]|[)）]|[\u3000-\u303f]?[\uff08(][^)）]*[)）])$/.test(x.trim())) return null;
+  if (who === 'dra' && /ほんま|やで|とる|とんだ|へん[。、！]|やろ|あかん/.test(x)) return null;
+  if (who === 'kiki' && /(だよ|だね|してよ|じゃん)([。！!？?♪]|$)/.test(x)) return null;
+  if (who !== 'mua' && /ぢゃん|まぢ/.test(x)) return null;
+  return x;
+};
 const alfApiSceneFor = (kind, a, b, hostName) => {
   if (!alfApiEnabled()) return null;
   const st = ALF_STORE.state.st;
@@ -120702,10 +120713,11 @@ const alfApiSceneFor = (kind, a, b, hostName) => {
   const lines = sc.lines.map(l => {
     const who = l.side === 'a' ? a : b;
     const t = String(l.t).replace(/\{f\}/g, l.side === 'a' ? alfTheirLabel(hostName, b) : assistantLifeName(a)).replace(/\{h\}/g, hostName).replace(/\{name\}/g, () => l.side === 'a' && typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(a) : 'あなた');
-    return /[{}]/.test(t) || t.length > 80 ? null : {
+    const ok = alfApiLineOk(who, t);
+    return !ok || /[{}]/.test(ok) || ok.length > 80 ? null : {
       who,
       guest: l.side === 'b',
-      text: t
+      text: ok
     };
   });
   if (lines.some(x => !x)) return null;

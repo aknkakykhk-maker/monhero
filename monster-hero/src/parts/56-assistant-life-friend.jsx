@@ -676,6 +676,19 @@ const assistantLifeFriendRequestScenes = async (life) => {
     return next && next.list.length ? 'ok' : 'failed';
   } catch { return 'failed'; } finally { _alfApiBusy = false; }
 };
+// 作った文を、助手ごとの口調の決まりに合わせる。合わせられない文は null(場面ごと台本へ)。
+//   2026-11-08 本番の試しで「みゅあの じゃん」「膝に座る」が返ってきたため(docs/progress/assistant-peer/VOICE.md の決まり)
+const ALF_API_BODY_WORDS = /膝|ひざ|抱き|だっこ|キス|ちゅー|添い寝|くっつ|手をつな|お風呂|ベッド|恋|デート|付き合|好きだよ|大好き/;
+const alfApiLineOk = (who, t) => {
+  let x = String(t || '');
+  if (who === 'mua') x = x.replace(/じゃん/g, 'ぢゃん').replace(/まじ/g, 'まぢ').replace(/マジ/g, 'マヂ');
+  if (ALF_API_BODY_WORDS.test(x) || /(この|あの|その)子|子たち/.test(x)) return null;
+  if (who === 'atsu' && !/(笑|[！？!?…♪w]|[)）]|[\u3000-\u303f]?[\uff08(][^)）]*[)）])$/.test(x.trim())) return null;
+  if (who === 'dra' && /ほんま|やで|とる|とんだ|へん[。、！]|やろ|あかん/.test(x)) return null;
+  if (who === 'kiki' && /(だよ|だね|してよ|じゃん)([。！!？?♪]|$)/.test(x)) return null;
+  if (who !== 'mua' && /ぢゃん|まぢ/.test(x)) return null;
+  return x;
+};
 // 作った場面があれば使う(その組で1回だけ)。無ければ null(台本へ)
 const alfApiSceneFor = (kind, a, b, hostName) => {
   if (!alfApiEnabled()) return null;
@@ -689,7 +702,8 @@ const alfApiSceneFor = (kind, a, b, hostName) => {
     const who = l.side === 'a' ? a : b;
     const t = String(l.t).replace(/\{f\}/g, l.side === 'a' ? alfTheirLabel(hostName, b) : assistantLifeName(a)).replace(/\{h\}/g, hostName)
       .replace(/\{name\}/g, () => (l.side === 'a' && typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(a) : 'あなた'));
-    return /[{}]/.test(t) || t.length > 80 ? null : { who, guest: l.side === 'b', text: t };
+    const ok = alfApiLineOk(who, t);
+    return !ok || /[{}]/.test(ok) || ok.length > 80 ? null : { who, guest: l.side === 'b', text: ok };
   });
   if (lines.some(x => !x)) return null;
   alfSaveSt({ ...st, api: { ...api, used: [...api.used, key].slice(-12) } });

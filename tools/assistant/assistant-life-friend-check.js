@@ -251,10 +251,15 @@ const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'er
   check('⑨ 作った場面を使い、{f}・{h}・{name} を端末で差しこむ', sc.lines[0].text === 'あおいさんのドラ、来たよ♪ あおいさんの家まぢかわいい！' && sc.lines[1].guest && sc.lines[1].text.startsWith('みゅあ、') && !/[{}]/.test(sc.lines.map(l => l.text).join('')), sc.lines.map(l => l.text).join(' / '));
   const sc2 = G('assistantLifeFriendGoScene')({ ids: ['mua'], theirs: ['dra'], name: 'あおい', host: 'aoi-0001' });
   check('⑨ 同じ組の作った場面は1回だけ(2回目は台本)', sc2.lines[0].text !== sc.lines[0].text && sc2.lines[1].text === 'おやつ、半分こしような', sc2.lines.map(l => l.text).join(' / '));
+  { const ok = G('alfApiLineOk');
+    check('⑨ 作った文の口調: みゅあの「じゃん/まじ」は「ぢゃん/まぢ」へ', ok('mua', 'それ椅子あつかいじゃん、まじで') === 'それ椅子あつかいぢゃん、まぢで');
+    check('⑨ 作った文の口調: 体に触れる言葉・あつの文末・ドラの関西弁・ききのタメ口・ほかの助手の「ぢゃん」は使わない',
+      ok('dra', 'おでの膝、いまならあいてるぞ') === null && ok('atsu', 'いらっしゃい') === null && ok('atsu', 'いらっしゃい笑') === 'いらっしゃい笑'
+      && ok('dra', 'ほんまによう来たな') === null && ok('kiki', '来てくれてうれしいよ。また遊ぼうだね') === null && ok('momosuke', 'かわいいぢゃん') === null && ok('kiki', 'いらっしゃいませ♪') === 'いらっしゃいませ♪'); }
   flags.assistantLifeFriendApi = false;
   G('alfSaveSt')({ ...G('alfToday()'), api: null });
   asked = []; await G('assistantLifeFriendRequestScenes')(lifeApi);
-  check('⑨ 印 assistantLifeFriendApi が偽なら頼まない', asked.length === 0 && /\n\s*assistantLifeFriendApi:\s*false,/.test(fs.readFileSync(path.join(root, 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8')));
+  check('⑨ 印 assistantLifeFriendApi が偽なら頼まない', asked.length === 0 && /\n\s*assistantLifeFriendApi:\s*(true|false),/.test(fs.readFileSync(path.join(root, 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8')));
   fakeServer = base;
 
   // ⑧ 公開の印
