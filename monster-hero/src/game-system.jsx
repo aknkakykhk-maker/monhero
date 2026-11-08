@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 60cf4f2b2bce60ed
+// generated-sha256: de1b340922243ba8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -66966,7 +66966,7 @@ const normalizeAssistantMasmonPick = (raw) => {
 // 提案の記録: [{ day, a, from, text(100字), res('yes'|'some'|'no'|'none'|'fail'), what }] 新しい60件まで
 const ASSISTANT_MASMON_ASK_FROM = Object.freeze(['masmon', 'hero', 'welcome', 'deck']);
 const normalizeAssistantMasmonAsked = (raw) => (Array.isArray(raw) ? raw.slice(-60) : []).filter(x => x && typeof x === 'object' && assistantMasmonBasePlanOf(x.a) && ASSISTANT_MASMON_ASK_FROM.includes(x.from) && typeof x.day === 'string')
-  .map(x => ({ day: x.day.slice(0, 10), a: x.a, from: x.from, text: typeof x.text === 'string' ? x.text.slice(0, 100) : '', res: ['yes', 'some', 'no', 'none', 'fail'].includes(x.res) ? x.res : 'none', what: typeof x.what === 'string' ? x.what.slice(0, 60) : '', counted: x.counted === true }));
+  .map(x => ({ day: x.day.slice(0, 10), a: x.a, from: x.from, text: typeof x.text === 'string' ? x.text.slice(0, 100) : '', res: ['yes', 'some', 'no', 'none', 'fail'].includes(x.res) ? x.res : 'none', what: typeof x.what === 'string' ? x.what.slice(0, 60) : '', reply: typeof x.reply === 'string' ? x.reply.slice(0, 80) : '', counted: x.counted === true }));
 // 提案で決まった所: { [助手]: { names:{ [slot]: [前の名前…] }, parts:{ [slot]: [部位の番号…] }, hero: slot(0=いつもの勇者モン), wish: 迎えたい種類, deck: { face, name, plan, day } } }
 const normalizeAssistantMasmonMine = (raw) => {
   const out = {};
@@ -67617,7 +67617,7 @@ const assistantLifeCardMaterial = (id) => {
 const ASSISTANT_MASMON_ASK_PER_DAY = 3;
 const ASSISTANT_MASMON_ASK_HINT = Object.freeze({
   masmon: '名前や色について、思ったことを書いてみてください(例: 体をオレンジにしてみたら？/名前を「ひだまり」にしない？)',
-  hero: '勇者モンについて書いてみてください(例: 勇者モンはミーアにしてみたら？)',
+  hero: '勇者モンについて書いてみてください(例: 勇者モンはミーアにしてみたら？/名前に♪を付けたら？)',
   welcome: '次に迎えてほしいマスモンを書いてみてください(例: 次はプラントを迎えてみたら？)',
   deck: 'MFバトルカードのデッキについて書いてみてください(例: 推しのデッキは守りで「まったり作戦」にしたら？)',
 });
@@ -67636,7 +67636,7 @@ const assistantMasmonAskCtx = (aid, from, t, lv) => {
   const monName = (m) => (assistantMasmonMon(m) || {}).name || m;
   const ctx = { lv, colors: [], fav: (p.favColors || []).map(x => assistantMasmonColorName(x.color)), dislike: [], cands: [], team: rows.map(r => ({ slot: r.slot, nick: r.nick, mon: monName(r.monster) })), decks: Object.entries(ASSISTANT_MASMON_DECK_FACE).map(([face, name]) => ({ face, name })) };
   for (const x of p.dislikeMon || []) ctx.dislike.push(x.monster ? monName(x.monster) : `${assistantMasmonLineageName(x.lineage) || x.lineage}`);
-  if (from === 'masmon' && t) {
+  if (t && (from === 'masmon' || from === 'hero')) { // くわしい画面と勇者モンの所は、そのマスモンの名前・色も変えられる
     const n = assistantMasmonRegions(t.monster) || 3;
     const now = assistantMasmonDyeNowOf(st, aid, t.slot, (rows.find(r => r.slot === t.slot) || {}).colors || []);
     ctx.mon = { slot: t.slot, name: monName(t.monster), nick: t.nick, parts: Array.from({ length: n }, (_, i) => { const r = assistantMasmonPartRule(t.monster, i); return r.keep ? `${r.name}(染めない)` : r.name; }), now: Array.from({ length: n }, (_, i) => (now[i] ? assistantMasmonColorName(String(now[i]).split('@')[0]) : '元の色')) };
@@ -67737,7 +67737,9 @@ const assistantMasmonAsk = async (aid, from, text, t = null) => {
   if (!body || _assistantMasmonAskBusy) return null;
   if (assistantMasmonAskUsed(aid) >= ASSISTANT_MASMON_ASK_PER_DAY) return { res: 'limit', note: `今日は${ASSISTANT_MASMON_ASK_PER_DAY}回受けてもらいました。また明日、提案してみてください` };
   const lv = Number.isFinite(_assistantMasmonBondNow[aid]) ? _assistantMasmonBondNow[aid] : 1;
-  const record = (res, what = '', counted = false) => { const c = ASSISTANT_MASMON_STORE.state; assistantMasmonSave({ ...c, asked: [...(c.asked || []), { day: assistantMasmonToday(), a: aid, from, text: body, res, what, counted }].slice(-60) }); };
+  const record = (res, what = '', counted = false, reply = '') => { const c = ASSISTANT_MASMON_STORE.state; assistantMasmonSave({ ...c, asked: [...(c.asked || []), { day: assistantMasmonToday(), a: aid, from, text: body, res, what, reply: String(reply || '').slice(0, 80), counted }].slice(-60) }); };
+  // 直前のやりとり(その助手への提案の新しい4回・古い順)。続きの言葉が通じるように渡す(2026-11-09 社長「なかなか会話が伝わらない」)
+  const history = (ASSISTANT_MASMON_STORE.state.asked || []).filter(x => x.a === aid && x.text && x.res !== 'fail').slice(-4).map(x => ({ text: x.text, reply: x.reply || '' }));
   let bid = null; try { bid = typeof ensureBreederId === 'function' ? await ensureBreederId() : null; } catch (_) { bid = null; }
   if (!bid || !assistantMasmonAskOn()) { record('fail'); return { res: 'fail', note: 'いまは返事ができませんでした。少し時間をおいて試してみてください' }; }
   _assistantMasmonAskBusy = true;
@@ -67745,17 +67747,18 @@ const assistantMasmonAsk = async (aid, from, text, t = null) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 20000);
     let res = null;
-    try { const r = await fetch(ASSISTANT_CHAT_URL, { method: 'POST', headers: SB_HEADERS, signal: controller.signal, body: JSON.stringify({ kind: 'masmon_suggest', breederId: bid, a: aid, from, text: body, ctx: assistantMasmonAskCtx(aid, from, t, lv) }) }); res = r.ok ? await r.json() : null; } finally { clearTimeout(timer); }
+    try { const r = await fetch(ASSISTANT_CHAT_URL, { method: 'POST', headers: SB_HEADERS, signal: controller.signal, body: JSON.stringify({ kind: 'masmon_suggest', breederId: bid, a: aid, from, text: body, history, ctx: assistantMasmonAskCtx(aid, from, t, lv) }) }); res = r.ok ? await r.json() : null; } finally { clearTimeout(timer); }
     if (!res || res.ok !== true || !res.result) { record('fail'); return { res: 'fail', note: res && res.kind === 'tired' ? '今日はもう返事ができないみたいです。また明日、提案してみてください' : 'いまは返事ができませんでした。少し時間をおいて試してみてください' }; }
     const r = res.result;
     // 開いた所と違うものは当てない(例: 勇者モンの所から色を言われた)。くわしい画面からは名前と色だけ
-    const fits = { masmon: ['name', 'color'], hero: ['hero'], welcome: ['welcome'], deck: ['deck'] }[from] || [];
-    if (r.kind === 'none' || !fits.includes(r.kind)) { record('none'); return { res: 'none', note: from === 'masmon' ? 'うまく読み取れませんでした。名前か色について、どう変えてほしいかを具体的に書いてみてください' : 'うまく読み取れませんでした。どう変えてほしいかを、もう少し具体的に書いてみてください' }; }
+    const fits = { masmon: ['name', 'color'], hero: ['hero', 'name', 'color'], welcome: ['welcome'], deck: ['deck'] }[from] || [];
+    // 変えることが読み取れない・ここでは変えられないものでも、エラーにせず助手がふつうに返事をする(何も変えない・回数は減らない)
+    if (r.kind === 'none' || !fits.includes(r.kind)) { const talk = r.replies.talk || r.replies.some; record('none', '', false, talk); return { res: 'none', line: talk, note: '' }; }
     const outcome = assistantMasmonAskJudge(aid, r, lv);
     const done = assistantMasmonAskApply(aid, r, outcome, t);
     const res2 = outcome === 'no' ? 'no' : done.changed ? outcome : 'some';
-    record(res2, done.what || '', done.changed);
-    const line = outcome === 'no' ? r.replies.no : done.changed ? (outcome === 'yes' ? r.replies.yes : r.replies.some) : r.replies.some;
+    const line = outcome === 'no' ? r.replies.no : done.changed ? (outcome === 'yes' ? r.replies.yes : r.replies.some) : (r.replies.talk || r.replies.some);
+    record(res2, done.what || '', done.changed, line);
     return { res: res2, line, what: done.what, before: done.before, after: done.after, t: done.t, note: done.changed ? '' : (outcome === 'no' ? '断られても、今日の回数は減りません' : '今回は考えておく、とのことでした(回数は減りません)') };
   } catch (_) { record('fail'); return { res: 'fail', note: 'いまは返事ができませんでした。少し時間をおいて試してみてください' }; } finally { _assistantMasmonAskBusy = false; }
 };
@@ -68179,7 +68182,7 @@ function AssistantMasmonSheet({ id, land = false, onClose, bondLv = null }) {
       <p className="mt-2 text-[10.5px] font-bold leading-snug text-slate-400">🐾 {who.name}が自分で育てて、自分の好きな色に染めているマスモンです。押すと詳しく見られます。</p>
     </>);
   } else if (tab === 'team' && p.v2) {
-    body = <AssistantMasmonFormation who={who} team={team} waiting={waiting} land={land} onOpen={setDetail} onAsk={(from) => setAsk({ from })}/>;
+    body = <AssistantMasmonFormation who={who} team={team} waiting={waiting} land={land} onOpen={setDetail} onAsk={(from) => setAsk({ from, t: from === 'hero' ? (team.find(x => x.lead) || team[0]) : null })}/>;
   } else if (tab === 'team') {
     body = (<>
       <div className="grid grid-cols-3 gap-2">
