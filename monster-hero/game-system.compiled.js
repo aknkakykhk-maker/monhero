@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 384d0bd47181b2d5
+// source-sha256: 9056db31cf0c1008
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108471,7 +108471,7 @@ function AssistantLifeSpentMark({
     className: "pointer-events-none absolute z-[1] grid place-items-center rounded-full bg-slate-100 font-black text-slate-900 shadow",
     style: {
       left: -3,
-      bottom: -3,
+      bottom: 0,
       width: d,
       height: d,
       fontSize: Math.max(7, Math.round(d * 0.72)),
