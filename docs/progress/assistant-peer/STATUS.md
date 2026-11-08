@@ -381,3 +381,19 @@
   見本を作った台本: 本物の HOME の上に組む形(`shots/mapplan/`。横は HOME と同じく絵が真ん中の帯で札が左右に広がる)
 - 今の main の assistant-life-browser-check ⑩「🎁 好きなもの 10種類」が NG(#5071 のあとから・オクリモノ2の持ち物。統括部長へ回した)
 - 568×320 の HOME で「モンヒロバトル」と「ミッション」の札が少し重なる(前から・HOME の配置の持ち主へ)
+
+## ナカヨシ9(2026-11-08 夕〜・地図 案A)
+- 枝 `claude/nakayoshi9-map`。地図は新しい部品 `56-assistant-life-map.jsx`(`AssistantLifeTownMap`)。「📋 居場所」は HOME の画面そのもの(main.mh-home-scene の大きさ・--mh-home-* の値・絵・MFバトルカードの札の class を写し、同じ class の札を置く)を画面いっぱいに出し、下へスクロールで見出し・一覧・アイコンの列
+  - 助手は札の上(入らなければ下・横)に小さな全身+「していることの印+名前」の札。5人からは重ねて「◯◯ほか◯人」。いない場所は薄い。町だけの場所の札は絵ごとの位置(ASSISTANT_LIFE_MAP_TOWN: classic/halloween/halloweenWide)
+  - 場所を押すとシート(いる助手・🎵一緒に遊ぶ・🃏対戦する・🏡部屋へ・閉じる)。家の札のシートには町にいる人も並ぶ(=HOME の「助手ライフ」の下の顔ぶれ)
+- そろえた所: HOME の顔の表を場所→札の1つの表(ASSISTANT_LIFE_SPOT_FAC)に・神殿にも顔/HOME の顔は main の札だけを見る/家の言い方「みんなの家」/今日あったことの場所の名前を施設の名前に(カード部屋で対戦→MFバトルカードで対戦。card-life-reward-browser-check の正規表現も直した)
+- 検査 `tools/assistant/assistant-life-map-check.js`(①11か所 ②HOME と札が1対1 ③顔と全身が同じ場所・家のシート ④言い方 ⑤重ならない ⑥シート。縦3・横3・タブレット・🔄横)。古い地図の項目(assistant-life-browser-check ⑩⑫⑯)は新しい形に置きかえ
+- 社長の答え(2026-11-08): 文案1〜5に6を足して「この文で公開」。カード部屋の 1.5倍を使い切った助手は「HOMEも地図も出す」(前の Q2 A「HOME では顔を外す」を改めた)→ HOME の顔の左下と地図の全身に「済」の印(AssistantLifeSpentMark)、顔は少し暗く、「UP」は使い切っていない助手がいるときだけ。カード部(ソランド・ツナグ)へ知らせ済み、カード部の検査3本(card-life-limit-check E・card-life-limit-browser-check ⑤⑦・card-life-reward-browser-check ④)も合わせた
+- 更新履歴(18:25)・ヘルプ(居場所の文+カード部屋の1.5倍の項に「済」の1文)入り。当番マスモンは地図に出さないまま(❸B)
+- 既知の別件: assistant-life-friend-browser-check ⑥⑫(仲良し度の知らせと置き手紙)が main でも大きさを変えてゆれる/save-keys-check が main で NG(mh_assistant_life_masmon_v1 が SAVE_DATA.md に無い・キズナ側)
+## キズナ4(2026-11-08〜・キズナ3の後任)染め方の作り込み
+- 枝 claude/kizuna4-dye。染め方 v2(助手8人のくせ・30体の部位の表・歯止め・季節/好きな色の染め直し)。表と決まりは DYE-DETAIL.md
+- 保存は mh_assistant_life_masmon_v1 に dyes を足すだけ(made の v1 の色は書き換えない・版の印 v:2)。SAVE_DATA.md にキーを書いた
+- 止め絵 masmon-life/dye2/(sheet-1・sheet-2・players・season・zoom-*・game/)。撮り直しは masmon-life/dye2-shoot.js
+- 検査: run-checks --changed は 409/413。NG のうち「子」の言い方・保存キーの載せ忘れは直した。残りの2本(assistant-life-friend-browser-check の仲良し度の知らせ・sheet-close-check の AssistantMasmonDetail「もどる」)は main でも出る前からのもの
+- 待ち: 窓口経由で社長の確認(止め絵・更新履歴とヘルプの文案)→ ミハリの確認 → 更新履歴・ヘルプを入れて PR・マージ

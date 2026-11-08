@@ -10,9 +10,9 @@
 //   ③ 相手えらび: ソラシドの印は灰色の「🃏済」、えるびんは「🃏UP」。帯は「いまカード部屋にいる助手: えるびん」と
 //      「🃏 ソラシドのごほうびアップは使い切りました…次は◯時から」(◯は次の時間帯の始まり)。字が切れず、札・画面からはみ出さない
 //   ④ えるびんとすぐ投了(もらえる数 0): 数えない(保存にえるびんが無い・印は「🃏UP」のまま)
-//   ⑤ HOME: MFバトルカードの横の顔からソラシドが消え、えるびんと「UP」は残る
+//   ⑤ HOME: MFバトルカードの横にソラシドの顔は残り「済」の印(2026-11-08 社長「HOMEも地図も出す」で前の「消える」を改めた)、えるびんと「UP」も残る
 //   ⑥ 助手ライフの家: ソラシドの部屋は灰色の押せないボタン「🃏 ごほうびアップは使い切りました…次は◯時から」、えるびんの部屋はふだんのボタン。画面に入り、字が切れない
-//   ⑦ 2人とも使い切る: HOME の顔の並びにカードの助手がいなくなり、「UP」も消える。相手えらびの帯は灰色で、2人とも「済」
+//   ⑦ 2人とも使い切る: HOME の顔は2人とも残って「済」の印(2026-11-08 社長「HOMEも地図も出す」)、「UP」は消える。相手えらびの帯は灰色で、2人とも「済」
 //   ⑧ 時間帯が変わると戻る(保存の slot が前の時間帯): 相手えらびは2人とも「🃏UP」・起動し直した HOME に2人の顔と「UP」
 //   ③' 帯がいちばん高いまま 320×568 にしても、強さのボタンが「対戦する」の帯に潜らない
 //   ⑨ 表示と保存が一致(③⑦⑧で、印が「済」の助手 = 保存で今の時間帯に1回使った助手)
@@ -150,7 +150,7 @@ const run = async (browser, mode, errors) => {
   };
   const homeRow = async () => ({ top: (await onTop('[data-home-card-battle]')) === true, ...(await homeRow0()) });
   const homeRow0 = () => page.evaluate(() => ({ faces: [...document.querySelectorAll('[data-assistant-life-home-faces="card"] [data-assistant-life-home-face]')].map((e) => e.getAttribute('data-assistant-life-home-face')).sort().join(','),
-    up: !!document.querySelector('[data-assistant-life-home-card-up]') }));
+    up: !!document.querySelector('[data-assistant-life-home-card-up]'), spent: [...document.querySelectorAll('[data-assistant-life-home-faces="card"] [data-assistant-life-home-face-spent="1"]')].map((e) => e.getAttribute('data-assistant-life-home-face')).sort().join(',') }));
   const winScene = () => page.evaluate(() => { window.__mhCardScene = (st) => { st.turn = 12; st.players[1].mons.forEach((m) => { m.life = 0; }); st.winner = 0; st.reason = '全員KO'; st.phase = 'over'; st.pending = null; return st; }; });
   const toResult = async () => {
     for (let i = 0; i < 40; i++) { if (await page.locator('[data-card-top="result"]').count()) break; await pass(); }
@@ -231,7 +231,7 @@ const run = async (browser, mode, errors) => {
     await goHome();
     const h5 = await homeRow();
     const up5 = await inView('[data-assistant-life-home-card-up]');
-    check(`⑤ ${mode.label} HOME: MFバトルカードの横の顔からソラシドが消え、えるびんと「UP」は残る`, h5.top && h5.faces === 'erubin' && h5.up && up5 === true, `${JSON.stringify(h5)} UP ${up5}`);
+    check(`⑤ ${mode.label} HOME: MFバトルカードの横にソラシドの顔は残り「済」の印が付く・えるびんと「UP」も残る(2026-11-08 社長「HOMEも地図も出す」)`, h5.top && h5.faces === 'erubin,sorashido' && h5.spent === 'sorashido' && h5.up && up5 === true, `${JSON.stringify(h5)} UP ${up5}`);
     await scene('5-home', '[data-home-card-battle]', 'HOME の MFバトルカードの札');
     // ⑥ 助手ライフの家: 部屋のボタン
     for (let i = 0; i < 5; i++) { try { await page.locator('[data-home-assistant-life]').first().click({ timeout: 4000 }); break; } catch (e) { if (i === 4) throw e; await dismiss(); await page.waitForTimeout(800); } }
@@ -263,7 +263,7 @@ const run = async (browser, mode, errors) => {
     await goHome();
     await setUsed({ sorashido: 1, erubin: 1 });
     const h7 = await homeRow();
-    check(`⑦ ${mode.label} 2人とも使い切る: HOME の顔の並びにカードの助手がいない・「UP」も消える`, h7.top && h7.faces === '' && !h7.up, JSON.stringify(h7));
+    check(`⑦ ${mode.label} 2人とも使い切る: HOME の顔は2人とも残って「済」の印・「UP」は消える(2026-11-08 社長「HOMEも地図も出す」)`, h7.top && h7.faces === 'erubin,sorashido' && h7.spent === 'erubin,sorashido' && !h7.up, JSON.stringify(h7));
     await scene('7-home-none', '[data-home-card-battle]', 'HOME の MFバトルカードの札');
     await page.locator('[data-home-card-battle]').first().dispatchEvent('click');
     await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
@@ -289,7 +289,7 @@ const run = async (browser, mode, errors) => {
     // HOME は起動し直して見る(保存から読み直す所 cardLifeRewardLoad の確かめにもなる)
     await boot(); await force(); await page.waitForTimeout(1500);
     const h8 = await homeRow();
-    check(`⑧ ${mode.label} 時間帯が変わると戻る(起動し直して保存から読む): HOME に2人の顔と「UP」`, h8.top && h8.faces === 'erubin,sorashido' && h8.up, JSON.stringify(h8));
+    check(`⑧ ${mode.label} 時間帯が変わると戻る(起動し直して保存から読む): HOME に2人の顔と「UP」・「済」の印は消える`, h8.top && h8.faces === 'erubin,sorashido' && h8.spent === '' && h8.up, JSON.stringify(h8));
   } finally { await ctx.close(); }
 };
 

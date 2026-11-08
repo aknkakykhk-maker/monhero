@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8da283651d237c84
+// source-sha256: f52961f4df859718
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -56516,7 +56516,8 @@ const sbFetchFriendRoster = async selfIdRaw => {
     otherId: view.otherId,
     userName: (looks[view.otherId] || {}).userName || '名無しのブリーダー',
     lastSeenAt: (looks[view.otherId] || {}).lastSeenAt || 0,
-    icon: (looks[view.otherId] || {}).icon ?? null
+    icon: (looks[view.otherId] || {}).icon ?? null,
+    profileFrame: (looks[view.otherId] || {}).profileFrame || null
   })).sort((a, b) => b.lastSeenAt - a.lastSeenAt);
 };
 const FRIEND_PLACE_TEXT = Object.freeze({
@@ -62644,7 +62645,7 @@ const growthFxSessionLevel = (list = []) => {
 };
 const GROWTH_FX_CSS = `
 .mh-gfx-chips{position:fixed;top:calc(env(safe-area-inset-top,0px) + 52px);right:10px;z-index:44000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
-.mh-gfx-chips.left{right:auto;left:10px;align-items:flex-start}
+.mh-gfx-chips.left{right:auto;left:10px;align-items:flex-start}.mh-gfx-chips.one .mh-gfx-chip:not(:first-child){display:none}.mh-gfx-chips.one .mh-gfx-chip:first-child::after{content:attr(data-more);margin-left:2px;border-radius:999px;background:#ffffff26;padding:0 5px;font-size:10px;font-weight:900}.mh-gfx-chips.row{flex-direction:row;align-items:flex-start;max-width:calc(100% - 20px);flex-wrap:nowrap}
 .mh-gfx-chips.mini .mh-gfx-chip>.min-w-0{display:none}.mh-gfx-chips.mini .mh-gfx-chip{padding:3px 8px 3px 4px;gap:4px}
 .mh-gfx-chip{position:relative;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;border-radius:999px;background:linear-gradient(90deg,#1e1b2ef0,#0f172af0);
   border:1.5px solid var(--gc);box-shadow:0 0 14px color-mix(in srgb,var(--gc) 40%,transparent);font-weight:900;font-size:11px;color:#fff;
@@ -63154,39 +63155,106 @@ const GrowthFxLevelUp = ({
   }, done ? '押すと閉じる' : '押すと先へ'));
 };
 const GROWTH_FX_CHIP_TOPS = [52, 8, 96, 140];
-const GROWTH_FX_CHIP_BUSY_SEL = 'button,a,input,[role="tab"],[role="button"],[data-assistant-bubble],img,svg,p,span,b,small,strong,em,h1,h2,h3,h4,li,label,[data-alf-face]';
-const growthFxChipSpotBusy = box => {
-  if (typeof document === 'undefined' || !document.elementsFromPoint) return false;
-  const r = box.getBoundingClientRect();
+const GROWTH_FX_CHIP_BUSY_SEL = 'button,a,input,[role="tab"],[role="button"],[data-assistant-bubble],img,svg,p,span,b,small,strong,em,h1,h2,h3,h4,li,label,div,[data-alf-face]';
+const growthFxChipSpotScore = (box, first = false) => {
+  if (typeof document === 'undefined' || !document.elementsFromPoint) return 0;
+  const r = [...box.querySelectorAll('.mh-gfx-chip')].reduce((a, c) => {
+    const q = c.getBoundingClientRect();
+    if (!q.width || !q.height) return a;
+    return {
+      left: Math.min(a.left, q.left),
+      top: Math.min(a.top, q.top - 12),
+      right: Math.max(a.right, q.right),
+      bottom: Math.max(a.bottom, q.bottom + 4)
+    };
+  }, (() => {
+    const b = box.getBoundingClientRect();
+    return {
+      left: b.left,
+      top: b.top,
+      right: b.right,
+      bottom: b.bottom
+    };
+  })());
+  r.width = r.right - r.left;
+  r.height = r.bottom - r.top;
+  let score = 0;
   for (const fx of [0.15, 0.5, 0.85]) for (const fy of [0.25, 0.75]) {
     const x = r.left + r.width * fx,
       y = r.top + r.height * fy;
-    const under = document.elementsFromPoint(x, y).find(el => !box.contains(el));
+    const under = document.elementsFromPoint(x, y).find(el => !box.contains(el) && !el.contains(box));
     if (!under) continue;
-    if (under.closest('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]')) return true;
-    if ([...under.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return true;
+    if (under.closest('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]')) {
+      score += 3;
+      if (first) return score;
+    } else if ([...under.childNodes].some(n => {
+      if (n.nodeType !== 3 || !n.textContent.trim()) return false;
+      const rg = document.createRange();
+      rg.selectNodeContents(n);
+      return [...rg.getClientRects()].some(q => x >= q.left - 2 && x <= q.right + 2 && y >= q.top - 2 && y <= q.bottom + 2);
+    })) {
+      score += 2;
+      if (first) return score;
+    }
   }
   const vw = window.innerWidth,
     vh = window.innerHeight;
+  const hit = e => Math.min(r.right, e.right) - Math.max(r.left, e.left) > 1 && Math.min(r.bottom, e.bottom) - Math.max(r.top, e.top) > 1;
+  const seen = (el, e) => {
+    const x0 = Math.max(r.left, e.left),
+      y0 = Math.max(r.top, e.top),
+      x1 = Math.min(r.right, e.right),
+      y1 = Math.min(r.bottom, e.bottom);
+    return [[x0 + 1, y0 + 1], [(x0 + x1) / 2, (y0 + y1) / 2]].some(([cx, cy]) => {
+      const top = document.elementsFromPoint(cx, cy).find(x => !box.contains(x) && !x.contains(box));
+      return !top || top === el || el.contains(top) || top.contains(el);
+    });
+  };
+  for (const sh of document.querySelectorAll('.mhl-sheet,[data-mhl-sheet],[role="dialog"]')) {
+    if (box.contains(sh) || sh.contains(box)) continue;
+    const e = sh.getBoundingClientRect();
+    if (!e.width || !e.height || !hit(e)) continue;
+    const cs = getComputedStyle(sh);
+    if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
+    score += 3;
+    if (first) return score;
+  }
   for (const el of document.querySelectorAll(GROWTH_FX_CHIP_BUSY_SEL)) {
     if (box.contains(el)) continue;
     const e = el.getBoundingClientRect();
-    if (!e.width || !e.height || e.width > vw * 0.9 || e.height > vh * 0.5) continue;
-    if (Math.min(r.right, e.right) - Math.max(r.left, e.left) <= 1 || Math.min(r.bottom, e.bottom) - Math.max(r.top, e.top) <= 1) continue;
+    if (!e.width || !e.height || !hit(e)) continue;
     const cs = getComputedStyle(el);
     if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
     const isPic = /^(IMG|SVG)$/i.test(el.tagName) || el.hasAttribute('data-alf-face');
     const isAct = el.matches('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]');
-    const hasText = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
-    if (!isPic && !isAct && !hasText) continue;
-    const cx = Math.max(r.left, e.left) + 1,
-      cy = Math.max(r.top, e.top) + 1;
-    const top = document.elementsFromPoint(cx, cy).find(x => !box.contains(x));
-    if (top && !(top === el || el.contains(top) || top.contains(el))) continue;
-    return true;
+    const texts = [...el.childNodes].filter(n => n.nodeType === 3 && n.textContent.trim());
+    if (texts.length) {
+      let on = null;
+      for (const t of texts) {
+        const rg = document.createRange();
+        rg.selectNodeContents(t);
+        for (const q of rg.getClientRects()) if (hit(q)) {
+          on = q;
+          break;
+        }
+        if (on) break;
+      }
+      if (on && seen(el, on)) {
+        score += isAct ? 3 : 2;
+        if (first) return score;
+        continue;
+      }
+      if (!isAct) continue;
+    }
+    if (!isPic && !isAct) continue;
+    if (e.width > vw * 0.9 || e.height > vh * 0.5) continue;
+    if (!seen(el, e)) continue;
+    score += isAct ? 3 : 1;
+    if (first) return score;
   }
-  return false;
+  return score;
 };
+const growthFxChipSpotBusy = box => growthFxChipSpotScore(box, true) > 0;
 const GrowthFxChipsBox = ({
   level,
   count,
@@ -63201,29 +63269,82 @@ const GrowthFxChipsBox = ({
       const steps = [];
       for (let y = window.innerHeight - 10 - box.offsetHeight; y >= 8; y -= 24) steps.push(Math.round(y));
       const tops = [...new Set([...GROWTH_FX_CHIP_TOPS, Math.max(60, window.innerHeight - 120 - box.offsetHeight), ...steps])];
-      for (const mini of [false, true]) {
+      const chipEls = box.querySelectorAll('.mh-gfx-chip');
+      const more = Math.max(0, chipEls.length - 1);
+      if (chipEls[0]) chipEls[0].setAttribute('data-more', more ? `ほか${more}` : '');
+      for (const [mini, row, one] of [[false, false, false], [true, false, false], [true, true, false], ...(more ? [[true, false, true]] : [])]) {
         box.classList.toggle('mini', mini);
+        box.classList.toggle('row', row);
+        box.classList.toggle('one', one);
         for (const left of [false, true]) {
           box.classList.toggle('left', left);
           for (const t of tops) {
             box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`;
             if (!growthFxChipSpotBusy(box)) {
-              box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${left ? 'left-' : ''}${t}`;
+              box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${row ? 'row-' : ''}${one ? 'one-' : ''}${left ? 'left-' : ''}${t}`;
               return;
             }
           }
         }
       }
-      box.classList.remove('left');
-      box.style.top = `calc(env(safe-area-inset-top, 0px) + ${GROWTH_FX_CHIP_TOPS[1]}px)`;
-      box.dataset.growthFxChipsTop = 'mini-busy';
+      let best = null;
+      for (const [row, one] of [[false, false], [true, false], ...(more ? [[false, true]] : [])]) for (const left of [false, true]) {
+        box.classList.toggle('row', row);
+        box.classList.toggle('one', one);
+        box.classList.toggle('left', left);
+        for (const t of tops) {
+          box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`;
+          const sc = growthFxChipSpotScore(box);
+          if (!best || sc < best.sc) best = {
+            sc,
+            left,
+            t,
+            row,
+            one
+          };
+        }
+      }
+      box.classList.toggle('row', !!(best && best.row));
+      box.classList.toggle('one', !!(best && best.one));
+      box.classList.toggle('left', !!(best && best.left));
+      box.style.top = `calc(env(safe-area-inset-top, 0px) + ${best ? best.t : GROWTH_FX_CHIP_TOPS[1]}px)`;
+      box.dataset.growthFxChipsTop = `mini-busy${best ? `-${best.left ? 'left-' : ''}${best.t}` : ''}`;
     };
     place();
+    let tm = null;
+    const mo = typeof MutationObserver === 'function' ? new MutationObserver(list => {
+      if (list.every(m => ref.current && ref.current.contains(m.target))) return;
+      if (tm) return;
+      tm = setTimeout(() => {
+        tm = null;
+        place();
+      }, 50);
+    }) : null;
+    if (mo && document.body) mo.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+    const onAnimEnd = e => {
+      if (ref.current && ref.current.contains(e.target)) return;
+      if (tm) return;
+      tm = setTimeout(() => {
+        tm = null;
+        place();
+      }, 50);
+    };
+    document.addEventListener('animationend', onAnimEnd, true);
+    document.addEventListener('transitionend', onAnimEnd, true);
     const t1 = setTimeout(place, 500),
-      t2 = setTimeout(place, 1500);
+      t2 = setTimeout(place, 1500),
+      iv = setInterval(place, 700);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
+      clearInterval(iv);
+      if (tm) clearTimeout(tm);
+      if (mo) mo.disconnect();
+      document.removeEventListener('animationend', onAnimEnd, true);
+      document.removeEventListener('transitionend', onAnimEnd, true);
     };
   }, [count]);
   return React.createElement("div", {
@@ -91239,8 +91360,18 @@ const RHYTHM_BEAT_PRESENCE_KIND = Object.freeze({
   busy: {
     tag: '🎮 部屋で遊び中',
     color: '#a78bfa'
+  },
+  private: {
+    tag: '🔑 プライベート中',
+    color: '#fbbf24'
   }
 });
+const rhythmBeatFriendFramed = (f, resolve) => !!(f && typeof ProfileAvatar === 'function' && typeof resolve === 'function');
+const rhythmBeatFriendFrameId = f => f && f.profileFrame && f.profileFrame !== 'none' ? f.profileFrame : null;
+const rhythmBeatFriendFace = f => React.createElement("span", {
+  className: "grid h-full w-full place-items-center rounded-full bg-slate-800 text-xs",
+  "aria-hidden": "true"
+}, "🙂");
 function RhythmBeatPresenceStrip({
   assistants = [],
   friends = [],
@@ -91317,7 +91448,20 @@ function RhythmBeatPresenceStrip({
         id: f.otherId
       }),
       className: "flex w-[58px] shrink-0 flex-col items-center rounded-xl bg-sky-500/10 pt-1 text-center active:scale-95"
-    }, face(f.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(f.icon) : '', k.color, '🙂', 'friend'), React.createElement("b", {
+    }, rhythmBeatFriendFramed(f, resolveIconUrl) ? React.createElement("span", {
+      "data-rhythm-beat-presence-face": "friend",
+      "data-rhythm-beat-presence-framed": rhythmBeatFriendFrameId(f) || undefined,
+      className: "block h-11 w-11 shrink-0"
+    }, React.createElement(ProfileAvatar, {
+      src: f.icon ? resolveIconUrl(f.icon) : '',
+      id: f.icon,
+      frameId: rhythmBeatFriendFrameId(f),
+      small: true,
+      fit: true,
+      alt: "",
+      className: "h-11 w-11",
+      fallback: rhythmBeatFriendFace(f)
+    })) : face(f.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(f.icon) : '', k.color, '🙂', 'friend'), React.createElement("b", {
       "data-rhythm-beat-presence-mark": "friend",
       className: "mt-0.5 block whitespace-nowrap rounded bg-sky-300 px-1 text-[8px] font-black leading-tight text-slate-950"
     }, "フレンド"), React.createElement("b", {
@@ -91330,52 +91474,121 @@ function RhythmBeatPresenceStrip({
     }, k.tag));
   }))));
 }
-function RhythmBeatPresenceButton({
+function RhythmBeatVisitorFaces({
   assistants = [],
   friends = [],
-  onOpen,
-  resolveIconUrl
+  max = 3,
+  size = 26,
+  where = '',
+  names = false,
+  onPick,
+  onMore,
+  resolveIconUrl,
+  className = ''
 }) {
-  const faces = [...assistants.map(a => ({
-    key: `a-${a.id}`,
+  const items = [...assistants.map(a => ({
+    kind: 'assistant',
+    id: a.id,
+    name: a.name,
     src: rhythmBeatAssistantFace(a.id),
-    color: '#f472b6',
-    round: 'rounded-full'
+    color: '#f472b6'
   })), ...friends.map(f => ({
-    key: `f-${f.otherId}`,
+    kind: 'friend',
+    id: f.otherId,
+    name: f.userName,
+    f,
     src: f.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(f.icon) : '',
-    color: (RHYTHM_BEAT_PRESENCE_KIND[f.kind] || RHYTHM_BEAT_PRESENCE_KIND.here).color,
-    round: 'rounded-md'
+    color: (RHYTHM_BEAT_PRESENCE_KIND[f.kind] || RHYTHM_BEAT_PRESENCE_KIND.here).color
   }))];
-  return React.createElement("button", {
-    type: "button",
-    "data-rhythm-beat-presence-open": true,
-    "aria-label": `いまモンヒロビートにいる人(${faces.length}人)を見る`,
-    onClick: onOpen,
-    className: "flex min-h-[44px] shrink-0 items-center gap-1 rounded-xl border border-amber-300/60 bg-indigo-950/80 px-1.5 active:scale-95"
-  }, React.createElement("span", {
-    className: "flex items-center pl-1.5",
-    "aria-hidden": "true"
-  }, faces.slice(0, 3).map((f, i) => React.createElement("span", {
-    key: f.key,
-    className: `-ml-1.5 block h-7 w-7 overflow-hidden border-2 bg-slate-900 ${f.round} ${i >= 2 ? 'max-[359px]:hidden' : ''}`,
-    style: {
-      borderColor: f.color
+  if (!items.length) return null;
+  const shown = items.slice(0, max);
+  const rest = items.length - shown.length;
+  const tap = fn => e => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (typeof Audio_ !== 'undefined' && Audio_.fgSe) Audio_.fgSe.tap();
+    fn();
+  };
+  const key = fn => e => {
+    if (e.key === 'Enter' || e.key === ' ') tap(fn)(e);
+  };
+  const px = `${size}px`;
+  return React.createElement("span", {
+    "data-rhythm-beat-visitors": where,
+    className: `flex items-center ${className}`,
+    onClick: e => e.stopPropagation()
+  }, shown.map(it => React.createElement("span", {
+    key: `${it.kind}-${it.id}`,
+    role: "button",
+    tabIndex: 0,
+    "aria-label": `${it.kind === 'assistant' ? '助手' : 'フレンド'} ${it.name}`,
+    "data-rhythm-beat-visitor": it.kind,
+    "data-rhythm-beat-visitor-id": it.id,
+    "data-rhythm-beat-visitor-kind": it.kind === 'friend' ? it.f.kind : 'practice',
+    onClick: tap(() => onPick({
+      kind: it.kind,
+      id: it.id
+    })),
+    onKeyDown: key(() => onPick({
+      kind: it.kind,
+      id: it.id
+    })),
+    className: `relative shrink-0 cursor-pointer active:scale-90 ${names ? 'flex flex-col items-center' : 'block'}`,
+    style: names ? {
+      width: `${size + 18}px`
+    } : {
+      width: px,
+      height: px
     }
-  }, f.src ? React.createElement("img", {
-    src: f.src,
+  }, React.createElement("span", {
+    className: "relative block shrink-0",
+    style: {
+      width: px,
+      height: px
+    }
+  }, it.kind === 'friend' && rhythmBeatFriendFramed(it.f, resolveIconUrl) ? React.createElement("span", {
+    "data-rhythm-beat-presence-face": "friend",
+    "data-rhythm-beat-presence-framed": rhythmBeatFriendFrameId(it.f) || undefined,
+    className: "block h-full w-full"
+  }, React.createElement(ProfileAvatar, {
+    src: it.src,
+    id: it.f.icon,
+    frameId: rhythmBeatFriendFrameId(it.f),
+    small: true,
+    fit: true,
+    alt: "",
+    className: "h-full w-full",
+    fallback: rhythmBeatFriendFace(it.f)
+  })) : React.createElement("span", {
+    "data-rhythm-beat-presence-face": it.kind,
+    className: `block h-full w-full overflow-hidden border-2 bg-slate-900 shadow ${it.kind === 'assistant' ? 'rounded-full' : 'rounded-md'}`,
+    style: {
+      borderColor: it.color
+    }
+  }, it.src ? React.createElement("img", {
+    src: it.src,
     alt: "",
     draggable: false,
     className: "h-full w-full object-cover"
   }) : React.createElement("span", {
-    className: "grid h-full w-full place-items-center text-xs"
-  }, "🙂")))), React.createElement("span", {
-    className: "flex flex-col items-center leading-none"
-  }, React.createElement("small", {
-    className: "block whitespace-nowrap text-[8.5px] font-black text-amber-200"
-  }, "いる人"), React.createElement("b", {
-    className: "block whitespace-nowrap text-[13px] font-black text-white"
-  }, faces.length)));
+    className: "grid h-full w-full place-items-center text-xs",
+    "aria-hidden": "true"
+  }, "🙂"))), names && React.createElement("b", {
+    "data-rhythm-beat-visitor-name": true,
+    className: "block w-full truncate text-center text-[8px] font-black leading-[9px] text-slate-950"
+  }, it.name))), rest > 0 && React.createElement("span", {
+    role: "button",
+    tabIndex: 0,
+    "data-rhythm-beat-visitors-more": where,
+    "aria-label": `ほか${rest}人を見る`,
+    onClick: tap(onMore),
+    onKeyDown: key(onMore),
+    className: "grid shrink-0 cursor-pointer place-items-center rounded-full border-2 border-white/70 bg-slate-900/90 text-[10px] font-black text-white active:scale-90",
+    style: {
+      width: px,
+      height: px
+    }
+  }, "+", rest));
 }
 function RhythmBeatPresenceList({
   open,
@@ -91423,9 +91636,9 @@ function RhythmBeatPresenceSheet({
   const name = isAssistant ? who && who.name || '助手' : friend && friend.userName || 'フレンド';
   const k = !isAssistant && friend ? RHYTHM_BEAT_PRESENCE_KIND[friend.kind] || RHYTHM_BEAT_PRESENCE_KIND.here : null;
   const src = isAssistant ? rhythmBeatAssistantFace(pick.id) : friend && friend.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(friend.icon) : '';
-  const title = isAssistant ? `${name} は いま練習中` : friend && friend.kind === 'room' ? `${name} さんが部屋を開いています` : friend && friend.kind === 'busy' ? `${name} さんは部屋で遊び中` : `${name} さんが いまモンヒロビートにいます`;
+  const title = isAssistant ? `${name} は いま練習中` : friend && friend.kind === 'room' ? `${name} さんが部屋を開いています` : friend && friend.kind === 'busy' ? `${name} さんは部屋で遊び中` : friend && friend.kind === 'private' ? `${name} さんは合言葉の部屋にいます` : `${name} さんが いまモンヒロビートにいます`;
   const sub = isAssistant ? 'モンヒロビートにいるあいだは券なし' : friend && friend.kind === 'room' && friend.room ? `フリーマッチ ${friend.room.n}/${RHYTHM_MULTI_ROOM_MAX}人${friend.room.ph === 'select' ? '・曲えらび中' : '・待合い'}` : k ? k.tag : '';
-  const line = isAssistant ? 'フリーマッチかプライベートの部屋で「呼ぶ」と、セッション券なしで一緒に演奏できます(何曲でも)。ソロライブには来られません。' : friend && friend.kind === 'room' ? '「入る」で、その部屋へ入れます。' : friend && friend.kind === 'busy' ? '合言葉の部屋か、演奏中の部屋にいるので、いまは入れません。部屋に誘ってもらうか、終わってから誘ってみましょう。' : '部屋を作って 💌 で誘うと、一緒に遊べます。';
+  const line = isAssistant ? 'フリーマッチかプライベートの部屋で「呼ぶ」と、セッション券なしで一緒に演奏できます(何曲でも)。ソロライブには来られません。' : friend && friend.kind === 'room' ? '「入る」で、その部屋へ入れます。' : friend && friend.kind === 'busy' ? '合言葉の部屋か、演奏中の部屋にいるので、いまは入れません。部屋に誘ってもらうか、終わってから誘ってみましょう。' : friend && friend.kind === 'private' ? '合言葉(プライベート)の部屋にいるので、いまは入れません。合言葉を教えてもらうか、終わってから誘ってみましょう。' : '部屋を作って 💌 で誘うと、一緒に遊べます。';
   const action = isAssistant ? {
     label: '部屋を作って呼ぶ',
     go: () => onCallAssistant(pick.id)
@@ -91452,7 +91665,18 @@ function RhythmBeatPresenceSheet({
     }
   }, React.createElement("div", {
     className: "flex items-center gap-2.5"
-  }, React.createElement("span", {
+  }, !isAssistant && rhythmBeatFriendFramed(friend, resolveIconUrl) ? React.createElement("span", {
+    "data-rhythm-beat-presence-sheet-framed": rhythmBeatFriendFrameId(friend) || 'none',
+    className: "block h-[52px] w-[52px] shrink-0"
+  }, React.createElement(ProfileAvatar, {
+    src: src,
+    id: friend.icon,
+    frameId: rhythmBeatFriendFrameId(friend),
+    fit: true,
+    alt: "",
+    className: "h-[52px] w-[52px]",
+    fallback: rhythmBeatFriendFace(friend)
+  })) : React.createElement("span", {
     className: "block h-[52px] w-[52px] shrink-0 overflow-hidden rounded-full border-2 bg-slate-950",
     style: {
       borderColor: accent
@@ -91693,6 +91917,11 @@ function RhythmMultiAwayBar({
       roomWaitingSetRef.current = false;
     }
   }, [roomWaiting]);
+  const inPrivate = !!view && view.mode === 'private';
+  React.useEffect(() => {
+    if (typeof friendsSetRoomPrivate !== 'function') return;
+    friendsSetRoomPrivate(inPrivate);
+  }, [inPrivate]);
   React.useEffect(() => {
     if (!shown) {
       seenRef.current = null;
@@ -92453,7 +92682,8 @@ function ModeSelectAssistantPanel({
   assistant,
   showArt,
   showComment,
-  onToggle
+  onToggle,
+  artCorner = null
 }) {
   const [artRatio, setArtRatio] = React.useState(null);
   const artSrc = assistant && assistant.image;
@@ -92482,7 +92712,7 @@ function ModeSelectAssistantPanel({
     onToggle: onToggle,
     cls: "mhms-art-toggles absolute bottom-1.5 right-1.5 z-20",
     withLabel: false
-  }), React.createElement("div", {
+  }), artCorner, React.createElement("div", {
     className: "mhms-float pointer-events-none absolute inset-0"
   }, RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id] ? (() => {
     const fr = RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id];
@@ -93199,7 +93429,8 @@ function RhythmMultiScreen({
     const order = {
       room: 0,
       here: 1,
-      busy: 2
+      busy: 2,
+      private: 3
     };
     return (roster || []).map(f => {
       const room = by[f.otherId];
@@ -93217,6 +93448,10 @@ function RhythmMultiScreen({
       if (p.place === 'multi' || p.place === 'rhythmPlay') return {
         ...f,
         kind: 'busy'
+      };
+      if (p.place === 'roomPrivate') return {
+        ...f,
+        kind: 'private'
       };
       return null;
     }).filter(Boolean).map((f, i) => [f, i]).sort(([a, ia], [b, ib]) => order[a.kind] - order[b.kind] || ia - ib).map(([f]) => f);
@@ -93665,7 +93900,7 @@ function RhythmMultiScreen({
     }, "⏹", React.createElement("br", null), "終了") : '←'), React.createElement("div", {
       className: "min-w-0 flex-1 leading-none"
     }, React.createElement("small", {
-      className: "block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300"
+      className: "block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300 max-[359px]:tracking-normal"
     }, "MONBEAT ・ SELECT MODE"), React.createElement("b", {
       className: "mhms-title block truncate text-lg font-black leading-tight tracking-wider"
     }, "モードえらび"), (ms.beatPointText || Number.isFinite(ms.beatRankXp)) && React.createElement("div", {
@@ -93694,15 +93929,7 @@ function RhythmMultiScreen({
       kind: "beat",
       xp: ms.beatRankXp,
       size: "xs"
-    })))), ms.multi && (beatAssistants.length > 0 || beatFriends.length > 0) && React.createElement(RhythmBeatPresenceButton, {
-      assistants: beatAssistants,
-      friends: beatFriends,
-      resolveIconUrl: resolveIconUrl,
-      onOpen: () => {
-        Audio_.fgSe.tap();
-        setBeatListOpen(true);
-      }
-    }), quickRunInfo && React.createElement(RhythmQuickRunPill, {
+    })))), quickRunInfo && React.createElement(RhythmQuickRunPill, {
       info: quickRunInfo,
       onRestart: onRestartQuickRun,
       onResume: onResumeQuickRun,
@@ -93724,7 +93951,21 @@ function RhythmMultiScreen({
       assistant: ms.assistant,
       showArt: ms.showArt,
       showComment: ms.showComment,
-      onToggle: ms.onToggleAssistant
+      onToggle: ms.onToggleAssistant,
+      artCorner: ms.multi && beatAssistants.length > 0 && ms.assistant && ms.showArt ? React.createElement("span", {
+        "data-rhythm-beat-art-corner": true,
+        className: "absolute left-1.5 top-1.5 z-20 flex flex-col items-start gap-0.5"
+      }, React.createElement("small", {
+        className: "rounded-full bg-pink-500/90 px-1.5 text-[9px] font-black leading-[14px] text-white shadow"
+      }, "🎤 練習中"), React.createElement(RhythmBeatVisitorFaces, {
+        where: "art",
+        assistants: beatAssistants,
+        max: 3,
+        size: 32,
+        className: "flex-col gap-1",
+        onPick: setBeatPick,
+        onMore: () => setBeatListOpen(true)
+      })) : null
     }), React.createElement("div", {
       className: "shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2"
     }, !(ms.assistant && (ms.showArt || ms.showComment)) && assistToggles('justify-end', true), friendsOn && friendInvites.length > 0 && React.createElement("section", {
@@ -93779,7 +94020,18 @@ function RhythmMultiScreen({
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "mhms-mark"
-    }, "FREE MATCH"), React.createElement("span", {
+    }, "FREE MATCH"), React.createElement(RhythmBeatVisitorFaces, {
+      where: "free",
+      assistants: ms.assistant && ms.showArt ? [] : beatAssistants,
+      friends: beatFriends,
+      max: 2,
+      size: 20,
+      names: true,
+      className: "absolute right-1 top-0.5 z-10 items-start landscape:hidden",
+      onPick: setBeatPick,
+      onMore: () => setBeatListOpen(true),
+      resolveIconUrl: resolveIconUrl
+    }), React.createElement("span", {
       "aria-hidden": "true",
       className: "mhms-ico relative text-3xl leading-none max-[359px]:text-2xl"
     }, "🎮"), React.createElement("span", {
@@ -93788,7 +94040,18 @@ function RhythmMultiScreen({
       className: "block text-[18px] font-black italic leading-tight"
     }, "フリーマッチ"), React.createElement("small", {
       className: "block text-[10px] font-black leading-tight text-slate-900/80"
-    }, "だれとでも最大", RHYTHM_MULTI_ROOM_MAX, "人で協力"), React.createElement(RhythmMultiLobbyCount, null))), ms.multi && React.createElement("button", {
+    }, "だれとでも最大", RHYTHM_MULTI_ROOM_MAX, "人で協力"), React.createElement(RhythmMultiLobbyCount, null), React.createElement(RhythmBeatVisitorFaces, {
+      where: "free-row",
+      assistants: ms.assistant && ms.showArt ? [] : beatAssistants,
+      friends: beatFriends,
+      max: 3,
+      size: 22,
+      names: true,
+      className: "relative z-10 mt-0.5 hidden items-start landscape:flex",
+      onPick: setBeatPick,
+      onMore: () => setBeatListOpen(true),
+      resolveIconUrl: resolveIconUrl
+    }))), ms.multi && React.createElement("button", {
       "data-rhythm-mode-private": true,
       "data-rhythm-mode-private-open": true,
       type: "button",
@@ -105377,17 +105640,19 @@ const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({
   studio: 'モンヒロビート',
   cardroom: 'MFバトルカード',
   ranch: 'M/B管理',
-  temple: '神殿'
+  temple: '神殿',
+  home: 'みんなの家'
 });
 const assistantLifePlaceShow = place => ASSISTANT_LIFE_PLACE_SHOW[place] || ASSISTANT_LIFE_PLACES[place] || '';
-const assistantLifeFacilityOf = entry => {
-  if (!entry) return 'life';
-  if (entry.doing === 'practice') return 'rhythm';
-  if (entry.doing === 'cards' && entry.place === 'cardroom') return 'card';
-  if (entry.doing === 'training') return 'management';
-  if (entry.place === 'market') return 'market';
-  return 'life';
-};
+const ASSISTANT_LIFE_SPOT_FAC = Object.freeze({
+  studio: 'rhythm',
+  cardroom: 'card',
+  ranch: 'management',
+  market: 'market',
+  temple: 'temple',
+  home: 'life'
+});
+const assistantLifeFacilityOf = entry => entry && ASSISTANT_LIFE_SPOT_FAC[entry.place] || 'life';
 const ASSISTANT_LIFE_TOD_LOOK = Object.freeze({
   morning: 'morning',
   day: 'noon',
@@ -106505,7 +106770,7 @@ const assistantLifeTodLabel = (now = Date.now()) => {
 const assistantLifeDiaryOnSlot = (life, slot, now = Date.now()) => {
   const gs = (life.groups || []).slice(0, 3);
   if (!gs.length) return;
-  const text = gs.map(g => `${g.ids.map(assistantLifeName).join('・')} ${ASSISTANT_LIFE_PLACES[g.place]}で${ASSISTANT_LIFE_DOINGS[g.doing].label}`).join(' / ');
+  const text = gs.map(g => `${g.ids.map(assistantLifeName).join('・')} ${assistantLifePlaceShow(g.place)}で${ASSISTANT_LIFE_DOINGS[g.doing].label}`).join(' / ');
   void assistantLifeDiaryAdd(`${assistantLifeTodLabel(now)}: ${text}`, gs.flatMap(g => g.ids), {
     kind: 'slot',
     now,
@@ -106544,7 +106809,7 @@ const assistantLifeOnWoken = ev => {
 const assistantLifeOnCardMatch = ev => {
   if (!ev || !ev.assistantId || !ASSISTANT_LIFE_PREFS[ev.assistantId]) return;
   assistantLifeRhythmPlay(ev.assistantId, ev.at || Date.now());
-  void assistantLifeDiaryAdd(`${assistantLifeName(ev.assistantId)}とカード部屋で対戦して${ev.won ? '勝った' : '負けた'}`, [ev.assistantId], {
+  void assistantLifeDiaryAdd(`${assistantLifeName(ev.assistantId)}とMFバトルカードで対戦して${ev.won ? '勝った' : '負けた'}`, [ev.assistantId], {
     kind: 'card',
     now: ev.at || Date.now()
   });
@@ -106597,6 +106862,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-hdr{position:relative;z-index:5;padding:8px 12px 6px;background:linear-gradient(180deg,#140b2ef2,#140b2ecc 75%,#140b2e00)}
 .mhl-en{font-size:9px;letter-spacing:.18em;font-weight:900;color:#f9a8d4}
 .mhl-ti{font-size:22px;font-weight:900;line-height:1.05;background:linear-gradient(90deg,#fff,#fbcfe8 60%,#fde68a);-webkit-background-clip:text;background-clip:text;color:transparent}
+.mhl-quick{display:flex;align-items:center;gap:5px;border-radius:999px;padding:3px 4px 3px 9px;border:1px solid #fbbf2488;background:rgba(15,23,42,.78);font-size:10.5px;font-weight:900;color:#fde68a}.mhl-quick b{color:#fff}.mhl-quick button{min-height:26px;border-radius:999px;padding:0 9px;background:#334155;color:#e2e8f0;font-size:10.5px;font-weight:900;border:1px solid #64748b}.mhl-quick.is-start{padding:3px 10px;min-height:30px;background:linear-gradient(90deg,#f59e0b,#ea580c);color:#fff;border-color:#fde68a}
 .mhl-clock{border-radius:12px;padding:3px 8px;border:1px solid #ffffff33;background:rgba(15,23,42,.72);text-align:right}
 .mhl-chip{display:inline-flex;align-items:center;gap:3px;background:linear-gradient(90deg,#be185d,#f59e0b);padding:1px 8px;border-radius:999px;font-size:10px;font-weight:900;white-space:nowrap}
 .mhl-bar{flex:1;height:7px;border-radius:9px;background:#ffffff1f;overflow:hidden}.mhl-bar>i{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fbbf24)}
@@ -107634,20 +107900,85 @@ function AssistantLifeScene({
     onClick: onClose
   }, "🏡 家へ戻る")));
 }
-const useAssistantLifeLand = () => {
-  const get = () => typeof window !== 'undefined' && window.innerWidth > window.innerHeight && window.innerHeight < 600;
-  const [land, setLand] = React.useState(get);
+const assistantLifeViewSize = () => {
+  if (typeof window === 'undefined') return {
+    w: 390,
+    h: 844,
+    rot: false
+  };
+  const rot = typeof RHYTHM_VIEW_ROTATION === 'object' && !!RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.active === 'function' && RHYTHM_VIEW_ROTATION.active();
+  return rot ? {
+    w: window.innerHeight,
+    h: window.innerWidth,
+    rot: true
+  } : {
+    w: window.innerWidth,
+    h: window.innerHeight,
+    rot: false
+  };
+};
+const useAssistantLifeViewSize = () => {
+  const [size, setSize] = React.useState(assistantLifeViewSize);
   React.useEffect(() => {
-    const f = () => setLand(get());
+    const f = () => setSize(prev => {
+      const n = assistantLifeViewSize();
+      return n.w === prev.w && n.h === prev.h && n.rot === prev.rot ? prev : n;
+    });
     window.addEventListener('resize', f);
     window.addEventListener('orientationchange', f);
+    const id = setInterval(f, 500);
     return () => {
       window.removeEventListener('resize', f);
       window.removeEventListener('orientationchange', f);
+      clearInterval(id);
     };
   }, []);
-  return land;
+  return size;
 };
+const useAssistantLifeLand = () => {
+  const v = useAssistantLifeViewSize();
+  return v.w > v.h && v.h < 600;
+};
+function AssistantLifeQuickChip({
+  quickRun,
+  onStop,
+  onStart,
+  land
+}) {
+  if (!quickRun || typeof quickRun !== 'object') return null;
+  const loops = Number.isFinite(Number(quickRun.loops)) ? Math.max(1, Math.floor(Number(quickRun.loops))) : 1;
+  if (quickRun.live) {
+    return React.createElement("div", {
+      className: "mhl-quick shrink-0 self-center",
+      "data-assistant-life-quick": "live",
+      "data-assistant-life-quick-run": "live",
+      "data-assistant-life-quick-loop": loops
+    }, React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "⚡ 裏クイック ", React.createElement("b", null, loops, "周目")), onStop && React.createElement("button", {
+      type: "button",
+      "data-assistant-life-quick-stop": true,
+      onClick: onStop,
+      "aria-label": "裏クイックを止める"
+    }, "止める"));
+  }
+  if (quickRun.canStart && onStart) {
+    return React.createElement("div", {
+      className: "shrink-0 self-center",
+      "data-assistant-life-quick": "start",
+      "data-assistant-life-quick-run": "stopped"
+    }, React.createElement("button", {
+      type: "button",
+      className: "mhl-quick is-start",
+      "data-assistant-life-quick-start": true,
+      onClick: onStart,
+      "aria-label": "裏クイックを始める"
+    }, React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "▶ 裏クイック")));
+  }
+  return null;
+}
 function AssistantLifeHouse({
   metIds,
   onReplay,
@@ -107656,7 +107987,11 @@ function AssistantLifeHouse({
   bondLevelOf = null,
   furnItems = null,
   onGiveFurn = null,
-  onGiveSolo = null
+  onGiveSolo = null,
+  quickRun = null,
+  onQuickRunStop = null,
+  onQuickRunStart = null,
+  quickRunStrip = null
 }) {
   const st = useAssistantLifeNow(metIds);
   const diary = useAssistantLifeDiary();
@@ -107673,12 +108008,7 @@ function AssistantLifeHouse({
   const [masmonId, setMasmonId] = React.useState(null);
   const [intro, setIntro] = React.useState(null);
   const [boardOpen, setBoardOpen] = React.useState(false);
-  const [vw, setVw] = React.useState(() => typeof window !== 'undefined' ? window.innerWidth : 390);
-  React.useEffect(() => {
-    const f = () => setVw(window.innerWidth);
-    window.addEventListener('resize', f);
-    return () => window.removeEventListener('resize', f);
-  }, []);
+  const vw = useAssistantLifeViewSize().w;
   React.useEffect(() => {
     let alive = true;
     (async () => {
@@ -108087,6 +108417,11 @@ function AssistantLifeHouse({
     } : undefined
   }, "助手ライフ")), React.createElement("div", {
     className: "min-w-0 flex-1"
+  }), !quickRunStrip && React.createElement(AssistantLifeQuickChip, {
+    quickRun: quickRun,
+    onStop: onQuickRunStop,
+    onStart: onQuickRunStart,
+    land: land
   }), typeof TimeOfDayClock === 'function' && React.createElement("div", {
     className: "ml-auto shrink-0 self-center",
     "data-assistant-life-clock-box": true
@@ -108138,24 +108473,7 @@ function AssistantLifeHouse({
     life: life,
     peerSt: peerSt
   }));
-  const tabBody = tab === 'house' ? houseView : tab === 'where' ? React.createElement("div", {
-    className: "px-3 pb-3",
-    "data-assistant-life-where": true
-  }, React.createElement(AssistantLifeTownMap, {
-    life: life,
-    ids: ids,
-    look: look,
-    onPick: id => {
-      setTab('house');
-      setRoomId(id);
-    }
-  }), React.createElement(AssistantLifeScreenBody, {
-    metIds: metIds,
-    onReplay: playTalk,
-    peerItems: peerItems,
-    onUseItem: onUseItem,
-    embedded: true
-  })) : tab === 'visit' && typeof AssistantLifeFriendPage === 'function' ? React.createElement(AssistantLifeFriendPage, {
+  const tabBody = tab === 'house' ? houseView : tab === 'where' ? null : tab === 'visit' && typeof AssistantLifeFriendPage === 'function' ? React.createElement(AssistantLifeFriendPage, {
     life: life
   }) : tab === 'friends' ? React.createElement("div", {
     className: "px-3 pb-3 pt-1"
@@ -108269,7 +108587,7 @@ function AssistantLifeHouse({
   }, React.createElement(AssistantLifeHouseStyle, null), typeof AssistantLifeRelStyle === 'function' && React.createElement(AssistantLifeRelStyle, null), React.createElement("div", {
     className: "mhl-page",
     style: {
-      maxWidth: land ? 'none' : 480
+      maxWidth: land || tab === 'where' ? 'none' : 480
     }
   }, React.createElement("div", {
     className: `mhl-sky t-${look}`
@@ -108278,7 +108596,35 @@ function AssistantLifeHouse({
     style: {
       backgroundImage: `url(${ASSISTANT_LIFE_VIEW[look][1]})`
     }
-  }), land ? React.createElement("div", {
+  }), tab === 'where' ? React.createElement(AssistantLifeTownMap, {
+    life: life,
+    ids: ids,
+    land: land,
+    onBack: () => setTab('house'),
+    onPick: id => {
+      setTab('house');
+      setRoomId(id);
+    },
+    onBeat: beat,
+    onCard: card,
+    list: React.createElement(React.Fragment, null, header, note && React.createElement("p", {
+      "data-assistant-life-note": true,
+      className: "mx-3 mb-1 rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 text-[11px] font-bold text-sky-100"
+    }, note), React.createElement("div", {
+      className: "px-3 pb-2"
+    }, React.createElement(AssistantLifeScreenBody, {
+      metIds: metIds,
+      onReplay: playTalk,
+      peerItems: peerItems,
+      onUseItem: onUseItem,
+      embedded: true
+    })), React.createElement("div", {
+      className: "px-3",
+      style: {
+        paddingBottom: 'calc(10px + env(safe-area-inset-bottom))'
+      }
+    }, icons))
+  }) : land ? React.createElement("div", {
     className: "relative z-[2] flex h-full min-h-0",
     style: {
       paddingLeft: 'env(safe-area-inset-left)',
@@ -108291,10 +108637,16 @@ function AssistantLifeHouse({
     }
   }, tabBody), React.createElement("div", {
     className: "flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2"
-  }, header, note && React.createElement("p", {
+  }, header, quickRunStrip && React.createElement("div", {
+    className: "shrink-0",
+    "data-assistant-life-quick-strip": true
+  }, quickRunStrip), note && React.createElement("p", {
     "data-assistant-life-note": true,
     className: "rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1 text-[10.5px] font-bold text-sky-100"
-  }, note), tiles, icons)) : React.createElement(React.Fragment, null, header, React.createElement("div", {
+  }, note), tiles, icons)) : React.createElement(React.Fragment, null, header, quickRunStrip && React.createElement("div", {
+    className: "relative z-[3] shrink-0",
+    "data-assistant-life-quick-strip": true
+  }, quickRunStrip), React.createElement("div", {
     className: "mhl-body"
   }, note && React.createElement("p", {
     "data-assistant-life-note": true,
@@ -108452,142 +108804,32 @@ function AssistantLifeHouse({
     onGive: doGive
   }));
 }
-const ASSISTANT_LIFE_MAP_CROP = Object.freeze({
-  y0: 120,
-  h: 1440
-});
-const ASSISTANT_LIFE_MAP_POS = Object.freeze({
-  ranch: [23.4, 30.6],
-  library: [69.1, 22.9],
-  cafe: [87.0, 29.5],
-  temple: [66.0, 35.5],
-  garden: [87.0, 46.5],
-  plaza: [51.0, 48.6],
-  studio: [16.5, 64.0],
-  market: [85.0, 64.6],
-  home: [9.6, 78.5],
-  cardroom: [49.9, 91.7],
-  hill: [80.8, 5.6]
-});
-const ASSISTANT_LIFE_MAP_BUILDING = Object.freeze({
-  studio: [2, 45, 36, 70],
-  temple: [55, 24, 80, 40],
-  ranch: [3, 6, 42, 35],
-  market: [68, 48, 100, 70],
-  cardroom: [18, 72, 82, 100]
-});
-function AssistantLifeTownMap({
-  life,
-  ids,
-  look,
-  onPick
+function AssistantLifeSpentMark({
+  size = 20
 }) {
-  const at = {};
-  for (const id of ids) {
-    const w = assistantLifeWhereOf(life, id);
-    const p = w ? w.place : 'home';
-    (at[p] = at[p] || []).push(id);
-  }
-  const mapRef = useRef(null);
-  React.useLayoutEffect(() => {
-    const fit = () => {
-      const m = mapRef.current;
-      if (!m) return;
-      const mr = m.getBoundingClientRect();
-      for (const el of m.querySelectorAll('[data-assistant-life-map-place]')) {
-        el.style.translate = '';
-        const r = el.getBoundingClientRect();
-        const dx = r.left < mr.left + 3 ? mr.left + 3 - r.left : r.right > mr.right - 3 ? mr.right - 3 - r.right : 0;
-        const dy = r.top < mr.top + 3 ? mr.top + 3 - r.top : r.bottom > mr.bottom - 3 ? mr.bottom - 3 - r.bottom : 0;
-        if (dx || dy) el.style.translate = `${dx}px ${dy}px`;
-      }
-      const els = [...m.querySelectorAll('[data-assistant-life-map-place]')];
-      const hit = (r, q) => Math.min(r.right, q.right) - Math.max(r.left, q.left) > 1 && Math.min(r.bottom, q.bottom) - Math.max(r.top, q.top) > 1;
-      const tr = el => (el.style.translate || '0px 0px').split(' ').map(v => parseFloat(v) || 0).concat([0]).slice(0, 2);
-      for (const a of els) {
-        if (!a.querySelector('button')) continue;
-        for (const b of els) {
-          if (a === b || b.querySelector('button')) continue;
-          const ra = a.getBoundingClientRect(),
-            rb = b.getBoundingClientRect();
-          if (!hit(ra, rb)) continue;
-          const [x0, y0] = tr(b);
-          const cands = [[0, ra.top - rb.bottom - 2], [0, ra.bottom - rb.top + 2], [ra.left - rb.right - 2, 0], [ra.right - rb.left + 2, 0]].sort((p, q) => Math.abs(p[0]) + Math.abs(p[1]) - Math.abs(q[0]) - Math.abs(q[1]));
-          const free = cands.find(([dx, dy]) => {
-            const q = {
-              left: rb.left + dx,
-              right: rb.right + dx,
-              top: rb.top + dy,
-              bottom: rb.bottom + dy
-            };
-            if (q.left < mr.left + 3 || q.right > mr.right - 3 || q.top < mr.top + 3 || q.bottom > mr.bottom - 3) return false;
-            return els.every(o => o === b || !hit(q, o.getBoundingClientRect()));
-          }) || cands[0];
-          b.style.translate = `${x0 + free[0]}px ${y0 + free[1]}px`;
-        }
-      }
-    };
-    fit();
-    window.addEventListener('resize', fit);
-    return () => window.removeEventListener('resize', fit);
-  });
-  const tod = assistantLifeTodOn() && typeof TimeOfDayTint === 'function';
-  const filter = {
-    morning: 'saturate(.85) brightness(1.05) sepia(.18)',
-    noon: 'none',
-    evening: 'saturate(1.1) brightness(.85) sepia(.35) hue-rotate(-12deg)',
-    night: 'brightness(.45) saturate(.7)'
-  }[look];
-  return React.createElement("div", {
-    className: "relative mb-2 overflow-hidden rounded-2xl border border-white/15",
-    ref: mapRef,
+  const d = Math.max(10, Math.round(size * 0.6));
+  return React.createElement("span", {
+    "aria-hidden": "true",
+    "data-assistant-life-spent-mark": true,
+    className: "pointer-events-none absolute z-[1] grid place-items-center rounded-full bg-slate-100 font-black text-slate-900 shadow",
     style: {
-      aspectRatio: `941 / ${ASSISTANT_LIFE_MAP_CROP.h}`
-    },
-    "data-assistant-life-map": true
-  }, React.createElement("img", {
-    src: "data/images/home-background.jpg",
-    alt: "",
-    className: "absolute left-0 top-0 w-full",
-    style: {
-      filter: tod ? 'none' : filter,
-      transform: `translateY(-${(100 * ASSISTANT_LIFE_MAP_CROP.y0 / 1672).toFixed(2)}%)`
+      left: -3,
+      bottom: 0,
+      width: d,
+      height: d,
+      fontSize: Math.max(7, Math.round(d * 0.72)),
+      lineHeight: 1,
+      boxShadow: '0 0 0 1px #0b1020'
     }
-  }), tod && React.createElement(TimeOfDayTint, null), Object.entries(ASSISTANT_LIFE_MAP_POS).map(([place, [x, y]]) => {
-    const who = at[place] || [];
-    return React.createElement("div", {
-      key: place,
-      className: "absolute flex -translate-x-1/2 -translate-y-full flex-col items-center",
-      style: {
-        left: `${x}%`,
-        top: `${y}%`
-      },
-      "data-assistant-life-map-place": place
-    }, who.length > 0 && React.createElement("span", {
-      className: "flex rounded-full border border-white/40 bg-slate-950/70 px-1 py-0.5"
-    }, who.map(id => {
-      const a = assistantById(id);
-      return a ? React.createElement("button", {
-        key: id,
-        type: "button",
-        onClick: () => onPick(id),
-        className: "-ml-1.5 first:ml-0 rounded-full"
-      }, React.createElement(AssistantFace, {
-        who: a,
-        size: 24,
-        accent: a.accent
-      })) : null;
-    })), React.createElement("span", {
-      className: `mt-0.5 whitespace-nowrap rounded-md border px-1.5 text-[9.5px] font-black ${who.length ? 'border-amber-300 bg-amber-950/90 text-amber-50' : 'border-slate-500/60 bg-slate-950/70 text-slate-300'}`
-    }, ASSISTANT_LIFE_PLACE_ICON[place], " ", place === 'home' ? '助手の家' : assistantLifePlaceShow(place)));
-  }));
+  }, "済");
 }
 const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({
-  rhythm: '.mh-home-facility.rhythm',
-  card: '.mh-home-card-battle',
-  management: '.mh-home-facility.management',
-  market: '.mh-home-facility.market',
-  life: '.mh-home-facility.life'
+  rhythm: 'main.mh-home-scene .mh-home-facility.rhythm',
+  card: 'main.mh-home-scene .mh-home-card-battle',
+  management: 'main.mh-home-scene .mh-home-facility.management',
+  temple: 'main.mh-home-scene .mh-home-facility.temple',
+  market: 'main.mh-home-scene .mh-home-facility.market',
+  life: 'main.mh-home-scene .mh-home-facility.life'
 });
 const ASSISTANT_LIFE_HOME_OBSTACLES = '.mh-home-facility,.mh-home-card-battle,.mh-home-event-banner,.mh-home-tour-banner,.mh-home-mission,.mh-home-gift,.mh-home-event-badge,.mh-home-assistant';
 function AssistantLifeHomeFaces({
@@ -108646,12 +108888,11 @@ function AssistantLifeHomeFaces({
   for (const id of ASSISTANT_LIFE_HOUSE_ORDER) {
     if (!ids.includes(id)) continue;
     let f = assistantLifeFacilityOf(assistantLifeWhereOf(life, id));
-    if (f === 'card' && assistantLifeCardSpent(id)) continue;
     if (!rects[f]) f = 'life';
     if (!rects[f]) continue;
     (by[f] = by[f] || []).push(id);
   }
-  const cardUp = typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && assistantLifeHouseCardIds().some(id => (by.card || []).includes(id));
+  const cardUp = typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && assistantLifeHouseCardIds().some(id => (by.card || []).includes(id) && !assistantLifeCardSpent(id));
   const peer = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null;
   const q = peer && peer.quarrel && peer.quarrel.pending;
   const after = new Set(q && q.pair ? String(q.pair).split('-') : []);
@@ -108683,11 +108924,13 @@ function AssistantLifeHomeFaces({
       if (!who) return null;
       const w = assistantLifeWhereOf(life, id);
       const lonely = w && w.reason === 'lonely';
+      const spent = f === 'card' && !!assistantLifeCardSpent(id);
       return React.createElement("button", {
         key: id,
         type: "button",
         "data-assistant-life-home-face": id,
-        "aria-label": `${who.name}のようす`,
+        "data-assistant-life-home-face-spent": spent ? '1' : undefined,
+        "aria-label": `${who.name}のようす${spent ? '(対戦のごほうび済み)' : ''}`,
         onClick: () => {
           ASSISTANT_LIFE_STORE.set({
             open: true,
@@ -108699,10 +108942,17 @@ function AssistantLifeHomeFaces({
           marginLeft: i ? -4 : 0,
           boxShadow: lonely ? '0 0 0 1.5px #fbbf24,0 0 6px #fbbf24' : after.has(id) ? '0 0 0 1.5px #7dd3fc' : '0 0 0 1.5px #fff'
         }
+      }, React.createElement("span", {
+        className: "block",
+        style: spent ? {
+          filter: 'grayscale(.6) brightness(.8)'
+        } : undefined
       }, React.createElement(AssistantFace, {
         who: who,
         size: size,
         accent: who.accent
+      })), spent && React.createElement(AssistantLifeSpentMark, {
+        size: size
       }), React.createElement("span", {
         "aria-hidden": "true",
         className: "absolute -inset-1.5"
@@ -108720,6 +108970,711 @@ function AssistantLifeHomeFaces({
   }), rects.life && typeof AssistantLifeFriendHomeBadge === 'function' && React.createElement(AssistantLifeFriendHomeBadge, {
     rect: rects.life
   }));
+}
+const ASSISTANT_LIFE_MAP_ORDER = Object.freeze(['ranch', 'temple', 'market', 'home', 'studio', 'cardroom', 'hill', 'library', 'cafe', 'garden', 'plaza']);
+const ASSISTANT_LIFE_MAP_TOWN_ONLY = Object.freeze(['hill', 'library', 'cafe', 'garden', 'plaza']);
+const ASSISTANT_LIFE_MAP_TOWN = Object.freeze({
+  classic: {
+    hill: [0.47, 0.115],
+    library: [0.72, 0.205],
+    cafe: [0.9, 0.29],
+    garden: [0.8, 0.44],
+    plaza: [0.5, 0.465]
+  },
+  halloween: {
+    hill: [0.5, 0.085],
+    library: [0.7, 0.2],
+    cafe: [0.9, 0.27],
+    garden: [0.82, 0.45],
+    plaza: [0.5, 0.465]
+  },
+  halloweenWide: {
+    hill: [0.5, 0.17],
+    library: [0.62, 0.27],
+    cafe: [0.84, 0.22],
+    garden: [0.76, 0.4],
+    plaza: [0.47, 0.54]
+  }
+});
+const assistantLifeMapArtOf = src => /halloween-wide/.test(String(src || '')) ? 'halloweenWide' : /halloween/.test(String(src || '')) ? 'halloween' : 'classic';
+const ASSISTANT_LIFE_DOING_ICON = Object.freeze({
+  snack: '🍰',
+  practice: '🎵',
+  training: '🥚',
+  cards: '🃏',
+  walk: '🚶',
+  idle: '💭',
+  sleep: '💤',
+  read: '📖'
+});
+const ASSISTANT_LIFE_MAP_ABOUT = Object.freeze({
+  home: '家で過ごしている助手。部屋をのぞいて、声をかけられます',
+  studio: 'モンヒロビートで練習している助手。いる助手とは、券なしで一緒に遊べます',
+  cardroom: 'MFバトルカードの研究をしている助手。いる助手と対戦すると、ごほうびが上がります',
+  ranch: 'M/B管理でモンスターを育てている助手',
+  temple: '神殿にいる助手',
+  market: 'マーケットにいる助手',
+  library: '図書室で本を読んだり、カードを研究したりしている助手',
+  cafe: 'おやつ屋さんでおやつを食べている助手',
+  hill: 'ひなたの丘でのんびりしている助手',
+  garden: '中庭で過ごしている助手',
+  plaza: '広場を散歩している助手'
+});
+const ASSISTANT_LIFE_MAP_FAC_NAME = Object.freeze({
+  management: 'M/B管理',
+  temple: '神殿',
+  market: 'マーケット',
+  life: '助手ライフ',
+  rhythm: 'モンヒロビート',
+  card: 'MFバトルカード'
+});
+const assistantLifeMapSpotWord = place => `${ASSISTANT_LIFE_PLACE_ICON[place] || '📍'} ${place === 'home' ? 'みんなの家' : assistantLifePlaceShow(place)}`;
+const assistantLifeMapReadHome = () => {
+  const out = {
+    w: window.innerWidth,
+    h: window.innerHeight,
+    vars: {},
+    src: 'data/images/home-background.jpg',
+    wide: false,
+    card: 'mh-home-card-battle raised',
+    fromHome: false
+  };
+  try {
+    const rot = typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.active();
+    const scene = document.querySelector('main.mh-home-scene');
+    if (!scene) return out;
+    const img = scene.querySelector('.mh-home-background img.mh-home-main');
+    if (img && img.getAttribute('src')) {
+      out.src = img.getAttribute('src');
+      out.wide = !!scene.querySelector('.mh-home-background.is-wide');
+    }
+    const card = scene.querySelector('.mh-home-card-battle');
+    if (card) out.card = [...card.classList].filter(c => c !== 'is-tutorial-spot').join(' ');
+    if (rot || !scene.offsetWidth || !scene.offsetHeight) return out;
+    out.w = scene.offsetWidth;
+    out.h = scene.offsetHeight;
+    out.fromHome = true;
+    for (let i = 0; i < scene.style.length; i++) {
+      const k = scene.style[i];
+      if (/^--mh-home-/.test(k)) out.vars[k] = scene.style.getPropertyValue(k);
+    }
+  } catch (_) {}
+  return out;
+};
+function AssistantLifeMapFig({
+  who,
+  h,
+  sleep,
+  spent = false
+}) {
+  const src = assistantFullImage(who, sleep ? 'normal' : 'happy');
+  const [box, setBox] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.get(src) || null);
+  React.useEffect(() => {
+    let alive = true;
+    assistantLifeStandBox(src).then(b => {
+      if (alive) setBox(b);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [src]);
+  const b = box || {
+    t: 0,
+    b: 1,
+    l: 0,
+    r: 1,
+    ar: 0.6
+  };
+  const ih = h / Math.max(0.2, b.b - b.t),
+    iw = ih * (b.ar || 0.6);
+  const w = Math.round(Math.min((b.r - b.l) * iw, h * 0.78));
+  const cx = (b.l + b.r) / 2 * iw;
+  const mask = 'linear-gradient(#000 74%,transparent)';
+  return React.createElement("span", {
+    className: "relative block shrink-0",
+    style: {
+      width: w,
+      height: h
+    }
+  }, React.createElement("span", {
+    className: "absolute inset-0 overflow-hidden",
+    style: {
+      WebkitMaskImage: mask,
+      maskImage: mask
+    },
+    "data-assistant-life-map-fig": true
+  }, React.createElement("img", {
+    src: src,
+    alt: "",
+    draggable: false,
+    style: {
+      position: 'absolute',
+      height: ih,
+      width: iw,
+      maxWidth: 'none',
+      top: -b.t * ih,
+      left: w / 2 - cx,
+      filter: sleep ? 'brightness(.62) saturate(.7)' : 'drop-shadow(0 2px 3px #0009)'
+    }
+  })), sleep && React.createElement("span", {
+    className: "absolute right-0 top-0 text-[10px]",
+    "aria-hidden": "true"
+  }, "💤"), spent && typeof AssistantLifeSpentMark === 'function' && React.createElement(AssistantLifeSpentMark, {
+    size: Math.round(h * 0.5)
+  }));
+}
+function AssistantLifeTownMap({
+  life,
+  ids,
+  onPick,
+  onBeat = null,
+  onCard = null,
+  onBack,
+  list = null,
+  land = false
+}) {
+  const [home, setHome] = React.useState(() => assistantLifeMapReadHome());
+  const [sheet, setSheet] = React.useState(null);
+  const sceneRef = React.useRef(null);
+  const listRef = React.useRef(null);
+  React.useEffect(() => {
+    const re = () => setHome(prev => {
+      const n = assistantLifeMapReadHome();
+      return JSON.stringify(prev) === JSON.stringify(n) ? prev : n;
+    });
+    const t = setInterval(re, 1000);
+    window.addEventListener('resize', re);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener('resize', re);
+    };
+  }, []);
+  const at = {};
+  for (const id of ASSISTANT_LIFE_HOUSE_ORDER) {
+    if (!ids.includes(id)) continue;
+    const w = assistantLifeWhereOf(life, id);
+    const p = w && ASSISTANT_LIFE_PLACE_ICON[w.place] ? w.place : 'home';
+    (at[p] = at[p] || []).push(id);
+  }
+  const art = assistantLifeMapArtOf(home.src);
+  const small = home.h < 500;
+  const figH = home.h < 360 ? 30 : small ? 34 : 42;
+  React.useLayoutEffect(() => {
+    const S = sceneRef.current;
+    if (!S) return undefined;
+    const place = () => {
+      const sr = S.getBoundingClientRect();
+      const rel = r => ({
+        left: r.left - sr.left,
+        top: r.top - sr.top,
+        right: r.right - sr.left,
+        bottom: r.bottom - sr.top,
+        width: r.width,
+        height: r.height
+      });
+      const hit = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1;
+      const area = (a, b) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+      const bar = S.querySelector('[data-assistant-life-map-bar]');
+      const topMin = bar ? rel(bar.getBoundingClientRect()).bottom + 2 : 2;
+      const hint = S.querySelector('[data-assistant-life-map-hint]');
+      const obs = [];
+      if (hint) obs.push(rel(hint.getBoundingClientRect()));
+      const tagOf = el => el.classList.contains('mh-home-facility') ? el.querySelector(':scope > span') || el : el;
+      for (const el of S.querySelectorAll('[data-assistant-life-map-place]')) {
+        if (el.hasAttribute('data-assistant-life-map-town')) continue;
+        obs.push(rel(tagOf(el).getBoundingClientRect()));
+      }
+      const W = S.clientWidth,
+        H = S.clientHeight;
+      const inside = q => q.left >= 3 && q.right <= W - 3 && q.top >= topMin && q.bottom <= H - 3;
+      const best = cands => cands.find(q => inside(q) && obs.every(o => !hit(q, o))) || cands.filter(inside).sort((a, b) => obs.reduce((s, o) => s + area(a, o), 0) - obs.reduce((s, o) => s + area(b, o), 0))[0] || cands[0];
+      const free = q => inside(q) && obs.every(o => !hit(q, o));
+      const setScale = (c, sc) => {
+        c.style.transformOrigin = '0 0';
+        c.style.transform = sc === 1 ? '' : `scale(${sc})`;
+      };
+      const put = (el, l, t) => {
+        el.style.left = `${Math.round(l)}px`;
+        el.style.top = `${Math.round(t)}px`;
+        el.style.visibility = '';
+      };
+      const img = S.querySelector('.mh-home-background img.mh-home-main');
+      let ib = null;
+      if (img && img.naturalWidth) {
+        const r = rel(img.getBoundingClientRect()),
+          nw = img.naturalWidth,
+          nh = img.naturalHeight;
+        const k = getComputedStyle(img).objectFit === 'cover' ? Math.max(r.width / nw, r.height / nh) : Math.min(r.width / nw, r.height / nh);
+        ib = {
+          x: r.left + (r.width - nw * k) / 2,
+          y: r.top + (r.height - nh * k) / 2,
+          w: nw * k,
+          h: nh * k
+        };
+      }
+      const soft = [];
+      if (ib) for (const el of S.querySelectorAll('[data-assistant-life-map-town]')) {
+        const pos = (ASSISTANT_LIFE_MAP_TOWN[art] || ASSISTANT_LIFE_MAP_TOWN.classic)[el.getAttribute('data-assistant-life-map-place')];
+        if (!pos) continue;
+        const x = ib.x + ib.w * pos[0],
+          y = ib.y + ib.h * pos[1],
+          w = el.offsetWidth / 2 + 4,
+          h = el.offsetHeight / 2 + 4;
+        soft.push({
+          left: x - w,
+          right: x + w,
+          top: y - h,
+          bottom: y + h
+        });
+      }
+      for (const c of S.querySelectorAll('[data-assistant-life-map-crowd]')) {
+        const k = c.getAttribute('data-assistant-life-map-crowd');
+        const anchor = S.querySelector(`[data-assistant-life-map-place="${k}"]`);
+        if (!anchor || anchor.hasAttribute('data-assistant-life-map-town')) continue;
+        const a = rel(tagOf(anchor).getBoundingClientRect());
+        let q = null;
+        for (const sc of [1, 0.8, 0.66]) {
+          const w = c.offsetWidth * sc,
+            h = c.offsetHeight * sc,
+            cx = (a.left + a.right) / 2,
+            cy = (a.top + a.bottom) / 2;
+          const box = (l, t) => ({
+            left: l,
+            top: t,
+            right: l + w,
+            bottom: t + h,
+            width: w,
+            height: h
+          });
+          const clampX = l => Math.max(3, Math.min(W - 3 - w, l));
+          const cands = [];
+          for (const s of [0, -24, 24, -48, 48, -72, 72, -96, 96]) {
+            cands.push(box(clampX(cx - w / 2 + s), a.top - h - 1));
+            cands.push(box(clampX(cx - w / 2 + s), a.bottom + 1));
+          }
+          for (const s of [0, -16, 16, -32, 32, -48, 48]) {
+            cands.push(box(a.right + 2, cy - h / 2 + s));
+            cands.push(box(a.left - w - 2, cy - h / 2 + s));
+          }
+          q = cands.find(x => free(x) && soft.every(o => !hit(x, o))) || best(cands);
+          setScale(c, sc);
+          if (free(q)) break;
+        }
+        put(c, q.left, q.top);
+        obs.push(q);
+      }
+      const towns = [...S.querySelectorAll('[data-assistant-life-map-town]')].map(el => ({
+        el,
+        k: el.getAttribute('data-assistant-life-map-place')
+      })).map(t => ({
+        ...t,
+        c: S.querySelector(`[data-assistant-life-map-crowd="${t.k}"]`)
+      })).sort((x, y) => (y.c ? 1 : 0) - (x.c ? 1 : 0));
+      for (const {
+        el,
+        k,
+        c
+      } of towns) {
+        const pos = (ASSISTANT_LIFE_MAP_TOWN[art] || ASSISTANT_LIFE_MAP_TOWN.classic)[k];
+        if (!ib || !pos) {
+          el.style.visibility = 'hidden';
+          if (c) c.style.visibility = 'hidden';
+          continue;
+        }
+        let got = null;
+        for (const [ts, cs, far] of c ? [[1, 1, 120], [1, 0.8, 120], [0.85, 0.66, 120], [0.72, 0.6, 120], [0.85, 0.66, 168]] : [[1, 1, 120], [0.85, 1, 120], [0.72, 1, 120], [0.85, 1, 168]]) {
+          const tw = el.offsetWidth * ts,
+            th = el.offsetHeight * ts;
+          const cw = c ? c.offsetWidth * cs : 0,
+            ch = c ? c.offsetHeight * cs + 1 : 0;
+          const w = Math.max(tw, cw),
+            h = th + ch;
+          const x0 = ib.x + ib.w * pos[0] - w / 2,
+            y0 = ib.y + ib.h * pos[1] - th / 2 - ch;
+          const cands = [];
+          for (let d = 0; d <= far; d += 6) for (const [dx, dy] of d ? [[0, -d], [0, d], [-d, 0], [d, 0], [-d, -d], [d, -d], [-d, d], [d, d]] : [[0, 0]]) cands.push({
+            left: x0 + dx,
+            top: y0 + dy,
+            right: x0 + dx + w,
+            bottom: y0 + dy + h,
+            width: w,
+            height: h
+          });
+          const q = best(cands);
+          got = {
+            q,
+            ts,
+            cs,
+            tw,
+            th,
+            cw,
+            ch,
+            w
+          };
+          if (free(q)) break;
+        }
+        const {
+          q,
+          ts,
+          cs,
+          tw,
+          th,
+          cw,
+          ch,
+          w
+        } = got;
+        if (c) {
+          setScale(c, cs);
+          put(c, q.left + (w - cw) / 2, q.top);
+          obs.push({
+            left: q.left + (w - cw) / 2,
+            top: q.top,
+            right: q.left + (w + cw) / 2,
+            bottom: q.top + ch - 1
+          });
+        }
+        const tl = q.left + (w - tw) / 2,
+          tt = q.top + ch;
+        setScale(el, ts);
+        put(el, tl, tt);
+        obs.push({
+          left: tl,
+          top: tt,
+          right: tl + tw,
+          bottom: tt + th
+        });
+      }
+    };
+    place();
+    const img = S.querySelector('.mh-home-background img.mh-home-main');
+    if (img && !img.complete) img.addEventListener('load', place, {
+      once: true
+    });
+    const t = setTimeout(place, 350);
+    return () => {
+      clearTimeout(t);
+      if (img) img.removeEventListener('load', place);
+    };
+  });
+  const sceneStyle = {
+    position: 'relative',
+    flex: 'none',
+    width: home.w,
+    height: home.h,
+    margin: '0 auto',
+    ...home.vars
+  };
+  const facBtn = (place, cls, aria, inner) => {
+    const n = (at[place] || []).length;
+    return React.createElement("button", {
+      key: place,
+      type: "button",
+      className: `mh-home-facility ${cls}`,
+      "aria-label": `${aria}(${n ? `${n}人` : 'だれもいない'})`,
+      "data-assistant-life-map-place": place,
+      "data-assistant-life-map-empty": n ? '0' : '1',
+      style: n ? undefined : {
+        opacity: 0.55,
+        filter: 'saturate(.5)'
+      },
+      onClick: () => setSheet(place)
+    }, inner);
+  };
+  const cardN = (at.cardroom || []).length;
+  const spentOf = (id, place) => place === 'cardroom' && typeof assistantLifeCardSpent === 'function' && !!assistantLifeCardSpent(id);
+  const crowd = place => {
+    const who = at[place] || [];
+    if (!who.length) return null;
+    const many = who.length > 4;
+    return React.createElement("div", {
+      key: `c-${place}`,
+      className: "absolute z-[6] flex items-end",
+      style: {
+        visibility: 'hidden',
+        left: 0,
+        top: 0
+      },
+      "data-assistant-life-map-crowd": place
+    }, many ? React.createElement("div", {
+      className: "flex flex-col items-center"
+    }, React.createElement("div", {
+      className: "flex items-end"
+    }, who.map((id, i) => {
+      const a = assistantById(id);
+      if (!a) return null;
+      const w = assistantLifeWhereOf(life, id);
+      return React.createElement("button", {
+        key: id,
+        type: "button",
+        "aria-label": `${a.name}の部屋`,
+        "data-assistant-life-map-who": id,
+        onClick: () => setSheet(place),
+        style: {
+          marginLeft: i ? -Math.round(figH * 0.42) : 0
+        }
+      }, React.createElement(AssistantLifeMapFig, {
+        who: a,
+        h: figH,
+        sleep: !!(w && w.doing === 'sleep'),
+        spent: spentOf(id, place)
+      }));
+    })), React.createElement("span", {
+      className: "mhl-map-name",
+      "data-assistant-life-map-name": true
+    }, `${assistantLifeName(who[0])}ほか${who.length - 1}人`)) : who.map(id => {
+      const a = assistantById(id);
+      if (!a) return null;
+      const w = assistantLifeWhereOf(life, id);
+      const d = w && ASSISTANT_LIFE_DOINGS[w.doing];
+      return React.createElement("button", {
+        key: id,
+        type: "button",
+        "aria-label": `${a.name}・${d ? d.label : ''}${spentOf(id, place) ? '(対戦のごほうび済み)' : ''}`,
+        "data-assistant-life-map-who": id,
+        "data-assistant-life-map-spent": spentOf(id, place) ? '1' : undefined,
+        onClick: () => setSheet(place),
+        className: "flex flex-col items-center px-[1px]"
+      }, React.createElement(AssistantLifeMapFig, {
+        who: a,
+        h: figH,
+        sleep: !!(w && w.doing === 'sleep'),
+        spent: spentOf(id, place)
+      }), React.createElement("span", {
+        className: "mhl-map-name",
+        "data-assistant-life-map-name": true
+      }, w && ASSISTANT_LIFE_DOING_ICON[w.doing], a.name));
+    }));
+  };
+  const sheetPlace = sheet;
+  const sheetWho = sheetPlace ? at[sheetPlace] || [] : [];
+  const fac = sheetPlace ? assistantLifeFacilityOf({
+    place: sheetPlace
+  }) : null;
+  const sheetTown = sheetPlace === 'home' ? ASSISTANT_LIFE_MAP_TOWN_ONLY.flatMap(p => (at[p] || []).map(id => [id, p])) : [];
+  const row = (id, place, town) => {
+    const a = assistantById(id);
+    if (!a) return null;
+    const w = assistantLifeWhereOf(life, id);
+    const d = w && ASSISTANT_LIFE_DOINGS[w.doing];
+    const withNames = w && w.with && w.with.length ? `${w.with.map(assistantLifeName).join('・')}と` : 'ひとりで';
+    const spent = place === 'cardroom' && typeof assistantLifeCardSpent === 'function' ? assistantLifeCardSpent(id) : null;
+    return React.createElement("div", {
+      key: id,
+      className: "mt-2 flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-900/85 p-2",
+      "data-assistant-life-map-sheet-who": id,
+      "data-assistant-life-map-sheet-at": place
+    }, React.createElement(AssistantFace, {
+      who: a,
+      size: 36,
+      accent: a.accent
+    }), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("p", {
+      className: "text-[13px] font-black text-white"
+    }, a.name, spent && React.createElement("span", {
+      className: "ml-1 rounded-full bg-slate-200 px-1.5 text-[9.5px] font-black text-slate-900",
+      "data-assistant-life-map-sheet-spent": true
+    }, "済 ごほうび済み")), React.createElement("p", {
+      className: "text-[10.5px] font-bold text-slate-300"
+    }, town ? `${assistantLifeMapSpotWord(place)}で ` : '', w && ASSISTANT_LIFE_DOING_ICON[w.doing], " ", withNames, d ? d.label : '過ごしている', w && w.reason === 'lonely' ? '(さみしそう)' : ''), spent && React.createElement("p", {
+      className: "text-[10.5px] font-bold text-amber-200",
+      style: {
+        wordBreak: 'auto-phrase'
+      },
+      "data-assistant-life-map-sheet-next": true
+    }, typeof cardLifeSpentText === 'function' ? cardLifeSpentText(spent) : '🃏 ごほうびアップは次の時間帯から')), React.createElement("div", {
+      className: "flex shrink-0 flex-col gap-1"
+    }, place === 'studio' && typeof onBeat === 'function' && typeof ASSISTANT_LIFE_LINKS !== 'undefined' && typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && React.createElement("button", {
+      type: "button",
+      "data-assistant-life-map-act": "beat",
+      onClick: () => {
+        setSheet(null);
+        onBeat(id);
+      },
+      className: "rounded-xl bg-gradient-to-r from-cyan-600 to-violet-600 px-2 py-1 text-[11px] font-black text-white active:scale-95"
+    }, "🎵 一緒に遊ぶ"), place === 'cardroom' && !spent && typeof onCard === 'function' && typeof ASSISTANT_LIFE_LINKS !== 'undefined' && typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && React.createElement("button", {
+      type: "button",
+      "data-assistant-life-map-act": "card",
+      onClick: () => {
+        setSheet(null);
+        onCard(id);
+      },
+      className: "rounded-xl bg-gradient-to-r from-blue-700 to-violet-700 px-2 py-1 text-[11px] font-black text-white active:scale-95"
+    }, "🃏 対戦する"), React.createElement("button", {
+      type: "button",
+      "data-assistant-life-map-act": "room",
+      onClick: () => {
+        setSheet(null);
+        onPick(id);
+      },
+      className: "rounded-xl border border-pink-300/60 px-2 py-1 text-[11px] font-black text-pink-100 active:scale-95"
+    }, "🏡 部屋へ ›")));
+  };
+  return React.createElement("div", {
+    className: "absolute inset-0 z-[4] overflow-y-auto overflow-x-hidden bg-[#0b1020]",
+    "data-assistant-life-where": true,
+    "data-assistant-life-map-art": art
+  }, React.createElement("style", null, `.mhl-map-town{position:absolute;z-index:4;padding:0;border:0;background:transparent;color:#fff}
+.mhl-map-town>span{display:flex;align-items:center;gap:4px;white-space:nowrap;padding:4px 9px;border:2px solid #ffe6a7a8;border-radius:12px;background:#10211df2;box-shadow:0 3px 10px #0009;font-size:12px;font-weight:900;line-height:1.15;text-shadow:0 2px 4px #000}
+.mhl-map-town[data-assistant-life-map-empty="1"]>span{opacity:.6;border-color:#94a3b8aa;background:#0f172ad9}
+.mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:${small ? 8 : 9}px;font-weight:900;line-height:${small ? 12 : 13}px;color:#fff;box-shadow:0 1px 3px #0008}
+[data-assistant-life-map] .mh-home-facility:active>span,.mhl-map-town:active>span{transform:scale(.94)}`), React.createElement("div", {
+    ref: sceneRef,
+    className: `mh-home-scene${home.wide ? ' is-wide' : ''}`,
+    style: sceneStyle,
+    "data-assistant-life-map": true,
+    "data-assistant-life-map-from-home": home.fromHome ? '1' : '0'
+  }, React.createElement("picture", {
+    className: `mh-home-background is-ready${home.wide ? ' is-wide' : ''}`,
+    "aria-hidden": "true"
+  }, React.createElement("img", {
+    className: "mh-home-backdrop",
+    src: home.src,
+    alt: ""
+  }), React.createElement("img", {
+    className: "mh-home-main",
+    src: home.src,
+    alt: ""
+  })), React.createElement("nav", {
+    className: "mh-home-facilities",
+    "aria-label": "町の場所"
+  }, facBtn('ranch', 'management', 'M/B管理', React.createElement("span", null, React.createElement(Layers, {
+    size: 18
+  }), React.createElement("b", {
+    className: "mh-home-facility-label"
+  }, "M/B管理", React.createElement("small", null, "モンスター・編成")))), facBtn('temple', 'temple', '神殿', React.createElement("span", null, React.createElement(Sparkles, {
+    size: 18
+  }), "神殿")), facBtn('market', 'market', 'マーケット', React.createElement("span", null, React.createElement(ShoppingBag, {
+    size: 17
+  }), "マーケット")), facBtn('home', 'life', '助手ライフ みんなの家', React.createElement("span", null, React.createElement("span", {
+    "aria-hidden": "true",
+    style: {
+      fontSize: 16,
+      lineHeight: 1
+    }
+  }, "🏡"), React.createElement("b", {
+    className: "mh-home-facility-label"
+  }, "助手ライフ", React.createElement("small", null, "みんなの家")))), facBtn('studio', 'rhythm', 'モンヒロビート', React.createElement("span", null, "🎵 モンヒロビート"))), React.createElement("button", {
+    type: "button",
+    className: home.card,
+    "aria-label": `MFバトルカード(${cardN ? `${cardN}人` : 'だれもいない'})`,
+    "data-assistant-life-map-place": "cardroom",
+    "data-assistant-life-map-empty": cardN ? '0' : '1',
+    style: cardN ? undefined : {
+      opacity: 0.55,
+      filter: 'saturate(.5)'
+    },
+    onClick: () => setSheet('cardroom')
+  }, React.createElement("span", null, "🃏 MFバトルカード")), ASSISTANT_LIFE_MAP_TOWN_ONLY.map(p => {
+    const n = (at[p] || []).length;
+    return React.createElement("button", {
+      key: p,
+      type: "button",
+      className: "mhl-map-town",
+      style: {
+        visibility: 'hidden',
+        left: 0,
+        top: 0
+      },
+      "aria-label": `${assistantLifePlaceShow(p)}(${n ? `${n}人` : 'だれもいない'})`,
+      "data-assistant-life-map-place": p,
+      "data-assistant-life-map-town": true,
+      "data-assistant-life-map-empty": n ? '0' : '1',
+      onClick: () => setSheet(p)
+    }, React.createElement("span", null, ASSISTANT_LIFE_PLACE_ICON[p], " ", assistantLifePlaceShow(p)));
+  }), ASSISTANT_LIFE_MAP_ORDER.map(crowd), React.createElement("div", {
+    className: "absolute inset-x-0 top-0 z-[8] flex items-center gap-2 bg-gradient-to-b from-[#0b1020f2] via-[#0b1020d9] to-transparent px-2 pb-3",
+    style: {
+      paddingTop: land ? 6 : 'calc(6px + env(safe-area-inset-top))',
+      paddingLeft: 'calc(8px + env(safe-area-inset-left))',
+      paddingRight: 'calc(8px + env(safe-area-inset-right))'
+    },
+    "data-assistant-life-map-bar": true
+  }, React.createElement("button", {
+    type: "button",
+    "data-assistant-life-map-back": true,
+    onClick: onBack,
+    className: "shrink-0 rounded-xl border border-pink-300/60 bg-slate-950/85 px-2.5 py-1.5 text-[12px] font-black text-pink-100 active:scale-95"
+  }, "🏡 家へ"), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "truncate text-[15px] font-black leading-tight text-white",
+    style: {
+      textShadow: '0 2px 4px #000'
+    }
+  }, "📋 みんなの居場所"), React.createElement("p", {
+    className: "truncate text-[10px] font-bold text-slate-200",
+    "data-assistant-life-map-time": true
+  }, assistantLifeTodLabel(), " ・ ", assistantLifeNextSlotText().replace(/みんなが動きます$/, 'みんなが動く'))), list && React.createElement("button", {
+    type: "button",
+    "data-assistant-life-map-list": true,
+    onClick: () => {
+      try {
+        const l = listRef.current,
+          box = l && l.parentElement;
+        if (box) box.scrollTo({
+          top: l.offsetTop,
+          behavior: 'smooth'
+        });
+      } catch (_) {}
+    },
+    className: "shrink-0 rounded-xl border border-slate-500/70 bg-slate-950/85 px-2.5 py-1.5 text-[11px] font-black text-slate-100 active:scale-95"
+  }, "📃 一覧 ↓")), React.createElement("p", {
+    className: "pointer-events-none absolute left-1/2 z-[7] -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-950/85 px-3 py-1 text-[10.5px] font-bold text-slate-100",
+    style: {
+      bottom: 'calc(10px + env(safe-area-inset-bottom))'
+    },
+    "data-assistant-life-map-hint": true
+  }, "場所を押すと、いる助手とできること")), list && React.createElement("div", {
+    ref: listRef,
+    className: "relative bg-[#0b1020]",
+    "data-assistant-life-map-below": true
+  }, list), sheetPlace && React.createElement("div", {
+    className: "fixed inset-0",
+    style: {
+      zIndex: 30
+    },
+    "data-assistant-life-map-sheet": sheetPlace
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    className: "absolute inset-0 bg-black/60",
+    onClick: () => setSheet(null)
+  }), React.createElement("div", {
+    className: "mhl-sheet",
+    style: land ? {
+      left: 'auto',
+      width: '42%',
+      top: 0,
+      maxHeight: '100%',
+      borderRadius: '22px 0 0 22px',
+      borderTop: 0,
+      borderLeft: '2px solid #f9a8d4',
+      paddingTop: 10
+    } : undefined
+  }, React.createElement("p", {
+    className: "mhl-en"
+  }, "WHERE · ", String(sheetPlace).toUpperCase()), React.createElement("p", {
+    className: "text-[18px] font-black",
+    "data-assistant-life-map-sheet-title": true
+  }, assistantLifeMapSpotWord(sheetPlace)), React.createElement("p", {
+    className: "text-[10.5px] font-bold text-slate-300",
+    "data-assistant-life-map-sheet-home": true
+  }, ASSISTANT_LIFE_MAP_TOWN_ONLY.includes(sheetPlace) ? `町の場所。HOME では「🏡 助手ライフ」の札の下に顔が出ます` : `HOME の「${ASSISTANT_LIFE_MAP_FAC_NAME[fac]}」の札${sheetPlace === 'home' ? '(家と町にいる助手の顔もここ)' : ''}`), React.createElement("p", {
+    className: "mt-1 text-[11.5px] font-bold leading-snug text-slate-100"
+  }, ASSISTANT_LIFE_MAP_ABOUT[sheetPlace]), sheetWho.length ? sheetWho.map(id => row(id, sheetPlace, false)) : React.createElement("p", {
+    className: "mt-2 rounded-xl bg-slate-900/85 px-2 py-2 text-[12px] font-bold text-slate-300",
+    "data-assistant-life-map-sheet-none": true
+  }, "いまはだれもいません"), sheetTown.length > 0 && React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "mt-3 text-[11px] font-black text-amber-200",
+    "data-assistant-life-map-sheet-town": true
+  }, "📍 町にいる助手(HOME ではこの札の下に顔が出ます)"), sheetTown.map(([id, p]) => row(id, p, true))), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-map-sheet-close": true,
+    "data-mhl-sheet-close": true,
+    onClick: () => setSheet(null),
+    className: "mt-3 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]"
+  }, "閉じる"))));
 }
 const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   id: 'rel-fight-erubin-momosuke-1',
@@ -123234,6 +124189,38 @@ const assistantMasmonPlanOf = id => {
   } catch (_) {
     made = null;
   }
+  let st = null;
+  try {
+    st = ASSISTANT_MASMON_STORE.state;
+  } catch (_) {
+    st = null;
+  }
+  const d = st && st.draw && st.draw.v === ASSISTANT_MASMON_DRAW_V && Array.isArray(st.draw.made[id]) ? st.draw.made[id] : null;
+  if (d && d.length) {
+    const w = st.draw.welcomed[id] || {};
+    const row2 = t => ({
+      monster: t.monster,
+      nick: t.nick,
+      why: t.why,
+      lv: t.lv,
+      grow: t.grow,
+      slot: t.slot,
+      role: t.role,
+      welcome: t.welcome,
+      dye: {
+        colors: [...assistantMasmonDyeNowOf(st, id, t.slot, t.colors)]
+      }
+    });
+    return {
+      ...base,
+      v2: true,
+      team: d.filter(t => t.slot === 1 || w[t.monster]).map(t => ({
+        ...row2(t),
+        lead: t.slot === 1
+      })),
+      extra: d.filter(t => t.slot !== 1 && !w[t.monster]).map(row2)
+    };
+  }
   if (!Array.isArray(made) || made.length < 3) return base;
   const row = t => ({
     monster: t.monster,
@@ -123241,8 +124228,9 @@ const assistantMasmonPlanOf = id => {
     why: t.why,
     lv: t.lv,
     grow: t.grow,
+    slot: t.slot,
     dye: {
-      colors: [...t.colors]
+      colors: [...assistantMasmonDyeNowOf(st, id, t.slot, t.colors)]
     }
   });
   return {
@@ -123293,6 +124281,62 @@ const normalizeAssistantMasmonMade = raw => {
   }
   return out;
 };
+const ASSISTANT_MASMON_DRAW_V = 2;
+const ASSISTANT_MASMON_DRAW_MAX = 8;
+const normalizeAssistantMasmonDraw = raw => {
+  const out = {
+    v: 0,
+    at: '',
+    made: {},
+    welcomed: {},
+    named: false,
+    fav: {}
+  };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw) || raw.v !== ASSISTANT_MASMON_DRAW_V) return out;
+  out.v = ASSISTANT_MASMON_DRAW_V;
+  out.at = typeof raw.at === 'string' ? raw.at.slice(0, 10) : '';
+  out.named = raw.named === true;
+  const made = raw.made && typeof raw.made === 'object' && !Array.isArray(raw.made) ? raw.made : {};
+  for (const [aid, list] of Object.entries(made)) {
+    if (!assistantMasmonBasePlanOf(aid) || !Array.isArray(list)) continue;
+    const rows = [];
+    const slots = new Set();
+    const mons = new Set();
+    for (const t of list.slice(0, ASSISTANT_MASMON_DRAW_MAX)) {
+      if (!t || typeof t !== 'object') continue;
+      const slot = Number(t.slot),
+        lv = Number(t.lv),
+        wl = Number(t.welcome);
+      if (!Number.isInteger(slot) || slot < 1 || slot > ASSISTANT_MASMON_DRAW_MAX || slots.has(slot) || typeof t.monster !== 'string' || mons.has(t.monster)) continue;
+      if (typeof t.nick !== 'string' || !t.nick || t.nick.length > 16 || !Number.isFinite(lv)) continue;
+      const colors = Array.isArray(t.colors) ? t.colors.slice(0, 8).map(c => typeof c === 'string' && ASSISTANT_MASMON_DYE_RE.test(c) ? c : null) : [];
+      slots.add(slot);
+      mons.add(t.monster);
+      rows.push({
+        slot,
+        monster: t.monster,
+        nick: t.nick,
+        lv: Math.max(1, Math.min(99, Math.round(lv))),
+        grow: typeof t.grow === 'string' ? t.grow.slice(0, 30) : '',
+        why: typeof t.why === 'string' ? t.why.slice(0, 40) : '',
+        role: typeof t.role === 'string' && ASSISTANT_MASMON_ROLE_NAME[t.role] ? t.role : '',
+        welcome: Number.isInteger(wl) && wl >= 1 && wl <= 99 ? wl : slot * 2 - 1,
+        colors,
+        ai: t.ai === true
+      });
+    }
+    if (rows.length && slots.has(1)) out.made[aid] = rows.sort((a, b) => a.slot - b.slot);
+  }
+  const w = raw.welcomed && typeof raw.welcomed === 'object' ? raw.welcomed : {};
+  for (const [aid, mons] of Object.entries(w)) {
+    if (!assistantMasmonBasePlanOf(aid) || !mons || typeof mons !== 'object' || Array.isArray(mons)) continue;
+    const m = {};
+    for (const [mid, day] of Object.entries(mons)) if (typeof day === 'string' && day) m[mid] = day.slice(0, 10);
+    out.welcomed[aid] = m;
+  }
+  if (raw.fav && typeof raw.fav === 'object') for (const [aid, sig] of Object.entries(raw.fav)) if (assistantMasmonBasePlanOf(aid) && typeof sig === 'string') out.fav[aid] = sig.slice(0, 120);
+  return out;
+};
 const normalizeAssistantMasmonSave = raw => {
   const out = {
     v: 1,
@@ -123300,12 +124344,16 @@ const normalizeAssistantMasmonSave = raw => {
     seed: '',
     made: {},
     named: false,
-    noticed: {}
+    noticed: {},
+    dyes: {},
+    draw: normalizeAssistantMasmonDraw(null)
   };
   if (raw && typeof raw === 'object') {
     if (typeof raw.seed === 'string' && /^[\w-]{4,60}$/.test(raw.seed)) out.seed = raw.seed;
     out.made = normalizeAssistantMasmonMade(raw.made);
     out.named = raw.named === true;
+    out.dyes = normalizeAssistantMasmonDyes(raw.dyes);
+    out.draw = normalizeAssistantMasmonDraw(raw.draw);
     if (raw.noticed && typeof raw.noticed === 'object') for (const [k, v] of Object.entries(raw.noticed)) if (v === true && assistantMasmonBasePlanOf(k)) out.noticed[k] = true;
   }
   const w = raw && typeof raw === 'object' && raw.welcomed && typeof raw.welcomed === 'object' ? raw.welcomed : {};
@@ -123483,6 +124531,715 @@ const assistantMasmonDyeMake = (aid, p, monster, style, rnd) => {
   if (!cols.some(Boolean)) cols[0] = tpl.find(Boolean);
   return cols;
 };
+const ASSISTANT_MASMON_HUE = Object.freeze({
+  red: 355,
+  orange: 28,
+  yellow: 48,
+  lime: 78,
+  green: 135,
+  teal: 168,
+  cyan: 190,
+  sky: 200,
+  blue: 220,
+  purple: 265,
+  magenta: 300,
+  pink: 330
+});
+const ASSISTANT_MASMON_TONE = Object.freeze({
+  pale: [18, 97, '淡い'],
+  deep: [80, 42, '深い'],
+  dull: [32, 60, 'くすんだ'],
+  vivid: [95, 90, 'あざやかな']
+});
+const ASSISTANT_MASMON_TONE_ACHRO = Object.freeze({
+  black: {
+    base: 'black',
+    light: 'gray',
+    pale: 'gray',
+    deep: 'black',
+    dull: 'custom:0:0:30',
+    vivid: 'black'
+  },
+  white: {
+    base: 'white',
+    light: 'white',
+    pale: 'white',
+    deep: 'gray',
+    dull: 'custom:30:8:85',
+    vivid: 'white'
+  },
+  gray: {
+    base: 'gray',
+    light: 'white',
+    pale: 'white',
+    deep: 'custom:0:0:40',
+    dull: 'gray',
+    vivid: 'gray'
+  }
+});
+const ASSISTANT_MASMON_ACHRO_NAME = Object.freeze({
+  'custom:0:0:30': '炭色',
+  'custom:30:8:85': '生成り',
+  'custom:0:0:40': '濃い灰'
+});
+const assistantMasmonBaseOf = c => String(c || '').split('@')[0].replace(/_light$/, '');
+const assistantMasmonTone = (c, tone, jit = 0) => {
+  const b = assistantMasmonBaseOf(c);
+  if (ASSISTANT_MASMON_TONE_ACHRO[b]) return ASSISTANT_MASMON_TONE_ACHRO[b][tone] || b;
+  if (!Number.isFinite(ASSISTANT_MASMON_HUE[b])) return null;
+  if (tone === 'base') return b;
+  if (tone === 'light') return `${b}_light`;
+  const tv = ASSISTANT_MASMON_TONE[tone];
+  if (!tv) return b;
+  return `custom:${(ASSISTANT_MASMON_HUE[b] + Math.round(jit) + 360) % 360}:${tv[0]}:${tv[1]}`;
+};
+const assistantMasmonToneName = c => {
+  const id = String(c || '').split('@')[0];
+  if (ASSISTANT_MASMON_ACHRO_NAME[id]) return ASSISTANT_MASMON_ACHRO_NAME[id];
+  const m = /^custom:(\d+):(\d+):(\d+)$/.exec(id);
+  if (!m) return typeof MASU_COLOR_LABELS !== 'undefined' && MASU_COLOR_LABELS[id] || id;
+  const h = Number(m[1]),
+    s = Number(m[2]),
+    v = Number(m[3]);
+  let best = 'red',
+    bd = 999;
+  for (const [k, hh] of Object.entries(ASSISTANT_MASMON_HUE)) {
+    const d = Math.min(Math.abs(h - hh), 360 - Math.abs(h - hh));
+    if (d < bd) {
+      bd = d;
+      best = k;
+    }
+  }
+  const tone = Object.values(ASSISTANT_MASMON_TONE).find(t => t[0] === s && t[1] === v);
+  const label = typeof MASU_COLOR_LABELS !== 'undefined' && MASU_COLOR_LABELS[best] || best;
+  return tone ? `${tone[2]}${label}` : `${label}っぽい色`;
+};
+const ASSISTANT_MASMON_DYE_HABIT = Object.freeze({
+  mua: {
+    say: 'ふんわり明るい色をノリで重ねる。白と薄い色が好き',
+    ref: 'ゲームの♪みゅあ♪の染め色(白・薄ピンク・赤・薄マゼンタ・薄空色。濃さはほぼそのまま)',
+    extra: ['white', 'magenta_light', 'red'],
+    tones: {
+      light: 3,
+      pale: 2,
+      vivid: 2,
+      base: 1
+    },
+    avoid: ['gray'],
+    alpha: [65, 90],
+    keep: 0.3,
+    parts: 'mix',
+    grad: true,
+    gloss: true,
+    odd: 0.1,
+    roles: ['grad', 'accent', 'bold', 'contrast', 'season']
+  },
+  kiki: {
+    say: 'ピンクの濃淡を差し色に。落ち着いた色が多め',
+    ref: 'ゲームの☆きき☆の染め色(薄ピンク・マゼンタ・ピンク)',
+    extra: ['magenta'],
+    tones: {
+      light: 2,
+      base: 2,
+      dull: 2,
+      deep: 1
+    },
+    avoid: ['yellow', 'lime', 'cyan'],
+    alpha: [45, 70],
+    keep: 0.6,
+    parts: 'accent',
+    grad: false,
+    gloss: false,
+    odd: 0,
+    roles: ['accent', 'natural', 'grad', 'accent', 'contrast']
+  },
+  momosuke: {
+    say: 'ステージ映えする派手な色を全部の部位に。濃いめ',
+    tones: {
+      vivid: 3,
+      base: 2,
+      light: 1
+    },
+    avoid: ['gray', 'black'],
+    alpha: [70, 90],
+    keep: 0.1,
+    parts: 'wide',
+    grad: true,
+    gloss: true,
+    odd: 0.15,
+    roles: ['bold', 'grad', 'contrast', 'season', 'bold']
+  },
+  dra: {
+    say: '大きい所をざっくり。ときどき思いがけない色にする(変な色の人)',
+    tones: {
+      base: 2,
+      dull: 2,
+      deep: 1,
+      vivid: 1
+    },
+    avoid: [],
+    alpha: [55, 90],
+    keep: 0.2,
+    parts: 'wide',
+    grad: false,
+    gloss: false,
+    odd: 0.45,
+    roles: ['odd', 'odd', 'natural', 'bold', 'contrast']
+  },
+  atsu: {
+    say: '勝負の赤と締めの黒。大きい所は濃く、差し色にピンクや白',
+    ref: 'ゲームのあつの染め色(赤・黒が中心。ピンク・薄橙・白が差し色。濃さを下げるのは4回に1回くらい)',
+    extra: ['pink', 'orange_light', 'white'],
+    tones: {
+      base: 3,
+      deep: 2,
+      vivid: 1
+    },
+    avoid: ['purple_light'],
+    alpha: [75, 90],
+    keep: 0.2,
+    parts: 'wide',
+    grad: false,
+    gloss: true,
+    odd: 0.1,
+    roles: ['contrast', 'bold', 'accent', 'grad', 'contrast']
+  },
+  kyuko: {
+    say: '夜の灯りのような淡い色を小さい所に。元の色をよく残す',
+    tones: {
+      light: 3,
+      pale: 3,
+      dull: 1
+    },
+    avoid: ['lime', 'yellow', 'magenta'],
+    alpha: [30, 55],
+    keep: 0.6,
+    parts: 'accent',
+    grad: true,
+    gloss: false,
+    odd: 0,
+    roles: ['natural', 'grad', 'accent', 'season', 'natural']
+  },
+  sorashido: {
+    say: '青の濃淡を決まった順に。濃さのばらつきが小さい',
+    tones: {
+      base: 2,
+      light: 2,
+      deep: 2
+    },
+    avoid: ['magenta', 'lime', 'pink'],
+    alpha: [50, 62],
+    keep: 0.4,
+    parts: 'even',
+    grad: true,
+    gloss: false,
+    odd: 0,
+    roles: ['grad', 'accent', 'natural', 'contrast', 'grad']
+  },
+  erubin: {
+    say: '黒・茶・灰の落ち着いた色で全体をまとめる',
+    tones: {
+      dull: 3,
+      deep: 2,
+      base: 1
+    },
+    avoid: ['magenta', 'lime', 'yellow'],
+    alpha: [50, 75],
+    keep: 0.3,
+    parts: 'wide',
+    grad: false,
+    gloss: false,
+    odd: 0.05,
+    roles: ['natural', 'accent', 'grad', 'season', 'bold']
+  }
+});
+const ASSISTANT_MASMON_ROLE_NAME = Object.freeze({
+  main: '好きな色が主役',
+  accent: '差し色だけ',
+  grad: '同じ色の濃淡',
+  contrast: '反対色を差す',
+  natural: '元の色に近い',
+  bold: '全部の部位を思い切って',
+  odd: '思いがけない色',
+  season: '季節の色'
+});
+const ASSISTANT_MASMON_SEASON = Object.freeze({
+  spring: ['pink_light', 'lime_light', 'yellow_light'],
+  summer: ['sky', 'cyan', 'yellow'],
+  autumn: ['orange', 'red', 'yellow'],
+  winter: ['white', 'blue_light', 'red']
+});
+const ASSISTANT_MASMON_SEASON_NAME = Object.freeze({
+  spring: '春',
+  summer: '夏',
+  autumn: '秋',
+  winter: '冬'
+});
+const assistantMasmonSeasonKey = day => {
+  const m = /^(\d{4})-(\d{2})/.exec(String(day || ''));
+  if (!m) return '';
+  const y = Number(m[1]),
+    mo = Number(m[2]);
+  const s = mo >= 3 && mo <= 5 ? 'spring' : mo >= 6 && mo <= 8 ? 'summer' : mo >= 9 && mo <= 11 ? 'autumn' : 'winter';
+  return `${mo <= 2 ? y - 1 : y}-${s}`;
+};
+const ASSISTANT_MASMON_DYE_PARTS = Object.freeze({
+  KenshiMocchi: [['肌', 'skin', 26], ['コート・ブーツ', 'wide dark', 54], ['髪', 'dark', 22], ['左の剣', '', 12], ['右の剣', '', 12]],
+  MelWhip: [['イチゴ・赤い実', '', 10], ['服・スカート', '', 25], ['フリル', '', 16], ['ケーキ・クリーム', 'white', 42], ['髪', '', 14]],
+  Iblis: [['白い毛', 'wide white', 43], ['紫のパーツ', '', 27], ['翼', 'dark', 14]],
+  Mocchi: [['体', 'wide skin', 84], ['頭の葉', '', 12], ['口ばし', '', 10]],
+  Ghost: [['帽子', 'dark', 41], ['体', 'wide white clear skin', 59], ['リボン', '', 6]],
+  Monol: [['上', 'dark', 32], ['中', 'dark', 39], ['下', 'dark', 33]],
+  Golem: [['頭・胴・脚', 'wide', 58], ['両腕', '', 42], ['足元の石', '', 11]],
+  Eiki: [['髪・リボン', '', 37], ['刀・オーラ', 'clear', 33], ['鎧', 'wide', 77]],
+  Zan: [['体', 'wide', 61], ['目', 'face', 4], ['腕の刃', '', 40]],
+  Tiger: [['毛', 'wide', 58], ['胸元・おなか', 'white', 32], ['角', '', 10]],
+  Pandora: [['靴下', '', 5], ['黒い服・翼', 'dark', 26], ['白い服・翼', 'white', 29], ['紫の髪', '', 8], ['白い髪', 'white', 9]],
+  Oboro: [['花', 'wide', 48], ['茎・葉・足', '', 39], ['本体', 'white skin', 21]],
+  Plant: [['花', 'wide', 50], ['葉・茎', '', 34], ['本体', 'white skin', 17]],
+  Yggdrasil: [['髪・葉', '', 42], ['カエルの体', '', 38], ['角・杖・マント', '', 22]],
+  Dreamy: [['体の毛', 'white skin', 22], ['雲', 'wide white', 54], ['縞の帽子', '', 12], ['玉の飾り', '', 11], ['ピンクと水色の飾り', '', 6]],
+  Illumine: [['黒い体', 'dark skin', 38], ['後ろの髪', 'dark', 18], ['光る髪', 'wide clear', 54], ['金の飾り', '', 10], ['目と模様', 'face', 7]],
+  Suezo: [['体', 'wide', 59], ['瞳', 'face', 25], ['口', '', 15]],
+  Mitarashi: [['体', 'wide', 58], ['お腹・翼の金', '', 39], ['口元', 'face', 9]],
+  Ark: [['体・翼', 'wide', 79], ['白い羽・紋章', 'white', 20], ['王冠・輪', '', 6]],
+  Mia: [['髪', '', 16], ['服・ブーツ', '', 28], ['服の模様', '', 7]],
+  Melody: [['傘の羊毛・玉', '', 23], ['帽子', '', 16], ['顔・体の白', 'white skin', 20], ['象の体', 'wide', 55], ['象の耳の内側', '', 23]],
+  Spooky: [['帽子・服', 'wide', 47], ['手・しっぽ', 'white clear', 32], ['かぼちゃの顔', 'skin', 19], ['リボン・飾り', '', 15], ['しっぽの先の枝', '', 10]],
+  Kuromy: [['傘のピンク・リボン', '', 27], ['傘のフリル', '', 22], ['黒い帽子・ケープ', 'dark', 24], ['上に乗った方の白', 'white', 20], ['下の生き物', 'wide', 55]],
+  Snegurochka: [['髪・ヒレ', '', 40], ['帽子・衣装', '', 21], ['腕・おなか・尾', 'white skin', 36]],
+  Undine: [['髪', '', 39], ['肌・尾', 'wide skin', 52], ['白い衣装', 'white', 13]],
+  Yaobikuni: [['緑の髪・尾・上衣', 'wide', 67], ['ピンクの髪', '', 12], ['肌', 'white skin', 21]],
+  Pixie: [['髪', '', 20], ['肌', 'white skin', 48], ['服・翼', '', 44]],
+  Ham: [['体の毛', 'wide', 59], ['おなかの白', 'white', 34], ['耳の内側', '', 14]],
+  Kyubi: [['髪', '', 25], ['しっぽ・耳の毛', 'white', 42], ['服の白・襟', 'white', 30], ['胸の紫・下駄', '', 16], ['手袋・脚', '', 19]],
+  Orihime: [['髪・耳', '', 22], ['しっぽ・羽衣', 'wide white', 45], ['上の着物', '', 8], ['外の羽織', 'dark', 23], ['手袋・靴下', '', 11]]
+});
+const assistantMasmonPartRule = (mon, i) => {
+  const row = (ASSISTANT_MASMON_DYE_PARTS[mon] || [])[i];
+  const tags = new Set(String(row ? row[1] : '').split(' ').filter(Boolean));
+  const area = row && Number.isFinite(row[2]) ? row[2] / 100 : 0.3;
+  let cap = 90;
+  if (tags.has('wide')) cap = 75;
+  if (tags.has('dark')) cap = Math.min(cap, 70);
+  if (tags.has('white')) cap = Math.min(cap, 60);
+  if (tags.has('clear')) cap = Math.min(cap, 50);
+  if (tags.has('skin')) cap = Math.min(cap, 55);
+  return {
+    i,
+    name: row ? row[0] : `部位${i + 1}`,
+    keep: tags.has('face'),
+    skin: tags.has('skin'),
+    white: tags.has('white'),
+    dark: tags.has('dark'),
+    clear: tags.has('clear'),
+    wide: tags.has('wide'),
+    cap,
+    area
+  };
+};
+const assistantMasmonDyeLimit = (plan, role) => {
+  let odd = 0;
+  const list = [];
+  for (const e of plan) {
+    if (!e || !e.p || e.p.keep || !e.c) continue;
+    if (e.odd) {
+      if (odd >= 2) continue;
+      odd += 1;
+    }
+    let tone = e.tone;
+    const achro = !!ASSISTANT_MASMON_TONE_ACHRO[assistantMasmonBaseOf(e.c)];
+    if (e.p.white && (tone === 'deep' || assistantMasmonBaseOf(e.c) === 'black')) {
+      tone = 'light';
+      if (assistantMasmonBaseOf(e.c) === 'black') e.c = 'gray';
+    }
+    if (e.p.skin && (tone === 'deep' || tone === 'vivid')) tone = 'light';
+    let a = Math.round(e.a);
+    if (e.p.dark && (tone === 'light' || tone === 'pale' || achro && assistantMasmonBaseOf(e.c) === 'white')) a = Math.min(a, 55);
+    if (e.odd && e.p.wide) a = Math.min(a, 60);
+    if (tone === 'deep' && !e.p.dark) a = Math.min(a, 65);
+    a = Math.max(20, Math.min(e.p.cap, a));
+    const id = assistantMasmonTone(e.c, tone, e.jit || 0);
+    if (!id) continue;
+    const prev = list.findIndex(x => x.p.i === e.p.i);
+    if (prev >= 0) list.splice(prev, 1);
+    list.push({
+      ...e,
+      tone,
+      a,
+      id
+    });
+  }
+  const limit = role === 'bold' ? 0.9 : 0.75;
+  for (let guard = 0; guard < 40; guard++) {
+    const cov = list.reduce((s, x) => s + x.p.area * x.a / 100, 0);
+    if (cov <= limit) break;
+    const big = [...list].filter(x => x.a > 35).sort((x, y) => y.p.area * y.a - x.p.area * x.a)[0];
+    if (!big) break;
+    big.a -= 5;
+  }
+  const hueOf = x => {
+    const m = /^custom:(\d+)/.exec(x.id);
+    return m ? Number(m[1]) : ASSISTANT_MASMON_HUE[assistantMasmonBaseOf(x.id)];
+  };
+  for (const x of list) for (const y of list) {
+    if (x === y || x.tone !== 'vivid' || y.tone !== 'vivid' || x.a < 80 || y.a < 80) continue;
+    const hx = hueOf(x),
+      hy = hueOf(y);
+    if (!Number.isFinite(hx) || !Number.isFinite(hy)) continue;
+    const d = Math.min(Math.abs(hx - hy), 360 - Math.abs(hx - hy));
+    if (d > 150) (x.p.area < y.p.area ? x : y).a = 65;
+  }
+  return list;
+};
+const assistantMasmonDyeMake2 = (aid, p, monster, role, rnd, base = null) => {
+  const H = ASSISTANT_MASMON_DYE_HABIT[aid] || ASSISTANT_MASMON_DYE_HABIT.mua;
+  const n = assistantMasmonRegions(monster) || 3;
+  const parts = Array.from({
+    length: n
+  }, (_, i) => assistantMasmonPartRule(monster, i));
+  const can = parts.filter(x => !x.keep);
+  const out = base ? Array.from({
+    length: n
+  }, (_, i) => base[i] || null) : Array(n).fill(null);
+  if (!can.length) return out;
+  const avoid = new Set(H.avoid);
+  const okC = c => c && !avoid.has(c) && !avoid.has(assistantMasmonBaseOf(c));
+  const fav0 = (p.favColors || []).map(x => x.color).filter(Boolean);
+  let fav = fav0.filter(okC);
+  if (!fav.length) fav = fav0.length ? fav0 : ['pink'];
+  if (role !== 'main' && fav.length > 1) {
+    const r0 = Math.floor(rnd() * fav.length);
+    fav = [...fav.slice(r0), ...fav.slice(0, r0)];
+  } else if (fav.length > 1 && rnd() < 0.35) fav = [fav[1], fav[0], ...fav.slice(2)];
+  const pool2 = [...fav, ...(H.extra || []).filter(c => okC(c) && !fav.includes(c))];
+  const tw = Object.entries(H.tones);
+  const tsum = tw.reduce((s, [, w]) => s + w, 0);
+  const pickTone = () => {
+    let r = rnd() * tsum;
+    for (const [t, w] of tw) {
+      r -= w;
+      if (r < 0) return !H.gloss && t === 'vivid' ? 'base' : t;
+    }
+    return tw[0][0];
+  };
+  const jit = () => (rnd() - 0.5) * 8;
+  const al = (f = 1) => (H.alpha[0] + (H.alpha[1] - H.alpha[0]) * rnd()) * f;
+  const wide = [...can].sort((a, b) => b.area - a.area),
+    small = [...can].sort((a, b) => a.area - b.area);
+  const orderOf = H.parts === 'even' ? can : null;
+  const opp = c => {
+    const o = ASSISTANT_MASMON_OPP[assistantMasmonBaseOf(c)] || 'gray';
+    return okC(o) ? o : fav[fav.length - 1];
+  };
+  const oddColor = () => {
+    const hs = Object.keys(ASSISTANT_MASMON_HUE).filter(h => !fav.map(assistantMasmonBaseOf).includes(h) && okC(h));
+    return hs.length ? hs[Math.floor(rnd() * hs.length)] : opp(fav[0]);
+  };
+  const ladder = H.tones.deep ? ['deep', 'base', 'light', 'pale'] : ['base', 'light', 'pale', 'pale'];
+  const plan = [];
+  const put = (pp, c, tone, a, extra = {}) => {
+    if (pp) plan.push({
+      p: pp,
+      c,
+      tone,
+      a,
+      jit: jit(),
+      ...extra
+    });
+  };
+  const keepIt = () => rnd() < H.keep;
+  const seq = orderOf || wide;
+  switch (role) {
+    case 'main':
+      put(seq[0], fav[0], pickTone(), Math.max(al(1.05), 45));
+      seq.slice(1).forEach((x, k) => {
+        if (!keepIt()) put(x, fav[(k + 1) % fav.length], H.grad ? ladder[Math.min(k + 1, 3)] : pickTone(), al(0.9));
+      });
+      break;
+    case 'accent':
+      {
+        const cnt = small.length > 2 && rnd() < 0.5 ? 2 : 1;
+        small.slice(0, cnt).forEach((x, k) => put(x, pool2[Math.floor(rnd() * pool2.length)] || fav[k % fav.length], pickTone(), Math.max(al(1.1), 55)));
+        break;
+      }
+    case 'grad':
+      {
+        const use = seq.filter((x, k) => k < 2 || !keepIt());
+        const gf = fav.find(c => !ASSISTANT_MASMON_TONE_ACHRO[assistantMasmonBaseOf(c)]) || fav[0];
+        use.forEach((x, k) => put(x, gf, ladder[Math.min(k, 3)], al(1 - k * 0.08)));
+        break;
+      }
+    case 'contrast':
+      put(wide[0], fav[0], pickTone(), al());
+      if (small[0] && small[0] !== wide[0]) put(small[0], opp(fav[0]), H.gloss ? 'vivid' : 'base', Math.max(al(1.05), 60));
+      break;
+    case 'natural':
+      put(wide[Math.floor(rnd() * Math.min(2, wide.length))], fav[Math.floor(rnd() * fav.length)], H.tones.deep && !H.tones.light ? 'dull' : 'light', 25 + rnd() * 15);
+      break;
+    case 'bold':
+      seq.forEach((x, k) => put(x, k % 3 === 2 ? opp(fav[0]) : pool2[k % pool2.length], H.gloss ? k % 2 ? 'base' : 'vivid' : pickTone(), Math.max(al(1.05), 75)));
+      break;
+    case 'odd':
+      put(wide[0], oddColor(), rnd() < 0.5 ? 'vivid' : 'deep', al(), {
+        odd: true
+      });
+      if (small[0] && small[0] !== wide[0]) put(small[0], rnd() < 0.5 ? oddColor() : fav[0], pickTone(), al(), {
+        odd: rnd() < 0.6
+      });
+      if (wide[1] && wide[1] !== small[0] && !keepIt()) put(wide[1], fav[0], pickTone(), al(0.9));
+      break;
+    case 'season':
+      {
+        const sk = String(base && base.__season || assistantMasmonSeasonKey(typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '')).split('-')[1] || 'autumn';
+        const sc = (ASSISTANT_MASMON_SEASON[sk] || ASSISTANT_MASMON_SEASON.autumn).filter(okC);
+        const c = sc.length ? sc[Math.floor(rnd() * sc.length)] : `${assistantMasmonBaseOf(fav[0])}`;
+        put(small[0], c, pickTone(), Math.max(al(), 55));
+        if (!base && wide[0] !== small[0] && !keepIt()) put(wide[0], fav[0], 'light', al(0.8));
+        break;
+      }
+    default:
+      put(wide[0], fav[0], pickTone(), al());
+  }
+  const free = small.filter(x => !plan.some(e => e.p === x));
+  if (role !== 'odd' && H.odd > 0 && rnd() < H.odd && free.length) put(free[0], oddColor(), 'vivid', al(), {
+    odd: true
+  });
+  if (!plan.length) put(wide[0], fav[0], 'light', 40);
+  for (const x of assistantMasmonDyeLimit(plan, role)) out[x.p.i] = x.a >= 100 ? x.id : `${x.id}@${x.a}`;
+  return out;
+};
+const ASSISTANT_MASMON_DYE_V = 2;
+const ASSISTANT_MASMON_DYE_RE = /^([a-z_]{2,16}|custom:\d{1,3}:\d{1,3}:\d{1,3})(@(100|[1-9]\d))?$/;
+const assistantMasmonFavSig = p => (p && p.favColors || []).map(x => x.color).join(',');
+const normalizeAssistantMasmonDyes = raw => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [aid, list] of Object.entries(raw)) {
+    if (!assistantMasmonBasePlanOf(aid) || !Array.isArray(list)) continue;
+    const rows = [];
+    for (const e of list.slice(-40)) {
+      if (!e || typeof e !== 'object' || e.d !== ASSISTANT_MASMON_DRAW_V || !['season', 'like'].includes(e.why) || !e.slots || typeof e.slots !== 'object') continue;
+      const slots = {};
+      for (const [s, cs] of Object.entries(e.slots)) {
+        const k = Number(s);
+        if (Number.isInteger(k) && k >= 1 && k <= ASSISTANT_MASMON_DRAW_MAX && Array.isArray(cs)) slots[k] = cs.slice(0, 8).map(c => typeof c === 'string' && ASSISTANT_MASMON_DYE_RE.test(c) ? c : null);
+      }
+      const roles = {};
+      if (e.roles && typeof e.roles === 'object') for (const [s, r] of Object.entries(e.roles)) if (ASSISTANT_MASMON_ROLE_NAME[r]) roles[Number(s)] = r;
+      rows.push({
+        v: ASSISTANT_MASMON_DYE_V,
+        d: ASSISTANT_MASMON_DRAW_V,
+        why: e.why,
+        at: typeof e.at === 'string' ? e.at.slice(0, 10) : '',
+        season: typeof e.season === 'string' ? e.season.slice(0, 16) : '',
+        fav: typeof e.fav === 'string' ? e.fav.slice(0, 120) : '',
+        roles,
+        slots
+      });
+    }
+    if (rows.length) out[aid] = rows;
+  }
+  return out;
+};
+const assistantMasmonDyeNowOf = (state, aid, slot, fallback) => {
+  const hist = state && state.dyes && state.dyes[aid];
+  if (Array.isArray(hist)) for (let k = hist.length - 1; k >= 0; k--) {
+    const cs = hist[k].slots && hist[k].slots[slot];
+    if (Array.isArray(cs)) return cs;
+  }
+  return fallback;
+};
+const assistantMasmonDyeLog = (aid, slot) => {
+  const st = ASSISTANT_MASMON_STORE.state,
+    hist = st.dyes && st.dyes[aid] || [];
+  const row = assistantMasmonDrawOn(aid, st) ? st.draw.made[aid].find(t => t.slot === slot) : null;
+  if (!row) return [];
+  let before = row.colors;
+  const out = [];
+  for (const e of hist) {
+    const cs = e.slots[slot];
+    if (!Array.isArray(cs)) continue;
+    out.push({
+      why: e.why,
+      at: e.at,
+      season: e.season,
+      role: e.roles[slot] || '',
+      colors: cs,
+      before
+    });
+    before = cs;
+  }
+  return out.reverse();
+};
+const assistantMasmonDyeEnsure = (state, day) => {
+  const season = assistantMasmonSeasonKey(day);
+  if (!season || !state.draw || state.draw.v !== ASSISTANT_MASMON_DRAW_V) return state;
+  const dyes = {
+    ...(state.dyes || {})
+  };
+  let changed = false;
+  for (const [aid, list] of Object.entries(state.draw.made || {})) {
+    const p = assistantMasmonBasePlanOf(aid);
+    if (!p || !Array.isArray(list) || !list.length) continue;
+    const hist = Array.isArray(dyes[aid]) ? [...dyes[aid]] : [];
+    const sig = assistantMasmonFavSig(p);
+    const last = hist[hist.length - 1] || null;
+    const lastSeason = last ? last.season : assistantMasmonSeasonKey(state.draw.at);
+    const lastFav = last && last.fav || state.draw.fav[aid] || sig;
+    const w = state.draw.welcomed[aid] || {};
+    const mine = list.filter(t => t.slot === 1 || w[t.monster]);
+    const cur = t => assistantMasmonDyeNowOf({
+      dyes: {
+        [aid]: hist
+      }
+    }, aid, t.slot, t.colors);
+    if (lastFav !== sig) {
+      const lead = list.find(t => t.slot === 1);
+      if (lead) {
+        const rnd = assistantMasmonRng(`${state.seed}|${aid}|like|${sig}`);
+        hist.push({
+          v: ASSISTANT_MASMON_DYE_V,
+          d: ASSISTANT_MASMON_DRAW_V,
+          why: 'like',
+          at: day,
+          season,
+          fav: sig,
+          roles: {
+            1: 'main'
+          },
+          slots: {
+            1: assistantMasmonDyeMake2(aid, p, lead.monster, 'main', rnd)
+          }
+        });
+        changed = true;
+      }
+    } else if (lastSeason && lastSeason !== season && mine.length) {
+      const rnd = assistantMasmonRng(`${state.seed}|${aid}|${season}`);
+      const lastSeasonSlot = Number(Object.keys(([...hist].reverse().find(e => e.why === 'season') || {}).slots || {})[0]);
+      const pool = mine.length > 1 ? mine.filter(t => t.slot !== lastSeasonSlot) : mine;
+      const t = pool[Math.floor(rnd() * pool.length)];
+      const b = [...cur(t)];
+      b.__season = season;
+      hist.push({
+        v: ASSISTANT_MASMON_DYE_V,
+        d: ASSISTANT_MASMON_DRAW_V,
+        why: 'season',
+        at: day,
+        season,
+        fav: sig,
+        roles: {
+          [t.slot]: 'season'
+        },
+        slots: {
+          [t.slot]: assistantMasmonDyeMake2(aid, p, t.monster, 'season', rnd, b)
+        }
+      });
+      changed = true;
+    }
+    if (hist.length > 40) hist.splice(0, hist.length - 40);
+    if (hist.length) dyes[aid] = hist;
+  }
+  return changed ? {
+    ...state,
+    dyes
+  } : state;
+};
+const assistantMasmonWelcomeLv = slot => slot * 2 - 1;
+const ASSISTANT_MASMON_GROW_KINDS = Object.freeze(['攻撃型', '防御型', 'ライフ型', 'ガッツ型', 'すばやさ型']);
+const assistantMasmonDrawPool = (aid, p) => {
+  const ok = m => typeof m === 'string' && !!assistantMasmonMon(m);
+  const badMon = new Set(),
+    badLin = new Set();
+  for (const x of p.dislikeMon || []) {
+    if (x.monster) {
+      badMon.add(x.monster);
+      const l = assistantMasmonLineage(x.monster);
+      if (l) badLin.add(l);
+    }
+    if (x.lineage) badLin.add(x.lineage);
+  }
+  const fine = m => ok(m) && !badMon.has(m) && !badLin.has(assistantMasmonLineage(m));
+  const likes = [],
+    more = [],
+    seen = new Set();
+  const add = (list, t) => {
+    if (t && fine(t.monster) && !seen.has(t.monster)) {
+      seen.add(t.monster);
+      list.push(t);
+    }
+  };
+  for (const t of p.team || []) add(likes, t);
+  for (const x of p.likeMon || []) if (x.monster) add(likes, {
+    monster: x.monster,
+    why: x.why
+  });
+  for (const t of [...(p.extra || []), ...(ASSISTANT_MASMON_POOL_MORE[aid] || [])]) add(more, t);
+  const lins = new Set();
+  for (const t of likes) {
+    const l = assistantMasmonLineage(t.monster);
+    if (l) lins.add(l);
+  }
+  for (const x of p.likeMon || []) if (x.lineage) lins.add(x.lineage);
+  const all = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? Object.keys(ALL_PLAYER_MONSTERS) : [];
+  for (const m of all) {
+    const l = assistantMasmonLineage(m);
+    if (l && lins.has(l)) add(more, {
+      monster: m,
+      why: `${assistantMasmonLineageName(l) || '好きな種類'}の仲間だから気になる`
+    });
+  }
+  const rest = [];
+  for (const m of all) add(rest, {
+    monster: m,
+    why: '一緒にいると楽しい'
+  });
+  return {
+    likes,
+    more,
+    rest
+  };
+};
+const assistantMasmonDrawFor = (aid, seed) => {
+  const p = assistantMasmonBasePlanOf(aid);
+  if (!p) return null;
+  const rnd = assistantMasmonRng(`${seed}|${aid}|draw-v${ASSISTANT_MASMON_DRAW_V}`);
+  const {
+    likes,
+    more,
+    rest
+  } = assistantMasmonDrawPool(aid, p);
+  if (!likes.length) return null;
+  const lead = likes[Math.floor(rnd() * likes.length)];
+  const picked = [lead];
+  for (const t of [...assistantMasmonShuffle([...likes.filter(t => t !== lead), ...more], rnd), ...assistantMasmonShuffle(rest, rnd)]) {
+    if (picked.length >= ASSISTANT_MASMON_DRAW_MAX) break;
+    if (!picked.some(x => x.monster === t.monster)) picked.push(t);
+  }
+  const H = ASSISTANT_MASMON_DYE_HABIT[aid] || ASSISTANT_MASMON_DYE_HABIT.mua;
+  const roles = ['main'];
+  while (roles.length < picked.length) roles.push(...assistantMasmonShuffle(H.roles, rnd));
+  return picked.map((t, i) => {
+    const slot = i + 1,
+      mon = assistantMasmonMon(t.monster);
+    const lv0 = Number.isFinite(t.lv) ? t.lv : Math.max(5, 20 - slot * 2);
+    const lv = Math.max(1, Math.min(30, lv0 + Math.round((rnd() - 0.5) * 6)));
+    const grow = typeof t.grow === 'string' && t.grow ? t.grow : ASSISTANT_MASMON_GROW_KINDS[Math.floor(rnd() * ASSISTANT_MASMON_GROW_KINDS.length)];
+    const nick = typeof t.nick === 'string' && t.nick ? t.nick : mon && mon.name || t.monster;
+    return {
+      slot,
+      monster: t.monster,
+      nick,
+      lv,
+      grow,
+      why: t.why || '',
+      role: roles[i],
+      welcome: assistantMasmonWelcomeLv(slot),
+      colors: assistantMasmonDyeMake2(aid, p, t.monster, roles[i], rnd),
+      ai: false
+    };
+  });
+};
 const assistantMasmonMakeFor = (aid, seed) => {
   const p = assistantMasmonBasePlanOf(aid);
   if (!p) return null;
@@ -123520,7 +125277,7 @@ const assistantMasmonMakeFor = (aid, seed) => {
 };
 const assistantMasmonEnsureMade = async () => {
   const cur = ASSISTANT_MASMON_STORE.state;
-  const need = ASSISTANT_MASMON_PLAN.map(a => a.id).filter(id => !cur.made[id]);
+  const need = ASSISTANT_MASMON_PLAN.map(a => a.id).filter(id => !(cur.draw && cur.draw.v === ASSISTANT_MASMON_DRAW_V && cur.draw.made[id]));
   if (need.length) {
     let seed = cur.seed;
     if (!seed) {
@@ -123532,31 +125289,67 @@ const assistantMasmonEnsureMade = async () => {
       }
       seed = typeof bid === 'string' && /^[\w-]{4,60}$/.test(bid) ? bid : `r-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e9).toString(36)}`;
     }
-    const made = {
-      ...cur.made
+    const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : new Date().toISOString().slice(0, 10);
+    const st0 = ASSISTANT_MASMON_STORE.state;
+    const d0 = st0.draw && st0.draw.v === ASSISTANT_MASMON_DRAW_V ? st0.draw : {
+      v: ASSISTANT_MASMON_DRAW_V,
+      at: day,
+      made: {},
+      welcomed: {},
+      named: false,
+      fav: {}
+    };
+    const draw = {
+      ...d0,
+      made: {
+        ...d0.made
+      },
+      welcomed: {
+        ...d0.welcomed
+      },
+      fav: {
+        ...d0.fav
+      }
     };
     for (const id of need) {
-      const m = assistantMasmonMakeFor(id, seed);
-      if (m) made[id] = m;
+      const m = assistantMasmonDrawFor(id, seed);
+      if (!m) continue;
+      draw.made[id] = m;
+      draw.welcomed[id] = {
+        [m[0].monster]: day
+      };
+      draw.fav[id] = assistantMasmonFavSig(assistantMasmonBasePlanOf(id));
     }
+    if (!draw.at) draw.at = day;
     const next = {
-      ...ASSISTANT_MASMON_STORE.state,
+      ...st0,
       seed,
-      made
+      draw
     };
     ASSISTANT_MASMON_STORE.set(next);
     try {
       if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false);
     } catch (_) {}
   }
+  try {
+    const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '';
+    const st = ASSISTANT_MASMON_STORE.state;
+    const next = st.seed ? assistantMasmonDyeEnsure(st, day) : st;
+    if (next !== st) {
+      ASSISTANT_MASMON_STORE.set(next);
+      try {
+        if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false);
+      } catch (_) {}
+    }
+  } catch (_) {}
   void assistantMasmonAskNames();
 };
 let _assistantMasmonNamesBusy = false;
 const assistantMasmonAskNames = async () => {
   const st = ASSISTANT_MASMON_STORE.state;
-  if (st.named || _assistantMasmonNamesBusy) return 'skip';
+  if (!st.draw || st.draw.v !== ASSISTANT_MASMON_DRAW_V || st.draw.named || _assistantMasmonNamesBusy) return 'skip';
   if (!(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonNamesApi === true) || typeof ASSISTANT_CHAT_URL === 'undefined' || typeof SB_HEADERS === 'undefined') return 'skip';
-  const items = Object.entries(st.made).map(([a, list]) => ({
+  const items = Object.entries(st.draw.made).map(([a, list]) => ({
     a,
     s: list.map(t => {
       const m = assistantMasmonMon(t.monster);
@@ -123598,7 +125391,8 @@ const assistantMasmonAskNames = async () => {
     if (!res || res.ok !== true || !res.names || typeof res.names !== 'object') return res && res.kind === 'tired' ? 'tired' : 'failed';
     const cur = ASSISTANT_MASMON_STORE.state;
     const made = {};
-    for (const [a, list] of Object.entries(cur.made)) {
+    if (!cur.draw || cur.draw.v !== ASSISTANT_MASMON_DRAW_V) return 'skip';
+    for (const [a, list] of Object.entries(cur.draw.made)) {
       const got = res.names[a] && typeof res.names[a] === 'object' ? res.names[a] : {};
       const usedNames = new Set();
       made[a] = list.map(t => {
@@ -123614,8 +125408,11 @@ const assistantMasmonAskNames = async () => {
     }
     const next = {
       ...cur,
-      made,
-      named: true
+      draw: {
+        ...cur.draw,
+        made,
+        named: true
+      }
     };
     ASSISTANT_MASMON_STORE.set(next);
     try {
@@ -123694,7 +125491,8 @@ const useAssistantMasmonSave = () => {
   }, []);
   return st;
 };
-const assistantMasmonWelcomed = (aid, st = ASSISTANT_MASMON_STORE.state) => st && st.welcomed && st.welcomed[aid] || {};
+const assistantMasmonDrawOn = (aid, st = ASSISTANT_MASMON_STORE.state) => !!(st && st.draw && st.draw.v === ASSISTANT_MASMON_DRAW_V && Array.isArray(st.draw.made[aid]));
+const assistantMasmonWelcomed = (aid, st = ASSISTANT_MASMON_STORE.state) => (assistantMasmonDrawOn(aid, st) ? st.draw.welcomed[aid] : st && st.welcomed && st.welcomed[aid]) || {};
 const assistantMasmonBench = (p, st = ASSISTANT_MASMON_STORE.state) => p && Array.isArray(p.extra) ? p.extra.filter(t => assistantMasmonMonOk(t) && assistantMasmonWelcomed(p.id, st)[t.monster]).map(t => ({
   ...t,
   bench: true
@@ -123704,26 +125502,36 @@ const assistantMasmonToWelcome = (p, bondLv, st = ASSISTANT_MASMON_STORE.state) 
   const done = assistantMasmonWelcomed(p.id, st);
   return p.extra.find(t => assistantMasmonMonOk(t) && !done[t.monster] && Number.isFinite(t.welcome) && bondLv >= t.welcome) || null;
 };
-const assistantMasmonWelcome = async (aid, t) => {
+const assistantMasmonWelcome = async (aid, t, quiet = false) => {
   await ASSISTANT_MASMON_STORE.load();
   const cur = ASSISTANT_MASMON_STORE.state;
   if (assistantMasmonWelcomed(aid, cur)[t.monster]) return false;
   const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : new Date().toISOString().slice(0, 10);
-  const next = {
+  const w2 = {
+    ...assistantMasmonWelcomed(aid, cur),
+    [t.monster]: day
+  };
+  const next = assistantMasmonDrawOn(aid, cur) ? {
+    ...cur,
+    draw: {
+      ...cur.draw,
+      welcomed: {
+        ...cur.draw.welcomed,
+        [aid]: w2
+      }
+    }
+  } : {
     ...cur,
     welcomed: {
       ...cur.welcomed,
-      [aid]: {
-        ...assistantMasmonWelcomed(aid, cur),
-        [t.monster]: day
-      }
+      [aid]: w2
     }
   };
   ASSISTANT_MASMON_STORE.set(next);
   try {
     if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false);
   } catch (_) {}
-  try {
+  if (!quiet) try {
     if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`${assistantLifeName(aid)}が新しいマスモン「${t.nick}」を迎えた`, [aid]);
   } catch (_) {}
   return true;
@@ -123865,8 +125673,8 @@ const assistantMasmonStats = t => {
   }
   return out;
 };
-const assistantMasmonSwatch = c => typeof MASU_COLOR_SWATCH !== 'undefined' && MASU_COLOR_SWATCH[c] || '#94a3b8';
-const assistantMasmonColorName = c => typeof MASU_COLOR_LABELS !== 'undefined' && MASU_COLOR_LABELS[c] || c;
+const assistantMasmonSwatch = c => typeof MASU_COLOR_SWATCH !== 'undefined' && MASU_COLOR_SWATCH[c] || (typeof getColorSwatchHex === 'function' && /^custom:/.test(String(c)) ? getColorSwatchHex(c) : '#94a3b8');
+const assistantMasmonColorName = c => assistantMasmonToneName(c);
 const assistantMasmonRegions = mid => typeof MASU_COLOR_REGION_HUES !== 'undefined' && Array.isArray(MASU_COLOR_REGION_HUES[mid]) ? MASU_COLOR_REGION_HUES[mid].length : 0;
 const assistantMasmonFavCard = id => {
   try {
@@ -123934,6 +125742,150 @@ function AssistantMasmonWaitCard({
       wordBreak: 'auto-phrase'
     }
   }, "🔒 仲良し度 Lv", t.welcome, " になると、新しいマスモンを迎えます")));
+}
+const assistantMasmonAllies = team => [...team].filter(t => !t.lead).sort((a, b) => b.lv - a.lv || a.slot - b.slot).slice(0, 3);
+function AssistantMasmonFormation({
+  who,
+  team,
+  waiting,
+  land = false,
+  onOpen
+}) {
+  const lead = team.find(t => t.lead) || team[0];
+  const allies = assistantMasmonAllies(team);
+  const slots = [...team.map(t => ({
+    t,
+    ok: true
+  })), ...waiting.map(t => ({
+    t,
+    ok: false
+  }))].sort((a, b) => (a.t.slot || 0) - (b.t.slot || 0)).slice(0, ASSISTANT_MASMON_DRAW_MAX);
+  const cell = land ? 52 : 68;
+  const heroCard = lead && React.createElement("button", {
+    type: "button",
+    className: "mhm-card flex w-full items-center gap-2.5 text-left",
+    "data-assistant-masmon-hero": lead.monster,
+    onClick: () => onOpen(lead)
+  }, React.createElement("div", {
+    className: "mhm-stage shrink-0"
+  }, React.createElement(AssistantMasmonPic, {
+    t: lead,
+    size: land ? 84 : 112
+  })), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "text-[10px] font-black text-amber-300"
+  }, "⚔ 勇者モン"), React.createElement("p", {
+    className: "truncate text-[16px] font-black text-white"
+  }, lead.nick), React.createElement("p", {
+    className: "truncate text-[10.5px] font-bold text-amber-200"
+  }, "Lv.", lead.lv, " ・ ", assistantMasmonGrowKind(lead.grow)), React.createElement("p", {
+    className: "mt-1 text-[11px] font-bold leading-snug text-slate-100",
+    style: {
+      wordBreak: 'auto-phrase'
+    },
+    "data-assistant-masmon-hero-why": true
+  }, "💬 ", who.name, "「勇者モンは", lead.nick, "。", lead.why, "」")));
+  const allyCard = React.createElement("div", {
+    className: "mhm-card",
+    "data-assistant-masmon-allies": true
+  }, React.createElement("p", {
+    className: "text-[10px] font-black text-slate-400"
+  }, "道中で仲間にしやすい3体"), React.createElement("div", {
+    className: "mt-1 grid grid-cols-3 gap-1.5"
+  }, [0, 1, 2].map(i => {
+    const t = allies[i];
+    return t ? React.createElement("button", {
+      key: t.monster,
+      type: "button",
+      className: "text-center",
+      "data-assistant-masmon-ally": t.monster,
+      onClick: () => onOpen(t)
+    }, React.createElement("div", {
+      className: "mhm-stage"
+    }, React.createElement(AssistantMasmonPic, {
+      t: t,
+      size: land ? cell : 84
+    })), React.createElement("p", {
+      className: "mt-0.5 truncate text-[10.5px] font-black text-white"
+    }, t.nick), React.createElement("p", {
+      className: "truncate text-[9px] font-bold text-amber-200"
+    }, "Lv.", t.lv)) : React.createElement("div", {
+      key: `e${i}`,
+      className: "flex flex-col items-center justify-center rounded-lg border border-dashed border-white/20 text-[9.5px] font-bold text-slate-500",
+      style: {
+        minHeight: cell + 30
+      }
+    }, "まだ");
+  })));
+  const formCard = React.createElement("div", {
+    className: "mhm-card",
+    "data-assistant-masmon-formation": true
+  }, React.createElement("p", {
+    className: "flex items-baseline justify-between text-[10px] font-black text-slate-400"
+  }, React.createElement("span", null, "編成"), React.createElement("span", {
+    className: "text-amber-200"
+  }, team.length, "/", ASSISTANT_MASMON_DRAW_MAX)), React.createElement("div", {
+    className: "mt-1 grid grid-cols-4 gap-1.5"
+  }, slots.map(({
+    t,
+    ok
+  }) => ok ? React.createElement("button", {
+    key: t.monster,
+    type: "button",
+    className: "relative text-center",
+    "data-assistant-masmon-team": t.monster,
+    onClick: () => onOpen(t)
+  }, t.lead && React.createElement("em", {
+    className: "mhm-lead absolute left-0 top-0 z-[1]",
+    style: {
+      fontSize: 8.5
+    }
+  }, "勇者"), React.createElement("div", {
+    className: "mhm-stage"
+  }, React.createElement(AssistantMasmonPic, {
+    t: t,
+    size: cell
+  })), React.createElement("p", {
+    className: "mt-0.5 truncate text-[10px] font-black text-white"
+  }, t.nick)) : (() => {
+    const m = assistantMasmonMon(t.monster);
+    return React.createElement("div", {
+      key: t.monster,
+      className: "text-center",
+      "data-assistant-masmon-wait": t.monster
+    }, React.createElement("div", {
+      className: "mhm-stage"
+    }, React.createElement("div", {
+      className: "mhm-pic",
+      style: {
+        width: cell,
+        height: cell
+      }
+    }, m && React.createElement("img", {
+      src: m.imgUrl,
+      alt: "",
+      draggable: false,
+      style: {
+        width: '100%',
+        height: '100%',
+        objectFit: 'contain',
+        filter: 'brightness(0) opacity(.55)'
+      }
+    }))), React.createElement("p", {
+      className: "mt-0.5 truncate text-[9.5px] font-bold text-sky-200"
+    }, "🔒 Lv", t.welcome));
+  })())));
+  return React.createElement(React.Fragment, null, React.createElement("div", {
+    className: `grid gap-2 ${land ? 'grid-cols-2' : 'grid-cols-1'}`
+  }, React.createElement("div", {
+    className: "flex flex-col gap-2"
+  }, heroCard, allyCard), formCard), React.createElement("p", {
+    className: "mt-2 text-[10.5px] font-bold leading-snug text-slate-400",
+    style: {
+      wordBreak: 'auto-phrase'
+    }
+  }, "⚔ モンヒロバトルと同じく、8体の編成から勇者モンを1体連れて行き、道中で3体を仲間にして4体で戦います。編成は", who.name, "が決めています。仲良し度が Lv2 上がるごとに、新しいマスモンを迎えます。"));
 }
 const ASSISTANT_MASMON_TABS = Object.freeze([['mons', '🐾 マスモン'], ['team', '⚔ 編成'], ['deck', '🃏 デッキ'], ['taste', '💗 好き・苦手']]);
 function AssistantMasmonPic({
@@ -124023,7 +125975,7 @@ function AssistantMasmonRow({
     className: "break-all"
   }, t.nick), t.lead && React.createElement("em", {
     className: "mhm-lead"
-  }, "先頭"), t.bench && React.createElement("em", {
+  }, "勇者モン"), t.bench && React.createElement("em", {
     className: "mhm-lead mhm-bench"
   }, "控え")), land ? React.createElement(React.Fragment, null, React.createElement("p", {
     className: "flex flex-wrap gap-x-1 text-[10.5px] font-bold leading-tight text-slate-300"
@@ -124072,10 +126024,15 @@ function AssistantMasmonSheet({
     (async () => {
       await ASSISTANT_MASMON_STORE.load();
       const p0 = assistantMasmonPlanOf(id),
-        t = assistantMasmonToWelcome(p0, Number(bondLv));
-      if (t && (await assistantMasmonWelcome(id, t)) && alive) setWelcome(t);
+        lv = Number(bondLv);
+      const due = p0 && Number.isFinite(lv) ? (p0.extra || []).filter(t => assistantMasmonMonOk(t) && Number.isFinite(t.welcome) && lv >= t.welcome && !assistantMasmonWelcomed(id)[t.monster]) : [];
+      let last = null;
+      for (let i = 0; i < due.length; i++) {
+        if (await assistantMasmonWelcome(id, due[i], i < due.length - 1)) last = due[i];
+      }
+      if (last && alive) setWelcome(last);
       const st = ASSISTANT_MASMON_STORE.state;
-      if (st.named && !st.noticed[id] && alive) {
+      if (!assistantMasmonDrawOn(id, st) && st.named && !st.noticed[id] && alive) {
         setRenamed(true);
         const next = {
           ...st,
@@ -124121,6 +126078,14 @@ function AssistantMasmonSheet({
     }))), React.createElement("p", {
       className: "mt-2 text-[10.5px] font-bold leading-snug text-slate-400"
     }, "🐾 ", who.name, "が自分で育てて、自分の好きな色に染めているマスモンです。押すと詳しく見られます。"));
+  } else if (tab === 'team' && p.v2) {
+    body = React.createElement(AssistantMasmonFormation, {
+      who: who,
+      team: team,
+      waiting: waiting,
+      land: land,
+      onOpen: setDetail
+    });
   } else if (tab === 'team') {
     body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "grid grid-cols-3 gap-2"
@@ -124514,7 +126479,7 @@ function AssistantMasmonDetail({
   const like = assistantMasmonLikeText(who, p, t);
   const skills = assistantMasmonSkills(t);
   const kind = assistantMasmonGrowKind(t.grow);
-  const role = t.lead ? '先頭' : t.bench ? '控え' : '編成';
+  const role = t.lead ? p && p.v2 ? '勇者モン' : '先頭' : t.bench ? '控え' : '編成';
   const pic = React.createElement(AssistantMasmonPic, {
     t: t,
     size: land ? 190 : 210
@@ -124572,8 +126537,32 @@ function AssistantMasmonDetail({
       }
     }) : React.createElement("i", {
       className: "inline-block h-[12px] w-[12px] rounded-full border border-dashed border-white/70"
-    }), b ? `${assistantMasmonColorName(b)}${al < 100 ? `(うすめ ${al}%)` : ''}` : '元の色');
-  }))), React.createElement("div", {
+    }), React.createElement("small", {
+      className: "text-slate-400"
+    }, assistantMasmonPartRule(t.monster, i).name), b ? `${assistantMasmonColorName(b)}${al < 100 ? `(うすめ ${al}%)` : ''}` : '元の色');
+  })), (() => {
+    const e = who && who.id && Number.isInteger(t.slot) ? assistantMasmonDyeLog(who.id, t.slot)[0] : null;
+    if (!e) return null;
+    const why = e.why === 'season' ? `${ASSISTANT_MASMON_SEASON_NAME[String(e.season).split('-')[1]] || '季節'}の色に染め直しました` : e.why === 'like' ? '好きな色が変わって、染め直しました' : '染め方を見直しました';
+    const before = (e.before || []).slice(0, n || 5);
+    return React.createElement("p", {
+      className: "mt-1.5 flex flex-wrap items-center gap-1 text-[10px] font-bold text-slate-300",
+      "data-assistant-masmon-dye-log": e.why
+    }, React.createElement("span", null, "🎨 ", e.at ? `${e.at.slice(5).replace('-', '/')} ` : '', why, ASSISTANT_MASMON_ROLE_NAME[e.role] ? `(${ASSISTANT_MASMON_ROLE_NAME[e.role]})` : ''), React.createElement("span", {
+      className: "inline-flex items-center gap-[3px] text-slate-400"
+    }, "前の色", before.map((c, i) => c ? React.createElement("i", {
+      key: i,
+      title: assistantMasmonColorName(String(c).split('@')[0]),
+      className: "inline-block h-[8px] w-[8px] rounded-full border border-white/40",
+      style: {
+        background: assistantMasmonSwatch(String(c).split('@')[0])
+      }
+    }) : React.createElement("i", {
+      key: i,
+      title: "元の色",
+      className: "inline-block h-[8px] w-[8px] rounded-full border border-dashed border-white/50"
+    }))));
+  })()), React.createElement("div", {
     className: "mhm-card mt-2",
     "data-assistant-masmon-detail-talk": true
   }, like && React.createElement("p", {
@@ -126965,16 +128954,13 @@ function AlfFriendHouseView({
       alive = false;
     };
   }, []);
-  const [vw, setVw] = React.useState(() => typeof window !== 'undefined' ? window.innerWidth : 390);
-  const [vh, setVh] = React.useState(() => typeof window !== 'undefined' ? window.innerHeight : 844);
-  React.useEffect(() => {
-    const on = () => {
-      setVw(window.innerWidth);
-      setVh(window.innerHeight);
-    };
-    window.addEventListener('resize', on);
-    return () => window.removeEventListener('resize', on);
-  }, []);
+  const {
+    w: vw,
+    h: vh
+  } = typeof useAssistantLifeViewSize === 'function' ? useAssistantLifeViewSize() : {
+    w: 390,
+    h: 844
+  };
   React.useEffect(() => {
     if (friend && friend.id) void alfFetchMore(friend.id);
   }, [friend && friend.id]);
@@ -142764,7 +144750,8 @@ const CardQuickRunDetail = ({
   autoReady,
   autoDifficulty,
   todayLoops = 0,
-  onClose
+  onClose,
+  note = null
 }) => {
   const live = !!quickRun && !quickRun.stopped;
   const row = (label, value, tone = 'text-white') => React.createElement("div", {
@@ -142801,10 +144788,10 @@ const CardQuickRunDetail = ({
     className: `shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-black ${!quickRun ? 'border-white/20 text-slate-300' : live ? 'border-fuchsia-300/50 text-fuchsia-100' : 'border-rose-400/70 text-rose-200'}`
   }, !quickRun ? '回していません' : live ? `${quickRun.loops}周目` : '止まっています')), React.createElement("div", {
     className: "mt-2 rounded-2xl bg-black/30 px-3 py-1"
-  }, row('いまのようす', !quickRun ? 'いまは回していません' : live ? `回しています(WAVE ${wave || 1}/10)` : '止まっています', live ? 'text-fuchsia-100' : !quickRun ? 'text-slate-300' : 'text-rose-200'), quickRun && !live && quickRun.info && quickRun.info.reason && row('止まった理由', quickRun.info.reason, 'text-rose-200'), row('難易度', quickRun && quickRun.difficulty || autoDifficulty || 'AUTO設定でまだ決まっていません', quickRun && quickRun.difficulty || autoDifficulty ? 'text-white' : 'text-amber-200'), quickRun && row('何周目', `${quickRun.loops}周目`), quickRun && row('この周回でふえたダイヤ', `+${(quickRun.gold || 0).toLocaleString()}`, 'text-emerald-200'), quickRun && row('この周回でふえた経験値', `+${(quickRun.xp || 0).toLocaleString()}`, 'text-emerald-200'), row('今日バトルカードで足した周回', `${(todayLoops || 0).toLocaleString()}周ぶん`, 'text-sky-100')), React.createElement("p", {
+  }, row('いまのようす', !quickRun ? 'いまは回していません' : live ? `回しています(WAVE ${wave || 1}/10)` : '止まっています', live ? 'text-fuchsia-100' : !quickRun ? 'text-slate-300' : 'text-rose-200'), quickRun && !live && quickRun.info && quickRun.info.reason && row('止まった理由', quickRun.info.reason, 'text-rose-200'), row('難易度', quickRun && quickRun.difficulty || autoDifficulty || 'AUTO設定でまだ決まっていません', quickRun && quickRun.difficulty || autoDifficulty ? 'text-white' : 'text-amber-200'), quickRun && row('何周目', `${quickRun.loops}周目`), quickRun && row('この周回でふえたダイヤ', `+${(quickRun.gold || 0).toLocaleString()}`, 'text-emerald-200'), quickRun && row('この周回でふえた経験値', `+${(quickRun.xp || 0).toLocaleString()}`, 'text-emerald-200'), todayLoops !== null && row('今日バトルカードで足した周回', `${(todayLoops || 0).toLocaleString()}周ぶん`, 'text-sky-100')), React.createElement("p", {
     className: "mt-2 text-[11px] font-bold leading-snug text-slate-400",
     style: JA_WRAP_STYLE
-  }, jaWrap(autoReady || quickRun ? 'フリー対戦・マルチで戦うと、その分がクイック周回として足されます。裏で回しているときは、いまの周回が進みます。' : 'AUTO設定で、勇者モン・配置距離・難易度の3つを決めると、戦った分がクイック周回として足されます。')), React.createElement("button", {
+  }, jaWrap(note || (autoReady || quickRun ? 'フリー対戦・マルチで戦うと、その分がクイック周回として足されます。裏で回しているときは、いまの周回が進みます。' : 'AUTO設定で、勇者モン・配置距離・難易度の3つを決めると、戦った分がクイック周回として足されます。'))), React.createElement("button", {
     type: "button",
     "data-card-quick-detail-close": true,
     onClick: onClose,
@@ -165945,7 +167932,12 @@ function MonsterHeroGame() {
   const isCardScreen = state => typeof state === 'string' && state.startsWith('CARD_');
   const cardMarketEntryRef = useRef(false);
   const isCardRunScreen = state => isCardScreen(state) || state === 'BREEDER_MARKET' && cardMarketEntryRef.current === true;
-  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state);
+  const ASSISTANT_LIFE_RUN_STATES = ['HOME', 'PROFILE', 'ITEM_INVENTORY'];
+  const assistantLifeOpenRef = useRef(false);
+  const assistantLifeExitingRef = useRef(false);
+  const gameStateNowRef = useRef('HOME');
+  const isAssistantLifeRunScreen = state => assistantLifeExitingRef.current || assistantLifeOpenRef.current && ASSISTANT_LIFE_RUN_STATES.includes(state);
+  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state) || isAssistantLifeRunScreen(state);
   const runBackgroundAllowedRef = useRef(false);
   const gameStateCaller = () => {
     try {
@@ -165957,6 +167949,7 @@ function MonsterHeroGame() {
     }
   };
   const setGameState = next => {
+    gameStateNowRef.current = next;
     runBackgroundAllowedRef.current = isBackgroundRunScreen(next);
     if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`);
     setGameStateRaw(next);
@@ -168548,7 +170541,13 @@ function MonsterHeroGame() {
   const [assistantLifeOpenNow, setAssistantLifeOpenNow] = useState(false);
   useEffect(() => {
     if (typeof ASSISTANT_LIFE_STORE === 'undefined') return undefined;
-    const fn = st => setAssistantLifeOpenNow(!!(st && st.open));
+    const fn = st => {
+      const open = !!(st && st.open);
+      if (!open && assistantLifeOpenRef.current && runStageRef.current && ASSISTANT_LIFE_RUN_STATES.includes(gameStateNowRef.current)) assistantLifeExitingRef.current = true;
+      assistantLifeOpenRef.current = open;
+      runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
+      setAssistantLifeOpenNow(open);
+    };
     ASSISTANT_LIFE_STORE.listeners.add(fn);
     return () => {
       ASSISTANT_LIFE_STORE.listeners.delete(fn);
@@ -171213,7 +173212,9 @@ function MonsterHeroGame() {
   const rhythmBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && RHYTHM_BACKGROUND_RUN_SCREENS.includes(gameState);
   const cardScreenOpen = isCardRunScreen(gameState);
   const cardBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && cardScreenOpen;
-  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen;
+  const assistantLifeScreenOpen = isAssistantLifeRunScreen(gameState);
+  const assistantLifeBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && assistantLifeScreenOpen;
+  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen || assistantLifeScreenOpen;
   runBackgroundAllowedRef.current = runBackgroundAllowed;
   const advanceRunStage = stage => {
     runStageRef.current = stage;
@@ -171224,7 +173225,7 @@ function MonsterHeroGame() {
     runStageRef.current = null;
     setRunStage(null);
   };
-  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun);
+  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun);
   const rhythmSongListScrollRef = useRef(0);
   const returnToBackgroundRun = () => {
     catchUpUntilRef.current = 0;
@@ -172487,8 +174488,8 @@ function MonsterHeroGame() {
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);else if (key) Audio_.playBGM(key);else Audio_.stopBGM();
   }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow]);
   useEffect(() => {
-    Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen ? 0 : seVolume);
-  }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen]);
+    Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen || assistantLifeBackgroundRun ? 0 : seVolume);
+  }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen, assistantLifeBackgroundRun]);
   useEffect(() => {
     if (!(beatRankFx || beatRankBarPlaying) || ultraEcoSession && !cardScreenOpen) return undefined;
     Audio_.setSeVolume(seVolume);
@@ -180698,6 +182699,101 @@ function MonsterHeroGame() {
     }
     setGameState(RHYTHM_MODE_PUBLIC_RELEASE ? 'HOME' : 'DEBUG_SETTINGS');
   };
+  const assistantLifeSettlingRef = useRef(false);
+  const settleAssistantLifeRun = async () => {
+    if (assistantLifeSettlingRef.current) return;
+    assistantLifeSettlingRef.current = true;
+    try {
+      if (runStageRef.current && isQuickMode(runMode) && !runResultFinishedRef.current) await handleGiveUp({
+        silent: true
+      });
+      if (runStageRef.current) {
+        const stay = gameStateNowRef.current;
+        returnToHome();
+        if (stay && stay !== 'HOME' && !isRunStage(stay)) setGameState(stay);
+      }
+    } finally {
+      assistantLifeSettlingRef.current = false;
+    }
+  };
+  useEffect(() => {
+    if (assistantLifeOpenNow || !assistantLifeExitingRef.current) return;
+    void settleAssistantLifeRun().finally(() => {
+      assistantLifeExitingRef.current = false;
+      runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
+    });
+  }, [assistantLifeOpenNow]);
+  const assistantLifeQuickRunView = () => {
+    if (!assistantLifeOpenNow) return null;
+    const canStart = autoQuickRunConfigured(autoSettings) && !!repeatTemplateFromAutoSettings() && !(runStage !== null && !runResultFinished);
+    const base = cardQuickRunView();
+    if (!base) return canStart ? {
+      live: false,
+      loops: 0,
+      stopped: true,
+      difficulty: (DIFFICULTY_SETTINGS[autoSettings.quickRun.difficulty] || quickDifficultySetting(autoSettings.quickRun.difficulty) || {}).label || null,
+      xp: 0,
+      gold: 0,
+      canStart
+    } : null;
+    const live = assistantLifeBackgroundRun && !quickRunProgress.finished;
+    return {
+      live,
+      loops: base.loops,
+      stopped: !live,
+      difficulty: base.difficulty,
+      xp: base.xp,
+      gold: base.gold,
+      canStart,
+      info: base.info
+    };
+  };
+  const [lifeQuickDetail, setLifeQuickDetail] = useState(false);
+  const renderLifeQuickRunStrip = () => {
+    const view = assistantLifeQuickRunView();
+    if (!view) return null;
+    const autoDifficulty = autoQuickRunConfigured(autoSettings) ? (DIFFICULTY_SETTINGS[autoSettings.quickRun.difficulty] || quickDifficultySetting(autoSettings.quickRun.difficulty) || {}).label || null : null;
+    const detailRun = view.info ? view : null;
+    return React.createElement(React.Fragment, null, lifeQuickDetail && React.createElement(CardQuickRunDetail, {
+      quickRun: detailRun,
+      autoReady: autoQuickRunConfigured(autoSettings),
+      autoDifficulty: autoDifficulty,
+      todayLoops: null,
+      onClose: () => setLifeQuickDetail(false),
+      note: "助手ライフを開いているあいだ、AUTO設定の編成でクイックの周回が裏で進みます。閉じるか「止める」を押すと、それまでの報酬を受け取って周回を終えます。"
+    }), React.createElement("div", {
+      "data-life-quick-run": view.live ? 'live' : 'stopped',
+      className: "relative z-20 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-400/25 bg-slate-950/95 px-2 py-1"
+    }, view.info ? React.createElement(RhythmQuickRunPill, {
+      info: view.info,
+      onRestart: () => startQuickRunFromRhythm(),
+      widthClass: "min-w-0 flex-1"
+    }) : React.createElement("button", {
+      type: "button",
+      "data-life-quick-run-start": true,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        startQuickRunFromRhythm();
+      },
+      className: "min-h-[32px] min-w-0 flex-1 truncate rounded-full border border-fuchsia-300/60 bg-fuchsia-800/70 px-2.5 text-[11px] font-black text-white active:scale-[.97]"
+    }, "▶ 周回を始める"), React.createElement("button", {
+      type: "button",
+      "data-life-quick-run-detail": true,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        setLifeQuickDetail(true);
+      },
+      className: "min-h-[32px] shrink-0 rounded-full border border-white/25 bg-slate-900/80 px-2.5 text-[11px] font-black text-slate-100 active:scale-[.97]"
+    }, "詳細"), view.live && React.createElement("button", {
+      type: "button",
+      "data-life-quick-run-stop": true,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        void settleAssistantLifeRun();
+      },
+      className: "min-h-[32px] shrink-0 rounded-full border border-fuchsia-300/60 bg-fuchsia-800/70 px-2.5 text-[11px] font-black text-white active:scale-[.97]"
+    }, "止める")));
+  };
   const handleRetry = () => {
     stopAllAuto();
     if (speciesChallengeBattleRunRef.current) {
@@ -184797,6 +186893,28 @@ function MonsterHeroGame() {
     const timer = setTimeout(retry, QUICK_RUN_AUTO_RETRY_MS);
     return () => clearTimeout(timer);
   }, [quickRunProgress, gameState, resultProcessing, autoSettings, cardQuickAutoStart]);
+  useEffect(() => {
+    if (!assistantLifeOpenNow) return;
+    if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return;
+    if (!ASSISTANT_LIFE_RUN_STATES.includes(gameStateNowRef.current)) return;
+    if (quickRunProgressRef.current && !quickRunProgressRef.current.finished) return;
+    if (runStageRef.current && !runResultFinishedRef.current) return;
+    if (!repeatTemplateFromAutoSettings()) return;
+    startQuickRunFromRhythm();
+  }, [assistantLifeOpenNow]);
+  useEffect(() => {
+    if (!quickRunProgress || !quickRunProgress.finished || quickRunProgress.reason !== 'defeat') return undefined;
+    if (!assistantLifeOpenNow || !ASSISTANT_LIFE_RUN_STATES.includes(gameState)) return undefined;
+    if (resultProcessing) return undefined;
+    if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return undefined;
+    const retryLife = () => {
+      const current = quickRunProgressRef.current;
+      if (!current || !current.finished || current.reason !== 'defeat' || !assistantLifeOpenRef.current) return;
+      startQuickRunFromRhythm();
+    };
+    const timer = setTimeout(retryLife, QUICK_RUN_AUTO_RETRY_MS);
+    return () => clearTimeout(timer);
+  }, [quickRunProgress, gameState, resultProcessing, autoSettings, assistantLifeOpenNow]);
   const cycleBattleAuto = () => {
     if (autoRepeatRef.current) {
       setAutoBattleEnabled(false);
@@ -189957,6 +192075,12 @@ function MonsterHeroGame() {
           token: ownedItemCount(ownedItems, 'peer_token')
         }
       }), typeof AssistantLifeScreen === 'function' && React.createElement(AssistantLifeScreen, {
+        quickRun: assistantLifeQuickRunView(),
+        quickRunStrip: renderLifeQuickRunStrip(),
+        onQuickRunStop: () => {
+          void settleAssistantLifeRun();
+        },
+        onQuickRunStart: () => startQuickRunFromRhythm(),
         metIds: metIds,
         onReplay: talk => setPeerReplay(talk),
         bondLevelOf: id => assistantBondLevel(normalizeAssistantBond(assistantBonds[id]).points),
@@ -190657,7 +192781,7 @@ function MonsterHeroGame() {
         }, setting.label, unlocked ? '' : '（クイック未クリア）');
       }))), React.createElement("div", null, React.createElement("div", {
         className: "text-[11px] font-black text-slate-300 mb-1.5"
-      }, "モンヒロビートを開いたら自動で始める"), React.createElement("button", {
+      }, "モンヒロビート・助手ライフを開いたら自動で始める"), React.createElement("button", {
         type: "button",
         "data-auto-quick-run-autostart": true,
         "aria-pressed": draftAutoSettings.quickRun?.autoStart === true,
@@ -190672,7 +192796,7 @@ function MonsterHeroGame() {
         className: `shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${draftAutoSettings.quickRun?.autoStart === true ? 'bg-fuchsia-500 text-white' : 'bg-slate-700 text-slate-300'}`
       }, draftAutoSettings.quickRun?.autoStart === true ? 'ON' : 'OFF')), React.createElement("p", {
         className: "mt-1 text-[10px] leading-relaxed text-slate-400"
-      }, "ONにすると、HOMEなどからモンヒロビートを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲えらびの上の帯から、いつでも止められます。")), React.createElement("div", {
+      }, "ONにすると、HOMEなどからモンヒロビートや助手ライフを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲えらびの上の帯や、助手ライフの周回の札から、いつでも止められます。")), React.createElement("div", {
         className: "pt-1"
       }, React.createElement(AssistantBubble, {
         scene: "autoQuickRunSettings",
