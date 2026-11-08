@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a7f6c48c5d25ae68
+// generated-sha256: 9e9d1d6f1e98b475
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -81245,7 +81245,7 @@ const CardPvpVoidDialog = ({ onExit }) => (
     style={{ ...(typeof cardSafePad === 'function' ? cardSafePad('1rem') : {}), zIndex: MODAL_Z.dialog + 200, backgroundColor: 'rgba(2,6,23,0.88)' }}>
     <div className="w-full max-w-sm rounded-2xl border border-rose-300/40 bg-slate-900 p-5 text-center shadow-2xl">
       <p id="mh-card-pvp-void-title" className="text-[17px] font-black text-rose-100">この試合は続けられません</p>
-      <p className="mt-3 text-left text-[13px] font-bold leading-relaxed text-slate-200">通信のずれで、相手と場が合わなくなりました。この試合は記録に残さずに終わります。ビートPと強さの点数は、増えも減りもしません。</p>
+      <p className="mt-3 text-left text-[13px] font-bold leading-relaxed text-slate-200 [word-break:keep-all]">通信のずれで、<wbr/>相手と場が<wbr/>合わなく<wbr/>なりました。<wbr/>この試合は<wbr/>記録に<wbr/>残さずに<wbr/>終わります。<wbr/>ビートPと<wbr/>強さの点数は、<wbr/>増えも<wbr/>減りも<wbr/>しません。</p>
       <button type="button" data-card-pvp-void-exit onClick={() => { Audio_.fgSe.tap(); onExit(); }}
         className="mh-button mt-4 min-h-[52px] w-full rounded-2xl bg-amber-400 font-black text-slate-950 active:scale-[.98]">試合を終える</button>
     </div>
@@ -81683,7 +81683,7 @@ const useCardPvpClock = (pvp, st, step) => {
   }
   const left = pvp ? cardPvpLimitMs(st) - (now - startRef.current - pauseRef.current.ms) : 0;
   useEffect(() => {
-    if (!pvp || st.winner !== null) return;
+    if (!pvp || st.winner !== null || CARD_PVP.get().phase !== 'playing') return; // 無効試合(void)・終わったあとは、時計で手を進めない
     if (decider === 0 && st.phase === 'guts' && !st.pending && gutsRef.current === st.turn) { gutsRef.current = -1; CARD_PVP.auto(() => step({ type: 'guts', hand: [] })); return; }
     if (decider === 0 && left <= 0 && firedRef.current !== key) {
       firedRef.current = key;

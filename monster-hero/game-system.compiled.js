@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f9b4b273ffd00ccc
+// source-sha256: d4db54072a138a67
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -150879,8 +150879,8 @@ const CardPvpVoidDialog = ({
   id: "mh-card-pvp-void-title",
   className: "text-[17px] font-black text-rose-100"
 }, "この試合は続けられません"), React.createElement("p", {
-  className: "mt-3 text-left text-[13px] font-bold leading-relaxed text-slate-200"
-}, "通信のずれで、相手と場が合わなくなりました。この試合は記録に残さずに終わります。ビートPと強さの点数は、増えも減りもしません。"), React.createElement("button", {
+  className: "mt-3 text-left text-[13px] font-bold leading-relaxed text-slate-200 [word-break:keep-all]"
+}, "通信のずれで、", React.createElement("wbr", null), "相手と場が", React.createElement("wbr", null), "合わなく", React.createElement("wbr", null), "なりました。", React.createElement("wbr", null), "この試合は", React.createElement("wbr", null), "記録に", React.createElement("wbr", null), "残さずに", React.createElement("wbr", null), "終わります。", React.createElement("wbr", null), "ビートPと", React.createElement("wbr", null), "強さの点数は、", React.createElement("wbr", null), "増えも", React.createElement("wbr", null), "減りも", React.createElement("wbr", null), "しません。"), React.createElement("button", {
   type: "button",
   "data-card-pvp-void-exit": true,
   onClick: () => {
@@ -151638,7 +151638,7 @@ const useCardPvpClock = (pvp, st, step) => {
   }
   const left = pvp ? cardPvpLimitMs(st) - (now - startRef.current - pauseRef.current.ms) : 0;
   useEffect(() => {
-    if (!pvp || st.winner !== null) return;
+    if (!pvp || st.winner !== null || CARD_PVP.get().phase !== 'playing') return;
     if (decider === 0 && st.phase === 'guts' && !st.pending && gutsRef.current === st.turn) {
       gutsRef.current = -1;
       CARD_PVP.auto(() => step({
