@@ -24,7 +24,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 const fresh = new Date(Date.now() - 3 * 3600000).toISOString();
 const dayKey = new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 10);
 const HOUSES = [
-  { breeder_id: 'aoi-0001', open: true, updated_at: fresh, house: { v: 1, ids: ['mua', 'kiki', 'dra', 'momosuke', 'atsu', 'kyuko', 'sorashido', 'erubin'], r: { mua: { at: 'home', d: 'snack', m: 'happy', fu: { c: 'lantern', w: 'starpic', f: 'sofa' } }, kiki: { at: 'out', d: 'walk', m: 'happy' }, dra: { fu: { f: 'bear', w: 'trophy' }, at: 'home', d: 'idle', m: 'happy' }, momosuke: { at: 'home', d: 'practice', m: 'eager' }, atsu: { at: 'home', d: 'cards', m: 'happy' }, kyuko: { at: 'out', d: 'read', m: 'happy' }, sorashido: { at: 'home', d: 'training', m: 'happy' }, erubin: { at: 'home', d: 'sleep', m: 'sleepy' } }, ac1: { k: 'beat', x: '「風がそよぐ」を遊んだ', at: Date.now() - 3600000 }, dy: [{ t: '10:10', x: '朝: みゅあ・ききが居間でおやつ' }, { t: '09:00', x: 'ドラ セッション → 🎵Lv2' }] } },
+  { breeder_id: 'aoi-0001', open: true, updated_at: fresh, house: { v: 1, ids: ['mua', 'kiki', 'dra', 'momosuke', 'atsu', 'kyuko', 'sorashido', 'erubin'], r: { mua: { at: 'home', d: 'snack', m: 'happy', fu: { c: 'lantern', w: 'starpic', f: 'sofa' } }, kiki: { p: 'cardroom', at: 'out', d: 'walk', m: 'happy' }, dra: { fu: { f: 'bear', w: 'trophy' }, at: 'home', d: 'idle', m: 'happy' }, momosuke: { at: 'home', d: 'practice', m: 'eager' }, atsu: { at: 'home', d: 'cards', m: 'happy' }, kyuko: { at: 'out', d: 'read', m: 'happy' }, sorashido: { at: 'home', d: 'training', m: 'happy' }, erubin: { at: 'home', d: 'sleep', m: 'sleepy' } }, ac1: { k: 'beat', x: '「風がそよぐ」を遊んだ', at: Date.now() - 3600000 }, dy: [{ t: '10:10', x: '朝: みゅあ・ききが居間でおやつ' }, { t: '09:00', x: 'ドラ セッション → 🎵Lv2' }] } },
   { breeder_id: 'yuto-0001', open: true, updated_at: fresh, house: { v: 1, ids: ['momosuke', 'kyuko'], r: { momosuke: { at: 'home', d: 'snack', m: 'happy' }, kyuko: { at: 'home', d: 'idle', m: 'happy' } } } },
 ];
 const route = (posted) => async (r) => {
@@ -180,6 +180,8 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.locator('[data-alf-visit] [data-assistant-life-room="kiki"]').click();
       await page.locator('[data-alf-visit-sheet="kiki"]').waitFor({ timeout: 3000 });
       check(`⑥ おでかけ中の部屋も押せて、「おでかけ中」と分かる(${v.id})`, (await page.locator('[data-alf-visit-room-state="out"]').count()) === 1);
+      check(`⑯ 出かけている助手は行き先が分かる(部屋の札「🃏 カード部屋へ」・シート)(${v.id})`, /(カード部屋|MFバトルカード)へ/.test(await page.locator('[data-alf-visit] [data-assistant-life-room="kiki"]').innerText()) && /(カード部屋|MFバトルカード)へおでかけ中/.test(await page.locator('[data-alf-visit-room-state]').innerText()));
+      check(`⑯ 部屋のシートにマスモンの絵が3つ・「贈られた家具: まだありません」(${v.id})`, (await page.locator('[data-alf-visit-masmon-one]').count()) === 3 && (await page.locator('[data-alf-visit-masmon-one] img').count()) >= 3 && /贈られた家具: まだありません/.test(await page.locator('[data-alf-visit-furn]').innerText()));
       check(`⑭ 訪ねた家の掲示板に、その人の最近(迎えたマスモン・遊んだ曲)が出る(${v.id})`, /ゴーレム/.test(await page.locator('[data-alf-visit]').innerText()));
       await shot(page, `${v.id}-5b-visit-out`);
       await page.locator('[data-alf-visit-sheet] .mhl-sheet button:has-text("とじる")').click();
