@@ -308,6 +308,16 @@ const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'er
     for (const [id, t] of all) { const filled = t.replace(/\{h\}/g, 'あおい').replace(/\{f\}/g, 'あおいさんのドラ').replace(/\{name\}/g, 'ゆうとさん'); if (ok(id, filled) == null) bad.push(`${id}「${t}」口調`); if (/[0-9０-９]/.test(t) || /(この|あの|その)子|子たち/.test(t) || /[{}]/.test(t.replace(/\{(name|h|f)\}/g, '')) || t.length > 60) bad.push(`${id}「${t}」`); if (/\{h\}(?!さん)/.test(t)) bad.push(`${id}「${t}」{h}さん`); }
     check('⑬ 訪ねた家の台本が8人そろい、口調・数字・「子」・穴の決まりを守る', bad.length === 0, bad.slice(0, 5).join(' / ')); }
 
+  // ⑭ フレンドの最近(2026-11-08 社長): 種類と長さの決まり・控えの ac1・設定 act の既定は入
+  { const na = G('alfNormalizeAc');
+    const ac = na([{ k: 'beat', x: '「風がそよぐ」を遊んだ', at: 1 }, { k: 'score', x: 'x', at: 1 }, { k: 'card', x: 'あ'.repeat(60), at: 2 }, { k: 'furn', x: '{name}の部屋', at: 3 }]);
+    check('⑭ 最近の行は知らない種類を捨て、40字で切り、{ } を消す', ac.length === 3 && ac[1].x.length === 40 && !/[{}]/.test(ac[2].x), JSON.stringify(ac));
+    const h = G('assistantLifeFriendNormalizeHouse')({ v: 1, ids: ['mua'], r: { mua: { at: 'home', d: 'idle', m: 'happy' } }, ac1: { k: 'masmon', x: '新しいマスモン「ゴーレム」を迎えた', at: 5 } });
+    check('⑭ 控え(一覧用)の最近の1つ ac1 を読む', h && h.ac1 && h.ac1.k === 'masmon');
+    check('⑭ 設定「最近の遊びをフレンドに見せる」の既定は入', G('normalizeAssistantLifeFriendSettings(null).act') === true && G('normalizeAssistantLifeFriendSettings({ act: false }).act') === false);
+    const play = fs.readFileSync(path.join(root, 'monster-hero/src/parts/30-rhythm-play.jsx'), 'utf8');
+    check('⑭ モンヒロビートは公開中の曲だけ、曲名だけを残す(デバッグ・練習・タイミング合わせは残さない)', /!debugPlay&&!tutorial&&!calibrating&&typeof assistantLifeFriendNoteActivity==='function'&&typeof RHYTHM_DEMO_SONG_IDS!=='undefined'&&RHYTHM_DEMO_SONG_IDS\.includes\(song\?\.songId\)/.test(play)); }
+
   // ⑧ 公開の印
   const rel = fs.readFileSync(path.join(root, 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8');
   check('⑧ 公開の印 assistantLifeFriend がある(真/偽どちらでも、偽なら通信しないことを下で見る)', /\n\s*assistantLifeFriend:\s*(true|false),/.test(rel));
