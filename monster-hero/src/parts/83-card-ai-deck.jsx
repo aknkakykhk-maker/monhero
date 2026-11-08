@@ -45,7 +45,8 @@ const CARD_AI_FACES = Object.freeze({
   dra: { oshi: { lead: 'zilla', style: 'normal', name: 'グジラとどっしり行進' }, suki: { lead: 'suezo', style: 'normal', name: 'スエゾーのギャグ劇場' }, yoso: { lead: null, style: 'normal' }, honne: { lead: 'golem', style: 'attack', name: 'おでの大ぶり勝負' } },
   atsu: { oshi: { lead: 'dragon', style: 'normal', name: 'ドラゴンで正面突破' }, suki: { lead: 'mocchi', style: 'normal', name: 'モッチーに続け' }, yoso: { lead: null, style: 'normal' }, honne: { lead: 'ghost', style: 'normal', name: 'こっそり奇襲作戦' } },
   kyuko: { oshi: { lead: 'mew', style: 'normal', name: 'ニャーの気まぐれ一手' }, suki: { lead: 'pixie', style: 'normal', name: 'ピクシーのわがまま作戦' }, yoso: { lead: null, style: 'normal' }, honne: { lead: null, style: 'attack', name: '直感だけで全部いく' } },
-  sorashido: { oshi: { lead: 'hare', style: 'normal', name: 'ハムで大混乱' }, suki: { lead: 'kyubi', style: 'normal', name: 'キュービの推し活' }, yoso: { lead: null, style: 'normal' }, honne: { lead: null, style: 'attack', name: 'ソロバン抜きの一発勝負' } },
+  // ソラシドの本音は 2026-11-08 社長の答えで「ソロバン抜きの一発勝負」から差し替え(マスモンの愛称「ソロバン」と同じことばだった)
+  sorashido: { oshi: { lead: 'hare', style: 'normal', name: 'ハムで大混乱' }, suki: { lead: 'kyubi', style: 'normal', name: 'キュービの推し活' }, yoso: { lead: null, style: 'normal' }, honne: { lead: null, style: 'attack', name: '表なしの一発勝負' } },
   erubin: { oshi: { lead: 'durahan', style: 'guard', name: 'デュラハンの盾の陣' }, suki: { lead: 'pixie', style: 'normal', name: 'ピクシーの応援団' }, yoso: { lead: null, style: 'normal' }, honne: { lead: null, style: 'attack', name: 'たまには剣だけで' } },
 });
 // 素顔が本音になる仲良し度(助手部の口の friendLv。アプリの仲良し度の段 1〜。4 は「相棒」)。口が無ければ よそいき のまま

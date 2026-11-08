@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c029a05d1b202a9d
+// source-sha256: 61284f75406e9d76
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -137571,7 +137571,7 @@ const CARD_AI_FACES = Object.freeze({
     honne: {
       lead: null,
       style: 'attack',
-      name: 'ソロバン抜きの一発勝負'
+      name: '表なしの一発勝負'
     }
   },
   erubin: {
