@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2b562622cae7eed8
+// source-sha256: 6b0f58cb0247d70d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161903,7 +161903,12 @@ function MonsterHeroGame() {
   const isCardScreen = state => typeof state === 'string' && state.startsWith('CARD_');
   const cardMarketEntryRef = useRef(false);
   const isCardRunScreen = state => isCardScreen(state) || state === 'BREEDER_MARKET' && cardMarketEntryRef.current === true;
-  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state);
+  const ASSISTANT_LIFE_RUN_STATES = ['HOME', 'PROFILE', 'ITEM_INVENTORY'];
+  const assistantLifeOpenRef = useRef(false);
+  const assistantLifeExitingRef = useRef(false);
+  const gameStateNowRef = useRef('HOME');
+  const isAssistantLifeRunScreen = state => assistantLifeExitingRef.current || assistantLifeOpenRef.current && ASSISTANT_LIFE_RUN_STATES.includes(state);
+  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state) || isAssistantLifeRunScreen(state);
   const runBackgroundAllowedRef = useRef(false);
   const gameStateCaller = () => {
     try {
@@ -161915,6 +161920,7 @@ function MonsterHeroGame() {
     }
   };
   const setGameState = next => {
+    gameStateNowRef.current = next;
     runBackgroundAllowedRef.current = isBackgroundRunScreen(next);
     if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`);
     setGameStateRaw(next);
@@ -164482,7 +164488,13 @@ function MonsterHeroGame() {
   const [assistantLifeOpenNow, setAssistantLifeOpenNow] = useState(false);
   useEffect(() => {
     if (typeof ASSISTANT_LIFE_STORE === 'undefined') return undefined;
-    const fn = st => setAssistantLifeOpenNow(!!(st && st.open));
+    const fn = st => {
+      const open = !!(st && st.open);
+      if (!open && assistantLifeOpenRef.current && runStageRef.current && ASSISTANT_LIFE_RUN_STATES.includes(gameStateNowRef.current)) assistantLifeExitingRef.current = true;
+      assistantLifeOpenRef.current = open;
+      runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
+      setAssistantLifeOpenNow(open);
+    };
     ASSISTANT_LIFE_STORE.listeners.add(fn);
     return () => {
       ASSISTANT_LIFE_STORE.listeners.delete(fn);
@@ -167132,7 +167144,9 @@ function MonsterHeroGame() {
   const rhythmBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && RHYTHM_BACKGROUND_RUN_SCREENS.includes(gameState);
   const cardScreenOpen = isCardRunScreen(gameState);
   const cardBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && cardScreenOpen;
-  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen;
+  const assistantLifeScreenOpen = isAssistantLifeRunScreen(gameState);
+  const assistantLifeBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && assistantLifeScreenOpen;
+  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen || assistantLifeScreenOpen;
   runBackgroundAllowedRef.current = runBackgroundAllowed;
   const advanceRunStage = stage => {
     runStageRef.current = stage;
@@ -167143,7 +167157,7 @@ function MonsterHeroGame() {
     runStageRef.current = null;
     setRunStage(null);
   };
-  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun);
+  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun);
   const rhythmSongListScrollRef = useRef(0);
   const returnToBackgroundRun = () => {
     catchUpUntilRef.current = 0;
@@ -168406,8 +168420,8 @@ function MonsterHeroGame() {
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);else if (key) Audio_.playBGM(key);else Audio_.stopBGM();
   }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow]);
   useEffect(() => {
-    Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen ? 0 : seVolume);
-  }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen]);
+    Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen || assistantLifeBackgroundRun ? 0 : seVolume);
+  }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen, assistantLifeBackgroundRun]);
   useEffect(() => {
     if (!(beatRankFx || beatRankBarPlaying) || ultraEcoSession && !cardScreenOpen) return undefined;
     Audio_.setSeVolume(seVolume);
@@ -176604,6 +176618,54 @@ function MonsterHeroGame() {
       return;
     }
     setGameState(RHYTHM_MODE_PUBLIC_RELEASE ? 'HOME' : 'DEBUG_SETTINGS');
+  };
+  const assistantLifeSettlingRef = useRef(false);
+  const settleAssistantLifeRun = async () => {
+    if (assistantLifeSettlingRef.current) return;
+    assistantLifeSettlingRef.current = true;
+    try {
+      if (runStageRef.current && isQuickMode(runMode) && !runResultFinishedRef.current) await handleGiveUp({
+        silent: true
+      });
+      if (runStageRef.current) {
+        const stay = gameStateNowRef.current;
+        returnToHome();
+        if (stay && stay !== 'HOME' && !isRunStage(stay)) setGameState(stay);
+      }
+    } finally {
+      assistantLifeSettlingRef.current = false;
+    }
+  };
+  useEffect(() => {
+    if (assistantLifeOpenNow || !assistantLifeExitingRef.current) return;
+    void settleAssistantLifeRun().finally(() => {
+      assistantLifeExitingRef.current = false;
+      runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
+    });
+  }, [assistantLifeOpenNow]);
+  const assistantLifeQuickRunView = () => {
+    if (!assistantLifeOpenNow) return null;
+    const canStart = autoQuickRunConfigured(autoSettings) && !!repeatTemplateFromAutoSettings() && !(runStage !== null && !runResultFinished);
+    const base = cardQuickRunView();
+    if (!base) return canStart ? {
+      live: false,
+      loops: 0,
+      stopped: true,
+      difficulty: (DIFFICULTY_SETTINGS[autoSettings.quickRun.difficulty] || quickDifficultySetting(autoSettings.quickRun.difficulty) || {}).label || null,
+      xp: 0,
+      gold: 0,
+      canStart
+    } : null;
+    const live = assistantLifeBackgroundRun && !quickRunProgress.finished;
+    return {
+      live,
+      loops: base.loops,
+      stopped: !live,
+      difficulty: base.difficulty,
+      xp: base.xp,
+      gold: base.gold,
+      canStart
+    };
   };
   const handleRetry = () => {
     stopAllAuto();
@@ -185864,6 +185926,11 @@ function MonsterHeroGame() {
           token: ownedItemCount(ownedItems, 'peer_token')
         }
       }), typeof AssistantLifeScreen === 'function' && React.createElement(AssistantLifeScreen, {
+        quickRun: assistantLifeQuickRunView(),
+        onQuickRunStop: () => {
+          void settleAssistantLifeRun();
+        },
+        onQuickRunStart: () => startQuickRunFromRhythm(),
         metIds: metIds,
         onReplay: talk => setPeerReplay(talk),
         bondLevelOf: id => assistantBondLevel(normalizeAssistantBond(assistantBonds[id]).points),

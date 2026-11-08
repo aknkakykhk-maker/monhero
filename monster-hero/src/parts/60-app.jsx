@@ -10,8 +10,16 @@ function MonsterHeroGame() {
   // ★state ではなく控え(ref)で持つ。押した瞬間に setGameState が読むので、次の描画を待つと1描画ぶん古い判断になる(下の 2026-09-14 と同じ型)
   const cardMarketEntryRef = useRef(false);
   const isCardRunScreen = state => isCardScreen(state) || (state === 'BREEDER_MARKET' && cardMarketEntryRef.current === true);
-  // 裏でクイック∞周回を続けたまま開いていてよい画面か(モンビー・MFバトルカード)
-  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state);
+  // 助手ライフを開いているあいだ(2026-11-08 社長「助手ライフ画面でも裏クイックほしい」)。助手ライフは HOME・プロフィール・アイテムの上に重ねて開く。
+  // ★カードのマーケットと同じく控え(ref)で持つ。開け閉めは ASSISTANT_LIFE_STORE の知らせ(下の assistantLifeOpenNow の受け口)で、その場で入れ直す
+  // assistantLifeExitingRef … 閉じたあと、裏の周回を締め終わるまで(締めている途中に段階が進んでも、画面をバトルへ飛ばさない)
+  const ASSISTANT_LIFE_RUN_STATES = ['HOME', 'PROFILE', 'ITEM_INVENTORY'];
+  const assistantLifeOpenRef = useRef(false);
+  const assistantLifeExitingRef = useRef(false);
+  const gameStateNowRef = useRef('HOME');
+  const isAssistantLifeRunScreen = state => assistantLifeExitingRef.current || (assistantLifeOpenRef.current && ASSISTANT_LIFE_RUN_STATES.includes(state));
+  // 裏でクイック∞周回を続けたまま開いていてよい画面か(モンビー・MFバトルカード・助手ライフ)
+  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state) || isAssistantLifeRunScreen(state);
   // 「いまモンビーを開いているか」の控え。advanceRunStage が呼ばれた時点の値で判断するために使う。
   const runBackgroundAllowedRef = useRef(false);
   // 画面を切り替える唯一の入口。★必ずこれを通す(useStateのsetterを直接呼ばない)。
@@ -30,7 +38,7 @@ function MonsterHeroGame() {
   // ここで控えも一緒に更新すれば、切り替えたその瞬間から正しい判断になる。
   // 画面を変えるたびに、どの処理が変えたかを記録に残す(MH_SCREEN_TRAIL・10-core.jsx)
   const gameStateCaller = () => { try { const line = String(new Error().stack || '').split('\n').slice(2).find((l) => !/setGameState|gameStateCaller/.test(l)) || ''; const m = /at\s+([\w$.]+)/.exec(line) || /^([\w$.]+)@/.exec(line.trim()); return m ? m[1] : ''; } catch (_) { return ''; } };
-  const setGameState = (next) => { runBackgroundAllowedRef.current = isBackgroundRunScreen(next); if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`); setGameStateRaw(next); };
+  const setGameState = (next) => { gameStateNowRef.current = next; runBackgroundAllowedRef.current = isBackgroundRunScreen(next); if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`); setGameStateRaw(next); };
   const [debugThrowScreenError, setDebugThrowScreenError] = useState(false); // デバッグ設定から画面エラーの受け止めを試すためだけの印
   const debugMenuRootRef = useRef(null); // デバッグメニューの名前で絞り込む欄が、どの範囲を探すか(2026-10-27)
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
@@ -2411,7 +2419,15 @@ function MonsterHeroGame() {
   const [assistantLifeOpenNow, setAssistantLifeOpenNow] = useState(false);
   useEffect(() => {
     if (typeof ASSISTANT_LIFE_STORE === 'undefined') return undefined;
-    const fn = (st) => setAssistantLifeOpenNow(!!(st && st.open));
+    // 開け閉めの瞬間に控えも入れ直す(次の描画を待つと1描画ぶん古い判断になる。2026-09-14 の型)。
+    // 裏の周回を回したまま閉じたら、締め終わるまで「裏で回してよい」のままにする(締めは下の effect)
+    const fn = (st) => {
+      const open = !!(st && st.open);
+      if (!open && assistantLifeOpenRef.current && runStageRef.current && ASSISTANT_LIFE_RUN_STATES.includes(gameStateNowRef.current)) assistantLifeExitingRef.current = true;
+      assistantLifeOpenRef.current = open;
+      runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
+      setAssistantLifeOpenNow(open);
+    };
     ASSISTANT_LIFE_STORE.listeners.add(fn);
     return () => { ASSISTANT_LIFE_STORE.listeners.delete(fn); };
   }, []);
@@ -4907,8 +4923,12 @@ function MonsterHeroGame() {
   //  ・クイックの∞周回だけ(モンビーと同じ)
   //  ・対戦中(CARD_BATTLE)も回す。演奏と違ってターン制で、1/60秒ごとの判定が無いので割り込まれても困らない
   const cardBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && cardScreenOpen;
-  // ランの画面を描かずに段階だけ進めてよいか。モンビー・MFバトルカードを開いている間はそのまま進める
-  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen;
+  // 助手ライフを開いているか(HOME・プロフィール・アイテムの上。閉じて締めている途中も含む)。開いている間はランが進んでも画面を切り替えない
+  const assistantLifeScreenOpen = isAssistantLifeRunScreen(gameState);
+  // 助手ライフを開いたまま裏で周回してよい状態か。クイックの∞周回だけ(モンビー・カードと同じ)
+  const assistantLifeBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && assistantLifeScreenOpen;
+  // ランの画面を描かずに段階だけ進めてよいか。モンビー・MFバトルカード・助手ライフを開いている間はそのまま進める
+  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen || assistantLifeScreenOpen;
   // ★advanceRunStage は setTimeout や await の後から呼ばれる。
   //   そこで値をそのまま読むと「バトル画面で作られたときの古い値」を掴んでしまい、
   //   モンビーへ移った直後に敵を倒した瞬間、画面がバトルへ飛び戻る
@@ -4930,7 +4950,7 @@ function MonsterHeroGame() {
   // ランから抜けた(HOMEへ戻った・やり直した)ときに段階を捨てる
   const clearRunStage = () => { runStageRef.current = null; setRunStage(null); };
   // ランを進めてよいか。ランの画面を描いているとき、またはモンビーの非演奏画面で裏回し中。
-  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun);
+  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun);
   // モンビーからクイックのバトルへ戻る。ランの段階そのものへ戻すので、続きから遊べる
   // 曲えらびの一覧をどこまで見ていたか。全国ランキングや遊びかたを見て戻ったとき、
   // その場所から続けられるようにするための控え(保存はしない・リロードで消えてよい)
@@ -6373,7 +6393,8 @@ function MonsterHeroGame() {
   // モンビーを開いている間は、裏で回っているバトルのSEを鳴らさない。
   // 曲の試聴・演奏と重なると邪魔になるため(超省エネと同じ考え方)。
   // 音量の保存値そのものは変えないので、モンビーを出れば元の音量へ戻る
-  useEffect(() => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen) ? 0 : seVolume); }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen]);
+  // 助手ライフの上で裏の周回を回しているあいだも、バトルの音は鳴らさない(BGM は助手ライフの曲のまま。2026-11-08)
+  useEffect(() => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen || assistantLifeBackgroundRun) ? 0 : seVolume); }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen, assistantLifeBackgroundRun]);
   // モンヒロビートの画面は上で効果音の音量を0にしている(裏の周回のバトルの音を消すため)。ランクアップの演出(beatRankFx)を出している間だけは、
   // 効果音の音量設定どおりに戻して鳴らし、閉じたら上と同じ決まりに戻す(2026-10-29 社長「ファンファーレもなかった」。0のままだと演出の音が鳴らなかった)。
   // 超省エネのあいだは今までどおり鳴らさない
@@ -12652,6 +12673,43 @@ function MonsterHeroGame() {
       return;
     }
     setGameState(RHYTHM_MODE_PUBLIC_RELEASE?'HOME':'DEBUG_SETTINGS');
+  };
+
+  // ===== 助手ライフの上の裏クイック(2026-11-08 社長「助手ライフ画面でも裏クイックほしい」) =====
+  // 締める: exitRhythmSongSelect と同じく、報酬を入れて(リザルトは見せない)から片付ける。
+  // 見ている画面はそのまま(HOME・プロフィール・アイテムの上で閉じたらそこに残る。交換所へ飛んだならそのまま交換所)
+  const assistantLifeSettlingRef = useRef(false);
+  const settleAssistantLifeRun = async () => {
+    if (assistantLifeSettlingRef.current) return;
+    assistantLifeSettlingRef.current = true;
+    try {
+      if (runStageRef.current && isQuickMode(runMode) && !runResultFinishedRef.current) await handleGiveUp({ silent: true });
+      if (runStageRef.current) {
+        const stay = gameStateNowRef.current;
+        returnToHome();
+        if (stay && stay !== 'HOME' && !isRunStage(stay)) setGameState(stay);
+      }
+    } finally {
+      assistantLifeSettlingRef.current = false;
+    }
+  };
+  // 閉じたら締める(閉じた瞬間の印 assistantLifeExitingRef は、開け閉めの受け口が立てる)
+  useEffect(() => {
+    if (assistantLifeOpenNow || !assistantLifeExitingRef.current) return;
+    void settleAssistantLifeRun().finally(() => {
+      assistantLifeExitingRef.current = false;
+      runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
+    });
+  }, [assistantLifeOpenNow]);
+  // 助手ライフへ渡す、裏の周回のようす(cardQuickRunView と同じ作り)。周回をしていなくて、始められもしないときは null
+  //   canStart … AUTO設定のクイック周回がそろっていて、勝負のついていない挑戦が無いとき(「開いたら自動で始める」は入れない)
+  const assistantLifeQuickRunView = () => {
+    if (!assistantLifeOpenNow) return null;
+    const canStart = autoQuickRunConfigured(autoSettings) && !!repeatTemplateFromAutoSettings() && !(runStage !== null && !runResultFinished);
+    const base = cardQuickRunView();
+    if (!base) return canStart ? { live: false, loops: 0, stopped: true, difficulty: ((DIFFICULTY_SETTINGS[autoSettings.quickRun.difficulty] || quickDifficultySetting(autoSettings.quickRun.difficulty) || {}).label || null), xp: 0, gold: 0, canStart } : null;
+    const live = assistantLifeBackgroundRun && !quickRunProgress.finished;
+    return { live, loops: base.loops, stopped: !live, difficulty: base.difficulty, xp: base.xp, gold: base.gold, canStart };
   };
 
   const handleRetry = () => {
@@ -19344,7 +19402,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {typeof AssistantLifeHomeFaces==='function'&&gameState==='HOME'&&!busy&&!peerReplay&&<AssistantLifeHomeFaces metIds={metIds}/>}
             {/* はじめて2人に贈る道具を手に入れたときの案内(HOME で1回だけ・公開の印 assistantLife) */}
             {typeof AssistantLifeItemIntro==='function'&&gameState==='HOME'&&!busy&&!peerReplay&&<AssistantLifeItemIntro peerItems={typeof assistantLifeGiftCounts==='function'?assistantLifeGiftCounts(ownedItems):{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}}/>}
-            {typeof AssistantLifeScreen==='function'&&<AssistantLifeScreen metIds={metIds} onReplay={(talk)=>setPeerReplay(talk)} bondLevelOf={(id)=>assistantBondLevel(normalizeAssistantBond(assistantBonds[id]).points)}
+            {typeof AssistantLifeScreen==='function'&&<AssistantLifeScreen quickRun={assistantLifeQuickRunView()} onQuickRunStop={()=>{void settleAssistantLifeRun();}} onQuickRunStart={()=>startQuickRunFromRhythm()} metIds={metIds} onReplay={(talk)=>setPeerReplay(talk)} bondLevelOf={(id)=>assistantBondLevel(normalizeAssistantBond(assistantBonds[id]).points)}
               peerItems={typeof assistantLifeGiftCounts==='function'?assistantLifeGiftCounts(ownedItems):{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}} onUseItem={useAssistantPeerItem}
               furnItems={typeof assistantLifeFurnCounts==='function'?assistantLifeFurnCounts(ownedItems):null} onGiveFurn={giveAssistantLifeFurn}/>}
           </>;
