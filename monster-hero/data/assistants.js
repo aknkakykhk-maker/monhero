@@ -1483,6 +1483,9 @@ const ASSISTANT_BOND_ACTIONS = {
   peerTrio:   { amount:3,  dailyMax:6,  label:'助手3人の掛け合いを見る', releaseFlag:'assistantPeer' },
   peerEvent:  { amount:8,  dailyMax:16, label:'助手どうしのミニイベントを見る', releaseFlag:'assistantPeer' },
   peerMakeup: { amount:8,  dailyMax:8,  label:'助手どうしの仲直りを見る', releaseFlag:'assistantPeer' },
+  // 助手ライフのフレンドの家との行き来(2026-11-08 社長)。行った助手の場面を見た(1回 +10・1日3回まで)/来てくれた助手を迎えた(+6・1日2人まで)
+  friendGo:      { amount:10, dailyMax:30, label:'助手がフレンドの家へ遊びに行った様子を見る', releaseFlag:'assistantLifeFriend' },
+  friendWelcome: { amount:6,  dailyMax:12, label:'フレンドの助手を迎える', releaseFlag:'assistantLifeFriend' },
 };
 // 1日に増やせる合計。行動の種類が増えるほど「1日でどれだけ遊んでも上限40で頭打ち」が
 // きつくなりすぎたため、行動ごとの上限をすべて合わせた理論上の最大値まで引き上げた。
@@ -13242,6 +13245,8 @@ const ASSISTANT_PEER_BOND_ACTIONS = Object.freeze({
   makeup: { amount:5, dailyMax:5, label:'けんかのあと仲直りした', uncapped:true },
   // 助手ライフ: けんかの間に入った助手と、けんかした2人それぞれ(2026-11-08 社長の決まり「間に入る+3」・助手部キズナ)
   mediate: { amount:3, dailyMax:6, label:'けんかの間に入った' },
+  // 助手ライフ: 2人でフレンドの家へ遊びに行った(2026-11-08 社長「友情Lv +4」・1日3回まで)
+  friend: { amount:4, dailyMax:12, label:'2人でフレンドの家へ遊びに行った' },
 });
 const ASSISTANT_PEER_BOND_DAILY_MAX = 20;
 // 思い出アルバムのツーショット写真(段ごとに1枚。2人の立ち絵を並べて作る)。e … 左・右の表情

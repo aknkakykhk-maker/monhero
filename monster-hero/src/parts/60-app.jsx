@@ -8519,6 +8519,22 @@ function MonsterHeroGame() {
   }, [grantProfileFrames, deliverAssistantBondRewards]);
   // 助手どうしの掛け合い・今日のペアで、出てきた助手それぞれの仲良し度を増やす(2026-11-07・56-assistant-peer.jsx)
   useEffect(() => { if (typeof assistantPeerSetPlayerBondAdder === 'function') assistantPeerSetPlayerBondAdder(addAssistantBondFor); }, [addAssistantBondFor]);
+  // 助手ライフのフレンドの家のおみやげ(ビートP)をギフトで届ける(2026-11-08・56-assistant-life-friend.jsx)。
+  //   id は「日付+家」で1つに決まるので、同じおみやげは二度届かない(grantGiftOnce)。1日300Pまでは向こうで数える
+  useEffect(() => {
+    if (typeof assistantLifeFriendSetGiftSender !== 'function') return;
+    assistantLifeFriendSetGiftSender((gift) => runGiftWrite(async () => {
+      if (RELEASE_FLAGS.assistantLifeFriend !== true || !gift || typeof gift.id !== 'string') return false;
+      const savedGifts = await storeGet('mh_gifts', [], false);
+      const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
+      const grant = grantGiftOnce(beforeGifts, gift);
+      if (!grant.granted) return false;
+      const saved = await saveStoredValuesOrRollback([{ key:'mh_gifts', before:beforeGifts, next:grant.gifts }], storeGet, storeSet);
+      if (!saved) return false;
+      setGifts(grant.gifts);
+      return true;
+    }));
+  }, []);
   // 助手どうし・助手ライフの台本の {name} を、話している助手がいまプレイヤーを呼ぶ呼び方にする(仲良し度の段・性別・選んだ呼び方。2026-11-07 社長「ブリーダーとか呼び方がおかしい」)
   useEffect(() => {
     if (typeof assistantPeerSetPlayerCaller !== 'function') return;

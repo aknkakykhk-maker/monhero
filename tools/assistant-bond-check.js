@@ -176,8 +176,10 @@ const WANT_AMOUNTS = {
   peerTrio: [3, 6], peerEvent: [8, 16], peerMakeup: [8, 8],
   // 助手ライフで2人に道具を贈る(2026-11-08 社長 GIFT-PLAN.md)。1回ぶんは道具と好みで呼ぶ側が決める(いちばん多くて 40×1.5=60・1日3回)。公開の印 assistantLife
   lifeGift: [60, 180],
+  // 助手ライフのフレンドの家との行き来(2026-11-08 社長。公開の印 assistantLifeFriend)
+  friendGo: [10, 30], friendWelcome: [6, 12],
 };
-const PEER_KEYS = ['peerTalk', 'peerChoice', 'peerDaily', 'peerGift', 'peerToken', 'peerPlay', 'peerTrio', 'peerEvent', 'peerMakeup', 'lifeGift'];
+const PEER_KEYS = ['peerTalk', 'peerChoice', 'peerDaily', 'peerGift', 'peerToken', 'peerPlay', 'peerTrio', 'peerEvent', 'peerMakeup', 'lifeGift', 'friendGo', 'friendWelcome'];
 const wrongAmounts = Object.entries(WANT_AMOUNTS)
   .filter(([k, [amount, dailyMax]]) => !actions[k] || actions[k].amount !== amount || actions[k].dailyMax !== dailyMax)
   .map(([k, [amount, dailyMax]]) => `${k}: ${actions[k] ? `${actions[k].amount}/${actions[k].dailyMax}` : 'なし'} (期待 ${amount}/${dailyMax})`);
