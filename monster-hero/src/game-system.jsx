@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 22a5f1172e1c153b
+// generated-sha256: 26c8da6285841a22
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -23193,7 +23193,9 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
           })}
           </div>
           </div>
-          <div className="flex gap-2" style={{gridArea:'act'}}>
+          {/* 横向き(🔄横も)は、詳しい欄が中で送れる作り。決定の段は欄の下に貼り付けて、送らなくても見えるようにする
+              (iPhone の🔄横は画面が低く、マルチの曲えらびで「この曲で決定」が欄の下へ隠れていた・2026-11-08 社長「下が切れてる」) */}
+          <div data-rhythm-song-act className="flex gap-2 landscape:sticky landscape:bottom-0 landscape:z-10 landscape:-mx-1 landscape:bg-slate-950/95 landscape:px-1 landscape:py-1" style={{gridArea:'act'}}>
             {!hideRandom&&<button type="button" data-rhythm-song-random onClick={pickRandom}
               className="min-h-[46px] w-[38%] rounded-xl border border-white/20 bg-slate-900 text-xs font-black text-slate-200 landscape:min-h-[42px]">ランダム</button>}
             <button type="button" data-rhythm-demo-start={difficulty.id} disabled={playDisabled}

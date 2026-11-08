@@ -26,7 +26,21 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/cs
 const MEASURE_LIB = () => {
   window.__mhBox = (el, root) => { let x = 0; let y = 0; let e = el; while (e && e !== root) { x += e.offsetLeft; y += e.offsetTop; e = e.offsetParent; } return { l: x, t: y, r: x + el.offsetWidth, b: y + el.offsetHeight }; };
 };
-const measureSelect = (page) => page.evaluate(() => '');
+// 曲えらび: 決定のボタンと難易度の列が、部屋の枠(画面)の中に見えている
+const measureSelect = (page) => page.evaluate(() => {
+  const R = (e) => e && e.getBoundingClientRect();
+  const inBox = (a, b) => a && b && a.width > 0 && a.left >= b.left - 1 && a.right <= b.right + 1 && a.top >= b.top - 1 && a.bottom <= b.bottom + 1;
+  const main = R(document.querySelector('[data-rhythm-multi]'));
+  const bad = [];
+  const play = document.querySelector('[data-rhythm-demo-start]');
+  if (!inBox(R(play), main)) bad.push('「この曲で決定」が画面の外');
+  // 送れる欄の中にあるものは、欄の見えている所に入っていればよい
+  const detail = document.querySelector('[data-rhythm-song-detail]');
+  if (play && detail && !inBox(R(play), R(detail))) bad.push('「この曲で決定」が詳しい欄の見えている所の外');
+  const diffs = [...document.querySelectorAll('[data-rhythm-difficulty-best]')].map((e) => e.closest('button')).filter(Boolean);
+  if (!diffs.length) bad.push('難易度の列が無い');
+  return bad.join(' / ');
+});
 // 四角 a が四角 b の中に入っているか。回していても、画面上の四角どうしで比べれば向きに関係なく言える
 const measureResult = (page) => page.evaluate(() => {
   const R = (e) => e && e.getBoundingClientRect();
@@ -75,7 +89,7 @@ const measureResult = (page) => page.evaluate(() => {
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const errors = [];
   try {
-    for (const [w, h, rot, name] of [[390, 844, true, 'rot'], [375, 667, true, 'rot-se'], [390, 844, false, 'tate'], [844, 390, false, 'yoko'], [320, 568, false, 'small']]) {
+    for (const [w, h, rot, name] of [[390, 664, true, 'rot-iphone'], [390, 844, true, 'rot'], [375, 667, true, 'rot-se'], [390, 844, false, 'tate'], [844, 390, false, 'yoko'], [320, 568, false, 'small']]) {
       if (process.env.ONLY && process.env.ONLY !== name) continue;
       const page = await browser.newPage({ viewport: { width: w, height: h } });
       // iPhone の切り欠き(上 59px・ホームバー 34px)を入れて測る(env() は作れないので、index.html の --mh-safe-* で差し替える)

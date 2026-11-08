@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4cedff8d6a5b8853
+// source-sha256: 5cae859d9de1e0bb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -36961,7 +36961,8 @@ const RhythmSongSelect = ({
       }, text);
     })());
   }))), React.createElement("div", {
-    className: "flex gap-2",
+    "data-rhythm-song-act": true,
+    className: "flex gap-2 landscape:sticky landscape:bottom-0 landscape:z-10 landscape:-mx-1 landscape:bg-slate-950/95 landscape:px-1 landscape:py-1",
     style: {
       gridArea: 'act'
     }
