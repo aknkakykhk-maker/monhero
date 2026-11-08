@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 014a74d32fc505b0
+// generated-sha256: 7fe7e8673a70bcc4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -76243,6 +76243,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const K = CARD_SAVE_KEYS;
     // 前のカードポイントの残りを、ビートPへ1回だけ移す(印つき。82 の cardMigratePointsOnce)。失敗しても遊びは止めない
     try { await cardMigratePointsOnce(storeGet, storeSet, saveStoredValuesOrRollback); } catch (_) { /* 次に開いたときにやり直す */ }
+    // 2026-11-08 マルチが止まった不具合の投了の負けを1回だけ戻す(92 の cardPvpFix20261108Once・印 mh_card_pvp_fix_20261108_v1)。記録を読む前に当てる
+    try { if (typeof cardPvpFix20261108Once === 'function') await cardPvpFix20261108Once(storeGet, storeSet, saveStoredValuesOrRollback); } catch (_) { /* 次に開いたときにやり直す */ }
     const [collection, decks, point, starter, daily, record, unlocked, tutorial, bgm, settings, cpuPlaylist] = await Promise.all([
       storeGet(K.collection, null), storeGet(K.decks, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null),
       storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null), storeGet(K.tutorial, null),
@@ -82026,6 +82028,33 @@ const cardPvpHistoryWhen = (at) => {
 };
 
 // ---- 保存(読み直してから足す。書けなくても対戦は続ける) ----
+// ---- 2026-11-08 マルチが止まった不具合の補正(1回だけ・社長の決定) ----
+// 14時台に2人のマルチが「なめろう」などの不具合で止まり、2人とも投了して1つずつ負けが増えた(#5063 で原因は直した)。
+// その投了の負けだけを、端末の記録(mh_card_record_v1 の pvp.lose)から1回だけ戻す。ビートP・経験値は投了で減っていないので触らない。
+//   印 mh_card_pvp_fix_20261108_v1 { at, undone } … 書いたら二度とやらない(当てはまる試合が無い端末も印だけ書く)。
+//   当てはまるのは、マルチの履歴(mh_card_pvp_history_v1)に下の試合が「負け・投了」で残っている端末だけ(その試合をした2人の端末)
+const CARD_PVP_FIX_20261108_KEY = 'mh_card_pvp_fix_20261108_v1';
+const CARD_PVP_FIX_20261108_MATCHES = Object.freeze(['mmw7e6d8i6v7uxd', 'mmw7ecam4ptfvzi']);
+// 純粋な計算: 戻す負けの数と、直したあとの記録(cardNormalizeRecord を通した形)
+const cardPvpFix20261108Plan = (history, record) => {
+  const list = cardPvpNormalizeHistory(history);
+  const hits = list.filter((e) => CARD_PVP_FIX_20261108_MATCHES.includes(e.match) && e.outcome === 'lose' && e.reason === '投了');
+  const rec = typeof cardNormalizeRecord === 'function' ? cardNormalizeRecord(record) : null;
+  if (!rec || !hits.length) return { undone: 0, record: null, matches: [] };
+  const undone = Math.min(hits.length, rec.pvp.lose);
+  return { undone, record: undone > 0 ? { ...rec, pvp: { ...rec.pvp, lose: rec.pvp.lose - undone } } : null, matches: hits.map((e) => e.match) };
+};
+// 1回だけ当てる(MFバトルカードを開いたとき・84 の load から)。印と記録は同じ取引で書く。失敗したら次に開いたときにやり直す
+const cardPvpFix20261108Once = async (getValue, setValue, saveAll) => {
+  const done = await getValue(CARD_PVP_FIX_20261108_KEY, null, false);
+  if (done && typeof done === 'object') return { undone: 0, saved: false };
+  const [history, record] = await Promise.all([getValue(CARD_PVP_HISTORY_KEY, [], false), getValue(CARD_SAVE_KEYS.record, null, false)]);
+  const plan = cardPvpFix20261108Plan(history, record);
+  const entries = [{ key: CARD_PVP_FIX_20261108_KEY, before: done, next: { at: Date.now(), undone: plan.undone, matches: plan.matches } }];
+  if (plan.record) entries.push({ key: CARD_SAVE_KEYS.record, before: record, next: plan.record });
+  const saved = await saveAll(entries, getValue, setValue);
+  return { undone: saved ? plan.undone : 0, saved };
+};
 const cardPvpHistoryLoad = async () => {
   try { return cardPvpNormalizeHistory(await storeGet(CARD_PVP_HISTORY_KEY, [], false)); } catch (_) { return []; }
 };
