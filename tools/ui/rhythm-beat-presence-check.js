@@ -96,34 +96,75 @@ const json = (route, body) => route.fulfill({ status: 200, contentType: 'applica
   }, assistants);
   const shot = async (page, name) => { if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `${name}.png`) }); } };
   const inside = (page, sel) => page.evaluate((q) => { const el = document.querySelector(q); if (!el) return false; const r = el.getBoundingClientRect(); return r.top >= -1 && r.left >= -1 && r.bottom <= innerHeight + 1 && r.right <= innerWidth + 1; }, sel);
-  // 顔は見出しの「いる人」ボタンから開く一覧の中にある。開いていなければ開いてから押す(2026-11-08 帯をボタン+一覧へ)
+  // 顔は、助手が立ち絵の枠の左上・フレンドがフリーマッチのボタンの右上(2026-11-08 社長)。入りきらない人は「+N」から開く一覧の中
   const openList = async (page) => {
     if (await page.evaluate(() => !!document.querySelector('[data-rhythm-beat-presence-list]'))) return;
-    await page.evaluate(() => { const b = document.querySelector('[data-rhythm-beat-presence-open]'); b && b.click(); });
+    await page.evaluate(() => { const b = [...document.querySelectorAll('[data-rhythm-beat-visitors-more]')].find((e) => e.getClientRects().length); b && b.click(); });
     await page.waitForTimeout(400);
   };
+  // 一覧の中の顔(data-rhythm-beat-presence-*)を押す。一覧が閉じていれば「+N」で開く
   const tapFace = async (page, sel) => { await openList(page); await page.evaluate((q) => { const e = document.querySelector(q); e && e.click(); }, sel); };
+  const closeList = (page) => page.evaluate(() => { const b = document.querySelector('[data-rhythm-beat-presence-list-close]'); b && b.click(); });
   try {
     for (const [vp, name, rot] of [[{ width: 390, height: 844 }, 'tate', false], [{ width: 844, height: 390 }, 'yoko', false], [{ width: 390, height: 844 }, 'rot', true], [{ width: 320, height: 568 }, 'small', false]]) {
       const page = await open(vp);
       if (rot) { await page.evaluate(() => { try { RHYTHM_VIEW_ROTATION.set(90); } catch (e) {} }); await page.waitForTimeout(1200); }
       // 検査のあいだに助手ライフの様子が作り直されることがあるので、読む直前にもう一度合わせる
       await patchLife(page, true); await page.waitForTimeout(600);
-      check(`${name}: 見出しの「いる人」ボタンが画面の中に入る`, await inside(page, '[data-rhythm-beat-presence-open]'));
-      check(`${name}: 「いる人」ボタンの数が一覧の人数と同じ(助手2+フレンド4)`, await page.evaluate(() => /6/.test((document.querySelector('[data-rhythm-beat-presence-open]') || {}).innerText || '')));
+      // 置き場所: 助手は立ち絵の枠の左上(立ち絵ON/コメントONとぶつからない)、フレンドはフリーマッチのボタンの右上
+      const place = await page.evaluate(() => {
+        const bad = [];
+        const rect = (e) => e && e.getBoundingClientRect();
+        const hit = (a, b) => a && b && Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1;
+        const inBox = (a, b) => a && b && a.left >= b.left - 1 && a.right <= b.right + 1 && a.top >= b.top - 1 && a.bottom <= b.bottom + 1;
+        if (document.querySelector('[data-rhythm-beat-presence-open]')) bad.push('見出しの「いる人」ボタンが残っている');
+        const art = document.querySelector('[data-rhythm-mode-assistant-art-box]');
+        const corner = document.querySelector('[data-rhythm-beat-art-corner]');
+        const aIds = [...document.querySelectorAll('[data-rhythm-beat-visitors="art"] [data-rhythm-beat-visitor="assistant"]')].map((e) => e.getAttribute('data-rhythm-beat-visitor-id'));
+        if (aIds.join(',') !== 'mua,kiki') bad.push(`立ち絵の枠の助手: ${aIds.join(',') || 'なし'}`);
+        if (!inBox(rect(corner), rect(art))) bad.push('助手の顔が立ち絵の枠からはみ出す');
+        const tog = document.querySelector('[data-rhythm-mode-assistant-art-box] .mhms-art-toggles');
+        if (hit(rect(corner), rect(tog))) bad.push('助手の顔が立ち絵ON/コメントONに重なる');
+        const free = document.querySelector('[data-rhythm-multi-free]');
+        // 縦は右上の角(free)、横向き・🔄横は説明の下の行(free-row)。見えているほうを見る
+        const fv = [...document.querySelectorAll('[data-rhythm-beat-visitors^="free"]')].find((e) => e.getClientRects().length);
+        if (!fv) bad.push('フリーマッチに顔が出ていない');
+        const fIds = fv ? [...fv.querySelectorAll('[data-rhythm-beat-visitor="friend"]')].map((e) => e.getAttribute('data-rhythm-beat-visitor-id')) : [];
+        if (fIds.join(',') !== 'friendroom01,friendhere01,friendbusy01') bad.push(`フリーマッチの顔: ${fIds.join(',') || 'なし'}`);
+        if (fv && fv.querySelector('[data-rhythm-beat-visitor="assistant"]')) bad.push('立ち絵があるのに助手がフリーマッチにも出る');
+        if (!fv || (fv.querySelector('[data-rhythm-beat-visitors-more]') || {}).innerText !== '+1') bad.push('4人目が「+1」になっていない');
+        if (!inBox(rect(fv), rect(free))) bad.push('フレンドの顔がフリーマッチのボタンからはみ出す');
+        // フリーマッチの題・説明・待ち人数の字に重ならない
+        [...(free ? free.querySelectorAll('b, small') : [])].filter((t) => fv && !fv.contains(t) && t.getClientRects().length).forEach((t) => { if (hit(rect(t), rect(fv))) bad.push(`顔が「${t.innerText.slice(0, 8)}」に重なる`); });
+        return bad.join(' / ');
+      });
+      check(`${name}: 助手は立ち絵の枠の左上・フレンドはフリーマッチの右上(見出しには置かない)`, place === '', place);
       // 「いる人」ボタンで見出しの「モードえらび」が切れない(320幅で「モードえ…」になった)
       const titleCut = await page.evaluate(() => { const t = document.querySelector('[data-rhythm-mode-select] .mhms-title'); return t ? t.scrollWidth > t.clientWidth + 1 : true; });
       check(`${name}: 見出しの「モードえらび」が切れない`, !titleCut);
       // 上の小さい英字(MONBEAT ・ SELECT MODE)も切れない(320幅で「…」になり ja-wrap-beat-screen-check が落ちた)
       const subCut = await page.evaluate(() => { const t = document.querySelector('[data-rhythm-mode-select] header small'); return t ? t.scrollWidth > t.clientWidth + 1 : false; });
       check(`${name}: 見出しの上の英字が切れない`, !subCut);
-      await shot(page, `presence-button-${name}`);
+      await shot(page, `presence-place-${name}`);
+      // 立ち絵の枠の顔を押すと、その助手の窓
+      await page.evaluate(() => document.querySelector('[data-rhythm-beat-visitors="art"] [data-rhythm-beat-visitor-id="kiki"]').click());
+      await page.waitForTimeout(400);
+      check(`${name}: 立ち絵の枠の顔を押すと、その助手の窓`, await page.evaluate(() => document.querySelector('[data-rhythm-beat-presence-sheet]')?.getAttribute('data-rhythm-beat-presence-sheet') === 'assistant' && /きき/.test(document.querySelector('[data-rhythm-beat-presence-sheet]').innerText)));
+      await page.evaluate(() => { const x = [...document.querySelectorAll('[data-rhythm-beat-presence-sheet] button')].find((e) => /とじる/.test(e.innerText)); x && x.click(); });
+      await page.waitForTimeout(300);
+      // フリーマッチの顔を押すと、その人の窓が開き、フリーマッチのシートは開かない
+      await page.evaluate(() => [...document.querySelectorAll('[data-rhythm-beat-visitors^="free"] [data-rhythm-beat-visitor-id="friendhere01"]')].find((e) => e.getClientRects().length).click());
+      await page.waitForTimeout(400);
+      check(`${name}: フリーマッチの顔を押すと、その人の窓(フリーマッチのシートは開かない)`, await page.evaluate(() => document.querySelector('[data-rhythm-beat-presence-sheet]')?.getAttribute('data-rhythm-beat-presence-sheet') === 'friend' && !document.querySelector('[data-rhythm-mode-free-sheet]')));
+      if (name === 'tate') await shot(page, 'presence-friend-tate');
+      await page.evaluate(() => { const x = [...document.querySelectorAll('[data-rhythm-beat-presence-sheet] button')].find((e) => /とじる/.test(e.innerText)); x && x.click(); });
+      await page.waitForTimeout(300);
       await openList(page);
       const strip = await page.evaluate(() => ({
         a: [...document.querySelectorAll('[data-rhythm-beat-presence-assistant]')].map((e) => e.getAttribute('data-rhythm-beat-presence-assistant')),
         f: [...document.querySelectorAll('[data-rhythm-beat-presence-friend]')].map((e) => `${e.getAttribute('data-rhythm-beat-presence-friend')}:${e.getAttribute('data-rhythm-beat-presence-kind')}`),
       }));
-      check(`${name}: 帯に練習中の助手が出る(🎤 呼べる)`, strip.a.join(',') === 'mua,kiki', strip.a.join(','));
+      check(`${name}: 一覧(+N)に練習中の助手が出る(🎤 呼べる)`, strip.a.join(',') === 'mua,kiki', strip.a.join(','));
       check(`${name}: フレンドは「部屋あり → 誘える → 部屋で遊び中 → 🔑 プライベート中」の順。部屋で待ち中だけ・ホームの人は出ない`, strip.f.join(',') === 'friendroom01:room,friendhere01:here,friendbusy01:busy,friendpriv01:private', strip.f.join(','));
       check(`${name}: 一覧の窓が画面の中に入る`, await inside(page, '[data-rhythm-beat-presence-list] > div'));
       // 助手とフレンド(プレイヤー)は見出し・札・枠の形で見分けられる(2026-11-08 社長「助手とプレイヤーで区別つくようにして」。同じ名前の人がいる)
@@ -208,7 +249,7 @@ const json = (route, body) => route.fulfill({ status: 200, contentType: 'applica
     }
     // だれもいないとき
     const page = await open({ width: 390, height: 844 }, { friends: false, assistants: false });
-    check('だれもいなければ「いる人」ボタンは出ない', await page.evaluate(() => !document.querySelector('[data-rhythm-beat-presence-open]') && !document.querySelector('[data-rhythm-beat-presence]')), await page.evaluate(() => { const e = document.querySelector('[data-rhythm-beat-presence]'); return e ? e.innerText.replace(/\s+/g, ' ').slice(0, 120) + ' / ' + JSON.stringify((ASSISTANT_LIFE_STORE.state.life || {}).groups || []).slice(0, 200) : ''; }));
+    check('だれもいなければ顔は出ない', await page.evaluate(() => !document.querySelector('[data-rhythm-beat-visitors]') && !document.querySelector('[data-rhythm-beat-presence]')), await page.evaluate(() => { const e = document.querySelector('[data-rhythm-beat-presence]'); return e ? e.innerText.replace(/\s+/g, ' ').slice(0, 120) + ' / ' + JSON.stringify((ASSISTANT_LIFE_STORE.state.life || {}).groups || []).slice(0, 200) : ''; }));
     await page.close();
     // 送る側: 合言葉の部屋にいるあいだ friendsSetRoomPrivate を立てる(フレンドの一覧で「🔑 プライベート中」になる)
     const multiSrc = fs.readFileSync(path.join(ROOT, 'monster-hero', 'src', 'parts', '77-screen-rhythm-multi.jsx'), 'utf8');
