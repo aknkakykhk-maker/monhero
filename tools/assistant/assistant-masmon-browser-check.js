@@ -17,7 +17,8 @@ const root = path.resolve(__dirname, '..', '..'), PORT = 9273;
 const { quietBootSeed, updateNoticeSeed, oneTimeNoticeSeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 const { MIME, STORY_IDS, seed, toHome, finishTalk } = require(path.resolve(__dirname, 'life-browser-shared'));
 const SHOTS = process.argv.includes('--shots');
-const shotDir = path.join(root, 'docs/progress/assistant-peer/shots');
+const shotDir = process.env.MASMON_SHOT_DIR ? path.resolve(process.env.MASMON_SHOT_DIR) : path.join(root, 'docs/progress/assistant-peer/shots');
+//   MASMON_SEED=◯◯ で、そのプレイヤーの種でマスモンを決めて開く(プレイヤーごとに違うマスモン ❶B の止め絵用)
 const BASE = process.env.LIFE_BASE ? process.env.LIFE_BASE.replace(/\/?$/, '/') : `http://localhost:${PORT}/`;
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
@@ -64,6 +65,7 @@ const layoutProblems = (page) => page.evaluate(() => {
       await page.addInitScript(seed, { storyIds: STORY_IDS, life: true });
       // 仲良し度を Lv7 に(迎える2体とも届く)。保存キーは助手ごと(みゅあだけ mh_assistant_bond_v1)。ページの中だけ
       if (!process.env.MASMON_LOW_BOND) await page.addInitScript(() => { try { if (localStorage.getItem('mh_check_masmon_bond') === null) { localStorage.setItem('mh_check_masmon_bond', '1'); for (const id of ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']) { const key = id === 'mua' ? 'mh_assistant_bond_v1' : `mh_assistant_bond_${id}_v1`; let b = {}; try { b = JSON.parse(localStorage.getItem(key)) || {}; } catch {} localStorage.setItem(key, JSON.stringify({ ...b, points: 1800 })); } } } catch {} });
+      if (process.env.MASMON_SEED) await page.addInitScript((sd) => { try { if (localStorage.getItem('mh_assistant_life_masmon_v1') === null) localStorage.setItem('mh_assistant_life_masmon_v1', JSON.stringify({ v: 1, seed: sd })); } catch (_) {} }, process.env.MASMON_SEED);
       await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
       await page.goto(`${BASE}monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
       await toHome(page);

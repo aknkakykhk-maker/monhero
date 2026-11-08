@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d5d79c7d869aace1
+// source-sha256: 937a1621a0d7d924
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13737,6 +13737,7 @@ const RELEASE_FLAGS = {
   assistantLife: true,
   assistantLifeFurniture: true,
   assistantLifeFriend: true,
+  assistantMasmonNamesApi: false,
   assistantLifeFriendApi: true,
   rhythmAssistantSession: true,
   assistantSorashido: true,
@@ -122000,15 +122001,90 @@ const ASSISTANT_MASMON_PLAN = [{
     "why": "落ち着いた色"
   }]
 }];
-const assistantMasmonPlanOf = id => ASSISTANT_MASMON_PLAN.find(a => a && a.id === id) || null;
+const assistantMasmonBasePlanOf = id => ASSISTANT_MASMON_PLAN.find(a => a && a.id === id) || null;
+const assistantMasmonPlanOf = id => {
+  const base = assistantMasmonBasePlanOf(id);
+  if (!base) return null;
+  let made = null;
+  try {
+    made = typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.state.made ? ASSISTANT_MASMON_STORE.state.made[id] : null;
+  } catch (_) {
+    made = null;
+  }
+  if (!Array.isArray(made) || made.length < 3) return base;
+  const row = t => ({
+    monster: t.monster,
+    nick: t.nick,
+    why: t.why,
+    lv: t.lv,
+    grow: t.grow,
+    dye: {
+      colors: [...t.colors]
+    }
+  });
+  return {
+    ...base,
+    team: made.filter(t => t.slot <= 3).map(t => ({
+      ...row(t),
+      lead: t.slot === 1
+    })),
+    extra: made.filter(t => t.slot >= 4).map(t => ({
+      ...row(t),
+      welcome: t.slot === 4 ? 4 : 7
+    }))
+  };
+};
 const assistantMasmonMonOk = t => !!(t && typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[t.monster]);
 const assistantMasmonTeam = p => p ? [...p.team].sort((a, b) => (b.lead ? 1 : 0) - (a.lead ? 1 : 0)).filter(assistantMasmonMonOk) : [];
 const ASSISTANT_MASMON_KEY = 'mh_assistant_life_masmon_v1';
+const ASSISTANT_MASMON_COLOR_RE = /^[a-z_]{2,16}(@(100|[1-9]\d))?$/;
+const normalizeAssistantMasmonMade = raw => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [aid, list] of Object.entries(raw)) {
+    if (!assistantMasmonBasePlanOf(aid) || !Array.isArray(list)) continue;
+    const rows = [];
+    const slots = new Set();
+    const mons = new Set();
+    for (const t of list.slice(0, 5)) {
+      if (!t || typeof t !== 'object') continue;
+      const slot = Number(t.slot),
+        lv = Number(t.lv);
+      if (!Number.isInteger(slot) || slot < 1 || slot > 5 || slots.has(slot) || typeof t.monster !== 'string' || mons.has(t.monster)) continue;
+      if (typeof t.nick !== 'string' || !t.nick || t.nick.length > 16 || !Number.isFinite(lv)) continue;
+      const colors = Array.isArray(t.colors) ? t.colors.slice(0, 8).map(c => typeof c === 'string' && ASSISTANT_MASMON_COLOR_RE.test(c) ? c : null) : [];
+      slots.add(slot);
+      mons.add(t.monster);
+      rows.push({
+        slot,
+        monster: t.monster,
+        nick: t.nick,
+        lv: Math.max(1, Math.min(99, Math.round(lv))),
+        grow: typeof t.grow === 'string' ? t.grow.slice(0, 30) : '',
+        why: typeof t.why === 'string' ? t.why.slice(0, 40) : '',
+        colors,
+        ai: t.ai === true
+      });
+    }
+    if (rows.length >= 3 && slots.has(1)) out[aid] = rows.sort((a, b) => a.slot - b.slot);
+  }
+  return out;
+};
 const normalizeAssistantMasmonSave = raw => {
   const out = {
     v: 1,
-    welcomed: {}
+    welcomed: {},
+    seed: '',
+    made: {},
+    named: false,
+    noticed: {}
   };
+  if (raw && typeof raw === 'object') {
+    if (typeof raw.seed === 'string' && /^[\w-]{4,60}$/.test(raw.seed)) out.seed = raw.seed;
+    out.made = normalizeAssistantMasmonMade(raw.made);
+    out.named = raw.named === true;
+    if (raw.noticed && typeof raw.noticed === 'object') for (const [k, v] of Object.entries(raw.noticed)) if (v === true && assistantMasmonBasePlanOf(k)) out.noticed[k] = true;
+  }
   const w = raw && typeof raw === 'object' && raw.welcomed && typeof raw.welcomed === 'object' ? raw.welcomed : {};
   for (const [aid, mons] of Object.entries(w)) {
     if (!mons || typeof mons !== 'object' || Array.isArray(mons)) continue;
@@ -122038,7 +122114,309 @@ const ASSISTANT_MASMON_STORE = {
     } catch (_) {}
     this.loaded = true;
     this.set(normalizeAssistantMasmonSave(raw));
+    try {
+      await assistantMasmonEnsureMade();
+    } catch (_) {}
     return this.state;
+  }
+};
+const ASSISTANT_MASMON_POOL_MORE = Object.freeze({
+  mua: [{
+    monster: 'Pixie',
+    nick: 'ぴくぴく',
+    why: 'キラキラしててかわいい',
+    lv: 9,
+    grow: 'すばやさ型'
+  }],
+  kiki: [{
+    monster: 'Ghost',
+    nick: 'ゴーくん',
+    why: 'ふわふわなのに力持ち',
+    lv: 9,
+    grow: '攻撃型'
+  }],
+  momosuke: [{
+    monster: 'Kuromy',
+    nick: 'クロちゃん',
+    why: 'ユグドラシル種。ステージ衣装みたい',
+    lv: 10,
+    grow: 'ガッツ型'
+  }],
+  dra: [{
+    monster: 'Monol',
+    nick: 'くろいた',
+    why: '黒くて落ち着く。どっしり',
+    lv: 8,
+    grow: '防御型'
+  }],
+  atsu: [{
+    monster: 'Eiki',
+    nick: 'センくん',
+    why: 'ザンの仲間。速くて強い',
+    lv: 11,
+    grow: 'すばやさ型'
+  }],
+  kyuko: [{
+    monster: 'Snegurochka',
+    nick: 'ゆきの',
+    why: '静かで、夜の読書のおともに',
+    lv: 8,
+    grow: 'ガッツ型'
+  }],
+  sorashido: [{
+    monster: 'Eiki',
+    nick: 'サクラ',
+    why: '手の内がはっきりしていて読みやすい',
+    lv: 9,
+    grow: '攻撃型'
+  }],
+  erubin: [{
+    monster: 'Orihime',
+    nick: 'ほしの',
+    why: '強いのについ目がいく',
+    lv: 10,
+    grow: 'ガッツ型'
+  }]
+});
+const assistantMasmonRng = seedText => {
+  let h = 2166136261;
+  for (const ch of String(seedText)) {
+    h ^= ch.charCodeAt(0);
+    h = Math.imul(h, 16777619);
+  }
+  let x = h >>> 0 || 1;
+  return () => {
+    x ^= x << 13;
+    x >>>= 0;
+    x ^= x >>> 17;
+    x ^= x << 5;
+    x >>>= 0;
+    return x / 4294967296;
+  };
+};
+const assistantMasmonShuffle = (list, rnd) => {
+  const a = [...list];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+const ASSISTANT_MASMON_OPP = Object.freeze({
+  red: 'cyan',
+  orange: 'blue',
+  yellow: 'purple',
+  lime: 'magenta',
+  green: 'pink',
+  teal: 'red',
+  cyan: 'red',
+  sky: 'orange',
+  blue: 'orange',
+  purple: 'yellow',
+  magenta: 'green',
+  pink: 'green',
+  black: 'white',
+  white: 'black',
+  gray: 'black'
+});
+const ASSISTANT_MASMON_TEMPER = Object.freeze({
+  kiki: 'quiet',
+  kyuko: 'quiet',
+  sorashido: 'quiet',
+  mua: 'mid',
+  erubin: 'mid',
+  momosuke: 'bold',
+  atsu: 'bold',
+  dra: 'bold'
+});
+const assistantMasmonDyeMake = (aid, p, monster, style, rnd) => {
+  const opp = c => {
+    const light = c.endsWith('_light');
+    const o = ASSISTANT_MASMON_OPP[c.replace('_light', '')] || 'gray';
+    return light && !['black', 'white', 'gray'].includes(o) ? `${o}_light` : o;
+  };
+  const fav0 = (p.favColors || []).map(x => x.color).filter(Boolean);
+  const fav = fav0.length ? rnd() < 0.5 ? fav0 : [...fav0.slice(1), fav0[0]] : ['pink'];
+  const f = i => fav[i % fav.length];
+  const t = ASSISTANT_MASMON_TEMPER[aid] || 'mid';
+  const k = base => {
+    let a = base;
+    if (t === 'quiet' && style !== 5) a *= 0.75;
+    if (t === 'bold' && style !== 4) a = Math.min(90, a * 1.12);
+    a += Math.round((rnd() - 0.5) * 10);
+    return Math.max(20, Math.min(90, Math.round(a)));
+  };
+  const at = (c, a) => c ? `${c}@${a}` : null;
+  const tpl = {
+    1: [at(f(0), k(85)), at(f(1), k(65)), null, at(f(0), k(70)), null],
+    2: [null, at(f(0), k(90)), null, null, null],
+    3: [at(opp(f(0)), k(70)), null, at('orange', k(55)), null, at(opp(f(0)), k(60))],
+    4: [at(f(1), 35), null, null, null, null],
+    5: [at(f(0), 90), at(f(2) || opp(f(0)), 90), at(f(1), 90), at(opp(f(1)), 85), at(f(0), 90)]
+  }[style];
+  const regions = typeof MASU_COLOR_REGION_HUES !== 'undefined' && Array.isArray(MASU_COLOR_REGION_HUES[monster]) ? MASU_COLOR_REGION_HUES[monster].length : 3;
+  const cols = tpl.slice(0, regions);
+  while (cols.length < regions) cols.push(null);
+  if (!cols.some(Boolean)) cols[0] = tpl.find(Boolean);
+  return cols;
+};
+const assistantMasmonMakeFor = (aid, seed) => {
+  const p = assistantMasmonBasePlanOf(aid);
+  if (!p) return null;
+  const rnd = assistantMasmonRng(`${seed}|${aid}|masmon-v1`);
+  const ok = t => assistantMasmonMonOk(t);
+  const likes = p.team.filter(ok);
+  const rest = [...(p.extra || []), ...(ASSISTANT_MASMON_POOL_MORE[aid] || [])].filter(ok);
+  if (!likes.length) return null;
+  const lead = likes[Math.floor(rnd() * likes.length)];
+  const others = assistantMasmonShuffle([...likes.filter(t => t !== lead), ...rest], rnd);
+  const picked = [lead];
+  const mons = new Set([lead.monster]);
+  for (const t of others) {
+    if (picked.length >= 5) break;
+    if (!mons.has(t.monster)) {
+      picked.push(t);
+      mons.add(t.monster);
+    }
+  }
+  const styles = [1, ...assistantMasmonShuffle([2, 3, 4, 5], rnd)];
+  return picked.map((t, i) => {
+    const lv0 = Number.isFinite(t.lv) ? t.lv : 10;
+    const lv = Math.max(1, i === 0 ? lv0 + Math.round((rnd() - 0.5) * 6) : Math.min(lv0 + Math.round((rnd() - 0.5) * 6), 30));
+    return {
+      slot: i + 1,
+      monster: t.monster,
+      nick: t.nick,
+      lv,
+      grow: t.grow || '',
+      why: t.why || '',
+      colors: assistantMasmonDyeMake(aid, p, t.monster, styles[i], rnd),
+      ai: false
+    };
+  });
+};
+const assistantMasmonEnsureMade = async () => {
+  const cur = ASSISTANT_MASMON_STORE.state;
+  const need = ASSISTANT_MASMON_PLAN.map(a => a.id).filter(id => !cur.made[id]);
+  if (need.length) {
+    let seed = cur.seed;
+    if (!seed) {
+      let bid = null;
+      try {
+        bid = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
+      } catch (_) {
+        bid = null;
+      }
+      seed = typeof bid === 'string' && /^[\w-]{4,60}$/.test(bid) ? bid : `r-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e9).toString(36)}`;
+    }
+    const made = {
+      ...cur.made
+    };
+    for (const id of need) {
+      const m = assistantMasmonMakeFor(id, seed);
+      if (m) made[id] = m;
+    }
+    const next = {
+      ...ASSISTANT_MASMON_STORE.state,
+      seed,
+      made
+    };
+    ASSISTANT_MASMON_STORE.set(next);
+    try {
+      if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false);
+    } catch (_) {}
+  }
+  void assistantMasmonAskNames();
+};
+let _assistantMasmonNamesBusy = false;
+const assistantMasmonAskNames = async () => {
+  const st = ASSISTANT_MASMON_STORE.state;
+  if (st.named || _assistantMasmonNamesBusy) return 'skip';
+  if (!(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonNamesApi === true) || typeof ASSISTANT_CHAT_URL === 'undefined' || typeof SB_HEADERS === 'undefined') return 'skip';
+  const items = Object.entries(st.made).map(([a, list]) => ({
+    a,
+    s: list.map(t => {
+      const m = assistantMasmonMon(t.monster);
+      return {
+        slot: t.slot,
+        mon: m ? m.name : t.monster,
+        why: t.why
+      };
+    })
+  }));
+  if (!items.length) return 'skip';
+  let bid = null;
+  try {
+    bid = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
+  } catch (_) {
+    bid = null;
+  }
+  if (!bid) return 'skip';
+  _assistantMasmonNamesBusy = true;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 20000);
+    let res = null;
+    try {
+      const r = await fetch(ASSISTANT_CHAT_URL, {
+        method: 'POST',
+        headers: SB_HEADERS,
+        signal: controller.signal,
+        body: JSON.stringify({
+          kind: 'masmon_names',
+          breederId: bid,
+          items
+        })
+      });
+      res = r.ok ? await r.json() : null;
+    } finally {
+      clearTimeout(timer);
+    }
+    if (!res || res.ok !== true || !res.names || typeof res.names !== 'object') return res && res.kind === 'tired' ? 'tired' : 'failed';
+    const cur = ASSISTANT_MASMON_STORE.state;
+    const made = {};
+    for (const [a, list] of Object.entries(cur.made)) {
+      const got = res.names[a] && typeof res.names[a] === 'object' ? res.names[a] : {};
+      const usedNames = new Set();
+      made[a] = list.map(t => {
+        const n = typeof got[t.slot] === 'string' ? got[t.slot].trim() : '';
+        const okName = /^[ぁ-ゖァ-ヺー一-龠々・]{2,8}$/u.test(n) && !usedNames.has(n);
+        if (okName) usedNames.add(n);
+        return okName ? {
+          ...t,
+          nick: n,
+          ai: true
+        } : t;
+      });
+    }
+    const next = {
+      ...cur,
+      made,
+      named: true
+    };
+    ASSISTANT_MASMON_STORE.set(next);
+    try {
+      if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false);
+    } catch (_) {}
+    return 'ok';
+  } catch (_) {
+    return 'failed';
+  } finally {
+    _assistantMasmonNamesBusy = false;
+  }
+};
+const assistantLifeMasmonTeamOf = id => {
+  try {
+    const p = assistantMasmonPlanOf(id);
+    if (!p) return [];
+    return [...assistantMasmonTeam(p), ...assistantMasmonBench(p)].map(t => ({
+      monster: t.monster,
+      nick: t.nick,
+      colors: [...(t.dye && t.dye.colors || [])],
+      lead: !!t.lead
+    }));
+  } catch (_) {
+    return [];
   }
 };
 const useAssistantMasmonSave = () => {
@@ -122087,15 +122465,29 @@ const assistantMasmonWelcome = async (aid, t) => {
   return true;
 };
 const ASSISTANT_MASMON_WELCOME_LINES = Object.freeze({
-  mua: '{name}、見て見て！ 新しいマスモンを迎えたよ〜！ {mon}の「{nick}」！ よろしくね♪',
-  kiki: '{name}、新しいマスモンを迎えまちた。{mon}の「{nick}」でつ。いっぱいちからに振りまつ',
-  momosuke: '{name}〜！ ももの新しい仲間、{mon}の「{nick}」だよ♡ 一緒にステージに立とうね！',
-  dra: 'おう{name}。新しいマスモンが来たぞ。{mon}の「{nick}」だ。のんびり育てるよ',
-  atsu: '{name}！ 新しい仲間だ。{mon}の「{nick}」。明日から一緒に朝練するぞ！',
-  kyuko: 'ほい、{name}。新しいマスモン迎えたよ。{mon}の「{nick}」。俺の夜の読書のおともが増えた〜',
-  sorashido: '{name}、新しいマスモンを迎えたさー。{mon}の「{nick}」。表に1行足しておくね',
-  erubin: '{name}、新しい仲間を迎えたよ。{mon}の「{nick}」。みんなで守っていこう'
+  mua: '{name}、見て見てー！ 新しいマスモン迎えたの✨ {mon}の「{nick}」！ よろしくね♪',
+  kiki: '{name}、新しいマスモンをお迎えしました。{mon}の「{nick}」でつ。よろしくお願いしまつ♪',
+  momosuke: '{name}〜！！ ももの新しい仲間、{mon}の「{nick}」だよ♡ いっしょにステージ立とうね！！',
+  dra: 'おう、{name}。新しいマスモンが来たぞ。{mon}の「{nick}」だ。のんびり育てていくからな',
+  atsu: '{name}！ 新しい仲間が来た笑 {mon}の「{nick}」、よろしく頼む！',
+  kyuko: 'ほい、{name}。新しいマスモン迎えたよ〜。{mon}の「{nick}」、仲良くしてねぇ',
+  sorashido: 'うぉぉぉ！{name}、新しい仲間だぜ・・・！ {mon}の「{nick}」、表にも足しとくな笑',
+  erubin: '{name}、新しい仲間を迎えたよ。{mon}の「{nick}」。仲良くしてくれるとうれしいな'
 });
+const ASSISTANT_MASMON_RENAMED_LINES = Object.freeze({
+  mua: '{name}、マスモンたちに新しい名前つけたの！ 見てみてー✨',
+  kiki: '{name}、マスモンたちに新しいお名前を付けました。見てくださいな♪',
+  momosuke: '{name}！！ マスモンみんなに新しい名前つけたよ♡ 見て見て！！',
+  dra: '{name}、マスモンたちに新しい名前を付けたぞ。見てやってくれ',
+  atsu: '{name}、マスモンたちに新しい名前付けた笑 見てって！',
+  kyuko: 'ほい、{name}。マスモンたちに新しい名前付けたよ〜。見てみてねぇ',
+  sorashido: '{name}、マスモンたちに新しい名前を付けたぜ・・・！ 見てくれ笑',
+  erubin: '{name}、マスモンたちに新しい名前を付けたんだ。見てくれるかな'
+});
+const assistantMasmonRenamedLine = aid => {
+  const call = typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(aid) : 'あなた';
+  return String(ASSISTANT_MASMON_RENAMED_LINES[aid] || '{name}、マスモンたちに新しい名前を付けたよ').split('{name}').join(call);
+};
 const assistantMasmonWelcomeLine = (aid, t) => {
   const m = assistantMasmonMon(t.monster);
   const call = typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(aid) : 'あなた';
@@ -122404,6 +122796,7 @@ function AssistantMasmonSheet({
   const [detail, setDetail] = React.useState(null);
   const save = useAssistantMasmonSave();
   const [welcome, setWelcome] = React.useState(null);
+  const [renamed, setRenamed] = React.useState(false);
   React.useEffect(() => {
     let alive = true;
     (async () => {
@@ -122411,6 +122804,21 @@ function AssistantMasmonSheet({
       const p0 = assistantMasmonPlanOf(id),
         t = assistantMasmonToWelcome(p0, Number(bondLv));
       if (t && (await assistantMasmonWelcome(id, t)) && alive) setWelcome(t);
+      const st = ASSISTANT_MASMON_STORE.state;
+      if (st.named && !st.noticed[id] && alive) {
+        setRenamed(true);
+        const next = {
+          ...st,
+          noticed: {
+            ...st.noticed,
+            [id]: true
+          }
+        };
+        ASSISTANT_MASMON_STORE.set(next);
+        try {
+          if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false);
+        } catch (_) {}
+      }
     })();
     return () => {
       alive = false;
@@ -122426,7 +122834,10 @@ function AssistantMasmonSheet({
   const fav = tab === 'deck' ? assistantMasmonFavCard(id) : null;
   let body = null;
   if (tab === 'mons') {
-    body = React.createElement(React.Fragment, null, React.createElement("div", {
+    body = React.createElement(React.Fragment, null, renamed && React.createElement("p", {
+      className: "mhm-card mb-2 text-[11.5px] font-bold leading-snug text-slate-100",
+      "data-assistant-masmon-renamed": true
+    }, who.name, "「", assistantMasmonRenamedLine(id), "」"), React.createElement("div", {
       className: land ? 'grid grid-cols-3 gap-2' : 'flex flex-col gap-2'
     }, all.map(t => React.createElement(AssistantMasmonRow, {
       key: t.monster,
