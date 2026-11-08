@@ -107,6 +107,7 @@
 | `mh_breeder_gender_v1` | string / `'none'` | プロフィールの性別(`'male'`/`'female'`/`'none'`=答えない)。`normalizeBreederGender` を通し、無い・壊れているときは `'none'`(これまでと同じ呼び方)。助手の段ごとの呼び方(`ASSISTANT_GENDER_CALLS`)とマスモンのくん/ちゃんに使う。端末の中だけで、ランキング・フレンドには送らない(2026-11-06 社長) |
 | `mh_friend_favorites_v1` | string[] / `[]` | フレンド一覧で「お気に入り」にしたフレンドのID(`friendsNormalizeFavorites` を通す) |
 | `mh_friend_recent_v1` | object[] / `[]` | 最近いっしょに遊んだ人(`{id,name,at}`。新しい順・同じ人は1件・最大30人。端末だけに覚え、サーバーへは送らない。`friendsNormalizeRecent` を通す) |
+| `mh_friend_presence_show_v1` | boolean / `true` | 「いまの状態をフレンドに見せる」(2026-11-08)。`false` のときは friend_profiles の place を 'other'(ログイン中)にし、オート周回中・操作なしの分(records.au・records.im)も送らない |
 | `mh_friend_notes_v1` | object / `{}` | フレンドごとのメモ(フレンドのID→メモ。メモは12文字まで・最大200人ぶん。端末だけに覚え、サーバーへは送らない。`friendsNormalizeNotes` を通す) |
 | `mh_raid_jack_v1` | object / `raidJackDefaultState()` | イベント・レイドボス「ジャック」の端末側の記録(A/Bそれぞれの今日の使用回数・買い足した回数・倒した段階、Bの累計ダメージの自分用の控え、受け取り済みの報酬ID、送れなかった与ダメージの再送待ち)。`raidJackNormalizeState` を通す。既存のキーには触らない。設計: `docs/spec/RAID_BOSS_JACK.md` |
 | `mh_card_collection_v1` | object / `cardNormalizeCollection` | MFバトルカードの持っているカード `{ カード番号: 枚数 }`(モンスターカードも同じ表)。枚数は 1〜99。知らない番号は消さずに残す。設計: `docs/spec/CARD_BATTLE.md` 6-1 |
@@ -153,6 +154,8 @@
 | `mh_card_settings_v1` | object / `normalizeCardSettings` | MFバトルカードの演出 `{ speed: 'normal'|'fast', autoPass: 真偽 }`。無い人は ふつう・自動パスON |
 | `mh_card_pack_fx_v1` | string / `cardPackFxOn`('OFF' のときだけ切る) | MFバトルカードのオプション「パックを開ける演出」(2026-10-31)。'ON'(強め)か 'OFF'(短め)。無い・壊れていたら強め。見た目だけで、出るカードは変わらない |
 | `mh_card_ai_talk_v1` | object / `cardNormalizeAiTalk` | MFバトルカードの助手のおしゃべり(AI)の入/切 `{ on: 真偽 }`(2026-10-25)。無い・壊れていたら入。呼べるのは公開の印かデバッグ端末だけ(83-card-battle-talk-ai.jsx) |
+| `mh_card_ai_recipe_v1` | object / `cardNormalizeAiRecipe` | MFバトルカードの助手の3つのデッキ(2026-11-08)。`{ v:1, day, perWho: { 助手id: { met, gamesSince, slotsDone, decks: { attack/guard/normal: { plan, name, line, at, ai } } } } }`。plan は 82 の `cardAiPlanClean` を通す。無い・壊れていたら空(今の組み方)。日付が変わると slotsDone だけ0に戻す。公開の印 `cardGrowStyle` が偽のあいだは読み書きしない |
+| `mh_card_ai_deck_v1` | object / `cardNormalizeAiDeck` | 助手のデッキを AI で組むかの入/切 `{ on: 真偽 }`(2026-11-08)。無い・壊れていたら入。切なら AI に聞かず、型の中の揺らぎで組み直す |
 | `mh_raid_jack_frame_gift_v1` | object / `null` | プロフィールフレーム「ハロウィン・妖」をギフトで届けた印(`{ at, frameId }`・2026-10-20)。レイドで大王まで倒せたときの終章を見た参加者へ1回だけ届けるため。ギフトの一覧(`mh_gifts`)は古いものから消えるので、二重に届けないためにこの印を持つ。ギフトと同じ取引で保存する |
 | `mh_raid_jack_ending_replay_v1` | object / `null` | ハロウィン・ナイトの終章を一度だけ流し直した印(`{ at }`・2026-11-01)。終章にソラシドのセリフを足したあと、見終えた人へ前に見た方の終章を1回だけ流すため。終章をはじめて見た人も、見終えたところで立てる。終章を見た印(`mh_rhythm_event_story_v1`)と大王のフレームのギフトには触らない。`RAID_JACK_ENDING_REPLAY_READY` が真になるまで読みも書きもしない |
 | `mh_sorashido_gift_v1` | object / `null` | ソラシドの沖縄のおみやげ(10,000ビートP)をギフトで届けた印(`{ at, beatPoints }`・2026-10-27)。ソラシドの加入のお話を見終えた人へ1回だけ届けるため。ギフトの一覧(`mh_gifts`)は古いものから消えるので、それだけでは二重を防げない。イベント回想で見直しても届かない |
