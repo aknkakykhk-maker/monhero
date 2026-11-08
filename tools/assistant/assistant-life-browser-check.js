@@ -159,10 +159,12 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-1-home-faces.png') });
     // ⑯ 地図と HOME の札の位置(1対1)は assistant-life-map-check.js が見る(2026-11-08 地図 案A)
     // 入場の演出(その日の最初は長い)・家
+    // 入場の演出は1.2秒だけ出る。開いた直後はページが重く、確かめる側が遅れて見逃すことがあるので、押す前から「出たか」を記録しておく(2026-11-08)
+    await page.evaluate(() => { window.__mhIntroSeen = []; const mo = new MutationObserver(() => { const e = document.querySelector('[data-assistant-life-intro]'); if (e) { const k = e.getAttribute('data-assistant-life-intro'); if (!window.__mhIntroSeen.includes(k)) window.__mhIntroSeen.push(k); } }); mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-assistant-life-intro'] }); window.__mhIntroMo = mo; });
     await page.locator('[data-home-assistant-life]').click();
     await page.locator('[data-assistant-life-screen]').waitFor({ timeout: 5000 });
-    // 演出は画面が出た少しあと(保存を読んでから)に出るので、1秒まで待って数える(画面が出た瞬間に数えていて、ときどき間に合わなかった・2026-11-08)
-    check('⑩ 入場の演出が出る(その日の最初は長い)', await page.locator('[data-assistant-life-intro="long"]').waitFor({ timeout: 1000 }).then(() => true).catch(() => false));
+    await page.waitForFunction(() => (window.__mhIntroSeen || []).length > 0, null, { timeout: 6000 }).catch(() => {});
+    check('⑩ 入場の演出が出る(その日の最初は長い)', await page.evaluate(() => { try { window.__mhIntroMo.disconnect(); } catch (_) {} return (window.__mhIntroSeen || [])[0] === 'long'; }));
     check('⑩ 入場を見た日を新しいキーに残す', /^\d{4}-\d{2}-\d{2}$/.test(String(await ls(page, 'mh_assistant_life_intro_v1'))));
     await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 4000 }).catch(() => {});
     check('⑩ 家に8人の部屋が出る', (await page.locator('[data-assistant-life-room]').count()) === 8);
