@@ -6,7 +6,11 @@
 //   CardAssistantDeckView({ who, styleId, land })  … 助手部(キズナ2)のマスモンのデッキのタブ(56 の AssistantMasmonSheet)へ差しこむ中身。
 //       名前・助手のひとこと・3体・切り札・種類ごとのカードの一覧(同じカードは ×3 でまとめる・押すと大きく見る)・組み直した時刻。
 //       3つの切りかえ(よく使うの印)はタブの側(キズナ2)。外枠は .mhm-card(56 の見た目・端にくっつかない検査がそのまま効く)
-//   CardFoeDeckChip({ name, styleId, kind })      … 対戦で出したデッキの型の札(相手えらび・VS・結果・記録)。kind … 'foe' | 'vs' | 'result'
+//   CardFoeDeckChip({ name, styleId, kind })      … 対戦で出したデッキの札「今日のデッキ ⚔️ ◯◯」(相手えらび・VS・結果)。kind … 'foe' | 'vs' | 'result'
+//   CardFoeTeamName({ text, tone })                … 今の自動の名前(cardAssistantDeckName)に「チーム」の見出しを付けた帯(VS・結果)
+//   ★社長の答え(2026-11-08): VS・結果は自動の名前(チーム)と3つのデッキの名前(今日のデッキ)を両方残す(Q1 B)。
+//     3体は対戦のたびに選び直す・タブには「よく使う3体」「3体は対戦のたびに変わります」(Q2 B)。切り札はガッツのいちばん重い技(Q3 A)。
+//     AI が名前を付けられないときは、8つの名前に型を添える「のんびり長期戦・攻め」(ふつうは名前だけ)(Q4 A)
 //
 // 中身はルールの cardAssistantDeckPreview(82・読むだけ)。印 cardGrowStyle(84 の cardGrowStyleOn)が偽のあいだは何も出さない(null)
 // ★82 は触らない(サーバの杯で同じ 82 が動くため)。画面の部品だけをここに置く
@@ -18,6 +22,14 @@ const CARD_DECK_STYLE_ICON = Object.freeze({ attack: '⚔️', guard: '🛡️',
 const CARD_DECK_KIND_GROUPS = Object.freeze([['技', ['pow', 'int']], ['防御', ['blk']], ['回避', ['dge']], ['特殊', ['spe']], ['場', ['fld']]]);
 
 const cardAssistantDeckViewOn = () => typeof cardGrowStyleOn === 'function' && cardGrowStyleOn();
+// デッキの名前。AI が付けた名前があればそれ、無ければ8つの名前(82 の CARD_AI_STYLE_NAMES)に型を添える(ふつうは名前だけ・社長 Q4 A)
+const cardAssistantDeckDisplayName = (who, styleId, name = null) => {
+  const sid = CARD_DECK_STYLE_LABEL[styleId] ? styleId : 'normal';
+  const base = typeof CARD_AI_STYLE_NAMES !== 'undefined' ? CARD_AI_STYLE_NAMES[who] : null;
+  if (typeof name === 'string' && name && name !== base) return name;
+  if (!base) return null;
+  return sid === 'normal' ? base : `${base}・${CARD_DECK_STYLE_LABEL[sid]}`;
+};
 
 // 見せるための形に直す(読むだけ)。who … 助手の id、styleId … 'attack' | 'guard' | 'normal'。読めなければ null
 //   ace … 切り札(技のうちガッツがいちばん重いもの。同じならダメージの大きいもの)
@@ -37,7 +49,7 @@ const cardAssistantDeckSummary = (who, styleId) => {
     const ace = uniq.filter((c) => c.kind === 'pow' || c.kind === 'int').sort(byGuts)[0] || null;
     const groups = CARD_DECK_KIND_GROUPS.map(([label, kinds]) => [label, uniq.filter((c) => kinds.includes(c.kind)).sort(byGuts)]).filter((g) => g[1].length);
     const monsters = d.monsters.map((no) => cardMonsterOf(db, no)).filter(Boolean);
-    const name = typeof d.name === 'string' && d.name ? d.name : null;
+    const name = cardAssistantDeckDisplayName(who, sid, typeof d.name === 'string' ? d.name : null);
     const line = typeof d.line === 'string' && d.line ? d.line : null;
     const at = Number.isFinite(d.at) ? d.at : null;
     return { styleId: sid, monsters, count, ace, groups, total: d.cards.length, name, line, at };
@@ -71,15 +83,19 @@ function CardAssistantDeckView({ who, styleId, land = false }) {
       <p data-card-assistant-deck-name className="text-[18px] font-black leading-tight text-amber-200" style={JA_LABEL_STYLE}>{CARD_DECK_STYLE_ICON[s.styleId]} {s.name || `${label}のデッキ`}</p>
       {s.line && <p data-card-assistant-deck-line className="mt-1 rounded-lg bg-black/30 px-2 py-1 text-[11.5px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE}>{a ? `${a.name}「${s.line}」` : s.line}</p>}
       <div className="mt-2 flex items-end gap-2">
-        <div className={`grid flex-1 grid-cols-3 gap-1 ${land ? 'max-w-[190px]' : ''}`}>
+        <div className={`flex-1 ${land ? 'max-w-[190px]' : ''}`}>
+        <p className="text-[10px] font-black text-slate-400">よく使う3体</p>
+        <div className="grid grid-cols-3 gap-1">
           {s.monsters.map((m) => (
             <div key={m.no} className="min-w-0 text-center" data-card-assistant-deck-mon={m.no}>
               <img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="w-full rounded-[5px]"/>
               <p className="text-[10px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{m.name}</p>
             </div>))}
         </div>
+        </div>
         {s.ace && <div className={`${land ? 'w-[70px]' : 'w-[96px]'} shrink-0 text-center`} data-card-assistant-deck-ace={s.ace.no}><p className="text-[10px] font-black text-rose-200">切り札</p>{tile(s.ace, true)}</div>}
       </div>
+      <p data-card-assistant-deck-mon-note className="mt-1 text-[10.5px] font-bold text-slate-400">3体は対戦のたびに変わります</p>
     </div>);
   const list = (
     <div className="mhm-card" data-card-assistant-deck-list>
@@ -98,15 +114,24 @@ function CardAssistantDeckView({ who, styleId, land = false }) {
   );
 }
 
-// 対戦で出したデッキの型の札。name … デッキの名前(無ければ型だけ)、styleId … 型。印が偽・型が分からなければ null
-function CardFoeDeckChip({ name, styleId, kind = 'foe' }) {
+// 対戦で出したデッキの札「今日のデッキ ⚔️ ◯◯」。name … デッキの名前(cardAssistantDeckDisplayName)、styleId … 型。印が偽・型が分からなければ null
+//   kind … 'foe'(相手えらび)・'vs'・'result'(置く場所の印だけ。言葉は同じ)
+function CardFoeDeckChip({ name, styleId, kind = 'foe', compact = false }) {
   if (!cardAssistantDeckViewOn() || !CARD_DECK_STYLE_LABEL[styleId]) return null;
-  const label = CARD_DECK_STYLE_LABEL[styleId];
-  const deck = name ? `『${name}』(${label})` : `${label}のデッキ`;
-  const text = kind === 'vs' ? `今日は${deck}でいくよ` : kind === 'result' ? `相手のデッキ: ${deck}` : `今日のデッキ: ${deck}`;
   return (
-    <div data-card-foe-deck-chip={kind} data-card-foe-deck-style={styleId} className="mx-auto flex max-w-full items-center justify-center gap-1 rounded-full border border-amber-300/70 bg-slate-950/80 px-3 py-1 text-[12px] font-black leading-tight text-amber-100">
-      <span aria-hidden="true">{CARD_DECK_STYLE_ICON[styleId]}</span><span className="min-w-0" style={JA_WRAP_STYLE}>{text}</span>
+    <div data-card-foe-deck-chip={kind} data-card-foe-deck-style={styleId} className={`mx-auto flex max-w-full items-center justify-center gap-1.5 rounded-full border border-amber-300/70 bg-slate-950/80 px-3 font-black leading-tight text-amber-100 ${compact ? 'py-0.5 text-[11px]' : 'py-1 text-[12px]'}`}>
+      <small className="shrink-0 rounded-full bg-amber-300 px-1.5 py-px text-[10px] font-black text-slate-950">今日のデッキ</small>
+      <span className="min-w-0" style={JA_WRAP_STYLE}><span aria-hidden="true">{CARD_DECK_STYLE_ICON[styleId]} </span>{name || `${CARD_DECK_STYLE_LABEL[styleId]}のデッキ`}</span>
+    </div>
+  );
+}
+// 今の自動の名前(84 の cardAssistantDeckName)に「チーム」の見出しを付けた帯。印が偽なら null(VS は今の CardVsDeckName のまま)
+function CardFoeTeamName({ text, tone = 'foe', compact = false }) {
+  if (!cardAssistantDeckViewOn() || !text) return null;
+  return (
+    <div data-card-foe-team-name className={`mx-auto flex max-w-full items-center justify-center gap-1.5 rounded-2xl px-3 font-black leading-tight ${tone === 'foe' ? 'bg-rose-950/80 text-rose-100' : 'bg-sky-950/80 text-sky-100'} ${compact ? 'py-0.5 text-[11px]' : 'py-0.5 text-[13px]'}`}>
+      <small className="shrink-0 rounded-full bg-white/20 px-1.5 py-px text-[10px] font-black">チーム</small>
+      <span className="min-w-0" style={JA_WRAP_STYLE}>{text}</span>
     </div>
   );
 }

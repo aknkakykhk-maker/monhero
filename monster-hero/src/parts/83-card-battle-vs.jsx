@@ -289,7 +289,10 @@ const CardVsIntro = ({ db, intro, onDone, meIcon = null }) => {
               {foe.line && foe.line.t && <p data-card-vs-line className="mt-1 rounded-2xl rounded-bl-sm bg-white px-2.5 py-1.5 text-[12px] font-bold leading-snug text-slate-900" style={JA_WRAP_STYLE}>{cardRuleLine(foe.line.t)}</p>}
             </div>
           </div>
-          <CardVsDeckName text={foe.deckName} tone="foe"/>
+          {/* 育つ助手の型で戦うとき(印 cardGrowStyle)は、自動の名前に「チーム」、3つのデッキの名前に「今日のデッキ」を付けて両方出す(社長 2026-11-08 Q1 B) */}
+          {foe.style && typeof cardAssistantDeckViewOn === 'function' && cardAssistantDeckViewOn()
+            ? <div data-card-vs-foe-decks className="mh-vs-fade flex max-w-full flex-col items-center gap-1"><CardFoeTeamName text={foe.deckName}/><CardFoeDeckChip name={foe.styleName} styleId={foe.style} kind="vs"/></div>
+            : <CardVsDeckName text={foe.deckName} tone="foe"/>}
           <CardVsMonsters db={db} monsters={foe.monsters} side="foe" start={short ? 200 : 500} step={step}/>
         </div>
         <div aria-hidden="true" data-card-vs-mark className="mh-vs-pop flex shrink-0 items-center justify-center py-1 text-[44px] font-black italic leading-none text-amber-300 landscape:px-2" style={{ animationDelay: short ? '400ms' : '1000ms', WebkitTextStroke: '2px #7c2d12', textShadow: '0 4px 0 rgba(0,0,0,.45)' }}>VS</div>
