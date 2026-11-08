@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2da9d8d7af64551f
+// source-sha256: 6dc7a06b4125c671
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108079,6 +108079,21 @@ function AssistantLifeStands({
         height: '50%',
         filter
       }
+    }), zz && p && React.createElement(AssistantLifeSleepEyes, {
+      pid: x.pid,
+      src: x.src,
+      w: p.width,
+      h: p.height,
+      style: {
+        left: p.left,
+        top: p.top,
+        filter: 'brightness(.45) saturate(.6)',
+        clipPath: `inset(${p.clip[0].toFixed(1)}px 0 ${p.clip[1].toFixed(1)}px 0)`,
+        ...(p.fade ? {
+          WebkitMaskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)`,
+          maskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)`
+        } : {})
+      }
     }), zz && p && React.createElement("span", {
       className: "absolute text-[34px]",
       style: {
@@ -110285,6 +110300,16 @@ function AssistantLifeRoomFigure({
       background: tone,
       mixBlendMode: 'multiply',
       pointerEvents: 'none'
+    }
+  }), sleep && React.createElement(AssistantLifeSleepEyes, {
+    pid: who.id,
+    src: src,
+    w: p.width,
+    h: p.height,
+    style: {
+      left: 0,
+      top: 0,
+      filter: 'brightness(.6)'
     }
   })), sleep && React.createElement("span", {
     "aria-hidden": "true",

@@ -93,6 +93,9 @@ function AssistantLifeRoomFigure({ who, src, p, look, sleep = false, onPress = n
       <img src={src} alt="" draggable={false} data-assistant-life-roomview-fig={who.id} onClick={onPress || undefined}
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', maxWidth: 'none', filter: `drop-shadow(0 0 .6px #2a1414cc) saturate(.92) sepia(.1)${sleep ? ' brightness(.6)' : ''}`, cursor: onPress ? 'pointer' : undefined }}/>
       <span aria-hidden="true" style={{ position: 'absolute', inset: 0, ...shape, background: tone, mixBlendMode: 'multiply', pointerEvents: 'none' }}/>
+      {/* 複数人の部屋で一人だけ寝ている場合も、立ち絵の目を閉じて表示する。 */}
+      {sleep && <AssistantLifeSleepEyes pid={who.id} src={src} w={p.width} h={p.height}
+        style={{ left: 0, top: 0, filter: 'brightness(.6)' }}/>}
     </div>
     {sleep && <span aria-hidden="true" style={{ position: 'absolute', left: p.cx + p.w * 0.2, top: p.visTop, fontSize: 18, pointerEvents: 'none' }}>💤</span>}
   </>);
