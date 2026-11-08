@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 365c6a9fae1bed9b
+// source-sha256: 7e59e694da5927bf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -127367,6 +127367,14 @@ const assistantLifeCardMaterial = id => {
     return null;
   }
 };
+const assistantMasmonAskNameOk = n => {
+  const t = String(n || '').trim();
+  if (!t || t.length > 12 || /[\u0000-\u001f\u007f<>{}`\\]/.test(t)) return false;
+  const f = t.normalize('NFKC').toLowerCase();
+  if ((f.match(/\d/g) || []).length >= 5 || /[@＠]|#\d|(^|[^a-z])id([^a-z]|$)|https?|www|\.(com|jp|net)/.test(f)) return false;
+  if (['line', 'ライン', 'らいん', 'insta', 'インスタ', 'discord', 'ディスコ', 'twitter', 'ツイッター', 'tiktok', 'mail', 'メール', 'kakao', 'telegram'].some(w => f.includes(w))) return false;
+  return true;
+};
 const ASSISTANT_MASMON_ASK_PER_DAY = 10;
 const ASSISTANT_MASMON_ASK_HINT = Object.freeze({
   masmon: '名前や色、このマスモンのことを自由に書いてみてください(例: 体を夕焼けっぽくしてみたら？/名前に♪を付けて/別のマスモンに変えてみたら？)',
@@ -127554,7 +127562,7 @@ const assistantMasmonAskApply = (aid, r, outcome, t) => {
       t
     };
   }
-  if (r.kind === 'name' && t && outcome === 'yes') {
+  if (r.kind === 'name' && t && outcome === 'yes' && assistantMasmonAskNameOk(r.name)) {
     const rows = assistantMasmonRowsOf(st, aid),
       row = rows.find(x => x.slot === t.slot);
     if (!row || row.nick === r.name || rows.some(x => x.nick === r.name)) return {
@@ -127613,14 +127621,14 @@ const assistantMasmonAskApply = (aid, r, outcome, t) => {
     const nu = {
       slot: t.slot,
       monster: r.monster,
-      nick: r.name || monName(r.monster),
+      nick: (r.name && assistantMasmonAskNameOk(r.name) ? r.name : '') || monName(r.monster),
       lv: row.lv,
       grow: row.grow,
       why: 'あなたの提案で迎えた',
       role,
       welcome: row.welcome || t.slot * 2 - 1,
       colors: assistantMasmonDyeMake2(aid, p, r.monster, role, rnd),
-      ai: !!r.name,
+      ai: !!(r.name && assistantMasmonAskNameOk(r.name)),
       reason: 'ask',
       at: day
     };

@@ -1159,10 +1159,18 @@ export const SUGGEST_DECK_NAME_RE = /^[ぁ-ゖァ-ヺー一-龠々・！!？?]{2
 //   悪い言葉(MASMON_NAME_NG・呼び名の禁止)・連絡先(URL・@・5けた以上の数字)・助手の名前そのものは落とす
 // 2026-11-09 社長「そんなに厳しくしないで自由度をつけて」: 字の種類の決まりは外し、1〜12字・改行や制御文字・<>{} だけ落とす
 export const SUGGEST_NAME_RE = /^[^\u0000-\u001f\u007f<>{}`\\]{1,12}$/u;
+// 連絡先らしいもの(2026-11-09 ミハリ: マスモンの名前はフレンドの家にも出る)。NFKC で全角・半角カナをそろえ、区切りを無視して数えた数字が5字以上・連絡先のことば・URL・@ を落とす
+const SUGGEST_CONTACT_WORDS = ['line', 'ライン', 'らいん', 'insta', 'インスタ', 'いんすた', 'discord', 'ディスコ', 'でぃすこ', 'twitter', 'ツイッター', 'tiktok', 'ティックトック', 'mail', 'メール', 'gmail', 'skype', 'kakao', 'カカオ', 'telegram', 'qrコード', 'http', 'www', '.com', '.jp', '.net'];
+export const suggestLooksContact = (n) => {
+  const t = String(n || '').normalize('NFKC').toLowerCase();
+  if ((t.match(/\d/g) || []).length >= 5) return true;
+  if (/[@＠]|#\d|(^|[^a-z])id([^a-z]|$)/.test(t)) return true;
+  return SUGGEST_CONTACT_WORDS.some(w => t.includes(w));
+};
 export const suggestNameOk = (n, assistantNames = []) => {
   const t = String(n || '').trim();
   if (!SUGGEST_NAME_RE.test(t)) return false;
-  if (/https?|www|@|\d{5,}|[０-９]{5,}/i.test(t)) return false;
+  if (suggestLooksContact(t)) return false;
   const f = masmonFold(t);
   if (MASMON_NAME_NG.some(w => f.includes(masmonFold(w)))) return false;
   if (CALLNAME_BANNED_RE.test(t)) return false;
