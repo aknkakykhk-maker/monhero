@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3f2a53e93ca92d78
+// source-sha256: d0b3eca23280fe93
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -15788,17 +15788,6 @@ const missionRewardsFor = (rewards, {
     ...r
   };
 });
-const MISSION_PROGRESS_EVENT = 'mh:mission-progress';
-const missionNotify = (event, amount = 1) => {
-  try {
-    if (typeof window !== 'undefined' && typeof CustomEvent === 'function') window.dispatchEvent(new CustomEvent(MISSION_PROGRESS_EVENT, {
-      detail: {
-        event,
-        amount
-      }
-    }));
-  } catch (_) {}
-};
 const missionClaimableList = (state, type) => {
   const sent = type === 'daily' ? state.sentDaily : type === 'weekly' ? state.sentWeekly : state.sentMonthly;
   return MISSION_DEFS[type].filter(m => missionValue(state, type, m) >= m.target && !sent.includes(m.id));
@@ -15811,14 +15800,16 @@ const missionNextReset = (type, now = Date.now()) => {
   return shifted.getTime() - 5 * 60 * 60 * 1000;
 };
 const reconcileMonthlyMissionCompletions = (value, now = Date.now()) => {
+  const dailyDefs = missionDefsAt('daily', now),
+    weeklyDefs = missionDefsAt('weekly', now);
   const state = normalizeMissions(value, now),
-    dailyComplete = MISSION_DEFS.daily.find(m => m.complete),
-    weeklyComplete = MISSION_DEFS.weekly.find(m => m.complete);
-  if (dailyComplete && missionValue(state, 'daily', dailyComplete) >= dailyComplete.target && !state.monthlyDailyCompletePeriods.includes(state.dailyPeriod)) {
+    dailyComplete = dailyDefs.find(m => m.complete),
+    weeklyComplete = weeklyDefs.find(m => m.complete);
+  if (dailyComplete && missionValue(state, 'daily', dailyComplete, dailyDefs) >= dailyComplete.target && !state.monthlyDailyCompletePeriods.includes(state.dailyPeriod)) {
     state.monthlyDailyCompletePeriods = [...state.monthlyDailyCompletePeriods, state.dailyPeriod];
     state.monthly.dailyCompletes = (Number(state.monthly.dailyCompletes) || 0) + 1;
   }
-  if (weeklyComplete && missionValue(state, 'weekly', weeklyComplete) >= weeklyComplete.target && !state.monthlyWeeklyCompletePeriods.includes(state.weeklyPeriod)) {
+  if (weeklyComplete && missionValue(state, 'weekly', weeklyComplete, weeklyDefs) >= weeklyComplete.target && !state.monthlyWeeklyCompletePeriods.includes(state.weeklyPeriod)) {
     state.monthlyWeeklyCompletePeriods = [...state.monthlyWeeklyCompletePeriods, state.weeklyPeriod];
     state.monthly.weeklyCompletes = (Number(state.monthly.weeklyCompletes) || 0) + 1;
   }
@@ -63932,6 +63923,17 @@ function ScreenThemeModal({
     onClick: onClose
   }, "決定")));
 }
+const MISSION_PROGRESS_EVENT = 'mh:mission-progress';
+const missionNotify = (event, amount = 1) => {
+  try {
+    if (typeof window !== 'undefined' && typeof CustomEvent === 'function') window.dispatchEvent(new CustomEvent(MISSION_PROGRESS_EVENT, {
+      detail: {
+        event,
+        amount
+      }
+    }));
+  } catch (_) {}
+};
 const MISSION_DAILY_LINE_URL = `${typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : ''}/functions/v1/mission-daily-line`;
 const MISSION_DAILY_LINE_KEY = 'mh_mission_daily_line_v1';
 const MISSION_DAILY_LINE_IDS = Object.freeze(['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']);

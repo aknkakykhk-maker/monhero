@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 31da0788dc474564
+// generated-sha256: a41d07dfea6177e2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9906,9 +9906,9 @@ const LOGIN_BONUS_REWARDS = [
   // 7日目にセッション券(2026-10-07・docs/spec/RHYTHM_BUDDY.md)。アイテムのidをそのまま持つ報酬(gameItem)で配る
   [{ type:'bondPointReset', amount:1 }, { type:'trainingTicketLarge', amount:1 }, { type:'skipTicketJo', amount:1 }, { type:'gameItem', itemId:'session_ticket', amount:2 }],
 ];
-const GIFT_REWARD_LABELS = { diamond:'ダイヤ', breederPoint:'ブリーダーP', breederXp:'ブリーダー経験値', dyeMock:'染色もどき', bondPointReset:'絆ポイントリセットの書', uniqueSkillResetTicket:'スキルポイントリセット券', rainbowPsyche:'虹のプシュケー', rainbowTranscendFruit:'虹の超越の実', trainingTicket:'トレーニングチケット', trainingTicketLarge:'重トレーニングチケット', skipTicketJo:'スキップチケット・序', skipTicketHa:'スキップチケット・破', skipTicketKyu:'スキップチケット・急', beatPoint:'ビートP',
-  // MFバトルカードのカードパック券(2026-11-08 ミッションの作り直し)。受け取ると mh_card_tactics_v1 の tickets へ足す(カードランクのごほうびと同じ入れ物)
-  cardPackTicket:'カードパック券' };
+// cardPackTicket … MFバトルカードのカードパック券(2026-11-08 ミッションの作り直し)。受け取ると mh_card_tactics_v1 の tickets へ足す(カードランクのごほうびと同じ入れ物)。
+//   ★この表は1行のまま(検査 tools/mode/rhythm-reward-gift-check.js が1行で切り出す)
+const GIFT_REWARD_LABELS = { diamond:'ダイヤ', breederPoint:'ブリーダーP', breederXp:'ブリーダー経験値', dyeMock:'染色もどき', bondPointReset:'絆ポイントリセットの書', uniqueSkillResetTicket:'スキルポイントリセット券', rainbowPsyche:'虹のプシュケー', rainbowTranscendFruit:'虹の超越の実', trainingTicket:'トレーニングチケット', trainingTicketLarge:'重トレーニングチケット', skipTicketJo:'スキップチケット・序', skipTicketHa:'スキップチケット・破', skipTicketKyu:'スキップチケット・急', beatPoint:'ビートP', cardPackTicket:'カードパック券' };
 const LOGIN_BONUS_DEFAULT = { currentDay:1, lastGrantedPeriod:null, totalLoginDays:0 };
 // 日本時間へ直した後に4時間戻した暦日を期間キーにする。03:59と04:00は別の日、
 // 04:00から翌03:59までは同じ日として扱える、比較・保存しやすい YYYY-MM-DD 形式。
@@ -10945,23 +10945,18 @@ const missionRewardsFor = (rewards, { ownedItems = null, room = null } = {}) => 
   const swap = r && r.type === 'gameItem' ? missionFurnitureSwap(r.itemId, ownedItems, room) : null;
   return swap ? { ...swap, amount:swap.amount * Math.max(1, Math.floor(Number(r.amount) || 1)), swappedFrom:r.itemId } : { ...r };
 });
-// ほかの部品(ビート・カード・助手ライフ・フレンド)から「ミッションが進んだ」を知らせる。数えるのは MonsterHeroGame の saveMissionProgress だけ
-const MISSION_PROGRESS_EVENT = 'mh:mission-progress';
-const missionNotify = (event, amount = 1) => {
-  try { if (typeof window !== 'undefined' && typeof CustomEvent === 'function') window.dispatchEvent(new CustomEvent(MISSION_PROGRESS_EVENT, { detail: { event, amount } })); } catch (_) {}
-};
-// 「達成済みかつ未受取(ギフト未送付)」のミッション。HOMEの通知バッジ・タブのバッジ・一括受取が
-// すべてこの判定を共有するので、どこか1か所だけ数え方がずれることがない
 const missionClaimableList = (state,type) => { const sent=type==='daily'?state.sentDaily:type==='weekly'?state.sentWeekly:state.sentMonthly; return MISSION_DEFS[type].filter(m=>missionValue(state,type,m)>=m.target && !sent.includes(m.id)); };
 const missionClaimableCount = state => ['daily','weekly','monthly'].reduce((sum,type)=>sum+missionClaimableList(state,type).length,0);
 const missionNextReset = (type,now=Date.now()) => { const shifted=new Date(Number(now)+5*60*60*1000); shifted.setUTCHours(0,0,0,0); if(type==='monthly')shifted.setUTCMonth(shifted.getUTCMonth()+1,1);else shifted.setUTCDate(shifted.getUTCDate()+(type==='daily'?1:7-((shifted.getUTCDay()+6)%7))); return shifted.getTime()-5*60*60*1000; };
 const reconcileMonthlyMissionCompletions = (value,now=Date.now()) => {
-  const state=normalizeMissions(value,now), dailyComplete=MISSION_DEFS.daily.find(m=>m.complete), weeklyComplete=MISSION_DEFS.weekly.find(m=>m.complete);
-  if(dailyComplete&&missionValue(state,'daily',dailyComplete)>=dailyComplete.target&&!state.monthlyDailyCompletePeriods.includes(state.dailyPeriod)){
+  // 定義は渡された時刻のもの(日替わり・週替わりが今の期間とそろうように)
+  const dailyDefs=missionDefsAt('daily',now), weeklyDefs=missionDefsAt('weekly',now);
+  const state=normalizeMissions(value,now), dailyComplete=dailyDefs.find(m=>m.complete), weeklyComplete=weeklyDefs.find(m=>m.complete);
+  if(dailyComplete&&missionValue(state,'daily',dailyComplete,dailyDefs)>=dailyComplete.target&&!state.monthlyDailyCompletePeriods.includes(state.dailyPeriod)){
     state.monthlyDailyCompletePeriods=[...state.monthlyDailyCompletePeriods,state.dailyPeriod];
     state.monthly.dailyCompletes=(Number(state.monthly.dailyCompletes)||0)+1;
   }
-  if(weeklyComplete&&missionValue(state,'weekly',weeklyComplete)>=weeklyComplete.target&&!state.monthlyWeeklyCompletePeriods.includes(state.weeklyPeriod)){
+  if(weeklyComplete&&missionValue(state,'weekly',weeklyComplete,weeklyDefs)>=weeklyComplete.target&&!state.monthlyWeeklyCompletePeriods.includes(state.weeklyPeriod)){
     state.monthlyWeeklyCompletePeriods=[...state.monthlyWeeklyCompletePeriods,state.weeklyPeriod];
     state.monthly.weeklyCompletes=(Number(state.monthly.weeklyCompletes)||0)+1;
   }
@@ -39500,6 +39495,14 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
 //     報酬の数を AI に決めさせない(数がぶれると不公平になる)。数字が入った文は中継役でも、ここでも捨てる
 //   ・呼ぶのは1人1日1回まで(朝4時の区切り)。届かない・落ちた・切のときは、下の決まった台詞(8人の口調)を出す
 //   ・保存は新しいキー mh_mission_daily_line_v1 { day, lines:{ 助手id: 文 }, tries, at } だけ(読むときは normalizeMissionDailyLine を通す)
+// ★17 の部品は window を掴まない決まり(parts-purity-check)なので、知らせの口はここに置く。
+// ほかの部品(ビート・カード・助手ライフ・フレンド)から「ミッションが進んだ」を知らせる。数えるのは MonsterHeroGame の saveMissionProgress だけ
+const MISSION_PROGRESS_EVENT = 'mh:mission-progress';
+const missionNotify = (event, amount = 1) => {
+  try { if (typeof window !== 'undefined' && typeof CustomEvent === 'function') window.dispatchEvent(new CustomEvent(MISSION_PROGRESS_EVENT, { detail: { event, amount } })); } catch (_) {}
+};
+// 「達成済みかつ未受取(ギフト未送付)」のミッション。HOMEの通知バッジ・タブのバッジ・一括受取が
+// すべてこの判定を共有するので、どこか1か所だけ数え方がずれることがない
 const MISSION_DAILY_LINE_URL = `${typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : ''}/functions/v1/mission-daily-line`;
 const MISSION_DAILY_LINE_KEY = 'mh_mission_daily_line_v1';
 const MISSION_DAILY_LINE_IDS = Object.freeze(['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']);

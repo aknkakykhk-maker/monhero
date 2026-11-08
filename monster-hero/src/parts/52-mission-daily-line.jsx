@@ -5,6 +5,14 @@
 //     報酬の数を AI に決めさせない(数がぶれると不公平になる)。数字が入った文は中継役でも、ここでも捨てる
 //   ・呼ぶのは1人1日1回まで(朝4時の区切り)。届かない・落ちた・切のときは、下の決まった台詞(8人の口調)を出す
 //   ・保存は新しいキー mh_mission_daily_line_v1 { day, lines:{ 助手id: 文 }, tries, at } だけ(読むときは normalizeMissionDailyLine を通す)
+// ★17 の部品は window を掴まない決まり(parts-purity-check)なので、知らせの口はここに置く。
+// ほかの部品(ビート・カード・助手ライフ・フレンド)から「ミッションが進んだ」を知らせる。数えるのは MonsterHeroGame の saveMissionProgress だけ
+const MISSION_PROGRESS_EVENT = 'mh:mission-progress';
+const missionNotify = (event, amount = 1) => {
+  try { if (typeof window !== 'undefined' && typeof CustomEvent === 'function') window.dispatchEvent(new CustomEvent(MISSION_PROGRESS_EVENT, { detail: { event, amount } })); } catch (_) {}
+};
+// 「達成済みかつ未受取(ギフト未送付)」のミッション。HOMEの通知バッジ・タブのバッジ・一括受取が
+// すべてこの判定を共有するので、どこか1か所だけ数え方がずれることがない
 const MISSION_DAILY_LINE_URL = `${typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : ''}/functions/v1/mission-daily-line`;
 const MISSION_DAILY_LINE_KEY = 'mh_mission_daily_line_v1';
 const MISSION_DAILY_LINE_IDS = Object.freeze(['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']);

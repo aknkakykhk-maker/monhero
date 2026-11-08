@@ -57,7 +57,7 @@ export const buildPrompt = (day) => {
     '- mua: 今日は月曜日！{task}と、{reward}がもらえるよ♪',
     '- atsu: 今日は火曜日！ とりあえず{task}と{reward}もらえるよ笑',
   ].join('\n');
-  const user = `今日は${WEEKDAYS[wd]}曜日。日替わりミッションは「${TASKS[wd]}」。8人ぶんの1行を JSON で。`;
+  const user = `今日は${WEEKDAYS[wd]}曜日。日替わりミッションは「${TASKS[wd]}」。助手みんなのひとことを JSON で。`;
   return { system, user };
 };
 // Claude の返事から、使える行だけを取り出す
