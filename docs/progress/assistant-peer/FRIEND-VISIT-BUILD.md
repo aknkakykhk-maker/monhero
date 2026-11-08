@@ -99,3 +99,11 @@
 6. 台詞の注文書(コトバ・ツムギ。PLAN 8章)
 
 検査: `tools/assistant/assistant-life-friend-check.js`・`assistant-life-friend-browser-check.js`(`--shots <出力先>`)・`assistant-chat-check.js --unit` の ㉗。
+
+## オトズレ3 の進み具合(2026-11-08)
+
+- 1 の10組の試し(v18): 頼んだ10組のうち使えたのは5組。ログでは5場面ぶん書けていて、中継役の見張りが半分捨てていた。
+  原因: 決まりの見本に「2人」「2倍」(数字は全部捨てる見張りと食い違い・同じ助手どうしが落ちる)/ドラの「やろう」「撮る」まで関西弁扱い/あつの「。」・絵文字終わり。
+  直した: 見本と決まり(数字を書かない・相手はどちらも {f})・ドラの見張りを狭める(端末と同じ FRIEND_DRA_KANSAI)・あつの「。」は「！」へ・捨てた理由の名前だけをログ(friend_dropped)へ。配ったら同じ10組で数え直す
+- 2 プロフィールの入口 `AssistantLifeFriendProfileVisit`(75 の デッキの下)・一覧に家が届いていないフレンドを薄く(data-alf-house-waiting)。ヘルプに1行。止め絵の道具 ⑩
+- 3 の案: `FRIEND-AWAY-NOTE-PLAN.md`・止め絵 `friend/away-note-*.jpg`・SQL `docs/sql/assistant-life/FRIEND_VISIT_NOTE_ADD.sql`(窓口へ送って返事待ち)

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: abda0b4851932244
+// source-sha256: 4d1857294be3c9bd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -87885,7 +87885,10 @@ function FriendsScreen({
       }, React.createElement(CardShareDeckActions, {
         breederId: selected.otherId,
         onGo: onCardShareGo
-      })), fold('overview', '遊んだ記録'), profileTab === 'overview' && React.createElement(React.Fragment, null, React.createElement("div", {
+      })), typeof AssistantLifeFriendProfileVisit === 'function' && React.createElement(AssistantLifeFriendProfileVisit, {
+        friendId: selected.otherId,
+        friendName: look.userName
+      }), fold('overview', '遊んだ記録'), profileTab === 'overview' && React.createElement(React.Fragment, null, React.createElement("div", {
         className: `${SCREEN_PANEL_FLAT_CLASS} mt-1`
       }, !sum && React.createElement("p", {
         className: "text-[11px] font-bold text-slate-400"
@@ -122396,8 +122399,11 @@ const alfApiLineOk = (who, t) => {
   let x = String(t || '');
   if (who === 'mua') x = x.replace(/じゃん/g, 'ぢゃん').replace(/まじ/g, 'まぢ').replace(/マジ/g, 'マヂ');
   if (ALF_API_BODY_WORDS.test(x) || /(この|あの|その)子|子たち/.test(x)) return null;
-  if (who === 'atsu' && !/(笑|[！？!?…♪w]|[)）]|[\u3000-\u303f]?[\uff08(][^)）]*[)）])$/.test(x.trim())) return null;
-  if (who === 'dra' && /ほんま|やで|とる|とんだ|へん[。、！]|やろ|あかん/.test(x)) return null;
+  if (who === 'atsu') {
+    x = x.trim().replace(/。$/, '！');
+    if (!/(笑|[！？!?…♪w]|[)）]|[\u3000-\u303f]?[\uff08(][^)）]*[)）]|\p{Extended_Pictographic}\uFE0F?)$/u.test(x)) return null;
+  }
+  if (who === 'dra' && /ほんま|やで|っとる|っとん|とんだ|やろ(?!う)|あかん|へん[。、！]/.test(x)) return null;
   if (who === 'kiki' && /(だよ|だね|してよ|じゃん)([。！!？?♪]|$)/.test(x)) return null;
   if (who !== 'mua' && /ぢゃん|まぢ/.test(x)) return null;
   return x;
@@ -122665,6 +122671,63 @@ function AlfFriendHouseView({
     className: "mt-3 text-[10px] leading-snug text-slate-400"
   }, friend.name, "さんには、あなたが訪ねたことが置き手紙で届きます。相手のセーブや助手の仲良し度は変わりません。"))));
 }
+const alfVisitBlockedText = (friendId, name, s = ALF_STORE.state) => {
+  if (s.mode === 'off') return 'フレンドの家との行き来は、いまお休み中です。';
+  if (!s.settings.open) return '「🏘 フレンド」の設定で、行き来を切にしています。';
+  if (s.settings.muted.includes(friendId)) return 'この家は「来ないようにする」にしています。';
+  if (!alfOpenHouses('look').some(f => f.id === friendId)) return `${name || 'このフレンド'}さんが助手ライフを開くと遊びに行けます。`;
+  const can = assistantLifeFriendCanLook(friendId);
+  if (can === 'done') return '今日はこの家にもう遊びに行きました(朝4時に戻ります)。';
+  if (can === 'max') return '今日はもう遊びに行けません(朝4時に戻ります)。';
+  return can === 'ok' ? null : 'いまは遊びに行けません。';
+};
+function AssistantLifeFriendProfileVisit({
+  friendId,
+  friendName
+}) {
+  const s = useAssistantLifeFriendState();
+  const [open, setOpen] = React.useState(false);
+  React.useEffect(() => {
+    if (alfEnabled() && alfSafeOther(friendId)) void (async () => {
+      await ALF_STORE.load();
+      await alfFetchHouses();
+    })();
+  }, [friendId]);
+  if (!alfEnabled() || !alfSafeOther(friendId)) return null;
+  const blocked = s.ready ? alfVisitBlockedText(friendId, friendName, s) : '読み込んでいます…';
+  const house = blocked ? null : alfOpenHouses('look').find(f => f.id === friendId);
+  return React.createElement("div", {
+    className: "mt-2",
+    "data-alf-profile-visit": blocked ? 'blocked' : 'ok'
+  }, React.createElement("button", {
+    type: "button",
+    disabled: !house,
+    className: "min-h-[44px] w-full rounded-xl border-2 border-amber-300/70 bg-amber-300 px-3 text-[13px] font-black text-slate-950 active:scale-95 disabled:border-slate-600 disabled:bg-slate-800 disabled:text-slate-400",
+    "data-alf-profile-visit-go": true,
+    onClick: () => house && setOpen(true)
+  }, "🏘 家へ遊びに行く"), blocked && React.createElement("p", {
+    className: "mt-1 text-center text-[10.5px] font-bold leading-snug text-slate-400",
+    "data-alf-profile-visit-why": true
+  }, blocked), open && house && (typeof ReactDOM !== 'undefined' && ReactDOM.createPortal && typeof document !== 'undefined' ? ReactDOM.createPortal(React.createElement("div", {
+    className: "fixed inset-0",
+    style: {
+      zIndex: 70
+    },
+    "data-alf-profile-layer": true
+  }, React.createElement(AlfFriendHouseView, {
+    friend: house,
+    onClose: () => setOpen(false)
+  })), document.body) : React.createElement("div", {
+    className: "fixed inset-0",
+    style: {
+      zIndex: 70
+    },
+    "data-alf-profile-layer": true
+  }, React.createElement(AlfFriendHouseView, {
+    friend: house,
+    onClose: () => setOpen(false)
+  }))));
+}
 function AssistantLifeFriendPage({
   life
 }) {
@@ -122692,6 +122755,7 @@ function AssistantLifeFriendPage({
     "data-alf-page": "off"
   }, "🏘 フレンドの家との行き来は、いまお休み中です。");
   const houses = alfOpenHouses('look');
+  const waiting = s.roster.filter(f => !houses.some(h => h.id === f.id) && !s.settings.muted.includes(f.id)).slice(0, 30);
   const notes = assistantLifeFriendNotes(s);
   const openScene = async (kind, i) => {
     if (kind === 'out') {
@@ -122890,9 +122954,21 @@ function AssistantLifeFriendPage({
         setMenu(null);
       }
     }, "来ないようにする"));
-  }) : React.createElement("p", {
+  }) : !waiting.length && React.createElement("p", {
     className: `${card} text-[11px] text-slate-400`
-  }, "遊びに行けるフレンドの家はまだありません(フレンドが助手ライフを開くと、ここに並びます)。")), React.createElement("p", {
+  }, "遊びに行けるフレンドの家はまだありません(フレンドが助手ライフを開くと、ここに並びます)。"), waiting.map(f => React.createElement("div", {
+    key: f.id,
+    className: `${card} flex items-center gap-2 opacity-55`,
+    "data-alf-house-waiting": f.id
+  }, React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "truncate text-[12px] font-black text-slate-200"
+  }, f.name, "さんの家"), React.createElement("p", {
+    className: "text-[10px] leading-snug text-slate-400"
+  }, f.name, "さんが助手ライフを開くと遊びに行けます")), React.createElement("span", {
+    className: "shrink-0 rounded-xl border border-slate-600 px-2.5 py-1.5 text-[11px] font-black text-slate-400"
+  }, "🚪 まだ")))), React.createElement("p", {
     className: sec
   }, "⚙️ 行き来の設定"), React.createElement("div", {
     className: card,
