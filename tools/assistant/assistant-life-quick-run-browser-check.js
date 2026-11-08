@@ -191,7 +191,10 @@ const seed = () => {
         for (let k = 0; k < 3 && c && c.ng.length; k++) { await page.waitForTimeout(600); c = await strip(); }
         check(`⑧ ${tag}: 帯が題・時計・アイコンに重ならない・はみ出さない・字が切れない`, !!c && c.ng.length === 0, JSON.stringify(c));
         // 仲良し度の知らせ(44-growth-fx)を出して、帯のボタン(とくに「止める」)・時計にかぶらない(2026-11-08 ミハリ)
-        await page.evaluate(() => { growthFxAssistantBond('mua', 100, 160); growthFxAssistantBond('dra', 20, 30); growthFxAssistantBond('atsu', 20, 30); }); await page.waitForTimeout(2000);
+        await page.evaluate(() => { growthFxAssistantBond('mua', 100, 160); growthFxAssistantBond('dra', 20, 30); growthFxAssistantBond('atsu', 20, 30); }); await page.waitForTimeout(1200);
+        // 周回の報酬でお祝いの全面シートが出ていると、その下はどこも埋まって見え、知らせは逃げ場が無い(シートを閉じると0.7秒以内に置き直す)。閉じてから測る
+        for (let i = 0; i < 4 && await closePopups(); i++) await page.waitForTimeout(300);
+        await page.waitForTimeout(900);
         const cover = await page.evaluate(() => { const rot = typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.active(); const R0 = (e) => (rot ? RHYTHM_VIEW_ROTATION.rectOf(e) : e.getBoundingClientRect());
           const hit = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1; const out = [];
           for (const ch of document.querySelectorAll('.mh-gfx-chip')) { if (!ch.getClientRects().length) continue; const r = R0(ch); for (const o of document.querySelectorAll('[data-life-quick-run] button,[data-life-quick-run] small,[data-assistant-life-clock-box],[data-assistant-life-close]')) if (o.getClientRects().length && hit(r, R0(o))) out.push((o.textContent || o.getAttribute('data-assistant-life-clock-box') || '').trim().slice(0, 10) || '時計'); }
