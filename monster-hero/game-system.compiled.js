@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2f50862f202622a0
+// source-sha256: d719d5a5b973354e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -107939,7 +107939,9 @@ function AssistantLifeHouse({
     "data-assistant-life-item-solo-amt": true
   }, "1人に贈ると: ", React.createElement("span", {
     className: "whitespace-nowrap text-pink-200"
-  }, "💗 仲良し度 ", assistantLifeItemRange(x).player), "(友情Lv は上がらない)")), haveOf(x.kind) <= 0 && (canGive && buyTarget(false) && typeof assistantLifeCanBuy === 'function' && assistantLifeCanBuy(x) ? React.createElement("button", {
+  }, "💗 仲良し度 ", assistantLifeItemRange(x).player), React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "(友情Lv は上がらない)"))), haveOf(x.kind) <= 0 && (canGive && buyTarget(false) && typeof assistantLifeCanBuy === 'function' && assistantLifeCanBuy(x) ? React.createElement("button", {
     type: "button",
     "data-assistant-life-item-buy": x.kind,
     onClick: () => openBuy(x.kind, false),
