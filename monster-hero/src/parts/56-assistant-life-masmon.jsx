@@ -275,8 +275,8 @@ const assistantMasmonWhere = (id, life) => {
 const ASSISTANT_MASMON_DOING_MARK = Object.freeze({ sleep: '💤', practice: '♪', snack: '🍡', read: '📖', cards: '🃏', walk: '♪' });
 
 // 部屋の見た目は、家の画面でシートの CSS が読まれていないので、その場で書く
-const ASSISTANT_MASMON_PET_STYLE = Object.freeze({ position: 'absolute', bottom: 9, zIndex: 4, pointerEvents: 'none', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.45))' });
-const ASSISTANT_MASMON_PET_MARK = Object.freeze({ position: 'absolute', left: '50%', bottom: '100%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', lineHeight: '12px', fontWeight: 900, background: 'rgba(255,255,255,.92)', color: '#7c2d12', borderRadius: 999, padding: '0 4px' });
+const ASSISTANT_MASMON_PET_STYLE = Object.freeze({ position: 'absolute', zIndex: 4, pointerEvents: 'none', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.45))' });
+const ASSISTANT_MASMON_PET_MARK = Object.freeze({ position: 'absolute', right: -2, top: -4, whiteSpace: 'nowrap', lineHeight: '12px', fontWeight: 900, background: 'rgba(255,255,255,.92)', color: '#7c2d12', borderRadius: 999, padding: '0 2px' });
 // 部屋の中: 札・顔・吹き出し・扉・名札に重ならない場所を測って置く(家具の絵文字は飾りなので、その前に立ってよい)。どこにも置けない部屋では出さない
 function AssistantMasmonRoomPet({ id, h, life }) {
   const ref = React.useRef(null);
@@ -299,16 +299,18 @@ function AssistantMasmonRoomPet({ id, h, life }) {
     const obs = [...room.querySelectorAll('.tag,.pp,.bb,.pl,.lv,.lock,[data-assistant-life-rel-door],[data-assistant-life-rel-mend],[data-assistant-life-rel-sit]')]
       .map(x => x.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
     const hit = (a) => obs.some(r => Math.min(a.r, r.right) - Math.max(a.l, r.left) > 0 && Math.min(a.b, r.bottom) - Math.max(a.t, r.top) > 0);
-    const floor = 9;
-    const markW = 18;
-    for (const size of [Math.round(Math.min(48, h * .48)), Math.round(Math.min(38, h * .4)), 28]) {
-      const mark = 13; // 上の印のぶん
-      const half = Math.max(size, markW) / 2; // 印は絵の真ん中の上に出るので、広いほうの幅で見る
-      const xs = []; for (let x = rr.width - size / 2 - half - 3; x - (half - size / 2) >= 3; x -= 6) xs.push(Math.round(x));
-      for (const x of xs) {
-        const c = rr.left + x + size / 2;
-        const box = { l: c - half, r: c + half, t: rr.bottom - floor - size - mark, b: rr.bottom - floor + 2 };
-        if (!hit(box)) { setPos({ x, size }); return; }
+    // 床に近い所から上へ、右から左へ探し、入るいちばん大きい大きさで置く(印は絵の右上に小さく重ねる)。
+    //   床が札でふさがれている部屋も、名札と窓のあいだ(窓辺)など上のほうの空きに小さく入る
+    const floor = 9, mw = 2, mh = 4; // 印が絵からはみ出すぶん(右・上)。印は絵の右上の角にかぶせる
+    const sizes = [...new Set([Math.round(Math.min(48, h * .48)), Math.round(Math.min(38, h * .4)), 30, 24, 20, 18])].filter(n => n > 0);
+    for (const size of sizes) {
+      const ys = []; for (let y = rr.height - floor - size; y >= mh + 1; y -= 4) ys.push(y);
+      if (ys[ys.length - 1] !== mh + 1) ys.push(mh + 1); // 上端(名札の横・窓辺)
+      for (const y of ys) {
+        for (let x = rr.width - size - mw - 3; x >= 3; x -= 4) {
+          const box = { l: rr.left + x, r: rr.left + x + size + mw, t: rr.top + y - mh, b: rr.top + y + size };
+          if (!hit(box)) { setPos({ x, y, size }); return; }
+        }
       }
     }
     setPos(false);
@@ -319,12 +321,12 @@ function AssistantMasmonRoomPet({ id, h, life }) {
   const mark = where.kind === 'stay' ? '🏠' : (where.w && ASSISTANT_MASMON_DOING_MARK[where.w.doing]) || '✨';
   return (
     <span ref={ref} className="mhm-pet" data-assistant-life-room-masmon-pet={t.monster} data-assistant-life-room-masmon-where={where.kind}
-      style={{ ...ASSISTANT_MASMON_PET_STYLE, ...(pos ? { left: pos.x, width: pos.size, height: pos.size } : { left: 0, width: 1, height: 1, visibility: 'hidden' }) }} aria-hidden="true">
+      style={{ ...ASSISTANT_MASMON_PET_STYLE, ...(pos ? { left: pos.x, top: pos.y, width: pos.size, height: pos.size } : { left: 0, width: 1, height: 1, visibility: 'hidden' }) }} aria-hidden="true">
       {pos && <>
         {typeof DyedMonsterImage === 'function'
           ? <DyedMonsterImage baseId={t.monster} src={mon.imgUrl} masuColors={t.dye && t.dye.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>
           : <img src={mon.imgUrl} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>}
-        <b title={where.kind === 'stay' ? 'るすばん' : undefined} style={{ ...ASSISTANT_MASMON_PET_MARK, fontSize: 10 }}>{mark}</b>
+        <b title={where.kind === 'stay' ? 'るすばん' : undefined} style={{ ...ASSISTANT_MASMON_PET_MARK, fontSize: pos.size < 30 ? 8 : 10 }}>{mark}</b>
       </>}
     </span>);
 }

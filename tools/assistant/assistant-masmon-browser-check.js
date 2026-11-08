@@ -74,17 +74,18 @@ const layoutProblems = (page) => page.evaluate(() => {
       await page.locator('[data-home-assistant-life]').click({ timeout: 20000 });
       await page.locator('[data-assistant-life-screen]').waitFor({ timeout: 8000 });
       await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
-      { // ⑤ 部屋にいるマスモン
-        await page.waitForTimeout(1500);
+      { // ⑤ 部屋にいるマスモン(染めた絵ができるのを待つ)
+        await page.waitForTimeout(SHOTS ? 4000 : 1500);
         const r = await page.evaluate(() => {
-          const ng = []; let n = 0, stay = 0;
+          const ng = []; let n = 0, stay = 0, should = 0; const miss = [];
           const life = assistantLifeCurrent();
           for (const room of document.querySelectorAll('[data-assistant-life-room]')) {
             const id = room.getAttribute('data-assistant-life-room');
             const pet = room.querySelector('[data-assistant-life-room-masmon-pet]');
             const where = assistantMasmonWhere(id, life).kind;
             if (where === 'out' && pet) ng.push(`${id}: 出かけたのに部屋にいる`);
-            if (!pet || pet.style.visibility === 'hidden') continue;
+            if (where !== 'out' && !room.querySelector('.lock')) should++;
+            if (!pet || pet.style.visibility === 'hidden') { if (where !== 'out' && !room.querySelector('.lock')) miss.push(id); continue; }
             n++; if (where === 'stay') stay++;
             const a = pet.getBoundingClientRect(), mark = pet.querySelector('b'), m = mark ? mark.getBoundingClientRect() : null, rr = room.getBoundingClientRect();
             const boxes = [a, m].filter(Boolean);
@@ -94,10 +95,10 @@ const layoutProblems = (page) => page.evaluate(() => {
               for (const b of boxes) if (Math.min(b.right, q.right) - Math.max(b.left, q.left) > 1 && Math.min(b.bottom, q.bottom) - Math.max(b.top, q.top) > 1) ng.push(`${id}: ${o.className || o.getAttribute('data-assistant-life-rel-door') || '部品'} に重なる`);
             }
           }
-          return { ng: [...new Set(ng)], n, stay };
+          return { ng: [...new Set(ng)], n, stay, should, miss };
         });
         check(`${T}部屋のマスモン: 札・顔・吹き出し・扉・名札に重ならない・はみ出さない`, !r.ng.length, r.ng.slice(0, 4).join(' / '));
-        check(`${T}部屋のマスモンが1体以上いる`, r.n >= 1, `${r.n}部屋(留守番${r.stay})`);
+        check(`${T}部屋のマスモンが、出かけていない部屋の全部に見える`, r.should > 0 && r.n === r.should, `${r.n}/${r.should}部屋(留守番${r.stay})${r.miss.length ? ' 出ない: ' + r.miss.join('・') : ''}`);
         if (SHOTS) await page.screenshot({ path: path.join(shotDir, `masmon-5-house-${v.id}.jpg`), type: 'jpeg', quality: 80 });
       }
       if (v.id === 'p') {

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5aeb3ac7de8282a0
+// source-sha256: 31c3314c49cdfffe
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -121092,23 +121092,21 @@ const ASSISTANT_MASMON_DOING_MARK = Object.freeze({
 });
 const ASSISTANT_MASMON_PET_STYLE = Object.freeze({
   position: 'absolute',
-  bottom: 9,
   zIndex: 4,
   pointerEvents: 'none',
   filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.45))'
 });
 const ASSISTANT_MASMON_PET_MARK = Object.freeze({
   position: 'absolute',
-  left: '50%',
-  bottom: '100%',
-  transform: 'translateX(-50%)',
+  right: -2,
+  top: -4,
   whiteSpace: 'nowrap',
   lineHeight: '12px',
   fontWeight: 900,
   background: 'rgba(255,255,255,.92)',
   color: '#7c2d12',
   borderRadius: 999,
-  padding: '0 4px'
+  padding: '0 2px'
 });
 function AssistantMasmonRoomPet({
   id,
@@ -121137,27 +121135,30 @@ function AssistantMasmonRoomPet({
     const rr = room.getBoundingClientRect();
     const obs = [...room.querySelectorAll('.tag,.pp,.bb,.pl,.lv,.lock,[data-assistant-life-rel-door],[data-assistant-life-rel-mend],[data-assistant-life-rel-sit]')].map(x => x.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
     const hit = a => obs.some(r => Math.min(a.r, r.right) - Math.max(a.l, r.left) > 0 && Math.min(a.b, r.bottom) - Math.max(a.t, r.top) > 0);
-    const floor = 9;
-    const markW = 18;
-    for (const size of [Math.round(Math.min(48, h * .48)), Math.round(Math.min(38, h * .4)), 28]) {
-      const mark = 13;
-      const half = Math.max(size, markW) / 2;
-      const xs = [];
-      for (let x = rr.width - size / 2 - half - 3; x - (half - size / 2) >= 3; x -= 6) xs.push(Math.round(x));
-      for (const x of xs) {
-        const c = rr.left + x + size / 2;
-        const box = {
-          l: c - half,
-          r: c + half,
-          t: rr.bottom - floor - size - mark,
-          b: rr.bottom - floor + 2
-        };
-        if (!hit(box)) {
-          setPos({
-            x,
-            size
-          });
-          return;
+    const floor = 9,
+      mw = 2,
+      mh = 4;
+    const sizes = [...new Set([Math.round(Math.min(48, h * .48)), Math.round(Math.min(38, h * .4)), 30, 24, 20, 18])].filter(n => n > 0);
+    for (const size of sizes) {
+      const ys = [];
+      for (let y = rr.height - floor - size; y >= mh + 1; y -= 4) ys.push(y);
+      if (ys[ys.length - 1] !== mh + 1) ys.push(mh + 1);
+      for (const y of ys) {
+        for (let x = rr.width - size - mw - 3; x >= 3; x -= 4) {
+          const box = {
+            l: rr.left + x,
+            r: rr.left + x + size + mw,
+            t: rr.top + y - mh,
+            b: rr.top + y + size
+          };
+          if (!hit(box)) {
+            setPos({
+              x,
+              y,
+              size
+            });
+            return;
+          }
         }
       }
     }
@@ -121176,6 +121177,7 @@ function AssistantMasmonRoomPet({
       ...ASSISTANT_MASMON_PET_STYLE,
       ...(pos ? {
         left: pos.x,
+        top: pos.y,
         width: pos.size,
         height: pos.size
       } : {
@@ -121210,7 +121212,7 @@ function AssistantMasmonRoomPet({
     title: where.kind === 'stay' ? 'るすばん' : undefined,
     style: {
       ...ASSISTANT_MASMON_PET_MARK,
-      fontSize: 10
+      fontSize: pos.size < 30 ? 8 : 10
     }
   }, mark)));
 }
