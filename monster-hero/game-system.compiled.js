@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cc19fe91f4dddd81
+// source-sha256: da89822ff862cd64
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -120820,6 +120820,169 @@ const assistantMasmonFavCard = id => {
     return null;
   }
 };
+const MOCK_DECK_STYLES = [['attack', '攻め'], ['guard', '守り'], ['normal', 'ふつう']];
+const MOCK_DECK_LINES = {
+  dra: {
+    attack: 'ふむ。たまには前に出るぞ。速さで押しきる',
+    guard: 'ふむ。あわてず、守って、あとで返す。いつものやり方だ',
+    normal: 'ふむ。どっちにも転べるようにしておいた'
+  }
+};
+const MOCK_DECK_NAMES = {
+  dra: {
+    attack: 'メダマ焼き突撃隊',
+    guard: 'のんびり長期戦',
+    normal: 'まったり様子見'
+  }
+};
+const MOCK_KIND_GROUPS = [['技', ['pow', 'int']], ['防御', ['blk']], ['回避', ['dge']], ['特殊', ['spe']], ['場', ['fld']]];
+const mockDeckOf = (who, sid) => {
+  if (typeof cardAssistantDeckPreview !== 'function') return null;
+  const d = cardAssistantDeckPreview(who, sid, 'normal');
+  if (!d) return null;
+  const db = CARD_BATTLE_DATA;
+  const cards = d.cards.map(no => cardOf(db, no)).filter(Boolean);
+  const count = {};
+  d.cards.forEach(no => {
+    count[no] = (count[no] || 0) + 1;
+  });
+  const ace = cards.filter(c => c.kind === 'pow' || c.kind === 'int').sort((a, b) => b.guts - a.guts || (b.damage || 0) - (a.damage || 0))[0] || null;
+  const groups = MOCK_KIND_GROUPS.map(([label, kinds]) => [label, [...new Set(d.cards)].map(no => cardOf(db, no)).filter(c => c && kinds.includes(c.kind)).sort((a, b) => b.guts - a.guts || (a.no < b.no ? -1 : 1))]).filter(g => g[1].length);
+  const name = MOCK_DECK_NAMES[who] && MOCK_DECK_NAMES[who][sid] || d.name || 'デッキ';
+  return {
+    ...d,
+    ace,
+    groups,
+    count,
+    name,
+    line: MOCK_DECK_LINES[who] && MOCK_DECK_LINES[who][sid] || ''
+  };
+};
+const MOCK_STYLE_ICON = {
+  attack: '⚔️',
+  guard: '🛡',
+  normal: '⚖️'
+};
+const mockFoeDeckLabel = who => {
+  const sid = typeof ASSISTANT_MASMON_CARD_STYLE !== 'undefined' && ASSISTANT_MASMON_CARD_STYLE[who] || null;
+  if (!sid) return null;
+  const name = MOCK_DECK_NAMES[who] && MOCK_DECK_NAMES[who][sid] || typeof CARD_AI_STYLE_NAMES !== 'undefined' && CARD_AI_STYLE_NAMES[who] || '';
+  const label = (MOCK_DECK_STYLES.find(x => x[0] === sid) || [])[1] || '';
+  return name ? {
+    sid,
+    name,
+    label,
+    icon: MOCK_STYLE_ICON[sid] || '🃏'
+  } : null;
+};
+function MockFoeDeckChip({
+  who,
+  kind
+}) {
+  const d = typeof mockFoeDeckLabel === 'function' ? mockFoeDeckLabel(who) : null;
+  if (!d) return null;
+  const text = kind === 'vs' ? `今日は『${d.name}』(${d.label})でいくよ` : kind === 'result' ? `相手のデッキ: 『${d.name}』(${d.label})` : `今日のデッキ: 『${d.name}』(${d.label})`;
+  return React.createElement("div", {
+    "data-mock-foe-deck": kind,
+    className: "mx-auto flex max-w-full items-center justify-center gap-1 rounded-full border border-amber-300/70 bg-slate-950/80 px-3 py-1 text-[12px] font-black leading-tight text-amber-100"
+  }, React.createElement("span", {
+    "aria-hidden": "true"
+  }, d.icon), React.createElement("span", {
+    className: "min-w-0",
+    style: typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined
+  }, text));
+}
+function MockAssistantDeckTab({
+  id,
+  who,
+  land
+}) {
+  const fav = typeof ASSISTANT_MASMON_CARD_STYLE !== 'undefined' && ASSISTANT_MASMON_CARD_STYLE[id] || 'normal';
+  const [sid, setSid] = React.useState(fav);
+  const [detail, setDetail] = React.useState(null);
+  const d = mockDeckOf(id, sid);
+  if (!d) return React.createElement("p", {
+    className: "text-[12px] text-slate-300"
+  }, "デッキを読めませんでした");
+  const db = CARD_BATTLE_DATA;
+  const mons = d.monsters.map(no => cardMonsterOf(db, no)).filter(Boolean);
+  const tile = (c, big = false) => React.createElement("button", {
+    key: c.no,
+    type: "button",
+    "data-mock-deck-card": c.no,
+    onClick: () => setDetail(c.no),
+    className: `relative block ${big ? land ? 'w-[70px]' : 'w-[96px]' : 'w-full'} active:scale-95`
+  }, React.createElement("img", {
+    src: CARD_IMG(c.img),
+    alt: c.name,
+    draggable: false,
+    className: "w-full rounded-[5px] shadow"
+  }), d.count[c.no] > 1 && React.createElement("b", {
+    className: "absolute bottom-0.5 right-0.5 rounded bg-black/80 px-1 text-[11px] font-black text-amber-200"
+  }, "×", d.count[c.no]));
+  const head = React.createElement("div", {
+    "data-mock-deck-styles": true,
+    className: "grid grid-cols-3 gap-1.5"
+  }, MOCK_DECK_STYLES.map(([s, label]) => React.createElement("button", {
+    key: s,
+    type: "button",
+    "data-mock-deck-style": s,
+    "aria-pressed": sid === s,
+    onClick: () => setSid(s),
+    className: `flex min-h-[40px] items-center justify-center gap-1 rounded-xl border px-1 py-1 text-[13px] font-black ${sid === s ? 'border-amber-300 bg-amber-400 text-slate-950' : 'border-white/15 bg-slate-800 text-slate-200'}`
+  }, label, s === fav && React.createElement("em", {
+    className: "whitespace-nowrap rounded-full bg-emerald-400 px-1.5 py-px text-[9px] font-black not-italic text-emerald-950"
+  }, "よく使う"))));
+  const top = React.createElement("div", {
+    className: "mhm-card mt-2"
+  }, React.createElement("p", {
+    className: "text-[10px] font-black text-slate-400"
+  }, "MFバトルカード・", MOCK_DECK_STYLES.find(x => x[0] === sid)[1], "のデッキ"), React.createElement("p", {
+    className: "text-[18px] font-black text-amber-200"
+  }, "🃏 ", d.name), d.line && React.createElement("p", {
+    className: "mt-1 rounded-lg bg-black/30 px-2 py-1 text-[11.5px] font-bold leading-snug text-slate-100"
+  }, who.name, "「", d.line, "」"), React.createElement("div", {
+    className: "mt-2 flex items-end gap-2"
+  }, React.createElement("div", {
+    className: `grid flex-1 grid-cols-3 gap-1 ${land ? 'max-w-[190px]' : ''}`
+  }, mons.map(m => React.createElement("div", {
+    key: m.no,
+    className: "text-center"
+  }, React.createElement("img", {
+    src: CARD_IMG(m.img),
+    alt: m.name,
+    draggable: false,
+    className: "w-full rounded-[5px]"
+  }), React.createElement("p", {
+    className: "truncate text-[10px] font-black text-white"
+  }, m.name)))), d.ace && React.createElement("div", {
+    className: `${land ? 'w-[70px]' : 'w-[96px]'} shrink-0 text-center`
+  }, React.createElement("p", {
+    className: "text-[10px] font-black text-rose-200"
+  }, "切り札"), tile(d.ace, true))));
+  const list = React.createElement("div", {
+    className: "mhm-card mt-2",
+    "data-mock-deck-list": true
+  }, d.groups.map(([label, cs]) => React.createElement("div", {
+    key: label,
+    className: "mt-1.5 first:mt-0"
+  }, React.createElement("p", {
+    className: "text-[11px] font-black text-slate-300"
+  }, label, " ", React.createElement("small", {
+    className: "text-slate-500"
+  }, cs.reduce((a, c) => a + d.count[c.no], 0), "枚")), React.createElement("div", {
+    className: `mt-1 grid ${land ? 'grid-cols-10' : 'grid-cols-6'} gap-1`
+  }, cs.map(c => tile(c))))), React.createElement("p", {
+    className: "mt-2 text-[10px] font-bold text-slate-500"
+  }, "🤖 AI が 4:00 に組み直しました ・ 対戦では毎回少し入れかわります"));
+  return React.createElement(React.Fragment, null, head, land ? React.createElement("div", {
+    className: "grid grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-2"
+  }, top, list) : React.createElement(React.Fragment, null, top, list), detail && typeof CardDetailModal === 'function' && React.createElement(CardDetailModal, {
+    db: db,
+    no: detail,
+    onClose: () => setDetail(null)
+  }));
+}
 const ASSISTANT_MASMON_TABS = Object.freeze([['mons', '🐾 マスモン'], ['team', '⚔ 編成'], ['deck', '🃏 デッキ'], ['taste', '💗 好き・苦手']]);
 function AssistantMasmonPic({
   t,
@@ -120965,30 +121128,11 @@ function AssistantMasmonSheet({
       className: "mt-2 text-[10.5px] font-bold leading-snug text-slate-400"
     }, "⚔ 編成は", who.name, "が決めています。"));
   } else if (tab === 'deck') {
-    body = React.createElement(React.Fragment, null, React.createElement("div", {
-      className: "mhm-card",
-      "data-assistant-masmon-deck": true
-    }, React.createElement("p", {
-      className: "text-[10px] font-black text-slate-400"
-    }, "MFバトルカードのデッキの型"), React.createElement("p", {
-      className: "text-[18px] font-black text-amber-200"
-    }, "🃏 ", p.deck.name), React.createElement("p", {
-      className: "mt-0.5 text-[11.5px] font-bold leading-snug text-slate-100"
-    }, p.deck.plan)), fav && React.createElement("div", {
-      className: "mhm-card mt-2 flex items-center gap-3",
-      "data-assistant-masmon-fav-card": true
-    }, React.createElement("img", {
-      src: fav.src,
-      alt: fav.name,
-      draggable: false,
-      className: "w-[74px] shrink-0 rounded-md shadow"
-    }), React.createElement("p", {
-      className: "text-[11.5px] font-bold leading-snug text-slate-100"
-    }, "好きなカード: ", React.createElement("b", {
-      className: "text-white"
-    }, fav.name))), React.createElement("p", {
-      className: "mt-2 text-[10.5px] font-bold leading-snug text-slate-400"
-    }, "🃏 MFバトルカードのデッキは、マスモンとは別に組んでいます。"));
+    body = React.createElement(MockAssistantDeckTab, {
+      id: id,
+      who: who,
+      land: land
+    });
   } else {
     const line = (x, kind) => {
       const name = assistantMasmonTasteName(x);
@@ -131203,7 +131347,15 @@ const CardVsIntro = ({
   }, cardRuleLine(foe.line.t)))), React.createElement(CardVsDeckName, {
     text: foe.deckName,
     tone: "foe"
-  }), React.createElement(CardVsMonsters, {
+  }), who && typeof MockFoeDeckChip === 'function' && React.createElement("div", {
+    className: "mh-vs-fade",
+    style: {
+      animationDelay: '350ms'
+    }
+  }, React.createElement(MockFoeDeckChip, {
+    who: who.id,
+    kind: "vs"
+  })), React.createElement(CardVsMonsters, {
     db: db,
     monsters: foe.monsters,
     side: "foe",
@@ -133723,7 +133875,10 @@ const CardFoeStyle = ({
   return React.createElement("div", {
     "data-card-foe-style": who,
     className: "space-y-1.5 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
-  }, React.createElement("div", {
+  }, typeof MockFoeDeckChip === 'function' && React.createElement(MockFoeDeckChip, {
+    who: who,
+    kind: "foe"
+  }), React.createElement("div", {
     className: "flex flex-wrap items-center gap-x-2 gap-y-1"
   }, React.createElement("span", {
     "data-card-foe-style-label": true,
@@ -140206,6 +140361,9 @@ const CardBattleScreen = ({
       a: a,
       lineScene: win ? 'lose' : cardResultLineQuick(result) ? 'winQuick' : 'win',
       talkFacts: result.talk
+    }), a && !result.share && typeof MockFoeDeckChip === 'function' && React.createElement(MockFoeDeckChip, {
+      who: a.id,
+      kind: "result"
     }), result.share && React.createElement("p", {
       "data-card-result-share": true,
       className: "text-center text-[13px] font-black text-emerald-200"

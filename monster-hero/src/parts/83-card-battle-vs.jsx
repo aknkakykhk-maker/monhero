@@ -290,6 +290,7 @@ const CardVsIntro = ({ db, intro, onDone, meIcon = null }) => {
             </div>
           </div>
           <CardVsDeckName text={foe.deckName} tone="foe"/>
+          {who && typeof MockFoeDeckChip === 'function' && <div className="mh-vs-fade" style={{ animationDelay: '350ms' }}><MockFoeDeckChip who={who.id} kind="vs"/></div>}
           <CardVsMonsters db={db} monsters={foe.monsters} side="foe" start={short ? 200 : 500} step={step}/>
         </div>
         <div aria-hidden="true" data-card-vs-mark className="mh-vs-pop flex shrink-0 items-center justify-center py-1 text-[44px] font-black italic leading-none text-amber-300 landscape:px-2" style={{ animationDelay: short ? '400ms' : '1000ms', WebkitTextStroke: '2px #7c2d12', textShadow: '0 4px 0 rgba(0,0,0,.45)' }}>VS</div>

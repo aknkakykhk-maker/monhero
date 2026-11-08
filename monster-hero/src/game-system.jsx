@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: aa610eeeee0ff01c
+// generated-sha256: 602c327343318f94
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -64702,6 +64702,91 @@ const assistantMasmonFavCard = (id) => {
 };
 // デッキのカードの並びは、カード部の読むだけの口 cardAssistantDeckPreview が main に入ってからつなぐ(2026-11-08 ソランドとすり合わせ済み)
 
+// ===== 案の止め絵だけ(2026-11-08 カード部ツナグ。マージしない) =====
+// 助手ごとにデッキを3つ(攻め/守り/ふつう)。中身はルールの cardAssistantDeckPreview(本物の組み方)。名前とひとことは仮
+const MOCK_DECK_STYLES = [['attack', '攻め'], ['guard', '守り'], ['normal', 'ふつう']];
+const MOCK_DECK_LINES = {
+  dra: { attack: 'ふむ。たまには前に出るぞ。速さで押しきる', guard: 'ふむ。あわてず、守って、あとで返す。いつものやり方だ', normal: 'ふむ。どっちにも転べるようにしておいた' },
+};
+const MOCK_DECK_NAMES = {
+  dra: { attack: 'メダマ焼き突撃隊', guard: 'のんびり長期戦', normal: 'まったり様子見' },
+};
+const MOCK_KIND_GROUPS = [['技', ['pow', 'int']], ['防御', ['blk']], ['回避', ['dge']], ['特殊', ['spe']], ['場', ['fld']]];
+const mockDeckOf = (who, sid) => {
+  if (typeof cardAssistantDeckPreview !== 'function') return null;
+  const d = cardAssistantDeckPreview(who, sid, 'normal');
+  if (!d) return null;
+  const db = CARD_BATTLE_DATA;
+  const cards = d.cards.map(no => cardOf(db, no)).filter(Boolean);
+  const count = {}; d.cards.forEach(no => { count[no] = (count[no] || 0) + 1; });
+  const ace = cards.filter(c => c.kind === 'pow' || c.kind === 'int').sort((a, b) => (b.guts - a.guts) || ((b.damage || 0) - (a.damage || 0)))[0] || null;
+  const groups = MOCK_KIND_GROUPS.map(([label, kinds]) => [label, [...new Set(d.cards)].map(no => cardOf(db, no)).filter(c => c && kinds.includes(c.kind)).sort((a, b) => (b.guts - a.guts) || (a.no < b.no ? -1 : 1))]).filter(g => g[1].length);
+  const name = (MOCK_DECK_NAMES[who] && MOCK_DECK_NAMES[who][sid]) || d.name || 'デッキ';
+  return { ...d, ace, groups, count, name, line: (MOCK_DECK_LINES[who] && MOCK_DECK_LINES[who][sid]) || '' };
+};
+// 対戦で出すデッキの型の札(仮)。相手えらび・VS・結果で同じもの
+const MOCK_STYLE_ICON = { attack: '⚔️', guard: '🛡', normal: '⚖️' };
+const mockFoeDeckLabel = (who) => {
+  const sid = (typeof ASSISTANT_MASMON_CARD_STYLE !== 'undefined' && ASSISTANT_MASMON_CARD_STYLE[who]) || null;
+  if (!sid) return null;
+  const name = (MOCK_DECK_NAMES[who] && MOCK_DECK_NAMES[who][sid]) || (typeof CARD_AI_STYLE_NAMES !== 'undefined' && CARD_AI_STYLE_NAMES[who]) || '';
+  const label = (MOCK_DECK_STYLES.find(x => x[0] === sid) || [])[1] || '';
+  return name ? { sid, name, label, icon: MOCK_STYLE_ICON[sid] || '🃏' } : null;
+};
+function MockFoeDeckChip({ who, kind }) {
+  const d = typeof mockFoeDeckLabel === 'function' ? mockFoeDeckLabel(who) : null;
+  if (!d) return null;
+  const text = kind === 'vs' ? `今日は『${d.name}』(${d.label})でいくよ` : kind === 'result' ? `相手のデッキ: 『${d.name}』(${d.label})` : `今日のデッキ: 『${d.name}』(${d.label})`;
+  return <div data-mock-foe-deck={kind} className="mx-auto flex max-w-full items-center justify-center gap-1 rounded-full border border-amber-300/70 bg-slate-950/80 px-3 py-1 text-[12px] font-black leading-tight text-amber-100"><span aria-hidden="true">{d.icon}</span><span className="min-w-0" style={typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined}>{text}</span></div>;
+}
+function MockAssistantDeckTab({ id, who, land }) {
+  const fav = (typeof ASSISTANT_MASMON_CARD_STYLE !== 'undefined' && ASSISTANT_MASMON_CARD_STYLE[id]) || 'normal';
+  const [sid, setSid] = React.useState(fav);
+  const [detail, setDetail] = React.useState(null);
+  const d = mockDeckOf(id, sid);
+  if (!d) return <p className="text-[12px] text-slate-300">デッキを読めませんでした</p>;
+  const db = CARD_BATTLE_DATA;
+  const mons = d.monsters.map(no => cardMonsterOf(db, no)).filter(Boolean);
+  const tile = (c, big = false) => (
+    <button key={c.no} type="button" data-mock-deck-card={c.no} onClick={() => setDetail(c.no)} className={`relative block ${big ? (land ? 'w-[70px]' : 'w-[96px]') : 'w-full'} active:scale-95`}>
+      <img src={CARD_IMG(c.img)} alt={c.name} draggable={false} className="w-full rounded-[5px] shadow"/>
+      {d.count[c.no] > 1 && <b className="absolute bottom-0.5 right-0.5 rounded bg-black/80 px-1 text-[11px] font-black text-amber-200">×{d.count[c.no]}</b>}
+    </button>);
+  const head = (
+    <div data-mock-deck-styles className="grid grid-cols-3 gap-1.5">
+      {MOCK_DECK_STYLES.map(([s, label]) => (
+        <button key={s} type="button" data-mock-deck-style={s} aria-pressed={sid === s} onClick={() => setSid(s)}
+          className={`flex min-h-[40px] items-center justify-center gap-1 rounded-xl border px-1 py-1 text-[13px] font-black ${sid === s ? 'border-amber-300 bg-amber-400 text-slate-950' : 'border-white/15 bg-slate-800 text-slate-200'}`}>
+          {label}{s === fav && <em className="whitespace-nowrap rounded-full bg-emerald-400 px-1.5 py-px text-[9px] font-black not-italic text-emerald-950">よく使う</em>}
+        </button>))}
+    </div>);
+  const top = (
+    <div className="mhm-card mt-2">
+      <p className="text-[10px] font-black text-slate-400">MFバトルカード・{MOCK_DECK_STYLES.find(x => x[0] === sid)[1]}のデッキ</p>
+      <p className="text-[18px] font-black text-amber-200">🃏 {d.name}</p>
+      {d.line && <p className="mt-1 rounded-lg bg-black/30 px-2 py-1 text-[11.5px] font-bold leading-snug text-slate-100">{who.name}「{d.line}」</p>}
+      <div className="mt-2 flex items-end gap-2">
+        <div className={`grid flex-1 grid-cols-3 gap-1 ${land ? 'max-w-[190px]' : ''}`}>{mons.map(m => (
+          <div key={m.no} className="text-center"><img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="w-full rounded-[5px]"/><p className="truncate text-[10px] font-black text-white">{m.name}</p></div>))}</div>
+        {d.ace && <div className={`${land ? 'w-[70px]' : 'w-[96px]'} shrink-0 text-center`}><p className="text-[10px] font-black text-rose-200">切り札</p>{tile(d.ace, true)}</div>}
+      </div>
+    </div>);
+  const list = (
+    <div className="mhm-card mt-2" data-mock-deck-list>
+      {d.groups.map(([label, cs]) => (
+        <div key={label} className="mt-1.5 first:mt-0">
+          <p className="text-[11px] font-black text-slate-300">{label} <small className="text-slate-500">{cs.reduce((a, c) => a + d.count[c.no], 0)}枚</small></p>
+          <div className={`mt-1 grid ${land ? 'grid-cols-10' : 'grid-cols-6'} gap-1`}>{cs.map(c => tile(c))}</div>
+        </div>))}
+      <p className="mt-2 text-[10px] font-bold text-slate-500">🤖 AI が 4:00 に組み直しました ・ 対戦では毎回少し入れかわります</p>
+    </div>);
+  return (<>
+    {head}
+    {land ? <div className="grid grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-2">{top}{list}</div> : <>{top}{list}</>}
+    {detail && typeof CardDetailModal === 'function' && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
+  </>);
+}
+
 const ASSISTANT_MASMON_TABS = Object.freeze([['mons', '🐾 マスモン'], ['team', '⚔ 編成'], ['deck', '🃏 デッキ'], ['taste', '💗 好き・苦手']]);
 
 function AssistantMasmonPic({ t, size }) {
@@ -64774,19 +64859,7 @@ function AssistantMasmonSheet({ id, land = false, onClose }) {
       <p className="mt-2 text-[10.5px] font-bold leading-snug text-slate-400">⚔ 編成は{who.name}が決めています。</p>
     </>);
   } else if (tab === 'deck') {
-    body = (<>
-      <div className="mhm-card" data-assistant-masmon-deck>
-        <p className="text-[10px] font-black text-slate-400">MFバトルカードのデッキの型</p>
-        <p className="text-[18px] font-black text-amber-200">🃏 {p.deck.name}</p>
-        <p className="mt-0.5 text-[11.5px] font-bold leading-snug text-slate-100">{p.deck.plan}</p>
-      </div>
-      {fav && (
-        <div className="mhm-card mt-2 flex items-center gap-3" data-assistant-masmon-fav-card>
-          <img src={fav.src} alt={fav.name} draggable={false} className="w-[74px] shrink-0 rounded-md shadow"/>
-          <p className="text-[11.5px] font-bold leading-snug text-slate-100">好きなカード: <b className="text-white">{fav.name}</b></p>
-        </div>)}
-      <p className="mt-2 text-[10.5px] font-bold leading-snug text-slate-400">🃏 MFバトルカードのデッキは、マスモンとは別に組んでいます。</p>
-    </>);
+    body = <MockAssistantDeckTab id={id} who={who} land={land}/>;
   } else {
     const line = (x, kind) => {
       const name = assistantMasmonTasteName(x);
@@ -70689,6 +70762,7 @@ const CardVsIntro = ({ db, intro, onDone, meIcon = null }) => {
             </div>
           </div>
           <CardVsDeckName text={foe.deckName} tone="foe"/>
+          {who && typeof MockFoeDeckChip === 'function' && <div className="mh-vs-fade" style={{ animationDelay: '350ms' }}><MockFoeDeckChip who={who.id} kind="vs"/></div>}
           <CardVsMonsters db={db} monsters={foe.monsters} side="foe" start={short ? 200 : 500} step={step}/>
         </div>
         <div aria-hidden="true" data-card-vs-mark className="mh-vs-pop flex shrink-0 items-center justify-center py-1 text-[44px] font-black italic leading-none text-amber-300 landscape:px-2" style={{ animationDelay: short ? '400ms' : '1000ms', WebkitTextStroke: '2px #7c2d12', textShadow: '0 4px 0 rgba(0,0,0,.45)' }}>VS</div>
@@ -72262,6 +72336,7 @@ const CardFoeStyle = ({ db, who, level }) => {
   const upper = level === 'hard' || level === 'expert' || level === 'master';
   return (
     <div data-card-foe-style={who} className="space-y-1.5 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
+      {typeof MockFoeDeckChip === 'function' && <MockFoeDeckChip who={who} kind="foe"/>}
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span data-card-foe-style-label className="shrink-0 rounded-full bg-amber-300 px-2.5 py-0.5 text-[12px] font-black text-slate-950">{style.label}</span>
         <span className="min-w-0 text-[11px] font-bold text-slate-200" style={JA_WRAP_STYLE}>{jaWrap(style.note)}</span>
@@ -75836,6 +75911,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           {/* カードランクの経験値の棒は、結果を開いてすぐ目に入るよう、いちばん上(勝ち負けのすぐ下)に置く(2026-10-30 社長「終わったあとに経験値ゲージのバーの動きが見れない」) */}
           {result.rankGain && <CardRankResult gain={result.rankGain}/>}
           {a && <CardResultTalk a={a} lineScene={win ? 'lose' : cardResultLineQuick(result) ? 'winQuick' : 'win'} talkFacts={result.talk}/>}
+          {a && !result.share && typeof MockFoeDeckChip === 'function' && <MockFoeDeckChip who={a.id} kind="result"/>}
           {result.share && <p data-card-result-share className="text-center text-[13px] font-black text-emerald-200">{result.share.name}さんのデッキと対戦しました</p>}
           {a && <CardResultVsRow meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meName={(rank && rank.profile && rank.profile.name) || 'あなた'}
             foeNode={<img src={assistantFaceImage(a, 'normal')} alt="" className="h-8 w-8 rounded-lg border-2 bg-black object-cover object-top" style={{ borderColor: a.accent }}/>} foeName={a.name} outcome={win ? '勝ち' : result.outcome === 'surrender' ? '投了' : '負け'}/>}
