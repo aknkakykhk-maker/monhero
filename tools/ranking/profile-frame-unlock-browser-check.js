@@ -8,6 +8,11 @@
 //   ・高い人 … 起動しただけで配られている。選べる
 // を確かめる。
 const { chromium } = require('playwright');
+// HOME で自動で流れるお話は、検査の共通の種(quiet-boot-seed の eventStorySeed)で全部見たことにする。
+// 下の seed でお話の既読を手で書き写していたため、タクティクスの「4人のタイプ」が漏れ、その回想が
+// プロフィールの上に開いたままになって飾り枠の案内が出ず、②の3項目が落ちていた(2026-11-08 検査部ミハリ)。
+// ★seed のあとに入れる(seed が mh_rhythm_event_story_v1 を2件だけで上書きするため、後から全部で書き直す)
+const { eventStorySeed } = require('../boot/quiet-boot-seed');
 
 const PAGE_URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
 const results = [];
@@ -84,6 +89,7 @@ async function run() {
   const low = await browser.newPage({ viewport: { width: 390, height: 844 } });
   low.on('pageerror', e => fatal.push(e.message));
   await low.addInitScript(seed, { points: 0, seenNoticeIds: SEEN_NOTICE_IDS });
+  await low.addInitScript(eventStorySeed());
   await openProfile(low);
   // 案内が出ていたら閉じる(低いLvでは出ないはずだが、出ても先へ進める)
   await low.evaluate(() => [...document.querySelectorAll('button')].find(b => b.textContent.trim() === '閉じる')?.click());
@@ -110,7 +116,8 @@ async function run() {
   // ===== ② もう仲良し度が高い人(Lv7以上) =====
   const high = await browser.newPage({ viewport: { width: 390, height: 844 } });
   high.on('pageerror', e => fatal.push(e.message));
-  await high.addInitScript(seed, { points: 2000, seenNoticeIds: SEEN_NOTICE_IDS });   // Lv7(need:1750)を超える
+  await high.addInitScript(seed, { points: 2000, seenNoticeIds: SEEN_NOTICE_IDS });
+  await high.addInitScript(eventStorySeed());   // Lv7(need:1750)を超える
   await openProfile(high);
   // ★案内はログインボーナス・更新の案内より後ろに回る(重ならないようにしてある)。
   //   実際の遊び方と同じで「それらを閉じて、次にプロフィールを開いたとき」に出る
