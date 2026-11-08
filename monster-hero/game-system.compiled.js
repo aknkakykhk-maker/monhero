@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a47bded6f430043f
+// source-sha256: ddc5b7f13602e439
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -137327,6 +137327,13 @@ const CardBattleBoard = ({
       onEyes: n => setWatchEyes(Number.isInteger(n) ? n : 0)
     });
   }, []);
+  const [pvpVoid, setPvpVoid] = useState(false);
+  useEffect(() => {
+    if (!pvpLive) return undefined;
+    const look = r => setPvpVoid(!!r && r.phase === 'void');
+    look(CARD_PVP.get());
+    return CARD_PVP.subscribe(look);
+  }, []);
   useCardPvpAuto(db, pvpLive, st, step, paused);
   const pvpClock = useCardPvpClock(pvpLive, st, step);
   const demoAt = useRef(0);
@@ -139233,6 +139240,14 @@ const CardBattleBoard = ({
     confirmLabel: confirm.kind === 'use' ? '使う' : '終わる',
     onCancel: () => setConfirm(null),
     onConfirm: confirmYes
+  }), pvpVoid && React.createElement(CardPvpVoidDialog, {
+    onExit: () => {
+      finished.current = true;
+      onFinish({
+        outcome: 'void',
+        st: stRef.current
+      });
+    }
   }), quit && !tutorial && React.createElement(ConfirmSheet, {
     title: "投了しますか？",
     message: pvp ? '投了すると負けになります' : '投了すると負けになります(ビートPとクイック周回は、倒した相手のモンスターの数に応じて少しだけ)',
@@ -140665,6 +140680,14 @@ const CardBattleScreen = ({
         setGame(null);
         onNavigate('CARD_TOP');
         setView(back);
+        return;
+      }
+      if (outcome === 'void' && game.pvp) {
+        const wasCup = !!CARD_PVP.get().cup;
+        CARD_PVP.leave();
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
+        onNavigate('CARD_TOP');
+        setView(wasCup ? 'cup' : 'pvp');
         return;
       }
       if (typeof assistantPeerOnPlay === 'function') void assistantPeerOnPlay('card');
@@ -148101,6 +148124,11 @@ const cardPvpCleanMessage = raw => {
     t: raw.t,
     from
   };
+  if (raw.t === 'void') return typeof raw.match === 'string' && raw.match ? {
+    t: 'void',
+    from,
+    match: raw.match.slice(0, 40)
+  } : null;
   return null;
 };
 const CARD_PVP_RESULT_LINES = Object.freeze({
@@ -148955,18 +148983,19 @@ const CARD_PVP = (() => {
     });
   };
   const deliver = () => {
-    while (board && s.inbox[s.theirSeq + 1]) {
+    while (board && s.phase === 'playing' && s.inbox[s.theirSeq + 1]) {
       const msg = s.inbox[s.theirSeq + 1];
       const inbox = {
         ...s.inbox
       };
       delete inbox[s.theirSeq + 1];
-      const next = board.onAct(msg);
+      const next = typeof window !== 'undefined' && window.__mhCardPvpDesyncTest === true ? null : board.onAct(msg);
       if (!next) {
-        set({
-          inbox,
-          broken: '相手の手がルールに合いませんでした。この試合は続けられません'
-        });
+        s = {
+          ...s,
+          inbox
+        };
+        goVoid();
         return;
       }
       s = {
@@ -149006,6 +149035,21 @@ const CARD_PVP = (() => {
   };
   const forceEnd = outcome => {
     if (s && s.phase === 'playing' && board) board.onForceEnd(outcome);
+  };
+  const goVoid = () => {
+    if (!s || !s.match || !(s.phase === 'playing' || s.phase === 'over' && s.result && !s.result.rewarded && !s.cupSent)) return;
+    if (isHost()) cardPvpWatchHost().stop();
+    set({
+      phase: 'void',
+      result: null,
+      outbox: [],
+      again: null,
+      foeAgain: null
+    });
+    send({
+      t: 'void',
+      match: s.match
+    });
   };
   const cupSend = async () => {
     if (!s || !s.cup || s.cupSent || !s.result || s.result.verify === 'wait') return;
@@ -149181,6 +149225,10 @@ const CARD_PVP = (() => {
     };
     if (msg.t === 'start') {
       if (!isHost() && msg.guest === s.me.id) begin(msg);
+      return;
+    }
+    if (msg.t === 'void') {
+      if (msg.match === s.match && !(typeof window !== 'undefined' && window.__mhCardPvpOldTest === true)) goVoid();
       return;
     }
     if (msg.t === 'act') {
@@ -149506,6 +149554,10 @@ const CARD_PVP = (() => {
         rd: s.again.rd,
         seal: s.again.seal
       });
+      if (s.phase === 'void' && s.match) send({
+        t: 'void',
+        match: s.match
+      });
       if (s.phase === 'playing' && s.foe && alive && Date.now() - s.foe.seen > CARD_PVP_ALIVE_MS) forceEnd('foeLeft');
       if (s.phase === 'over' && s.foe && alive && !s.foeGone && Date.now() - s.foe.seen > CARD_PVP_ALIVE_MS) set({
         foeGone: true,
@@ -149515,7 +149567,7 @@ const CARD_PVP = (() => {
   };
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && inGame() && !alive) connect();
+      if (document.visibilityState === 'visible' && (inGame() || s && s.phase === 'void') && !alive) connect();
     });
   }
   if (typeof window !== 'undefined') {
@@ -149583,7 +149635,7 @@ const CARD_PVP = (() => {
         });
       }
       if (s && s.phase === 'playing') penalize();
-      if (s && socket) send({
+      if (s && socket && s.phase !== 'void') send({
         t: 'bye'
       });
       stop();
@@ -149930,6 +149982,35 @@ const cardPvpPhrases = text => String(text).split(/(?<=、)/).map((x, i) => Reac
   key: i,
   className: "inline-block"
 }, x));
+const CardPvpVoidDialog = ({
+  onExit
+}) => React.createElement("div", {
+  "data-card-pvp-void": true,
+  role: "dialog",
+  "aria-modal": "true",
+  "aria-labelledby": "mh-card-pvp-void-title",
+  className: "fixed inset-0 flex items-center justify-center overflow-y-auto p-4",
+  style: {
+    ...(typeof cardSafePad === 'function' ? cardSafePad('1rem') : {}),
+    zIndex: MODAL_Z.dialog + 200,
+    backgroundColor: 'rgba(2,6,23,0.88)'
+  }
+}, React.createElement("div", {
+  className: "w-full max-w-sm rounded-2xl border border-rose-300/40 bg-slate-900 p-5 text-center shadow-2xl"
+}, React.createElement("p", {
+  id: "mh-card-pvp-void-title",
+  className: "text-[17px] font-black text-rose-100"
+}, "この試合は続けられません"), React.createElement("p", {
+  className: "mt-3 text-left text-[13px] font-bold leading-relaxed text-slate-200"
+}, "通信のずれで、相手と場が合わなくなりました。この試合は記録に残さずに終わります。ビートPと強さの点数は、増えも減りもしません。"), React.createElement("button", {
+  type: "button",
+  "data-card-pvp-void-exit": true,
+  onClick: () => {
+    Audio_.fgSe.tap();
+    onExit();
+  },
+  className: "mh-button mt-4 min-h-[52px] w-full rounded-2xl bg-amber-400 font-black text-slate-950 active:scale-[.98]"
+}, "試合を終える")));
 const CardPvpLobby = ({
   meIcon = null,
   meFrame = null,
@@ -150174,6 +150255,20 @@ const CardPvpLobby = ({
     meIcon: meIcon,
     meName: profile.name
   });
+  if (room.phase === 'void') {
+    const exitVoid = () => {
+      const wasCup = !!CARD_PVP.get().cup;
+      CARD_PVP.leave();
+      if (wasCup) onBack(true);
+    };
+    return React.createElement("div", {
+      "data-mh-screen": true,
+      "data-card-pvp": "void",
+      className: SCREEN_SHELL_CLASS
+    }, React.createElement(CardPvpVoidDialog, {
+      onExit: exitVoid
+    }));
+  }
   if (room.phase === 'over' && r) {
     const noAgain = !!room.cup || room.foeGone || r.reason === '相手が抜けた' || r.reason === '相手の時間切れ' || r.reason === '通信が切れた';
     const win = r.outcome === 'win';

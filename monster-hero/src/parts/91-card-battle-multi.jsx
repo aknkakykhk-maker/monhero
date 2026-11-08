@@ -296,6 +296,8 @@ const cardPvpCleanMessage = (raw) => {
   // もう1戦(同じ相手と同じ部屋で。rd … 次の試合の回の番号・seal … 次の試合の山札の封)
   if (raw.t === 'again') { const rd = cardPvpInt(raw.rd, 1000); const seal = typeof raw.seal === 'string' && /^[0-9a-f]{64}$/.test(raw.seal) ? raw.seal : null; return rd && seal ? { t: 'again', from, rd, seal } : null; }
   if (raw.t === 'surrender' || raw.t === 'bye' || raw.t === 'timeout') return { t: raw.t, from };
+  // この試合は続けられない(届いた手がルールに合わず、場が食い違った。2026-11-08 で足した項目。古い版は知らないので捨てる)
+  if (raw.t === 'void') return typeof raw.match === 'string' && raw.match ? { t: 'void', from, match: raw.match.slice(0, 40) } : null;
   return null;
 };
 
@@ -770,11 +772,12 @@ const CARD_PVP = (() => {
   };
   const deliver = () => {
     // 届いた順にそろえて、つぎの番号のものから当てる(抜けがあれば待つ)
-    while (board && s.inbox[s.theirSeq + 1]) {
+    while (board && s.phase === 'playing' && s.inbox[s.theirSeq + 1]) {
       const msg = s.inbox[s.theirSeq + 1];
       const inbox = { ...s.inbox }; delete inbox[s.theirSeq + 1];
-      const next = board.onAct(msg);
-      if (!next) { set({ inbox, broken: '相手の手がルールに合いませんでした。この試合は続けられません' }); return; }
+      // 検査だけ: 場が食い違ったことにする(window.__mhCardPvpDesyncTest)。ふだんは何もしない
+      const next = typeof window !== 'undefined' && window.__mhCardPvpDesyncTest === true ? null : board.onAct(msg);
+      if (!next) { s = { ...s, inbox }; goVoid(); return; }
       s = { ...s, inbox, theirSeq: msg.seq, history: [...s.history, { by: 1, act: cardPvpFlip(msg.act), reveal: msg.reveal }] };
       watchPush(1, cardPvpFlip(msg.act), msg.reveal, next);
       send({ t: 'ack', seq: msg.seq, discard: next.players[0].discard });
@@ -791,6 +794,15 @@ const CARD_PVP = (() => {
     return slept;
   };
   const forceEnd = (outcome) => { if (s && s.phase === 'playing' && board) board.onForceEnd(outcome); };
+  // 無効試合(2026-11-08 ソランド): 届いた手がルールに合わず、2台の場が食い違った。勝ち負け・ビートP・強さの点数・履歴・見返し・ミッション・杯の結果は、どれも付けない・送らない。
+  //   はねた側は { t: 'void', match } を相手へ送る(見回りで送り直す。古い版の相手は捨てるので、前と同じく、やがて「相手が抜けた」になる)。受けた側も同じ形になる。
+  //   結果を出したあと(over)でも、ごほうびを渡す前なら無効にする(相手の最後の手をこちらがはねたとき)
+  const goVoid = () => {
+    if (!s || !s.match || !(s.phase === 'playing' || (s.phase === 'over' && s.result && !s.result.rewarded && !s.cupSent))) return;
+    if (isHost()) cardPvpWatchHost().stop();
+    set({ phase: 'void', result: null, outbox: [], again: null, foeAgain: null });
+    send({ t: 'void', match: s.match });
+  };
   // 個人杯の試合(④): 確かめが決まったら(ok / ng / skip)、杯へ結果を1回だけ送る(card_cup_live_report・how=pvp)。
   //   手の並びは、確かめが通った試合だけ { kind: 'pvp', order, seeds: [自分, 相手], first, acts }(自分が0番の向き。93 の cardReplayFromTour が並びを戻す)
   const cupSend = async () => {
@@ -853,6 +865,8 @@ const CARD_PVP = (() => {
     }
     if (s.foe) s = { ...s, foe: { ...s.foe, seen: now } };
     if (msg.t === 'start') { if (!isHost() && msg.guest === s.me.id) begin(msg); return; }
+    // 検査だけ: 古い版の相手(void を知らない)のふりをする(window.__mhCardPvpOldTest)
+    if (msg.t === 'void') { if (msg.match === s.match && !(typeof window !== 'undefined' && window.__mhCardPvpOldTest === true)) goVoid(); return; }
     if (msg.t === 'act') {
       if (msg.match !== s.match) return;
       if (msg.seq <= s.theirSeq) { send({ t: 'ack', seq: s.theirSeq }); return; }
@@ -979,6 +993,7 @@ const CARD_PVP = (() => {
       if (s.phase === 'over') sendOpen();
       if (inGame() && isHost()) cardPvpWatchHost().tick();
       if (s.phase === 'over' && s.again) send({ t: 'again', rd: s.again.rd, seal: s.again.seal });
+      if (s.phase === 'void' && s.match) send({ t: 'void', match: s.match }); // 相手が受け取るまで(相手が部屋を出るまで)送り直す
       // 相手から何も届かないまま CARD_PVP_ALIVE_MS が過ぎたら、抜けた扱い(こちらの電波が切れているあいだは数えない)
       if (s.phase === 'playing' && s.foe && alive && Date.now() - s.foe.seen > CARD_PVP_ALIVE_MS) forceEnd('foeLeft');
       // 結果のあとも同じ: bye が届かないまま相手が消えたら、部屋を出たとみる(「もう1戦」を待ち続けない。2026-10-27 部長)
@@ -987,7 +1002,7 @@ const CARD_PVP = (() => {
   };
   // iPhone でアプリを切り替えて戻ってきたら、すぐにつなぎ直す / タブを閉じるときは「抜けます」を送る
   if (typeof document !== 'undefined') {
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && inGame() && !alive) connect(); });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && (inGame() || (s && s.phase === 'void')) && !alive) connect(); });
   }
   if (typeof window !== 'undefined') {
     window.addEventListener('pagehide', () => { if (s && s.phase === 'playing') { send({ t: 'bye' }); penalize(); } });
@@ -1024,7 +1039,8 @@ const CARD_PVP = (() => {
         const nowT = Date.now();
         Object.entries(s.invited || {}).filter(([, x]) => x && x.ok && x.code === s.code && nowT - x.at <= CARD_PVP_INVITE_TTL_MS).forEach(([to, x]) => { void sbCancelCardInvite(s.me.bid, to, x.code); });
       }
-      if (s && s.phase === 'playing') penalize(); if (s && socket) send({ t: 'bye' }); stop(); board = null; s = blank(); emit();
+      // 無効試合から出るときは罰を付けず、bye も送らない(古い版の相手に「相手が抜けた」の勝ちを渡さない)
+      if (s && s.phase === 'playing') penalize(); if (s && socket && s.phase !== 'void') send({ t: 'bye' }); stop(); board = null; s = blank(); emit();
     },
     // 送った招待を覚えておく(入口の画面を閉じても、上の帯と「部屋を出る」で使う)
     noteInvite: (to, rec) => { if (s && rec && s.code === rec.code) set({ invited: { ...s.invited, [to]: rec } }); },
@@ -1200,6 +1216,18 @@ const cardPvpPhrases = (text) => String(text).split(/(?<=、)/).map((x, i) => <s
 // onReward(result) … 確かめが済んだら1回だけ呼ぶ(84 が保存して { point, loops, quick, saved } を返す)。確かめで無効になった試合は呼ばない
 // assistant … 結果の画面に立ち絵を出す自分の助手(84 の topAssistant)/ point … いまのビートP
 // onAssistant … いまは使わない(だれとでもは待ち続ける。呼ぶ側との形を変えないために受けておく)/ rankSend … 強さの点数へ届けてよいか(公開後のふつうの入口だけ。84→60-app の rank.send)
+// 無効試合の窓(2026-11-08 ソランド)。対戦の画面(84)と、結果を出したあとの部屋の画面の両方で同じものを出す。onExit … 「試合を終える」(入口へ・罰なし)
+const CardPvpVoidDialog = ({ onExit }) => (
+  <div data-card-pvp-void role="dialog" aria-modal="true" aria-labelledby="mh-card-pvp-void-title" className="fixed inset-0 flex items-center justify-center overflow-y-auto p-4"
+    style={{ ...(typeof cardSafePad === 'function' ? cardSafePad('1rem') : {}), zIndex: MODAL_Z.dialog + 200, backgroundColor: 'rgba(2,6,23,0.88)' }}>
+    <div className="w-full max-w-sm rounded-2xl border border-rose-300/40 bg-slate-900 p-5 text-center shadow-2xl">
+      <p id="mh-card-pvp-void-title" className="text-[17px] font-black text-rose-100">この試合は続けられません</p>
+      <p className="mt-3 text-left text-[13px] font-bold leading-relaxed text-slate-200">通信のずれで、相手と場が合わなくなりました。この試合は記録に残さずに終わります。ビートPと強さの点数は、増えも減りもしません。</p>
+      <button type="button" data-card-pvp-void-exit onClick={() => { Audio_.fgSe.tap(); onExit(); }}
+        className="mh-button mt-4 min-h-[52px] w-full rounded-2xl bg-amber-400 font-black text-slate-950 active:scale-[.98]">試合を終える</button>
+    </div>
+  </div>
+);
 const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], onStart, onBack, onStepAway = null, onPickDeck = null, onReward, assistant = null, point = null, onAssistant = null, rankSend = false, onOpenReplay = null, replayHas = null }) => {
   const [room, setRoom] = useState(() => CARD_PVP.get());
   const [code, setCode] = useState('');
@@ -1349,6 +1377,11 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   // ---- 結果(助手と対戦の結果の画面と同じ形: 立ち絵・もらったビートP・クイック周回・いまのビートP) ----
   // ★立ち絵の横は、助手の台詞ではなく結果の文(マルチ対戦の結果の台詞は、まだ作っていない。台詞は社長が先に読む決まり)
   if (historyOpen && room.phase === 'idle' && typeof CardPvpHistory === 'function') return <CardPvpHistory onBack={() => setHistoryOpen(false)} onOpenReplay={onOpenReplay} replayHas={replayHas} meIcon={meIcon} meName={profile.name}/>;
+  // 無効試合(結果を出したあとに、相手から「続けられない」が届いた)。「試合を終える」で入口へ(杯の試合なら杯の画面へ)
+  if (room.phase === 'void') {
+    const exitVoid = () => { const wasCup = !!CARD_PVP.get().cup; CARD_PVP.leave(); if (wasCup) onBack(true); };
+    return <div data-mh-screen data-card-pvp="void" className={SCREEN_SHELL_CLASS}><CardPvpVoidDialog onExit={exitVoid}/></div>;
+  }
   if (room.phase === 'over' && r) {
     // 「もう1戦」を出さない試合: 相手が部屋を出た・抜けた・時間切れ(相手がもういない・離れているので、待ち続けてしまう)
     const noAgain = !!room.cup || room.foeGone || r.reason === '相手が抜けた' || r.reason === '相手の時間切れ' || r.reason === '通信が切れた';

@@ -1596,6 +1596,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       onEyes: (n) => setWatchEyes(Number.isInteger(n) ? n : 0),
     });
   }, []);
+  // 無効試合(91 の goVoid): 2台の場が食い違ったら、窓を出して止める
+  const [pvpVoid, setPvpVoid] = useState(false);
+  useEffect(() => { if (!pvpLive) return undefined; const look = (r) => setPvpVoid(!!r && r.phase === 'void'); look(CARD_PVP.get()); return CARD_PVP.subscribe(look); }, []);
   useCardPvpAuto(db, pvpLive, st, step, paused); // 検査のときだけ自分の番を自動で打つ(91。ふだんは何もしない)
   const pvpClock = useCardPvpClock(pvpLive, st, step); // マルチ対戦の持ち時間(91)。マルチでないときは何もしない
   // 動きの見本(デバッグ): 決まった順に1手ずつ進める
@@ -2717,6 +2720,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         </div>
       )}
       {confirm && <ConfirmSheet title={confirm.label} message={confirm.kind === 'use' ? 'オプションで確かめないようにもできます' : ''} confirmLabel={confirm.kind === 'use' ? '使う' : '終わる'} onCancel={() => setConfirm(null)} onConfirm={confirmYes}/>}
+      {pvpVoid && <CardPvpVoidDialog onExit={() => { finished.current = true; onFinish({ outcome: 'void', st: stRef.current }); }}/>}
       {quit && !tutorial && <ConfirmSheet title="投了しますか？" message={pvp ? '投了すると負けになります' : '投了すると負けになります(ビートPとクイック周回は、倒した相手のモンスターの数に応じて少しだけ)'} confirmLabel="投了する" danger onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; if (pvp) CARD_PVP.surrender(); onFinish({ outcome: 'surrender', st }); }}/>}
       {skipAsk && <ConfirmSheet title="結果へ進みますか？" message="ここから最後まで、2人とも戦術カードで一瞬で戦って、結果を出します(この対戦はあとから見返せます)" confirmLabel="結果へ" onCancel={() => setSkipAsk(false)} onConfirm={() => { setSkipAsk(false); skipToEnd(); }}/>}
       {quit && tutorial && <ConfirmSheet title="チュートリアルを飛ばしますか？" message={'ルールの画面からいつでもできます'} confirmLabel="飛ばす" onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; onFinish({ outcome: 'tutorialSkip', st }); }}/>}
@@ -3560,6 +3564,15 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         setGame(null);
         onNavigate('CARD_TOP');
         setView(back);
+        return;
+      }
+      // マルチの無効試合(91 の goVoid): 何も付けない・数えない・送らない。部屋を出て、入口へ(杯の試合なら杯の画面へ)
+      if (outcome === 'void' && game.pvp) {
+        const wasCup = !!CARD_PVP.get().cup;
+        CARD_PVP.leave();
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
+        onNavigate('CARD_TOP');
+        setView(wasCup ? 'cup' : 'pvp');
         return;
       }
       // 助手どうし(2026-11-07・56-assistant-peer.jsx): 遊びに連れていくペアがいれば、対戦を1回終えるごとに2人が仲良くなる(見返しは除く)
