@@ -351,7 +351,10 @@ const unit = async (core) => {
       && tone('dra', 'ええな、おでも叩きたい') === null && tone('dra', '大きいのはおでが食べる分だな。くさ') === null && /難易度の名前/.test(core.FRIEND_RULES_TEXT));
     check('㉗ 決まりの文の見本に数字が無く、数字を書かない・相手はどちらも {f} と書くと決めている', !/[0-9０-９]/.test(core.FRIEND_RULES_TEXT.slice(core.FRIEND_RULES_TEXT.indexOf('見本'))) && /数字\(「2人」「2倍」なども\)は1つも書かない/.test(core.FRIEND_RULES_TEXT) && /a も b も名前を書かずに \{f\}/.test(core.FRIEND_RULES_TEXT));
     { const why = []; const pz = core.normalizeFriendPairs([{ kind: 'go', a: 'momosuke', b: 'momosuke' }], { assistants: { momosuke: {} } });
-      const kept = core.validateFriendScenes([{ kind: 'go', a: 'momosuke', b: 'momosuke', lines: [{ side: 'a', e: 'happy', t: 'ももが2人！？' }, { side: 'b', e: 'happy', t: 'ふふん♡' }] }], pz, (w) => why.push(w));
+      const kept = core.validateFriendScenes([{ kind: 'go', a: 'momosuke', b: 'momosuke', lines: [{ side: 'a', e: 'happy', t: 'ももが3回目！？' }, { side: 'b', e: 'happy', t: 'ふふん♡' }] }], pz, (w) => why.push(w));
+      { const pm = core.normalizeFriendPairs([{ kind: 'go', a: 'mua', b: 'dra' }], { assistants: { mua: {}, dra: {} } });
+        const ok2 = core.validateFriendScenes([{ kind: 'go', a: 'mua', b: 'dra', lines: [{ side: 'a', e: 'happy', t: '{f} ドラ、2人で遊ぼ！' }, { side: 'b', e: 'happy', t: 'おう、よく来たな' }] }], pm, null, { mua: 'みゅあ', dra: 'ドラ' });
+        check('㉗ 「2人」は「ふたり」へ直し、「{f} ドラ」の重ねた名前は {f} だけにする', ok2.length === 1 && ok2[0].lines[0].t === '{f}、ふたりで遊ぼ！', JSON.stringify(ok2)); }
       check('㉗ 捨てた場面は理由の名前だけを知らせる(台詞は渡さない)', kept.length === 0 && why.length === 1 && why[0] === 'digit', JSON.stringify(why)); }
     check('㉗ 決まりの文に、助手ごとの必ず守ること・体に触れない・見本が入っている', /必ず守ること/.test(core.FRIEND_RULES_TEXT) && /ぢゃん/.test(core.FRIEND_RULES_TEXT) && /体に触れる話をしない/.test(core.FRIEND_RULES_TEXT) && /見本/.test(core.FRIEND_RULES_TEXT));
   }
