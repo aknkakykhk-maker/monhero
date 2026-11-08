@@ -11,6 +11,7 @@
 //   F. 型を渡すのは 84 の助手と対戦だけ(杯・みんなのデッキは渡さない)。82 から助手ライフの口を読まない。口は呼ぶ時に typeof で確かめる
 //   G. 対戦の記録: 助手と対戦の記録に型を残す。古い記録(型なし)・知らない値は 'normal' として読む。マルチの記録には付けない
 //   I. 方針の上書き(opts.plan・AI が決める): 幅の外は丸める・候補外(無い番号・場のカードでない名前)は捨てる・全部捨てたら上書きしない・方針の札と場のカードが入る
+//   J. 方針の幅の強さ: くせを全部下の端・全部上の端にして、候補から種でえらんだ prefer・field で組むと、EXPERT・MASTER の8人の平均の差が ±10点以内(くわしい数は README)
 //   H. サーバの杯の写し(supabase/functions/card-tournament-run/game.js)が、いまの 82 から作り直してある
 const fs = require('fs');
 const path = require('path');
@@ -21,7 +22,7 @@ const GAME = path.join(ROOT, 'monster-hero');
 const src = (f) => fs.readFileSync(path.join(GAME, f), 'utf8');
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
 vm.runInContext(`${src('data/card-battle-cards.js')}\n;\n${src('src/parts/82-card-battle-core.jsx')}\n;\n${src('src/parts/82-card-tactics-core.jsx')}\n;\n${src('src/parts/93-card-replay.jsx').split('// ---- 保存(端末の中だけ)')[0]}\n;\n`
-  + 'this.E = { CARD_BATTLE_DATA, CARD_AI_HABITS, CARD_AI_DECKS, CARD_AI_STYLE_IDS, CARD_AI_STYLE_VARIANT, cardAiBuildDeck, cardAiSeededRand, cardAiStyleOf, cardAssistantDeckPreview, cardDeckProblems, cardSimulate, cardAiPolicy, cardReplayNormalizeOne, cardReplayStyleOf, cardAiPlanClean, CARD_AI_PLAN_RANGE, cardAiPlanHabitRange, cardAiDeckHabit };', ctx);
+  + 'this.E = { CARD_BATTLE_DATA, CARD_AI_HABITS, CARD_AI_DECKS, CARD_AI_STYLE_IDS, CARD_AI_STYLE_VARIANT, cardAiBuildDeck, cardAiSeededRand, cardAiStyleOf, cardAssistantDeckPreview, cardDeckProblems, cardSimulate, cardAiPolicy, cardReplayNormalizeOne, cardReplayStyleOf, cardAiPlanClean, CARD_AI_PLAN_RANGE, cardAiPlanHabitRange, cardAiDeckHabit, cardAiPlanCandidates };', ctx);
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
 const VERBOSE = process.argv.includes('--verbose');
@@ -173,6 +174,38 @@ check('助手は8人', WHO.length === 8, WHO.join(','));
   check('I 方針の札(HARD から)と場のカードが入る', want.length > 0 && want.every((x) => names(withPlan).includes(x.name)) && names(withPlan).includes('灼熱の地'), `${want.map((x) => x.name).join('・')} / 場 ${names(withPlan).includes('灼熱の地')}`);
   const d = E.cardAiBuildDeck(db, 'mua', 'easy', E.cardAiSeededRand('p'), { plan: { prefer: want.map((x) => x.no), habit: { keepGuard: 1.5 } } });
   check('I 方針を入れてもデッキの決まりを守る', E.cardDeckProblems(db, d).length === 0 && d.cards.length === 50 && E.cardDeckProblems(db, withPlan).length === 0);
+}
+// ---- J ----
+{
+  const games = 8;
+  const kits = Object.keys(db.starters);
+  const fieldsAll = Object.values(db.cards).filter((c) => c.ready && c.kind === 'fld');
+  const rateOf = (w, lv, corner) => {
+    let win = 0, n = 0, seed = 1;
+    for (const k of kits) for (let g = 0; g < games; g++) {
+      const rs = `${w}:${lv}:${k}:${g}`;
+      const base = E.cardAiBuildDeck(db, w, lv, E.cardAiSeededRand(rs), { playerDeck: E.cardAiBuildDeck(db, k) });
+      let mine = base;
+      if (corner !== null) {
+        const rnd = E.cardAiSeededRand(`j:${corner}:${rs}`);
+        const r = E.cardAiPlanHabitRange(w, lv);
+        const cand = E.cardAiPlanCandidates(db, w, lv, base.monsters);
+        const prefer = []; while (prefer.length < 6 && prefer.length < cand.length) { const c = cand[Math.floor(rnd() * cand.length)]; if (!prefer.includes(c.no)) prefer.push(c.no); }
+        const plan = { prefer, field: [fieldsAll[Math.floor(rnd() * fieldsAll.length)].name], habit: Object.fromEntries(Object.entries(r).map(([key, v]) => [key, v[corner]])) };
+        mine = E.cardAiBuildDeck(db, w, lv, E.cardAiSeededRand(rs), { playerDeck: E.cardAiBuildDeck(db, k), plan });
+      }
+      const st = E.cardSimulate(db, { decks: [mine, E.cardAiBuildDeck(db, k)], policies: [E.cardAiPolicy(w, lv, { sameBlood: !!mine.sameBlood }), E.cardAiPolicy('kyuko', lv, { playerRole: true })], seed: 7000 + seed++, first: g % 2 });
+      if (st.winner === 0) win++;
+      n++;
+    }
+    return win / n * 100;
+  };
+  for (const lv of ['expert', 'master']) for (const corner of [0, 1]) {
+    let d = 0;
+    for (const w of WHO) d += rateOf(w, lv, corner) - rateOf(w, lv, null);
+    d /= WHO.length;
+    check(`J ${lv} くせを全部${corner ? '上' : '下'}の端にした方針: 8人の平均の差 ${d.toFixed(1)}点が ±10点以内`, Math.abs(d) <= 10);
+  }
 }
 // ---- H ----
 {
