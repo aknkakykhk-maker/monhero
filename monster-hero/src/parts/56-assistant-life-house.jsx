@@ -798,7 +798,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
     <div className="mhl-hdr" style={{ paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>
       <div className="flex items-start gap-2">
         <button type="button" data-assistant-life-close onClick={close} aria-label="閉じる" className="h-9 w-8 shrink-0 text-[19px] text-slate-100">←</button>
-        <div className="min-w-0 shrink-0" data-assistant-life-title><p className="mhl-en whitespace-nowrap" style={land ? { letterSpacing: '.06em', fontSize: 8 } : undefined}>ASSISTANT LIFE · {tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : tab === 'visit' ? 'VISIT' : 'HOUSE'}</p><p className="mhl-ti whitespace-nowrap" style={land ? { fontSize: 18 } : undefined}>助手ライフ</p></div>
+        {/* 英字の小見出しは狭い横(🔄横 667)で縮んで省略する(時計の札を押し出さない・2026-11-08 ミハリ) */}
+        <div className="min-w-0 shrink overflow-hidden" data-assistant-life-title><p className="mhl-en truncate whitespace-nowrap" style={land ? { letterSpacing: '.06em', fontSize: 8 } : undefined}>ASSISTANT LIFE · {tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : tab === 'visit' ? 'VISIT' : 'HOUSE'}</p><p className="mhl-ti whitespace-nowrap" style={land ? { fontSize: 18 } : undefined}>助手ライフ</p></div>
         <div className="min-w-0 flex-1"/>
         {/* いまの時刻の札(ハナビの共通部品 44-time-of-day.jsx。設定の「いまの時刻を出す」が切なら出ない) */}
         {typeof TimeOfDayClock === 'function' && <div className="shrink-0 self-center"><TimeOfDayClock/></div>}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 538fb5d8af0f7d15
+// generated-sha256: ae1f3abb6daa62e9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -62934,7 +62934,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
     <div className="mhl-hdr" style={{ paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>
       <div className="flex items-start gap-2">
         <button type="button" data-assistant-life-close onClick={close} aria-label="閉じる" className="h-9 w-8 shrink-0 text-[19px] text-slate-100">←</button>
-        <div className="min-w-0 shrink-0" data-assistant-life-title><p className="mhl-en whitespace-nowrap" style={land ? { letterSpacing: '.06em', fontSize: 8 } : undefined}>ASSISTANT LIFE · {tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : tab === 'visit' ? 'VISIT' : 'HOUSE'}</p><p className="mhl-ti whitespace-nowrap" style={land ? { fontSize: 18 } : undefined}>助手ライフ</p></div>
+        {/* 英字の小見出しは狭い横(🔄横 667)で縮んで省略する(時計の札を押し出さない・2026-11-08 ミハリ) */}
+        <div className="min-w-0 shrink overflow-hidden" data-assistant-life-title><p className="mhl-en truncate whitespace-nowrap" style={land ? { letterSpacing: '.06em', fontSize: 8 } : undefined}>ASSISTANT LIFE · {tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : tab === 'visit' ? 'VISIT' : 'HOUSE'}</p><p className="mhl-ti whitespace-nowrap" style={land ? { fontSize: 18 } : undefined}>助手ライフ</p></div>
         <div className="min-w-0 flex-1"/>
         {/* いまの時刻の札(ハナビの共通部品 44-time-of-day.jsx。設定の「いまの時刻を出す」が切なら出ない) */}
         {typeof TimeOfDayClock === 'function' && <div className="shrink-0 self-center"><TimeOfDayClock/></div>}
@@ -64398,7 +64399,7 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
             {lifeOn && <AssistantLifeGiftWeight w={peerW} tone="peer" kind="peer" gainText={peerW && !peerW.max ? ASSISTANT_LIFE_PEER_LV_GAIN[peerW.next] || '' : ''}/>}
           </div>
         </div>
-        <p className="mt-1 text-[10px] leading-snug text-slate-400 [[data-assistant-life-land='1']_&]:hidden">{lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)・?=贈ると分かる。同じ道具は1日1回・合わせて1日3回(朝4時に戻る)' : '1日1回(朝4時に戻る)'}・持っている {have}個{info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''}</p>
+        <p className="mt-1 text-[10px] leading-snug text-slate-400 [[data-assistant-life-land='1']_&]:hidden">{lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)・?=贈ると分かる。同じ道具は1⁠日1回・合わせて1⁠日3回(朝4時に戻る)' : '1⁠日1回(朝4時に戻る)'}・持っている {have}個{info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''}</p>
         {reason && <p data-assistant-life-give-reason className="mt-1.5 rounded-xl bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-300">{reason}</p>}
         {lifeOn && have <= 0 && <div className="mt-1.5"><AssistantLifeShopButton tab="item"/></div>}
         {/* やめる・贈るは、シートを下へ送らなくても押せるように下に貼り付ける(横で説明と重みが増えても隠れない) */}

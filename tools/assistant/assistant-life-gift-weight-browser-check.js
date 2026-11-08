@@ -64,7 +64,7 @@ const cutProblems = (page, sel) => page.evaluate((s) => {
     return page;
   };
   // HOME の助手どうしのおしゃべりの帯が出ていると押せないので、消えるのを待ってから押す
-  const openHouse = async (page) => { await page.locator('[data-assistant-peer-line]').waitFor({ state: 'detached', timeout: 15000 }).catch(() => {}); await page.locator('[data-home-assistant-life]').click({ timeout: 20000 }); await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 6000 }).catch(() => {}); await page.waitForTimeout(400); };
+  const openHouse = async (page) => { for (let i = 0; i < 3; i++) { await page.locator('[data-assistant-peer-line]').waitFor({ state: 'detached', timeout: 15000 }).catch(() => {}); try { await page.locator('[data-home-assistant-life]').click({ timeout: 8000 }); break; } catch (e) { if (i === 2) throw e; await page.waitForTimeout(1500); } } await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 6000 }).catch(() => {}); await page.waitForTimeout(400); };
   try {
     for (const [w, h, tag, file] of [[390, 844, '縦 390', 'tate'], [375, 667, '縦 375', 'tate375'], [844, 390, '横 844', 'yoko'], [667, 375, '🔄横 667', 'yoko667']]) {
       const page = await open(w, h);
@@ -73,6 +73,9 @@ const cutProblems = (page, sel) => page.evaluate((s) => {
       await page.locator('[data-assistant-life-icon="items"]').click(); await page.waitForTimeout(300);
       const items = await page.locator('[data-assistant-life-items]').innerText().catch(() => '');
       check(`① ${tag}: 道具タブに友情Lv・仲良し度の説明と交換所の入口が出る`, /友情Lv=贈った2人の助手どうしの仲/.test(items) && /仲良し度=あなたとその助手の仲/.test(items) && (await page.locator('[data-assistant-life-items] [data-assistant-life-shop="item"]').count()) >= 2, items.replace(/\s+/g, ' ').slice(0, 80));
+      // 右上の時計の札が右端で切れない(🔄横 667 の狭い欄・2026-11-08 ミハリ)
+      const clockOk = await page.evaluate(() => { const c = document.querySelector('[data-assistant-life-screen] [data-time-of-day-clock], [data-assistant-life-screen] .mhl-clock'); if (!c) return true; const r = c.getBoundingClientRect(); let p = c.parentElement; while (p && getComputedStyle(p).overflow === 'visible') p = p.parentElement; const pr = p ? p.getBoundingClientRect() : { right: innerWidth }; return r.right <= Math.min(innerWidth, pr.right) + 1; });
+      check(`③ ${tag}: 右上の時計の札が右端で切れない`, clockOk);
       const cutItems = await cutProblems(page, '[data-assistant-life-items]');
       check(`③ ${tag}: 道具タブの文字が切れない・はみ出さない`, cutItems.length === 0, cutItems.join(','));
       if (SHOTS) { await page.locator('[data-assistant-life-gift-explain]').first().scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(shotDir, `${file}-1-items.png`) }); }
@@ -125,7 +128,7 @@ const cutProblems = (page, sel) => page.evaluate((s) => {
       await page.close();
     }
     check('⑥ ページのエラーが出ない', errors.length === 0, errors.slice(0, 3).join(' / '));
-  } catch (e) { console.log('NG: 途中で止まった —', e.message.split('\n').slice(0, 4).join(' ')); failed++; }
+  } catch (e) { console.log('NG: 途中で止まった —', e.message.split('\n').slice(0, 9).join(' ')); failed++; }
   await browser.close(); server.close();
   console.log(failed ? `NG ${failed}件` : 'すべてOK');
   process.exit(failed ? 1 : 0);

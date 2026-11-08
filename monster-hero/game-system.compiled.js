@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9f08da98753b0c16
+// source-sha256: ef0318984e41a167
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -106462,10 +106462,10 @@ function AssistantLifeHouse({
     "aria-label": "閉じる",
     className: "h-9 w-8 shrink-0 text-[19px] text-slate-100"
   }, "←"), React.createElement("div", {
-    className: "min-w-0 shrink-0",
+    className: "min-w-0 shrink overflow-hidden",
     "data-assistant-life-title": true
   }, React.createElement("p", {
-    className: "mhl-en whitespace-nowrap",
+    className: "mhl-en truncate whitespace-nowrap",
     style: land ? {
       letterSpacing: '.06em',
       fontSize: 8
@@ -119846,7 +119846,7 @@ function AssistantLifeGiftSheet({
     gainText: peerW && !peerW.max ? ASSISTANT_LIFE_PEER_LV_GAIN[peerW.next] || '' : ''
   }))), React.createElement("p", {
     className: "mt-1 text-[10px] leading-snug text-slate-400 [[data-assistant-life-land='1']_&]:hidden"
-  }, lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)・?=贈ると分かる。同じ道具は1日1回・合わせて1日3回(朝4時に戻る)' : '1日1回(朝4時に戻る)', "・持っている ", have, "個", info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''), reason && React.createElement("p", {
+  }, lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)・?=贈ると分かる。同じ道具は1⁠日1回・合わせて1⁠日3回(朝4時に戻る)' : '1⁠日1回(朝4時に戻る)', "・持っている ", have, "個", info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''), reason && React.createElement("p", {
     "data-assistant-life-give-reason": true,
     className: "mt-1.5 rounded-xl bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-300"
   }, reason), lifeOn && have <= 0 && React.createElement("div", {
