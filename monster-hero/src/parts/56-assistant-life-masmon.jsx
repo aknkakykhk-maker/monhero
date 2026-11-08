@@ -87,7 +87,7 @@ const assistantMasmonFavCard = (id) => {
     const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
     if (!sp || !db || !db.monsters) return null;
     const m = Object.values(db.monsters).find(x => x && x.species === sp && !x.variant);
-    return m ? { name: m.name, src: `images/card-battle/l/${m.img}.jpg` } : null;
+    return m && typeof CARD_IMG === 'function' ? { name: m.name, src: CARD_IMG(m.img, 'l') } : null;
   } catch (_) { return null; }
 };
 // デッキのカードの並びは、カード部の読むだけの口 cardAssistantDeckPreview が main に入ってからつなぐ(2026-11-08 ソランドとすり合わせ済み)

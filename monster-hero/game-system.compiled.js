@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1118310552854b2d
+// source-sha256: e712d7a77d7dc7d7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -119736,9 +119736,9 @@ const assistantMasmonFavCard = id => {
     const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
     if (!sp || !db || !db.monsters) return null;
     const m = Object.values(db.monsters).find(x => x && x.species === sp && !x.variant);
-    return m ? {
+    return m && typeof CARD_IMG === 'function' ? {
       name: m.name,
-      src: `images/card-battle/l/${m.img}.jpg`
+      src: CARD_IMG(m.img, 'l')
     } : null;
   } catch (_) {
     return null;
