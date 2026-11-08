@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1fc506ff720a164b
+// source-sha256: aded578008ac8195
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -120964,6 +120964,11 @@ function AssistantMasmonSheet({
     }, "Lv.", t.lv, " ・ ", assistantMasmonGrowKind(t.grow))))), React.createElement("p", {
       className: "mt-2 text-[10.5px] font-bold leading-snug text-slate-400"
     }, "⚔ 編成は", who.name, "が決めています。"));
+  } else if (tab === 'deck' && assistantMasmonDeckTabOn()) {
+    body = React.createElement(AssistantMasmonDeckTab, {
+      id: id,
+      land: land
+    });
   } else if (tab === 'deck') {
     body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "mhm-card",
@@ -121130,6 +121135,60 @@ function AssistantMasmonRoomRow({
   }, React.createElement("b", null, lead.nick), "(", m.name, " Lv.", lead.lv, ") ほか", Math.max(0, p.team.length - 1), "体"), React.createElement("span", {
     className: "ml-auto pl-1 text-[12px] font-black text-pink-300"
   }, "›"));
+}
+const ASSISTANT_MASMON_DECK_STYLES = Object.freeze([['attack', '攻め'], ['guard', '守り'], ['normal', 'ふつう']]);
+const assistantMasmonDeckTabOn = () => {
+  try {
+    return typeof cardGrowStyleOn === 'function' && cardGrowStyleOn() && typeof CardAssistantDeckView === 'function';
+  } catch (_) {
+    return false;
+  }
+};
+function AssistantMasmonDeckTab({
+  id,
+  land = false
+}) {
+  const fav = ASSISTANT_MASMON_CARD_STYLE[id] || 'normal';
+  const [sid, setSid] = React.useState(fav);
+  const [, setLoaded] = React.useState(0);
+  React.useEffect(() => {
+    let alive = true;
+    try {
+      if (typeof cardAiDeckMarkMet === 'function') void Promise.resolve(cardAiDeckMarkMet(id)).catch(() => {});
+    } catch (_) {}
+    try {
+      if (typeof cardLoadAiRecipe === 'function') void Promise.resolve(cardLoadAiRecipe()).then(() => {
+        if (alive) setLoaded(n => n + 1);
+      }).catch(() => {});
+    } catch (_) {}
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+  return React.createElement(React.Fragment, null, React.createElement("div", {
+    "data-assistant-masmon-deck-styles": true,
+    className: "grid grid-cols-3 gap-1.5"
+  }, ASSISTANT_MASMON_DECK_STYLES.map(([s, label]) => React.createElement("button", {
+    key: s,
+    type: "button",
+    "data-assistant-masmon-deck-style": s,
+    "aria-pressed": sid === s,
+    onClick: () => {
+      if (typeof Audio_ !== 'undefined') Audio_.fgSe.tap();
+      setSid(s);
+    },
+    className: `flex min-h-[40px] items-center justify-center gap-1 rounded-xl border px-1 py-1 text-[13px] font-black ${sid === s ? 'border-amber-300 bg-amber-400 text-slate-950' : 'border-white/15 bg-slate-800 text-slate-200'}`
+  }, label, s === fav && React.createElement("em", {
+    "data-assistant-masmon-deck-fav": true,
+    className: "whitespace-nowrap rounded-full bg-emerald-400 px-1.5 py-px text-[9px] font-black not-italic text-emerald-950"
+  }, "よく使う")))), React.createElement("div", {
+    className: "mt-2",
+    "data-assistant-masmon-deck-view": sid
+  }, React.createElement(CardAssistantDeckView, {
+    who: id,
+    styleId: sid,
+    land: land
+  })));
 }
 const ASSISTANT_MASMON_CSS = `
 .mhm-panel{position:absolute;left:0;right:0;bottom:0;top:5%;display:flex;flex-direction:column;background:linear-gradient(180deg,#1f1640,#0b1020 70%);border-top:2px solid #f9a8d4;border-radius:22px 22px 0 0;padding:12px 14px calc(12px + env(safe-area-inset-bottom));color:#fff}
