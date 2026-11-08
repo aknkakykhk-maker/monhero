@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c30f97e7bf4bd2b9
+// source-sha256: e1846009f14ae628
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -123016,7 +123016,7 @@ function AlfFriendHouseView({
     "data-alf-visit-note": done ? 'done' : can
   }, noteLine), React.createElement("p", {
     className: "mt-1 text-[9.5px] leading-snug text-slate-300"
-  }, friend.name, "さんのセーブや、助手の仲良し度は変わりません。"));
+  }, friend.name, "さんのセーブや、", friend.name, "さんの助手の仲良し度は変わりません。"));
   const board = diaryItems.length ? React.createElement("div", {
     className: "mt-1 rounded-xl bg-amber-50/90 px-2 py-1 text-amber-950",
     "data-alf-visit-diary": true
@@ -123079,7 +123079,9 @@ function AlfFriendHouseView({
       maxHeight: '100%',
       paddingTop: 92,
       borderRadius: '22px 0 0 22px'
-    } : undefined
+    } : {
+      maxHeight: 'calc(100% - 96px)'
+    }
   }, React.createElement("div", {
     className: "flex items-center gap-2"
   }, React.createElement(AlfFace, {
@@ -123169,7 +123171,9 @@ function AlfFriendHouseView({
       maxHeight: '100%',
       paddingTop: 92,
       borderRadius: '22px 0 0 22px'
-    } : undefined
+    } : {
+      maxHeight: 'calc(100% - 96px)'
+    }
   }, React.createElement("p", {
     className: "text-[15px] font-black text-amber-100"
   }, "✉️ 置き手紙の一言をえらぶ", leaving ? React.createElement("span", {

@@ -165,7 +165,7 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.locator('[data-alf-visit]').waitFor({ timeout: 5000 });
       { const ng = await textProblems(page, '[data-alf-visit]'); check(`⑥ 訪ねた家の部屋の並びがはみ出さない・字が切れない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
       // 「仲良し度 +10」などの知らせ(右上の .mh-gfx-chips)が、部屋の名前・顔・吹き出しを隠さない
-      const chipNg = async () => page.evaluate(() => { const hit = (a, c) => Math.min(a.right, c.right) - Math.max(a.left, c.left) > 1 && Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top) > 1; const out = []; for (const ch of document.querySelectorAll('.mh-gfx-chip')) { const r = ch.getBoundingClientRect(); if (!r.width) continue; for (const el of document.querySelectorAll('[data-alf-visit] .mhl-room .pl,[data-alf-visit] .mhl-room [data-assistant-life-room-face],[data-alf-visit-talk] p,[data-alf-visit-replies] button,[data-alf-visit-title]')) if (hit(r, el.getBoundingClientRect())) out.push((el.textContent || el.getAttribute('data-alf-face') || '').trim().slice(0, 10)); } return out; });
+      const chipNg = async () => page.evaluate(() => { const hit = (a, c) => Math.min(a.right, c.right) - Math.max(a.left, c.left) > 1 && Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top) > 1; const out = []; for (const ch of document.querySelectorAll('.mh-gfx-chip')) { const r = ch.getBoundingClientRect(); if (!r.width) continue; for (const el of document.querySelectorAll('[data-alf-visit] .mhl-room .pl,[data-alf-visit] .mhl-room [data-assistant-life-room-face],[data-alf-visit-talk] p,[data-alf-visit-replies] button,[data-alf-visit-title],[data-alf-visit-words] .mhl-sheet button,[data-alf-visit-sheet] .mhl-sheet button')) if (hit(r, el.getBoundingClientRect())) out.push((el.textContent || el.getAttribute('data-alf-face') || '').trim().slice(0, 10)); } return out; });
       { const ng = await chipNg(); check(`⑥ 仲良し度の知らせが、訪ねた家の部屋の名前・顔を隠さない(${v.id})`, ng.length === 0, ng.join(' / ')); }
       await shot(page, `${v.id}-5-visit`);
       check(`⑥ 訪ねた家は自分の家と同じ家の絵(部屋8つ・名札「あおいさんの家」)・できることの札・置き手紙で何が届くかの1行(${v.id})`, (await page.locator('[data-alf-visit] [data-assistant-life-house] .mhl-room').count()) === 8 && /あおいさんの家/.test(await page.locator('[data-alf-visit] [data-assistant-life-hname]').innerText()) && (await page.locator('[data-alf-visit-acts]').count()) === 1 && /届きます/.test(await page.locator('[data-alf-visit-note]').innerText()));
@@ -174,6 +174,11 @@ const badgeProblems = (page) => page.evaluate(() => {
       check(`⑥ おでかけ中の部屋も押せて、「おでかけ中」と分かる(${v.id})`, (await page.locator('[data-alf-visit-room-state="out"]').count()) === 1);
       check(`⑫ くわしい控えから、今日あったこと(3つ)が出る(${v.id})`, /練習スタジオ/.test(await page.locator('[data-alf-visit]').innerText()));
       await shot(page, `${v.id}-5b-visit-out`);
+      await page.locator('[data-alf-visit-sheet] .mhl-sheet button:has-text("とじる")').click();
+      await page.locator('[data-alf-visit] [data-assistant-life-room="mua"]').click();
+      await page.locator('[data-alf-visit-sheet="mua"]').waitFor({ timeout: 3000 });
+      check(`⑫ くわしい控えの押し入れが部屋のシートに出る(${v.id})`, /押し入れ/.test(await page.locator('[data-alf-visit-kept]').innerText().catch(() => '')));
+      await shot(page, `${v.id}-5c-visit-kept`);
       await page.locator('[data-alf-visit-sheet] .mhl-sheet button:has-text("とじる")').click();
       await page.locator('[data-alf-visit] [data-assistant-life-room="dra"]').click();
       await page.locator('[data-alf-visit-room="dra"]').click();
@@ -186,6 +191,8 @@ const badgeProblems = (page) => page.evaluate(() => {
       await shot(page, `${v.id}-6b-visit-words`);
       await page.locator('[data-alf-note-free]').fill('ID: aoi_1234567 で');
       check(`⑫ 自由文に連絡先を書くと理由が出て、一言を押せない(${v.id})`, (await page.locator('[data-alf-note-warn]').count()) === 1 && await page.locator('[data-alf-word="1"]').isDisabled());
+      { const ng = await chipNg(); check(`⑫ 仲良し度の知らせが、置き手紙のシートのボタンを隠さない(${v.id})`, ng.length === 0, ng.join(' / ')); }
+      await shot(page, `${v.id}-6d-visit-warn`);
       await page.locator('[data-alf-note-free]').fill('ソファふかふかでよかった！');
       await shot(page, `${v.id}-6c-visit-free`);
       await page.locator('[data-alf-word="1"]').click();

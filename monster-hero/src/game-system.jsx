@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f067667fb940126a
+// generated-sha256: 2b80cd11f262e93d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -65829,7 +65829,7 @@ function AlfFriendHouseView({ friend, onClose }) {
         <button type="button" className="mhl-tile mhl-give" disabled={can !== 'ok' || !!done} data-alf-visit-leave onClick={() => { setRoomId(null); setNoteWarn(''); setLeaving(''); }}><i>✉️</i><b>置き手紙</b><small>{done ? '残した' : can === 'ok' ? '今日あと1回' : '今日は残した'}</small></button>
       </div>
       <p className="mt-1.5 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] font-bold leading-snug text-amber-100" data-alf-visit-note={done ? 'done' : can}>{noteLine}</p>
-      <p className="mt-1 text-[9.5px] leading-snug text-slate-300">{friend.name}さんのセーブや、助手の仲良し度は変わりません。</p>
+      <p className="mt-1 text-[9.5px] leading-snug text-slate-300">{friend.name}さんのセーブや、{friend.name}さんの助手の仲良し度は変わりません。</p>
     </div>);
   const board = diaryItems.length ? (
     <div className="mt-1 rounded-xl bg-amber-50/90 px-2 py-1 text-amber-950" data-alf-visit-diary>
@@ -65844,7 +65844,7 @@ function AlfFriendHouseView({ friend, onClose }) {
   const sheet = roomId && r0 ? (
     <div className="absolute inset-0" style={{ zIndex: 30 }} data-alf-visit-sheet={roomId}>
       <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/55" onClick={() => { setRoomId(null); setTalk(null); }}/>
-      <div className="mhl-sheet" style={land ? { left: 'auto', width: '44%', top: 0, maxHeight: '100%', paddingTop: 92, borderRadius: '22px 0 0 22px' } : undefined}>
+      <div className="mhl-sheet" style={land ? { left: 'auto', width: '44%', top: 0, maxHeight: '100%', paddingTop: 92, borderRadius: '22px 0 0 22px' } : { maxHeight: 'calc(100% - 96px)' }}>
         <div className="flex items-center gap-2">
           <AlfFace id={roomId} size={46}/>
           <div className="min-w-0 flex-1">
@@ -65874,7 +65874,7 @@ function AlfFriendHouseView({ friend, onClose }) {
   const words = leaving != null ? (
     <div className="absolute inset-0" style={{ zIndex: 31 }} data-alf-visit-words>
       <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/55" onClick={() => setLeaving(null)}/>
-      <div className="mhl-sheet" style={land ? { left: 'auto', width: '44%', top: 0, maxHeight: '100%', paddingTop: 92, borderRadius: '22px 0 0 22px' } : undefined}>
+      <div className="mhl-sheet" style={land ? { left: 'auto', width: '44%', top: 0, maxHeight: '100%', paddingTop: 92, borderRadius: '22px 0 0 22px' } : { maxHeight: 'calc(100% - 96px)' }}>
         <p className="text-[15px] font-black text-amber-100">✉️ 置き手紙の一言をえらぶ{leaving ? <span className="ml-1 text-[11px] text-slate-200">(あて先: {assistantLifeName(leaving)}{h.r[leaving] && (h.r[leaving].at !== 'home' || h.r[leaving].d === 'sleep') ? '・留守' : ''})</span> : null}</p>
         <p className="text-[10.5px] font-bold text-slate-200">一言を押すと{friend.name}さんに届いて、この家から帰ります(ビートP 50)</p>
         <label className="mt-2 block text-[10.5px] font-bold text-slate-200" htmlFor="alf-note-free">✏️ ひとこと(自由・{ALF_NOTE_MAX}字まで・なくてもよい)</label>
