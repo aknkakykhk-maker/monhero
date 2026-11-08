@@ -158,9 +158,13 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.locator('[data-alf-house="aoi-0001"] [data-alf-act="look"]').click();
       await page.locator('[data-alf-visit]').waitFor({ timeout: 5000 });
       { const ng = await textProblems(page, '[data-alf-visit]'); check(`⑥ 訪ねた家の部屋の並びがはみ出さない・字が切れない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
+      // 「仲良し度 +10」などの知らせ(右上の .mh-gfx-chips)が、部屋の名前・顔・吹き出しを隠さない
+      const chipNg = async () => page.evaluate(() => { const hit = (a, c) => Math.min(a.right, c.right) - Math.max(a.left, c.left) > 1 && Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top) > 1; const out = []; for (const ch of document.querySelectorAll('.mh-gfx-chip')) { const r = ch.getBoundingClientRect(); if (!r.width) continue; for (const el of document.querySelectorAll('[data-alf-visit-room] span,[data-alf-visit-room] [data-alf-face],[data-alf-visit-talk] div,[data-alf-visit-replies] button,[data-alf-visit-title]')) if (hit(r, el.getBoundingClientRect())) out.push((el.textContent || el.getAttribute('data-alf-face') || '').trim().slice(0, 10)); } return out; });
+      { const ng = await chipNg(); check(`⑥ 仲良し度の知らせが、訪ねた家の部屋の名前・顔を隠さない(${v.id})`, ng.length === 0, ng.join(' / ')); }
       await shot(page, `${v.id}-5-visit`);
       await page.locator('[data-alf-visit-room="dra"]').click();
       await page.locator('[data-alf-visit-replies]').waitFor({ timeout: 3000 });
+      { const ng = await chipNg(); check(`⑥ 仲良し度の知らせが、声をかけた吹き出し・返事を隠さない(${v.id})`, ng.length === 0, ng.join(' / ')); }
       await shot(page, `${v.id}-6-visit-talk`);
       await page.locator('[data-alf-reply="0"]').click();
       await page.locator('[data-alf-visit-leave]').click();

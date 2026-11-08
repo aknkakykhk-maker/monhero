@@ -744,6 +744,9 @@ function AlfFriendHouseView({ friend, onClose }) {
   if (!friend || !friend.house) return null;
   const h = friend.house;
   const can = assistantLifeFriendCanLook(friend.id);
+  // 縦は大きく(下半分が空かないように)。右上は「仲良し度 +10」などの知らせ(44-growth-fx の .mh-gfx-chips)が出る所なので、案内の行にして空けておく
+  const tall = typeof window !== 'undefined' && window.innerHeight > window.innerWidth;
+  const face = tall ? 48 : 34;
   const lines = (aid) => ALF_TALK_LINES[aid] || ['いらっしゃい', 'ありがとう', 'またね'];
   const greet = (aid) => setTalk({ aid, step: 0, text: alfFill(lines(aid)[0], { h: friend.name, who: aid }) });
   const reply = (i) => { if (!talk) return; setTalked(t => [...new Set([...t, talk.aid])]); setTalk({ ...talk, step: 1, mine: ALF_PLAYER_REPLIES[i], text: alfFill(lines(talk.aid)[1 + (i % 2)], { h: friend.name, who: talk.aid }) }); };
@@ -761,32 +764,33 @@ function AlfFriendHouseView({ friend, onClose }) {
         </div>
         <button type="button" className="shrink-0 rounded-xl border border-slate-500 px-3 py-1.5 text-[12px] font-black text-slate-100" data-alf-visit-close onClick={onClose}>もどる</button>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+        <div className="flex items-center" style={{ height: 50 }} data-alf-visit-gap><p className="max-w-[55%] text-[11px] leading-snug text-slate-300">{talk ? <><span className="whitespace-nowrap">返事をえらぶか、</span><span className="whitespace-nowrap">ほかの部屋へ</span></> : <><span className="whitespace-nowrap">黄色い枠の部屋を押して、</span><span className="whitespace-nowrap">助手に声をかけよう</span></>}</p></div>
         <div className="grid grid-cols-4 gap-2" data-alf-visit-rooms>
           {h.ids.map(aid => { const r = h.r[aid] || { at: 'home', d: 'idle' }; const home = r.at === 'home'; const can = home && r.d !== 'sleep'; return (
             <button key={aid} type="button" disabled={!can} data-alf-visit-room={aid} onClick={() => can && greet(aid)}
-              className={`flex min-h-[78px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl border p-1 ${can ? (talk && talk.aid === aid ? 'border-amber-300 bg-amber-900/40' : 'border-amber-200/50 bg-slate-800/90') : 'border-slate-600/40 bg-slate-900/70 opacity-60'}`}>
-              <AlfFace id={aid} size={34}/>
-              <span className="whitespace-nowrap text-[10.5px] font-black text-slate-100">{assistantLifeName(aid)}</span>
+              style={{ minHeight: tall ? 112 : 78 }}
+              className={`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl border p-1 ${can ? (talk && talk.aid === aid ? 'border-amber-300 bg-amber-900/40' : 'border-amber-200/50 bg-slate-800/90') : 'border-slate-600/40 bg-slate-900/70 opacity-60'}`}>
+              <AlfFace id={aid} size={face}/>
+              <span className={`whitespace-nowrap font-black text-slate-100 ${tall ? 'text-[12px]' : 'text-[10.5px]'}`}>{assistantLifeName(aid)}</span>
               <span className="whitespace-nowrap text-[9px] text-slate-300">{home ? (ALF_DOING_ROOM[r.d] || 'のんびり中') : 'おでかけ中'}</span>
             </button>); })}
         </div>
         {talk && (
-          <div className="mt-3" data-alf-visit-talk>
-            {talk.mine && <p className="mb-1 text-right text-[11.5px] text-pink-100" data-alf-visit-mine>あなた「{talk.mine}」</p>}
+          <div className={tall ? 'mt-5' : 'mt-3'} data-alf-visit-talk>
+            {talk.mine && <p className={`mb-1 text-right text-pink-100 ${tall ? 'text-[13px]' : 'text-[11.5px]'}`} data-alf-visit-mine>あなた「{talk.mine}」</p>}
             <div className="flex items-end gap-2">
-              <AlfFace id={talk.aid} size={40}/>
-              <div className="min-w-0 rounded-2xl border border-sky-300/40 bg-sky-950/70 px-2.5 py-1.5 text-[12px] leading-snug text-sky-50">
+              <AlfFace id={talk.aid} size={tall ? 60 : 40}/>
+              <div className={`min-w-0 rounded-2xl border border-sky-300/40 bg-sky-950/70 leading-snug text-sky-50 ${tall ? 'px-3 py-2.5 text-[15px]' : 'px-2.5 py-1.5 text-[12px]'}`}>
                 <p className="text-[9.5px] font-black opacity-80">{alfTheirLabel(friend.name, talk.aid)}</p><p>{talk.text}</p>
               </div>
             </div>
-            {talk.step === 0 && <div className="mt-2 grid grid-cols-3 gap-1.5" data-alf-visit-replies>{ALF_PLAYER_REPLIES.map((t, i) => <button key={i} type="button" className="rounded-xl border border-pink-200/50 bg-pink-950/50 px-1 py-1.5 text-[11px] font-black text-pink-50" data-alf-reply={i} onClick={() => reply(i)}>{t}</button>)}</div>}
+            {talk.step === 0 && <div className="mt-2 grid grid-cols-3 gap-1.5" data-alf-visit-replies>{ALF_PLAYER_REPLIES.map((t, i) => <button key={i} type="button" className={`rounded-xl border border-pink-200/50 bg-pink-950/50 px-1 font-black text-pink-50 ${tall ? 'py-3 text-[12.5px]' : 'py-1.5 text-[11px]'}`} data-alf-reply={i} onClick={() => reply(i)}>{t}</button>)}</div>}
           </div>)}
-        {!talk && <p className="mt-3 text-[11px] text-slate-300">黄色い枠の部屋を押すと、その助手に声をかけられます。</p>}
         {done ? <p className="mt-3 text-[11.5px] font-black text-amber-200" data-alf-visit-note>{done}</p>
           : can === 'ok' ? (leaving
             ? <div className="mt-3 rounded-2xl border border-amber-300/40 bg-slate-900 p-2" data-alf-visit-words><p className="text-[11px] font-black text-amber-200">置き手紙の一言をえらぶ</p><div className="mt-1 flex flex-wrap gap-1">{ALF_WORD_TEXTS.map((t, i) => <button key={i} type="button" className="rounded-lg border border-amber-200/40 px-1.5 py-0.5 text-[10.5px] text-amber-50" data-alf-word={i} onClick={() => leave(i)}>{t}</button>)}</div></div>
-            : <button type="button" className="mt-3 w-full rounded-2xl bg-amber-300 py-2 text-[12.5px] font-black text-slate-950" data-alf-visit-leave onClick={() => setLeaving(true)}>✉️ 置き手紙を残して帰る</button>)
+            : <button type="button" className={`w-full rounded-2xl bg-amber-300 font-black text-slate-950 ${tall ? 'mt-5 py-3 text-[14px]' : 'mt-3 py-2 text-[12.5px]'}`} data-alf-visit-leave onClick={() => setLeaving(true)}>✉️ 置き手紙を残して帰る</button>)
           : <p className="mt-3 text-[10.5px] text-slate-400">{can === 'done' ? '今日はこの家に置き手紙を残しました。' : '今日はもう置き手紙を残せません(朝4時に戻ります)。'}</p>}
         <p className="mt-3 text-[10px] leading-snug text-slate-400">{friend.name}さんには、あなたが訪ねたことが置き手紙で届きます。相手のセーブや助手の仲良し度は変わりません。</p>
       </div>

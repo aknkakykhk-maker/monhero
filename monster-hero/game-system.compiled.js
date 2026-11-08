@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 25d1a2f03dc3748c
+// source-sha256: 0dce62ef55c0cef7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -120509,6 +120509,8 @@ function AlfFriendHouseView({
   if (!friend || !friend.house) return null;
   const h = friend.house;
   const can = assistantLifeFriendCanLook(friend.id);
+  const tall = typeof window !== 'undefined' && window.innerHeight > window.innerWidth;
+  const face = tall ? 48 : 34;
   const lines = aid => ALF_TALK_LINES[aid] || ['いらっしゃい', 'ありがとう', 'またね'];
   const greet = aid => setTalk({
     aid,
@@ -120568,8 +120570,24 @@ function AlfFriendHouseView({
     "data-alf-visit-close": true,
     onClick: onClose
   }, "もどる")), React.createElement("div", {
-    className: "min-h-0 flex-1 overflow-y-auto px-3 py-2"
+    className: "min-h-0 flex-1 overflow-y-auto px-3 pb-3"
   }, React.createElement("div", {
+    className: "flex items-center",
+    style: {
+      height: 50
+    },
+    "data-alf-visit-gap": true
+  }, React.createElement("p", {
+    className: "max-w-[55%] text-[11px] leading-snug text-slate-300"
+  }, talk ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "返事をえらぶか、"), React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "ほかの部屋へ")) : React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "黄色い枠の部屋を押して、"), React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "助手に声をかけよう")))), React.createElement("div", {
     className: "grid grid-cols-4 gap-2",
     "data-alf-visit-rooms": true
   }, h.ids.map(aid => {
@@ -120585,28 +120603,31 @@ function AlfFriendHouseView({
       disabled: !can,
       "data-alf-visit-room": aid,
       onClick: () => can && greet(aid),
-      className: `flex min-h-[78px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl border p-1 ${can ? talk && talk.aid === aid ? 'border-amber-300 bg-amber-900/40' : 'border-amber-200/50 bg-slate-800/90' : 'border-slate-600/40 bg-slate-900/70 opacity-60'}`
+      style: {
+        minHeight: tall ? 112 : 78
+      },
+      className: `flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl border p-1 ${can ? talk && talk.aid === aid ? 'border-amber-300 bg-amber-900/40' : 'border-amber-200/50 bg-slate-800/90' : 'border-slate-600/40 bg-slate-900/70 opacity-60'}`
     }, React.createElement(AlfFace, {
       id: aid,
-      size: 34
+      size: face
     }), React.createElement("span", {
-      className: "whitespace-nowrap text-[10.5px] font-black text-slate-100"
+      className: `whitespace-nowrap font-black text-slate-100 ${tall ? 'text-[12px]' : 'text-[10.5px]'}`
     }, assistantLifeName(aid)), React.createElement("span", {
       className: "whitespace-nowrap text-[9px] text-slate-300"
     }, home ? ALF_DOING_ROOM[r.d] || 'のんびり中' : 'おでかけ中'));
   })), talk && React.createElement("div", {
-    className: "mt-3",
+    className: tall ? 'mt-5' : 'mt-3',
     "data-alf-visit-talk": true
   }, talk.mine && React.createElement("p", {
-    className: "mb-1 text-right text-[11.5px] text-pink-100",
+    className: `mb-1 text-right text-pink-100 ${tall ? 'text-[13px]' : 'text-[11.5px]'}`,
     "data-alf-visit-mine": true
   }, "あなた「", talk.mine, "」"), React.createElement("div", {
     className: "flex items-end gap-2"
   }, React.createElement(AlfFace, {
     id: talk.aid,
-    size: 40
+    size: tall ? 60 : 40
   }), React.createElement("div", {
-    className: "min-w-0 rounded-2xl border border-sky-300/40 bg-sky-950/70 px-2.5 py-1.5 text-[12px] leading-snug text-sky-50"
+    className: `min-w-0 rounded-2xl border border-sky-300/40 bg-sky-950/70 leading-snug text-sky-50 ${tall ? 'px-3 py-2.5 text-[15px]' : 'px-2.5 py-1.5 text-[12px]'}`
   }, React.createElement("p", {
     className: "text-[9.5px] font-black opacity-80"
   }, alfTheirLabel(friend.name, talk.aid)), React.createElement("p", null, talk.text))), talk.step === 0 && React.createElement("div", {
@@ -120615,12 +120636,10 @@ function AlfFriendHouseView({
   }, ALF_PLAYER_REPLIES.map((t, i) => React.createElement("button", {
     key: i,
     type: "button",
-    className: "rounded-xl border border-pink-200/50 bg-pink-950/50 px-1 py-1.5 text-[11px] font-black text-pink-50",
+    className: `rounded-xl border border-pink-200/50 bg-pink-950/50 px-1 font-black text-pink-50 ${tall ? 'py-3 text-[12.5px]' : 'py-1.5 text-[11px]'}`,
     "data-alf-reply": i,
     onClick: () => reply(i)
-  }, t)))), !talk && React.createElement("p", {
-    className: "mt-3 text-[11px] text-slate-300"
-  }, "黄色い枠の部屋を押すと、その助手に声をかけられます。"), done ? React.createElement("p", {
+  }, t)))), done ? React.createElement("p", {
     className: "mt-3 text-[11.5px] font-black text-amber-200",
     "data-alf-visit-note": true
   }, done) : can === 'ok' ? leaving ? React.createElement("div", {
@@ -120638,7 +120657,7 @@ function AlfFriendHouseView({
     onClick: () => leave(i)
   }, t)))) : React.createElement("button", {
     type: "button",
-    className: "mt-3 w-full rounded-2xl bg-amber-300 py-2 text-[12.5px] font-black text-slate-950",
+    className: `w-full rounded-2xl bg-amber-300 font-black text-slate-950 ${tall ? 'mt-5 py-3 text-[14px]' : 'mt-3 py-2 text-[12.5px]'}`,
     "data-alf-visit-leave": true,
     onClick: () => setLeaving(true)
   }, "✉️ 置き手紙を残して帰る") : React.createElement("p", {
