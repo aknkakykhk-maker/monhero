@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4f74cc88a2061cc5
+// generated-sha256: 649689c089b82b0a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -54390,7 +54390,7 @@ function RhythmBeatPresenceStrip({ assistants = [], friends = [], onPick, resolv
   return (
     <section data-rhythm-beat-presence className="rounded-2xl border-[1.5px] border-amber-300/60 bg-gradient-to-r from-indigo-950/95 to-slate-900/95 px-2.5 py-2">
       <div className="flex items-center gap-1.5 text-[11px] font-black text-amber-200">
-        <span>🎵 いまモンヒロビートにいる人</span>
+        <span className="min-w-0 break-keep truncate">🎵 いまモンヒロビートにいる人</span>
         <small className="ml-auto text-[9.5px] font-bold text-slate-300">押すと一緒に遊べる所</small>
       </div>
       <div className="mt-1.5 flex gap-2 overflow-x-auto pb-0.5">

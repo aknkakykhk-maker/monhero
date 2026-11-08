@@ -1396,7 +1396,7 @@ function RhythmBeatPresenceStrip({ assistants = [], friends = [], onPick, resolv
   return (
     <section data-rhythm-beat-presence className="rounded-2xl border-[1.5px] border-amber-300/60 bg-gradient-to-r from-indigo-950/95 to-slate-900/95 px-2.5 py-2">
       <div className="flex items-center gap-1.5 text-[11px] font-black text-amber-200">
-        <span>🎵 いまモンヒロビートにいる人</span>
+        <span className="min-w-0 break-keep truncate">🎵 いまモンヒロビートにいる人</span>
         <small className="ml-auto text-[9.5px] font-bold text-slate-300">押すと一緒に遊べる所</small>
       </div>
       <div className="mt-1.5 flex gap-2 overflow-x-auto pb-0.5">
