@@ -74,6 +74,8 @@ const pressable = (page, sel) => page.evaluate((s) => { const b = document.query
   const openPairSheet = async (page, id) => { await page.locator(`[data-assistant-life-room="${id}"]`).click(); await page.waitForTimeout(300); await page.locator('[data-assistant-life-room-act="give"]').click(); await page.waitForTimeout(400); };
   const points = (page) => page.evaluate(() => Number(JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0')));
   const owned = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('mh_owned_items') || '{}'));
+  // 仲良し度の段が上がったときの画面(ほかの場面と同じ演出)は押して閉じる
+  const closeFx = async (page) => { for (let i = 0; i < 6 && await page.locator('[data-growth-fx-sheet]').count(); i++) { await page.locator('[data-growth-fx-sheet]').first().click({ timeout: 1500 }).catch(() => {}); await page.waitForTimeout(400); } };
   const costOf = (page, itemId) => page.evaluate((i) => (RHYTHM_EVENT_POINT_SHOP_OFFERS.find(o => o.itemId === i) || {}).cost, itemId);
   try {
     // ①〜⑦ 縦 390
@@ -101,7 +103,7 @@ const pressable = (page, sel) => page.evaluate((s) => { const b = document.query
       // ④ 買って贈る(窓は毎回出る)
       await page.locator('[data-assistant-life-give-buy]').click(); await page.waitForTimeout(400);
       check('② 確かめの窓は毎回出る', (await page.locator('[data-assistant-life-buy-confirm]').count()) === 1);
-      await page.locator('[data-assistant-life-buy-go]').click(); await page.waitForTimeout(1200); await finishTalk(page);
+      await page.locator('[data-assistant-life-buy-go]').click(); await page.waitForTimeout(1200); await finishTalk(page); await closeFx(page);
       await page.locator('[data-assistant-life-scene-back]').click({ timeout: 3000 }).catch(() => {}); await page.waitForTimeout(300);
       const p1 = await points(page), own1 = await owned(page);
       const day = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_assistant_life_gift_day_v1') || 'null'));
@@ -131,7 +133,7 @@ const pressable = (page, sel) => page.evaluate((s) => { const b = document.query
       const conf2 = await page.locator('[data-assistant-life-buy-confirm]').innerText().catch(() => '');
       const letterCost = await costOf(page, 'solo_letter');
       check('⑦ 1人に贈るシートでも確かめの窓(友情Lv の行は無い)', /手書きの手紙/.test(conf2) && /仲良し度 \+/.test(conf2) && !/友情Lv/.test(conf2) && conf2.includes(`3,000 → ${(3000 - letterCost).toLocaleString()}`), conf2.replace(/\s+/g, ' ').slice(0, 120));
-      await page.locator('[data-assistant-life-buy-go]').click(); await page.waitForTimeout(1200); await finishTalk(page);
+      await page.locator('[data-assistant-life-buy-go]').click(); await page.waitForTimeout(1200); await finishTalk(page); await closeFx(page);
       await page.locator('[data-assistant-life-scene-back]').click({ timeout: 3000 }).catch(() => {}); await page.waitForTimeout(300);
       const solo = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_assistant_life_solo_gift_v1') || 'null'));
       check('⑦ 1人に買って贈ると、ビートPが減り1人の記録に残る', (await points(page)) === 3000 - letterCost && !!(solo && solo.used && solo.used.letter === id), JSON.stringify(solo));
@@ -149,6 +151,7 @@ const pressable = (page, sel) => page.evaluate((s) => { const b = document.query
       const room = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_assistant_life_room_v1') || 'null'));
       const plantCost = await costOf(page, 'furn_plant');
       check('⑧ 家具を買って贈ると部屋に入り、ビートPが値段ぶん減る', !!(room && room[id] && room[id].got && room[id].got.plant) && (await points(page)) === p2 - plantCost && (await page.locator('[data-assistant-life-furn-buy="plant"]').count()) === 0, `${await points(page)}`);
+      await closeFx(page);
       await page.locator('[data-assistant-life-furn-close]').click().catch(() => {}); await page.waitForTimeout(400);
       await finishTalk(page).catch(() => {}); await page.locator('[data-assistant-life-scene-back]').click({ timeout: 2000 }).catch(() => {}); await page.waitForTimeout(300);
       await page.locator('[data-assistant-life-roomview-close]').click({ timeout: 2000 }).catch(() => page.mouse.click(20, 60)); await page.waitForTimeout(200); // 部屋は大きな部屋になったので「← 家へ」で閉じる(2026-11-08)

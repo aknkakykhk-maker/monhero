@@ -391,3 +391,9 @@
 - 社長の答え(2026-11-08): 文案1〜5に6を足して「この文で公開」。カード部屋の 1.5倍を使い切った助手は「HOMEも地図も出す」(前の Q2 A「HOME では顔を外す」を改めた)→ HOME の顔の左下と地図の全身に「済」の印(AssistantLifeSpentMark)、顔は少し暗く、「UP」は使い切っていない助手がいるときだけ。カード部(ソランド・ツナグ)へ知らせ済み、カード部の検査3本(card-life-limit-check E・card-life-limit-browser-check ⑤⑦・card-life-reward-browser-check ④)も合わせた
 - 更新履歴(18:25)・ヘルプ(居場所の文+カード部屋の1.5倍の項に「済」の1文)入り。当番マスモンは地図に出さないまま(❸B)
 - 既知の別件: assistant-life-friend-browser-check ⑥⑫(仲良し度の知らせと置き手紙)が main でも大きさを変えてゆれる/save-keys-check が main で NG(mh_assistant_life_masmon_v1 が SAVE_DATA.md に無い・キズナ側)
+## キズナ4(2026-11-08〜・キズナ3の後任)染め方の作り込み
+- 枝 claude/kizuna4-dye。染め方 v2(助手8人のくせ・30体の部位の表・歯止め・季節/好きな色の染め直し)。表と決まりは DYE-DETAIL.md
+- 保存は mh_assistant_life_masmon_v1 に dyes を足すだけ(made の v1 の色は書き換えない・版の印 v:2)。SAVE_DATA.md にキーを書いた
+- 止め絵 masmon-life/dye2/(sheet-1・sheet-2・players・season・zoom-*・game/)。撮り直しは masmon-life/dye2-shoot.js
+- 検査: run-checks --changed は 409/413。NG のうち「子」の言い方・保存キーの載せ忘れは直した。残りの2本(assistant-life-friend-browser-check の仲良し度の知らせ・sheet-close-check の AssistantMasmonDetail「もどる」)は main でも出る前からのもの
+- 待ち: 窓口経由で社長の確認(止め絵・更新履歴とヘルプの文案)→ ミハリの確認 → 更新履歴・ヘルプを入れて PR・マージ

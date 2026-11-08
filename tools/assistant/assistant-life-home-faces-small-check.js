@@ -28,7 +28,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(oneTimeNoticeSeed());
       await page.addInitScript(seed, { storyIds: STORY_IDS, life: true, intro: false, bondAll: null });
       await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
-      await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
+      await page.goto(`${process.env.LIFE_BASE ? process.env.LIFE_BASE.replace(/\/?$/, "/") : `http://localhost:${PORT}/`}monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
       await toHome(page); await waitFaces(page); await finishTalk(page); await page.waitForTimeout(1500);
       const out = await page.evaluate(() => { const ng = [];
         for (const f of document.querySelectorAll('[data-assistant-life-home-faces]')) { const r = f.getBoundingClientRect(); if (!r.width) continue; if (r.top < -1 || r.left < -1 || r.bottom > innerHeight + 1 || r.right > innerWidth + 1) ng.push(`顔の列が画面の外 ${f.getAttribute('data-assistant-life-home-faces')} 下端${Math.round(r.bottom)}/${innerHeight}`); }

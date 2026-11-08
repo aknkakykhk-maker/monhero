@@ -1029,8 +1029,8 @@ export const handleFriendScenes = async ({ body, digest, client, take, refund, l
 // 回数は別の表(assistant_masmon_name_usage)。index.ts の takeMasmon/refundMasmon が数える。全員の上限を 0 にすると止まる
 export const MASMON_NAME_USER_LIMIT = 3;
 export const MASMON_NAME_TOTAL_LIMIT = 500;
-export const MASMON_NAME_MAX_TOKENS = 2500;
-export const MASMON_NAME_SLOTS_MAX = 5;
+export const MASMON_NAME_MAX_TOKENS = 3500;
+export const MASMON_NAME_SLOTS_MAX = 8; // 2026-11-08 引き直しで1人8体まで(前は5)
 export const MASMON_NAME_RE = /^[ぁ-ゖァ-ヺー一-龠々・]{2,8}$/u;
 // 出してはいけない言葉(MFバトルカードのチャットの禁止語と同じ考え。かな・カナは同じに見る)
 export const MASMON_NAME_NG = Object.freeze([
@@ -1048,7 +1048,7 @@ export const masmonNameOk = (n, assistantNames = []) => {
   if (assistantNames.some(a => a && masmonFold(a) === f)) return false;
   return true;
 };
-// 頼みをそろえる。items: [{ a: 助手id, s: [{ slot: 1〜5, mon: モンスター名, why: 好きなわけ }] }]
+// 頼みをそろえる。items: [{ a: 助手id, s: [{ slot: 1〜8, mon: モンスター名, why: 好きなわけ }] }]
 export const normalizeMasmonItems = (raw, digest) => {
   const out = []; const seen = new Set();
   for (const it of Array.isArray(raw) ? raw.slice(0, 12) : []) {

@@ -518,6 +518,8 @@ const sbFetchFriendRoster = async (selfIdRaw) => {
     lastSeenAt: (looks[view.otherId] || {}).lastSeenAt || 0,
     // アイコン(2026-11-08 ビート部の「いまモンヒロビートにいる人」で顔を出す。足すだけ)
     icon: (looks[view.otherId] || {}).icon ?? null,
+    // プロフィールのフレーム(2026-11-08 社長「プレイヤー側は顔アイコンとフレームもリンクさせて」。足すだけ)
+    profileFrame: (looks[view.otherId] || {}).profileFrame || null,
   })).sort((a, b) => b.lastSeenAt - a.lastSeenAt);
 };
 
@@ -558,6 +560,38 @@ const friendsSetRoomWaiting = (on) => { _friendsRoomWaiting = !!on; };
 // 合言葉(プライベート)の部屋にいるあいだ真(ビート部が部屋の出入りで呼ぶ)。演奏中(RHYTHM_PLAY)は「演奏中」を先にする(テンポと決めた)
 let _friendsRoomPrivate = false;
 const friendsSetRoomPrivate = (on) => { _friendsRoomPrivate = !!on; };
+// 助手ライフの中のどこにいるか(2026-11-08 社長「ただ助手ライフと書かれてるだけだと味気ない」・案A)。家の画面と訪ねた家が知らせる
+//   lv … h=家(la があればその助手の部屋)/w=みんなの居場所/f=友情/i=道具/p=フレンドの家を選ぶ/v=フレンドの家を訪ねている
+//   records.lv・records.la で送る(表・SQL は増やさない)。「いまの状態をフレンドに見せる」が切なら送らない
+const FRIEND_LIFE_SPOTS = Object.freeze(['h', 'w', 'f', 'i', 'p', 'v']);
+const FRIEND_LIFE_SPOT_TEXT = Object.freeze({
+  h: ['🏡 助手の家', '🏡 助手ライフで家の様子を見ている'],
+  w: ['📋 みんなの居場所', '📋 助手ライフでみんなの居場所を見ている'],
+  f: ['🤝 助手の友情', '🤝 助手ライフで助手どうしの友情を見ている'],
+  i: ['🎒 助手の道具', '🎒 助手ライフで道具を選んでいる'],
+  p: ['🏘 遊びに行く家選び', '🏘 遊びに行くフレンドの家を選んでいる'],
+  v: ['🏘 フレンドの家へ', '🏘 フレンドの家に遊びに行っている'],
+});
+let _friendsLifeSpot = { lv: '', la: '' };
+let _friendsLifeVisit = 0;
+const friendsLifeSpotChanged = () => { try { if (typeof window !== 'undefined') window.dispatchEvent(new Event('mh-friend-spot')); } catch (error) { /* 知らせられなくても、2分ごとの知らせで届く */ } };
+const friendsSetLifeSpot = (lv, la = '') => {
+  const next = { lv: FRIEND_LIFE_SPOTS.includes(lv) ? lv : '', la: typeof la === 'string' ? la.slice(0, 16) : '' };
+  if (next.lv === _friendsLifeSpot.lv && next.la === _friendsLifeSpot.la) return;
+  _friendsLifeSpot = next; friendsLifeSpotChanged();
+};
+const friendsSetLifeVisit = (on) => { _friendsLifeVisit = Math.max(0, _friendsLifeVisit + (on ? 1 : -1)); friendsLifeSpotChanged(); };
+// いま送る印(訪ねた家を開いているあいだは v を先にする)
+const friendsLifeSpotNow = () => (_friendsLifeVisit > 0 ? { lv: 'v', la: '' } : (_friendsLifeSpot.lv ? { lv: _friendsLifeSpot.lv, la: _friendsLifeSpot.lv === 'h' ? _friendsLifeSpot.la : '' } : null));
+// 受け取った印から [一覧の短い形, プロフィールの文の形]。知らない印・知らない助手は出さない(古い版と同じ「🏡 助手ライフ」へ戻る)
+const friendsLifeSpotText = (records) => {
+  if (!records || !FRIEND_LIFE_SPOTS.includes(records.lv)) return null;
+  if (records.lv === 'h' && records.la) {
+    const a = typeof assistantById === 'function' ? assistantById(records.la) : null;
+    if (a && a.name) return [`🏡 ${a.name}の部屋`, `🏡 ${a.name}の部屋をのぞいている`];
+  }
+  return FRIEND_LIFE_SPOT_TEXT[records.lv];
+};
 // 受け取った行の場所。place が 'other' で records.pl があれば、そちら
 const friendsPlaceFromRow = (place, records) => {
   if (place === 'other' && records && FRIEND_SUB_PLACES.includes(records.pl)) return records.pl;
@@ -570,6 +604,8 @@ const friendsPlaceOfScreen = (gameState) => {
   const name = typeof gameState === 'string' ? gameState : '';
   if (_friendsRoomPrivate && name !== 'RHYTHM_PLAY') return 'roomPrivate';
   if (_friendsRoomWaiting) return 'room';
+  // プロフィールから「🏘 家へ遊びに行く」で訪ねているあいだも、助手ライフにいることにする
+  if (_friendsLifeVisit > 0 && name !== 'RHYTHM_PLAY' && name !== 'CARD_BATTLE') return 'life';
   // 助手ライフは HOME の上に開く器(56-assistant-life の data-assistant-life-screen)
   if (name === 'HOME' && typeof document !== 'undefined' && document.querySelector && document.querySelector('[data-assistant-life-screen]')) return 'life';
   if (name === 'HOME') return 'home';
@@ -592,6 +628,7 @@ const friendsPresenceText = (place, updatedAtMs, nowMs, records = null) => {
     const where = FRIEND_IDLE_OPEN_TEXT[place] || FRIEND_IDLE_OPEN_TEXT.other;
     return { online: true, auto: true, text: FRIEND_AUTO_TEXT, sub: records.au ? (place && place !== 'other' && place !== 'home' ? FRIEND_PLACE_TEXT[place] : '') : `${where}を開いたまま ${records.im}分 操作なし` };
   }
+  if (online && place === 'life') { const sp = friendsLifeSpotText(records); if (sp) return { online: true, text: sp[0], long: sp[1] }; }
   if (online) return { online: true, text: FRIEND_PLACE_TEXT[place] || FRIEND_PLACE_TEXT.other };
   return { online: false, text: friendsLastSeenText(updatedAtMs, nowMs) };
 };
@@ -608,7 +645,7 @@ const friendsPresenceFor = async (ids) => {
     const at = Number.isFinite(r.updatedAt) ? r.updatedAt : 0;
     const p = friendsPresenceText(r.place, at, now, r.records);
     // place … いまの場所(friendsPlaceFromRow を通した値。2026-11-08 ビート部が「モンヒロビートにいるか」を見分けるのに足した)
-    out[id] = { online: p.online, text: p.text, sub: p.sub || '', auto: !!p.auto, at, place: r.place || null };
+    out[id] = { online: p.online, text: p.text, long: p.long || '', sub: p.sub || '', auto: !!p.auto, at, place: r.place || null };
   });
   return out;
 };
@@ -752,6 +789,7 @@ const friendsNormalizeRecords = (raw) => {
   return {
     pl: FRIEND_SUB_PLACES.includes(raw.pl) ? raw.pl : null,
     au: raw.au === 1 ? 1 : 0, im: Math.min(1440, friendsInt(raw.im)),
+    lv: FRIEND_LIFE_SPOTS.includes(raw.lv) ? raw.lv : '', la: typeof raw.la === 'string' && /^[a-z0-9_]{1,16}$/i.test(raw.la) ? raw.la : '',
     battle,
     rhythm: { played: friendsInt(raw.rhythm && raw.rhythm.played), songs, ach: friendsNormalizeAchievements(raw.rhythm && raw.rhythm.ach) },
     collection: { masu: friendsInt(c.masu), dex: friendsInt(c.dex), dexTotal: friendsInt(c.dexTotal), transcended: friendsInt(c.transcended),
@@ -784,6 +822,7 @@ const friendsBuildSummary = ({ place, masuMons, favoriteMasuId, playtime, messag
   return {
     place: show && Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, place) ? place : 'other',
     au: show && auto ? 1 : 0,
+    spot: show && place === 'life' ? friendsLifeSpotNow() : null,
     im: show && place !== 'rhythmPlay' && place !== 'cardBattle' ? Math.min(1440, friendsIdleMinutes()) : 0,
     startedOn: (typeof span.since === 'string' && FRIEND_DAY_RE.test(span.since)) ? span.since : null,
     playSeconds: Number.isFinite(totalMs) && totalMs >= 0 ? Math.floor(totalMs / 1000) : null,
@@ -811,7 +850,8 @@ const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
     if (_friendProfileExtraUnavailable) await send(base);
     else {
       // MFバトルカードの場所は records.pl に載せる(records が無いときも、場所だけは載せる)
-      const now = { ...(sub ? { pl: sub } : {}), ...(summary.au ? { au: 1 } : {}), ...(summary.im ? { im: summary.im } : {}) };
+      const now = { ...(sub ? { pl: sub } : {}), ...(summary.au ? { au: 1 } : {}), ...(summary.im ? { im: summary.im } : {}),
+        ...(summary.spot && summary.spot.lv ? { lv: summary.spot.lv, ...(summary.spot.la ? { la: summary.spot.la } : {}) } : {}) };
       const records = Object.keys(now).length ? { ...(summary.records || {}), ...now } : summary.records;
       try { await send({ ...base, message: summary.message, records }); }
       catch (error) {

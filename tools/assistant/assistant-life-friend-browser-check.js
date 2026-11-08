@@ -18,13 +18,14 @@ const shotArg = process.argv.indexOf('--shots');
 const shotDir = shotArg > 0 ? path.resolve(process.argv[shotArg + 1] || 'friend-shots') : null;
 if (shotDir) fs.mkdirSync(shotDir, { recursive: true });
 let failed = 0;
+let presenceLife = false; // ⑰ のあいだ、偽サーバーが助手ライフの中の場所を返す
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 
 // 偽の Supabase(承認済みのフレンド2人・控え2軒・自分あての置き手紙2通)
 const fresh = new Date(Date.now() - 3 * 3600000).toISOString();
 const dayKey = new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 10);
 const HOUSES = [
-  { breeder_id: 'aoi-0001', open: true, updated_at: fresh, house: { v: 1, ids: ['mua', 'kiki', 'dra', 'momosuke', 'atsu', 'kyuko', 'sorashido', 'erubin'], r: { mua: { at: 'home', d: 'snack', m: 'happy', fu: { c: 'lantern', w: 'starpic', f: 'sofa' } }, kiki: { at: 'out', d: 'walk', m: 'happy' }, dra: { fu: { f: 'bear', w: 'trophy' }, at: 'home', d: 'idle', m: 'happy' }, momosuke: { at: 'home', d: 'practice', m: 'eager' }, atsu: { at: 'home', d: 'cards', m: 'happy' }, kyuko: { at: 'out', d: 'read', m: 'happy' }, sorashido: { at: 'home', d: 'training', m: 'happy' }, erubin: { at: 'home', d: 'sleep', m: 'sleepy' } }, ac1: { k: 'beat', x: '「風がそよぐ」を遊んだ', at: Date.now() - 3600000 }, dy: [{ t: '10:10', x: '朝: みゅあ・ききが居間でおやつ' }, { t: '09:00', x: 'ドラ セッション → 🎵Lv2' }] } },
+  { breeder_id: 'aoi-0001', open: true, updated_at: fresh, house: { v: 1, ids: ['mua', 'kiki', 'dra', 'momosuke', 'atsu', 'kyuko', 'sorashido', 'erubin'], r: { mua: { at: 'home', d: 'snack', m: 'happy', fu: { c: 'lantern', w: 'starpic', f: 'sofa' } }, kiki: { p: 'cardroom', at: 'out', d: 'walk', m: 'happy' }, dra: { fu: { f: 'bear', w: 'trophy' }, at: 'home', d: 'idle', m: 'happy' }, momosuke: { at: 'home', d: 'practice', m: 'eager' }, atsu: { at: 'home', d: 'cards', m: 'happy' }, kyuko: { at: 'out', d: 'read', m: 'happy' }, sorashido: { at: 'home', d: 'training', m: 'happy' }, erubin: { at: 'home', d: 'sleep', m: 'sleepy' } }, ac1: { k: 'beat', x: '「風がそよぐ」を遊んだ', at: Date.now() - 3600000 }, dy: [{ t: '10:10', x: '朝: みゅあ・ききが居間でおやつ' }, { t: '09:00', x: 'ドラ セッション → 🎵Lv2' }] } },
   { breeder_id: 'yuto-0001', open: true, updated_at: fresh, house: { v: 1, ids: ['momosuke', 'kyuko'], r: { momosuke: { at: 'home', d: 'snack', m: 'happy' }, kyuko: { at: 'home', d: 'idle', m: 'happy' } } } },
 ];
 const route = (posted) => async (r) => {
@@ -52,6 +53,8 @@ const route = (posted) => async (r) => {
   // いまの状態(friend_profiles の place・records)。あおい=オート周回中(モンヒロビート)/ゆうと=演奏中/みお=ホームを開いたまま25分
   if (/friend_profiles/.test(url) && /select=breeder_id,place/.test(url)) {
     const at = new Date(Date.now() - 60000).toISOString();
+    // ⑰ 助手ライフの中の場所(あおい=みゅあの部屋/ゆうと=フレンドの家/みお=みんなの居場所)
+    if (presenceLife) return json([{ breeder_id: 'aoi-0001', place: 'other', updated_at: at, records: { pl: 'life', lv: 'h', la: 'mua' } }, { breeder_id: 'yuto-0001', place: 'other', updated_at: at, records: { pl: 'life', lv: 'v' } }, { breeder_id: 'mio-0001', place: 'other', updated_at: at, records: { pl: 'life', lv: 'w' } }]);
     return json([{ breeder_id: 'aoi-0001', place: 'rhythm', updated_at: at, records: { au: 1 } }, { breeder_id: 'yuto-0001', place: 'other', updated_at: at, records: { pl: 'rhythmPlay' } }, { breeder_id: 'mio-0001', place: 'home', updated_at: at, records: { im: 25 } }]);
   }
   if (/friend_profiles|breeder_profiles/.test(url)) return json([{ breeder_id: 'aoi-0001', user_name: 'あおい', last_seen_at: fresh }, { breeder_id: 'yuto-0001', user_name: 'ゆうと', last_seen_at: fresh }, { breeder_id: 'mio-0001', user_name: 'みお', last_seen_at: fresh }]);
@@ -107,13 +110,13 @@ const badgeProblems = (page) => page.evaluate(() => {
   await new Promise(r => server.listen(PORT, r));
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const shot = async (page, name) => { if (shotDir) await page.screenshot({ path: path.join(shotDir, `${name}.png`) }); };
-  const open = async ({ w, h, on = true }) => {
+  const open = async ({ w, h, on = true, stub = [] }) => {
     const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: shotDir ? 2 : 1 });
     const errors = []; page.on('pageerror', e => errors.push(String(e)));
     const posted = []; const calls = [];
     page.on('request', q => { if (/assistant_life_friend|assistant-chat/.test(q.url())) calls.push(`${q.method()} ${q.url()}`); });
     // 自動操作の見張り(本物へ書かない)は、行き来の表だけ偽サーバーへ通す
-    await page.addInitScript(() => { window.__mhSupabaseStubbed = ['assistant_life_friend']; });
+    await page.addInitScript((extra) => { window.__mhSupabaseStubbed = ['assistant_life_friend', ...extra]; }, stub);
     await page.addInitScript(quietBootSeed());
     await page.addInitScript(updateNoticeSeed());
     await page.addInitScript(oneTimeNoticeSeed());
@@ -173,13 +176,17 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.locator('[data-alf-visit]').waitFor({ timeout: 5000 });
       { const ng = await textProblems(page, '[data-alf-visit]'); check(`⑥ 訪ねた家の部屋の並びがはみ出さない・字が切れない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
       // 「仲良し度 +10」などの知らせ(右上の .mh-gfx-chips)が、部屋の名前・顔・吹き出しを隠さない
-      const chipNg = async () => page.evaluate(() => { const hit = (a, c) => Math.min(a.right, c.right) - Math.max(a.left, c.left) > 1 && Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top) > 1; const out = []; for (const ch of document.querySelectorAll('.mh-gfx-chip')) { const r = ch.getBoundingClientRect(); if (!r.width) continue; for (const el of document.querySelectorAll('[data-alf-visit] .mhl-room .pl,[data-alf-visit] .mhl-room [data-assistant-life-room-face],[data-alf-visit-talk] p,[data-alf-visit-replies] button,[data-alf-visit-title],[data-alf-visit-words] .mhl-sheet button,[data-alf-visit-sheet] .mhl-sheet button')) if (hit(r, el.getBoundingClientRect())) out.push((el.textContent || el.getAttribute('data-alf-face') || '').trim().slice(0, 10)); } return out; });
+      // 知らせは画面が組み替わると置き直す(44-growth-fx の MutationObserver)。置き直すまで少し待ってから測る
+      const chipNg = async () => { await page.waitForTimeout(400); return chipNgNow(); };
+      const chipNgNow = async () => page.evaluate(() => { const hit = (a, c) => Math.min(a.right, c.right) - Math.max(a.left, c.left) > 1 && Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top) > 1; const out = []; for (const ch of document.querySelectorAll('.mh-gfx-chip')) { const r = ch.getBoundingClientRect(); if (!r.width) continue; for (const el of document.querySelectorAll('[data-alf-visit] .mhl-room .pl,[data-alf-visit] .mhl-room [data-assistant-life-room-face],[data-alf-visit-talk] p,[data-alf-visit-replies] button,[data-alf-visit-title],[data-alf-visit-words] .mhl-sheet button,[data-alf-visit-sheet] .mhl-sheet button')) if (hit(r, el.getBoundingClientRect())) out.push((el.textContent || el.getAttribute('data-alf-face') || '').trim().slice(0, 10)); } return out; });
       { const ng = await chipNg(); check(`⑥ 仲良し度の知らせが、訪ねた家の部屋の名前・顔を隠さない(${v.id})`, ng.length === 0, ng.join(' / ')); }
       await shot(page, `${v.id}-5-visit`);
       check(`⑥ 訪ねた家は自分の家と同じ家の絵(部屋8つ・名札「あおいさんの家」)・できることの札・置き手紙で何が届くかの1行(${v.id})`, (await page.locator('[data-alf-visit] [data-assistant-life-house] .mhl-room').count()) === 8 && /あおいさんの家/.test(await page.locator('[data-alf-visit] [data-assistant-life-hname]').innerText()) && (await page.locator('[data-alf-visit-acts]').count()) === 1 && /届きます/.test(await page.locator('[data-alf-visit-note]').innerText()));
       await page.locator('[data-alf-visit] [data-assistant-life-room="kiki"]').click();
       await page.locator('[data-alf-visit-sheet="kiki"]').waitFor({ timeout: 3000 });
       check(`⑥ おでかけ中の部屋も押せて、「おでかけ中」と分かる(${v.id})`, (await page.locator('[data-alf-visit-room-state="out"]').count()) === 1);
+      check(`⑯ 出かけている助手は行き先が分かる(部屋の札「🃏 カード部屋へ」・シート)(${v.id})`, /(カード部屋|MFバトルカード)へ/.test(await page.locator('[data-alf-visit] [data-assistant-life-room="kiki"]').innerText()) && /(カード部屋|MFバトルカード)へおでかけ中/.test(await page.locator('[data-alf-visit-room-state]').innerText()));
+      check(`⑯ 部屋のシートに「贈られた家具: まだありません」(${v.id})`,  /贈られた家具: まだありません/.test(await page.locator('[data-alf-visit-furn]').innerText()));
       check(`⑭ 訪ねた家の掲示板に、その人の最近(迎えたマスモン・遊んだ曲)が出る(${v.id})`, /ゴーレム/.test(await page.locator('[data-alf-visit]').innerText()));
       await shot(page, `${v.id}-5b-visit-out`);
       await page.locator('[data-alf-visit-sheet] .mhl-sheet button:has-text("とじる")').click();
@@ -296,6 +303,60 @@ const badgeProblems = (page) => page.evaluate(() => {
       { const ng = rotNow ? [] : await badgeProblems(page); check(`⑦ 戻った HOME で印が正しい所に出る(${v.id})`, ng.length === 0, ng.join(' / ')); }
       await shot(page, `${v.id}-9-home-back`);
       check(`ページの中でエラーが出ない(${v.id})`, errors.length === 0, errors.slice(0, 2).join(' / '));
+      await page.close();
+    }
+    // ⑰ 助手ライフにいるフレンドは、そこで何をしているかが分かる(2026-11-08 社長・案A)
+    for (const v of [{ id: 'tate', w: 390, h: 844 }, { id: 'yoko', w: 844, h: 390 }, { id: 'small', w: 360, h: 640 }]) {
+      presenceLife = true;
+      const { page, errors } = await open({ ...v, stub: ['friend_profiles'] });
+      const sent = []; page.on('request', q => { if (q.method() === 'POST' && /friend_profiles\?on_conflict/.test(q.url())) { try { sent.push(JSON.parse(q.postData())[0]); } catch {} } });
+      await waitFaces(page);
+      await page.evaluate(() => document.querySelector('.mh-home-player')?.click());
+      await page.waitForSelector('[data-profile-friends]', { timeout: 15000 });
+      await page.evaluate(() => document.querySelector('[data-profile-friends]').click());
+      await page.locator('[data-friend-row="mio-0001"]').waitFor({ timeout: 15000 });
+      await page.waitForFunction(() => /みゅあの部屋/.test(document.body.innerText), null, { timeout: 8000 }).catch(() => {});
+      { const t = await page.locator('[data-friend-row]').allInnerTexts();
+        check(`⑰ フレンドの一覧に短い形「🏡 みゅあの部屋」「🏘 フレンドの家へ」「📋 みんなの居場所」(${v.id})`, t.some(x => /あおい/.test(x) && /🏡 みゅあの部屋/.test(x)) && t.some(x => /ゆうと/.test(x) && /🏘 フレンドの家へ/.test(x)) && t.some(x => /みお/.test(x) && /📋 みんなの居場所/.test(x)), t.join(' | ').slice(0, 200));
+        const ng = await textProblems(page, '[data-friend-row]'); check(`⑰ 一覧の字がはみ出さない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
+      await shot(page, `${v.id}-17-life-list`);
+      await page.locator('[data-friend-row="aoi-0001"]').click();
+      await page.waitForFunction(() => /のぞいている/.test(document.body.innerText), null, { timeout: 8000 }).catch(() => {});
+      check(`⑰ プロフィールは文の形「🏡 みゅあの部屋をのぞいている」(${v.id})`, /🏡 みゅあの部屋をのぞいている/.test(await page.locator('[data-friend-presence]').first().innerText().catch(() => '')));
+      await shot(page, `${v.id}-17b-life-profile`);
+      if (await page.locator('[data-alf-profile-visit="ok"]').count()) {
+        await page.locator('[data-alf-profile-visit-go]').click();
+        await page.locator('[data-alf-visit]').waitFor({ timeout: 5000 });
+        await page.waitForFunction(() => document.querySelector('[data-alf-visit-now]'), null, { timeout: 8000 }).catch(() => {});
+        check(`⑰ 訪ねた家の見出しは、横は文の形「いま 🏡 みゅあの部屋をのぞいている」・縦は札に収まる短い形「いま 🏡 みゅあの部屋」(${v.id})`, (v.w > v.h ? /いま 🏡 みゅあの部屋をのぞいている/ : /^いま 🏡 みゅあの部屋$/).test(await page.locator('[data-alf-visit-now]').innerText().catch(() => '')));
+        await shot(page, `${v.id}-17c-life-visit`);
+        // 自分が訪ねているあいだは lv=v を送る(持ち主の名前は送らない)
+        await page.waitForFunction(() => true); for (let i = 0; i < 40 && !sent.some(b => b && b.records && b.records.lv === 'v'); i++) await page.waitForTimeout(500);
+        const bv = sent.filter(b => b && b.records && b.records.lv === 'v').pop();
+        check(`⑰ 訪ねているあいだ、自分の状態は lv=v で送る・持ち主の名前やidは載せない(${v.id})`, !!bv && bv.place === 'other' && bv.records.pl === 'life' && !/aoi|あおい/.test(JSON.stringify(bv.records)), String(JSON.stringify(sent.map(b => b && b.records && [b.place, b.records.pl, b.records.lv]))).slice(0, 200));
+        await page.locator('[data-alf-visit-close]').click();
+      } else check(`⑰ あおいさんの家へ行ける(${v.id})`, false, 'data-alf-profile-visit="ok" が無い');
+      check(`ページの中でエラーが出ない(${v.id})`, errors.length === 0, errors.slice(0, 2).join(' / '));
+      await page.close();
+      presenceLife = false;
+    }
+    // ⑰ 自分の家で部屋を開くと lv=h・la=その助手 を送る
+    {
+      const { page, errors } = await open({ w: 390, h: 844, stub: ['friend_profiles'] });
+      const sent = []; page.on('request', q => { if (q.method() === 'POST' && /friend_profiles\?on_conflict/.test(q.url())) { try { sent.push(JSON.parse(q.postData())[0]); } catch {} } });
+      await waitFaces(page);
+      await openHouse(page);
+      await page.locator('[data-assistant-life-room="mua"]').first().click().catch(() => {});
+      for (let i = 0; i < 40 && !sent.some(b => b && b.records && b.records.la === 'mua'); i++) await page.waitForTimeout(500);
+      const bh = sent.filter(b => b && b.records && b.records.lv === 'h').pop();
+      check('⑰ 自分の家でみゅあの部屋を開くと lv=h・la=mua を送る', !!bh && bh.records.la === 'mua' && bh.records.pl === 'life', JSON.stringify(sent.map(b => b && b.records && [b.records.pl, b.records.lv, b.records.la])).slice(0, 200));
+      await page.evaluate(() => storeSet(FRIEND_PRESENCE_SHOW_KEY, false)).catch(() => {});
+      await page.locator('[data-mhl-sheet-close]').first().click({ timeout: 3000 }).catch(() => {});
+      await page.locator('[data-assistant-life-icon="where"]').click({ timeout: 8000 });
+      const n0 = sent.length; for (let i = 0; i < 40 && sent.length === n0; i++) await page.waitForTimeout(500);
+      const off = sent.slice(n0).pop();
+      check('⑰ 「いまの状態をフレンドに見せる」が切なら、場所の印(lv・la)を送らない', !!off && !(off.records && (off.records.lv || off.records.la)) && off.place === 'other', String(JSON.stringify(off && [off.place, off.records && off.records.lv])).slice(0, 120));
+      check('ページの中でエラーが出ない(⑰ 自分の家)', errors.length === 0, errors.slice(0, 2).join(' / '));
       await page.close();
     }
     // ⑧ 印が偽
