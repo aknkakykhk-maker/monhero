@@ -55,3 +55,50 @@
 ## 検査
 
 `node tools/card/card-assistant-talk-check.js`(偽物の Claude と偽物の回数の数え方で、中継役とゲーム側の材料づくりを確かめる)
+
+## デッキを組む(deckPlan・2026-11-08 社長の決定「助手のデッキを AI で組む」)
+
+ゲーム側はルールくん、中継役はブレイブくん。同じ中継役 `card-assistant-talk` に種類 `deckPlan` を足した(Haiku 5.5・構造化出力)。
+
+### ゲームが送るもの(数字と名前だけ。自由な文は送らない)
+
+```json
+{ "kind": "deckPlan", "breederId": "…", "assistantId": "mua", "samples": ["その助手のふだんの台詞(60字まで・6つまで)"],
+  "facts": {
+    "style": "attack | guard | normal",
+    "favorites": ["好きなモンスターの名前(5つまで)"],
+    "cards": [{ "no": "101", "name": "…", "kind": "pow", "guts": 4, "damage": 6, "user": "mocchi", "area": true }],
+    "fields": ["場のカードの候補の名前"],
+    "habit": { "big": [下, 上], "saveGuts": [下, 上], "keepGuard": [下, 上] },
+    "prefer": [下, 上]
+  } }
+```
+
+- 人柄は、ほかの種類と同じく中継役が `assistant-chat-digest.json` から読む(ゲームは送らない)。口調の見本は `samples`
+- 候補は200枚まで・場のカードは30まで。くせの幅は 0〜5 の中に丸め、下>上なら入れかえる。`prefer` が無ければ 5〜8
+- `style` が無い・候補のカードが無いときは 400
+
+### 中継役が返すもの
+
+```json
+{ "ok": true, "kind": "plan", "name": "12字まで | null", "line": "60字まで | null", "prefer": ["候補の no だけ・重なりなし・上の枚数まで"],
+  "field": ["候補の名前だけ・2枚まで"], "habit": { "big": 1.5, "saveGuts": 0, "keepGuard": 1.5 }, "remainingToday": 39 }
+```
+
+- 候補に無い no・名前は捨てる。くせの数は幅の中へ丸める(無ければ幅の真ん中)。`prefer` が下の枚数に届かないことはある(ゲームが足す)
+- `name`・`line` は言葉の見張りに通し、落ちたら `null`(ゲームが既定の名前・ひとことを使う)。見張るもの: ゲームに出してはいけない言葉(マルチ対戦のチャットの `CARD_CHAT_NG` と同じ表)・連絡先らしいもの・モンスターを「子」と呼ぶ言い方(名前は「子」を全部・ひとことは「子たち」「どの子」など。`tools/changelog/monster-ko-check.js` と同じ決まり)
+- 上限のとき `{ ok: true, kind: "tired", text: null, limited: "user" | "total" }`、遅れ・読めない返事は `{ ok: true, kind: "sorry", text: null }`(回数は返す)。どちらもゲームは AI なしで組み直す
+
+### 回数(ひとこと・デッキ相談とは別に数える)
+
+| 上限 | 既定 | Secrets で変える |
+| --- | --- | --- |
+| 全員合わせて1日 | 100回(社長の決定) | `CARD_DECK_PLAN_TOTAL_DAILY_LIMIT` |
+| 1人1日 | 40回(8人 ×(はじめの3回+10対戦ごと)を見て) | `CARD_DECK_PLAN_USER_DAILY_LIMIT` |
+
+数える表と関数は `supabase/migrations/202611080001_card_deck_plan_usage.sql`(足すだけ。`card_deck_plan_usage`・`card_deck_plan_take`・`card_deck_plan_refund`。service_role だけが呼べる)。1日の区切りは朝4:00。
+
+### 公開の手順(窓口)
+
+1. `202611080001_card_deck_plan_usage.sql` を流す(足すだけ)
+2. 関数 `card-assistant-talk` を出し直す(`index.ts`・`core.js`)。Secrets は足さなくても既定の上限で動く
