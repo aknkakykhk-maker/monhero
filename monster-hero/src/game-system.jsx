@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8c0a71f423191326
+// generated-sha256: ff867ce41b82664f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -39069,8 +39069,9 @@ const GrowthFxChipsBox = ({ level, count, children }) => {
       if (tm) return; tm = setTimeout(() => { tm = null; place(); }, 150);
     }) : null;
     if (mo && document.body) mo.observe(document.body, { childList: true, subtree: true });
-    const t1 = setTimeout(place, 500), t2 = setTimeout(place, 1500);
-    return () => { clearTimeout(t1); clearTimeout(t2); if (tm) clearTimeout(tm); if (mo) mo.disconnect(); };
+    // 出ているあいだは 0.7秒ごとにも置き直す(画面を一瞬揺らす演出や、帯の字の変わり目で測りまちがえても戻す。探す順は決まっているので、画面が変わらなければ同じ所のまま)
+    const t1 = setTimeout(place, 500), t2 = setTimeout(place, 1500), iv = setInterval(place, 700);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearInterval(iv); if (tm) clearTimeout(tm); if (mo) mo.disconnect(); };
   }, [count]);
   return <div ref={ref} className={`mh-gfx-chips mh-gfx-${level}`} data-growth-fx-chips aria-live="polite">{children}</div>;
 };

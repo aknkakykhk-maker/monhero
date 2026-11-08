@@ -639,8 +639,9 @@ const GrowthFxChipsBox = ({ level, count, children }) => {
       if (tm) return; tm = setTimeout(() => { tm = null; place(); }, 150);
     }) : null;
     if (mo && document.body) mo.observe(document.body, { childList: true, subtree: true });
-    const t1 = setTimeout(place, 500), t2 = setTimeout(place, 1500);
-    return () => { clearTimeout(t1); clearTimeout(t2); if (tm) clearTimeout(tm); if (mo) mo.disconnect(); };
+    // 出ているあいだは 0.7秒ごとにも置き直す(画面を一瞬揺らす演出や、帯の字の変わり目で測りまちがえても戻す。探す順は決まっているので、画面が変わらなければ同じ所のまま)
+    const t1 = setTimeout(place, 500), t2 = setTimeout(place, 1500), iv = setInterval(place, 700);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearInterval(iv); if (tm) clearTimeout(tm); if (mo) mo.disconnect(); };
   }, [count]);
   return <div ref={ref} className={`mh-gfx-chips mh-gfx-${level}`} data-growth-fx-chips aria-live="polite">{children}</div>;
 };

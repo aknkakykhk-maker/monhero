@@ -171,7 +171,11 @@ const seed = () => {
         const W = rot ? innerHeight : innerWidth;
         const R = R0(el); const hit = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1; const ng = [];
         for (const sel of ['[data-assistant-life-title]', '[data-assistant-life-clock-box]', '[data-assistant-life-clock]', '[data-assistant-life-tier]', '[data-assistant-life-close]', '[data-assistant-life-icons]']) for (const o of document.querySelectorAll(sel)) if (o.getClientRects().length && hit(R, R0(o))) ng.push(sel);
-        if (R.right > W + 1 || R.left < -1) ng.push(`はみ出す ${Math.round(R.left)}〜${Math.round(R.right)}/${W}`);
+        // 帯は助手ライフの画面の中に収まる。助手ライフの画面は、回した器(🔄横)か画面の中に収まる(器の大きさが遅れて変わる回もあるので、器そのものと比べる)
+        const root = document.querySelector('.mhl-root'), RR = root ? R0(root) : null;
+        const frame = rot ? document.querySelector('[data-mh-view-rotation="true"]') : null, FR = frame ? R0(frame) : { left: 0, right: innerWidth };
+        if (RR && (R.right > RR.right + 1 || R.left < RR.left - 1)) ng.push(`帯が助手ライフからはみ出す ${Math.round(R.left)}〜${Math.round(R.right)} / ${Math.round(RR.left)}〜${Math.round(RR.right)}`);
+        if (RR && (RR.right > FR.right + 1 || RR.left < FR.left - 1)) ng.push(`助手ライフが画面からはみ出す ${Math.round(RR.left)}〜${Math.round(RR.right)} / ${Math.round(FR.left)}〜${Math.round(FR.right)}${rot ? '(器)' : ''}`);
         for (const t of el.querySelectorAll('button,small')) if (t.getClientRects().length && t.scrollWidth > t.clientWidth + 1 && !/周目|WAVE/.test(t.textContent)) ng.push(`字が切れる ${t.textContent}`);
         const m = el.textContent.match(/(\d+)周目/);
         return { run: el.getAttribute('data-life-quick-run'), loop: m ? Number(m[1]) : 0, text: el.textContent, ng, oldChip: !!document.querySelector('[data-assistant-life-quick-run]') }; });
@@ -182,8 +186,18 @@ const seed = () => {
       for (const [w, h, tag, rot] of [[390, 844, 'tate', 0], [844, 390, 'yoko', 0], [820, 1180, 'tablet', 0], [390, 844, 'rot', 90]]) {
         await page.setViewportSize({ width: w, height: h }); await page.evaluate((a) => { if (typeof RHYTHM_VIEW_ROTATION !== 'undefined') RHYTHM_VIEW_ROTATION.set(a); }, rot); await page.waitForTimeout(rot ? 2000 : 1200); // 回したあとは器と大きさの見直し(0.5秒ごと)を待つ
         for (let i = 0; i < 6 && await closePopups(); i++) await page.waitForTimeout(400);
-        const c = await strip();
+        let c = await strip();
+        // 報酬のお祝いなどで画面を一瞬揺らす演出の最中だと、助手ライフごと数px ずれて測れる。0.6秒おいて測り直し、続けてずれているときだけ NG
+        for (let k = 0; k < 3 && c && c.ng.length; k++) { await page.waitForTimeout(600); c = await strip(); }
         check(`⑧ ${tag}: 帯が題・時計・アイコンに重ならない・はみ出さない・字が切れない`, !!c && c.ng.length === 0, JSON.stringify(c));
+        // 仲良し度の知らせ(44-growth-fx)を出して、帯のボタン(とくに「止める」)・時計にかぶらない(2026-11-08 ミハリ)
+        await page.evaluate(() => { growthFxAssistantBond('mua', 100, 160); growthFxAssistantBond('dra', 20, 30); growthFxAssistantBond('atsu', 20, 30); }); await page.waitForTimeout(2000);
+        const cover = await page.evaluate(() => { const rot = typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.active(); const R0 = (e) => (rot ? RHYTHM_VIEW_ROTATION.rectOf(e) : e.getBoundingClientRect());
+          const hit = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1; const out = [];
+          for (const ch of document.querySelectorAll('.mh-gfx-chip')) { if (!ch.getClientRects().length) continue; const r = R0(ch); for (const o of document.querySelectorAll('[data-life-quick-run] button,[data-life-quick-run] small,[data-assistant-life-clock-box],[data-assistant-life-close]')) if (o.getClientRects().length && hit(r, R0(o))) out.push((o.textContent || o.getAttribute('data-assistant-life-clock-box') || '').trim().slice(0, 10) || '時計'); }
+          const box = document.querySelector('[data-growth-fx-chips]');
+          return { hits: [...new Set(out)], top: box ? box.dataset.growthFxChipsTop : '' }; });
+        check(`⑧ ${tag}: 仲良し度の知らせが帯のボタン・時計にかぶらない`, cover.hits.length === 0, `${cover.hits.join(' / ')} (置き場所 ${cover.top})`);
         if (rot) { const fit = await page.evaluate(() => { const p = document.querySelector('.mhl-page'); const r = RHYTHM_VIEW_ROTATION.rectOf(p); return { w: Math.round(r.width), h: Math.round(r.height), land: document.querySelector('[data-assistant-life-screen]').getAttribute('data-assistant-life-land') }; });
           check('⑧ 🔄横: 助手ライフが回した画面いっぱい(横の形)に出る', fit.w >= 844 - 2 && fit.h >= 390 - 2 && fit.land === '1', JSON.stringify(fit)); }
         if (SHOTS) await page.screenshot({ path: path.join(shotDir, `strip-live-${tag}.jpg`), type: 'jpeg', quality: 78 });
