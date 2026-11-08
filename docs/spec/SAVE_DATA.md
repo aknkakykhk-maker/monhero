@@ -348,6 +348,7 @@
 | `mh_rhythm_fix_override_v1` | object / 未設定なら `{}` | モンヒロビートの「実機でしか分からない直し方」(`RHYTHM_TOUCH_FIXES`)を、この端末だけで入れる/切る上書き(2026-10-07)。`{ 直し方の名前: boolean }`。**`storeSet` ではなく `localStorage` へ直接**書く(`rhythmTouchFixSetOverride`)。読むときは表にある名前の boolean だけ拾い、それ以外・壊れた値は捨てる(上書きなし=表のとおり)。いまゲームの画面からは書かない(検査と手で試すとき用) |
 | `mh_sky_lift_portrait_proto` | 文字列 `'25'` / `'39'` / 未設定(=16%) | **デバッグ専用**。縦画面の空中の段の高さの差(道の高さの 16%・25%・39%)を見比べる切り替え(2026-10-11・HELL の試作)。音ゲーデバッグの「プレイ」タブの切り替え(`RhythmSkyLiftSwitch`)だけが `localStorage` へ直接書き、16% を選ぶとキーを消す。読むときは `25`・`39` 以外(未設定・壊れた値)を 16% として読む(`rhythmSkyLiftPortrait`)。空中の段がある譜面(デバッグの試作の枠)だけに効き、通常プレイには何も起きない |
 | `mh_assistant_bubble_mode_v1` | `'ALWAYS'` / `'DAILY'` / `'OFF'` / 既定 `'ALWAYS'` | 助手の吹き出し(画面ごとのひとこと)の出し方(2026-10-10・改善G6)。設定画面のボタンで書く。`normalizeAssistantBubbleMode` で既定へ倒す。はじめての案内・`…Intro` の場面・HOMEの助手・助手の告知には効かない |
+| `mh_assistant_peer_auto_v1` | `true` / 未設定・`true` 以外は切 | 助手どうしの会話(掛け合い・特別なお話・助手ライフの場面・見返し)を自動で進めるか(2026-11-08 社長)。設定画面の「助手どうしの会話を自動で進める」で書く。既定は切(タップで次へ)。`ASSISTANT_PEER_AUTO_STORE`(56-assistant-peer.jsx) |
 | `mh_assistant_bubble_seen_v1` | object / 未設定なら空 | 「1日1回」のときに、その日に出した場面 `{ day:'YYYY-MM-DD'(朝5:00区切り), scenes:[場面のキー] }`。日が違う・壊れた値は空として読む(`normalizeAssistantBubbleSeen`) |
 | `mh_bubble_collapsed_v1` | object / 未設定なら空 | 助手の吹き出しを「小さくたたんだ」売り場の印 `{ 'market:event':true, 'help':true, … }`(2026-10-26 開発部 k02・e01。ヘルプの上の助手は 'help'。たたんだものだけ入れ、ひらけば消える)。キーは画面ごとの `collapseKey`。object でない・値が `true` でないものは捨てて「ひらいたまま」として読む(`normalizeBubbleCollapsed`)。既存のキーは触らない |
 

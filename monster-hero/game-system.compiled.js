@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e1846009f14ae628
+// source-sha256: e8a2d73efd72b4a2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13733,7 +13733,7 @@ const RELEASE_FLAGS = {
   assistantKyuko: true,
   assistantPeer: true,
   assistantPeerApi: true,
-  assistantCallname: false,
+  assistantCallname: true,
   assistantLife: true,
   assistantLifeFurniture: true,
   assistantLifeFriend: true,
@@ -13743,6 +13743,7 @@ const RELEASE_FLAGS = {
   assistantErubin: true,
   cardBattle: true,
   cardAssistantTalk: true,
+  cardGrowStyle: false,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   tacticsHate: true,
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE,
@@ -63264,6 +63265,7 @@ function SettingsScreen({
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
   const [assetDownloadOpen, setAssetDownloadOpen] = useState(false);
   const assistantBubble = useAssistantBubbleState();
+  const peerAuto = typeof useAssistantPeerAuto === 'function' ? useAssistantPeerAuto() : null;
   const [battleCardLook, setBattleCardLook] = useState(() => BATTLE_CARD_LOOK.value);
   if (assetDownloadOpen) return React.createElement(AssetDownloadPage, {
     onBack: () => setAssetDownloadOpen(false)
@@ -63466,6 +63468,34 @@ function SettingsScreen({
     "aria-pressed": assistantBubble.mode === option.id,
     onClick: () => ASSISTANT_BUBBLE_STORE.setMode(option.id),
     className: `flex min-h-[52px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight active:scale-95 ${assistantBubble.mode === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
+  }, React.createElement("span", {
+    className: "block"
+  }, option.label), React.createElement("small", {
+    className: "mt-0.5 block text-[10px] font-bold opacity-80"
+  }, option.note))))), peerAuto && typeof assistantPeerEnabled === 'function' && assistantPeerEnabled() && React.createElement("div", {
+    "data-assistant-peer-auto-setting": true,
+    className: `${SCREEN_PANEL_CLASS} w-full text-left`
+  }, React.createElement("b", {
+    className: "block text-[13px] font-black text-slate-200"
+  }, "助手どうしの会話を自動で進める"), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
+  }, "助手たちの掛け合いや特別なお話、助手ライフの場面のことばの進め方です。「切」のときは、タップするまで次へ進みません。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, [{
+    on: false,
+    label: '切',
+    note: 'タップで次へ'
+  }, {
+    on: true,
+    label: '入',
+    note: '自動で進む'
+  }].map(option => React.createElement("button", {
+    key: option.label,
+    type: "button",
+    "data-assistant-peer-auto": option.on ? 'on' : 'off',
+    "aria-pressed": peerAuto.on === option.on,
+    onClick: () => ASSISTANT_PEER_AUTO_STORE.setOn(option.on),
+    className: `flex min-h-[52px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight active:scale-95 ${peerAuto.on === option.on ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
   }, React.createElement("span", {
     className: "block"
   }, option.label), React.createElement("small", {
@@ -99551,6 +99581,65 @@ const ASSISTANT_PEER_TALK_RATE = {
 };
 const ASSISTANT_PEER_TALK_GAP_MS = 90 * 1000;
 const ASSISTANT_PEER_LINE_MS = 3600;
+const ASSISTANT_PEER_AUTO_KEY = 'mh_assistant_peer_auto_v1';
+const ASSISTANT_PEER_AUTO_STORE = (() => {
+  let state = {
+    on: false,
+    loaded: false
+  };
+  let loading = null;
+  const listeners = new Set();
+  const emit = () => listeners.forEach(fn => {
+    try {
+      fn(state);
+    } catch (_) {}
+  });
+  return {
+    get: () => state,
+    load() {
+      if (loading) return loading;
+      loading = (async () => {
+        let on = false;
+        try {
+          on = (await storeGet(ASSISTANT_PEER_AUTO_KEY, false, false)) === true;
+        } catch (_) {
+          on = false;
+        }
+        state = {
+          on,
+          loaded: true
+        };
+        emit();
+      })();
+      return loading;
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+    setOn(next) {
+      state = {
+        ...state,
+        on: next === true,
+        loaded: true
+      };
+      emit();
+      try {
+        void Promise.resolve(storeSet(ASSISTANT_PEER_AUTO_KEY, state.on)).catch(() => {});
+      } catch (_) {}
+    }
+  };
+})();
+const useAssistantPeerAuto = () => {
+  const [state, setState] = React.useState(() => ASSISTANT_PEER_AUTO_STORE.get());
+  React.useEffect(() => {
+    const off = ASSISTANT_PEER_AUTO_STORE.subscribe(setState);
+    setState(ASSISTANT_PEER_AUTO_STORE.get());
+    void ASSISTANT_PEER_AUTO_STORE.load();
+    return off;
+  }, []);
+  return state;
+};
 const ASSISTANT_PEER_SCENES = Object.freeze({
   HOME: 'home',
   BREEDER_MARKET: 'market',
@@ -100519,6 +100608,7 @@ function AssistantPeerTalk({
   today = null
 }) {
   const st = useAssistantPeerState();
+  const auto = useAssistantPeerAuto();
   const [cur, setCur] = React.useState(null);
   React.useEffect(() => {
     if (ASSISTANT_PEER_STORE.state.talking !== !!cur) ASSISTANT_PEER_STORE.set({
@@ -100677,11 +100767,18 @@ function AssistantPeerTalk({
     }
     finish(c);
   }, [finish]);
+  const stopRef = React.useRef(st.stopTalkAt || 0);
   React.useEffect(() => {
-    if (!cur || cur.phase === 'choice') return undefined;
+    const at = st.stopTalkAt || 0;
+    if (at === stopRef.current) return;
+    stopRef.current = at;
+    if (cur) finish(cur);
+  }, [st.stopTalkAt]);
+  React.useEffect(() => {
+    if (!cur || cur.phase === 'choice' || !auto.on) return undefined;
     const t = setTimeout(() => advance(cur), ASSISTANT_PEER_LINE_MS + (cur.special ? 1200 : 0));
     return () => clearTimeout(t);
-  }, [cur, advance]);
+  }, [cur, advance, auto.on]);
   React.useEffect(() => {
     if (!toast) return undefined;
     const t = setTimeout(() => setToast(null), 3200);
@@ -105233,7 +105330,9 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-room .tag b{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mhl-room .tag small[data-assistant-life-room-with]{white-space:normal;line-height:1.15}[data-assistant-life-land="1"] .mhl-room .tag{padding:2px 5px 3px}[data-assistant-life-land="1"] .mhl-room .tag b{font-size:9.5px}[data-assistant-life-land="1"] .mhl-room .tag small{font-size:8px}.mhl-room .tag small{display:block;font-size:9px;font-weight:800;color:#7c2d12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mhl-room .lock{position:absolute;inset:0;z-index:6;display:grid;place-items:center;background:rgba(15,23,42,.78);font-size:11px;font-weight:900;color:#cbd5e1}
 .mhl-liv{position:absolute;overflow:hidden;border-radius:3px;background:linear-gradient(#f3e3c4,#e7cfa2)}
-.mhl-board{position:absolute;left:8px;top:6px;bottom:6px;border-radius:5px;background:#c08a52;border:3px solid #7c4a22;padding:3px 6px;overflow:hidden}
+.mhl-board{position:absolute;left:8px;top:6px;bottom:6px;border-radius:5px;background:#c08a52;border:3px solid #7c4a22;padding:3px 6px;overflow:hidden;display:flex;flex-direction:column;flex-wrap:wrap;align-content:flex-start;justify-content:flex-start;column-gap:24px}
+.mhl-board>*{width:100%;flex:none}
+.mhl-board-more{margin-left:auto;flex:none;border-radius:999px;background:#fffbeb;color:#7c4a22;font-size:8.5px;font-weight:900;line-height:1;padding:2px 5px;white-space:nowrap}
 .mhl-board b{display:block;font-size:9.5px;color:#fff}.mhl-board p{font-size:9px;font-weight:800;line-height:1.25;color:#1e293b;background:#fffbeb;border-radius:3px;padding:1px 4px;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .mhl-door{position:absolute;bottom:0;width:38px;border-radius:18px 18px 0 0;background:linear-gradient(#8b5a2b,#6b4423);border:2px solid #3b2412}
 .mhl-find{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:900;padding:6px 10px;border-radius:999px;background:linear-gradient(135deg,#7c3aed,#db2777);border:1.5px solid #fff9;box-shadow:0 4px 12px #0009}
@@ -105442,6 +105541,17 @@ function AssistantLifeHouseArt({
     ly = wall + rows * (rh + wall);
   const night = look === 'night';
   const items = (diary.items || []).slice(-3).reverse();
+  const total = (diary.items || []).length;
+  const boardRef = React.useRef(null);
+  const [shownN, setShownN] = React.useState(items.length);
+  React.useLayoutEffect(() => {
+    const el = boardRef.current;
+    if (!el) return;
+    const w = el.clientWidth;
+    const n = [...el.querySelectorAll('[data-assistant-life-board-item]')].filter(p => p.offsetLeft + 1 < w).length;
+    if (n !== shownN) setShownN(n);
+  });
+  const restN = Math.max(0, total - Math.min(shownN, items.length));
   return React.createElement("div", {
     className: `mhl-house${pop ? ' mhl-pop' : ''}`,
     "data-assistant-life-house": true,
@@ -105502,6 +105612,7 @@ function AssistantLifeHouseArt({
     }
   }, React.createElement("button", {
     type: "button",
+    ref: boardRef,
     className: "mhl-board text-left",
     "data-assistant-life-board": true,
     onClick: onBoard,
@@ -105509,7 +105620,12 @@ function AssistantLifeHouseArt({
       width: Math.min(width * (land ? .42 : .52), 240)
     },
     "aria-label": "今日あったことを全部見る"
-  }, React.createElement("b", null, "📌 今日あったこと", items.length ? ' ›' : ''), items.length ? items.slice(0, land ? 1 : 2).map((x, i) => React.createElement("p", {
+  }, React.createElement("b", {
+    className: "flex items-center gap-1"
+  }, "📌 今日あったこと", items.length > 0 && React.createElement("span", {
+    className: "mhl-board-more",
+    "data-assistant-life-board-more": restN
+  }, restN > 0 ? `ほか${restN}件 ›` : '全部 ›')), items.length ? items.slice(0, land ? 1 : 2).map((x, i) => React.createElement("p", {
     key: i,
     "data-assistant-life-board-item": true
   }, React.createElement(AssistantLifeChunks, {
@@ -105786,10 +105902,9 @@ function AssistantLifeRoomSheet({
     className: "col-span-2 rounded-2xl border-2 border-pink-300 bg-slate-950/95 px-3 py-2",
     "data-assistant-life-room-follow": follow.kind
   }, React.createElement("p", {
-    className: "text-[12px] font-bold leading-relaxed text-pink-50 [word-break:keep-all] [overflow-wrap:anywhere]"
-  }, who.name, "「", React.createElement(AssistantLifeChunks, {
-    text: follow.text
-  }), "」"), React.createElement("div", {
+    className: `${land ? 'text-[11px]' : 'text-[12px]'} font-bold leading-snug text-pink-50`,
+    style: JA_WRAP_STYLE
+  }, jaWrap(`${who.name}「${follow.text}」`)), React.createElement("div", {
     className: "mt-1.5 grid grid-cols-2 gap-1.5"
   }, React.createElement("button", {
     type: "button",
@@ -105825,7 +105940,7 @@ function AssistantLifeRoomSheet({
     "data-assistant-life-room-act": "give",
     disabled: !canGive,
     onClick: () => onGive(w.group)
-  }, "🎁 贈る"), onChat && React.createElement("button", {
+  }, "🎁 贈る"), onChat && !follow && React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-call col-span-2",
     "data-assistant-life-room-act": "chat",
@@ -105850,7 +105965,13 @@ function AssistantLifeRoomSheet({
     onClick: () => onCard(id)
   }, "🃏 カード部屋で対戦する ", React.createElement("span", {
     className: "mhl-card-up"
-  }, "ごほうびアップ")))), furnOpen && typeof AssistantLifeFurnSheet === 'function' && React.createElement(AssistantLifeFurnSheet, {
+  }, "ごほうびアップ")), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-room-close": true,
+    "data-mhl-sheet-close": true,
+    onClick: onClose,
+    className: "col-span-2 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]"
+  }, "閉じる"))), furnOpen && typeof AssistantLifeFurnSheet === 'function' && React.createElement(AssistantLifeFurnSheet, {
     id: id,
     furnItems: furnItems || {},
     onGiveFurn: onGiveFurn,
@@ -105938,7 +106059,7 @@ function AssistantLifeStand({
       transform: 'translateX(-50%)',
       height: '58%',
       width: '70%',
-      bottom: '22%',
+      bottom: 'max(22%, 150px)',
       opacity: 0,
       filter
     }
@@ -105957,7 +106078,7 @@ function AssistantLifeStand({
       height: `${(h * 100).toFixed(2)}%`,
       width: 'auto',
       maxWidth: 'none',
-      bottom: `calc(22% - ${((1 - box.b) * h * 100).toFixed(2)}%)`,
+      bottom: `calc(max(22%, 150px) - ${((1 - box.b) * h * 100).toFixed(2)}%)`,
       transform: `translateX(-${((box.l + box.r) / 2 * 100).toFixed(1)}%)`,
       objectFit: 'fill',
       filter
@@ -106100,7 +106221,12 @@ function AssistantLifeScene({
   }, React.createElement("button", {
     type: "button",
     "data-assistant-life-scene-back": true,
-    onClick: onClose,
+    onClick: () => {
+      if (peer && peer.talking && typeof ASSISTANT_PEER_STORE !== 'undefined') ASSISTANT_PEER_STORE.set({
+        stopTalkAt: Date.now()
+      });
+      onClose();
+    },
     "aria-label": "家へ戻る",
     className: "h-9 w-9 text-[18px] text-slate-100"
   }, "←"), React.createElement("div", {
@@ -106755,7 +106881,10 @@ function AssistantLifeHouse({
     className: "mhl-en"
   }, "TODAY"), React.createElement("p", {
     className: "text-[18px] font-black"
-  }, "📌 今日あったこと"), (diary.items || []).length ? [...diary.items].reverse().map((x, i) => React.createElement("p", {
+  }, "📌 今日あったこと"), React.createElement("p", {
+    className: "text-[10.5px] font-bold text-slate-400",
+    "data-assistant-life-diary-count": true
+  }, "全部で", (diary.items || []).length, "件・新しい順"), (diary.items || []).length ? [...diary.items].reverse().map((x, i) => React.createElement("p", {
     key: i,
     className: "mt-1.5 text-[12px] font-bold leading-snug text-slate-100"
   }, React.createElement("b", {
@@ -106766,8 +106895,10 @@ function AssistantLifeHouse({
     className: "mt-2 text-[12px] text-slate-400"
   }, "まだ何もありません"), React.createElement("button", {
     type: "button",
-    className: "mhl-btn mt-3 w-full bg-slate-700",
-    onClick: () => setBoardOpen(false)
+    "data-assistant-life-diary-close": true,
+    "data-mhl-sheet-close": true,
+    onClick: () => setBoardOpen(false),
+    className: "mt-3 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]"
   }, "閉じる"))), scene && React.createElement(AssistantLifeScene, {
     key: scene.key,
     scene: scene,
@@ -119725,6 +119856,7 @@ function AssistantLifeGiftSheet({
   }, React.createElement("button", {
     type: "button",
     "data-assistant-life-give-cancel": true,
+    "data-mhl-sheet-close": true,
     onClick: () => setGive(null),
     className: "min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]"
   }, "やめる"), React.createElement("button", {
@@ -120184,6 +120316,7 @@ function AssistantLifeFurnSheet({
   }))))), React.createElement("button", {
     type: "button",
     "data-assistant-life-furn-close": true,
+    "data-mhl-sheet-close": true,
     onClick: onClose,
     className: "mt-2 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]"
   }, "閉じる")));
@@ -121105,6 +121238,7 @@ function AssistantMasmonSheet({
     type: "button",
     className: "mhl-btn shrink-0 bg-slate-700 px-3",
     "data-assistant-masmon-close": true,
+    "data-mhl-sheet-close": true,
     onClick: onClose
   }, "閉じる")), React.createElement("div", {
     className: "mt-2 grid grid-cols-4 gap-1",
@@ -122803,6 +122937,7 @@ function AlfSceneSheet({
     type: "button",
     className: "mt-3 w-full rounded-2xl bg-amber-300 py-2 text-[13px] font-black text-slate-950",
     "data-alf-scene-close": true,
+    "data-mhl-sheet-close": true,
     onClick: onClose
   }, "とじる"))));
 }
@@ -126633,6 +126768,87 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   }
   return cardAiFillBind(db, st, scored[0].o, policy);
 };
+const CARD_AI_STYLE_IDS = Object.freeze(['attack', 'guard', 'normal']);
+const CARD_AI_STYLE_TUNE = Object.freeze({
+  attack: {
+    mul: {
+      attack: 1.3,
+      keepGuard: 0.75,
+      big: 1.1
+    }
+  },
+  guard: {
+    add: {
+      keepGuard: 0.3
+    },
+    mul: {
+      attack: 0.95
+    }
+  }
+});
+const CARD_AI_STYLE_NAMES = Object.freeze({
+  mua: 'キラキラ速攻',
+  kiki: 'ずっしり火力',
+  momosuke: 'ステージ・オン',
+  dra: 'のんびり長期戦',
+  atsu: '真っ向勝負',
+  kyuko: '夜の読み筋',
+  sorashido: '計算ずく',
+  erubin: 'みんなで守る'
+});
+const CARD_AI_STYLE_VARIANT = Object.freeze({
+  attack: 'blade',
+  guard: 'shield',
+  normal: 'mind'
+});
+const CARD_AI_PLAN_RANGE = Object.freeze({
+  habitMul: Object.freeze({
+    big: [0.8, 1.25],
+    saveGuts: [0.8, 1.25],
+    keepGuard: [0.8, 1.1]
+  }),
+  prefer: [5, 8],
+  preferTop: 24,
+  field: [1, 2]
+});
+const cardAiPlanHabitRangeOf = base => Object.fromEntries(Object.entries(CARD_AI_PLAN_RANGE.habitMul).map(([k, [lo, hi]]) => {
+  const b = Number.isFinite(base && base[k]) ? base[k] : 1;
+  return [k, [Math.round(b * lo * 100) / 100, Math.round(b * hi * 100) / 100]];
+}));
+const cardAiPlanHabitClamp = (base, habit) => {
+  const r = cardAiPlanHabitRangeOf(base);
+  return Object.fromEntries(Object.entries(habit || {}).filter(([k, v]) => r[k] && Number.isFinite(v)).map(([k, v]) => [k, Math.min(r[k][1], Math.max(r[k][0], v))]));
+};
+const cardAiPlanHabitRange = (who, levelId = 'normal', styleId = null) => {
+  const style = cardAiStyleOf(styleId);
+  const recipeAll = CARD_AI_DECKS[who] || CARD_AI_DECKS.mua;
+  const variant = style && Array.isArray(recipeAll.variants) ? recipeAll.variants.find(v => v.id === CARD_AI_STYLE_VARIANT[style]) : null;
+  const h0 = variant && variant.deckHabit ? {
+    ...cardAiDeckHabit(who, levelId),
+    ...variant.deckHabit
+  } : cardAiDeckHabit(who, levelId);
+  const tune = style && !variant && !Array.isArray(recipeAll.variants) ? CARD_AI_STYLE_TUNE[style] : null;
+  const h = tune ? Object.fromEntries(Object.entries(h0).map(([k, v]) => [k, typeof v === 'number' ? v * ((tune.mul || {})[k] || 1) + ((tune.add || {})[k] || 0) : v])) : h0;
+  return cardAiPlanHabitRangeOf(h);
+};
+const cardAiPlanClean = (db, plan) => {
+  if (!plan || typeof plan !== 'object' || !db || !db.cards) return null;
+  const R = CARD_AI_PLAN_RANGE;
+  const seen = new Set();
+  const prefer = (Array.isArray(plan.prefer) ? plan.prefer : []).map(no => typeof no === 'string' ? db.cards[no] : null).filter(c => c && c.ready && c.kind !== 'fld' && !seen.has(c.name) && seen.add(c.name)).slice(0, R.prefer[1]).map(c => c.name);
+  const fields = new Set(Object.values(db.cards).filter(c => c.ready && c.kind === 'fld').map(c => c.name));
+  const field = [...new Set((Array.isArray(plan.field) ? plan.field : []).map(f => f && typeof f === 'object' ? f.name : f).filter(n => typeof n === 'string' && fields.has(n)))].slice(0, R.field[1]);
+  const habit = {};
+  const h = plan.habit && typeof plan.habit === 'object' ? plan.habit : {};
+  for (const k of Object.keys(R.habitMul)) if (Number.isFinite(h[k])) habit[k] = Math.min(5, Math.max(0, h[k]));
+  if (!prefer.length && !field.length && !Object.keys(habit).length) return null;
+  return {
+    prefer,
+    field,
+    habit
+  };
+};
+const cardAiStyleOf = s => typeof s === 'string' && CARD_AI_STYLE_IDS.includes(s) ? s : null;
 const CARD_AI_DECKS = Object.freeze({
   mua: {
     kit: 'speed',
@@ -127042,16 +127258,31 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   const cfg = CARD_AI_BUILD[levelId] || CARD_AI_BUILD.normal;
   const rnd = typeof rand === 'function' ? rand : cardAiSeededRand(`${who}:${levelId}`);
   const monsters = cardAiPickTrio(db, who, levelId, rnd, opts && opts.playerDeck);
-  const variant = Array.isArray(recipeAll.variants) && recipeAll.variants.length ? recipeAll.variants[Math.min(recipeAll.variants.length - 1, Math.floor(rnd() * recipeAll.variants.length))] : null;
-  const recipe = variant ? {
+  const style = cardAiStyleOf(opts && opts.style);
+  const drawn = Array.isArray(recipeAll.variants) && recipeAll.variants.length ? recipeAll.variants[Math.min(recipeAll.variants.length - 1, Math.floor(rnd() * recipeAll.variants.length))] : null;
+  const variant = drawn && style ? recipeAll.variants.find(v => v.id === CARD_AI_STYLE_VARIANT[style]) || drawn : drawn;
+  const plan = cardAiPlanClean(db, opts && opts.plan);
+  const recipe0 = variant ? {
     ...recipeAll,
     ...variant
   } : recipeAll;
+  const recipe = plan ? {
+    ...recipe0,
+    ...(plan.field.length ? {
+      field: plan.field
+    } : {})
+  } : recipe0;
   const maxWave = cfg.maxWave;
-  const habit = variant && variant.deckHabit ? {
+  const habit0 = variant && variant.deckHabit ? {
     ...cardAiDeckHabit(who, levelId),
     ...variant.deckHabit
   } : cardAiDeckHabit(who, levelId);
+  const tune = style && !variant ? CARD_AI_STYLE_TUNE[style] : null;
+  const habit1 = tune ? Object.fromEntries(Object.entries(habit0).map(([k, v]) => [k, typeof v === 'number' ? v * ((tune.mul || {})[k] || 1) + ((tune.add || {})[k] || 0) : v])) : habit0;
+  const habit = plan ? {
+    ...habit1,
+    ...cardAiPlanHabitClamp(habit1, plan.habit)
+  } : habit1;
   const mons = monsters.map(no => cardMonsterOf(db, no));
   const pool = Object.values(db.cards).filter(c => c.ready && (c.user === 'any' || c.user === 'breeder' ? c.wave <= maxWave : mons.some(m => cardUsableBy(c, {
     ...m,
@@ -127068,6 +127299,8 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   });
   const ranked = Object.values(byName).sort((a, b) => b.v - a.v || (a.c.no < b.c.no ? -1 : 1));
   const preferOn = levelId === 'hard' || levelId === 'expert' || levelId === 'master';
+  const planTop = new Set(ranked.slice(0, CARD_AI_PLAN_RANGE.preferTop).map(x => x.c.name));
+  const preferNames = [...(recipe.prefer || []), ...(plan ? plan.prefer.filter(n => planTop.has(n) && !(recipe.prefer || []).includes(n)) : [])];
   const guardTarget = Math.round(12 + 6 * Math.min(1.5, habit.keepGuard));
   const cards = [];
   const heavyMax = Math.round(8 * habit.big);
@@ -127109,7 +127342,7 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   })));
   const shared = attacks.filter(x => x.c.user === 'any' || x.c.user === 'breeder');
   const used = new Set();
-  (preferOn ? recipe.prefer || [] : []).forEach(name => {
+  (preferOn ? preferNames : []).forEach(name => {
     const x = byName[name];
     if (x && !used.has(name)) {
       used.add(name);
@@ -127149,6 +127382,40 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
     monsters: monsters.slice(),
     cards,
     sameBlood
+  };
+};
+const cardAiPlanCandidates = (db, who, levelId = 'normal', monsters = []) => {
+  const cfg = CARD_AI_BUILD[levelId] || CARD_AI_BUILD.normal;
+  const mons = (Array.isArray(monsters) ? monsters : []).map(no => cardMonsterOf(db, no)).filter(Boolean);
+  if (!mons.length) return [];
+  const habit = cardAiDeckHabit(who, levelId);
+  const byName = {};
+  Object.values(db.cards).filter(c => c.ready && c.kind !== 'fld' && (c.user === 'any' || c.user === 'breeder' ? c.wave <= cfg.maxWave : mons.some(m => cardUsableBy(c, {
+    ...m,
+    ko: false
+  }) && c.wave <= Math.max(cfg.maxWave, cardAiMonWave(db, m, c))))).forEach(c => {
+    const v = cardAiCardValue(c, habit);
+    if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = {
+      c,
+      v
+    };
+  });
+  return Object.values(byName).sort((a, b) => b.v - a.v || (a.c.no < b.c.no ? -1 : 1)).slice(0, CARD_AI_PLAN_RANGE.preferTop).map(x => x.c);
+};
+const cardAssistantDeckPreview = (who, styleId = 'normal', level = 'normal') => {
+  if (typeof CARD_BATTLE_DATA === 'undefined' || !CARD_AI_DECKS[who]) return null;
+  const sid = cardAiStyleOf(styleId) || 'normal';
+  const lv = CARD_AI_BUILD[level] ? level : 'normal';
+  const db = CARD_BATTLE_DATA;
+  const deck = cardAiBuildDeck(db, who, lv, cardAiSeededRand(`preview:${who}:${sid}:${lv}`), {
+    style: sid
+  });
+  return {
+    monsters: deck.monsters.slice(),
+    cards: deck.cards.slice(),
+    styleId: sid,
+    name: CARD_AI_STYLE_NAMES[who] || null,
+    line: null
   };
 };
 const cardDeckProblems = (db, deck) => {
@@ -134056,6 +134323,21 @@ const cardLifeAtCard = id => {
     return false;
   }
 };
+const cardGrowStyleOn = () => {
+  try {
+    return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardGrowStyle === true;
+  } catch (_) {
+    return false;
+  }
+};
+const cardLifeCardStyle = id => {
+  if (!cardGrowStyleOn()) return null;
+  try {
+    return typeof assistantLifeCardStyle === 'function' ? cardAiStyleOf(assistantLifeCardStyle(id)) : null;
+  } catch (_) {
+    return null;
+  }
+};
 const cardLifeOnMatch = x => {
   try {
     if (typeof assistantLifeOnCardMatch === 'function') assistantLifeOnCardMatch(x);
@@ -139203,7 +139485,8 @@ const CardBattleScreen = ({
         foe: {
           name: log.foeName,
           who: game.who,
-          deckName: log.deckName
+          deckName: log.deckName,
+          style: log.style
         },
         outcome,
         reason: '',
@@ -139418,12 +139701,16 @@ const CardBattleScreen = ({
     }
     const activeDeck = deck;
     const share = pick.share || null;
+    const foeStyle = !share && !(opts && opts.cup) ? cardLifeCardStyle(pick.who) : null;
     const cpuDeck = share ? {
       monsters: share.deck.monsters.slice(),
       cards: share.deck.cards.slice(),
       sameBlood: cardShareSameBlood(db, share.deck)
     } : cardAiBuildDeck(db, pick.who, pick.level, Math.random, {
-      playerDeck: activeDeck
+      playerDeck: activeDeck,
+      ...(foeStyle ? {
+        style: foeStyle
+      } : {})
     });
     const seed = cup ? cup.seed : (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
     const gameKey = cup ? `cup-${cup.matchId}-${Date.now().toString(36)}` : `${seed}`;
@@ -139513,6 +139800,7 @@ const CardBattleScreen = ({
     const scene = typeof window !== 'undefined' && typeof window.__mhCardScene === 'function';
     cpuLogRef.current = scene ? null : {
       id: gameKey,
+      style: foeStyle || 'normal',
       seed,
       first,
       decks: [{
@@ -149935,6 +150223,7 @@ const cardReplayDeckOf = raw => {
   };
 };
 const cardReplayText = (v, max) => typeof v === 'string' ? v.slice(0, max) : '';
+const cardReplayStyleOf = s => s === 'attack' || s === 'guard' || s === 'normal' ? s : 'normal';
 const cardReplayNormalizeOne = raw => {
   if (!raw || typeof raw !== 'object' || raw.v !== 1) return null;
   if (typeof raw.id !== 'string' || !CARD_REPLAY_ID_RE.test(raw.id)) return null;
@@ -149967,7 +150256,10 @@ const cardReplayNormalizeOne = raw => {
       icon: cardReplayText(foe.icon, 64),
       frame: typeof foe.frame === 'string' ? foe.frame.slice(0, 40) : null,
       deckName: typeof foe.deckName === 'string' ? foe.deckName.slice(0, 30) || null : null,
-      who: typeof foe.who === 'string' ? foe.who.slice(0, 20) : null
+      who: typeof foe.who === 'string' ? foe.who.slice(0, 20) : null,
+      ...(raw.kind === 'cpu' ? {
+        style: cardReplayStyleOf(foe.style)
+      } : {})
     },
     outcome: outcomes.includes(raw.outcome) ? raw.outcome : null,
     reason: cardReplayText(raw.reason, 40),
@@ -150166,7 +150458,10 @@ const cardReplayMake = (db, {
       icon: foe && foe.icon || '',
       frame: foe && foe.frame || null,
       deckName: foe && foe.deckName || null,
-      who: foe && foe.who || null
+      who: foe && foe.who || null,
+      ...(kind === 'cpu' ? {
+        style: cardReplayStyleOf(foe && foe.style)
+      } : {})
     },
     outcome,
     reason: reason || '',

@@ -326,7 +326,9 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-room .tag b{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mhl-room .tag small[data-assistant-life-room-with]{white-space:normal;line-height:1.15}[data-assistant-life-land="1"] .mhl-room .tag{padding:2px 5px 3px}[data-assistant-life-land="1"] .mhl-room .tag b{font-size:9.5px}[data-assistant-life-land="1"] .mhl-room .tag small{font-size:8px}.mhl-room .tag small{display:block;font-size:9px;font-weight:800;color:#7c2d12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mhl-room .lock{position:absolute;inset:0;z-index:6;display:grid;place-items:center;background:rgba(15,23,42,.78);font-size:11px;font-weight:900;color:#cbd5e1}
 .mhl-liv{position:absolute;overflow:hidden;border-radius:3px;background:linear-gradient(#f3e3c4,#e7cfa2)}
-.mhl-board{position:absolute;left:8px;top:6px;bottom:6px;border-radius:5px;background:#c08a52;border:3px solid #7c4a22;padding:3px 6px;overflow:hidden}
+.mhl-board{position:absolute;left:8px;top:6px;bottom:6px;border-radius:5px;background:#c08a52;border:3px solid #7c4a22;padding:3px 6px;overflow:hidden;display:flex;flex-direction:column;flex-wrap:wrap;align-content:flex-start;justify-content:flex-start;column-gap:24px}
+.mhl-board>*{width:100%;flex:none}
+.mhl-board-more{margin-left:auto;flex:none;border-radius:999px;background:#fffbeb;color:#7c4a22;font-size:8.5px;font-weight:900;line-height:1;padding:2px 5px;white-space:nowrap}
 .mhl-board b{display:block;font-size:9.5px;color:#fff}.mhl-board p{font-size:9px;font-weight:800;line-height:1.25;color:#1e293b;background:#fffbeb;border-radius:3px;padding:1px 4px;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .mhl-door{position:absolute;bottom:0;width:38px;border-radius:18px 18px 0 0;background:linear-gradient(#8b5a2b,#6b4423);border:2px solid #3b2412}
 .mhl-find{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:900;padding:6px 10px;border-radius:999px;background:linear-gradient(135deg,#7c3aed,#db2777);border:1.5px solid #fff9;box-shadow:0 4px 12px #0009}
@@ -417,6 +419,17 @@ function AssistantLifeHouseArt({ width, land, look, rooms, metSet, onOpen, diary
   const bodyH = wall + rows * (rh + wall) + lh + wall, ly = wall + rows * (rh + wall);
   const night = look === 'night';
   const items = (diary.items || []).slice(-3).reverse();
+  const total = (diary.items || []).length;
+  // 掲示板に入りきった件の数を測る(入らない件は見えない右の列へ回る .mhl-board)。残りは見出しに「ほか◯件」(2026-11-08 社長「切れてここまでしかみれない」)
+  const boardRef = React.useRef(null);
+  const [shownN, setShownN] = React.useState(items.length);
+  React.useLayoutEffect(() => {
+    const el = boardRef.current; if (!el) return;
+    const w = el.clientWidth;
+    const n = [...el.querySelectorAll('[data-assistant-life-board-item]')].filter(p => p.offsetLeft + 1 < w).length;
+    if (n !== shownN) setShownN(n);
+  });
+  const restN = Math.max(0, total - Math.min(shownN, items.length));
   return (
     <div className={`mhl-house${pop ? ' mhl-pop' : ''}`} data-assistant-life-house style={{ width, height: roofH + bodyH }}>
       <div className="mhl-chim" style={{ left: width * .72, top: roofH * .05, height: roofH * .6 }}/>
@@ -429,8 +442,8 @@ function AssistantLifeHouseArt({ width, land, look, rooms, metSet, onOpen, diary
           return <AssistantLifeRoom key={id} id={id} idx={i + r} met={metSet.has(id)} look={look} x={wall + c * (rw + wall)} y={wall + r * (rh + wall)} w={rw} h={rh} state={rooms[id]} onOpen={onOpen} other={other ? (other[id] || {}) : null}/>;
         })}
         <div className="mhl-liv" data-assistant-life-living style={{ left: wall, top: ly, width: width - 2 * wall, height: lh, filter: night ? 'brightness(.62)' : undefined }}>
-          <button type="button" className="mhl-board text-left" data-assistant-life-board onClick={onBoard} style={{ width: Math.min(width * (land ? .42 : .52), 240) }} aria-label="今日あったことを全部見る">
-            <b>📌 今日あったこと{items.length ? ' ›' : ''}</b>
+          <button type="button" ref={boardRef} className="mhl-board text-left" data-assistant-life-board onClick={onBoard} style={{ width: Math.min(width * (land ? .42 : .52), 240) }} aria-label="今日あったことを全部見る">
+            <b className="flex items-center gap-1">📌 今日あったこと{items.length > 0 && <span className="mhl-board-more" data-assistant-life-board-more={restN}>{restN > 0 ? `ほか${restN}件 ›` : '全部 ›'}</span>}</b>
             {items.length ? items.slice(0, land ? 1 : 2).map((x, i) => <p key={i} data-assistant-life-board-item><AssistantLifeChunks text={`${x.t} ${assistantLifeBoardShort(x.text, land ? 2 : 1)}`}/></p>) : <p>まだ何もありません</p>}
           </button>
           <div className="mhl-door" style={{ left: width * (land ? .62 : .66), height: lh - 14 }}/>
@@ -535,7 +548,8 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
           {/* 声をかけたあとの続き(2026-11-08 社長 ❼A・❾A)。ボタンの段のいちばん上(横はボタンの段が下に止まるので、段の外だと隠れる) */}
           {follow && onChat && (
             <div className="col-span-2 rounded-2xl border-2 border-pink-300 bg-slate-950/95 px-3 py-2" data-assistant-life-room-follow={follow.kind}>
-              <p className="text-[12px] font-bold leading-relaxed text-pink-50 [word-break:keep-all] [overflow-wrap:anywhere]">{who.name}「<AssistantLifeChunks text={follow.text}/>」</p>
+              {/* 言葉の切れ目で折る(かぎかっこだけが1行に割れないよう、名前と台詞をひとつの文として折る・ミハリ 2026-11-08) */}
+              <p className={`${land ? 'text-[11px]' : 'text-[12px]'} font-bold leading-snug text-pink-50`} style={JA_WRAP_STYLE}>{jaWrap(`${who.name}「${follow.text}」`)}</p>
               <div className="mt-1.5 grid grid-cols-2 gap-1.5">
                 <button type="button" className="mhl-btn bg-pink-500" data-assistant-life-room-follow-chat onClick={() => onChat(id, follow)}>💬 おしゃべりする</button>
                 <button type="button" className="mhl-btn bg-slate-700" data-assistant-life-room-follow-bye onClick={() => onFollowDone && onFollowDone()}>またね</button>
@@ -548,7 +562,8 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
             ? <button type="button" className="mhl-btn mhl-call" data-assistant-life-room-act="invite" disabled={w && w.reason === 'distance'} onClick={() => onInvite(id)}>{asleep ? '💤 そっと声をかける' : '💬 声をかける'}</button>
             : <button type="button" className="mhl-btn mhl-give" data-assistant-life-room-act="give" disabled={!canGive} onClick={() => onGive(w.group)}>🎁 贈る</button>}
           {/* その助手とおしゃべり(社長 ❼A・寝ていれば起こして ❽B)。選んでいない助手とも話せる */}
-          {onChat && <button type="button" className="mhl-btn mhl-call col-span-2" data-assistant-life-room-act="chat" onClick={() => onChat(id, null)}>{asleep ? '💤 起こしておしゃべり' : '💬 おしゃべりする'}</button>}
+          {/* 続きのカードが出ているあいだは、同じことをするボタンを2つ並べない(ミハリ 2026-11-08) */}
+          {onChat && !follow && <button type="button" className="mhl-btn mhl-call col-span-2" data-assistant-life-room-act="chat" onClick={() => onChat(id, null)}>{asleep ? '💤 起こしておしゃべり' : '💬 おしゃべりする'}</button>}
           {typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && (
             <button type="button" className="mhl-btn mhl-beat col-span-2" data-assistant-life-room-act="beat" onClick={() => onBeat(id)}>{asleep ? '🎵 起こしてモンヒロビートに誘う' : atBeat && beatFree ? <>🎵 会いに行く<em className="ml-1 rounded-full bg-amber-300 px-1.5 text-[10px] not-italic text-amber-950" data-assistant-life-room-free>券なし</em></> : '🎵 一緒にモンヒロビート'}</button>)}
           {/* 部屋の家具(段階B・2026-11-08 社長): 贈る・置く・しまう */}
@@ -557,6 +572,8 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
           {/* カード部屋にいる助手と対戦すると、ごほうび 1.5倍(2026-11-07 社長・カード部)。カード部屋にいるときだけ出す(寝ているときは出さない) */}
           {typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id) && (
             <button type="button" className="mhl-btn mhl-card col-span-2" data-assistant-life-room-act="card" onClick={() => onCard(id)}>🃏 カード部屋で対戦する <span className="mhl-card-up">ごほうびアップ</span></button>)}
+          {/* はっきり分かる閉じるボタン(家具のシートと同じ形。2026-11-08 窓口)。横はボタンの段ごと下に止まるので、いつも見える */}
+          <button type="button" data-assistant-life-room-close data-mhl-sheet-close onClick={onClose} className="col-span-2 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
         </div>
       </div>
       {furnOpen && typeof AssistantLifeFurnSheet === 'function' && <AssistantLifeFurnSheet id={id} furnItems={furnItems || {}} onGiveFurn={onGiveFurn} land={land}
@@ -566,7 +583,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
 
 // 場面の立ち絵(2026-11-08 社長「サイズバランスが悪いのはわざと？」: 絵ごとに余白と縦横の比がちがい、ききが小さく・きゅうこが大きく出ていた)。
 //   絵の描かれている範囲(透明でない所)を一度だけ測り、見た目の高さ(頭の上〜絵の下)を場面の高さの fig にそろえる。
-//   下は絵の下の端を、場面の下から 22% の床にそろえる。左右は描かれている範囲の真ん中を cx にそろえる。衣装の絵でも同じ。測れないうちは今までの出し方
+//   下は絵の下の端を、場面の下から 22%(横で低い画面は台詞の窓の上 150px)の床にそろえる(2026-11-08 ミハリ: 横で顔が台詞の窓の裏に隠れた)。左右は描かれている範囲の真ん中を cx にそろえる。衣装の絵でも同じ。測れないうちは今までの出し方
 const ASSISTANT_LIFE_STAND_BOX = new Map();
 const assistantLifeStandBox = (src) => new Promise((res) => {
   if (ASSISTANT_LIFE_STAND_BOX.has(src)) { res(ASSISTANT_LIFE_STAND_BOX.get(src)); return; }
@@ -590,11 +607,11 @@ function AssistantLifeStand({ pid, src, cx, fig, sleep }) {
   const [box, setBox] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.get(src) || null);
   React.useEffect(() => { let alive = true; assistantLifeStandBox(src).then(b => { if (alive) setBox(b); }); return () => { alive = false; }; }, [src]);
   const filter = sleep ? 'brightness(.45) saturate(.6) drop-shadow(0 6px 12px #0008)' : undefined;
-  if (!box) return <img className="st" data-assistant-life-scene-stand={pid} data-assistant-life-scene-sleep={sleep ? '1' : '0'} src={src} alt="" style={{ left: `${cx}%`, transform: 'translateX(-50%)', height: '58%', width: '70%', bottom: '22%', opacity: 0, filter }}/>;
+  if (!box) return <img className="st" data-assistant-life-scene-stand={pid} data-assistant-life-scene-sleep={sleep ? '1' : '0'} src={src} alt="" style={{ left: `${cx}%`, transform: 'translateX(-50%)', height: '58%', width: '70%', bottom: 'max(22%, 150px)', opacity: 0, filter }}/>;
   const span = Math.max(0.2, box.b - box.t);
   const h = fig / span; // 場面の高さに対する絵の高さ
   return <img className="st" data-assistant-life-scene-stand={pid} data-assistant-life-scene-sleep={sleep ? '1' : '0'} data-assistant-life-scene-fig={fig} src={src} alt=""
-    style={{ left: `${cx}%`, height: `${(h * 100).toFixed(2)}%`, width: 'auto', maxWidth: 'none', bottom: `calc(22% - ${((1 - box.b) * h * 100).toFixed(2)}%)`, transform: `translateX(-${(((box.l + box.r) / 2) * 100).toFixed(1)}%)`, objectFit: 'fill', filter }}/>;
+    style={{ left: `${cx}%`, height: `${(h * 100).toFixed(2)}%`, width: 'auto', maxWidth: 'none', bottom: `calc(max(22%, 150px) - ${((1 - box.b) * h * 100).toFixed(2)}%)`, transform: `translateX(-${(((box.l + box.r) / 2) * 100).toFixed(1)}%)`, objectFit: 'fill', filter }}/>;
 }
 
 // 場面(見守る・ようすを見る・渡す の掛け合いを、その場所の背景と立ち絵で流す)
@@ -642,7 +659,7 @@ function AssistantLifeScene({ scene, look, onClose, onGive, canGive }) {
           {zz && <span className="absolute text-[34px]" style={{ left: `${cx + 8}%`, top: '30%' }} aria-hidden="true">💤</span>}</React.Fragment>; })}
       <div className="mhl-hdr absolute inset-x-0 top-0" style={{ paddingTop: 'calc(8px + env(safe-area-inset-top))' }}>
         <div className="flex items-start gap-2">
-          <button type="button" data-assistant-life-scene-back onClick={onClose} aria-label="家へ戻る" className="h-9 w-9 text-[18px] text-slate-100">←</button>
+          <button type="button" data-assistant-life-scene-back onClick={() => { if (peer && peer.talking && typeof ASSISTANT_PEER_STORE !== 'undefined') ASSISTANT_PEER_STORE.set({ stopTalkAt: Date.now() }); onClose(); }} aria-label="家へ戻る" className="h-9 w-9 text-[18px] text-slate-100">←</button>
           <div className="min-w-0 flex-1"><p className="mhl-en">{scene.place && scene.place !== 'home' ? String(scene.place).toUpperCase() : 'ROOM'}</p>{/* アイコンは字の塗り(背景を字の形で切り抜く)の外に置く。中に入れると絵文字まで切り抜かれ、iPhone で白い四角になった(2026-11-08 社長) */}<p className="flex items-center gap-1.5" data-assistant-life-scene-title><span aria-hidden="true" data-assistant-life-scene-icon className="text-[19px] leading-none">{ASSISTANT_LIFE_PLACE_ICON[scene.place] || '🏡'}</span><span className="mhl-ti" style={{ fontSize: 19 }}>{placeName}</span></p></div>
         </div>
         {ids.length >= 3 && <p data-assistant-life-scene-group className="mt-1 w-fit rounded-full px-2 py-0.5 text-[10px] font-black" style={{ background: 'linear-gradient(90deg,#0ea5e9,#a855f7)' }}>👥 {ids.length}人で ・ <AssistantLifeNames text={assistantLifeGroupNames(ids, 8)}/></p>}
@@ -914,9 +931,9 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
           <div className="absolute inset-0" style={{ zIndex: 25 }} data-assistant-life-diary>
             <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/60" onClick={() => setBoardOpen(false)}/>
             <div className="mhl-sheet" style={land ? { left: 'auto', width: '42%', top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px' } : undefined}>
-              <p className="mhl-en">TODAY</p><p className="text-[18px] font-black">📌 今日あったこと</p>
+              <p className="mhl-en">TODAY</p><p className="text-[18px] font-black">📌 今日あったこと</p><p className="text-[10.5px] font-bold text-slate-400" data-assistant-life-diary-count>全部で{(diary.items || []).length}件・新しい順</p>
               {(diary.items || []).length ? [...diary.items].reverse().map((x, i) => <p key={i} className="mt-1.5 text-[12px] font-bold leading-snug text-slate-100"><b className="mr-1.5 text-amber-200">{x.t}</b><AssistantLifeChunks text={x.text}/></p>) : <p className="mt-2 text-[12px] text-slate-400">まだ何もありません</p>}
-              <button type="button" className="mhl-btn mt-3 w-full bg-slate-700" onClick={() => setBoardOpen(false)}>閉じる</button>
+              <button type="button" data-assistant-life-diary-close data-mhl-sheet-close onClick={() => setBoardOpen(false)} className="mt-3 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
             </div>
           </div>)}
         {scene && <AssistantLifeScene key={scene.key} scene={scene} look={look} canGive={canGive && itemsLeft > 0} onClose={() => { setScene(null); showFollow(); }} onGive={openGive}/>}

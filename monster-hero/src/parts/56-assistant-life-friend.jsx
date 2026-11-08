@@ -868,7 +868,7 @@ function AlfSceneSheet({ scene, onClose }) {
             </div>))}
         </div>
         {scene.reward && <p className="mt-2 text-[11px] font-black text-amber-200" data-alf-scene-reward>{scene.reward}</p>}
-        <button type="button" className="mt-3 w-full rounded-2xl bg-amber-300 py-2 text-[13px] font-black text-slate-950" data-alf-scene-close onClick={onClose}>とじる</button>
+        <button type="button" className="mt-3 w-full rounded-2xl bg-amber-300 py-2 text-[13px] font-black text-slate-950" data-alf-scene-close data-mhl-sheet-close onClick={onClose}>とじる</button>
       </div>
     </div>);
 }
