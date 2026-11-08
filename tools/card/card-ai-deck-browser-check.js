@@ -8,6 +8,7 @@
 //   ② 印が真・AI が返す: 相手えらびで選ぶと裏で AI に組んでもらう → VS に「チーム」と「今日のデッキ」の名前・ひとこと → 結果に同じ「今日のデッキ」の名前→ その助手との10戦の数が1つ増える。札は画面の中
 //   ③ 印が真・AI なし(遅れの返事): 揺らぎで組む → VS・結果は既定の名前で同じ形(画面に違いが出ない)
 //   ⑥ これまでのデッキ: 相手えらびの選び口(おまかせ・今の3つ・これまで)で選ぶと、今日のデッキ・VS・結果の名前がそれになる
+//   ⑧ 遊ぶ人の提案(assistantLifeDeckWish の代わり): 次の組み直しで1回だけ使い、相手えらび・VS・結果に提案の名前が出る
 //   ⑦ 選び口を開いても、隣の欄の立ち絵と吹き出しが画面に入る(横で下へ押し出された崩れ)
 //   ⑤ VS に自分の側(3体)も出て、画面に入っている(相手の側より遅れて出るので、出そろうまで待ってから撮る)
 //   ④ 実行時エラーが無い
@@ -68,6 +69,8 @@ const run = async (browser, mode, scene, errors) => {
   // 自動操作のブラウザの書き込みの守り(26-supabase.jsx)は、中継役だけ偽物へ通す(差し替えた口だけ)
   await page.addInitScript((on) => { window.__aiDeckFlag = on; window.__mhSupabaseStubbed = ['card-assistant-talk']; }, scene.flag);
   // ⑥ これまでのデッキ: きき の昔のデッキを1つ置いておく(推しの枠・主役ゴーレム)。選び口で選び、VS・結果にその名前が出るか
+  // ⑧ 遊ぶ人の提案(助手部の口 assistantLifeDeckWish の代わり): 推しのデッキ・守り・「まったり作戦」
+  if (scene.wish) await page.addInitScript(() => { window.assistantLifeDeckWish = (id) => (id === 'kiki' ? { face: 'oshi', name: 'まったり作戦', plan: 'guard', day: '2026-11-08' } : null); });
   if (scene.past) await page.addInitScript(() => { if (sessionStorage.getItem('h')) return; sessionStorage.setItem('h', '1');
     localStorage.setItem('mh_card_ai_deck_history_v1', JSON.stringify({ v: 1, perWho: { kiki: [{ id: 'oshi-1700000000000', slot: 'oshi', name: 'ゴーレムの力くらべ', plan: null,
       spec: { lead: 'golem', avoid: ['dragon', 'zilla'], keep: ['tiger', 'hare'], free: 1, style: 'normal' }, monsters: [], top: [], from: 1700000000000, to: 1700300000000 }] } })); });
@@ -130,6 +133,17 @@ const run = async (browser, mode, scene, errors) => {
     await page.locator(`[data-card-foe="${WHO}"]`).click();
     await page.getByRole('button', { name: /MASTER/ }).first().click();
     await page.waitForTimeout(2500);
+    if (scene.wish) {
+      await page.waitForTimeout(1500);
+      const saved = await page.evaluate(() => { const v = JSON.parse(localStorage.getItem('mh_card_ai_recipe_v2') || 'null'); const u = JSON.parse(localStorage.getItem('mh_card_ai_deck_wish_v1') || 'null'); return { oshi: v && v.perWho.kiki && v.perWho.kiki.decks.oshi, used: u }; });
+      check(`⑧ ${label}: 提案は次の組み直しで1回だけ使い、推しのデッキの名前と型になる・使った印を残す`, !!saved.oshi && saved.oshi.name === 'ゴーレムのまったり作戦' && saved.oshi.style === 'guard' && !!saved.used && JSON.stringify(saved.used.used.kiki) === JSON.stringify(['oshi:2026-11-08']), JSON.stringify(saved));
+      // 今日のデッキを推しにして、相手えらびの札を見る(83 の cardAiDeckNextMemo)
+      await page.evaluate(() => { cardAiDeckNextMemo.kiki = 'oshi'; }); // eslint-disable-line no-undef
+      await page.locator('[data-card-foe="mua"]').click(); await page.locator(`[data-card-foe="${WHO}"]`).click(); await page.waitForTimeout(500);
+      const chip = await page.evaluate((w) => { const c = document.querySelector(`[data-card-foe-style="${w}"] [data-card-foe-deck-chip-name]`); return c ? c.textContent.trim() : ''; }, WHO);
+      check(`⑧ ${label}: 相手えらびの今日のデッキに提案の名前が出る`, /ゴーレムのまったり作戦$/.test(chip), chip);
+      await snap('0-wish');
+    }
     if (scene.past) {
       const pk = page.locator(`[data-card-foe-deck-picker="${WHO}"] [data-card-foe-deck-picker-open]`);
       const first = (await pk.innerText().catch(() => '')).replace(/\s+/g, '');
@@ -193,7 +207,7 @@ const run = async (browser, mode, scene, errors) => {
     else {
       const styleIn = await inView('[data-card-vs-style]');
       // 3つのうち組んだのは1つだけ。ほかの型が選ばれたときは既定の名前(どちらでも「型: 名前」とひとことが出る)
-      const okName = !!vs && (scene.past ? vs.style === 'ゴーレムの力くらべ' : (names.includes(vs.style) || (scene.ai && vs.style === 'ゴーレム大暴れ'))) && !!vs.team;
+      const okName = !!vs && (scene.wish ? vs.style === 'ゴーレムのまったり作戦' : scene.past ? vs.style === 'ゴーレムの力くらべ' : (names.includes(vs.style) || (scene.ai && vs.style === 'ゴーレム大暴れ'))) && !!vs.team;
       check(`${scene.ai ? '②' : '③'} ${label}: VS に「チーム」と「今日のデッキ」の名前・ひとこと(画面の中)`, okName && !!vs.line && styleIn === true, `${JSON.stringify(vs)} / ${styleIn}`);
     }
     for (let i = 0; i < 40; i++) { if (await page.locator('[data-card-top="result"]').count()) break; await pass(); }
@@ -218,7 +232,7 @@ const run = async (browser, mode, scene, errors) => {
   const server = await serve();
   const browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const errors = [];
-  const SCENES = [{ id: 'off', label: '印が偽', flag: false, ai: false }, { id: 'ai', label: 'AI あり', flag: true, ai: true }, { id: 'noai', label: 'AI なし', flag: true, ai: false }, { id: 'past', label: '昔のデッキ', flag: true, ai: false, past: true }];
+  const SCENES = [{ id: 'off', label: '印が偽', flag: false, ai: false }, { id: 'ai', label: 'AI あり', flag: true, ai: true }, { id: 'noai', label: 'AI なし', flag: true, ai: false }, { id: 'past', label: '昔のデッキ', flag: true, ai: false, past: true }, { id: 'wish', label: '提案', flag: true, ai: false, wish: true }];
   try {
     for (const mode of MODES) for (const scene of SCENES) {
       try { await run(browser, mode, scene, errors); } catch (e) { check(`${mode.label}・${scene.label} 最後まで触れる`, false, String(e).slice(0, 300)); }
