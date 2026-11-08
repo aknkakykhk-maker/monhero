@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 905df41e2a42c960
+// source-sha256: 1e26c91bf3fe95c0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -107181,6 +107181,7 @@ function AssistantLifeRoomSheet({
   }, rvAct('sheet', home ? '👀 ようす' : '👀 くわしく', 'bg-gradient-to-br from-rose-400 to-amber-500', toSheet), rvAct('chat', asleep ? '💤 起こす' : '💬 おしゃべり', 'bg-gradient-to-br from-sky-400 to-indigo-500', () => onChat ? onChat(id, null) : toSheet(), !onChat && !home), rvAct('give', '🎁 贈る', 'bg-pink-600', () => {
     if (soloOn && canGiveSolo) onGiveSolo(id, w && w.group ? w.group.ids : [id]);else if (w && w.group && canGive) onGive(w.group);else toSheet();
   }), rvAct('furn', '🪑 家具', 'bg-orange-600', () => setFurnOpen(true), !(typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled() && onGiveFurn)), rvAct('masmon', `🐾 マスモン ${rvTeam.length || ''}`.trim(), 'bg-teal-600', () => onMasmon ? onMasmon(id) : toSheet(), !onMasmon), rvAct('beat', atBeat ? '🎵 会いに行く' : '🎵 ビート', 'bg-gradient-to-br from-violet-500 to-pink-500', () => onBeat(id), typeof ASSISTANT_LIFE_LINKS.beatInvite !== 'function'));
+  const rvSheetW = land && typeof window !== 'undefined' && window.innerWidth < 760 ? '50%' : '42%';
   const rvScene = typeof AssistantLifeRoomScene === 'function' ? React.createElement(AssistantLifeRoomScene, {
     id: id,
     look: typeof assistantLifeTimeLook === 'function' ? assistantLifeTimeLook() : 'noon',
@@ -107217,7 +107218,7 @@ function AssistantLifeRoomSheet({
   }, "← 家へ"), land ? rvScene && React.createElement("div", {
     className: "absolute inset-y-0 left-0 bg-[#0b1020]",
     style: {
-      width: '58%'
+      width: rvSheetW === '42%' ? '58%' : '50%'
     }
   }, rvScene) : null, React.createElement("div", {
     ref: scrollRef,
@@ -107233,7 +107234,7 @@ function AssistantLifeRoomSheet({
     className: "mhl-sheet",
     style: land ? {
       left: 'auto',
-      width: '42%',
+      width: rvSheetW,
       top: 0,
       maxHeight: '100%',
       borderRadius: '22px 0 0 22px',
@@ -107251,6 +107252,12 @@ function AssistantLifeRoomSheet({
     className: "text-[21px] font-black"
   }, who.name, "の部屋"), React.createElement("p", {
     className: "mt-1 max-w-[62%] text-[12px] font-bold",
+    style: {
+      wordBreak: 'auto-phrase',
+      ...(land ? {
+        maxWidth: 'none'
+      } : {})
+    },
     "data-assistant-life-room-where": true
   }, where, groupNames && React.createElement(React.Fragment, null, " ・ ", w.group.ids.length, "人(", React.createElement(AssistantLifeNames, {
     text: groupNames
@@ -107329,7 +107336,8 @@ function AssistantLifeRoomSheet({
       background: '#0b1020',
       paddingTop: 6,
       paddingBottom: 6,
-      marginBottom: -4
+      marginBottom: -4,
+      boxShadow: '0 -14px 12px #0b1020'
     } : undefined
   }, follow && onChat && React.createElement("div", {
     className: "col-span-2 rounded-2xl border-2 border-pink-300 bg-slate-950/95 px-3 py-2",

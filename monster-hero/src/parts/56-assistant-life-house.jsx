@@ -570,6 +570,8 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
       {rvAct('masmon', `🐾 マスモン ${rvTeam.length || ''}`.trim(), 'bg-teal-600', () => (onMasmon ? onMasmon(id) : toSheet()), !onMasmon)}
       {rvAct('beat', atBeat ? '🎵 会いに行く' : '🎵 ビート', 'bg-gradient-to-br from-violet-500 to-pink-500', () => onBeat(id), typeof ASSISTANT_LIFE_LINKS.beatInvite !== 'function')}
     </div>);
+  // 横で狭い画面(667 など)は、右の中身の欄を半分まで広げる(説明が言葉の途中で折れて、下のボタンの段に隠れた・2026-11-08 ミハリ)
+  const rvSheetW = land && typeof window !== 'undefined' && window.innerWidth < 760 ? '50%' : '42%';
   const rvScene = typeof AssistantLifeRoomScene === 'function' ? (
     <AssistantLifeRoomScene id={id} look={typeof assistantLifeTimeLook === 'function' ? assistantLifeTimeLook() : 'noon'} land={land} people={people} sleepIds={sleepIds} away={away} team={rvTeam} furn={rvFurn}
       bubble={follow && follow.text ? follow.text : ''} title={`${who.name}の部屋`} sub={`${lv != null ? `💗 仲良し度 Lv${lv} ・ ` : ''}${where}`}
@@ -578,13 +580,13 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
     <div className="absolute inset-0" style={{ zIndex: 25 }} data-assistant-life-room-sheet={id}>
       <button type="button" aria-label="閉じる" data-assistant-life-roomview-close onClick={onClose} className="absolute z-[40] rounded-xl border border-pink-300/60 bg-slate-950/85 px-2.5 py-1.5 text-[12px] font-black text-pink-100 active:scale-95"
         style={{ left: 'calc(10px + env(safe-area-inset-left))', top: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>← 家へ</button>
-      {land ? (rvScene && <div className="absolute inset-y-0 left-0 bg-[#0b1020]" style={{ width: '58%' }}>{rvScene}</div>) : null}
+      {land ? (rvScene && <div className="absolute inset-y-0 left-0 bg-[#0b1020]" style={{ width: rvSheetW === '42%' ? '58%' : '50%' }}>{rvScene}</div>) : null}
       <div ref={scrollRef} className={land ? 'contents' : 'absolute inset-0 overflow-y-auto overflow-x-hidden bg-[#0b1020]'} data-assistant-life-roomview-scroll>
       {!land && rvScene && <div style={{ height: 'calc(100% - 52px)', minHeight: 420 }}>{rvScene}</div>}
-      <div ref={sheetRef} className="mhl-sheet" style={land ? { left: 'auto', width: '42%', top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px', borderTop: 0, borderLeft: '2px solid #f9a8d4', paddingTop: 10 } : { position: 'relative', maxHeight: 'none', zIndex: 1 }}>
+      <div ref={sheetRef} className="mhl-sheet" style={land ? { left: 'auto', width: rvSheetW, top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px', borderTop: 0, borderLeft: '2px solid #f9a8d4', paddingTop: 10 } : { position: 'relative', maxHeight: 'none', zIndex: 1 }}>
         <p className="mhl-en">ROOM · {String(who.id).toUpperCase()}</p>
         <p className="text-[21px] font-black">{who.name}の部屋</p>
-        <p className="mt-1 max-w-[62%] text-[12px] font-bold" data-assistant-life-room-where>{where}{groupNames && <> ・ {w.group.ids.length}人(<AssistantLifeNames text={groupNames}/>)</>}</p>
+        <p className="mt-1 max-w-[62%] text-[12px] font-bold" style={{ wordBreak: 'auto-phrase', ...(land ? { maxWidth: 'none' } : {}) }} data-assistant-life-room-where>{where}{groupNames && <> ・ {w.group.ids.length}人(<AssistantLifeNames text={groupNames}/>)</>}</p>
         {!home && <p className="text-[11px] font-bold text-violet-200">⏱ {slotDef ? `${slotDef.to % 24}時まで` : ''}いる</p>}
         {(() => { const sh = assistantLifeRhythmShiftOn(((ASSISTANT_LIFE_STORE.state.rhythm || {})[id]), assistantLifeDayKey()); const rh = ASSISTANT_LIFE_RHYTHM[id]; return <p className="text-[10.5px] font-bold text-sky-200" data-assistant-life-room-rhythm={assistantLifeRhythmLabel(sh)}>🕰 生活のリズム: {rh ? rh.label : ''}{Math.abs(sh) >= 0.3 ? `(いまは ${assistantLifeRhythmLabel(sh)})` : ''}</p>; })()}
         {asleep ? <p className="text-[11px] font-bold text-indigo-200" data-assistant-life-room-asleep>💤 ぐっすり寝ている</p> : (w && w.reason === 'lonely') ? <p className="text-[11px] font-bold text-amber-200">💭 さみしそう(だれか来てほしい)</p> : mood ? <p className="text-[11px] font-bold text-pink-200">気分: {mood}</p> : null}
@@ -602,7 +604,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
           </div>
         </div>
         {/* 横は狭いので、ボタンをシートの下に止めて、いつも全部見えるようにする(2026-11-08 窓口) */}
-        <div className="mt-2 grid grid-cols-2 gap-1.5" data-assistant-life-room-acts style={land ? { position: 'sticky', bottom: -10, zIndex: 6, background: '#0b1020', paddingTop: 6, paddingBottom: 6, marginBottom: -4 } : undefined}>
+        <div className="mt-2 grid grid-cols-2 gap-1.5" data-assistant-life-room-acts style={land ? { position: 'sticky', bottom: -10, zIndex: 6, background: '#0b1020', paddingTop: 6, paddingBottom: 6, marginBottom: -4, boxShadow: '0 -14px 12px #0b1020' } : undefined}>
           {/* 声をかけたあとの続き(2026-11-08 社長 ❼A・❾A)。ボタンの段のいちばん上(横はボタンの段が下に止まるので、段の外だと隠れる) */}
           {follow && onChat && (
             <div className="col-span-2 rounded-2xl border-2 border-pink-300 bg-slate-950/95 px-3 py-2" data-assistant-life-room-follow={follow.kind}>
