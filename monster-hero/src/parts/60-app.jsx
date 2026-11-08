@@ -2422,6 +2422,7 @@ function MonsterHeroGame() {
   // 助手との仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる。
   // 助手ごとに完全に分けて持つので、切り替えてももう片方の進捗は消えない
   const [assistantBonds, setAssistantBonds] = useState({});
+  useEffect(() => { if (typeof assistantLifeCardBondsMirror === 'function') assistantLifeCardBondsMirror(assistantBonds); }, [assistantBonds]); // カード部の材料の口(56)へ仲良し度の写しを渡す
   // 助手ライフの画面を開いているか(曲を「風がそよぐ場所」にする・ふだんの掛け合いを止める。2026-11-07 社長)
   const [assistantLifeOpenNow, setAssistantLifeOpenNow] = useState(false);
   useEffect(() => {

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: beef5aa2dd9659cc
+// generated-sha256: ea8b31abafb1d414
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -66043,6 +66043,28 @@ const assistantMasmonAskNames = async () => {
     return 'ok';
   } catch (_) { return 'failed'; } finally { _assistantMasmonNamesBusy = false; }
 };
+// カード部(推し・好き・素顔のデッキ)が読む材料の口(2026-11-08 ルールくん・ソランドと決めた形)。読むだけ・何も保存しない
+//   推し・好きは助手の表(はじめの好み)から読む。マスモンの引き直し・迎えでは変わらない(デッキの主役が急に入れかわらない)
+//   → { core: 推しの血統 id, likes: [好きなモンスター id(実装済みだけ)], likeLineages: [ぜんぶ好きな血統 id], friendLv: 仲良し度, mood: いまの気分 id } か null
+let _assistantLifeCardBonds = {};
+const assistantLifeCardBondsMirror = (bonds) => { _assistantLifeCardBonds = bonds && typeof bonds === 'object' ? bonds : {}; };
+const assistantLifeCardMaterial = (id) => {
+  try {
+    if (typeof assistantLifeEnabled === 'function' && !assistantLifeEnabled()) return null;
+    const p = assistantMasmonBasePlanOf(id);
+    if (!p) return null;
+    const rows = Array.isArray(p.likeMon) ? p.likeMon : [];
+    const likes = rows.map(x => x && x.monster).filter(m => typeof m === 'string' && assistantMasmonMon(m));
+    const likeLineages = rows.map(x => x && x.lineage).filter(l => typeof l === 'string' && l);
+    const first = rows[0] || null;
+    const core = first ? (first.lineage || (first.monster ? assistantMasmonLineage(first.monster) : null)) : null;
+    let friendLv = 0;
+    try { const b = _assistantLifeCardBonds[id]; const pts = typeof normalizeAssistantBond === 'function' ? normalizeAssistantBond(b).points : null; const lv = Number.isFinite(pts) && typeof assistantBondLevelOf === 'function' ? assistantBondLevelOf(pts) : 0; friendLv = Number.isFinite(lv) ? lv : 0; } catch (_) { friendLv = 0; }
+    let mood = null;
+    try { const m = typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.life && ASSISTANT_LIFE_STORE.state.life.moods ? ASSISTANT_LIFE_STORE.state.life.moods[id] : null; mood = typeof m === 'string' && m ? m : null; } catch (_) { mood = null; }
+    return { core: core || null, likes, likeLineages, friendLv, mood };
+  } catch (_) { return null; }
+};
 // フレンドの家の控えに写す口(オトズレ3): その人のマスモン [{ monster, nick, colors, lead }](先頭が先・編成3体+迎えた控え)
 const assistantLifeMasmonTeamOf = (id) => {
   try {
@@ -91361,6 +91383,7 @@ function MonsterHeroGame() {
   // 助手との仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる。
   // 助手ごとに完全に分けて持つので、切り替えてももう片方の進捗は消えない
   const [assistantBonds, setAssistantBonds] = useState({});
+  useEffect(() => { if (typeof assistantLifeCardBondsMirror === 'function') assistantLifeCardBondsMirror(assistantBonds); }, [assistantBonds]); // カード部の材料の口(56)へ仲良し度の写しを渡す
   // 助手ライフの画面を開いているか(曲を「風がそよぐ場所」にする・ふだんの掛け合いを止める。2026-11-07 社長)
   const [assistantLifeOpenNow, setAssistantLifeOpenNow] = useState(false);
   useEffect(() => {

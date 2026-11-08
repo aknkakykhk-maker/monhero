@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 283899e0e8859e25
+// source-sha256: 123fc522a5a84c56
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -123617,6 +123617,47 @@ const assistantMasmonAskNames = async () => {
     _assistantMasmonNamesBusy = false;
   }
 };
+let _assistantLifeCardBonds = {};
+const assistantLifeCardBondsMirror = bonds => {
+  _assistantLifeCardBonds = bonds && typeof bonds === 'object' ? bonds : {};
+};
+const assistantLifeCardMaterial = id => {
+  try {
+    if (typeof assistantLifeEnabled === 'function' && !assistantLifeEnabled()) return null;
+    const p = assistantMasmonBasePlanOf(id);
+    if (!p) return null;
+    const rows = Array.isArray(p.likeMon) ? p.likeMon : [];
+    const likes = rows.map(x => x && x.monster).filter(m => typeof m === 'string' && assistantMasmonMon(m));
+    const likeLineages = rows.map(x => x && x.lineage).filter(l => typeof l === 'string' && l);
+    const first = rows[0] || null;
+    const core = first ? first.lineage || (first.monster ? assistantMasmonLineage(first.monster) : null) : null;
+    let friendLv = 0;
+    try {
+      const b = _assistantLifeCardBonds[id];
+      const pts = typeof normalizeAssistantBond === 'function' ? normalizeAssistantBond(b).points : null;
+      const lv = Number.isFinite(pts) && typeof assistantBondLevelOf === 'function' ? assistantBondLevelOf(pts) : 0;
+      friendLv = Number.isFinite(lv) ? lv : 0;
+    } catch (_) {
+      friendLv = 0;
+    }
+    let mood = null;
+    try {
+      const m = typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.life && ASSISTANT_LIFE_STORE.state.life.moods ? ASSISTANT_LIFE_STORE.state.life.moods[id] : null;
+      mood = typeof m === 'string' && m ? m : null;
+    } catch (_) {
+      mood = null;
+    }
+    return {
+      core: core || null,
+      likes,
+      likeLineages,
+      friendLv,
+      mood
+    };
+  } catch (_) {
+    return null;
+  }
+};
 const assistantLifeMasmonTeamOf = id => {
   try {
     const p = assistantMasmonPlanOf(id);
@@ -168490,6 +168531,9 @@ function MonsterHeroGame() {
   const rhythmHellStoryAfterResultRef = useRef(false);
   const [tacticsIntroPending, setTacticsIntroPending] = useState(false);
   const [assistantBonds, setAssistantBonds] = useState({});
+  useEffect(() => {
+    if (typeof assistantLifeCardBondsMirror === 'function') assistantLifeCardBondsMirror(assistantBonds);
+  }, [assistantBonds]);
   const [assistantLifeOpenNow, setAssistantLifeOpenNow] = useState(false);
   useEffect(() => {
     if (typeof ASSISTANT_LIFE_STORE === 'undefined') return undefined;
