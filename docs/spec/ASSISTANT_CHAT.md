@@ -81,6 +81,9 @@ HELL・モンヒロビート・マルチの項目が材料に無かった)。
 2. Secrets に `ANTHROPIC_API_KEY` を登録(社長)
 3. Edge Function `assistant-chat` を公開する。ファイルは `supabase/functions/assistant-chat/index.ts` と `core.js` の2つ。
    **verify_jwt は外す**(ゲームが送る publishable key は JWT ではないため。外さないと 401 になる)
+   core.js・ranking.js を固定の版から読ませる中継ぎにするときは、`cdn.jsdelivr.net/gh/aknkakykhk-maker/monhero@<sha>/supabase/functions/assistant-chat/` を使う。
+   **jsdelivr がその sha で 403 を返したら、`raw.githubusercontent.com/aknkakykhk-maker/monhero/<sha>/supabase/functions/assistant-chat/` を読む形にする**(中身は同じ。2026-11-08 version 19・7249b53 で jsdelivr が 403 になり、窓口がこちらで配った)。
+   どちらも sha は短縮でなく固定した版(ブランチ名にしない)。配ったら不正な頼み(空の本文)で 400 bad_request が返ることを確かめる
 4. 呼べるのは `https://aknkakykhk-maker.github.io` からだけ(CORS と Origin の確認)。増やすなら Secrets `ASSISTANT_CHAT_ALLOWED_ORIGINS`(カンマ区切り)
 
 ## 検査

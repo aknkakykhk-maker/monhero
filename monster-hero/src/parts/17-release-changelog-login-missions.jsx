@@ -122,7 +122,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 会話で決まる呼び方・助手へのあだ名(2026-11-08 社長・docs/progress/assistant-peer/AI-TALK-PLAN.md)。中継役(assistant-chat の call/nick 欄)を
   //   窓口が配り、社長が更新履歴の文に「この文で」と言ってから真にする。偽のあいだは、カード・Lv6 の問いかけ・あだ名が出ず、呼び方は今までどおり
   //   (保存してある呼び方 mh_assistant_callname_v1 は偽でも読む。プロフィールの入力欄で決めたものは偽でもそこへ入る)
-  assistantCallname: false,
+  assistantCallname: true,
   // 助手どうしの作り直し「助手たちの今」(2026-11-07 社長。設計 docs/progress/assistant-peer/LIFE-PLAN.md)。1人ずつが気分としたいことで
   //   だれと過ごすかを決める仕組み・にぎわい(遊んだ量で4段)・専用の画面。全部そろって社長が「この文で公開」と言ったら真にする。
   //   偽のあいだは、にぎわいを数えず、助手どうしの仲良くなり方も今のまま(56-assistant-life.jsx)

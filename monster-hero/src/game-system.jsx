@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 55f4557aaa10a754
+// generated-sha256: c65a1c8cb639d64b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9601,7 +9601,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 会話で決まる呼び方・助手へのあだ名(2026-11-08 社長・docs/progress/assistant-peer/AI-TALK-PLAN.md)。中継役(assistant-chat の call/nick 欄)を
   //   窓口が配り、社長が更新履歴の文に「この文で」と言ってから真にする。偽のあいだは、カード・Lv6 の問いかけ・あだ名が出ず、呼び方は今までどおり
   //   (保存してある呼び方 mh_assistant_callname_v1 は偽でも読む。プロフィールの入力欄で決めたものは偽でもそこへ入る)
-  assistantCallname: false,
+  assistantCallname: true,
   // 助手どうしの作り直し「助手たちの今」(2026-11-07 社長。設計 docs/progress/assistant-peer/LIFE-PLAN.md)。1人ずつが気分としたいことで
   //   だれと過ごすかを決める仕組み・にぎわい(遊んだ量で4段)・専用の画面。全部そろって社長が「この文で公開」と言ったら真にする。
   //   偽のあいだは、にぎわいを数えず、助手どうしの仲良くなり方も今のまま(56-assistant-life.jsx)
@@ -52286,6 +52286,8 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
               </div>
               {/* 札の下(2枚並びの外・全幅)に「このデッキと戦う」「借りる」。登録していない人は出ない(95 の CardShareDeckActions) */}
               {typeof CardShareDeckActions === 'function' && <div className="mt-2"><CardShareDeckActions breederId={selected.otherId} onGo={onCardShareGo}/></div>}
+              {/* 「🏘 家へ遊びに行く」(56-assistant-life-friend の AssistantLifeFriendProfileVisit・2026-11-08 社長)。助手ライフが開いていない人には出ない */}
+              {typeof AssistantLifeFriendProfileVisit === 'function' && <AssistantLifeFriendProfileVisit friendId={selected.otherId} friendName={look.userName}/>}
               {/* 記録は1行ずつにたたむ(2026-10-29 案B。前はタブ4つ)。押した行だけ開く。もう一度押すと閉じる */}
               {fold('overview', '遊んだ記録')}
               {profileTab === 'overview' && (<>
@@ -62673,7 +62675,8 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
           {/* 声をかけたあとの続き(2026-11-08 社長 ❼A・❾A)。ボタンの段のいちばん上(横はボタンの段が下に止まるので、段の外だと隠れる) */}
           {follow && onChat && (
             <div className="col-span-2 rounded-2xl border-2 border-pink-300 bg-slate-950/95 px-3 py-2" data-assistant-life-room-follow={follow.kind}>
-              <p className="text-[12px] font-bold leading-relaxed text-pink-50 [word-break:keep-all] [overflow-wrap:anywhere]">{who.name}「<AssistantLifeChunks text={follow.text}/>」</p>
+              {/* 言葉の切れ目で折る(かぎかっこだけが1行に割れないよう、名前と台詞をひとつの文として折る・ミハリ 2026-11-08) */}
+              <p className={`${land ? 'text-[11px]' : 'text-[12px]'} font-bold leading-snug text-pink-50`} style={JA_WRAP_STYLE}>{jaWrap(`${who.name}「${follow.text}」`)}</p>
               <div className="mt-1.5 grid grid-cols-2 gap-1.5">
                 <button type="button" className="mhl-btn bg-pink-500" data-assistant-life-room-follow-chat onClick={() => onChat(id, follow)}>💬 おしゃべりする</button>
                 <button type="button" className="mhl-btn bg-slate-700" data-assistant-life-room-follow-bye onClick={() => onFollowDone && onFollowDone()}>またね</button>
@@ -62686,7 +62689,8 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
             ? <button type="button" className="mhl-btn mhl-call" data-assistant-life-room-act="invite" disabled={w && w.reason === 'distance'} onClick={() => onInvite(id)}>{asleep ? '💤 そっと声をかける' : '💬 声をかける'}</button>
             : <button type="button" className="mhl-btn mhl-give" data-assistant-life-room-act="give" disabled={!canGive} onClick={() => onGive(w.group)}>🎁 贈る</button>}
           {/* その助手とおしゃべり(社長 ❼A・寝ていれば起こして ❽B)。選んでいない助手とも話せる */}
-          {onChat && <button type="button" className="mhl-btn mhl-call col-span-2" data-assistant-life-room-act="chat" onClick={() => onChat(id, null)}>{asleep ? '💤 起こしておしゃべり' : '💬 おしゃべりする'}</button>}
+          {/* 続きのカードが出ているあいだは、同じことをするボタンを2つ並べない(ミハリ 2026-11-08) */}
+          {onChat && !follow && <button type="button" className="mhl-btn mhl-call col-span-2" data-assistant-life-room-act="chat" onClick={() => onChat(id, null)}>{asleep ? '💤 起こしておしゃべり' : '💬 おしゃべりする'}</button>}
           {typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && (
             <button type="button" className="mhl-btn mhl-beat col-span-2" data-assistant-life-room-act="beat" onClick={() => onBeat(id)}>{asleep ? '🎵 起こしてモンヒロビートに誘う' : atBeat && beatFree ? <>🎵 会いに行く<em className="ml-1 rounded-full bg-amber-300 px-1.5 text-[10px] not-italic text-amber-950" data-assistant-life-room-free>券なし</em></> : '🎵 一緒にモンヒロビート'}</button>)}
           {/* 部屋の家具(段階B・2026-11-08 社長): 贈る・置く・しまう */}
@@ -65576,8 +65580,9 @@ const alfApiLineOk = (who, t) => {
   let x = String(t || '');
   if (who === 'mua') x = x.replace(/じゃん/g, 'ぢゃん').replace(/まじ/g, 'まぢ').replace(/マジ/g, 'マヂ');
   if (ALF_API_BODY_WORDS.test(x) || /(この|あの|その)子|子たち/.test(x)) return null;
-  if (who === 'atsu' && !/(笑|[！？!?…♪w]|[)）]|[\u3000-\u303f]?[\uff08(][^)）]*[)）])$/.test(x.trim())) return null;
-  if (who === 'dra' && /ほんま|やで|とる|とんだ|へん[。、！]|やろ|あかん/.test(x)) return null;
+  if (who === 'atsu') { x = x.trim().replace(/。$/, '！'); if (!/(笑|[！？!?…♪w]|[)）]|[\u3000-\u303f]?[\uff08(][^)）]*[)）]|\p{Extended_Pictographic}\uFE0F?)$/u.test(x)) return null; }
+  // ドラの関西弁(中継役の FRIEND_DRA_KANSAI と同じ。「やろう」「撮る」は通す・2026-11-08 オトズレ3)
+  if (who === 'dra' && /ほんま|やで|っとる|っとん|とんだ|やろ(?!う)|あかん|へん[。、！]/.test(x)) return null;
   if (who === 'kiki' && /(だよ|だね|してよ|じゃん)([。！!？?♪]|$)/.test(x)) return null;
   if (who !== 'mua' && /ぢゃん|まぢ/.test(x)) return null;
   return x;
@@ -65703,6 +65708,36 @@ function AlfFriendHouseView({ friend, onClose }) {
       </div>
     </div>);
 }
+// 家へ遊びに行けない理由(プロフィールの入口と「🏘 フレンド」の一覧で同じ文)。行けるときは null
+const alfVisitBlockedText = (friendId, name, s = ALF_STORE.state) => {
+  if (s.mode === 'off') return 'フレンドの家との行き来は、いまお休み中です。';
+  if (!s.settings.open) return '「🏘 フレンド」の設定で、行き来を切にしています。';
+  if (s.settings.muted.includes(friendId)) return 'この家は「来ないようにする」にしています。';
+  if (!alfOpenHouses('look').some(f => f.id === friendId)) return `${name || 'このフレンド'}さんが助手ライフを開くと遊びに行けます。`;
+  const can = assistantLifeFriendCanLook(friendId);
+  if (can === 'done') return '今日はこの家にもう遊びに行きました(朝4時に戻ります)。';
+  if (can === 'max') return '今日はもう遊びに行けません(朝4時に戻ります)。';
+  return can === 'ok' ? null : 'いまは遊びに行けません。';
+};
+// フレンドのプロフィールの入口「🏘 家へ遊びに行く」(2026-11-08 社長)。75-screen-friends が差しこむ。
+//   押すとその人の家(AlfFriendHouseView)を開き、もどるとそのままプロフィールへ戻る。行けないときは押せない形で理由を出す
+function AssistantLifeFriendProfileVisit({ friendId, friendName }) {
+  const s = useAssistantLifeFriendState();
+  const [open, setOpen] = React.useState(false);
+  React.useEffect(() => { if (alfEnabled() && alfSafeOther(friendId)) void (async () => { await ALF_STORE.load(); await alfFetchHouses(); })(); }, [friendId]);
+  if (!alfEnabled() || !alfSafeOther(friendId)) return null;
+  const blocked = s.ready ? alfVisitBlockedText(friendId, friendName, s) : '読み込んでいます…';
+  const house = blocked ? null : alfOpenHouses('look').find(f => f.id === friendId);
+  return (
+    <div className="mt-2" data-alf-profile-visit={blocked ? 'blocked' : 'ok'}>
+      <button type="button" disabled={!house} className="min-h-[44px] w-full rounded-xl border-2 border-amber-300/70 bg-amber-300 px-3 text-[13px] font-black text-slate-950 active:scale-95 disabled:border-slate-600 disabled:bg-slate-800 disabled:text-slate-400"
+        data-alf-profile-visit-go onClick={() => house && setOpen(true)}>🏘 家へ遊びに行く</button>
+      {blocked && <p className="mt-1 text-center text-[10.5px] font-bold leading-snug text-slate-400" data-alf-profile-visit-why>{blocked}</p>}
+      {open && house && (typeof ReactDOM !== 'undefined' && ReactDOM.createPortal && typeof document !== 'undefined'
+        ? ReactDOM.createPortal(<div className="fixed inset-0" style={{ zIndex: 70 }} data-alf-profile-layer><AlfFriendHouseView friend={house} onClose={() => setOpen(false)}/></div>, document.body)
+        : <div className="fixed inset-0" style={{ zIndex: 70 }} data-alf-profile-layer><AlfFriendHouseView friend={house} onClose={() => setOpen(false)}/></div>)}
+    </div>);
+}
 // 家の画面のアイコン「🏘 フレンド」のページ(②いま・今日の行き来/置き手紙/③行ったことのある家/⑧設定)
 function AssistantLifeFriendPage({ life }) {
   const s = useAssistantLifeFriendState();
@@ -65718,6 +65753,8 @@ function AssistantLifeFriendPage({ life }) {
   const st = s.st; const lim = ALF_LIMITS[s.mode === 'on' ? 'on' : 'thin'];
   if (!s.ready || s.mode === 'off') return <div className="px-3 py-6 text-center text-[12px] text-slate-300" data-alf-page="off">🏘 フレンドの家との行き来は、いまお休み中です。</div>;
   const houses = alfOpenHouses('look');
+  // 家が届いていない(または古い)フレンド。来ないようにした家は出さない
+  const waiting = s.roster.filter(f => !houses.some(h => h.id === f.id) && !s.settings.muted.includes(f.id)).slice(0, 30);
   const notes = assistantLifeFriendNotes(s);
   const openScene = async (kind, i) => {
     if (kind === 'out') { setScene(assistantLifeFriendGoScene(st.out)); const r = await assistantLifeFriendSeeOuting('out'); if (r && r.beatP) setScene(x => x && { ...x, reward: `🎁 おみやげ ビートP ${r.beatP}${r.photo ? '・写真1枚' : ''}` }); }
@@ -65769,7 +65806,16 @@ function AssistantLifeFriendPage({ life }) {
             <button type="button" className="shrink-0 rounded-xl border border-slate-500 px-2 py-1.5 text-[11px] text-slate-200" aria-label="その他" data-alf-act="menu" onClick={() => setMenu(menu === f.id ? null : f.id)}>⋯</button>
             {menu === f.id && <button type="button" className="shrink-0 rounded-xl border border-rose-300/60 px-2 py-1.5 text-[10px] text-rose-100" data-alf-act="mute" onClick={() => { assistantLifeFriendMute(f.id, true); setMenu(null); }}>来ないようにする</button>}
           </div>); })
-          : <p className={`${card} text-[11px] text-slate-400`}>遊びに行けるフレンドの家はまだありません(フレンドが助手ライフを開くと、ここに並びます)。</p>}
+          : !waiting.length && <p className={`${card} text-[11px] text-slate-400`}>遊びに行けるフレンドの家はまだありません(フレンドが助手ライフを開くと、ここに並びます)。</p>}
+        {/* まだ家が届いていないフレンドも薄く並べる(2026-11-08 社長)。押せない */}
+        {waiting.map(f => (
+          <div key={f.id} className={`${card} flex items-center gap-2 border-dashed border-slate-500/60`} data-alf-house-waiting={f.id}>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[12px] font-black text-slate-300">{f.name}さんの家</p>
+              <p className="text-[10px] leading-snug text-slate-300">{f.name}さんが助手ライフを開くと遊びに行けます</p>
+            </div>
+            <span className="shrink-0 rounded-xl border border-slate-500 bg-slate-800 px-2.5 py-1.5 text-[11px] font-black text-slate-300">🚪 まだ</span>
+          </div>))}
       </div>
       <p className={sec}>⚙️ 行き来の設定</p>
       <div className={card} data-alf-settings>
