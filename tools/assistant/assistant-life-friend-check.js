@@ -263,11 +263,26 @@ const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'er
     check('⑨ 作った文の口調: 体に触れる言葉・あつの文末・ドラの関西弁・ききのタメ口・ほかの助手の「ぢゃん」は使わない',
       ok('dra', 'おでの膝、いまならあいてるぞ') === null && ok('atsu', 'いらっしゃい') === null && ok('atsu', 'いらっしゃい笑') === 'いらっしゃい笑'
       && ok('dra', 'ほんまによう来たな') === null && ok('kiki', '来てくれてうれしいよ。また遊ぼうだね') === null && ok('momosuke', 'かわいいぢゃん') === null && ok('kiki', 'いらっしゃいませ♪') === 'いらっしゃいませ♪'); }
+  { const ok = G('alfApiLineOk');
+    check('⑨ 作った文の口調(中継役と同じ): ドラの「やろう」は通し「〜やろ？」は捨てる・あつの「。」終わりは「！」へ',
+      ok('dra', 'トランプやろうな、えへへ') !== null && ok('dra', 'うまいやろ？') === null && ok('atsu', 'おじゃまします。') === 'おじゃまします！' && ok('atsu', '来たぞ☺️') === '来たぞ☺️', JSON.stringify([ok('dra', 'トランプやろうな、えへへ'), ok('dra', 'うまいやろ？'), ok('atsu', 'おじゃまします。'), ok('atsu', '来たぞ☺️')])); }
   flags.assistantLifeFriendApi = false;
   G('alfSaveSt')({ ...G('alfToday()'), api: null });
   asked = []; await G('assistantLifeFriendRequestScenes')(lifeApi);
   check('⑨ 印 assistantLifeFriendApi が偽なら頼まない', asked.length === 0 && /\n\s*assistantLifeFriendApi:\s*(true|false),/.test(fs.readFileSync(path.join(root, 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8')));
   fakeServer = base;
+
+  // ⑩ プロフィールの入口「🏘 家へ遊びに行く」と、家が届いていないフレンドの薄い並び(2026-11-08 社長)
+  { const why = G('alfVisitBlockedText');
+    vm.runInContext("ALF_STORE.set({ mode: 'thin', roster: [{ id: 'nohouse-01', name: 'まだ' }], houses: {} })", ctx);
+    check('⑩ 家が届いていないフレンドは「◯◯さんが助手ライフを開くと遊びに行けます」', why('nohouse-01', 'まだ') === 'まださんが助手ライフを開くと遊びに行けます。', why('nohouse-01', 'まだ'));
+    vm.runInContext("ALF_STORE.set({ mode: 'off' })", ctx);
+    check('⑩ 行き来がお休みのときはその理由', /お休み中/.test(why('nohouse-01', 'まだ')));
+    vm.runInContext("ALF_STORE.set({ mode: 'thin' })", ctx);
+    const friends = fs.readFileSync(path.join(root, 'monster-hero/src/parts/75-screen-friends.jsx'), 'utf8');
+    const page = fs.readFileSync(path.join(root, 'monster-hero/src/parts/56-assistant-life-friend.jsx'), 'utf8');
+    check('⑩ フレンドのプロフィールに入口がある(デッキの「このデッキと戦う」の下)', /CardShareDeckActions[\s\S]{0,400}<AssistantLifeFriendProfileVisit friendId=\{selected\.otherId\}/.test(friends));
+    check('⑩ 「🏘 フレンド」の一覧に、家が届いていないフレンドを薄く並べる(押せない)', /data-alf-house-waiting/.test(page) && /border-dashed/.test(page)); }
 
   // ⑧ 公開の印
   const rel = fs.readFileSync(path.join(root, 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8');

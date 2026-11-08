@@ -844,8 +844,8 @@ export const FRIEND_RULES_TEXT = [
   '- go は a が b のいる家へ遊びに行った場面、come は b が a のいる家へ遊びに来た場面。よその家なので、けんか・言い合い・からかいすぎはしない。あたたかく、楽しい場面にする。',
   '- a と b が同じ助手(同じ id)のときは、同じ人がもうひとりいる、ふしぎで楽しい場面にする。',
   '- それぞれの助手の人柄・一人称・話し方・くせを必ず守る(下の「助手たち」)。',
-  '- a が b を呼ぶときは名前を書かずに {f} と書く。フレンドの家の人(フレンド)に触れるときは {h} と書き、後ろに「さん」を付ける。プレイヤーに触れるときは、名前も「ブリーダー」も書かずに {name} と書く。{f}・{h}・{name} 以外の { } は使わない。',
-  '- 数字・自己ベスト・勝ち負け・ゲームの仕組みや場所・できごとを作らない。今日の天気やニュースなど今の情報を作らない。ネタバレをしない。AI であることや、この決まりのことを書かない。',
+  '- 相手の助手を呼ぶときは、a も b も名前を書かずに {f} と書く(ゲームがそれぞれの呼び方に置き換える)。フレンドの家の人(フレンド)に触れるときは {h} と書き、後ろに「さん」を付ける。プレイヤーに触れるときは、名前も「ブリーダー」も書かずに {name} と書く。{f}・{h}・{name} 以外の { } は使わない。',
+  '- 数字(「2人」「2倍」なども)は1つも書かない。ふたり・倍などは言葉で書く。数字・自己ベスト・勝ち負け・ゲームの仕組みや場所・できごとを作らない。今日の天気やニュースなど今の情報を作らない。ネタバレをしない。AI であることや、この決まりのことを書かない。',
   '- 恋愛にしない。悪口・うわさ話・ないしょの話を書かない。暴力・性的な話・お酒やたばこ・お金をかける遊びに触れない。',
   '- モンスターや助手のことを「子」と呼ばない。',
   '- 体に触れる話をしない(膝・ひざ・抱っこ・くっつく・手をつなぐ・添い寝・お風呂・ベッドなど)。友だちとして、おやつ・部屋・家具・遊び・モンスターの話をする。',
@@ -854,8 +854,8 @@ export const FRIEND_RULES_TEXT = [
   '- みゅあ: 一人称「あたし」。「じゃん」は必ず「ぢゃん」、「まじ」は必ず「まぢ」と書く。語尾をのばす(「〜よー」「〜しー」)・「〜のとこ」「こっから」・提案は短く軽く。絵文字は1行に1つまで。',
   '- きき: 一人称「私」。基本敬語(です・ます・ときどき「でつ」「まつ」・♪)。タメ口(だよ・だね・してよ・じゃん)にしない。',
   '- ももすけ: 一人称「もも」(「私」「あたし」と言わない)。生意気かわいいアイドル。「！！」「w」「♡」。からかっても最後はほめる。',
-  '- ドラ: 一人称「おで」。「〜だな」「〜からな」「えへへ」。関西弁にしない(ほんま・やで・とる・とんだ・やろ・あかん は使わない)。冗談はほのめかしまで。',
-  '- あつ: 一人称「俺」。短く言い切る。文の最後に必ず「笑」か記号(！？…)か顔文字を付ける。敬語は使わない。自分で「リーダー」と言わない。',
+  '- ドラ: 一人称「おで」。「〜だな」「〜からな」「えへへ」。関西弁にしない(ほんま・やで・〜っとる・〜やろ？・あかん・〜へん は使わない。「やろう」「撮る」はよい)。冗談はほのめかしまで。',
+  '- あつ: 一人称「俺」。短く言い切る。文の最後は「。」にせず、必ず「笑」か記号(！？…)か顔文字で終える。敬語は使わない。自分で「リーダー」と言わない。',
   '- きゅうこ: 一人称「俺」。おだやかなタメ口。「ほい！」「おけ〜」「ありがとん笑」「〜ぇ」。理由を短く添える。',
   '- ソラシド: 一人称「俺」。熱くて陽気。「うぉぉぉ！」「〜ぜ・・・！」「笑」。沖縄の言葉(なんくるないさ〜・でーじ・ちばりよー)はときどき。',
   '- えるびん: 一人称「俺」。おだやかでやわらかいタメ口(「〜ね」「〜かな」)。相手を気づかう。実在の人の私生活に触れない。',
@@ -863,7 +863,7 @@ export const FRIEND_RULES_TEXT = [
   '見本(この調子で):',
   '- go a=mua b=dra: a「{f}、おじゃましまーす♪ {h}の家、まぢかわいいぢゃん！」/ b「おう、よく来たな。おやつ半分こしような、えへへ」',
   '- come a=kiki b=atsu: b「{h}さんちから来た笑 おじゃまします！」/ a「いらっしゃいませ。お茶をどうぞ♪」',
-  '- go a=momosuke b=momosuke: a「ももが2人！？かわいさも2倍じゃん！！」/ b「ふふん、本物はこっちのももだよ♡」',
+  '- go a=momosuke b=momosuke: a「ももがふたり！？かわいさも倍じゃん！！」/ b「ふふん、本物はこっちのももだよ♡」',
 ].join('\n');
 const FRIEND_SCHEMA = (ids) => ({
   type: 'object',
@@ -917,18 +917,22 @@ export const normalizeFriendPairs = (raw, digest) => {
 };
 const FRIEND_BANNED_WORDS = /恋|デート|付き合|キス|彼氏|彼女|結婚|ないしょ|内緒|秘密|ひみつ|けんか|ケンカ|喧嘩|膝|ひざ|抱き|だっこ|抱っこ|ちゅー|添い寝|くっつ|手をつな|お風呂|ベッド/;
 // 助手ごとの口調の見張り(端末の alfApiLineOk と同じ決まり)。直せるもの(みゅあの じゃん/まじ)は直し、直せないものは null
+// ドラの関西弁(2026-11-08 オトズレ3: 「やろう」「撮る」まで捨てていたので狭めた。端末の alfApiLineOk と同じ)
+export const FRIEND_DRA_KANSAI = /ほんま|やで|っとる|っとん|とんだ|やろ(?!う)|あかん|へん[。、！]/;
 export const friendLineTone = (who, t) => {
   let x = String(t || '');
   if (who === 'mua') x = x.replace(/じゃん/g, 'ぢゃん').replace(/まじ/g, 'まぢ').replace(/マジ/g, 'マヂ');
   else if (/ぢゃん|まぢ/.test(x)) return null;
-  if (who === 'atsu' && !/(笑|[！？!?…♪w]|[)）])$/.test(x.trim())) return null;
-  if (who === 'dra' && /ほんま|やで|とる|とんだ|やろ|あかん/.test(x)) return null;
+  if (who === 'atsu') { x = x.trim().replace(/。$/, '！'); if (!/(笑|[！？!?…♪w]|[)）]|\p{Extended_Pictographic}\uFE0F?)$/u.test(x)) return null; }
+  if (who === 'dra' && FRIEND_DRA_KANSAI.test(x)) return null;
   if (who === 'kiki' && /(だよ|だね|してよ|じゃん)([。！!？?♪]|$)/.test(x)) return null;
   if (who === 'momosuke' && /^(私|あたし)|[、。](私|あたし)は/.test(x)) return null;
   return x;
 };
 // 作った場面を確かめる。崩れたものは捨てる(残りだけ返す)。数字は1つも使わせない(作り話の数字を出さない)
-export const validateFriendScenes = (scenes, pairs) => {
+// onDrop には捨てた理由の名前だけを渡す(文は渡さない・ログに台詞を残さない)
+export const validateFriendScenes = (scenes, pairs, onDrop = null) => {
+  const drop = (why) => { if (typeof onDrop === 'function') { try { onDrop(why); } catch { /* 記録が落ちても続ける */ } } };
   const byKey = Object.fromEntries(pairs.map(p => [p.key, p]));
   const out = [];
   const used = new Set();
@@ -936,20 +940,22 @@ export const validateFriendScenes = (scenes, pairs) => {
     if (out.length >= FRIEND_SCENES_MAX) break;
     const key = `${sc && sc.kind}|${sc && sc.a}|${sc && sc.b}`;
     const pair = byKey[key];
-    if (!pair || used.has(key) || !Array.isArray(sc.lines)) continue;
+    if (!pair || used.has(key) || !Array.isArray(sc.lines)) { drop(!pair ? 'pair' : used.has(key) ? 'dup' : 'shape'); continue; }
     const lines = [];
     let ok = true;
+    let why = '';
     for (const l of sc.lines.slice(0, FRIEND_LINE_MAX_COUNT)) {
-      if (!l || (l.side !== 'a' && l.side !== 'b') || !EXPRESSIONS.includes(l.e) || typeof l.t !== 'string') { ok = false; break; }
+      if (!l || (l.side !== 'a' && l.side !== 'b') || !EXPRESSIONS.includes(l.e) || typeof l.t !== 'string') { ok = false; why = 'shape'; break; }
       let t = l.t.trim().replace(/ブリーダー(さん)?(?!Lv|P|ランク|ポイント|レベル|経験|の教え|アイコン)/g, '{name}').replace(/\{h\}(?!さん)/g, '{h}さん');
       t = friendLineTone(l.side === 'a' ? pair.a : pair.b, t);
-      if (t == null) { ok = false; break; }
-      if (t.length < 2 || t.length > FRIEND_LINE_MAX || /[\r\n]/.test(t)) { ok = false; break; }
-      if (/[{}]/.test(t.replace(/\{f\}|\{h\}|\{name\}/g, ''))) { ok = false; break; }
-      if (DAILY_BANNED.test(t) || FRIEND_BANNED_WORDS.test(t) || looksPersonal(t) || /子たち|この子|あの子|その子/.test(t) || /[0-9０-９]/.test(t)) { ok = false; break; }
+      if (t == null) { ok = false; why = `tone_${l.side === 'a' ? pair.a : pair.b}`; break; }
+      if (t.length < 2 || t.length > FRIEND_LINE_MAX || /[\r\n]/.test(t)) { ok = false; why = 'length'; break; }
+      if (/[{}]/.test(t.replace(/\{f\}|\{h\}|\{name\}/g, ''))) { ok = false; why = 'brace'; break; }
+      why = DAILY_BANNED.test(t) ? 'ai' : FRIEND_BANNED_WORDS.test(t) ? 'banned' : looksPersonal(t) ? 'personal' : /子たち|この子|あの子|その子/.test(t) ? 'ko' : /[0-9０-９]/.test(t) ? 'digit' : '';
+      if (why) { ok = false; break; }
       lines.push({ side: l.side, e: l.e, t });
     }
-    if (!ok || lines.length < FRIEND_LINE_MIN || (pair.a !== pair.b && new Set(lines.map(l => l.side)).size < 2)) continue;
+    if (!ok || lines.length < FRIEND_LINE_MIN || (pair.a !== pair.b && new Set(lines.map(l => l.side)).size < 2)) { drop(why || 'few'); continue; }
     used.add(key);
     out.push({ kind: pair.kind, a: pair.a, b: pair.b, lines });
   }
@@ -997,7 +1003,9 @@ export const handleFriendScenes = async ({ body, digest, client, take, refund, l
   let scenes = [];
   if (response && response.stop_reason !== 'refusal') {
     const text = (response.content || []).filter(b => b && b.type === 'text').map(b => b.text).join('');
-    try { scenes = validateFriendScenes(JSON.parse(text).scenes, pairs); } catch { scenes = []; }
+    const dropped = [];
+    try { scenes = validateFriendScenes(JSON.parse(text).scenes, pairs, (why) => dropped.push(why)); } catch { scenes = []; dropped.push('json'); }
+    if (dropped.length) log({ event: 'friend_dropped', reasons: dropped.slice(0, FRIEND_SCENES_MAX) });
   }
   if (response && response.usage) {
     const u = response.usage;

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d3a8da1446bb043d
+// source-sha256: 375b3c7f2f27b4b9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -87886,7 +87886,10 @@ function FriendsScreen({
       }, React.createElement(CardShareDeckActions, {
         breederId: selected.otherId,
         onGo: onCardShareGo
-      })), fold('overview', '遊んだ記録'), profileTab === 'overview' && React.createElement(React.Fragment, null, React.createElement("div", {
+      })), typeof AssistantLifeFriendProfileVisit === 'function' && React.createElement(AssistantLifeFriendProfileVisit, {
+        friendId: selected.otherId,
+        friendName: look.userName
+      }), fold('overview', '遊んだ記録'), profileTab === 'overview' && React.createElement(React.Fragment, null, React.createElement("div", {
         className: `${SCREEN_PANEL_FLAT_CLASS} mt-1`
       }, !sum && React.createElement("p", {
         className: "text-[11px] font-bold text-slate-400"
@@ -98857,6 +98860,8 @@ function AssistantChatWindow({
   bondTitle,
   bondTone,
   callnameKit = null,
+  opening = null,
+  zIndex = 9000,
   onExchange,
   onClose
 }) {
@@ -98885,24 +98890,44 @@ function AssistantChatWindow({
     };
   }, []);
   const log = logs[id] || [];
+  const openingDone = React.useRef(false);
   React.useEffect(() => {
-    if (!loaded || !callnameKit || callnameKit.asked || !id) return;
-    if (!(Number(bondLevel) >= ASSISTANT_CALLNAME_ASK_LEVEL)) return;
-    callnameKit.markAsk({
-      asked: true
-    });
-    if (callnameKit.current || callnameKit.customStyle) return;
-    const line = assistantCallnameFillLine(assistantCallnameLine(id, 'ask'), {
-      name: callName
-    });
-    saveLog([...(logs[id] || []), {
-      role: 'assistant',
-      text: line,
-      e: 'wink'
-    }]);
-    setCallCard({
-      kind: 'ask'
-    });
+    if (!loaded || !id || openingDone.current) return;
+    openingDone.current = true;
+    const list = [...(logs[id] || [])];
+    let card = null;
+    if (opening && opening.text) {
+      list.push({
+        role: 'assistant',
+        text: opening.text,
+        e: opening.e || 'happy'
+      });
+      if (opening.card && callnameKit) {
+        card = opening.card;
+        if (opening.card.from === 'assistant') callnameKit.markAsk({
+          offeredAt: Date.now()
+        });
+      }
+    }
+    if (callnameKit && !callnameKit.asked && !card && Number(bondLevel) >= ASSISTANT_CALLNAME_ASK_LEVEL) {
+      callnameKit.markAsk({
+        asked: true
+      });
+      if (!callnameKit.current && !callnameKit.customStyle) {
+        list.push({
+          role: 'assistant',
+          text: assistantCallnameFillLine(assistantCallnameLine(id, 'ask'), {
+            name: callName
+          }),
+          e: 'wink'
+        });
+        card = {
+          kind: 'ask'
+        };
+      }
+    }
+    if (list.length !== (logs[id] || []).length) saveLog(list);
+    if (card) setCallCard(card);
   }, [loaded, id]);
   React.useEffect(() => {
     const el = listRef.current;
@@ -99151,7 +99176,7 @@ function AssistantChatWindow({
     "data-assistant-chat": true,
     className: "fixed inset-0 flex items-end sm:items-center justify-center bg-black/60 p-2",
     style: {
-      zIndex: 9000,
+      zIndex,
       paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))'
     },
     onClick: onClose
@@ -105102,7 +105127,9 @@ const assistantLifeDiaryOnSlot = (life, slot, now = Date.now()) => {
 };
 const ASSISTANT_LIFE_LINKS = {
   beatInvite: null,
-  cardInvite: null
+  cardInvite: null,
+  chatWith: null,
+  chatFollowLine: null
 };
 const assistantLifeHouseCardIds = () => {
   try {
@@ -105603,7 +105630,10 @@ function AssistantLifeRoomSheet({
   furnItems = null,
   onGiveFurn = null,
   onFurnTalk = null,
-  onMasmon = null
+  onMasmon = null,
+  onChat = null,
+  follow = null,
+  onFollowDone = null
 }) {
   const [furnOpen, setFurnOpen] = React.useState(false);
   const who = assistantById(id);
@@ -105748,7 +105778,26 @@ function AssistantLifeRoomSheet({
       paddingBottom: 6,
       marginBottom: -4
     } : undefined
-  }, w && w.group ? React.createElement("button", {
+  }, follow && onChat && React.createElement("div", {
+    className: "col-span-2 rounded-2xl border-2 border-pink-300 bg-slate-950/95 px-3 py-2",
+    "data-assistant-life-room-follow": follow.kind
+  }, React.createElement("p", {
+    className: "text-[12px] font-bold leading-relaxed text-pink-50 [word-break:keep-all] [overflow-wrap:anywhere]"
+  }, who.name, "「", React.createElement(AssistantLifeChunks, {
+    text: follow.text
+  }), "」"), React.createElement("div", {
+    className: "mt-1.5 grid grid-cols-2 gap-1.5"
+  }, React.createElement("button", {
+    type: "button",
+    className: "mhl-btn bg-pink-500",
+    "data-assistant-life-room-follow-chat": true,
+    onClick: () => onChat(id, follow)
+  }, "💬 おしゃべりする"), React.createElement("button", {
+    type: "button",
+    className: "mhl-btn bg-slate-700",
+    "data-assistant-life-room-follow-bye": true,
+    onClick: () => onFollowDone && onFollowDone()
+  }, "またね"))), w && w.group ? React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-watch",
     "data-assistant-life-room-act": "watch",
@@ -105772,7 +105821,12 @@ function AssistantLifeRoomSheet({
     "data-assistant-life-room-act": "give",
     disabled: !canGive,
     onClick: () => onGive(w.group)
-  }, "🎁 贈る"), typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && React.createElement("button", {
+  }, "🎁 贈る"), onChat && React.createElement("button", {
+    type: "button",
+    className: "mhl-btn mhl-call col-span-2",
+    "data-assistant-life-room-act": "chat",
+    onClick: () => onChat(id, null)
+  }, asleep ? '💤 起こしておしゃべり' : '💬 おしゃべりする'), typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-beat col-span-2",
     "data-assistant-life-room-act": "beat",
@@ -106122,6 +106176,8 @@ function AssistantLifeHouse({
   const [tab, setTab] = React.useState('house');
   const [roomId, setRoomId] = React.useState(st.focus || null);
   const [scene, setScene] = React.useState(null);
+  const [follow, setFollow] = React.useState(null);
+  const followAfterRef = React.useRef(null);
   const [note, setNote] = React.useState('');
   const [give, setGive] = React.useState(null);
   const [masmonId, setMasmonId] = React.useState(null);
@@ -106197,6 +106253,23 @@ function AssistantLifeHouse({
     setScene(null);
     assistantLifeCloseScreen();
   };
+  const showFollow = () => {
+    const id = followAfterRef.current;
+    followAfterRef.current = null;
+    if (!id || typeof ASSISTANT_LIFE_LINKS.chatFollowLine !== 'function') return;
+    let f = null;
+    try {
+      f = ASSISTANT_LIFE_LINKS.chatFollowLine(id);
+    } catch {
+      f = null;
+    }
+    if (!f || !f.text) return;
+    setRoomId(id);
+    setFollow({
+      ...f,
+      id
+    });
+  };
   const playTalk = (talk, ctx) => {
     if (!talk) return;
     const speakers = [...new Set((talk.lines || []).map(l => l && l.who).filter(Boolean))];
@@ -106264,6 +106337,7 @@ function AssistantLifeHouse({
       place: w.place
     }) : relSolo || assistantLifePickCallTalk(id, life);
     if (!(await assistantLifeNudge('invite', id))) return;
+    followAfterRef.current = !sleeping && typeof ASSISTANT_LIFE_LINKS.chatFollowLine === 'function' ? id : null;
     if (talk) {
       if (!sleeping) assistantLifeMarkSeen(talk);
       playTalk(talk, {
@@ -106271,7 +106345,7 @@ function AssistantLifeHouse({
         place: w ? w.place : 'home',
         sleep: sleeping
       });
-    }
+    } else if (followAfterRef.current) showFollow();
     setNote(sleeping ? `${nameOf(id)}は寝ています。次の時間に、起きてだれかのところへ行きます` : `${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
   };
   const mediate = async id => {
@@ -106325,6 +106399,25 @@ function AssistantLifeHouse({
       place: g ? g.place : 'home',
       gift: true
     });
+  };
+  const chatOn = typeof ASSISTANT_LIFE_LINKS.chatWith === 'function';
+  const chat = (id, f) => {
+    try {
+      if (typeof ASSISTANT_LIFE_LINKS.chatWith !== 'function') return;
+      const w = assistantLifeWhereOf(life, id);
+      const asleep = !!(w && w.doing === 'sleep');
+      if (asleep) {
+        assistantLifeRhythmPlay(id, Date.now());
+        void assistantLifeDiaryAdd(`${assistantLifeName(id)} 起こされておしゃべり`, [id], {
+          kind: 'woken'
+        });
+      }
+      setFollow(null);
+      ASSISTANT_LIFE_LINKS.chatWith(id, {
+        asleep,
+        follow: f || null
+      });
+    } catch {}
   };
   const beat = id => {
     try {
@@ -106614,7 +106707,10 @@ function AssistantLifeHouse({
     },
     canGive: canGive && itemsLeft > 0,
     land: land,
-    onClose: () => setRoomId(null),
+    onClose: () => {
+      setRoomId(null);
+      setFollow(null);
+    },
     onPeek: peek,
     onInvite: invite,
     onWatch: watch,
@@ -106623,7 +106719,10 @@ function AssistantLifeHouse({
     onCard: card,
     onMediate: mediate,
     roomState: rooms[roomId],
-    onMasmon: setMasmonId
+    onMasmon: setMasmonId,
+    onChat: chatOn ? chat : null,
+    follow: follow && follow.id === roomId ? follow : null,
+    onFollowDone: () => setFollow(null)
   }), masmonId && typeof AssistantMasmonSheet === 'function' && React.createElement(AssistantMasmonSheet, {
     id: masmonId,
     land: land,
@@ -106670,7 +106769,10 @@ function AssistantLifeHouse({
     scene: scene,
     look: look,
     canGive: canGive && itemsLeft > 0,
-    onClose: () => setScene(null),
+    onClose: () => {
+      setScene(null);
+      showFollow();
+    },
     onGive: openGive
   }), intro && React.createElement("button", {
     type: "button",
@@ -122397,8 +122499,11 @@ const alfApiLineOk = (who, t) => {
   let x = String(t || '');
   if (who === 'mua') x = x.replace(/じゃん/g, 'ぢゃん').replace(/まじ/g, 'まぢ').replace(/マジ/g, 'マヂ');
   if (ALF_API_BODY_WORDS.test(x) || /(この|あの|その)子|子たち/.test(x)) return null;
-  if (who === 'atsu' && !/(笑|[！？!?…♪w]|[)）]|[\u3000-\u303f]?[\uff08(][^)）]*[)）])$/.test(x.trim())) return null;
-  if (who === 'dra' && /ほんま|やで|とる|とんだ|へん[。、！]|やろ|あかん/.test(x)) return null;
+  if (who === 'atsu') {
+    x = x.trim().replace(/。$/, '！');
+    if (!/(笑|[！？!?…♪w]|[)）]|[\u3000-\u303f]?[\uff08(][^)）]*[)）]|\p{Extended_Pictographic}\uFE0F?)$/u.test(x)) return null;
+  }
+  if (who === 'dra' && /ほんま|やで|っとる|っとん|とんだ|やろ(?!う)|あかん|へん[。、！]/.test(x)) return null;
   if (who === 'kiki' && /(だよ|だね|してよ|じゃん)([。！!？?♪]|$)/.test(x)) return null;
   if (who !== 'mua' && /ぢゃん|まぢ/.test(x)) return null;
   return x;
@@ -122666,6 +122771,63 @@ function AlfFriendHouseView({
     className: "mt-3 text-[10px] leading-snug text-slate-400"
   }, friend.name, "さんには、あなたが訪ねたことが置き手紙で届きます。相手のセーブや助手の仲良し度は変わりません。"))));
 }
+const alfVisitBlockedText = (friendId, name, s = ALF_STORE.state) => {
+  if (s.mode === 'off') return 'フレンドの家との行き来は、いまお休み中です。';
+  if (!s.settings.open) return '「🏘 フレンド」の設定で、行き来を切にしています。';
+  if (s.settings.muted.includes(friendId)) return 'この家は「来ないようにする」にしています。';
+  if (!alfOpenHouses('look').some(f => f.id === friendId)) return `${name || 'このフレンド'}さんが助手ライフを開くと遊びに行けます。`;
+  const can = assistantLifeFriendCanLook(friendId);
+  if (can === 'done') return '今日はこの家にもう遊びに行きました(朝4時に戻ります)。';
+  if (can === 'max') return '今日はもう遊びに行けません(朝4時に戻ります)。';
+  return can === 'ok' ? null : 'いまは遊びに行けません。';
+};
+function AssistantLifeFriendProfileVisit({
+  friendId,
+  friendName
+}) {
+  const s = useAssistantLifeFriendState();
+  const [open, setOpen] = React.useState(false);
+  React.useEffect(() => {
+    if (alfEnabled() && alfSafeOther(friendId)) void (async () => {
+      await ALF_STORE.load();
+      await alfFetchHouses();
+    })();
+  }, [friendId]);
+  if (!alfEnabled() || !alfSafeOther(friendId)) return null;
+  const blocked = s.ready ? alfVisitBlockedText(friendId, friendName, s) : '読み込んでいます…';
+  const house = blocked ? null : alfOpenHouses('look').find(f => f.id === friendId);
+  return React.createElement("div", {
+    className: "mt-2",
+    "data-alf-profile-visit": blocked ? 'blocked' : 'ok'
+  }, React.createElement("button", {
+    type: "button",
+    disabled: !house,
+    className: "min-h-[44px] w-full rounded-xl border-2 border-amber-300/70 bg-amber-300 px-3 text-[13px] font-black text-slate-950 active:scale-95 disabled:border-slate-600 disabled:bg-slate-800 disabled:text-slate-400",
+    "data-alf-profile-visit-go": true,
+    onClick: () => house && setOpen(true)
+  }, "🏘 家へ遊びに行く"), blocked && React.createElement("p", {
+    className: "mt-1 text-center text-[10.5px] font-bold leading-snug text-slate-400",
+    "data-alf-profile-visit-why": true
+  }, blocked), open && house && (typeof ReactDOM !== 'undefined' && ReactDOM.createPortal && typeof document !== 'undefined' ? ReactDOM.createPortal(React.createElement("div", {
+    className: "fixed inset-0",
+    style: {
+      zIndex: 70
+    },
+    "data-alf-profile-layer": true
+  }, React.createElement(AlfFriendHouseView, {
+    friend: house,
+    onClose: () => setOpen(false)
+  })), document.body) : React.createElement("div", {
+    className: "fixed inset-0",
+    style: {
+      zIndex: 70
+    },
+    "data-alf-profile-layer": true
+  }, React.createElement(AlfFriendHouseView, {
+    friend: house,
+    onClose: () => setOpen(false)
+  }))));
+}
 function AssistantLifeFriendPage({
   life
 }) {
@@ -122693,6 +122855,7 @@ function AssistantLifeFriendPage({
     "data-alf-page": "off"
   }, "🏘 フレンドの家との行き来は、いまお休み中です。");
   const houses = alfOpenHouses('look');
+  const waiting = s.roster.filter(f => !houses.some(h => h.id === f.id) && !s.settings.muted.includes(f.id)).slice(0, 30);
   const notes = assistantLifeFriendNotes(s);
   const openScene = async (kind, i) => {
     if (kind === 'out') {
@@ -122891,9 +123054,21 @@ function AssistantLifeFriendPage({
         setMenu(null);
       }
     }, "来ないようにする"));
-  }) : React.createElement("p", {
+  }) : !waiting.length && React.createElement("p", {
     className: `${card} text-[11px] text-slate-400`
-  }, "遊びに行けるフレンドの家はまだありません(フレンドが助手ライフを開くと、ここに並びます)。")), React.createElement("p", {
+  }, "遊びに行けるフレンドの家はまだありません(フレンドが助手ライフを開くと、ここに並びます)。"), waiting.map(f => React.createElement("div", {
+    key: f.id,
+    className: `${card} flex items-center gap-2 border-dashed border-slate-500/60`,
+    "data-alf-house-waiting": f.id
+  }, React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "truncate text-[12px] font-black text-slate-300"
+  }, f.name, "さんの家"), React.createElement("p", {
+    className: "text-[10px] leading-snug text-slate-300"
+  }, f.name, "さんが助手ライフを開くと遊びに行けます")), React.createElement("span", {
+    className: "shrink-0 rounded-xl border border-slate-500 bg-slate-800 px-2.5 py-1.5 text-[11px] font-black text-slate-300"
+  }, "🚪 まだ")))), React.createElement("p", {
     className: sec
   }, "⚙️ 行き来の設定"), React.createElement("div", {
     className: card,
@@ -163022,6 +163197,7 @@ function MonsterHeroGame() {
   const [assistantCallnameAsk, setAssistantCallnameAskState] = useState({});
   const [callnameToast, setCallnameToast] = useState(null);
   const [assistantChatOpen, setAssistantChatOpen] = useState(false);
+  const [assistantChatWith, setAssistantChatWith] = useState(null);
   const [peerReplay, setPeerReplay] = useState(null);
   const assistantDailyLinesAskedRef = useRef('');
   const [assistantDailyLinesDebugMsg, setAssistantDailyLinesDebugMsg] = useState('');
@@ -169242,6 +169418,48 @@ function MonsterHeroGame() {
       return all;
     });
   }, []);
+  useEffect(() => {
+    if (typeof ASSISTANT_LIFE_LINKS === 'undefined' || !ASSISTANT_LIFE_LINKS) return;
+    const on = RELEASE_FLAGS.assistantCallname === true && RELEASE_FLAGS.assistantChat === true && typeof assistantCallnameLifePick === 'function';
+    const levelOf = id => assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points);
+    const callOf = id => assistantCallName(breederNameRef.current, levelOf(id), assistantCallStyles[id] || null, id);
+    ASSISTANT_LIFE_LINKS.chatFollowLine = on ? id => assistantCallnameLifePick(id, {
+      level: levelOf(id),
+      asked: !!(assistantCallnameAsk[id] && assistantCallnameAsk[id].asked),
+      current: assistantCallnames[id] && assistantCallnames[id].call || null,
+      customStyle: assistantCallStyles[id] || null,
+      offeredAt: assistantCallnameAsk[id] && assistantCallnameAsk[id].offeredAt || 0,
+      callName: callOf(id),
+      fill: t => assistantFillCallTemplate(assistantGenderCallOf(t, id), breederNameRef.current)
+    }) : null;
+    ASSISTANT_LIFE_LINKS.chatWith = on ? (id, opts = {}) => {
+      if (!ASSISTANT_LIST.some(a => a.id === id)) return;
+      const f = opts && opts.follow;
+      const fill = (line, vars = {}) => String(line || '').replace(/\{call\}/g, vars.call || '').replace(/\{name\}/g, callOf(id));
+      let opening = null;
+      if (opts && opts.asleep) opening = {
+        text: fill(assistantCallnameLine(id, 'wake')),
+        e: 'troubled'
+      };else if (f && f.kind === 'offer' && f.value) opening = {
+        text: f.text,
+        e: 'wink',
+        card: {
+          kind: 'call',
+          value: f.value,
+          from: 'assistant'
+        }
+      };else if (f && f.kind === 'plain') opening = {
+        text: f.text,
+        e: 'happy'
+      };
+      setAssistantChatWith({
+        id,
+        opening,
+        fromLife: true
+      });
+      setAssistantChatOpen(true);
+    } : null;
+  }, [assistantCallnames, assistantCallnameAsk, assistantCallStyles, assistantBonds, breederName]);
   const assistantBondValue = useMemo(() => ({
     points: assistantBond.points,
     level: assistantBondLevelNow,
@@ -183782,12 +184000,16 @@ function MonsterHeroGame() {
         setGameState('CARD_TOP');
       }
     }), assistantChatOpen && activeAssistant && (() => {
-      const id = activeAssistant.id;
-      const lv = assistantBondLevelNow;
+      const chatWho = assistantChatWith && ASSISTANT_LIST.find(a => a.id === assistantChatWith.id) || activeAssistant;
+      const id = chatWho.id;
+      const lv = id === activeAssistant.id ? assistantBondLevelNow : assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points);
       const stage = assistantBondStageByLevel(lv, id) || {};
       return React.createElement(AssistantChatWindow, {
-        assistant: activeAssistant,
+        key: id,
+        assistant: chatWho,
         playerName: breederName,
+        opening: assistantChatWith && assistantChatWith.opening || null,
+        zIndex: assistantChatWith && assistantChatWith.fromLife ? 9300 : 9000,
         callName: assistantCallName(breederName, lv, assistantCallStyles[id] || null, id),
         bondLevel: lv,
         bondTitle: stage.title || '',
@@ -183804,7 +184026,7 @@ function MonsterHeroGame() {
             const g = setAssistantCallnameFor(id, call, by);
             if (g) setCallnameToast({
               id,
-              text: `${activeAssistant.name}の呼び方：${assistantFillCallTemplate(g, breederName)}`
+              text: `${chatWho.name}の呼び方：${assistantFillCallTemplate(g, breederName)}`
             });
             return g;
           },
@@ -183812,7 +184034,10 @@ function MonsterHeroGame() {
           markAsk: patch => markAssistantCallnameAsk(id, patch)
         } : null,
         onExchange: () => addAssistantBondFor(id, 'chat'),
-        onClose: () => setAssistantChatOpen(false)
+        onClose: () => {
+          setAssistantChatOpen(false);
+          setAssistantChatWith(null);
+        }
       });
     })(), callnameToast && !assistantChatOpen && typeof AssistantCallnameToast === 'function' && (() => {
       const who = ASSISTANT_LIST.find(a => a.id === callnameToast.id);
@@ -192175,7 +192400,8 @@ function MonsterHeroGame() {
       onCancel: () => setShowNameEdit(false),
       onSave: handleSaveName
     }), showCallStylePicker && React.createElement("div", {
-      className: "fixed inset-0 flex flex-col items-center justify-center p-6",
+      "data-call-style-picker": true,
+      className: "fixed inset-0 flex flex-col items-center overflow-y-auto mh-scroll p-6 [@media(max-height:520px)]:p-3",
       style: {
         position: 'fixed',
         inset: 0,
@@ -192183,7 +192409,7 @@ function MonsterHeroGame() {
         zIndex: 90000
       }
     }, React.createElement("div", {
-      className: "bg-slate-900 rounded-3xl p-6 w-full max-w-xs shadow-2xl",
+      className: "bg-slate-900 rounded-3xl p-6 [@media(max-height:520px)]:p-4 w-full max-w-xs shadow-2xl my-auto shrink-0",
       style: {
         border: `1px solid ${activeAssistant.accent}`
       }
@@ -192226,8 +192452,11 @@ function MonsterHeroGame() {
         className: "shrink-0 min-h-[36px] rounded-xl border border-slate-600 bg-slate-800 px-2.5 text-[10px] font-black text-slate-200 active:scale-95"
       }, "外す")));
     })(), assistantBondLevelNow >= ASSISTANT_CALL_STYLE_UNLOCK_LEVEL ? React.createElement(React.Fragment, null, React.createElement("p", {
-      className: "text-[9px] text-slate-500 text-center mb-3 leading-tight"
-    }, "仲良し度がLv6になったので、呼び方を自由に決められます。「", '{name}', "」と書くと、そこがあなたの名前に置き換わります。"), React.createElement("input", {
+      className: "text-[9px] text-slate-500 text-center mb-3 leading-tight",
+      style: JA_WRAP_STYLE
+    }, jaWrap('仲良し度がLv6になったので、呼び方を自由に決められます。'), React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "「", '{name}', "」"), jaWrap('と書くと、そこがあなたの名前に置き換わります。')), React.createElement("input", {
       type: "text",
       value: tempCallStyle,
       onChange: e => setTempCallStyle(e.target.value),

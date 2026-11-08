@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 26ca6b57e865c93d
+// generated-sha256: a7c11add333623a0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -52289,6 +52289,8 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
               </div>
               {/* 札の下(2枚並びの外・全幅)に「このデッキと戦う」「借りる」。登録していない人は出ない(95 の CardShareDeckActions) */}
               {typeof CardShareDeckActions === 'function' && <div className="mt-2"><CardShareDeckActions breederId={selected.otherId} onGo={onCardShareGo}/></div>}
+              {/* 「🏘 家へ遊びに行く」(56-assistant-life-friend の AssistantLifeFriendProfileVisit・2026-11-08 社長)。助手ライフが開いていない人には出ない */}
+              {typeof AssistantLifeFriendProfileVisit === 'function' && <AssistantLifeFriendProfileVisit friendId={selected.otherId} friendName={look.userName}/>}
               {/* 記録は1行ずつにたたむ(2026-10-29 案B。前はタブ4つ)。押した行だけ開く。もう一度押すと閉じる */}
               {fold('overview', '遊んだ記録')}
               {profileTab === 'overview' && (<>
@@ -59220,7 +59222,10 @@ const assistantChatTasteFromHint = (hint) => {
 const assistantCallnameFillLine = (line, { call, nick, name }) => String(line || '')
   .replace(/\{call\}/g, call || '').replace(/\{nick\}/g, nick || '').replace(/\{name\}/g, name || '');
 
-function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondTitle, bondTone, callnameKit = null, onExchange, onClose }) {
+// opening … 窓を開いたときに助手が先に言うひとこと(助手ライフの部屋から開いたとき・2026-11-08 社長 ❽❾)。{ text, e, card }。
+//            card があれば、そのまま確かめるカードも出す(持ちかけ)。保存する会話の記録に1行足す(台本なので API は使わない)
+// zIndex  … 助手ライフの画面(9000)の上に開くときは大きくする
+function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondTitle, bondTone, callnameKit = null, opening = null, zIndex = 9000, onExchange, onClose }) {
   const id = assistant && assistant.id;
   const [logs, setLogs] = React.useState({});
   const [memos, setMemos] = React.useState({});
@@ -59245,15 +59250,31 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
     return () => { alive = false; };
   }, []);
   const log = (logs[id] || []);
-  // Lv6 から、助手のほうから「なんて呼んだらいい？」と1回だけ聞く(社長 ❶)。もう決めている人には聞かない(聞いたことにする)
+  // 開いたときに助手が先に話すもの(1回だけ)。順に足してから1回で保存する(別々に足すと、あとの方が前の方を消すため)
+  //   ① 助手ライフの部屋から開いたときの最初のひとこと(寝起き・持ちかけ・呼び方の話。2026-11-08 社長 ❽❾)
+  //   ② Lv6 から、助手のほうから「なんて呼んだらいい？」と1回だけ聞く(社長 ❶)。もう決めている人には聞かない(聞いたことにする)
+  const openingDone = React.useRef(false);
   React.useEffect(() => {
-    if (!loaded || !callnameKit || callnameKit.asked || !id) return;
-    if (!(Number(bondLevel) >= ASSISTANT_CALLNAME_ASK_LEVEL)) return;
-    callnameKit.markAsk({ asked: true });
-    if (callnameKit.current || callnameKit.customStyle) return;
-    const line = assistantCallnameFillLine(assistantCallnameLine(id, 'ask'), { name: callName });
-    saveLog([...(logs[id] || []), { role: 'assistant', text: line, e: 'wink' }]);
-    setCallCard({ kind: 'ask' });
+    if (!loaded || !id || openingDone.current) return;
+    openingDone.current = true;
+    const list = [...(logs[id] || [])];
+    let card = null;
+    if (opening && opening.text) {
+      list.push({ role: 'assistant', text: opening.text, e: opening.e || 'happy' });
+      if (opening.card && callnameKit) {
+        card = opening.card;
+        if (opening.card.from === 'assistant') callnameKit.markAsk({ offeredAt: Date.now() });
+      }
+    }
+    if (callnameKit && !callnameKit.asked && !card && Number(bondLevel) >= ASSISTANT_CALLNAME_ASK_LEVEL) {
+      callnameKit.markAsk({ asked: true });
+      if (!callnameKit.current && !callnameKit.customStyle) {
+        list.push({ role: 'assistant', text: assistantCallnameFillLine(assistantCallnameLine(id, 'ask'), { name: callName }), e: 'wink' });
+        card = { kind: 'ask' };
+      }
+    }
+    if (list.length !== (logs[id] || []).length) saveLog(list);
+    if (card) setCallCard(card);
   }, [loaded, id]);
   React.useEffect(() => { const el = listRef.current; if (el) el.scrollTop = el.scrollHeight; }, [log.length, sending, callCard]);
   const lastExpression = (log.slice().reverse().find(m => m.role === 'assistant') || {}).e || 'happy';
@@ -59399,7 +59420,7 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
   if (!assistant) return null;
   const accent = assistant.accent || '#f472b6';
   return (
-    <div data-assistant-chat className="fixed inset-0 flex items-end sm:items-center justify-center bg-black/60 p-2" style={{ zIndex: 9000, paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }} onClick={onClose}>
+    <div data-assistant-chat className="fixed inset-0 flex items-end sm:items-center justify-center bg-black/60 p-2" style={{ zIndex, paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }} onClick={onClose}>
       <div className="w-full max-w-md max-h-[85vh] [[data-mh-view-rotation=true]_&]:max-h-[85vw] flex flex-col rounded-2xl border-2 bg-slate-950 text-slate-100 shadow-2xl" style={{ borderColor: accent }} onClick={ev => ev.stopPropagation()}>
         <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-800 shrink-0">
           <img data-assistant-chat-face={lastExpression} src={assistantFaceSrc(assistant, lastExpression)} alt="" className="h-11 w-11 rounded-full border-2 object-cover bg-slate-900" style={{ borderColor: accent }}/>
@@ -62360,7 +62381,10 @@ const assistantLifeDiaryOnSlot = (life, slot, now = Date.now()) => {
 //   1曲終えて助手が育ったら、ビート部が assistantLifeOnSessionLive(ev) を呼ぶ(ev = { assistantId, partnerIds, songId, levelUp, level, duo, at })
 //   家の部屋から「一緒にモンビー」を押したら、ビート部が入れておいた ASSISTANT_LIFE_LINKS.beatInvite(助手id) を呼ぶ(無ければボタンを出さない)
 // カード部が入れておく ASSISTANT_LIFE_LINKS.cardInvite(助手id)(84 の cardLifeSetApp)。カード部屋にいる助手の部屋で「🃏 カード部屋で対戦する」を押すと呼ぶ(無ければボタンを出さない)
-const ASSISTANT_LIFE_LINKS = { beatInvite: null, cardInvite: null };
+// chatWith(id, { asleep, follow }) … その助手とのおしゃべりを、助手ライフの上に開く(本体 60-app.jsx が入れる・2026-11-08 社長 ❼〜❿ 助手部ココロ)
+// chatFollowLine(id) … 声をかけたあとの続きのカードのひとこと { kind:'ask'|'offer'|'plain', text, value? }(呼び方の話の日・社長 ❾)
+//   公開の印 assistantCallname が偽のあいだは null のまま(部屋に「おしゃべりする」も続きのカードも出ない)
+const ASSISTANT_LIFE_LINKS = { beatInvite: null, cardInvite: null, chatWith: null, chatFollowLine: null };
 // いまカード部屋にいる助手(段階2の読むだけの口 assistantLifeCardIds。無い・こわれているときはだれもいない)
 const assistantLifeHouseCardIds = () => {
   try { const v = typeof assistantLifeCardIds === 'function' ? assistantLifeCardIds() : []; return Array.isArray(v) ? v.filter(x => typeof x === 'string') : []; } catch { return []; }
@@ -62603,7 +62627,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
 };
 
 // 部屋を押したとき(その助手のこと・その場でできること)
-function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose, onPeek, onInvite, onWatch, onGive, onBeat, onCard, canGive, slot, land = false, onMediate = null, roomState = null, furnItems = null, onGiveFurn = null, onFurnTalk = null, onMasmon = null }) {
+function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose, onPeek, onInvite, onWatch, onGive, onBeat, onCard, canGive, slot, land = false, onMediate = null, roomState = null, furnItems = null, onGiveFurn = null, onFurnTalk = null, onMasmon = null, onChat = null, follow = null, onFollowDone = null }) {
   const [furnOpen, setFurnOpen] = React.useState(false);
   const who = assistantById(id);
   if (!who) return null;
@@ -62651,12 +62675,23 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
         </div>
         {/* 横は狭いので、ボタンをシートの下に止めて、いつも全部見えるようにする(2026-11-08 窓口) */}
         <div className="mt-2 grid grid-cols-2 gap-1.5" data-assistant-life-room-acts style={land ? { position: 'sticky', bottom: -10, zIndex: 6, background: '#0b1020', paddingTop: 6, paddingBottom: 6, marginBottom: -4 } : undefined}>
+          {/* 声をかけたあとの続き(2026-11-08 社長 ❼A・❾A)。ボタンの段のいちばん上(横はボタンの段が下に止まるので、段の外だと隠れる) */}
+          {follow && onChat && (
+            <div className="col-span-2 rounded-2xl border-2 border-pink-300 bg-slate-950/95 px-3 py-2" data-assistant-life-room-follow={follow.kind}>
+              <p className="text-[12px] font-bold leading-relaxed text-pink-50 [word-break:keep-all] [overflow-wrap:anywhere]">{who.name}「<AssistantLifeChunks text={follow.text}/>」</p>
+              <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                <button type="button" className="mhl-btn bg-pink-500" data-assistant-life-room-follow-chat onClick={() => onChat(id, follow)}>💬 おしゃべりする</button>
+                <button type="button" className="mhl-btn bg-slate-700" data-assistant-life-room-follow-bye onClick={() => onFollowDone && onFollowDone()}>またね</button>
+              </div>
+            </div>)}
           {w && w.group
             ? <button type="button" className="mhl-btn mhl-watch" data-assistant-life-room-act="watch" disabled={!canWatch} onClick={() => onWatch(w.group)}>{canWatch ? (home ? '👀 見守る' : '👀 見守りに行く') : '見守りました'}</button>
             : <button type="button" className="mhl-btn mhl-watch" data-assistant-life-room-act="peek" disabled={!canWatch} onClick={() => onPeek(id)}>{canWatch ? '👀 ようすを見る' : '見た'}</button>}
           {!w || !w.group
             ? <button type="button" className="mhl-btn mhl-call" data-assistant-life-room-act="invite" disabled={w && w.reason === 'distance'} onClick={() => onInvite(id)}>{asleep ? '💤 そっと声をかける' : '💬 声をかける'}</button>
             : <button type="button" className="mhl-btn mhl-give" data-assistant-life-room-act="give" disabled={!canGive} onClick={() => onGive(w.group)}>🎁 贈る</button>}
+          {/* その助手とおしゃべり(社長 ❼A・寝ていれば起こして ❽B)。選んでいない助手とも話せる */}
+          {onChat && <button type="button" className="mhl-btn mhl-call col-span-2" data-assistant-life-room-act="chat" onClick={() => onChat(id, null)}>{asleep ? '💤 起こしておしゃべり' : '💬 おしゃべりする'}</button>}
           {typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && (
             <button type="button" className="mhl-btn mhl-beat col-span-2" data-assistant-life-room-act="beat" onClick={() => onBeat(id)}>{asleep ? '🎵 起こしてモンヒロビートに誘う' : atBeat && beatFree ? <>🎵 会いに行く<em className="ml-1 rounded-full bg-amber-300 px-1.5 text-[10px] not-italic text-amber-950" data-assistant-life-room-free>券なし</em></> : '🎵 一緒にモンヒロビート'}</button>)}
           {/* 部屋の家具(段階B・2026-11-08 社長): 贈る・置く・しまう */}
@@ -62781,6 +62816,9 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const [tab, setTab] = React.useState('house');
   const [roomId, setRoomId] = React.useState(st.focus || null);
   const [scene, setScene] = React.useState(null);
+  // 声をかけたあとの続きのカード(2026-11-08 社長 ❼A)。掛け合いが閉じたら、同じ部屋のシートを開き直して出す
+  const [follow, setFollow] = React.useState(null);
+  const followAfterRef = React.useRef(null);
   const [note, setNote] = React.useState('');
   const [give, setGive] = React.useState(null);
   const [masmonId, setMasmonId] = React.useState(null); // 🐾 助手のマスモン(56-assistant-life-masmon.jsx)
@@ -62820,6 +62858,13 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const nameOf = assistantLifeName;
   const close = () => { setScene(null); assistantLifeCloseScreen(); };
   // 掛け合いを、家を閉じずに場面で流す
+  const showFollow = () => {
+    const id = followAfterRef.current; followAfterRef.current = null;
+    if (!id || typeof ASSISTANT_LIFE_LINKS.chatFollowLine !== 'function') return;
+    let f = null; try { f = ASSISTANT_LIFE_LINKS.chatFollowLine(id); } catch { f = null; }
+    if (!f || !f.text) return;
+    setRoomId(id); setFollow({ ...f, id });
+  };
   const playTalk = (talk, ctx) => {
     if (!talk) return;
     // 場面の立ち絵は、実際に話す助手と必ずそろえる(組の人+台本で話す人。いない助手が話す台本を流しても、その助手の絵が出る)
@@ -62853,7 +62898,10 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
     const relSolo = !sleeping && typeof assistantLifeRelSoloTalk === 'function' ? assistantLifeRelSoloTalk(id, rooms[id]) : null; // やきもち中なら、その気持ちの一言(rel.jsx)
     const talk = sleeping ? assistantLifePickSleepTalk(id, { wake: true, bondLv: typeof bondLevelOf === 'function' ? bondLevelOf(id) : 1, place: w.place }) : (relSolo || assistantLifePickCallTalk(id, life));
     if (!(await assistantLifeNudge('invite', id))) return;
+    // 掛け合いが閉じたら、この部屋に戻って続きのカードを出す(起きている助手だけ・おしゃべりの口があるときだけ)
+    followAfterRef.current = (!sleeping && typeof ASSISTANT_LIFE_LINKS.chatFollowLine === 'function') ? id : null;
     if (talk) { if (!sleeping) assistantLifeMarkSeen(talk); playTalk(talk, { ids: [id], place: w ? w.place : 'home', sleep: sleeping }); }
+    else if (followAfterRef.current) showFollow();
     setNote(sleeping ? `${nameOf(id)}は寝ています。次の時間に、起きてだれかのところへ行きます` : `${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
   };
   // {name}が取り持つ(けんか中の2人を、その場で仲直りさせる。56-assistant-life-rel.jsx)
@@ -62886,6 +62934,19 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
     setGive(null);
     void assistantLifeDiaryAdd(`${give.pair.map(nameOf).join('と')}に${info.name}を贈った`, give.pair, { kind: 'give' });
     playTalk(talk, { ids: give.pair, place: g ? g.place : 'home', gift: true });
+  };
+  // おしゃべり(2026-11-08 社長 ❼〜❿)。助手ライフは閉じずに上に開くので、閉じると同じ部屋のシートに戻る。
+  //   寝ていれば起こして話す(今日あったことに残し、生活のリズムの「誘って遊んだ」に数える)
+  const chatOn = typeof ASSISTANT_LIFE_LINKS.chatWith === 'function';
+  const chat = (id, f) => {
+    try {
+      if (typeof ASSISTANT_LIFE_LINKS.chatWith !== 'function') return;
+      const w = assistantLifeWhereOf(life, id);
+      const asleep = !!(w && w.doing === 'sleep');
+      if (asleep) { assistantLifeRhythmPlay(id, Date.now()); void assistantLifeDiaryAdd(`${assistantLifeName(id)} 起こされておしゃべり`, [id], { kind: 'woken' }); }
+      setFollow(null);
+      ASSISTANT_LIFE_LINKS.chatWith(id, { asleep, follow: f || null });
+    } catch {}
   };
   const beat = (id) => { try { if (typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function') { close(); ASSISTANT_LIFE_LINKS.beatInvite(id); } } catch {} };
   const card = (id) => { try { if (typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function') { close(); ASSISTANT_LIFE_LINKS.cardInvite(id); } } catch {} };
@@ -62989,7 +63050,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
           </div>
         </>)}
         {roomId && <AssistantLifeRoomSheet id={roomId} life={life} peerSt={peerSt} bondLevelOf={bondLevelOf} diary={diary} slot={slot} furnItems={furnItems} onGiveFurn={onGiveFurn} onFurnTalk={(talk, text) => { playTalk(talk, { ids: [talk.pair[0]], place: 'home', gift: true }); setNote(text); }} canGive={canGive && itemsLeft > 0}
-          land={land} onClose={() => setRoomId(null)} onPeek={peek} onInvite={invite} onWatch={watch} onGive={(g) => openGive(g.ids)} onBeat={beat} onCard={card} onMediate={mediate} roomState={rooms[roomId]} onMasmon={setMasmonId}/>}
+          land={land} onClose={() => { setRoomId(null); setFollow(null); }} onPeek={peek} onInvite={invite} onWatch={watch} onGive={(g) => openGive(g.ids)} onBeat={beat} onCard={card} onMediate={mediate} roomState={rooms[roomId]} onMasmon={setMasmonId}
+          onChat={chatOn ? chat : null} follow={follow && follow.id === roomId ? follow : null} onFollowDone={() => setFollow(null)}/>}
         {masmonId && typeof AssistantMasmonSheet === 'function' && <AssistantMasmonSheet id={masmonId} land={land} onClose={() => setMasmonId(null)}/>}
         {boardOpen && (
           <div className="absolute inset-0" style={{ zIndex: 25 }} data-assistant-life-diary>
@@ -63000,7 +63062,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
               <button type="button" className="mhl-btn mt-3 w-full bg-slate-700" onClick={() => setBoardOpen(false)}>閉じる</button>
             </div>
           </div>)}
-        {scene && <AssistantLifeScene key={scene.key} scene={scene} look={look} canGive={canGive && itemsLeft > 0} onClose={() => setScene(null)} onGive={openGive}/>}
+        {scene && <AssistantLifeScene key={scene.key} scene={scene} look={look} canGive={canGive && itemsLeft > 0} onClose={() => { setScene(null); showFollow(); }} onGive={openGive}/>}
         {intro && (
           <button type="button" className="mhl-intro" data-assistant-life-intro={intro} onClick={() => setIntro(null)} aria-label="とばす">
             {intro === 'long' && <div className="absolute inset-0 grid place-items-center" style={{ animation: 'mhlFade .3s ease-in .9s both' }}>
@@ -65519,8 +65581,9 @@ const alfApiLineOk = (who, t) => {
   let x = String(t || '');
   if (who === 'mua') x = x.replace(/じゃん/g, 'ぢゃん').replace(/まじ/g, 'まぢ').replace(/マジ/g, 'マヂ');
   if (ALF_API_BODY_WORDS.test(x) || /(この|あの|その)子|子たち/.test(x)) return null;
-  if (who === 'atsu' && !/(笑|[！？!?…♪w]|[)）]|[\u3000-\u303f]?[\uff08(][^)）]*[)）])$/.test(x.trim())) return null;
-  if (who === 'dra' && /ほんま|やで|とる|とんだ|へん[。、！]|やろ|あかん/.test(x)) return null;
+  if (who === 'atsu') { x = x.trim().replace(/。$/, '！'); if (!/(笑|[！？!?…♪w]|[)）]|[\u3000-\u303f]?[\uff08(][^)）]*[)）]|\p{Extended_Pictographic}\uFE0F?)$/u.test(x)) return null; }
+  // ドラの関西弁(中継役の FRIEND_DRA_KANSAI と同じ。「やろう」「撮る」は通す・2026-11-08 オトズレ3)
+  if (who === 'dra' && /ほんま|やで|っとる|っとん|とんだ|やろ(?!う)|あかん|へん[。、！]/.test(x)) return null;
   if (who === 'kiki' && /(だよ|だね|してよ|じゃん)([。！!？?♪]|$)/.test(x)) return null;
   if (who !== 'mua' && /ぢゃん|まぢ/.test(x)) return null;
   return x;
@@ -65646,6 +65709,36 @@ function AlfFriendHouseView({ friend, onClose }) {
       </div>
     </div>);
 }
+// 家へ遊びに行けない理由(プロフィールの入口と「🏘 フレンド」の一覧で同じ文)。行けるときは null
+const alfVisitBlockedText = (friendId, name, s = ALF_STORE.state) => {
+  if (s.mode === 'off') return 'フレンドの家との行き来は、いまお休み中です。';
+  if (!s.settings.open) return '「🏘 フレンド」の設定で、行き来を切にしています。';
+  if (s.settings.muted.includes(friendId)) return 'この家は「来ないようにする」にしています。';
+  if (!alfOpenHouses('look').some(f => f.id === friendId)) return `${name || 'このフレンド'}さんが助手ライフを開くと遊びに行けます。`;
+  const can = assistantLifeFriendCanLook(friendId);
+  if (can === 'done') return '今日はこの家にもう遊びに行きました(朝4時に戻ります)。';
+  if (can === 'max') return '今日はもう遊びに行けません(朝4時に戻ります)。';
+  return can === 'ok' ? null : 'いまは遊びに行けません。';
+};
+// フレンドのプロフィールの入口「🏘 家へ遊びに行く」(2026-11-08 社長)。75-screen-friends が差しこむ。
+//   押すとその人の家(AlfFriendHouseView)を開き、もどるとそのままプロフィールへ戻る。行けないときは押せない形で理由を出す
+function AssistantLifeFriendProfileVisit({ friendId, friendName }) {
+  const s = useAssistantLifeFriendState();
+  const [open, setOpen] = React.useState(false);
+  React.useEffect(() => { if (alfEnabled() && alfSafeOther(friendId)) void (async () => { await ALF_STORE.load(); await alfFetchHouses(); })(); }, [friendId]);
+  if (!alfEnabled() || !alfSafeOther(friendId)) return null;
+  const blocked = s.ready ? alfVisitBlockedText(friendId, friendName, s) : '読み込んでいます…';
+  const house = blocked ? null : alfOpenHouses('look').find(f => f.id === friendId);
+  return (
+    <div className="mt-2" data-alf-profile-visit={blocked ? 'blocked' : 'ok'}>
+      <button type="button" disabled={!house} className="min-h-[44px] w-full rounded-xl border-2 border-amber-300/70 bg-amber-300 px-3 text-[13px] font-black text-slate-950 active:scale-95 disabled:border-slate-600 disabled:bg-slate-800 disabled:text-slate-400"
+        data-alf-profile-visit-go onClick={() => house && setOpen(true)}>🏘 家へ遊びに行く</button>
+      {blocked && <p className="mt-1 text-center text-[10.5px] font-bold leading-snug text-slate-400" data-alf-profile-visit-why>{blocked}</p>}
+      {open && house && (typeof ReactDOM !== 'undefined' && ReactDOM.createPortal && typeof document !== 'undefined'
+        ? ReactDOM.createPortal(<div className="fixed inset-0" style={{ zIndex: 70 }} data-alf-profile-layer><AlfFriendHouseView friend={house} onClose={() => setOpen(false)}/></div>, document.body)
+        : <div className="fixed inset-0" style={{ zIndex: 70 }} data-alf-profile-layer><AlfFriendHouseView friend={house} onClose={() => setOpen(false)}/></div>)}
+    </div>);
+}
 // 家の画面のアイコン「🏘 フレンド」のページ(②いま・今日の行き来/置き手紙/③行ったことのある家/⑧設定)
 function AssistantLifeFriendPage({ life }) {
   const s = useAssistantLifeFriendState();
@@ -65661,6 +65754,8 @@ function AssistantLifeFriendPage({ life }) {
   const st = s.st; const lim = ALF_LIMITS[s.mode === 'on' ? 'on' : 'thin'];
   if (!s.ready || s.mode === 'off') return <div className="px-3 py-6 text-center text-[12px] text-slate-300" data-alf-page="off">🏘 フレンドの家との行き来は、いまお休み中です。</div>;
   const houses = alfOpenHouses('look');
+  // 家が届いていない(または古い)フレンド。来ないようにした家は出さない
+  const waiting = s.roster.filter(f => !houses.some(h => h.id === f.id) && !s.settings.muted.includes(f.id)).slice(0, 30);
   const notes = assistantLifeFriendNotes(s);
   const openScene = async (kind, i) => {
     if (kind === 'out') { setScene(assistantLifeFriendGoScene(st.out)); const r = await assistantLifeFriendSeeOuting('out'); if (r && r.beatP) setScene(x => x && { ...x, reward: `🎁 おみやげ ビートP ${r.beatP}${r.photo ? '・写真1枚' : ''}` }); }
@@ -65712,7 +65807,16 @@ function AssistantLifeFriendPage({ life }) {
             <button type="button" className="shrink-0 rounded-xl border border-slate-500 px-2 py-1.5 text-[11px] text-slate-200" aria-label="その他" data-alf-act="menu" onClick={() => setMenu(menu === f.id ? null : f.id)}>⋯</button>
             {menu === f.id && <button type="button" className="shrink-0 rounded-xl border border-rose-300/60 px-2 py-1.5 text-[10px] text-rose-100" data-alf-act="mute" onClick={() => { assistantLifeFriendMute(f.id, true); setMenu(null); }}>来ないようにする</button>}
           </div>); })
-          : <p className={`${card} text-[11px] text-slate-400`}>遊びに行けるフレンドの家はまだありません(フレンドが助手ライフを開くと、ここに並びます)。</p>}
+          : !waiting.length && <p className={`${card} text-[11px] text-slate-400`}>遊びに行けるフレンドの家はまだありません(フレンドが助手ライフを開くと、ここに並びます)。</p>}
+        {/* まだ家が届いていないフレンドも薄く並べる(2026-11-08 社長)。押せない */}
+        {waiting.map(f => (
+          <div key={f.id} className={`${card} flex items-center gap-2 border-dashed border-slate-500/60`} data-alf-house-waiting={f.id}>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[12px] font-black text-slate-300">{f.name}さんの家</p>
+              <p className="text-[10px] leading-snug text-slate-300">{f.name}さんが助手ライフを開くと遊びに行けます</p>
+            </div>
+            <span className="shrink-0 rounded-xl border border-slate-500 bg-slate-800 px-2.5 py-1.5 text-[11px] font-black text-slate-300">🚪 まだ</span>
+          </div>))}
       </div>
       <p className={sec}>⚙️ 行き来の設定</p>
       <div className={card} data-alf-settings>
@@ -88929,6 +89033,8 @@ function MonsterHeroGame() {
   const [callnameToast, setCallnameToast] = useState(null);
   // 助手とおしゃべりの窓(2026-10-14)。開いているあいだだけ真。公開の印 assistantChat が立つまではデバッグ設定からだけ開ける
   const [assistantChatOpen, setAssistantChatOpen] = useState(false);
+  // おしゃべりの相手(2026-11-08 社長 ❼〜❿)。null のときは、いま選んでいる助手。助手ライフの部屋から開いたときは { id, opening, fromLife }
+  const [assistantChatWith, setAssistantChatWith] = useState(null);
   // 関係図から見返す助手どうしの特別なお話(台本)。null なら見返していない
   const [peerReplay, setPeerReplay] = useState(null);
   // ふだんの吹き出しを1日1回まとめて作る(2026-10-14)。この起動で頼んだ「日付|助手」を覚え、二重に頼まない
@@ -94972,6 +95078,33 @@ function MonsterHeroGame() {
       return all;
     });
   }, []);
+  // 助手ライフの部屋からのおしゃべり(2026-11-08 社長 ❼A〜❿A)。部屋のシートは ASSISTANT_LIFE_LINKS を typeof で見て、ボタンと続きのカードを出す
+  //   chatWith … その助手とのおしゃべりを助手ライフの上に開く(助手ライフは閉じない=閉じると同じ部屋のシートに戻る)。寝ていれば寝起きのひとことから
+  //   chatFollowLine … 声をかけたあとのひとこと(呼び方の話/持ちかけ/ふつう。assistantCallnameLifePick)
+  useEffect(() => {
+    if (typeof ASSISTANT_LIFE_LINKS === 'undefined' || !ASSISTANT_LIFE_LINKS) return;
+    const on = RELEASE_FLAGS.assistantCallname === true && RELEASE_FLAGS.assistantChat === true && typeof assistantCallnameLifePick === 'function';
+    const levelOf = (id) => assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points);
+    const callOf = (id) => assistantCallName(breederNameRef.current, levelOf(id), assistantCallStyles[id] || null, id);
+    ASSISTANT_LIFE_LINKS.chatFollowLine = on ? (id) => assistantCallnameLifePick(id, {
+      level: levelOf(id), asked: !!(assistantCallnameAsk[id] && assistantCallnameAsk[id].asked),
+      current: (assistantCallnames[id] && assistantCallnames[id].call) || null, customStyle: assistantCallStyles[id] || null,
+      offeredAt: (assistantCallnameAsk[id] && assistantCallnameAsk[id].offeredAt) || 0, callName: callOf(id),
+      fill: (t) => assistantFillCallTemplate(assistantGenderCallOf(t, id), breederNameRef.current),
+    }) : null;
+    ASSISTANT_LIFE_LINKS.chatWith = on ? (id, opts = {}) => {
+      if (!ASSISTANT_LIST.some(a => a.id === id)) return;
+      const f = opts && opts.follow;
+      const fill = (line, vars = {}) => String(line || '').replace(/\{call\}/g, vars.call || '').replace(/\{name\}/g, callOf(id));
+      let opening = null;
+      if (opts && opts.asleep) opening = { text: fill(assistantCallnameLine(id, 'wake')), e: 'troubled' };
+      else if (f && f.kind === 'offer' && f.value) opening = { text: f.text, e: 'wink', card: { kind: 'call', value: f.value, from: 'assistant' } };
+      else if (f && f.kind === 'plain') opening = { text: f.text, e: 'happy' };
+      // f.kind === 'ask' は、窓の中の Lv6 の問いかけがそのまま続く(同じことを2回言わない)
+      setAssistantChatWith({ id, opening, fromLife: true });
+      setAssistantChatOpen(true);
+    } : null;
+  }, [assistantCallnames, assistantCallnameAsk, assistantCallStyles, assistantBonds, breederName]);
   // 吹き出しへ配る値。画面側は <AssistantBubble scene="…"/> のままでよい
   const assistantBondValue = useMemo(() => ({
     points: assistantBond.points,
@@ -105266,10 +105399,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         )}
         {/* 助手とおしゃべり(2026-10-14)。話す相手は、いま選んでいる助手。返事が来た1往復ごとにその助手の仲良し度(chat)が増える */}
         {assistantChatOpen&&activeAssistant&&(()=>{
-          const id=activeAssistant.id;
-          const lv=assistantBondLevelNow;
+          // 助手ライフの部屋から開いたときは、その助手(選んでいない助手でもよい)。仲良し度もその助手のぶん(社長 ❿A)
+          const chatWho=(assistantChatWith&&ASSISTANT_LIST.find(a=>a.id===assistantChatWith.id))||activeAssistant;
+          const id=chatWho.id;
+          const lv=id===activeAssistant.id?assistantBondLevelNow:assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points);
           const stage=assistantBondStageByLevel(lv,id)||{};
-          return <AssistantChatWindow assistant={activeAssistant} playerName={breederName}
+          return <AssistantChatWindow key={id} assistant={chatWho} playerName={breederName}
+            opening={(assistantChatWith&&assistantChatWith.opening)||null} zIndex={assistantChatWith&&assistantChatWith.fromLife?9300:9000}
             callName={assistantCallName(breederName,lv,assistantCallStyles[id]||null,id)}
             bondLevel={lv} bondTitle={stage.title||''} bondTone={stage.tone||''}
             callnameKit={RELEASE_FLAGS.assistantCallname===true?{
@@ -105280,11 +105416,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               asked:!!(assistantCallnameAsk[id]&&assistantCallnameAsk[id].asked),
               offeredAt:(assistantCallnameAsk[id]&&assistantCallnameAsk[id].offeredAt)||0,
               fill:(t)=>assistantFillCallTemplate(assistantGenderCallOf(t,id),breederName),
-              setCall:(call,by)=>{const g=setAssistantCallnameFor(id,call,by);if(g)setCallnameToast({id,text:`${activeAssistant.name}の呼び方：${assistantFillCallTemplate(g,breederName)}`});return g;},
+              setCall:(call,by)=>{const g=setAssistantCallnameFor(id,call,by);if(g)setCallnameToast({id,text:`${chatWho.name}の呼び方：${assistantFillCallTemplate(g,breederName)}`});return g;},
               setNick:(nick)=>setAssistantNicknameFor(id,nick),
               markAsk:(patch)=>markAssistantCallnameAsk(id,patch),
             }:null}
-            onExchange={()=>addAssistantBondFor(id,'chat')} onClose={()=>setAssistantChatOpen(false)}/>;
+            onExchange={()=>addAssistantBondFor(id,'chat')} onClose={()=>{setAssistantChatOpen(false);setAssistantChatWith(null);}}/>;
         })()}
         {/* 呼び方が決まったあと、つぎの画面で1回だけ出す知らせ(2026-11-08)。🔄横では回した器の中へ出す */}
         {callnameToast&&!assistantChatOpen&&typeof AssistantCallnameToast==='function'&&(()=>{
@@ -108853,8 +108989,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         )}
 
         {showCallStylePicker&&(
-          <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
-            <div className="bg-slate-900 rounded-3xl p-6 w-full max-w-xs shadow-2xl" style={{border:`1px solid ${activeAssistant.accent}`}}>
+          // 低い画面(横667×375 など)で上がはみ出さないよう、外側を縦に流せるようにして、窓は高さが足りるときだけ真ん中へ(ミハリ 2026-11-08)
+          <div data-call-style-picker className="fixed inset-0 flex flex-col items-center overflow-y-auto mh-scroll p-6 [@media(max-height:520px)]:p-3" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
+            <div className="bg-slate-900 rounded-3xl p-6 [@media(max-height:520px)]:p-4 w-full max-w-xs shadow-2xl my-auto shrink-0" style={{border:`1px solid ${activeAssistant.accent}`}}>
               <h3 className="text-lg font-black text-white mb-1 text-center">{activeAssistant.name}の呼び方</h3>
               {/* 会話で決めた呼び方・助手のあだ名(2026-11-08)。Lv6 より前でもここで外せる。外すのは新しいキーの行だけ */}
               {(()=>{const talked=assistantCallnames[selectedAssistantId]&&assistantCallnames[selectedAssistantId].call;const nick=assistantNicknames[selectedAssistantId]&&assistantNicknames[selectedAssistantId].nick;
@@ -108866,7 +109003,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <button type="button" data-nickname-reset onClick={()=>setAssistantNicknameFor(selectedAssistantId,null)} className="shrink-0 min-h-[36px] rounded-xl border border-slate-600 bg-slate-800 px-2.5 text-[10px] font-black text-slate-200 active:scale-95">外す</button></div>}
                 </div>);})()}
               {assistantBondLevelNow>=ASSISTANT_CALL_STYLE_UNLOCK_LEVEL?(<>
-              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">仲良し度がLv6になったので、呼び方を自由に決められます。「{'{name}'}」と書くと、そこがあなたの名前に置き換わります。</p>
+              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight" style={JA_WRAP_STYLE}>{jaWrap('仲良し度がLv6になったので、呼び方を自由に決められます。')}<span className="whitespace-nowrap">「{'{name}'}」</span>{jaWrap('と書くと、そこがあなたの名前に置き換わります。')}</p>
               <input type="text" value={tempCallStyle} onChange={e=>setTempCallStyle(e.target.value)} maxLength={(typeof ASSISTANT_CALL_STYLE_MAX_LEN!=='undefined'&&ASSISTANT_CALL_STYLE_MAX_LEN)||16} placeholder={`例: {name}さん`} className="w-full bg-black/50 border border-slate-700 rounded-xl p-3 text-white font-bold text-center mb-2"/>
               <div className="flex flex-wrap gap-1.5 justify-center mb-4">
                 {((typeof assistantCallStylesOf==='function'&&assistantCallStylesOf(selectedAssistantId))||[]).map(style=>(
