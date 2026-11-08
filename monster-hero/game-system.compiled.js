@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e793542d792110af
+// source-sha256: 1fc506ff720a164b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -140438,13 +140438,7 @@ const CardBattleScreen = ({
     }, "勝"), lifeIds.includes(x.id) && React.createElement("span", {
       "data-card-foe-life-chip": true,
       className: "absolute left-0.5 top-0.5 rounded-full bg-gradient-to-r from-amber-200 to-amber-400 px-1 text-[9px] font-black leading-[14px] text-slate-950 shadow landscape:text-[8px] landscape:leading-[12px]"
-    }, "🃏UP")))), lifeFoes.length > 0 && React.createElement("div", {
-      "data-card-foe-life-band": true,
-      className: "rounded-xl border-2 border-amber-300 bg-amber-950/80 px-2.5 py-1.5 text-[13px] font-black leading-snug text-amber-200",
-      style: JA_LABEL_STYLE
-    }, React.createElement("p", null, jaWrap(`🃏 いまカード部屋にいる助手: ${lifeFoes.map(x => x.name).join('・')}`)), React.createElement("p", {
-      className: "text-[12px] text-white"
-    }, jaWrap('この助手と対戦すると、ビートP・カードランクの経験値・クイック周回が 1.5倍'))), React.createElement("div", {
+    }, "🃏UP")))), React.createElement("div", {
       className: "flex items-baseline gap-2 px-0.5 pt-1"
     }, React.createElement("span", {
       className: "text-[10px] font-black uppercase tracking-widest text-slate-300"
@@ -140482,7 +140476,13 @@ const CardBattleScreen = ({
       }, open ? `勝ち${CARD_AI_LEVELS[lv].point}` : '🔒'));
     })), debug && React.createElement("p", {
       className: "text-[11px] font-bold text-slate-400"
-    }, "(デバッグ: まだ開いていない強さも選べます。開いた印は勝ったときだけ付きます)"), React.createElement("div", {
+    }, "(デバッグ: まだ開いていない強さも選べます。開いた印は勝ったときだけ付きます)"), lifeFoes.length > 0 && React.createElement("div", {
+      "data-card-foe-life-band": true,
+      className: "rounded-xl border-2 border-amber-300 bg-amber-950/80 px-2.5 py-1.5 text-[13px] font-black leading-snug text-amber-200",
+      style: JA_LABEL_STYLE
+    }, React.createElement("p", null, jaWrap(`🃏 いまカード部屋にいる助手: ${lifeFoes.map(x => x.name).join('・')}`)), React.createElement("p", {
+      className: "text-[12px] text-white"
+    }, jaWrap('この助手と対戦すると、ビートP・カードランクの経験値・クイック周回が 1.5倍'))), React.createElement("div", {
       className: "space-y-2 landscape:grid landscape:grid-cols-2 landscape:items-stretch landscape:gap-2 landscape:space-y-0"
     }, a && React.createElement("div", {
       className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2 landscape:items-center"

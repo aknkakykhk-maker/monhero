@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c2761138b72560d4
+// generated-sha256: 37fb685b1b2abdf9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -76028,10 +76028,6 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               </button>
             ))}
           </div>
-          {lifeFoes.length > 0 && <div data-card-foe-life-band className="rounded-xl border-2 border-amber-300 bg-amber-950/80 px-2.5 py-1.5 text-[13px] font-black leading-snug text-amber-200" style={JA_LABEL_STYLE}>
-            <p>{jaWrap(`🃏 いまカード部屋にいる助手: ${lifeFoes.map((x) => x.name).join('・')}`)}</p>
-            <p className="text-[12px] text-white">{jaWrap('この助手と対戦すると、ビートP・カードランクの経験値・クイック周回が 1.5倍')}</p>
-          </div>}
           {/* 強さのボタンは助手の顔のすぐ下(紹介の欄が長いと、下の「対戦する」の帯に潜っていた。2026-10-25 社長の実機) */}
           {/* 見出しの部品(ScreenSectionLabel)の注記は9pxで小さすぎた(見回り #16)。ほかの画面は変えず、ここだけ11pxで書く */}
           <div className="flex items-baseline gap-2 px-0.5 pt-1">
@@ -76055,6 +76051,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             })}
           </div>
           {debug && <p className="text-[11px] font-bold text-slate-400">(デバッグ: まだ開いていない強さも選べます。開いた印は勝ったときだけ付きます)</p>}
+          {/* いまカード部屋にいる助手の帯は、強さのボタンの下(上に置くと、3行になったとき 320×568 の横で強さのボタンが「対戦する」の帯に潜った。2026-11-08 ツナグの指摘) */}
+          {lifeFoes.length > 0 && <div data-card-foe-life-band className="rounded-xl border-2 border-amber-300 bg-amber-950/80 px-2.5 py-1.5 text-[13px] font-black leading-snug text-amber-200" style={JA_LABEL_STYLE}>
+            <p>{jaWrap(`🃏 いまカード部屋にいる助手: ${lifeFoes.map((x) => x.name).join('・')}`)}</p>
+            <p className="text-[12px] text-white">{jaWrap('この助手と対戦すると、ビートP・カードランクの経験値・クイック周回が 1.5倍')}</p>
+          </div>}
           {/* 横の画面は、紹介と型の欄を左右に並べる(縦に積むと強さのボタンが下へ出た。landscape-screens-check) */}
           <div className="space-y-2 landscape:grid landscape:grid-cols-2 landscape:items-stretch landscape:gap-2 landscape:space-y-0">
           {a && (
