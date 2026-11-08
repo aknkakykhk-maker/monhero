@@ -295,6 +295,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-hdr{position:relative;z-index:5;padding:8px 12px 6px;background:linear-gradient(180deg,#140b2ef2,#140b2ecc 75%,#140b2e00)}
 .mhl-en{font-size:9px;letter-spacing:.18em;font-weight:900;color:#f9a8d4}
 .mhl-ti{font-size:22px;font-weight:900;line-height:1.05;background:linear-gradient(90deg,#fff,#fbcfe8 60%,#fde68a);-webkit-background-clip:text;background-clip:text;color:transparent}
+.mhl-quick{display:flex;align-items:center;gap:5px;border-radius:999px;padding:3px 4px 3px 9px;border:1px solid #fbbf2488;background:rgba(15,23,42,.78);font-size:10.5px;font-weight:900;color:#fde68a}.mhl-quick b{color:#fff}.mhl-quick button{min-height:26px;border-radius:999px;padding:0 9px;background:#334155;color:#e2e8f0;font-size:10.5px;font-weight:900;border:1px solid #64748b}.mhl-quick.is-start{padding:3px 10px;min-height:30px;background:linear-gradient(90deg,#f59e0b,#ea580c);color:#fff;border-color:#fde68a}
 .mhl-clock{border-radius:12px;padding:3px 8px;border:1px solid #ffffff33;background:rgba(15,23,42,.72);text-align:right}
 .mhl-chip{display:inline-flex;align-items:center;gap:3px;background:linear-gradient(90deg,#be185d,#f59e0b);padding:1px 8px;border-radius:999px;font-size:10px;font-weight:900;white-space:nowrap}
 .mhl-bar{flex:1;height:7px;border-radius:9px;background:#ffffff1f;overflow:hidden}.mhl-bar>i{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fbbf24)}
@@ -707,13 +708,50 @@ function AssistantLifeScene({ scene, look, onClose, onGive, canGive }) {
 }
 
 // ---------- 専用ページ ----------
-const useAssistantLifeLand = () => {
-  const get = () => typeof window !== 'undefined' && window.innerWidth > window.innerHeight && window.innerHeight < 600;
-  const [land, setLand] = React.useState(get);
-  React.useEffect(() => { const f = () => setLand(get()); window.addEventListener('resize', f); window.addEventListener('orientationchange', f); return () => { window.removeEventListener('resize', f); window.removeEventListener('orientationchange', f); }; }, []);
-  return land;
+// 見えている画面の幅・高さ。🔄横(モンヒロビートの「横」で、端末は縦のまま器を回す)のときは、回した器の幅・高さ
+//   (window の幅・高さは端末の縦のままなので、それで決めると縦の形のまま器の真ん中に縮んだ。2026-11-08 ジン)
+const assistantLifeViewSize = () => {
+  if (typeof window === 'undefined') return { w: 390, h: 844, rot: false };
+  const rot = typeof RHYTHM_VIEW_ROTATION === 'object' && !!RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.active === 'function' && RHYTHM_VIEW_ROTATION.active();
+  return rot ? { w: window.innerHeight, h: window.innerWidth, rot: true } : { w: window.innerWidth, h: window.innerHeight, rot: false };
 };
-function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = null, bondLevelOf = null, furnItems = null, onGiveFurn = null, onGiveSolo = null }) {
+// 大きさが変わったら描き直す。🔄横の切り替えは resize が来ないので、0.5秒ごとにも見る
+const useAssistantLifeViewSize = () => {
+  const [size, setSize] = React.useState(assistantLifeViewSize);
+  React.useEffect(() => {
+    const f = () => setSize(prev => { const n = assistantLifeViewSize(); return (n.w === prev.w && n.h === prev.h && n.rot === prev.rot) ? prev : n; });
+    window.addEventListener('resize', f); window.addEventListener('orientationchange', f);
+    const id = setInterval(f, 500);
+    return () => { window.removeEventListener('resize', f); window.removeEventListener('orientationchange', f); clearInterval(id); };
+  }, []);
+  return size;
+};
+const useAssistantLifeLand = () => { const v = useAssistantLifeViewSize(); return v.w > v.h && v.h < 600; };
+// 裏クイックの札(2026-11-08 社長「助手ライフ画面でも裏クイックほしい」)。中身はバトル部(ジン)が 60-app から渡す:
+//   quickRun … null(一度も回していない)か { live, loops, stopped, difficulty, xp, gold, canStart }/onQuickRunStop()/onQuickRunStart()
+//   回っているときは「⚡ 裏クイック ◯周目」と「止める」、止まっていて始められるときは「▶ 裏クイック」。数え方はカードの札と同じ(loops をそのまま)
+function AssistantLifeQuickChip({ quickRun, onStop, onStart, land }) {
+  if (!quickRun || typeof quickRun !== 'object') return null;
+  // 「◯周目」は loops をそのまま(1周目から 1。MFバトルカードの札 84-screen-card-battle と同じ数え方)
+  const loops = Number.isFinite(Number(quickRun.loops)) ? Math.max(1, Math.floor(Number(quickRun.loops))) : 1;
+  // 印はバトル部(セコンド)の検査とそろえる: 外枠 data-assistant-life-quick-run=live|stopped/始める data-assistant-life-quick-start/止める data-assistant-life-quick-stop
+  if (quickRun.live) {
+    return (
+      <div className="mhl-quick shrink-0 self-center" data-assistant-life-quick="live" data-assistant-life-quick-run="live" data-assistant-life-quick-loop={loops}>
+        <span className="whitespace-nowrap">⚡ 裏クイック <b>{loops}周目</b></span>
+        {onStop && <button type="button" data-assistant-life-quick-stop onClick={onStop} aria-label="裏クイックを止める">止める</button>}
+      </div>);
+  }
+  // 止めたあと・自動で始めるが切・負けて始め直すまでのあいだだけ「▶ 裏クイック」(助手ライフを開くとふだんは自動で始まる。2026-11-08 社長)
+  if (quickRun.canStart && onStart) {
+    return (
+      <div className="shrink-0 self-center" data-assistant-life-quick="start" data-assistant-life-quick-run="stopped">
+        <button type="button" className="mhl-quick is-start" data-assistant-life-quick-start onClick={onStart} aria-label="裏クイックを始める"><span className="whitespace-nowrap">▶ 裏クイック</span></button>
+      </div>);
+  }
+  return null;
+}
+function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = null, bondLevelOf = null, furnItems = null, onGiveFurn = null, onGiveSolo = null, quickRun = null, onQuickRunStop = null, onQuickRunStart = null, quickRunStrip = null }) {
   const st = useAssistantLifeNow(metIds);
   const diary = useAssistantLifeDiary();
   const peerSt = (typeof useAssistantPeerState === 'function') ? useAssistantPeerState() : null;
@@ -731,8 +769,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const [masmonId, setMasmonId] = React.useState(null); // 🐾 助手のマスモン(56-assistant-life-masmon.jsx)
   const [intro, setIntro] = React.useState(null); // 'long' | 'short' | null
   const [boardOpen, setBoardOpen] = React.useState(false); // 今日あったことを全部
-  const [vw, setVw] = React.useState(() => (typeof window !== 'undefined' ? window.innerWidth : 390));
-  React.useEffect(() => { const f = () => setVw(window.innerWidth); window.addEventListener('resize', f); return () => window.removeEventListener('resize', f); }, []);
+  const vw = useAssistantLifeViewSize().w; // 🔄横では回した器の幅
   // 入場: その日の最初は長く(1.2秒)、2回目からは短く(0.4秒)
   React.useEffect(() => {
     let alive = true;
@@ -934,6 +971,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         <div className="min-w-0 shrink overflow-hidden" data-assistant-life-title><p className="mhl-en truncate whitespace-nowrap" style={land ? { letterSpacing: '.06em', fontSize: 8 } : undefined}>ASSISTANT LIFE · {tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : tab === 'visit' ? 'VISIT' : 'HOUSE'}</p><p className="mhl-ti whitespace-nowrap" style={land ? { fontSize: 18 } : undefined}>助手ライフ</p></div>
         <div className="min-w-0 flex-1"/>
         {/* いまの時刻の札(ハナビの共通部品 44-time-of-day.jsx。設定の「いまの時刻を出す」が切なら出ない) */}
+        {/* 裏クイック: 60-app がほかのモードと同じ帯(quickRunStrip)を渡すときは帯を見出しの下に出し、この小さな札は出さない(2026-11-08 社長「他のモードと同じような表示に」) */}
+        {!quickRunStrip && <AssistantLifeQuickChip quickRun={quickRun} onStop={onQuickRunStop} onStart={onQuickRunStart} land={land}/>}
         {typeof TimeOfDayClock === 'function' && <div className="ml-auto shrink-0 self-center" data-assistant-life-clock-box><TimeOfDayClock/></div>}
       </div>
       {/* 時間帯と、みんなが動くまで(題を切らないよう2段目に。2026-11-07 社長「文字列も気をつけて」) */}
@@ -1009,6 +1048,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
             <div className="mhl-body" style={{ flex: '0 0 64%' }}>{tabBody}</div>
             <div className="flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2">
               {header}
+              {quickRunStrip && <div className="shrink-0" data-assistant-life-quick-strip>{quickRunStrip}</div>}
               {note && <p data-assistant-life-note className="rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1 text-[10.5px] font-bold text-sky-100">{note}</p>}
               {tiles}
               {icons}
@@ -1016,6 +1056,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
           </div>
         ) : (<>
           {header}
+          {quickRunStrip && <div className="relative z-[3] shrink-0" data-assistant-life-quick-strip>{quickRunStrip}</div>}
           <div className="mhl-body">
             {note && <p data-assistant-life-note className="mx-3 mb-1 rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 text-[11px] font-bold text-sky-100">{note}</p>}
             {tabBody}

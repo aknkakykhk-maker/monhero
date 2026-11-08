@@ -198,6 +198,7 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `hamCounterFxTimerRef.current = setTimeout(skipHamCounterFx, ms)` | progress | 止める | ハムのカウンターの演出を見せ終えて、待っている攻撃を進める(`await` の resolve)。止めると攻撃が止まったままになる |
 | `}, QUICK_RUN_AUTO_RETRY_MS);` | progress | 止める | クイックの自動周回で負けたあと、少し待って1周目から始め直す(次の画面へ進む)。effect の後始末で `clearTimeout` |
 | `setTimeout(retry, QUICK_RUN_AUTO_RETRY_MS)` | progress | 止める | MFバトルカードの中で、クイックの自動周回(カードのオプション)が負けたあと、少し待って1周目から始め直す(次の画面へ進む)。effect の後始末で `clearTimeout` |
+| `setTimeout(retryLife, QUICK_RUN_AUTO_RETRY_MS)` | progress | 止める | 助手ライフを開いたまま回しているクイックの自動周回(AUTO設定の自動開始)が負けたあと、少し待って1周目から始め直す(2026-11-08)。effect の後始末で `clearTimeout` |
 | `const t = setTimeout(() => setOpen(false), 2500)` | screen | 止める | 小さな説明の吹き出しを2.5秒で閉じる(41-screen-ui.jsx)。後始末で `clearTimeout` |
 | `setTimeout(place, 120)` | screen | 止める | HOMEの置き場所を測り直す(1回目・69-screen-home.jsx) |
 | `setTimeout(place, 700)` | screen | 止める | HOMEの置き場所を測り直す(2回目。絵が読み込まれたあと) |
