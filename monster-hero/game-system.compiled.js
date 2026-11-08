@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 283899e0e8859e25
+// source-sha256: 6e0ded1c5b60508b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -63221,9 +63221,25 @@ const GrowthFxChipsBox = ({
     place();
     const t1 = setTimeout(place, 500),
       t2 = setTimeout(place, 1500);
+    let wait = 0;
+    const mo = typeof MutationObserver !== 'undefined' && document.body ? new MutationObserver(list => {
+      const box = ref.current;
+      if (!box || wait || list.every(m => box.contains(m.target))) return;
+      wait = setTimeout(() => {
+        wait = 0;
+        place();
+      }, 250);
+    }) : null;
+    if (mo) mo.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true
+    });
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
+      clearTimeout(wait);
+      if (mo) mo.disconnect();
     };
   }, [count]);
   return React.createElement("div", {

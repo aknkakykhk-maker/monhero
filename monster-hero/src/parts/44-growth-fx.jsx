@@ -607,7 +607,17 @@ const GrowthFxChipsBox = ({ level, count, children }) => {
     };
     place();
     const t1 = setTimeout(place, 500), t2 = setTimeout(place, 1500);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    // 札を出しているあいだに画面の中身が変わったら(返事のボタン・シートがあとから下に出るなど)、そのたびに探し直す
+    //   (2026-11-08 横 844 のフレンドの家: 空いていた下のほうに置いたあと、置き手紙のボタンが出てきて札の下に隠れた)
+    //   中身がずっと動く画面(時計・バトル)で重くならないよう、探し直すのは 0.25秒に1回まで
+    let wait = 0;
+    const mo = typeof MutationObserver !== 'undefined' && document.body ? new MutationObserver((list) => {
+      const box = ref.current;
+      if (!box || wait || list.every(m => box.contains(m.target))) return;
+      wait = setTimeout(() => { wait = 0; place(); }, 250);
+    }) : null;
+    if (mo) mo.observe(document.body, { childList: true, subtree: true, characterData: true });
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(wait); if (mo) mo.disconnect(); };
   }, [count]);
   return <div ref={ref} className={`mh-gfx-chips mh-gfx-${level}`} data-growth-fx-chips aria-live="polite">{children}</div>;
 };
