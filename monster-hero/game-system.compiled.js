@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e22e216b4ab787aa
+// source-sha256: ebc9e8dfd6bfbe7c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -100966,7 +100966,7 @@ function AssistantPeerMap({
   const dailyPair = daily ? daily.pair.split('-') : null;
   return React.createElement("div", {
     "data-assistant-peer-map": true,
-    className: "rounded-2xl border border-white/10 bg-slate-950/60 p-3"
+    className: "rounded-2xl border border-white/10 bg-slate-950/85 p-3"
   }, React.createElement("p", {
     className: "text-[12px] font-black text-pink-200"
   }, "助手どうしの関係図"), React.createElement("p", {
@@ -102821,6 +102821,7 @@ const assistantLifeLookNow = () => {
     return null;
   }
 };
+const assistantLifePlaceLabel = p => typeof assistantLifePlaceShow === 'function' ? assistantLifePlaceShow(p) : ASSISTANT_LIFE_PLACES[p];
 const assistantLifeTalkSet = () => {
   if (assistantLifeTalkCache) return assistantLifeTalkCache;
   const raw = typeof ASSISTANT_LIFE_TALKS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_TALKS) ? ASSISTANT_LIFE_TALKS : [];
@@ -103686,7 +103687,7 @@ function AssistantLifeScreenBody({
     className: "mt-2 rounded-xl bg-sky-400/10 px-2 py-1.5 text-[11px] font-bold text-sky-100"
   }, note), tab === 'now' && React.createElement(React.Fragment, null, canGive && !embedded && React.createElement("div", {
     "data-assistant-life-items": true,
-    className: "mt-2 rounded-2xl border border-amber-300/40 bg-amber-400/5 p-2"
+    className: "mt-2 rounded-2xl border border-amber-300/40 bg-slate-950/90 p-2"
   }, React.createElement("p", {
     className: "text-[12px] font-black text-amber-200"
   }, "🎁 2人に贈る道具(今日あと ", typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0, "回・同じ道具は1日1回)"), itemInfos.map(x => React.createElement("div", {
@@ -103718,7 +103719,7 @@ function AssistantLifeScreenBody({
     return React.createElement("div", {
       key: key,
       "data-assistant-life-group": key,
-      className: "rounded-2xl border border-white/10 bg-slate-900/80 p-2"
+      className: "rounded-2xl border border-white/15 bg-slate-950/90 p-2"
     }, React.createElement("div", {
       className: "flex items-center gap-2"
     }, React.createElement(AssistantLifeFaces, {
@@ -103730,7 +103731,7 @@ function AssistantLifeScreenBody({
       className: "text-[12px] font-black leading-tight text-white"
     }, g.ids.map(nameOf).join('・')), React.createElement("p", {
       className: "text-[11px] font-bold leading-tight text-pink-200"
-    }, ASSISTANT_LIFE_PLACES[g.place], "で", ASSISTANT_LIFE_DOINGS[g.doing].label))), g.ids.some(id => mood(id)) && React.createElement("p", {
+    }, assistantLifePlaceLabel(g.place), "で", ASSISTANT_LIFE_DOINGS[g.doing].label))), g.ids.some(id => mood(id)) && React.createElement("p", {
       className: "mt-1 text-[11px] text-slate-300"
     }, g.ids.filter(id => mood(id)).map(id => `${nameOf(id)}: ${mood(id)}`).join(' / ')), (() => {
       const hints = pairsOf(g.ids).map(([a, b]) => ({
@@ -103763,18 +103764,18 @@ function AssistantLifeScreenBody({
       "data-assistant-life-watch": key,
       disabled: done || watchLeft <= 0,
       onClick: () => watch(g),
-      className: "min-h-[44px] flex-1 rounded-xl border border-pink-300/50 bg-pink-400/10 px-2 text-[12px] font-black text-pink-100 active:scale-[.98] disabled:opacity-40"
-    }, done ? '見守りました' : watchLeft <= 0 ? '今日はもう見守れません' : '👀 見守る'), canGive && React.createElement("button", {
+      className: "min-h-[44px] flex-1 rounded-xl border border-pink-300/60 bg-pink-500/25 px-2 text-[12px] font-black text-pink-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400"
+    }, done ? '✓ 見守りました' : watchLeft <= 0 ? '今日はもう見守れません' : '👀 見守る'), canGive && React.createElement("button", {
       type: "button",
       "data-assistant-life-give": key,
       onClick: () => openGive(g),
-      className: "min-h-[44px] flex-1 rounded-xl border border-amber-300/60 bg-amber-400/15 px-2 text-[12px] font-black text-amber-100 active:scale-[.98]"
+      className: "min-h-[44px] flex-1 rounded-xl border border-amber-300/70 bg-amber-500/25 px-2 text-[12px] font-black text-amber-50 active:scale-[.98]"
     }, "🎁 ", g.ids.length === 2 ? '贈る' : 'だれに贈る？')));
   }), Object.entries(life.solo || {}).map(([id, s]) => React.createElement("div", {
     key: id,
     "data-assistant-life-solo": id,
     "data-assistant-life-reason": s.reason,
-    className: "flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-900/60 p-2"
+    className: "flex items-center gap-2 rounded-2xl border border-white/15 bg-slate-950/90 p-2"
   }, React.createElement(AssistantLifeFaces, {
     ids: [id],
     size: 36
@@ -103786,25 +103787,25 @@ function AssistantLifeScreenBody({
     className: `ml-1 text-[10px] ${s.reason === 'lonely' ? 'text-amber-200' : 'text-slate-400'}`
   }, ASSISTANT_LIFE_REASON_LABEL[s.reason])), React.createElement("p", {
     className: "text-[11px] font-bold leading-tight text-slate-300"
-  }, ASSISTANT_LIFE_PLACES[s.place], "で", ASSISTANT_LIFE_DOINGS[s.doing].label, "・", mood(id))), React.createElement("button", {
+  }, assistantLifePlaceLabel(s.place), "で", ASSISTANT_LIFE_DOINGS[s.doing].label, "・", mood(id))), React.createElement("button", {
     type: "button",
     "data-assistant-life-peek": id,
     disabled: (life.watched || []).includes(`solo:${id}`),
     onClick: () => peek(id),
-    className: "min-h-[44px] shrink-0 rounded-xl border border-pink-300/40 bg-pink-400/5 px-2 text-[11px] font-black text-pink-100 active:scale-[.98] disabled:opacity-40"
-  }, (life.watched || []).includes(`solo:${id}`) ? '見た' : 'ようすを見る'), s.reason !== 'distance' && React.createElement("button", {
+    className: "min-h-[44px] shrink-0 rounded-xl border border-pink-300/60 bg-pink-500/25 px-2 text-[11px] font-black text-pink-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400"
+  }, (life.watched || []).includes(`solo:${id}`) ? '✓ 見た' : 'ようすを見る'), s.reason !== 'distance' && React.createElement("button", {
     type: "button",
     "data-assistant-life-invite": id,
     disabled: invitedNext.has(id),
     onClick: () => invite(id),
-    className: "min-h-[44px] shrink-0 rounded-xl border border-amber-300/50 bg-amber-400/10 px-2 text-[11px] font-black text-amber-100 active:scale-[.98] disabled:opacity-40"
-  }, invitedNext.has(id) ? '誘った' : '誘う')))), ids.length >= 2 && React.createElement("div", {
+    className: "min-h-[44px] shrink-0 rounded-xl border border-amber-300/70 bg-amber-500/25 px-2 text-[11px] font-black text-amber-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400"
+  }, invitedNext.has(id) ? '✓ 誘った' : '誘う')))), ids.length >= 2 && React.createElement("div", {
     "data-assistant-life-introduce": true,
-    className: "mt-3 rounded-2xl border border-sky-300/30 bg-sky-400/5 p-2"
+    className: "mt-3 rounded-2xl border border-sky-300/50 bg-slate-950/90 p-2"
   }, React.createElement("p", {
     className: "text-[12px] font-black text-sky-100"
   }, "引き合わせる"), React.createElement("p", {
-    className: "mb-1.5 text-[10px] text-slate-400"
+    className: "mb-1.5 text-[10px] text-slate-300"
   }, "2人を選ぶと、次の時間に一緒に過ごしやすくなります。言い合いのあとなら、仲直りのきっかけに。"), React.createElement("div", {
     className: "flex flex-wrap gap-1.5"
   }, ids.map(id => {
@@ -103815,17 +103816,18 @@ function AssistantLifeScreenBody({
       "data-assistant-life-pick": id,
       "aria-pressed": on,
       onClick: () => setPick(p => on ? p.filter(x => x !== id) : [...p, id].slice(-2)),
-      className: `min-h-[40px] rounded-full border px-2.5 text-[11px] font-black active:scale-95 ${on ? 'border-sky-300 bg-sky-400/25 text-white' : 'border-white/15 text-slate-300'}`
+      className: `min-h-[40px] rounded-full border px-2.5 text-[11px] font-black active:scale-95 ${on ? 'border-sky-300 bg-sky-500/40 text-white' : 'border-white/25 bg-slate-800 text-slate-100'}`
     }, nameOf(id));
   })), React.createElement("button", {
     type: "button",
     "data-assistant-life-introduce-go": true,
     disabled: pick.length !== 2 || !!introNext,
     onClick: introduce,
-    className: "mt-2 min-h-[44px] w-full rounded-xl border border-sky-300/50 bg-sky-400/10 text-[12px] font-black text-sky-100 active:scale-[.98] disabled:opacity-40"
+    className: "mt-2 min-h-[44px] w-full rounded-xl border border-sky-300/60 bg-sky-500/25 text-[12px] font-black text-sky-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400"
   }, introNext ? `次の時間は ${introNext.pair.split('-').map(nameOf).join('と')} を引き合わせます` : '次の時間に一緒に過ごしてもらう')), React.createElement("p", {
-    className: "mt-3 text-[10px] leading-snug text-slate-500"
-  }, "みんな、時間(朝5・昼10・午後14・夕方18・夜21・深夜0時)が変わるたびに、自分で過ごし方を決めます。")), tab === 'map' && typeof AssistantPeerMap === 'function' && React.createElement("div", {
+    "data-assistant-life-foot": true,
+    className: "mt-3 rounded-xl bg-slate-950/85 px-2 py-1.5 text-[10.5px] leading-snug text-slate-300"
+  }, "みんな、5時・10時・14時・18時・21時・0時に、自分で過ごし方を決め直します。")), tab === 'map' && typeof AssistantPeerMap === 'function' && React.createElement("div", {
     className: "mt-2"
   }, React.createElement(AssistantPeerMap, {
     metIds: metIds,
@@ -103955,12 +103957,14 @@ const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({
   library: '📚',
   market: '🛍️',
   hill: '🌄',
-  garden: '🌷'
+  garden: '🌷',
+  temple: '✨'
 });
 const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({
   studio: 'モンヒロビート',
   cardroom: 'MFバトルカード',
-  ranch: 'M/B管理'
+  ranch: 'M/B管理',
+  temple: '神殿'
 });
 const assistantLifePlaceShow = place => ASSISTANT_LIFE_PLACE_SHOW[place] || ASSISTANT_LIFE_PLACES[place] || '';
 const assistantLifeFacilityOf = entry => {
@@ -105795,6 +105799,108 @@ function AssistantLifeRoomSheet({
     }
   }));
 }
+const ASSISTANT_LIFE_STAND_BOX = new Map();
+const assistantLifeStandBox = src => new Promise(res => {
+  if (ASSISTANT_LIFE_STAND_BOX.has(src)) {
+    res(ASSISTANT_LIFE_STAND_BOX.get(src));
+    return;
+  }
+  const im = new Image();
+  im.onload = () => {
+    try {
+      const W = 96,
+        H = Math.max(1, Math.round(96 * im.naturalHeight / im.naturalWidth));
+      const c = document.createElement('canvas');
+      c.width = W;
+      c.height = H;
+      const g = c.getContext('2d');
+      g.drawImage(im, 0, 0, W, H);
+      const d = g.getImageData(0, 0, W, H).data;
+      let t = H,
+        b = -1,
+        l = W,
+        r = -1;
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (d[(y * W + x) * 4 + 3] > 40) {
+        if (y < t) t = y;
+        if (y > b) b = y;
+        if (x < l) l = x;
+        if (x > r) r = x;
+      }
+      const box = b < 0 ? null : {
+        t: t / H,
+        b: (b + 1) / H,
+        l: l / W,
+        r: (r + 1) / W,
+        ar: im.naturalWidth / im.naturalHeight
+      };
+      ASSISTANT_LIFE_STAND_BOX.set(src, box);
+      res(box);
+    } catch (_) {
+      ASSISTANT_LIFE_STAND_BOX.set(src, null);
+      res(null);
+    }
+  };
+  im.onerror = () => {
+    ASSISTANT_LIFE_STAND_BOX.set(src, null);
+    res(null);
+  };
+  im.src = src;
+});
+function AssistantLifeStand({
+  pid,
+  src,
+  cx,
+  fig,
+  sleep
+}) {
+  const [box, setBox] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.get(src) || null);
+  React.useEffect(() => {
+    let alive = true;
+    assistantLifeStandBox(src).then(b => {
+      if (alive) setBox(b);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [src]);
+  const filter = sleep ? 'brightness(.45) saturate(.6) drop-shadow(0 6px 12px #0008)' : undefined;
+  if (!box) return React.createElement("img", {
+    className: "st",
+    "data-assistant-life-scene-stand": pid,
+    "data-assistant-life-scene-sleep": sleep ? '1' : '0',
+    src: src,
+    alt: "",
+    style: {
+      left: `${cx}%`,
+      transform: 'translateX(-50%)',
+      height: '58%',
+      width: '70%',
+      bottom: '22%',
+      opacity: 0,
+      filter
+    }
+  });
+  const span = Math.max(0.2, box.b - box.t);
+  const h = fig / span;
+  return React.createElement("img", {
+    className: "st",
+    "data-assistant-life-scene-stand": pid,
+    "data-assistant-life-scene-sleep": sleep ? '1' : '0',
+    "data-assistant-life-scene-fig": fig,
+    src: src,
+    alt: "",
+    style: {
+      left: `${cx}%`,
+      height: `${(h * 100).toFixed(2)}%`,
+      width: 'auto',
+      maxWidth: 'none',
+      bottom: `calc(22% - ${((1 - box.b) * h * 100).toFixed(2)}%)`,
+      transform: `translateX(-${((box.l + box.r) / 2 * 100).toFixed(1)}%)`,
+      objectFit: 'fill',
+      filter
+    }
+  });
+}
 const assistantLifeSceneBg = (place, look) => {
   const v = ASSISTANT_LIFE_VIEW[look];
   if (place === 'plaza') return {
@@ -105907,20 +106013,12 @@ function AssistantLifeScene({
     const zz = (scene.sleep || []).includes(pid);
     return React.createElement(React.Fragment, {
       key: pid
-    }, React.createElement("img", {
-      className: "st",
-      "data-assistant-life-scene-stand": pid,
-      "data-assistant-life-scene-sleep": zz ? '1' : '0',
+    }, React.createElement(AssistantLifeStand, {
+      pid: pid,
       src: assistantFullImage(who, zz ? 'normal' : 'happy'),
-      alt: "",
-      style: {
-        left: `${cx}%`,
-        transform: 'translateX(-50%)',
-        height: n >= 4 ? '50%' : '58%',
-        width: n === 1 ? '90%' : n >= 4 ? '46%' : '70%',
-        bottom: '22%',
-        filter: zz ? 'brightness(.45) saturate(.6) drop-shadow(0 6px 12px #0008)' : undefined
-      }
+      cx: cx,
+      fig: n >= 4 ? 0.28 : n === 3 ? 0.32 : n === 2 ? 0.36 : 0.4,
+      sleep: zz
     }), zz && React.createElement("span", {
       className: "absolute text-[34px]",
       style: {
@@ -105947,11 +106045,18 @@ function AssistantLifeScene({
   }, React.createElement("p", {
     className: "mhl-en"
   }, scene.place && scene.place !== 'home' ? String(scene.place).toUpperCase() : 'ROOM'), React.createElement("p", {
+    className: "flex items-center gap-1.5",
+    "data-assistant-life-scene-title": true
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    "data-assistant-life-scene-icon": true,
+    className: "text-[19px] leading-none"
+  }, ASSISTANT_LIFE_PLACE_ICON[scene.place] || '🏡'), React.createElement("span", {
     className: "mhl-ti",
     style: {
       fontSize: 19
     }
-  }, ASSISTANT_LIFE_PLACE_ICON[scene.place] || '🏡', " ", placeName))), ids.length >= 3 && React.createElement("p", {
+  }, placeName)))), ids.length >= 3 && React.createElement("p", {
     "data-assistant-life-scene-group": true,
     className: "mt-1 w-fit rounded-full px-2 py-0.5 text-[10px] font-black",
     style: {
@@ -106608,14 +106713,22 @@ const ASSISTANT_LIFE_MAP_CROP = Object.freeze({
 const ASSISTANT_LIFE_MAP_POS = Object.freeze({
   ranch: [23.4, 30.6],
   library: [69.1, 22.9],
-  studio: [83.5, 27.8],
-  garden: [69.1, 33.3],
+  cafe: [87.0, 29.5],
+  temple: [66.0, 35.5],
+  garden: [87.0, 46.5],
   plaza: [51.0, 48.6],
-  cafe: [14.9, 61.8],
+  studio: [16.5, 64.0],
   market: [85.0, 64.6],
   home: [9.6, 78.5],
   cardroom: [49.9, 91.7],
   hill: [80.8, 5.6]
+});
+const ASSISTANT_LIFE_MAP_BUILDING = Object.freeze({
+  studio: [2, 45, 36, 70],
+  temple: [55, 24, 80, 40],
+  ranch: [3, 6, 42, 35],
+  market: [68, 48, 100, 70],
+  cardroom: [18, 72, 82, 100]
 });
 function AssistantLifeTownMap({
   life,

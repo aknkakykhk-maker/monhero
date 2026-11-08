@@ -17,11 +17,11 @@ const ASSISTANT_LIFE_ROOM_LOOK = Object.freeze({
   sorashido: { wall: ['#fff8d6', '#f6e59a'], furn: '🃏🧮' },
   erubin:    { wall: ['#e8edf3', '#c9d3df'], furn: '⚔️🛡️' },
 });
-const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({ home: '🏡', plaza: '⛲', cafe: '🍰', studio: '🎵', ranch: '🥚', cardroom: '🃏', library: '📚', market: '🛍️', hill: '🌄', garden: '🌷' });
+const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({ home: '🏡', plaza: '⛲', cafe: '🍰', studio: '🎵', ranch: '🥚', cardroom: '🃏', library: '📚', market: '🛍️', hill: '🌄', garden: '🌷', temple: '✨' });
 // 出かけている先を、HOME のどの施設に出すか(していること → 施設)。家と町は「🏡 助手ライフ」
 // 遊び場(段階2・LIFE-STAGE2-PLAN.md): 札・居場所・地図・場面の題では、ゲームの遊びの場所を施設の名前で出す(「🎵 モンヒロビートへ」)。
 //   台本の穴 {place} の言葉(ASSISTANT_LIFE_PLACES)は変えない。今日あったことも今の言葉のまま
-const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({ studio: 'モンヒロビート', cardroom: 'MFバトルカード', ranch: 'M/B管理' });
+const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({ studio: 'モンヒロビート', cardroom: 'MFバトルカード', ranch: 'M/B管理', temple: '神殿' });
 const assistantLifePlaceShow = (place) => ASSISTANT_LIFE_PLACE_SHOW[place] || ASSISTANT_LIFE_PLACES[place] || '';
 const assistantLifeFacilityOf = (entry) => {
   if (!entry) return 'life';
@@ -547,6 +547,39 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
     </div>);
 }
 
+// 場面の立ち絵(2026-11-08 社長「サイズバランスが悪いのはわざと？」: 絵ごとに余白と縦横の比がちがい、ききが小さく・きゅうこが大きく出ていた)。
+//   絵の描かれている範囲(透明でない所)を一度だけ測り、見た目の高さ(頭の上〜絵の下)を場面の高さの fig にそろえる。
+//   下は絵の下の端を、場面の下から 22% の床にそろえる。左右は描かれている範囲の真ん中を cx にそろえる。衣装の絵でも同じ。測れないうちは今までの出し方
+const ASSISTANT_LIFE_STAND_BOX = new Map();
+const assistantLifeStandBox = (src) => new Promise((res) => {
+  if (ASSISTANT_LIFE_STAND_BOX.has(src)) { res(ASSISTANT_LIFE_STAND_BOX.get(src)); return; }
+  const im = new Image();
+  im.onload = () => {
+    try {
+      const W = 96, H = Math.max(1, Math.round(96 * im.naturalHeight / im.naturalWidth));
+      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      const g = c.getContext('2d'); g.drawImage(im, 0, 0, W, H);
+      const d = g.getImageData(0, 0, W, H).data;
+      let t = H, b = -1, l = W, r = -1;
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (d[(y * W + x) * 4 + 3] > 40) { if (y < t) t = y; if (y > b) b = y; if (x < l) l = x; if (x > r) r = x; }
+      const box = b < 0 ? null : { t: t / H, b: (b + 1) / H, l: l / W, r: (r + 1) / W, ar: im.naturalWidth / im.naturalHeight };
+      ASSISTANT_LIFE_STAND_BOX.set(src, box); res(box);
+    } catch (_) { ASSISTANT_LIFE_STAND_BOX.set(src, null); res(null); }
+  };
+  im.onerror = () => { ASSISTANT_LIFE_STAND_BOX.set(src, null); res(null); };
+  im.src = src;
+});
+function AssistantLifeStand({ pid, src, cx, fig, sleep }) {
+  const [box, setBox] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.get(src) || null);
+  React.useEffect(() => { let alive = true; assistantLifeStandBox(src).then(b => { if (alive) setBox(b); }); return () => { alive = false; }; }, [src]);
+  const filter = sleep ? 'brightness(.45) saturate(.6) drop-shadow(0 6px 12px #0008)' : undefined;
+  if (!box) return <img className="st" data-assistant-life-scene-stand={pid} data-assistant-life-scene-sleep={sleep ? '1' : '0'} src={src} alt="" style={{ left: `${cx}%`, transform: 'translateX(-50%)', height: '58%', width: '70%', bottom: '22%', opacity: 0, filter }}/>;
+  const span = Math.max(0.2, box.b - box.t);
+  const h = fig / span; // 場面の高さに対する絵の高さ
+  return <img className="st" data-assistant-life-scene-stand={pid} data-assistant-life-scene-sleep={sleep ? '1' : '0'} data-assistant-life-scene-fig={fig} src={src} alt=""
+    style={{ left: `${cx}%`, height: `${(h * 100).toFixed(2)}%`, width: 'auto', maxWidth: 'none', bottom: `calc(22% - ${((1 - box.b) * h * 100).toFixed(2)}%)`, transform: `translateX(-${(((box.l + box.r) / 2) * 100).toFixed(1)}%)`, objectFit: 'fill', filter }}/>;
+}
+
 // 場面(見守る・ようすを見る・渡す の掛け合いを、その場所の背景と立ち絵で流す)
 const assistantLifeSceneBg = (place, look) => {
   const v = ASSISTANT_LIFE_VIEW[look];
@@ -588,12 +621,12 @@ function AssistantLifeScene({ scene, look, onClose, onGive, canGive }) {
       <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg,transparent 45%,rgba(10,6,30,.7) 85%)' }}/>
       {ids.map((pid, i) => { const who = assistantById(pid); if (!who) return null; const n = ids.length; const cx = n === 1 ? 50 : n === 2 ? (i ? 66 : 34) : n === 3 ? [22, 50, 78][i] : [16, 38, 62, 84][i];
         const zz = (scene.sleep || []).includes(pid);
-        return <React.Fragment key={pid}><img className="st" data-assistant-life-scene-stand={pid} data-assistant-life-scene-sleep={zz ? '1' : '0'} src={assistantFullImage(who, zz ? 'normal' : 'happy')} alt="" style={{ left: `${cx}%`, transform: 'translateX(-50%)', height: n >= 4 ? '50%' : '58%', width: n === 1 ? '90%' : n >= 4 ? '46%' : '70%', bottom: '22%', filter: zz ? 'brightness(.45) saturate(.6) drop-shadow(0 6px 12px #0008)' : undefined }}/>
+        return <React.Fragment key={pid}><AssistantLifeStand pid={pid} src={assistantFullImage(who, zz ? 'normal' : 'happy')} cx={cx} fig={n >= 4 ? 0.28 : n === 3 ? 0.32 : n === 2 ? 0.36 : 0.4} sleep={zz}/>
           {zz && <span className="absolute text-[34px]" style={{ left: `${cx + 8}%`, top: '30%' }} aria-hidden="true">💤</span>}</React.Fragment>; })}
       <div className="mhl-hdr absolute inset-x-0 top-0" style={{ paddingTop: 'calc(8px + env(safe-area-inset-top))' }}>
         <div className="flex items-start gap-2">
           <button type="button" data-assistant-life-scene-back onClick={onClose} aria-label="家へ戻る" className="h-9 w-9 text-[18px] text-slate-100">←</button>
-          <div className="min-w-0 flex-1"><p className="mhl-en">{scene.place && scene.place !== 'home' ? String(scene.place).toUpperCase() : 'ROOM'}</p><p className="mhl-ti" style={{ fontSize: 19 }}>{ASSISTANT_LIFE_PLACE_ICON[scene.place] || '🏡'} {placeName}</p></div>
+          <div className="min-w-0 flex-1"><p className="mhl-en">{scene.place && scene.place !== 'home' ? String(scene.place).toUpperCase() : 'ROOM'}</p>{/* アイコンは字の塗り(背景を字の形で切り抜く)の外に置く。中に入れると絵文字まで切り抜かれ、iPhone で白い四角になった(2026-11-08 社長) */}<p className="flex items-center gap-1.5" data-assistant-life-scene-title><span aria-hidden="true" data-assistant-life-scene-icon className="text-[19px] leading-none">{ASSISTANT_LIFE_PLACE_ICON[scene.place] || '🏡'}</span><span className="mhl-ti" style={{ fontSize: 19 }}>{placeName}</span></p></div>
         </div>
         {ids.length >= 3 && <p data-assistant-life-scene-group className="mt-1 w-fit rounded-full px-2 py-0.5 text-[10px] font-black" style={{ background: 'linear-gradient(90deg,#0ea5e9,#a855f7)' }}>👥 {ids.length}人で ・ <AssistantLifeNames text={assistantLifeGroupNames(ids, 8)}/></p>}
         {hint && ids.length === 2 && <p className="mt-1 w-fit rounded-full px-2 py-0.5 text-[10px] font-black" style={{ background: 'linear-gradient(90deg,#db2777,#a855f7)' }}>🤝 {ids.slice(0, 2).map(assistantLifeName).join('・')} 友情Lv{hint.lv}{stage ? ` ${assistantPeerStageName(stage)}` : ''}</p>}
@@ -858,10 +891,15 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
 //   育成場=青い屋根の大きな建物と柵/図書室=金の塔/練習スタジオ=その右の青い屋根の石の家/中庭=光る泉/広場=方位の印/
 //   おやつ屋さん=赤い屋根の家/マーケット=しましまの屋台/カード部屋=闘技場/ひなたの丘=滝の上/助手の家=左下の林(絵に家が無いので印だけ)
 const ASSISTANT_LIFE_MAP_CROP = Object.freeze({ y0: 120, h: 1440 });
+// 2026-11-08 社長「実際のホームと場所ずれしてる？」→ HOME にそろえる: 施設と結びつく場所は HOME の札と同じ建物
+//   (モンヒロビート=左の赤い屋根の家・神殿=右上の光る泉・M/B管理=左上の青い屋根・マーケット=しましまの屋台・MFバトルカード=闘技場)。
+//   町だけの場所は空いている所へ(おやつ屋さん=右上の青い屋根の石の家・中庭=石の家と屋台のあいだの芝生)。検査 browser ⑯ が建物の範囲を見る
 const ASSISTANT_LIFE_MAP_POS = Object.freeze({
-  ranch: [23.4, 30.6], library: [69.1, 22.9], studio: [83.5, 27.8], garden: [69.1, 33.3], plaza: [51.0, 48.6],
-  cafe: [14.9, 61.8], market: [85.0, 64.6], home: [9.6, 78.5], cardroom: [49.9, 91.7], hill: [80.8, 5.6],
+  ranch: [23.4, 30.6], library: [69.1, 22.9], cafe: [87.0, 29.5], temple: [66.0, 35.5], garden: [87.0, 46.5], plaza: [51.0, 48.6],
+  studio: [16.5, 64.0], market: [85.0, 64.6], home: [9.6, 78.5], cardroom: [49.9, 91.7], hill: [80.8, 5.6],
 });
+// 建物の範囲(町の絵の幅と切り抜いた高さの %。[左, 上, 右, 下])。HOME の札と地図の場所が同じ建物かを検査が見るのに使う
+const ASSISTANT_LIFE_MAP_BUILDING = Object.freeze({ studio: [2, 45, 36, 70], temple: [55, 24, 80, 40], ranch: [3, 6, 42, 35], market: [68, 48, 100, 70], cardroom: [18, 72, 82, 100] });
 function AssistantLifeTownMap({ life, ids, look, onPick }) {
   const at = {};
   for (const id of ids) { const w = assistantLifeWhereOf(life, id); const p = w ? w.place : 'home'; (at[p] = at[p] || []).push(id); }
