@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ceca8ead1c5eaffa
+// source-sha256: a5d71c8aad5acd85
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -123851,7 +123851,7 @@ const assistantMasmonPlanOf = id => {
   }
   const d = st && st.draw && st.draw.v === ASSISTANT_MASMON_DRAW_V && Array.isArray(st.draw.made[id]) ? st.draw.made[id] : null;
   if (d && d.length) {
-    const w = st.draw.welcomed[id] || {};
+    const rows = assistantMasmonRowsOf(st, id);
     const row2 = t => ({
       monster: t.monster,
       nick: t.nick,
@@ -123861,18 +123861,27 @@ const assistantMasmonPlanOf = id => {
       slot: t.slot,
       role: t.role,
       welcome: t.welcome,
+      reason: t.reason || '',
       dye: {
         colors: [...assistantMasmonDyeNowOf(st, id, t.slot, t.colors)]
       }
     });
+    const had = new Set(rows.map(t => t.slot));
+    const waiting = d.filter(t => !had.has(t.slot)).map(t => ({
+      slot: t.slot,
+      welcome: t.welcome,
+      monster: `__slot${t.slot}`,
+      nick: '？？？',
+      unknown: true
+    }));
     return {
       ...base,
       v2: true,
-      team: d.filter(t => t.slot === 1 || w[t.monster]).map(t => ({
+      team: rows.map(t => ({
         ...row2(t),
         lead: t.slot === 1
       })),
-      extra: d.filter(t => t.slot !== 1 && !w[t.monster]).map(row2)
+      extra: waiting
     };
   }
   if (!Array.isArray(made) || made.length < 3) return base;
@@ -123991,6 +124000,39 @@ const normalizeAssistantMasmonDraw = raw => {
   if (raw.fav && typeof raw.fav === 'object') for (const [aid, sig] of Object.entries(raw.fav)) if (assistantMasmonBasePlanOf(aid) && typeof sig === 'string') out.fav[aid] = sig.slice(0, 120);
   return out;
 };
+const normalizeAssistantMasmonPick = raw => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [aid, slots] of Object.entries(raw)) {
+    if (!assistantMasmonBasePlanOf(aid) || !slots || typeof slots !== 'object' || Array.isArray(slots)) continue;
+    const m = {};
+    const mons = new Set();
+    for (const [k, t] of Object.entries(slots)) {
+      const slot = Number(k);
+      if (!Number.isInteger(slot) || slot < 2 || slot > ASSISTANT_MASMON_DRAW_MAX || !t || typeof t !== 'object') continue;
+      const lv = Number(t.lv),
+        wl = Number(t.welcome);
+      if (typeof t.monster !== 'string' || mons.has(t.monster) || typeof t.nick !== 'string' || !t.nick || t.nick.length > 16 || !Number.isFinite(lv)) continue;
+      mons.add(t.monster);
+      m[slot] = {
+        slot,
+        monster: t.monster,
+        nick: t.nick,
+        lv: Math.max(1, Math.min(99, Math.round(lv))),
+        grow: typeof t.grow === 'string' ? t.grow.slice(0, 30) : '',
+        why: typeof t.why === 'string' ? t.why.slice(0, 40) : '',
+        role: typeof t.role === 'string' && ASSISTANT_MASMON_ROLE_NAME[t.role] ? t.role : '',
+        welcome: Number.isInteger(wl) && wl >= 1 && wl <= 99 ? wl : slot * 2 - 1,
+        colors: Array.isArray(t.colors) ? t.colors.slice(0, 8).map(c => typeof c === 'string' && ASSISTANT_MASMON_DYE_RE.test(c) ? c : null) : [],
+        ai: t.ai === true,
+        reason: typeof t.reason === 'string' && ASSISTANT_MASMON_PICK_REASON[t.reason] ? t.reason : '',
+        at: typeof t.at === 'string' ? t.at.slice(0, 10) : ''
+      };
+    }
+    if (Object.keys(m).length) out[aid] = m;
+  }
+  return out;
+};
 const normalizeAssistantMasmonSave = raw => {
   const out = {
     v: 1,
@@ -124000,7 +124042,9 @@ const normalizeAssistantMasmonSave = raw => {
     named: false,
     noticed: {},
     dyes: {},
-    draw: normalizeAssistantMasmonDraw(null)
+    draw: normalizeAssistantMasmonDraw(null),
+    pick: {},
+    pickNameDay: ''
   };
   if (raw && typeof raw === 'object') {
     if (typeof raw.seed === 'string' && /^[\w-]{4,60}$/.test(raw.seed)) out.seed = raw.seed;
@@ -124008,6 +124052,8 @@ const normalizeAssistantMasmonSave = raw => {
     out.named = raw.named === true;
     out.dyes = normalizeAssistantMasmonDyes(raw.dyes);
     out.draw = normalizeAssistantMasmonDraw(raw.draw);
+    out.pick = normalizeAssistantMasmonPick(raw.pick);
+    out.pickNameDay = typeof raw.pickNameDay === 'string' ? raw.pickNameDay.slice(0, 10) : '';
     if (raw.noticed && typeof raw.noticed === 'object') for (const [k, v] of Object.entries(raw.noticed)) if (v === true && assistantMasmonBasePlanOf(k)) out.noticed[k] = true;
   }
   const w = raw && typeof raw === 'object' && raw.welcomed && typeof raw.welcomed === 'object' ? raw.welcomed : {};
@@ -124707,7 +124753,7 @@ const assistantMasmonDyeNowOf = (state, aid, slot, fallback) => {
 const assistantMasmonDyeLog = (aid, slot) => {
   const st = ASSISTANT_MASMON_STORE.state,
     hist = st.dyes && st.dyes[aid] || [];
-  const row = assistantMasmonDrawOn(aid, st) ? st.draw.made[aid].find(t => t.slot === slot) : null;
+  const row = assistantMasmonRowsOf(st, aid).find(t => t.slot === slot) || null;
   if (!row) return [];
   let before = row.colors;
   const out = [];
@@ -124741,15 +124787,14 @@ const assistantMasmonDyeEnsure = (state, day) => {
     const last = hist[hist.length - 1] || null;
     const lastSeason = last ? last.season : assistantMasmonSeasonKey(state.draw.at);
     const lastFav = last && last.fav || state.draw.fav[aid] || sig;
-    const w = state.draw.welcomed[aid] || {};
-    const mine = list.filter(t => t.slot === 1 || w[t.monster]);
+    const mine = assistantMasmonRowsOf(state, aid);
     const cur = t => assistantMasmonDyeNowOf({
       dyes: {
         [aid]: hist
       }
     }, aid, t.slot, t.colors);
     if (lastFav !== sig) {
-      const lead = list.find(t => t.slot === 1);
+      const lead = mine.find(t => t.slot === 1);
       if (lead) {
         const rnd = assistantMasmonRng(`${state.seed}|${aid}|like|${sig}`);
         hist.push({
@@ -124893,6 +124938,280 @@ const assistantMasmonDrawFor = (aid, seed) => {
       ai: false
     };
   });
+};
+const ASSISTANT_MASMON_PLAY_TAGS = Object.freeze({
+  rhythm: ['Melody', 'Illumine', 'Dreamy', 'Mia', 'Kuromy', 'MelWhip', 'Snegurochka', 'Pixie'],
+  battle: ['Golem', 'Tiger', 'Zan', 'Eiki', 'KenshiMocchi', 'Kyubi', 'Ark', 'Iblis', 'Pandora'],
+  card: ['Monol', 'Orihime', 'Spooky', 'Ghost', 'Suezo', 'Yggdrasil', 'Undine'],
+  chat: ['Mocchi', 'Ham', 'Plant', 'Oboro', 'Mitarashi', 'Yaobikuni', 'Dreamy']
+});
+const ASSISTANT_MASMON_MOOD_TAG = Object.freeze({
+  happy: 'like',
+  lonely: 'chat',
+  restless: 'rhythm',
+  sulky: 'rest',
+  sleepy: 'chat',
+  eager: 'battle'
+});
+const ASSISTANT_MASMON_PICK_REASON = Object.freeze({
+  rhythm: '最近いっしょにモンヒロビートをしているから',
+  card: '最近いっしょにMFバトルカードをしているから',
+  battle: '最近いっしょにバトルをしているから',
+  chat: '最近よくおしゃべりしているから',
+  gift: 'いろいろ贈ってもらったお礼に、好きなモンスターを',
+  mood_happy: 'ごきげんな日に、好きなモンスターを',
+  mood_lonely: 'さみしくて、そばにいてくれそうなモンスターを',
+  mood_restless: 'そわそわして、いっしょに動けるモンスターを',
+  mood_sulky: 'ちょっとすねて、いつもと違うモンスターを',
+  mood_sleepy: 'ねむくて、のんびりしたモンスターを',
+  mood_eager: 'やる気が出て、強そうなモンスターを',
+  open: '仲良くなって、意外な好みを見せたくて',
+  like: '前から好きだったモンスターだから',
+  lineage: '好きなモンスターの仲間だから',
+  balance: '編成の釣り合いを考えて'
+});
+const assistantMasmonPickContext = (aid, bondLv) => {
+  const ctx = {
+    lv: Number.isFinite(bondLv) ? bondLv : 1,
+    mood: null,
+    counts: {},
+    gifts: 0
+  };
+  try {
+    const l = typeof ASSISTANT_LIFE_STORE !== 'undefined' ? ASSISTANT_LIFE_STORE.state : null;
+    if (l && l.life && l.life.moods && typeof l.life.moods[aid] === 'string') ctx.mood = l.life.moods[aid];
+    if (l && l.play && l.play.counts) ctx.counts = {
+      ...l.play.counts
+    };
+  } catch (_) {}
+  try {
+    const g = typeof ASSISTANT_LIFE_GIFT_STORE !== 'undefined' ? ASSISTANT_LIFE_GIFT_STORE.state : null;
+    const known = g && g.likes && g.likes.known && g.likes.known[aid] ? Object.values(g.likes.known[aid]).filter(v => v === 'gift').length : 0;
+    const solo = g && g.solo && g.solo.used ? Object.values(g.solo.used).filter(v => v === aid).length : 0;
+    ctx.gifts = known + solo;
+  } catch (_) {}
+  return ctx;
+};
+const assistantMasmonChooseAt = (aid, slot, have, ctx, seed, day) => {
+  const p = assistantMasmonBasePlanOf(aid);
+  if (!p) return null;
+  const rnd = assistantMasmonRng(`${seed}|${aid}|pick|${slot}|${day}|${ctx.mood || ''}`);
+  const {
+    likes,
+    more,
+    rest
+  } = assistantMasmonDrawPool(aid, p);
+  const haveMons = new Set(have.map(t => t.monster));
+  const linCount = {};
+  for (const t of have) {
+    const l = assistantMasmonLineage(t.monster);
+    if (l) linCount[l] = (linCount[l] || 0) + 1;
+  }
+  const cands = [...likes.map(t => ({
+    t,
+    src: 'like'
+  })), ...more.map(t => ({
+    t,
+    src: 'lineage'
+  })), ...rest.map(t => ({
+    t,
+    src: 'rest'
+  }))].filter(c => !haveMons.has(c.t.monster));
+  if (!cands.length) return null;
+  const tagOf = m => Object.keys(ASSISTANT_MASMON_PLAY_TAGS).filter(k => ASSISTANT_MASMON_PLAY_TAGS[k].includes(m));
+  let best = null;
+  for (const c of cands) {
+    const why = {};
+    const m = c.t.monster,
+      tags = tagOf(m);
+    let sc = c.src === 'like' ? 3 : c.src === 'lineage' ? 2 : 0.4;
+    for (const k of ['rhythm', 'battle', 'card', 'chat']) {
+      const n = Number(ctx.counts[k]) || 0;
+      if (n > 0 && tags.includes(k)) {
+        const v = Math.min(3, n * 0.6);
+        sc += v;
+        why[k] = v;
+      }
+    }
+    const mt = ASSISTANT_MASMON_MOOD_TAG[ctx.mood];
+    if (mt && (mt === 'like' && c.src === 'like' || mt === 'rest' && c.src !== 'like' || tags.includes(mt))) {
+      sc += 1.5;
+      why[`mood_${ctx.mood}`] = 1.5;
+    }
+    if (ctx.gifts > 0 && c.src === 'like') {
+      const v = Math.min(2, ctx.gifts * 0.4);
+      sc += v;
+      why.gift = v;
+    }
+    if (ctx.lv >= 9 && c.src !== 'like') {
+      sc += 1;
+      why.open = 1;
+    }
+    const l = assistantMasmonLineage(m);
+    if (l && (linCount[l] || 0) >= 2) sc *= 0.4;
+    sc *= 0.6 + 0.8 * rnd();
+    if (!best || sc > best.sc) best = {
+      c,
+      sc,
+      why
+    };
+  }
+  const top = Object.entries(best.why).sort((a, b) => b[1] - a[1])[0];
+  const reason = top ? top[0] : best.c.src === 'like' ? 'like' : best.c.src === 'lineage' ? 'lineage' : 'balance';
+  const kinds = new Set(have.map(t => assistantMasmonGrowKind(t.grow)));
+  const miss = ASSISTANT_MASMON_GROW_KINDS.filter(k => !kinds.has(k));
+  const grow = miss.length ? miss[Math.floor(rnd() * miss.length)] : ASSISTANT_MASMON_GROW_KINDS[Math.floor(rnd() * ASSISTANT_MASMON_GROW_KINDS.length)];
+  const H = ASSISTANT_MASMON_DYE_HABIT[aid] || ASSISTANT_MASMON_DYE_HABIT.mua;
+  const role = H.roles[Math.floor(rnd() * H.roles.length)];
+  const mon = assistantMasmonMon(best.c.t.monster);
+  return {
+    slot,
+    monster: best.c.t.monster,
+    nick: typeof best.c.t.nick === 'string' && best.c.t.nick ? best.c.t.nick : mon && mon.name || best.c.t.monster,
+    lv: Math.max(1, Math.min(30, 4 + Math.round(ctx.lv * 0.9) + Math.round((rnd() - 0.5) * 4))),
+    grow,
+    why: ASSISTANT_MASMON_PICK_REASON[reason],
+    role,
+    welcome: assistantMasmonWelcomeLv(slot),
+    colors: assistantMasmonDyeMake2(aid, p, best.c.t.monster, role, rnd),
+    ai: false,
+    reason,
+    at: day
+  };
+};
+const assistantMasmonWelcomeDue = async (aid, bondLv) => {
+  await ASSISTANT_MASMON_STORE.load();
+  const st = ASSISTANT_MASMON_STORE.state;
+  if (!assistantMasmonDrawOn(aid, st) || !Number.isFinite(bondLv)) return [];
+  const p = assistantMasmonPlanOf(aid);
+  const due = (p.extra || []).filter(t => t.unknown && bondLv >= t.welcome);
+  if (!due.length) return [];
+  const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : new Date().toISOString().slice(0, 10);
+  const ctx = assistantMasmonPickContext(aid, bondLv);
+  const have = assistantMasmonRowsOf(st, aid);
+  const picked = {};
+  for (const t of due) {
+    const r = assistantMasmonChooseAt(aid, t.slot, [...have, ...Object.values(picked)], ctx, st.seed, day);
+    if (r) picked[t.slot] = r;
+  }
+  const list = Object.values(picked);
+  if (!list.length) return [];
+  const cur = ASSISTANT_MASMON_STORE.state;
+  const mine = {
+    ...(cur.pick && cur.pick[aid] || {})
+  };
+  for (const r of list) if (!mine[r.slot]) mine[r.slot] = r;
+  const next = {
+    ...cur,
+    pick: {
+      ...(cur.pick || {}),
+      [aid]: mine
+    }
+  };
+  ASSISTANT_MASMON_STORE.set(next);
+  try {
+    if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false);
+  } catch (_) {}
+  const last = list[list.length - 1];
+  try {
+    if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`${assistantLifeName(aid)}が新しいマスモン「${last.nick}」を迎えた`, [aid]);
+  } catch (_) {}
+  void assistantMasmonAskPickNames();
+  return list;
+};
+let _assistantMasmonPickNamesBusy = false;
+const assistantMasmonAskPickNames = async () => {
+  const st = ASSISTANT_MASMON_STORE.state;
+  const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '';
+  if (_assistantMasmonPickNamesBusy || !day || st.pickNameDay === day) return 'skip';
+  if (!(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonNamesApi === true) || typeof ASSISTANT_CHAT_URL === 'undefined' || typeof SB_HEADERS === 'undefined') return 'skip';
+  const items = Object.entries(st.pick || {}).map(([a, slots]) => ({
+    a,
+    s: Object.values(slots).filter(t => !t.ai).map(t => {
+      const m = assistantMasmonMon(t.monster);
+      return {
+        slot: t.slot,
+        mon: m ? m.name : t.monster,
+        why: t.why
+      };
+    })
+  })).filter(x => x.s.length);
+  if (!items.length) return 'skip';
+  let bid = null;
+  try {
+    bid = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
+  } catch (_) {
+    bid = null;
+  }
+  if (!bid) return 'skip';
+  _assistantMasmonPickNamesBusy = true;
+  const markDay = () => {
+    const c = ASSISTANT_MASMON_STORE.state;
+    const n = {
+      ...c,
+      pickNameDay: day
+    };
+    ASSISTANT_MASMON_STORE.set(n);
+    try {
+      if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, n, false);
+    } catch (_) {}
+  };
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 20000);
+    let res = null;
+    try {
+      const r = await fetch(ASSISTANT_CHAT_URL, {
+        method: 'POST',
+        headers: SB_HEADERS,
+        signal: controller.signal,
+        body: JSON.stringify({
+          kind: 'masmon_names',
+          breederId: bid,
+          items
+        })
+      });
+      res = r.ok ? await r.json() : null;
+    } finally {
+      clearTimeout(timer);
+    }
+    if (!res || res.ok !== true || !res.names || typeof res.names !== 'object') {
+      markDay();
+      return 'failed';
+    }
+    const cur = ASSISTANT_MASMON_STORE.state;
+    const pick = {};
+    for (const [a, slots] of Object.entries(cur.pick || {})) {
+      const got = res.names[a] && typeof res.names[a] === 'object' ? res.names[a] : {};
+      const used = new Set(assistantMasmonRowsOf(cur, a).map(t => t.nick));
+      const m = {};
+      for (const [k, t] of Object.entries(slots)) {
+        const n = typeof got[t.slot] === 'string' ? got[t.slot].trim() : '';
+        const ok = !t.ai && /^[ぁ-ゖァ-ヺー一-龠々・]{2,8}$/u.test(n) && !used.has(n);
+        if (ok) used.add(n);
+        m[k] = ok ? {
+          ...t,
+          nick: n,
+          ai: true
+        } : t;
+      }
+      pick[a] = m;
+    }
+    const next = {
+      ...cur,
+      pick
+    };
+    ASSISTANT_MASMON_STORE.set(next);
+    try {
+      if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false);
+    } catch (_) {}
+    return 'ok';
+  } catch (_) {
+    markDay();
+    return 'failed';
+  } finally {
+    _assistantMasmonPickNamesBusy = false;
+  }
 };
 const assistantMasmonMakeFor = (aid, seed) => {
   const p = assistantMasmonBasePlanOf(aid);
@@ -125146,6 +125465,16 @@ const useAssistantMasmonSave = () => {
   return st;
 };
 const assistantMasmonDrawOn = (aid, st = ASSISTANT_MASMON_STORE.state) => !!(st && st.draw && st.draw.v === ASSISTANT_MASMON_DRAW_V && Array.isArray(st.draw.made[aid]));
+const assistantMasmonRowsOf = (st, aid) => {
+  const d = st && st.draw && st.draw.v === ASSISTANT_MASMON_DRAW_V && Array.isArray(st.draw.made[aid]) ? st.draw.made[aid] : [];
+  const w = st && st.draw && st.draw.welcomed[aid] || {},
+    pk = st && st.pick && st.pick[aid] || {};
+  const out = [];
+  for (const t of d) {
+    if (pk[t.slot]) out.push(pk[t.slot]);else if (t.slot === 1 || w[t.monster]) out.push(t);
+  }
+  return out;
+};
 const assistantMasmonWelcomed = (aid, st = ASSISTANT_MASMON_STORE.state) => (assistantMasmonDrawOn(aid, st) ? st.draw.welcomed[aid] : st && st.welcomed && st.welcomed[aid]) || {};
 const assistantMasmonBench = (p, st = ASSISTANT_MASMON_STORE.state) => p && Array.isArray(p.extra) ? p.extra.filter(t => assistantMasmonMonOk(t) && assistantMasmonWelcomed(p.id, st)[t.monster]).map(t => ({
   ...t,
@@ -125344,16 +125673,16 @@ const assistantMasmonFavCard = id => {
     return null;
   }
 };
-const assistantMasmonWaiting = (p, st = ASSISTANT_MASMON_STORE.state) => p && Array.isArray(p.extra) ? p.extra.filter(t => assistantMasmonMonOk(t) && !assistantMasmonWelcomed(p.id, st)[t.monster]) : [];
+const assistantMasmonWaiting = (p, st = ASSISTANT_MASMON_STORE.state) => p && Array.isArray(p.extra) ? p.extra.filter(t => t.unknown || assistantMasmonMonOk(t) && !assistantMasmonWelcomed(p.id, st)[t.monster]) : [];
 function AssistantMasmonWaitCard({
   t,
   land = false,
   small = false
 }) {
-  const m = assistantMasmonMon(t.monster);
-  if (!m) return null;
+  const m = t.unknown ? null : assistantMasmonMon(t.monster);
+  if (!m && !t.unknown) return null;
   const size = small ? land ? 60 : 84 : 78;
-  const pic = React.createElement("div", {
+  const pic = m ? React.createElement("div", {
     className: "mhm-pic",
     style: {
       width: size,
@@ -125369,7 +125698,19 @@ function AssistantMasmonWaitCard({
       objectFit: 'contain',
       filter: 'brightness(0) opacity(.55)'
     }
-  }));
+  })) : React.createElement("div", {
+    className: "mhm-pic grid place-items-center",
+    style: {
+      width: size,
+      height: size
+    },
+    "data-assistant-masmon-unknown": true
+  }, React.createElement("span", {
+    className: "font-black text-slate-500",
+    style: {
+      fontSize: Math.round(size * 0.5)
+    }
+  }, "？"));
   if (small) return React.createElement("div", {
     className: "text-center",
     "data-assistant-masmon-wait": t.monster
@@ -125395,7 +125736,7 @@ function AssistantMasmonWaitCard({
     style: {
       wordBreak: 'auto-phrase'
     }
-  }, "🔒 仲良し度 Lv", t.welcome, " になると、新しいマスモンを迎えます")));
+  }, "🔒 仲良し度 Lv", t.welcome, " になると、新しいマスモンを迎えます", t.unknown ? '(だれが来るかは、そのときの様子で決まります)' : '')));
 }
 const assistantMasmonAllies = team => [...team].filter(t => !t.lead).sort((a, b) => b.lv - a.lv || a.slot - b.slot).slice(0, 3);
 function AssistantMasmonFormation({
@@ -125503,7 +125844,7 @@ function AssistantMasmonFormation({
   })), React.createElement("p", {
     className: "mt-0.5 truncate text-[10px] font-black text-white"
   }, t.nick)) : (() => {
-    const m = assistantMasmonMon(t.monster);
+    const m = t.unknown ? null : assistantMasmonMon(t.monster);
     return React.createElement("div", {
       key: t.monster,
       className: "text-center",
@@ -125511,12 +125852,12 @@ function AssistantMasmonFormation({
     }, React.createElement("div", {
       className: "mhm-stage"
     }, React.createElement("div", {
-      className: "mhm-pic",
+      className: "mhm-pic grid place-items-center",
       style: {
         width: cell,
         height: cell
       }
-    }, m && React.createElement("img", {
+    }, m ? React.createElement("img", {
       src: m.imgUrl,
       alt: "",
       draggable: false,
@@ -125526,7 +125867,13 @@ function AssistantMasmonFormation({
         objectFit: 'contain',
         filter: 'brightness(0) opacity(.55)'
       }
-    }))), React.createElement("p", {
+    }) : React.createElement("span", {
+      className: "font-black text-slate-500",
+      style: {
+        fontSize: Math.round(cell * 0.5)
+      },
+      "data-assistant-masmon-unknown": true
+    }, "？"))), React.createElement("p", {
       className: "mt-0.5 truncate text-[9.5px] font-bold text-sky-200"
     }, "🔒 Lv", t.welcome));
   })())));
@@ -125679,12 +126026,17 @@ function AssistantMasmonSheet({
       await ASSISTANT_MASMON_STORE.load();
       const p0 = assistantMasmonPlanOf(id),
         lv = Number(bondLv);
-      const due = p0 && Number.isFinite(lv) ? (p0.extra || []).filter(t => assistantMasmonMonOk(t) && Number.isFinite(t.welcome) && lv >= t.welcome && !assistantMasmonWelcomed(id)[t.monster]) : [];
-      let last = null;
-      for (let i = 0; i < due.length; i++) {
-        if (await assistantMasmonWelcome(id, due[i], i < due.length - 1)) last = due[i];
+      if (p0 && p0.v2) {
+        const got = await assistantMasmonWelcomeDue(id, lv);
+        if (got.length && alive) setWelcome(got[got.length - 1]);
+      } else {
+        const due = p0 && Number.isFinite(lv) ? (p0.extra || []).filter(t => assistantMasmonMonOk(t) && Number.isFinite(t.welcome) && lv >= t.welcome && !assistantMasmonWelcomed(id)[t.monster]) : [];
+        let last = null;
+        for (let i = 0; i < due.length; i++) {
+          if (await assistantMasmonWelcome(id, due[i], i < due.length - 1)) last = due[i];
+        }
+        if (last && alive) setWelcome(last);
       }
-      if (last && alive) setWelcome(last);
       const st = ASSISTANT_MASMON_STORE.state;
       if (!assistantMasmonDrawOn(id, st) && st.named && !st.noticed[id] && alive) {
         setRenamed(true);
@@ -126083,7 +126435,13 @@ function AssistantMasmonSheet({
       wordBreak: 'auto-phrase'
     },
     "data-assistant-masmon-welcome-line": true
-  }, assistantMasmonWelcomeLine(id, welcome))), React.createElement("button", {
+  }, assistantMasmonWelcomeLine(id, welcome))), welcome.reason && ASSISTANT_MASMON_PICK_REASON[welcome.reason] && React.createElement("p", {
+    className: "mt-1.5 text-center text-[11px] font-bold leading-snug text-sky-200",
+    style: {
+      wordBreak: 'auto-phrase'
+    },
+    "data-assistant-masmon-welcome-reason": true
+  }, "💭 選んだわけ: ", ASSISTANT_MASMON_PICK_REASON[welcome.reason]), React.createElement("button", {
     type: "button",
     className: "mhl-btn mt-3 w-full",
     style: {
