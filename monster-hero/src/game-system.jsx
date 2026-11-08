@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2295ed4d38d996b5
+// generated-sha256: fa7631cdd9f25a04
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -38527,6 +38527,8 @@ const GROWTH_FX_KINDS = Object.freeze({
   session: { color: '#c084fc', deep: '#6b21a8', icon: '🎤', particle: '♪', label: 'セッションLv' },
   beat:    { color: '#a3e635', deep: '#3f6212', icon: '🎵', particle: '♪', label: 'ビートLv' },
   breeder: { color: '#60a5fa', deep: '#1e40af', icon: '🛡️', particle: '◆', label: 'ブリーダーLv' },
+  // 助手ライフの裏クイックを止めた・閉じたときの結果の一言(text だけを出す札。ゲージ・数字は出さない)
+  quick:   { color: '#e879f9', deep: '#86198f', icon: '⚡', particle: '⚔', label: '裏クイック' },
 });
 const growthFxKind = (kind) => GROWTH_FX_KINDS[kind] || GROWTH_FX_KINDS.bond;
 
@@ -38539,8 +38541,11 @@ const GROWTH_FX_CALM_SCREENS = Object.freeze(new Set([
 ]));
 // 画面の上にこれが出ているあいだは出さない(お話・ほかの大きな演出・案内)。中・大の段だけ止める目印もある(おしゃべりの画面)
 const GROWTH_FX_HOLD_ALL_SELECTOR = '[data-event-story],[data-story-stage],[data-story-sheet],[data-player-rank-up-fx]';
-const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat]';
+// 助手ライフで裏クイックが回っているあいだ(帯 data-life-quick-run="live")も、全面のお祝いは貯めておく。止めたり閉じたりしたら出す
+//   (モンヒロビート・カードの画面では裏の周回のお祝いは出ない作りなのに、助手ライフは HOME の上なので毎回全面で出ていた。2026-11-08 社長「中途半端」)
+const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat],[data-life-quick-run="live"]';
 const GROWTH_FX_SMALL_MS = 1900;
+const GROWTH_FX_TEXT_MS = 3600;      // 文の一行の札(読む時間をとる)
 const GROWTH_FX_ITEM_MS = 3400;
 const GROWTH_FX_SMALL_MAX = 3;       // 一度に並べる札の数
 const GROWTH_FX_QUEUE_MAX = 24;      // 貯めておく数の上限(古いものから捨てる。値は保存済みなので見えなくなるだけ)
@@ -38561,11 +38566,13 @@ const growthFxPush = (ev) => {
     if (gain <= 0) return;
     const key = String(ev.key || `${ev.kind}:${ev.who || ''}`);
     const list = GROWTH_FX_STORE.small;
+    // 文の一行の札(裏クイックの結果)は、同じ中身がまだ並んでいれば足さない(止める・閉じるが続けて呼ばれても1枚。2026-11-08 ミハリ)
+    if (ev.text && list.some(c => c.kind === ev.kind && c.text === String(ev.text))) return;
     const same = list.find(c => c.key === key);
     // 続けて上がったら1枚にまとめる(数字を足し上げ、ゲージは今の位置へ)。出し直しの合図(rev)を進めて、消える時間を延ばす
     if (same) { same.gain += gain; same.pctTo = growthFxPct(ev.pctTo); same.rev += 1; }
     else {
-      list.push({ id: ++GROWTH_FX_STORE.seq, rev: 0, key, kind: ev.kind, name: String(ev.name || ''), gain,
+      list.push({ id: ++GROWTH_FX_STORE.seq, rev: 0, key, kind: ev.kind, name: String(ev.name || ''), text: String(ev.text || ''), gain,
         pctFrom: growthFxPct(ev.pctFrom), pctTo: growthFxPct(ev.pctTo) });
       if (list.length > GROWTH_FX_QUEUE_MAX) list.splice(0, list.length - GROWTH_FX_QUEUE_MAX);
     }
@@ -38778,6 +38785,7 @@ const GROWTH_FX_CSS = `
 .mh-gfx-chip .ico{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--gc) 30%,transparent);font-size:13px;color:var(--gc)}
 .mh-gfx-chip .ico.beat{animation:mhGfxBeat .5s ease-out}
 .mh-gfx-chip .who{font-size:9px;color:#cbd5e1;line-height:1.1;max-width:9.5em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mh-gfx-chip .txt{font-size:11px;font-weight:800;color:#f8fafc;line-height:1.25;max-width:15em}.mh-gfx-chip .txt b{color:var(--gc);font-weight:900}
 .mh-gfx-chip .bar{width:56px;height:5px;border-radius:9px;background:#334155;overflow:hidden;margin-top:2px}
 .mh-gfx-chip .bar i{display:block;height:100%;background:var(--gc);transition:width .7s ease-out}
 .mh-gfx-chip .num{color:var(--gc);font-size:14px;font-variant-numeric:tabular-nums}
@@ -38945,11 +38953,19 @@ const GrowthFxChip = ({ chip, level, held }) => {
   useEffect(() => {
     if (held) return undefined;
     setOut(false);
-    const t1 = setTimeout(() => setOut(true), GROWTH_FX_SMALL_MS);
-    const t2 = setTimeout(() => growthFxDropSmall(chip.id), GROWTH_FX_SMALL_MS + 320);
+    const ms = chip.text ? GROWTH_FX_TEXT_MS : GROWTH_FX_SMALL_MS;
+    const t1 = setTimeout(() => setOut(true), ms);
+    const t2 = setTimeout(() => growthFxDropSmall(chip.id), ms + 320);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [chip.id, chip.rev, held]);
   const pts = level === 'full' ? [0, 1, 2, 3] : [];
+  // 文の一行だけの札(裏クイックの結果)。狭いときの小さい形(mini)でも文は消さない
+  if (chip.text) return (
+    <div className={`mh-gfx-chip text${out ? ' out' : ''}`} data-growth-fx-chip={chip.kind} data-growth-fx-chip-id={chip.id} style={{ '--gc': k.color }}>
+      <span className="ico beat" aria-hidden="true">{cardIconNode(k.icon, 13)}</span>
+      <span className="txt"><b>{k.label}</b> {chip.text}</span>
+    </div>
+  );
   return (
     <div className={`mh-gfx-chip${out ? ' out' : ''}`} data-growth-fx-chip={chip.kind} style={{ '--gc': k.color }}>
       <span key={`i${chip.rev}`} className="ico beat" aria-hidden="true">{cardIconNode(k.icon, 13)}</span>
@@ -39077,6 +39093,9 @@ const growthFxChipSpotScore = (box, first = false) => {
     else if ([...under.childNodes].some(n => { if (n.nodeType !== 3 || !n.textContent.trim()) return false; const rg = document.createRange(); rg.selectNodeContents(n); return [...rg.getClientRects()].some(q => x >= q.left - 2 && x <= q.right + 2 && y >= q.top - 2 && y <= q.bottom + 2); })) { score += 2; if (first) return score; }
   }
   const vw = window.innerWidth, vh = window.innerHeight;
+  // 画面の外にはみ出す置き場所は選ばない(見えない札になる)。札は出てくる動きの途中で測ることがあるので、端から4px内側までを使う
+  //   (🔄横では回した画面の下が端末の左になるので、上下左右どれも見る。上は札が上へずれる分の12pxを足してある)
+  if (r.left < 4 || r.top < -8 || r.right > vw - 4 || r.bottom > vh - 4) { score += 5; if (first) return score; }
   const hit = (e) => Math.min(r.right, e.right) - Math.max(r.left, e.left) > 1 && Math.min(r.bottom, e.bottom) - Math.max(r.top, e.top) > 1;
   // 手前に別のものが重なって見えていない要素は数えない(角と真ん中の2点で見る。角だけだと、角に顔の丸が乗った地図の札を見落とした)
   const seen = (el, e) => { const x0 = Math.max(r.left, e.left), y0 = Math.max(r.top, e.top), x1 = Math.min(r.right, e.right), y1 = Math.min(r.bottom, e.bottom);
@@ -39126,8 +39145,10 @@ const GrowthFxChipsBox = ({ level, count, children }) => {
       const box = ref.current;
       if (!box) return;
       // いつもの高さのあとに、画面の下から上へ24pxおきの高さも試す(詰まった横の画面で、空いた所を見つける)
-      const steps = []; for (let y = window.innerHeight - 10 - box.offsetHeight; y >= 8; y -= 24) steps.push(Math.round(y));
-      const tops = [...new Set([...GROWTH_FX_CHIP_TOPS, Math.max(60, window.innerHeight - 120 - box.offsetHeight), ...steps])];
+      // 🔄横(画面を回して見ている)ときは、札の入れ物も回っているので、高さは端末の横幅になる(2026-11-08 ナカヨシ8: 回した画面の外に札を置いていた)
+      const frameH = (typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.active && RHYTHM_VIEW_ROTATION.active()) ? window.innerWidth : window.innerHeight;
+      const steps = []; for (let y = frameH - 10 - box.offsetHeight; y >= 8; y -= 24) steps.push(Math.round(y));
+      const tops = [...new Set([...GROWTH_FX_CHIP_TOPS, Math.max(60, frameH - 120 - box.offsetHeight), ...steps])];
       // 右寄せで空きが無ければ左寄せでも探す(横のビートP交換所は右の列が品物で埋まり、左の列の下が空いている・2026-11-08)
       // 縦に積んで入らないときは、小さくして横1列にも並べて探す(横の画面は高さが無い。2026-11-08 ナカヨシ8)
       // それでも入らない詰まった画面(ビートP交換所)は、先頭の1枚に「+残りの数」を付けた1枚にまとめて探す
@@ -39196,7 +39217,8 @@ const GrowthFxLayer = ({ screen, load }) => {
   return (
     <>
       {!holdAll && !sheet && small.length > 0 && <GrowthFxChipsBox level={level} count={Math.min(small.length, GROWTH_FX_SMALL_MAX)}>
-        {small.slice(0, GROWTH_FX_SMALL_MAX).map(c => <GrowthFxChip key={c.id} chip={c} level={level} held={false}/>)}
+        {/* 文の一行の札(裏クイックの結果)を先頭に。狭い画面で1枚だけ出す形(one)でも、結果が後ろに隠れない */}
+        {[...small].sort((a, b) => (b.text ? 1 : 0) - (a.text ? 1 : 0)).slice(0, GROWTH_FX_SMALL_MAX).map(c => <GrowthFxChip key={c.id} chip={c} level={level} held={false}/>)}
       </GrowthFxChipsBox>}
       {sheet && (sheet.tier === 'level'
         ? <GrowthFxLevelUp key={sheet.id} sheet={sheet} level={level} onClose={() => growthFxDropSheet(sheet.id)}/>
@@ -103349,7 +103371,16 @@ function MonsterHeroGame() {
     if (assistantLifeSettlingRef.current) return;
     assistantLifeSettlingRef.current = true;
     try {
-      if (runStageRef.current && isQuickMode(runMode) && !runResultFinishedRef.current) await handleGiveUp({ silent: true });
+      // 締める前の値(貯まりかけの分も含む)を取っておき、締めたあとに「裏クイック ◯周・ダイヤ+◯・経験値+◯」の小さな札で知らせる
+      //   (2026-11-08 社長: 止めた・閉じたときに結果の一言を出す。見た目だけで、報酬の計算には触らない)
+      const running = !!runStageRef.current && isQuickMode(runMode) && !runResultFinishedRef.current;
+      const before = running ? cardQuickRunView() : null;
+      if (running) await handleGiveUp({ silent: true });
+      // 同じ中身の札が続けて押し込まれても、growthFxPush の側で1枚にする(止めるの二度押し・止めたあとに閉じる。2026-11-08 ミハリ)
+      if (before) {
+        const loops = Math.max(0, Math.floor(Number(before.loops) || 0)), gold = Math.max(0, Math.floor(Number(before.gold) || 0)), xp = Math.max(0, Math.floor(Number(before.xp) || 0));
+        if (typeof growthFxPush === 'function') growthFxPush({ tier: 'small', kind: 'quick', key: `quick:${Date.now()}`, gain: 1, text: `${loops}周・ダイヤ+${gold.toLocaleString()}・経験値+${xp.toLocaleString()}` });
+      }
       if (runStageRef.current) {
         const stay = gameStateNowRef.current;
         returnToHome();
@@ -110032,11 +110063,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {/* AUTO∞の超省エネ中は、BATTLEから中間画面・CHAMPION・次周まで同じ暗さを保つ。 */}
       {/* モンビーを開いている間は外す。曲えらびや譜面まで暗いままだと遊べない
           (超省エネはバトルを見ないための暗幕なので、見る画面へ移ったら役目が終わる) */}
-      {ultraEcoSession&&!rhythmScreenOpen&&!cardScreenOpen&&<div data-ultra-eco-session-dimmer className="fixed inset-0 bg-black/55 pointer-events-none" style={{zIndex:2147483646}} aria-hidden="true"/>}
+      {ultraEcoSession&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&<div data-ultra-eco-session-dimmer className="fixed inset-0 bg-black/55 pointer-events-none" style={{zIndex:2147483646}} aria-hidden="true"/>}
       {/* 画面の揺れはアプリ全体にかかるので、モンビーを開いている間は掛けない。
           裏でバトルが進んでいるだけなのに、曲えらびや演奏の画面まで揺れてしまう
           (2026-09-06・ユーザー指摘「演出が残ってた（画面が揺れるなど）」) */}
-      <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView&&!rhythmScreenOpen&&!cardScreenOpen&&battleFxSettings.shake!=='OFF'?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
+      <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&battleFxSettings.shake!=='OFF'?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
 
         {/* MFバトルカードの予告の小窓(HOME の「近日公開」の札から。84 の CardBattleTeaser) */}
         {gameState==='HOME'&&cardTeaserOpen&&<CardBattleTeaser onClose={()=>setCardTeaserOpen(false)}/>}
@@ -116173,7 +116204,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       )}
 
       {/* GAME OVER */}
-      {hp<=0&&!debugBattle&&!rhythmScreenOpen&&!cardScreenOpen&&(
+      {hp<=0&&!debugBattle&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&(
         <GameOverScreen
           finalRewardSummary={finalRewardSummary} handleRetry={handleRetry}
           masuRegisterButtonNode={masuRegisterButtonNode} resultActionPending={resultActionPending}
@@ -116182,7 +116213,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         />
       )}
 
-      {gaveUp&&!debugBattle&&!rhythmScreenOpen&&!cardScreenOpen&&(
+      {gaveUp&&!debugBattle&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&(
         <GaveUpScreen
           finalRewardSummary={finalRewardSummary} handleRetry={handleRetry}
           masuRegisterButtonNode={masuRegisterButtonNode} resultActionPending={resultActionPending}
@@ -116212,7 +116243,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         ?<RaidJackIntro enabled={battleFxEffective.waveIntro!=='OFF'&&gameState==='BATTLE'&&!!enemy} enemyName={enemy?.name} title={battleModeInfo(runMode).short} tier={enemy?.raidJackPumpkin?1:(Number(String(enemy?.raidJackTier||'').slice(1))||1)} friendly={enemy?.raidJackPumpkin===true}/>
         :<WaveIntro enabled={battleFxEffective.waveIntro!=='OFF'&&gameState==='BATTLE'&&!!enemy} wave={wave} enemyName={enemy?.name} title={''}/>}
       <EnemyDefeatFx fx={gameState==='BATTLE'?defeatFx:null}/>
-      {effect&&!rhythmScreenOpen&&!cardScreenOpen&&(<div className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
+      {effect&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&(<div className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
         {effect.type==='unique'&&(
           <>
             <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 42%, rgba(168,85,247,0.5) 0%, rgba(99,102,241,0.35) 35%, rgba(0,0,0,0) 68%)', animation:'auraPulse 600ms ease-out infinite'}}></div>
