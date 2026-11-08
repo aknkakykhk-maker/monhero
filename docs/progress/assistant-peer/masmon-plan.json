@@ -1,85 +1,708 @@
 {
-  "_": "助手のマスモン一覧・編成・デッキ・好きな血統/苦手な血統の案(2026-11-08 助手部キズナ・社長に選んでもらう前)。monster は ALL_PLAYER_MONSTERS の id、lineage は MONSTER_LINEAGE_MAP の main。検査 tools/assistant/assistant-masmon-plan-check.js",
-  "assistants": [
-    { "id": "mua", "name": "みゅあ",
-      "team": [
-        { "monster": "Mocchi", "nick": "もちぷる", "lead": true, "why": "いちばんの推し。育成場でいつも育てている" },
-        { "monster": "Pixie", "nick": "ぴくりん", "why": "元気でおしゃれ。服好きのみゅあと気が合う" },
-        { "monster": "MelWhip", "nick": "ほいっぷちゃん", "why": "おやつ好きどうし。甘いものの話で盛り上がる" }
-      ],
-      "like": [ { "lineage": "mocchi", "why": "推しのモッチーがいる" }, { "lineage": "pixie", "why": "かわいくておしゃれ" }, { "lineage": "yggdrasil", "why": "メルホイップ・メロディーが甘くてかわいい" } ],
-      "dislike": [ { "lineage": "ghost", "why": "こわいのはまぢ無理" }, { "lineage": "monol", "why": "かたくて地味" }, { "lineage": "golem", "why": "ごつくて、ちょっとこわい" } ],
-      "deck": { "name": "キラキラ速攻", "plan": "軽いカードを早く並べて、先に押し切る。ノリで決めて、勝てたらはしゃぐ" },
-      "later": null },
-    { "id": "kiki", "name": "きき",
-      "team": [
-        { "monster": "Golem", "nick": "ごろべえ", "lead": true, "why": "好きなモンスター。ちからに振って育てる" },
-        { "monster": "Plant", "nick": "おちゃば", "why": "静かでおだやか。お茶の時間に似合う" },
-        { "monster": "Undine", "nick": "しずく", "why": "落ち着いたお姉さんの雰囲気どうし" }
-      ],
-      "like": [ { "lineage": "golem", "why": "火力。ちからに振るのが楽しい" }, { "lineage": "plant", "why": "静かで落ち着く" }, { "lineage": "undine", "why": "おだやかで上品" } ],
-      "dislike": [ { "lineage": "ham", "why": "にぎやかすぎて落ち着かない" }, { "lineage": "suezo", "why": "大きな目に見つめられると照れる" }, { "lineage": "tiger", "why": "すばしこくて目が回る" } ],
-      "deck": { "name": "ずっしり火力", "plan": "守って耐えて、ちからの高いモンスターで一撃。数字よりも火力を信じる" },
-      "later": null },
-    { "id": "momosuke", "name": "ももすけ",
-      "team": [
-        { "monster": "Melody", "nick": "メロちゃん", "lead": true, "why": "歌とダンス。練習スタジオで一緒にライブごっこ" },
-        { "monster": "Mia", "nick": "みあみあ", "why": "華やか。人に見てもらうのが好きなももすけと合う" },
-        { "monster": "Ham", "nick": "ハムっち", "why": "元気いっぱい。ほめられると跳ねる" }
-      ],
-      "like": [ { "lineage": "yggdrasil", "why": "メロディーと一緒に歌える" }, { "lineage": "pixie", "why": "ステージ映えする" }, { "lineage": "ham", "why": "ノリがいい" } ],
-      "dislike": [ { "lineage": "monol", "why": "ノリが合わない" }, { "lineage": "plant", "why": "ステージでじっとしてる" }, { "lineage": "undine", "why": "衣装がぬれちゃう" } ],
-      "deck": { "name": "ステージ・オン", "plan": "派手なカードで盛り上げる。勝っても負けても見せ場を作る" },
-      "later": { "monster": "メタルナー", "why": "台本の好きなモンスター。実装されたら4体目に加わる" } },
-    { "id": "dra", "name": "ドラ",
-      "team": [
-        { "monster": "Suezo", "nick": "メダマ焼き", "lead": true, "why": "くだらないギャグに付き合ってくれる相棒" },
-        { "monster": "Oboro", "nick": "おぼろん", "why": "ひなたの丘で一緒に昼寝" },
-        { "monster": "Mitarashi", "nick": "みたらしくん", "why": "おやつの時間をのんびり一緒に" }
-      ],
-      "like": [ { "lineage": "suezo", "why": "ギャグが通じる" }, { "lineage": "plant", "why": "のんびり昼寝できる" }, { "lineage": "mocchi", "why": "もちもちで膝にやさしい" } ],
-      "dislike": [ { "lineage": "tiger", "why": "すばしっこくて膝がもたない" }, { "lineage": "zan", "why": "速すぎて説明が追いつかない" }, { "lineage": "ark", "why": "まぶしくて昼寝できない" } ],
-      "deck": { "name": "のんびり長期戦", "plan": "あわてず守って、長い試合で少しずつ削る。説明しながら打つ" },
-      "later": { "monster": "グジラ", "why": "台本の好きなモンスター。実装されたら4体目に加わる" } },
-    { "id": "atsu", "name": "あつ",
-      "team": [
-        { "monster": "Tiger", "nick": "ライ", "lead": true, "why": "勝負好き・前に出るタイプどうし" },
-        { "monster": "KenshiMocchi", "nick": "師匠", "why": "朝の育成で一緒に稽古する" },
-        { "monster": "Zan", "nick": "ザンくん", "why": "上の難易度に挑む負けず嫌い" }
-      ],
-      "like": [ { "lineage": "tiger", "why": "まっすぐ勝負できる" }, { "lineage": "zan", "why": "速くて強い" }, { "lineage": "mocchi", "why": "剣士モッチーの稽古が好き" } ],
-      "dislike": [ { "lineage": "plant", "why": "のんびりすぎて調子がくるう" }, { "lineage": "illumine", "why": "夢の話についていけない" }, { "lineage": "ham", "why": "ふざけてて勝負にならない" } ],
-      "deck": { "name": "真っ向勝負", "plan": "強いモンスターで正面から。小細工はしない。負けたらすぐ再戦" },
-      "later": { "monster": "ドラゴン", "why": "台本の好きなモンスター。実装されたら4体目に加わる" } },
-    { "id": "kyuko", "name": "きゅうこ",
-      "team": [
-        { "monster": "Illumine", "nick": "ともしび", "lead": true, "why": "加入のお話から縁がある。夜の読書に灯り" },
-        { "monster": "Dreamy", "nick": "ゆめの", "why": "夢見がち。図書室でひとりの時間に寄りそう" },
-        { "monster": "Kuromy", "nick": "よる", "why": "夜ふかしの夜に似合う、静かな相棒" }
-      ],
-      "like": [ { "lineage": "illumine", "why": "灯りと夢。夜の読書に合う" }, { "lineage": "yggdrasil", "why": "クロミーが静かでいい" }, { "lineage": "kyubi", "why": "物語に出てきそう" } ],
-      "dislike": [ { "lineage": "tiger", "why": "さわがしくて本が読めない" }, { "lineage": "suezo", "why": "じっと見られると落ち着かない" }, { "lineage": "ham", "why": "元気すぎてつかれる" } ],
-      "deck": { "name": "夜の読み筋", "plan": "相手の手を読んで、最後にひっくり返す。数字と直感の両方で決める" },
-      "later": { "monster": "ニャー", "why": "台本の好きなモンスター。実装されたら4体目に加わる" } },
-    { "id": "sorashido", "name": "ソラシド",
-      "team": [
-        { "monster": "Kyubi", "nick": "コン太", "lead": true, "why": "推し。カード研究の話し相手" },
-        { "monster": "Orihime", "nick": "ヒメ", "why": "もう1人の推し。表をまとめる夜に" },
-        { "monster": "Monol", "nick": "ソロバン", "why": "計算と表づくり。どっしり落ち着いている" }
-      ],
-      "like": [ { "lineage": "kyubi", "why": "推しのキュービ・オリヒメ" }, { "lineage": "monol", "why": "表にしやすい" }, { "lineage": "ark", "why": "強さの数字が美しい" } ],
-      "dislike": [ { "lineage": "ghost", "why": "動きが読めない" }, { "lineage": "plant", "why": "のんびりで試合が長い" }, { "lineage": "pixie", "why": "気まぐれで計算が合わない" } ],
-      "deck": { "name": "計算ずく", "plan": "記録から勝ち筋を決めて、その通りに打つ。表は毎晩書き直す" },
-      "later": null },
-    { "id": "erubin", "name": "えるびん",
-      "team": [
-        { "monster": "Ark", "nick": "ノア", "lead": true, "why": "好きなモンスター" },
-        { "monster": "Yggdrasil", "nick": "こかげ", "why": "中庭で、みんなを大きく見守る" },
-        { "monster": "Ghost", "nick": "ふわり", "why": "カード部屋で、ゴーストのカードを研究" }
-      ],
-      "like": [ { "lineage": "ark", "why": "好きなアークがいる" }, { "lineage": "yggdrasil", "why": "みんなを包む大きさ" }, { "lineage": "ghost", "why": "カードで使うのが好き" } ],
-      "dislike": [ { "lineage": "zan", "why": "せっかちで、ついていけない" }, { "lineage": "tiger", "why": "すぐけんか腰になる" }, { "lineage": "golem", "why": "重くて散歩に向かない" } ],
-      "deck": { "name": "みんなで守る", "plan": "仲間を守るカードを多めに。ひとりも倒れさせないで勝つ" },
-      "later": { "monster": "デュラハン", "why": "台本の好きなモンスター。実装されたら4体目に加わる" } }
-  ]
+ "_": "助手のマスモン(一覧・編成・成長・染色)と好き/苦手(モンスター単位→その血統にも少し)・MFバトルカードのデッキ(マスモンとは別のカード)の案(2026-11-08 助手部キズナ・社長に選んでもらう前)。monster は ALL_PLAYER_MONSTERS の id。デッキのカードの中身は今のカード部の表(CARD_AI_DECKS)が元で、ソランドとすり合わせる。検査 tools/assistant/assistant-masmon-plan-check.js",
+ "assistants": [
+  {
+   "id": "mua",
+   "name": "みゅあ",
+   "team": [
+    {
+     "monster": "Mocchi",
+     "nick": "もちぷる",
+     "lead": true,
+     "why": "いちばんの推し。育成場でいつも育てている",
+     "lv": 24,
+     "grow": "すばやさ型(ノリで決めた)",
+     "dye": {
+      "colors": [
+       "pink_light",
+       "yellow_light",
+       "sky_light"
+      ]
+     }
+    },
+    {
+     "monster": "Pixie",
+     "nick": "ぴくりん",
+     "why": "元気でおしゃれ。服好きのみゅあと気が合う",
+     "lv": 16,
+     "grow": "ガッツ型",
+     "dye": {
+      "colors": [
+       "yellow_light",
+       "sky_light",
+       "pink"
+      ]
+     }
+    },
+    {
+     "monster": "MelWhip",
+     "nick": "ほいっぷちゃん",
+     "why": "おやつ好きどうし。甘いものの話で盛り上がる",
+     "lv": 14,
+     "grow": "ライフ型",
+     "dye": {
+      "colors": [
+       "sky_light",
+       "pink",
+       "white",
+       "pink_light",
+       "yellow_light"
+      ]
+     }
+    }
+   ],
+   "deck": {
+    "name": "キラキラ速攻",
+    "plan": "軽いカードを早く並べて、先に押し切る。ノリで決めて、勝てたらはしゃぐ",
+    "cardFavorite": "モッチー",
+    "cards": "ホリィの声援・飛び散る火花"
+   },
+   "later": null,
+   "likeMon": [
+    {
+     "monster": "Mocchi",
+     "why": "いちばんの推し"
+    },
+    {
+     "monster": "Pixie",
+     "why": "元気でおしゃれ"
+    },
+    {
+     "monster": "MelWhip",
+     "why": "甘くてかわいい"
+    }
+   ],
+   "dislikeMon": [
+    {
+     "monster": "Ghost",
+     "why": "こわいのはまぢ無理"
+    },
+    {
+     "monster": "Monol",
+     "why": "かたくて地味"
+    },
+    {
+     "monster": "Golem",
+     "why": "ごつくて、ちょっとこわい"
+    }
+   ]
+  },
+  {
+   "id": "kiki",
+   "name": "きき",
+   "team": [
+    {
+     "monster": "Golem",
+     "nick": "ごろべえ",
+     "lead": true,
+     "why": "好きなモンスター。ちからに振って育てる",
+     "lv": 26,
+     "grow": "攻撃型(ちからに振る)",
+     "dye": {
+      "colors": [
+       "pink_light",
+       "magenta",
+       "red"
+      ]
+     }
+    },
+    {
+     "monster": "Plant",
+     "nick": "おちゃば",
+     "why": "静かでおだやか。お茶の時間に似合う",
+     "lv": 15,
+     "grow": "防御型",
+     "dye": {
+      "colors": [
+       "magenta",
+       "red",
+       "pink"
+      ]
+     }
+    },
+    {
+     "monster": "Undine",
+     "nick": "しずく",
+     "why": "落ち着いたお姉さんの雰囲気どうし",
+     "lv": 13,
+     "grow": "ガッツ型",
+     "dye": {
+      "colors": [
+       "red",
+       "pink",
+       "white"
+      ]
+     }
+    }
+   ],
+   "deck": {
+    "name": "ずっしり火力",
+    "plan": "守って耐えて、ちからの高いモンスターで一撃。数字よりも火力を信じる",
+    "cardFavorite": "ゴーレム",
+    "cards": "必殺技の応酬・長期戦の予感"
+   },
+   "later": null,
+   "likeMon": [
+    {
+     "monster": "Golem",
+     "why": "ちからに振るのが楽しい"
+    },
+    {
+     "monster": "Plant",
+     "why": "静かで落ち着く"
+    },
+    {
+     "monster": "Undine",
+     "why": "おだやかで上品"
+    }
+   ],
+   "dislikeMon": [
+    {
+     "monster": "Ham",
+     "why": "にぎやかすぎて落ち着かない"
+    },
+    {
+     "monster": "Suezo",
+     "why": "大きな目に見つめられると照れる"
+    },
+    {
+     "monster": "Tiger",
+     "why": "すばしこくて目が回る"
+    }
+   ]
+  },
+  {
+   "id": "momosuke",
+   "name": "ももすけ",
+   "team": [
+    {
+     "monster": "Melody",
+     "nick": "メロちゃん",
+     "lead": true,
+     "why": "歌とダンス。練習スタジオで一緒にライブごっこ",
+     "lv": 22,
+     "grow": "ガッツ型(ステージ映え)",
+     "dye": {
+      "colors": [
+       "magenta",
+       "pink",
+       "purple_light",
+       "yellow",
+       "white"
+      ]
+     }
+    },
+    {
+     "monster": "Mia",
+     "nick": "みあみあ",
+     "why": "華やか。人に見てもらうのが好きなももすけと合う",
+     "lv": 15,
+     "grow": "すばやさ型",
+     "dye": {
+      "colors": [
+       "pink",
+       "purple_light",
+       "yellow"
+      ]
+     }
+    },
+    {
+     "monster": "Ham",
+     "nick": "ハムっち",
+     "why": "元気いっぱい。ほめられると跳ねる",
+     "lv": 12,
+     "grow": "ライフ型",
+     "dye": {
+      "colors": [
+       "purple_light",
+       "yellow",
+       "white"
+      ]
+     }
+    }
+   ],
+   "deck": {
+    "name": "ステージ・オン",
+    "plan": "派手なカードで盛り上げる。勝っても負けても見せ場を作る",
+    "cardFavorite": "メタルナー",
+    "cards": "冷静な判断・がんじがらめ"
+   },
+   "later": {
+    "monster": "メタルナー",
+    "why": "台本の好きなモンスター。実装されたら4体目に加わる"
+   },
+   "likeMon": [
+    {
+     "monster": "Melody",
+     "why": "一緒に歌える"
+    },
+    {
+     "monster": "Mia",
+     "why": "ステージ映えする"
+    },
+    {
+     "monster": "Ham",
+     "why": "ノリがいい"
+    }
+   ],
+   "dislikeMon": [
+    {
+     "monster": "Monol",
+     "why": "ノリが合わない"
+    },
+    {
+     "monster": "Plant",
+     "why": "ステージでじっとしてる"
+    },
+    {
+     "monster": "Undine",
+     "why": "衣装がぬれちゃう"
+    }
+   ]
+  },
+  {
+   "id": "dra",
+   "name": "ドラ",
+   "team": [
+    {
+     "monster": "Suezo",
+     "nick": "メダマ焼き",
+     "lead": true,
+     "why": "くだらないギャグに付き合ってくれる相棒",
+     "lv": 18,
+     "grow": "ライフ型(のんびり)",
+     "dye": {
+      "colors": [
+       "orange",
+       "yellow",
+       "orange_light"
+      ]
+     }
+    },
+    {
+     "monster": "Oboro",
+     "nick": "おぼろん",
+     "why": "ひなたの丘で一緒に昼寝",
+     "lv": 14,
+     "grow": "防御型",
+     "dye": {
+      "colors": [
+       "yellow",
+       "orange_light",
+       "lime_light"
+      ]
+     }
+    },
+    {
+     "monster": "Mitarashi",
+     "nick": "みたらしくん",
+     "why": "おやつの時間をのんびり一緒に",
+     "lv": 13,
+     "grow": "ライフ型",
+     "dye": {
+      "colors": [
+       "orange_light",
+       "lime_light",
+       "white"
+      ]
+     }
+    }
+   ],
+   "deck": {
+    "name": "のんびり長期戦",
+    "plan": "あわてず守って、長い試合で少しずつ削る。説明しながら打つ",
+    "cardFavorite": "グジラ",
+    "cards": "興奮のるつぼ・必殺技の封印"
+   },
+   "later": {
+    "monster": "グジラ",
+    "why": "台本の好きなモンスター。実装されたら4体目に加わる"
+   },
+   "likeMon": [
+    {
+     "monster": "Suezo",
+     "why": "ギャグが通じる"
+    },
+    {
+     "monster": "Oboro",
+     "why": "一緒に昼寝できる"
+    },
+    {
+     "monster": "Mitarashi",
+     "why": "もちもちで膝にやさしい"
+    }
+   ],
+   "dislikeMon": [
+    {
+     "monster": "Tiger",
+     "why": "すばしっこくて膝がもたない"
+    },
+    {
+     "monster": "Zan",
+     "why": "速すぎて説明が追いつかない"
+    },
+    {
+     "monster": "Ark",
+     "why": "まぶしくて昼寝できない"
+    }
+   ]
+  },
+  {
+   "id": "atsu",
+   "name": "あつ",
+   "team": [
+    {
+     "monster": "Tiger",
+     "nick": "ライ",
+     "lead": true,
+     "why": "勝負好き・前に出るタイプどうし",
+     "lv": 27,
+     "grow": "攻撃型(朝の育成)",
+     "dye": {
+      "colors": [
+       "red",
+       "black",
+       "white"
+      ]
+     }
+    },
+    {
+     "monster": "KenshiMocchi",
+     "nick": "師匠",
+     "why": "朝の育成で一緒に稽古する",
+     "lv": 19,
+     "grow": "攻撃型",
+     "dye": {
+      "colors": [
+       "black",
+       "white",
+       "orange",
+       "gray",
+       "red"
+      ]
+     }
+    },
+    {
+     "monster": "Zan",
+     "nick": "ザンくん",
+     "why": "上の難易度に挑む負けず嫌い",
+     "lv": 16,
+     "grow": "すばやさ型",
+     "dye": {
+      "colors": [
+       "white",
+       "orange",
+       "gray"
+      ]
+     }
+    }
+   ],
+   "deck": {
+    "name": "真っ向勝負",
+    "plan": "強いモンスターで正面から。小細工はしない。負けたらすぐ再戦",
+    "cardFavorite": "ドラゴン",
+    "cards": "竜巻アタック・地震・炎のカベ・ブリザード"
+   },
+   "later": {
+    "monster": "ドラゴン",
+    "why": "台本の好きなモンスター。実装されたら4体目に加わる"
+   },
+   "likeMon": [
+    {
+     "monster": "Tiger",
+     "why": "まっすぐ勝負できる"
+    },
+    {
+     "monster": "KenshiMocchi",
+     "why": "稽古がたのしい"
+    },
+    {
+     "monster": "Zan",
+     "why": "速くて強い"
+    }
+   ],
+   "dislikeMon": [
+    {
+     "monster": "Oboro",
+     "why": "のんびりすぎて調子がくるう"
+    },
+    {
+     "monster": "Dreamy",
+     "why": "夢の話についていけない"
+    },
+    {
+     "monster": "Ham",
+     "why": "ふざけてて勝負にならない"
+    }
+   ]
+  },
+  {
+   "id": "kyuko",
+   "name": "きゅうこ",
+   "team": [
+    {
+     "monster": "Illumine",
+     "nick": "ともしび",
+     "lead": true,
+     "why": "加入のお話から縁がある。夜の読書に灯り",
+     "lv": 21,
+     "grow": "ガッツ型(夜ふかしで育成)",
+     "dye": {
+      "colors": [
+       "purple",
+       "blue",
+       "black",
+       "purple_light",
+       "white"
+      ]
+     }
+    },
+    {
+     "monster": "Dreamy",
+     "nick": "ゆめの",
+     "why": "夢見がち。図書室でひとりの時間に寄りそう",
+     "lv": 15,
+     "grow": "ガッツ型",
+     "dye": {
+      "colors": [
+       "blue",
+       "black",
+       "purple_light",
+       "white",
+       "purple"
+      ]
+     }
+    },
+    {
+     "monster": "Kuromy",
+     "nick": "よる",
+     "why": "夜ふかしの夜に似合う、静かな相棒",
+     "lv": 14,
+     "grow": "防御型",
+     "dye": {
+      "colors": [
+       "black",
+       "purple_light",
+       "white",
+       "purple",
+       "blue"
+      ]
+     }
+    }
+   ],
+   "deck": {
+    "name": "夜の読み筋",
+    "plan": "相手の手を読んで、最後にひっくり返す。数字と直感の両方で決める",
+    "cardFavorite": "ニャー",
+    "cards": "必殺技の応酬"
+   },
+   "later": {
+    "monster": "ニャー",
+    "why": "台本の好きなモンスター。実装されたら4体目に加わる"
+   },
+   "likeMon": [
+    {
+     "monster": "Illumine",
+     "why": "灯りが夜の読書に合う"
+    },
+    {
+     "monster": "Kuromy",
+     "why": "静かでいい"
+    },
+    {
+     "monster": "Kyubi",
+     "why": "物語に出てきそう"
+    }
+   ],
+   "dislikeMon": [
+    {
+     "monster": "Tiger",
+     "why": "さわがしくて本が読めない"
+    },
+    {
+     "monster": "Suezo",
+     "why": "じっと見られると落ち着かない"
+    },
+    {
+     "monster": "Ham",
+     "why": "元気すぎてつかれる"
+    }
+   ]
+  },
+  {
+   "id": "sorashido",
+   "name": "ソラシド",
+   "team": [
+    {
+     "monster": "Kyubi",
+     "nick": "コン太",
+     "lead": true,
+     "why": "推し。カード研究の話し相手",
+     "lv": 25,
+     "grow": "すばやさ型(記録どおり)",
+     "dye": {
+      "colors": [
+       "orange",
+       "black",
+       "sky",
+       "yellow",
+       "white"
+      ]
+     }
+    },
+    {
+     "monster": "Orihime",
+     "nick": "ヒメ",
+     "why": "もう1人の推し。表をまとめる夜に",
+     "lv": 18,
+     "grow": "ガッツ型",
+     "dye": {
+      "colors": [
+       "black",
+       "sky",
+       "yellow",
+       "white",
+       "orange"
+      ]
+     }
+    },
+    {
+     "monster": "Monol",
+     "nick": "ソロバン",
+     "why": "計算と表づくり。どっしり落ち着いている",
+     "lv": 15,
+     "grow": "防御型",
+     "dye": {
+      "colors": [
+       "sky",
+       "yellow",
+       "white"
+      ]
+     }
+    }
+   ],
+   "deck": {
+    "name": "計算ずく",
+    "plan": "記録から勝ち筋を決めて、その通りに打つ。表は毎晩書き直す",
+    "cardFavorite": "ハム(大声)",
+    "cards": "大混乱・時間稼ぎ・大声・ハテナマーク"
+   },
+   "later": null,
+   "likeMon": [
+    {
+     "monster": "Kyubi",
+     "why": "推し"
+    },
+    {
+     "monster": "Monol",
+     "why": "表にしやすい"
+    },
+    {
+     "monster": "Ark",
+     "why": "強さの数字が美しい"
+    }
+   ],
+   "dislikeMon": [
+    {
+     "monster": "Ghost",
+     "why": "動きが読めない"
+    },
+    {
+     "monster": "Oboro",
+     "why": "のんびりで試合が長い"
+    },
+    {
+     "monster": "Pixie",
+     "why": "気まぐれで計算が合わない"
+    }
+   ]
+  },
+  {
+   "id": "erubin",
+   "name": "えるびん",
+   "team": [
+    {
+     "monster": "Ark",
+     "nick": "ノア",
+     "lead": true,
+     "why": "好きなモンスター",
+     "lv": 23,
+     "grow": "防御型(みんなを守る)",
+     "dye": {
+      "colors": [
+       "green",
+       "teal_light",
+       "white"
+      ]
+     }
+    },
+    {
+     "monster": "Yggdrasil",
+     "nick": "こかげ",
+     "why": "中庭で、みんなを大きく見守る",
+     "lv": 17,
+     "grow": "ライフ型",
+     "dye": {
+      "colors": [
+       "teal_light",
+       "white",
+       "lime"
+      ]
+     }
+    },
+    {
+     "monster": "Ghost",
+     "nick": "ふわり",
+     "why": "カード部屋で、ゴーストのカードを研究",
+     "lv": 14,
+     "grow": "ガッツ型",
+     "dye": {
+      "colors": [
+       "white",
+       "lime",
+       "teal"
+      ]
+     }
+    }
+   ],
+   "deck": {
+    "name": "みんなで守る",
+    "plan": "仲間を守るカードを多めに。ひとりも倒れさせないで勝つ",
+    "cardFavorite": "デュラハン",
+    "cards": "剣技・精神・守りの3つの組み方"
+   },
+   "later": {
+    "monster": "デュラハン",
+    "why": "台本の好きなモンスター。実装されたら4体目に加わる"
+   },
+   "likeMon": [
+    {
+     "monster": "Ark",
+     "why": "好きなモンスター"
+    },
+    {
+     "monster": "Yggdrasil",
+     "why": "みんなを包む大きさ"
+    },
+    {
+     "monster": "Ghost",
+     "why": "カードで使うのが好き"
+    }
+   ],
+   "dislikeMon": [
+    {
+     "monster": "Zan",
+     "why": "せっかちで、ついていけない"
+    },
+    {
+     "monster": "Tiger",
+     "why": "すぐけんか腰になる"
+    },
+    {
+     "monster": "Golem",
+     "why": "重くて散歩に向かない"
+    }
+   ]
+  }
+ ]
 }
