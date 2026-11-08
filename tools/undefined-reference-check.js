@@ -71,9 +71,6 @@ const GLOBALS = new Set([
 //   定義が入ったら、この一覧から消してよい(消し忘れても、定義があれば許しは使われない)
 const LATER_HOOKS = {
   assistantLifeCardMood: '育つ助手の気分の言葉(助手部キズナ2が相談を作るときに足す。2026-11-08)',
-  assistantLifeStandFace: '立ち絵の顔の測り(助手部オクリモノ3の枝 okurimono3/stage-c が main に入ると定義される。部屋を大きく見る画面が読む。2026-11-08)',
-  assistantLifeStandRule: '立ち絵1人ぶんの置き場所と切る位置(オクリモノ3の枝 okurimono3/stage-c が main に入ると定義される。部屋を大きく見る画面が読む。2026-11-08)',
-  assistantLifeStandVisH: '立ち絵の見えている体の高さ(fit を含む。オクリモノ3の枝 okurimono3/stage-c。部屋を大きく見る画面が読む。2026-11-08)',
 };
 const laterOk = (name) => Object.prototype.hasOwnProperty.call(LATER_HOOKS, name) && source.includes(`typeof ${name} === 'function'`);
 
