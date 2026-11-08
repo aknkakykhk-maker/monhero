@@ -733,8 +733,13 @@ check('STEP2の更新履歴は開発メモとして残し、未完成機能を�
 // ★2026-10-07 セッション券(マルチにマスモンを呼ぶ券・150P)を足した(ユーザー指示・docs/spec/RHYTHM_BUDDY.md)
 // ★2026-11-06 性格のたね(マスモンの性格を選び直す・1,000P・何個でも)を足した(社長の決定 案1・#4645)
 // ★2026-11-07 助手どうしの差し入れ(200P)・友情のしるし(500P)を足した(社長の決定・公開の印 assistantPeer の後ろ)
-check('ビートP交換所は対象確定済みの固定16商品だけ',(()=>{
-  const got=(O.RHYTHM_EVENT_POINT_SHOP_OFFERS||[]).map(o=>[o.id,o.itemId||'',o.grantAmount,o.cost]);
+// ★2026-11-08 助手ライフの道具(peer_cake など8種類・印 assistantLife)と家具(furn_*・印 assistantLifeFurniture)は、
+//   tools/assistant/assistant-life-gift-check.js が値段・印まで見張るので、ここでは除いて見る(オクリモノ)
+const BEAT_SHOP_FIXED=(O.RHYTHM_EVENT_POINT_SHOP_OFFERS||[]).filter(o=>o.releaseFlag!=='assistantLife'&&o.releaseFlag!=='assistantLifeFurniture');
+check('助手ライフの道具・家具は、それぞれの公開の印の後ろにあり、助手ライフの持ち物だけ',
+  (O.RHYTHM_EVENT_POINT_SHOP_OFFERS||[]).filter(o=>o.releaseFlag==='assistantLife'||o.releaseFlag==='assistantLifeFurniture').every(o=>o.kind==='item'&&/^(peer|furn)_[a-z]+$/.test(o.itemId||'')));
+check('ビートP交換所は対象確定済みの固定16商品だけ(助手ライフの道具・家具は除く)',(()=>{
+  const got=BEAT_SHOP_FIXED.map(o=>[o.id,o.itemId||'',o.grantAmount,o.cost]);
   const want=[
     // ★2026-09-17に値上げ(ユーザー指示)。高額の3つ(証片・虹の超越の実・勇者の証)は据え置き、
     //   それ以外の9商品を5倍にした。仕様書は RHYTHM_EVENT_POINTS.md §20.1
@@ -749,7 +754,7 @@ check('ビートP交換所は対象確定済みの固定16商品だけ',(()=>{
   return JSON.stringify(got)===JSON.stringify(want);
 })());
 check('対象未決定のアイコンを推測でビートP商品へ入れない',
-  (O.RHYTHM_EVENT_POINT_SHOP_OFFERS||[]).length===16
+  BEAT_SHOP_FIXED.length===16
   &&!(O.RHYTHM_EVENT_POINT_SHOP_OFFERS||[]).some(o=>o.kind==='icon'||/アイコン/.test(o.name||'')));
 check('ビートPの数量交換計算はダイヤと複数個アイテムを正しく扱う',(()=>{
   const diamond=O.RHYTHM_EVENT_POINT_SHOP_OFFERS.find(o=>o.id==='diamond_300');
