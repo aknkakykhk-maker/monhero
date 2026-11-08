@@ -16,6 +16,7 @@ const plan = JSON.parse(fs.readFileSync(planPath, 'utf8')).assistants;
 const pick = (a) => ({
   id: a.id,
   team: a.team.map(t => ({ monster: t.monster, nick: t.nick, lead: !!t.lead, why: t.why, lv: t.lv, grow: t.grow, dye: { colors: t.dye.colors } })),
+  extra: (a.extra || []).map(t => ({ monster: t.monster, nick: t.nick, why: t.why, lv: t.lv, grow: t.grow, welcome: t.welcome, dye: { colors: t.dye.colors } })),
   deck: { name: a.deck.name, plan: a.deck.plan },
   likeMon: a.likeMon, dislikeMon: a.dislikeMon, favColors: a.favColors,
 });
