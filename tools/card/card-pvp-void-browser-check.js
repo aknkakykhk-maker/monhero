@@ -73,7 +73,10 @@ const pvpGo = async (page, sel) => { await page.locator(sel).first().click(); aw
 const TITLE = 'この試合は続けられません';
 const BODY = '通信のずれで、相手と場が合わなくなりました。この試合は記録に残さずに終わります。ビートPと強さの点数は、増えも減りもしません。';
 // 試合で変わってよい保存(時刻・画面の位置など)。これ以外の mh_* が変わったら NG
-const LOOSE = /^mh_(last_|session|bgm|screen|seen_at|app_|boot|play_time|login|card_last_view|card_pvp_last|card_top_view|card_chat)/;
+// 助手どうしの掛け合い(56-assistant-peer)は、画面に入ったときに(90秒あけて)流れ、記録とミッションの「助手とふれあう」を書く。試合とは関係ないので見ない。
+//   ミッション(mh_missions)は、カードの1戦・勝ち(cardPlays・cardWins)が動いていないかだけを別に見る(2026-11-08: 入口へ戻ったときに掛け合いが流れて NG になっていた)
+const LOOSE = /^mh_(last_|session|bgm|screen|seen_at|app_|boot|play_time|login|card_last_view|card_pvp_last|card_top_view|card_chat|assistant_peer_|assistant_life_play_v1$|missions$)/;
+const cardMission = (raw) => { let n = 0; const walk = (v) => { if (!v || typeof v !== 'object') return; for (const [k, x] of Object.entries(v)) { if ((k === 'cardPlays' || k === 'cardWins') && Number.isFinite(x)) n += x; else walk(x); } }; try { walk(JSON.parse(raw || 'null')); } catch (_) { /* 読めない */ } return n; };
 
 (async () => {
   let chromium;
@@ -210,7 +213,9 @@ const LOOSE = /^mh_(last_|session|bgm|screen|seen_at|app_|boot|play_time|login|c
     await A.waitForTimeout(2500);
     const saveAfter = [await store(A), await store(B)];
     const diff = [changed(saveBefore[0], saveAfter[0]), changed(saveBefore[1], saveAfter[1])];
-    check('④ ビートP・履歴・見返し・ミッションなど、端末の保存が変わらない', diff.every((x) => x.length === 0), JSON.stringify(diff));
+    check('④ ビートP・履歴・見返しなど、端末の保存が変わらない', diff.every((x) => x.length === 0), JSON.stringify(diff));
+    check('④ ミッションのカードの1戦・勝ちが増えない', [0, 1].every((i) => cardMission(saveBefore[i].mh_missions) === cardMission(saveAfter[i].mh_missions)),
+      [0, 1].map((i) => `${cardMission(saveBefore[i].mh_missions)}→${cardMission(saveAfter[i].mh_missions)}`).join(' / '));
     check('④ 強さの点数へ何も送らない', reports.length === 0, `${reports.length}件`);
     await A.evaluate(() => { window.__mhCardPvpDesyncTest = false; });
 
@@ -230,8 +235,9 @@ const LOOSE = /^mh_(last_|session|bgm|screen|seen_at|app_|boot|play_time|login|c
     await A.locator('[data-card-pvp-void-exit]').click().catch(() => {});
     const idleA2 = await A.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
     check('⑤ 「試合を終える」で入口へ戻れる・罰が付かない', idleA2 && (await penalty(A)) <= Date.now());
-    const diff2 = changed(saveBefore2, await store(A));
-    check('⑤ はねた側の端末の保存が変わらない', diff2.length === 0, JSON.stringify(diff2));
+    const saveAfter2 = await store(A);
+    const diff2 = changed(saveBefore2, saveAfter2);
+    check('⑤ はねた側の端末の保存が変わらない・ミッションのカードの数も増えない', diff2.length === 0 && cardMission(saveBefore2.mh_missions) === cardMission(saveAfter2.mh_missions), JSON.stringify(diff2));
     check('⑥ 実行時エラーが無い', errors.length === 0, errors.slice(0, 3).join(' | '));
   } catch (e) {
     check('検査が最後まで動く', false, String(e && e.stack || e).slice(0, 400));
