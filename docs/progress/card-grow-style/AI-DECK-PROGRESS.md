@@ -28,7 +28,9 @@
 - SAVE_DATA.md に2つのキー
 - 検査: tools/card/card-ai-deck-check.js(46件・中継役は偽物)・card-ai-grow-style-check.js を合わせた
 
+- 画面の検査 tools/card/card-ai-deck-browser-check.js(縦・横 × 印が偽/AI あり/AI なし)。止め絵は ai-deck-shots/(`<縦横>-<場面>-1-vs.png`・`-2-result.png`)
+  - 検査のブラウザは書き込みの守り(26-supabase)で中継役への POST も止まるので、`window.__mhSupabaseStubbed = ['card-assistant-talk']` を入れて偽物へ通す
+
 ## 残り
-- 印を真にした状態で縦・横を触って撮る(検査の中だけ RELEASE_FLAGS.cardGrowStyle を真に・中継役は偽物)
 - 文案(既定の名前の出し方・VS のひとこと・「型: 」・設定の見出しと説明・更新履歴・ヘルプ)を部長へ
 - 社長の「この文で」のあと、印を真にして公開
