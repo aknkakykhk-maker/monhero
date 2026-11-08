@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fdb4ba5446335040
+// source-sha256: 629e7427c1a8a83f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -56516,7 +56516,8 @@ const sbFetchFriendRoster = async selfIdRaw => {
     otherId: view.otherId,
     userName: (looks[view.otherId] || {}).userName || '名無しのブリーダー',
     lastSeenAt: (looks[view.otherId] || {}).lastSeenAt || 0,
-    icon: (looks[view.otherId] || {}).icon ?? null
+    icon: (looks[view.otherId] || {}).icon ?? null,
+    profileFrame: (looks[view.otherId] || {}).profileFrame || null
   })).sort((a, b) => b.lastSeenAt - a.lastSeenAt);
 };
 const FRIEND_PLACE_TEXT = Object.freeze({
@@ -62644,7 +62645,7 @@ const growthFxSessionLevel = (list = []) => {
 };
 const GROWTH_FX_CSS = `
 .mh-gfx-chips{position:fixed;top:calc(env(safe-area-inset-top,0px) + 52px);right:10px;z-index:44000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
-.mh-gfx-chips.left{right:auto;left:10px;align-items:flex-start}
+.mh-gfx-chips.left{right:auto;left:10px;align-items:flex-start}.mh-gfx-chips.one .mh-gfx-chip:not(:first-child){display:none}.mh-gfx-chips.one .mh-gfx-chip:first-child::after{content:attr(data-more);margin-left:2px;border-radius:999px;background:#ffffff26;padding:0 5px;font-size:10px;font-weight:900}.mh-gfx-chips.row{flex-direction:row;align-items:flex-start;max-width:calc(100% - 20px);flex-wrap:nowrap}
 .mh-gfx-chips.mini .mh-gfx-chip>.min-w-0{display:none}.mh-gfx-chips.mini .mh-gfx-chip{padding:3px 8px 3px 4px;gap:4px}
 .mh-gfx-chip{position:relative;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;border-radius:999px;background:linear-gradient(90deg,#1e1b2ef0,#0f172af0);
   border:1.5px solid var(--gc);box-shadow:0 0 14px color-mix(in srgb,var(--gc) 40%,transparent);font-weight:900;font-size:11px;color:#fff;
@@ -63154,39 +63155,106 @@ const GrowthFxLevelUp = ({
   }, done ? '押すと閉じる' : '押すと先へ'));
 };
 const GROWTH_FX_CHIP_TOPS = [52, 8, 96, 140];
-const GROWTH_FX_CHIP_BUSY_SEL = 'button,a,input,[role="tab"],[role="button"],[data-assistant-bubble],img,svg,p,span,b,small,strong,em,h1,h2,h3,h4,li,label,[data-alf-face]';
-const growthFxChipSpotBusy = box => {
-  if (typeof document === 'undefined' || !document.elementsFromPoint) return false;
-  const r = box.getBoundingClientRect();
+const GROWTH_FX_CHIP_BUSY_SEL = 'button,a,input,[role="tab"],[role="button"],[data-assistant-bubble],img,svg,p,span,b,small,strong,em,h1,h2,h3,h4,li,label,div,[data-alf-face]';
+const growthFxChipSpotScore = (box, first = false) => {
+  if (typeof document === 'undefined' || !document.elementsFromPoint) return 0;
+  const r = [...box.querySelectorAll('.mh-gfx-chip')].reduce((a, c) => {
+    const q = c.getBoundingClientRect();
+    if (!q.width || !q.height) return a;
+    return {
+      left: Math.min(a.left, q.left),
+      top: Math.min(a.top, q.top - 12),
+      right: Math.max(a.right, q.right),
+      bottom: Math.max(a.bottom, q.bottom + 4)
+    };
+  }, (() => {
+    const b = box.getBoundingClientRect();
+    return {
+      left: b.left,
+      top: b.top,
+      right: b.right,
+      bottom: b.bottom
+    };
+  })());
+  r.width = r.right - r.left;
+  r.height = r.bottom - r.top;
+  let score = 0;
   for (const fx of [0.15, 0.5, 0.85]) for (const fy of [0.25, 0.75]) {
     const x = r.left + r.width * fx,
       y = r.top + r.height * fy;
-    const under = document.elementsFromPoint(x, y).find(el => !box.contains(el));
+    const under = document.elementsFromPoint(x, y).find(el => !box.contains(el) && !el.contains(box));
     if (!under) continue;
-    if (under.closest('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]')) return true;
-    if ([...under.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return true;
+    if (under.closest('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]')) {
+      score += 3;
+      if (first) return score;
+    } else if ([...under.childNodes].some(n => {
+      if (n.nodeType !== 3 || !n.textContent.trim()) return false;
+      const rg = document.createRange();
+      rg.selectNodeContents(n);
+      return [...rg.getClientRects()].some(q => x >= q.left - 2 && x <= q.right + 2 && y >= q.top - 2 && y <= q.bottom + 2);
+    })) {
+      score += 2;
+      if (first) return score;
+    }
   }
   const vw = window.innerWidth,
     vh = window.innerHeight;
+  const hit = e => Math.min(r.right, e.right) - Math.max(r.left, e.left) > 1 && Math.min(r.bottom, e.bottom) - Math.max(r.top, e.top) > 1;
+  const seen = (el, e) => {
+    const x0 = Math.max(r.left, e.left),
+      y0 = Math.max(r.top, e.top),
+      x1 = Math.min(r.right, e.right),
+      y1 = Math.min(r.bottom, e.bottom);
+    return [[x0 + 1, y0 + 1], [(x0 + x1) / 2, (y0 + y1) / 2]].some(([cx, cy]) => {
+      const top = document.elementsFromPoint(cx, cy).find(x => !box.contains(x) && !x.contains(box));
+      return !top || top === el || el.contains(top) || top.contains(el);
+    });
+  };
+  for (const sh of document.querySelectorAll('.mhl-sheet,[data-mhl-sheet],[role="dialog"]')) {
+    if (box.contains(sh) || sh.contains(box)) continue;
+    const e = sh.getBoundingClientRect();
+    if (!e.width || !e.height || !hit(e)) continue;
+    const cs = getComputedStyle(sh);
+    if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
+    score += 3;
+    if (first) return score;
+  }
   for (const el of document.querySelectorAll(GROWTH_FX_CHIP_BUSY_SEL)) {
     if (box.contains(el)) continue;
     const e = el.getBoundingClientRect();
-    if (!e.width || !e.height || e.width > vw * 0.9 || e.height > vh * 0.5) continue;
-    if (Math.min(r.right, e.right) - Math.max(r.left, e.left) <= 1 || Math.min(r.bottom, e.bottom) - Math.max(r.top, e.top) <= 1) continue;
+    if (!e.width || !e.height || !hit(e)) continue;
     const cs = getComputedStyle(el);
     if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
     const isPic = /^(IMG|SVG)$/i.test(el.tagName) || el.hasAttribute('data-alf-face');
     const isAct = el.matches('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]');
-    const hasText = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
-    if (!isPic && !isAct && !hasText) continue;
-    const cx = Math.max(r.left, e.left) + 1,
-      cy = Math.max(r.top, e.top) + 1;
-    const top = document.elementsFromPoint(cx, cy).find(x => !box.contains(x));
-    if (top && !(top === el || el.contains(top) || top.contains(el))) continue;
-    return true;
+    const texts = [...el.childNodes].filter(n => n.nodeType === 3 && n.textContent.trim());
+    if (texts.length) {
+      let on = null;
+      for (const t of texts) {
+        const rg = document.createRange();
+        rg.selectNodeContents(t);
+        for (const q of rg.getClientRects()) if (hit(q)) {
+          on = q;
+          break;
+        }
+        if (on) break;
+      }
+      if (on && seen(el, on)) {
+        score += isAct ? 3 : 2;
+        if (first) return score;
+        continue;
+      }
+      if (!isAct) continue;
+    }
+    if (!isPic && !isAct) continue;
+    if (e.width > vw * 0.9 || e.height > vh * 0.5) continue;
+    if (!seen(el, e)) continue;
+    score += isAct ? 3 : 1;
+    if (first) return score;
   }
-  return false;
+  return score;
 };
+const growthFxChipSpotBusy = box => growthFxChipSpotScore(box, true) > 0;
 const GrowthFxChipsBox = ({
   level,
   count,
@@ -63201,29 +63269,82 @@ const GrowthFxChipsBox = ({
       const steps = [];
       for (let y = window.innerHeight - 10 - box.offsetHeight; y >= 8; y -= 24) steps.push(Math.round(y));
       const tops = [...new Set([...GROWTH_FX_CHIP_TOPS, Math.max(60, window.innerHeight - 120 - box.offsetHeight), ...steps])];
-      for (const mini of [false, true]) {
+      const chipEls = box.querySelectorAll('.mh-gfx-chip');
+      const more = Math.max(0, chipEls.length - 1);
+      if (chipEls[0]) chipEls[0].setAttribute('data-more', more ? `ほか${more}` : '');
+      for (const [mini, row, one] of [[false, false, false], [true, false, false], [true, true, false], ...(more ? [[true, false, true]] : [])]) {
         box.classList.toggle('mini', mini);
+        box.classList.toggle('row', row);
+        box.classList.toggle('one', one);
         for (const left of [false, true]) {
           box.classList.toggle('left', left);
           for (const t of tops) {
             box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`;
             if (!growthFxChipSpotBusy(box)) {
-              box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${left ? 'left-' : ''}${t}`;
+              box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${row ? 'row-' : ''}${one ? 'one-' : ''}${left ? 'left-' : ''}${t}`;
               return;
             }
           }
         }
       }
-      box.classList.remove('left');
-      box.style.top = `calc(env(safe-area-inset-top, 0px) + ${GROWTH_FX_CHIP_TOPS[1]}px)`;
-      box.dataset.growthFxChipsTop = 'mini-busy';
+      let best = null;
+      for (const [row, one] of [[false, false], [true, false], ...(more ? [[false, true]] : [])]) for (const left of [false, true]) {
+        box.classList.toggle('row', row);
+        box.classList.toggle('one', one);
+        box.classList.toggle('left', left);
+        for (const t of tops) {
+          box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`;
+          const sc = growthFxChipSpotScore(box);
+          if (!best || sc < best.sc) best = {
+            sc,
+            left,
+            t,
+            row,
+            one
+          };
+        }
+      }
+      box.classList.toggle('row', !!(best && best.row));
+      box.classList.toggle('one', !!(best && best.one));
+      box.classList.toggle('left', !!(best && best.left));
+      box.style.top = `calc(env(safe-area-inset-top, 0px) + ${best ? best.t : GROWTH_FX_CHIP_TOPS[1]}px)`;
+      box.dataset.growthFxChipsTop = `mini-busy${best ? `-${best.left ? 'left-' : ''}${best.t}` : ''}`;
     };
     place();
+    let tm = null;
+    const mo = typeof MutationObserver === 'function' ? new MutationObserver(list => {
+      if (list.every(m => ref.current && ref.current.contains(m.target))) return;
+      if (tm) return;
+      tm = setTimeout(() => {
+        tm = null;
+        place();
+      }, 50);
+    }) : null;
+    if (mo && document.body) mo.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+    const onAnimEnd = e => {
+      if (ref.current && ref.current.contains(e.target)) return;
+      if (tm) return;
+      tm = setTimeout(() => {
+        tm = null;
+        place();
+      }, 50);
+    };
+    document.addEventListener('animationend', onAnimEnd, true);
+    document.addEventListener('transitionend', onAnimEnd, true);
     const t1 = setTimeout(place, 500),
-      t2 = setTimeout(place, 1500);
+      t2 = setTimeout(place, 1500),
+      iv = setInterval(place, 700);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
+      clearInterval(iv);
+      if (tm) clearTimeout(tm);
+      if (mo) mo.disconnect();
+      document.removeEventListener('animationend', onAnimEnd, true);
+      document.removeEventListener('transitionend', onAnimEnd, true);
     };
   }, [count]);
   return React.createElement("div", {
@@ -91239,8 +91360,18 @@ const RHYTHM_BEAT_PRESENCE_KIND = Object.freeze({
   busy: {
     tag: '🎮 部屋で遊び中',
     color: '#a78bfa'
+  },
+  private: {
+    tag: '🔑 プライベート中',
+    color: '#fbbf24'
   }
 });
+const rhythmBeatFriendFramed = (f, resolve) => !!(f && typeof ProfileAvatar === 'function' && typeof resolve === 'function');
+const rhythmBeatFriendFrameId = f => f && f.profileFrame && f.profileFrame !== 'none' ? f.profileFrame : null;
+const rhythmBeatFriendFace = f => React.createElement("span", {
+  className: "grid h-full w-full place-items-center rounded-full bg-slate-800 text-xs",
+  "aria-hidden": "true"
+}, "🙂");
 function RhythmBeatPresenceStrip({
   assistants = [],
   friends = [],
@@ -91317,7 +91448,20 @@ function RhythmBeatPresenceStrip({
         id: f.otherId
       }),
       className: "flex w-[58px] shrink-0 flex-col items-center rounded-xl bg-sky-500/10 pt-1 text-center active:scale-95"
-    }, face(f.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(f.icon) : '', k.color, '🙂', 'friend'), React.createElement("b", {
+    }, rhythmBeatFriendFramed(f, resolveIconUrl) ? React.createElement("span", {
+      "data-rhythm-beat-presence-face": "friend",
+      "data-rhythm-beat-presence-framed": rhythmBeatFriendFrameId(f) || undefined,
+      className: "block h-11 w-11 shrink-0"
+    }, React.createElement(ProfileAvatar, {
+      src: f.icon ? resolveIconUrl(f.icon) : '',
+      id: f.icon,
+      frameId: rhythmBeatFriendFrameId(f),
+      small: true,
+      fit: true,
+      alt: "",
+      className: "h-11 w-11",
+      fallback: rhythmBeatFriendFace(f)
+    })) : face(f.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(f.icon) : '', k.color, '🙂', 'friend'), React.createElement("b", {
       "data-rhythm-beat-presence-mark": "friend",
       className: "mt-0.5 block whitespace-nowrap rounded bg-sky-300 px-1 text-[8px] font-black leading-tight text-slate-950"
     }, "フレンド"), React.createElement("b", {
@@ -91330,52 +91474,121 @@ function RhythmBeatPresenceStrip({
     }, k.tag));
   }))));
 }
-function RhythmBeatPresenceButton({
+function RhythmBeatVisitorFaces({
   assistants = [],
   friends = [],
-  onOpen,
-  resolveIconUrl
+  max = 3,
+  size = 26,
+  where = '',
+  names = false,
+  onPick,
+  onMore,
+  resolveIconUrl,
+  className = ''
 }) {
-  const faces = [...assistants.map(a => ({
-    key: `a-${a.id}`,
+  const items = [...assistants.map(a => ({
+    kind: 'assistant',
+    id: a.id,
+    name: a.name,
     src: rhythmBeatAssistantFace(a.id),
-    color: '#f472b6',
-    round: 'rounded-full'
+    color: '#f472b6'
   })), ...friends.map(f => ({
-    key: `f-${f.otherId}`,
+    kind: 'friend',
+    id: f.otherId,
+    name: f.userName,
+    f,
     src: f.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(f.icon) : '',
-    color: (RHYTHM_BEAT_PRESENCE_KIND[f.kind] || RHYTHM_BEAT_PRESENCE_KIND.here).color,
-    round: 'rounded-md'
+    color: (RHYTHM_BEAT_PRESENCE_KIND[f.kind] || RHYTHM_BEAT_PRESENCE_KIND.here).color
   }))];
-  return React.createElement("button", {
-    type: "button",
-    "data-rhythm-beat-presence-open": true,
-    "aria-label": `いまモンヒロビートにいる人(${faces.length}人)を見る`,
-    onClick: onOpen,
-    className: "flex min-h-[44px] shrink-0 items-center gap-1 rounded-xl border border-amber-300/60 bg-indigo-950/80 px-1.5 active:scale-95"
-  }, React.createElement("span", {
-    className: "flex items-center pl-1.5",
-    "aria-hidden": "true"
-  }, faces.slice(0, 3).map((f, i) => React.createElement("span", {
-    key: f.key,
-    className: `-ml-1.5 block h-7 w-7 overflow-hidden border-2 bg-slate-900 ${f.round} ${i >= 2 ? 'max-[359px]:hidden' : ''}`,
-    style: {
-      borderColor: f.color
+  if (!items.length) return null;
+  const shown = items.slice(0, max);
+  const rest = items.length - shown.length;
+  const tap = fn => e => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (typeof Audio_ !== 'undefined' && Audio_.fgSe) Audio_.fgSe.tap();
+    fn();
+  };
+  const key = fn => e => {
+    if (e.key === 'Enter' || e.key === ' ') tap(fn)(e);
+  };
+  const px = `${size}px`;
+  return React.createElement("span", {
+    "data-rhythm-beat-visitors": where,
+    className: `flex items-center ${className}`,
+    onClick: e => e.stopPropagation()
+  }, shown.map(it => React.createElement("span", {
+    key: `${it.kind}-${it.id}`,
+    role: "button",
+    tabIndex: 0,
+    "aria-label": `${it.kind === 'assistant' ? '助手' : 'フレンド'} ${it.name}`,
+    "data-rhythm-beat-visitor": it.kind,
+    "data-rhythm-beat-visitor-id": it.id,
+    "data-rhythm-beat-visitor-kind": it.kind === 'friend' ? it.f.kind : 'practice',
+    onClick: tap(() => onPick({
+      kind: it.kind,
+      id: it.id
+    })),
+    onKeyDown: key(() => onPick({
+      kind: it.kind,
+      id: it.id
+    })),
+    className: `relative shrink-0 cursor-pointer active:scale-90 ${names ? 'flex flex-col items-center' : 'block'}`,
+    style: names ? {
+      width: `${size + 18}px`
+    } : {
+      width: px,
+      height: px
     }
-  }, f.src ? React.createElement("img", {
-    src: f.src,
+  }, React.createElement("span", {
+    className: "relative block shrink-0",
+    style: {
+      width: px,
+      height: px
+    }
+  }, it.kind === 'friend' && rhythmBeatFriendFramed(it.f, resolveIconUrl) ? React.createElement("span", {
+    "data-rhythm-beat-presence-face": "friend",
+    "data-rhythm-beat-presence-framed": rhythmBeatFriendFrameId(it.f) || undefined,
+    className: "block h-full w-full"
+  }, React.createElement(ProfileAvatar, {
+    src: it.src,
+    id: it.f.icon,
+    frameId: rhythmBeatFriendFrameId(it.f),
+    small: true,
+    fit: true,
+    alt: "",
+    className: "h-full w-full",
+    fallback: rhythmBeatFriendFace(it.f)
+  })) : React.createElement("span", {
+    "data-rhythm-beat-presence-face": it.kind,
+    className: `block h-full w-full overflow-hidden border-2 bg-slate-900 shadow ${it.kind === 'assistant' ? 'rounded-full' : 'rounded-md'}`,
+    style: {
+      borderColor: it.color
+    }
+  }, it.src ? React.createElement("img", {
+    src: it.src,
     alt: "",
     draggable: false,
     className: "h-full w-full object-cover"
   }) : React.createElement("span", {
-    className: "grid h-full w-full place-items-center text-xs"
-  }, "🙂")))), React.createElement("span", {
-    className: "flex flex-col items-center leading-none"
-  }, React.createElement("small", {
-    className: "block whitespace-nowrap text-[8.5px] font-black text-amber-200"
-  }, "いる人"), React.createElement("b", {
-    className: "block whitespace-nowrap text-[13px] font-black text-white"
-  }, faces.length)));
+    className: "grid h-full w-full place-items-center text-xs",
+    "aria-hidden": "true"
+  }, "🙂"))), names && React.createElement("b", {
+    "data-rhythm-beat-visitor-name": true,
+    className: "block w-full truncate text-center text-[8px] font-black leading-[9px] text-slate-950"
+  }, it.name))), rest > 0 && React.createElement("span", {
+    role: "button",
+    tabIndex: 0,
+    "data-rhythm-beat-visitors-more": where,
+    "aria-label": `ほか${rest}人を見る`,
+    onClick: tap(onMore),
+    onKeyDown: key(onMore),
+    className: "grid shrink-0 cursor-pointer place-items-center rounded-full border-2 border-white/70 bg-slate-900/90 text-[10px] font-black text-white active:scale-90",
+    style: {
+      width: px,
+      height: px
+    }
+  }, "+", rest));
 }
 function RhythmBeatPresenceList({
   open,
@@ -91423,9 +91636,9 @@ function RhythmBeatPresenceSheet({
   const name = isAssistant ? who && who.name || '助手' : friend && friend.userName || 'フレンド';
   const k = !isAssistant && friend ? RHYTHM_BEAT_PRESENCE_KIND[friend.kind] || RHYTHM_BEAT_PRESENCE_KIND.here : null;
   const src = isAssistant ? rhythmBeatAssistantFace(pick.id) : friend && friend.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(friend.icon) : '';
-  const title = isAssistant ? `${name} は いま練習中` : friend && friend.kind === 'room' ? `${name} さんが部屋を開いています` : friend && friend.kind === 'busy' ? `${name} さんは部屋で遊び中` : `${name} さんが いまモンヒロビートにいます`;
+  const title = isAssistant ? `${name} は いま練習中` : friend && friend.kind === 'room' ? `${name} さんが部屋を開いています` : friend && friend.kind === 'busy' ? `${name} さんは部屋で遊び中` : friend && friend.kind === 'private' ? `${name} さんは合言葉の部屋にいます` : `${name} さんが いまモンヒロビートにいます`;
   const sub = isAssistant ? 'モンヒロビートにいるあいだは券なし' : friend && friend.kind === 'room' && friend.room ? `フリーマッチ ${friend.room.n}/${RHYTHM_MULTI_ROOM_MAX}人${friend.room.ph === 'select' ? '・曲えらび中' : '・待合い'}` : k ? k.tag : '';
-  const line = isAssistant ? 'フリーマッチかプライベートの部屋で「呼ぶ」と、セッション券なしで一緒に演奏できます(何曲でも)。ソロライブには来られません。' : friend && friend.kind === 'room' ? '「入る」で、その部屋へ入れます。' : friend && friend.kind === 'busy' ? '合言葉の部屋か、演奏中の部屋にいるので、いまは入れません。部屋に誘ってもらうか、終わってから誘ってみましょう。' : '部屋を作って 💌 で誘うと、一緒に遊べます。';
+  const line = isAssistant ? 'フリーマッチかプライベートの部屋で「呼ぶ」と、セッション券なしで一緒に演奏できます(何曲でも)。ソロライブには来られません。' : friend && friend.kind === 'room' ? '「入る」で、その部屋へ入れます。' : friend && friend.kind === 'busy' ? '合言葉の部屋か、演奏中の部屋にいるので、いまは入れません。部屋に誘ってもらうか、終わってから誘ってみましょう。' : friend && friend.kind === 'private' ? '合言葉(プライベート)の部屋にいるので、いまは入れません。合言葉を教えてもらうか、終わってから誘ってみましょう。' : '部屋を作って 💌 で誘うと、一緒に遊べます。';
   const action = isAssistant ? {
     label: '部屋を作って呼ぶ',
     go: () => onCallAssistant(pick.id)
@@ -91452,7 +91665,18 @@ function RhythmBeatPresenceSheet({
     }
   }, React.createElement("div", {
     className: "flex items-center gap-2.5"
-  }, React.createElement("span", {
+  }, !isAssistant && rhythmBeatFriendFramed(friend, resolveIconUrl) ? React.createElement("span", {
+    "data-rhythm-beat-presence-sheet-framed": rhythmBeatFriendFrameId(friend) || 'none',
+    className: "block h-[52px] w-[52px] shrink-0"
+  }, React.createElement(ProfileAvatar, {
+    src: src,
+    id: friend.icon,
+    frameId: rhythmBeatFriendFrameId(friend),
+    fit: true,
+    alt: "",
+    className: "h-[52px] w-[52px]",
+    fallback: rhythmBeatFriendFace(friend)
+  })) : React.createElement("span", {
     className: "block h-[52px] w-[52px] shrink-0 overflow-hidden rounded-full border-2 bg-slate-950",
     style: {
       borderColor: accent
@@ -91693,6 +91917,11 @@ function RhythmMultiAwayBar({
       roomWaitingSetRef.current = false;
     }
   }, [roomWaiting]);
+  const inPrivate = !!view && view.mode === 'private';
+  React.useEffect(() => {
+    if (typeof friendsSetRoomPrivate !== 'function') return;
+    friendsSetRoomPrivate(inPrivate);
+  }, [inPrivate]);
   React.useEffect(() => {
     if (!shown) {
       seenRef.current = null;
@@ -92453,7 +92682,8 @@ function ModeSelectAssistantPanel({
   assistant,
   showArt,
   showComment,
-  onToggle
+  onToggle,
+  artCorner = null
 }) {
   const [artRatio, setArtRatio] = React.useState(null);
   const artSrc = assistant && assistant.image;
@@ -92482,7 +92712,7 @@ function ModeSelectAssistantPanel({
     onToggle: onToggle,
     cls: "mhms-art-toggles absolute bottom-1.5 right-1.5 z-20",
     withLabel: false
-  }), React.createElement("div", {
+  }), artCorner, React.createElement("div", {
     className: "mhms-float pointer-events-none absolute inset-0"
   }, RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id] ? (() => {
     const fr = RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id];
@@ -93199,7 +93429,8 @@ function RhythmMultiScreen({
     const order = {
       room: 0,
       here: 1,
-      busy: 2
+      busy: 2,
+      private: 3
     };
     return (roster || []).map(f => {
       const room = by[f.otherId];
@@ -93217,6 +93448,10 @@ function RhythmMultiScreen({
       if (p.place === 'multi' || p.place === 'rhythmPlay') return {
         ...f,
         kind: 'busy'
+      };
+      if (p.place === 'roomPrivate') return {
+        ...f,
+        kind: 'private'
       };
       return null;
     }).filter(Boolean).map((f, i) => [f, i]).sort(([a, ia], [b, ib]) => order[a.kind] - order[b.kind] || ia - ib).map(([f]) => f);
@@ -93665,7 +93900,7 @@ function RhythmMultiScreen({
     }, "⏹", React.createElement("br", null), "終了") : '←'), React.createElement("div", {
       className: "min-w-0 flex-1 leading-none"
     }, React.createElement("small", {
-      className: "block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300"
+      className: "block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300 max-[359px]:tracking-normal"
     }, "MONBEAT ・ SELECT MODE"), React.createElement("b", {
       className: "mhms-title block truncate text-lg font-black leading-tight tracking-wider"
     }, "モードえらび"), (ms.beatPointText || Number.isFinite(ms.beatRankXp)) && React.createElement("div", {
@@ -93694,15 +93929,7 @@ function RhythmMultiScreen({
       kind: "beat",
       xp: ms.beatRankXp,
       size: "xs"
-    })))), ms.multi && (beatAssistants.length > 0 || beatFriends.length > 0) && React.createElement(RhythmBeatPresenceButton, {
-      assistants: beatAssistants,
-      friends: beatFriends,
-      resolveIconUrl: resolveIconUrl,
-      onOpen: () => {
-        Audio_.fgSe.tap();
-        setBeatListOpen(true);
-      }
-    }), quickRunInfo && React.createElement(RhythmQuickRunPill, {
+    })))), quickRunInfo && React.createElement(RhythmQuickRunPill, {
       info: quickRunInfo,
       onRestart: onRestartQuickRun,
       onResume: onResumeQuickRun,
@@ -93724,7 +93951,21 @@ function RhythmMultiScreen({
       assistant: ms.assistant,
       showArt: ms.showArt,
       showComment: ms.showComment,
-      onToggle: ms.onToggleAssistant
+      onToggle: ms.onToggleAssistant,
+      artCorner: ms.multi && beatAssistants.length > 0 && ms.assistant && ms.showArt ? React.createElement("span", {
+        "data-rhythm-beat-art-corner": true,
+        className: "absolute left-1.5 top-1.5 z-20 flex flex-col items-start gap-0.5"
+      }, React.createElement("small", {
+        className: "rounded-full bg-pink-500/90 px-1.5 text-[9px] font-black leading-[14px] text-white shadow"
+      }, "🎤 練習中"), React.createElement(RhythmBeatVisitorFaces, {
+        where: "art",
+        assistants: beatAssistants,
+        max: 3,
+        size: 32,
+        className: "flex-col gap-1",
+        onPick: setBeatPick,
+        onMore: () => setBeatListOpen(true)
+      })) : null
     }), React.createElement("div", {
       className: "shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2"
     }, !(ms.assistant && (ms.showArt || ms.showComment)) && assistToggles('justify-end', true), friendsOn && friendInvites.length > 0 && React.createElement("section", {
@@ -93779,7 +94020,18 @@ function RhythmMultiScreen({
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "mhms-mark"
-    }, "FREE MATCH"), React.createElement("span", {
+    }, "FREE MATCH"), React.createElement(RhythmBeatVisitorFaces, {
+      where: "free",
+      assistants: ms.assistant && ms.showArt ? [] : beatAssistants,
+      friends: beatFriends,
+      max: 2,
+      size: 20,
+      names: true,
+      className: "absolute right-1 top-0.5 z-10 items-start landscape:hidden",
+      onPick: setBeatPick,
+      onMore: () => setBeatListOpen(true),
+      resolveIconUrl: resolveIconUrl
+    }), React.createElement("span", {
       "aria-hidden": "true",
       className: "mhms-ico relative text-3xl leading-none max-[359px]:text-2xl"
     }, "🎮"), React.createElement("span", {
@@ -93788,7 +94040,18 @@ function RhythmMultiScreen({
       className: "block text-[18px] font-black italic leading-tight"
     }, "フリーマッチ"), React.createElement("small", {
       className: "block text-[10px] font-black leading-tight text-slate-900/80"
-    }, "だれとでも最大", RHYTHM_MULTI_ROOM_MAX, "人で協力"), React.createElement(RhythmMultiLobbyCount, null))), ms.multi && React.createElement("button", {
+    }, "だれとでも最大", RHYTHM_MULTI_ROOM_MAX, "人で協力"), React.createElement(RhythmMultiLobbyCount, null), React.createElement(RhythmBeatVisitorFaces, {
+      where: "free-row",
+      assistants: ms.assistant && ms.showArt ? [] : beatAssistants,
+      friends: beatFriends,
+      max: 3,
+      size: 22,
+      names: true,
+      className: "relative z-10 mt-0.5 hidden items-start landscape:flex",
+      onPick: setBeatPick,
+      onMore: () => setBeatListOpen(true),
+      resolveIconUrl: resolveIconUrl
+    }))), ms.multi && React.createElement("button", {
       "data-rhythm-mode-private": true,
       "data-rhythm-mode-private-open": true,
       type: "button",
@@ -106599,6 +106862,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-hdr{position:relative;z-index:5;padding:8px 12px 6px;background:linear-gradient(180deg,#140b2ef2,#140b2ecc 75%,#140b2e00)}
 .mhl-en{font-size:9px;letter-spacing:.18em;font-weight:900;color:#f9a8d4}
 .mhl-ti{font-size:22px;font-weight:900;line-height:1.05;background:linear-gradient(90deg,#fff,#fbcfe8 60%,#fde68a);-webkit-background-clip:text;background-clip:text;color:transparent}
+.mhl-quick{display:flex;align-items:center;gap:5px;border-radius:999px;padding:3px 4px 3px 9px;border:1px solid #fbbf2488;background:rgba(15,23,42,.78);font-size:10.5px;font-weight:900;color:#fde68a}.mhl-quick b{color:#fff}.mhl-quick button{min-height:26px;border-radius:999px;padding:0 9px;background:#334155;color:#e2e8f0;font-size:10.5px;font-weight:900;border:1px solid #64748b}.mhl-quick.is-start{padding:3px 10px;min-height:30px;background:linear-gradient(90deg,#f59e0b,#ea580c);color:#fff;border-color:#fde68a}
 .mhl-clock{border-radius:12px;padding:3px 8px;border:1px solid #ffffff33;background:rgba(15,23,42,.72);text-align:right}
 .mhl-chip{display:inline-flex;align-items:center;gap:3px;background:linear-gradient(90deg,#be185d,#f59e0b);padding:1px 8px;border-radius:999px;font-size:10px;font-weight:900;white-space:nowrap}
 .mhl-bar{flex:1;height:7px;border-radius:9px;background:#ffffff1f;overflow:hidden}.mhl-bar>i{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fbbf24)}
@@ -107636,20 +107900,85 @@ function AssistantLifeScene({
     onClick: onClose
   }, "🏡 家へ戻る")));
 }
-const useAssistantLifeLand = () => {
-  const get = () => typeof window !== 'undefined' && window.innerWidth > window.innerHeight && window.innerHeight < 600;
-  const [land, setLand] = React.useState(get);
+const assistantLifeViewSize = () => {
+  if (typeof window === 'undefined') return {
+    w: 390,
+    h: 844,
+    rot: false
+  };
+  const rot = typeof RHYTHM_VIEW_ROTATION === 'object' && !!RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.active === 'function' && RHYTHM_VIEW_ROTATION.active();
+  return rot ? {
+    w: window.innerHeight,
+    h: window.innerWidth,
+    rot: true
+  } : {
+    w: window.innerWidth,
+    h: window.innerHeight,
+    rot: false
+  };
+};
+const useAssistantLifeViewSize = () => {
+  const [size, setSize] = React.useState(assistantLifeViewSize);
   React.useEffect(() => {
-    const f = () => setLand(get());
+    const f = () => setSize(prev => {
+      const n = assistantLifeViewSize();
+      return n.w === prev.w && n.h === prev.h && n.rot === prev.rot ? prev : n;
+    });
     window.addEventListener('resize', f);
     window.addEventListener('orientationchange', f);
+    const id = setInterval(f, 500);
     return () => {
       window.removeEventListener('resize', f);
       window.removeEventListener('orientationchange', f);
+      clearInterval(id);
     };
   }, []);
-  return land;
+  return size;
 };
+const useAssistantLifeLand = () => {
+  const v = useAssistantLifeViewSize();
+  return v.w > v.h && v.h < 600;
+};
+function AssistantLifeQuickChip({
+  quickRun,
+  onStop,
+  onStart,
+  land
+}) {
+  if (!quickRun || typeof quickRun !== 'object') return null;
+  const loops = Number.isFinite(Number(quickRun.loops)) ? Math.max(1, Math.floor(Number(quickRun.loops))) : 1;
+  if (quickRun.live) {
+    return React.createElement("div", {
+      className: "mhl-quick shrink-0 self-center",
+      "data-assistant-life-quick": "live",
+      "data-assistant-life-quick-run": "live",
+      "data-assistant-life-quick-loop": loops
+    }, React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "⚡ 裏クイック ", React.createElement("b", null, loops, "周目")), onStop && React.createElement("button", {
+      type: "button",
+      "data-assistant-life-quick-stop": true,
+      onClick: onStop,
+      "aria-label": "裏クイックを止める"
+    }, "止める"));
+  }
+  if (quickRun.canStart && onStart) {
+    return React.createElement("div", {
+      className: "shrink-0 self-center",
+      "data-assistant-life-quick": "start",
+      "data-assistant-life-quick-run": "stopped"
+    }, React.createElement("button", {
+      type: "button",
+      className: "mhl-quick is-start",
+      "data-assistant-life-quick-start": true,
+      onClick: onStart,
+      "aria-label": "裏クイックを始める"
+    }, React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "▶ 裏クイック")));
+  }
+  return null;
+}
 function AssistantLifeHouse({
   metIds,
   onReplay,
@@ -107658,7 +107987,11 @@ function AssistantLifeHouse({
   bondLevelOf = null,
   furnItems = null,
   onGiveFurn = null,
-  onGiveSolo = null
+  onGiveSolo = null,
+  quickRun = null,
+  onQuickRunStop = null,
+  onQuickRunStart = null,
+  quickRunStrip = null
 }) {
   const st = useAssistantLifeNow(metIds);
   const diary = useAssistantLifeDiary();
@@ -107675,12 +108008,7 @@ function AssistantLifeHouse({
   const [masmonId, setMasmonId] = React.useState(null);
   const [intro, setIntro] = React.useState(null);
   const [boardOpen, setBoardOpen] = React.useState(false);
-  const [vw, setVw] = React.useState(() => typeof window !== 'undefined' ? window.innerWidth : 390);
-  React.useEffect(() => {
-    const f = () => setVw(window.innerWidth);
-    window.addEventListener('resize', f);
-    return () => window.removeEventListener('resize', f);
-  }, []);
+  const vw = useAssistantLifeViewSize().w;
   React.useEffect(() => {
     let alive = true;
     (async () => {
@@ -108089,6 +108417,11 @@ function AssistantLifeHouse({
     } : undefined
   }, "助手ライフ")), React.createElement("div", {
     className: "min-w-0 flex-1"
+  }), !quickRunStrip && React.createElement(AssistantLifeQuickChip, {
+    quickRun: quickRun,
+    onStop: onQuickRunStop,
+    onStart: onQuickRunStart,
+    land: land
   }), typeof TimeOfDayClock === 'function' && React.createElement("div", {
     className: "ml-auto shrink-0 self-center",
     "data-assistant-life-clock-box": true
@@ -108304,10 +108637,16 @@ function AssistantLifeHouse({
     }
   }, tabBody), React.createElement("div", {
     className: "flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2"
-  }, header, note && React.createElement("p", {
+  }, header, quickRunStrip && React.createElement("div", {
+    className: "shrink-0",
+    "data-assistant-life-quick-strip": true
+  }, quickRunStrip), note && React.createElement("p", {
     "data-assistant-life-note": true,
     className: "rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1 text-[10.5px] font-bold text-sky-100"
-  }, note), tiles, icons)) : React.createElement(React.Fragment, null, header, React.createElement("div", {
+  }, note), tiles, icons)) : React.createElement(React.Fragment, null, header, quickRunStrip && React.createElement("div", {
+    className: "relative z-[3] shrink-0",
+    "data-assistant-life-quick-strip": true
+  }, quickRunStrip), React.createElement("div", {
     className: "mhl-body"
   }, note && React.createElement("p", {
     "data-assistant-life-note": true,
@@ -121754,6 +122093,21 @@ const assistantLifeSoloLine = (who, g, like, rand = Math.random) => {
     t: String(pick.t).split('{item}').join(g.name)
   } : null;
 };
+const assistantLifeAddBondWithFx = (who, actionKey, amount) => {
+  if (typeof assistantPeerPlayerBondAdder === 'undefined' || !assistantPeerPlayerBondAdder) return;
+  const before = assistantLifeBondPointsOf(who);
+  try {
+    assistantPeerPlayerBondAdder(who, actionKey, amount);
+  } catch {
+    return;
+  }
+  const after = assistantLifeBondPointsOf(who);
+  if (Number.isFinite(before) && Number.isFinite(after) && after > before && typeof growthFxAssistantBond === 'function') {
+    try {
+      growthFxAssistantBond(who, before, after);
+    } catch {}
+  }
+};
 const assistantLifeSoloGive = async (who, kind, rand = Math.random) => {
   await ASSISTANT_LIFE_GIFT_STORE.load();
   const g = assistantLifeGiftOf(kind);
@@ -121800,11 +122154,7 @@ const assistantLifeSoloGive = async (who, kind, rand = Math.random) => {
   }
   const like = assistantLifeGiftLike(who, g.key);
   const amount = assistantLifeSoloAmount(who, g.key);
-  if (typeof assistantPeerPlayerBondAdder !== 'undefined' && assistantPeerPlayerBondAdder) {
-    try {
-      assistantPeerPlayerBondAdder(who, 'lifeGift', amount);
-    } catch {}
-  }
+  assistantLifeAddBondWithFx(who, 'lifeGift', amount);
   if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`${typeof assistantLifeName === 'function' ? assistantLifeName(who) : who}に${g.name}を贈った`, [who], {
     kind: 'give'
   });
@@ -122739,11 +123089,7 @@ const assistantLifeFurnGive = async (who, key) => {
     storeSet(ASSISTANT_LIFE_GIFT_LIKES_KEY, likes, false);
   } catch {}
   const amount = assistantLifeFurnAmount(who, key);
-  if (typeof assistantPeerPlayerBondAdder !== 'undefined' && assistantPeerPlayerBondAdder) {
-    try {
-      assistantPeerPlayerBondAdder(who, 'lifeFurn', amount);
-    } catch {}
-  }
+  assistantLifeAddBondWithFx(who, 'lifeFurn', amount);
   const f = assistantLifeFurnOf(key);
   if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`${typeof assistantLifeName === 'function' ? assistantLifeName(who) : who}の部屋に${f.name}を贈った`, [who], {
     kind: 'give'
@@ -127160,6 +127506,7 @@ const alfBuildHouse = (life, metIds) => {
       d: ASSISTANT_LIFE_DOINGS[w.doing] ? w.doing : 'idle',
       m: ASSISTANT_LIFE_MOODS[m] ? m : 'happy'
     };
+    if (w.place !== 'home' && typeof ASSISTANT_LIFE_PLACES !== 'undefined' && ASSISTANT_LIFE_PLACES[w.place]) r[id].p = w.place;
     try {
       const put = typeof assistantLifeRoomOf === 'function' ? assistantLifeRoomOf(id).put : null;
       const fu = {};
@@ -127361,6 +127708,7 @@ const assistantLifeFriendNormalizeHouse = raw => {
       d: typeof x.d === 'string' && ASSISTANT_LIFE_DOINGS[x.d] ? x.d : 'idle',
       m: typeof x.m === 'string' && ASSISTANT_LIFE_MOODS[x.m] ? x.m : 'happy'
     };
+    if (r[id].at === 'out' && typeof x.p === 'string' && x.p !== 'home' && typeof ASSISTANT_LIFE_PLACES !== 'undefined' && ASSISTANT_LIFE_PLACES[x.p]) r[id].p = x.p;
     const furn = typeof ASSISTANT_LIFE_FURNITURE !== 'undefined' && Array.isArray(ASSISTANT_LIFE_FURNITURE) ? ASSISTANT_LIFE_FURNITURE : [];
     if (x.fu && typeof x.fu === 'object') {
       const fu = {};
@@ -128866,6 +129214,13 @@ function AlfSceneSheet({
   }, "とじる"))));
 }
 const ALF_PLAYER_REPLIES = Object.freeze(['こんにちは！', 'おじゃましてます', 'すてきな部屋だね']);
+const alfNoBreak = text => {
+  const parts = String(text || '').split('。').filter(Boolean);
+  return parts.map((x, i) => React.createElement("span", {
+    key: i,
+    className: "whitespace-nowrap"
+  }, x, i < parts.length - 1 || /。$/.test(text) ? '。' : ''));
+};
 const alfRoomsOf = house => {
   const rooms = {};
   for (const id of ALF_IDS) {
@@ -128875,7 +129230,9 @@ const alfRoomsOf = house => {
       continue;
     }
     const doing = (ASSISTANT_LIFE_DOINGS[r.d] || {}).label || 'のんびり';
-    if (r.at !== 'home') rooms[id] = {
+    if (r.at !== 'home') rooms[id] = r.p && typeof assistantLifePlaceShow === 'function' ? {
+      tag: [`${typeof ASSISTANT_LIFE_PLACE_ICON !== 'undefined' && ASSISTANT_LIFE_PLACE_ICON[r.p] || '🚶'} ${assistantLifePlaceShow(r.p)}へ`, doing]
+    } : {
       tag: ['🚶 おでかけ中', 'いまは家にいない']
     };else if (r.d === 'sleep') rooms[id] = {
       in: [id],
@@ -128928,16 +129285,13 @@ function AlfFriendHouseView({
       alive = false;
     };
   }, []);
-  const [vw, setVw] = React.useState(() => typeof window !== 'undefined' ? window.innerWidth : 390);
-  const [vh, setVh] = React.useState(() => typeof window !== 'undefined' ? window.innerHeight : 844);
-  React.useEffect(() => {
-    const on = () => {
-      setVw(window.innerWidth);
-      setVh(window.innerHeight);
-    };
-    window.addEventListener('resize', on);
-    return () => window.removeEventListener('resize', on);
-  }, []);
+  const {
+    w: vw,
+    h: vh
+  } = typeof useAssistantLifeViewSize === 'function' ? useAssistantLifeViewSize() : {
+    w: 390,
+    h: 844
+  };
   React.useEffect(() => {
     if (friend && friend.id) void alfFetchMore(friend.id);
   }, [friend && friend.id]);
@@ -129197,7 +129551,7 @@ function AlfFriendHouseView({
   }, alfTheirLabel(friend.name, roomId), "の部屋"), React.createElement("p", {
     className: "text-[11px] font-bold text-slate-200",
     "data-alf-visit-room-state": roomState
-  }, roomState === 'out' ? '🚶 いまはおでかけ中。部屋は見られます' : roomState === 'sleep' ? '💤 すやすや…起こさないように、そっと見るだけ' : `🏠 部屋で${(ASSISTANT_LIFE_DOINGS[r0.d] || {}).label || 'のんびり'}`)), React.createElement("button", {
+  }, alfNoBreak(roomState === 'out' ? r0.p && typeof assistantLifePlaceShow === 'function' ? `${typeof ASSISTANT_LIFE_PLACE_ICON !== 'undefined' && ASSISTANT_LIFE_PLACE_ICON[r0.p] || '🚶'} ${assistantLifePlaceShow(r0.p)}へおでかけ中。部屋は見られます` : '🚶 いまはおでかけ中。部屋は見られます' : roomState === 'sleep' ? '💤 すやすや…起こさないように、そっと見るだけ' : `🏠 部屋で${(ASSISTANT_LIFE_DOINGS[r0.d] || {}).label || 'のんびり'}`))), React.createElement("button", {
     type: "button",
     "data-mhl-sheet-close": true,
     className: "shrink-0 rounded-xl border border-slate-500 px-3 py-1.5 text-[12px] font-black text-slate-100",
@@ -129208,7 +129562,7 @@ function AlfFriendHouseView({
   }, "とじる")), React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-200",
     "data-alf-visit-furn": true
-  }, "🪑 置いている家具: ", furnNames(roomId).length ? furnNames(roomId).join('・') : 'まだ無し'), keptNames(roomId).length > 0 && React.createElement("p", {
+  }, "🪑 贈られた家具: ", furnNames(roomId).length ? furnNames(roomId).join('・') : 'まだありません'), keptNames(roomId).length > 0 && React.createElement("p", {
     className: "mt-0.5 text-[10.5px] text-slate-300",
     "data-alf-visit-kept": true
   }, "📦 押し入れ: ", keptNames(roomId).join('・')), masmonOf(roomId).length > 0 && React.createElement("p", {
@@ -144727,7 +145081,8 @@ const CardQuickRunDetail = ({
   autoReady,
   autoDifficulty,
   todayLoops = 0,
-  onClose
+  onClose,
+  note = null
 }) => {
   const live = !!quickRun && !quickRun.stopped;
   const row = (label, value, tone = 'text-white') => React.createElement("div", {
@@ -144764,10 +145119,10 @@ const CardQuickRunDetail = ({
     className: `shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-black ${!quickRun ? 'border-white/20 text-slate-300' : live ? 'border-fuchsia-300/50 text-fuchsia-100' : 'border-rose-400/70 text-rose-200'}`
   }, !quickRun ? '回していません' : live ? `${quickRun.loops}周目` : '止まっています')), React.createElement("div", {
     className: "mt-2 rounded-2xl bg-black/30 px-3 py-1"
-  }, row('いまのようす', !quickRun ? 'いまは回していません' : live ? `回しています(WAVE ${wave || 1}/10)` : '止まっています', live ? 'text-fuchsia-100' : !quickRun ? 'text-slate-300' : 'text-rose-200'), quickRun && !live && quickRun.info && quickRun.info.reason && row('止まった理由', quickRun.info.reason, 'text-rose-200'), row('難易度', quickRun && quickRun.difficulty || autoDifficulty || 'AUTO設定でまだ決まっていません', quickRun && quickRun.difficulty || autoDifficulty ? 'text-white' : 'text-amber-200'), quickRun && row('何周目', `${quickRun.loops}周目`), quickRun && row('この周回でふえたダイヤ', `+${(quickRun.gold || 0).toLocaleString()}`, 'text-emerald-200'), quickRun && row('この周回でふえた経験値', `+${(quickRun.xp || 0).toLocaleString()}`, 'text-emerald-200'), row('今日バトルカードで足した周回', `${(todayLoops || 0).toLocaleString()}周ぶん`, 'text-sky-100')), React.createElement("p", {
+  }, row('いまのようす', !quickRun ? 'いまは回していません' : live ? `回しています(WAVE ${wave || 1}/10)` : '止まっています', live ? 'text-fuchsia-100' : !quickRun ? 'text-slate-300' : 'text-rose-200'), quickRun && !live && quickRun.info && quickRun.info.reason && row('止まった理由', quickRun.info.reason, 'text-rose-200'), row('難易度', quickRun && quickRun.difficulty || autoDifficulty || 'AUTO設定でまだ決まっていません', quickRun && quickRun.difficulty || autoDifficulty ? 'text-white' : 'text-amber-200'), quickRun && row('何周目', `${quickRun.loops}周目`), quickRun && row('この周回でふえたダイヤ', `+${(quickRun.gold || 0).toLocaleString()}`, 'text-emerald-200'), quickRun && row('この周回でふえた経験値', `+${(quickRun.xp || 0).toLocaleString()}`, 'text-emerald-200'), todayLoops !== null && row('今日バトルカードで足した周回', `${(todayLoops || 0).toLocaleString()}周ぶん`, 'text-sky-100')), React.createElement("p", {
     className: "mt-2 text-[11px] font-bold leading-snug text-slate-400",
     style: JA_WRAP_STYLE
-  }, jaWrap(autoReady || quickRun ? 'フリー対戦・マルチで戦うと、その分がクイック周回として足されます。裏で回しているときは、いまの周回が進みます。' : 'AUTO設定で、勇者モン・配置距離・難易度の3つを決めると、戦った分がクイック周回として足されます。')), React.createElement("button", {
+  }, jaWrap(note || (autoReady || quickRun ? 'フリー対戦・マルチで戦うと、その分がクイック周回として足されます。裏で回しているときは、いまの周回が進みます。' : 'AUTO設定で、勇者モン・配置距離・難易度の3つを決めると、戦った分がクイック周回として足されます。'))), React.createElement("button", {
     type: "button",
     "data-card-quick-detail-close": true,
     onClick: onClose,
@@ -167908,7 +168263,12 @@ function MonsterHeroGame() {
   const isCardScreen = state => typeof state === 'string' && state.startsWith('CARD_');
   const cardMarketEntryRef = useRef(false);
   const isCardRunScreen = state => isCardScreen(state) || state === 'BREEDER_MARKET' && cardMarketEntryRef.current === true;
-  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state);
+  const ASSISTANT_LIFE_RUN_STATES = ['HOME', 'PROFILE', 'ITEM_INVENTORY'];
+  const assistantLifeOpenRef = useRef(false);
+  const assistantLifeExitingRef = useRef(false);
+  const gameStateNowRef = useRef('HOME');
+  const isAssistantLifeRunScreen = state => assistantLifeExitingRef.current || assistantLifeOpenRef.current && ASSISTANT_LIFE_RUN_STATES.includes(state);
+  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state) || isAssistantLifeRunScreen(state);
   const runBackgroundAllowedRef = useRef(false);
   const gameStateCaller = () => {
     try {
@@ -167920,6 +168280,7 @@ function MonsterHeroGame() {
     }
   };
   const setGameState = next => {
+    gameStateNowRef.current = next;
     runBackgroundAllowedRef.current = isBackgroundRunScreen(next);
     if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`);
     setGameStateRaw(next);
@@ -170511,7 +170872,13 @@ function MonsterHeroGame() {
   const [assistantLifeOpenNow, setAssistantLifeOpenNow] = useState(false);
   useEffect(() => {
     if (typeof ASSISTANT_LIFE_STORE === 'undefined') return undefined;
-    const fn = st => setAssistantLifeOpenNow(!!(st && st.open));
+    const fn = st => {
+      const open = !!(st && st.open);
+      if (!open && assistantLifeOpenRef.current && runStageRef.current && ASSISTANT_LIFE_RUN_STATES.includes(gameStateNowRef.current)) assistantLifeExitingRef.current = true;
+      assistantLifeOpenRef.current = open;
+      runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
+      setAssistantLifeOpenNow(open);
+    };
     ASSISTANT_LIFE_STORE.listeners.add(fn);
     return () => {
       ASSISTANT_LIFE_STORE.listeners.delete(fn);
@@ -173176,7 +173543,9 @@ function MonsterHeroGame() {
   const rhythmBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && RHYTHM_BACKGROUND_RUN_SCREENS.includes(gameState);
   const cardScreenOpen = isCardRunScreen(gameState);
   const cardBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && cardScreenOpen;
-  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen;
+  const assistantLifeScreenOpen = isAssistantLifeRunScreen(gameState);
+  const assistantLifeBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && assistantLifeScreenOpen;
+  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen || assistantLifeScreenOpen;
   runBackgroundAllowedRef.current = runBackgroundAllowed;
   const advanceRunStage = stage => {
     runStageRef.current = stage;
@@ -173187,7 +173556,7 @@ function MonsterHeroGame() {
     runStageRef.current = null;
     setRunStage(null);
   };
-  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun);
+  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun);
   const rhythmSongListScrollRef = useRef(0);
   const returnToBackgroundRun = () => {
     catchUpUntilRef.current = 0;
@@ -174450,8 +174819,8 @@ function MonsterHeroGame() {
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);else if (key) Audio_.playBGM(key);else Audio_.stopBGM();
   }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow]);
   useEffect(() => {
-    Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen ? 0 : seVolume);
-  }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen]);
+    Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen || assistantLifeBackgroundRun ? 0 : seVolume);
+  }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen, assistantLifeBackgroundRun]);
   useEffect(() => {
     if (!(beatRankFx || beatRankBarPlaying) || ultraEcoSession && !cardScreenOpen) return undefined;
     Audio_.setSeVolume(seVolume);
@@ -182661,6 +183030,101 @@ function MonsterHeroGame() {
     }
     setGameState(RHYTHM_MODE_PUBLIC_RELEASE ? 'HOME' : 'DEBUG_SETTINGS');
   };
+  const assistantLifeSettlingRef = useRef(false);
+  const settleAssistantLifeRun = async () => {
+    if (assistantLifeSettlingRef.current) return;
+    assistantLifeSettlingRef.current = true;
+    try {
+      if (runStageRef.current && isQuickMode(runMode) && !runResultFinishedRef.current) await handleGiveUp({
+        silent: true
+      });
+      if (runStageRef.current) {
+        const stay = gameStateNowRef.current;
+        returnToHome();
+        if (stay && stay !== 'HOME' && !isRunStage(stay)) setGameState(stay);
+      }
+    } finally {
+      assistantLifeSettlingRef.current = false;
+    }
+  };
+  useEffect(() => {
+    if (assistantLifeOpenNow || !assistantLifeExitingRef.current) return;
+    void settleAssistantLifeRun().finally(() => {
+      assistantLifeExitingRef.current = false;
+      runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
+    });
+  }, [assistantLifeOpenNow]);
+  const assistantLifeQuickRunView = () => {
+    if (!assistantLifeOpenNow) return null;
+    const canStart = autoQuickRunConfigured(autoSettings) && !!repeatTemplateFromAutoSettings() && !(runStage !== null && !runResultFinished);
+    const base = cardQuickRunView();
+    if (!base) return canStart ? {
+      live: false,
+      loops: 0,
+      stopped: true,
+      difficulty: (DIFFICULTY_SETTINGS[autoSettings.quickRun.difficulty] || quickDifficultySetting(autoSettings.quickRun.difficulty) || {}).label || null,
+      xp: 0,
+      gold: 0,
+      canStart
+    } : null;
+    const live = assistantLifeBackgroundRun && !quickRunProgress.finished;
+    return {
+      live,
+      loops: base.loops,
+      stopped: !live,
+      difficulty: base.difficulty,
+      xp: base.xp,
+      gold: base.gold,
+      canStart,
+      info: base.info
+    };
+  };
+  const [lifeQuickDetail, setLifeQuickDetail] = useState(false);
+  const renderLifeQuickRunStrip = () => {
+    const view = assistantLifeQuickRunView();
+    if (!view) return null;
+    const autoDifficulty = autoQuickRunConfigured(autoSettings) ? (DIFFICULTY_SETTINGS[autoSettings.quickRun.difficulty] || quickDifficultySetting(autoSettings.quickRun.difficulty) || {}).label || null : null;
+    const detailRun = view.info ? view : null;
+    return React.createElement(React.Fragment, null, lifeQuickDetail && React.createElement(CardQuickRunDetail, {
+      quickRun: detailRun,
+      autoReady: autoQuickRunConfigured(autoSettings),
+      autoDifficulty: autoDifficulty,
+      todayLoops: null,
+      onClose: () => setLifeQuickDetail(false),
+      note: "助手ライフを開いているあいだ、AUTO設定の編成でクイックの周回が裏で進みます。閉じるか「止める」を押すと、それまでの報酬を受け取って周回を終えます。"
+    }), React.createElement("div", {
+      "data-life-quick-run": view.live ? 'live' : 'stopped',
+      className: "relative z-20 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-400/25 bg-slate-950/95 px-2 py-1"
+    }, view.info ? React.createElement(RhythmQuickRunPill, {
+      info: view.info,
+      onRestart: () => startQuickRunFromRhythm(),
+      widthClass: "min-w-0 flex-1"
+    }) : React.createElement("button", {
+      type: "button",
+      "data-life-quick-run-start": true,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        startQuickRunFromRhythm();
+      },
+      className: "min-h-[32px] min-w-0 flex-1 truncate rounded-full border border-fuchsia-300/60 bg-fuchsia-800/70 px-2.5 text-[11px] font-black text-white active:scale-[.97]"
+    }, "▶ 周回を始める"), React.createElement("button", {
+      type: "button",
+      "data-life-quick-run-detail": true,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        setLifeQuickDetail(true);
+      },
+      className: "min-h-[32px] shrink-0 rounded-full border border-white/25 bg-slate-900/80 px-2.5 text-[11px] font-black text-slate-100 active:scale-[.97]"
+    }, "詳細"), view.live && React.createElement("button", {
+      type: "button",
+      "data-life-quick-run-stop": true,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        void settleAssistantLifeRun();
+      },
+      className: "min-h-[32px] shrink-0 rounded-full border border-fuchsia-300/60 bg-fuchsia-800/70 px-2.5 text-[11px] font-black text-white active:scale-[.97]"
+    }, "止める")));
+  };
   const handleRetry = () => {
     stopAllAuto();
     if (speciesChallengeBattleRunRef.current) {
@@ -186760,6 +187224,28 @@ function MonsterHeroGame() {
     const timer = setTimeout(retry, QUICK_RUN_AUTO_RETRY_MS);
     return () => clearTimeout(timer);
   }, [quickRunProgress, gameState, resultProcessing, autoSettings, cardQuickAutoStart]);
+  useEffect(() => {
+    if (!assistantLifeOpenNow) return;
+    if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return;
+    if (!ASSISTANT_LIFE_RUN_STATES.includes(gameStateNowRef.current)) return;
+    if (quickRunProgressRef.current && !quickRunProgressRef.current.finished) return;
+    if (runStageRef.current && !runResultFinishedRef.current) return;
+    if (!repeatTemplateFromAutoSettings()) return;
+    startQuickRunFromRhythm();
+  }, [assistantLifeOpenNow]);
+  useEffect(() => {
+    if (!quickRunProgress || !quickRunProgress.finished || quickRunProgress.reason !== 'defeat') return undefined;
+    if (!assistantLifeOpenNow || !ASSISTANT_LIFE_RUN_STATES.includes(gameState)) return undefined;
+    if (resultProcessing) return undefined;
+    if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return undefined;
+    const retryLife = () => {
+      const current = quickRunProgressRef.current;
+      if (!current || !current.finished || current.reason !== 'defeat' || !assistantLifeOpenRef.current) return;
+      startQuickRunFromRhythm();
+    };
+    const timer = setTimeout(retryLife, QUICK_RUN_AUTO_RETRY_MS);
+    return () => clearTimeout(timer);
+  }, [quickRunProgress, gameState, resultProcessing, autoSettings, assistantLifeOpenNow]);
   const cycleBattleAuto = () => {
     if (autoRepeatRef.current) {
       setAutoBattleEnabled(false);
@@ -191920,6 +192406,12 @@ function MonsterHeroGame() {
           token: ownedItemCount(ownedItems, 'peer_token')
         }
       }), typeof AssistantLifeScreen === 'function' && React.createElement(AssistantLifeScreen, {
+        quickRun: assistantLifeQuickRunView(),
+        quickRunStrip: renderLifeQuickRunStrip(),
+        onQuickRunStop: () => {
+          void settleAssistantLifeRun();
+        },
+        onQuickRunStart: () => startQuickRunFromRhythm(),
         metIds: metIds,
         onReplay: talk => setPeerReplay(talk),
         bondLevelOf: id => assistantBondLevel(normalizeAssistantBond(assistantBonds[id]).points),
@@ -192620,7 +193112,7 @@ function MonsterHeroGame() {
         }, setting.label, unlocked ? '' : '（クイック未クリア）');
       }))), React.createElement("div", null, React.createElement("div", {
         className: "text-[11px] font-black text-slate-300 mb-1.5"
-      }, "モンヒロビートを開いたら自動で始める"), React.createElement("button", {
+      }, "モンヒロビート・助手ライフを開いたら自動で始める"), React.createElement("button", {
         type: "button",
         "data-auto-quick-run-autostart": true,
         "aria-pressed": draftAutoSettings.quickRun?.autoStart === true,
@@ -192635,7 +193127,7 @@ function MonsterHeroGame() {
         className: `shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${draftAutoSettings.quickRun?.autoStart === true ? 'bg-fuchsia-500 text-white' : 'bg-slate-700 text-slate-300'}`
       }, draftAutoSettings.quickRun?.autoStart === true ? 'ON' : 'OFF')), React.createElement("p", {
         className: "mt-1 text-[10px] leading-relaxed text-slate-400"
-      }, "ONにすると、HOMEなどからモンヒロビートを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲えらびの上の帯から、いつでも止められます。")), React.createElement("div", {
+      }, "ONにすると、HOMEなどからモンヒロビートや助手ライフを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲えらびの上の帯や、助手ライフの周回の札から、いつでも止められます。")), React.createElement("div", {
         className: "pt-1"
       }, React.createElement(AssistantBubble, {
         scene: "autoQuickRunSettings",
