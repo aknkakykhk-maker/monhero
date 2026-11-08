@@ -14,7 +14,7 @@
 //      止めたあとは、開いたままでは始め直さない。閉じてもう一度開けば、また始まる(2026-11-08 社長)
 //   ⑨ 回しているあいだ、助手ライフが揺れない・お祝いの全面シートは貯めておく(止めると出る)
 //   ⑧ 本物の帯で(ナカヨシ8): ほかのモードと同じ帯(RhythmQuickRunPill・詳細・止める)の「◯周目」が進む・縦/横/タブレット/🔄横で重ならない・
-//      🔄横で助手ライフが回した画面いっぱいに出る・詳細の窓が上に出る・止めると締まる・止めたあと始め直せる(--shots で shots/lifequick/strip-*.jpg)
+//      🔄横で助手ライフが回した画面いっぱいに出る・詳細の窓が上に出る・止めると締まる・止めると結果の一言の札が出る・止めたあと始め直せる(--shots で shots/lifequick/strip-*.jpg)
 // 札(ボタン)がまだ無くても動くよう、AssistantLifeScreen に渡る props を横から受け取って押す(札ができたらそのボタンでも同じ道を通る)
 'use strict';
 const http = require('http');
@@ -225,11 +225,17 @@ const seed = () => {
       await page.locator('[data-card-quick-detail-close]').click({ force: true }).catch(() => {}); await page.waitForTimeout(300);
       for (let i = 0; i < 6 && await closePopups(); i++) await page.waitForTimeout(400);
       const b1 = await state();
+      // 止めたときの結果の一言(裏クイック ◯周・ダイヤ+◯・経験値+◯)を記録する見張り。札は3秒半で消えるので出た瞬間に取る
+      await page.evaluate(() => { window.__quickChips = []; const seen = new Set();
+        const grab = () => document.querySelectorAll('[data-growth-fx-chip="quick"]').forEach(el => { if (seen.has(el)) return; seen.add(el); window.__quickChips.push(el.textContent || ''); });
+        new MutationObserver(grab).observe(document.body, { childList: true, subtree: true }); });
       await page.locator('[data-life-quick-run-stop]').click({ force: true });
       await page.waitForTimeout(3000);
       for (let i = 0; i < 4 && await closePopups(); i++) await page.waitForTimeout(300);
       const c1 = await strip(), s1 = await state();
       check('⑧ 帯の「止める」で締まり(報酬が入る)、帯が止まった形になる', !!c1 && c1.run === 'stopped' && (s1.gold > b1.gold || s1.xp > b1.xp), JSON.stringify({ c1, gold: [b1.gold, s1.gold], xp: [b1.xp, s1.xp] }));
+      const qc = await page.evaluate(() => window.__quickChips || []);
+      check('⑧ 止めると「裏クイック ◯周・ダイヤ+◯・経験値+◯」の小さな札が1枚出る', qc.length === 1 && /^\S*\s*裏クイック \d+周・ダイヤ\+[\d,]+・経験値\+[\d,]+$/.test(qc[0].trim()), JSON.stringify(qc));
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'strip-stopped-tate.jpg'), type: 'jpeg', quality: 78 });
       const again = page.locator('[data-assistant-life-quick-strip] [data-life-quick-run-start], [data-assistant-life-quick-strip] [data-rhythm-multi-quick-run-restart]').first();
       // 止めると貯めていたお祝いが少し遅れて出るので、閉じてから押す(押しても始まらなければもう一度)
