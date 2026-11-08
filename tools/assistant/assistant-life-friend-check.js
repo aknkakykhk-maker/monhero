@@ -53,6 +53,10 @@ load('monster-hero/src/parts/56-assistant-peer.jsx');
 load('monster-hero/src/parts/56-assistant-life.jsx');
 load('monster-hero/src/parts/56-assistant-life-house.jsx');
 load('monster-hero/src/parts/56-assistant-life-rel.jsx');
+// 置き手紙の自由文は MFバトルカードのチャットと同じ表を使う(91 の純粋な計算の所だけ読む)
+{ const src = fs.readFileSync(path.join(root, 'monster-hero/src/parts/91-card-battle-multi.jsx'), 'utf8');
+  const i = src.indexOf('// ---- 自由文コメントの純粋な計算'); const j = src.indexOf('// ---- 部屋と通信');
+  if (i > 0 && j > i) vm.runInContext(src.slice(i, j).replace(/^const /gm, 'var '), ctx); }
 load('monster-hero/src/parts/56-assistant-life-friend.jsx');
 const G = (expr) => vm.runInContext(expr, ctx);
 const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'];
@@ -276,6 +280,8 @@ const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'er
   { const why = G('alfVisitBlockedText');
     vm.runInContext("ALF_STORE.set({ mode: 'thin', roster: [{ id: 'nohouse-01', name: 'まだ' }], houses: {} })", ctx);
     check('⑩ 家が届いていないフレンドは「◯◯さんが助手ライフを開くと遊びに行けます」', why('nohouse-01', 'まだ') === 'まださんが助手ライフを開くと遊びに行けます。', why('nohouse-01', 'まだ'));
+    vm.runInContext("ALF_STORE.set({ mode: 'thin', roster: [{ id: 'hasHouse-01', name: 'いる' }], houses: { 'hasHouse-01': { open: true, at: Date.now(), house: { v: 1, ids: ['mua'], r: { mua: { at: 'home', d: 'idle', m: 'happy' } } } } }, st: { ...ALF_STORE.state.st, look: 99, looked: { 'hasHouse-01': 1 } } })", ctx);
+    check('⑩ 今日もう置き手紙を残した家・上限のあとでも、訪ねるのは止めない(2026-11-08 社長「家に遊びに行くのに制限はなしがいい」)', why('hasHouse-01', 'いる') === null, String(why('hasHouse-01', 'いる')));
     vm.runInContext("ALF_STORE.set({ mode: 'off' })", ctx);
     check('⑩ 行き来がお休みのときはその理由', /お休み中/.test(why('nohouse-01', 'まだ')));
     vm.runInContext("ALF_STORE.set({ mode: 'thin' })", ctx);
@@ -283,6 +289,24 @@ const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'er
     const page = fs.readFileSync(path.join(root, 'monster-hero/src/parts/56-assistant-life-friend.jsx'), 'utf8');
     check('⑩ フレンドのプロフィールに入口がある(デッキの「このデッキと戦う」の下)', /CardShareDeckActions[\s\S]{0,400}<AssistantLifeFriendProfileVisit friendId=\{selected\.otherId\}/.test(friends));
     check('⑩ 「🏘 フレンド」の一覧に、家が届いていないフレンドを薄く並べる(押せない)', /data-alf-house-waiting/.test(page) && /border-dashed/.test(page)); }
+
+  // ⑪ 置き手紙の自由文・くわしい控え(2026-11-08 社長)
+  { const nc = G('alfNoteCheck');
+    check('⑪ 自由文: 40字で切る・空はよい・連絡先(ID・URL・電話番号)ははじく', nc('').ok && nc('あ'.repeat(60)).text.length === 40 && !nc('ID: yuto_1234567').ok && !nc('https://example.com 見てね').ok && !nc('090-1234-5678').ok, JSON.stringify([nc(''), nc('あ'.repeat(60)).text.length, nc('ID: yuto_1234567'), nc('https://example.com 見てね'), nc('090-1234-5678'), typeof G('typeof cardChatContact')]));
+    check('⑪ 自由文: 住所・本名・学校ははじき、悪い言葉は●', !nc('〒123 なんとか市').ok && !nc('本名はたろう').ok && !nc('○○中学だよ').ok && nc('ばか言うな').text.includes('●') && nc('ソファふかふかでよかった！').text === 'ソファふかふかでよかった！', JSON.stringify([nc('〒123 なんとか市'), nc('本名はたろう'), nc('○○中学だよ'), nc('ばか言うな'), nc('ソファふかふかでよかった！')]));
+    const nm = G('assistantLifeFriendNormalizeMore');
+    const m = nm({ v: 1, fu: { mua: { p: { c: 'lantern', w: 'sofa', f: 'sofa' }, k: ['bear', 'nope', 'bear'] }, xx: { p: {} } }, dy: [{ t: '10:10', x: '朝: みゅあがおやつ{name}' }, { t: 'x', x: '' }] });
+    check('⑪ くわしい控えを読むとき、場所の合わない家具・知らない家具・知らない助手・空の行は捨てる', m && m.fu.mua.p.c === 'lantern' && !m.fu.mua.p.w && m.fu.mua.p.f === 'sofa' && JSON.stringify(m.fu.mua.k) === '["bear"]' && !m.fu.xx && m.dy.length === 1 && !/[{}]/.test(m.dy[0].x), JSON.stringify(m));
+    check('⑪ くわしい控えが大きすぎたら読まない', nm({ v: 1, dy: [{ t: '1:00', x: 'あ'.repeat(7000) }] }) === null);
+    const page = fs.readFileSync(path.join(root, 'monster-hero/src/parts/56-assistant-life-friend.jsx'), 'utf8');
+    check('⑪ くわしい控えの表は soft で読む(表が無くても行き来ぜんぶを準備中にしない)', /ALF_TABLE_MORE\}\?on_conflict=breeder_id`, \{[^\n]*soft: true/.test(page) && /limit=1`, \{ soft: true \}/.test(page));
+    check('⑪ くわしい控えに、よその人の名前が入る行(フレンドの家との行き来)を写さない', /x\.kind !== 'friend' && !\/さんの\|さんち\//.test(page)); }
+
+  // ⑬ 訪ねた家の台本(コトバ・ツムギ 2026-11-08): 8人そろう・口調の見張り(作った場面と同じ alfApiLineOk)に通る・数字や「子」が無い・穴は {name}/{h}/{f} だけ
+  { const V = G('ALF_VISIT_LINES'); const ok = G('alfApiLineOk'); const ids = G('ALF_IDS'); const bad = [];
+    const all = []; for (const id of ids) { const v = V[id]; if (!v || v.greet.length < 3 || Object.keys(v.doing).length < 6 || v.reply.length < 3 || v.sleep.length < 2) bad.push(`${id}: 本数`); if (v) all.push(...[...v.greet, ...Object.values(v.doing), ...v.reply, ...v.sleep].map(t => [id, t])); for (const t of [...(G('ALF_GO_MORE')[id] || []), ...(G('ALF_WELCOME_MORE')[id] || [])]) all.push([id, t]); }
+    for (const [id, t] of all) { const filled = t.replace(/\{h\}/g, 'あおい').replace(/\{f\}/g, 'あおいさんのドラ').replace(/\{name\}/g, 'ゆうとさん'); if (ok(id, filled) == null) bad.push(`${id}「${t}」口調`); if (/[0-9０-９]/.test(t) || /(この|あの|その)子|子たち/.test(t) || /[{}]/.test(t.replace(/\{(name|h|f)\}/g, '')) || t.length > 60) bad.push(`${id}「${t}」`); if (/\{h\}(?!さん)/.test(t)) bad.push(`${id}「${t}」{h}さん`); }
+    check('⑬ 訪ねた家の台本が8人そろい、口調・数字・「子」・穴の決まりを守る', bad.length === 0, bad.slice(0, 5).join(' / ')); }
 
   // ⑧ 公開の印
   const rel = fs.readFileSync(path.join(root, 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8');
