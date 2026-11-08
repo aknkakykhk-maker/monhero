@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 46979e697669d365
+// source-sha256: 9f21f486cb2ecd61
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -119654,7 +119654,7 @@ function AssistantLifeShopButton({
       ev.stopPropagation();
       assistantLifeOpenShop(tab, who);
     },
-    className: `${small ? 'min-h-[32px] px-2 text-[10.5px]' : 'min-h-[40px] w-full px-3 text-[12px]'} shrink-0 whitespace-nowrap rounded-xl border border-violet-300/70 bg-violet-500/25 font-black text-violet-100 active:scale-[.97]`
+    className: `${small ? 'min-h-[32px] px-2 text-[10.5px]' : 'min-h-[40px] w-full px-3 text-[12px]'} shrink-0 whitespace-nowrap rounded-xl border border-violet-300/70 bg-[#2e1065] font-black text-violet-100 shadow-md active:scale-[.97]`
   }, label);
 }
 function AssistantLifeGiftExplain({
@@ -120124,7 +120124,9 @@ function AssistantLifeRoomFurn({
   baseCount = 2
 }) {
   const st = useAssistantLifeGiftState();
-  if (!assistantLifeFurnEnabled()) return null;
+  const marker = React.useRef(null);
+  const [moved, setMoved] = React.useState({});
+  const on = assistantLifeFurnEnabled();
   const room = assistantLifeRoomOf(id, st);
   const size = Math.round(Math.max(16, Math.min(26, h * 0.26, w * 0.17)));
   const faceSize = Math.round(Math.min(40, h * 0.44));
@@ -120160,33 +120162,170 @@ function AssistantLifeRoomFurn({
       top: Math.round(h * 0.13)
     };
   };
-  return React.createElement(React.Fragment, null, Object.entries(room.put).filter(([, k]) => k).map(([slot, k]) => {
+  const measure = React.useRef(null);
+  measure.current = () => {
+    if (!on) return;
+    const roomEl = marker.current && marker.current.parentElement;
+    if (!roomEl) return;
+    const rr = roomEl.getBoundingClientRect();
+    if (!rr.width) return;
+    const rel = el => {
+      const r = el.getBoundingClientRect();
+      return {
+        l: r.left - rr.left,
+        t: r.top - rr.top,
+        r: r.right - rr.left,
+        b: r.bottom - rr.top
+      };
+    };
+    const hit = (a, b) => a.l < b.r - 1 && b.l < a.r - 1 && a.t < b.b - 1 && b.t < a.b - 1;
+    const pick = sel => [...roomEl.querySelectorAll(sel)].filter(el => el.getClientRects().length).map(rel);
+    const must = pick('.pl, .lv, .pp > span, .fu, [data-assistant-life-room-bub]'),
+      soft = pick('.tag');
+    const next = {},
+      taken = [];
+    for (const el of roomEl.querySelectorAll('[data-assistant-life-room-furn]')) {
+      const slot = el.dataset.assistantLifeRoomFurn.split(':')[1];
+      const base = pos(slot);
+      const cs = moved[slot] && moved[slot].scale || 1;
+      const er = el.getBoundingClientRect(),
+        gr = (el.lastElementChild || el).getBoundingClientRect();
+      const dx0 = (gr.left - er.left) / cs,
+        dy0 = (gr.top - er.top) / cs,
+        gw0 = Math.max(g, gr.width / cs),
+        gh0 = Math.max(g, gr.height / cs);
+      let best = null,
+        scale = 1,
+        bestBox = null;
+      for (const sc of [1, 0.8, 0.65]) {
+        const dx = dx0 * sc,
+          dy = dy0 * sc,
+          gw = gw0 * sc + 2,
+          gh = gh0 * sc + 2;
+        const box = q => ({
+          l: q.left + dx - 1,
+          t: q.top + dy - 1,
+          r: q.left + dx + gw,
+          b: q.top + dy + gh
+        });
+        const freeOf = blocks => q => {
+          const bx = box(q);
+          return bx.l >= 1 && bx.t >= 1 && bx.r <= w - 1 && bx.b <= h - 8 && !blocks.some(b => hit(bx, b)) && !taken.some(b => hit(bx, b));
+        };
+        const strict = freeOf([...must, ...soft]),
+          loose = freeOf(must);
+        let found = strict(base) ? base : null;
+        if (!found) {
+          const step = Math.max(2, Math.round(g * sc / 4)),
+            cands = [];
+          for (let y = 1; y <= h; y += step) for (let x = 1; x <= w; x += step) cands.push({
+            left: x,
+            top: y
+          });
+          cands.sort((a, b) => Math.hypot(a.left - base.left, a.top - base.top) - Math.hypot(b.left - base.left, b.top - base.top));
+          found = cands.find(strict) || (loose(base) ? base : cands.find(loose)) || null;
+        }
+        if (found) {
+          best = found;
+          scale = sc;
+          bestBox = box(found);
+          break;
+        }
+        if (sc === 0.65 && !soft.length) {
+          best = base;
+          scale = 0;
+          bestBox = {
+            l: 0,
+            t: 0,
+            r: 0,
+            b: 0
+          };
+          break;
+        }
+        if (sc === 0.65) {
+          const only = freeOf([]);
+          const cands = [];
+          for (let y = 1; y <= h; y += 2) for (let x = 1; x <= w; x += 2) cands.push({
+            left: x,
+            top: y
+          });
+          cands.sort((a, b) => Math.hypot(a.left - base.left, a.top - base.top) - Math.hypot(b.left - base.left, b.top - base.top));
+          best = cands.find(only) || base;
+          scale = sc;
+          bestBox = box(best);
+        }
+      }
+      taken.push(bestBox);
+      if (best !== base || scale !== 1) next[slot] = {
+        left: Math.round(best.left),
+        top: Math.round(best.top),
+        scale
+      };
+    }
+    setMoved(prev => JSON.stringify(next) === JSON.stringify(prev) ? prev : next);
+  };
+  React.useLayoutEffect(() => {
+    if (measure.current) measure.current();
+  });
+  React.useEffect(() => {
+    if (!on) return undefined;
+    const run = () => {
+      if (measure.current) measure.current();
+    };
+    const t = setInterval(run, 700);
+    const roomEl = marker.current && marker.current.parentElement;
+    let raf = 0;
+    const mo = roomEl && typeof MutationObserver !== 'undefined' ? new MutationObserver(() => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(run);
+    }) : null;
+    if (mo) mo.observe(roomEl, {
+      childList: true,
+      subtree: true,
+      characterData: true
+    });
+    return () => {
+      clearInterval(t);
+      cancelAnimationFrame(raf);
+      if (mo) mo.disconnect();
+    };
+  }, [on]);
+  if (!on) return null;
+  return React.createElement(React.Fragment, null, React.createElement("span", {
+    ref: marker,
+    hidden: true
+  }), Object.entries(room.put).filter(([, k]) => k).map(([slot, k]) => {
     const f = assistantLifeFurnOf(k);
     if (!f || !ASSISTANT_LIFE_FURN_SLOTS[slot]) return null;
-    const p = pos(slot);
+    const p = moved[slot] || pos(slot);
+    const sc = moved[slot] && Number.isFinite(moved[slot].scale) ? moved[slot].scale : 1;
+    const sz = Math.max(1, Math.round(size * (sc || 1)));
     return React.createElement("span", {
       key: slot,
       "data-assistant-life-room-furn": `${id}:${slot}:${k}`,
+      "data-assistant-life-room-furn-moved": moved[slot] ? '1' : '0',
+      "data-assistant-life-room-furn-hidden": sc === 0 ? '1' : '0',
       "aria-hidden": "true",
       style: {
+        display: sc === 0 ? 'none' : undefined,
         position: 'absolute',
         left: p.left,
         top: p.top,
-        width: size,
-        height: size,
+        width: sz,
+        height: sz,
         zIndex: 2,
-        fontSize: size,
+        fontSize: sz,
         lineHeight: 1,
         pointerEvents: 'none',
         filter: 'drop-shadow(0 2px 2px #0006)'
       }
-    }, slot === 'ceil' && React.createElement("span", {
+    }, slot === 'ceil' && p.top <= 6 && React.createElement("span", {
       style: {
         position: 'absolute',
         bottom: '100%',
         left: '50%',
         width: 1,
-        height: Math.round(size * 0.3),
+        height: Math.round(sz * 0.3),
         background: '#7c5a3a'
       }
     }), React.createElement("span", null, f.emoji));

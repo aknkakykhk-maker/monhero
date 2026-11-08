@@ -349,7 +349,7 @@ function AssistantLifeShopButton({ tab = 'item', who = null, label = '🛒 交�
   if (!assistantLifeCanOpenShop()) return null;
   return (
     <button type="button" data-assistant-life-shop={tab} onClick={(ev) => { ev.stopPropagation(); assistantLifeOpenShop(tab, who); }}
-      className={`${small ? 'min-h-[32px] px-2 text-[10.5px]' : 'min-h-[40px] w-full px-3 text-[12px]'} shrink-0 whitespace-nowrap rounded-xl border border-violet-300/70 bg-violet-500/25 font-black text-violet-100 active:scale-[.97]`}>{label}</button>);
+      className={`${small ? 'min-h-[32px] px-2 text-[10.5px]' : 'min-h-[40px] w-full px-3 text-[12px]'} shrink-0 whitespace-nowrap rounded-xl border border-violet-300/70 bg-[#2e1065] font-black text-violet-100 shadow-md active:scale-[.97]`}>{label}</button>);
 }
 
 // 友情Lv・仲良し度の短い説明(道具の一覧の上と贈るシート)
@@ -624,7 +624,8 @@ function AssistantLifeRoomFurn({ id, w, h, faces = 0, baseCount = 2 }) {
   // 描いたあとに測って、吹き出し・名札・Lv・顔・もとの家具・出かけた札・ほかの家具に重なる家具だけ、元の場所にいちばん近い空いた所へずらす
   //   (2026-11-08 ミハリ「縦 390 のあつの部屋で、考えごとの吹き出しがトロフィーの下半分を隠す」「横 844 で床の家具が吹き出しの後ろに半分隠れる」。
   //    吹き出しは文の長さで高さが変わるので、決め打ちの位置では避けきれない)
-  React.useLayoutEffect(() => {
+  const measure = React.useRef(null);
+  measure.current = () => {
     if (!on) return;
     const roomEl = marker.current && marker.current.parentElement;
     if (!roomEl) return;
@@ -632,35 +633,68 @@ function AssistantLifeRoomFurn({ id, w, h, faces = 0, baseCount = 2 }) {
     if (!rr.width) return;
     const rel = (el) => { const r = el.getBoundingClientRect(); return { l: r.left - rr.left, t: r.top - rr.top, r: r.right - rr.left, b: r.bottom - rr.top }; };
     const hit = (a, b) => a.l < b.r - 1 && b.l < a.r - 1 && a.t < b.b - 1 && b.t < a.b - 1;
-    const blocks = [...roomEl.querySelectorAll('.pl, .lv, .pp > span, .fu, .tag, [data-assistant-life-room-bub]')].filter(el => el.getClientRects().length).map(rel);
+    const pick = (sel) => [...roomEl.querySelectorAll(sel)].filter(el => el.getClientRects().length).map(rel);
+    // 出かけた札(.tag)は部屋の真ん中を大きく使う。まず札も避けて探し、無ければ札の後ろはよいことにする(札は前に出て、部屋は暗くしてある)
+    const must = pick('.pl, .lv, .pp > span, .fu, [data-assistant-life-room-bub]'), soft = pick('.tag');
     const next = {}, taken = [];
     for (const el of roomEl.querySelectorAll('[data-assistant-life-room-furn]')) {
       const slot = el.dataset.assistantLifeRoomFurn.split(':')[1];
       const base = pos(slot);
-      const box = (q) => ({ l: q.left, t: q.top, r: q.left + g, b: q.top + g });
-      const free = (q) => q.left >= 2 && q.top >= 2 && q.left + g <= w - 2 && q.top + g <= h - 10 && !blocks.some(b => hit(box(q), b)) && !taken.some(b => hit(box(q), b));
-      let best = free(base) ? base : null;
-      if (!best) {
-        const step = Math.max(3, Math.round(g / 3)), cands = [];
-        for (let y = 2; y + g <= h - 10; y += step) for (let x = 2; x + g <= w - 2; x += step) cands.push({ left: x, top: y });
-        cands.sort((a, b) => Math.hypot(a.left - base.left, a.top - base.top) - Math.hypot(b.left - base.left, b.top - base.top));
-        best = cands.find(free) || base;
+      // 絵文字の実際の大きさ(箱の左上からのずれも含めて)で測る。いま小さくしているぶんは戻して考える
+      const cs = (moved[slot] && moved[slot].scale) || 1;
+      const er = el.getBoundingClientRect(), gr = (el.lastElementChild || el).getBoundingClientRect();
+      const dx0 = (gr.left - er.left) / cs, dy0 = (gr.top - er.top) / cs, gw0 = Math.max(g, gr.width / cs), gh0 = Math.max(g, gr.height / cs);
+      let best = null, scale = 1, bestBox = null;
+      // 空きが無い狭い部屋では、少し小さくして探し直す(8割・6.5割)
+      for (const sc of [1, 0.8, 0.65]) {
+        const dx = dx0 * sc, dy = dy0 * sc, gw = gw0 * sc + 2, gh = gh0 * sc + 2;
+        const box = (q) => ({ l: q.left + dx - 1, t: q.top + dy - 1, r: q.left + dx + gw, b: q.top + dy + gh });
+        const freeOf = (blocks) => (q) => { const bx = box(q); return bx.l >= 1 && bx.t >= 1 && bx.r <= w - 1 && bx.b <= h - 8 && !blocks.some(b => hit(bx, b)) && !taken.some(b => hit(bx, b)); };
+        const strict = freeOf([...must, ...soft]), loose = freeOf(must);
+        let found = strict(base) ? base : null;
+        if (!found) {
+          const step = Math.max(2, Math.round(g * sc / 4)), cands = [];
+          for (let y = 1; y <= h; y += step) for (let x = 1; x <= w; x += step) cands.push({ left: x, top: y });
+          cands.sort((a, b) => Math.hypot(a.left - base.left, a.top - base.top) - Math.hypot(b.left - base.left, b.top - base.top));
+          found = cands.find(strict) || (loose(base) ? base : cands.find(loose)) || null;
+        }
+        if (found) { best = found; scale = sc; bestBox = box(found); break; }
+        // それでも無い(出かけた札が部屋を覆う狭い部屋)ときは、せめて家具どうしは重ならない所へ
+        // 人がいる部屋でどう置いても吹き出し・名札・顔・もとの家具に隠れるときは、その大きさの画面では描かない(家具のシートには並ぶ)
+        if (sc === 0.65 && !soft.length) { best = base; scale = 0; bestBox = { l: 0, t: 0, r: 0, b: 0 }; break; }
+        if (sc === 0.65) { const only = freeOf([]); const cands = []; for (let y = 1; y <= h; y += 2) for (let x = 1; x <= w; x += 2) cands.push({ left: x, top: y });
+          cands.sort((a, b) => Math.hypot(a.left - base.left, a.top - base.top) - Math.hypot(b.left - base.left, b.top - base.top));
+          best = cands.find(only) || base; scale = sc; bestBox = box(best); }
       }
-      taken.push(box(best));
-      if (best !== base) next[slot] = { left: Math.round(best.left), top: Math.round(best.top) };
+      taken.push(bestBox);
+      if (best !== base || scale !== 1) next[slot] = { left: Math.round(best.left), top: Math.round(best.top), scale };
     }
-    const same = JSON.stringify(next) === JSON.stringify(moved);
-    if (!same) setMoved(next);
-  });
+    setMoved(prev => (JSON.stringify(next) === JSON.stringify(prev) ? prev : next));
+  };
+  React.useLayoutEffect(() => { if (measure.current) measure.current(); });
+  // 吹き出しの字があとから読み込まれて大きさが変わることがあるので、ときどき測り直す
+  //   部屋の中身(吹き出し・顔・札)が変わったときは、次のコマですぐ測り直す
+  React.useEffect(() => {
+    if (!on) return undefined;
+    const run = () => { if (measure.current) measure.current(); };
+    const t = setInterval(run, 700);
+    const roomEl = marker.current && marker.current.parentElement;
+    let raf = 0;
+    const mo = roomEl && typeof MutationObserver !== 'undefined' ? new MutationObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(run); }) : null;
+    if (mo) mo.observe(roomEl, { childList: true, subtree: true, characterData: true });
+    return () => { clearInterval(t); cancelAnimationFrame(raf); if (mo) mo.disconnect(); };
+  }, [on]);
   if (!on) return null;
   return (<><span ref={marker} hidden/>{Object.entries(room.put).filter(([, k]) => k).map(([slot, k]) => {
     const f = assistantLifeFurnOf(k);
     if (!f || !ASSISTANT_LIFE_FURN_SLOTS[slot]) return null;
     const p = moved[slot] || pos(slot);
+    const sc = moved[slot] && Number.isFinite(moved[slot].scale) ? moved[slot].scale : 1;
+    const sz = Math.max(1, Math.round(size * (sc || 1)));
     return (
-      <span key={slot} data-assistant-life-room-furn={`${id}:${slot}:${k}`} data-assistant-life-room-furn-moved={moved[slot] ? '1' : '0'} aria-hidden="true"
-        style={{ position: 'absolute', left: p.left, top: p.top, width: size, height: size, zIndex: 2, fontSize: size, lineHeight: 1, pointerEvents: 'none', filter: 'drop-shadow(0 2px 2px #0006)' }}>
-        {slot === 'ceil' && p.top <= 6 && <span style={{ position: 'absolute', bottom: '100%', left: '50%', width: 1, height: Math.round(size * 0.3), background: '#7c5a3a' }}/>}
+      <span key={slot} data-assistant-life-room-furn={`${id}:${slot}:${k}`} data-assistant-life-room-furn-moved={moved[slot] ? '1' : '0'} data-assistant-life-room-furn-hidden={sc === 0 ? '1' : '0'} aria-hidden="true"
+        style={{ display: sc === 0 ? 'none' : undefined, position: 'absolute', left: p.left, top: p.top, width: sz, height: sz, zIndex: 2, fontSize: sz, lineHeight: 1, pointerEvents: 'none', filter: 'drop-shadow(0 2px 2px #0006)' }}>
+        {slot === 'ceil' && p.top <= 6 && <span style={{ position: 'absolute', bottom: '100%', left: '50%', width: 1, height: Math.round(sz * 0.3), background: '#7c5a3a' }}/>}
         <span>{f.emoji}</span>
       </span>); })}</>);
 }

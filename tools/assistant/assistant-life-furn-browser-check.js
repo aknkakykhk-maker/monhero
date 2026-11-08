@@ -9,7 +9,7 @@
 //   ⑤ 押し入れ・入れかえ・しまうのボタン/同じ家具は二度と贈れない(贈れる一覧から消える)
 //   ⑥ 交換所: 「家具」タブに12種類、「アイテム」タブには家具が並ばない
 //   ⑦ ページのエラーが出ない
-//   ⑧ 8人の部屋に3つずつ置いても、家具が吹き出し・名札・顔・もとの家具・出かけた札に隠れない(重なるときは測って空いた所へずらす)
+//   ⑧ 8人の部屋に3つずつ置いても、家具が吹き出し・名札・Lv・顔・もとの家具に隠れない(重なるときは測って空いた所へずらす。出かけた札の後ろはよい)
 const http = require('http'), path = require('path'), fs = require('fs');
 const root = path.resolve(__dirname, '..', '..'), PORT = 9233;
 const { quietBootSeed, updateNoticeSeed, oneTimeNoticeSeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
@@ -47,7 +47,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await toHome(page); await waitFaces(page);
     return page;
   };
-  const openHouse = async (page) => { await page.locator('[data-home-assistant-life]').click({ timeout: 20000 }); await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 6000 }).catch(() => {}); await page.waitForTimeout(400); };
+  // HOME の助手どうしのおしゃべりの帯が出ていると押せないので、消えるのを待ってから押す
+  const openHouse = async (page) => { await page.locator('[data-assistant-peer-line]').waitFor({ state: 'detached', timeout: 15000 }).catch(() => {}); await page.locator('[data-home-assistant-life]').click({ timeout: 20000 }); await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 6000 }).catch(() => {}); await page.waitForTimeout(400); };
   const openRoomFurn = async (page, id) => { await page.locator(`[data-assistant-life-room="${id}"]`).click(); await page.waitForTimeout(250); await page.locator('[data-assistant-life-room-act="furn"]').click(); await page.waitForTimeout(300); };
   const inView = (page, sel) => page.evaluate((s) => { const el = document.querySelector(s); if (!el) return false; const r = el.getBoundingClientRect(); return r.left >= -1 && r.top >= -1 && r.right <= innerWidth + 1 && r.bottom <= innerHeight + 1; }, sel);
   const give = async (page, id, key) => { await openRoomFurn(page, id); await page.locator(`[data-assistant-life-furn-give="${key}"]`).click(); await page.waitForTimeout(700); await finishTalk(page); await page.locator('[data-assistant-life-scene-back]').click({ timeout: 3000 }).catch(() => {}); await page.waitForTimeout(300); };
@@ -142,14 +143,17 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       await openHouse(page); await page.waitForTimeout(500);
       const ng = await page.evaluate(() => { const out = [];
         const hit = (a, b) => a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1;
-        for (const room of document.querySelectorAll('[data-assistant-life-room]')) { const rr = room.getBoundingClientRect(); const fs = [...room.querySelectorAll('[data-assistant-life-room-furn]')];
+        for (const room of document.querySelectorAll('[data-assistant-life-room]')) { const rr = room.getBoundingClientRect(); const fs = [...room.querySelectorAll('[data-assistant-life-room-furn]')].filter(f => f.dataset.assistantLifeRoomFurnHidden !== '1');
           for (const f of fs) { const r = (f.lastElementChild || f).getBoundingClientRect(); const n = f.dataset.assistantLifeRoomFurn;
             if (r.left < rr.left - 1 || r.right > rr.right + 1 || r.top < rr.top - 1 || r.bottom > rr.bottom + 1) out.push(`${n} 部屋からはみ出す`);
-            for (const s of ['[data-assistant-life-room-bub]', '.pl', '.lv', '.pp > span', '.fu', '.tag']) for (const o of room.querySelectorAll(s)) if (o.getClientRects().length && hit(r, o.getBoundingClientRect())) out.push(`${n} が ${s} に重なる`);
+            // 出かけた札(.tag)は前に出る札で部屋は暗くしてあるので、その後ろはよい(空いていれば札も避ける)
+            // 出かけている部屋(札が部屋を覆う)は、家具どうしとはみ出しだけを見る
+            if (!room.querySelector('.tag')) for (const s of ['[data-assistant-life-room-bub]', '.pl', '.lv', '.pp > span', '.fu']) for (const o of room.querySelectorAll(s)) if (o.getClientRects().length && hit(r, o.getBoundingClientRect())) out.push(`${n} が ${s} に重なる`);
             for (const o of fs) if (o !== f && hit(r, (o.lastElementChild || o).getBoundingClientRect())) out.push(`${n} 家具どうし`); } }
         return [...new Set(out)]; });
-      const count = await page.locator('[data-assistant-life-room-furn]').count();
-      check(`⑧ ${tag}: 8人の部屋に3つずつ置いても、家具が吹き出し・名札・顔・もとの家具・出かけた札に隠れない`, count >= 24 && ng.length === 0, `${count}個 ${ng.slice(0, 4).join(' | ')}`);
+      // 縦 390・375・横 844 では24個全部を描く。🔄横 667 の小さな部屋で、人がいてどう置いても隠れる家具だけは描かない(家具のシートには並ぶ)
+      const count = await page.locator('[data-assistant-life-room-furn][data-assistant-life-room-furn-hidden="0"]').count();
+      check(`⑧ ${tag}: 8人の部屋に3つずつ置いても、見えている家具が吹き出し・名札・Lv・顔・もとの家具に隠れない${w === 667 ? '' : '(24個全部見える)'}`, (w === 667 ? count >= 16 : count >= 24) && ng.length === 0, `${count}個 ${ng.slice(0, 4).join(' | ')}`);
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, `furn-${w}-8-all.png`) });
       await page.close();
     }
