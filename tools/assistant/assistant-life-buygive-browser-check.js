@@ -151,7 +151,7 @@ const pressable = (page, sel) => page.evaluate((s) => { const b = document.query
       check('⑧ 家具を買って贈ると部屋に入り、ビートPが値段ぶん減る', !!(room && room[id] && room[id].got && room[id].got.plant) && (await points(page)) === p2 - plantCost && (await page.locator('[data-assistant-life-furn-buy="plant"]').count()) === 0, `${await points(page)}`);
       await page.locator('[data-assistant-life-furn-close]').click().catch(() => {}); await page.waitForTimeout(400);
       await finishTalk(page).catch(() => {}); await page.locator('[data-assistant-life-scene-back]').click({ timeout: 2000 }).catch(() => {}); await page.waitForTimeout(300);
-      await page.mouse.click(20, 60); await page.waitForTimeout(200);
+      await page.locator('[data-assistant-life-roomview-close]').click({ timeout: 2000 }).catch(() => page.mouse.click(20, 60)); await page.waitForTimeout(200); // 部屋は大きな部屋になったので「← 家へ」で閉じる(2026-11-08)
       // ⑨ 道具タブ
       await page.locator('[data-assistant-life-icon="items"]').click(); await page.waitForTimeout(300);
       const rowBtn = page.locator('[data-assistant-life-item-buy="earphone"]');

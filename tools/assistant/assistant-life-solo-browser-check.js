@@ -65,7 +65,7 @@ const cutProblems = (page, sel) => page.evaluate((s) => {
   const groupRoom = (page) => page.evaluate(() => { try { const gs = (ASSISTANT_LIFE_STORE.state.life.groups || []).filter(g => g.ids.length === 2); const g = gs.find(x => !document.querySelector(`[data-assistant-life-room="${x.ids[0]}"] [data-assistant-life-rel]`)) || gs[0]; return g ? g.ids[0] : null; } catch { return null; } });
   const openSoloSheet = async (page, id) => { await page.locator(`[data-assistant-life-room="${id}"]`).click(); await page.waitForTimeout(300);
     // 1人に3回贈ったあとは、部屋の「◯◯だけに贈る」が押せない(正しい動き)
-    if (await page.locator('[data-assistant-life-room-act="give-solo"]').isDisabled()) { await page.mouse.click(20, 60); await page.waitForTimeout(200); return false; }
+    if (await page.locator('[data-assistant-life-room-act="give-solo"]').isDisabled()) { await page.locator('[data-assistant-life-roomview-close]').click().catch(() => page.mouse.click(20, 60)); /* 部屋は大きな部屋になったので「← 家へ」で閉じる(2026-11-08 ナカヨシ9) */ await page.waitForTimeout(200); return false; }
     await page.locator('[data-assistant-life-room-act="give-solo"]').click(); await page.waitForTimeout(400); return true; };
   const giveSolo = async (page, id, kind) => {
     if (!(await openSoloSheet(page, id))) return { given: false, reason: '今日はもう1人に3回贈りました(部屋のボタンが押せない)' };
@@ -140,7 +140,7 @@ const cutProblems = (page, sel) => page.evaluate((s) => {
       const likes = await page.locator(`[data-assistant-life-gift-likes="${id}"]`).innerText().catch(() => '');
       check('⑥ 好きなものは「分かった ◯/14」(❹A)', /分かった \d+\/14/.test(likes), likes.replace(/\s+/g, ' ').slice(0, 40));
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'tate-5-room-after.png') });
-      await page.mouse.click(20, 60); await page.waitForTimeout(200);
+      await page.locator('[data-assistant-life-roomview-close]').click({ timeout: 2000 }).catch(() => page.mouse.click(20, 60)); await page.waitForTimeout(200); // 部屋は大きな部屋になったので「← 家へ」で閉じる(2026-11-08)
       // ⑦ 道具タブ・交換所
       await page.locator('[data-assistant-life-icon="items"]').click(); await page.waitForTimeout(300);
       const items = await page.locator('[data-assistant-life-items]').innerText().catch(() => '');
