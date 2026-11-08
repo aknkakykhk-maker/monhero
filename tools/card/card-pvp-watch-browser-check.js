@@ -268,7 +268,7 @@ const pvpGo = async (page, sel) => { await page.locator(sel).first().click(); aw
     await C.locator('[data-card-watch-leave]').click();
     await C.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
     const afterC = await C.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('mh_')).map((k) => [k, localStorage.getItem(k)])));
-    const changed = Object.keys({ ...beforeC2, ...afterC }).filter((k) => beforeC2[k] !== afterC[k] && !/^mh_(last_|session|boot|app_open|bgm|se_|ui_|debug|visit|playtime)/.test(k)); // 遊んだ時間(mh_playtime_v1)は時間がたてば書かれる(観戦とは関係ない)
+    const changed = Object.keys({ ...beforeC2, ...afterC }).filter((k) => beforeC2[k] !== afterC[k] && !/^mh_(last_|session|boot|app_open|bgm|se_|ui_|debug|visit|playtime|screen_trail_v1)/.test(k)); // mh_screen_trail_v1 … 画面の出来事を最近30件だけ残す記録(10-core・新しいキー) // 遊んだ時間(mh_playtime_v1)は時間がたてば書かれる(観戦とは関係ない)
     check('⑦ 観戦をやめると、マルチ対戦の入口へ戻る', true);
     check('⑧ 観戦では保存を書き換えない', changed.length === 0 && !!beforeC, changed.join(', '));
     check('⑧ 実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
