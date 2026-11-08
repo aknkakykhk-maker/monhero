@@ -49,6 +49,14 @@ const CHANGELOG = [
     ],
   },
   {
+    date: "2026-11-08 15:22", type:'update', group:'assistant', title:'フレンドの最近が見られるようになりました', status:'new',
+    items:[
+      '「🏘 フレンド」の家の一覧に、その人の最近の1行が出るようになりました(遊んだモンヒロビートの曲・MFバトルカードで勝った・新しく迎えたマスモン・部屋に置いた家具など)',
+      'フレンドの家を訪ねると、居間の掲示板で「◯◯さんの家の最近」が見られます。助手たちの今日の様子も並びます',
+      '見せたくないときは、「🏘 フレンド」の設定の「最近の遊びをフレンドに見せる」を切にしてください',
+    ],
+  },
+  {
     date: "2026-11-08 15:16", type:'update', group:'assistant', title:'助手1人だけに道具を贈れるようになりました', status:'new',
     assistantNotice:{ id:'update_notice_assistant_life_solo_v1', type:'market' },
     items:[
