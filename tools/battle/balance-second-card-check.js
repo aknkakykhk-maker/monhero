@@ -58,7 +58,10 @@ check('processTurnで2枚目以降を判定している',
   has('const halveCounter=makeHalveCounter();')
     // AIコピーの札は2枚目に数えない(entry.aiCopy・2026-10-27)
     && (has('const halved=halveCounter.take(card,entry.slotIdx);') || has('const halved=entry.aiCopy?false:halveCounter.take(card,entry.slotIdx);'))
-    && has("const effMul=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect'):(halved?0.5:1);"));
+    // 2026-11-07: 固有技のオリジナル強化(効果の強さ・回復の量)を掛ける前の値を effMulBase に分けた。半減はそこに入る
+    && (has("const effMul=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect'):(halved?0.5:1);")
+      || (has("const effMulBase=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect'):(halved?0.5:1);")
+        && has('const effMul=effMulBase*(1+cardBoost.effectPct/100);') && has('const healMul=effMulBase*(1+cardBoost.healPct/100);'))));
 // アシストカードを枚数に数えないのは器(makeCardHalveCounter)の中。上の halveFlags が実際に確かめる
 check('数え方は1か所(cardHalveGroup)で決めている',
   has('const makeHalveCounter = () => makeCardHalveCounter(cardHalveGroup, isAssistCard);')
@@ -82,7 +85,8 @@ check('固有技の数値効果も半減する',
   buffHalved('addPermaBuff', 'dmgCutPct') && buffHalved('addPermaBuff', 'atkPct')
     // ガッツ回復は現在値ではなく「そのときの上限」から出す。
     // 2026-09-20: 新モードは「使った子の上限 × 率」なので gainGutsByRate を通る(半減は率へ掛かる)
-    && buffHalved('addPermaBuff', 'comboDmgPct') && has('gainGutsByRate(slotIdx,0.5*effMul)')
+    // スエゾーのガッツ回復は回復の量(healMul。半減は effMulBase から入る)
+    && buffHalved('addPermaBuff', 'comboDmgPct') && (has('gainGutsByRate(slotIdx,0.5*effMul)') || has('gainGutsByRate(slotIdx,0.5*healMul)'))
     && buffHalved('addPermaBuff', 'critRatePct') && buffHalved('addWaveBuff', 'enemyAtkDebuffPct'));
 // 2026-09-20: 新モードは「同じ子の2枚目」なので言い方を変えている
 check('半減したことを画面に出す',

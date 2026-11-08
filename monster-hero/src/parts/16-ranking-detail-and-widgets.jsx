@@ -99,6 +99,9 @@ const rankingMasuDetail = (masu) => {
     ...(Object.keys(normalizeSoulTraitLevels(masu.soulTraitLevels)).length > 0
       ? { soulTraitLevels: normalizeSoulTraitLevels(masu.soulTraitLevels) } : {}),
     ...(soulTraitSpentPoints(masu) > 0 ? { soulSpentPoints: soulTraitSpentPoints(masu) } : {}),
+    // 固有技のオリジナル強化に使った固有技Pの合計(2026-11-07 社長「ランキングの詳細に1つだけ足す」)。積んでいなければ入れない。
+    // 種類ごとの中身は送らない(合計1つだけ)。読む側は項目が無い記録を0として読む
+    ...(uniqueSkillBoostSpentPoints(masu) > 0 ? { uniqueBoostSpent: uniqueSkillBoostSpentPoints(masu) } : {}),
     statPoints: { hp: num(sp.hp), atk: num(sp.atk), def: num(sp.def), guts: num(sp.guts) },
     // 間合い適性は「グレードの文字」の配列(['C','M','C','C'] など)。数値ではないので
     // 数に直そうとすると全部0になり、ランキング側だけ全距離Cに見えてしまう
@@ -159,6 +162,8 @@ const rankingDetailToMasu = (baseId, detail, colors) => {
     soulRankStage: normalizeSoulRankStage(detail.soulRankStage),
     soulTraitLevels: normalizeSoulTraitLevels(detail.soulTraitLevels),
     soulSpentPointsSnapshot: Number.isFinite(Number(detail.soulSpentPoints)) ? num(detail.soulSpentPoints) : 0,
+    // オリジナル強化に使った固有技Pの合計(記録した時点)。古い記録には無いので0
+    uniqueBoostSpentSnapshot: num(detail.uniqueBoostSpent),
     statPoints: { hp: num(sp.hp), atk: num(sp.atk), def: num(sp.def), guts: num(sp.guts) },
     // グレード以外(数値へ潰してしまった古い記録など)が入っていたら、その記録には
     // 間合い適性が残っていないものとして扱う。nullにしておけば血統本来の適性が出るので、

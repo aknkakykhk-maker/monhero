@@ -387,7 +387,7 @@ const useBubbleCollapse = (collapseKey) => {
 const bubbleWrap = (text) => (typeof jaWrap === 'function' ? jaWrap(text) : text);
 // (どちらも後ろの部品で宣言されるので、読み込み時ではなく描くときに引く)
 const bubbleWrapStyle = () => (typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined);
-const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0, collapseKey=null, collapseHidden=false }) => {
+const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0, collapseKey=null, collapseHidden=false, oneLine=false }) => {
   const [open, setOpen] = useState(defaultOpen);
   const [collapsed, setCollapsed] = useBubbleCollapse(collapseKey);
   // 設定「助手のひとこと」で隠すか。開いた画面ごとに1回だけ決め、見ているあいだに消えたり出たりしない
@@ -481,15 +481,24 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
   }
   return (
     <>
-      <div data-assistant-bubble className={`w-full flex items-end gap-2 ${collapseKey?'relative':''}`}>
+      <div data-assistant-bubble data-bubble-one-line={oneLine?'':undefined} className={`w-full flex ${oneLine?'items-center':'items-end'} gap-2 ${collapseKey?'relative':''}`}>
         {/* 顔をタップすると次のセリフへ。詳細は吹き出し側をタップする(操作を分けている) */}
         <button type="button" onClick={onFaceTap} aria-label={`${who.name}に話しかける`} className="shrink-0 active:scale-90 transition-transform">
           <AssistantFace who={who} size={size} accent={color} expression={face}/>
         </button>
         <Wrapper
           {...(hasDetail ? { onClick:()=>setOpen(true), 'aria-label':`${who.name}の説明を開く` } : {})}
-          className={`relative flex-1 min-w-0 text-left rounded-2xl border-2 ${compact?'px-2.5 py-1.5':'px-3 py-2'} ${hasDetail?'active:scale-[.99]':''}`}
+          className={`relative flex-1 min-w-0 text-left rounded-2xl border-2 ${oneLine?'flex items-center gap-1.5 px-2.5 py-1 max-h-[36px]':compact?'px-2.5 py-1.5':'px-3 py-2'} ${hasDetail?'active:scale-[.99]':''}`}
           style={{ borderColor:color, backgroundColor:'var(--mh-bubble-bg, rgba(15,23,42,0.92))' }}>
+          {/* oneLine … 名前とセリフを1行に並べ、はみ出す分は … で切る。「タップで詳しく」は右端の小さな「›」(高さ36px以内。
+              2026-11-08 マモリ: 曲えらびの横の欄は空きが40pxほどしかなく、3行の吹き出しが画面の下へはみ出していた) */}
+          {oneLine ? <>
+            <span className="absolute" style={{ left:'-9px', top:'50%', marginTop:'-7px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:`9px solid ${color}` }}/>
+            <span className="absolute" style={{ left:'-6px', top:'50%', marginTop:'-7px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:'9px solid rgba(15,23,42,0.92)' }}/>
+            <span className="shrink-0 text-[9px] font-black tracking-widest" style={{ color }}>{who.name}</span>
+            <span data-bubble-text data-bubble-max-lines={1} className="min-w-0 flex-1 truncate text-[10px] leading-snug text-white" style={{ whiteSpace:'nowrap', textWrap:'nowrap' }}>{text}</span>{/* index.html の text-wrap: balance が折らない指定を上書きするので、ここで直に止める */}
+            {hasDetail&&<span data-bubble-more-text aria-hidden="true" className="shrink-0" style={{ color }}><ChevronRight size={12}/></span>}
+          </> : <>
           {/* 吹き出しのしっぽ(左向き) */}
           <span className="absolute" style={{ left:'-9px', bottom:'14px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:`9px solid ${color}` }}/>
           <span className="absolute" style={{ left:'-6px', bottom:'14px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:'9px solid rgba(15,23,42,0.92)' }}/>
@@ -500,13 +509,14 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
           <span data-bubble-text data-bubble-max-lines={maxLines>0?maxLines:undefined} className={`block text-white leading-relaxed ${compact?'text-[10px]':'text-[12px]'}`}
             style={maxLines>0?{...bubbleWrapStyle(),display:'-webkit-box',WebkitBoxOrient:'vertical',WebkitLineClamp:maxLines,overflow:'hidden'}:bubbleWrapStyle()}>{bubbleWrap(text)}</span>
           {(hasDetail||footerSpace>0)&&<span className="mt-0.5 flex items-center justify-end gap-0.5 text-[9px] font-black" style={{ color, ...(footerSpace>0?{paddingLeft:`${footerSpace}px`,minHeight:'18px',whiteSpace:'nowrap'}:{}) }}>{hasDetail&&<><span data-bubble-more-text>タップで詳しく</span><ChevronRight size={11}/></>}</span>}
+          </>}
         </Wrapper>
         {collapseKey&&<button type="button" onClick={() => setCollapsed(true)} aria-label="ひとことをたたむ" data-bubble-collapse
           className="mh-hit-expand absolute right-1 top-0 z-10 min-h-[24px] min-w-[24px] rounded-full text-[10px] font-black text-slate-300 bg-slate-900/80 border border-white/20 active:scale-90">▴</button>}
       </div>
       {open&&(
         <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:70000}} role="dialog" aria-modal="true" aria-label={`${who.name}の説明`}>
-          <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 bg-slate-950 flex flex-col" style={{ borderColor:color, maxHeight:'88vh' }}>
+          <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 bg-slate-950 flex flex-col max-h-[88vh] [[data-mh-view-rotation=true]_&]:max-h-[88vw]" style={{ borderColor:color }}>
             <div className="shrink-0 flex items-center gap-3 p-4 border-b border-white/10">
               <AssistantFace who={who} size={68} accent={color} expression={face}/>
               <div className="flex-1 min-w-0">

@@ -164,7 +164,7 @@ check('マスモンの詳細から使える枠がある',
     && has('extraAfterApt: renderUniqueSkillPointBox(getMasuMon(rosterDetailMon.masuId)'));
 check('ポイントが0でも未使用数を表示する', has('未使用 固有技P：{normalized.uniqueSkillPoints}'));
 check('仮配分の増減・キャンセル・確定がある', has('changeDraft(choice.key,-1)')&&has('changeDraft(choice.key,1)')&&has('キャンセル')&&has('強化を確定'));
-check('リセット券の所持数・使用不可条件・確認文言がある', has('所持 {resetTicketCount}枚')&&has('disabled={resetTicketCount<=0||resetPointCount<=0}')&&has('スキルポイントリセット券を1枚消費します。'));
+check('リセット券の所持数・使用不可条件・確認文言がある', has('所持 {resetTicketCount}枚')&&(has('disabled={resetTicketCount<=0||resetPointCount<=0}')||has('disabled={resetTicketCount<=0||resetPointCount+boostPointCount<=0}'))&&has('スキルポイントリセット券を1枚消費します。'));
 check('リセット後は個体と券を既存キーへ保存する', grab('const useUniqueSkillResetTicket', '// 強化ポイントリセットの書').includes("storeSet('mh_masu_mons', next, false)")&&grab('const useUniqueSkillResetTicket', '// 強化ポイントリセットの書').includes("storeSet('mh_owned_items', next, false)"));
 check('最大まで育った技は押せない', has('maxed=choice.level>=MAX_UNIQUE_SKILL_LEVEL'));
 const namedUnique = { name:'モッチ砲', names:['モッチ砲','大モッチ砲','超モッチ砲'], baseMult:1, baseGuts:1 };

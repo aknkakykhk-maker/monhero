@@ -69,9 +69,21 @@
 | `mh_assistant_life_play_v1` | object | 助手たちの今のにぎわい `{ day(朝4時区切り), points, counts:{rhythm,battle,card,chat,peer}, lastDay, streak }`。段(静か/ふつう/にぎやか/お祭り)で助手どうしの仲良くなり方と1日の上限が変わる。助手どうしの点 `mh_assistant_peer_bond_v1` は書き換えない(上がる量が変わるだけ) |
 | `mh_assistant_peer_seen14_v1` | object | 助手たちの今で見た台本 `{ [台本の id]: 見た日(朝4時区切り) }`。見た台本は14日のあいだ出しにくくする(全部見ていたら前に見たものから)。14日より前の記録・壊れた値は読むときに捨てる(最大4000件)。公開の印 `assistantLife` が真のときだけ書く |
 | `mh_assistant_life_item_intro_v1` | boolean | 2人にあげる道具(差し入れ・友情のしるし)を初めて持ったときの案内を出したか。true なら2度出さない。公開の印 `assistantLife` が真のときだけ書く |
+| `mh_assistant_life_gift_day_v1` | object | 助手ライフで、その日に2人へ贈った道具(2026-11-08)。`{ day, used: { [kind]: ペア } }`。同じ道具は1日1回・合わせて1日3回を数える。🧺🤝 は前からの `mh_assistant_peer_gift_v1` にも書く |
+| `mh_assistant_life_likes_v1` | object | 分かった助手の好み(2026-11-08)。`{ known: { [助手]: { [道具の key]: 'gift'(贈って分かった) \| 'told'(教えてくれた) } }, told: [{ who, key, day, lv }] }`。told は部屋のシートで見るまで残る知らせ(8件まで)。好みそのものは `ASSISTANT_LIFE_GIFT_LIKES` |
+| `mh_assistant_life_masmon_v1` | object | 助手のマスモン(2026-11-08・#5082)。`{ v:1, seed(ブリーダーID か1回だけ作った乱数), made:{ [助手]: [{ slot:1〜5, monster, nick, lv, grow, why, colors:[色id か「色id@濃さ」か null], ai }] }, named(AI の名前を付けたか), noticed:{ [助手]: true }(名前を付け直した1行を出したか), welcomed:{ [助手]: { [モンスターid]: 'YYYY-MM-DD' } } }`。made は1人1回だけ作り、あとで表を直しても変えない。読み込みは normalizeAssistantMasmonSave(壊れた値・知らない助手は捨てる)。何も無い人は表の3体を出す 2026-11-08 引き直し(社長 Q1A): 項目 `draw:{ v:2, at, made:{ [助手]: [{ slot:1〜8, monster, nick, lv, grow, why, role(染め方), welcome(迎える仲良し度 Lv。1・3・5…15), colors, ai }] }, welcomed:{ [助手]:{ [モンスター]: 日付 } }, named, fav:{ [助手]: 好きな色の並び } }` と `dyes:{ [助手]: [{ v:2, d:2, why('season'\|'like'), at, season, fav, roles, slots:{ [slot]: 色の列 } }] }` を足した。画面は draw を先に読み、前の版の made・welcomed・named は書き換えずに残す。draw は助手ごとに1回だけ作る(あれば二度引かない・種はブリーダーID+draw-v2)。dyes は同じ季節・同じ好きな色の並びでは二度足さない。色は `custom:色相:彩度:明度@濃さ` も入る 2026-11-08 迎えるときに選ぶ(社長「迎えるときに決める」): 項目 `pick:{ [助手]: { [slot 2〜8]: { slot, monster, nick, lv, grow, why, role, welcome, colors, ai, reason(選んだわけ), at } } }` と `pickNameDay`(AI の名前を試した日)を足した。迎えた枠は draw の行より pick を先に読み、まだの枠は「？」。draw・welcomed は消さない。1つの枠に1回だけ書く 2026-11-08 「提案する」(社長 Q1B・Q2C): 項目 `asked:[{ day, a, from('masmon'\|'hero'\|'welcome'\|'deck'), text(100字), res('yes'\|'some'\|'no'\|'none'\|'fail'), what, counted }]`(新しい60件)と `mine:{ [助手]: { names:{ [slot]: [前の名前…] }, parts:{ [slot]: [部位の番号…] }, hero: slot, wish: 迎えたい種類, wishSoft, deck:{ face, name, plan, day } } }` を足した。色は dyes に why:'ask' で足す。mine.parts の部位は、季節・好きな色の染め直しで上書きしない。受けてもらった数(counted)は助手1人1日3回まで |
+| `mh_assistant_life_cheki_v1` | object | 思い出チェキを撮った日(2026-11-08)。`{ [ペア]: ['YYYY-MM-DD', …] }`(ペアごとに60枚まで)。思い出アルバムに出す |
+| `mh_assistant_life_room_v1` | object | 助手の部屋の家具(2026-11-08 段階B)。`{ [助手]: { put: { ceil, wall, floor }(家具の key か null), kept: [key…](押し入れ), got: { [key]: 'YYYY-MM-DD' }(贈った日。1つの家具は1人に1回) } }`。公開の印 `assistantLifeFurniture` の後ろ |
+| `mh_assistant_life_solo_gift_v1` | object | 助手1人に贈った道具(2026-11-08 社長 SOLO-GIFT-PLAN.md)。`{ day: 'YYYY-MM-DD', used: { [kind]: 助手 } }`。2人に贈る回数(`mh_assistant_life_gift_day_v1`)とは別に1日3回。1人に贈ったチェキは `mh_assistant_life_cheki_v1` の `{ [助手]: [日…] }` に足す(2人のキーは「a-b」なので重ならない)。公開の印 `assistantLifeSolo`。壊れていたら空として読む |
 | `mh_assistant_life_diary_v1` | object | 助手ライフ「助手たちの家」の今日あったこと `{ day(朝4時区切り), items:[{ t('HH:MM'), text, ids, kind }], slots:[書いた時間の番号] }`。日が変わると空から始める。40件まで。公開の印 `assistantLife` が真のときだけ書く(2026-11-07) |
 | `mh_assistant_life_intro_v1` | string | 助手ライフの入場の演出を長く見せた日(朝4時区切りの日付)。同じ日の2回目からは短くする。公開の印 `assistantLife` が真のときだけ書く(2026-11-07) |
 | `mh_assistant_life_rhythm_v1` | object | 助手ライフの生活のリズムの変わり方 `{ [助手id]: { shift(-1 朝型〜+1 夜型), day(最後に動いた日), dayGain(その日に動いた量) } }`。夜・朝に誘って遊ぶと少しずつ動き、誘わない日は 0 へ戻る。性格ごとの上限あり。公開の印 `assistantLife` が真のときだけ書く(2026-11-07) |
+| `mh_assistant_life_rel_v1` | object | 助手ライフの人間らしい出来事(けんか・仲直り)の記録 `{ mended: { [ペア 'a-b']: { day(朝4時区切り), abs(時間の番号) } } }`。仲直りした日から2日は同じ組がけんかしない・同じ時間のうちは部屋に「🤝 仲直り！」を出すのに使う。壊れた値は空として読む。今のけんかの記録(`mh_assistant_peer_quarrel_v1`)は変えない。公開の印 `assistantLife` が偽なら読み書きしない(56-assistant-life-rel.jsx) |
+| `mh_assistant_life_friend_v1` | object | 助手ライフのフレンドの家との行き来(2026-11-08) `{ day(朝4時区切り), go, come, look(今日の回数), went・looked(今日行った家), beatP(今日のおみやげ・300まで), seen(見た置き手紙の番号), sentAt・sentSig(控えを送った時刻と中身の印), out・back(行っている/帰ってきた助手), came(来ている助手), photos(行ったことのある家の写真・60件まで), lastHosts, api(Claude API で作ったその日の場面) }`。壊れた値は既定値。日が変わると今日の数だけ戻す。公開の印 `assistantLifeFriend` が偽なら読み書きしない(56-assistant-life-friend.jsx) |
+| `mh_assistant_life_friend_settings_v1` | object | 行き来の設定 `{ open(行き来する), show(家の様子を見せる), come(来てもらう), muted(来ないようにした家・100軒まで), noteShow(置き手紙の自由文を見る), noteOff(自由文を見ない人・100人まで), act(最近の遊びを見せる) }`。無い項目は「入」・空で補う(2026-11-08 noteShow・noteOff・act を足した) |
+| `mh_assistant_life_friend_known_v1` | object | 顔なじみの回数 `{ '自分の助手|フレンドのID|相手の助手': 回数 }`(300組まで)。数字は増えるだけで、ほかの値は変えない |
+| `mh_assistant_life_friend_intro_v1` | boolean | 「🏘 フレンド」のはじめての案内を見たか |
+| `mh_assistant_life_friend_activity_v1` | object[] / `[]` | フレンドに見せる「最近」のうち、モンヒロビートで遊んだ曲名(2026-11-08)。`[{ k:'beat', x:曲名(30字), at }]` を新しい順に6つまで。公開中の曲だけ・スコアなどは残さない。設定 `act` が切なら送らない(端末の中には残る) |
 | `mh_assistant_daily_lines_v1` | object | ふだんの吹き出しを1日1回まとめて作ったひとこと(2026-10-14)。`{ day, assistantId, lines: { [場面]: [{ e, t, n }] } }`。日付が変われば使わず、次に作ったら入れ替える。n はその日に出した回数 |
 | `mh_story_assistant_chat_seen_v1` | boolean | 助手とおしゃべりのお話「話せるようになった日」を本編で見たか(飛ばしても立つ)。公開の後の最初の HOME で1回だけ流すため。回想・デバッグでは立てない |
 | `mh_beat_shop_vip_letter_seen_v1` | boolean | お話「レジェンドブリーダーへの招待状」を本編で見たか(飛ばしても立つ・2026-11-05)。ブリーダーレベル1000以上の HOME で1回だけ流す。true の人だけ、ビートP交換所のダイヤ・トレーニングチケット・重トレーニングチケットが「優待パス還元」になる(値段は data/rhythm-event.js の LEGEND_BREEDER_PASS_OFFERS。保存しない)。回想・デバッグでは立てない |
@@ -82,6 +94,8 @@
 | `mh_market_icons` | string[] / `[]` | 購入アイコンID。ブリーダーP交換所だけでなく、**ビートP交換所のハロウィンのアイコン(1000P)の交換でも**、まとまりの中身が全部ここへ足される(2026-10-04)。**同じキャラのアイコン(助手の表情・モンスターの顔と円盤石など)は、どれか1つでも入っていれば全部持っている扱い**(2026-10-03・`BREEDER_ICON_GROUPS` / `expandOwnedMarketIcons`)。広げるのは読むときだけで、保存値は書き換えない。買うと、まとめの中身が全部入る |
 | `mh_owned_items` | object / `{}` | 消耗品ID→個数 |
 | `mh_missions` | object / 期間ごとの既定値 | デイリー・ウィークリー・マンスリーの進捗、期間ID、ギフト送付済みID。旧データの欠損項目は読み込み時に補う |
+| `mh_mission_renew_v1` | object / `normalizeMissionRenewMark` | ミッションの作り直し(2026-11-08)の切り替えの印 `{ at, daily, weekly, monthly }`。一度だけ書く。今までミッションの保存があった人は書いた日・週・月の期間、はじめての人は `'-'`。印の期間と今の期間が同じあいだだけ「前の項目を残す・コンプリートは少ないほうの目安」で数える(次の期間へは持ち越さない)。`mh_missions` の形・キー名は変えていない |
+| `mh_mission_daily_line_v1` | object / `normalizeMissionDailyLine` | ミッションの助手の1日1行の案内(2026-11-08)。`{ day, lines:{ 助手id: 文 }, tries, at }`。中継役 mission-daily-line から1日1回(届かなければ10分あけて3回まで)もらった文の控え。文は {task}・{reward} の場所だけを持ち、数はゲームが入れる。無い・壊れていたら決まった台詞 |
 | `mh_unlocked_monsters` | string[] / 初期8種 | 解放済み種ID |
 | `mh_monster_roster` | string[] / 解放済み一覧 | 候補編成。種IDまたは `masu:<id>` |
 | `mh_auto_settings_v1` | object / `{strategy:'random', allies:[{rosterEntry:null,slot:null} × 3], breakthroughReserve:{gold:0,psyche:0}, quickRun:{heroRosterEntry:null,distance:null,difficulty:null,autoStart:false}}` | AUTO用の事前設定。方針・供モン・クイック周回設定に加え、AUTO∞自動限界突破で最低限残すダイヤ/虹のプシュケーを `breakthroughReserve` に保存する。`quickRun.autoStart` は「モンヒロビートを開いたら自動で∞周回を始めるか」（既定 `false`。項目の無い既存データ・壊れた値は `false` へ倒す）。欠損・不正値は0へ正規化し、0は保護なし |
@@ -94,12 +108,14 @@
 | `mh_breeder_gender_v1` | string / `'none'` | プロフィールの性別(`'male'`/`'female'`/`'none'`=答えない)。`normalizeBreederGender` を通し、無い・壊れているときは `'none'`(これまでと同じ呼び方)。助手の段ごとの呼び方(`ASSISTANT_GENDER_CALLS`)とマスモンのくん/ちゃんに使う。端末の中だけで、ランキング・フレンドには送らない(2026-11-06 社長) |
 | `mh_friend_favorites_v1` | string[] / `[]` | フレンド一覧で「お気に入り」にしたフレンドのID(`friendsNormalizeFavorites` を通す) |
 | `mh_friend_recent_v1` | object[] / `[]` | 最近いっしょに遊んだ人(`{id,name,at}`。新しい順・同じ人は1件・最大30人。端末だけに覚え、サーバーへは送らない。`friendsNormalizeRecent` を通す) |
+| `mh_friend_presence_show_v1` | boolean / `true` | 「いまの状態をフレンドに見せる」(2026-11-08)。`false` のときは friend_profiles の place を 'other'(ログイン中)にし、オート周回中・操作なしの分(records.au・records.im)も送らない |
 | `mh_friend_notes_v1` | object / `{}` | フレンドごとのメモ(フレンドのID→メモ。メモは12文字まで・最大200人ぶん。端末だけに覚え、サーバーへは送らない。`friendsNormalizeNotes` を通す) |
 | `mh_raid_jack_v1` | object / `raidJackDefaultState()` | イベント・レイドボス「ジャック」の端末側の記録(A/Bそれぞれの今日の使用回数・買い足した回数・倒した段階、Bの累計ダメージの自分用の控え、受け取り済みの報酬ID、送れなかった与ダメージの再送待ち)。`raidJackNormalizeState` を通す。既存のキーには触らない。設計: `docs/spec/RAID_BOSS_JACK.md` |
 | `mh_card_collection_v1` | object / `cardNormalizeCollection` | MFバトルカードの持っているカード `{ カード番号: 枚数 }`(モンスターカードも同じ表)。枚数は 1〜99。知らない番号は消さずに残す。設計: `docs/spec/CARD_BATTLE.md` 6-1 |
 | `mh_card_pvp_penalty_v1` | number(時刻ms) | MFバトルカードのマルチ対戦で、試合の途中で部屋を出た・アプリを閉じたとき、この時刻(3分後)まで部屋に入れない(2026-10-24・91-card-battle-multi.jsx)。無い・壊れた値・過ぎた時刻は「入れる」 |
 | `mh_card_chat_prefs_v1` | object / `cardChatNormalizePrefs` | MFバトルカードのマルチと観戦のコメントの設定 `{ free, flow }`(自由文を出すか・観戦のコメントを流すか。2026-10-30・91-card-battle-multi.jsx)。無い・壊れているときはどちらも true。コメントの本文は保存しない |
 | `mh_card_pvp_history_v1` | array / `cardPvpNormalizeHistory` | MFバトルカードのマルチ対戦の履歴(2026-10-27・92-card-pvp-history.jsx)。新しい30試合まで `[{ match, at, room, outcome, reason, turns, verify, foe:{ bid, name, icon, frame, deckName }, foeDeck:{ monsters, cards }|null, foeSeen:[使われた札], myDeck:{ name, monsters, cards }, rating:{ before, after }|null }]`。相手のデッキは封を開けて「合っている」試合だけ。壊れた行は捨てる。端末の中だけ(Supabase に送らない) |
+| `mh_card_pvp_fix_20261108_v1` | object `{ at, undone, matches }` | 2026-11-08 マルチが不具合で止まった試合の投了の負けを、`mh_card_record_v1` の `pvp.lose` から1回だけ戻した印(92 の `cardPvpFix20261108Once`・社長の決定)。当てはまる試合が履歴に無い端末も印だけ書く。印があれば二度と当てない。記録と同じ取引で書く |
 | `mh_card_replays_v1` | object / `cardReplayNormalize` | MFバトルカードの過去の対戦を見る(リプレイ)の記録 `{ v:1, list:[{ v:1, id(試合の番号), kind:'pvp'|'cpu', at, rules(ルールの版), first, names, foe:{ name, icon, frame, deckName, who }, outcome, reason, decks:[自分, 相手], seeds:[自分, 相手], acts:[[by, 手], …], prints(1手ごとの場の指紋4文字ずつ), fav, turn(最後の番。2026-10-27 に足した項目・無ければ null), level(助手と対戦の難易度。2026-10-27 に足した項目・無ければ null) }] }`(新しい順)。新しい50試合まで・お気に入り10まで(消さない)・合わせて約750KBまで(2026-10-27 に10試合・3つ・150KBから増やした。キーは同じ)。localStorage へは直に書き、いっぱいのときはゲーム全体の保存の失敗に数えず、128KBの空きが残るまで古い試合(★以外)から消す。それでも入らなければその試合だけ残さない。端末の中だけ(送らない)。壊れた1件は捨て、知らない値は既定で補う。マルチは確かめ(`cardPvpVerify`)が通った試合だけ書く。なぞり直して手が当たらない・指紋が合わない所で止め「ここまでしか見られません」(2026-10-27・93-card-replay.jsx) |
 | `mh_card_deck_owner_key_v1` | string(16進48文字)/ `cardShareOwnerKey` | MFバトルカードのみんなのデッキ(2026-10-29・95-card-deck-share.jsx)の持ち主の鍵。はじめて登録するときに端末で作る。表 card_deck_entries には md5 の指紋だけを置き、登録し直し・やめる・報酬の受け取りで照らし合わせる。バックアップで引き継ぐ。消すと、その登録を書きかえられなくなる |
 | `mh_card_rented_deck_v1` | object / `cardRentedNormalize` | MFバトルカードのみんなのデッキで借りているデッキ(2026-10-29・95-card-deck-share.jsx)。1組だけ `{ ownerId, name, icon, frame, version, deckName, deck:{monsters, cards}, at }`・返すと null。助手と対戦のデッキ選び(87)に並ぶ。マルチでは使えない。壊れた値は「借りていない」 |
@@ -133,11 +149,17 @@
 | `mh_card_bgm_v1` | object / `normalizeCardBgm` | MFバトルカードのBGM `{ top: 曲id(トップ画面・2026-10-26 に足した項目), cpu: 'auto'(相手の助手に合わせる)か曲id, pvp: 曲id }`。オプションで曲を選んだときだけ書く。無い項目・知らない曲idは既定(top `atsu_cup_theme` = MF × ICHIKA MIX・cpu `auto`・pvp `ichika_battle`)へ。選んだ人の値は書き換えない |
 | `mh_card_cpu_playlist_v1` | object / `cardNormalizeCpuPlaylist` | MFバトルカードの助手と対戦の曲の並び `{ v:1, assistants:{ 助手id: [曲id 1〜5] } }`(2026-10-26)。オプションで直したときだけ書く。無い・壊れていたら助手ごとの曲1つ。知らない助手・知らない曲・同じ曲の2つ目・6曲目からは落とし、0曲になった助手は既定の1曲。これがあれば助手と対戦では `mh_card_bgm_v1` の `cpu` を使わない(そちらは消さない・書き換えない) |
 | `mh_card_cpu_open_v1` | object / `cardNormalizeCpuOpen` か `null` | MFバトルカードの助手と対戦の、いま遊んでいる試合の印 `{ id, who, level, rankable, at, beat, facts:{ ownTurns, kos } }`。始めたときに書き、ふつうに終わったら結果と同じ取引で `null` にする。残っていて `beat` が15秒より古ければ、次に開いたときに投了として数えて `null` にする(2026-10-26 社長「負け扱いにする」。84-screen-card-battle.jsx)。壊れていたら数えずに `null` |
+| `mh_card_life_reward_v1` | object / `cardLifeRewardNorm` | カード部屋にいる助手と対戦したときの 1.5倍を使った回数(2026-11-08 社長・84-screen-card-battle.jsx)`{ slot: 時間帯の通し番号(assistantLifeSlotAt().abs), used: { 助手id: 回数 } }`。1つの時間帯で助手1人につき1回まで。読むときに slot が今と違えば空(助手たちが動く時間に数え直し)。数えるのは 1.5倍で本当に増えた試合だけで、結果と同じ取引で書く。保存のほうが新しい時間帯なら書かない。壊れた値・数でない値は無視 |
 | `mh_card_last_level_v1` | string / `CARD_LEVEL_ORDER` に入っているか確かめる | MFバトルカードの助手と対戦で前に選んだ難易度('easy'〜'master')。難易度を押したときに書き、相手えらびを開いたときの最初の位置にする。無い・壊れている・まだ開いていない難易度ならイージー(2026-10-29) |
 | `mh_card_start_level_v1` | string / `cardNormalizeStartLevel` | MFバトルカードの設定「助手と対戦の最初の強さ」。'last'(前に選んだもの・既定)か 'easy'〜'master'。無い・壊れているときは 'last'。選んだ強さがまだ開いていなければ、開いている中でいちばん近い強さ、それも無ければ EASY(2026-10-29) |
 | `mh_card_settings_v1` | object / `normalizeCardSettings` | MFバトルカードの演出 `{ speed: 'normal'|'fast', autoPass: 真偽 }`。無い人は ふつう・自動パスON |
 | `mh_card_pack_fx_v1` | string / `cardPackFxOn`('OFF' のときだけ切る) | MFバトルカードのオプション「パックを開ける演出」(2026-10-31)。'ON'(強め)か 'OFF'(短め)。無い・壊れていたら強め。見た目だけで、出るカードは変わらない |
 | `mh_card_ai_talk_v1` | object / `cardNormalizeAiTalk` | MFバトルカードの助手のおしゃべり(AI)の入/切 `{ on: 真偽 }`(2026-10-25)。無い・壊れていたら入。呼べるのは公開の印かデバッグ端末だけ(83-card-battle-talk-ai.jsx) |
+| `mh_card_ai_recipe_v1` | object / `cardNormalizeAiRecipe` | MFバトルカードの助手の3つのデッキ(2026-11-08)。`{ v:1, day, perWho: { 助手id: { met, gamesSince, slotsDone, decks: { attack/guard/normal: { plan, name, line, at, ai } } } } }`。plan は 82 の `cardAiPlanClean` を通す。無い・壊れていたら空(今の組み方)。日付が変わると slotsDone だけ0に戻す。公開の印 `cardGrowStyle` が偽のあいだは読み書きしない 2026-11-08 推し・好き・素顔に作り直してからは**読むだけ**(v2 が無い端末で、会った印・10戦の数・その日の枠の数を引きつぐ。書きかえない・消さない) |
+| `mh_card_ai_recipe_v2` | object / `cardNormalizeAiRecipe2` | MFバトルカードの助手の推し・好き・素顔のデッキ(2026-11-08)。`{ v:2, day, perWho: { 助手id: { met, gamesSince, slotsDone, decks: { oshi/suki/yoso/honne: { plan, name, line, at, since, ai } } } } }`。無い・壊れていたら空(v2 が無いときだけ v1 から会った印・10戦の数・枠の数を引きつぐ)。知らない助手・知らない枠は捨てる。方針は `cardAiPlanClean` を通す。名前12字・ひとこと60字。日付が変わると枠の数だけ0 |
+| `mh_card_ai_deck_history_v1` | object / `cardNormalizeAiHistory` | 助手の「これまでのデッキ」(2026-11-08)。`{ v:1, perWho: { 助手id: [{ id, slot, name, plan, spec: { lead, avoid, keep, free, style }, monsters, top, from, to }] } }`。組み直しで名前が変わったときだけ1つ足す。助手ごとに新しい順で10個まで(11個目で一番古いものが消える)。壊れた1つは捨てる |
+| `mh_card_ai_deck_wish_v1` | object / `cardNormalizeAiWish` | 遊ぶ人が助手に出したデッキの提案を、もう使ったかの印(2026-11-08)。`{ v:1, used: { 助手id: ['推し・好き・素顔の id:YYYY-MM-DD:提案の型と名前の指紋', …] } }`(前の形 `id:YYYY-MM-DD` も読む。同じ日に同じ顔へ別の提案をしても、1回ずつ使う)。助手ごとに新しい20個まで。無い・壊れていたら空(=まだ使っていない)。`fought: { 助手id: [デッキの名前, …] }` は、提案の名前のデッキと初めて戦った印(VS の台詞を1回だけにする。無ければ足すだけ)。提案そのものは助手部の保存にある |
+| `mh_card_ai_deck_v1` | object / `cardNormalizeAiDeck` | 助手のデッキを AI で組むかの入/切 `{ on: 真偽 }`(2026-11-08)。無い・壊れていたら入。切なら AI に聞かず、型の中の揺らぎで組み直す |
 | `mh_raid_jack_frame_gift_v1` | object / `null` | プロフィールフレーム「ハロウィン・妖」をギフトで届けた印(`{ at, frameId }`・2026-10-20)。レイドで大王まで倒せたときの終章を見た参加者へ1回だけ届けるため。ギフトの一覧(`mh_gifts`)は古いものから消えるので、二重に届けないためにこの印を持つ。ギフトと同じ取引で保存する |
 | `mh_raid_jack_ending_replay_v1` | object / `null` | ハロウィン・ナイトの終章を一度だけ流し直した印(`{ at }`・2026-11-01)。終章にソラシドのセリフを足したあと、見終えた人へ前に見た方の終章を1回だけ流すため。終章をはじめて見た人も、見終えたところで立てる。終章を見た印(`mh_rhythm_event_story_v1`)と大王のフレームのギフトには触らない。`RAID_JACK_ENDING_REPLAY_READY` が真になるまで読みも書きもしない |
 | `mh_sorashido_gift_v1` | object / `null` | ソラシドの沖縄のおみやげ(10,000ビートP)をギフトで届けた印(`{ at, beatPoints }`・2026-10-27)。ソラシドの加入のお話を見終えた人へ1回だけ届けるため。ギフトの一覧(`mh_gifts`)は古いものから消えるので、それだけでは二重を防げない。イベント回想で見直しても届かない |
@@ -235,6 +257,9 @@
 | `mh_assistant_selected_v1` | string / 既定の助手 | 選んでいる助手(`normalizeAssistantId`) |
 | `mh_assistant_bond_v1` / `mh_assistant_bond_<id>_v1` | object / `ASSISTANT_BOND_EMPTY` | 助手ごとの親密度。みゅあは無印、ほかの助手は `<id>` 付き(`assistantBondKeyFor`) |
 | `mh_assistant_call_style` / `mh_assistant_call_style_<id>` | string | 助手の呼び方(さん付けなど)。みゅあは無印(`assistantCallStyleKeyFor`) |
+| `mh_assistant_callname_v1` | object | 会話で決まる呼び方(2026-11-08〜・AI-TALK-PLAN)。`{ [助手id]: { call, by:'chat'｜'offer'｜'ask'｜'profile', at, prev } }`。`call` は `{name}` 入りの型か名前を含まない呼び方(16字まで・名前を入れて12字まで・入れない言葉は読むときにも捨てる)。`assistantCallName` が今の `mh_assistant_call_style*` より先に見る。元に戻すとその助手の行を消す。無い人は空 |
+| `mh_assistant_callname_ask_v1` | object | `{ [助手id]: { asked, offeredAt } }`。Lv6 の「なんて呼んだらいい？」を聞いたか・会話の流れで助手が持ちかけた時刻(7日に1回)。無い人は空 |
+| `mh_assistant_nickname_v1` | object | プレイヤーが助手を呼ぶあだ名(2026-11-08〜)。`{ [助手id]: { nick, at } }`(10字まで)。おしゃべりで中継役へ渡すだけ。無い人は空 |
 | `mh_assistant_unlock_seen_v1` | object / `{}` | 助手の解放告知を見たか(`data/assistants.js` の `normalizeAssistantUnlockSeen`) |
 | `mh_extreme_hs_<難易度>` / `mh_extreme_clears_<難易度>` | number / `0` | 極限チャレンジ(`EXTREME` `NIGHTMARE` `CHAOS` `ULTIMATE` `INFINITY` `GOD` `RAGNAROK` `HELHEIM` `ETERNAL` `INFERNO` `EREBUS` `COCYTUS`)のハイスコアと完走回数。`COCYTUS` は2026-11-01に足した新しいキー(`mh_extreme_hs_COCYTUS` / `mh_extreme_clears_COCYTUS`)。`ETERNAL` は2026-10-29、`INFERNO` は2026-10-31に足した新しいキー(`mh_extreme_hs_ETERNAL` / `mh_extreme_clears_ETERNAL` / `mh_extreme_hs_INFERNO` / `mh_extreme_clears_INFERNO`)で、無ければ0から始まる |
 | `mh_cocytus_open_kept_v1` | object / 無し | `{version:1, extreme:boolean, species:string[]}`。INFERNO と COCYTUS のあいだに EREBUS(エレボス)を足したとき(2026-11-04)、すでに COCYTUS が開いていた人を閉じないための印。**公開のあと最初の読み込みで1回だけ**、いまの記録から作る(極限で INFERNO をクリアしていれば extreme、種族チャレンジ(クラシック)で INFERNO をクリアしていた種族を species)。キーがあれば読むだけで作り直さない。読めない・壊れているときは空として読む(COCYTUS の記録がある人は印が無くても開く)。新しく足したキーで、既存のキーは触らない |
@@ -336,6 +361,7 @@
 | `mh_rhythm_fix_override_v1` | object / 未設定なら `{}` | モンヒロビートの「実機でしか分からない直し方」(`RHYTHM_TOUCH_FIXES`)を、この端末だけで入れる/切る上書き(2026-10-07)。`{ 直し方の名前: boolean }`。**`storeSet` ではなく `localStorage` へ直接**書く(`rhythmTouchFixSetOverride`)。読むときは表にある名前の boolean だけ拾い、それ以外・壊れた値は捨てる(上書きなし=表のとおり)。いまゲームの画面からは書かない(検査と手で試すとき用) |
 | `mh_sky_lift_portrait_proto` | 文字列 `'25'` / `'39'` / 未設定(=16%) | **デバッグ専用**。縦画面の空中の段の高さの差(道の高さの 16%・25%・39%)を見比べる切り替え(2026-10-11・HELL の試作)。音ゲーデバッグの「プレイ」タブの切り替え(`RhythmSkyLiftSwitch`)だけが `localStorage` へ直接書き、16% を選ぶとキーを消す。読むときは `25`・`39` 以外(未設定・壊れた値)を 16% として読む(`rhythmSkyLiftPortrait`)。空中の段がある譜面(デバッグの試作の枠)だけに効き、通常プレイには何も起きない |
 | `mh_assistant_bubble_mode_v1` | `'ALWAYS'` / `'DAILY'` / `'OFF'` / 既定 `'ALWAYS'` | 助手の吹き出し(画面ごとのひとこと)の出し方(2026-10-10・改善G6)。設定画面のボタンで書く。`normalizeAssistantBubbleMode` で既定へ倒す。はじめての案内・`…Intro` の場面・HOMEの助手・助手の告知には効かない |
+| `mh_assistant_peer_auto_v1` | `true` / 未設定・`true` 以外は切 | 助手どうしの会話(掛け合い・特別なお話・助手ライフの場面・見返し)を自動で進めるか(2026-11-08 社長)。設定画面の「助手どうしの会話を自動で進める」で書く。既定は切(タップで次へ)。`ASSISTANT_PEER_AUTO_STORE`(56-assistant-peer.jsx) |
 | `mh_assistant_bubble_seen_v1` | object / 未設定なら空 | 「1日1回」のときに、その日に出した場面 `{ day:'YYYY-MM-DD'(朝5:00区切り), scenes:[場面のキー] }`。日が違う・壊れた値は空として読む(`normalizeAssistantBubbleSeen`) |
 | `mh_bubble_collapsed_v1` | object / 未設定なら空 | 助手の吹き出しを「小さくたたんだ」売り場の印 `{ 'market:event':true, 'help':true, … }`(2026-10-26 開発部 k02・e01。ヘルプの上の助手は 'help'。たたんだものだけ入れ、ひらけば消える)。キーは画面ごとの `collapseKey`。object でない・値が `true` でないものは捨てて「ひらいたまま」として読む(`normalizeBubbleCollapsed`)。既存のキーは触らない |
 
@@ -413,7 +439,7 @@
 
 ### ミッション
 
-`mh_missions` は既存のデイリー／ウィークリーに、マンスリーの項目を追加した単一オブジェクトである。既存キーの改名・削除は行わない。`normalizeMissions` が欠損を補い、日次・週次・月次の期間が変わった部分だけを初期化する。
+`mh_missions` は既存のデイリー／ウィークリーに、マンスリーの項目を追加した単一オブジェクトである。2026-11-08 のミッションの作り直しでは、数える項目(beatPlays・beatClears・cardPlays・cardWins・assistantTouches・friendVisits)と、助手とふれあった日の一覧(weeklyAssistantDays・monthlyAssistantDays)を**足しただけ**で、既存の項目・キー名・受取履歴(sent*)・ギフトの固定idは変えていない。足りない古い保存は0・空で読む。既存キーの改名・削除は行わない。`normalizeMissions` が欠損を補い、日次・週次・月次の期間が変わった部分だけを初期化する。
 
 - 日次: `dailyPeriod`, `daily`, `sentDaily`（JST 04:00更新）
 - 週次: `weeklyPeriod`, `weekly`, `sentWeekly`, `weeklyLoginDays`（月曜JST 04:00更新）
@@ -487,6 +513,16 @@
 無効な初期技は自前へフォールバック）、起動時に既存個体を一括で書き換えることはしない。
 設定の保存は `uniqueSkillLevels` と `uniqueSkillPoints` に触れないため、並び替えや初期技の変更で
 固有技Lv・固有技ポイントが変化することはない。
+
+固有技のオリジナル強化(2026-11-07)で足した項目は `uniqueSkillBoosts` の1つだけで、`mh_masu_mons` の個体オブジェクトへ
+**追加**する(新しい保存キーは作らない)。形は `{ '<技のキー>': { '<種類id>': 目盛りの数 } }`。技のキーは恒久Lvと同じ
+`own` / `inhId:<inheritedUniqueId>`、種類idは `UNIQUE_BOOST_DEFINITIONS`(11-masu-progression.jsx)の id。
+強化に使ったぶんだけ既存の `uniqueSkillPoints` が減り、`uniqueSkillLevels` の意味は変えない。
+持たない既存個体は「強化なし」として読み、知らない種類・負の値・上限超えは読むときに捨てる/丸める(一括書き換えはしない)。
+転生では持っている個体だけそのまま持ち越す(`resetMasuForRebirth`)。スキルポイントリセット券は Lv と一緒に強化も空にし、
+使った固有技Pを `uniqueSkillPoints` へ返す。合体では副の選んだ技の強化を、主に付いた新しい技のキーへ写す。
+総合力は「使った固有技P × 10」を足す(100Pで+1000)。ランキングの詳細(`rankingMasuDetail`)には合計だけを
+`uniqueBoostSpent` として、積んでいるときだけ足す(読む側は無ければ0)。
 
 ### 魂格システム
 

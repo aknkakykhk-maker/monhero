@@ -18,6 +18,7 @@ const KO=/(?<![子])子(?=[がをはにのもとでやへ、。！？!?…」』
 // 保存の値として使っている文(画面にはそのまま出さない)は見ない。書き換えると、プレイヤーが組んだ戦術(保存データ)が働かなくなる(CLAUDE.md ⑦)。
 //   MFバトルカードの戦術の「立ち回り」「ブリーダー」の選択肢の値と、その値で分ける判定・手本。画面には CARD_TACTIC_* の表の表示用の文(「モンスター」)が出る
 const SAVED_VALUE_LINE=/\{ id: '(stance|bEff)',|if \(v === '|'(stance|bEff)\.[^']*'/;
+const KO_GENERAL_SOURCE='(?:新しい|好きな|強い|弱い|育てた|育ててる|育てる|育てたい|使った|使ってる|使う|使いたい|お気に入りの|推しの|気になる|ほしい|欲しい|強かった|レアな|かわいい|可愛い|小さい|大きい|速い|硬い|固い|はじめての|初めての|仲間の|手持ちの|残りの|ベンチの|控えの|ほかの|他の|別の|同じ|似た|若い|育った|出した|入れた|呼んだ|選んだ)子(?![供ども])';
 const found=[];
 for(const f of files){
   const src=fs.readFileSync(path.join(ROOT,f),'utf8');
@@ -26,14 +27,18 @@ for(const f of files){
   const visit=n=>{if(!n||typeof n!=='object')return;if(Array.isArray(n)){n.forEach(visit);return;}
     if((n.type==='StringLiteral'||n.type==='TemplateElement'||n.type==='JSXText')&&!SAVED_VALUE_LINE.test(lines[n.loc.start.line-1]||'')){
       const t=n.type==='TemplateElement'?n.value.cooked||'':n.value;let m;KO.lastIndex=0;
-      while((m=KO.exec(t))){if(EXCL.test(t.slice(Math.max(0,m.index-4),m.index+3)))continue;found.push(`${f.replace('monster-hero/','')}:${n.loc.start.line} 「${t.slice(Math.max(0,m.index-8),m.index+3)}」`);}}
+      while((m=KO.exec(t))){if(EXCL.test(t.slice(Math.max(0,m.index-4),m.index+3)))continue;found.push(`${f.replace('monster-hero/','')}:${n.loc.start.line} 「${t.slice(Math.max(0,m.index-8),m.index+3)}」`);}
+      const G=new RegExp(KO_GENERAL_SOURCE,'g');while((m=G.exec(t))){const at=m.index+m[0].length-1;if(found.some(x=>x.startsWith(`${f.replace('monster-hero/','')}:${n.loc.start.line} `)))break;found.push(`${f.replace('monster-hero/','')}:${n.loc.start.line} 「${t.slice(Math.max(0,at-8),at+4)}」`);}}
     for(const k in n){if(k==='loc'||/Comments$/.test(k))continue;const v=n[k];if(v&&typeof v==='object')visit(v);}};
   visit(ast.program);
 }
 // 【2026-11-07 ジン部長】助手などの台詞でも、複数・一般のモンスターを「子」と呼ばない(「この子たち」「この子ら」「高い子ほど」「どの子」など)。
 //   特定の1体を指す「この子」「あの子」はそのまま通す(社長)。人を指す言葉(女の子・〜ばっかりの子 など)は台詞の場面で決めるので、
 //   ここでは複数・一般の形だけを見る
-const DIALOG_KO=/子(?:たち|ら(?![しい]))|子ほど|(?:どの|ほかの|他の)子(?![供ど])/g;
+// 【2026-11-08 窓口・ココロ】「新しい子育てる」「好きな子入れて」「マスモンは育てた子だよ」が通っていた。
+//   見ていたのは「子」の後ろに助詞が来る形(プレイヤー向けの文)と、複数・「どの子」の形(台詞)だけで、
+//   「〈形容詞・動詞〉子」で一般のモンスターを指す形を見ていなかった。それも台詞・プレイヤー向けの文の両方で見る
+const DIALOG_KO=new RegExp('子(?:たち|ら(?![しい]))|子ほど|(?:どの|ほかの|他の)子(?![供ど])|'+KO_GENERAL_SOURCE,'g');
 // 開催中のイベントのお話は、開催のあいだ触らない決まり(CLAUDE.md ⑥-4)。終わったら言い換えること(期限を過ぎると NG になる)
 // 開催中のイベントで見送った台詞は、2026-11-09 のイベント終了後に言い換えた(パンドラとふたつの翼 EP3・EP7)。見送りが要るときはここへ { text, until, why } を足す
 const DIALOG_KO_HOLD=[];
@@ -56,7 +61,7 @@ for(const f of DIALOG_FILES){
   visit(ast.program);
 }
 console.log(`${found.length?'NG':'OK'}: プレイヤー向けの文で、モンスターを「子」と呼んでいない(助手の台詞は除く) — ${found.length?found.slice(0,8).join(' / '):`${files.length}ファイル`}`);
-console.log(`${dialogFound.length?'NG':'OK'}: 助手などの台詞で、複数・一般のモンスターを「子たち」「子ら」「〜子ほど」「どの子」と呼んでいない(特定の1体の「この子」は通す) — ${dialogFound.length?dialogFound.slice(0,process.env.ALL?999:8).join(' / '):`${DIALOG_FILES.size}ファイル`}${held.length?` (開催中のイベントのため期限まで見送り: ${held.join('・')})`:''}`);
+console.log(`${dialogFound.length?'NG':'OK'}: 助手などの台詞で、複数・一般のモンスターを「子たち」「子ら」「〜子ほど」「どの子」「新しい子」「好きな子」「育てた子」などと呼んでいない(特定の1体の「この子」は通す) — ${dialogFound.length?dialogFound.slice(0,process.env.ALL?999:8).join(' / '):`${DIALOG_FILES.size}ファイル`}${held.length?` (開催中のイベントのため期限まで見送り: ${held.join('・')})`:''}`);
 const ng=found.length+dialogFound.length;
 console.log(ng?`\n${ng}件のNGがあります`:'\nすべてOK');
 process.exit(ng?1:0);

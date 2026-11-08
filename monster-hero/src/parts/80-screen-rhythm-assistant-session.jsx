@@ -215,7 +215,7 @@ function RhythmAssistSessionPicker({ assistants = [], calledIds = [], guideAssis
                   {lv >= RHYTHM_ASSIST_SESSION_TASTE_LEVEL && <span data-rhythm-assist-taste className="w-full truncate text-center text-[9px] font-bold text-slate-300">♡ {rhythmAssistSessionLikedNames(who.id).join('・')}</span>}
                   {calledOf(who.id) && <span className="rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950">呼んでいる</span>}
                   {!calledOf(who.id) && !rhythmAssistSessionVisitFree(who.id) && rhythmAssistSessionAsleep(who.id) && <span data-rhythm-assist-asleep className="w-full rounded-xl bg-indigo-300/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950">💤 寝ている</span>}
-                  {!calledOf(who.id) && rhythmAssistSessionVisitFree(who.id) && <span data-rhythm-assist-visit aria-label="🎵 いまモンビーにいる・回数なし" className="flex w-full flex-wrap justify-center rounded-xl bg-sky-400/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"><span className="whitespace-nowrap">🎵 いま</span><span className="whitespace-nowrap">モンビーにいる</span><span className="whitespace-nowrap">・回数なし</span></span>}
+                  {!calledOf(who.id) && rhythmAssistSessionVisitFree(who.id) && <span data-rhythm-assist-visit aria-label="🎵 いまモンヒロビートにいる・回数なし" className="flex w-full flex-wrap justify-center rounded-xl bg-sky-400/90 px-1 py-0.5 text-center text-[9px] font-black leading-tight text-slate-950"><span className="whitespace-nowrap">🎵 いま</span><span className="whitespace-nowrap">モンヒロビート</span><span className="whitespace-nowrap">にいる・回数なし</span></span>}
                 </button>
               );
             })}
@@ -282,9 +282,15 @@ const rhythmAssistSessionVisitFree = (id) => {
 //     同じ時間帯に断られた助手を呼び直すと1回ごとに+2割(9割まで)。断られた回数は起動の中だけ覚える(保存しない)
 //   断られたら回数もセッション券も使わない。来てくれたら、部屋に来たときの一言を「起こされた」一言にする
 const RHYTHM_ASSIST_SESSION_WAKE = { refused: {}, woke: new Set() };
+// 寝ているかの正本は助手ライフの assistantLifeAsleep(ナカヨシ5・#4862。印が偽・失敗なら偽)
 const rhythmAssistSessionAsleep = (id) => {
-  if (!rhythmAssistSessionEnabled() || typeof assistantLifeCurrent !== 'function' || typeof assistantLifeWhereOf !== 'function') return false;
-  try { const w = assistantLifeWhereOf(assistantLifeCurrent(), id); return !!(w && w.doing === 'sleep'); } catch (_) { return false; }
+  if (!rhythmAssistSessionEnabled() || typeof assistantLifeAsleep !== 'function') return false;
+  try { return assistantLifeAsleep(id) === true; } catch (_) { return false; }
+};
+// 起こして部屋に入れたことを助手ライフへ知らせる(家の「今日あったこと」と生活のリズムの「誘って遊んだ」)。入れたときだけ呼ぶ
+const rhythmAssistSessionNoteWoken = (id) => {
+  if (typeof assistantLifeOnWoken !== 'function') return;
+  try { assistantLifeOnWoken({ assistantId: id, came: true, at: Date.now() }); } catch (_) { /* 受け手の失敗で止めない */ }
 };
 const rhythmAssistSessionWakeChance = ({ nightOwl = false, bondLevel = 1, bondMax = 1, retries = 0 } = {}) => {
   const bond = bondMax > 1 ? Math.max(0, Math.min(1, (Number(bondLevel) - 1) / (bondMax - 1))) : 0;
@@ -639,8 +645,9 @@ function RhythmAssistSessionDuoResult({ ids = [], round }) {
       ))}
       {onlyGain.length > 0 && (
         <p data-rhythm-assist-peer-gains className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/40 bg-violet-950/50 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100 landscape:col-span-2 [[data-mh-view-rotation=true]_&]:col-span-2">
+          {/* 6組並ぶと「(Lv1 顔見知り)」の繰り返しで画面の幅いっぱいだった(2026-11-08 社長)。まとめの行は「+3(Lv1)」と短く */}
           <span className="shrink-0">🎤 友情Lv</span>
-          {onlyGain.map(({ key: k, d, gained, level }) => <span key={k} data-rhythm-assist-peer-gain className="whitespace-nowrap text-amber-200">{rhythmAssistSessionName(d.a)}・{rhythmAssistSessionName(d.b)} {rhythmAssistSessionPeerGainText(gained, level)}</span>)}
+          {onlyGain.map(({ key: k, d, gained, level }) => <span key={k} data-rhythm-assist-peer-gain className="whitespace-nowrap text-amber-200">{rhythmAssistSessionName(d.a)}・{rhythmAssistSessionName(d.b)} +{gained}{Number(level) > 0 ? `(Lv${level})` : ''}</span>)}
         </p>
       )}
     </>

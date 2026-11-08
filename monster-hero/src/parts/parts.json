@@ -228,6 +228,10 @@
       "role": "画面: 設定(SETTINGS)。MonsterHeroGame から切り出した1画面目"
     },
     {
+      "file": "52-mission-daily-line.jsx",
+      "role": "ミッション: 助手の1日1行の案内(中継役 mission-daily-line・決まった台詞・mh_mission_daily_line_v1)"
+    },
+    {
       "file": "52-screen-missions.jsx",
       "role": "画面: ミッション(MISSIONS)。受け取りは MonsterHeroGame 側に残し、props で受ける"
     },
@@ -274,6 +278,10 @@
     {
       "file": "63-screen-masu-soul-traits.jsx",
       "role": "画面: 魂格特性(MASU_SOUL_TRAITS)"
+    },
+    {
+      "file": "63-unique-boost-sheet.jsx",
+      "role": "シート: 固有技のオリジナル強化(マスモン詳細の固有技強化の枠から開く)"
     },
     {
       "file": "64-screen-masu-transcend-enhance.jsx",
@@ -364,6 +372,30 @@
       "role": "助手ライフの専用ページ「助手たちの家」(AssistantLifeHouse: 8人の部屋・部屋を押す・場面・みんなの居場所・入場・今日やれること)と、HOME の施設の横の顔(AssistantLifeHomeFaces)。ビート部とのつなぎ口 assistantLifeAtBeat・assistantLifeBeatIds。公開の印 assistantLife の後ろ。保存は mh_assistant_life_diary_v1・mh_assistant_life_intro_v1 の新しいキーだけ"
     },
     {
+      "file": "56-assistant-life-map.jsx",
+      "role": "助手ライフの「📋 みんなの居場所」の地図(案A・2026-11-08 社長): HOME の画面そのもの(同じ絵・同じ札の部品と位置)に、助手が小さな全身で立つ。町だけの場所は同じ形の札を絵の中の建物に。場所を押すと、いる助手とできることのシート。公開の印 assistantLife の後ろ。何も保存しない"
+    },
+    {
+      "file": "56-assistant-life-roomview.jsx",
+      "role": "助手の部屋を大きく見る(2026-11-08 社長 案A): 部屋の絵(壁・床・窓・置いた家具)に助手が立ち(①色味と影 ②腰から下は家具の後ろ ③見えている体で大きさ)、マスモン全部が床を歩く。部品 AssistantLifeRoomScene は見せるだけで、部屋のシートが上(横は左)に置く。フレンドの家でも使える形。何も保存しない"
+    },
+    {
+      "file": "56-assistant-life-rel.jsx",
+      "role": "助手ライフの人間らしい関係の出来事(けんか・仲直り・やきもち・ないしょ話・相談・からかう・ライバル心・久しぶりの気まずさ)と家での見せ方(扉を閉める・居間で離れて座る・仲直りの札)。台本は tools/assistant/life-rel-talks-import.js が書く。公開の印 assistantLife の後ろ。保存は mh_assistant_life_rel_v1 の新しいキーだけ"
+    },
+    {
+      "file": "56-assistant-life-gifts.jsx",
+      "role": "部品: 助手ライフの道具(2人に贈る10種類)・好み(好き・ふつう・苦手。贈ると分かる・仲良し度の段で教えてくれる)・贈るシート・部屋の「好きなもの」。保存 mh_assistant_life_gift_day_v1・mh_assistant_life_likes_v1・mh_assistant_life_cheki_v1。2026-11-08 GIFT-PLAN.md"
+    },
+    {
+      "file": "56-assistant-life-masmon.jsx",
+      "role": "部品: 助手ライフの助手のマスモン(一覧・編成・デッキの型・好き苦手・好きな色)。部屋のシートの「🐾 マスモン」から開く。表 ASSISTANT_MASMON_PLAN は tools/assistant/assistant-masmon-import.js が docs/progress/assistant-peer/masmon-plan.json から書く。口 assistantLifeCardStyle(カード部)・assistantLifeTasteOf(ココロ)。何も保存しない"
+    },
+    {
+      "file": "56-assistant-life-friend.jsx",
+      "role": "助手ライフのフレンドの家との行き来(助手が自分で行く go・フレンドの助手が来る come・プレイヤーが訪ねる look)。家の控えを送る/読む・行き来の記録・置き手紙・お礼・設定・「🏘 フレンド」のページと HOME の印。公開の印 assistantLifeFriend の後ろ。保存は mh_assistant_life_friend_v1・_settings_v1・_known_v1・_intro_v1 の新しいキーだけ。表は assistant_life_friend_switch/_houses/_visits"
+    },
+    {
       "file": "82-card-battle-core.jsx",
       "role": "MFバトルカードのルールの本体とコンピューターの考え方(ゲームの始まり・できる操作・操作を進める・守り・勝ち負け・くせと難易度)。カードの表は data/card-battle-cards.js",
       "pure": true
@@ -391,6 +423,10 @@
     {
       "file": "83-card-battle-talk-ai.jsx",
       "role": "MFバトルカードの助手のおしゃべり(AI)。中継役 card-assistant-talk を呼ぶ口・入/切(mh_card_ai_talk_v1)・山場/対戦後/デッキ相談の材料。失敗したら決まった台詞のまま"
+    },
+    {
+      "file": "83-card-ai-deck.jsx",
+      "role": "MFバトルカード: 助手のデッキを AI で組む(3つの型のデッキ・組み直しの時期・揺らぎ・中継役 deckPlan)。公開の印 cardGrowStyle で止める"
     },
     {
       "file": "83-card-battle-vs.jsx",
@@ -422,6 +458,10 @@
     {
       "file": "87-card-deck-edit.jsx",
       "role": "画面: MFバトルカードのデッキ編成(デッキの一覧・組む画面)・カード図鑑・ルールの画面。決まりは 82 の cardDeckProblems・cardDeckAddReason。保存は 84 の CardBattleScreen が入れる"
+    },
+    {
+      "file": "87-card-assistant-deck-view.jsx",
+      "role": "部品: MFバトルカードの助手のデッキの中身(CardAssistantDeckView。助手部のマスモンのデッキのタブへ差しこむ)と、対戦で出したデッキの札(CardFoeDeckChip・CardFoeTeamName)。中身は 83-card-ai-deck の cardAssistantDeckPreview を読むだけ。印 cardGrowStyle が偽なら出さない"
     },
     {
       "file": "87-card-deck-pick.jsx",

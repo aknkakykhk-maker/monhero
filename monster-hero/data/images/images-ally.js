@@ -345,6 +345,9 @@ const TIGER_FACE_ICON = "images/monster-icons/face/tiger.png?v=1557ff181186";
 const PIXIE_FACE_ICON = "images/monster-icons/face/pixie.png?v=d33b92e39fa0";
 const MIA_FACE_ICON = "images/monster-icons/face/mia.png?v=35b65c9e07c6";
 const PANDORA_FACE_ICON = "images/monster-icons/face/pandora.png?v=2f1277f1d3bb";
+// イベント「パンドラとふたつの翼」第7話で、悪魔・天使のパンドラが話すときの顔(2026-11-08。今の顔と同じ寄り方で立ち絵から切り抜き)
+const PANDORA_DEVIL_FACE_ICON = "images/monster-icons/face/pandora-devil.png?v=7fe2b50d9912";
+const PANDORA_ANGEL_FACE_ICON = "images/monster-icons/face/pandora-angel.png?v=4b62f08ab824";
 const SUEZO_FACE_ICON = "images/monster-icons/face/suezo.png?v=696938ca7d63";
 const GOLEM_FACE_ICON = "images/monster-icons/face/golem.png?v=8ef71840d1d5";
 const MONOL_FACE_ICON = MONOL_ICON;

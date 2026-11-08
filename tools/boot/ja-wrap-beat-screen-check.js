@@ -42,6 +42,10 @@ const BEAT_SCREEN_WRAP_LIMIT = 0;
 const BEAT_SCREEN_CLIP_LIMIT = 0;
 // わざと「…」で切っている所。[種類, 場所(要素の印), 理由]。字は回ごとに変わる(イベント名など)ので、場所で書く
 const CLIP_ALLOW = [
+  // 曲えらびの横の助手の吹き出しは、1行の形(AssistantBubble の oneLine)でわざと「…」で切る。押すと全文が開く。
+  //   決定ボタンまで詰めた右の欄に、2行以上の吹き出しは入らない(はみ出して顔と「タップで詳しく」が切れていた・ミハリ #4885 → #4889)。
+  //   練習の案内(1〜14枚目)で切れて見えるのも、案内の文ではなく後ろの曲えらびのこの吹き出し
+  ['「…」切れ', '[data-rhythm-song-notice-landscape] [data-bubble-one-line]', '曲えらびの横の助手の吹き出し(1行の形)。右の欄に収めるため1行で切り、押すと全文が開く(29-rhythm-screens.jsx・2026-11-07 #4889)'],
   ['「…」切れ', '[data-rhythm-beat-point-campaign]', 'ビートPキャンペーンの帯。倍率(「周回 5倍」)を必ず見せるため、イベント名のほうだけ縮める(58-screen-rhythm.jsx・2026-10-26)'],
 ];
 let failed = 0;

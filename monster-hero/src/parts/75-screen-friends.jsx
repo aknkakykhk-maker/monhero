@@ -18,6 +18,19 @@ const FriendPresenceTag = ({ info, className = '' }) => (info ? (
     <span className="truncate">{info.text}</span>
   </small>
 ) : null);
+// 「いまの状態をフレンドに見せる」(2026-11-08 社長・既定は入)。34 の FRIEND_PRESENCE_SHOW_KEY に保存し、次の知らせから反映する
+function FriendPresenceShowSetting() {
+  const [on, setOn] = React.useState(true);
+  React.useEffect(() => { let alive = true; (async () => { try { const v = await storeGet(FRIEND_PRESENCE_SHOW_KEY, true); if (alive) setOn(v !== false); } catch {} })(); return () => { alive = false; }; }, []);
+  return (
+    <div className={SCREEN_PANEL_CLASS} data-friend-presence-setting>
+      <label className="flex items-center justify-between gap-2 text-[12px] font-black text-white">
+        <span>いまの状態をフレンドに見せる</span>
+        <input type="checkbox" checked={on} onChange={(e) => { const v = e.target.checked; setOn(v); try { storeSet(FRIEND_PRESENCE_SHOW_KEY, v, false); } catch {} }}/>
+      </label>
+      <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">「⚡ オート周回中」「🎵 モンヒロビートで演奏中」などが、フレンドの一覧に出ます。切にすると「ログイン中」とだけ出ます。</p>
+    </div>);
+}
 const FRIENDS_RESULT_TEXT = Object.freeze({
   sent: ['フレンド申請を送りました。承認されるとフレンドになります', 'ok'],
   accepted: ['フレンドになりました!', 'ok'],
@@ -316,7 +329,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
           {noticeBox}
           {(() => {
             const sum = summaries[selected.otherId] || null;
-            const seen = friendsPresenceText(sum ? sum.place : null, Math.max(sum ? sum.updatedAt : 0, look.lastSeenAt || 0), now);
+            const seen = friendsPresenceText(sum ? sum.place : null, Math.max(sum ? sum.updatedAt : 0, look.lastSeenAt || 0), now, sum ? sum.records : null);
             const monName = (id) => (id && ALL_PLAYER_MONSTERS[id] ? ALL_PLAYER_MONSTERS[id].name : '');
             const fav = sum && sum.favorite ? sum.favorite : null;
             const favBase = fav ? ALL_PLAYER_MONSTERS[fav.monsterId] : null;
@@ -340,7 +353,8 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
               <div className={`${SCREEN_PANEL_CLASS} flex flex-col items-center gap-2 py-5 text-center`}>
                 {avatar(selected.otherId, 'h-20 w-20', 'text-4xl')}
                 <b className="max-w-full truncate text-lg font-black text-white">{look.userName}</b>
-                <span data-friend-presence={seen.online ? 'online' : 'offline'} className={`text-[11px] font-black ${seen.online ? 'text-emerald-300' : 'text-slate-400'}`}>{seen.online ? '● ' : ''}{seen.text}</span>
+                <span data-friend-presence={seen.online ? 'online' : 'offline'} data-friend-presence-auto={seen.auto ? '1' : undefined} className={`text-[11px] font-black ${seen.auto ? 'text-amber-300' : seen.online ? 'text-emerald-300' : 'text-slate-400'}`}>{seen.online ? '● ' : ''}{(seen.long || seen.text)}</span>
+                {seen.sub ? <span data-friend-presence-sub className="text-[10px] font-bold text-slate-400">{seen.sub}</span> : null}
                 {sum && sum.message ? <p data-friend-message className="max-w-full break-words rounded-xl bg-black/30 px-3 py-1.5 text-[12px] font-bold leading-snug text-pink-100">「{sum.message}」</p> : null}
                 {noteEdit && noteEdit.id === selected.otherId ? (
                   <div data-friend-note-form className="flex w-full max-w-[280px] gap-1">
@@ -376,6 +390,8 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
               </div>
               {/* 札の下(2枚並びの外・全幅)に「このデッキと戦う」「借りる」。登録していない人は出ない(95 の CardShareDeckActions) */}
               {typeof CardShareDeckActions === 'function' && <div className="mt-2"><CardShareDeckActions breederId={selected.otherId} onGo={onCardShareGo}/></div>}
+              {/* 「🏘 家へ遊びに行く」(56-assistant-life-friend の AssistantLifeFriendProfileVisit・2026-11-08 社長)。助手ライフが開いていない人には出ない */}
+              {typeof AssistantLifeFriendProfileVisit === 'function' && <AssistantLifeFriendProfileVisit friendId={selected.otherId} friendName={look.userName}/>}
               {/* 記録は1行ずつにたたむ(2026-10-29 案B。前はタブ4つ)。押した行だけ開く。もう一度押すと閉じる */}
               {fold('overview', '遊んだ記録')}
               {profileTab === 'overview' && (<>
@@ -507,8 +523,9 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
           {notes[view.otherId] ? <small data-friend-note-label className="block truncate text-[9px] font-bold text-amber-200">📝 {notes[view.otherId]}</small> : null}
           {(() => {
             const sum = summaries[view.otherId];
-            const seen = friendsPresenceText(sum ? sum.place : null, Math.max(sum ? sum.updatedAt : 0, look.lastSeenAt || 0), now);
-            return <span data-friend-presence={seen.online ? 'online' : 'offline'} className={`block truncate text-[9px] font-bold ${seen.online ? 'text-emerald-300' : 'text-slate-400'}`}>{seen.online ? '● ' : ''}{seen.text}</span>;
+            const seen = friendsPresenceText(sum ? sum.place : null, Math.max(sum ? sum.updatedAt : 0, look.lastSeenAt || 0), now, sum ? sum.records : null);
+            return <><span data-friend-presence={seen.online ? 'online' : 'offline'} data-friend-presence-auto={seen.auto ? '1' : undefined} className={`block truncate text-[9px] font-bold ${seen.auto ? 'text-amber-300' : seen.online ? 'text-emerald-300' : 'text-slate-400'}`}>{seen.online ? '● ' : ''}{seen.text}</span>
+              {seen.sub ? <span data-friend-presence-sub className="block truncate text-[8.5px] font-bold text-slate-400">{seen.sub}</span> : null}</>;
           })()}
         </div>
         {right}
@@ -584,6 +601,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
               <button type="button" data-friend-share-link disabled={!myCode} onClick={shareLink} className={`${btn} mt-2 w-full border-sky-400/60 bg-sky-500/20 text-sky-100`}>招待リンクを送る（LINEなど）</button>
               <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">このコードを伝えると、相手からフレンド申請してもらえます。コードは変わりません。</p>
             </div>
+            {typeof FriendPresenceShowSetting === 'function' && <FriendPresenceShowSetting/>}
             <div className={SCREEN_PANEL_CLASS}>
               <ScreenSectionLabel>コードで申請する</ScreenSectionLabel>
               <input type="text" value={codeInput} onChange={(event) => setCodeInput(event.target.value.slice(0, 16))}

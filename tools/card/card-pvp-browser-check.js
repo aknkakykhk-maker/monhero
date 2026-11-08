@@ -90,7 +90,13 @@ const FAKE_WS = () => {
 const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, `${name}.png`), style: 'div[style*="2147483647"] > span { display: none !important; }' }).catch(() => {}); } };
 
 // カードランクが上がったときの演出(43 の PlayerRankUpFx)は、押すまで画面を覆う。開いていたら2回押して閉じる(演出を飛ばす → 閉じる)
-const closeRankFx = async (page) => { for (let i = 0; i < 3 && await page.locator('[data-player-rank-up-fx]').count(); i++) { await page.locator('[data-player-rank-up-fx]').click({ position: { x: 10, y: 10 } }).catch(() => {}); await page.waitForTimeout(400); } };
+// ランクアップの演出(43。1回目に押すと出し切り、2回目で閉じる)は、結果のあと少し遅れて出ることがある。
+//   すぐ閉じに行くと、閉じたあとに出た演出が「部屋を出る」の上にかぶさって押せなかった(2026-11-08 ソランド)。少し待ってから、出ていれば何度でも閉じる
+const closeRankFx = async (page) => {
+  // 演出は経験値の棒が満タンになってから出る(合図が来ないときも5秒の保険で出る・97 CardRankResult)。出るまで最大6秒待つ
+  for (let t = 0; t < 6000 && !(await page.locator('[data-player-rank-up-fx]').count()); t += 300) await page.waitForTimeout(300);
+  for (let i = 0; i < 10 && await page.locator('[data-player-rank-up-fx]').count(); i++) { await page.locator('[data-player-rank-up-fx]').first().click({ position: { x: 10, y: 10 } }).catch(() => {}); await page.waitForTimeout(400); }
+};
 // マルチの入口で相手を決めるボタンを押し、続くデッキ選びで「対戦へ」を押す(2026-10-30 社長「相手を選んだあとにデッキ選択」。前に使ったデッキが選ばれている)
 const pvpGo = async (page, sel) => { await page.locator(sel).first().click(); await page.locator('[data-card-deck-pick-go]').click({ timeout: 10000 }); };
 
@@ -172,6 +178,11 @@ const pvpGo = async (page, sel) => { await page.locator(sel).first().click(); aw
       await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
       await page.locator('footer button[aria-label=""]').dispatchEvent('click');
       await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
+      // ログインボーナスの窓は起動のあと遅れて出ることがあり、「⚔️ バトル」にかぶさって押せなかった(2026-11-08)。出ていれば閉じてから押す
+      for (let i = 0; i < 8 && await page.locator('[role="dialog"][aria-label="ログインボーナス"]').count(); i++) {
+        const b = page.locator('[role="dialog"][aria-label="ログインボーナス"]').getByRole('button', { name: '閉じる' }).first();
+        await b.dispatchEvent('click').catch(() => {}); await page.waitForTimeout(400);
+      }
       await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().click();
       await page.locator('[data-debug-card-battle]').dispatchEvent('click');
     };
@@ -557,7 +568,11 @@ const pvpGo = async (page, sel) => { await page.locator(sel).first().click(); aw
     check('⑪ 招待のようすの見分け(届いている・時間切れ・時刻が読めない行・断られた・表が読めない)', st === 'live,expired,live,declined,live', st);
     const after = await A.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('mh_')).map((k) => [k, localStorage.getItem(k)])));
     // 起動のあとに本体が書き足すもの(お話の既読など)は数えない。マルチ対戦は何も保存しない
-    const volatile = /^mh_(last_|session|boot|app_open|login|bgm|se_|ui_|debug|daily_login|visit|rhythm_event_story_v1)/;
+    // mh_screen_trail_v1 … 画面の出来事を最近30件だけ残す記録(10-core・2026-11-07 から。新しいキーで、セーブは書き換えない)
+    // 対戦を1回終えるとほかの部の仕組みがわざと数えるもの(どれも新しいキー・既存のセーブは書き換えない):
+    //   mh_missions … ミッションの「MFバトルカードを1戦」(2026-11-08 ミッションの作り直し・84 の missionNotify)/
+    //   mh_assistant_life_play_v1・mh_assistant_peer_* … 助手ライフのにぎわい・助手どうしの会話(84 の assistantPeerOnPlay('card'))
+    const volatile = /^mh_(last_|session|boot|app_open|login|bgm|se_|ui_|debug|daily_login|visit|rhythm_event_story_v1|screen_trail_v1|missions$|assistant_life_play_v1|assistant_peer_)/;
     const changed = Object.keys(before).filter((k) => !k.startsWith('mh_card_') && !volatile.test(k) && before[k] !== after[k]);
     check('⑤ 実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
     check('⑤ mh_card_* 以外の保存を書き換えていない', changed.length === 0, changed.slice(0, 5).join(', '));

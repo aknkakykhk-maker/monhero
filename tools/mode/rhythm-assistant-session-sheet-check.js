@@ -4,7 +4,7 @@
 //   MH_BASE_URL=https://aknkakykhk-maker.github.io/monhero node tools/mode/rhythm-assistant-session-sheet-check.js … 公開したあと、本番の版で同じことを確かめる
 //
 // 見張る崩れ(2026-11-07 社長「まだまだ仕上がりが甘すぎるからちゃんと検査しながらすすめて」):
-//   ・助手が自分でモンビーに出かけているあいだは回数なし(社長の決定)。その札「🎵 いまモンビーにいる・回数なし」が、
+//   ・助手が自分でモンビーに出かけているあいだは回数なし(社長の決定)。その札「🎵 いまモンヒロビートにいる・回数なし」が、
 //     縦で助手のカードの幅を越えて🎵が切れていた。札とカードの中の文字がカードに収まるか
 //   ・回数を使わない人数を、無料・券の数に入れていないか(無料も券も0でも「呼ぶ」が押せる)
 //   ・呼んでも払わず、控え(mh_rhythm_buddy_v1 の calls)を残さない(返すものが無い)
@@ -60,7 +60,7 @@ for(const [w,h,rot,lab] of [[390,844,false,'縦画面'],[844,390,false,'横画�
     const btn=[...document.querySelectorAll('[data-rhythm-buddy-call-all]')].filter(vis).map((b)=>b.disabled);
     return {tags:tags.map((t)=>t.closest('[data-rhythm-assist-card]').getAttribute('data-rhythm-assist-card')),out,cost,btn};
   });
-  check(`呼ぶシート(${lab}): モンビーにいる助手(きき)だけに「🎵 いまモンビーにいる・回数なし」の札`,r.tags.join(',')==='kiki',r.tags.join(','));
+  check(`呼ぶシート(${lab}): モンビーにいる助手(きき)だけに「🎵 いまモンヒロビートにいる・回数なし」の札`,r.tags.join(',')==='kiki',r.tags.join(','));
   check(`呼ぶシート(${lab}): 助手のカードの中の文字・札がカードと札の幅からはみ出さない`,r.out.length===0,r.out.slice(0,6).join(' / '));
   check(`呼ぶシート(${lab}): 回数を使わないと書き、無料も券も0でも「呼ぶ」が押せる`,r.cost.length===1&&/回数は使いません/.test(r.cost[0])&&r.btn.length===1&&r.btn[0]===false,JSON.stringify(r));
 }
@@ -83,6 +83,8 @@ for(const [w,h,rot,lab] of [[390,844,false,'縦画面'],[844,390,false,'横画�
   check(`呼ぶシート(${lab}): 寝ている助手(ドラ)だけに「💤 寝ている」の札があり、カードに収まる`,r.who==='dra'&&r.inCard,JSON.stringify(r));
 }
 await page.setViewportSize({width:390,height:844});await page.evaluate(()=>RHYTHM_VIEW_ROTATION.set(0));await page.waitForTimeout(500);
+// 助手ライフへの知らせ(assistantLifeOnWoken)を数える。家の「今日あったこと」は ASSISTANT_LIFE_STORE の日記に残る
+await page.evaluate(()=>{window.__wokenDiary=()=>JSON.stringify(((ASSISTANT_LIFE_DIARY.state||{}).items||[]).filter((x)=>x.kind==='woken'));window.__wokenBefore=window.__wokenDiary();});
 // 断られる(乱数を大きくする)
 await page.evaluate(()=>{window.__rand=Math.random;Math.random=()=>0.999;});
 await page.locator('[data-rhythm-assist-card="dra"]').click();await page.waitForTimeout(200);
@@ -109,6 +111,11 @@ await page.waitForFunction(()=>(RHYTHM_MULTI.view().myCpus||[]).some((c)=>c.masu
 await page.evaluate(()=>{Math.random=window.__rand;});
 const came=await page.evaluate(()=>({inRoom:(RHYTHM_MULTI.view().myCpus||[]).some((c)=>c.masuId==='as:dra'),free:rhythmBuddyFreeLeft(RHYTHM_BUDDY_STORE.get(),rhythmBuddyDayKey(Date.now()))}));
 check('来てくれたら部屋に入り、回数を1回使う',came.inRoom&&came.free===free0-1,JSON.stringify({...came,free0}));
+await page.waitForTimeout(500);
+check('起こして部屋に入れたら、助手ライフの「今日あったこと」に残る(断られた回は残らない・assistantLifeOnWoken)',await page.evaluate(()=>{const a=JSON.parse(window.__wokenBefore),b=JSON.parse(window.__wokenDiary());return b.length===a.length+1&&/起こされてモンヒロビートへ/.test(b[b.length-1].text)&&(b[b.length-1].ids||[]).includes('dra');}),await page.evaluate(()=>String(window.__wokenDiary()).slice(-200)));
+await page.waitForTimeout(800);
+const after5=await page.evaluate(()=>({note:!!document.querySelector('[data-rhythm-assist-refused]'),sheet:!!document.querySelector('[data-rhythm-buddy-sheet]')}));
+check('断られたあと呼び直して来てくれたら、古い断りの一言は消え、シートも開き直さない(ミハリ B5)',!after5.note&&!after5.sheet,JSON.stringify(after5));
 await page.waitForTimeout(2500);
 const wokeSaid=await page.evaluate(()=>{const lines=(RHYTHM_ASSIST_SESSION_SOLO_LINES.dra.woke||[]).map((x)=>x[1].replace(/\{name\}/g,'').slice(0,6));const chat=(RHYTHM_MULTI.view().chat||[]).map((c)=>String(c.text||''));return {ok:chat.some((t)=>lines.some((l)=>t.includes(l))),chat:chat.slice(-3)};});
 check('来てくれたら、部屋に来たときの一言が起こされた一言(woke)になる',wokeSaid.ok,JSON.stringify(wokeSaid));

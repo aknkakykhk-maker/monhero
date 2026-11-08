@@ -17,6 +17,8 @@ const GROWTH_FX_KINDS = Object.freeze({
   session: { color: '#c084fc', deep: '#6b21a8', icon: '🎤', particle: '♪', label: 'セッションLv' },
   beat:    { color: '#a3e635', deep: '#3f6212', icon: '🎵', particle: '♪', label: 'ビートLv' },
   breeder: { color: '#60a5fa', deep: '#1e40af', icon: '🛡️', particle: '◆', label: 'ブリーダーLv' },
+  // 助手ライフの裏クイックを止めた・閉じたときの結果の一言(text だけを出す札。ゲージ・数字は出さない)
+  quick:   { color: '#e879f9', deep: '#86198f', icon: '⚡', particle: '⚔', label: '裏クイック' },
 });
 const growthFxKind = (kind) => GROWTH_FX_KINDS[kind] || GROWTH_FX_KINDS.bond;
 
@@ -29,8 +31,11 @@ const GROWTH_FX_CALM_SCREENS = Object.freeze(new Set([
 ]));
 // 画面の上にこれが出ているあいだは出さない(お話・ほかの大きな演出・案内)。中・大の段だけ止める目印もある(おしゃべりの画面)
 const GROWTH_FX_HOLD_ALL_SELECTOR = '[data-event-story],[data-story-stage],[data-story-sheet],[data-player-rank-up-fx]';
-const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat]';
+// 助手ライフで裏クイックが回っているあいだ(帯 data-life-quick-run="live")も、全面のお祝いは貯めておく。止めたり閉じたりしたら出す
+//   (モンヒロビート・カードの画面では裏の周回のお祝いは出ない作りなのに、助手ライフは HOME の上なので毎回全面で出ていた。2026-11-08 社長「中途半端」)
+const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat],[data-life-quick-run="live"]';
 const GROWTH_FX_SMALL_MS = 1900;
+const GROWTH_FX_TEXT_MS = 3600;      // 文の一行の札(読む時間をとる)
 const GROWTH_FX_ITEM_MS = 3400;
 const GROWTH_FX_SMALL_MAX = 3;       // 一度に並べる札の数
 const GROWTH_FX_QUEUE_MAX = 24;      // 貯めておく数の上限(古いものから捨てる。値は保存済みなので見えなくなるだけ)
@@ -51,11 +56,13 @@ const growthFxPush = (ev) => {
     if (gain <= 0) return;
     const key = String(ev.key || `${ev.kind}:${ev.who || ''}`);
     const list = GROWTH_FX_STORE.small;
+    // 文の一行の札(裏クイックの結果)は、同じ中身がまだ並んでいれば足さない(止める・閉じるが続けて呼ばれても1枚。2026-11-08 ミハリ)
+    if (ev.text && list.some(c => c.kind === ev.kind && c.text === String(ev.text))) return;
     const same = list.find(c => c.key === key);
     // 続けて上がったら1枚にまとめる(数字を足し上げ、ゲージは今の位置へ)。出し直しの合図(rev)を進めて、消える時間を延ばす
     if (same) { same.gain += gain; same.pctTo = growthFxPct(ev.pctTo); same.rev += 1; }
     else {
-      list.push({ id: ++GROWTH_FX_STORE.seq, rev: 0, key, kind: ev.kind, name: String(ev.name || ''), gain,
+      list.push({ id: ++GROWTH_FX_STORE.seq, rev: 0, key, kind: ev.kind, name: String(ev.name || ''), text: String(ev.text || ''), gain,
         pctFrom: growthFxPct(ev.pctFrom), pctTo: growthFxPct(ev.pctTo) });
       if (list.length > GROWTH_FX_QUEUE_MAX) list.splice(0, list.length - GROWTH_FX_QUEUE_MAX);
     }
@@ -64,7 +71,9 @@ const growthFxPush = (ev) => {
     const sheets = GROWTH_FX_STORE.sheets;
     const mergeKey = tier === 'level' ? String(ev.key || `${ev.kind}:${ev.who || ''}`) : null;
     const prev = mergeKey ? sheets.find((s, i) => i > 0 && s.tier === 'level' && s.key === mergeKey) : null;
-    if (prev) Object.assign(prev, { ...ev, tier, key: mergeKey, levelFrom: prev.levelFrom, gains: [...(prev.gains || []), ...(ev.gains || [])] });
+    // セッションLv は、助手ごとに「Lv.◯ → ◯」の1行へまとめ直す(行を足し重ねない。2026-11-08 社長「一気に上がったときは…まとめて出す」)
+    if (prev && Array.isArray(prev.sessionUps) && Array.isArray(ev.sessionUps)) Object.assign(prev, growthFxSessionSheet([...prev.sessionUps, ...ev.sessionUps]), { tier, key: mergeKey });
+    else if (prev) Object.assign(prev, { ...ev, tier, key: mergeKey, levelFrom: prev.levelFrom, gains: [...(prev.gains || []), ...(ev.gains || [])] });
     else {
       sheets.push({ ...ev, tier, key: mergeKey, id: ++GROWTH_FX_STORE.seq });
       if (sheets.length > GROWTH_FX_QUEUE_MAX) sheets.splice(0, sheets.length - GROWTH_FX_QUEUE_MAX);
@@ -171,7 +180,8 @@ const growthFxPeerLevel = ({ pair, levelBefore, levelAfter } = {}) => {
 };
 // 2人に品物を渡した。名前と絵は持ち物のデータ(BREEDER_MARKET_ITEMS の name・emoji)から取る(種類・名前はあとで変わるため書き込まない)
 //   reaction … 'like' | 'dislike' | null(好き嫌いが入ったら渡す) / playerGain … あなたとの仲良し度の増えた量(2人それぞれ)
-const growthFxPeerItem = ({ pair, itemId, pointsBefore, pointsAfter, levelBefore, levelAfter, reaction = null, playerGain = 0 } = {}) => {
+//   playerGains … 1人ずつの仲良し度の量 [a, b](助手ライフの道具は好みで変わる・2026-11-08)/ likes … 1人ずつの好み ['like'|'mid'|'bad', …](顔の表情)
+const growthFxPeerItem = ({ pair, itemId, pointsBefore, pointsAfter, levelBefore, levelAfter, reaction = null, playerGain = 0, playerGains = null, likes = null } = {}) => {
   if (!Array.isArray(pair) || pair.length !== 2 || !growthFxAssistantOf(pair[0]) || !growthFxAssistantOf(pair[1])) return;
   const gain = growthFxNum(pointsAfter) - growthFxNum(pointsBefore);
   if (!(gain > 0) && !(growthFxNum(playerGain) > 0)) return;
@@ -181,27 +191,83 @@ const growthFxPeerItem = ({ pair, itemId, pointsBefore, pointsAfter, levelBefore
   const rows = [];
   if (gain > 0) rows.push({ kind: 'friend', label: '2人の友情Lv', levelFrom: levelBefore, levelTo: levelAfter,
     pctFrom: growthFxPeerPct(pointsBefore), pctTo: growthFxPeerPct(pointsAfter), gain });
-  if (growthFxNum(playerGain) > 0) rows.push({ kind: 'bond', label: 'あなたとの仲良し度(2人とも)', pctFrom: 0, pctTo: 100, gain: growthFxNum(playerGain) });
-  const face = (id) => growthFxAssistantFace(id, reaction === 'dislike' ? 'troubled' : reaction === 'like' ? 'excited' : 'happy');
+  const each = Array.isArray(playerGains) && playerGains.length === 2 && playerGains[0] !== playerGains[1];
+  if (each) pair.forEach((id, i) => { if (growthFxNum(playerGains[i]) > 0) rows.push({ kind: 'bond', label: `あなたとの仲良し度(${growthFxAssistantName(id)})`, pctFrom: 0, pctTo: 100, gain: growthFxNum(playerGains[i]) }); });
+  else if (growthFxNum(playerGain) > 0) rows.push({ kind: 'bond', label: 'あなたとの仲良し度(2人とも)', pctFrom: 0, pctTo: 100, gain: growthFxNum(playerGain) });
+  const faceOf = (i) => { const l = Array.isArray(likes) ? likes[i] : null; return l === 'bad' ? 'troubled' : l === 'like' ? 'excited' : l === 'mid' ? 'happy' : (reaction === 'dislike' ? 'troubled' : reaction === 'like' ? 'excited' : 'happy'); };
+  const face = (id) => growthFxAssistantFace(id, faceOf(pair.indexOf(id)));
   growthFxPush({ tier: 'item', kind: 'friend', title: `${growthFxAssistantName(a)} と ${growthFxAssistantName(b)} に ${item.name || ''}！`,
     item: `${item.emoji || ''} ${item.name || ''} ×1`, faces: [face(a), face(b)].filter(Boolean), reaction, rows });
 };
 // セッションLv(モンヒロビートの助手・マモリ)。マルチの結果で決まるが、マルチの最中は出さず、出してよい画面へ戻ってから出す。
 //   何人も一度に上がったら1回にまとめる(list に [{ assistantId, levelBefore, levelAfter, tickets }] を全部入れて呼ぶ)
-const growthFxSessionLevel = (list = []) => {
+// 一度に何段も上がっても、助手ごとに1行(「みゅあ セッションLv.7 → 18 +11」)。途中で開いたものは、その行の下に小さく添える。
+//   行は GROWTH_FX_SESSION_ROWS_MAX 人まで。それより多いときは「ほか◯人」の1行にまとめる(画面の外に出さない)
+const GROWTH_FX_SESSION_ROWS_MAX = 4;
+// セッションLv で開くもの(ヘルプ「セッションLvで開くもの」と同じ。数字は 33-rhythm-assistant-session.jsx の定数から読む)
+const growthFxSessionUnlocks = () => {
+  const L = (v, d) => (typeof v !== 'undefined' && Number.isFinite(Number(v)) ? Number(v) : d);
+  const rows = [
+    [L(typeof RHYTHM_ASSIST_SESSION_TASTE_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_TASTE_LEVEL : undefined, 10), '好きな曲が見える'],
+    [L(typeof RHYTHM_ASSIST_SESSION_GLOW_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_GLOW_LEVEL : undefined, 15), 'サビで顔が光る'],
+    [L(typeof RHYTHM_ASSIST_SESSION_CHEER_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_CHEER_LEVEL : undefined, 25), '得意の応援'],
+    [L(typeof RHYTHM_ASSIST_SESSION_FRAME_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_FRAME_LEVEL : undefined, 45), '結果の枠が助手の色に'],
+    [L(typeof RHYTHM_ASSIST_SESSION_BADGE_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_BADGE_LEVEL : undefined, 50), 'プロフィールに札'],
+    [L(typeof RHYTHM_ASSIST_SESSION_LISTEN_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_LISTEN_LEVEL : undefined, 75), '曲の聞きどころ'],
+    [L(typeof RHYTHM_ASSIST_SESSION_BACK_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_BACK_LEVEL : undefined, 90), '名前入りの背景'],
+    [L(typeof RHYTHM_ASSIST_SESSION_MASTER_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_MASTER_LEVEL : undefined, 100), '称号「セッションマスター」'],
+  ];
+  const bonus = typeof RHYTHM_ASSIST_SESSION_P_BONUS !== 'undefined' && Array.isArray(RHYTHM_ASSIST_SESSION_P_BONUS) ? RHYTHM_ASSIST_SESSION_P_BONUS : [];
+  bonus.forEach(([lv, rate]) => rows.push([Number(lv), `ビートP +${Math.round(Number(rate) * 100)}%`]));
+  return rows.filter(r => Number.isFinite(r[0])).sort((a, b) => a[0] - b[0]);
+};
+const growthFxSessionSheet = (list = []) => {
   const ups = (Array.isArray(list) ? list : []).filter(u => u && growthFxNum(u.levelAfter) > growthFxNum(u.levelBefore) && growthFxAssistantOf(u.assistantId));
-  if (!ups.length) return;
-  const top = ups[0];
-  const gains = ups.map(u => ({ icon: '🎤', text: `${growthFxAssistantName(u.assistantId)} セッションLv.${u.levelAfter}`,
-    note: growthFxNum(u.tickets) > 0 ? `セッション券 ×${growthFxNum(u.tickets)}` : '' }));
-  growthFxPush({ tier: 'level', kind: 'session', who: ups.map(u => u.assistantId).join('+'), levelFrom: top.levelBefore, levelTo: top.levelAfter,
-    title: 'セッションLv UP!', sub: ups.length > 1 ? 'いっしょに演奏した助手のセッションLvが上がった' : `${growthFxAssistantName(top.assistantId)} とのセッションLvが Lv.${top.levelAfter} になった`,
-    face: growthFxAssistantFace(top.assistantId, 'excited'), gains: ups.length > 1 || gains[0].note ? gains : [] });
+  // 助手ごとにまとめる(いちばん前の Lv から、いちばん後の Lv へ。券は足す)。並びは最初に上がった順
+  const by = new Map();
+  ups.forEach(u => {
+    const id = u.assistantId, b = growthFxNum(u.levelBefore), a = growthFxNum(u.levelAfter), t = growthFxNum(u.tickets);
+    const cur = by.get(id);
+    if (!cur) by.set(id, { assistantId: id, levelBefore: b, levelAfter: a, tickets: t > 0 ? t : 0 });
+    else { cur.levelBefore = Math.min(cur.levelBefore, b); cur.levelAfter = Math.max(cur.levelAfter, a); cur.tickets += t > 0 ? t : 0; }
+  });
+  // いちばん多く上がった助手を先頭に(盾の Lv と顔はこの人。同じなら最初に上がった順)
+  const rows = [...by.values()].map((r, i) => ({ ...r, i })).sort((a, b) => (b.levelAfter - b.levelBefore) - (a.levelAfter - a.levelBefore) || a.i - b.i);
+  const unlocks = growthFxSessionUnlocks();
+  const gainOf = (r) => {
+    const opened = unlocks.filter(([lv]) => lv > r.levelBefore && lv <= r.levelAfter).map(([lv, text]) => `Lv.${lv} ${text}`);
+    const notes = [...(r.tickets > 0 ? [`セッション券 ×${r.tickets}`] : []), ...opened];
+    // 開いたものが多いときは3つまで(残りは「ほか◯つ」)
+    const note = notes.length > 3 ? `${notes.slice(0, 3).join('・\u200b')}・\u200bほか${notes.length - 3}つ` : notes.join('・\u200b');
+    return { icon: '🎤', text: `${growthFxAssistantName(r.assistantId)} セッションLv.${r.levelBefore} → ${r.levelAfter}`,
+      up: `+${r.levelAfter - r.levelBefore}`, note, session: true };
+  };
+  const shown = rows.length > GROWTH_FX_SESSION_ROWS_MAX ? rows.slice(0, GROWTH_FX_SESSION_ROWS_MAX - 1) : rows;
+  const gains = shown.map(gainOf);
+  if (shown.length < rows.length) {
+    const rest = rows.slice(shown.length);
+    gains.push({ icon: '🎤', text: `ほか${rest.length}人`, note: rest.map(r => `${growthFxAssistantName(r.assistantId)} Lv.${r.levelAfter}`).join('・'), session: true });
+  }
+  const top = rows[0] || null;
+  return { sessionUps: ups, levelFrom: top ? top.levelBefore : 0, levelTo: top ? top.levelAfter : 0,
+    // 折れ目は言葉の切れ目だけ(U+200B。.sub は keep-all)
+    sub: rows.length > 1 ? 'いっしょに演奏した\u200b助手の\u200bセッションLvが\u200b上がった' : top ? `${growthFxAssistantName(top.assistantId)} とのセッションLvが Lv.${top.levelAfter} になった` : '',
+    face: top ? growthFxAssistantFace(top.assistantId, 'excited') : null,
+    // 1人で、添えるもの(券・開いたもの)も無いときは行を出さない(大きな数字だけで足りる)
+    gains: rows.length > 1 || (gains[0] && (gains[0].note || rows[0].levelAfter - rows[0].levelBefore > 1)) ? gains : [] };
+};
+const growthFxSessionLevel = (list = []) => {
+  const sheet = growthFxSessionSheet(list);
+  if (!sheet.sessionUps.length) return;
+  // 何回かに分けて届いても1枚にまとめる(key を1つに決める)
+  growthFxPush({ tier: 'level', kind: 'session', key: 'session:all', who: 'session', title: 'セッションLv UP!', ...sheet });
 };
 
 // ---------- 見た目 ----------
 const GROWTH_FX_CSS = `
 .mh-gfx-chips{position:fixed;top:calc(env(safe-area-inset-top,0px) + 52px);right:10px;z-index:44000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
+.mh-gfx-chips.left{right:auto;left:10px;align-items:flex-start}.mh-gfx-chips.one .mh-gfx-chip:not(:first-child){display:none}.mh-gfx-chips.one .mh-gfx-chip:first-child::after{content:attr(data-more);margin-left:2px;border-radius:999px;background:#ffffff26;padding:0 5px;font-size:10px;font-weight:900}.mh-gfx-chips.row{flex-direction:row;align-items:flex-start;max-width:calc(100% - 20px);flex-wrap:nowrap}
+.mh-gfx-chips.mini .mh-gfx-chip>.min-w-0{display:none}.mh-gfx-chips.mini .mh-gfx-chip{padding:3px 8px 3px 4px;gap:4px}
 .mh-gfx-chip{position:relative;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;border-radius:999px;background:linear-gradient(90deg,#1e1b2ef0,#0f172af0);
   border:1.5px solid var(--gc);box-shadow:0 0 14px color-mix(in srgb,var(--gc) 40%,transparent);font-weight:900;font-size:11px;color:#fff;
   animation:mhGfxChipIn .35s cubic-bezier(.2,1.6,.4,1) both}
@@ -209,6 +275,7 @@ const GROWTH_FX_CSS = `
 .mh-gfx-chip .ico{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--gc) 30%,transparent);font-size:13px;color:var(--gc)}
 .mh-gfx-chip .ico.beat{animation:mhGfxBeat .5s ease-out}
 .mh-gfx-chip .who{font-size:9px;color:#cbd5e1;line-height:1.1;max-width:9.5em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mh-gfx-chip .txt{font-size:11px;font-weight:800;color:#f8fafc;line-height:1.25;max-width:15em}.mh-gfx-chip .txt b{color:var(--gc);font-weight:900}
 .mh-gfx-chip .bar{width:56px;height:5px;border-radius:9px;background:#334155;overflow:hidden;margin-top:2px}
 .mh-gfx-chip .bar i{display:block;height:100%;background:var(--gc);transition:width .7s ease-out}
 .mh-gfx-chip .num{color:var(--gc);font-size:14px;font-variant-numeric:tabular-nums}
@@ -262,7 +329,11 @@ const GROWTH_FX_CSS = `
 .mh-gfx-gains{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;width:min(300px,82vw)}
 .mh-gfx-gains li{display:flex;align-items:center;gap:8px;background:#0f172ae0;border:1px solid color-mix(in srgb,var(--gc) 60%,transparent);border-radius:12px;padding:6px 10px;font-size:12px;font-weight:900;text-align:left;
   animation:mhGfxGain .4s var(--d) cubic-bezier(.2,1.5,.4,1) both}
-.mh-gfx-gains li small{display:block;font-size:10px;color:#94a3b8;font-weight:700}
+/* 添え書き・説明は言葉の途中で折らない(空白・「・」・U+200B の所だけで折る) */
+.mh-gfx-lv .sub{word-break:keep-all;overflow-wrap:anywhere}
+.mh-gfx-gains li small{word-break:keep-all;overflow-wrap:anywhere;display:block;font-size:10px;color:#94a3b8;font-weight:700;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+/* 行が多くても画面の外へ出さない(2026-11-08 社長のスクショ: セッションLv の行が20行以上並び、見出しも下も切れた)。入りきらない分は中で送る */
+.mh-gfx-gains{max-height:calc(var(--mh-vh) - 400px);min-height:0;overflow-y:auto;overscroll-behavior:contain}
 .mh-gfx-gains li .new{margin-left:auto;font-size:9px;background:var(--gc);color:#111;border-radius:6px;padding:1px 5px}
 .mh-gfx-face{position:absolute;height:32vh;left:50%;margin-left:-21vh;bottom:0;z-index:1;pointer-events:none;animation:mhGfxRise .6s .85s cubic-bezier(.2,1.4,.4,1) both;filter:drop-shadow(0 0 20px #000a)}
 .mh-gfx-lv-hint{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);left:0;right:0;text-align:center;font-size:10px;color:#cbd5e1;z-index:3;animation:mhGfxFade .3s 1.6s both}
@@ -278,9 +349,15 @@ const GROWTH_FX_CSS = `
   .mh-gfx-lv{flex-direction:row;gap:22px;margin-top:0}
   .mh-gfx-sheet.has-face .mh-gfx-lv{margin-left:min(36vw,300px)}
   .mh-gfx-lv .sub{max-width:240px}
-  .mh-gfx-gains{margin-top:0;width:290px}
+  .mh-gfx-gains{margin-top:0;width:290px;max-height:calc(var(--mh-vh) - 48px)}
   .mh-gfx-face{left:0;margin-left:0;height:62vh}
 }
+/* 🔄 横(端末は縦のまま、アプリが画面を回す)でも横画面の並びにする(2026-11-08)。回っているとき vh は回した後の横幅・vw は高さになる */
+[data-mh-view-rotation="true"] .mh-gfx-lv{flex-direction:row;gap:22px;margin-top:0}
+[data-mh-view-rotation="true"] .mh-gfx-sheet.has-face .mh-gfx-lv{margin-left:min(36vh,300px)}
+[data-mh-view-rotation="true"] .mh-gfx-lv .sub{max-width:240px}
+[data-mh-view-rotation="true"] .mh-gfx-gains{margin-top:0;width:290px;max-height:calc(100vw - 48px)}
+[data-mh-view-rotation="true"] .mh-gfx-face{left:0;margin-left:0;height:62vw}
 /* 最後の形(押して飛ばした・軽い設定): 動きを終わらせた状態で見せる */
 .mh-gfx-done *,.mh-gfx-done{animation-delay:0s !important;animation-duration:.01s !important}
 .mh-gfx-done .mh-gfx-rays{animation:none !important}
@@ -366,11 +443,19 @@ const GrowthFxChip = ({ chip, level, held }) => {
   useEffect(() => {
     if (held) return undefined;
     setOut(false);
-    const t1 = setTimeout(() => setOut(true), GROWTH_FX_SMALL_MS);
-    const t2 = setTimeout(() => growthFxDropSmall(chip.id), GROWTH_FX_SMALL_MS + 320);
+    const ms = chip.text ? GROWTH_FX_TEXT_MS : GROWTH_FX_SMALL_MS;
+    const t1 = setTimeout(() => setOut(true), ms);
+    const t2 = setTimeout(() => growthFxDropSmall(chip.id), ms + 320);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [chip.id, chip.rev, held]);
   const pts = level === 'full' ? [0, 1, 2, 3] : [];
+  // 文の一行だけの札(裏クイックの結果)。狭いときの小さい形(mini)でも文は消さない
+  if (chip.text) return (
+    <div className={`mh-gfx-chip text${out ? ' out' : ''}`} data-growth-fx-chip={chip.kind} data-growth-fx-chip-id={chip.id} style={{ '--gc': k.color }}>
+      <span className="ico beat" aria-hidden="true">{cardIconNode(k.icon, 13)}</span>
+      <span className="txt"><b>{k.label}</b> {chip.text}</span>
+    </div>
+  );
   return (
     <div className={`mh-gfx-chip${out ? ' out' : ''}`} data-growth-fx-chip={chip.kind} style={{ '--gc': k.color }}>
       <span key={`i${chip.rev}`} className="ico beat" aria-hidden="true">{cardIconNode(k.icon, 13)}</span>
@@ -465,6 +550,7 @@ const GrowthFxLevelUp = ({ sheet, level, onClose }) => {
             <li key={i} style={{ '--d': `${1.2 + i * 0.3}s` }}>
               <span aria-hidden="true">{cardIconNode(g.icon || '✨', 14)}</span>
               <span className="min-w-0"><b>{String(g.text || '')}</b>{g.note && <small>{String(g.note)}</small>}</span>
+              {g.up && <span className="new" data-gfx-session-up>{String(g.up)}</span>}
               {g.isNew && <span className="new">NEW</span>}
             </li>
           ))}
@@ -473,6 +559,124 @@ const GrowthFxLevelUp = ({ sheet, level, onClose }) => {
       <div className="mh-gfx-lv-hint">{done ? '押すと閉じる' : '押すと先へ'}</div>
     </div>
   );
+};
+
+// 小さな札の置き場所(2026-11-08 窓口「通知が下の文字を隠さない位置に」)。右上のいつもの高さ(52px)で、下に文字やボタンがあれば、
+//   上の帯(8px)→ 少し下(96・140px)→ 下のほう の順に、下に文字もボタンもない高さを探して置く。どこも空いていなければいつもの高さ
+const GROWTH_FX_CHIP_TOPS = [52, 8, 96, 140];
+//   2026-11-08 窓口「フレンドの家で、知らせが部屋の名前・顔・声をかけた吹き出しを隠す」: 6つの点だけでは、点のあいだの短い名前や顔の絵を見逃していた。
+//   点で見たあとに、札の四角に重なる 文字・ボタン・絵(顔) を全部見る(見えているものだけ。画面いっぱいの入れ物や背景は数えない)
+const GROWTH_FX_CHIP_BUSY_SEL = 'button,a,input,[role="tab"],[role="button"],[data-assistant-bubble],img,svg,p,span,b,small,strong,em,h1,h2,h3,h4,li,label,div,[data-alf-face]';
+// 札の四角にかかる物の重さ(0 なら空き)。押せるもの・字は重く(3・2)、絵は軽く(1)数える。first が真なら1つ見つけたところで返す
+const growthFxChipSpotScore = (box, first = false) => {
+  if (typeof document === 'undefined' || !document.elementsFromPoint) return 0;
+  // 札は動き(出てくるときのずれ)で入れ物より上にはみ出して描かれ、置いた直後より最後に上へ上がって止まるので、入れ物と札の両方を含む範囲に上12px・下4pxを足して測る(2026-11-08 ナカヨシ8: 10px 上の字を見落とした)
+  const r = [...box.querySelectorAll('.mh-gfx-chip')].reduce((a, c) => { const q = c.getBoundingClientRect(); if (!q.width || !q.height) return a; /* 1枚にまとめたとき隠れた札(大きさ0)は数えない */ return { left: Math.min(a.left, q.left), top: Math.min(a.top, q.top - 12), right: Math.max(a.right, q.right), bottom: Math.max(a.bottom, q.bottom + 4) }; }, (() => { const b = box.getBoundingClientRect(); return { left: b.left, top: b.top, right: b.right, bottom: b.bottom }; })());
+  r.width = r.right - r.left; r.height = r.bottom - r.top;
+  let score = 0;
+  for (const fx of [0.15, 0.5, 0.85]) for (const fy of [0.25, 0.75]) {
+    const x = r.left + r.width * fx, y = r.top + r.height * fy;
+    const under = document.elementsFromPoint(x, y).find(el => !box.contains(el) && !el.contains(box));
+    if (!under) continue;
+    if (under.closest('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]')) { score += 3; if (first) return score; }
+    // 字は、その点に字そのものがあるときだけ(横幅いっぱいの題の空いた所を「字」と数えない)
+    else if ([...under.childNodes].some(n => { if (n.nodeType !== 3 || !n.textContent.trim()) return false; const rg = document.createRange(); rg.selectNodeContents(n); return [...rg.getClientRects()].some(q => x >= q.left - 2 && x <= q.right + 2 && y >= q.top - 2 && y <= q.bottom + 2); })) { score += 2; if (first) return score; }
+  }
+  const vw = window.innerWidth, vh = window.innerHeight;
+  // 画面の外にはみ出す置き場所は選ばない(見えない札になる)。札は出てくる動きの途中で測ることがあるので、端から4px内側までを使う
+  //   (🔄横では回した画面の下が端末の左になるので、上下左右どれも見る。上は札が上へずれる分の12pxを足してある)
+  if (r.left < 4 || r.top < -8 || r.right > vw - 4 || r.bottom > vh - 4) { score += 5; if (first) return score; }
+  const hit = (e) => Math.min(r.right, e.right) - Math.max(r.left, e.left) > 1 && Math.min(r.bottom, e.bottom) - Math.max(r.top, e.top) > 1;
+  // 手前に別のものが重なって見えていない要素は数えない(角と真ん中の2点で見る。角だけだと、角に顔の丸が乗った地図の札を見落とした)
+  const seen = (el, e) => { const x0 = Math.max(r.left, e.left), y0 = Math.max(r.top, e.top), x1 = Math.min(r.right, e.right), y1 = Math.min(r.bottom, e.bottom);
+    return [[x0 + 1, y0 + 1], [(x0 + x1) / 2, (y0 + y1) / 2]].some(([cx, cy]) => { const top = document.elementsFromPoint(cx, cy).find(x => !box.contains(x) && !x.contains(box)); return !top || top === el || el.contains(top) || top.contains(el); }); };
+  // 下から出るシート(助手ライフ・フレンドの家の .mhl-sheet・窓 role=dialog)が開いているあいだは、シートの四角を丸ごと避ける
+  //   (中のボタンだけを見ると、小さい画面でシートの「やめる」の上を選ぶ回があった。2026-11-08 ミハリ 375×667)
+  for (const sh of document.querySelectorAll('.mhl-sheet,[data-mhl-sheet],[role="dialog"]')) {
+    if (box.contains(sh) || sh.contains(box)) continue;
+    const e = sh.getBoundingClientRect();
+    if (!e.width || !e.height || !hit(e)) continue;
+    const cs = getComputedStyle(sh); if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
+    score += 3; if (first) return score;
+  }
+  for (const el of document.querySelectorAll(GROWTH_FX_CHIP_BUSY_SEL)) {
+    if (box.contains(el)) continue;
+    const e = el.getBoundingClientRect();
+    if (!e.width || !e.height || !hit(e)) continue;
+    const cs = getComputedStyle(el);
+    if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
+    const isPic = /^(IMG|SVG)$/i.test(el.tagName) || el.hasAttribute('data-alf-face');
+    const isAct = el.matches('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]');
+    const texts = [...el.childNodes].filter(n => n.nodeType === 3 && n.textContent.trim());
+    // 字は、要素の四角ではなく字そのものの範囲で見る(幅いっぱいの見出しも拾う。2026-11-08 ナカヨシ8 ビートP交換所の題)
+    if (texts.length) {
+      let on = null;
+      for (const t of texts) { const rg = document.createRange(); rg.selectNodeContents(t); for (const q of rg.getClientRects()) if (hit(q)) { on = q; break; } if (on) break; }
+      if (on && seen(el, on)) { score += isAct ? 3 : 2; if (first) return score; continue; }
+      if (!isAct) continue;
+    }
+    // 押せるもの・絵は四角で見る(画面いっぱいの入れ物は数えない)
+    if (!isPic && !isAct) continue;
+    if (e.width > vw * 0.9 || e.height > vh * 0.5) continue;
+    if (!seen(el, e)) continue;
+    score += isAct ? 3 : 1;
+    if (first) return score;
+  }
+  return score;
+};
+const growthFxChipSpotBusy = (box) => growthFxChipSpotScore(box, true) > 0;
+//   どの高さも下に文字・ボタンがあるとき(マーケットなど詰まった画面)は、名前とゲージを省いた小さな札(印と +数 だけ)にして、もう一度探す。
+//   画面は少しあとで組み替わる(吹き出しが出るなど)ので、出してから 0.5秒・1.5秒でも探し直す
+const GrowthFxChipsBox = ({ level, count, children }) => {
+  const ref = useRef(null);
+  React.useLayoutEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const place = () => {
+      const box = ref.current;
+      if (!box) return;
+      // いつもの高さのあとに、画面の下から上へ24pxおきの高さも試す(詰まった横の画面で、空いた所を見つける)
+      // 🔄横(画面を回して見ている)ときは、札の入れ物も回っているので、高さは端末の横幅になる(2026-11-08 ナカヨシ8: 回した画面の外に札を置いていた)
+      const frameH = (typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.active && RHYTHM_VIEW_ROTATION.active()) ? window.innerWidth : window.innerHeight;
+      const steps = []; for (let y = frameH - 10 - box.offsetHeight; y >= 8; y -= 24) steps.push(Math.round(y));
+      const tops = [...new Set([...GROWTH_FX_CHIP_TOPS, Math.max(60, frameH - 120 - box.offsetHeight), ...steps])];
+      // 右寄せで空きが無ければ左寄せでも探す(横のビートP交換所は右の列が品物で埋まり、左の列の下が空いている・2026-11-08)
+      // 縦に積んで入らないときは、小さくして横1列にも並べて探す(横の画面は高さが無い。2026-11-08 ナカヨシ8)
+      // それでも入らない詰まった画面(ビートP交換所)は、先頭の1枚に「+残りの数」を付けた1枚にまとめて探す
+      const chipEls = box.querySelectorAll('.mh-gfx-chip');
+      const more = Math.max(0, chipEls.length - 1);
+      if (chipEls[0]) chipEls[0].setAttribute('data-more', more ? `ほか${more}` : '');
+      for (const [mini, row, one] of [[false, false, false], [true, false, false], [true, true, false], ...(more ? [[true, false, true]] : [])]) {
+        box.classList.toggle('mini', mini); box.classList.toggle('row', row); box.classList.toggle('one', one);
+        for (const left of [false, true]) {
+          box.classList.toggle('left', left);
+          for (const t of tops) { box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`; if (!growthFxChipSpotBusy(box)) { box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${row ? 'row-' : ''}${one ? 'one-' : ''}${left ? 'left-' : ''}${t}`; return; } }
+        }
+      }
+      // どこにも空きが無いときは、かかる物がいちばん軽い所へ(ボタンや字より絵の上。右上の時計・止めるに重ねない。2026-11-08 ナカヨシ8 助手ライフ)
+      let best = null;
+      for (const [row, one] of [[false, false], [true, false], ...(more ? [[false, true]] : [])]) for (const left of [false, true]) {
+        box.classList.toggle('row', row); box.classList.toggle('one', one); box.classList.toggle('left', left);
+        for (const t of tops) { box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`; const sc = growthFxChipSpotScore(box); if (!best || sc < best.sc) best = { sc, left, t, row, one }; }
+      }
+      box.classList.toggle('row', !!(best && best.row)); box.classList.toggle('one', !!(best && best.one)); box.classList.toggle('left', !!(best && best.left));
+      box.style.top = `calc(env(safe-area-inset-top, 0px) + ${best ? best.t : GROWTH_FX_CHIP_TOPS[1]}px)`; box.dataset.growthFxChipsTop = `mini-busy${best ? `-${best.left ? 'left-' : ''}${best.t}` : ''}`;
+    };
+    place();
+    // 画面の中身は遅れて出ることがある(フレンドのタブの案内・交換所の品物)ので、出ているあいだに中身が増えたら、少しおいて置き直す
+    let tm = null;
+    const mo = typeof MutationObserver === 'function' ? new MutationObserver((list) => {
+      if (list.every(m => ref.current && ref.current.contains(m.target))) return;
+      if (tm) return; tm = setTimeout(() => { tm = null; place(); }, 50);
+    }) : null;
+    if (mo && document.body) mo.observe(document.body, { childList: true, subtree: true });
+    // シートが下から出てくる動きなどが終わった瞬間にも置き直す(動きの途中で測ると、止まったあとのボタンにかぶった。2026-11-08 ミハリ フレンドの家の置き手紙)
+    const onAnimEnd = (e) => { if (ref.current && ref.current.contains(e.target)) return; if (tm) return; tm = setTimeout(() => { tm = null; place(); }, 50); }; // 何度も来るので、まとめて1回
+    document.addEventListener('animationend', onAnimEnd, true); document.addEventListener('transitionend', onAnimEnd, true);
+    // 出ているあいだは 0.7秒ごとにも置き直す(画面を一瞬揺らす演出や、帯の字の変わり目で測りまちがえても戻す。探す順は決まっているので、画面が変わらなければ同じ所のまま)
+    const t1 = setTimeout(place, 500), t2 = setTimeout(place, 1500), iv = setInterval(place, 700);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearInterval(iv); if (tm) clearTimeout(tm); if (mo) mo.disconnect(); document.removeEventListener('animationend', onAnimEnd, true); document.removeEventListener('transitionend', onAnimEnd, true); };
+  }, [count]);
+  return <div ref={ref} className={`mh-gfx-chips mh-gfx-${level}`} data-growth-fx-chips aria-live="polite">{children}</div>;
 };
 
 // 60-app.jsx に1つだけ置く。screen … いまの gameState / load … バトル設定「画面の軽さ」
@@ -502,9 +706,10 @@ const GrowthFxLayer = ({ screen, load }) => {
   const sheet = !holdSheet ? sheets[0] : null;
   return (
     <>
-      {!holdAll && !sheet && small.length > 0 && <div className={`mh-gfx-chips mh-gfx-${level}`} data-growth-fx-chips aria-live="polite">
-        {small.slice(0, GROWTH_FX_SMALL_MAX).map(c => <GrowthFxChip key={c.id} chip={c} level={level} held={false}/>)}
-      </div>}
+      {!holdAll && !sheet && small.length > 0 && <GrowthFxChipsBox level={level} count={Math.min(small.length, GROWTH_FX_SMALL_MAX)}>
+        {/* 文の一行の札(裏クイックの結果)を先頭に。狭い画面で1枚だけ出す形(one)でも、結果が後ろに隠れない */}
+        {[...small].sort((a, b) => (b.text ? 1 : 0) - (a.text ? 1 : 0)).slice(0, GROWTH_FX_SMALL_MAX).map(c => <GrowthFxChip key={c.id} chip={c} level={level} held={false}/>)}
+      </GrowthFxChipsBox>}
       {sheet && (sheet.tier === 'level'
         ? <GrowthFxLevelUp key={sheet.id} sheet={sheet} level={level} onClose={() => growthFxDropSheet(sheet.id)}/>
         : <GrowthFxItemCard key={sheet.id} sheet={sheet} level={level} onClose={() => growthFxDropSheet(sheet.id)}/>)}

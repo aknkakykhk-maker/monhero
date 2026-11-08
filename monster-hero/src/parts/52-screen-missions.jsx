@@ -18,8 +18,22 @@
 // ・「すべて受け取る」は3つのタブの達成済みをまとめて1回で受け取る(2026-10-10・社長の選択)。色はいま選んでいるタブに合わせる
 // ・受け取ると、ギフトボックスを経由せずその場で持ち物へ入り、「手に入れたもの」の窓が出る。
 //   以前の作りでギフトボックスへ送ったまま受け取っていないものは「ギフトボックスに届いています」と出し、すべて受け取るで一緒に受け取れる
-function MissionsScreen({ gifts, missions, missionTab, onSelectTab, onBack, onClaim, onClaimAll }) {
+// 【2026-11-08・ミッションの作り直し(PLAN.md 第3版・作るときの画面の決まり)】
+// ・報酬は1つずつ「札」(data-mission-reward-chip)にして並べる。札の中では折らず、並びきらない札は次の行へ送る
+//   (前は「 / 」でつないだ1本の文で、「スキップチケット」が言葉の途中で折れていた)。検査 tools/boot/mission-renewal-screens-check.js
+// ・行の頭に遊びの印(⚔️ / 🎵 / 🃏 / 🏡 / 🤝)。別の道がある行は「🎵 または ⚔️」
+// ・家具の報酬は、持っていればビートPに替えて届く。札もその値で出し、下に一言添える(受け取りと同じ missionRewardsFor)
+const MISSION_CHIP_EMOJI = Object.freeze({ beatPoint:'🎟️', cardPackTicket:'🎫' });
+const missionRewardChipText = (r) => { const t = giftRewardText(r); const e = MISSION_CHIP_EMOJI[r && r.type]; return e ? `${e} ${t}` : t; };
+function MissionsScreen({ gifts, missions, missionTab, onSelectTab, onBack, onClaim, onClaimAll, ownedItems = null }) {
   const state = normalizeMissions(missions), defs = MISSION_DEFS[missionTab];
+  // 助手の1日1行の案内(デイリーのタブ)。いま選んでいる助手が話す。AI の文が無ければ決まった台詞
+  const bond = typeof useAssistantBond === 'function' ? useAssistantBond() : null;
+  const aiLines = useMissionDailyLines();
+  const dailyLine = missionDailyLineFor(bond && bond.assistantId, aiLines);
+  // 家具を替えるかどうかは助手ライフの部屋も見る。読み込みが済んだら描き直す
+  const [room, setRoom] = useState(() => (typeof ASSISTANT_LIFE_GIFT_STORE !== 'undefined' && ASSISTANT_LIFE_GIFT_STORE.loaded ? ASSISTANT_LIFE_GIFT_STORE.state.room : null));
+  useEffect(() => { let live = true; if (typeof ASSISTANT_LIFE_GIFT_STORE !== 'undefined') void ASSISTANT_LIFE_GIFT_STORE.load().then((st) => { if (live) setRoom(st.room || null); }).catch(() => {}); return () => { live = false; }; }, []);
   const sent = missionTab === 'daily' ? state.sentDaily : missionTab === 'weekly' ? state.sentWeekly : state.sentMonthly;
   const resetAt = missionNextReset(missionTab);
   // 以前の作りでギフトボックスへ送ったまま、まだ受け取っていないミッションか
@@ -32,7 +46,7 @@ function MissionsScreen({ gifts, missions, missionTab, onSelectTab, onBack, onCl
     <div data-mh-screen className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="ミッション" icon={<List size={20}/>} accent="text-amber-400" onBack={onBack} backLabel="戻る"/>
       {/* 受け取れる報酬があるかどうかでセリフを切り替える */}
-      {(()=>{const claimable=missionClaimableCount(state)>0;const allDone=['daily','weekly','monthly'].every(t=>MISSION_DEFS[t].every(m=>missionValue(state,t,m)>=m.target));return <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble key={claimable?'claim':'normal'} scene={claimable?'missionsClaimable':'missionsNormal'} condition={claimable&&allDone?'allDone':null} compact/></div>;})()}
+      {(()=>{const claimable=missionClaimableCount(state)>0;const allDone=['daily','weekly','monthly'].every(t=>MISSION_DEFS[t].every(m=>missionValue(state,t,m)>=m.target));return <div className="shrink-0 w-full max-w-md mx-auto mb-2">{dailyLine&&missionTab==='daily'?<div data-mission-daily-line><AssistantBubble key={`line-${dailyLine.who}`} assistantId={dailyLine.who} line={dailyLine.text} expression='happy' compact/></div>:<AssistantBubble key={claimable?'claim':'normal'} scene={claimable?'missionsClaimable':'missionsNormal'} condition={claimable&&allDone?'allDone':null} compact/>}</div>;})()}
       <ScreenTabs value={missionTab} onChange={onSelectTab} items={[
         {id:'daily',color:'#d97706',label:<>デイリー{tabCountBadge(missionClaimableList(state,'daily').length)}</>},
         {id:'weekly',color:'#7c3aed',label:<>ウィークリー{tabCountBadge(missionClaimableList(state,'weekly').length)}</>},
@@ -40,10 +54,10 @@ function MissionsScreen({ gifts, missions, missionTab, onSelectTab, onBack, onCl
       ]}/>
       {(()=>{const nowMs=Date.now();const backlog=(Array.isArray(gifts)?gifts:[]).filter(g=>g?.source==='mission'&&!g.claimedAt&&giftIsClaimable(g,nowMs)).length;const total=missionClaimableCount(state)+backlog;return <button type="button" data-mission-claim-all disabled={!total} onClick={()=>onClaimAll()} className={`shrink-0 mb-2 min-h-[52px] rounded-xl bg-gradient-to-r ${bulkGradient} text-[13px] font-black text-white shadow-lg active:scale-[.98] disabled:opacity-40`}>すべて受け取る{total>0&&` (${total})`}</button>;})()}
       <div className="mb-2 flex shrink-0 justify-center"><span className="rounded-full border border-white/10 bg-slate-900/70 px-3 py-1 text-[10px] font-black text-slate-300">次回更新: {new Date(resetAt).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',weekday:'short',hour:'2-digit',minute:'2-digit'})}</span></div>
-      <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>{defs.length===0?<ScreenEmpty emoji="🗒️" lines={['このタブのミッションはありません','ほかのタブに受け取れるものがあるかもしれません']}/>:defs.map(m=>{const value=missionValue(state,missionTab,m),done=value>=m.target,isSent=sent.includes(m.id),pct=Math.min(100,Math.floor(value/m.target*100));return <article key={m.id} className={`rounded-2xl border p-3 ${isSent?'bg-slate-900/70 border-white/10':done?'bg-amber-950/40 border-amber-400/60':'bg-slate-900 border-white/10'}`}>
-        <div className="flex items-start justify-between gap-2"><div className="min-w-0"><h3 className="font-black text-sm text-white break-words">{m.name}</h3><p className="mt-0.5 text-[11px] font-bold leading-snug text-slate-400 break-words">{m.condition}</p></div><b className="shrink-0 text-[12px] text-amber-200">{Math.min(value,m.target)} / {m.target}</b></div>
+      <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>{defs.length===0?<ScreenEmpty emoji="🗒️" lines={['このタブのミッションはありません','ほかのタブに受け取れるものがあるかもしれません']}/>:defs.map(m=>{const shownRewards=missionRewardsFor(m.rewards,{ownedItems,room}),swapped=shownRewards.filter(r=>r.swappedFrom),value=missionValue(state,missionTab,m),done=value>=m.target,isSent=sent.includes(m.id),pct=Math.min(100,Math.floor(value/m.target*100));return <article key={m.id} className={`rounded-2xl border p-3 ${isSent?'bg-slate-900/70 border-white/10':done?'bg-amber-950/40 border-amber-400/60':'bg-slate-900 border-white/10'}`}>
+        <div className="flex items-start justify-between gap-2"><div className="min-w-0"><h3 className="flex flex-wrap items-center gap-1.5 font-black text-sm text-white break-words">{m.tag&&<span data-mission-tag className="shrink-0 whitespace-nowrap rounded-full border border-white/10 bg-slate-800 px-2 py-0.5 text-[11px] font-black text-slate-200">{m.tag}</span>}<span className="min-w-0">{m.name}</span></h3><p className="mt-0.5 text-[11px] font-bold leading-snug text-slate-400 break-words">{m.condition}</p></div><b className="shrink-0 text-[12px] text-amber-200">{Math.min(value,m.target)} / {m.target}</b></div>
         <div className="h-2 my-2 overflow-hidden rounded-full bg-black/40 ring-1 ring-white/5"><div className={`h-full rounded-full transition-[width] ease-out ${done?'bg-amber-400':'bg-cyan-500'}`} style={{width:`${pct}%`}}></div></div>
-        <div className="flex items-center justify-between gap-2"><div className="min-w-0 text-[11px] font-black text-cyan-200 break-words">報酬: {m.rewards.map(giftRewardText).join(' / ')}</div>{isSent?<button type="button" disabled className="shrink-0 min-h-[44px] px-3 rounded-xl bg-amber-500 text-[11px] font-black text-black disabled:opacity-40">{inGiftBox(m)?'ギフトボックスに届いています':'受け取り済み'}</button>:done?<button type="button" onClick={()=>onClaim(missionTab,m)} className="shrink-0 min-h-[44px] px-4 rounded-xl bg-amber-500 text-[12px] font-black text-black active:scale-95">受け取る</button>:<span className="shrink-0 text-[11px] font-black text-slate-400">進行中 {pct}%</span>}</div>
+        <div className="flex items-center justify-between gap-2"><div className="min-w-0 flex-1" data-mission-rewards><div className="flex flex-wrap items-center gap-1"><span className="shrink-0 text-[11px] font-black text-cyan-200">報酬:</span>{shownRewards.map((r,i)=><span key={i} data-mission-reward-chip className={`whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-black ${r.type==='beatPoint'?'border-violet-300/50 bg-violet-900/60 text-violet-50':'border-white/10 bg-slate-800/80 text-cyan-200'}`}>{missionRewardChipText(r)}</span>)}</div>{swapped.length>0&&<p data-mission-furniture-swap className="mt-1 text-[10px] font-bold leading-snug text-slate-400">{swapped.map(r=>giftItemRewardInfo(r.swappedFrom)?.name||'家具').join('・')}は持っているので、ビートPに替えて届きます</p>}</div>{isSent?<button type="button" disabled className="shrink-0 min-h-[44px] px-3 rounded-xl bg-amber-500 text-[11px] font-black text-black disabled:opacity-40">{inGiftBox(m)?'ギフトボックスに届いています':'受け取り済み'}</button>:done?<button type="button" onClick={()=>onClaim(missionTab,m)} className="shrink-0 min-h-[44px] px-4 rounded-xl bg-amber-500 text-[12px] font-black text-black active:scale-95">受け取る</button>:<span className="shrink-0 text-[11px] font-black text-slate-400">進行中 {pct}%</span>}</div>
       </article>})}</div>
     </div>
   );

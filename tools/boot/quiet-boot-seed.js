@@ -71,10 +71,19 @@ const INTRO_STORY_KEY_IDS = Object.freeze({
   TACTICS_TYPES_STORY_SEEN_KEY: 'tactics_types',
   // ハロウィン・ナイトの終章の流し直し(2026-11-01)。上で終章を見たことにするので、流し直しも済んだことにする(キーは 35-raid-jack.jsx)
   RAID_JACK_ENDING_REPLAY_KEY: 'raid_jack_ending_replay',
+  // 「あたらしい助手」の紹介(きき・ももすけ。69-screen-home.jsx の KikiIntroOverlay・MomosukeIntroOverlay)も HOME で画面いっぱいに出る。
+  // 入っていなかったので、検査のたびに紹介が先に出ていた(2026-11-08 ビート部テンポの報告・検査部ミハリ)。
+  // ★新しいお話・紹介の「見た」の印を足したら、ここへも足す。漏れは tools/boot/quiet-boot-seed-coverage-check.js が止める
+  KIKI_INTRO_SEEN_KEY: 'kiki_intro',
+  MOMOSUKE_INTRO_SEEN_KEY: 'momosuke_intro',
 });
-const introStoryKeys = (except = []) => {
+// 印の本体での置き場所は決めずに、parts を全部読んで探す(置き場所が変わっても読めるように・2026-11-08)
+const partsSource = () => {
   const parts = path.resolve(__dirname, '..', '..', 'monster-hero/src/parts');
-  const src = ['17-release-changelog-login-missions.jsx', '35-raid-jack.jsx'].map((f) => fs.readFileSync(path.join(parts, f), 'utf8')).join('\n');
+  return fs.readdirSync(parts).filter((f) => f.endsWith('.jsx')).sort().map((f) => fs.readFileSync(path.join(parts, f), 'utf8')).join('\n');
+};
+const introStoryKeys = (except = []) => {
+  const src = partsSource();
   return Object.entries(INTRO_STORY_KEY_IDS).filter(([, id]) => !except.includes(id))
     .map(([name]) => (src.match(new RegExp(`const ${name} = '([^']+)'`)) || [])[1]).filter(Boolean);
 };
@@ -130,4 +139,11 @@ const updateNoticeSeed = () => ({
 // 会話も案内もまとめて黙らせる(ふつうはこれを使う)
 const quietBootSeed = () => ({ content: `${eventStorySeed().content}\n${ONE_TIME_NOTICE_SCRIPT}` });
 
-module.exports = { eventStoryIds, eventStoryKey, eventStorySeed, oneTimeNoticeSeed, quietBootSeed, updateNoticeSeed };
+// ログインボーナスを「もう受け取った」ことにする種(2026-11-07 マモリ: 日付が変わる時刻をまたぐと、ログインボーナスの窓が割りこんで
+// お話を待つ検査が落ち、回し直すと通る)。lastGrantedPeriod を遠い先にしておくと、いつ回しても配られない(本体の grantLoginBonus は
+// 「前回の期間以下なら配らない」)。ログインボーナスそのものを確かめる検査では使わない
+const loginBonusDoneSeed = () => () => {
+  try { localStorage.setItem('mh_login_bonus', JSON.stringify({ currentDay: 1, lastGrantedPeriod: '9999-12-31', totalLoginDays: 1 })); } catch {}
+};
+
+module.exports = { eventStoryIds, eventStoryKey, eventStorySeed, loginBonusDoneSeed, oneTimeNoticeSeed, quietBootSeed, updateNoticeSeed, INTRO_STORY_KEY_IDS, introStoryKeys, partsSource };

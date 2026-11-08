@@ -198,12 +198,14 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `hamCounterFxTimerRef.current = setTimeout(skipHamCounterFx, ms)` | progress | 止める | ハムのカウンターの演出を見せ終えて、待っている攻撃を進める(`await` の resolve)。止めると攻撃が止まったままになる |
 | `}, QUICK_RUN_AUTO_RETRY_MS);` | progress | 止める | クイックの自動周回で負けたあと、少し待って1周目から始め直す(次の画面へ進む)。effect の後始末で `clearTimeout` |
 | `setTimeout(retry, QUICK_RUN_AUTO_RETRY_MS)` | progress | 止める | MFバトルカードの中で、クイックの自動周回(カードのオプション)が負けたあと、少し待って1周目から始め直す(次の画面へ進む)。effect の後始末で `clearTimeout` |
+| `setTimeout(retryLife, QUICK_RUN_AUTO_RETRY_MS)` | progress | 止める | 助手ライフを開いたまま回しているクイックの自動周回(AUTO設定の自動開始)が負けたあと、少し待って1周目から始め直す(2026-11-08)。effect の後始末で `clearTimeout` |
 | `const t = setTimeout(() => setOpen(false), 2500)` | screen | 止める | 小さな説明の吹き出しを2.5秒で閉じる(41-screen-ui.jsx)。後始末で `clearTimeout` |
 | `setTimeout(place, 120)` | screen | 止める | HOMEの置き場所を測り直す(1回目・69-screen-home.jsx) |
 | `setTimeout(place, 700)` | screen | 止める | HOMEの置き場所を測り直す(2回目。絵が読み込まれたあと) |
 | `timers.push(setTimeout(place, 60))` | screen | 止める | HOMEのジャックの吹き出しの置き場所を、みゅあの吹き出しが伸び縮みしたあと測り直す(69-screen-home.jsx。2026-10-24) |
 | `setTimeout(run, 600 + Math.floor(Math.random() * 1800)` | progress | 投げっぱなし | モンヒロビートのフリーマッチで、CPUの発言を少し遅らせて部屋へ送る(77-screen-rhythm-multi.jsx)。止めるとほかの人に届かない |
 | `setTimeout(() => setNote(RHYTHM_BUDDY_REFUND_NOTE.get())` | progress | 止める | 相棒の返金のお知らせを、期限が来たら消す(80-screen-rhythm-buddy.jsx)。止めると出たまま(`setCopied` と同じ) |
+| `persistQuickGuideSeen(id); }, QUICK_GUIDE_SEEN_AFTER_MS)` | screen | 止める | クイック・AUTO設定・裏周回の案内が1.2秒見えたら「見た」を保存する待ち(#4837)。案内が替わる・画面を離れると effect の後始末で `clearTimeout`(見えていない案内は数えない) |
 
 ## 次の本でやること
 

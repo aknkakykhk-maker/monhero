@@ -417,7 +417,9 @@ check('場面の足しかたが手順として書いてある',
   assistantsSrc.includes('<AssistantBubble scene="home"/>') && assistantsSrc.includes('ASSISTANT_SCENES に場面を1つ足す'));
 
 // --- ④ 共通コンポーネント ---
-check('吹き出しは1つの共通コンポーネント', has('const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0, collapseKey=null, collapseHidden=false })'));
+check('吹き出しは1つの共通コンポーネント', has('const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0, collapseKey=null, collapseHidden=false, oneLine=false })'));
+// 1行の形(oneLine・2026-11-08 マモリ: 曲えらびの横の欄は空きが40pxほど)。名前とセリフを1行・高さ36px以内・折らない(index.html の text-wrap: balance に負けない)
+check('吹き出しの1行の形(oneLine)は高さ36px以内で、セリフを折らない', has("max-h-[36px]") && has("style={{ whiteSpace:'nowrap', textWrap:'nowrap' }}") && has("data-bubble-one-line"));
 check('選んだセリフの表情がそのまま顔に渡る', has('const face = expression || shown?.e || null;') && has('<AssistantFace who={who} size={size} accent={color} expression={face}/>'));
 // 場面や条件が変わったときだけ選び直す。ほかの再描画でセリフが入れ替わると読めない
 check('セリフは場面と条件が変わったときだけ選び直す',

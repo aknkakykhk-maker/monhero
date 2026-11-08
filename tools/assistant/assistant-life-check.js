@@ -40,14 +40,15 @@ load('monster-hero/data/assistants.js');
 // 2人にあげる道具の検査用に、持ち物(breeder.js)と交換所(rhythm-event.js)から2品の行だけを切り出して読む(ファイル丸ごとはほかの定義に頼っているため)
 {
   const pick = (rel, re) => fs.readFileSync(path.join(root, rel), 'utf8').split('\n').filter(l => re.test(l));
-  const items = fs.readFileSync(path.join(root, 'monster-hero/data/breeder.js'), 'utf8').match(/\{ id:'peer_(gift|token)'[\s\S]*?desc:"[^"]*" \}/g) || [];
-  const offers = pick('monster-hero/data/rhythm-event.js', /Object\.freeze\(\{ id:'peer_(gift|token)'/).map(l => l.trim().replace(/,$/, ''));
+  const items = fs.readFileSync(path.join(root, 'monster-hero/data/breeder.js'), 'utf8').match(/\{ id:'peer_[a-z]+'[\s\S]*?desc:"[^"]*" \}/g) || [];
+  const offers = pick('monster-hero/data/rhythm-event.js', /Object\.freeze\(\{ id:'peer_[a-z]+'/).map(l => l.trim().replace(/,$/, ''));
   vm.runInContext(`var BREEDER_MARKET_ITEMS = [${items.join(',')}]; var RHYTHM_EVENT_POINT_SHOP_OFFERS = [${offers.join(',')}];`, ctx);
 }
 let dayNow = '2026-11-07';
 vm.runInContext('var assistantBubbleDayKey = () => __day(); var assistantPeerDayKey = () => __day(); var jstDayKey4 = () => __day(); var assistantById = (id) => ASSISTANTS.find(a => a.id === id);', Object.assign(ctx, { __day: () => dayNow }));
 load('monster-hero/src/parts/56-assistant-peer.jsx');
 load('monster-hero/src/parts/56-assistant-life.jsx');
+load('monster-hero/src/parts/56-assistant-life-gifts.jsx');
 const G = (expr) => vm.runInContext(expr, ctx);
 
 const PREFS = G('ASSISTANT_LIFE_PREFS');
@@ -156,10 +157,18 @@ if (process.argv.includes('--stats')) {
       if (g.ids.length === 2 && g.place === 'home') bad.push(`${life.abs}: 2人きりで家`);
       if (!DOINGS[g.doing].places.includes(g.place)) bad.push(`${life.abs}: ${g.doing} を ${g.place} で`);
     }
-    for (const [id, s] of Object.entries(life.solo)) if (!DOINGS[s.doing].places.includes(s.place) && !(s.reason === 'lonely' && s.place === 'home') && !((s.doing === 'idle' || s.doing === 'walk') && s.place === PREFS[id].fav)) bad.push(`${life.abs}: ${id} が ${s.doing} を ${s.place} で`);
+    for (const [id, s] of Object.entries(life.solo)) if (!DOINGS[s.doing].places.includes(s.place) && !(s.reason === 'lonely' && s.place === 'home')) bad.push(`${life.abs}: ${id} が ${s.doing} を ${s.place} で`);
     for (const id of Object.keys(life.moods)) if (!MOODS[life.moods[id]]) bad.push(`${life.abs}: 気分 ${life.moods[id]}`);
   }
-  check('② 1人は1か所だけ・組は2〜4人・2人きりで「家」「寝る」は作らない・場所としていることが合う', bad.length === 0, bad.slice(0, 5).join(' / '));
+  check('② 1人は1か所だけ・組は2〜4人・2人きりで「家」「寝る」は作らない・場所としていることが合う(カード部屋で散歩、にしない。ミハリ L9)', bad.length === 0, bad.slice(0, 5).join(' / '));
+  // 寝ている助手は「さみしそう」にしない・気分は「ねむい」(ミハリ L2・L12)
+  const sleepBad = [];
+  for (const life of runs) for (const [id, s] of Object.entries(life.solo)) if (s.doing === 'sleep' && (s.reason === 'lonely' || life.moods[id] !== 'sleepy' || (life.lonely || []).includes(id))) sleepBad.push(`${life.abs}: ${id} ${s.reason}/${life.moods[id]}`);
+  check('② 寝ている助手は「さみしそう」にならず、気分は「ねむい」', sleepBad.length === 0 && runs.some(l => Object.values(l.solo).some(s => s.doing === 'sleep')), sleepBad.slice(0, 5).join(' / '));
+  // 前の版で保存した様子も、読み込むときに整える
+  const norm = G('normalizeAssistantLife');
+  const fixed = norm({ moods: { dra: 'eager', sorashido: 'happy' }, groups: [], solo: { dra: { doing: 'sleep', place: 'home', reason: 'lonely' }, sorashido: { doing: 'walk', place: 'cardroom', reason: 'mypace' } }, lonely: ['dra'] });
+  check('② 前の版の様子(寝ているのにさみしそう・カード部屋で散歩)は、読み込むときに整える', fixed.solo.dra.reason === 'mypace' && fixed.moods.dra === 'sleepy' && !fixed.lonely.includes('dra') && DOINGS.walk.places.includes(fixed.solo.sorashido.place));
   // 言い合い
   let together = 0;
   for (let k = 0; k < 60; k++) {
@@ -446,12 +455,39 @@ if (process.argv.includes('--stats')) {
     let brN = 0;
     for (let k = 0; k < 300; k++) { const t = G('assistantLifePickSoloTalk')('mua', { ...lifeBase, moods: { mua: 'happy' }, solo: { mua: { doing: 'walk', place: 'plaza', reason: 'mypace' } } }, peer(1), Math.random); if (t && t.kind === 'life-breeder') brN++; }
     check('⑧ ようすを見ると、ときどきブリーダーへのひとこと', T.breeder.length === 0 || (brN > 30 && brN < 150), `${brN}/300`);
+    // ⑧ 台詞の場所といまの場所(2026-11-07 ミハリ 残り④: 練習スタジオのソラシドが「広場、だれもいないな笑」)。8人 × 場所 × 気分・理由で、ようすを見る・声をかけるの台詞が別の場所の名前を言わない
+    {
+      const ids = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'];
+      const D = G('ASSISTANT_LIFE_DOINGS'), W = G('ASSISTANT_LIFE_TALK_PLACE_WORDS'), at = G('assistantLifeTalkAt');
+      const ng = [];
+      let n = 0;
+      const TODS = G('assistantLifeTalkTods'); let todNg = [];
+      for (const look of ['morning', 'noon', 'evening', 'night']) { ctx.assistantLifeTimeLook = () => look;
+      for (const id of ids) for (const [doing, d] of Object.entries(D)) for (const place of d.places) for (const mood of [null, 'happy', 'lonely', 'restless', 'sulky', 'sleepy', 'eager']) for (const reason of ['lonely', 'mypace']) for (let k = 0; k < 2; k++) {
+        const life = { ...lifeBase, moods: mood ? { [id]: mood } : {}, solo: { [id]: { doing, place, reason } } };
+        for (const t of [G('assistantLifePickSoloTalk')(id, life, peer(1), Math.random), G('assistantLifePickCallTalk')(id, life, Math.random)]) {
+          if (!t) continue; n++;
+          // 台本ごとに: 別の場所の名前を言うなら、その台本は鍵の place がいまの場所(家の窓から広場が見える、など)
+          for (const pid of (t.parts || [t.id])) {
+            const o = G('ASSISTANT_LIFE_TALKS').find(x => x.id === pid); if (!o) continue;
+            const txt = o.lines.map(l => l.t).join('/');
+            const hit = W.find(([w]) => txt.includes(w));
+            if (hit && hit[1] !== place && at(o) !== place) ng.push(`${id}@${place}: ${txt.slice(0, 24)}`);
+            const tods = TODS(o); if (tods && !tods.includes(look)) todNg.push(`${id}@${look}: ${txt.slice(0, 24)}`);
+          }
+        }
+      }
+      }
+      delete ctx.assistantLifeTimeLook;
+      check('⑧ ようすを見る・声をかけるの台詞は、いまの時間帯と食いちがわない(夕方に「朝の散歩で」を言わない)', todNg.length === 0 && TODS({ lines: [{ t: '朝の散歩で、きれいな花を見つけました' }] }).join() === 'morning', [...new Set(todNg)].slice(0, 3).join(' / '));
+      check('⑧ ようすを見る・声をかけるの台詞は、いまの場所とちがう場所の名前を言わない(8人×場所×気分)', n > 1000 && ng.length === 0, `${n}本 ${[...new Set(ng)].slice(0, 3).join(' / ')}`);
+    }
     lstore.set({ seen: {} });
   }
   // 2人にあげる道具: 数字は表から読む/渡すとよさそうな印
   {
     const g = G("assistantLifeItemInfo('gift')"), t = G("assistantLifeItemInfo('token')");
-    check('⑧ 道具の名前・値段・上がる量は表から読む(差し入れ 200P・友情Lv +15/しるし 500P・+30)', g.name === '差し入れ' && g.cost === 200 && g.peerAmt === 15 && g.playerAmt > 0 && t.cost === 500 && t.peerAmt === 30, `${g.name} ${g.cost} ${g.peerAmt}/${g.playerAmt}・${t.name} ${t.cost} ${t.peerAmt}/${t.playerAmt}`);
+    check('⑧ 道具の名前・値段・上がる量は表から読む(おやつバスケット 200P・友情Lv +15/おそろいのミサンガ 500P・+30)', g.name === 'おやつバスケット' && t.name === 'おそろいのミサンガ' && g.cost === 200 && g.peerAmt === 15 && g.playerAmt > 0 && t.cost === 500 && t.peerAmt === 30, `${g.name} ${g.cost} ${g.peerAmt}/${g.playerAmt}・${t.name} ${t.cost} ${t.peerAmt}/${t.playerAmt}`);
     const hint = G('assistantLifePairHint');
     const h1 = hint({ bond: { 'kiki-mua': 440 }, quarrel: {} }, lifeBase, 'kiki', 'mua');
     const h2 = hint({ bond: { 'kiki-mua': 300 }, quarrel: { pending: { pair: 'kiki-mua' } } }, lifeBase, 'kiki', 'mua');

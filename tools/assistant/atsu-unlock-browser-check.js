@@ -10,6 +10,7 @@
 //   ③ 印が真で、みゅあ・きき・ももすけ がそろって Lv5 以上 … HOME でお話が流れる。見終わると一覧で選べる。選ぶと HOME の吹き出しがあつになる
 // 印を真・偽にするのは、このページの中だけ(読み込み直後に RELEASE_FLAGS を書き換える)。ファイルの印は変えない
 const fs = require('fs');
+const { eventStorySeed } = require('../boot/quiet-boot-seed'); // お話の既読は本体から読んだ共通の種で入れる(手で書き写さない)
 const path = require('path');
 const { chromium } = require(path.join(__dirname, '../node_modules/playwright'));
 
@@ -118,6 +119,8 @@ const pickerText = (page) => page.evaluate(() => {
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     page.on('pageerror', (e) => fatal.push(e.message));
     await page.addInitScript(seed, { storyIds: STORY_IDS, noticeIds: SEEN_NOTICE_IDS, ...opts });
+    // お話・紹介の既読は共通の種で、手で書いた seed のあとに入れる(新しいお話が増えても先に流れない)
+    await page.addInitScript(eventStorySeed({ except: [STORY_ID] }));
     return page;
   };
   const ready = { mua: NEED[5], kiki: NEED[5], momosuke: NEED[5] };

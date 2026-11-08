@@ -37,6 +37,8 @@ function BreederMarketScreen({
   // MFバトルカードの「MFバトルカード」の売り場(区切り2)。いまはMFバトルカードのトップの「マーケットへ」から入ったときだけ渡す(デバッグ専用のあいだ)。
   // { point, starter, shop, busy, onBuyPack(packId,count), onBuyStarter(kit), onExchange(offer) }。initialSection … 最初に開く売り場
   cardShop=null, initialSection=null,
+  // initialTab … 最初に開く売り場のタブ(助手ライフの「🛒 交換所で手に入れる」から: 'item' 道具の棚 / 'furniture' 家具の棚)
+  initialTab=null,
 }) {
   // 2026-09-14・マーケットのタブ乱立を避けるため、最初に用途別の入口を選ぶ。
   // 入口だけこの画面のローカル状態で持ち、購入・交換・商品タブの既存stateは親側をそのまま使う。
@@ -52,8 +54,19 @@ function BreederMarketScreen({
   // ダイヤショップ以外の売り場のタブ(2026-10-01 ユーザー指示「ビートPの商品をタブわけして / マーケット全体的に統一させて」)。
   // ダイヤショップのタブは本体の marketTab のまま。ほかはこの画面の中だけで持つ(マーケットを出たら最初のタブへ戻る)
   // 開ける画面から戻ったときは、買ったときのタブで開く(cardShopScrollMemo)
-  const [sectionTabs,setSectionTabs]=useState(()=>initialSection==='card'&&cardShopScrollMemo.pending&&cardShopScrollMemo.tab?{card:cardShopScrollMemo.tab}:{});
+  const [sectionTabs,setSectionTabs]=useState(()=>initialSection==='card'&&cardShopScrollMemo.pending&&cardShopScrollMemo.tab?{card:cardShopScrollMemo.tab}:(initialSection&&initialTab?{[initialSection]:initialTab}:{}));
   const cardListRef = React.useRef(null);
+  // 助手ライフの「🛒 交換所で手に入れる」から「アイテム」タブで開いたときは、2人に贈る道具の所まで送る(1回だけ)
+  React.useEffect(()=>{
+    if(!(initialSection==='event'&&initialTab==='item')) return;
+    let n=0; const t=setInterval(()=>{ const el=document.querySelector('[data-event-point-life-gift]'); n++;
+      if(el){ clearInterval(t);
+        // 縦に送れる入れ物だけを動かす(画面全体を動かさない。viewport-height-check の決まり)
+        let box=el.parentElement; while(box&&!(/(auto|scroll)/.test(getComputedStyle(box).overflowY)&&box.scrollHeight>box.clientHeight)) box=box.parentElement;
+        if(box){ const r=el.getBoundingClientRect(), b=box.getBoundingClientRect(); box.scrollTop+=r.top-b.top-Math.max(0,(b.height-r.height)/2); } }
+      else if(n>40) clearInterval(t); },50);
+    return ()=>clearInterval(t);
+  },[]);
   const cardPressedRowRef = React.useRef(null); // 一覧で最後に押した行 { attr, value }(確認の窓の「買う」は行の外なので上書きしない)
   const mountedRef = React.useRef(true);
   React.useEffect(()=>()=>{ mountedRef.current=false; },[]);
@@ -135,7 +148,7 @@ function BreederMarketScreen({
     breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},...(hasDiscIconCards?[{key:'disc',label:'円盤石アイコン'}]:[]),...(breederFrameItems.length?[{key:'frame',label:'フレーム'}]:[])] },
     exchange:{ color:'#059669', tabs:[{key:'psyche',label:'プシュケー'},{key:'proof',label:'勇者の証'}] },
     card:{ color:'#ea580c', tabs:[{key:'pack',label:'パック'},{key:'tactics',label:'戦術カード'},{key:'starter',label:'スターター'},{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'}] },
-    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer=>offer.available!==false)?[{key:'costume',label:'着替え'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.some(offer=>offer.available!==false)?[{key:'icon',label:'アイコン'}]:[]),{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
+    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer=>offer.available!==false)?[{key:'costume',label:'着替え'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.some(offer=>offer.available!==false)?[{key:'icon',label:'アイコン'}]:[]),{key:'item',label:'アイテム'},...((typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS.assistantLife===true&&RELEASE_FLAGS.assistantLifeFurniture===true)?[{key:'furniture',label:'家具'}]:[]),{key:'material',label:'強化素材'}] },
   };
   const activeSectionTab = (section) => {
     const tabs=SECTION_TABS[section]?.tabs||[];
@@ -151,7 +164,8 @@ function BreederMarketScreen({
   // レジェンドブリーダー優待パス(2026-11-05)を持っている人は、対象の3つの値段と受け取る数を優待パス還元に差し替えて並べる(交換するときも本体が決め直す)
   // releaseFlag の付いた品物(助手どうしの差し入れなど)は、その公開の印が立つまで並べない
   const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer=>!offer.releaseFlag||(typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS[offer.releaseFlag]===true))
-    .filter(offer=>(eventTab==='material')===BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId))
+    // 助手ライフの家具(furn_*)は「家具」タブだけに並べる(2026-11-08 社長「交換所に家具の段を足すだけ」)
+    .filter(offer=>{ const furn=String(offer.itemId||'').startsWith('furn_'); if(eventTab==='furniture') return furn; if(furn) return false; return (eventTab==='material')===BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId); })
     .map(offer=>rhythmEventPointShopOfferWithPass(offer, legendPassActive===true));
   // 優待パス還元の札がある一覧では、ほかの札にも同じ高さの段を取って、札の高さをそろえる
   const legendPassSlot = eventItemOffers.some(offer=>offer.legendPass===true);
@@ -164,6 +178,13 @@ function BreederMarketScreen({
     // カード売り場は5つ(戦術カードが増えた)で等分すると「戦術カー/ド」「スター/ター」と言葉の途中で折れるので、5つから1行にして詰める(2026-10-29)
     // ビートP交換所も5つのときに幅320で「アシ/スト」「アイ/テム」と折れたので、同じく5つから1行に詰める(2026-10-31)
     const tight=section==='card'||section==='event';
+    // ビートP交換所に「家具」が加わって8つになり、1行だと右端が「強化素杉」のように切れて見えた(2026-11-08 窓口)。2段に並べて、全部の名前が見えるようにする
+    //   6つでも幅375で右端が切れたので、6つは3列・7つ以上は4列の2段にする
+    if(section==='event'&&items.length>=6) return <div role="tablist" data-market-tabs-grid={section} className={`mb-2 grid w-full min-w-0 max-w-full shrink-0 gap-1 ${items.length<=6?'grid-cols-3':'grid-cols-4'}`}>
+      {items.map(tab=>{const on=tab.id===value;return <button key={tab.id} type="button" role="tab" aria-selected={on} onClick={()=>selectSectionTab(section,tab.id)}
+        className={`mh-tab relative min-h-[40px] min-w-0 rounded-xl px-0 text-[10.5px] font-black leading-tight whitespace-nowrap active:scale-95 ${on?'text-white':'border border-white/10 bg-slate-900 text-slate-400'}`}
+        style={on?{background:tab.color}:undefined}>{tab.label}</button>;})}
+    </div>;
     if(!scroll||items.length<(tight?5:6)) return <ScreenTabs value={value} onChange={(key)=>selectSectionTab(section,key)} items={items}/>;
     return <div role="tablist" data-market-tabs-scroll={section} className={`mb-2 flex shrink-0 overflow-x-auto pb-0.5 ${tight?'gap-1.5':'gap-2'}`}>
       {items.map(tab=>{const on=tab.id===value;return <button key={tab.id} type="button" role="tab" aria-selected={on} onClick={()=>selectSectionTab(section,tab.id)}
@@ -415,7 +436,7 @@ function BreederMarketScreen({
             🎫 優待パスの手紙を読む
           </button>}
         <div data-event-point-shop data-event-point-tab={eventTab} className={MARKET_GRID_CLASS}>
-          {(eventTab==='item'||eventTab==='material')&&eventItemOffers.map(offer=>{
+          {(eventTab==='item'||eventTab==='material'||eventTab==='furniture')&&eventItemOffers.map(offer=>{
             const item=beatPointItemOf(offer);
             const grantText=`${offer.grantAmount.toLocaleString()}${offer.unit}`;
             // ダイヤの品は受け取る数が名前(ダイヤ ×300)に入っていて、持ち数は所持ダイヤと同じなので中段は空ける
@@ -429,7 +450,7 @@ function BreederMarketScreen({
               <span data-legend-pass-offer className="whitespace-nowrap text-[9px] font-bold text-slate-400 line-through tabular-nums">{offer.baseCost.toLocaleString()}P→{offer.baseGrantAmount.toLocaleString()}{offer.unit}</span>
               <span className="whitespace-nowrap text-[10px] max-[359px]:text-[9px] font-black text-amber-200 tabular-nums">{offer.cost.toLocaleString()}P→{offer.grantAmount.toLocaleString()}{offer.unit}</span>
             </>:null;
-            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-offer':offer.id}}
+            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-offer':offer.id,...(/^peer_/.test(String(offer.itemId||''))?{'data-event-point-life-gift':offer.itemId}:{})}}
               item={item} owned={false} comingSoon={false}
               noteSlot={legendPassSlot} note={passNote}
               canBuy={safeEventPoints>=offer.cost&&!busy}

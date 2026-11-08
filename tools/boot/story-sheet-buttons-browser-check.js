@@ -6,6 +6,7 @@
 // お話の窓は共通の部品なので、いちばん長い台詞のある「物置の古い箱」を全部めくって、どの台詞でもボタンが画面の中にあり、
 // 押した所にボタン自身がある(背面へ抜けない)ことを見る。大きさは 844×390・667×375・縦の 390×844。
 const http = require('http'), path = require('path'), fs = require('fs');
+const { eventStorySeed } = require('../boot/quiet-boot-seed'); // お話の既読は本体から読んだ共通の種で入れる(手で書き写さない)
 const root = path.resolve(__dirname, '..', '..'), PORT = 9213;
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
@@ -38,6 +39,8 @@ const seed = ({ storyIds }) => {
     const errors = []; page.on('pageerror', e => errors.push(String(e)));
     await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
     await page.addInitScript(seed, { storyIds: STORY_IDS });
+    // お話・紹介の既読は共通の種で、手で書いた seed のあとに入れる(新しいお話が増えても先に流れない)
+    await page.addInitScript(eventStorySeed());
     await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     // タイトル→HOME。窓は閉じる
@@ -62,6 +65,9 @@ const seed = ({ storyIds }) => {
       await page.waitForTimeout(200);
     }
     await page.waitForTimeout(600);
+    // お話の頭の題の札(「タップで始まります」・data-story-opening-card)は、数秒で消えるか押すと消える演出。窓のボタンの上に重なるので、
+    // 消えるのを待ってから測る(共通の種でハロウィン・ナイト終章の流し直しを済みにすると、回想でも札が出る。2026-11-08 ミハリ)
+    for (let i = 0; i < 20 && await page.locator('[data-story-opening-card]').count(); i++) { await page.locator('[data-story-opening-card]').first().click({ timeout: 500 }).catch(() => {}); await page.waitForTimeout(250); }
     let worst = { over: -1e9 }, at38 = null, total = 0, miss = null;
     for (let i = 0; i < 80; i++) {
       const m = await page.evaluate(() => {

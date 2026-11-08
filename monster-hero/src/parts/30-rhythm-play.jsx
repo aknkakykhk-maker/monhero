@@ -801,7 +801,7 @@ const RhythmMonsterSlotsPanel=({rhythmMonsterSlots,rhythmMonsterSlotIdsInUse,rhy
               {rhythmMonsterPickerOpen&&<ModalFrame label="モンスターノーツにするマスモンを選ぶ" border="border-fuchsia-400/70" onClose={()=>setRhythmMonsterPickerOpen(false)}>
                 <h3 className="text-center text-base font-black text-fuchsia-100">{target+1}番目に出すマスモン</h3>
                 <p className="mt-1 text-center text-[10px] font-bold text-slate-400">曲の約{Math.round((ratios[target]||0)*100)}%あたりで出ます{targetMasu?`（いまは ${targetMasu.name}）`:''}</p>
-                <ul data-rhythm-monster-picker className="mh-scroll mt-3 max-h-[55vh] space-y-1.5 overflow-y-auto">
+                <ul data-rhythm-monster-picker className="mh-scroll mt-3 max-h-[55vh] [[data-mh-view-rotation=true]_&]:max-h-[55vw] space-y-1.5 overflow-y-auto">
                 {candidates.map(masu=>{
                   const base=ALL_PLAYER_MONSTERS[masu.baseId],issue=rhythmMonsterSlotReplaceIssue(rhythmMonsterSlotIdsInUse,target,masu.id,masuMons);
                   const ability=rhythmSlotAbility(masu),at=slotOf(masu);
@@ -2296,6 +2296,8 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     const isNewRecord=!assistOn&&score>run.startBestScore;const merged=assistOn?normalizeRhythmBestRecord(run.startBest):mergeRhythmBestRecord(run.startBest,result);
     // 遊んだ記録を送る(待たない・失敗しても何もしない)。デバッグ・練習・タイミング合わせ・アシストモードは送らない
     if(!debugPlay&&!tutorial&&!calibrating&&!assistOn)rhythmPlayLogSend({song,difficulty,rawChart,notes:run.notes,settings,mirror:mirrorOn,cleared:!failed});
+    // フレンドの「最近」に曲名だけ残す(56-assistant-life-friend・2026-11-08 社長。公開中の曲だけ・スコアなどは残さない)
+    if(!debugPlay&&!tutorial&&!calibrating&&typeof assistantLifeFriendNoteActivity==='function'&&typeof RHYTHM_DEMO_SONG_IDS!=='undefined'&&RHYTHM_DEMO_SONG_IDS.includes(song?.songId)){try{void assistantLifeFriendNoteActivity('beat',song?.displayName||'');}catch{}}
     // タッチの診断を残して送る(待たない・失敗しても何もしない)。デバッグ・練習・タイミング合わせは除く。アシストは印を付けて含める
     if(!debugPlay&&!tutorial&&!calibrating){try{RHYTHM_TIMING_DIAG.meta(run.audio?.info?.());}catch{}}
     try{RHYTHM_INPUT_REC.finish({cleared:!failed,score:Number(run.score)||0});}catch{}

@@ -42,7 +42,8 @@ const combo=(base,bonus=0)=>base+Math.floor(base*(1+bonus)); assert.strictEqual(
 const inherited=(base,origin)=>Math.floor(base*(origin==='Pandora'?1:1.5)); assert.strictEqual(inherited(1000,'Zan'),1500); assert.strictEqual(inherited(1000,'Pandora'),1000);
 const cost=(base,{zero=false,resonance=0}={})=>{let value=zero?0:base;if(value>0&&resonance>0)value=Math.floor(value*.5);return value;};
 assert.strictEqual(cost(52,{resonance:2}),26); assert.strictEqual(cost(52,{zero:true,resonance:2}),0); let turns=2; assert.strictEqual(cost(52,{resonance:turns--}),26);assert.strictEqual(cost(52,{resonance:turns--}),26);assert.strictEqual(cost(52,{resonance:turns}),52);
-assert(source.includes("setNextTurnBuff('pandoraResonanceTurns',2)")); assert(source.includes('if (resonanceRefresh==null && resonanceCarry>0)'));
+// 2026-11-07: 固有技のオリジナル強化「効果の長さ」で 2+N ターンになる(強化なしは今までどおり2)
+assert(source.includes("setNextTurnBuff('pandoraResonanceTurns',2)") || (source.includes("const resonanceTurns=2+cardBoost.durationTurns;") && source.includes("setNextTurnBuff('pandoraResonanceTurns',resonanceTurns)"))); assert(source.includes('if (resonanceRefresh==null && resonanceCarry>0)'));
 // エイキ追加時に縦長立ち絵の一覧が伸びた。パンドラが引き続き対象に含まれていることだけを見る
 assert(/MONSTER_ART_CONTAIN_IDS = Object\.freeze\(\[[^\]]*'Pandora'[^\]]*\]\)/.test(source));
 assert(!source.includes('PANDORA_DEBUG'));
