@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d4db54072a138a67
+// source-sha256: 9fbcbc5f2c7f2d6c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -106345,6 +106345,8 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed #ffffff1a;font-size:12px;font-weight:800}
 .mhl-row .k{width:78px;flex:none;color:#cbd5e1;font-size:10.5px}
 .mhl-btn{min-height:44px;border-radius:12px;font-size:12px;font-weight:900;color:#fff}.mhl-btn:disabled{opacity:.45}
+/* 背の低い横(🔄横 667×375 など)では、部屋のシートの下に止めたボタンの段が画面を占めて、見出しの下の行を隠していた(2026-11-08 ミハリ)。ボタンを少し低くする */
+@media (orientation:landscape) and (max-height:420px){[data-assistant-life-room-acts] .mhl-btn{min-height:34px;font-size:11.5px}[data-assistant-life-room-acts]{gap:5px}}
 .mhl-scene{position:absolute;inset:0;z-index:30;overflow:hidden;background:#000}
 .mhl-scene .bg{position:absolute;inset:0;background-size:cover;background-position:center}
 .mhl-scene .st{position:absolute;bottom:0;object-fit:contain;object-position:bottom;filter:drop-shadow(0 6px 12px #0008)}
@@ -107920,7 +107922,10 @@ function AssistantLifeHouse({
       label: `🛒 ${x.cost != null ? `${x.cost}P` : '交換所'}`
     }));
   })), React.createElement("p", {
-    className: "mt-2 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] leading-snug text-slate-200"
+    className: "mt-2 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] leading-snug text-slate-200",
+    style: {
+      wordBreak: 'auto-phrase'
+    }
   }, "手に入れる: モンヒロビートの「ビートP交換所」(", itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・'), ")。贈る: 部屋や場面の「🎁 贈る」", soloOn ? '(2人に・その助手だけに)' : '', "。好きな物なら多め・苦手な物なら少なめに上がり、好みは贈ると分かります。同じ道具は1日1回・合わせて1日3回。声をかける・見守るは無料です。次の段まであと何点・この道具で段の何割進むかは、「🎁 贈る」で2人を選ぶと出ます"), typeof AssistantLifeShopButton === 'function' && React.createElement("div", {
     className: "mt-2"
   }, React.createElement(AssistantLifeShopButton, {
@@ -140937,6 +140942,9 @@ const CardBattleScreen = ({
     try {
       await cardMigratePointsOnce(storeGet, storeSet, saveStoredValuesOrRollback);
     } catch (_) {}
+    try {
+      if (typeof cardPvpFix20261108Once === 'function') await cardPvpFix20261108Once(storeGet, storeSet, saveStoredValuesOrRollback);
+    } catch (_) {}
     const [collection, decks, point, starter, daily, record, unlocked, tutorial, bgm, settings, cpuPlaylist] = await Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null), storeGet(K.tutorial, null), storeGet(K.bgm, null), storeGet(K.settings, null), storeGet(K.cpuPlaylist, null)]);
     const next = {
       collection: cardNormalizeCollection(collection),
@@ -152313,6 +152321,58 @@ const cardPvpHistoryWhen = at => {
   const d = new Date(at + 9 * 3600 * 1000);
   const p = n => String(n).padStart(2, '0');
   return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
+};
+const CARD_PVP_FIX_20261108_KEY = 'mh_card_pvp_fix_20261108_v1';
+const CARD_PVP_FIX_20261108_MATCHES = Object.freeze(['mmw7e6d8i6v7uxd', 'mmw7ecam4ptfvzi']);
+const cardPvpFix20261108Plan = (history, record) => {
+  const list = cardPvpNormalizeHistory(history);
+  const hits = list.filter(e => CARD_PVP_FIX_20261108_MATCHES.includes(e.match) && e.outcome === 'lose' && e.reason === '投了');
+  const rec = typeof cardNormalizeRecord === 'function' ? cardNormalizeRecord(record) : null;
+  if (!rec || !hits.length) return {
+    undone: 0,
+    record: null,
+    matches: []
+  };
+  const undone = Math.min(hits.length, rec.pvp.lose);
+  return {
+    undone,
+    record: undone > 0 ? {
+      ...rec,
+      pvp: {
+        ...rec.pvp,
+        lose: rec.pvp.lose - undone
+      }
+    } : null,
+    matches: hits.map(e => e.match)
+  };
+};
+const cardPvpFix20261108Once = async (getValue, setValue, saveAll) => {
+  const done = await getValue(CARD_PVP_FIX_20261108_KEY, null, false);
+  if (done && typeof done === 'object') return {
+    undone: 0,
+    saved: false
+  };
+  const [history, record] = await Promise.all([getValue(CARD_PVP_HISTORY_KEY, [], false), getValue(CARD_SAVE_KEYS.record, null, false)]);
+  const plan = cardPvpFix20261108Plan(history, record);
+  const entries = [{
+    key: CARD_PVP_FIX_20261108_KEY,
+    before: done,
+    next: {
+      at: Date.now(),
+      undone: plan.undone,
+      matches: plan.matches
+    }
+  }];
+  if (plan.record) entries.push({
+    key: CARD_SAVE_KEYS.record,
+    before: record,
+    next: plan.record
+  });
+  const saved = await saveAll(entries, getValue, setValue);
+  return {
+    undone: saved ? plan.undone : 0,
+    saved
+  };
 };
 const cardPvpHistoryLoad = async () => {
   try {
