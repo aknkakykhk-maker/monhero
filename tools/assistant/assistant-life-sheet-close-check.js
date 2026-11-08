@@ -1,7 +1,7 @@
 // 助手ライフの下から出るシートは、どれもはっきり分かる「閉じる」ボタンを持つ(2026-11-08 窓口・ナカヨシ8)。
 //   node tools/assistant/assistant-life-sheet-close-check.js
 //   ① 部品の中: シート(.mhl-sheet・下から出る rounded-t-3xl の箱・マスモンの .mhm-panel)を出す部品は、
-//      どれも data-mhl-sheet-close の付いた「閉じる/とじる/やめる」ボタンを持つ(暗い所を押すだけで閉じる形にしない)
+//      どれも data-mhl-sheet-close の付いた「閉じる/とじる/やめる/もどる(上のシートへ戻る)」ボタンを持つ(暗い所を押すだけで閉じる形にしない)
 //   ② 実際の画面(縦 390×844・縦 375×667・横 844×390・タブレット 820×1180): 部屋のシート・家具のシート・
 //      マスモンのシート・今日あったことの一覧を開くと、閉じるボタンが画面の中に見えていて、押すと閉じる
 //   ③ ページのエラーが出ない
@@ -26,7 +26,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       const hasSheet = /className="mhl-sheet"|rounded-t-3xl|className=\{`mhm-panel/.test(body);
       if (!hasSheet) continue;
       sheets++;
-      const close = /<button [^<]*?data-mhl-sheet-close[^<]*?>\s*(閉じる|とじる|やめる)\s*<\/button>/.test(body.replace(/\n\s*/g, ' '));
+      const close = /<button [^<]*?data-mhl-sheet-close[^<]*?>\s*(閉じる|とじる|やめる|もどる)\s*<\/button>/.test(body.replace(/\n\s*/g, ' '));
       if (!close) ng.push(`${f} ${m[1]}`);
     }
   }

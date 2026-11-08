@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 41e9e413ac10ac91
+// generated-sha256: f40da4ca25787c56
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -38729,7 +38729,7 @@ const growthFxSessionLevel = (list = []) => {
 // ---------- 見た目 ----------
 const GROWTH_FX_CSS = `
 .mh-gfx-chips{position:fixed;top:calc(env(safe-area-inset-top,0px) + 52px);right:10px;z-index:44000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
-.mh-gfx-chips.left{right:auto;left:10px;align-items:flex-start}
+.mh-gfx-chips.left{right:auto;left:10px;align-items:flex-start}.mh-gfx-chips.one .mh-gfx-chip:not(:first-child){display:none}.mh-gfx-chips.one .mh-gfx-chip:first-child::after{content:attr(data-more);margin-left:2px;border-radius:999px;background:#ffffff26;padding:0 5px;font-size:10px;font-weight:900}.mh-gfx-chips.row{flex-direction:row;align-items:flex-start;max-width:calc(100% - 20px);flex-wrap:nowrap}
 .mh-gfx-chips.mini .mh-gfx-chip>.min-w-0{display:none}.mh-gfx-chips.mini .mh-gfx-chip{padding:3px 8px 3px 4px;gap:4px}
 .mh-gfx-chip{position:relative;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;border-radius:999px;background:linear-gradient(90deg,#1e1b2ef0,#0f172af0);
   border:1.5px solid var(--gc);box-shadow:0 0 14px color-mix(in srgb,var(--gc) 40%,transparent);font-weight:900;font-size:11px;color:#fff;
@@ -39020,40 +39020,62 @@ const GrowthFxLevelUp = ({ sheet, level, onClose }) => {
 const GROWTH_FX_CHIP_TOPS = [52, 8, 96, 140];
 //   2026-11-08 窓口「フレンドの家で、知らせが部屋の名前・顔・声をかけた吹き出しを隠す」: 6つの点だけでは、点のあいだの短い名前や顔の絵を見逃していた。
 //   点で見たあとに、札の四角に重なる 文字・ボタン・絵(顔) を全部見る(見えているものだけ。画面いっぱいの入れ物や背景は数えない)
-const GROWTH_FX_CHIP_BUSY_SEL = 'button,a,input,[role="tab"],[role="button"],[data-assistant-bubble],img,svg,p,span,b,small,strong,em,h1,h2,h3,h4,li,label,[data-alf-face]';
-const growthFxChipSpotBusy = (box) => {
-  if (typeof document === 'undefined' || !document.elementsFromPoint) return false;
-  const r = box.getBoundingClientRect();
+const GROWTH_FX_CHIP_BUSY_SEL = 'button,a,input,[role="tab"],[role="button"],[data-assistant-bubble],img,svg,p,span,b,small,strong,em,h1,h2,h3,h4,li,label,div,[data-alf-face]';
+// 札の四角にかかる物の重さ(0 なら空き)。押せるもの・字は重く(3・2)、絵は軽く(1)数える。first が真なら1つ見つけたところで返す
+const growthFxChipSpotScore = (box, first = false) => {
+  if (typeof document === 'undefined' || !document.elementsFromPoint) return 0;
+  // 札は動き(出てくるときのずれ)で入れ物より上にはみ出して描かれ、置いた直後より最後に上へ上がって止まるので、入れ物と札の両方を含む範囲に上12px・下4pxを足して測る(2026-11-08 ナカヨシ8: 10px 上の字を見落とした)
+  const r = [...box.querySelectorAll('.mh-gfx-chip')].reduce((a, c) => { const q = c.getBoundingClientRect(); if (!q.width || !q.height) return a; /* 1枚にまとめたとき隠れた札(大きさ0)は数えない */ return { left: Math.min(a.left, q.left), top: Math.min(a.top, q.top - 12), right: Math.max(a.right, q.right), bottom: Math.max(a.bottom, q.bottom + 4) }; }, (() => { const b = box.getBoundingClientRect(); return { left: b.left, top: b.top, right: b.right, bottom: b.bottom }; })());
+  r.width = r.right - r.left; r.height = r.bottom - r.top;
+  let score = 0;
   for (const fx of [0.15, 0.5, 0.85]) for (const fy of [0.25, 0.75]) {
     const x = r.left + r.width * fx, y = r.top + r.height * fy;
-    const under = document.elementsFromPoint(x, y).find(el => !box.contains(el));
+    const under = document.elementsFromPoint(x, y).find(el => !box.contains(el) && !el.contains(box));
     if (!under) continue;
-    if (under.closest('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]')) return true;
-    if ([...under.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return true;
+    if (under.closest('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]')) { score += 3; if (first) return score; }
+    // 字は、その点に字そのものがあるときだけ(横幅いっぱいの題の空いた所を「字」と数えない)
+    else if ([...under.childNodes].some(n => { if (n.nodeType !== 3 || !n.textContent.trim()) return false; const rg = document.createRange(); rg.selectNodeContents(n); return [...rg.getClientRects()].some(q => x >= q.left - 2 && x <= q.right + 2 && y >= q.top - 2 && y <= q.bottom + 2); })) { score += 2; if (first) return score; }
   }
   const vw = window.innerWidth, vh = window.innerHeight;
+  const hit = (e) => Math.min(r.right, e.right) - Math.max(r.left, e.left) > 1 && Math.min(r.bottom, e.bottom) - Math.max(r.top, e.top) > 1;
+  // 手前に別のものが重なって見えていない要素は数えない(角と真ん中の2点で見る。角だけだと、角に顔の丸が乗った地図の札を見落とした)
+  const seen = (el, e) => { const x0 = Math.max(r.left, e.left), y0 = Math.max(r.top, e.top), x1 = Math.min(r.right, e.right), y1 = Math.min(r.bottom, e.bottom);
+    return [[x0 + 1, y0 + 1], [(x0 + x1) / 2, (y0 + y1) / 2]].some(([cx, cy]) => { const top = document.elementsFromPoint(cx, cy).find(x => !box.contains(x) && !x.contains(box)); return !top || top === el || el.contains(top) || top.contains(el); }); };
+  // 下から出るシート(助手ライフ・フレンドの家の .mhl-sheet・窓 role=dialog)が開いているあいだは、シートの四角を丸ごと避ける
+  //   (中のボタンだけを見ると、小さい画面でシートの「やめる」の上を選ぶ回があった。2026-11-08 ミハリ 375×667)
+  for (const sh of document.querySelectorAll('.mhl-sheet,[data-mhl-sheet],[role="dialog"]')) {
+    if (box.contains(sh) || sh.contains(box)) continue;
+    const e = sh.getBoundingClientRect();
+    if (!e.width || !e.height || !hit(e)) continue;
+    const cs = getComputedStyle(sh); if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
+    score += 3; if (first) return score;
+  }
   for (const el of document.querySelectorAll(GROWTH_FX_CHIP_BUSY_SEL)) {
     if (box.contains(el)) continue;
     const e = el.getBoundingClientRect();
-    if (!e.width || !e.height || e.height > vh * 0.5) continue;
-    if (Math.min(r.right, e.right) - Math.max(r.left, e.left) <= 1 || Math.min(r.bottom, e.bottom) - Math.max(r.top, e.top) <= 1) continue;
-    // 文字のある要素・押せるもの・絵だけ(中身の無い飾りの span などは数えない)
-    const isPic = /^(IMG|SVG)$/i.test(el.tagName) || el.hasAttribute('data-alf-face');
-    const isAct = el.matches('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]');
-    const hasText = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
-    //   幅いっぱいの入れ物は数えないが、文字を直に持つ1行(縦の小さい画面のシートの説明の行など)は幅が広くても数える(2026-11-08 オトズレ3)
-    if (e.width > vw * 0.9 && !hasText) continue;
+    if (!e.width || !e.height || !hit(e)) continue;
     const cs = getComputedStyle(el);
     if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
-    if (!isPic && !isAct && !hasText) continue;
-    // ほかの画面の下に隠れている(手前に別のものが重なっている)要素は数えない
-    const cx = Math.max(r.left, e.left) + 1, cy = Math.max(r.top, e.top) + 1;
-    const top = document.elementsFromPoint(cx, cy).find(x => !box.contains(x));
-    if (top && !(top === el || el.contains(top) || top.contains(el))) continue;
-    return true;
+    const isPic = /^(IMG|SVG)$/i.test(el.tagName) || el.hasAttribute('data-alf-face');
+    const isAct = el.matches('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]');
+    const texts = [...el.childNodes].filter(n => n.nodeType === 3 && n.textContent.trim());
+    // 字は、要素の四角ではなく字そのものの範囲で見る(幅いっぱいの見出しも拾う。2026-11-08 ナカヨシ8 ビートP交換所の題)
+    if (texts.length) {
+      let on = null;
+      for (const t of texts) { const rg = document.createRange(); rg.selectNodeContents(t); for (const q of rg.getClientRects()) if (hit(q)) { on = q; break; } if (on) break; }
+      if (on && seen(el, on)) { score += isAct ? 3 : 2; if (first) return score; continue; }
+      if (!isAct) continue;
+    }
+    // 押せるもの・絵は四角で見る(画面いっぱいの入れ物は数えない)
+    if (!isPic && !isAct) continue;
+    if (e.width > vw * 0.9 || e.height > vh * 0.5) continue;
+    if (!seen(el, e)) continue;
+    score += isAct ? 3 : 1;
+    if (first) return score;
   }
-  return false;
+  return score;
 };
+const growthFxChipSpotBusy = (box) => growthFxChipSpotScore(box, true) > 0;
 //   どの高さも下に文字・ボタンがあるとき(マーケットなど詰まった画面)は、名前とゲージを省いた小さな札(印と +数 だけ)にして、もう一度探す。
 //   画面は少しあとで組み替わる(吹き出しが出るなど)ので、出してから 0.5秒・1.5秒でも探し直す
 const GrowthFxChipsBox = ({ level, count, children }) => {
@@ -39067,29 +39089,41 @@ const GrowthFxChipsBox = ({ level, count, children }) => {
       const steps = []; for (let y = window.innerHeight - 10 - box.offsetHeight; y >= 8; y -= 24) steps.push(Math.round(y));
       const tops = [...new Set([...GROWTH_FX_CHIP_TOPS, Math.max(60, window.innerHeight - 120 - box.offsetHeight), ...steps])];
       // 右寄せで空きが無ければ左寄せでも探す(横のビートP交換所は右の列が品物で埋まり、左の列の下が空いている・2026-11-08)
-      for (const mini of [false, true]) {
-        box.classList.toggle('mini', mini);
+      // 縦に積んで入らないときは、小さくして横1列にも並べて探す(横の画面は高さが無い。2026-11-08 ナカヨシ8)
+      // それでも入らない詰まった画面(ビートP交換所)は、先頭の1枚に「+残りの数」を付けた1枚にまとめて探す
+      const chipEls = box.querySelectorAll('.mh-gfx-chip');
+      const more = Math.max(0, chipEls.length - 1);
+      if (chipEls[0]) chipEls[0].setAttribute('data-more', more ? `ほか${more}` : '');
+      for (const [mini, row, one] of [[false, false, false], [true, false, false], [true, true, false], ...(more ? [[true, false, true]] : [])]) {
+        box.classList.toggle('mini', mini); box.classList.toggle('row', row); box.classList.toggle('one', one);
         for (const left of [false, true]) {
           box.classList.toggle('left', left);
-          for (const t of tops) { box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`; if (!growthFxChipSpotBusy(box)) { box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${left ? 'left-' : ''}${t}`; return; } }
+          for (const t of tops) { box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`; if (!growthFxChipSpotBusy(box)) { box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${row ? 'row-' : ''}${one ? 'one-' : ''}${left ? 'left-' : ''}${t}`; return; } }
         }
       }
-      box.classList.remove('left');
-      box.style.top = `calc(env(safe-area-inset-top, 0px) + ${GROWTH_FX_CHIP_TOPS[1]}px)`; box.dataset.growthFxChipsTop = 'mini-busy';
+      // どこにも空きが無いときは、かかる物がいちばん軽い所へ(ボタンや字より絵の上。右上の時計・止めるに重ねない。2026-11-08 ナカヨシ8 助手ライフ)
+      let best = null;
+      for (const [row, one] of [[false, false], [true, false], ...(more ? [[false, true]] : [])]) for (const left of [false, true]) {
+        box.classList.toggle('row', row); box.classList.toggle('one', one); box.classList.toggle('left', left);
+        for (const t of tops) { box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`; const sc = growthFxChipSpotScore(box); if (!best || sc < best.sc) best = { sc, left, t, row, one }; }
+      }
+      box.classList.toggle('row', !!(best && best.row)); box.classList.toggle('one', !!(best && best.one)); box.classList.toggle('left', !!(best && best.left));
+      box.style.top = `calc(env(safe-area-inset-top, 0px) + ${best ? best.t : GROWTH_FX_CHIP_TOPS[1]}px)`; box.dataset.growthFxChipsTop = `mini-busy${best ? `-${best.left ? 'left-' : ''}${best.t}` : ''}`;
     };
     place();
-    const t1 = setTimeout(place, 500), t2 = setTimeout(place, 1500);
-    // 出たあとでシートが開くなど、画面が組み替わったら探し直す(2026-11-08 オトズレ3「横のフレンドの家で、あとから開いた置き手紙のシートのボタンを隠す」)。
-    //   いまの場所の下が空いたままなら動かさない(札があちこちへ跳ねないように)
-    let t3 = 0;
-    const again = () => { const box = ref.current; if (!box || !growthFxChipSpotBusy(box)) return; place(); };
-    const mo = typeof MutationObserver === 'function' ? new MutationObserver(() => { clearTimeout(t3); t3 = setTimeout(again, 40); }) : null;
+    // 画面の中身は遅れて出ることがある(フレンドのタブの案内・交換所の品物)ので、出ているあいだに中身が増えたら、少しおいて置き直す
+    let tm = null;
+    const mo = typeof MutationObserver === 'function' ? new MutationObserver((list) => {
+      if (list.every(m => ref.current && ref.current.contains(m.target))) return;
+      if (tm) return; tm = setTimeout(() => { tm = null; place(); }, 50);
+    }) : null;
     if (mo && document.body) mo.observe(document.body, { childList: true, subtree: true });
-    //   シートは下から滑り出す動きで出るので、探した瞬間はまだ画面の下にある。動き終わったときにも探し直す
-    const moved = () => { clearTimeout(t3); t3 = setTimeout(again, 40); };
-    document.addEventListener('animationend', moved, true); document.addEventListener('transitionend', moved, true);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); if (mo) mo.disconnect();
-      document.removeEventListener('animationend', moved, true); document.removeEventListener('transitionend', moved, true); };
+    // シートが下から出てくる動きなどが終わった瞬間にも置き直す(動きの途中で測ると、止まったあとのボタンにかぶった。2026-11-08 ミハリ フレンドの家の置き手紙)
+    const onAnimEnd = (e) => { if (ref.current && ref.current.contains(e.target)) return; if (tm) return; tm = setTimeout(() => { tm = null; place(); }, 50); }; // 何度も来るので、まとめて1回
+    document.addEventListener('animationend', onAnimEnd, true); document.addEventListener('transitionend', onAnimEnd, true);
+    // 出ているあいだは 0.7秒ごとにも置き直す(画面を一瞬揺らす演出や、帯の字の変わり目で測りまちがえても戻す。探す順は決まっているので、画面が変わらなければ同じ所のまま)
+    const t1 = setTimeout(place, 500), t2 = setTimeout(place, 1500), iv = setInterval(place, 700);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearInterval(iv); if (tm) clearTimeout(tm); if (mo) mo.disconnect(); document.removeEventListener('animationend', onAnimEnd, true); document.removeEventListener('transitionend', onAnimEnd, true); };
   }, [count]);
   return <div ref={ref} className={`mh-gfx-chips mh-gfx-${level}`} data-growth-fx-chips aria-live="polite">{children}</div>;
 };
@@ -63279,6 +63313,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-hdr{position:relative;z-index:5;padding:8px 12px 6px;background:linear-gradient(180deg,#140b2ef2,#140b2ecc 75%,#140b2e00)}
 .mhl-en{font-size:9px;letter-spacing:.18em;font-weight:900;color:#f9a8d4}
 .mhl-ti{font-size:22px;font-weight:900;line-height:1.05;background:linear-gradient(90deg,#fff,#fbcfe8 60%,#fde68a);-webkit-background-clip:text;background-clip:text;color:transparent}
+.mhl-quick{display:flex;align-items:center;gap:5px;border-radius:999px;padding:3px 4px 3px 9px;border:1px solid #fbbf2488;background:rgba(15,23,42,.78);font-size:10.5px;font-weight:900;color:#fde68a}.mhl-quick b{color:#fff}.mhl-quick button{min-height:26px;border-radius:999px;padding:0 9px;background:#334155;color:#e2e8f0;font-size:10.5px;font-weight:900;border:1px solid #64748b}.mhl-quick.is-start{padding:3px 10px;min-height:30px;background:linear-gradient(90deg,#f59e0b,#ea580c);color:#fff;border-color:#fde68a}
 .mhl-clock{border-radius:12px;padding:3px 8px;border:1px solid #ffffff33;background:rgba(15,23,42,.72);text-align:right}
 .mhl-chip{display:inline-flex;align-items:center;gap:3px;background:linear-gradient(90deg,#be185d,#f59e0b);padding:1px 8px;border-radius:999px;font-size:10px;font-weight:900;white-space:nowrap}
 .mhl-bar{flex:1;height:7px;border-radius:9px;background:#ffffff1f;overflow:hidden}.mhl-bar>i{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fbbf24)}
@@ -63691,13 +63726,50 @@ function AssistantLifeScene({ scene, look, onClose, onGive, canGive }) {
 }
 
 // ---------- 専用ページ ----------
-const useAssistantLifeLand = () => {
-  const get = () => typeof window !== 'undefined' && window.innerWidth > window.innerHeight && window.innerHeight < 600;
-  const [land, setLand] = React.useState(get);
-  React.useEffect(() => { const f = () => setLand(get()); window.addEventListener('resize', f); window.addEventListener('orientationchange', f); return () => { window.removeEventListener('resize', f); window.removeEventListener('orientationchange', f); }; }, []);
-  return land;
+// 見えている画面の幅・高さ。🔄横(モンヒロビートの「横」で、端末は縦のまま器を回す)のときは、回した器の幅・高さ
+//   (window の幅・高さは端末の縦のままなので、それで決めると縦の形のまま器の真ん中に縮んだ。2026-11-08 ジン)
+const assistantLifeViewSize = () => {
+  if (typeof window === 'undefined') return { w: 390, h: 844, rot: false };
+  const rot = typeof RHYTHM_VIEW_ROTATION === 'object' && !!RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.active === 'function' && RHYTHM_VIEW_ROTATION.active();
+  return rot ? { w: window.innerHeight, h: window.innerWidth, rot: true } : { w: window.innerWidth, h: window.innerHeight, rot: false };
 };
-function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = null, bondLevelOf = null, furnItems = null, onGiveFurn = null, onGiveSolo = null }) {
+// 大きさが変わったら描き直す。🔄横の切り替えは resize が来ないので、0.5秒ごとにも見る
+const useAssistantLifeViewSize = () => {
+  const [size, setSize] = React.useState(assistantLifeViewSize);
+  React.useEffect(() => {
+    const f = () => setSize(prev => { const n = assistantLifeViewSize(); return (n.w === prev.w && n.h === prev.h && n.rot === prev.rot) ? prev : n; });
+    window.addEventListener('resize', f); window.addEventListener('orientationchange', f);
+    const id = setInterval(f, 500);
+    return () => { window.removeEventListener('resize', f); window.removeEventListener('orientationchange', f); clearInterval(id); };
+  }, []);
+  return size;
+};
+const useAssistantLifeLand = () => { const v = useAssistantLifeViewSize(); return v.w > v.h && v.h < 600; };
+// 裏クイックの札(2026-11-08 社長「助手ライフ画面でも裏クイックほしい」)。中身はバトル部(ジン)が 60-app から渡す:
+//   quickRun … null(一度も回していない)か { live, loops, stopped, difficulty, xp, gold, canStart }/onQuickRunStop()/onQuickRunStart()
+//   回っているときは「⚡ 裏クイック ◯周目」と「止める」、止まっていて始められるときは「▶ 裏クイック」。数え方はカードの札と同じ(loops をそのまま)
+function AssistantLifeQuickChip({ quickRun, onStop, onStart, land }) {
+  if (!quickRun || typeof quickRun !== 'object') return null;
+  // 「◯周目」は loops をそのまま(1周目から 1。MFバトルカードの札 84-screen-card-battle と同じ数え方)
+  const loops = Number.isFinite(Number(quickRun.loops)) ? Math.max(1, Math.floor(Number(quickRun.loops))) : 1;
+  // 印はバトル部(セコンド)の検査とそろえる: 外枠 data-assistant-life-quick-run=live|stopped/始める data-assistant-life-quick-start/止める data-assistant-life-quick-stop
+  if (quickRun.live) {
+    return (
+      <div className="mhl-quick shrink-0 self-center" data-assistant-life-quick="live" data-assistant-life-quick-run="live" data-assistant-life-quick-loop={loops}>
+        <span className="whitespace-nowrap">⚡ 裏クイック <b>{loops}周目</b></span>
+        {onStop && <button type="button" data-assistant-life-quick-stop onClick={onStop} aria-label="裏クイックを止める">止める</button>}
+      </div>);
+  }
+  // 止めたあと・自動で始めるが切・負けて始め直すまでのあいだだけ「▶ 裏クイック」(助手ライフを開くとふだんは自動で始まる。2026-11-08 社長)
+  if (quickRun.canStart && onStart) {
+    return (
+      <div className="shrink-0 self-center" data-assistant-life-quick="start" data-assistant-life-quick-run="stopped">
+        <button type="button" className="mhl-quick is-start" data-assistant-life-quick-start onClick={onStart} aria-label="裏クイックを始める"><span className="whitespace-nowrap">▶ 裏クイック</span></button>
+      </div>);
+  }
+  return null;
+}
+function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = null, bondLevelOf = null, furnItems = null, onGiveFurn = null, onGiveSolo = null, quickRun = null, onQuickRunStop = null, onQuickRunStart = null, quickRunStrip = null }) {
   const st = useAssistantLifeNow(metIds);
   const diary = useAssistantLifeDiary();
   const peerSt = (typeof useAssistantPeerState === 'function') ? useAssistantPeerState() : null;
@@ -63715,8 +63787,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const [masmonId, setMasmonId] = React.useState(null); // 🐾 助手のマスモン(56-assistant-life-masmon.jsx)
   const [intro, setIntro] = React.useState(null); // 'long' | 'short' | null
   const [boardOpen, setBoardOpen] = React.useState(false); // 今日あったことを全部
-  const [vw, setVw] = React.useState(() => (typeof window !== 'undefined' ? window.innerWidth : 390));
-  React.useEffect(() => { const f = () => setVw(window.innerWidth); window.addEventListener('resize', f); return () => window.removeEventListener('resize', f); }, []);
+  const vw = useAssistantLifeViewSize().w; // 🔄横では回した器の幅
   // 入場: その日の最初は長く(1.2秒)、2回目からは短く(0.4秒)
   React.useEffect(() => {
     let alive = true;
@@ -63918,6 +63989,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         <div className="min-w-0 shrink overflow-hidden" data-assistant-life-title><p className="mhl-en truncate whitespace-nowrap" style={land ? { letterSpacing: '.06em', fontSize: 8 } : undefined}>ASSISTANT LIFE · {tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : tab === 'visit' ? 'VISIT' : 'HOUSE'}</p><p className="mhl-ti whitespace-nowrap" style={land ? { fontSize: 18 } : undefined}>助手ライフ</p></div>
         <div className="min-w-0 flex-1"/>
         {/* いまの時刻の札(ハナビの共通部品 44-time-of-day.jsx。設定の「いまの時刻を出す」が切なら出ない) */}
+        {/* 裏クイック: 60-app がほかのモードと同じ帯(quickRunStrip)を渡すときは帯を見出しの下に出し、この小さな札は出さない(2026-11-08 社長「他のモードと同じような表示に」) */}
+        {!quickRunStrip && <AssistantLifeQuickChip quickRun={quickRun} onStop={onQuickRunStop} onStart={onQuickRunStart} land={land}/>}
         {typeof TimeOfDayClock === 'function' && <div className="ml-auto shrink-0 self-center" data-assistant-life-clock-box><TimeOfDayClock/></div>}
       </div>
       {/* 時間帯と、みんなが動くまで(題を切らないよう2段目に。2026-11-07 社長「文字列も気をつけて」) */}
@@ -63993,6 +64066,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
             <div className="mhl-body" style={{ flex: '0 0 64%' }}>{tabBody}</div>
             <div className="flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2">
               {header}
+              {quickRunStrip && <div className="shrink-0" data-assistant-life-quick-strip>{quickRunStrip}</div>}
               {note && <p data-assistant-life-note className="rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1 text-[10.5px] font-bold text-sky-100">{note}</p>}
               {tiles}
               {icons}
@@ -64000,6 +64074,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
           </div>
         ) : (<>
           {header}
+          {quickRunStrip && <div className="relative z-[3] shrink-0" data-assistant-life-quick-strip>{quickRunStrip}</div>}
           <div className="mhl-body">
             {note && <p data-assistant-life-note className="mx-3 mb-1 rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 text-[11px] font-bold text-sky-100">{note}</p>}
             {tabBody}
@@ -68491,9 +68566,7 @@ function AlfFriendHouseView({ friend, onClose }) {
   const [boardOpen, setBoardOpen] = React.useState(false);
   const [selfName, setSelfName] = React.useState('');
   React.useEffect(() => { let alive = true; (async () => { try { const n = typeof storeGet === 'function' ? await storeGet('mh_breeder_name', '') : ''; if (alive && typeof n === 'string' && n && n !== '名無しのブリーダー') setSelfName(n.slice(0, 10)); } catch {} })(); return () => { alive = false; }; }, []);
-  const [vw, setVw] = React.useState(() => (typeof window !== 'undefined' ? window.innerWidth : 390));
-  const [vh, setVh] = React.useState(() => (typeof window !== 'undefined' ? window.innerHeight : 844));
-  React.useEffect(() => { const on = () => { setVw(window.innerWidth); setVh(window.innerHeight); }; window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
+  const { w: vw, h: vh } = typeof useAssistantLifeViewSize === 'function' ? useAssistantLifeViewSize() : { w: 390, h: 844 }; // 🔄横では回した器の幅・高さ
   React.useEffect(() => { if (friend && friend.id) void alfFetchMore(friend.id); }, [friend && friend.id]);
   // その人のいまの状態(34-friends-api の friendsPresenceFor。訪ねたときに1回だけ読む)
   const [now, setNow] = React.useState(null);
@@ -77833,7 +77906,8 @@ const CardPlaylistRows = ({ list, onChange, bgmPreview, tag }) => {
 // バトルカードのトップの上の帯(60-app の renderCardQuickRunStrip)の「詳細」を押したときの窓(2026-10-26 社長「横の経験値とかを詳細ボタンの中に入れればいいよ」)。
 // 数は帯・対戦の盤と同じ所(60-app の cardQuickRunView)から読む。描くのは 60-app(帯と同じ所)
 // quickRun … { live, loops, stopped, xp, gold, difficulty, info:{ wave, reason } } か null(一度も回していない)
-const CardQuickRunDetail = ({ quickRun, autoReady, autoDifficulty, todayLoops = 0, onClose }) => {
+// 助手ライフの裏クイック(2026-11-08)でも同じ窓を使う。todayLoops に null を渡すと「今日バトルカードで足した周回」の行を出さず、note を渡すと下の説明を差し替える(カードからは今までどおり)
+const CardQuickRunDetail = ({ quickRun, autoReady, autoDifficulty, todayLoops = 0, onClose, note = null }) => {
   const live = !!quickRun && !quickRun.stopped;
   const row = (label, value, tone = 'text-white') => (
     <div className="flex items-baseline justify-between gap-3 border-b border-white/10 py-1.5 last:border-b-0">
@@ -77857,11 +77931,11 @@ const CardQuickRunDetail = ({ quickRun, autoReady, autoDifficulty, todayLoops = 
           {quickRun && row('何周目', `${quickRun.loops}周目`)}
           {quickRun && row('この周回でふえたダイヤ', `+${(quickRun.gold || 0).toLocaleString()}`, 'text-emerald-200')}
           {quickRun && row('この周回でふえた経験値', `+${(quickRun.xp || 0).toLocaleString()}`, 'text-emerald-200')}
-          {row('今日バトルカードで足した周回', `${(todayLoops || 0).toLocaleString()}周ぶん`, 'text-sky-100')}
+          {todayLoops !== null && row('今日バトルカードで足した周回', `${(todayLoops || 0).toLocaleString()}周ぶん`, 'text-sky-100')}
         </div>
-        <p className="mt-2 text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(autoReady || quickRun
+        <p className="mt-2 text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(note || (autoReady || quickRun
           ? 'フリー対戦・マルチで戦うと、その分がクイック周回として足されます。裏で回しているときは、いまの周回が進みます。'
-          : 'AUTO設定で、勇者モン・配置距離・難易度の3つを決めると、戦った分がクイック周回として足されます。')}</p>
+          : 'AUTO設定で、勇者モン・配置距離・難易度の3つを決めると、戦った分がクイック周回として足されます。'))}</p>
         <button type="button" data-card-quick-detail-close onClick={onClose} className="mh-button mt-3 min-h-[44px] w-full rounded-2xl border border-white/15 bg-slate-800 text-[14px] font-black text-white active:scale-[.98]">閉じる</button>
       </div>
     </div>
@@ -89763,8 +89837,16 @@ function MonsterHeroGame() {
   // ★state ではなく控え(ref)で持つ。押した瞬間に setGameState が読むので、次の描画を待つと1描画ぶん古い判断になる(下の 2026-09-14 と同じ型)
   const cardMarketEntryRef = useRef(false);
   const isCardRunScreen = state => isCardScreen(state) || (state === 'BREEDER_MARKET' && cardMarketEntryRef.current === true);
-  // 裏でクイック∞周回を続けたまま開いていてよい画面か(モンビー・MFバトルカード)
-  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state);
+  // 助手ライフを開いているあいだ(2026-11-08 社長「助手ライフ画面でも裏クイックほしい」)。助手ライフは HOME・プロフィール・アイテムの上に重ねて開く。
+  // ★カードのマーケットと同じく控え(ref)で持つ。開け閉めは ASSISTANT_LIFE_STORE の知らせ(下の assistantLifeOpenNow の受け口)で、その場で入れ直す
+  // assistantLifeExitingRef … 閉じたあと、裏の周回を締め終わるまで(締めている途中に段階が進んでも、画面をバトルへ飛ばさない)
+  const ASSISTANT_LIFE_RUN_STATES = ['HOME', 'PROFILE', 'ITEM_INVENTORY'];
+  const assistantLifeOpenRef = useRef(false);
+  const assistantLifeExitingRef = useRef(false);
+  const gameStateNowRef = useRef('HOME');
+  const isAssistantLifeRunScreen = state => assistantLifeExitingRef.current || (assistantLifeOpenRef.current && ASSISTANT_LIFE_RUN_STATES.includes(state));
+  // 裏でクイック∞周回を続けたまま開いていてよい画面か(モンビー・MFバトルカード・助手ライフ)
+  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state) || isAssistantLifeRunScreen(state);
   // 「いまモンビーを開いているか」の控え。advanceRunStage が呼ばれた時点の値で判断するために使う。
   const runBackgroundAllowedRef = useRef(false);
   // 画面を切り替える唯一の入口。★必ずこれを通す(useStateのsetterを直接呼ばない)。
@@ -89783,7 +89865,7 @@ function MonsterHeroGame() {
   // ここで控えも一緒に更新すれば、切り替えたその瞬間から正しい判断になる。
   // 画面を変えるたびに、どの処理が変えたかを記録に残す(MH_SCREEN_TRAIL・10-core.jsx)
   const gameStateCaller = () => { try { const line = String(new Error().stack || '').split('\n').slice(2).find((l) => !/setGameState|gameStateCaller/.test(l)) || ''; const m = /at\s+([\w$.]+)/.exec(line) || /^([\w$.]+)@/.exec(line.trim()); return m ? m[1] : ''; } catch (_) { return ''; } };
-  const setGameState = (next) => { runBackgroundAllowedRef.current = isBackgroundRunScreen(next); if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`); setGameStateRaw(next); };
+  const setGameState = (next) => { gameStateNowRef.current = next; runBackgroundAllowedRef.current = isBackgroundRunScreen(next); if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`); setGameStateRaw(next); };
   const [debugThrowScreenError, setDebugThrowScreenError] = useState(false); // デバッグ設定から画面エラーの受け止めを試すためだけの印
   const debugMenuRootRef = useRef(null); // デバッグメニューの名前で絞り込む欄が、どの範囲を探すか(2026-10-27)
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
@@ -92180,7 +92262,15 @@ function MonsterHeroGame() {
   const [assistantLifeOpenNow, setAssistantLifeOpenNow] = useState(false);
   useEffect(() => {
     if (typeof ASSISTANT_LIFE_STORE === 'undefined') return undefined;
-    const fn = (st) => setAssistantLifeOpenNow(!!(st && st.open));
+    // 開け閉めの瞬間に控えも入れ直す(次の描画を待つと1描画ぶん古い判断になる。2026-09-14 の型)。
+    // 裏の周回を回したまま閉じたら、締め終わるまで「裏で回してよい」のままにする(締めは下の effect)
+    const fn = (st) => {
+      const open = !!(st && st.open);
+      if (!open && assistantLifeOpenRef.current && runStageRef.current && ASSISTANT_LIFE_RUN_STATES.includes(gameStateNowRef.current)) assistantLifeExitingRef.current = true;
+      assistantLifeOpenRef.current = open;
+      runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
+      setAssistantLifeOpenNow(open);
+    };
     ASSISTANT_LIFE_STORE.listeners.add(fn);
     return () => { ASSISTANT_LIFE_STORE.listeners.delete(fn); };
   }, []);
@@ -94680,8 +94770,12 @@ function MonsterHeroGame() {
   //  ・クイックの∞周回だけ(モンビーと同じ)
   //  ・対戦中(CARD_BATTLE)も回す。演奏と違ってターン制で、1/60秒ごとの判定が無いので割り込まれても困らない
   const cardBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && cardScreenOpen;
-  // ランの画面を描かずに段階だけ進めてよいか。モンビー・MFバトルカードを開いている間はそのまま進める
-  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen;
+  // 助手ライフを開いているか(HOME・プロフィール・アイテムの上。閉じて締めている途中も含む)。開いている間はランが進んでも画面を切り替えない
+  const assistantLifeScreenOpen = isAssistantLifeRunScreen(gameState);
+  // 助手ライフを開いたまま裏で周回してよい状態か。クイックの∞周回だけ(モンビー・カードと同じ)
+  const assistantLifeBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && assistantLifeScreenOpen;
+  // ランの画面を描かずに段階だけ進めてよいか。モンビー・MFバトルカード・助手ライフを開いている間はそのまま進める
+  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen || assistantLifeScreenOpen;
   // ★advanceRunStage は setTimeout や await の後から呼ばれる。
   //   そこで値をそのまま読むと「バトル画面で作られたときの古い値」を掴んでしまい、
   //   モンビーへ移った直後に敵を倒した瞬間、画面がバトルへ飛び戻る
@@ -94703,7 +94797,7 @@ function MonsterHeroGame() {
   // ランから抜けた(HOMEへ戻った・やり直した)ときに段階を捨てる
   const clearRunStage = () => { runStageRef.current = null; setRunStage(null); };
   // ランを進めてよいか。ランの画面を描いているとき、またはモンビーの非演奏画面で裏回し中。
-  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun);
+  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun);
   // モンビーからクイックのバトルへ戻る。ランの段階そのものへ戻すので、続きから遊べる
   // 曲えらびの一覧をどこまで見ていたか。全国ランキングや遊びかたを見て戻ったとき、
   // その場所から続けられるようにするための控え(保存はしない・リロードで消えてよい)
@@ -96146,7 +96240,8 @@ function MonsterHeroGame() {
   // モンビーを開いている間は、裏で回っているバトルのSEを鳴らさない。
   // 曲の試聴・演奏と重なると邪魔になるため(超省エネと同じ考え方)。
   // 音量の保存値そのものは変えないので、モンビーを出れば元の音量へ戻る
-  useEffect(() => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen) ? 0 : seVolume); }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen]);
+  // 助手ライフの上で裏の周回を回しているあいだも、バトルの音は鳴らさない(BGM は助手ライフの曲のまま。2026-11-08)
+  useEffect(() => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen || assistantLifeBackgroundRun) ? 0 : seVolume); }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen, assistantLifeBackgroundRun]);
   // モンヒロビートの画面は上で効果音の音量を0にしている(裏の周回のバトルの音を消すため)。ランクアップの演出(beatRankFx)を出している間だけは、
   // 効果音の音量設定どおりに戻して鳴らし、閉じたら上と同じ決まりに戻す(2026-10-29 社長「ファンファーレもなかった」。0のままだと演出の音が鳴らなかった)。
   // 超省エネのあいだは今までどおり鳴らさない
@@ -102436,6 +102531,67 @@ function MonsterHeroGame() {
     setGameState(RHYTHM_MODE_PUBLIC_RELEASE?'HOME':'DEBUG_SETTINGS');
   };
 
+  // ===== 助手ライフの上の裏クイック(2026-11-08 社長「助手ライフ画面でも裏クイックほしい」) =====
+  // 締める: exitRhythmSongSelect と同じく、報酬を入れて(リザルトは見せない)から片付ける。
+  // 見ている画面はそのまま(HOME・プロフィール・アイテムの上で閉じたらそこに残る。交換所へ飛んだならそのまま交換所)
+  const assistantLifeSettlingRef = useRef(false);
+  const settleAssistantLifeRun = async () => {
+    if (assistantLifeSettlingRef.current) return;
+    assistantLifeSettlingRef.current = true;
+    try {
+      if (runStageRef.current && isQuickMode(runMode) && !runResultFinishedRef.current) await handleGiveUp({ silent: true });
+      if (runStageRef.current) {
+        const stay = gameStateNowRef.current;
+        returnToHome();
+        if (stay && stay !== 'HOME' && !isRunStage(stay)) setGameState(stay);
+      }
+    } finally {
+      assistantLifeSettlingRef.current = false;
+    }
+  };
+  // 閉じたら締める(閉じた瞬間の印 assistantLifeExitingRef は、開け閉めの受け口が立てる)
+  useEffect(() => {
+    if (assistantLifeOpenNow || !assistantLifeExitingRef.current) return;
+    void settleAssistantLifeRun().finally(() => {
+      assistantLifeExitingRef.current = false;
+      runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
+    });
+  }, [assistantLifeOpenNow]);
+  // 助手ライフへ渡す、裏の周回のようす(cardQuickRunView と同じ作り)。周回をしていなくて、始められもしないときは null
+  //   canStart … AUTO設定のクイック周回がそろっていて、勝負のついていない挑戦が無いとき(札の「始める」を出す)。
+  //   開いたら自動で始めるのは、下の「助手ライフを開いたら自動で∞周回を始める」(AUTO設定の自動開始スイッチが ON のとき)
+  const assistantLifeQuickRunView = () => {
+    if (!assistantLifeOpenNow) return null;
+    const canStart = autoQuickRunConfigured(autoSettings) && !!repeatTemplateFromAutoSettings() && !(runStage !== null && !runResultFinished);
+    const base = cardQuickRunView();
+    if (!base) return canStart ? { live: false, loops: 0, stopped: true, difficulty: ((DIFFICULTY_SETTINGS[autoSettings.quickRun.difficulty] || quickDifficultySetting(autoSettings.quickRun.difficulty) || {}).label || null), xp: 0, gold: 0, canStart } : null;
+    const live = assistantLifeBackgroundRun && !quickRunProgress.finished;
+    // info … モンヒロビートのモードえらび・カードのトップの帯(RhythmQuickRunPill)と同じ形。札をほかのモードと同じ部品にそろえるときに使う(2026-11-08 社長「他のモードと同じような表示に」)
+    return { live, loops: base.loops, stopped: !live, difficulty: base.difficulty, xp: base.xp, gold: base.gold, canStart, info: base.info };
+  };
+
+  // 助手ライフの上に出す、裏の周回の帯(2026-11-08 社長「他のモードと同じような表示に」)。カードのトップの帯(renderCardQuickRunStrip)と同じ形:
+  //   RhythmQuickRunPill(モンヒロビートのモードえらびと同じ)+「詳細」(CardQuickRunDetail を助手ライフ向けに)+ 回しているときは「止める」(カードの「⚔ バトルへ」の位置)。
+  //   まだ一度も回していなくて始められるだけのときは「▶ 周回を始める」。置き場所は助手ライフ側(56-assistant-life*.jsx)が決める
+  const [lifeQuickDetail, setLifeQuickDetail] = useState(false);
+  const renderLifeQuickRunStrip = () => {
+    const view = assistantLifeQuickRunView();
+    if (!view) return null;
+    const autoDifficulty = autoQuickRunConfigured(autoSettings) ? ((DIFFICULTY_SETTINGS[autoSettings.quickRun.difficulty] || quickDifficultySetting(autoSettings.quickRun.difficulty) || {}).label || null) : null;
+    const detailRun = view.info ? view : null;
+    return (<>
+      {lifeQuickDetail && <CardQuickRunDetail quickRun={detailRun} autoReady={autoQuickRunConfigured(autoSettings)} autoDifficulty={autoDifficulty} todayLoops={null} onClose={() => setLifeQuickDetail(false)}
+        note="助手ライフを開いているあいだ、AUTO設定の編成でクイックの周回が裏で進みます。閉じるか「止める」を押すと、それまでの報酬を受け取って周回を終えます。"/>}
+      <div data-life-quick-run={view.live ? 'live' : 'stopped'} className="relative z-20 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-400/25 bg-slate-950/95 px-2 py-1">
+        {view.info
+          ? <RhythmQuickRunPill info={view.info} onRestart={() => startQuickRunFromRhythm()} widthClass="min-w-0 flex-1"/>
+          : <button type="button" data-life-quick-run-start onClick={() => { Audio_.fgSe.tap(); startQuickRunFromRhythm(); }} className="min-h-[32px] min-w-0 flex-1 truncate rounded-full border border-fuchsia-300/60 bg-fuchsia-800/70 px-2.5 text-[11px] font-black text-white active:scale-[.97]">▶ 周回を始める</button>}
+        <button type="button" data-life-quick-run-detail onClick={() => { Audio_.fgSe.tap(); setLifeQuickDetail(true); }} className="min-h-[32px] shrink-0 rounded-full border border-white/25 bg-slate-900/80 px-2.5 text-[11px] font-black text-slate-100 active:scale-[.97]">詳細</button>
+        {view.live && <button type="button" data-life-quick-run-stop onClick={() => { Audio_.fgSe.tap(); void settleAssistantLifeRun(); }} className="min-h-[32px] shrink-0 rounded-full border border-fuchsia-300/60 bg-fuchsia-800/70 px-2.5 text-[11px] font-black text-white active:scale-[.97]">止める</button>}
+      </div>
+    </>);
+  };
+
   const handleRetry = () => {
     stopAllAuto();
     // 種族チャレンジは通常の勇者選択(PICK_HERO)へは戻さない。
@@ -105961,6 +106117,33 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const timer = setTimeout(retry, QUICK_RUN_AUTO_RETRY_MS);   // 目印をモンヒロビートの始め直しと分ける(SCREEN_EFFECTS_MAP)
     return () => clearTimeout(timer);
   }, [quickRunProgress, gameState, resultProcessing, autoSettings, cardQuickAutoStart]);
+  // ===== 助手ライフを開いたら自動で∞周回を始める・負けたら始め直す(2026-11-08 社長「助手ライフを開いたら自動で始める」) =====
+  // スイッチは増やさない。AUTO設定の「モンヒロビート・助手ライフを開いたら自動で始める」(autoQuickRunAutoStartEnabled)を使う(カードのスイッチはカードのまま)。
+  // ★始めるのは助手ライフが閉→開になった瞬間だけ(依存は assistantLifeOpenNow だけ)。開いたまま HOME・プロフィール・アイテムを行き来しても始め直さない。
+  //   札の「止める」で止めたあとも、開いたままでは始め直さない(閉じてもう一度開けば、また始まる)。条件はモンヒロビートの自動開始と同じ
+  useEffect(() => {
+    if (!assistantLifeOpenNow) return;
+    if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return;
+    if (!ASSISTANT_LIFE_RUN_STATES.includes(gameStateNowRef.current)) return;
+    if (quickRunProgressRef.current && !quickRunProgressRef.current.finished) return;
+    if (runStageRef.current && !runResultFinishedRef.current) return;
+    if (!repeatTemplateFromAutoSettings()) return;
+    startQuickRunFromRhythm();
+  }, [assistantLifeOpenNow]);
+  // 負けたら数秒おいて1周目から始め直す(モンヒロビートと同じ。助手ライフを開いていて、スイッチが ON のときだけ)
+  useEffect(() => {
+    if (!quickRunProgress || !quickRunProgress.finished || quickRunProgress.reason !== 'defeat') return undefined;
+    if (!assistantLifeOpenNow || !ASSISTANT_LIFE_RUN_STATES.includes(gameState)) return undefined;
+    if (resultProcessing) return undefined;
+    if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return undefined;
+    const retryLife = () => {
+      const current = quickRunProgressRef.current;
+      if (!current || !current.finished || current.reason !== 'defeat' || !assistantLifeOpenRef.current) return;
+      startQuickRunFromRhythm();
+    };
+    const timer = setTimeout(retryLife, QUICK_RUN_AUTO_RETRY_MS);   // 目印を助手ライフの始め直しとして分ける(SCREEN_EFFECTS_MAP)
+    return () => clearTimeout(timer);
+  }, [quickRunProgress, gameState, resultProcessing, autoSettings, assistantLifeOpenNow]);
   // バトル内ではAUTO系を1ボタンで循環する。表示用stateは持たず、既存の同期refから次の状態だけを決める。
   const cycleBattleAuto = () => {
     if(autoRepeatRef.current){setAutoBattleEnabled(false);return;}
@@ -109126,7 +109309,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {typeof AssistantLifeHomeFaces==='function'&&gameState==='HOME'&&!busy&&!peerReplay&&<AssistantLifeHomeFaces metIds={metIds}/>}
             {/* はじめて2人に贈る道具を手に入れたときの案内(HOME で1回だけ・公開の印 assistantLife) */}
             {typeof AssistantLifeItemIntro==='function'&&gameState==='HOME'&&!busy&&!peerReplay&&<AssistantLifeItemIntro peerItems={typeof assistantLifeGiftCounts==='function'?assistantLifeGiftCounts(ownedItems):{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}}/>}
-            {typeof AssistantLifeScreen==='function'&&<AssistantLifeScreen metIds={metIds} onReplay={(talk)=>setPeerReplay(talk)} bondLevelOf={(id)=>assistantBondLevel(normalizeAssistantBond(assistantBonds[id]).points)}
+            {typeof AssistantLifeScreen==='function'&&<AssistantLifeScreen quickRun={assistantLifeQuickRunView()} quickRunStrip={renderLifeQuickRunStrip()} onQuickRunStop={()=>{void settleAssistantLifeRun();}} onQuickRunStart={()=>startQuickRunFromRhythm()} metIds={metIds} onReplay={(talk)=>setPeerReplay(talk)} bondLevelOf={(id)=>assistantBondLevel(normalizeAssistantBond(assistantBonds[id]).points)}
               peerItems={typeof assistantLifeGiftCounts==='function'?assistantLifeGiftCounts(ownedItems):{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}} onUseItem={useAssistantPeerItem}
               furnItems={typeof assistantLifeFurnCounts==='function'?assistantLifeFurnCounts(ownedItems):null} onGiveFurn={giveAssistantLifeFurn} onGiveSolo={giveAssistantLifeSolo}/>}
           </>;
@@ -109315,7 +109498,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* モンヒロビートから∞周回を始めるための事前設定(docs/spec/QUICK_RHYTHM_LINK.md PR5)。
                   3つとも決めたときだけ使う。決めていないあいだは、これまでどおり
                   「1周目に自分で組んだ編成」をそのまま繰り返す */}
-              <section data-auto-settings-section="quickRun" className="space-y-3"><div><h3 className="text-[13px] font-black text-indigo-200">3. モンヒロビート中に回すクイック周回</h3><p className="text-[11px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。難易度は「クイックでクリア済み」のものだけ選べます（演奏したぶんが周回クリアとして入るのも同じ条件のため）。</p></div><div className={`${SCREEN_PANEL_CLASS} space-y-2`}><label className="block text-[12px] font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">使わない（まだ決めていない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[11px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-xl border text-[10px] font-black active:scale-95 ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border} ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':'opacity-50'}`}>{draftAutoSettings.quickRun?.distance===slot&&'✓'}{label}</button>)}</div></div><div><label className="block text-[11px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isAutoQuickRunDifficultyAllowed(key,quickClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（クイック未クリア）'}</option>;})}</select></div><div><div className="text-[11px] font-black text-slate-300 mb-1.5">モンヒロビートを開いたら自動で始める</div><button type="button" data-auto-quick-run-autostart aria-pressed={draftAutoSettings.quickRun?.autoStart===true} disabled={!autoQuickRunConfigured(draftAutoSettings)} onClick={()=>updateDraftAutoQuickRun({autoStart:!(draftAutoSettings.quickRun?.autoStart===true)})} className={`flex min-h-[48px] w-full items-center justify-between gap-2 rounded-xl border px-3 text-left active:scale-[.99] disabled:opacity-40 ${draftAutoSettings.quickRun?.autoStart===true?'border-fuchsia-300 bg-fuchsia-900/50':'border-white/10 bg-slate-950'}`}><span className="min-w-0 flex-1 text-[11px] font-black text-white">{draftAutoSettings.quickRun?.autoStart===true?'ON（開いたらすぐ回しはじめる）':'OFF（自分で「始める」を押す）'}</span><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${draftAutoSettings.quickRun?.autoStart===true?'bg-fuchsia-500 text-white':'bg-slate-700 text-slate-300'}`}>{draftAutoSettings.quickRun?.autoStart===true?'ON':'OFF'}</span></button><p className="mt-1 text-[10px] leading-relaxed text-slate-400">ONにすると、HOMEなどからモンヒロビートを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲えらびの上の帯から、いつでも止められます。</p></div><div className="pt-1"><AssistantBubble scene="autoQuickRunSettings" compact/></div><p className="text-[11px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
+              <section data-auto-settings-section="quickRun" className="space-y-3"><div><h3 className="text-[13px] font-black text-indigo-200">3. モンヒロビート中に回すクイック周回</h3><p className="text-[11px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。難易度は「クイックでクリア済み」のものだけ選べます（演奏したぶんが周回クリアとして入るのも同じ条件のため）。</p></div><div className={`${SCREEN_PANEL_CLASS} space-y-2`}><label className="block text-[12px] font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">使わない（まだ決めていない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[11px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-xl border text-[10px] font-black active:scale-95 ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border} ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':'opacity-50'}`}>{draftAutoSettings.quickRun?.distance===slot&&'✓'}{label}</button>)}</div></div><div><label className="block text-[11px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isAutoQuickRunDifficultyAllowed(key,quickClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（クイック未クリア）'}</option>;})}</select></div><div><div className="text-[11px] font-black text-slate-300 mb-1.5">モンヒロビート・助手ライフを開いたら自動で始める</div><button type="button" data-auto-quick-run-autostart aria-pressed={draftAutoSettings.quickRun?.autoStart===true} disabled={!autoQuickRunConfigured(draftAutoSettings)} onClick={()=>updateDraftAutoQuickRun({autoStart:!(draftAutoSettings.quickRun?.autoStart===true)})} className={`flex min-h-[48px] w-full items-center justify-between gap-2 rounded-xl border px-3 text-left active:scale-[.99] disabled:opacity-40 ${draftAutoSettings.quickRun?.autoStart===true?'border-fuchsia-300 bg-fuchsia-900/50':'border-white/10 bg-slate-950'}`}><span className="min-w-0 flex-1 text-[11px] font-black text-white">{draftAutoSettings.quickRun?.autoStart===true?'ON（開いたらすぐ回しはじめる）':'OFF（自分で「始める」を押す）'}</span><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${draftAutoSettings.quickRun?.autoStart===true?'bg-fuchsia-500 text-white':'bg-slate-700 text-slate-300'}`}>{draftAutoSettings.quickRun?.autoStart===true?'ON':'OFF'}</span></button><p className="mt-1 text-[10px] leading-relaxed text-slate-400">ONにすると、HOMEなどからモンヒロビートや助手ライフを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲えらびの上の帯や、助手ライフの周回の札から、いつでも止められます。</p></div><div className="pt-1"><AssistantBubble scene="autoQuickRunSettings" compact/></div><p className="text-[11px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
               <section data-auto-breakthrough-bulk-settings data-auto-settings-section="breakthrough" className={`${SCREEN_PANEL_CLASS} space-y-3`}>
                 <div><h3 className="text-[13px] font-black text-cyan-200">4. AUTO∞ 自動限界突破</h3><p className="mt-1 text-[11px] font-bold leading-relaxed text-slate-400">現在所有しているマスモンをまとめて設定し、限界突破で使い切らないようダイヤと虹のプシュケーを残せます。</p></div>
                 <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3 space-y-2">
