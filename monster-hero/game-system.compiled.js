@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d48d2294c99cd274
+// source-sha256: b5da2cfda62911e3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -131664,14 +131664,19 @@ const CardVsIntro = ({
     "data-card-vs-line": true,
     className: "mt-1 rounded-2xl rounded-bl-sm bg-white px-2.5 py-1.5 text-[12px] font-bold leading-snug text-slate-900",
     style: JA_WRAP_STYLE
-  }, cardRuleLine(foe.line.t)))), React.createElement(CardVsDeckName, {
+  }, cardRuleLine(foe.line.t)))), foe.styleName && typeof CardFoeDeckChip === 'function' ? React.createElement("div", {
+    "data-card-vs-style": true,
+    className: "mh-vs-fade flex max-w-full flex-col items-center gap-1"
+  }, React.createElement(CardFoeTeamName, {
+    text: foe.deckName
+  }), React.createElement(CardFoeDeckChip, {
+    name: foe.styleName,
+    styleId: foe.styleId,
+    kind: "vs"
+  })) : React.createElement(CardVsDeckName, {
     text: foe.deckName,
     tone: "foe"
-  }), foe.styleName && React.createElement("div", {
-    "data-card-vs-style": true,
-    className: "mh-vs-fade max-w-full rounded-full border border-amber-300/70 bg-amber-950/80 px-2.5 py-0.5 text-center text-[11px] font-black leading-tight text-amber-100",
-    style: JA_LABEL_STYLE
-  }, "型: ", foe.styleName), React.createElement(CardVsMonsters, {
+  }), React.createElement(CardVsMonsters, {
     db: db,
     monsters: foe.monsters,
     side: "foe",
@@ -139594,7 +139599,8 @@ const CardBattleScreen = ({
       ...(aiPick ? {
         aiDeck: {
           style: aiPick.styleId,
-          name: aiPick.name
+          name: aiPick.name,
+          team: intro.foe.deckName || null
         }
       } : {}),
       ...(share ? {
@@ -140713,11 +140719,17 @@ const CardBattleScreen = ({
       }),
       foeName: a.name,
       outcome: win ? '勝ち' : result.outcome === 'surrender' ? '投了' : '負け'
-    }), result.aiDeck && result.aiDeck.name && React.createElement("p", {
+    }), result.aiDeck && result.aiDeck.name && typeof CardFoeDeckChip === 'function' && React.createElement("div", {
       "data-card-result-ai-deck": true,
-      className: "text-center text-[12px] font-black text-amber-200",
-      style: JA_LABEL_STYLE
-    }, "型: ", result.aiDeck.name), React.createElement("div", {
+      className: "flex flex-col items-center gap-1"
+    }, React.createElement(CardFoeTeamName, {
+      text: result.aiDeck.team,
+      compact: true
+    }), React.createElement(CardFoeDeckChip, {
+      name: result.aiDeck.name,
+      styleId: result.aiDeck.style,
+      kind: "result"
+    })), React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, !result.demo && r.total > 0 && React.createElement("div", {
       "data-card-gain-count": true,
@@ -144215,6 +144227,205 @@ const CardShopStarters = ({
     }
   }));
 };
+const CARD_DECK_STYLE_LABEL = Object.freeze({
+  attack: '攻め',
+  guard: '守り',
+  normal: 'ふつう'
+});
+const CARD_DECK_STYLE_ICON = Object.freeze({
+  attack: '⚔️',
+  guard: '🛡️',
+  normal: '⚖️'
+});
+const CARD_DECK_KIND_GROUPS = Object.freeze([['技', ['pow', 'int']], ['防御', ['blk']], ['回避', ['dge']], ['特殊', ['spe']], ['場', ['fld']]]);
+const cardAssistantDeckViewOn = () => typeof cardGrowStyleOn === 'function' && cardGrowStyleOn();
+const cardAssistantDeckDisplayName = (who, styleId, name = null) => {
+  const sid = CARD_DECK_STYLE_LABEL[styleId] ? styleId : 'normal';
+  if (typeof name === 'string' && name) return name;
+  if (typeof cardAiStyleDefaultName === 'function') return cardAiStyleDefaultName(who, sid);
+  const base = typeof CARD_AI_STYLE_NAMES !== 'undefined' ? CARD_AI_STYLE_NAMES[who] : null;
+  if (!base) return null;
+  return sid === 'normal' ? base : `${base}・${CARD_DECK_STYLE_LABEL[sid]}`;
+};
+const cardAssistantDeckSummary = (who, styleId) => {
+  try {
+    if (typeof cardAssistantDeckPreview !== 'function' || typeof CARD_BATTLE_DATA === 'undefined') return null;
+    const sid = CARD_DECK_STYLE_LABEL[styleId] ? styleId : 'normal';
+    const d = cardAssistantDeckPreview(who, sid, 'normal');
+    if (!d || !Array.isArray(d.monsters) || !Array.isArray(d.cards)) return null;
+    const db = CARD_BATTLE_DATA;
+    const count = {};
+    d.cards.forEach(no => {
+      count[no] = (count[no] || 0) + 1;
+    });
+    const uniq = [...new Set(d.cards)].map(no => cardOf(db, no)).filter(Boolean);
+    const byGuts = (a, b) => (b.guts || 0) - (a.guts || 0) || (b.damage || 0) - (a.damage || 0) || (a.no < b.no ? -1 : 1);
+    const ace = uniq.filter(c => c.kind === 'pow' || c.kind === 'int').sort(byGuts)[0] || null;
+    const groups = CARD_DECK_KIND_GROUPS.map(([label, kinds]) => [label, uniq.filter(c => kinds.includes(c.kind)).sort(byGuts)]).filter(g => g[1].length);
+    const monsters = d.monsters.map(no => cardMonsterOf(db, no)).filter(Boolean);
+    const name = cardAssistantDeckDisplayName(who, sid, typeof d.name === 'string' ? d.name : null);
+    const line = typeof d.line === 'string' && d.line ? d.line : null;
+    const at = Number.isFinite(d.at) ? d.at : null;
+    return {
+      styleId: sid,
+      monsters,
+      count,
+      ace,
+      groups,
+      total: d.cards.length,
+      name,
+      line,
+      at
+    };
+  } catch (_) {
+    return null;
+  }
+};
+const cardAssistantDeckAtText = at => {
+  if (!Number.isFinite(at)) return '';
+  const t = new Date(at);
+  return Number.isNaN(t.getTime()) ? '' : `${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`;
+};
+function CardAssistantDeckView({
+  who,
+  styleId,
+  land = false
+}) {
+  const [detail, setDetail] = React.useState(null);
+  if (!cardAssistantDeckViewOn()) return null;
+  const s = cardAssistantDeckSummary(who, styleId);
+  const a = typeof assistantById === 'function' ? assistantById(who) : null;
+  if (!s) return React.createElement("div", {
+    className: "mhm-card",
+    "data-card-assistant-deck-view": "none"
+  }, React.createElement("p", {
+    className: "text-[11.5px] font-bold text-slate-300"
+  }, "デッキを読めませんでした"));
+  const db = CARD_BATTLE_DATA;
+  const label = CARD_DECK_STYLE_LABEL[s.styleId];
+  const tile = (c, big = false) => React.createElement("button", {
+    key: c.no,
+    type: "button",
+    "data-card-assistant-deck-card": c.no,
+    "aria-label": `${c.name}を大きく見る`,
+    onClick: () => {
+      if (typeof Audio_ !== 'undefined') Audio_.fgSe.tap();
+      setDetail(c.no);
+    },
+    className: `relative block ${big ? land ? 'w-[70px]' : 'w-[96px]' : 'w-full'} active:scale-95`
+  }, React.createElement("img", {
+    src: CARD_IMG(c.img),
+    alt: c.name,
+    draggable: false,
+    className: "w-full rounded-[5px] shadow"
+  }), s.count[c.no] > 1 && React.createElement("b", {
+    className: "absolute bottom-0.5 right-0.5 rounded bg-black/80 px-1 text-[11px] font-black text-amber-200"
+  }, "×", s.count[c.no]));
+  const at = cardAssistantDeckAtText(s.at);
+  const top = React.createElement("div", {
+    className: "mhm-card",
+    "data-card-assistant-deck-head": s.styleId
+  }, React.createElement("p", {
+    className: "text-[10px] font-black text-slate-400"
+  }, "MFバトルカード・", label, "のデッキ"), React.createElement("p", {
+    "data-card-assistant-deck-name": true,
+    className: "text-[18px] font-black leading-tight text-amber-200",
+    style: JA_LABEL_STYLE
+  }, CARD_DECK_STYLE_ICON[s.styleId], " ", s.name || `${label}のデッキ`), s.line && React.createElement("p", {
+    "data-card-assistant-deck-line": true,
+    className: "mt-1 rounded-lg bg-black/30 px-2 py-1 text-[11.5px] font-bold leading-snug text-slate-100",
+    style: JA_WRAP_STYLE
+  }, a ? `${a.name}「${s.line}」` : s.line), React.createElement("div", {
+    className: "mt-2 flex items-end gap-2"
+  }, React.createElement("div", {
+    className: `flex-1 ${land ? 'max-w-[190px]' : ''}`
+  }, React.createElement("p", {
+    className: "text-[10px] font-black text-slate-400"
+  }, "よく使う3体"), React.createElement("div", {
+    className: "grid grid-cols-3 gap-1"
+  }, s.monsters.map(m => React.createElement("div", {
+    key: m.no,
+    className: "min-w-0 text-center",
+    "data-card-assistant-deck-mon": m.no
+  }, React.createElement("img", {
+    src: CARD_IMG(m.img),
+    alt: m.name,
+    draggable: false,
+    className: "w-full rounded-[5px]"
+  }), React.createElement("p", {
+    className: "text-[10px] font-black leading-tight text-white",
+    style: JA_LABEL_STYLE
+  }, m.name))))), s.ace && React.createElement("div", {
+    className: `${land ? 'w-[70px]' : 'w-[96px]'} shrink-0 text-center`,
+    "data-card-assistant-deck-ace": s.ace.no
+  }, React.createElement("p", {
+    className: "text-[10px] font-black text-rose-200"
+  }, "切り札"), tile(s.ace, true))), React.createElement("p", {
+    "data-card-assistant-deck-mon-note": true,
+    className: "mt-1 text-[10.5px] font-bold text-slate-400"
+  }, "3体は対戦のたびに変わります"));
+  const list = React.createElement("div", {
+    className: "mhm-card",
+    "data-card-assistant-deck-list": true
+  }, s.groups.map(([g, cs]) => React.createElement("div", {
+    key: g,
+    className: "mt-1.5 first:mt-0",
+    "data-card-assistant-deck-group": g
+  }, React.createElement("p", {
+    className: "text-[11px] font-black text-slate-300"
+  }, g, " ", React.createElement("small", {
+    className: "text-slate-500"
+  }, cs.reduce((n, c) => n + s.count[c.no], 0), "枚")), React.createElement("div", {
+    className: `mt-1 grid ${land ? 'grid-cols-10' : 'grid-cols-6'} gap-1`
+  }, cs.map(c => tile(c))))), React.createElement("p", {
+    className: "mt-2 text-[10.5px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, `🤖 ${at ? `AI が ${at} に組み直しました。` : ''}対戦では毎回少し入れかわります`));
+  return React.createElement("div", {
+    "data-card-assistant-deck-view": s.styleId,
+    className: land ? 'grid grid-cols-[minmax(0,5fr)_minmax(0,7fr)] items-start gap-2' : 'flex flex-col gap-2'
+  }, top, list, detail && typeof CardDetailModal === 'function' && React.createElement(CardDetailModal, {
+    db: db,
+    no: detail,
+    onClose: () => setDetail(null)
+  }));
+}
+function CardFoeDeckChip({
+  name,
+  styleId,
+  kind = 'foe',
+  compact = false
+}) {
+  if (!cardAssistantDeckViewOn() || !CARD_DECK_STYLE_LABEL[styleId]) return null;
+  return React.createElement("div", {
+    "data-card-foe-deck-chip": kind,
+    "data-card-foe-deck-style": styleId,
+    className: `mx-auto flex max-w-full items-center justify-center gap-1.5 rounded-full border border-amber-300/70 bg-slate-950/80 px-3 font-black leading-tight text-amber-100 ${compact ? 'py-0.5 text-[11px]' : 'py-1 text-[12px]'}`
+  }, React.createElement("small", {
+    className: "shrink-0 rounded-full bg-amber-300 px-1.5 py-px text-[10px] font-black text-slate-950"
+  }, "今日のデッキ"), React.createElement("span", {
+    className: "min-w-0",
+    style: JA_WRAP_STYLE
+  }, React.createElement("span", {
+    "aria-hidden": "true"
+  }, CARD_DECK_STYLE_ICON[styleId], " "), name || `${CARD_DECK_STYLE_LABEL[styleId]}のデッキ`));
+}
+function CardFoeTeamName({
+  text,
+  tone = 'foe',
+  compact = false
+}) {
+  if (!cardAssistantDeckViewOn() || !text) return null;
+  return React.createElement("div", {
+    "data-card-foe-team-name": true,
+    className: `mx-auto flex max-w-full items-center justify-center gap-1.5 rounded-2xl px-3 font-black leading-tight ${tone === 'foe' ? 'bg-rose-950/80 text-rose-100' : 'bg-sky-950/80 text-sky-100'} ${compact ? 'py-0.5 text-[11px]' : 'py-0.5 text-[13px]'}`
+  }, React.createElement("small", {
+    className: "shrink-0 rounded-full bg-white/20 px-1.5 py-px text-[10px] font-black"
+  }, "チーム"), React.createElement("span", {
+    className: "min-w-0",
+    style: JA_WRAP_STYLE
+  }, text));
+}
 const cardDeckPickChoices = (db, decks, collection, opts = {}) => {
   const own = (decks && decks.decks || []).map(d => ({
     id: d.id,

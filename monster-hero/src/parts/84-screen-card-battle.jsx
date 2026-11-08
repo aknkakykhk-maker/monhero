@@ -3830,7 +3830,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const auto = autoIn ? { tactics: autoIn.tactics, level: typeof cardShareFightLevel === 'function' ? cardShareFightLevel(autoIn.tactics) : 'master', sameBlood: !!cardShareSameBlood(db, activeDeck), quick: !!autoIn.quick } : null;
     // カード部屋にいる助手と対戦: 始めた時点でいたかで決める(手で遊ぶ助手と対戦だけ。みんなのデッキ・杯・オートは上げない)
     const lifeUp = !share && !cup && !auto && cardLifeAtCard(pick.who);
-    setGame({ key: gameKey, st, who: pick.who, level: pick.level, settings: save.settings, intro: auto && auto.quick ? null : intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(lifeUp ? { lifeUp: true } : {}), ...(aiPick ? { aiDeck: { style: aiPick.styleId, name: aiPick.name } } : {}), ...(share ? { share } : {}), ...(cup ? { cup } : {}), ...(auto ? { auto } : {}),
+    setGame({ key: gameKey, st, who: pick.who, level: pick.level, settings: save.settings, intro: auto && auto.quick ? null : intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(lifeUp ? { lifeUp: true } : {}), ...(aiPick ? { aiDeck: { style: aiPick.styleId, name: aiPick.name, team: intro.foe.deckName || null } } : {}), ...(share ? { share } : {}), ...(cup ? { cup } : {}), ...(auto ? { auto } : {}),
       ...(rented ? { rented: { ownerId: rented.ownerId, version: rented.version, name: rented.owner } } : {}) });
     const scene = typeof window !== 'undefined' && typeof window.__mhCardScene === 'function';
     cpuLogRef.current = scene ? null : { id: gameKey, style: foeStyle || 'normal', styleName: (aiPick && aiPick.name) || null, seed, first, decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], foeName: intro.foe.name, deckName: intro.foe.deckName || null, acts: [] };
@@ -4287,8 +4287,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           {result.share && <p data-card-result-share className="text-center text-[13px] font-black text-emerald-200">{result.share.name}さんのデッキと対戦しました</p>}
           {a && <CardResultVsRow meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meName={(rank && rank.profile && rank.profile.name) || 'あなた'}
             foeNode={<img src={assistantFaceImage(a, 'normal')} alt="" className="h-8 w-8 rounded-lg border-2 bg-black object-cover object-top" style={{ borderColor: a.accent }}/>} foeName={a.name} outcome={win ? '勝ち' : result.outcome === 'surrender' ? '投了' : '負け'}/>}
-          {/* 助手の3つのデッキの型の名前(公開の印 cardGrowStyle が真のときだけ)。★「型: 」の言い方は社長の「この文で」待ち */}
-          {result.aiDeck && result.aiDeck.name && <p data-card-result-ai-deck className="text-center text-[12px] font-black text-amber-200" style={JA_LABEL_STYLE}>型: {result.aiDeck.name}</p>}
+          {/* 対戦で出したデッキ(公開の印 cardGrowStyle が真のときだけ)。社長 2026-11-08 Q1 B: 自動の名前に「チーム」、3つのデッキの名前に「今日のデッキ」の見出しを付けて両方(87 の部品) */}
+          {result.aiDeck && result.aiDeck.name && typeof CardFoeDeckChip === 'function' && (
+            <div data-card-result-ai-deck className="flex flex-col items-center gap-1">
+              <CardFoeTeamName text={result.aiDeck.team} compact/>
+              <CardFoeDeckChip name={result.aiDeck.name} styleId={result.aiDeck.style} kind="result"/>
+            </div>
+          )}
           <div className={SCREEN_PANEL_CLASS}>
             {/* もらったビートPは大きく数え上げる(下の行が本当の数。数え上げは飾り) */}
             {!result.demo && r.total > 0 && <div data-card-gain-count className="mb-1 text-center text-[32px] font-black leading-none text-amber-200 [text-shadow:0_0_16px_rgba(251,191,36,.55)]">+<CardCountUp to={r.total}/><span className="ml-1 text-[14px]">ビートP</span></div>}

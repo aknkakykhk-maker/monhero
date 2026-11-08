@@ -289,9 +289,11 @@ const CardVsIntro = ({ db, intro, onDone, meIcon = null }) => {
               {foe.line && foe.line.t && <p data-card-vs-line className="mt-1 rounded-2xl rounded-bl-sm bg-white px-2.5 py-1.5 text-[12px] font-bold leading-snug text-slate-900" style={JA_WRAP_STYLE}>{cardRuleLine(foe.line.t)}</p>}
             </div>
           </div>
-          <CardVsDeckName text={foe.deckName} tone="foe"/>
-          {/* 助手の3つのデッキの型の名前(83-card-ai-deck.jsx・公開の印 cardGrowStyle が真のときだけ 84 が入れる)。★「型: 」の言い方は社長の「この文で」待ち */}
-          {foe.styleName && <div data-card-vs-style className="mh-vs-fade max-w-full rounded-full border border-amber-300/70 bg-amber-950/80 px-2.5 py-0.5 text-center text-[11px] font-black leading-tight text-amber-100" style={JA_LABEL_STYLE}>型: {foe.styleName}</div>}
+          {/* 助手の3つのデッキ(83-card-ai-deck.jsx・公開の印 cardGrowStyle が真のときだけ 84 が styleName・styleId を入れる)。
+              社長 2026-11-08 Q1 B: 自動の名前に「チーム」、3つのデッキの名前に「今日のデッキ」の見出しを付けて両方出す(87 の部品) */}
+          {foe.styleName && typeof CardFoeDeckChip === 'function'
+            ? <div data-card-vs-style className="mh-vs-fade flex max-w-full flex-col items-center gap-1"><CardFoeTeamName text={foe.deckName}/><CardFoeDeckChip name={foe.styleName} styleId={foe.styleId} kind="vs"/></div>
+            : <CardVsDeckName text={foe.deckName} tone="foe"/>}
           <CardVsMonsters db={db} monsters={foe.monsters} side="foe" start={short ? 200 : 500} step={step}/>
         </div>
         <div aria-hidden="true" data-card-vs-mark className="mh-vs-pop flex shrink-0 items-center justify-center py-1 text-[44px] font-black italic leading-none text-amber-300 landscape:px-2" style={{ animationDelay: short ? '400ms' : '1000ms', WebkitTextStroke: '2px #7c2d12', textShadow: '0 4px 0 rgba(0,0,0,.45)' }}>VS</div>
