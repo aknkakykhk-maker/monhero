@@ -44,7 +44,9 @@ const base = (extra = {}) => ({ kind: 'masmon_suggest', breederId: 'b-1', player
     check('① デッキ: 顔・名前・方針', d.result.face === 'oshi' && d.result.deckName === 'まったり作戦' && d.result.plan === 'guard', JSON.stringify(d.result));
     const bad = await run({ kind: 'deck', face: 'oshi', deckName: 'くそデッキ', plan: '' });
     check('② デッキ名の禁止語・方針も名前も無い → none', bad.result.kind === 'none');
-    check('② 名前の見張り(♪や英字は通す・禁止語・連絡先・長すぎるものは none)', (await run({ kind: 'name', name: 'あつちー♪' })).result.name === 'あつちー♪' && (await run({ kind: 'name', name: 'Medama' })).result.name === 'Medama' && (await run({ kind: 'name', name: 'ばか丸' })).result.kind === 'none' && (await run({ kind: 'name', name: 'www.x' })).result.kind === 'none' && (await run({ kind: 'name', name: 'あいうえおかきくけこさ' })).result.kind === 'none');
+    check('② 名前の見張り(字の種類は問わない・禁止語・連絡先・12字をこえるものは none)', (await run({ kind: 'name', name: 'あつちー♪' })).result.name === 'あつちー♪' && (await run({ kind: 'name', name: 'Medama' })).result.name === 'Medama' && (await run({ kind: 'name', name: 'ばか丸' })).result.kind === 'none' && (await run({ kind: 'name', name: 'www.x' })).result.kind === 'none' && (await run({ kind: 'name', name: 'あいうえおかきくけこさしす' })).result.kind === 'none' && (await run({ kind: 'name', name: 'Mocchi ♪ 2' })).result.name === 'Mocchi ♪ 2');
+    const sw = await run({ kind: 'swap', monster: 'Plant', name: 'はっぱ♪' });
+    check('① 入れ替え: 候補の種類だけ・名前も一緒に', sw.result.kind === 'swap' && sw.result.monster === 'Plant' && sw.result.name === 'はっぱ♪' && (await run({ kind: 'swap', monster: 'Ark' })).result.kind === 'none', JSON.stringify(sw.result));
     const t = await run({ kind: 'none', replies: { yes: '', some: '', no: '', talk: '♪が大事なんだね、どこに付けよっか？' } });
     check('③ 変えることが無いときも、talk の返事で ok を返す', t.ok === true && t.result.kind === 'none' && t.result.replies.talk.includes('♪'), JSON.stringify(t.result && t.result.replies));
   }
