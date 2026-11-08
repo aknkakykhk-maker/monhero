@@ -232,7 +232,9 @@ const cardAiFaceSpec = (db, who, slot, freeIn = null, groupsIn = null) => {
 //   返り値 { groups, free, order, ok }。同じ db・同じ助手ならいつも同じ(保存しない)
 // 強さのそろえ(社長の案B・最後の手)。振り分けで ±10点に入らなかった顔だけ、組み方の雑さ(82 の noise)を足す。{ 助手: { 枠: { 強さ: 足す数 } } }。
 //   足すと弱くなる。0.05 は MASTER の雑さと同じくらい。表は docs/progress/card-ai-faces/README.md
-const CARD_AI_FACE_NOISE = Object.freeze({});
+const CARD_AI_FACE_NOISE = Object.freeze({
+  sorashido: { yoso: { master: 0.3 } }, // よそいきの MASTER 70% → 54%(今の組み方 48%。1組300戦)
+});
 // 決めた振り分け(2026-11-08 自動で探した結果。EXPERT・MASTER で、どの顔もその助手の今の勝率に近い物。docs/progress/card-ai-faces/README.md の強さの表)
 //   探し方: 蛇行6通り+混ぜた割り当てから始め、2つの組の種を1つずつ入れかえて、いちばんずれの小さい物を残した(作業場所の道具。1組60戦)
 //   使う前に、決まり(重なり4割まで・主役2体以上ちがう)と、カードの種と合っているかを確かめる。合わなければ、下の手順で探し直す
