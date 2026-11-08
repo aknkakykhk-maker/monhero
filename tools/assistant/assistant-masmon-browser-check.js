@@ -1,6 +1,7 @@
 // 助手ライフ: 部屋の「🐾 マスモン」(56-assistant-life-masmon.jsx)を本物の画面で開いて確かめる。
 //   node tools/assistant/assistant-masmon-browser-check.js          検査(縦 390×844・横 844×390・🔄横から戻った 390×844)
 //   node tools/assistant/assistant-masmon-browser-check.js --shots  止め絵も撮る(docs/progress/assistant-peer/shots/masmon-<タブ>-<向き>.jpg)
+//   MASMON_TAG_MOCK=1 で、出かけ札を上へ寄せた見本の形を当てて見る(ナカヨシ8が札を動かす前の確かめ用)
 //   MASMON_ALL=1 で8人ぶん・MASMON_WHO=dra でその1人(ふだんはききだけ)
 //   LIFE_BASE=https://aknkakykhk-maker.github.io/monhero/ で本番の版を見る(公開後の確かめ)
 // 見るもの:
@@ -74,10 +75,14 @@ const layoutProblems = (page) => page.evaluate(() => {
       await page.locator('[data-home-assistant-life]').click({ timeout: 20000 });
       await page.locator('[data-assistant-life-screen]').waitFor({ timeout: 8000 });
       await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
+      if (process.env.MASMON_TAG_MOCK) {
+        await page.addStyleTag({ content: '.mhl-room .tag{top:4px!important;transform:translate(-50%,0) rotate(-2deg) scale(.82)!important;transform-origin:50% 0!important}' });
+        await page.evaluate(() => window.dispatchEvent(new Event('resize')));
+      }
       { // ⑤ 部屋にいるマスモン(染めた絵ができるのを待つ)
         await page.waitForTimeout(SHOTS ? 4000 : 1500);
         const r = await page.evaluate(() => {
-          const ng = []; let n = 0, stay = 0, should = 0; const miss = [];
+          const ng = []; let n = 0, stay = 0, should = 0; const miss = [], sizeList = [];
           const life = assistantLifeCurrent();
           for (const room of document.querySelectorAll('[data-assistant-life-room]')) {
             const id = room.getAttribute('data-assistant-life-room');
@@ -87,19 +92,39 @@ const layoutProblems = (page) => page.evaluate(() => {
             if (where !== 'out' && !room.querySelector('.lock')) should++;
             if (!pet || pet.style.visibility === 'hidden') { if (where !== 'out' && !room.querySelector('.lock')) miss.push(id); continue; }
             n++; if (where === 'stay') stay++;
-            const a = pet.getBoundingClientRect(), mark = pet.querySelector('b'), m = mark ? mark.getBoundingClientRect() : null, rr = room.getBoundingClientRect();
-            const boxes = [a, m].filter(Boolean);
-            for (const b of boxes) if (b.left < rr.left - 1 || b.right > rr.right + 1 || b.top < rr.top - 1 || b.bottom > rr.bottom + 1) ng.push(`${id}: 部屋からはみ出す`);
-            for (const o of room.querySelectorAll('.tag,.pp,.bb,.pl,.lv,[data-assistant-life-rel-door],[data-assistant-life-rel-mend],[data-assistant-life-rel-sit]')) {
-              const q = o.getBoundingClientRect(); if (!q.width) continue;
-              for (const b of boxes) if (Math.min(b.right, q.right) - Math.max(b.left, q.left) > 1 && Math.min(b.bottom, q.bottom) - Math.max(b.top, q.top) > 1) ng.push(`${id}: ${o.className || o.getAttribute('data-assistant-life-rel-door') || '部品'} に重なる`);
+            const size = parseFloat(pet.style.width), y = parseFloat(pet.style.top), rr = room.getBoundingClientRect();
+            sizeList.push(Math.round(size));
+            const [w0, w1] = (pet.getAttribute('data-assistant-life-room-masmon-walk') || '').split('-').map(Number);
+            if (!Number.isFinite(w0) || !Number.isFinite(w1)) { ng.push(`${id}: 歩く区間が無い`); continue; }
+            // 歩く区間の端から端まで、どの位置でも(印のはみ出しを含めて)重ならない・はみ出さない
+            const obs = [...room.querySelectorAll('.tag,.pp,.bb,.pl,.lv,[data-assistant-life-rel-door],[data-assistant-life-rel-mend],[data-assistant-life-rel-sit]')].map(o => [o, o.getBoundingClientRect()]).filter(([, q]) => q.width);
+            for (let x = w0; x <= w1; x += 2) {
+              const box = { l: rr.left + x, r: rr.left + x + size + 2, t: rr.top + y - 3, b: rr.top + y + size };
+              if (box.l < rr.left - 1 || box.r > rr.right + 1 || box.t < rr.top - 1 || box.b > rr.bottom + 1) ng.push(`${id}: 部屋からはみ出す(x=${x})`);
+              for (const [o, q] of obs) if (Math.min(box.r, q.right) - Math.max(box.l, q.left) > 1 && Math.min(box.b, q.bottom) - Math.max(box.t, q.top) > 1) ng.push(`${id}: 歩く途中で ${o.className || '部品'} に重なる`);
             }
           }
-          return { ng: [...new Set(ng)], n, stay, should, miss };
+          return { ng: [...new Set(ng)], n, stay, should, miss, sizeList };
         });
-        check(`${T}部屋のマスモン: 札・顔・吹き出し・扉・名札に重ならない・はみ出さない`, !r.ng.length, r.ng.slice(0, 4).join(' / '));
+        check(`${T}部屋のマスモン: 歩く途中のどの位置でも札・顔・吹き出し・扉・名札に重ならない・はみ出さない`, !r.ng.length, r.ng.slice(0, 4).join(' / '));
+        check(`${T}部屋のマスモンは、どの部屋も同じ大きさ`, new Set(r.sizeList).size <= 1, r.sizeList.join(','));
         check(`${T}部屋のマスモンが、出かけていない部屋の全部に見える`, r.should > 0 && r.n === r.should, `${r.n}/${r.should}部屋(留守番${r.stay})${r.miss.length ? ' 出ない: ' + r.miss.join('・') : ''}`);
         if (SHOTS) await page.screenshot({ path: path.join(shotDir, `masmon-5-house-${v.id}.jpg`), type: 'jpeg', quality: 80 });
+        { // 歩く: しばらく待つと位置が変わる/動きを減らす設定では動かない
+          const pos = () => page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-room-masmon-pet]')].filter(p => p.style.visibility !== 'hidden').map(p => `${p.getAttribute('data-assistant-life-room-masmon-pet')}:${p.getBoundingClientRect().left.toFixed(0)}`).join(' '));
+          const xs = {}; const a = await pos();
+          for (let k = 0; k < 12; k++) { for (const it of (await pos()).split(' ').filter(Boolean)) { const [n, x] = it.split(':'); (xs[n] = xs[n] || []).push(Number(x)); } await page.waitForTimeout(1000); }
+          const moved = Object.entries(xs).map(([n, v]) => `${n}:${Math.max(...v) - Math.min(...v)}px`);
+          if (a) check(`${T}部屋のマスモンが床を歩く(12秒のあいだにどれかが 8px 以上動く)`, Object.values(xs).some(v => Math.max(...v) - Math.min(...v) >= 8), moved.join(' '));
+          if (SHOTS) await page.screenshot({ path: path.join(shotDir, `masmon-5-house-${v.id}-2.jpg`), type: 'jpeg', quality: 80 });
+          if (a && v.id === 'p') {
+            await page.emulateMedia({ reducedMotion: 'reduce' }); await page.evaluate(() => window.dispatchEvent(new Event('resize'))); await page.waitForTimeout(1500);
+            const c = await pos(); await page.waitForTimeout(8000); const d = await pos();
+            check(`${T}動きを減らす設定では、止まったまま`, c === d, `${c} → ${d}`);
+            await page.emulateMedia({ reducedMotion: 'no-preference' });
+          }
+        }
+
       }
       if (v.id === 'p') {
         const hooks = await page.evaluate(() => ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'].map(id => ({ id, s: assistantLifeCardStyle(id), t: assistantLifeTasteOf(id) })));

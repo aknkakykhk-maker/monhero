@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3a6286417680fa2c
+// generated-sha256: be4737e5f7477706
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -64817,15 +64817,47 @@ const ASSISTANT_MASMON_DOING_MARK = Object.freeze({ sleep: '💤', practice: '�
 
 // 部屋の見た目は、家の画面でシートの CSS が読まれていないので、その場で書く
 const ASSISTANT_MASMON_PET_STYLE = Object.freeze({ position: 'absolute', zIndex: 4, pointerEvents: 'none', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.45))' });
-const ASSISTANT_MASMON_PET_MARK = Object.freeze({ position: 'absolute', right: -2, top: -4, whiteSpace: 'nowrap', lineHeight: '12px', fontWeight: 900, background: 'rgba(255,255,255,.92)', color: '#7c2d12', borderRadius: 999, padding: '0 2px' });
-// 部屋の中: 札・顔・吹き出し・扉・名札に重ならない場所を測って置く(家具の絵文字は飾りなので、その前に立ってよい)。どこにも置けない部屋では出さない
+const ASSISTANT_MASMON_PET_MARK = Object.freeze({ position: 'absolute', right: -2, top: -3, whiteSpace: 'nowrap', lineHeight: '12px', fontWeight: 900, background: 'rgba(255,255,255,.92)', color: '#7c2d12', borderRadius: 999, padding: '0 2px' });
+// 部屋のマスモンの大きさ(2026-11-08 社長の選び A: どの部屋でも助手の顔の丸と見合う同じ大きさ)。顔の丸は Math.min(40, h*.44)
+const assistantMasmonPetSize = (h) => Math.round(Math.min(40, h * .44));
+const ASSISTANT_MASMON_PET_FLOOR = 9;      // 床の板の高さ(.fl と同じ)
+const ASSISTANT_MASMON_PET_MW = 2, ASSISTANT_MASMON_PET_MH = 3; // 印が絵からはみ出すぶん(右・上)
+const ASSISTANT_MASMON_PET_HIT = '.tag,.pp,.bb,.pl,.lv,.lock,[data-assistant-life-rel-door],[data-assistant-life-rel-mend],[data-assistant-life-rel-sit]';
+const assistantMasmonReducedMotion = () => { try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) { return false; } };
+// 部屋の床の帯で、重なってはいけない物に当たらない x の区間(歩ける所)と、その中の止まってよい所(家具の上を除く)を測る
+const assistantMasmonFloorPlan = (room, size) => {
+  const rr = room.getBoundingClientRect();
+  const rect = (q) => q.getBoundingClientRect();
+  const obs = [...room.querySelectorAll(ASSISTANT_MASMON_PET_HIT)].map(rect).filter(r => r.width > 0 && r.height > 0);
+  const furn = [...room.querySelectorAll('.fu')].map(rect).filter(r => r.width > 0);
+  const top = rr.bottom - ASSISTANT_MASMON_PET_FLOOR - size - ASSISTANT_MASMON_PET_MH, bot = rr.bottom - ASSISTANT_MASMON_PET_FLOOR + 1;
+  const hitAt = (x, list) => { const l = rr.left + x, r = l + size + ASSISTANT_MASMON_PET_MW; return list.some(q => Math.min(r, q.right) - Math.max(l, q.left) > 0 && Math.min(bot, q.bottom) - Math.max(top, q.top) > 0); };
+  const runs = []; let st = null;
+  const maxX = Math.floor(rr.width - size - ASSISTANT_MASMON_PET_MW - 3);
+  for (let x = 3; x <= maxX; x++) {
+    const ok = !hitAt(x, obs);
+    if (ok && st == null) st = x;
+    if ((!ok || x === maxX) && st != null) { const end = ok ? x : x - 1; if (end >= st) runs.push([st, end]); st = null; }
+  }
+  runs.sort((p, q) => (q[1] - q[0]) - (p[1] - p[0]));
+  const run = runs[0] || null;
+  if (!run) return null;
+  const stops = []; for (let x = run[0]; x <= run[1]; x++) if (!hitAt(x, furn)) stops.push(x);
+  return { run, stops: stops.length ? stops : [run[0], run[1]], y: rr.height - ASSISTANT_MASMON_PET_FLOOR - size };
+};
+
+// 部屋の中(社長の選び A+歩く): どの部屋でも同じ大きさで床に立ち、床の空いている区間だけを左右に歩く。
+//   ときどき止まって様子の印を出す(歩いているあいだは出さない)。家具の上には止まらない(通るだけ)。
+//   床の帯が空いていない部屋では出さない(札の位置はナカヨシ8が床を空ける)。動きを減らす設定の人には止まった姿
 function AssistantMasmonRoomPet({ id, h, life }) {
   const ref = React.useRef(null);
-  const [pos, setPos] = React.useState(null);
+  const [plan, setPlan] = React.useState(null);  // { run, stops, y } | false
+  const [at, setAt] = React.useState(null);      // { x, moving, dir, ms }
+  const [tick, setTick] = React.useState(0);
   const t = assistantMasmonDuty(id);
   const where = assistantMasmonWhere(id, life);
+  const size = assistantMasmonPetSize(h);
   const key = `${id}|${t ? t.monster : ''}|${where.kind}|${h}`;
-  const [tick, setTick] = React.useState(0);
   // 家が入場の動きの途中だと測り違えるので、少し待って測り直す。画面の大きさが変わったときも測り直す
   React.useEffect(() => {
     const re = () => setTick(n => n + 1);
@@ -64836,38 +64868,50 @@ function AssistantMasmonRoomPet({ id, h, life }) {
   React.useLayoutEffect(() => {
     const el = ref.current, room = el && el.closest('.mhl-room');
     if (!room) return;
-    const rr = room.getBoundingClientRect();
-    const obs = [...room.querySelectorAll('.tag,.pp,.bb,.pl,.lv,.lock,[data-assistant-life-rel-door],[data-assistant-life-rel-mend],[data-assistant-life-rel-sit]')]
-      .map(x => x.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
-    const hit = (a) => obs.some(r => Math.min(a.r, r.right) - Math.max(a.l, r.left) > 0 && Math.min(a.b, r.bottom) - Math.max(a.t, r.top) > 0);
-    // 床に近い所から上へ、右から左へ探し、入るいちばん大きい大きさで置く(印は絵の右上に小さく重ねる)。
-    //   床が札でふさがれている部屋も、名札と窓のあいだ(窓辺)など上のほうの空きに小さく入る
-    const floor = 9, mw = 2, mh = 4; // 印が絵からはみ出すぶん(右・上)。印は絵の右上の角にかぶせる
-    const sizes = [...new Set([Math.round(Math.min(48, h * .48)), Math.round(Math.min(38, h * .4)), 30, 24, 20, 18])].filter(n => n > 0);
-    for (const size of sizes) {
-      const ys = []; for (let y = rr.height - floor - size; y >= mh + 1; y -= 4) ys.push(y);
-      if (ys[ys.length - 1] !== mh + 1) ys.push(mh + 1); // 上端(名札の横・窓辺)
-      for (const y of ys) {
-        for (let x = rr.width - size - mw - 3; x >= 3; x -= 4) {
-          const box = { l: rr.left + x, r: rr.left + x + size + mw, t: rr.top + y - mh, b: rr.top + y + size };
-          if (!hit(box)) { setPos({ x, y, size }); return; }
-        }
-      }
-    }
-    setPos(false);
-  }, [key, tick]);
+    const fp = assistantMasmonFloorPlan(room, size);
+    setPlan(fp || false);
+    if (fp) setAt(prev => {
+      const x = prev && fp.stops.includes(prev.x) ? prev.x : fp.stops[assistantMasmonHash(`${id}|start`) % fp.stops.length];
+      return { x, moving: false, dir: 1, ms: 0 };
+    });
+  }, [key, tick, size]);
+  // 歩く: 止まる(3〜6秒・印を出す)→ 止まってよい所のどこかへ歩く(1秒に14px くらい)
+  React.useEffect(() => {
+    if (!plan || !at || assistantMasmonReducedMotion()) return undefined;
+    let alive = true, timer = null;
+    const step = () => {
+      if (!alive) return;
+      setAt(prev => {
+        if (!prev) return prev;
+        if (prev.moving) { timer = setTimeout(step, 3000 + Math.random() * 3000); return { ...prev, moving: false }; }
+        const far = plan.stops.filter(x => Math.abs(x - prev.x) >= 12);
+        if (!far.length) { timer = setTimeout(step, 5000); return prev; }
+        const x = far[Math.floor(Math.random() * far.length)];
+        const ms = Math.round(Math.abs(x - prev.x) / 14 * 1000);
+        timer = setTimeout(step, ms + 50);
+        return { x, moving: true, dir: x > prev.x ? 1 : -1, ms };
+      });
+    };
+    timer = setTimeout(step, 2500 + Math.random() * 2500);
+    return () => { alive = false; clearTimeout(timer); };
+  }, [plan]);
   if (!t || where.kind === 'out') return null;
   const mon = assistantMasmonMon(t.monster);
   if (!mon) return null;
   const mark = where.kind === 'stay' ? '🏠' : (where.w && ASSISTANT_MASMON_DOING_MARK[where.w.doing]) || '✨';
+  const show = plan && at;
   return (
     <span ref={ref} className="mhm-pet" data-assistant-life-room-masmon-pet={t.monster} data-assistant-life-room-masmon-where={where.kind}
-      style={{ ...ASSISTANT_MASMON_PET_STYLE, ...(pos ? { left: pos.x, top: pos.y, width: pos.size, height: pos.size } : { left: 0, width: 1, height: 1, visibility: 'hidden' }) }} aria-hidden="true">
-      {pos && <>
-        {typeof DyedMonsterImage === 'function'
-          ? <DyedMonsterImage baseId={t.monster} src={mon.imgUrl} masuColors={t.dye && t.dye.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>
-          : <img src={mon.imgUrl} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>}
-        <b title={where.kind === 'stay' ? 'るすばん' : undefined} style={{ ...ASSISTANT_MASMON_PET_MARK, fontSize: pos.size < 30 ? 8 : 10 }}>{mark}</b>
+      data-assistant-life-room-masmon-walk={plan ? `${plan.run[0]}-${plan.run[1]}` : ''} data-assistant-life-room-masmon-moving={show && at.moving ? '1' : '0'}
+      style={{ ...ASSISTANT_MASMON_PET_STYLE, ...(show ? { left: at.x, top: plan.y, width: size, height: size, transition: at.moving ? `left ${at.ms}ms linear` : 'none' } : { left: 0, top: 0, width: 1, height: 1, visibility: 'hidden' }) }} aria-hidden="true">
+      {show && <>
+        <span style={{ display: 'block', width: '100%', height: '100%', transform: at.dir < 0 ? 'scaleX(-1)' : 'none', animation: at.moving ? 'mhmPetHop .5s ease-in-out infinite' : 'none' }}>
+          {typeof DyedMonsterImage === 'function'
+            ? <DyedMonsterImage baseId={t.monster} src={mon.imgUrl} masuColors={t.dye && t.dye.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>
+            : <img src={mon.imgUrl} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>}
+        </span>
+        {!at.moving && <b title={where.kind === 'stay' ? 'るすばん' : undefined} style={{ ...ASSISTANT_MASMON_PET_MARK, fontSize: size < 30 ? 8 : 10 }}>{mark}</b>}
+        <style>{'@keyframes mhmPetHop{0%,100%{translate:0 0}50%{translate:0 -2px}}'}</style>
       </>}
     </span>);
 }
