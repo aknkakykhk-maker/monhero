@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 275b23293145b0f2
+// generated-sha256: f33ce4a3a754bd2a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -65696,7 +65696,7 @@ function AssistantLifeFurnSheet({ id, furnItems, onGiveFurn, onClose, onTalk, la
         {toBuy.length > 0 && (<>
           <p className="mt-2 text-[11px] font-black text-violet-200">🛒 まだ持っていない家具 <span className="text-slate-300">(買ってそのまま贈れます)</span></p>
           <div className="mt-1 space-y-1" data-assistant-life-furn-tobuy>
-            {toBuy.map(f => row(f, btn(`🛒 ${f.cost}P`, () => setBuyKey(f.key), 'border-violet-300/80 bg-violet-600 text-white', { 'data-assistant-life-furn-buy': f.key, 'aria-label': `${f.name}を${f.cost}Pで買って贈る` })))}
+            {toBuy.map(f => row(f, btn(<>🛒 {f.cost}P<br/>で買って贈る</>, () => setBuyKey(f.key), 'border-violet-300/80 bg-violet-600 leading-tight text-white', { 'data-assistant-life-furn-buy': f.key, 'aria-label': `${f.name}を${f.cost}Pで買って贈る` })))}
           </div>
         </>)}
         <div className="mt-1"><AssistantLifeShopButton tab="furniture" who={id} label="🛒 交換所の家具の棚へ"/></div>

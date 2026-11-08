@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7117b4f92253029d
+// source-sha256: 41c0f3479922009e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -122220,7 +122220,7 @@ function AssistantLifeFurnSheet({
   }, "(買ってそのまま贈れます)")), React.createElement("div", {
     className: "mt-1 space-y-1",
     "data-assistant-life-furn-tobuy": true
-  }, toBuy.map(f => row(f, btn(`🛒 ${f.cost}P`, () => setBuyKey(f.key), 'border-violet-300/80 bg-violet-600 text-white', {
+  }, toBuy.map(f => row(f, btn(React.createElement(React.Fragment, null, "🛒 ", f.cost, "P", React.createElement("br", null), "で買って贈る"), () => setBuyKey(f.key), 'border-violet-300/80 bg-violet-600 leading-tight text-white', {
     'data-assistant-life-furn-buy': f.key,
     'aria-label': `${f.name}を${f.cost}Pで買って贈る`
   }))))), React.createElement("div", {
