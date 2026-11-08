@@ -611,6 +611,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const diary = useAssistantLifeDiary();
   const peerSt = (typeof useAssistantPeerState === 'function') ? useAssistantPeerState() : null;
   const land = useAssistantLifeLand();
+  // フレンドの家との行き来(部屋の札・5つ目のアイコン)が変わったら描き直す(56-assistant-life-friend.jsx。部品はいつもある)
+  if (typeof useAssistantLifeFriendState === 'function') useAssistantLifeFriendState();
   const [tab, setTab] = React.useState('house');
   const [roomId, setRoomId] = React.useState(st.focus || null);
   const [scene, setScene] = React.useState(null);
@@ -986,5 +988,6 @@ function AssistantLifeHomeFaces({ metIds }) {
             {upW > 0 && <span data-assistant-life-home-card-up className="pointer-events-none shrink-0 rounded-full bg-amber-300 font-black text-slate-950" style={{ marginLeft: 2, fontSize: Math.max(8, Math.round(size * 0.48)), lineHeight: `${Math.max(10, size - 4)}px`, padding: '0 3px' }}>UP</span>}
           </div>
         </div>); })}
+    {rects.life && typeof AssistantLifeFriendHomeBadge === 'function' && <AssistantLifeFriendHomeBadge rect={rects.life}/>}
   </>);
 }
