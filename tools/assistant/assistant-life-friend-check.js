@@ -280,6 +280,8 @@ const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'er
   { const why = G('alfVisitBlockedText');
     vm.runInContext("ALF_STORE.set({ mode: 'thin', roster: [{ id: 'nohouse-01', name: 'まだ' }], houses: {} })", ctx);
     check('⑩ 家が届いていないフレンドは「◯◯さんが助手ライフを開くと遊びに行けます」', why('nohouse-01', 'まだ') === 'まださんが助手ライフを開くと遊びに行けます。', why('nohouse-01', 'まだ'));
+    vm.runInContext("ALF_STORE.set({ mode: 'thin', roster: [{ id: 'hasHouse-01', name: 'いる' }], houses: { 'hasHouse-01': { open: true, at: Date.now(), house: { v: 1, ids: ['mua'], r: { mua: { at: 'home', d: 'idle', m: 'happy' } } } } }, st: { ...ALF_STORE.state.st, look: 99, looked: { 'hasHouse-01': 1 } } })", ctx);
+    check('⑩ 今日もう置き手紙を残した家・上限のあとでも、訪ねるのは止めない(2026-11-08 社長「家に遊びに行くのに制限はなしがいい」)', why('hasHouse-01', 'いる') === null, String(why('hasHouse-01', 'いる')));
     vm.runInContext("ALF_STORE.set({ mode: 'off' })", ctx);
     check('⑩ 行き来がお休みのときはその理由', /お休み中/.test(why('nohouse-01', 'まだ')));
     vm.runInContext("ALF_STORE.set({ mode: 'thin' })", ctx);
