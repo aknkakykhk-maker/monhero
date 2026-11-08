@@ -63,6 +63,8 @@ const measureResult = (page) => page.evaluate(() => {
     if (rot ? sideRot : side) out.growth.push(`「${e.innerText.trim().slice(0, 12)}」がはみ出す`);
     if (e.scrollWidth > e.clientWidth + 1) out.growth.push(`「${e.innerText.trim().slice(0, 12)}」の中身が切れる`);
   });
+  // ④ いちばん下の「メンバーの成績」「次へ」が部屋の枠の中に見える(押し出されない)
+  ['[data-rhythm-multi-member-stats]', '[data-rhythm-multi-result-next]'].forEach((q) => { const e = document.querySelector(q); if (!inBox(R(e), R(main))) out.growth.push(`${q.includes('next') ? '「次へ」' : '「メンバーの成績」'}が画面の外`); });
   return { mvp: out.mvp.join(' / '), stamps: out.stamps.join(' / '), growth: out.growth.join(' / ') };
 });
 (async () => {
@@ -134,7 +136,7 @@ const measureResult = (page) => page.evaluate(() => {
       const res = await measureResult(page);
       check(`${name}: 結果の MVP の枠で顔と難易度が切れない`, res.mvp === '', res.mvp);
       check(`${name}: 定型のあいさつが切れずに並び、🏆・チャットと重ならない`, res.stamps === '', res.stamps);
-      check(`${name}: 助手の育ちの札・友情Lv の行が画面の幅からはみ出さない`, res.growth === '', res.growth);
+      check(`${name}: 助手の育ちの札・友情Lv の行がはみ出さず、下の「次へ」も画面の中`, res.growth === '', res.growth);
       await page.close();
     }
     check('画面のエラーが無い', errors.length === 0, errors.slice(0, 3).join(' / '));
