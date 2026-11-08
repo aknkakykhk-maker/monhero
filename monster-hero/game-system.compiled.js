@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e6a685794c4ad186
+// source-sha256: 0fce0e558f25887f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -110615,29 +110615,78 @@ function AssistantLifeRoomBed({
         filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})`
       }
     }));
-  }), React.createElement("span", {
-    "data-assistant-life-roomview-quilt": true,
-    style: {
-      position: 'absolute',
-      left: pillow.left + pillow.w * 0.62,
-      top: mattTop - 14,
-      width: bw - (pillow.left - left) - pillow.w * 0.62 - 12,
-      height: 52,
-      borderRadius: '18px 10px 8px 8px',
-      background: `repeating-linear-gradient(45deg,${quilt[0]} 0 10px,${quilt[1]}55 10px 12px),${quilt[0]}`,
-      boxShadow: '0 3px 5px #0004'
-    }
-  }), React.createElement("span", {
-    style: {
-      position: 'absolute',
-      left: pillow.left + pillow.w * 0.62,
-      top: mattTop - 14,
-      width: 22,
-      height: 52,
-      borderRadius: '18px 4px 4px 8px',
-      background: '#ffffffcc'
-    }
-  }), items.length > 0 && React.createElement("span", {
+  }), (() => {
+    const U = U0(F),
+      ch = U * 1.32,
+      cw = U * 1.2;
+    const headLeft = pillow.left + 2,
+      cy = pillow.top + pillow.h * 0.6 - cw / 2;
+    const qx = items.length ? headLeft + 0.8 * U : pillow.left + pillow.w * 0.62;
+    const qTop = items.length ? cy - cw * 0.32 : mattTop - 14;
+    const qw = Math.max(60, left + bw - 14 - qx),
+      qh = Math.max(40, mattTop + 34 - qTop);
+    const pid = `mhlq-${id}`;
+    const d = `M0,${qh} L0,${qh * 0.3} Q0,0 ${qw * 0.1},${qh * 0.04} C${qw * 0.2},${qh * 0.08} ${qw * 0.24},${qh * 0.3} ${qw * 0.36},${qh * 0.36}` + ` C${qw * 0.55},${qh * 0.42} ${qw * 0.68},${qh * 0.36} ${qw * 0.8},${qh * 0.44} C${qw * 0.86},${qh * 0.48} ${qw * 0.88},${qh * 0.28} ${qw * 0.95},${qh * 0.34}` + ` Q${qw},${qh * 0.38} ${qw},${qh * 0.62} L${qw},${qh} Z`;
+    return React.createElement("svg", {
+      "data-assistant-life-roomview-quilt": true,
+      width: qw,
+      height: qh,
+      viewBox: `0 0 ${qw} ${qh}`,
+      style: {
+        position: 'absolute',
+        left: qx,
+        top: qTop,
+        overflow: 'visible',
+        filter: 'drop-shadow(0 3px 4px #0005)'
+      }
+    }, React.createElement("defs", null, React.createElement("pattern", {
+      id: pid,
+      width: "14",
+      height: "14",
+      patternUnits: "userSpaceOnUse",
+      patternTransform: "rotate(45)"
+    }, React.createElement("rect", {
+      width: "14",
+      height: "14",
+      fill: quilt[0]
+    }), React.createElement("rect", {
+      width: "2",
+      height: "14",
+      fill: quilt[1],
+      opacity: ".45"
+    })), React.createElement("linearGradient", {
+      id: `${pid}-s`,
+      x1: "0",
+      y1: "0",
+      x2: "0",
+      y2: "1"
+    }, React.createElement("stop", {
+      offset: "0",
+      stopColor: "#fff",
+      stopOpacity: ".35"
+    }), React.createElement("stop", {
+      offset: ".7",
+      stopColor: "#000",
+      stopOpacity: "0"
+    }), React.createElement("stop", {
+      offset: "1",
+      stopColor: "#000",
+      stopOpacity: ".22"
+    }))), React.createElement("path", {
+      d: d,
+      fill: `url(#${pid})`
+    }), React.createElement("path", {
+      d: d,
+      fill: `url(#${pid}-s)`
+    }), React.createElement("path", {
+      d: `M3,${qh} L3,${qh * 0.3} Q3,3 ${qw * 0.1},${qh * 0.06}`,
+      fill: "none",
+      stroke: "#ffffff",
+      strokeOpacity: ".85",
+      strokeWidth: "9",
+      strokeLinecap: "round"
+    }));
+  })(), items.length > 0 && React.createElement("span", {
     style: {
       position: 'absolute',
       left: pillow.left + pillow.w * 0.3,
