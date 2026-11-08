@@ -1388,8 +1388,9 @@ const RHYTHM_BEAT_PRESENCE_KIND = Object.freeze({
   busy: { tag: '🎮 部屋で遊び中', color: '#a78bfa' },
 });
 function RhythmBeatPresenceStrip({ assistants = [], friends = [], onPick, resolveIconUrl }) {
-  const face = (src, color, label) => (
-    <span className="relative block h-11 w-11 overflow-hidden rounded-full border-2 bg-slate-900" style={{ borderColor: color }}>
+  // 助手は丸い枠、フレンド(プレイヤー)は角の丸い四角の枠
+  const face = (src, color, label, who) => (
+    <span data-rhythm-beat-presence-face={who} className={`relative block h-11 w-11 overflow-hidden border-2 bg-slate-900 ${who === 'assistant' ? 'rounded-full' : 'rounded-lg'}`} style={{ borderColor: color }}>
       {src ? <img src={src} alt="" draggable={false} className="h-full w-full object-cover" /> : <span className="grid h-full w-full place-items-center text-lg" aria-hidden="true">{label}</span>}
     </span>
   );
@@ -1399,29 +1400,81 @@ function RhythmBeatPresenceStrip({ assistants = [], friends = [], onPick, resolv
         <span className="min-w-0 break-keep truncate">🎵 いまモンヒロビートにいる人</span>
         <small className="ml-auto text-[10.5px] font-bold text-slate-200 max-[359px]:text-[9.5px]">押すと一緒に遊べる所</small>
       </div>
-      <div className="mt-1.5 flex gap-2 overflow-x-auto pb-0.5">
-        {assistants.map((a) => (
-          <button key={`a-${a.id}`} type="button" data-rhythm-beat-presence-assistant={a.id} onClick={() => onPick({ kind: 'assistant', id: a.id })}
-            className="flex w-[58px] shrink-0 flex-col items-center text-center active:scale-95">
-            {face(rhythmBeatAssistantFace(a.id), '#f472b6', '🎤')}
-            <b className="mt-0.5 block w-full truncate text-[10px] font-black leading-tight text-white">{a.name}</b>
-            <small className="block whitespace-nowrap text-[8.5px] font-black text-pink-300">🎤 呼べる</small>
-          </button>
-        ))}
-        {assistants.length > 0 && friends.length > 0 && <span aria-hidden="true" className="my-1 w-px shrink-0 bg-white/20" />}
-        {friends.map((f) => {
-          const k = RHYTHM_BEAT_PRESENCE_KIND[f.kind] || RHYTHM_BEAT_PRESENCE_KIND.here;
-          return (
-            <button key={`f-${f.otherId}`} type="button" data-rhythm-beat-presence-friend={f.otherId} data-rhythm-beat-presence-kind={f.kind} onClick={() => onPick({ kind: 'friend', id: f.otherId })}
-              className="flex w-[58px] shrink-0 flex-col items-center text-center active:scale-95">
-              {face(f.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(f.icon) : '', k.color, '🙂')}
-              <b className="mt-0.5 block w-full truncate text-[10px] font-black leading-tight text-white">{f.userName}</b>
-              <small className="block whitespace-nowrap text-[8.5px] font-black" style={{ color: k.color }}>{k.tag}</small>
-            </button>
-          );
-        })}
-      </div>
+      {/* 助手とフレンドを分けて並べる。同じ名前のプレイヤーもいるので、見出し・札・枠の形でも見分ける(2026-11-08 社長「助手とプレイヤーで区別つくようにして」) */}
+      {assistants.length > 0 && (
+        <div data-rhythm-beat-presence-group="assistant" className="mt-1.5">
+          <h4 className="text-[10px] font-black text-pink-300">🤖 助手 <small className="text-[9px] font-bold text-slate-300">練習中・券なしで呼べる</small></h4>
+          <div className="mt-1 flex flex-wrap gap-2 pb-0.5">
+            {assistants.map((a) => (
+              <button key={`a-${a.id}`} type="button" data-rhythm-beat-presence-assistant={a.id} onClick={() => onPick({ kind: 'assistant', id: a.id })}
+                className="flex w-[58px] shrink-0 flex-col items-center rounded-xl bg-pink-500/10 pt-1 text-center active:scale-95">
+                {face(rhythmBeatAssistantFace(a.id), '#f472b6', '🎤', 'assistant')}
+                <b data-rhythm-beat-presence-mark="assistant" className="mt-0.5 block whitespace-nowrap rounded bg-pink-300 px-1 text-[8px] font-black leading-tight text-slate-950">助手</b>
+                <b className="mt-0.5 block w-full truncate text-[10px] font-black leading-tight text-white">{a.name}</b>
+                <small className="block whitespace-nowrap text-[8.5px] font-black text-pink-300">🎤 呼べる</small>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {friends.length > 0 && (
+        <div data-rhythm-beat-presence-group="friend" className={`mt-1.5 ${assistants.length > 0 ? 'border-t border-white/15 pt-1.5' : ''}`}>
+          <h4 className="text-[10px] font-black text-sky-300">👥 フレンド <small className="text-[9px] font-bold text-slate-300">プレイヤー</small></h4>
+          <div className="mt-1 flex flex-wrap gap-2 pb-0.5">
+            {friends.map((f) => {
+              const k = RHYTHM_BEAT_PRESENCE_KIND[f.kind] || RHYTHM_BEAT_PRESENCE_KIND.here;
+              return (
+                <button key={`f-${f.otherId}`} type="button" data-rhythm-beat-presence-friend={f.otherId} data-rhythm-beat-presence-kind={f.kind} onClick={() => onPick({ kind: 'friend', id: f.otherId })}
+                  className="flex w-[58px] shrink-0 flex-col items-center rounded-xl bg-sky-500/10 pt-1 text-center active:scale-95">
+                  {face(f.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(f.icon) : '', k.color, '🙂', 'friend')}
+                  <b data-rhythm-beat-presence-mark="friend" className="mt-0.5 block whitespace-nowrap rounded bg-sky-300 px-1 text-[8px] font-black leading-tight text-slate-950">フレンド</b>
+                  <b className="mt-0.5 block w-full truncate text-[10px] font-black leading-tight text-white">{f.userName}</b>
+                  <small className="block whitespace-nowrap text-[8.5px] font-black" style={{ color: k.color }}>{k.tag}</small>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </section>
+  );
+}
+// 見出しの行に置く「いまいる人」のボタン。顔を3つまで重ねて、人数を添える。
+// 帯のままモードえらびに置くと、縦で立ち絵の枠が半分を割り、横・回転で下の段のボタンが画面の外へ押し出された(2026-11-08)
+function RhythmBeatPresenceButton({ assistants = [], friends = [], onOpen, resolveIconUrl }) {
+  const faces = [
+    ...assistants.map((a) => ({ key: `a-${a.id}`, src: rhythmBeatAssistantFace(a.id), color: '#f472b6', round: 'rounded-full' })),
+    ...friends.map((f) => ({ key: `f-${f.otherId}`, src: f.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(f.icon) : '', color: (RHYTHM_BEAT_PRESENCE_KIND[f.kind] || RHYTHM_BEAT_PRESENCE_KIND.here).color, round: 'rounded-md' })),
+  ];
+  return (
+    <button type="button" data-rhythm-beat-presence-open aria-label={`いまモンヒロビートにいる人(${faces.length}人)を見る`} onClick={onOpen}
+      className="flex min-h-[44px] shrink-0 items-center gap-1 rounded-xl border border-amber-300/60 bg-indigo-950/80 px-1.5 active:scale-95">
+      <span className="flex items-center pl-1.5" aria-hidden="true">
+        {/* 小さい画面(359px以下)は2つまで。3つだと見出しの「モードえらび」が切れた */}
+        {faces.slice(0, 3).map((f, i) => (
+          <span key={f.key} className={`-ml-1.5 block h-7 w-7 overflow-hidden border-2 bg-slate-900 ${f.round} ${i >= 2 ? 'max-[359px]:hidden' : ''}`} style={{ borderColor: f.color }}>
+            {f.src ? <img src={f.src} alt="" draggable={false} className="h-full w-full object-cover" /> : <span className="grid h-full w-full place-items-center text-xs">🙂</span>}
+          </span>
+        ))}
+      </span>
+      <span className="flex flex-col items-center leading-none">
+        <small className="block whitespace-nowrap text-[8.5px] font-black text-amber-200">いる人</small>
+        <b className="block whitespace-nowrap text-[13px] font-black text-white">{faces.length}</b>
+      </span>
+    </button>
+  );
+}
+// 見出しのボタンから開く一覧。中身は帯と同じで、顔を押すと下の窓へ進む
+function RhythmBeatPresenceList({ open, assistants, friends, onPick, onClose, resolveIconUrl }) {
+  if (!open) return null;
+  return (
+    <div className="absolute inset-0 z-[85400] flex items-end justify-center p-3 landscape:items-center" data-rhythm-beat-presence-list>
+      <button type="button" aria-label="閉じる" className="absolute inset-0 bg-slate-950/70" onClick={onClose} />
+      <div className="relative w-full max-w-sm space-y-2">
+        <RhythmBeatPresenceStrip assistants={assistants} friends={friends} onPick={onPick} resolveIconUrl={resolveIconUrl} />
+        <button type="button" data-rhythm-beat-presence-list-close className="block w-full rounded-xl bg-slate-700 py-2.5 text-sm font-black text-white active:scale-[.98]" onClick={onClose}>とじる</button>
+      </div>
+    </div>
   );
 }
 // 帯の顔を押したときの窓。助手は「どこで一緒に演奏できるか」を1行で、フレンドは入る/誘う
@@ -1453,6 +1506,7 @@ function RhythmBeatPresenceSheet({ pick, friend = null, onClose, onCallAssistant
             {src ? <img src={src} alt="" draggable={false} className="h-full w-full object-cover" /> : <span className="grid h-full w-full place-items-center text-xl" aria-hidden="true">🙂</span>}
           </span>
           <span className="min-w-0 flex-1 leading-tight">
+            <b data-rhythm-beat-presence-sheet-mark={isAssistant ? 'assistant' : 'friend'} className={`mb-0.5 inline-block rounded px-1 text-[9px] font-black leading-tight text-slate-950 ${isAssistant ? 'bg-pink-300' : 'bg-sky-300'}`}>{isAssistant ? '🤖 助手' : '👥 フレンド'}</b>
             <b className="block text-[14px] font-black" style={JA_WRAP_STYLE}>{jaWrap(title)}</b>
             {sub && <small className="mt-0.5 block text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(sub)}</small>}
           </span>
@@ -2331,7 +2385,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   const buddyCallButton = (extra = '') => (view && RHYTHM_MULTI.canSummon() && (masuMons.length > 0 || sessionAssistantsOn) ? (
     <button data-rhythm-buddy-open type="button" onClick={() => setBuddySheet('pick')}
       className={`min-h-[44px] w-full rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-2 text-sm font-black text-slate-950 ${extra}`}>
-      {sessionAssistantsOn ? '🎵 マスモン・助手を呼ぶ' : '🎵 マスモンを呼ぶ'}<small className="block text-[9px] font-bold opacity-80">{sessionAssistantsOn ? 'マスモンや助手がCPUとして一緒に遊びます' : 'マスモンがCPUとして一緒に遊びます'}</small>
+      {sessionAssistantsOn ? '🎵 マスモン・助手を呼ぶ' : '🎵 マスモンを呼ぶ'}<small className="block break-keep text-[9px] font-bold opacity-80">{sessionAssistantsOn ? 'マスモンや助手がCPUとして一緒に遊びます' : 'マスモンがCPUとして一緒に遊びます'}</small>
     </button>
   ) : null);
   const mine = view ? view.members.find((m) => m.id === view.selfId) : null;
@@ -2534,6 +2588,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   const [beatPresence, setBeatPresence] = React.useState({});
   const [beatRooms, setBeatRooms] = React.useState([]);
   const [beatPick, setBeatPick] = React.useState(null);
+  const [beatListOpen, setBeatListOpen] = React.useState(false);
   const [inviteFirstId, setInviteFirstId] = React.useState('');
   const rosterIds = (roster || []).map((f) => f.otherId).join(',');
   React.useEffect(() => {
@@ -2886,6 +2941,11 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               </div>
             )}
           </div>
+          {/* いまモンヒロビートにいる人(2026-11-08)。だれもいなければ出さない */}
+          {ms.multi && (beatAssistants.length > 0 || beatFriends.length > 0) && (
+            <RhythmBeatPresenceButton assistants={beatAssistants} friends={beatFriends} resolveIconUrl={resolveIconUrl}
+              onOpen={() => { Audio_.fgSe.tap(); setBeatListOpen(true); }} />
+          )}
           {quickRunInfo && <RhythmQuickRunPill info={quickRunInfo} onRestart={onRestartQuickRun} onResume={onResumeQuickRun} widthClass="max-w-[42%]" />}
           <RhythmOrientationButton/>
         </header>
@@ -2896,8 +2956,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             横画面: 左に立ち絵、右にボタン(2026-10-03・ユーザー指摘「サイズ感悪い」で組み直し) */}
         <div className={`relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${ms.showArt && ms.assistant ? '' : 'portrait:justify-center'}`}>
           <ModeSelectAssistantPanel assistant={ms.assistant} showArt={ms.showArt} showComment={ms.showComment} onToggle={ms.onToggleAssistant} />
-          {/* 帯(いまモンヒロビートにいる人)があるときは横画面で上から並べる。真ん中寄せのままだと、入りきらない上の端(帯の見出し)が切れる */}
-          <div className={`shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2 ${ms.multi && (beatAssistants.length > 0 || beatFriends.length > 0) ? 'landscape:justify-start' : 'landscape:justify-center'}`}>
+          <div className="shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2">
             {!(ms.assistant && (ms.showArt || ms.showComment)) && assistToggles('justify-end', true)}
             {friendsOn && friendInvites.length > 0 && (
               <section data-rhythm-multi-friend-invites className={`${card} space-y-2 border-pink-400/60`}>
@@ -2909,10 +2968,6 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                   </div>
                 ))}
               </section>
-            )}
-            {/* いまモンヒロビートにいる人(2026-11-08)。だれもいなければ出さない */}
-            {ms.multi && (beatAssistants.length > 0 || beatFriends.length > 0) && (
-              <RhythmBeatPresenceStrip assistants={beatAssistants} friends={beatFriends} onPick={setBeatPick} resolveIconUrl={resolveIconUrl} />
             )}
             <div className={`grid gap-2 ${ms.multi ? 'grid-cols-2' : 'grid-cols-1'}`}>
               {/* ソロ: いつもの曲えらびへ */}
@@ -2996,6 +3051,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         {recordOpen && <RhythmMultiRecordSheet songName={(id) => { const song = songById(id); return song ? rhythmSongFullName(song) : '(曲)'; }} onClose={() => setRecordOpen(false)} />}
         {buddySheetLayer}
         {buddyRefundNote && <div data-rhythm-buddy-refund role="status" className="pointer-events-none absolute inset-x-3 top-3 z-[86000] mx-auto max-w-sm rounded-xl border border-lime-300/60 bg-slate-950/90 px-3 py-2 text-center text-xs font-black leading-snug text-lime-100 shadow-lg" style={{ marginTop: 'var(--mh-sa-top)' }}>{buddyRefundNote}</div>}
+        <RhythmBeatPresenceList open={beatListOpen} assistants={beatAssistants} friends={beatFriends} resolveIconUrl={resolveIconUrl}
+          onClose={() => setBeatListOpen(false)} onPick={(p) => { setBeatListOpen(false); setBeatPick(p); }} />
         <RhythmBeatPresenceSheet pick={beatPick} friend={beatPickFriend} onClose={() => setBeatPick(null)} onCallAssistant={beatCallAssistant}
           onJoinRoom={beatJoinRoom} onInvite={beatInviteFriend} resolveIconUrl={resolveIconUrl} />
         {/* フリーマッチ: 部屋を作る / 部屋に入る(一覧) / おまかせで入る(2026-11-07 社長「部屋を作ると入るで一覧が見れるような感じ」) */}
