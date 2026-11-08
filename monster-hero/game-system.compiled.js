@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: da0ac5e52b2ecf8e
+// source-sha256: 5aeb3ac7de8282a0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -105376,6 +105376,10 @@ function AssistantLifeRoom({
   }, x)))), typeof AssistantLifeRelRoomLayer === 'function' && React.createElement(AssistantLifeRelRoomLayer, {
     state: state,
     h: h
+  }), met && typeof AssistantMasmonRoomPet === 'function' && React.createElement(AssistantMasmonRoomPet, {
+    id: id,
+    h: h,
+    life: typeof assistantLifeCurrent === 'function' ? assistantLifeCurrent() : null
   }), state && state.tag && React.createElement("span", {
     className: "tag",
     "data-assistant-life-room-away": id
@@ -121016,6 +121020,10 @@ function AssistantMasmonRoomRow({
   const lead = p.team.find(t => t.lead) || p.team[0];
   const m = lead && assistantMasmonMon(lead.monster);
   if (!m) return null;
+  let now = '';
+  try {
+    now = assistantMasmonNowText(id, typeof assistantLifeCurrent === 'function' ? assistantLifeCurrent() : null);
+  } catch (_) {}
   return React.createElement("button", {
     type: "button",
     className: "mhl-row w-full text-left",
@@ -121024,11 +121032,200 @@ function AssistantMasmonRoomRow({
   }, React.createElement("span", {
     className: "k"
   }, "🐾 マスモン"), React.createElement("span", {
-    className: "min-w-0 truncate text-[11px] font-bold"
-  }, React.createElement("b", null, lead.nick), "(", m.name, " Lv.", lead.lv, ") ほか", Math.max(0, p.team.length - 1), "体"), React.createElement("span", {
+    className: "min-w-0 text-[11px] font-bold"
+  }, React.createElement("span", {
+    className: "block truncate"
+  }, React.createElement("b", null, lead.nick), "(", m.name, " Lv.", lead.lv, ") ほか", Math.max(0, p.team.length - 1), "体"), now && React.createElement("span", {
+    className: "block text-[10px] text-sky-200",
+    "data-assistant-life-room-masmon-now": true
+  }, "🐾 いま: ", now)), React.createElement("span", {
     className: "ml-auto pl-1 text-[12px] font-black text-pink-300"
   }, "›"));
 }
+const assistantMasmonHash = str => {
+  let h = 2166136261;
+  for (const ch of String(str)) {
+    h ^= ch.charCodeAt(0);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+};
+const assistantMasmonDuty = (id, day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '') => {
+  const p = assistantMasmonPlanOf(id);
+  if (!p) return null;
+  const team = [...p.team].sort((a, b) => (b.lead ? 1 : 0) - (a.lead ? 1 : 0)).filter(t => assistantMasmonMon(t.monster));
+  if (!team.length) return null;
+  return team[assistantMasmonHash(`${day}|${id}`) % team.length];
+};
+const assistantLifeMasmonLead = id => {
+  try {
+    if (typeof assistantLifeEnabled === 'function' && !assistantLifeEnabled()) return null;
+  } catch (_) {
+    return null;
+  }
+  const t = assistantMasmonDuty(id);
+  return t ? {
+    monster: t.monster,
+    nick: t.nick,
+    colors: [...(t.dye && t.dye.colors || [])]
+  } : null;
+};
+const assistantMasmonWhere = (id, life) => {
+  const w = typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, id) : null;
+  if (!w || w.place === 'home') return {
+    kind: 'with',
+    w
+  };
+  const abs = life && Number.isFinite(life.abs) ? life.abs : 0;
+  return {
+    kind: assistantMasmonHash(`${abs}|${id}|go`) % 2 === 0 ? 'out' : 'stay',
+    w
+  };
+};
+const ASSISTANT_MASMON_DOING_MARK = Object.freeze({
+  sleep: '💤',
+  practice: '♪',
+  snack: '🍡',
+  read: '📖',
+  cards: '🃏',
+  walk: '♪'
+});
+const ASSISTANT_MASMON_PET_STYLE = Object.freeze({
+  position: 'absolute',
+  bottom: 9,
+  zIndex: 4,
+  pointerEvents: 'none',
+  filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.45))'
+});
+const ASSISTANT_MASMON_PET_MARK = Object.freeze({
+  position: 'absolute',
+  left: '50%',
+  bottom: '100%',
+  transform: 'translateX(-50%)',
+  whiteSpace: 'nowrap',
+  lineHeight: '12px',
+  fontWeight: 900,
+  background: 'rgba(255,255,255,.92)',
+  color: '#7c2d12',
+  borderRadius: 999,
+  padding: '0 4px'
+});
+function AssistantMasmonRoomPet({
+  id,
+  h,
+  life
+}) {
+  const ref = React.useRef(null);
+  const [pos, setPos] = React.useState(null);
+  const t = assistantMasmonDuty(id);
+  const where = assistantMasmonWhere(id, life);
+  const key = `${id}|${t ? t.monster : ''}|${where.kind}|${h}`;
+  const [tick, setTick] = React.useState(0);
+  React.useEffect(() => {
+    const re = () => setTick(n => n + 1);
+    const ts = [setTimeout(re, 450), setTimeout(re, 1300)];
+    window.addEventListener('resize', re);
+    return () => {
+      ts.forEach(clearTimeout);
+      window.removeEventListener('resize', re);
+    };
+  }, [key]);
+  React.useLayoutEffect(() => {
+    const el = ref.current,
+      room = el && el.closest('.mhl-room');
+    if (!room) return;
+    const rr = room.getBoundingClientRect();
+    const obs = [...room.querySelectorAll('.tag,.pp,.bb,.pl,.lv,.lock,[data-assistant-life-rel-door],[data-assistant-life-rel-mend],[data-assistant-life-rel-sit]')].map(x => x.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
+    const hit = a => obs.some(r => Math.min(a.r, r.right) - Math.max(a.l, r.left) > 0 && Math.min(a.b, r.bottom) - Math.max(a.t, r.top) > 0);
+    const floor = 9;
+    const markW = 18;
+    for (const size of [Math.round(Math.min(48, h * .48)), Math.round(Math.min(38, h * .4)), 28]) {
+      const mark = 13;
+      const half = Math.max(size, markW) / 2;
+      const xs = [];
+      for (let x = rr.width - size / 2 - half - 3; x - (half - size / 2) >= 3; x -= 6) xs.push(Math.round(x));
+      for (const x of xs) {
+        const c = rr.left + x + size / 2;
+        const box = {
+          l: c - half,
+          r: c + half,
+          t: rr.bottom - floor - size - mark,
+          b: rr.bottom - floor + 2
+        };
+        if (!hit(box)) {
+          setPos({
+            x,
+            size
+          });
+          return;
+        }
+      }
+    }
+    setPos(false);
+  }, [key, tick]);
+  if (!t || where.kind === 'out') return null;
+  const mon = assistantMasmonMon(t.monster);
+  if (!mon) return null;
+  const mark = where.kind === 'stay' ? '🏠' : where.w && ASSISTANT_MASMON_DOING_MARK[where.w.doing] || '✨';
+  return React.createElement("span", {
+    ref: ref,
+    className: "mhm-pet",
+    "data-assistant-life-room-masmon-pet": t.monster,
+    "data-assistant-life-room-masmon-where": where.kind,
+    style: {
+      ...ASSISTANT_MASMON_PET_STYLE,
+      ...(pos ? {
+        left: pos.x,
+        width: pos.size,
+        height: pos.size
+      } : {
+        left: 0,
+        width: 1,
+        height: 1,
+        visibility: 'hidden'
+      })
+    },
+    "aria-hidden": "true"
+  }, pos && React.createElement(React.Fragment, null, typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+    baseId: t.monster,
+    src: mon.imgUrl,
+    masuColors: t.dye && t.dye.colors,
+    alt: "",
+    draggable: false,
+    style: {
+      width: '100%',
+      height: '100%',
+      objectFit: 'contain'
+    }
+  }) : React.createElement("img", {
+    src: mon.imgUrl,
+    alt: "",
+    draggable: false,
+    style: {
+      width: '100%',
+      height: '100%',
+      objectFit: 'contain'
+    }
+  }), React.createElement("b", {
+    title: where.kind === 'stay' ? 'るすばん' : undefined,
+    style: {
+      ...ASSISTANT_MASMON_PET_MARK,
+      fontSize: 10
+    }
+  }, mark)));
+}
+const assistantMasmonNowText = (id, life) => {
+  const t = assistantMasmonDuty(id);
+  if (!t) return '';
+  const where = assistantMasmonWhere(id, life);
+  const name = typeof assistantLifeName === 'function' ? assistantLifeName(id) : id;
+  if (where.kind === 'stay') return `${t.nick}は部屋でるすばん中`;
+  if (where.kind === 'out') {
+    const pl = where.w && typeof assistantLifePlaceShow === 'function' ? assistantLifePlaceShow(where.w.place) : '';
+    return pl ? `${t.nick}は${name}と一緒に${pl}` : `${t.nick}は${name}と一緒にお出かけ中`;
+  }
+  return where.w && where.w.doing === 'sleep' ? `${t.nick}は${name}のそばで眠っている` : `${t.nick}は部屋で${name}のそばにいる`;
+};
 const ASSISTANT_MASMON_CSS = `
 .mhm-panel{position:absolute;left:0;right:0;bottom:0;top:5%;display:flex;flex-direction:column;background:linear-gradient(180deg,#1f1640,#0b1020 70%);border-top:2px solid #f9a8d4;border-radius:22px 22px 0 0;padding:12px 14px calc(12px + env(safe-area-inset-bottom));color:#fff}
 .mhm-panel.is-land{top:0;left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));border:2px solid #f9a8d4;border-bottom:0;padding:8px 14px 8px}

@@ -236,13 +236,109 @@ function AssistantMasmonRoomRow({ id, onOpen }) {
   const lead = p.team.find(t => t.lead) || p.team[0];
   const m = lead && assistantMasmonMon(lead.monster);
   if (!m) return null;
+  let now = ''; try { now = assistantMasmonNowText(id, typeof assistantLifeCurrent === 'function' ? assistantLifeCurrent() : null); } catch (_) {}
   return (
     <button type="button" className="mhl-row w-full text-left" data-assistant-life-room-masmon onClick={() => onOpen(id)}>
       <span className="k">🐾 マスモン</span>
-      <span className="min-w-0 truncate text-[11px] font-bold"><b>{lead.nick}</b>({m.name} Lv.{lead.lv}) ほか{Math.max(0, p.team.length - 1)}体</span>
+      <span className="min-w-0 text-[11px] font-bold"><span className="block truncate"><b>{lead.nick}</b>({m.name} Lv.{lead.lv}) ほか{Math.max(0, p.team.length - 1)}体</span>
+        {now && <span className="block text-[10px] text-sky-200" data-assistant-life-room-masmon-now>🐾 いま: {now}</span>}</span>
       <span className="ml-auto pl-1 text-[12px] font-black text-pink-300">›</span>
     </button>);
 }
+
+// ---------- 部屋にいるマスモン(2026-11-08 社長「助手のマスモンも部屋にいたりどこかにいたり」・選び ❶A ❷A ❸B) ----------
+// ❶ 部屋に出すのは1体。3体のうち、その日の当番(先頭から日ごとに交代)
+// ❷ 助手が出かけているときは、時間の区切りごとに半分くらい一緒に出かけ、残りは部屋で留守番
+// ❸ 地図・居場所タブには出さない(部屋と部屋のシートだけ)
+// 数字には効かせない・何も保存しない(当番も留守番も日付と時間の区切りから決まる)
+const assistantMasmonHash = (str) => { let h = 2166136261; for (const ch of String(str)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
+const assistantMasmonDuty = (id, day = (typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '')) => {
+  const p = assistantMasmonPlanOf(id);
+  if (!p) return null;
+  const team = [...p.team].sort((a, b) => (b.lead ? 1 : 0) - (a.lead ? 1 : 0)).filter(t => assistantMasmonMon(t.monster));
+  if (!team.length) return null;
+  return team[assistantMasmonHash(`${day}|${id}`) % team.length];
+};
+// オトズレ2(フレンドの家の控え)が読む口: その日の当番 { monster, nick, colors }
+const assistantLifeMasmonLead = (id) => {
+  try { if (typeof assistantLifeEnabled === 'function' && !assistantLifeEnabled()) return null; } catch (_) { return null; }
+  const t = assistantMasmonDuty(id);
+  return t ? { monster: t.monster, nick: t.nick, colors: [...((t.dye && t.dye.colors) || [])] } : null;
+};
+// いまマスモンがどこにいるか: 'with'(助手のそば・部屋)/'stay'(留守番)/'out'(助手と一緒に出かけた)
+const assistantMasmonWhere = (id, life) => {
+  const w = typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, id) : null;
+  if (!w || w.place === 'home') return { kind: 'with', w };
+  const abs = life && Number.isFinite(life.abs) ? life.abs : 0;
+  return { kind: assistantMasmonHash(`${abs}|${id}|go`) % 2 === 0 ? 'out' : 'stay', w };
+};
+const ASSISTANT_MASMON_DOING_MARK = Object.freeze({ sleep: '💤', practice: '♪', snack: '🍡', read: '📖', cards: '🃏', walk: '♪' });
+
+// 部屋の見た目は、家の画面でシートの CSS が読まれていないので、その場で書く
+const ASSISTANT_MASMON_PET_STYLE = Object.freeze({ position: 'absolute', bottom: 9, zIndex: 4, pointerEvents: 'none', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.45))' });
+const ASSISTANT_MASMON_PET_MARK = Object.freeze({ position: 'absolute', left: '50%', bottom: '100%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', lineHeight: '12px', fontWeight: 900, background: 'rgba(255,255,255,.92)', color: '#7c2d12', borderRadius: 999, padding: '0 4px' });
+// 部屋の中: 札・顔・吹き出し・扉・名札に重ならない場所を測って置く(家具の絵文字は飾りなので、その前に立ってよい)。どこにも置けない部屋では出さない
+function AssistantMasmonRoomPet({ id, h, life }) {
+  const ref = React.useRef(null);
+  const [pos, setPos] = React.useState(null);
+  const t = assistantMasmonDuty(id);
+  const where = assistantMasmonWhere(id, life);
+  const key = `${id}|${t ? t.monster : ''}|${where.kind}|${h}`;
+  const [tick, setTick] = React.useState(0);
+  // 家が入場の動きの途中だと測り違えるので、少し待って測り直す。画面の大きさが変わったときも測り直す
+  React.useEffect(() => {
+    const re = () => setTick(n => n + 1);
+    const ts = [setTimeout(re, 450), setTimeout(re, 1300)];
+    window.addEventListener('resize', re);
+    return () => { ts.forEach(clearTimeout); window.removeEventListener('resize', re); };
+  }, [key]);
+  React.useLayoutEffect(() => {
+    const el = ref.current, room = el && el.closest('.mhl-room');
+    if (!room) return;
+    const rr = room.getBoundingClientRect();
+    const obs = [...room.querySelectorAll('.tag,.pp,.bb,.pl,.lv,.lock,[data-assistant-life-rel-door],[data-assistant-life-rel-mend],[data-assistant-life-rel-sit]')]
+      .map(x => x.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
+    const hit = (a) => obs.some(r => Math.min(a.r, r.right) - Math.max(a.l, r.left) > 0 && Math.min(a.b, r.bottom) - Math.max(a.t, r.top) > 0);
+    const floor = 9;
+    const markW = 18;
+    for (const size of [Math.round(Math.min(48, h * .48)), Math.round(Math.min(38, h * .4)), 28]) {
+      const mark = 13; // 上の印のぶん
+      const half = Math.max(size, markW) / 2; // 印は絵の真ん中の上に出るので、広いほうの幅で見る
+      const xs = []; for (let x = rr.width - size / 2 - half - 3; x - (half - size / 2) >= 3; x -= 6) xs.push(Math.round(x));
+      for (const x of xs) {
+        const c = rr.left + x + size / 2;
+        const box = { l: c - half, r: c + half, t: rr.bottom - floor - size - mark, b: rr.bottom - floor + 2 };
+        if (!hit(box)) { setPos({ x, size }); return; }
+      }
+    }
+    setPos(false);
+  }, [key, tick]);
+  if (!t || where.kind === 'out') return null;
+  const mon = assistantMasmonMon(t.monster);
+  if (!mon) return null;
+  const mark = where.kind === 'stay' ? '🏠' : (where.w && ASSISTANT_MASMON_DOING_MARK[where.w.doing]) || '✨';
+  return (
+    <span ref={ref} className="mhm-pet" data-assistant-life-room-masmon-pet={t.monster} data-assistant-life-room-masmon-where={where.kind}
+      style={{ ...ASSISTANT_MASMON_PET_STYLE, ...(pos ? { left: pos.x, width: pos.size, height: pos.size } : { left: 0, width: 1, height: 1, visibility: 'hidden' }) }} aria-hidden="true">
+      {pos && <>
+        {typeof DyedMonsterImage === 'function'
+          ? <DyedMonsterImage baseId={t.monster} src={mon.imgUrl} masuColors={t.dye && t.dye.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>
+          : <img src={mon.imgUrl} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>}
+        <b title={where.kind === 'stay' ? 'るすばん' : undefined} style={{ ...ASSISTANT_MASMON_PET_MARK, fontSize: 10 }}>{mark}</b>
+      </>}
+    </span>);
+}
+
+// 部屋のシートの「🐾 いま」(どこにいるか)
+const assistantMasmonNowText = (id, life) => {
+  const t = assistantMasmonDuty(id);
+  if (!t) return '';
+  const where = assistantMasmonWhere(id, life);
+  const name = typeof assistantLifeName === 'function' ? assistantLifeName(id) : id;
+  if (where.kind === 'stay') return `${t.nick}は部屋でるすばん中`;
+  if (where.kind === 'out') { const pl = where.w && typeof assistantLifePlaceShow === 'function' ? assistantLifePlaceShow(where.w.place) : ''; return pl ? `${t.nick}は${name}と一緒に${pl}` : `${t.nick}は${name}と一緒にお出かけ中`; }
+  return where.w && where.w.doing === 'sleep' ? `${t.nick}は${name}のそばで眠っている` : `${t.nick}は部屋で${name}のそばにいる`;
+};
 
 const ASSISTANT_MASMON_CSS = `
 .mhm-panel{position:absolute;left:0;right:0;bottom:0;top:5%;display:flex;flex-direction:column;background:linear-gradient(180deg,#1f1640,#0b1020 70%);border-top:2px solid #f9a8d4;border-radius:22px 22px 0 0;padding:12px 14px calc(12px + env(safe-area-inset-bottom));color:#fff}

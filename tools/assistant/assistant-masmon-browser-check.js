@@ -8,7 +8,8 @@
 //   ② マスモンは3体・先頭が1体・染めた絵が出ている(絵の読み込みに失敗していない)
 //   ③ 枠の端にカードがくっつかない(パネルの左右から 6px 以上あける)・横にはみ出さない・名前が「…」で切れない
 //   ④ 口: assistantLifeCardStyle・assistantLifeTasteOf が8人ぶん返る(印が偽なら null)
-//   ⑤ 画面のエラーが無い
+//   ⑤ 部屋にいるマスモン: 札・顔・吹き出し・扉・名札に重ならない/部屋からはみ出さない/一緒に出かけたマスモンは部屋に出ない/地図には出ない
+//   ⑥ 画面のエラーが無い
 const http = require('http'), path = require('path'), fs = require('fs');
 const root = path.resolve(__dirname, '..', '..'), PORT = 9273;
 const { quietBootSeed, updateNoticeSeed, oneTimeNoticeSeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
@@ -73,6 +74,32 @@ const layoutProblems = (page) => page.evaluate(() => {
       await page.locator('[data-home-assistant-life]').click({ timeout: 20000 });
       await page.locator('[data-assistant-life-screen]').waitFor({ timeout: 8000 });
       await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
+      { // ⑤ 部屋にいるマスモン
+        await page.waitForTimeout(1500);
+        const r = await page.evaluate(() => {
+          const ng = []; let n = 0, stay = 0;
+          const life = assistantLifeCurrent();
+          for (const room of document.querySelectorAll('[data-assistant-life-room]')) {
+            const id = room.getAttribute('data-assistant-life-room');
+            const pet = room.querySelector('[data-assistant-life-room-masmon-pet]');
+            const where = assistantMasmonWhere(id, life).kind;
+            if (where === 'out' && pet) ng.push(`${id}: 出かけたのに部屋にいる`);
+            if (!pet || pet.style.visibility === 'hidden') continue;
+            n++; if (where === 'stay') stay++;
+            const a = pet.getBoundingClientRect(), mark = pet.querySelector('b'), m = mark ? mark.getBoundingClientRect() : null, rr = room.getBoundingClientRect();
+            const boxes = [a, m].filter(Boolean);
+            for (const b of boxes) if (b.left < rr.left - 1 || b.right > rr.right + 1 || b.top < rr.top - 1 || b.bottom > rr.bottom + 1) ng.push(`${id}: 部屋からはみ出す`);
+            for (const o of room.querySelectorAll('.tag,.pp,.bb,.pl,.lv,[data-assistant-life-rel-door],[data-assistant-life-rel-mend],[data-assistant-life-rel-sit]')) {
+              const q = o.getBoundingClientRect(); if (!q.width) continue;
+              for (const b of boxes) if (Math.min(b.right, q.right) - Math.max(b.left, q.left) > 1 && Math.min(b.bottom, q.bottom) - Math.max(b.top, q.top) > 1) ng.push(`${id}: ${o.className || o.getAttribute('data-assistant-life-rel-door') || '部品'} に重なる`);
+            }
+          }
+          return { ng: [...new Set(ng)], n, stay };
+        });
+        check(`${T}部屋のマスモン: 札・顔・吹き出し・扉・名札に重ならない・はみ出さない`, !r.ng.length, r.ng.slice(0, 4).join(' / '));
+        check(`${T}部屋のマスモンが1体以上いる`, r.n >= 1, `${r.n}部屋(留守番${r.stay})`);
+        if (SHOTS) await page.screenshot({ path: path.join(shotDir, `masmon-5-house-${v.id}.jpg`), type: 'jpeg', quality: 80 });
+      }
       if (v.id === 'p') {
         const hooks = await page.evaluate(() => ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'].map(id => ({ id, s: assistantLifeCardStyle(id), t: assistantLifeTasteOf(id) })));
         check(`${T}口 assistantLifeCardStyle が8人ぶん attack/guard/normal`, hooks.every(h => ['attack', 'guard', 'normal'].includes(h.s)), hooks.map(h => `${h.id}:${h.s}`).join(' '));

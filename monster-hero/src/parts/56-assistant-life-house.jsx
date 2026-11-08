@@ -398,6 +398,7 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx }) {
         <span key={pid} className={state.lonely && pid === id ? 'lonely' : state.after ? 'after' : ''} data-assistant-life-room-face={pid}><AssistantFace who={who} size={Math.round(Math.min(40, h * .44))} accent={who.accent}/></span>) : null; })}</div>}
       {ppl && state.bub && <span className="bb" data-assistant-life-room-bub style={{ bottom: Math.round(Math.min(40, h * .44)) + 14, fontSize: w < 150 ? 8.5 : undefined }}>{[].concat(state.lonely && !state.sleep && !state.after && w < 150 ? ['💭 さみしいな…'] : state.bub).map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span className="whitespace-nowrap" data-assistant-life-chunk>{x}</span></React.Fragment>)}</span>}
       {typeof AssistantLifeRelRoomLayer === 'function' && <AssistantLifeRelRoomLayer state={state} h={h}/>}
+      {met && typeof AssistantMasmonRoomPet === 'function' && <AssistantMasmonRoomPet id={id} h={h} life={typeof assistantLifeCurrent === 'function' ? assistantLifeCurrent() : null}/>}
       {state && state.tag && <span className="tag" data-assistant-life-room-away={id}><b>{state.tag[0]}</b><small>{state.tag[1]}</small>{state.tag[2] && <small data-assistant-life-room-with><AssistantLifeNames text={state.tag[2]}/></small>}</span>}
       {!met && <span className="lock">まだ会っていない</span>}
     </button>);
