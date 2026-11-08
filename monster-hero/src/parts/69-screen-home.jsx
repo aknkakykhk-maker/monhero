@@ -371,12 +371,22 @@ function HomeScreen({
       // モンヒロビートが押し下げられて、その下(イベントの札・公式杯・MFバトルカード)にかかるときだけ、下の札をまとめて下げる。
       // 下の札は下から位置を決めているので、translate で動かす(offsetTop は translate を含まないので、測り直しても積み上がらない)
       const rh=scene.querySelector('.mh-home-facility.rhythm');let push=0;
+      // 横(背の低い横画面)では M/B管理の右にモンヒロビートが並ぶので、M/B管理の真下の札(イベント)も、M/B管理の下端より下へ押す(2026-11-08 横 568×320 で吹き出しが長いと重なった)
+      if(mg&&mg.offsetParent){const mb=offTop(mg)+mg.offsetHeight+6,mr=offLeft(mg)+mg.offsetWidth;
+        for(const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle')){if(!el.offsetParent)continue;const t=offTop(el);if(t>offTop(mg)&&offLeft(el)<mr)push=Math.max(push,mb-t);}}
       if(rh&&rh.offsetParent){const rb=offTop(rh)+rh.offsetHeight+22,rr=offLeft(rh)+rh.offsetWidth;
         // 押し下げても、いちばん下の札とその下の顔の列(助手ライフ・22px)が画面の下に収まる所まで(2026-11-08 横 568×320 で MFバトルカードの札と顔が画面の外へ出た)
         let room=Infinity;
         for(const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle')){if(!el.offsetParent)continue;const t=offTop(el);if(t>offTop(rh)&&offLeft(el)<rr){push=Math.max(push,rb-t);room=Math.min(room,scene.clientHeight-(t+el.offsetHeight)-(el.classList.contains('mh-home-card-battle')?24:4));}}
         push=Math.min(push,Math.max(0,room));}
-      scene.style.setProperty('--mh-home-left-push',`${Math.max(0,Math.ceil(push))}px`);};
+      scene.style.setProperty('--mh-home-left-push',`${Math.max(0,Math.ceil(push))}px`);
+      // 「モンヒロバトル」(下の真ん中)が右下の「ミッション」「ギフト」と横に重なるときは、重なった分だけ左へ寄せる(2026-11-08 横 568×320 で重なった)。
+      // バトルの札は translateX(-50%) で真ん中に置いているので、左端は offsetLeft − 幅/2
+      const bt=scene.querySelector('.mh-home-facility.battle');let nudge=0;
+      if(bt&&bt.offsetParent){const bl=offLeft(bt)-bt.offsetWidth/2,br=bl+bt.offsetWidth,btop=offTop(bt),bb=btop+bt.offsetHeight;
+        for(const el of scene.querySelectorAll('.mh-home-mission,.mh-home-gift')){if(!el.offsetParent)continue;const l=offLeft(el),t=offTop(el);if(t<bb&&t+el.offsetHeight>btop&&l<br&&l+el.offsetWidth>bl)nudge=Math.max(nudge,br-l+8);}
+        nudge=Math.min(nudge,Math.max(0,bl-8));}
+      scene.style.setProperty('--mh-home-battle-nudge',`${-Math.ceil(nudge)}px`);};
     measure();
     if(typeof ResizeObserver==='undefined'){const id=setInterval(measure,1000);return()=>clearInterval(id);}
     const ro=new ResizeObserver(measure);ro.observe(box);ro.observe(scene);
