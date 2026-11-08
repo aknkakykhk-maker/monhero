@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5499b927446a03f5
+// generated-sha256: 1dff0e44fbd3051f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -34380,6 +34380,38 @@ const friendsSetRoomWaiting = (on) => { _friendsRoomWaiting = !!on; };
 // 合言葉(プライベート)の部屋にいるあいだ真(ビート部が部屋の出入りで呼ぶ)。演奏中(RHYTHM_PLAY)は「演奏中」を先にする(テンポと決めた)
 let _friendsRoomPrivate = false;
 const friendsSetRoomPrivate = (on) => { _friendsRoomPrivate = !!on; };
+// 助手ライフの中のどこにいるか(2026-11-08 社長「ただ助手ライフと書かれてるだけだと味気ない」・案A)。家の画面と訪ねた家が知らせる
+//   lv … h=家(la があればその助手の部屋)/w=みんなの居場所/f=友情/i=道具/p=フレンドの家を選ぶ/v=フレンドの家を訪ねている
+//   records.lv・records.la で送る(表・SQL は増やさない)。「いまの状態をフレンドに見せる」が切なら送らない
+const FRIEND_LIFE_SPOTS = Object.freeze(['h', 'w', 'f', 'i', 'p', 'v']);
+const FRIEND_LIFE_SPOT_TEXT = Object.freeze({
+  h: ['🏡 助手の家', '🏡 助手ライフで家の様子を見ている'],
+  w: ['📋 みんなの居場所', '📋 助手ライフでみんなの居場所を見ている'],
+  f: ['🤝 助手の友情', '🤝 助手ライフで助手どうしの友情を見ている'],
+  i: ['🎒 助手の道具', '🎒 助手ライフで道具を選んでいる'],
+  p: ['🏘 遊びに行く家選び', '🏘 遊びに行くフレンドの家を選んでいる'],
+  v: ['🏘 フレンドの家へ', '🏘 フレンドの家に遊びに行っている'],
+});
+let _friendsLifeSpot = { lv: '', la: '' };
+let _friendsLifeVisit = 0;
+const friendsLifeSpotChanged = () => { try { if (typeof window !== 'undefined') window.dispatchEvent(new Event('mh-friend-spot')); } catch (error) { /* 知らせられなくても、2分ごとの知らせで届く */ } };
+const friendsSetLifeSpot = (lv, la = '') => {
+  const next = { lv: FRIEND_LIFE_SPOTS.includes(lv) ? lv : '', la: typeof la === 'string' ? la.slice(0, 16) : '' };
+  if (next.lv === _friendsLifeSpot.lv && next.la === _friendsLifeSpot.la) return;
+  _friendsLifeSpot = next; friendsLifeSpotChanged();
+};
+const friendsSetLifeVisit = (on) => { _friendsLifeVisit = Math.max(0, _friendsLifeVisit + (on ? 1 : -1)); friendsLifeSpotChanged(); };
+// いま送る印(訪ねた家を開いているあいだは v を先にする)
+const friendsLifeSpotNow = () => (_friendsLifeVisit > 0 ? { lv: 'v', la: '' } : (_friendsLifeSpot.lv ? { lv: _friendsLifeSpot.lv, la: _friendsLifeSpot.lv === 'h' ? _friendsLifeSpot.la : '' } : null));
+// 受け取った印から [一覧の短い形, プロフィールの文の形]。知らない印・知らない助手は出さない(古い版と同じ「🏡 助手ライフ」へ戻る)
+const friendsLifeSpotText = (records) => {
+  if (!records || !FRIEND_LIFE_SPOTS.includes(records.lv)) return null;
+  if (records.lv === 'h' && records.la) {
+    const a = typeof assistantById === 'function' ? assistantById(records.la) : null;
+    if (a && a.name) return [`🏡 ${a.name}の部屋`, `🏡 ${a.name}の部屋をのぞいている`];
+  }
+  return FRIEND_LIFE_SPOT_TEXT[records.lv];
+};
 // 受け取った行の場所。place が 'other' で records.pl があれば、そちら
 const friendsPlaceFromRow = (place, records) => {
   if (place === 'other' && records && FRIEND_SUB_PLACES.includes(records.pl)) return records.pl;
@@ -34392,6 +34424,8 @@ const friendsPlaceOfScreen = (gameState) => {
   const name = typeof gameState === 'string' ? gameState : '';
   if (_friendsRoomPrivate && name !== 'RHYTHM_PLAY') return 'roomPrivate';
   if (_friendsRoomWaiting) return 'room';
+  // プロフィールから「🏘 家へ遊びに行く」で訪ねているあいだも、助手ライフにいることにする
+  if (_friendsLifeVisit > 0 && name !== 'RHYTHM_PLAY' && name !== 'CARD_BATTLE') return 'life';
   // 助手ライフは HOME の上に開く器(56-assistant-life の data-assistant-life-screen)
   if (name === 'HOME' && typeof document !== 'undefined' && document.querySelector && document.querySelector('[data-assistant-life-screen]')) return 'life';
   if (name === 'HOME') return 'home';
@@ -34414,6 +34448,7 @@ const friendsPresenceText = (place, updatedAtMs, nowMs, records = null) => {
     const where = FRIEND_IDLE_OPEN_TEXT[place] || FRIEND_IDLE_OPEN_TEXT.other;
     return { online: true, auto: true, text: FRIEND_AUTO_TEXT, sub: records.au ? (place && place !== 'other' && place !== 'home' ? FRIEND_PLACE_TEXT[place] : '') : `${where}を開いたまま ${records.im}分 操作なし` };
   }
+  if (online && place === 'life') { const sp = friendsLifeSpotText(records); if (sp) return { online: true, text: sp[0], long: sp[1] }; }
   if (online) return { online: true, text: FRIEND_PLACE_TEXT[place] || FRIEND_PLACE_TEXT.other };
   return { online: false, text: friendsLastSeenText(updatedAtMs, nowMs) };
 };
@@ -34430,7 +34465,7 @@ const friendsPresenceFor = async (ids) => {
     const at = Number.isFinite(r.updatedAt) ? r.updatedAt : 0;
     const p = friendsPresenceText(r.place, at, now, r.records);
     // place … いまの場所(friendsPlaceFromRow を通した値。2026-11-08 ビート部が「モンヒロビートにいるか」を見分けるのに足した)
-    out[id] = { online: p.online, text: p.text, sub: p.sub || '', auto: !!p.auto, at, place: r.place || null };
+    out[id] = { online: p.online, text: p.text, long: p.long || '', sub: p.sub || '', auto: !!p.auto, at, place: r.place || null };
   });
   return out;
 };
@@ -34574,6 +34609,7 @@ const friendsNormalizeRecords = (raw) => {
   return {
     pl: FRIEND_SUB_PLACES.includes(raw.pl) ? raw.pl : null,
     au: raw.au === 1 ? 1 : 0, im: Math.min(1440, friendsInt(raw.im)),
+    lv: FRIEND_LIFE_SPOTS.includes(raw.lv) ? raw.lv : '', la: typeof raw.la === 'string' && /^[a-z0-9_]{1,16}$/i.test(raw.la) ? raw.la : '',
     battle,
     rhythm: { played: friendsInt(raw.rhythm && raw.rhythm.played), songs, ach: friendsNormalizeAchievements(raw.rhythm && raw.rhythm.ach) },
     collection: { masu: friendsInt(c.masu), dex: friendsInt(c.dex), dexTotal: friendsInt(c.dexTotal), transcended: friendsInt(c.transcended),
@@ -34606,6 +34642,7 @@ const friendsBuildSummary = ({ place, masuMons, favoriteMasuId, playtime, messag
   return {
     place: show && Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, place) ? place : 'other',
     au: show && auto ? 1 : 0,
+    spot: show && place === 'life' ? friendsLifeSpotNow() : null,
     im: show && place !== 'rhythmPlay' && place !== 'cardBattle' ? Math.min(1440, friendsIdleMinutes()) : 0,
     startedOn: (typeof span.since === 'string' && FRIEND_DAY_RE.test(span.since)) ? span.since : null,
     playSeconds: Number.isFinite(totalMs) && totalMs >= 0 ? Math.floor(totalMs / 1000) : null,
@@ -34633,7 +34670,8 @@ const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
     if (_friendProfileExtraUnavailable) await send(base);
     else {
       // MFバトルカードの場所は records.pl に載せる(records が無いときも、場所だけは載せる)
-      const now = { ...(sub ? { pl: sub } : {}), ...(summary.au ? { au: 1 } : {}), ...(summary.im ? { im: summary.im } : {}) };
+      const now = { ...(sub ? { pl: sub } : {}), ...(summary.au ? { au: 1 } : {}), ...(summary.im ? { im: summary.im } : {}),
+        ...(summary.spot && summary.spot.lv ? { lv: summary.spot.lv, ...(summary.spot.la ? { la: summary.spot.la } : {}) } : {}) };
       const records = Object.keys(now).length ? { ...(summary.records || {}), ...now } : summary.records;
       try { await send({ ...base, message: summary.message, records }); }
       catch (error) {
@@ -52722,7 +52760,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
               <div className={`${SCREEN_PANEL_CLASS} flex flex-col items-center gap-2 py-5 text-center`}>
                 {avatar(selected.otherId, 'h-20 w-20', 'text-4xl')}
                 <b className="max-w-full truncate text-lg font-black text-white">{look.userName}</b>
-                <span data-friend-presence={seen.online ? 'online' : 'offline'} data-friend-presence-auto={seen.auto ? '1' : undefined} className={`text-[11px] font-black ${seen.auto ? 'text-amber-300' : seen.online ? 'text-emerald-300' : 'text-slate-400'}`}>{seen.online ? '● ' : ''}{seen.text}</span>
+                <span data-friend-presence={seen.online ? 'online' : 'offline'} data-friend-presence-auto={seen.auto ? '1' : undefined} className={`text-[11px] font-black ${seen.auto ? 'text-amber-300' : seen.online ? 'text-emerald-300' : 'text-slate-400'}`}>{seen.online ? '● ' : ''}{(seen.long || seen.text)}</span>
                 {seen.sub ? <span data-friend-presence-sub className="text-[10px] font-bold text-slate-400">{seen.sub}</span> : null}
                 {sum && sum.message ? <p data-friend-message className="max-w-full break-words rounded-xl bg-black/30 px-3 py-1.5 text-[12px] font-bold leading-snug text-pink-100">「{sum.message}」</p> : null}
                 {noteEdit && noteEdit.id === selected.otherId ? (
@@ -63778,6 +63816,12 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   if (typeof useAssistantLifeFriendState === 'function') useAssistantLifeFriendState();
   const [tab, setTab] = React.useState('house');
   const [roomId, setRoomId] = React.useState(st.focus || null);
+  // フレンドに見せる「いまの状態」に、家の中のどこにいるかを知らせる(34-friends-api・2026-11-08 案A)。閉じたら消す
+  React.useEffect(() => {
+    if (typeof friendsSetLifeSpot !== 'function') return;
+    friendsSetLifeSpot(({ house: 'h', where: 'w', friends: 'f', items: 'i', visit: 'p' })[tab] || 'h', tab === 'house' && roomId ? String(roomId) : '');
+  }, [tab, roomId]);
+  React.useEffect(() => () => { if (typeof friendsSetLifeSpot === 'function') friendsSetLifeSpot(''); }, []);
   const [scene, setScene] = React.useState(null);
   // 声をかけたあとの続きのカード(2026-11-08 社長 ❼A)。掛け合いが閉じたら、同じ部屋のシートを開き直して出す
   const [follow, setFollow] = React.useState(null);
@@ -68566,6 +68610,8 @@ const alfFurnPutOf = (house) => {
 };
 function AlfFriendHouseView({ friend, onClose }) {
   const fs = useAssistantLifeFriendState();
+  // 訪ねているあいだは、自分の「いまの状態」を「🏘 フレンドの家に遊びに行っている」にする(持ち主の名前は送らない・34-friends-api)
+  React.useEffect(() => { if (typeof friendsSetLifeVisit !== 'function') return undefined; friendsSetLifeVisit(true); return () => friendsSetLifeVisit(false); }, []);
   const [roomId, setRoomId] = React.useState(null);
   const [noteText, setNoteText] = React.useState('');
   const [talk, setTalk] = React.useState(null); // { aid, text, step }  step 0=あいさつ(返事を選ぶ) 1=反応
@@ -68635,7 +68681,7 @@ function AlfFriendHouseView({ friend, onClose }) {
         <p className="mhl-en whitespace-nowrap">VISIT · FRIEND HOUSE</p>
         <p className="truncate text-[17px] font-black text-amber-100" data-alf-visit-title>🏘 {friend.name}さんの家</p>
         <p className="text-[10px] font-bold text-slate-200"><span className="whitespace-nowrap">📷 {alfAgoText(friend.at)} の様子</span>・<span className="whitespace-nowrap">{friend.name}さんが最後に開いたとき</span></p>
-        {now && now.online && <p className={`mt-0.5 inline-block max-w-full truncate rounded-full px-2 py-0.5 text-[10.5px] font-black ${now.auto ? 'bg-amber-950/80 text-amber-200' : 'bg-emerald-950/70 text-emerald-200'}`} data-alf-visit-now>いま {now.text}</p>}
+        {now && now.online && <p className={`mt-0.5 inline-block max-w-full truncate rounded-full px-2 py-0.5 text-[10.5px] font-black ${now.auto ? 'bg-amber-950/80 text-amber-200' : 'bg-emerald-950/70 text-emerald-200'}`} data-alf-visit-now>いま {now.long || now.text}</p>}
       </div>
     </div>);
   const tiles = (
@@ -92731,12 +92777,20 @@ function MonsterHeroGame() {
     })();
     return () => { cancelled = true; };
   }, [gameState, friendsActive]);
+  // 助手ライフの中で場所が変わった(34-friends-api の friendsSetLifeSpot・2026-11-08 案A)ときも送り直す
+  const [friendSpotTick, setFriendSpotTick] = useState(0);
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const on = () => setFriendSpotTick(t => t + 1);
+    window.addEventListener('mh-friend-spot', on);
+    return () => window.removeEventListener('mh-friend-spot', on);
+  }, []);
   useEffect(() => {
     if (!friendsActive) return undefined;
     const wait = Math.max(3000, FRIEND_PUBLISH_MIN_MS - (Date.now() - friendPublishRef.current));
     const timer = setTimeout(publishFriendProfile, wait);
     return () => clearTimeout(timer);
-  }, [friendsActive, gameState, masuMons, favoriteMasuId, profileMessage, publishFriendProfile]);
+  }, [friendsActive, gameState, masuMons, favoriteMasuId, profileMessage, publishFriendProfile, friendSpotTick]);
   useEffect(() => {
     if (!friendsActive) return undefined;
     const timer = setInterval(() => { if (typeof document === 'undefined' || !document.hidden) publishFriendProfile(); }, FRIEND_HEARTBEAT_MS);

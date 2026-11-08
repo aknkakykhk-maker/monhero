@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e897e22af8082da1
+// source-sha256: a5bce6be95423ef8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -56570,6 +56570,53 @@ let _friendsRoomPrivate = false;
 const friendsSetRoomPrivate = on => {
   _friendsRoomPrivate = !!on;
 };
+const FRIEND_LIFE_SPOTS = Object.freeze(['h', 'w', 'f', 'i', 'p', 'v']);
+const FRIEND_LIFE_SPOT_TEXT = Object.freeze({
+  h: ['🏡 助手の家', '🏡 助手ライフで家の様子を見ている'],
+  w: ['📋 みんなの居場所', '📋 助手ライフでみんなの居場所を見ている'],
+  f: ['🤝 助手の友情', '🤝 助手ライフで助手どうしの友情を見ている'],
+  i: ['🎒 助手の道具', '🎒 助手ライフで道具を選んでいる'],
+  p: ['🏘 遊びに行く家選び', '🏘 遊びに行くフレンドの家を選んでいる'],
+  v: ['🏘 フレンドの家へ', '🏘 フレンドの家に遊びに行っている']
+});
+let _friendsLifeSpot = {
+  lv: '',
+  la: ''
+};
+let _friendsLifeVisit = 0;
+const friendsLifeSpotChanged = () => {
+  try {
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('mh-friend-spot'));
+  } catch (error) {}
+};
+const friendsSetLifeSpot = (lv, la = '') => {
+  const next = {
+    lv: FRIEND_LIFE_SPOTS.includes(lv) ? lv : '',
+    la: typeof la === 'string' ? la.slice(0, 16) : ''
+  };
+  if (next.lv === _friendsLifeSpot.lv && next.la === _friendsLifeSpot.la) return;
+  _friendsLifeSpot = next;
+  friendsLifeSpotChanged();
+};
+const friendsSetLifeVisit = on => {
+  _friendsLifeVisit = Math.max(0, _friendsLifeVisit + (on ? 1 : -1));
+  friendsLifeSpotChanged();
+};
+const friendsLifeSpotNow = () => _friendsLifeVisit > 0 ? {
+  lv: 'v',
+  la: ''
+} : _friendsLifeSpot.lv ? {
+  lv: _friendsLifeSpot.lv,
+  la: _friendsLifeSpot.lv === 'h' ? _friendsLifeSpot.la : ''
+} : null;
+const friendsLifeSpotText = records => {
+  if (!records || !FRIEND_LIFE_SPOTS.includes(records.lv)) return null;
+  if (records.lv === 'h' && records.la) {
+    const a = typeof assistantById === 'function' ? assistantById(records.la) : null;
+    if (a && a.name) return [`🏡 ${a.name}の部屋`, `🏡 ${a.name}の部屋をのぞいている`];
+  }
+  return FRIEND_LIFE_SPOT_TEXT[records.lv];
+};
 const friendsPlaceFromRow = (place, records) => {
   if (place === 'other' && records && FRIEND_SUB_PLACES.includes(records.pl)) return records.pl;
   return Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, place) ? place : null;
@@ -56580,6 +56627,7 @@ const friendsPlaceOfScreen = gameState => {
   const name = typeof gameState === 'string' ? gameState : '';
   if (_friendsRoomPrivate && name !== 'RHYTHM_PLAY') return 'roomPrivate';
   if (_friendsRoomWaiting) return 'room';
+  if (_friendsLifeVisit > 0 && name !== 'RHYTHM_PLAY' && name !== 'CARD_BATTLE') return 'life';
   if (name === 'HOME' && typeof document !== 'undefined' && document.querySelector && document.querySelector('[data-assistant-life-screen]')) return 'life';
   if (name === 'HOME') return 'home';
   if (name === 'CARD_BATTLE') return 'cardBattle';
@@ -56602,6 +56650,14 @@ const friendsPresenceText = (place, updatedAtMs, nowMs, records = null) => {
       auto: true,
       text: FRIEND_AUTO_TEXT,
       sub: records.au ? place && place !== 'other' && place !== 'home' ? FRIEND_PLACE_TEXT[place] : '' : `${where}を開いたまま ${records.im}分 操作なし`
+    };
+  }
+  if (online && place === 'life') {
+    const sp = friendsLifeSpotText(records);
+    if (sp) return {
+      online: true,
+      text: sp[0],
+      long: sp[1]
     };
   }
   if (online) return {
@@ -56629,6 +56685,7 @@ const friendsPresenceFor = async ids => {
     out[id] = {
       online: p.online,
       text: p.text,
+      long: p.long || '',
       sub: p.sub || '',
       auto: !!p.auto,
       at,
@@ -56824,6 +56881,8 @@ const friendsNormalizeRecords = raw => {
     pl: FRIEND_SUB_PLACES.includes(raw.pl) ? raw.pl : null,
     au: raw.au === 1 ? 1 : 0,
     im: Math.min(1440, friendsInt(raw.im)),
+    lv: FRIEND_LIFE_SPOTS.includes(raw.lv) ? raw.lv : '',
+    la: typeof raw.la === 'string' && /^[a-z0-9_]{1,16}$/i.test(raw.la) ? raw.la : '',
     battle,
     rhythm: {
       played: friendsInt(raw.rhythm && raw.rhythm.played),
@@ -56889,6 +56948,7 @@ const friendsBuildSummary = ({
   return {
     place: show && Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, place) ? place : 'other',
     au: show && auto ? 1 : 0,
+    spot: show && place === 'life' ? friendsLifeSpotNow() : null,
     im: show && place !== 'rhythmPlay' && place !== 'cardBattle' ? Math.min(1440, friendsIdleMinutes()) : 0,
     startedOn: typeof span.since === 'string' && FRIEND_DAY_RE.test(span.since) ? span.since : null,
     playSeconds: Number.isFinite(totalMs) && totalMs >= 0 ? Math.floor(totalMs / 1000) : null,
@@ -56933,6 +56993,12 @@ const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
         } : {}),
         ...(summary.im ? {
           im: summary.im
+        } : {}),
+        ...(summary.spot && summary.spot.lv ? {
+          lv: summary.spot.lv,
+          ...(summary.spot.la ? {
+            la: summary.spot.la
+          } : {})
         } : {})
       };
       const records = Object.keys(now).length ? {
@@ -88679,7 +88745,7 @@ function FriendsScreen({
         "data-friend-presence": seen.online ? 'online' : 'offline',
         "data-friend-presence-auto": seen.auto ? '1' : undefined,
         className: `text-[11px] font-black ${seen.auto ? 'text-amber-300' : seen.online ? 'text-emerald-300' : 'text-slate-400'}`
-      }, seen.online ? '● ' : '', seen.text), seen.sub ? React.createElement("span", {
+      }, seen.online ? '● ' : '', seen.long || seen.text), seen.sub ? React.createElement("span", {
         "data-friend-presence-sub": true,
         className: "text-[10px] font-bold text-slate-400"
       }, seen.sub) : null, sum && sum.message ? React.createElement("p", {
@@ -108000,6 +108066,19 @@ function AssistantLifeHouse({
   if (typeof useAssistantLifeFriendState === 'function') useAssistantLifeFriendState();
   const [tab, setTab] = React.useState('house');
   const [roomId, setRoomId] = React.useState(st.focus || null);
+  React.useEffect(() => {
+    if (typeof friendsSetLifeSpot !== 'function') return;
+    friendsSetLifeSpot({
+      house: 'h',
+      where: 'w',
+      friends: 'f',
+      items: 'i',
+      visit: 'p'
+    }[tab] || 'h', tab === 'house' && roomId ? String(roomId) : '');
+  }, [tab, roomId]);
+  React.useEffect(() => () => {
+    if (typeof friendsSetLifeSpot === 'function') friendsSetLifeSpot('');
+  }, []);
   const [scene, setScene] = React.useState(null);
   const [follow, setFollow] = React.useState(null);
   const followAfterRef = React.useRef(null);
@@ -128944,6 +129023,11 @@ function AlfFriendHouseView({
   onClose
 }) {
   const fs = useAssistantLifeFriendState();
+  React.useEffect(() => {
+    if (typeof friendsSetLifeVisit !== 'function') return undefined;
+    friendsSetLifeVisit(true);
+    return () => friendsSetLifeVisit(false);
+  }, []);
   const [roomId, setRoomId] = React.useState(null);
   const [noteText, setNoteText] = React.useState('');
   const [talk, setTalk] = React.useState(null);
@@ -129120,7 +129204,7 @@ function AlfFriendHouseView({
   }, friend.name, "さんが最後に開いたとき")), now && now.online && React.createElement("p", {
     className: `mt-0.5 inline-block max-w-full truncate rounded-full px-2 py-0.5 text-[10.5px] font-black ${now.auto ? 'bg-amber-950/80 text-amber-200' : 'bg-emerald-950/70 text-emerald-200'}`,
     "data-alf-visit-now": true
-  }, "いま ", now.text)));
+  }, "いま ", now.long || now.text)));
   const tiles = React.createElement("div", {
     "data-alf-visit-acts": true
   }, React.createElement("p", {
@@ -170948,12 +171032,19 @@ function MonsterHeroGame() {
       cancelled = true;
     };
   }, [gameState, friendsActive]);
+  const [friendSpotTick, setFriendSpotTick] = useState(0);
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const on = () => setFriendSpotTick(t => t + 1);
+    window.addEventListener('mh-friend-spot', on);
+    return () => window.removeEventListener('mh-friend-spot', on);
+  }, []);
   useEffect(() => {
     if (!friendsActive) return undefined;
     const wait = Math.max(3000, FRIEND_PUBLISH_MIN_MS - (Date.now() - friendPublishRef.current));
     const timer = setTimeout(publishFriendProfile, wait);
     return () => clearTimeout(timer);
-  }, [friendsActive, gameState, masuMons, favoriteMasuId, profileMessage, publishFriendProfile]);
+  }, [friendsActive, gameState, masuMons, favoriteMasuId, profileMessage, publishFriendProfile, friendSpotTick]);
   useEffect(() => {
     if (!friendsActive) return undefined;
     const timer = setInterval(() => {
