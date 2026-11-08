@@ -126,6 +126,7 @@ const layoutProblems = (page) => page.evaluate(() => {
           return { ng: [...new Set(ng)], n, stay, should, miss, sizeList };
         });
         check(`${T}部屋のマスモン: 歩く途中のどの位置でも札・顔・吹き出し・扉・名札に重ならない・はみ出さない`, !r.ng.length, r.ng.slice(0, 4).join(' / '));
+        check(`${T}部屋のマスモンは1部屋に1体まで(2重に出ない)`, await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-room]')].every(r => r.querySelectorAll('[data-assistant-life-room-masmon-pet]').length <= 1)));
         check(`${T}部屋のマスモンは、どの部屋も同じ大きさ`, new Set(r.sizeList).size <= 1, r.sizeList.join(','));
         check(`${T}部屋のマスモンが、出かけていない部屋の全部に見える`, r.should > 0 && r.n === r.should, `${r.n}/${r.should}部屋(留守番${r.stay})${r.miss.length ? ' 出ない: ' + r.miss.join('・') : ''}`);
         if (SHOTS) await page.screenshot({ path: path.join(shotDir, `masmon-5-house-${v.id}.jpg`), type: 'jpeg', quality: 80 });
