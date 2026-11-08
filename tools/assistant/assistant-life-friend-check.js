@@ -8,7 +8,7 @@
 //   ⑤ 保存: 新しいキーだけ。古い形・壊れた値でも既定値で読める/既存の mh_* に書かない
 //   ⑥ 表が無い(404 PGRST205)ときは「準備中」にして、それ以後は通信しない。フレンドの通信の印(_friendsUnavailable)は立てない
 //   ⑦ 台本: 8人ぶんがそろう/助手・マスモンを「子」と呼ばない/みゅあは「じゃん」「まじ」を使わない/あつの文の最後は笑・記号・顔文字/{name}・{f}・{h}・{v} 以外の穴が無い
-//   ⑧ 公開の印 assistantLifeFriend は既定で偽
+//   ⑧ 公開の印 assistantLifeFriend が偽なら通信しない(2026-11-08 公開で真にした)
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -259,7 +259,7 @@ const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'er
 
   // ⑧ 公開の印
   const rel = fs.readFileSync(path.join(root, 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8');
-  check('⑧ 公開の印 assistantLifeFriend は既定で偽', /\n\s*assistantLifeFriend:\s*false,/.test(rel));
+  check('⑧ 公開の印 assistantLifeFriend がある(真/偽どちらでも、偽なら通信しないことを下で見る)', /\n\s*assistantLifeFriend:\s*(true|false),/.test(rel));
   flags.assistantLifeFriend = false;
   calls.length = 0;
   await G('assistantLifeFriendOnSlot')(life, { abs: 30 });

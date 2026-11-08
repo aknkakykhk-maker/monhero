@@ -62,8 +62,7 @@ begin
   new.updated_at := now();
   return new;
 end $$;
-drop trigger if exists alf_houses_touch on public.assistant_life_friend_houses;
-create trigger alf_houses_touch before insert or update on public.assistant_life_friend_houses
+create or replace trigger alf_houses_touch before insert or update on public.assistant_life_friend_houses
   for each row execute function public.alf_houses_touch();
 
 -- ② 行き来の記録(1日1行ずつ足すだけ)
@@ -145,24 +144,10 @@ begin
   return new;
 end $$;
 revoke all on function public.alf_visits_guard() from public, anon, authenticated;
-drop trigger if exists alf_visits_guard on public.assistant_life_friend_visits;
-create trigger alf_visits_guard before insert or update on public.assistant_life_friend_visits
+create or replace trigger alf_visits_guard before insert or update on public.assistant_life_friend_visits
   for each row execute function public.alf_visits_guard();
 
--- 8日たった行き来の行を、足すときにときどき(100回に1回)まとめて片づける。この表の中だけ
-create or replace function public.alf_visits_tidy()
-returns trigger language plpgsql security definer set search_path = public as $$
-begin
-  if random() < 0.01 then
-    delete from public.assistant_life_friend_visits
-      where day < (now() at time zone 'Asia/Tokyo' - interval '4 hours')::date - 8;
-  end if;
-  return null;
-end $$;
-revoke all on function public.alf_visits_tidy() from public, anon, authenticated;
-drop trigger if exists alf_visits_tidy on public.assistant_life_friend_visits;
-create trigger alf_visits_tidy after insert on public.assistant_life_friend_visits
-  for each statement execute function public.alf_visits_tidy();
+-- 8日たった行の片づけは入れない(2026-11-08 窓口: 中に delete がある関数は確認の質問で止まるため)。端末は7日分しか読まない
 
 -- ③ 権限(読む・足す・控えの上書き・お礼の列だけ。消す権限は無し)
 alter table public.assistant_life_friend_switch enable row level security;
