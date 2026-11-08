@@ -1,0 +1,62 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>助手のマスモン案</title><style>
+:root{--ink:#f8fafc;--sub:#cbd5e1}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f172a;color:var(--ink);font-family:"Hiragino Maru Gothic ProN","M PLUS Rounded 1c","Noto Sans JP",sans-serif;padding:16px}
+h1{font-size:20px;font-weight:900}.lead{font-size:12px;color:var(--sub);margin:4px 0 12px;line-height:1.5}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:760px}
+.card{background:#1e1b4b;border:2px solid #334155;border-radius:16px;padding:10px 12px}
+.hd{display:flex;align-items:center;gap:8px}.hd img{width:40px;height:40px;border-radius:50%;object-fit:cover;object-position:50% 8%;background:#fff;border:2px solid #fff}
+.hd b{font-size:17px}.hd small{margin-left:auto;font-size:10.5px;color:#fde68a;font-weight:900;white-space:nowrap}
+.mons{display:flex;gap:6px;margin-top:8px}
+.mon{flex:1;background:#0b1020;border-radius:10px;padding:5px;text-align:center;position:relative;min-width:0}
+.mon img{width:100%;height:58px;object-fit:contain;background:radial-gradient(circle,#cbd5e1 0,#64748b 70%);border-radius:8px}
+.mon b{display:block;font-size:12px;white-space:nowrap}.mon i{display:block;font-style:normal;font-size:9.5px;color:#94a3b8;white-space:nowrap}
+.mon .ld{position:absolute;left:4px;top:4px;font-size:9px;font-weight:900;background:#f472b6;border-radius:6px;padding:0 4px}
+.row{margin-top:6px;font-size:11px;line-height:1.45;display:flex;gap:6px}.row .k{flex:none;width:44px;font-weight:900}.row .v{flex:1}.nw{white-space:nowrap}
+.lk{color:#86efac}.ds{color:#fca5a5}.dk{color:#fde68a}
+.chip{display:inline-block;white-space:nowrap;margin-right:6px}
+.later{font-size:10px;color:#94a3b8;margin-top:4px}
+</style></head><body>
+<h1>助手のマスモン一覧・編成・デッキ・好きな血統と苦手な血統(案)</h1>
+<p class="lead" style="width:760px">モンスターは実装済み(ALL_PLAYER_MONSTERS)からだけ。1人3体・🅿先頭が編成の先頭。ニックネームは助手が付けた名前の案。好き・苦手は血統ごと(持っているマスモンの血統は好きに入る)。数字(スコア・ランキング・強さ)には効かせません。</p>
+<div class="grid"><div class="card"><div class="hd"><img src="../../../../monster-hero/images/assistant/myua_happy.PNG" alt=""><b>みゅあ</b><small>🃏 キラキラ速攻</small></div>
+<div class="mons"><div class="mon"><span class="ld">先頭</span><img src="../../../../monster-hero/images/monsters/mocchi.png" alt=""><b>もちぷる</b><i>モッチー</i></div><div class="mon"><img src="../../../../monster-hero/images/monsters/pixie.png" alt=""><b>ぴくりん</b><i>ピクシー</i></div><div class="mon"><img src="../../../../monster-hero/images/monsters/mel-whip.png" alt=""><b>ほいっぷちゃん</b><i>メルホイップ</i></div></div>
+<p class="row lk"><span class="k">💗 好き</span><span class="v"><span class="chip">モッチー</span><span class="chip">ピクシー</span><span class="chip">ユグドラシル</span></span></p>
+<p class="row ds"><span class="k">💦 苦手</span><span class="v"><span class="chip">ゴースト</span><span class="chip">モノリス</span><span class="chip">ゴーレム</span></span></p>
+<p class="row dk"><span class="k">🃏 方針</span><span class="v"><span class="nw">軽いカードを早く並べて、</span><wbr><span class="nw">先に押し切る。</span><wbr><span class="nw">ノリで決めて、</span><wbr><span class="nw">勝てたらはしゃぐ</span></span></p>
+</div><div class="card"><div class="hd"><img src="../../../../monster-hero/images/assistant/kiki_happy.PNG" alt=""><b>きき</b><small>🃏 ずっしり火力</small></div>
+<div class="mons"><div class="mon"><span class="ld">先頭</span><img src="../../../../monster-hero/images/monsters/golem.png" alt=""><b>ごろべえ</b><i>ゴーレム</i></div><div class="mon"><img src="../../../../monster-hero/images/monsters/plant.PNG" alt=""><b>おちゃば</b><i>プラント</i></div><div class="mon"><img src="../../../../monster-hero/images/monsters/undine.PNG" alt=""><b>しずく</b><i>ウンディーネ</i></div></div>
+<p class="row lk"><span class="k">💗 好き</span><span class="v"><span class="chip">ゴーレム</span><span class="chip">プラント</span><span class="chip">ウンディーネ</span></span></p>
+<p class="row ds"><span class="k">💦 苦手</span><span class="v"><span class="chip">ハム</span><span class="chip">スエゾー</span><span class="chip">ライガー</span></span></p>
+<p class="row dk"><span class="k">🃏 方針</span><span class="v"><span class="nw">守って耐えて、</span><wbr><span class="nw">ちからの高いモンスターで一撃。</span><wbr><span class="nw">数字よりも火力を信じる</span></span></p>
+</div><div class="card"><div class="hd"><img src="../../../../monster-hero/images/assistant/momosuke_happy.PNG" alt=""><b>ももすけ</b><small>🃏 ステージ・オン</small></div>
+<div class="mons"><div class="mon"><span class="ld">先頭</span><img src="../../../../monster-hero/images/monsters/melody.png" alt=""><b>メロちゃん</b><i>メロディー</i></div><div class="mon"><img src="../../../../monster-hero/images/monsters/mia.PNG" alt=""><b>みあみあ</b><i>ミーア</i></div><div class="mon"><img src="../../../../monster-hero/images/monsters/ham.png" alt=""><b>ハムっち</b><i>ハム</i></div></div>
+<p class="row lk"><span class="k">💗 好き</span><span class="v"><span class="chip">ユグドラシル</span><span class="chip">ピクシー</span><span class="chip">ハム</span></span></p>
+<p class="row ds"><span class="k">💦 苦手</span><span class="v"><span class="chip">モノリス</span><span class="chip">プラント</span><span class="chip">ウンディーネ</span></span></p>
+<p class="row dk"><span class="k">🃏 方針</span><span class="v"><span class="nw">派手なカードで盛り上げる。</span><wbr><span class="nw">勝っても負けても見せ場を作る</span></span></p>
+<p class="later">あとで: メタルナー(実装されたら4体目に)</p></div><div class="card"><div class="hd"><img src="../../../../monster-hero/images/assistant/dra_happy.PNG" alt=""><b>ドラ</b><small>🃏 のんびり長期戦</small></div>
+<div class="mons"><div class="mon"><span class="ld">先頭</span><img src="../../../../monster-hero/images/monsters/suezo.png" alt=""><b>メダマ焼き</b><i>スエゾー</i></div><div class="mon"><img src="../../../../monster-hero/images/monsters/oboro.png" alt=""><b>おぼろん</b><i>オボロゲソウ</i></div><div class="mon"><img src="../../../../monster-hero/images/monsters/mitarashi.png" alt=""><b>みたらしくん</b><i>ミタラシ</i></div></div>
+<p class="row lk"><span class="k">💗 好き</span><span class="v"><span class="chip">スエゾー</span><span class="chip">プラント</span><span class="chip">モッチー</span></span></p>
+<p class="row ds"><span class="k">💦 苦手</span><span class="v"><span class="chip">ライガー</span><span class="chip">ザン</span><span class="chip">アーク</span></span></p>
+<p class="row dk"><span class="k">🃏 方針</span><span class="v"><span class="nw">あわてず守って、</span><wbr><span class="nw">長い試合で少しずつ削る。</span><wbr><span class="nw">説明しながら打つ</span></span></p>
+<p class="later">あとで: グジラ(実装されたら4体目に)</p></div><div class="card"><div class="hd"><img src="../../../../monster-hero/images/assistant/atsu_happy.PNG" alt=""><b>あつ</b><small>🃏 真っ向勝負</small></div>
+<div class="mons"><div class="mon"><span class="ld">先頭</span><img src="../../../../monster-hero/images/monsters/tiger.png" alt=""><b>ライ</b><i>ライガー</i></div><div class="mon"><img src="../../../../monster-hero/images/monsters/kenshi-mocchi.png" alt=""><b>師匠</b><i>剣士モッチー</i></div><div class="mon"><img src="../../../../monster-hero/images/monsters/zan.png" alt=""><b>ザンくん</b><i>ザン</i></div></div>
+<p class="row lk"><span class="k">💗 好き</span><span class="v"><span class="chip">ライガー</span><span class="chip">ザン</span><span class="chip">モッチー</span></span></p>
+<p class="row ds"><span class="k">💦 苦手</span><span class="v"><span class="chip">プラント</span><span class="chip">イルミネ</span><span class="chip">ハム</span></span></p>
+<p class="row dk"><span class="k">🃏 方針</span><span class="v"><span class="nw">強いモンスターで正面から。</span><wbr><span class="nw">小細工はしない。</span><wbr><span class="nw">負けたらすぐ再戦</span></span></p>
+<p class="later">あとで: ドラゴン(実装されたら4体目に)</p></div><div class="card"><div class="hd"><img src="../../../../monster-hero/images/assistant/kyuko_happy.PNG" alt=""><b>きゅうこ</b><small>🃏 夜の読み筋</small></div>
+<div class="mons"><div class="mon"><span class="ld">先頭</span><img src="../../../../monster-hero/images/monsters/illumine.png" alt=""><b>ともしび</b><i>イルミネ</i></div><div class="mon"><img src="../../../../monster-hero/images/monsters/dreamy.png" alt=""><b>ゆめの</b><i>ドリーミィ</i></div><div class="mon"><img src="../../../../monster-hero/images/monsters/kuromy.png" alt=""><b>よる</b><i>クロミー</i></div></div>
+<p class="row lk"><span class="k">💗 好き</span><span class="v"><span class="chip">イルミネ</span><span class="chip">ユグドラシル</span><span class="chip">キュービ</span></span></p>
+<p class="row ds"><span class="k">💦 苦手</span><span class="v"><span class="chip">ライガー</span><span class="chip">スエゾー</span><span class="chip">ハム</span></span></p>
+<p class="row dk"><span class="k">🃏 方針</span><span class="v"><span class="nw">相手の手を読んで、</span><wbr><span class="nw">最後にひっくり返す。</span><wbr><span class="nw">数字と直感の両方で決める</span></span></p>
+<p class="later">あとで: ニャー(実装されたら4体目に)</p></div><div class="card"><div class="hd"><img src="../../../../monster-hero/images/assistant/sorashido_happy.PNG" alt=""><b>ソラシド</b><small>🃏 計算ずく</small></div>
+<div class="mons"><div class="mon"><span class="ld">先頭</span><img src="../../../../monster-hero/images/monsters/kyubi.png" alt=""><b>コン太</b><i>キュービ</i></div><div class="mon"><img src="../../../../monster-hero/images/monsters/orihime.png" alt=""><b>ヒメ</b><i>オリヒメ</i></div><div class="mon"><img src="../../../../monster-hero/images/monsters/monol.png" alt=""><b>ソロバン</b><i>モノリス</i></div></div>
+<p class="row lk"><span class="k">💗 好き</span><span class="v"><span class="chip">キュービ</span><span class="chip">モノリス</span><span class="chip">アーク</span></span></p>
+<p class="row ds"><span class="k">💦 苦手</span><span class="v"><span class="chip">ゴースト</span><span class="chip">プラント</span><span class="chip">ピクシー</span></span></p>
+<p class="row dk"><span class="k">🃏 方針</span><span class="v"><span class="nw">記録から勝ち筋を決めて、</span><wbr><span class="nw">その通りに打つ。</span><wbr><span class="nw">表は毎晩書き直す</span></span></p>
+</div><div class="card"><div class="hd"><img src="../../../../monster-hero/images/assistant/erubin_happy.PNG" alt=""><b>えるびん</b><small>🃏 みんなで守る</small></div>
+<div class="mons"><div class="mon"><span class="ld">先頭</span><img src="../../../../monster-hero/images/monsters/ark.png" alt=""><b>ノア</b><i>アーク</i></div><div class="mon"><img src="../../../../monster-hero/images/monsters/yggdrasil.png" alt=""><b>こかげ</b><i>ユグドラシル</i></div><div class="mon"><img src="../../../../monster-hero/images/monsters/ghost.png" alt=""><b>ふわり</b><i>ゴースト</i></div></div>
+<p class="row lk"><span class="k">💗 好き</span><span class="v"><span class="chip">アーク</span><span class="chip">ユグドラシル</span><span class="chip">ゴースト</span></span></p>
+<p class="row ds"><span class="k">💦 苦手</span><span class="v"><span class="chip">ザン</span><span class="chip">ライガー</span><span class="chip">ゴーレム</span></span></p>
+<p class="row dk"><span class="k">🃏 方針</span><span class="v"><span class="nw">仲間を守るカードを多めに。</span><wbr><span class="nw">ひとりも倒れさせないで勝つ</span></span></p>
+<p class="later">あとで: デュラハン(実装されたら4体目に)</p></div></div></body></html>
