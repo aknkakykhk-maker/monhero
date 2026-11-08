@@ -72,7 +72,8 @@ const cutProblems = (page, sel) => page.evaluate((s) => {
       // ① 道具タブ
       await page.locator('[data-assistant-life-icon="items"]').click(); await page.waitForTimeout(300);
       const items = await page.locator('[data-assistant-life-items]').innerText().catch(() => '');
-      check(`① ${tag}: 道具タブに友情Lv・仲良し度の説明と交換所の入口が出る`, /友情Lv=贈った2人の助手どうしの仲/.test(items) && /仲良し度=あなたとその助手の仲/.test(items) && (await page.locator('[data-assistant-life-items] [data-assistant-life-shop="item"]').count()) >= 2, items.replace(/\s+/g, ' ').slice(0, 80));
+      // 2026-11-08 買って贈る: 持っていない行は「🛒 ◯P で買って贈る」(一緒にいる組がいないときは交換所の入口)。下の交換所の入口はいつもある
+      check(`① ${tag}: 道具タブに友情Lv・仲良し度の説明と交換所の入口が出る`, /友情Lv=贈った2人の助手どうしの仲/.test(items) && /仲良し度=あなたとその助手の仲/.test(items) && (await page.locator('[data-assistant-life-items] [data-assistant-life-shop="item"], [data-assistant-life-items] [data-assistant-life-item-buy]').count()) >= 2, items.replace(/\s+/g, ' ').slice(0, 80));
       // 右上の時計の札が右端で切れない(🔄横 667 の狭い欄・2026-11-08 ミハリ)
       const clockOk = await page.evaluate(() => { const c = [...document.querySelectorAll('[data-assistant-life-clock-box] [data-time-of-day-clock]')].find(x => x.getClientRects().length); if (!c) return true; const r = c.getBoundingClientRect(); let p = c.parentElement; while (p && getComputedStyle(p).overflow === 'visible') p = p.parentElement; const pr = p ? p.getBoundingClientRect() : { right: innerWidth }; return r.right <= Math.min(innerWidth, pr.right) + 1; });
       check(`③ ${tag}: 右上の時計の札が右端で切れない`, clockOk);
@@ -99,7 +100,8 @@ const cutProblems = (page, sel) => page.evaluate((s) => {
         if (SHOTS) await page.screenshot({ path: path.join(shotDir, `${file}-2-sheet.png`) });
         // 持っていない道具を選ぶと「🛒 交換所で手に入れる」
         await page.locator('[data-assistant-life-give-kind="onigiri"]').click().catch(() => {}); await page.waitForTimeout(200);
-        check(`④ ${tag}: 持っていない道具を選ぶと、贈るシートに交換所の入口が出る`, (await page.locator('[data-assistant-life-give-sheet] [data-assistant-life-shop="item"]').count()) === 1);
+        // 2026-11-08 買って贈る: 贈れる道具なら「🛒 ◯P で買って贈る」、買えないときは交換所の入口
+        check(`④ ${tag}: 持っていない道具を選ぶと、贈るシートに交換所の入口(か「買って贈る」)が出る`, (await page.locator('[data-assistant-life-give-sheet] [data-assistant-life-shop="item"], [data-assistant-life-give-sheet] [data-assistant-life-give-buy]').count()) === 1);
         if (SHOTS) await page.screenshot({ path: path.join(shotDir, `${file}-3-sheet-none.png`) });
         await page.locator('[data-assistant-life-give-cancel]').click().catch(() => {}); await page.waitForTimeout(200);
       } else check(`② ${tag}: 贈るシートが開く`, false);
