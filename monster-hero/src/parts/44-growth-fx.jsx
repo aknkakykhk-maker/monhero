@@ -206,6 +206,7 @@ const growthFxSessionLevel = (list = []) => {
 // ---------- 見た目 ----------
 const GROWTH_FX_CSS = `
 .mh-gfx-chips{position:fixed;top:calc(env(safe-area-inset-top,0px) + 52px);right:10px;z-index:44000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
+.mh-gfx-chips.mini .mh-gfx-chip>.min-w-0{display:none}.mh-gfx-chips.mini .mh-gfx-chip{padding:3px 8px 3px 4px;gap:4px}
 .mh-gfx-chip{position:relative;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;border-radius:999px;background:linear-gradient(90deg,#1e1b2ef0,#0f172af0);
   border:1.5px solid var(--gc);box-shadow:0 0 14px color-mix(in srgb,var(--gc) 40%,transparent);font-weight:900;font-size:11px;color:#fff;
   animation:mhGfxChipIn .35s cubic-bezier(.2,1.6,.4,1) both}
@@ -479,6 +480,44 @@ const GrowthFxLevelUp = ({ sheet, level, onClose }) => {
   );
 };
 
+// 小さな札の置き場所(2026-11-08 窓口「通知が下の文字を隠さない位置に」)。右上のいつもの高さ(52px)で、下に文字やボタンがあれば、
+//   上の帯(8px)→ 少し下(96・140px)→ 下のほう の順に、下に文字もボタンもない高さを探して置く。どこも空いていなければいつもの高さ
+const GROWTH_FX_CHIP_TOPS = [52, 8, 96, 140];
+const growthFxChipSpotBusy = (box) => {
+  if (typeof document === 'undefined' || !document.elementsFromPoint) return false;
+  const r = box.getBoundingClientRect();
+  for (const fx of [0.15, 0.5, 0.85]) for (const fy of [0.25, 0.75]) {
+    const x = r.left + r.width * fx, y = r.top + r.height * fy;
+    const under = document.elementsFromPoint(x, y).find(el => !box.contains(el));
+    if (!under) continue;
+    if (under.closest('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]')) return true;
+    if ([...under.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return true;
+  }
+  return false;
+};
+//   どの高さも下に文字・ボタンがあるとき(マーケットなど詰まった画面)は、名前とゲージを省いた小さな札(印と +数 だけ)にして、もう一度探す。
+//   画面は少しあとで組み替わる(吹き出しが出るなど)ので、出してから 0.5秒・1.5秒でも探し直す
+const GrowthFxChipsBox = ({ level, count, children }) => {
+  const ref = useRef(null);
+  React.useLayoutEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const place = () => {
+      const box = ref.current;
+      if (!box) return;
+      const tops = [...GROWTH_FX_CHIP_TOPS, Math.max(60, window.innerHeight - 120 - box.offsetHeight)];
+      for (const mini of [false, true]) {
+        box.classList.toggle('mini', mini);
+        for (const t of tops) { box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`; if (!growthFxChipSpotBusy(box)) { box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${t}`; return; } }
+      }
+      box.style.top = `calc(env(safe-area-inset-top, 0px) + ${GROWTH_FX_CHIP_TOPS[1]}px)`; box.dataset.growthFxChipsTop = 'mini-busy';
+    };
+    place();
+    const t1 = setTimeout(place, 500), t2 = setTimeout(place, 1500);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [count]);
+  return <div ref={ref} className={`mh-gfx-chips mh-gfx-${level}`} data-growth-fx-chips aria-live="polite">{children}</div>;
+};
+
 // 60-app.jsx に1つだけ置く。screen … いまの gameState / load … バトル設定「画面の軽さ」
 const GrowthFxLayer = ({ screen, load }) => {
   const [, setTick] = useState(0);
@@ -506,9 +545,9 @@ const GrowthFxLayer = ({ screen, load }) => {
   const sheet = !holdSheet ? sheets[0] : null;
   return (
     <>
-      {!holdAll && !sheet && small.length > 0 && <div className={`mh-gfx-chips mh-gfx-${level}`} data-growth-fx-chips aria-live="polite">
+      {!holdAll && !sheet && small.length > 0 && <GrowthFxChipsBox level={level} count={Math.min(small.length, GROWTH_FX_SMALL_MAX)}>
         {small.slice(0, GROWTH_FX_SMALL_MAX).map(c => <GrowthFxChip key={c.id} chip={c} level={level} held={false}/>)}
-      </div>}
+      </GrowthFxChipsBox>}
       {sheet && (sheet.tier === 'level'
         ? <GrowthFxLevelUp key={sheet.id} sheet={sheet} level={level} onClose={() => growthFxDropSheet(sheet.id)}/>
         : <GrowthFxItemCard key={sheet.id} sheet={sheet} level={level} onClose={() => growthFxDropSheet(sheet.id)}/>)}

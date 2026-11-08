@@ -119,10 +119,21 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 助手どうしの掛け合いの API 版(kind:'peer_talks')。中継役(assistant-chat)を窓口が配り、表 assistant_peer_talk_usage を作ってから
   //   マージする(2026-11-07 社長「この文で公開」・窓口の段取り)。偽にすると頼まず、台本版(ASSISTANT_PEER_TALKS)だけで流れる
   assistantPeerApi: true,
+  // 会話で決まる呼び方・助手へのあだ名(2026-11-08 社長・docs/progress/assistant-peer/AI-TALK-PLAN.md)。中継役(assistant-chat の call/nick 欄)を
+  //   窓口が配り、社長が更新履歴の文に「この文で」と言ってから真にする。偽のあいだは、カード・Lv6 の問いかけ・あだ名が出ず、呼び方は今までどおり
+  //   (保存してある呼び方 mh_assistant_callname_v1 は偽でも読む。プロフィールの入力欄で決めたものは偽でもそこへ入る)
+  assistantCallname: false,
   // 助手どうしの作り直し「助手たちの今」(2026-11-07 社長。設計 docs/progress/assistant-peer/LIFE-PLAN.md)。1人ずつが気分としたいことで
   //   だれと過ごすかを決める仕組み・にぎわい(遊んだ量で4段)・専用の画面。全部そろって社長が「この文で公開」と言ったら真にする。
   //   偽のあいだは、にぎわいを数えず、助手どうしの仲良くなり方も今のまま(56-assistant-life.jsx)
   assistantLife: true,
+  // 助手ライフの家具(段階B・2026-11-08 社長 GIFT-PLAN.md)。交換所の「家具」・部屋に置く・贈ったときの反応。社長の「この文で」が出るまで偽
+  assistantLifeFurniture: true, // 2026-11-08 社長「この文で」
+  // 助手ライフのフレンドの家との行き来(2026-11-08 社長・助手部オトズレ。設計 docs/progress/assistant-peer/FRIEND-VISIT-PLAN.md)。
+  //   表 assistant_life_friend_* を流し、画面を撮って確かめ、社長の「この文で」が出たら真にする。偽のあいだは通信もしない(56-assistant-life-friend.jsx)
+  assistantLifeFriend: true, // 2026-11-08 社長「この文で」・表を流した(窓口)
+  // その場面の台詞を Claude API で1日1回まとめて作る(assistant-chat の kind:'friend_scenes')。中継役を配ってから真にする。偽・thin・off・失敗のときは台本だけ
+  assistantLifeFriendApi: true, // 2026-11-08 assistant-chat v17(窓口が配った)を端末の形で1回呼んで確かめた。スイッチが thin/off のあいだは頼まない
   // モンヒロビートの助手とのセッション(2026-11-07 社長の決定・ビート部マモリ)。全部そろって社長の「この文で」が出るまで偽
   rhythmAssistantSession: true, // 2026-11-07 社長「この文で公開」
   // 7人目の助手ソラシド(2026-10-27 社長の決定)。絵・お話・お知らせがそろって、社長が「公開」と言ったら真にする。

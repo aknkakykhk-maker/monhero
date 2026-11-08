@@ -9,6 +9,7 @@
 //      好きと苦手の血統は重ならない/苦手なモンスター・その血統のマスモンは持たない
 //   ⑥ 成長と染色: Lv は 1〜100/染色はプレイヤーと同じ仕組み・同じ枠数(MASU_COLOR_REGION_HUES の部位数。書いていない種類は全身1枠)。
 //      どの種類も染められる(「染めない種類」は作らない)。色はゲームの色の名前(MASU_COLOR_TARGET の名前と _light)
+//   ⑦ 助手どうしで好き・苦手がかぶりすぎない(同じモンスター・血統は2人まで)・好きな色はゲームの色の名前
 //   ⑤ 「あとで加わる」(later)は、まだ実装されていないモンスターだけ(実装されたら一覧に入れ直す合図)
 'use strict';
 const fs = require('fs'), path = require('path');
@@ -57,20 +58,28 @@ for (const { name, data } of sources) {
   const T = `[${name}] `;
   check(`${T}8人ぶんある`, IDS.every(id => data.some(a => a.id === id)), data.map(a => a.id).join(','));
   const bad = [], teamNg = [], likeNg = [], laterNg = [], dyeNg = [];
+  const likeCount = {}, disCount = {};
   for (const a of data) {
     const team = a.team || [];
     for (const m of team) if (!IMPL.has(m.monster)) bad.push(`${a.id}:${m.monster}${upBlock.includes(`${m.monster}:`) ? '(まだ案のモンスター)' : ''}`);
     for (const l of [...(a.like || []), ...(a.dislike || [])]) if (!IMPL_LINEAGES.has(l.lineage)) bad.push(`${a.id}:血統 ${l.lineage}`);
     if (team.length !== 3 || team.filter(m => m.lead).length !== 1) teamNg.push(`${a.id}(${team.length}体・先頭${team.filter(m => m.lead).length})`);
     for (const m of team) if (!m.nick || m.nick.length > 8 || /子/.test(m.nick) || team.filter(x => x.nick === m.nick).length > 1) teamNg.push(`${a.id}:${m.nick || '名前なし'}`);
-    // 好き・苦手(モンスター単位)と、そこから広がる血統
-    const likeMon = (a.likeMon || []).map(x => x.monster), disMon = (a.dislikeMon || []).map(x => x.monster);
+    // 好き・苦手: モンスター単位か血統ごと(社長「ユグドラシル種」「アーク種」など)。モンスターの好き・苦手はその血統にも少し広がる
+    const likeMon = (a.likeMon || []).filter(x => x.monster).map(x => x.monster), disMon = (a.dislikeMon || []).filter(x => x.monster).map(x => x.monster);
+    const likeLin = (a.likeMon || []).filter(x => x.lineage).map(x => x.lineage), disLin = (a.dislikeMon || []).filter(x => x.lineage).map(x => x.lineage);
     for (const id of [...likeMon, ...disMon]) if (!IMPL.has(id)) bad.push(`${a.id}:好き/苦手 ${id}${upBlock.includes(`${id}:`) ? '(まだ案のモンスター)' : ''}`);
-    const like = new Set(likeMon.map(id => MAP.get(id))), dis = new Set(disMon.map(id => MAP.get(id)));
-    if (likeMon.length !== 3 || disMon.length !== 3) likeNg.push(`${a.id}(好き${likeMon.length}・苦手${disMon.length})`);
+    for (const l of [...likeLin, ...disLin]) if (!IMPL_LINEAGES.has(l)) bad.push(`${a.id}:好き/苦手の血統 ${l}`);
+    const like = new Set([...likeMon.map(id => MAP.get(id)), ...likeLin]), dis = new Set([...disMon.map(id => MAP.get(id)), ...disLin]);
+    const nl = (a.likeMon || []).length, nd = (a.dislikeMon || []).length;
+    if (nl < 1 || nl > 4 || nd > 4) likeNg.push(`${a.id}(好き${nl}・苦手${nd}。好きは1〜4・苦手は0〜4)`);
     for (const l of like) if (dis.has(l)) likeNg.push(`${a.id}:血統 ${l} が好きと苦手の両方に広がる`);
     for (const m of team) { const ln = MAP.get(m.monster); if (disMon.includes(m.monster) || dis.has(ln)) likeNg.push(`${a.id}:${m.nick}(${m.monster})が苦手なモンスター・血統`); }
-    if (!likeMon.includes((team.find(m => m.lead) || {}).monster)) likeNg.push(`${a.id}:先頭のマスモンが好きなモンスターに入っていない`);
+    const lead = (team.find(m => m.lead) || {}).monster;
+    if (!likeMon.includes(lead) && !likeLin.includes(MAP.get(lead))) likeNg.push(`${a.id}:先頭のマスモンが好きなモンスター・血統に入っていない`);
+    for (const c of (a.favColors || [])) if (!COLOR_IDS.has(c.color)) likeNg.push(`${a.id}:好きな色「${c.color}」はゲームの色の名前にない`);
+    for (const x of (a.likeMon || [])) { const k = x.monster || `種:${x.lineage}`; (likeCount[k] = likeCount[k] || []).push(a.id); }
+    for (const x of (a.dislikeMon || [])) { const k = x.monster || `種:${x.lineage}`; (disCount[k] = disCount[k] || []).push(a.id); }
     // 成長と染色
     for (const m of team) {
       if (!Number.isFinite(m.lv) || m.lv < 1 || m.lv > 100) dyeNg.push(`${a.id}:${m.nick} の Lv`);
@@ -86,8 +95,11 @@ for (const { name, data } of sources) {
   }
   check(`${T}① ② まだ実装されていないモンスター・血統が混ざっていない`, !bad.length, bad.join(' / '));
   check(`${T}③ 3体・先頭1体・ニックネーム`, !teamNg.length, teamNg.join(' / '));
-  check(`${T}④ 好き・苦手のモンスター3つずつ・広がる血統が重ならない・苦手なものは持たない`, !likeNg.length, likeNg.join(' / '));
+  check(`${T}④ 好き(1〜4)・苦手(0〜4)・広がる血統が重ならない・苦手なものは持たない・好きな色`, !likeNg.length, likeNg.join(' / '));
   check(`${T}⑥ 成長(Lv)と染色(プレイヤーと同じ枠数・ゲームの色)`, !dyeNg.length, dyeNg.join(' / '));
+  // ⑦ 助手どうしで好き・苦手がかぶりすぎない(同じモンスター・血統を好き/苦手に入れる助手は2人まで。社長「かぶりすぎない」)
+  const over = [...Object.entries(likeCount).filter(([, v]) => v.length > 2).map(([k, v]) => `好き ${k}: ${v.join('・')}`), ...Object.entries(disCount).filter(([, v]) => v.length > 2).map(([k, v]) => `苦手 ${k}: ${v.join('・')}`)];
+  check(`${T}⑦ 好き・苦手が助手どうしでかぶりすぎない(同じものは2人まで)`, !over.length, over.join(' / '));
   check(`${T}⑤ 「あとで加わる」は、まだ実装されていないモンスターだけ`, !laterNg.length, laterNg.join(' / '));
 }
 console.log(failed ? `\nNG が ${failed} 件` : '\nすべてOK');

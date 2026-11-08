@@ -81,8 +81,9 @@ const unit = async (core) => {
     check('① 全員の1日の上限は2,000往復・1人は100回(2026-10-14 社長の決定)', core.TOTAL_DAILY_LIMIT === 2000 && core.USER_DAILY_LIMIT === 100);
     check('① thinking を切り、effort は low(Haiku 5.5 は high 以下なら切れる)', p.thinking && p.thinking.type === 'disabled' && p.output_config && p.output_config.effort === 'low');
     const schema = p.output_config && p.output_config.format && p.output_config.format.schema;
-    check('① 構造化出力(json_schema)で reply・expression・memo を受け取る', p.output_config.format.type === 'json_schema'
-      && JSON.stringify(schema.required) === JSON.stringify(['reply', 'expression', 'memo']) && schema.additionalProperties === false);
+    // 2026-11-08 呼び方(call)・助手へのあだ名(nick)・好みの手がかり(taste)の欄を足した(AI-TALK-PLAN。呼び出しは増やさない)
+    check('① 構造化出力(json_schema)で reply・expression・memo・call・nick・taste を受け取る', p.output_config.format.type === 'json_schema'
+      && JSON.stringify(schema.required) === JSON.stringify(['reply', 'expression', 'memo', 'call', 'nick', 'taste']) && schema.additionalProperties === false);
     check('① 思い出メモは6つの欄(好きなもの・目標・あったこと・話題・あらすじ・ないしょの話 2026-11-07)', JSON.stringify(schema.properties.memo.required) === JSON.stringify(['likes', 'goals', 'events', 'topics', 'summary', 'secret']) && schema.properties.memo.additionalProperties === false);
     check('① max_tokens は、10行くらいの返事とメモが入る長さ', p.max_tokens >= 800 && p.max_tokens <= 1500, String(p.max_tokens));
     const msgs = p.messages || [];
@@ -300,6 +301,50 @@ const unit = async (core) => {
     check('㉖ 上限のときは Claude を呼ばずに tired', r3.json.kind === 'tired' && client.calls.length === 1);
     const r4 = await core.handleRequest({ body: { kind: 'peer_talks', breederId: 'b1', pairs: [{ a: 'mua', b: 'mua' }] }, digest: DIGEST, client, take: async () => ({ ok: true }), refund: async () => {}, takePeer, refundPeer });
     check('㉖ ペアが無い頼みは 400', r4.status === 400);
+  }
+  // ㉗ 助手ライフのフレンドの家の場面(kind:'friend_scenes'・2026-11-08 社長「最初から Claude API で」)。おしゃべりと同じ表('friend:' の頭)・全員の上限を分け合う
+  {
+    const pairs = [{ kind: 'go', a: 'mua', b: 'dra' }, { kind: 'come', a: 'kiki', b: 'mua' }, { kind: 'go', a: 'mua', b: 'mua' }, { kind: 'go', a: 'mua', b: 'nobody' }, { kind: 'fly', a: 'mua', b: 'kiki' }];
+    const good = { scenes: [
+      { kind: 'go', a: 'mua', b: 'dra', lines: [{ side: 'a', e: 'happy', t: '{f}、遊びに来たよ♪ {h}の家まぢかわいいぢゃん！' }, { side: 'b', e: 'happy', t: 'よく来たな。おやつあるぞ' }] },
+      { kind: 'come', a: 'kiki', b: 'mua', lines: [{ side: 'b', e: 'happy', t: '{h}さんちから来たよ♪' }, { side: 'a', e: 'happy', t: 'いらっしゃいませ。{name}もよろこびます♪' }] },
+      { kind: 'go', a: 'mua', b: 'mua', lines: [{ side: 'a', e: 'surprise', t: 'もうひとりのあたし！？' }, { side: 'b', e: 'happy', t: 'まぢ！？' }] },
+      { kind: 'go', a: 'mua', b: 'dra', lines: [{ side: 'a', e: 'happy', t: '3回目だね' }, { side: 'b', e: 'happy', t: 'そうだな' }] },
+      { kind: 'come', a: 'kiki', b: 'mua', lines: [{ side: 'a', e: 'happy', t: '{f}とデートでつ' }, { side: 'b', e: 'happy', t: 'えっ' }] },
+      { kind: 'go', a: 'kiki', b: 'dra', lines: [{ side: 'a', e: 'happy', t: '頼んでいない組' }, { side: 'b', e: 'happy', t: 'はい' }] },
+      { kind: 'go', a: 'mua', b: 'mua', lines: [{ side: 'a', e: 'happy', t: '{x}の穴' }, { side: 'b', e: 'happy', t: 'はい' }] },
+    ] };
+    const calls = [];
+    const take = async (id, u, t) => { calls.push(['take', id, u, t]); return { ok: true, remaining: 2 }; };
+    const refund = async (id) => { calls.push(['refund', id]); };
+    const client = fakeClient(() => okResponse(good));
+    const r = await core.handleRequest({ body: { kind: 'friend_scenes', breederId: 'b1', pairs }, digest: DIGEST, client, take, refund, takePeer: async () => { throw new Error('掛け合いの表を使った'); }, friendUsed: async () => 0, limits: { total: 2000, friendTotal: 1000 } });
+    const p = client.calls[0] || {};
+    check('㉗ friend_scenes はおしゃべりと同じ表で friend: を付けて数え、1人1日3回・全員の上限はおしゃべりと同じ', calls[0] && calls[0][1] === 'friend:b1' && calls[0][2] === 3 && calls[0][3] === 2000 && core.FRIEND_USER_LIMIT === 3);
+    check('㉗ モデルは同じ・thinking を切る・構造化出力・system は決まり/ヘルプ/助手たち', p.model === 'claude-haiku-5-5' && p.thinking && p.thinking.type === 'disabled' && p.output_config.format.type === 'json_schema' && (p.system || []).length === 3 && /フレンド/.test(p.system[0].text));
+    const ask = JSON.stringify(p.messages || []);
+    check('㉗ 頼みは組の id だけ(呼び名・ブリーダーIDを送らない)・知らない助手と種類は捨てる', /kind=go a=mua/.test(ask) && /kind=come a=kiki/.test(ask) && !/nobody|fly|b1/.test(ask));
+    const sc = r.json.scenes || [];
+    check('㉗ 正しい3本だけ残る(数字・恋愛・頼んでいない組・知らない穴・同じ組の2本目は捨てる)', r.json.ok === true && r.json.kind === 'friend_scenes' && sc.length === 3, JSON.stringify(sc));
+    check('㉗ {h} の後ろに「さん」を付けそろえる', sc[0] && sc[0].lines[0].t.includes('{h}さんの家'));
+    const empty = fakeClient(() => okResponse({ scenes: [] }));
+    calls.length = 0;
+    const r2 = await core.handleRequest({ body: { kind: 'friend_scenes', breederId: 'b1', pairs }, digest: DIGEST, client: empty, take, refund, friendUsed: async () => 0 });
+    check('㉗ 1本も作れなかったら回数を戻し sorry(ゲームは台本で出す)', r2.json.ok === false && calls.some(c => c[0] === 'refund' && c[1] === 'friend:b1'));
+    const before = client.calls.length;
+    const r3 = await core.handleRequest({ body: { kind: 'friend_scenes', breederId: 'b1', pairs }, digest: DIGEST, client, take: async () => ({ ok: false, reason: 'total' }), refund, friendUsed: async () => 0 });
+    const r4 = await core.handleRequest({ body: { kind: 'friend_scenes', breederId: 'b1', pairs }, digest: DIGEST, client, take, refund, friendUsed: async () => 1000, limits: { friendTotal: 1000 } });
+    const r5 = await core.handleRequest({ body: { kind: 'friend_scenes', breederId: 'b1', pairs }, digest: DIGEST, client, take, refund, limits: { friendTotal: 0 } });
+    const r6 = await core.handleRequest({ body: { kind: 'friend_scenes', breederId: 'b1', pairs }, digest: DIGEST, client, take, refund, friendUsed: async () => { throw new Error('x'); } });
+    check('㉗ 全員の上限・専用の上限(ASSISTANT_FRIEND_DAILY_LIMIT)・0 で止める・数えられないときは Claude を呼ばずに tired', [r3, r4, r5, r6].every(x => x.json.kind === 'tired') && client.calls.length === before);
+    const r7 = await core.handleRequest({ body: { kind: 'friend_scenes', breederId: 'b1', pairs: [{ kind: 'go', a: 'x', b: 'y' }] }, digest: DIGEST, client, take, refund });
+    check('㉗ 組が無い頼みは 400', r7.status === 400);
+    const tone = core.friendLineTone;
+    check('㉗ 口調の見張り: みゅあの じゃん/まじ→ぢゃん/まぢ・あつの文末・ドラの関西弁・ききのタメ口・ほかの助手の ぢゃん', tone('mua', 'それ椅子じゃん、まじで') === 'それ椅子ぢゃん、まぢで' && tone('atsu', 'いらっしゃい') === null && tone('atsu', 'いらっしゃい笑') === 'いらっしゃい笑' && tone('dra', 'ほんまによう来たな') === null && tone('kiki', 'うれしいだよ') === null && tone('sorashido', 'いいぢゃん') === null);
+    { const bad = fakeClient(() => okResponse({ scenes: [{ kind: 'go', a: 'mua', b: 'dra', lines: [{ side: 'a', e: 'happy', t: '来たよ♪' }, { side: 'b', e: 'happy', t: 'おでの膝、いまならあいてるぞ' }] }] }));
+      const r8 = await core.handleRequest({ body: { kind: 'friend_scenes', breederId: 'b1', pairs }, digest: DIGEST, client: bad, take, refund, friendUsed: async () => 0 });
+      check('㉗ 体に触れる話(膝など)の場面は捨てる', r8.json.ok === false); }
+    check('㉗ 決まりの文に、助手ごとの必ず守ること・体に触れない・見本が入っている', /必ず守ること/.test(core.FRIEND_RULES_TEXT) && /ぢゃん/.test(core.FRIEND_RULES_TEXT) && /体に触れる話をしない/.test(core.FRIEND_RULES_TEXT) && /見本/.test(core.FRIEND_RULES_TEXT));
   }
   // ⑰ ふだんの吹き出しを1日1回まとめて作る(kind:'daily_lines'・2026-10-14)
   {

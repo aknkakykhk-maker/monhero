@@ -2,6 +2,8 @@
 //   after  … 対戦後のひとこと(1試合に1回)
 //   moment … バトル中の山場のひとこと(大技・KO・残り1体・逆転。手は今のAIが決める)
 //   deck   … デッキ相談(デッキ編成の画面から。勧めるカードは、送られてきた一覧の中で入れられるものだけ)
+//   deckPlan … 助手のデッキを AI で組む(2026-11-08 社長の決定)。返すのは名前・ひとこと・優先するカード・場のカード・くせの数だけ。
+//              カードを選ぶのは候補の中から、くせの数はゲームが送った幅の中へ丸める。名前・ひとことは言葉の見張りを通す
 // index.ts(Deno の入口)から呼ぶ。Claude のクライアントと回数の数え方は外から渡すので、
 // 検査(tools/card/card-assistant-talk-check.js)は偽物を渡して、本番の API を叩かずに確かめられる。
 // 書き方は助手とおしゃべり(supabase/functions/assistant-chat)にそろえた。あちらの中身と回数の上限には触らない。
@@ -11,21 +13,26 @@
 // ★仕様: docs/spec/CARD_ASSISTANT_TALK.md
 
 export const MODEL = 'claude-haiku-5-5';
-export const KINDS = Object.freeze(['after', 'moment', 'deck']);
-// 回数は「ひとこと(after と moment)」と「デッキ相談(deck)」に分けて数える
-export const bucketOf = (kind) => (kind === 'deck' ? 'deck' : 'talk');
+export const KINDS = Object.freeze(['after', 'moment', 'deck', 'deckPlan']);
+// 回数は「ひとこと(after と moment)」「デッキ相談(deck)」「デッキを組む(deckPlan)」に分けて数える。
+//   deckPlan は別の表(card_deck_plan_usage)で、全員の合計もほかと混ぜずに数える(index.ts が数える関数を分ける)
+export const bucketOf = (kind) => (kind === 'deck' ? 'deck' : kind === 'deckPlan' ? 'plan' : 'talk');
 // 1端末1日・全員合計1日の上限(2026-10-25 社長が案どおりに決めた。Secrets で上書きできる)
 export const USER_TALK_DAILY_LIMIT = 150;
 export const USER_DECK_DAILY_LIMIT = 10;
 export const TOTAL_DAILY_LIMIT = 2000;
+// デッキを組む(deckPlan): 全員合わせて1日100回(2026-11-08 社長の決定)。1人1日は 40回(8人 ×(はじめの3回+10対戦ごと)を見て)。
+//   Secrets の CARD_DECK_PLAN_TOTAL_DAILY_LIMIT・CARD_DECK_PLAN_USER_DAILY_LIMIT で上書きできる
+export const USER_PLAN_DAILY_LIMIT = 40;
+export const PLAN_TOTAL_DAILY_LIMIT = 100;
 // 返事の長さ(社長「短く」40〜60字)。デッキ相談は理由をつけるので少し長め
 export const TALK_MAX_CHARS = 80;
 export const DECK_TEXT_MAX_CHARS = 200;
 export const DECK_PICK_MAX = 6;
 export const DECK_PICK_REASON_MAX = 30;
-export const MAX_TOKENS = Object.freeze({ after: 300, moment: 200, deck: 900 });
+export const MAX_TOKENS = Object.freeze({ after: 300, moment: 200, deck: 900, deckPlan: 700 });
 // 1回の待ち時間(ゲームはもっと短く待つ。山場は2.5秒で見切る)。やり直しはしない
-export const TIMEOUT_MS = Object.freeze({ after: 8000, moment: 4000, deck: 15000 });
+export const TIMEOUT_MS = Object.freeze({ after: 8000, moment: 4000, deck: 15000, deckPlan: 15000 });
 // 受け取る大きさ
 export const MAX_BODY_CHARS = 40000;
 export const MAX_SAMPLES = 6;
@@ -33,6 +40,16 @@ export const MAX_SAMPLE_CHARS = 60;
 export const MAX_NAME_CHARS = 20;
 export const MAX_DECK_CARDS = 200;
 export const MAX_CARD_TEXT_CHARS = 90;
+// デッキを組む(deckPlan)の形
+export const PLAN_STYLES = Object.freeze(['attack', 'guard', 'normal']);
+export const PLAN_HABITS = Object.freeze(['big', 'saveGuts', 'keepGuard']);
+export const PLAN_NAME_MAX = 12;       // デッキの名前
+export const PLAN_LINE_MAX = 60;       // 助手のひとこと(40字くらいを頼み、60字で切る)
+export const PLAN_FIELD_MAX = 2;       // 場のカード
+export const PLAN_PREFER_RANGE = Object.freeze([5, 8]); // 優先するカードの枚数(ゲームが幅を送らなければこれ)
+export const PLAN_HABIT_LIMIT = Object.freeze([0, 5]);  // くせの数の幅の外枠(ゲームの幅もこの中に丸める)
+export const MAX_PLAN_FIELDS = 30;
+export const MAX_FAVORITES = 5;
 
 export const DIGEST_URL = 'https://aknkakykhk-maker.github.io/monhero/monster-hero/data/assistant-chat-digest.json';
 export const DEFAULT_ALLOWED_ORIGINS = ['https://aknkakykhk-maker.github.io'];
@@ -42,6 +59,43 @@ const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 // ゲームが付ける印やかっこを取り除く(名前やカードの文に命令が入っていても、ただの文字として扱う)
 const clean = (v, n) => str(v, n * 2).replace(/<\/?[^>]{0,40}>/g, '').replace(/[\r\n]+/g, ' ').trim().slice(0, n);
 const int = (v, lo, hi, d = 0) => { const n = Number(v); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, Math.floor(n))) : d; };
+
+// ---- 言葉の見張り(deckPlan の名前とひとこと) ----
+// ゲームに出してはいけない言葉は、マルチ対戦のチャット(91-card-battle-multi.jsx の CARD_CHAT_NG・CARD_CHAT_OK)と同じ。
+//   ゲームの表を直したら、ここも同じに直す(tools/card/card-assistant-talk-check.js が同じかを見る)
+export const WORD_NG = Object.freeze([
+  'しね', 'ころす', 'ころせ', 'きえろ', 'ばか', 'あほ', 'まぬけ', 'ざこ', 'きもい', 'きもち悪', 'うざい', 'ぶす', 'でぶ',
+  'がいじ', 'ちしょう', 'ちんこ', 'ちんぽ', 'まんこ', 'せっくす', 'えっち', 'おっぱい', 'れいぷ', 'ふぁっく',
+  '死ね', '殺す', '殺せ', '馬鹿', '阿呆', '屑', '池沼', '障害者', '雑魚', '気持ち悪',
+  'fuck', 'shit', 'bitch', 'sex', 'porn', 'dick', 'pussy', 'asshole', 'idiot', 'stupid',
+]);
+export const WORD_OK = Object.freeze(['ばかり', 'ばかで', 'ばかず', 'しねま', 'あほうどり']);
+const fold = (t) => String(t || '').split('').map((c) => {
+  let n = c;
+  try { n = c.normalize('NFKC'); } catch { /* そのまま */ }
+  if (n.length !== 1) n = c;
+  n = n.replace(/[ァ-ヶ]/g, (k) => String.fromCharCode(k.charCodeAt(0) - 0x60));
+  const l = n.toLowerCase();
+  return l.length === 1 ? l : n;
+}).join('');
+const hasNgWord = (t) => {
+  const low = fold(t);
+  const ok = new Array(low.length).fill(false);
+  WORD_OK.forEach((w) => { let i = low.indexOf(w); while (i >= 0) { for (let k = i; k < i + w.length; k++) ok[k] = true; i = low.indexOf(w, i + 1); } });
+  return WORD_NG.some((w) => { let i = low.indexOf(w); while (i >= 0) { if (!ok[i]) return true; i = low.indexOf(w, i + 1); } return false; });
+};
+// モンスターを「子」と呼ばない(2026-11-06 社長)。決まりは tools/changelog/monster-ko-check.js と同じ。
+//   名前(画面の文)… 人を指す言葉などを除いた「子」は全部だめ / ひとこと(助手の台詞)… 複数・一般を指す「子たち」「子ら」「子ほど」「どの子」だけだめ
+const KO_EXCL = /様子|調子|梯子|帽子|扇子|椅子|王子|双子|女子|男子|団子|菓子|拍子|粒子|原子|電子|分子|冊子|格子|種子|子供|子ども|息子|弟子|振り?子|女の子|男の子|子守|子分|親子|迷子|お子|赤子|子孫|子音|調子/g;
+const KO_DIALOG = /子(?:たち|ら(?![しい]))|子ほど|(?:どの|ほかの|他の)子(?![供ど])/;
+// 連絡先らしいもの(URL・メール・長い数字)
+const hasContact = (t) => /https?:|www\.|@|[0-9０-９]{6,}/i.test(String(t || ''));
+export const wordGuard = (text, where) => {
+  const t = String(text || '');
+  if (!t || hasNgWord(t) || hasContact(t)) return false;
+  if (where === 'name') return !t.replace(KO_EXCL, '').includes('子');
+  return !KO_DIALOG.test(t);
+};
 
 // どの助手でも変わらない決まり。キャッシュが効くよう、日付や人ごとの値は入れない
 export const RULES_TEXT = [
@@ -59,6 +113,10 @@ export const RULES_TEXT = [
   'デッキ相談のとき:',
   '- 勧めてよいカードは、渡された「入れられるカード」の一覧にあるものだけ。番号(no)をそのまま返す。一覧に無いカードは名前も出さない。',
   '- 選んだモンスターが使えるカード(使える:〜)と、全モンスターのカードの中から、デッキの組み方に合うものを選ぶ。理由は短く。',
+  'デッキを組むとき:',
+  '- 選んでよいカードは、渡された「候補のカード」の番号(no)だけ。場のカードは「場のカードの候補」の名前だけ。一覧に無いものは書かない。',
+  '- くせの数は、渡された幅の中から選ぶ。戦い方(攻め・守り・ふつう)と、あなたの人柄に合うように。',
+  '- デッキの名前は12字まで、ひとことは40字くらい。どちらもあなたの口調で。モンスターのことを「子」と呼ばない(「モンスター」か名前で呼ぶ)。',
 ].join('\n');
 
 // 人柄(助手とおしゃべりと同じ材料。data/assistant-chat-digest.json の assistants)
@@ -97,6 +155,27 @@ export const normalizeRequest = (body, digest) => {
   if (!kind || !breederId || !digest || !digest.assistants || !digest.assistants[assistantId]) return null;
   const samples = (Array.isArray(body.samples) ? body.samples : []).slice(0, MAX_SAMPLES).map((s) => clean(s, MAX_SAMPLE_CHARS)).filter(Boolean);
   const f = body.facts && typeof body.facts === 'object' ? body.facts : {};
+  if (kind === 'deckPlan') {
+    const style = PLAN_STYLES.includes(f.style) ? f.style : null;
+    const cards = (Array.isArray(f.cards) ? f.cards : []).slice(0, MAX_DECK_CARDS).map((c) => ({
+      no: clean(c && c.no, 8), name: clean(c && c.name, MAX_NAME_CHARS), kind: clean(c && c.kind, 8), user: clean(c && c.user, MAX_NAME_CHARS),
+      guts: int(c && c.guts, 0, 20), damage: c && Number.isFinite(Number(c.damage)) && c.damage !== null ? int(c.damage, 0, 99) : null, area: !!(c && c.area === true),
+    })).filter((c) => c.no && c.name);
+    const fields = (Array.isArray(f.fields) ? f.fields : []).slice(0, MAX_PLAN_FIELDS).map((x) => clean(x && typeof x === 'object' ? x.name : x, MAX_NAME_CHARS)).filter(Boolean);
+    const favorites = (Array.isArray(f.favorites) ? f.favorites : []).slice(0, MAX_FAVORITES).map((m) => clean(m, MAX_NAME_CHARS)).filter(Boolean);
+    // くせの幅([下, 上])。おかしければ外枠。下>上なら入れかえる
+    const [L0, L1] = PLAN_HABIT_LIMIT;
+    const range = (r) => {
+      const a = Array.isArray(r) && Number.isFinite(Number(r[0])) ? Math.max(L0, Math.min(L1, Number(r[0]))) : L0;
+      const b = Array.isArray(r) && Number.isFinite(Number(r[1])) ? Math.max(L0, Math.min(L1, Number(r[1]))) : L1;
+      return a <= b ? [a, b] : [b, a];
+    };
+    const habit = Object.fromEntries(PLAN_HABITS.map((k) => [k, range(f.habit && f.habit[k])]));
+    const pr = Array.isArray(f.prefer) ? f.prefer : PLAN_PREFER_RANGE;
+    const pMin = int(pr[0], 1, 12, PLAN_PREFER_RANGE[0]), pMax = int(pr[1], 1, 12, PLAN_PREFER_RANGE[1]);
+    if (!style || !cards.length) return null;
+    return { kind, breederId, assistantId, samples, facts: { style, cards, fields, favorites, habit, prefer: [Math.min(pMin, pMax), Math.max(pMin, pMax)] } };
+  }
   if (kind === 'deck') {
     const cards = (Array.isArray(f.cards) ? f.cards : []).slice(0, MAX_DECK_CARDS).map((c) => ({
       no: clean(c && c.no, 8), name: clean(c && c.name, MAX_NAME_CHARS), kind: clean(c && c.kind, 8), user: clean(c && c.user, MAX_NAME_CHARS),
@@ -125,8 +204,22 @@ export const normalizeRequest = (body, digest) => {
 };
 
 // 試合のこと(ゲームが送った値を、決まった言い方に直す。自由な文は名前だけ)
+const PLAN_STYLE_TEXT = Object.freeze({ attack: '攻め(相手を早く倒す)', guard: '守り(守りの札を残して堅く)', normal: 'ふつう(攻めと守りの釣り合い)' });
+const PLAN_HABIT_TEXT = Object.freeze({ big: '大技を選ぶくせ', saveGuts: 'ガッツをためるくせ', keepGuard: '守りの札を残すくせ' });
 export const factsText = (req) => {
   const f = req.facts;
+  if (req.kind === 'deckPlan') {
+    return [
+      '【デッキを組むこと】',
+      `戦い方: ${PLAN_STYLE_TEXT[f.style]}`,
+      f.favorites.length ? `あなたの好きなモンスター: ${f.favorites.map((m) => `「${m}」`).join('・')}` : '',
+      `優先するカード: ${f.prefer[0]}〜${f.prefer[1]}枚`,
+      `くせの数の幅: ${PLAN_HABITS.map((k) => `${PLAN_HABIT_TEXT[k]}(${k}) ${f.habit[k][0]}〜${f.habit[k][1]}`).join(' / ')}`,
+      '候補のカード(no|名前|種類|使える|ガッツ|ダメージ|全体):',
+      ...f.cards.map((c) => `${c.no}|「${c.name}」|${c.kind}|${c.user}|${c.guts}|${c.damage === null ? '-' : c.damage}|${c.area ? '全体' : '-'}`),
+      f.fields.length ? `場のカードの候補: ${f.fields.map((x) => `「${x}」`).join('・')}` : '場のカードの候補: なし',
+    ].filter(Boolean).join('\n');
+  }
   if (req.kind === 'deck') {
     return [
       '【デッキのこと】',
@@ -150,7 +243,7 @@ export const factsText = (req) => {
 const samplesText = (samples) => (samples.length ? `\n\n【決まった台詞の見本(この場面であなたが言う台詞。調子をまねる・写さない)】\n${samples.map((s) => `・${s}`).join('\n')}` : '');
 export const buildMessages = (req) => [{
   role: 'user',
-  content: `${factsText(req)}${samplesText(req.samples)}\n\n${req.kind === 'deck' ? 'このデッキの組み方をひとことで相談にのって、勧めるカードを選んで。' : req.kind === 'after' ? '対戦が終わったあとのひとことを言って。' : 'いまの場面でひとこと言って。'}`,
+  content: `${factsText(req)}${samplesText(req.samples)}\n\n${req.kind === 'deckPlan' ? 'この戦い方で、あなたが使うデッキの作戦を決めて。名前・ひとこと・優先するカード・場のカード・くせの数を返して。' : req.kind === 'deck' ? 'このデッキの組み方をひとことで相談にのって、勧めるカードを選んで。' : req.kind === 'after' ? '対戦が終わったあとのひとことを言って。' : 'いまの場面でひとこと言って。'}`,
 }];
 
 // 返事の形(構造化出力)
@@ -177,12 +270,47 @@ export const DECK_SCHEMA = {
   additionalProperties: false,
 };
 
+export const PLAN_SCHEMA = {
+  type: 'object',
+  properties: {
+    name: { type: 'string', description: `デッキの名前(${PLAN_NAME_MAX}字まで)。あなたの口調で` },
+    line: { type: 'string', description: 'このデッキについての、あなたのひとこと(40字くらい)' },
+    prefer: { type: 'array', description: '優先するカード。候補のカードの no だけ', items: { type: 'string' } },
+    field: { type: 'array', description: `使う場のカード(${PLAN_FIELD_MAX}枚まで)。場のカードの候補の名前だけ`, items: { type: 'string' } },
+    habit: {
+      type: 'object', description: 'くせの数。渡された幅の中で',
+      properties: { big: { type: 'number' }, saveGuts: { type: 'number' }, keepGuard: { type: 'number' } },
+      required: ['big', 'saveGuts', 'keepGuard'], additionalProperties: false,
+    },
+  },
+  required: ['name', 'line', 'prefer', 'field', 'habit'],
+  additionalProperties: false,
+};
+// deckPlan の返事を、候補の中・幅の中へそろえる(候補外は捨てる・幅の外は丸める・言葉の見張りに落ちた名前とひとことは null)
+export const parsePlan = (j, req) => {
+  const f = req.facts;
+  const nos = new Set(f.cards.map((c) => c.no));
+  const seen = new Set();
+  const prefer = (Array.isArray(j.prefer) ? j.prefer : []).map((x) => String(x)).filter((no) => nos.has(no) && !seen.has(no) && seen.add(no)).slice(0, f.prefer[1]);
+  const fieldSet = new Set(f.fields);
+  const fseen = new Set();
+  const field = (Array.isArray(j.field) ? j.field : []).map((x) => clean(x, MAX_NAME_CHARS)).filter((x) => fieldSet.has(x) && !fseen.has(x) && fseen.add(x)).slice(0, PLAN_FIELD_MAX);
+  const habit = Object.fromEntries(PLAN_HABITS.map((k) => {
+    const [lo, hi] = f.habit[k];
+    const v = Number(j.habit && j.habit[k]);
+    return [k, Math.round((Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : (lo + hi) / 2) * 100) / 100];
+  }));
+  const name = clean(j.name, PLAN_NAME_MAX);
+  const line = clean(j.line, PLAN_LINE_MAX);
+  return { name: name && wordGuard(name, 'name') ? name : null, line: line && wordGuard(line, 'line') ? line : null, prefer, field, habit };
+};
 export const parseReply = (response, req) => {
   if (!response || response.stop_reason === 'refusal') return null;
   const raw = (response.content || []).filter((b) => b && b.type === 'text').map((b) => b.text).join('');
   if (!raw) return null;
   try {
     const j = JSON.parse(raw);
+    if (req.kind === 'deckPlan') return j && typeof j === 'object' ? parsePlan(j, req) : null;
     const text = clean(j.text, req.kind === 'deck' ? DECK_TEXT_MAX_CHARS : TALK_MAX_CHARS);
     if (!text) return null;
     const out = { text, expression: EXPRESSIONS.includes(j.expression) ? j.expression : 'normal' };
@@ -207,8 +335,8 @@ export const handleRequest = async ({ body, digest, client, take, refund, log = 
   const req = normalizeRequest(body, digest);
   if (!req) return { status: 400, json: { ok: false, error: 'bad_request' } };
   const bucket = bucketOf(req.kind);
-  const userLimit = bucket === 'deck' ? (limits.deck || USER_DECK_DAILY_LIMIT) : (limits.talk || USER_TALK_DAILY_LIMIT);
-  const totalLimit = limits.total || TOTAL_DAILY_LIMIT;
+  const userLimit = bucket === 'plan' ? (limits.plan || USER_PLAN_DAILY_LIMIT) : bucket === 'deck' ? (limits.deck || USER_DECK_DAILY_LIMIT) : (limits.talk || USER_TALK_DAILY_LIMIT);
+  const totalLimit = bucket === 'plan' ? (limits.planTotal || PLAN_TOTAL_DAILY_LIMIT) : (limits.total || TOTAL_DAILY_LIMIT);
   let ticket;
   try { ticket = await take(req.breederId, bucket, userLimit, totalLimit); } catch {
     log({ event: 'take_failed', kind: req.kind });
@@ -226,7 +354,7 @@ export const handleRequest = async ({ body, digest, client, take, refund, log = 
       max_tokens: MAX_TOKENS[req.kind],
       // 速さ優先(社長「考える量は絞る」)。Haiku 5.5 は effort が high 以下なら thinking を切れる
       thinking: { type: 'disabled' },
-      output_config: { effort: 'low', format: { type: 'json_schema', schema: req.kind === 'deck' ? DECK_SCHEMA : TALK_SCHEMA } },
+      output_config: { effort: 'low', format: { type: 'json_schema', schema: req.kind === 'deckPlan' ? PLAN_SCHEMA : req.kind === 'deck' ? DECK_SCHEMA : TALK_SCHEMA } },
       system: buildSystem(digest, req.assistantId),
       messages: buildMessages(req),
     }, { timeout: TIMEOUT_MS[req.kind] });
@@ -243,7 +371,10 @@ export const handleRequest = async ({ body, digest, client, take, refund, log = 
     try { await refund(req.breederId, bucket); } catch { log({ event: 'refund_failed' }); }
     return reply('sorry');
   }
-  return { status: 200, json: { ok: true, kind: 'reply', ...parsed, remainingToday: Number.isFinite(ticket.remaining) ? ticket.remaining : null } };
+  const remainingToday = Number.isFinite(ticket.remaining) ? ticket.remaining : null;
+  // deckPlan は text を持たない(名前・ひとこと・カード・くせの数)。kind は 'plan'
+  if (req.kind === 'deckPlan') return { status: 200, json: { ok: true, kind: 'plan', ...parsed, remainingToday } };
+  return { status: 200, json: { ok: true, kind: 'reply', ...parsed, remainingToday } };
 };
 
 // 人柄の材料を公開中のサイトから読む(助手とおしゃべりと同じもの)。しばらく覚えておく

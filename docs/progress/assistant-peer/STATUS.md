@@ -273,3 +273,35 @@
 - すり合わせ中(返事待ち): ビート部マモリ(腕前の元にセッションLvを読む・結果のひとことの口)/カード部ソランド(CARD_AI_DECKS に型2〜3・assistantLifeCardStyle・デッキ名)/バトル部ジン(能力の伸び方の関数・DyedMonsterImage・神殿の応援の口 assistantLifeCheerOf)
 - API: オトズレ2の friend_scenes が先にデプロイ → そのあと main を取り込んで grow_consult・grow_report を足す(同じ日にデプロイしない)
 - 作る順(案): ①データとマスモンの画面(部屋の「🐾 マスモン」・一覧・編成・デッキ・好き苦手。縦・横・🔄横)②成長(育成場・練習スタジオ・カード部屋に行った回数で Lv)③相談(部屋の「？」・台本で先に作り、API はあと)④神殿の応援 ⑤API。どれも作る前に止め絵と更新履歴の文案を窓口へ
+- 2026-11-08 段階A(道具10種類・好み)を公開: #4940(本体・更新履歴・告知・ヘルプ)/#4946(コトバの台詞)/#4952(検査の直し)。本番で assistant-life-browser-check すべて OK・ミハリの撮り直し OK(#4945)
+- 次: 段階B(家具)。交換所に「家具」の段・部屋の天井・壁・床・贈ったときの反応(furn 96本は届いている)。家具は z-index 3 以下(キズナの扉が前)。オトズレの控えには put の3つ
+
+### キズナ → キズナ2 への引き継ぎ(2026-11-08 10時ごろ・ここで区切り)
+- 決まったこと(社長): デッキ名は A(今の自動のデッキ名は残し「型: キラキラ速攻」のように添える)・8つの名前は「この文で」/好き・苦手・好きな色は確定(masmon-plan.json・表 ux/masmon-table.png・#4950)
+- 社長の選び待ち: 好き嫌いが変わる仕組み(GROW-PLAN 8 の ❶〜❹)
+- すり合わせ済みの口(作るときに足す。どれも typeof で確かめて呼ぶ・数字には効かせない):
+  - ビート部マモリ: 読むだけ rhythmAssistSessionLevel・rhythmAssistSessionMon().lives/.songs・rhythmAssistSessionOnLive。こちらが出す口 assistantLifeGrowBeatOf(id) → { stars 1〜5, style 'accuracy'|'fast'|'slide' }(main に入ったらマモリへ知らせる。マモリが結果のひとことに3割で使う。台詞 grow:<style> はコトバに注文)
+  - カード部ソランド: こちらが出す口 assistantLifeCardStyle(id) → 'attack'|'guard'|'normal'|null(えるびんは blade/shield/mind に対応)。カード部が 84 で読み cardAiBuildDeck に渡す(フリー対戦だけ)。カード部の読むだけの口 cardAssistantDeckPreview(who, styleId, level)(部屋では NORMAL・「対戦では毎回少し入れかわります」)
+  - バトル部ジン: 能力は助手ライフ側の見た目用の伸び方(基礎値は読むだけ)/染色は DyedMonsterImage・色はゲームの色の名前・プレイヤーの染色の保存は触らない/神殿の応援 assistantLifeCheerOf() → { id, line } を神殿の入口(合体・転生の画面の上)の小さな札とひとことだけ・バトル中は出さない・try で包む。足したら PR 番号をジンへ
+  - ココロ(AI 会話): こちらが出す口 assistantLifeTasteOnTalk({ assistantId, monsterId, positive })(false も受けて今は無視・1日1回 +4 はこちらで数える)・assistantLifeTasteOf(id) → { likes:[表示名≤5], dislikes:[≤5], changed:[{ name, to }≤3] }(血統は「○○種」・印が偽なら null)
+  - オトズレ2: assistant-chat は friend_scenes が先にデプロイ → main 取り込みのあと grow_consult・grow_report(GROW-PLAN 7-(4))
+  - オクリモノ: 差し入れの改名(🧺おやつバスケット)で、けんか・仲直りの更新履歴 08:33 の3行目とヘルプ「けんかと仲直り」の「差し入れ」を直してもらう約束。仲直りに使える道具は食べ物・飲み物の4つ(gift・cake・onigiri・tea)の案 → 決まったら assistantLifeRelOnGift の頭(kind !== 'gift')を直す
+- 公開済み(キズナ): けんか・仲直り #4915・間に入る28組 #4925。検査 life-rel-check・life-rel-browser-check・assistant-masmon-plan-check
+
+## キズナ2(2026-11-08〜・育つ助手を作る)
+- ① データとマスモンの画面を作った(ブランチ claude/kizuna2-grow・未公開): 部品 `56-assistant-life-masmon.jsx`。部屋のシートに「🐾 マスモン」の1行 → シート(🐾 マスモン・⚔ 編成・🃏 デッキ・💗 好き・苦手)。何も保存しない
+  - 表 ASSISTANT_MASMON_PLAN は `node tools/assistant/assistant-masmon-import.js` が masmon-plan.json から書く(手で直さない。`--check` で食い違いを見る)
+  - 口: assistantLifeCardStyle(id)(mua/kiki/atsu=attack・dra/erubin=guard・ほか normal)・assistantLifeTasteOf(id)(changed はまだ空)
+  - デッキのカードの並びは、カード部の cardAssistantDeckPreview が main に入ってからつなぐ(未定義の名前は undefined-reference-check が typeof でも落とすので、入るまで書かない)
+  - 検査・撮影: `node tools/assistant/assistant-masmon-browser-check.js [--shots]`(縦・横・🔄横から戻った。端にくっつかない・切れない・絵が出る)→ shots/masmon-*.jpg
+- 待ち: 更新履歴・ヘルプの文の「この文で」/ミハリの撮り直し/好き嫌いが変わる ❶〜❹
+- 次: ② 成長(育成場・練習スタジオ・カード部屋に行った回数で Lv。新しいキー mh_assistant_life_masmon_v1)
+- 追記(ココロ・2026-11-08): まだ main に無い関数名は typeof で確かめても undefined-reference-check に止められるので、ココロは受け口の入れ物 `ASSISTANT_CHAT_TASTE_HOOKS = { of:null, onTalk:null }` を 56-assistant-chat.jsx に置き、それ経由で呼ぶ。キズナ2は自分の部品(56-assistant-chat.jsx より後ろの parts)のトップレベルに次を足す: `if (typeof ASSISTANT_CHAT_TASTE_HOOKS === 'object' && ASSISTANT_CHAT_TASTE_HOOKS) { ASSISTANT_CHAT_TASTE_HOOKS.of = assistantLifeTasteOf; ASSISTANT_CHAT_TASTE_HOOKS.onTalk = assistantLifeTasteOnTalk; }`。ココロの PR が先に main へ入る(入ったら知らせが来る)。ほかの部(マモリ・ソランド・ジン)の口も、相手より先に名前を書けないときは同じ「入れ物」の形にそろえる
+- 追記(オトズレ2): friend_scenes のデプロイは社長の「この文で」→ main → 窓口へ知らせてから。PR 番号はキズナ2か窓口へ
+- 2026-11-08 社長の指摘3つを直した(枝 claude/assistant-life-readable)
+  - 居場所タブが朝に読めない → 札・枠・説明・道具の欄・友情の関係図を濃い面に(bg-slate-950/85〜90)。済んだボタンは「✓ 見た」「✓ 誘った」「✓ 見守りました」で灰色の面。下の説明は時刻だけ(5時・10時…)。ヘルプも「6つの時刻」に。検査 browser ⑮(朝・昼・夕・夜 × 縦・横で、字が濃い面の上にあり明るさの比 4.5 以上)
+  - 場面の立ち絵の大きさがばらばら → `AssistantLifeStand`: 絵の透けていない範囲を一度測り(`ASSISTANT_LIFE_STAND_BOX`)、見た目の高さを人数ごとに(1人40%・2人36%・3人32%・4人28%)そろえる。床は下から22%。見出しのアイコンは字の塗り(background-clip:text)の外へ(中だと iPhone で白い四角)。検査 browser ⑰(28組+3人・4人で頭の高さの差3%以内・大きさの比1.08以内・アイコン)
+  - 地図を HOME にそろえる → モンヒロビート=左の赤い屋根の家・神殿(新)=右上の光る泉・おやつ屋さん=石の家・中庭=石の家と屋台のあいだ。`ASSISTANT_LIFE_MAP_BUILDING`(建物の範囲)。一覧の場所の名前も施設の名前(`assistantLifePlaceLabel`)。検査 browser ⑯
+- 施設へ行く意味の案(A/B)を窓口へ: LIFE-FACILITY-PERKS.md。社長の選び待ち
+- 担当の分け: 道具の種類・好き嫌い・家具=オクリモノ/けんか・仲直り=キズナ(56-assistant-life-rel.jsx)
+- 二歩目の台詞はコトバ・ツムギが書いている(LIFE-STAGE2-LINES-ORDER.md)。届いたら取り込み道具に temple/shopping・visit・lure を足す

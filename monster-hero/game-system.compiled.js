@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 231fc2cf52e3b4d7
+// source-sha256: d3a8da1446bb043d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13733,7 +13733,11 @@ const RELEASE_FLAGS = {
   assistantKyuko: true,
   assistantPeer: true,
   assistantPeerApi: true,
+  assistantCallname: false,
   assistantLife: true,
+  assistantLifeFurniture: true,
+  assistantLifeFriend: true,
+  assistantLifeFriendApi: true,
   rhythmAssistantSession: true,
   assistantSorashido: true,
   assistantErubin: true,
@@ -62253,6 +62257,7 @@ const growthFxSessionLevel = (list = []) => {
 };
 const GROWTH_FX_CSS = `
 .mh-gfx-chips{position:fixed;top:calc(env(safe-area-inset-top,0px) + 52px);right:10px;z-index:44000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
+.mh-gfx-chips.mini .mh-gfx-chip>.min-w-0{display:none}.mh-gfx-chips.mini .mh-gfx-chip{padding:3px 8px 3px 4px;gap:4px}
 .mh-gfx-chip{position:relative;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;border-radius:999px;background:linear-gradient(90deg,#1e1b2ef0,#0f172af0);
   border:1.5px solid var(--gc);box-shadow:0 0 14px color-mix(in srgb,var(--gc) 40%,transparent);font-weight:900;font-size:11px;color:#fff;
   animation:mhGfxChipIn .35s cubic-bezier(.2,1.6,.4,1) both}
@@ -62747,6 +62752,60 @@ const GrowthFxLevelUp = ({
     className: "mh-gfx-lv-hint"
   }, done ? '押すと閉じる' : '押すと先へ'));
 };
+const GROWTH_FX_CHIP_TOPS = [52, 8, 96, 140];
+const growthFxChipSpotBusy = box => {
+  if (typeof document === 'undefined' || !document.elementsFromPoint) return false;
+  const r = box.getBoundingClientRect();
+  for (const fx of [0.15, 0.5, 0.85]) for (const fy of [0.25, 0.75]) {
+    const x = r.left + r.width * fx,
+      y = r.top + r.height * fy;
+    const under = document.elementsFromPoint(x, y).find(el => !box.contains(el));
+    if (!under) continue;
+    if (under.closest('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]')) return true;
+    if ([...under.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return true;
+  }
+  return false;
+};
+const GrowthFxChipsBox = ({
+  level,
+  count,
+  children
+}) => {
+  const ref = useRef(null);
+  React.useLayoutEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const place = () => {
+      const box = ref.current;
+      if (!box) return;
+      const tops = [...GROWTH_FX_CHIP_TOPS, Math.max(60, window.innerHeight - 120 - box.offsetHeight)];
+      for (const mini of [false, true]) {
+        box.classList.toggle('mini', mini);
+        for (const t of tops) {
+          box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`;
+          if (!growthFxChipSpotBusy(box)) {
+            box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${t}`;
+            return;
+          }
+        }
+      }
+      box.style.top = `calc(env(safe-area-inset-top, 0px) + ${GROWTH_FX_CHIP_TOPS[1]}px)`;
+      box.dataset.growthFxChipsTop = 'mini-busy';
+    };
+    place();
+    const t1 = setTimeout(place, 500),
+      t2 = setTimeout(place, 1500);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [count]);
+  return React.createElement("div", {
+    ref: ref,
+    className: `mh-gfx-chips mh-gfx-${level}`,
+    "data-growth-fx-chips": true,
+    "aria-live": "polite"
+  }, children);
+};
 const GrowthFxLayer = ({
   screen,
   load
@@ -62783,10 +62842,9 @@ const GrowthFxLayer = ({
   const holdSheet = !vis.sheet;
   const level = growthFxLevelOf(load);
   const sheet = !holdSheet ? sheets[0] : null;
-  return React.createElement(React.Fragment, null, !holdAll && !sheet && small.length > 0 && React.createElement("div", {
-    className: `mh-gfx-chips mh-gfx-${level}`,
-    "data-growth-fx-chips": true,
-    "aria-live": "polite"
+  return React.createElement(React.Fragment, null, !holdAll && !sheet && small.length > 0 && React.createElement(GrowthFxChipsBox, {
+    level: level,
+    count: Math.min(small.length, GROWTH_FX_SMALL_MAX)
   }, small.slice(0, GROWTH_FX_SMALL_MAX).map(c => React.createElement(GrowthFxChip, {
     key: c.id,
     chip: c,
@@ -64092,7 +64150,10 @@ function BreederMarketScreen({
       }] : []), {
         key: 'item',
         label: 'アイテム'
-      }, {
+      }, ...(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLife === true && RELEASE_FLAGS.assistantLifeFurniture === true ? [{
+        key: 'furniture',
+        label: '家具'
+      }] : []), {
         key: 'material',
         label: '強化素材'
       }]
@@ -64111,7 +64172,12 @@ function BreederMarketScreen({
   const exchangeTab = activeSectionTab('exchange');
   const eventTab = activeSectionTab('event');
   const BEAT_POINT_MATERIAL_ITEM_IDS = ['rainbow_psyche', 'hero_proof_shard', 'transcend_fruit_rainbow', 'hero_proof'];
-  const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer => !offer.releaseFlag || typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS[offer.releaseFlag] === true).filter(offer => eventTab === 'material' === BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId)).map(offer => rhythmEventPointShopOfferWithPass(offer, legendPassActive === true));
+  const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer => !offer.releaseFlag || typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS[offer.releaseFlag] === true).filter(offer => {
+    const furn = String(offer.itemId || '').startsWith('furn_');
+    if (eventTab === 'furniture') return furn;
+    if (furn) return false;
+    return eventTab === 'material' === BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId);
+  }).map(offer => rhythmEventPointShopOfferWithPass(offer, legendPassActive === true));
   const legendPassSlot = eventItemOffers.some(offer => offer.legendPass === true);
   const renderSectionTabs = (section, scroll = false) => {
     const items = SECTION_TABS[section].tabs.map(tab => ({
@@ -64121,6 +64187,24 @@ function BreederMarketScreen({
     }));
     const value = activeSectionTab(section);
     const tight = section === 'card' || section === 'event';
+    if (section === 'event' && items.length >= 6) return React.createElement("div", {
+      role: "tablist",
+      "data-market-tabs-grid": section,
+      className: `mb-2 grid w-full min-w-0 max-w-full shrink-0 gap-1 ${items.length <= 6 ? 'grid-cols-3' : 'grid-cols-4'}`
+    }, items.map(tab => {
+      const on = tab.id === value;
+      return React.createElement("button", {
+        key: tab.id,
+        type: "button",
+        role: "tab",
+        "aria-selected": on,
+        onClick: () => selectSectionTab(section, tab.id),
+        className: `mh-tab relative min-h-[40px] min-w-0 rounded-xl px-0 text-[10.5px] font-black leading-tight whitespace-nowrap active:scale-95 ${on ? 'text-white' : 'border border-white/10 bg-slate-900 text-slate-400'}`,
+        style: on ? {
+          background: tab.color
+        } : undefined
+      }, tab.label);
+    }));
     if (!scroll || items.length < (tight ? 5 : 6)) return React.createElement(ScreenTabs, {
       value: value,
       onChange: key => selectSectionTab(section, key),
@@ -64632,7 +64716,7 @@ function BreederMarketScreen({
     "data-event-point-shop": true,
     "data-event-point-tab": eventTab,
     className: MARKET_GRID_CLASS
-  }, (eventTab === 'item' || eventTab === 'material') && eventItemOffers.map(offer => {
+  }, (eventTab === 'item' || eventTab === 'material' || eventTab === 'furniture') && eventItemOffers.map(offer => {
     const item = beatPointItemOf(offer);
     const grantText = `${offer.grantAmount.toLocaleString()}${offer.unit}`;
     const middle = offer.kind === 'diamond' ? null : ownedMiddle(ownedItemCount(ownedItems, offer.itemId), item.base ? {
@@ -65118,6 +65202,7 @@ function ProfileScreen({
   onOpenItems,
   onOpenCallStylePicker,
   onOpenAssistantPicker,
+  talkedCallname = null,
   onSelectBattleMode,
   onOpenEventReplayList,
   onOpenSpeciesRecords,
@@ -65511,8 +65596,9 @@ function ProfileScreen({
       }
     }, activeAssistant.name, "との仲良し度"), React.createElement("div", {
       className: "text-[12px] font-black text-white"
-    }, "Lv.", assistantBondLevelNow, "\u3000", stage ? stage.title : '')), assistantBondLevelNow >= (typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL || 6) ? React.createElement("button", {
+    }, "Lv.", assistantBondLevelNow, "\u3000", stage ? stage.title : '')), assistantBondLevelNow >= (typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL || 6) || !!talkedCallname ? React.createElement("button", {
       type: "button",
+      "data-profile-call-style": true,
       onClick: onOpenCallStylePicker,
       className: "shrink-0 min-h-[44px] rounded-xl px-2 text-right active:scale-95"
     }, React.createElement("div", {
@@ -98736,6 +98822,33 @@ const assistantPeerMemosFor = (selfId, memos, last, today = assistantPeerDayKey(
   }
   return out;
 };
+const ASSISTANT_CALLNAME_OFFER_MS = (typeof ASSISTANT_CALLNAME_OFFER_DAYS !== 'undefined' ? ASSISTANT_CALLNAME_OFFER_DAYS : 7) * 86400000;
+const ASSISTANT_CHAT_TASTE_HOOKS = {
+  of: null,
+  onTalk: null
+};
+const ASSISTANT_CHAT_TASTE_GOOD_RE = /好き|すき|かわい|可愛|カワイ|かっこい|カッコい|格好い|強い|つよい|最強|推し|いいよね|いいね|最高|大好き|きれい|綺麗/;
+const assistantChatTasteFromText = text => {
+  const ids = assistantChatMonsterIds(text, '');
+  return ids.length && ASSISTANT_CHAT_TASTE_GOOD_RE.test(String(text || '')) ? {
+    monsterId: ids[0],
+    positive: true
+  } : null;
+};
+const assistantChatTasteFromHint = hint => {
+  if (!hint || typeof hint !== 'object' || typeof hint.monster !== 'string' || typeof hint.positive !== 'boolean') return null;
+  if (typeof ALL_PLAYER_MONSTERS === 'undefined') return null;
+  const m = Object.values(ALL_PLAYER_MONSTERS).find(x => x && !x.debugOnly && (x.name === hint.monster || x.id === hint.monster));
+  return m ? {
+    monsterId: m.id,
+    positive: hint.positive
+  } : null;
+};
+const assistantCallnameFillLine = (line, {
+  call,
+  nick,
+  name
+}) => String(line || '').replace(/\{call\}/g, call || '').replace(/\{nick\}/g, nick || '').replace(/\{name\}/g, name || '');
 function AssistantChatWindow({
   assistant,
   playerName,
@@ -98743,6 +98856,7 @@ function AssistantChatWindow({
   bondLevel,
   bondTitle,
   bondTone,
+  callnameKit = null,
   onExchange,
   onClose
 }) {
@@ -98754,6 +98868,7 @@ function AssistantChatWindow({
   const [input, setInput] = React.useState('');
   const [sending, setSending] = React.useState(false);
   const [remaining, setRemaining] = React.useState(null);
+  const [callCard, setCallCard] = React.useState(null);
   const listRef = React.useRef(null);
   React.useEffect(() => {
     let alive = true;
@@ -98771,9 +98886,28 @@ function AssistantChatWindow({
   }, []);
   const log = logs[id] || [];
   React.useEffect(() => {
+    if (!loaded || !callnameKit || callnameKit.asked || !id) return;
+    if (!(Number(bondLevel) >= ASSISTANT_CALLNAME_ASK_LEVEL)) return;
+    callnameKit.markAsk({
+      asked: true
+    });
+    if (callnameKit.current || callnameKit.customStyle) return;
+    const line = assistantCallnameFillLine(assistantCallnameLine(id, 'ask'), {
+      name: callName
+    });
+    saveLog([...(logs[id] || []), {
+      role: 'assistant',
+      text: line,
+      e: 'wink'
+    }]);
+    setCallCard({
+      kind: 'ask'
+    });
+  }, [loaded, id]);
+  React.useEffect(() => {
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [log.length, sending]);
+  }, [log.length, sending, callCard]);
   const lastExpression = (log.slice().reverse().find(m => m.role === 'assistant') || {}).e || 'happy';
   const saveLog = next => {
     setLogs(prev => {
@@ -98828,6 +98962,21 @@ function AssistantChatWindow({
       text
     }];
     saveLog(withUser);
+    const pendingCard = callCard;
+    setCallCard(null);
+    const shy = !!callnameKit && typeof assistantCallnameShy === 'function' && assistantCallnameShy(id, bondLevel, assistantPeerDayKey());
+    const canOffer = !!callnameKit && Number(bondLevel) >= 3 && !pendingCard && Date.now() - (callnameKit.offeredAt || 0) >= ASSISTANT_CALLNAME_OFFER_MS;
+    const callnameCtx = callnameKit ? {
+      shy,
+      canOffer,
+      asking: !!(pendingCard && pendingCard.kind === 'ask'),
+      nick: callnameKit.nick || '',
+      hasTalked: !!callnameKit.current
+    } : null;
+    let tastes = null;
+    try {
+      tastes = typeof ASSISTANT_CHAT_TASTE_HOOKS.of === 'function' ? ASSISTANT_CHAT_TASTE_HOOKS.of(id) : null;
+    } catch {}
     const rankingPlan = assistantChatRankingPlan(text, log.filter(m => m && m.role === 'user').map(m => m.text).reverse().slice(0, ASSISTANT_CHAT_RANKING_PREV));
     setSending(true);
     let res = null;
@@ -98850,7 +98999,13 @@ function AssistantChatWindow({
             bondTitle,
             bondTone,
             memo: memos[id] || null,
-            peerMemos: assistantPeerMemosFor(id, memos, lastDays)
+            peerMemos: assistantPeerMemosFor(id, memos, lastDays),
+            ...(callnameCtx ? {
+              callname: callnameCtx
+            } : {}),
+            ...(tastes ? {
+              tastes
+            } : {})
           },
           ...(rankingPlan ? {
             ranking: rankingPlan
@@ -98860,13 +99015,88 @@ function AssistantChatWindow({
       if (r.ok) res = await r.json();
     } catch {}
     setSending(false);
-    const reply = res && typeof res.reply === 'string' && res.reply ? res.reply : ASSISTANT_CHAT_LINES.sorry;
-    const e = res && typeof res.expression === 'string' ? res.expression : 'troubled';
+    let reply = res && typeof res.reply === 'string' && res.reply ? res.reply : ASSISTANT_CHAT_LINES.sorry;
+    let e = res && typeof res.expression === 'string' ? res.expression : 'troubled';
+    if (callnameKit) {
+      const replied = !!(res && res.kind === 'reply');
+      const hasMark = !!(res && res.call && typeof res.call === 'object');
+      let card = null;
+      if (hasMark) {
+        const c = res.call,
+          n = res.nick && typeof res.nick === 'object' ? res.nick : null;
+        if (c.action === 'confirm' && typeof c.value === 'string') {
+          const from = c.from === 'assistant' ? 'assistant' : 'player';
+          const v = assistantCallnameGuard(c.value, playerName);
+          if (v && !(from === 'player' && shy) && !(from === 'assistant' && !canOffer)) card = {
+            kind: 'call',
+            value: v,
+            from
+          };
+          if (card && from === 'assistant') callnameKit.markAsk({
+            offeredAt: Date.now()
+          });
+        } else if (c.action === 'reset' && callnameKit.current) card = {
+          kind: 'reset'
+        };else if (c.action === 'ask' && Number(bondLevel) >= ASSISTANT_CALLNAME_ASK_LEVEL) card = {
+          kind: 'ask'
+        };
+        if (!card && n && n.action === 'confirm' && !shy) {
+          const v = assistantNicknameGuard(n.value);
+          if (v) card = {
+            kind: 'nick',
+            value: v
+          };
+        }
+      } else {
+        const d = assistantCallnameDetect(text) || (pendingCard && pendingCard.kind === 'ask' && text.length <= 12 && !/\s/.test(text) ? {
+          kind: 'call',
+          value: text
+        } : null);
+        const v = d && d.kind === 'call' ? assistantCallnameGuard(d.value, playerName) : d && d.kind === 'nick' ? assistantNicknameGuard(d.value) : null;
+        let lineKind = null;
+        if (d && d.kind === 'reset' && callnameKit.current) {
+          card = {
+            kind: 'reset'
+          };
+        } else if (d && v && shy) lineKind = d.kind === 'nick' ? 'nickShy' : 'shy';else if (d && v) {
+          card = d.kind === 'nick' ? {
+            kind: 'nick',
+            value: v
+          } : {
+            kind: 'call',
+            value: v,
+            from: 'player'
+          };
+          lineKind = d.kind === 'nick' ? 'nickConfirm' : 'confirm';
+        }
+        if (!replied && lineKind) {
+          reply = assistantCallnameFillLine(assistantCallnameLine(id, lineKind), {
+            call: v ? callnameKit.fill(v) : '',
+            nick: v || '',
+            name: callName
+          });
+          e = /hy$/.test(lineKind) ? 'crying' : 'happy';
+        }
+      }
+      setCallCard(card);
+    }
     saveLog([...withUser, {
       role: 'assistant',
       text: reply,
       e
     }]);
+    if (res && res.kind === 'reply' && typeof ASSISTANT_CHAT_TASTE_HOOKS.onTalk === 'function') {
+      const taste = Object.prototype.hasOwnProperty.call(res, 'tasteHint') ? assistantChatTasteFromHint(res.tasteHint) : assistantChatTasteFromText(text);
+      if (taste) {
+        try {
+          ASSISTANT_CHAT_TASTE_HOOKS.onTalk({
+            assistantId: id,
+            monsterId: taste.monsterId,
+            positive: taste.positive
+          });
+        } catch {}
+      }
+    }
     if (res && Number.isFinite(res.remainingToday)) setRemaining(res.remainingToday);
     if (res && res.kind === 'reply') {
       if (res.memo && typeof res.memo === 'object') saveMemo(res.memo);
@@ -98875,6 +99105,46 @@ function AssistantChatWindow({
       if (typeof assistantLifeAddPlay === 'function') void assistantLifeAddPlay('chat');
     }
   };
+  const sayLine = (kind, vars, expression = 'happy') => saveLog([...(logs[id] || []), {
+    role: 'assistant',
+    text: assistantCallnameFillLine(assistantCallnameLine(id, kind), {
+      name: callName,
+      ...vars
+    }),
+    e: expression
+  }]);
+  const noteLine = text => saveLog([...(logs[id] || []), {
+    role: 'assistant',
+    text,
+    e: 'happy'
+  }]);
+  const answerCallCard = (yes, value) => {
+    const card = callCard;
+    setCallCard(null);
+    if (!card || !callnameKit) return;
+    if (card.kind === 'call' || card.kind === 'ask') {
+      const v = value || card.value;
+      if (yes && v) {
+        const saved = callnameKit.setCall(v, card.kind === 'ask' ? 'ask' : card.from === 'assistant' ? 'offer' : 'chat');
+        if (saved) sayLine('accept', {
+          call: callnameKit.fill(saved)
+        }, 'happy');
+      } else sayLine('keep', {}, 'normal');
+    } else if (card.kind === 'reset') {
+      if (yes) {
+        callnameKit.setCall(null, 'chat');
+        noteLine(`${assistant.name}の呼び方を元に戻しました`);
+      }
+    } else if (card.kind === 'nick') {
+      if (yes) {
+        const saved = callnameKit.setNick(card.value);
+        if (saved) sayLine('nickAccept', {
+          nick: saved
+        }, 'happy');
+      }
+    }
+  };
+  const callCardChoices = callCard && callCard.kind === 'ask' && callnameKit ? assistantCallnameChoices(id, callnameKit.current || callnameKit.customStyle || null).filter(t => callnameKit.fill(t) !== callName).slice(0, 3) : [];
   if (!assistant) return null;
   const accent = assistant.accent || '#f472b6';
   return React.createElement("div", {
@@ -98964,7 +99234,56 @@ function AssistantChatWindow({
     }), React.createElement("span", {
       className: "w-full truncate text-center text-[9px] font-bold leading-none text-slate-300"
     }, mon.name));
-  }))))), sending && React.createElement("p", {
+  }))))), callCard && callnameKit && !sending && React.createElement("div", {
+    "data-assistant-callname-card": callCard.kind
+  }, React.createElement("div", {
+    className: "rounded-2xl border-2 px-3 py-2 text-[11px] font-bold leading-relaxed text-pink-50 [word-break:keep-all] [overflow-wrap:anywhere]",
+    style: {
+      borderColor: accent,
+      background: 'rgba(244,114,182,.12)'
+    }
+  }, callCard.kind === 'call' && React.createElement(React.Fragment, null, "これから「", React.createElement("b", {
+    className: "text-[13px] text-white"
+  }, callnameKit.fill(callCard.value)), "」って呼んでいい？"), callCard.kind === 'nick' && React.createElement(React.Fragment, null, assistant.name, "のことを「", React.createElement("b", {
+    className: "text-[13px] text-white"
+  }, callCard.value), "」って呼ぶ？"), callCard.kind === 'reset' && React.createElement(React.Fragment, null, "呼び方を元に戻していい？"), callCard.kind === 'ask' && React.createElement(React.Fragment, null, "呼び方をえらぶか、送る欄に書いてね"), callCard.kind === 'ask' ? React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "mt-1.5 flex flex-wrap gap-1.5"
+  }, callCardChoices.map(t => React.createElement("button", {
+    key: t,
+    type: "button",
+    "data-assistant-callname-choice": t,
+    onClick: () => answerCallCard(true, t),
+    className: "min-h-[32px] rounded-full border bg-slate-900 px-3 text-[11px] font-black text-pink-100 active:scale-95",
+    style: {
+      borderColor: accent
+    }
+  }, callnameKit.fill(t)))), React.createElement("button", {
+    type: "button",
+    "data-assistant-callname-no": true,
+    onClick: () => answerCallCard(false),
+    className: "mt-1.5 min-h-[36px] w-full rounded-xl border border-slate-500 bg-slate-800 px-2 text-[11px] font-black text-slate-200 active:scale-95"
+  }, "いまのまま(", callName, ")")) : React.createElement("div", {
+    className: "mt-1.5 flex gap-1.5"
+  }, React.createElement("button", {
+    type: "button",
+    "data-assistant-callname-yes": true,
+    onClick: () => answerCallCard(true),
+    className: "min-h-[36px] flex-1 rounded-xl px-2 text-[11px] font-black text-white active:scale-95",
+    style: {
+      background: accent
+    }
+  }, callCard.kind === 'reset' ? 'うん、戻して' : 'うん、そう呼んで'), React.createElement("button", {
+    type: "button",
+    "data-assistant-callname-no": true,
+    onClick: () => answerCallCard(false),
+    className: "min-h-[36px] flex-1 rounded-xl border border-slate-500 bg-slate-800 px-2 text-[11px] font-black text-slate-200 active:scale-95"
+  }, "いまのままで"))), callCard.kind !== 'reset' && React.createElement("p", {
+    className: "mt-1 text-center text-[10px] font-bold text-slate-400 [word-break:keep-all] [overflow-wrap:anywhere]"
+  }, callCard.kind === 'nick' ? 'おしゃべりの中で使うあだ名です。' : React.createElement(React.Fragment, null, callCard.kind === 'ask' ? 'えらぶと' : '「うん」を押すと', "、", React.createElement("span", {
+    style: {
+      color: accent
+    }
+  }, assistant.name), "だけ呼び方が変わります。"), "プロフィールで元に戻せます")), sending && React.createElement("p", {
     "data-assistant-chat-sending": true,
     className: "text-[11px] text-slate-400"
   }, assistant.name, "が考え中…")), React.createElement("div", {
@@ -98987,6 +99306,57 @@ function AssistantChatWindow({
       background: accent
     }
   }, "送る"))));
+}
+function AssistantCallnameToast({
+  assistant,
+  text,
+  screen,
+  hidden = false,
+  onDone
+}) {
+  const [from] = React.useState(screen);
+  const [show, setShow] = React.useState(false);
+  React.useEffect(() => {
+    if (screen !== from) setShow(true);
+  }, [screen, from]);
+  React.useEffect(() => {
+    if (!show) return undefined;
+    const t = setTimeout(() => onDone && onDone(), 4000);
+    return () => clearTimeout(t);
+  }, [show]);
+  const [, setTick] = React.useState(0);
+  React.useEffect(() => {
+    if (!show) return undefined;
+    const t = setInterval(() => setTick(n => n + 1), 250);
+    return () => clearInterval(t);
+  }, [show]);
+  if (!show || !assistant || hidden) return null;
+  const accent = assistant.accent || '#f472b6';
+  const target = typeof rotationAwarePortalTarget === 'function' ? rotationAwarePortalTarget() : document.body;
+  const body = React.createElement("div", {
+    "data-assistant-callname-toast": true,
+    onClick: () => onDone && onDone(),
+    className: "fixed left-1/2 top-[18%] -translate-x-1/2 w-[min(320px,86%)] flex items-center gap-2.5 rounded-2xl border-2 bg-slate-950/95 px-3 py-2.5 shadow-2xl",
+    style: {
+      borderColor: accent,
+      zIndex: 9100
+    }
+  }, React.createElement("img", {
+    src: assistantFaceSrc(assistant, 'happy'),
+    alt: "",
+    className: "h-11 w-11 shrink-0 rounded-full border-2 object-cover bg-slate-900",
+    style: {
+      borderColor: accent
+    }
+  }), React.createElement("p", {
+    className: "min-w-0 text-[12px] font-bold leading-relaxed text-pink-50 [word-break:keep-all] [overflow-wrap:anywhere]"
+  }, "呼び方が新しくなりました", React.createElement("br", null), React.createElement("span", {
+    className: "mt-0.5 inline-block rounded-md px-1.5 text-[10px] font-black text-slate-900",
+    style: {
+      background: accent
+    }
+  }, text)));
+  return target ? ReactDOM.createPortal(body, target) : body;
 }
 const ASSISTANT_DAILY_LINES_KEY = 'mh_assistant_daily_lines_v1';
 const ASSISTANT_DAILY_LINES_RATE = 1 / 3;
@@ -100597,7 +100967,7 @@ function AssistantPeerMap({
   const dailyPair = daily ? daily.pair.split('-') : null;
   return React.createElement("div", {
     "data-assistant-peer-map": true,
-    className: "rounded-2xl border border-white/10 bg-slate-950/60 p-3"
+    className: "rounded-2xl border border-white/10 bg-slate-950/85 p-3"
   }, React.createElement("p", {
     className: "text-[12px] font-black text-pink-200"
   }, "助手どうしの関係図"), React.createElement("p", {
@@ -102290,6 +102660,11 @@ const assistantLifeNow = async ({
       assistantLifeDiaryOnSlot(life, slot, now);
     } catch {}
   }
+  if (typeof assistantLifeFriendOnSlot === 'function') {
+    try {
+      void assistantLifeFriendOnSlot(life, slot, now);
+    } catch {}
+  }
   if (typeof assistantLifeRelTick === 'function') {
     try {
       void assistantLifeRelTick(now);
@@ -102447,6 +102822,7 @@ const assistantLifeLookNow = () => {
     return null;
   }
 };
+const assistantLifePlaceLabel = p => typeof assistantLifePlaceShow === 'function' ? assistantLifePlaceShow(p) : ASSISTANT_LIFE_PLACES[p];
 const assistantLifeTalkSet = () => {
   if (assistantLifeTalkCache) return assistantLifeTalkCache;
   const raw = typeof ASSISTANT_LIFE_TALKS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_TALKS) ? ASSISTANT_LIFE_TALKS : [];
@@ -103312,7 +103688,7 @@ function AssistantLifeScreenBody({
     className: "mt-2 rounded-xl bg-sky-400/10 px-2 py-1.5 text-[11px] font-bold text-sky-100"
   }, note), tab === 'now' && React.createElement(React.Fragment, null, canGive && !embedded && React.createElement("div", {
     "data-assistant-life-items": true,
-    className: "mt-2 rounded-2xl border border-amber-300/40 bg-amber-400/5 p-2"
+    className: "mt-2 rounded-2xl border border-amber-300/40 bg-slate-950/90 p-2"
   }, React.createElement("p", {
     className: "text-[12px] font-black text-amber-200"
   }, "🎁 2人に贈る道具(今日あと ", typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0, "回・同じ道具は1日1回)"), itemInfos.map(x => React.createElement("div", {
@@ -103344,7 +103720,7 @@ function AssistantLifeScreenBody({
     return React.createElement("div", {
       key: key,
       "data-assistant-life-group": key,
-      className: "rounded-2xl border border-white/10 bg-slate-900/80 p-2"
+      className: "rounded-2xl border border-white/15 bg-slate-950/90 p-2"
     }, React.createElement("div", {
       className: "flex items-center gap-2"
     }, React.createElement(AssistantLifeFaces, {
@@ -103356,7 +103732,7 @@ function AssistantLifeScreenBody({
       className: "text-[12px] font-black leading-tight text-white"
     }, g.ids.map(nameOf).join('・')), React.createElement("p", {
       className: "text-[11px] font-bold leading-tight text-pink-200"
-    }, ASSISTANT_LIFE_PLACES[g.place], "で", ASSISTANT_LIFE_DOINGS[g.doing].label))), g.ids.some(id => mood(id)) && React.createElement("p", {
+    }, assistantLifePlaceLabel(g.place), "で", ASSISTANT_LIFE_DOINGS[g.doing].label))), g.ids.some(id => mood(id)) && React.createElement("p", {
       className: "mt-1 text-[11px] text-slate-300"
     }, g.ids.filter(id => mood(id)).map(id => `${nameOf(id)}: ${mood(id)}`).join(' / ')), (() => {
       const hints = pairsOf(g.ids).map(([a, b]) => ({
@@ -103389,18 +103765,18 @@ function AssistantLifeScreenBody({
       "data-assistant-life-watch": key,
       disabled: done || watchLeft <= 0,
       onClick: () => watch(g),
-      className: "min-h-[44px] flex-1 rounded-xl border border-pink-300/50 bg-pink-400/10 px-2 text-[12px] font-black text-pink-100 active:scale-[.98] disabled:opacity-40"
-    }, done ? '見守りました' : watchLeft <= 0 ? '今日はもう見守れません' : '👀 見守る'), canGive && React.createElement("button", {
+      className: "min-h-[44px] flex-1 rounded-xl border border-pink-300/60 bg-pink-500/25 px-2 text-[12px] font-black text-pink-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400"
+    }, done ? '✓ 見守りました' : watchLeft <= 0 ? '今日はもう見守れません' : '👀 見守る'), canGive && React.createElement("button", {
       type: "button",
       "data-assistant-life-give": key,
       onClick: () => openGive(g),
-      className: "min-h-[44px] flex-1 rounded-xl border border-amber-300/60 bg-amber-400/15 px-2 text-[12px] font-black text-amber-100 active:scale-[.98]"
+      className: "min-h-[44px] flex-1 rounded-xl border border-amber-300/70 bg-amber-500/25 px-2 text-[12px] font-black text-amber-50 active:scale-[.98]"
     }, "🎁 ", g.ids.length === 2 ? '贈る' : 'だれに贈る？')));
   }), Object.entries(life.solo || {}).map(([id, s]) => React.createElement("div", {
     key: id,
     "data-assistant-life-solo": id,
     "data-assistant-life-reason": s.reason,
-    className: "flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-900/60 p-2"
+    className: "flex items-center gap-2 rounded-2xl border border-white/15 bg-slate-950/90 p-2"
   }, React.createElement(AssistantLifeFaces, {
     ids: [id],
     size: 36
@@ -103412,25 +103788,25 @@ function AssistantLifeScreenBody({
     className: `ml-1 text-[10px] ${s.reason === 'lonely' ? 'text-amber-200' : 'text-slate-400'}`
   }, ASSISTANT_LIFE_REASON_LABEL[s.reason])), React.createElement("p", {
     className: "text-[11px] font-bold leading-tight text-slate-300"
-  }, ASSISTANT_LIFE_PLACES[s.place], "で", ASSISTANT_LIFE_DOINGS[s.doing].label, "・", mood(id))), React.createElement("button", {
+  }, assistantLifePlaceLabel(s.place), "で", ASSISTANT_LIFE_DOINGS[s.doing].label, "・", mood(id))), React.createElement("button", {
     type: "button",
     "data-assistant-life-peek": id,
     disabled: (life.watched || []).includes(`solo:${id}`),
     onClick: () => peek(id),
-    className: "min-h-[44px] shrink-0 rounded-xl border border-pink-300/40 bg-pink-400/5 px-2 text-[11px] font-black text-pink-100 active:scale-[.98] disabled:opacity-40"
-  }, (life.watched || []).includes(`solo:${id}`) ? '見た' : 'ようすを見る'), s.reason !== 'distance' && React.createElement("button", {
+    className: "min-h-[44px] shrink-0 rounded-xl border border-pink-300/60 bg-pink-500/25 px-2 text-[11px] font-black text-pink-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400"
+  }, (life.watched || []).includes(`solo:${id}`) ? '✓ 見た' : 'ようすを見る'), s.reason !== 'distance' && React.createElement("button", {
     type: "button",
     "data-assistant-life-invite": id,
     disabled: invitedNext.has(id),
     onClick: () => invite(id),
-    className: "min-h-[44px] shrink-0 rounded-xl border border-amber-300/50 bg-amber-400/10 px-2 text-[11px] font-black text-amber-100 active:scale-[.98] disabled:opacity-40"
-  }, invitedNext.has(id) ? '誘った' : '誘う')))), ids.length >= 2 && React.createElement("div", {
+    className: "min-h-[44px] shrink-0 rounded-xl border border-amber-300/70 bg-amber-500/25 px-2 text-[11px] font-black text-amber-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400"
+  }, invitedNext.has(id) ? '✓ 誘った' : '誘う')))), ids.length >= 2 && React.createElement("div", {
     "data-assistant-life-introduce": true,
-    className: "mt-3 rounded-2xl border border-sky-300/30 bg-sky-400/5 p-2"
+    className: "mt-3 rounded-2xl border border-sky-300/50 bg-slate-950/90 p-2"
   }, React.createElement("p", {
     className: "text-[12px] font-black text-sky-100"
   }, "引き合わせる"), React.createElement("p", {
-    className: "mb-1.5 text-[10px] text-slate-400"
+    className: "mb-1.5 text-[10px] text-slate-300"
   }, "2人を選ぶと、次の時間に一緒に過ごしやすくなります。言い合いのあとなら、仲直りのきっかけに。"), React.createElement("div", {
     className: "flex flex-wrap gap-1.5"
   }, ids.map(id => {
@@ -103441,17 +103817,18 @@ function AssistantLifeScreenBody({
       "data-assistant-life-pick": id,
       "aria-pressed": on,
       onClick: () => setPick(p => on ? p.filter(x => x !== id) : [...p, id].slice(-2)),
-      className: `min-h-[40px] rounded-full border px-2.5 text-[11px] font-black active:scale-95 ${on ? 'border-sky-300 bg-sky-400/25 text-white' : 'border-white/15 text-slate-300'}`
+      className: `min-h-[40px] rounded-full border px-2.5 text-[11px] font-black active:scale-95 ${on ? 'border-sky-300 bg-sky-500/40 text-white' : 'border-white/25 bg-slate-800 text-slate-100'}`
     }, nameOf(id));
   })), React.createElement("button", {
     type: "button",
     "data-assistant-life-introduce-go": true,
     disabled: pick.length !== 2 || !!introNext,
     onClick: introduce,
-    className: "mt-2 min-h-[44px] w-full rounded-xl border border-sky-300/50 bg-sky-400/10 text-[12px] font-black text-sky-100 active:scale-[.98] disabled:opacity-40"
+    className: "mt-2 min-h-[44px] w-full rounded-xl border border-sky-300/60 bg-sky-500/25 text-[12px] font-black text-sky-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400"
   }, introNext ? `次の時間は ${introNext.pair.split('-').map(nameOf).join('と')} を引き合わせます` : '次の時間に一緒に過ごしてもらう')), React.createElement("p", {
-    className: "mt-3 text-[10px] leading-snug text-slate-500"
-  }, "みんな、時間(朝5・昼10・午後14・夕方18・夜21・深夜0時)が変わるたびに、自分で過ごし方を決めます。")), tab === 'map' && typeof AssistantPeerMap === 'function' && React.createElement("div", {
+    "data-assistant-life-foot": true,
+    className: "mt-3 rounded-xl bg-slate-950/85 px-2 py-1.5 text-[10.5px] leading-snug text-slate-300"
+  }, "みんな、5時・10時・14時・18時・21時・0時に、自分で過ごし方を決め直します。")), tab === 'map' && typeof AssistantPeerMap === 'function' && React.createElement("div", {
     className: "mt-2"
   }, React.createElement(AssistantPeerMap, {
     metIds: metIds,
@@ -103581,12 +103958,14 @@ const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({
   library: '📚',
   market: '🛍️',
   hill: '🌄',
-  garden: '🌷'
+  garden: '🌷',
+  temple: '✨'
 });
 const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({
   studio: 'モンヒロビート',
   cardroom: 'MFバトルカード',
-  ranch: 'M/B管理'
+  ranch: 'M/B管理',
+  temple: '神殿'
 });
 const assistantLifePlaceShow = place => ASSISTANT_LIFE_PLACE_SHOW[place] || ASSISTANT_LIFE_PLACES[place] || '';
 const assistantLifeFacilityOf = entry => {
@@ -104952,6 +105331,12 @@ function AssistantLifeRoom({
     "aria-hidden": "true"
   }, L.furn), React.createElement("div", {
     className: "fl"
+  }), typeof AssistantLifeRoomFurn === 'function' && React.createElement(AssistantLifeRoomFurn, {
+    id: id,
+    w: w,
+    h: h,
+    faces: ppl ? ppl.length : 0,
+    baseCount: [...String(L.furn || '')].filter(c => /\p{Extended_Pictographic}/u.test(c)).length
   }), ppl && !state.sleep && (look === 'night' || look === 'evening') && React.createElement("div", {
     className: "lamp"
   }), ppl && state.sleep && React.createElement("div", {
@@ -105190,6 +105575,11 @@ const assistantLifeRoomsOf = (life, metIds) => {
       assistantLifeRelDecorateRooms(rooms, life, peer);
     } catch {}
   }
+  if (typeof assistantLifeFriendDecorateRooms === 'function') {
+    try {
+      assistantLifeFriendDecorateRooms(rooms);
+    } catch {}
+  }
   return rooms;
 };
 function AssistantLifeRoomSheet({
@@ -105209,8 +105599,13 @@ function AssistantLifeRoomSheet({
   slot,
   land = false,
   onMediate = null,
-  roomState = null
+  roomState = null,
+  furnItems = null,
+  onGiveFurn = null,
+  onFurnTalk = null,
+  onMasmon = null
 }) {
+  const [furnOpen, setFurnOpen] = React.useState(false);
   const who = assistantById(id);
   if (!who) return null;
   const w = assistantLifeWhereOf(life, id);
@@ -105318,6 +105713,9 @@ function AssistantLifeRoomSheet({
   }, "Lv", f.lv))))), typeof AssistantLifeGiftLikesRow === 'function' && React.createElement(AssistantLifeGiftLikesRow, {
     id: id,
     compact: land
+  }), typeof AssistantMasmonRoomRow === 'function' && React.createElement(AssistantMasmonRoomRow, {
+    id: id,
+    onOpen: onMasmon
   }), sess && React.createElement("div", {
     className: "mhl-row",
     "data-assistant-life-room-session-row": true
@@ -105382,14 +105780,131 @@ function AssistantLifeRoomSheet({
   }, asleep ? '🎵 起こしてモンヒロビートに誘う' : atBeat && beatFree ? React.createElement(React.Fragment, null, "🎵 会いに行く", React.createElement("em", {
     className: "ml-1 rounded-full bg-amber-300 px-1.5 text-[10px] not-italic text-amber-950",
     "data-assistant-life-room-free": true
-  }, "券なし")) : '🎵 一緒にモンヒロビート'), typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id) && React.createElement("button", {
+  }, "券なし")) : '🎵 一緒にモンヒロビート'), typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled() && onGiveFurn && React.createElement("button", {
+    type: "button",
+    className: "mhl-btn col-span-2 bg-gradient-to-r from-amber-500 to-orange-600",
+    "data-assistant-life-room-act": "furn",
+    onClick: () => setFurnOpen(true)
+  }, "🪑 部屋の家具"), typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id) && React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-card col-span-2",
     "data-assistant-life-room-act": "card",
     onClick: () => onCard(id)
   }, "🃏 カード部屋で対戦する ", React.createElement("span", {
     className: "mhl-card-up"
-  }, "ごほうびアップ")))));
+  }, "ごほうびアップ")))), furnOpen && typeof AssistantLifeFurnSheet === 'function' && React.createElement(AssistantLifeFurnSheet, {
+    id: id,
+    furnItems: furnItems || {},
+    onGiveFurn: onGiveFurn,
+    land: land,
+    onClose: () => setFurnOpen(false),
+    onTalk: (talk, text) => {
+      setFurnOpen(false);
+      if (onFurnTalk) onFurnTalk(talk, text);
+    }
+  }));
+}
+const ASSISTANT_LIFE_STAND_BOX = new Map();
+const assistantLifeStandBox = src => new Promise(res => {
+  if (ASSISTANT_LIFE_STAND_BOX.has(src)) {
+    res(ASSISTANT_LIFE_STAND_BOX.get(src));
+    return;
+  }
+  const im = new Image();
+  im.onload = () => {
+    try {
+      const W = 96,
+        H = Math.max(1, Math.round(96 * im.naturalHeight / im.naturalWidth));
+      const c = document.createElement('canvas');
+      c.width = W;
+      c.height = H;
+      const g = c.getContext('2d');
+      g.drawImage(im, 0, 0, W, H);
+      const d = g.getImageData(0, 0, W, H).data;
+      let t = H,
+        b = -1,
+        l = W,
+        r = -1;
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (d[(y * W + x) * 4 + 3] > 40) {
+        if (y < t) t = y;
+        if (y > b) b = y;
+        if (x < l) l = x;
+        if (x > r) r = x;
+      }
+      const box = b < 0 ? null : {
+        t: t / H,
+        b: (b + 1) / H,
+        l: l / W,
+        r: (r + 1) / W,
+        ar: im.naturalWidth / im.naturalHeight
+      };
+      ASSISTANT_LIFE_STAND_BOX.set(src, box);
+      res(box);
+    } catch (_) {
+      ASSISTANT_LIFE_STAND_BOX.set(src, null);
+      res(null);
+    }
+  };
+  im.onerror = () => {
+    ASSISTANT_LIFE_STAND_BOX.set(src, null);
+    res(null);
+  };
+  im.src = src;
+});
+function AssistantLifeStand({
+  pid,
+  src,
+  cx,
+  fig,
+  sleep
+}) {
+  const [box, setBox] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.get(src) || null);
+  React.useEffect(() => {
+    let alive = true;
+    assistantLifeStandBox(src).then(b => {
+      if (alive) setBox(b);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [src]);
+  const filter = sleep ? 'brightness(.45) saturate(.6) drop-shadow(0 6px 12px #0008)' : undefined;
+  if (!box) return React.createElement("img", {
+    className: "st",
+    "data-assistant-life-scene-stand": pid,
+    "data-assistant-life-scene-sleep": sleep ? '1' : '0',
+    src: src,
+    alt: "",
+    style: {
+      left: `${cx}%`,
+      transform: 'translateX(-50%)',
+      height: '58%',
+      width: '70%',
+      bottom: '22%',
+      opacity: 0,
+      filter
+    }
+  });
+  const span = Math.max(0.2, box.b - box.t);
+  const h = fig / span;
+  return React.createElement("img", {
+    className: "st",
+    "data-assistant-life-scene-stand": pid,
+    "data-assistant-life-scene-sleep": sleep ? '1' : '0',
+    "data-assistant-life-scene-fig": fig,
+    src: src,
+    alt: "",
+    style: {
+      left: `${cx}%`,
+      height: `${(h * 100).toFixed(2)}%`,
+      width: 'auto',
+      maxWidth: 'none',
+      bottom: `calc(22% - ${((1 - box.b) * h * 100).toFixed(2)}%)`,
+      transform: `translateX(-${((box.l + box.r) / 2 * 100).toFixed(1)}%)`,
+      objectFit: 'fill',
+      filter
+    }
+  });
 }
 const assistantLifeSceneBg = (place, look) => {
   const v = ASSISTANT_LIFE_VIEW[look];
@@ -105503,20 +106018,12 @@ function AssistantLifeScene({
     const zz = (scene.sleep || []).includes(pid);
     return React.createElement(React.Fragment, {
       key: pid
-    }, React.createElement("img", {
-      className: "st",
-      "data-assistant-life-scene-stand": pid,
-      "data-assistant-life-scene-sleep": zz ? '1' : '0',
+    }, React.createElement(AssistantLifeStand, {
+      pid: pid,
       src: assistantFullImage(who, zz ? 'normal' : 'happy'),
-      alt: "",
-      style: {
-        left: `${cx}%`,
-        transform: 'translateX(-50%)',
-        height: n >= 4 ? '50%' : '58%',
-        width: n === 1 ? '90%' : n >= 4 ? '46%' : '70%',
-        bottom: '22%',
-        filter: zz ? 'brightness(.45) saturate(.6) drop-shadow(0 6px 12px #0008)' : undefined
-      }
+      cx: cx,
+      fig: n >= 4 ? 0.28 : n === 3 ? 0.32 : n === 2 ? 0.36 : 0.4,
+      sleep: zz
     }), zz && React.createElement("span", {
       className: "absolute text-[34px]",
       style: {
@@ -105543,11 +106050,18 @@ function AssistantLifeScene({
   }, React.createElement("p", {
     className: "mhl-en"
   }, scene.place && scene.place !== 'home' ? String(scene.place).toUpperCase() : 'ROOM'), React.createElement("p", {
+    className: "flex items-center gap-1.5",
+    "data-assistant-life-scene-title": true
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    "data-assistant-life-scene-icon": true,
+    className: "text-[19px] leading-none"
+  }, ASSISTANT_LIFE_PLACE_ICON[scene.place] || '🏡'), React.createElement("span", {
     className: "mhl-ti",
     style: {
       fontSize: 19
     }
-  }, ASSISTANT_LIFE_PLACE_ICON[scene.place] || '🏡', " ", placeName))), ids.length >= 3 && React.createElement("p", {
+  }, placeName)))), ids.length >= 3 && React.createElement("p", {
     "data-assistant-life-scene-group": true,
     className: "mt-1 w-fit rounded-full px-2 py-0.5 text-[10px] font-black",
     style: {
@@ -105596,17 +106110,21 @@ function AssistantLifeHouse({
   onReplay,
   peerItems = null,
   onUseItem = null,
-  bondLevelOf = null
+  bondLevelOf = null,
+  furnItems = null,
+  onGiveFurn = null
 }) {
   const st = useAssistantLifeNow(metIds);
   const diary = useAssistantLifeDiary();
   const peerSt = typeof useAssistantPeerState === 'function' ? useAssistantPeerState() : null;
   const land = useAssistantLifeLand();
+  if (typeof useAssistantLifeFriendState === 'function') useAssistantLifeFriendState();
   const [tab, setTab] = React.useState('house');
   const [roomId, setRoomId] = React.useState(st.focus || null);
   const [scene, setScene] = React.useState(null);
   const [note, setNote] = React.useState('');
   const [give, setGive] = React.useState(null);
+  const [masmonId, setMasmonId] = React.useState(null);
   const [intro, setIntro] = React.useState(null);
   const [boardOpen, setBoardOpen] = React.useState(false);
   const [vw, setVw] = React.useState(() => typeof window !== 'undefined' ? window.innerWidth : 390);
@@ -105825,7 +106343,8 @@ function AssistantLifeHouse({
     } catch {}
   };
   const unwatched = (life.groups || []).filter(g => !(life.watched || []).includes(assistantLifeGroupKey(g)));
-  const lonely = Object.entries(life.solo || {}).find(([, s]) => s.reason === 'lonely');
+  const awayFriend = id => typeof assistantLifeFriendAwayOf === 'function' && !!assistantLifeFriendAwayOf(id);
+  const lonely = Object.entries(life.solo || {}).find(([id, s]) => s.reason === 'lonely' && !awayFriend(id));
   const beatIds = ids.filter(id => {
     const w = assistantLifeWhereOf(life, id);
     return w && w.doing === 'practice';
@@ -105848,9 +106367,9 @@ function AssistantLifeHouse({
     type: "button",
     className: "mhl-tile mhl-call flex-1",
     "data-assistant-life-today-act": "call",
-    disabled: !Object.keys(life.solo || {}).length,
+    disabled: !Object.keys(life.solo || {}).filter(id => !awayFriend(id)).length,
     onClick: () => {
-      const id = lonely ? lonely[0] : Object.keys(life.solo || {})[0];
+      const id = lonely ? lonely[0] : Object.keys(life.solo || {}).filter(id => !awayFriend(id))[0];
       if (id) setRoomId(id);
     }
   }, React.createElement("em", null, "無料"), React.createElement("i", null, "💬"), React.createElement("b", null, "声をかける"), React.createElement("small", {
@@ -105876,7 +106395,7 @@ function AssistantLifeHouse({
     className: "mhl-icons",
     role: "tablist",
     "data-assistant-life-icons": true
-  }, [['house', '🏡', '家'], ['where', '📋', '居場所'], ['friends', '🤝', '友情'], ['items', '🎒', '道具']].map(([k, ic, label]) => React.createElement("button", {
+  }, [['house', '🏡', '家'], ['where', '📋', '居場所'], ['friends', '🤝', '友情'], ['items', '🎒', '道具'], ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏘', 'フレンド']] : [])].map(([k, ic, label]) => React.createElement("button", {
     key: k,
     type: "button",
     role: "tab",
@@ -105910,7 +106429,7 @@ function AssistantLifeHouse({
       letterSpacing: '.06em',
       fontSize: 8
     } : undefined
-  }, "ASSISTANT LIFE · ", tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : 'HOUSE'), React.createElement("p", {
+  }, "ASSISTANT LIFE · ", tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : tab === 'visit' ? 'VISIT' : 'HOUSE'), React.createElement("p", {
     className: "mhl-ti whitespace-nowrap",
     style: land ? {
       fontSize: 18
@@ -105984,7 +106503,9 @@ function AssistantLifeHouse({
     peerItems: peerItems,
     onUseItem: onUseItem,
     embedded: true
-  })) : tab === 'friends' ? React.createElement("div", {
+  })) : tab === 'visit' && typeof AssistantLifeFriendPage === 'function' ? React.createElement(AssistantLifeFriendPage, {
+    life: life
+  }) : tab === 'friends' ? React.createElement("div", {
     className: "px-3 pb-3 pt-1"
   }, typeof AssistantPeerMap === 'function' && React.createElement(AssistantPeerMap, {
     metIds: metIds,
@@ -106057,12 +106578,12 @@ function AssistantLifeHouse({
     className: "flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2"
   }, header, note && React.createElement("p", {
     "data-assistant-life-note": true,
-    className: "rounded-xl bg-sky-400/15 px-2 py-1 text-[10.5px] font-bold text-sky-100"
+    className: "rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1 text-[10.5px] font-bold text-sky-100"
   }, note), tiles, icons)) : React.createElement(React.Fragment, null, header, React.createElement("div", {
     className: "mhl-body"
   }, note && React.createElement("p", {
     "data-assistant-life-note": true,
-    className: "mx-3 mb-1 rounded-xl bg-sky-400/15 px-2 py-1.5 text-[11px] font-bold text-sky-100"
+    className: "mx-3 mb-1 rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 text-[11px] font-bold text-sky-100"
   }, note), tabBody), React.createElement("div", {
     className: "relative z-[3] bg-gradient-to-t from-[#0b1020] via-[#0b1020ee] to-transparent px-3 pt-1.5",
     style: {
@@ -106081,6 +106602,16 @@ function AssistantLifeHouse({
     bondLevelOf: bondLevelOf,
     diary: diary,
     slot: slot,
+    furnItems: furnItems,
+    onGiveFurn: onGiveFurn,
+    onFurnTalk: (talk, text) => {
+      playTalk(talk, {
+        ids: [talk.pair[0]],
+        place: 'home',
+        gift: true
+      });
+      setNote(text);
+    },
     canGive: canGive && itemsLeft > 0,
     land: land,
     onClose: () => setRoomId(null),
@@ -106091,7 +106622,12 @@ function AssistantLifeHouse({
     onBeat: beat,
     onCard: card,
     onMediate: mediate,
-    roomState: rooms[roomId]
+    roomState: rooms[roomId],
+    onMasmon: setMasmonId
+  }), masmonId && typeof AssistantMasmonSheet === 'function' && React.createElement(AssistantMasmonSheet, {
+    id: masmonId,
+    land: land,
+    onClose: () => setMasmonId(null)
   }), boardOpen && React.createElement("div", {
     className: "absolute inset-0",
     style: {
@@ -106188,14 +106724,22 @@ const ASSISTANT_LIFE_MAP_CROP = Object.freeze({
 const ASSISTANT_LIFE_MAP_POS = Object.freeze({
   ranch: [23.4, 30.6],
   library: [69.1, 22.9],
-  studio: [83.5, 27.8],
-  garden: [69.1, 33.3],
+  cafe: [87.0, 29.5],
+  temple: [66.0, 35.5],
+  garden: [87.0, 46.5],
   plaza: [51.0, 48.6],
-  cafe: [14.9, 61.8],
+  studio: [16.5, 64.0],
   market: [85.0, 64.6],
   home: [9.6, 78.5],
   cardroom: [49.9, 91.7],
   hill: [80.8, 5.6]
+});
+const ASSISTANT_LIFE_MAP_BUILDING = Object.freeze({
+  studio: [2, 45, 36, 70],
+  temple: [55, 24, 80, 40],
+  ranch: [3, 6, 42, 35],
+  market: [68, 48, 100, 70],
+  cardroom: [18, 72, 82, 100]
 });
 function AssistantLifeTownMap({
   life,
@@ -106437,6 +106981,8 @@ function AssistantLifeHomeFaces({
         padding: '0 3px'
       }
     }, "UP")));
+  }), rects.life && typeof AssistantLifeFriendHomeBadge === 'function' && React.createElement(AssistantLifeFriendHomeBadge, {
+    rect: rects.life
   }));
 }
 const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
@@ -118637,7 +119183,8 @@ const ASSISTANT_LIFE_GIFT_STORE = {
   state: {
     day: normalizeAssistantLifeGiftDay(null),
     likes: normalizeAssistantLifeGiftLikes(null),
-    cheki: {}
+    cheki: {},
+    room: {}
   },
   loaded: false,
   loading: null,
@@ -118660,11 +119207,12 @@ const ASSISTANT_LIFE_GIFT_STORE = {
     if (this.loaded) return Promise.resolve(this.state);
     if (!this.loading) this.loading = (async () => {
       try {
-        const [d, l, c] = await Promise.all([storeGet(ASSISTANT_LIFE_GIFT_DAY_KEY, null, false), storeGet(ASSISTANT_LIFE_GIFT_LIKES_KEY, null, false), storeGet(ASSISTANT_LIFE_GIFT_CHEKI_KEY, null, false)]);
+        const [d, l, c, r] = await Promise.all([storeGet(ASSISTANT_LIFE_GIFT_DAY_KEY, null, false), storeGet(ASSISTANT_LIFE_GIFT_LIKES_KEY, null, false), storeGet(ASSISTANT_LIFE_GIFT_CHEKI_KEY, null, false), storeGet('mh_assistant_life_room_v1', null, false)]);
         this.state = {
           day: normalizeAssistantLifeGiftDay(d),
           likes: normalizeAssistantLifeGiftLikes(l),
-          cheki: normalizeAssistantLifeGiftCheki(c)
+          cheki: normalizeAssistantLifeGiftCheki(c),
+          room: normalizeAssistantLifeRoom(r)
         };
       } catch {}
       this.loaded = true;
@@ -118714,11 +119262,27 @@ const assistantLifeGiftReason = (kind, peerSt, have = 1, st = ASSISTANT_LIFE_GIF
   if (have <= 0) return '持っていません(ビートP交換所で手に入ります)';
   return '';
 };
-const assistantLifeGiftKnown = (who, kindOrKey, st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+const assistantLifeGiftKeyOf = kindOrKey => {
   const g = assistantLifeGiftDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey);
-  return !!(g && st.likes.known[who] && st.likes.known[who][g.key]);
+  if (g) return {
+    key: g.key,
+    furniture: false
+  };
+  const f = (typeof ASSISTANT_LIFE_FURNITURE !== 'undefined' && Array.isArray(ASSISTANT_LIFE_FURNITURE) ? ASSISTANT_LIFE_FURNITURE : []).find(x => x.key === kindOrKey);
+  return f ? {
+    key: f.key,
+    furniture: true
+  } : null;
 };
-const assistantLifeGiftShownLike = (who, kindOrKey, st = ASSISTANT_LIFE_GIFT_STORE.state) => assistantLifeGiftKnown(who, kindOrKey, st) ? assistantLifeGiftLike(who, kindOrKey) : 'unknown';
+const assistantLifeGiftKnown = (who, kindOrKey, st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  const k = assistantLifeGiftKeyOf(kindOrKey);
+  return !!(k && st.likes.known[who] && st.likes.known[who][k.key]);
+};
+const assistantLifeGiftShownLike = (who, kindOrKey, st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  if (!assistantLifeGiftKnown(who, kindOrKey, st)) return 'unknown';
+  const k = assistantLifeGiftKeyOf(kindOrKey);
+  return k.furniture ? assistantLifeFurnLike(who, k.key) : assistantLifeGiftLike(who, kindOrKey);
+};
 const assistantLifeGiftRecord = async (kind, pair) => {
   await ASSISTANT_LIFE_GIFT_STORE.load();
   const g = assistantLifeGiftOf(kind);
@@ -118798,7 +119362,8 @@ const assistantLifeGiftOnBondLevel = async (who, level, rand = Math.random) => {
   if (!t) return null;
   await ASSISTANT_LIFE_GIFT_STORE.load();
   const st = ASSISTANT_LIFE_GIFT_STORE.state;
-  const left = (t.like || []).filter(k => !(st.likes.known[who] && st.likes.known[who][k]));
+  const ft = assistantLifeFurnEnabled() && typeof ASSISTANT_LIFE_FURN_LIKES !== 'undefined' ? ASSISTANT_LIFE_FURN_LIKES[who] : null;
+  const left = [...(t.like || []), ...(ft && ft.like || [])].filter(k => !(st.likes.known[who] && st.likes.known[who][k]));
   if (!left.length) return null;
   const key = left[Math.floor(rand() * left.length) % left.length];
   const known = {
@@ -118823,7 +119388,7 @@ const assistantLifeGiftOnBondLevel = async (who, level, rand = Math.random) => {
   try {
     storeSet(ASSISTANT_LIFE_GIFT_LIKES_KEY, likes, false);
   } catch {}
-  const g = assistantLifeGiftOf(key);
+  const g = assistantLifeGiftOf(key) || assistantLifeFurnOf(key);
   if (g && typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`${typeof assistantLifeName === 'function' ? assistantLifeName(who) : who}が好きなものを教えてくれた(${g.emoji} ${g.name})`, [who], {
     kind: 'gift'
   });
@@ -118844,7 +119409,7 @@ const assistantLifeGiftToldSeen = who => {
   } catch {}
 };
 const assistantLifeGiftHintLine = (who, key) => {
-  const g = assistantLifeGiftOf(key);
+  const g = assistantLifeGiftOf(key) || assistantLifeFurnOf(key);
   const real = typeof ASSISTANT_LIFE_GIFT_HINT_LINES !== 'undefined' && ASSISTANT_LIFE_GIFT_HINT_LINES[who] && ASSISTANT_LIFE_GIFT_HINT_LINES[who][key];
   const temp = typeof ASSISTANT_LIFE_GIFT_HINT_TEMP !== 'undefined' ? ASSISTANT_LIFE_GIFT_HINT_TEMP[who] : null;
   const pick = real && real.t ? real : temp;
@@ -119094,6 +119659,3331 @@ function AssistantLifeChekiRow({
   })), React.createElement("p", {
     className: "text-center text-[9px] font-black text-slate-700"
   }, String(d).slice(5).replace('-', '/'))))));
+}
+const ASSISTANT_LIFE_ROOM_KEY = 'mh_assistant_life_room_v1';
+const ASSISTANT_LIFE_FURN_SLOTS = Object.freeze({
+  ceil: Object.freeze({
+    label: '天井',
+    x: 0.36,
+    y: 0,
+    w: 0.2,
+    h: 0.2
+  }),
+  wall: Object.freeze({
+    label: '壁',
+    x: 0.02,
+    y: 0.28,
+    w: 0.2,
+    h: 0.26
+  }),
+  floor: Object.freeze({
+    label: '床',
+    x: 0.42,
+    y: 0.56,
+    w: 0.2,
+    h: 0.32
+  })
+});
+const assistantLifeFurnEnabled = () => typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeFurniture === true;
+const assistantLifeFurnDefs = () => typeof ASSISTANT_LIFE_FURNITURE !== 'undefined' && Array.isArray(ASSISTANT_LIFE_FURNITURE) ? ASSISTANT_LIFE_FURNITURE : [];
+const assistantLifeFurnOf = key => {
+  const f = assistantLifeFurnDefs().find(x => x.key === key || x.itemId === key);
+  if (!f) return null;
+  const item = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : []).find(x => x && x.id === f.itemId) || {};
+  const offer = (typeof RHYTHM_EVENT_POINT_SHOP_OFFERS !== 'undefined' ? RHYTHM_EVENT_POINT_SHOP_OFFERS : []).find(x => x.itemId === f.itemId) || {};
+  return {
+    ...f,
+    furniture: true,
+    name: item.name || offer.name || '',
+    emoji: item.emoji || offer.emoji || '🪑',
+    cost: Number.isFinite(offer.cost) ? offer.cost : null
+  };
+};
+const assistantLifeFurnCounts = ownedItems => {
+  const o = {};
+  for (const f of assistantLifeFurnDefs()) {
+    const n = ownedItems && typeof ownedItems === 'object' ? Number(ownedItems[f.itemId]) : 0;
+    o[f.key] = Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+  }
+  return o;
+};
+const assistantLifeFurnLike = (who, key) => {
+  const t = typeof ASSISTANT_LIFE_FURN_LIKES !== 'undefined' ? ASSISTANT_LIFE_FURN_LIKES[who] : null;
+  if (!t) return 'mid';
+  return (t.like || []).includes(key) ? 'like' : (t.bad || []).includes(key) ? 'bad' : 'mid';
+};
+const assistantLifeFurnAmount = (who, key) => Math.round((typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 80) * assistantLifeGiftMult(assistantLifeFurnLike(who, key)));
+const normalizeAssistantLifeRoomOne = raw => {
+  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const keys = new Set(assistantLifeFurnDefs().map(f => f.key));
+  const slotOf = k => (assistantLifeFurnDefs().find(f => f.key === k) || {}).slot;
+  const put = {
+    ceil: null,
+    wall: null,
+    floor: null
+  };
+  if (r.put && typeof r.put === 'object') for (const s of Object.keys(put)) {
+    const k = r.put[s];
+    if (typeof k === 'string' && keys.has(k) && slotOf(k) === s) put[s] = k;
+  }
+  const got = {};
+  if (r.got && typeof r.got === 'object' && !Array.isArray(r.got)) for (const [k, d] of Object.entries(r.got)) if (keys.has(k) && typeof d === 'string') got[k] = d;
+  const placed = new Set(Object.values(put).filter(Boolean));
+  const kept = [...new Set((Array.isArray(r.kept) ? r.kept : []).filter(k => typeof k === 'string' && keys.has(k) && !placed.has(k)))];
+  return {
+    put,
+    kept,
+    got
+  };
+};
+const normalizeAssistantLifeRoom = raw => {
+  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const o = {};
+  for (const [who, v] of Object.entries(r)) if (/^[a-z]+$/.test(who)) o[who] = normalizeAssistantLifeRoomOne(v);
+  return o;
+};
+const assistantLifeRoomOf = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => normalizeAssistantLifeRoomOne((st.room || {})[who]);
+const assistantLifeFurnGiveState = (roomSt, who, key, day) => {
+  const f = assistantLifeFurnDefs().find(x => x.key === key);
+  const cur = normalizeAssistantLifeRoomOne((roomSt || {})[who]);
+  if (!f || cur.got[key]) return null;
+  const put = {
+      ...cur.put
+    },
+    kept = [...cur.kept];
+  const placed = !put[f.slot];
+  if (placed) put[f.slot] = key;else kept.push(key);
+  return {
+    room: {
+      ...(roomSt || {}),
+      [who]: {
+        put,
+        kept,
+        got: {
+          ...cur.got,
+          [key]: day
+        }
+      }
+    },
+    placed
+  };
+};
+const assistantLifeFurnMoveState = (roomSt, who, key, toPut) => {
+  const f = assistantLifeFurnDefs().find(x => x.key === key);
+  const cur = normalizeAssistantLifeRoomOne((roomSt || {})[who]);
+  if (!f || !cur.got[key]) return null;
+  const put = {
+    ...cur.put
+  };
+  let kept = cur.kept.filter(k => k !== key);
+  if (toPut) {
+    if (put[f.slot] && put[f.slot] !== key) kept.push(put[f.slot]);
+    put[f.slot] = key;
+  } else {
+    if (put[f.slot] === key) put[f.slot] = null;
+    kept.push(key);
+  }
+  return {
+    ...(roomSt || {}),
+    [who]: {
+      put,
+      kept: [...new Set(kept)],
+      got: cur.got
+    }
+  };
+};
+const assistantLifeRoomSave = room => {
+  ASSISTANT_LIFE_GIFT_STORE.set({
+    room
+  });
+  try {
+    storeSet(ASSISTANT_LIFE_ROOM_KEY, room, false);
+  } catch {}
+};
+const assistantLifeFurnTalk = (who, key, rand = Math.random) => {
+  const f = assistantLifeFurnOf(key);
+  if (!f) return null;
+  const like = assistantLifeFurnLike(who, key);
+  const real = typeof ASSISTANT_LIFE_FURN_LINES !== 'undefined' && ASSISTANT_LIFE_FURN_LINES[who] && ASSISTANT_LIFE_FURN_LINES[who][key];
+  const list = Array.isArray(real) ? real.filter(x => x && Array.isArray(x.lines) && x.lines.length) : [];
+  const pick = list.length ? list[Math.floor(rand() * list.length) % list.length].lines : null;
+  const temp = typeof ASSISTANT_LIFE_GIFT_TEMP_LINES !== 'undefined' && ASSISTANT_LIFE_GIFT_TEMP_LINES[who] ? ASSISTANT_LIFE_GIFT_TEMP_LINES[who][like] : null;
+  const lines = (pick || (temp ? [{
+    e: temp.e,
+    t: String(temp.t).split('{item}').join(f.name).replace(/\{c\}[、とに]?/g, '')
+  }] : [])).map(x => ({
+    who,
+    e: x.e || 'happy',
+    t: x.t
+  }));
+  return lines.length ? {
+    id: `furn-${key}-${who}`,
+    pair: [who],
+    lv: 1,
+    scene: 'any',
+    furniture: key,
+    like,
+    lines
+  } : null;
+};
+const assistantLifeFurnGive = async (who, key) => {
+  if (!assistantLifeFurnEnabled()) return null;
+  await ASSISTANT_LIFE_GIFT_STORE.load();
+  const st = ASSISTANT_LIFE_GIFT_STORE.state;
+  const r = assistantLifeFurnGiveState(st.room, who, key, assistantLifeGiftToday());
+  if (!r) return null;
+  assistantLifeRoomSave(r.room);
+  const known = {
+    ...st.likes.known,
+    [who]: {
+      ...(st.likes.known[who] || {}),
+      [key]: 'gift'
+    }
+  };
+  const likes = {
+    ...st.likes,
+    known
+  };
+  ASSISTANT_LIFE_GIFT_STORE.set({
+    likes
+  });
+  try {
+    storeSet(ASSISTANT_LIFE_GIFT_LIKES_KEY, likes, false);
+  } catch {}
+  const amount = assistantLifeFurnAmount(who, key);
+  if (typeof assistantPeerPlayerBondAdder !== 'undefined' && assistantPeerPlayerBondAdder) {
+    try {
+      assistantPeerPlayerBondAdder(who, 'lifeFurn', amount);
+    } catch {}
+  }
+  const f = assistantLifeFurnOf(key);
+  if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`${typeof assistantLifeName === 'function' ? assistantLifeName(who) : who}の部屋に${f.name}を贈った`, [who], {
+    kind: 'give'
+  });
+  const talk = assistantLifeFurnTalk(who, key);
+  return talk ? {
+    ...talk,
+    amount,
+    placed: r.placed
+  } : null;
+};
+const assistantLifeFurnMove = async (who, key, toPut) => {
+  await ASSISTANT_LIFE_GIFT_STORE.load();
+  const next = assistantLifeFurnMoveState(ASSISTANT_LIFE_GIFT_STORE.state.room, who, key, toPut);
+  if (next) assistantLifeRoomSave(next);
+  return !!next;
+};
+function AssistantLifeRoomFurn({
+  id,
+  w,
+  h,
+  faces = 0,
+  baseCount = 2
+}) {
+  const st = useAssistantLifeGiftState();
+  if (!assistantLifeFurnEnabled()) return null;
+  const room = assistantLifeRoomOf(id, st);
+  const size = Math.round(Math.max(16, Math.min(26, h * 0.26, w * 0.17)));
+  const faceSize = Math.round(Math.min(40, h * 0.44));
+  const faceLeft = faces > 0 ? w * 0.9 - faceSize - (faces - 1) * (faceSize - 10) : w * 0.9;
+  const baseRight = 5 + baseCount * 21 + 2;
+  const g = Math.round(size * 1.25);
+  const wide = faceLeft - baseRight >= g + 4;
+  const pos = slot => {
+    if (wide) {
+      if (slot === 'ceil') return {
+        left: Math.round(w * 0.3),
+        top: 3
+      };
+      if (slot === 'wall') return {
+        left: Math.round(w * 0.52),
+        top: Math.round(h * 0.1)
+      };
+      return {
+        left: Math.round((baseRight + faceLeft) / 2 - g / 2),
+        top: Math.round(h - 13 - g)
+      };
+    }
+    if (slot === 'wall') return {
+      left: 6,
+      top: Math.max(24, Math.round(h - 38 - g))
+    };
+    if (slot === 'ceil') return {
+      left: Math.round(w * 0.31),
+      top: 3
+    };
+    return {
+      left: Math.round(w * 0.31) + g + 2,
+      top: Math.round(h * 0.13)
+    };
+  };
+  return React.createElement(React.Fragment, null, Object.entries(room.put).filter(([, k]) => k).map(([slot, k]) => {
+    const f = assistantLifeFurnOf(k);
+    if (!f || !ASSISTANT_LIFE_FURN_SLOTS[slot]) return null;
+    const p = pos(slot);
+    return React.createElement("span", {
+      key: slot,
+      "data-assistant-life-room-furn": `${id}:${slot}:${k}`,
+      "aria-hidden": "true",
+      style: {
+        position: 'absolute',
+        left: p.left,
+        top: p.top,
+        width: size,
+        height: size,
+        zIndex: 2,
+        fontSize: size,
+        lineHeight: 1,
+        pointerEvents: 'none',
+        filter: 'drop-shadow(0 2px 2px #0006)'
+      }
+    }, slot === 'ceil' && React.createElement("span", {
+      style: {
+        position: 'absolute',
+        bottom: '100%',
+        left: '50%',
+        width: 1,
+        height: Math.round(size * 0.3),
+        background: '#7c5a3a'
+      }
+    }), React.createElement("span", null, f.emoji));
+  }));
+}
+function AssistantLifeFurnSheet({
+  id,
+  furnItems,
+  onGiveFurn,
+  onClose,
+  onTalk,
+  land = false
+}) {
+  const st = useAssistantLifeGiftState();
+  const [busy, setBusy] = React.useState(false);
+  const [msg, setMsg] = React.useState('');
+  const who = typeof assistantById === 'function' ? assistantById(id) : null;
+  if (!assistantLifeFurnEnabled() || !who) return null;
+  const room = assistantLifeRoomOf(id, st);
+  const all = assistantLifeFurnDefs().map(f => assistantLifeFurnOf(f.key)).filter(Boolean);
+  const mine = all.filter(f => room.got[f.key]);
+  const canGive = all.filter(f => !room.got[f.key] && (Number(furnItems && furnItems[f.key]) || 0) > 0);
+  const shown = k => assistantLifeGiftShownLike(id, k, st);
+  const mark = s => s === 'like' ? '💗' : s === 'bad' ? '💧' : s === 'unknown' ? '?' : '';
+  const give = async k => {
+    if (busy) return;
+    setBusy(true);
+    const talk = typeof onGiveFurn === 'function' ? await onGiveFurn(id, k) : null;
+    setBusy(false);
+    if (!talk) {
+      setMsg('いまは贈れません(持っている数を見てください)');
+      return;
+    }
+    const f = assistantLifeFurnOf(k);
+    const likeText = talk.like === 'like' ? '💗 好きな家具！' : talk.like === 'bad' ? '💧 ちょっと苦手…' : '';
+    const text = `${who.name}に${f.emoji} ${f.name}を贈った。💗 仲良し度 +${talk.amount}${likeText ? ` ・ ${likeText}` : ''}${talk.placed ? '' : `(${ASSISTANT_LIFE_FURN_SLOTS[f.slot].label}はふさがっているので押し入れへ)`}`;
+    setMsg(text);
+    if (typeof onTalk === 'function') onTalk(talk, text);
+  };
+  const row = (f, act) => React.createElement("div", {
+    key: f.key,
+    className: "flex items-center gap-2 rounded-xl bg-slate-800/80 px-2 py-1",
+    "data-assistant-life-furn-row": f.key
+  }, React.createElement("span", {
+    className: "text-[22px] leading-none",
+    "aria-hidden": "true"
+  }, f.emoji), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "truncate text-[12px] font-black text-white"
+  }, f.name, " ", React.createElement("span", {
+    className: "text-[10px] text-slate-300"
+  }, ASSISTANT_LIFE_FURN_SLOTS[f.slot].label), " ", React.createElement("span", {
+    className: "text-[10.5px]"
+  }, mark(shown(f.key))))), act);
+  const btn = (label, onClick, cls, data) => React.createElement("button", _extends({
+    type: "button"
+  }, data, {
+    disabled: busy,
+    onClick: onClick,
+    className: `min-h-[36px] shrink-0 rounded-lg border px-2 text-[11px] font-black active:scale-95 disabled:opacity-40 ${cls}`
+  }), label);
+  return React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      zIndex: 32
+    },
+    "data-assistant-life-furn-sheet": id
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    className: "absolute inset-0 bg-black/60",
+    onClick: onClose
+  }), React.createElement("div", {
+    className: "mhl-sheet",
+    style: land ? {
+      left: 'auto',
+      width: '46%',
+      top: 0,
+      maxHeight: '100%',
+      borderRadius: '22px 0 0 22px',
+      borderTop: 0,
+      borderLeft: '2px solid #fbbf24',
+      paddingTop: 10
+    } : {
+      borderTopColor: '#fbbf24'
+    }
+  }, React.createElement("p", {
+    className: "mhl-en"
+  }, "FURNITURE · ", String(id).toUpperCase()), React.createElement("p", {
+    className: "text-[18px] font-black text-white"
+  }, "🪑 ", who.name, "の部屋の家具"), React.createElement("p", {
+    className: "text-[10.5px] font-bold leading-snug text-slate-300"
+  }, "置けるのは天井・壁・床に1つずつ。ほかは押し入れにしまえます。好きな家具なら仲良し度が多めに上がります(1つの家具は1回)"), msg && React.createElement("p", {
+    "data-assistant-life-furn-msg": true,
+    className: "mt-1.5 rounded-xl bg-amber-300/15 px-2 py-1 text-[11px] font-black leading-snug text-amber-100"
+  }, msg), React.createElement("p", {
+    className: "mt-2 text-[11px] font-black text-amber-200"
+  }, "🎁 贈れる家具"), React.createElement("div", {
+    className: "mt-1 space-y-1"
+  }, canGive.length ? canGive.map(f => row(f, React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "shrink-0 text-[10px] font-bold text-slate-300"
+  }, "×", furnItems[f.key]), btn('贈る', () => give(f.key), 'border-amber-300/70 bg-amber-400/20 text-amber-100', {
+    'data-assistant-life-furn-give': f.key
+  })))) : React.createElement("p", {
+    className: "rounded-xl bg-slate-800/80 px-2 py-1 text-[11px] font-bold text-slate-300"
+  }, "贈れる家具がありません。モンヒロビートの「ビートP交換所」の「家具」で手に入ります")), React.createElement("p", {
+    className: "mt-2 text-[11px] font-black text-amber-200"
+  }, "🏠 部屋に置いてある家具 ", React.createElement("span", {
+    className: "text-slate-300"
+  }, "(", mine.length, "/", all.length, "持っている)")), React.createElement("div", {
+    className: "mt-1 space-y-1",
+    "data-assistant-life-furn-placed": true
+  }, mine.filter(f => room.put[f.slot] === f.key).length ? mine.filter(f => room.put[f.slot] === f.key).map(f => row(f, btn('しまう', () => assistantLifeFurnMove(id, f.key, false), 'border-slate-500 text-slate-200', {
+    'data-assistant-life-furn-keep': f.key
+  }))) : React.createElement("p", {
+    className: "rounded-xl bg-slate-800/80 px-2 py-1 text-[11px] font-bold text-slate-300"
+  }, "まだありません")), mine.some(f => room.put[f.slot] !== f.key) && React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "mt-2 text-[11px] font-black text-amber-200"
+  }, "📦 押し入れ"), React.createElement("div", {
+    className: "mt-1 space-y-1",
+    "data-assistant-life-furn-kept": true
+  }, mine.filter(f => room.put[f.slot] !== f.key).map(f => row(f, btn(room.put[f.slot] ? '入れかえる' : '置く', () => assistantLifeFurnMove(id, f.key, true), 'border-pink-300/70 bg-pink-400/15 text-pink-100', {
+    'data-assistant-life-furn-put': f.key
+  }))))), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-furn-close": true,
+    onClick: onClose,
+    className: "mt-2 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]"
+  }, "閉じる")));
+}
+const ASSISTANT_MASMON_PLAN = [{
+  "id": "mua",
+  "team": [{
+    "monster": "KenshiMocchi",
+    "nick": "もち隊長",
+    "lead": true,
+    "why": "好き。剣を持ったモッチーがかっこかわいい",
+    "lv": 24,
+    "grow": "すばやさ型(ノリで決めた)",
+    "dye": {
+      "colors": ["pink_light", "sky", "pink", "pink_light", "sky"]
+    }
+  }, {
+    "monster": "MelWhip",
+    "nick": "ほいっぷちゃん",
+    "lead": false,
+    "why": "好き。甘くてかわいい",
+    "lv": 16,
+    "grow": "ライフ型",
+    "dye": {
+      "colors": ["sky", "pink", "pink_light", "sky", "pink"]
+    }
+  }, {
+    "monster": "Iblis",
+    "nick": "イブちゃん",
+    "lead": false,
+    "why": "好き。ちょっと悪そうなのがいい",
+    "lv": 14,
+    "grow": "攻撃型",
+    "dye": {
+      "colors": ["pink", "pink_light", "sky"]
+    }
+  }],
+  "deck": {
+    "name": "キラキラ速攻",
+    "plan": "軽いカードを早く並べて、先に押し切る。ノリで決めて、勝てたらはしゃぐ"
+  },
+  "likeMon": [{
+    "monster": "KenshiMocchi",
+    "why": "剣を持ったモッチーがかっこかわいい"
+  }, {
+    "monster": "MelWhip",
+    "why": "甘くてかわいい"
+  }, {
+    "monster": "Iblis",
+    "why": "ちょっと悪そうなのがいい"
+  }],
+  "dislikeMon": [{
+    "monster": "Ghost",
+    "why": "こわいのはまぢ無理"
+  }, {
+    "monster": "Monol",
+    "why": "かたくて地味"
+  }, {
+    "monster": "Golem",
+    "why": "ごつくて、ちょっとこわい"
+  }],
+  "favColors": [{
+    "color": "pink_light",
+    "why": "ふんわりかわいい"
+  }, {
+    "color": "sky",
+    "why": "さわやか"
+  }, {
+    "color": "pink",
+    "why": "はっきりかわいい"
+  }]
+}, {
+  "id": "kiki",
+  "team": [{
+    "monster": "Golem",
+    "nick": "ごろべえ",
+    "lead": true,
+    "why": "好き。ちからに振るのが楽しい",
+    "lv": 26,
+    "grow": "攻撃型(ちからに振る)",
+    "dye": {
+      "colors": ["pink", "red", "pink_light"]
+    }
+  }, {
+    "monster": "Eiki",
+    "nick": "エイキさん",
+    "lead": false,
+    "why": "好き。きりっとして強い",
+    "lv": 17,
+    "grow": "攻撃型",
+    "dye": {
+      "colors": ["red", "pink_light", "pink"]
+    }
+  }, {
+    "monster": "Zan",
+    "nick": "ざんざん",
+    "lead": false,
+    "why": "好き。速くて鋭い",
+    "lv": 15,
+    "grow": "すばやさ型",
+    "dye": {
+      "colors": ["pink_light", "pink", "red"]
+    }
+  }],
+  "deck": {
+    "name": "ずっしり火力",
+    "plan": "守って耐えて、ちからの高いモンスターで一撃。数字よりも火力を信じる"
+  },
+  "likeMon": [{
+    "monster": "Golem",
+    "why": "ちからに振るのが楽しい"
+  }, {
+    "monster": "Eiki",
+    "why": "きりっとして強い"
+  }, {
+    "monster": "Zan",
+    "why": "速くて鋭い"
+  }],
+  "dislikeMon": [{
+    "monster": "Oboro",
+    "why": "力が低くて物足りない"
+  }, {
+    "monster": "Monol",
+    "why": "力が低くて物足りない"
+  }, {
+    "monster": "Plant",
+    "why": "力が低くて物足りない"
+  }],
+  "favColors": [{
+    "color": "pink",
+    "why": "いつものリボンの色"
+  }, {
+    "color": "red",
+    "why": "火力の色"
+  }, {
+    "color": "pink_light",
+    "why": "やさしい"
+  }]
+}, {
+  "id": "momosuke",
+  "team": [{
+    "monster": "Melody",
+    "nick": "メロちゃん",
+    "lead": true,
+    "why": "好き。一緒に歌える",
+    "lv": 22,
+    "grow": "ガッツ型(ステージ映え)",
+    "dye": {
+      "colors": ["magenta", "pink", "purple_light", "yellow", "magenta"]
+    }
+  }, {
+    "monster": "Yggdrasil",
+    "nick": "ユグっち",
+    "lead": false,
+    "why": "好きなユグドラシル種",
+    "lv": 15,
+    "grow": "ライフ型",
+    "dye": {
+      "colors": ["pink", "purple_light", "yellow"]
+    }
+  }, {
+    "monster": "Dreamy",
+    "nick": "ゆめっち",
+    "lead": false,
+    "why": "好き。ゆめかわ",
+    "lv": 13,
+    "grow": "すばやさ型",
+    "dye": {
+      "colors": ["purple_light", "yellow", "magenta", "pink", "purple_light"]
+    }
+  }],
+  "deck": {
+    "name": "ステージ・オン",
+    "plan": "派手なカードで盛り上げる。勝っても負けても見せ場を作る"
+  },
+  "likeMon": [{
+    "monster": "Melody",
+    "why": "一緒に歌える"
+  }, {
+    "lineage": "yggdrasil",
+    "why": "ユグドラシル種はぜんぶ好き"
+  }, {
+    "monster": "Dreamy",
+    "why": "ゆめかわ"
+  }],
+  "dislikeMon": [{
+    "monster": "Golem",
+    "why": "ゴリゴリで一緒に踊れない"
+  }, {
+    "monster": "Tiger",
+    "why": "ゴリゴリでこわい"
+  }, {
+    "monster": "Iblis",
+    "why": "ゴリゴリでこわい"
+  }],
+  "favColors": [{
+    "color": "magenta",
+    "why": "ステージの色"
+  }, {
+    "color": "pink",
+    "why": "かわいい担当"
+  }, {
+    "color": "purple_light",
+    "why": "ゆめかわ"
+  }, {
+    "color": "yellow",
+    "why": "スポットライト"
+  }]
+}, {
+  "id": "dra",
+  "team": [{
+    "monster": "Suezo",
+    "nick": "メダマ焼き",
+    "lead": true,
+    "why": "好き。ギャグが通じる",
+    "lv": 18,
+    "grow": "ライフ型(のんびり)",
+    "dye": {
+      "colors": ["green", "orange", "black"]
+    }
+  }, {
+    "monster": "Golem",
+    "nick": "ゴロ助",
+    "lead": false,
+    "why": "好き。何でも強く育てられる",
+    "lv": 20,
+    "grow": "攻撃型",
+    "dye": {
+      "colors": ["orange", "black", "green"]
+    }
+  }, {
+    "monster": "Oboro",
+    "nick": "おぼろん",
+    "lead": false,
+    "why": "一緒に昼寝",
+    "lv": 14,
+    "grow": "防御型",
+    "dye": {
+      "colors": ["black", "green", "orange"]
+    }
+  }],
+  "deck": {
+    "name": "のんびり長期戦",
+    "plan": "あわてず守って、長い試合で少しずつ削る。説明しながら打つ"
+  },
+  "likeMon": [{
+    "monster": "Suezo",
+    "why": "ギャグが通じる"
+  }, {
+    "monster": "Golem",
+    "why": "どっしりして強い"
+  }],
+  "dislikeMon": [{
+    "monster": "Ark",
+    "why": "まぶしくて昼寝できない"
+  }, {
+    "lineage": "ark",
+    "why": "アーク種はぜんぶ苦手"
+  }],
+  "favColors": [{
+    "color": "green",
+    "why": "ひなたの丘の草"
+  }, {
+    "color": "orange",
+    "why": "茶色っぽくて落ち着く"
+  }, {
+    "color": "black",
+    "why": "落ち着く"
+  }]
+}, {
+  "id": "atsu",
+  "team": [{
+    "monster": "KenshiMocchi",
+    "nick": "師匠",
+    "lead": true,
+    "why": "好き。モッチー種は特別",
+    "lv": 27,
+    "grow": "攻撃型(朝の育成)",
+    "dye": {
+      "colors": ["red", "black", "red", "black", "red"]
+    }
+  }, {
+    "monster": "Zan",
+    "nick": "ザンくん",
+    "lead": false,
+    "why": "好き。速くて強い",
+    "lv": 19,
+    "grow": "すばやさ型",
+    "dye": {
+      "colors": ["black", "red", "black"]
+    }
+  }, {
+    "monster": "Spooky",
+    "nick": "スプ",
+    "lead": false,
+    "why": "好きなゴースト種",
+    "lv": 16,
+    "grow": "攻撃型",
+    "dye": {
+      "colors": ["red", "black", "red", "black", "red"]
+    }
+  }],
+  "deck": {
+    "name": "真っ向勝負",
+    "plan": "強いモンスターで正面から。小細工はしない。負けたらすぐ再戦"
+  },
+  "likeMon": [{
+    "monster": "KenshiMocchi",
+    "why": "モッチー種は特別"
+  }, {
+    "monster": "Zan",
+    "why": "速くて強い"
+  }, {
+    "lineage": "ghost",
+    "why": "ゴースト種は強くてかっこいい"
+  }],
+  "dislikeMon": [],
+  "favColors": [{
+    "color": "red",
+    "why": "勝負の色"
+  }, {
+    "color": "black",
+    "why": "締まって見える"
+  }]
+}, {
+  "id": "kyuko",
+  "team": [{
+    "monster": "Illumine",
+    "nick": "ともしび",
+    "lead": true,
+    "why": "好き。灯りが夜の読書に合う",
+    "lv": 21,
+    "grow": "ガッツ型(夜ふかしで育成)",
+    "dye": {
+      "colors": ["red_light", "white", "orange_light", "red_light", "white"]
+    }
+  }, {
+    "monster": "Dreamy",
+    "nick": "ゆめの",
+    "lead": false,
+    "why": "好き。夢の話ができる",
+    "lv": 15,
+    "grow": "ガッツ型",
+    "dye": {
+      "colors": ["white", "orange_light", "red_light", "white", "orange_light"]
+    }
+  }, {
+    "monster": "Pixie",
+    "nick": "ぴぃ",
+    "lead": false,
+    "why": "好きなピクシー種",
+    "lv": 14,
+    "grow": "すばやさ型",
+    "dye": {
+      "colors": ["orange_light", "red_light", "white"]
+    }
+  }],
+  "deck": {
+    "name": "夜の読み筋",
+    "plan": "相手の手を読んで、最後にひっくり返す。数字と直感の両方で決める"
+  },
+  "likeMon": [{
+    "monster": "Illumine",
+    "why": "灯りが夜の読書に合う"
+  }, {
+    "monster": "Dreamy",
+    "why": "夢の話ができる"
+  }, {
+    "lineage": "pixie",
+    "why": "ピクシー種はかわいい"
+  }],
+  "dislikeMon": [{
+    "monster": "Suezo",
+    "why": "じっと見られると落ち着かない"
+  }, {
+    "monster": "Ham",
+    "why": "元気すぎてつかれる"
+  }, {
+    "monster": "Eiki",
+    "why": "きびきびしすぎて本が読めない"
+  }],
+  "favColors": [{
+    "color": "red_light",
+    "why": "髪の色"
+  }, {
+    "color": "white",
+    "why": "服の色"
+  }, {
+    "color": "orange_light",
+    "why": "目の色"
+  }]
+}, {
+  "id": "sorashido",
+  "team": [{
+    "monster": "Kyubi",
+    "nick": "コン太",
+    "lead": true,
+    "why": "推し",
+    "lv": 25,
+    "grow": "すばやさ型(記録どおり)",
+    "dye": {
+      "colors": ["blue", "sky", "white", "blue", "sky"]
+    }
+  }, {
+    "monster": "Orihime",
+    "nick": "ヒメ",
+    "lead": false,
+    "why": "もう1人の推し",
+    "lv": 18,
+    "grow": "ガッツ型",
+    "dye": {
+      "colors": ["sky", "white", "blue", "sky", "white"]
+    }
+  }, {
+    "monster": "Monol",
+    "nick": "ソロバン",
+    "lead": false,
+    "why": "計算と表づくり",
+    "lv": 15,
+    "grow": "防御型",
+    "dye": {
+      "colors": ["white", "blue", "sky"]
+    }
+  }],
+  "deck": {
+    "name": "計算ずく",
+    "plan": "記録から勝ち筋を決めて、その通りに打つ。表は毎晩書き直す"
+  },
+  "likeMon": [{
+    "monster": "Kyubi",
+    "why": "推し"
+  }, {
+    "monster": "Orihime",
+    "why": "もう1人の推し"
+  }],
+  "dislikeMon": [{
+    "monster": "Spooky",
+    "why": "動きが読めない"
+  }, {
+    "monster": "Mitarashi",
+    "why": "のんびりで試合が長い"
+  }, {
+    "monster": "Undine",
+    "why": "気まぐれで計算が合わない"
+  }],
+  "favColors": [{
+    "color": "blue",
+    "why": "着物の色"
+  }, {
+    "color": "sky",
+    "why": "沖縄の海"
+  }, {
+    "color": "white",
+    "why": "表の紙"
+  }]
+}, {
+  "id": "erubin",
+  "team": [{
+    "monster": "Ark",
+    "nick": "ノア",
+    "lead": true,
+    "why": "好きなモンスター",
+    "lv": 23,
+    "grow": "防御型(みんなを守る)",
+    "dye": {
+      "colors": ["black", "orange", "gray"]
+    }
+  }, {
+    "monster": "Kuromy",
+    "nick": "よぞら",
+    "lead": false,
+    "why": "強いのについ目がいく",
+    "lv": 20,
+    "grow": "攻撃型",
+    "dye": {
+      "colors": ["orange", "gray", "black", "orange", "gray"]
+    }
+  }, {
+    "monster": "Mia",
+    "nick": "つばさ",
+    "lead": false,
+    "why": "強いのについ目がいく",
+    "lv": 17,
+    "grow": "すばやさ型",
+    "dye": {
+      "colors": ["gray", "black", "orange"]
+    }
+  }],
+  "deck": {
+    "name": "みんなで守る",
+    "plan": "仲間を守るカードを多めに。ひとりも倒れさせないで勝つ"
+  },
+  "likeMon": [{
+    "monster": "Ark",
+    "why": "好きなモンスター"
+  }, {
+    "monster": "Kuromy",
+    "why": "強いのについ目がいく"
+  }, {
+    "monster": "Mia",
+    "why": "強いのについ目がいく"
+  }],
+  "dislikeMon": [{
+    "monster": "Zan",
+    "why": "せっかちで、ついていけない"
+  }, {
+    "monster": "Yaobikuni",
+    "why": "ひんやりして少しこわい"
+  }, {
+    "monster": "Ham",
+    "why": "にぎやかで、散歩が落ち着かない"
+  }],
+  "favColors": [{
+    "color": "black",
+    "why": "いつもの服"
+  }, {
+    "color": "orange",
+    "why": "茶色っぽくて落ち着く"
+  }, {
+    "color": "gray",
+    "why": "落ち着いた色"
+  }]
+}];
+const assistantMasmonPlanOf = id => ASSISTANT_MASMON_PLAN.find(a => a && a.id === id) || null;
+const assistantMasmonMon = mid => typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[mid] || null;
+const assistantMasmonLineage = mid => {
+  try {
+    const l = typeof monsterLineageOf === 'function' ? monsterLineageOf(mid) : null;
+    const m = l && l.main;
+    return (m && typeof m === 'object' ? m.id : m) || null;
+  } catch (_) {
+    return null;
+  }
+};
+const assistantMasmonLineageName = lin => typeof MONSTER_LINEAGES !== 'undefined' && MONSTER_LINEAGES[lin] ? MONSTER_LINEAGES[lin].name : '';
+const assistantMasmonTasteName = x => {
+  if (!x) return '';
+  if (x.lineage) {
+    const n = assistantMasmonLineageName(x.lineage);
+    return n ? `${n}種` : '';
+  }
+  const m = assistantMasmonMon(x.monster);
+  return m ? m.name : '';
+};
+const assistantMasmonSpread = x => {
+  if (!x || !x.monster) return '';
+  const lin = assistantMasmonLineage(x.monster),
+    n = assistantMasmonLineageName(lin);
+  const m = assistantMasmonMon(x.monster);
+  return n && m && n !== m.name ? `${n}種` : '';
+};
+const ASSISTANT_MASMON_CARD_STYLE = Object.freeze({
+  mua: 'attack',
+  kiki: 'attack',
+  momosuke: 'normal',
+  dra: 'guard',
+  atsu: 'attack',
+  kyuko: 'normal',
+  sorashido: 'normal',
+  erubin: 'guard'
+});
+const assistantLifeCardStyle = id => {
+  try {
+    if (typeof assistantLifeEnabled === 'function' && !assistantLifeEnabled()) return null;
+  } catch (_) {
+    return null;
+  }
+  return ASSISTANT_MASMON_CARD_STYLE[id] || null;
+};
+const assistantLifeTasteOf = id => {
+  try {
+    if (typeof assistantLifeEnabled === 'function' && !assistantLifeEnabled()) return null;
+  } catch (_) {
+    return null;
+  }
+  const p = assistantMasmonPlanOf(id);
+  if (!p) return null;
+  const names = xs => [...new Set((xs || []).map(assistantMasmonTasteName).filter(Boolean))].slice(0, 5);
+  return {
+    likes: names(p.likeMon),
+    dislikes: names(p.dislikeMon),
+    changed: []
+  };
+};
+if (typeof ASSISTANT_CHAT_TASTE_HOOKS === 'object' && ASSISTANT_CHAT_TASTE_HOOKS) {
+  ASSISTANT_CHAT_TASTE_HOOKS.of = assistantLifeTasteOf;
+}
+const ASSISTANT_MASMON_GROW_BIAS = Object.freeze({
+  '攻撃型': {
+    atk: 1.18
+  },
+  '防御型': {
+    def: 1.18
+  },
+  'ガッツ型': {
+    guts: 1.18
+  },
+  'ライフ型': {
+    hp: 1.18
+  },
+  'すばやさ型': {
+    atk: 1.08,
+    guts: 1.08
+  }
+});
+const ASSISTANT_MASMON_STAT_CAP = Object.freeze({
+  hp: 2200,
+  atk: 560,
+  def: 560,
+  guts: 420
+});
+const ASSISTANT_MASMON_STAT_LABEL = Object.freeze([['hp', 'ライフ'], ['atk', '攻撃'], ['def', '防御'], ['guts', 'ガッツ']]);
+const assistantMasmonGrowKind = grow => String(grow || '').split('(')[0];
+const assistantMasmonStats = t => {
+  const m = assistantMasmonMon(t && t.monster);
+  if (!m) return null;
+  const lv = Number.isFinite(t.lv) ? Math.max(1, t.lv) : 1;
+  const bias = ASSISTANT_MASMON_GROW_BIAS[assistantMasmonGrowKind(t.grow)] || {};
+  const base = {
+    hp: m.baseHp,
+    atk: m.baseAtk,
+    def: m.baseDef,
+    guts: m.baseGuts
+  };
+  const out = {};
+  for (const [k] of ASSISTANT_MASMON_STAT_LABEL) {
+    const b = Number.isFinite(base[k]) ? base[k] : 0;
+    out[k] = Math.min(1, b * (1 + (lv - 1) * 0.04) * (bias[k] || 1) / ASSISTANT_MASMON_STAT_CAP[k]);
+  }
+  return out;
+};
+const assistantMasmonSwatch = c => typeof MASU_COLOR_SWATCH !== 'undefined' && MASU_COLOR_SWATCH[c] || '#94a3b8';
+const assistantMasmonColorName = c => typeof MASU_COLOR_LABELS !== 'undefined' && MASU_COLOR_LABELS[c] || c;
+const assistantMasmonRegions = mid => typeof MASU_COLOR_REGION_HUES !== 'undefined' && Array.isArray(MASU_COLOR_REGION_HUES[mid]) ? MASU_COLOR_REGION_HUES[mid].length : 0;
+const assistantMasmonFavCard = id => {
+  try {
+    const sp = typeof CARD_AI_FAVORITE !== 'undefined' ? CARD_AI_FAVORITE[id] : null;
+    const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
+    if (!sp || !db || !db.monsters) return null;
+    const m = Object.values(db.monsters).find(x => x && x.species === sp && !x.variant);
+    return m && typeof CARD_IMG === 'function' ? {
+      name: m.name,
+      src: CARD_IMG(m.img, 'l')
+    } : null;
+  } catch (_) {
+    return null;
+  }
+};
+const ASSISTANT_MASMON_TABS = Object.freeze([['mons', '🐾 マスモン'], ['team', '⚔ 編成'], ['deck', '🃏 デッキ'], ['taste', '💗 好き・苦手']]);
+function AssistantMasmonPic({
+  t,
+  size
+}) {
+  const m = assistantMasmonMon(t.monster);
+  if (!m) return null;
+  const box = {
+    width: size,
+    height: size
+  };
+  return React.createElement("div", {
+    className: "mhm-pic",
+    style: box
+  }, typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+    baseId: t.monster,
+    src: m.imgUrl,
+    masuColors: t.dye && t.dye.colors,
+    alt: m.name,
+    draggable: false,
+    style: {
+      width: '100%',
+      height: '100%',
+      objectFit: 'contain'
+    }
+  }) : React.createElement("img", {
+    src: m.imgUrl,
+    alt: m.name,
+    draggable: false,
+    style: {
+      width: '100%',
+      height: '100%',
+      objectFit: 'contain'
+    }
+  }));
+}
+function AssistantMasmonDots({
+  t
+}) {
+  const n = assistantMasmonRegions(t.monster);
+  const cs = (t.dye && t.dye.colors || []).slice(0, n || 5);
+  return React.createElement("span", {
+    className: "inline-flex items-center gap-[3px] align-middle",
+    "data-assistant-masmon-dye": cs.join(',')
+  }, cs.map((c, i) => React.createElement("i", {
+    key: i,
+    title: assistantMasmonColorName(c),
+    className: "inline-block h-[9px] w-[9px] rounded-full border border-white/40",
+    style: {
+      background: assistantMasmonSwatch(c)
+    }
+  })), n > 0 && React.createElement("small", {
+    className: "ml-0.5 text-[9px] font-bold text-slate-400"
+  }, n, "枠"));
+}
+function AssistantMasmonRow({
+  t,
+  land = false
+}) {
+  const m = assistantMasmonMon(t.monster);
+  const st = assistantMasmonStats(t);
+  if (!m || !st) return null;
+  return React.createElement("div", {
+    className: "mhm-card flex gap-2.5",
+    "data-assistant-masmon-row": t.monster
+  }, React.createElement(AssistantMasmonPic, {
+    t: t,
+    size: 78
+  }), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "truncate text-[15px] font-black text-white"
+  }, t.nick, t.lead && React.createElement("em", {
+    className: "mhm-lead ml-1.5"
+  }, "先頭")), land ? React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "truncate text-[10.5px] font-bold text-slate-300"
+  }, m.name, " ・ Lv.", t.lv), React.createElement("p", {
+    className: "text-[10px]"
+  }, React.createElement(AssistantMasmonDots, {
+    t: t
+  }))) : React.createElement("p", {
+    className: "truncate text-[10.5px] font-bold text-slate-300"
+  }, m.name, " ・ Lv.", t.lv, " ", React.createElement(AssistantMasmonDots, {
+    t: t
+  })), React.createElement("p", {
+    className: "truncate text-[11px] font-black text-amber-200"
+  }, "📈 ", t.grow), React.createElement("div", {
+    className: `mt-0.5 grid gap-x-3 gap-y-0.5 ${land ? 'grid-cols-1' : 'grid-cols-2'}`
+  }, ASSISTANT_MASMON_STAT_LABEL.map(([k, label]) => React.createElement("div", {
+    key: k,
+    className: "flex items-center gap-1.5 text-[9.5px] font-bold text-slate-300"
+  }, React.createElement("span", {
+    className: "w-[34px] shrink-0"
+  }, label), React.createElement("span", {
+    className: "mhm-bar"
+  }, React.createElement("i", {
+    style: {
+      width: `${Math.round(st[k] * 100)}%`
+    }
+  })))))));
+}
+function AssistantMasmonSheet({
+  id,
+  land = false,
+  onClose
+}) {
+  const [tab, setTab] = React.useState('mons');
+  const who = typeof assistantById === 'function' ? assistantById(id) : null;
+  const p = assistantMasmonPlanOf(id);
+  if (!who || !p) return null;
+  const team = [...p.team].sort((a, b) => (b.lead ? 1 : 0) - (a.lead ? 1 : 0)).filter(t => assistantMasmonMon(t.monster));
+  const fav = tab === 'deck' ? assistantMasmonFavCard(id) : null;
+  let body = null;
+  if (tab === 'mons') {
+    body = React.createElement(React.Fragment, null, React.createElement("div", {
+      className: land ? 'grid grid-cols-3 gap-2' : 'flex flex-col gap-2'
+    }, team.map(t => React.createElement(AssistantMasmonRow, {
+      key: t.monster,
+      t: t,
+      land: land
+    }))), React.createElement("p", {
+      className: "mt-2 text-[10.5px] font-bold leading-snug text-slate-400"
+    }, "🐾 ", who.name, "が自分で育てて、自分の好きな色に染めているマスモンです。"));
+  } else if (tab === 'team') {
+    body = React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "grid grid-cols-3 gap-2"
+    }, team.map(t => React.createElement("div", {
+      key: t.monster,
+      className: "mhm-card relative text-center",
+      "data-assistant-masmon-team": t.monster
+    }, t.lead && React.createElement("em", {
+      className: "mhm-lead absolute left-1.5 top-1.5 z-[1]"
+    }, "先頭"), React.createElement("div", {
+      className: "mhm-stage"
+    }, React.createElement(AssistantMasmonPic, {
+      t: t,
+      size: land ? 104 : 92
+    })), React.createElement("p", {
+      className: "mt-1 truncate text-[13px] font-black text-white"
+    }, t.nick), React.createElement("p", {
+      className: "truncate text-[10px] font-bold text-amber-200"
+    }, "Lv.", t.lv, " ・ ", assistantMasmonGrowKind(t.grow))))), React.createElement("p", {
+      className: "mt-2 text-[10.5px] font-bold leading-snug text-slate-400"
+    }, "⚔ 編成は", who.name, "が決めています。"));
+  } else if (tab === 'deck') {
+    body = React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "mhm-card",
+      "data-assistant-masmon-deck": true
+    }, React.createElement("p", {
+      className: "text-[10px] font-black text-slate-400"
+    }, "MFバトルカードのデッキの型"), React.createElement("p", {
+      className: "text-[18px] font-black text-amber-200"
+    }, "🃏 ", p.deck.name), React.createElement("p", {
+      className: "mt-0.5 text-[11.5px] font-bold leading-snug text-slate-100"
+    }, p.deck.plan)), fav && React.createElement("div", {
+      className: "mhm-card mt-2 flex items-center gap-3",
+      "data-assistant-masmon-fav-card": true
+    }, React.createElement("img", {
+      src: fav.src,
+      alt: fav.name,
+      draggable: false,
+      className: "w-[74px] shrink-0 rounded-md shadow"
+    }), React.createElement("p", {
+      className: "text-[11.5px] font-bold leading-snug text-slate-100"
+    }, "好きなカード: ", React.createElement("b", {
+      className: "text-white"
+    }, fav.name))), React.createElement("p", {
+      className: "mt-2 text-[10.5px] font-bold leading-snug text-slate-400"
+    }, "🃏 MFバトルカードのデッキは、マスモンとは別に組んでいます。"));
+  } else {
+    const line = (x, kind) => {
+      const name = assistantMasmonTasteName(x);
+      if (!name) return null;
+      const m = x.monster ? assistantMasmonMon(x.monster) : null;
+      const spread = kind === 'like' ? assistantMasmonSpread(x) : '';
+      return React.createElement("div", {
+        key: `${kind}-${x.monster || x.lineage}`,
+        className: "flex items-center gap-2 py-1",
+        "data-assistant-masmon-taste": `${kind}:${x.monster || x.lineage}`
+      }, m ? React.createElement("img", {
+        src: m.iconUrl || m.imgUrl,
+        alt: "",
+        draggable: false,
+        className: "h-[34px] w-[34px] shrink-0 rounded-full bg-slate-500 object-contain"
+      }) : React.createElement("span", {
+        className: "grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full bg-slate-800 text-[15px]"
+      }, "🧬"), React.createElement("p", {
+        className: "min-w-0 text-[11.5px] font-bold leading-snug text-slate-100",
+        style: {
+          wordBreak: 'auto-phrase'
+        }
+      }, React.createElement("b", {
+        className: "text-white"
+      }, name), " … ", x.why, spread && React.createElement("small", {
+        className: "block text-[10px] text-slate-400"
+      }, spread, "も少し", kind === 'like' ? '好き' : '苦手')));
+    };
+    const merge = xs => {
+      const lins = new Set((xs || []).filter(x => x.lineage).map(x => x.lineage));
+      const folded = (xs || []).filter(x => x.monster && lins.has(assistantMasmonLineage(x.monster)) && assistantMasmonSpread(x) === '');
+      return (xs || []).filter(x => !folded.includes(x)).map(x => {
+        const f = x.lineage && folded.find(y => assistantMasmonLineage(y.monster) === x.lineage);
+        return f ? {
+          ...x,
+          why: f.why
+        } : x;
+      });
+    };
+    const likes = merge(p.likeMon),
+      dislikes = merge(p.dislikeMon);
+    body = React.createElement("div", {
+      className: land ? 'grid grid-cols-3 gap-2' : 'flex flex-col gap-2'
+    }, React.createElement("div", {
+      className: "mhm-card"
+    }, React.createElement("p", {
+      className: "text-[12px] font-black text-pink-300"
+    }, "💗 好き"), likes.map(x => line(x, 'like'))), React.createElement("div", {
+      className: "mhm-card"
+    }, React.createElement("p", {
+      className: "text-[12px] font-black text-sky-300"
+    }, "💦 苦手"), dislikes.length ? dislikes.map(x => line(x, 'dislike')) : React.createElement("p", {
+      className: "py-1 text-[11.5px] font-bold text-slate-300"
+    }, "苦手なモンスターはいない")), React.createElement("div", {
+      className: "mhm-card"
+    }, React.createElement("p", {
+      className: "text-[12px] font-black text-amber-200"
+    }, "🎨 好きな色"), p.favColors.map(c => React.createElement("div", {
+      key: c.color,
+      className: "flex items-center gap-2 py-1",
+      "data-assistant-masmon-color": c.color
+    }, React.createElement("i", {
+      className: "inline-block h-[22px] w-[22px] shrink-0 rounded-full border-2 border-white/50",
+      style: {
+        background: assistantMasmonSwatch(c.color)
+      }
+    }), React.createElement("p", {
+      className: "text-[11.5px] font-bold text-slate-100"
+    }, React.createElement("b", {
+      className: "text-white"
+    }, assistantMasmonColorName(c.color)), " … ", c.why)))));
+  }
+  return React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      zIndex: 30
+    },
+    "data-assistant-masmon-sheet": id,
+    "data-assistant-masmon-tab": tab
+  }, React.createElement("style", null, ASSISTANT_MASMON_CSS), React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    className: "absolute inset-0 bg-black/70",
+    onClick: onClose
+  }), React.createElement("div", {
+    className: `mhm-panel ${land ? 'is-land' : ''}`
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, typeof AssistantFace === 'function' && React.createElement("span", {
+    className: "shrink-0 rounded-full ring-2 ring-pink-300"
+  }, React.createElement(AssistantFace, {
+    who: who,
+    size: 38,
+    accent: who.accent
+  })), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "mhl-en"
+  }, "MASMON · ", String(who.id).toUpperCase()), React.createElement("p", {
+    className: "truncate text-[19px] font-black text-white"
+  }, who.name, "のマスモン")), React.createElement("button", {
+    type: "button",
+    className: "mhl-btn shrink-0 bg-slate-700 px-3",
+    "data-assistant-masmon-close": true,
+    onClick: onClose
+  }, "閉じる")), React.createElement("div", {
+    className: "mt-2 grid grid-cols-4 gap-1",
+    role: "tablist"
+  }, ASSISTANT_MASMON_TABS.map(([k, label]) => React.createElement("button", {
+    key: k,
+    type: "button",
+    role: "tab",
+    "aria-selected": tab === k,
+    className: `mhm-tab ${tab === k ? 'on' : ''}`,
+    "data-assistant-masmon-tab-btn": k,
+    onClick: () => setTab(k)
+  }, label))), React.createElement("div", {
+    className: "mhm-body mt-2"
+  }, body)));
+}
+function AssistantMasmonRoomRow({
+  id,
+  onOpen
+}) {
+  const p = assistantMasmonPlanOf(id);
+  if (!p || typeof onOpen !== 'function') return null;
+  const lead = p.team.find(t => t.lead) || p.team[0];
+  const m = lead && assistantMasmonMon(lead.monster);
+  if (!m) return null;
+  return React.createElement("button", {
+    type: "button",
+    className: "mhl-row w-full text-left",
+    "data-assistant-life-room-masmon": true,
+    onClick: () => onOpen(id)
+  }, React.createElement("span", {
+    className: "k"
+  }, "🐾 マスモン"), React.createElement("span", {
+    className: "min-w-0 truncate text-[11px] font-bold"
+  }, React.createElement("b", null, lead.nick), "(", m.name, " Lv.", lead.lv, ") ほか", Math.max(0, p.team.length - 1), "体"), React.createElement("span", {
+    className: "ml-auto pl-1 text-[12px] font-black text-pink-300"
+  }, "›"));
+}
+const ASSISTANT_MASMON_CSS = `
+.mhm-panel{position:absolute;left:0;right:0;bottom:0;top:5%;display:flex;flex-direction:column;background:linear-gradient(180deg,#1f1640,#0b1020 70%);border-top:2px solid #f9a8d4;border-radius:22px 22px 0 0;padding:12px 14px calc(12px + env(safe-area-inset-bottom));color:#fff}
+.mhm-panel.is-land{top:0;left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));border:2px solid #f9a8d4;border-bottom:0;padding:8px 14px 8px}
+.mhm-body{flex:1;min-height:0;overflow-y:auto;padding:2px 2px 6px}
+.mhm-tab{border-radius:999px;background:#1e293b;padding:6px 2px;font-size:11px;font-weight:900;color:#cbd5e1;white-space:nowrap}
+.mhm-tab.on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff}
+.mhm-card{border:1px solid rgba(148,163,184,.35);background:rgba(15,23,42,.85);border-radius:14px;padding:8px 10px}
+.mhm-pic{flex-shrink:0;border-radius:10px;background:radial-gradient(circle at 50% 40%,#94a3b8,#475569);overflow:hidden;margin:0 auto}
+.mhm-stage{display:flex;justify-content:center}
+.mhm-lead{font-style:normal;border-radius:999px;background:#f472b6;padding:0 6px;font-size:9.5px;font-weight:900;color:#fff;vertical-align:middle}
+.mhm-bar{position:relative;flex:1;height:5px;border-radius:99px;background:#334155;overflow:hidden}
+.mhm-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#fbbf24,#f97316)}
+`;
+const ALF_KEY = 'mh_assistant_life_friend_v1';
+const ALF_SETTINGS_KEY = 'mh_assistant_life_friend_settings_v1';
+const ALF_KNOWN_KEY = 'mh_assistant_life_friend_known_v1';
+const ALF_INTRO_KEY = 'mh_assistant_life_friend_intro_v1';
+const ALF_TABLE_SWITCH = 'assistant_life_friend_switch';
+const ALF_TABLE_HOUSES = 'assistant_life_friend_houses';
+const ALF_TABLE_VISITS = 'assistant_life_friend_visits';
+const ALF_IDS = typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'];
+const ALF_LIMITS = Object.freeze({
+  on: Object.freeze({
+    go: 3,
+    come: 2,
+    look: 3,
+    readMs: 30 * 60000,
+    sendMs: 10 * 60000
+  }),
+  thin: Object.freeze({
+    go: 1,
+    come: 0,
+    look: 1,
+    readMs: 30 * 60000,
+    sendMs: 60 * 60000
+  })
+});
+const ALF_BEAT_P = Object.freeze({
+  go: 100,
+  look: 50,
+  dayMax: 300
+});
+const ALF_FRESH_DAYS = Object.freeze({
+  go: 14,
+  look: 14,
+  come: 7
+});
+const ALF_HOUSE_MAX_CHARS = 2000;
+const ALF_WORDS = 12;
+const ALF_THANKS = 6;
+const alfEnabled = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeFriend === true && typeof assistantLifeEnabled === 'function' && assistantLifeEnabled();
+const alfValidId = id => typeof id === 'string' && ALF_IDS.includes(id);
+const alfSafeOther = v => typeof v === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(v) ? v : null;
+const alfInt = (v, lo, hi, d = 0) => {
+  const n = Math.floor(Number(v));
+  return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d;
+};
+const alfStr = (v, max) => typeof v === 'string' ? v.slice(0, max) : '';
+const alfDay = (now = Date.now()) => typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey(now) : new Date(Number(now) + 5 * 3600000).toISOString().slice(0, 10);
+const alfDayShift = (day, n) => {
+  const t = Date.parse(`${day}T00:00:00Z`);
+  return Number.isFinite(t) ? new Date(t + n * 86400000).toISOString().slice(0, 10) : day;
+};
+const alfDefaultState = () => ({
+  day: null,
+  go: 0,
+  come: 0,
+  look: 0,
+  went: {},
+  looked: {},
+  beatP: 0,
+  seen: [],
+  sentAt: 0,
+  sentSig: '',
+  out: null,
+  back: null,
+  came: [],
+  photos: [],
+  lastHosts: [],
+  api: null
+});
+const alfNormalizeOut = o => {
+  if (!o || typeof o !== 'object') return null;
+  const ids = Array.isArray(o.ids) ? [...new Set(o.ids.filter(alfValidId))].slice(0, 2) : [];
+  const host = alfSafeOther(o.host);
+  if (!ids.length || !host || !Number.isFinite(o.abs)) return null;
+  const theirs = Array.isArray(o.theirs) ? [...new Set(o.theirs.filter(alfValidId))].slice(0, 3) : [];
+  return {
+    abs: Math.floor(o.abs),
+    ids,
+    host,
+    name: alfStr(o.name, 20) || 'フレンド',
+    theirs,
+    word: alfInt(o.word, 0, ALF_WORDS - 1),
+    day: typeof o.day === 'string' ? o.day.slice(0, 10) : null,
+    seen: o.seen === true,
+    rewarded: o.rewarded === true
+  };
+};
+const alfNormalizeApi = o => {
+  if (!o || typeof o !== 'object' || typeof o.day !== 'string') return null;
+  const okLine = l => l && (l.side === 'a' || l.side === 'b') && typeof l.t === 'string' && l.t.length >= 2 && l.t.length <= 60 && !/[{}]/.test(l.t.replace(/\{f\}|\{h\}|\{name\}/g, ''));
+  const list = Array.isArray(o.list) ? o.list.map(x => x && (x.kind === 'go' || x.kind === 'come') && alfValidId(x.a) && alfValidId(x.b) && Array.isArray(x.lines) && x.lines.length >= 2 && x.lines.every(okLine) ? {
+    kind: x.kind,
+    a: x.a,
+    b: x.b,
+    lines: x.lines.slice(0, 4).map(l => ({
+      side: l.side,
+      e: typeof l.e === 'string' ? l.e.slice(0, 12) : 'normal',
+      t: l.t
+    }))
+  } : null).filter(Boolean).slice(0, 6) : [];
+  return {
+    day: o.day.slice(0, 10),
+    asked: alfInt(o.asked, 0, 9),
+    list,
+    used: Array.isArray(o.used) ? o.used.filter(k => typeof k === 'string').slice(-12) : []
+  };
+};
+const normalizeAssistantLifeFriend = v => {
+  const d = alfDefaultState();
+  if (!v || typeof v !== 'object') return d;
+  const flags = x => {
+    const o = {};
+    if (x && typeof x === 'object') for (const [k, val] of Object.entries(x)) if (alfSafeOther(k) && val) o[k] = 1;
+    return o;
+  };
+  const came = Array.isArray(v.came) ? v.came.map(c => c && alfSafeOther(c.host) && alfValidId(c.aid) ? {
+    host: c.host,
+    name: alfStr(c.name, 20) || 'フレンド',
+    aid: c.aid,
+    mine: alfValidId(c.mine) ? c.mine : null,
+    seen: c.seen === true
+  } : null).filter(Boolean).slice(0, 2) : [];
+  const photos = Array.isArray(v.photos) ? v.photos.map(p => p && alfSafeOther(p.host) && typeof p.day === 'string' ? {
+    host: p.host,
+    name: alfStr(p.name, 20) || 'フレンド',
+    day: p.day.slice(0, 10),
+    ids: Array.isArray(p.ids) ? p.ids.filter(alfValidId).slice(0, 2) : [],
+    theirs: Array.isArray(p.theirs) ? p.theirs.filter(alfValidId).slice(0, 3) : []
+  } : null).filter(Boolean).slice(-60) : [];
+  return {
+    day: typeof v.day === 'string' ? v.day.slice(0, 10) : null,
+    go: alfInt(v.go, 0, 99),
+    come: alfInt(v.come, 0, 99),
+    look: alfInt(v.look, 0, 99),
+    went: flags(v.went),
+    looked: flags(v.looked),
+    beatP: alfInt(v.beatP, 0, ALF_BEAT_P.dayMax),
+    seen: Array.isArray(v.seen) ? v.seen.filter(n => Number.isFinite(n)).slice(-200) : [],
+    sentAt: Number.isFinite(v.sentAt) ? v.sentAt : 0,
+    sentSig: alfStr(v.sentSig, 64),
+    out: alfNormalizeOut(v.out),
+    back: alfNormalizeOut(v.back),
+    came,
+    photos,
+    lastHosts: Array.isArray(v.lastHosts) ? v.lastHosts.filter(alfSafeOther).slice(0, 10) : [],
+    api: alfNormalizeApi(v.api)
+  };
+};
+const normalizeAssistantLifeFriendSettings = v => {
+  const o = v && typeof v === 'object' ? v : {};
+  return {
+    open: o.open !== false,
+    show: o.show !== false,
+    come: o.come !== false,
+    muted: Array.isArray(o.muted) ? [...new Set(o.muted.filter(alfSafeOther))].slice(0, 100) : []
+  };
+};
+const normalizeAssistantLifeFriendKnown = v => {
+  const o = {};
+  if (v && typeof v === 'object' && !Array.isArray(v)) {
+    for (const [k, n] of Object.entries(v).slice(-300)) {
+      const p = k.split('|');
+      if (p.length === 3 && alfValidId(p[0]) && alfSafeOther(p[1]) && alfValidId(p[2]) && Number.isFinite(n) && n > 0) o[k] = Math.min(9999, Math.floor(n));
+    }
+  }
+  return o;
+};
+const alfRollDay = (st, day) => {
+  if (st.day === day) return st;
+  return {
+    ...st,
+    day,
+    go: 0,
+    come: 0,
+    look: 0,
+    went: {},
+    looked: {},
+    beatP: 0,
+    came: [],
+    api: null,
+    lastHosts: Object.keys(st.went || {}).slice(0, 10)
+  };
+};
+const alfBuildHouse = (life, metIds) => {
+  const ids = [...new Set((metIds || []).filter(alfValidId))].slice(0, 12);
+  const r = {};
+  for (const id of ids) {
+    const w = typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, id) : null;
+    if (!w) continue;
+    const m = life && life.moods ? life.moods[id] : null;
+    r[id] = {
+      at: w.place === 'home' ? 'home' : 'out',
+      d: ASSISTANT_LIFE_DOINGS[w.doing] ? w.doing : 'idle',
+      m: ASSISTANT_LIFE_MOODS[m] ? m : 'happy'
+    };
+  }
+  return {
+    v: 1,
+    ids,
+    r
+  };
+};
+const assistantLifeFriendNormalizeHouse = raw => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  try {
+    if (JSON.stringify(raw).length > ALF_HOUSE_MAX_CHARS) return null;
+  } catch {
+    return null;
+  }
+  const ids = Array.isArray(raw.ids) ? [...new Set(raw.ids.filter(alfValidId))].slice(0, 12) : [];
+  const r = {};
+  for (const id of ids) {
+    const x = raw.r && typeof raw.r === 'object' ? raw.r[id] : null;
+    if (!x || typeof x !== 'object') continue;
+    r[id] = {
+      at: x.at === 'out' ? 'out' : 'home',
+      d: typeof x.d === 'string' && ASSISTANT_LIFE_DOINGS[x.d] ? x.d : 'idle',
+      m: typeof x.m === 'string' && ASSISTANT_LIFE_MOODS[x.m] ? x.m : 'happy'
+    };
+  }
+  return {
+    v: 1,
+    ids,
+    r
+  };
+};
+const alfHomeIds = house => house ? house.ids.filter(id => house.r[id] && house.r[id].at === 'home') : [];
+const ALF_STORE = {
+  state: {
+    loaded: false,
+    st: alfDefaultState(),
+    settings: normalizeAssistantLifeFriendSettings(null),
+    known: {},
+    intro: false,
+    mode: null,
+    ready: true,
+    selfId: null,
+    roster: [],
+    houses: {},
+    visits: [],
+    busy: false,
+    scene: null
+  },
+  loading: null,
+  listeners: new Set(),
+  emit() {
+    for (const fn of this.listeners) {
+      try {
+        fn(this.state);
+      } catch {}
+    }
+  },
+  set(patch) {
+    this.state = {
+      ...this.state,
+      ...patch
+    };
+    this.emit();
+  },
+  load() {
+    if (this.state.loaded) return Promise.resolve(this.state);
+    if (this.loading) return this.loading;
+    this.loading = (async () => {
+      const [a, b, c, d] = await Promise.all([ALF_KEY, ALF_SETTINGS_KEY, ALF_KNOWN_KEY, ALF_INTRO_KEY].map(k => storeGet(k, null, false).catch(() => null)));
+      this.set({
+        loaded: true,
+        st: alfRollDay(normalizeAssistantLifeFriend(a), alfDay()),
+        settings: normalizeAssistantLifeFriendSettings(b),
+        known: normalizeAssistantLifeFriendKnown(c),
+        intro: d === true
+      });
+      return this.state;
+    })();
+    return this.loading;
+  }
+};
+const alfSaveSt = st => {
+  ALF_STORE.set({
+    st
+  });
+  try {
+    storeSet(ALF_KEY, st, false);
+  } catch {}
+};
+const alfSaveSettings = settings => {
+  ALF_STORE.set({
+    settings
+  });
+  try {
+    storeSet(ALF_SETTINGS_KEY, settings, false);
+  } catch {}
+};
+const alfSaveKnown = known => {
+  ALF_STORE.set({
+    known
+  });
+  try {
+    storeSet(ALF_KNOWN_KEY, known, false);
+  } catch {}
+};
+const alfToday = () => {
+  const day = alfDay();
+  const cur = ALF_STORE.state.st;
+  const st = alfRollDay(cur, day);
+  if (st !== cur) alfSaveSt(st);
+  return st;
+};
+const useAssistantLifeFriendState = () => {
+  const [s, setS] = React.useState(ALF_STORE.state);
+  React.useEffect(() => {
+    const fn = x => setS(x);
+    ALF_STORE.listeners.add(fn);
+    void ALF_STORE.load();
+    setS(ALF_STORE.state);
+    return () => {
+      ALF_STORE.listeners.delete(fn);
+    };
+  }, []);
+  return s;
+};
+let _alfUnavailable = false;
+const alfRequest = async (path, {
+  method = 'GET',
+  body = null,
+  prefer = null
+} = {}) => {
+  if (_alfUnavailable) {
+    const e = new Error('assistant life friend tables are not ready');
+    e.notReady = true;
+    throw e;
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), typeof FRIENDS_TIMEOUT_MS !== 'undefined' ? FRIENDS_TIMEOUT_MS : 8000);
+  try {
+    const headers = prefer ? {
+      ...SB_HEADERS,
+      'Content-Type': 'application/json',
+      'Prefer': prefer
+    } : {
+      ...SB_HEADERS,
+      'Content-Type': 'application/json'
+    };
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      method,
+      headers,
+      cache: 'no-store',
+      signal: controller.signal,
+      body: body === null ? undefined : JSON.stringify(body)
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      if (_isMissingTableError(res.status, text)) {
+        _alfUnavailable = true;
+        ALF_STORE.set({
+          ready: false
+        });
+        const e = new Error('assistant life friend tables are not ready');
+        e.notReady = true;
+        throw e;
+      }
+      const e = new Error(`alf ${method} ${path.split('?')[0]} ${res.status}`);
+      e.status = res.status;
+      e.body = text;
+      throw e;
+    }
+    return text ? JSON.parse(text) : [];
+  } catch (error) {
+    if (error && error.name === 'AbortError') throw new Error('alf request timed out');
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const alfQuoteIn = ids => ids.map(id => `"${id}"`).join(',');
+let _alfModeLoading = null;
+const alfLoadMode = () => {
+  if (ALF_STORE.state.mode) return Promise.resolve(ALF_STORE.state.mode);
+  if (_alfModeLoading) return _alfModeLoading;
+  _alfModeLoading = (async () => {
+    let mode = 'thin';
+    try {
+      const rows = await alfRequest(`${ALF_TABLE_SWITCH}?select=mode&id=eq.1`);
+      const m = Array.isArray(rows) && rows[0] ? rows[0].mode : null;
+      mode = ['on', 'thin', 'off'].includes(m) ? m : 'thin';
+    } catch (e) {
+      mode = e && e.notReady ? 'off' : 'thin';
+    }
+    ALF_STORE.set({
+      mode
+    });
+    return mode;
+  })();
+  return _alfModeLoading;
+};
+const alfLimits = () => ALF_LIMITS[ALF_STORE.state.mode === 'on' ? 'on' : 'thin'];
+const alfSelf = async () => {
+  if (ALF_STORE.state.selfId) return ALF_STORE.state.selfId;
+  const id = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
+  const safe = alfSafeOther(id);
+  if (safe) ALF_STORE.set({
+    selfId: safe
+  });
+  return safe;
+};
+let _alfRosterAt = 0;
+const alfRoster = async (force = false) => {
+  const self = await alfSelf();
+  if (!self || typeof sbFetchFriendRoster !== 'function') return [];
+  if (!force && Date.now() - _alfRosterAt < alfLimits().readMs) return ALF_STORE.state.roster;
+  try {
+    const list = await sbFetchFriendRoster(self);
+    const roster = (Array.isArray(list) ? list : []).map(f => alfSafeOther(f.otherId) ? {
+      id: f.otherId,
+      name: alfStr(f.userName, 20) || '名無しのブリーダー'
+    } : null).filter(Boolean).slice(0, 60);
+    _alfRosterAt = Date.now();
+    ALF_STORE.set({
+      roster
+    });
+    return roster;
+  } catch {
+    return ALF_STORE.state.roster;
+  }
+};
+let _alfHousesAt = 0;
+let _alfHousesDay = null;
+let _alfHousesMax = null;
+const alfFetchHouses = async (force = false) => {
+  if (_alfUnavailable) return ALF_STORE.state.houses;
+  const mode = await alfLoadMode();
+  if (mode === 'off') return {};
+  const roster = await alfRoster();
+  const muted = new Set(ALF_STORE.state.settings.muted);
+  const ids = roster.map(f => f.id).filter(id => !muted.has(id));
+  if (!ids.length) {
+    ALF_STORE.set({
+      houses: {}
+    });
+    return {};
+  }
+  const day = alfDay();
+  if (!force && Date.now() - _alfHousesAt < alfLimits().readMs) return ALF_STORE.state.houses;
+  if (!force && mode === 'thin' && _alfHousesDay === day) return ALF_STORE.state.houses;
+  try {
+    const since = _alfHousesMax ? `&updated_at=gt.${encodeURIComponent(_alfHousesMax)}` : '';
+    const rows = await alfRequest(`${ALF_TABLE_HOUSES}?select=breeder_id,open,house,updated_at&breeder_id=in.(${alfQuoteIn(ids)})${since}`);
+    const houses = {
+      ...ALF_STORE.state.houses
+    };
+    for (const row of Array.isArray(rows) ? rows : []) {
+      const id = alfSafeOther(row && row.breeder_id);
+      if (!id) continue;
+      const at = Date.parse(row.updated_at);
+      houses[id] = {
+        open: row.open !== false,
+        house: assistantLifeFriendNormalizeHouse(row.house),
+        at: Number.isFinite(at) ? at : 0
+      };
+      if (typeof row.updated_at === 'string' && (!_alfHousesMax || row.updated_at > _alfHousesMax)) _alfHousesMax = row.updated_at;
+    }
+    for (const id of Object.keys(houses)) if (!ids.includes(id)) delete houses[id];
+    _alfHousesAt = Date.now();
+    _alfHousesDay = day;
+    ALF_STORE.set({
+      houses
+    });
+    return houses;
+  } catch {
+    return ALF_STORE.state.houses;
+  }
+};
+const alfOpenHouses = (kind = 'go', now = Date.now()) => {
+  const s = ALF_STORE.state;
+  const muted = new Set(s.settings.muted);
+  const fresh = ALF_FRESH_DAYS[kind] * 86400000;
+  return s.roster.map(f => ({
+    ...f,
+    ...(s.houses[f.id] || {})
+  })).filter(f => f.open && f.house && f.house.ids.length && !muted.has(f.id) && now - (f.at || 0) <= fresh).sort((a, b) => (b.at || 0) - (a.at || 0));
+};
+let _alfVisitsAt = 0;
+const alfFetchVisits = async (force = false) => {
+  if (_alfUnavailable) return ALF_STORE.state.visits;
+  const mode = await alfLoadMode();
+  if (mode === 'off') return [];
+  const self = await alfSelf();
+  if (!self) return [];
+  if (!force && Date.now() - _alfVisitsAt < alfLimits().readMs) return ALF_STORE.state.visits;
+  try {
+    const from = alfDayShift(alfDay(), -7);
+    const rows = await alfRequest(`${ALF_TABLE_VISITS}?select=id,kind,visitor_id,host_id,day,assistants,word,thanks,created_at&or=(host_id.eq.${self},visitor_id.eq.${self})&day=gte.${from}&order=created_at.desc&limit=60`);
+    const visits = (Array.isArray(rows) ? rows : []).map(r => r && Number.isFinite(r.id) && ['go', 'come', 'player'].includes(r.kind) && alfSafeOther(r.visitor_id) && alfSafeOther(r.host_id) ? {
+      id: r.id,
+      kind: r.kind,
+      visitor: r.visitor_id,
+      host: r.host_id,
+      day: String(r.day || '').slice(0, 10),
+      ids: Array.isArray(r.assistants) ? r.assistants.filter(alfValidId).slice(0, 2) : [],
+      word: alfInt(r.word, 0, ALF_WORDS - 1),
+      thanks: r.thanks == null ? null : alfInt(r.thanks, 0, ALF_THANKS - 1),
+      at: Date.parse(r.created_at) || 0
+    } : null).filter(Boolean);
+    _alfVisitsAt = Date.now();
+    ALF_STORE.set({
+      visits
+    });
+    return visits;
+  } catch {
+    return ALF_STORE.state.visits;
+  }
+};
+const alfRefusalText = e => {
+  const b = String(e && (e.body || e.message) || '');
+  if (e && e.notReady) return 'フレンドの家との行き来は、いま準備中です';
+  if (/フレンドではありません/.test(b)) return 'フレンドではなくなったため、置き手紙を残せませんでした';
+  if (/切にしています/.test(b)) return 'あなたか相手が行き来を「切」にしているため、置き手紙を残せませんでした';
+  if (/今日はもう/.test(b)) return '今日はもう訪ねられません(朝4時に戻ります)';
+  if (/止めています/.test(b)) return 'フレンドの家との行き来は、いまお休み中です';
+  if (/日付/.test(b)) return '端末の日付と時刻がずれているようです。合わせてからもう一度';
+  if (e && e.status === 409 || /23505|duplicate/.test(b)) return '今日はこの家にもう置き手紙を残しました';
+  return '通信がうまくいきませんでした(時間をおいてもう一度)';
+};
+const alfPostVisitR = async ({
+  kind,
+  visitor,
+  host,
+  ids = [],
+  word = 0
+}) => {
+  try {
+    await alfRequest(ALF_TABLE_VISITS, {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: {
+        kind,
+        visitor_id: visitor,
+        host_id: host,
+        day: alfDay(),
+        assistants: ids,
+        word
+      }
+    });
+    return {
+      ok: true,
+      reason: ''
+    };
+  } catch (e) {
+    return {
+      ok: false,
+      reason: alfRefusalText(e)
+    };
+  }
+};
+const alfPostVisit = async args => (await alfPostVisitR(args)).ok;
+const alfSig = s => {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(36);
+};
+const alfPublish = async (life, metIds, now = Date.now(), {
+  force = false
+} = {}) => {
+  if (_alfUnavailable) return false;
+  const mode = await alfLoadMode();
+  if (mode === 'off') return false;
+  const self = await alfSelf();
+  if (!self) return false;
+  const st = alfToday();
+  const settings = ALF_STORE.state.settings;
+  const house = settings.show ? alfBuildHouse(life, metIds) : {};
+  const sig = alfSig(`${alfDay(now)}|${settings.open ? 1 : 0}|${JSON.stringify(house)}`);
+  if (!force && st.sentAt) {
+    if (sig === st.sentSig) return false;
+    if (now - st.sentAt < alfLimits().sendMs) return false;
+  }
+  try {
+    await alfRequest(`${ALF_TABLE_HOUSES}?on_conflict=breeder_id`, {
+      method: 'POST',
+      prefer: 'resolution=merge-duplicates,return=minimal',
+      body: {
+        breeder_id: self,
+        open: settings.open,
+        house
+      }
+    });
+    alfSaveSt({
+      ...alfToday(),
+      sentAt: now,
+      sentSig: sig
+    });
+    return true;
+  } catch {
+    return false;
+  }
+};
+const alfEnsureHouse = async ({
+  force = false
+} = {}) => {
+  if (typeof ASSISTANT_LIFE_STORE === 'undefined') return false;
+  try {
+    await ASSISTANT_LIFE_STORE.load();
+  } catch {
+    return false;
+  }
+  const life = ASSISTANT_LIFE_STORE.state.life;
+  const st = alfToday();
+  const sentToday = st.sentAt && alfDay(st.sentAt) === st.day;
+  if (sentToday && !force) return true;
+  const metIds = [...new Set([...(life && life.groups || []).flatMap(g => g.ids), ...Object.keys(life && life.solo || {})])];
+  return alfPublish(life, metIds, Date.now(), {
+    force: true
+  });
+};
+const assistantLifeFriendPickOuting = ({
+  life,
+  ids,
+  houses,
+  st,
+  settings,
+  mode,
+  pendingIds = [],
+  abs,
+  salt = ''
+}) => {
+  if (!life || mode === 'off' || !settings || !settings.open) return null;
+  const lim = ALF_LIMITS[mode === 'on' ? 'on' : 'thin'];
+  if ((st.go || 0) >= lim.go) return null;
+  if (life.slot === 'late') return null;
+  const busy = new Set(pendingIds || []);
+  const cand = (ids || []).filter(id => {
+    const s = life.solo && life.solo[id];
+    return alfValidId(id) && s && s.place === 'home' && s.doing !== 'sleep' && s.reason !== 'distance' && !busy.has(id);
+  }).sort();
+  if (!cand.length) return null;
+  const rand = assistantLifeRng(`${salt}|friend|${abs}|${cand.join(',')}`);
+  const social = cand.reduce((t, id) => t + (ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].social || 0.5), 0) / cand.length;
+  const chance = Math.min(0.6, 0.15 + 0.3 * social) * (life.slot === 'night' ? 0.7 : 1);
+  if (rand() >= chance) return null;
+  const muted = new Set(settings.muted || []);
+  const went = st.went || {};
+  const last = new Set(st.lastHosts || []);
+  const w = {};
+  for (const h of houses || []) {
+    if (!h || !alfSafeOther(h.id) || went[h.id] || muted.has(h.id) || !h.house || !alfHomeIds(h.house).length) continue;
+    w[h.id] = (last.has(h.id) ? 0.3 : 1) * (1 + Math.min(1, (h.known || 0) / 10));
+  }
+  const host = assistantLifePickWeighted(w, rand);
+  if (!host) return null;
+  const order = [...cand];
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  const two = order.length >= 2 && rand() < 0.35;
+  const h = houses.find(x => x.id === host);
+  return {
+    host,
+    name: h.name,
+    ids: order.slice(0, two ? 2 : 1).sort(),
+    theirs: alfHomeIds(h.house).slice(0, 2),
+    word: Math.floor(rand() * ALF_WORDS)
+  };
+};
+const assistantLifeFriendPickCome = ({
+  houses,
+  st,
+  settings,
+  mode,
+  myHome = [],
+  seed = ''
+}) => {
+  if (mode !== 'on' || !settings || !settings.open || !settings.come) return null;
+  if ((st.come || 0) >= ALF_LIMITS.on.come) return null;
+  const done = new Set((st.came || []).map(c => c.host));
+  const muted = new Set(settings.muted || []);
+  const list = (houses || []).filter(h => h && alfSafeOther(h.id) && !done.has(h.id) && !muted.has(h.id) && alfHomeIds(h.house).length);
+  if (!list.length) return null;
+  const rand = assistantLifeRng(`${seed}|come|${st.day}|${st.come}`);
+  if (rand() >= 0.5) return null;
+  const h = list[Math.floor(rand() * list.length)];
+  const theirs = alfHomeIds(h.house);
+  const aid = theirs[Math.floor(rand() * theirs.length)];
+  const mine = myHome.length ? myHome[Math.floor(rand() * myHome.length)] : null;
+  return {
+    host: h.id,
+    name: h.name,
+    aid,
+    mine
+  };
+};
+let _alfGiftSender = null;
+const assistantLifeFriendSetGiftSender = fn => {
+  _alfGiftSender = typeof fn === 'function' ? fn : null;
+};
+const alfGiveBeatP = async (kind, giftId, st) => {
+  const want = ALF_BEAT_P[kind] || 0;
+  const amount = Math.max(0, Math.min(want, ALF_BEAT_P.dayMax - (st.beatP || 0)));
+  if (!amount || !_alfGiftSender) return 0;
+  let ok = false;
+  try {
+    ok = await _alfGiftSender({
+      id: giftId,
+      title: kind === 'look' ? 'フレンドの家へ遊びに行ったおみやげ' : '助手のフレンドの家のおみやげ',
+      source: 'assistantLifeFriend',
+      rewards: [{
+        type: 'beatPoint',
+        amount
+      }]
+    });
+  } catch {
+    ok = false;
+  }
+  return ok ? amount : 0;
+};
+const alfAddKnown = pairs => {
+  const known = {
+    ...ALF_STORE.state.known
+  };
+  for (const k of pairs) known[k] = (known[k] || 0) + 1;
+  alfSaveKnown(normalizeAssistantLifeFriendKnown(known));
+};
+const alfBond = (ids, action) => {
+  if (typeof assistantPeerAddPlayerBond === 'function') {
+    try {
+      assistantPeerAddPlayerBond(ids, action);
+    } catch {}
+  }
+};
+const assistantLifeFriendSeeOuting = async (which = 'out') => {
+  await ALF_STORE.load();
+  let st = alfToday();
+  const o = st[which];
+  if (!o || o.rewarded) {
+    if (o && !o.seen) alfSaveSt({
+      ...st,
+      [which]: {
+        ...o,
+        seen: true
+      }
+    });
+    return null;
+  }
+  const sameDay = o.day === st.day;
+  if (sameDay) {
+    alfBond(o.ids, 'friendGo');
+    if (o.ids.length === 2 && typeof assistantPeerGain === 'function') {
+      try {
+        await assistantPeerGain(o.ids[0], o.ids[1], 'friend');
+      } catch {}
+    }
+  }
+  st = alfToday();
+  const got = await alfGiveBeatP('go', `alf_go_${o.day || st.day}_${o.host.slice(0, 12)}`, st);
+  const firstHere = !st.photos.some(p => p.host === o.host);
+  const photos = firstHere ? [...st.photos, {
+    host: o.host,
+    name: o.name,
+    day: o.day || st.day,
+    ids: o.ids,
+    theirs: o.theirs
+  }].slice(-60) : st.photos;
+  alfSaveSt({
+    ...st,
+    beatP: st.beatP + got,
+    photos,
+    [which]: {
+      ...o,
+      seen: true,
+      rewarded: true
+    }
+  });
+  alfAddKnown(o.ids.flatMap(a => o.theirs.map(b => `${a}|${o.host}|${b}`)));
+  return {
+    beatP: got,
+    photo: firstHere,
+    bond: sameDay
+  };
+};
+const assistantLifeFriendSeeCome = async i => {
+  await ALF_STORE.load();
+  const st = alfToday();
+  const c = st.came[i];
+  if (!c || c.seen) return null;
+  if (c.mine) alfBond([c.mine], 'friendWelcome');
+  const came = st.came.map((x, j) => j === i ? {
+    ...x,
+    seen: true
+  } : x);
+  alfSaveSt({
+    ...st,
+    came
+  });
+  if (c.mine) alfAddKnown([`${c.mine}|${c.host}|${c.aid}`]);
+  return {
+    mine: c.mine
+  };
+};
+const assistantLifeFriendOnSlot = async (life, slot, now = Date.now()) => {
+  if (!alfEnabled() || !life) return;
+  await ALF_STORE.load();
+  let st = alfToday();
+  if (st.out && st.out.abs !== slot.abs) {
+    st = {
+      ...st,
+      back: st.out,
+      out: null
+    };
+    alfSaveSt(st);
+  }
+  const metIds = [...new Set([...(life.groups || []).flatMap(g => g.ids), ...Object.keys(life.solo || {})])];
+  void alfPublish(life, metIds, now);
+  if (st.out) return;
+  const mode = await alfLoadMode();
+  if (mode === 'off' || _alfUnavailable) return;
+  const self = await alfSelf();
+  if (!self) return;
+  await alfFetchHouses();
+  const known = ALF_STORE.state.known;
+  const houses = alfOpenHouses('go', now).map(h => ({
+    ...h,
+    known: Object.entries(known).filter(([k]) => k.split('|')[1] === h.id).reduce((t, [, n]) => t + n, 0)
+  }));
+  const pending = typeof assistantLifeRelPending === 'function' ? (assistantLifeRelPending() || {}).ids || [] : [];
+  const pick = assistantLifeFriendPickOuting({
+    life,
+    ids: metIds,
+    houses,
+    st: alfToday(),
+    settings: ALF_STORE.state.settings,
+    mode,
+    pendingIds: pending,
+    abs: slot.abs,
+    salt: life.salt || ''
+  });
+  if (!pick) return;
+  if (!(await alfEnsureHouse())) return;
+  const ok = await alfPostVisit({
+    kind: 'go',
+    visitor: self,
+    host: pick.host,
+    ids: pick.ids,
+    word: pick.word
+  });
+  if (!ok) return;
+  const cur = alfToday();
+  alfSaveSt({
+    ...cur,
+    go: cur.go + 1,
+    went: {
+      ...cur.went,
+      [pick.host]: 1
+    },
+    out: {
+      abs: slot.abs,
+      day: cur.day,
+      ...pick,
+      seen: false,
+      rewarded: false
+    }
+  });
+  if (typeof assistantLifeDiaryAdd === 'function') {
+    try {
+      void assistantLifeDiaryAdd(`🏘 ${pick.ids.map(assistantLifeName).join('・')} ${pick.name}さんの家へ`, pick.ids, {
+        kind: 'friend',
+        now
+      });
+    } catch {}
+  }
+};
+const assistantLifeFriendOnOpen = async (life, now = Date.now()) => {
+  if (!alfEnabled()) return;
+  await ALF_STORE.load();
+  const mode = await alfLoadMode();
+  if (mode === 'off' || _alfUnavailable) return;
+  const self = await alfSelf();
+  if (!self) return;
+  await alfEnsureHouse();
+  await alfFetchHouses();
+  void alfFetchVisits();
+  void assistantLifeFriendRequestScenes(life);
+  const st = alfToday();
+  const myHome = life ? Object.entries(life.solo || {}).filter(([id, s]) => alfValidId(id) && s.place === 'home' && s.doing !== 'sleep').map(([id]) => id).filter(id => !(st.out && st.out.ids.includes(id))) : [];
+  const pick = assistantLifeFriendPickCome({
+    houses: alfOpenHouses('come', now),
+    st,
+    settings: ALF_STORE.state.settings,
+    mode,
+    myHome,
+    seed: `${self}|${life && life.abs}`
+  });
+  if (!pick) return;
+  const ok = await alfPostVisit({
+    kind: 'come',
+    visitor: pick.host,
+    host: self,
+    ids: [pick.aid]
+  });
+  if (!ok) return;
+  const cur = alfToday();
+  alfSaveSt({
+    ...cur,
+    come: cur.come + 1,
+    came: [...cur.came, {
+      ...pick,
+      seen: false
+    }].slice(0, 2)
+  });
+  if (typeof assistantLifeDiaryAdd === 'function') {
+    try {
+      void assistantLifeDiaryAdd(`🏘 ${pick.name}さんの${assistantLifeName(pick.aid)}が来た`, pick.mine ? [pick.mine] : [], {
+        kind: 'friend',
+        now
+      });
+    } catch {}
+  }
+};
+const assistantLifeFriendCanLook = hostId => {
+  const st = ALF_STORE.state.st;
+  const lim = alfLimits();
+  if (ALF_STORE.state.mode === 'off' || !ALF_STORE.state.settings.open) return 'off';
+  if (st.looked && st.looked[hostId]) return 'done';
+  if ((st.look || 0) >= lim.look) return 'max';
+  return 'ok';
+};
+const assistantLifeFriendLeaveNote = async (hostId, {
+  word = 0,
+  talked = [],
+  name = ''
+} = {}) => {
+  await ALF_STORE.load();
+  alfToday();
+  const can = assistantLifeFriendCanLook(hostId);
+  if (can !== 'ok') return {
+    ok: false,
+    reason: can === 'done' ? '今日はこの家にもう置き手紙を残しました' : can === 'max' ? '今日はもう訪ねられません(朝4時に戻ります)' : 'フレンドの家との行き来が「切」になっています'
+  };
+  const self = await alfSelf();
+  if (!self) return {
+    ok: false,
+    reason: 'この端末では、まだフレンドの機能が使えません'
+  };
+  if (!(await alfEnsureHouse())) return {
+    ok: false,
+    reason: 'あなたの家の様子をまだ届けられていません。電波のよい所でもう一度'
+  };
+  const ids = [...new Set((talked || []).filter(alfValidId))].slice(0, 2);
+  const r = await alfPostVisitR({
+    kind: 'player',
+    visitor: self,
+    host: hostId,
+    ids,
+    word: alfInt(word, 0, ALF_WORDS - 1)
+  });
+  if (!r.ok) return {
+    ok: false,
+    reason: r.reason
+  };
+  const cur = alfToday();
+  const firstHere = !cur.photos.some(p => p.host === hostId);
+  const photos = firstHere ? [...cur.photos, {
+    host: hostId,
+    name: alfStr(name, 20) || 'フレンド',
+    day: cur.day,
+    ids: [],
+    theirs: ids
+  }].slice(-60) : cur.photos;
+  const marked = {
+    ...cur,
+    look: cur.look + 1,
+    looked: {
+      ...cur.looked,
+      [hostId]: 1
+    },
+    photos
+  };
+  alfSaveSt(marked);
+  const got = await alfGiveBeatP('look', `alf_player_${cur.day}_${hostId.slice(0, 12)}`, marked);
+  if (got) {
+    const now2 = alfToday();
+    alfSaveSt({
+      ...now2,
+      beatP: now2.beatP + got
+    });
+  }
+  return {
+    ok: true,
+    beatP: got,
+    photo: firstHere
+  };
+};
+const assistantLifeFriendNotes = (s = ALF_STORE.state) => {
+  const self = s.selfId;
+  const names = Object.fromEntries((s.roster || []).map(f => [f.id, f.name]));
+  const muted = new Set(s.settings.muted);
+  return (s.visits || []).map(v => {
+    if (v.host === self && (v.kind === 'go' || v.kind === 'player') && names[v.visitor] && !muted.has(v.visitor)) return {
+      ...v,
+      who: v.visitor,
+      name: names[v.visitor],
+      dir: 'in'
+    };
+    if (v.visitor === self && v.kind === 'come' && names[v.host]) return {
+      ...v,
+      who: v.host,
+      name: names[v.host],
+      dir: 'away'
+    };
+    return null;
+  }).filter(Boolean);
+};
+const assistantLifeFriendUnseen = (s = ALF_STORE.state) => {
+  const seen = new Set(s.st.seen);
+  const notes = assistantLifeFriendNotes(s).filter(n => !seen.has(n.id)).length;
+  return notes + s.st.came.filter(c => !c.seen).length + (s.st.back && !s.st.back.seen ? 1 : 0);
+};
+const assistantLifeFriendMarkSeen = () => {
+  const st = alfToday();
+  const ids = assistantLifeFriendNotes().map(n => n.id);
+  const seen = [...new Set([...st.seen, ...ids])].slice(-200);
+  if (seen.length !== st.seen.length) alfSaveSt({
+    ...st,
+    seen
+  });
+};
+const assistantLifeFriendThanks = async (visitId, k) => {
+  const n = alfInt(k, 0, ALF_THANKS - 1);
+  try {
+    await alfRequest(`${ALF_TABLE_VISITS}?id=eq.${Math.floor(visitId)}`, {
+      method: 'PATCH',
+      prefer: 'return=minimal',
+      body: {
+        thanks: n
+      }
+    });
+    ALF_STORE.set({
+      visits: ALF_STORE.state.visits.map(v => v.id === visitId ? {
+        ...v,
+        thanks: n
+      } : v)
+    });
+    return true;
+  } catch {
+    return false;
+  }
+};
+const assistantLifeFriendSetSettings = patch => {
+  const settings = normalizeAssistantLifeFriendSettings({
+    ...ALF_STORE.state.settings,
+    ...patch
+  });
+  alfSaveSettings(settings);
+  const st = ALF_STORE.state.st;
+  alfSaveSt({
+    ...st,
+    sentSig: '',
+    sentAt: 0
+  });
+  if (ALF_STORE.state.loaded && typeof ASSISTANT_LIFE_STORE !== 'undefined') {
+    const life = ASSISTANT_LIFE_STORE.state.life;
+    void alfPublish(life, [...new Set([...(life.groups || []).flatMap(g => g.ids), ...Object.keys(life.solo || {})])]);
+  }
+};
+const assistantLifeFriendMute = (hostId, on) => {
+  const muted = ALF_STORE.state.settings.muted.filter(x => x !== hostId);
+  assistantLifeFriendSetSettings({
+    muted: on ? [...muted, hostId] : muted
+  });
+};
+const assistantLifeFriendAwayOf = id => {
+  if (!alfEnabled()) return null;
+  const o = ALF_STORE.state.st.out;
+  if (!o || !o.ids.includes(id)) return null;
+  const cur = typeof assistantLifeCurrent === 'function' ? assistantLifeCurrent() : null;
+  return cur && cur.abs === o.abs ? o : null;
+};
+const ALF_GO_LINES = Object.freeze({
+  mua: ['おじゃましまーす♪ {f}、遊びに来ちゃった！', '{h}さんの家、まぢかわいいぢゃん！'],
+  kiki: ['おじゃまします。{f}さん、今日はよろしくお願いしまつ♪', '{h}さんのお家、落ち着きますね。'],
+  momosuke: ['ももが遊びに来てあげたよ！！{f}、うれしいでしょw', '{h}さんの家、なかなかセンスいいじゃん♡'],
+  dra: ['よっ、{f}。遊びに来たからな、えへへ', '{h}さんの家、いい匂いするな。おやつあるか？'],
+  atsu: ['とりあえず来てみた笑 {f}、元気？', '{h}さんの家、居心地いいな笑'],
+  kyuko: ['ほい！{f}、遊びに来たよ〜', '{h}さんの家、片づいてて動きやすいねぇ。'],
+  sorashido: ['うぉぉぉ！{f}、来たぜ・・・！', '{h}さんの家、でーじいい感じだな笑'],
+  erubin: ['こんにちは、{f}。おじゃまするね', '{h}さんの家、あったかい感じがするね。']
+});
+const ALF_REPLY_LINES = Object.freeze({
+  mua: ['{v}ぢゃん！いらっしゃーい♪', 'ゆっくりしてってね！'],
+  kiki: ['{v}さん、いらっしゃいませ♪', 'お茶をいれますね。'],
+  momosuke: ['{v}！ももの家へようこそ！！', 'しかたないから遊んであげる♡'],
+  dra: ['おっ、{v}か。上がってけよな', 'おやつ、半分こしような'],
+  atsu: ['{v}じゃん、いらっしゃい笑', 'てか座って座って笑'],
+  kyuko: ['おけ〜、{v}いらっしゃい！', 'ちょうどひと息つくとこだったんだぁ。'],
+  sorashido: ['{v}！よく来たぜ・・・！', 'なんくるないさ〜、くつろいでけ笑'],
+  erubin: ['{v}、来てくれたんだね', '寒くなかった？ゆっくりしてね']
+});
+const ALF_SAME_LINES = Object.freeze({
+  mua: 'もうひとりのあたし！？まぢ！？',
+  kiki: '私がもうひとり…ふしぎな気分でつ。',
+  momosuke: 'ももが2人！？かわいさも2倍じゃん！！',
+  dra: 'おでがもうひとりいるな…えへへ',
+  atsu: '俺がいる笑 なんか照れるな笑',
+  kyuko: 'え、俺？ぐぬぬぬ、どっちが本物だぁ',
+  sorashido: 'うぉぉぉ！俺がもうひとりいるぜ・・・！',
+  erubin: '自分と会うって、なんだかくすぐったいね'
+});
+const ALF_BACK_LINES = Object.freeze({
+  mua: 'ただいま〜！{h}さんの家、楽しかったぢゃん♪',
+  kiki: 'ただいま戻りました。{h}さんのお家、素敵でしたよ。',
+  momosuke: 'ただいま！！{name}、おみやげあるよ♡',
+  dra: 'ただいまだな。{h}さんの家、また行きたいな',
+  atsu: 'ただいま笑 {h}さんの家、よかったよ笑',
+  kyuko: 'ただいまぁ。{h}さんの家で、いい話できたよ〜',
+  sorashido: 'ただいまだぜ！{h}さんの家、でーじ楽しかった笑',
+  erubin: 'ただいま。{h}さんの家の話、聞いてくれる？'
+});
+const ALF_GUEST_LINES = Object.freeze({
+  mua: '{h}さんちから遊びに来たよ♪',
+  kiki: '{h}さんのところから参りました。おじゃまします。',
+  momosuke: '{h}さんちのももだよ！！遊びに来た！',
+  dra: '{h}さんちから来たからな。おじゃまするぞ',
+  atsu: '{h}さんちから来た笑 おじゃまします笑',
+  kyuko: 'ほい！{h}さんちから来たよ〜',
+  sorashido: '{h}さんちから来たぜ・・・！',
+  erubin: '{h}さんの家から来たよ。おじゃまするね'
+});
+const ALF_WELCOME_LINES = Object.freeze({
+  mua: 'いらっしゃーい♪ ゆっくりしてってね！',
+  kiki: 'ようこそ。お茶をどうぞ♪',
+  momosuke: 'いらっしゃい！！ももの家、すごいでしょ♡',
+  dra: 'よく来たな。おやつあるぞ',
+  atsu: 'いらっしゃい笑 座って座って笑',
+  kyuko: 'いらっしゃ〜い！ちょうどお茶いれたとこ〜',
+  sorashido: 'うぉぉぉ！いらっしゃいだぜ・・・！',
+  erubin: 'いらっしゃい。来てくれてうれしいな'
+});
+const ALF_TALK_LINES = Object.freeze({
+  mua: ['あ、{h}さんのお友だちぢゃん！いらっしゃーい♪', 'あたしのこと、{h}さんから聞いてる？', 'また遊びに来てよ♪'],
+  kiki: ['いらっしゃいませ。{h}さんのお友だちですね。', 'ゆっくりしていってくださいね♪', 'またお会いできるとうれしいでつ。'],
+  momosuke: ['お客さん！？ももに会いに来たんでしょw', 'ももの家、かわいいでしょ♡', 'また来てもいいよ！！'],
+  dra: ['おっ、お客さんだな。いらっしゃい', 'おやつ食べてくか？えへへ', 'また来いよな'],
+  atsu: ['お、いらっしゃい笑', '{h}さんの友だちなら大歓迎笑', 'また来てね笑'],
+  kyuko: ['ほい！いらっしゃ〜い', '{h}さんの友だちかぁ、ありがとん笑', 'またねぇ〜'],
+  sorashido: ['うぉぉぉ！お客さんだぜ・・・！', 'ちばりよー！応援してるぜ笑', 'また来いよ笑'],
+  erubin: ['いらっしゃい。来てくれてありがとう', '{h}さんの家、居心地いいでしょ', '気をつけて帰ってね']
+});
+const ALF_WORD_TEXTS = Object.freeze(['楽しかった！', 'また来るね', 'おじゃましました', 'おやつおいしかった', 'いい部屋だったよ', 'また遊ぼうね', 'ゆっくりできた', 'ありがとう', 'お話しできてうれしかった', 'みんな元気そうだった', 'また会いたいな', 'お留守のあいだにおじゃましました']);
+const ALF_THANKS_TEXTS = Object.freeze(['来てくれてありがとう！', 'またいつでも来てね', 'うれしかったよ', '今度はこっちから行くね', 'みんな喜んでたよ', 'おつかれさま！']);
+const ALF_DOING_ROOM = Object.freeze({
+  snack: 'おやつ中',
+  practice: '練習中',
+  training: '育成中',
+  cards: 'カード研究中',
+  walk: '散歩中',
+  idle: 'のんびり中',
+  sleep: 'おやすみ中',
+  read: '読書中'
+});
+const alfFill = (text, {
+  f = '',
+  h = '',
+  v = '',
+  who = null
+} = {}) => String(text || '').replace(/\{f\}/g, f).replace(/\{h\}/g, h).replace(/\{v\}/g, v).replace(/\{name\}/g, () => typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(who) : 'あなた');
+const alfTheirLabel = (hostName, aid) => `${hostName}さんの${assistantLifeName(aid)}`;
+const assistantLifeFriendGoScene = (o, n = 0) => {
+  if (!o) return null;
+  const viaApi = o.theirs.length ? alfApiSceneFor('go', o.ids[0], o.theirs.includes(o.ids[0]) ? o.ids[0] : o.theirs[0], o.name) : null;
+  if (viaApi) return {
+    kind: 'go',
+    title: `🏘 ${o.name}さんの家`,
+    lines: viaApi,
+    host: o.name
+  };
+  const mine = o.ids;
+  const theirs = o.theirs.length ? o.theirs : [];
+  const lines = [];
+  const t0 = theirs[0];
+  const pick = arr => arr[(n + mine.length) % arr.length];
+  lines.push({
+    who: mine[0],
+    text: alfFill(pick(ALF_GO_LINES[mine[0]] || ['おじゃまします']), {
+      f: t0 ? alfTheirLabel(o.name, t0) : `${o.name}さん`,
+      h: o.name,
+      who: mine[0]
+    })
+  });
+  if (t0) lines.push({
+    who: t0,
+    guest: true,
+    text: alfFill(pick(ALF_REPLY_LINES[t0] || ['いらっしゃい']), {
+      v: mine.map(assistantLifeName).join('と'),
+      who: t0
+    })
+  });
+  const same = mine.find(id => theirs.includes(id));
+  if (same) lines.push({
+    who: same,
+    text: alfFill(ALF_SAME_LINES[same] || '', {
+      who: same
+    })
+  });
+  if (mine[1]) lines.push({
+    who: mine[1],
+    text: alfFill((ALF_GO_LINES[mine[1]] || ['', ''])[1] || 'おじゃまします', {
+      h: o.name,
+      who: mine[1]
+    })
+  });
+  return {
+    kind: 'go',
+    title: `🏘 ${o.name}さんの家`,
+    lines: lines.filter(l => l.text).slice(0, 4),
+    host: o.name
+  };
+};
+const assistantLifeFriendBackScene = o => o ? {
+  kind: 'back',
+  title: 'おかえり！',
+  host: o.name,
+  lines: o.ids.map(id => ({
+    who: id,
+    text: alfFill(ALF_BACK_LINES[id] || 'ただいま', {
+      h: o.name,
+      who: id
+    })
+  }))
+} : null;
+const assistantLifeFriendComeScene = c => {
+  const viaApi = c && c.mine ? alfApiSceneFor('come', c.mine, c.aid, c.name) : null;
+  if (viaApi) return {
+    kind: 'come',
+    title: `🏘 ${c.name}さんの${assistantLifeName(c.aid)}が来た`,
+    host: c.name,
+    lines: viaApi
+  };
+  return alfComeSceneScript(c);
+};
+const alfComeSceneScript = c => c ? {
+  kind: 'come',
+  title: `🏘 ${c.name}さんの${assistantLifeName(c.aid)}が来た`,
+  host: c.name,
+  lines: [{
+    who: c.aid,
+    guest: true,
+    text: alfFill(ALF_GUEST_LINES[c.aid] || 'おじゃまします', {
+      h: c.name,
+      who: c.aid
+    })
+  }, ...(c.mine ? [{
+    who: c.mine,
+    text: alfFill(c.mine === c.aid ? ALF_SAME_LINES[c.mine] : ALF_WELCOME_LINES[c.mine], {
+      who: c.mine
+    })
+  }] : [])]
+} : null;
+const ALF_API_ASK_MAX = 2;
+let _alfApiBusy = false;
+const alfApiEnabled = () => alfEnabled() && RELEASE_FLAGS.assistantLifeFriendApi === true && typeof ASSISTANT_CHAT_URL === 'string';
+const alfApiPairs = (life, houses) => {
+  const mine = Object.entries(life && life.solo || {}).filter(([id, s]) => alfValidId(id) && s.place === 'home' && s.doing !== 'sleep').map(([id]) => id).sort();
+  const pairs = [];
+  const seen = new Set();
+  const add = (kind, a, b) => {
+    const k = `${kind}|${a}|${b}`;
+    if (!seen.has(k) && pairs.length < 6) {
+      seen.add(k);
+      pairs.push({
+        kind,
+        a,
+        b
+      });
+    }
+  };
+  for (const h of (houses || []).slice(0, 4)) {
+    const theirs = alfHomeIds(h.house);
+    if (!theirs.length || !mine.length) continue;
+    const same = mine.find(id => theirs.includes(id));
+    add('go', mine[pairs.length % mine.length], same || theirs[0]);
+    add('come', mine[(pairs.length + 1) % mine.length], theirs[theirs.length - 1]);
+  }
+  return pairs;
+};
+const assistantLifeFriendRequestScenes = async life => {
+  if (!alfApiEnabled() || _alfApiBusy || ALF_STORE.state.mode !== 'on') return 'skip';
+  const st = alfToday();
+  const api = st.api && st.api.day === st.day ? st.api : {
+    day: st.day,
+    asked: 0,
+    list: [],
+    used: []
+  };
+  if (api.list.some(x => !api.used.includes(`${x.kind}|${x.a}|${x.b}`))) return 'cached';
+  if (api.asked >= ALF_API_ASK_MAX) return 'skip';
+  const pairs = alfApiPairs(life, alfOpenHouses('go'));
+  if (!pairs.length) return 'skip';
+  const self = await alfSelf();
+  if (!self) return 'skip';
+  _alfApiBusy = true;
+  alfSaveSt({
+    ...alfToday(),
+    api: {
+      ...api,
+      asked: api.asked + 1
+    }
+  });
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    let res = null;
+    try {
+      const r = await fetch(ASSISTANT_CHAT_URL, {
+        method: 'POST',
+        headers: SB_HEADERS,
+        signal: controller.signal,
+        body: JSON.stringify({
+          kind: 'friend_scenes',
+          breederId: self,
+          pairs
+        })
+      });
+      res = r.ok ? await r.json() : null;
+    } finally {
+      clearTimeout(timer);
+    }
+    if (!res || res.ok !== true || !Array.isArray(res.scenes)) return 'failed';
+    const cur = alfToday();
+    const base = cur.api && cur.api.day === cur.day ? cur.api : {
+      day: cur.day,
+      asked: 1,
+      list: [],
+      used: []
+    };
+    const next = alfNormalizeApi({
+      ...base,
+      list: [...base.list, ...res.scenes]
+    });
+    alfSaveSt({
+      ...cur,
+      api: next
+    });
+    return next && next.list.length ? 'ok' : 'failed';
+  } catch {
+    return 'failed';
+  } finally {
+    _alfApiBusy = false;
+  }
+};
+const ALF_API_BODY_WORDS = /膝|ひざ|抱き|だっこ|キス|ちゅー|添い寝|くっつ|手をつな|お風呂|ベッド|恋|デート|付き合|好きだよ|大好き/;
+const alfApiLineOk = (who, t) => {
+  let x = String(t || '');
+  if (who === 'mua') x = x.replace(/じゃん/g, 'ぢゃん').replace(/まじ/g, 'まぢ').replace(/マジ/g, 'マヂ');
+  if (ALF_API_BODY_WORDS.test(x) || /(この|あの|その)子|子たち/.test(x)) return null;
+  if (who === 'atsu' && !/(笑|[！？!?…♪w]|[)）]|[\u3000-\u303f]?[\uff08(][^)）]*[)）])$/.test(x.trim())) return null;
+  if (who === 'dra' && /ほんま|やで|とる|とんだ|へん[。、！]|やろ|あかん/.test(x)) return null;
+  if (who === 'kiki' && /(だよ|だね|してよ|じゃん)([。！!？?♪]|$)/.test(x)) return null;
+  if (who !== 'mua' && /ぢゃん|まぢ/.test(x)) return null;
+  return x;
+};
+const alfApiSceneFor = (kind, a, b, hostName) => {
+  if (!alfApiEnabled()) return null;
+  const st = ALF_STORE.state.st;
+  const api = st.api && st.api.day === st.day ? st.api : null;
+  if (!api) return null;
+  const key = `${kind}|${a}|${b}`;
+  const sc = api.list.find(x => `${x.kind}|${x.a}|${x.b}` === key && !api.used.includes(key));
+  if (!sc) return null;
+  const lines = sc.lines.map(l => {
+    const who = l.side === 'a' ? a : b;
+    const t = String(l.t).replace(/\{f\}/g, l.side === 'a' ? alfTheirLabel(hostName, b) : assistantLifeName(a)).replace(/\{h\}/g, hostName).replace(/\{name\}/g, () => l.side === 'a' && typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(a) : 'あなた');
+    const ok = alfApiLineOk(who, t);
+    return !ok || /[{}]/.test(ok) || ok.length > 80 ? null : {
+      who,
+      guest: l.side === 'b',
+      text: ok
+    };
+  });
+  if (lines.some(x => !x)) return null;
+  alfSaveSt({
+    ...st,
+    api: {
+      ...api,
+      used: [...api.used, key].slice(-12)
+    }
+  });
+  return lines;
+};
+const alfAgoText = (at, now = Date.now()) => {
+  if (!at) return '';
+  const d = new Date(at + 9 * 3600000);
+  const hm = `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+  const days = Math.round((Date.parse(`${alfDay(now)}T00:00:00Z`) - Date.parse(`${alfDay(at)}T00:00:00Z`)) / 86400000);
+  return days <= 0 ? `今日 ${hm}` : days === 1 ? `きのう ${hm}` : `${days}日前`;
+};
+const alfLayer = node => {
+  const host = typeof document !== 'undefined' ? document.querySelector('[data-assistant-life-screen]') : null;
+  return host && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal ? ReactDOM.createPortal(node, host) : node;
+};
+function AlfFace({
+  id,
+  size = 30
+}) {
+  const who = typeof assistantById === 'function' ? assistantById(id) : null;
+  return who ? React.createElement("span", {
+    className: "inline-flex shrink-0",
+    "data-alf-face": id
+  }, React.createElement(AssistantFace, {
+    who: who,
+    size: size,
+    accent: who.accent
+  })) : null;
+}
+function AlfSceneSheet({
+  scene,
+  onClose
+}) {
+  if (!scene) return null;
+  return alfLayer(React.createElement("div", {
+    className: "absolute inset-0 flex items-end justify-center bg-black/55 sm:items-center",
+    style: {
+      zIndex: 45
+    },
+    "data-alf-scene": scene.kind,
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "w-full max-w-[420px] rounded-t-3xl border border-amber-300/40 bg-slate-950/95 p-3 pb-[calc(12px+env(safe-area-inset-bottom))] sm:rounded-3xl",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("p", {
+    className: "text-[13px] font-black text-amber-200",
+    "data-alf-scene-title": true
+  }, scene.title), React.createElement("div", {
+    className: "mt-2 space-y-2"
+  }, scene.lines.map((l, i) => React.createElement("div", {
+    key: i,
+    className: `flex items-end gap-2 ${l.guest ? 'flex-row-reverse' : ''}`,
+    "data-alf-scene-line": true
+  }, React.createElement(AlfFace, {
+    id: l.who,
+    size: 36
+  }), React.createElement("div", {
+    className: `min-w-0 rounded-2xl border px-2.5 py-1.5 text-[12px] leading-snug ${l.guest ? 'border-sky-300/40 bg-sky-950/70 text-sky-50' : 'border-pink-300/40 bg-pink-950/60 text-pink-50'}`
+  }, React.createElement("p", {
+    className: "text-[9.5px] font-black opacity-80"
+  }, l.guest ? alfTheirLabel(scene.host, l.who) : assistantLifeName(l.who)), React.createElement("p", null, l.text))))), scene.reward && React.createElement("p", {
+    className: "mt-2 text-[11px] font-black text-amber-200",
+    "data-alf-scene-reward": true
+  }, scene.reward), React.createElement("button", {
+    type: "button",
+    className: "mt-3 w-full rounded-2xl bg-amber-300 py-2 text-[13px] font-black text-slate-950",
+    "data-alf-scene-close": true,
+    onClick: onClose
+  }, "とじる"))));
+}
+const ALF_PLAYER_REPLIES = Object.freeze(['こんにちは！', 'おじゃましてます', 'すてきな部屋だね']);
+function AlfFriendHouseView({
+  friend,
+  onClose
+}) {
+  const [talk, setTalk] = React.useState(null);
+  const [talked, setTalked] = React.useState([]);
+  const [leaving, setLeaving] = React.useState(false);
+  const [done, setDone] = React.useState(null);
+  if (!friend || !friend.house) return null;
+  const h = friend.house;
+  const can = assistantLifeFriendCanLook(friend.id);
+  const tall = typeof window !== 'undefined' && window.innerHeight > window.innerWidth;
+  const face = tall ? 48 : 34;
+  const lines = aid => ALF_TALK_LINES[aid] || ['いらっしゃい', 'ありがとう', 'またね'];
+  const greet = aid => setTalk({
+    aid,
+    step: 0,
+    text: alfFill(lines(aid)[0], {
+      h: friend.name,
+      who: aid
+    })
+  });
+  const reply = i => {
+    if (!talk) return;
+    setTalked(t => [...new Set([...t, talk.aid])]);
+    setTalk({
+      ...talk,
+      step: 1,
+      mine: ALF_PLAYER_REPLIES[i],
+      text: alfFill(lines(talk.aid)[1 + i % 2], {
+        h: friend.name,
+        who: talk.aid
+      })
+    });
+  };
+  const leave = async word => {
+    const r = await assistantLifeFriendLeaveNote(friend.id, {
+      word,
+      talked,
+      name: friend.name
+    });
+    setLeaving(false);
+    setDone(r && r.ok ? `✉️ 置き手紙「${ALF_WORD_TEXTS[word]}」を残しました${r.photo ? '・📷 写真1枚' : ''}${r.beatP ? `・🎁 ビートP ${r.beatP}(ギフトに届きます)` : ''}` : `⚠️ ${r && r.reason || '置き手紙を残せませんでした(時間をおいてもう一度)'}`);
+  };
+  return alfLayer(React.createElement("div", {
+    className: "absolute inset-0 flex flex-col bg-slate-950",
+    style: {
+      zIndex: 44
+    },
+    "data-alf-visit": true
+  }, React.createElement("div", {
+    className: "flex items-center gap-2 border-b border-amber-300/30 px-3 pb-2",
+    style: {
+      paddingTop: 'calc(8px + env(safe-area-inset-top))'
+    }
+  }, React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "truncate text-[15px] font-black text-amber-200",
+    "data-alf-visit-title": true
+  }, "🏘 ", friend.name, "さんの家"), React.createElement("p", {
+    className: "text-[10px] text-slate-400"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "🚪 訪ねている"), "・", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "📷 ", alfAgoText(friend.at), " の控え"))), React.createElement("button", {
+    type: "button",
+    className: "shrink-0 rounded-xl border border-slate-500 px-3 py-1.5 text-[12px] font-black text-slate-100",
+    "data-alf-visit-close": true,
+    onClick: onClose
+  }, "もどる")), React.createElement("div", {
+    className: "min-h-0 flex-1 overflow-y-auto px-3 pb-3"
+  }, React.createElement("div", {
+    className: "flex items-center",
+    style: {
+      height: 50
+    },
+    "data-alf-visit-gap": true
+  }, React.createElement("p", {
+    className: "max-w-[55%] text-[11px] leading-snug text-slate-300"
+  }, talk ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "返事をえらぶか、"), React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "ほかの部屋へ")) : React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "黄色い枠の部屋を押して、"), React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "助手に声をかけよう")))), React.createElement("div", {
+    className: "grid grid-cols-4 gap-2",
+    "data-alf-visit-rooms": true
+  }, h.ids.map(aid => {
+    const r = h.r[aid] || {
+      at: 'home',
+      d: 'idle'
+    };
+    const home = r.at === 'home';
+    const can = home && r.d !== 'sleep';
+    return React.createElement("button", {
+      key: aid,
+      type: "button",
+      disabled: !can,
+      "data-alf-visit-room": aid,
+      onClick: () => can && greet(aid),
+      style: {
+        minHeight: tall ? 112 : 78
+      },
+      className: `flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl border p-1 ${can ? talk && talk.aid === aid ? 'border-amber-300 bg-amber-900/40' : 'border-amber-200/50 bg-slate-800/90' : 'border-slate-600/40 bg-slate-900/70 opacity-60'}`
+    }, React.createElement(AlfFace, {
+      id: aid,
+      size: face
+    }), React.createElement("span", {
+      className: `whitespace-nowrap font-black text-slate-100 ${tall ? 'text-[12px]' : 'text-[10.5px]'}`
+    }, assistantLifeName(aid)), React.createElement("span", {
+      className: "whitespace-nowrap text-[9px] text-slate-300"
+    }, home ? ALF_DOING_ROOM[r.d] || 'のんびり中' : 'おでかけ中'));
+  })), talk && React.createElement("div", {
+    className: tall ? 'mt-5' : 'mt-3',
+    "data-alf-visit-talk": true
+  }, talk.mine && React.createElement("p", {
+    className: `mb-1 text-right text-pink-100 ${tall ? 'text-[13px]' : 'text-[11.5px]'}`,
+    "data-alf-visit-mine": true
+  }, "あなた「", talk.mine, "」"), React.createElement("div", {
+    className: "flex items-end gap-2"
+  }, React.createElement(AlfFace, {
+    id: talk.aid,
+    size: tall ? 60 : 40
+  }), React.createElement("div", {
+    className: `min-w-0 rounded-2xl border border-sky-300/40 bg-sky-950/70 leading-snug text-sky-50 ${tall ? 'px-3 py-2.5 text-[15px]' : 'px-2.5 py-1.5 text-[12px]'}`
+  }, React.createElement("p", {
+    className: "text-[9.5px] font-black opacity-80"
+  }, alfTheirLabel(friend.name, talk.aid)), React.createElement("p", null, talk.text))), talk.step === 0 && React.createElement("div", {
+    className: "mt-2 grid grid-cols-3 gap-1.5",
+    "data-alf-visit-replies": true
+  }, ALF_PLAYER_REPLIES.map((t, i) => React.createElement("button", {
+    key: i,
+    type: "button",
+    className: `rounded-xl border border-pink-200/50 bg-pink-950/50 px-1 font-black text-pink-50 ${tall ? 'py-3 text-[12.5px]' : 'py-1.5 text-[11px]'}`,
+    "data-alf-reply": i,
+    onClick: () => reply(i)
+  }, t)))), done ? React.createElement("p", {
+    className: "mt-3 text-[11.5px] font-black text-amber-200",
+    "data-alf-visit-note": true
+  }, done) : can === 'ok' ? leaving ? React.createElement("div", {
+    className: "mt-3 rounded-2xl border border-amber-300/40 bg-slate-900 p-2",
+    "data-alf-visit-words": true
+  }, React.createElement("p", {
+    className: "text-[11px] font-black text-amber-200"
+  }, "置き手紙の一言をえらぶ"), React.createElement("div", {
+    className: "mt-1 flex flex-wrap gap-1"
+  }, ALF_WORD_TEXTS.map((t, i) => React.createElement("button", {
+    key: i,
+    type: "button",
+    className: "rounded-lg border border-amber-200/40 px-1.5 py-0.5 text-[10.5px] text-amber-50",
+    "data-alf-word": i,
+    onClick: () => leave(i)
+  }, t)))) : React.createElement("button", {
+    type: "button",
+    className: `w-full rounded-2xl bg-amber-300 font-black text-slate-950 ${tall ? 'mt-5 py-3 text-[14px]' : 'mt-3 py-2 text-[12.5px]'}`,
+    "data-alf-visit-leave": true,
+    onClick: () => setLeaving(true)
+  }, "✉️ 置き手紙を残して帰る") : React.createElement("p", {
+    className: "mt-3 text-[10.5px] text-slate-400"
+  }, can === 'done' ? '今日はこの家に置き手紙を残しました。' : '今日はもう置き手紙を残せません(朝4時に戻ります)。'), React.createElement("p", {
+    className: "mt-3 text-[10px] leading-snug text-slate-400"
+  }, friend.name, "さんには、あなたが訪ねたことが置き手紙で届きます。相手のセーブや助手の仲良し度は変わりません。"))));
+}
+function AssistantLifeFriendPage({
+  life
+}) {
+  const s = useAssistantLifeFriendState();
+  const [scene, setScene] = React.useState(null);
+  const [visit, setVisit] = React.useState(null);
+  const [menu, setMenu] = React.useState(null);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      await ALF_STORE.load();
+      await assistantLifeFriendOnOpen(life);
+      await alfFetchVisits();
+      if (alive) assistantLifeFriendMarkSeen();
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  if (!alfEnabled()) return null;
+  const st = s.st;
+  const lim = ALF_LIMITS[s.mode === 'on' ? 'on' : 'thin'];
+  if (!s.ready || s.mode === 'off') return React.createElement("div", {
+    className: "px-3 py-6 text-center text-[12px] text-slate-300",
+    "data-alf-page": "off"
+  }, "🏘 フレンドの家との行き来は、いまお休み中です。");
+  const houses = alfOpenHouses('look');
+  const notes = assistantLifeFriendNotes(s);
+  const openScene = async (kind, i) => {
+    if (kind === 'out') {
+      setScene(assistantLifeFriendGoScene(st.out));
+      const r = await assistantLifeFriendSeeOuting('out');
+      if (r && r.beatP) setScene(x => x && {
+        ...x,
+        reward: `🎁 おみやげ ビートP ${r.beatP}${r.photo ? '・写真1枚' : ''}`
+      });
+    }
+    if (kind === 'back') {
+      setScene(assistantLifeFriendBackScene(st.back));
+      const r = await assistantLifeFriendSeeOuting('back');
+      if (r && r.beatP) setScene(x => x && {
+        ...x,
+        reward: `🎁 おみやげ ビートP ${r.beatP}${r.photo ? '・写真1枚' : ''}`
+      });
+    }
+    if (kind === 'come') {
+      setScene(assistantLifeFriendComeScene(st.came[i]));
+      void assistantLifeFriendSeeCome(i);
+    }
+  };
+  const sec = 'mt-3 inline-block rounded-full bg-slate-950/85 px-2.5 py-0.5 text-[12px] font-black text-amber-200 shadow';
+  const card = 'mt-1.5 rounded-2xl border border-amber-300/25 bg-slate-900/85 p-2';
+  return React.createElement("div", {
+    className: "px-3 pb-3 pt-1",
+    "data-alf-page": "on"
+  }, !s.intro && React.createElement("div", {
+    className: card,
+    "data-alf-intro": true
+  }, React.createElement("p", {
+    className: "text-[11px] leading-snug text-slate-200",
+    "data-alf-intro-text": true
+  }, ['助手たちは、', 'ときどき自分で', 'フレンドの家へ', '遊びに行きます。', 'フレンドの助手が', '遊びに来ることも', 'あります。', 'あなたも', '「🚪 訪ねる」で', 'フレンドの家を', '見て回れます。'].map((t, i) => React.createElement("span", {
+    key: i,
+    className: "whitespace-nowrap"
+  }, t))), React.createElement("button", {
+    type: "button",
+    className: "mt-1.5 rounded-xl bg-amber-300 px-3 py-1 text-[11px] font-black text-slate-950",
+    "data-alf-intro-ok": true,
+    onClick: () => {
+      ALF_STORE.set({
+        intro: true
+      });
+      try {
+        storeSet(ALF_INTRO_KEY, true, false);
+      } catch {}
+    }
+  }, "わかった")), React.createElement("p", {
+    className: sec
+  }, "🏘 いまの行き来"), React.createElement("div", {
+    className: card,
+    "data-alf-now": true
+  }, st.out && React.createElement("div", {
+    className: "flex items-center gap-2",
+    "data-alf-now-out": true
+  }, st.out.ids.map(id => React.createElement(AlfFace, {
+    key: id,
+    id: id,
+    size: 28
+  })), React.createElement("p", {
+    className: "min-w-0 flex-1 text-[11.5px] text-slate-100"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, st.out.ids.map(assistantLifeName).join('・')), "が", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, st.out.name, "さんの家へ")), React.createElement("button", {
+    type: "button",
+    className: "shrink-0 rounded-xl bg-amber-300 px-2.5 py-1 text-[11px] font-black text-slate-950",
+    "data-alf-act": "out",
+    onClick: () => openScene('out')
+  }, "▶ 様子")), !st.out && st.back && !st.back.seen && React.createElement("div", {
+    className: "flex items-center gap-2",
+    "data-alf-now-back": true
+  }, st.back.ids.map(id => React.createElement(AlfFace, {
+    key: id,
+    id: id,
+    size: 28
+  })), React.createElement("p", {
+    className: "min-w-0 flex-1 text-[11.5px] text-slate-100"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, st.back.ids.map(assistantLifeName).join('・')), "が帰ってきた"), React.createElement("button", {
+    type: "button",
+    className: "shrink-0 rounded-xl bg-amber-300 px-2.5 py-1 text-[11px] font-black text-slate-950",
+    "data-alf-act": "back",
+    onClick: () => openScene('back')
+  }, "おかえり！")), st.came.map((c, i) => React.createElement("div", {
+    key: i,
+    className: "mt-1 flex items-center gap-2",
+    "data-alf-now-come": true
+  }, React.createElement(AlfFace, {
+    id: c.aid,
+    size: 28
+  }), React.createElement("p", {
+    className: "min-w-0 flex-1 text-[11.5px] text-slate-100"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, alfTheirLabel(c.name, c.aid)), "が遊びに来た"), !c.seen ? React.createElement("button", {
+    type: "button",
+    className: "shrink-0 rounded-xl bg-sky-300 px-2.5 py-1 text-[11px] font-black text-slate-950",
+    "data-alf-act": "come",
+    onClick: () => openScene('come', i)
+  }, "▶ 迎える") : React.createElement("span", {
+    className: "shrink-0 text-[10px] text-slate-400"
+  }, "迎えた"))), !st.out && !(st.back && !st.back.seen) && !st.came.length && React.createElement("p", {
+    className: "text-[11px] text-slate-400"
+  }, "いまは、みんな家にいます。"), React.createElement("p", {
+    className: "mt-1.5 flex flex-wrap gap-x-3 text-[10px] text-slate-300",
+    "data-alf-today": true
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "助手が行った ", st.go, "/", lim.go), React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "来てくれた ", st.come, "/", lim.come), React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "あなたが訪ねた ", st.look, "/", lim.look), React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "おみやげ ", st.beatP, "/", ALF_BEAT_P.dayMax, "P"))), React.createElement("p", {
+    className: sec
+  }, "✉️ 置き手紙"), React.createElement("div", {
+    className: card,
+    "data-alf-notes": true
+  }, notes.length ? notes.slice(0, 12).map(n => React.createElement("div", {
+    key: n.id,
+    className: "border-b border-slate-700/60 py-1 last:border-0",
+    "data-alf-note": n.kind
+  }, React.createElement("p", {
+    className: "text-[11px] leading-snug text-slate-100"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap text-slate-400"
+  }, alfAgoText(n.at)), ' ', n.dir === 'away' ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, n.ids.map(assistantLifeName).join('・')), "が", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, n.name, "さんの家へ"), "遊びに行っていた") : n.kind === 'player' ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, n.name, "さん"), "が訪ねてくれた「", ALF_WORD_TEXTS[n.word], "」", n.ids.length ? React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "・", n.ids.map(assistantLifeName).join('・'), "と話した") : null) : React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, n.name, "さんの", n.ids.map(assistantLifeName).join('・')), "が来た「", ALF_WORD_TEXTS[n.word], "」")), n.dir === 'in' && (n.thanks == null ? React.createElement("div", {
+    className: "mt-1 flex flex-wrap gap-1"
+  }, ALF_THANKS_TEXTS.slice(0, 3).map((t, k) => React.createElement("button", {
+    key: k,
+    type: "button",
+    className: "rounded-lg border border-amber-200/40 px-1.5 py-0.5 text-[10px] text-amber-100",
+    "data-alf-thanks": k,
+    onClick: () => assistantLifeFriendThanks(n.id, k)
+  }, t))) : React.createElement("p", {
+    className: "text-[10px] text-slate-400"
+  }, "お礼「", ALF_THANKS_TEXTS[n.thanks], "」を返しました")))) : React.createElement("p", {
+    className: "text-[11px] text-slate-400"
+  }, "まだ置き手紙はありません。")), React.createElement("p", {
+    className: sec
+  }, "🏠 フレンドの家"), React.createElement("div", {
+    "data-alf-houses": true
+  }, houses.length ? houses.map(f => {
+    const can = assistantLifeFriendCanLook(f.id);
+    const been = st.photos.some(p => p.host === f.id);
+    return React.createElement("div", {
+      key: f.id,
+      className: `${card} flex items-center gap-2`,
+      "data-alf-house": f.id
+    }, React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("p", {
+      className: "truncate text-[12px] font-black text-slate-100"
+    }, f.name, "さんの家", been ? ' 📷' : ''), React.createElement("p", {
+      className: "text-[10px] text-slate-400"
+    }, alfAgoText(f.at), " の様子"), React.createElement("div", {
+      className: "mt-0.5 flex gap-0.5"
+    }, alfHomeIds(f.house).slice(0, 6).map(id => React.createElement(AlfFace, {
+      key: id,
+      id: id,
+      size: 22
+    })))), React.createElement("button", {
+      type: "button",
+      disabled: can === 'off',
+      className: "shrink-0 rounded-xl bg-amber-300 px-2.5 py-1.5 text-[11px] font-black text-slate-950 disabled:opacity-40",
+      "data-alf-act": "look",
+      onClick: () => setVisit(f)
+    }, "🚪 訪ねる"), React.createElement("button", {
+      type: "button",
+      className: "shrink-0 rounded-xl border border-slate-500 px-2 py-1.5 text-[11px] text-slate-200",
+      "aria-label": "その他",
+      "data-alf-act": "menu",
+      onClick: () => setMenu(menu === f.id ? null : f.id)
+    }, "⋯"), menu === f.id && React.createElement("button", {
+      type: "button",
+      className: "shrink-0 rounded-xl border border-rose-300/60 px-2 py-1.5 text-[10px] text-rose-100",
+      "data-alf-act": "mute",
+      onClick: () => {
+        assistantLifeFriendMute(f.id, true);
+        setMenu(null);
+      }
+    }, "来ないようにする"));
+  }) : React.createElement("p", {
+    className: `${card} text-[11px] text-slate-400`
+  }, "遊びに行けるフレンドの家はまだありません(フレンドが助手ライフを開くと、ここに並びます)。")), React.createElement("p", {
+    className: sec
+  }, "⚙️ 行き来の設定"), React.createElement("div", {
+    className: card,
+    "data-alf-settings": true
+  }, [['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る']].map(([k, label]) => React.createElement("label", {
+    key: k,
+    className: "flex items-center justify-between gap-2 py-1 text-[11.5px] text-slate-100",
+    "data-alf-setting": k
+  }, React.createElement("span", null, label), React.createElement("input", {
+    type: "checkbox",
+    checked: !!s.settings[k],
+    onChange: e => assistantLifeFriendSetSettings({
+      [k]: e.target.checked
+    })
+  }))), s.settings.muted.length > 0 && React.createElement("button", {
+    type: "button",
+    className: "mt-1 text-[10.5px] text-amber-200 underline",
+    "data-alf-unmute": true,
+    onClick: () => assistantLifeFriendSetSettings({
+      muted: []
+    })
+  }, "来ないようにした家(", s.settings.muted.length, "軒)を戻す")), React.createElement(AlfSceneSheet, {
+    scene: scene,
+    onClose: () => setScene(null)
+  }), visit && React.createElement(AlfFriendHouseView, {
+    friend: visit,
+    onClose: () => setVisit(null)
+  }));
+}
+const assistantLifeFriendDecorateRooms = rooms => {
+  if (!alfEnabled() || !rooms) return rooms;
+  for (const id of Object.keys(rooms)) {
+    const o = assistantLifeFriendAwayOf(id);
+    if (!o || !rooms[id]) continue;
+    rooms[id] = {
+      tag: [`🏘 ${o.name}さんの家へ`, o.ids.length > 1 ? `${o.ids.length}人で 遊びに` : 'ひとりで 遊びに', o.ids.length > 1 ? assistantLifeGroupNames(o.ids, 4) : null]
+    };
+  }
+  return rooms;
+};
+function AssistantLifeFriendHomeBadge({
+  rect
+}) {
+  const s = useAssistantLifeFriendState();
+  const [toast, setToast] = React.useState('');
+  const lastRef = React.useRef(null);
+  React.useEffect(() => {
+    if (alfEnabled()) void (async () => {
+      await ALF_STORE.load();
+      const m = await alfLoadMode();
+      if (m !== 'off') await alfEnsureHouse();
+      await alfRoster();
+      await alfFetchVisits();
+    })();
+  }, []);
+  const n = alfEnabled() && s.loaded && s.mode && s.mode !== 'off' ? assistantLifeFriendUnseen(s) : 0;
+  React.useEffect(() => {
+    if (lastRef.current != null && n > lastRef.current) {
+      const seen = new Set(s.st.seen);
+      const note = assistantLifeFriendNotes(s).find(x => !seen.has(x.id));
+      setToast(note ? note.kind === 'player' ? `🏘 ${note.name}さんが訪ねてくれました` : note.dir === 'away' ? `🏘 ${note.ids.map(assistantLifeName).join('・')}が${note.name}さんの家へ行っていました` : `🏘 ${note.name}さんの${note.ids.map(assistantLifeName).join('・')}が来ました` : '🏘 フレンドの家から知らせがあります');
+      const t = setTimeout(() => setToast(''), 3000);
+      lastRef.current = n;
+      return () => clearTimeout(t);
+    }
+    lastRef.current = n;
+    return undefined;
+  }, [n]);
+  if (!n && !toast) return null;
+  return React.createElement(React.Fragment, null, n > 0 && rect && React.createElement("span", {
+    className: "pointer-events-none fixed rounded-full border border-white/70 bg-sky-300 px-1 text-[9.5px] font-black leading-[15px] text-slate-950 shadow",
+    "data-alf-badge": true,
+    style: {
+      zIndex: 41,
+      left: rect.x + rect.w - 14,
+      top: rect.y - 8
+    }
+  }, "🏘 ", n), toast && rect && React.createElement("div", {
+    className: "pointer-events-none fixed whitespace-nowrap rounded-full border border-sky-200/60 bg-slate-950/90 px-2.5 text-[11px] font-black leading-[20px] text-sky-50 shadow-lg",
+    "data-alf-toast": true,
+    style: {
+      zIndex: 60,
+      top: Math.max(4, rect.y - 26),
+      ...(rect.right ? {
+        right: Math.max(4, (typeof window !== 'undefined' ? window.innerWidth : 390) - rect.x - rect.w)
+      } : {
+        left: Math.max(4, rect.x)
+      })
+    }
+  }, toast));
 }
 const CARD_BATTLE_HAND_MAX = 5;
 const CARD_BATTLE_DECK_SIZE = 50;
@@ -158389,6 +162279,8 @@ function MonsterHeroGame() {
   const [quickJoin, setQuickJoin] = useState(null);
   const quickAdvanceRef = useRef(null);
   const [breederName, setBreederName] = useState('名無しのブリーダー');
+  const breederNameRef = useRef('名無しのブリーダー');
+  breederNameRef.current = breederName;
   const [breederXp, setBreederXp] = useState(0);
   const [gold, setGold] = useState(0);
   const goldRef = useRef(gold);
@@ -158486,6 +162378,27 @@ function MonsterHeroGame() {
       return null;
     }
     return assistantPeerUseItem(kind, pair);
+  };
+  const giveAssistantLifeFurn = async (who, key) => {
+    if (typeof assistantLifeFurnGive !== 'function' || typeof assistantLifeFurnEnabled !== 'function' || !assistantLifeFurnEnabled()) return null;
+    const def = assistantLifeFurnOf(key);
+    if (!def) return null;
+    await ASSISTANT_LIFE_GIFT_STORE.load();
+    if (assistantLifeRoomOf(who).got[key]) return null;
+    const have = ownedItemCount(ownedItemsRef.current, def.itemId);
+    if (have <= 0) return null;
+    const nextItems = {
+      ...ownedItemsRef.current,
+      [def.itemId]: have - 1
+    };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    try {
+      await storeSet('mh_owned_items', nextItems, false);
+    } catch {
+      return null;
+    }
+    return assistantLifeFurnGive(who, key);
   };
   const useBuddyTraitSeed = async (masuId, traitId) => {
     const have = ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TRAIT_SEED_ITEM_ID);
@@ -159104,6 +163017,10 @@ function MonsterHeroGame() {
   }, [friendsActive, publishFriendProfile]);
   const [assistantCallStyles, setAssistantCallStylesState] = useState({});
   const assistantCallStyle = assistantCallStyles[selectedAssistantId] || null;
+  const [assistantCallnames, setAssistantCallnamesState] = useState({});
+  const [assistantNicknames, setAssistantNicknamesState] = useState({});
+  const [assistantCallnameAsk, setAssistantCallnameAskState] = useState({});
+  const [callnameToast, setCallnameToast] = useState(null);
   const [assistantChatOpen, setAssistantChatOpen] = useState(false);
   const [peerReplay, setPeerReplay] = useState(null);
   const assistantDailyLinesAskedRef = useRef('');
@@ -163138,6 +167055,12 @@ function MonsterHeroGame() {
         if (typeof saved === 'string' && saved.trim()) loadedCallStyles[who.id] = saved;
       }
       setAssistantCallStylesState(loadedCallStyles);
+      {
+        const cn = typeof assistantSetCallnames === 'function' ? assistantSetCallnames(await storeGet(ASSISTANT_CALLNAME_KEY, {}, false)) : {};
+        setAssistantCallnamesState(cn);
+        if (typeof normalizeAssistantNicknames === 'function') setAssistantNicknamesState(normalizeAssistantNicknames(await storeGet(ASSISTANT_NICKNAME_KEY, {}, false)));
+        if (typeof normalizeAssistantCallnameAsk === 'function') setAssistantCallnameAskState(normalizeAssistantCallnameAsk(await storeGet(ASSISTANT_CALLNAME_ASK_KEY, {}, false)));
+      }
       const savedXp = await storeGet('mh_breeder_xp', 0, false);
       setBreederXp(savedXp);
       const savedGold = await storeGet('mh_gold', 0, false);
@@ -164812,7 +168735,7 @@ function MonsterHeroGame() {
       ...prev,
       [id]: result.state
     }));
-    if (actionKey !== 'lifeGift' && typeof growthFxAssistantBond === 'function') growthFxAssistantBond(id, current.points, result.state.points);
+    if (actionKey !== 'lifeGift' && actionKey !== 'lifeFurn' && typeof growthFxAssistantBond === 'function') growthFxAssistantBond(id, current.points, result.state.points);
     const after = assistantBondLevelOf(result.state.points);
     if (id === selectedAssistantIdRef.current && after > before) setAssistantBondUp(true);
     if (after > before) grantProfileFrames(id, after);
@@ -164825,6 +168748,24 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (typeof assistantPeerSetPlayerBondAdder === 'function') assistantPeerSetPlayerBondAdder(addAssistantBondFor);
   }, [addAssistantBondFor]);
+  useEffect(() => {
+    if (typeof assistantLifeFriendSetGiftSender !== 'function') return;
+    assistantLifeFriendSetGiftSender(gift => runGiftWrite(async () => {
+      if (RELEASE_FLAGS.assistantLifeFriend !== true || !gift || typeof gift.id !== 'string') return false;
+      const savedGifts = await storeGet('mh_gifts', [], false);
+      const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
+      const grant = grantGiftOnce(beforeGifts, gift);
+      if (!grant.granted) return false;
+      const saved = await saveStoredValuesOrRollback([{
+        key: 'mh_gifts',
+        before: beforeGifts,
+        next: grant.gifts
+      }], storeGet, storeSet);
+      if (!saved) return false;
+      setGifts(grant.gifts);
+      return true;
+    }));
+  }, []);
   useEffect(() => {
     if (typeof assistantPeerSetPlayerCaller !== 'function') return;
     assistantPeerSetPlayerCaller(id => assistantCallName(breederName, assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points), assistantCallStyles[id] || null, id));
@@ -165238,6 +169179,68 @@ function MonsterHeroGame() {
     try {
       storeSet(assistantCallStyleKeyFor(id), next, false);
     } catch {}
+    setAssistantCallnameFor(id, next && typeof assistantCallnameGuard === 'function' && assistantCallnameGuard(next, breederNameRef.current) ? next : null, 'profile');
+  }, []);
+  const setAssistantCallnameFor = useCallback((id, call, by) => {
+    if (!id || typeof assistantSetCallnames !== 'function') return null;
+    const cur = assistantCallnamesNow || {};
+    const all = {
+      ...cur
+    };
+    const guarded = call ? assistantCallnameGuard(call, breederNameRef.current) : null;
+    if (call && !guarded) return null;
+    if (guarded) all[id] = {
+      call: guarded,
+      by,
+      at: Date.now(),
+      prev: cur[id] && cur[id].call || null
+    };else delete all[id];
+    const next = assistantSetCallnames(all);
+    setAssistantCallnamesState(next);
+    setAssistantCallStylesState(prev => ({
+      ...prev
+    }));
+    try {
+      storeSet(ASSISTANT_CALLNAME_KEY, next, false);
+    } catch {}
+    return guarded;
+  }, []);
+  const setAssistantNicknameFor = useCallback((id, nick) => {
+    if (!id || typeof assistantNicknameGuard !== 'function') return null;
+    const guarded = nick ? assistantNicknameGuard(nick) : null;
+    if (nick && !guarded) return null;
+    setAssistantNicknamesState(prev => {
+      const all = {
+        ...prev
+      };
+      if (guarded) all[id] = {
+        nick: guarded,
+        at: Date.now()
+      };else delete all[id];
+      try {
+        storeSet(ASSISTANT_NICKNAME_KEY, all, false);
+      } catch {}
+      return all;
+    });
+    return guarded;
+  }, []);
+  const markAssistantCallnameAsk = useCallback((id, patch) => {
+    if (!id) return;
+    setAssistantCallnameAskState(prev => {
+      const all = {
+        ...prev,
+        [id]: {
+          asked: false,
+          offeredAt: 0,
+          ...(prev[id] || {}),
+          ...patch
+        }
+      };
+      try {
+        storeSet(ASSISTANT_CALLNAME_ASK_KEY, all, false);
+      } catch {}
+      return all;
+    });
   }, []);
   const assistantBondValue = useMemo(() => ({
     points: assistantBond.points,
@@ -179789,9 +183792,38 @@ function MonsterHeroGame() {
         bondLevel: lv,
         bondTitle: stage.title || '',
         bondTone: stage.tone || '',
+        callnameKit: RELEASE_FLAGS.assistantCallname === true ? {
+          current: assistantCallnames[id] && assistantCallnames[id].call || null,
+          prev: assistantCallnames[id] && assistantCallnames[id].prev || null,
+          customStyle: assistantCallStyles[id] || null,
+          nick: assistantNicknames[id] && assistantNicknames[id].nick || null,
+          asked: !!(assistantCallnameAsk[id] && assistantCallnameAsk[id].asked),
+          offeredAt: assistantCallnameAsk[id] && assistantCallnameAsk[id].offeredAt || 0,
+          fill: t => assistantFillCallTemplate(assistantGenderCallOf(t, id), breederName),
+          setCall: (call, by) => {
+            const g = setAssistantCallnameFor(id, call, by);
+            if (g) setCallnameToast({
+              id,
+              text: `${activeAssistant.name}の呼び方：${assistantFillCallTemplate(g, breederName)}`
+            });
+            return g;
+          },
+          setNick: nick => setAssistantNicknameFor(id, nick),
+          markAsk: patch => markAssistantCallnameAsk(id, patch)
+        } : null,
         onExchange: () => addAssistantBondFor(id, 'chat'),
         onClose: () => setAssistantChatOpen(false)
       });
+    })(), callnameToast && !assistantChatOpen && typeof AssistantCallnameToast === 'function' && (() => {
+      const who = ASSISTANT_LIST.find(a => a.id === callnameToast.id);
+      return who ? React.createElement(AssistantCallnameToast, {
+        key: callnameToast.id + callnameToast.text,
+        assistant: who,
+        text: callnameToast.text,
+        screen: gameState,
+        hidden: showCallStylePicker,
+        onDone: () => setCallnameToast(null)
+      }) : null;
     })(), typeof AssistantPeerTalk === 'function' && RELEASE_FLAGS.assistantPeer === true && (() => {
       const metIds = assistantsUnlockedFrom(rhythmEventStorySeen).filter(who => who.id !== 'momosuke' || momosukeIntroSeenFlag).map(who => who.id);
       const busy = !!eventReplay || assistantChatOpen || showAssistantPicker || kikiIntroStep != null || momosukeIntroStep != null || !assistantChosen;
@@ -179824,7 +183856,9 @@ function MonsterHeroGame() {
           gift: ownedItemCount(ownedItems, 'peer_gift'),
           token: ownedItemCount(ownedItems, 'peer_token')
         },
-        onUseItem: useAssistantPeerItem
+        onUseItem: useAssistantPeerItem,
+        furnItems: typeof assistantLifeFurnCounts === 'function' ? assistantLifeFurnCounts(ownedItems) : null,
+        onGiveFurn: giveAssistantLifeFurn
       }));
     })(), typeof QuickGuideOverlay === 'function' && quickGuideActive && activeAssistant && (() => {
       const replay = quickGuideActive.startsWith('replay:') ? quickGuideActive.slice(7) : null;
@@ -186478,8 +190512,9 @@ function MonsterHeroGame() {
         setShowCostumePicker(true);
       },
       onOpenItems: () => setGameState('ITEM_INVENTORY'),
+      talkedCallname: assistantCallnames[selectedAssistantId] && assistantCallnames[selectedAssistantId].call || null,
       onOpenCallStylePicker: () => {
-        setTempCallStyle(assistantCallStyle || '');
+        setTempCallStyle(assistantCallnames[selectedAssistantId] && assistantCallnames[selectedAssistantId].call || assistantCallStyle || '');
         setShowCallStylePicker(true);
       },
       onOpenAssistantPicker: () => setShowAssistantPicker(true),
@@ -188154,9 +192189,45 @@ function MonsterHeroGame() {
       }
     }, React.createElement("h3", {
       className: "text-lg font-black text-white mb-1 text-center"
-    }, activeAssistant.name, "の呼び方"), React.createElement("p", {
+    }, activeAssistant.name, "の呼び方"), (() => {
+      const talked = assistantCallnames[selectedAssistantId] && assistantCallnames[selectedAssistantId].call;
+      const nick = assistantNicknames[selectedAssistantId] && assistantNicknames[selectedAssistantId].nick;
+      if (!talked && !nick) return null;
+      return React.createElement("div", {
+        "data-callname-profile": true,
+        className: "mb-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/40 p-2.5"
+      }, talked && React.createElement("div", {
+        className: "flex items-center gap-2"
+      }, React.createElement("p", {
+        className: "min-w-0 flex-1 text-[11px] font-bold leading-snug text-slate-300 [word-break:keep-all] [overflow-wrap:anywhere]"
+      }, "会話で決めた呼び方：", React.createElement("span", {
+        className: "font-black",
+        style: {
+          color: activeAssistant.accent
+        }
+      }, assistantFillCallTemplate(talked, breederName))), React.createElement("button", {
+        type: "button",
+        "data-callname-reset": true,
+        onClick: () => {
+          setAssistantCallnameFor(selectedAssistantId, null, 'chat');
+          setTempCallStyle(assistantCallStyle || '');
+        },
+        className: "shrink-0 min-h-[36px] rounded-xl border border-slate-600 bg-slate-800 px-2.5 text-[10px] font-black text-slate-200 active:scale-95"
+      }, "元に戻す")), nick && React.createElement("div", {
+        className: "flex items-center gap-2"
+      }, React.createElement("p", {
+        className: "min-w-0 flex-1 text-[11px] font-bold leading-snug text-slate-300 [word-break:keep-all] [overflow-wrap:anywhere]"
+      }, activeAssistant.name, "のあだ名：", React.createElement("span", {
+        className: "font-black text-white"
+      }, nick)), React.createElement("button", {
+        type: "button",
+        "data-nickname-reset": true,
+        onClick: () => setAssistantNicknameFor(selectedAssistantId, null),
+        className: "shrink-0 min-h-[36px] rounded-xl border border-slate-600 bg-slate-800 px-2.5 text-[10px] font-black text-slate-200 active:scale-95"
+      }, "外す")));
+    })(), assistantBondLevelNow >= ASSISTANT_CALL_STYLE_UNLOCK_LEVEL ? React.createElement(React.Fragment, null, React.createElement("p", {
       className: "text-[9px] text-slate-500 text-center mb-3 leading-tight"
-    }, "絆Lv6になったので、呼び方を自由に決められます。「", '{name}', "」と書くと、そこがあなたの名前に置き換わります。"), React.createElement("input", {
+    }, "仲良し度がLv6になったので、呼び方を自由に決められます。「", '{name}', "」と書くと、そこがあなたの名前に置き換わります。"), React.createElement("input", {
       type: "text",
       value: tempCallStyle,
       onChange: e => setTempCallStyle(e.target.value),
@@ -188198,7 +192269,10 @@ function MonsterHeroGame() {
         setShowCallStylePicker(false);
       },
       className: "w-full text-[10px] text-slate-500 font-bold py-1 active:scale-95"
-    }, "絆Lvの呼び方に戻す"))), showAssistantPicker && React.createElement("div", {
+    }, "仲良し度の呼び方に戻す")) : React.createElement("button", {
+      onClick: () => setShowCallStylePicker(false),
+      className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
+    }, "閉じる"))), showAssistantPicker && React.createElement("div", {
       className: "fixed inset-0 flex flex-col items-center justify-center p-5",
       style: {
         position: 'fixed',
