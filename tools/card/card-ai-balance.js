@@ -5,6 +5,7 @@
 //   --vs each … 助手どうしの総当たり
 //   --games … 1組あたりの試合数(先攻・後攻を半分ずつ入れかえる)。組は 6人 × 5人 / 2 = 15組
 //   --style attack|guard|normal … 育つ助手の型を渡して組む(2026-11-08。渡さなければ今どおり)
+//   --face oshi|suki|yoso|honne … 助手の推し・好き・素顔のデッキ(83-card-ai-deck.jsx の cardAiFaceBuild)で組む(2026-11-08。方針なし=揺らぎの前の形)
 //   --with-pending … 公開の印が立っていない助手(仮の値で表に足した子)も測る。ふだんは公開済みの助手だけ(card-released-foes.js)
 // 読み方: 「勝率」は、その助手がほかの5人と戦ったときの勝ちの割合(50% がちょうど真ん中)
 const fs = require('fs');
@@ -15,12 +16,14 @@ const { cardFoeOpenInRepo } = require('./card-released-foes');
 const ROOT = path.resolve(__dirname, '..', '..');
 const GAME = path.join(ROOT, 'monster-hero');
 const load = () => {
-  const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
+  const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map, Date });
   // 戦術カード(助手の EXPERT・MASTER の基本カード)も読む。--no-tactics のときは読まない(入れる前の強さとくらべる)
   const tac = path.join(GAME, 'src', 'parts', '82-card-tactics-core.jsx');
   const withTac = !process.argv.includes('--no-tactics') && fs.existsSync(tac);
+  const withFace = process.argv.includes('--face');
   const src = `${fs.readFileSync(path.join(GAME, 'data', 'card-battle-cards.js'), 'utf8')}\n;\n${fs.readFileSync(path.join(GAME, 'src', 'parts', '82-card-battle-core.jsx'), 'utf8')}\n;\n${withTac ? `${fs.readFileSync(tac, 'utf8')}\n;\n` : ''}`
-    + 'this.E = { CARD_BATTLE_DATA, cardSimulate, cardAiBuildDeck, cardAiPolicy, CARD_AI_HABITS, cardAiSeededRand };';
+    + `${withFace ? `${fs.readFileSync(path.join(GAME, 'src', 'parts', '83-card-ai-deck.jsx'), 'utf8')}\n;\n` : ''}`
+    + `this.E = { CARD_BATTLE_DATA, cardSimulate, cardAiBuildDeck, cardAiPolicy, CARD_AI_HABITS, cardAiSeededRand${withFace ? ', cardAiFaceBuild' : ''} };`;
   vm.runInContext(src, ctx, { filename: '82-card-battle-core.jsx' });
   return ctx.E;
 };
@@ -32,6 +35,7 @@ const games = Math.max(2, Number(opt('--games', 40)) || 40);
 const jsonOut = opt('--json', null);
 const vs = opt('--vs', 'starter');
 const style = opt('--style', null);
+const face = opt('--face', null);
 
 const E = load();
 const db = E.CARD_BATTLE_DATA;
@@ -50,7 +54,9 @@ levels.forEach((lv) => {
       kits.forEach((k) => {
         for (let g = 0; g < games; g++) {
           // 助手のデッキは毎試合組み直す(好きなモンスター ベスト4から3体・カードも少しずつ変わる。2026-10-25)。MASTER はプレイヤー役のデッキを見る
-          const mine = E.cardAiBuildDeck(db, w, lv, E.cardAiSeededRand(`${w}:${lv}:${k}:${g}`), { playerDeck: E.cardAiBuildDeck(db, k), ...(style ? { style } : {}) });
+          const rr = E.cardAiSeededRand(`${w}:${lv}:${k}:${g}`);
+          const mine = face ? E.cardAiFaceBuild(db, w, face, lv, rr, { playerDeck: E.cardAiBuildDeck(db, k) })
+            : E.cardAiBuildDeck(db, w, lv, rr, { playerDeck: E.cardAiBuildDeck(db, k), ...(style ? { style } : {}) });
           // プレイヤー役は山札の上限を見ない(playerRole。2026-10-27 ソランド判断・ドラ EXPERT の測り方をそろえるため。人が相手のときと同じ測り方)
           const st = E.cardSimulate(db, { decks: [mine, E.cardAiBuildDeck(db, k)], policies: [E.cardAiPolicy(w, lv, { sameBlood: !!mine.sameBlood }), E.cardAiPolicy('kyuko', lv, { playerRole: true })], seed: 7000 + seed++, first: g % 2 });
           if (st.winner === 0) win[w] += 1;
