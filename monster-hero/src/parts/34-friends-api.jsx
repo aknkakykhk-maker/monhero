@@ -516,6 +516,8 @@ const sbFetchFriendRoster = async (selfIdRaw) => {
     otherId: view.otherId,
     userName: (looks[view.otherId] || {}).userName || '名無しのブリーダー',
     lastSeenAt: (looks[view.otherId] || {}).lastSeenAt || 0,
+    // アイコン(2026-11-08 ビート部の「いまモンヒロビートにいる人」で顔を出す。足すだけ)
+    icon: (looks[view.otherId] || {}).icon ?? null,
   })).sort((a, b) => b.lastSeenAt - a.lastSeenAt);
 };
 
@@ -575,7 +577,8 @@ const friendsPresenceFor = async (ids) => {
     if (!r) return;
     const at = Number.isFinite(r.updatedAt) ? r.updatedAt : 0;
     const p = friendsPresenceText(r.place, at, now);
-    out[id] = { online: p.online, text: p.text, at };
+    // place … いまの場所(friendsPlaceFromRow を通した値。2026-11-08 ビート部が「モンヒロビートにいるか」を見分けるのに足した)
+    out[id] = { online: p.online, text: p.text, at, place: r.place || null };
   });
   return out;
 };
