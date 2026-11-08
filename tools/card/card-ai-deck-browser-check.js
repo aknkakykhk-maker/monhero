@@ -9,6 +9,7 @@
 //   ③ 印が真・AI なし(遅れの返事): 揺らぎで組む → VS・結果は既定の名前で同じ形(画面に違いが出ない)
 //   ⑥ これまでのデッキ: 相手えらびの選び口(おまかせ・今の3つ・これまで)で選ぶと、今日のデッキ・VS・結果の名前がそれになる
 //   ⑧ 遊ぶ人の提案(assistantLifeDeckWish の代わり): 次の組み直しで1回だけ使い、相手えらび・VS・結果に提案の名前が出る
+//   ⑨ 提案のデッキで初めて戦うときだけ VS の台詞が提案の台詞・2回目は今の台詞
 //   ⑦ 選び口を開いても、隣の欄の立ち絵と吹き出しが画面に入る(横で下へ押し出された崩れ)
 //   ⑤ VS に自分の側(3体)も出て、画面に入っている(相手の側より遅れて出るので、出そろうまで待ってから撮る)
 //   ④ 実行時エラーが無い
@@ -224,6 +225,21 @@ const run = async (browser, mode, scene, errors) => {
       check(`${scene.ai ? '②' : '③'} ${label}: その助手との10戦の数が1つ増える`, n === 1, String(n));
     }
     await snap('2-result');
+    // ⑨ 提案のデッキで初めて戦うときだけ、VS の台詞が提案の台詞(社長「やる」)。2回目(もう一度)は今の台詞
+    if (scene.wish) {
+      check(`⑨ ${label}: 提案のデッキで初めて戦う VS は、提案の台詞`, !!vs && vs.line === '考えてくれた『ゴーレムのまったり作戦』でお相手しまつ( ˘ω˘)', JSON.stringify(vs && vs.line));
+      await page.evaluate(() => { cardAiDeckNextMemo.kiki = 'oshi'; }); // eslint-disable-line no-undef
+      await page.getByRole('button', { name: /^もう一度/ }).first().click();
+      let vs2 = null;
+      for (let i = 0; i < 30 && !vs2; i++) {
+        vs2 = await page.evaluate(() => { const m = document.querySelector('[data-card-vs-mark]'); const l = document.querySelector('[data-card-vs-line]'); return m && l ? l.textContent : null; });
+        if (!vs2) { const go = page.getByRole('button', { name: /^対戦へ$|このデッキで/ }).first(); if (await go.count() && await go.isVisible().catch(() => false)) await go.click().catch(() => {}); await page.waitForTimeout(250); }
+      }
+      await page.waitForTimeout(1300);
+      const fought = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_ai_deck_wish_v1') || 'null'));
+      check(`⑨ ${label}: 2回目(もう一度)の VS は今の台詞・初めて戦った印が残る`, vs2 === '今日は『ゴーレムのまったり作戦』でお相手しまつ( ˘ω˘)' && !!fought && JSON.stringify(fought.fought && fought.fought.kiki) === JSON.stringify(['ゴーレムのまったり作戦']), `${vs2} / ${JSON.stringify(fought)}`);
+      await snap('3-vs-2nd');
+    }
   } finally { await ctx.close(); }
 };
 

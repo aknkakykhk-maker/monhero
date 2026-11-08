@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ec5314d40461b036
+// source-sha256: 9156d2f5c19190d8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -139208,6 +139208,9 @@ const cardAiDeckEntryOf = (raw, db) => {
     ai: raw.ai === true,
     ...(style ? {
       style
+    } : {}),
+    ...(raw.wish === true ? {
+      wish: true
     } : {})
   };
 };
@@ -139827,6 +139830,7 @@ const cardLoadAiRecipe = async () => {
     };
   }
   await cardAiHistoryRead();
+  await cardAiWishRead();
   return cardAiRecipeState;
 };
 const cardSaveAiRecipe = async next => {
@@ -139928,7 +139932,56 @@ const cardAiFaceDiverseOk = (db, who, slot, plan, w, side, style = null) => {
   });
 };
 const CARD_AI_WISH_KEY = 'mh_card_ai_deck_wish_v1';
-const CARD_AI_WISH_PLAN_OK = Object.freeze({});
+const CARD_AI_WISH_PLAN_OK = Object.freeze({
+  mua: {
+    oshi: ['attack'],
+    suki: ['guard'],
+    yoso: ['attack', 'guard', 'normal'],
+    honne: ['attack', 'guard', 'normal']
+  },
+  kiki: {
+    oshi: ['attack', 'guard', 'normal'],
+    suki: [],
+    yoso: ['attack', 'normal'],
+    honne: ['attack', 'normal']
+  },
+  momosuke: {
+    oshi: ['guard'],
+    suki: ['attack', 'guard', 'normal'],
+    yoso: ['attack', 'guard', 'normal'],
+    honne: ['attack', 'guard', 'normal']
+  },
+  dra: {
+    oshi: ['attack', 'guard', 'normal'],
+    suki: ['attack', 'normal'],
+    yoso: ['attack', 'guard', 'normal'],
+    honne: ['attack', 'guard', 'normal']
+  },
+  atsu: {
+    oshi: ['guard', 'normal'],
+    suki: ['attack', 'guard', 'normal'],
+    yoso: ['attack', 'guard'],
+    honne: []
+  },
+  kyuko: {
+    oshi: [],
+    suki: ['guard', 'normal'],
+    yoso: ['attack', 'guard', 'normal'],
+    honne: ['attack', 'guard', 'normal']
+  },
+  sorashido: {
+    oshi: ['attack', 'normal'],
+    suki: ['attack', 'guard', 'normal'],
+    yoso: [],
+    honne: []
+  },
+  erubin: {
+    oshi: ['attack', 'guard', 'normal'],
+    suki: [],
+    yoso: ['guard', 'normal'],
+    honne: ['guard', 'normal']
+  }
+});
 const cardAiWishPlanOk = (who, slot, plan) => {
   const row = CARD_AI_WISH_PLAN_OK[who];
   const list = row && Array.isArray(row[slot]) ? row[slot] : [];
@@ -139956,27 +140009,40 @@ const cardAiWishOf = who => {
   };
 };
 const cardNormalizeAiWish = raw => {
-  const used = {};
-  const src = cardAiDeckIsObj(raw) && cardAiDeckIsObj(raw.used) ? raw.used : {};
-  for (const who of Object.keys(src)) {
-    if (!CARD_AI_FACES[who] || !Array.isArray(src[who])) continue;
-    const list = [...new Set(src[who].filter(x => typeof x === 'string' && /^(oshi|suki|sugao):\d{4}-\d{2}-\d{2}$/.test(x)))].slice(-CARD_AI_WISH_KEEP);
-    if (list.length) used[who] = list;
-  }
+  const pick = (key, ok) => {
+    const out = {};
+    const src = cardAiDeckIsObj(raw) && cardAiDeckIsObj(raw[key]) ? raw[key] : {};
+    for (const who of Object.keys(src)) {
+      if (!CARD_AI_FACES[who] || !Array.isArray(src[who])) continue;
+      const list = [...new Set(src[who].filter(ok))].slice(-CARD_AI_WISH_KEEP);
+      if (list.length) out[who] = list;
+    }
+    return out;
+  };
+  const used = pick('used', x => typeof x === 'string' && /^(oshi|suki|sugao):\d{4}-\d{2}-\d{2}$/.test(x));
+  const fought = pick('fought', x => typeof x === 'string' && x.length > 0 && x.length <= CARD_AI_DECK_NAME_MAX);
   return {
     v: 1,
-    used
+    used,
+    ...(Object.keys(fought).length ? {
+      fought
+    } : {})
   };
+};
+let cardAiWishState = {
+  v: 1,
+  used: {}
 };
 const cardAiWishRead = async () => {
   try {
-    return cardNormalizeAiWish(await storeGet(CARD_AI_WISH_KEY, null));
+    cardAiWishState = cardNormalizeAiWish(await storeGet(CARD_AI_WISH_KEY, null));
   } catch (_) {
-    return {
+    cardAiWishState = {
       v: 1,
       used: {}
     };
   }
+  return cardAiWishState;
 };
 const cardAiWishPending = async who => {
   if (!cardAiDeckFlagOn()) return null;
@@ -139988,17 +140054,36 @@ const cardAiWishPending = async who => {
 const cardAiWishMarkUsed = async (who, wish) => {
   const st = await cardAiWishRead();
   const next = cardNormalizeAiWish({
-    v: 1,
+    ...st,
     used: {
       ...st.used,
       [who]: [...(st.used[who] || []), wish.mark]
     }
   });
+  cardAiWishState = next;
   try {
     await storeSet(CARD_AI_WISH_KEY, next);
   } catch (_) {}
   return next;
 };
+const cardAiDeckWishFought = async (who, name) => {
+  if (!cardAiDeckFlagOn() || !CARD_AI_FACES[who] || typeof name !== 'string' || !name) return null;
+  const st = await cardAiWishRead();
+  if (((st.fought || {})[who] || []).includes(name)) return st;
+  const next = cardNormalizeAiWish({
+    ...st,
+    fought: {
+      ...(st.fought || {}),
+      [who]: [...((st.fought || {})[who] || []), name]
+    }
+  });
+  cardAiWishState = next;
+  try {
+    await storeSet(CARD_AI_WISH_KEY, next);
+  } catch (_) {}
+  return next;
+};
+const cardAiDeckWishFirst = (who, name) => !!name && !((cardAiWishState && cardAiWishState.fought || {})[who] || []).includes(name);
 const cardAiWishName = (db, who, slot, name, others, used) => {
   if (!name) return null;
   const spec = cardAiFaceSpec(db, who, slot);
@@ -140083,6 +140168,7 @@ const cardAiDeckRebuild = async (who, reason, opts = {}) => {
         }
       }
     }
+    const isWish = !!wishName && name === wishName;
     const entry = cardAiDeckEntryOf({
       plan,
       name,
@@ -140090,7 +140176,8 @@ const cardAiDeckRebuild = async (who, reason, opts = {}) => {
       at: now,
       since,
       ai: !!got,
-      style
+      style,
+      wish: isWish || !!(prev && prev.wish) && name === (prev && prev.name)
     }, db);
     if (past) await cardAiHistoryPush(who, past);
     const passed = Number.isFinite(opts.passed) ? opts.passed : w.slotsDone;
@@ -140329,15 +140416,20 @@ const cardAssistantDeckPick = (who, rand = Math.random, level = 'normal', extra 
   const e = w && w.decks[slot] || null;
   const plan = e && e.plan ? e.plan : null;
   const deck = cardAiFaceBuild(CARD_BATTLE_DATA, who, slot, level, rnd, extra, plan, e && e.style);
+  const nm = cardAiFaceNameOf(w, who, slot);
+  const wishFirst = !!(e && e.wish) && cardAiDeckWishFirst(who, nm);
   return {
     styleId: id,
     slot,
     deckId: id,
     deckFrom: 'now',
-    name: cardAiFaceNameOf(w, who, slot),
+    name: nm,
     line: e && e.line || null,
     plan,
-    deck
+    deck,
+    ...(wishFirst ? {
+      wishFirst: true
+    } : {})
   };
 };
 const cardAiRecipeOf = (who, face) => {
@@ -140401,8 +140493,22 @@ const CARD_AI_DECK_VS_LINES = Object.freeze({
   sorashido: '今日は『{name}』でいくぜ・・・！ 計算済み笑',
   erubin: '今日は『{name}』でいこうかな🤔 よろしくね笑'
 });
+const CARD_AI_DECK_WISH_LINES = Object.freeze({
+  mua: '考えてくれた『{name}』でいくよ♪ まぢ嬉しい！全力だからね！',
+  kiki: '考えてくれた『{name}』でお相手しまつ( ˘ω˘)',
+  momosuke: '考えてくれた『{name}』、ももが使いこなしちゃうよ♡ 勝てるかな〜？w',
+  kyuko: 'ほい、考えてくれた『{name}』でいくよぉ笑 ありがとね',
+  dra: 'おで、考えてくれた『{name}』でいくぞ。えへへ、うれしいな。手加減しないからな',
+  atsu: '考えてくれた『{name}』でいくわ笑 全力な！',
+  sorashido: '考えてくれた『{name}』でいくぜ・・・！ これも計算済み笑',
+  erubin: '考えてくれた『{name}』でいこうかな🤔 ありがとね笑'
+});
 const cardAiDeckVsLine = (who, pick) => {
   if (!pick) return null;
+  if (pick.wishFirst && CARD_AI_DECK_WISH_LINES[who] && pick.name) return {
+    t: CARD_AI_DECK_WISH_LINES[who].replace('{name}', pick.name),
+    e: 'happy'
+  };
   if (pick.line) return {
     t: pick.line,
     e: 'happy'
@@ -149030,6 +149136,7 @@ const CardBattleScreen = ({
       playerDeck: activeDeck
     }, typeof cardAiDeckNextId === 'function' ? cardAiDeckNextId(pick.who) : typeof cardAiDeckNextStyle === 'function' ? cardAiDeckNextStyle(pick.who) : null) : null;
     if (aiPick && typeof cardAiDeckNextDone === 'function') cardAiDeckNextDone(pick.who);
+    if (aiPick && aiPick.wishFirst && typeof cardAiDeckWishFought === 'function') void Promise.resolve(cardAiDeckWishFought(pick.who, aiPick.name)).catch(() => {});
     const foeStyle = aiPick ? aiPick.styleId : null;
     const cpuDeck = share ? {
       monsters: share.deck.monsters.slice(),

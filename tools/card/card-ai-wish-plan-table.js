@@ -71,7 +71,8 @@ const measure = (who) => {
           seen[key] = pct;
         }
         out.rates[`${sl}:${plan}:${lv}`] = Math.round(pct * 10) / 10;
-        if (Math.abs(pct - base[lv]) > LIMIT) allOk = false;
+        // 境目(ちょうど10点)で小数の誤差に左右されないよう、表に残す数(小数第1位)でくらべる
+        if (Math.abs(Math.round(pct * 10) / 10 - Math.round(base[lv] * 10) / 10) > LIMIT + 1e-9) allOk = false;
       }
       if (allOk) out.ok[sl].push(plan);
     }
