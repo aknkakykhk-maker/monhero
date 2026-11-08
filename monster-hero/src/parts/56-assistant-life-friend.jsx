@@ -967,7 +967,7 @@ function AlfFriendHouseView({ friend, onClose }) {
     <div className="mhl-hdr flex items-start gap-2" style={{ paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>
       <button type="button" className="h-9 w-8 shrink-0 text-[19px] text-slate-100" aria-label="もどる" data-alf-visit-close onClick={onClose}>←</button>
       {/* 右上は「仲良し度 +10」などの知らせ(44-growth-fx の .mh-gfx-chips)が出る所なので、題は左に寄せて右を空ける */}
-      <div className="min-w-0" style={{ maxWidth: land ? '100%' : '62%' }}>
+      <div className="min-w-0" style={{ maxWidth: land ? '100%' : '48%' }}>
         <p className="mhl-en whitespace-nowrap">VISIT · FRIEND HOUSE</p>
         <p className="truncate text-[17px] font-black text-amber-100" data-alf-visit-title>🏘 {friend.name}さんの家</p>
         <p className="text-[10px] font-bold text-slate-200"><span className="whitespace-nowrap">📷 {alfAgoText(friend.at)} の様子</span>・<span className="whitespace-nowrap">{friend.name}さんが最後に開いたとき</span></p>

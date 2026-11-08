@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 117a765644b3638f
+// source-sha256: abc78c7e75f4febd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -123260,7 +123260,7 @@ function AlfFriendHouseView({
   }, "←"), React.createElement("div", {
     className: "min-w-0",
     style: {
-      maxWidth: land ? '100%' : '62%'
+      maxWidth: land ? '100%' : '48%'
     }
   }, React.createElement("p", {
     className: "mhl-en whitespace-nowrap"
