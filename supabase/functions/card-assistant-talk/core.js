@@ -50,6 +50,9 @@ export const PLAN_PREFER_RANGE = Object.freeze([5, 8]); // 優先するカード
 export const PLAN_HABIT_LIMIT = Object.freeze([0, 5]);  // くせの数の幅の外枠(ゲームの幅もこの中に丸める)
 export const MAX_PLAN_FIELDS = 30;
 export const MAX_FAVORITES = 5;
+// 推し・好き・素顔のデッキ(2026-11-08 社長の決定)。顔と素顔の側はゲームが送る id を決まった言い方に直す(自由な文は主役の名前だけ)
+export const PLAN_FACES = Object.freeze(['oshi', 'suki', 'sugao']);
+export const PLAN_SIDES = Object.freeze(['yoso', 'honne']);
 
 export const DIGEST_URL = 'https://aknkakykhk-maker.github.io/monhero/monster-hero/data/assistant-chat-digest.json';
 export const DEFAULT_ALLOWED_ORIGINS = ['https://aknkakykhk-maker.github.io'];
@@ -174,7 +177,11 @@ export const normalizeRequest = (body, digest) => {
     const pr = Array.isArray(f.prefer) ? f.prefer : PLAN_PREFER_RANGE;
     const pMin = int(pr[0], 1, 12, PLAN_PREFER_RANGE[0]), pMax = int(pr[1], 1, 12, PLAN_PREFER_RANGE[1]);
     if (!style || !cards.length) return null;
-    return { kind, breederId, assistantId, samples, facts: { style, cards, fields, favorites, habit, prefer: [Math.min(pMin, pMax), Math.max(pMin, pMax)] } };
+    // 顔(無ければ前の型だけの問い。古いゲームからの問いもそのまま通す)
+    const face = PLAN_FACES.includes(f.face) ? f.face : null;
+    const side = face === 'sugao' && PLAN_SIDES.includes(f.side) ? f.side : null;
+    const lead = face ? clean(f.lead, MAX_NAME_CHARS) || null : null;
+    return { kind, breederId, assistantId, samples, facts: { style, cards, fields, favorites, habit, prefer: [Math.min(pMin, pMax), Math.max(pMin, pMax)], face, side, lead } };
   }
   if (kind === 'deck') {
     const cards = (Array.isArray(f.cards) ? f.cards : []).slice(0, MAX_DECK_CARDS).map((c) => ({
@@ -206,12 +213,24 @@ export const normalizeRequest = (body, digest) => {
 // 試合のこと(ゲームが送った値を、決まった言い方に直す。自由な文は名前だけ)
 const PLAN_STYLE_TEXT = Object.freeze({ attack: '攻め(相手を早く倒す)', guard: '守り(守りの札を残して堅く)', normal: 'ふつう(攻めと守りの釣り合い)' });
 const PLAN_HABIT_TEXT = Object.freeze({ big: '大技を選ぶくせ', saveGuts: 'ガッツをためるくせ', keepGuard: '守りの札を残すくせ' });
+const PLAN_FACE_TEXT = Object.freeze({
+  oshi: '推しのデッキ(推しのモンスターが主役。推しが活躍できるカードを優先する)',
+  suki: '好きのデッキ(好きなモンスターが主役。そのモンスターらしさが出るカードを優先する)',
+  yoso: '素顔のデッキ・よそいき(ふだんどおりの、無難で強い組み方)',
+  honne: '素顔のデッキ・本音(ふだんはやらないけれど、ほんとはやってみたい組み方)',
+});
+const planFaceKey = (f) => (f.face === 'sugao' ? (f.side === 'honne' ? 'honne' : 'yoso') : f.face);
+// 名前の決まり(ゲームの見張り 83 の cardAiFaceNameOk と同じ。合わなければゲームが既定の名前にする)
+const PLAN_NAME_RULE = '名前は12字まで。主役のモンスターの名前か、あなたの遊び方が分かる言葉を入れる。「攻め」「守り」「ふつう」は使わない。「〇〇・攻め」のように後ろに付け足さない';
 export const factsText = (req) => {
   const f = req.facts;
   if (req.kind === 'deckPlan') {
     return [
       '【デッキを組むこと】',
       `戦い方: ${PLAN_STYLE_TEXT[f.style]}`,
+      f.face ? `デッキ: ${PLAN_FACE_TEXT[planFaceKey(f)]}` : '',
+      f.face && f.lead ? `主役: 「${f.lead}」` : '',
+      f.face ? `名前の決まり: ${PLAN_NAME_RULE}` : '',
       f.favorites.length ? `あなたの好きなモンスター: ${f.favorites.map((m) => `「${m}」`).join('・')}` : '',
       `優先するカード: ${f.prefer[0]}〜${f.prefer[1]}枚`,
       `くせの数の幅: ${PLAN_HABITS.map((k) => `${PLAN_HABIT_TEXT[k]}(${k}) ${f.habit[k][0]}〜${f.habit[k][1]}`).join(' / ')}`,

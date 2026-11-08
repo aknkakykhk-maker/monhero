@@ -4,7 +4,7 @@
 //
 // 助手部のマスモンのシートと同じ器(56 の ASSISTANT_MASMON_CSS の .mhm-panel / .mhm-body)の中に、CardAssistantDeckView を開く。
 //   ① 印 cardGrowStyle が偽のあいだは何も出さない(部品も札も null)
-//   ② 8人 × 3つの型で、名前・3体・切り札が出る。種類ごとの一覧の枚数を足すと50枚。×N はデッキの中の枚数と同じ
+//   ② 8人 × 3つの型と、推し・好き・素顔の3つで、名前・3体・切り札が出る。種類ごとの一覧の枚数を足すと50枚。×N はデッキの中の枚数と同じ
 //   ③ カードを押すと大きく見る窓(data-card-detail)が、シート(z-index 30)より上に出て、閉じられる
 //   ④ 字が「…」で切れない・箱からはみ出さない・カードの札(.mhm-card)がパネルの端から 6px 以上あく(助手部の検査と同じ見方)
 //   ⑤ 札の言葉: 「今日のデッキ」の見出し+型の印+デッキの名前(CardFoeDeckChip)・「チーム」の見出し+自動の名前(CardFoeTeamName)
@@ -22,6 +22,9 @@ let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 const WHO = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'];
 const STYLES = ['attack', 'guard', 'normal'];
+// 2026-11-08 推し・好き・素顔に作り直し(ルールくん)。今の口は顔の id を返す。型の id は前のリプレイを読むために残す
+const FACES = ['oshi', 'suki', 'sugao'];
+const ICON = '(⚔️|🛡️|⚖️|💖|⭐|🎭)';
 
 (async () => {
   let pw;
@@ -67,15 +70,16 @@ const STYLES = ['attack', 'guard', 'normal'];
       // ② 8人 × 3つ
       const bad = [];
       for (const who of WHO) {
-        for (const s of STYLES) {
+        for (const s of [...STYLES, ...FACES]) {
           await mount(who, s, true);
           const r = await page.evaluate(([who, s]) => {
             const v = document.querySelector('[data-card-assistant-deck-view]');
-            const p = cardAssistantDeckPreview(who, s, 'normal');
+            const face = s === 'oshi' || s === 'suki' || s === 'sugao';
+            const p = face ? cardAssistantFacePreview(who, s, 'normal') : cardAssistantDeckPreview(who, s, 'normal');
             const want = {}; p.cards.forEach((no) => { want[no] = (want[no] || 0) + 1; });
             const sum = [...document.querySelectorAll('[data-card-assistant-deck-group] [data-card-assistant-deck-card]')].reduce((n, el) => n + want[el.getAttribute('data-card-assistant-deck-card')], 0);
             const xs = [...document.querySelectorAll('[data-card-assistant-deck-list] [data-card-assistant-deck-card]')].map((el) => { const no = el.getAttribute('data-card-assistant-deck-card'); const b = el.querySelector('b'); return (b ? Number(b.textContent.replace('×', '')) : 1) === want[no]; });
-            const base = CARD_AI_STYLE_NAMES[who]; const wantName = s === 'normal' ? base : `${base}・${{ attack: '攻め', guard: '守り' }[s]}`;
+            const base = CARD_AI_STYLE_NAMES[who]; const wantName = face ? cardAiFaceName(who, s) : s === 'normal' ? base : `${base}・${{ attack: '攻め', guard: '守り' }[s]}`;
             return { nameOk: ((document.querySelector('[data-card-assistant-deck-name]') || {}).textContent || '').includes(wantName), note: !!document.querySelector('[data-card-assistant-deck-mon-note]') && /よく使う3体/.test(v.textContent),
               style: v && v.getAttribute('data-card-assistant-deck-view'), name: (document.querySelector('[data-card-assistant-deck-name]') || {}).textContent || '',
               atOk: (Number(p.at) > 0) === /AI が \d+:\d\d に組み直しました/.test(v.textContent), mons: document.querySelectorAll('[data-card-assistant-deck-mon]').length, ace: !!document.querySelector('[data-card-assistant-deck-ace]'), sum, total: p.cards.length, xOk: xs.every(Boolean) };
@@ -118,6 +122,8 @@ const STYLES = ['attack', 'guard', 'normal'];
       //    8人×3つの既定の名前と、AI の名前の上限12字(83 の CARD_AI_DECK_NAME_MAX)を、横の相手えらびの型の欄(約210px)より狭い 200px の箱に置く
       const fold = await page.evaluate(() => {
         const names = []; Object.keys(CARD_AI_STYLE_NAMES).forEach((w) => ['attack', 'guard', 'normal'].forEach((st) => names.push([st, cardAssistantDeckDisplayName(w, st)])));
+        // 推し・好き・素顔の既定の名前(素顔は よそいき・本音 の両方)
+        Object.keys(CARD_AI_FACES).forEach((w) => ['oshi', 'suki', 'yoso', 'honne'].forEach((sl) => names.push([sl === 'yoso' || sl === 'honne' ? 'sugao' : sl, cardAiFaceDefaultName(w, sl)])));
         names.push(['attack', 'ガチガチ鉄壁のカウンター砦'.slice(0, CARD_AI_DECK_NAME_MAX)], ['guard', 'ＷＷＷＷＷＷＷＷＷＷＷＷ'.slice(0, CARD_AI_DECK_NAME_MAX)]);
         const box = document.createElement('div'); box.style.cssText = 'position:fixed;left:0;top:0;width:200px;z-index:2147483000'; document.body.appendChild(box);
         const r = ReactDOM.createRoot(box); const bad = [];
@@ -130,7 +136,7 @@ const STYLES = ['attack', 'guard', 'normal'];
         r.unmount(); box.remove();
         return { n: names.length, bad };
       });
-      check(`⑨ ${view}: 札のデッキの名前が途中で折れない(既定の名前 ${fold.n - 2}個と12字の名前を、200px の箱で)`, fold.bad.length === 0 && fold.n >= 26, fold.bad.slice(0, 3).join(' / '));
+      check(`⑨ ${view}: 札のデッキの名前が途中で折れない(既定の名前 ${fold.n - 2}個と12字の名前を、200px の箱で)`, fold.bad.length === 0 && fold.n >= 58, fold.bad.slice(0, 3).join(' / '));
       check(`⑥ ${view}: 実行時エラーが無い`, errors.length === 0, errors.slice(0, 2).join(' / '));
       await page.close();
     }
@@ -185,13 +191,20 @@ const STYLES = ['attack', 'guard', 'normal'];
         await page.locator('[data-card-cpu]').click();
         await page.getByRole('button', { name: 'わかった' }).click({ timeout: 3000 }).catch(() => {});
         await page.locator('[data-card-top] button').filter({ hasText: 'フリー対戦' }).first().click();
+        // 今日のデッキは毎回ちがう顔になる。いちばん長い名前(ドラの好き「メダマ焼きのギャグ劇場」)に決めてから選ぶ(83 の cardAiDeckNextMemo)
+        await page.evaluate(() => { cardAiDeckNextMemo.dra = 'oshi'; }); // eslint-disable-line no-undef
         await page.locator('[data-card-foe="dra"]').click();
         await page.locator('[data-card-foe-style="dra"] [data-card-foe-deck-chip="foe"]').waitFor({ timeout: 5000 }).catch(() => {});
         const foe = await page.evaluate(() => { const els = [...document.querySelectorAll('[data-card-foe-deck-chip]')]; const e = els[0]; const t = e && e.querySelector('span'); const lh = t ? parseFloat(getComputedStyle(t).lineHeight) || 14 : 0; return { n: els.length, inPanel: !!(e && e.closest('[data-card-foe-style="dra"]')), chip: e ? e.textContent : '', style: e ? e.getAttribute('data-card-foe-deck-style') : '', lines: t ? Math.round(t.getBoundingClientRect().height / lh) : 0 }; });
-        const foeClip = await clipped('[data-card-foe-style="dra"]');
+        // 型の欄を見える所へ動かしてから切れを測る(横では右の列がスクロールする箱。画像の読み込みで、欄の下の行が箱の端にかかったまま測ることがあった)
         await page.locator('[data-card-foe-style="dra"]').scrollIntoViewIfNeeded().catch(() => {});
+        await page.waitForTimeout(200);
+        const foeClip = await clipped('[data-card-foe-style="dra"]');
         await shot('real-foe');
-        check(`⑧ ${view}: 相手えらびの型の欄に今日のデッキが1つ出て、既定の名前が1行に収まり(折れると帯が崩れる)、はみ出さず、切れない`, foe.n === 1 && foe.inPanel && /^今日のデッキ(⚔️|🛡️|⚖️) /.test(foe.chip) && foe.lines === 1 && !foeClip.length, [JSON.stringify(foe), ...foeClip].slice(0, 3).join(' / '));
+        check(`⑧ ${view}: 相手えらびの型の欄に今日のデッキが1つ出て、既定の名前が1行に収まり(折れると帯が崩れる)、はみ出さず、切れない`, foe.n === 1 && foe.inPanel && new RegExp(`^今日のデッキ${ICON} `).test(foe.chip) && foe.lines === 1 && !foeClip.length, [JSON.stringify(foe), ...foeClip].slice(0, 3).join(' / '));
+        // ドラの今日のデッキの名前(推し・好き・素顔の今の側)。顔の印のあとに、そのどれか
+        const draNames = await page.evaluate(() => ['oshi', 'suki', 'sugao'].map((f) => cardAiFaceName('dra', f)));
+        const draChip = new RegExp(`^今日のデッキ${ICON} (${draNames.join('|')})$`);
         await page.locator('[data-card-start]').click();
         await page.locator('[data-card-deck-pick-go]').click();
         await page.locator('[data-card-vs-style]').waitFor({ timeout: 10000 });
@@ -200,7 +213,7 @@ const STYLES = ['attack', 'guard', 'normal'];
         const vsOver = await overlap(['[data-card-vs-style] [data-card-foe-team-name]', '[data-card-vs-style] [data-card-foe-deck-chip]', '[data-card-vs-line]', '[data-card-vs-mon]', '[data-card-vs-mark]']);
         const vsClip = await clipped('[data-card-vs]');
         await shot('real-vs');
-        check(`⑧ ${view}: VS に「チーム」と「今日のデッキ」が両方出て、互いにも3体・吹き出し・VS の字にも重ならず、はみ出さず、切れない`, /^チーム.+/.test(vs.team) && /^今日のデッキ(⚔️|🛡️|⚖️) のんびり長期戦(・攻め|・守り)?$/.test(vs.chip) && !vsOver.length && !vsClip.length, [JSON.stringify(vs), ...vsOver, ...vsClip].slice(0, 4).join(' / '));
+        check(`⑧ ${view}: VS に「チーム」と「今日のデッキ」が両方出て、互いにも3体・吹き出し・VS の字にも重ならず、はみ出さず、切れない`, /^チーム.+/.test(vs.team) && draChip.test(vs.chip) && !vsOver.length && !vsClip.length, [JSON.stringify(vs), ...vsOver, ...vsClip].slice(0, 4).join(' / '));
         check(`⑧ ${view}: 相手えらびで見せた今日のデッキと、VS の今日のデッキが同じ(型も名前も)`, foe.chip === vs.chip && foe.style === vs.style, `相手えらび ${foe.chip}(${foe.style}) / VS ${vs.chip}(${vs.style})`);
         await page.locator('[data-card-battle]').waitFor({ timeout: 20000 });
         await page.waitForTimeout(2500);
@@ -214,7 +227,7 @@ const STYLES = ['attack', 'guard', 'normal'];
         await shot('real-result');
         await scrollAll('[data-card-top="result"]');
         const resClip = await clipped('[data-card-top="result"]');
-        check(`⑧ ${view}: 結果に「チーム」と「今日のデッキ」が両方出て、重ならず、はみ出さず、切れない`, /^チーム.+/.test(res.team) && /^今日のデッキ(⚔️|🛡️|⚖️) のんびり長期戦(・攻め|・守り)?$/.test(res.chip) && res.chip === vs.chip && !resOver.length && !resClip.length, [JSON.stringify(res), ...resOver, ...resClip].slice(0, 4).join(' / '));
+        check(`⑧ ${view}: 結果に「チーム」と「今日のデッキ」が両方出て、重ならず、はみ出さず、切れない`, /^チーム.+/.test(res.team) && draChip.test(res.chip) && res.chip === vs.chip && !resOver.length && !resClip.length, [JSON.stringify(res), ...resOver, ...resClip].slice(0, 4).join(' / '));
         check(`⑧ ${view}: 実際の流れで実行時エラーが無い`, errors.length === 0, errors.slice(0, 2).join(' / '));
       } catch (e) {
         check(`⑧ ${view}: 実際の流れを最後まで進められた`, false, String(e).split('\n')[0]);

@@ -2894,12 +2894,20 @@ function MonsterHeroGame() {
     })();
     return () => { cancelled = true; };
   }, [gameState, friendsActive]);
+  // 助手ライフの中で場所が変わった(34-friends-api の friendsSetLifeSpot・2026-11-08 案A)ときも送り直す
+  const [friendSpotTick, setFriendSpotTick] = useState(0);
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const on = () => setFriendSpotTick(t => t + 1);
+    window.addEventListener('mh-friend-spot', on);
+    return () => window.removeEventListener('mh-friend-spot', on);
+  }, []);
   useEffect(() => {
     if (!friendsActive) return undefined;
     const wait = Math.max(3000, FRIEND_PUBLISH_MIN_MS - (Date.now() - friendPublishRef.current));
     const timer = setTimeout(publishFriendProfile, wait);
     return () => clearTimeout(timer);
-  }, [friendsActive, gameState, masuMons, favoriteMasuId, profileMessage, publishFriendProfile]);
+  }, [friendsActive, gameState, masuMons, favoriteMasuId, profileMessage, publishFriendProfile, friendSpotTick]);
   useEffect(() => {
     if (!friendsActive) return undefined;
     const timer = setInterval(() => { if (typeof document === 'undefined' || !document.hidden) publishFriendProfile(); }, FRIEND_HEARTBEAT_MS);
