@@ -1626,7 +1626,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
 // 検査のときだけ: 自分の番を、コンピューターの考え方で自動で打つ(window.__mhCardPvpAuto が真のときだけ。ふだんは何もしない)。
 // 2台のブラウザを最後まで戦わせる検査 tools/card/card-pvp-browser-check.js が使う。対戦の画面(84)の CardBattleBoard から呼ぶ
 const useCardPvpAuto = (db, pvp, st, step, paused) => useEffect(() => {
-  if (!pvp || paused || typeof window === 'undefined' || !window.__mhCardPvpAuto || st.winner !== null || cardPvpDecider(st) !== 0) return undefined;
+  if (!pvp || paused || typeof window === 'undefined' || !window.__mhCardPvpAuto || st.winner !== null || cardPvpDecider(st) !== 0 || CARD_PVP.get().phase !== 'playing') return undefined; // 無効試合(void)の窓のあいだは打たない
   const t = setTimeout(() => {
     // 検査のときだけ: ガッツの段で、window.__mhCardPvpAutoBack の回数だけ「攻撃に戻る」を打つ(打てた回数を __mhCardPvpBackDone に数える)
     if (st.phase === 'guts' && !st.pending && Number(window.__mhCardPvpAutoBack) > 0 && step({ type: 'backToAttack' })) {
