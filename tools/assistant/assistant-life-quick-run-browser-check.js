@@ -165,11 +165,12 @@ const seed = () => {
     check('⑦ 閉じてもう一度開けば、また自動で始まる', !!s.q && s.q.live === true, JSON.stringify(s.q));
     // ⑨ 回しているあいだ、助手ライフが揺れない(裏のバトルの画面の揺れが効かない)・お祝いの全面シートは貯めておく(2026-11-08 社長「画面がめちゃくちゃ動く」「中途半端」)
     {
-      await page.evaluate(() => { window.__q9 = { moves: 0, sheets: 0, n: 0 }; let prev = null; window.__q9T = setInterval(() => { const r = document.querySelector('.mhl-root'); if (!r) return; const b = r.getBoundingClientRect(); const k = `${Math.round(b.left)},${Math.round(b.top)},${Math.round(b.width)}`; if (prev && prev !== k) window.__q9.moves++; prev = k; if (document.querySelector('[data-growth-fx-sheet]')) window.__q9.sheets++; window.__q9.n++; }, 100); });
-      await page.waitForTimeout(25000);
+      await page.evaluate(() => { window.__q9 = { moves: 0, sheets: 0, fx: 0, dim: 0, n: 0 }; let prev = null; window.__q9T = setInterval(() => { const r = document.querySelector('.mhl-root'); if (!r) return; const b = r.getBoundingClientRect(); const k = `${Math.round(b.left)},${Math.round(b.top)},${Math.round(b.width)}`; if (prev && prev !== k) window.__q9.moves++; prev = k; if (document.querySelector('[data-growth-fx-sheet]')) window.__q9.sheets++; if (/NEW CARD!|POWER UP!|VICTORY|DEFEAT/.test(document.body.innerText)) window.__q9.fx++; if (document.querySelector('[data-ultra-eco-session-dimmer]')) window.__q9.dim++; window.__q9.n++; }, 100); });
+      await page.waitForTimeout(45000); // 1周(約40秒)のあいだに、WAVE10 のあとの割り込みの場面も通る
       const q9 = await page.evaluate(() => { clearInterval(window.__q9T); return window.__q9; });
       check('⑨ 回しているあいだ、助手ライフの画面が揺れない(裏のバトルの揺れが効かない)', q9.n > 100 && q9.moves === 0, JSON.stringify(q9));
       check('⑨ 回しているあいだ、お祝いの全面シートは出さずに貯めておく', q9.sheets === 0, JSON.stringify(q9));
+      check('⑨ 回しているあいだ、裏のバトルの全面の演出(NEW CARD!・VICTORY など)と超省エネの暗幕を出さない(モンヒロビート・カードと同じ)', q9.fx === 0 && q9.dim === 0, JSON.stringify(q9));
     }
     // ⑧ 本物の帯で(ナカヨシ8。社長「他のモードと同じような表示に」: ビート・カードと同じ RhythmQuickRunPill の帯)
     {
