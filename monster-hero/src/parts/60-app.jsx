@@ -2246,6 +2246,21 @@ function MonsterHeroGame() {
     try { await storeSet('mh_owned_items', nextItems, false); } catch { return null; }
     return assistantLifeFurnGive(who, key);
   };
+  // 助手1人に道具を贈る(2026-11-08 社長 SOLO-GIFT-PLAN.md)。贈れるか確かめてから持ち物を1つ減らし、減らせたときだけ記録・仲良し度を入れる
+  const giveAssistantLifeSolo = async (who, kind) => {
+    if (typeof assistantLifeSoloGive !== 'function' || typeof assistantLifeSoloOn !== 'function' || !assistantLifeSoloOn()) return null;
+    const def = assistantLifeGiftOf(kind);
+    if (!def) return null;
+    await ASSISTANT_LIFE_GIFT_STORE.load();
+    const have = ownedItemCount(ownedItemsRef.current, def.itemId);
+    const peerSt = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null;
+    if (assistantLifeSoloReason(kind, peerSt, have)) return null;
+    const nextItems = { ...ownedItemsRef.current, [def.itemId]: have - 1 };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    try { await storeSet('mh_owned_items', nextItems, false); } catch { return null; }
+    return assistantLifeSoloGive(who, kind);
+  };
   // 性格のたねを1個使って、マスモンの性格を選び直す(2026-11-06 社長の決定 C)。
   // 先に相棒の保存(mh_rhythm_buddy_v1)を書き換え、できたときだけたねを1個減らす(減ったのに性格が変わらない、を作らない)
   const useBuddyTraitSeed = async (masuId, traitId) => {
@@ -19272,7 +19287,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {typeof AssistantLifeItemIntro==='function'&&gameState==='HOME'&&!busy&&!peerReplay&&<AssistantLifeItemIntro peerItems={typeof assistantLifeGiftCounts==='function'?assistantLifeGiftCounts(ownedItems):{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}}/>}
             {typeof AssistantLifeScreen==='function'&&<AssistantLifeScreen metIds={metIds} onReplay={(talk)=>setPeerReplay(talk)} bondLevelOf={(id)=>assistantBondLevel(normalizeAssistantBond(assistantBonds[id]).points)}
               peerItems={typeof assistantLifeGiftCounts==='function'?assistantLifeGiftCounts(ownedItems):{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}} onUseItem={useAssistantPeerItem}
-              furnItems={typeof assistantLifeFurnCounts==='function'?assistantLifeFurnCounts(ownedItems):null} onGiveFurn={giveAssistantLifeFurn}/>}
+              furnItems={typeof assistantLifeFurnCounts==='function'?assistantLifeFurnCounts(ownedItems):null} onGiveFurn={giveAssistantLifeFurn} onGiveSolo={giveAssistantLifeSolo}/>}
           </>;
         })()}
 

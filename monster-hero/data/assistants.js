@@ -15269,6 +15269,42 @@ const ASSISTANT_LIFE_GIFT_TEMP_LINES = Object.freeze({
   sorashido: { like:{ e:'excited', t:'うぉぉぉ！ {item}！ でーじうれしいぜ・・・！ {c}、使おうぜ笑' }, mid:{ e:'happy', t:'{item}、ありがとうだぜ！ {c}と分けるぜ笑' }, bad:{ e:'troubled', t:'{item}か・・・俺にはちょっと落ち着かないな笑 でもありがとな' } },
   erubin:    { like:{ e:'happy', t:'{item}だ、うれしいな。{c}と一緒に使うね' }, mid:{ e:'happy', t:'{item}、ありがとう。{c}と大事にするね' }, bad:{ e:'troubled', t:'{item}か…俺は控えめにしとこうかな。気持ちはうれしいよ' } },
 });
+// ===== 助手1人に贈る(2026-11-08 社長 docs/progress/assistant-peer/SOLO-GIFT-PLAN.md) =====
+// 2人に贈る道具10種類も1人に贈れる(その助手の好みで仲良し度だけ。量は2人に贈ったときの1人ぶんと同じ ❷A)。
+// それに加えて、1人にだけ贈れる道具を4種類。key・kind・itemId(solo_<key>)・player(ふつうのときの仲良し度)
+// 名前・絵・値段は持ち物(BREEDER_MARKET_ITEMS)と交換所(RHYTHM_EVENT_POINT_SHOP_OFFERS)が正本
+const ASSISTANT_LIFE_SOLO_GIFTS = Object.freeze([
+  Object.freeze({ key:'letter',    kind:'letter',    itemId:'solo_letter',    player:20, what:'気持ちを書いた手紙。その助手だけに渡します' }),
+  Object.freeze({ key:'candy',     kind:'candy',     itemId:'solo_candy',     player:15, what:'ひとつぶのキャンディ。ちょっとしたお礼に' }),
+  Object.freeze({ key:'keyholder', kind:'keyholder', itemId:'solo_keyholder', player:35, what:'その助手のためのキーホルダー。いつも持ち歩けます' }),
+  Object.freeze({ key:'omamori',   kind:'omamori',   itemId:'solo_omamori',   player:40, what:'小さなおまもり。がんばる助手を応援します' }),
+]);
+// 1人用の道具の好み(1人に 💗1つ・💧1つ)
+const ASSISTANT_LIFE_SOLO_LIKES = Object.freeze({
+  mua:       Object.freeze({ like:['keyholder'], bad:['omamori'] }),
+  kiki:      Object.freeze({ like:['letter'],    bad:['candy'] }),
+  momosuke:  Object.freeze({ like:['candy'],     bad:['omamori'] }),
+  dra:       Object.freeze({ like:['candy'],     bad:['letter'] }),
+  atsu:      Object.freeze({ like:['omamori'],   bad:['letter'] }),
+  kyuko:     Object.freeze({ like:['letter'],    bad:['keyholder'] }),
+  sorashido: Object.freeze({ like:['keyholder'], bad:['letter'] }),
+  erubin:    Object.freeze({ like:['letter'],    bad:['candy'] }),
+});
+// 1人に贈れる回数(2人に贈る3回とは別に数える ❶B。同じ道具は1日1回のまま。朝4時に戻る)
+const ASSISTANT_LIFE_SOLO_DAILY_MAX = 3;
+// 1人に贈ったときのひとこと(仮)。コトバ・ツムギの台詞(lines/ORDER-SOLO.md の solo)が届くまで、好み別に1つずつ。{item} は道具の名前、{name} はプレイヤー
+const ASSISTANT_LIFE_SOLO_TEMP_LINES = Object.freeze({
+  mua:       { like:{ e:'excited', t:'え、{item}！？ あたしだけに？ {name}わかってるぢゃん♪' }, mid:{ e:'happy', t:'{item}ありがと♪ 大事にするね！' }, bad:{ e:'troubled', t:'{item}かぁ…まぢありがと、気持ちはうれしいよ！' } },
+  kiki:      { like:{ e:'happy', t:'{item}…！ 私に、でつか。うれしいでつ♪' }, mid:{ e:'happy', t:'{item}、ありがとうございまつ。大事にしまつね' }, bad:{ e:'troubled', t:'{item}でつか…お気持ち、うれしいでつよ' } },
+  momosuke:  { like:{ e:'excited', t:'{item}！？ ももの好きなやつじゃん！！ さすがっ♡' }, mid:{ e:'happy', t:'{item}だ！ ありがと〜！！' }, bad:{ e:'troubled', t:'{item}…！ えへへ、気持ちはうれしいよ！' } },
+  dra:       { like:{ e:'excited', t:'おお、{item}！ これ好きなんだよな、えへへ' }, mid:{ e:'happy', t:'{item}か、ありがたいな。大事にするわ' }, bad:{ e:'troubled', t:'{item}か…うん、気持ちはうれしいぞ' } },
+  atsu:      { like:{ e:'excited', t:'{item}じゃん！ 俺に？ わかってるね笑' }, mid:{ e:'happy', t:'{item}ありがと笑 大事にするわ！' }, bad:{ e:'troubled', t:'{item}か…ありがとね、気持ちはうれしい笑' } },
+  kyuko:     { like:{ e:'excited', t:'ほい！ {item}だぁ、好きなやつ笑 ありがとん' }, mid:{ e:'happy', t:'{item}、ありがとん笑 大事にするね' }, bad:{ e:'troubled', t:'{item}かぁ…気持ちはうれしいよぉ笑' } },
+  sorashido: { like:{ e:'excited', t:'うぉぉぉ！ {item}！ でーじうれしいぜ・・・！' }, mid:{ e:'happy', t:'{item}、ありがとうだぜ！ 大事にするぜ' }, bad:{ e:'troubled', t:'{item}か・・・気持ちはうれしいぜ笑' } },
+  erubin:    { like:{ e:'happy', t:'{item}だ、うれしいな。ありがとう' }, mid:{ e:'happy', t:'{item}、ありがとう。大事にするね' }, bad:{ e:'troubled', t:'{item}…ありがとう、気持ちはうれしいよ' } },
+});
+// 1人に贈ったときの台詞(コトバ・ツムギ。tools/assistant/life-gift-lines-import.js が書き直す)。{ [助手]: { [key]: [{ like, e, t }] } }
+const ASSISTANT_LIFE_SOLO_LINES = Object.freeze({});
 // ===== 助手ライフの家具(1人に贈る・部屋に置く。段階B 2026-11-08 社長 GIFT-PLAN.md の3) =====
 // key … 好みの表・台詞で使う名前 / itemId … 持ち物の id(furn_<key>) / slot … 置き場所(ceil 天井・wall 壁・floor 床)
 // 名前・絵・値段は持ち物(BREEDER_MARKET_ITEMS)と交換所(RHYTHM_EVENT_POINT_SHOP_OFFERS)が正本
