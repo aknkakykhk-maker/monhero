@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 67c53055afc92a29
+// source-sha256: ab51228f9d867e2d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -134200,10 +134200,17 @@ const CardFoeStyle = ({
   const fav = Object.values(db.monsters).find(m => m.species === favSpecies && !m.variant && String(m.wave) !== 'hybrid') || null;
   const lv = CARD_LEVEL_LABEL[level] || '';
   const upper = level === 'hard' || level === 'expert' || level === 'master';
+  const nextStyle = typeof cardAiDeckNextStyle === 'function' ? cardAiDeckNextStyle(who) : null;
+  const nextName = nextStyle && typeof cardAssistantDeckDisplayName === 'function' ? cardAssistantDeckDisplayName(who, nextStyle, typeof cardAiDeckNextName === 'function' ? cardAiDeckNextName(who) : null) : null;
   return React.createElement("div", {
     "data-card-foe-style": who,
     className: "space-y-1.5 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
-  }, React.createElement("div", {
+  }, nextStyle && typeof CardFoeDeckChip === 'function' && React.createElement(CardFoeDeckChip, {
+    name: nextName,
+    styleId: nextStyle,
+    kind: "foe",
+    compact: true
+  }), React.createElement("div", {
     className: "flex flex-wrap items-center gap-x-2 gap-y-1"
   }, React.createElement("span", {
     "data-card-foe-style-label": true,

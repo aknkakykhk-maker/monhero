@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2668c5d4add10a08
+// generated-sha256: b47530a79b13d36a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -72572,8 +72572,12 @@ const CardFoeStyle = ({ db, who, level }) => {
   const fav = Object.values(db.monsters).find((m) => m.species === favSpecies && !m.variant && String(m.wave) !== 'hybrid') || null;
   const lv = CARD_LEVEL_LABEL[level] || '';
   const upper = level === 'hard' || level === 'expert' || level === 'master';
+  // 今日のデッキ(ルールの cardAiDeckNextStyle で先に決めた型。対戦ではこの型で出る)。印が偽なら札は出ない(87 の CardFoeDeckChip)
+  const nextStyle = typeof cardAiDeckNextStyle === 'function' ? cardAiDeckNextStyle(who) : null;
+  const nextName = nextStyle && typeof cardAssistantDeckDisplayName === 'function' ? cardAssistantDeckDisplayName(who, nextStyle, typeof cardAiDeckNextName === 'function' ? cardAiDeckNextName(who) : null) : null;
   return (
     <div data-card-foe-style={who} className="space-y-1.5 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
+      {nextStyle && typeof CardFoeDeckChip === 'function' && <CardFoeDeckChip name={nextName} styleId={nextStyle} kind="foe" compact/>}
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span data-card-foe-style-label className="shrink-0 rounded-full bg-amber-300 px-2.5 py-0.5 text-[12px] font-black text-slate-950">{style.label}</span>
         <span className="min-w-0 text-[11px] font-bold text-slate-200" style={JA_WRAP_STYLE}>{jaWrap(style.note)}</span>

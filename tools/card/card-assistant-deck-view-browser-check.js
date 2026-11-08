@@ -10,8 +10,8 @@
 //   ⑤ 札の言葉: 「今日のデッキ」の見出し+型の印+デッキの名前(CardFoeDeckChip)・「チーム」の見出し+自動の名前(CardFoeTeamName)
 //   ⑦ 名前の既定(社長 Q4 A): AI の名前が無いときは「のんびり長期戦・攻め」(ふつうは名前だけ)。タブに「よく使う3体」「3体は対戦のたびに変わります」(Q2 B)
 //   ⑧ 実際の流れ(印をページの中でだけ立てる): VS の「チーム」と「今日のデッキ」・投了したあとの結果の2つが出て、
-//      画面からはみ出さず、互いにも3体・吹き出しにも重ならず、切れない。型は対戦を始めるときに助手の気分で選ばれる(83-card-ai-deck)ので、
-//      相手えらびには出さない(まだ決まっていない)
+//      画面からはみ出さず、互いにも3体・吹き出しにも重ならず、切れない。相手えらびの型の欄にも今日のデッキが1つ出て、
+//      その型・名前が VS・結果と同じ(ルールが先に決める cardAiDeckNextStyle。見せた型と戦う型がずれない)
 //   ⑥ 実行時エラーが無い
 const fs = require('fs');
 const path = require('path');
@@ -168,17 +168,22 @@ const STYLES = ['attack', 'guard', 'normal'];
         await page.getByRole('button', { name: 'わかった' }).click({ timeout: 3000 }).catch(() => {});
         await page.locator('[data-card-top] button').filter({ hasText: 'フリー対戦' }).first().click();
         await page.locator('[data-card-foe="dra"]').click();
-        const foeChip = await page.locator('[data-card-foe-deck-chip]').count();
-        check(`⑧ ${view}: 相手えらびには今日のデッキを出さない(対戦を始めるときに決まる)`, foeChip === 0, `${foeChip}個`);
+        await page.locator('[data-card-foe-style="dra"] [data-card-foe-deck-chip="foe"]').waitFor({ timeout: 5000 }).catch(() => {});
+        const foe = await page.evaluate(() => { const els = [...document.querySelectorAll('[data-card-foe-deck-chip]')]; const e = els[0]; return { n: els.length, inPanel: !!(e && e.closest('[data-card-foe-style="dra"]')), chip: e ? e.textContent : '', style: e ? e.getAttribute('data-card-foe-deck-style') : '' }; });
+        const foeClip = await clipped('[data-card-foe-style="dra"]');
+        await page.locator('[data-card-foe-style="dra"]').scrollIntoViewIfNeeded().catch(() => {});
+        await shot('real-foe');
+        check(`⑧ ${view}: 相手えらびの型の欄に今日のデッキが1つ出て、はみ出さず、切れない`, foe.n === 1 && foe.inPanel && /^今日のデッキ(⚔️|🛡️|⚖️) /.test(foe.chip) && !foeClip.length, [JSON.stringify(foe), ...foeClip].slice(0, 3).join(' / '));
         await page.locator('[data-card-start]').click();
         await page.locator('[data-card-deck-pick-go]').click();
         await page.locator('[data-card-vs-style]').waitFor({ timeout: 10000 });
         await page.waitForTimeout(1900);
-        const vs = await page.evaluate(() => ({ team: (document.querySelector('[data-card-vs-style] [data-card-foe-team-name]') || {}).textContent || '', chip: (document.querySelector('[data-card-vs-style] [data-card-foe-deck-chip="vs"]') || {}).textContent || '' }));
+        const vs = await page.evaluate(() => ({ team: (document.querySelector('[data-card-vs-style] [data-card-foe-team-name]') || {}).textContent || '', chip: (document.querySelector('[data-card-vs-style] [data-card-foe-deck-chip="vs"]') || {}).textContent || '', style: (document.querySelector('[data-card-vs-style] [data-card-foe-deck-chip="vs"]') || { getAttribute: () => '' }).getAttribute('data-card-foe-deck-style') || '' }));
         const vsOver = await overlap(['[data-card-vs-style] [data-card-foe-team-name]', '[data-card-vs-style] [data-card-foe-deck-chip]', '[data-card-vs-line]', '[data-card-vs-mon]', '[data-card-vs-mark]']);
         const vsClip = await clipped('[data-card-vs]');
         await shot('real-vs');
         check(`⑧ ${view}: VS に「チーム」と「今日のデッキ」が両方出て、互いにも3体・吹き出し・VS の字にも重ならず、はみ出さず、切れない`, /^チーム.+/.test(vs.team) && /^今日のデッキ(⚔️|🛡️|⚖️) のんびり長期戦(・攻め|・守り)?$/.test(vs.chip) && !vsOver.length && !vsClip.length, [JSON.stringify(vs), ...vsOver, ...vsClip].slice(0, 4).join(' / '));
+        check(`⑧ ${view}: 相手えらびで見せた今日のデッキと、VS の今日のデッキが同じ(型も名前も)`, foe.chip === vs.chip && foe.style === vs.style, `相手えらび ${foe.chip}(${foe.style}) / VS ${vs.chip}(${vs.style})`);
         await page.locator('[data-card-battle]').waitFor({ timeout: 20000 });
         await page.waitForTimeout(2500);
         await page.locator('[data-card-quit]').click();
