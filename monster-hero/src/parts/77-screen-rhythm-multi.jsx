@@ -1336,7 +1336,7 @@ function RhythmMultiStampBar({ phase, onSend, className = '', limit = 0, wrap = 
         const hit = flash && flash.text === stamp;
         return (
           <button key={stamp} data-rhythm-multi-chat-stamp type="button" onClick={() => press(stamp)}
-            className={`shrink-0 whitespace-nowrap rounded-full border font-black transition active:scale-95 ${big ? 'min-h-[42px] px-3.5 text-[13px]' : 'min-h-[38px] px-3 text-xs'} ${hit ? (flash.ok ? 'border-emerald-300 bg-emerald-600 text-white' : 'border-amber-300 bg-amber-700 text-white') : 'border-white/15 bg-slate-700/90 text-white'}`}>
+            className={`shrink-0 whitespace-nowrap rounded-full border font-black transition active:scale-95 ${big ? 'min-h-[42px] px-3.5 text-[13px] landscape:min-h-[36px] landscape:px-2 landscape:text-[11px]' : 'min-h-[38px] px-3 text-xs'} ${hit ? (flash.ok ? 'border-emerald-300 bg-emerald-600 text-white' : 'border-amber-300 bg-amber-700 text-white') : 'border-white/15 bg-slate-700/90 text-white'}`}>
             {hit ? (flash.ok ? '✓ 送信' : '⏳ 少し待って') : stamp}
           </button>
         );
@@ -2824,7 +2824,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     const last = chatList.length ? chatList[chatList.length - 1] : null;
     return (
       <button data-rhythm-multi-chat-open type="button" onClick={() => setChatOpen(true)} aria-label={chatUnread ? `チャット(未読${chatUnread}件)` : 'チャット'}
-        className="relative flex min-h-[42px] w-[30%] max-w-[200px] shrink-0 items-center gap-1.5 rounded-2xl border border-cyan-400/50 bg-cyan-950/50 px-2 text-left">
+        className="relative flex min-h-[42px] w-[30%] max-w-[200px] shrink-0 items-center gap-1.5 rounded-2xl border border-cyan-400/50 bg-cyan-950/50 px-2 text-left landscape:w-[22%] landscape:max-w-[160px]">
         <span aria-hidden="true" className="text-xl leading-none">💬</span>
         <span className="min-w-0 flex-1 leading-tight">
           <small className="block text-[9px] font-black text-cyan-200">{last ? last.name : 'チャット'}</small>
@@ -3321,7 +3321,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             ))}
           </div>
         </div>
-        <ul className="relative grid max-h-[300px] min-h-0 flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-11 landscape:pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2">
+        {/* 横向き(🔄横も)はカードに最低の高さを持たせる。下の育ちの札・友情Lv の欄に押しつぶされて、MVP の顔と「HELL Lv.◯」が切れた(2026-11-08 社長) */}
+        <ul className="relative grid max-h-[300px] min-h-0 flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-11 landscape:min-h-[136px] landscape:pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2">
           {/* 吹き出しの段: カードの上の余白に、カードと同じ5列で重ねる(高さは ul の上の余白と同じ。下の端=カードの上の端) */}
           <li aria-hidden="true" data-rhythm-multi-result-bubbles className="pointer-events-none absolute inset-x-2 top-0 z-40 grid h-11 grid-cols-5 gap-1.5 landscape:inset-x-3 landscape:h-4 landscape:gap-2 [@media(max-height:440px)]:h-2 [[data-mh-view-rotation=true]_&]:h-2">
             {Array.from({ length: RHYTHM_MULTI_ROOM_MAX }).map((_, i) => {
@@ -3361,7 +3362,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               縦画面のほうが効いてしまう。回転中の写し(`[[data-mh-view-rotation=true]_&]:`)を並べて書く(2026-10-04・ユーザー報告「画面切れしてる」)。
               ★折り返さない。実機の横画面は左右と下に余白(切り欠き・ホームバー)があって狭く、2段になるとカードが押しつぶされて
               アイコンと難易度が切れた(2026-10-03・ユーザー報告)。入りきらないぶんは横にすべらせる */}
-          <RhythmMultiStampBar phase="result" onSend={(text) => RHYTHM_MULTI.sendChat(text)} big limit={6} className="min-w-0 flex-1 portrait:flex-wrap [[data-mh-view-rotation=true]_&]:flex-nowrap" />
+          {/* 横向き(🔄横も)は札を小さくして6つを1列に収める(6つ目が半分切れ、🏆とチャットが詰まっていた・2026-11-08 社長) */}
+          <RhythmMultiStampBar phase="result" onSend={(text) => RHYTHM_MULTI.sendChat(text)} big limit={6} className="min-w-0 flex-1 portrait:flex-wrap landscape:gap-1 [[data-mh-view-rotation=true]_&]:flex-nowrap" />
           {rankingButton()}
           {chatLatestButton()}
         </div>
@@ -3380,7 +3382,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             return masu ? { masu, cpuRow } : assistantId ? { assistantId, cpuRow } : null;
           }).filter(Boolean);
           if (!grown.length) return null;
-          return <div data-rhythm-buddy-growth-list className="grid shrink-0 grid-cols-1 gap-1 px-3 pt-1 landscape:grid-cols-2 [[data-mh-view-rotation=true]_&]:grid-cols-2">{grown.map(({ masu, assistantId, cpuRow }) => (masu ? (
+          // 育ちの札と友情Lv は、入りきらなければこの欄の中で送る(カードの列を押しつぶさない)
+          return <div data-rhythm-buddy-growth-list className="grid min-h-0 shrink grid-cols-1 content-start gap-1 overflow-y-auto px-3 pt-1 landscape:grid-cols-2 [[data-mh-view-rotation=true]_&]:grid-cols-2">{grown.map(({ masu, assistantId, cpuRow }) => (masu ? (
             <RhythmBuddyGrowth key={masu.id} masu={masu} round={room.round} songId={room.songId} diffId={cpuRow.res.diffId} durationMs={song ? Number(song.playDurationMs) || 0 : 0} teamRank={team.rank}
               chartLevel={song && song.difficulties && song.difficulties[cpuRow.res.diffId] ? Number(song.difficulties[cpuRow.res.diffId].level) || 0 : 0}
               humans={team.rows.filter((row) => !row.m.cpu).length}

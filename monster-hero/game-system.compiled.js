@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c480ff3688b37685
+// source-sha256: 83ef89a29cdc2532
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91166,7 +91166,7 @@ function RhythmMultiStampBar({
       "data-rhythm-multi-chat-stamp": true,
       type: "button",
       onClick: () => press(stamp),
-      className: `shrink-0 whitespace-nowrap rounded-full border font-black transition active:scale-95 ${big ? 'min-h-[42px] px-3.5 text-[13px]' : 'min-h-[38px] px-3 text-xs'} ${hit ? flash.ok ? 'border-emerald-300 bg-emerald-600 text-white' : 'border-amber-300 bg-amber-700 text-white' : 'border-white/15 bg-slate-700/90 text-white'}`
+      className: `shrink-0 whitespace-nowrap rounded-full border font-black transition active:scale-95 ${big ? 'min-h-[42px] px-3.5 text-[13px] landscape:min-h-[36px] landscape:px-2 landscape:text-[11px]' : 'min-h-[38px] px-3 text-xs'} ${hit ? flash.ok ? 'border-emerald-300 bg-emerald-600 text-white' : 'border-amber-300 bg-amber-700 text-white' : 'border-white/15 bg-slate-700/90 text-white'}`
     }, hit ? flash.ok ? '✓ 送信' : '⏳ 少し待って' : stamp);
   }));
 }
@@ -93485,7 +93485,7 @@ function RhythmMultiScreen({
       type: "button",
       onClick: () => setChatOpen(true),
       "aria-label": chatUnread ? `チャット(未読${chatUnread}件)` : 'チャット',
-      className: "relative flex min-h-[42px] w-[30%] max-w-[200px] shrink-0 items-center gap-1.5 rounded-2xl border border-cyan-400/50 bg-cyan-950/50 px-2 text-left"
+      className: "relative flex min-h-[42px] w-[30%] max-w-[200px] shrink-0 items-center gap-1.5 rounded-2xl border border-cyan-400/50 bg-cyan-950/50 px-2 text-left landscape:w-[22%] landscape:max-w-[160px]"
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "text-xl leading-none"
@@ -94505,7 +94505,7 @@ function RhythmMultiScreen({
     }, React.createElement("small", {
       className: "absolute -top-3.5 -translate-x-1/2 text-[9px] font-black text-slate-300"
     }, mk.id))))), React.createElement("ul", {
-      className: "relative grid max-h-[300px] min-h-0 flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-11 landscape:pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2"
+      className: "relative grid max-h-[300px] min-h-0 flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-11 landscape:min-h-[136px] landscape:pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2"
     }, React.createElement("li", {
       "aria-hidden": "true",
       "data-rhythm-multi-result-bubbles": true,
@@ -94568,7 +94568,7 @@ function RhythmMultiScreen({
       onSend: text => RHYTHM_MULTI.sendChat(text),
       big: true,
       limit: 6,
-      className: "min-w-0 flex-1 portrait:flex-wrap [[data-mh-view-rotation=true]_&]:flex-nowrap"
+      className: "min-w-0 flex-1 portrait:flex-wrap landscape:gap-1 [[data-mh-view-rotation=true]_&]:flex-nowrap"
     }), rankingButton(), chatLatestButton()), (() => {
       if (team.waiting) return null;
       const myRow = team.rows.find(row => row.m.id === view.selfId);
@@ -94589,7 +94589,7 @@ function RhythmMultiScreen({
       if (!grown.length) return null;
       return React.createElement("div", {
         "data-rhythm-buddy-growth-list": true,
-        className: "grid shrink-0 grid-cols-1 gap-1 px-3 pt-1 landscape:grid-cols-2 [[data-mh-view-rotation=true]_&]:grid-cols-2"
+        className: "grid min-h-0 shrink grid-cols-1 content-start gap-1 overflow-y-auto px-3 pt-1 landscape:grid-cols-2 [[data-mh-view-rotation=true]_&]:grid-cols-2"
       }, grown.map(({
         masu,
         assistantId,
@@ -98094,7 +98094,7 @@ function RhythmAssistSessionDuoResult({
     key: k,
     "data-rhythm-assist-peer-gain": true,
     className: "whitespace-nowrap text-amber-200"
-  }, rhythmAssistSessionName(d.a), "・", rhythmAssistSessionName(d.b), " ", rhythmAssistSessionPeerGainText(gained, level)))));
+  }, rhythmAssistSessionName(d.a), "・", rhythmAssistSessionName(d.b), " +", gained, Number(level) > 0 ? `(Lv${level})` : ''))));
 }
 const rhythmAssistSessionCardStyle = (m, isMvp = false) => {
   const who = m && m.cpu && m.as ? rhythmAssistSessionWho(m.as) : null;
