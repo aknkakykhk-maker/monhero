@@ -62,6 +62,8 @@ const textProblems = (page, sel) => page.evaluate((s) => {
     if (b.left < -1 || b.right > W + 1) ng.push(`${s} が横にはみ出す(${Math.round(b.left)}〜${Math.round(b.right)})`);
     for (const el of box.querySelectorAll('.whitespace-nowrap,[data-alf-visit-room] span,.mhl-icons button')) {
       if (!el.offsetParent) continue;
+      // 居間の掲示板に入りきらない件は、わざと見えない右の列へ回す作り(見出しに「ほか◯件」)。そこは見ない
+      { const bp = el.closest('[data-assistant-life-board-item]'); const bd = el.closest('[data-assistant-life-board]'); if (bp && bd && bp.offsetLeft + 1 >= bd.clientWidth) continue; }
       const rects = [...el.getClientRects()];
       const txt = (el.textContent || '').trim().slice(0, 18);
       if (el.classList.contains('whitespace-nowrap') && new Set(rects.filter(q => q.width > 0).map(q => Math.round(q.top / 4))).size > 1) ng.push(`折れる: ${txt}`);

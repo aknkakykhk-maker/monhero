@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e8a2d73efd72b4a2
+// source-sha256: 8205cdf0228f686e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -122990,6 +122990,7 @@ function AlfFriendHouseView({
   const [leaving, setLeaving] = React.useState(null);
   const [done, setDone] = React.useState(null);
   const [noteWarn, setNoteWarn] = React.useState('');
+  const [boardOpen, setBoardOpen] = React.useState(false);
   const [vw, setVw] = React.useState(() => typeof window !== 'undefined' ? window.innerWidth : 390);
   const [vh, setVh] = React.useState(() => typeof window !== 'undefined' ? window.innerHeight : 844);
   React.useEffect(() => {
@@ -123187,7 +123188,7 @@ function AlfFriendHouseView({
       }))
     },
     pop: false,
-    onBoard: () => {},
+    onBoard: () => setBoardOpen(true),
     hname: `🏡 ${friend.name}さんの家`,
     other: otherPut
   }));
@@ -123231,6 +123232,7 @@ function AlfFriendHouseView({
     "data-alf-visit-room-state": roomState
   }, roomState === 'out' ? '🚶 いまはおでかけ中。部屋は見られます' : roomState === 'sleep' ? '💤 すやすや…起こさないように、そっと見るだけ' : `🏠 部屋で${(ASSISTANT_LIFE_DOINGS[r0.d] || {}).label || 'のんびり'}`)), React.createElement("button", {
     type: "button",
+    "data-mhl-sheet-close": true,
     className: "shrink-0 rounded-xl border border-slate-500 px-3 py-1.5 text-[12px] font-black text-slate-100",
     onClick: () => {
       setRoomId(null);
@@ -123356,12 +123358,51 @@ function AlfFriendHouseView({
     onClick: () => leave(i)
   }, t))), React.createElement("button", {
     type: "button",
+    "data-mhl-sheet-close": true,
     className: "mhl-btn mt-3 w-full bg-slate-700",
     onClick: () => {
       setLeaving(null);
       setNoteWarn('');
     }
   }, "やめる"))) : null;
+  const diarySheet = boardOpen ? React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      zIndex: 31
+    },
+    "data-alf-visit-diary-all": true
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    className: "absolute inset-0 bg-black/55",
+    onClick: () => setBoardOpen(false)
+  }), React.createElement("div", {
+    className: "mhl-sheet",
+    style: land ? {
+      left: 'auto',
+      width: '44%',
+      top: 0,
+      maxHeight: '100%',
+      paddingTop: 92,
+      borderRadius: '22px 0 0 22px'
+    } : {
+      maxHeight: 'calc(100% - 96px)'
+    }
+  }, React.createElement("p", {
+    className: "text-[16px] font-black text-amber-100"
+  }, "📌 ", friend.name, "さんの家の今日あったこと"), diaryItems.length ? diaryItems.map((d, i) => React.createElement("p", {
+    key: i,
+    className: "mt-1.5 text-[12px] font-bold leading-snug text-slate-100"
+  }, React.createElement("b", {
+    className: "mr-1.5 text-amber-200"
+  }, d.t), d.x)) : React.createElement("p", {
+    className: "mt-1.5 text-[12px] text-slate-300"
+  }, "まだ何もありません"), React.createElement("button", {
+    type: "button",
+    "data-mhl-sheet-close": true,
+    className: "mhl-btn mt-3 w-full bg-slate-700",
+    onClick: () => setBoardOpen(false)
+  }, "閉じる"))) : null;
   return alfLayer(React.createElement("div", {
     className: "mhl-root",
     style: {
@@ -123406,7 +123447,7 @@ function AlfFriendHouseView({
     style: {
       paddingBottom: 'calc(10px + env(safe-area-inset-bottom))'
     }
-  }, tiles)), sheet, words)));
+  }, tiles)), sheet, words, diarySheet)));
 }
 const alfVisitBlockedText = (friendId, name, s = ALF_STORE.state) => {
   if (s.mode === 'off') return 'フレンドの家との行き来は、いまお休み中です。';
