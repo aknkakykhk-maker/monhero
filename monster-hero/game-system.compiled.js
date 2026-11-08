@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2b562622cae7eed8
+// source-sha256: f598c9f24ae30d50
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -105865,6 +105865,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-hdr{position:relative;z-index:5;padding:8px 12px 6px;background:linear-gradient(180deg,#140b2ef2,#140b2ecc 75%,#140b2e00)}
 .mhl-en{font-size:9px;letter-spacing:.18em;font-weight:900;color:#f9a8d4}
 .mhl-ti{font-size:22px;font-weight:900;line-height:1.05;background:linear-gradient(90deg,#fff,#fbcfe8 60%,#fde68a);-webkit-background-clip:text;background-clip:text;color:transparent}
+.mhl-quick{display:flex;align-items:center;gap:5px;border-radius:999px;padding:3px 4px 3px 9px;border:1px solid #fbbf2488;background:rgba(15,23,42,.78);font-size:10.5px;font-weight:900;color:#fde68a}.mhl-quick b{color:#fff}.mhl-quick button{min-height:26px;border-radius:999px;padding:0 9px;background:#334155;color:#e2e8f0;font-size:10.5px;font-weight:900;border:1px solid #64748b}.mhl-quick.is-start{padding:3px 10px;min-height:30px;background:linear-gradient(90deg,#f59e0b,#ea580c);color:#fff;border-color:#fde68a}
 .mhl-clock{border-radius:12px;padding:3px 8px;border:1px solid #ffffff33;background:rgba(15,23,42,.72);text-align:right}
 .mhl-chip{display:inline-flex;align-items:center;gap:3px;background:linear-gradient(90deg,#be185d,#f59e0b);padding:1px 8px;border-radius:999px;font-size:10px;font-weight:900;white-space:nowrap}
 .mhl-bar{flex:1;height:7px;border-radius:9px;background:#ffffff1f;overflow:hidden}.mhl-bar>i{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fbbf24)}
@@ -106891,6 +106892,41 @@ const useAssistantLifeLand = () => {
   }, []);
   return land;
 };
+function AssistantLifeQuickChip({
+  quickRun,
+  onStop,
+  onStart,
+  land
+}) {
+  if (!quickRun || typeof quickRun !== 'object') return null;
+  const loops = Number.isFinite(Number(quickRun.loops)) ? Math.max(0, Math.floor(Number(quickRun.loops))) : 0;
+  if (quickRun.live) {
+    return React.createElement("div", {
+      className: "mhl-quick shrink-0 self-center",
+      "data-assistant-life-quick": "live",
+      "data-assistant-life-quick-loop": loops + 1
+    }, React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "⚡ 裏クイック ", React.createElement("b", null, loops + 1, "周目")), onStop && React.createElement("button", {
+      type: "button",
+      "data-assistant-life-quick-stop": true,
+      onClick: onStop,
+      "aria-label": "裏クイックを止める"
+    }, "止める"));
+  }
+  if (quickRun.canStart && onStart) {
+    return React.createElement("button", {
+      type: "button",
+      className: "mhl-quick is-start shrink-0 self-center",
+      "data-assistant-life-quick": "start",
+      onClick: onStart,
+      "aria-label": "裏クイックを始める"
+    }, React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "▶ 裏クイック"));
+  }
+  return null;
+}
 function AssistantLifeHouse({
   metIds,
   onReplay,
@@ -106898,7 +106934,10 @@ function AssistantLifeHouse({
   onUseItem = null,
   bondLevelOf = null,
   furnItems = null,
-  onGiveFurn = null
+  onGiveFurn = null,
+  quickRun = null,
+  onQuickRunStop = null,
+  onQuickRunStart = null
 }) {
   const st = useAssistantLifeNow(metIds);
   const diary = useAssistantLifeDiary();
@@ -107274,6 +107313,11 @@ function AssistantLifeHouse({
     } : undefined
   }, "助手ライフ")), React.createElement("div", {
     className: "min-w-0 flex-1"
+  }), React.createElement(AssistantLifeQuickChip, {
+    quickRun: quickRun,
+    onStop: onQuickRunStop,
+    onStart: onQuickRunStart,
+    land: land
   }), typeof TimeOfDayClock === 'function' && React.createElement("div", {
     className: "ml-auto shrink-0 self-center",
     "data-assistant-life-clock-box": true
