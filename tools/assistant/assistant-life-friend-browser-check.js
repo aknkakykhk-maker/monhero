@@ -49,6 +49,11 @@ const route = (posted) => async (r) => {
     const self = (url.match(/requester_id\.eq\.([^,)&]+)/) || url.match(/eq\.([0-9a-f-]{20,})/) || [])[1] || 'x';
     return json([{ requester_id: self, target_id: 'aoi-0001', status: 'accepted', blocked_by: null, created_at: fresh, updated_at: fresh }, { requester_id: 'yuto-0001', target_id: self, status: 'accepted', blocked_by: null, created_at: fresh, updated_at: fresh }, { requester_id: self, target_id: 'mio-0001', status: 'accepted', blocked_by: null, created_at: fresh, updated_at: fresh }]);
   }
+  // いまの状態(friend_profiles の place・records)。あおい=オート周回中(モンヒロビート)/ゆうと=演奏中/みお=ホームを開いたまま25分
+  if (/friend_profiles/.test(url) && /select=breeder_id,place/.test(url)) {
+    const at = new Date(Date.now() - 60000).toISOString();
+    return json([{ breeder_id: 'aoi-0001', place: 'rhythm', updated_at: at, records: { au: 1 } }, { breeder_id: 'yuto-0001', place: 'other', updated_at: at, records: { pl: 'rhythmPlay' } }, { breeder_id: 'mio-0001', place: 'home', updated_at: at, records: { im: 25 } }]);
+  }
   if (/friend_profiles|breeder_profiles/.test(url)) return json([{ breeder_id: 'aoi-0001', user_name: 'あおい', last_seen_at: fresh }, { breeder_id: 'yuto-0001', user_name: 'ゆうと', last_seen_at: fresh }, { breeder_id: 'mio-0001', user_name: 'みお', last_seen_at: fresh }]);
   if (/functions\/v1\/assistant-chat/.test(url)) return json({ ok: false, kind: 'tired' });
   return json([]);
@@ -223,6 +228,10 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.waitForSelector('[data-profile-friends]', { timeout: 15000 });
       await page.evaluate(() => document.querySelector('[data-profile-friends]').click());
       await page.locator('[data-friend-row="mio-0001"]').waitFor({ timeout: 15000 });
+      await page.waitForFunction(() => document.querySelectorAll('[data-friend-presence-auto]').length >= 2, null, { timeout: 8000 }).catch(() => {});
+      { const t = await page.locator('[data-friend-row]').allInnerTexts();
+        check(`⑮ フレンドの一覧に「⚡ オート周回中」+下の行(周回中・開いたまま25分)と「🎵 演奏中」(${v.id})`, t.some(x => /あおい/.test(x) && /オート周回中/.test(x)) && t.some(x => /みお/.test(x) && /ホームを開いたまま 25分 操作なし/.test(x)) && t.some(x => /ゆうと/.test(x) && /演奏中/.test(x)), t.join(' | ').slice(0, 200)); }
+      await shot(page, `${v.id}-11-presence-list`);
       await page.locator('[data-friend-row="mio-0001"]').click();
       await page.locator('[data-alf-profile-visit]').waitFor({ timeout: 10000 });
       await page.waitForFunction(() => document.querySelector('[data-alf-profile-visit-why]') && !/読み込んで/.test(document.querySelector('[data-alf-profile-visit-why]').innerText), null, { timeout: 8000 }).catch(() => {});

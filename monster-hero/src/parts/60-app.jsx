@@ -2838,10 +2838,14 @@ function MonsterHeroGame() {
         ownedIconIds: latest.ownedMarketIcons, ownedFrameIds: latest.ownedProfileFrames,
       });
     } catch (error) { console.error('[friends] records build failed:', error && error.message ? error.message : error); }
+    // オート周回中(クイックの∞周回が回っている・裏に回って止まっているときは finished)と「いまの状態をフレンドに見せる」(2026-11-08・34-friends-api)
+    let auto = false; let show = true;
+    try { const q = quickRunProgressRef.current; auto = !!(q && !q.finished); } catch (error) { auto = false; }
+    try { show = (await storeGet(FRIEND_PRESENCE_SHOW_KEY, true)) !== false; } catch (error) { show = true; }
     await sbUpsertFriendProfile(id, friendsBuildSummary({
       place: friendsPlaceOfScreen(latest.gameState), masuMons: latest.masuMons,
       favoriteMasuId: latest.favoriteMasuId, playtime: playtimeRef.current,
-      message: latest.profileMessage, records,
+      message: latest.profileMessage, records, auto, show,
     }));
     // 端末ごとのプレイ時間(2台で遊ぶ人の合計を出すため)。表がまだ無ければ何もしない
     await sbUpsertFriendPlaytimeDevice(id, playtimeDeviceRef.current);

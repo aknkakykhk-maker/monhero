@@ -184,9 +184,21 @@ const statusOf = (a, b) => {
 
   // ---- フレンドに見せる情報 ----
   check('画面から場所の大分類を引ける', api.friendsPlaceOfScreen('HOME') === 'home' && api.friendsPlaceOfScreen('RHYTHM_MULTI') === 'multi'
-    && api.friendsPlaceOfScreen('RHYTHM_PLAY') === 'rhythm' && api.friendsPlaceOfScreen('BATTLE') === 'battle' && api.friendsPlaceOfScreen('BATTLE_MENU') === 'battle'
+    && api.friendsPlaceOfScreen('RHYTHM_PLAY') === 'rhythmPlay' && api.friendsPlaceOfScreen('RHYTHM_DEMO_HOME') === 'rhythm' && api.friendsPlaceOfScreen('BATTLE') === 'battle' && api.friendsPlaceOfScreen('BATTLE_MENU') === 'battle'
     && api.friendsPlaceOfScreen('MASU_ENHANCE') === 'masu' && api.friendsPlaceOfScreen('BREEDER_MARKET') === 'market'
     && api.friendsPlaceOfScreen('PROFILE') === 'other' && api.friendsPlaceOfScreen(undefined) === 'other');
+  // いまの状態(2026-11-08 社長): オート周回中・10分以上操作なしは「⚡ オート周回中」。演奏中・対戦中は変えない。5分を過ぎたら見ない
+  { const tN = 1700000000000; const P = api.friendsPresenceText;
+    const a1 = P('rhythm', tN - 60000, tN, { au: 1, im: 0 });
+    const a2 = P('rhythm', tN - 60000, tN, { au: 0, im: 12 });
+    const a3 = P('rhythmPlay', tN - 60000, tN, { au: 0, im: 30 });
+    const a4 = P('rhythm', tN - 10 * 60000, tN, { au: 1, im: 0 });
+    const a5 = P('home', tN - 60000, tN, { au: 0, im: 9 });
+    check('いまの状態: オート周回中は「⚡ オート周回中」+下に今の場所', a1.auto && a1.text === '⚡ オート周回中' && /モンヒロビート/.test(a1.sub), JSON.stringify(a1));
+    check('いまの状態: 10分以上操作なしは「⚡ オート周回中」+「モンヒロビートを開いたまま 12分 操作なし」', a2.auto && a2.sub === 'モンヒロビートを開いたまま 12分 操作なし', JSON.stringify(a2));
+    check('いまの状態: 演奏中は操作がなくても変えない・5分を過ぎた知らせは「◯分前」・9分は変えない', !a3.auto && /演奏中/.test(a3.text) && !a4.online && !a4.auto && !a5.auto, JSON.stringify([a3, a4, a5]));
+    const sum = api.friendsBuildSummary({ place: 'rhythm', masuMons: [], playtime: {}, auto: true, show: false });
+    check('いまの状態: 「いまの状態をフレンドに見せる」が切なら、場所は other・周回の印も送らない', sum.place === 'other' && sum.au === 0 && sum.im === 0, JSON.stringify(sum).slice(0, 120)); }
   const t0 = 1700000000000;
   check('5分以内なら「いまの場所」、それより前なら「◯分前」', api.friendsPresenceText('rhythm', t0 - 60 * 1000, t0).online === true
     && api.friendsPresenceText('rhythm', t0 - 60 * 1000, t0).text === 'モンヒロビートで遊び中'

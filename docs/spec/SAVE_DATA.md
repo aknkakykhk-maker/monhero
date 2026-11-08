@@ -106,6 +106,7 @@
 | `mh_breeder_gender_v1` | string / `'none'` | プロフィールの性別(`'male'`/`'female'`/`'none'`=答えない)。`normalizeBreederGender` を通し、無い・壊れているときは `'none'`(これまでと同じ呼び方)。助手の段ごとの呼び方(`ASSISTANT_GENDER_CALLS`)とマスモンのくん/ちゃんに使う。端末の中だけで、ランキング・フレンドには送らない(2026-11-06 社長) |
 | `mh_friend_favorites_v1` | string[] / `[]` | フレンド一覧で「お気に入り」にしたフレンドのID(`friendsNormalizeFavorites` を通す) |
 | `mh_friend_recent_v1` | object[] / `[]` | 最近いっしょに遊んだ人(`{id,name,at}`。新しい順・同じ人は1件・最大30人。端末だけに覚え、サーバーへは送らない。`friendsNormalizeRecent` を通す) |
+| `mh_friend_presence_show_v1` | boolean / `true` | 「いまの状態をフレンドに見せる」(2026-11-08)。`false` のときは friend_profiles の place を 'other'(ログイン中)にし、オート周回中・操作なしの分(records.au・records.im)も送らない |
 | `mh_friend_notes_v1` | object / `{}` | フレンドごとのメモ(フレンドのID→メモ。メモは12文字まで・最大200人ぶん。端末だけに覚え、サーバーへは送らない。`friendsNormalizeNotes` を通す) |
 | `mh_raid_jack_v1` | object / `raidJackDefaultState()` | イベント・レイドボス「ジャック」の端末側の記録(A/Bそれぞれの今日の使用回数・買い足した回数・倒した段階、Bの累計ダメージの自分用の控え、受け取り済みの報酬ID、送れなかった与ダメージの再送待ち)。`raidJackNormalizeState` を通す。既存のキーには触らない。設計: `docs/spec/RAID_BOSS_JACK.md` |
 | `mh_card_collection_v1` | object / `cardNormalizeCollection` | MFバトルカードの持っているカード `{ カード番号: 枚数 }`(モンスターカードも同じ表)。枚数は 1〜99。知らない番号は消さずに残す。設計: `docs/spec/CARD_BATTLE.md` 6-1 |
