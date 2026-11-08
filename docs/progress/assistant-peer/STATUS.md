@@ -388,5 +388,6 @@
   - 場所を押すとシート(いる助手・🎵一緒に遊ぶ・🃏対戦する・🏡部屋へ・閉じる)。家の札のシートには町にいる人も並ぶ(=HOME の「助手ライフ」の下の顔ぶれ)
 - そろえた所: HOME の顔の表を場所→札の1つの表(ASSISTANT_LIFE_SPOT_FAC)に・神殿にも顔/HOME の顔は main の札だけを見る/家の言い方「みんなの家」/今日あったことの場所の名前を施設の名前に(カード部屋で対戦→MFバトルカードで対戦。card-life-reward-browser-check の正規表現も直した)
 - 検査 `tools/assistant/assistant-life-map-check.js`(①11か所 ②HOME と札が1対1 ③顔と全身が同じ場所・家のシート ④言い方 ⑤重ならない ⑥シート。縦3・横3・タブレット・🔄横)。古い地図の項目(assistant-life-browser-check ⑩⑫⑯)は新しい形に置きかえ
-- 相談中: カード部屋の1.5倍を使い切った助手(HOME は顔を外す決まり)を、地図ではカード部屋に立たせ、シートに「対戦のごほうびは次の時間帯から」
-- 公開前: 止め絵(shots/lifemap/)と更新履歴・ヘルプの文案を統括部長へ → 社長の「この文で」→ ミハリの確認 → 公開。ヘルプ(助手ライフの節の「📋 みんなの居場所」の文)は書きかえ済み・更新履歴はまだ入れていない
+- 社長の答え(2026-11-08): 文案1〜5に6を足して「この文で公開」。カード部屋の 1.5倍を使い切った助手は「HOMEも地図も出す」(前の Q2 A「HOME では顔を外す」を改めた)→ HOME の顔の左下と地図の全身に「済」の印(AssistantLifeSpentMark)、顔は少し暗く、「UP」は使い切っていない助手がいるときだけ。カード部(ソランド・ツナグ)へ知らせ済み、カード部の検査3本(card-life-limit-check E・card-life-limit-browser-check ⑤⑦・card-life-reward-browser-check ④)も合わせた
+- 更新履歴(18:25)・ヘルプ(居場所の文+カード部屋の1.5倍の項に「済」の1文)入り。当番マスモンは地図に出さないまま(❸B)
+- 既知の別件: assistant-life-friend-browser-check ⑥⑫(仲良し度の知らせと置き手紙)が main でも大きさを変えてゆれる/save-keys-check が main で NG(mh_assistant_life_masmon_v1 が SAVE_DATA.md に無い・キズナ側)

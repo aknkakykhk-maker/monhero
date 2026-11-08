@@ -12,7 +12,7 @@
 //   ④ えるびんとすぐ投了(もらえる数 0): 数えない(保存にえるびんが無い・印は「🃏UP」のまま)
 //   ⑤ HOME: MFバトルカードの横にソラシドの顔は残り「済」の印(2026-11-08 社長「HOMEも地図も出す」で前の「消える」を改めた)、えるびんと「UP」も残る
 //   ⑥ 助手ライフの家: ソラシドの部屋は灰色の押せないボタン「🃏 ごほうびアップは使い切りました…次は◯時から」、えるびんの部屋はふだんのボタン。画面に入り、字が切れない
-//   ⑦ 2人とも使い切る: HOME の顔の並びにカードの助手がいなくなり、「UP」も消える。相手えらびの帯は灰色で、2人とも「済」
+//   ⑦ 2人とも使い切る: HOME の顔は2人とも残って「済」の印(2026-11-08 社長「HOMEも地図も出す」)、「UP」は消える。相手えらびの帯は灰色で、2人とも「済」
 //   ⑧ 時間帯が変わると戻る(保存の slot が前の時間帯): 相手えらびは2人とも「🃏UP」・起動し直した HOME に2人の顔と「UP」
 //   ③' 帯がいちばん高いまま 320×568 にしても、強さのボタンが「対戦する」の帯に潜らない
 //   ⑨ 表示と保存が一致(③⑦⑧で、印が「済」の助手 = 保存で今の時間帯に1回使った助手)
@@ -263,7 +263,7 @@ const run = async (browser, mode, errors) => {
     await goHome();
     await setUsed({ sorashido: 1, erubin: 1 });
     const h7 = await homeRow();
-    check(`⑦ ${mode.label} 2人とも使い切る: HOME の顔の並びにカードの助手がいない・「UP」も消える`, h7.top && h7.faces === '' && !h7.up, JSON.stringify(h7));
+    check(`⑦ ${mode.label} 2人とも使い切る: HOME の顔は2人とも残って「済」の印・「UP」は消える(2026-11-08 社長「HOMEも地図も出す」)`, h7.top && h7.faces === 'erubin,sorashido' && h7.spent === 'erubin,sorashido' && !h7.up, JSON.stringify(h7));
     await scene('7-home-none', '[data-home-card-battle]', 'HOME の MFバトルカードの札');
     await page.locator('[data-home-card-battle]').first().dispatchEvent('click');
     await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
