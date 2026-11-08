@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 15eaddbcf0c45a9d
+// source-sha256: 46bbd050ec765fc8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -63171,13 +63171,14 @@ const growthFxChipSpotBusy = box => {
   for (const el of document.querySelectorAll(GROWTH_FX_CHIP_BUSY_SEL)) {
     if (box.contains(el)) continue;
     const e = el.getBoundingClientRect();
-    if (!e.width || !e.height || e.width > vw * 0.9 || e.height > vh * 0.5) continue;
+    if (!e.width || !e.height || e.height > vh * 0.5) continue;
     if (Math.min(r.right, e.right) - Math.max(r.left, e.left) <= 1 || Math.min(r.bottom, e.bottom) - Math.max(r.top, e.top) <= 1) continue;
-    const cs = getComputedStyle(el);
-    if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
     const isPic = /^(IMG|SVG)$/i.test(el.tagName) || el.hasAttribute('data-alf-face');
     const isAct = el.matches('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]');
     const hasText = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+    if (e.width > vw * 0.9 && !hasText) continue;
+    const cs = getComputedStyle(el);
+    if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
     if (!isPic && !isAct && !hasText) continue;
     const cx = Math.max(r.left, e.left) + 1,
       cy = Math.max(r.top, e.top) + 1;
@@ -63221,9 +63222,33 @@ const GrowthFxChipsBox = ({
     place();
     const t1 = setTimeout(place, 500),
       t2 = setTimeout(place, 1500);
+    let t3 = 0;
+    const again = () => {
+      const box = ref.current;
+      if (!box || !growthFxChipSpotBusy(box)) return;
+      place();
+    };
+    const mo = typeof MutationObserver === 'function' ? new MutationObserver(() => {
+      clearTimeout(t3);
+      t3 = setTimeout(again, 40);
+    }) : null;
+    if (mo && document.body) mo.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+    const moved = () => {
+      clearTimeout(t3);
+      t3 = setTimeout(again, 40);
+    };
+    document.addEventListener('animationend', moved, true);
+    document.addEventListener('transitionend', moved, true);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
+      clearTimeout(t3);
+      if (mo) mo.disconnect();
+      document.removeEventListener('animationend', moved, true);
+      document.removeEventListener('transitionend', moved, true);
     };
   }, [count]);
   return React.createElement("div", {

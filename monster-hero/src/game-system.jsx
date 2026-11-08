@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8ee121b50da8cf74
+// generated-sha256: d310a173a03b32f6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -39033,14 +39033,16 @@ const growthFxChipSpotBusy = (box) => {
   for (const el of document.querySelectorAll(GROWTH_FX_CHIP_BUSY_SEL)) {
     if (box.contains(el)) continue;
     const e = el.getBoundingClientRect();
-    if (!e.width || !e.height || e.width > vw * 0.9 || e.height > vh * 0.5) continue;
+    if (!e.width || !e.height || e.height > vh * 0.5) continue;
     if (Math.min(r.right, e.right) - Math.max(r.left, e.left) <= 1 || Math.min(r.bottom, e.bottom) - Math.max(r.top, e.top) <= 1) continue;
-    const cs = getComputedStyle(el);
-    if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
     // 文字のある要素・押せるもの・絵だけ(中身の無い飾りの span などは数えない)
     const isPic = /^(IMG|SVG)$/i.test(el.tagName) || el.hasAttribute('data-alf-face');
     const isAct = el.matches('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]');
     const hasText = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+    //   幅いっぱいの入れ物は数えないが、文字を直に持つ1行(縦の小さい画面のシートの説明の行など)は幅が広くても数える(2026-11-08 オトズレ3)
+    if (e.width > vw * 0.9 && !hasText) continue;
+    const cs = getComputedStyle(el);
+    if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
     if (!isPic && !isAct && !hasText) continue;
     // ほかの画面の下に隠れている(手前に別のものが重なっている)要素は数えない
     const cx = Math.max(r.left, e.left) + 1, cy = Math.max(r.top, e.top) + 1;
@@ -39075,7 +39077,17 @@ const GrowthFxChipsBox = ({ level, count, children }) => {
     };
     place();
     const t1 = setTimeout(place, 500), t2 = setTimeout(place, 1500);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    // 出たあとでシートが開くなど、画面が組み替わったら探し直す(2026-11-08 オトズレ3「横のフレンドの家で、あとから開いた置き手紙のシートのボタンを隠す」)。
+    //   いまの場所の下が空いたままなら動かさない(札があちこちへ跳ねないように)
+    let t3 = 0;
+    const again = () => { const box = ref.current; if (!box || !growthFxChipSpotBusy(box)) return; place(); };
+    const mo = typeof MutationObserver === 'function' ? new MutationObserver(() => { clearTimeout(t3); t3 = setTimeout(again, 40); }) : null;
+    if (mo && document.body) mo.observe(document.body, { childList: true, subtree: true });
+    //   シートは下から滑り出す動きで出るので、探した瞬間はまだ画面の下にある。動き終わったときにも探し直す
+    const moved = () => { clearTimeout(t3); t3 = setTimeout(again, 40); };
+    document.addEventListener('animationend', moved, true); document.addEventListener('transitionend', moved, true);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); if (mo) mo.disconnect();
+      document.removeEventListener('animationend', moved, true); document.removeEventListener('transitionend', moved, true); };
   }, [count]);
   return <div ref={ref} className={`mh-gfx-chips mh-gfx-${level}`} data-growth-fx-chips aria-live="polite">{children}</div>;
 };
