@@ -18,7 +18,10 @@
 //   ⑪ API が止まっていても、端末の読み取りでカードが出る(返事は台本)
 //   ⑫ プロフィールの呼び方の小窓に「会話で決めた呼び方」が出て、元に戻すと新しいキーの行だけ消える。小窓のあいだは知らせを出さない
 //   ⑬ Lv6 で開くと、助手から「なんて呼んだらいい？」と1回だけ聞き、候補のボタンが出る
-//   ⑭ 公開の印が偽のときは、カードも問いかけも出ない
+//   ⑭ 公開の印が偽のときは、カードも問いかけも、部屋の「おしゃべりする」も出ない
+//   ⑮ 助手ライフの部屋の声かけのあとのひとこと(呼び方の話/持ちかけ/ふつう)の選び方
+//   ⑯ 部屋から選んでいない助手とのおしゃべりが助手ライフの上に開き、閉じると同じ部屋へ ⑰ 声をかけたあとの続きのカード
+//   ⑲ 話した助手の仲良し度に入る ⑳ 寝ている助手は起こして寝起きのひとことから
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
@@ -85,7 +88,7 @@ const fast = async () => {
   check('⑤ Lv3 からはだれも照れない(社長)', lv3.length === 0, lv3.join(','));
   // ⑥
   const ids = X.ASSISTANTS.map(a => a.id);
-  const kinds = ['ask', 'confirm', 'accept', 'keep', 'shy', 'nickConfirm', 'nickAccept', 'nickShy'];
+  const kinds = ['ask', 'confirm', 'accept', 'keep', 'shy', 'nickConfirm', 'nickAccept', 'nickShy', 'lifeAsk', 'lifeOffer', 'lifePlain', 'wake'];
   const missing = ids.flatMap(id => kinds.filter(k => !(X.ASSISTANT_CALLNAME_LINES[id] && Array.isArray(X.ASSISTANT_CALLNAME_LINES[id][k]) && X.ASSISTANT_CALLNAME_LINES[id][k].length)).map(k => `${id}.${k}`));
   check('⑥ 助手全員に、台本の場面がそろっている', missing.length === 0, missing.join(' / '));
   const lines = (id) => Object.values(X.ASSISTANT_CALLNAME_LINES[id] || {}).flat();
@@ -95,6 +98,19 @@ const fast = async () => {
   check('⑥ あつは文の最後に必ず笑か記号', atsuBad.length === 0, atsuBad.join(' / '));
   check('⑥ 台本で「この子」「うちの子」と言わない', !ids.some(id => lines(id).some(l => /(この|うちの|その|あの)子/.test(l))));
   check('⑥ 台本で「AI」と言わない', !ids.some(id => lines(id).some(l => /AI|ＡＩ|API|Claude/i.test(l))));
+  // ⑮(前半) 助手ライフの部屋で、声をかけたあとのひとこと(社長 ❾A)
+  {
+    const ctx = vm.createContext({ console }); vm.runInContext(`${fs.readFileSync(ASSISTANTS, 'utf8')}\nthis.P = assistantCallnameLifePick;`, ctx);
+    const P = ctx.P, fill = (t) => t.replace('{name}', 'テスト');
+    const now = Date.parse('2026-11-20T12:00:00+09:00');
+    const a = P('atsu', { level: 6, asked: false, current: null, customStyle: null, offeredAt: 0, callName: 'テスト', fill, now });
+    const o = P('atsu', { level: 4, asked: false, current: null, customStyle: null, offeredAt: 0, callName: 'テスト', fill, now });
+    const p1 = P('atsu', { level: 4, asked: false, current: null, customStyle: null, offeredAt: now - 86400000, callName: 'テスト', fill, now });
+    const p2 = P('atsu', { level: 2, asked: false, current: null, customStyle: null, offeredAt: 0, callName: 'テスト', fill, now });
+    check('⑮ Lv6 でまだ聞いていない助手は、呼び方の話(ask)', a.kind === 'ask' && /呼び方/.test(a.text));
+    check('⑮ Lv3 から7日に1回、具体的な呼び方を持ちかける(offer・いまの呼び方とは別)', o.kind === 'offer' && !!o.value && fill(o.value) !== 'テスト' && o.text.includes(fill(o.value)), JSON.stringify(o));
+    check('⑮ 持ちかけてから7日たっていない日・Lv2 は、ふつうのひとこと(plain)', p1.kind === 'plain' && p2.kind === 'plain');
+  }
   // ⑦
   const cn = (o) => ({ playerName: 'テスト', callname: { shy: false, canOffer: false, asking: false, nick: '', ...o } });
   const j = (o) => ({ call: { action: 'confirm', value: 'あっちゃん', from: 'player' }, nick: { action: 'none', value: '' }, taste: { monster: '', feeling: 'none' }, ...o });
@@ -127,7 +143,7 @@ const PORT = 8987;
 const browser = async () => {
   let chromium;
   try { ({ chromium } = require('playwright')); } catch { console.log('SKIP: playwright が入っていないので実ブラウザの確認は飛ばします'); return; }
-  const { MIME, STORY_IDS, seed, toHome, finishTalk } = require(path.resolve(__dirname, 'life-browser-shared'));
+  const { MIME, STORY_IDS, INTRO_KEYS, seed, toHome, finishTalk } = require(path.resolve(__dirname, 'life-browser-shared'));
   const { quietBootSeed, updateNoticeSeed, oneTimeNoticeSeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
   const core = await import(CORE);
   const server = http.createServer((req, res) => {
@@ -150,7 +166,7 @@ const browser = async () => {
     const errors = []; page.on('pageerror', e => errors.push(String(e)));
     await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
     await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(oneTimeNoticeSeed());
-    await page.addInitScript(seed, { storyIds: STORY_IDS, life: true });
+    await page.addInitScript(seed, { storyIds: STORY_IDS, introKeys: INTRO_KEYS, life: true });
     await page.addInitScript(({ flag, bond, extra }) => {
       if (!localStorage.getItem('cn_check_seeded')) {
         localStorage.setItem('cn_check_seeded', '1');
@@ -245,10 +261,76 @@ const browser = async () => {
       check('⑬ 実行時エラーがない', errors.length === 0, errors.slice(0, 2).join(' / '));
       await page.close();
     }
+    { // ⑯〜⑳ 助手ライフの部屋から(社長 ❼A〜❿A)
+      const openLife = async (page) => {
+        await page.locator('[data-assistant-chat-close]').dispatchEvent('click').catch(() => {}); await page.waitForTimeout(300);
+        await page.locator('[data-home-assistant-life]').click({ timeout: 20000 });
+        await page.locator('[data-assistant-life-screen]').waitFor({ timeout: 8000 });
+        await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 6000 }).catch(() => {});
+        await page.locator('[data-assistant-life-icon="house"]').click({ timeout: 5000 }).catch(() => {}); await page.waitForTimeout(400);
+      };
+      const room = async (page, id) => { await page.locator(`[data-assistant-life-room="${id}"]`).click({ timeout: 8000 }); await page.waitForTimeout(400); };
+      const topIsChat = (page) => page.evaluate(() => { const el = document.elementFromPoint(innerWidth / 2, innerHeight - 40); return !!(el && el.closest('[data-assistant-chat]')); });
+      const { page, errors } = await open({ bond: 420, extra: { mh_assistant_bond_atsu_v1: { points: 420 } } });
+      await openLife(page); await room(page, 'atsu');
+      const btn = page.locator('[data-assistant-life-room-sheet="atsu"] [data-assistant-life-room-act="chat"]');
+      check('⑯ 部屋のシートに「💬 おしゃべりする」が出る(選んでいない助手 あつ でも)', await btn.count() === 1 && /おしゃべりする/.test(await btn.innerText()));
+      const bondBefore = (await ls(page, 'mh_assistant_bond_atsu_v1') || {}).points, muaBefore = (await ls(page, 'mh_assistant_bond_v1') || {}).points;
+      await btn.click(); await page.locator('[data-assistant-chat]').waitFor({ timeout: 8000 }); await page.waitForTimeout(400);
+      check('⑯ 押すと、あつとのおしゃべりが助手ライフの上に開く(HOME へは戻らない)', /あつとおしゃべり/.test(await page.locator('[data-assistant-chat]').innerText()) && await page.locator('[data-assistant-life-screen]').count() === 1 && await topIsChat(page));
+      await say(page, 'こんにちは');
+      const bondAfter = (await ls(page, 'mh_assistant_bond_atsu_v1') || {}).points, muaAfter = (await ls(page, 'mh_assistant_bond_v1') || {}).points;
+      check('⑲ 選んでいない助手と話しても、その助手の仲良し度に入る(選んでいる助手のぶんは増えない)', bondAfter > bondBefore && muaAfter === muaBefore, `${bondBefore}→${bondAfter} / みゅあ ${muaBefore}→${muaAfter}`);
+      await page.locator('[data-assistant-chat-close]').dispatchEvent('click'); await page.waitForTimeout(400);
+      check('⑯ 閉じると、同じ部屋のシートに戻る', await page.locator('[data-assistant-life-room-sheet="atsu"]').count() === 1 && await page.locator('[data-assistant-chat]').count() === 0);
+      // 声をかける → 掛け合い → 家へ戻る → 続きのカード
+      await page.locator('[data-assistant-life-room-sheet="atsu"] [data-assistant-life-room-act="invite"]').click(); await page.waitForTimeout(500);
+      for (let i = 0; i < 30 && await page.locator('[data-assistant-life-scene]').count(); i++) {
+        await finishTalk(page);
+        await page.locator('[data-assistant-life-scene-back]').click({ timeout: 1000 }).catch(() => {}); await page.waitForTimeout(300);
+      }
+      const follow = page.locator('[data-assistant-life-room-sheet="atsu"] [data-assistant-life-room-follow]');
+      check('⑰ 声をかけた掛け合いのあと、同じ部屋に戻って続きのカードが出る', await follow.count() === 1, await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-room-sheet]')].map(e => e.getAttribute('data-assistant-life-room-sheet')).join(',')));
+      if (await follow.count()) {
+        const kind = await follow.getAttribute('data-assistant-life-room-follow');
+        await page.locator('[data-assistant-life-room-follow-chat]').click(); await page.locator('[data-assistant-chat]').waitFor({ timeout: 8000 }); await page.waitForTimeout(500);
+        const last = await page.locator('[data-assistant-chat-msg="assistant"]').last().innerText();
+        check('⑰ 続きの「おしゃべりする」で開くと、助手のひとことから始まる(持ちかけならカードも出る)', last.length > 0 && (kind !== 'offer' || await page.locator('[data-assistant-callname-card="call"]').count() === 1), `${kind}: ${last.slice(0, 30)}`);
+        await page.locator('[data-assistant-chat-close]').dispatchEvent('click'); await page.waitForTimeout(300);
+      }
+      check('⑯〜⑲ 実行時エラーがない', errors.length === 0, errors.slice(0, 2).join(' / '));
+      await page.close();
+    }
+    { // ⑳ 寝ている助手は起こして話す(社長 ❽B)
+      const { page, errors } = await open({ bond: 420 });
+      await page.evaluate(() => { const life = JSON.parse(localStorage.getItem('mh_assistant_life_v1') || '{}'); life.solo = { ...(life.solo || {}), atsu: { doing: 'sleep', place: 'home', reason: 'sleepy' } }; localStorage.setItem('mh_assistant_life_v1', JSON.stringify(life)); });
+      await page.reload({ waitUntil: 'domcontentloaded' }); await toHome(page); await page.waitForTimeout(1200); await finishTalk(page);
+      await page.locator('[data-home-assistant-life]').click({ timeout: 20000 });
+      await page.locator('[data-assistant-life-screen]').waitFor({ timeout: 8000 });
+      await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 6000 }).catch(() => {});
+      await page.locator('[data-assistant-life-icon="house"]').click({ timeout: 5000 }).catch(() => {}); await page.waitForTimeout(400);
+      await page.locator('[data-assistant-life-room="atsu"]').click({ timeout: 8000 }); await page.waitForTimeout(400);
+      const btn = page.locator('[data-assistant-life-room-sheet="atsu"] [data-assistant-life-room-act="chat"]');
+      const label = await btn.innerText().catch(() => '');
+      check('⑳ 寝ている助手には「💤 起こしておしゃべり」', /起こしておしゃべり/.test(label), label);
+      if (await btn.count()) {
+        await btn.click(); await page.locator('[data-assistant-chat]').waitFor({ timeout: 8000 }); await page.waitForTimeout(500);
+        const first = await page.locator('[data-assistant-chat-msg="assistant"]').last().innerText();
+        check('⑳ 起こすと、寝起きのひとことから始まる', /寝てた/.test(first), first.slice(0, 30));
+      }
+      check('⑳ 実行時エラーがない', errors.length === 0, errors.slice(0, 2).join(' / '));
+      await page.close();
+    }
     { // ⑭
       const { page } = await open({ flag: false, bond: 1300, extra: { mh_assistant_call_style: null } });
       await say(page, 'あっちゃんって呼んで');
       check('⑭ 公開の印が偽のときは、カードも問いかけも出ない', await page.locator('[data-assistant-callname-card]').count() === 0 && (await ls(page, 'mh_assistant_callname_ask_v1')) === null);
+      await page.locator('[data-assistant-chat-close]').dispatchEvent('click').catch(() => {}); await page.waitForTimeout(300);
+      await page.locator('[data-home-assistant-life]').click({ timeout: 20000 }).catch(() => {});
+      await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 6000 }).catch(() => {});
+      await page.locator('[data-assistant-life-icon="house"]').click({ timeout: 5000 }).catch(() => {}); await page.waitForTimeout(400);
+      await page.locator('[data-assistant-life-room="atsu"]').click({ timeout: 8000 }).catch(() => {}); await page.waitForTimeout(400);
+      check('⑭ 公開の印が偽のときは、部屋に「おしゃべりする」も出ない', await page.locator('[data-assistant-life-room-sheet="atsu"]').count() === 1 && await page.locator('[data-assistant-life-room-act="chat"]').count() === 0);
       await page.close();
     }
   } finally { await b.close(); server.close(); }

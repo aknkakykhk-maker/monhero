@@ -49,6 +49,20 @@ const CHANGELOG = [
     ],
   },
   {
+    // 2026-11-08 呼び方を会話で決める・助手ライフの部屋からおしゃべり(助手部ココロ)。社長「この文で」・助手の告知あり
+    date: "2026-11-08 11:25", type:'content', group:'assistant', title:'助手とのおしゃべりで、呼び方を決められるようになりました', status:'new', releaseFlag:'assistantCallname',
+    items:[
+      'おしゃべりで「〇〇って呼んで」と話しかけると、助手が「〇〇って呼んでいい？」と確かめてくれます。「うん」を押すと、その助手はこれからその呼び方で呼んでくれます。',
+      '助手ライフの部屋からも、その助手とおしゃべりできるようになりました。いっしょに遊ぶ助手に選んでいない助手とも話せます。',
+      '寝ている助手も、起こしておしゃべりできます。寝起きのひとことは、助手によっていろいろです。',
+      '呼び方は助手ごとに別々に決められます。仲良くなったばかりのうちは、照れて「もう少しあとでね」と言う助手もいます。',
+      '仲良し度がLv6になると、助手のほうから「なんて呼んだらいい？」と聞いてきます。話の流れで、助手から新しい呼び方を持ちかけてくることもあります。',
+      '「〇〇って呼んでいい？」と、助手にあだ名を付けることもできます。',
+      '決めた呼び方とあだ名は、プロフィールの助手の「呼び方」から元に戻せます。',
+    ],
+    assistantNotice:{ id:'update_notice_assistant_callname_v1', type:'content' },
+  },
+  {
     date: "2026-11-08 11:23", type:'update', group:'assistant', title:'助手ライフの道具から、交換所へそのまま行けるようになりました', status:'new',
     items:[
       '道具タブ・贈る画面・部屋の家具の画面の「🛒」から、ビートP交換所の道具の棚・家具の棚へそのまま行けます。交換所から戻ると、助手ライフの元の画面に戻ります。',
@@ -66,6 +80,17 @@ const CHANGELOG = [
     assistantNotice:{ id:'update_notice_life_furniture_v1', type:'market' },
   },
   {
+    // 2026-11-08 育つ助手の一歩目(助手部キズナ2)。社長「この文で」・助手の告知あり(みゅあの台本は data/assistants.js)
+    date: "2026-11-08 10:31", type:'content', group:'assistant', title:'助手ライフで、助手の部屋から「🐾 マスモン」が見られるようになりました', status:'new', releaseFlag:'assistantLife',
+    items:[
+      '助手たちもそれぞれ自分のマスモンを3体育てています。ニックネーム・Lv・育ち方と、自分の好きな色に染めた姿が見られます',
+      '「⚔ 編成」で先頭のマスモン、「🃏 デッキ」でMFバトルカードのデッキの型(みゅあの「キラキラ速攻」など)が見られます',
+      '「💗 好き・苦手」で、助手ごとの好きなモンスター・苦手なモンスター・好きな色が分かります',
+      '助手のマスモンは助手が自分で育てているもので、あなたのマスモンやセーブには影響しません',
+    ],
+    assistantNotice:{ id:'update_notice_assistant_masmon_v1', type:'content' },
+  },
+  {
     date: "2026-11-08 09:55", type:'content', group:'assistant', title:'フレンドの家と行き来できるようになりました', status:'new', releaseFlag:'assistantLifeFriend',
     assistantNotice:{ id:'update_notice_assistant_life_friend_v1', type:'content' },
     items:[
@@ -77,6 +102,7 @@ const CHANGELOG = [
       '相手のセーブデータや助手の仲良し度は変わりません。フレンドの家の様子は、フレンドが最後に助手ライフを開いたときのものです',
     ],
   },
+
   {
     date: "2026-11-08 09:07", type:'update', group:'assistant', title:'助手ライフで、2人に贈る道具が10種類になりました', status:'new',
     items:[

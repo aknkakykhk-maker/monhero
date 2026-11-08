@@ -2,6 +2,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 // 通常合体と「限界突破して合体」が、実ブラウザで同じ演出を最後まで表示することを確認する。
 const fs = require('fs');
 const path = require('path');
+const { eventStorySeed } = require('../boot/quiet-boot-seed'); // お話の既読は本体から読んだ共通の種で入れる(手で書き写さない)
 const { chromium } = require('playwright');
 
 const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
@@ -48,6 +49,8 @@ const run = async (browser, scenario) => {
       makeMasu('fusion-next-sub', 'Golem', '次の副・ゴーレム', 50, ['green', 'yellow', 'blue']),
     ]);
   }, scenario);
+  // お話・紹介の既読は共通の種で、手で書いた seed のあとに入れる(新しいお話が増えても先に流れない)
+  await page.addInitScript(eventStorySeed());
   await page.goto(URL, { waitUntil: 'load', timeout: 60000 });
   const pointerDown = selector => page.evaluate(sel => {
     const node = document.querySelector(sel);

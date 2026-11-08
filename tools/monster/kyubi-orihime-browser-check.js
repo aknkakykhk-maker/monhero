@@ -8,6 +8,7 @@
 // 九尾幻灯・煉獄・星合の刻・霊魂が出て、実行時エラーが出ないことを見る。
 // 進め方(難易度→勇者モン→配置→アシスト→バトル)は tools/mode/tactics-ex-skills-browser-check.js から借りた。
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
+const { eventStorySeed } = require('../boot/quiet-boot-seed'); // お話の既読は本体から読んだ共通の種で入れる(手で書き写さない)
 const { pickProParty } = require('../battle/lib/pro-party-pick');
 const http = require('http');
 const path = require('path');
@@ -70,6 +71,8 @@ const check = (name, ok, detail = '') => {
     // ★ランキングへは何も送らない(本番の入口でも途中で読み込み直すだけで、降参しない)
     // 通信を差し替えたので、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
     await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
+    // お話・紹介の既読は共通の種で、手で書いた seed のあとに入れる(新しいお話が増えても先に流れない)
+    await page.addInitScript(eventStorySeed());
     await page.evaluate(() => { window.__mhSupabaseStubbed = true; }).catch(() => {});
     await page.route(/supabase\.co/, (route) => route.abort());
     const boot = async () => {

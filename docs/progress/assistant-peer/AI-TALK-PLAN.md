@@ -241,3 +241,13 @@
 - 仲良し度がLv6になると、助手のほうから「なんて呼んだらいい？」と聞いてきます。話の流れで、助手から新しい呼び方を持ちかけてくることもあります。
 - 「〇〇って呼んでいい？」と、助手にあだ名を付けることもできます。
 - 決めた呼び方とあだ名は、プロフィールの助手の「呼び方」から元に戻せます。
+
+### 作ったもの(2026-11-08・社長の選択 ❼A ❽B ❾A ❿A)
+
+- 部屋のシート(56-assistant-life-house.jsx): 「💬 おしゃべりする」/寝ていれば「💤 起こしておしゃべり」。声をかけた掛け合いを閉じたら、同じ部屋に戻ってボタンの段のいちばん上に続きのカード
+- 口: `ASSISTANT_LIFE_LINKS.chatWith`・`chatFollowLine`(本体 60-app.jsx が、公開の印 assistantCallname と assistantChat が立っているときだけ入れる)
+- ひとことの選び方 `assistantCallnameLifePick`(data/assistants.js): Lv6 で未だ → 呼び方の話/Lv3 から7日に1回 → 具体的な呼び方の持ちかけ(窓を開くと確かめるカード)/ほか → ふつう。台本は8人×4場面(lifeAsk・lifeOffer・lifePlain・wake)
+- おしゃべりの窓は助手ライフの上(z 9300)に開き、閉じると同じ部屋のシート。仲良し度は話した助手のぶん(今と同じ量・上限)
+- 起こして話したときは、今日あったことに「◯◯ 起こされておしゃべり」・生活のリズムの「誘って遊んだ」に数える
+- 呼び方の小窓: 縦320の言葉の途中の折れ(jaWrap)・横667の上のはみ出し(外側を縦に流す)を直した
+- 検査: callname-check.js ⑮〜⑳。止め絵: `shots/callname-life-real-1〜8.jpg`・`shots/callname-real-7-picker-320.jpg`・`-8-picker-667.jpg`(撮り方 `shots/callname-life-real-shots.js`)
