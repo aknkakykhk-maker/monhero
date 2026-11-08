@@ -931,7 +931,8 @@ export const friendLineTone = (who, t) => {
 };
 // 作った場面を確かめる。崩れたものは捨てる(残りだけ返す)。数字は1つも使わせない(作り話の数字を出さない)
 // onDrop には捨てた理由の名前だけを渡す(文は渡さない・ログに台詞を残さない)
-export const validateFriendScenes = (scenes, pairs, onDrop = null) => {
+// names … { 助手id: 名前 }。「{f} ドラ」のように穴の後ろに名前を重ねた所を {f} だけにする
+export const validateFriendScenes = (scenes, pairs, onDrop = null, names = {}) => {
   const drop = (why) => { if (typeof onDrop === 'function') { try { onDrop(why); } catch { /* 記録が落ちても続ける */ } } };
   const byKey = Object.fromEntries(pairs.map(p => [p.key, p]));
   const out = [];
@@ -947,6 +948,10 @@ export const validateFriendScenes = (scenes, pairs, onDrop = null) => {
     for (const l of sc.lines.slice(0, FRIEND_LINE_MAX_COUNT)) {
       if (!l || (l.side !== 'a' && l.side !== 'b') || !EXPRESSIONS.includes(l.e) || typeof l.t !== 'string') { ok = false; why = 'shape'; break; }
       let t = l.t.trim().replace(/ブリーダー(さん)?(?!Lv|P|ランク|ポイント|レベル|経験|の教え|アイコン)/g, '{name}').replace(/\{h\}(?!さん)/g, '{h}さん');
+      // 人数・倍は言葉に直す(数字は全部捨てる見張りの前に。2026-11-08 version 20 の試しで「2人」の場面が落ちた)
+      t = t.replace(/[1１]人/g, 'ひとり').replace(/[2２]人/g, 'ふたり').replace(/[2２]倍/g, '倍');
+      const other = names[l.side === 'a' ? pair.b : pair.a];
+      if (other) t = t.split(`{f}${other}`).join('{f}').split(`{f} ${other}`).join('{f}').split(`{f}　${other}`).join('{f}');
       t = friendLineTone(l.side === 'a' ? pair.a : pair.b, t);
       if (t == null) { ok = false; why = `tone_${l.side === 'a' ? pair.a : pair.b}`; break; }
       if (t.length < 2 || t.length > FRIEND_LINE_MAX || /[\r\n]/.test(t)) { ok = false; why = 'length'; break; }
@@ -1004,7 +1009,7 @@ export const handleFriendScenes = async ({ body, digest, client, take, refund, l
   if (response && response.stop_reason !== 'refusal') {
     const text = (response.content || []).filter(b => b && b.type === 'text').map(b => b.text).join('');
     const dropped = [];
-    try { scenes = validateFriendScenes(JSON.parse(text).scenes, pairs, (why) => dropped.push(why)); } catch { scenes = []; dropped.push('json'); }
+    try { scenes = validateFriendScenes(JSON.parse(text).scenes, pairs, (why) => dropped.push(why), Object.fromEntries(Object.keys(digest.assistants).map(id => [id, name(id)]))); } catch { scenes = []; dropped.push('json'); }
     if (dropped.length) log({ event: 'friend_dropped', reasons: dropped.slice(0, FRIEND_SCENES_MAX) });
   }
   if (response && response.usage) {
