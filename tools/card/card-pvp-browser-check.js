@@ -569,7 +569,10 @@ const pvpGo = async (page, sel) => { await page.locator(sel).first().click(); aw
     const after = await A.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('mh_')).map((k) => [k, localStorage.getItem(k)])));
     // 起動のあとに本体が書き足すもの(お話の既読など)は数えない。マルチ対戦は何も保存しない
     // mh_screen_trail_v1 … 画面の出来事を最近30件だけ残す記録(10-core・2026-11-07 から。新しいキーで、セーブは書き換えない)
-    const volatile = /^mh_(last_|session|boot|app_open|login|bgm|se_|ui_|debug|daily_login|visit|rhythm_event_story_v1|screen_trail_v1)/;
+    // 対戦を1回終えるとほかの部の仕組みがわざと数えるもの(どれも新しいキー・既存のセーブは書き換えない):
+    //   mh_missions … ミッションの「MFバトルカードを1戦」(2026-11-08 ミッションの作り直し・84 の missionNotify)/
+    //   mh_assistant_life_play_v1・mh_assistant_peer_* … 助手ライフのにぎわい・助手どうしの会話(84 の assistantPeerOnPlay('card'))
+    const volatile = /^mh_(last_|session|boot|app_open|login|bgm|se_|ui_|debug|daily_login|visit|rhythm_event_story_v1|screen_trail_v1|missions$|assistant_life_play_v1|assistant_peer_)/;
     const changed = Object.keys(before).filter((k) => !k.startsWith('mh_card_') && !volatile.test(k) && before[k] !== after[k]);
     check('⑤ 実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
     check('⑤ mh_card_* 以外の保存を書き換えていない', changed.length === 0, changed.slice(0, 5).join(', '));
