@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 31f6abc6f4bd4f76
+// generated-sha256: 91519eee12f5df90
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -62317,7 +62317,7 @@ const assistantLifeTalkSet = () => {
 };
 const assistantLifeQuarrelTalks = () => [...assistantLifeTalkSet().quarrel, ...(typeof assistantLifeRelQuarrelTalks === 'function' ? assistantLifeRelQuarrelTalks() : [])]; // 原因つきのけんか(rel.jsx)も
 // 思い出アルバムに入るもの(2人・3人)
-const assistantLifeAlbumTalks = () => { const x = assistantLifeTalkSet(); return [...x.pair, ...x.anyTrio, ...x.trio, ...(typeof assistantLifeRelAlbumTalks === 'function' ? assistantLifeRelAlbumTalks() : [])]; };
+const assistantLifeAlbumTalks = () => { const x = assistantLifeTalkSet(); return [...x.pair, ...x.anyTrio, ...x.trio, ...(typeof assistantLifeFurnAlbumTalks === 'function' ? assistantLifeFurnAlbumTalks() : []), ...(typeof assistantLifeRelAlbumTalks === 'function' ? assistantLifeRelAlbumTalks() : [])]; };
 // 台本の穴 {place}・{doing}・{doing_te}。いまの様子(talk.ctx)→ 台本の鍵 → していることの場所 の順で決める
 const assistantLifeFillHoles = (text, talk) => {
   const c = (talk && talk.ctx) || {};
@@ -62581,7 +62581,9 @@ const assistantLifeWatch = async (group, now = Date.now()) => {
   const key = assistantLifeGroupKey(group);
   if ((life.watched || []).includes(key) || assistantLifeWatchLeft(ASSISTANT_LIFE_STORE.state.play, day) <= 0) return null;
   // 様子に合う台本(段階3)。無ければ今までの選び方
-  const talk = assistantLifePickGroupTalk(group, ASSISTANT_PEER_STORE.state, life) || assistantLifePickWatchTalk(group, ASSISTANT_PEER_STORE.state);
+  // 段階C ❷A: 部屋で遊びに来た助手と家具の掛け合いがあれば、それを先に流す(見守る1回に数える・アルバムと今日あったことに残る)
+  const furnVisit = group.place === 'home' && typeof assistantLifeFurnVisitOf === 'function' && typeof assistantLifeHostOf === 'function' ? assistantLifeFurnVisitOf(assistantLifeHostOf(group.ids), group.ids) : null;
+  const talk = furnVisit || assistantLifePickGroupTalk(group, ASSISTANT_PEER_STORE.state, life) || assistantLifePickWatchTalk(group, ASSISTANT_PEER_STORE.state);
   if (!talk) return null;
   const p = assistantLifePlayForDay(ASSISTANT_LIFE_STORE.state.play, day);
   ASSISTANT_LIFE_STORE.set({ life: { ...life, watched: [...(life.watched || []), key] }, play: { ...p, counts: { ...(p.counts || {}), watch: ((p.counts && p.counts.watch) || 0) + 1 } } });
@@ -63416,6 +63418,13 @@ const assistantLifeRoomsOf = (life, metIds) => {
       if (host === id) {
         const lonely = w.reason === 'lonely';
         rooms[id] = { in: [host, ...ids.filter(x => x !== host)], lonely, sleep: w.doing === 'sleep', bub: w.doing === 'sleep' ? ['💤 おやすみ中'] : lonely ? ['💭 だれか', '来ないかな…'] : ids.length > 1 ? ['部屋で', `${ids.length}人で`, doing.label] : ['部屋で', doing.label] };
+        // 段階C(2026-11-08 社長 ❶A ❷A): 好きな家具を置いた部屋にひとりでいるときは家具の吹き出し/遊びに来た助手と家具の掛け合いがあれば「◯◯の話をしてる」
+        if (w.doing !== 'sleep' && !lonely) {
+          const visit = ids.length > 1 && typeof assistantLifeFurnVisitOf === 'function' ? assistantLifeFurnVisitOf(host, ids) : null;
+          const use = ids.length === 1 && typeof assistantLifeFurnUseBub === 'function' ? assistantLifeFurnUseBub(host) : null;
+          if (visit) rooms[id] = { ...rooms[id], bub: assistantLifeFurnVisitBub(visit) || rooms[id].bub, furnVisit: visit.id };
+          else if (use) rooms[id] = { ...rooms[id], bub: use.bub, furnUse: use.key };
+        }
       } else rooms[id] = { tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)] };
       continue;
     }
@@ -63555,15 +63564,68 @@ const assistantLifeStandBox = (src) => new Promise((res) => {
   im.onerror = () => { ASSISTANT_LIFE_STAND_BOX.set(src, null); res(null); };
   im.src = src;
 });
-function AssistantLifeStand({ pid, src, cx, fig, sleep }) {
-  const [box, setBox] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.get(src) || null);
-  React.useEffect(() => { let alive = true; assistantLifeStandBox(src).then(b => { if (alive) setBox(b); }); return () => { alive = false; }; }, [src]);
-  const filter = sleep ? 'brightness(.45) saturate(.6) drop-shadow(0 6px 12px #0008)' : undefined;
-  if (!box) return <img className="st" data-assistant-life-scene-stand={pid} data-assistant-life-scene-sleep={sleep ? '1' : '0'} src={src} alt="" style={{ left: `${cx}%`, transform: 'translateX(-50%)', height: '58%', width: '70%', bottom: 'max(22%, 150px)', opacity: 0, filter }}/>;
-  const span = Math.max(0.2, box.b - box.t);
-  const h = fig / span; // 場面の高さに対する絵の高さ
-  return <img className="st" data-assistant-life-scene-stand={pid} data-assistant-life-scene-sleep={sleep ? '1' : '0'} data-assistant-life-scene-fig={fig} src={src} alt=""
-    style={{ left: `${cx}%`, height: `${(h * 100).toFixed(2)}%`, width: 'auto', maxWidth: 'none', bottom: `calc(max(22%, 150px) - ${((1 - box.b) * h * 100).toFixed(2)}%)`, transform: `translateX(-${(((box.l + box.r) / 2) * 100).toFixed(1)}%)`, objectFit: 'fill', filter }}/>;
+// 立ち絵の見た目の大きさをそろえる(2026-11-08 社長「立ち絵サイズのバランスや配置の仕方があんまりよくない」「実際の見た目ではかって」)
+//   8人の絵は全身ではなく上半身で、どこで切れているかが絵ごとに違う。透けていない画素の範囲(見えている体)の中で、目と顎の高さを測った表
+//   (docs/progress/assistant-peer/gifts/stagec/STAND-MEASURE.md)。「目から顎まで」を全員同じ長さにして、頭の大きさをそろえる
+//   eye・chin … 見えている体の上を0・下を1とした目・顎の高さ / head … 顔だけの絵(ドラ)。頭ひとつぶんの大きさで床に置く
+const ASSISTANT_LIFE_STAND_FACE = Object.freeze({
+  mua: { eye: 0.34, chin: 0.46 }, kiki: { eye: 0.46, chin: 0.58 }, momosuke: { eye: 0.44, chin: 0.55 }, dra: { head: true },
+  atsu: { eye: 0.29, chin: 0.43 }, kyuko: { eye: 0.33, chin: 0.47 }, sorashido: { eye: 0.31, chin: 0.47 }, erubin: { eye: 0.31, chin: 0.47 },
+});
+// 着替えなど表に無い絵は、8人のふつうの形で見る
+const assistantLifeStandFace = (pid, src) => {
+  const who = typeof assistantById === 'function' ? assistantById(pid) : null;
+  const own = who && who.imagePrefix && String(src || '').includes(`/${who.imagePrefix}_`);
+  return (own && ASSISTANT_LIFE_STAND_FACE[pid]) || { eye: 0.33, chin: 0.47 };
+};
+// 場面の大きさ(W×H px)と、並ぶ人の絵の見えている範囲から、1人ずつの置き場所を決める(px)
+//   ・目から顎までの長さ F を全員同じに。F は人数で決める高さの割合と、1人の見えている幅が受け持ちの幅を大きく超えない長さの小さいほう
+//   ・体の下端を床の線にそろえる(上半身で切れている絵が宙に浮かない。背丈の差はそのまま出る)
+const assistantLifeStandLayout = (items, W, H) => {
+  const n = items.length;
+  if (!n || !W || !H || items.some(x => !x.box)) return null;
+  const floor = H - Math.max(H * 0.22, Math.min(150, H * 0.3));
+  const sw = (W * 0.92) / n;
+  const fh = H * ({ 1: 0.085, 2: 0.075, 3: 0.064, 4: 0.055 }[Math.min(4, n)]);
+  const visH = (x, F) => (x.face.head ? F * 2.4 : F / (x.face.chin - x.face.eye));
+  const visW = (x, F) => visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
+  let F = fh;
+  for (const x of items) { const w1 = visW(x, 1); if (w1 > 0) F = Math.min(F, (sw * 1.08) / w1); }
+  return items.map((x, i) => {
+    const vh = visH(x, F), ih = vh / (x.box.b - x.box.t), iw = ih * x.box.ar;
+    const visTop = floor - vh;
+    const cx = W * 0.04 + sw * (i + 0.5);
+    return { top: visTop - x.box.t * ih, height: ih, left: cx - ((x.box.l + x.box.r) / 2) * iw, width: iw, cx, face: F, visTop, visBottom: visTop + vh };
+  });
+};
+function AssistantLifeStands({ ids, sleepIds = [] }) {
+  const ref = React.useRef(null);
+  const [size, setSize] = React.useState({ w: 0, h: 0 });
+  const srcs = ids.map(pid => { const who = assistantById(pid); return who ? assistantFullImage(who, sleepIds.includes(pid) ? 'normal' : 'happy') : null; });
+  const [boxes, setBoxes] = React.useState(() => srcs.map(s => (s ? ASSISTANT_LIFE_STAND_BOX.get(s) || null : null)));
+  const key = srcs.join('|');
+  React.useEffect(() => { let alive = true; Promise.all(srcs.map(s => (s ? assistantLifeStandBox(s) : Promise.resolve(null)))).then(b => { if (alive) setBoxes(b); }); return () => { alive = false; }; }, [key]);
+  React.useLayoutEffect(() => {
+    const el = ref.current && ref.current.parentElement;
+    if (!el) return undefined;
+    const f = () => setSize(prev => (prev.w === el.clientWidth && prev.h === el.clientHeight ? prev : { w: el.clientWidth, h: el.clientHeight }));
+    f();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(f) : null;
+    if (ro) ro.observe(el); else window.addEventListener('resize', f);
+    return () => { if (ro) ro.disconnect(); else window.removeEventListener('resize', f); };
+  }, []);
+  const items = ids.map((pid, i) => ({ pid, src: srcs[i], box: boxes[i], face: assistantLifeStandFace(pid, srcs[i]) })).filter(x => x.src);
+  const lay = assistantLifeStandLayout(items, size.w, size.h);
+  return (<><span ref={ref} hidden/>{items.map((x, i) => {
+    const zz = sleepIds.includes(x.pid);
+    const filter = zz ? 'brightness(.45) saturate(.6) drop-shadow(0 6px 12px #0008)' : undefined;
+    const p = lay && lay[i];
+    return (<React.Fragment key={x.pid}>
+      <img className="st" data-assistant-life-scene-stand={x.pid} data-assistant-life-scene-sleep={zz ? '1' : '0'} src={x.src} alt=""
+        data-assistant-life-scene-face={p ? Math.round(p.face) : ''} data-assistant-life-scene-vis={p ? `${Math.round(p.visTop)},${Math.round(p.visBottom)}` : ''}
+        style={p ? { left: p.left, top: p.top, height: p.height, width: p.width, maxWidth: 'none', bottom: 'auto', objectFit: 'fill', filter } : { opacity: 0, height: '50%', filter }}/>
+      {zz && p && <span className="absolute text-[34px]" style={{ left: p.cx + 20, top: Math.max(40, p.visTop) }} aria-hidden="true">💤</span>}
+    </React.Fragment>); })}</>);
 }
 
 // 場面(見守る・ようすを見る・渡す の掛け合いを、その場所の背景と立ち絵で流す)
@@ -63605,10 +63667,7 @@ function AssistantLifeScene({ scene, look, onClose, onGive, canGive }) {
         : <div className="absolute inset-0" style={{ background: ASSISTANT_LIFE_TINT[bg.tint] }}/>)}
       {!bg && look === 'night' && <div className="absolute inset-0" style={{ background: 'rgba(10,15,50,.35)' }}/>}
       <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg,transparent 45%,rgba(10,6,30,.7) 85%)' }}/>
-      {ids.map((pid, i) => { const who = assistantById(pid); if (!who) return null; const n = ids.length; const cx = n === 1 ? 50 : n === 2 ? (i ? 66 : 34) : n === 3 ? [22, 50, 78][i] : [16, 38, 62, 84][i];
-        const zz = (scene.sleep || []).includes(pid);
-        return <React.Fragment key={pid}><AssistantLifeStand pid={pid} src={assistantFullImage(who, zz ? 'normal' : 'happy')} cx={cx} fig={n >= 4 ? 0.28 : n === 3 ? 0.32 : n === 2 ? 0.36 : 0.4} sleep={zz}/>
-          {zz && <span className="absolute text-[34px]" style={{ left: `${cx + 8}%`, top: '30%' }} aria-hidden="true">💤</span>}</React.Fragment>; })}
+      <AssistantLifeStands ids={ids} sleepIds={scene.sleep || []}/>
       <div className="mhl-hdr absolute inset-x-0 top-0" style={{ paddingTop: 'calc(8px + env(safe-area-inset-top))' }}>
         <div className="flex items-start gap-2">
           <button type="button" data-assistant-life-scene-back onClick={() => { if (peer && peer.talking && typeof ASSISTANT_PEER_STORE !== 'undefined') ASSISTANT_PEER_STORE.set({ stopTalkAt: Date.now() }); onClose(); }} aria-label="家へ戻る" className="h-9 w-9 text-[18px] text-slate-100">←</button>
@@ -65666,6 +65725,48 @@ const assistantLifeFurnMove = async (who, key, toPut) => {
   if (next) assistantLifeRoomSave(next);
   return !!next;
 };
+
+// ---------- 段階C: 好きな家具を使う吹き出し・遊びに来た助手が家具に触れる(2026-11-08 社長 ❶A ❷A・docs/progress/assistant-peer/gifts/STAGE-C-PLAN.md) ----------
+// 台詞はツムギ(assistants.js の ASSISTANT_LIFE_FURNUSE_LINES・ASSISTANT_LIFE_VISITFURN_LINES)。保存は増やさない(部屋に置いてある家具を見るだけ)
+const ASSISTANT_LIFE_FURN_SHORT = Object.freeze({ sofa: 'ソファ', bear: 'くま', plant: '植物', record: 'レコード', nyacushion: 'クッション', starpic: '星空の絵',
+  trophy: 'トロフィー', bookshelf: '本棚', heartmirror: '鏡', lantern: 'ランタン', mirrorball: 'ミラーボール', windbell: '風鈴' });
+const assistantLifeFurnPlaced = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => Object.values(assistantLifeRoomOf(who, st).put).filter(Boolean);
+// 吹き出しは2行に分ける(言葉の区切り「で・を・に・の・が・と・、」のうち、真ん中にいちばん近い所で)
+const assistantLifeBubSplit = (text) => {
+  const t = String(text || '');
+  if (t.length <= 8) return [t];
+  let best = -1;
+  for (let i = 2; i < t.length - 1; i++) if ('でをにのがと、'.includes(t[i - 1]) && (best < 0 || Math.abs(i - t.length / 2) < Math.abs(best - t.length / 2))) best = i;
+  const at = best > 0 ? best : Math.ceil(t.length / 2);
+  return [t.slice(0, at), t.slice(at)];
+};
+// ❶A: 好きな家具が部屋に置いてあれば、ひとりで部屋にいるあいだはいつもこの吹き出し(家具の絵文字+ひとこと)。無ければ null
+const assistantLifeFurnUseBub = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  if (!assistantLifeFurnEnabled()) return null;
+  const lines = typeof ASSISTANT_LIFE_FURNUSE_LINES !== 'undefined' ? ASSISTANT_LIFE_FURNUSE_LINES[who] : null;
+  if (!lines) return null;
+  const key = assistantLifeFurnPlaced(who, st).find(k => lines[k] && assistantLifeFurnLike(who, k) === 'like');
+  if (!key) return null;
+  const f = assistantLifeFurnOf(key);
+  const [a, b] = assistantLifeBubSplit(lines[key]);
+  return { key, bub: [`${f ? f.emoji : ''} ${a}`, ...(b ? [b] : [])] };
+};
+// ❷A: 部屋の主(host)の部屋に、台詞のある相手(guest)がいて、その家具が置いてあるときの掛け合い。ids … 部屋にいる助手
+const assistantLifeFurnVisitOf = (host, ids, st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  if (!assistantLifeFurnEnabled() || !Array.isArray(ids) || ids.length < 2) return null;
+  const all = typeof ASSISTANT_LIFE_VISITFURN_LINES !== 'undefined' && Array.isArray(ASSISTANT_LIFE_VISITFURN_LINES) ? ASSISTANT_LIFE_VISITFURN_LINES : [];
+  const placed = assistantLifeFurnPlaced(host, st);
+  const v = all.find(x => x.host === host && x.guest !== host && ids.includes(x.guest) && placed.includes(x.item));
+  return v ? assistantLifeFurnVisitTalk(v) : null;
+};
+const assistantLifeFurnVisitTalk = (v) => ({ id: `visitfurn-${v.guest}-${v.host}-${v.item}`, pair: [v.guest, v.host], lv: 1, scene: 'any', furnVisit: v.item,
+  lines: v.lines.map(x => ({ who: x.who, e: x.e || 'happy', t: x.t })) });
+const assistantLifeFurnVisitBub = (talk) => {
+  const k = talk && talk.furnVisit, f = k && assistantLifeFurnOf(k);
+  return f ? [`${f.emoji} ${ASSISTANT_LIFE_FURN_SHORT[k] || f.name}の話を`, 'してる'] : null;
+};
+// 思い出アルバムに並べる掛け合い(家具が開いているときだけ。見たものはアルバムの記録に入る)
+const assistantLifeFurnAlbumTalks = () => (assistantLifeFurnEnabled() && typeof ASSISTANT_LIFE_VISITFURN_LINES !== 'undefined' && Array.isArray(ASSISTANT_LIFE_VISITFURN_LINES) ? ASSISTANT_LIFE_VISITFURN_LINES.map(assistantLifeFurnVisitTalk) : []);
 
 // 部屋の絵に置いた家具を出す(印が偽なら何も出さない)。z-index は 2(灯りを消した膜・キズナの扉・顔・吹き出しより後ろ)
 // faces … いま部屋にいる顔の数 / baseCount … もとからある家具(左下の絵文字)の数。床の家具は、もとの家具と顔のあいだに入れる。

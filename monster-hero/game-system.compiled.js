@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c480ff3688b37685
+// source-sha256: d7fce68107002fac
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -104310,7 +104310,7 @@ const assistantLifeTalkSet = () => {
 const assistantLifeQuarrelTalks = () => [...assistantLifeTalkSet().quarrel, ...(typeof assistantLifeRelQuarrelTalks === 'function' ? assistantLifeRelQuarrelTalks() : [])];
 const assistantLifeAlbumTalks = () => {
   const x = assistantLifeTalkSet();
-  return [...x.pair, ...x.anyTrio, ...x.trio, ...(typeof assistantLifeRelAlbumTalks === 'function' ? assistantLifeRelAlbumTalks() : [])];
+  return [...x.pair, ...x.anyTrio, ...x.trio, ...(typeof assistantLifeFurnAlbumTalks === 'function' ? assistantLifeFurnAlbumTalks() : []), ...(typeof assistantLifeRelAlbumTalks === 'function' ? assistantLifeRelAlbumTalks() : [])];
 };
 const assistantLifeFillHoles = (text, talk) => {
   const c = talk && talk.ctx || {};
@@ -104717,7 +104717,8 @@ const assistantLifeWatch = async (group, now = Date.now()) => {
   const life = ASSISTANT_LIFE_STORE.state.life;
   const key = assistantLifeGroupKey(group);
   if ((life.watched || []).includes(key) || assistantLifeWatchLeft(ASSISTANT_LIFE_STORE.state.play, day) <= 0) return null;
-  const talk = assistantLifePickGroupTalk(group, ASSISTANT_PEER_STORE.state, life) || assistantLifePickWatchTalk(group, ASSISTANT_PEER_STORE.state);
+  const furnVisit = group.place === 'home' && typeof assistantLifeFurnVisitOf === 'function' && typeof assistantLifeHostOf === 'function' ? assistantLifeFurnVisitOf(assistantLifeHostOf(group.ids), group.ids) : null;
+  const talk = furnVisit || assistantLifePickGroupTalk(group, ASSISTANT_PEER_STORE.state, life) || assistantLifePickWatchTalk(group, ASSISTANT_PEER_STORE.state);
   if (!talk) return null;
   const p = assistantLifePlayForDay(ASSISTANT_LIFE_STORE.state.play, day);
   ASSISTANT_LIFE_STORE.set({
@@ -107029,6 +107030,19 @@ const assistantLifeRoomsOf = (life, metIds) => {
           sleep: w.doing === 'sleep',
           bub: w.doing === 'sleep' ? ['💤 おやすみ中'] : lonely ? ['💭 だれか', '来ないかな…'] : ids.length > 1 ? ['部屋で', `${ids.length}人で`, doing.label] : ['部屋で', doing.label]
         };
+        if (w.doing !== 'sleep' && !lonely) {
+          const visit = ids.length > 1 && typeof assistantLifeFurnVisitOf === 'function' ? assistantLifeFurnVisitOf(host, ids) : null;
+          const use = ids.length === 1 && typeof assistantLifeFurnUseBub === 'function' ? assistantLifeFurnUseBub(host) : null;
+          if (visit) rooms[id] = {
+            ...rooms[id],
+            bub: assistantLifeFurnVisitBub(visit) || rooms[id].bub,
+            furnVisit: visit.id
+          };else if (use) rooms[id] = {
+            ...rooms[id],
+            bub: use.bub,
+            furnUse: use.key
+          };
+        }
       } else rooms[id] = {
         tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)]
       };
@@ -107389,60 +107403,168 @@ const assistantLifeStandBox = src => new Promise(res => {
   };
   im.src = src;
 });
-function AssistantLifeStand({
-  pid,
-  src,
-  cx,
-  fig,
-  sleep
+const ASSISTANT_LIFE_STAND_FACE = Object.freeze({
+  mua: {
+    eye: 0.34,
+    chin: 0.46
+  },
+  kiki: {
+    eye: 0.46,
+    chin: 0.58
+  },
+  momosuke: {
+    eye: 0.44,
+    chin: 0.55
+  },
+  dra: {
+    head: true
+  },
+  atsu: {
+    eye: 0.29,
+    chin: 0.43
+  },
+  kyuko: {
+    eye: 0.33,
+    chin: 0.47
+  },
+  sorashido: {
+    eye: 0.31,
+    chin: 0.47
+  },
+  erubin: {
+    eye: 0.31,
+    chin: 0.47
+  }
+});
+const assistantLifeStandFace = (pid, src) => {
+  const who = typeof assistantById === 'function' ? assistantById(pid) : null;
+  const own = who && who.imagePrefix && String(src || '').includes(`/${who.imagePrefix}_`);
+  return own && ASSISTANT_LIFE_STAND_FACE[pid] || {
+    eye: 0.33,
+    chin: 0.47
+  };
+};
+const assistantLifeStandLayout = (items, W, H) => {
+  const n = items.length;
+  if (!n || !W || !H || items.some(x => !x.box)) return null;
+  const floor = H - Math.max(H * 0.22, Math.min(150, H * 0.3));
+  const sw = W * 0.92 / n;
+  const fh = H * {
+    1: 0.085,
+    2: 0.075,
+    3: 0.064,
+    4: 0.055
+  }[Math.min(4, n)];
+  const visH = (x, F) => x.face.head ? F * 2.4 : F / (x.face.chin - x.face.eye);
+  const visW = (x, F) => visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
+  let F = fh;
+  for (const x of items) {
+    const w1 = visW(x, 1);
+    if (w1 > 0) F = Math.min(F, sw * 1.08 / w1);
+  }
+  return items.map((x, i) => {
+    const vh = visH(x, F),
+      ih = vh / (x.box.b - x.box.t),
+      iw = ih * x.box.ar;
+    const visTop = floor - vh;
+    const cx = W * 0.04 + sw * (i + 0.5);
+    return {
+      top: visTop - x.box.t * ih,
+      height: ih,
+      left: cx - (x.box.l + x.box.r) / 2 * iw,
+      width: iw,
+      cx,
+      face: F,
+      visTop,
+      visBottom: visTop + vh
+    };
+  });
+};
+function AssistantLifeStands({
+  ids,
+  sleepIds = []
 }) {
-  const [box, setBox] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.get(src) || null);
+  const ref = React.useRef(null);
+  const [size, setSize] = React.useState({
+    w: 0,
+    h: 0
+  });
+  const srcs = ids.map(pid => {
+    const who = assistantById(pid);
+    return who ? assistantFullImage(who, sleepIds.includes(pid) ? 'normal' : 'happy') : null;
+  });
+  const [boxes, setBoxes] = React.useState(() => srcs.map(s => s ? ASSISTANT_LIFE_STAND_BOX.get(s) || null : null));
+  const key = srcs.join('|');
   React.useEffect(() => {
     let alive = true;
-    assistantLifeStandBox(src).then(b => {
-      if (alive) setBox(b);
+    Promise.all(srcs.map(s => s ? assistantLifeStandBox(s) : Promise.resolve(null))).then(b => {
+      if (alive) setBoxes(b);
     });
     return () => {
       alive = false;
     };
-  }, [src]);
-  const filter = sleep ? 'brightness(.45) saturate(.6) drop-shadow(0 6px 12px #0008)' : undefined;
-  if (!box) return React.createElement("img", {
-    className: "st",
-    "data-assistant-life-scene-stand": pid,
-    "data-assistant-life-scene-sleep": sleep ? '1' : '0',
-    src: src,
-    alt: "",
-    style: {
-      left: `${cx}%`,
-      transform: 'translateX(-50%)',
-      height: '58%',
-      width: '70%',
-      bottom: 'max(22%, 150px)',
-      opacity: 0,
-      filter
-    }
-  });
-  const span = Math.max(0.2, box.b - box.t);
-  const h = fig / span;
-  return React.createElement("img", {
-    className: "st",
-    "data-assistant-life-scene-stand": pid,
-    "data-assistant-life-scene-sleep": sleep ? '1' : '0',
-    "data-assistant-life-scene-fig": fig,
-    src: src,
-    alt: "",
-    style: {
-      left: `${cx}%`,
-      height: `${(h * 100).toFixed(2)}%`,
-      width: 'auto',
-      maxWidth: 'none',
-      bottom: `calc(max(22%, 150px) - ${((1 - box.b) * h * 100).toFixed(2)}%)`,
-      transform: `translateX(-${((box.l + box.r) / 2 * 100).toFixed(1)}%)`,
-      objectFit: 'fill',
-      filter
-    }
-  });
+  }, [key]);
+  React.useLayoutEffect(() => {
+    const el = ref.current && ref.current.parentElement;
+    if (!el) return undefined;
+    const f = () => setSize(prev => prev.w === el.clientWidth && prev.h === el.clientHeight ? prev : {
+      w: el.clientWidth,
+      h: el.clientHeight
+    });
+    f();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(f) : null;
+    if (ro) ro.observe(el);else window.addEventListener('resize', f);
+    return () => {
+      if (ro) ro.disconnect();else window.removeEventListener('resize', f);
+    };
+  }, []);
+  const items = ids.map((pid, i) => ({
+    pid,
+    src: srcs[i],
+    box: boxes[i],
+    face: assistantLifeStandFace(pid, srcs[i])
+  })).filter(x => x.src);
+  const lay = assistantLifeStandLayout(items, size.w, size.h);
+  return React.createElement(React.Fragment, null, React.createElement("span", {
+    ref: ref,
+    hidden: true
+  }), items.map((x, i) => {
+    const zz = sleepIds.includes(x.pid);
+    const filter = zz ? 'brightness(.45) saturate(.6) drop-shadow(0 6px 12px #0008)' : undefined;
+    const p = lay && lay[i];
+    return React.createElement(React.Fragment, {
+      key: x.pid
+    }, React.createElement("img", {
+      className: "st",
+      "data-assistant-life-scene-stand": x.pid,
+      "data-assistant-life-scene-sleep": zz ? '1' : '0',
+      src: x.src,
+      alt: "",
+      "data-assistant-life-scene-face": p ? Math.round(p.face) : '',
+      "data-assistant-life-scene-vis": p ? `${Math.round(p.visTop)},${Math.round(p.visBottom)}` : '',
+      style: p ? {
+        left: p.left,
+        top: p.top,
+        height: p.height,
+        width: p.width,
+        maxWidth: 'none',
+        bottom: 'auto',
+        objectFit: 'fill',
+        filter
+      } : {
+        opacity: 0,
+        height: '50%',
+        filter
+      }
+    }), zz && p && React.createElement("span", {
+      className: "absolute text-[34px]",
+      style: {
+        left: p.cx + 20,
+        top: Math.max(40, p.visTop)
+      },
+      "aria-hidden": "true"
+    }, "💤"));
+  }));
 }
 const assistantLifeSceneBg = (place, look) => {
   const v = ASSISTANT_LIFE_VIEW[look];
@@ -107548,28 +107670,9 @@ function AssistantLifeScene({
     style: {
       background: 'linear-gradient(180deg,transparent 45%,rgba(10,6,30,.7) 85%)'
     }
-  }), ids.map((pid, i) => {
-    const who = assistantById(pid);
-    if (!who) return null;
-    const n = ids.length;
-    const cx = n === 1 ? 50 : n === 2 ? i ? 66 : 34 : n === 3 ? [22, 50, 78][i] : [16, 38, 62, 84][i];
-    const zz = (scene.sleep || []).includes(pid);
-    return React.createElement(React.Fragment, {
-      key: pid
-    }, React.createElement(AssistantLifeStand, {
-      pid: pid,
-      src: assistantFullImage(who, zz ? 'normal' : 'happy'),
-      cx: cx,
-      fig: n >= 4 ? 0.28 : n === 3 ? 0.32 : n === 2 ? 0.36 : 0.4,
-      sleep: zz
-    }), zz && React.createElement("span", {
-      className: "absolute text-[34px]",
-      style: {
-        left: `${cx + 8}%`,
-        top: '30%'
-      },
-      "aria-hidden": "true"
-    }, "💤"));
+  }), React.createElement(AssistantLifeStands, {
+    ids: ids,
+    sleepIds: scene.sleep || []
   }), React.createElement("div", {
     className: "mhl-hdr absolute inset-x-0 top-0",
     style: {
@@ -122145,6 +122248,67 @@ const assistantLifeFurnMove = async (who, key, toPut) => {
   if (next) assistantLifeRoomSave(next);
   return !!next;
 };
+const ASSISTANT_LIFE_FURN_SHORT = Object.freeze({
+  sofa: 'ソファ',
+  bear: 'くま',
+  plant: '植物',
+  record: 'レコード',
+  nyacushion: 'クッション',
+  starpic: '星空の絵',
+  trophy: 'トロフィー',
+  bookshelf: '本棚',
+  heartmirror: '鏡',
+  lantern: 'ランタン',
+  mirrorball: 'ミラーボール',
+  windbell: '風鈴'
+});
+const assistantLifeFurnPlaced = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => Object.values(assistantLifeRoomOf(who, st).put).filter(Boolean);
+const assistantLifeBubSplit = text => {
+  const t = String(text || '');
+  if (t.length <= 8) return [t];
+  let best = -1;
+  for (let i = 2; i < t.length - 1; i++) if ('でをにのがと、'.includes(t[i - 1]) && (best < 0 || Math.abs(i - t.length / 2) < Math.abs(best - t.length / 2))) best = i;
+  const at = best > 0 ? best : Math.ceil(t.length / 2);
+  return [t.slice(0, at), t.slice(at)];
+};
+const assistantLifeFurnUseBub = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  if (!assistantLifeFurnEnabled()) return null;
+  const lines = typeof ASSISTANT_LIFE_FURNUSE_LINES !== 'undefined' ? ASSISTANT_LIFE_FURNUSE_LINES[who] : null;
+  if (!lines) return null;
+  const key = assistantLifeFurnPlaced(who, st).find(k => lines[k] && assistantLifeFurnLike(who, k) === 'like');
+  if (!key) return null;
+  const f = assistantLifeFurnOf(key);
+  const [a, b] = assistantLifeBubSplit(lines[key]);
+  return {
+    key,
+    bub: [`${f ? f.emoji : ''} ${a}`, ...(b ? [b] : [])]
+  };
+};
+const assistantLifeFurnVisitOf = (host, ids, st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  if (!assistantLifeFurnEnabled() || !Array.isArray(ids) || ids.length < 2) return null;
+  const all = typeof ASSISTANT_LIFE_VISITFURN_LINES !== 'undefined' && Array.isArray(ASSISTANT_LIFE_VISITFURN_LINES) ? ASSISTANT_LIFE_VISITFURN_LINES : [];
+  const placed = assistantLifeFurnPlaced(host, st);
+  const v = all.find(x => x.host === host && x.guest !== host && ids.includes(x.guest) && placed.includes(x.item));
+  return v ? assistantLifeFurnVisitTalk(v) : null;
+};
+const assistantLifeFurnVisitTalk = v => ({
+  id: `visitfurn-${v.guest}-${v.host}-${v.item}`,
+  pair: [v.guest, v.host],
+  lv: 1,
+  scene: 'any',
+  furnVisit: v.item,
+  lines: v.lines.map(x => ({
+    who: x.who,
+    e: x.e || 'happy',
+    t: x.t
+  }))
+});
+const assistantLifeFurnVisitBub = talk => {
+  const k = talk && talk.furnVisit,
+    f = k && assistantLifeFurnOf(k);
+  return f ? [`${f.emoji} ${ASSISTANT_LIFE_FURN_SHORT[k] || f.name}の話を`, 'してる'] : null;
+};
+const assistantLifeFurnAlbumTalks = () => assistantLifeFurnEnabled() && typeof ASSISTANT_LIFE_VISITFURN_LINES !== 'undefined' && Array.isArray(ASSISTANT_LIFE_VISITFURN_LINES) ? ASSISTANT_LIFE_VISITFURN_LINES.map(assistantLifeFurnVisitTalk) : [];
 function AssistantLifeRoomFurn({
   id,
   w,
