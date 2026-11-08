@@ -11,7 +11,7 @@
 //   ② 窓の文が、縦にも横にも切れない(窓が画面に収まる)
 //   ③ 「試合を終える」で、2台ともマルチの入口へ戻る・抜けた罰(mh_card_pvp_penalty_v1)が付かない
 //   ④ ビートP・強さの点数・マルチの履歴・見返し・ミッションが、どれも増えも減りもしない(端末の保存が変わらない・点数へ何も送らない)
-//   ⑤ 古い版の相手(void を知らない): はねた側には窓が出て、入口へ戻れる・罰は付かない
+//   ⑤ 古い版の相手(void を知らない): はねた側には窓が出て、窓のあいだは場が動かない・入口へ戻れる・罰は付かない
 //   ⑥ 実行時エラーが無い
 const http = require('http'), path = require('path'), fs = require('fs');
 const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
@@ -220,7 +220,11 @@ const LOOSE = /^mh_(last_|session|bgm|screen|seen_at|app_|boot|play_time|login|c
     await play(A, B);
     await A.evaluate(() => { window.__mhCardPvpDesyncTest = true; });
     const seenA2 = await A.locator('[data-card-pvp-void]').waitFor({ timeout: 60000 }).then(() => true).catch(() => false);
-    await A.waitForTimeout(4000);
+    // 窓のあいだは場が動かない(検査の自動の手も止まる。2026-11-08: 自動の手が窓の後ろで打ち続けて決着し、ふつうの終わりの処理でミッションが数えられることがあった)
+    const board = () => A.evaluate(() => { const b = document.querySelector('[data-card-battle]'); return b ? b.innerText.replace(/\d+秒/g, '') : ''; });
+    const boardBefore = await board();
+    await A.waitForTimeout(6000);
+    check('⑤ 窓のあいだは、はねた側の場が動かない', boardBefore && boardBefore === await board());
     const seenB2 = await B.locator('[data-card-pvp-void]').count();
     check('⑤ 古い版の相手でも、はねた側には窓が出る(相手は void を捨てるので窓は出ない)', seenA2 && seenB2 === 0, `${seenA2} / ${seenB2}`);
     await A.locator('[data-card-pvp-void-exit]').click().catch(() => {});

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2e96a67453b50b13
+// source-sha256: 48b84fdb1b55faa7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -142224,7 +142224,7 @@ const CardBattleScreen = ({
         setView(back);
         return;
       }
-      if (outcome === 'void' && game.pvp) {
+      if (game.pvp && (outcome === 'void' || CARD_PVP.get().phase === 'void')) {
         const wasCup = !!CARD_PVP.get().cup;
         CARD_PVP.leave();
         onBgm && onBgm(cardBgmOf(save.bgm.top));
@@ -152525,7 +152525,7 @@ const CardPvpLobby = ({
   }, "部屋を出る")));
 };
 const useCardPvpAuto = (db, pvp, st, step, paused) => useEffect(() => {
-  if (!pvp || paused || typeof window === 'undefined' || !window.__mhCardPvpAuto || st.winner !== null || cardPvpDecider(st) !== 0) return undefined;
+  if (!pvp || paused || typeof window === 'undefined' || !window.__mhCardPvpAuto || st.winner !== null || cardPvpDecider(st) !== 0 || CARD_PVP.get().phase !== 'playing') return undefined;
   const t = setTimeout(() => {
     if (st.phase === 'guts' && !st.pending && Number(window.__mhCardPvpAutoBack) > 0 && step({
       type: 'backToAttack'
