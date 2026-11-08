@@ -7,6 +7,7 @@
 // 2体の枠が窓と重ならないか・はみ出さないか・台本どおりの数と pose で出ているかを、縦390・844×390・667×375で見る。
 // 公開の印 assistantSorashido はページの中でだけ立てる(本体の印は偽のまま)。
 const http = require('http'), path = require('path'), fs = require('fs');
+const { eventStorySeed } = require('../boot/quiet-boot-seed'); // お話の既読は本体から読んだ共通の種で入れる(手で書き写さない)
 const root = path.resolve(__dirname, '..', '..'), PORT = 9214;
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
@@ -41,6 +42,8 @@ const seed = ({ storyIds }) => {
     const errors = []; page.on('pageerror', e => errors.push(String(e)));
     await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
     await page.addInitScript(seed, { storyIds: STORY_IDS });
+    // お話・紹介の既読は共通の種で、手で書いた seed のあとに入れる(新しいお話が増えても先に流れない)
+    await page.addInitScript(eventStorySeed({ except: ['sorashido_join_2026_10_27'] }));
     await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     // タイトル→HOME。窓は閉じる

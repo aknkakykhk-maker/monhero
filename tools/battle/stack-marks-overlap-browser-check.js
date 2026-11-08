@@ -10,6 +10,7 @@
 //   ② タクティクスプロ: 横長の新しい枠
 // 土台(起動・始め方)は unit-detail-browser-check.js から写した。
 const { pickProParty } = require('./lib/pro-party-pick');
+const { eventStorySeed } = require('../boot/quiet-boot-seed'); // お話の既読は本体から読んだ共通の種で入れる(手で書き写さない)
 const TOOLS_DIR = require('path').join(__dirname, '..');
 const http = require('http');
 const path = require('path');
@@ -80,6 +81,8 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     // ★ランキングへは何も送らない(本番の入口でも途中で読み込み直すだけで、降参しない)
     // 通信を差し替えたので、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
     await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
+    // お話・紹介の既読は共通の種で、手で書いた seed のあとに入れる(新しいお話が増えても先に流れない)
+    await page.addInitScript(eventStorySeed());
     await page.evaluate(() => { window.__mhSupabaseStubbed = true; }).catch(() => {});
     await page.route(/supabase\.co/, (route) => route.abort());
     const boot = async () => {

@@ -346,7 +346,10 @@ const assistantChatTasteFromHint = (hint) => {
 const assistantCallnameFillLine = (line, { call, nick, name }) => String(line || '')
   .replace(/\{call\}/g, call || '').replace(/\{nick\}/g, nick || '').replace(/\{name\}/g, name || '');
 
-function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondTitle, bondTone, callnameKit = null, onExchange, onClose }) {
+// opening … 窓を開いたときに助手が先に言うひとこと(助手ライフの部屋から開いたとき・2026-11-08 社長 ❽❾)。{ text, e, card }。
+//            card があれば、そのまま確かめるカードも出す(持ちかけ)。保存する会話の記録に1行足す(台本なので API は使わない)
+// zIndex  … 助手ライフの画面(9000)の上に開くときは大きくする
+function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondTitle, bondTone, callnameKit = null, opening = null, zIndex = 9000, onExchange, onClose }) {
   const id = assistant && assistant.id;
   const [logs, setLogs] = React.useState({});
   const [memos, setMemos] = React.useState({});
@@ -371,15 +374,31 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
     return () => { alive = false; };
   }, []);
   const log = (logs[id] || []);
-  // Lv6 から、助手のほうから「なんて呼んだらいい？」と1回だけ聞く(社長 ❶)。もう決めている人には聞かない(聞いたことにする)
+  // 開いたときに助手が先に話すもの(1回だけ)。順に足してから1回で保存する(別々に足すと、あとの方が前の方を消すため)
+  //   ① 助手ライフの部屋から開いたときの最初のひとこと(寝起き・持ちかけ・呼び方の話。2026-11-08 社長 ❽❾)
+  //   ② Lv6 から、助手のほうから「なんて呼んだらいい？」と1回だけ聞く(社長 ❶)。もう決めている人には聞かない(聞いたことにする)
+  const openingDone = React.useRef(false);
   React.useEffect(() => {
-    if (!loaded || !callnameKit || callnameKit.asked || !id) return;
-    if (!(Number(bondLevel) >= ASSISTANT_CALLNAME_ASK_LEVEL)) return;
-    callnameKit.markAsk({ asked: true });
-    if (callnameKit.current || callnameKit.customStyle) return;
-    const line = assistantCallnameFillLine(assistantCallnameLine(id, 'ask'), { name: callName });
-    saveLog([...(logs[id] || []), { role: 'assistant', text: line, e: 'wink' }]);
-    setCallCard({ kind: 'ask' });
+    if (!loaded || !id || openingDone.current) return;
+    openingDone.current = true;
+    const list = [...(logs[id] || [])];
+    let card = null;
+    if (opening && opening.text) {
+      list.push({ role: 'assistant', text: opening.text, e: opening.e || 'happy' });
+      if (opening.card && callnameKit) {
+        card = opening.card;
+        if (opening.card.from === 'assistant') callnameKit.markAsk({ offeredAt: Date.now() });
+      }
+    }
+    if (callnameKit && !callnameKit.asked && !card && Number(bondLevel) >= ASSISTANT_CALLNAME_ASK_LEVEL) {
+      callnameKit.markAsk({ asked: true });
+      if (!callnameKit.current && !callnameKit.customStyle) {
+        list.push({ role: 'assistant', text: assistantCallnameFillLine(assistantCallnameLine(id, 'ask'), { name: callName }), e: 'wink' });
+        card = { kind: 'ask' };
+      }
+    }
+    if (list.length !== (logs[id] || []).length) saveLog(list);
+    if (card) setCallCard(card);
   }, [loaded, id]);
   React.useEffect(() => { const el = listRef.current; if (el) el.scrollTop = el.scrollHeight; }, [log.length, sending, callCard]);
   const lastExpression = (log.slice().reverse().find(m => m.role === 'assistant') || {}).e || 'happy';
@@ -525,7 +544,7 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
   if (!assistant) return null;
   const accent = assistant.accent || '#f472b6';
   return (
-    <div data-assistant-chat className="fixed inset-0 flex items-end sm:items-center justify-center bg-black/60 p-2" style={{ zIndex: 9000, paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }} onClick={onClose}>
+    <div data-assistant-chat className="fixed inset-0 flex items-end sm:items-center justify-center bg-black/60 p-2" style={{ zIndex, paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }} onClick={onClose}>
       <div className="w-full max-w-md max-h-[85vh] [[data-mh-view-rotation=true]_&]:max-h-[85vw] flex flex-col rounded-2xl border-2 bg-slate-950 text-slate-100 shadow-2xl" style={{ borderColor: accent }} onClick={ev => ev.stopPropagation()}>
         <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-800 shrink-0">
           <img data-assistant-chat-face={lastExpression} src={assistantFaceSrc(assistant, lastExpression)} alt="" className="h-11 w-11 rounded-full border-2 object-cover bg-slate-900" style={{ borderColor: accent }}/>

@@ -13,6 +13,7 @@
 //   ④ 実行時エラーが出ない
 // 土台(起動・始め方・1ターンの流し方)は ai-copy-invariants-browser-check.js から写した。
 const { pickProParty } = require('./lib/pro-party-pick');
+const { eventStorySeed } = require('../boot/quiet-boot-seed'); // お話の既読は本体から読んだ共通の種で入れる(手で書き写さない)
 const TOOLS_DIR = require('path').join(__dirname, '..');
 const http = require('http');
 const path = require('path');
@@ -79,6 +80,8 @@ const HERO = process.env.HERO || 'ゴーレム';
       const t = setInterval(() => { try { if (typeof RELEASE_FLAGS !== 'undefined') { RELEASE_FLAGS.assistantSorashido = true; clearInterval(t); } } catch (e) {} }, 5);
     });
     await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
+    // お話・紹介の既読は共通の種で、手で書いた seed のあとに入れる(新しいお話が増えても先に流れない)
+    await page.addInitScript(eventStorySeed());
     await page.route(/supabase\.co/, (route) => route.abort());
     await page.route(/data\/enemy-monsters\.js/, async (route) => {
       const res = await route.fetch();

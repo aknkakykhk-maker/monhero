@@ -287,6 +287,15 @@
   - オトズレ2: assistant-chat は friend_scenes が先にデプロイ → main 取り込みのあと grow_consult・grow_report(GROW-PLAN 7-(4))
   - オクリモノ: 差し入れの改名(🧺おやつバスケット)で、けんか・仲直りの更新履歴 08:33 の3行目とヘルプ「けんかと仲直り」の「差し入れ」を直してもらう約束。仲直りに使える道具は食べ物・飲み物の4つ(gift・cake・onigiri・tea)の案 → 決まったら assistantLifeRelOnGift の頭(kind !== 'gift')を直す
 - 公開済み(キズナ): けんか・仲直り #4915・間に入る28組 #4925。検査 life-rel-check・life-rel-browser-check・assistant-masmon-plan-check
+
+## キズナ2(2026-11-08〜・育つ助手を作る)
+- ① データとマスモンの画面を作った(ブランチ claude/kizuna2-grow・未公開): 部品 `56-assistant-life-masmon.jsx`。部屋のシートに「🐾 マスモン」の1行 → シート(🐾 マスモン・⚔ 編成・🃏 デッキ・💗 好き・苦手)。何も保存しない
+  - 表 ASSISTANT_MASMON_PLAN は `node tools/assistant/assistant-masmon-import.js` が masmon-plan.json から書く(手で直さない。`--check` で食い違いを見る)
+  - 口: assistantLifeCardStyle(id)(mua/kiki/atsu=attack・dra/erubin=guard・ほか normal)・assistantLifeTasteOf(id)(changed はまだ空)
+  - デッキのカードの並びは、カード部の cardAssistantDeckPreview が main に入ってからつなぐ(未定義の名前は undefined-reference-check が typeof でも落とすので、入るまで書かない)
+  - 検査・撮影: `node tools/assistant/assistant-masmon-browser-check.js [--shots]`(縦・横・🔄横から戻った。端にくっつかない・切れない・絵が出る)→ shots/masmon-*.jpg
+- 待ち: 更新履歴・ヘルプの文の「この文で」/ミハリの撮り直し/好き嫌いが変わる ❶〜❹
+- 次: ② 成長(育成場・練習スタジオ・カード部屋に行った回数で Lv。新しいキー mh_assistant_life_masmon_v1)
 - 追記(ココロ・2026-11-08): まだ main に無い関数名は typeof で確かめても undefined-reference-check に止められるので、ココロは受け口の入れ物 `ASSISTANT_CHAT_TASTE_HOOKS = { of:null, onTalk:null }` を 56-assistant-chat.jsx に置き、それ経由で呼ぶ。キズナ2は自分の部品(56-assistant-chat.jsx より後ろの parts)のトップレベルに次を足す: `if (typeof ASSISTANT_CHAT_TASTE_HOOKS === 'object' && ASSISTANT_CHAT_TASTE_HOOKS) { ASSISTANT_CHAT_TASTE_HOOKS.of = assistantLifeTasteOf; ASSISTANT_CHAT_TASTE_HOOKS.onTalk = assistantLifeTasteOnTalk; }`。ココロの PR が先に main へ入る(入ったら知らせが来る)。ほかの部(マモリ・ソランド・ジン)の口も、相手より先に名前を書けないときは同じ「入れ物」の形にそろえる
 - 追記(オトズレ2): friend_scenes のデプロイは社長の「この文で」→ main → 窓口へ知らせてから。PR 番号はキズナ2か窓口へ
 - 2026-11-08 社長の指摘3つを直した(枝 claude/assistant-life-readable)
@@ -296,3 +305,21 @@
 - 施設へ行く意味の案(A/B)を窓口へ: LIFE-FACILITY-PERKS.md。社長の選び待ち
 - 担当の分け: 道具の種類・好き嫌い・家具=オクリモノ/けんか・仲直り=キズナ(56-assistant-life-rel.jsx)
 - 二歩目の台詞はコトバ・ツムギが書いている(LIFE-STAGE2-LINES-ORDER.md)。届いたら取り込み道具に temple/shopping・visit・lure を足す
+
+### ナカヨシ7 の続き(ナカヨシ8へ・2026-11-08 11:20)
+公開済み: #4880 段階1の残り/#4883 🔄横の窓3件・吹き出し・台詞の時間帯/#4888 AssistantBubble の oneLine/#4898 段階2の一歩目(券なし・遊び場の名前)/#4982 読みやすさ・立ち絵・見出しのアイコン・地図を HOME に。どれも本番で検査済み。
+
+窓口から届いて、まだ手を付けていない仕事(急ぎの順):
+1. **助手どうしの会話の自動送りをやめる**(社長「勝手にコメントが進むのやめてほしい」): 時間で次へ進む所を全部洗い出し(HOME の特別なお話・助手ライフの場面・フレンドの家=オトズレ2・けんか=キズナ2)、設定「助手どうしの会話を自動で進める」(既定は切・新しいキーか設定に項目を足して正規化)で一括。検査とヘルプの設定の項に1行。更新履歴は不要の見込み
+2. **立ち絵の表示サイズ**(社長「表示サイズ決めて収めたほうがいい」・received/2026-11-08-library-standing-art.jpg): 場所の場面で画面の幅・高さに上限を決める。胸から上の絵は下端を画面か枠の下にそろえるか下をぼかし、四角い切れ目を見せない。部屋のシート右上の立ち絵(ソラシドの左端・下端が切れる)も。縦390・375・横・タブレット768×1024・🔄横から戻ったとき。検査「はみ出さない・下端が切れて見えない・上限を超えない」。今の場面は AssistantLifeStand(見た目の高さだけそろえている)
+3. **シートの閉じるボタン**(社長「戻るボタンがないと戻り方がわかりにくい」): 部屋のシートに ✕ か「閉じる」(家具のシートと同じ形)。助手ライフの下からのシート全部(部屋・贈る・家具・居場所・友情・道具・フレンドの家・マスモン)を洗い出してそろえ、ほかの部署にも知らせる。検査「シートはどれも閉じるボタンを持つ」
+4. **仲良し度の札の置き場所**(持ち主はナカヨシ): オクリモノの #4991(44-growth-fx.jsx の growthFxChipSpotBusy)は文字・ボタンだけを見ているので、枠(枠線・背景のある箱)も「埋まっている」に広げる(交換所の縦でみゅあの吹き出しの縁と「所持ビートP」の帯にかかる)。縦390・320・横・タブレット・🔄横で HOME・助手ライフの各タブ・おしゃべり・交換所を見る検査1本。直したらオクリモノ2・オトズレ2・ココロ・キズナ2へ知らせる
+5. 縦390の掲示板「今日あったこと」で2件目が半分切れる(ミハリ)
+6. **施設へ行く意味**(社長の選び): M/B管理=トレーニングの経験値1割増(助手がいるあいだ・1日の上限)/神殿=その助手との仲良し度が上がる(控えめ・1日の上限)/マーケット=助手のおすすめ品1つが1割引き(1日1回)。ランキングに効かない。M/B管理・神殿はジン、マーケットは持ち主とすり合わせて、公開前の文を窓口へ。二歩目と一緒に
+7. **二歩目の台詞**: コトバ 152本(lines/kotoba-stage2.txt・PR 未マージ)・ツムギ 88本(PR #4912 未マージ)。抜き出しは窓口へ送った → 社長の OK が出たらマージし、life-talks-import.js に kotoba-stage2.txt・tsumugi-stage2.txt と visit・lure・place=temple・doing=temple/shopping を足して取り込む。神殿・お買い物のしていること(ASSISTANT_LIFE_DOINGS に temple/shopping・ASSISTANT_LIFE_PLACES に temple)・好みの重み・HOME の顔(assistantLifeFacilityOf)・visit を会いに行ったときに・lure を誘いのボタンに
+8. Claude API の案(社長「活用出来そうなら使っていい」): 月の費用・Supabase Edge Function の呼び出し回数・API が止まったときの決まった文。社長の選びまで作らない
+9. キズナ2: 出かけ札を少し上へ寄せて、部屋の床に30pxほど空けられないか(マスモンの置き場所)
+10. オクリモノ: 家具屋さんを町の空いている建物に置きたい(地図は #4982 で HOME にそろえた。空いている所はほとんど無い)
+
+すり合わせの済んだもの: ココロ #5001(部屋のシートに「💬 おしゃべりする」・続きのカード)/オトズレ2 #4987(フレンドの家・アイコンの列5つ目・friend)/キズナ(56-assistant-life-rel.jsx)/オクリモノ(56-assistant-life-gifts.jsx・道具タブ)
+既知の別件: mode/rhythm-event-window-check.js が main で2件 NG(ビート部へ回した)

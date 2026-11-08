@@ -15,6 +15,7 @@
 //   ⑤ 実行時エラー(真っ白)が出ない
 // 土台(起動・始め方)は stack-marks-overlap-browser-check.js から写した。
 const { pickProParty } = require('./lib/pro-party-pick');
+const { eventStorySeed } = require('../boot/quiet-boot-seed'); // お話の既読は本体から読んだ共通の種で入れる(手で書き写さない)
 const TOOLS_DIR = require('path').join(__dirname, '..');
 const http = require('http');
 const path = require('path');
@@ -79,6 +80,8 @@ const check = (name, ok, detail = '') => {
       const t = setInterval(() => { try { if (typeof RELEASE_FLAGS !== 'undefined') { RELEASE_FLAGS.assistantSorashido = true; clearInterval(t); } } catch (e) {} }, 5);
     });
     await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
+    // お話・紹介の既読は共通の種で、手で書いた seed のあとに入れる(新しいお話が増えても先に流れない)
+    await page.addInitScript(eventStorySeed());
     // ランキングの記録を書き込む通信だけを数える(プロフィールの同期・読むだけの rpc は別物)
     await page.route(/supabase\.co/, (route) => { const r = route.request(); const u = r.url(); if (r.method() !== 'GET' && /\/rest\/v1\/[a-z_]*rank/i.test(u) && !/\/rpc\//.test(u)) posts.push(`${r.method()} ${u}`); return route.abort(); });
     await page.route(/data\/enemy-monsters\.js/, async (route) => {
