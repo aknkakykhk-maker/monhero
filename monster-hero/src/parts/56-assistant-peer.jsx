@@ -45,8 +45,47 @@ const ASSISTANT_PEER_TALK_OTHER_MAX = 3;
 const ASSISTANT_PEER_TALK_RATE = { home: 0.4, other: 0.25 };
 // 続けて流さない間(ミリ秒)
 const ASSISTANT_PEER_TALK_GAP_MS = 90 * 1000;
-// 1行を出しておく時間(タップで先へ進める)
+// 1行を出しておく時間(「自動で進める」を入れたときだけ使う。ふだんはタップで次へ)
 const ASSISTANT_PEER_LINE_MS = 3600;
+// 助手どうしの会話を自動で進めるか(2026-11-08 社長「勝手にコメントが進むのやめてほしい。設定でオフをデフォルトで」)。
+//   保存: 新しいキー mh_assistant_peer_auto_v1 = true(入)/ 無い・true 以外なら切(タップで次へ)。既存のキーは触らない
+//   HOME の掛け合い・特別なお話・助手ライフの場面・見返しは、どれも下の AssistantPeerTalk で流れるので、ここ1つで止まる
+const ASSISTANT_PEER_AUTO_KEY = 'mh_assistant_peer_auto_v1';
+const ASSISTANT_PEER_AUTO_STORE = (() => {
+  let state = { on: false, loaded: false };
+  let loading = null;
+  const listeners = new Set();
+  const emit = () => listeners.forEach((fn) => { try { fn(state); } catch (_) { /* 画面側の失敗で止めない */ } });
+  return {
+    get: () => state,
+    load() {
+      if (loading) return loading;
+      loading = (async () => {
+        let on = false;
+        try { on = (await storeGet(ASSISTANT_PEER_AUTO_KEY, false, false)) === true; } catch (_) { on = false; }
+        state = { on, loaded: true };
+        emit();
+      })();
+      return loading;
+    },
+    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+    setOn(next) {
+      state = { ...state, on: next === true, loaded: true };
+      emit();
+      try { void Promise.resolve(storeSet(ASSISTANT_PEER_AUTO_KEY, state.on)).catch(() => {}); } catch (_) { /* 保存できなくてもこの回は効く */ }
+    },
+  };
+})();
+const useAssistantPeerAuto = () => {
+  const [state, setState] = React.useState(() => ASSISTANT_PEER_AUTO_STORE.get());
+  React.useEffect(() => {
+    const off = ASSISTANT_PEER_AUTO_STORE.subscribe(setState);
+    setState(ASSISTANT_PEER_AUTO_STORE.get());
+    void ASSISTANT_PEER_AUTO_STORE.load();
+    return off;
+  }, []);
+  return state;
+};
 // 掛け合いを出す画面(gameState → 場面)
 const ASSISTANT_PEER_SCENES = Object.freeze({ HOME: 'home', BREEDER_MARKET: 'market', RHYTHM_MODE_SELECT: 'rhythm', MASU_MONS: 'masu', CARD_TOP: 'card' });
 
@@ -647,6 +686,7 @@ const assistantPeerLineText = (line, talk) => {
 // today … その日の遊び方 { battles, clears, enhances }(その日の出来事の掛け合いを選ぶのに使う)
 function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayEnd = null, today = null }) {
   const st = useAssistantPeerState();
+  const auto = useAssistantPeerAuto();
   const [cur, setCur] = React.useState(null); // { talk, special, step, phase:'lines'|'choice'|'reply', pick, replay }
   // 掛け合いが流れているあいだは、助手たちの今の帯(56-assistant-life.jsx)を隠す
   React.useEffect(() => { if (ASSISTANT_PEER_STORE.state.talking !== !!cur) ASSISTANT_PEER_STORE.set({ talking: !!cur }); }, [!!cur]);
@@ -736,11 +776,12 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
     if (c.phase === 'lines' && Array.isArray(c.talk.choice) && c.talk.choice.length) { setCur(x => x && ({ ...x, phase: 'choice' })); return; }
     finish(c);
   }, [finish]);
+  // 自動で進めるのは設定を入れたときだけ(既定は切=タップで次へ)
   React.useEffect(() => {
-    if (!cur || cur.phase === 'choice') return undefined;
+    if (!cur || cur.phase === 'choice' || !auto.on) return undefined;
     const t = setTimeout(() => advance(cur), ASSISTANT_PEER_LINE_MS + (cur.special ? 1200 : 0));
     return () => clearTimeout(t);
-  }, [cur, advance]);
+  }, [cur, advance, auto.on]);
   React.useEffect(() => { if (!toast) return undefined; const t = setTimeout(() => setToast(null), 3200); return () => clearTimeout(t); }, [toast]);
 
   const wrap = (children, attrs = {}) => (

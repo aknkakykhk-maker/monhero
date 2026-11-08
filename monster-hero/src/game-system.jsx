@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 55f4557aaa10a754
+// generated-sha256: d3f7a43afb93bd03
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -39155,6 +39155,8 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
   const [assetDownloadOpen, setAssetDownloadOpen] = useState(false);
   // 助手のひとことの出し方(21-assistant.jsx の ASSISTANT_BUBBLE_STORE。早期の return より前で読む)
   const assistantBubble = useAssistantBubbleState();
+  // 助手どうしの会話を自動で進めるか(56-assistant-peer.jsx の ASSISTANT_PEER_AUTO_STORE。既定は切)
+  const peerAuto = typeof useAssistantPeerAuto === 'function' ? useAssistantPeerAuto() : null;
   // 行動カードの見た目(71-screen-battle.jsx の BATTLE_CARD_LOOK。端末に保存する。バトル画面は開くたびに読む)
   const [battleCardLook, setBattleCardLook] = useState(() => BATTLE_CARD_LOOK.value);
   if (assetDownloadOpen) return <AssetDownloadPage onBack={() => setAssetDownloadOpen(false)}/>;
@@ -39289,6 +39291,24 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
             ))}
           </div>
         </div>
+        {/* 助手どうしの会話を自動で進める(2026-11-08 社長「勝手にコメントが進むのやめてほしい。設定でオフをデフォルトで」)。
+            HOME の掛け合い・特別なお話・助手ライフの場面・見返しが、この1つで切り替わる */}
+        {peerAuto && typeof assistantPeerEnabled === 'function' && assistantPeerEnabled() && (
+          <div data-assistant-peer-auto-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
+            <b className="block text-[13px] font-black text-slate-200">助手どうしの会話を自動で進める</b>
+            <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">助手たちの掛け合いや特別なお話、助手ライフの場面のことばの進め方です。「切」のときは、タップするまで次へ進みません。</p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {[{ on: false, label: '切', note: 'タップで次へ' }, { on: true, label: '入', note: '自動で進む' }].map(option => (
+                <button key={option.label} type="button" data-assistant-peer-auto={option.on ? 'on' : 'off'}
+                  aria-pressed={peerAuto.on === option.on}
+                  onClick={() => ASSISTANT_PEER_AUTO_STORE.setOn(option.on)}
+                  className={`flex min-h-[52px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight active:scale-95 ${peerAuto.on === option.on ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
+                  <span className="block">{option.label}</span>
+                  <small className="mt-0.5 block text-[10px] font-bold opacity-80">{option.note}</small>
+                </button>
+              ))}
+            </div>
+          </div>)}
         {/* 「タイトルへ戻る」は後戻りの大きい操作なので、区切り線でメニューから切り離す */}
         <div className="border-t border-white/10 pt-6 space-y-3">
           <div className="text-center text-[10px] font-mono text-slate-400">BUILD {BUILD_DATE}</div>
@@ -59666,8 +59686,47 @@ const ASSISTANT_PEER_TALK_OTHER_MAX = 3;
 const ASSISTANT_PEER_TALK_RATE = { home: 0.4, other: 0.25 };
 // 続けて流さない間(ミリ秒)
 const ASSISTANT_PEER_TALK_GAP_MS = 90 * 1000;
-// 1行を出しておく時間(タップで先へ進める)
+// 1行を出しておく時間(「自動で進める」を入れたときだけ使う。ふだんはタップで次へ)
 const ASSISTANT_PEER_LINE_MS = 3600;
+// 助手どうしの会話を自動で進めるか(2026-11-08 社長「勝手にコメントが進むのやめてほしい。設定でオフをデフォルトで」)。
+//   保存: 新しいキー mh_assistant_peer_auto_v1 = true(入)/ 無い・true 以外なら切(タップで次へ)。既存のキーは触らない
+//   HOME の掛け合い・特別なお話・助手ライフの場面・見返しは、どれも下の AssistantPeerTalk で流れるので、ここ1つで止まる
+const ASSISTANT_PEER_AUTO_KEY = 'mh_assistant_peer_auto_v1';
+const ASSISTANT_PEER_AUTO_STORE = (() => {
+  let state = { on: false, loaded: false };
+  let loading = null;
+  const listeners = new Set();
+  const emit = () => listeners.forEach((fn) => { try { fn(state); } catch (_) { /* 画面側の失敗で止めない */ } });
+  return {
+    get: () => state,
+    load() {
+      if (loading) return loading;
+      loading = (async () => {
+        let on = false;
+        try { on = (await storeGet(ASSISTANT_PEER_AUTO_KEY, false, false)) === true; } catch (_) { on = false; }
+        state = { on, loaded: true };
+        emit();
+      })();
+      return loading;
+    },
+    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+    setOn(next) {
+      state = { ...state, on: next === true, loaded: true };
+      emit();
+      try { void Promise.resolve(storeSet(ASSISTANT_PEER_AUTO_KEY, state.on)).catch(() => {}); } catch (_) { /* 保存できなくてもこの回は効く */ }
+    },
+  };
+})();
+const useAssistantPeerAuto = () => {
+  const [state, setState] = React.useState(() => ASSISTANT_PEER_AUTO_STORE.get());
+  React.useEffect(() => {
+    const off = ASSISTANT_PEER_AUTO_STORE.subscribe(setState);
+    setState(ASSISTANT_PEER_AUTO_STORE.get());
+    void ASSISTANT_PEER_AUTO_STORE.load();
+    return off;
+  }, []);
+  return state;
+};
 // 掛け合いを出す画面(gameState → 場面)
 const ASSISTANT_PEER_SCENES = Object.freeze({ HOME: 'home', BREEDER_MARKET: 'market', RHYTHM_MODE_SELECT: 'rhythm', MASU_MONS: 'masu', CARD_TOP: 'card' });
 
@@ -60268,6 +60327,7 @@ const assistantPeerLineText = (line, talk) => {
 // today … その日の遊び方 { battles, clears, enhances }(その日の出来事の掛け合いを選ぶのに使う)
 function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayEnd = null, today = null }) {
   const st = useAssistantPeerState();
+  const auto = useAssistantPeerAuto();
   const [cur, setCur] = React.useState(null); // { talk, special, step, phase:'lines'|'choice'|'reply', pick, replay }
   // 掛け合いが流れているあいだは、助手たちの今の帯(56-assistant-life.jsx)を隠す
   React.useEffect(() => { if (ASSISTANT_PEER_STORE.state.talking !== !!cur) ASSISTANT_PEER_STORE.set({ talking: !!cur }); }, [!!cur]);
@@ -60357,11 +60417,12 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
     if (c.phase === 'lines' && Array.isArray(c.talk.choice) && c.talk.choice.length) { setCur(x => x && ({ ...x, phase: 'choice' })); return; }
     finish(c);
   }, [finish]);
+  // 自動で進めるのは設定を入れたときだけ(既定は切=タップで次へ)
   React.useEffect(() => {
-    if (!cur || cur.phase === 'choice') return undefined;
+    if (!cur || cur.phase === 'choice' || !auto.on) return undefined;
     const t = setTimeout(() => advance(cur), ASSISTANT_PEER_LINE_MS + (cur.special ? 1200 : 0));
     return () => clearTimeout(t);
-  }, [cur, advance]);
+  }, [cur, advance, auto.on]);
   React.useEffect(() => { if (!toast) return undefined; const t = setTimeout(() => setToast(null), 3200); return () => clearTimeout(t); }, [toast]);
 
   const wrap = (children, attrs = {}) => (
@@ -62466,7 +62527,8 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-room .tag b{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mhl-room .tag small[data-assistant-life-room-with]{white-space:normal;line-height:1.15}[data-assistant-life-land="1"] .mhl-room .tag{padding:2px 5px 3px}[data-assistant-life-land="1"] .mhl-room .tag b{font-size:9.5px}[data-assistant-life-land="1"] .mhl-room .tag small{font-size:8px}.mhl-room .tag small{display:block;font-size:9px;font-weight:800;color:#7c2d12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mhl-room .lock{position:absolute;inset:0;z-index:6;display:grid;place-items:center;background:rgba(15,23,42,.78);font-size:11px;font-weight:900;color:#cbd5e1}
 .mhl-liv{position:absolute;overflow:hidden;border-radius:3px;background:linear-gradient(#f3e3c4,#e7cfa2)}
-.mhl-board{position:absolute;left:8px;top:6px;bottom:6px;border-radius:5px;background:#c08a52;border:3px solid #7c4a22;padding:3px 6px;overflow:hidden}
+.mhl-board{position:absolute;left:8px;top:6px;bottom:6px;border-radius:5px;background:#c08a52;border:3px solid #7c4a22;padding:3px 6px;overflow:hidden;display:flex;flex-direction:column;flex-wrap:wrap;align-content:flex-start;justify-content:flex-start;column-gap:24px}
+.mhl-board>*{width:100%;flex:none}
 .mhl-board b{display:block;font-size:9.5px;color:#fff}.mhl-board p{font-size:9px;font-weight:800;line-height:1.25;color:#1e293b;background:#fffbeb;border-radius:3px;padding:1px 4px;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .mhl-door{position:absolute;bottom:0;width:38px;border-radius:18px 18px 0 0;background:linear-gradient(#8b5a2b,#6b4423);border:2px solid #3b2412}
 .mhl-find{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:900;padding:6px 10px;border-radius:999px;background:linear-gradient(135deg,#7c3aed,#db2777);border:1.5px solid #fff9;box-shadow:0 4px 12px #0009}
@@ -62695,6 +62757,8 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
           {/* カード部屋にいる助手と対戦すると、ごほうび 1.5倍(2026-11-07 社長・カード部)。カード部屋にいるときだけ出す(寝ているときは出さない) */}
           {typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id) && (
             <button type="button" className="mhl-btn mhl-card col-span-2" data-assistant-life-room-act="card" onClick={() => onCard(id)}>🃏 カード部屋で対戦する <span className="mhl-card-up">ごほうびアップ</span></button>)}
+          {/* はっきり分かる閉じるボタン(家具のシートと同じ形。2026-11-08 窓口)。横はボタンの段ごと下に止まるので、いつも見える */}
+          <button type="button" data-assistant-life-room-close data-mhl-sheet-close onClick={onClose} className="col-span-2 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
         </div>
       </div>
       {furnOpen && typeof AssistantLifeFurnSheet === 'function' && <AssistantLifeFurnSheet id={id} furnItems={furnItems || {}} onGiveFurn={onGiveFurn} land={land}
@@ -63054,7 +63118,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
             <div className="mhl-sheet" style={land ? { left: 'auto', width: '42%', top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px' } : undefined}>
               <p className="mhl-en">TODAY</p><p className="text-[18px] font-black">📌 今日あったこと</p>
               {(diary.items || []).length ? [...diary.items].reverse().map((x, i) => <p key={i} className="mt-1.5 text-[12px] font-bold leading-snug text-slate-100"><b className="mr-1.5 text-amber-200">{x.t}</b><AssistantLifeChunks text={x.text}/></p>) : <p className="mt-2 text-[12px] text-slate-400">まだ何もありません</p>}
-              <button type="button" className="mhl-btn mt-3 w-full bg-slate-700" onClick={() => setBoardOpen(false)}>閉じる</button>
+              <button type="button" data-assistant-life-diary-close data-mhl-sheet-close onClick={() => setBoardOpen(false)} className="mt-3 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
             </div>
           </div>)}
         {scene && <AssistantLifeScene key={scene.key} scene={scene} look={look} canGive={canGive && itemsLeft > 0} onClose={() => { setScene(null); showFollow(); }} onGive={openGive}/>}
@@ -64352,7 +64416,7 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
         <p className="mt-1 text-[10px] leading-snug text-slate-400 [[data-assistant-life-land='1']_&]:hidden">{lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)・?=贈ると分かる。同じ道具は1日1回・合わせて1日3回(朝4時に戻る)' : '1日1回(朝4時に戻る)'}・持っている {have}個{info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''}</p>
         {reason && <p data-assistant-life-give-reason className="mt-1.5 rounded-xl bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-300">{reason}</p>}
         <div className="mt-2 flex gap-2">
-          <button type="button" data-assistant-life-give-cancel onClick={() => setGive(null)} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">やめる</button>
+          <button type="button" data-assistant-life-give-cancel data-mhl-sheet-close onClick={() => setGive(null)} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">やめる</button>
           <button type="button" data-assistant-life-give-go disabled={!!reason || pair.length !== 2} onClick={onGive}
             className="min-h-[44px] flex-[2] rounded-xl border border-amber-300/70 bg-amber-400/20 text-[14px] font-black text-amber-100 active:scale-[.98] disabled:opacity-40">{info.emoji} 贈る</button>
         </div>
@@ -64592,7 +64656,7 @@ function AssistantLifeFurnSheet({ id, furnItems, onGiveFurn, onClose, onTalk, la
             {mine.filter(f => room.put[f.slot] !== f.key).map(f => row(f, btn(room.put[f.slot] ? '入れかえる' : '置く', () => assistantLifeFurnMove(id, f.key, true), 'border-pink-300/70 bg-pink-400/15 text-pink-100', { 'data-assistant-life-furn-put': f.key })))}
           </div>
         </>)}
-        <button type="button" data-assistant-life-furn-close onClick={onClose} className="mt-2 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
+        <button type="button" data-assistant-life-furn-close data-mhl-sheet-close onClick={onClose} className="mt-2 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
       </div>
     </div>);
 }
@@ -64818,7 +64882,7 @@ function AssistantMasmonSheet({ id, land = false, onClose }) {
         <div className="flex items-center gap-2">
           {typeof AssistantFace === 'function' && <span className="shrink-0 rounded-full ring-2 ring-pink-300"><AssistantFace who={who} size={38} accent={who.accent}/></span>}
           <div className="min-w-0 flex-1"><p className="mhl-en">MASMON · {String(who.id).toUpperCase()}</p><p className="truncate text-[19px] font-black text-white">{who.name}のマスモン</p></div>
-          <button type="button" className="mhl-btn shrink-0 bg-slate-700 px-3" data-assistant-masmon-close onClick={onClose}>閉じる</button>
+          <button type="button" className="mhl-btn shrink-0 bg-slate-700 px-3" data-assistant-masmon-close data-mhl-sheet-close onClick={onClose}>閉じる</button>
         </div>
         <div className="mt-2 grid grid-cols-4 gap-1" role="tablist">
           {ASSISTANT_MASMON_TABS.map(([k, label]) => (
@@ -65637,7 +65701,7 @@ function AlfSceneSheet({ scene, onClose }) {
             </div>))}
         </div>
         {scene.reward && <p className="mt-2 text-[11px] font-black text-amber-200" data-alf-scene-reward>{scene.reward}</p>}
-        <button type="button" className="mt-3 w-full rounded-2xl bg-amber-300 py-2 text-[13px] font-black text-slate-950" data-alf-scene-close onClick={onClose}>とじる</button>
+        <button type="button" className="mt-3 w-full rounded-2xl bg-amber-300 py-2 text-[13px] font-black text-slate-950" data-alf-scene-close data-mhl-sheet-close onClick={onClose}>とじる</button>
       </div>
     </div>);
 }

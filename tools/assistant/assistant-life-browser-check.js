@@ -47,6 +47,11 @@ const boardProblems = (page) => page.evaluate(() => {
   const ng = [];
   for (const c of document.querySelectorAll('[data-assistant-life-board-item] [data-assistant-life-chunk]')) if (c.getClientRects().length > 1) ng.push(`掲示板の言葉が途中で折れる: ${c.textContent}`);
   if (!document.querySelector('[data-assistant-life-board-item] [data-assistant-life-chunk]')) ng.push('掲示板に言葉が無い(検査の前提)');
+  // 掲示板の件は、全部見えるか・まったく見えないか(縦 390 で2件目が半分切れていた。2026-11-08 ナカヨシ8)
+  { const bd = document.querySelector('[data-assistant-life-board]');
+    if (bd) { const br = bd.getBoundingClientRect(), cs = getComputedStyle(bd), bt = br.top + parseFloat(cs.borderTopWidth), bb = br.bottom - parseFloat(cs.borderBottomWidth), bl = br.left, brr = br.right;
+      for (const p of bd.querySelectorAll('[data-assistant-life-board-item]')) { const r = p.getBoundingClientRect(); const inX = r.left < brr - 1 && r.right > bl + 1; const inY = r.top < bb - 1 && r.bottom > bt + 1;
+        if (inX && inY && (r.bottom > bb + 0.5 || r.top < bt - 0.5)) ng.push(`掲示板の件が半分切れる: ${p.textContent}`); } } }
   for (const sm of document.querySelectorAll('[data-assistant-life-today] small')) if (sm.scrollWidth > sm.clientWidth + 1) ng.push(`今日やれることの字が切れる: ${sm.textContent}`);
   // 部屋の吹き出し(「💭 だれか来ないかな…」)が部屋の幅で切れない・まとまりの途中で折れない(2026-11-08 ミハリ: 横で「だれか来ない…」)
   for (const b of document.querySelectorAll('[data-assistant-life-room-bub]')) { if (b.scrollWidth > b.clientWidth + 1 || b.scrollHeight > b.clientHeight + 1) ng.push(`部屋の吹き出しが切れる: ${b.textContent}`); for (const c of b.querySelectorAll('[data-assistant-life-chunk]')) if (c.getClientRects().length > 1) ng.push(`吹き出しが途中で折れる: ${c.textContent}`); }
