@@ -67,12 +67,13 @@
 - Edge Function: core.js に `handleFriendScenes`(共通部分は触らない)、index.ts に専用の上限と `friendUsed`。**まだデプロイしていない**(デプロイ前に窓口へ・今の v16 の形を読んでから)
 - 検査: `tools/assistant/assistant-life-friend-check.js`(①〜⑨・64件)、`assistant-chat-check.js` に ㉗
 
-### 残り
+### 残り(2026-11-08 コミット 28f9a2f の時点)
 
-1. main の取り込み(#4935 ほか)
-2. HOME の「🏘 n」・帯の知らせ(ナカヨシ7の返事待ち)・居間の扉の顔
-3. 縦・横・🔄横で本物を撮って見る → 崩れの検査を `assistant-life-browser-check.js` に足す → ミハリに撮り直し
-4. SQL 本文を窓口へ → TEST→本番→VERIFY を1回で
-5. Edge Function のデプロイ(窓口へ知らせてから)→ キズナへ PR 番号
-6. 更新履歴・ヘルプの文を窓口へ → 社長の「この文で」→ 印を真に → 公開 → 本番で確認
-7. 台詞の注文書(コトバ・ツムギ)
+済み: main の取り込み/HOME の「🏘 n」と HOME の帯(3秒・HOME だけ。モンヒロビートの中には出さない)/画面の検査 `tools/assistant/assistant-life-friend-browser-check.js`(縦・横・375・🔄横・印が偽。撮るときは `--shots <出力先>`)を通して、絵を1枚ずつ見た/ミハリへ撮り直しを頼んだ/SQL の本文(aa41ecc の3本)と更新履歴・ヘルプの文案を窓口へ送った
+
+1. 窓口の返事待ち: SQL「流してよい」・更新履歴とヘルプの「この文で」・ナカヨシ7(居間の扉の顔はまだ作っていない)・ミハリの撮り直し
+2. 「この文で」のあと: changelog-help-update スキルを開いて書く → 検査 → PR → マージ
+3. SQL を TEST→APPLY→VERIFY の1回で流す(スイッチは thin)
+4. main に入ったら Edge Function のデプロイ(今の v16 を get_edge_function で読み、friend_scenes だけ足す。jsdelivr の固定版を新しいコミットへ)。窓口へ知らせてから。済んだらキズナへ PR 番号
+5. 印 `assistantLifeFriend` を真に(API の印 `assistantLifeFriendApi` はデプロイを確かめてから真)→ 公開 → 本番で確認して報告
+6. 台詞の注文書(コトバ・ツムギ。PLAN 8章)
