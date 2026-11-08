@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7d0e1654dade7a36
+// source-sha256: 25f8279b36a65a1c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -77902,6 +77902,15 @@ function HomeScreen({
       if (lf && lf.offsetParent) scene.style.setProperty('--mh-home-life-bottom', `${Math.ceil(offTop(lf) + lf.offsetHeight)}px`);
       const rh = scene.querySelector('.mh-home-facility.rhythm');
       let push = 0;
+      if (mg && mg.offsetParent) {
+        const mb = offTop(mg) + mg.offsetHeight + 6,
+          mr = offLeft(mg) + mg.offsetWidth;
+        for (const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle')) {
+          if (!el.offsetParent) continue;
+          const t = offTop(el);
+          if (t > offTop(mg) && offLeft(el) < mr) push = Math.max(push, mb - t);
+        }
+      }
       if (rh && rh.offsetParent) {
         const rb = offTop(rh) + rh.offsetHeight + 22,
           rr = offLeft(rh) + rh.offsetWidth;
@@ -77917,6 +77926,22 @@ function HomeScreen({
         push = Math.min(push, Math.max(0, room));
       }
       scene.style.setProperty('--mh-home-left-push', `${Math.max(0, Math.ceil(push))}px`);
+      const bt = scene.querySelector('.mh-home-facility.battle');
+      let nudge = 0;
+      if (bt && bt.offsetParent) {
+        const bl = offLeft(bt) - bt.offsetWidth / 2,
+          br = bl + bt.offsetWidth,
+          btop = offTop(bt),
+          bb = btop + bt.offsetHeight;
+        for (const el of scene.querySelectorAll('.mh-home-mission,.mh-home-gift')) {
+          if (!el.offsetParent) continue;
+          const l = offLeft(el),
+            t = offTop(el);
+          if (t < bb && t + el.offsetHeight > btop && l < br && l + el.offsetWidth > bl) nudge = Math.max(nudge, br - l + 8);
+        }
+        nudge = Math.min(nudge, Math.max(0, bl - 8));
+      }
+      scene.style.setProperty('--mh-home-battle-nudge', `${-Math.ceil(nudge)}px`);
     };
     measure();
     if (typeof ResizeObserver === 'undefined') {
@@ -90825,6 +90850,10 @@ const RHYTHM_MULTI = (() => {
         sl: result && result.slow
       });
       me.playing = false;
+      if (quit === true && round === s.startedRound && s.liveStreak > 0 && s.streakQuitRound !== round) {
+        s.liveStreak -= 1;
+        s.streakQuitRound = round;
+      }
       const queued = s.queue;
       s.queue = [];
       queued.forEach(raw => onMessage(raw));
@@ -102304,6 +102333,9 @@ function AssistantPeerAlbum({
   onUseItem = null
 }) {
   const st = useAssistantPeerState();
+  const giftSt = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
+  const [buyKind, setBuyKind] = React.useState(null);
+  const [useMsg, setUseMsg] = React.useState('');
   const [a, b] = pair.map(id => assistantById(id));
   const key = assistantPeerPairKey(pair[0], pair[1]);
   const lv = assistantPeerLevel(st, pair[0], pair[1]);
@@ -102350,29 +102382,57 @@ function AssistantPeerAlbum({
     pair: pair
   }), typeof onUseItem === 'function' && (() => {
     const playing = st.play && st.play.pair === key;
-    const itemBtn = (kind, emoji, label) => {
+    const lifeOn = typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() && typeof assistantLifeGiftKinds === 'function' && !!giftSt;
+    const kinds = lifeOn ? assistantLifeGiftKinds().map(g => assistantLifeGiftOf(g.kind)).filter(Boolean) : [{
+      kind: 'gift',
+      emoji: '🧺',
+      name: 'おやつバスケット'
+    }, {
+      kind: 'token',
+      emoji: '🤝',
+      name: 'おそろいのミサンガ'
+    }];
+    const itemBtn = x => {
+      const kind = x.kind;
       const have = peerItems && Number(peerItems[kind]) || 0;
-      const used = assistantPeerItemUsedToday(st, kind);
+      const why = lifeOn ? assistantLifeGiftReason(kind, st, 1, giftSt) : '';
+      const used = lifeOn ? !!why : assistantPeerItemUsedToday(st, kind);
+      const buy = lifeOn && !used && have <= 0 && typeof assistantLifeCanBuy === 'function' && assistantLifeCanBuy(x);
+      const words = typeof assistantLifeGiftWrapName === 'function' && x.key ? assistantLifeGiftWrapName(x) : [x.name];
       return React.createElement("button", {
+        key: kind,
         type: "button",
         "data-assistant-peer-use": kind,
-        disabled: used || have <= 0,
-        onClick: () => onUseItem(kind, pair),
-        className: "min-h-[44px] rounded-xl border border-amber-300/50 bg-amber-400/10 px-2 py-1 text-left active:scale-[.98] disabled:opacity-40"
+        "data-assistant-peer-buy": buy ? kind : undefined,
+        disabled: used || have <= 0 && !buy,
+        onClick: () => {
+          setUseMsg('');
+          if (buy) setBuyKind(kind);else void onUseItem(kind, pair);
+        },
+        className: `min-h-[44px] rounded-xl border px-2 py-1 text-left active:scale-[.98] disabled:opacity-40 ${buy ? 'border-violet-300/60 bg-violet-500/10' : 'border-amber-300/50 bg-amber-400/10'}`
       }, React.createElement("span", {
-        className: "block text-[11px] font-black text-amber-100"
-      }, emoji, " ", label), React.createElement("span", {
-        className: "block text-[9px] font-bold text-slate-400"
-      }, used ? '今日はもう使いました' : have > 0 ? `持っている ${have}個` : 'ビートP交換所で手に入ります'));
+        className: "block text-[11px] font-black leading-snug text-amber-100",
+        style: {
+          wordBreak: 'keep-all',
+          overflowWrap: 'anywhere'
+        }
+      }, x.emoji, " ", words.map((w, i) => React.createElement(React.Fragment, {
+        key: i
+      }, i > 0 && React.createElement("wbr", null), w)), React.createElement("wbr", null), "を贈る"), React.createElement("span", {
+        className: `block text-[9px] font-bold ${buy ? 'text-violet-200' : 'text-slate-400'}`
+      }, used ? lifeOn ? '今日は贈れません' : '今日はもう使いました' : have > 0 ? `持っている ${have}個` : buy ? `🛒 ${x.cost}P で買って贈る` : 'ビートP交換所で手に入ります'));
     };
     return React.createElement("div", {
       "data-assistant-peer-actions": true,
       className: "mt-3"
     }, React.createElement("p", {
       className: "mb-1 text-[11px] font-black text-amber-200"
-    }, "2人にしてあげる"), React.createElement("div", {
+    }, "2人にしてあげる"), useMsg && React.createElement("p", {
+      "data-assistant-peer-use-msg": true,
+      className: "mb-1 rounded-lg bg-slate-800 px-2 py-1 text-[10.5px] font-bold text-slate-200"
+    }, useMsg), React.createElement("div", {
       className: "grid grid-cols-2 gap-1.5"
-    }, itemBtn('gift', '🧺', 'おやつバスケットを贈る'), itemBtn('token', '🤝', 'おそろいのミサンガを贈る')), React.createElement("button", {
+    }, kinds.map(itemBtn)), React.createElement("button", {
       type: "button",
       "data-assistant-peer-play": playing ? 'on' : 'off',
       onClick: () => assistantPeerSetPlayPair(playing ? null : pair),
@@ -102401,7 +102461,20 @@ function AssistantPeerAlbum({
     "aria-hidden": "true"
   }, t.special ? '✦' : t.kind === 'event' ? '🎪' : t.kind === 'trio' ? '👥' : t.kind === 'quarrel' || t.kind === 'makeup' ? '🤝' : t.choice ? '💬' : '▶'), React.createElement("span", {
     className: "min-w-0 flex-1 truncate text-[10px] font-bold text-slate-200"
-  }, t.special ? (t.lv || 5) >= 10 ? '特別なお話・その2' : '特別なお話' : t.kind === 'event' ? `ミニイベント「${t.title}」` : t.kind === 'makeup' ? '仲直り' : t.kind === 'quarrel' ? `言い合い: ${firstLine(t)}` : firstLine(t)))))));
+  }, t.special ? (t.lv || 5) >= 10 ? '特別なお話・その2' : '特別なお話' : t.kind === 'event' ? `ミニイベント「${t.title}」` : t.kind === 'makeup' ? '仲直り' : t.kind === 'quarrel' ? `言い合い: ${firstLine(t)}` : firstLine(t)))))), buyKind && typeof AssistantLifeBuyConfirm === 'function' && (() => {
+    const x = assistantLifeGiftOf(buyKind);
+    return x ? React.createElement(AssistantLifeBuyConfirm, {
+      item: x,
+      to: `${a.name}と${b.name}`,
+      onClose: () => setBuyKind(null),
+      gains: assistantLifeGiftGainsFor(buyKind, pair, id => (assistantById(id) || {}).name || id),
+      check: () => assistantLifeGiftReason(buyKind, ASSISTANT_PEER_STORE.state, 1),
+      give: async () => {
+        const t = await onUseItem(buyKind, pair);
+        if (!t) setUseMsg(`${x.name}は、いまは贈れません。買った${x.name}は持ち物に残っています`);
+      }
+    }) : null;
+  })());
 }
 function AssistantPeerMap({
   metIds,
@@ -102545,6 +102618,7 @@ function AssistantPeerMap({
         setAlbumPair(null);
         if (onReplay) onReplay(talk);
       }
+      return talk;
     } : null
   }));
 }
@@ -105070,12 +105144,12 @@ function AssistantLifeScreenBody({
       kind
     });
   };
-  const doGive = async () => {
+  const doGive = async (opts = null) => {
     if (!give || !give.pair) return;
     const talk = await onUseItem(give.kind, give.pair);
     const info = assistantLifeItemInfo(give.kind);
     if (!talk) {
-      setNote(`${info.name}は、いまは贈れません(同じ道具は1日1回・合わせて1日3回・持っている数を見てください)`);
+      setNote(`${info.name}は、いまは贈れません(同じ道具は1日1回・合わせて1日3回・持っている数を見てください)${opts && opts.bought ? `。買った${info.name}は持ち物に残っています` : ''}`);
       setGive(null);
       return;
     }
@@ -105158,7 +105232,7 @@ function AssistantLifeScreenBody({
     className: `min-h-[40px] flex-1 rounded-xl border text-[12px] font-black active:scale-[.98] ${tab === k ? 'border-pink-300 bg-pink-400/20 text-pink-100' : 'border-white/10 text-slate-400'}`
   }, label)))), note && React.createElement("p", {
     "data-assistant-life-note": true,
-    className: "mt-2 rounded-xl bg-sky-400/10 px-2 py-1.5 text-[11px] font-bold text-sky-100"
+    className: "mt-2 rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 text-[11px] font-bold text-sky-100"
   }, note), tab === 'now' && React.createElement(React.Fragment, null, canGive && !embedded && React.createElement("div", {
     "data-assistant-life-items": true,
     className: "mt-2 rounded-2xl border border-amber-300/40 bg-slate-950/90 p-2"
@@ -105446,17 +105520,19 @@ const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({
   studio: 'モンヒロビート',
   cardroom: 'MFバトルカード',
   ranch: 'M/B管理',
-  temple: '神殿'
+  temple: '神殿',
+  home: 'みんなの家'
 });
 const assistantLifePlaceShow = place => ASSISTANT_LIFE_PLACE_SHOW[place] || ASSISTANT_LIFE_PLACES[place] || '';
-const assistantLifeFacilityOf = entry => {
-  if (!entry) return 'life';
-  if (entry.doing === 'practice') return 'rhythm';
-  if (entry.doing === 'cards' && entry.place === 'cardroom') return 'card';
-  if (entry.doing === 'training') return 'management';
-  if (entry.place === 'market') return 'market';
-  return 'life';
-};
+const ASSISTANT_LIFE_SPOT_FAC = Object.freeze({
+  studio: 'rhythm',
+  cardroom: 'card',
+  ranch: 'management',
+  market: 'market',
+  temple: 'temple',
+  home: 'life'
+});
+const assistantLifeFacilityOf = entry => entry && ASSISTANT_LIFE_SPOT_FAC[entry.place] || 'life';
 const ASSISTANT_LIFE_TOD_LOOK = Object.freeze({
   morning: 'morning',
   day: 'noon',
@@ -106574,7 +106650,7 @@ const assistantLifeTodLabel = (now = Date.now()) => {
 const assistantLifeDiaryOnSlot = (life, slot, now = Date.now()) => {
   const gs = (life.groups || []).slice(0, 3);
   if (!gs.length) return;
-  const text = gs.map(g => `${g.ids.map(assistantLifeName).join('・')} ${ASSISTANT_LIFE_PLACES[g.place]}で${ASSISTANT_LIFE_DOINGS[g.doing].label}`).join(' / ');
+  const text = gs.map(g => `${g.ids.map(assistantLifeName).join('・')} ${assistantLifePlaceShow(g.place)}で${ASSISTANT_LIFE_DOINGS[g.doing].label}`).join(' / ');
   void assistantLifeDiaryAdd(`${assistantLifeTodLabel(now)}: ${text}`, gs.flatMap(g => g.ids), {
     kind: 'slot',
     now,
@@ -106613,7 +106689,7 @@ const assistantLifeOnWoken = ev => {
 const assistantLifeOnCardMatch = ev => {
   if (!ev || !ev.assistantId || !ASSISTANT_LIFE_PREFS[ev.assistantId]) return;
   assistantLifeRhythmPlay(ev.assistantId, ev.at || Date.now());
-  void assistantLifeDiaryAdd(`${assistantLifeName(ev.assistantId)}とカード部屋で対戦して${ev.won ? '勝った' : '負けた'}`, [ev.assistantId], {
+  void assistantLifeDiaryAdd(`${assistantLifeName(ev.assistantId)}とMFバトルカードで対戦して${ev.won ? '勝った' : '負けた'}`, [ev.assistantId], {
     kind: 'card',
     now: ev.at || Date.now()
   });
@@ -107938,10 +108014,10 @@ function AssistantLifeHouse({
   const usedOf = kind => !!(typeof assistantLifeGiftReason === 'function' && assistantLifeGiftReason(kind, peerSt, 1));
   const soloOn = typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn() && !!onGiveSolo;
   const soloLeft = soloOn ? assistantLifeSoloLeft() : 0;
-  const openGiveSolo = (who, ids) => {
+  const openGiveSolo = (who, ids, pickKind = null) => {
     if (!soloOn || !who) return;
     const usable = assistantLifeSoloKinds().filter(g => haveOf(g.kind) > 0 && !assistantLifeSoloReason(g.kind, peerSt, haveOf(g.kind)));
-    const kind = (usable[0] || assistantLifeSoloKinds()[0] || {}).kind;
+    const kind = pickKind || (usable[0] || assistantLifeSoloKinds()[0] || {}).kind;
     const list = Array.isArray(ids) && ids.length ? ids : [who];
     const ps = [];
     for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) ps.push([list[i], list[j]]);
@@ -107955,14 +108031,14 @@ function AssistantLifeHouse({
       kind
     });
   };
-  const openGive = gids => {
+  const openGive = (gids, pickKind = null) => {
     const list = Array.isArray(gids) ? gids : gids && gids.ids || [];
     if (list.length === 1 && soloOn) {
-      openGiveSolo(list[0], list);
+      openGiveSolo(list[0], list, pickKind);
       return;
     }
     if (list.length < 2) return;
-    const kind = itemInfos.find(x => haveOf(x.kind) > 0 && !usedOf(x.kind))?.kind || 'gift';
+    const kind = pickKind || itemInfos.find(x => haveOf(x.kind) > 0 && !usedOf(x.kind))?.kind || 'gift';
     const ps = [];
     for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) ps.push([list[i], list[j]]);
     const best = ps.find(([a, b]) => assistantLifePairHint(peerSt, life, a, b).near) || ps.find(([a, b]) => assistantLifePairHint(peerSt, life, a, b).after) || ps[0];
@@ -107975,7 +108051,17 @@ function AssistantLifeHouse({
       kind
     });
   };
-  const doGive = async () => {
+  const buyTarget = solo => {
+    const groups = (life.groups || []).map(g => (g.ids || []).filter(id => ids.includes(id))).filter(g => g.length >= (solo ? 1 : 2));
+    return groups[0] || (solo && ids.length ? [ids[0]] : null);
+  };
+  const openBuy = (kind, solo) => {
+    const g = buyTarget(solo);
+    if (!g) return;
+    if (solo) openGiveSolo(g[0], g, kind);else openGive(g, kind);
+  };
+  const doGive = async (opts = null) => {
+    const keptText = opts && opts.bought ? `。買った${opts.bought.name}は持ち物に残っています` : '';
     if (give && give.solo && soloOn) {
       const who = give.solo,
         kind = give.kind;
@@ -107983,7 +108069,7 @@ function AssistantLifeHouse({
       const info = assistantLifeItemInfo(kind);
       setGive(null);
       if (!talk) {
-        setNote(`${info ? info.name : '道具'}は、いまは贈れません(1人には1日3回・同じ道具は1日1回・持っている数を見てください)`);
+        setNote(`${info ? info.name : '道具'}は、いまは贈れません(1人には1日3回・同じ道具は1日1回・持っている数を見てください)${keptText}`);
         return;
       }
       const w = assistantLifeWhereOf(life, who);
@@ -108000,7 +108086,7 @@ function AssistantLifeHouse({
     const talk = await onUseItem(give.kind, give.pair);
     const info = assistantLifeItemInfo(give.kind);
     if (!talk) {
-      setNote(`${info.name}は、いまは贈れません(同じ道具は1日1回・合わせて1日3回・持っている数を見てください)`);
+      setNote(`${info.name}は、いまは贈れません(同じ道具は1日1回・合わせて1日3回・持っている数を見てください)${keptText}`);
       setGive(null);
       return;
     }
@@ -108197,24 +108283,7 @@ function AssistantLifeHouse({
     life: life,
     peerSt: peerSt
   }));
-  const tabBody = tab === 'house' ? houseView : tab === 'where' ? React.createElement("div", {
-    className: "px-3 pb-3",
-    "data-assistant-life-where": true
-  }, React.createElement(AssistantLifeTownMap, {
-    life: life,
-    ids: ids,
-    look: look,
-    onPick: id => {
-      setTab('house');
-      setRoomId(id);
-    }
-  }), React.createElement(AssistantLifeScreenBody, {
-    metIds: metIds,
-    onReplay: playTalk,
-    peerItems: peerItems,
-    onUseItem: onUseItem,
-    embedded: true
-  })) : tab === 'visit' && typeof AssistantLifeFriendPage === 'function' ? React.createElement(AssistantLifeFriendPage, {
+  const tabBody = tab === 'house' ? houseView : tab === 'where' ? null : tab === 'visit' && typeof AssistantLifeFriendPage === 'function' ? React.createElement(AssistantLifeFriendPage, {
     life: life
   }) : tab === 'friends' ? React.createElement("div", {
     className: "px-3 pb-3 pt-1"
@@ -108258,11 +108327,18 @@ function AssistantLifeHouse({
     "data-assistant-life-item-solo-amt": true
   }, "1人に贈ると: ", React.createElement("span", {
     className: "whitespace-nowrap text-pink-200"
-  }, "💗 仲良し度 ", assistantLifeItemRange(x).player), "(友情Lv は上がらない)")), haveOf(x.kind) <= 0 && typeof AssistantLifeShopButton === 'function' && React.createElement(AssistantLifeShopButton, {
+  }, "💗 仲良し度 ", assistantLifeItemRange(x).player), React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "(友情Lv は上がらない)"))), haveOf(x.kind) <= 0 && (canGive && buyTarget(false) && typeof assistantLifeCanBuy === 'function' && assistantLifeCanBuy(x) ? React.createElement("button", {
+    type: "button",
+    "data-assistant-life-item-buy": x.kind,
+    onClick: () => openBuy(x.kind, false),
+    className: "min-h-[32px] shrink-0 rounded-xl border border-violet-300/80 bg-violet-600 px-2 text-[10.5px] font-black leading-tight text-white active:scale-[.97]"
+  }, "🛒 ", x.cost, "P", React.createElement("br", null), "で買って贈る") : typeof AssistantLifeShopButton === 'function' && React.createElement(AssistantLifeShopButton, {
     tab: "item",
     small: true,
     label: `🛒 ${x.cost != null ? `${x.cost}P` : '交換所'}`
-  }))), soloOn && soloInfos.length > 0 && React.createElement(React.Fragment, null, React.createElement("p", {
+  })))), soloOn && soloInfos.length > 0 && React.createElement(React.Fragment, null, React.createElement("p", {
     className: "mt-3 inline-block rounded-xl bg-slate-950/85 px-2 py-0.5 text-[13px] font-black text-pink-200",
     "data-assistant-life-items-solo": true
   }, "💗 1人に贈る道具 ", React.createElement("span", {
@@ -108290,11 +108366,16 @@ function AssistantLifeHouse({
       className: "whitespace-nowrap text-pink-200"
     }, "💗 仲良し度 +", lo, "〜", hi), React.createElement("span", {
       className: "whitespace-nowrap text-slate-400"
-    }, "(好みで変わる)"))), haveOf(x.kind) <= 0 && typeof AssistantLifeShopButton === 'function' && React.createElement(AssistantLifeShopButton, {
+    }, "(好みで変わる)"))), haveOf(x.kind) <= 0 && (buyTarget(true) && typeof assistantLifeCanBuy === 'function' && assistantLifeCanBuy(x) ? React.createElement("button", {
+      type: "button",
+      "data-assistant-life-item-buy": x.kind,
+      onClick: () => openBuy(x.kind, true),
+      className: "min-h-[32px] shrink-0 rounded-xl border border-violet-300/80 bg-violet-600 px-2 text-[10.5px] font-black leading-tight text-white active:scale-[.97]"
+    }, "🛒 ", x.cost, "P", React.createElement("br", null), "で買って贈る") : typeof AssistantLifeShopButton === 'function' && React.createElement(AssistantLifeShopButton, {
       tab: "item",
       small: true,
       label: `🛒 ${x.cost != null ? `${x.cost}P` : '交換所'}`
-    }));
+    })));
   })), React.createElement("p", {
     className: "mt-2 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] leading-snug text-slate-200",
     style: {
@@ -108316,7 +108397,7 @@ function AssistantLifeHouse({
   }, React.createElement(AssistantLifeHouseStyle, null), typeof AssistantLifeRelStyle === 'function' && React.createElement(AssistantLifeRelStyle, null), React.createElement("div", {
     className: "mhl-page",
     style: {
-      maxWidth: land ? 'none' : 480
+      maxWidth: land || tab === 'where' ? 'none' : 480
     }
   }, React.createElement("div", {
     className: `mhl-sky t-${look}`
@@ -108325,7 +108406,35 @@ function AssistantLifeHouse({
     style: {
       backgroundImage: `url(${ASSISTANT_LIFE_VIEW[look][1]})`
     }
-  }), land ? React.createElement("div", {
+  }), tab === 'where' ? React.createElement(AssistantLifeTownMap, {
+    life: life,
+    ids: ids,
+    land: land,
+    onBack: () => setTab('house'),
+    onPick: id => {
+      setTab('house');
+      setRoomId(id);
+    },
+    onBeat: beat,
+    onCard: card,
+    list: React.createElement(React.Fragment, null, header, note && React.createElement("p", {
+      "data-assistant-life-note": true,
+      className: "mx-3 mb-1 rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 text-[11px] font-bold text-sky-100"
+    }, note), React.createElement("div", {
+      className: "px-3 pb-2"
+    }, React.createElement(AssistantLifeScreenBody, {
+      metIds: metIds,
+      onReplay: playTalk,
+      peerItems: peerItems,
+      onUseItem: onUseItem,
+      embedded: true
+    })), React.createElement("div", {
+      className: "px-3",
+      style: {
+        paddingBottom: 'calc(10px + env(safe-area-inset-bottom))'
+      }
+    }, icons))
+  }) : land ? React.createElement("div", {
     className: "relative z-[2] flex h-full min-h-0",
     style: {
       paddingLeft: 'env(safe-area-inset-left)',
@@ -108499,142 +108608,32 @@ function AssistantLifeHouse({
     onGive: doGive
   }));
 }
-const ASSISTANT_LIFE_MAP_CROP = Object.freeze({
-  y0: 120,
-  h: 1440
-});
-const ASSISTANT_LIFE_MAP_POS = Object.freeze({
-  ranch: [23.4, 30.6],
-  library: [69.1, 22.9],
-  cafe: [87.0, 29.5],
-  temple: [66.0, 35.5],
-  garden: [87.0, 46.5],
-  plaza: [51.0, 48.6],
-  studio: [16.5, 64.0],
-  market: [85.0, 64.6],
-  home: [9.6, 78.5],
-  cardroom: [49.9, 91.7],
-  hill: [80.8, 5.6]
-});
-const ASSISTANT_LIFE_MAP_BUILDING = Object.freeze({
-  studio: [2, 45, 36, 70],
-  temple: [55, 24, 80, 40],
-  ranch: [3, 6, 42, 35],
-  market: [68, 48, 100, 70],
-  cardroom: [18, 72, 82, 100]
-});
-function AssistantLifeTownMap({
-  life,
-  ids,
-  look,
-  onPick
+function AssistantLifeSpentMark({
+  size = 20
 }) {
-  const at = {};
-  for (const id of ids) {
-    const w = assistantLifeWhereOf(life, id);
-    const p = w ? w.place : 'home';
-    (at[p] = at[p] || []).push(id);
-  }
-  const mapRef = useRef(null);
-  React.useLayoutEffect(() => {
-    const fit = () => {
-      const m = mapRef.current;
-      if (!m) return;
-      const mr = m.getBoundingClientRect();
-      for (const el of m.querySelectorAll('[data-assistant-life-map-place]')) {
-        el.style.translate = '';
-        const r = el.getBoundingClientRect();
-        const dx = r.left < mr.left + 3 ? mr.left + 3 - r.left : r.right > mr.right - 3 ? mr.right - 3 - r.right : 0;
-        const dy = r.top < mr.top + 3 ? mr.top + 3 - r.top : r.bottom > mr.bottom - 3 ? mr.bottom - 3 - r.bottom : 0;
-        if (dx || dy) el.style.translate = `${dx}px ${dy}px`;
-      }
-      const els = [...m.querySelectorAll('[data-assistant-life-map-place]')];
-      const hit = (r, q) => Math.min(r.right, q.right) - Math.max(r.left, q.left) > 1 && Math.min(r.bottom, q.bottom) - Math.max(r.top, q.top) > 1;
-      const tr = el => (el.style.translate || '0px 0px').split(' ').map(v => parseFloat(v) || 0).concat([0]).slice(0, 2);
-      for (const a of els) {
-        if (!a.querySelector('button')) continue;
-        for (const b of els) {
-          if (a === b || b.querySelector('button')) continue;
-          const ra = a.getBoundingClientRect(),
-            rb = b.getBoundingClientRect();
-          if (!hit(ra, rb)) continue;
-          const [x0, y0] = tr(b);
-          const cands = [[0, ra.top - rb.bottom - 2], [0, ra.bottom - rb.top + 2], [ra.left - rb.right - 2, 0], [ra.right - rb.left + 2, 0]].sort((p, q) => Math.abs(p[0]) + Math.abs(p[1]) - Math.abs(q[0]) - Math.abs(q[1]));
-          const free = cands.find(([dx, dy]) => {
-            const q = {
-              left: rb.left + dx,
-              right: rb.right + dx,
-              top: rb.top + dy,
-              bottom: rb.bottom + dy
-            };
-            if (q.left < mr.left + 3 || q.right > mr.right - 3 || q.top < mr.top + 3 || q.bottom > mr.bottom - 3) return false;
-            return els.every(o => o === b || !hit(q, o.getBoundingClientRect()));
-          }) || cands[0];
-          b.style.translate = `${x0 + free[0]}px ${y0 + free[1]}px`;
-        }
-      }
-    };
-    fit();
-    window.addEventListener('resize', fit);
-    return () => window.removeEventListener('resize', fit);
-  });
-  const tod = assistantLifeTodOn() && typeof TimeOfDayTint === 'function';
-  const filter = {
-    morning: 'saturate(.85) brightness(1.05) sepia(.18)',
-    noon: 'none',
-    evening: 'saturate(1.1) brightness(.85) sepia(.35) hue-rotate(-12deg)',
-    night: 'brightness(.45) saturate(.7)'
-  }[look];
-  return React.createElement("div", {
-    className: "relative mb-2 overflow-hidden rounded-2xl border border-white/15",
-    ref: mapRef,
+  const d = Math.max(10, Math.round(size * 0.6));
+  return React.createElement("span", {
+    "aria-hidden": "true",
+    "data-assistant-life-spent-mark": true,
+    className: "pointer-events-none absolute z-[1] grid place-items-center rounded-full bg-slate-100 font-black text-slate-900 shadow",
     style: {
-      aspectRatio: `941 / ${ASSISTANT_LIFE_MAP_CROP.h}`
-    },
-    "data-assistant-life-map": true
-  }, React.createElement("img", {
-    src: "data/images/home-background.jpg",
-    alt: "",
-    className: "absolute left-0 top-0 w-full",
-    style: {
-      filter: tod ? 'none' : filter,
-      transform: `translateY(-${(100 * ASSISTANT_LIFE_MAP_CROP.y0 / 1672).toFixed(2)}%)`
+      left: -3,
+      bottom: 0,
+      width: d,
+      height: d,
+      fontSize: Math.max(7, Math.round(d * 0.72)),
+      lineHeight: 1,
+      boxShadow: '0 0 0 1px #0b1020'
     }
-  }), tod && React.createElement(TimeOfDayTint, null), Object.entries(ASSISTANT_LIFE_MAP_POS).map(([place, [x, y]]) => {
-    const who = at[place] || [];
-    return React.createElement("div", {
-      key: place,
-      className: "absolute flex -translate-x-1/2 -translate-y-full flex-col items-center",
-      style: {
-        left: `${x}%`,
-        top: `${y}%`
-      },
-      "data-assistant-life-map-place": place
-    }, who.length > 0 && React.createElement("span", {
-      className: "flex rounded-full border border-white/40 bg-slate-950/70 px-1 py-0.5"
-    }, who.map(id => {
-      const a = assistantById(id);
-      return a ? React.createElement("button", {
-        key: id,
-        type: "button",
-        onClick: () => onPick(id),
-        className: "-ml-1.5 first:ml-0 rounded-full"
-      }, React.createElement(AssistantFace, {
-        who: a,
-        size: 24,
-        accent: a.accent
-      })) : null;
-    })), React.createElement("span", {
-      className: `mt-0.5 whitespace-nowrap rounded-md border px-1.5 text-[9.5px] font-black ${who.length ? 'border-amber-300 bg-amber-950/90 text-amber-50' : 'border-slate-500/60 bg-slate-950/70 text-slate-300'}`
-    }, ASSISTANT_LIFE_PLACE_ICON[place], " ", place === 'home' ? '助手の家' : assistantLifePlaceShow(place)));
-  }));
+  }, "済");
 }
 const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({
-  rhythm: '.mh-home-facility.rhythm',
-  card: '.mh-home-card-battle',
-  management: '.mh-home-facility.management',
-  market: '.mh-home-facility.market',
-  life: '.mh-home-facility.life'
+  rhythm: 'main.mh-home-scene .mh-home-facility.rhythm',
+  card: 'main.mh-home-scene .mh-home-card-battle',
+  management: 'main.mh-home-scene .mh-home-facility.management',
+  temple: 'main.mh-home-scene .mh-home-facility.temple',
+  market: 'main.mh-home-scene .mh-home-facility.market',
+  life: 'main.mh-home-scene .mh-home-facility.life'
 });
 const ASSISTANT_LIFE_HOME_OBSTACLES = '.mh-home-facility,.mh-home-card-battle,.mh-home-event-banner,.mh-home-tour-banner,.mh-home-mission,.mh-home-gift,.mh-home-event-badge,.mh-home-assistant';
 function AssistantLifeHomeFaces({
@@ -108693,12 +108692,11 @@ function AssistantLifeHomeFaces({
   for (const id of ASSISTANT_LIFE_HOUSE_ORDER) {
     if (!ids.includes(id)) continue;
     let f = assistantLifeFacilityOf(assistantLifeWhereOf(life, id));
-    if (f === 'card' && assistantLifeCardSpent(id)) continue;
     if (!rects[f]) f = 'life';
     if (!rects[f]) continue;
     (by[f] = by[f] || []).push(id);
   }
-  const cardUp = typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && assistantLifeHouseCardIds().some(id => (by.card || []).includes(id));
+  const cardUp = typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && assistantLifeHouseCardIds().some(id => (by.card || []).includes(id) && !assistantLifeCardSpent(id));
   const peer = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null;
   const q = peer && peer.quarrel && peer.quarrel.pending;
   const after = new Set(q && q.pair ? String(q.pair).split('-') : []);
@@ -108730,11 +108728,13 @@ function AssistantLifeHomeFaces({
       if (!who) return null;
       const w = assistantLifeWhereOf(life, id);
       const lonely = w && w.reason === 'lonely';
+      const spent = f === 'card' && !!assistantLifeCardSpent(id);
       return React.createElement("button", {
         key: id,
         type: "button",
         "data-assistant-life-home-face": id,
-        "aria-label": `${who.name}のようす`,
+        "data-assistant-life-home-face-spent": spent ? '1' : undefined,
+        "aria-label": `${who.name}のようす${spent ? '(対戦のごほうび済み)' : ''}`,
         onClick: () => {
           ASSISTANT_LIFE_STORE.set({
             open: true,
@@ -108746,10 +108746,17 @@ function AssistantLifeHomeFaces({
           marginLeft: i ? -4 : 0,
           boxShadow: lonely ? '0 0 0 1.5px #fbbf24,0 0 6px #fbbf24' : after.has(id) ? '0 0 0 1.5px #7dd3fc' : '0 0 0 1.5px #fff'
         }
+      }, React.createElement("span", {
+        className: "block",
+        style: spent ? {
+          filter: 'grayscale(.6) brightness(.8)'
+        } : undefined
       }, React.createElement(AssistantFace, {
         who: who,
         size: size,
         accent: who.accent
+      })), spent && React.createElement(AssistantLifeSpentMark, {
+        size: size
       }), React.createElement("span", {
         "aria-hidden": "true",
         className: "absolute -inset-1.5"
@@ -108767,6 +108774,711 @@ function AssistantLifeHomeFaces({
   }), rects.life && typeof AssistantLifeFriendHomeBadge === 'function' && React.createElement(AssistantLifeFriendHomeBadge, {
     rect: rects.life
   }));
+}
+const ASSISTANT_LIFE_MAP_ORDER = Object.freeze(['ranch', 'temple', 'market', 'home', 'studio', 'cardroom', 'hill', 'library', 'cafe', 'garden', 'plaza']);
+const ASSISTANT_LIFE_MAP_TOWN_ONLY = Object.freeze(['hill', 'library', 'cafe', 'garden', 'plaza']);
+const ASSISTANT_LIFE_MAP_TOWN = Object.freeze({
+  classic: {
+    hill: [0.47, 0.115],
+    library: [0.72, 0.205],
+    cafe: [0.9, 0.29],
+    garden: [0.8, 0.44],
+    plaza: [0.5, 0.465]
+  },
+  halloween: {
+    hill: [0.5, 0.085],
+    library: [0.7, 0.2],
+    cafe: [0.9, 0.27],
+    garden: [0.82, 0.45],
+    plaza: [0.5, 0.465]
+  },
+  halloweenWide: {
+    hill: [0.5, 0.17],
+    library: [0.62, 0.27],
+    cafe: [0.84, 0.22],
+    garden: [0.76, 0.4],
+    plaza: [0.47, 0.54]
+  }
+});
+const assistantLifeMapArtOf = src => /halloween-wide/.test(String(src || '')) ? 'halloweenWide' : /halloween/.test(String(src || '')) ? 'halloween' : 'classic';
+const ASSISTANT_LIFE_DOING_ICON = Object.freeze({
+  snack: '🍰',
+  practice: '🎵',
+  training: '🥚',
+  cards: '🃏',
+  walk: '🚶',
+  idle: '💭',
+  sleep: '💤',
+  read: '📖'
+});
+const ASSISTANT_LIFE_MAP_ABOUT = Object.freeze({
+  home: '家で過ごしている助手。部屋をのぞいて、声をかけられます',
+  studio: 'モンヒロビートで練習している助手。いる助手とは、券なしで一緒に遊べます',
+  cardroom: 'MFバトルカードの研究をしている助手。いる助手と対戦すると、ごほうびが上がります',
+  ranch: 'M/B管理でモンスターを育てている助手',
+  temple: '神殿にいる助手',
+  market: 'マーケットにいる助手',
+  library: '図書室で本を読んだり、カードを研究したりしている助手',
+  cafe: 'おやつ屋さんでおやつを食べている助手',
+  hill: 'ひなたの丘でのんびりしている助手',
+  garden: '中庭で過ごしている助手',
+  plaza: '広場を散歩している助手'
+});
+const ASSISTANT_LIFE_MAP_FAC_NAME = Object.freeze({
+  management: 'M/B管理',
+  temple: '神殿',
+  market: 'マーケット',
+  life: '助手ライフ',
+  rhythm: 'モンヒロビート',
+  card: 'MFバトルカード'
+});
+const assistantLifeMapSpotWord = place => `${ASSISTANT_LIFE_PLACE_ICON[place] || '📍'} ${place === 'home' ? 'みんなの家' : assistantLifePlaceShow(place)}`;
+const assistantLifeMapReadHome = () => {
+  const out = {
+    w: window.innerWidth,
+    h: window.innerHeight,
+    vars: {},
+    src: 'data/images/home-background.jpg',
+    wide: false,
+    card: 'mh-home-card-battle raised',
+    fromHome: false
+  };
+  try {
+    const rot = typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.active();
+    const scene = document.querySelector('main.mh-home-scene');
+    if (!scene) return out;
+    const img = scene.querySelector('.mh-home-background img.mh-home-main');
+    if (img && img.getAttribute('src')) {
+      out.src = img.getAttribute('src');
+      out.wide = !!scene.querySelector('.mh-home-background.is-wide');
+    }
+    const card = scene.querySelector('.mh-home-card-battle');
+    if (card) out.card = [...card.classList].filter(c => c !== 'is-tutorial-spot').join(' ');
+    if (rot || !scene.offsetWidth || !scene.offsetHeight) return out;
+    out.w = scene.offsetWidth;
+    out.h = scene.offsetHeight;
+    out.fromHome = true;
+    for (let i = 0; i < scene.style.length; i++) {
+      const k = scene.style[i];
+      if (/^--mh-home-/.test(k)) out.vars[k] = scene.style.getPropertyValue(k);
+    }
+  } catch (_) {}
+  return out;
+};
+function AssistantLifeMapFig({
+  who,
+  h,
+  sleep,
+  spent = false
+}) {
+  const src = assistantFullImage(who, sleep ? 'normal' : 'happy');
+  const [box, setBox] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.get(src) || null);
+  React.useEffect(() => {
+    let alive = true;
+    assistantLifeStandBox(src).then(b => {
+      if (alive) setBox(b);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [src]);
+  const b = box || {
+    t: 0,
+    b: 1,
+    l: 0,
+    r: 1,
+    ar: 0.6
+  };
+  const ih = h / Math.max(0.2, b.b - b.t),
+    iw = ih * (b.ar || 0.6);
+  const w = Math.round(Math.min((b.r - b.l) * iw, h * 0.78));
+  const cx = (b.l + b.r) / 2 * iw;
+  const mask = 'linear-gradient(#000 74%,transparent)';
+  return React.createElement("span", {
+    className: "relative block shrink-0",
+    style: {
+      width: w,
+      height: h
+    }
+  }, React.createElement("span", {
+    className: "absolute inset-0 overflow-hidden",
+    style: {
+      WebkitMaskImage: mask,
+      maskImage: mask
+    },
+    "data-assistant-life-map-fig": true
+  }, React.createElement("img", {
+    src: src,
+    alt: "",
+    draggable: false,
+    style: {
+      position: 'absolute',
+      height: ih,
+      width: iw,
+      maxWidth: 'none',
+      top: -b.t * ih,
+      left: w / 2 - cx,
+      filter: sleep ? 'brightness(.62) saturate(.7)' : 'drop-shadow(0 2px 3px #0009)'
+    }
+  })), sleep && React.createElement("span", {
+    className: "absolute right-0 top-0 text-[10px]",
+    "aria-hidden": "true"
+  }, "💤"), spent && typeof AssistantLifeSpentMark === 'function' && React.createElement(AssistantLifeSpentMark, {
+    size: Math.round(h * 0.5)
+  }));
+}
+function AssistantLifeTownMap({
+  life,
+  ids,
+  onPick,
+  onBeat = null,
+  onCard = null,
+  onBack,
+  list = null,
+  land = false
+}) {
+  const [home, setHome] = React.useState(() => assistantLifeMapReadHome());
+  const [sheet, setSheet] = React.useState(null);
+  const sceneRef = React.useRef(null);
+  const listRef = React.useRef(null);
+  React.useEffect(() => {
+    const re = () => setHome(prev => {
+      const n = assistantLifeMapReadHome();
+      return JSON.stringify(prev) === JSON.stringify(n) ? prev : n;
+    });
+    const t = setInterval(re, 1000);
+    window.addEventListener('resize', re);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener('resize', re);
+    };
+  }, []);
+  const at = {};
+  for (const id of ASSISTANT_LIFE_HOUSE_ORDER) {
+    if (!ids.includes(id)) continue;
+    const w = assistantLifeWhereOf(life, id);
+    const p = w && ASSISTANT_LIFE_PLACE_ICON[w.place] ? w.place : 'home';
+    (at[p] = at[p] || []).push(id);
+  }
+  const art = assistantLifeMapArtOf(home.src);
+  const small = home.h < 500;
+  const figH = home.h < 360 ? 30 : small ? 34 : 42;
+  React.useLayoutEffect(() => {
+    const S = sceneRef.current;
+    if (!S) return undefined;
+    const place = () => {
+      const sr = S.getBoundingClientRect();
+      const rel = r => ({
+        left: r.left - sr.left,
+        top: r.top - sr.top,
+        right: r.right - sr.left,
+        bottom: r.bottom - sr.top,
+        width: r.width,
+        height: r.height
+      });
+      const hit = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1;
+      const area = (a, b) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+      const bar = S.querySelector('[data-assistant-life-map-bar]');
+      const topMin = bar ? rel(bar.getBoundingClientRect()).bottom + 2 : 2;
+      const hint = S.querySelector('[data-assistant-life-map-hint]');
+      const obs = [];
+      if (hint) obs.push(rel(hint.getBoundingClientRect()));
+      const tagOf = el => el.classList.contains('mh-home-facility') ? el.querySelector(':scope > span') || el : el;
+      for (const el of S.querySelectorAll('[data-assistant-life-map-place]')) {
+        if (el.hasAttribute('data-assistant-life-map-town')) continue;
+        obs.push(rel(tagOf(el).getBoundingClientRect()));
+      }
+      const W = S.clientWidth,
+        H = S.clientHeight;
+      const inside = q => q.left >= 3 && q.right <= W - 3 && q.top >= topMin && q.bottom <= H - 3;
+      const best = cands => cands.find(q => inside(q) && obs.every(o => !hit(q, o))) || cands.filter(inside).sort((a, b) => obs.reduce((s, o) => s + area(a, o), 0) - obs.reduce((s, o) => s + area(b, o), 0))[0] || cands[0];
+      const free = q => inside(q) && obs.every(o => !hit(q, o));
+      const setScale = (c, sc) => {
+        c.style.transformOrigin = '0 0';
+        c.style.transform = sc === 1 ? '' : `scale(${sc})`;
+      };
+      const put = (el, l, t) => {
+        el.style.left = `${Math.round(l)}px`;
+        el.style.top = `${Math.round(t)}px`;
+        el.style.visibility = '';
+      };
+      const img = S.querySelector('.mh-home-background img.mh-home-main');
+      let ib = null;
+      if (img && img.naturalWidth) {
+        const r = rel(img.getBoundingClientRect()),
+          nw = img.naturalWidth,
+          nh = img.naturalHeight;
+        const k = getComputedStyle(img).objectFit === 'cover' ? Math.max(r.width / nw, r.height / nh) : Math.min(r.width / nw, r.height / nh);
+        ib = {
+          x: r.left + (r.width - nw * k) / 2,
+          y: r.top + (r.height - nh * k) / 2,
+          w: nw * k,
+          h: nh * k
+        };
+      }
+      const soft = [];
+      if (ib) for (const el of S.querySelectorAll('[data-assistant-life-map-town]')) {
+        const pos = (ASSISTANT_LIFE_MAP_TOWN[art] || ASSISTANT_LIFE_MAP_TOWN.classic)[el.getAttribute('data-assistant-life-map-place')];
+        if (!pos) continue;
+        const x = ib.x + ib.w * pos[0],
+          y = ib.y + ib.h * pos[1],
+          w = el.offsetWidth / 2 + 4,
+          h = el.offsetHeight / 2 + 4;
+        soft.push({
+          left: x - w,
+          right: x + w,
+          top: y - h,
+          bottom: y + h
+        });
+      }
+      for (const c of S.querySelectorAll('[data-assistant-life-map-crowd]')) {
+        const k = c.getAttribute('data-assistant-life-map-crowd');
+        const anchor = S.querySelector(`[data-assistant-life-map-place="${k}"]`);
+        if (!anchor || anchor.hasAttribute('data-assistant-life-map-town')) continue;
+        const a = rel(tagOf(anchor).getBoundingClientRect());
+        let q = null;
+        for (const sc of [1, 0.8, 0.66]) {
+          const w = c.offsetWidth * sc,
+            h = c.offsetHeight * sc,
+            cx = (a.left + a.right) / 2,
+            cy = (a.top + a.bottom) / 2;
+          const box = (l, t) => ({
+            left: l,
+            top: t,
+            right: l + w,
+            bottom: t + h,
+            width: w,
+            height: h
+          });
+          const clampX = l => Math.max(3, Math.min(W - 3 - w, l));
+          const cands = [];
+          for (const s of [0, -24, 24, -48, 48, -72, 72, -96, 96]) {
+            cands.push(box(clampX(cx - w / 2 + s), a.top - h - 1));
+            cands.push(box(clampX(cx - w / 2 + s), a.bottom + 1));
+          }
+          for (const s of [0, -16, 16, -32, 32, -48, 48]) {
+            cands.push(box(a.right + 2, cy - h / 2 + s));
+            cands.push(box(a.left - w - 2, cy - h / 2 + s));
+          }
+          q = cands.find(x => free(x) && soft.every(o => !hit(x, o))) || best(cands);
+          setScale(c, sc);
+          if (free(q)) break;
+        }
+        put(c, q.left, q.top);
+        obs.push(q);
+      }
+      const towns = [...S.querySelectorAll('[data-assistant-life-map-town]')].map(el => ({
+        el,
+        k: el.getAttribute('data-assistant-life-map-place')
+      })).map(t => ({
+        ...t,
+        c: S.querySelector(`[data-assistant-life-map-crowd="${t.k}"]`)
+      })).sort((x, y) => (y.c ? 1 : 0) - (x.c ? 1 : 0));
+      for (const {
+        el,
+        k,
+        c
+      } of towns) {
+        const pos = (ASSISTANT_LIFE_MAP_TOWN[art] || ASSISTANT_LIFE_MAP_TOWN.classic)[k];
+        if (!ib || !pos) {
+          el.style.visibility = 'hidden';
+          if (c) c.style.visibility = 'hidden';
+          continue;
+        }
+        let got = null;
+        for (const [ts, cs, far] of c ? [[1, 1, 120], [1, 0.8, 120], [0.85, 0.66, 120], [0.72, 0.6, 120], [0.85, 0.66, 168]] : [[1, 1, 120], [0.85, 1, 120], [0.72, 1, 120], [0.85, 1, 168]]) {
+          const tw = el.offsetWidth * ts,
+            th = el.offsetHeight * ts;
+          const cw = c ? c.offsetWidth * cs : 0,
+            ch = c ? c.offsetHeight * cs + 1 : 0;
+          const w = Math.max(tw, cw),
+            h = th + ch;
+          const x0 = ib.x + ib.w * pos[0] - w / 2,
+            y0 = ib.y + ib.h * pos[1] - th / 2 - ch;
+          const cands = [];
+          for (let d = 0; d <= far; d += 6) for (const [dx, dy] of d ? [[0, -d], [0, d], [-d, 0], [d, 0], [-d, -d], [d, -d], [-d, d], [d, d]] : [[0, 0]]) cands.push({
+            left: x0 + dx,
+            top: y0 + dy,
+            right: x0 + dx + w,
+            bottom: y0 + dy + h,
+            width: w,
+            height: h
+          });
+          const q = best(cands);
+          got = {
+            q,
+            ts,
+            cs,
+            tw,
+            th,
+            cw,
+            ch,
+            w
+          };
+          if (free(q)) break;
+        }
+        const {
+          q,
+          ts,
+          cs,
+          tw,
+          th,
+          cw,
+          ch,
+          w
+        } = got;
+        if (c) {
+          setScale(c, cs);
+          put(c, q.left + (w - cw) / 2, q.top);
+          obs.push({
+            left: q.left + (w - cw) / 2,
+            top: q.top,
+            right: q.left + (w + cw) / 2,
+            bottom: q.top + ch - 1
+          });
+        }
+        const tl = q.left + (w - tw) / 2,
+          tt = q.top + ch;
+        setScale(el, ts);
+        put(el, tl, tt);
+        obs.push({
+          left: tl,
+          top: tt,
+          right: tl + tw,
+          bottom: tt + th
+        });
+      }
+    };
+    place();
+    const img = S.querySelector('.mh-home-background img.mh-home-main');
+    if (img && !img.complete) img.addEventListener('load', place, {
+      once: true
+    });
+    const t = setTimeout(place, 350);
+    return () => {
+      clearTimeout(t);
+      if (img) img.removeEventListener('load', place);
+    };
+  });
+  const sceneStyle = {
+    position: 'relative',
+    flex: 'none',
+    width: home.w,
+    height: home.h,
+    margin: '0 auto',
+    ...home.vars
+  };
+  const facBtn = (place, cls, aria, inner) => {
+    const n = (at[place] || []).length;
+    return React.createElement("button", {
+      key: place,
+      type: "button",
+      className: `mh-home-facility ${cls}`,
+      "aria-label": `${aria}(${n ? `${n}人` : 'だれもいない'})`,
+      "data-assistant-life-map-place": place,
+      "data-assistant-life-map-empty": n ? '0' : '1',
+      style: n ? undefined : {
+        opacity: 0.55,
+        filter: 'saturate(.5)'
+      },
+      onClick: () => setSheet(place)
+    }, inner);
+  };
+  const cardN = (at.cardroom || []).length;
+  const spentOf = (id, place) => place === 'cardroom' && typeof assistantLifeCardSpent === 'function' && !!assistantLifeCardSpent(id);
+  const crowd = place => {
+    const who = at[place] || [];
+    if (!who.length) return null;
+    const many = who.length > 4;
+    return React.createElement("div", {
+      key: `c-${place}`,
+      className: "absolute z-[6] flex items-end",
+      style: {
+        visibility: 'hidden',
+        left: 0,
+        top: 0
+      },
+      "data-assistant-life-map-crowd": place
+    }, many ? React.createElement("div", {
+      className: "flex flex-col items-center"
+    }, React.createElement("div", {
+      className: "flex items-end"
+    }, who.map((id, i) => {
+      const a = assistantById(id);
+      if (!a) return null;
+      const w = assistantLifeWhereOf(life, id);
+      return React.createElement("button", {
+        key: id,
+        type: "button",
+        "aria-label": `${a.name}の部屋`,
+        "data-assistant-life-map-who": id,
+        onClick: () => setSheet(place),
+        style: {
+          marginLeft: i ? -Math.round(figH * 0.42) : 0
+        }
+      }, React.createElement(AssistantLifeMapFig, {
+        who: a,
+        h: figH,
+        sleep: !!(w && w.doing === 'sleep'),
+        spent: spentOf(id, place)
+      }));
+    })), React.createElement("span", {
+      className: "mhl-map-name",
+      "data-assistant-life-map-name": true
+    }, `${assistantLifeName(who[0])}ほか${who.length - 1}人`)) : who.map(id => {
+      const a = assistantById(id);
+      if (!a) return null;
+      const w = assistantLifeWhereOf(life, id);
+      const d = w && ASSISTANT_LIFE_DOINGS[w.doing];
+      return React.createElement("button", {
+        key: id,
+        type: "button",
+        "aria-label": `${a.name}・${d ? d.label : ''}${spentOf(id, place) ? '(対戦のごほうび済み)' : ''}`,
+        "data-assistant-life-map-who": id,
+        "data-assistant-life-map-spent": spentOf(id, place) ? '1' : undefined,
+        onClick: () => setSheet(place),
+        className: "flex flex-col items-center px-[1px]"
+      }, React.createElement(AssistantLifeMapFig, {
+        who: a,
+        h: figH,
+        sleep: !!(w && w.doing === 'sleep'),
+        spent: spentOf(id, place)
+      }), React.createElement("span", {
+        className: "mhl-map-name",
+        "data-assistant-life-map-name": true
+      }, w && ASSISTANT_LIFE_DOING_ICON[w.doing], a.name));
+    }));
+  };
+  const sheetPlace = sheet;
+  const sheetWho = sheetPlace ? at[sheetPlace] || [] : [];
+  const fac = sheetPlace ? assistantLifeFacilityOf({
+    place: sheetPlace
+  }) : null;
+  const sheetTown = sheetPlace === 'home' ? ASSISTANT_LIFE_MAP_TOWN_ONLY.flatMap(p => (at[p] || []).map(id => [id, p])) : [];
+  const row = (id, place, town) => {
+    const a = assistantById(id);
+    if (!a) return null;
+    const w = assistantLifeWhereOf(life, id);
+    const d = w && ASSISTANT_LIFE_DOINGS[w.doing];
+    const withNames = w && w.with && w.with.length ? `${w.with.map(assistantLifeName).join('・')}と` : 'ひとりで';
+    const spent = place === 'cardroom' && typeof assistantLifeCardSpent === 'function' ? assistantLifeCardSpent(id) : null;
+    return React.createElement("div", {
+      key: id,
+      className: "mt-2 flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-900/85 p-2",
+      "data-assistant-life-map-sheet-who": id,
+      "data-assistant-life-map-sheet-at": place
+    }, React.createElement(AssistantFace, {
+      who: a,
+      size: 36,
+      accent: a.accent
+    }), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("p", {
+      className: "text-[13px] font-black text-white"
+    }, a.name, spent && React.createElement("span", {
+      className: "ml-1 rounded-full bg-slate-200 px-1.5 text-[9.5px] font-black text-slate-900",
+      "data-assistant-life-map-sheet-spent": true
+    }, "済 ごほうび済み")), React.createElement("p", {
+      className: "text-[10.5px] font-bold text-slate-300"
+    }, town ? `${assistantLifeMapSpotWord(place)}で ` : '', w && ASSISTANT_LIFE_DOING_ICON[w.doing], " ", withNames, d ? d.label : '過ごしている', w && w.reason === 'lonely' ? '(さみしそう)' : ''), spent && React.createElement("p", {
+      className: "text-[10.5px] font-bold text-amber-200",
+      style: {
+        wordBreak: 'auto-phrase'
+      },
+      "data-assistant-life-map-sheet-next": true
+    }, typeof cardLifeSpentText === 'function' ? cardLifeSpentText(spent) : '🃏 ごほうびアップは次の時間帯から')), React.createElement("div", {
+      className: "flex shrink-0 flex-col gap-1"
+    }, place === 'studio' && typeof onBeat === 'function' && typeof ASSISTANT_LIFE_LINKS !== 'undefined' && typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && React.createElement("button", {
+      type: "button",
+      "data-assistant-life-map-act": "beat",
+      onClick: () => {
+        setSheet(null);
+        onBeat(id);
+      },
+      className: "rounded-xl bg-gradient-to-r from-cyan-600 to-violet-600 px-2 py-1 text-[11px] font-black text-white active:scale-95"
+    }, "🎵 一緒に遊ぶ"), place === 'cardroom' && !spent && typeof onCard === 'function' && typeof ASSISTANT_LIFE_LINKS !== 'undefined' && typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && React.createElement("button", {
+      type: "button",
+      "data-assistant-life-map-act": "card",
+      onClick: () => {
+        setSheet(null);
+        onCard(id);
+      },
+      className: "rounded-xl bg-gradient-to-r from-blue-700 to-violet-700 px-2 py-1 text-[11px] font-black text-white active:scale-95"
+    }, "🃏 対戦する"), React.createElement("button", {
+      type: "button",
+      "data-assistant-life-map-act": "room",
+      onClick: () => {
+        setSheet(null);
+        onPick(id);
+      },
+      className: "rounded-xl border border-pink-300/60 px-2 py-1 text-[11px] font-black text-pink-100 active:scale-95"
+    }, "🏡 部屋へ ›")));
+  };
+  return React.createElement("div", {
+    className: "absolute inset-0 z-[4] overflow-y-auto overflow-x-hidden bg-[#0b1020]",
+    "data-assistant-life-where": true,
+    "data-assistant-life-map-art": art
+  }, React.createElement("style", null, `.mhl-map-town{position:absolute;z-index:4;padding:0;border:0;background:transparent;color:#fff}
+.mhl-map-town>span{display:flex;align-items:center;gap:4px;white-space:nowrap;padding:4px 9px;border:2px solid #ffe6a7a8;border-radius:12px;background:#10211df2;box-shadow:0 3px 10px #0009;font-size:12px;font-weight:900;line-height:1.15;text-shadow:0 2px 4px #000}
+.mhl-map-town[data-assistant-life-map-empty="1"]>span{opacity:.6;border-color:#94a3b8aa;background:#0f172ad9}
+.mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:${small ? 8 : 9}px;font-weight:900;line-height:${small ? 12 : 13}px;color:#fff;box-shadow:0 1px 3px #0008}
+[data-assistant-life-map] .mh-home-facility:active>span,.mhl-map-town:active>span{transform:scale(.94)}`), React.createElement("div", {
+    ref: sceneRef,
+    className: `mh-home-scene${home.wide ? ' is-wide' : ''}`,
+    style: sceneStyle,
+    "data-assistant-life-map": true,
+    "data-assistant-life-map-from-home": home.fromHome ? '1' : '0'
+  }, React.createElement("picture", {
+    className: `mh-home-background is-ready${home.wide ? ' is-wide' : ''}`,
+    "aria-hidden": "true"
+  }, React.createElement("img", {
+    className: "mh-home-backdrop",
+    src: home.src,
+    alt: ""
+  }), React.createElement("img", {
+    className: "mh-home-main",
+    src: home.src,
+    alt: ""
+  })), React.createElement("nav", {
+    className: "mh-home-facilities",
+    "aria-label": "町の場所"
+  }, facBtn('ranch', 'management', 'M/B管理', React.createElement("span", null, React.createElement(Layers, {
+    size: 18
+  }), React.createElement("b", {
+    className: "mh-home-facility-label"
+  }, "M/B管理", React.createElement("small", null, "モンスター・編成")))), facBtn('temple', 'temple', '神殿', React.createElement("span", null, React.createElement(Sparkles, {
+    size: 18
+  }), "神殿")), facBtn('market', 'market', 'マーケット', React.createElement("span", null, React.createElement(ShoppingBag, {
+    size: 17
+  }), "マーケット")), facBtn('home', 'life', '助手ライフ みんなの家', React.createElement("span", null, React.createElement("span", {
+    "aria-hidden": "true",
+    style: {
+      fontSize: 16,
+      lineHeight: 1
+    }
+  }, "🏡"), React.createElement("b", {
+    className: "mh-home-facility-label"
+  }, "助手ライフ", React.createElement("small", null, "みんなの家")))), facBtn('studio', 'rhythm', 'モンヒロビート', React.createElement("span", null, "🎵 モンヒロビート"))), React.createElement("button", {
+    type: "button",
+    className: home.card,
+    "aria-label": `MFバトルカード(${cardN ? `${cardN}人` : 'だれもいない'})`,
+    "data-assistant-life-map-place": "cardroom",
+    "data-assistant-life-map-empty": cardN ? '0' : '1',
+    style: cardN ? undefined : {
+      opacity: 0.55,
+      filter: 'saturate(.5)'
+    },
+    onClick: () => setSheet('cardroom')
+  }, React.createElement("span", null, "🃏 MFバトルカード")), ASSISTANT_LIFE_MAP_TOWN_ONLY.map(p => {
+    const n = (at[p] || []).length;
+    return React.createElement("button", {
+      key: p,
+      type: "button",
+      className: "mhl-map-town",
+      style: {
+        visibility: 'hidden',
+        left: 0,
+        top: 0
+      },
+      "aria-label": `${assistantLifePlaceShow(p)}(${n ? `${n}人` : 'だれもいない'})`,
+      "data-assistant-life-map-place": p,
+      "data-assistant-life-map-town": true,
+      "data-assistant-life-map-empty": n ? '0' : '1',
+      onClick: () => setSheet(p)
+    }, React.createElement("span", null, ASSISTANT_LIFE_PLACE_ICON[p], " ", assistantLifePlaceShow(p)));
+  }), ASSISTANT_LIFE_MAP_ORDER.map(crowd), React.createElement("div", {
+    className: "absolute inset-x-0 top-0 z-[8] flex items-center gap-2 bg-gradient-to-b from-[#0b1020f2] via-[#0b1020d9] to-transparent px-2 pb-3",
+    style: {
+      paddingTop: land ? 6 : 'calc(6px + env(safe-area-inset-top))',
+      paddingLeft: 'calc(8px + env(safe-area-inset-left))',
+      paddingRight: 'calc(8px + env(safe-area-inset-right))'
+    },
+    "data-assistant-life-map-bar": true
+  }, React.createElement("button", {
+    type: "button",
+    "data-assistant-life-map-back": true,
+    onClick: onBack,
+    className: "shrink-0 rounded-xl border border-pink-300/60 bg-slate-950/85 px-2.5 py-1.5 text-[12px] font-black text-pink-100 active:scale-95"
+  }, "🏡 家へ"), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "truncate text-[15px] font-black leading-tight text-white",
+    style: {
+      textShadow: '0 2px 4px #000'
+    }
+  }, "📋 みんなの居場所"), React.createElement("p", {
+    className: "truncate text-[10px] font-bold text-slate-200",
+    "data-assistant-life-map-time": true
+  }, assistantLifeTodLabel(), " ・ ", assistantLifeNextSlotText().replace(/みんなが動きます$/, 'みんなが動く'))), list && React.createElement("button", {
+    type: "button",
+    "data-assistant-life-map-list": true,
+    onClick: () => {
+      try {
+        const l = listRef.current,
+          box = l && l.parentElement;
+        if (box) box.scrollTo({
+          top: l.offsetTop,
+          behavior: 'smooth'
+        });
+      } catch (_) {}
+    },
+    className: "shrink-0 rounded-xl border border-slate-500/70 bg-slate-950/85 px-2.5 py-1.5 text-[11px] font-black text-slate-100 active:scale-95"
+  }, "📃 一覧 ↓")), React.createElement("p", {
+    className: "pointer-events-none absolute left-1/2 z-[7] -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-950/85 px-3 py-1 text-[10.5px] font-bold text-slate-100",
+    style: {
+      bottom: 'calc(10px + env(safe-area-inset-bottom))'
+    },
+    "data-assistant-life-map-hint": true
+  }, "場所を押すと、いる助手とできること")), list && React.createElement("div", {
+    ref: listRef,
+    className: "relative bg-[#0b1020]",
+    "data-assistant-life-map-below": true
+  }, list), sheetPlace && React.createElement("div", {
+    className: "fixed inset-0",
+    style: {
+      zIndex: 30
+    },
+    "data-assistant-life-map-sheet": sheetPlace
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    className: "absolute inset-0 bg-black/60",
+    onClick: () => setSheet(null)
+  }), React.createElement("div", {
+    className: "mhl-sheet",
+    style: land ? {
+      left: 'auto',
+      width: '42%',
+      top: 0,
+      maxHeight: '100%',
+      borderRadius: '22px 0 0 22px',
+      borderTop: 0,
+      borderLeft: '2px solid #f9a8d4',
+      paddingTop: 10
+    } : undefined
+  }, React.createElement("p", {
+    className: "mhl-en"
+  }, "WHERE · ", String(sheetPlace).toUpperCase()), React.createElement("p", {
+    className: "text-[18px] font-black",
+    "data-assistant-life-map-sheet-title": true
+  }, assistantLifeMapSpotWord(sheetPlace)), React.createElement("p", {
+    className: "text-[10.5px] font-bold text-slate-300",
+    "data-assistant-life-map-sheet-home": true
+  }, ASSISTANT_LIFE_MAP_TOWN_ONLY.includes(sheetPlace) ? `町の場所。HOME では「🏡 助手ライフ」の札の下に顔が出ます` : `HOME の「${ASSISTANT_LIFE_MAP_FAC_NAME[fac]}」の札${sheetPlace === 'home' ? '(家と町にいる助手の顔もここ)' : ''}`), React.createElement("p", {
+    className: "mt-1 text-[11.5px] font-bold leading-snug text-slate-100"
+  }, ASSISTANT_LIFE_MAP_ABOUT[sheetPlace]), sheetWho.length ? sheetWho.map(id => row(id, sheetPlace, false)) : React.createElement("p", {
+    className: "mt-2 rounded-xl bg-slate-900/85 px-2 py-2 text-[12px] font-bold text-slate-300",
+    "data-assistant-life-map-sheet-none": true
+  }, "いまはだれもいません"), sheetTown.length > 0 && React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "mt-3 text-[11px] font-black text-amber-200",
+    "data-assistant-life-map-sheet-town": true
+  }, "📍 町にいる助手(HOME ではこの札の下に顔が出ます)"), sheetTown.map(([id, p]) => row(id, p, true))), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-map-sheet-close": true,
+    "data-mhl-sheet-close": true,
+    onClick: () => setSheet(null),
+    className: "mt-3 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]"
+  }, "閉じる"))));
 }
 const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   id: 'rel-fight-erubin-momosuke-1',
@@ -121510,6 +122222,173 @@ function AssistantLifeShopButton({
     className: `${small ? 'min-h-[32px] px-2 text-[10.5px]' : 'min-h-[40px] w-full px-3 text-[12px]'} shrink-0 whitespace-nowrap rounded-xl border border-violet-300/70 bg-[#2e1065] font-black text-violet-100 shadow-md active:scale-[.97]`
   }, label);
 }
+let assistantLifeBuyer = null;
+const assistantLifeSetBuyer = fn => {
+  assistantLifeBuyer = typeof fn === 'function' ? fn : null;
+};
+const assistantLifeCanBuy = item => !!(assistantLifeBuyer && item && item.itemId && Number.isFinite(item.cost) && item.cost > 0);
+const ASSISTANT_LIFE_BEATP = {
+  n: null,
+  listeners: new Set(),
+  async refresh() {
+    try {
+      const v = typeof loadRhythmEventPoints === 'function' ? await loadRhythmEventPoints() : null;
+      this.n = Number.isFinite(v) ? Math.max(0, Math.floor(v)) : null;
+    } catch {
+      this.n = null;
+    }
+    for (const fn of this.listeners) {
+      try {
+        fn(this.n);
+      } catch {}
+    }
+    return this.n;
+  }
+};
+const useAssistantLifeBeatPoints = () => {
+  const [n, setN] = React.useState(ASSISTANT_LIFE_BEATP.n);
+  React.useEffect(() => {
+    const fn = v => setN(v);
+    ASSISTANT_LIFE_BEATP.listeners.add(fn);
+    void ASSISTANT_LIFE_BEATP.refresh();
+    return () => {
+      ASSISTANT_LIFE_BEATP.listeners.delete(fn);
+    };
+  }, []);
+  return n;
+};
+const assistantLifeBuyOne = async itemId => {
+  if (!assistantLifeBuyer) return {
+    ok: false,
+    reason: 'none'
+  };
+  let r = null;
+  try {
+    r = await assistantLifeBuyer(itemId);
+  } catch {
+    r = null;
+  }
+  void ASSISTANT_LIFE_BEATP.refresh();
+  return r && r.ok ? {
+    ok: true
+  } : {
+    ok: false,
+    reason: r && r.reason || 'save'
+  };
+};
+const assistantLifeGiftGainsFor = (kind, pair, nameOf, st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  const g = assistantLifeGiftOf(kind),
+    amt = g && assistantLifeGiftAmounts(kind, pair);
+  if (!amt) return [];
+  const shown = pair.map(id => assistantLifeGiftShownLike(id, g.key, st));
+  return [...pair.map((id, i) => ({
+    text: `💗 ${nameOf(id)}との仲良し度 ${shown[i] === 'unknown' ? `+${amt.range.player[0]}〜${amt.range.player[1]}` : `+${amt.player[i]}`}`
+  })), {
+    text: `🤝 2人の友情Lv ${assistantLifeGiftPeerShown(g, shown)}`,
+    cls: 'text-orange-300'
+  }];
+};
+const assistantLifeBuyLabel = item => `🛒 ${item.cost}P で買って贈る`;
+function AssistantLifeBuyConfirm({
+  item,
+  to,
+  gains = [],
+  check,
+  give,
+  onClose
+}) {
+  const points = useAssistantLifeBeatPoints();
+  const [busy, setBusy] = React.useState(false);
+  const [err, setErr] = React.useState('');
+  if (!item) return null;
+  const known = Number.isFinite(points);
+  const short = known ? Math.max(0, item.cost - points) : 0;
+  const reason = typeof check === 'function' ? check() : '';
+  const go = async () => {
+    if (busy) return;
+    const r0 = typeof check === 'function' ? check() : '';
+    if (r0) {
+      setErr(r0);
+      return;
+    }
+    setBusy(true);
+    setErr('');
+    const r = await assistantLifeBuyOne(item.itemId);
+    if (!r.ok) {
+      setBusy(false);
+      setErr(r.reason === 'points' ? 'ビートPが足りません' : r.reason === 'busy' ? 'ほかの交換を待っています。少ししてからもう一度押してください' : '買えませんでした。ビートPと持ち物はそのままです');
+      return;
+    }
+    try {
+      if (typeof give === 'function') await give();
+    } finally {
+      setBusy(false);
+      if (typeof onClose === 'function') onClose();
+    }
+  };
+  return React.createElement("div", {
+    "data-assistant-life-buy-confirm": item.itemId,
+    className: "absolute inset-0 flex items-center justify-center bg-black/70 px-4",
+    style: {
+      zIndex: 45
+    },
+    onClick: ev => {
+      ev.stopPropagation();
+      if (!busy) onClose();
+    }
+  }, React.createElement("div", {
+    className: "max-h-full w-full max-w-sm overflow-y-auto rounded-3xl border-2 border-violet-300/70 bg-slate-900 p-3",
+    onClick: ev => ev.stopPropagation()
+  }, React.createElement("p", {
+    className: "text-[13px] font-black text-violet-200"
+  }, "🛒 買って贈る"), React.createElement("div", {
+    className: "mt-1.5 flex items-center gap-2"
+  }, React.createElement("span", {
+    className: "grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/5 text-[30px]",
+    "aria-hidden": "true"
+  }, item.emoji), React.createElement("p", {
+    className: "min-w-0 flex-1 text-[15px] font-black leading-snug text-white",
+    "data-assistant-life-buy-name": true
+  }, item.name)), React.createElement("p", {
+    className: "mt-2 text-[12px] font-black leading-snug text-white",
+    style: {
+      wordBreak: 'keep-all',
+      overflowWrap: 'anywhere'
+    },
+    "data-assistant-life-buy-text": true
+  }, "ビートP ", item.cost, " で買って、", React.createElement("wbr", null), "そのまま ", to, " に贈ります"), React.createElement("p", {
+    className: "mt-1.5 rounded-xl bg-slate-800 px-2 py-1 text-[11.5px] font-black text-slate-200",
+    "data-assistant-life-buy-points": known ? `${points}-${points - item.cost}` : ''
+  }, "所持ビートP ", known ? React.createElement(React.Fragment, null, points.toLocaleString(), " → ", React.createElement("span", {
+    className: short > 0 ? 'text-rose-300' : 'text-amber-200'
+  }, short > 0 ? '−' : (points - item.cost).toLocaleString())) : '…'), gains.length > 0 && React.createElement("div", {
+    className: "mt-1.5 space-y-0.5",
+    "data-assistant-life-buy-gains": true
+  }, gains.map((x, i) => React.createElement("p", {
+    key: i,
+    className: `text-[11px] font-black leading-snug ${x.cls || 'text-pink-200'}`
+  }, x.text))), short > 0 && React.createElement("p", {
+    "data-assistant-life-buy-short": short,
+    className: "mt-1.5 rounded-xl bg-rose-500/15 px-2 py-1 text-[11.5px] font-black text-rose-200"
+  }, "ビートPが足りません(あと", short.toLocaleString(), "P)"), (err || reason) && React.createElement("p", {
+    "data-assistant-life-buy-err": true,
+    className: "mt-1.5 rounded-xl bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-300"
+  }, err || reason), React.createElement("div", {
+    className: "mt-2.5 flex gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    "data-assistant-life-buy-cancel": true,
+    disabled: busy,
+    onClick: onClose,
+    className: "min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98] disabled:opacity-40"
+  }, "やめる"), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-buy-go": true,
+    disabled: busy || !known || short > 0 || !!reason,
+    onClick: go,
+    className: "min-h-[44px] flex-[2] rounded-xl border border-violet-300/80 bg-violet-600 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40"
+  }, busy ? '…' : '🛒 買って贈る'))));
+}
 function AssistantLifeGiftExplain({
   compact = false
 }) {
@@ -121540,6 +122419,8 @@ function AssistantLifeGiftSheet({
   onGive
 }) {
   const st = useAssistantLifeGiftState();
+  const beatP = useAssistantLifeBeatPoints();
+  const [buying, setBuying] = React.useState(false);
   const soloOn = assistantLifeSoloOn();
   const soloWho = soloOn && give.solo ? give.solo : null;
   const gifts = (soloWho ? assistantLifeSoloKinds() : assistantLifeGiftKinds()).map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
@@ -121552,6 +122433,11 @@ function AssistantLifeGiftSheet({
   const have = haveOf(info.kind);
   const reason = soloWho ? assistantLifeSoloReason(info.kind, peerSt, have, st) : assistantLifeGiftReason(info.kind, peerSt, have, st);
   const lifeOn = typeof assistantLifeEnabled === 'function' && assistantLifeEnabled();
+  const reasonOf = () => {
+    const s2 = ASSISTANT_LIFE_GIFT_STORE.state;
+    return soloWho ? assistantLifeSoloReason(info.kind, peerSt, 1, s2) : assistantLifeGiftReason(info.kind, peerSt, 1, s2);
+  };
+  const buyable = lifeOn && have <= 0 && !reasonOf() && assistantLifeCanBuy(info) && (!!soloWho || pair.length === 2);
   const leftToday = lifeOn ? soloWho ? assistantLifeSoloLeft(st) : assistantLifeGiftLeft(peerSt, st) : null;
   const pairs = [];
   for (let i = 0; i < give.ids.length; i++) for (let j = i + 1; j < give.ids.length; j++) pairs.push([give.ids[i], give.ids[j]]);
@@ -121722,10 +122608,13 @@ function AssistantLifeGiftSheet({
     gainText: peerW && !peerW.max ? ASSISTANT_LIFE_PEER_LV_GAIN[peerW.next] || '' : ''
   }))), React.createElement("p", {
     className: "mt-1 text-[10px] leading-snug text-slate-400 [[data-assistant-life-land='1']_&]:hidden"
-  }, soloWho ? '1人に贈ると、その助手の好みで仲良し度だけが上がります(友情Lv は上がりません)。1人には1⁠日3回・同じ道具は1⁠日1回(朝4時に戻る)' : lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)・?=贈ると分かる。同じ道具は1⁠日1回・合わせて1⁠日3回(朝4時に戻る)' : '1⁠日1回(朝4時に戻る)', "・持っている ", have, "個", info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''), reason && React.createElement("p", {
+  }, soloWho ? '1人に贈ると、その助手の好みで仲良し度だけが上がります(友情Lv は上がりません)。1人には1⁠日3回・同じ道具は1⁠日1回(朝4時に戻る)' : lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)・?=贈ると分かる。同じ道具は1⁠日1回・合わせて1⁠日3回(朝4時に戻る)' : '1⁠日1回(朝4時に戻る)', "・持っている ", have, "個", info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''), buyable && React.createElement("p", {
+    "data-assistant-life-give-buy-hint": true,
+    className: "mt-1.5 rounded-xl bg-violet-500/15 px-2 py-1 text-[11px] font-black leading-snug text-violet-100"
+  }, "持っていない道具も、ここで買ってそのまま贈れます(所持ビートP ", Number.isFinite(beatP) ? beatP.toLocaleString() : '…', ")"), reason && !buyable && React.createElement("p", {
     "data-assistant-life-give-reason": true,
     className: "mt-1.5 rounded-xl bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-300"
-  }, reason), lifeOn && have <= 0 && React.createElement("div", {
+  }, reason), lifeOn && have <= 0 && !buyable && React.createElement("div", {
     className: "mt-1.5"
   }, React.createElement(AssistantLifeShopButton, {
     tab: "item"
@@ -121743,13 +122632,32 @@ function AssistantLifeGiftSheet({
     "data-mhl-sheet-close": true,
     onClick: () => setGive(null),
     className: "min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]"
-  }, "やめる"), React.createElement("button", {
+  }, "やめる"), buyable ? React.createElement("button", {
+    type: "button",
+    "data-assistant-life-give-buy": info.kind,
+    onClick: () => setBuying(true),
+    className: "min-h-[44px] flex-[2] rounded-xl border border-violet-300/80 bg-violet-600 text-[14px] font-black text-white active:scale-[.98]"
+  }, assistantLifeBuyLabel(info)) : React.createElement("button", {
     type: "button",
     "data-assistant-life-give-go": true,
     disabled: !!reason || !soloWho && pair.length !== 2,
-    onClick: onGive,
+    onClick: () => onGive(),
     className: "min-h-[44px] flex-[2] rounded-xl border border-amber-300/70 bg-amber-400/20 text-[14px] font-black text-amber-100 active:scale-[.98] disabled:opacity-40"
-  }, info.emoji, " 贈る"))));
+  }, info.emoji, " 贈る"))), buying && React.createElement(AssistantLifeBuyConfirm, {
+    item: info,
+    to: soloWho ? nameOf(soloWho) : pair.map(nameOf).join('と'),
+    onClose: () => setBuying(false),
+    gains: [...people.map((id, i) => ({
+      text: `💗 ${nameOf(id)}との仲良し度 ${playerText(i)}`
+    })), ...(!soloWho ? [{
+      text: `🤝 2人の友情Lv ${peerText}`,
+      cls: 'text-orange-300'
+    }] : [])],
+    check: reasonOf,
+    give: () => onGive({
+      bought: info
+    })
+  }));
 }
 function AssistantLifeChekiRow({
   pair
@@ -122229,24 +123137,32 @@ function AssistantLifeFurnSheet({
   const st = useAssistantLifeGiftState();
   const [busy, setBusy] = React.useState(false);
   const [msg, setMsg] = React.useState('');
+  const [buyKey, setBuyKey] = React.useState(null);
   const who = typeof assistantById === 'function' ? assistantById(id) : null;
   if (!assistantLifeFurnEnabled() || !who) return null;
   const room = assistantLifeRoomOf(id, st);
   const all = assistantLifeFurnDefs().map(f => assistantLifeFurnOf(f.key)).filter(Boolean);
   const mine = all.filter(f => room.got[f.key]);
   const canGive = all.filter(f => !room.got[f.key] && (Number(furnItems && furnItems[f.key]) || 0) > 0);
+  const toBuy = all.filter(f => !room.got[f.key] && !((Number(furnItems && furnItems[f.key]) || 0) > 0) && assistantLifeCanBuy(f));
+  const furnGainText = k => {
+    const s = shown(k);
+    if (s !== 'unknown') return `+${assistantLifeFurnAmount(id, k)}`;
+    const base = typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 80;
+    return `+${Math.round(base * assistantLifeGiftMult('bad'))}〜${Math.round(base * assistantLifeGiftMult('like'))}`;
+  };
   const shown = k => assistantLifeGiftShownLike(id, k, st);
   const mark = s => s === 'like' ? '💗' : s === 'bad' ? '💧' : s === 'unknown' ? '?' : '';
-  const give = async k => {
+  const give = async (k, bought = false) => {
     if (busy) return;
     setBusy(true);
     const talk = typeof onGiveFurn === 'function' ? await onGiveFurn(id, k) : null;
     setBusy(false);
+    const f = assistantLifeFurnOf(k);
     if (!talk) {
-      setMsg('いまは贈れません(持っている数を見てください)');
+      setMsg(`いまは贈れません(持っている数を見てください)${bought && f ? `。買った${f.name}は持ち物に残っています` : ''}`);
       return;
     }
-    const f = assistantLifeFurnOf(k);
     const likeText = talk.like === 'like' ? '💗 好きな家具！' : talk.like === 'bad' ? '💧 ちょっと苦手…' : '';
     const text = `${who.name}に${f.emoji} ${f.name}を贈った。💗 仲良し度 +${talk.amount}${likeText ? ` ・ ${likeText}` : ''}${talk.placed ? '' : `(${ASSISTANT_LIFE_FURN_SLOTS[f.slot].label}はふさがっているので押し入れへ)`}`;
     setMsg(text);
@@ -122319,7 +123235,19 @@ function AssistantLifeFurnSheet({
     'data-assistant-life-furn-give': f.key
   })))) : React.createElement("p", {
     className: "rounded-xl bg-slate-800/80 px-2 py-1 text-[11px] font-bold text-slate-300"
-  }, "贈れる家具がありません。モンヒロビートの「ビートP交換所」の「家具」で手に入ります"), React.createElement(AssistantLifeShopButton, {
+  }, toBuy.length ? '持っている家具はありません。下の「まだ持っていない家具」から、買ってそのまま贈れます' : '贈れる家具がありません。モンヒロビートの「ビートP交換所」の「家具」で手に入ります')), toBuy.length > 0 && React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "mt-2 text-[11px] font-black text-violet-200"
+  }, "🛒 まだ持っていない家具 ", React.createElement("span", {
+    className: "text-slate-300"
+  }, "(買ってそのまま贈れます)")), React.createElement("div", {
+    className: "mt-1 space-y-1",
+    "data-assistant-life-furn-tobuy": true
+  }, toBuy.map(f => row(f, btn(React.createElement(React.Fragment, null, "🛒 ", f.cost, "P", React.createElement("br", null), "で買って贈る"), () => setBuyKey(f.key), 'border-violet-300/80 bg-violet-600 leading-tight text-white', {
+    'data-assistant-life-furn-buy': f.key,
+    'aria-label': `${f.name}を${f.cost}Pで買って贈る`
+  }))))), React.createElement("div", {
+    className: "mt-1"
+  }, React.createElement(AssistantLifeShopButton, {
     tab: "furniture",
     who: id,
     label: "🛒 交換所の家具の棚へ"
@@ -122347,7 +123275,19 @@ function AssistantLifeFurnSheet({
     "data-mhl-sheet-close": true,
     onClick: onClose,
     className: "mt-2 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]"
-  }, "閉じる")));
+  }, "閉じる")), buyKey && (() => {
+    const f = assistantLifeFurnOf(buyKey);
+    return f ? React.createElement(AssistantLifeBuyConfirm, {
+      item: f,
+      to: who.name,
+      onClose: () => setBuyKey(null),
+      gains: [{
+        text: `💗 ${who.name}との仲良し度 ${furnGainText(f.key)}(1つの家具は1回)`
+      }],
+      check: () => assistantLifeRoomOf(id).got[f.key] ? 'この家具はもう贈りました' : '',
+      give: () => give(f.key, true)
+    }) : null;
+  })());
 }
 const ASSISTANT_MASMON_PLAN = [{
   "id": "mua",
@@ -123440,6 +124380,47 @@ const assistantMasmonAskNames = async () => {
     _assistantMasmonNamesBusy = false;
   }
 };
+let _assistantLifeCardBonds = {};
+const assistantLifeCardBondsMirror = bonds => {
+  _assistantLifeCardBonds = bonds && typeof bonds === 'object' ? bonds : {};
+};
+const assistantLifeCardMaterial = id => {
+  try {
+    if (typeof assistantLifeEnabled === 'function' && !assistantLifeEnabled()) return null;
+    const p = assistantMasmonBasePlanOf(id);
+    if (!p) return null;
+    const rows = Array.isArray(p.likeMon) ? p.likeMon : [];
+    const likes = rows.map(x => x && x.monster).filter(m => typeof m === 'string' && assistantMasmonMon(m));
+    const likeLineages = rows.map(x => x && x.lineage).filter(l => typeof l === 'string' && l);
+    const first = rows[0] || null;
+    const core = first ? first.lineage || (first.monster ? assistantMasmonLineage(first.monster) : null) : null;
+    let friendLv = 0;
+    try {
+      const b = _assistantLifeCardBonds[id];
+      const pts = typeof normalizeAssistantBond === 'function' ? normalizeAssistantBond(b).points : null;
+      const lv = Number.isFinite(pts) && typeof assistantBondLevelOf === 'function' ? assistantBondLevelOf(pts) : 0;
+      friendLv = Number.isFinite(lv) ? lv : 0;
+    } catch (_) {
+      friendLv = 0;
+    }
+    let mood = null;
+    try {
+      const m = typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.life && ASSISTANT_LIFE_STORE.state.life.moods ? ASSISTANT_LIFE_STORE.state.life.moods[id] : null;
+      mood = typeof m === 'string' && m ? m : null;
+    } catch (_) {
+      mood = null;
+    }
+    return {
+      core: core || null,
+      likes,
+      likeLineages,
+      friendLv,
+      mood
+    };
+  } catch (_) {
+    return null;
+  }
+};
 const assistantLifeMasmonTeamOf = id => {
   try {
     const p = assistantMasmonPlanOf(id);
@@ -124389,8 +125370,9 @@ function AssistantMasmonDetail({
     type: "button",
     className: "mhl-btn shrink-0 bg-slate-700 px-3",
     "data-assistant-masmon-detail-close": true,
+    "data-mhl-sheet-close": true,
     onClick: onClose
-  }, "もどる")), React.createElement("div", {
+  }, "閉じる")), React.createElement("div", {
     className: "mhm-body mt-2"
   }, land ? React.createElement("div", {
     className: "flex gap-3"
@@ -143612,7 +144594,7 @@ const CardBattleScreen = ({
         setView(back);
         return;
       }
-      if (outcome === 'void' && game.pvp) {
+      if (game.pvp && (outcome === 'void' || CARD_PVP.get().phase === 'void')) {
         const wasCup = !!CARD_PVP.get().cup;
         CARD_PVP.leave();
         onBgm && onBgm(cardBgmOf(save.bgm.top));
@@ -153913,7 +154895,7 @@ const CardPvpLobby = ({
   }, "部屋を出る")));
 };
 const useCardPvpAuto = (db, pvp, st, step, paused) => useEffect(() => {
-  if (!pvp || paused || typeof window === 'undefined' || !window.__mhCardPvpAuto || st.winner !== null || cardPvpDecider(st) !== 0) return undefined;
+  if (!pvp || paused || typeof window === 'undefined' || !window.__mhCardPvpAuto || st.winner !== null || cardPvpDecider(st) !== 0 || CARD_PVP.get().phase !== 'playing') return undefined;
   const t = setTimeout(() => {
     if (st.phase === 'guts' && !st.pending && Number(window.__mhCardPvpAutoBack) > 0 && step({
       type: 'backToAttack'
@@ -168312,6 +169294,9 @@ function MonsterHeroGame() {
   const rhythmHellStoryAfterResultRef = useRef(false);
   const [tacticsIntroPending, setTacticsIntroPending] = useState(false);
   const [assistantBonds, setAssistantBonds] = useState({});
+  useEffect(() => {
+    if (typeof assistantLifeCardBondsMirror === 'function') assistantLifeCardBondsMirror(assistantBonds);
+  }, [assistantBonds]);
   const [assistantLifeOpenNow, setAssistantLifeOpenNow] = useState(false);
   useEffect(() => {
     if (typeof ASSISTANT_LIFE_STORE === 'undefined') return undefined;
@@ -174475,6 +175460,18 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (typeof assistantLifeSetBondPointsReader === 'function') assistantLifeSetBondPointsReader(id => normalizeAssistantBond(assistantBondsRef.current[normalizeAssistantId(id)]).points);
   }, []);
+  useEffect(() => {
+    if (typeof assistantLifeSetBuyer === 'function') assistantLifeSetBuyer(async itemId => {
+      const offer = RHYTHM_EVENT_POINT_SHOP_OFFERS.find(o => o && o.itemId === itemId && o.kind === 'item' && (Number(o.grantAmount) || 1) === 1);
+      if (!offer) return {
+        ok: false,
+        reason: 'none'
+      };
+      const r = await exchangeRhythmEventPoints(offer, 1);
+      if (!r || !r.ok) setMarketExchangeError('');
+      return r;
+    });
+  });
   useEffect(() => {
     if (typeof assistantLifeSetShopOpener === 'function') assistantLifeSetShopOpener(tab => {
       setLifeShopEntry(tab === 'furniture' ? 'furniture' : 'item');
@@ -208335,7 +209332,7 @@ const createAnimationStyle = () => {
     @keyframes mhDiscBorn{0%{opacity:0;transform:scale(.35)}60%{opacity:1;filter:drop-shadow(0 0 30px #fde68a) brightness(1.6)}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 18px rgba(253,230,138,.55)) brightness(1)}}
     @keyframes mhDiscUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
     @media (prefers-reduced-motion: reduce){.mh-disc-rebirth-disc,.mh-disc-rebirth-flash,.mh-disc-rebirth-sparks i{animation:none;opacity:0}.mh-disc-rebirth-rays{animation:none;opacity:1}.mh-disc-rebirth-plate,.mh-disc-rebirth-art,.mh-disc-rebirth-name,.mh-disc-rebirth-note,.mh-disc-rebirth-close{animation:none;opacity:1;transform:none;pointer-events:auto}}
-    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 43px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(152px + var(--wal-grow,0px));padding:4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:2.52%;top:max(26.58%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:2.94%;top:max(25.9%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%)}.mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}/* 背の低い画面(縦 700px 前後まで)では、イベントの札とMFバトルカードの札を、モンヒロビートの札(top:55.25%)の下まで下げる。重なっていた(2026-10-26) */.mh-home-event-banner{position:absolute;z-index:5;left:9px;bottom:min(calc(33% + 4px),calc(44.75% - 82px));display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}.mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));padding:0}.mh-home-card-battle.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}/* 公式杯の札(2026-10-31 社長・案A)。イベントの札の下・MFバトルカードの札の上(MFバトルカードの札のいつもの段)。イベントの札が無いときは1段上がる。公式杯の札があるときは、MFバトルカードの札は1段下(below-tour) */.mh-home-tour-banner{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));display:flex;align-items:center;gap:6px;max-width:min(calc(100% - 150px),240px);padding:3px 10px 3px 7px;border:1.5px solid #fde68a;border-radius:13px;background:linear-gradient(135deg,#78350fee,#b45309ee 45%,#1e1b4bee);color:#fffbeb;text-align:left;box-shadow:0 0 0 2px #f59e0b55,0 3px 10px #0008}.mh-home-tour-banner.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}.mh-home-tour-banner>span:first-child{font-size:19px;line-height:1}.mh-home-tour-banner>span:last-child{display:flex;min-width:0;flex-direction:column;gap:1px;line-height:1.2}.mh-home-tour-banner b{overflow:hidden;font-size:11.5px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner small{display:block;overflow:hidden;font-size:9.5px;font-weight:800;color:#fde68a;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner em{margin-left:5px;padding:0 5px;border-radius:999px;background:#fbbf24;color:#3d2305;font-style:normal;font-size:9px;font-weight:900;line-height:1.5}.mh-home-tour-banner:active{transform:scale(.96);filter:brightness(1.15)}.mh-home-card-battle.below-tour{bottom:min(calc(33% - 84px),calc(44.75% - 170px))}.mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}.mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}.mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){.mh-home-event-banner{bottom:52px}/* 横向きでもイベントの札を出す。MFバトルカードの札(下から12px)のすぐ上(2026-10-26 ダメダシくん「横では見当たらない」) */.mh-home-card-battle,.mh-home-card-battle.raised,.mh-home-card-battle.below-tour{bottom:12px}/* 横向きの公式杯の札は MFバトルカードの札のすぐ上、イベントの札はその上 */.mh-home-tour-banner,.mh-home-tour-banner.raised{bottom:52px}.mh-home-scene:has(.mh-home-tour-banner) .mh-home-event-banner{bottom:96px}}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 43px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(152px + var(--wal-grow,0px));padding:4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:2.52%;top:max(26.58%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:2.94%;top:max(25.9%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(calc(-50% + var(--mh-home-battle-nudge,0px)))}.mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}/* 背の低い画面(縦 700px 前後まで)では、イベントの札とMFバトルカードの札を、モンヒロビートの札(top:55.25%)の下まで下げる。重なっていた(2026-10-26) */.mh-home-event-banner{position:absolute;z-index:5;left:9px;bottom:min(calc(33% + 4px),calc(44.75% - 82px));display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}.mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));padding:0}.mh-home-card-battle.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}/* 公式杯の札(2026-10-31 社長・案A)。イベントの札の下・MFバトルカードの札の上(MFバトルカードの札のいつもの段)。イベントの札が無いときは1段上がる。公式杯の札があるときは、MFバトルカードの札は1段下(below-tour) */.mh-home-tour-banner{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));display:flex;align-items:center;gap:6px;max-width:min(calc(100% - 150px),240px);padding:3px 10px 3px 7px;border:1.5px solid #fde68a;border-radius:13px;background:linear-gradient(135deg,#78350fee,#b45309ee 45%,#1e1b4bee);color:#fffbeb;text-align:left;box-shadow:0 0 0 2px #f59e0b55,0 3px 10px #0008}.mh-home-tour-banner.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}.mh-home-tour-banner>span:first-child{font-size:19px;line-height:1}.mh-home-tour-banner>span:last-child{display:flex;min-width:0;flex-direction:column;gap:1px;line-height:1.2}.mh-home-tour-banner b{overflow:hidden;font-size:11.5px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner small{display:block;overflow:hidden;font-size:9.5px;font-weight:800;color:#fde68a;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner em{margin-left:5px;padding:0 5px;border-radius:999px;background:#fbbf24;color:#3d2305;font-style:normal;font-size:9px;font-weight:900;line-height:1.5}.mh-home-tour-banner:active{transform:scale(.96);filter:brightness(1.15)}.mh-home-card-battle.below-tour{bottom:min(calc(33% - 84px),calc(44.75% - 170px))}.mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}.mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}.mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){.mh-home-event-banner{bottom:52px}/* 横向きでもイベントの札を出す。MFバトルカードの札(下から12px)のすぐ上(2026-10-26 ダメダシくん「横では見当たらない」) */.mh-home-card-battle,.mh-home-card-battle.raised,.mh-home-card-battle.below-tour{bottom:12px}/* 横向きの公式杯の札は MFバトルカードの札のすぐ上、イベントの札はその上 */.mh-home-tour-banner,.mh-home-tour-banner.raised{bottom:52px}.mh-home-scene:has(.mh-home-tour-banner) .mh-home-event-banner{bottom:96px}}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
        ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも
@@ -208578,7 +209575,7 @@ const createAnimationStyle = () => {
     .mh-gift-list{display:flex;flex-direction:column;gap:8px}.mh-gift-card{display:flex;flex:none;flex-direction:column;gap:4px;min-height:88px;padding:10px 12px}.mh-gift-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;min-width:0;min-height:20px}.mh-gift-heading h3{display:flex;align-items:flex-start;gap:4px;min-width:0;font-size:14px;line-height:19px;color:#fff}.mh-gift-heading h3 span{flex:none;margin-top:1px;padding:1px 6px;border-radius:6px;background:#78350f;color:#fde68a;font-size:10px;line-height:16px}.mh-gift-heading h3 b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-width:0;white-space:normal;overflow-wrap:anywhere}.mh-gift-heading>em{flex:none;padding:2px 8px;border-radius:999px;font-size:10px;line-height:16px;font-style:normal;font-weight:900}.mh-gift-main{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px}.mh-gift-rewards{display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:2px 7px;min-width:0;color:#fde68a;font-size:11px;line-height:15px;font-weight:900}.mh-gift-rewards span{overflow-wrap:anywhere}.mh-gift-main>button{flex:none;min-width:84px;height:44px;padding:0 12px;border-radius:12px;background:#0891b2;color:#fff;font-size:12px;font-weight:900;white-space:nowrap;transition:transform .12s ease-out}.mh-gift-main>button:active{transform:scale(.95)}.mh-gift-main>button:disabled{opacity:.4;transform:none}.mh-gift-deadline{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#94a3b8;font-size:10px;line-height:14px}
     @media(max-height:620px){.mh-home-mission{top:64%}.mh-home-gift{top:73%}}
     /* 横画面(#146・2026-09-05)。コラムが画面いっぱいになるので、左右の余白へ施設を振り分ける。左＝吹き出し・M/B管理・モンヒロビート、右＝更新履歴・神殿・マーケット、右下＝ミッションとギフトを横並び、下中央＝バトル。上の max-height:620px は横画面のスマホにも当たるので、この行はそれより後ろに置いて上書きする */
-    @media(orientation:landscape) and (max-height:600px){.mh-home-assistant{left:2%;width:36%;top:calc(70px + env(safe-area-inset-top))}.mh-home-facility>span{padding:6px 12px}.mh-home-facility.management{left:2.4%;top:max(calc(146px + env(safe-area-inset-top)),calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-scene .mh-home-facility.rhythm,.mh-home-scene .mh-home-facilities:has(.mh-home-facility.life) .mh-home-facility.rhythm{left:calc(var(--mh-home-management-right,124px) + 8px);top:max(calc(156px + env(safe-area-inset-top)),calc(var(--mh-home-assistant-bottom,0px) + 16px))}.mh-home-facility.temple{right:2.4%;top:35.76%}.mh-home-facility.market{right:2.4%;top:59.76%}.mh-home-scene .mh-home-facility.life{left:auto;right:calc(2.4% + 118px);top:59.76%}.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle,.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle.raised,.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle.below-tour{bottom:32px}.mh-home-scene:has(.mh-home-facility.life) .mh-home-event-banner{bottom:72px}.mh-home-mission{right:calc(5% + 120px);top:78%}.mh-home-gift{top:78%}.mh-home-facility.battle>span{padding:8px 16px;font-size:18px;animation:none}.mh-home-masumon-layer{left:30%;right:30%;top:30%;bottom:34%}}
+    @media(orientation:landscape) and (max-height:340px){.mh-home-assistant{width:56%!important}}@media(orientation:landscape) and (max-height:600px){.mh-home-assistant{left:2%;width:36%;top:calc(70px + env(safe-area-inset-top))}.mh-home-facility>span{padding:6px 12px}.mh-home-facility.management{left:2.4%;top:max(calc(146px + env(safe-area-inset-top)),calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-scene .mh-home-facility.rhythm,.mh-home-scene .mh-home-facilities:has(.mh-home-facility.life) .mh-home-facility.rhythm{left:calc(var(--mh-home-management-right,124px) + 8px);top:max(calc(156px + env(safe-area-inset-top)),calc(var(--mh-home-assistant-bottom,0px) + 16px))}.mh-home-facility.temple{right:2.4%;top:35.76%}.mh-home-facility.market{right:2.4%;top:59.76%}.mh-home-scene .mh-home-facility.life{left:auto;right:calc(2.4% + 118px);top:59.76%}.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle,.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle.raised,.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle.below-tour{bottom:32px}.mh-home-scene:has(.mh-home-facility.life) .mh-home-event-banner{bottom:72px}.mh-home-mission{right:calc(5% + 120px);top:78%}.mh-home-gift{top:78%}.mh-home-facility.battle>span{padding:8px 16px;font-size:18px;animation:none}.mh-home-masumon-layer{left:30%;right:30%;top:30%;bottom:34%}}
     /* 横画面でも幅が 760px までの端末(667×375 など)では、ミッションがモンヒロバトルの札に33px重なっていた。ミッション・ギフトを細く、バトルの札を小さくして、すき間をあける(2026-10-27) */
     @media(orientation:landscape) and (max-height:600px) and (max-width:760px){.mh-home-mission{width:104px;padding:7px 5px;right:calc(3% + 104px);white-space:nowrap}.mh-home-gift{width:96px;padding:7px 5px;right:3%}.mh-home-facility.battle>span{min-width:120px;padding:8px 8px;font-size:15px}}
     .mh-boot-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom));color:#fff;text-align:center;background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%);isolation:isolate}
