@@ -26,6 +26,9 @@ for (const f of FILES) {
     if (!m) return;
     const [, kind, who, key, like, e, t] = m;
     const at = `${path.basename(f)}:${i + 1}`;
+    // 家具を教えてくれるひとこと(hint item=sofa など)は家具の段階Bで取り込む
+    const FURN = ['sofa', 'bear', 'plant', 'record', 'nyacushion', 'starpic', 'trophy', 'bookshelf', 'heartmirror', 'lantern', 'mirrorball', 'windbell'];
+    if (kind === 'hint' && FURN.includes(key)) return;
     if (!LIKES[who] || !keys.has(key)) { ng.push(`${at} 知らない助手か道具`); return; }
     if (!EXPR.includes(e)) { ng.push(`${at} 表情 ${e}`); return; }
     if (t.length > 60 || /ブリーダー|(この|あの|その)子(?![供ど])/.test(t)) { ng.push(`${at} 60字超えか「ブリーダー」「子」`); return; }
