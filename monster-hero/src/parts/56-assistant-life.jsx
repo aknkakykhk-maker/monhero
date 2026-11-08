@@ -1060,11 +1060,11 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
     const best = ps.find(([a, b]) => assistantLifePairHint(peerSt, life, a, b).near) || ps.find(([a, b]) => assistantLifePairHint(peerSt, life, a, b).after) || ps[0];
     setGive({ ids: g.ids, pair: g.ids.length === 2 ? [...g.ids] : best, kind });
   };
-  const doGive = async () => {
+  const doGive = async (opts = null) => {
     if (!give || !give.pair) return;
     const talk = await onUseItem(give.kind, give.pair);
     const info = assistantLifeItemInfo(give.kind);
-    if (!talk) { setNote(`${info.name}は、いまは贈れません(同じ道具は1日1回・合わせて1日3回・持っている数を見てください)`); setGive(null); return; }
+    if (!talk) { setNote(`${info.name}は、いまは贈れません(同じ道具は1日1回・合わせて1日3回・持っている数を見てください)${opts && opts.bought ? `。買った${info.name}は持ち物に残っています` : ''}`); setGive(null); return; }
     const g = (life.groups || []).find(x => give.pair.every(id => x.ids.includes(id)));
     setGive(null);
     playTalk(talk, { ids: give.pair, place: g ? g.place : null });
@@ -1098,7 +1098,8 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
                 className={`min-h-[40px] flex-1 rounded-xl border text-[12px] font-black active:scale-[.98] ${tab === k ? 'border-pink-300 bg-pink-400/20 text-pink-100' : 'border-white/10 text-slate-400'}`}>{label}</button>))}
           </div>
           </>}
-          {note && <p data-assistant-life-note className="mt-2 rounded-xl bg-sky-400/10 px-2 py-1.5 text-[11px] font-bold text-sky-100">{note}</p>}
+          {/* お知らせの帯は家の画面と同じ濃い下地(薄い下地だと朝・夕の明るい空の上で字が沈む・2026-11-08 ミハリ) */}
+          {note && <p data-assistant-life-note className="mt-2 rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 text-[11px] font-bold text-sky-100">{note}</p>}
           {tab === 'now' && (<>
             {canGive && !embedded && (
               <div data-assistant-life-items className="mt-2 rounded-2xl border border-amber-300/40 bg-slate-950/90 p-2">

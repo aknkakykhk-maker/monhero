@@ -424,6 +424,90 @@ function AssistantLifeShopButton({ tab = 'item', who = null, label = '🛒 交�
       className={`${small ? 'min-h-[32px] px-2 text-[10.5px]' : 'min-h-[40px] w-full px-3 text-[12px]'} shrink-0 whitespace-nowrap rounded-xl border border-violet-300/70 bg-[#2e1065] font-black text-violet-100 shadow-md active:scale-[.97]`}>{label}</button>);
 }
 
+// ---------- 買って贈るを1回で(2026-11-08 社長 止め絵 docs/progress/assistant-peer/gifts/buygive/。確かめの窓は毎回出す) ----------
+// 60-app.jsx が「交換所と同じ処理で1つ買う」口を渡す(exchangeRhythmEventPoints(offer, 1)。ビートPを引くのはそこだけ・二重に引かない)
+// 流れ: 贈れるかを先に確かめる → 確かめの窓 → 買う → 贈る。贈れなかったら、買った品は持ち物に残る
+let assistantLifeBuyer = null;
+const assistantLifeSetBuyer = (fn) => { assistantLifeBuyer = typeof fn === 'function' ? fn : null; };
+const assistantLifeCanBuy = (item) => !!(assistantLifeBuyer && item && item.itemId && Number.isFinite(item.cost) && item.cost > 0);
+// 所持ビートP(読むだけ。買ったら読み直す)
+const ASSISTANT_LIFE_BEATP = {
+  n: null, listeners: new Set(),
+  async refresh() {
+    try { const v = typeof loadRhythmEventPoints === 'function' ? await loadRhythmEventPoints() : null; this.n = Number.isFinite(v) ? Math.max(0, Math.floor(v)) : null; } catch { this.n = null; }
+    for (const fn of this.listeners) { try { fn(this.n); } catch {} }
+    return this.n;
+  },
+};
+const useAssistantLifeBeatPoints = () => {
+  const [n, setN] = React.useState(ASSISTANT_LIFE_BEATP.n);
+  React.useEffect(() => {
+    const fn = (v) => setN(v);
+    ASSISTANT_LIFE_BEATP.listeners.add(fn);
+    void ASSISTANT_LIFE_BEATP.refresh();
+    return () => { ASSISTANT_LIFE_BEATP.listeners.delete(fn); };
+  }, []);
+  return n;
+};
+const assistantLifeBuyOne = async (itemId) => {
+  if (!assistantLifeBuyer) return { ok: false, reason: 'none' };
+  let r = null;
+  try { r = await assistantLifeBuyer(itemId); } catch { r = null; }
+  void ASSISTANT_LIFE_BEATP.refresh();
+  return r && r.ok ? { ok: true } : { ok: false, reason: (r && r.reason) || 'save' };
+};
+// 2人に贈るときの「上がる量」の行(確かめの窓に出す。好みが分からない人は幅で)
+const assistantLifeGiftGainsFor = (kind, pair, nameOf, st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  const g = assistantLifeGiftOf(kind), amt = g && assistantLifeGiftAmounts(kind, pair);
+  if (!amt) return [];
+  const shown = pair.map(id => assistantLifeGiftShownLike(id, g.key, st));
+  return [...pair.map((id, i) => ({ text: `💗 ${nameOf(id)}との仲良し度 ${shown[i] === 'unknown' ? `+${amt.range.player[0]}〜${amt.range.player[1]}` : `+${amt.player[i]}`}` })),
+    { text: `🤝 2人の友情Lv ${assistantLifeGiftPeerShown(g, shown)}`, cls: 'text-orange-300' }];
+};
+const assistantLifeBuyLabel = (item) => `🛒 ${item.cost}P で買って贈る`;
+// 確かめの窓。item … { itemId, name, emoji, cost } / to … 贈る相手の言い方 / gains … [{ text, cls }] 上がる量
+// check() … 買う直前にもう一度、贈れるか(贈れるなら '') / give() … 買えたあとに贈る(持ち物の1つを使う)
+function AssistantLifeBuyConfirm({ item, to, gains = [], check, give, onClose }) {
+  const points = useAssistantLifeBeatPoints();
+  const [busy, setBusy] = React.useState(false);
+  const [err, setErr] = React.useState('');
+  if (!item) return null;
+  const known = Number.isFinite(points);
+  const short = known ? Math.max(0, item.cost - points) : 0;
+  const reason = typeof check === 'function' ? check() : '';
+  const go = async () => {
+    if (busy) return;
+    const r0 = typeof check === 'function' ? check() : '';
+    if (r0) { setErr(r0); return; }
+    setBusy(true); setErr('');
+    const r = await assistantLifeBuyOne(item.itemId);
+    if (!r.ok) { setBusy(false); setErr(r.reason === 'points' ? 'ビートPが足りません' : r.reason === 'busy' ? 'ほかの交換を待っています。少ししてからもう一度押してください' : '買えませんでした。ビートPと持ち物はそのままです'); return; }
+    try { if (typeof give === 'function') await give(); } finally { setBusy(false); if (typeof onClose === 'function') onClose(); }
+  };
+  return (
+    <div data-assistant-life-buy-confirm={item.itemId} className="absolute inset-0 flex items-center justify-center bg-black/70 px-4" style={{ zIndex: 45 }} onClick={(ev) => { ev.stopPropagation(); if (!busy) onClose(); }}>
+      <div className="max-h-full w-full max-w-sm overflow-y-auto rounded-3xl border-2 border-violet-300/70 bg-slate-900 p-3" onClick={ev => ev.stopPropagation()}>
+        <p className="text-[13px] font-black text-violet-200">🛒 買って贈る</p>
+        <div className="mt-1.5 flex items-center gap-2">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/5 text-[30px]" aria-hidden="true">{item.emoji}</span>
+          <p className="min-w-0 flex-1 text-[15px] font-black leading-snug text-white" data-assistant-life-buy-name>{item.name}</p>
+        </div>
+        <p className="mt-2 text-[12px] font-black leading-snug text-white" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }} data-assistant-life-buy-text>ビートP {item.cost} で買って、<wbr/>そのまま {to} に贈ります</p>
+        <p className="mt-1.5 rounded-xl bg-slate-800 px-2 py-1 text-[11.5px] font-black text-slate-200" data-assistant-life-buy-points={known ? `${points}-${points - item.cost}` : ''}>所持ビートP {known ? <>{points.toLocaleString()} → <span className={short > 0 ? 'text-rose-300' : 'text-amber-200'}>{short > 0 ? '−' : (points - item.cost).toLocaleString()}</span></> : '…'}</p>
+        {gains.length > 0 && <div className="mt-1.5 space-y-0.5" data-assistant-life-buy-gains>
+          {gains.map((x, i) => <p key={i} className={`text-[11px] font-black leading-snug ${x.cls || 'text-pink-200'}`}>{x.text}</p>)}
+        </div>}
+        {short > 0 && <p data-assistant-life-buy-short={short} className="mt-1.5 rounded-xl bg-rose-500/15 px-2 py-1 text-[11.5px] font-black text-rose-200">ビートPが足りません(あと{short.toLocaleString()}P)</p>}
+        {(err || reason) && <p data-assistant-life-buy-err className="mt-1.5 rounded-xl bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-300">{err || reason}</p>}
+        <div className="mt-2.5 flex gap-2">
+          <button type="button" data-assistant-life-buy-cancel disabled={busy} onClick={onClose} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98] disabled:opacity-40">やめる</button>
+          <button type="button" data-assistant-life-buy-go disabled={busy || !known || short > 0 || !!reason} onClick={go}
+            className="min-h-[44px] flex-[2] rounded-xl border border-violet-300/80 bg-violet-600 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40">{busy ? '…' : '🛒 買って贈る'}</button>
+        </div>
+      </div>
+    </div>);
+}
+
 // 友情Lv・仲良し度の短い説明(道具の一覧の上と贈るシート)
 function AssistantLifeGiftExplain({ compact = false }) {
   return (
@@ -437,6 +521,8 @@ function AssistantLifeGiftExplain({ compact = false }) {
 // give … { ids(一緒にいる助手), pair(2人に贈るとき), solo(1人に贈るときの助手), kind }。1人に贈る(2026-11-08 社長 SOLO-GIFT-PLAN.md)は印 assistantLifeSolo の後ろ
 function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, onGive }) {
   const st = useAssistantLifeGiftState();
+  const beatP = useAssistantLifeBeatPoints();
+  const [buying, setBuying] = React.useState(false);
   const soloOn = assistantLifeSoloOn();
   const soloWho = soloOn && give.solo ? give.solo : null;
   const gifts = (soloWho ? assistantLifeSoloKinds() : assistantLifeGiftKinds()).map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
@@ -449,6 +535,9 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
   const have = haveOf(info.kind);
   const reason = soloWho ? assistantLifeSoloReason(info.kind, peerSt, have, st) : assistantLifeGiftReason(info.kind, peerSt, have, st);
   const lifeOn = typeof assistantLifeEnabled === 'function' && assistantLifeEnabled();
+  // 買って贈る: 持っていないだけで、ほかは贈れるとき(1日の回数・同じ道具は1日1回を先に確かめる)
+  const reasonOf = () => { const s2 = ASSISTANT_LIFE_GIFT_STORE.state; return soloWho ? assistantLifeSoloReason(info.kind, peerSt, 1, s2) : assistantLifeGiftReason(info.kind, peerSt, 1, s2); };
+  const buyable = lifeOn && have <= 0 && !reasonOf() && assistantLifeCanBuy(info) && (!!soloWho || pair.length === 2);
   const leftToday = lifeOn ? (soloWho ? assistantLifeSoloLeft(st) : assistantLifeGiftLeft(peerSt, st)) : null;
   const pairs = [];
   for (let i = 0; i < give.ids.length; i++) for (let j = i + 1; j < give.ids.length; j++) pairs.push([give.ids[i], give.ids[j]]);
@@ -531,15 +620,21 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
           </div>}
         </div>
         <p className="mt-1 text-[10px] leading-snug text-slate-400 [[data-assistant-life-land='1']_&]:hidden">{soloWho ? '1人に贈ると、その助手の好みで仲良し度だけが上がります(友情Lv は上がりません)。1人には1⁠日3回・同じ道具は1⁠日1回(朝4時に戻る)' : lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)・?=贈ると分かる。同じ道具は1⁠日1回・合わせて1⁠日3回(朝4時に戻る)' : '1⁠日1回(朝4時に戻る)'}・持っている {have}個{info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''}</p>
-        {reason && <p data-assistant-life-give-reason className="mt-1.5 rounded-xl bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-300">{reason}</p>}
-        {lifeOn && have <= 0 && <div className="mt-1.5"><AssistantLifeShopButton tab="item"/></div>}
+        {buyable && <p data-assistant-life-give-buy-hint className="mt-1.5 rounded-xl bg-violet-500/15 px-2 py-1 text-[11px] font-black leading-snug text-violet-100">持っていない道具も、ここで買ってそのまま贈れます(所持ビートP {Number.isFinite(beatP) ? beatP.toLocaleString() : '…'})</p>}
+        {reason && !buyable && <p data-assistant-life-give-reason className="mt-1.5 rounded-xl bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-300">{reason}</p>}
+        {lifeOn && have <= 0 && !buyable && <div className="mt-1.5"><AssistantLifeShopButton tab="item"/></div>}
         {/* やめる・贈るは、シートを下へ送らなくても押せるように下に貼り付ける(横で説明と重みが増えても隠れない) */}
         <div className="sticky -mx-3 mt-2 flex gap-2 bg-slate-900 px-3 pb-3 pt-1.5" data-assistant-life-give-actions style={{ bottom: 'calc(-0.75rem - env(safe-area-inset-bottom))', marginBottom: 'calc(-0.75rem - env(safe-area-inset-bottom))', paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
           <button type="button" data-assistant-life-give-cancel data-mhl-sheet-close onClick={() => setGive(null)} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">やめる</button>
-          <button type="button" data-assistant-life-give-go disabled={!!reason || (!soloWho && pair.length !== 2)} onClick={onGive}
-            className="min-h-[44px] flex-[2] rounded-xl border border-amber-300/70 bg-amber-400/20 text-[14px] font-black text-amber-100 active:scale-[.98] disabled:opacity-40">{info.emoji} 贈る</button>
+          {buyable ? <button type="button" data-assistant-life-give-buy={info.kind} onClick={() => setBuying(true)}
+            className="min-h-[44px] flex-[2] rounded-xl border border-violet-300/80 bg-violet-600 text-[14px] font-black text-white active:scale-[.98]">{assistantLifeBuyLabel(info)}</button>
+          : <button type="button" data-assistant-life-give-go disabled={!!reason || (!soloWho && pair.length !== 2)} onClick={() => onGive()}
+            className="min-h-[44px] flex-[2] rounded-xl border border-amber-300/70 bg-amber-400/20 text-[14px] font-black text-amber-100 active:scale-[.98] disabled:opacity-40">{info.emoji} 贈る</button>}
         </div>
       </div>
+      {buying && <AssistantLifeBuyConfirm item={info} to={soloWho ? nameOf(soloWho) : pair.map(nameOf).join('と')} onClose={() => setBuying(false)}
+        gains={[...people.map((id, i) => ({ text: `💗 ${nameOf(id)}との仲良し度 ${playerText(i)}` })), ...(!soloWho ? [{ text: `🤝 2人の友情Lv ${peerText}`, cls: 'text-orange-300' }] : [])]}
+        check={reasonOf} give={() => onGive({ bought: info })}/>}
     </div>);
 }
 
@@ -795,20 +890,25 @@ function AssistantLifeFurnSheet({ id, furnItems, onGiveFurn, onClose, onTalk, la
   const st = useAssistantLifeGiftState();
   const [busy, setBusy] = React.useState(false);
   const [msg, setMsg] = React.useState('');
+  const [buyKey, setBuyKey] = React.useState(null); // 買って贈る(2026-11-08)
   const who = typeof assistantById === 'function' ? assistantById(id) : null;
   if (!assistantLifeFurnEnabled() || !who) return null;
   const room = assistantLifeRoomOf(id, st);
   const all = assistantLifeFurnDefs().map(f => assistantLifeFurnOf(f.key)).filter(Boolean);
   const mine = all.filter(f => room.got[f.key]);
   const canGive = all.filter(f => !room.got[f.key] && (Number(furnItems && furnItems[f.key]) || 0) > 0);
+  // まだ持っていない家具(買ってそのまま贈れる。同じ家具は1人に1つなので、贈った家具は出さない)
+  const toBuy = all.filter(f => !room.got[f.key] && !((Number(furnItems && furnItems[f.key]) || 0) > 0) && assistantLifeCanBuy(f));
+  const furnGainText = (k) => { const s = shown(k); if (s !== 'unknown') return `+${assistantLifeFurnAmount(id, k)}`;
+    const base = typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 80; return `+${Math.round(base * assistantLifeGiftMult('bad'))}〜${Math.round(base * assistantLifeGiftMult('like'))}`; };
   const shown = (k) => assistantLifeGiftShownLike(id, k, st);
   const mark = (s) => (s === 'like' ? '💗' : s === 'bad' ? '💧' : s === 'unknown' ? '?' : '');
-  const give = async (k) => {
+  const give = async (k, bought = false) => {
     if (busy) return; setBusy(true);
     const talk = typeof onGiveFurn === 'function' ? await onGiveFurn(id, k) : null;
     setBusy(false);
-    if (!talk) { setMsg('いまは贈れません(持っている数を見てください)'); return; }
     const f = assistantLifeFurnOf(k);
+    if (!talk) { setMsg(`いまは贈れません(持っている数を見てください)${bought && f ? `。買った${f.name}は持ち物に残っています` : ''}`); return; }
     const likeText = talk.like === 'like' ? '💗 好きな家具！' : talk.like === 'bad' ? '💧 ちょっと苦手…' : '';
     const text = `${who.name}に${f.emoji} ${f.name}を贈った。💗 仲良し度 +${talk.amount}${likeText ? ` ・ ${likeText}` : ''}${talk.placed ? '' : `(${ASSISTANT_LIFE_FURN_SLOTS[f.slot].label}はふさがっているので押し入れへ)`}`;
     setMsg(text);
@@ -834,9 +934,15 @@ function AssistantLifeFurnSheet({ id, furnItems, onGiveFurn, onClose, onTalk, la
         <p className="mt-2 text-[11px] font-black text-amber-200">🎁 贈れる家具</p>
         <div className="mt-1 space-y-1">
           {canGive.length ? canGive.map(f => row(f, <>{<span className="shrink-0 text-[10px] font-bold text-slate-300">×{furnItems[f.key]}</span>}{btn('贈る', () => give(f.key), 'border-amber-300/70 bg-amber-400/20 text-amber-100', { 'data-assistant-life-furn-give': f.key })}</>))
-            : <p className="rounded-xl bg-slate-800/80 px-2 py-1 text-[11px] font-bold text-slate-300">贈れる家具がありません。モンヒロビートの「ビートP交換所」の「家具」で手に入ります</p>}
-          <AssistantLifeShopButton tab="furniture" who={id} label="🛒 交換所の家具の棚へ"/>
+            : <p className="rounded-xl bg-slate-800/80 px-2 py-1 text-[11px] font-bold text-slate-300">{toBuy.length ? '持っている家具はありません。下の「まだ持っていない家具」から、買ってそのまま贈れます' : '贈れる家具がありません。モンヒロビートの「ビートP交換所」の「家具」で手に入ります'}</p>}
         </div>
+        {toBuy.length > 0 && (<>
+          <p className="mt-2 text-[11px] font-black text-violet-200">🛒 まだ持っていない家具 <span className="text-slate-300">(買ってそのまま贈れます)</span></p>
+          <div className="mt-1 space-y-1" data-assistant-life-furn-tobuy>
+            {toBuy.map(f => row(f, btn(<>🛒 {f.cost}P<br/>で買って贈る</>, () => setBuyKey(f.key), 'border-violet-300/80 bg-violet-600 leading-tight text-white', { 'data-assistant-life-furn-buy': f.key, 'aria-label': `${f.name}を${f.cost}Pで買って贈る` })))}
+          </div>
+        </>)}
+        <div className="mt-1"><AssistantLifeShopButton tab="furniture" who={id} label="🛒 交換所の家具の棚へ"/></div>
         {/* 部屋に置いてある家具と押し入れの家具を、見出しで分ける(2026-11-08 ミハリ「どちらが置いてあるか字で分からない」) */}
         <p className="mt-2 text-[11px] font-black text-amber-200">🏠 部屋に置いてある家具 <span className="text-slate-300">({mine.length}/{all.length}持っている)</span></p>
         <div className="mt-1 space-y-1" data-assistant-life-furn-placed>
@@ -851,5 +957,9 @@ function AssistantLifeFurnSheet({ id, furnItems, onGiveFurn, onClose, onTalk, la
         </>)}
         <button type="button" data-assistant-life-furn-close data-mhl-sheet-close onClick={onClose} className="mt-2 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
       </div>
+      {buyKey && (() => { const f = assistantLifeFurnOf(buyKey); return f ? (
+        <AssistantLifeBuyConfirm item={f} to={who.name} onClose={() => setBuyKey(null)}
+          gains={[{ text: `💗 ${who.name}との仲良し度 ${furnGainText(f.key)}(1つの家具は1回)` }]}
+          check={() => (assistantLifeRoomOf(id).got[f.key] ? 'この家具はもう贈りました' : '')} give={() => give(f.key, true)}/>) : null; })()}
     </div>);
 }

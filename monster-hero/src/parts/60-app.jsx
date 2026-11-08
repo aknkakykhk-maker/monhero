@@ -8570,6 +8570,15 @@ function MonsterHeroGame() {
   // 助手ライフの贈るシートの「数字の重み」(次の段まで)に、助手ごとの仲良し度の点を読ませる(読むだけ)
   useEffect(() => { if (typeof assistantLifeSetBondPointsReader === 'function') assistantLifeSetBondPointsReader((id) => normalizeAssistantBond(assistantBondsRef.current[normalizeAssistantId(id)]).points); }, []);
   // 助手ライフから交換所の道具・家具の棚を開く
+  // 助手ライフの「買って贈る」(2026-11-08 社長)。交換所と同じ処理(exchangeRhythmEventPoints)で1つだけ買う。ビートPを引くのはここだけ。
+  //   描くたびに渡し直す(交換の処理が、そのときの所持金・持ち物を見るため)
+  useEffect(() => { if (typeof assistantLifeSetBuyer === 'function') assistantLifeSetBuyer(async (itemId) => {
+    const offer = RHYTHM_EVENT_POINT_SHOP_OFFERS.find(o => o && o.itemId === itemId && o.kind === 'item' && (Number(o.grantAmount) || 1) === 1);
+    if (!offer) return { ok:false, reason:'none' };
+    const r = await exchangeRhythmEventPoints(offer, 1);
+    if (!r || !r.ok) setMarketExchangeError('');
+    return r;
+  }); });
   useEffect(() => { if (typeof assistantLifeSetShopOpener === 'function') assistantLifeSetShopOpener((tab) => { setLifeShopEntry(tab === 'furniture' ? 'furniture' : 'item'); setMarketExchangeError(''); setGameState('BREEDER_MARKET'); }); }, []);
   // 助手ライフのフレンドの家のおみやげ(ビートP)をギフトで届ける(2026-11-08・56-assistant-life-friend.jsx)。
   //   id は「日付+家」で1つに決まるので、同じおみやげは二度届かない(grantGiftOnce)。1日300Pまでは向こうで数える
