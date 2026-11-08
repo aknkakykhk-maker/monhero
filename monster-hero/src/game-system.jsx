@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7fcae9a23e493f4b
+// generated-sha256: 8beabc29565d7732
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -62796,7 +62796,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
 
 // 場面の立ち絵(2026-11-08 社長「サイズバランスが悪いのはわざと？」: 絵ごとに余白と縦横の比がちがい、ききが小さく・きゅうこが大きく出ていた)。
 //   絵の描かれている範囲(透明でない所)を一度だけ測り、見た目の高さ(頭の上〜絵の下)を場面の高さの fig にそろえる。
-//   下は絵の下の端を、場面の下から 22% の床にそろえる。左右は描かれている範囲の真ん中を cx にそろえる。衣装の絵でも同じ。測れないうちは今までの出し方
+//   下は絵の下の端を、場面の下から 22%(横で低い画面は台詞の窓の上 150px)の床にそろえる(2026-11-08 ミハリ: 横で顔が台詞の窓の裏に隠れた)。左右は描かれている範囲の真ん中を cx にそろえる。衣装の絵でも同じ。測れないうちは今までの出し方
 const ASSISTANT_LIFE_STAND_BOX = new Map();
 const assistantLifeStandBox = (src) => new Promise((res) => {
   if (ASSISTANT_LIFE_STAND_BOX.has(src)) { res(ASSISTANT_LIFE_STAND_BOX.get(src)); return; }
@@ -62820,11 +62820,11 @@ function AssistantLifeStand({ pid, src, cx, fig, sleep }) {
   const [box, setBox] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.get(src) || null);
   React.useEffect(() => { let alive = true; assistantLifeStandBox(src).then(b => { if (alive) setBox(b); }); return () => { alive = false; }; }, [src]);
   const filter = sleep ? 'brightness(.45) saturate(.6) drop-shadow(0 6px 12px #0008)' : undefined;
-  if (!box) return <img className="st" data-assistant-life-scene-stand={pid} data-assistant-life-scene-sleep={sleep ? '1' : '0'} src={src} alt="" style={{ left: `${cx}%`, transform: 'translateX(-50%)', height: '58%', width: '70%', bottom: '22%', opacity: 0, filter }}/>;
+  if (!box) return <img className="st" data-assistant-life-scene-stand={pid} data-assistant-life-scene-sleep={sleep ? '1' : '0'} src={src} alt="" style={{ left: `${cx}%`, transform: 'translateX(-50%)', height: '58%', width: '70%', bottom: 'max(22%, 150px)', opacity: 0, filter }}/>;
   const span = Math.max(0.2, box.b - box.t);
   const h = fig / span; // 場面の高さに対する絵の高さ
   return <img className="st" data-assistant-life-scene-stand={pid} data-assistant-life-scene-sleep={sleep ? '1' : '0'} data-assistant-life-scene-fig={fig} src={src} alt=""
-    style={{ left: `${cx}%`, height: `${(h * 100).toFixed(2)}%`, width: 'auto', maxWidth: 'none', bottom: `calc(22% - ${((1 - box.b) * h * 100).toFixed(2)}%)`, transform: `translateX(-${(((box.l + box.r) / 2) * 100).toFixed(1)}%)`, objectFit: 'fill', filter }}/>;
+    style={{ left: `${cx}%`, height: `${(h * 100).toFixed(2)}%`, width: 'auto', maxWidth: 'none', bottom: `calc(max(22%, 150px) - ${((1 - box.b) * h * 100).toFixed(2)}%)`, transform: `translateX(-${(((box.l + box.r) / 2) * 100).toFixed(1)}%)`, objectFit: 'fill', filter }}/>;
 }
 
 // 場面(見守る・ようすを見る・渡す の掛け合いを、その場所の背景と立ち絵で流す)

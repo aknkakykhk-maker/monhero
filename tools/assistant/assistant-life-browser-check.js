@@ -89,16 +89,20 @@ const standProblems = async (page, combos, label) => {
       const sc = document.querySelector('[data-assistant-life-scene]'); if (!sc) return null; const H = sc.getBoundingClientRect().height;
       const st = [...sc.querySelectorAll('[data-assistant-life-scene-stand]')].map(e => { const r = e.getBoundingClientRect(), b = ASSISTANT_LIFE_STAND_BOX.get(e.getAttribute('src')); return b ? { top: r.top + b.t * r.height, fh: (b.b - b.t) * r.height } : null; });
       const ic = sc.querySelector('[data-assistant-life-scene-icon]');
-      return { H, st, icon: !!ic && !ic.closest('.mhl-ti') && ic.getBoundingClientRect().width > 4 };
+      // 顔(見た目の上から4割)が台詞の窓に隠れていないか(2026-11-08 ミハリ: 横で窓の裏に隠れた)
+      const tw = document.querySelector('[data-assistant-peer-talk]'); const twTop = tw ? tw.getBoundingClientRect().top : Infinity;
+      const hidden = [...sc.querySelectorAll('[data-assistant-life-scene-stand]')].filter(e => { const r = e.getBoundingClientRect(), b = ASSISTANT_LIFE_STAND_BOX.get(e.getAttribute('src')); return b && r.top + (b.t + 0.4 * (b.b - b.t)) * r.height > twTop; }).map(e => e.getAttribute('data-assistant-life-scene-stand'));
+      return { H, st, hidden, icon: !!ic && !ic.closest('.mhl-ti') && ic.getBoundingClientRect().width > 4 };
     });
     if (!m) { ng.push(`${ids.join('・')}: 場面が開かない`); continue; }
     n++;
     if (m.st.length !== ids.length || m.st.some(x => !x)) ng.push(`${ids.join('・')}: 立ち絵が測れない`);
     else { const t = m.st.map(x => x.top), f = m.st.map(x => x.fh); const d = (Math.max(...t) - Math.min(...t)) / m.H, r = Math.max(...f) / Math.min(...f); if (d > 0.03 || r > 1.08) ng.push(`${ids.join('・')}: 頭の高さの差 ${(d * 100).toFixed(1)}%・大きさの比 ${r.toFixed(2)}`); }
     if (!m.icon) ng.push(`${ids.join('・')}: 見出しのアイコンが出ていない`);
+    if (m.hidden && m.hidden.length) ng.push(`${ids.join('・')}: 顔が台詞の窓に隠れる(${m.hidden.join(',')})`);
     await page.locator('[data-assistant-life-scene-back]').click({ timeout: 2000 }).catch(() => {}); await page.waitForTimeout(200);
   }
-  check(`⑰ 場面の立ち絵の頭の高さ・大きさがそろい、見出しのアイコンが出る(${label}・${n}場面)`, ng.length === 0 && n === combos.length, ng.slice(0, 4).join(' / '));
+  check(`⑰ 場面の立ち絵の頭の高さ・大きさがそろい、顔が台詞の窓に隠れず、見出しのアイコンが出る(${label}・${n}場面)`, ng.length === 0 && n === combos.length, ng.slice(0, 4).join(' / '));
 };
 const LIFE_IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'];
 const STAND_COMBOS = [...LIFE_IDS.flatMap((a, i) => LIFE_IDS.slice(i + 1).map(b => [a, b])), ['mua', 'kiki', 'kyuko'], ['dra', 'sorashido', 'erubin'], ['momosuke', 'atsu', 'kiki'], ['kiki', 'dra', 'kyuko', 'mua'], ['atsu', 'kyuko', 'sorashido', 'erubin']];
