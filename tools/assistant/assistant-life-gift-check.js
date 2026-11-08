@@ -9,6 +9,7 @@
 //   ⑥ 保存: 新しいキー(mh_assistant_life_gift_day_v1・mh_assistant_life_likes_v1・mh_assistant_life_cheki_v1)に足すだけ。壊れた値でも空で読む
 //   ⑦ 台詞: 仮の1行(8人×好き・ふつう・苦手)と教えてくれる1行がそろい、{item} が道具の名前に置きかわる/口調(みゅあ「ぢゃん」・あつの文末)/「子」・「ブリーダー」を書かない
 //   ⑧ 印が偽のとき: 今までの2つ(🧺🤝)だけ・それぞれ1日1回
+//   ⑨ 家具(段階B): 12種類・交換所・好みの表・量・置く/押し入れ/入れかえ/しまう・二度は贈れない・壊れた値・印 assistantLifeFurniture
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -20,7 +21,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 
 const mem = {};
 const writes = [];
-const flags = { assistantPeer: true, assistantLife: true };
+const flags = { assistantPeer: true, assistantLife: true, assistantLifeFurniture: false };
 let dayNow = '2026-11-08';
 const added = [];
 const ctx = vm.createContext({
@@ -37,8 +38,8 @@ const load = (rel) => {
 };
 load('monster-hero/data/assistants.js');
 // 持ち物(breeder.js)と交換所(rhythm-event.js)から、道具の行だけを切り出して読む
-const itemSrc = fs.readFileSync(path.join(root, 'monster-hero/data/breeder.js'), 'utf8').match(/\{ id:'peer_[a-z]+'[\s\S]*?desc:"[^"]*" \}/g) || [];
-const offerSrc = fs.readFileSync(path.join(root, 'monster-hero/data/rhythm-event.js'), 'utf8').split('\n').filter(l => /Object\.freeze\(\{ id:'peer_[a-z]+'/.test(l)).map(l => l.trim().replace(/,$/, ''));
+const itemSrc = fs.readFileSync(path.join(root, 'monster-hero/data/breeder.js'), 'utf8').match(/\{ id:'(peer|furn)_[a-z]+'[\s\S]*?desc:"[^"]*" \}/g) || [];
+const offerSrc = fs.readFileSync(path.join(root, 'monster-hero/data/rhythm-event.js'), 'utf8').split('\n').filter(l => /Object\.freeze\(\{ id:'(peer|furn)_[a-z]+'/.test(l)).map(l => l.trim().replace(/,$/, ''));
 vm.runInContext(`var BREEDER_MARKET_ITEMS = [${itemSrc.join(',')}]; var RHYTHM_EVENT_POINT_SHOP_OFFERS = [${offerSrc.join(',')}];`, ctx);
 vm.runInContext('var assistantBubbleDayKey = () => __day(); var assistantPeerDayKey = () => __day(); var jstDayKey4 = () => __day(); var assistantById = (id) => ASSISTANTS.find(a => a.id === id);', ctx);
 load('monster-hero/src/parts/56-assistant-peer.jsx');
@@ -102,7 +103,7 @@ const OFFERS = G('RHYTHM_EVENT_POINT_SHOP_OFFERS');
   store.state = { ...store.state, loaded: true, gift: null, bond: {}, bondDay: null }; store.loaded = true;
   const use = G('assistantPeerUseItem');
   const t1 = await use('cake', ['mua', 'kiki']);
-  check('④ 贈ると2人のひとこと(仮の1行・{item} が名前に)・2人の仲良し度(lifeGift・好みの量)・友情Lv', t1 && t1.lines.length === 2 && t1.lines[0].t.includes('はんぶんこケーキ') && !t1.lines.some(l => l.t.includes('{item}'))
+  check('④ 贈ると2人のひとこと({item} が残らない)・2人の仲良し度(lifeGift・好みの量)・友情Lv', t1 && t1.lines.length === 2 && !t1.lines.some(l => l.t.includes('{item}'))
     && added.includes('mua:lifeGift:60') && added.includes('kiki:lifeGift:40') && store.state.bond['kiki-mua'] === 25, `${added.join(' ')} / ${store.state.bond['kiki-mua']}`);
   check('④ 同じ道具は1日1回(ほかの2人にも贈れない)', (await use('cake', ['dra', 'atsu'])) === null);
   check('④ 別の道具なら贈れる(2回目)', !!(await use('gift', ['dra', 'atsu'])));
@@ -134,7 +135,7 @@ const OFFERS = G('RHYTHM_EVENT_POINT_SHOP_OFFERS');
   const used = new Set(writes);
   check('⑥ 新しいキーに書く(gift_day・likes)', used.has('mh_assistant_life_gift_day_v1') && used.has('mh_assistant_life_likes_v1'));
   const allowed = new Set(['mh_assistant_life_gift_day_v1', 'mh_assistant_life_likes_v1', 'mh_assistant_life_cheki_v1', 'mh_assistant_peer_gift_v1', 'mh_assistant_peer_bond_v1', 'mh_assistant_peer_bond_day_v1',
-    'mh_assistant_life_diary_v1', 'mh_assistant_life_v1', 'mh_assistant_life_play_v1']);
+    'mh_assistant_life_diary_v1', 'mh_assistant_life_v1', 'mh_assistant_life_play_v1', 'mh_assistant_life_room_v1']);
   const strange = [...used].filter(k => !allowed.has(k));
   check('⑥ ほかの既存キーは書きかえない', !strange.length, strange.join(','));
   await use('cheki', ['mua', 'momosuke']);
@@ -166,6 +167,47 @@ const OFFERS = G('RHYTHM_EVENT_POINT_SHOP_OFFERS');
   check('⑧ 印が偽なら 🧺🤝 それぞれ1日1回(3回の決まりは無し)', /今日はもう使いました/.test(G('assistantLifeGiftReason')('gift', store.state, 1)) && G('assistantLifeGiftReason')('token', store.state, 1) === '');
   flags.assistantLife = true;
 
+  // ⑨ 家具(段階B・2026-11-08)
+  {
+    const FURN = G('ASSISTANT_LIFE_FURNITURE'), FL = G('ASSISTANT_LIFE_FURN_LIKES');
+    check('⑨ 家具は12種類・置き場所は天井・壁・床・持ち物の id は furn_<key>', FURN.length === 12 && FURN.every(f => ['ceil', 'wall', 'floor'].includes(f.slot) && f.itemId === `furn_${f.key}`) && new Set(FURN.map(f => f.key)).size === 12);
+    const fitem = (id) => ITEMS.find(x => x.id === id), foff = (id) => OFFERS.find(o => o.itemId === id);
+    const PLANF = { sofa: 1200, bear: 600, plant: 500, record: 1000, nyacushion: 700, starpic: 800, trophy: 900, bookshelf: 700, heartmirror: 700, lantern: 700, mirrorball: 1000, windbell: 400 };
+    const badF = FURN.filter(f => !fitem(f.itemId) || fitem(f.itemId).shop !== false || !foff(f.itemId) || foff(f.itemId).cost !== PLANF[f.key] || foff(f.itemId).releaseFlag !== 'assistantLifeFurniture' || foff(f.itemId).name !== fitem(f.itemId).name);
+    check('⑨ 12種類とも持ち物と交換所(案の値段・公開の印 assistantLifeFurniture の後ろ)にある', !badF.length, badF.map(f => f.key).join(','));
+    const OKF = { mua: 'bear heartmirror mirrorball/bookshelf', kiki: 'plant bookshelf windbell/mirrorball', momosuke: 'record heartmirror mirrorball/plant', dra: 'sofa bear nyacushion/trophy',
+      atsu: 'sofa record trophy/heartmirror', kyuko: 'nyacushion starpic bookshelf/mirrorball', sorashido: 'starpic trophy lantern/bear', erubin: 'plant lantern windbell/mirrorball' };
+    const dF = IDS.filter(id => `${FL[id].like.join(' ')}/${FL[id].bad.join(' ')}` !== OKF[id]);
+    check('⑨ 家具の好みは社長の OK の表と同じ', !dF.length, dF.join(','));
+    check('⑨ 仲良し度: ふつう +80・好き +120・苦手 +40', G("assistantLifeFurnAmount('atsu', 'plant')") === 80 && G("assistantLifeFurnAmount('atsu', 'sofa')") === 120 && G("assistantLifeFurnAmount('atsu', 'heartmirror')") === 40 && G('ASSISTANT_BOND_ACTIONS').lifeFurn.amount >= 120);
+    const giveS = G('assistantLifeFurnGiveState'), moveS = G('assistantLifeFurnMoveState');
+    let room = {};
+    let r = giveS(room, 'atsu', 'sofa', '2026-11-09'); room = r.room;
+    check('⑨ 贈ると空いている置き場所に置く', r.placed && room.atsu.put.floor === 'sofa');
+    r = giveS(room, 'atsu', 'record', '2026-11-09'); room = r.room;
+    check('⑨ 置き場所がふさがっていたら押し入れへ', !r.placed && room.atsu.kept.includes('record') && room.atsu.put.floor === 'sofa');
+    check('⑨ 同じ家具は1人に1つ(二度は贈れない)', giveS(room, 'atsu', 'sofa', '2026-11-09') === null);
+    room = moveS(room, 'atsu', 'record', true);
+    check('⑨ 入れかえると、前の家具は押し入れへ', room.atsu.put.floor === 'record' && room.atsu.kept.includes('sofa') && !room.atsu.kept.includes('record'));
+    room = moveS(room, 'atsu', 'record', false);
+    check('⑨ しまうと置き場所が空く', room.atsu.put.floor === null && room.atsu.kept.includes('record'));
+    check('⑨ 贈っていない家具は置けない', moveS(room, 'atsu', 'trophy', true) === null);
+    const nr = G('normalizeAssistantLifeRoom');
+    const bad = nr({ atsu: { put: { floor: 'lantern', wall: 'zzz', ceil: 5 }, kept: 'x', got: [1] }, mua: null, 'X-1': {} });
+    check('⑨ 壊れた値でも空で読む(置き場所の合わない家具・知らない家具は捨てる)', bad.atsu.put.floor === null && bad.atsu.put.wall === null && Array.isArray(bad.atsu.kept) && bad.mua && !bad['X-1']);
+    flags.assistantLifeFurniture = true;
+    store.state = { ...store.state };
+    added.length = 0;
+    const t = await G('assistantLifeFurnGive')('kiki', 'plant');
+    check('⑨ 贈ると部屋に置き・好みが分かり・仲良し度(lifeFurn)・ひとこと(届いた台詞)', t && t.like === 'like' && t.amount === 120 && added.includes('kiki:lifeFurn:120') && mem.mh_assistant_life_room_v1.kiki.put.floor === 'plant'
+      && G("assistantLifeGiftShownLike('kiki', 'plant')") === 'like' && t.lines.length >= 1 && t.lines.every(l => l.who === 'kiki' && !/\{item\}/.test(l.t)), JSON.stringify({ like: t && t.like, amount: t && t.amount, added, room: mem.mh_assistant_life_room_v1 }).slice(0, 200));
+    const told = await G('assistantLifeGiftOnBondLevel')('sorashido', 3, () => 0.99);
+    check('⑨ 家具が開いていれば、好きな家具も教えてくれる(候補に入る)', ['starpic', 'trophy', 'lantern', 'onigiri', 'puzzle', 'sleeve'].includes(told) && !!G('assistantLifeGiftHintLine')('sorashido', 'lantern'));
+    flags.assistantLifeFurniture = false;
+    check('⑨ 印が偽なら家具は贈れない', (await G('assistantLifeFurnGive')('kiki', 'windbell')) === null);
+    const sd2 = fs.readFileSync(path.join(root, 'docs/spec/SAVE_DATA.md'), 'utf8');
+    check('⑨ 保存の一覧(SAVE_DATA.md)に mh_assistant_life_room_v1', sd2.includes('mh_assistant_life_room_v1'));
+  }
   console.log(failed ? `\n${failed}件のNGがあります` : '\nすべて OK');
   process.exit(failed ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
