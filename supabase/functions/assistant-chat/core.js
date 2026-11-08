@@ -923,7 +923,7 @@ export const friendLineTone = (who, t) => {
   let x = String(t || '');
   if (who === 'mua') x = x.replace(/じゃん/g, 'ぢゃん').replace(/まじ/g, 'まぢ').replace(/マジ/g, 'マヂ');
   else if (/ぢゃん|まぢ/.test(x)) return null;
-  if (who === 'atsu') { x = x.trim().replace(/。$/, '！'); if (!/(笑|[！？!?…♪w]|[)）]|\p{Extended_Pictographic}\uFE0F?)$/u.test(x)) return null; }
+  if (who === 'atsu') { x = x.trim().replace(/。$/, '！'); if (!/(笑|[！？!?…♪w]|[)）][ノﾉｼ]?|\p{Extended_Pictographic}\uFE0F?)$/u.test(x)) return null; }
   if (who === 'dra' && FRIEND_DRA_KANSAI.test(x)) return null;
   if (who === 'kiki' && /(だよ|だね|してよ|じゃん)([。！!？?♪]|$)/.test(x)) return null;
   if (who === 'momosuke' && /^(私|あたし)|[、。](私|あたし)は/.test(x)) return null;

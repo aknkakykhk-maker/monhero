@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9c127b97b3e985c4
+// source-sha256: 7f866136e27d65cb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -62570,6 +62570,7 @@ const growthFxSessionLevel = (list = []) => {
 };
 const GROWTH_FX_CSS = `
 .mh-gfx-chips{position:fixed;top:calc(env(safe-area-inset-top,0px) + 52px);right:10px;z-index:44000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
+.mh-gfx-chips.left{right:auto;left:10px;align-items:flex-start}
 .mh-gfx-chips.mini .mh-gfx-chip>.min-w-0{display:none}.mh-gfx-chips.mini .mh-gfx-chip{padding:3px 8px 3px 4px;gap:4px}
 .mh-gfx-chip{position:relative;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;border-radius:999px;background:linear-gradient(90deg,#1e1b2ef0,#0f172af0);
   border:1.5px solid var(--gc);box-shadow:0 0 14px color-mix(in srgb,var(--gc) 40%,transparent);font-weight:900;font-size:11px;color:#fff;
@@ -63123,17 +63124,23 @@ const GrowthFxChipsBox = ({
     const place = () => {
       const box = ref.current;
       if (!box) return;
-      const tops = [...GROWTH_FX_CHIP_TOPS, Math.max(60, window.innerHeight - 120 - box.offsetHeight)];
+      const steps = [];
+      for (let y = window.innerHeight - 10 - box.offsetHeight; y >= 8; y -= 24) steps.push(Math.round(y));
+      const tops = [...new Set([...GROWTH_FX_CHIP_TOPS, Math.max(60, window.innerHeight - 120 - box.offsetHeight), ...steps])];
       for (const mini of [false, true]) {
         box.classList.toggle('mini', mini);
-        for (const t of tops) {
-          box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`;
-          if (!growthFxChipSpotBusy(box)) {
-            box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${t}`;
-            return;
+        for (const left of [false, true]) {
+          box.classList.toggle('left', left);
+          for (const t of tops) {
+            box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`;
+            if (!growthFxChipSpotBusy(box)) {
+              box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${left ? 'left-' : ''}${t}`;
+              return;
+            }
           }
         }
       }
+      box.classList.remove('left');
       box.style.top = `calc(env(safe-area-inset-top, 0px) + ${GROWTH_FX_CHIP_TOPS[1]}px)`;
       box.dataset.growthFxChipsTop = 'mini-busy';
     };
@@ -123899,6 +123906,132 @@ const ALF_TALK_LINES = Object.freeze({
   sorashido: ['うぉぉぉ！お客さんだぜ・・・！', 'ちばりよー！応援してるぜ笑', 'また来いよ笑'],
   erubin: ['いらっしゃい。来てくれてありがとう', '{h}さんの家、居心地いいでしょ', '気をつけて帰ってね']
 });
+const ALF_VISIT_LINES = Object.freeze({
+  "mua": {
+    "greet": ["はじめましてー！ {h}さんのお友だち？", "わ、お客さんだ！ ゆっくりしてってよー✨", "{name}って言うの？ よろしくね♪"],
+    "doing": {
+      "snack": "いま、おやつ食べてたとこー！ いっしょにどう？",
+      "practice": "ちょうど練習してたの！ 見てってよー♪",
+      "training": "モッチーのお世話中だったの！ かわいいでしょ？",
+      "cards": "カード並べてたとこ！ どれがかわいいと思う？",
+      "read": "雑誌見てたの！ コーデ決めてたとこ♪",
+      "idle": "ちょうどヒマしてたの！ ナイスタイミングぢゃん👍"
+    },
+    "reply": ["ありがとー！ 来てくれて、まぢうれしい♪", "うんうん(●ﾟｪﾟ))ｺｸｺｸ 楽しんでってね！", "そう言ってもらえると、照れるぢゃんｗ"],
+    "sleep": ["…むにゃ…このリボン…かわいー…", "…すぅ…いらっしゃーい…むにゃ…"]
+  },
+  "kiki": {
+    "greet": ["まあ、お客さまでつね。ようこそいらっしゃいました", "はじめまして。{h}さんのところの、ききでつ", "{name}、どうぞお入りくださいな♪"],
+    "doing": {
+      "snack": "ちょうど、お茶菓子をいただいていたところでつ。おひとついかが？",
+      "practice": "モンヒロビートの練習中でした。ちから全開でいきまつよ♪",
+      "training": "ゴーレムさんのお世話をしていました。立派でしょう？",
+      "cards": "カードを並べていたところでつ。攻撃のカードばかりですね♪",
+      "read": "本を読んでいました。静かな時間は、いいものでつね",
+      "idle": "ぼんやりお茶を飲んでいたところでした。ゆっくりしていってくださいね"
+    },
+    "reply": ["ありがとうございます。くつろいでくださいね♪", "そう言っていただけると、うれしいでつ", "どうぞ、お茶でもいれましょうか"],
+    "sleep": ["…すぅ…お茶が…さめてしまいまつ…", "…むにゃ…火力は…こちらに…"]
+  },
+  "momosuke": {
+    "greet": ["わ、お客さん！！ ももの部屋へようこそ♡", "はじめまして！！ {h}さんちの、ももだよ！！", "{name}、来てくれたの！？ うれしい！！"],
+    "doing": {
+      "snack": "おやつタイム中！！ ひと口あげるw",
+      "practice": "いま練習中！！ ももの音、聞いてって♡",
+      "training": "メタルナーみがいてたとこ！！ ぴかぴかでしょ？",
+      "cards": "カード並べてた！！ かわいいのばっかでしょw",
+      "read": "楽譜見てたの！！ 次の曲、どれにしよっかな",
+      "idle": "ちょうどヒマだったの！！ 遊ぼ遊ぼ！！"
+    },
+    "reply": ["でしょ！？ ももの自慢の部屋だもん♡", "ありがと！！ ゆっくりしてってねw", "えっへん！！ もっとほめていいよw"],
+    "sleep": ["…すぅ…ライブ…まだ終わらない…", "…むにゃ…ぴかぴか…w"]
+  },
+  "dra": {
+    "greet": ["お、お客さんか。よく来たな", "はじめましてだな。{h}さんのところのドラだ", "{name}か。ゆっくりしていけよ"],
+    "doing": {
+      "snack": "ちょうどおやつ中だ。ひとつ食うか？",
+      "practice": "モンビーの練習してたとこだ。リズムきざむぞ",
+      "training": "グジラの世話してたんだ。でっかいだろ",
+      "cards": "山札を確かめてたとこだ。見ていくか？",
+      "read": "説明書きを読んでたんだ。わかりやすく書いてあるな",
+      "idle": "ぼーっとしてたとこだ。ちょうどよかったな、えへへ"
+    },
+    "reply": ["そうか、ありがとな。くつろいでいけ", "おでの部屋、気に入ったか？", "まあ、座ってくれ。おやつもあるぞ"],
+    "sleep": ["…ぐぅ…グジラ…まだ食べるのか…", "…すぅ…いらっしゃい…むにゃ…"]
+  },
+  "atsu": {
+    "greet": ["お、いらっしゃい！ {h}さんの友だちだよね笑", "{name}、来てくれたんだ！ ゆっくりしてって笑", "おっ、お客さん笑 遠慮しないで入って！"],
+    "doing": {
+      "snack": "ちょうどおやつ食べてた笑 一個どう？",
+      "practice": "いま一曲叩いてたとこ笑 {name}も聞いてく？",
+      "training": "ドラゴンの世話してた笑 ちょっと待ってて！",
+      "cards": "デッキ組み直してたとこ笑 見ていく？",
+      "read": "本読んでたら、ちょっと寝そうだった笑 来てくれて助かる！",
+      "idle": "ぼーっとしてた笑 ちょうど話し相手ほしかった！"
+    },
+    "reply": ["ありがと笑 くつろいでって！", "そう言ってもらえると、うれしい笑", "いいって笑 {h}さんにも伝えとく！"],
+    "sleep": ["……次の一曲、いける……", "……ドラゴン、えらいぞ……( *'ω'*)ノ"]
+  },
+  "kyuko": {
+    "greet": ["ほい、いらっしゃ〜い。{name}、ようこそだよぉ", "あ、お客さんだぁ。{h}さんの友だちかな？", "ちょうどひと休みしたかったんだぁ。どうぞどうぞ"],
+    "doing": {
+      "snack": "おやつ食べてたとこ〜。一緒にどう？",
+      "practice": "いま練習してたんだぁ。ちょっと聞いてってよぉ",
+      "training": "ニャーの世話してたとこ〜。かわいいでしょ笑",
+      "cards": "新しい組み方、考えてたんだぁ。見る？",
+      "read": "本読んでたとこ〜。いいところで来たねぇ笑",
+      "idle": "ぼーっと音楽聞いてたんだぁ。座っていいよぉ"
+    },
+    "reply": ["ありがとん笑 ゆっくりしてってねぇ", "そう言ってもらえると、うれしいなぁ", "ほい、どういたしまして〜。{h}さんも喜ぶよぉ"],
+    "sleep": ["……むにゃ……あと一ページ……", "……ニャー、そこはだめだよぉ……"]
+  },
+  "sorashido": {
+    "greet": ["うぉぉぉ！ お客さんだ！ よく来てくれたな", "{name}、いらっしゃい！ くつろいでくれ笑", "{h}さんの友だちか。ゆっくりしていけよ"],
+    "doing": {
+      "snack": "ちょうどちんすこう食べてたんだ。一緒にどうだ？",
+      "practice": "いま練習してたんだ！ 聞いていくか？",
+      "training": "育成の記録をつけてたとこだ。ちょっと待っててくれ",
+      "cards": "新しい表を作ってたんだぜ・・・！ 見ていくか？",
+      "read": "本を読んでたんだ。いいところで来たな笑",
+      "idle": "考えごとしてたんだ。話し相手ができてうれしいぞ"
+    },
+    "reply": ["ありがとな！ でーじうれしいぞ笑", "そう言ってもらえると、表を作ったかいがあるな", "気をつかわなくていいぞ。ゆっくりしてくれ"],
+    "sleep": ["……うぉぉ……むにゃ……表が……", "……なんくるないさ〜……すぅ……"]
+  },
+  "erubin": {
+    "greet": ["いらっしゃい。{name}、来てくれてありがとう", "はじめまして、かな。{h}さんのお友だちだね", "ようこそ。ゆっくりしていってね☺️"],
+    "doing": {
+      "snack": "ちょうどお茶とおやつの時間だったんだ。一緒にどうかな？",
+      "practice": "いま練習してたところだよ。少し聞いていく？",
+      "training": "デュラハンのお世話をしてたんだ。おとなしいでしょ",
+      "cards": "カードの組み方を考えてたんだ。見ていく？",
+      "read": "本を読んでたんだ。静かでいい時間だね",
+      "idle": "窓の外をながめてたんだ。ちょうどよかったよ"
+    },
+    "reply": ["ありがとう。そう言ってもらえるとうれしいな", "どういたしまして。気をつかわなくていいからね", "うん、{h}さんにも伝えておくね"],
+    "sleep": ["……みんな、元気かな……", "……デュラハン、そこで守って……"]
+  }
+});
+const ALF_GO_MORE = Object.freeze({
+  "mua": ["{h}さんの家、おしゃれすぎぢゃない！？", "{f}の部屋、見せてもらってもいい？"],
+  "kiki": ["{h}さんのお家、落ち着いたすてきなお部屋でつね", "{f}、おじゃましまつ。お茶をお持ちしました♪"],
+  "momosuke": ["{h}さんちの部屋、かわいいじゃん！！", "{f}、遊びに来たよ！！ 練習見せて♡"],
+  "dra": ["{h}さんの家か。いい部屋だな", "{f}、おじゃまするぞ。おやつ持ってきた"],
+  "atsu": ["{f}、遊びに来た笑 なんかして遊ぼ！", "{h}さんの部屋、いい感じじゃん！ また来たいな笑"],
+  "kyuko": ["{f}、遊びに来たよぉ。何してたの？", "{h}さんの部屋、本がありそうで落ち着くねぇ"],
+  "sorashido": ["{f}、遊びに来たぞ！ 今日はなにする？", "{h}さんの部屋、でーじ落ち着くな笑"],
+  "erubin": ["{f}、遊びに来たよ。元気だったかな？", "{h}さんの部屋、やさしい感じがするね"]
+});
+const ALF_WELCOME_MORE = Object.freeze({
+  "mua": ["{f}だ！ 来てくれたの、まぢうれしい♪", "あたしの部屋、こっちだよー！ ゆっくりしてってね✨"],
+  "kiki": ["{f}、ようこそ。お茶をおいれしまつね", "遠いところ、ありがとうございまつ。ゆっくりしていってくださいな"],
+  "momosuke": ["{f}だ！！ ももの部屋、案内するね♡", "いらっしゃい！！ おやつ用意してあるよw"],
+  "dra": ["{f}か、よく来たな。ゆっくりしていけ", "おでの部屋はこっちだ。散らかってるけどな"],
+  "atsu": ["いらっしゃい！ 来てくれたの、まじでうれしい笑", "{f}、よく来たじゃん笑 ゆっくりしてって！"],
+  "kyuko": ["いらっしゃ〜い。{f}、待ってたよぉ", "ほい、上がって上がって〜。お茶いれるねぇ"],
+  "sorashido": ["よく来たな！ {f}、待ってたぞ", "いらっしゃい！ ゆっくりしていけよ笑"],
+  "erubin": ["いらっしゃい、{f}。ゆっくりしていってね", "来てくれてうれしいよ。お茶をいれるね"]
+});
 const ALF_WORD_TEXTS = Object.freeze(['楽しかった！', 'また来るね', 'おじゃましました', 'おやつおいしかった', 'いい部屋だったよ', 'また遊ぼうね', 'ゆっくりできた', 'ありがとう', 'お話しできてうれしかった', 'みんな元気そうだった', 'また会いたいな', 'お留守のあいだにおじゃましました']);
 const ALF_THANKS_TEXTS = Object.freeze(['来てくれてありがとう！', 'またいつでも来てね', 'うれしかったよ', '今度はこっちから行くね', 'みんな喜んでたよ', 'おつかれさま！']);
 const ALF_DOING_ROOM = Object.freeze({
@@ -123915,8 +124048,10 @@ const alfFill = (text, {
   f = '',
   h = '',
   v = '',
-  who = null
-} = {}) => String(text || '').replace(/\{f\}/g, f).replace(/\{h\}/g, h).replace(/\{v\}/g, v).replace(/\{name\}/g, () => typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(who) : 'あなた');
+  who = null,
+  name = null
+} = {}) => String(text || '').replace(/\{f\}/g, f).replace(/\{h\}/g, h).replace(/\{v\}/g, v).replace(/\{name\}/g, () => name != null ? name : typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(who) : 'あなた');
+const alfPickOne = arr => Array.isArray(arr) && arr.length ? arr[Math.floor(Math.random() * arr.length)] : '';
 const alfTheirLabel = (hostName, aid) => `${hostName}さんの${assistantLifeName(aid)}`;
 const assistantLifeFriendGoScene = (o, n = 0) => {
   if (!o) return null;
@@ -123934,7 +124069,7 @@ const assistantLifeFriendGoScene = (o, n = 0) => {
   const pick = arr => arr[(n + mine.length) % arr.length];
   lines.push({
     who: mine[0],
-    text: alfFill(pick(ALF_GO_LINES[mine[0]] || ['おじゃまします']), {
+    text: alfFill(pick([...(ALF_GO_LINES[mine[0]] || ['おじゃまします']), ...(ALF_GO_MORE[mine[0]] || [])]), {
       f: t0 ? alfTheirLabel(o.name, t0) : `${o.name}さん`,
       h: o.name,
       who: mine[0]
@@ -124004,7 +124139,8 @@ const alfComeSceneScript = c => c ? {
     })
   }, ...(c.mine ? [{
     who: c.mine,
-    text: alfFill(c.mine === c.aid ? ALF_SAME_LINES[c.mine] : ALF_WELCOME_LINES[c.mine], {
+    text: alfFill(c.mine === c.aid ? ALF_SAME_LINES[c.mine] : alfPickOne([ALF_WELCOME_LINES[c.mine], ...(ALF_WELCOME_MORE[c.mine] || [])].filter(Boolean)), {
+      f: alfTheirLabel(c.name, c.aid),
       who: c.mine
     })
   }] : [])]
@@ -124108,7 +124244,7 @@ const alfApiLineOk = (who, t) => {
   if (ALF_API_BODY_WORDS.test(x) || /(この|あの|その)子|子たち/.test(x)) return null;
   if (who === 'atsu') {
     x = x.trim().replace(/。$/, '！');
-    if (!/(笑|[！？!?…♪w]|[)）]|[\u3000-\u303f]?[\uff08(][^)）]*[)）]|\p{Extended_Pictographic}\uFE0F?)$/u.test(x)) return null;
+    if (!/(笑|[！？!?…♪w]|[)）][ノﾉｼ]?|[\u3000-\u303f]?[\uff08(][^)）]*[)）]|\p{Extended_Pictographic}\uFE0F?)$/u.test(x)) return null;
   }
   if (who === 'dra' && /ほんま|やで|っとる|っとん|とんだ|やろ(?!う)|あかん|へん[。、！]|ええ(な|で|やん|わ)|(草|くさ)[。！!w]*$/.test(x)) return null;
   if (who === 'kiki' && /(だよ|だね|してよ|じゃん)([。！!？?♪]|$)/.test(x)) return null;
@@ -124260,6 +124396,19 @@ function AlfFriendHouseView({
   const [done, setDone] = React.useState(null);
   const [noteWarn, setNoteWarn] = React.useState('');
   const [boardOpen, setBoardOpen] = React.useState(false);
+  const [selfName, setSelfName] = React.useState('');
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const n = typeof storeGet === 'function' ? await storeGet('mh_breeder_name', '') : '';
+        if (alive && typeof n === 'string' && n && n !== '名無しのブリーダー') setSelfName(n.slice(0, 10));
+      } catch {}
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [vw, setVw] = React.useState(() => typeof window !== 'undefined' ? window.innerWidth : 390);
   const [vh, setVh] = React.useState(() => typeof window !== 'undefined' ? window.innerHeight : 844);
   React.useEffect(() => {
@@ -124285,14 +124434,25 @@ function AlfFriendHouseView({
   const pad = 12;
   const houseW = land ? Math.min(560, Math.round(vw * 0.64) - pad * 2) : Math.min(380, vw - pad * 2);
   const lines = aid => ALF_TALK_LINES[aid] || ['いらっしゃい', 'ありがとう', 'またね'];
+  const visitor = `${selfName || 'お客'}さん`;
+  const vl = aid => ALF_VISIT_LINES[aid] || {
+    greet: [],
+    doing: {},
+    reply: [],
+    sleep: []
+  };
   const greet = aid => {
+    const d = h.r[aid] && h.r[aid].d;
+    const byDoing = vl(aid).doing[d];
+    const text = byDoing && Math.random() < 0.6 ? byDoing : alfPickOne([lines(aid)[0], ...vl(aid).greet]);
     setRoomId(aid);
     setTalk({
       aid,
       step: 0,
-      text: alfFill(lines(aid)[0], {
+      text: alfFill(text, {
         h: friend.name,
-        who: aid
+        who: aid,
+        name: visitor
       })
     });
   };
@@ -124303,9 +124463,10 @@ function AlfFriendHouseView({
       ...talk,
       step: 1,
       mine: ALF_PLAYER_REPLIES[i],
-      text: alfFill(lines(talk.aid)[1 + i % 2], {
+      text: alfFill(alfPickOne([lines(talk.aid)[1 + i % 2], ...vl(talk.aid).reply]), {
         h: friend.name,
-        who: talk.aid
+        who: talk.aid,
+        name: visitor
       })
     });
   };
@@ -124375,7 +124536,7 @@ function AlfFriendHouseView({
   }, "←"), React.createElement("div", {
     className: "min-w-0",
     style: {
-      maxWidth: land ? '100%' : '62%'
+      maxWidth: land ? '100%' : '48%'
     }
   }, React.createElement("p", {
     className: "mhl-en whitespace-nowrap"
@@ -124545,9 +124706,16 @@ function AlfFriendHouseView({
     className: "mhl-btn mt-2 w-full bg-sky-600",
     "data-alf-visit-room": roomId,
     onClick: () => greet(roomId)
-  }, "💬 ", assistantLifeName(roomId), "に話しかける") : React.createElement("p", {
+  }, "💬 ", assistantLifeName(roomId), "に話しかける") : React.createElement(React.Fragment, null, roomState === 'sleep' && vl(roomId).sleep.length > 0 && React.createElement("p", {
+    className: "mt-2 rounded-2xl border border-indigo-300/30 bg-indigo-950/60 px-3 py-1.5 text-[12.5px] italic text-indigo-100",
+    "data-alf-visit-sleep": true
+  }, "💤 ", alfFill(vl(roomId).sleep[(roomId.length + (friend.id || '').length) % vl(roomId).sleep.length], {
+    h: friend.name,
+    who: roomId,
+    name: visitor
+  })), React.createElement("p", {
     className: "mt-2 text-[11px] text-slate-300"
-  }, roomState === 'out' ? '帰ってきたら話せます。' : '起きているときに話せます。'), can === 'ok' && !done && React.createElement("button", {
+  }, roomState === 'out' ? '帰ってきたら話せます。' : '起きているときに話せます。')), can === 'ok' && !done && React.createElement("button", {
     type: "button",
     className: "mhl-btn mt-2 w-full bg-amber-500 text-slate-950",
     "data-alf-visit-room-note": roomId,
@@ -124723,10 +124891,7 @@ const alfVisitBlockedText = (friendId, name, s = ALF_STORE.state) => {
   if (!s.settings.open) return '「🏘 フレンド」の設定で、行き来を切にしています。';
   if (s.settings.muted.includes(friendId)) return 'この家は「来ないようにする」にしています。';
   if (!alfOpenHouses('look').some(f => f.id === friendId)) return `${name || 'このフレンド'}さんが助手ライフを開くと遊びに行けます。`;
-  const can = assistantLifeFriendCanLook(friendId);
-  if (can === 'done') return '今日はこの家にもう遊びに行きました(朝4時に戻ります)。';
-  if (can === 'max') return '今日はもう遊びに行けません(朝4時に戻ります)。';
-  return can === 'ok' ? null : 'いまは遊びに行けません。';
+  return null;
 };
 function AssistantLifeFriendProfileVisit({
   friendId,
@@ -124920,7 +125085,7 @@ function AssistantLifeFriendPage({
     className: "whitespace-nowrap"
   }, "来てくれた ", st.come, "/", lim.come), React.createElement("span", {
     className: "whitespace-nowrap"
-  }, "あなたが訪ねた ", st.look, "/", lim.look), React.createElement("span", {
+  }, "置き手紙 ", st.look, "/", lim.look), React.createElement("span", {
     className: "whitespace-nowrap"
   }, "おみやげ ", st.beatP, "/", ALF_BEAT_P.dayMax, "P"))), React.createElement("p", {
     className: sec
