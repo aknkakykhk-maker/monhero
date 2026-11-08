@@ -17,7 +17,7 @@
 //   ⑨ 演出(44-growth-fx.jsx): 渡すと品物の演出/見守って友情Lv が上がると Lv アップの演出(トーストは重ねない)。止め絵 life-10・life-11
 //   ⑭ カード部とのつなぎ口: カード部屋にいる助手を読むだけ・対戦の知らせで今日あったことに1件
 //   ⑮ 読みやすさ: 朝・昼・夕・夜で、居場所・友情・道具の字が濃い面の上にあり、明るさの差が足りている
-//   ⑯ 地図は HOME にそろえる: 施設と結びつく場所が HOME の札と同じ建物
+//   ⑯ 地図は HOME にそろえる → 2026-11-08 案A で HOME の画面そのものを地図にした。HOME と札が1対1かは assistant-life-map-check.js ②
 //   ⑰ 場面の立ち絵: 2人・3人・4人で頭の高さと大きさがそろう・見出しのアイコンが字の塗りの外に出る
 //   ⑦ 段階3: 見守ると組の中の人だけが話す様子の台本が流れる(穴が残らない)/ひとりの助手の「ようすを見る」で、その人のひとりごとが流れる
 const http = require('http'), path = require('path'), fs = require('fs');
@@ -152,27 +152,7 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     { const ng = await homeFacesProblems(page); check('① 顔の列は、どの札でも札(名前)の下にあり、何にも重ならない(縦 390×844)', ng.length === 0, ng.join(' / ')); }
     check('① 顔ははみ出さない(縦 390)', await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-home-faces]')].every(el => { const r = el.getBoundingClientRect(); return r.left >= -1 && r.right <= window.innerWidth + 1; })));
     if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-1-home-faces.png') });
-    // ⑯ 地図は HOME にそろえる(2026-11-08 社長「実際のホームと場所ずれしてる？」): HOME の施設の札にいちばん近い建物と、地図のその場所が同じ建物
-    {
-      const ng = await page.evaluate(() => {
-        const img = document.querySelector('.mh-home-background img.mh-home-main'); if (!img) return ['HOME の絵が無い'];
-        const r = img.getBoundingClientRect(), k = Math.max(r.width / img.naturalWidth, r.height / img.naturalHeight);
-        const ox = r.left + (r.width - img.naturalWidth * k) / 2, oy = r.top + (r.height - img.naturalHeight * k) / 2;
-        const B = ASSISTANT_LIFE_MAP_BUILDING, crop = ASSISTANT_LIFE_MAP_CROP, out = [];
-        const toMap = (x, y) => [100 * (x - ox) / k / img.naturalWidth, 100 * ((y - oy) / k - crop.y0) / crop.h];
-        const dist = ([x, y], [l, t, rr, b]) => Math.hypot(Math.max(l - x, 0, x - rr), Math.max(t - y, 0, y - b));
-        for (const [fac, place] of [['.mh-home-facility.rhythm', 'studio'], ['.mh-home-facility.temple', 'temple'], ['.mh-home-facility.management', 'ranch'], ['.mh-home-facility.market', 'market'], ['.mh-home-card-battle', 'cardroom']]) {
-          const e = document.querySelector(fac); if (!e) { out.push(`HOME に ${fac} が無い`); continue; }
-          const q = e.getBoundingClientRect(), p = toMap(q.left + q.width / 2, q.top + q.height / 2);
-          const near = Object.entries(B).sort((a, b) => dist(p, a[1]) - dist(p, b[1]))[0][0];
-          if (near !== place) out.push(`HOME の ${place} の札は ${near} の建物に近い`);
-          const [mx, my] = ASSISTANT_LIFE_MAP_POS[place] || [-1, -1], [l, t, rr, b] = B[place];
-          if (mx < l || mx > rr || my < t || my > b) out.push(`地図の ${place} が建物の外(${mx},${my})`);
-        }
-        return out;
-      });
-      check('⑯ 地図の施設の場所(モンヒロビート・神殿・M/B管理・マーケット・MFバトルカード)が、HOME の札と同じ建物にある', ng.length === 0, ng.join(' / '));
-    }
+    // ⑯ 地図と HOME の札の位置(1対1)は assistant-life-map-check.js が見る(2026-11-08 地図 案A)
     // 入場の演出(その日の最初は長い)・家
     await page.locator('[data-home-assistant-life]').click();
     await page.locator('[data-assistant-life-screen]').waitFor({ timeout: 5000 });
@@ -204,7 +184,7 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
       });
       await page.waitForTimeout(300);
       const last = await page.evaluate(() => (ASSISTANT_LIFE_DIARY.state.items.slice(-1)[0] || {}).text || '');
-      check('⑭ カード部屋にいる助手(assistantLifeAtCard・assistantLifeCardIds): 組の全員・図書室のカード研究は入れない・対戦の知らせで今日あったことに1件', !!r.want && r.want === r.got && r.atOne && r.libIds === 0 && /カード部屋で対戦して勝った/.test(last), `${r.got} / 図書室 ${r.libIds} / ${last}`);
+      check('⑭ カード部屋にいる助手(assistantLifeAtCard・assistantLifeCardIds): 組の全員・図書室のカード研究は入れない・対戦の知らせで今日あったことに1件', !!r.want && r.want === r.got && r.atOne && r.libIds === 0 && /MFバトルカードで対戦して勝った/.test(last), `${r.got} / 図書室 ${r.libIds} / ${last}`);
     }
     // ⑫ 文字(2026-11-07 社長「文字列も気をつけて」): 題が切れない・助手の名前の途中で折れない・掲示板は2行で読める
     const textOk = await page.evaluate(() => {
@@ -278,31 +258,16 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     // 地図のふち(丘は上・家は左)にも顔が出るようにする(ミハリ L7①)
     await page.evaluate(() => { const l = ASSISTANT_LIFE_STORE.state.life; const gs = l.groups || []; const k = gs.findIndex(x => x.place !== 'cafe'); if (k >= 0) ASSISTANT_LIFE_STORE.set({ life: { ...l, groups: gs.map((x, i) => i === k ? { ...x, doing: 'walk', place: 'hill' } : x) } }); });
     await toWhere(page);
-    check('⑩ みんなの居場所に町の地図(場所に顔)', (await page.locator('[data-assistant-life-map] [data-assistant-life-map-place="cafe"] button').count()) === 2);
+    check('⑩ みんなの居場所に町の地図(場所に全身)', (await page.locator('[data-assistant-life-map] [data-assistant-life-map-crowd="cafe"] [data-assistant-life-map-who]').count()) === 2);
+    // 地図の札・人の並びの重なり・時間帯の色・1対1は assistant-life-map-check.js(案A・2026-11-08)。ここでは丘・家に人がいて地図の中に出るかだけ
     const mapOk = await page.evaluate(() => {
       const map = document.querySelector('[data-assistant-life-map]'); if (!map) return ['地図が無い'];
       const m = map.getBoundingClientRect(); const ng = [];
-      const labs = [...map.querySelectorAll('[data-assistant-life-map-place] > span:last-child')].map(e => ({ id: e.parentElement.getAttribute('data-assistant-life-map-place'), r: e.getBoundingClientRect() }));
-      for (const a of labs) { if (a.r.left < m.left - 1 || a.r.right > m.right + 1 || a.r.top < m.top - 1 || a.r.bottom > m.bottom + 1) ng.push(`地図の外: ${a.id}`); }
-      for (const f of map.querySelectorAll('[data-assistant-life-map-place] button')) { const r = f.getBoundingClientRect(); if (r.left < m.left - 1 || r.right > m.right + 1 || r.top < m.top - 1 || r.bottom > m.bottom + 1) ng.push(`顔が地図のふちで切れる: ${f.closest('[data-assistant-life-map-place]').getAttribute('data-assistant-life-map-place')}`); }
-      if (document.documentElement.getAttribute('data-mh-tod') && !map.querySelector('[data-time-of-day-tint]')) ng.push('地図に時間帯の色が重なっていない(夜も昼の明るさ)');
-      if (!map.querySelector('[data-assistant-life-map-place="hill"] button') || !map.querySelector('[data-assistant-life-map-place="home"] button')) ng.push('丘・家に顔が無い(検査の前提)');
-      for (let i = 0; i < labs.length; i++) for (let j = i + 1; j < labs.length; j++) { const a = labs[i].r, b = labs[j].r; if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1) ng.push(`札が重なる: ${labs[i].id}×${labs[j].id}`); }
+      for (const c of map.querySelectorAll('[data-assistant-life-map-crowd]')) { const r = c.getBoundingClientRect(); if (r.left < m.left - 1 || r.right > m.right + 1 || r.top < m.top - 1 || r.bottom > m.bottom + 1) ng.push(`人が地図のふちで切れる: ${c.getAttribute('data-assistant-life-map-crowd')}`); }
+      if (!map.querySelector('[data-assistant-life-map-crowd="hill"]') || !map.querySelector('[data-assistant-life-map-crowd="home"]')) ng.push('丘・家に人が無い(検査の前提)');
       return ng;
     });
-    check('⑫ 地図の場所の札と顔は地図の中で、札どうし重ならない(家とおやつ屋さん・丘と家のふちの顔も)・時間帯の色が重なる', mapOk.length === 0, mapOk.join(' / '));
-    // 中庭に2人(顔の丸が練習スタジオの札にかかっていた。ミハリ 残り②)
-    await page.evaluate(() => { const l = ASSISTANT_LIFE_STORE.state.life; const solo = { ...l.solo }; const ks = Object.keys(solo).filter(k => solo[k].place !== 'home').concat(Object.keys(solo).filter(k => solo[k].place === 'home')).slice(0, 2); const gs = l.groups || []; if (ks.length === 2) { for (const k of ks) delete solo[k]; ASSISTANT_LIFE_STORE.set({ life: { ...l, solo, groups: [...gs, { ids: ks, doing: 'walk', place: 'garden' }] } }); } });
-    await page.waitForTimeout(300);
-    const faceOk = await page.evaluate(() => {
-      const map = document.querySelector('[data-assistant-life-map]'); if (!map) return ['地図が無い'];
-      const ng = []; const labs = [...map.querySelectorAll('[data-assistant-life-map-place] > span:last-child')].map(e => ({ id: e.parentElement.getAttribute('data-assistant-life-map-place'), r: e.getBoundingClientRect() }));
-      if (!map.querySelector('[data-assistant-life-map-place="garden"] button')) ng.push('中庭に顔が無い(検査の前提)');
-      for (const f of map.querySelectorAll('[data-assistant-life-map-place] > span:first-child')) { if (!f.querySelector('button')) continue; const r = f.getBoundingClientRect(), own = f.parentElement.getAttribute('data-assistant-life-map-place'); for (const b of labs) { if (b.id === own) continue; if (Math.min(r.right, b.r.right) - Math.max(r.left, b.r.left) > 1 && Math.min(r.bottom, b.r.bottom) - Math.max(r.top, b.r.top) > 1) ng.push(`顔が札に重なる: ${own}の顔×${b.id}`); } }
-      for (let i = 0; i < labs.length; i++) for (let j = i + 1; j < labs.length; j++) { const a = labs[i].r, b = labs[j].r; if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1) ng.push(`札が重なる: ${labs[i].id}×${labs[j].id}`); }
-      return ng;
-    });
-    check('⑫ 地図で顔の丸がとなりの場所の札に重ならない(中庭に2人 → 練習スタジオの札)', faceOk.length === 0, faceOk.join(' / '));
+    check('⑫ 地図の人の並びは地図の中(丘・家も)', mapOk.length === 0, mapOk.join(' / '));
     if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-17-map-garden.png') });
     const groups = await page.locator('[data-assistant-life-group]').count();
     const solos = await page.locator('[data-assistant-life-solo]').count();
@@ -483,6 +448,7 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
           for (const el of root.querySelectorAll('p,span,b,button,small')) {
             const own = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()); if (!own) continue;
             if (el.closest('[data-assistant-life-map]')) continue; // 地図の札は別に見ている(⑫)
+            if (el.closest('.mhl-hdr')) continue; // 見出し(題の字の塗り)は家のタブで見る。居場所では地図の下の一覧に入る(2026-11-08 地図 案A)
             const r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;
             const cs = getComputedStyle(el); const fg = rgba(cs.color); if (!fg) continue;
             let bg = null; for (let e = el; e && e !== document.body; e = e.parentElement) { const c = rgba(getComputedStyle(e).backgroundColor); if (c && c.a >= 0.75) { bg = c; break; } if (e === root) break; } // 面はタブの中身の中で探す(外の画面の地の色は、背景の絵に隠れている)
