@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ef3f20fbd2cbfcba
+// source-sha256: 6060e14fc118d809
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -106221,6 +106221,13 @@ const assistantLifeHouseCardIds = () => {
     return [];
   }
 };
+const assistantLifeCardSpent = id => {
+  try {
+    return typeof cardLifeRewardSpent === 'function' ? cardLifeRewardSpent(id) : null;
+  } catch {
+    return null;
+  }
+};
 const assistantLifeOnWoken = ev => {
   if (!ev || !ev.assistantId || !ASSISTANT_LIFE_PREFS[ev.assistantId]) return;
   if (!ev.came) return;
@@ -106998,14 +107005,19 @@ function AssistantLifeRoomSheet({
     className: "mhl-btn col-span-2 bg-gradient-to-r from-amber-500 to-orange-600",
     "data-assistant-life-room-act": "furn",
     onClick: () => setFurnOpen(true)
-  }, "🪑 部屋の家具"), typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id) && React.createElement("button", {
+  }, "🪑 部屋の家具"), typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id) && (assistantLifeCardSpent(id) ? React.createElement("button", {
+    type: "button",
+    disabled: true,
+    className: "mhl-btn col-span-2 cursor-not-allowed bg-slate-600 text-slate-200 opacity-80",
+    "data-assistant-life-room-act": "card-spent"
+  }, typeof cardLifeSpentText === 'function' ? cardLifeSpentText(assistantLifeCardSpent(id)) : '🃏 ごほうびアップは使い切りました') : React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-card col-span-2",
     "data-assistant-life-room-act": "card",
     onClick: () => onCard(id)
   }, "🃏 カード部屋で対戦する ", React.createElement("span", {
     className: "mhl-card-up"
-  }, "ごほうびアップ")), React.createElement("button", {
+  }, "ごほうびアップ"))), React.createElement("button", {
     type: "button",
     "data-assistant-life-room-close": true,
     "data-mhl-sheet-close": true,
@@ -108301,6 +108313,7 @@ function AssistantLifeHomeFaces({
   for (const id of ASSISTANT_LIFE_HOUSE_ORDER) {
     if (!ids.includes(id)) continue;
     let f = assistantLifeFacilityOf(assistantLifeWhereOf(life, id));
+    if (f === 'card' && assistantLifeCardSpent(id)) continue;
     if (!rects[f]) f = 'life';
     if (!rects[f]) continue;
     (by[f] = by[f] || []).push(id);
@@ -136563,6 +136576,78 @@ const cardLifeAtCard = id => {
     return false;
   }
 };
+const CARD_LIFE_REWARD_KEY = 'mh_card_life_reward_v1';
+const CARD_LIFE_REWARD_MAX = 1;
+const cardLifeSlotNow = (now = Date.now()) => {
+  try {
+    const v = typeof assistantLifeSlotAt === 'function' ? assistantLifeSlotAt(now) : null;
+    return v && Number.isFinite(v.abs) && Number.isFinite(v.i) ? v : null;
+  } catch (_) {
+    return null;
+  }
+};
+const cardLifeRewardNorm = (raw, slot) => {
+  const used = {};
+  if (Number.isFinite(slot) && raw && typeof raw === 'object' && !Array.isArray(raw) && raw.slot === slot && raw.used && typeof raw.used === 'object' && !Array.isArray(raw.used)) {
+    for (const [k, v] of Object.entries(raw.used)) {
+      const n = Math.trunc(Number(v));
+      if (k && Number.isFinite(n) && n > 0) used[k] = Math.min(n, 99);
+    }
+  }
+  return {
+    slot: Number.isFinite(slot) ? slot : null,
+    used
+  };
+};
+const cardLifeRewardAfter = (raw, slot, who) => {
+  if (!Number.isFinite(slot) || typeof who !== 'string' || !who) return null;
+  if (raw && typeof raw === 'object' && Number.isFinite(raw.slot) && raw.slot > slot) return null;
+  const cur = cardLifeRewardNorm(raw, slot);
+  return {
+    slot,
+    used: {
+      ...cur.used,
+      [who]: (cur.used[who] || 0) + 1
+    }
+  };
+};
+const CARD_LIFE_REWARD_MEM = {
+  raw: null
+};
+const cardLifeRewardLoad = async () => {
+  try {
+    CARD_LIFE_REWARD_MEM.raw = await storeGet(CARD_LIFE_REWARD_KEY, null);
+  } catch (_) {}
+  return CARD_LIFE_REWARD_MEM.raw;
+};
+const cardLifeRewardLeft = (id, now = Date.now()) => {
+  const s = cardLifeSlotNow(now);
+  return !!s && typeof id === 'string' && !!id && (cardLifeRewardNorm(CARD_LIFE_REWARD_MEM.raw, s.abs).used[id] || 0) < CARD_LIFE_REWARD_MAX;
+};
+const cardLifeRewardSpent = (id, now = Date.now()) => {
+  const s = cardLifeSlotNow(now);
+  if (!s || typeof id !== 'string' || !id || cardLifeRewardLeft(id, now)) return null;
+  const list = typeof ASSISTANT_LIFE_SLOTS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_SLOTS) ? ASSISTANT_LIFE_SLOTS : null;
+  const nx = list && list.length ? list[(s.i + 1) % list.length] : null;
+  return {
+    next: nx && Number.isFinite(nx.from) ? nx.from : null
+  };
+};
+const cardLifeSpentText = (sp, name = '') => `🃏 ${name ? `${name}の` : ''}ごほうびアップは使い切りました…次は${sp && Number.isFinite(sp.next) ? `${sp.next}時` : '次の時間'}から`;
+const cardLifeRewardEntry = async (who, slot) => {
+  let before = null;
+  try {
+    before = await storeGet(CARD_LIFE_REWARD_KEY, null);
+  } catch (_) {
+    return null;
+  }
+  const next = cardLifeRewardAfter(before, slot, who);
+  return next ? {
+    key: CARD_LIFE_REWARD_KEY,
+    next,
+    before
+  } : null;
+};
 const cardGrowStyleOn = () => {
   try {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardGrowStyle === true;
@@ -136590,6 +136675,7 @@ const CARD_LIFE_INVITE = {
 const CARD_LIFE_INVITE_TTL_MS = 60 * 1000;
 const cardLifeSetApp = app => {
   CARD_LIFE_INVITE.app = app && typeof app === 'object' ? app : null;
+  void cardLifeRewardLoad();
   if (typeof ASSISTANT_LIFE_LINKS === 'undefined' || !ASSISTANT_LIFE_LINKS) return;
   ASSISTANT_LIFE_LINKS.cardInvite = CARD_LIFE_INVITE.app && typeof CARD_LIFE_INVITE.app.open === 'function' && (!CARD_LIFE_INVITE.app.visible || CARD_LIFE_INVITE.app.visible()) ? id => {
     CARD_LIFE_INVITE.pending = {
@@ -141706,6 +141792,7 @@ const CardBattleScreen = ({
       const fresh = await freshCardSave();
       const lifeMult = game.lifeUp && !game.demo ? CARD_LIFE_UP_MULT : 1;
       const reward = cardCpuReward(fresh.daily, game.level, outcome, facts, lifeMult);
+      const lifeEntry = lifeMult > 1 && reward.lifeUp === true && Number.isFinite(game.lifeSlot) ? await cardLifeRewardEntry(game.who, game.lifeSlot) : null;
       const loops = cardCpuLoops(game.level, outcome, facts, lifeMult);
       const rankable = !!(rank && rank.send) && !debug;
       const nextRecord = cardRecordAfter(fresh.record, {
@@ -141767,7 +141854,8 @@ const CardBattleScreen = ({
         daily: reward.daily,
         record: nextRecord,
         unlocked: nextUnlocked
-      }, fresh.raw, [...openExtra, ...(detailEntry ? [detailEntry] : []), ...levelGain.entries]);
+      }, fresh.raw, [...openExtra, ...(detailEntry ? [detailEntry] : []), ...levelGain.entries, ...(lifeEntry ? [lifeEntry] : [])]);
+      if (ok && lifeEntry) CARD_LIFE_REWARD_MEM.raw = lifeEntry.next;
       if (ok && openExtra.length) {
         openIdRef.current = null;
         openRef.current = null;
@@ -142012,7 +142100,8 @@ const CardBattleScreen = ({
       sameBlood: !!cardShareSameBlood(db, activeDeck),
       quick: !!autoIn.quick
     } : null;
-    const lifeUp = !share && !cup && !auto && cardLifeAtCard(pick.who);
+    const lifeUp = !share && !cup && !auto && cardLifeAtCard(pick.who) && cardLifeRewardLeft(pick.who);
+    const lifeSlot = lifeUp ? (cardLifeSlotNow() || {}).abs : null;
     setGame({
       key: gameKey,
       st,
@@ -142022,7 +142111,8 @@ const CardBattleScreen = ({
       intro: auto && auto.quick ? null : intro,
       cpuSameBlood: !!cpuDeck.sameBlood,
       ...(lifeUp ? {
-        lifeUp: true
+        lifeUp: true,
+        lifeSlot
       } : {}),
       ...(share ? {
         share
@@ -142778,6 +142868,8 @@ const CardBattleScreen = ({
     const a = allAssistants.find(x => x.id === foe.who) || foes[0];
     const lifeIds = cardLifeCardIds();
     const lifeFoes = foes.filter(x => lifeIds.includes(x.id));
+    const lifeSpent = Object.fromEntries(lifeFoes.map(x => [x.id, cardLifeRewardSpent(x.id)]).filter(e => e[1]));
+    const lifeUpFoes = lifeFoes.filter(x => !lifeSpent[x.id]);
     const line = a ? cardPickLine(a.id, 'challenge', null, () => 0.0) : null;
     return React.createElement("div", {
       "data-mh-screen": true,
@@ -142831,16 +142923,13 @@ const CardBattleScreen = ({
       }
     }, x.name)), save.record.beaten[x.id] && React.createElement("span", {
       className: "absolute right-1 top-1 rounded bg-amber-400 px-1 text-[10px] font-black text-slate-900"
-    }, "勝"), lifeIds.includes(x.id) && React.createElement("span", {
+    }, "勝"), lifeIds.includes(x.id) && (lifeSpent[x.id] ? React.createElement("span", {
+      "data-card-foe-life-chip": "spent",
+      className: "absolute left-0.5 top-0.5 rounded-full bg-slate-500 px-1 text-[9px] font-black leading-[14px] text-slate-100 shadow landscape:text-[8px] landscape:leading-[12px]"
+    }, "🃏済") : React.createElement("span", {
       "data-card-foe-life-chip": true,
       className: "absolute left-0.5 top-0.5 rounded-full bg-gradient-to-r from-amber-200 to-amber-400 px-1 text-[9px] font-black leading-[14px] text-slate-950 shadow landscape:text-[8px] landscape:leading-[12px]"
-    }, "🃏UP")))), lifeFoes.length > 0 && React.createElement("div", {
-      "data-card-foe-life-band": true,
-      className: "rounded-xl border-2 border-amber-300 bg-amber-950/80 px-2.5 py-1.5 text-[13px] font-black leading-snug text-amber-200",
-      style: JA_LABEL_STYLE
-    }, React.createElement("p", null, jaWrap(`🃏 いまカード部屋にいる助手: ${lifeFoes.map(x => x.name).join('・')}`)), React.createElement("p", {
-      className: "text-[12px] text-white"
-    }, jaWrap('この助手と対戦すると、ビートP・カードランクの経験値・クイック周回が 1.5倍'))), React.createElement("div", {
+    }, "🃏UP"))))), React.createElement("div", {
       className: "flex items-baseline gap-2 px-0.5 pt-1"
     }, React.createElement("span", {
       className: "text-[10px] font-black uppercase tracking-widest text-slate-300"
@@ -142878,7 +142967,17 @@ const CardBattleScreen = ({
       }, open ? `勝ち${CARD_AI_LEVELS[lv].point}` : '🔒'));
     })), debug && React.createElement("p", {
       className: "text-[11px] font-bold text-slate-400"
-    }, "(デバッグ: まだ開いていない強さも選べます。開いた印は勝ったときだけ付きます)"), React.createElement("div", {
+    }, "(デバッグ: まだ開いていない強さも選べます。開いた印は勝ったときだけ付きます)"), lifeFoes.length > 0 && React.createElement("div", {
+      "data-card-foe-life-band": lifeUpFoes.length ? 'up' : 'spent',
+      className: `rounded-xl border-2 px-2.5 py-1.5 text-[13px] font-black leading-snug ${lifeUpFoes.length ? 'border-amber-300 bg-amber-950/80 text-amber-200' : 'border-slate-500 bg-slate-800/90 text-slate-200'}`,
+      style: JA_LABEL_STYLE
+    }, lifeUpFoes.length > 0 && React.createElement(React.Fragment, null, React.createElement("p", null, jaWrap(`🃏 いまカード部屋にいる助手: ${lifeUpFoes.map(x => x.name).join('・')}`)), React.createElement("p", {
+      className: "text-[12px] text-white"
+    }, jaWrap('この助手と対戦すると、ビートP・カードランクの経験値・クイック周回が 1.5倍'))), lifeFoes.filter(x => lifeSpent[x.id]).map(x => React.createElement("p", {
+      key: x.id,
+      "data-card-foe-life-spent": x.id,
+      className: `text-[12px] text-slate-300 ${lifeUpFoes.length ? 'mt-0.5' : ''}`
+    }, jaWrap(cardLifeSpentText(lifeSpent[x.id], x.name))))), React.createElement("div", {
       className: "space-y-2 landscape:grid landscape:grid-cols-2 landscape:items-stretch landscape:gap-2 landscape:space-y-0"
     }, a && React.createElement("div", {
       className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2 landscape:items-center"
