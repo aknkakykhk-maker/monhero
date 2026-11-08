@@ -85,8 +85,8 @@ check('A 倍率は 1.5', M === 1.5, M);
 // ---- E・F(84 の書き方) ----
 {
   const s84 = src('src/parts/84-screen-card-battle.jsx');
-  check('E 始めた時点で決める: みんなのデッキ・杯・オートは上げない', /const lifeUp = !share && !cup && !auto && cardLifeAtCard\(pick\.who\);/.test(s84));
-  check('E game.lifeUp に持つ', /\.\.\.\(lifeUp \? \{ lifeUp: true \} : \{\}\)/.test(s84));
+  check('E 始めた時点で決める: みんなのデッキ・杯・オートは上げない', /const lifeUp = !share && !cup && !auto && cardLifeAtCard\(pick\.who\) && cardLifeRewardLeft\(pick\.who\);/.test(s84));
+  check('E game.lifeUp に持つ', /\.\.\.\(lifeUp \? \{ lifeUp: true, lifeSlot \} : \{\}\)/.test(s84));
   check('E 終わりは game.lifeUp で倍率を決め、ビートP・周回・経験値に同じ倍率を渡す',
     /const lifeMult = game\.lifeUp && !game\.demo \? CARD_LIFE_UP_MULT : 1;/.test(s84)
     && /cardCpuReward\(fresh\.daily, game\.level, outcome, facts, lifeMult\)/.test(s84)
@@ -104,7 +104,9 @@ check('A 倍率は 1.5', M === 1.5, M);
   const s82 = src('src/parts/82-card-battle-core.jsx');
   const s84 = src('src/parts/84-screen-card-battle.jsx');
   const s56 = src('src/parts/56-assistant-life-house.jsx');
-  check('G 新しい保存のキー(mh_)を足していない', ![s82, s84, s56].some((t) => /mh_card_life|mh_assistant_life_card/.test(t)));
+  // 2026-11-08 社長の上限(1つの時間帯で助手1人1回)で、回数のキー mh_card_life_reward_v1 を1つだけ足した。ほかは足さない
+  const keys = [s82, s84, s56].flatMap((t) => t.match(/mh_card_life\w*|mh_assistant_life_card\w*/g) || []);
+  check('G 足した保存のキーは回数の mh_card_life_reward_v1 だけ', keys.length > 0 && keys.every((k) => k === 'mh_card_life_reward_v1'), keys.join(','));
 }
 
 if (fails.length) {
