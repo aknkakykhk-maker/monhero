@@ -7,7 +7,8 @@
 //   ③ 8人それぞれ3体・先頭(lead)は1体・ニックネームは空でなく8文字まで・「子」と書かない
 //   ④ 好き・苦手はモンスター単位で3つずつ(社長「剣士モッチーが好きならモッチー種も好き」→ その血統にも少し広がる)。
 //      好きと苦手の血統は重ならない/苦手なモンスター・その血統のマスモンは持たない
-//   ⑥ 成長と染色: Lv は 1〜100/染色は、プレイヤーと同じ染色のマスク(images/monsters/<名前>-dye-mask)がある種類だけ・3部位の色
+//   ⑥ 成長と染色: Lv は 1〜100/染色はプレイヤーと同じ仕組み・同じ枠数(MASU_COLOR_REGION_HUES の部位数。書いていない種類は全身1枠)。
+//      どの種類も染められる(「染めない種類」は作らない)。色はゲームの色の名前(MASU_COLOR_TARGET の名前と _light)
 //   ⑤ 「あとで加わる」(later)は、まだ実装されていないモンスターだけ(実装されたら一覧に入れ直す合図)
 'use strict';
 const fs = require('fs'), path = require('path');
@@ -26,6 +27,20 @@ check('① 実装済みのモンスターの一覧が読める', IMPL.size >= 20
 // 絵のファイル名(染色のマスクを探す)。images-ally.js の imgUrl の定数から
 const imgs = fs.readFileSync(path.join(root, 'monster-hero/data/images/images-ally.js'), 'utf8');
 const IMGFILE = Object.fromEntries([...IMPL.keys()].map(id => { const m = allBlock.match(new RegExp(`^\\s{2}${id}:[^\\n]*?imgUrl:\\s*(\\w+)`, 'm')); const c = m && imgs.match(new RegExp(`const ${m[1]} = "images/monsters/([^."?]+)`)); return [id, c ? c[1].toLowerCase() : null]; }));
+// プレイヤーの染色の枠数(MASU_COLOR_REGION_HUES の配列の長さ。書いていない種類は全身1枠)と、色の名前
+const dyeSrc = fs.readFileSync(path.join(root, 'monster-hero/src/parts/15-dye-and-art.jsx'), 'utf8');
+// 表の式をそのまま読む(中で使っている BOXES などの定数は空の値にして数だけ取る)。後から足している種類は REGION_HUES の代入も読む
+const REGIONS = (() => {
+  const a0 = dyeSrc.indexOf('const MASU_COLOR_REGION_HUES = {');
+  const expr = dyeSrc.slice(a0 + 'const MASU_COLOR_REGION_HUES = '.length, dyeSrc.indexOf('\n};', a0) + 2);
+  const scope = new Proxy({}, { has: (t, k) => k !== 'Math' && k !== 'Object' && k !== 'Array', get: (t, k) => (k === Symbol.unscopables ? undefined : []) });
+  const obj = Function('scope', `with (scope) { return (${expr}); }`)(scope);
+  const out = {}; for (const [k, v] of Object.entries(obj)) out[k] = Array.isArray(v) ? v.length : 0;
+  for (const m of dyeSrc.matchAll(/MASU_COLOR_REGION_HUES\.(\w+)\s*=\s*MASU_COLOR_REGION_HUES\.(\w+)/g)) out[m[1]] = out[m[2]];
+  return out;
+})();
+const COLOR_IDS = new Set((() => { const a0 = dyeSrc.indexOf('const MASU_COLOR_TARGET = {'); const keys = [...dyeSrc.slice(a0, dyeSrc.indexOf('\n};', a0)).matchAll(/^  (\w+):/gm)].map(m => m[1]); return [...keys, ...keys.filter(k => !['black', 'white', 'gray'].includes(k)).map(k => `${k}_light`)]; })());
+check('⑥ プレイヤーの染色の枠数が読める', Object.keys(REGIONS).length >= 20 && REGIONS.KenshiMocchi === 5 && REGIONS.Mocchi === 3, `${Object.keys(REGIONS).length}種・色${COLOR_IDS.size}`);
 const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'];
 const sources = [];
 const planPath = path.join(root, 'docs/progress/assistant-peer/masmon-plan.json');
@@ -59,11 +74,12 @@ for (const { name, data } of sources) {
     // 成長と染色
     for (const m of team) {
       if (!Number.isFinite(m.lv) || m.lv < 1 || m.lv > 100) dyeNg.push(`${a.id}:${m.nick} の Lv`);
-      if (m.dye) {
-        const file = IMGFILE[m.monster];
-        const has = file && fs.readdirSync(path.join(root, 'monster-hero/images/monsters')).some(f => f.toLowerCase().startsWith(`${file}-dye-mask`));
-        if (!has) dyeNg.push(`${a.id}:${m.nick}(${m.monster})は染色のマスクが無いのに染めている`);
-        if (!Array.isArray(m.dye.colors) || m.dye.colors.length !== 3 || !m.dye.colors.every(c => /^#[0-9a-f]{6}$/i.test(c))) dyeNg.push(`${a.id}:${m.nick} の色は3部位`);
+      const want = REGIONS[m.monster] || 1;
+      const cols = m.dye && Array.isArray(m.dye.colors) ? m.dye.colors : null;
+      if (!cols) dyeNg.push(`${a.id}:${m.nick} が染まっていない(どの種類も染められる)`);
+      else {
+        if (cols.length !== want) dyeNg.push(`${a.id}:${m.nick}(${m.monster})の色は ${cols.length}枠・プレイヤーは ${want}枠`);
+        for (const c of cols) if (!COLOR_IDS.has(c)) dyeNg.push(`${a.id}:${m.nick} の色「${c}」はゲームの色の名前にない`);
       }
     }
     if (a.later && [...IMPL.values()].includes(a.later.monster)) laterNg.push(`${a.id}:${a.later.monster} はもう実装済み(一覧に入れ直す)`);
@@ -71,7 +87,7 @@ for (const { name, data } of sources) {
   check(`${T}① ② まだ実装されていないモンスター・血統が混ざっていない`, !bad.length, bad.join(' / '));
   check(`${T}③ 3体・先頭1体・ニックネーム`, !teamNg.length, teamNg.join(' / '));
   check(`${T}④ 好き・苦手のモンスター3つずつ・広がる血統が重ならない・苦手なものは持たない`, !likeNg.length, likeNg.join(' / '));
-  check(`${T}⑥ 成長(Lv)と染色(マスクのある種類だけ・3部位)`, !dyeNg.length, dyeNg.join(' / '));
+  check(`${T}⑥ 成長(Lv)と染色(プレイヤーと同じ枠数・ゲームの色)`, !dyeNg.length, dyeNg.join(' / '));
   check(`${T}⑤ 「あとで加わる」は、まだ実装されていないモンスターだけ`, !laterNg.length, laterNg.join(' / '));
 }
 console.log(failed ? `\nNG が ${failed} 件` : '\nすべてOK');

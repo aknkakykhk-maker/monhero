@@ -253,7 +253,8 @@ const assistantPeerGainState = (st, a, b, action, day, opts = null) => {
   const pairMax = (opts && Number.isFinite(opts.cap)) ? opts.cap : ((typeof ASSISTANT_PEER_BOND_DAILY_MAX !== 'undefined' && ASSISTANT_PEER_BOND_DAILY_MAX) || 20);
   // にぎわいの倍率は、ふだんの行動だけに掛ける(差し入れ・しるし・今日のペアなど決まった量のものはそのまま)
   const mult = (opts && Number.isFinite(opts.mult) && !act.uncapped) ? opts.mult : 1;
-  const amount = Math.round(act.amount * mult);
+  // 1回ぶんを呼ぶ側が決める行動(助手ライフの道具は好みで量が変わる)。その行動の1回の上限(act.amount)は超えない
+  const amount = Math.round((opts && Number.isFinite(opts.amount) ? Math.min(opts.amount, act.amount) : act.amount) * mult);
   const actMax = Math.round(act.dailyMax * mult);
   // uncapped の行動(今日のペア・続けてログイン)はペアごとの1日の合計に数えず、合計の上限でも止めない
   const usedCapped = Object.entries(got).filter(([k]) => !(actions[k] && actions[k].uncapped)).reduce((s, [, v]) => s + v, 0);
@@ -271,17 +272,17 @@ const assistantPeerSaveBond = () => {
   try { storeSet(ASSISTANT_PEER_BOND_STORE_KEY, st.bond, false); storeSet(ASSISTANT_PEER_BOND_DAY_KEY, st.bondDay, false); } catch {}
 };
 // 2人の仲良し度を上げる。上がった結果を返す(上がらなければ gained:0)
-const assistantPeerGain = async (a, b, action) => {
+const assistantPeerGain = async (a, b, action, amount = null) => {
   if (!assistantPeerEnabled()) return { gained: 0 };
   await ASSISTANT_PEER_STORE.load();
   // 助手たちの今(公開の印 assistantLife)が真なら、その日のにぎわいの段で仲良くなり方が変わる
   if (typeof assistantLifeEnabled === 'function' && assistantLifeEnabled()) { try { await ASSISTANT_LIFE_STORE.load(); } catch {} }
   const opts = typeof assistantLifeGainOptsNow === 'function' ? assistantLifeGainOptsNow() : null;
-  const r = assistantPeerGainState(ASSISTANT_PEER_STORE.state, a, b, action, assistantPeerDayKey(), opts);
+  const r = assistantPeerGainState(ASSISTANT_PEER_STORE.state, a, b, action, assistantPeerDayKey(), Number.isFinite(amount) ? { ...(opts || {}), amount } : opts);
   if (r.gained > 0) { ASSISTANT_PEER_STORE.set(r.st); assistantPeerSaveBond(); }
   // 友情Lv が上がった演出(44-growth-fx.jsx)。どの道で上がっても、ここ1か所から呼ぶ。道具のときは道具の演出の中で見せるので呼ばない。
   //   助手たちの今(印 assistantLife)の公開と一緒に出す。見た目だけ(保存・計算は触らない)
-  if (r.gained > 0 && r.levelAfter > r.levelBefore && action !== 'gift' && action !== 'token' && assistantPeerLifeOn() && typeof growthFxPeerLevel === 'function') {
+  if (r.gained > 0 && r.levelAfter > r.levelBefore && action !== 'gift' && action !== 'token' && action !== 'lifeItem' && assistantPeerLifeOn() && typeof growthFxPeerLevel === 'function') {
     try { growthFxPeerLevel({ pair: [a, b], levelBefore: r.levelBefore, levelAfter: r.levelAfter }); } catch {}
   }
   return r;
@@ -414,32 +415,54 @@ const assistantPeerItemUsedToday = (st, kind, now = Date.now()) => {
   return !!(g && g.day === assistantPeerDayKey(now) && g[kind]);
 };
 // 品物を使った(持ち物はもう1個減らしてある)。仲良し度を上げ、2人のひとことの掛け合いを返す
+// 助手ライフ(印 assistantLife)が真なら、道具は10種類・2人の好みで上がる量が変わる(56-assistant-life-gifts.jsx・2026-11-08 社長)。
+//   同じ道具は1日1回・合わせて1日3回。🧺🤝 は前のキー(mh_assistant_peer_gift_v1)にも書く(前の版と同じ日に二重に使えないように)
 const assistantPeerUseItem = async (kind, pair) => {
-  if (!assistantPeerEnabled() || (kind !== 'gift' && kind !== 'token') || !Array.isArray(pair) || pair.length !== 2) return null;
+  const lifeGifts = assistantPeerLifeOn() && typeof assistantLifeGiftOf === 'function';
+  const old = kind === 'gift' || kind === 'token';
+  if (!assistantPeerEnabled() || !Array.isArray(pair) || pair.length !== 2 || pair[0] === pair[1]) return null;
+  if (!old && !(lifeGifts && assistantLifeGiftOf(kind))) return null;
   await ASSISTANT_PEER_STORE.load();
+  if (lifeGifts) { await ASSISTANT_LIFE_GIFT_STORE.load(); if (assistantLifeGiftReason(kind, ASSISTANT_PEER_STORE.state, 1)) return null; }
+  else if (assistantPeerItemUsedToday(ASSISTANT_PEER_STORE.state, kind)) return null;
   const st = ASSISTANT_PEER_STORE.state;
-  if (assistantPeerItemUsedToday(st, kind)) return null;
   const day = assistantPeerDayKey();
-  const g = st.gift && st.gift.day === day ? st.gift : { day, gift: null, token: null };
-  const next = { ...g, [kind]: assistantPeerPairKey(pair[0], pair[1]) };
-  ASSISTANT_PEER_STORE.set({ gift: next });
-  try { storeSet(ASSISTANT_PEER_GIFT_KEY, next, false); } catch {}
+  if (old) {
+    const g = st.gift && st.gift.day === day ? st.gift : { day, gift: null, token: null };
+    const next = { ...g, [kind]: assistantPeerPairKey(pair[0], pair[1]) };
+    ASSISTANT_PEER_STORE.set({ gift: next });
+    try { storeSet(ASSISTANT_PEER_GIFT_KEY, next, false); } catch {}
+  }
   const pointsBefore = assistantPeerPoints(ASSISTANT_PEER_STORE.state, pair[0], pair[1]);
-  const r = await assistantPeerGain(pair[0], pair[1], kind);
-  assistantPeerAddPlayerBond(pair, kind === 'gift' ? 'peerGift' : 'peerToken');
-  // 品物を渡した演出(44-growth-fx.jsx)。名前と絵は演出の側が持ち物の表から取る。好き嫌いはまだ無いので reaction は null
-  if (assistantPeerLifeOn() && typeof growthFxPeerItem === 'function') {
+  let r, playerGains, likes = null;
+  if (lifeGifts) {
+    const amt = assistantLifeGiftAmounts(kind, pair);
+    likes = amt.likes;
+    r = await assistantPeerGain(pair[0], pair[1], 'lifeItem', amt.peer);
+    playerGains = amt.player;
+    pair.forEach((id, i) => { if (assistantPeerPlayerBondAdder) { try { assistantPeerPlayerBondAdder(id, 'lifeGift', amt.player[i]); } catch {} } });
+    await assistantLifeGiftRecord(kind, pair);
+  } else {
+    r = await assistantPeerGain(pair[0], pair[1], kind);
+    assistantPeerAddPlayerBond(pair, kind === 'gift' ? 'peerGift' : 'peerToken');
     const pa = typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS[kind === 'gift' ? 'peerGift' : 'peerToken'];
+    playerGains = [pa ? pa.amount : 0, pa ? pa.amount : 0];
+  }
+  // 品物を渡した演出(44-growth-fx.jsx)。名前と絵は演出の側が持ち物の表から取る。好みは1人ずつ(likes)
+  if (assistantPeerLifeOn() && typeof growthFxPeerItem === 'function') {
     const after = pointsBefore + ((r && r.gained) || 0);
-    try { growthFxPeerItem({ pair: [...pair], itemId: ASSISTANT_PEER_ITEM_IDS[kind], pointsBefore, pointsAfter: after,
-      levelBefore: assistantPeerLevelOf(pointsBefore), levelAfter: assistantPeerLevelOf(after), reaction: null, playerGain: pa ? pa.amount : 0 }); } catch {}
+    const reaction = likes ? (likes.includes('like') && !likes.includes('bad') ? 'like' : likes.includes('bad') && !likes.includes('like') ? 'dislike' : null) : null;
+    const itemId = lifeGifts ? assistantLifeGiftOf(kind).itemId : ASSISTANT_PEER_ITEM_IDS[kind];
+    try { growthFxPeerItem({ pair: [...pair], itemId, pointsBefore, pointsAfter: after,
+      levelBefore: assistantPeerLevelOf(pointsBefore), levelAfter: assistantPeerLevelOf(after), reaction, playerGain: Math.max(...playerGains),
+      playerGains, likes }); } catch {}
   }
   // 助手たちの今: もらった2人はしばらくごきげんで、一緒に過ごしやすい
   if (typeof assistantLifeNote === 'function') void assistantLifeNote('gift', { pair: assistantPeerPairKey(pair[0], pair[1]) });
   if (typeof assistantLifeAddPlay === 'function') void assistantLifeAddPlay('peer');
-  // けんか中の2人に差し入れ → その場で仲直り(56-assistant-life-rel.jsx)
+  // けんか中の2人に道具を贈る → その場で仲直り(56-assistant-life-rel.jsx)。仲直りでなければ道具のひとこと
   const mend = typeof assistantLifeRelOnGift === 'function' ? await assistantLifeRelOnGift(kind, pair) : null;
-  return mend || assistantPeerReactionTalk(kind, pair);
+  return mend || (lifeGifts ? assistantLifeGiftTalk(kind, pair) : assistantPeerReactionTalk(kind, pair));
 };
 // 遊びに連れていくペアを決める(null でやめる)
 const assistantPeerSetPlayPair = (pair) => {
@@ -837,6 +860,8 @@ function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseIt
         <div className="grid grid-cols-2 gap-2">
           {photos.map(ph => <AssistantPeerPhoto key={ph.lv} pair={pair} photo={ph} open={lv >= ph.lv}/>)}
         </div>
+        {/* 思い出チェキ(助手ライフの道具・2026-11-08)。撮った日ごとに1枚 */}
+        {typeof AssistantLifeChekiRow === 'function' && <AssistantLifeChekiRow pair={pair}/>}
         {typeof onUseItem === 'function' && (() => {
           const playing = st.play && st.play.pair === key;
           const itemBtn = (kind, emoji, label) => {
@@ -853,8 +878,8 @@ function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseIt
             <div data-assistant-peer-actions className="mt-3">
               <p className="mb-1 text-[11px] font-black text-amber-200">2人にしてあげる</p>
               <div className="grid grid-cols-2 gap-1.5">
-                {itemBtn('gift', '🧺', '差し入れを渡す')}
-                {itemBtn('token', '🤝', '友情のしるしを使う')}
+                {itemBtn('gift', '🧺', 'おやつバスケットを贈る')}
+                {itemBtn('token', '🤝', 'おそろいのミサンガを贈る')}
               </div>
               <button type="button" data-assistant-peer-play={playing ? 'on' : 'off'} onClick={() => assistantPeerSetPlayPair(playing ? null : pair)}
                 className="mt-1.5 min-h-[44px] w-full rounded-xl border border-sky-300/50 bg-sky-400/10 px-2 py-1 text-left active:scale-[.98]">

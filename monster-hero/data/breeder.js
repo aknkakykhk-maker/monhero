@@ -638,10 +638,19 @@ const BREEDER_MARKET_ITEMS = [
   // 手に入る所: ビートP交換所(1,000P・何個でも)と、ビートランクの5ランクごとのおまけ(1個)。マーケットでは売らない
   // 助手どうしの差し入れ・友情のしるし(2026-11-07 社長)。ビートP交換所(200P・500P)で手に入り、プロフィールの「助手どうしの関係図」から2人に渡す。
   //   どちらも全体で1日1回まで(56-assistant-peer.jsx)。マーケットでは売らない。公開の印 assistantPeer
-  { id:'peer_gift', name:"差し入れ", type:'item', emoji:"🧺", cost:0, shop:false, usage:'assistantPeer',
-    desc:"助手どうしに渡すおやつの差し入れ。プロフィールの「助手どうしの関係図」でペアを選んで渡すと、2人の仲良し度と、2人それぞれとあなたの仲良し度が上がる。1日1回まで。" },
-  { id:'peer_token', name:"友情のしるし", type:'item', emoji:"🤝", cost:0, shop:false, usage:'assistantPeer',
-    desc:"助手どうしの友情のしるし。プロフィールの「助手どうしの関係図」でペアを選んで使うと、2人の仲良し度が大きく上がり、2人それぞれとあなたの仲良し度も上がる。1日1回まで。" },
+  { id:'peer_gift', name:"おやつバスケット", type:'item', emoji:"🧺", cost:0, shop:false, usage:'assistantPeer',
+    desc:"助手2人に贈るおやつのかご(前の名前は「差し入れ」)。プロフィールの「助手どうしの関係図」でペアを選んで渡すと、2人の仲良し度と、2人それぞれとあなたの仲良し度が上がる。1日1回まで。" },
+  { id:'peer_token', name:"おそろいのミサンガ", type:'item', emoji:"🤝", cost:0, shop:false, usage:'assistantPeer',
+    desc:"助手2人に贈るおそろいのミサンガ(前の名前は「友情のしるし」)。プロフィールの「助手どうしの関係図」でペアを選んで使うと、2人の仲良し度が大きく上がり、2人それぞれとあなたの仲良し度も上がる。1日1回まで。" },
+  // 助手ライフで2人に贈る道具(2026-11-08 社長・GIFT-PLAN.md)。ビートP交換所で手に入る。マーケットでは売らない。好み・上がる量は assistants.js の ASSISTANT_LIFE_GIFTS
+  { id:'peer_cake', name:"はんぶんこケーキ", type:'item', emoji:"🍰", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈るふたり分のショートケーキ。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
+  { id:'peer_onigiri', name:"ほかほかおにぎり", type:'item', emoji:"🍙", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る具だくさんのおにぎり。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
+  { id:'peer_tea', name:"午後のティーセット", type:'item', emoji:"🫖", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る紅茶とお菓子のセット。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
+  { id:'peer_earphone', name:"かたみみイヤホン", type:'item', emoji:"🎧", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る、片耳ずつで同じ曲を聴くイヤホン。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
+  { id:'peer_puzzle', name:"ふたりで解くパズル", type:'item', emoji:"🧩", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る絵のパズル。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
+  { id:'peer_sleeve', name:"おそろいスリーブ", type:'item', emoji:"🃏", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る、カードを入れるおそろいのスリーブ。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
+  { id:'peer_cheki', name:"思い出チェキ", type:'item', emoji:"📸", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る、その場で写真が出るカメラ。2人の思い出アルバムに1枚増える。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
+  { id:'peer_flower', name:"ちいさな花束", type:'item', emoji:"🌷", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る小さな花束。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
   { id:'buddy_trait_seed', name:"性格のたね", type:'item', emoji:"🌱", cost:0, shop:false, usage:'rhythmBuddy',
     desc:"モンヒロビートのマスモンの性格を、全部の中から好きなものに選び直す。選んだ性格は遊び方では変わらない(もう一度使えば変えられる)。HOMEの「M/B管理」の「マスモン一覧(モンヒロビート)」で、マスモンの詳しい画面から使う。ビートP交換所とビートランクのおまけで手に入る。" },
   // 助手みゅあの表情アイコン(8種)。アイコンタブの最後に並ぶ

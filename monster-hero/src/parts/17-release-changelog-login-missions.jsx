@@ -603,7 +603,8 @@ const normalizeAssistantBond = (value) => {
 };
 // 行動に応じて仲良し度を増やした結果を返す(渡された値は変えない)。
 // 日付が変わっていれば、その日の集計だけをリセットする(貯まった量はそのまま)
-const gainAssistantBond = (state, actionKey, now = Date.now()) => {
+// amount … 1回ぶんを呼ぶ側が決めるとき(助手ライフの道具・好みで変わる)。その行動の1回ぶん(action.amount)は超えない
+const gainAssistantBond = (state, actionKey, now = Date.now(), amount = null) => {
   const cur = normalizeAssistantBond(state);
   const actions = (typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS) || {};
   const action = actions[actionKey];
@@ -615,8 +616,10 @@ const gainAssistantBond = (state, actionKey, now = Date.now()) => {
   const used = Math.max(0, Math.floor(Number(daily[actionKey]) || 0));
   const totalMax = (typeof ASSISTANT_BOND_DAILY_MAX !== 'undefined' && ASSISTANT_BOND_DAILY_MAX) || 30;
   // 「1回ぶん」「その行動の1日ぶん」「1日の合計」の3つのうち、いちばん小さいところで止める
+  const base = Math.max(0, Math.floor(Number(action.amount) || 0));
+  const once = Number.isFinite(amount) ? Math.min(Math.max(0, Math.floor(amount)), base) : base;
   const gain = Math.min(
-    Math.max(0, Math.floor(Number(action.amount) || 0)),
+    once,
     Math.max(0, Math.floor(Number(action.dailyMax) || 0) - used),
     Math.max(0, totalMax - dailyTotal),
   );
