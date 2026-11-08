@@ -5456,6 +5456,8 @@ function MonsterHeroGame() {
   const cardOriginBackRef = useRef(null); // MFバトルカードを閉じたときの戻り先(プロフィール・フレンドの「バトルカードのデッキ」から来たとき)
   // MFバトルカードの「マーケットへ」から入ったときだけ、マーケットに「MFバトルカード」の売り場を出す(デバッグ専用のあいだ。区切り2)
   const [cardMarketEntry, setCardMarketEntryRaw] = useState(false);
+  // 助手ライフの「🛒 交換所で手に入れる」から入ったとき: ビートP交換所のどの棚を開くか('item' | 'furniture')。戻ると助手ライフへ(56-assistant-life-gifts.jsx)
+  const [lifeShopEntry, setLifeShopEntry] = useState(null);
   // ★控え(冒頭の cardMarketEntryRef)も同時に入れる。setGameState('BREEDER_MARKET') がすぐあとに読むので、描画を待たない
   const setCardMarketEntry = (next) => { cardMarketEntryRef.current = next === true; setCardMarketEntryRaw(next === true); };
   const [cardShopState, setCardShopState] = useState(null); // { point, starter, shop }(売り場に出す分だけ。保存の正本は mh_card_*)
@@ -8536,6 +8538,10 @@ function MonsterHeroGame() {
   }, [grantProfileFrames, deliverAssistantBondRewards]);
   // 助手どうしの掛け合い・今日のペアで、出てきた助手それぞれの仲良し度を増やす(2026-11-07・56-assistant-peer.jsx)
   useEffect(() => { if (typeof assistantPeerSetPlayerBondAdder === 'function') assistantPeerSetPlayerBondAdder(addAssistantBondFor); }, [addAssistantBondFor]);
+  // 助手ライフの贈るシートの「数字の重み」(次の段まで)に、助手ごとの仲良し度の点を読ませる(読むだけ)
+  useEffect(() => { if (typeof assistantLifeSetBondPointsReader === 'function') assistantLifeSetBondPointsReader((id) => normalizeAssistantBond(assistantBondsRef.current[normalizeAssistantId(id)]).points); }, []);
+  // 助手ライフから交換所の道具・家具の棚を開く
+  useEffect(() => { if (typeof assistantLifeSetShopOpener === 'function') assistantLifeSetShopOpener((tab) => { setLifeShopEntry(tab === 'furniture' ? 'furniture' : 'item'); setMarketExchangeError(''); setGameState('BREEDER_MARKET'); }); }, []);
   // 助手ライフのフレンドの家のおみやげ(ビートP)をギフトで届ける(2026-11-08・56-assistant-life-friend.jsx)。
   //   id は「日付+家」で1つに決まるので、同じおみやげは二度届かない(grantGiftOnce)。1日300Pまでは向こうで数える
   useEffect(() => {
@@ -10794,6 +10800,7 @@ function MonsterHeroGame() {
     && !runResultFinishedRef.current && !!quickRunProgressRef.current && !quickRunProgressRef.current.finished;
   // カードから開いたマーケットの印は、カードとマーケットの外へ出たら下ろす(ふつうにマーケットへ来たときにカードの中と数えない)
   useEffect(() => { if (gameState !== 'BREEDER_MARKET' && !isCardScreen(gameState) && cardMarketEntryRef.current) setCardMarketEntry(false); }, [gameState]);
+  useEffect(() => { if (gameState !== 'BREEDER_MARKET') setLifeShopEntry(null); }, [gameState]);
   // MFバトルカードの「戻る」。裏で周回を回したまま来ていたら、モンヒロビートの「戻る」(exitRhythmSongSelect)と同じく、
   // そこまでの報酬を入れて周回を締めてから出る(締めずに出ると、ランが宙ぶらりんのまま残る)
   const cardExitingRunRef = useRef(false);
@@ -21930,7 +21937,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             isItemOwned={isMarketItemOwned}
             frameConditionOf={(frameId,shop)=>profileFrameConditionStatus(profileFrameById(frameId),rhythmClearTotal,shop)}
             previewIcon={{ src:resolveIconUrl(breederIcon), id:breederIcon }}
-            onBack={cardMarketEntry?()=>{setCardMarketEntry(false);setMarketExchangeError('');setGameState('CARD_TOP');}:returnToHome}
+            onBack={cardMarketEntry?()=>{setCardMarketEntry(false);setMarketExchangeError('');setGameState('CARD_TOP');}
+              :lifeShopEntry?()=>{setLifeShopEntry(null);setMarketExchangeError('');returnToHome();if(typeof assistantLifeBackFromShop==='function')assistantLifeBackFromShop();}:returnToHome}
             onSelectTab={(key)=>{setMarketTab(key);setMarketExchangeError('');}}
             onZoomIcon={setMarketIconZoom}
             onBuy={buyMarketItem}
@@ -21945,7 +21953,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onReadLegendPassLetter={()=>{ if(!eventReplay) setEventReplay({ id: LEGEND_BREEDER_PASS_STORY_ID, step: 0, live: true }); }}
             onOpenUpcomingDetail={setUpcomingMonsterDetail}
             cardShop={cardMarketEntry&&cardShopState?{ ...cardShopState, busy:false, onBuyPack:buyCardPacks, onBuyStarter:buyCardStarter, onExchange:exchangeCardPoints, onExchangeCatalog:exchangeCardCatalog, onUseCatalog:spendCardCatalog, onBuyTactics:buyTacticsPacks, onExchangeTactics:exchangeTacticsShard }:null}
-            initialSection={cardMarketEntry?'card':null}
+            initialSection={cardMarketEntry?'card':lifeShopEntry?'event':null}
+            initialTab={!cardMarketEntry&&lifeShopEntry?lifeShopEntry:null}
           />
         )}
         {/* MFバトルカード: パックを開ける(区切り2)。買うのはマーケットの「MFバトルカード」の売り場 */}
