@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ddc5b7f13602e439
+// source-sha256: b50574fd458e6dda
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -149039,17 +149039,29 @@ const CARD_PVP = (() => {
   const goVoid = () => {
     if (!s || !s.match || !(s.phase === 'playing' || s.phase === 'over' && s.result && !s.result.rewarded && !s.cupSent)) return;
     if (isHost()) cardPvpWatchHost().stop();
+    const cup = s.cup && !s.cupSent ? s.cup : null;
     set({
       phase: 'void',
       result: null,
       outbox: [],
       again: null,
-      foeAgain: null
+      foeAgain: null,
+      ...(cup ? {
+        cupSent: true
+      } : {})
     });
     send({
       t: 'void',
       match: s.match
     });
+    if (cup) void (async () => {
+      const key = typeof cardShareOwnerKey === 'function' ? await cardShareOwnerKey(false).catch(() => null) : null;
+      if (key && typeof cardTourRpc === 'function') await cardTourRpc('card_cup_live_void', {
+        p_match: cup.matchId,
+        p_owner: cup.selfId,
+        p_key: key
+      }).catch(() => null);
+    })();
   };
   const cupSend = async () => {
     if (!s || !s.cup || s.cupSent || !s.result || s.result.verify === 'wait') return;

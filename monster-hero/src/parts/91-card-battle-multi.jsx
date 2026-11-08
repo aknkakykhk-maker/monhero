@@ -800,8 +800,14 @@ const CARD_PVP = (() => {
   const goVoid = () => {
     if (!s || !s.match || !(s.phase === 'playing' || (s.phase === 'over' && s.result && !s.result.rewarded && !s.cupSent))) return;
     if (isHost()) cardPvpWatchHost().stop();
-    set({ phase: 'void', result: null, outbox: [], again: null, foeAgain: null });
+    const cup = s.cup && !s.cupSent ? s.cup : null;
+    set({ phase: 'void', result: null, outbox: [], again: null, foeAgain: null, ...(cup ? { cupSent: true } : {}) });
     send({ t: 'void', match: s.match });
+    // 個人杯の試合: どちらの負けにもせず、杯へ「食い違い」の印を付ける(card_cup_live_void)。登録デッキどうしの自動の試合で決まる(2026-11-08 社長)
+    if (cup) void (async () => {
+      const key = typeof cardShareOwnerKey === 'function' ? await cardShareOwnerKey(false).catch(() => null) : null;
+      if (key && typeof cardTourRpc === 'function') await cardTourRpc('card_cup_live_void', { p_match: cup.matchId, p_owner: cup.selfId, p_key: key }).catch(() => null);
+    })();
   };
   // 個人杯の試合(④): 確かめが決まったら(ok / ng / skip)、杯へ結果を1回だけ送る(card_cup_live_report・how=pvp)。
   //   手の並びは、確かめが通った試合だけ { kind: 'pvp', order, seeds: [自分, 相手], first, acts }(自分が0番の向き。93 の cardReplayFromTour が並びを戻す)
