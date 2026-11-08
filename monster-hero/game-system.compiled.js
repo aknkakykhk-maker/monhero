@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2da9d8d7af64551f
+// source-sha256: f66286ba8e08c746
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -125917,6 +125917,7 @@ const normalizeAssistantMasmonAsked = raw => (Array.isArray(raw) ? raw.slice(-60
   text: typeof x.text === 'string' ? x.text.slice(0, 100) : '',
   res: ['yes', 'some', 'no', 'none', 'fail'].includes(x.res) ? x.res : 'none',
   what: typeof x.what === 'string' ? x.what.slice(0, 60) : '',
+  reply: typeof x.reply === 'string' ? x.reply.slice(0, 80) : '',
   counted: x.counted === true
 }));
 const normalizeAssistantMasmonMine = raw => {
@@ -127350,7 +127351,7 @@ const assistantLifeCardMaterial = id => {
 const ASSISTANT_MASMON_ASK_PER_DAY = 3;
 const ASSISTANT_MASMON_ASK_HINT = Object.freeze({
   masmon: '名前や色について、思ったことを書いてみてください(例: 体をオレンジにしてみたら？/名前を「ひだまり」にしない？)',
-  hero: '勇者モンについて書いてみてください(例: 勇者モンはミーアにしてみたら？)',
+  hero: '勇者モンについて書いてみてください(例: 勇者モンはミーアにしてみたら？/名前に♪を付けたら？)',
   welcome: '次に迎えてほしいマスモンを書いてみてください(例: 次はプラントを迎えてみたら？)',
   deck: 'MFバトルカードのデッキについて書いてみてください(例: 推しのデッキは守りで「まったり作戦」にしたら？)'
 });
@@ -127400,7 +127401,7 @@ const assistantMasmonAskCtx = (aid, from, t, lv) => {
     }))
   };
   for (const x of p.dislikeMon || []) ctx.dislike.push(x.monster ? monName(x.monster) : `${assistantMasmonLineageName(x.lineage) || x.lineage}`);
-  if (from === 'masmon' && t) {
+  if (t && (from === 'masmon' || from === 'hero')) {
     const n = assistantMasmonRegions(t.monster) || 3;
     const now = assistantMasmonDyeNowOf(st, aid, t.slot, (rows.find(r => r.slot === t.slot) || {}).colors || []);
     ctx.mon = {
@@ -127638,7 +127639,7 @@ const assistantMasmonAsk = async (aid, from, text, t = null) => {
     note: `今日は${ASSISTANT_MASMON_ASK_PER_DAY}回受けてもらいました。また明日、提案してみてください`
   };
   const lv = Number.isFinite(_assistantMasmonBondNow[aid]) ? _assistantMasmonBondNow[aid] : 1;
-  const record = (res, what = '', counted = false) => {
+  const record = (res, what = '', counted = false, reply = '') => {
     const c = ASSISTANT_MASMON_STORE.state;
     assistantMasmonSave({
       ...c,
@@ -127649,10 +127650,15 @@ const assistantMasmonAsk = async (aid, from, text, t = null) => {
         text: body,
         res,
         what,
+        reply: String(reply || '').slice(0, 80),
         counted
       }].slice(-60)
     });
   };
+  const history = (ASSISTANT_MASMON_STORE.state.asked || []).filter(x => x.a === aid && x.text && x.res !== 'fail').slice(-4).map(x => ({
+    text: x.text,
+    reply: x.reply || ''
+  }));
   let bid = null;
   try {
     bid = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
@@ -127682,6 +127688,7 @@ const assistantMasmonAsk = async (aid, from, text, t = null) => {
           a: aid,
           from,
           text: body,
+          history,
           ctx: assistantMasmonAskCtx(aid, from, t, lv)
         })
       });
@@ -127699,22 +127706,24 @@ const assistantMasmonAsk = async (aid, from, text, t = null) => {
     const r = res.result;
     const fits = {
       masmon: ['name', 'color'],
-      hero: ['hero'],
+      hero: ['hero', 'name', 'color'],
       welcome: ['welcome'],
       deck: ['deck']
     }[from] || [];
     if (r.kind === 'none' || !fits.includes(r.kind)) {
-      record('none');
+      const talk = r.replies.talk || r.replies.some;
+      record('none', '', false, talk);
       return {
         res: 'none',
-        note: from === 'masmon' ? 'うまく読み取れませんでした。名前か色について、どう変えてほしいかを具体的に書いてみてください' : 'うまく読み取れませんでした。どう変えてほしいかを、もう少し具体的に書いてみてください'
+        line: talk,
+        note: ''
       };
     }
     const outcome = assistantMasmonAskJudge(aid, r, lv);
     const done = assistantMasmonAskApply(aid, r, outcome, t);
     const res2 = outcome === 'no' ? 'no' : done.changed ? outcome : 'some';
-    record(res2, done.what || '', done.changed);
-    const line = outcome === 'no' ? r.replies.no : done.changed ? outcome === 'yes' ? r.replies.yes : r.replies.some : r.replies.some;
+    const line = outcome === 'no' ? r.replies.no : done.changed ? outcome === 'yes' ? r.replies.yes : r.replies.some : r.replies.talk || r.replies.some;
+    record(res2, done.what || '', done.changed, line);
     return {
       res: res2,
       line,
@@ -128701,7 +128710,8 @@ function AssistantMasmonSheet({
       land: land,
       onOpen: setDetail,
       onAsk: from => setAsk({
-        from
+        from,
+        t: from === 'hero' ? team.find(x => x.lead) || team[0] : null
       })
     });
   } else if (tab === 'team') {
