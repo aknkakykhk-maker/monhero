@@ -9,6 +9,7 @@
 //   ⑤ 押し入れ・入れかえ・しまうのボタン/同じ家具は二度と贈れない(贈れる一覧から消える)
 //   ⑥ 交換所: 「家具」タブに12種類、「アイテム」タブには家具が並ばない
 //   ⑦ ページのエラーが出ない
+//   ⑧ 8人の部屋に3つずつ置いても、家具が吹き出し・名札・顔・もとの家具・出かけた札に隠れない(重なるときは測って空いた所へずらす)
 const http = require('http'), path = require('path'), fs = require('fs');
 const root = path.resolve(__dirname, '..', '..'), PORT = 9233;
 const { quietBootSeed, updateNoticeSeed, oneTimeNoticeSeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
@@ -130,6 +131,26 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       await page.waitForTimeout(300);
       const itemText = await page.locator('[data-event-point-shop]').innerText().catch(() => '');
       check(`⑥ ${tag}: 「アイテム」タブには家具が並ばない`, !/ふかふかソファ|ミラーボール/.test(itemText) && /おやつバスケット/.test(itemText));
+      await page.close();
+    }
+    // ⑧ 8人の部屋に家具を3つずつ置いても、家具が吹き出し・名札・Lv・顔・もとの家具・出かけた札・ほかの家具に隠れない(縦 390・375・横 844・🔄横 667)
+    //    (2026-11-08 ミハリ「縦 390 のあつの部屋で、考えごとの吹き出しがトロフィーの下半分を隠す」。重なるときは測って空いた所へずらす)
+    for (const [w, h, tag] of [[390, 844, '縦 390'], [375, 667, '縦 375'], [844, 390, '横 844'], [667, 375, '🔄横 667']]) {
+      const page = await open(w, h, true);
+      await page.evaluate(() => { localStorage.setItem('mh_assistant_life_room_v1', JSON.stringify(Object.fromEntries(['atsu', 'mua', 'kiki', 'momosuke', 'dra', 'kyuko', 'sorashido', 'erubin'].map(id => [id, { put: { ceil: 'lantern', wall: 'trophy', floor: 'sofa' }, kept: [], got: { lantern: '2026-11-08', trophy: '2026-11-08', sofa: '2026-11-08' } }])))); });
+      await page.reload({ waitUntil: 'domcontentloaded' }); await toHome(page); await waitFaces(page);
+      await openHouse(page); await page.waitForTimeout(500);
+      const ng = await page.evaluate(() => { const out = [];
+        const hit = (a, b) => a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1;
+        for (const room of document.querySelectorAll('[data-assistant-life-room]')) { const rr = room.getBoundingClientRect(); const fs = [...room.querySelectorAll('[data-assistant-life-room-furn]')];
+          for (const f of fs) { const r = (f.lastElementChild || f).getBoundingClientRect(); const n = f.dataset.assistantLifeRoomFurn;
+            if (r.left < rr.left - 1 || r.right > rr.right + 1 || r.top < rr.top - 1 || r.bottom > rr.bottom + 1) out.push(`${n} 部屋からはみ出す`);
+            for (const s of ['[data-assistant-life-room-bub]', '.pl', '.lv', '.pp > span', '.fu', '.tag']) for (const o of room.querySelectorAll(s)) if (o.getClientRects().length && hit(r, o.getBoundingClientRect())) out.push(`${n} が ${s} に重なる`);
+            for (const o of fs) if (o !== f && hit(r, (o.lastElementChild || o).getBoundingClientRect())) out.push(`${n} 家具どうし`); } }
+        return [...new Set(out)]; });
+      const count = await page.locator('[data-assistant-life-room-furn]').count();
+      check(`⑧ ${tag}: 8人の部屋に3つずつ置いても、家具が吹き出し・名札・顔・もとの家具・出かけた札に隠れない`, count >= 24 && ng.length === 0, `${count}個 ${ng.slice(0, 4).join(' | ')}`);
+      if (SHOTS) await page.screenshot({ path: path.join(shotDir, `furn-${w}-8-all.png`) });
       await page.close();
     }
     check('⑦ ページのエラーが出ない', errors.length === 0, errors.slice(0, 3).join(' / '));

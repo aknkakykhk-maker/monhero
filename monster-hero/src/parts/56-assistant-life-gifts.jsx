@@ -597,7 +597,9 @@ const assistantLifeFurnMove = async (who, key, toPut) => {
 //   狭い部屋で入らないときは、部屋の上の真ん中へ寄せる(顔に重ねない・2026-11-08 検査で見つけた 横 844 の重なり)
 function AssistantLifeRoomFurn({ id, w, h, faces = 0, baseCount = 2 }) {
   const st = useAssistantLifeGiftState();
-  if (!assistantLifeFurnEnabled()) return null;
+  const marker = React.useRef(null);
+  const [moved, setMoved] = React.useState({});
+  const on = assistantLifeFurnEnabled();
   const room = assistantLifeRoomOf(id, st);
   // 絵が届くまでは絵文字。読み取れる大きさにする(2026-11-08 窓口「小さく窮屈」)
   const size = Math.round(Math.max(16, Math.min(26, h * 0.26, w * 0.17)));
@@ -619,14 +621,46 @@ function AssistantLifeRoomFurn({ id, w, h, faces = 0, baseCount = 2 }) {
     if (slot === 'ceil') return { left: Math.round(w * 0.31), top: 3 };
     return { left: Math.round(w * 0.31) + g + 2, top: Math.round(h * 0.13) };
   };
-  return (<>{Object.entries(room.put).filter(([, k]) => k).map(([slot, k]) => {
+  // 描いたあとに測って、吹き出し・名札・Lv・顔・もとの家具・出かけた札・ほかの家具に重なる家具だけ、元の場所にいちばん近い空いた所へずらす
+  //   (2026-11-08 ミハリ「縦 390 のあつの部屋で、考えごとの吹き出しがトロフィーの下半分を隠す」「横 844 で床の家具が吹き出しの後ろに半分隠れる」。
+  //    吹き出しは文の長さで高さが変わるので、決め打ちの位置では避けきれない)
+  React.useLayoutEffect(() => {
+    if (!on) return;
+    const roomEl = marker.current && marker.current.parentElement;
+    if (!roomEl) return;
+    const rr = roomEl.getBoundingClientRect();
+    if (!rr.width) return;
+    const rel = (el) => { const r = el.getBoundingClientRect(); return { l: r.left - rr.left, t: r.top - rr.top, r: r.right - rr.left, b: r.bottom - rr.top }; };
+    const hit = (a, b) => a.l < b.r - 1 && b.l < a.r - 1 && a.t < b.b - 1 && b.t < a.b - 1;
+    const blocks = [...roomEl.querySelectorAll('.pl, .lv, .pp > span, .fu, .tag, [data-assistant-life-room-bub]')].filter(el => el.getClientRects().length).map(rel);
+    const next = {}, taken = [];
+    for (const el of roomEl.querySelectorAll('[data-assistant-life-room-furn]')) {
+      const slot = el.dataset.assistantLifeRoomFurn.split(':')[1];
+      const base = pos(slot);
+      const box = (q) => ({ l: q.left, t: q.top, r: q.left + g, b: q.top + g });
+      const free = (q) => q.left >= 2 && q.top >= 2 && q.left + g <= w - 2 && q.top + g <= h - 10 && !blocks.some(b => hit(box(q), b)) && !taken.some(b => hit(box(q), b));
+      let best = free(base) ? base : null;
+      if (!best) {
+        const step = Math.max(3, Math.round(g / 3)), cands = [];
+        for (let y = 2; y + g <= h - 10; y += step) for (let x = 2; x + g <= w - 2; x += step) cands.push({ left: x, top: y });
+        cands.sort((a, b) => Math.hypot(a.left - base.left, a.top - base.top) - Math.hypot(b.left - base.left, b.top - base.top));
+        best = cands.find(free) || base;
+      }
+      taken.push(box(best));
+      if (best !== base) next[slot] = { left: Math.round(best.left), top: Math.round(best.top) };
+    }
+    const same = JSON.stringify(next) === JSON.stringify(moved);
+    if (!same) setMoved(next);
+  });
+  if (!on) return null;
+  return (<><span ref={marker} hidden/>{Object.entries(room.put).filter(([, k]) => k).map(([slot, k]) => {
     const f = assistantLifeFurnOf(k);
     if (!f || !ASSISTANT_LIFE_FURN_SLOTS[slot]) return null;
-    const p = pos(slot);
+    const p = moved[slot] || pos(slot);
     return (
-      <span key={slot} data-assistant-life-room-furn={`${id}:${slot}:${k}`} aria-hidden="true"
+      <span key={slot} data-assistant-life-room-furn={`${id}:${slot}:${k}`} data-assistant-life-room-furn-moved={moved[slot] ? '1' : '0'} aria-hidden="true"
         style={{ position: 'absolute', left: p.left, top: p.top, width: size, height: size, zIndex: 2, fontSize: size, lineHeight: 1, pointerEvents: 'none', filter: 'drop-shadow(0 2px 2px #0006)' }}>
-        {slot === 'ceil' && <span style={{ position: 'absolute', bottom: '100%', left: '50%', width: 1, height: Math.round(size * 0.3), background: '#7c5a3a' }}/>}
+        {slot === 'ceil' && p.top <= 6 && <span style={{ position: 'absolute', bottom: '100%', left: '50%', width: 1, height: Math.round(size * 0.3), background: '#7c5a3a' }}/>}
         <span>{f.emoji}</span>
       </span>); })}</>);
 }
