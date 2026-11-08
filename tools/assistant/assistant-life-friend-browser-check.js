@@ -24,7 +24,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 const fresh = new Date(Date.now() - 3 * 3600000).toISOString();
 const dayKey = new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 10);
 const HOUSES = [
-  { breeder_id: 'aoi-0001', open: true, updated_at: fresh, house: { v: 1, ids: ['mua', 'kiki', 'dra', 'momosuke', 'atsu', 'kyuko', 'sorashido', 'erubin'], r: { mua: { at: 'home', d: 'snack', m: 'happy', fu: { c: 'lantern', w: 'starpic', f: 'sofa' } }, kiki: { at: 'out', d: 'walk', m: 'happy' }, dra: { fu: { f: 'bear', w: 'trophy' }, at: 'home', d: 'idle', m: 'happy' }, momosuke: { at: 'home', d: 'practice', m: 'eager' }, atsu: { at: 'home', d: 'cards', m: 'happy' }, kyuko: { at: 'out', d: 'read', m: 'happy' }, sorashido: { at: 'home', d: 'training', m: 'happy' }, erubin: { at: 'home', d: 'sleep', m: 'sleepy' } }, dy: [{ t: '10:10', x: '朝: みゅあ・ききが居間でおやつ' }, { t: '09:00', x: 'ドラ セッション → 🎵Lv2' }] } },
+  { breeder_id: 'aoi-0001', open: true, updated_at: fresh, house: { v: 1, ids: ['mua', 'kiki', 'dra', 'momosuke', 'atsu', 'kyuko', 'sorashido', 'erubin'], r: { mua: { at: 'home', d: 'snack', m: 'happy', fu: { c: 'lantern', w: 'starpic', f: 'sofa' } }, kiki: { at: 'out', d: 'walk', m: 'happy' }, dra: { fu: { f: 'bear', w: 'trophy' }, at: 'home', d: 'idle', m: 'happy' }, momosuke: { at: 'home', d: 'practice', m: 'eager' }, atsu: { at: 'home', d: 'cards', m: 'happy' }, kyuko: { at: 'out', d: 'read', m: 'happy' }, sorashido: { at: 'home', d: 'training', m: 'happy' }, erubin: { at: 'home', d: 'sleep', m: 'sleepy' } }, ac1: { k: 'beat', x: '「風がそよぐ」を遊んだ', at: Date.now() - 3600000 }, dy: [{ t: '10:10', x: '朝: みゅあ・ききが居間でおやつ' }, { t: '09:00', x: 'ドラ セッション → 🎵Lv2' }] } },
   { breeder_id: 'yuto-0001', open: true, updated_at: fresh, house: { v: 1, ids: ['momosuke', 'kyuko'], r: { momosuke: { at: 'home', d: 'snack', m: 'happy' }, kyuko: { at: 'home', d: 'idle', m: 'happy' } } } },
 ];
 const route = (posted) => async (r) => {
@@ -33,7 +33,7 @@ const route = (posted) => async (r) => {
   if (/assistant_life_friend_switch/.test(url)) return json([{ mode: 'on' }]);
   if (/assistant_life_friend_house_more/.test(url)) {
     if (method !== 'GET') { try { posted.push({ more: JSON.parse(r.request().postData()) }); } catch {} return json('', 201); }
-    return json(/aoi-0001/.test(url) ? [{ more: { v: 1, fu: { mua: { p: { c: 'lantern', w: 'starpic', f: 'sofa' }, k: ['bear', 'plant'] }, dra: { p: { w: 'trophy', f: 'bear' }, k: [] } }, dy: [{ t: '11:00', x: '昼: ももすけ・あつが練習スタジオで練習' }, { t: '10:10', x: '朝: みゅあ・ききが居間でおやつ' }, { t: '09:00', x: 'ドラ セッション → 🎵Lv2' }] }, updated_at: fresh }] : []);
+    return json(/aoi-0001/.test(url) ? [{ more: { v: 1, fu: { mua: { p: { c: 'lantern', w: 'starpic', f: 'sofa' }, k: ['bear', 'plant'] }, dra: { p: { w: 'trophy', f: 'bear' }, k: [] } }, ac: [{ k: 'masmon', x: '新しいマスモン「ゴーレム」を迎えた', at: Date.now() - 1800000 }, { k: 'beat', x: '「風がそよぐ」を遊んだ', at: Date.now() - 3600000 }], dy: [{ t: '11:00', x: '昼: ももすけ・あつが練習スタジオで練習' }, { t: '10:10', x: '朝: みゅあ・ききが居間でおやつ' }, { t: '09:00', x: 'ドラ セッション → 🎵Lv2' }] }, updated_at: fresh }] : []);
   }
   if (/assistant_life_friend_houses/.test(url)) return method === 'GET' ? json(HOUSES) : json('', 201);
   if (/assistant_life_friend_visits/.test(url)) {
@@ -147,11 +147,12 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.locator('[data-alf-page="on"]').waitFor({ timeout: 8000 });
       await page.locator('[data-alf-house]').first().waitFor({ timeout: 8000 }).catch(() => {});
       await page.locator('[data-alf-note]').first().waitFor({ timeout: 8000 }).catch(() => {});
-      check(`③ ページにいまの行き来・置き手紙2通・フレンドの家2軒・設定4つ(${v.id})`, (await page.locator('[data-alf-now-out]').count()) === 1 && (await page.locator('[data-alf-note]').count()) === 2 && (await page.locator('[data-alf-house]').count()) === 2 && (await page.locator('[data-alf-setting]').count()) === 4);
+      check(`③ ページにいまの行き来・置き手紙2通・フレンドの家2軒・設定5つ(${v.id})`, (await page.locator('[data-alf-now-out]').count()) === 1 && (await page.locator('[data-alf-note]').count()) === 2 && (await page.locator('[data-alf-house]').count()) === 2 && (await page.locator('[data-alf-setting]').count()) === 5);
       { const ng = await textProblems(page, '[data-alf-page]'); check(`③ ページがはみ出さない・字が切れない・言葉の途中で折れない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
       check(`③ 置き手紙に「訪ねてくれた」「ドラと話した」とお礼の3択(${v.id})`, /訪ねてくれた/.test(await page.locator('[data-alf-notes]').innerText()) && /ドラと話した/.test(await page.locator('[data-alf-notes]').innerText()) && (await page.locator('[data-alf-thanks]').count()) === 3);
       check(`③ 家が届いていないフレンド(みお)は薄く並び「みおさんが助手ライフを開くと遊びに行けます」(${v.id})`, (await page.locator('[data-alf-house-waiting="mio-0001"]').count()) === 1 && /みおさんが助手ライフを開くと遊びに行けます/.test(await page.locator('[data-alf-house-waiting="mio-0001"]').innerText().catch(() => '')));
       check(`⑫ 届いた置き手紙に自由文が出て、「この人の自由文を見ない」がある(${v.id})`, /ソファふかふかでよかった/.test(await page.locator('[data-alf-notes]').innerText()) && (await page.locator('[data-alf-note-off="aoi-0001"]').count()) === 1);
+      check(`⑭ 一覧の札に、その人の最近の1行が出る(${v.id})`, /風がそよぐ/.test(await page.locator('[data-alf-house="aoi-0001"] [data-alf-house-act]').innerText().catch(() => '')));
       await shot(page, `${v.id}-3-page`);
       await page.evaluate(() => { const el = document.querySelector('[data-alf-houses]'); if (el) el.scrollIntoView({ block: 'start' }); });
       await shot(page, `${v.id}-3b-page-houses`);
@@ -174,9 +175,16 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.locator('[data-alf-visit] [data-assistant-life-room="kiki"]').click();
       await page.locator('[data-alf-visit-sheet="kiki"]').waitFor({ timeout: 3000 });
       check(`⑥ おでかけ中の部屋も押せて、「おでかけ中」と分かる(${v.id})`, (await page.locator('[data-alf-visit-room-state="out"]').count()) === 1);
-      check(`⑫ くわしい控えから、今日あったこと(3つ)が出る(${v.id})`, /練習スタジオ/.test(await page.locator('[data-alf-visit]').innerText()));
+      check(`⑭ 訪ねた家の掲示板に、その人の最近(迎えたマスモン・遊んだ曲)が出る(${v.id})`, /ゴーレム/.test(await page.locator('[data-alf-visit]').innerText()));
       await shot(page, `${v.id}-5b-visit-out`);
       await page.locator('[data-alf-visit-sheet] .mhl-sheet button:has-text("とじる")').click();
+      {
+        await page.locator('[data-alf-visit] [data-assistant-life-board]').click();
+        await page.locator('[data-alf-visit-diary-all]').waitFor({ timeout: 3000 });
+        const all = await page.locator('[data-alf-visit-diary-all]').innerText();
+        check(`⑫ 掲示板を押すと、その家の最近と今日あったことが全部見られる(${v.id})`, /練習スタジオ/.test(all) && /ゴーレム/.test(all) && /風がそよぐ/.test(all), all.slice(0, 120));
+        await shot(page, `${v.id}-5d-visit-diary`);
+        await page.locator('[data-alf-visit-diary-all] [data-mhl-sheet-close]').click(); }
       await page.locator('[data-alf-visit] [data-assistant-life-room="mua"]').click();
       await page.locator('[data-alf-visit-sheet="mua"]').waitFor({ timeout: 3000 });
       check(`⑫ くわしい控えの押し入れが部屋のシートに出る(${v.id})`, /押し入れ/.test(await page.locator('[data-alf-visit-kept]').innerText().catch(() => '')));
