@@ -318,6 +318,10 @@ const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'er
     const play = fs.readFileSync(path.join(root, 'monster-hero/src/parts/30-rhythm-play.jsx'), 'utf8');
     check('⑭ モンヒロビートは公開中の曲だけ、曲名だけを残す(デバッグ・練習・タイミング合わせは残さない)', /!debugPlay&&!tutorial&&!calibrating&&typeof assistantLifeFriendNoteActivity==='function'&&typeof RHYTHM_DEMO_SONG_IDS!=='undefined'&&RHYTHM_DEMO_SONG_IDS\.includes\(song\?\.songId\)/.test(play)); }
 
+  // ⑯ 控えの行き先(2026-11-08 社長「8部屋とも留守なのはなぜ」): 出かけているときだけ・町の場所だけ
+  { const h = G('assistantLifeFriendNormalizeHouse')({ v: 1, ids: ['kiki', 'mua', 'dra'], r: { kiki: { at: 'out', d: 'cards', m: 'happy', p: 'cardroom' }, mua: { at: 'home', d: 'idle', m: 'happy', p: 'cardroom' }, dra: { at: 'out', d: 'idle', m: 'happy', p: 'nowhere' } } });
+    check('⑯ 行き先は、出かけている助手の町の場所だけ読む', h.r.kiki.p === 'cardroom' && !h.r.mua.p && !h.r.dra.p, JSON.stringify(h.r)); }
+
   // ⑧ 公開の印
   const rel = fs.readFileSync(path.join(root, 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8');
   check('⑧ 公開の印 assistantLifeFriend がある(真/偽どちらでも、偽なら通信しないことを下で見る)', /\n\s*assistantLifeFriend:\s*(true|false),/.test(rel));
