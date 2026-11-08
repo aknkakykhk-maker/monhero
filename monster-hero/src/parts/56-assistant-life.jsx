@@ -476,6 +476,7 @@ const assistantLifeNow = async ({ members, now = Date.now() } = {}) => {
   assistantLifeSaveLife();
   // 今日あったこと(家の掲示板)へ、この時間の過ごし方を書く(56-assistant-life-house.jsx)
   if (typeof assistantLifeDiaryOnSlot === 'function') { try { assistantLifeDiaryOnSlot(life, slot, now); } catch {} }
+  if (typeof assistantLifeRelTick === 'function') { try { void assistantLifeRelTick(now); } catch {} } // 前の日からのけんかは朝4時までに仲直り(rel.jsx)
   return life;
 };
 // 最近のできごとを覚える(kind: gift・play・quarrel・makeup。pair か ids)
@@ -620,9 +621,9 @@ const assistantLifeTalkSet = () => {
   assistantLifeTalkCache = out;
   return out;
 };
-const assistantLifeQuarrelTalks = () => assistantLifeTalkSet().quarrel;
+const assistantLifeQuarrelTalks = () => [...assistantLifeTalkSet().quarrel, ...(typeof assistantLifeRelQuarrelTalks === 'function' ? assistantLifeRelQuarrelTalks() : [])]; // 原因つきのけんか(rel.jsx)も
 // 思い出アルバムに入るもの(2人・3人)
-const assistantLifeAlbumTalks = () => { const x = assistantLifeTalkSet(); return [...x.pair, ...x.anyTrio, ...x.trio]; };
+const assistantLifeAlbumTalks = () => { const x = assistantLifeTalkSet(); return [...x.pair, ...x.anyTrio, ...x.trio, ...(typeof assistantLifeRelAlbumTalks === 'function' ? assistantLifeRelAlbumTalks() : [])]; };
 // 台本の穴 {place}・{doing}・{doing_te}。いまの様子(talk.ctx)→ 台本の鍵 → していることの場所 の順で決める
 const assistantLifeFillHoles = (text, talk) => {
   const c = (talk && talk.ctx) || {};
@@ -682,15 +683,22 @@ const assistantLifePickPairTalk = (pair, group, peerSt, life, seen, rand = Math.
   const quarrels = typeof assistantPeerExtraTalks === 'function' ? assistantPeerExtraTalks().quarrels : assistantLifeQuarrelTalks();
   const q = (peerSt && peerSt.quarrel) || { pending: null, done: [] };
   if (q.pending && q.pending.pair === key) {
+    // 仲直りの形を選ぶ(謝る・間に入る。56-assistant-life-rel.jsx)。無ければけんか自身の仲直り
+    const rm = typeof assistantLifeRelPickMend === 'function' ? assistantLifeRelPickMend({ ...q.pending, ids: [a, b] }, group, peerSt, seen, rand) : null;
+    if (rm) return assistantLifeWithCtx(rm, ctx);
     const mk = quarrels.find(t => t.kind === 'makeup' && t.quarrelId === q.pending.id);
     if (mk) return assistantLifeWithCtx(mk, ctx);
   }
   const moods = (life && life.moods) || {};
   const grumpy = [a, b].some(id => moods[id] === 'sulky' || moods[id] === 'restless');
-  if (!q.pending && lv >= 2 && rand() < (grumpy ? 0.3 : 0.05)) {
+  const cooling = typeof assistantLifeRelCooling === 'function' && assistantLifeRelCooling(key); // 仲直りから2日はけんかしない(rel.jsx)
+  if (!q.pending && !cooling && lv >= 2 && rand() < (grumpy ? 0.3 : 0.05)) {
     const qs = quarrels.filter(t => t.kind === 'quarrel' && assistantLifePairKey(t.pair[0], t.pair[1]) === key && !(seen && seen[t.id]));
     if (qs.length) return assistantLifeWithCtx(qs[Math.floor(rand() * qs.length)], ctx);
   }
+  // 人間らしい出来事(からかう・ライバル・相談・ないしょ話・久しぶりの気まずさ。rel.jsx)
+  const rp = typeof assistantLifeRelPickPair === 'function' ? assistantLifeRelPickPair([a, b], group, peerSt, life, seen, rand) : null;
+  if (rp) return assistantLifeWithCtx(rp, ctx);
   const band = assistantLifeLvBand(lv);
   const air = assistantLifeAirOf(life, a, b);
   const okBand = (x) => x == null || (ASSISTANT_LIFE_BAND_RANK[x] ?? 0) <= ASSISTANT_LIFE_BAND_RANK[band];
@@ -708,6 +716,9 @@ const assistantLifePickGroupTalk = (group, peerSt, life = ASSISTANT_LIFE_STORE.s
   const ids = group.ids;
   const ctx = { place: group.place, doing: group.doing };
   if (ids.length === 2) return assistantLifePickPairTalk(ids, group, peerSt, life, seen, rand);
+  // 待っている仲直り(間に入る)・やきもち(rel.jsx)
+  const rg = typeof assistantLifeRelPickGroup === 'function' ? assistantLifeRelPickGroup(group, peerSt, life, seen, rand) : null;
+  if (rg) return assistantLifeWithCtx(rg.trio ? rg : { ...rg, trio: [...ids] }, ctx);
   const trioLv = typeof ASSISTANT_PEER_TRIO_LV !== 'undefined' ? ASSISTANT_PEER_TRIO_LV : 2;
   const pairsOk = (m) => { for (let i = 0; i < m.length; i++) for (let j = i + 1; j < m.length; j++) if (assistantLifeLevelOf(peerSt, m[i], m[j]) < trioLv) return false; return true; };
   const oldTrios = typeof assistantPeerExtraTalks === 'function' ? assistantPeerExtraTalks().trios : [];

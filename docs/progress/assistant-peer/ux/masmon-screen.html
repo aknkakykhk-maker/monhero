@@ -1,0 +1,45 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>助手のマスモン画面の見本</title><style>
+:root{--ink:#f8fafc;--sub:#cbd5e1}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f172a;color:var(--ink);font-family:"Hiragino Maru Gothic ProN","M PLUS Rounded 1c","Noto Sans JP",sans-serif;padding:16px}
+h1{font-size:20px;font-weight:900}.lead{font-size:12px;color:var(--sub);margin:4px 0 12px;line-height:1.5}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:760px}
+.card{background:#1e1b4b;border:2px solid #334155;border-radius:16px;padding:10px 12px}
+.hd{display:flex;align-items:center;gap:8px}.hd img{width:40px;height:40px;border-radius:50%;object-fit:cover;object-position:50% 8%;background:#fff;border:2px solid #fff}
+.hd b{font-size:17px}.hd small{margin-left:auto;font-size:10.5px;color:#fde68a;font-weight:900;white-space:nowrap}
+.mons{display:flex;gap:6px;margin-top:8px}
+.mon{flex:1;background:#0b1020;border-radius:10px;padding:5px;text-align:center;position:relative;min-width:0}
+.mon img{width:100%;height:58px;object-fit:contain;background:radial-gradient(circle,#cbd5e1 0,#64748b 70%);border-radius:8px}
+.mon b{display:block;font-size:12px;white-space:nowrap}.mon i{display:block;font-style:normal;font-size:9.5px;color:#94a3b8;white-space:nowrap}
+.mon .ld{position:absolute;left:4px;top:4px;font-size:9px;font-weight:900;background:#f472b6;border-radius:6px;padding:0 4px}
+.row{margin-top:6px;font-size:11px;line-height:1.45;display:flex;gap:6px}.row .k{flex:none;width:44px;font-weight:900}.row .v{flex:1}.nw{white-space:nowrap}
+.lk{color:#86efac}.ds{color:#fca5a5}.dk{color:#fde68a}
+.chip{display:inline-block;white-space:nowrap;margin-right:6px}
+.later{font-size:10px;color:#94a3b8;margin-top:4px}
+
+.ph{background:linear-gradient(#1e1b4b,#0b1020 70%);border:3px solid #334155;border-radius:24px;overflow:hidden;position:relative;flex:none}
+.top{padding:12px 14px 4px}.en{font-size:10px;letter-spacing:.2em;color:#f9a8d4;font-weight:900}.t{font-size:19px;font-weight:900;display:flex;align-items:center;gap:8px}
+.t img{width:34px;height:34px;border-radius:50%;object-fit:cover;object-position:50% 8%;background:#fff}
+.tb{display:flex;gap:4px;padding:6px 12px}.nw{white-space:nowrap}.tb span{flex:1;text-align:center;font-size:11px;font-weight:900;padding:6px 0;border-radius:10px;background:#1e293b;color:#94a3b8;white-space:nowrap}.tb .on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff}
+.li{display:flex;gap:10px;margin:8px 12px;background:#111827;border:1px solid #334155;border-radius:14px;padding:8px}
+.li img{width:76px;height:76px;object-fit:contain;background:radial-gradient(circle,#cbd5e1 0,#64748b 70%);border-radius:10px}
+.li b{font-size:15px}.li em{font-style:normal;font-size:10px;background:#f472b6;border-radius:6px;padding:0 5px;vertical-align:2px}.li i{display:block;font-style:normal;font-size:11px;color:#94a3b8}.li p{font-size:11.5px;margin-top:3px;line-height:1.4}
+.tm{display:flex;gap:8px;padding:8px 12px}.sl{flex:1;background:#111827;border:1px solid #334155;border-radius:14px;text-align:center;padding:6px;position:relative}
+.sl img{width:100%;height:96px;object-fit:contain;background:radial-gradient(circle,#cbd5e1 0,#64748b 70%);border-radius:10px}.sl b{font-size:13px;white-space:nowrap}.sl em{position:absolute;left:6px;top:6px;font-style:normal;font-size:10px;background:#f472b6;border-radius:6px;padding:0 5px}
+.dkb{margin:8px 12px;background:#111827;border:1px solid #334155;border-radius:14px;padding:10px;font-size:12px;line-height:1.5}.dn{font-size:15px;font-weight:900;color:#fde68a}.lk2{color:#86efac;font-weight:900}.ds2{color:#fca5a5;font-weight:900}
+.note{font-size:10.5px;color:#94a3b8;margin:6px 12px}
+.cap{font-size:12px;color:#e2e8f0;margin-top:6px;width:390px;line-height:1.5}
+.row2{display:flex;gap:16px;align-items:flex-start}
+.rot{width:390px;height:844px;border:3px solid #334155;border-radius:24px;position:relative;overflow:hidden;background:#000}
+.rot .ph{position:absolute;left:50%;top:50%;width:844px;height:390px;transform:translate(-50%,-50%) rotate(90deg);border:0;border-radius:0}
+</style></head><body>
+<h1>助手のマスモン(部屋の「🐾 マスモン」から開く)見本</h1>
+<p class="lead">見本の絵です(まだ作っていません)。プレイヤーのマスモン画面と同じ見せ方。見るだけで、プレイヤーのマスモン・セーブには触りません。</p>
+<div class="row2">
+<div><div class="ph" style="width:390px;height:844px"><div class="top"><p class="en">MASMON · KIKI</p><p class="t"><img src="../../../../monster-hero/images/assistant/kiki_happy.PNG" alt="">ききのマスモン</p></div><div class="tb"><span class="on">🐾 マスモン</span><span class="">⚔ 編成</span><span class="">🃏 デッキ</span><span class="">💗 好き・苦手</span></div><div class="li"><img src="../../../../monster-hero/images/monsters/golem.png" alt=""><div><b>ごろべえ <em>先頭</em></b><i>ゴーレム ・ Lv.24</i><p><span class="nw">好きなモンスター。</span><wbr><span class="nw">ちからに振って育てる</span></p></div></div><div class="li"><img src="../../../../monster-hero/images/monsters/plant.PNG" alt=""><div><b>おちゃば</b><i>プラント ・ Lv.15</i><p><span class="nw">静かでおだやか。</span><wbr><span class="nw">お茶の時間に似合う</span></p></div></div><div class="li"><img src="../../../../monster-hero/images/monsters/undine.PNG" alt=""><div><b>しずく</b><i>ウンディーネ ・ Lv.15</i><p><span class="nw">落ち着いたお姉さんの雰囲気どうし</span></p></div></div>
+<p class="note">🔁 再生や育成はききの中だけ。ときどき中庭や部屋で一緒に遊んでいます</p><div class="dkb"><p class="dn">🃏 ずっしり火力</p><p><span class="nw">守って耐えて、</span><wbr><span class="nw">ちからの高いモンスターで一撃。</span><wbr><span class="nw">数字よりも火力を信じる</span></p><p class="lk2">💗 ゴーレム・プラント・ウンディーネ</p><p class="ds2">💦 ハム・スエゾー・ライガー</p></div></div><p class="cap"><b>縦</b>: <span class="nw">マスモン一覧(ニックネーム・種類・Lv・わけ)。</span><wbr><span class="nw">下にデッキと、</span><wbr><span class="nw">好き・苦手</span></p></div>
+<div><div style="display:flex;flex-direction:column;gap:6px"><div class="ph" style="width:844px;height:390px"><div class="top"><p class="en">MASMON · KIKI</p><p class="t"><img src="../../../../monster-hero/images/assistant/kiki_happy.PNG" alt="">ききのマスモン</p></div><div class="tb"><span class="">🐾 マスモン</span><span class="on">⚔ 編成</span><span class="">🃏 デッキ</span><span class="">💗 好き・苦手</span></div>
+<div style="display:flex"><div style="flex:1.35"><div class="tm"><div class="sl"><em>先頭</em><img src="../../../../monster-hero/images/monsters/golem.png" alt=""><b>ごろべえ</b></div><div class="sl"><img src="../../../../monster-hero/images/monsters/plant.PNG" alt=""><b>おちゃば</b></div><div class="sl"><img src="../../../../monster-hero/images/monsters/undine.PNG" alt=""><b>しずく</b></div></div><p class="note">編成はいつもききが決める。相談されたら変わることも</p></div><div style="flex:1"><div class="dkb"><p class="dn">🃏 ずっしり火力</p><p><span class="nw">守って耐えて、</span><wbr><span class="nw">ちからの高いモンスターで一撃。</span><wbr><span class="nw">数字よりも火力を信じる</span></p><p class="lk2">💗 ゴーレム・プラント・ウンディーネ</p><p class="ds2">💦 ハム・スエゾー・ライガー</p></div></div></div></div><p class="cap" style="width:844px"><b>横</b>: 編成(先頭+2体)とデッキを並べる</p>
+<div class="row2"><div class="rot"><div class="ph" style="width:844px;height:390px"><div class="top"><p class="en">MASMON · KIKI</p><p class="t"><img src="../../../../monster-hero/images/assistant/kiki_happy.PNG" alt="">ききのマスモン</p></div><div class="tb"><span class="">🐾 マスモン</span><span class="on">⚔ 編成</span><span class="">🃏 デッキ</span><span class="">💗 好き・苦手</span></div>
+<div style="display:flex"><div style="flex:1.35"><div class="tm"><div class="sl"><em>先頭</em><img src="../../../../monster-hero/images/monsters/golem.png" alt=""><b>ごろべえ</b></div><div class="sl"><img src="../../../../monster-hero/images/monsters/plant.PNG" alt=""><b>おちゃば</b></div><div class="sl"><img src="../../../../monster-hero/images/monsters/undine.PNG" alt=""><b>しずく</b></div></div><p class="note">編成はいつもききが決める。相談されたら変わることも</p></div><div style="flex:1"><div class="dkb"><p class="dn">🃏 ずっしり火力</p><p><span class="nw">守って耐えて、</span><wbr><span class="nw">ちからの高いモンスターで一撃。</span><wbr><span class="nw">数字よりも火力を信じる</span></p><p class="lk2">💗 ゴーレム・プラント・ウンディーネ</p><p class="ds2">💦 ハム・スエゾー・ライガー</p></div></div></div></div></div><p class="cap" style="width:300px"><b>🔄横</b>: <span class="nw">縦の端末で、</span><wbr><span class="nw">横向きに回したとき。</span><wbr><span class="nw">横と同じ並びを、</span><wbr><span class="nw">回して見せる</span></p></div></div></div>
+</div></body></html>

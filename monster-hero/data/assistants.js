@@ -10749,6 +10749,9 @@ const STORY_GUEST_SPEAKERS = [
   // イベント「鍵の向こう側へ ～パンドラとふたつの翼～」(2026-11-02)のパンドラ。立ち絵はゲームのモンスターの全身の絵。
   //   pandora_shadow … 正体が分かる前の影(名前は「？？？」)。大きな全身の絵は台本の monsters(21-assistant.jsx の STORY_MONSTER_ART)で出す
   { id: 'pandora', name: 'パンドラ', role: 'ゲスト', emoji: '🗝️', accent: '#c084fc', image: (typeof PANDORA_FACE_ICON !== 'undefined' ? PANDORA_FACE_ICON : (typeof PANDORA_IMG !== 'undefined' ? PANDORA_IMG : null)), expressions: [], defaultExpression: 'normal' },
+  // 第7話(PANDORA_WINGS_EP7)で悪魔・天使に分かれて話すときの顔。台詞の stage で上の段に出す(who は 'pandora' のまま)
+  { id: 'pandoraDevil', name: '悪魔のパンドラ', role: 'ゲスト', emoji: '😈', accent: '#a855f7', image: (typeof PANDORA_DEVIL_FACE_ICON !== 'undefined' ? PANDORA_DEVIL_FACE_ICON : (typeof PANDORA_FACE_ICON !== 'undefined' ? PANDORA_FACE_ICON : null)), expressions: [], defaultExpression: 'normal' },
+  { id: 'pandoraAngel', name: '天使のパンドラ', role: 'ゲスト', emoji: '😇', accent: '#facc15', image: (typeof PANDORA_ANGEL_FACE_ICON !== 'undefined' ? PANDORA_ANGEL_FACE_ICON : (typeof PANDORA_FACE_ICON !== 'undefined' ? PANDORA_FACE_ICON : null)), expressions: [], defaultExpression: 'normal' },
   { id: 'pandora_shadow', name: '？？？', role: 'ゲスト', emoji: '🗝️', accent: '#6b21a8', image: (typeof PANDORA_SHADOW_IMG !== 'undefined' ? PANDORA_SHADOW_IMG : null), imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
 ];
 
@@ -11667,7 +11670,7 @@ const ASSISTANT_RHYTHM_GRAND_OPEN_TEASER = [
   { who:'sorashido', e:'excited',  t:'うぉぉぉ、本オープン！ 飾りつけの数の計算なら任せてくれだぜ・・・！' },
   { who:'erubin',    e:'happy',    t:'いいねー！ 俺も手伝うよ。何から始めよっか' },
   { who:'mua',       e:'wink',     t:'それは当日までのひみつ〜。ぜったい楽しみにしててね！' },
-  { who:'kiki',      e:'happy',    t:'くわしいことは、更新情報でお知らせしまつ。みなさん、お楽しみに〜♪♪' },
+  { who:'kiki',      e:'happy',    t:'本オープンは、11月9日の朝10時でつ。くわしいことは、更新情報でお知らせしまつ。みなさん、お楽しみに〜♪♪' },
 ];
 const ASSISTANT_RHYTHM_GRAND_OPEN_TEASER_CALLS = { kiki: 'みゅあちん' };
 const ASSISTANT_RHYTHM_GRAND_OPEN_STORY = [
@@ -11969,19 +11972,19 @@ const PANDORA_WINGS_EP7 = [
   { who:'sorashido', e:'normal',  fxText:'ソラシドが、三線を重ねる', t:'まだまだ、鳴らすよ' },
   // ---- 箱の中・暗やみ(天使と悪魔に分かれたパンドラが、向かい合っている) ----
   { bg:'dark_void', who:'pandora',  name:'天使のパンドラ', e:'normal', stage:'none', monsters:[{ id:'PandoraDevil', pose:'splitL' }, { id:'PandoraAngel', pose:'splitR' }], fxText:'箱の中。天使と悪魔のパンドラが、向かい合っている', t:'……聞こえる。わたしたちの歌' },
-  { who:'pandora',  name:'悪魔のパンドラ', e:'normal', t:'……外で、あの子たちが歌ってる' },
-  { who:'pandora',  name:'天使のパンドラ', e:'normal', t:'あなたがいなければ、わたしはもっと、まっすぐ笑えたのに' },
-  { who:'pandora',  name:'悪魔のパンドラ', e:'normal', t:'あなたがいなければ、わたしはもっと、強くいられたのに' },
-  { who:'pandora',  name:'天使のパンドラ', e:'normal', t:'……でも' },
-  { who:'pandora',  name:'悪魔のパンドラ', e:'normal', t:'……でも、あなたがいないと、わたしは、わたしじゃない' },
-  { who:'pandora',  name:'天使のパンドラ', e:'normal', t:'……ずっと、大嫌いだった' },
-  { who:'pandora',  name:'悪魔のパンドラ', e:'normal', t:'……ずっと、手放せなかった' },
+  { who:'pandora',  name:'悪魔のパンドラ', e:'normal', stage:'pandoraDevil', t:'……外で、あの子たちが歌ってる' },
+  { who:'pandora',  name:'天使のパンドラ', e:'normal', stage:'pandoraAngel', t:'あなたがいなければ、わたしはもっと、まっすぐ笑えたのに' },
+  { who:'pandora',  name:'悪魔のパンドラ', e:'normal', stage:'pandoraDevil', t:'あなたがいなければ、わたしはもっと、強くいられたのに' },
+  { who:'pandora',  name:'天使のパンドラ', e:'normal', stage:'pandoraAngel', t:'……でも' },
+  { who:'pandora',  name:'悪魔のパンドラ', e:'normal', stage:'pandoraDevil', t:'……でも、あなたがいないと、わたしは、わたしじゃない' },
+  { who:'pandora',  name:'天使のパンドラ', e:'normal', stage:'pandoraAngel', t:'……ずっと、大嫌いだった' },
+  { who:'pandora',  name:'悪魔のパンドラ', e:'normal', stage:'pandoraDevil', t:'……ずっと、手放せなかった' },
   { who:'kyuko',    e:'normal',   fxText:'箱の外から、きゅうこの声が届く', t:'パンドラ。……わかり合えなくても、いいんだよ' },
   { who:'kyuko',    e:'normal',   t:'わかり合えないままでも、手はつなげる。……俺は、そう思う' },
-  { who:'pandora',  name:'天使のパンドラ', e:'normal', t:'……手を、つなぐ' },
-  { who:'pandora',  name:'悪魔のパンドラ', e:'normal', t:'……ふたりで、なら' },
-  { who:'pandora',  name:'天使のパンドラ', e:'normal', t:'閉じこめられた運命なんて' },
-  { who:'pandora',  name:'悪魔のパンドラ', e:'normal', t:'わたしとわたしで、こわしてしまえばいい' },
+  { who:'pandora',  name:'天使のパンドラ', e:'normal', stage:'pandoraAngel', t:'……手を、つなぐ' },
+  { who:'pandora',  name:'悪魔のパンドラ', e:'normal', stage:'pandoraDevil', t:'……ふたりで、なら' },
+  { who:'pandora',  name:'天使のパンドラ', e:'normal', stage:'pandoraAngel', t:'閉じこめられた運命なんて' },
+  { who:'pandora',  name:'悪魔のパンドラ', e:'normal', stage:'pandoraDevil', t:'わたしとわたしで、こわしてしまえばいい' },
   { who:'pandora',  e:'normal',   monsters:[{ id:'PandoraDevil', pose:'mergeL' }, { id:'Pandora', pose:'merged' }, { id:'PandoraAngel', pose:'mergeR' }], fx:'merge', fxText:'ふたりが、手を取り合った', t:'……開けるよ。今度は、わたしの手で' },
   { who:'pandora',  e:'normal',   monsters:[{ id:'Pandora', pose:'idle' }], fx:'unlock', bgm:'melo_rebellion', fxText:'鍵穴に光が集まり、鍵が回った', t:'……' },
   // ---- 箱の前 ----
@@ -13032,6 +13035,8 @@ const ASSISTANT_PEER_BOND_ACTIONS = Object.freeze({
   // ③ ミニイベント(1日5まで)・仲直り(1回の仲直りにつき1回・1日20の上限の外)(2026-11-07 社長)
   event:  { amount:5, dailyMax:5, label:'2人のミニイベントを見た' },
   makeup: { amount:5, dailyMax:5, label:'けんかのあと仲直りした', uncapped:true },
+  // 助手ライフ: けんかの間に入った助手と、けんかした2人それぞれ(2026-11-08 社長の決まり「間に入る+3」・助手部キズナ)
+  mediate: { amount:3, dailyMax:6, label:'けんかの間に入った' },
 });
 const ASSISTANT_PEER_BOND_DAILY_MAX = 20;
 // 思い出アルバムのツーショット写真(段ごとに1枚。2人の立ち絵を並べて作る)。e … 左・右の表情
@@ -16549,7 +16554,7 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'atsu', e:'troubled', t:'今日はちょっとうまくいかないなー笑' },
   ] },
   { id:'life-solo-atsu-053', kind:'solo', who:'atsu', keys:{ mood:'sulky' }, line:'feel', lines:[
-    { who:'atsu', e:'normal', t:'ちなみに、悔しいのは本気だかららしい笑' },
+    { who:'atsu', e:'normal', t:'ちなみに、悔しいのは本気だからだよ笑' },
   ] },
   { id:'life-solo-kyuko-001', kind:'solo', who:'kyuko', keys:{ place:'library', mood:'happy', why:'mypace' }, line:'scene', lines:[
     { who:'kyuko', e:'normal', t:'図書室、今日は俺ひとりだぁ。貸し切りっしょ笑' },
