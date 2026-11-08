@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 901fb4f05e5ea5ed
+// generated-sha256: 28145a8ab98a1eec
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9614,7 +9614,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // その場面の台詞を Claude API で1日1回まとめて作る(assistant-chat の kind:'friend_scenes')。中継役を配ってから真にする。偽・thin・off・失敗のときは台本だけ
   // 助手のマスモンの名前を Claude API で1人1回まとめて付ける(assistant-chat の kind:'masmon_names'・2026-11-08 社長の選び ❷B)。
   //   窓口が中継役を配ったのを確かめてから真にする。偽・失敗のあいだは表の名前のまま(56-assistant-life-masmon.jsx)
-  assistantMasmonNamesApi: false,
+  assistantMasmonNamesApi: true, // 2026-11-08 assistant-chat v22(窓口が配った)を本番の形で1回呼んで名前が返るのを確かめた(キズナ3)
   assistantLifeFriendApi: true, // 2026-11-08 assistant-chat v17(窓口が配った)を端末の形で1回呼んで確かめた。スイッチが thin/off のあいだは頼まない
   // モンヒロビートの助手とのセッション(2026-11-07 社長の決定・ビート部マモリ)。全部そろって社長の「この文で」が出るまで偽
   rhythmAssistantSession: true, // 2026-11-07 社長「この文で公開」
@@ -38685,6 +38685,7 @@ const growthFxSessionLevel = (list = []) => {
 // ---------- 見た目 ----------
 const GROWTH_FX_CSS = `
 .mh-gfx-chips{position:fixed;top:calc(env(safe-area-inset-top,0px) + 52px);right:10px;z-index:44000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
+.mh-gfx-chips.left{right:auto;left:10px;align-items:flex-start}
 .mh-gfx-chips.mini .mh-gfx-chip>.min-w-0{display:none}.mh-gfx-chips.mini .mh-gfx-chip{padding:3px 8px 3px 4px;gap:4px}
 .mh-gfx-chip{position:relative;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;border-radius:999px;background:linear-gradient(90deg,#1e1b2ef0,#0f172af0);
   border:1.5px solid var(--gc);box-shadow:0 0 14px color-mix(in srgb,var(--gc) 40%,transparent);font-weight:900;font-size:11px;color:#fff;
@@ -39016,11 +39017,18 @@ const GrowthFxChipsBox = ({ level, count, children }) => {
     const place = () => {
       const box = ref.current;
       if (!box) return;
-      const tops = [...GROWTH_FX_CHIP_TOPS, Math.max(60, window.innerHeight - 120 - box.offsetHeight)];
+      // いつもの高さのあとに、画面の下から上へ24pxおきの高さも試す(詰まった横の画面で、空いた所を見つける)
+      const steps = []; for (let y = window.innerHeight - 10 - box.offsetHeight; y >= 8; y -= 24) steps.push(Math.round(y));
+      const tops = [...new Set([...GROWTH_FX_CHIP_TOPS, Math.max(60, window.innerHeight - 120 - box.offsetHeight), ...steps])];
+      // 右寄せで空きが無ければ左寄せでも探す(横のビートP交換所は右の列が品物で埋まり、左の列の下が空いている・2026-11-08)
       for (const mini of [false, true]) {
         box.classList.toggle('mini', mini);
-        for (const t of tops) { box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`; if (!growthFxChipSpotBusy(box)) { box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${t}`; return; } }
+        for (const left of [false, true]) {
+          box.classList.toggle('left', left);
+          for (const t of tops) { box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`; if (!growthFxChipSpotBusy(box)) { box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${left ? 'left-' : ''}${t}`; return; } }
+        }
       }
+      box.classList.remove('left');
       box.style.top = `calc(env(safe-area-inset-top, 0px) + ${GROWTH_FX_CHIP_TOPS[1]}px)`; box.dataset.growthFxChipsTop = 'mini-busy';
     };
     place();
@@ -62965,6 +62973,7 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, othe
       {met && typeof AssistantMasmonRoomPet === 'function' && <AssistantMasmonRoomPet id={id} h={h} life={typeof assistantLifeCurrent === 'function' ? assistantLifeCurrent() : null}/>}
       {/* 出かけ札は床にかけない(2026-11-08 社長: 助手のマスモンが部屋の床を歩く。キズナ2)。縦は名札の右に2行(行き先/一緒の全員の名前・ひとりなら何をしているか・けんかや仲直りの印)、
           横は名札の下に1行(行き先・人数・印)。どちらも部屋の上から 36px までに収める */}
+      {met && !other && typeof AssistantMasmonRoomPet === 'function' && <AssistantMasmonRoomPet id={id} h={h} life={typeof assistantLifeCurrent === 'function' ? assistantLifeCurrent() : null}/>}
       {state && state.tag && (() => { const t = state.tag; const mark = !!t[1] && /^(💢|🤝)/u.test(t[1]); const n = Number((String(t[1] || '').match(/^(\d+)人で/) || [])[1]) || 0;
         // 縦: 上の行(名札の右)に一緒の全員の名前か、ひとりなら何をしているか・印。下の行(札の幅いっぱい)に行き先。名前は札に入る数まで(残りは「ほか◯人」)
         const ml = [...assistantLifeName(id)].length * 10 + 20; // 名札の幅(字10px+余白)。上の行はその右から
@@ -65922,7 +65931,9 @@ const ASSISTANT_MASMON_DOING_MARK = Object.freeze({ sleep: '💤', practice: '�
 const ASSISTANT_MASMON_PET_STYLE = Object.freeze({ position: 'absolute', zIndex: 4, pointerEvents: 'none', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.45))' });
 const ASSISTANT_MASMON_PET_MARK = Object.freeze({ position: 'absolute', right: -2, top: -3, whiteSpace: 'nowrap', lineHeight: '12px', fontWeight: 900, background: 'rgba(255,255,255,.92)', color: '#7c2d12', borderRadius: 999, padding: '0 2px' });
 // 部屋のマスモンの大きさ(2026-11-08 社長の選び A: どの部屋でも助手の顔の丸と見合う同じ大きさ)。顔の丸は Math.min(40, h*.44)
-const assistantMasmonPetSize = (h) => Math.round(Math.min(40, h * .44));
+// 低い部屋(iPhone SE/8 の横など)では、出かけ札の帯(上から37px)・床・印のはみ出しを引いた高さまで縮める(どの部屋も同じ高さなので、大きさはそろう)。
+//   16px より小さくなる部屋(568×320 など)では出さない(歩く区間が見つからないので出ない)
+const assistantMasmonPetSize = (h) => Math.round(Math.min(40, h * .44, h - 37 - 9 - 3));
 const ASSISTANT_MASMON_PET_FLOOR = 9;      // 床の板の高さ(.fl と同じ)
 const ASSISTANT_MASMON_PET_MW = 2, ASSISTANT_MASMON_PET_MH = 3; // 印が絵からはみ出すぶん(右・上)
 const ASSISTANT_MASMON_PET_HIT = '.tag,.pp,.bb,.pl,.lv,.lock,[data-assistant-life-rel-door],[data-assistant-life-rel-mend],[data-assistant-life-rel-sit]';
@@ -65998,7 +66009,7 @@ function AssistantMasmonRoomPet({ id, h, life }) {
     timer = setTimeout(step, 2500 + Math.random() * 2500);
     return () => { alive = false; clearTimeout(timer); };
   }, [plan]);
-  if (!t || where.kind === 'out') return null;
+  if (!t || where.kind === 'out' || size < 16) return null;
   const mon = assistantMasmonMon(t.monster);
   if (!mon) return null;
   const mark = where.kind === 'stay' ? '🏠' : (where.w && ASSISTANT_MASMON_DOING_MARK[where.w.doing]) || '✨';
@@ -67494,13 +67505,20 @@ const cardBeginTurn = (st) => {
   }
 };
 
-// 捨て札からランダムに n 枚をガッツへ(足りなければある分だけ)。選ぶのは持ち主の種(players[p].rng)。マルチの2台で同じ札になる
+// 捨て札からランダムに n 枚をガッツへ(足りなければある分だけ)。
+// ★選ぶ場所は、2台のどちらの端末でも同じに見える値(番・先攻か後攻か・捨て札とガッツの枚数・何枚目か)から決める(2026-11-08 ソランド)。
+//   前は持ち主の種(players[p].rng)で選んでいたが、マルチでは相手の種は試合が終わるまで封をされていて、こちらの端末の種は本物と違う。
+//   そのため相手の端末と違う札がガッツへ移り、2台の捨て札がずれて、届いた手をはね合い、両方が「相手の番」のまま止まった(社長が2回続けて止まった)。
+//   選ぶのは「何番目か」だけなので、相手の捨て札にまだ仮の札が混ざっていても、同じ場所の札が動く。持ち主の種は進めない(山札の切り直しの種はそのまま)
 const cardDiscardToGuts = (st, p, n) => {
   const me = st.players[p];
+  const side = p === st.first ? 'f' : 's';
   let k = 0;
-  let s = Number.isFinite(me.rng) ? me.rng : (st.seed || 1);
-  for (; k < n && me.discard.length; k++) { const r = cardRngNext(s); s = r.s; const i = Math.floor(r.v * me.discard.length); me.guts.push(me.discard.splice(i, 1)[0]); }
-  me.rng = s;
+  for (; k < n && me.discard.length; k++) {
+    const rnd = cardAiSeededRand(`dg|${st.turn}|${side}|${me.discard.length}|${me.guts.length}|${st.players[1 - p].discard.length}|${k}`);
+    const i = Math.min(me.discard.length - 1, Math.floor(rnd() * me.discard.length));
+    me.guts.push(me.discard.splice(i, 1)[0]);
+  }
   return k;
 };
 const cardPayGuts = (st, p, n) => {
@@ -82168,7 +82186,7 @@ const CARD_REPLAY_KEY = 'mh_card_replays_v1';
 //   7 → 8: 純血のプライドのとき、みんな下がれで派生の味方は回避できない(2026-10-27 社長)
 //   8 → 9: サブが「？？？」の子は、純血のスピード・純血のプライドで純血ではない(2026-10-27 社長 案A)
 //   9 → 10: ガッツの段から攻撃に戻る手(backToAttack)を足した(2026-10-27 社長)
-const CARD_REPLAY_RULES = 10; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン / 5: 防御でマイナスされない技に防御の札を出せない / 6: カウンター・歌う / 8: プライドとみんな下がれ / 9: サブ？？？は純血ではない / 10: 攻撃に戻る
+const CARD_REPLAY_RULES = 11; // 11: 捨て札からガッツ(なめろう・霊魂操作)を、2台で同じ札を選ぶ形に(2026-11-08。マルチが止まった直し)/ 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン / 5: 防御でマイナスされない技に防御の札を出せない / 6: カウンター・歌う / 8: プライドとみんな下がれ / 9: サブ？？？は純血ではない / 10: 攻撃に戻る
 const CARD_REPLAY_MAX = 50;               // 取っておく試合の数(お気に入りを含む)
 const CARD_REPLAY_FAV_MAX = 10;           // お気に入りの数
 const CARD_REPLAY_BYTES_MAX = 750000;     // 合わせた大きさの上限(文字数)。超えたら古い試合(お気に入りでない物)から消す

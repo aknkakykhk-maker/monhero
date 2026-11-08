@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 937a1621a0d7d924
+// source-sha256: 45bc95d8850b563c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13737,7 +13737,7 @@ const RELEASE_FLAGS = {
   assistantLife: true,
   assistantLifeFurniture: true,
   assistantLifeFriend: true,
-  assistantMasmonNamesApi: false,
+  assistantMasmonNamesApi: true,
   assistantLifeFriendApi: true,
   rhythmAssistantSession: true,
   assistantSorashido: true,
@@ -62571,6 +62571,7 @@ const growthFxSessionLevel = (list = []) => {
 };
 const GROWTH_FX_CSS = `
 .mh-gfx-chips{position:fixed;top:calc(env(safe-area-inset-top,0px) + 52px);right:10px;z-index:44000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
+.mh-gfx-chips.left{right:auto;left:10px;align-items:flex-start}
 .mh-gfx-chips.mini .mh-gfx-chip>.min-w-0{display:none}.mh-gfx-chips.mini .mh-gfx-chip{padding:3px 8px 3px 4px;gap:4px}
 .mh-gfx-chip{position:relative;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;border-radius:999px;background:linear-gradient(90deg,#1e1b2ef0,#0f172af0);
   border:1.5px solid var(--gc);box-shadow:0 0 14px color-mix(in srgb,var(--gc) 40%,transparent);font-weight:900;font-size:11px;color:#fff;
@@ -63124,17 +63125,23 @@ const GrowthFxChipsBox = ({
     const place = () => {
       const box = ref.current;
       if (!box) return;
-      const tops = [...GROWTH_FX_CHIP_TOPS, Math.max(60, window.innerHeight - 120 - box.offsetHeight)];
+      const steps = [];
+      for (let y = window.innerHeight - 10 - box.offsetHeight; y >= 8; y -= 24) steps.push(Math.round(y));
+      const tops = [...new Set([...GROWTH_FX_CHIP_TOPS, Math.max(60, window.innerHeight - 120 - box.offsetHeight), ...steps])];
       for (const mini of [false, true]) {
         box.classList.toggle('mini', mini);
-        for (const t of tops) {
-          box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`;
-          if (!growthFxChipSpotBusy(box)) {
-            box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${t}`;
-            return;
+        for (const left of [false, true]) {
+          box.classList.toggle('left', left);
+          for (const t of tops) {
+            box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`;
+            if (!growthFxChipSpotBusy(box)) {
+              box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${left ? 'left-' : ''}${t}`;
+              return;
+            }
           }
         }
       }
+      box.classList.remove('left');
       box.style.top = `calc(env(safe-area-inset-top, 0px) + ${GROWTH_FX_CHIP_TOPS[1]}px)`;
       box.dataset.growthFxChipsTop = 'mini-busy';
     };
@@ -106111,6 +106118,10 @@ function AssistantLifeRoom({
     id: id,
     h: h,
     life: typeof assistantLifeCurrent === 'function' ? assistantLifeCurrent() : null
+  }), met && !other && typeof AssistantMasmonRoomPet === 'function' && React.createElement(AssistantMasmonRoomPet, {
+    id: id,
+    h: h,
+    life: typeof assistantLifeCurrent === 'function' ? assistantLifeCurrent() : null
   }), state && state.tag && (() => {
     const t = state.tag;
     const mark = !!t[1] && /^(💢|🤝)/u.test(t[1]);
@@ -123456,7 +123467,7 @@ const ASSISTANT_MASMON_PET_MARK = Object.freeze({
   borderRadius: 999,
   padding: '0 2px'
 });
-const assistantMasmonPetSize = h => Math.round(Math.min(40, h * .44));
+const assistantMasmonPetSize = h => Math.round(Math.min(40, h * .44, h - 37 - 9 - 3));
 const ASSISTANT_MASMON_PET_FLOOR = 9;
 const ASSISTANT_MASMON_PET_MW = 2,
   ASSISTANT_MASMON_PET_MH = 3;
@@ -123578,7 +123589,7 @@ function AssistantMasmonRoomPet({
       clearTimeout(timer);
     };
   }, [plan]);
-  if (!t || where.kind === 'out') return null;
+  if (!t || where.kind === 'out' || size < 16) return null;
   const mon = assistantMasmonMon(t.monster);
   if (!mon) return null;
   const mark = where.kind === 'stay' ? '🏠' : where.w && ASSISTANT_MASMON_DOING_MARK[where.w.doing] || '✨';
@@ -126613,15 +126624,13 @@ const cardBeginTurn = st => {
 };
 const cardDiscardToGuts = (st, p, n) => {
   const me = st.players[p];
+  const side = p === st.first ? 'f' : 's';
   let k = 0;
-  let s = Number.isFinite(me.rng) ? me.rng : st.seed || 1;
   for (; k < n && me.discard.length; k++) {
-    const r = cardRngNext(s);
-    s = r.s;
-    const i = Math.floor(r.v * me.discard.length);
+    const rnd = cardAiSeededRand(`dg|${st.turn}|${side}|${me.discard.length}|${me.guts.length}|${st.players[1 - p].discard.length}|${k}`);
+    const i = Math.min(me.discard.length - 1, Math.floor(rnd() * me.discard.length));
     me.guts.push(me.discard.splice(i, 1)[0]);
   }
-  me.rng = s;
   return k;
 };
 const cardPayGuts = (st, p, n) => {
@@ -152778,7 +152787,7 @@ const CardPvpHistory = ({
   })));
 };
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
-const CARD_REPLAY_RULES = 10;
+const CARD_REPLAY_RULES = 11;
 const CARD_REPLAY_MAX = 50;
 const CARD_REPLAY_FAV_MAX = 10;
 const CARD_REPLAY_BYTES_MAX = 750000;

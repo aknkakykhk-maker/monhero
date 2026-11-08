@@ -701,7 +701,9 @@ const ASSISTANT_MASMON_DOING_MARK = Object.freeze({ sleep: '💤', practice: '�
 const ASSISTANT_MASMON_PET_STYLE = Object.freeze({ position: 'absolute', zIndex: 4, pointerEvents: 'none', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.45))' });
 const ASSISTANT_MASMON_PET_MARK = Object.freeze({ position: 'absolute', right: -2, top: -3, whiteSpace: 'nowrap', lineHeight: '12px', fontWeight: 900, background: 'rgba(255,255,255,.92)', color: '#7c2d12', borderRadius: 999, padding: '0 2px' });
 // 部屋のマスモンの大きさ(2026-11-08 社長の選び A: どの部屋でも助手の顔の丸と見合う同じ大きさ)。顔の丸は Math.min(40, h*.44)
-const assistantMasmonPetSize = (h) => Math.round(Math.min(40, h * .44));
+// 低い部屋(iPhone SE/8 の横など)では、出かけ札の帯(上から37px)・床・印のはみ出しを引いた高さまで縮める(どの部屋も同じ高さなので、大きさはそろう)。
+//   16px より小さくなる部屋(568×320 など)では出さない(歩く区間が見つからないので出ない)
+const assistantMasmonPetSize = (h) => Math.round(Math.min(40, h * .44, h - 37 - 9 - 3));
 const ASSISTANT_MASMON_PET_FLOOR = 9;      // 床の板の高さ(.fl と同じ)
 const ASSISTANT_MASMON_PET_MW = 2, ASSISTANT_MASMON_PET_MH = 3; // 印が絵からはみ出すぶん(右・上)
 const ASSISTANT_MASMON_PET_HIT = '.tag,.pp,.bb,.pl,.lv,.lock,[data-assistant-life-rel-door],[data-assistant-life-rel-mend],[data-assistant-life-rel-sit]';
@@ -777,7 +779,7 @@ function AssistantMasmonRoomPet({ id, h, life }) {
     timer = setTimeout(step, 2500 + Math.random() * 2500);
     return () => { alive = false; clearTimeout(timer); };
   }, [plan]);
-  if (!t || where.kind === 'out') return null;
+  if (!t || where.kind === 'out' || size < 16) return null;
   const mon = assistantMasmonMon(t.monster);
   if (!mon) return null;
   const mark = where.kind === 'stay' ? '🏠' : (where.w && ASSISTANT_MASMON_DOING_MARK[where.w.doing]) || '✨';
