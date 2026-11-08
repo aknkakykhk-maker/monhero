@@ -63,6 +63,7 @@ const boardProblems = (page) => page.evaluate(() => {
     const total = (typeof ASSISTANT_LIFE_DIARY !== 'undefined' && (ASSISTANT_LIFE_DIARY.state.items || []).length) || 0;
     if (bd && total > 0) { if (!more) ng.push('掲示板に「ほか◯件／全部 ›」が無い');
       else { const w = bd.clientWidth; const seen = [...bd.querySelectorAll('[data-assistant-life-board-item]')].filter(p => p.offsetLeft + 1 < w).length;
+        if (seen < 1) ng.push(`掲示板に件が1つも見えない(全${total}件・2026-11-08 ミハリ 横)`);
         if (Number(more.getAttribute('data-assistant-life-board-more')) !== total - seen) ng.push(`「ほか◯件」の数が合わない: ${more.textContent} 全${total}・見えている${seen}`);
         const mr = more.getBoundingClientRect(), br = bd.getBoundingClientRect(); if (mr.right > br.right + 0.5 || more.scrollWidth > more.clientWidth + 1) ng.push(`「${more.textContent}」が掲示板からはみ出す`); } } }
   for (const sm of document.querySelectorAll('[data-assistant-life-today] small')) if (sm.scrollWidth > sm.clientWidth + 1) ng.push(`今日やれることの字が切れる: ${sm.textContent}`);
