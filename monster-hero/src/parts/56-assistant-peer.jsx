@@ -784,14 +784,10 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
   }, [cur, advance, auto.on]);
   React.useEffect(() => { if (!toast) return undefined; const t = setTimeout(() => setToast(null), 3200); return () => clearTimeout(t); }, [toast]);
 
-  // 助手ライフの画面(z 9000)を開いているときは、その上の場面で流す。
-  // 横(高さ600未満)の場面では、窓を右下に寄せて小さめにする(真ん中に置くと立ち絵の顔が窓の裏に隠れた。2026-11-08 ミハリ)。立ち絵は左側に並ぶ(56-assistant-life-house.jsx の AssistantLifeScene)
-  const lifeOpen = typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.open;
-  const sideDock = lifeOpen && typeof assistantLifeSceneSide === 'function' && assistantLifeSceneSide();
   const wrap = (children, attrs = {}) => (
-    <div className={`fixed inset-x-0 flex ${sideDock ? 'justify-end' : 'justify-center'} px-2 pointer-events-none`} data-assistant-peer-dock={sideDock ? 'side' : 'center'}
-      style={{ zIndex: lifeOpen ? 9150 : 8500, bottom: sideDock ? 'calc(8px + env(safe-area-inset-bottom))' : 'calc(5.5rem + env(safe-area-inset-bottom))' }} {...attrs}>
-      <div className="pointer-events-auto w-full max-w-md" style={sideDock ? { maxWidth: 'min(46vw, 400px)' } : undefined}>{children}</div>
+    // 助手ライフの画面(z 9000)を開いているときは、その上の場面で流す
+    <div className="fixed inset-x-0 flex justify-center px-2 pointer-events-none" style={{ zIndex: (typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.open) ? 9150 : 8500, bottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }} {...attrs}>
+      <div className="pointer-events-auto w-full max-w-md">{children}</div>
     </div>
   );
   if (!cur) {

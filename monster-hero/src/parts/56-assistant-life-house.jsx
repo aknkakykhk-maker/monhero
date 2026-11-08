@@ -611,15 +611,11 @@ const assistantLifeSceneBg = (place, look) => {
 };
 const assistantLifeTodOn = () => { try { return !!document.documentElement.getAttribute('data-mh-tod'); } catch (_) { return false; } };
 const ASSISTANT_LIFE_TINT = Object.freeze({ morning: 'linear-gradient(180deg,rgba(255,190,190,.25),transparent 60%)', noon: 'none', evening: 'linear-gradient(180deg,rgba(255,120,80,.35),rgba(110,50,90,.35))', night: 'linear-gradient(180deg,rgba(10,15,50,.6),rgba(10,15,50,.5))' });
-// 横(高さ600未満)の場面: 台詞の窓は右下(56-assistant-peer.jsx)、立ち絵は左の半分に並べる(2026-11-08 ミハリ「横で立ち絵が窓の裏に隠れる」)
-const assistantLifeSceneSide = () => typeof window !== 'undefined' && window.innerWidth > window.innerHeight && window.innerHeight < 600;
 function AssistantLifeScene({ scene, look, onClose, onGive, canGive }) {
   const peer = (typeof useAssistantPeerState === 'function') ? useAssistantPeerState() : null;
   const [started, setStarted] = React.useState(false);
   React.useEffect(() => { if (peer && peer.talking) setStarted(true); }, [peer && peer.talking]);
   const done = started && peer && !peer.talking;
-  const [side, setSide] = React.useState(assistantLifeSceneSide);
-  React.useEffect(() => { const f = () => setSide(assistantLifeSceneSide()); window.addEventListener('resize', f); return () => window.removeEventListener('resize', f); }, []);
   const ids = (scene.ids || []).slice(0, 4);
   const bg = scene.place === 'home' || !scene.place ? null : assistantLifeSceneBg(scene.place, look);
   const host = scene.place === 'home' ? assistantLifeHostOf(ids) : null;
@@ -641,8 +637,7 @@ function AssistantLifeScene({ scene, look, onClose, onGive, canGive }) {
         : <div className="absolute inset-0" style={{ background: ASSISTANT_LIFE_TINT[bg.tint] }}/>)}
       {!bg && look === 'night' && <div className="absolute inset-0" style={{ background: 'rgba(10,15,50,.35)' }}/>}
       <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg,transparent 45%,rgba(10,6,30,.7) 85%)' }}/>
-      {ids.map((pid, i) => { const who = assistantById(pid); if (!who) return null; const n = ids.length; const cx0 = n === 1 ? 50 : n === 2 ? (i ? 66 : 34) : n === 3 ? [22, 50, 78][i] : [16, 38, 62, 84][i];
-        const cx = side ? 2 + cx0 * 0.5 : cx0;
+      {ids.map((pid, i) => { const who = assistantById(pid); if (!who) return null; const n = ids.length; const cx = n === 1 ? 50 : n === 2 ? (i ? 66 : 34) : n === 3 ? [22, 50, 78][i] : [16, 38, 62, 84][i];
         const zz = (scene.sleep || []).includes(pid);
         return <React.Fragment key={pid}><AssistantLifeStand pid={pid} src={assistantFullImage(who, zz ? 'normal' : 'happy')} cx={cx} fig={n >= 4 ? 0.28 : n === 3 ? 0.32 : n === 2 ? 0.36 : 0.4} sleep={zz}/>
           {zz && <span className="absolute text-[34px]" style={{ left: `${cx + 8}%`, top: '30%' }} aria-hidden="true">💤</span>}</React.Fragment>; })}
