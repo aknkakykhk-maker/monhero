@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0e411e0090834fd4
+// generated-sha256: 27f986785f6e4e83
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -103875,7 +103875,9 @@ function MonsterHeroGame() {
       {lifeQuickDetail && <CardQuickRunDetail quickRun={detailRun} autoReady={autoQuickRunConfigured(autoSettings)} autoDifficulty={autoDifficulty} todayLoops={null} onClose={() => setLifeQuickDetail(false)}
         note="助手ライフを開いているあいだ、AUTO設定の編成でクイックの周回が裏で進みます。閉じるか「止める」を押すと、それまでの報酬を受け取って周回を終えます。"/>}
       <div data-life-quick-run={view.live ? 'live' : 'stopped'} className="relative z-20 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-400/25 bg-slate-950/95 px-2 py-1">
-        {view.info
+        {lifeLoseNote && !view.live
+          ? <span data-life-quick-run-lose={lifeLoseNote} role="status" className="min-h-[32px] min-w-0 flex-1 truncate rounded-full border border-rose-300/50 bg-rose-950/80 px-2.5 text-[11px] font-black leading-[30px] text-rose-100">😢 {lifeLoseNote === 'retry' ? '負けちゃった…始め直すよ' : '負けちゃった…'}</span>
+          : view.info
           ? <RhythmQuickRunPill info={view.info} onRestart={() => startQuickRunFromRhythm()} widthClass="min-w-0 flex-1"/>
           : <button type="button" data-life-quick-run-start onClick={() => { Audio_.fgSe.tap(); startQuickRunFromRhythm(); }} className="min-h-[32px] min-w-0 flex-1 truncate rounded-full border border-fuchsia-300/60 bg-fuchsia-800/70 px-2.5 text-[11px] font-black text-white active:scale-[.97]">▶ 周回を始める</button>}
         <button type="button" data-life-quick-run-detail onClick={() => { Audio_.fgSe.tap(); setLifeQuickDetail(true); }} className="min-h-[32px] shrink-0 rounded-full border border-white/25 bg-slate-900/80 px-2.5 text-[11px] font-black text-slate-100 active:scale-[.97]">詳細</button>
@@ -107436,6 +107438,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const timer = setTimeout(retryLife, QUICK_RUN_AUTO_RETRY_MS);   // 目印を助手ライフの始め直しとして分ける(SCREEN_EFFECTS_MAP)
     return () => clearTimeout(timer);
   }, [quickRunProgress, gameState, resultProcessing, autoSettings, assistantLifeOpenNow]);
+  // 助手ライフを開いたまま裏で負けたとき、帯に数秒だけ「負けちゃった…」を出す(2026-11-08 社長「帯に小さく出す」・ミハリの提案)。
+  //   負けの幕は助手ライフの上には出さないので、これが無いと「◯周目」が1へ戻るだけで負けたことが分からない。
+  //   出すのは負けた瞬間から QUICK_RUN_AUTO_RETRY_MS のあいだ(自動で始め直すまでの間と同じ長さ)。見た目だけで、周回の動きには触らない
+  //   ★消すタイマーは ref に持ち、effect の片づけでは消さない。4秒のあいだに周回の進みが変わる(始め直して1周目が始まる)と
+  //     片づけで消えて札が残り、あとで「止める」を押したときに昔の札が出ていた(2026-11-08 ミハリ)。
+  //     新しい周回が始まったとき・助手ライフを閉じたときは、すぐ札を戻す
+  const [lifeLoseNote, setLifeLoseNote] = useState(null);
+  const lifeLoseSeenRef = useRef(null);
+  const lifeLoseTimerRef = useRef(null);
+  const clearLifeLoseNote = () => { if (lifeLoseTimerRef.current) clearTimeout(lifeLoseTimerRef.current); lifeLoseTimerRef.current = null; setLifeLoseNote(null); };
+  useEffect(() => {
+    const p = quickRunProgress;
+    if (!assistantLifeOpenNow || !p || !p.finished) { if (lifeLoseTimerRef.current || lifeLoseNote) clearLifeLoseNote(); return; }
+    if (p.reason !== 'defeat' || lifeLoseSeenRef.current === p) return;
+    lifeLoseSeenRef.current = p;
+    if (lifeLoseTimerRef.current) clearTimeout(lifeLoseTimerRef.current);
+    setLifeLoseNote(quickRhythmGuideReleased && autoQuickRunAutoStartEnabled(autoSettings) ? 'retry' : 'lose');
+    lifeLoseTimerRef.current = setTimeout(() => { lifeLoseTimerRef.current = null; setLifeLoseNote(null); }, QUICK_RUN_AUTO_RETRY_MS);
+  }, [quickRunProgress, assistantLifeOpenNow]);
+  useEffect(() => () => { if (lifeLoseTimerRef.current) clearTimeout(lifeLoseTimerRef.current); }, []);
   // バトル内ではAUTO系を1ボタンで循環する。表示用stateは持たず、既存の同期refから次の状態だけを決める。
   const cycleBattleAuto = () => {
     if(autoRepeatRef.current){setAutoBattleEnabled(false);return;}
