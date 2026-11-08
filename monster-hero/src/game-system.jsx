@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a941db1ea4439c6e
+// generated-sha256: 589695f5eef21f7a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67727,10 +67727,18 @@ const assistantMasmonNowText = (id, life) => {
 //   上に切りかえ3つ(攻め/守り/ふつう・その助手がいちばん出す型に「よく使う」)→ 中身はカード部ツナグの部品 CardAssistantDeckView(87)
 //   開いたときに cardAiDeckMarkMet(会った助手だけ AI で組み直す)と cardLoadAiRecipe(AI の名前・方針を読む)を呼ぶ。待たない
 const ASSISTANT_MASMON_DECK_STYLES = Object.freeze([['attack', '攻め'], ['guard', '守り'], ['normal', 'ふつう']]);
+// 2026-11-08 推し・好き・素顔に作り直し(カード部ルールくん)。カード部の口(83 の cardAssistantFacePreview)があれば顔の3つ、無ければ今の型の3つ
+//   「よく使う」は今の気分・仲良し度に合う顔(83 の cardAiDeckMainFace。分からなければ印を出さない)
+const ASSISTANT_MASMON_DECK_FACES = Object.freeze([['oshi', '推し'], ['suki', '好き'], ['sugao', '素顔']]);
+const assistantMasmonDeckFaceOn = () => typeof cardAssistantFacePreview === 'function';
 const assistantMasmonDeckTabOn = () => { try { return typeof cardGrowStyleOn === 'function' && cardGrowStyleOn() && typeof CardAssistantDeckView === 'function'; } catch (_) { return false; } };
 function AssistantMasmonDeckTab({ id, land = false }) {
-  const fav = ASSISTANT_MASMON_CARD_STYLE[id] || 'normal';
-  const [sid, setSid] = React.useState(fav);
+  const faceOn = assistantMasmonDeckFaceOn();
+  const tabs = faceOn ? ASSISTANT_MASMON_DECK_FACES : ASSISTANT_MASMON_DECK_STYLES;
+  let mainFace = null;
+  try { mainFace = faceOn && typeof cardAiDeckMainFace === 'function' ? cardAiDeckMainFace(id) : null; } catch (_) { mainFace = null; }
+  const fav = faceOn ? mainFace : (ASSISTANT_MASMON_CARD_STYLE[id] || 'normal');
+  const [sid, setSid] = React.useState(fav || tabs[0][0]);
   const [, setLoaded] = React.useState(0);
   React.useEffect(() => {
     let alive = true;
@@ -67740,12 +67748,29 @@ function AssistantMasmonDeckTab({ id, land = false }) {
   }, [id]);
   return (<>
     <div data-assistant-masmon-deck-styles className="grid grid-cols-3 gap-1.5">
-      {ASSISTANT_MASMON_DECK_STYLES.map(([s, label]) => (
+      {tabs.map(([s, label]) => (
         <button key={s} type="button" data-assistant-masmon-deck-style={s} aria-pressed={sid === s} onClick={() => { if (typeof Audio_ !== 'undefined') Audio_.fgSe.tap(); setSid(s); }}
           className={`flex min-h-[40px] items-center justify-center gap-1 rounded-xl border px-1 py-1 text-[13px] font-black ${sid === s ? 'border-amber-300 bg-amber-400 text-slate-950' : 'border-white/15 bg-slate-800 text-slate-200'}`}>
           {label}{s === fav && <em data-assistant-masmon-deck-fav className="whitespace-nowrap rounded-full bg-emerald-400 px-1.5 py-px text-[9px] font-black not-italic text-emerald-950">よく使う</em>}
         </button>))}
     </div>
+    {faceOn && (() => {
+      // これまでのデッキ(カード部の口 83 の cardAiDeckChoices の past。組み直して名前が変わる前のデッキ。10個まで)。押すと中身を下に出す
+      let past = [];
+      try { past = typeof cardAiDeckChoices === 'function' ? cardAiDeckChoices(id).filter(c => c.past) : []; } catch (_) { past = []; }
+      if (!past.length) return null;
+      return (
+        <div data-assistant-masmon-deck-past className="mt-2">
+          <p className="text-[10.5px] font-black text-slate-400">これまでのデッキ</p>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {past.map(c => (
+              <button key={c.id} type="button" data-assistant-masmon-deck-past-item={c.id} aria-pressed={sid === c.id} onClick={() => { if (typeof Audio_ !== 'undefined') Audio_.fgSe.tap(); setSid(c.id); }}
+                className={`rounded-lg border px-2 py-1 text-[11px] font-black ${sid === c.id ? 'border-amber-300 bg-amber-400 text-slate-950' : 'border-white/15 bg-slate-800 text-slate-200'}`}>
+                {c.name}{typeof cardAiDeckPeriodText === 'function' && <small className="ml-1 text-[9.5px] font-bold opacity-80">{cardAiDeckPeriodText(c.from, c.to)}</small>}
+              </button>))}
+          </div>
+        </div>);
+    })()}
     <div className="mt-2" data-assistant-masmon-deck-view={sid}><CardAssistantDeckView who={id} styleId={sid} land={land}/></div>
   </>);
 }
@@ -71294,8 +71319,9 @@ const cardAiPickIndex = (weights, rand) => {
 // 好きなモンスターの候補(主血統がその種族のもの。通常・キラ・別絵キラ・混血/派生)
 // 好きな子をもう1つの血統からも選ぶ助手(2026-11-04 社長: ソラシドはキュービ推しなので、キュービ・オリヒメも好きな子に入れる)
 const CARD_AI_FAVORITE_EXTRA = Object.freeze({ sorashido: ['kyubi'] });
-const cardAiFavoriteCandidates = (db, who) => {
-  const favs = [CARD_AI_FAVORITE[who] || CARD_AI_FAVORITE.mua, ...(CARD_AI_FAVORITE_EXTRA[who] || [])];
+// lead … 主役の種を決めたいとき(助手の推し・好き・素顔のデッキ 83)。無ければ今と同じ(好きな種+おまけ)
+const cardAiFavoriteCandidates = (db, who, lead = null) => {
+  const favs = typeof lead === 'string' && lead ? [lead] : [CARD_AI_FAVORITE[who] || CARD_AI_FAVORITE.mua, ...(CARD_AI_FAVORITE_EXTRA[who] || [])];
   return Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && favs.some((fav) => (String(m.wave) === 'hybrid' ? m.main === fav : m.species === fav))).map((m) => m.no).sort();
 };
 // モンスターの弾(混血・派生は主の種族の弾)。好きな子の技は、この弾まで使える
@@ -71318,9 +71344,17 @@ const CARD_AI_MILL_MON_BONUS = 6;
 const cardAiMillMonBonus = (habit, m) => (habit && habit.mill && m && CARD_AI_MILL_BLOODS.includes(cardAiBloodOf(m)) ? CARD_AI_MILL_MON_BONUS * habit.mill : 0);
 // 毎試合の3体: 好きな子1体(候補から少しずつ変える)+ 型に合うバランスで2体。強さごとの決めは CARD_AI_BUILD
 //   MASTER は、相手(プレイヤー)のデッキに全体攻撃が多ければライフの多い子、回避が多ければ回避されない技を持つ子を選ぶ
-const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
+// face … { lead: 主役の種, avoid: [使わない種], keep: [いつも使わない種], free: 数 }(助手の推し・好き・素顔のデッキ 83)。無ければ今と同じ。大会・サーバーは渡さない
+//   仲間の 1体目〜free 体目は keep だけを避け、そのあとは avoid も避ける(3つのデッキで、主役3体が2体以上ちがうように)
+const cardAiPickTrio = (db, who, levelId, rand, playerDeck, face = null) => {
   const cfg = CARD_AI_BUILD[levelId] || CARD_AI_BUILD.normal;
-  const favs = cardAiFavoriteCandidates(db, who).map((no) => cardMonsterOf(db, no));
+  const lead = face && typeof face.lead === 'string' ? face.lead : null;
+  const avoid = new Set(face && Array.isArray(face.avoid) ? face.avoid.filter((x) => typeof x === 'string' && x !== lead) : []);
+  const keep = new Set(face && Array.isArray(face.keep) ? face.keep.filter((x) => typeof x === 'string' && x !== lead) : [...avoid]);
+  const free = face && Number.isInteger(face.free) && face.free > 0 ? face.free : 0;
+  const avoidAt = (k, m) => { const set = k < free ? keep : avoid; return set.has(m.species) || (String(m.wave) === 'hybrid' && set.has(m.main)); };
+  const favs0 = cardAiFavoriteCandidates(db, who, lead).map((no) => cardMonsterOf(db, no));
+  const favs = lead && !favs0.length ? cardAiFavoriteCandidates(db, who).map((no) => cardMonsterOf(db, no)) : favs0;
   if (!favs.length) return [];
   // 好きな子: 通常を多めに、キラ・別絵キラ・混血もときどき。MASTER はいちばん型に合う子
   // 混血は守りがサブの種族だけなので、いちばん強い子を選ぶとき(MASTER)は少し低く見る(2026-10-27 混血のメイン・サブの直し)
@@ -71328,8 +71362,10 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
   const favW = favs.map((m) => (String(m.wave) === 'hybrid' ? 1.5 : !m.variant ? 3 : /別絵/.test(m.variant) ? 1 : 2));
   const fav = cfg.best ? favs[favScore.indexOf(Math.max(...favScore))] : favs[cardAiPickIndex(favW, rand)];
   // 残り2体の候補: 通常のモンスター(別々の種族・好きな子と違う種族)。弾は技などのカードと同じ決め(全部の弾の強さでは混血・派生も)
-  const cands = Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && !m.variant && m.species !== fav.species && m.species !== CARD_AI_FAVORITE[who]
-    && (String(m.wave) === 'hybrid' ? cfg.maxWave >= 99 && m.main !== CARD_AI_FAVORITE[who] : Number(m.wave) <= cfg.maxWave));
+  const favSp = lead && favs0.length ? lead : CARD_AI_FAVORITE[who];
+  const cands = Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && !m.variant && m.species !== fav.species && m.species !== favSp
+    && !keep.has(m.species) && !(String(m.wave) === 'hybrid' && keep.has(m.main))
+    && (String(m.wave) === 'hybrid' ? cfg.maxWave >= 99 && m.main !== favSp : Number(m.wave) <= cfg.maxWave));
   let counter = () => 0;
   if (cfg.best && playerDeck && Array.isArray(playerDeck.cards) && playerDeck.cards.length) {
     const pc = playerDeck.cards.map((no) => cardOf(db, no)).filter(Boolean);
@@ -71338,7 +71374,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
     counter = (m) => areaRate * (m.life || 0) * 1.5 + evadeRate * Object.values(db.cards).filter((c) => c.ready && cardHasEff(c, 'noEvade') && cardUsableBy(c, { ...m, ko: false })).length * 1.2;
   }
   // 好きな子の血統の仲間(好きな子とは別の子。キラ・別絵キラは同じ子として1つに数える)
-  const family = favs.filter((m) => m.species !== fav.species);
+  const family = favs.filter((m) => m.species !== fav.species && !keep.has(m.species));
   const familySize = new Set(favs.map((m) => m.species)).size;
   // EASY・NORMAL は割合(くせとしてときどき)。HARD から上は、仲間も候補に入れて、チームとして数え直した点数(cardAiTeamValue)でくらべる
   //   ★数え直すのは仲間だけ(ほかの子の点数は今のまま。強さのそろえを動かさないため)。
@@ -71376,7 +71412,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
       continue;
     }
     const team = out.map((no) => cardMonsterOf(db, no));
-    const left = scored.filter((x) => !usedNos.has(x.m.species) && (isFamily.has(x.m.no) || (!usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)))))
+    const left = scored.filter((x) => !usedNos.has(x.m.species) && !avoidAt(k, x.m) && (isFamily.has(x.m.no) || (!usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)))))
       .map((x) => (isFamily.has(x.m.no) ? { ...x, v: cardAiTeamValue(db, who, team, x.m, cfg.maxWave, levelId) + counter(x.m) } : x));
     if (!left.length) break;
     let pick;
@@ -71398,7 +71434,7 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   const recipeAll = CARD_AI_DECKS[who] || CARD_AI_DECKS.mua;
   const cfg = CARD_AI_BUILD[levelId] || CARD_AI_BUILD.normal;
   const rnd = typeof rand === 'function' ? rand : cardAiSeededRand(`${who}:${levelId}`);
-  const monsters = cardAiPickTrio(db, who, levelId, rnd, opts && opts.playerDeck);
+  const monsters = cardAiPickTrio(db, who, levelId, rnd, opts && opts.playerDeck, opts && opts.face);
   // 型をいくつも持つ助手(えるびん)は、毎試合1つ選ぶ(3体を選んだあとに引くので、ほかの助手の組み方は変わらない)
   //   育つ助手の型(opts.style)が渡されたら、その型に当たる組み方に決める(引くのは今どおり1回。ほかの札の選び方の乱数をずらさない)
   const style = cardAiStyleOf(opts && opts.style);
@@ -71421,7 +71457,9 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
     : mons.some((m) => cardUsableBy(c, { ...m, ko: false }) && c.wave <= Math.max(maxWave, cardAiMonWave(db, m, c)))));
   // 名前ごとに1つ(同じ名前の別番号は、入れたい度の高いほう)。強さごとの雑さ(noise)で、毎回少しずつ違うカードが入る
   const byName = {};
-  const noise = Math.max(0, cfg.noise + (((CARD_AI_DECK_TUNE[who] || {})[levelId]) || 0));
+  // face.noise … 助手の推し・好き・素顔のデッキの強さのそろえ(83 の CARD_AI_FACE_NOISE。社長の案B・2026-11-08)。渡さなければ今と同じ
+  const faceNoise = opts && opts.face && Number.isFinite(opts.face.noise) ? Math.max(-0.3, Math.min(0.6, opts.face.noise)) : 0;
+  const noise = Math.max(0, cfg.noise + (((CARD_AI_DECK_TUNE[who] || {})[levelId]) || 0) + faceNoise);
   pool.forEach((c) => { const v = cardAiCardValue(c, habit) + noise * (rnd() * 2 - 1); if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = { c, v }; });
   const ranked = Object.values(byName).sort((a, b) => b.v - a.v || (a.c.no < b.c.no ? -1 : 1));
   const preferOn = levelId === 'hard' || levelId === 'expert' || levelId === 'master';
@@ -71615,6 +71653,8 @@ const CARD_SAVE_KEYS = Object.freeze({
   weeklyReward: 'mh_card_weekly_reward_v1', // 受け取った週間報酬の週の一覧 ['card_weekly_2026-11-02', …](90 の cardWeeksAwaitingReward。壊れているときは何も配らない)
   aiTalk: 'mh_card_ai_talk_v1',       // 助手のおしゃべり(AI)の入/切 { on }(無ければ入。83-card-battle-talk-ai.jsx の cardNormalizeAiTalk)
   aiRecipe: 'mh_card_ai_recipe_v1',   // 助手の3つのデッキ(型ごとの方針・名前・ひとこと・組んだ時刻)と組み直しの数(83-card-ai-deck.jsx の cardNormalizeAiRecipe。2026-11-08)
+  aiDeckHistory: 'mh_card_ai_deck_history_v1', // 助手の「これまでのデッキ」(組み直す前のデッキ。助手ごとに新しい順で10個まで。83-card-ai-deck.jsx の cardNormalizeAiHistory。2026-11-08)
+  aiRecipe2: 'mh_card_ai_recipe_v2',  // 助手の推し・好き・素顔のデッキ(顔ごとの方針・名前・ひとこと・組んだ時刻)と組み直しの数(83-card-ai-deck.jsx。2026-11-08。v1 は読むだけで残す)
   aiDeck: 'mh_card_ai_deck_v1',       // 助手のデッキを AI で組むかの入/切 { on }(無ければ入。83-card-ai-deck.jsx の cardNormalizeAiDeck)
 });
 // カードで使う・もらうポイントはビートP(2026-10-26 社長「ビートPを廃止してビートポイントにして」)。
@@ -73613,23 +73653,61 @@ const cardTalkCheckPicks = (db, deck, collection, picks) => {
 };
 
 // ---- part: 83-card-ai-deck.jsx ----
-// ===== MFバトルカード: 助手のデッキを AI で組む(3つのデッキ・2026-11-08 社長の決定) =====
-// 助手ごとに型(attack/guard/normal)ごとのデッキを3つ持つ。時期が来たら3つのうち「いちばん古い1つ」だけを組み直す。
-//   組み直すときは中継役(card-assistant-talk の deckPlan)に方針を聞く。使えない(切・上限・失敗・遅れ)ときは、型の中の小さな揺らぎで組み直す(画面に違いは出さない)
-//   対戦で出すデッキは、助手ライフの今の型(assistantLifeCardStyle)を6割・ほかの2つを2割ずつ(型が無ければ均等)
+// ===== MFバトルカード: 助手の推し・好き・素顔のデッキ(2026-11-08 社長の決定。前の型3つ attack/guard/normal を作り直した) =====
+// 助手ごとにデッキを3つ持つ。
+//   推し(oshi) … その助手の推しの種が主役
+//   好き(suki) … 好きなモンスター(助手ライフ)のもう1体が主役(カードに無い種は、同じ系統か近い種)
+//   素顔(sugao) … 仲良し度で変わる。低い=よそいき(yoso・無難な今の組み方) / 高い=本音(honne・ほんとはやってみたい組み方)
+//   3つは主役のまわりの種を別々の組から選ぶ(系統を3つの組へ振り分ける)。主役3体は2体以上ちがい、カードの重なりは4割まで(組み直すたびに検査が見る)
+// 時期が来たら3つのうち「いちばん古い1つ」だけを組み直す。組み直すときは中継役(card-assistant-talk の deckPlan)に方針と名前を聞く。
+//   使えない(切・上限・失敗・遅れ)ときは、小さな揺らぎで組み直す(画面に違いは出さない)。名前が決まりに合わなければ既定の名前
+//   対戦で出すデッキは、助手ライフの今の気分・仲良し度に合う1つを6割・ほかの2つを2割ずつ(合う物が無ければ均等)
 // ★全部、公開の印 RELEASE_FLAGS.cardGrowStyle(84 の cardGrowStyleOn)で止める。偽のあいだは何も読まない・書かない・呼ばない
-// ★保存は新しいキーだけ(CARD_SAVE_KEYS.aiRecipe・aiDeck)。画面は持たない(node の検査で読めるように JSX を書かない)
-// ★82 の型・方針の口(cardAiBuildDeck の opts.style・opts.plan、cardAiPlanClean・cardAiPlanCandidates・cardAiPlanHabitRange)の上に作る
-// 進捗メモ: docs/progress/card-grow-style/AI-DECK-PROGRESS.md
-const CARD_AI_RECIPE_KEY = CARD_SAVE_KEYS.aiRecipe; // mh_card_ai_recipe_v1
-const CARD_AI_DECK_KEY = CARD_SAVE_KEYS.aiDeck;     // mh_card_ai_deck_v1
+// ★保存は新しいキー mh_card_ai_recipe_v2 だけに書く。前の mh_card_ai_recipe_v1 は読むだけ(会った印・10戦の数を引きつぐ。消さない・書きかえない)
+// ★画面は持たない(node の検査で読めるように JSX を書かない)。材料(推し・好き・仲良し度・気分)は助手部の口 assistantLifeCardMaterial を typeof で読む
+// ★82 の口(cardAiBuildDeck の opts.face・opts.style・opts.plan、cardAiPlanClean・cardAiPlanCandidates・cardAiPlanHabitRange)の上に作る
+// 進捗メモ: docs/progress/card-ai-faces/README.md
+const CARD_AI_RECIPE_KEY = CARD_SAVE_KEYS.aiRecipe;   // mh_card_ai_recipe_v1(読むだけ)
+const CARD_AI_RECIPE2_KEY = CARD_SAVE_KEYS.aiRecipe2; // mh_card_ai_recipe_v2
+const CARD_AI_DECK_KEY = CARD_SAVE_KEYS.aiDeck;       // mh_card_ai_deck_v1
+const CARD_AI_HISTORY_KEY = CARD_SAVE_KEYS.aiDeckHistory; // mh_card_ai_deck_history_v1
+const CARD_AI_HISTORY_MAX = 10;     // 「これまでのデッキ」は助手ごとに10個まで(11個目で一番古いものが消える。社長 2026-11-08 Q1)
+const CARD_AI_RENAME_SHARE = 0.8;   // 組み直しの印: 主役の3体のうち1体以上が変わるか、札が2割以上入れかわったら新しい名前(社長 Q3 A)
 const CARD_AI_DECK_GAMES = 10;      // その助手と何戦ごとに組み直すか
 const CARD_AI_DECK_SLOTS = 3;       // 1日に何回(朝4時区切りの1日を8時間ずつに分け、その中の時刻は端末と日付の種で決める)
 const CARD_AI_DECK_WAIT_MS = 16000; // 中継役を待つ長さ(中継役の側は15秒)
-const CARD_AI_DECK_MAIN = 0.6;      // 助手ライフの今の型を出す割合(残りはほかの2つで半分ずつ)
+const CARD_AI_DECK_MAIN = 0.6;      // 今の気分・仲良し度に合うデッキを出す割合(残りはほかの2つで半分ずつ)
 const CARD_AI_DECK_JITTER = 0.25;   // 揺らぎ: くせを幅の何割まで動かすか
 const CARD_AI_DECK_NAME_MAX = 12;
 const CARD_AI_DECK_LINE_MAX = 60;
+const CARD_AI_FACE_SHARE_MAX = 0.4; // 2つのデッキで同じカードは4割まで(社長 Q3 A)
+const CARD_AI_FACE_TRIO_DIFF = 2;   // 主役3体は2体以上ちがう(社長 Q3 A)
+
+// ---- 顔(推し・好き・素顔) ----
+const CARD_AI_FACE_IDS = Object.freeze(['oshi', 'suki', 'sugao']);
+// 保存するのは4つ(素顔は よそいき・本音 の2つを持ち、仲良し度で出すほうを決める)
+const CARD_AI_FACE_SLOTS = Object.freeze(['oshi', 'suki', 'yoso', 'honne']);
+const CARD_AI_FACE_LABEL = Object.freeze({ oshi: '推し', suki: '好き', sugao: '素顔' });
+const cardAiFaceOf = (s) => (typeof s === 'string' && CARD_AI_FACE_IDS.includes(s) ? s : null);
+// 助手ごとの表。lead … 主役の種(カードの species。null は組の中でいちばん強い種)
+//   style … くせの倍率(82 の CARD_AI_STYLE_TUNE。'normal' は今と同じ) / name … 既定の名前(2026-11-08 社長「この名前で作る」)
+//   ★名前にマスモンの愛称を使わない(社長「既定の名前は愛称を使わない名前に」。愛称は人ごとに違い、引き直しもある)。主役は種の名前で書く
+//   よそいき(yoso)の名前は今の8つの名前(82 の CARD_AI_STYLE_NAMES)。好きの種は、カードに無い種を部長の判断で近い種にした(みゅあ: イブリス→ジョーカー・きき: ザン→ライガー)
+const CARD_AI_FACES = Object.freeze({
+  mua: { oshi: { lead: 'mocchi', style: 'normal', name: '剣士モッチーの一番乗り' }, suki: { lead: 'joker', words: ['イブリス'], style: 'normal', name: 'イブリスとちょい悪ナイト' }, yoso: { lead: null, style: 'normal' }, honne: { lead: null, style: 'attack', name: 'ノリだけで全力突破' } },
+  kiki: { oshi: { lead: 'golem', style: 'normal', name: 'ゴーレムの一撃' }, suki: { lead: 'tiger', style: 'normal', name: 'ライガーの桜吹雪' }, yoso: { lead: null, style: 'normal' }, honne: { lead: null, style: 'attack', name: 'ぜんぶ必殺技でつ' } },
+  momosuke: { oshi: { lead: 'metalner', style: 'normal', name: 'メタルナーの銀ピカライブ' }, suki: { lead: 'mew', style: 'normal', name: 'ニャーとおやすみソング' }, yoso: { lead: null, style: 'normal' }, honne: { lead: null, style: 'attack', name: 'ぜんぶ見せ場♡' } },
+  dra: { oshi: { lead: 'zilla', style: 'normal', name: 'グジラとどっしり行進' }, suki: { lead: 'suezo', style: 'normal', name: 'スエゾーのギャグ劇場' }, yoso: { lead: null, style: 'normal' }, honne: { lead: 'golem', style: 'attack', name: 'おでの大ぶり勝負' } },
+  atsu: { oshi: { lead: 'dragon', style: 'normal', name: 'ドラゴンで正面突破' }, suki: { lead: 'mocchi', style: 'normal', name: 'モッチーに続け' }, yoso: { lead: null, style: 'normal' }, honne: { lead: 'ghost', style: 'normal', name: 'こっそり奇襲作戦' } },
+  kyuko: { oshi: { lead: 'mew', style: 'normal', name: 'ニャーの気まぐれ一手' }, suki: { lead: 'pixie', style: 'normal', name: 'ピクシーのわがまま作戦' }, yoso: { lead: null, style: 'normal' }, honne: { lead: null, style: 'attack', name: '直感だけで全部いく' } },
+  // ソラシドの本音は 2026-11-08 社長の答えで「ソロバン抜きの一発勝負」から差し替え(マスモンの愛称「ソロバン」と同じことばだった)
+  sorashido: { oshi: { lead: 'hare', style: 'normal', name: 'ハムで大混乱' }, suki: { lead: 'kyubi', style: 'normal', name: 'キュービの推し活' }, yoso: { lead: null, style: 'normal' }, honne: { lead: null, style: 'attack', name: '表なしの一発勝負' } },
+  erubin: { oshi: { lead: 'durahan', style: 'guard', name: 'デュラハンの盾の陣' }, suki: { lead: 'pixie', style: 'normal', name: 'ピクシーの応援団' }, yoso: { lead: null, style: 'normal' }, honne: { lead: null, style: 'attack', name: 'たまには剣だけで' } },
+});
+// 素顔が本音になる仲良し度(助手部の口の friendLv。アプリの仲良し度の段 1〜。4 は「相棒」)。口が無ければ よそいき のまま
+const CARD_AI_HONNE_LV = 4;
+// 気分(助手ライフの ASSISTANT_LIFE_MOODS)→ 6割で出す顔。ねむい・知らない気分は均等(部長の確認待ちの案)
+const CARD_AI_MOOD_FACE = Object.freeze({ eager: 'oshi', happy: 'suki', lonely: 'suki', restless: 'sugao', sulky: 'sugao' });
 
 // ---- 保存の形 ----
 const cardAiDeckIsObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -73653,9 +73731,11 @@ const cardAiDeckEntryOf = (raw, db) => {
       plan = { prefer: nos.filter((no) => !seen.has(db.cards[no].name) && seen.add(db.cards[no].name)), field: c.field.slice(), habit: { ...c.habit } };
     }
   }
-  return { plan, name: cardAiDeckText(raw.name, CARD_AI_DECK_NAME_MAX), line: cardAiDeckText(raw.line, CARD_AI_DECK_LINE_MAX), at, ai: raw.ai === true };
+  const since = Number.isFinite(raw.since) && raw.since > 0 ? Math.floor(raw.since) : at;
+  return { plan, name: cardAiDeckText(raw.name, CARD_AI_DECK_NAME_MAX), line: cardAiDeckText(raw.line, CARD_AI_DECK_LINE_MAX), at, since, ai: raw.ai === true };
 };
-// 保存の全体。無い・壊れているときは空。日付が変われば、枠の数(slotsDone)だけ0に戻す(デッキと10戦の数はそのまま)
+const cardAiDeckCount = (x, max) => (Number.isInteger(x) && x >= 0 ? Math.min(max, x) : 0);
+// 前の保存(v1・型ごと)の読み方。読むだけ(v2 が無いとき、会った印・10戦の数・その日の枠の数を引きつぐ)
 const cardNormalizeAiRecipe = (raw, today, db = (typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null)) => {
   const v = cardAiDeckIsObj(raw) ? raw : {};
   const sameDay = typeof v.day === 'string' && v.day === today;
@@ -73667,10 +73747,31 @@ const cardNormalizeAiRecipe = (raw, today, db = (typeof CARD_BATTLE_DATA !== 'un
     const decks = {};
     const ds = cardAiDeckIsObj(w.decks) ? w.decks : {};
     for (const st of CARD_AI_STYLE_IDS) { const e = cardAiDeckEntryOf(ds[st], db); if (e) decks[st] = e; }
-    const n = (x, max) => (Number.isInteger(x) && x >= 0 ? Math.min(max, x) : 0);
-    perWho[who] = { met: w.met === true, gamesSince: n(w.gamesSince, 9999), slotsDone: sameDay ? n(w.slotsDone, CARD_AI_DECK_SLOTS) : 0, decks };
+    perWho[who] = { met: w.met === true, gamesSince: cardAiDeckCount(w.gamesSince, 9999), slotsDone: sameDay ? cardAiDeckCount(w.slotsDone, CARD_AI_DECK_SLOTS) : 0, decks };
   }
   return { v: 1, day: typeof today === 'string' ? today : '', perWho };
+};
+// 今の保存(v2・顔ごと)。無い・壊れているときは空。日付が変われば、枠の数(slotsDone)だけ0に戻す(デッキと10戦の数はそのまま)
+//   v2 が無い(null)ときだけ、v1 から会った印・10戦の数・その日の枠の数を引きつぐ(デッキは型ごとなので引きつがない)
+const cardNormalizeAiRecipe2 = (raw, today, v1raw = null, db = (typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null)) => {
+  if (!cardAiDeckIsObj(raw)) {
+    const old = cardNormalizeAiRecipe(v1raw, today, db);
+    const perWho = {};
+    for (const [who, w] of Object.entries(old.perWho)) perWho[who] = { met: w.met, gamesSince: w.gamesSince, slotsDone: w.slotsDone, decks: {} };
+    return { v: 2, day: typeof today === 'string' ? today : '', perWho };
+  }
+  const sameDay = typeof raw.day === 'string' && raw.day === today;
+  const perWho = {};
+  const src = cardAiDeckIsObj(raw.perWho) ? raw.perWho : {};
+  for (const who of Object.keys(src)) {
+    if (!CARD_AI_DECKS[who] || !cardAiDeckIsObj(src[who])) continue;
+    const w = src[who];
+    const decks = {};
+    const ds = cardAiDeckIsObj(w.decks) ? w.decks : {};
+    for (const slot of CARD_AI_FACE_SLOTS) { const e = cardAiDeckEntryOf(ds[slot], db); if (e) decks[slot] = e; }
+    perWho[who] = { met: w.met === true, gamesSince: cardAiDeckCount(w.gamesSince, 9999), slotsDone: sameDay ? cardAiDeckCount(w.slotsDone, CARD_AI_DECK_SLOTS) : 0, decks };
+  }
+  return { v: 2, day: typeof today === 'string' ? today : '', perWho };
 };
 const cardNormalizeAiDeck = (v) => ({ on: !(cardAiDeckIsObj(v) && v.on === false) });
 
@@ -73691,10 +73792,11 @@ const cardAiDeckDue = (w, passed) => {
   if (w.slotsDone < passed) return 'slot';
   return null;
 };
-// 3つのうちいちばん古い型(まだ無い型がいちばん古い。同じなら attack → guard → normal の順)
-const cardAiDeckOldest = (w) => {
+// 今見えている3つ(推し・好き・素顔の今の側)のうち、いちばん古い物の保存の枠(まだ無い物がいちばん古い。同じなら 推し → 好き → 素顔)
+const cardAiDeckOldest = (w, sugao = 'yoso') => {
   const decks = (w && w.decks) || {};
-  return CARD_AI_STYLE_IDS.slice().sort((a, b) => ((decks[a] && decks[a].at) || 0) - ((decks[b] && decks[b].at) || 0))[0];
+  const slots = ['oshi', 'suki', sugao === 'honne' ? 'honne' : 'yoso'];
+  return slots.slice().sort((a, b) => ((decks[a] && decks[a].at) || 0) - ((decks[b] && decks[b].at) || 0))[0];
 };
 
 // ---- 揺らぎ(AI なしの組み直し) ----
@@ -73723,34 +73825,308 @@ const cardAiDeckJitter = (prev, { cands, fields, range, rnd }) => {
   return { prefer, field, habit };
 };
 
-// ---- 対戦で出す型 ----
-// main(助手ライフの今の型)を6割・ほかの2つを2割ずつ。main が無ければ3つ均等
-const cardAiDeckPickStyle = (main, rnd) => {
+// ---- 材料(助手部の口。無ければ代わり) ----
+// assistantLifeCardMaterial(id) → { core, likes, friendLv, mood, face? }。読むだけ。無い・壊れているときは代わり(仲良し度・気分なし)
+const cardAiFaceMaterial = (who) => {
+  let m = null;
+  try { m = typeof assistantLifeCardMaterial === 'function' ? assistantLifeCardMaterial(who) : null; } catch (_) { m = null; }
+  const ok = cardAiDeckIsObj(m);
+  return {
+    friendLv: ok && Number.isFinite(m.friendLv) ? m.friendLv : null,
+    mood: ok && typeof m.mood === 'string' ? m.mood : null,
+    face: ok ? cardAiFaceOf(m.face) : null,
+  };
+};
+// 素顔は今どちらか('honne' | 'yoso')
+const cardAiFaceSugaoSide = (mat) => (mat && Number.isFinite(mat.friendLv) && mat.friendLv >= CARD_AI_HONNE_LV ? 'honne' : 'yoso');
+// 6割で出す顔(face を直接返せばそれ・気分の表・無ければ null=均等)
+const cardAiFaceMain = (mat) => (mat ? (mat.face || cardAiFaceOf(CARD_AI_MOOD_FACE[mat.mood]) || null) : null);
+// 顔 → 保存の枠
+const cardAiFaceSlotOf = (face, side = 'yoso') => (face === 'sugao' ? (side === 'honne' ? 'honne' : 'yoso') : cardAiFaceOf(face));
+
+// ---- 種の振り分け(3つのデッキのまわりの種を別々にする) ----
+// 系統(混血はメインの系統)。カードの species
+const cardAiFaceLineOf = (m) => (String(m.wave) === 'hybrid' ? m.main : m.species);
+// 助手ごとに、系統を3つの組(推し・好き・素顔)へ振り分ける。主役の種はその組に置き、残りは強さ(MASTER の点数)の順に蛇行で配る
+//   order … 蛇行の始まり(6通り)。返り値 { oshi: [系統…], suki: [...], sugao: [...] }(組の中は強い順)
+const CARD_AI_FACE_ORDERS = Object.freeze([['sugao', 'oshi', 'suki'], ['oshi', 'suki', 'sugao'], ['sugao', 'suki', 'oshi'], ['suki', 'oshi', 'sugao'], ['oshi', 'sugao', 'suki'], ['suki', 'sugao', 'oshi']]);
+const cardAiFaceGroupsBy = (db, who, order) => {
+  const t = CARD_AI_FACES[who] || CARD_AI_FACES.mua;
+  const mons = Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && !m.variant && String(m.wave) !== 'hybrid');
+  const lines = [...new Set(mons.map((m) => m.species))];
+  const fixed = { oshi: [t.oshi.lead], suki: [t.suki.lead], sugao: [t.yoso.lead, t.honne.lead].filter(Boolean) };
+  const groups = { oshi: [], suki: [], sugao: [] };
+  const placed = new Set();
+  for (const g of CARD_AI_FACE_IDS) for (const sp of fixed[g]) if (sp && lines.includes(sp) && !placed.has(sp)) { groups[g].push(sp); placed.add(sp); }
+  const v = Object.fromEntries(lines.map((sp) => [sp, Math.max(...mons.filter((m) => m.species === sp).map((m) => cardAiMonScore(db, who, m, 99, 'master')))]));
+  const rest = lines.filter((sp) => !placed.has(sp)).sort((a, b) => v[b] - v[a] || (a < b ? -1 : 1));
+  const snake = [...order, ...order.slice().reverse()];
+  rest.forEach((sp, i) => { groups[snake[i % snake.length]].push(sp); });
+  // 組の中は強い順(主役を決めていない顔は、組の先頭を主役にする)
+  for (const g of CARD_AI_FACE_IDS) groups[g].sort((a, b) => v[b] - v[a] || (a < b ? -1 : 1));
+  return groups;
+};
+// その顔で組むときの主役と使わない系統(82 の cardAiBuildDeck の opts.face)・くせの型
+//   lead が null の顔(よそいき・本音の一部)は、組の中でいちばん強い系統。groups・free を渡さなければ、決めた振り分け(cardAiFaceLayout)
+const cardAiFaceSpec = (db, who, slot, freeIn = null, groupsIn = null) => {
+  const t = CARD_AI_FACES[who] || CARD_AI_FACES.mua;
+  const row = t[slot] || t.oshi;
+  const face = slot === 'yoso' || slot === 'honne' ? 'sugao' : slot;
+  const lay = groupsIn ? null : cardAiFaceLayout(db, who);
+  const groups = groupsIn || lay.groups;
+  const mine = groups[face] || [];
+  const lead = row.lead && mine.includes(row.lead) ? row.lead : mine[0] || null;
+  const avoid = CARD_AI_FACE_IDS.filter((g) => g !== face).flatMap((g) => groups[g]);
+  // ほかの2つの顔の主役(素顔は よそいき・本音 の両方)。仲間の1体目はこれだけを避ける
+  const keep = CARD_AI_FACE_IDS.filter((g) => g !== face).flatMap((g) => (g === 'sugao' ? [t.yoso.lead || groups.sugao[0], t.honne.lead || groups.sugao[0]] : [t[g].lead])).filter(Boolean);
+  const free = Number.isInteger(freeIn) ? freeIn : ((lay && lay.free[slot]) || 0);
+  return { face, slot, lead, avoid, keep: [...new Set(keep)], free, style: cardAiStyleOf(row.style) || 'normal' };
+};
+// 振り分けを決める(助手ごと)。蛇行の始まり6通りを順に試し、それぞれで「仲間の1体目を組の外からも選ぶか(顔ごと 1/0)」を決める。
+//   選べると強くなるが、ほかの顔と重なりやすい。MASTER で組んでみて、見える組み合わせ(推し・好き・素顔の今の側)が
+//   「カード4割まで・主役2体以上ちがう」を破れば、大事な順の低い側を 0 にする(推し → よそいき → 好き → 本音)。全部守れた最初の振り分けを使う
+//   返り値 { groups, free, order, ok }。同じ db・同じ助手ならいつも同じ(保存しない)
+// 強さのそろえ(社長の案B・最後の手)。振り分けで ±10点に入らなかった顔だけ、組み方の雑さ(82 の noise)を足す。{ 助手: { 枠: { 強さ: 足す数 } } }。
+//   足すと弱くなる。0.05 は MASTER の雑さと同じくらい。表は docs/progress/card-ai-faces/README.md
+const CARD_AI_FACE_NOISE = Object.freeze({
+  sorashido: { yoso: { master: 0.3 } }, // よそいきの MASTER 70% → 54%(今の組み方 48%。1組300戦)
+});
+// 決めた振り分け(2026-11-08 自動で探した結果。EXPERT・MASTER で、どの顔もその助手の今の勝率に近い物。docs/progress/card-ai-faces/README.md の強さの表)
+//   探し方: 蛇行6通り+混ぜた割り当てから始め、2つの組の種を1つずつ入れかえて、いちばんずれの小さい物を残した(作業場所の道具。1組60戦)
+//   使う前に、決まり(重なり4割まで・主役2体以上ちがう)と、カードの種と合っているかを確かめる。合わなければ、下の手順で探し直す
+const CARD_AI_FACE_LAYOUTS = Object.freeze({
+  mua: { oshi: ['mocchi', 'metalner', 'golem', 'hare', 'centaur', 'worm', 'mew', 'arrowhead', 'zilla'], suki: ['joker', 'henger', 'dino', 'dragon', 'kyubi', 'ghost', 'gali', 'colorpandora', 'plant'], sugao: ['tiger', 'durahan', 'naga', 'phoenix', 'pixie', 'jell', 'monol', 'suezo'], free: { oshi: 0, suki: 0, yoso: 0, honne: 1 } },
+  kiki: { oshi: ['golem', 'durahan', 'gali', 'phoenix', 'mew', 'metalner', 'suezo', 'monol', 'ghost'], suki: ['dragon', 'worm', 'henger', 'tiger', 'zilla', 'centaur', 'mocchi', 'pixie', 'joker'], sugao: ['hare', 'dino', 'naga', 'kyubi', 'jell', 'arrowhead', 'colorpandora', 'plant'], free: { oshi: 1, suki: 0, yoso: 0, honne: 0 } },
+  momosuke: { oshi: ['durahan', 'metalner', 'ghost', 'dino', 'mocchi', 'dragon', 'naga', 'monol', 'joker'], suki: ['tiger', 'centaur', 'kyubi', 'phoenix', 'colorpandora', 'mew', 'worm', 'jell', 'gali'], sugao: ['henger', 'hare', 'golem', 'plant', 'suezo', 'pixie', 'arrowhead', 'zilla'], free: { oshi: 0, suki: 0, yoso: 1, honne: 1 } },
+  dra: { oshi: ['tiger', 'phoenix', 'hare', 'worm', 'mew', 'jell', 'plant', 'zilla', 'monol'], suki: ['dragon', 'durahan', 'dino', 'kyubi', 'centaur', 'arrowhead', 'suezo', 'ghost', 'colorpandora'], sugao: ['henger', 'golem', 'metalner', 'mocchi', 'pixie', 'gali', 'naga', 'joker'], free: { oshi: 1, suki: 1, yoso: 1, honne: 1 } },
+  atsu: { oshi: ['dragon', 'golem', 'henger', 'worm', 'centaur', 'suezo', 'naga', 'colorpandora', 'monol'], suki: ['tiger', 'hare', 'dino', 'mew', 'gali', 'mocchi', 'pixie', 'zilla'], sugao: ['durahan', 'metalner', 'phoenix', 'kyubi', 'jell', 'arrowhead', 'ghost', 'plant', 'joker'], free: { oshi: 0, suki: 0, yoso: 0, honne: 0 } },
+  kyuko: { oshi: ['durahan', 'henger', 'hare', 'dino', 'centaur', 'mew', 'mocchi', 'naga', 'monol'], suki: ['dragon', 'golem', 'phoenix', 'worm', 'jell', 'suezo', 'pixie', 'plant', 'colorpandora'], sugao: ['tiger', 'metalner', 'kyubi', 'gali', 'arrowhead', 'ghost', 'zilla', 'joker'], free: { oshi: 1, suki: 1, yoso: 1, honne: 1 } },
+  sorashido: { oshi: ['henger', 'mew', 'joker', 'metalner', 'hare', 'phoenix', 'mocchi', 'gali', 'naga'], suki: ['tiger', 'durahan', 'dragon', 'plant', 'centaur', 'kyubi', 'worm', 'arrowhead', 'monol'], sugao: ['jell', 'suezo', 'golem', 'dino', 'ghost', 'zilla', 'pixie', 'colorpandora'], free: { oshi: 1, suki: 0, yoso: 0, honne: 1 } },
+  erubin: { oshi: ['durahan', 'dragon', 'golem', 'hare', 'metalner', 'gali', 'naga', 'mocchi', 'plant'], suki: ['monol', 'phoenix', 'dino', 'mew', 'centaur', 'suezo', 'pixie', 'zilla', 'joker'], sugao: ['tiger', 'henger', 'worm', 'kyubi', 'jell', 'arrowhead', 'colorpandora', 'ghost'], free: { oshi: 1, suki: 0, yoso: 0, honne: 0 } },
+});
+const CARD_AI_FACE_RANK = Object.freeze(['oshi', 'yoso', 'suki', 'honne']);
+const CARD_AI_FACE_PAIRS = Object.freeze([['oshi', 'suki'], ['oshi', 'yoso'], ['suki', 'yoso'], ['oshi', 'honne'], ['suki', 'honne']]);
+const cardAiFaceLayoutMemo = {};
+const cardAiFaceLayout = (db, who) => {
+  const key = `${who}:${Object.keys(db.monsters).length}`;
+  if (cardAiFaceLayoutMemo[key]) return cardAiFaceLayoutMemo[key];
+  const fixedLay = cardAiFaceFixedLayout(db, who);
+  if (fixedLay) { cardAiFaceLayoutMemo[key] = fixedLay; return fixedLay; }
+  let last = null;
+  for (let oi = 0; oi < CARD_AI_FACE_ORDERS.length; oi++) {
+    const groups = cardAiFaceGroupsBy(db, who, CARD_AI_FACE_ORDERS[oi]);
+    const free = { oshi: 1, suki: 1, yoso: 1, honne: 1 };
+    const deckOf = (slot) => cardAiFaceBuildWith(db, who, cardAiFaceSpec(db, who, slot, free[slot], groups), 'master', cardAiSeededRand(`face:${who}:${slot}:master`), {}, null);
+    let ok = false;
+    for (let round = 0; round < 8; round++) {
+      const d = Object.fromEntries(CARD_AI_FACE_SLOTS.map((sl) => [sl, deckOf(sl)]));
+      const bad = CARD_AI_FACE_PAIRS.find(([a, b]) => cardAiFaceShare(d[a], d[b]) > CARD_AI_FACE_SHARE_MAX || cardAiFaceTrioDiff(d[a], d[b]) < CARD_AI_FACE_TRIO_DIFF);
+      if (!bad) { ok = true; break; }
+      const loser = [...bad].sort((x, y) => CARD_AI_FACE_RANK.indexOf(y) - CARD_AI_FACE_RANK.indexOf(x)).find((sl) => free[sl]);
+      if (!loser) break;
+      free[loser] = 0;
+    }
+    last = { groups, free, order: oi, ok };
+    if (ok) break;
+  }
+  cardAiFaceLayoutMemo[key] = last;
+  return last;
+};
+// 決めた振り分けを使えるか(カードの種とぴったり合う・主役の種が自分の組にある・決まりを守る)。使えなければ null
+const cardAiFaceFixedLayout = (db, who) => {
+  const L = CARD_AI_FACE_LAYOUTS[who];
+  const t = CARD_AI_FACES[who];
+  if (!L || !t) return null;
+  const lines = [...new Set(Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && !m.variant && String(m.wave) !== 'hybrid').map((m) => m.species))].sort();
+  const all = [...L.oshi, ...L.suki, ...L.sugao];
+  if (JSON.stringify(all.slice().sort()) !== JSON.stringify(lines)) return null;
+  if (!L.oshi.includes(t.oshi.lead) || !L.suki.includes(t.suki.lead) || [t.yoso.lead, t.honne.lead].some((x) => x && !L.sugao.includes(x))) return null;
+  const v = Object.fromEntries(lines.map((sp) => [sp, Math.max(...Object.values(db.monsters).filter((m) => m.species === sp && !m.variant && String(m.wave) !== 'hybrid').map((m) => cardAiMonScore(db, who, m, 99, 'master')))]));
+  const groups = Object.fromEntries(CARD_AI_FACE_IDS.map((g) => [g, L[g].slice().sort((a, b) => v[b] - v[a] || (a < b ? -1 : 1))]));
+  const free = { ...L.free };
+  const deckOf = (slot) => cardAiFaceBuildWith(db, who, cardAiFaceSpec(db, who, slot, free[slot], groups), 'master', cardAiSeededRand(`face:${who}:${slot}:master`), {}, null);
+  const d = Object.fromEntries(CARD_AI_FACE_SLOTS.map((sl) => [sl, deckOf(sl)]));
+  const ok = !CARD_AI_FACE_PAIRS.some(([a, b]) => cardAiFaceShare(d[a], d[b]) > CARD_AI_FACE_SHARE_MAX || cardAiFaceTrioDiff(d[a], d[b]) < CARD_AI_FACE_TRIO_DIFF);
+  return ok ? { groups, free, order: 'fixed', ok: true } : null;
+};
+const cardAiFaceGroups = (db, who) => cardAiFaceLayout(db, who).groups;
+const cardAiFaceFreeMap = (db, who) => cardAiFaceLayout(db, who).free;
+
+// ---- これまでのデッキ(組み直す前のデッキ) ----
+// 1つ { id, slot, name, plan, spec: { lead, avoid, keep, free, style }, monsters: [3体], top: [札8枚まで], from, to }。spec と plan があれば、昔のデッキとも同じ組み方で戦える
+const cardAiHistoryEntryOf = (raw, db) => {
+  if (!cardAiDeckIsObj(raw) || !CARD_AI_FACE_SLOTS.includes(raw.slot)) return null;
+  const name = cardAiDeckText(raw.name, CARD_AI_DECK_NAME_MAX);
+  const id = typeof raw.id === 'string' && /^[a-z0-9:_-]{1,40}$/i.test(raw.id) ? raw.id : null;
+  const sp = cardAiDeckIsObj(raw.spec) ? raw.spec : null;
+  const strs = (a, n) => (Array.isArray(a) ? a.filter((x) => typeof x === 'string' && x.length <= 40).slice(0, n) : []);
+  if (!name || !id || !sp || typeof sp.lead !== 'string') return null;
+  const spec = { lead: sp.lead, avoid: strs(sp.avoid, 60), keep: strs(sp.keep, 10), free: sp.free === 1 ? 1 : 0, style: cardAiStyleOf(sp.style) || 'normal' };
+  const plan = db && cardAiDeckIsObj(raw.plan) && cardAiPlanClean(db, raw.plan) ? cardAiDeckEntryOf({ plan: raw.plan }, db).plan : null;
+  const okNo = (no) => typeof no === 'string' && (!db || (db.cards[no] || db.monsters[no]));
+  const from = Number.isFinite(raw.from) && raw.from > 0 ? Math.floor(raw.from) : 0;
+  const to = Number.isFinite(raw.to) && raw.to >= from ? Math.floor(raw.to) : from;
+  return { id, slot: raw.slot, name, plan, spec, monsters: strs(raw.monsters, 3).filter(okNo), top: strs(raw.top, 8).filter(okNo), from, to };
+};
+const cardNormalizeAiHistory = (raw, db = (typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null)) => {
+  const perWho = {};
+  const src = cardAiDeckIsObj(raw) && cardAiDeckIsObj(raw.perWho) ? raw.perWho : {};
+  for (const who of Object.keys(src)) {
+    if (!CARD_AI_FACES[who] || !Array.isArray(src[who])) continue;
+    const seen = new Set();
+    const list = src[who].map((e) => cardAiHistoryEntryOf(e, db)).filter((e) => e && !seen.has(e.id) && seen.add(e.id)).sort((a, b) => b.to - a.to).slice(0, CARD_AI_HISTORY_MAX);
+    if (list.length) perWho[who] = list;
+  }
+  return { v: 1, perWho };
+};
+// ★頭が「ど」の言葉は入れない(「〇〇のど根性」が「のど」と読める。2026-11-08 部長)。チームの自動の名前(83-card-battle-vs.jsx の CARD_DECK_NAME_TAILS)と同じことばも避ける
+// 助手ごとの遊び方の言葉(AI が使えないとき、2つ目からの名前「主役の種の名前+の+言葉」に使う。部長・社長の確認待ちの案)
+const CARD_AI_PLAY_WORDS = Object.freeze({
+  mua: ['はしゃぎ組', 'ぴかぴか組', 'るんるん隊', 'ときめき作戦', 'わくわく隊', 'きゅんきゅん隊'],
+  kiki: ['ぶちかまし', '力くらべ', 'ねばり腰', 'ひと押し', 'ぽかぽか隊', '根性勝負'],
+  momosuke: ['センター', 'きらめき舞台', 'アンコール', '大歓声', 'ラストサビ', 'ファンサ'],
+  dra: ['ゆるっと隊', 'ひなたぼっこ', 'じっくり作戦', 'まったり組', 'おひるね隊', 'ぽてぽて歩き'],
+  atsu: ['全力投球', '再戦上等', '熱血組', '一直線', '真剣一本', '燃える魂'],
+  kyuko: ['夜ふかし', '大逆転', '月あかり', 'ひらめき', 'ないしょ話', 'ねこの目'],
+  sorashido: ['必勝の表', '勝ち筋', 'データ戦', '方程式', '答え合わせ', '分析班'],
+  erubin: ['仲間の輪', '支え合い', 'ほっこり組', 'ぬくもり隊', 'あったか隊', 'ひだまり組'],
+});
+// 2つ目からの名前(AI が使えない・決まりに合わないとき)。主役の種の名前+の+遊び方の言葉で、決まりに合い、その助手の一覧(今・これまで)に無いもの。作れなければ null
+const cardAiFaceMakeName = (db, who, slot, others, used, rnd = Math.random) => {
+  const spec = cardAiFaceSpec(db, who, slot);
+  const mon = Object.values(db.monsters).find((m) => m.species === spec.lead && !m.variant && String(m.wave) !== 'hybrid');
+  if (!mon) return null;
+  const words = (CARD_AI_PLAY_WORDS[who] || []).slice();
+  for (let i = words.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [words[i], words[j]] = [words[j], words[i]]; }
+  for (const w of words) {
+    const n = `${mon.name}の${w}`;
+    if (n.length <= CARD_AI_DECK_NAME_MAX && !used.includes(n) && cardAiFaceNameOk(db, who, slot, n, others)) return n;
+  }
+  return null;
+};
+
+// ---- 名前 ----
+// 既定の名前(AI が名前を付けられない・見張りに落ちたとき)。よそいきは今の8つの名前
+const cardAiFaceDefaultName = (who, slot) => {
+  const t = CARD_AI_FACES[who];
+  if (!t) return null;
+  if (slot === 'yoso') return CARD_AI_STYLE_NAMES[who] || null;
+  return (t[slot] && t[slot].name) || null;
+};
+// 2つの名前に同じことばがあるか。名前をカタカナ・漢字・ひらがなのまとまりに分けてくらべる(「の」「と」のつなぎや、まとまりの切れ目をまたぐ部分は数えない)
+//   カタカナ … 同じまとまり(2字以上)か、3字以上のまとまりがもう一方に含まれる(キラキラ・ノリ / ライガー と ライブ は別)
+//   漢字 … 2字以上が同じ(一撃・全力・火力)  ひらがな … 3字以上が同じ(ずっしり・ぜんぶ)
+const cardAiFaceRuns = (t) => (typeof t === 'string' ? t.match(/[゠-ヿー]+|[一-鿿々]+|[ぁ-ゟ]+/g) || [] : []);
+const cardAiFaceShareWord = (a, b) => {
+  const ra = cardAiFaceRuns(a), rb = cardAiFaceRuns(b);
+  const kind = (r) => (/^[゠-ヿー]+$/.test(r) ? 'kata' : /^[一-鿿々]+$/.test(r) ? 'kan' : 'hira');
+  const sub = (x, y, n) => { for (let i = 0; i + n <= x.length; i++) if (y.includes(x.slice(i, i + n))) return true; return false; };
+  for (const x of ra) for (const y of rb) {
+    const k = kind(x);
+    if (k !== kind(y)) continue;
+    if (k === 'kata' && ((x === y && x.length >= 2) || (x.length >= 3 && y.includes(x)) || (y.length >= 3 && x.includes(y)))) return true;
+    if (k === 'kan' && x.length >= 2 && y.length >= 2 && sub(x, y, 2)) return true;
+    if (k === 'hira' && x.length >= 3 && y.length >= 3 && sub(x, y, 3)) return true;
+  }
+  return false;
+};
+// AI が付けた名前が決まりに合うか(社長 Q2 A): 型のことば(攻め・守り・ふつう)と「・〇〇」を付けない/ほかの3つ(素顔は よそいき・本音 の両方)と同じことばを使わない/
+//   推し・好きは主役(愛称か種の名前。表の words は遊び方のことば)が入る。合わなければ既定の名前
+//   「・〇〇」は今の8つの名前に添える形(「キラキラ速攻・攻め」など)のこと。今の名前の「ステージ・オン」は使ってよい
+const cardAiFaceNameOk = (db, who, slot, name, others = []) => {
+  if (typeof name !== 'string' || !name) return false;
+  const base = CARD_AI_STYLE_NAMES[who];
+  if (/攻め|守り|ふつう/.test(name) || (base && name.startsWith(`${base}・`))) return false;
+  if (others.some((o) => cardAiFaceShareWord(name, o))) return false;
+  if (cardAiFaceNicks(who).some((n) => name.includes(n))) return false;
+  if (slot === 'oshi' || slot === 'suki') {
+    const spec = cardAiFaceSpec(db, who, slot);
+    const mon = Object.values(db.monsters).find((m) => m.species === spec.lead && !m.variant);
+    const row = (CARD_AI_FACES[who] || {})[slot] || {};
+    const words = [mon && mon.name, ...(Array.isArray(row.words) ? row.words : [])].filter(Boolean);
+    if (!words.some((w) => name.includes(w))) return false;
+  }
+  return true;
+};
+// その助手のマスモンの愛称(助手部の表 ASSISTANT_MASMON_PLAN と、この端末で引いたマスモン assistantLifeMasmonTeamOf)。名前に入っていたら使わない
+//   2文字以上の愛称だけ(1文字は普通のことばと区別できない)。口が無い・壊れているときは空
+const cardAiFaceNicks = (who) => {
+  const out = new Set();
+  const add = (rows) => { (Array.isArray(rows) ? rows : []).forEach((t) => { if (t && typeof t.nick === 'string' && t.nick.trim().length >= 2) out.add(t.nick.trim()); }); };
+  try {
+    if (typeof ASSISTANT_MASMON_PLAN !== 'undefined' && Array.isArray(ASSISTANT_MASMON_PLAN)) {
+      const p = ASSISTANT_MASMON_PLAN.find((x) => x && x.id === who);
+      if (p) { add(p.team); add(p.bench); add(p.more); }
+    }
+  } catch (_) { /* 表が無ければ見ない */ }
+  try { if (typeof assistantLifeMasmonTeamOf === 'function') add(assistantLifeMasmonTeamOf(who)); } catch (_) { /* 口が無ければ見ない */ }
+  return [...out];
+};
+// 今の名前(保存した名前か既定)。others を作るのに使う
+const cardAiFaceNameOf = (w, who, slot) => (w && w.decks && w.decks[slot] && w.decks[slot].name) || cardAiFaceDefaultName(who, slot);
+const cardAiFaceOtherNames = (w, who, slot) => CARD_AI_FACE_SLOTS.filter((s) => s !== slot && !((slot === 'yoso' && s === 'honne') || (slot === 'honne' && s === 'yoso'))).map((s) => cardAiFaceNameOf(w, who, s)).filter(Boolean);
+
+// ---- 対戦で出す顔 ----
+// main(今の気分・仲良し度に合う顔)を6割・ほかの2つを2割ずつ。main が無ければ3つ均等
+const cardAiDeckPickFace = (main, rnd) => {
   const r = rnd();
-  const m = cardAiStyleOf(main);
-  if (!m) return CARD_AI_STYLE_IDS[Math.min(CARD_AI_STYLE_IDS.length - 1, Math.floor(r * CARD_AI_STYLE_IDS.length))];
+  const m = cardAiFaceOf(main);
+  if (!m) return CARD_AI_FACE_IDS[Math.min(CARD_AI_FACE_IDS.length - 1, Math.floor(r * CARD_AI_FACE_IDS.length))];
   if (r < CARD_AI_DECK_MAIN) return m;
-  const others = CARD_AI_STYLE_IDS.filter((s) => s !== m);
+  const others = CARD_AI_FACE_IDS.filter((s) => s !== m);
   return others[(r - CARD_AI_DECK_MAIN) < (1 - CARD_AI_DECK_MAIN) / 2 ? 0 : 1];
 };
-// 既定の名前(AI が名前を付けられない・見張りに落ちたとき)。社長 Q4 A: 8つの名前に型を添える(82 の cardAiStyleDefaultName)
-const cardAiDeckDefaultName = (who, style) => cardAiStyleDefaultName(who, style);
+
+// ---- 組む(読むだけ) ----
+// その枠のデッキを組む。plan は保存した方針(無ければ型だけ)。level は 82 の強さ
+//   弾の少ない強さ(EASY〜HARD)では組の中に使える種が足りず、3体そろわないことがある。そのときは、ほかの2つの主役だけを避けて組み直す
+const cardAiFaceBuild = (db, who, slot, level, rnd, extra = {}, plan = null) => cardAiFaceBuildWith(db, who, cardAiFaceSpec(db, who, slot), level, rnd, extra, plan);
+const cardAiFaceBuildWith = (db, who, spec, level, rnd, extra = {}, plan = null) => {
+  const lv = CARD_AI_BUILD[level] ? level : 'normal';
+  const nz = (((CARD_AI_FACE_NOISE[who] || {})[spec.slot] || {})[lv]) || 0;
+  const opts = (avoid) => ({ ...extra, style: spec.style, face: { lead: spec.lead, avoid, keep: spec.keep, free: spec.free, ...(nz ? { noise: nz } : {}) }, ...(plan ? { plan } : {}) });
+  const deck = cardAiBuildDeck(db, who, lv, rnd, opts(spec.avoid));
+  if (deck.monsters.length >= 3) return deck;
+  return cardAiBuildDeck(db, who, lv, rnd, opts(spec.keep));
+};
+// 見せる・くらべるためのデッキ(毎回同じ並び。MASTER の種で組む)
+const cardAiFacePreviewDeck = (db, who, slot, plan = null, level = 'master') => cardAiFaceBuild(db, who, slot, level, cardAiSeededRand(`face:${who}:${slot}:${level}`), {}, plan);
+// 2つのデッキの同じカードの割合(枚数の重なり / 50)と、主役3体のちがう数
+const cardAiFaceShare = (a, b) => {
+  const cnt = (cards) => cards.reduce((m, no) => { m[no] = (m[no] || 0) + 1; return m; }, {});
+  const ca = cnt(a.cards), cb = cnt(b.cards);
+  const same = Object.keys(ca).reduce((s, no) => s + Math.min(ca[no], cb[no] || 0), 0);
+  return same / Math.max(1, Math.max(a.cards.length, b.cards.length));
+};
+const cardAiFaceTrioDiff = (a, b) => a.monsters.filter((no) => !b.monsters.includes(no)).length;
 
 // ---- 中継役へ送る材料(数字と名前だけ) ----
-// 候補はその助手の「いつもの3体」(プレビューと同じ種)で組んだときの上位の札。場のカードは全部
-const cardAiDeckFacts = (db, who, style) => {
-  const trio = cardAiBuildDeck(db, who, 'master', cardAiSeededRand(`preview:${who}:${style}:master`), { style }).monsters;
+// 候補はその顔の3体(プレビューと同じ種)で組んだときの上位の札。場のカードは全部。主役・方針・話し方の手がかりも送る
+const CARD_AI_FACE_POLICY = Object.freeze({
+  oshi: '推しのモンスターが主役。推しが活躍できるカードを優先する',
+  suki: '好きなモンスターが主役。そのモンスターらしさが出るカードを優先する',
+  yoso: 'よそいきの組み方。ふだんどおりの、無難で強い組み方',
+  honne: '本音の組み方。ふだんはやらないけれど、ほんとはやってみたい組み方',
+});
+const cardAiDeckFacts = (db, who, slot) => {
+  const spec = cardAiFaceSpec(db, who, slot);
+  const trio = cardAiFacePreviewDeck(db, who, slot).monsters;
   const cands = cardAiPlanCandidates(db, who, 'master', trio);
   const fields = Object.values(db.cards).filter((c) => c.ready && c.kind === 'fld').map((c) => c.name);
+  const leadMon = trio.map((no) => db.monsters[no]).find((m) => m && cardAiFaceLineOf(m) === spec.lead);
   return {
-    trio, cands, fields,
-    range: cardAiPlanHabitRange(who, 'master', style),
+    trio, cands, fields, spec,
+    range: cardAiPlanHabitRange(who, 'master', spec.style),
     facts: {
-      style,
+      style: spec.style,
+      face: spec.face, side: slot === 'yoso' || slot === 'honne' ? slot : null,
+      // 主役は種の名前だけ(マスモンの愛称は渡さない。社長 2026-11-08)
+      lead: (leadMon && leadMon.name) || null,
+      policy: CARD_AI_FACE_POLICY[slot] || null,
       favorites: trio.map((no) => (db.monsters[no] || {}).name).filter(Boolean).slice(0, 5),
       cards: cands.map((c) => ({ no: c.no, name: c.name, kind: c.kind, guts: c.guts, damage: Number.isFinite(c.damage) ? c.damage : null, user: c.user, area: !!cardHasEff(c, 'area') })),
       fields,
-      habit: cardAiPlanHabitRange(who, 'master', style),
+      habit: cardAiPlanHabitRange(who, 'master', spec.style),
       prefer: CARD_AI_PLAN_RANGE.prefer.slice(),
     },
   };
@@ -73763,19 +74139,37 @@ const cardAiDeckFlagOn = () => { try { return typeof cardGrowStyleOn === 'functi
 let cardAiRecipeState = null;
 let cardAiDeckSetting = { on: true };
 const cardAiDeckToday = () => (typeof cardTodayJst === 'function' ? cardTodayJst() : new Date(Date.now() + 5 * 3600 * 1000).toISOString().slice(0, 10));
+// 保存を読む(v2。無ければ v1 を読むだけで引きつぐ)
+const cardAiRecipeRead = async () => {
+  const raw = await storeGet(CARD_AI_RECIPE2_KEY, null).catch(() => null);
+  const v1 = cardAiDeckIsObj(raw) ? null : await storeGet(CARD_AI_RECIPE_KEY, null).catch(() => null);
+  return cardNormalizeAiRecipe2(raw, cardAiDeckToday(), v1);
+};
 const cardLoadAiRecipe = async () => {
-  try { cardAiRecipeState = cardNormalizeAiRecipe(await storeGet(CARD_AI_RECIPE_KEY, null), cardAiDeckToday()); } catch (_) { cardAiRecipeState = cardNormalizeAiRecipe(null, cardAiDeckToday()); }
+  try { cardAiRecipeState = await cardAiRecipeRead(); } catch (_) { cardAiRecipeState = cardNormalizeAiRecipe2(null, cardAiDeckToday()); }
   try { cardAiDeckSetting = cardNormalizeAiDeck(await storeGet(CARD_AI_DECK_KEY, null)); } catch (_) { cardAiDeckSetting = { on: true }; }
+  await cardAiHistoryRead();
   return cardAiRecipeState;
 };
 const cardSaveAiRecipe = async (next) => {
   cardAiRecipeState = next;
-  try { return await storeSet(CARD_AI_RECIPE_KEY, next); } catch (_) { return false; }
+  try { return await storeSet(CARD_AI_RECIPE2_KEY, next); } catch (_) { return false; }
 };
 const cardSaveAiDeck = async (on) => {
   cardAiDeckSetting = { on: !!on };
   try { await storeSet(CARD_AI_DECK_KEY, cardAiDeckSetting); } catch (_) { /* 入/切が保存できなくても遊べる */ }
   return cardAiDeckSetting;
+};
+// これまでのデッキ(読む・足す)。足すのは組み直しで名前が変わったときだけ。新しい順で10個まで(古いものから消える)
+let cardAiHistoryState = { v: 1, perWho: {} };
+const cardAiHistoryRead = async () => { try { cardAiHistoryState = cardNormalizeAiHistory(await storeGet(CARD_AI_HISTORY_KEY, null)); } catch (_) { cardAiHistoryState = { v: 1, perWho: {} }; } return cardAiHistoryState; };
+const cardAiHistoryPush = async (who, entry) => {
+  const cur = await cardAiHistoryRead();
+  const list = [entry, ...(cur.perWho[who] || []).filter((e) => e.id !== entry.id)];
+  const next = cardNormalizeAiHistory({ v: 1, perWho: { ...cur.perWho, [who]: list } });
+  cardAiHistoryState = next;
+  try { await storeSet(CARD_AI_HISTORY_KEY, next); } catch (_) { /* 残せなくても遊べる */ }
+  return next;
 };
 // AI に聞いてよいか(印・入/切・おしゃべりの AI を呼べる端末か)。だめなら揺らぎで組む
 const cardAiDeckAskOn = () => cardAiDeckFlagOn() && cardAiDeckSetting.on !== false && typeof cardTalkOpen === 'function' && cardTalkOpen();
@@ -73797,30 +74191,69 @@ const cardAiDeckFetch = async (who, facts) => {
       name: cardAiDeckText(res.name, CARD_AI_DECK_NAME_MAX), line: cardAiDeckText(res.line, CARD_AI_DECK_LINE_MAX) };
   } catch (_) { return null; } finally { clearTimeout(timer); }
 };
-// 1人の助手の、いちばん古い型を組み直す(AI か揺らぎ)。reason: 'slot'(時刻の枠)/'games'(10戦)/'first'(まだ1つも無い)
+// 組み直した方針が、ほかの2つと重なりすぎないか(カード4割まで・主役3体は2体以上ちがう)。だめなら前の方針(無ければ型だけ)へ戻す
+const cardAiFaceDiverseOk = (db, who, slot, plan, w, side) => {
+  const mine = cardAiFacePreviewDeck(db, who, slot, plan);
+  const others = ['oshi', 'suki', side === 'honne' ? 'honne' : 'yoso'].filter((s) => s !== slot && !((slot === 'yoso' || slot === 'honne') && (s === 'yoso' || s === 'honne')));
+  return others.every((s) => {
+    const e = w && w.decks && w.decks[s];
+    const d = cardAiFacePreviewDeck(db, who, s, e && e.plan);
+    return cardAiFaceShare(mine, d) <= CARD_AI_FACE_SHARE_MAX && cardAiFaceTrioDiff(mine, d) >= CARD_AI_FACE_TRIO_DIFF;
+  });
+};
+// 1人の助手の、いちばん古い顔を組み直す(AI か揺らぎ)。reason: 'slot'(時刻の枠)/'games'(10戦)
 const cardAiDeckBusy = new Set();
 const cardAiDeckRebuild = async (who, reason, opts = {}) => {
-  if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who] || cardAiDeckBusy.has(who) || typeof CARD_BATTLE_DATA === 'undefined') return null;
+  if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who] || !CARD_AI_FACES[who] || cardAiDeckBusy.has(who) || typeof CARD_BATTLE_DATA === 'undefined') return null;
   cardAiDeckBusy.add(who);
   try {
     const db = CARD_BATTLE_DATA;
     const now = Number.isFinite(opts.now) ? opts.now : Date.now();
-    // いちばん古い型は、保存を読み直してから選ぶ(手元の控えが古いことがある)
-    const before = cardNormalizeAiRecipe(await storeGet(CARD_AI_RECIPE_KEY, null).catch(() => null), cardAiDeckToday());
-    const style = cardAiDeckOldest(before.perWho[who] || null);
-    const f = cardAiDeckFacts(db, who, style);
+    const side = cardAiFaceSugaoSide(cardAiFaceMaterial(who));
+    // いちばん古い顔は、保存を読み直してから選ぶ(手元の控えが古いことがある)
+    const before = await cardAiRecipeRead();
+    const slot = cardAiDeckOldest(before.perWho[who] || null, side);
+    const f = cardAiDeckFacts(db, who, slot);
     const got = await cardAiDeckFetch(who, f.facts);
     // 読み直してから書く(待っているあいだにほかの所が書いたぶんを消さない)
-    const cur = cardNormalizeAiRecipe(await storeGet(CARD_AI_RECIPE_KEY, null).catch(() => null), cardAiDeckToday());
+    const cur = await cardAiRecipeRead();
     const w = cur.perWho[who] || { met: true, gamesSince: 0, slotsDone: 0, decks: {} };
-    const prev = w.decks[style] || null;
-    const plan = got && cardAiPlanClean(db, got.plan) ? got.plan : cardAiDeckJitter(prev && prev.plan, { cands: f.cands, fields: f.fields, range: f.range, rnd: cardAiSeededRand(`jitter:${who}:${style}:${now}`) });
-    const entry = cardAiDeckEntryOf({ plan, name: got ? got.name : (prev && prev.name), line: got ? got.line : (prev && prev.line), at: now, ai: !!got }, db);
+    const prev = w.decks[slot] || null;
+    const jitter = () => cardAiDeckJitter(prev && prev.plan, { cands: f.cands, fields: f.fields, range: f.range, rnd: cardAiSeededRand(`jitter:${who}:${slot}:${now}`) });
+    let plan = got && cardAiPlanClean(db, got.plan) ? got.plan : jitter();
+    // 重なりの見張り(社長 Q3 A)。AI の方針が重なりすぎたら揺らぎ、それもだめなら前の方針(無ければ方針なし=型だけ)
+    if (!cardAiFaceDiverseOk(db, who, slot, plan, w, side)) {
+      const j = jitter();
+      plan = cardAiFaceDiverseOk(db, who, slot, j, w, side) ? j : (prev && prev.plan) || null;
+    }
+    // 名前(社長 2026-11-08「デッキはかわってくたびに名前をかえて」)。1つ目は既定の名前。
+    //   組み直しの印(主役の3体のうち1体以上・札の2割以上が入れかわった)が立てば新しい名前: AI の名前 → だめなら 種の名前+遊び方の言葉。
+    //   その助手の一覧(今の4つ・これまでのデッキ)にある名前は使わない。新しい名前が作れなければ前の名前のまま(これまでのデッキにも残さない)
+    const others = cardAiFaceOtherNames(w, who, slot);
+    let name = null, since = now, past = null;
+    if (prev) {
+      const a0 = cardAiFacePreviewDeck(db, who, slot, prev.plan), a1 = cardAiFacePreviewDeck(db, who, slot, plan);
+      const changed = cardAiFaceTrioDiff(a0, a1) >= 1 || cardAiFaceShare(a0, a1) <= CARD_AI_RENAME_SHARE; // 札が2割以上入れかわった=重なり8割以下
+      name = prev.name; since = prev.since || prev.at || now;
+      if (changed) {
+        const hist = await cardAiHistoryRead();
+        const used = [...CARD_AI_FACE_SLOTS.map((sl) => cardAiFaceNameOf(w, who, sl)), ...(hist.perWho[who] || []).map((e) => e.name)].filter(Boolean);
+        const fresh = got && got.name && !used.includes(got.name) && cardAiFaceNameOk(db, who, slot, got.name, others) ? got.name
+          : cardAiFaceMakeName(db, who, slot, others, used, cardAiSeededRand(`name:${who}:${slot}:${now}`));
+        if (fresh) {
+          const spec = cardAiFaceSpec(db, who, slot);
+          past = { id: `${slot}-${since}`, slot, name: cardAiFaceNameOf(w, who, slot), plan: prev.plan, spec: { lead: spec.lead, avoid: spec.avoid, keep: spec.keep, free: spec.free, style: spec.style },
+            monsters: a0.monsters.slice(0, 3), top: [...new Set(a0.cards)].slice(0, 8), from: since, to: now };
+          name = fresh; since = now;
+        }
+      }
+    }
+    const entry = cardAiDeckEntryOf({ plan, name, line: got ? got.line : (prev && prev.line), at: now, since, ai: !!got }, db);
+    if (past) await cardAiHistoryPush(who, past);
     const passed = Number.isFinite(opts.passed) ? opts.passed : w.slotsDone;
-    const nextW = { ...w, met: true, decks: { ...w.decks, [style]: entry }, gamesSince: reason === 'games' ? 0 : w.gamesSince, slotsDone: reason === 'slot' ? Math.max(w.slotsDone, passed) : w.slotsDone };
-    const next = { ...cur, perWho: { ...cur.perWho, [who]: nextW } };
-    await cardSaveAiRecipe(next);
-    return { who, style, ai: !!got };
+    const nextW = { ...w, met: true, decks: { ...w.decks, [slot]: entry }, gamesSince: reason === 'games' ? 0 : w.gamesSince, slotsDone: reason === 'slot' ? Math.max(w.slotsDone, passed) : w.slotsDone };
+    await cardSaveAiRecipe({ ...cur, perWho: { ...cur.perWho, [who]: nextW } });
+    return { who, slot, ai: !!got };
   } catch (_) { return null; } finally { cardAiDeckBusy.delete(who); }
 };
 // 時期が来た助手を、裏で1人ずつ組み直す(カードのトップを開いたとき。対戦の前・待たせない所)
@@ -73844,59 +74277,153 @@ const cardAiDeckRunDue = async (opts = {}) => {
 // 会った印(相手えらびで選んだ・部屋を開いた)。印が偽なら何もしない。まだデッキが無ければ裏で1つ組む
 const cardAiDeckMarkMet = async (who) => {
   if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who]) return false;
-  const cur = cardNormalizeAiRecipe(await storeGet(CARD_AI_RECIPE_KEY, null).catch(() => null), cardAiDeckToday());
+  const cur = await cardAiRecipeRead();
   const w = cur.perWho[who];
-  if (w && w.met) { cardAiRecipeState = cur; return true; }
-  await cardSaveAiRecipe({ ...cur, perWho: { ...cur.perWho, [who]: { met: true, gamesSince: 0, slotsDone: 0, decks: {}, ...(w || {}), ...{ met: true } } } });
+  if (w && w.met && Object.keys(w.decks).length) { cardAiRecipeState = cur; return true; }
+  await cardSaveAiRecipe({ ...cur, perWho: { ...cur.perWho, [who]: { gamesSince: 0, slotsDone: 0, decks: {}, ...(w || {}), met: true } } });
   void cardAiDeckRebuild(who, 'slot');
   return true;
 };
 // その助手と1戦し終えた(助手と対戦の結果を書いたあと)。10戦で裏で組み直す
 const cardAiDeckAfterMatch = async (who) => {
   if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who]) return null;
-  const cur = cardNormalizeAiRecipe(await storeGet(CARD_AI_RECIPE_KEY, null).catch(() => null), cardAiDeckToday());
+  const cur = await cardAiRecipeRead();
   const w = cur.perWho[who] || { met: true, gamesSince: 0, slotsDone: 0, decks: {} };
   const nextW = { ...w, met: true, gamesSince: w.gamesSince + 1 };
   await cardSaveAiRecipe({ ...cur, perWho: { ...cur.perWho, [who]: nextW } });
   if (nextW.gamesSince >= CARD_AI_DECK_GAMES) void cardAiDeckRebuild(who, 'games');
   return nextW.gamesSince;
 };
-// 助手ライフの今の型(読むだけ。無い・壊れているときは null)
-const cardAiDeckLifeStyle = (who) => { try { return typeof assistantLifeCardStyle === 'function' ? cardAiStyleOf(assistantLifeCardStyle(who)) : null; } catch (_) { return null; } };
-// 今日のデッキ(助手と対戦で次に出す型)。相手えらびで見せた型と、対戦で出す型をそろえるため、先に決めて持っておく(1戦し終えたら決め直す)
-//   ブラウザを閉じれば決め直し(保存しない)。印が偽なら null
+// ---- 今日のデッキ(今の3つ+これまでのデッキから選ぶ) ----
+// デッキの id: 今の3つは顔('oshi'|'suki'|'sugao')、これまでのデッキは 'h:' + その id
+const CARD_AI_PICK_NOW = 0.8;   // これまでのデッキがあるとき、今の3つで8割(合う顔 5割・ほか 1.5割ずつ)・これまでのデッキ全体で2割(社長 2026-11-08 Q1・部長の案)
+const cardAiHistoryOf = (who) => (cardAiHistoryState && cardAiHistoryState.perWho[who]) || [];
+const cardAiDeckIdFace = (id) => {
+  if (cardAiFaceOf(id)) return id;
+  if (typeof id === 'string' && id.startsWith('h:')) {
+    const sl = id.slice(2).split('-')[0];
+    return sl === 'yoso' || sl === 'honne' ? 'sugao' : cardAiFaceOf(sl);
+  }
+  return null;
+};
+// 選ぶ: これまでのデッキが無ければ今までどおり(合う顔6割・ほか2割ずつ/分からなければ均等)。
+//   あれば 今の3つで8割(合う顔は 5割、ほか 1.5割ずつ。合う顔が分からなければ8割を3つ均等)・これまでのデッキで2割(新しいものほど重く 10:9:…:1)
+const cardAiDeckPickId = (main, hist, rnd) => {
+  if (!Array.isArray(hist) || !hist.length) return cardAiDeckPickFace(main, rnd);
+  const r = rnd();
+  if (r < CARD_AI_PICK_NOW) {
+    const m = cardAiFaceOf(main);
+    if (!m) return CARD_AI_FACE_IDS[Math.min(2, Math.floor((r / CARD_AI_PICK_NOW) * 3))];
+    if (r < 0.5) return m;
+    const others = CARD_AI_FACE_IDS.filter((f) => f !== m);
+    return others[r < 0.5 + (CARD_AI_PICK_NOW - 0.5) / 2 ? 0 : 1];
+  }
+  const w = hist.map((_, i) => CARD_AI_HISTORY_MAX - i);
+  let x = ((r - CARD_AI_PICK_NOW) / (1 - CARD_AI_PICK_NOW)) * w.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < hist.length; i++) { x -= w[i]; if (x < 0) return `h:${hist[i].id}`; }
+  return `h:${hist[hist.length - 1].id}`;
+};
+// 次の対戦のデッキ。相手えらびで見せたデッキと、対戦で出すデッキをそろえるため、先に決めて持っておく(1戦し終えたら決め直す)
+//   遊ぶ人が相手えらびで選んだら(cardAiDeckChoose)、それを使い続ける(おまかせに戻すまで)。ブラウザを閉じれば決め直し(保存しない)。印が偽なら null
 const cardAiDeckNextMemo = {};
-const cardAiDeckNextStyle = (who) => {
-  if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who]) return null;
-  if (!cardAiDeckNextMemo[who]) cardAiDeckNextMemo[who] = cardAiDeckPickStyle(cardAiDeckLifeStyle(who), Math.random);
+const cardAiDeckChosenMemo = {};
+const cardAiDeckNextId = (who) => {
+  if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who] || !CARD_AI_FACES[who]) return null;
+  const hist = cardAiHistoryOf(who);
+  const cur = cardAiDeckNextMemo[who];
+  const valid = cardAiFaceOf(cur) || (typeof cur === 'string' && cur.startsWith('h:') && hist.some((e) => `h:${e.id}` === cur));
+  if (!valid) { cardAiDeckNextMemo[who] = cardAiDeckPickId(cardAiFaceMain(cardAiFaceMaterial(who)), hist, Math.random); delete cardAiDeckChosenMemo[who]; }
   return cardAiDeckNextMemo[who];
 };
-// 今日のデッキの名前(保存した名前、無ければ既定「◯◯・攻め」)。相手えらびの札用
+// 次の対戦のデッキの顔(相手えらび・VS の札の印)。名前は前と同じ cardAiDeckNextStyle(84 が呼ぶ)
+const cardAiDeckNextStyle = (who) => cardAiDeckIdFace(cardAiDeckNextId(who));
+// 遊ぶ人が選ぶ(相手えらびの「デッキ」の選び口)。id … 'oshi'|'suki'|'sugao'|'h:…'。null で おまかせ(選び直す)
+const cardAiDeckChoose = (who, id) => {
+  if (!cardAiDeckFlagOn() || !CARD_AI_FACES[who]) return null;
+  if (id == null) { delete cardAiDeckNextMemo[who]; delete cardAiDeckChosenMemo[who]; return cardAiDeckNextId(who); }
+  if (!cardAiDeckChoices(who).some((c) => c.id === id)) return cardAiDeckNextId(who);
+  cardAiDeckNextMemo[who] = id; cardAiDeckChosenMemo[who] = true;
+  return id;
+};
+const cardAiDeckChosen = (who) => (cardAiDeckChosenMemo[who] ? cardAiDeckNextMemo[who] || null : null);
+// 選び口に出す一覧: 今の3つ(推し・好き・素顔の今の側)と、これまでのデッキ(新しい順)。{ id, face, name, past, from, to }
+const cardAiDeckChoices = (who) => {
+  if (!cardAiDeckFlagOn() || !CARD_AI_FACES[who]) return [];
+  const now = CARD_AI_FACE_IDS.map((f) => ({ id: f, face: f, name: cardAiFaceName(who, f), past: false, from: 0, to: 0 }));
+  const past = cardAiHistoryOf(who).map((e) => ({ id: `h:${e.id}`, face: cardAiDeckIdFace(`h:${e.id}`), name: e.name, past: true, from: e.from, to: e.to }));
+  return [...now, ...past];
+};
+// 使っていた時期の書き方(11/8〜11/9。同じ日なら 11/8)。読めなければ空
+const cardAiDeckPeriodText = (from, to) => {
+  const d = (t) => { const x = new Date(t); return Number.isNaN(x.getTime()) || !(t > 0) ? '' : `${x.getMonth() + 1}/${x.getDate()}`; };
+  const a = d(from), b = d(to);
+  return a && b && a !== b ? `${a}〜${b}` : (a || b);
+};
+// 今の気分・仲良し度に合う顔(6割で出す顔。部屋のタブの「よく使う」)。分からなければ null。印が偽なら null
+const cardAiDeckMainFace = (who) => (cardAiDeckFlagOn() && CARD_AI_FACES[who] ? cardAiFaceMain(cardAiFaceMaterial(who)) : null);
+// 顔の今の名前(保存した名前、無ければ既定)。素顔は今の側(よそいき・本音)
+const cardAiFaceName = (who, face) => {
+  const slot = cardAiFaceSlotOf(face, cardAiFaceSugaoSide(cardAiFaceMaterial(who)));
+  if (!slot) return null;
+  return cardAiFaceNameOf(cardAiRecipeState && cardAiRecipeState.perWho[who], who, slot);
+};
+// 今日のデッキの名前(相手えらびの札用)
 const cardAiDeckNextName = (who) => {
-  const st = cardAiDeckNextStyle(who);
-  if (!st) return null;
-  const e = cardAiRecipeState && cardAiRecipeState.perWho[who] && cardAiRecipeState.perWho[who].decks[st];
-  return (e && e.name) || cardAiDeckDefaultName(who, st);
+  const id = cardAiDeckNextId(who);
+  if (!id) return null;
+  if (cardAiFaceOf(id)) return cardAiFaceName(who, id);
+  const e = cardAiHistoryOf(who).find((x) => `h:${x.id}` === id);
+  return e ? e.name : null;
 };
-// 1戦し終えた(または対戦を始めた)ら、次の対戦の型を決め直す
-const cardAiDeckNextDone = (who) => { delete cardAiDeckNextMemo[who]; };
-// 対戦で出すデッキ(読むだけ。助手と対戦の 84 と、助手どうしの対戦(助手ライフ・キズナ2)が使う)。印が偽なら null(呼ぶ側は今の組み方)
-//   返り値 { styleId, name, line, plan, deck }。deck は cardAiBuildDeck の物(level は既定 'normal')
-//   styleId を渡せばその型(84 は相手えらびで見せた今日のデッキ cardAiDeckNextStyle を渡す)。渡さなければ今の型6割・ほか2割ずつで選ぶ
-const cardAssistantDeckPick = (who, rand = Math.random, level = 'normal', extra = {}, styleIn = null) => {
-  if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who] || typeof CARD_BATTLE_DATA === 'undefined') return null;
+// 1戦し終えた(または対戦を始めた)ら、次の対戦のデッキを決め直す(遊ぶ人が選んだデッキはそのまま)
+const cardAiDeckNextDone = (who) => { if (!cardAiDeckChosenMemo[who]) delete cardAiDeckNextMemo[who]; };
+// 対戦で出すデッキ(読むだけ。助手と対戦の 84 と、助手どうしの対戦(助手ライフ)が使う)。印が偽なら null(呼ぶ側は今の組み方)
+//   返り値 { styleId: 顔, slot, deckId, deckFrom: 'now'|'past', name, line, plan, deck }。deck は cardAiBuildDeck の物(level は既定 'normal')
+//   idIn を渡せばそのデッキ(84 は相手えらびで見せた今日のデッキ cardAiDeckNextId を渡す)。渡さなければ cardAiDeckPickId で選ぶ
+const cardAssistantDeckPick = (who, rand = Math.random, level = 'normal', extra = {}, idIn = null) => {
+  if (!cardAiDeckFlagOn() || !CARD_AI_DECKS[who] || !CARD_AI_FACES[who] || typeof CARD_BATTLE_DATA === 'undefined') return null;
   const rnd = typeof rand === 'function' ? rand : Math.random;
-  const styleId = cardAiStyleOf(styleIn) || cardAiDeckPickStyle(cardAiDeckLifeStyle(who), rnd);
-  const e = (cardAiRecipeState && cardAiRecipeState.perWho[who] && cardAiRecipeState.perWho[who].decks[styleId]) || null;
+  const mat = cardAiFaceMaterial(who);
+  const hist = cardAiHistoryOf(who);
+  let id = typeof idIn === 'string' && (cardAiFaceOf(idIn) || hist.some((e) => `h:${e.id}` === idIn)) ? idIn : cardAiDeckPickId(cardAiFaceMain(mat), hist, rnd);
+  const past = id.startsWith('h:') ? hist.find((e) => `h:${e.id}` === id) : null;
+  if (past) {
+    const deck = cardAiFaceBuildWith(CARD_BATTLE_DATA, who, { ...past.spec, slot: past.slot }, level, rnd, extra, past.plan);
+    return { styleId: cardAiDeckIdFace(id), slot: past.slot, deckId: id, deckFrom: 'past', name: past.name, line: null, plan: past.plan, deck };
+  }
+  if (!cardAiFaceOf(id)) id = 'oshi';
+  const slot = cardAiFaceSlotOf(id, cardAiFaceSugaoSide(mat));
+  const w = cardAiRecipeState && cardAiRecipeState.perWho[who];
+  const e = (w && w.decks[slot]) || null;
   const plan = e && e.plan ? e.plan : null;
-  const deck = cardAiBuildDeck(CARD_BATTLE_DATA, who, CARD_AI_BUILD[level] ? level : 'normal', rnd, { ...extra, style: styleId, ...(plan ? { plan } : {}) });
-  return { styleId, name: (e && e.name) || cardAiDeckDefaultName(who, styleId), line: (e && e.line) || null, plan, deck };
+  const deck = cardAiFaceBuild(CARD_BATTLE_DATA, who, slot, level, rnd, extra, plan);
+  return { styleId: id, slot, deckId: id, deckFrom: 'now', name: cardAiFaceNameOf(w, who, slot), line: (e && e.line) || null, plan, deck };
 };
-// 保存してある型のデッキ(読むだけ。82 の cardAssistantDeckPreview が型ごとの plan・name・line・at を読む)。印が偽なら null
-const cardAiRecipeOf = (who, styleId) => {
+// 保存してある顔のデッキ(読むだけ)。印が偽なら null
+const cardAiRecipeOf = (who, face) => {
   if (!cardAiDeckFlagOn() || !cardAiRecipeState) return null;
-  const e = cardAiRecipeState.perWho[who] && cardAiRecipeState.perWho[who].decks[styleId];
+  const slot = cardAiFaceSlotOf(face, cardAiFaceSugaoSide(cardAiFaceMaterial(who)));
+  const e = slot && cardAiRecipeState.perWho[who] && cardAiRecipeState.perWho[who].decks[slot];
   return e ? { plan: e.plan, name: e.name, line: e.line, at: e.at } : null;
+};
+// 顔のデッキの中身(見せる用。87 のデッキの欄・56 の部屋のタブ)。返り値 { monsters, cards, styleId: 顔, slot, side, name, line, at }。助手でない・印が偽なら null
+//   これまでのデッキの id('h:…')を渡せば、そのデッキ(past・from・to つき)
+const cardAssistantFacePreview = (who, face, level = 'normal') => {
+  if (!cardAiDeckFlagOn() || !CARD_AI_FACES[who] || typeof CARD_BATTLE_DATA === 'undefined') return null;
+  if (typeof face === 'string' && face.startsWith('h:')) {
+    const e = cardAiHistoryOf(who).find((x) => `h:${x.id}` === face);
+    if (!e) return null;
+    const lv = CARD_AI_BUILD[level] ? level : 'normal';
+    const d = cardAiFaceBuildWith(CARD_BATTLE_DATA, who, { ...e.spec, slot: e.slot }, lv, cardAiSeededRand(`face:${who}:${face}:${lv}`), {}, e.plan);
+    return { monsters: d.monsters.slice(), cards: d.cards.slice(), styleId: cardAiDeckIdFace(face), slot: e.slot, side: null, name: e.name, line: null, at: 0, past: true, from: e.from, to: e.to };
+  }
+  const f = cardAiFaceOf(face) || 'oshi';
+  const side = cardAiFaceSugaoSide(cardAiFaceMaterial(who));
+  const slot = cardAiFaceSlotOf(f, side);
+  const e = cardAiRecipeState && cardAiRecipeState.perWho[who] && cardAiRecipeState.perWho[who].decks[slot];
+  const deck = cardAiFacePreviewDeck(CARD_BATTLE_DATA, who, slot, e && e.plan, CARD_AI_BUILD[level] ? level : 'normal');
+  return { monsters: deck.monsters.slice(), cards: deck.cards.slice(), styleId: f, slot, side: f === 'sugao' ? side : null,
+    name: cardAiFaceNameOf(cardAiRecipeState && cardAiRecipeState.perWho[who], who, slot), line: (e && e.line) || null, at: (e && e.at) || 0 };
 };
 // VS の画面で助手が言うひとこと。AI の line があればそれ、無ければ助手ごとの既定({name} にデッキの名前)
 //   既定の言い方は、各助手の話し方に合わせた部長の案(社長の「この文で」待ち)。表情は happy
@@ -75823,9 +76350,45 @@ const CARD_FOE_BUILD_NOTE = Object.freeze({
   expert: '戦い方に合うモンスターと、全部の弾の強いカードで、しっかり組んでくる',
   master: '全部の弾から本気で組んでくる。あなたのデッキを見て、モンスターを選び直すことも',
 });
+// 相手えらびの「デッキ」の選び口(2026-11-08 社長「昔のデッキとも戦える」)。既定は おまかせ(その日の気分)。
+//   押すと今の3つ(推し・好き・素顔)と「これまでのデッキ」(名前・使っていた時期)から選べる。ルールの口(83 の cardAiDeckChoices・cardAiDeckChoose)が無ければ出さない
+const CardFoeDeckPicker = ({ who, onChange }) => {
+  const [open, setOpen] = React.useState(false);
+  if (typeof cardAiDeckChoices !== 'function' || typeof cardAiDeckChoose !== 'function') return null;
+  const list = cardAiDeckChoices(who);
+  if (!list.length) return null;
+  const chosen = typeof cardAiDeckChosen === 'function' ? cardAiDeckChosen(who) : null;
+  const icon = (f) => (typeof CARD_DECK_STYLE_ICON !== 'undefined' && CARD_DECK_STYLE_ICON[f]) || '';
+  const pick = (id) => { if (typeof Audio_ !== 'undefined') Audio_.fgSe.tap(); cardAiDeckChoose(who, id); setOpen(false); if (onChange) onChange(); };
+  const cur = chosen ? list.find((c) => c.id === chosen) : null;
+  const row = (c) => (
+    <button key={c.id} type="button" data-card-foe-deck-choice={c.id} aria-pressed={chosen === c.id} onClick={() => pick(c.id)}
+      className={`flex w-full items-center gap-1.5 rounded-lg border px-2 py-1 text-left text-[11.5px] font-black ${chosen === c.id ? 'border-amber-300 bg-amber-400 text-slate-950' : 'border-white/15 bg-slate-800 text-slate-100'}`}>
+      <span aria-hidden="true">{icon(c.face)}</span><span className="min-w-0 flex-1" style={JA_LABEL_STYLE}>{c.name}</span>
+      {c.past && <small data-card-foe-deck-period className="shrink-0 text-[10px] font-bold opacity-80">{typeof cardAiDeckPeriodText === 'function' ? cardAiDeckPeriodText(c.from, c.to) : ''}</small>}
+    </button>);
+  const now = list.filter((c) => !c.past), past = list.filter((c) => c.past);
+  return (
+    <div data-card-foe-deck-picker={who}>
+      <button type="button" data-card-foe-deck-picker-open aria-expanded={open} onClick={() => { if (typeof Audio_ !== 'undefined') Audio_.fgSe.tap(); setOpen(!open); }}
+        className="flex w-full items-center justify-between gap-2 rounded-lg border border-white/15 bg-slate-800/80 px-2 py-1 text-[11.5px] font-black text-slate-100">
+        <span className="min-w-0" style={JA_LABEL_STYLE}><small className="mr-1 text-[10px] text-slate-400">デッキ</small>{cur ? `${icon(cur.face)} ${cur.name}` : 'おまかせ(その日の気分)'}</span>
+        <span aria-hidden="true" className="shrink-0 text-slate-400">{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div data-card-foe-deck-picker-list className="mt-1 space-y-1">
+          <button type="button" data-card-foe-deck-choice="auto" aria-pressed={!chosen} onClick={() => pick(null)}
+            className={`w-full rounded-lg border px-2 py-1 text-left text-[11.5px] font-black ${!chosen ? 'border-amber-300 bg-amber-400 text-slate-950' : 'border-white/15 bg-slate-800 text-slate-100'}`}>おまかせ(その日の気分)</button>
+          {now.map(row)}
+          {past.length > 0 && <p className="pt-0.5 text-[10px] font-black text-slate-400">これまでのデッキ</p>}
+          {past.map(row)}
+        </div>)}
+    </div>);
+};
 const CardFoeStyle = ({ db, who, level }) => {
   const style = cardFoeStyle(who);
   const recipe = CARD_AI_DECKS[who];
+  const [, setTick] = React.useState(0);
   if (!style || !recipe) return null;
   // 好きなモンスター(主血統で決める。82 の CARD_AI_FAVORITE)。名前と顔だけ出す(社長 2026-10-25「余計な文消しといて」)
   const favSpecies = CARD_AI_FAVORITE[who];
@@ -75838,6 +76401,7 @@ const CardFoeStyle = ({ db, who, level }) => {
   return (
     <div data-card-foe-style={who} className="space-y-1.5 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
       {nextStyle && typeof CardFoeDeckChip === 'function' && <CardFoeDeckChip name={nextName} styleId={nextStyle} kind="foe" compact/>}
+      {nextStyle && <CardFoeDeckPicker who={who} onChange={() => setTick((n) => n + 1)}/>}
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span data-card-foe-style-label className="shrink-0 rounded-full bg-amber-300 px-2.5 py-0.5 text-[12px] font-black text-slate-950">{style.label}</span>
         <span className="min-w-0 text-[11px] font-bold text-slate-200" style={JA_WRAP_STYLE}>{jaWrap(style.note)}</span>
@@ -78873,7 +79437,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       // 過去の対戦を見る(93): この試合の手の一覧。先に作っておき、保存は結果を書いたあと(使った技を数えるのにも使う)
       const log = cpuLogRef.current;
       const replayRec = log && log.id === game.key ? cardReplayFromCpu(db, { id: `c${log.id}`, at: Date.now(), myDeck: log.decks[0], cpuDeck: log.decks[1], seed: log.seed, first: log.first, history: log.acts,
-        foe: { name: log.foeName, who: game.who, deckName: log.deckName, style: log.style, styleName: log.styleName }, outcome, reason: '', level: game.level }) : null;
+        foe: { name: log.foeName, who: game.who, deckName: log.deckName, style: log.style, styleName: log.styleName, ...(game.aiDeck ? { deckId: game.aiDeck.deckId, deckFrom: game.aiDeck.deckFrom } : {}) }, outcome, reason: '', level: game.level }) : null;
       if (log && log.id === game.key) cpuLogRef.current = null;
       // 記録をくわしく(90 の mh_card_record_detail_v1。見本の対戦は数えない)。デッキ・場の3体・使った技も足す
       const usedDeck = save.decks.decks.find((d) => d.id === save.decks.active) || null;
@@ -78968,7 +79532,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const share = pick.share || null;
     // 育つ助手の型(助手部の口 assistantLifeCardStyle。2026-11-08)。助手と対戦だけ(杯・みんなのデッキは今のまま)。口が無い・知らない値は型なし(今どおり)
     // 印が真なら、3つのデッキから今日のデッキを選ぶ(83-card-ai-deck.jsx の cardAssistantDeckPick: 今の型6割・ほか2割ずつ。保存した方針で組む)
-    const aiPick = !share && !(opts && opts.cup) && cardGrowStyleOn() && typeof cardAssistantDeckPick === 'function' ? cardAssistantDeckPick(pick.who, Math.random, pick.level, { playerDeck: activeDeck }, typeof cardAiDeckNextStyle === 'function' ? cardAiDeckNextStyle(pick.who) : null) : null;
+    const aiPick = !share && !(opts && opts.cup) && cardGrowStyleOn() && typeof cardAssistantDeckPick === 'function' ? cardAssistantDeckPick(pick.who, Math.random, pick.level, { playerDeck: activeDeck }, typeof cardAiDeckNextId === 'function' ? cardAiDeckNextId(pick.who) : typeof cardAiDeckNextStyle === 'function' ? cardAiDeckNextStyle(pick.who) : null) : null;
     if (aiPick && typeof cardAiDeckNextDone === 'function') cardAiDeckNextDone(pick.who); // 次の対戦の型は決め直す
     const foeStyle = aiPick ? aiPick.styleId : null;
     // 毎試合、好きなモンスター ベスト4から3体を選んで組み直す(MASTER はこちらのデッキも見る)
@@ -78987,14 +79551,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const intro = share ? { mode: 'assistant', foe: { who: null, name: share.name, icon: share.icon, frame: share.frame, line: null, deckName: share.tactics.name || null, monsters: vsMons(st, CARD_CPU) },
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } } : { mode: 'assistant',
       foe: { who: pick.who, name: assistant ? assistant.name : 'あいて', line: (aiPick && cardAiDeckVsLine(pick.who, aiPick)) || (CARD_VS_LINES[pick.who] || {})[pick.level] || null, deckName: cardAssistantDeckName(db, cpuDeck, pick.who, pick.level), monsters: vsMons(st, CARD_CPU),
-        ...(aiPick && aiPick.name ? { styleName: aiPick.name, styleId: aiPick.styleId } : {}) },
+        ...(aiPick && aiPick.name ? { styleName: aiPick.name, styleId: aiPick.styleId, deckId: aiPick.deckId || aiPick.styleId, deckFrom: aiPick.deckFrom === 'past' ? 'past' : 'now' } : {}) },
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } };
     const auto = autoIn ? { tactics: autoIn.tactics, level: typeof cardShareFightLevel === 'function' ? cardShareFightLevel(autoIn.tactics) : 'master', sameBlood: !!cardShareSameBlood(db, activeDeck), quick: !!autoIn.quick } : null;
     // カード部屋にいる助手と対戦: 始めた時点でいたかで決める(手で遊ぶ助手と対戦だけ。みんなのデッキ・杯・オートは上げない)
     //   1つの時間帯で助手1人につき1回まで(cardLifeRewardLeft。2026-11-08 社長)。数える時間帯も始めた時点のもの(lifeSlot)
     const lifeUp = !share && !cup && !auto && cardLifeAtCard(pick.who) && cardLifeRewardLeft(pick.who);
     const lifeSlot = lifeUp ? (cardLifeSlotNow() || {}).abs : null;
-    setGame({ key: gameKey, st, who: pick.who, level: pick.level, settings: save.settings, intro: auto && auto.quick ? null : intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(lifeUp ? { lifeUp: true, lifeSlot } : {}), ...(aiPick ? { aiDeck: { style: aiPick.styleId, name: aiPick.name, team: intro.foe.deckName || null } } : {}), ...(share ? { share } : {}), ...(cup ? { cup } : {}), ...(auto ? { auto } : {}),
+    setGame({ key: gameKey, st, who: pick.who, level: pick.level, settings: save.settings, intro: auto && auto.quick ? null : intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(lifeUp ? { lifeUp: true, lifeSlot } : {}), ...(aiPick ? { aiDeck: { style: aiPick.styleId, name: aiPick.name, team: intro.foe.deckName || null, deckId: aiPick.deckId || aiPick.styleId, deckFrom: aiPick.deckFrom === 'past' ? 'past' : 'now' } } : {}), ...(share ? { share } : {}), ...(cup ? { cup } : {}), ...(auto ? { auto } : {}),
       ...(rented ? { rented: { ownerId: rented.ownerId, version: rented.version, name: rented.owner } } : {}) });
     const scene = typeof window !== 'undefined' && typeof window.__mhCardScene === 'function';
     cpuLogRef.current = scene ? null : { id: gameKey, style: foeStyle || 'normal', styleName: (aiPick && aiPick.name) || null, seed, first, decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], foeName: intro.foe.name, deckName: intro.foe.deckName || null, acts: [] };
@@ -79351,7 +79915,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           {/* 横の画面は、紹介と型の欄を左右に並べる(縦に積むと強さのボタンが下へ出た。landscape-screens-check) */}
           <div className="space-y-2 landscape:grid landscape:grid-cols-2 landscape:items-stretch landscape:gap-2 landscape:space-y-0">
           {a && (
-            <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2 landscape:items-center">
+            <div data-card-foe-intro={a.id} className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2 landscape:items-start">
+              {/* 横の画面は中身を上に寄せる(真ん中寄せだと、右の欄の「デッキ」の選び口を開いて欄が伸びたとき、絵と吹き出しが画面の下へ押し出された。2026-11-08 部長の止め絵) */}
               {/* 背の低い画面(SE)では絵を低くして、下の「あなたのデッキ」の欄まで1画面に入れる(2026-10-24 改善部の点検 V2) */}
               {/* 横画面: 前は絵を外していた(2026-10-25 カゲあつくん「EASY〜が下で切れている」)が、この欄は右の欄と同じ高さに伸びるので、
                   上が空白になっていた(2026-10-26 巡回)。強さのボタンはこの欄より上にあるので、欄の高さに収まる大きさで出す。
@@ -79359,7 +79924,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               <CardAssistantArt src={assistantFullImage(a, 'wink')} alt={a.name} className="w-[42%]" style={{ height: 'var(--mh-foe-art-h, min(150px, max(17vh, 28vmin)))' }}/>
               <div className="min-w-0 flex-1 pb-2">
                 <div className="text-[11px] font-bold text-slate-400">{a.tagline}</div>
-                <div className="mt-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{line ? cardJaWrap(line.text) : ''}</div>
+                <div data-card-foe-intro-line className="mt-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{line ? cardJaWrap(line.text) : ''}</div>
               </div>
             </div>
           )}
@@ -81078,9 +81643,14 @@ const CardShopStarters = ({ db, point, busy, starter, shop, collection = null, o
 // 中身はルールの cardAssistantDeckPreview(83-card-ai-deck・読むだけ)。印 cardGrowStyle(84 の cardGrowStyleOn)が偽のあいだは何も出さない(null)
 // ★82 は触らない(サーバの杯で同じ 82 が動くため)。画面の部品だけをここに置く
 
-// 型の言い方と印(82 の CARD_AI_STYLE_IDS と同じ3つ)
-const CARD_DECK_STYLE_LABEL = Object.freeze({ attack: '攻め', guard: '守り', normal: 'ふつう' });
-const CARD_DECK_STYLE_ICON = Object.freeze({ attack: '⚔️', guard: '🛡️', normal: '⚖️' });
+// 型の言い方と印(82 の CARD_AI_STYLE_IDS と同じ3つ)。2026-11-08 推し・好き・素顔(83 の CARD_AI_FACE_IDS)を足した(ルールくん。印は部長の確認待ち)
+//   今の口(83 の cardAssistantDeckPick・cardAiDeckNextStyle)は顔の id を返す。型の id は前のリプレイなどを読むために残す
+const CARD_DECK_STYLE_LABEL = Object.freeze({ attack: '攻め', guard: '守り', normal: 'ふつう', oshi: '推し', suki: '好き', sugao: '素顔' });
+const CARD_DECK_STYLE_ICON = Object.freeze({ attack: '⚔️', guard: '🛡️', normal: '⚖️', oshi: '💖', suki: '⭐', sugao: '🎭' });
+const cardDeckIsFace = (id) => id === 'oshi' || id === 'suki' || id === 'sugao';
+// これまでのデッキの id('h:…'。83 の cardAiDeckChoices)。印・言葉は、そのデッキの顔のもの
+const cardDeckIsPast = (id) => typeof id === 'string' && id.startsWith('h:');
+const cardDeckFaceOf = (id) => (cardDeckIsPast(id) ? (typeof cardAiDeckIdFace === 'function' ? cardAiDeckIdFace(id) : null) : id);
 // 一覧の並び(種類ごと)。ちから技・かしこさ技は「技」にまとめる
 const CARD_DECK_KIND_GROUPS = Object.freeze([['技', ['pow', 'int']], ['防御', ['blk']], ['回避', ['dge']], ['特殊', ['spe']], ['場', ['fld']]]);
 
@@ -81089,6 +81659,7 @@ const cardAssistantDeckViewOn = () => typeof cardGrowStyleOn === 'function' && c
 const cardAssistantDeckDisplayName = (who, styleId, name = null) => {
   const sid = CARD_DECK_STYLE_LABEL[styleId] ? styleId : 'normal';
   if (typeof name === 'string' && name) return name; // ルールの口が返す名前(AI の名前か、82 の cardAiStyleDefaultName の既定)
+  if (cardDeckIsFace(sid)) return typeof cardAiFaceName === 'function' ? cardAiFaceName(who, sid) : null; // 顔は 83 の既定の名前
   if (typeof cardAiStyleDefaultName === 'function') return cardAiStyleDefaultName(who, sid);
   const base = typeof CARD_AI_STYLE_NAMES !== 'undefined' ? CARD_AI_STYLE_NAMES[who] : null;
   if (!base) return null;
@@ -81102,8 +81673,11 @@ const cardAssistantDeckDisplayName = (who, styleId, name = null) => {
 const cardAssistantDeckSummary = (who, styleId) => {
   try {
     if (typeof cardAssistantDeckPreview !== 'function' || typeof CARD_BATTLE_DATA === 'undefined') return null;
-    const sid = CARD_DECK_STYLE_LABEL[styleId] ? styleId : 'normal';
-    const d = cardAssistantDeckPreview(who, sid, 'normal');
+    const past = cardDeckIsPast(styleId);
+    const sid = past ? cardDeckFaceOf(styleId) : CARD_DECK_STYLE_LABEL[styleId] ? styleId : 'normal';
+    if (past && !sid) return null;
+    // 顔(推し・好き・素顔)とこれまでのデッキは 83 の cardAssistantFacePreview。素顔は今の側(よそいき・本音)を返す
+    const d = past || cardDeckIsFace(sid) ? (typeof cardAssistantFacePreview === 'function' ? cardAssistantFacePreview(who, past ? styleId : sid, 'normal') : null) : cardAssistantDeckPreview(who, sid, 'normal');
     if (!d || !Array.isArray(d.monsters) || !Array.isArray(d.cards)) return null;
     const db = CARD_BATTLE_DATA;
     const count = {};
@@ -81117,7 +81691,8 @@ const cardAssistantDeckSummary = (who, styleId) => {
     const line = typeof d.line === 'string' && d.line ? d.line : null;
     // 時刻が無いとき、ルールの口は at: 0 を返す。0 を時刻と読むと「AI が 0:00 に組み直しました」と出た(2026-11-08 止め絵)
     const at = Number.isFinite(d.at) && d.at > 0 ? d.at : null;
-    return { styleId: sid, monsters, count, ace, groups, total: d.cards.length, name, line, at };
+    const period = past && typeof cardAiDeckPeriodText === 'function' ? cardAiDeckPeriodText(d.from, d.to) : '';
+    return { styleId: sid, monsters, count, ace, groups, total: d.cards.length, name, line, at, side: d.side === 'honne' || d.side === 'yoso' ? d.side : null, past, period };
   } catch (_) { return null; }
 };
 // 組み直した時刻(4:00 など)。無ければ空
@@ -81144,7 +81719,7 @@ function CardAssistantDeckView({ who, styleId, land = false }) {
   const at = cardAssistantDeckAtText(s.at);
   const top = (
     <div className="mhm-card" data-card-assistant-deck-head={s.styleId}>
-      <p className="text-[10px] font-black text-slate-400">MFバトルカード・{label}のデッキ</p>
+      <p className="text-[10px] font-black text-slate-400">{s.past ? `MFバトルカード・これまでのデッキ(${label}${s.period ? `・${s.period}` : ''})` : `MFバトルカード・${label}のデッキ${s.side ? `(${s.side === 'honne' ? '本音' : 'よそいき'})` : ''}`}</p>
       <p data-card-assistant-deck-name className="text-[18px] font-black leading-tight text-amber-200" style={JA_LABEL_STYLE}>{CARD_DECK_STYLE_ICON[s.styleId]} {s.name || `${label}のデッキ`}</p>
       {s.line && <p data-card-assistant-deck-line className="mt-1 rounded-lg bg-black/30 px-2 py-1 text-[11.5px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE}>{a ? `${a.name}「${s.line}」` : s.line}</p>}
       <div className="mt-2 flex items-end gap-2">
@@ -84633,7 +85208,13 @@ const cardReplayText = (v, max) => (typeof v === 'string' ? v.slice(0, max) : ''
 //   { v:1, id, kind:'pvp'|'cpu', at, rules, first, names:[自分, 相手], foe:{ name, icon, frame, deckName, who }, outcome, reason,
 //     decks:[自分, 相手], seeds:[自分, 相手], acts:[[by, act], …], prints:'4文字ずつ', fav }
 // 助手と対戦で使った型(育つ助手・2026-11-08)。'attack'/'guard'/'normal'。古い記録(型なし)・知らない値は 'normal'
-const cardReplayStyleOf = (s) => (s === 'attack' || s === 'guard' || s === 'normal' ? s : 'normal');
+// どのデッキと戦ったか(2026-11-08 社長「昔のデッキとも戦える」→ 記録に残す)。deckId … 'oshi'|'suki'|'sugao'|'h:…'、deckFrom … 'now'(今の3つ)|'past'(これまでのデッキ)。無い・壊れているときは足さない
+const cardReplayFoeDeckOf = (foe) => {
+  const id = foe && typeof foe.deckId === 'string' && /^(oshi|suki|sugao|h:[a-z0-9:_-]{1,40})$/i.test(foe.deckId) ? foe.deckId : null;
+  return id ? { deckId: id, deckFrom: foe.deckFrom === 'past' ? 'past' : 'now' } : {};
+};
+// 型(attack/guard/normal)と、2026-11-08 からの顔(推し oshi・好き suki・素顔 sugao)。知らない値は normal
+const cardReplayStyleOf = (s) => (s === 'attack' || s === 'guard' || s === 'normal' || s === 'oshi' || s === 'suki' || s === 'sugao' ? s : 'normal');
 const cardReplayNormalizeOne = (raw) => {
   if (!raw || typeof raw !== 'object' || raw.v !== 1) return null;
   if (typeof raw.id !== 'string' || !CARD_REPLAY_ID_RE.test(raw.id)) return null;
@@ -84661,7 +85242,7 @@ const cardReplayNormalizeOne = (raw) => {
     names: [cardReplayText(Array.isArray(raw.names) ? raw.names[0] : '', 16) || 'あなた', cardReplayText(Array.isArray(raw.names) ? raw.names[1] : '', 16) || 'あいて'],
     foe: { name: cardReplayText(foe.name, 16) || 'あいて', icon: cardReplayText(foe.icon, 64), frame: typeof foe.frame === 'string' ? foe.frame.slice(0, 40) : null,
       deckName: typeof foe.deckName === 'string' ? (foe.deckName.slice(0, 30) || null) : null, who: typeof foe.who === 'string' ? foe.who.slice(0, 20) : null,
-        ...(raw.kind === 'cpu' ? { style: cardReplayStyleOf(foe.style), styleName: cardReplayText(foe.styleName, 12) || null } : {}) },
+        ...(raw.kind === 'cpu' ? { style: cardReplayStyleOf(foe.style), styleName: cardReplayText(foe.styleName, 12) || null, ...cardReplayFoeDeckOf(foe) } : {}) },
     outcome: outcomes.includes(raw.outcome) ? raw.outcome : null,
     reason: cardReplayText(raw.reason, 40),
     decks, seeds, acts,
@@ -84788,7 +85369,7 @@ const cardReplayMake = (db, { kind, match, at, decks, seeds, first, history, foe
   const rec = {
     v: 1, id: String(match || ''), kind, at: at || Date.now(), rules: CARD_REPLAY_RULES, first,
     names: ['あなた', (foe && foe.name) || 'あいて'],
-    foe: { name: (foe && foe.name) || 'あいて', icon: (foe && foe.icon) || '', frame: (foe && foe.frame) || null, deckName: (foe && foe.deckName) || null, who: (foe && foe.who) || null, ...(kind === 'cpu' ? { style: cardReplayStyleOf(foe && foe.style), styleName: cardReplayText(foe && foe.styleName, 12) || null } : {}) },
+    foe: { name: (foe && foe.name) || 'あいて', icon: (foe && foe.icon) || '', frame: (foe && foe.frame) || null, deckName: (foe && foe.deckName) || null, who: (foe && foe.who) || null, ...(kind === 'cpu' ? { style: cardReplayStyleOf(foe && foe.style), styleName: cardReplayText(foe && foe.styleName, 12) || null, ...cardReplayFoeDeckOf(foe) } : {}) },
     outcome, reason: reason || '',
     decks: decks.map((d) => ({ monsters: d.monsters.slice(), cards: d.cards.slice() })),
     seeds: seeds.map((n) => n >>> 0),

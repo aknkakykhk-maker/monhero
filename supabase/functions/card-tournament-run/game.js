@@ -2228,8 +2228,9 @@ const cardAiPickIndex = (weights, rand) => {
 // 好きなモンスターの候補(主血統がその種族のもの。通常・キラ・別絵キラ・混血/派生)
 // 好きな子をもう1つの血統からも選ぶ助手(2026-11-04 社長: ソラシドはキュービ推しなので、キュービ・オリヒメも好きな子に入れる)
 const CARD_AI_FAVORITE_EXTRA = Object.freeze({ sorashido: ['kyubi'] });
-const cardAiFavoriteCandidates = (db, who) => {
-  const favs = [CARD_AI_FAVORITE[who] || CARD_AI_FAVORITE.mua, ...(CARD_AI_FAVORITE_EXTRA[who] || [])];
+// lead … 主役の種を決めたいとき(助手の推し・好き・素顔のデッキ 83)。無ければ今と同じ(好きな種+おまけ)
+const cardAiFavoriteCandidates = (db, who, lead = null) => {
+  const favs = typeof lead === 'string' && lead ? [lead] : [CARD_AI_FAVORITE[who] || CARD_AI_FAVORITE.mua, ...(CARD_AI_FAVORITE_EXTRA[who] || [])];
   return Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && favs.some((fav) => (String(m.wave) === 'hybrid' ? m.main === fav : m.species === fav))).map((m) => m.no).sort();
 };
 // モンスターの弾(混血・派生は主の種族の弾)。好きな子の技は、この弾まで使える
@@ -2252,9 +2253,17 @@ const CARD_AI_MILL_MON_BONUS = 6;
 const cardAiMillMonBonus = (habit, m) => (habit && habit.mill && m && CARD_AI_MILL_BLOODS.includes(cardAiBloodOf(m)) ? CARD_AI_MILL_MON_BONUS * habit.mill : 0);
 // 毎試合の3体: 好きな子1体(候補から少しずつ変える)+ 型に合うバランスで2体。強さごとの決めは CARD_AI_BUILD
 //   MASTER は、相手(プレイヤー)のデッキに全体攻撃が多ければライフの多い子、回避が多ければ回避されない技を持つ子を選ぶ
-const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
+// face … { lead: 主役の種, avoid: [使わない種], keep: [いつも使わない種], free: 数 }(助手の推し・好き・素顔のデッキ 83)。無ければ今と同じ。大会・サーバーは渡さない
+//   仲間の 1体目〜free 体目は keep だけを避け、そのあとは avoid も避ける(3つのデッキで、主役3体が2体以上ちがうように)
+const cardAiPickTrio = (db, who, levelId, rand, playerDeck, face = null) => {
   const cfg = CARD_AI_BUILD[levelId] || CARD_AI_BUILD.normal;
-  const favs = cardAiFavoriteCandidates(db, who).map((no) => cardMonsterOf(db, no));
+  const lead = face && typeof face.lead === 'string' ? face.lead : null;
+  const avoid = new Set(face && Array.isArray(face.avoid) ? face.avoid.filter((x) => typeof x === 'string' && x !== lead) : []);
+  const keep = new Set(face && Array.isArray(face.keep) ? face.keep.filter((x) => typeof x === 'string' && x !== lead) : [...avoid]);
+  const free = face && Number.isInteger(face.free) && face.free > 0 ? face.free : 0;
+  const avoidAt = (k, m) => { const set = k < free ? keep : avoid; return set.has(m.species) || (String(m.wave) === 'hybrid' && set.has(m.main)); };
+  const favs0 = cardAiFavoriteCandidates(db, who, lead).map((no) => cardMonsterOf(db, no));
+  const favs = lead && !favs0.length ? cardAiFavoriteCandidates(db, who).map((no) => cardMonsterOf(db, no)) : favs0;
   if (!favs.length) return [];
   // 好きな子: 通常を多めに、キラ・別絵キラ・混血もときどき。MASTER はいちばん型に合う子
   // 混血は守りがサブの種族だけなので、いちばん強い子を選ぶとき(MASTER)は少し低く見る(2026-10-27 混血のメイン・サブの直し)
@@ -2262,8 +2271,10 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
   const favW = favs.map((m) => (String(m.wave) === 'hybrid' ? 1.5 : !m.variant ? 3 : /別絵/.test(m.variant) ? 1 : 2));
   const fav = cfg.best ? favs[favScore.indexOf(Math.max(...favScore))] : favs[cardAiPickIndex(favW, rand)];
   // 残り2体の候補: 通常のモンスター(別々の種族・好きな子と違う種族)。弾は技などのカードと同じ決め(全部の弾の強さでは混血・派生も)
-  const cands = Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && !m.variant && m.species !== fav.species && m.species !== CARD_AI_FAVORITE[who]
-    && (String(m.wave) === 'hybrid' ? cfg.maxWave >= 99 && m.main !== CARD_AI_FAVORITE[who] : Number(m.wave) <= cfg.maxWave));
+  const favSp = lead && favs0.length ? lead : CARD_AI_FAVORITE[who];
+  const cands = Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && !m.variant && m.species !== fav.species && m.species !== favSp
+    && !keep.has(m.species) && !(String(m.wave) === 'hybrid' && keep.has(m.main))
+    && (String(m.wave) === 'hybrid' ? cfg.maxWave >= 99 && m.main !== favSp : Number(m.wave) <= cfg.maxWave));
   let counter = () => 0;
   if (cfg.best && playerDeck && Array.isArray(playerDeck.cards) && playerDeck.cards.length) {
     const pc = playerDeck.cards.map((no) => cardOf(db, no)).filter(Boolean);
@@ -2272,7 +2283,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
     counter = (m) => areaRate * (m.life || 0) * 1.5 + evadeRate * Object.values(db.cards).filter((c) => c.ready && cardHasEff(c, 'noEvade') && cardUsableBy(c, { ...m, ko: false })).length * 1.2;
   }
   // 好きな子の血統の仲間(好きな子とは別の子。キラ・別絵キラは同じ子として1つに数える)
-  const family = favs.filter((m) => m.species !== fav.species);
+  const family = favs.filter((m) => m.species !== fav.species && !keep.has(m.species));
   const familySize = new Set(favs.map((m) => m.species)).size;
   // EASY・NORMAL は割合(くせとしてときどき)。HARD から上は、仲間も候補に入れて、チームとして数え直した点数(cardAiTeamValue)でくらべる
   //   ★数え直すのは仲間だけ(ほかの子の点数は今のまま。強さのそろえを動かさないため)。
@@ -2310,7 +2321,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
       continue;
     }
     const team = out.map((no) => cardMonsterOf(db, no));
-    const left = scored.filter((x) => !usedNos.has(x.m.species) && (isFamily.has(x.m.no) || (!usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)))))
+    const left = scored.filter((x) => !usedNos.has(x.m.species) && !avoidAt(k, x.m) && (isFamily.has(x.m.no) || (!usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)))))
       .map((x) => (isFamily.has(x.m.no) ? { ...x, v: cardAiTeamValue(db, who, team, x.m, cfg.maxWave, levelId) + counter(x.m) } : x));
     if (!left.length) break;
     let pick;
@@ -2332,7 +2343,7 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   const recipeAll = CARD_AI_DECKS[who] || CARD_AI_DECKS.mua;
   const cfg = CARD_AI_BUILD[levelId] || CARD_AI_BUILD.normal;
   const rnd = typeof rand === 'function' ? rand : cardAiSeededRand(`${who}:${levelId}`);
-  const monsters = cardAiPickTrio(db, who, levelId, rnd, opts && opts.playerDeck);
+  const monsters = cardAiPickTrio(db, who, levelId, rnd, opts && opts.playerDeck, opts && opts.face);
   // 型をいくつも持つ助手(えるびん)は、毎試合1つ選ぶ(3体を選んだあとに引くので、ほかの助手の組み方は変わらない)
   //   育つ助手の型(opts.style)が渡されたら、その型に当たる組み方に決める(引くのは今どおり1回。ほかの札の選び方の乱数をずらさない)
   const style = cardAiStyleOf(opts && opts.style);
@@ -2355,7 +2366,9 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
     : mons.some((m) => cardUsableBy(c, { ...m, ko: false }) && c.wave <= Math.max(maxWave, cardAiMonWave(db, m, c)))));
   // 名前ごとに1つ(同じ名前の別番号は、入れたい度の高いほう)。強さごとの雑さ(noise)で、毎回少しずつ違うカードが入る
   const byName = {};
-  const noise = Math.max(0, cfg.noise + (((CARD_AI_DECK_TUNE[who] || {})[levelId]) || 0));
+  // face.noise … 助手の推し・好き・素顔のデッキの強さのそろえ(83 の CARD_AI_FACE_NOISE。社長の案B・2026-11-08)。渡さなければ今と同じ
+  const faceNoise = opts && opts.face && Number.isFinite(opts.face.noise) ? Math.max(-0.3, Math.min(0.6, opts.face.noise)) : 0;
+  const noise = Math.max(0, cfg.noise + (((CARD_AI_DECK_TUNE[who] || {})[levelId]) || 0) + faceNoise);
   pool.forEach((c) => { const v = cardAiCardValue(c, habit) + noise * (rnd() * 2 - 1); if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = { c, v }; });
   const ranked = Object.values(byName).sort((a, b) => b.v - a.v || (a.c.no < b.c.no ? -1 : 1));
   const preferOn = levelId === 'hard' || levelId === 'expert' || levelId === 'master';
@@ -2549,6 +2562,8 @@ const CARD_SAVE_KEYS = Object.freeze({
   weeklyReward: 'mh_card_weekly_reward_v1', // 受け取った週間報酬の週の一覧 ['card_weekly_2026-11-02', …](90 の cardWeeksAwaitingReward。壊れているときは何も配らない)
   aiTalk: 'mh_card_ai_talk_v1',       // 助手のおしゃべり(AI)の入/切 { on }(無ければ入。83-card-battle-talk-ai.jsx の cardNormalizeAiTalk)
   aiRecipe: 'mh_card_ai_recipe_v1',   // 助手の3つのデッキ(型ごとの方針・名前・ひとこと・組んだ時刻)と組み直しの数(83-card-ai-deck.jsx の cardNormalizeAiRecipe。2026-11-08)
+  aiDeckHistory: 'mh_card_ai_deck_history_v1', // 助手の「これまでのデッキ」(組み直す前のデッキ。助手ごとに新しい順で10個まで。83-card-ai-deck.jsx の cardNormalizeAiHistory。2026-11-08)
+  aiRecipe2: 'mh_card_ai_recipe_v2',  // 助手の推し・好き・素顔のデッキ(顔ごとの方針・名前・ひとこと・組んだ時刻)と組み直しの数(83-card-ai-deck.jsx。2026-11-08。v1 は読むだけで残す)
   aiDeck: 'mh_card_ai_deck_v1',       // 助手のデッキを AI で組むかの入/切 { on }(無ければ入。83-card-ai-deck.jsx の cardNormalizeAiDeck)
 });
 // カードで使う・もらうポイントはビートP(2026-10-26 社長「ビートPを廃止してビートポイントにして」)。
