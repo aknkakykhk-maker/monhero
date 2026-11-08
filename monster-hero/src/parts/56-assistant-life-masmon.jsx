@@ -789,6 +789,18 @@ const assistantMasmonAskNameOk = (n) => {
   if (words.some(w => f.includes(w) || bare.includes(w.replace(/[.ー]/g, '')))) return false;
   return true;
 };
+// AI の返事が足りない種類だけ使う、助手ごとの用意した台詞(受ける/少し変える/断る/ふつうの返事)。ほかの種類の文は使い回さない
+const ASSISTANT_MASMON_ASK_LINES = Object.freeze({
+  mua: { yes: 'いいね♪ そうしてみる！まぢありがと〜', some: 'ちょっとだけ取り入れてみた！まぢいい感じかも', no: 'ん〜、それはちょっと違うかも…ごめんね！', talk: 'ん？どうしたいか、もうちょい教えて！' },
+  kiki: { yes: 'はい、そうしてみますね。ありがとうございます', some: '少しだけ取り入れてみました', no: '申し訳ありません、それは少し…ごめんなさい', talk: 'どうしたいか、もう少し教えていただけますか？' },
+  momosuke: { yes: 'いいね〜！ももがそうしちゃうよ♡', some: 'ちょっとだけ変えてみたよ〜♡', no: 'ん〜、それはももの好みじゃないかも〜ごめんね', talk: 'ん〜？どうしたいか、もうちょっと教えて♡' },
+  dra: { yes: 'おう、そうしてみるぞ。えへへ', some: 'ちょっとだけ変えてみたぞ', no: 'それはちょっとなあ…ごめんな', talk: 'ん？どうしたいのか、もうちょい教えてくれ' },
+  atsu: { yes: 'いいね、そうしてみるわ笑', some: 'ちょっとだけ取り入れてみたわ笑', no: 'それはちょっと違うかな笑 ごめんね(｡-人-｡)', talk: 'ん？どうしたいか教えて笑' },
+  kyuko: { yes: 'ほい、そうしてみるよぉ笑', some: 'ちょっとだけ変えてみたよぉ笑', no: 'それはちょっとなぁ…ごめんねぇ笑', talk: 'ん〜？どうしたいか教えてよぉ笑' },
+  sorashido: { yes: '了解・・・！そうしてみるぜ笑', some: '少しだけ取り入れてみたぜ・・・！', no: 'それは計算に合わないぜ・・・ごめんな', talk: 'どうしたいか、もう少し教えてくれ・・・！' },
+  erubin: { yes: 'うん、そうしてみるね笑', some: 'ちょっとだけ取り入れてみたよ笑', no: 'それはちょっと…ごめんね🤔', talk: 'どうしたいか、もうちょっと教えてね🤔' },
+});
+const assistantMasmonAskLine = (aid, replies, kind) => (replies && replies[kind]) || (ASSISTANT_MASMON_ASK_LINES[aid] || ASSISTANT_MASMON_ASK_LINES.mua)[kind];
 const ASSISTANT_MASMON_ASK_PER_DAY = 10; // 2026-11-09 社長「1日の制限は10に増やして」(前は3)
 const ASSISTANT_MASMON_ASK_HINT = Object.freeze({
   masmon: '名前や色、このマスモンのことを自由に書いてみてください(例: 体を夕焼けっぽくしてみたら？/名前に♪を付けて/別のマスモンに変えてみたら？)',
@@ -945,11 +957,11 @@ const assistantMasmonAsk = async (aid, from, text, t = null) => {
     // 開いた所と違うものは当てない(例: 勇者モンの所から色を言われた)。くわしい画面からは名前と色だけ
     const fits = { masmon: ['name', 'color', 'swap'], hero: ['hero', 'name', 'color', 'swap'], welcome: ['welcome'], deck: ['deck'] }[from] || [];
     // 変えることが読み取れない・ここでは変えられないものでも、エラーにせず助手がふつうに返事をする(何も変えない・回数は減らない)
-    if (r.kind === 'none' || !fits.includes(r.kind)) { const talk = r.replies.talk || r.replies.some; record('none', '', false, talk); return { res: 'none', line: talk, note: '' }; }
+    if (r.kind === 'none' || !fits.includes(r.kind)) { const talk = assistantMasmonAskLine(aid, r.replies, 'talk'); record('none', '', false, talk); return { res: 'none', line: talk, note: '' }; }
     const outcome = assistantMasmonAskJudge(aid, r, lv);
     const done = assistantMasmonAskApply(aid, r, outcome, t);
     const res2 = outcome === 'no' ? 'no' : done.changed ? outcome : 'some';
-    const line = outcome === 'no' ? r.replies.no : done.changed ? (outcome === 'yes' ? r.replies.yes : r.replies.some) : (r.replies.talk || r.replies.some);
+    const line = assistantMasmonAskLine(aid, r.replies, outcome === 'no' ? 'no' : done.changed ? (outcome === 'yes' ? 'yes' : 'some') : 'talk');
     record(res2, done.what || '', done.changed, line);
     return { res: res2, line, what: done.what, before: done.before, after: done.after, t: done.t, note: done.changed ? '' : (outcome === 'no' ? '断られても、今日の回数は減りません' : '今回は考えておく、とのことでした(回数は減りません)') };
   } catch (_) { record('fail'); return { res: 'fail', note: 'いまは返事ができませんでした。少し時間をおいて試してみてください' }; } finally { _assistantMasmonAskBusy = false; }
