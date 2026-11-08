@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2525d763dd7f5bb2
+// generated-sha256: 3577c493b40b4346
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -99691,7 +99691,8 @@ function MonsterHeroGame() {
     });
   }, [assistantLifeOpenNow]);
   // 助手ライフへ渡す、裏の周回のようす(cardQuickRunView と同じ作り)。周回をしていなくて、始められもしないときは null
-  //   canStart … AUTO設定のクイック周回がそろっていて、勝負のついていない挑戦が無いとき(「開いたら自動で始める」は入れない)
+  //   canStart … AUTO設定のクイック周回がそろっていて、勝負のついていない挑戦が無いとき(札の「始める」を出す)。
+  //   開いたら自動で始めるのは、下の「助手ライフを開いたら自動で∞周回を始める」(AUTO設定の自動開始スイッチが ON のとき)
   const assistantLifeQuickRunView = () => {
     if (!assistantLifeOpenNow) return null;
     const canStart = autoQuickRunConfigured(autoSettings) && !!repeatTemplateFromAutoSettings() && !(runStage !== null && !runResultFinished);
