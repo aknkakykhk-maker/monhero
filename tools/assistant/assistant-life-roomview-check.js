@@ -78,6 +78,10 @@ const MIX = { groups: [{ ids: ['kiki', 'mua'], doing: 'snack', place: 'home' }, 
         if (dock) { for (const b of dock.querySelectorAll('button')) { const q = b.getBoundingClientRect(); if (q.bottom > innerHeight + 1 || q.top < S.top) ng.push(`札が画面の外 ${b.textContent}`); if (b.scrollWidth > b.clientWidth + 1) ng.push(`札の字が切れる ${b.textContent}`); } }
         // 立ち絵の色味の層(①)・大きさ(③ 見えている体)
         for (const f of sc.querySelectorAll('[data-assistant-life-roomview-fig]')) { if (!f.nextElementSibling || !/multiply/.test(getComputedStyle(f.nextElementSibling).mixBlendMode)) ng.push('立ち絵に色味の層が無い'); }
+        // 同じ部屋の人は顔(目〜顎)の長さが同じ・左右に分かれる(真ん中が離れている)(2026-11-08 社長「きき・みゅあが大きく重なる」)
+        const ps = [...sc.querySelectorAll('[data-assistant-life-roomview-face]')].map(e => ({ f: Number(e.getAttribute('data-assistant-life-roomview-face')), r: e.getBoundingClientRect() }));
+        if (ps.length > 1 && new Set(ps.map(p => p.f)).size > 1) ng.push(`顔の大きさがそろわない ${ps.map(p => p.f).join(',')}`);
+        for (let i = 0; i + 1 < ps.length; i++) { const a = ps[i].r, b = ps[i + 1].r; if (Math.abs((a.left + a.right) / 2 - (b.left + b.right) / 2) < Math.min(a.width, b.width) * 0.45) ng.push('2人の立ち絵が大きく重なる'); }
         const life = ASSISTANT_LIFE_STORE.state.life;
         const team = assistantLifeMasmonTeamOf(who).length, want = assistantLifeRoomMasmons(who, life).length;
         return { ng, figs, front, away, ms: ms.length, team, want, dockN: dock ? dock.querySelectorAll('button').length : 0 };

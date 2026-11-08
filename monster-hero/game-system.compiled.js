@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d77015a0016228ab
+// source-sha256: 905df41e2a42c960
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -109479,102 +109479,163 @@ const assistantLifeRoomCalm = () => {
     return false;
   }
 };
+const assistantLifeRoomStandRule = () => {
+  const def = {
+    ec: 0.1639,
+    len: 2.63,
+    cut: {
+      above: 0.55,
+      below: 1.8,
+      fade: 0.45
+    }
+  };
+  try {
+    if (typeof assistantLifeStandRule === 'function') {
+      const r = assistantLifeStandRule();
+      if (r && Number.isFinite(r.ec) && Number.isFinite(r.len) && r.cut) return r;
+    }
+  } catch (_) {}
+  return def;
+};
+const assistantLifeRoomFaceOf = (pid, src) => {
+  try {
+    if (typeof assistantLifeStandFace === 'function') return assistantLifeStandFace(pid, src);
+  } catch (_) {}
+  return {
+    top: 0.05,
+    eye: 0.33,
+    chin: 0.47,
+    m: 1
+  };
+};
+const assistantLifeRoomStandLayout = (items, W, usable, deskTop, land, bed = false) => {
+  const n = items.length;
+  if (!n || items.some(x => !x.box)) return null;
+  const R = assistantLifeRoomStandRule();
+  const span = W * (land ? 0.8 : 0.86),
+    sw = span / n,
+    x0 = (W - span) / 2;
+  let F = Math.min(usable * {
+    1: 0.07,
+    2: 0.07,
+    3: 0.062,
+    4: 0.055
+  }[Math.min(4, n)], W * 0.085);
+  const visH = (x, f) => f / (R.ec * (x.face.m || 1));
+  const visW = (x, f) => visH(x, f) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
+  for (const x of items) {
+    const w1 = visW(x, 1);
+    if (w1 > 0) F = Math.min(F, sw * 0.98 / w1);
+  }
+  const U = F * R.len;
+  const topY = bed ? deskTop + 0.15 * U - U : deskTop + 0.2 * U - R.cut.below * U;
+  return items.map((x, i) => {
+    const vh = visH(x, F),
+      ih = vh / (x.box.b - x.box.t),
+      iw = ih * x.box.ar;
+    const visTop = topY - (x.face.top || 0) * vh,
+      imgTop = visTop - x.box.t * ih;
+    const cx = x0 + sw * (i + 0.5);
+    const frameTop = topY - R.cut.above * U,
+      frameBottom = topY + R.cut.below * U;
+    const clip = [Math.max(0, frameTop - imgTop), Math.max(0, imgTop + ih - frameBottom)];
+    const fade = x.face.head ? null : [Math.max(0, (frameBottom - R.cut.fade * U - imgTop) / ih), Math.min(1, (frameBottom - imgTop) / ih)];
+    return {
+      left: cx - (x.box.l + x.box.r) / 2 * iw,
+      top: imgTop,
+      width: iw,
+      height: ih,
+      clip,
+      fade,
+      cx,
+      face: F,
+      visTop,
+      headTop: topY,
+      frameBottom,
+      w: visW(x, F)
+    };
+  });
+};
 function AssistantLifeRoomFigure({
   who,
-  cx,
-  baseY,
-  vh,
+  src,
+  p,
   look,
   sleep = false,
-  onPress = null,
-  mood = 'happy'
+  onPress = null
 }) {
-  const src = assistantFullImage(who, sleep ? 'normal' : mood);
-  const [box, setBox] = React.useState(() => (typeof ASSISTANT_LIFE_STAND_BOX !== 'undefined' ? ASSISTANT_LIFE_STAND_BOX.get(src) : null) || null);
-  React.useEffect(() => {
-    let alive = true;
-    if (typeof assistantLifeStandBox === 'function') assistantLifeStandBox(src).then(b => {
-      if (alive) setBox(b);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [src]);
-  const b = box || {
-    t: 0,
-    b: 1,
-    l: 0,
-    r: 1,
-    ar: 0.7
-  };
-  const ih = vh / Math.max(0.2, b.b - b.t),
-    iw = ih * (b.ar || 0.7);
-  const left = cx - (b.l + b.r) / 2 * iw,
-    top = baseY - b.b * ih;
-  const pos = {
-    position: 'absolute',
-    left,
-    top,
-    width: iw,
-    height: ih,
-    maxWidth: 'none'
-  };
   const night = look === 'night',
     evening = look === 'evening';
   const tone = night ? 'linear-gradient(100deg,#ffd08a 0%,#c9c2ee 45%,#8a86c0 100%)' : evening ? 'linear-gradient(100deg,#ffe0b0 0%,#f2c9b0 60%,#c99a90 100%)' : 'linear-gradient(100deg,#ffffff 0%,#f6ece8 60%,#d9c2bc 100%)';
-  const mask = {
+  const fadeMask = p.fade ? `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)` : null;
+  const box = {
+    position: 'absolute',
+    left: p.left,
+    top: p.top,
+    width: p.width,
+    height: p.height,
+    clipPath: `inset(${p.clip[0].toFixed(1)}px 0 ${p.clip[1].toFixed(1)}px 0)`,
+    ...(fadeMask ? {
+      WebkitMaskImage: fadeMask,
+      maskImage: fadeMask
+    } : {})
+  };
+  const shape = {
     WebkitMaskImage: `url(${src})`,
     WebkitMaskSize: '100% 100%',
     maskImage: `url(${src})`,
     maskSize: '100% 100%'
   };
-  const Tag = onPress ? 'button' : 'div';
-  return React.createElement(Tag, {
-    type: onPress ? 'button' : undefined,
-    onClick: onPress || undefined,
-    "aria-label": onPress ? `${who.name}のようす` : undefined,
-    "data-assistant-life-roomview-person": who.id,
-    className: "absolute inset-0 block",
-    style: {
-      pointerEvents: 'none'
-    }
-  }, React.createElement("span", {
+  return React.createElement(React.Fragment, null, React.createElement("span", {
     "aria-hidden": "true",
     style: {
       position: 'absolute',
-      left: cx - vh * 0.36,
-      top: baseY - 12,
-      width: vh * 0.72,
+      left: p.cx - p.w * 0.45,
+      top: p.frameBottom - 16,
+      width: p.w * 0.9,
       height: 26,
       borderRadius: '50%',
-      background: 'radial-gradient(#0007,transparent 70%)'
+      background: 'radial-gradient(#0007,transparent 70%)',
+      pointerEvents: 'none'
     }
-  }), React.createElement("img", {
+  }), React.createElement("div", {
+    style: box,
+    "data-assistant-life-roomview-person": who.id,
+    "data-assistant-life-roomview-face": Math.round(p.face),
+    "data-assistant-life-roomview-head": Math.round(p.headTop)
+  }, React.createElement("img", {
     src: src,
     alt: "",
     draggable: false,
     "data-assistant-life-roomview-fig": who.id,
+    onClick: onPress || undefined,
     style: {
-      ...pos,
-      pointerEvents: onPress ? 'auto' : 'none',
-      filter: `drop-shadow(0 0 .6px #2a1414cc) saturate(.92) sepia(.1)${sleep ? ' brightness(.6)' : ''}`
+      position: 'absolute',
+      inset: 0,
+      width: '100%',
+      height: '100%',
+      maxWidth: 'none',
+      filter: `drop-shadow(0 0 .6px #2a1414cc) saturate(.92) sepia(.1)${sleep ? ' brightness(.6)' : ''}`,
+      cursor: onPress ? 'pointer' : undefined
     }
   }), React.createElement("span", {
     "aria-hidden": "true",
     style: {
-      ...pos,
-      ...mask,
+      position: 'absolute',
+      inset: 0,
+      ...shape,
       background: tone,
       mixBlendMode: 'multiply',
       pointerEvents: 'none'
     }
-  }), sleep && React.createElement("span", {
+  })), sleep && React.createElement("span", {
     "aria-hidden": "true",
     style: {
       position: 'absolute',
-      left: cx + vh * 0.12,
-      top: top + b.t * ih,
-      fontSize: 18
+      left: p.cx + p.w * 0.2,
+      top: p.visTop,
+      fontSize: 18,
+      pointerEvents: 'none'
     }
   }, "💤"));
 }
@@ -109772,12 +109833,47 @@ function AssistantLifeRoomScene({
   const night = look === 'night',
     evening = look === 'evening';
   const n = Math.max(1, Math.min(4, people.length));
-  const vh = Math.round(Math.min(usable * 0.68, W * (land ? 0.5 : 0.8)) * (n >= 3 ? 0.8 : n === 2 ? 0.9 : 1));
-  const xs = n === 1 ? [0.55] : n === 2 ? [0.4, 0.66] : n === 3 ? [0.28, 0.52, 0.76] : [0.2, 0.4, 0.6, 0.8];
-  const deskTop = floorY - Math.round(vh * 0.12);
+  const deskTop = floorY - Math.round(usable * 0.05);
+  const standItems = people.slice(0, 4).map(pid => {
+    const a = assistantById(pid);
+    if (!a) return null;
+    const src = assistantFullImage(a, sleepIds.includes(pid) ? 'normal' : 'happy');
+    return {
+      pid,
+      who: a,
+      src,
+      face: assistantLifeRoomFaceOf(pid, src)
+    };
+  }).filter(Boolean);
+  const [boxes, setBoxes] = React.useState({});
+  const srcKey = standItems.map(x => x.src).join('|');
+  React.useEffect(() => {
+    let alive = true;
+    Promise.all(standItems.map(x => typeof assistantLifeStandBox === 'function' ? assistantLifeStandBox(x.src) : Promise.resolve(null))).then(bs => {
+      if (!alive) return;
+      const o = {};
+      standItems.forEach((x, i) => {
+        o[x.src] = bs[i] || {
+          t: 0,
+          b: 1,
+          l: 0,
+          r: 1,
+          ar: 0.7
+        };
+      });
+      setBoxes(o);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [srcKey]);
+  const lay = assistantLifeRoomStandLayout(standItems.map(x => ({
+    ...x,
+    box: boxes[x.src]
+  })), W, usable, deskTop, land, people.length > 0 && people.every(x => sleepIds.includes(x)));
   const asleep = people.length > 0 && people.every(x => sleepIds.includes(x));
   const frontKind = asleep ? 'bed' : ASSISTANT_LIFE_ROOM_FRONT[id] || 'desk';
-  const frontW = Math.min(W - 24, Math.round(vh * 0.62 * Math.max(1.4, n) + 40));
+  const frontW = Math.min(W - 24, lay ? Math.round(Math.max(...lay.map(p => p.cx + p.w / 2)) - Math.min(...lay.map(p => p.cx - p.w / 2)) + 60) : Math.round(W * 0.6));
   const mN = team.length,
     rows = mN > 4 ? 2 : 1,
     perRow = Math.ceil(mN / rows);
@@ -109855,22 +109951,17 @@ function AssistantLifeRoomScene({
         filter: 'drop-shadow(0 5px 4px #0005)'
       }
     }, f.emoji);
-  }), people.map((pid, i) => {
-    const a = assistantById(pid);
-    if (!a) return null;
-    return React.createElement(AssistantLifeRoomFigure, {
-      key: pid,
-      who: a,
-      cx: W * xs[i],
-      baseY: deskTop + Math.round(vh * 0.32),
-      vh: vh,
-      look: look,
-      sleep: sleepIds.includes(pid),
-      onPress: onPerson ? () => onPerson(pid) : null
-    });
-  }), people.length > 0 && React.createElement(AssistantLifeRoomFront, {
+  }), lay && standItems.map((x, i) => React.createElement(AssistantLifeRoomFigure, {
+    key: x.pid,
+    who: x.who,
+    src: x.src,
+    p: lay[i],
+    look: look,
+    sleep: sleepIds.includes(x.pid),
+    onPress: onPerson ? () => onPerson(x.pid) : null
+  })), people.length > 0 && React.createElement(AssistantLifeRoomFront, {
     kind: frontKind,
-    cx: W * (n === 1 ? xs[0] : 0.5),
+    cx: W / 2,
     top: deskTop,
     w: frontW,
     items: ASSISTANT_LIFE_ROOM_DESK_ITEMS[id] || []
@@ -109888,7 +109979,7 @@ function AssistantLifeRoomScene({
     className: "absolute max-w-[62%] rounded-2xl bg-white px-2.5 py-1.5 text-[12px] font-black leading-snug text-slate-900 shadow",
     style: {
       left: W * 0.06,
-      top: Math.max(topH + 8, deskTop - vh - 6),
+      top: Math.max(topH + 8, (lay ? Math.min(...lay.map(p => p.visTop)) : deskTop - 200) - 40),
       wordBreak: 'auto-phrase'
     },
     "data-assistant-life-roomview-bubble": true
