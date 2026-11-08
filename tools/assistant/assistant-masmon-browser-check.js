@@ -8,7 +8,8 @@
 //   ② マスモンは3体・先頭が1体・染めた絵が出ている(絵の読み込みに失敗していない)
 //   ③ 枠の端にカードがくっつかない(パネルの左右から 6px 以上あける)・横にはみ出さない・名前が「…」で切れない
 //   ④ 口: assistantLifeCardStyle・assistantLifeTasteOf が8人ぶん返る(印が偽なら null)
-//   ⑤ 画面のエラーが無い
+//   ⑤ 部屋にいるマスモン: 札・顔・吹き出し・扉・名札に重ならない/部屋からはみ出さない/一緒に出かけたマスモンは部屋に出ない/歩く/動きを減らす設定では止まる
+//   ⑥ 画面のエラーが無い
 const http = require('http'), path = require('path'), fs = require('fs');
 const root = path.resolve(__dirname, '..', '..'), PORT = 9273;
 const { quietBootSeed, updateNoticeSeed, oneTimeNoticeSeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
@@ -19,6 +20,8 @@ const BASE = process.env.LIFE_BASE ? process.env.LIFE_BASE.replace(/\/?$/, '/') 
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 const VIEWS = [{ id: 'p', name: '縦 390×844', w: 390, h: 844 }, { id: 'l', name: '横 844×390', w: 844, h: 390 }, { id: 'r', name: '🔄横から戻った 390×844', w: 390, h: 844, rot: true }];
+// iPhone SE/8 の横(667×375)も見る(2026-11-08 ミハリ: 667 では歩くマスモンが1部屋しか出なかった)
+VIEWS.push({ id: 's', name: '横 667×375', w: 667, h: 375 });
 const WHOS = process.env.MASMON_WHO ? [process.env.MASMON_WHO] : process.env.MASMON_ALL ? ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'] : ['kiki'];
 const TABS = ['mons', 'team', 'deck', 'taste'];
 
@@ -73,12 +76,60 @@ const layoutProblems = (page) => page.evaluate(() => {
       await page.locator('[data-home-assistant-life]').click({ timeout: 20000 });
       await page.locator('[data-assistant-life-screen]').waitFor({ timeout: 8000 });
       await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
+      { // ⑤ 部屋にいるマスモン(染めた絵ができるのを待つ)
+        await page.waitForTimeout(SHOTS ? 4000 : 1500);
+        const r = await page.evaluate(() => {
+          const ng = []; let n = 0, stay = 0, should = 0; const miss = [], sizeList = [];
+          const life = assistantLifeCurrent();
+          for (const room of document.querySelectorAll('[data-assistant-life-room]')) {
+            const id = room.getAttribute('data-assistant-life-room');
+            const pet = room.querySelector('[data-assistant-life-room-masmon-pet]');
+            const where = assistantMasmonWhere(id, life).kind;
+            if (where === 'out' && pet) ng.push(`${id}: 出かけたのに部屋にいる`);
+            if (where !== 'out' && !room.querySelector('.lock')) should++;
+            if (!pet || pet.style.visibility === 'hidden') { if (where !== 'out' && !room.querySelector('.lock')) miss.push(id); continue; }
+            n++; if (where === 'stay') stay++;
+            const size = parseFloat(pet.style.width), y = parseFloat(pet.style.top), rr = room.getBoundingClientRect();
+            sizeList.push(Math.round(size));
+            const [w0, w1] = (pet.getAttribute('data-assistant-life-room-masmon-walk') || '').split('-').map(Number);
+            if (!Number.isFinite(w0) || !Number.isFinite(w1)) { ng.push(`${id}: 歩く区間が無い`); continue; }
+            // 歩く区間の端から端まで、どの位置でも(印のはみ出しを含めて)重ならない・はみ出さない
+            const obs = [...room.querySelectorAll('.tag,.pp,.bb,.pl,.lv,[data-assistant-life-rel-door],[data-assistant-life-rel-mend],[data-assistant-life-rel-sit]')].map(o => [o, o.getBoundingClientRect()]).filter(([, q]) => q.width);
+            for (let x = w0; x <= w1; x += 2) {
+              const box = { l: rr.left + x, r: rr.left + x + size + 2, t: rr.top + y - 3, b: rr.top + y + size };
+              if (box.l < rr.left - 1 || box.r > rr.right + 1 || box.t < rr.top - 1 || box.b > rr.bottom + 1) ng.push(`${id}: 部屋からはみ出す(x=${x})`);
+              for (const [o, q] of obs) if (Math.min(box.r, q.right) - Math.max(box.l, q.left) > 1 && Math.min(box.b, q.bottom) - Math.max(box.t, q.top) > 1) ng.push(`${id}: 歩く途中で ${o.className || '部品'} に重なる`);
+            }
+          }
+          return { ng: [...new Set(ng)], n, stay, should, miss, sizeList };
+        });
+        check(`${T}部屋のマスモン: 歩く途中のどの位置でも札・顔・吹き出し・扉・名札に重ならない・はみ出さない`, !r.ng.length, r.ng.slice(0, 4).join(' / '));
+        check(`${T}部屋のマスモンは、どの部屋も同じ大きさ`, new Set(r.sizeList).size <= 1, r.sizeList.join(','));
+        check(`${T}部屋のマスモンが、出かけていない部屋の全部に見える`, r.should > 0 && r.n === r.should, `${r.n}/${r.should}部屋(留守番${r.stay})${r.miss.length ? ' 出ない: ' + r.miss.join('・') : ''}`);
+        if (SHOTS) await page.screenshot({ path: path.join(shotDir, `masmon-5-house-${v.id}.jpg`), type: 'jpeg', quality: 80 });
+        { // 歩く: しばらく待つと位置が変わる/動きを減らす設定では動かない
+          const pos = () => page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-room-masmon-pet]')].filter(p => p.style.visibility !== 'hidden').map(p => `${p.getAttribute('data-assistant-life-room-masmon-pet')}:${p.getBoundingClientRect().left.toFixed(0)}`).join(' '));
+          const xs = {}; const a = await pos();
+          for (let k = 0; k < 12; k++) { for (const it of (await pos()).split(' ').filter(Boolean)) { const [n, x] = it.split(':'); (xs[n] = xs[n] || []).push(Number(x)); } await page.waitForTimeout(1000); }
+          const moved = Object.entries(xs).map(([n, v]) => `${n}:${Math.max(...v) - Math.min(...v)}px`);
+          if (a) check(`${T}部屋のマスモンが床を歩く(12秒のあいだにどれかが 8px 以上動く)`, Object.values(xs).some(v => Math.max(...v) - Math.min(...v) >= 8), moved.join(' '));
+          if (SHOTS) await page.screenshot({ path: path.join(shotDir, `masmon-5-house-${v.id}-2.jpg`), type: 'jpeg', quality: 80 });
+          if (a && v.id === 'p') {
+            await page.emulateMedia({ reducedMotion: 'reduce' }); await page.evaluate(() => window.dispatchEvent(new Event('resize'))); await page.waitForTimeout(1500);
+            const c = await pos(); await page.waitForTimeout(8000); const d = await pos();
+            check(`${T}動きを減らす設定では、止まったまま`, c === d, `${c} → ${d}`);
+            await page.emulateMedia({ reducedMotion: 'no-preference' });
+          }
+        }
+
+      }
       if (v.id === 'p') {
         const hooks = await page.evaluate(() => ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'].map(id => ({ id, s: assistantLifeCardStyle(id), t: assistantLifeTasteOf(id) })));
         check(`${T}口 assistantLifeCardStyle が8人ぶん attack/guard/normal`, hooks.every(h => ['attack', 'guard', 'normal'].includes(h.s)), hooks.map(h => `${h.id}:${h.s}`).join(' '));
         check(`${T}口 assistantLifeTasteOf が8人ぶん(好きは1つ以上・名前で)`, hooks.every(h => h.t && h.t.likes.length >= 1 && h.t.likes.every(n => typeof n === 'string' && n)), hooks.map(h => `${h.id}:${h.t ? h.t.likes.join('・') : 'null'}`).join(' / '));
       }
-      for (const WHO of WHOS) {
+      // 667×375 は部屋のマスモンだけを見る(シートの字の切れは、作り直し中のシート claude/kizuna2-grow で直す)
+      for (const WHO of (v.id === 's' ? [] : WHOS)) {
       const T = `${T0}${WHO} `;
       const want = await page.evaluate((id) => { const p = ASSISTANT_MASMON_PLAN.find(a => a.id === id); return { deck: p.deck.name, colors: p.favColors.length, dis: p.dislikeMon.length }; }, WHO);
       await page.locator(`[data-assistant-life-room="${WHO}"]`).first().click({ timeout: 8000 });
