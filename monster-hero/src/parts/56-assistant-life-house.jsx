@@ -322,12 +322,16 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-room .bb{position:absolute;right:4px;z-index:5;max-width:88%;overflow:hidden;white-space:normal;line-height:1.2;text-align:center;font-size:9.5px;font-weight:900;background:#fff;color:#1e293b;border-radius:9px;padding:1px 6px;box-shadow:0 2px 5px #0007}
 .mhl-room .off{position:absolute;inset:0;z-index:3;background:rgba(6,9,24,.5)}
 .mhl-room .lamp{position:absolute;inset:0;z-index:3;background:radial-gradient(circle at 60% 40%,rgba(255,214,140,.45),transparent 70%);mix-blend-mode:screen;pointer-events:none}
-.mhl-room .tag{position:absolute;left:50%;top:50%;z-index:6;transform:translate(-50%,-38%) rotate(-3deg);max-width:92%;text-align:center;padding:3px 8px 4px;border-radius:7px;background:linear-gradient(#fef3c7,#fde68a);color:#422006;border:1.5px solid #b45309;box-shadow:0 3px 6px #0009}
-.mhl-room .tag b{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mhl-room .tag small[data-assistant-life-room-with]{white-space:normal;line-height:1.15}[data-assistant-life-land="1"] .mhl-room .tag{padding:2px 5px 3px}[data-assistant-life-land="1"] .mhl-room .tag b{font-size:9.5px}[data-assistant-life-land="1"] .mhl-room .tag small{font-size:8px}.mhl-room .tag small{display:block;font-size:9px;font-weight:800;color:#7c2d12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mhl-room .tag{position:absolute;left:3px;right:3px;top:2px;z-index:6;text-align:left;padding:0 5px 1px;border-radius:6px;background:linear-gradient(#fef3c7,#fde68a);color:#422006;border:1.5px solid #b45309;box-shadow:0 2px 4px #0008}
+.mhl-room .tag small{display:block;height:19px;font-size:8.5px;line-height:19px;font-weight:800;color:#7c2d12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mhl-room .tag b{display:block;font-size:10px;line-height:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mhl-room .tag i{display:none;font-style:normal}
+.mhl-room[data-assistant-life-room-tag="1"] .pl{z-index:7}.mhl-room[data-assistant-life-room-tag="1"] .lv{top:38px}
+[data-assistant-life-land="1"] .mhl-room .tag{top:22px;padding:0 4px}[data-assistant-life-land="1"] .mhl-room .tag b{font-size:9px;line-height:11px}[data-assistant-life-land="1"] .mhl-room .tag small{display:none}[data-assistant-life-land="1"] .mhl-room .tag i{display:inline}[data-assistant-life-land="1"] .mhl-room .tag[data-assistant-life-room-tag-mark="1"] small{display:block;margin-left:0!important;height:11px;font-size:9px;line-height:11px}[data-assistant-life-land="1"] .mhl-room .tag[data-assistant-life-room-tag-mark="1"] b{display:none}
+[data-assistant-life-land="1"] .mhl-room[data-assistant-life-room-tag="1"] .lv{left:auto;right:3px;top:5px}
 .mhl-room .lock{position:absolute;inset:0;z-index:6;display:grid;place-items:center;background:rgba(15,23,42,.78);font-size:11px;font-weight:900;color:#cbd5e1}
 .mhl-liv{position:absolute;overflow:hidden;border-radius:3px;background:linear-gradient(#f3e3c4,#e7cfa2)}
 .mhl-board{position:absolute;left:8px;top:6px;bottom:6px;border-radius:5px;background:#c08a52;border:3px solid #7c4a22;padding:3px 6px;overflow:hidden;display:flex;flex-direction:column;flex-wrap:wrap;align-content:flex-start;justify-content:flex-start;column-gap:24px}
 .mhl-board>*{width:100%;flex:none}
+[data-assistant-life-land="1"] .mhl-board{top:3px;bottom:3px;padding:2px 6px}
 .mhl-board-more{margin-left:auto;flex:none;border-radius:999px;background:#fffbeb;color:#7c4a22;font-size:8.5px;font-weight:900;line-height:1;padding:2px 5px;white-space:nowrap}
 .mhl-board b{display:block;font-size:9.5px;color:#fff}.mhl-board p{font-size:9px;font-weight:800;line-height:1.25;color:#1e293b;background:#fffbeb;border-radius:3px;padding:1px 4px;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .mhl-door{position:absolute;bottom:0;width:38px;border-radius:18px 18px 0 0;background:linear-gradient(#8b5a2b,#6b4423);border:2px solid #3b2412}
@@ -381,6 +385,16 @@ function AssistantLifeChunks({ text }) {
 // 掲示板は2行まで: 縦は1組・横は2組までと「ほか◯組」(全部は押した先の一覧で読む)
 const assistantLifeBoardShort = (text, max = 2) => { const ps = String(text || '').split(' / '); return ps.length > max ? `${ps.slice(0, max).join(' / ')} ほか${ps.length - max}組` : String(text || ''); };
 // 部屋1つ
+// 出かけ札の上の行に入るだけの名前(字の数で数える)。入らない分は「ほか◯人」。text は assistantLifeGroupNames の形(「A・B・C」か「A・B ほか2人」)
+const assistantLifeTagNames = (text, budget) => {
+  const m = String(text || '').match(/^(.*?)(?: ほか(\d+)人)?$/);
+  const list = String(m[1] || '').split('・').filter(Boolean);
+  let rest = Number(m[2]) || 0;
+  const len = (a, r) => [...a.join('・')].length + (r ? [...` ほか${r}人`].length : 0);
+  const out = [...list];
+  while (out.length > 1 && len(out, rest) > budget) { out.pop(); rest++; }
+  return `${out.join('・')}${rest ? ` ほか${rest}人` : ''}`;
+};
 // other … よその家(フレンドの家)を描くとき { put }。自分のセッションの Lv は出さず、家具は控えの置き方で描く(56-assistant-life-friend.jsx)
 function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, other = null }) {
   const L = ASSISTANT_LIFE_ROOM_LOOK[id];
@@ -404,7 +418,16 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, othe
         <span key={pid} className={state.lonely && pid === id ? 'lonely' : state.after ? 'after' : ''} data-assistant-life-room-face={pid}><AssistantFace who={who} size={Math.round(Math.min(40, h * .44))} accent={who.accent}/></span>) : null; })}</div>}
       {ppl && state.bub && <span className="bb" data-assistant-life-room-bub style={{ bottom: Math.round(Math.min(40, h * .44)) + 14, fontSize: w < 150 ? 8.5 : undefined }}>{[].concat(state.lonely && !state.sleep && !state.after && w < 150 ? ['💭 さみしいな…'] : state.bub).map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span className="whitespace-nowrap" data-assistant-life-chunk>{x}</span></React.Fragment>)}</span>}
       {typeof AssistantLifeRelRoomLayer === 'function' && <AssistantLifeRelRoomLayer state={state} h={h}/>}
-      {state && state.tag && <span className="tag" data-assistant-life-room-away={id}><b>{state.tag[0]}</b><small>{state.tag[1]}</small>{state.tag[2] && <small data-assistant-life-room-with><AssistantLifeNames text={state.tag[2]}/></small>}</span>}
+      {/* 出かけ札は床にかけない(2026-11-08 社長: 助手のマスモンが部屋の床を歩く。キズナ2)。縦は名札の右に2行(行き先/一緒の全員の名前・ひとりなら何をしているか・けんかや仲直りの印)、
+          横は名札の下に1行(行き先・人数・印)。どちらも部屋の上から 36px までに収める */}
+      {state && state.tag && (() => { const t = state.tag; const mark = !!t[1] && /^(💢|🤝)/u.test(t[1]); const n = Number((String(t[1] || '').match(/^(\d+)人で/) || [])[1]) || 0;
+        // 縦: 上の行(名札の右)に一緒の全員の名前か、ひとりなら何をしているか・印。下の行(札の幅いっぱい)に行き先。名前は札に入る数まで(残りは「ほか◯人」)
+        const ml = [...assistantLifeName(id)].length * 10 + 20; // 名札の幅(字10px+余白)。上の行はその右から
+        const names = t[2] ? assistantLifeTagNames(t[2], Math.floor((w - 6 - ml - 10) / 8.8)) : null;
+        const short = [...String(t[0])].length <= 9; // 横は1行。行き先が長いときは人数を付けない(「…」で切らない)
+        return <span className="tag" data-assistant-life-room-away={id} data-assistant-life-room-tag-mark={mark ? '1' : '0'}>
+          {mark || !names ? <small data-assistant-life-room-what style={{ marginLeft: ml }}>{t[1]}</small> : <small data-assistant-life-room-with style={{ marginLeft: ml }}><AssistantLifeNames text={names}/></small>}
+          <b>{t[0]}<i data-assistant-life-room-tag-short>{n > 1 && short ? `・${n}人` : ''}{mark ? ` ${[...t[1]][0]}` : ''}</i></b></span>; })()}
       {!met && <span className="lock">まだ会っていない</span>}
     </button>);
 }
