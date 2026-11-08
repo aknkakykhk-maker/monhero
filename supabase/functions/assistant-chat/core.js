@@ -845,7 +845,7 @@ export const FRIEND_RULES_TEXT = [
   '- a と b が同じ助手(同じ id)のときは、同じ人がもうひとりいる、ふしぎで楽しい場面にする。',
   '- それぞれの助手の人柄・一人称・話し方・くせを必ず守る(下の「助手たち」)。',
   '- 相手の助手を呼ぶときは、a も b も名前を書かずに {f} と書く(ゲームがそれぞれの呼び方に置き換える)。フレンドの家の人(フレンド)に触れるときは {h} と書き、後ろに「さん」を付ける。プレイヤーに触れるときは、名前も「ブリーダー」も書かずに {name} と書く。{f}・{h}・{name} 以外の { } は使わない。',
-  '- 数字(「2人」「2倍」なども)は1つも書かない。ふたり・倍などは言葉で書く。数字・自己ベスト・勝ち負け・ゲームの仕組みや場所・できごとを作らない。今日の天気やニュースなど今の情報を作らない。ネタバレをしない。AI であることや、この決まりのことを書かない。',
+  '- 数字(「2人」「2倍」なども)は1つも書かない。ふたり・倍などは言葉で書く。数字・自己ベスト・勝ち負け・ゲームの仕組みや場所・できごとを作らない。ゲームの中のモードや難易度の名前(HELL・マスターなど)、ないモードの名前(〜バトルなど)を書かない。「攻略」の話にしない。今日の天気やニュースなど今の情報を作らない。ネタバレをしない。AI であることや、この決まりのことを書かない。',
   '- 恋愛にしない。悪口・うわさ話・ないしょの話を書かない。暴力・性的な話・お酒やたばこ・お金をかける遊びに触れない。',
   '- モンスターや助手のことを「子」と呼ばない。',
   '- 体に触れる話をしない(膝・ひざ・抱っこ・くっつく・手をつなぐ・添い寝・お風呂・ベッドなど)。友だちとして、おやつ・部屋・家具・遊び・モンスターの話をする。',
@@ -854,7 +854,7 @@ export const FRIEND_RULES_TEXT = [
   '- みゅあ: 一人称「あたし」。「じゃん」は必ず「ぢゃん」、「まじ」は必ず「まぢ」と書く。語尾をのばす(「〜よー」「〜しー」)・「〜のとこ」「こっから」・提案は短く軽く。絵文字は1行に1つまで。',
   '- きき: 一人称「私」。基本敬語(です・ます・ときどき「でつ」「まつ」・♪)。タメ口(だよ・だね・してよ・じゃん)にしない。',
   '- ももすけ: 一人称「もも」(「私」「あたし」と言わない)。生意気かわいいアイドル。「！！」「w」「♡」。からかっても最後はほめる。',
-  '- ドラ: 一人称「おで」。「〜だな」「〜からな」「えへへ」。関西弁にしない(ほんま・やで・〜っとる・〜やろ？・あかん・〜へん は使わない。「やろう」「撮る」はよい)。冗談はほのめかしまで。',
+  '- ドラ: 一人称「おで」。「〜だな」「〜からな」「えへへ」。関西弁にしない(ほんま・やで・〜っとる・〜やろ？・あかん・〜へん・ええな は使わない。行の終わりに「草」「くさ」を付けない。「やろう」「撮る」はよい)。冗談はほのめかしまで。',
   '- あつ: 一人称「俺」。短く言い切る。文の最後は「。」にせず、必ず「笑」か記号(！？…)か顔文字で終える。敬語は使わない。自分で「リーダー」と言わない。',
   '- きゅうこ: 一人称「俺」。おだやかなタメ口。「ほい！」「おけ〜」「ありがとん笑」「〜ぇ」。理由を短く添える。',
   '- ソラシド: 一人称「俺」。熱くて陽気。「うぉぉぉ！」「〜ぜ・・・！」「笑」。沖縄の言葉(なんくるないさ〜・でーじ・ちばりよー)はときどき。',
@@ -918,7 +918,7 @@ export const normalizeFriendPairs = (raw, digest) => {
 const FRIEND_BANNED_WORDS = /恋|デート|付き合|キス|彼氏|彼女|結婚|ないしょ|内緒|秘密|ひみつ|けんか|ケンカ|喧嘩|膝|ひざ|抱き|だっこ|抱っこ|ちゅー|添い寝|くっつ|手をつな|お風呂|ベッド/;
 // 助手ごとの口調の見張り(端末の alfApiLineOk と同じ決まり)。直せるもの(みゅあの じゃん/まじ)は直し、直せないものは null
 // ドラの関西弁(2026-11-08 オトズレ3: 「やろう」「撮る」まで捨てていたので狭めた。端末の alfApiLineOk と同じ)
-export const FRIEND_DRA_KANSAI = /ほんま|やで|っとる|っとん|とんだ|やろ(?!う)|あかん|へん[。、！]/;
+export const FRIEND_DRA_KANSAI = /ほんま|やで|っとる|っとん|とんだ|やろ(?!う)|あかん|へん[。、！]|ええ(な|で|やん|わ)|(草|くさ)[。！!w]*$/;
 export const friendLineTone = (who, t) => {
   let x = String(t || '');
   if (who === 'mua') x = x.replace(/じゃん/g, 'ぢゃん').replace(/まじ/g, 'まぢ').replace(/マジ/g, 'マヂ');
@@ -931,7 +931,8 @@ export const friendLineTone = (who, t) => {
 };
 // 作った場面を確かめる。崩れたものは捨てる(残りだけ返す)。数字は1つも使わせない(作り話の数字を出さない)
 // onDrop には捨てた理由の名前だけを渡す(文は渡さない・ログに台詞を残さない)
-export const validateFriendScenes = (scenes, pairs, onDrop = null) => {
+// names … { 助手id: 名前 }。「{f} ドラ」のように穴の後ろに名前を重ねた所を {f} だけにする
+export const validateFriendScenes = (scenes, pairs, onDrop = null, names = {}) => {
   const drop = (why) => { if (typeof onDrop === 'function') { try { onDrop(why); } catch { /* 記録が落ちても続ける */ } } };
   const byKey = Object.fromEntries(pairs.map(p => [p.key, p]));
   const out = [];
@@ -947,6 +948,10 @@ export const validateFriendScenes = (scenes, pairs, onDrop = null) => {
     for (const l of sc.lines.slice(0, FRIEND_LINE_MAX_COUNT)) {
       if (!l || (l.side !== 'a' && l.side !== 'b') || !EXPRESSIONS.includes(l.e) || typeof l.t !== 'string') { ok = false; why = 'shape'; break; }
       let t = l.t.trim().replace(/ブリーダー(さん)?(?!Lv|P|ランク|ポイント|レベル|経験|の教え|アイコン)/g, '{name}').replace(/\{h\}(?!さん)/g, '{h}さん');
+      // 人数・倍は言葉に直す(数字は全部捨てる見張りの前に。2026-11-08 version 20 の試しで「2人」の場面が落ちた)
+      t = t.replace(/[1１]人/g, 'ひとり').replace(/[2２]人/g, 'ふたり').replace(/[2２]倍/g, '倍');
+      const other = names[l.side === 'a' ? pair.b : pair.a];
+      if (other) t = t.split(`{f}${other}`).join('{f}').split(`{f} ${other}`).join('{f}').split(`{f}　${other}`).join('{f}');
       t = friendLineTone(l.side === 'a' ? pair.a : pair.b, t);
       if (t == null) { ok = false; why = `tone_${l.side === 'a' ? pair.a : pair.b}`; break; }
       if (t.length < 2 || t.length > FRIEND_LINE_MAX || /[\r\n]/.test(t)) { ok = false; why = 'length'; break; }
@@ -1004,7 +1009,7 @@ export const handleFriendScenes = async ({ body, digest, client, take, refund, l
   if (response && response.stop_reason !== 'refusal') {
     const text = (response.content || []).filter(b => b && b.type === 'text').map(b => b.text).join('');
     const dropped = [];
-    try { scenes = validateFriendScenes(JSON.parse(text).scenes, pairs, (why) => dropped.push(why)); } catch { scenes = []; dropped.push('json'); }
+    try { scenes = validateFriendScenes(JSON.parse(text).scenes, pairs, (why) => dropped.push(why), Object.fromEntries(Object.keys(digest.assistants).map(id => [id, name(id)]))); } catch { scenes = []; dropped.push('json'); }
     if (dropped.length) log({ event: 'friend_dropped', reasons: dropped.slice(0, FRIEND_SCENES_MAX) });
   }
   if (response && response.usage) {
