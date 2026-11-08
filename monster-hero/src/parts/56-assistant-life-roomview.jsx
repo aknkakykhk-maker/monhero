@@ -246,8 +246,7 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
           <p className="whitespace-nowrap text-[14px] font-black text-white">{away.title}</p>
           {away.sub && <p className="whitespace-nowrap text-[10.5px] font-bold text-slate-300">{away.sub}</p>}
         </div>)}
-      {bubble && people.length > 0 && (
-        <p className="absolute max-w-[62%] rounded-2xl bg-white px-2.5 py-1.5 text-[12px] font-black leading-snug text-slate-900 shadow" style={{ left: W * 0.06, top: Math.max(topH + 8, (lay ? Math.min(...lay.map(p => p.visTop)) : deskTop - 200) - 40), wordBreak: 'auto-phrase' }} data-assistant-life-roomview-bubble>{bubble}</p>)}
+
       {/* マスモン(全部・歩く)。押すとくわしい画面 */}
       {team.map((t, i) => {
         const row = rows === 2 && i < perRow ? 0 : rows === 2 ? 1 : 1, k = rows === 2 && i >= perRow ? i - perRow : i, cnt = rows === 2 ? (row === 0 ? perRow : mN - perRow) : mN;
@@ -265,8 +264,11 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
           </button>); })}
       {/* 時間帯: 夜は暗く・灯り */}
       {night && <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(circle at 18% 30%,#ffc46b40 0,#ffc46b18 110px,transparent 220px),#050a2480' }}/>}
-      {night && <span aria-hidden="true" className="pointer-events-none absolute" style={{ left: W * 0.1, top: topH + usable * 0.12, fontSize: 28 }}>🏮</span>}
+      {night && <span aria-hidden="true" className="pointer-events-none absolute" style={{ left: W * 0.08, top: topH + 2, fontSize: 26 }}>🏮</span>}
       {evening && <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ background: '#ff8a3018' }}/>}
+      {/* 吹き出しは夜の暗さ・灯り・壁の家具より前(横で🏮と壁の家具が字に重なった・2026-11-08 オトズレ3)。左の壁の家具と灯りの列(幅の22%まで)を避ける */}
+      {bubble && people.length > 0 && (
+        <p className="absolute z-[6] max-w-[64%] rounded-2xl bg-white px-2.5 py-1.5 text-[12px] font-black leading-snug text-slate-900 shadow" style={{ left: W * 0.24, top: Math.max(topH + 8, (lay ? Math.min(...lay.map(p => p.visTop)) : deskTop - 200) - 40), wordBreak: 'auto-phrase' }} data-assistant-life-roomview-bubble>{bubble}</p>)}
       {/* 上の帯 */}
       <div className="absolute inset-x-0 top-0 flex items-center gap-2 bg-gradient-to-b from-[#0b1020f0] to-transparent px-3 pb-4" style={{ paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))', paddingLeft: 12 + padLeft }}>
         {onBack && <button type="button" data-assistant-life-roomview-back onClick={onBack} className="shrink-0 rounded-xl border border-pink-300/60 bg-slate-950/85 px-2.5 py-1.5 text-[12px] font-black text-pink-100 active:scale-95">{backLabel}</button>}

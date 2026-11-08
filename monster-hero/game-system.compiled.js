@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0fce0e558f25887f
+// source-sha256: ac55227381a517e6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -110902,15 +110902,7 @@ function AssistantLifeRoomScene({
     className: "whitespace-nowrap text-[14px] font-black text-white"
   }, away.title), away.sub && React.createElement("p", {
     className: "whitespace-nowrap text-[10.5px] font-bold text-slate-300"
-  }, away.sub)), bubble && people.length > 0 && React.createElement("p", {
-    className: "absolute max-w-[62%] rounded-2xl bg-white px-2.5 py-1.5 text-[12px] font-black leading-snug text-slate-900 shadow",
-    style: {
-      left: W * 0.06,
-      top: Math.max(topH + 8, (lay ? Math.min(...lay.map(p => p.visTop)) : deskTop - 200) - 40),
-      wordBreak: 'auto-phrase'
-    },
-    "data-assistant-life-roomview-bubble": true
-  }, bubble), team.map((t, i) => {
+  }, away.sub)), team.map((t, i) => {
     const row = rows === 2 && i < perRow ? 0 : rows === 2 ? 1 : 1,
       k = rows === 2 && i >= perRow ? i - perRow : i,
       cnt = rows === 2 ? row === 0 ? perRow : mN - perRow : mN;
@@ -110967,9 +110959,9 @@ function AssistantLifeRoomScene({
     "aria-hidden": "true",
     className: "pointer-events-none absolute",
     style: {
-      left: W * 0.1,
-      top: topH + usable * 0.12,
-      fontSize: 28
+      left: W * 0.08,
+      top: topH + 2,
+      fontSize: 26
     }
   }, "🏮"), evening && React.createElement("div", {
     "aria-hidden": "true",
@@ -110977,7 +110969,15 @@ function AssistantLifeRoomScene({
     style: {
       background: '#ff8a3018'
     }
-  }), React.createElement("div", {
+  }), bubble && people.length > 0 && React.createElement("p", {
+    className: "absolute z-[6] max-w-[64%] rounded-2xl bg-white px-2.5 py-1.5 text-[12px] font-black leading-snug text-slate-900 shadow",
+    style: {
+      left: W * 0.24,
+      top: Math.max(topH + 8, (lay ? Math.min(...lay.map(p => p.visTop)) : deskTop - 200) - 40),
+      wordBreak: 'auto-phrase'
+    },
+    "data-assistant-life-roomview-bubble": true
+  }, bubble), React.createElement("div", {
     className: "absolute inset-x-0 top-0 flex items-center gap-2 bg-gradient-to-b from-[#0b1020f0] to-transparent px-3 pb-4",
     style: {
       paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))',
