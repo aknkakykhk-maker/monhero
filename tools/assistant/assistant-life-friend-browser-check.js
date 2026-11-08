@@ -328,7 +328,7 @@ const badgeProblems = (page) => page.evaluate(() => {
         await page.locator('[data-alf-profile-visit-go]').click();
         await page.locator('[data-alf-visit]').waitFor({ timeout: 5000 });
         await page.waitForFunction(() => document.querySelector('[data-alf-visit-now]'), null, { timeout: 8000 }).catch(() => {});
-        check(`⑰ 訪ねた家の見出しも文の形「いま 🏡 みゅあの部屋をのぞいている」(${v.id})`, /いま 🏡 みゅあの部屋をのぞいている/.test(await page.locator('[data-alf-visit-now]').innerText().catch(() => '')));
+        check(`⑰ 訪ねた家の見出しは、横は文の形「いま 🏡 みゅあの部屋をのぞいている」・縦は札に収まる短い形「いま 🏡 みゅあの部屋」(${v.id})`, (v.w > v.h ? /いま 🏡 みゅあの部屋をのぞいている/ : /^いま 🏡 みゅあの部屋$/).test(await page.locator('[data-alf-visit-now]').innerText().catch(() => '')));
         await shot(page, `${v.id}-17c-life-visit`);
         // 自分が訪ねているあいだは lv=v を送る(持ち主の名前は送らない)
         await page.waitForFunction(() => true); for (let i = 0; i < 40 && !sent.some(b => b && b.records && b.records.lv === 'v'); i++) await page.waitForTimeout(500);
