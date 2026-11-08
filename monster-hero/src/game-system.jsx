@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 84b07ba912e37fec
+// generated-sha256: b51b749c8c64104d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67176,7 +67176,7 @@ const normalizeAssistantMasmonDyes = (raw) => {
       const slots = {};
       for (const [s, cs] of Object.entries(e.slots)) { const k = Number(s); if (Number.isInteger(k) && k >= 1 && k <= ASSISTANT_MASMON_DRAW_MAX && Array.isArray(cs)) slots[k] = cs.slice(0, 8).map(c => (typeof c === 'string' && ASSISTANT_MASMON_DYE_RE.test(c) ? c : null)); }
       const roles = {}; if (e.roles && typeof e.roles === 'object') for (const [s, r] of Object.entries(e.roles)) if (ASSISTANT_MASMON_ROLE_NAME[r]) roles[Number(s)] = r;
-      rows.push({ v: ASSISTANT_MASMON_DYE_V, d: ASSISTANT_MASMON_DRAW_V, why: e.why, at: typeof e.at === 'string' ? e.at.slice(0, 10) : '', season: typeof e.season === 'string' ? e.season.slice(0, 16) : '', fav: typeof e.fav === 'string' ? e.fav.slice(0, 120) : '', roles, slots });
+      rows.push({ v: ASSISTANT_MASMON_DYE_V, d: ASSISTANT_MASMON_DRAW_V, why: e.why, undo: e.undo === true, at: typeof e.at === 'string' ? e.at.slice(0, 10) : '', season: typeof e.season === 'string' ? e.season.slice(0, 16) : '', fav: typeof e.fav === 'string' ? e.fav.slice(0, 120) : '', roles, slots });
     }
     if (rows.length) out[aid] = rows;
   }
@@ -67195,7 +67195,7 @@ const assistantMasmonDyeLog = (aid, slot) => {
   if (!row) return [];
   let before = row.colors;
   const out = [];
-  for (const e of hist) { const cs = e.slots[slot]; if (!Array.isArray(cs)) continue; out.push({ why: e.why, at: e.at, season: e.season, role: e.roles[slot] || '', colors: cs, before }); before = cs; }
+  for (const e of hist) { const cs = e.slots[slot]; if (!Array.isArray(cs)) continue; out.push({ why: e.why, undo: !!e.undo, at: e.at, season: e.season, role: e.roles[slot] || '', colors: cs, before }); before = cs; }
   return out.reverse();
 };
 const assistantMasmonDyeEnsure = (state, day) => {
@@ -67643,11 +67643,11 @@ const assistantMasmonAsk = async (aid, from, text, t = null) => {
 // 前に戻してもらう(AI は使わない・回数は減らない)
 const assistantMasmonUndoColor = (aid, slot) => {
   const log = assistantMasmonDyeLog(aid, slot)[0];
-  if (!log || log.why !== 'ask') return false;
+  if (!log || log.why !== 'ask' || log.undo) return false;
   const st = ASSISTANT_MASMON_STORE.state, day = assistantMasmonToday();
-  const hist = [...((st.dyes && st.dyes[aid]) || []), { v: ASSISTANT_MASMON_DYE_V, d: ASSISTANT_MASMON_DRAW_V, why: 'ask', at: day, season: assistantMasmonSeasonKey(day), fav: assistantMasmonFavSig(assistantMasmonBasePlanOf(aid)), roles: {}, slots: { [slot]: [...log.before] } }];
+  const hist = [...((st.dyes && st.dyes[aid]) || []), { v: ASSISTANT_MASMON_DYE_V, d: ASSISTANT_MASMON_DRAW_V, why: 'ask', undo: true, at: day, season: assistantMasmonSeasonKey(day), fav: assistantMasmonFavSig(assistantMasmonBasePlanOf(aid)), roles: {}, slots: { [slot]: [...log.before] } }];
   const m = { ...assistantMasmonMineOf(st, aid) }; m.parts = { ...m.parts };
-  const back = assistantMasmonDyeLog(aid, slot); if (!back.slice(1).some(e => e.why === 'ask')) delete m.parts[slot]; // ひとつ前もプレイヤーの色でなければ、季節の色を差してよい部位に戻す
+  const back = assistantMasmonDyeLog(aid, slot); if (!back.slice(1).some(e => e.why === 'ask' && !e.undo)) delete m.parts[slot]; // ひとつ前もプレイヤーの色でなければ、季節の色を差してよい部位に戻す
   assistantMasmonSave({ ...st, dyes: { ...(st.dyes || {}), [aid]: hist.slice(-40) }, mine: { ...(st.mine || {}), [aid]: m } });
   return true;
 };
@@ -68261,7 +68261,7 @@ function AssistantMasmonDetail({ who, p, t, land = false, onClose, onAsk = null 
       {(() => {
         const e = who && who.id && Number.isInteger(t.slot) ? assistantMasmonDyeLog(who.id, t.slot)[0] : null;
         if (!e) return null;
-        const why = e.why === 'season' ? `${ASSISTANT_MASMON_SEASON_NAME[String(e.season).split('-')[1]] || '季節'}の色に染め直しました` : e.why === 'like' ? '好きな色が変わって、染め直しました' : e.why === 'ask' ? 'あなたの提案で染め直しました' : '染め方を見直しました';
+        const why = e.why === 'season' ? `${ASSISTANT_MASMON_SEASON_NAME[String(e.season).split('-')[1]] || '季節'}の色に染め直しました` : e.why === 'like' ? '好きな色が変わって、染め直しました' : e.why === 'ask' ? (e.undo ? '前の色に戻しました' : 'あなたの提案で染め直しました') : '染め方を見直しました';
         const before = (e.before || []).slice(0, n || 5);
         return (
           <p className="mt-1.5 flex flex-wrap items-center gap-1 text-[10px] font-bold text-slate-300" data-assistant-masmon-dye-log={e.why}>
@@ -68274,7 +68274,7 @@ function AssistantMasmonDetail({ who, p, t, land = false, onClose, onAsk = null 
     </div>
     {onAsk && assistantMasmonAskOn() && Number.isInteger(t.slot) && (() => {
       const st = ASSISTANT_MASMON_STORE.state;
-      const lastAsk = (assistantMasmonDyeLog(who.id, t.slot)[0] || {}).why === 'ask';
+      const l0 = assistantMasmonDyeLog(who.id, t.slot)[0] || {}; const lastAsk = l0.why === 'ask' && !l0.undo; // 戻したあとは、もう出さない
       const prevName = (assistantMasmonMineOf(st, who.id).names[t.slot] || []).slice(-1)[0];
       return (
         <div className="mhm-card mt-2 flex flex-wrap items-center gap-2" data-assistant-masmon-detail-ask>

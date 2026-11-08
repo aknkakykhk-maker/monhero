@@ -1155,7 +1155,7 @@ const SUGGEST_FROM = ['masmon', 'hero', 'welcome', 'deck'];
 const SUGGEST_FACES = ['oshi', 'like', 'sugao'];
 const SUGGEST_PLANS = ['attack', 'guard', 'normal'];
 export const SUGGEST_DECK_NAME_RE = /^[ぁ-ゖァ-ヺー一-龠々・！!？?]{2,12}$/u;
-const sClean = (v, n) => str(v, n).replace(/[\n\r<>{}`]/g, ' ').trim();
+const sClean = (v, n) => str(v, n).replace(/[\n\r<>{}`]/g, ' ').replace(/「/g, '『').replace(/」/g, '』').trim(); // かぎかっこは『』にして、プレイヤーのことばの「」を閉じられないようにする
 export const normalizeSuggest = (body, digest) => {
   const a = str(body && body.a, 20);
   if (!digest.assistants[a]) return null;

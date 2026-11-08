@@ -264,6 +264,10 @@ const layoutProblems = (page) => page.evaluate(() => {
           await page.locator('[data-assistant-masmon-undo="color"]').click().catch(() => {});
           await page.waitForTimeout(500);
           await page.locator('[data-assistant-masmon-detail-close]').click({ timeout: 2000 }).catch(() => {});
+          await page.locator('[data-assistant-masmon-row]').first().click(); await page.locator('[data-assistant-masmon-detail]').waitFor({ timeout: 3000 }).catch(() => {});
+          const logTxt = await page.locator('[data-assistant-masmon-dye-log]').innerText().catch(() => '');
+          check(`${T}提案(色)を戻したら「前の色に戻しました」・戻すボタンは消える`, /前の色に戻しました/.test(logTxt) && (await page.locator('[data-assistant-masmon-undo="color"]').count()) === 0, logTxt.slice(0, 30));
+          await page.locator('[data-assistant-masmon-detail-close]').click({ timeout: 2000 }).catch(() => {});
           const hasWait = (await page.locator('[data-assistant-masmon-ask-open="welcome"]').count()) > 0;
           if (hasWait) { const w = await send('welcome', '次はこのモンスターを迎えてみたら？', true); check(`${T}提案(迎える): 希望が残る`, (await page.locator('[data-assistant-masmon-wish]').innerText().catch(() => '')).includes('希望') || w.res === 'no', w.res); }
           await page.locator('[data-assistant-masmon-tab-btn="team"]').click(); await page.waitForTimeout(800);

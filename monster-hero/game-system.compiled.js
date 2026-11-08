@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6f4ac871e9493b2b
+// source-sha256: 13fdc6d0e6b18b72
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -126265,6 +126265,7 @@ const normalizeAssistantMasmonDyes = raw => {
         v: ASSISTANT_MASMON_DYE_V,
         d: ASSISTANT_MASMON_DRAW_V,
         why: e.why,
+        undo: e.undo === true,
         at: typeof e.at === 'string' ? e.at.slice(0, 10) : '',
         season: typeof e.season === 'string' ? e.season.slice(0, 16) : '',
         fav: typeof e.fav === 'string' ? e.fav.slice(0, 120) : '',
@@ -126296,6 +126297,7 @@ const assistantMasmonDyeLog = (aid, slot) => {
     if (!Array.isArray(cs)) continue;
     out.push({
       why: e.why,
+      undo: !!e.undo,
       at: e.at,
       season: e.season,
       role: e.roles[slot] || '',
@@ -127336,13 +127338,14 @@ const assistantMasmonAsk = async (aid, from, text, t = null) => {
 };
 const assistantMasmonUndoColor = (aid, slot) => {
   const log = assistantMasmonDyeLog(aid, slot)[0];
-  if (!log || log.why !== 'ask') return false;
+  if (!log || log.why !== 'ask' || log.undo) return false;
   const st = ASSISTANT_MASMON_STORE.state,
     day = assistantMasmonToday();
   const hist = [...(st.dyes && st.dyes[aid] || []), {
     v: ASSISTANT_MASMON_DYE_V,
     d: ASSISTANT_MASMON_DRAW_V,
     why: 'ask',
+    undo: true,
     at: day,
     season: assistantMasmonSeasonKey(day),
     fav: assistantMasmonFavSig(assistantMasmonBasePlanOf(aid)),
@@ -127358,7 +127361,7 @@ const assistantMasmonUndoColor = (aid, slot) => {
     ...m.parts
   };
   const back = assistantMasmonDyeLog(aid, slot);
-  if (!back.slice(1).some(e => e.why === 'ask')) delete m.parts[slot];
+  if (!back.slice(1).some(e => e.why === 'ask' && !e.undo)) delete m.parts[slot];
   assistantMasmonSave({
     ...st,
     dyes: {
@@ -128782,7 +128785,7 @@ function AssistantMasmonDetail({
   })), (() => {
     const e = who && who.id && Number.isInteger(t.slot) ? assistantMasmonDyeLog(who.id, t.slot)[0] : null;
     if (!e) return null;
-    const why = e.why === 'season' ? `${ASSISTANT_MASMON_SEASON_NAME[String(e.season).split('-')[1]] || '季節'}の色に染め直しました` : e.why === 'like' ? '好きな色が変わって、染め直しました' : e.why === 'ask' ? 'あなたの提案で染め直しました' : '染め方を見直しました';
+    const why = e.why === 'season' ? `${ASSISTANT_MASMON_SEASON_NAME[String(e.season).split('-')[1]] || '季節'}の色に染め直しました` : e.why === 'like' ? '好きな色が変わって、染め直しました' : e.why === 'ask' ? e.undo ? '前の色に戻しました' : 'あなたの提案で染め直しました' : '染め方を見直しました';
     const before = (e.before || []).slice(0, n || 5);
     return React.createElement("p", {
       className: "mt-1.5 flex flex-wrap items-center gap-1 text-[10px] font-bold text-slate-300",
@@ -128803,7 +128806,8 @@ function AssistantMasmonDetail({
     }))));
   })()), onAsk && assistantMasmonAskOn() && Number.isInteger(t.slot) && (() => {
     const st = ASSISTANT_MASMON_STORE.state;
-    const lastAsk = (assistantMasmonDyeLog(who.id, t.slot)[0] || {}).why === 'ask';
+    const l0 = assistantMasmonDyeLog(who.id, t.slot)[0] || {};
+    const lastAsk = l0.why === 'ask' && !l0.undo;
     const prevName = (assistantMasmonMineOf(st, who.id).names[t.slot] || []).slice(-1)[0];
     return React.createElement("div", {
       className: "mhm-card mt-2 flex flex-wrap items-center gap-2",
