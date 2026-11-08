@@ -257,6 +257,16 @@ const assistantLifeSoloLine = (who, g, like, rand = Math.random) => {
   const pick = list.length ? list[Math.floor(rand() * list.length) % list.length] : temp;
   return pick ? { who, e: pick.e || 'happy', t: String(pick.t).split('{item}').join(g.name) } : null;
 };
+// 1人に贈る・家具を贈るときの仲良し度(2026-11-08 社長「物をあげたときの親密度の変動アクションがなかった」)
+//   60-app の addAssistantBondFor は、道具・家具のぶん(lifeGift・lifeFurn)では小さな札を出さない(2人に贈るときは growthFxPeerItem が2人ぶんの量を出すため)。
+//   1人に贈る・家具を贈るにはその演出が無いので、ここで上がる前と後の点を読んで、ほかの場面と同じ仲良し度の札を出す(演出の部品と置き場所は触らない)
+const assistantLifeAddBondWithFx = (who, actionKey, amount) => {
+  if (typeof assistantPeerPlayerBondAdder === 'undefined' || !assistantPeerPlayerBondAdder) return;
+  const before = assistantLifeBondPointsOf(who);
+  try { assistantPeerPlayerBondAdder(who, actionKey, amount); } catch { return; }
+  const after = assistantLifeBondPointsOf(who);
+  if (Number.isFinite(before) && Number.isFinite(after) && after > before && typeof growthFxAssistantBond === 'function') { try { growthFxAssistantBond(who, before, after); } catch {} }
+};
 // 1人に贈った(持ち物はもう減らしてある)。その日の数・分かった好み・チェキ(その助手ひとりの1枚)・仲良し度・今日あったこと。ひとことの形を返す
 const assistantLifeSoloGive = async (who, kind, rand = Math.random) => {
   await ASSISTANT_LIFE_GIFT_STORE.load();
@@ -275,7 +285,7 @@ const assistantLifeSoloGive = async (who, kind, rand = Math.random) => {
   if (patch.cheki) { try { storeSet(ASSISTANT_LIFE_GIFT_CHEKI_KEY, patch.cheki, false); } catch {} }
   const like = assistantLifeGiftLike(who, g.key);
   const amount = assistantLifeSoloAmount(who, g.key);
-  if (typeof assistantPeerPlayerBondAdder !== 'undefined' && assistantPeerPlayerBondAdder) { try { assistantPeerPlayerBondAdder(who, 'lifeGift', amount); } catch {} }
+  assistantLifeAddBondWithFx(who, 'lifeGift', amount);
   if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`${typeof assistantLifeName === 'function' ? assistantLifeName(who) : who}に${g.name}を贈った`, [who], { kind: 'give' });
   const line = assistantLifeSoloLine(who, g, like, rand);
   const call = typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(who) : 'あなた';
@@ -763,7 +773,7 @@ const assistantLifeFurnGive = async (who, key) => {
   ASSISTANT_LIFE_GIFT_STORE.set({ likes });
   try { storeSet(ASSISTANT_LIFE_GIFT_LIKES_KEY, likes, false); } catch {}
   const amount = assistantLifeFurnAmount(who, key);
-  if (typeof assistantPeerPlayerBondAdder !== 'undefined' && assistantPeerPlayerBondAdder) { try { assistantPeerPlayerBondAdder(who, 'lifeFurn', amount); } catch {} }
+  assistantLifeAddBondWithFx(who, 'lifeFurn', amount);
   const f = assistantLifeFurnOf(key);
   if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`${typeof assistantLifeName === 'function' ? assistantLifeName(who) : who}の部屋に${f.name}を贈った`, [who], { kind: 'give' });
   const talk = assistantLifeFurnTalk(who, key);
