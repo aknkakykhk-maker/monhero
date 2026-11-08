@@ -567,7 +567,8 @@ const pvpGo = async (page, sel) => { await page.locator(sel).first().click(); aw
     check('⑪ 招待のようすの見分け(届いている・時間切れ・時刻が読めない行・断られた・表が読めない)', st === 'live,expired,live,declined,live', st);
     const after = await A.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('mh_')).map((k) => [k, localStorage.getItem(k)])));
     // 起動のあとに本体が書き足すもの(お話の既読など)は数えない。マルチ対戦は何も保存しない
-    const volatile = /^mh_(last_|session|boot|app_open|login|bgm|se_|ui_|debug|daily_login|visit|rhythm_event_story_v1)/;
+    // mh_screen_trail_v1 … 画面の出来事を最近30件だけ残す記録(10-core・2026-11-07 から。新しいキーで、セーブは書き換えない)
+    const volatile = /^mh_(last_|session|boot|app_open|login|bgm|se_|ui_|debug|daily_login|visit|rhythm_event_story_v1|screen_trail_v1)/;
     const changed = Object.keys(before).filter((k) => !k.startsWith('mh_card_') && !volatile.test(k) && before[k] !== after[k]);
     check('⑤ 実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
     check('⑤ mh_card_* 以外の保存を書き換えていない', changed.length === 0, changed.slice(0, 5).join(', '));
