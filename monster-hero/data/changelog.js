@@ -58,6 +58,18 @@ const CHANGELOG = [
     assistantNotice:{ id:'update_notice_life_furniture_v1', type:'market' },
   },
   {
+    date: "2026-11-08 09:55", type:'content', group:'assistant', title:'フレンドの家と行き来できるようになりました', status:'new', releaseFlag:'assistantLifeFriend',
+    assistantNotice:{ id:'update_notice_assistant_life_friend_v1', type:'content' },
+    items:[
+      '助手たちが、ときどき自分でフレンドの家へ遊びに行くようになりました。部屋に「🏘 ○○さんの家へ」の札が出て、帰ってくると「おかえり！」とおみやげ(ビートP 100)を持ってきます',
+      'フレンドの助手が、あなたの家へ遊びに来ることもあります。「▶ 迎える」で会えます',
+      'あなたも「🏘 フレンド」から、フレンドの家を訪ねられます。相手の助手に声をかけて、置き手紙を残して帰ると ビートP 50',
+      '来てくれた人の置き手紙には、お礼を返せます',
+      'おみやげのビートPは1日300Pまでです(朝4時に戻ります)。行き来は「⚙️ 行き来の設定」で切にできます',
+      '相手のセーブデータや助手の仲良し度は変わりません。フレンドの家の様子は、フレンドが最後に助手ライフを開いたときのものです',
+    ],
+  },
+  {
     date: "2026-11-08 09:07", type:'update', group:'assistant', title:'助手ライフで、2人に贈る道具が10種類になりました', status:'new',
     items:[
       'ビートP交換所に、助手2人に贈る道具が8種類増えました(はんぶんこケーキ・ほかほかおにぎり・午後のティーセット・かたみみイヤホン・ふたりで解くパズル・おそろいスリーブ・思い出チェキ・ちいさな花束)。',
@@ -85,6 +97,8 @@ const CHANGELOG = [
     // 2026-11-07 社長「ホームで流してから本オープン。その前に予告の告知あり」。予告の印(rhythmGrandOpenTeaser)が立つまで一覧にも告知にも出さない。
     // ★予告を出すときは、date を出した時刻へ取り直し、日にちが決まっていれば items に本オープンの日時を1行足す
     date: "2026-11-08 08:14", type:'content', group:'rhythm', title:'モンヒロビートが、もうすぐ本オープンします', status:'new', releaseFlag:'rhythmGrandOpenTeaser',
+    // 2026-11-08 社長「これを予告更新に足しといて」(社長が作った予告画像・元は grand-open-teaser-kit/received/)。助手の告知にも同じ絵が出る
+    image: 'images/events/rhythm-grand-open-teaser.jpg?v=45ae90cee48b',
     assistantNotice:{ id:'update_notice_rhythm_grand_open_teaser_v1', type:'content', notifyUntil:'2026-11-09T10:00:00+09:00' },
     items:[
       'モンヒロビートは、11月9日(月)の朝10時に、プレオープンを終えて本オープンします。',

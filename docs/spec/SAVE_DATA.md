@@ -77,6 +77,10 @@
 | `mh_assistant_life_intro_v1` | string | 助手ライフの入場の演出を長く見せた日(朝4時区切りの日付)。同じ日の2回目からは短くする。公開の印 `assistantLife` が真のときだけ書く(2026-11-07) |
 | `mh_assistant_life_rhythm_v1` | object | 助手ライフの生活のリズムの変わり方 `{ [助手id]: { shift(-1 朝型〜+1 夜型), day(最後に動いた日), dayGain(その日に動いた量) } }`。夜・朝に誘って遊ぶと少しずつ動き、誘わない日は 0 へ戻る。性格ごとの上限あり。公開の印 `assistantLife` が真のときだけ書く(2026-11-07) |
 | `mh_assistant_life_rel_v1` | object | 助手ライフの人間らしい出来事(けんか・仲直り)の記録 `{ mended: { [ペア 'a-b']: { day(朝4時区切り), abs(時間の番号) } } }`。仲直りした日から2日は同じ組がけんかしない・同じ時間のうちは部屋に「🤝 仲直り！」を出すのに使う。壊れた値は空として読む。今のけんかの記録(`mh_assistant_peer_quarrel_v1`)は変えない。公開の印 `assistantLife` が偽なら読み書きしない(56-assistant-life-rel.jsx) |
+| `mh_assistant_life_friend_v1` | object | 助手ライフのフレンドの家との行き来(2026-11-08) `{ day(朝4時区切り), go, come, look(今日の回数), went・looked(今日行った家), beatP(今日のおみやげ・300まで), seen(見た置き手紙の番号), sentAt・sentSig(控えを送った時刻と中身の印), out・back(行っている/帰ってきた助手), came(来ている助手), photos(行ったことのある家の写真・60件まで), lastHosts, api(Claude API で作ったその日の場面) }`。壊れた値は既定値。日が変わると今日の数だけ戻す。公開の印 `assistantLifeFriend` が偽なら読み書きしない(56-assistant-life-friend.jsx) |
+| `mh_assistant_life_friend_settings_v1` | object | 行き来の設定 `{ open(行き来する), show(家の様子を見せる), come(来てもらう), muted(来ないようにした家・100軒まで) }`。無ければ全部「入」 |
+| `mh_assistant_life_friend_known_v1` | object | 顔なじみの回数 `{ '自分の助手|フレンドのID|相手の助手': 回数 }`(300組まで)。数字は増えるだけで、ほかの値は変えない |
+| `mh_assistant_life_friend_intro_v1` | boolean | 「🏘 フレンド」のはじめての案内を見たか |
 | `mh_assistant_daily_lines_v1` | object | ふだんの吹き出しを1日1回まとめて作ったひとこと(2026-10-14)。`{ day, assistantId, lines: { [場面]: [{ e, t, n }] } }`。日付が変われば使わず、次に作ったら入れ替える。n はその日に出した回数 |
 | `mh_story_assistant_chat_seen_v1` | boolean | 助手とおしゃべりのお話「話せるようになった日」を本編で見たか(飛ばしても立つ)。公開の後の最初の HOME で1回だけ流すため。回想・デバッグでは立てない |
 | `mh_beat_shop_vip_letter_seen_v1` | boolean | お話「レジェンドブリーダーへの招待状」を本編で見たか(飛ばしても立つ・2026-11-05)。ブリーダーレベル1000以上の HOME で1回だけ流す。true の人だけ、ビートP交換所のダイヤ・トレーニングチケット・重トレーニングチケットが「優待パス還元」になる(値段は data/rhythm-event.js の LEGEND_BREEDER_PASS_OFFERS。保存しない)。回想・デバッグでは立てない |
@@ -240,6 +244,9 @@
 | `mh_assistant_selected_v1` | string / 既定の助手 | 選んでいる助手(`normalizeAssistantId`) |
 | `mh_assistant_bond_v1` / `mh_assistant_bond_<id>_v1` | object / `ASSISTANT_BOND_EMPTY` | 助手ごとの親密度。みゅあは無印、ほかの助手は `<id>` 付き(`assistantBondKeyFor`) |
 | `mh_assistant_call_style` / `mh_assistant_call_style_<id>` | string | 助手の呼び方(さん付けなど)。みゅあは無印(`assistantCallStyleKeyFor`) |
+| `mh_assistant_callname_v1` | object | 会話で決まる呼び方(2026-11-08〜・AI-TALK-PLAN)。`{ [助手id]: { call, by:'chat'｜'offer'｜'ask'｜'profile', at, prev } }`。`call` は `{name}` 入りの型か名前を含まない呼び方(16字まで・名前を入れて12字まで・入れない言葉は読むときにも捨てる)。`assistantCallName` が今の `mh_assistant_call_style*` より先に見る。元に戻すとその助手の行を消す。無い人は空 |
+| `mh_assistant_callname_ask_v1` | object | `{ [助手id]: { asked, offeredAt } }`。Lv6 の「なんて呼んだらいい？」を聞いたか・会話の流れで助手が持ちかけた時刻(7日に1回)。無い人は空 |
+| `mh_assistant_nickname_v1` | object | プレイヤーが助手を呼ぶあだ名(2026-11-08〜)。`{ [助手id]: { nick, at } }`(10字まで)。おしゃべりで中継役へ渡すだけ。無い人は空 |
 | `mh_assistant_unlock_seen_v1` | object / `{}` | 助手の解放告知を見たか(`data/assistants.js` の `normalizeAssistantUnlockSeen`) |
 | `mh_extreme_hs_<難易度>` / `mh_extreme_clears_<難易度>` | number / `0` | 極限チャレンジ(`EXTREME` `NIGHTMARE` `CHAOS` `ULTIMATE` `INFINITY` `GOD` `RAGNAROK` `HELHEIM` `ETERNAL` `INFERNO` `EREBUS` `COCYTUS`)のハイスコアと完走回数。`COCYTUS` は2026-11-01に足した新しいキー(`mh_extreme_hs_COCYTUS` / `mh_extreme_clears_COCYTUS`)。`ETERNAL` は2026-10-29、`INFERNO` は2026-10-31に足した新しいキー(`mh_extreme_hs_ETERNAL` / `mh_extreme_clears_ETERNAL` / `mh_extreme_hs_INFERNO` / `mh_extreme_clears_INFERNO`)で、無ければ0から始まる |
 | `mh_cocytus_open_kept_v1` | object / 無し | `{version:1, extreme:boolean, species:string[]}`。INFERNO と COCYTUS のあいだに EREBUS(エレボス)を足したとき(2026-11-04)、すでに COCYTUS が開いていた人を閉じないための印。**公開のあと最初の読み込みで1回だけ**、いまの記録から作る(極限で INFERNO をクリアしていれば extreme、種族チャレンジ(クラシック)で INFERNO をクリアしていた種族を species)。キーがあれば読むだけで作り直さない。読めない・壊れているときは空として読む(COCYTUS の記録がある人は印が無くても開く)。新しく足したキーで、既存のキーは触らない |
