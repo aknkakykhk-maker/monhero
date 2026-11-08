@@ -2231,6 +2231,21 @@ function MonsterHeroGame() {
     try { await storeSet('mh_owned_items', nextItems, false); } catch { return null; }
     return assistantPeerUseItem(kind, pair);
   };
+  // 助手ライフの家具を1つ贈る(段階B・2026-11-08)。贈れるか(まだ贈っていない家具か)を先に確かめ、持ち物を1つ減らして保存できたときだけ部屋に置く
+  const giveAssistantLifeFurn = async (who, key) => {
+    if (typeof assistantLifeFurnGive !== 'function' || typeof assistantLifeFurnEnabled !== 'function' || !assistantLifeFurnEnabled()) return null;
+    const def = assistantLifeFurnOf(key);
+    if (!def) return null;
+    await ASSISTANT_LIFE_GIFT_STORE.load();
+    if (assistantLifeRoomOf(who).got[key]) return null;
+    const have = ownedItemCount(ownedItemsRef.current, def.itemId);
+    if (have <= 0) return null;
+    const nextItems = { ...ownedItemsRef.current, [def.itemId]: have - 1 };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    try { await storeSet('mh_owned_items', nextItems, false); } catch { return null; }
+    return assistantLifeFurnGive(who, key);
+  };
   // 性格のたねを1個使って、マスモンの性格を選び直す(2026-11-06 社長の決定 C)。
   // 先に相棒の保存(mh_rhythm_buddy_v1)を書き換え、できたときだけたねを1個減らす(減ったのに性格が変わらない、を作らない)
   const useBuddyTraitSeed = async (masuId, traitId) => {
@@ -8505,7 +8520,7 @@ function MonsterHeroGame() {
     setAssistantBonds(prev => ({ ...prev, [id]: result.state }));
     // 上がった瞬間の演出(見た目だけ。値と保存はこの前後のまま)
     // 道具を贈ったぶん(lifeGift)は、道具の演出の中に2人それぞれの量を出すので、小さな札は重ねない(2026-11-08 窓口「通知が下の文字を隠す」)
-    if (actionKey !== 'lifeGift' && typeof growthFxAssistantBond === 'function') growthFxAssistantBond(id, current.points, result.state.points);
+    if (actionKey !== 'lifeGift' && actionKey !== 'lifeFurn' && typeof growthFxAssistantBond === 'function') growthFxAssistantBond(id, current.points, result.state.points);
     // Lvが上がったら、次にHOMEを開いたときに助手がそのことに触れる。
     // ただし、いま選んでいる助手のときだけ(選んでいない助手のLvアップを本人以外に言わせない)
     const after = assistantBondLevelOf(result.state.points);
@@ -19281,7 +19296,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {/* はじめて2人に贈る道具を手に入れたときの案内(HOME で1回だけ・公開の印 assistantLife) */}
             {typeof AssistantLifeItemIntro==='function'&&gameState==='HOME'&&!busy&&!peerReplay&&<AssistantLifeItemIntro peerItems={typeof assistantLifeGiftCounts==='function'?assistantLifeGiftCounts(ownedItems):{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}}/>}
             {typeof AssistantLifeScreen==='function'&&<AssistantLifeScreen metIds={metIds} onReplay={(talk)=>setPeerReplay(talk)} bondLevelOf={(id)=>assistantBondLevel(normalizeAssistantBond(assistantBonds[id]).points)}
-              peerItems={typeof assistantLifeGiftCounts==='function'?assistantLifeGiftCounts(ownedItems):{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}} onUseItem={useAssistantPeerItem}/>}
+              peerItems={typeof assistantLifeGiftCounts==='function'?assistantLifeGiftCounts(ownedItems):{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}} onUseItem={useAssistantPeerItem}
+              furnItems={typeof assistantLifeFurnCounts==='function'?assistantLifeFurnCounts(ownedItems):null} onGiveFurn={giveAssistantLifeFurn}/>}
           </>;
         })()}
 
