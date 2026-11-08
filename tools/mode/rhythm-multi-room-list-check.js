@@ -72,7 +72,8 @@ ok('古い版の部屋も一覧に並ぶ(名前は空のまま→画面では「
 // 画面の部品
 ok('フリーマッチを押すとシート(部屋を作る/部屋に入る/おまかせ)', /data-rhythm-mode-free-sheet/.test(src) && /data-rhythm-multi-free-create/.test(src) && /data-rhythm-multi-free-list-open/.test(src) && /data-rhythm-multi-free-auto/.test(src));
 ok('部屋に入る: 一覧と「入る」、部屋が無いときの案内', /data-rhythm-multi-room-row=/.test(src) && /data-rhythm-multi-room-join=/.test(src) && /data-rhythm-multi-room-list-empty/.test(src) && /古い版の部屋は名前が無いので「部屋 ◯◯◯◯」/.test(src));
-ok('部屋主が知らせに名前などを足して送る', /lobby\.socket\.send\(\{ t: 'room', code: s\.code, n: humans, hn: me\.name, hi: me\.icon, hr: me\.level, ph: s\.room\.phase \}\)/.test(src));
+// 2026-11-08: 部屋主のブリーダーID(hb)を足した(モードえらびの「いまモンヒロビートにいる人」でフレンドの部屋を見分ける)
+ok('部屋主が知らせに名前など(とブリーダーID)を足して送る', /lobby\.socket\.send\(\{ t: 'room', code: s\.code, n: humans, hn: me\.name, hi: me\.icon, hr: me\.level, ph: s\.room\.phase, hb: me\.bid \|\| undefined \}\)/.test(src));
 ok('「部屋を作る」で作った部屋は、ひとりでもほかの部屋へまとめない', /noMerge: !!\(opts && opts\.create\)/.test(src) && /!s\.noMerge/.test(src));
 ok('招待はプライベートでもフリーでも(待合いの欄と💌のシート)', /\{friendsOn && view && \(\n\s*<section data-rhythm-multi-friend-invite/.test(src) && /data-rhythm-multi-invite-open/.test(src) && /\{chatSheet\}\{inviteSheetLayer\}/.test(src));
 const app = read('monster-hero/src/parts/60-app.jsx');

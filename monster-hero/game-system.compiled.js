@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b50574fd458e6dda
+// source-sha256: f9b4b273ffd00ccc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13736,6 +13736,7 @@ const RELEASE_FLAGS = {
   assistantCallname: true,
   assistantLife: true,
   assistantLifeFurniture: true,
+  assistantLifeSolo: true,
   assistantLifeFriend: true,
   assistantLifeFriendApi: true,
   rhythmAssistantSession: true,
@@ -41888,6 +41889,11 @@ const RhythmTapTest = ({
       mirror: mirrorOn,
       cleared: !failed
     });
+    if (!debugPlay && !tutorial && !calibrating && typeof assistantLifeFriendNoteActivity === 'function' && typeof RHYTHM_DEMO_SONG_IDS !== 'undefined' && RHYTHM_DEMO_SONG_IDS.includes(song?.songId)) {
+      try {
+        void assistantLifeFriendNoteActivity('beat', song?.displayName || '');
+      } catch {}
+    }
     if (!debugPlay && !tutorial && !calibrating) {
       try {
         RHYTHM_TIMING_DIAG.meta(run.audio?.info?.());
@@ -56508,7 +56514,8 @@ const sbFetchFriendRoster = async selfIdRaw => {
   return groups.friends.map(view => ({
     otherId: view.otherId,
     userName: (looks[view.otherId] || {}).userName || '名無しのブリーダー',
-    lastSeenAt: (looks[view.otherId] || {}).lastSeenAt || 0
+    lastSeenAt: (looks[view.otherId] || {}).lastSeenAt || 0,
+    icon: (looks[view.otherId] || {}).icon ?? null
   })).sort((a, b) => b.lastSeenAt - a.lastSeenAt);
 };
 const FRIEND_PLACE_TEXT = Object.freeze({
@@ -56574,7 +56581,8 @@ const friendsPresenceFor = async ids => {
     out[id] = {
       online: p.online,
       text: p.text,
-      at
+      at,
+      place: r.place || null
     };
   });
   return out;
@@ -77830,11 +77838,16 @@ function HomeScreen({
       if (rh && rh.offsetParent) {
         const rb = offTop(rh) + rh.offsetHeight + 22,
           rr = offLeft(rh) + rh.offsetWidth;
+        let room = Infinity;
         for (const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle')) {
           if (!el.offsetParent) continue;
           const t = offTop(el);
-          if (t > offTop(rh) && offLeft(el) < rr) push = Math.max(push, rb - t);
+          if (t > offTop(rh) && offLeft(el) < rr) {
+            push = Math.max(push, rb - t);
+            room = Math.min(room, scene.clientHeight - (t + el.offsetHeight) - (el.classList.contains('mh-home-card-battle') ? 24 : 4));
+          }
         }
+        push = Math.min(push, Math.max(0, room));
       }
       scene.style.setProperty('--mh-home-left-push', `${Math.max(0, Math.ceil(push))}px`);
     };
@@ -89295,7 +89308,8 @@ const rhythmMultiCleanRoomNotice = raw => {
     hn: rhythmMultiText(raw.hn, 12),
     hi: rhythmMultiText(raw.hi, 60),
     hr: rhythmMultiInt(raw.hr, 9999),
-    ph: raw.ph === 'select' ? 'select' : raw.ph === 'matching' ? 'matching' : ''
+    ph: raw.ph === 'select' ? 'select' : raw.ph === 'matching' ? 'matching' : '',
+    hb: rhythmMultiText(raw.hb, 64).replace(/[^A-Za-z0-9_-]/g, '')
   };
 };
 const rhythmMultiRoomList = (rooms, now = Date.now(), freshMs = 8000, exceptCode = '') => Object.entries(rooms || {}).filter(([code, info]) => code !== exceptCode && info && now - info.seen <= freshMs).map(([code, info]) => ({
@@ -89304,7 +89318,8 @@ const rhythmMultiRoomList = (rooms, now = Date.now(), freshMs = 8000, exceptCode
   hn: info.hn || '',
   hi: info.hi || '',
   hr: info.hr || 0,
-  ph: info.ph || ''
+  ph: info.ph || '',
+  hb: info.hb || ''
 })).sort((a, b) => b.n - a.n || (a.code < b.code ? -1 : 1));
 const rhythmMultiBestRoom = (rooms, exceptCode) => {
   const now = Date.now();
@@ -90098,7 +90113,8 @@ const RHYTHM_MULTI = (() => {
         hn: me.name,
         hi: me.icon,
         hr: me.level,
-        ph: s.room.phase
+        ph: s.room.phase,
+        hb: me.bid || undefined
       });
     }
     const recentlySawOthers = Object.values(s.members).some(m => m.id !== s.selfId && Date.now() - m.seen < RHYTHM_MULTI_MERGE_QUIET_MS);
@@ -91046,6 +91062,199 @@ function RhythmMultiResultBubble({
     "aria-hidden": "true",
     className: "absolute -bottom-[6px] left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-b-2 border-r-2 border-sky-300 bg-white"
   })));
+}
+const RHYTHM_MULTI_PRESENCE_PENDING = {
+  call: '',
+  invite: '',
+  at: 0
+};
+const rhythmMultiTakePresencePending = () => {
+  const p = RHYTHM_MULTI_PRESENCE_PENDING;
+  const fresh = Date.now() - p.at < 60000;
+  const out = fresh ? {
+    call: p.call,
+    invite: p.invite
+  } : {
+    call: '',
+    invite: ''
+  };
+  p.call = '';
+  p.invite = '';
+  p.at = 0;
+  return out;
+};
+const rhythmBeatAssistantFace = id => {
+  try {
+    const who = typeof assistantById === 'function' ? assistantById(id) : null;
+    return who && typeof assistantFaceSrc === 'function' ? assistantFaceSrc(who, 'happy') || '' : '';
+  } catch (_) {
+    return '';
+  }
+};
+const RHYTHM_BEAT_PRESENCE_KIND = Object.freeze({
+  room: {
+    tag: '🏠 部屋あり',
+    color: '#34d399'
+  },
+  here: {
+    tag: '💌 誘える',
+    color: '#38bdf8'
+  },
+  busy: {
+    tag: '🎮 部屋で遊び中',
+    color: '#a78bfa'
+  }
+});
+function RhythmBeatPresenceStrip({
+  assistants = [],
+  friends = [],
+  onPick,
+  resolveIconUrl
+}) {
+  const face = (src, color, label) => React.createElement("span", {
+    className: "relative block h-11 w-11 overflow-hidden rounded-full border-2 bg-slate-900",
+    style: {
+      borderColor: color
+    }
+  }, src ? React.createElement("img", {
+    src: src,
+    alt: "",
+    draggable: false,
+    className: "h-full w-full object-cover"
+  }) : React.createElement("span", {
+    className: "grid h-full w-full place-items-center text-lg",
+    "aria-hidden": "true"
+  }, label));
+  return React.createElement("section", {
+    "data-rhythm-beat-presence": true,
+    className: "rounded-2xl border-[1.5px] border-amber-300/60 bg-gradient-to-r from-indigo-950/95 to-slate-900/95 px-2.5 py-2"
+  }, React.createElement("div", {
+    className: "flex items-center gap-1.5 text-[11px] font-black text-amber-200"
+  }, React.createElement("span", {
+    className: "min-w-0 break-keep truncate"
+  }, "🎵 いまモンヒロビートにいる人"), React.createElement("small", {
+    className: "ml-auto text-[10.5px] font-bold text-slate-200 max-[359px]:text-[9.5px]"
+  }, "押すと一緒に遊べる所")), React.createElement("div", {
+    className: "mt-1.5 flex gap-2 overflow-x-auto pb-0.5"
+  }, assistants.map(a => React.createElement("button", {
+    key: `a-${a.id}`,
+    type: "button",
+    "data-rhythm-beat-presence-assistant": a.id,
+    onClick: () => onPick({
+      kind: 'assistant',
+      id: a.id
+    }),
+    className: "flex w-[58px] shrink-0 flex-col items-center text-center active:scale-95"
+  }, face(rhythmBeatAssistantFace(a.id), '#f472b6', '🎤'), React.createElement("b", {
+    className: "mt-0.5 block w-full truncate text-[10px] font-black leading-tight text-white"
+  }, a.name), React.createElement("small", {
+    className: "block whitespace-nowrap text-[8.5px] font-black text-pink-300"
+  }, "🎤 呼べる"))), assistants.length > 0 && friends.length > 0 && React.createElement("span", {
+    "aria-hidden": "true",
+    className: "my-1 w-px shrink-0 bg-white/20"
+  }), friends.map(f => {
+    const k = RHYTHM_BEAT_PRESENCE_KIND[f.kind] || RHYTHM_BEAT_PRESENCE_KIND.here;
+    return React.createElement("button", {
+      key: `f-${f.otherId}`,
+      type: "button",
+      "data-rhythm-beat-presence-friend": f.otherId,
+      "data-rhythm-beat-presence-kind": f.kind,
+      onClick: () => onPick({
+        kind: 'friend',
+        id: f.otherId
+      }),
+      className: "flex w-[58px] shrink-0 flex-col items-center text-center active:scale-95"
+    }, face(f.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(f.icon) : '', k.color, '🙂'), React.createElement("b", {
+      className: "mt-0.5 block w-full truncate text-[10px] font-black leading-tight text-white"
+    }, f.userName), React.createElement("small", {
+      className: "block whitespace-nowrap text-[8.5px] font-black",
+      style: {
+        color: k.color
+      }
+    }, k.tag));
+  })));
+}
+function RhythmBeatPresenceSheet({
+  pick,
+  friend = null,
+  onClose,
+  onCallAssistant,
+  onJoinRoom,
+  onInvite,
+  resolveIconUrl
+}) {
+  if (!pick) return null;
+  const isAssistant = pick.kind === 'assistant';
+  const who = isAssistant && typeof assistantById === 'function' ? assistantById(pick.id) : null;
+  const name = isAssistant ? who && who.name || '助手' : friend && friend.userName || 'フレンド';
+  const k = !isAssistant && friend ? RHYTHM_BEAT_PRESENCE_KIND[friend.kind] || RHYTHM_BEAT_PRESENCE_KIND.here : null;
+  const src = isAssistant ? rhythmBeatAssistantFace(pick.id) : friend && friend.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(friend.icon) : '';
+  const title = isAssistant ? `${name} は いま練習中` : friend && friend.kind === 'room' ? `${name} さんが部屋を開いています` : friend && friend.kind === 'busy' ? `${name} さんは部屋で遊び中` : `${name} さんが いまモンヒロビートにいます`;
+  const sub = isAssistant ? 'モンヒロビートにいるあいだは券なし' : friend && friend.kind === 'room' && friend.room ? `フリーマッチ ${friend.room.n}/${RHYTHM_MULTI_ROOM_MAX}人${friend.room.ph === 'select' ? '・曲えらび中' : '・待合い'}` : k ? k.tag : '';
+  const line = isAssistant ? 'フリーマッチかプライベートの部屋で「呼ぶ」と、セッション券なしで一緒に演奏できます(何曲でも)。ソロライブには来られません。' : friend && friend.kind === 'room' ? '「入る」で、その部屋へ入れます。' : friend && friend.kind === 'busy' ? '合言葉の部屋か、演奏中の部屋にいるので、いまは入れません。部屋に誘ってもらうか、終わってから誘ってみましょう。' : '部屋を作って 💌 で誘うと、一緒に遊べます。';
+  const action = isAssistant ? {
+    label: '部屋を作って呼ぶ',
+    go: () => onCallAssistant(pick.id)
+  } : friend && friend.kind === 'room' && friend.room ? {
+    label: '入る',
+    go: () => onJoinRoom(friend.room.code)
+  } : friend && friend.kind === 'here' ? {
+    label: '部屋を作って誘う',
+    go: () => onInvite(pick.id)
+  } : null;
+  const accent = isAssistant ? '#f472b6' : k ? k.color : '#38bdf8';
+  return React.createElement("div", {
+    className: "absolute inset-0 z-[85500] flex items-end justify-center p-3 landscape:items-center",
+    "data-rhythm-beat-presence-sheet": pick.kind
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    className: "absolute inset-0 bg-slate-950/70",
+    onClick: onClose
+  }), React.createElement("div", {
+    className: "relative w-full max-w-sm rounded-2xl border-2 bg-slate-900 p-3.5 text-white shadow-2xl",
+    style: {
+      borderColor: accent
+    }
+  }, React.createElement("div", {
+    className: "flex items-center gap-2.5"
+  }, React.createElement("span", {
+    className: "block h-[52px] w-[52px] shrink-0 overflow-hidden rounded-full border-2 bg-slate-950",
+    style: {
+      borderColor: accent
+    }
+  }, src ? React.createElement("img", {
+    src: src,
+    alt: "",
+    draggable: false,
+    className: "h-full w-full object-cover"
+  }) : React.createElement("span", {
+    className: "grid h-full w-full place-items-center text-xl",
+    "aria-hidden": "true"
+  }, "🙂")), React.createElement("span", {
+    className: "min-w-0 flex-1 leading-tight"
+  }, React.createElement("b", {
+    className: "block text-[14px] font-black",
+    style: JA_WRAP_STYLE
+  }, jaWrap(title)), sub && React.createElement("small", {
+    className: "mt-0.5 block text-[11px] font-bold text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap(sub)))), React.createElement("p", {
+    "data-rhythm-beat-presence-line": true,
+    className: "mt-2.5 rounded-xl bg-slate-800 px-2.5 py-2 text-[12px] font-bold leading-relaxed text-slate-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(line)), React.createElement("div", {
+    className: `mt-2.5 grid gap-2 ${action ? 'grid-cols-2' : 'grid-cols-1'}`
+  }, React.createElement("button", {
+    type: "button",
+    onClick: onClose,
+    className: "min-h-[44px] rounded-xl border border-white/20 text-sm font-black"
+  }, "とじる"), action && React.createElement("button", {
+    type: "button",
+    "data-rhythm-beat-presence-go": true,
+    onClick: action.go,
+    className: "min-h-[44px] rounded-xl bg-gradient-to-r from-pink-600 to-violet-600 text-sm font-black"
+  }, action.label))));
 }
 function RhythmMultiLobbyCount() {
   const [count, setCount] = React.useState(null);
@@ -92410,6 +92619,7 @@ function RhythmMultiScreen({
     const song = songs.find(x => x.songId === id);
     return song ? rhythmSongFullName(song) : '(曲)';
   };
+  const [callPreselect, setCallPreselect] = React.useState('');
   const [buddyInfoId, setBuddyInfoId] = React.useState('');
   const openBuddyInfo = m => {
     if (m && m.cpu) setBuddyInfoId(m.id);
@@ -92436,6 +92646,7 @@ function RhythmMultiScreen({
     assistants: sessionAssistants,
     pickAssistant: callAssistant,
     guideAssistantId: guideAssistantId,
+    preselectAssistant: callPreselect,
     freeSeats: view ? Math.max(0, RHYTHM_MULTI_ROOM_MAX - (view.members || []).length) : 0,
     breederName: profile && profile.name,
     songName: buddySongName,
@@ -92685,6 +92896,109 @@ function RhythmMultiScreen({
     return RHYTHM_MULTI.watchRooms('free', setFreeRooms);
   }, [freeOpen]);
   const freeRoomCount = Array.isArray(freeRooms) ? freeRooms.length : null;
+  const modeSelectShown = !view && !searching && !!modeSelect;
+  const [beatTick, setBeatTick] = React.useState(0);
+  const [beatPresence, setBeatPresence] = React.useState({});
+  const [beatRooms, setBeatRooms] = React.useState([]);
+  const [beatPick, setBeatPick] = React.useState(null);
+  const [inviteFirstId, setInviteFirstId] = React.useState('');
+  const rosterIds = (roster || []).map(f => f.otherId).join(',');
+  React.useEffect(() => {
+    if (!modeSelectShown) return undefined;
+    const t = setInterval(() => setBeatTick(x => x + 1), 60000);
+    return () => clearInterval(t);
+  }, [modeSelectShown]);
+  React.useEffect(() => {
+    if (!modeSelectShown || !friendsOn || !rosterIds || typeof friendsPresenceFor !== 'function') return undefined;
+    let alive = true;
+    void friendsPresenceFor(rosterIds.split(',')).then(p => {
+      if (alive) setBeatPresence(p || {});
+    });
+    return () => {
+      alive = false;
+    };
+  }, [modeSelectShown, friendsOn, rosterIds, beatTick]);
+  const BEAT_PLACES = ['rhythm', 'rhythmPlay', 'multi', 'room'];
+  const beatFriendNear = modeSelectShown && friendsOn && (roster || []).some(f => {
+    const p = beatPresence[f.otherId];
+    return !!(p && p.online && BEAT_PLACES.includes(p.place));
+  });
+  React.useEffect(() => {
+    if (!beatFriendNear) {
+      setBeatRooms([]);
+      return undefined;
+    }
+    return RHYTHM_MULTI.watchRooms('free', list => setBeatRooms(Array.isArray(list) ? list : []));
+  }, [beatFriendNear]);
+  const beatAssistants = (() => {
+    void beatTick;
+    if (!modeSelectShown || !sessionAssistantsOn || typeof assistantLifeBeatIds !== 'function') return [];
+    try {
+      const ids = assistantLifeBeatIds();
+      return (sessionAssistants || []).filter(a => a && ids.includes(a.id)).sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
+    } catch (_) {
+      return [];
+    }
+  })();
+  const friendRoomsBy = list => {
+    const by = {};
+    (list || []).forEach(r => {
+      if (r && r.hb && !by[r.hb]) by[r.hb] = r;
+    });
+    return by;
+  };
+  const beatFriendsOf = rooms => {
+    if (!friendsOn) return [];
+    const by = friendRoomsBy(rooms);
+    const order = {
+      room: 0,
+      here: 1,
+      busy: 2
+    };
+    return (roster || []).map(f => {
+      const room = by[f.otherId];
+      if (room) return {
+        ...f,
+        kind: 'room',
+        room
+      };
+      const p = beatPresence[f.otherId];
+      if (!p || !p.online) return null;
+      if (p.place === 'rhythm') return {
+        ...f,
+        kind: 'here'
+      };
+      if (p.place === 'multi' || p.place === 'rhythmPlay') return {
+        ...f,
+        kind: 'busy'
+      };
+      return null;
+    }).filter(Boolean).map((f, i) => [f, i]).sort(([a, ia], [b, ib]) => order[a.kind] - order[b.kind] || ia - ib).map(([f]) => f);
+  };
+  const beatFriends = modeSelectShown ? beatFriendsOf(beatRooms) : [];
+  const beatPickFriend = beatPick && beatPick.kind === 'friend' ? beatFriendsOf(freeOpen && Array.isArray(freeRooms) ? freeRooms : beatRooms).find(f => f.otherId === beatPick.id) || null : null;
+  const beatCallAssistant = id => {
+    setBeatPick(null);
+    Object.assign(RHYTHM_MULTI_PRESENCE_PENDING, {
+      call: id,
+      invite: '',
+      at: Date.now()
+    });
+    createFree();
+  };
+  const beatInviteFriend = id => {
+    setBeatPick(null);
+    Object.assign(RHYTHM_MULTI_PRESENCE_PENDING, {
+      call: '',
+      invite: id,
+      at: Date.now()
+    });
+    createFree();
+  };
+  const beatJoinRoom = code => {
+    setBeatPick(null);
+    joinFreeRoom(code);
+  };
   const rejoinTarget = !view ? rhythmMultiRejoinTarget() : null;
   const rejoinButton = rejoinTarget && React.createElement("button", {
     type: "button",
@@ -92954,7 +93268,7 @@ function RhythmMultiScreen({
     className: "text-[11px] font-bold text-slate-400"
   }, "フレンドを読み込んでいます…"), roster !== null && roster.length === 0 && React.createElement("p", {
     className: "text-[11px] font-bold leading-relaxed text-slate-400"
-  }, "まだフレンドがいません。プロフィールの「フレンド」から、フレンドコードで申請できます。"), (typeof friendsPresenceSort === 'function' ? friendsPresenceSort(roster || [], presence) : roster || []).map(friend => React.createElement("div", {
+  }, "まだフレンドがいません。プロフィールの「フレンド」から、フレンドコードで申請できます。"), (list => inviteFirstId ? [...list.filter(f => f.otherId === inviteFirstId), ...list.filter(f => f.otherId !== inviteFirstId)] : list)(typeof friendsPresenceSort === 'function' ? friendsPresenceSort(roster || [], presence) : roster || []).map(friend => React.createElement("div", {
     key: friend.otherId,
     "data-rhythm-multi-friend-row": true,
     className: "flex items-center gap-2 rounded-lg bg-slate-950/60 px-2 py-1.5"
@@ -92984,6 +93298,25 @@ function RhythmMultiScreen({
     setInviteSheet(true);
     if (friendSelfId) loadRoster(friendSelfId);
   };
+  const viewSelfId = view ? view.selfId : '';
+  React.useEffect(() => {
+    if (!viewSelfId || modeSelect) return;
+    const p = rhythmMultiTakePresencePending();
+    if (p.call) {
+      setCallPreselect(p.call);
+      setBuddySheet('pick');
+    } else if (p.invite) {
+      setInviteFirstId(p.invite);
+      openInviteSheet();
+    }
+  }, [viewSelfId]);
+  const buddySheetWasOpen = React.useRef(false);
+  React.useEffect(() => {
+    if (buddySheet) buddySheetWasOpen.current = true;else if (buddySheetWasOpen.current) {
+      buddySheetWasOpen.current = false;
+      setCallPreselect('');
+    }
+  }, [buddySheet]);
   const inviteButton = (extra = '') => friendsOn && view && React.createElement("button", {
     "data-rhythm-multi-invite-open": true,
     type: "button",
@@ -93139,7 +93472,7 @@ function RhythmMultiScreen({
       showComment: ms.showComment,
       onToggle: ms.onToggleAssistant
     }), React.createElement("div", {
-      className: "shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2"
+      className: `shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2 ${ms.multi && (beatAssistants.length > 0 || beatFriends.length > 0) ? 'landscape:justify-start' : 'landscape:justify-center'}`
     }, !(ms.assistant && (ms.showArt || ms.showComment)) && assistToggles('justify-end', true), friendsOn && friendInvites.length > 0 && React.createElement("section", {
       "data-rhythm-multi-friend-invites": true,
       className: `${card} space-y-2 border-pink-400/60`
@@ -93155,7 +93488,12 @@ function RhythmMultiScreen({
       type: "button",
       className: `${btn} shrink-0 bg-pink-700 text-xs`,
       onClick: () => joinFromInvite(invite)
-    }, "参加する")))), React.createElement("div", {
+    }, "参加する")))), ms.multi && (beatAssistants.length > 0 || beatFriends.length > 0) && React.createElement(RhythmBeatPresenceStrip, {
+      assistants: beatAssistants,
+      friends: beatFriends,
+      onPick: setBeatPick,
+      resolveIconUrl: resolveIconUrl
+    }), React.createElement("div", {
       className: `grid gap-2 ${ms.multi ? 'grid-cols-2' : 'grid-cols-1'}`
     }, React.createElement("button", {
       "data-rhythm-mode-solo": true,
@@ -93382,7 +93720,15 @@ function RhythmMultiScreen({
       style: {
         marginTop: 'var(--mh-sa-top)'
       }
-    }, buddyRefundNote), freeOpen && React.createElement("div", {
+    }, buddyRefundNote), React.createElement(RhythmBeatPresenceSheet, {
+      pick: beatPick,
+      friend: beatPickFriend,
+      onClose: () => setBeatPick(null),
+      onCallAssistant: beatCallAssistant,
+      onJoinRoom: beatJoinRoom,
+      onInvite: beatInviteFriend,
+      resolveIconUrl: resolveIconUrl
+    }), freeOpen && React.createElement("div", {
       className: "absolute inset-0 z-[85000]"
     }, React.createElement("button", {
       type: "button",
@@ -93417,7 +93763,50 @@ function RhythmMultiScreen({
         setFreeList(false);
       },
       className: "min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 text-sm font-black"
-    }, "✕")), rejoinButton, freeList ? React.createElement(RhythmMultiRoomList, {
+    }, "✕")), rejoinButton, !freeList && (() => {
+      const list = beatFriendsOf(Array.isArray(freeRooms) ? freeRooms : []).filter(f => f.kind === 'room' || f.kind === 'here');
+      if (!list.length) return null;
+      return React.createElement("section", {
+        "data-rhythm-free-friends": true,
+        className: "rounded-2xl border-2 border-emerald-400/80 bg-emerald-950/60 px-3 py-2"
+      }, React.createElement("b", {
+        className: "block text-[11px] font-black text-emerald-300"
+      }, "🤝 フレンドがいます"), list.map(f => React.createElement("div", {
+        key: f.otherId,
+        "data-rhythm-free-friend": f.otherId,
+        "data-rhythm-free-friend-kind": f.kind,
+        className: "mt-1.5 flex items-center gap-2"
+      }, React.createElement("span", {
+        className: "block h-[34px] w-[34px] shrink-0 overflow-hidden rounded-full border-2 bg-slate-950",
+        style: {
+          borderColor: f.kind === 'room' ? '#34d399' : '#38bdf8'
+        }
+      }, f.icon && typeof resolveIconUrl === 'function' ? React.createElement("img", {
+        src: resolveIconUrl(f.icon),
+        alt: "",
+        draggable: false,
+        className: "h-full w-full object-cover"
+      }) : React.createElement("span", {
+        className: "grid h-full w-full place-items-center",
+        "aria-hidden": "true"
+      }, "🙂")), React.createElement("span", {
+        className: "min-w-0 flex-1 leading-tight"
+      }, React.createElement("b", {
+        className: "block truncate text-[13px] font-black text-white"
+      }, f.kind === 'room' ? `${f.userName} さんの部屋` : `${f.userName} さん`), React.createElement("small", {
+        className: "block truncate text-[10px] font-bold text-slate-300"
+      }, f.kind === 'room' ? `${f.room.n}/${RHYTHM_MULTI_ROOM_MAX}人${f.room.ph === 'select' ? '・曲えらび中' : '・待合い'}` : 'モンヒロビートにいる・部屋はまだ')), f.kind === 'room' ? React.createElement("button", {
+        type: "button",
+        "data-rhythm-free-friend-join": f.room.code,
+        onClick: () => joinFreeRoom(f.room.code),
+        className: "min-h-[40px] shrink-0 rounded-xl bg-emerald-500 px-4 text-[13px] font-black text-white"
+      }, "入る") : React.createElement("button", {
+        type: "button",
+        "data-rhythm-free-friend-invite": f.otherId,
+        onClick: () => beatInviteFriend(f.otherId),
+        className: "min-h-[40px] shrink-0 whitespace-nowrap rounded-xl bg-sky-600 px-3 text-[13px] font-black text-white"
+      }, "作って誘う"))));
+    })(), freeList ? React.createElement(RhythmMultiRoomList, {
       onJoin: joinFreeRoom,
       onCreate: createFree,
       onBack: () => setFreeList(false),
@@ -95751,7 +96140,8 @@ function RhythmBuddySheet({
   guideAssistantId = '',
   freeSeats = 4,
   refused = null,
-  onCallStart = null
+  onCallStart = null,
+  preselectAssistant = ''
 }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
@@ -95761,7 +96151,10 @@ function RhythmBuddySheet({
   const detail = detailId ? (masuMons || []).find(x => x && x.id === detailId) : null;
   const canPay = freeLeft > 0 || tickets > 0;
   const listControls = useRhythmBuddyListControls();
-  const [picks, setPicks] = React.useState([]);
+  const [picks, setPicks] = React.useState(() => preselectAssistant && (assistants || []).some(a => a && a.id === preselectAssistant) && !calledIds.includes(rhythmAssistSessionKey(preselectAssistant)) && freeSeats > 0 ? [{
+    kind: 'assistant',
+    id: preselectAssistant
+  }] : []);
   const [pickNote, setPickNote] = React.useState('');
   const isPicked = (kind, id) => picks.some(p => p.kind === kind && p.id === id);
   const togglePick = (kind, id) => {
@@ -95783,7 +96176,7 @@ function RhythmBuddySheet({
     setPickNote('');
   };
   const assistOn = rhythmAssistSessionEnabled() && typeof pickAssistant === 'function' && (assistants || []).length > 0;
-  const [tab, setTab] = React.useState(() => (masuMons || []).length && !refused ? 'masu' : 'assistant');
+  const [tab, setTab] = React.useState(() => (masuMons || []).length && !refused && !preselectAssistant ? 'masu' : 'assistant');
   const tabNow = assistOn ? tab : 'masu';
   const masuPicks = picks.filter(p => p.kind === 'masu');
   const singleMasu = masuPicks.length === 1 && picks.length === 1 ? (masuMons || []).find(x => x && x.id === masuPicks[0].id) : null;
@@ -105828,6 +106221,13 @@ const assistantLifeHouseCardIds = () => {
     return [];
   }
 };
+const assistantLifeCardSpent = id => {
+  try {
+    return typeof cardLifeRewardSpent === 'function' ? cardLifeRewardSpent(id) : null;
+  } catch {
+    return null;
+  }
+};
 const assistantLifeOnWoken = ev => {
   if (!ev || !ev.assistantId || !ASSISTANT_LIFE_PREFS[ev.assistantId]) return;
   if (!ev.came) return;
@@ -106386,9 +106786,12 @@ function AssistantLifeRoomSheet({
   onMasmon = null,
   onChat = null,
   follow = null,
-  onFollowDone = null
+  onFollowDone = null,
+  onGiveSolo = null,
+  canGiveSolo = false
 }) {
   const [furnOpen, setFurnOpen] = React.useState(!!openFurn);
+  const soloOn = typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn() && !!onGiveSolo;
   const who = assistantById(id);
   if (!who) return null;
   const w = assistantLifeWhereOf(life, id);
@@ -106499,6 +106902,8 @@ function AssistantLifeRoomSheet({
   }), typeof AssistantMasmonRoomRow === 'function' && React.createElement(AssistantMasmonRoomRow, {
     id: id,
     onOpen: onMasmon
+  }), soloOn && typeof AssistantLifeChekiRow === 'function' && React.createElement(AssistantLifeChekiRow, {
+    pair: [id]
   }), sess && React.createElement("div", {
     className: "mhl-row",
     "data-assistant-life-room-session-row": true
@@ -106561,19 +106966,28 @@ function AssistantLifeRoomSheet({
     "data-assistant-life-room-act": "peek",
     disabled: !canWatch,
     onClick: () => onPeek(id)
-  }, canWatch ? '👀 ようすを見る' : '見た'), !w || !w.group ? React.createElement("button", {
+  }, canWatch ? '👀 ようすを見る' : '見た'), (!w || !w.group || soloOn) && React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-call",
     "data-assistant-life-room-act": "invite",
     disabled: w && w.reason === 'distance',
     onClick: () => onInvite(id)
-  }, asleep ? '💤 そっと声をかける' : '💬 声をかける') : React.createElement("button", {
+  }, asleep ? '💤 そっと声をかける' : '💬 声をかける'), w && w.group && React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-give",
     "data-assistant-life-room-act": "give",
     disabled: !canGive,
     onClick: () => onGive(w.group)
-  }, "🎁 贈る"), onChat && !follow && React.createElement("button", {
+  }, soloOn ? '🎁 2人に贈る' : '🎁 贈る'), soloOn && React.createElement("button", {
+    type: "button",
+    className: `mhl-btn mhl-give ${w && w.group ? '' : 'col-span-2'}`,
+    "data-assistant-life-room-act": "give-solo",
+    disabled: !canGiveSolo,
+    onClick: () => onGiveSolo(id, w && w.group ? w.group.ids : [id]),
+    style: {
+      background: 'linear-gradient(90deg,#db2777,#be185d)'
+    }
+  }, w && w.group ? `🎁 ${who.name}だけに贈る` : `🎁 ${who.name}に贈る`), onChat && !follow && React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-call col-span-2",
     "data-assistant-life-room-act": "chat",
@@ -106591,14 +107005,19 @@ function AssistantLifeRoomSheet({
     className: "mhl-btn col-span-2 bg-gradient-to-r from-amber-500 to-orange-600",
     "data-assistant-life-room-act": "furn",
     onClick: () => setFurnOpen(true)
-  }, "🪑 部屋の家具"), typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id) && React.createElement("button", {
+  }, "🪑 部屋の家具"), typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id) && (assistantLifeCardSpent(id) ? React.createElement("button", {
+    type: "button",
+    disabled: true,
+    className: "mhl-btn col-span-2 cursor-not-allowed bg-slate-600 text-slate-200 opacity-80",
+    "data-assistant-life-room-act": "card-spent"
+  }, typeof cardLifeSpentText === 'function' ? cardLifeSpentText(assistantLifeCardSpent(id)) : '🃏 ごほうびアップは使い切りました') : React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-card col-span-2",
     "data-assistant-life-room-act": "card",
     onClick: () => onCard(id)
   }, "🃏 カード部屋で対戦する ", React.createElement("span", {
     className: "mhl-card-up"
-  }, "ごほうびアップ")), React.createElement("button", {
+  }, "ごほうびアップ"))), React.createElement("button", {
     type: "button",
     "data-assistant-life-room-close": true,
     "data-mhl-sheet-close": true,
@@ -106929,7 +107348,8 @@ function AssistantLifeHouse({
   onUseItem = null,
   bondLevelOf = null,
   furnItems = null,
-  onGiveFurn = null
+  onGiveFurn = null,
+  onGiveSolo = null
 }) {
   const st = useAssistantLifeNow(metIds);
   const diary = useAssistantLifeDiary();
@@ -107140,8 +107560,31 @@ function AssistantLifeHouse({
   const itemInfos = assistantLifeItemInfos();
   const haveOf = kind => peerItems && Number(peerItems[kind]) || 0;
   const usedOf = kind => !!(typeof assistantLifeGiftReason === 'function' && assistantLifeGiftReason(kind, peerSt, 1));
+  const soloOn = typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn() && !!onGiveSolo;
+  const soloLeft = soloOn ? assistantLifeSoloLeft() : 0;
+  const openGiveSolo = (who, ids) => {
+    if (!soloOn || !who) return;
+    const usable = assistantLifeSoloKinds().filter(g => haveOf(g.kind) > 0 && !assistantLifeSoloReason(g.kind, peerSt, haveOf(g.kind)));
+    const kind = (usable[0] || assistantLifeSoloKinds()[0] || {}).kind;
+    const list = Array.isArray(ids) && ids.length ? ids : [who];
+    const ps = [];
+    for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) ps.push([list[i], list[j]]);
+    setRoomId(null);
+    setScene(null);
+    setNote('');
+    setGive({
+      ids: list,
+      pair: ps[0] || null,
+      solo: who,
+      kind
+    });
+  };
   const openGive = gids => {
     const list = Array.isArray(gids) ? gids : gids && gids.ids || [];
+    if (list.length === 1 && soloOn) {
+      openGiveSolo(list[0], list);
+      return;
+    }
     if (list.length < 2) return;
     const kind = itemInfos.find(x => haveOf(x.kind) > 0 && !usedOf(x.kind))?.kind || 'gift';
     const ps = [];
@@ -107157,6 +107600,26 @@ function AssistantLifeHouse({
     });
   };
   const doGive = async () => {
+    if (give && give.solo && soloOn) {
+      const who = give.solo,
+        kind = give.kind;
+      const talk = await onGiveSolo(who, kind);
+      const info = assistantLifeItemInfo(kind);
+      setGive(null);
+      if (!talk) {
+        setNote(`${info ? info.name : '道具'}は、いまは贈れません(1人には1日3回・同じ道具は1日1回・持っている数を見てください)`);
+        return;
+      }
+      const w = assistantLifeWhereOf(life, who);
+      const likeText = talk.like === 'like' ? ' ・ 💗 好きなもの！' : talk.like === 'bad' ? ' ・ 💧 ちょっと苦手…' : '';
+      playTalk(talk, {
+        ids: [who],
+        place: w ? w.place : 'home',
+        gift: true
+      });
+      setNote(`${nameOf(who)}に${info ? `${info.emoji} ${info.name}` : ''}を贈った。💗 仲良し度 +${talk.amount}${likeText}`);
+      return;
+    }
     if (!give || !give.pair) return;
     const talk = await onUseItem(give.kind, give.pair);
     const info = assistantLifeItemInfo(give.kind);
@@ -107219,8 +107682,10 @@ function AssistantLifeHouse({
     return w && w.doing === 'practice';
   });
   const itemsLeft = Math.min(typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0, itemInfos.filter(x => !usedOf(x.kind) && haveOf(x.kind) > 0).length);
-  const itemsHave = itemInfos.reduce((n, x) => n + haveOf(x.kind), 0);
+  const soloInfos = soloOn ? assistantLifeSoloDefs().map(g => assistantLifeItemInfo(g.kind)).filter(Boolean) : [];
+  const itemsHave = [...itemInfos, ...soloInfos].reduce((n, x) => n + haveOf(x.kind), 0);
   const giveGroup = (life.groups || [])[0];
+  const giveSoloId = soloOn ? Object.keys(life.solo || {}).find(id => !awayFriend(id)) || giveGroup && giveGroup.ids[0] || null : null;
   const pad = 12;
   const houseW = land ? Math.min(560, Math.round(vw * 0.64) - pad * 2) : Math.min(380, vw - pad * 2);
   const tiles = React.createElement("div", {
@@ -107247,11 +107712,11 @@ function AssistantLifeHouse({
     type: "button",
     className: "mhl-tile mhl-give flex-1",
     "data-assistant-life-today-act": "give",
-    disabled: !canGive || !giveGroup,
+    disabled: !canGive || !giveGroup && !giveSoloId,
     onClick: () => {
-      if (itemsLeft > 0 && giveGroup) openGive(giveGroup.ids);else setTab('items');
+      if (itemsLeft > 0 && giveGroup) openGive(giveGroup.ids);else if (soloLeft > 0 && giveSoloId) openGiveSolo(giveSoloId, giveGroup && giveGroup.ids.includes(giveSoloId) ? giveGroup.ids : [giveSoloId]);else setTab('items');
     }
-  }, React.createElement("em", null, itemsLeft, "回"), React.createElement("i", null, "🎁"), React.createElement("b", null, "贈る"), React.createElement("small", null, "道具 ", itemsHave, "個")), React.createElement("button", {
+  }, React.createElement("em", null, soloOn ? itemsLeft + soloLeft : itemsLeft, "回"), React.createElement("i", null, "🎁"), React.createElement("b", null, "贈る"), React.createElement("small", null, "道具 ", itemsHave, "個")), React.createElement("button", {
     type: "button",
     className: "mhl-tile mhl-beat flex-1",
     "data-assistant-life-today-act": "beat",
@@ -107412,13 +107877,51 @@ function AssistantLifeHouse({
     className: "whitespace-nowrap text-pink-200"
   }, "💗 仲良し度 ", assistantLifeItemRange(x).player), React.createElement("span", {
     className: "whitespace-nowrap text-slate-400"
-  }, "(好みで変わる)"))), haveOf(x.kind) <= 0 && typeof AssistantLifeShopButton === 'function' && React.createElement(AssistantLifeShopButton, {
+  }, "(好みで変わる)")), soloOn && React.createElement("p", {
+    className: "text-[10px] leading-snug text-slate-400",
+    "data-assistant-life-item-solo-amt": true
+  }, "1人に贈ると: ", React.createElement("span", {
+    className: "whitespace-nowrap text-pink-200"
+  }, "💗 仲良し度 ", assistantLifeItemRange(x).player), "(友情Lv は上がらない)")), haveOf(x.kind) <= 0 && typeof AssistantLifeShopButton === 'function' && React.createElement(AssistantLifeShopButton, {
     tab: "item",
     small: true,
     label: `🛒 ${x.cost != null ? `${x.cost}P` : '交換所'}`
-  }))), React.createElement("p", {
+  }))), soloOn && soloInfos.length > 0 && React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "mt-3 inline-block rounded-xl bg-slate-950/85 px-2 py-0.5 text-[13px] font-black text-pink-200",
+    "data-assistant-life-items-solo": true
+  }, "💗 1人に贈る道具 ", React.createElement("span", {
+    className: "text-[10.5px] text-slate-200"
+  }, "今日あと ", soloLeft, "回")), soloInfos.map(x => {
+    const g = assistantLifeGiftOf(x.kind);
+    const lo = Math.round(g.player * assistantLifeGiftMult('bad')),
+      hi = Math.round(g.player * assistantLifeGiftMult('like'));
+    return React.createElement("div", {
+      key: x.kind,
+      "data-assistant-life-item": x.kind,
+      className: "mt-2 flex items-center gap-2 rounded-2xl border border-pink-300/30 bg-slate-900/85 p-2"
+    }, React.createElement("span", {
+      className: "grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/5 text-[26px]",
+      "aria-hidden": "true"
+    }, x.emoji), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("p", {
+      className: "text-[12px] font-black text-white"
+    }, x.name, " ", React.createElement("span", {
+      className: "text-[10px] text-slate-400"
+    }, "持っている ", haveOf(x.kind), "個")), React.createElement("p", {
+      className: "text-[10.5px] leading-snug text-slate-300"
+    }, x.what.split('。')[0], "。", React.createElement("span", {
+      className: "whitespace-nowrap text-pink-200"
+    }, "💗 仲良し度 +", lo, "〜", hi), React.createElement("span", {
+      className: "whitespace-nowrap text-slate-400"
+    }, "(好みで変わる)"))), haveOf(x.kind) <= 0 && typeof AssistantLifeShopButton === 'function' && React.createElement(AssistantLifeShopButton, {
+      tab: "item",
+      small: true,
+      label: `🛒 ${x.cost != null ? `${x.cost}P` : '交換所'}`
+    }));
+  })), React.createElement("p", {
     className: "mt-2 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] leading-snug text-slate-200"
-  }, "手に入れる: モンヒロビートの「ビートP交換所」(", itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・'), ")。贈る: 部屋や場面の「🎁 贈る」。好きな物なら多め・苦手な物なら少なめに上がり、好みは贈ると分かります。同じ道具は1日1回・合わせて1日3回。声をかける・見守るは無料です。次の段まであと何点・この道具で段の何割進むかは、「🎁 贈る」で2人を選ぶと出ます"), typeof AssistantLifeShopButton === 'function' && React.createElement("div", {
+  }, "手に入れる: モンヒロビートの「ビートP交換所」(", itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・'), ")。贈る: 部屋や場面の「🎁 贈る」", soloOn ? '(2人に・その助手だけに)' : '', "。好きな物なら多め・苦手な物なら少なめに上がり、好みは贈ると分かります。同じ道具は1日1回・合わせて1日3回。声をかける・見守るは無料です。次の段まであと何点・この道具で段の何割進むかは、「🎁 贈る」で2人を選ぶと出ます"), typeof AssistantLifeShopButton === 'function' && React.createElement("div", {
     className: "mt-2"
   }, React.createElement(AssistantLifeShopButton, {
     tab: "item"
@@ -107479,6 +107982,8 @@ function AssistantLifeHouse({
     key: roomId,
     id: roomId,
     openFurn: furnBack === roomId,
+    onGiveSolo: soloOn ? openGiveSolo : null,
+    canGiveSolo: soloOn && soloLeft > 0,
     life: life,
     peerSt: peerSt,
     bondLevelOf: bondLevelOf,
@@ -107808,6 +108313,7 @@ function AssistantLifeHomeFaces({
   for (const id of ASSISTANT_LIFE_HOUSE_ORDER) {
     if (!ids.includes(id)) continue;
     let f = assistantLifeFacilityOf(assistantLifeWhereOf(life, id));
+    if (f === 'card' && assistantLifeCardSpent(id)) continue;
     if (!rects[f]) f = 'life';
     if (!rects[f]) continue;
     (by[f] = by[f] || []).push(id);
@@ -119953,6 +120459,7 @@ const ASSISTANT_LIFE_GIFT_DAY_KEY = 'mh_assistant_life_gift_day_v1';
 const ASSISTANT_LIFE_GIFT_LIKES_KEY = 'mh_assistant_life_likes_v1';
 const ASSISTANT_LIFE_GIFT_CHEKI_KEY = 'mh_assistant_life_cheki_v1';
 const ASSISTANT_LIFE_GIFT_CHEKI_MAX = 60;
+const ASSISTANT_LIFE_SOLO_GIFT_KEY = 'mh_assistant_life_solo_gift_v1';
 const ASSISTANT_LIFE_GIFT_WRAP = Object.freeze({
   basket: ['おやつ', 'バスケット'],
   misanga: ['おそろいの', 'ミサンガ'],
@@ -119963,7 +120470,10 @@ const ASSISTANT_LIFE_GIFT_WRAP = Object.freeze({
   puzzle: ['ふたりで解く', 'パズル'],
   sleeve: ['おそろい', 'スリーブ'],
   cheki: ['思い出', 'チェキ'],
-  flower: ['ちいさな', '花束']
+  flower: ['ちいさな', '花束'],
+  letter: ['手書きの', '手紙'],
+  candy: ['ひとつぶ', 'キャンディ'],
+  omamori: ['小さな', 'おまもり']
 });
 const assistantLifeGiftWrapName = g => {
   const w = g && ASSISTANT_LIFE_GIFT_WRAP[g.key];
@@ -119976,17 +120486,23 @@ const ASSISTANT_LIFE_GIFT_LABEL = Object.freeze({
   unknown: '?'
 });
 const assistantLifeGiftDefs = () => typeof ASSISTANT_LIFE_GIFTS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_GIFTS) ? ASSISTANT_LIFE_GIFTS : [];
+const assistantLifeSoloDefs = () => typeof ASSISTANT_LIFE_SOLO_GIFTS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_SOLO_GIFTS) ? ASSISTANT_LIFE_SOLO_GIFTS : [];
+const assistantLifeSoloOn = () => typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeSolo === true;
+const assistantLifeAnyGiftDef = kindOrKey => assistantLifeGiftDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey) || assistantLifeSoloDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey) || null;
+const assistantLifeIsSoloOnly = kindOrKey => !!assistantLifeSoloDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey);
+const assistantLifeSoloKinds = () => assistantLifeSoloOn() ? [...assistantLifeGiftDefs(), ...assistantLifeSoloDefs()] : [];
 const assistantLifeGiftKinds = () => {
   const all = assistantLifeGiftDefs();
   return typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() ? all : all.filter(g => g.kind === 'gift' || g.kind === 'token');
 };
 const assistantLifeGiftOf = kindOrKey => {
-  const g = assistantLifeGiftDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey);
+  const g = assistantLifeAnyGiftDef(kindOrKey);
   if (!g) return null;
   const item = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : []).find(x => x && x.id === g.itemId) || {};
   const offer = (typeof RHYTHM_EVENT_POINT_SHOP_OFFERS !== 'undefined' ? RHYTHM_EVENT_POINT_SHOP_OFFERS : []).find(x => x.itemId === g.itemId) || {};
   return {
     ...g,
+    solo: assistantLifeIsSoloOnly(g.key),
     name: item.name || offer.name || '',
     emoji: item.emoji || offer.emoji || '🎁',
     cost: Number.isFinite(offer.cost) ? offer.cost : null
@@ -119994,15 +120510,16 @@ const assistantLifeGiftOf = kindOrKey => {
 };
 const assistantLifeGiftCounts = ownedItems => {
   const o = {};
-  for (const g of assistantLifeGiftDefs()) {
+  for (const g of [...assistantLifeGiftDefs(), ...assistantLifeSoloDefs()]) {
     const n = ownedItems && typeof ownedItems === 'object' ? Number(ownedItems[g.itemId]) : 0;
     o[g.kind] = Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
   }
   return o;
 };
 const assistantLifeGiftLike = (who, kindOrKey) => {
-  const g = assistantLifeGiftDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey);
-  const t = typeof ASSISTANT_LIFE_GIFT_LIKES !== 'undefined' ? ASSISTANT_LIFE_GIFT_LIKES[who] : null;
+  const g = assistantLifeAnyGiftDef(kindOrKey);
+  const solo = g && assistantLifeIsSoloOnly(g.key);
+  const t = solo ? typeof ASSISTANT_LIFE_SOLO_LIKES !== 'undefined' ? ASSISTANT_LIFE_SOLO_LIKES[who] : null : typeof ASSISTANT_LIFE_GIFT_LIKES !== 'undefined' ? ASSISTANT_LIFE_GIFT_LIKES[who] : null;
   if (!g || !t) return 'mid';
   if ((t.like || []).includes(g.key)) return 'like';
   if ((t.bad || []).includes(g.key)) return 'bad';
@@ -120079,6 +120596,7 @@ const normalizeAssistantLifeGiftCheki = raw => {
 const ASSISTANT_LIFE_GIFT_STORE = {
   state: {
     day: normalizeAssistantLifeGiftDay(null),
+    solo: normalizeAssistantLifeGiftDay(null),
     likes: normalizeAssistantLifeGiftLikes(null),
     cheki: {},
     room: {}
@@ -120104,9 +120622,10 @@ const ASSISTANT_LIFE_GIFT_STORE = {
     if (this.loaded) return Promise.resolve(this.state);
     if (!this.loading) this.loading = (async () => {
       try {
-        const [d, l, c, r] = await Promise.all([storeGet(ASSISTANT_LIFE_GIFT_DAY_KEY, null, false), storeGet(ASSISTANT_LIFE_GIFT_LIKES_KEY, null, false), storeGet(ASSISTANT_LIFE_GIFT_CHEKI_KEY, null, false), storeGet('mh_assistant_life_room_v1', null, false)]);
+        const [d, l, c, r, so] = await Promise.all([storeGet(ASSISTANT_LIFE_GIFT_DAY_KEY, null, false), storeGet(ASSISTANT_LIFE_GIFT_LIKES_KEY, null, false), storeGet(ASSISTANT_LIFE_GIFT_CHEKI_KEY, null, false), storeGet('mh_assistant_life_room_v1', null, false), storeGet(ASSISTANT_LIFE_SOLO_GIFT_KEY, null, false)]);
         this.state = {
           day: normalizeAssistantLifeGiftDay(d),
+          solo: normalizeAssistantLifeGiftDay(so),
           likes: normalizeAssistantLifeGiftLikes(l),
           cheki: normalizeAssistantLifeGiftCheki(c),
           room: normalizeAssistantLifeRoom(r)
@@ -120154,13 +120673,14 @@ const assistantLifeGiftReason = (kind, peerSt, have = 1, st = ASSISTANT_LIFE_GIF
   const usedOld = typeof assistantPeerItemUsedToday === 'function' && peerSt && (kind === 'gift' || kind === 'token') && assistantPeerItemUsedToday(peerSt, kind);
   if (!lifeOn) return usedOld ? '今日はもう使いました(朝4時に戻ります)' : have <= 0 ? '持っていません(ビートP交換所で手に入ります)' : '';
   const used = assistantLifeGiftUsedMap(peerSt, st);
-  if (used[kind] || usedOld) return '今日はもうこの道具を贈りました(朝4時に戻ります)';
+  const usedSolo = st.solo && st.solo.day === assistantLifeGiftToday() && st.solo.used && st.solo.used[kind];
+  if (used[kind] || usedOld || usedSolo) return '今日はもうこの道具を贈りました(朝4時に戻ります)';
   if (assistantLifeGiftLeft(peerSt, st) <= 0) return '今日はもう3回贈りました(朝4時に戻ります)';
   if (have <= 0) return '持っていません(ビートP交換所で手に入ります)';
   return '';
 };
 const assistantLifeGiftKeyOf = kindOrKey => {
-  const g = assistantLifeGiftDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey);
+  const g = assistantLifeAnyGiftDef(kindOrKey);
   if (g) return {
     key: g.key,
     furniture: false
@@ -120253,6 +120773,110 @@ const assistantLifeGiftTalk = (kind, pair, rand = Math.random) => {
     lines
   } : null;
 };
+const assistantLifeSoloUsedMap = (st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  const day = assistantLifeGiftToday();
+  return st.solo && st.solo.day === day ? {
+    ...st.solo.used
+  } : {};
+};
+const assistantLifeSoloLeft = (st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  const max = typeof ASSISTANT_LIFE_SOLO_DAILY_MAX !== 'undefined' && Number.isFinite(ASSISTANT_LIFE_SOLO_DAILY_MAX) ? ASSISTANT_LIFE_SOLO_DAILY_MAX : 3;
+  return Math.max(0, max - Object.keys(assistantLifeSoloUsedMap(st)).length);
+};
+const assistantLifeSoloReason = (kind, peerSt, have = 1, st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  if (!assistantLifeSoloOn() || !assistantLifeSoloKinds().some(g => g.kind === kind)) return 'この道具はまだ贈れません';
+  if (assistantLifeSoloUsedMap(st)[kind] || assistantLifeGiftUsedMap(peerSt, st)[kind]) return '今日はもうこの道具を贈りました(朝4時に戻ります)';
+  if (assistantLifeSoloLeft(st) <= 0) return '今日はもう1人に3回贈りました(朝4時に戻ります)';
+  if (have <= 0) return '持っていません(ビートP交換所で手に入ります)';
+  return '';
+};
+const assistantLifeSoloAmount = (who, kindOrKey) => {
+  const g = assistantLifeAnyGiftDef(kindOrKey);
+  return g ? Math.round(g.player * assistantLifeGiftMult(assistantLifeGiftLike(who, g.key))) : 0;
+};
+const assistantLifeSoloLine = (who, g, like, rand = Math.random) => {
+  const real = typeof ASSISTANT_LIFE_SOLO_LINES !== 'undefined' && ASSISTANT_LIFE_SOLO_LINES[who] && ASSISTANT_LIFE_SOLO_LINES[who][g.key];
+  const list = Array.isArray(real) ? real.filter(x => x && x.t) : [];
+  const temp = typeof ASSISTANT_LIFE_SOLO_TEMP_LINES !== 'undefined' && ASSISTANT_LIFE_SOLO_TEMP_LINES[who] ? ASSISTANT_LIFE_SOLO_TEMP_LINES[who][like] : null;
+  const pick = list.length ? list[Math.floor(rand() * list.length) % list.length] : temp;
+  return pick ? {
+    who,
+    e: pick.e || 'happy',
+    t: String(pick.t).split('{item}').join(g.name)
+  } : null;
+};
+const assistantLifeSoloGive = async (who, kind, rand = Math.random) => {
+  await ASSISTANT_LIFE_GIFT_STORE.load();
+  const g = assistantLifeGiftOf(kind);
+  if (!g || !who) return null;
+  const st = ASSISTANT_LIFE_GIFT_STORE.state;
+  const day = assistantLifeGiftToday();
+  const solo = {
+    day,
+    used: {
+      ...assistantLifeSoloUsedMap(st),
+      [kind]: String(who)
+    }
+  };
+  const known = {
+    ...st.likes.known,
+    [who]: {
+      ...(st.likes.known[who] || {}),
+      [g.key]: 'gift'
+    }
+  };
+  const likes = {
+    ...st.likes,
+    known
+  };
+  const patch = {
+    solo,
+    likes
+  };
+  if (g.key === 'cheki') patch.cheki = {
+    ...st.cheki,
+    [who]: [...(st.cheki[who] || []), day].slice(-ASSISTANT_LIFE_GIFT_CHEKI_MAX)
+  };
+  ASSISTANT_LIFE_GIFT_STORE.set(patch);
+  try {
+    storeSet(ASSISTANT_LIFE_SOLO_GIFT_KEY, solo, false);
+  } catch {}
+  try {
+    storeSet(ASSISTANT_LIFE_GIFT_LIKES_KEY, likes, false);
+  } catch {}
+  if (patch.cheki) {
+    try {
+      storeSet(ASSISTANT_LIFE_GIFT_CHEKI_KEY, patch.cheki, false);
+    } catch {}
+  }
+  const like = assistantLifeGiftLike(who, g.key);
+  const amount = assistantLifeSoloAmount(who, g.key);
+  if (typeof assistantPeerPlayerBondAdder !== 'undefined' && assistantPeerPlayerBondAdder) {
+    try {
+      assistantPeerPlayerBondAdder(who, 'lifeGift', amount);
+    } catch {}
+  }
+  if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`${typeof assistantLifeName === 'function' ? assistantLifeName(who) : who}に${g.name}を贈った`, [who], {
+    kind: 'give'
+  });
+  const line = assistantLifeSoloLine(who, g, like, rand);
+  const call = typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(who) : 'あなた';
+  return line ? {
+    id: `solo-${g.key}-${who}`,
+    pair: [who],
+    lv: 1,
+    scene: 'any',
+    reaction: kind,
+    gift: g.key,
+    solo: true,
+    like,
+    amount,
+    lines: [{
+      ...line,
+      t: line.t.split('{name}').join(call)
+    }]
+  } : null;
+};
 const assistantLifeGiftOnBondLevel = async (who, level, rand = Math.random) => {
   if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled()) return null;
   const t = typeof ASSISTANT_LIFE_GIFT_LIKES !== 'undefined' ? ASSISTANT_LIFE_GIFT_LIKES[who] : null;
@@ -120260,7 +120884,8 @@ const assistantLifeGiftOnBondLevel = async (who, level, rand = Math.random) => {
   await ASSISTANT_LIFE_GIFT_STORE.load();
   const st = ASSISTANT_LIFE_GIFT_STORE.state;
   const ft = assistantLifeFurnEnabled() && typeof ASSISTANT_LIFE_FURN_LIKES !== 'undefined' ? ASSISTANT_LIFE_FURN_LIKES[who] : null;
-  const left = [...(t.like || []), ...(ft && ft.like || [])].filter(k => !(st.likes.known[who] && st.likes.known[who][k]));
+  const so = assistantLifeSoloOn() && typeof ASSISTANT_LIFE_SOLO_LIKES !== 'undefined' ? ASSISTANT_LIFE_SOLO_LIKES[who] : null;
+  const left = [...(t.like || []), ...(so && so.like || []), ...(ft && ft.like || [])].filter(k => !(st.likes.known[who] && st.likes.known[who][k]));
   if (!left.length) return null;
   const key = left[Math.floor(rand() * left.length) % left.length];
   const known = {
@@ -120325,7 +120950,7 @@ function AssistantLifeGiftLikesRow({
   const st = useAssistantLifeGiftState();
   const [open, setOpen] = React.useState(false);
   if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled()) return null;
-  const gifts = assistantLifeGiftKinds().map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
+  const gifts = [...assistantLifeGiftKinds(), ...(assistantLifeSoloOn() ? assistantLifeSoloDefs() : [])].map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
   const known = gifts.filter(g => assistantLifeGiftKnown(id, g.key, st)).length;
   const liked = gifts.filter(g => assistantLifeGiftShownLike(id, g.key, st) === 'like');
   const told = st.likes.told.filter(x => x.who === id).slice(-1)[0] || null;
@@ -120535,33 +121160,52 @@ function AssistantLifeGiftSheet({
   onGive
 }) {
   const st = useAssistantLifeGiftState();
-  const gifts = assistantLifeGiftKinds().map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
+  const soloOn = assistantLifeSoloOn();
+  const soloWho = soloOn && give.solo ? give.solo : null;
+  const gifts = (soloWho ? assistantLifeSoloKinds() : assistantLifeGiftKinds()).map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
   const info = gifts.find(x => x.kind === give.kind) || gifts[0];
   if (!info) return null;
-  const pair = give.pair || [];
+  const pair = soloWho ? [] : give.pair || [];
+  const people = soloWho ? [soloWho] : pair;
   const hint = pair.length === 2 && typeof assistantLifePairHint === 'function' ? assistantLifePairHint(peerSt, life, pair[0], pair[1]) : null;
   const left = hint && hint.next ? hint.next.min - hint.pts : null;
   const have = haveOf(info.kind);
-  const reason = assistantLifeGiftReason(info.kind, peerSt, have, st);
+  const reason = soloWho ? assistantLifeSoloReason(info.kind, peerSt, have, st) : assistantLifeGiftReason(info.kind, peerSt, have, st);
   const lifeOn = typeof assistantLifeEnabled === 'function' && assistantLifeEnabled();
-  const leftToday = lifeOn ? assistantLifeGiftLeft(peerSt, st) : null;
+  const leftToday = lifeOn ? soloWho ? assistantLifeSoloLeft(st) : assistantLifeGiftLeft(peerSt, st) : null;
   const pairs = [];
   for (let i = 0; i < give.ids.length; i++) for (let j = i + 1; j < give.ids.length; j++) pairs.push([give.ids[i], give.ids[j]]);
-  const samePair = p => pair.length === 2 && p.every(id => pair.includes(id));
+  const samePair = p => !soloWho && pair.length === 2 && p.every(id => pair.includes(id));
+  const toPair = p => setGive({
+    ...give,
+    pair: p,
+    solo: null,
+    kind: assistantLifeIsSoloOnly(give.kind) ? (assistantLifeGiftKinds()[0] || {}).kind : give.kind
+  });
+  const toSolo = id => setGive({
+    ...give,
+    solo: id
+  });
   const amt = pair.length === 2 ? assistantLifeGiftAmounts(info.kind, pair) : null;
-  const shown = pair.map(id => lifeOn ? assistantLifeGiftShownLike(id, info.key, st) : 'mid');
+  const shown = people.map(id => lifeOn ? assistantLifeGiftShownLike(id, info.key, st) : 'mid');
+  const soloRange = [Math.round(info.player * assistantLifeGiftMult('bad')), Math.round(info.player * assistantLifeGiftMult('like'))];
   const tagCls = {
     like: 'bg-pink-600 text-white',
     mid: 'bg-slate-600 text-white',
     bad: 'bg-cyan-700 text-white',
     unknown: 'bg-slate-700 text-slate-200'
   };
-  const playerText = i => !amt ? '' : shown[i] === 'unknown' ? `+${amt.range.player[0]}〜${amt.range.player[1]}` : `+${amt.player[i]}`;
+  const playerText = i => soloWho ? shown[i] === 'unknown' ? `+${soloRange[0]}〜${soloRange[1]}` : `+${assistantLifeSoloAmount(soloWho, info.key)}` : !amt ? '' : shown[i] === 'unknown' ? `+${amt.range.player[0]}〜${amt.range.player[1]}` : `+${amt.player[i]}`;
   const peerText = !amt ? '' : lifeOn ? assistantLifeGiftPeerShown(info, shown) : `+${amt.peer}`;
   const mark = s => s === 'like' ? '💗' : s === 'bad' ? '💧' : s === 'unknown' ? '?' : '';
   const bondLv = typeof ASSISTANT_BOND_LEVELS !== 'undefined' ? ASSISTANT_BOND_LEVELS : [];
   const peerLv = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' ? ASSISTANT_PEER_BOND_LEVELS : [];
   const playerW = i => {
+    if (soloWho) {
+      const n = assistantLifeSoloAmount(soloWho, info.key);
+      const [lo, hi] = shown[i] === 'unknown' ? soloRange : [n, n];
+      return assistantLifeWeightOf(assistantLifeBondPointsOf(soloWho), lo, hi, bondLv, 'need');
+    }
     if (!amt) return null;
     const [lo, hi] = shown[i] === 'unknown' ? amt.range.player : [amt.player[i], amt.player[i]];
     return assistantLifeWeightOf(assistantLifeBondPointsOf(pair[i]), lo, hi, bondLv, 'need');
@@ -120584,36 +121228,42 @@ function AssistantLifeGiftSheet({
   }, React.createElement("div", {
     className: "flex items-center gap-2"
   }, React.createElement("p", {
-    className: "min-w-0 flex-1 text-[14px] font-black text-white"
-  }, "🎁 2人に贈る"), leftToday != null && React.createElement("span", {
+    className: "min-w-0 flex-1 text-[14px] font-black text-white",
+    "data-assistant-life-give-title": true
+  }, soloWho ? `🎁 ${nameOf(soloWho)}に贈る` : '🎁 2人に贈る'), leftToday != null && React.createElement("span", {
     "data-assistant-life-give-left": leftToday,
     className: "shrink-0 rounded-full bg-slate-800 px-2 text-[10.5px] font-black leading-[22px] text-amber-200"
   }, "今日あと ", leftToday, "回"), React.createElement(AssistantLifeFaces, {
-    ids: pair,
+    ids: people,
     size: 30
   })), lifeOn && React.createElement("div", {
     className: "mt-1.5"
   }, React.createElement(AssistantLifeGiftExplain, {
     compact: true
-  })), pairs.length > 1 && React.createElement("div", {
-    className: "mt-1.5 flex flex-wrap gap-1.5"
+  })), (pairs.length > 1 || soloOn && give.ids.length >= 1 && (pairs.length || give.ids.length > 1)) && React.createElement("div", {
+    className: "mt-1.5 flex flex-wrap gap-1.5",
+    "data-assistant-life-give-who": true
   }, pairs.map(p => React.createElement("button", {
     key: p.join('-'),
     type: "button",
     "data-assistant-life-give-pair": p.join('-'),
     "aria-pressed": samePair(p),
-    onClick: () => setGive({
-      ...give,
-      pair: p
-    }),
+    onClick: () => toPair(p),
     className: `min-h-[34px] rounded-full border px-2.5 text-[11px] font-black active:scale-95 ${samePair(p) ? 'border-amber-300 bg-amber-400/25 text-white' : 'border-white/15 text-slate-300'}`
-  }, p.map(nameOf).join('と')))), React.createElement("div", {
+  }, "🤝 ", p.map(nameOf).join('と'), "に")), soloOn && give.ids.map(id => React.createElement("button", {
+    key: id,
+    type: "button",
+    "data-assistant-life-give-solo": id,
+    "aria-pressed": soloWho === id,
+    onClick: () => toSolo(id),
+    className: `min-h-[34px] rounded-full border px-2.5 text-[11px] font-black active:scale-95 ${soloWho === id ? 'border-pink-300 bg-pink-400/25 text-white' : 'border-white/15 text-slate-300'}`
+  }, "💗 ", nameOf(id), "だけに"))), React.createElement("div", {
     className: "mt-2 grid grid-cols-5 gap-1",
     role: "tablist"
   }, gifts.map(x => {
     const on = x.kind === info.kind;
     const n = haveOf(x.kind);
-    const ls = pair.map(id => lifeOn ? assistantLifeGiftShownLike(id, x.key, st) : 'mid');
+    const ls = people.map(id => lifeOn ? assistantLifeGiftShownLike(id, x.key, st) : 'mid');
     return React.createElement("button", {
       key: x.kind,
       type: "button",
@@ -120639,7 +121289,7 @@ function AssistantLifeGiftSheet({
       key: i
     }, i > 0 && React.createElement("wbr", null), w))), React.createElement("span", {
       className: "block text-[9px] font-black leading-tight text-slate-300"
-    }, lifeOn && pair.length === 2 ? ls.map(mark).map(m => m || '・').join(' ') : ''), React.createElement("em", {
+    }, lifeOn && people.length ? ls.map(mark).map(m => m || '・').join(' ') : ''), React.createElement("em", {
       className: "absolute right-0.5 top-0.5 rounded-full bg-slate-950/90 px-1 text-[8.5px] font-black not-italic text-slate-200"
     }, "×", n));
   })), React.createElement("div", {
@@ -120656,7 +121306,7 @@ function AssistantLifeGiftSheet({
     className: "text-[10.5px] leading-snug text-slate-300 [[data-assistant-life-land='1']_&]:hidden"
   }, info.what))), React.createElement("div", {
     className: "mt-1.5 space-y-1 text-[11px]"
-  }, pair.map((id, i) => React.createElement("div", {
+  }, people.map((id, i) => React.createElement("div", {
     key: id,
     className: "rounded-lg bg-slate-800/80 px-2 py-1",
     "data-assistant-life-give-person": `${id}:${shown[i]}`
@@ -120676,7 +121326,7 @@ function AssistantLifeGiftSheet({
       const w = playerW(i);
       return w && !w.max ? assistantLifeBondLvGain(w.next) : '';
     })()
-  }))), React.createElement("div", {
+  }))), !soloWho && React.createElement("div", {
     className: "rounded-lg bg-slate-800/80 px-2 py-1",
     "data-assistant-life-give-peer": true
   }, React.createElement("div", {
@@ -120692,7 +121342,7 @@ function AssistantLifeGiftSheet({
     gainText: peerW && !peerW.max ? ASSISTANT_LIFE_PEER_LV_GAIN[peerW.next] || '' : ''
   }))), React.createElement("p", {
     className: "mt-1 text-[10px] leading-snug text-slate-400 [[data-assistant-life-land='1']_&]:hidden"
-  }, lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)・?=贈ると分かる。同じ道具は1⁠日1回・合わせて1⁠日3回(朝4時に戻る)' : '1⁠日1回(朝4時に戻る)', "・持っている ", have, "個", info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''), reason && React.createElement("p", {
+  }, soloWho ? '1人に贈ると、その助手の好みで仲良し度だけが上がります(友情Lv は上がりません)。1人には1⁠日3回・同じ道具は1⁠日1回(朝4時に戻る)' : lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)・?=贈ると分かる。同じ道具は1⁠日1回・合わせて1⁠日3回(朝4時に戻る)' : '1⁠日1回(朝4時に戻る)', "・持っている ", have, "個", info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''), reason && React.createElement("p", {
     "data-assistant-life-give-reason": true,
     className: "mt-1.5 rounded-xl bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-300"
   }, reason), lifeOn && have <= 0 && React.createElement("div", {
@@ -120716,7 +121366,7 @@ function AssistantLifeGiftSheet({
   }, "やめる"), React.createElement("button", {
     type: "button",
     "data-assistant-life-give-go": true,
-    disabled: !!reason || pair.length !== 2,
+    disabled: !!reason || !soloWho && pair.length !== 2,
     onClick: onGive,
     className: "min-h-[44px] flex-[2] rounded-xl border border-amber-300/70 bg-amber-400/20 text-[14px] font-black text-amber-100 active:scale-[.98] disabled:opacity-40"
   }, info.emoji, " 贈る"))));
@@ -120725,8 +121375,8 @@ function AssistantLifeChekiRow({
   pair
 }) {
   const st = useAssistantLifeGiftState();
-  if (!Array.isArray(pair) || pair.length !== 2) return null;
-  const pk = typeof assistantPeerPairKey === 'function' ? assistantPeerPairKey(pair[0], pair[1]) : [...pair].sort().join('-');
+  if (!Array.isArray(pair) || pair.length !== 2 && pair.length !== 1) return null;
+  const pk = pair.length === 1 ? String(pair[0]) : typeof assistantPeerPairKey === 'function' ? assistantPeerPairKey(pair[0], pair[1]) : [...pair].sort().join('-');
   const days = st.cheki && st.cheki[pk] || [];
   if (!days.length) return null;
   const show = days.slice(-6).reverse();
@@ -122717,7 +123367,8 @@ const normalizeAssistantLifeFriendSettings = v => {
     come: o.come !== false,
     muted: Array.isArray(o.muted) ? [...new Set(o.muted.filter(alfSafeOther))].slice(0, 100) : [],
     noteShow: o.noteShow !== false,
-    noteOff: Array.isArray(o.noteOff) ? [...new Set(o.noteOff.filter(alfSafeOther))].slice(0, 100) : []
+    noteOff: Array.isArray(o.noteOff) ? [...new Set(o.noteOff.filter(alfSafeOther))].slice(0, 100) : [],
+    act: o.act !== false
   };
 };
 const normalizeAssistantLifeFriendKnown = v => {
@@ -122765,13 +123416,27 @@ const alfBuildHouse = (life, metIds) => {
       if (Object.keys(fu).length) r[id].fu = fu;
     } catch {}
   }
+  const ac1 = _alfActCache && _alfActCache[0] && ALF_STORE.state.settings.act ? {
+    k: _alfActCache[0].k,
+    x: _alfActCache[0].x,
+    at: _alfActCache[0].at
+  } : null;
   return {
     v: 1,
     ids,
-    r
+    r,
+    ...(ac1 ? {
+      ac1
+    } : {})
   };
 };
+let _alfActCache = null;
 const ALF_TABLE_MORE = 'assistant_life_friend_house_more';
+const alfNormalizeAc = v => (Array.isArray(v) ? v : []).slice(0, 6).map(a => a && ['beat', 'card', 'masmon', 'furn'].includes(a.k) && typeof a.x === 'string' && Number.isFinite(a.at) ? {
+  k: a.k,
+  x: a.x.replace(/[{}<>]/g, '').slice(0, 40),
+  at: a.at
+} : null).filter(Boolean);
 const ALF_MORE_MAX_CHARS = 6000;
 const alfDiaryShare = n => {
   try {
@@ -122806,6 +123471,94 @@ const alfBuildMore = ids => {
     dy
   };
 };
+const ALF_ACT_KEY = 'mh_assistant_life_friend_activity_v1';
+const ALF_ACT_MAX = 6;
+const ALF_ACT_KINDS = Object.freeze({
+  beat: 'モンヒロビート',
+  card: 'MFバトルカード',
+  masmon: 'マスモン',
+  furn: 'お部屋'
+});
+const ALF_ACT_ICON = Object.freeze({
+  beat: '🎵',
+  card: '🃏',
+  masmon: '🐾',
+  furn: '🪑'
+});
+const normalizeAlfActivity = v => (Array.isArray(v) ? v : []).filter(x => x && x.k === 'beat' && typeof x.x === 'string' && x.x && Number.isFinite(x.at)).map(x => ({
+  k: 'beat',
+  x: alfStr(x.x, 30),
+  at: x.at
+})).slice(0, ALF_ACT_MAX);
+const assistantLifeFriendNoteActivity = async (k, x) => {
+  if (k !== 'beat' || typeof x !== 'string' || !x.trim() || typeof storeGet !== 'function') return;
+  try {
+    const cur = normalizeAlfActivity(await storeGet(ALF_ACT_KEY, []));
+    const t = alfStr(x.trim(), 30);
+    storeSet(ALF_ACT_KEY, [{
+      k,
+      x: t,
+      at: Date.now()
+    }, ...cur.filter(y => y.x !== t)].slice(0, ALF_ACT_MAX), false);
+  } catch {}
+};
+const alfCollectActivity = async (now = Date.now()) => {
+  const out = [];
+  const week = 7 * 86400000;
+  const get = async (key, def) => {
+    try {
+      return typeof storeGet === 'function' ? await storeGet(key, def) : def;
+    } catch {
+      return def;
+    }
+  };
+  for (const a of normalizeAlfActivity(await get(ALF_ACT_KEY, []))) out.push({
+    k: 'beat',
+    x: `「${a.x}」を遊んだ`,
+    at: a.at
+  });
+  const rec = await get('mh_card_record_v1', null);
+  for (const r of (rec && Array.isArray(rec.recent) ? rec.recent : []).filter(r => r && r.outcome === 'win' && Number.isFinite(r.at)).slice(0, 2)) out.push({
+    k: 'card',
+    x: alfValidId(r.who) ? `${assistantLifeName(r.who)}に対戦で勝った` : '対戦で勝った',
+    at: r.at
+  });
+  const hist = await get('mh_card_pvp_history_v1', []);
+  const w = (Array.isArray(hist) ? hist : []).find(m => m && m.outcome === 'win' && Number.isFinite(m.at));
+  if (w) out.push({
+    k: 'card',
+    x: 'マルチ対戦で勝った',
+    at: w.at
+  });
+  const ms = await get('mh_masu_mons', []);
+  const m = (Array.isArray(ms) ? ms : []).filter(x => x && Number.isFinite(x.createdAt)).sort((a, b) => b.createdAt - a.createdAt)[0];
+  const mon = m && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[m.baseId] : null;
+  if (mon && mon.name) out.push({
+    k: 'masmon',
+    x: `新しいマスモン「${alfStr(mon.name, 16)}」を迎えた`,
+    at: m.createdAt
+  });
+  for (const id of ALF_IDS) {
+    try {
+      const room = typeof assistantLifeRoomOf === 'function' ? assistantLifeRoomOf(id) : null;
+      for (const key of Object.values(room && room.put || {}).filter(Boolean)) {
+        const day = room.got && room.got[key];
+        const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(key) : null;
+        const at = typeof day === 'string' ? Date.parse(`${day}T12:00:00+09:00`) : NaN;
+        if (f && f.name && Number.isFinite(at)) out.push({
+          k: 'furn',
+          x: `${assistantLifeName(id)}の部屋に「${f.name}」を置いた`,
+          at
+        });
+      }
+    } catch {}
+  }
+  return out.filter(a => now - a.at <= week && a.at <= now + 60000).sort((a, b) => b.at - a.at).slice(0, ALF_ACT_MAX).map(a => ({
+    k: a.k,
+    x: alfStr(a.x, 40),
+    at: a.at
+  }));
+};
 const assistantLifeFriendNormalizeMore = raw => {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   try {
@@ -122836,7 +123589,8 @@ const assistantLifeFriendNormalizeMore = raw => {
   return {
     v: 1,
     fu,
-    dy
+    dy,
+    ac: alfNormalizeAc(raw.ac)
   };
 };
 const assistantLifeFriendNormalizeHouse = raw => {
@@ -122870,12 +123624,16 @@ const assistantLifeFriendNormalizeHouse = raw => {
     t: /^\d{1,2}:\d{2}$/.test(d.t) ? d.t : '',
     x: d.x.replace(/[{}<>]/g, '').slice(0, 40)
   } : null).filter(d => d && d.x);
+  const ac1 = alfNormalizeAc(raw.ac1 ? [raw.ac1] : [])[0] || null;
   return {
     v: 1,
     ids,
     r,
     ...(dy.length ? {
       dy
+    } : {}),
+    ...(ac1 ? {
+      ac1
     } : {})
   };
 };
@@ -123246,6 +124004,11 @@ const alfPublish = async (life, metIds, now = Date.now(), {
   if (!self) return false;
   const st = alfToday();
   const settings = ALF_STORE.state.settings;
+  try {
+    _alfActCache = settings.act ? await alfCollectActivity(now) : [];
+  } catch {
+    _alfActCache = [];
+  }
   const house = settings.show ? alfBuildHouse(life, metIds) : {};
   const sig = alfSig(`${alfDay(now)}|${settings.open ? 1 : 0}|${JSON.stringify(house)}`);
   if (!force && st.sentAt) {
@@ -123267,7 +124030,12 @@ const alfPublish = async (life, metIds, now = Date.now(), {
       sentAt: now,
       sentSig: sig
     });
-    void alfPublishMore(self, settings.show ? alfBuildMore(house.ids) : {});
+    void alfPublishMore(self, settings.show ? {
+      ...alfBuildMore(house.ids),
+      ...(settings.act ? {
+        ac: _alfActCache || []
+      } : {})
+    } : {});
     return true;
   } catch {
     return false;
@@ -124521,7 +125289,12 @@ function AlfFriendHouseView({
     };
     return o;
   })();
-  const diaryItems = more && more.dy.length ? more.dy : h.dy || [];
+  const actItems = more && more.ac ? more.ac.map(a => ({
+    t: alfAgoText(a.at).replace(/^今日 /, ''),
+    x: `${ALF_ACT_ICON[a.k] || '✨'} ${a.x}`,
+    act: a.k
+  })) : [];
+  const diaryItems = [...actItems, ...(more && more.dy.length ? more.dy : h.dy || [])].slice(0, 10);
   const header = React.createElement("div", {
     className: "mhl-hdr flex items-start gap-2",
     style: {
@@ -124588,7 +125361,7 @@ function AlfFriendHouseView({
     "data-alf-visit-diary": true
   }, React.createElement("p", {
     className: "text-[10px] font-black"
-  }, "📌 ", friend.name, "さんの家の今日あったこと"), diaryItems.slice(0, land ? 5 : 3).map((d, i) => React.createElement("p", {
+  }, "📌 ", friend.name, "さんの家の最近"), diaryItems.slice(0, land ? 5 : 3).map((d, i) => React.createElement("p", {
     key: i,
     className: "text-[10px] font-bold leading-snug"
   }, React.createElement("b", {
@@ -124827,12 +125600,16 @@ function AlfFriendHouseView({
     }
   }, React.createElement("p", {
     className: "text-[16px] font-black text-amber-100"
-  }, "📌 ", friend.name, "さんの家の今日あったこと"), diaryItems.length ? diaryItems.map((d, i) => React.createElement("p", {
-    key: i,
+  }, "📌 ", friend.name, "さんの家の最近"), diaryItems.length ? diaryItems.map((d, i) => React.createElement(React.Fragment, {
+    key: i
+  }, !d.act && (i === 0 || diaryItems[i - 1].act) && React.createElement("p", {
+    className: "mt-2.5 border-t border-slate-600/60 pt-1.5 text-[11px] font-black text-sky-200",
+    "data-alf-visit-diary-sep": true
+  }, "🏠 助手たちの今日"), React.createElement("p", {
     className: "mt-1.5 text-[12px] font-bold leading-snug text-slate-100"
   }, React.createElement("b", {
     className: "mr-1.5 text-amber-200"
-  }, d.t), d.x)) : React.createElement("p", {
+  }, d.t), d.x))) : React.createElement("p", {
     className: "mt-1.5 text-[12px] text-slate-300"
   }, "まだ何もありません"), React.createElement("button", {
     type: "button",
@@ -125173,7 +125950,10 @@ function AssistantLifeFriendPage({
       }, "・🪑 家具", fu)) : null, React.createElement("wbr", null), React.createElement("span", {
         className: "whitespace-nowrap text-slate-400"
       }, "・", alfAgoText(f.at)));
-    })()), React.createElement("div", {
+    })()), f.house.ac1 && React.createElement("p", {
+      className: "truncate text-[10.5px] font-bold text-amber-200",
+      "data-alf-house-act": true
+    }, ALF_ACT_ICON[f.house.ac1.k] || '✨', " ", f.house.ac1.x), React.createElement("div", {
       className: "mt-0.5 flex gap-0.5"
     }, alfHomeIds(f.house).slice(0, 6).map(id => React.createElement(AlfFace, {
       key: id,
@@ -125219,7 +125999,7 @@ function AssistantLifeFriendPage({
   }, "⚙️ 行き来の設定"), React.createElement("div", {
     className: card,
     "data-alf-settings": true
-  }, [['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る'], ['noteShow', '置き手紙の自由文を見る']].map(([k, label]) => React.createElement("label", {
+  }, [['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る'], ['act', '最近の遊びをフレンドに見せる'], ['noteShow', '置き手紙の自由文を見る']].map(([k, label]) => React.createElement("label", {
     key: k,
     className: "flex items-center justify-between gap-2 py-1 text-[11.5px] text-slate-100",
     "data-alf-setting": k
@@ -135796,6 +136576,78 @@ const cardLifeAtCard = id => {
     return false;
   }
 };
+const CARD_LIFE_REWARD_KEY = 'mh_card_life_reward_v1';
+const CARD_LIFE_REWARD_MAX = 1;
+const cardLifeSlotNow = (now = Date.now()) => {
+  try {
+    const v = typeof assistantLifeSlotAt === 'function' ? assistantLifeSlotAt(now) : null;
+    return v && Number.isFinite(v.abs) && Number.isFinite(v.i) ? v : null;
+  } catch (_) {
+    return null;
+  }
+};
+const cardLifeRewardNorm = (raw, slot) => {
+  const used = {};
+  if (Number.isFinite(slot) && raw && typeof raw === 'object' && !Array.isArray(raw) && raw.slot === slot && raw.used && typeof raw.used === 'object' && !Array.isArray(raw.used)) {
+    for (const [k, v] of Object.entries(raw.used)) {
+      const n = Math.trunc(Number(v));
+      if (k && Number.isFinite(n) && n > 0) used[k] = Math.min(n, 99);
+    }
+  }
+  return {
+    slot: Number.isFinite(slot) ? slot : null,
+    used
+  };
+};
+const cardLifeRewardAfter = (raw, slot, who) => {
+  if (!Number.isFinite(slot) || typeof who !== 'string' || !who) return null;
+  if (raw && typeof raw === 'object' && Number.isFinite(raw.slot) && raw.slot > slot) return null;
+  const cur = cardLifeRewardNorm(raw, slot);
+  return {
+    slot,
+    used: {
+      ...cur.used,
+      [who]: (cur.used[who] || 0) + 1
+    }
+  };
+};
+const CARD_LIFE_REWARD_MEM = {
+  raw: null
+};
+const cardLifeRewardLoad = async () => {
+  try {
+    CARD_LIFE_REWARD_MEM.raw = await storeGet(CARD_LIFE_REWARD_KEY, null);
+  } catch (_) {}
+  return CARD_LIFE_REWARD_MEM.raw;
+};
+const cardLifeRewardLeft = (id, now = Date.now()) => {
+  const s = cardLifeSlotNow(now);
+  return !!s && typeof id === 'string' && !!id && (cardLifeRewardNorm(CARD_LIFE_REWARD_MEM.raw, s.abs).used[id] || 0) < CARD_LIFE_REWARD_MAX;
+};
+const cardLifeRewardSpent = (id, now = Date.now()) => {
+  const s = cardLifeSlotNow(now);
+  if (!s || typeof id !== 'string' || !id || cardLifeRewardLeft(id, now)) return null;
+  const list = typeof ASSISTANT_LIFE_SLOTS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_SLOTS) ? ASSISTANT_LIFE_SLOTS : null;
+  const nx = list && list.length ? list[(s.i + 1) % list.length] : null;
+  return {
+    next: nx && Number.isFinite(nx.from) ? nx.from : null
+  };
+};
+const cardLifeSpentText = (sp, name = '') => `🃏 ${name ? `${name}の` : ''}ごほうびアップは使い切りました…次は${sp && Number.isFinite(sp.next) ? `${sp.next}時` : '次の時間'}から`;
+const cardLifeRewardEntry = async (who, slot) => {
+  let before = null;
+  try {
+    before = await storeGet(CARD_LIFE_REWARD_KEY, null);
+  } catch (_) {
+    return null;
+  }
+  const next = cardLifeRewardAfter(before, slot, who);
+  return next ? {
+    key: CARD_LIFE_REWARD_KEY,
+    next,
+    before
+  } : null;
+};
 const cardGrowStyleOn = () => {
   try {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardGrowStyle === true;
@@ -135823,6 +136675,7 @@ const CARD_LIFE_INVITE = {
 const CARD_LIFE_INVITE_TTL_MS = 60 * 1000;
 const cardLifeSetApp = app => {
   CARD_LIFE_INVITE.app = app && typeof app === 'object' ? app : null;
+  void cardLifeRewardLoad();
   if (typeof ASSISTANT_LIFE_LINKS === 'undefined' || !ASSISTANT_LIFE_LINKS) return;
   ASSISTANT_LIFE_LINKS.cardInvite = CARD_LIFE_INVITE.app && typeof CARD_LIFE_INVITE.app.open === 'function' && (!CARD_LIFE_INVITE.app.visible || CARD_LIFE_INVITE.app.visible()) ? id => {
     CARD_LIFE_INVITE.pending = {
@@ -140962,6 +141815,7 @@ const CardBattleScreen = ({
       const fresh = await freshCardSave();
       const lifeMult = game.lifeUp && !game.demo ? CARD_LIFE_UP_MULT : 1;
       const reward = cardCpuReward(fresh.daily, game.level, outcome, facts, lifeMult);
+      const lifeEntry = lifeMult > 1 && reward.lifeUp === true && Number.isFinite(game.lifeSlot) ? await cardLifeRewardEntry(game.who, game.lifeSlot) : null;
       const loops = cardCpuLoops(game.level, outcome, facts, lifeMult);
       const rankable = !!(rank && rank.send) && !debug;
       const nextRecord = cardRecordAfter(fresh.record, {
@@ -141023,7 +141877,8 @@ const CardBattleScreen = ({
         daily: reward.daily,
         record: nextRecord,
         unlocked: nextUnlocked
-      }, fresh.raw, [...openExtra, ...(detailEntry ? [detailEntry] : []), ...levelGain.entries]);
+      }, fresh.raw, [...openExtra, ...(detailEntry ? [detailEntry] : []), ...levelGain.entries, ...(lifeEntry ? [lifeEntry] : [])]);
+      if (ok && lifeEntry) CARD_LIFE_REWARD_MEM.raw = lifeEntry.next;
       if (ok && openExtra.length) {
         openIdRef.current = null;
         openRef.current = null;
@@ -141268,7 +142123,8 @@ const CardBattleScreen = ({
       sameBlood: !!cardShareSameBlood(db, activeDeck),
       quick: !!autoIn.quick
     } : null;
-    const lifeUp = !share && !cup && !auto && cardLifeAtCard(pick.who);
+    const lifeUp = !share && !cup && !auto && cardLifeAtCard(pick.who) && cardLifeRewardLeft(pick.who);
+    const lifeSlot = lifeUp ? (cardLifeSlotNow() || {}).abs : null;
     setGame({
       key: gameKey,
       st,
@@ -141278,7 +142134,8 @@ const CardBattleScreen = ({
       intro: auto && auto.quick ? null : intro,
       cpuSameBlood: !!cpuDeck.sameBlood,
       ...(lifeUp ? {
-        lifeUp: true
+        lifeUp: true,
+        lifeSlot
       } : {}),
       ...(share ? {
         share
@@ -142034,6 +142891,8 @@ const CardBattleScreen = ({
     const a = allAssistants.find(x => x.id === foe.who) || foes[0];
     const lifeIds = cardLifeCardIds();
     const lifeFoes = foes.filter(x => lifeIds.includes(x.id));
+    const lifeSpent = Object.fromEntries(lifeFoes.map(x => [x.id, cardLifeRewardSpent(x.id)]).filter(e => e[1]));
+    const lifeUpFoes = lifeFoes.filter(x => !lifeSpent[x.id]);
     const line = a ? cardPickLine(a.id, 'challenge', null, () => 0.0) : null;
     return React.createElement("div", {
       "data-mh-screen": true,
@@ -142087,16 +142946,13 @@ const CardBattleScreen = ({
       }
     }, x.name)), save.record.beaten[x.id] && React.createElement("span", {
       className: "absolute right-1 top-1 rounded bg-amber-400 px-1 text-[10px] font-black text-slate-900"
-    }, "勝"), lifeIds.includes(x.id) && React.createElement("span", {
+    }, "勝"), lifeIds.includes(x.id) && (lifeSpent[x.id] ? React.createElement("span", {
+      "data-card-foe-life-chip": "spent",
+      className: "absolute left-0.5 top-0.5 rounded-full bg-slate-500 px-1 text-[9px] font-black leading-[14px] text-slate-100 shadow landscape:text-[8px] landscape:leading-[12px]"
+    }, "🃏済") : React.createElement("span", {
       "data-card-foe-life-chip": true,
       className: "absolute left-0.5 top-0.5 rounded-full bg-gradient-to-r from-amber-200 to-amber-400 px-1 text-[9px] font-black leading-[14px] text-slate-950 shadow landscape:text-[8px] landscape:leading-[12px]"
-    }, "🃏UP")))), lifeFoes.length > 0 && React.createElement("div", {
-      "data-card-foe-life-band": true,
-      className: "rounded-xl border-2 border-amber-300 bg-amber-950/80 px-2.5 py-1.5 text-[13px] font-black leading-snug text-amber-200",
-      style: JA_LABEL_STYLE
-    }, React.createElement("p", null, jaWrap(`🃏 いまカード部屋にいる助手: ${lifeFoes.map(x => x.name).join('・')}`)), React.createElement("p", {
-      className: "text-[12px] text-white"
-    }, jaWrap('この助手と対戦すると、ビートP・カードランクの経験値・クイック周回が 1.5倍'))), React.createElement("div", {
+    }, "🃏UP"))))), React.createElement("div", {
       className: "flex items-baseline gap-2 px-0.5 pt-1"
     }, React.createElement("span", {
       className: "text-[10px] font-black uppercase tracking-widest text-slate-300"
@@ -142134,7 +142990,17 @@ const CardBattleScreen = ({
       }, open ? `勝ち${CARD_AI_LEVELS[lv].point}` : '🔒'));
     })), debug && React.createElement("p", {
       className: "text-[11px] font-bold text-slate-400"
-    }, "(デバッグ: まだ開いていない強さも選べます。開いた印は勝ったときだけ付きます)"), React.createElement("div", {
+    }, "(デバッグ: まだ開いていない強さも選べます。開いた印は勝ったときだけ付きます)"), lifeFoes.length > 0 && React.createElement("div", {
+      "data-card-foe-life-band": lifeUpFoes.length ? 'up' : 'spent',
+      className: `rounded-xl border-2 px-2.5 py-1.5 text-[13px] font-black leading-snug ${lifeUpFoes.length ? 'border-amber-300 bg-amber-950/80 text-amber-200' : 'border-slate-500 bg-slate-800/90 text-slate-200'}`,
+      style: JA_LABEL_STYLE
+    }, lifeUpFoes.length > 0 && React.createElement(React.Fragment, null, React.createElement("p", null, jaWrap(`🃏 いまカード部屋にいる助手: ${lifeUpFoes.map(x => x.name).join('・')}`)), React.createElement("p", {
+      className: "text-[12px] text-white"
+    }, jaWrap('この助手と対戦すると、ビートP・カードランクの経験値・クイック周回が 1.5倍'))), lifeFoes.filter(x => lifeSpent[x.id]).map(x => React.createElement("p", {
+      key: x.id,
+      "data-card-foe-life-spent": x.id,
+      className: `text-[12px] text-slate-300 ${lifeUpFoes.length ? 'mt-0.5' : ''}`
+    }, jaWrap(cardLifeSpentText(lifeSpent[x.id], x.name))))), React.createElement("div", {
       className: "space-y-2 landscape:grid landscape:grid-cols-2 landscape:items-stretch landscape:gap-2 landscape:space-y-0"
     }, a && React.createElement("div", {
       className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2 landscape:items-center"
@@ -164830,6 +165696,27 @@ function MonsterHeroGame() {
     }
     return assistantLifeFurnGive(who, key);
   };
+  const giveAssistantLifeSolo = async (who, kind) => {
+    if (typeof assistantLifeSoloGive !== 'function' || typeof assistantLifeSoloOn !== 'function' || !assistantLifeSoloOn()) return null;
+    const def = assistantLifeGiftOf(kind);
+    if (!def) return null;
+    await ASSISTANT_LIFE_GIFT_STORE.load();
+    const have = ownedItemCount(ownedItemsRef.current, def.itemId);
+    const peerSt = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null;
+    if (assistantLifeSoloReason(kind, peerSt, have)) return null;
+    const nextItems = {
+      ...ownedItemsRef.current,
+      [def.itemId]: have - 1
+    };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    try {
+      await storeSet('mh_owned_items', nextItems, false);
+    } catch {
+      return null;
+    }
+    return assistantLifeSoloGive(who, kind);
+  };
   const useBuddyTraitSeed = async (masuId, traitId) => {
     const have = ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TRAIT_SEED_ITEM_ID);
     if (have <= 0) return false;
@@ -186441,7 +187328,8 @@ function MonsterHeroGame() {
         },
         onUseItem: useAssistantPeerItem,
         furnItems: typeof assistantLifeFurnCounts === 'function' ? assistantLifeFurnCounts(ownedItems) : null,
-        onGiveFurn: giveAssistantLifeFurn
+        onGiveFurn: giveAssistantLifeFurn,
+        onGiveSolo: giveAssistantLifeSolo
       }));
     })(), typeof QuickGuideOverlay === 'function' && quickGuideActive && activeAssistant && (() => {
       const replay = quickGuideActive.startsWith('replay:') ? quickGuideActive.slice(7) : null;
