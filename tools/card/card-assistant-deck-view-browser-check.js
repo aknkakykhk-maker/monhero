@@ -12,6 +12,7 @@
 //   ⑧ 実際の流れ(印をページの中でだけ立てる): VS の「チーム」と「今日のデッキ」・投了したあとの結果の2つが出て、
 //      画面からはみ出さず、互いにも3体・吹き出しにも重ならず、切れない。相手えらびの型の欄にも今日のデッキが1つ出て、
 //      その型・名前が VS・結果と同じ(ルールが先に決める cardAiDeckNextStyle。見せた型と戦う型がずれない)
+//   ⑨ 札のデッキの名前が途中で折れない(8人×3つの既定の名前と12字の名前を、200px の箱で。入らないときは見出しと名前の間で行が分かれる)
 //   ⑥ 実行時エラーが無い
 const fs = require('fs');
 const path = require('path');
@@ -113,6 +114,23 @@ const STYLES = ['attack', 'guard', 'normal'];
       // ⑤ 型の札の言葉
       const chips = await page.evaluate(() => ({ ...Object.fromEntries([...document.querySelectorAll('[data-card-foe-deck-chip]')].map((e) => [e.getAttribute('data-card-foe-deck-chip'), e.textContent])), team: (document.querySelector('[data-card-foe-team-name]') || {}).textContent || '' }));
       check(`⑤ ${view}: 札の言葉(「今日のデッキ」+型の印+名前・「チーム」+自動の名前)`, ['foe', 'vs', 'result'].every((k) => /^今日のデッキ🛡️ のんびり長期戦・守り$/.test(chips[k] || '')) && chips.team === 'チームドラのカチコチねばり腰の砦', JSON.stringify(chips));
+      // ⑨ 札のデッキの名前が途中で折れない(部長 2026-11-08: 横の相手えらびで「のんびり長期戦・/守り」と折れた)。
+      //    8人×3つの既定の名前と、AI の名前の上限12字(83 の CARD_AI_DECK_NAME_MAX)を、横の相手えらびの型の欄(約210px)より狭い 200px の箱に置く
+      const fold = await page.evaluate(() => {
+        const names = []; Object.keys(CARD_AI_STYLE_NAMES).forEach((w) => ['attack', 'guard', 'normal'].forEach((st) => names.push([st, cardAssistantDeckDisplayName(w, st)])));
+        names.push(['attack', 'ガチガチ鉄壁のカウンター砦'.slice(0, CARD_AI_DECK_NAME_MAX)], ['guard', 'ＷＷＷＷＷＷＷＷＷＷＷＷ'.slice(0, CARD_AI_DECK_NAME_MAX)]);
+        const box = document.createElement('div'); box.style.cssText = 'position:fixed;left:0;top:0;width:200px;z-index:2147483000'; document.body.appendChild(box);
+        const r = ReactDOM.createRoot(box); const bad = [];
+        ReactDOM.flushSync(() => r.render(React.createElement('div', null, names.map(([st, n], i) => React.createElement(CardFoeDeckChip, { key: i, name: n, styleId: st, kind: 'foe', compact: true })))));
+        [...box.querySelectorAll('[data-card-foe-deck-chip]')].forEach((chip, i) => {
+          const t = chip.querySelector('[data-card-foe-deck-chip-name]'); const lh = parseFloat(getComputedStyle(t).lineHeight) || 14;
+          const tr = t.getBoundingClientRect(); const cr = chip.getBoundingClientRect();
+          if (Math.round(tr.height / lh) !== 1 || tr.right > cr.right + 0.5 || cr.right > 200.5 || !t.textContent.includes(names[i][1])) bad.push(`${names[i][1]}(${Math.round(tr.height)}px/${Math.round(tr.right)}px)`);
+        });
+        r.unmount(); box.remove();
+        return { n: names.length, bad };
+      });
+      check(`⑨ ${view}: 札のデッキの名前が途中で折れない(既定の名前 ${fold.n - 2}個と12字の名前を、200px の箱で)`, fold.bad.length === 0 && fold.n >= 26, fold.bad.slice(0, 3).join(' / '));
       check(`⑥ ${view}: 実行時エラーが無い`, errors.length === 0, errors.slice(0, 2).join(' / '));
       await page.close();
     }

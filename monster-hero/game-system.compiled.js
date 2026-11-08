@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fba2497dd9b2386a
+// source-sha256: 50fee0d719abdddc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -144423,12 +144423,12 @@ function CardFoeDeckChip({
   return React.createElement("div", {
     "data-card-foe-deck-chip": kind,
     "data-card-foe-deck-style": styleId,
-    className: `mx-auto flex max-w-full items-center justify-center border border-amber-300/70 bg-slate-950/80 font-black leading-tight text-amber-100 ${compact ? 'gap-1 rounded-2xl px-1.5 py-0.5 text-[11px]' : 'gap-1.5 rounded-full px-3 py-1 text-[12px]'}`
+    className: `mx-auto flex max-w-full flex-wrap items-center justify-center gap-y-0.5 border border-amber-300/70 bg-slate-950/80 font-black leading-tight text-amber-100 ${compact ? 'gap-1 rounded-2xl px-1.5 py-0.5 text-[11px]' : 'gap-1.5 rounded-full px-3 py-1 text-[12px]'}`
   }, React.createElement("small", {
     className: `shrink-0 rounded-full bg-amber-300 py-px text-[10px] font-black text-slate-950 ${compact ? 'px-1' : 'px-1.5'}`
   }, "今日のデッキ"), React.createElement("span", {
-    className: "min-w-0",
-    style: JA_WRAP_STYLE
+    "data-card-foe-deck-chip-name": true,
+    className: "whitespace-nowrap"
   }, React.createElement("span", {
     "aria-hidden": "true"
   }, CARD_DECK_STYLE_ICON[styleId], " "), name || `${CARD_DECK_STYLE_LABEL[styleId]}のデッキ`));

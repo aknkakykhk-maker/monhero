@@ -121,11 +121,12 @@ function CardAssistantDeckView({ who, styleId, land = false }) {
 function CardFoeDeckChip({ name, styleId, kind = 'foe', compact = false }) {
   if (!cardAssistantDeckViewOn() || !CARD_DECK_STYLE_LABEL[styleId]) return null;
   return (
-    <div data-card-foe-deck-chip={kind} data-card-foe-deck-style={styleId} className={`mx-auto flex max-w-full items-center justify-center border border-amber-300/70 bg-slate-950/80 font-black leading-tight text-amber-100 ${compact ? 'gap-1 rounded-2xl px-1.5 py-0.5 text-[11px]' : 'gap-1.5 rounded-full px-3 py-1 text-[12px]'}`}>
+    <div data-card-foe-deck-chip={kind} data-card-foe-deck-style={styleId} className={`mx-auto flex max-w-full flex-wrap items-center justify-center gap-y-0.5 border border-amber-300/70 bg-slate-950/80 font-black leading-tight text-amber-100 ${compact ? 'gap-1 rounded-2xl px-1.5 py-0.5 text-[11px]' : 'gap-1.5 rounded-full px-3 py-1 text-[12px]'}`}>
       {/* compact … 相手えらびの型の欄(横では幅が約210px)。詰めないと既定の名前「のんびり長期戦・守り」が2行に折れ、丸い帯が崩れた(2026-11-08 止め絵)。
-          長い名前は折れてよいので、角は丸めすぎない(rounded-2xl) */}
+          名前の途中では折らない(whitespace-nowrap。部長 2026-11-08)。入らないときは見出しと名前の間で行を分ける(flex-wrap)。名前は12字まで(83 の CARD_AI_DECK_NAME_MAX)。
+          2行になっても形が崩れないよう、角は丸めすぎない(rounded-2xl) */}
       <small className={`shrink-0 rounded-full bg-amber-300 py-px text-[10px] font-black text-slate-950 ${compact ? 'px-1' : 'px-1.5'}`}>今日のデッキ</small>
-      <span className="min-w-0" style={JA_WRAP_STYLE}><span aria-hidden="true">{CARD_DECK_STYLE_ICON[styleId]} </span>{name || `${CARD_DECK_STYLE_LABEL[styleId]}のデッキ`}</span>
+      <span data-card-foe-deck-chip-name className="whitespace-nowrap"><span aria-hidden="true">{CARD_DECK_STYLE_ICON[styleId]} </span>{name || `${CARD_DECK_STYLE_LABEL[styleId]}のデッキ`}</span>
     </div>
   );
 }
