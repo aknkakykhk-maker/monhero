@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 26f889e3161fde1c
+// source-sha256: 99a56c6340340121
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -62300,6 +62300,7 @@ const growthFxPush = ev => {
     if (gain <= 0) return;
     const key = String(ev.key || `${ev.kind}:${ev.who || ''}`);
     const list = GROWTH_FX_STORE.small;
+    if (ev.text && list.some(c => c.kind === ev.kind && c.text === String(ev.text))) return;
     const same = list.find(c => c.key === key);
     if (same) {
       same.gain += gain;
@@ -182731,11 +182732,11 @@ function MonsterHeroGame() {
       if (running) await handleGiveUp({
         silent: true
       });
-      if (before && typeof growthFxPush === 'function') {
+      if (before) {
         const loops = Math.max(0, Math.floor(Number(before.loops) || 0)),
           gold = Math.max(0, Math.floor(Number(before.gold) || 0)),
           xp = Math.max(0, Math.floor(Number(before.xp) || 0));
-        growthFxPush({
+        if (typeof growthFxPush === 'function') growthFxPush({
           tier: 'small',
           kind: 'quick',
           key: `quick:${Date.now()}`,

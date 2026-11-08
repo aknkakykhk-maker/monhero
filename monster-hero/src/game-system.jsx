@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 41b3916234080d10
+// generated-sha256: aae3762dc1579da2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -102560,9 +102560,9 @@ function MonsterHeroGame() {
       const before = running ? cardQuickRunView() : null;
       if (running) await handleGiveUp({ silent: true });
       // 同じ中身の札が続けて押し込まれても、growthFxPush の側で1枚にする(止めるの二度押し・止めたあとに閉じる。2026-11-08 ミハリ)
-      if (before && typeof growthFxPush === 'function') {
+      if (before) {
         const loops = Math.max(0, Math.floor(Number(before.loops) || 0)), gold = Math.max(0, Math.floor(Number(before.gold) || 0)), xp = Math.max(0, Math.floor(Number(before.xp) || 0));
-        growthFxPush({ tier: 'small', kind: 'quick', key: `quick:${Date.now()}`, gain: 1, text: `${loops}周・ダイヤ+${gold.toLocaleString()}・経験値+${xp.toLocaleString()}` });
+        if (typeof growthFxPush === 'function') growthFxPush({ tier: 'small', kind: 'quick', key: `quick:${Date.now()}`, gain: 1, text: `${loops}周・ダイヤ+${gold.toLocaleString()}・経験値+${xp.toLocaleString()}` });
       }
       if (runStageRef.current) {
         const stay = gameStateNowRef.current;
