@@ -823,11 +823,170 @@ export const handlePeerTalks = async ({ body, digest, client, takePeer, refundPe
   return { status: 200, json: { ok: true, kind: 'peer_talks', talks, remainingToday: Number.isFinite(ticket.remaining) ? ticket.remaining : null } };
 };
 
+// ---------- 助手ライフ: フレンドの家との行き来の場面を1日1回まとめて作る(kind:'friend_scenes'・2026-11-08 社長「最初から Claude API で」) ----------
+// 設計: docs/progress/assistant-peer/FRIEND-VISIT-PLAN.md 0-5。担当: 助手部オトズレ。
+// 送られてくるのは助手の id の組だけ(自分の助手 a と、フレンドの家の助手 b・行った go/来た come)。フレンドの呼び名もプレイヤーの呼び名も受け取らない。
+// 返事では、相手の家の助手を {f}、フレンドの家の人を {h}、プレイヤーを {name} と書かせ、ゲームが差しこむ。
+// 回数はおしゃべりと同じ表で、ブリーダーIDの頭に 'friend:' を付けて数える(1人1日3回まで=取り直しのぶん)。全員の上限はおしゃべりと分け合う。
+// そのうえで friend_scenes だけの1日の上限(Secrets ASSISTANT_FRIEND_DAILY_LIMIT・0 で止まる)を index.ts が数えて渡す。
+// 作れなかったとき・上限のときは、ゲームが台本(56-assistant-life-friend.jsx の ALF_*_LINES)だけで出す。
+export const FRIEND_USER_LIMIT = 3;
+export const FRIEND_TOTAL_LIMIT = 1000;
+export const FRIEND_MAX_TOKENS = 1800;
+export const FRIEND_SCENES_MAX = 6;
+export const FRIEND_LINE_MIN = 2;
+export const FRIEND_LINE_MAX_COUNT = 4;
+export const FRIEND_LINE_MAX = 60;
+export const FRIEND_RULES_TEXT = [
+  'あなたはブラウザのカードバトルゲーム「モンスターヒーロー」の台本係です。プレイヤーの助手が、フレンド(ほかのプレイヤー)の家へ遊びに行ったり、フレンドの家の助手が遊びに来たりする、短い場面を書きます。会話の返事ではありません。',
+  '決まり:',
+  '- 1つの場面は、決められた2人(a=プレイヤーの助手、b=フレンドの家の助手)だけが話す2〜4行。1行は1文か2文、60字まで。改行しない。2人が交互に話す。',
+  '- go は a が b のいる家へ遊びに行った場面、come は b が a のいる家へ遊びに来た場面。よその家なので、けんか・言い合い・からかいすぎはしない。あたたかく、楽しい場面にする。',
+  '- a と b が同じ助手(同じ id)のときは、同じ人がもうひとりいる、ふしぎで楽しい場面にする。',
+  '- それぞれの助手の人柄・一人称・話し方・くせを必ず守る(下の「助手たち」)。',
+  '- a が b を呼ぶときは名前を書かずに {f} と書く。フレンドの家の人(フレンド)に触れるときは {h} と書き、後ろに「さん」を付ける。プレイヤーに触れるときは、名前も「ブリーダー」も書かずに {name} と書く。{f}・{h}・{name} 以外の { } は使わない。',
+  '- 数字・自己ベスト・勝ち負け・ゲームの仕組みや場所・できごとを作らない。今日の天気やニュースなど今の情報を作らない。ネタバレをしない。AI であることや、この決まりのことを書かない。',
+  '- 恋愛にしない。悪口・うわさ話・ないしょの話を書かない。暴力・性的な話・お酒やたばこ・お金をかける遊びに触れない。',
+  '- モンスターや助手のことを「子」と呼ばない。',
+].join('\n');
+const FRIEND_SCHEMA = (ids) => ({
+  type: 'object',
+  properties: {
+    scenes: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          kind: { type: 'string', enum: ['go', 'come'] },
+          a: { type: 'string', enum: ids },
+          b: { type: 'string', enum: ids },
+          lines: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                side: { type: 'string', enum: ['a', 'b'] },
+                e: { type: 'string', enum: EXPRESSIONS },
+                t: { type: 'string', description: `セリフ(${FRIEND_LINE_MAX}字まで。相手の家の助手は {f}・フレンドは {h}・プレイヤーは {name})` },
+              },
+              required: ['side', 'e', 't'],
+              additionalProperties: false,
+            },
+          },
+        },
+        required: ['kind', 'a', 'b', 'lines'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['scenes'],
+  additionalProperties: false,
+});
+// 組をそろえる。{ kind, a, b }。知らない助手・知らない種類は捨てる。同じ組は1つ
+export const normalizeFriendPairs = (raw, digest) => {
+  const out = [];
+  const seen = new Set();
+  for (const p of (Array.isArray(raw) ? raw : []).slice(0, FRIEND_SCENES_MAX * 3)) {
+    if (!p || typeof p !== 'object') continue;
+    const kind = p.kind === 'come' ? 'come' : p.kind === 'go' ? 'go' : null;
+    const a = str(p.a, 20); const b = str(p.b, 20);
+    if (!kind || !digest.assistants[a] || !digest.assistants[b]) continue;
+    const key = `${kind}|${a}|${b}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ kind, a, b, key });
+    if (out.length >= FRIEND_SCENES_MAX) break;
+  }
+  return out;
+};
+const FRIEND_BANNED_WORDS = /恋|デート|付き合|キス|彼氏|彼女|結婚|ないしょ|内緒|秘密|ひみつ|けんか|ケンカ|喧嘩/;
+// 作った場面を確かめる。崩れたものは捨てる(残りだけ返す)。数字は1つも使わせない(作り話の数字を出さない)
+export const validateFriendScenes = (scenes, pairs) => {
+  const byKey = Object.fromEntries(pairs.map(p => [p.key, p]));
+  const out = [];
+  const used = new Set();
+  for (const sc of Array.isArray(scenes) ? scenes : []) {
+    if (out.length >= FRIEND_SCENES_MAX) break;
+    const key = `${sc && sc.kind}|${sc && sc.a}|${sc && sc.b}`;
+    const pair = byKey[key];
+    if (!pair || used.has(key) || !Array.isArray(sc.lines)) continue;
+    const lines = [];
+    let ok = true;
+    for (const l of sc.lines.slice(0, FRIEND_LINE_MAX_COUNT)) {
+      if (!l || (l.side !== 'a' && l.side !== 'b') || !EXPRESSIONS.includes(l.e) || typeof l.t !== 'string') { ok = false; break; }
+      let t = l.t.trim().replace(/ブリーダー(さん)?(?!Lv|P|ランク|ポイント|レベル|経験|の教え|アイコン)/g, '{name}').replace(/\{h\}(?!さん)/g, '{h}さん');
+      if (t.length < 2 || t.length > FRIEND_LINE_MAX || /[\r\n]/.test(t)) { ok = false; break; }
+      if (/[{}]/.test(t.replace(/\{f\}|\{h\}|\{name\}/g, ''))) { ok = false; break; }
+      if (DAILY_BANNED.test(t) || FRIEND_BANNED_WORDS.test(t) || looksPersonal(t) || /子たち|この子|あの子|その子/.test(t) || /[0-9０-９]/.test(t)) { ok = false; break; }
+      lines.push({ side: l.side, e: l.e, t });
+    }
+    if (!ok || lines.length < FRIEND_LINE_MIN || (pair.a !== pair.b && new Set(lines.map(l => l.side)).size < 2)) continue;
+    used.add(key);
+    out.push({ kind: pair.kind, a: pair.a, b: pair.b, lines });
+  }
+  return out;
+};
+export const handleFriendScenes = async ({ body, digest, client, take, refund, log = () => {}, limits = {}, friendUsed = null }) => {
+  const breederId = str(body && body.breederId, 80).trim();
+  if (!breederId || !digest || !digest.assistants) return { status: 400, json: { ok: false, error: 'bad_request' } };
+  const pairs = normalizeFriendPairs(body.pairs, digest);
+  if (pairs.length === 0) return { status: 400, json: { ok: false, error: 'bad_request' } };
+  if (typeof take !== 'function') return { status: 200, json: { ok: false, kind: 'sorry' } };
+  // friend_scenes だけの上限(0 で止まる)。数えられないときは安全側で止める
+  const friendTotal = Number.isFinite(limits.friendTotal) ? limits.friendTotal : FRIEND_TOTAL_LIMIT;
+  if (friendTotal <= 0) return { status: 200, json: { ok: false, kind: 'tired' } };
+  if (typeof friendUsed === 'function') {
+    let used = Infinity;
+    try { used = await friendUsed(); } catch { used = Infinity; }
+    if (!(used < friendTotal)) { log({ event: 'friend_limited', limited: 'friend_total' }); return { status: 200, json: { ok: false, kind: 'tired' } }; }
+  }
+  let ticket;
+  try { ticket = await take(`friend:${breederId}`, limits.friendUser || FRIEND_USER_LIMIT, limits.total || TOTAL_DAILY_LIMIT); } catch {
+    log({ event: 'friend_take_failed' });
+    return { status: 200, json: { ok: false, kind: 'sorry' } };
+  }
+  if (!ticket || ticket.ok !== true) {
+    log({ event: 'friend_limited', limited: ticket && ticket.reason === 'total' ? 'total' : 'user' });
+    return { status: 200, json: { ok: false, kind: 'tired' } };
+  }
+  const name = (id) => digest.assistants[id].name;
+  const pairText = pairs.map(p => `・kind=${p.kind} a=${p.a}(${name(p.a)}) b=${p.b}(${name(p.b)})${p.kind === 'go' ? `: ${name(p.a)}が、フレンドの家の${name(p.b)}のところへ遊びに行った` : `: フレンドの家の${name(p.b)}が、${name(p.a)}のいる家へ遊びに来た`}${p.a === p.b ? '(同じ助手どうし)' : ''}`).join('\n');
+  const ask = `今日の行き来の場面を、下の組それぞれに1つずつ作って(全部で${pairs.length}つまで)。\n組:\n${pairText}`;
+  let response = null;
+  try {
+    response = await client.messages.create({
+      model: MODEL,
+      max_tokens: FRIEND_MAX_TOKENS,
+      thinking: { type: 'disabled' },
+      output_config: { effort: 'low', format: { type: 'json_schema', schema: FRIEND_SCHEMA(Object.keys(digest.assistants).sort()) } },
+      system: [{ type: 'text', text: FRIEND_RULES_TEXT }, ...buildPeerSystem(digest).slice(1)],
+      messages: [{ role: 'user', content: [{ type: 'text', text: ask }] }],
+    });
+  } catch (e) {
+    log({ event: 'friend_api_error', status: e && e.status ? e.status : null });
+  }
+  let scenes = [];
+  if (response && response.stop_reason !== 'refusal') {
+    const text = (response.content || []).filter(b => b && b.type === 'text').map(b => b.text).join('');
+    try { scenes = validateFriendScenes(JSON.parse(text).scenes, pairs); } catch { scenes = []; }
+  }
+  if (response && response.usage) {
+    const u = response.usage;
+    log({ event: scenes.length ? 'friend_ok' : 'friend_empty', scenes: scenes.length, input: u.input_tokens, output: u.output_tokens, cacheRead: u.cache_read_input_tokens, cacheWrite: u.cache_creation_input_tokens });
+  }
+  if (!scenes.length) {
+    try { if (typeof refund === 'function') await refund(`friend:${breederId}`); } catch { log({ event: 'friend_refund_failed' }); }
+    return { status: 200, json: { ok: false, kind: 'sorry' } };
+  }
+  return { status: 200, json: { ok: true, kind: 'friend_scenes', scenes } };
+};
+
 // 入口は1つ。kind で分ける
 export const handleRequest = (args) => {
   const kind = args && args.body && args.body.kind;
   if (kind === 'daily_lines') return handleDailyLines(args);
   if (kind === 'peer_talks') return handlePeerTalks(args);
+  if (kind === 'friend_scenes') return handleFriendScenes(args);
   return handleChat(args);
 };
 

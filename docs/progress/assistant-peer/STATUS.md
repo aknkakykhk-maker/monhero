@@ -298,3 +298,10 @@
 - 次: ② 成長(育成場・練習スタジオ・カード部屋に行った回数で Lv。新しいキー mh_assistant_life_masmon_v1)
 - 追記(ココロ・2026-11-08): まだ main に無い関数名は typeof で確かめても undefined-reference-check に止められるので、ココロは受け口の入れ物 `ASSISTANT_CHAT_TASTE_HOOKS = { of:null, onTalk:null }` を 56-assistant-chat.jsx に置き、それ経由で呼ぶ。キズナ2は自分の部品(56-assistant-chat.jsx より後ろの parts)のトップレベルに次を足す: `if (typeof ASSISTANT_CHAT_TASTE_HOOKS === 'object' && ASSISTANT_CHAT_TASTE_HOOKS) { ASSISTANT_CHAT_TASTE_HOOKS.of = assistantLifeTasteOf; ASSISTANT_CHAT_TASTE_HOOKS.onTalk = assistantLifeTasteOnTalk; }`。ココロの PR が先に main へ入る(入ったら知らせが来る)。ほかの部(マモリ・ソランド・ジン)の口も、相手より先に名前を書けないときは同じ「入れ物」の形にそろえる
 - 追記(オトズレ2): friend_scenes のデプロイは社長の「この文で」→ main → 窓口へ知らせてから。PR 番号はキズナ2か窓口へ
+- 2026-11-08 社長の指摘3つを直した(枝 claude/assistant-life-readable)
+  - 居場所タブが朝に読めない → 札・枠・説明・道具の欄・友情の関係図を濃い面に(bg-slate-950/85〜90)。済んだボタンは「✓ 見た」「✓ 誘った」「✓ 見守りました」で灰色の面。下の説明は時刻だけ(5時・10時…)。ヘルプも「6つの時刻」に。検査 browser ⑮(朝・昼・夕・夜 × 縦・横で、字が濃い面の上にあり明るさの比 4.5 以上)
+  - 場面の立ち絵の大きさがばらばら → `AssistantLifeStand`: 絵の透けていない範囲を一度測り(`ASSISTANT_LIFE_STAND_BOX`)、見た目の高さを人数ごとに(1人40%・2人36%・3人32%・4人28%)そろえる。床は下から22%。見出しのアイコンは字の塗り(background-clip:text)の外へ(中だと iPhone で白い四角)。検査 browser ⑰(28組+3人・4人で頭の高さの差3%以内・大きさの比1.08以内・アイコン)
+  - 地図を HOME にそろえる → モンヒロビート=左の赤い屋根の家・神殿(新)=右上の光る泉・おやつ屋さん=石の家・中庭=石の家と屋台のあいだ。`ASSISTANT_LIFE_MAP_BUILDING`(建物の範囲)。一覧の場所の名前も施設の名前(`assistantLifePlaceLabel`)。検査 browser ⑯
+- 施設へ行く意味の案(A/B)を窓口へ: LIFE-FACILITY-PERKS.md。社長の選び待ち
+- 担当の分け: 道具の種類・好き嫌い・家具=オクリモノ/けんか・仲直り=キズナ(56-assistant-life-rel.jsx)
+- 二歩目の台詞はコトバ・ツムギが書いている(LIFE-STAGE2-LINES-ORDER.md)。届いたら取り込み道具に temple/shopping・visit・lure を足す

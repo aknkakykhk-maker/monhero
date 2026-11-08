@@ -1498,6 +1498,9 @@ const ASSISTANT_BOND_ACTIONS = {
   peerTrio:   { amount:3,  dailyMax:6,  label:'助手3人の掛け合いを見る', releaseFlag:'assistantPeer' },
   peerEvent:  { amount:8,  dailyMax:16, label:'助手どうしのミニイベントを見る', releaseFlag:'assistantPeer' },
   peerMakeup: { amount:8,  dailyMax:8,  label:'助手どうしの仲直りを見る', releaseFlag:'assistantPeer' },
+  // 助手ライフのフレンドの家との行き来(2026-11-08 社長)。行った助手の場面を見た(1回 +10・1日3回まで)/来てくれた助手を迎えた(+6・1日2人まで)
+  friendGo:      { amount:10, dailyMax:30, label:'助手がフレンドの家へ遊びに行った様子を見る', releaseFlag:'assistantLifeFriend' },
+  friendWelcome: { amount:6,  dailyMax:12, label:'フレンドの助手を迎える', releaseFlag:'assistantLifeFriend' },
 };
 // 1日に増やせる合計。行動の種類が増えるほど「1日でどれだけ遊んでも上限40で頭打ち」が
 // きつくなりすぎたため、行動ごとの上限をすべて合わせた理論上の最大値まで引き上げた。
@@ -1817,7 +1820,7 @@ const ASSISTANT_SCENES = {
     help: 'basics/battle-modes',
     lines: [
       { e:'excited', t:'ここはベースモンだけの世界！ 腕の見せどころぢゃん。' },
-      { e:'wink',    t:'絆経験値3倍！ 新しい子育てるなら断然ここ！ (๑°ロ°๑)‼️' },
+      { e:'wink',    t:'絆経験値3倍！ 新しいモンスターを育てるなら断然ここ！ (๑°ロ°๑)‼️' },
       { e:'happy',   t:'ブリーダー経験値も1.5倍だからね〜。' },
       { e:'normal',  t:'育てたマスモンは連れていけないよ。素の力で勝負！' },
       { e:'wink',    t:'供モンは5体選んで、その中から3体が来てくれるの。誰が来るかはお楽しみ〜。' },
@@ -3327,7 +3330,7 @@ addAssistantLinePack({
       { e:'happy',    t:'アシストカードも忘れずに入れてね〜' },
       { e:'normal',   t:'カードの枚数は勇者モンの特性で増えることがあるよ。' },
       { e:'surprise', t:'この並び、なんか強そうな気がする…( ･×･)ｵｸﾁﾁｬｯｸ', w:0.3 },
-      { e:'wink',     t:'正解はひとつじゃないし、好きな子入れていいと思うよ♪' },
+      { e:'wink',     t:'正解はひとつじゃないし、好きなモンスター入れていいと思うよ♪' },
     ],
     masuList: [
       { e:'happy',    t:'{name}、育てたモンスターはここに並びますよ♪', bond:[1,2] },
@@ -4259,7 +4262,7 @@ addAssistantLinePack({
       { e:'happy',    t:'GREAT以上で取れたら能力が出るよ。……ちゃんと取れる？w' },
       { e:'normal',   t:'能力は主血統で決まってるの。育てても染めても変わんないよ。' },
       { e:'wink',     t:'ライフ持たないなら元気か無敵ね。ま、{name}なら要らないかもだけど♡' },
-      { e:'happy',    t:'好きな子入れときなよ。強さより気分でしょ、こういうのはw' },
+      { e:'happy',    t:'好きなモンスター入れときなよ。強さより気分でしょ、こういうのはw' },
     ],
     rhythmHelp: [
       { e:'happy',    t:'遊びかたはぜんぶここ。わかんなくなったら見にきていいよ！' },
@@ -5818,7 +5821,7 @@ addAssistantLinePack({
       { e:'happy',    t:'好きなモンスターで組むのがいちばん長続きすると思う' },
     ],
     monsterList: [
-      { e:'normal',  t:'ベースモンは種そのもの、マスモンは育てた子な' },
+      { e:'normal',  t:'ベースモンは種そのもの、マスモンは育てたモンスターな' },
       { e:'normal',  t:'詳細を開くと、間合い適性まで見られるよ' },
       { e:'happy',   t:'増えてくると眺めるだけで楽しくなるわ' },
     ],
@@ -6270,7 +6273,7 @@ addAssistantLinePack({
       { e:'happy',   t:'その並び、ちょっと好きかも♡' },
     ],
     monsterList: [
-      { e:'normal',  t:'ベースモンは素、マスモンは育てた子ね。' },
+      { e:'normal',  t:'ベースモンは素、マスモンは育てたモンスターね。' },
       { e:'wink',    t:'詳細開くと適性まで見れるよ。見なよw' },
       { e:'happy',   t:'増えてくと選ぶの楽しくなるよね♡' },
     ],
@@ -7192,11 +7195,11 @@ addAssistantLinePack({
       { e:'excited',  t:'パーティ編成って、結局ここが一番楽しいんだよね！' },
     ],
     monsterList: [
-      { e:'normal',   t:'ベースモンが種類の基本、マスモンが育てた子ね！' },
+      { e:'normal',   t:'ベースモンが種類の基本、マスモンが育てたモンスターね！' },
       { e:'happy',    t:'{name}、集まってくると眺めるだけで楽しいよ！' },
       { e:'wink',     t:'血統を見ると、伸びる方向が分かるよ笑' },
       { e:'normal',   t:'並べ替えると探しやすいよ！' },
-      { e:'normal',   t:'ベースモンは種そのもの、マスモンは育てた子だよ！' },
+      { e:'normal',   t:'ベースモンは種そのもの、マスモンは育てたモンスターだよ！' },
       { e:'normal',   t:'詳細を開けば、間合い適性まで分かるよ！' },
       { e:'happy',    t:'増えてくると眺めるだけで楽しくなるよね！' },
       { e:'wink',     t:'仲間が多いギルドって強いんだよ。いい感じじゃん笑' },
@@ -7944,7 +7947,7 @@ addAssistantLinePack({
       { e:'excited',  t:'課金しなくても、組み方でここまで変わるんだよねw' },
     ],
     monsterList: [
-      { e:'normal',   t:'ベースモンが種類の基本、マスモンが育てた子ね' },
+      { e:'normal',   t:'ベースモンが種類の基本、マスモンが育てたモンスターね' },
       { e:'happy',    t:'{name}、集まってくると眺めるだけで楽しいよぉ' },
       { e:'wink',     t:'血統を見ると、伸びる方向が分かるよw' },
       { e:'normal',   t:'並べ替えると探しやすいよ' },
@@ -8044,7 +8047,7 @@ addAssistantLinePack({
       { e:'normal',   t:'仲間とのお別れは慎重にね。俺もここはいつも悩む🥺' },
     ],
     pasture: [
-      { e:'happy',    t:'お気に入りは5体までHOMEに出せるよ。好きな子並べよ〜' },
+      { e:'happy',    t:'お気に入りは5体までHOMEに出せるよ。好きなモンスター並べよ〜' },
       { e:'normal',   t:'{name}、見てると和むでしょ笑' },
       { e:'wink',     t:'強さと関係ないとこだから、好みで選べばいいよw' },
       { e:'normal',   t:'いつでも入れ替えられるよぉ' },
@@ -8730,7 +8733,7 @@ addAssistantLinePack({
       { e:'wink',     t:'整理されてるフォルダみたいで、俺はこの画面好き笑' },
     ],
     monsterList: [
-      { e:'normal',   t:'ベースモンは種そのもの、マスモンは育てた子だよ' },
+      { e:'normal',   t:'ベースモンは種そのもの、マスモンは育てたモンスターだよ' },
       { e:'happy',    t:'{name}、集まってくると眺めるだけで楽しいね' },
       { e:'normal',   t:'並べ替えを使うと、目当てのモンスターがすぐ見つかるよ' },
       { e:'normal',   t:'詳細を開けば、間合い適性まで分かるよ' },
@@ -10564,7 +10567,7 @@ const ASSISTANT_BEAT_POINT_UP = [
   { who:'dra',      e:'surprise', t:'ドラシル！？ 名前に「ドラ」が入ってるじゃん。おでの親戚か？' },
   { who:'mua',      e:'troubled', t:'どう見てもカエルでしょ……' },
   { who:'dra',      e:'troubled', t:'いいだろ、ちょっとくらい夢見させてくれよ' },
-  { who:'momosuke', e:'happy',    t:'もうひとりのメルホイップは、ユグドラシルの血を引くレアな子だよ〜' },
+  { who:'momosuke', e:'happy',    t:'もうひとりのメルホイップは、ユグドラシルの血を引くレアなモンスターだよ〜' },
   { who:'mua',      e:'excited',  t:'ケーキに乗ってるモンスターでしょ！ あのケーキ、まぢおいしそう……' },
   { who:'kiki',     e:'angry',    t:'みゅあちん、食べちゃダメでつ。あのケーキも体の一部でつよ。' },
   { who:'mua',      e:'troubled', t:'わ、わかってるってば……甘い香りがするなって思っただけだし💦' },
@@ -13257,6 +13260,8 @@ const ASSISTANT_PEER_BOND_ACTIONS = Object.freeze({
   makeup: { amount:5, dailyMax:5, label:'けんかのあと仲直りした', uncapped:true },
   // 助手ライフ: けんかの間に入った助手と、けんかした2人それぞれ(2026-11-08 社長の決まり「間に入る+3」・助手部キズナ)
   mediate: { amount:3, dailyMax:6, label:'けんかの間に入った' },
+  // 助手ライフ: 2人でフレンドの家へ遊びに行った(2026-11-08 社長「友情Lv +4」・1日3回まで)
+  friend: { amount:4, dailyMax:12, label:'2人でフレンドの家へ遊びに行った' },
 });
 const ASSISTANT_PEER_BOND_DAILY_MAX = 20;
 // 思い出アルバムのツーショット写真(段ごとに1枚。2人の立ち絵を並べて作る)。e … 左・右の表情

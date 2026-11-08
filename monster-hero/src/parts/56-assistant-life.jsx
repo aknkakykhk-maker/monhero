@@ -476,6 +476,8 @@ const assistantLifeNow = async ({ members, now = Date.now() } = {}) => {
   assistantLifeSaveLife();
   // 今日あったこと(家の掲示板)へ、この時間の過ごし方を書く(56-assistant-life-house.jsx)
   if (typeof assistantLifeDiaryOnSlot === 'function') { try { assistantLifeDiaryOnSlot(life, slot, now); } catch {} }
+  // フレンドの家との行き来(控えを送る・ときどき助手が自分で遊びに行く。56-assistant-life-friend.jsx。印が偽なら何もしない)
+  if (typeof assistantLifeFriendOnSlot === 'function') { try { void assistantLifeFriendOnSlot(life, slot, now); } catch {} }
   if (typeof assistantLifeRelTick === 'function') { try { void assistantLifeRelTick(now); } catch {} } // 前の日からのけんかは朝4時までに仲直り(rel.jsx)
   return life;
 };
@@ -597,6 +599,8 @@ const assistantLifeTalkTods = (t) => {
   return ok;
 };
 const assistantLifeLookNow = () => { try { return typeof assistantLifeTimeLook === 'function' ? assistantLifeTimeLook() : null; } catch (_) { return null; } };
+// 画面の一覧に出す場所の名前。遊び場は施設の名前(家の部品 56-assistant-life-house.jsx の assistantLifePlaceShow。地図・札とそろえる)
+const assistantLifePlaceLabel = (p) => (typeof assistantLifePlaceShow === 'function' ? assistantLifePlaceShow(p) : ASSISTANT_LIFE_PLACES[p]);
 const assistantLifeTalkSet = () => {
   if (assistantLifeTalkCache) return assistantLifeTalkCache;
   const raw = (typeof ASSISTANT_LIFE_TALKS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_TALKS)) ? ASSISTANT_LIFE_TALKS : [];
@@ -1095,7 +1099,7 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
           {note && <p data-assistant-life-note className="mt-2 rounded-xl bg-sky-400/10 px-2 py-1.5 text-[11px] font-bold text-sky-100">{note}</p>}
           {tab === 'now' && (<>
             {canGive && !embedded && (
-              <div data-assistant-life-items className="mt-2 rounded-2xl border border-amber-300/40 bg-amber-400/5 p-2">
+              <div data-assistant-life-items className="mt-2 rounded-2xl border border-amber-300/40 bg-slate-950/90 p-2">
                 <p className="text-[12px] font-black text-amber-200">🎁 2人に贈る道具(今日あと {typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0}回・同じ道具は1日1回)</p>
                 {itemInfos.map(x => (
                   <div key={x.kind} data-assistant-life-item={x.kind} className="mt-1.5 flex items-center gap-2">
@@ -1109,12 +1113,12 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
               </div>)}
             <div className="mt-2 space-y-2">
               {(life.groups || []).map(g => { const key = assistantLifeGroupKey(g); const done = (life.watched || []).includes(key); return (
-                <div key={key} data-assistant-life-group={key} className="rounded-2xl border border-white/10 bg-slate-900/80 p-2">
+                <div key={key} data-assistant-life-group={key} className="rounded-2xl border border-white/15 bg-slate-950/90 p-2">
                   <div className="flex items-center gap-2">
                     <AssistantLifeFaces ids={g.ids} size={36}/>
                     <div className="min-w-0 flex-1">
                       <p className="text-[12px] font-black leading-tight text-white">{g.ids.map(nameOf).join('・')}</p>
-                      <p className="text-[11px] font-bold leading-tight text-pink-200">{ASSISTANT_LIFE_PLACES[g.place]}で{ASSISTANT_LIFE_DOINGS[g.doing].label}</p>
+                      <p className="text-[11px] font-bold leading-tight text-pink-200">{assistantLifePlaceLabel(g.place)}で{ASSISTANT_LIFE_DOINGS[g.doing].label}</p>
                     </div>
                   </div>
                   {g.ids.some(id => mood(id)) && <p className="mt-1 text-[11px] text-slate-300">{g.ids.filter(id => mood(id)).map(id => `${nameOf(id)}: ${mood(id)}`).join(' / ')}</p>}
@@ -1132,49 +1136,49 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
                   })()}
                   <div className="mt-1.5 flex gap-1.5">
                     <button type="button" data-assistant-life-watch={key} disabled={done || watchLeft <= 0} onClick={() => watch(g)}
-                      className="min-h-[44px] flex-1 rounded-xl border border-pink-300/50 bg-pink-400/10 px-2 text-[12px] font-black text-pink-100 active:scale-[.98] disabled:opacity-40">
-                      {done ? '見守りました' : watchLeft <= 0 ? '今日はもう見守れません' : '👀 見守る'}
+                      className="min-h-[44px] flex-1 rounded-xl border border-pink-300/60 bg-pink-500/25 px-2 text-[12px] font-black text-pink-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400">
+                      {done ? '✓ 見守りました' : watchLeft <= 0 ? '今日はもう見守れません' : '👀 見守る'}
                     </button>
                     {canGive && (
                       <button type="button" data-assistant-life-give={key} onClick={() => openGive(g)}
-                        className="min-h-[44px] flex-1 rounded-xl border border-amber-300/60 bg-amber-400/15 px-2 text-[12px] font-black text-amber-100 active:scale-[.98]">
+                        className="min-h-[44px] flex-1 rounded-xl border border-amber-300/70 bg-amber-500/25 px-2 text-[12px] font-black text-amber-50 active:scale-[.98]">
                         🎁 {g.ids.length === 2 ? '贈る' : 'だれに贈る？'}
                       </button>)}
                   </div>
                 </div>); })}
               {Object.entries(life.solo || {}).map(([id, s]) => (
-                <div key={id} data-assistant-life-solo={id} data-assistant-life-reason={s.reason} className="flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-900/60 p-2">
+                <div key={id} data-assistant-life-solo={id} data-assistant-life-reason={s.reason} className="flex items-center gap-2 rounded-2xl border border-white/15 bg-slate-950/90 p-2">
                   <AssistantLifeFaces ids={[id]} size={36}/>
                   <div className="min-w-0 flex-1">
                     <p className="text-[12px] font-black leading-tight text-white">{nameOf(id)}<span className={`ml-1 text-[10px] ${s.reason === 'lonely' ? 'text-amber-200' : 'text-slate-400'}`}>{ASSISTANT_LIFE_REASON_LABEL[s.reason]}</span></p>
-                    <p className="text-[11px] font-bold leading-tight text-slate-300">{ASSISTANT_LIFE_PLACES[s.place]}で{ASSISTANT_LIFE_DOINGS[s.doing].label}・{mood(id)}</p>
+                    <p className="text-[11px] font-bold leading-tight text-slate-300">{assistantLifePlaceLabel(s.place)}で{ASSISTANT_LIFE_DOINGS[s.doing].label}・{mood(id)}</p>
                   </div>
                   <button type="button" data-assistant-life-peek={id} disabled={(life.watched || []).includes(`solo:${id}`)} onClick={() => peek(id)}
-                    className="min-h-[44px] shrink-0 rounded-xl border border-pink-300/40 bg-pink-400/5 px-2 text-[11px] font-black text-pink-100 active:scale-[.98] disabled:opacity-40">
-                    {(life.watched || []).includes(`solo:${id}`) ? '見た' : 'ようすを見る'}
+                    className="min-h-[44px] shrink-0 rounded-xl border border-pink-300/60 bg-pink-500/25 px-2 text-[11px] font-black text-pink-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400">
+                    {(life.watched || []).includes(`solo:${id}`) ? '✓ 見た' : 'ようすを見る'}
                   </button>
                   {s.reason !== 'distance' && (
                     <button type="button" data-assistant-life-invite={id} disabled={invitedNext.has(id)} onClick={() => invite(id)}
-                      className="min-h-[44px] shrink-0 rounded-xl border border-amber-300/50 bg-amber-400/10 px-2 text-[11px] font-black text-amber-100 active:scale-[.98] disabled:opacity-40">
-                      {invitedNext.has(id) ? '誘った' : '誘う'}
+                      className="min-h-[44px] shrink-0 rounded-xl border border-amber-300/70 bg-amber-500/25 px-2 text-[11px] font-black text-amber-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400">
+                      {invitedNext.has(id) ? '✓ 誘った' : '誘う'}
                     </button>)}
                 </div>))}
             </div>
             {ids.length >= 2 && (
-              <div data-assistant-life-introduce className="mt-3 rounded-2xl border border-sky-300/30 bg-sky-400/5 p-2">
+              <div data-assistant-life-introduce className="mt-3 rounded-2xl border border-sky-300/50 bg-slate-950/90 p-2">
                 <p className="text-[12px] font-black text-sky-100">引き合わせる</p>
-                <p className="mb-1.5 text-[10px] text-slate-400">2人を選ぶと、次の時間に一緒に過ごしやすくなります。言い合いのあとなら、仲直りのきっかけに。</p>
+                <p className="mb-1.5 text-[10px] text-slate-300">2人を選ぶと、次の時間に一緒に過ごしやすくなります。言い合いのあとなら、仲直りのきっかけに。</p>
                 <div className="flex flex-wrap gap-1.5">
                   {ids.map(id => { const on = pick.includes(id); return (
                     <button key={id} type="button" data-assistant-life-pick={id} aria-pressed={on} onClick={() => setPick(p => on ? p.filter(x => x !== id) : [...p, id].slice(-2))}
-                      className={`min-h-[40px] rounded-full border px-2.5 text-[11px] font-black active:scale-95 ${on ? 'border-sky-300 bg-sky-400/25 text-white' : 'border-white/15 text-slate-300'}`}>{nameOf(id)}</button>); })}
+                      className={`min-h-[40px] rounded-full border px-2.5 text-[11px] font-black active:scale-95 ${on ? 'border-sky-300 bg-sky-500/40 text-white' : 'border-white/25 bg-slate-800 text-slate-100'}`}>{nameOf(id)}</button>); })}
                 </div>
                 <button type="button" data-assistant-life-introduce-go disabled={pick.length !== 2 || !!introNext} onClick={introduce}
-                  className="mt-2 min-h-[44px] w-full rounded-xl border border-sky-300/50 bg-sky-400/10 text-[12px] font-black text-sky-100 active:scale-[.98] disabled:opacity-40">
+                  className="mt-2 min-h-[44px] w-full rounded-xl border border-sky-300/60 bg-sky-500/25 text-[12px] font-black text-sky-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400">
                   {introNext ? `次の時間は ${introNext.pair.split('-').map(nameOf).join('と')} を引き合わせます` : '次の時間に一緒に過ごしてもらう'}
                 </button>
               </div>)}
-            <p className="mt-3 text-[10px] leading-snug text-slate-500">みんな、時間(朝5・昼10・午後14・夕方18・夜21・深夜0時)が変わるたびに、自分で過ごし方を決めます。</p>
+            <p data-assistant-life-foot className="mt-3 rounded-xl bg-slate-950/85 px-2 py-1.5 text-[10.5px] leading-snug text-slate-300">みんな、5時・10時・14時・18時・21時・0時に、自分で過ごし方を決め直します。</p>
           </>)}
           {tab === 'map' && typeof AssistantPeerMap === 'function' && (
             <div className="mt-2"><AssistantPeerMap metIds={metIds} onReplay={(t) => { assistantLifeCloseScreen(); if (onReplay) onReplay(t); }} peerItems={peerItems} onUseItem={onUseItem}/></div>)}
