@@ -5,7 +5,7 @@
 //
 // 見ているもの(縦 390×844・横 844×390)
 //   ① 印が偽: VS・結果に型の札が出ない(今と同じ)・中継役を呼ばない・保存を書かない
-//   ② 印が真・AI が返す: 相手えらびで選ぶと裏で AI に組んでもらう → VS に「型: 名前」とひとこと → 結果に同じ「型: 名前」→ その助手との10戦の数が1つ増える。札は画面の中
+//   ② 印が真・AI が返す: 相手えらびで選ぶと裏で AI に組んでもらう → VS に「チーム」と「今日のデッキ」の名前・ひとこと → 結果に同じ「今日のデッキ」の名前→ その助手との10戦の数が1つ増える。札は画面の中
 //   ③ 印が真・AI なし(遅れの返事): 揺らぎで組む → VS・結果は既定の名前で同じ形(画面に違いが出ない)
 //   ④ 実行時エラーが無い
 const http = require('http');
@@ -131,7 +131,7 @@ const run = async (browser, mode, scene, errors) => {
     await page.locator('[data-card-start]').click();
     let vs = null;
     for (let i = 0; i < 30 && !vs; i++) {
-      vs = await page.evaluate(() => { const m = document.querySelector('[data-card-vs-mark]'); if (!m) return null; const s = document.querySelector('[data-card-vs-style]'); const l = document.querySelector('[data-card-vs-line]'); return { style: s ? s.textContent : null, line: l ? l.textContent : null }; });
+      vs = await page.evaluate(() => { const m = document.querySelector('[data-card-vs-mark]'); if (!m) return null; const s = document.querySelector('[data-card-vs-style] [data-card-foe-deck-chip-name]') || document.querySelector('[data-card-vs-style]'); const l = document.querySelector('[data-card-vs-line]'); const t = document.querySelector('[data-card-vs-style] [data-card-foe-team-name]'); return { style: s ? s.textContent.trim().replace(/^(⚔️|🛡️|⚖️)\s*/u, '') : null, line: l ? l.textContent : null, team: t ? t.textContent : null }; });
       if (!vs) { const go = page.getByRole('button', { name: /^対戦へ$|このデッキで/ }).first(); if (await go.count() && await go.isVisible().catch(() => false)) await go.click().catch(() => {}); await page.waitForTimeout(250); }
     }
     await page.waitForTimeout(900);
@@ -141,18 +141,18 @@ const run = async (browser, mode, scene, errors) => {
     else {
       const styleIn = await inView('[data-card-vs-style]');
       // 3つのうち組んだのは1つだけ。ほかの型が選ばれたときは既定の名前(どちらでも「型: 名前」とひとことが出る)
-      const okName = !!vs && ([names[WHO], `${names[WHO]}・攻め`, `${names[WHO]}・守り`].some((n) => vs.style === `型: ${n}`) || (scene.ai && vs.style === '型: ためし火力'));
-      check(`${scene.ai ? '②' : '③'} ${label}: VS に「型: 名前」とひとこと(画面の中)`, okName && !!vs.line && styleIn === true, `${JSON.stringify(vs)} / ${styleIn}`);
+      const okName = !!vs && ([names[WHO], `${names[WHO]}・攻め`, `${names[WHO]}・守り`].includes(vs.style) || (scene.ai && vs.style === 'ためし火力')) && !!vs.team;
+      check(`${scene.ai ? '②' : '③'} ${label}: VS に「チーム」と「今日のデッキ」の名前・ひとこと(画面の中)`, okName && !!vs.line && styleIn === true, `${JSON.stringify(vs)} / ${styleIn}`);
     }
     for (let i = 0; i < 40; i++) { if (await page.locator('[data-card-top="result"]').count()) break; await pass(); }
     await page.locator('[data-card-top="result"]').waitFor({ timeout: 20000 });
     await closeUp();
-    const res = await page.evaluate(() => { const r = document.querySelector('[data-card-result-ai-deck]'); return r ? r.textContent : null; });
+    const res = await page.evaluate(() => { const r = document.querySelector('[data-card-result-ai-deck] [data-card-foe-deck-chip-name]') || document.querySelector('[data-card-result-ai-deck]'); return r ? r.textContent.trim().replace(/^(⚔️|🛡️|⚖️)\s*/u, '') : null; });
     if (!scene.flag) check(`① ${label}: 結果に型の札が出ない`, res === null, String(res));
     else {
       await page.evaluate(() => document.querySelector('[data-card-result-ai-deck]')?.scrollIntoView({ block: 'center' }));
       const resIn = await inView('[data-card-result-ai-deck]');
-      check(`${scene.ai ? '②' : '③'} ${label}: 結果に VS と同じ「型: 名前」(画面の中)`, !!res && !!vs && res === vs.style && resIn === true, `${res} / ${vs && vs.style} / ${resIn}`);
+      check(`${scene.ai ? '②' : '③'} ${label}: 結果に VS と同じ「今日のデッキ」の名前(画面の中)`, !!res && !!vs && res === vs.style && resIn === true, `${res} / ${vs && vs.style} / ${resIn}`);
       const n = await page.evaluate((w) => { const v = JSON.parse(localStorage.getItem('mh_card_ai_recipe_v1') || 'null'); return v && v.perWho[w] ? v.perWho[w].gamesSince : null; }, WHO);
       check(`${scene.ai ? '②' : '③'} ${label}: その助手との10戦の数が1つ増える`, n === 1, String(n));
     }
