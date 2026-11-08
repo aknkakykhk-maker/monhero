@@ -43,9 +43,9 @@ const route = (posted) => async (r) => {
   }
   if (/friend_links/.test(url)) {
     const self = (url.match(/requester_id\.eq\.([^,)&]+)/) || url.match(/eq\.([0-9a-f-]{20,})/) || [])[1] || 'x';
-    return json([{ requester_id: self, target_id: 'aoi-0001', status: 'accepted', blocked_by: null, created_at: fresh, updated_at: fresh }, { requester_id: 'yuto-0001', target_id: self, status: 'accepted', blocked_by: null, created_at: fresh, updated_at: fresh }]);
+    return json([{ requester_id: self, target_id: 'aoi-0001', status: 'accepted', blocked_by: null, created_at: fresh, updated_at: fresh }, { requester_id: 'yuto-0001', target_id: self, status: 'accepted', blocked_by: null, created_at: fresh, updated_at: fresh }, { requester_id: self, target_id: 'mio-0001', status: 'accepted', blocked_by: null, created_at: fresh, updated_at: fresh }]);
   }
-  if (/friend_profiles|breeder_profiles/.test(url)) return json([{ breeder_id: 'aoi-0001', user_name: 'あおい', last_seen_at: fresh }, { breeder_id: 'yuto-0001', user_name: 'ゆうと', last_seen_at: fresh }]);
+  if (/friend_profiles|breeder_profiles/.test(url)) return json([{ breeder_id: 'aoi-0001', user_name: 'あおい', last_seen_at: fresh }, { breeder_id: 'yuto-0001', user_name: 'ゆうと', last_seen_at: fresh }, { breeder_id: 'mio-0001', user_name: 'みお', last_seen_at: fresh }]);
   if (/functions\/v1\/assistant-chat/.test(url)) return json({ ok: false, kind: 'tired' });
   return json([]);
 };
@@ -144,6 +144,7 @@ const badgeProblems = (page) => page.evaluate(() => {
       check(`③ ページにいまの行き来・置き手紙2通・フレンドの家2軒・設定3つ(${v.id})`, (await page.locator('[data-alf-now-out]').count()) === 1 && (await page.locator('[data-alf-note]').count()) === 2 && (await page.locator('[data-alf-house]').count()) === 2 && (await page.locator('[data-alf-setting]').count()) === 3);
       { const ng = await textProblems(page, '[data-alf-page]'); check(`③ ページがはみ出さない・字が切れない・言葉の途中で折れない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
       check(`③ 置き手紙に「訪ねてくれた」「ドラと話した」とお礼の3択(${v.id})`, /訪ねてくれた/.test(await page.locator('[data-alf-notes]').innerText()) && /ドラと話した/.test(await page.locator('[data-alf-notes]').innerText()) && (await page.locator('[data-alf-thanks]').count()) === 3);
+      check(`③ 家が届いていないフレンド(みお)は薄く並び「みおさんが助手ライフを開くと遊びに行けます」(${v.id})`, (await page.locator('[data-alf-house-waiting="mio-0001"]').count()) === 1 && /みおさんが助手ライフを開くと遊びに行けます/.test(await page.locator('[data-alf-house-waiting="mio-0001"]').innerText().catch(() => '')));
       await shot(page, `${v.id}-3-page`);
       await page.evaluate(() => { const el = document.querySelector('[data-alf-houses]'); if (el) el.scrollIntoView({ block: 'start' }); });
       await shot(page, `${v.id}-3b-page-houses`);
@@ -174,6 +175,37 @@ const badgeProblems = (page) => page.evaluate(() => {
       check(`⑥ 声をかける→返事→一言を選んで置き手紙(player・ドラ・一言1)(${v.id})`, pl.length === 1 && JSON.stringify(pl[0].assistants) === '["dra"]' && pl[0].word === 1, JSON.stringify(pl) + ' ' + calls.filter(c => /visits/.test(c)).map(c => c.slice(0, 60)).join(' | '));
       { const ng = await textProblems(page, '[data-alf-visit]'); check(`⑥ 置き手紙のあとも字が切れない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
       await shot(page, `${v.id}-7-visit-left`);
+      check(`ページの中でエラーが出ない(${v.id})`, errors.length === 0, errors.slice(0, 2).join(' / '));
+      await page.close();
+    }
+    // ⑩ フレンドのプロフィールの「🏘 家へ遊びに行く」(2026-11-08 社長)
+    for (const v of [{ id: 'tate', w: 390, h: 844 }, { id: 'yoko', w: 844, h: 390 }]) {
+      const { page, errors } = await open(v);
+      await waitFaces(page);
+      await page.evaluate(() => document.querySelector('.mh-home-player')?.click());
+      await page.waitForSelector('[data-profile-friends]', { timeout: 15000 });
+      await page.evaluate(() => document.querySelector('[data-profile-friends]').click());
+      await page.locator('[data-friend-row="mio-0001"]').waitFor({ timeout: 15000 });
+      await page.locator('[data-friend-row="mio-0001"]').click();
+      await page.locator('[data-alf-profile-visit]').waitFor({ timeout: 10000 });
+      await page.waitForFunction(() => document.querySelector('[data-alf-profile-visit-why]') && !/読み込んで/.test(document.querySelector('[data-alf-profile-visit-why]').innerText), null, { timeout: 8000 }).catch(() => {});
+      check(`⑩ 家が届いていないフレンドのプロフィールは、押せない入口と「みおさんが助手ライフを開くと遊びに行けます」(${v.id})`, await page.locator('[data-alf-profile-visit-go]').isDisabled() && /みおさんが助手ライフを開くと遊びに行けます/.test(await page.locator('[data-alf-profile-visit]').innerText()));
+      await page.locator('[data-alf-profile-visit]').scrollIntoViewIfNeeded();
+      await shot(page, `${v.id}-10-profile-blocked`);
+      await page.getByRole('button', { name: 'フレンド一覧へ戻る' }).first().click();
+      await page.locator('[data-friend-row="yuto-0001"]').click();
+      await page.locator('[data-alf-profile-visit="ok"]').waitFor({ timeout: 10000 });
+      { const ng = await textProblems(page, '[data-alf-profile-visit]'); check(`⑩ 入口がはみ出さない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
+      await page.locator('[data-alf-profile-visit]').scrollIntoViewIfNeeded();
+      await shot(page, `${v.id}-10b-profile-ok`);
+      await page.locator('[data-alf-profile-visit-go]').click();
+      await page.locator('[data-alf-visit]').waitFor({ timeout: 5000 });
+      { const ng = await page.evaluate(() => { const r = document.querySelector('[data-alf-visit]').getBoundingClientRect(); return r.top < -1 || r.left < -1 || r.right > innerWidth + 1 || r.bottom > innerHeight + 1 || r.width < innerWidth - 2 ? [`${Math.round(r.left)},${Math.round(r.top)} ${Math.round(r.width)}×${Math.round(r.height)}`] : []; });
+        check(`⑩ プロフィールから開いた家は画面いっぱいに出る(${v.id})`, ng.length === 0, ng.join(' / ')); }
+      check(`⑩ プロフィールから開いたのはゆうとさんの家(${v.id})`, /ゆうとさんの家/.test(await page.locator('[data-alf-visit-title]').innerText()));
+      await shot(page, `${v.id}-10c-profile-house`);
+      await page.locator('[data-alf-visit-close]').click();
+      check(`⑩ もどると同じプロフィールに戻る(${v.id})`, (await page.locator('[data-alf-visit]').count()) === 0 && (await page.locator('[data-alf-profile-visit="ok"]').count()) === 1);
       check(`ページの中でエラーが出ない(${v.id})`, errors.length === 0, errors.slice(0, 2).join(' / '));
       await page.close();
     }
