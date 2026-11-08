@@ -49,6 +49,11 @@ const route = (posted) => async (r) => {
     const self = (url.match(/requester_id\.eq\.([^,)&]+)/) || url.match(/eq\.([0-9a-f-]{20,})/) || [])[1] || 'x';
     return json([{ requester_id: self, target_id: 'aoi-0001', status: 'accepted', blocked_by: null, created_at: fresh, updated_at: fresh }, { requester_id: 'yuto-0001', target_id: self, status: 'accepted', blocked_by: null, created_at: fresh, updated_at: fresh }, { requester_id: self, target_id: 'mio-0001', status: 'accepted', blocked_by: null, created_at: fresh, updated_at: fresh }]);
   }
+  // いまの状態(friend_profiles の place・records)。あおい=オート周回中(モンヒロビート)/ゆうと=演奏中/みお=ホームを開いたまま25分
+  if (/friend_profiles/.test(url) && /select=breeder_id,place/.test(url)) {
+    const at = new Date(Date.now() - 60000).toISOString();
+    return json([{ breeder_id: 'aoi-0001', place: 'rhythm', updated_at: at, records: { au: 1 } }, { breeder_id: 'yuto-0001', place: 'other', updated_at: at, records: { pl: 'rhythmPlay' } }, { breeder_id: 'mio-0001', place: 'home', updated_at: at, records: { im: 25 } }]);
+  }
   if (/friend_profiles|breeder_profiles/.test(url)) return json([{ breeder_id: 'aoi-0001', user_name: 'あおい', last_seen_at: fresh }, { breeder_id: 'yuto-0001', user_name: 'ゆうと', last_seen_at: fresh }, { breeder_id: 'mio-0001', user_name: 'みお', last_seen_at: fresh }]);
   if (/functions\/v1\/assistant-chat/.test(url)) return json({ ok: false, kind: 'tired' });
   return json([]);
@@ -223,7 +228,14 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.waitForSelector('[data-profile-friends]', { timeout: 15000 });
       await page.evaluate(() => document.querySelector('[data-profile-friends]').click());
       await page.locator('[data-friend-row="mio-0001"]').waitFor({ timeout: 15000 });
+      await page.waitForFunction(() => document.querySelectorAll('[data-friend-presence-auto]').length >= 2, null, { timeout: 8000 }).catch(() => {});
+      { const t = await page.locator('[data-friend-row]').allInnerTexts();
+        check(`⑮ フレンドの一覧に「⚡ オート周回中」+下の行(周回中・開いたまま25分)と「🎵 演奏中」(${v.id})`, t.some(x => /あおい/.test(x) && /オート周回中/.test(x)) && t.some(x => /みお/.test(x) && /ホームを開いたまま 25分 操作なし/.test(x)) && t.some(x => /ゆうと/.test(x) && /演奏中/.test(x)), t.join(' | ').slice(0, 200)); }
+      await shot(page, `${v.id}-11-presence-list`);
       await page.locator('[data-friend-row="mio-0001"]').click();
+      await page.waitForFunction(() => document.querySelector('[data-friend-presence-sub]'), null, { timeout: 8000 }).catch(() => {});
+      check(`⑮ プロフィールの名前の下にも「⚡ オート周回中」+「ホームを開いたまま 25分 操作なし」(${v.id})`, /オート周回中/.test(await page.locator('[data-friend-presence]').first().innerText().catch(() => '')) && /ホームを開いたまま 25分 操作なし/.test(await page.locator('[data-friend-presence-sub]').first().innerText().catch(() => '')));
+      await shot(page, `${v.id}-11b-presence-profile`);
       await page.locator('[data-alf-profile-visit]').waitFor({ timeout: 10000 });
       await page.waitForFunction(() => document.querySelector('[data-alf-profile-visit-why]') && !/読み込んで/.test(document.querySelector('[data-alf-profile-visit-why]').innerText), null, { timeout: 8000 }).catch(() => {});
       check(`⑩ 家が届いていないフレンドのプロフィールは、押せない入口と「みおさんが助手ライフを開くと遊びに行けます」(${v.id})`, await page.locator('[data-alf-profile-visit-go]').isDisabled() && /みおさんが助手ライフを開くと遊びに行けます/.test(await page.locator('[data-alf-profile-visit]').innerText()));
@@ -243,6 +255,28 @@ const badgeProblems = (page) => page.evaluate(() => {
       await shot(page, `${v.id}-10c-profile-house`);
       await page.locator('[data-alf-visit-close]').click();
       check(`⑩ もどると同じプロフィールに戻る(${v.id})`, (await page.locator('[data-alf-visit]').count()) === 0 && (await page.locator('[data-alf-profile-visit="ok"]').count()) === 1);
+      check(`ページの中でエラーが出ない(${v.id})`, errors.length === 0, errors.slice(0, 2).join(' / '));
+      await page.close();
+    }
+    // ⑮ 「フレンド」→「追加」の「いまの状態をフレンドに見せる」(縦・横・小さい画面)
+    for (const v of [{ id: 'tate', w: 390, h: 844 }, { id: 'yoko', w: 844, h: 390 }, { id: 'small', w: 375, h: 667 }]) {
+      const { page, errors } = await open(v);
+      await waitFaces(page);
+      await page.evaluate(() => document.querySelector('.mh-home-player')?.click());
+      await page.waitForSelector('[data-profile-friends]', { timeout: 15000 });
+      await page.evaluate(() => document.querySelector('[data-profile-friends]').click());
+      if (v.id === 'small') {
+        await page.locator('[data-friend-row="aoi-0001"]').waitFor({ timeout: 15000 });
+        await page.waitForFunction(() => document.querySelectorAll('[data-friend-presence-auto]').length >= 2, null, { timeout: 8000 }).catch(() => {});
+        { const ng = await page.evaluate(() => { const out = []; for (const el of document.querySelectorAll('[data-friend-row] [data-friend-presence], [data-friend-row] [data-friend-presence-sub]')) { const r = el.getBoundingClientRect(); if (r.right > innerWidth + 1 || r.left < -1) out.push(el.textContent); } return out; });
+          check(`⑮ 小さい画面の一覧で、いまの状態の字がはみ出さない(${v.id})`, ng.length === 0, ng.join(' / ')); }
+        await shot(page, `${v.id}-11-presence-list`);
+      }
+      await page.locator('button, [role="tab"]').filter({ hasText: /^追加$/ }).first().click();
+      await page.locator('[data-friend-presence-setting]').waitFor({ timeout: 8000 });
+      check(`⑮ 「追加」に「いまの状態をフレンドに見せる」のチェック(${v.id})`, /いまの状態をフレンドに見せる/.test(await page.locator('[data-friend-presence-setting]').innerText()) && await page.locator('[data-friend-presence-setting] input[type="checkbox"]').isChecked());
+      await page.locator('[data-friend-presence-setting]').scrollIntoViewIfNeeded();
+      await shot(page, `${v.id}-11c-presence-setting`);
       check(`ページの中でエラーが出ない(${v.id})`, errors.length === 0, errors.slice(0, 2).join(' / '));
       await page.close();
     }

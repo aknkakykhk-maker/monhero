@@ -532,12 +532,32 @@ const FRIEND_PLACE_TEXT = Object.freeze({
   card: 'MFバトルカードで遊び中', cardBattle: 'MFバトルカードで対戦中',
   // マルチの部屋で相手を待っている(2026-10-29 社長「相手がいま何をしているかが見えると誘いやすい」。カード部・ビート部の共通・friendsSetRoomWaiting)
   room: '部屋で待ち中',
+  // 2026-11-08 社長「モンビーとかバトルカードとかオート周回中も分かるようにしたい」(FRIEND-PRESENCE-PLAN.md・オトズレ3)
+  rhythmPlay: '🎵 モンヒロビートで演奏中', life: '🏡 助手ライフ',
+  // モンヒロビートの合言葉(プライベート)の部屋にいる(2026-11-08 社長・ビート部テンポが friendsSetRoomPrivate を呼ぶ)
+  roomPrivate: '🔑 プライベート中',
 });
+// オート周回中・長く操作なし(10分)のときの文。place は今いる画面のまま、records.au(周回中)・records.im(操作なしの分)で足す(バトル部ジンとすり合わせ)
+const FRIEND_AUTO_TEXT = '⚡ オート周回中';
+const FRIEND_IDLE_AUTO_MIN = 10;
+// 長く操作がないときに「◯◯を開いたまま」と書く場所。演奏中・対戦中は変えない
+const FRIEND_IDLE_OPEN_TEXT = Object.freeze({ home: 'ホーム', rhythm: 'モンヒロビート', multi: 'モンヒロビート', room: '部屋', roomPrivate: '合言葉の部屋', card: 'MFバトルカード', masu: 'マスモンの画面', market: 'マーケット', life: '助手ライフ', battle: 'バトル', other: 'ゲーム' });
+// 最後に画面へ触れた時刻(端末の中だけ。送るのは「何分たったか」の数だけ)
+let _friendsLastInputAt = Date.now();
+if (typeof window !== 'undefined' && window.addEventListener) {
+  for (const ev of ['pointerdown', 'keydown', 'touchstart', 'wheel']) window.addEventListener(ev, () => { _friendsLastInputAt = Date.now(); }, { passive: true, capture: true });
+}
+const friendsIdleMinutes = (now = Date.now()) => Math.max(0, Math.floor((now - _friendsLastInputAt) / 60000));
+// 「いまの状態をフレンドに見せる」(2026-11-08 社長・既定は入)。切なら place は 'other'(ログイン中)だけを送る
+const FRIEND_PRESENCE_SHOW_KEY = 'mh_friend_presence_show_v1';
 // 表(friend_profiles.place)の決まり(check)に無い場所。表へは 'other' で送り、records.pl に本当の場所を載せる
-const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle', 'room']);
+const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle', 'room', 'rhythmPlay', 'life', 'roomPrivate']);
 // マルチの部屋で相手を待っているあいだ真(モンヒロビート・MFバトルカードの部屋が立てる)。次にフレンドへ知らせるとき、場所を「部屋で待ち中」にする
 let _friendsRoomWaiting = false;
 const friendsSetRoomWaiting = (on) => { _friendsRoomWaiting = !!on; };
+// 合言葉(プライベート)の部屋にいるあいだ真(ビート部が部屋の出入りで呼ぶ)。演奏中(RHYTHM_PLAY)は「演奏中」を先にする(テンポと決めた)
+let _friendsRoomPrivate = false;
+const friendsSetRoomPrivate = (on) => { _friendsRoomPrivate = !!on; };
 // 受け取った行の場所。place が 'other' で records.pl があれば、そちら
 const friendsPlaceFromRow = (place, records) => {
   if (place === 'other' && records && FRIEND_SUB_PLACES.includes(records.pl)) return records.pl;
@@ -547,12 +567,16 @@ const FRIEND_HEARTBEAT_MS = 2 * 60 * 1000;   // 開いているあいだ、こ�
 const FRIEND_PUBLISH_MIN_MS = 15 * 1000;     // 場所や中身が変わっても、これより短い間隔では送らない
 // 画面(gameState)から、見せる場所の大分類へ。細かい画面名や曲名は見せない
 const friendsPlaceOfScreen = (gameState) => {
-  if (_friendsRoomWaiting) return 'room';
   const name = typeof gameState === 'string' ? gameState : '';
+  if (_friendsRoomPrivate && name !== 'RHYTHM_PLAY') return 'roomPrivate';
+  if (_friendsRoomWaiting) return 'room';
+  // 助手ライフは HOME の上に開く器(56-assistant-life の data-assistant-life-screen)
+  if (name === 'HOME' && typeof document !== 'undefined' && document.querySelector && document.querySelector('[data-assistant-life-screen]')) return 'life';
   if (name === 'HOME') return 'home';
   if (name === 'CARD_BATTLE') return 'cardBattle';
   if (name.startsWith('CARD_')) return 'card';
   if (name === 'RHYTHM_MULTI') return 'multi';
+  if (name === 'RHYTHM_PLAY') return 'rhythmPlay';
   if (name.startsWith('RHYTHM')) return 'rhythm';
   if (name === 'BREEDER_MARKET') return 'market';
   if (/^(MASU_|MB_MANAGEMENT|PASTURE_|MONSTER_|OWNED_MONSTERS)/.test(name)) return 'masu';
@@ -560,8 +584,14 @@ const friendsPlaceOfScreen = (gameState) => {
   return 'other';
 };
 // 「いまの場所」または「◯分前」の文。online は5分以内に知らせが来ているか
-const friendsPresenceText = (place, updatedAtMs, nowMs) => {
+// records … 受け取った records(au=オート周回中・im=操作なしの分)。オート周回中・10分以上操作なしなら「⚡ オート周回中」、下の行 sub に今の場所/開いたまま
+const friendsPresenceText = (place, updatedAtMs, nowMs, records = null) => {
   const online = Number.isFinite(updatedAtMs) && updatedAtMs > 0 && nowMs - updatedAtMs < FRIENDS_ONLINE_MS;
+  const playing = place === 'rhythmPlay' || place === 'cardBattle';
+  if (online && records && !playing && (records.au || records.im >= FRIEND_IDLE_AUTO_MIN)) {
+    const where = FRIEND_IDLE_OPEN_TEXT[place] || FRIEND_IDLE_OPEN_TEXT.other;
+    return { online: true, auto: true, text: FRIEND_AUTO_TEXT, sub: records.au ? (place && place !== 'other' && place !== 'home' ? FRIEND_PLACE_TEXT[place] : '') : `${where}を開いたまま ${records.im}分 操作なし` };
+  }
   if (online) return { online: true, text: FRIEND_PLACE_TEXT[place] || FRIEND_PLACE_TEXT.other };
   return { online: false, text: friendsLastSeenText(updatedAtMs, nowMs) };
 };
@@ -576,9 +606,9 @@ const friendsPresenceFor = async (ids) => {
   Object.entries(rows && typeof rows === 'object' ? rows : {}).forEach(([id, r]) => {
     if (!r) return;
     const at = Number.isFinite(r.updatedAt) ? r.updatedAt : 0;
-    const p = friendsPresenceText(r.place, at, now);
+    const p = friendsPresenceText(r.place, at, now, r.records);
     // place … いまの場所(friendsPlaceFromRow を通した値。2026-11-08 ビート部が「モンヒロビートにいるか」を見分けるのに足した)
-    out[id] = { online: p.online, text: p.text, at, place: r.place || null };
+    out[id] = { online: p.online, text: p.text, sub: p.sub || '', auto: !!p.auto, at, place: r.place || null };
   });
   return out;
 };
@@ -721,6 +751,7 @@ const friendsNormalizeRecords = (raw) => {
   const c = raw.collection && typeof raw.collection === 'object' ? raw.collection : {};
   return {
     pl: FRIEND_SUB_PLACES.includes(raw.pl) ? raw.pl : null,
+    au: raw.au === 1 ? 1 : 0, im: Math.min(1440, friendsInt(raw.im)),
     battle,
     rhythm: { played: friendsInt(raw.rhythm && raw.rhythm.played), songs, ach: friendsNormalizeAchievements(raw.rhythm && raw.rhythm.ach) },
     collection: { masu: friendsInt(c.masu), dex: friendsInt(c.dex), dexTotal: friendsInt(c.dexTotal), transcended: friendsInt(c.transcended),
@@ -729,7 +760,8 @@ const friendsNormalizeRecords = (raw) => {
 };
 // 端末の持ち物から、フレンドに見せる情報を作る(書く内容はここで決まる)
 //  masuMons … 手持ちのマスモン / favoriteMasuId … 「好きなモンスター」に選んだ個体のid / playtime … normalizePlaytime の形
-const friendsBuildSummary = ({ place, masuMons, favoriteMasuId, playtime, message = '', records = null }) => {
+// auto … オート周回(クイックの∞周回)が回っているか(60-app の quickRunProgressRef・ジン)/show … 「いまの状態をフレンドに見せる」
+const friendsBuildSummary = ({ place, masuMons, favoriteMasuId, playtime, message = '', records = null, auto = false, show = true }) => {
   let bestBond = 0, bestBondMon = '', bestPower = 0, bestPowerMon = '', favorite = null;
   (Array.isArray(masuMons) ? masuMons : []).forEach((masu) => {
     try {
@@ -750,7 +782,9 @@ const friendsBuildSummary = ({ place, masuMons, favoriteMasuId, playtime, messag
   const span = playtime && typeof playtime === 'object' ? playtime : {};
   const totalMs = Number(span.totalMs);
   return {
-    place: Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, place) ? place : 'other',
+    place: show && Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, place) ? place : 'other',
+    au: show && auto ? 1 : 0,
+    im: show && place !== 'rhythmPlay' && place !== 'cardBattle' ? Math.min(1440, friendsIdleMinutes()) : 0,
     startedOn: (typeof span.since === 'string' && FRIEND_DAY_RE.test(span.since)) ? span.since : null,
     playSeconds: Number.isFinite(totalMs) && totalMs >= 0 ? Math.floor(totalMs / 1000) : null,
     bestBond: bestBond > 0 ? bestBond : null, bestBondMon: bestBondMon || null,
@@ -777,7 +811,8 @@ const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
     if (_friendProfileExtraUnavailable) await send(base);
     else {
       // MFバトルカードの場所は records.pl に載せる(records が無いときも、場所だけは載せる)
-      const records = sub ? { ...(summary.records || {}), pl: sub } : summary.records;
+      const now = { ...(sub ? { pl: sub } : {}), ...(summary.au ? { au: 1 } : {}), ...(summary.im ? { im: summary.im } : {}) };
+      const records = Object.keys(now).length ? { ...(summary.records || {}), ...now } : summary.records;
       try { await send({ ...base, message: summary.message, records }); }
       catch (error) {
         if (error && error.status === 400 && /message|records/i.test(String(error.message)) && /column|PGRST204/i.test(String(error.message))) {
