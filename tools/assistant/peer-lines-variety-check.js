@@ -69,6 +69,9 @@ const KEYS = {
   // けんかのたね(lines/FEELINGS.md): おやつ・順番・寝ぐせや服・作戦の好み・遅れた・うるさい/夜ふかし・メモを見た・勝負の結果
   seed: ['snack', 'order', 'look', 'plan', 'late', 'noise', 'peek', 'score'],
 };
+// フレンドの家との行き来(lines/ORDER-FRIEND.md・2026-11-08 オトズレ3)。ほかの枝と同じ行を触らないよう、ここで足す
+Object.assign(KINDS, { visit: 1, go: 1, welcome: 1 });
+for (const v of ['greet', 'reply', 'sleep']) if (!KEYS.line.includes(v)) KEYS.line.push(v);
 const txtProblems = [];
 const linesDir = path.join(root, 'docs', 'progress', 'assistant-peer', 'lines');
 const txtFiles = fs.existsSync(linesDir) ? fs.readdirSync(linesDir).filter(f => f.endsWith('.txt')).sort() : [];
