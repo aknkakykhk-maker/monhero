@@ -710,15 +710,20 @@ const useAssistantLifeLand = () => {
 function AssistantLifeQuickChip({ quickRun, onStop, onStart, land }) {
   if (!quickRun || typeof quickRun !== 'object') return null;
   const loops = Number.isFinite(Number(quickRun.loops)) ? Math.max(0, Math.floor(Number(quickRun.loops))) : 0;
+  // 印はバトル部(セコンド)の検査とそろえる: 外枠 data-assistant-life-quick-run=live|stopped/始める data-assistant-life-quick-start/止める data-assistant-life-quick-stop
   if (quickRun.live) {
     return (
-      <div className="mhl-quick shrink-0 self-center" data-assistant-life-quick="live" data-assistant-life-quick-loop={loops + 1}>
+      <div className="mhl-quick shrink-0 self-center" data-assistant-life-quick="live" data-assistant-life-quick-run="live" data-assistant-life-quick-loop={loops + 1}>
         <span className="whitespace-nowrap">⚡ 裏クイック <b>{loops + 1}周目</b></span>
         {onStop && <button type="button" data-assistant-life-quick-stop onClick={onStop} aria-label="裏クイックを止める">止める</button>}
       </div>);
   }
+  // 止めたあと・自動で始めるが切・負けて始め直すまでのあいだだけ「▶ 裏クイック」(助手ライフを開くとふだんは自動で始まる。2026-11-08 社長)
   if (quickRun.canStart && onStart) {
-    return <button type="button" className="mhl-quick is-start shrink-0 self-center" data-assistant-life-quick="start" onClick={onStart} aria-label="裏クイックを始める"><span className="whitespace-nowrap">▶ 裏クイック</span></button>;
+    return (
+      <div className="shrink-0 self-center" data-assistant-life-quick="start" data-assistant-life-quick-run="stopped">
+        <button type="button" className="mhl-quick is-start" data-assistant-life-quick-start onClick={onStart} aria-label="裏クイックを始める"><span className="whitespace-nowrap">▶ 裏クイック</span></button>
+      </div>);
   }
   return null;
 }

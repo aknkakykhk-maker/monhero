@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f598c9f24ae30d50
+// source-sha256: 8d9f74a02d6989f6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -106904,6 +106904,7 @@ function AssistantLifeQuickChip({
     return React.createElement("div", {
       className: "mhl-quick shrink-0 self-center",
       "data-assistant-life-quick": "live",
+      "data-assistant-life-quick-run": "live",
       "data-assistant-life-quick-loop": loops + 1
     }, React.createElement("span", {
       className: "whitespace-nowrap"
@@ -106915,15 +106916,19 @@ function AssistantLifeQuickChip({
     }, "止める"));
   }
   if (quickRun.canStart && onStart) {
-    return React.createElement("button", {
-      type: "button",
-      className: "mhl-quick is-start shrink-0 self-center",
+    return React.createElement("div", {
+      className: "shrink-0 self-center",
       "data-assistant-life-quick": "start",
+      "data-assistant-life-quick-run": "stopped"
+    }, React.createElement("button", {
+      type: "button",
+      className: "mhl-quick is-start",
+      "data-assistant-life-quick-start": true,
       onClick: onStart,
       "aria-label": "裏クイックを始める"
     }, React.createElement("span", {
       className: "whitespace-nowrap"
-    }, "▶ 裏クイック"));
+    }, "▶ 裏クイック")));
   }
   return null;
 }

@@ -1,6 +1,6 @@
 // 助手ライフの裏クイックの札(2026-11-08 社長「助手ライフ画面でも裏クイックほしい」)。中身は 60-app(バトル部)が props で渡す
 //   node tools/assistant/assistant-life-quick-chip-check.js
-//   ① 回っているとき「⚡ 裏クイック ◯周目」(loops+1)と「止める」・止まっていて始められるとき「▶ 裏クイック」・null なら出ない
+//   ① 回っているとき「⚡ 裏クイック ◯周目」(loops+1)と「止める」・止めたあと・自動で始めるが切のとき「▶ 裏クイック」(印は data-assistant-life-quick-run=live|stopped・-start・-stop)・null なら出ない
 //   ② 縦 390・縦 375・横 844・タブレット 820: 札が画面に収まり、題・時計・にぎわいの帯・ほかのボタンに重ならない・字が切れない
 //   ③ 押すと止める/始めるが呼ばれる
 //   見本の値は、ページの中で AssistantLifeQuickChip を包んで渡す(60-app の受け渡しが入ったあとも、この見張りは同じに動く)
@@ -82,7 +82,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
         if (mode === 'none') { check(`① ${tag}: 一度も回していないとき(null)は札を出さない`, !!r.none); continue; }
         check(`① ${tag}: ${mode === 'live' ? '回っているとき「⚡ 裏クイック 12周目」と「止める」' : '始められるとき「▶ 裏クイック」'}`, r.kind === mode && (mode === 'live' ? /⚡ 裏クイック 12周目/.test(r.text) && /止める/.test(r.text) : /▶ 裏クイック/.test(r.text)), r.text || 'なし');
         check(`② ${tag}(${mode}): 画面に収まり、題・時計・帯・ボタンに重ならない・字が切れない`, !!r.ng && r.ng.length === 0, (r.ng || []).join(' / '));
-        await page.locator(mode === 'live' ? '[data-assistant-life-quick-stop]' : '[data-assistant-life-quick="start"]').click().catch(() => {});
+        await page.locator(mode === 'live' ? '[data-assistant-life-quick-stop]' : '[data-assistant-life-quick-start]').click().catch(() => {});
         const q = await page.evaluate(() => window.__q);
         check(`③ ${tag}(${mode}): 押すと${mode === 'live' ? '止める' : '始める'}が呼ばれる`, mode === 'live' ? q.stop === 1 : q.start === 1, JSON.stringify(q));
       }
