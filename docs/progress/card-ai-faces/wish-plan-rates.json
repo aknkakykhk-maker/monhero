@@ -1,0 +1,402 @@
+[
+ {
+  "who": "mua",
+  "base": {
+   "expert": 44,
+   "master": 52.7
+  },
+  "rates": {
+   "oshi:attack:expert": 38,
+   "oshi:attack:master": 46,
+   "oshi:guard:expert": 40.2,
+   "oshi:guard:master": 41.3,
+   "oshi:normal:expert": 35,
+   "oshi:normal:master": 40,
+   "suki:attack:expert": 33,
+   "suki:attack:master": 41.7,
+   "suki:guard:expert": 37.7,
+   "suki:guard:master": 52.9,
+   "suki:normal:expert": 31,
+   "suki:normal:master": 49,
+   "yoso:attack:expert": 43.7,
+   "yoso:attack:master": 52,
+   "yoso:guard:expert": 40.3,
+   "yoso:guard:master": 50,
+   "yoso:normal:expert": 45,
+   "yoso:normal:master": 53.9,
+   "honne:attack:expert": 44,
+   "honne:attack:master": 52,
+   "honne:guard:expert": 39.3,
+   "honne:guard:master": 50,
+   "honne:normal:expert": 45,
+   "honne:normal:master": 53.9
+  },
+  "ok": {
+   "oshi": [
+    "attack"
+   ],
+   "suki": [
+    "guard"
+   ],
+   "yoso": [
+    "attack",
+    "guard",
+    "normal"
+   ],
+   "honne": [
+    "attack",
+    "guard",
+    "normal"
+   ]
+  }
+ },
+ {
+  "who": "kiki",
+  "base": {
+   "expert": 43.3,
+   "master": 46.3
+  },
+  "rates": {
+   "oshi:attack:expert": 40.2,
+   "oshi:attack:master": 39.3,
+   "oshi:guard:expert": 44.1,
+   "oshi:guard:master": 40.3,
+   "oshi:normal:expert": 44.3,
+   "oshi:normal:master": 41.7,
+   "suki:attack:expert": 39.2,
+   "suki:attack:master": 34.3,
+   "suki:guard:expert": 39.2,
+   "suki:guard:master": 35,
+   "suki:normal:expert": 36.7,
+   "suki:normal:master": 34.7,
+   "yoso:attack:expert": 44.1,
+   "yoso:attack:master": 36.7,
+   "yoso:guard:expert": 39.2,
+   "yoso:guard:master": 33.7,
+   "yoso:normal:expert": 39.2,
+   "yoso:normal:master": 38,
+   "honne:attack:expert": 44.1,
+   "honne:attack:master": 36.7,
+   "honne:guard:expert": 39.2,
+   "honne:guard:master": 33.7,
+   "honne:normal:expert": 39.2,
+   "honne:normal:master": 38
+  },
+  "ok": {
+   "oshi": [
+    "attack",
+    "guard",
+    "normal"
+   ],
+   "suki": [],
+   "yoso": [
+    "attack",
+    "normal"
+   ],
+   "honne": [
+    "attack",
+    "normal"
+   ]
+  }
+ },
+ {
+  "who": "momosuke",
+  "base": {
+   "expert": 48.3,
+   "master": 34.7
+  },
+  "rates": {
+   "oshi:attack:expert": 56,
+   "oshi:attack:master": 64.7,
+   "oshi:guard:expert": 45.1,
+   "oshi:guard:master": 44,
+   "oshi:normal:expert": 45.1,
+   "oshi:normal:master": 48.7,
+   "suki:attack:expert": 50,
+   "suki:attack:master": 34.3,
+   "suki:guard:expert": 51,
+   "suki:guard:master": 35.3,
+   "suki:normal:expert": 50,
+   "suki:normal:master": 34.3,
+   "yoso:attack:expert": 49,
+   "yoso:attack:master": 28.3,
+   "yoso:guard:expert": 51,
+   "yoso:guard:master": 28,
+   "yoso:normal:expert": 51,
+   "yoso:normal:master": 32.3,
+   "honne:attack:expert": 49,
+   "honne:attack:master": 28.3,
+   "honne:guard:expert": 51,
+   "honne:guard:master": 28,
+   "honne:normal:expert": 51,
+   "honne:normal:master": 32.3
+  },
+  "ok": {
+   "oshi": [
+    "guard"
+   ],
+   "suki": [
+    "attack",
+    "guard",
+    "normal"
+   ],
+   "yoso": [
+    "attack",
+    "guard",
+    "normal"
+   ],
+   "honne": [
+    "attack",
+    "guard",
+    "normal"
+   ]
+  }
+ },
+ {
+  "who": "dra",
+  "base": {
+   "expert": 35.7,
+   "master": 42.7
+  },
+  "rates": {
+   "oshi:attack:expert": 29,
+   "oshi:attack:master": 38.2,
+   "oshi:guard:expert": 34.3,
+   "oshi:guard:master": 45.1,
+   "oshi:normal:expert": 31.4,
+   "oshi:normal:master": 46.1,
+   "suki:attack:expert": 31.7,
+   "suki:attack:master": 33.3,
+   "suki:guard:expert": 28.3,
+   "suki:guard:master": 30.7,
+   "suki:normal:expert": 26.7,
+   "suki:normal:master": 32.7,
+   "yoso:attack:expert": 37.3,
+   "yoso:attack:master": 43,
+   "yoso:guard:expert": 34.3,
+   "yoso:guard:master": 47.1,
+   "yoso:normal:expert": 35.3,
+   "yoso:normal:master": 40.2,
+   "honne:attack:expert": 34.3,
+   "honne:attack:master": 47.1,
+   "honne:guard:expert": 33.3,
+   "honne:guard:master": 44.1,
+   "honne:normal:expert": 32,
+   "honne:normal:master": 40.2
+  },
+  "ok": {
+   "oshi": [
+    "attack",
+    "guard",
+    "normal"
+   ],
+   "suki": [
+    "attack"
+   ],
+   "yoso": [
+    "attack",
+    "guard",
+    "normal"
+   ],
+   "honne": [
+    "attack",
+    "guard",
+    "normal"
+   ]
+  }
+ },
+ {
+  "who": "atsu",
+  "base": {
+   "expert": 45.7,
+   "master": 45
+  },
+  "rates": {
+   "oshi:attack:expert": 49,
+   "oshi:attack:master": 63.3,
+   "oshi:guard:expert": 50,
+   "oshi:guard:master": 54.3,
+   "oshi:normal:expert": 47.1,
+   "oshi:normal:master": 52.7,
+   "suki:attack:expert": 45.7,
+   "suki:attack:master": 41.2,
+   "suki:guard:expert": 42.2,
+   "suki:guard:master": 39.3,
+   "suki:normal:expert": 42.2,
+   "suki:normal:master": 43.1,
+   "yoso:attack:expert": 43.1,
+   "yoso:attack:master": 50,
+   "yoso:guard:expert": 42.2,
+   "yoso:guard:master": 46.1,
+   "yoso:normal:expert": 34,
+   "yoso:normal:master": 50,
+   "honne:attack:expert": 38,
+   "honne:attack:master": 25.5,
+   "honne:guard:expert": 32.7,
+   "honne:guard:master": 24.5,
+   "honne:normal:expert": 43.1,
+   "honne:normal:master": 28.7
+  },
+  "ok": {
+   "oshi": [
+    "guard",
+    "normal"
+   ],
+   "suki": [
+    "attack",
+    "guard",
+    "normal"
+   ],
+   "yoso": [
+    "attack",
+    "guard"
+   ],
+   "honne": []
+  }
+ },
+ {
+  "who": "kyuko",
+  "base": {
+   "expert": 49.3,
+   "master": 41.3
+  },
+  "rates": {
+   "oshi:attack:expert": 52.9,
+   "oshi:attack:master": 52,
+   "oshi:guard:expert": 48,
+   "oshi:guard:master": 57,
+   "oshi:normal:expert": 50,
+   "oshi:normal:master": 57.3,
+   "suki:attack:expert": 62,
+   "suki:attack:master": 50,
+   "suki:guard:expert": 48.3,
+   "suki:guard:master": 50.7,
+   "suki:normal:expert": 48,
+   "suki:normal:master": 38.2,
+   "yoso:attack:expert": 54,
+   "yoso:attack:master": 38.2,
+   "yoso:guard:expert": 41,
+   "yoso:guard:master": 42.2,
+   "yoso:normal:expert": 46.1,
+   "yoso:normal:master": 46,
+   "honne:attack:expert": 54,
+   "honne:attack:master": 38.2,
+   "honne:guard:expert": 41,
+   "honne:guard:master": 42.2,
+   "honne:normal:expert": 46.1,
+   "honne:normal:master": 46
+  },
+  "ok": {
+   "oshi": [],
+   "suki": [
+    "guard",
+    "normal"
+   ],
+   "yoso": [
+    "attack",
+    "guard",
+    "normal"
+   ],
+   "honne": [
+    "attack",
+    "guard",
+    "normal"
+   ]
+  }
+ },
+ {
+  "who": "sorashido",
+  "base": {
+   "expert": 52.3,
+   "master": 44
+  },
+  "rates": {
+   "oshi:attack:expert": 56.9,
+   "oshi:attack:master": 49.3,
+   "oshi:guard:expert": 52,
+   "oshi:guard:master": 57.3,
+   "oshi:normal:expert": 45.7,
+   "oshi:normal:master": 48.7,
+   "suki:attack:expert": 61,
+   "suki:attack:master": 35.7,
+   "suki:guard:expert": 54.9,
+   "suki:guard:master": 35.7,
+   "suki:normal:expert": 62.3,
+   "suki:normal:master": 36.3,
+   "yoso:attack:expert": 53.9,
+   "yoso:attack:master": 54.3,
+   "yoso:guard:expert": 56.9,
+   "yoso:guard:master": 64.7,
+   "yoso:normal:expert": 50,
+   "yoso:normal:master": 58.3,
+   "honne:attack:expert": 55.9,
+   "honne:attack:master": 66.7,
+   "honne:guard:expert": 55.9,
+   "honne:guard:master": 59.3,
+   "honne:normal:expert": 48,
+   "honne:normal:master": 58
+  },
+  "ok": {
+   "oshi": [
+    "attack",
+    "normal"
+   ],
+   "suki": [
+    "attack",
+    "guard",
+    "normal"
+   ],
+   "yoso": [],
+   "honne": []
+  }
+ },
+ {
+  "who": "erubin",
+  "base": {
+   "expert": 50,
+   "master": 58
+  },
+  "rates": {
+   "oshi:attack:expert": 51,
+   "oshi:attack:master": 54.9,
+   "oshi:guard:expert": 47.1,
+   "oshi:guard:master": 55.9,
+   "oshi:normal:expert": 52,
+   "oshi:normal:master": 55.9,
+   "suki:attack:expert": 44.7,
+   "suki:attack:master": 43,
+   "suki:guard:expert": 30.4,
+   "suki:guard:master": 36.3,
+   "suki:normal:expert": 41,
+   "suki:normal:master": 43.7,
+   "yoso:attack:expert": 48,
+   "yoso:attack:master": 45.7,
+   "yoso:guard:expert": 52,
+   "yoso:guard:master": 48,
+   "yoso:normal:expert": 54.9,
+   "yoso:normal:master": 51.3,
+   "honne:attack:expert": 48,
+   "honne:attack:master": 45.7,
+   "honne:guard:expert": 52,
+   "honne:guard:master": 48,
+   "honne:normal:expert": 54.9,
+   "honne:normal:master": 51.3
+  },
+  "ok": {
+   "oshi": [
+    "attack",
+    "guard",
+    "normal"
+   ],
+   "suki": [],
+   "yoso": [
+    "guard",
+    "normal"
+   ],
+   "honne": [
+    "guard",
+    "normal"
+   ]
+  }
+ }
+]

@@ -21,6 +21,7 @@
 //   N. 材料の口(assistantLifeCardMaterial): 無ければ よそいき・均等/仲良し度で本音・face で6割の顔/壊れた値は無視
 //   P. 組み直しの名前(社長 2026-11-08): 1つ目は既定・中身が変われば新しい名前(AI → 種+遊び方の言葉。一覧の名前は使わない)・前のデッキを「これまで」に10個まで・マスモンの愛称を使わない
 //   Q. 選び方(これまでのデッキがあれば 5:1.5:1.5 + 2割を新しい順に)・遊ぶ人の選び口(昔のデッキとも戦える)・記録に deckId・deckFrom
+//   W. 遊ぶ人の提案(assistantLifeDeckWish): 口が無ければ今のまま・次の組み直しで提案の顔を1回だけ・名前は見張りを通す(種族名+の+名前)・型だけ寄せる・使った印
 //   O. 82 は face を渡さなければ今と同じ(大会・サーバーと同じ組み方。同じ種なら同じデッキ)
 const fs = require('fs');
 const path = require('path');
@@ -37,7 +38,7 @@ const SLOTS = ['oshi', 'suki', 'yoso', 'honne'];
 const PAIRS = [['oshi', 'suki'], ['oshi', 'yoso'], ['suki', 'yoso'], ['oshi', 'honne'], ['suki', 'honne']];
 
 // 1つの箱で 82・戦術・83 を読む。保存・中継役・印・助手ライフの口は箱の外から差し替える
-const makeBox = ({ flag = true, talkOpen = true, material = null, fetchImpl = null, store: init = null, masmon = MASMON } = {}) => {
+const makeBox = ({ flag = true, talkOpen = true, material = null, fetchImpl = null, store: init = null, masmon = MASMON, wish = null } = {}) => {
   const store = new Map(init || []);
   const calls = [];
   const writes = [];
@@ -55,6 +56,7 @@ const makeBox = ({ flag = true, talkOpen = true, material = null, fetchImpl = nu
     fetch: fetchImpl ? async (url, init2) => { calls.push(JSON.parse(init2.body)); return fetchImpl(JSON.parse(init2.body)); } : undefined,
     ...(material ? { assistantLifeCardMaterial: material } : {}),
     ...(masmon ? { ASSISTANT_MASMON_PLAN: masmon } : {}),
+    ...(wish ? { assistantLifeDeckWish: wish } : {}),
   };
   const ctx = vm.createContext(box);
   vm.runInContext(`${src('data/card-battle-cards.js')}\n;\n${src('src/parts/82-card-battle-core.jsx')}\n;\n${src('src/parts/82-card-tactics-core.jsx')}\n;\n${src('src/parts/83-card-ai-deck.jsx')}\n;\n`
@@ -64,7 +66,7 @@ const makeBox = ({ flag = true, talkOpen = true, material = null, fetchImpl = nu
     + ' cardLoadAiRecipe, cardSaveAiDeck, cardAiDeckRebuild, cardAiDeckRunDue, cardAiDeckMarkMet, cardAiDeckAfterMatch, cardAssistantDeckPick, cardAiRecipeOf, cardAiDeckVsLine, cardAiDeckNextStyle, cardAiDeckNextName, cardAiDeckNextDone,'
     + ' cardAiFaceGroups, cardAiFaceSpec, cardAiFaceBuild, cardAiFacePreviewDeck, cardAiFaceShare, cardAiFaceTrioDiff, cardAiFaceDefaultName, cardAiFaceNameOk, cardAiFaceShareWord, cardAiFaceOtherNames, cardAiFaceLineOf, cardAiFaceLayout,'
     + ' cardAiFaceMaterial, cardAiFaceSugaoSide, cardAiFaceMain, cardAiDeckMainFace, cardAssistantFacePreview, cardAiFaceName,'
-    + ' CARD_AI_HISTORY_MAX, CARD_AI_PLAY_WORDS, cardAiFaceNicks, cardNormalizeAiHistory, cardAiHistoryRead, cardAiDeckPickId, cardAiDeckNextId, cardAiDeckChoose, cardAiDeckChosen, cardAiDeckChoices, cardAiDeckPeriodText, cardAiFaceMakeName, cardAiDeckIdFace };', ctx);
+    + ' CARD_AI_HISTORY_MAX, CARD_AI_PLAY_WORDS, cardAiFaceNicks, cardNormalizeAiHistory, cardAiHistoryRead, cardAiDeckPickId, cardAiDeckNextId, cardAiDeckChoose, cardAiDeckChosen, cardAiDeckChoices, cardAiDeckPeriodText, cardAiFaceMakeName, cardAiDeckIdFace, cardAiWishOf, cardAiWishName, cardNormalizeAiWish, cardAiWishPlanOk, CARD_AI_WISH_PLAN_OK, cardAiDeckWishFought, CARD_AI_DECK_WISH_LINES };', ctx);
   return { E: ctx.E, store, calls, writes };
 };
 const ok200 = (body) => ({ ok: true, json: async () => body });
@@ -413,6 +415,126 @@ const MASMON = (() => {
     check('Q 記録: リプレイの相手に deckId・deckFrom を残す(84 が game.aiDeck から渡す・93 が見張って持つ)',
       /deckId: aiPick\.deckId \|\| aiPick\.styleId, deckFrom: aiPick\.deckFrom === 'past' \? 'past' : 'now'/.test(s84) && /deckId: game\.aiDeck\.deckId, deckFrom: game\.aiDeck\.deckFrom/.test(s84) && /const cardReplayFoeDeckOf = /.test(s93));
     check('Q 84: 対戦は相手えらびで見せたデッキ(cardAiDeckNextId)で始める', /typeof cardAiDeckNextId === 'function' \? cardAiDeckNextId\(pick\.who\)/.test(s84));
+  }
+  // ---- W: 遊ぶ人の提案(助手部の口 assistantLifeDeckWish・2026-11-08) ----
+  {
+    const WK = 'mh_card_ai_deck_wish_v1';
+    const day = '2026-11-08';
+    const at = (n) => ({ at: n, since: n, plan: null, name: null, line: null, ai: false });
+    const seed = () => [[KEY2, JSON.stringify({ v: 2, day, perWho: { kiki: { met: true, gamesSince: 0, slotsDone: 0, decks: { oshi: at(5), suki: at(50), yoso: at(9) } } } })]];
+    const sorry = () => ok200({ ok: true, kind: 'sorry' });
+    // 口が無い: 今のまま(いちばん古い推しを組み直す・印を書かない)
+    {
+      const b = makeBox({ fetchImpl: sorry, store: seed() });
+      await b.E.cardLoadAiRecipe();
+      const r = await b.E.cardAiDeckRebuild('kiki', 'games', { now: 1000 });
+      check('W 口が無ければ今のまま(いちばん古い顔・印を書かない)', r && r.slot === 'oshi' && !r.wish && !b.store.has(WK), J(r));
+    }
+    // 壊れた値は使わない
+    {
+      const bad = [null, 'x', { face: 'ura', day }, { face: 'oshi', day: '11/8' }, { face: 'oshi' }];
+      const ok = bad.every((v) => { const b = makeBox({ wish: () => v }); return b.E.cardAiWishOf('kiki') === null; });
+      const th = makeBox({ wish: () => { throw new Error('x'); } });
+      check('W 壊れた提案・投げる口は使わない(null)', ok && th.E.cardAiWishOf('kiki') === null);
+      const g = makeBox({ wish: () => ({ face: 'like', name: 'まったり作戦', plan: 'guard', day }) }).E.cardAiWishOf('kiki');
+      check('W 提案の読み方: like は好き・印は「顔:日:中身の指紋」', g && g.face === 'suki' && g.plan === 'guard' && g.name === 'まったり作戦' && new RegExp(`^suki:${day}:[0-9a-z]{1,8}$`).test(g.mark), J(g));
+    }
+    // 名前の形
+    {
+      const o = E.cardAiFaceOtherNames({ decks: {} }, 'kiki', 'suki');
+      check('W 提案の名前: 種族名が無ければ「種族名+の+名前」', E.cardAiWishName(db, 'kiki', 'suki', 'まったり作戦', o, []) === 'ライガーのまったり作戦');
+      check('W 提案の名前: 種族名があればそのまま', E.cardAiWishName(db, 'kiki', 'suki', 'ライガー大暴れ', o, []) === 'ライガー大暴れ');
+      check('W 提案の名前: 見張りに落ちる名前・長すぎる名前・使った名前は使わない',
+        E.cardAiWishName(db, 'kiki', 'suki', '攻めまくり', o, []) === null && E.cardAiWishName(db, 'kiki', 'suki', 'ごろべえ大好き', o, []) === null
+        && E.cardAiWishName(db, 'kiki', 'suki', 'のんびりまったり作戦', o, []) === null && E.cardAiWishName(db, 'kiki', 'suki', 'まったり作戦', o, ['ライガーのまったり作戦']) === null);
+    }
+    // 本物の組み直し: 提案の顔(好き)を1回だけ・名前・寄せた型・印・前のデッキは「これまで」へ
+    {
+      const b = makeBox({ fetchImpl: sorry, store: seed(), wish: () => ({ face: 'like', name: 'まったり作戦', plan: 'guard', day }) });
+      await b.E.cardLoadAiRecipe();
+      const r1 = await b.E.cardAiDeckRebuild('kiki', 'games', { now: 2000 });
+      const st = JSON.parse(b.store.get(KEY2)).perWho.kiki.decks;
+      const used = JSON.parse(b.store.get(WK) || 'null');
+      const hist = JSON.parse(b.store.get(E.CARD_SAVE_KEYS.aiDeckHistory) || 'null');
+      check('W 提案があれば、いちばん古い顔ではなく提案の顔(好き)を組み直す', r1 && r1.slot === 'suki' && String(r1.wish).startsWith(`suki:${day}:`) && r1.wishName === true, J(r1));
+      const okG = E.cardAiWishPlanOk('kiki', 'suki', 'guard');
+      check('W 提案の名前を持ち、型は表で寄せてよいときだけ寄せる(主役は変えない)', st.suki.name === 'ライガーのまったり作戦' && (okG ? st.suki.style === 'guard' : st.suki.style === undefined) && st.suki.since === 2000 && r1.wishStyle === okG, J({ suki: st.suki, okG }));
+      check('W 使った印を新しいキーに「顔:日:指紋」で持つ', used && used.used.kiki.length === 1 && used.used.kiki[0] === b.E.cardAiWishOf('kiki').mark && used.used.kiki[0].startsWith(`suki:${day}:`), J(used));
+      check('W 前のデッキ(既定の名前)は「これまでのデッキ」に残る', hist && hist.perWho.kiki[0].slot === 'suki' && hist.perWho.kiki[0].name === 'ライガーの桜吹雪', J(hist && hist.perWho.kiki[0]));
+      const p = b.E.cardAssistantDeckPick('kiki', E.cardAiSeededRand('w'), 'master', {}, 'suki');
+      check('W 対戦でも提案の名前で出て、主役は表のまま(ライガー)', p && p.name === 'ライガーのまったり作戦' && E.cardAiFaceLineOf(db.monsters[p.deck.monsters[0]]) === 'tiger', J(p && { name: p.name, lead: p.deck.monsters[0] }));
+      // 初めて戦うときの台詞(社長「やる」): 提案のデッキで1回だけ・AI のひとことより先・2回目は今の台詞・提案でないデッキでは出ない
+      check('W 提案のデッキには印(wish)が付く', st.suki.wish === true && !st.oshi.wish, J({ suki: st.suki.wish, oshi: st.oshi.wish }));
+      check('W 初めてのとき: 対戦で出すデッキに wishFirst・VS は提案の台詞', p.wishFirst === true && J(b.E.cardAiDeckVsLine('kiki', p)) === J({ t: '考えてくれた『ライガーのまったり作戦』でお相手しまつ( ˘ω˘)', e: 'happy' }), J(p && p.wishFirst));
+      check('W 初めてのとき: AI のひとことがあっても提案の台詞が先', J(b.E.cardAiDeckVsLine('kiki', { ...p, line: 'AI のひとこと' })) === J({ t: '考えてくれた『ライガーのまったり作戦』でお相手しまつ( ˘ω˘)', e: 'happy' }));
+      const po = b.E.cardAssistantDeckPick('kiki', E.cardAiSeededRand('w2'), 'master', {}, 'oshi');
+      check('W 提案でないデッキでは出ない', po && !po.wishFirst && J(b.E.cardAiDeckVsLine('kiki', po)) === J({ t: `今日は『${po.name}』でお相手しまつ( ˘ω˘)`, e: 'happy' }), J(po && { name: po.name, wishFirst: po.wishFirst }));
+      await b.E.cardAiDeckWishFought('kiki', p.name);
+      const p2 = b.E.cardAssistantDeckPick('kiki', E.cardAiSeededRand('w3'), 'master', {}, 'suki');
+      const ws = JSON.parse(b.store.get(WK));
+      check('W 2回目は今の台詞(初めて戦った印を同じキーの fought に足す・used はそのまま)', p2 && !p2.wishFirst && J(b.E.cardAiDeckVsLine('kiki', p2)) === J({ t: '今日は『ライガーのまったり作戦』でお相手しまつ( ˘ω˘)', e: 'happy' })
+        && ws.used.kiki.length === 1 && ws.used.kiki[0].startsWith(`suki:${day}:`) && J(ws.fought.kiki) === J(['ライガーのまったり作戦']), J(ws));
+      check('W 初めて戦うときの台詞は8人ぶん・{name} を1つ持つ', WHO.every((w) => typeof E.CARD_AI_DECK_WISH_LINES[w] === 'string' && E.CARD_AI_DECK_WISH_LINES[w].split('{name}').length === 2));
+      const r2 = await b.E.cardAiDeckRebuild('kiki', 'games', { now: 3000 });
+      check('W 同じ提案は2回使わない(次はいちばん古い顔=推し)', r2 && r2.slot === 'oshi' && !r2.wish, J(r2));
+      // 寄せた型で組み方が変わる(守り → 守りの札が増える)
+      const g0 = E.cardAiFaceBuild(db, 'kiki', 'suki', 'master', E.cardAiSeededRand('wg'), {}, null);
+      const g1 = E.cardAiFaceBuild(db, 'kiki', 'suki', 'master', E.cardAiSeededRand('wg'), {}, null, 'guard');
+      const guards = (d) => d.cards.filter((no) => ['blk', 'dge'].includes((db.cards[no] || {}).kind)).length;
+      check('W 提案の型「守り」で組むと、守りの札が増える(主役・3体の決め方は同じ)', guards(g1) > guards(g0) && E.cardAiFaceLineOf(db.monsters[g1.monsters[0]]) === 'tiger', `${guards(g0)} → ${guards(g1)}`);
+    }
+    // 同じ日に同じ顔へ、別の提案をもう一度(2026-11-08 ミハリ): 2回目の提案も1回使う。同じ提案は使わない
+    {
+      let cur = { face: 'oshi', name: '', plan: 'attack', day };
+      const b = makeBox({ fetchImpl: sorry, store: seed(), wish: () => cur });
+      await b.E.cardLoadAiRecipe();
+      const a1 = await b.E.cardAiDeckRebuild('kiki', 'games', { now: 5000 });
+      cur = { face: 'oshi', name: 'ずんずん行進', plan: '', day };
+      const a2 = await b.E.cardAiDeckRebuild('kiki', 'games', { now: 6000 });
+      const st2 = JSON.parse(b.store.get(KEY2)).perWho.kiki.decks.oshi;
+      const a3 = await b.E.cardAiDeckRebuild('kiki', 'games', { now: 7000 });
+      check('W 同じ日に同じ顔へ別の提案をしても、新しい提案として1回使う(同じ提案は2回使わない)', a1 && a1.slot === 'oshi' && !!a1.wish && a2 && a2.slot === 'oshi' && !!a2.wish && a2.wish !== a1.wish && st2.name === 'ゴーレムのずんずん行進' && a3 && !a3.wish,
+        J({ a1: a1 && a1.wish, a2: a2 && a2.wish, name: st2.name, a3: a3 && { slot: a3.slot, wish: a3.wish } }));
+    }
+    // 名前が通らない提案: 型だけ寄せて、名前はいつもの付け方
+    {
+      const b = makeBox({ fetchImpl: sorry, store: seed(), wish: () => ({ face: 'oshi', name: '攻めまくり', plan: 'attack', day }) });
+      await b.E.cardLoadAiRecipe();
+      const r = await b.E.cardAiDeckRebuild('kiki', 'games', { now: 4000 });
+      const st = JSON.parse(b.store.get(KEY2)).perWho.kiki.decks.oshi;
+      const okA = E.cardAiWishPlanOk('kiki', 'oshi', 'attack');
+      check('W 名前が見張りに落ちる提案は、名前を使わない(型は表で寄せてよいときだけ)', r && r.slot === 'oshi' && r.wishName === false && (okA ? st.style === 'attack' : st.style === undefined) && st.name !== '攻めまくり' && !/攻め/.test(st.name || ''), J(st));
+    }
+    // 寄せてよい型の表(部長「A」: 強さの目安 ±10点に入る組み合わせだけ)
+    {
+      const T = E.CARD_AI_WISH_PLAN_OK;
+      const missing = WHO.flatMap((w) => SLOTS.filter((sl) => !(T[w] && Array.isArray(T[w][sl]))).map((sl) => `${w}/${sl}`));
+      check('W 寄せてよい型の表が、8人×4つの顔ぶんそろっている(助手や顔が増えたら tools/card/card-ai-wish-plan-table.js --write で作り直す)', missing.length === 0, missing.slice(0, 6).join(' '));
+      const badVal = WHO.flatMap((w) => SLOTS.flatMap((sl) => ((T[w] || {})[sl] || []).filter((p) => !['attack', 'guard', 'normal'].includes(p)).map((p) => `${w}/${sl}:${p}`)));
+      check('W 表の中身は攻め・守り・ふつうだけ', badVal.length === 0, badVal.join(' '));
+      check('W 表に無い組み合わせ(知らない助手・知らない顔・知らない型)は寄せない', !E.cardAiWishPlanOk('nobody', 'oshi', 'attack') && !E.cardAiWishPlanOk('kiki', 'zzz', 'attack') && !E.cardAiWishPlanOk('kiki', 'oshi', 'ura') && !E.cardAiWishPlanOk('kiki', 'oshi', ''));
+      const src83 = src('src/parts/83-card-ai-deck.jsx');
+      check('W 83: 組み直しは提案の型を表で確かめてから寄せる', /const wishStyle = wish && wish\.plan && cardAiWishPlanOk\(who, slot, wish\.plan\) \? wish\.plan : null;/.test(src83));
+      // 表の元の数(道具が残す)と合っているか: 寄せてよい=両方の強さで ±10点
+      let rates = null;
+      try { rates = JSON.parse(fs.readFileSync(path.resolve(GAME, '..', 'docs/progress/card-ai-faces/wish-plan-rates.json'), 'utf8')); } catch (_) { rates = null; }
+      const mismatch = rates ? rates.flatMap((m) => SLOTS.flatMap((sl) => ['attack', 'guard', 'normal'].filter((p) => {
+        const ok = ['expert', 'master'].every((lv) => Math.abs(m.rates[`${sl}:${p}:${lv}`] - m.base[lv]) <= 10 + 1e-9);
+        return ok !== ((T[m.who] || {})[sl] || []).includes(p);
+      }).map((p) => `${m.who}/${sl}:${p}`))) : ['数の表が読めない'];
+      check('W 表は測った数(wish-plan-rates.json)のとおり(両方の強さで ±10点に入る型だけ)', mismatch.length === 0, mismatch.slice(0, 6).join(' '));
+    }
+    // 保存の読み方
+    {
+      const n = E.cardNormalizeAiWish({ used: { kiki: ['suki:2026-11-08', 'zz', 'suki:2026-11-08', 'oshi:2026-11-09'], nobody: ['oshi:2026-11-08'], mua: 'x' } });
+      check('W 印の読み方: 壊れた値・知らない助手・重なりは捨てる(前の形「顔:日」も読む)', JSON.stringify(n) === JSON.stringify({ v: 1, used: { kiki: ['suki:2026-11-08', 'oshi:2026-11-09'] } }), J(n));
+      const n3 = E.cardNormalizeAiWish({ used: { kiki: ['suki:2026-11-08:1a2b3c', 'suki:2026-11-08:ZZ!', 'suki:2026-11-08:123456789'] } });
+      check('W 印の読み方: 「顔:日:指紋」を読み、形の違う指紋は捨てる', JSON.stringify(n3.used.kiki) === JSON.stringify(['suki:2026-11-08:1a2b3c']), J(n3));
+      const n2 = E.cardNormalizeAiWish({ v: 1, used: { kiki: ['suki:2026-11-08'] }, fought: { kiki: ['ライガーのまったり作戦', 3, 'ライガーのまったり作戦', 'あ'.repeat(20)], nobody: ['x'] } });
+      check('W 初めて戦った印(fought)の読み方: 壊れた値・長すぎる名前・知らない助手は捨てる・used は前の形のまま', JSON.stringify(n2) === JSON.stringify({ v: 1, used: { kiki: ['suki:2026-11-08'] }, fought: { kiki: ['ライガーのまったり作戦'] } }), J(n2));
+      check('W 84: 提案のデッキで始めたら、初めて戦った印を残す', /if \(aiPick && aiPick\.wishFirst && typeof cardAiDeckWishFought === 'function'\) void Promise\.resolve\(cardAiDeckWishFought\(pick\.who, aiPick\.name\)\)/.test(src('src/parts/84-screen-card-battle.jsx')));
+      check('W 印のキーを保存キーの表に載せる', /`mh_card_ai_deck_wish_v1`/.test(fs.readFileSync(path.resolve(GAME, '..', 'docs/spec/SAVE_DATA.md'), 'utf8')));
+    }
   }
   // ---- O ----
   {
