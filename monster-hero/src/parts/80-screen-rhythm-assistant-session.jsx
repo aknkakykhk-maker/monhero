@@ -645,8 +645,9 @@ function RhythmAssistSessionDuoResult({ ids = [], round }) {
       ))}
       {onlyGain.length > 0 && (
         <p data-rhythm-assist-peer-gains className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-violet-300/40 bg-violet-950/50 px-2 py-0.5 text-[10px] font-black leading-tight text-violet-100 landscape:col-span-2 [[data-mh-view-rotation=true]_&]:col-span-2">
+          {/* 6組並ぶと「(Lv1 顔見知り)」の繰り返しで画面の幅いっぱいだった(2026-11-08 社長)。まとめの行は「+3(Lv1)」と短く */}
           <span className="shrink-0">🎤 友情Lv</span>
-          {onlyGain.map(({ key: k, d, gained, level }) => <span key={k} data-rhythm-assist-peer-gain className="whitespace-nowrap text-amber-200">{rhythmAssistSessionName(d.a)}・{rhythmAssistSessionName(d.b)} {rhythmAssistSessionPeerGainText(gained, level)}</span>)}
+          {onlyGain.map(({ key: k, d, gained, level }) => <span key={k} data-rhythm-assist-peer-gain className="whitespace-nowrap text-amber-200">{rhythmAssistSessionName(d.a)}・{rhythmAssistSessionName(d.b)} +{gained}{Number(level) > 0 ? `(Lv${level})` : ''}</span>)}
         </p>
       )}
     </>
