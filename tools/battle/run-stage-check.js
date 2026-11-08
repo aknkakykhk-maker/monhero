@@ -286,8 +286,11 @@ check('MFバトルカードからクイックのバトルへ戻れる・戻る�
   source.includes('data-card-quick-run-back') && source.includes('returnToBackgroundRun(); }}')
   && /const exitCardBattle = async \(\) => \{[\s\S]{0,600}?await handleGiveUp\(\{ silent: true \}\)[\s\S]{0,200}?returnToHome\(\);/.test(source));
 // 負けた・リタイアの暗幕や大きな演出を、カードの画面の上に出さない(モンビーと同じ)
-check('MFバトルカードの上に、裏の周回の負け・演出の幕を出さない',
-  ['{hp<=0&&!debugBattle&&!rhythmScreenOpen&&!cardScreenOpen&&(', '{gaveUp&&!debugBattle&&!rhythmScreenOpen&&!cardScreenOpen&&(', '{effect&&!rhythmScreenOpen&&!cardScreenOpen&&(']
+// 助手ライフの上にも出さない・揺らさない・暗幕を出さない(2026-11-08 社長「画面がめちゃくちゃ動く」。助手ライフだけ条件が抜けていた)
+check('MFバトルカード・助手ライフの上に、裏の周回の負け・演出の幕・画面の揺れ・超省エネの暗幕を出さない',
+  ['{hp<=0&&!debugBattle&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&(', '{gaveUp&&!debugBattle&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&(',
+    '{effect&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&(', '{ultraEcoSession&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&<div data-ultra-eco-session-dimmer',
+    "!cardScreenOpen&&!assistantLifeScreenOpen&&battleFxSettings.shake!=='OFF'"]
     .every(t => source.includes(t)));
 
 if (failed) { console.error(`\n${failed}件のNGがあります`); process.exit(1); }

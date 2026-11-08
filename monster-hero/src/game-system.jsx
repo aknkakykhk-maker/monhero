@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a34889a87e19b8a0
+// generated-sha256: 9fc2d3b884e79b9a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -38527,6 +38527,8 @@ const GROWTH_FX_KINDS = Object.freeze({
   session: { color: '#c084fc', deep: '#6b21a8', icon: '🎤', particle: '♪', label: 'セッションLv' },
   beat:    { color: '#a3e635', deep: '#3f6212', icon: '🎵', particle: '♪', label: 'ビートLv' },
   breeder: { color: '#60a5fa', deep: '#1e40af', icon: '🛡️', particle: '◆', label: 'ブリーダーLv' },
+  // 助手ライフの裏クイックを止めた・閉じたときの結果の一言(text だけを出す札。ゲージ・数字は出さない)
+  quick:   { color: '#e879f9', deep: '#86198f', icon: '⚡', particle: '⚔', label: '裏クイック' },
 });
 const growthFxKind = (kind) => GROWTH_FX_KINDS[kind] || GROWTH_FX_KINDS.bond;
 
@@ -38539,8 +38541,11 @@ const GROWTH_FX_CALM_SCREENS = Object.freeze(new Set([
 ]));
 // 画面の上にこれが出ているあいだは出さない(お話・ほかの大きな演出・案内)。中・大の段だけ止める目印もある(おしゃべりの画面)
 const GROWTH_FX_HOLD_ALL_SELECTOR = '[data-event-story],[data-story-stage],[data-story-sheet],[data-player-rank-up-fx]';
-const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat]';
+// 助手ライフで裏クイックが回っているあいだ(帯 data-life-quick-run="live")も、全面のお祝いは貯めておく。止めたり閉じたりしたら出す
+//   (モンヒロビート・カードの画面では裏の周回のお祝いは出ない作りなのに、助手ライフは HOME の上なので毎回全面で出ていた。2026-11-08 社長「中途半端」)
+const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat],[data-life-quick-run="live"]';
 const GROWTH_FX_SMALL_MS = 1900;
+const GROWTH_FX_TEXT_MS = 3600;      // 文の一行の札(読む時間をとる)
 const GROWTH_FX_ITEM_MS = 3400;
 const GROWTH_FX_SMALL_MAX = 3;       // 一度に並べる札の数
 const GROWTH_FX_QUEUE_MAX = 24;      // 貯めておく数の上限(古いものから捨てる。値は保存済みなので見えなくなるだけ)
@@ -38561,11 +38566,13 @@ const growthFxPush = (ev) => {
     if (gain <= 0) return;
     const key = String(ev.key || `${ev.kind}:${ev.who || ''}`);
     const list = GROWTH_FX_STORE.small;
+    // 文の一行の札(裏クイックの結果)は、同じ中身がまだ並んでいれば足さない(止める・閉じるが続けて呼ばれても1枚。2026-11-08 ミハリ)
+    if (ev.text && list.some(c => c.kind === ev.kind && c.text === String(ev.text))) return;
     const same = list.find(c => c.key === key);
     // 続けて上がったら1枚にまとめる(数字を足し上げ、ゲージは今の位置へ)。出し直しの合図(rev)を進めて、消える時間を延ばす
     if (same) { same.gain += gain; same.pctTo = growthFxPct(ev.pctTo); same.rev += 1; }
     else {
-      list.push({ id: ++GROWTH_FX_STORE.seq, rev: 0, key, kind: ev.kind, name: String(ev.name || ''), gain,
+      list.push({ id: ++GROWTH_FX_STORE.seq, rev: 0, key, kind: ev.kind, name: String(ev.name || ''), text: String(ev.text || ''), gain,
         pctFrom: growthFxPct(ev.pctFrom), pctTo: growthFxPct(ev.pctTo) });
       if (list.length > GROWTH_FX_QUEUE_MAX) list.splice(0, list.length - GROWTH_FX_QUEUE_MAX);
     }
@@ -38778,6 +38785,7 @@ const GROWTH_FX_CSS = `
 .mh-gfx-chip .ico{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--gc) 30%,transparent);font-size:13px;color:var(--gc)}
 .mh-gfx-chip .ico.beat{animation:mhGfxBeat .5s ease-out}
 .mh-gfx-chip .who{font-size:9px;color:#cbd5e1;line-height:1.1;max-width:9.5em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mh-gfx-chip .txt{font-size:11px;font-weight:800;color:#f8fafc;line-height:1.25;max-width:15em}.mh-gfx-chip .txt b{color:var(--gc);font-weight:900}
 .mh-gfx-chip .bar{width:56px;height:5px;border-radius:9px;background:#334155;overflow:hidden;margin-top:2px}
 .mh-gfx-chip .bar i{display:block;height:100%;background:var(--gc);transition:width .7s ease-out}
 .mh-gfx-chip .num{color:var(--gc);font-size:14px;font-variant-numeric:tabular-nums}
@@ -38945,11 +38953,19 @@ const GrowthFxChip = ({ chip, level, held }) => {
   useEffect(() => {
     if (held) return undefined;
     setOut(false);
-    const t1 = setTimeout(() => setOut(true), GROWTH_FX_SMALL_MS);
-    const t2 = setTimeout(() => growthFxDropSmall(chip.id), GROWTH_FX_SMALL_MS + 320);
+    const ms = chip.text ? GROWTH_FX_TEXT_MS : GROWTH_FX_SMALL_MS;
+    const t1 = setTimeout(() => setOut(true), ms);
+    const t2 = setTimeout(() => growthFxDropSmall(chip.id), ms + 320);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [chip.id, chip.rev, held]);
   const pts = level === 'full' ? [0, 1, 2, 3] : [];
+  // 文の一行だけの札(裏クイックの結果)。狭いときの小さい形(mini)でも文は消さない
+  if (chip.text) return (
+    <div className={`mh-gfx-chip text${out ? ' out' : ''}`} data-growth-fx-chip={chip.kind} data-growth-fx-chip-id={chip.id} style={{ '--gc': k.color }}>
+      <span className="ico beat" aria-hidden="true">{cardIconNode(k.icon, 13)}</span>
+      <span className="txt"><b>{k.label}</b> {chip.text}</span>
+    </div>
+  );
   return (
     <div className={`mh-gfx-chip${out ? ' out' : ''}`} data-growth-fx-chip={chip.kind} style={{ '--gc': k.color }}>
       <span key={`i${chip.rev}`} className="ico beat" aria-hidden="true">{cardIconNode(k.icon, 13)}</span>
@@ -39077,6 +39093,9 @@ const growthFxChipSpotScore = (box, first = false) => {
     else if ([...under.childNodes].some(n => { if (n.nodeType !== 3 || !n.textContent.trim()) return false; const rg = document.createRange(); rg.selectNodeContents(n); return [...rg.getClientRects()].some(q => x >= q.left - 2 && x <= q.right + 2 && y >= q.top - 2 && y <= q.bottom + 2); })) { score += 2; if (first) return score; }
   }
   const vw = window.innerWidth, vh = window.innerHeight;
+  // 画面の外にはみ出す置き場所は選ばない(見えない札になる)。札は出てくる動きの途中で測ることがあるので、端から4px内側までを使う
+  //   (🔄横では回した画面の下が端末の左になるので、上下左右どれも見る。上は札が上へずれる分の12pxを足してある)
+  if (r.left < 4 || r.top < -8 || r.right > vw - 4 || r.bottom > vh - 4) { score += 5; if (first) return score; }
   const hit = (e) => Math.min(r.right, e.right) - Math.max(r.left, e.left) > 1 && Math.min(r.bottom, e.bottom) - Math.max(r.top, e.top) > 1;
   // 手前に別のものが重なって見えていない要素は数えない(角と真ん中の2点で見る。角だけだと、角に顔の丸が乗った地図の札を見落とした)
   const seen = (el, e) => { const x0 = Math.max(r.left, e.left), y0 = Math.max(r.top, e.top), x1 = Math.min(r.right, e.right), y1 = Math.min(r.bottom, e.bottom);
@@ -39126,8 +39145,10 @@ const GrowthFxChipsBox = ({ level, count, children }) => {
       const box = ref.current;
       if (!box) return;
       // いつもの高さのあとに、画面の下から上へ24pxおきの高さも試す(詰まった横の画面で、空いた所を見つける)
-      const steps = []; for (let y = window.innerHeight - 10 - box.offsetHeight; y >= 8; y -= 24) steps.push(Math.round(y));
-      const tops = [...new Set([...GROWTH_FX_CHIP_TOPS, Math.max(60, window.innerHeight - 120 - box.offsetHeight), ...steps])];
+      // 🔄横(画面を回して見ている)ときは、札の入れ物も回っているので、高さは端末の横幅になる(2026-11-08 ナカヨシ8: 回した画面の外に札を置いていた)
+      const frameH = (typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.active && RHYTHM_VIEW_ROTATION.active()) ? window.innerWidth : window.innerHeight;
+      const steps = []; for (let y = frameH - 10 - box.offsetHeight; y >= 8; y -= 24) steps.push(Math.round(y));
+      const tops = [...new Set([...GROWTH_FX_CHIP_TOPS, Math.max(60, frameH - 120 - box.offsetHeight), ...steps])];
       // 右寄せで空きが無ければ左寄せでも探す(横のビートP交換所は右の列が品物で埋まり、左の列の下が空いている・2026-11-08)
       // 縦に積んで入らないときは、小さくして横1列にも並べて探す(横の画面は高さが無い。2026-11-08 ナカヨシ8)
       // それでも入らない詰まった画面(ビートP交換所)は、先頭の1枚に「+残りの数」を付けた1枚にまとめて探す
@@ -39196,7 +39217,8 @@ const GrowthFxLayer = ({ screen, load }) => {
   return (
     <>
       {!holdAll && !sheet && small.length > 0 && <GrowthFxChipsBox level={level} count={Math.min(small.length, GROWTH_FX_SMALL_MAX)}>
-        {small.slice(0, GROWTH_FX_SMALL_MAX).map(c => <GrowthFxChip key={c.id} chip={c} level={level} held={false}/>)}
+        {/* 文の一行の札(裏クイックの結果)を先頭に。狭い画面で1枚だけ出す形(one)でも、結果が後ろに隠れない */}
+        {[...small].sort((a, b) => (b.text ? 1 : 0) - (a.text ? 1 : 0)).slice(0, GROWTH_FX_SMALL_MAX).map(c => <GrowthFxChip key={c.id} chip={c} level={level} held={false}/>)}
       </GrowthFxChipsBox>}
       {sheet && (sheet.tier === 'level'
         ? <GrowthFxLevelUp key={sheet.id} sheet={sheet} level={level} onClose={() => growthFxDropSheet(sheet.id)}/>
@@ -62470,7 +62492,7 @@ const assistantLifeTalkSet = () => {
 };
 const assistantLifeQuarrelTalks = () => [...assistantLifeTalkSet().quarrel, ...(typeof assistantLifeRelQuarrelTalks === 'function' ? assistantLifeRelQuarrelTalks() : [])]; // 原因つきのけんか(rel.jsx)も
 // 思い出アルバムに入るもの(2人・3人)
-const assistantLifeAlbumTalks = () => { const x = assistantLifeTalkSet(); return [...x.pair, ...x.anyTrio, ...x.trio, ...(typeof assistantLifeRelAlbumTalks === 'function' ? assistantLifeRelAlbumTalks() : [])]; };
+const assistantLifeAlbumTalks = () => { const x = assistantLifeTalkSet(); return [...x.pair, ...x.anyTrio, ...x.trio, ...(typeof assistantLifeFurnAlbumTalks === 'function' ? assistantLifeFurnAlbumTalks() : []), ...(typeof assistantLifeRelAlbumTalks === 'function' ? assistantLifeRelAlbumTalks() : [])]; };
 // 台本の穴 {place}・{doing}・{doing_te}。いまの様子(talk.ctx)→ 台本の鍵 → していることの場所 の順で決める
 const assistantLifeFillHoles = (text, talk) => {
   const c = (talk && talk.ctx) || {};
@@ -62734,7 +62756,9 @@ const assistantLifeWatch = async (group, now = Date.now()) => {
   const key = assistantLifeGroupKey(group);
   if ((life.watched || []).includes(key) || assistantLifeWatchLeft(ASSISTANT_LIFE_STORE.state.play, day) <= 0) return null;
   // 様子に合う台本(段階3)。無ければ今までの選び方
-  const talk = assistantLifePickGroupTalk(group, ASSISTANT_PEER_STORE.state, life) || assistantLifePickWatchTalk(group, ASSISTANT_PEER_STORE.state);
+  // 段階C ❷A: 部屋で遊びに来た助手と家具の掛け合いがあれば、それを先に流す(見守る1回に数える・アルバムと今日あったことに残る)
+  const furnVisit = group.place === 'home' && typeof assistantLifeFurnVisitOf === 'function' && typeof assistantLifeHostOf === 'function' ? assistantLifeFurnVisitOf(assistantLifeHostOf(group.ids), group.ids) : null;
+  const talk = furnVisit || assistantLifePickGroupTalk(group, ASSISTANT_PEER_STORE.state, life) || assistantLifePickWatchTalk(group, ASSISTANT_PEER_STORE.state);
   if (!talk) return null;
   const p = assistantLifePlayForDay(ASSISTANT_LIFE_STORE.state.play, day);
   ASSISTANT_LIFE_STORE.set({ life: { ...life, watched: [...(life.watched || []), key] }, play: { ...p, counts: { ...(p.counts || {}), watch: ((p.counts && p.counts.watch) || 0) + 1 } } });
@@ -63567,6 +63591,13 @@ const assistantLifeRoomsOf = (life, metIds) => {
       if (host === id) {
         const lonely = w.reason === 'lonely';
         rooms[id] = { in: [host, ...ids.filter(x => x !== host)], lonely, sleep: w.doing === 'sleep', bub: w.doing === 'sleep' ? ['💤 おやすみ中'] : lonely ? ['💭 だれか', '来ないかな…'] : ids.length > 1 ? ['部屋で', `${ids.length}人で`, doing.label] : ['部屋で', doing.label] };
+        // 段階C(2026-11-08 社長 ❶A ❷A): 好きな家具を置いた部屋にひとりでいるときは家具の吹き出し/遊びに来た助手と家具の掛け合いがあれば「◯◯の話をしてる」
+        if (w.doing !== 'sleep' && !lonely) {
+          const visit = ids.length > 1 && typeof assistantLifeFurnVisitOf === 'function' ? assistantLifeFurnVisitOf(host, ids) : null;
+          const use = ids.length === 1 && typeof assistantLifeFurnUseBub === 'function' ? assistantLifeFurnUseBub(host) : null;
+          if (visit) rooms[id] = { ...rooms[id], bub: assistantLifeFurnVisitBub(visit) || rooms[id].bub, furnVisit: visit.id };
+          else if (use) rooms[id] = { ...rooms[id], bub: use.bub, furnUse: use.key };
+        }
       } else rooms[id] = { tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)] };
       continue;
     }
@@ -63706,15 +63737,104 @@ const assistantLifeStandBox = (src) => new Promise((res) => {
   im.onerror = () => { ASSISTANT_LIFE_STAND_BOX.set(src, null); res(null); };
   im.src = src;
 });
-function AssistantLifeStand({ pid, src, cx, fig, sleep }) {
-  const [box, setBox] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.get(src) || null);
-  React.useEffect(() => { let alive = true; assistantLifeStandBox(src).then(b => { if (alive) setBox(b); }); return () => { alive = false; }; }, [src]);
-  const filter = sleep ? 'brightness(.45) saturate(.6) drop-shadow(0 6px 12px #0008)' : undefined;
-  if (!box) return <img className="st" data-assistant-life-scene-stand={pid} data-assistant-life-scene-sleep={sleep ? '1' : '0'} src={src} alt="" style={{ left: `${cx}%`, transform: 'translateX(-50%)', height: '58%', width: '70%', bottom: 'max(22%, 150px)', opacity: 0, filter }}/>;
-  const span = Math.max(0.2, box.b - box.t);
-  const h = fig / span; // 場面の高さに対する絵の高さ
-  return <img className="st" data-assistant-life-scene-stand={pid} data-assistant-life-scene-sleep={sleep ? '1' : '0'} data-assistant-life-scene-fig={fig} src={src} alt=""
-    style={{ left: `${cx}%`, height: `${(h * 100).toFixed(2)}%`, width: 'auto', maxWidth: 'none', bottom: `calc(max(22%, 150px) - ${((1 - box.b) * h * 100).toFixed(2)}%)`, transform: `translateX(-${(((box.l + box.r) / 2) * 100).toFixed(1)}%)`, objectFit: 'fill', filter }}/>;
+// ===== 立ち絵の大きさと切る位置(共通の表と関数・2026-11-08 社長「この仕組みは他の立ち絵にも使えそうだね」) =====
+// ほかの画面(部屋を大きく見る画面・HOME・モンヒロビートなど)からも、名前で読んで使える。使い方は docs/progress/assistant-peer/gifts/stagec/STAND-MEASURE.md の「共通の表と関数」
+//   ASSISTANT_LIFE_STAND_FACE(手で置いた顔の点と m・fit)/ASSISTANT_LIFE_STAND_EC/ASSISTANT_LIFE_STAND_FACE_LEN/ASSISTANT_LIFE_STAND_CUT
+//   assistantLifeStandFace(pid, src) … その絵の顔の点(表に無い絵はふつうの形)
+//   assistantLifeStandRule({ face, box, F, topY, cx }) … 1人ぶんの置き場所(px)。box は assistantLifeStandBox(src) の見えている体の範囲
+// 立ち絵の見た目の大きさをそろえる(2026-11-08 社長「立ち絵サイズのバランスや配置の仕方があんまりよくない」「実際の見た目ではかって」)
+//   8人の絵は全身ではなく上半身で、どこで切れているかが絵ごとに違う。透けていない画素の範囲(見えている体)の中で、目と顎の高さを測った表
+//   (docs/progress/assistant-peer/gifts/stagec/STAND-MEASURE.md)。「目から顎まで」を全員同じ長さにして、頭の大きさをそろえる
+//   eye・chin … 見えている体の上を0・下を1とした目・顎の高さ / head … 顔だけの絵(ドラ)。頭ひとつぶんの大きさで床に置く
+const ASSISTANT_LIFE_STAND_FACE = Object.freeze({
+  mua: { top: 0.145, eye: 0.3275, chin: 0.425, m: 0.724 }, kiki: { top: 0.195, eye: 0.46, chin: 0.595, m: 0.847 }, momosuke: { top: 0.075, eye: 0.3925, chin: 0.535, m: 1.022 },
+  dra: { head: true, top: 0.10, eye: 0.46, m: 2.017 }, atsu: { top: 0.09, eye: 0.31, chin: 0.435, m: 0.895 }, kyuko: { top: 0.01, eye: 0.40, chin: 0.56, m: 1.040, fit: 0.95 },
+  sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 }, erubin: { top: 0.01, eye: 0.2325, chin: 0.46, m: 1.224 },
+});
+//   2026-11-08 社長「顔のサイズがまだあってない」「ちゃんとはかってるの？」: 絵を見て手で点を置き直した(測り絵 gifts/stagec/marks.png・STAND-MEASURE.md の4回目)
+//   top … 頭のてっぺん(髪の上端。うさ耳・リボン・羽・王冠などの飾りは含めない)/eye … 目の線(目を閉じた絵はまぶたの線)/chin … 顎の先(見えている体の上を0・下を1)
+//   m … 顔の大きさ。「目の線から顎の先」と「頬の幅」を、それぞれ7人の平均で割って2つを平均したもの。見えている体の高さは m に反比例させる(顔がそろう)
+//   ドラは顔だけの絵なので、7人の頭の高さ(てっぺんから顎)の平均とドラの頭の高さがそろう m
+//   fit … 測ったうえで、並び絵を見た社長の指示で少しだけ変えた大きさ(きゅうこ ×0.95「きゅうこが少しでかいね」)。無ければ 1
+// 目から顎の長さの平均(見えている体の高さに対する割合)。m=1 の人の「目から顎」が F になる
+const ASSISTANT_LIFE_STAND_EC = 0.1639;
+// 顔1個の長さ(頭のてっぺんから顎まで。7人の平均)を、目から顎の何倍か。2026-11-08 社長「顔のサイズを基準に縮尺合わせて上下で切る位置決めればそれなりに合う」:
+//   全員を、頭のてっぺんの上は顔0.55個ぶん(うさ耳・リボンが切れない所)・下はてっぺんから顔1.8個ぶん(顎から約0.8個。上半身の絵がいちばん短いソラシドでも絵が届く所)で切り、
+//   同じ高さの枠に入れる(下の 顔0.45個ぶんで消していく)
+const ASSISTANT_LIFE_STAND_FACE_LEN = 2.63;
+const ASSISTANT_LIFE_STAND_CUT = Object.freeze({ above: 0.55, below: 1.8, fade: 0.45 });
+// 着替えなど表に無い絵は、8人のふつうの形で見る
+const assistantLifeStandFace = (pid, src) => {
+  const who = typeof assistantById === 'function' ? assistantById(pid) : null;
+  const own = who && who.imagePrefix && String(src || '').includes(`/${who.imagePrefix}_`);
+  return (own && ASSISTANT_LIFE_STAND_FACE[pid]) || { top: 0.05, eye: 0.33, chin: 0.47, m: 1 };
+};
+// 見えている体の高さ(px)。F … m=1 の人の「目から顎」の長さ(px)。顔の大きさがそろう
+const assistantLifeStandVisH = (face, F) => (F / (ASSISTANT_LIFE_STAND_EC * ((face && face.m) || 1))) * ((face && face.fit) || 1);
+// 1人ぶんの置き場所(px)。topY … 頭のてっぺんをそろえる高さ/cx … 体の真ん中の横の位置
+//   返す値: top・height・width・left(絵の箱)/clip [上, 下](clip-path の inset に使う)/fade [始, 終](絵の高さに対する割合。mask の linear-gradient に使う。顔だけの絵は null)
+//   frameTop・frameBottom(上下で切る枠)/visTop・visBottom(見えている体)/U(顔1個の長さ)
+const assistantLifeStandRule = ({ face, box, F, topY, cx = 0 }) => {
+  if (!face || !box || !(F > 0)) return null;
+  const vh = assistantLifeStandVisH(face, F), ih = vh / (box.b - box.t), iw = ih * box.ar;
+  const visTop = topY - (face.top || 0) * vh, imgTop = visTop - box.t * ih;
+  const U = F * ASSISTANT_LIFE_STAND_FACE_LEN;
+  const frameTop = topY - ASSISTANT_LIFE_STAND_CUT.above * U, frameBottom = topY + ASSISTANT_LIFE_STAND_CUT.below * U;
+  const clip = [Math.max(0, frameTop - imgTop), Math.max(0, imgTop + ih - frameBottom)];
+  const fade = face.head ? null : [Math.max(0, (frameBottom - ASSISTANT_LIFE_STAND_CUT.fade * U - imgTop) / ih), Math.min(1, (frameBottom - imgTop) / ih)];
+  return { top: imgTop, height: ih, width: iw, left: cx - ((box.l + box.r) / 2) * iw, clip, fade, frameTop, frameBottom, visTop, visBottom: visTop + vh, U };
+};
+// 場面の大きさ(W×H px)と、並ぶ人の絵の見えている範囲から、1人ずつの置き場所を決める(px)
+//   ・目から顎までの長さ F を全員同じに。F は人数で決める高さの割合と、1人の見えている幅が受け持ちの幅を大きく超えない長さの小さいほう
+//   ・頭のてっぺんの高さをそろえ、目が縦は場面の上から4割あたり・横は3割5分あたりに来るように置く(2026-11-08 社長「画面の下に小さく固まり、上半分が空いている」)
+//   ・体の下のほうは、なめらかに消す(上半身で切れている絵の切れ目が宙に浮いて見えない)
+const assistantLifeStandLayout = (items, W, H) => {
+  const n = items.length;
+  if (!n || !W || !H || items.some(x => !x.box)) return null;
+  const sw = (W * 0.92) / n;
+  const fh = H * ({ 1: 0.085, 2: 0.075, 3: 0.064, 4: 0.055 }[Math.min(4, n)]);
+  const visH = (x, F) => assistantLifeStandVisH(x.face, F);
+  const visW = (x, F) => visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
+  let F = fh;
+  for (const x of items) { const w1 = visW(x, 1); if (w1 > 0) F = Math.min(F, (sw * 1.08) / w1); }
+  // 頭のてっぺんの高さ: 目の高さの平均が、縦は場面の上から4割・横は3割5分に来るところ
+  const eyeOff = items.reduce((a, x) => a + ((x.face.eye || 0.4) - (x.face.top || 0)) * visH(x, F), 0) / n;
+  const topY = H * (W > H ? 0.36 : 0.42) - eyeOff;
+  return items.map((x, i) => {
+    const cx = W * 0.04 + sw * (i + 0.5);
+    return { ...assistantLifeStandRule({ face: x.face, box: x.box, F, topY, cx }), cx, face: F };
+  });
+};
+function AssistantLifeStands({ ids, sleepIds = [] }) {
+  const ref = React.useRef(null);
+  const [size, setSize] = React.useState({ w: 0, h: 0 });
+  const srcs = ids.map(pid => { const who = assistantById(pid); return who ? assistantFullImage(who, sleepIds.includes(pid) ? 'normal' : 'happy') : null; });
+  const [boxes, setBoxes] = React.useState(() => srcs.map(s => (s ? ASSISTANT_LIFE_STAND_BOX.get(s) || null : null)));
+  const key = srcs.join('|');
+  React.useEffect(() => { let alive = true; Promise.all(srcs.map(s => (s ? assistantLifeStandBox(s) : Promise.resolve(null)))).then(b => { if (alive) setBoxes(b); }); return () => { alive = false; }; }, [key]);
+  React.useLayoutEffect(() => {
+    const el = ref.current && ref.current.parentElement;
+    if (!el) return undefined;
+    const f = () => setSize(prev => (prev.w === el.clientWidth && prev.h === el.clientHeight ? prev : { w: el.clientWidth, h: el.clientHeight }));
+    f();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(f) : null;
+    if (ro) ro.observe(el); else window.addEventListener('resize', f);
+    return () => { if (ro) ro.disconnect(); else window.removeEventListener('resize', f); };
+  }, []);
+  const items = ids.map((pid, i) => ({ pid, src: srcs[i], box: boxes[i], face: assistantLifeStandFace(pid, srcs[i]) })).filter(x => x.src);
+  const lay = assistantLifeStandLayout(items, size.w, size.h);
+  return (<><span ref={ref} hidden/>{items.map((x, i) => {
+    const zz = sleepIds.includes(x.pid);
+    const filter = zz ? 'brightness(.45) saturate(.6) drop-shadow(0 6px 12px #0008)' : undefined;
+    const p = lay && lay[i];
+    return (<React.Fragment key={x.pid}>
+      <img className="st" data-assistant-life-scene-stand={x.pid} data-assistant-life-scene-sleep={zz ? '1' : '0'} src={x.src} alt=""
+        data-assistant-life-scene-face={p ? Math.round(p.face) : ''} data-assistant-life-scene-vis={p ? `${Math.round(p.visTop)},${Math.round(p.visBottom)}` : ''}
+        style={p ? { left: p.left, top: p.top, height: p.height, width: p.width, maxWidth: 'none', bottom: 'auto', objectFit: 'fill', filter,
+          clipPath: `inset(${p.clip[0].toFixed(1)}px 0 ${p.clip[1].toFixed(1)}px 0)`,
+          ...(p.fade ? { WebkitMaskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)`, maskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)` } : {}) } : { opacity: 0, height: '50%', filter }}/>
+      {zz && p && <span className="absolute text-[34px]" style={{ left: p.cx + 20, top: Math.max(40, p.visTop) }} aria-hidden="true">💤</span>}
+    </React.Fragment>); })}</>);
 }
 
 // 場面(見守る・ようすを見る・渡す の掛け合いを、その場所の背景と立ち絵で流す)
@@ -63756,10 +63876,7 @@ function AssistantLifeScene({ scene, look, onClose, onGive, canGive }) {
         : <div className="absolute inset-0" style={{ background: ASSISTANT_LIFE_TINT[bg.tint] }}/>)}
       {!bg && look === 'night' && <div className="absolute inset-0" style={{ background: 'rgba(10,15,50,.35)' }}/>}
       <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg,transparent 45%,rgba(10,6,30,.7) 85%)' }}/>
-      {ids.map((pid, i) => { const who = assistantById(pid); if (!who) return null; const n = ids.length; const cx = n === 1 ? 50 : n === 2 ? (i ? 66 : 34) : n === 3 ? [22, 50, 78][i] : [16, 38, 62, 84][i];
-        const zz = (scene.sleep || []).includes(pid);
-        return <React.Fragment key={pid}><AssistantLifeStand pid={pid} src={assistantFullImage(who, zz ? 'normal' : 'happy')} cx={cx} fig={n >= 4 ? 0.28 : n === 3 ? 0.32 : n === 2 ? 0.36 : 0.4} sleep={zz}/>
-          {zz && <span className="absolute text-[34px]" style={{ left: `${cx + 8}%`, top: '30%' }} aria-hidden="true">💤</span>}</React.Fragment>; })}
+      <AssistantLifeStands ids={ids} sleepIds={scene.sleep || []}/>
       <div className="mhl-hdr absolute inset-x-0 top-0" style={{ paddingTop: 'calc(8px + env(safe-area-inset-top))' }}>
         <div className="flex items-start gap-2">
           <button type="button" data-assistant-life-scene-back onClick={() => { if (peer && peer.talking && typeof ASSISTANT_PEER_STORE !== 'undefined') ASSISTANT_PEER_STORE.set({ stopTalkAt: Date.now() }); onClose(); }} aria-label="家へ戻る" className="h-9 w-9 text-[18px] text-slate-100">←</button>
@@ -66116,6 +66233,48 @@ const assistantLifeFurnMove = async (who, key, toPut) => {
   if (next) assistantLifeRoomSave(next);
   return !!next;
 };
+
+// ---------- 段階C: 好きな家具を使う吹き出し・遊びに来た助手が家具に触れる(2026-11-08 社長 ❶A ❷A・docs/progress/assistant-peer/gifts/STAGE-C-PLAN.md) ----------
+// 台詞はツムギ(assistants.js の ASSISTANT_LIFE_FURNUSE_LINES・ASSISTANT_LIFE_VISITFURN_LINES)。保存は増やさない(部屋に置いてある家具を見るだけ)
+const ASSISTANT_LIFE_FURN_SHORT = Object.freeze({ sofa: 'ソファ', bear: 'くま', plant: '植物', record: 'レコード', nyacushion: 'クッション', starpic: '星空の絵',
+  trophy: 'トロフィー', bookshelf: '本棚', heartmirror: '鏡', lantern: 'ランタン', mirrorball: 'ミラーボール', windbell: '風鈴' });
+const assistantLifeFurnPlaced = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => Object.values(assistantLifeRoomOf(who, st).put).filter(Boolean);
+// 吹き出しは2行に分ける(言葉の区切り「で・を・に・の・が・と・、」のうち、真ん中にいちばん近い所で)
+const assistantLifeBubSplit = (text) => {
+  const t = String(text || '');
+  if (t.length <= 8) return [t];
+  let best = -1;
+  for (let i = 2; i < t.length - 1; i++) if ('でをにのがと、'.includes(t[i - 1]) && (best < 0 || Math.abs(i - t.length / 2) < Math.abs(best - t.length / 2))) best = i;
+  const at = best > 0 ? best : Math.ceil(t.length / 2);
+  return [t.slice(0, at), t.slice(at)];
+};
+// ❶A: 好きな家具が部屋に置いてあれば、ひとりで部屋にいるあいだはいつもこの吹き出し(家具の絵文字+ひとこと)。無ければ null
+const assistantLifeFurnUseBub = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  if (!assistantLifeFurnEnabled()) return null;
+  const lines = typeof ASSISTANT_LIFE_FURNUSE_LINES !== 'undefined' ? ASSISTANT_LIFE_FURNUSE_LINES[who] : null;
+  if (!lines) return null;
+  const key = assistantLifeFurnPlaced(who, st).find(k => lines[k] && assistantLifeFurnLike(who, k) === 'like');
+  if (!key) return null;
+  const f = assistantLifeFurnOf(key);
+  const [a, b] = assistantLifeBubSplit(lines[key]);
+  return { key, bub: [`${f ? f.emoji : ''} ${a}`, ...(b ? [b] : [])] };
+};
+// ❷A: 部屋の主(host)の部屋に、台詞のある相手(guest)がいて、その家具が置いてあるときの掛け合い。ids … 部屋にいる助手
+const assistantLifeFurnVisitOf = (host, ids, st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  if (!assistantLifeFurnEnabled() || !Array.isArray(ids) || ids.length < 2) return null;
+  const all = typeof ASSISTANT_LIFE_VISITFURN_LINES !== 'undefined' && Array.isArray(ASSISTANT_LIFE_VISITFURN_LINES) ? ASSISTANT_LIFE_VISITFURN_LINES : [];
+  const placed = assistantLifeFurnPlaced(host, st);
+  const v = all.find(x => x.host === host && x.guest !== host && ids.includes(x.guest) && placed.includes(x.item));
+  return v ? assistantLifeFurnVisitTalk(v) : null;
+};
+const assistantLifeFurnVisitTalk = (v) => ({ id: `visitfurn-${v.guest}-${v.host}-${v.item}`, pair: [v.guest, v.host], lv: 1, scene: 'any', furnVisit: v.item,
+  lines: v.lines.map(x => ({ who: x.who, e: x.e || 'happy', t: x.t })) });
+const assistantLifeFurnVisitBub = (talk) => {
+  const k = talk && talk.furnVisit, f = k && assistantLifeFurnOf(k);
+  return f ? [`${f.emoji} ${ASSISTANT_LIFE_FURN_SHORT[k] || f.name}の話を`, 'してる'] : null;
+};
+// 思い出アルバムに並べる掛け合い(家具が開いているときだけ。見たものはアルバムの記録に入る)
+const assistantLifeFurnAlbumTalks = () => (assistantLifeFurnEnabled() && typeof ASSISTANT_LIFE_VISITFURN_LINES !== 'undefined' && Array.isArray(ASSISTANT_LIFE_VISITFURN_LINES) ? ASSISTANT_LIFE_VISITFURN_LINES.map(assistantLifeFurnVisitTalk) : []);
 
 // 部屋の絵に置いた家具を出す(印が偽なら何も出さない)。z-index は 2(灯りを消した膜・キズナの扉・顔・吹き出しより後ろ)
 // faces … いま部屋にいる顔の数 / baseCount … もとからある家具(左下の絵文字)の数。床の家具は、もとの家具と顔のあいだに入れる。
@@ -103411,7 +103570,16 @@ function MonsterHeroGame() {
     if (assistantLifeSettlingRef.current) return;
     assistantLifeSettlingRef.current = true;
     try {
-      if (runStageRef.current && isQuickMode(runMode) && !runResultFinishedRef.current) await handleGiveUp({ silent: true });
+      // 締める前の値(貯まりかけの分も含む)を取っておき、締めたあとに「裏クイック ◯周・ダイヤ+◯・経験値+◯」の小さな札で知らせる
+      //   (2026-11-08 社長: 止めた・閉じたときに結果の一言を出す。見た目だけで、報酬の計算には触らない)
+      const running = !!runStageRef.current && isQuickMode(runMode) && !runResultFinishedRef.current;
+      const before = running ? cardQuickRunView() : null;
+      if (running) await handleGiveUp({ silent: true });
+      // 同じ中身の札が続けて押し込まれても、growthFxPush の側で1枚にする(止めるの二度押し・止めたあとに閉じる。2026-11-08 ミハリ)
+      if (before) {
+        const loops = Math.max(0, Math.floor(Number(before.loops) || 0)), gold = Math.max(0, Math.floor(Number(before.gold) || 0)), xp = Math.max(0, Math.floor(Number(before.xp) || 0));
+        if (typeof growthFxPush === 'function') growthFxPush({ tier: 'small', kind: 'quick', key: `quick:${Date.now()}`, gain: 1, text: `${loops}周・ダイヤ+${gold.toLocaleString()}・経験値+${xp.toLocaleString()}` });
+      }
       if (runStageRef.current) {
         const stay = gameStateNowRef.current;
         returnToHome();
@@ -110094,11 +110262,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {/* AUTO∞の超省エネ中は、BATTLEから中間画面・CHAMPION・次周まで同じ暗さを保つ。 */}
       {/* モンビーを開いている間は外す。曲えらびや譜面まで暗いままだと遊べない
           (超省エネはバトルを見ないための暗幕なので、見る画面へ移ったら役目が終わる) */}
-      {ultraEcoSession&&!rhythmScreenOpen&&!cardScreenOpen&&<div data-ultra-eco-session-dimmer className="fixed inset-0 bg-black/55 pointer-events-none" style={{zIndex:2147483646}} aria-hidden="true"/>}
+      {ultraEcoSession&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&<div data-ultra-eco-session-dimmer className="fixed inset-0 bg-black/55 pointer-events-none" style={{zIndex:2147483646}} aria-hidden="true"/>}
       {/* 画面の揺れはアプリ全体にかかるので、モンビーを開いている間は掛けない。
           裏でバトルが進んでいるだけなのに、曲えらびや演奏の画面まで揺れてしまう
           (2026-09-06・ユーザー指摘「演出が残ってた（画面が揺れるなど）」) */}
-      <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView&&!rhythmScreenOpen&&!cardScreenOpen&&battleFxSettings.shake!=='OFF'?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
+      <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&battleFxSettings.shake!=='OFF'?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
 
         {/* MFバトルカードの予告の小窓(HOME の「近日公開」の札から。84 の CardBattleTeaser) */}
         {gameState==='HOME'&&cardTeaserOpen&&<CardBattleTeaser onClose={()=>setCardTeaserOpen(false)}/>}
@@ -116235,7 +116403,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       )}
 
       {/* GAME OVER */}
-      {hp<=0&&!debugBattle&&!rhythmScreenOpen&&!cardScreenOpen&&(
+      {hp<=0&&!debugBattle&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&(
         <GameOverScreen
           finalRewardSummary={finalRewardSummary} handleRetry={handleRetry}
           masuRegisterButtonNode={masuRegisterButtonNode} resultActionPending={resultActionPending}
@@ -116244,7 +116412,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         />
       )}
 
-      {gaveUp&&!debugBattle&&!rhythmScreenOpen&&!cardScreenOpen&&(
+      {gaveUp&&!debugBattle&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&(
         <GaveUpScreen
           finalRewardSummary={finalRewardSummary} handleRetry={handleRetry}
           masuRegisterButtonNode={masuRegisterButtonNode} resultActionPending={resultActionPending}
@@ -116274,7 +116442,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         ?<RaidJackIntro enabled={battleFxEffective.waveIntro!=='OFF'&&gameState==='BATTLE'&&!!enemy} enemyName={enemy?.name} title={battleModeInfo(runMode).short} tier={enemy?.raidJackPumpkin?1:(Number(String(enemy?.raidJackTier||'').slice(1))||1)} friendly={enemy?.raidJackPumpkin===true}/>
         :<WaveIntro enabled={battleFxEffective.waveIntro!=='OFF'&&gameState==='BATTLE'&&!!enemy} wave={wave} enemyName={enemy?.name} title={''}/>}
       <EnemyDefeatFx fx={gameState==='BATTLE'?defeatFx:null}/>
-      {effect&&!rhythmScreenOpen&&!cardScreenOpen&&(<div className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
+      {effect&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&(<div className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
         {effect.type==='unique'&&(
           <>
             <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 42%, rgba(168,85,247,0.5) 0%, rgba(99,102,241,0.35) 35%, rgba(0,0,0,0) 68%)', animation:'auraPulse 600ms ease-out infinite'}}></div>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 226f6c8d84f44c98
+// source-sha256: f046309d67f2d636
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -62316,13 +62316,21 @@ const GROWTH_FX_KINDS = Object.freeze({
     icon: '🛡️',
     particle: '◆',
     label: 'ブリーダーLv'
+  },
+  quick: {
+    color: '#e879f9',
+    deep: '#86198f',
+    icon: '⚡',
+    particle: '⚔',
+    label: '裏クイック'
   }
 });
 const growthFxKind = kind => GROWTH_FX_KINDS[kind] || GROWTH_FX_KINDS.bond;
 const GROWTH_FX_CALM_SCREENS = Object.freeze(new Set(['HOME', 'PROFILE', 'ITEM_INVENTORY', 'GIFT_BOX', 'MISSIONS', 'BREEDER_MARKET', 'MB_MANAGEMENT', 'MASU_MONS', 'OWNED_MONSTERS', 'MONSTER_DEX', 'MONSTER_DEX_DETAIL', 'MONSTER_LIST_MENU', 'FRIENDS', 'ASSISTANT_SELECT', 'MASU_ENHANCE', 'MASU_AUTO_ENHANCE', 'MASU_FUSION', 'MASU_DONATION', 'MASU_OFFERING', 'MASU_REBIRTH', 'MASU_REGENERATION', 'MASU_REGENERATION_DETAIL', 'MASU_REINCARNATE', 'MASU_SOUL_RANK', 'MASU_SOUL_TRAITS', 'MASU_TRANSCENDENCE', 'MASU_TRANSCEND_ENHANCE']));
 const GROWTH_FX_HOLD_ALL_SELECTOR = '[data-event-story],[data-story-stage],[data-story-sheet],[data-player-rank-up-fx]';
-const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat]';
+const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat],[data-life-quick-run="live"]';
 const GROWTH_FX_SMALL_MS = 1900;
+const GROWTH_FX_TEXT_MS = 3600;
 const GROWTH_FX_ITEM_MS = 3400;
 const GROWTH_FX_SMALL_MAX = 3;
 const GROWTH_FX_QUEUE_MAX = 24;
@@ -62359,6 +62367,7 @@ const growthFxPush = ev => {
     if (gain <= 0) return;
     const key = String(ev.key || `${ev.kind}:${ev.who || ''}`);
     const list = GROWTH_FX_STORE.small;
+    if (ev.text && list.some(c => c.kind === ev.kind && c.text === String(ev.text))) return;
     const same = list.find(c => c.key === key);
     if (same) {
       same.gain += gain;
@@ -62371,6 +62380,7 @@ const growthFxPush = ev => {
         key,
         kind: ev.kind,
         name: String(ev.name || ''),
+        text: String(ev.text || ''),
         gain,
         pctFrom: growthFxPct(ev.pctFrom),
         pctTo: growthFxPct(ev.pctTo)
@@ -62721,6 +62731,7 @@ const GROWTH_FX_CSS = `
 .mh-gfx-chip .ico{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--gc) 30%,transparent);font-size:13px;color:var(--gc)}
 .mh-gfx-chip .ico.beat{animation:mhGfxBeat .5s ease-out}
 .mh-gfx-chip .who{font-size:9px;color:#cbd5e1;line-height:1.1;max-width:9.5em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mh-gfx-chip .txt{font-size:11px;font-weight:800;color:#f8fafc;line-height:1.25;max-width:15em}.mh-gfx-chip .txt b{color:var(--gc);font-weight:900}
 .mh-gfx-chip .bar{width:56px;height:5px;border-radius:9px;background:#334155;overflow:hidden;margin-top:2px}
 .mh-gfx-chip .bar i{display:block;height:100%;background:var(--gc);transition:width .7s ease-out}
 .mh-gfx-chip .num{color:var(--gc);font-size:14px;font-variant-numeric:tabular-nums}
@@ -62928,14 +62939,28 @@ const GrowthFxChip = ({
   useEffect(() => {
     if (held) return undefined;
     setOut(false);
-    const t1 = setTimeout(() => setOut(true), GROWTH_FX_SMALL_MS);
-    const t2 = setTimeout(() => growthFxDropSmall(chip.id), GROWTH_FX_SMALL_MS + 320);
+    const ms = chip.text ? GROWTH_FX_TEXT_MS : GROWTH_FX_SMALL_MS;
+    const t1 = setTimeout(() => setOut(true), ms);
+    const t2 = setTimeout(() => growthFxDropSmall(chip.id), ms + 320);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
     };
   }, [chip.id, chip.rev, held]);
   const pts = level === 'full' ? [0, 1, 2, 3] : [];
+  if (chip.text) return React.createElement("div", {
+    className: `mh-gfx-chip text${out ? ' out' : ''}`,
+    "data-growth-fx-chip": chip.kind,
+    "data-growth-fx-chip-id": chip.id,
+    style: {
+      '--gc': k.color
+    }
+  }, React.createElement("span", {
+    className: "ico beat",
+    "aria-hidden": "true"
+  }, cardIconNode(k.icon, 13)), React.createElement("span", {
+    className: "txt"
+  }, React.createElement("b", null, k.label), " ", chip.text));
   return React.createElement("div", {
     className: `mh-gfx-chip${out ? ' out' : ''}`,
     "data-growth-fx-chip": chip.kind,
@@ -63266,6 +63291,10 @@ const growthFxChipSpotScore = (box, first = false) => {
   }
   const vw = window.innerWidth,
     vh = window.innerHeight;
+  if (r.left < 4 || r.top < -8 || r.right > vw - 4 || r.bottom > vh - 4) {
+    score += 5;
+    if (first) return score;
+  }
   const hit = e => Math.min(r.right, e.right) - Math.max(r.left, e.left) > 1 && Math.min(r.bottom, e.bottom) - Math.max(r.top, e.top) > 1;
   const seen = (el, e) => {
     const x0 = Math.max(r.left, e.left),
@@ -63333,9 +63362,10 @@ const GrowthFxChipsBox = ({
     const place = () => {
       const box = ref.current;
       if (!box) return;
+      const frameH = typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.active && RHYTHM_VIEW_ROTATION.active() ? window.innerWidth : window.innerHeight;
       const steps = [];
-      for (let y = window.innerHeight - 10 - box.offsetHeight; y >= 8; y -= 24) steps.push(Math.round(y));
-      const tops = [...new Set([...GROWTH_FX_CHIP_TOPS, Math.max(60, window.innerHeight - 120 - box.offsetHeight), ...steps])];
+      for (let y = frameH - 10 - box.offsetHeight; y >= 8; y -= 24) steps.push(Math.round(y));
+      const tops = [...new Set([...GROWTH_FX_CHIP_TOPS, Math.max(60, frameH - 120 - box.offsetHeight), ...steps])];
       const chipEls = box.querySelectorAll('.mh-gfx-chip');
       const more = Math.max(0, chipEls.length - 1);
       if (chipEls[0]) chipEls[0].setAttribute('data-more', more ? `ほか${more}` : '');
@@ -63460,7 +63490,7 @@ const GrowthFxLayer = ({
   return React.createElement(React.Fragment, null, !holdAll && !sheet && small.length > 0 && React.createElement(GrowthFxChipsBox, {
     level: level,
     count: Math.min(small.length, GROWTH_FX_SMALL_MAX)
-  }, small.slice(0, GROWTH_FX_SMALL_MAX).map(c => React.createElement(GrowthFxChip, {
+  }, [...small].sort((a, b) => (b.text ? 1 : 0) - (a.text ? 1 : 0)).slice(0, GROWTH_FX_SMALL_MAX).map(c => React.createElement(GrowthFxChip, {
     key: c.id,
     chip: c,
     level: level,
@@ -104643,7 +104673,7 @@ const assistantLifeTalkSet = () => {
 const assistantLifeQuarrelTalks = () => [...assistantLifeTalkSet().quarrel, ...(typeof assistantLifeRelQuarrelTalks === 'function' ? assistantLifeRelQuarrelTalks() : [])];
 const assistantLifeAlbumTalks = () => {
   const x = assistantLifeTalkSet();
-  return [...x.pair, ...x.anyTrio, ...x.trio, ...(typeof assistantLifeRelAlbumTalks === 'function' ? assistantLifeRelAlbumTalks() : [])];
+  return [...x.pair, ...x.anyTrio, ...x.trio, ...(typeof assistantLifeFurnAlbumTalks === 'function' ? assistantLifeFurnAlbumTalks() : []), ...(typeof assistantLifeRelAlbumTalks === 'function' ? assistantLifeRelAlbumTalks() : [])];
 };
 const assistantLifeFillHoles = (text, talk) => {
   const c = talk && talk.ctx || {};
@@ -105050,7 +105080,8 @@ const assistantLifeWatch = async (group, now = Date.now()) => {
   const life = ASSISTANT_LIFE_STORE.state.life;
   const key = assistantLifeGroupKey(group);
   if ((life.watched || []).includes(key) || assistantLifeWatchLeft(ASSISTANT_LIFE_STORE.state.play, day) <= 0) return null;
-  const talk = assistantLifePickGroupTalk(group, ASSISTANT_PEER_STORE.state, life) || assistantLifePickWatchTalk(group, ASSISTANT_PEER_STORE.state);
+  const furnVisit = group.place === 'home' && typeof assistantLifeFurnVisitOf === 'function' && typeof assistantLifeHostOf === 'function' ? assistantLifeFurnVisitOf(assistantLifeHostOf(group.ids), group.ids) : null;
+  const talk = furnVisit || assistantLifePickGroupTalk(group, ASSISTANT_PEER_STORE.state, life) || assistantLifePickWatchTalk(group, ASSISTANT_PEER_STORE.state);
   if (!talk) return null;
   const p = assistantLifePlayForDay(ASSISTANT_LIFE_STORE.state.play, day);
   ASSISTANT_LIFE_STORE.set({
@@ -107365,6 +107396,19 @@ const assistantLifeRoomsOf = (life, metIds) => {
           sleep: w.doing === 'sleep',
           bub: w.doing === 'sleep' ? ['💤 おやすみ中'] : lonely ? ['💭 だれか', '来ないかな…'] : ids.length > 1 ? ['部屋で', `${ids.length}人で`, doing.label] : ['部屋で', doing.label]
         };
+        if (w.doing !== 'sleep' && !lonely) {
+          const visit = ids.length > 1 && typeof assistantLifeFurnVisitOf === 'function' ? assistantLifeFurnVisitOf(host, ids) : null;
+          const use = ids.length === 1 && typeof assistantLifeFurnUseBub === 'function' ? assistantLifeFurnUseBub(host) : null;
+          if (visit) rooms[id] = {
+            ...rooms[id],
+            bub: assistantLifeFurnVisitBub(visit) || rooms[id].bub,
+            furnVisit: visit.id
+          };else if (use) rooms[id] = {
+            ...rooms[id],
+            bub: use.bub,
+            furnUse: use.key
+          };
+        }
       } else rooms[id] = {
         tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)]
       };
@@ -107725,60 +107769,231 @@ const assistantLifeStandBox = src => new Promise(res => {
   };
   im.src = src;
 });
-function AssistantLifeStand({
-  pid,
-  src,
-  cx,
-  fig,
-  sleep
+const ASSISTANT_LIFE_STAND_FACE = Object.freeze({
+  mua: {
+    top: 0.145,
+    eye: 0.3275,
+    chin: 0.425,
+    m: 0.724
+  },
+  kiki: {
+    top: 0.195,
+    eye: 0.46,
+    chin: 0.595,
+    m: 0.847
+  },
+  momosuke: {
+    top: 0.075,
+    eye: 0.3925,
+    chin: 0.535,
+    m: 1.022
+  },
+  dra: {
+    head: true,
+    top: 0.10,
+    eye: 0.46,
+    m: 2.017
+  },
+  atsu: {
+    top: 0.09,
+    eye: 0.31,
+    chin: 0.435,
+    m: 0.895
+  },
+  kyuko: {
+    top: 0.01,
+    eye: 0.40,
+    chin: 0.56,
+    m: 1.040,
+    fit: 0.95
+  },
+  sorashido: {
+    top: 0.015,
+    eye: 0.345,
+    chin: 0.55,
+    m: 1.248
+  },
+  erubin: {
+    top: 0.01,
+    eye: 0.2325,
+    chin: 0.46,
+    m: 1.224
+  }
+});
+const ASSISTANT_LIFE_STAND_EC = 0.1639;
+const ASSISTANT_LIFE_STAND_FACE_LEN = 2.63;
+const ASSISTANT_LIFE_STAND_CUT = Object.freeze({
+  above: 0.55,
+  below: 1.8,
+  fade: 0.45
+});
+const assistantLifeStandFace = (pid, src) => {
+  const who = typeof assistantById === 'function' ? assistantById(pid) : null;
+  const own = who && who.imagePrefix && String(src || '').includes(`/${who.imagePrefix}_`);
+  return own && ASSISTANT_LIFE_STAND_FACE[pid] || {
+    top: 0.05,
+    eye: 0.33,
+    chin: 0.47,
+    m: 1
+  };
+};
+const assistantLifeStandVisH = (face, F) => F / (ASSISTANT_LIFE_STAND_EC * (face && face.m || 1)) * (face && face.fit || 1);
+const assistantLifeStandRule = ({
+  face,
+  box,
+  F,
+  topY,
+  cx = 0
+}) => {
+  if (!face || !box || !(F > 0)) return null;
+  const vh = assistantLifeStandVisH(face, F),
+    ih = vh / (box.b - box.t),
+    iw = ih * box.ar;
+  const visTop = topY - (face.top || 0) * vh,
+    imgTop = visTop - box.t * ih;
+  const U = F * ASSISTANT_LIFE_STAND_FACE_LEN;
+  const frameTop = topY - ASSISTANT_LIFE_STAND_CUT.above * U,
+    frameBottom = topY + ASSISTANT_LIFE_STAND_CUT.below * U;
+  const clip = [Math.max(0, frameTop - imgTop), Math.max(0, imgTop + ih - frameBottom)];
+  const fade = face.head ? null : [Math.max(0, (frameBottom - ASSISTANT_LIFE_STAND_CUT.fade * U - imgTop) / ih), Math.min(1, (frameBottom - imgTop) / ih)];
+  return {
+    top: imgTop,
+    height: ih,
+    width: iw,
+    left: cx - (box.l + box.r) / 2 * iw,
+    clip,
+    fade,
+    frameTop,
+    frameBottom,
+    visTop,
+    visBottom: visTop + vh,
+    U
+  };
+};
+const assistantLifeStandLayout = (items, W, H) => {
+  const n = items.length;
+  if (!n || !W || !H || items.some(x => !x.box)) return null;
+  const sw = W * 0.92 / n;
+  const fh = H * {
+    1: 0.085,
+    2: 0.075,
+    3: 0.064,
+    4: 0.055
+  }[Math.min(4, n)];
+  const visH = (x, F) => assistantLifeStandVisH(x.face, F);
+  const visW = (x, F) => visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
+  let F = fh;
+  for (const x of items) {
+    const w1 = visW(x, 1);
+    if (w1 > 0) F = Math.min(F, sw * 1.08 / w1);
+  }
+  const eyeOff = items.reduce((a, x) => a + ((x.face.eye || 0.4) - (x.face.top || 0)) * visH(x, F), 0) / n;
+  const topY = H * (W > H ? 0.36 : 0.42) - eyeOff;
+  return items.map((x, i) => {
+    const cx = W * 0.04 + sw * (i + 0.5);
+    return {
+      ...assistantLifeStandRule({
+        face: x.face,
+        box: x.box,
+        F,
+        topY,
+        cx
+      }),
+      cx,
+      face: F
+    };
+  });
+};
+function AssistantLifeStands({
+  ids,
+  sleepIds = []
 }) {
-  const [box, setBox] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.get(src) || null);
+  const ref = React.useRef(null);
+  const [size, setSize] = React.useState({
+    w: 0,
+    h: 0
+  });
+  const srcs = ids.map(pid => {
+    const who = assistantById(pid);
+    return who ? assistantFullImage(who, sleepIds.includes(pid) ? 'normal' : 'happy') : null;
+  });
+  const [boxes, setBoxes] = React.useState(() => srcs.map(s => s ? ASSISTANT_LIFE_STAND_BOX.get(s) || null : null));
+  const key = srcs.join('|');
   React.useEffect(() => {
     let alive = true;
-    assistantLifeStandBox(src).then(b => {
-      if (alive) setBox(b);
+    Promise.all(srcs.map(s => s ? assistantLifeStandBox(s) : Promise.resolve(null))).then(b => {
+      if (alive) setBoxes(b);
     });
     return () => {
       alive = false;
     };
-  }, [src]);
-  const filter = sleep ? 'brightness(.45) saturate(.6) drop-shadow(0 6px 12px #0008)' : undefined;
-  if (!box) return React.createElement("img", {
-    className: "st",
-    "data-assistant-life-scene-stand": pid,
-    "data-assistant-life-scene-sleep": sleep ? '1' : '0',
-    src: src,
-    alt: "",
-    style: {
-      left: `${cx}%`,
-      transform: 'translateX(-50%)',
-      height: '58%',
-      width: '70%',
-      bottom: 'max(22%, 150px)',
-      opacity: 0,
-      filter
-    }
-  });
-  const span = Math.max(0.2, box.b - box.t);
-  const h = fig / span;
-  return React.createElement("img", {
-    className: "st",
-    "data-assistant-life-scene-stand": pid,
-    "data-assistant-life-scene-sleep": sleep ? '1' : '0',
-    "data-assistant-life-scene-fig": fig,
-    src: src,
-    alt: "",
-    style: {
-      left: `${cx}%`,
-      height: `${(h * 100).toFixed(2)}%`,
-      width: 'auto',
-      maxWidth: 'none',
-      bottom: `calc(max(22%, 150px) - ${((1 - box.b) * h * 100).toFixed(2)}%)`,
-      transform: `translateX(-${((box.l + box.r) / 2 * 100).toFixed(1)}%)`,
-      objectFit: 'fill',
-      filter
-    }
-  });
+  }, [key]);
+  React.useLayoutEffect(() => {
+    const el = ref.current && ref.current.parentElement;
+    if (!el) return undefined;
+    const f = () => setSize(prev => prev.w === el.clientWidth && prev.h === el.clientHeight ? prev : {
+      w: el.clientWidth,
+      h: el.clientHeight
+    });
+    f();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(f) : null;
+    if (ro) ro.observe(el);else window.addEventListener('resize', f);
+    return () => {
+      if (ro) ro.disconnect();else window.removeEventListener('resize', f);
+    };
+  }, []);
+  const items = ids.map((pid, i) => ({
+    pid,
+    src: srcs[i],
+    box: boxes[i],
+    face: assistantLifeStandFace(pid, srcs[i])
+  })).filter(x => x.src);
+  const lay = assistantLifeStandLayout(items, size.w, size.h);
+  return React.createElement(React.Fragment, null, React.createElement("span", {
+    ref: ref,
+    hidden: true
+  }), items.map((x, i) => {
+    const zz = sleepIds.includes(x.pid);
+    const filter = zz ? 'brightness(.45) saturate(.6) drop-shadow(0 6px 12px #0008)' : undefined;
+    const p = lay && lay[i];
+    return React.createElement(React.Fragment, {
+      key: x.pid
+    }, React.createElement("img", {
+      className: "st",
+      "data-assistant-life-scene-stand": x.pid,
+      "data-assistant-life-scene-sleep": zz ? '1' : '0',
+      src: x.src,
+      alt: "",
+      "data-assistant-life-scene-face": p ? Math.round(p.face) : '',
+      "data-assistant-life-scene-vis": p ? `${Math.round(p.visTop)},${Math.round(p.visBottom)}` : '',
+      style: p ? {
+        left: p.left,
+        top: p.top,
+        height: p.height,
+        width: p.width,
+        maxWidth: 'none',
+        bottom: 'auto',
+        objectFit: 'fill',
+        filter,
+        clipPath: `inset(${p.clip[0].toFixed(1)}px 0 ${p.clip[1].toFixed(1)}px 0)`,
+        ...(p.fade ? {
+          WebkitMaskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)`,
+          maskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)`
+        } : {})
+      } : {
+        opacity: 0,
+        height: '50%',
+        filter
+      }
+    }), zz && p && React.createElement("span", {
+      className: "absolute text-[34px]",
+      style: {
+        left: p.cx + 20,
+        top: Math.max(40, p.visTop)
+      },
+      "aria-hidden": "true"
+    }, "💤"));
+  }));
 }
 const assistantLifeSceneBg = (place, look) => {
   const v = ASSISTANT_LIFE_VIEW[look];
@@ -107884,28 +108099,9 @@ function AssistantLifeScene({
     style: {
       background: 'linear-gradient(180deg,transparent 45%,rgba(10,6,30,.7) 85%)'
     }
-  }), ids.map((pid, i) => {
-    const who = assistantById(pid);
-    if (!who) return null;
-    const n = ids.length;
-    const cx = n === 1 ? 50 : n === 2 ? i ? 66 : 34 : n === 3 ? [22, 50, 78][i] : [16, 38, 62, 84][i];
-    const zz = (scene.sleep || []).includes(pid);
-    return React.createElement(React.Fragment, {
-      key: pid
-    }, React.createElement(AssistantLifeStand, {
-      pid: pid,
-      src: assistantFullImage(who, zz ? 'normal' : 'happy'),
-      cx: cx,
-      fig: n >= 4 ? 0.28 : n === 3 ? 0.32 : n === 2 ? 0.36 : 0.4,
-      sleep: zz
-    }), zz && React.createElement("span", {
-      className: "absolute text-[34px]",
-      style: {
-        left: `${cx + 8}%`,
-        top: '30%'
-      },
-      "aria-hidden": "true"
-    }, "💤"));
+  }), React.createElement(AssistantLifeStands, {
+    ids: ids,
+    sleepIds: scene.sleep || []
   }), React.createElement("div", {
     className: "mhl-hdr absolute inset-x-0 top-0",
     style: {
@@ -123190,6 +123386,67 @@ const assistantLifeFurnMove = async (who, key, toPut) => {
   if (next) assistantLifeRoomSave(next);
   return !!next;
 };
+const ASSISTANT_LIFE_FURN_SHORT = Object.freeze({
+  sofa: 'ソファ',
+  bear: 'くま',
+  plant: '植物',
+  record: 'レコード',
+  nyacushion: 'クッション',
+  starpic: '星空の絵',
+  trophy: 'トロフィー',
+  bookshelf: '本棚',
+  heartmirror: '鏡',
+  lantern: 'ランタン',
+  mirrorball: 'ミラーボール',
+  windbell: '風鈴'
+});
+const assistantLifeFurnPlaced = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => Object.values(assistantLifeRoomOf(who, st).put).filter(Boolean);
+const assistantLifeBubSplit = text => {
+  const t = String(text || '');
+  if (t.length <= 8) return [t];
+  let best = -1;
+  for (let i = 2; i < t.length - 1; i++) if ('でをにのがと、'.includes(t[i - 1]) && (best < 0 || Math.abs(i - t.length / 2) < Math.abs(best - t.length / 2))) best = i;
+  const at = best > 0 ? best : Math.ceil(t.length / 2);
+  return [t.slice(0, at), t.slice(at)];
+};
+const assistantLifeFurnUseBub = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  if (!assistantLifeFurnEnabled()) return null;
+  const lines = typeof ASSISTANT_LIFE_FURNUSE_LINES !== 'undefined' ? ASSISTANT_LIFE_FURNUSE_LINES[who] : null;
+  if (!lines) return null;
+  const key = assistantLifeFurnPlaced(who, st).find(k => lines[k] && assistantLifeFurnLike(who, k) === 'like');
+  if (!key) return null;
+  const f = assistantLifeFurnOf(key);
+  const [a, b] = assistantLifeBubSplit(lines[key]);
+  return {
+    key,
+    bub: [`${f ? f.emoji : ''} ${a}`, ...(b ? [b] : [])]
+  };
+};
+const assistantLifeFurnVisitOf = (host, ids, st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  if (!assistantLifeFurnEnabled() || !Array.isArray(ids) || ids.length < 2) return null;
+  const all = typeof ASSISTANT_LIFE_VISITFURN_LINES !== 'undefined' && Array.isArray(ASSISTANT_LIFE_VISITFURN_LINES) ? ASSISTANT_LIFE_VISITFURN_LINES : [];
+  const placed = assistantLifeFurnPlaced(host, st);
+  const v = all.find(x => x.host === host && x.guest !== host && ids.includes(x.guest) && placed.includes(x.item));
+  return v ? assistantLifeFurnVisitTalk(v) : null;
+};
+const assistantLifeFurnVisitTalk = v => ({
+  id: `visitfurn-${v.guest}-${v.host}-${v.item}`,
+  pair: [v.guest, v.host],
+  lv: 1,
+  scene: 'any',
+  furnVisit: v.item,
+  lines: v.lines.map(x => ({
+    who: x.who,
+    e: x.e || 'happy',
+    t: x.t
+  }))
+});
+const assistantLifeFurnVisitBub = talk => {
+  const k = talk && talk.furnVisit,
+    f = k && assistantLifeFurnOf(k);
+  return f ? [`${f.emoji} ${ASSISTANT_LIFE_FURN_SHORT[k] || f.name}の話を`, 'してる'] : null;
+};
+const assistantLifeFurnAlbumTalks = () => assistantLifeFurnEnabled() && typeof ASSISTANT_LIFE_VISITFURN_LINES !== 'undefined' && Array.isArray(ASSISTANT_LIFE_VISITFURN_LINES) ? ASSISTANT_LIFE_VISITFURN_LINES.map(assistantLifeFurnVisitTalk) : [];
 function AssistantLifeRoomFurn({
   id,
   w,
@@ -184261,9 +184518,23 @@ function MonsterHeroGame() {
     if (assistantLifeSettlingRef.current) return;
     assistantLifeSettlingRef.current = true;
     try {
-      if (runStageRef.current && isQuickMode(runMode) && !runResultFinishedRef.current) await handleGiveUp({
+      const running = !!runStageRef.current && isQuickMode(runMode) && !runResultFinishedRef.current;
+      const before = running ? cardQuickRunView() : null;
+      if (running) await handleGiveUp({
         silent: true
       });
+      if (before) {
+        const loops = Math.max(0, Math.floor(Number(before.loops) || 0)),
+          gold = Math.max(0, Math.floor(Number(before.gold) || 0)),
+          xp = Math.max(0, Math.floor(Number(before.xp) || 0));
+        if (typeof growthFxPush === 'function') growthFxPush({
+          tier: 'small',
+          kind: 'quick',
+          key: `quick:${Date.now()}`,
+          gain: 1,
+          text: `${loops}周・ダイヤ+${gold.toLocaleString()}・経験値+${xp.toLocaleString()}`
+        });
+      }
       if (runStageRef.current) {
         const stay = gameStateNowRef.current;
         returnToHome();
@@ -193483,7 +193754,7 @@ function MonsterHeroGame() {
       value: track.id
     }, track.name)))), React.createElement("p", {
       className: "mt-2 text-[10px] leading-relaxed text-slate-400"
-    }, "BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。"))), ultraEcoSession && !rhythmScreenOpen && !cardScreenOpen && React.createElement("div", {
+    }, "BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。"))), ultraEcoSession && !rhythmScreenOpen && !cardScreenOpen && !assistantLifeScreenOpen && React.createElement("div", {
       "data-ultra-eco-session-dimmer": true,
       className: "fixed inset-0 bg-black/55 pointer-events-none",
       style: {
@@ -193492,7 +193763,7 @@ function MonsterHeroGame() {
       "aria-hidden": "true"
     }), React.createElement("div", {
       className: "relative z-10 h-full flex flex-col",
-      style: screenShake && !ecoBattleView && !rhythmScreenOpen && !cardScreenOpen && battleFxSettings.shake !== 'OFF' ? {
+      style: screenShake && !ecoBattleView && !rhythmScreenOpen && !cardScreenOpen && !assistantLifeScreenOpen && battleFxSettings.shake !== 'OFF' ? {
         animation: bigShake ? 'mooQuake 750ms ease-in-out' : 'screenShake 450ms ease-in-out'
       } : undefined
     }, gameState === 'HOME' && cardTeaserOpen && React.createElement(CardBattleTeaser, {
@@ -206851,7 +207122,7 @@ function MonsterHeroGame() {
       speciesChallengeFromDebugRef: speciesChallengeFromDebugRef,
       speciesChallengeSaveRunRef: speciesChallengeSaveRunRef,
       speciesChallengeBattleRunRef: speciesChallengeBattleRunRef
-    }), hp <= 0 && !debugBattle && !rhythmScreenOpen && !cardScreenOpen && React.createElement(GameOverScreen, {
+    }), hp <= 0 && !debugBattle && !rhythmScreenOpen && !cardScreenOpen && !assistantLifeScreenOpen && React.createElement(GameOverScreen, {
       finalRewardSummary: finalRewardSummary,
       handleRetry: handleRetry,
       masuRegisterButtonNode: masuRegisterButtonNode,
@@ -206861,7 +207132,7 @@ function MonsterHeroGame() {
       runMode: runMode,
       runResultActionOnce: runResultActionOnce,
       score: score
-    }), gaveUp && !debugBattle && !rhythmScreenOpen && !cardScreenOpen && React.createElement(GaveUpScreen, {
+    }), gaveUp && !debugBattle && !rhythmScreenOpen && !cardScreenOpen && !assistantLifeScreenOpen && React.createElement(GaveUpScreen, {
       finalRewardSummary: finalRewardSummary,
       handleRetry: handleRetry,
       masuRegisterButtonNode: masuRegisterButtonNode,
@@ -206906,7 +207177,7 @@ function MonsterHeroGame() {
       title: ''
     }), React.createElement(EnemyDefeatFx, {
       fx: gameState === 'BATTLE' ? defeatFx : null
-    }), effect && !rhythmScreenOpen && !cardScreenOpen && React.createElement("div", {
+    }), effect && !rhythmScreenOpen && !cardScreenOpen && !assistantLifeScreenOpen && React.createElement("div", {
       className: "fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden",
       style: {
         position: 'fixed',
