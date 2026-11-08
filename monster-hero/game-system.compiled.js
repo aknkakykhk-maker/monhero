@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b8ec886560a9c4c9
+// source-sha256: 3f2a53e93ca92d78
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13743,6 +13743,7 @@ const RELEASE_FLAGS = {
   assistantErubin: true,
   cardBattle: true,
   cardAssistantTalk: true,
+  missionDailyLine: true,
   cardGrowStyle: false,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   tacticsHate: true,
@@ -14087,7 +14088,8 @@ const GIFT_REWARD_LABELS = {
   skipTicketJo: 'スキップチケット・序',
   skipTicketHa: 'スキップチケット・破',
   skipTicketKyu: 'スキップチケット・急',
-  beatPoint: 'ビートP'
+  beatPoint: 'ビートP',
+  cardPackTicket: 'カードパック券'
 };
 const LOGIN_BONUS_DEFAULT = {
   currentDay: 1,
@@ -14807,7 +14809,8 @@ const buildGiftClaim = (gift, balances, now = Date.now()) => {
       ...(balances?.ownedItems || {})
     },
     ownedProfileFrames: Array.isArray(balances?.ownedProfileFrames) ? [...balances.ownedProfileFrames] : [],
-    beatPoints: Math.max(0, Math.floor(Number(balances?.beatPoints)) || 0)
+    beatPoints: Math.max(0, Math.floor(Number(balances?.beatPoints)) || 0),
+    cardPackTickets: Math.max(0, Math.floor(Number(balances?.cardPackTickets)) || 0)
   };
   const itemIds = {
     dyeMock: 'dye_mock',
@@ -14831,7 +14834,7 @@ const buildGiftClaim = (gift, balances, now = Date.now()) => {
       if (!next.ownedProfileFrames.includes(frameId)) next.ownedProfileFrames.push(frameId);
       return;
     }
-    if (type === 'diamond') next.gold += amount;else if (type === 'breederPoint') next.breederPoints += amount;else if (type === 'breederXp') next.breederXp += amount;else if (type === 'beatPoint') next.beatPoints += amount;else {
+    if (type === 'diamond') next.gold += amount;else if (type === 'breederPoint') next.breederPoints += amount;else if (type === 'breederXp') next.breederXp += amount;else if (type === 'beatPoint') next.beatPoints += amount;else if (type === 'cardPackTicket') next.cardPackTickets += amount;else {
       const id = type === GIFT_ITEM_REWARD_TYPE ? itemId : itemIds[type];
       next.ownedItems[id] = (next.ownedItems[id] || 0) + amount;
     }
@@ -15034,11 +15037,18 @@ const missionWeeklyPeriod = (now = Date.now()) => {
 const missionMonthlyPeriod = (now = Date.now()) => new Date(Number(now) + 5 * 60 * 60 * 1000).toISOString().slice(0, 7);
 const MISSION_WEEK_ROTATION_EPOCH = '2026-08-24';
 const missionPeriodWeekday = (now = Date.now()) => new Date(`${missionDailyPeriod(now)}T00:00:00Z`).getUTCDay();
-const missionWeekRotationIndex = (now = Date.now()) => {
+const missionWeekRotationIndex = (now = Date.now(), n = MISSION_WEEKLY_ROTATION_COUNT) => {
   const periodMs = Date.parse(`${missionWeeklyPeriod(now)}T00:00:00Z`),
     epochMs = Date.parse(`${MISSION_WEEK_ROTATION_EPOCH}T00:00:00Z`);
   const index = Math.floor((periodMs - epochMs) / (7 * 24 * 60 * 60 * 1000));
-  return (index % 4 + 4) % 4;
+  return (index % n + n) % n;
+};
+const MISSION_MONTH_ROTATION_EPOCH = '2026-11';
+const missionMonthRotationIndex = (now = Date.now(), n = 12) => {
+  const [y, m] = missionMonthlyPeriod(now).split('-').map(Number),
+    [ey, em] = MISSION_MONTH_ROTATION_EPOCH.split('-').map(Number);
+  const index = (y - ey) * 12 + (m - em);
+  return (index % n + n) % n;
 };
 const MISSION_BATTLE_BOTH = '（クラシック・タクティクスどちらでも）';
 const missionItemReward = (itemId, amount) => ({
@@ -15046,52 +15056,82 @@ const missionItemReward = (itemId, amount) => ({
   itemId,
   amount
 });
+const MISSION_TAG_ANY = '⚔️🎵🃏',
+  MISSION_TAG_BATTLE = '⚔️',
+  MISSION_TAG_BEAT = '🎵 または ⚔️',
+  MISSION_TAG_CARD = '🃏 または ⚔️',
+  MISSION_TAG_ASSIST = '🏡',
+  MISSION_TAG_FRIEND = '🤝';
+const MISSION_DAILY_ASSIST_ITEMS = Object.freeze(['peer_tea', 'peer_onigiri', 'peer_tea', 'peer_flower', 'peer_cake', 'peer_gift', 'peer_onigiri']);
+const MISSION_WEEKLY_ASSIST_ITEMS = Object.freeze(['peer_cake', 'peer_puzzle', 'peer_earphone', 'peer_cheki', 'peer_sleeve']);
+const MISSION_MONTHLY_FURNITURE = Object.freeze(['furn_sofa', 'furn_bear', 'furn_plant', 'furn_record', 'furn_nyacushion', 'furn_starpic', 'furn_trophy', 'furn_bookshelf', 'furn_heartmirror', 'furn_lantern', 'furn_mirrorball', 'furn_windbell']);
 const DAILY_ROTATION_MISSIONS = Object.freeze({
   1: {
     id: 'daily_rotation',
     name: '本日のミッション',
-    condition: 'クイックモードを1回クリアする',
-    key: 'quickClears',
+    tag: MISSION_TAG_BEAT,
+    condition: 'モンヒロビートを1曲クリアする(またはバトルを1回クリア)',
+    key: 'beatClears',
+    alt: {
+      key: 'battleClears',
+      target: 1
+    },
     target: 1,
     rewards: [{
-      type: 'diamond',
-      amount: 300
+      type: 'beatPoint',
+      amount: 150
     }]
   },
   2: {
     id: 'daily_rotation',
     name: '本日のミッション',
-    condition: 'アイテムを1個使う',
-    key: 'itemUses',
+    tag: MISSION_TAG_CARD,
+    condition: 'MFバトルカードで1回勝つ(またはバトルを1回クリア)',
+    key: 'cardWins',
+    alt: {
+      key: 'battleClears',
+      target: 1
+    },
     target: 1,
     rewards: [{
-      type: 'trainingTicket',
-      amount: 3
+      type: 'cardPackTicket',
+      amount: 1
     }]
   },
   3: {
     id: 'daily_rotation',
     name: '本日のミッション',
-    condition: `プロモードを1回クリアする${MISSION_BATTLE_BOTH}`,
-    key: 'proClears',
+    tag: MISSION_TAG_BATTLE,
+    condition: 'クイックモードを1回クリアする',
+    key: 'quickClears',
     target: 1,
     rewards: [{
-      type: 'trainingTicketLarge',
-      amount: 1
+      type: 'diamond',
+      amount: 3000
     }]
   },
   4: {
     id: 'daily_rotation',
     name: '本日のミッション',
+    tag: MISSION_TAG_BATTLE,
+    condition: `プロモードを1回クリアする${MISSION_BATTLE_BOTH}`,
+    key: 'proClears',
+    target: 1,
+    rewards: [missionItemReward('hero_proof_shard', 2)]
+  },
+  5: {
+    id: 'daily_rotation',
+    name: '本日のミッション',
+    tag: MISSION_TAG_BATTLE,
     condition: `種族チャレンジを1回クリアする${MISSION_BATTLE_BOTH}`,
     key: 'speciesClears',
     target: 1,
     rewards: [{
       type: 'rainbowPsyche',
-      amount: 5
+      amount: 15
     }]
   },
-  5: {
+  6: {
     id: 'daily_rotation',
     name: '本日のミッション',
     condition: 'アイテムを1個使う',
@@ -15099,32 +15139,27 @@ const DAILY_ROTATION_MISSIONS = Object.freeze({
     target: 1,
     rewards: [{
       type: 'dyeMock',
-      amount: 1
+      amount: 2
     }]
-  },
-  6: {
-    id: 'daily_rotation',
-    name: '本日のミッション',
-    condition: `プロモードを1回クリアする${MISSION_BATTLE_BOTH}`,
-    key: 'proClears',
-    target: 1,
-    rewards: [missionItemReward('hero_proof_shard', 1)]
   },
   0: {
     id: 'daily_rotation',
     name: '本日のミッション',
-    condition: 'クイックモードを1回クリアする',
-    key: 'quickClears',
+    tag: MISSION_TAG_FRIEND,
+    condition: 'フレンドの家へ行く(または助手と1回ふれあう)',
+    key: 'friendVisits',
+    alt: {
+      key: 'assistantTouches',
+      target: 1
+    },
     target: 1,
-    rewards: [{
-      type: 'trainingTicketLarge',
-      amount: 1
-    }]
+    rewards: [missionItemReward('session_ticket', 1)]
   }
 });
 const WEEKLY_ROTATION_MISSIONS = Object.freeze([{
   id: 'weekly_rotation',
   name: '今週のミッション',
+  tag: MISSION_TAG_BATTLE,
   condition: `プロモードを3回クリアする${MISSION_BATTLE_BOTH}`,
   key: 'proClears',
   target: 3,
@@ -15132,6 +15167,7 @@ const WEEKLY_ROTATION_MISSIONS = Object.freeze([{
 }, {
   id: 'weekly_rotation',
   name: '今週のミッション',
+  tag: MISSION_TAG_BATTLE,
   condition: '極限チャレンジを1回クリアする（未解放ならクイックモードを10回クリア）',
   key: 'extremeOrQuick',
   target: 1,
@@ -15140,8 +15176,19 @@ const WEEKLY_ROTATION_MISSIONS = Object.freeze([{
     amount: 30
   }]
 }, {
+  id: 'weekly_market',
+  name: '今週のミッション',
+  condition: 'マーケットで3回買う',
+  key: 'marketTrades',
+  target: 3,
+  rewards: [{
+    type: 'dyeMock',
+    amount: 2
+  }]
+}, {
   id: 'weekly_rotation',
   name: '今週のミッション',
+  tag: MISSION_TAG_BATTLE,
   condition: `種族チャレンジを3回クリアする${MISSION_BATTLE_BOTH}`,
   key: 'speciesClears',
   target: 3,
@@ -15152,6 +15199,14 @@ const WEEKLY_ROTATION_MISSIONS = Object.freeze([{
 }, {
   id: 'weekly_rotation',
   name: '今週のミッション',
+  tag: MISSION_TAG_FRIEND,
+  condition: 'フレンドの家へ3回行く',
+  key: 'friendVisits',
+  target: 3,
+  rewards: [missionItemReward('peer_token', 1)]
+}, {
+  id: 'weekly_rotation',
+  name: '今週のミッション',
   condition: 'アイテムを10個使う',
   key: 'itemUses',
   target: 10,
@@ -15159,8 +15214,105 @@ const WEEKLY_ROTATION_MISSIONS = Object.freeze([{
     type: 'bondPointReset',
     amount: 1
   }]
+}, {
+  id: 'weekly_daily_claims',
+  name: '今週のミッション',
+  condition: 'アイテムを5個使う',
+  key: 'itemUses',
+  target: 5,
+  rewards: [{
+    type: 'uniqueSkillResetTicket',
+    amount: 1
+  }]
 }]);
-const missionDailyDefinitions = (now = Date.now()) => [{
+const MISSION_WEEKLY_ROTATION_COUNT = WEEKLY_ROTATION_MISSIONS.length;
+const MISSION_SWITCH_KEPT = Object.freeze({
+  weekly: Object.freeze([{
+    id: 'weekly_market',
+    name: 'マーケット常連',
+    condition: 'マーケットで3回買う',
+    key: 'marketTrades',
+    target: 3,
+    rewards: [{
+      type: 'dyeMock',
+      amount: 2
+    }]
+  }, {
+    id: 'weekly_daily_claims',
+    name: 'アイテム活用',
+    condition: 'アイテムを5個使う',
+    key: 'itemUses',
+    target: 5,
+    rewards: [{
+      type: 'uniqueSkillResetTicket',
+      amount: 1
+    }]
+  }]),
+  monthly: Object.freeze([{
+    id: 'monthly_market',
+    name: 'マーケット月間',
+    condition: 'マーケットで10回買い物する',
+    key: 'marketTrades',
+    target: 10,
+    rewards: [{
+      type: 'dyeMock',
+      amount: 5
+    }]
+  }, {
+    id: 'monthly_mode_runs',
+    name: 'モードプレイヤー',
+    condition: 'どのモードでも合わせて30回遊ぶ',
+    key: 'modeRuns',
+    target: 30,
+    rewards: [{
+      type: 'bondPointReset',
+      amount: 2
+    }]
+  }])
+});
+const MISSION_SWITCH_OLD_COMPLETE = Object.freeze({
+  daily: 4,
+  weekly: 6,
+  monthly: 8
+});
+const MISSION_RENEW_KEY = 'mh_mission_renew_v1';
+let missionRenewMark = null;
+const normalizeMissionRenewMark = v => v && typeof v === 'object' && !Array.isArray(v) && typeof v.daily === 'string' && typeof v.weekly === 'string' && typeof v.monthly === 'string' ? {
+  at: Number.isFinite(Number(v.at)) ? Number(v.at) : 0,
+  daily: v.daily,
+  weekly: v.weekly,
+  monthly: v.monthly
+} : null;
+const missionRenewMarkAt = (now = Date.now()) => ({
+  at: Number(now),
+  daily: missionDailyPeriod(now),
+  weekly: missionWeeklyPeriod(now),
+  monthly: missionMonthlyPeriod(now)
+});
+const setMissionRenewMark = v => {
+  missionRenewMark = normalizeMissionRenewMark(v);
+  return missionRenewMark;
+};
+const missionPeriodOf = (type, now = Date.now()) => type === 'daily' ? missionDailyPeriod(now) : type === 'weekly' ? missionWeeklyPeriod(now) : missionMonthlyPeriod(now);
+const missionInSwitch = (type, now = Date.now(), mark = missionRenewMark) => !!mark && mark[type] === missionPeriodOf(type, now);
+const missionWithComplete = (type, normal, complete, now) => {
+  const inSwitch = missionInSwitch(type, now);
+  const list = [...normal];
+  if (inSwitch) (MISSION_SWITCH_KEPT[type] || []).forEach(m => {
+    if (!list.some(x => x.id === m.id)) list.push({
+      ...m
+    });
+  });
+  const target = inSwitch ? Math.min(complete.target, MISSION_SWITCH_OLD_COMPLETE[type]) : complete.target;
+  const label = type === 'daily' ? 'デイリー' : type === 'weekly' ? 'ウィークリー' : 'マンスリー';
+  const when = type === 'daily' ? '日' : type === 'weekly' ? '週' : '月';
+  return [...list, {
+    ...complete,
+    target,
+    condition: `通常${label}${list.length}個のうち${target}個を達成する${inSwitch ? `(切り替えの${when}だけ)` : ''}`
+  }];
+};
+const missionDailyDefinitions = (now = Date.now()) => missionWithComplete('daily', [{
   id: 'daily_login',
   name: '今日もMonster Hero！',
   condition: 'その期間中にログインする',
@@ -15168,27 +15320,29 @@ const missionDailyDefinitions = (now = Date.now()) => [{
   target: 1,
   rewards: [{
     type: 'diamond',
-    amount: 200
+    amount: 2000
   }]
 }, {
   id: 'daily_battles',
-  name: 'バトルに挑戦',
-  condition: 'バトルを3回遊ぶ',
-  key: 'battles',
+  name: '好きな遊びを3回',
+  tag: MISSION_TAG_ANY,
+  condition: 'バトル・モンヒロビート1曲・カード1戦のどれでも',
+  key: 'anyPlays',
   target: 3,
   rewards: [{
-    type: 'trainingTicket',
-    amount: 3
+    type: 'beatPoint',
+    amount: 50
   }]
 }, {
   id: 'daily_wins',
   name: 'デイリーチャレンジ',
+  tag: MISSION_TAG_BATTLE,
   condition: `チャレンジモードを1回クリアする${MISSION_BATTLE_BOTH}`,
   key: 'challengeClears',
   target: 1,
   rewards: [{
     type: 'rainbowPsyche',
-    amount: 5
+    amount: 10
   }]
 }, {
   id: 'daily_enhance',
@@ -15198,30 +15352,36 @@ const missionDailyDefinitions = (now = Date.now()) => [{
   target: 1,
   rewards: [{
     type: 'diamond',
-    amount: 300
+    amount: 3000
   }]
 }, {
-  ...DAILY_ROTATION_MISSIONS[missionPeriodWeekday(now)]
+  id: 'daily_assistant',
+  name: '助手とふれあう',
+  tag: MISSION_TAG_ASSIST,
+  condition: '助手と1回ふれあう(助手ライフで誘う・会う・渡す/おしゃべり/フレンドの家 のどれか)',
+  key: 'assistantTouches',
+  target: 1,
+  rewards: [missionItemReward(MISSION_DAILY_ASSIST_ITEMS[missionPeriodWeekday(now)], 1)]
 }, {
+  ...DAILY_ROTATION_MISSIONS[missionPeriodWeekday(now)]
+}], {
   id: 'daily_complete',
   name: 'デイリーコンプリート',
-  condition: '通常デイリー5個のうち4個を達成する',
   key: 'complete',
-  target: 4,
+  target: 5,
   rewards: [{
     type: 'diamond',
-    amount: 500
+    amount: 5000
+  }, {
+    type: 'beatPoint',
+    amount: 100
   }, {
     type: 'skipTicketHa',
     amount: 1
-  }, {
-    type: 'gameItem',
-    itemId: 'session_ticket',
-    amount: 1
-  }],
+  }, missionItemReward('session_ticket', 1)],
   complete: true
-}];
-const missionWeeklyDefinitions = (now = Date.now()) => [{
+}, now);
+const missionWeeklyDefinitions = (now = Date.now()) => missionWithComplete('weekly', [{
   id: 'weekly_logins',
   name: '継続は力なり',
   condition: '5日ログインする(同じ日は1回)',
@@ -15229,17 +15389,21 @@ const missionWeeklyDefinitions = (now = Date.now()) => [{
   target: 5,
   rewards: [{
     type: 'diamond',
-    amount: 1000
+    amount: 10000
   }]
 }, {
   id: 'weekly_battles',
-  name: 'バトル週間',
-  condition: 'バトルを20回遊ぶ',
-  key: 'battles',
+  name: '好きな遊び週間',
+  tag: MISSION_TAG_ANY,
+  condition: '好きな遊びを20回(バトル・モンヒロビート1曲・カード1戦のどれでも)',
+  key: 'anyPlays',
   target: 20,
   rewards: [{
     type: 'diamond',
-    amount: 1000
+    amount: 10000
+  }, {
+    type: 'beatPoint',
+    amount: 500
   }]
 }, {
   id: 'weekly_enhance',
@@ -15249,73 +15413,88 @@ const missionWeeklyDefinitions = (now = Date.now()) => [{
   target: 10,
   rewards: [{
     type: 'trainingTicketLarge',
-    amount: 2
+    amount: 3
   }]
 }, {
   id: 'weekly_wins',
   name: 'クイック育成',
+  tag: MISSION_TAG_BATTLE,
   condition: 'クイックモードを5回クリアする',
   key: 'quickClears',
   target: 5,
   rewards: [{
     type: 'rainbowPsyche',
-    amount: 20
+    amount: 50
   }]
 }, {
   id: 'weekly_donations',
   name: 'チャレンジャー',
+  tag: MISSION_TAG_BATTLE,
   condition: `チャレンジモードを3回クリアする${MISSION_BATTLE_BOTH}`,
   key: 'challengeClears',
   target: 3,
+  rewards: [missionItemReward('hero_proof_shard', 3)]
+}, {
+  id: 'weekly_beat',
+  name: 'モンヒロビート週間',
+  tag: MISSION_TAG_BEAT,
+  condition: 'モンヒロビートを10曲遊ぶ(またはバトルを10回)',
+  key: 'beatPlays',
+  alt: {
+    key: 'battles',
+    target: 10
+  },
+  target: 10,
   rewards: [{
-    type: 'breederXp',
-    amount: 300
+    type: 'beatPoint',
+    amount: 500
   }]
 }, {
-  id: 'weekly_market',
-  name: 'マーケット常連',
-  condition: 'マーケットで3回買う',
-  key: 'marketTrades',
-  target: 3,
+  id: 'weekly_card',
+  name: 'カード週間',
+  tag: MISSION_TAG_CARD,
+  condition: 'MFバトルカードで5回勝つ(またはバトルで10回勝つ)',
+  key: 'cardWins',
+  alt: {
+    key: 'wins',
+    target: 10
+  },
+  target: 5,
   rewards: [{
-    type: 'dyeMock',
+    type: 'cardPackTicket',
     amount: 2
   }]
 }, {
-  id: 'weekly_daily_claims',
-  name: 'アイテム活用',
-  condition: 'アイテムを5個使う',
-  key: 'itemUses',
+  id: 'weekly_assistant',
+  name: 'ふれあい週間',
+  tag: MISSION_TAG_ASSIST,
+  condition: '助手と5日ふれあう(同じ日は1回)',
+  key: 'assistantDays',
   target: 5,
-  rewards: [{
-    type: 'uniqueSkillResetTicket',
-    amount: 1
-  }]
+  rewards: [missionItemReward(MISSION_WEEKLY_ASSIST_ITEMS[missionWeekRotationIndex(now, MISSION_WEEKLY_ASSIST_ITEMS.length)], 1)]
 }, {
   ...WEEKLY_ROTATION_MISSIONS[missionWeekRotationIndex(now)]
-}, {
+}], {
   id: 'weekly_complete',
   name: 'ウィークリーコンプリート',
-  condition: '通常ウィークリー8個のうち6個を達成する',
   key: 'complete',
-  target: 6,
+  target: 7,
   rewards: [{
     type: 'diamond',
-    amount: 3000
+    amount: 30000
   }, {
-    type: 'skipTicketKyu',
-    amount: 1
+    type: 'beatPoint',
+    amount: 1000
   }, {
     type: 'rainbowPsyche',
-    amount: 30
+    amount: 50
   }, missionItemReward('hero_proof_shard', 5), {
-    type: 'gameItem',
-    itemId: 'session_ticket',
-    amount: 3
-  }],
+    type: 'skipTicketKyu',
+    amount: 1
+  }, missionItemReward('session_ticket', 3)],
   complete: true
-}];
-const missionMonthlyDefinitions = () => [{
+}, now);
+const missionMonthlyDefinitions = (now = Date.now()) => missionWithComplete('monthly', [{
   id: 'monthly_logins',
   name: '月間ログイン',
   condition: '20日ログインする(同じ日は1回)',
@@ -15323,27 +15502,29 @@ const missionMonthlyDefinitions = () => [{
   target: 20,
   rewards: [{
     type: 'diamond',
-    amount: 5000
+    amount: 50000
   }]
 }, {
   id: 'monthly_battles',
-  name: '月間バトル',
-  condition: 'バトルを100回遊ぶ',
-  key: 'battles',
+  name: '月間プレイ',
+  tag: MISSION_TAG_ANY,
+  condition: '好きな遊びを100回(バトル・モンヒロビート1曲・カード1戦のどれでも)',
+  key: 'anyPlays',
   target: 100,
   rewards: [{
     type: 'rainbowPsyche',
-    amount: 50
+    amount: 100
   }]
 }, {
   id: 'monthly_wins',
   name: '月間勝利',
-  condition: 'バトルで200回勝つ',
-  key: 'wins',
+  tag: MISSION_TAG_ANY,
+  condition: '好きな遊びで200回勝つ(バトル・カードの勝ち・モンヒロビートのクリア)',
+  key: 'anyWins',
   target: 200,
   rewards: [{
     type: 'trainingTicketLarge',
-    amount: 5
+    amount: 10
   }]
 }, {
   id: 'monthly_daily_completes',
@@ -15353,7 +15534,7 @@ const missionMonthlyDefinitions = () => [{
   target: 20,
   rewards: [{
     type: 'diamond',
-    amount: 5000
+    amount: 50000
   }]
 }, {
   id: 'monthly_weekly_completes',
@@ -15363,11 +15544,12 @@ const missionMonthlyDefinitions = () => [{
   target: 3,
   rewards: [{
     type: 'rainbowPsyche',
-    amount: 100
+    amount: 200
   }]
 }, {
   id: 'monthly_quick_runs',
   name: 'クイック月間',
+  tag: MISSION_TAG_BATTLE,
   condition: 'クイックモードを20回遊ぶ',
   key: 'quickRuns',
   target: 20,
@@ -15378,16 +15560,18 @@ const missionMonthlyDefinitions = () => [{
 }, {
   id: 'monthly_challenge_runs',
   name: 'チャレンジ月間',
+  tag: MISSION_TAG_BATTLE,
   condition: `チャレンジモードを10回プレイする${MISSION_BATTLE_BOTH}`,
   key: 'challengeRuns',
   target: 10,
   rewards: [{
     type: 'rainbowPsyche',
-    amount: 50
+    amount: 100
   }]
 }, {
   id: 'monthly_pro_clears',
   name: 'プロ月間',
+  tag: MISSION_TAG_BATTLE,
   condition: `プロモードを10回クリアする${MISSION_BATTLE_BOTH}`,
   key: 'proClears',
   target: 10,
@@ -15403,47 +15587,63 @@ const missionMonthlyDefinitions = () => [{
     amount: 2
   }]
 }, {
-  id: 'monthly_market',
-  name: 'マーケット月間',
-  condition: 'マーケットで10回買い物する',
-  key: 'marketTrades',
-  target: 10,
+  id: 'monthly_beat',
+  name: 'モンヒロビート月間',
+  tag: MISSION_TAG_BEAT,
+  condition: 'モンヒロビートを50曲遊ぶ(またはバトルを50回)',
+  key: 'beatPlays',
+  alt: {
+    key: 'battles',
+    target: 50
+  },
+  target: 50,
   rewards: [{
-    type: 'dyeMock',
+    type: 'beatPoint',
+    amount: 2000
+  }]
+}, {
+  id: 'monthly_card',
+  name: 'カード月間',
+  tag: MISSION_TAG_CARD,
+  condition: 'MFバトルカードで20回勝つ(またはバトルで50回勝つ)',
+  key: 'cardWins',
+  alt: {
+    key: 'wins',
+    target: 50
+  },
+  target: 20,
+  rewards: [{
+    type: 'cardPackTicket',
     amount: 5
   }]
 }, {
-  id: 'monthly_mode_runs',
-  name: 'モードプレイヤー',
-  condition: 'どのモードでも合わせて30回遊ぶ',
-  key: 'modeRuns',
-  target: 30,
-  rewards: [{
-    type: 'bondPointReset',
-    amount: 2
-  }]
-}, {
+  id: 'monthly_assistant',
+  name: 'ふれあい月間',
+  tag: MISSION_TAG_ASSIST,
+  condition: '助手と20日ふれあう(同じ日は1回)',
+  key: 'assistantDays',
+  target: 20,
+  rewards: [missionItemReward('buddy_trait_seed', 1)]
+}], {
   id: 'monthly_complete',
   name: 'マンスリーコンプリート',
-  condition: '通常マンスリー11個のうち8個を達成する',
   key: 'complete',
-  target: 8,
+  target: 9,
   rewards: [{
     type: 'diamond',
-    amount: 10000
+    amount: 100000
+  }, {
+    type: 'beatPoint',
+    amount: 3000
   }, {
     type: 'rainbowPsyche',
-    amount: 200
+    amount: 300
   }, {
     type: 'rainbowTranscendFruit',
     amount: 1
-  }, missionItemReward('skip_ticket_kiwami', 1), {
-    type: 'gameItem',
-    itemId: 'session_ticket',
-    amount: 10
-  }],
+  }, missionItemReward('skip_ticket_kiwami', 1), missionItemReward('session_ticket', 10), missionItemReward(MISSION_MONTHLY_FURNITURE[missionMonthRotationIndex(now, MISSION_MONTHLY_FURNITURE.length)], 1)],
   complete: true
-}];
+}, now);
 const MISSION_DEFS = {
   get daily() {
     return missionDailyDefinitions();
@@ -15473,8 +15673,15 @@ const emptyMissionCounts = () => ({
   proClears: 0,
   extremeClears: 0,
   itemUses: 0,
-  speciesClears: 0
+  speciesClears: 0,
+  beatPlays: 0,
+  beatClears: 0,
+  cardPlays: 0,
+  cardWins: 0,
+  assistantTouches: 0,
+  friendVisits: 0
 });
+const missionDayList = (same, v) => same && Array.isArray(v) ? v.filter(d => typeof d === 'string') : [];
 const normalizeMissions = (value, now = Date.now()) => {
   const dailyPeriod = missionDailyPeriod(now),
     weeklyPeriod = missionWeeklyPeriod(now),
@@ -15483,59 +15690,114 @@ const normalizeMissions = (value, now = Date.now()) => {
   const dailySame = old.dailyPeriod === dailyPeriod,
     weeklySame = old.weeklyPeriod === weeklyPeriod,
     monthlySame = old.monthlyPeriod === monthlyPeriod;
+  const counts = (same, v) => {
+    const base = emptyMissionCounts();
+    if (!same || !v || typeof v !== 'object') return base;
+    const o = {
+      ...base,
+      ...v
+    };
+    Object.keys(base).forEach(k => {
+      const n = Number(o[k]);
+      o[k] = Number.isFinite(n) && n > 0 ? n : 0;
+    });
+    return o;
+  };
   const state = {
     version: 2,
     dailyPeriod,
     weeklyPeriod,
     monthlyPeriod,
-    daily: dailySame ? {
-      ...emptyMissionCounts(),
-      ...(old.daily || {})
-    } : emptyMissionCounts(),
-    weekly: weeklySame ? {
-      ...emptyMissionCounts(),
-      ...(old.weekly || {})
-    } : emptyMissionCounts(),
-    monthly: monthlySame ? {
-      ...emptyMissionCounts(),
-      ...(old.monthly || {})
-    } : emptyMissionCounts(),
+    daily: counts(dailySame, old.daily),
+    weekly: counts(weeklySame, old.weekly),
+    monthly: counts(monthlySame, old.monthly),
     sentDaily: dailySame && Array.isArray(old.sentDaily) ? old.sentDaily : [],
     sentWeekly: weeklySame && Array.isArray(old.sentWeekly) ? old.sentWeekly : [],
     sentMonthly: monthlySame && Array.isArray(old.sentMonthly) ? old.sentMonthly : [],
-    weeklyLoginDays: weeklySame && Array.isArray(old.weeklyLoginDays) ? old.weeklyLoginDays : [],
-    monthlyLoginDays: monthlySame && Array.isArray(old.monthlyLoginDays) ? old.monthlyLoginDays : [],
-    monthlyDailyCompletePeriods: monthlySame && Array.isArray(old.monthlyDailyCompletePeriods) ? old.monthlyDailyCompletePeriods : [],
-    monthlyWeeklyCompletePeriods: monthlySame && Array.isArray(old.monthlyWeeklyCompletePeriods) ? old.monthlyWeeklyCompletePeriods : []
+    weeklyLoginDays: missionDayList(weeklySame, old.weeklyLoginDays),
+    monthlyLoginDays: missionDayList(monthlySame, old.monthlyLoginDays),
+    monthlyDailyCompletePeriods: missionDayList(monthlySame, old.monthlyDailyCompletePeriods),
+    monthlyWeeklyCompletePeriods: missionDayList(monthlySame, old.monthlyWeeklyCompletePeriods),
+    weeklyAssistantDays: missionDayList(weeklySame, old.weeklyAssistantDays),
+    monthlyAssistantDays: missionDayList(monthlySame, old.monthlyAssistantDays)
   };
   if (!monthlySame) {
     const completed = type => {
-      const defs = MISSION_DEFS[type],
-        normal = defs.filter(m => !m.complete),
-        target = defs.find(m => m.complete)?.target || Infinity;
-      const sent = type === 'daily' ? state.sentDaily : state.sentWeekly;
-      return normal.filter(m => {
-        if (sent.includes(m.id)) return true;
-        if (m.key === 'loginDays') return state.weeklyLoginDays.length >= m.target;
-        if (type === 'weekly' && m.key === 'extremeOrQuick') return state.weekly.extremeClears >= 1 || state.weekly.quickClears >= 10;
-        return (Number(state[type]?.[m.key]) || 0) >= m.target;
-      }).length >= target;
+      const defs = missionDefsAt(type, now),
+        c = defs.find(m => m.complete);
+      return !!c && missionValue(state, type, c, defs) >= c.target;
     };
     if (dailySame && completed('daily')) state.monthlyDailyCompletePeriods = [dailyPeriod];
     if (weeklySame && completed('weekly')) state.monthlyWeeklyCompletePeriods = [weeklyPeriod];
   }
   return state;
 };
-const missionValue = (state, type, mission) => {
+const missionDefsAt = (type, now = Date.now()) => type === 'daily' ? missionDailyDefinitions(now) : type === 'weekly' ? missionWeeklyDefinitions(now) : missionMonthlyDefinitions(now);
+const missionCountOf = (state, type, key) => {
+  const c = state && state[type] || {};
+  const n = k => {
+    const v = Number(c[k]);
+    return Number.isFinite(v) && v > 0 ? v : 0;
+  };
+  if (key === 'loginDays') return ((type === 'monthly' ? state.monthlyLoginDays : state.weeklyLoginDays) || []).length;
+  if (key === 'assistantDays') return ((type === 'monthly' ? state.monthlyAssistantDays : state.weeklyAssistantDays) || []).length;
+  if (key === 'anyPlays') return n('battles') + n('beatPlays') + n('cardPlays');
+  if (key === 'anyWins') return n('wins') + n('cardWins') + n('beatClears');
+  if (key === 'battleClears') return n('challengeClears') + n('quickClears') + n('proClears') + n('speciesClears') + n('extremeClears');
+  return n(key);
+};
+const missionValue = (state, type, mission, defs = null) => {
   if (mission.complete) {
-    const normal = MISSION_DEFS[type].filter(m => !m.complete);
+    const normal = (defs || MISSION_DEFS[type]).filter(m => !m.complete);
     return normal.filter(m => missionValue(state, type, m) >= m.target).length;
   }
-  if (mission.key === 'loginDays') return type === 'monthly' ? state.monthlyLoginDays.length : state.weeklyLoginDays.length;
   const sent = type === 'daily' ? state.sentDaily : type === 'weekly' ? state.sentWeekly : state.sentMonthly;
   if (Array.isArray(sent) && sent.includes(mission.id)) return mission.target;
   if (type === 'weekly' && mission.key === 'extremeOrQuick') return (Number(state.weekly?.extremeClears) || 0) >= 1 || (Number(state.weekly?.quickClears) || 0) >= 10 ? 1 : 0;
-  return Number(state[type]?.[mission.key]) || 0;
+  const own = missionCountOf(state, type, mission.key);
+  if (mission.alt && Number(mission.alt.target) > 0) {
+    const alt = missionCountOf(state, type, mission.alt.key);
+    return Math.max(own, Math.floor(alt * mission.target / mission.alt.target));
+  }
+  return own;
+};
+const missionFurnitureSwap = (itemId, ownedItems, room) => {
+  if (typeof itemId !== 'string' || !itemId.startsWith('furn_')) return null;
+  const offer = (typeof RHYTHM_EVENT_POINT_SHOP_OFFERS !== 'undefined' ? RHYTHM_EVENT_POINT_SHOP_OFFERS : []).find(o => o && o.itemId === itemId);
+  const cost = offer && Number.isFinite(offer.cost) && offer.cost > 0 ? offer.cost : 0;
+  if (!cost) return null;
+  const owned = ownedItems && typeof ownedItems === 'object' ? Number(ownedItems[itemId]) : 0;
+  const ids = typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' && Array.isArray(ASSISTANT_LIFE_HOUSE_ORDER) ? ASSISTANT_LIFE_HOUSE_ORDER : [];
+  const key = itemId.slice(5);
+  const allGot = !!room && typeof room === 'object' && ids.length > 0 && ids.every(who => room[who] && room[who].got && room[who].got[key]);
+  return Number.isFinite(owned) && owned > 0 || allGot ? {
+    type: 'beatPoint',
+    amount: cost
+  } : null;
+};
+const missionRewardsFor = (rewards, {
+  ownedItems = null,
+  room = null
+} = {}) => (Array.isArray(rewards) ? rewards : []).map(r => {
+  const swap = r && r.type === 'gameItem' ? missionFurnitureSwap(r.itemId, ownedItems, room) : null;
+  return swap ? {
+    ...swap,
+    amount: swap.amount * Math.max(1, Math.floor(Number(r.amount) || 1)),
+    swappedFrom: r.itemId
+  } : {
+    ...r
+  };
+});
+const MISSION_PROGRESS_EVENT = 'mh:mission-progress';
+const missionNotify = (event, amount = 1) => {
+  try {
+    if (typeof window !== 'undefined' && typeof CustomEvent === 'function') window.dispatchEvent(new CustomEvent(MISSION_PROGRESS_EVENT, {
+      detail: {
+        event,
+        amount
+      }
+    }));
+  } catch (_) {}
 };
 const missionClaimableList = (state, type) => {
   const sent = type === 'daily' ? state.sentDaily : type === 'weekly' ? state.sentWeekly : state.sentMonthly;
@@ -63670,6 +63932,157 @@ function ScreenThemeModal({
     onClick: onClose
   }, "決定")));
 }
+const MISSION_DAILY_LINE_URL = `${typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : ''}/functions/v1/mission-daily-line`;
+const MISSION_DAILY_LINE_KEY = 'mh_mission_daily_line_v1';
+const MISSION_DAILY_LINE_IDS = Object.freeze(['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']);
+const MISSION_DAILY_LINE_TRIES = 3,
+  MISSION_DAILY_LINE_RETRY_MS = 10 * 60 * 1000,
+  MISSION_DAILY_LINE_WAIT_MS = 8000;
+const MISSION_WEEKDAY_NAMES = Object.freeze(['日', '月', '火', '水', '木', '金', '土']);
+const MISSION_DAILY_LINE_TASKS = Object.freeze({
+  0: 'フレンドの家へ行く',
+  1: 'モンヒロビートを1曲クリアする',
+  2: 'MFバトルカードで1回勝つ',
+  3: 'クイックモードを1回クリアする',
+  4: 'プロモードを1回クリアする',
+  5: '種族チャレンジを1回クリアする',
+  6: 'アイテムを1個使う'
+});
+const MISSION_DAILY_LINE_FALLBACK = Object.freeze({
+  mua: '今日は{day}曜日！{task}と、{reward}がもらえるよ♪',
+  kiki: '今日は{day}曜日でつ。{task}と、{reward}がもらえまつよ♪',
+  momosuke: '今日は{day}曜日！！ {task}と{reward}もらえるよ♡ ももと一緒にやろ！！',
+  dra: '今日は{day}曜日だな。{task}と、{reward}がもらえるからな。えへへ',
+  atsu: '今日は{day}曜日！ とりあえず{task}と{reward}もらえるよ笑',
+  kyuko: 'ほい！ 今日は{day}曜日ぃ。{task}と{reward}もらえるよ〜',
+  sorashido: 'うぉぉぉ！ 今日は{day}曜日だぜ・・・！ {task}と{reward}がもらえるぜ笑',
+  erubin: '今日は{day}曜日だね。{task}と、{reward}がもらえるよ。無理しない程度にね'
+});
+const missionLineRewardText = r => {
+  const n = Math.max(0, Math.floor(Number(r && r.amount) || 0)).toLocaleString();
+  if (!r) return '';
+  if (r.type === 'diamond') return `ダイヤ${n}`;
+  if (r.type === 'beatPoint') return `ビートP${n}`;
+  const name = r.type === 'gameItem' ? (typeof giftItemRewardInfo === 'function' && giftItemRewardInfo(r.itemId) || {}).name || '' : typeof GIFT_REWARD_LABELS !== 'undefined' && GIFT_REWARD_LABELS[r.type] || '';
+  if (!name) return '';
+  return `${name}${n}${/(券|チケット)$/.test(name) ? '枚' : '個'}`;
+};
+const missionDailyLineFacts = (now = Date.now()) => {
+  const wd = typeof missionPeriodWeekday === 'function' ? missionPeriodWeekday(now) : new Date(Number(now) + 5 * 3600000).getUTCDay();
+  const m = typeof DAILY_ROTATION_MISSIONS !== 'undefined' ? DAILY_ROTATION_MISSIONS[wd] : null;
+  const reward = m ? m.rewards.map(missionLineRewardText).filter(Boolean).join('と') : '';
+  return {
+    weekday: wd,
+    day: MISSION_WEEKDAY_NAMES[wd] || '',
+    task: MISSION_DAILY_LINE_TASKS[wd] || '',
+    reward
+  };
+};
+const missionDailyLineValid = t => typeof t === 'string' && t.length > 0 && t.length <= 80 && t.split('{task}').length === 2 && t.split('{reward}').length === 2 && !/[0-9０-９]/.test(t) && !/[\r\n]/.test(t) && !/https?:|www\./i.test(t) && !/[<>]/.test(t);
+const missionDailyLineFill = (template, facts) => String(template).split('{day}').join(facts.day).split('{task}').join(facts.task).split('{reward}').join(facts.reward);
+const missionDailyLineFor = (who, aiLines, facts = missionDailyLineFacts()) => {
+  const id = MISSION_DAILY_LINE_IDS.includes(who) ? who : 'mua';
+  if (!facts.task || !facts.reward) return null;
+  const ai = aiLines && typeof aiLines === 'object' ? aiLines[id] : null;
+  return {
+    who: id,
+    text: missionDailyLineFill(missionDailyLineValid(ai) ? ai : MISSION_DAILY_LINE_FALLBACK[id], facts),
+    ai: missionDailyLineValid(ai)
+  };
+};
+const normalizeMissionDailyLine = v => {
+  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  const lines = {};
+  if (r.lines && typeof r.lines === 'object' && !Array.isArray(r.lines)) MISSION_DAILY_LINE_IDS.forEach(id => {
+    if (missionDailyLineValid(r.lines[id])) lines[id] = r.lines[id];
+  });
+  const tries = Number.isFinite(Number(r.tries)) ? Math.max(0, Math.floor(Number(r.tries))) : 0;
+  return {
+    day: typeof r.day === 'string' ? r.day : '',
+    lines,
+    tries,
+    at: Number.isFinite(Number(r.at)) ? Number(r.at) : 0
+  };
+};
+const missionDailyLineShouldFetch = (saved, today, now = Date.now()) => {
+  const s = normalizeMissionDailyLine(saved);
+  if (s.day !== today) return true;
+  if (Object.keys(s.lines).length) return false;
+  return s.tries < MISSION_DAILY_LINE_TRIES && now - s.at >= MISSION_DAILY_LINE_RETRY_MS;
+};
+const missionDailyLineOpen = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.missionDailyLine === true;
+const missionDailyLineFetch = async () => {
+  if (!missionDailyLineOpen() || typeof fetch === 'undefined') return null;
+  const ac = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = setTimeout(() => {
+    if (ac) ac.abort();
+  }, MISSION_DAILY_LINE_WAIT_MS);
+  try {
+    const r = await fetch(MISSION_DAILY_LINE_URL, {
+      method: 'POST',
+      headers: typeof SB_HEADERS !== 'undefined' ? SB_HEADERS : {
+        'Content-Type': 'application/json'
+      },
+      body: '{}',
+      signal: ac ? ac.signal : undefined
+    });
+    const res = r.ok ? await r.json() : null;
+    return res && res.ok === true && res.lines && typeof res.lines === 'object' ? normalizeMissionDailyLine({
+      lines: res.lines
+    }).lines : null;
+  } catch (e) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const useMissionDailyLines = () => {
+  const [lines, setLines] = useState({});
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      const today = typeof jstDayKey4 === 'function' ? jstDayKey4() : '';
+      let saved = null;
+      try {
+        saved = await storeGet(MISSION_DAILY_LINE_KEY, null, false);
+      } catch (e) {
+        saved = null;
+      }
+      const s = normalizeMissionDailyLine(saved);
+      if (s.day === today && live) setLines(s.lines);
+      if (!missionDailyLineOpen() || !missionDailyLineShouldFetch(saved, today)) return;
+      const got = await missionDailyLineFetch();
+      const next = got && Object.keys(got).length ? {
+        day: today,
+        lines: got,
+        tries: (s.day === today ? s.tries : 0) + 1,
+        at: Date.now()
+      } : {
+        day: today,
+        lines: {},
+        tries: (s.day === today ? s.tries : 0) + 1,
+        at: Date.now()
+      };
+      try {
+        await storeSet(MISSION_DAILY_LINE_KEY, next, false);
+      } catch (e) {}
+      if (live) setLines(next.lines);
+    })();
+    return () => {
+      live = false;
+    };
+  }, []);
+  return lines;
+};
+const MISSION_CHIP_EMOJI = Object.freeze({
+  beatPoint: '🎟️',
+  cardPackTicket: '🎫'
+});
+const missionRewardChipText = r => {
+  const t = giftRewardText(r);
+  const e = MISSION_CHIP_EMOJI[r && r.type];
+  return e ? `${e} ${t}` : t;
+};
 function MissionsScreen({
   gifts,
   missions,
@@ -63677,10 +64090,24 @@ function MissionsScreen({
   onSelectTab,
   onBack,
   onClaim,
-  onClaimAll
+  onClaimAll,
+  ownedItems = null
 }) {
   const state = normalizeMissions(missions),
     defs = MISSION_DEFS[missionTab];
+  const bond = typeof useAssistantBond === 'function' ? useAssistantBond() : null;
+  const aiLines = useMissionDailyLines();
+  const dailyLine = missionDailyLineFor(bond && bond.assistantId, aiLines);
+  const [room, setRoom] = useState(() => typeof ASSISTANT_LIFE_GIFT_STORE !== 'undefined' && ASSISTANT_LIFE_GIFT_STORE.loaded ? ASSISTANT_LIFE_GIFT_STORE.state.room : null);
+  useEffect(() => {
+    let live = true;
+    if (typeof ASSISTANT_LIFE_GIFT_STORE !== 'undefined') void ASSISTANT_LIFE_GIFT_STORE.load().then(st => {
+      if (live) setRoom(st.room || null);
+    }).catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
   const sent = missionTab === 'daily' ? state.sentDaily : missionTab === 'weekly' ? state.sentWeekly : state.sentMonthly;
   const resetAt = missionNextReset(missionTab);
   const periodNow = missionTab === 'daily' ? state.dailyPeriod : missionTab === 'weekly' ? state.weeklyPeriod : state.monthlyPeriod;
@@ -63702,7 +64129,15 @@ function MissionsScreen({
     const allDone = ['daily', 'weekly', 'monthly'].every(t => MISSION_DEFS[t].every(m => missionValue(state, t, m) >= m.target));
     return React.createElement("div", {
       className: "shrink-0 w-full max-w-md mx-auto mb-2"
+    }, dailyLine && missionTab === 'daily' ? React.createElement("div", {
+      "data-mission-daily-line": true
     }, React.createElement(AssistantBubble, {
+      key: `line-${dailyLine.who}`,
+      assistantId: dailyLine.who,
+      line: dailyLine.text,
+      expression: "happy",
+      compact: true
+    })) : React.createElement(AssistantBubble, {
       key: claimable ? 'claim' : 'normal',
       scene: claimable ? 'missionsClaimable' : 'missionsNormal',
       condition: claimable && allDone ? 'allDone' : null,
@@ -63752,7 +64187,12 @@ function MissionsScreen({
     emoji: "🗒️",
     lines: ['このタブのミッションはありません', 'ほかのタブに受け取れるものがあるかもしれません']
   }) : defs.map(m => {
-    const value = missionValue(state, missionTab, m),
+    const shownRewards = missionRewardsFor(m.rewards, {
+        ownedItems,
+        room
+      }),
+      swapped = shownRewards.filter(r => r.swappedFrom),
+      value = missionValue(state, missionTab, m),
       done = value >= m.target,
       isSent = sent.includes(m.id),
       pct = Math.min(100, Math.floor(value / m.target * 100));
@@ -63764,8 +64204,13 @@ function MissionsScreen({
     }, React.createElement("div", {
       className: "min-w-0"
     }, React.createElement("h3", {
-      className: "font-black text-sm text-white break-words"
-    }, m.name), React.createElement("p", {
+      className: "flex flex-wrap items-center gap-1.5 font-black text-sm text-white break-words"
+    }, m.tag && React.createElement("span", {
+      "data-mission-tag": true,
+      className: "shrink-0 whitespace-nowrap rounded-full border border-white/10 bg-slate-800 px-2 py-0.5 text-[11px] font-black text-slate-200"
+    }, m.tag), React.createElement("span", {
+      className: "min-w-0"
+    }, m.name)), React.createElement("p", {
       className: "mt-0.5 text-[11px] font-bold leading-snug text-slate-400 break-words"
     }, m.condition)), React.createElement("b", {
       className: "shrink-0 text-[12px] text-amber-200"
@@ -63779,8 +64224,20 @@ function MissionsScreen({
     })), React.createElement("div", {
       className: "flex items-center justify-between gap-2"
     }, React.createElement("div", {
-      className: "min-w-0 text-[11px] font-black text-cyan-200 break-words"
-    }, "報酬: ", m.rewards.map(giftRewardText).join(' / ')), isSent ? React.createElement("button", {
+      className: "min-w-0 flex-1",
+      "data-mission-rewards": true
+    }, React.createElement("div", {
+      className: "flex flex-wrap items-center gap-1"
+    }, React.createElement("span", {
+      className: "shrink-0 text-[11px] font-black text-cyan-200"
+    }, "報酬:"), shownRewards.map((r, i) => React.createElement("span", {
+      key: i,
+      "data-mission-reward-chip": true,
+      className: `whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-black ${r.type === 'beatPoint' ? 'border-violet-300/50 bg-violet-900/60 text-violet-50' : 'border-white/10 bg-slate-800/80 text-cyan-200'}`
+    }, missionRewardChipText(r)))), swapped.length > 0 && React.createElement("p", {
+      "data-mission-furniture-swap": true,
+      className: "mt-1 text-[10px] font-bold leading-snug text-slate-400"
+    }, swapped.map(r => giftItemRewardInfo(r.swappedFrom)?.name || '家具').join('・'), "は持っているので、ビートPに替えて届きます")), isSent ? React.createElement("button", {
       type: "button",
       disabled: true,
       className: "shrink-0 min-h-[44px] px-3 rounded-xl bg-amber-500 text-[11px] font-black text-black disabled:opacity-40"
@@ -102859,6 +103316,7 @@ const assistantLifeNudge = async (kind, value, now = Date.now()) => {
   return true;
 };
 const assistantLifeAddPlay = async (kind, now = Date.now()) => {
+  if ((kind === 'chat' || kind === 'peer') && typeof missionNotify === 'function') missionNotify('assistantTouch');
   if (!assistantLifeEnabled()) return {
     gained: 0
   };
@@ -120066,6 +120524,7 @@ const assistantLifeFurnGive = async (who, key) => {
   const r = assistantLifeFurnGiveState(st.room, who, key, assistantLifeGiftToday());
   if (!r) return null;
   assistantLifeRoomSave(r.room);
+  if (typeof missionNotify === 'function') missionNotify('assistantTouch');
   const known = {
     ...st.likes.known,
     [who]: {
@@ -122237,6 +122696,10 @@ const assistantLifeFriendLeaveNote = async (hostId, {
     ok: false,
     reason: r.reason
   };
+  if (typeof missionNotify === 'function') {
+    missionNotify('friendVisit');
+    missionNotify('assistantTouch');
+  }
   const cur = alfToday();
   const firstHere = !cur.photos.some(p => p.host === hostId);
   const photos = firstHere ? [...cur.photos, {
@@ -138658,6 +139121,10 @@ const CardBattleScreen = ({
         return;
       }
       if (typeof assistantPeerOnPlay === 'function') void assistantPeerOnPlay('card');
+      if (!game.demo && !game.tutorial && !game.cup && !debug && typeof missionNotify === 'function') {
+        missionNotify('cardPlay');
+        if (outcome === 'win') missionNotify('cardWin');
+      }
       if (game.pvp) {
         CARD_PVP.finish(outcome, st);
         onBgm && onBgm(cardBgmOf(save.bgm.top));
@@ -167686,7 +168153,19 @@ function MonsterHeroGame() {
         }
         await storeSet(LOGIN_PT_TO_XP_KEY, true, false);
       }
-      let missionState = normalizeMissions(await storeGet('mh_missions', null, false));
+      const storedMissions = await storeGet('mh_missions', null, false);
+      let renewMark = normalizeMissionRenewMark(await storeGet(MISSION_RENEW_KEY, null, false));
+      if (!renewMark) {
+        renewMark = storedMissions && typeof storedMissions === 'object' ? missionRenewMarkAt() : {
+          at: Date.now(),
+          daily: '-',
+          weekly: '-',
+          monthly: '-'
+        };
+        await storeSet(MISSION_RENEW_KEY, renewMark, false);
+      }
+      setMissionRenewMark(renewMark);
+      let missionState = normalizeMissions(storedMissions);
       const loginDay = missionDailyPeriod();
       missionState.daily.login = 1;
       if (!missionState.weeklyLoginDays.includes(loginDay)) missionState.weeklyLoginDays.push(loginDay);
@@ -174532,18 +175011,23 @@ function MonsterHeroGame() {
         const storedFramesBefore = normalizeOwnedProfileFrames(await storeGet(PROFILE_FRAME_OWNED_KEY, [], false));
         const storedBeatBefore = await storeGet(RHYTHM_EVENT_POINTS_KEY, 0, false);
         const beatBefore = normalizeRhythmEventPoints(storedBeatBefore);
+        const hasCardPack = sourceGifts.some(g => wanted.has(g?.id) && Array.isArray(g?.rewards) && g.rewards.some(r => r?.type === 'cardPackTicket'));
+        const storedCardBefore = hasCardPack && typeof CARD_TACTICS_KEY !== 'undefined' ? await storeGet(CARD_TACTICS_KEY, null, false) : null;
+        const cardBefore = hasCardPack && typeof cardNormalizeTactics === 'function' ? cardNormalizeTactics(storedCardBefore) : null;
         let balances = {
           gold,
           breederPoints,
           ownedItems,
           breederXp,
           ownedProfileFrames: normalizeOwnedProfileFrames([...storedFramesBefore, ...ownedProfileFramesRef.current]),
-          beatPoints: beatBefore
+          beatPoints: beatBefore,
+          cardPackTickets: cardBefore ? cardBefore.tickets : 0
         };
         let claimedCount = 0;
         const now = Date.now();
         const nextGifts = sourceGifts.map(gift => {
           if (!wanted.has(gift?.id)) return gift;
+          if (!cardBefore && Array.isArray(gift?.rewards) && gift.rewards.some(r => r?.type === 'cardPackTicket')) return gift;
           const result = buildGiftClaim(gift, balances, now);
           if (!result.ok) return gift;
           balances = result.balances;
@@ -174598,6 +175082,14 @@ function MonsterHeroGame() {
           key: RHYTHM_EVENT_POINTS_KEY,
           before: storedBeatBefore,
           next: beatAfter
+        });
+        if (cardBefore && balances.cardPackTickets !== cardBefore.tickets) entries.push({
+          key: CARD_TACTICS_KEY,
+          before: storedCardBefore,
+          next: {
+            ...cardBefore,
+            tickets: balances.cardPackTickets
+          }
         });
         const keptGifts = pruneGiftHistory(nextGifts);
         entries.push({
@@ -174673,7 +175165,8 @@ function MonsterHeroGame() {
     setGameState('GIFT_BOX');
   };
   const saveMissionProgress = async (event, amount = 1) => {
-    if (debugBattleRef.current || runHasDebugOnlyMonster()) return;
+    const battleEvent = !['beatPlay', 'beatClear', 'cardPlay', 'cardWin', 'assistantTouch', 'friendVisit'].includes(event);
+    if (battleEvent && (debugBattleRef.current || runHasDebugOnlyMonster())) return;
     const n = Math.max(0, Math.floor(Number(amount) || 0));
     if (n <= 0) return;
     const rule = {
@@ -174685,8 +175178,8 @@ function MonsterHeroGame() {
       },
       win: {
         key: 'wins',
-        daily: false,
-        weekly: false,
+        daily: true,
+        weekly: true,
         monthly: true
       },
       enhance: {
@@ -174737,7 +175230,7 @@ function MonsterHeroGame() {
       },
       extremeClear: {
         key: 'extremeClears',
-        daily: false,
+        daily: true,
         weekly: true
       },
       itemUse: {
@@ -174750,6 +175243,42 @@ function MonsterHeroGame() {
         daily: true,
         weekly: true,
         monthly: true
+      },
+      beatPlay: {
+        key: 'beatPlays',
+        daily: true,
+        weekly: true,
+        monthly: true
+      },
+      beatClear: {
+        key: 'beatClears',
+        daily: true,
+        weekly: true,
+        monthly: true
+      },
+      cardPlay: {
+        key: 'cardPlays',
+        daily: true,
+        weekly: true,
+        monthly: true
+      },
+      cardWin: {
+        key: 'cardWins',
+        daily: true,
+        weekly: true,
+        monthly: true
+      },
+      assistantTouch: {
+        key: 'assistantTouches',
+        daily: true,
+        weekly: true,
+        monthly: true
+      },
+      friendVisit: {
+        key: 'friendVisits',
+        daily: true,
+        weekly: true,
+        monthly: true
       }
     }[event];
     if (!rule) return;
@@ -174758,12 +175287,27 @@ function MonsterHeroGame() {
     if (rule.weekly) next.weekly[rule.key] = (Number(next.weekly[rule.key]) || 0) + n;
     if (rule.monthly) next.monthly[rule.key] = (Number(next.monthly[rule.key]) || 0) + n;
     if (['challengeRun', 'quickRun', 'modeRun'].includes(event) && rule.key !== 'modeRuns') next.monthly.modeRuns = (Number(next.monthly.modeRuns) || 0) + n;
+    if (event === 'assistantTouch') {
+      const day = missionDailyPeriod();
+      if (!next.weeklyAssistantDays.includes(day)) next.weeklyAssistantDays = [...next.weeklyAssistantDays, day];
+      if (!next.monthlyAssistantDays.includes(day)) next.monthlyAssistantDays = [...next.monthlyAssistantDays, day];
+    }
     const reconciled = reconcileMonthlyMissionCompletions(next);
     missionsRef.current = reconciled;
     setMissions(reconciled);
     await storeSet('mh_missions', reconciled, false);
   };
-  const buildMissionGift = (type, period, mission) => ({
+  const saveMissionProgressRef = useRef(saveMissionProgress);
+  saveMissionProgressRef.current = saveMissionProgress;
+  useEffect(() => {
+    const onProgress = e => {
+      const d = e && e.detail;
+      if (d && typeof d.event === 'string') void saveMissionProgressRef.current(d.event, d.amount);
+    };
+    window.addEventListener(MISSION_PROGRESS_EVENT, onProgress);
+    return () => window.removeEventListener(MISSION_PROGRESS_EVENT, onProgress);
+  }, []);
+  const buildMissionGift = (type, period, mission, rewards = null) => ({
     id: `gift_mission_${type}_${period}_${mission.id}`,
     source: 'mission',
     missionId: mission.id,
@@ -174771,7 +175315,10 @@ function MonsterHeroGame() {
     periodId: period,
     title: `ミッション報酬「${mission.name}」`,
     description: `${mission.condition}の達成報酬です。`,
-    rewards: mission.rewards.map(r => ({
+    rewards: (Array.isArray(rewards) ? rewards : mission.rewards).map(({
+      swappedFrom,
+      ...r
+    }) => ({
       ...r
     })),
     createdAt: new Date().toISOString(),
@@ -174781,6 +175328,12 @@ function MonsterHeroGame() {
   const sendMissionGroupsToGiftBox = async groups => {
     {
       const state = normalizeMissions(missionsRef.current);
+      let room = null;
+      try {
+        if (typeof ASSISTANT_LIFE_GIFT_STORE !== 'undefined') room = (await ASSISTANT_LIFE_GIFT_STORE.load()).room || null;
+      } catch {
+        room = null;
+      }
       const storedGifts = await storeGet('mh_gifts', null, false);
       let nextGifts = Array.isArray(storedGifts) ? [...storedGifts] : Array.isArray(gifts) ? [...gifts] : [];
       const giftIds = [];
@@ -174795,7 +175348,10 @@ function MonsterHeroGame() {
         const period = type === 'daily' ? state.dailyPeriod : type === 'weekly' ? state.weeklyPeriod : state.monthlyPeriod;
         const sent = [...state[sentKey]];
         targets.forEach(mission => {
-          const gift = buildMissionGift(type, period, mission);
+          const gift = buildMissionGift(type, period, mission, missionRewardsFor(mission.rewards, {
+            ownedItems,
+            room
+          }));
           if (!nextGifts.some(g => g?.id === gift.id)) nextGifts = [gift, ...nextGifts];
           giftIds.push(gift.id);
           if (!sent.includes(mission.id)) sent.push(mission.id);
@@ -184569,7 +185125,8 @@ function MonsterHeroGame() {
       onSelectTab: setMissionTab,
       onBack: returnToHome,
       onClaim: claimMission,
-      onClaimAll: claimAllMissions
+      onClaimAll: claimAllMissions,
+      ownedItems: ownedItems
     }), showLoginBonusList && React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-5",
       style: {
@@ -188450,6 +189007,10 @@ function MonsterHeroGame() {
         if (rhythmPlay.from === 'notedex') return;
         if (result?.assist === true) return;
         if (rhythmPlay.from === 'demo' || rhythmPlay.from === 'multi' || rhythmPlay.from === 'raid') await grantBeatRankForResult(result, rhythmPlay);
+        if (rhythmPlay.from === 'demo' || rhythmPlay.from === 'multi' || rhythmPlay.from === 'raid') {
+          await saveMissionProgress('beatPlay');
+          if (result?.cleared !== false) await saveMissionProgress('beatClear');
+        }
         if ((rhythmPlay.from === 'demo' || rhythmPlay.from === 'multi' || rhythmPlay.from === 'raid') && typeof assistantPeerOnPlay === 'function') void assistantPeerOnPlay('rhythm');
         if (result?.cleared !== false) {
           try {

@@ -519,6 +519,8 @@ const assistantLifeNudge = async (kind, value, now = Date.now()) => {
 };
 // 遊んだとき(ビート・バトル・カード・おしゃべり・助手どうし)。段が上がったら tierUp を返す
 const assistantLifeAddPlay = async (kind, now = Date.now()) => {
+  // ミッションの「助手とふれあう」(2026-11-08)。おしゃべり・助手どうしを見守る・誘う・道具を贈る(ビート・バトル・カードは数えない)
+  if ((kind === 'chat' || kind === 'peer') && typeof missionNotify === 'function') missionNotify('assistantTouch');
   if (!assistantLifeEnabled()) return { gained: 0 };
   await ASSISTANT_LIFE_STORE.load();
   const r = assistantLifeAddPlayState(ASSISTANT_LIFE_STORE.state.play, kind, assistantLifeDayKey(now));
