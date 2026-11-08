@@ -10,6 +10,7 @@
 //   E. 読むだけの口 cardAssistantDeckPreview(who, styleId, level): 毎回同じ並び・3体と50枚・知らない型は normal・助手でない id は null
 //   F. 型を渡すのは 84 の助手と対戦だけ(杯・みんなのデッキは渡さない)。82 から助手ライフの口を読まない。口は呼ぶ時に typeof で確かめる
 //   G. 対戦の記録: 助手と対戦の記録に型を残す。古い記録(型なし)・知らない値は 'normal' として読む。マルチの記録には付けない
+//   I. 方針の上書き(opts.plan・AI が決める): 幅の外は丸める・候補外(無い番号・場のカードでない名前)は捨てる・全部捨てたら上書きしない・方針の札と場のカードが入る
 //   H. サーバの杯の写し(supabase/functions/card-tournament-run/game.js)が、いまの 82 から作り直してある
 const fs = require('fs');
 const path = require('path');
@@ -20,7 +21,7 @@ const GAME = path.join(ROOT, 'monster-hero');
 const src = (f) => fs.readFileSync(path.join(GAME, f), 'utf8');
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
 vm.runInContext(`${src('data/card-battle-cards.js')}\n;\n${src('src/parts/82-card-battle-core.jsx')}\n;\n${src('src/parts/82-card-tactics-core.jsx')}\n;\n${src('src/parts/93-card-replay.jsx').split('// ---- 保存(端末の中だけ)')[0]}\n;\n`
-  + 'this.E = { CARD_BATTLE_DATA, CARD_AI_HABITS, CARD_AI_DECKS, CARD_AI_STYLE_IDS, CARD_AI_STYLE_VARIANT, cardAiBuildDeck, cardAiSeededRand, cardAiStyleOf, cardAssistantDeckPreview, cardDeckProblems, cardSimulate, cardAiPolicy, cardReplayNormalizeOne, cardReplayStyleOf };', ctx);
+  + 'this.E = { CARD_BATTLE_DATA, CARD_AI_HABITS, CARD_AI_DECKS, CARD_AI_STYLE_IDS, CARD_AI_STYLE_VARIANT, cardAiBuildDeck, cardAiSeededRand, cardAiStyleOf, cardAssistantDeckPreview, cardDeckProblems, cardSimulate, cardAiPolicy, cardReplayNormalizeOne, cardReplayStyleOf, cardAiPlanClean, CARD_AI_PLAN_RANGE };', ctx);
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
 const VERBOSE = process.argv.includes('--verbose');
@@ -104,7 +105,8 @@ check('助手は8人', WHO.length === 8, WHO.join(','));
   const p1 = E.cardAssistantDeckPreview('kiki', 'attack', 'normal');
   const p2 = E.cardAssistantDeckPreview('kiki', 'attack', 'normal');
   check('E プレビューは毎回同じ並び', !!p1 && J(p1) === J(p2), J(p1 && p1.monsters));
-  check('E 3体と50枚・型の id を返す', !!p1 && p1.monsters.length === 3 && p1.cards.length === 50 && p1.styleId === 'attack' && 'name' in p1);
+  check('E 3体と50枚・型の id・名前(社長の8つ)・ひとこと(いまは null)を返す', !!p1 && p1.monsters.length === 3 && p1.cards.length === 50 && p1.styleId === 'attack' && p1.name === 'ずっしり火力' && p1.line === null, J(p1 && { name: p1.name, line: p1.line }));
+  check('E 8人とも名前がある', WHO.every((w) => typeof E.cardAssistantDeckPreview(w, 'normal').name === 'string'));
   const pz = E.cardAssistantDeckPreview('kiki', 'zzz');
   const pn = E.cardAssistantDeckPreview('kiki', 'normal');
   check('E 知らない型は normal', !!pz && pz.styleId === 'normal' && J(pz.cards) === J(pn.cards));
@@ -133,6 +135,23 @@ check('助手は8人', WHO.length === 8, WHO.join(','));
   check('G マルチの記録には型を付けない', !!pvp && !('style' in pvp.foe));
   const s84 = src('src/parts/84-screen-card-battle.jsx');
   check('G 84: 助手と対戦の記録に使った型を残す', /style: foeStyle \|\| 'normal'/.test(s84) && /deckName: log\.deckName, style: log\.style \}/.test(s84));
+}
+// ---- I ----
+{
+  const R = E.CARD_AI_PLAN_RANGE;
+  const c = E.cardAiPlanClean(db, { prefer: ['zzz', '011', '011'], field: ['必殺技の応酬', '竜巻アタック', { name: '灼熱の地' }, 'ないカード'], habit: { big: 99, saveGuts: -5, keepGuard: 'x', attack: 3 } });
+  check('I 候補外の番号・重なりを捨てる', !!c && J(c.prefer) === J([db.cards['011'].name]), J(c && c.prefer));
+  check('I 場のカードの名前だけ残す({name} の形も読む)', !!c && J(c.field) === J(['必殺技の応酬', '灼熱の地']), J(c && c.field));
+  check('I くせは幅の中へ丸め、知らないくせ・数でない値は捨てる', !!c && c.habit.big === R.habit.big[1] && c.habit.saveGuts === R.habit.saveGuts[0] && !('keepGuard' in c.habit) && !('attack' in c.habit), J(c && c.habit));
+  check('I 全部捨てたら上書きしない(null)', E.cardAiPlanClean(db, { prefer: ['zzz'], field: ['x'], habit: {} }) === null && E.cardAiPlanClean(db, null) === null && E.cardAiPlanClean(db, 'abc') === null);
+  check('I 方針なしは今と同じ', J(build('kiki', 'master', 3)) === J(E.cardAiBuildDeck(db, 'kiki', 'master', E.cardAiSeededRand('kiki:master:3'), { plan: null })));
+  const base = build('kiki', 'master', 3);
+  const names = (d) => d.cards.map((no) => db.cards[no].name);
+  const want = base.monsters.map((no) => Object.values(db.cards).find((x) => x.ready && x.kind !== 'fld' && x.user === db.monsters[no].species && !names(base).includes(x.name))).filter(Boolean).slice(0, 2);
+  const withPlan = E.cardAiBuildDeck(db, 'kiki', 'master', E.cardAiSeededRand('kiki:master:3'), { plan: { prefer: want.map((x) => x.no), field: ['灼熱の地'], habit: { big: 0.6 } } });
+  check('I 方針の札(HARD から)と場のカードが入る', want.length > 0 && want.every((x) => names(withPlan).includes(x.name)) && names(withPlan).includes('灼熱の地'), `${want.map((x) => x.name).join('・')} / 場 ${names(withPlan).includes('灼熱の地')}`);
+  const d = E.cardAiBuildDeck(db, 'mua', 'easy', E.cardAiSeededRand('p'), { plan: { prefer: want.map((x) => x.no), habit: { keepGuard: 1.5 } } });
+  check('I 方針を入れてもデッキの決まりを守る', E.cardDeckProblems(db, d).length === 0 && d.cards.length === 50 && E.cardDeckProblems(db, withPlan).length === 0);
 }
 // ---- H ----
 {

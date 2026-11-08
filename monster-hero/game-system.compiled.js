@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7e939cfd15d46477
+// source-sha256: 7d2e30bef9bf991f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -104618,7 +104618,6 @@ const assistantLifeAtCard = id => {
   }
 };
 const assistantLifeCardIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLifeAtCard);
-const assistantLifeCardStyle = id => null;
 const assistantLifeHostOf = ids => ids.find(id => ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav === 'home') || [...ids].sort((a, b) => ASSISTANT_LIFE_HOUSE_ORDER.indexOf(a) - ASSISTANT_LIFE_HOUSE_ORDER.indexOf(b))[0];
 const ASSISTANT_LIFE_DIARY_KEY = 'mh_assistant_life_diary_v1';
 const ASSISTANT_LIFE_DIARY_MAX = 40;
@@ -122050,11 +122049,48 @@ const CARD_AI_STYLE_TUNE = Object.freeze({
     }
   }
 });
+const CARD_AI_STYLE_NAMES = Object.freeze({
+  mua: 'キラキラ速攻',
+  kiki: 'ずっしり火力',
+  momosuke: 'ステージ・オン',
+  dra: 'のんびり長期戦',
+  atsu: '真っ向勝負',
+  kyuko: '夜の読み筋',
+  sorashido: '計算ずく',
+  erubin: 'みんなで守る'
+});
 const CARD_AI_STYLE_VARIANT = Object.freeze({
   attack: 'blade',
   guard: 'shield',
   normal: 'mind'
 });
+const CARD_AI_PLAN_RANGE = Object.freeze({
+  habit: Object.freeze({
+    big: [0.8, 1.4],
+    saveGuts: [0.8, 1.4],
+    keepGuard: [0.7, 1.3]
+  }),
+  prefer: [5, 8],
+  preferTop: 24,
+  field: [1, 2]
+});
+const cardAiPlanClean = (db, plan) => {
+  if (!plan || typeof plan !== 'object' || !db || !db.cards) return null;
+  const R = CARD_AI_PLAN_RANGE;
+  const seen = new Set();
+  const prefer = (Array.isArray(plan.prefer) ? plan.prefer : []).map(no => typeof no === 'string' ? db.cards[no] : null).filter(c => c && c.ready && c.kind !== 'fld' && !seen.has(c.name) && seen.add(c.name)).slice(0, R.prefer[1]).map(c => c.name);
+  const fields = new Set(Object.values(db.cards).filter(c => c.ready && c.kind === 'fld').map(c => c.name));
+  const field = [...new Set((Array.isArray(plan.field) ? plan.field : []).map(f => f && typeof f === 'object' ? f.name : f).filter(n => typeof n === 'string' && fields.has(n)))].slice(0, R.field[1]);
+  const habit = {};
+  const h = plan.habit && typeof plan.habit === 'object' ? plan.habit : {};
+  for (const [k, [lo, hi]] of Object.entries(R.habit)) if (Number.isFinite(h[k])) habit[k] = Math.min(hi, Math.max(lo, h[k]));
+  if (!prefer.length && !field.length && !Object.keys(habit).length) return null;
+  return {
+    prefer,
+    field,
+    habit
+  };
+};
 const cardAiStyleOf = s => typeof s === 'string' && CARD_AI_STYLE_IDS.includes(s) ? s : null;
 const CARD_AI_DECKS = Object.freeze({
   mua: {
@@ -122468,17 +122504,28 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   const style = cardAiStyleOf(opts && opts.style);
   const drawn = Array.isArray(recipeAll.variants) && recipeAll.variants.length ? recipeAll.variants[Math.min(recipeAll.variants.length - 1, Math.floor(rnd() * recipeAll.variants.length))] : null;
   const variant = drawn && style ? recipeAll.variants.find(v => v.id === CARD_AI_STYLE_VARIANT[style]) || drawn : drawn;
-  const recipe = variant ? {
+  const plan = cardAiPlanClean(db, opts && opts.plan);
+  const recipe0 = variant ? {
     ...recipeAll,
     ...variant
   } : recipeAll;
+  const recipe = plan ? {
+    ...recipe0,
+    ...(plan.field.length ? {
+      field: plan.field
+    } : {})
+  } : recipe0;
   const maxWave = cfg.maxWave;
   const habit0 = variant && variant.deckHabit ? {
     ...cardAiDeckHabit(who, levelId),
     ...variant.deckHabit
   } : cardAiDeckHabit(who, levelId);
   const tune = style && !variant ? CARD_AI_STYLE_TUNE[style] : null;
-  const habit = tune ? Object.fromEntries(Object.entries(habit0).map(([k, v]) => [k, typeof v === 'number' ? v * ((tune.mul || {})[k] || 1) + ((tune.add || {})[k] || 0) : v])) : habit0;
+  const habit1 = tune ? Object.fromEntries(Object.entries(habit0).map(([k, v]) => [k, typeof v === 'number' ? v * ((tune.mul || {})[k] || 1) + ((tune.add || {})[k] || 0) : v])) : habit0;
+  const habit = plan ? {
+    ...habit1,
+    ...plan.habit
+  } : habit1;
   const mons = monsters.map(no => cardMonsterOf(db, no));
   const pool = Object.values(db.cards).filter(c => c.ready && (c.user === 'any' || c.user === 'breeder' ? c.wave <= maxWave : mons.some(m => cardUsableBy(c, {
     ...m,
@@ -122495,6 +122542,8 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   });
   const ranked = Object.values(byName).sort((a, b) => b.v - a.v || (a.c.no < b.c.no ? -1 : 1));
   const preferOn = levelId === 'hard' || levelId === 'expert' || levelId === 'master';
+  const planTop = new Set(ranked.slice(0, CARD_AI_PLAN_RANGE.preferTop).map(x => x.c.name));
+  const preferNames = [...(recipe.prefer || []), ...(plan ? plan.prefer.filter(n => planTop.has(n) && !(recipe.prefer || []).includes(n)) : [])];
   const guardTarget = Math.round(12 + 6 * Math.min(1.5, habit.keepGuard));
   const cards = [];
   const heavyMax = Math.round(8 * habit.big);
@@ -122536,7 +122585,7 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   })));
   const shared = attacks.filter(x => x.c.user === 'any' || x.c.user === 'breeder');
   const used = new Set();
-  (preferOn ? recipe.prefer || [] : []).forEach(name => {
+  (preferOn ? preferNames : []).forEach(name => {
     const x = byName[name];
     if (x && !used.has(name)) {
       used.add(name);
@@ -122578,6 +122627,24 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
     sameBlood
   };
 };
+const cardAiPlanCandidates = (db, who, levelId = 'normal', monsters = []) => {
+  const cfg = CARD_AI_BUILD[levelId] || CARD_AI_BUILD.normal;
+  const mons = (Array.isArray(monsters) ? monsters : []).map(no => cardMonsterOf(db, no)).filter(Boolean);
+  if (!mons.length) return [];
+  const habit = cardAiDeckHabit(who, levelId);
+  const byName = {};
+  Object.values(db.cards).filter(c => c.ready && c.kind !== 'fld' && (c.user === 'any' || c.user === 'breeder' ? c.wave <= cfg.maxWave : mons.some(m => cardUsableBy(c, {
+    ...m,
+    ko: false
+  }) && c.wave <= Math.max(cfg.maxWave, cardAiMonWave(db, m, c))))).forEach(c => {
+    const v = cardAiCardValue(c, habit);
+    if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = {
+      c,
+      v
+    };
+  });
+  return Object.values(byName).sort((a, b) => b.v - a.v || (a.c.no < b.c.no ? -1 : 1)).slice(0, CARD_AI_PLAN_RANGE.preferTop).map(x => x.c);
+};
 const cardAssistantDeckPreview = (who, styleId = 'normal', level = 'normal') => {
   if (typeof CARD_BATTLE_DATA === 'undefined' || !CARD_AI_DECKS[who]) return null;
   const sid = cardAiStyleOf(styleId) || 'normal';
@@ -122586,17 +122653,12 @@ const cardAssistantDeckPreview = (who, styleId = 'normal', level = 'normal') => 
   const deck = cardAiBuildDeck(db, who, lv, cardAiSeededRand(`preview:${who}:${sid}:${lv}`), {
     style: sid
   });
-  let name = null;
-  try {
-    name = typeof cardAssistantDeckName === 'function' ? cardAssistantDeckName(db, deck, who, lv, cardAiSeededRand(`preview-name:${who}:${sid}:${lv}`)) : null;
-  } catch (_) {
-    name = null;
-  }
   return {
     monsters: deck.monsters.slice(),
     cards: deck.cards.slice(),
     styleId: sid,
-    name
+    name: CARD_AI_STYLE_NAMES[who] || null,
+    line: null
   };
 };
 const cardDeckProblems = (db, deck) => {
