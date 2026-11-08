@@ -11,9 +11,12 @@ const { quietBootSeed, updateNoticeSeed, oneTimeNoticeSeed } = require(path.join
 const { MIME, STORY_IDS, seed, toHome, finishTalk } = require(path.join(tools, 'assistant/life-browser-shared'));
 const out = __dirname;
 const VIEWS = [{ id: 'p', w: 390, h: 844 }, { id: 'l', w: 844, h: 390 }, { id: 'r', w: 390, h: 844, rot: true }];
-const PLANS = ['A', 'B', 'C'];
+const PLANS = ['A', 'B', 'C', 'W0', 'W1', 'W2'];
+//   W: A と同じ大きさで、床の空いている所(札・顔・吹き出し・名札に重ならない区間)だけを歩く。W0〜W2 は歩いている途中の3コマ
 
 const apply = (plan) => {
+  const walk = plan[0] === 'W', frame = walk ? Number(plan[1]) : 0;
+  if (walk) plan = 'A';
   const css = document.createElement('style');
   css.id = '__plan';
   if (plan === 'A') css.textContent = '.mhl-room .tag{top:42%!important;left:41%!important}[data-assistant-life-land="1"] .mhl-room .tag{left:40%!important;transform:translate(-50%,-38%) rotate(-3deg) scale(.86)!important}';
@@ -37,6 +40,25 @@ const apply = (plan) => {
     if (!pet) continue;
     pet.style.width = pet.style.height = `${face}px`;
     pet.style.top = 'auto'; pet.style.bottom = '9px';
+    if (walk) {
+      // 床の帯で、札・顔・吹き出し・名札に重ならない x の区間を集め、いちばん長い区間を歩く(3コマ: はし・まんなか・もう一方のはし)
+      const obs = [...room.querySelectorAll('.tag,.pp,.bb,.pl,.lv')].map(o => o.getBoundingClientRect());
+      const top = rr.bottom - 9 - face - 4, bot = rr.bottom - 9;
+      const free = []; let st = null;
+      for (let x = 3; x <= rr.width - face - 3; x += 2) {
+        const l = rr.left + x, r = l + face;
+        const ok = !obs.some(q => Math.min(r, q.right) - Math.max(l, q.left) > 0 && Math.min(bot, q.bottom) - Math.max(top, q.top) > 0);
+        if (ok && st == null) st = x; if (!ok && st != null) { free.push([st, x - 2]); st = null; }
+      }
+      if (st != null) free.push([st, rr.width - face - 3]);
+      free.sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]));
+      const [a, b] = free[0] || [rr.width - face - 3, rr.width - face - 3];
+      const x = [a, Math.round((a + b) / 2), b][(frame + id.length) % 3];
+      pet.style.left = `${x}px`;
+      pet.style.transform = (frame + id.length) % 2 ? 'scaleX(-1)' : 'none';
+      const mk = pet.querySelector('b'); if (mk) mk.style.display = frame === 1 ? '' : 'none'; // 止まったときだけ印
+      continue;
+    }
     if (plan === 'A') {
       // 床の右。顔の丸がいれば、その左
       const pp = room.querySelector('.pp');
