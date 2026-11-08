@@ -130,9 +130,17 @@ const json = (route, body) => route.fulfill({ status: 200, contentType: 'applica
         const fv = [...document.querySelectorAll('[data-rhythm-beat-visitors^="free"]')].find((e) => e.getClientRects().length);
         if (!fv) bad.push('フリーマッチに顔が出ていない');
         const fIds = fv ? [...fv.querySelectorAll('[data-rhythm-beat-visitor="friend"]')].map((e) => e.getAttribute('data-rhythm-beat-visitor-id')) : [];
-        if (fIds.join(',') !== 'friendroom01,friendhere01,friendbusy01') bad.push(`フリーマッチの顔: ${fIds.join(',') || 'なし'}`);
+        // 縦は2人+「+N」、横向きは3人+「+N」(名前を付けたぶん、縦は2人まで)
+        const want = ['friendroom01', 'friendhere01', 'friendbusy01', 'friendpriv01'];
+        if (!fIds.length || fIds.join(',') !== want.slice(0, fIds.length).join(',')) bad.push(`フリーマッチの顔: ${fIds.join(',') || 'なし'}`);
+        // フレンドは顔の下に名前(2026-11-08 社長「プレイヤーは名前もないとわからない」)。名前は顔の欄からはみ出さない
+        const nm = fv ? [...fv.querySelectorAll('[data-rhythm-beat-visitor="friend"]')].map((e) => (e.querySelector('[data-rhythm-beat-visitor-name]') || {}).innerText || '') : [];
+        const nameMap = { friendroom01: 'ぴよ', friendhere01: 'タロウ', friendbusy01: 'ハナ', friendpriv01: 'ミツ' };
+        if (nm.join(',') !== fIds.map((id) => nameMap[id]).join(',')) bad.push(`フレンドの名前: ${nm.join(',') || 'なし'}`);
+        if (fv) fv.querySelectorAll('[data-rhythm-beat-visitor-name]').forEach((e) => { const r = e.getBoundingClientRect(); const p = e.parentElement.getBoundingClientRect(); if (r.left < p.left - 1 || r.right > p.right + 1) bad.push(`名前「${e.innerText}」が欄からはみ出す`); });
         if (fv && fv.querySelector('[data-rhythm-beat-visitor="assistant"]')) bad.push('立ち絵があるのに助手がフリーマッチにも出る');
-        if (!fv || (fv.querySelector('[data-rhythm-beat-visitors-more]') || {}).innerText !== '+1') bad.push('4人目が「+1」になっていない');
+        const more = fv ? (fv.querySelector('[data-rhythm-beat-visitors-more]') || {}).innerText : '';
+        if (more !== `+${4 - fIds.length}`) bad.push(`入りきらない人が「+${4 - fIds.length}」になっていない(${more || 'なし'})`);
         if (!inBox(rect(fv), rect(free))) bad.push('フレンドの顔がフリーマッチのボタンからはみ出す');
         // フリーマッチの題・説明・待ち人数の字に重ならない
         [...(free ? free.querySelectorAll('b, small') : [])].filter((t) => fv && !fv.contains(t) && t.getClientRects().length).forEach((t) => { if (hit(rect(t), rect(fv))) bad.push(`顔が「${t.innerText.slice(0, 8)}」に重なる`); });

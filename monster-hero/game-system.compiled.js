@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9f16e4049abdd73a
+// source-sha256: 9a2f0460525f4b19
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91326,6 +91326,7 @@ function RhythmBeatVisitorFaces({
   max = 3,
   size = 26,
   where = '',
+  names = false,
   onPick,
   onMore,
   resolveIconUrl,
@@ -91378,7 +91379,15 @@ function RhythmBeatVisitorFaces({
       kind: it.kind,
       id: it.id
     })),
-    className: "relative block shrink-0 cursor-pointer active:scale-90",
+    className: `relative shrink-0 cursor-pointer active:scale-90 ${names ? 'flex flex-col items-center' : 'block'}`,
+    style: names ? {
+      width: `${size + 18}px`
+    } : {
+      width: px,
+      height: px
+    }
+  }, React.createElement("span", {
+    className: "relative block shrink-0",
     style: {
       width: px,
       height: px
@@ -91410,7 +91419,10 @@ function RhythmBeatVisitorFaces({
   }) : React.createElement("span", {
     className: "grid h-full w-full place-items-center text-xs",
     "aria-hidden": "true"
-  }, "🙂")))), rest > 0 && React.createElement("span", {
+  }, "🙂"))), names && React.createElement("b", {
+    "data-rhythm-beat-visitor-name": true,
+    className: "block w-full truncate text-center text-[8px] font-black leading-[9px] text-slate-950"
+  }, it.name))), rest > 0 && React.createElement("span", {
     role: "button",
     tabIndex: 0,
     "data-rhythm-beat-visitors-more": where,
@@ -93858,9 +93870,10 @@ function RhythmMultiScreen({
       where: "free",
       assistants: ms.assistant && ms.showArt ? [] : beatAssistants,
       friends: beatFriends,
-      max: 3,
-      size: 26,
-      className: "absolute right-1.5 top-1.5 z-10 -space-x-1.5 landscape:hidden",
+      max: 2,
+      size: 20,
+      names: true,
+      className: "absolute right-1 top-0.5 z-10 items-start landscape:hidden",
       onPick: setBeatPick,
       onMore: () => setBeatListOpen(true),
       resolveIconUrl: resolveIconUrl
@@ -93879,7 +93892,8 @@ function RhythmMultiScreen({
       friends: beatFriends,
       max: 3,
       size: 22,
-      className: "relative z-10 mt-0.5 hidden -space-x-1 landscape:flex",
+      names: true,
+      className: "relative z-10 mt-0.5 hidden items-start landscape:flex",
       onPick: setBeatPick,
       onMore: () => setBeatListOpen(true),
       resolveIconUrl: resolveIconUrl
