@@ -7,6 +7,7 @@
 // ステージの出るお話(ハロウィン・ナイト第2部・きゅうこ登場・ソラシド登場)を全部めくり、
 // ステージが出ている行で、ステージと窓が重ならず、ボタンが画面の中にあるかを見る。縦390では、今までどおり重ならないことも見る。
 const http = require('http'), path = require('path'), fs = require('fs');
+const { eventStorySeed } = require('../boot/quiet-boot-seed'); // お話の既読は本体から読んだ共通の種で入れる(手で書き写さない)
 const root = path.resolve(__dirname, '..', '..'), PORT = 9215;
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
@@ -42,6 +43,8 @@ const seed = ({ storyIds }) => {
     const errors = []; page.on('pageerror', e => errors.push(String(e)));
     await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
     await page.addInitScript(seed, { storyIds: STORY_IDS });
+    // お話・紹介の既読は共通の種で、手で書いた seed のあとに入れる(新しいお話が増えても先に流れない)
+    await page.addInitScript(eventStorySeed());
     await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     // タイトル→HOME。窓は閉じる

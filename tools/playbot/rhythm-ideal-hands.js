@@ -38,6 +38,7 @@ const W = 844, H = 390;
 const { chromium } = require(path.join(ROOT_DEFAULT, 'tools/node_modules/playwright'));
 const { createFakeSupabase } = require(path.join(ROOT_DEFAULT, 'tools/playbot/lib/fake-supabase.js'));
 const { touchInputSource } = require(path.join(ROOT_DEFAULT, 'tools/playbot/lib/touch-input.js'));
+const { eventStorySeed } = require(path.join(ROOT_DEFAULT, 'tools/boot/quiet-boot-seed.js'));
 const scan = require(path.join(ROOT_DEFAULT, 'tools/mode/rhythm-finger-owner-scan.js'));
 
 const seed = (songId) => `(() => {
@@ -194,6 +195,8 @@ const launch = async () => {
   });
   await context.addInitScript(() => { window.__mhSupabaseStubbed = true; });
   await context.addInitScript(seed(SONG));
+  // お話・紹介の既読は共通の種で、手で書いた seed のあとに入れる(新しいお話が増えても先に流れない)
+  await context.addInitScript(eventStorySeed());
   const page = await context.newPage();
   const errors = []; page.on('pageerror', (e) => errors.push(String(e).slice(0, 200)));
   await page.goto('https://sky.test/monster-hero/index.html', { waitUntil: 'load', timeout: 90000 });
