@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3204bcbbd98986ea
+// source-sha256: fe9b8a1de5f6d02d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -77835,11 +77835,16 @@ function HomeScreen({
       if (rh && rh.offsetParent) {
         const rb = offTop(rh) + rh.offsetHeight + 22,
           rr = offLeft(rh) + rh.offsetWidth;
+        let room = Infinity;
         for (const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle')) {
           if (!el.offsetParent) continue;
           const t = offTop(el);
-          if (t > offTop(rh) && offLeft(el) < rr) push = Math.max(push, rb - t);
+          if (t > offTop(rh) && offLeft(el) < rr) {
+            push = Math.max(push, rb - t);
+            room = Math.min(room, scene.clientHeight - (t + el.offsetHeight) - (el.classList.contains('mh-home-card-battle') ? 24 : 4));
+          }
         }
+        push = Math.min(push, Math.max(0, room));
       }
       scene.style.setProperty('--mh-home-left-push', `${Math.max(0, Math.ceil(push))}px`);
     };
