@@ -41,6 +41,7 @@ const sandbox = {
   masuPowerOf: (masu) => masu.power,
   rankingPartyColors: () => [], getMasuColors: () => [],
   rankingMasuDetail: (masu) => ({ v: 6, n: masu.baseId }),
+  assistantById: (id) => (id === 'mua' ? { id: 'mua', name: 'みゅあ' } : null),
   RHYTHM_SONGS: [{ songId: 'songA' }, { songId: 'songB' }, { songId: 'songC' }],
   RHYTHM_DIFFICULTIES: [{ id: 'EASY' }, { id: 'NORMAL' }, { id: 'HARD' }],
   // 実績の集計用: songC は EASY だけ、ほかは EASY と NORMAL(HARD はどの曲にも無い)
@@ -51,7 +52,7 @@ const sandbox = {
 // 通信層を、指定した fetch(偽サーバー)で新しく読み込む。第2の読み込みは「列がまだ無い環境」の検査に使う
 const EXPORTS_SOURCE = `${source}\n;globalThis.__api = { friendsMakeCode, friendsNormalizeCode, friendsFormatCode, friendsSafeId, friendLinkView, friendsGroup, friendsLastSeenText, friendsIdOfRankingEntry,
   sbEnsureFriendCode, sbFindBreederIdByCode, sbFetchFriendLinks, sbFetchFriendProfiles, sbSendFriendRequest, sbRespondFriendRequest, sbCancelFriendRequest,
-  sbRemoveFriend, sbBlockFriendUser, sbUnblockFriendUser, sbSendRoomInvite, sbFetchRoomInvites, sbFetchFriendRoster, friendsPlaceOfScreen, friendsSetRoomPrivate, friendsPresenceText, friendsPlaytimeText, friendsBuildSummary, friendsNormalizeRecent, friendsMergeRecent, friendsCleanNote, friendsNormalizeNotes, friendsInviteLink, friendsCodeFromSearch, friendsCompareScores, friendsCleanMessage, friendsNormalizeRecords, friendsRhythmSummary, friendsRhythmAchievements, friendsCollectionSummary, friendsArrangeList, friendsNormalizeFavorites, sbUpsertFriendProfile, sbFetchFriendSummaries, sbCountIncomingFriendRequests, FRIEND_INVITE_TTL_MS, FRIENDS_MAX, FRIENDS_PENDING_MAX, friendsUnavailable };`;
+  sbRemoveFriend, sbBlockFriendUser, sbUnblockFriendUser, sbSendRoomInvite, sbFetchRoomInvites, sbFetchFriendRoster, friendsPlaceOfScreen, friendsSetRoomPrivate, friendsSetLifeSpot, friendsSetLifeVisit, friendsLifeSpotText, friendsPresenceText, friendsPlaytimeText, friendsBuildSummary, friendsNormalizeRecent, friendsMergeRecent, friendsCleanNote, friendsNormalizeNotes, friendsInviteLink, friendsCodeFromSearch, friendsCompareScores, friendsCleanMessage, friendsNormalizeRecords, friendsRhythmSummary, friendsRhythmAchievements, friendsCollectionSummary, friendsArrangeList, friendsNormalizeFavorites, sbUpsertFriendProfile, sbFetchFriendSummaries, sbCountIncomingFriendRequests, FRIEND_INVITE_TTL_MS, FRIENDS_MAX, FRIENDS_PENDING_MAX, friendsUnavailable };`;
 const loadApi = (fetchImpl) => {
   const box = { ...sandbox, fetch: fetchImpl };
   vm.createContext(box);
@@ -202,6 +203,24 @@ const statusOf = (a, b) => {
     const rp = [api.friendsPlaceOfScreen('RHYTHM_MULTI'), api.friendsPlaceOfScreen('RHYTHM_PLAY')];
     api.friendsSetRoomPrivate(false);
     check('いまの状態: 合言葉の部屋は「🔑 プライベート中」、その中の演奏は「演奏中」(テンポと決めた)', rp[0] === 'roomPrivate' && rp[1] === 'rhythmPlay' && api.friendsPresenceText('roomPrivate', tN - 60000, tN).text === '🔑 プライベート中' && api.friendsPlaceOfScreen('RHYTHM_MULTI') === 'multi', JSON.stringify(rp));
+    // 助手ライフの中の場所(2026-11-08 社長・案A)
+    api.friendsSetLifeSpot('h', 'mua');
+    const ls1 = api.friendsBuildSummary({ place: 'life', masuMons: [], playtime: {} });
+    const ls0 = api.friendsBuildSummary({ place: 'life', masuMons: [], playtime: {}, show: false });
+    api.friendsSetLifeVisit(true);
+    const ls2 = api.friendsBuildSummary({ place: 'life', masuMons: [], playtime: {} });
+    const lsPlace = api.friendsPlaceOfScreen('PROFILE');
+    api.friendsSetLifeVisit(false); api.friendsSetLifeSpot('');
+    const lp = (rec) => P('life', tN - 60000, tN, rec);
+    check('いまの状態(助手ライフ): 部屋を開いていれば lv=h・la=助手、訪ねた家では lv=v(持ち主は送らない)・プロフィールから訪ねても助手ライフ', ls1.spot && ls1.spot.lv === 'h' && ls1.spot.la === 'mua' && ls2.spot.lv === 'v' && !ls2.spot.la && lsPlace === 'life', JSON.stringify([ls1.spot, ls2.spot, lsPlace]));
+    check('いまの状態(助手ライフ): 見せない設定なら場所の印も送らない', ls0.place === 'other' && !ls0.spot, JSON.stringify(ls0.spot));
+    check('いまの状態(助手ライフ): 一覧は短い形・プロフィールは文の形(「🏡 みゅあの部屋」「🏡 みゅあの部屋をのぞいている」「🏘 フレンドの家へ」)',
+      lp({ lv: 'h', la: 'mua' }).text === '🏡 みゅあの部屋' && lp({ lv: 'h', la: 'mua' }).long === '🏡 みゅあの部屋をのぞいている'
+      && lp({ lv: 'v' }).text === '🏘 フレンドの家へ' && lp({ lv: 'v' }).long === '🏘 フレンドの家に遊びに行っている' && lp({ lv: 'w' }).text === '📋 みんなの居場所', JSON.stringify(lp({ lv: 'h', la: 'mua' })));
+    check('いまの状態(助手ライフ): 印が無い・知らない助手・知らない印は、今までの「🏡 助手ライフ」/家の形', lp(null).text === '🏡 助手ライフ' && lp({ lv: 'x' }).text === '🏡 助手ライフ' && lp({ lv: 'h', la: 'zzz' }).text === '🏡 助手の家'
+      && api.friendsNormalizeRecords({ lv: 'q', la: '<b>' }).lv === '' && api.friendsNormalizeRecords({ lv: 'q', la: '<b>' }).la === '', JSON.stringify(lp({ lv: 'h', la: 'zzz' })));
+    // 短い形は一覧の1行に収まる長さ(印のあと全角9字まで)
+    check('いまの状態(助手ライフ): 短い形はどれも印のあと9字まで', ['h', 'w', 'f', 'i', 'p', 'v'].every((k) => [...lp({ lv: k }).text.split(' ')[1]].length <= 9), ['h', 'w', 'f', 'i', 'p', 'v'].map((k) => lp({ lv: k }).text).join('/'));
     check('いまの状態: 「いまの状態をフレンドに見せる」が切なら、場所は other・周回の印も送らない', sum.place === 'other' && sum.au === 0 && sum.im === 0, JSON.stringify(sum).slice(0, 120)); }
   const t0 = 1700000000000;
   check('5分以内なら「いまの場所」、それより前なら「◯分前」', api.friendsPresenceText('rhythm', t0 - 60 * 1000, t0).online === true

@@ -853,6 +853,12 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   if (typeof useAssistantLifeFriendState === 'function') useAssistantLifeFriendState();
   const [tab, setTab] = React.useState('house');
   const [roomId, setRoomId] = React.useState(st.focus || null);
+  // フレンドに見せる「いまの状態」に、家の中のどこにいるかを知らせる(34-friends-api・2026-11-08 案A)。閉じたら消す
+  React.useEffect(() => {
+    if (typeof friendsSetLifeSpot !== 'function') return;
+    friendsSetLifeSpot(({ house: 'h', where: 'w', friends: 'f', items: 'i', visit: 'p' })[tab] || 'h', tab === 'house' && roomId ? String(roomId) : '');
+  }, [tab, roomId]);
+  React.useEffect(() => () => { if (typeof friendsSetLifeSpot === 'function') friendsSetLifeSpot(''); }, []);
   const [scene, setScene] = React.useState(null);
   // 声をかけたあとの続きのカード(2026-11-08 社長 ❼A)。掛け合いが閉じたら、同じ部屋のシートを開き直して出す
   const [follow, setFollow] = React.useState(null);

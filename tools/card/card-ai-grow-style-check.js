@@ -119,7 +119,8 @@ check('助手は8人', WHO.length === 8, WHO.join(','));
   const s82 = src('src/parts/82-card-battle-core.jsx');
   const s84 = src('src/parts/84-screen-card-battle.jsx');
   check('F 82 から助手ライフの口を読まない', !/assistantLife\w*\s*\(/.test(s82));
-  check('F 84: 助手と対戦だけで3つのデッキから選ぶ(みんなのデッキ・杯は選ばない)・印が真のときだけ', /const aiPick = !share && !\(opts && opts\.cup\) && cardGrowStyleOn\(\) && typeof cardAssistantDeckPick === 'function' \? cardAssistantDeckPick\(pick\.who, Math\.random, pick\.level, \{ playerDeck: activeDeck \}, typeof cardAiDeckNextStyle === 'function' \? cardAiDeckNextStyle\(pick\.who\) : null\) : null;/.test(s84));
+  check('F 84: 助手と対戦だけで3つのデッキから選ぶ(みんなのデッキ・杯は選ばない)・印が真のときだけ', /const aiPick = !share && !\(opts && opts\.cup\) && cardGrowStyleOn\(\) && typeof cardAssistantDeckPick === 'function' \? cardAssistantDeckPick\(pick\.who, Math\.random, pick\.level, \{ playerDeck: activeDeck \}, typeof cardAiDeckNextId === 'function' \? cardAiDeckNextId\(pick\.who\) : typeof cardAiDeckNextStyle === 'function' \? cardAiDeckNextStyle\(pick\.who\) : null\) : null;/.test(s84));
+  // 2026-11-08 推し・好き・素顔: 相手えらびで見せた今日のデッキ(これまでのデッキも含む id)で始める。口が無ければ前の cardAiDeckNextStyle
   check('F 84: 選んだデッキで戦い、選ばないときは今の組み方', /: aiPick \? aiPick\.deck : cardAiBuildDeck\(db, pick\.who, pick\.level, Math\.random, \{ playerDeck: activeDeck \}\);/.test(s84));
   {
     const a = s84.indexOf('const cardGrowStyleOn = ');
@@ -130,7 +131,8 @@ check('助手は8人', WHO.length === 8, WHO.join(','));
     check('F 公開の印 cardGrowStyle は真(2026-11-08 社長「この文で公開」)', /\n  cardGrowStyle: true,/.test(s17));
   }
   const s83 = src('src/parts/83-card-ai-deck.jsx');
-  check('F 83: 助手ライフの口は呼ぶ時に typeof で確かめ、知らない値は型なし', /typeof assistantLifeCardStyle === 'function' \? cardAiStyleOf\(assistantLifeCardStyle\(who\)\) : null/.test(s83));
+  // 2026-11-08 推し・好き・素顔に作り直し: 助手ライフの材料の口(assistantLifeCardMaterial)を typeof で確かめて読む。壊れた値は無視(tools/card/card-ai-deck-check.js の N)
+  check('F 83: 助手ライフの材料の口は呼ぶ時に typeof で確かめ、投げても読めなくしない', /typeof assistantLifeCardMaterial === 'function' \? assistantLifeCardMaterial\(who\) : null/.test(s83) && /catch \(_\) \{ m = null; \}/.test(s83));
 }
 // ---- G ----
 {
@@ -144,7 +146,7 @@ check('助手は8人', WHO.length === 8, WHO.join(','));
   check('G 知らない値は normal', !!bad && bad.foe.style === 'normal');
   check('G マルチの記録には型を付けない', !!pvp && !('style' in pvp.foe));
   const s84 = src('src/parts/84-screen-card-battle.jsx');
-  check('G 84: 助手と対戦の記録に使った型を残す', /style: foeStyle \|\| 'normal'/.test(s84) && /deckName: log\.deckName, style: log\.style, styleName: log\.styleName \}/.test(s84));
+  check('G 84: 助手と対戦の記録に使った型を残す', /style: foeStyle \|\| 'normal'/.test(s84) && /deckName: log\.deckName, style: log\.style, styleName: log\.styleName(, \.\.\.\(game\.aiDeck \? \{ deckId: game\.aiDeck\.deckId, deckFrom: game\.aiDeck\.deckFrom \} : \{\}\))? \}/.test(s84));
 }
 // ---- I ----
 {

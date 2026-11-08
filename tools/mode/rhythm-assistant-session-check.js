@@ -264,7 +264,7 @@ check('助手のスコアをランキングへ送らない(助手の計算の部
 }
 // ---- 呼ぶシートの複数選択(2026-11-07 社長「1人ずつじゃなくて複数選択がほしい」) ----
 {
-  check('マスモンと助手をタブをまたいで選び、まとめて呼ぶ(picks・callAll)', /const \[picks, setPicks\] = React\.useState\(\[\]\);/.test(SHEET) && /const callAll = async \(\) => \{/.test(SHEET) && /picked=\{pickedAssistantIds\} onToggle=\{\(id\) => togglePick\('assistant', id\)\}/.test(SHEET));
+  check('マスモンと助手をタブをまたいで選び、まとめて呼ぶ(picks・callAll)', /const \[picks, setPicks\] = React\.useState\((\[\]|\(\) => \(preselectAssistant[^\n]*: \[\]\))\);/.test(SHEET) && /const callAll = async \(\) => \{/.test(SHEET) && /picked=\{pickedAssistantIds\} onToggle=\{\(id\) => togglePick\('assistant', id\)\}/.test(SHEET));
   check('部屋の空き席より多くは選べない(空き席は部屋が渡す)', /if \(picks\.length >= freeSeats\) \{ setPickNote/.test(SHEET) && /freeSeats=\{view \? Math\.max\(0, RHYTHM_MULTI_ROOM_MAX - \(view\.members \|\| \[\]\)\.length\) : 0\}/.test(MULTI));
   check('使う回数は1人1回のまま(無料から先・足りないぶんは券)。券が足りないときは押せない', /const useFree = Math\.min\(freeLeft, paidPicks\);/.test(SHEET) && /const shortTickets = Math\.max\(0, useTickets - tickets\);/.test(SHEET) && /disabled=\{busy \|\| !picks\.length \|\| shortTickets > 0\}/.test(SHEET));
   check('デュオになる組み合わせを選んでいるあいだに出す', /data-rhythm-buddy-multi-duo/.test(SHEET));
