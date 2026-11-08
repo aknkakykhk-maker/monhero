@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 81db4c6379176662
+// source-sha256: 45964beb4500c4d6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13734,7 +13734,7 @@ const RELEASE_FLAGS = {
   assistantPeer: true,
   assistantPeerApi: true,
   assistantLife: true,
-  assistantLifeFurniture: false,
+  assistantLifeFurniture: true,
   rhythmAssistantSession: true,
   assistantSorashido: true,
   assistantErubin: true,
@@ -119623,18 +119623,23 @@ function AssistantLifeFurnSheet({
     className: "rounded-xl bg-slate-800/80 px-2 py-1 text-[11px] font-bold text-slate-300"
   }, "贈れる家具がありません。モンヒロビートの「ビートP交換所」の「家具」で手に入ります")), React.createElement("p", {
     className: "mt-2 text-[11px] font-black text-amber-200"
-  }, "🏠 部屋の家具 ", mine.length, "/", all.length), React.createElement("div", {
-    className: "mt-1 space-y-1"
-  }, mine.length ? mine.map(f => {
-    const on = room.put[f.slot] === f.key;
-    return row(f, on ? btn('しまう', () => assistantLifeFurnMove(id, f.key, false), 'border-slate-500 text-slate-200', {
-      'data-assistant-life-furn-keep': f.key
-    }) : btn(room.put[f.slot] ? '入れかえる' : '置く', () => assistantLifeFurnMove(id, f.key, true), 'border-pink-300/70 bg-pink-400/15 text-pink-100', {
-      'data-assistant-life-furn-put': f.key
-    }));
-  }) : React.createElement("p", {
+  }, "🏠 部屋に置いてある家具 ", React.createElement("span", {
+    className: "text-slate-300"
+  }, "(", mine.length, "/", all.length, "持っている)")), React.createElement("div", {
+    className: "mt-1 space-y-1",
+    "data-assistant-life-furn-placed": true
+  }, mine.filter(f => room.put[f.slot] === f.key).length ? mine.filter(f => room.put[f.slot] === f.key).map(f => row(f, btn('しまう', () => assistantLifeFurnMove(id, f.key, false), 'border-slate-500 text-slate-200', {
+    'data-assistant-life-furn-keep': f.key
+  }))) : React.createElement("p", {
     className: "rounded-xl bg-slate-800/80 px-2 py-1 text-[11px] font-bold text-slate-300"
-  }, "まだありません")), React.createElement("button", {
+  }, "まだありません")), mine.some(f => room.put[f.slot] !== f.key) && React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "mt-2 text-[11px] font-black text-amber-200"
+  }, "📦 押し入れ"), React.createElement("div", {
+    className: "mt-1 space-y-1",
+    "data-assistant-life-furn-kept": true
+  }, mine.filter(f => room.put[f.slot] !== f.key).map(f => row(f, btn(room.put[f.slot] ? '入れかえる' : '置く', () => assistantLifeFurnMove(id, f.key, true), 'border-pink-300/70 bg-pink-400/15 text-pink-100', {
+    'data-assistant-life-furn-put': f.key
+  }))))), React.createElement("button", {
     type: "button",
     "data-assistant-life-furn-close": true,
     onClick: onClose,

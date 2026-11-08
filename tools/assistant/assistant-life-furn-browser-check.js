@@ -97,8 +97,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       check(`④ ${tag}: 置いた家具が部屋の中に出て、名札・顔・もとからある家具・家具どうしで重ならない・吹き出しより後ろ(z-index 2)`, (await page.locator('[data-assistant-life-room="atsu"] [data-assistant-life-room-furn]').count()) === 3 && ng.length === 0, ng.join(' / '));
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, `furn-${w}-2-house.png`) });
       await openRoomFurn(page, 'atsu');
-      check(`⑤ ${tag}: 置き場所がふさがった家具は押し入れ(「入れかえる」)・置いた家具は「しまう」・贈った家具は贈れる一覧から消える`,
-        (await page.locator('[data-assistant-life-furn-put="record"]').count()) === 1 && (await page.locator('[data-assistant-life-furn-keep="sofa"]').count()) === 1 && (await page.locator('[data-assistant-life-furn-give="sofa"]').count()) === 0);
+      check(`⑤ ${tag}: 「部屋に置いてある家具」と「押し入れ」を見出しで分ける・置き場所がふさがった家具は押し入れ(「入れかえる」)・置いた家具は「しまう」・贈った家具は贈れる一覧から消える`,
+        (await page.locator('[data-assistant-life-furn-kept] [data-assistant-life-furn-put="record"]').count()) === 1 && (await page.locator('[data-assistant-life-furn-placed] [data-assistant-life-furn-keep="sofa"]').count()) === 1 && (await page.locator('[data-assistant-life-furn-keep="sofa"]').count()) === 1 && (await page.locator('[data-assistant-life-furn-give="sofa"]').count()) === 0);
       await page.locator('[data-assistant-life-furn-put="record"]').click(); await page.waitForTimeout(300);
       const room2 = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_assistant_life_room_v1')));
       check(`⑤ ${tag}: 入れかえると、床はレコードプレーヤー・ソファは押し入れへ`, room2.atsu.put.floor === 'record' && room2.atsu.kept.includes('sofa'));
