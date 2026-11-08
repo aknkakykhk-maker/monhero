@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f7269521cfaa91ac
+// source-sha256: d48d2294c99cd274
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -126124,6 +126124,16 @@ const CARD_AI_STYLE_NAMES = Object.freeze({
   sorashido: '計算ずく',
   erubin: 'みんなで守る'
 });
+const CARD_AI_STYLE_SUFFIX = Object.freeze({
+  attack: '・攻め',
+  guard: '・守り',
+  normal: ''
+});
+const cardAiStyleDefaultName = (who, styleId) => {
+  const n = CARD_AI_STYLE_NAMES[who];
+  const s = cardAiStyleOf(styleId) || 'normal';
+  return n ? `${n}${CARD_AI_STYLE_SUFFIX[s]}` : null;
+};
 const CARD_AI_STYLE_VARIANT = Object.freeze({
   attack: 'blade',
   guard: 'shield',
@@ -126751,7 +126761,7 @@ const cardAssistantDeckPreview = (who, styleId = 'normal', level = 'normal') => 
     monsters: deck.monsters.slice(),
     cards: deck.cards.slice(),
     styleId: sid,
-    name: saved && saved.name || CARD_AI_STYLE_NAMES[who] || null,
+    name: saved && saved.name || cardAiStyleDefaultName(who, sid),
     line: saved && saved.line || null,
     at: saved && saved.at || 0
   };
@@ -130766,7 +130776,7 @@ const cardAiDeckPickStyle = (main, rnd) => {
   const others = CARD_AI_STYLE_IDS.filter(s => s !== m);
   return others[r - CARD_AI_DECK_MAIN < (1 - CARD_AI_DECK_MAIN) / 2 ? 0 : 1];
 };
-const cardAiDeckDefaultName = (who, style) => CARD_AI_STYLE_NAMES[who] || null;
+const cardAiDeckDefaultName = (who, style) => cardAiStyleDefaultName(who, style);
 const cardAiDeckFacts = (db, who, style) => {
   const trio = cardAiBuildDeck(db, who, 'master', cardAiSeededRand(`preview:${who}:${style}:master`), {
     style
@@ -131057,14 +131067,14 @@ const cardAiRecipeOf = (who, styleId) => {
   } : null;
 };
 const CARD_AI_DECK_VS_LINES = Object.freeze({
-  mua: 'えへへ、今日は『{name}』でいくね♪',
-  kiki: '今日は『{name}』。手加減しないよ',
-  momosuke: 'じゃーん! 今日のデッキは『{name}』だよっ',
-  dra: 'ふわぁ… 今日は『{name}』でいくよ〜',
-  atsu: '今日は『{name}』だ。かかってこい!',
-  kyuko: '今日のわたしは『{name}』。読ませてもらうわ',
-  sorashido: '今日は『{name}』でいく。計算どおりにな',
-  erubin: '今日は『{name}』でいこう。よろしく頼むよ'
+  mua: '今日は『{name}』でいくよ♪ まぢ全力だからね！',
+  kiki: '今日は『{name}』でお相手しまつ( ˘ω˘)',
+  momosuke: '今日のももは『{name}』だよ♡ 勝てるかな〜？w',
+  kyuko: 'ほい、今日は『{name}』でいくよぉ笑',
+  dra: 'おでは今日『{name}』でいくぞ。えへへ、手加減しないからな',
+  atsu: '今日は『{name}』でいくわ笑 全力な！',
+  sorashido: '今日は『{name}』でいくぜ・・・！ 計算済み笑',
+  erubin: '今日は『{name}』でいこうかな🤔 よろしくね笑'
 });
 const cardAiDeckVsLine = (who, pick) => {
   if (!pick) return null;
@@ -139553,7 +139563,8 @@ const CardBattleScreen = ({
         deckName: cardAssistantDeckName(db, cpuDeck, pick.who, pick.level),
         monsters: vsMons(st, CARD_CPU),
         ...(aiPick && aiPick.name ? {
-          styleName: aiPick.name
+          styleName: aiPick.name,
+          styleId: aiPick.styleId
         } : {})
       },
       me: {

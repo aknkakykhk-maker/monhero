@@ -204,7 +204,7 @@ const ok200 = (body) => ({ ok: true, json: async () => body });
     const same = att && J(att.deck.cards.length) === '50' && att.name === 'ためしの名前' && att.line === 'ためしのひとこと' && J(att.plan) === J(saved.plan);
     check('I 保存した方針・名前・ひとことで組む', !!same, J(att && { name: att.name, line: att.line }));
     const gd = picks.find((p) => p.styleId === 'guard');
-    check('I まだ組んでいない型は、今の組み方+既定の名前(AI なしでも名前が出る)', !!gd && gd.plan === null && gd.name === life.E.CARD_AI_STYLE_NAMES.dra);
+    check('I まだ組んでいない型は、今の組み方+既定の名前「◯◯・守り」(AI なしでも名前が出る)', !!gd && gd.plan === null && gd.name === `${life.E.CARD_AI_STYLE_NAMES.dra}・守り`, gd && gd.name);
     check('I 助手ライフの型(guard)がいちばん多く出る', picks.filter((p) => p.styleId === 'guard').length > 140);
     const v1 = life.E.cardAiDeckVsLine('dra', { name: 'のんびり長期戦', line: null });
     const v2 = life.E.cardAiDeckVsLine('dra', { name: 'x', line: 'AIのことば' });

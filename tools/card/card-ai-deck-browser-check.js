@@ -141,7 +141,7 @@ const run = async (browser, mode, scene, errors) => {
     else {
       const styleIn = await inView('[data-card-vs-style]');
       // 3つのうち組んだのは1つだけ。ほかの型が選ばれたときは既定の名前(どちらでも「型: 名前」とひとことが出る)
-      const okName = !!vs && (vs.style === `型: ${names[WHO]}` || (scene.ai && vs.style === '型: ためし火力'));
+      const okName = !!vs && ([names[WHO], `${names[WHO]}・攻め`, `${names[WHO]}・守り`].some((n) => vs.style === `型: ${n}`) || (scene.ai && vs.style === '型: ためし火力'));
       check(`${scene.ai ? '②' : '③'} ${label}: VS に「型: 名前」とひとこと(画面の中)`, okName && !!vs.line && styleIn === true, `${JSON.stringify(vs)} / ${styleIn}`);
     }
     for (let i = 0; i < 40; i++) { if (await page.locator('[data-card-top="result"]').count()) break; await pass(); }

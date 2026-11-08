@@ -118,8 +118,8 @@ const cardAiDeckPickStyle = (main, rnd) => {
   const others = CARD_AI_STYLE_IDS.filter((s) => s !== m);
   return others[(r - CARD_AI_DECK_MAIN) < (1 - CARD_AI_DECK_MAIN) / 2 ? 0 : 1];
 };
-// 既定の名前(AI が名前を付けられない・見張りに落ちたとき)。★型ごとの出し方は社長の「この文で」待ち(いまは同じ名前)
-const cardAiDeckDefaultName = (who, style) => CARD_AI_STYLE_NAMES[who] || null; // eslint-disable-line no-unused-vars
+// 既定の名前(AI が名前を付けられない・見張りに落ちたとき)。社長 Q4 A: 8つの名前に型を添える(82 の cardAiStyleDefaultName)
+const cardAiDeckDefaultName = (who, style) => cardAiStyleDefaultName(who, style);
 
 // ---- 中継役へ送る材料(数字と名前だけ) ----
 // 候補はその助手の「いつもの3体」(プレビューと同じ種)で組んだときの上位の札。場のカードは全部
@@ -266,16 +266,16 @@ const cardAiRecipeOf = (who, styleId) => {
   return e ? { plan: e.plan, name: e.name, line: e.line, at: e.at } : null;
 };
 // VS の画面で助手が言うひとこと。AI の line があればそれ、無ければ助手ごとの既定({name} にデッキの名前)
-//   ★既定の言い方は社長の「この文で」待ちの案(部長へ送る)。表情は happy
+//   既定の言い方は、各助手の話し方に合わせた部長の案(社長の「この文で」待ち)。表情は happy
 const CARD_AI_DECK_VS_LINES = Object.freeze({
-  mua: 'えへへ、今日は『{name}』でいくね♪',
-  kiki: '今日は『{name}』。手加減しないよ',
-  momosuke: 'じゃーん! 今日のデッキは『{name}』だよっ',
-  dra: 'ふわぁ… 今日は『{name}』でいくよ〜',
-  atsu: '今日は『{name}』だ。かかってこい!',
-  kyuko: '今日のわたしは『{name}』。読ませてもらうわ',
-  sorashido: '今日は『{name}』でいく。計算どおりにな',
-  erubin: '今日は『{name}』でいこう。よろしく頼むよ',
+  mua: '今日は『{name}』でいくよ♪ まぢ全力だからね！',
+  kiki: '今日は『{name}』でお相手しまつ( ˘ω˘)',
+  momosuke: '今日のももは『{name}』だよ♡ 勝てるかな〜？w',
+  kyuko: 'ほい、今日は『{name}』でいくよぉ笑',
+  dra: 'おでは今日『{name}』でいくぞ。えへへ、手加減しないからな',
+  atsu: '今日は『{name}』でいくわ笑 全力な！',
+  sorashido: '今日は『{name}』でいくぜ・・・！ 計算済み笑',
+  erubin: '今日は『{name}』でいこうかな🤔 よろしくね笑',
 });
 const cardAiDeckVsLine = (who, pick) => {
   if (!pick) return null;
