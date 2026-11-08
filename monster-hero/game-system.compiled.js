@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8853778b75834dd3
+// source-sha256: 53f35686a9e32715
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -109492,24 +109492,6 @@ const assistantLifeRoomCalm = () => {
     return false;
   }
 };
-const assistantLifeRoomStandRule = () => {
-  const def = {
-    ec: 0.1639,
-    len: 2.63,
-    cut: {
-      above: 0.55,
-      below: 1.8,
-      fade: 0.45
-    }
-  };
-  try {
-    if (typeof assistantLifeStandRule === 'function') {
-      const r = assistantLifeStandRule();
-      if (r && Number.isFinite(r.ec) && Number.isFinite(r.len) && r.cut) return r;
-    }
-  } catch (_) {}
-  return def;
-};
 const assistantLifeRoomFaceOf = (pid, src) => {
   try {
     if (typeof assistantLifeStandFace === 'function') return assistantLifeStandFace(pid, src);
@@ -109521,10 +109503,64 @@ const assistantLifeRoomFaceOf = (pid, src) => {
     m: 1
   };
 };
+const ASSISTANT_LIFE_ROOM_STAND_DEF = Object.freeze({
+  ec: 0.1639,
+  len: 2.63,
+  cut: Object.freeze({
+    above: 0.55,
+    below: 1.8,
+    fade: 0.45
+  })
+});
+const assistantLifeRoomVisH = (face, F) => {
+  try {
+    if (typeof assistantLifeStandVisH === 'function') {
+      const v = assistantLifeStandVisH(face, F);
+      if (Number.isFinite(v) && v > 0) return v;
+    }
+  } catch (_) {}
+  return F / (ASSISTANT_LIFE_ROOM_STAND_DEF.ec * (face.m || 1)) * (face.fit || 1);
+};
+const assistantLifeRoomPlace = (x, F, topY, cx) => {
+  try {
+    if (typeof assistantLifeStandRule === 'function') {
+      const r = assistantLifeStandRule({
+        face: x.face,
+        box: x.box,
+        F,
+        topY,
+        cx
+      });
+      if (r && Number.isFinite(r.top) && Number.isFinite(r.height)) return r;
+    }
+  } catch (_) {}
+  const D = ASSISTANT_LIFE_ROOM_STAND_DEF,
+    U = F * D.len;
+  const vh = assistantLifeRoomVisH(x.face, F),
+    ih = vh / (x.box.b - x.box.t),
+    iw = ih * x.box.ar;
+  const visTop = topY - (x.face.top || 0) * vh,
+    imgTop = visTop - x.box.t * ih;
+  const frameTop = topY - D.cut.above * U,
+    frameBottom = topY + D.cut.below * U;
+  return {
+    top: imgTop,
+    height: ih,
+    width: iw,
+    left: cx - (x.box.l + x.box.r) / 2 * iw,
+    clip: [Math.max(0, frameTop - imgTop), Math.max(0, imgTop + ih - frameBottom)],
+    fade: x.face.head ? null : [Math.max(0, (frameBottom - D.cut.fade * U - imgTop) / ih), Math.min(1, (frameBottom - imgTop) / ih)],
+    frameTop,
+    frameBottom,
+    visTop,
+    visBottom: visTop + vh,
+    U
+  };
+};
 const assistantLifeRoomStandLayout = (items, W, usable, deskTop, land, bed = false) => {
   const n = items.length;
   if (!n || items.some(x => !x.box)) return null;
-  const R = assistantLifeRoomStandRule();
+  const D = ASSISTANT_LIFE_ROOM_STAND_DEF;
   const span = W * (land ? 0.8 : 0.86),
     sw = span / n,
     x0 = (W - span) / 2;
@@ -109534,37 +109570,28 @@ const assistantLifeRoomStandLayout = (items, W, usable, deskTop, land, bed = fal
     3: 0.062,
     4: 0.055
   }[Math.min(4, n)], W * 0.085);
-  const visH = (x, f) => f / (R.ec * (x.face.m || 1));
-  const visW = (x, f) => visH(x, f) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
+  const visW = (x, f) => assistantLifeRoomVisH(x.face, f) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
   for (const x of items) {
     const w1 = visW(x, 1);
     if (w1 > 0) F = Math.min(F, sw * 0.98 / w1);
   }
-  const U = F * R.len;
-  const topY = bed ? deskTop + 0.15 * U - U : deskTop + 0.2 * U - R.cut.below * U;
+  const U = F * D.len;
+  const topY = bed ? deskTop + 0.15 * U - U : deskTop + 0.2 * U - D.cut.below * U;
   return items.map((x, i) => {
-    const vh = visH(x, F),
-      ih = vh / (x.box.b - x.box.t),
-      iw = ih * x.box.ar;
-    const visTop = topY - (x.face.top || 0) * vh,
-      imgTop = visTop - x.box.t * ih;
     const cx = x0 + sw * (i + 0.5);
-    const frameTop = topY - R.cut.above * U,
-      frameBottom = topY + R.cut.below * U;
-    const clip = [Math.max(0, frameTop - imgTop), Math.max(0, imgTop + ih - frameBottom)];
-    const fade = x.face.head ? null : [Math.max(0, (frameBottom - R.cut.fade * U - imgTop) / ih), Math.min(1, (frameBottom - imgTop) / ih)];
+    const r = assistantLifeRoomPlace(x, F, topY, cx);
     return {
-      left: cx - (x.box.l + x.box.r) / 2 * iw,
-      top: imgTop,
-      width: iw,
-      height: ih,
-      clip,
-      fade,
+      left: r.left,
+      top: r.top,
+      width: r.width,
+      height: r.height,
+      clip: r.clip,
+      fade: r.fade,
       cx,
       face: F,
-      visTop,
+      visTop: r.visTop,
       headTop: topY,
-      frameBottom,
+      frameBottom: r.frameBottom,
       w: visW(x, F)
     };
   });

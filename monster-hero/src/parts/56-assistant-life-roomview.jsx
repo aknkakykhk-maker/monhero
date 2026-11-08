@@ -35,39 +35,45 @@ const assistantLifeRoomCalm = () => { try { return typeof assistantMasmonReduced
 
 // 立ち絵の置き方(2026-11-08 社長「きき・みゅあが重なる・ドラが大きすぎる」→ オクリモノ3と社長が決めた測り方を使う):
 //   顔の大きさ m(手で置いた目・顎・頬の点から)で縮尺を決め、全員を同じ所で上下に切る(頭のてっぺんの上 顔0.55個・てっぺんから顔1.8個・下の 顔0.45個で消す)。
-//   表と関数はオクリモノ3の共通のもの(assistantLifeStandFace(pid, src)・assistantLifeStandRule() → { ec, len, cut }。docs/progress/assistant-peer/gifts/stagec/STAND-MEASURE.md)を読む。
+//   表と関数はオクリモノ3の共通のもの(assistantLifeStandFace・assistantLifeStandVisH・assistantLifeStandRule。docs/progress/assistant-peer/gifts/stagec/STAND-MEASURE.md)を読む。
 //   まだ無い版では、同じ決まりの既定(ふつうの形)で置く
-const assistantLifeRoomStandRule = () => {
-  const def = { ec: 0.1639, len: 2.63, cut: { above: 0.55, below: 1.8, fade: 0.45 } };
-  try { if (typeof assistantLifeStandRule === 'function') { const r = assistantLifeStandRule(); if (r && Number.isFinite(r.ec) && Number.isFinite(r.len) && r.cut) return r; } } catch (_) { /* 既定へ */ }
-  return def;
-};
 const assistantLifeRoomFaceOf = (pid, src) => {
   try { if (typeof assistantLifeStandFace === 'function') return assistantLifeStandFace(pid, src); } catch (_) { /* 既定へ */ }
   return { top: 0.05, eye: 0.33, chin: 0.47, m: 1 };
 };
+// オクリモノ3の共通の関数(56-assistant-life-house.jsx「立ち絵の大きさと切る位置」)を使う。まだ無い版では同じ値の既定で計算する
+//   ・assistantLifeStandVisH(face, F) … 見えている体の高さ(fit を含む)
+//   ・assistantLifeStandRule({ face, box, F, topY, cx }) … 1人ぶんの { top, height, width, left, clip, fade, frameTop, frameBottom, visTop, visBottom, U }
+const ASSISTANT_LIFE_ROOM_STAND_DEF = Object.freeze({ ec: 0.1639, len: 2.63, cut: Object.freeze({ above: 0.55, below: 1.8, fade: 0.45 }) });
+const assistantLifeRoomVisH = (face, F) => {
+  try { if (typeof assistantLifeStandVisH === 'function') { const v = assistantLifeStandVisH(face, F); if (Number.isFinite(v) && v > 0) return v; } } catch (_) { /* 既定へ */ }
+  return F / (ASSISTANT_LIFE_ROOM_STAND_DEF.ec * (face.m || 1)) * (face.fit || 1);
+};
+const assistantLifeRoomPlace = (x, F, topY, cx) => {
+  try { if (typeof assistantLifeStandRule === 'function') { const r = assistantLifeStandRule({ face: x.face, box: x.box, F, topY, cx }); if (r && Number.isFinite(r.top) && Number.isFinite(r.height)) return r; } } catch (_) { /* 既定へ */ }
+  const D = ASSISTANT_LIFE_ROOM_STAND_DEF, U = F * D.len;
+  const vh = assistantLifeRoomVisH(x.face, F), ih = vh / (x.box.b - x.box.t), iw = ih * x.box.ar;
+  const visTop = topY - (x.face.top || 0) * vh, imgTop = visTop - x.box.t * ih;
+  const frameTop = topY - D.cut.above * U, frameBottom = topY + D.cut.below * U;
+  return { top: imgTop, height: ih, width: iw, left: cx - ((x.box.l + x.box.r) / 2) * iw, clip: [Math.max(0, frameTop - imgTop), Math.max(0, imgTop + ih - frameBottom)],
+    fade: x.face.head ? null : [Math.max(0, (frameBottom - D.cut.fade * U - imgTop) / ih), Math.min(1, (frameBottom - imgTop) / ih)], frameTop, frameBottom, visTop, visBottom: visTop + vh, U };
+};
 // 部屋の大きさから、並ぶ人の置き場所を決める(px)。顔の長さ F を全員同じに(人数で決める高さと、受け持ちの幅を超えない長さの小さいほう)。
-//   頭のてっぺんの線は、切る下端(てっぺんから顔1.8個)が前の家具の天板より少し下に来る高さ。左右は受け持ちの幅の真ん中(重ならない)
+//   頭のてっぺんの線は、切る下端(てっぺんから顔1.8個)が前の家具の天板より少し下に来る高さ。寝ているとき(ベッド)は顎がベッドの上。左右は受け持ちの幅の真ん中(重ならない)
 const assistantLifeRoomStandLayout = (items, W, usable, deskTop, land, bed = false) => {
   const n = items.length;
   if (!n || items.some(x => !x.box)) return null;
-  const R = assistantLifeRoomStandRule();
+  const D = ASSISTANT_LIFE_ROOM_STAND_DEF;
   const span = W * (land ? 0.8 : 0.86), sw = span / n, x0 = (W - span) / 2;
   let F = Math.min(usable * ({ 1: 0.07, 2: 0.07, 3: 0.062, 4: 0.055 }[Math.min(4, n)]), W * 0.085); // 1人でも2人でも顔の大きさがなるべく同じ(縦は幅で上限)
-  const visH = (x, f) => f / (R.ec * (x.face.m || 1));
-  const visW = (x, f) => visH(x, f) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
+  const visW = (x, f) => assistantLifeRoomVisH(x.face, f) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
   for (const x of items) { const w1 = visW(x, 1); if (w1 > 0) F = Math.min(F, (sw * 0.98) / w1); }
-  const U = F * R.len;
-  // 寝ているとき(ベッド)は、顎がベッドの上に来る高さ(頭を枕にのせる)
-  const topY = bed ? deskTop + 0.15 * U - U : deskTop + 0.2 * U - R.cut.below * U;
+  const U = F * D.len;
+  const topY = bed ? deskTop + 0.15 * U - U : deskTop + 0.2 * U - D.cut.below * U;
   return items.map((x, i) => {
-    const vh = visH(x, F), ih = vh / (x.box.b - x.box.t), iw = ih * x.box.ar;
-    const visTop = topY - (x.face.top || 0) * vh, imgTop = visTop - x.box.t * ih;
     const cx = x0 + sw * (i + 0.5);
-    const frameTop = topY - R.cut.above * U, frameBottom = topY + R.cut.below * U;
-    const clip = [Math.max(0, frameTop - imgTop), Math.max(0, imgTop + ih - frameBottom)];
-    const fade = x.face.head ? null : [Math.max(0, (frameBottom - R.cut.fade * U - imgTop) / ih), Math.min(1, (frameBottom - imgTop) / ih)];
-    return { left: cx - ((x.box.l + x.box.r) / 2) * iw, top: imgTop, width: iw, height: ih, clip, fade, cx, face: F, visTop, headTop: topY, frameBottom, w: visW(x, F) };
+    const r = assistantLifeRoomPlace(x, F, topY, cx);
+    return { left: r.left, top: r.top, width: r.width, height: r.height, clip: r.clip, fade: r.fade, cx, face: F, visTop: r.visTop, headTop: topY, frameBottom: r.frameBottom, w: visW(x, F) };
   });
 };
 
