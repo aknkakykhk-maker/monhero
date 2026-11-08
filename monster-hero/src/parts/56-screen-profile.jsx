@@ -127,7 +127,7 @@ function ProfileScreen({
   // タクティクスバトルの記録(モードidごとに {hs,clears,waves})と、その種族チャレンジの進み具合
   tacticsRecordsOf, speciesChallengeProgressOf,
   costumeEnabled=false, wornCostume=null, onOpenCostumePicker=null,
-  onBack, onOpenNameEdit, onOpenIconPicker, onOpenFramePicker, onOpenDex, onOpenItems, onOpenCallStylePicker, onOpenAssistantPicker,
+  onBack, onOpenNameEdit, onOpenIconPicker, onOpenFramePicker, onOpenDex, onOpenItems, onOpenCallStylePicker, onOpenAssistantPicker, talkedCallname = null,
   onSelectBattleMode, onOpenEventReplayList, onOpenSpeciesRecords,
   rhythmHistoryCount, onOpenRhythmHistory,
   // フレンド画面への入口。公開前(friendsEnabled=false)は出さない
@@ -351,8 +351,8 @@ function ProfileScreen({
                   <div className="text-[11px] font-black tracking-widest" style={{color:accent}}>{activeAssistant.name}との仲良し度</div>
                   <div className="text-[12px] font-black text-white">Lv.{assistantBondLevelNow}　{stage?stage.title:''}</div>
                 </div>
-                {assistantBondLevelNow>=((typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL!=='undefined'&&ASSISTANT_CALL_STYLE_UNLOCK_LEVEL)||6)?(
-                  <button type="button" onClick={onOpenCallStylePicker} className="shrink-0 min-h-[44px] rounded-xl px-2 text-right active:scale-95">
+                {/* 会話で呼び方を決めた人は、Lv6 より前でも押せる(元に戻すため・2026-11-08) */}{(assistantBondLevelNow>=((typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL!=='undefined'&&ASSISTANT_CALL_STYLE_UNLOCK_LEVEL)||6)||!!talkedCallname)?(
+                  <button type="button" data-profile-call-style onClick={onOpenCallStylePicker} className="shrink-0 min-h-[44px] rounded-xl px-2 text-right active:scale-95">
                     <div className="text-[10px] text-slate-400 flex items-center justify-end gap-0.5">呼び方<Edit3 size={12}/></div>
                     <div className="text-[12px] font-black" style={{color:accent}}>{assistantSpeakText('{name}',breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId)}</div>
                   </button>

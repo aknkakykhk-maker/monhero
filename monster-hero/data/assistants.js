@@ -1216,13 +1216,218 @@ const assistantCallName = (name, level, customCall, assistantId) => {
   const raw = String(name || '').trim();
   if (!raw) return ASSISTANT_NO_NAME;
   const lv = Number.isFinite(level) ? level : ASSISTANT_BOND_MIN_LEVEL;
+  // 会話で決めた呼び方(2026-11-08)がいちばん先。Lv に関係なく使う(Lv1 から「こう呼んで」と言えるため)
+  const talked = (typeof assistantCallnameOf === 'function' && assistantId) ? assistantCallnameOf(assistantId) : null;
+  if (talked) return talked.includes('{name}') ? assistantFillCallTemplate(talked, raw) : talked;
   const custom = (lv >= ASSISTANT_CALL_STYLE_UNLOCK_LEVEL && typeof customCall === 'string') ? customCall.trim() : '';
   if (custom) return custom.includes('{name}') ? assistantFillCallTemplate(custom, raw) : custom;
   const stage = assistantBondStageByLevel(lv, assistantId);
   return assistantFillCallTemplate(assistantGenderCallOf(stage.call || '{name}', assistantId), raw);
 };
+// ---------- 会話で決まる呼び方・プレイヤーから助手へのあだ名(2026-11-08 社長・AI-TALK-PLAN) ----------
+// 保存は新しいキーだけ。今の mh_assistant_call_style_* は読むだけ(下地)で、書きかえない・消さない。
+//   mh_assistant_callname_v1     … { [助手id]: { call:'{name}ちゃん'|'あっちゃん', by:'chat'|'offer'|'ask'|'profile', at:ミリ秒, prev:1つ前|null } }
+//   mh_assistant_callname_ask_v1 … { [助手id]: { asked:true|false, offeredAt:ミリ秒 } }(Lv6の「なんて呼んだらいい？」を聞いたか・持ちかけた日)
+//   mh_assistant_nickname_v1     … { [助手id]: { nick:'みゅあたん', at:ミリ秒 } }(プレイヤーが助手を呼ぶあだ名。おしゃべりの中だけで使う)
+// 決まる順: 新しい呼び方 → Lv6 からの呼び方(今のキー) → 段の呼び方(性別込み)。プロフィールの入力欄で決めたものも新しい呼び方へ入れる(最後に決めたものが使われる)
+const ASSISTANT_CALLNAME_KEY = 'mh_assistant_callname_v1';
+const ASSISTANT_CALLNAME_ASK_KEY = 'mh_assistant_callname_ask_v1';
+const ASSISTANT_NICKNAME_KEY = 'mh_assistant_nickname_v1';
+const ASSISTANT_CALLNAME_FILLED_MAX = 12;      // 名前を入れたあとの長さ(吹き出しで切れないため)
+const ASSISTANT_NICKNAME_MAX = 10;
+const ASSISTANT_CALLNAME_ASK_LEVEL = ASSISTANT_CALL_STYLE_UNLOCK_LEVEL; // 助手から聞くのは今と同じ Lv6 から(社長)
+const ASSISTANT_CALLNAME_SHY_MAX_LEVEL = 2;    // Lv1〜2 は性格によって断ることがある。Lv3 からは断らない(社長)
+const ASSISTANT_CALLNAME_OFFER_DAYS = 7;       // 会話の流れで助手から持ちかけるのは、助手ごとに7日に1回まで
+// 呼び方・あだ名に入れない言葉。中継役(supabase/functions/assistant-chat/core.js の CALLNAME_BANNED_SOURCE)と同じ並び(検査が見張る)
+const ASSISTANT_CALLNAME_BANNED_SOURCE = 'ダーリン|ハニー|ベイビー|ベイベ|彼氏|彼女|カレシ|カノジョ|旦那|だんな|ダンナ|嫁|奥さん|ご主人|恋人|こいびと|あなた様|バカ|ばか|馬鹿|アホ|あほ|クズ|カス|ブス|デブ|ハゲ|ゴミ|ごみ|ザコ|ざこ|雑魚|死|殺|うんこ|うんち|ちんこ|ちんちん|まんこ|おっぱい|エロ|えろ|変態|へんたい|童貞|キモ|きもい|ガイジ|池沼|奴隷|どれい|ペット|下僕|本名|この子|うちの子|その子|あの子';
+const ASSISTANT_CALLNAME_BANNED_RE = new RegExp(ASSISTANT_CALLNAME_BANNED_SOURCE, 'i');
+// 個人情報らしいもの(電話・メール・郵便番号・URL・数字の並び)
+const ASSISTANT_CALLNAME_PERSONAL_RE = /\d{4,}|[0-9０-９]{4,}|@|https?:|www\.|〒|[-‐ー−]\d{3,}/;
+// 呼び方の型を確かめる。通れば保存してよい形('{name}' 入りか、名前を含まない呼び方)、通らなければ null
+const assistantCallnameGuard = (raw, playerName) => {
+  let t = String(raw == null ? '' : raw).normalize('NFKC').trim();
+  if (!t) return null;
+  const name = String(playerName || '').trim();
+  // AI が名前をそのまま書いてきたら {name} に戻す(名前を変えたときも呼び方が追いつくように)
+  if (name && !t.includes('{name}') && t.includes(name)) t = t.replace(name, '{name}');
+  if (/[<>\[\]\\`"]/.test(t.replace('{name}', ''))) return null;
+  if ((t.match(/\{name\}/g) || []).length > 1 || /[{}]/.test(t.replace('{name}', ''))) return null;
+  if (/\s/.test(t)) return null;
+  if (t.length > ASSISTANT_CALL_STYLE_MAX_LEN) return null;
+  const filled = t.replace('{name}', name || 'キミ');
+  if (filled.length > ASSISTANT_CALLNAME_FILLED_MAX && t !== '{name}') return null;
+  const body = t.replace('{name}', '');
+  if (ASSISTANT_CALLNAME_BANNED_RE.test(body) || ASSISTANT_CALLNAME_PERSONAL_RE.test(body)) return null;
+  // 名前だけでも、名前そのものに悪い言葉が入っていることはあるので、入れたあとでも見る(名前はプレイヤーが決めたものなので、名前だけの '{name}' は通す)
+  if (t !== '{name}' && ASSISTANT_CALLNAME_BANNED_RE.test(filled.replace(name, ''))) return null;
+  return t;
+};
+const assistantNicknameGuard = (raw) => {
+  const t = String(raw == null ? '' : raw).normalize('NFKC').trim();
+  if (!t || /\s|[<>{}\[\]\\`"]/.test(t) || t.length > ASSISTANT_NICKNAME_MAX) return null;
+  if (ASSISTANT_CALLNAME_BANNED_RE.test(t) || ASSISTANT_CALLNAME_PERSONAL_RE.test(t)) return null;
+  return t;
+};
+// 保存値をそろえる(無い・壊れているときは空。見張りを通らない値は捨てる)
+const normalizeAssistantCallnames = (raw) => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [id, v] of Object.entries(raw)) {
+    if (!v || typeof v !== 'object' || typeof v.call !== 'string') continue;
+    const call = assistantCallnameGuard(v.call, '');
+    if (!call) continue;
+    const prev = typeof v.prev === 'string' ? assistantCallnameGuard(v.prev, '') : null;
+    out[id] = { call, by: ['chat', 'offer', 'ask', 'profile'].includes(v.by) ? v.by : 'chat', at: Number.isFinite(v.at) ? v.at : 0, prev: prev || null };
+  }
+  return out;
+};
+const normalizeAssistantCallnameAsk = (raw) => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [id, v] of Object.entries(raw)) {
+    if (!v || typeof v !== 'object') continue;
+    out[id] = { asked: v.asked === true, offeredAt: Number.isFinite(v.offeredAt) ? v.offeredAt : 0 };
+  }
+  return out;
+};
+const normalizeAssistantNicknames = (raw) => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [id, v] of Object.entries(raw)) {
+    const nick = v && typeof v === 'object' ? assistantNicknameGuard(v.nick) : null;
+    if (nick) out[id] = { nick, at: Number.isFinite(v.at) ? v.at : 0 };
+  }
+  return out;
+};
+// いま使う新しい呼び方(画面側が読み込んだら入れる。性別と同じ形で、assistantCallName が先に見る)
+let assistantCallnamesNow = {};
+const assistantSetCallnames = (v) => { assistantCallnamesNow = normalizeAssistantCallnames(v); return assistantCallnamesNow; };
+const assistantCallnameOf = (assistantId) => (assistantCallnamesNow[assistantId] && assistantCallnamesNow[assistantId].call) || null;
+// Lv1〜2 で「こう呼んで」を断るか(性格しだい)。日と助手で決まるので、同じ日に何度頼んでも答えは同じ。Lv3 からは断らない
+//   断る割合: みゅあ・ドラはノリで受ける(0)/ききは「まだ早いでつ」/もも・あつは照れ/きゅうこ・ソラシド・えるびんは慎重め
+const ASSISTANT_CALLNAME_SHY_RATE = Object.freeze({ mua: 0, dra: 0, kiki: 0.6, momosuke: 0.35, atsu: 0.35, kyuko: 0.5, sorashido: 0.3, erubin: 0.5 });
+const assistantCallnameShy = (assistantId, level, dayKey) => {
+  if (!(Number(level) <= ASSISTANT_CALLNAME_SHY_MAX_LEVEL)) return false;
+  const rate = ASSISTANT_CALLNAME_SHY_RATE[assistantId] ?? 0.3;
+  if (rate <= 0) return false;
+  let h = 2166136261; const s = `callname|${assistantId}|${dayKey || ''}`;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  h ^= h >>> 15; h = Math.imul(h, 2246822507) >>> 0; h ^= h >>> 13;
+  return ((h >>> 0) % 10000) / 10000 < rate;
+};
+// 台本(API が止まっているとき・端末の読み取りで出すとき、Lv6 で聞くとき)。{call} = 新しい呼び方(名前入り)、{nick} = あだ名、{name} = いまの呼び方
+// ★みゅあは「ぢゃん」「まぢ」、ききは敬語(ときどき「でつ」「まつ」)、あつは文末に必ず笑・顔文字・記号
+const ASSISTANT_CALLNAME_LINES = Object.freeze({
+  mua: {
+    ask: ['ねえねえ、仲良くなったし……{name}のこと、これからなんて呼んだらいい？ 好きなの選んでもいいし、書いてくれてもOKだよ♪'],
+    confirm: ['えっ、「{call}」って呼んでほしいの？ いいぢゃん、呼んでみたい♪'],
+    accept: ['じゃあ……{call}！ ふふ、なんか照れるけど、うれしいかも♪'],
+    keep: ['りょーかい！ いまのまま{name}って呼ぶね♪'],
+    shy: ['えへへ、まだちょっと照れちゃうかも！ もっと仲良くなったら、そう呼ばせてね♪'],
+    nickConfirm: ['あたしのこと「{nick}」って呼びたいの？ かわいいぢゃん♪'],
+    nickAccept: ['「{nick}」……うん、気に入った！ これからそう呼んでね♪'],
+    nickShy: ['えー、まだ照れるってば！ もうちょっと仲良くなってからね♪'],
+  },
+  kiki: {
+    ask: ['あの……ずいぶん仲良くなれた気がするので、{name}のこと、これからどうお呼びしたらいいでしょう？ 選んでも、書いてくださってもいいですよ。'],
+    confirm: ['「{call}」とお呼びしてもいいんですか？ ……うれしいです。'],
+    accept: ['では……{call}。ふふ、少し照れまつね。これからもよろしくお願いします。'],
+    keep: ['わかりました。いまのまま{name}とお呼びしますね。'],
+    shy: ['ふふ、まだちょっと早い気がしまつ……。もう少し仲良くなれたら、そう呼ばせてくださいね。'],
+    nickConfirm: ['私のことを「{nick}」と呼んでくださるんですか？'],
+    nickAccept: ['「{nick}」……なんだか新鮮です。どうぞ、そう呼んでくださいね。'],
+    nickShy: ['ええと……それはまだ照れてしまいまつ。もう少しあとで、お願いしますね。'],
+  },
+  momosuke: {
+    ask: ['ねえねえ、ももたちもう仲良しじゃん！ {name}のこと、なんて呼んだらいい？ 選んでも書いてもいいよ！！'],
+    confirm: ['「{call}」って呼んでいいの？ まじで？ やったー！！'],
+    accept: ['{call}！ よーし、ももはこれからそう呼ぶからね！！w'],
+    keep: ['おっけー！ いまのまま{name}でいくね！'],
+    shy: ['えーっ、まだ早くない？w もうちょっと仲良くなったら呼んであげる！！'],
+    nickConfirm: ['もものこと「{nick}」って呼びたいの？ ふーん、いいセンスじゃん！'],
+    nickAccept: ['「{nick}」ね！ 気に入った！！ いっぱい呼んでいいよw'],
+    nickShy: ['えーっ、それはまだ照れるってw もうちょっと仲良くなってからね！！'],
+  },
+  dra: {
+    ask: ['なあ、おでたち結構仲良くなったよな。{name}のこと、これからなんて呼べばいい？ 選んでも書いてもいいぞ'],
+    confirm: ['「{call}」って呼んでいいのか？ いいね、そうしよう'],
+    accept: ['よし、{call}な。おで、ちゃんと覚えたからな'],
+    keep: ['わかった。いまのまま{name}って呼ぶわ'],
+    shy: ['お、おう……まだちょっと照れるな。もう少し仲良くなったら呼ばせてくれよ'],
+    nickConfirm: ['おでのこと「{nick}」って呼びたいのか？'],
+    nickAccept: ['「{nick}」か。悪くないな、そう呼んでくれていいぞ'],
+    nickShy: ['いやー、それはまだ照れるわ。もう少しあとでな'],
+  },
+  atsu: {
+    ask: ['てか、もう結構仲いいよね笑 {name}のこと、これからなんて呼べばいい？ 選んでも書いてもいいよ！'],
+    confirm: ['「{call}」って呼んでいいの？ まじで？笑'],
+    accept: ['じゃあ{call}で！ 俺もちゃんと覚えたよ笑'],
+    keep: ['おけ！ いまのまま{name}って呼ぶね笑'],
+    shy: ['いや、それはまだ照れるって笑 もうちょっと仲良くなったら呼ぶわ！'],
+    nickConfirm: ['俺のこと「{nick}」って呼びたいの？笑'],
+    nickAccept: ['「{nick}」ね、いいじゃん笑 そう呼んでよ！'],
+    nickShy: ['いやいや、まだ照れるって笑 もうちょっとあとでね！'],
+  },
+  kyuko: {
+    ask: ['ねぇ、だいぶ仲良くなったよね笑 {name}のこと、これからなんて呼んだらいいかなぁ？ 選んでも書いてもいいよ'],
+    confirm: ['「{call}」って呼んでいいの？ ありがとうございます笑'],
+    accept: ['じゃあ{call}で。ちゃんと覚えたよw'],
+    keep: ['おけ〜、いまのまま{name}って呼ぶね笑'],
+    shy: ['んー、まだちょっと早いかなぁ笑 もう少し仲良くなったら呼ばせてね'],
+    nickConfirm: ['俺のこと「{nick}」って呼びたいの？w'],
+    nickAccept: ['「{nick}」ね、いいと思う笑 そう呼んでいいよ'],
+    nickShy: ['それはまだ照れるなぁw もうちょっとあとでね'],
+  },
+  sorashido: {
+    ask: ['なあ、だいぶ仲良くなったよな笑 {name}のこと、これからなんて呼べばいい？ 選んでも書いてもいいぜ'],
+    confirm: ['「{call}」って呼んでいいのか!? うぉぉぉ、いいね笑'],
+    accept: ['よし、{call}な！ 俺の頭にしっかり刻んだぜ・・・！'],
+    keep: ['了解！ いまのまま{name}って呼ぶわ笑'],
+    shy: ['いや、まだちょっと照れるって笑 もうちょい仲良くなったら呼ばせてくれ！'],
+    nickConfirm: ['俺のこと「{nick}」って呼びたいのか？笑'],
+    nickAccept: ['「{nick}」か……悪くないぜ・・・！ そう呼んでくれ笑'],
+    nickShy: ['それはまだ照れるわ笑 もうちょいあとでな！'],
+  },
+  erubin: {
+    ask: ['だいぶ仲良くなれたよね。{name}のこと、これからなんて呼んだらいいかな？ 選んでも書いてもいいよ'],
+    confirm: ['「{call}」って呼んでいいのかな？ うれしいね'],
+    accept: ['じゃあ{call}って呼ぶね。そういうことです笑'],
+    keep: ['わかった、いまのまま{name}って呼ぶね'],
+    shy: ['うーん、まだちょっと早いかなって思うんだよね。もう少し仲良くなったら、そう呼ばせてね'],
+    nickConfirm: ['俺のこと「{nick}」って呼びたいのかな？'],
+    nickAccept: ['「{nick}」か、いいね。そう呼んでもらえるとうれしいよ笑'],
+    nickShy: ['それはまだ照れちゃうかな笑 もう少しあとでね'],
+  },
+});
+const assistantCallnameLine = (assistantId, kind) => {
+  const set = ASSISTANT_CALLNAME_LINES[assistantId] || ASSISTANT_CALLNAME_LINES.mua;
+  const list = set[kind] || ASSISTANT_CALLNAME_LINES.mua[kind] || [''];
+  return list[Math.floor(Math.random() * list.length)] || '';
+};
+// 候補のボタン(Lv6 で聞くとき)。その助手の選べる呼び方の例・性別の くん/ちゃん から3つ(いまの呼び方と同じものは外す)
+const assistantCallnameChoices = (assistantId, currentTemplate) => {
+  const pool = [
+    ...assistantCallStylesOf(assistantId).map(s => s.template),
+    assistantGenderCallOf('{name}', assistantId, 'male'), assistantGenderCallOf('{name}', assistantId, 'female'),
+    '{name}ちゃん', '{name}くん', '{name}',
+  ];
+  const seen = new Set([currentTemplate]);
+  return pool.filter(t => typeof t === 'string' && !seen.has(t) && seen.add(t)).slice(0, 4);
+};
+// 端末の読み取り(AI の印が無いとき・API が止まっているとき)。「◯◯って呼んで」=呼び方 /「◯◯って呼んでいい？」=助手のあだ名 /「前の呼び方に戻して」
+const assistantCallnameDetect = (text) => {
+  const s = String(text || '').normalize('NFKC');
+  if (/(前|まえ|元|もと)の呼び方に(戻|もど)して/.test(s)) return { kind: 'reset' };
+  const q = '[「『]?([^「」『』、。!?！？\\s]{1,12}?)[」』]?';
+  const nick = s.match(new RegExp(`(?:きみ|キミ|君|あなた|お前|おまえ)?(?:のこと)?(?:を)?${q}(?:って|と)(?:呼|よ)んで(?:も)?(?:いい|良い)`));
+  if (nick) return { kind: 'nick', value: nick[1] };
+  const call = s.match(new RegExp(`(?:これから|今度から|次から)?(?:は)?(?:俺|おれ|僕|ぼく|私|わたし|あたし|うち|自分)?(?:のこと)?(?:を|は)?${q}(?:って|と)(?:呼|よ)(?:んで(?:ほしい|欲しい|くれ|ね|よ|！|!|$)|んでください|んで$)`));
+  if (call) return { kind: 'call', value: call[1] };
+  return null;
+};
+
 // セリフの中の {name} を、そのときの呼び方へ置き換える
-const assistantSpeak = (text, name, level, customCall, assistantId) =>
+const assistantSpeak =(text, name, level, customCall, assistantId) =>
   String(text == null ? '' : text).replace(/\{name\}/g, assistantCallName(name, level, customCall, assistantId));
 
 // 仲良し度が増える行動。1日に増える量は行動ごとと合計の両方で頭打ちにする。
@@ -15064,8 +15269,8 @@ const ASSISTANT_LIFE_GIFT_TEMP_LINES = Object.freeze({
 });
 // 贈ったときの台詞(コトバ・ツムギ。lines/ORDER-GIFT.md の gift・hint を取り込んだもの)。{ [助手]: { [key]: [{ like, e, t }] } } / { [助手]: { [key]: { e, t } } }
 // 空のあいだは上の仮の1行(TEMP)を使う
-const ASSISTANT_LIFE_GIFT_LINES = Object.freeze({"atsu":{"basket":[{"like":"mid","e":"happy","t":"おやつバスケットだ！ {c}、一緒に食べよ笑"},{"like":"mid","e":"normal","t":"バスケットいっぱいじゃん！ {name}、ありがと笑"}],"misanga":[{"like":"like","e":"excited","t":"おそろいのミサンガ！？ {c}、今すぐつけよ笑"},{"like":"like","e":"happy","t":"これ、勝負のお守りにする！ {name}、まじでありがと笑"}],"cake":[{"like":"mid","e":"happy","t":"はんぶんこケーキね笑 {c}、半分ずつね！"},{"like":"mid","e":"normal","t":"ケーキだ！ 練習のあとに食べよ笑"}],"onigiri":[{"like":"like","e":"excited","t":"ほかほかおにぎり！ 腹へってたんだよね笑"},{"like":"like","e":"happy","t":"{name}、わかってる！ {c}、具はどっちにする？笑"}],"tea":[{"like":"bad","e":"troubled","t":"ティーセットか…俺、飲み方わかんないかも笑 {c}、教えて！"},{"like":"bad","e":"normal","t":"気持ちはうれしい！ {c}にいれてもらお笑"}],"earphone":[{"like":"like","e":"excited","t":"かたみみイヤホン！ {c}と同じ曲、聞きながら練習しよ笑"},{"like":"like","e":"happy","t":"これいい！ {name}、ありがと( *'ω'*)ノ"}],"puzzle":[{"like":"mid","e":"normal","t":"パズルか笑 {c}、どっちが早く解けるか勝負ね！"},{"like":"mid","e":"happy","t":"ふたりで解くパズル…勢いでいけるかな笑"}],"sleeve":[{"like":"mid","e":"happy","t":"おそろいのスリーブ！ {c}、次の対戦これで出よ笑"},{"like":"mid","e":"normal","t":"スリーブね！ デッキが引きしまる感じする笑"}],"cheki":[{"like":"mid","e":"happy","t":"チェキだ！ {c}、一枚撮ろ笑"},{"like":"mid","e":"normal","t":"思い出チェキね笑 勝ったときに撮ろ！"}],"flower":[{"like":"bad","e":"troubled","t":"花束…俺、枯らさないか心配笑 {c}、水やり手伝って！"},{"like":"bad","e":"normal","t":"ちいさな花束かぁ！ 気持ちはうれしい、ありがと笑"}]},"erubin":{"basket":[{"like":"mid","e":"happy","t":"おやつバスケット、ありがとう。{c}、一緒に選ぼうか"},{"like":"mid","e":"normal","t":"いろいろ入ってるね。みんなの分もありそうだね"}],"misanga":[{"like":"mid","e":"happy","t":"おそろいのミサンガ、うれしいね。{c}、つけてみようか"},{"like":"mid","e":"normal","t":"ミサンガ、ありがとう。大事にするね"}],"cake":[{"like":"bad","e":"troubled","t":"はんぶんこケーキか…甘いのは少しだけでいいかな。{c}、多めに食べてくれる？"},{"like":"bad","e":"normal","t":"気持ちはうれしいよ。{c}と分ければ、ちょうどいいかな"}],"onigiri":[{"like":"mid","e":"happy","t":"ほかほかおにぎり、ありがとう。{c}、あたたかいうちに食べよう"},{"like":"mid","e":"normal","t":"おにぎり、うれしいね。ベンチで食べようか"}],"tea":[{"like":"like","e":"excited","t":"ティーセット！ {name}、ありがとう。{c}、さっそくいれてみようか"},{"like":"like","e":"happy","t":"いい香りだね。こういうのが一番うれしいんだ☺️"}],"earphone":[{"like":"bad","e":"troubled","t":"かたみみイヤホンか…まだ慣れてないけど、{c}が教えてくれるかな"},{"like":"bad","e":"normal","t":"気持ちはうれしいよ。{c}のおすすめの曲、聞いてみようかな"}],"puzzle":[{"like":"mid","e":"normal","t":"ふたりで解くパズル、いいね。{c}、ゆっくり解こうか"},{"like":"mid","e":"happy","t":"パズルか。のんびり考えるのも楽しいね"}],"sleeve":[{"like":"like","e":"excited","t":"おそろいスリーブ！ デュラハンのカードに使おうかな"},{"like":"like","e":"happy","t":"{name}、ありがとう。{c}、次の対戦で一緒に使おうね😊"}],"cheki":[{"like":"mid","e":"happy","t":"思い出チェキ、いいね。{c}、一枚撮ろうか"},{"like":"mid","e":"normal","t":"チェキ、ありがとう。いい思い出になるね"}],"flower":[{"like":"like","e":"excited","t":"ちいさな花束！ {name}、ありがとう。部屋に飾るね"},{"like":"like","e":"happy","t":"きれいだね。{c}も、一本どうかな？☺️"}]},"kyuko":{"basket":[{"like":"bad","e":"troubled","t":"おやつバスケット…いっぱいで迷っちゃうなぁ。{c}、先に選んでよぉ"},{"like":"bad","e":"normal","t":"気持ちはうれしいよぉ。{c}と分けたら、ちょうどいいかもねぇ"}],"misanga":[{"like":"mid","e":"happy","t":"おそろいのミサンガかぁ。{c}、つけてみよっか笑"},{"like":"mid","e":"normal","t":"ほい、ミサンガ。切れたら願いがかなうんだっけぇ"}],"cake":[{"like":"mid","e":"happy","t":"はんぶんこケーキだぁ。{c}、きっちり半分ねぇ笑"},{"like":"mid","e":"normal","t":"ケーキ、ありがとん笑 甘いの食べると頭が回るんだよねぇ"}],"onigiri":[{"like":"mid","e":"normal","t":"ほかほかおにぎり、ありがとん笑"},{"like":"mid","e":"happy","t":"{c}、具は何かなぁ。当てっこしよ笑"}],"tea":[{"like":"like","e":"excited","t":"ティーセット！ {name}、わかってるぅ笑 {c}、本を読みながら飲も"},{"like":"like","e":"happy","t":"これ、ほしかったやつだぁ。ありがとん、{name}🥺"}],"earphone":[{"like":"like","e":"excited","t":"かたみみイヤホン！ {c}、俺のおすすめの曲、聞いてよぉ"},{"like":"like","e":"happy","t":"音楽、ふたりで聞けるのいいねぇ。ありがとん笑"}],"puzzle":[{"like":"like","e":"excited","t":"ふたりで解くパズル！ {c}、作戦立ててから始めよぉ"},{"like":"like","e":"happy","t":"パズル、たまらないんだよねぇ。{name}、さすがだぁ笑"}],"sleeve":[{"like":"mid","e":"normal","t":"おそろいスリーブ、いいねぇ。{c}、デッキ見せ合お笑"},{"like":"mid","e":"happy","t":"ほい。カードが長持ちしそうだぁ"}],"cheki":[{"like":"bad","e":"troubled","t":"チェキかぁ…写るの、ちょっと照れるんだよねぇ"},{"like":"bad","e":"normal","t":"気持ちはうれしいよぉ。{c}が撮ってくれるなら、写ってもいいかなぁ"}],"flower":[{"like":"mid","e":"happy","t":"ちいさな花束、かわいいねぇ。{c}、どこに飾ろっか"},{"like":"mid","e":"normal","t":"ほい、花束。本の横に置くと、いい感じだねぇ"}]},"sorashido":{"basket":[{"like":"mid","e":"happy","t":"おやつバスケット！ 中身、数えてもいいか？笑"},{"like":"mid","e":"normal","t":"{c}、バスケットの中、半分ずつ分けよう"}],"misanga":[{"like":"mid","e":"happy","t":"おそろいのミサンガか。{c}、勝負の日につけよう"},{"like":"mid","e":"normal","t":"ミサンガ、ありがとう。結び目の数、ちょうど7つだな笑"}],"cake":[{"like":"mid","e":"happy","t":"はんぶんこケーキ！ 半分の角度は計算済みだぞ笑"},{"like":"mid","e":"normal","t":"{c}、ケーキはちょうど半分にしよう"}],"onigiri":[{"like":"like","e":"excited","t":"ほかほかおにぎり！ うぉぉぉ、ありがとう！"},{"like":"like","e":"happy","t":"{name}、腹ぺこなのを計算されてたな笑 {c}、一緒に食べよう"}],"tea":[{"like":"bad","e":"troubled","t":"ティーセットか…ゆっくり飲むの、そわそわしちゃうんだよな笑"},{"like":"bad","e":"normal","t":"気持ちはうれしいぞ。{c}、いれ方を教えてくれるか？"}],"earphone":[{"like":"mid","e":"normal","t":"かたみみイヤホン！ {c}、同じ曲のBPM、当てっこしよう"},{"like":"mid","e":"happy","t":"イヤホン、ありがとう。曲を聞きながら表を作れるな"}],"puzzle":[{"like":"like","e":"excited","t":"ふたりで解くパズル！ これは燃えるぜ・・・！"},{"like":"like","e":"happy","t":"{c}、解く順番を表にしてから始めよう笑"}],"sleeve":[{"like":"like","e":"excited","t":"おそろいスリーブ！ デッキがでーじかっこよくなるぜ・・・！"},{"like":"like","e":"happy","t":"{name}、ありがとな！ {c}、次の対戦はこれで出よう"}],"cheki":[{"like":"mid","e":"happy","t":"思い出チェキか。{c}、勝った記念に一枚撮ろう"},{"like":"mid","e":"normal","t":"チェキ、ありがとう。表に貼っておくぞ笑"}],"flower":[{"like":"bad","e":"troubled","t":"花束か…どう飾ればいいか、計算が出ないな笑"},{"like":"bad","e":"normal","t":"気持ちはうれしいぞ。{c}、飾り方を教えてくれないか"}]}});
-const ASSISTANT_LIFE_GIFT_HINT_LINES = Object.freeze({});
+const ASSISTANT_LIFE_GIFT_LINES = Object.freeze({"atsu":{"basket":[{"like":"mid","e":"happy","t":"おやつバスケットだ！ {c}、一緒に食べよ笑"},{"like":"mid","e":"normal","t":"バスケットいっぱいじゃん！ {name}、ありがと笑"}],"misanga":[{"like":"like","e":"excited","t":"おそろいのミサンガ！？ {c}、今すぐつけよ笑"},{"like":"like","e":"happy","t":"これ、勝負のお守りにする！ {name}、まじでありがと笑"}],"cake":[{"like":"mid","e":"happy","t":"はんぶんこケーキね笑 {c}、半分ずつね！"},{"like":"mid","e":"normal","t":"ケーキだ！ 練習のあとに食べよ笑"}],"onigiri":[{"like":"like","e":"excited","t":"ほかほかおにぎり！ 腹へってたんだよね笑"},{"like":"like","e":"happy","t":"{name}、わかってる！ {c}、具はどっちにする？笑"}],"tea":[{"like":"bad","e":"troubled","t":"ティーセットか…俺、飲み方わかんないかも笑 {c}、教えて！"},{"like":"bad","e":"normal","t":"気持ちはうれしい！ {c}にいれてもらお笑"}],"earphone":[{"like":"like","e":"excited","t":"かたみみイヤホン！ {c}と同じ曲、聞きながら練習しよ笑"},{"like":"like","e":"happy","t":"これいい！ {name}、ありがと( *'ω'*)ノ"}],"puzzle":[{"like":"mid","e":"normal","t":"パズルか笑 {c}、どっちが早く解けるか勝負ね！"},{"like":"mid","e":"happy","t":"ふたりで解くパズル…勢いでいけるかな笑"}],"sleeve":[{"like":"mid","e":"happy","t":"おそろいのスリーブ！ {c}、次の対戦これで出よ笑"},{"like":"mid","e":"normal","t":"スリーブね！ デッキが引きしまる感じする笑"}],"cheki":[{"like":"mid","e":"happy","t":"チェキだ！ {c}、一枚撮ろ笑"},{"like":"mid","e":"normal","t":"思い出チェキね笑 勝ったときに撮ろ！"}],"flower":[{"like":"bad","e":"troubled","t":"花束…俺、枯らさないか心配笑 {c}、水やり手伝って！"},{"like":"bad","e":"normal","t":"ちいさな花束かぁ！ 気持ちはうれしい、ありがと笑"}]},"dra":{"basket":[{"like":"like","e":"excited","t":"おやつバスケットか！ {c}、おでは全部の味を食べるぞ"},{"like":"like","e":"happy","t":"{name}、わかってるな！ これは最高の贈り物だ、えへへ"}],"misanga":[{"like":"mid","e":"normal","t":"おそろいのミサンガか。{c}、つけてやるから腕を出せ"},{"like":"mid","e":"happy","t":"{name}、ありがとな。切れないように大事にするぞ"}],"cake":[{"like":"like","e":"excited","t":"はんぶんこケーキ！ {c}、おでは大きいほうでいいか？"},{"like":"like","e":"happy","t":"{name}、ケーキとは気がきくな。うまそうだぞ"}],"onigiri":[{"like":"like","e":"excited","t":"ほかほかおにぎり！ {c}、あったかいうちに食おう"},{"like":"like","e":"happy","t":"{name}、ありがとな。おで、おにぎりには目がないんだ"}],"tea":[{"like":"mid","e":"normal","t":"ティーセットか。{c}、おでの分もいれてくれるか"},{"like":"mid","e":"happy","t":"{name}、ありがとな。たまにはお茶もいいもんだ"}],"earphone":[{"like":"mid","e":"normal","t":"かたみみイヤホンか。{c}、何を聞く？"},{"like":"mid","e":"happy","t":"{name}、ありがとな。おでの好きな曲、教えてやるぞ"}],"puzzle":[{"like":"bad","e":"troubled","t":"パズルか…。{c}、おでは端っこ担当でいいか？"},{"like":"bad","e":"troubled","t":"{name}、ありがとな。…考えてたら、眠くなりそうだぞ"}],"sleeve":[{"like":"mid","e":"normal","t":"おそろいのスリーブか。{c}、デッキに付けてみるか"},{"like":"mid","e":"happy","t":"{name}、ありがとな。カードが長持ちするぞ"}],"cheki":[{"like":"mid","e":"surprise","t":"チェキか。{c}、おでの顔、ちゃんと入るか？"},{"like":"mid","e":"happy","t":"{name}、ありがとな。いい顔で撮るぞ、えへへ"}],"flower":[{"like":"bad","e":"troubled","t":"花束か…。{c}、どこに飾ればいいと思う？"},{"like":"bad","e":"normal","t":"{name}の気持ちはうれしいぞ。…水やり、忘れないようにしないとな"}]},"erubin":{"basket":[{"like":"mid","e":"happy","t":"おやつバスケット、ありがとう。{c}、一緒に選ぼうか"},{"like":"mid","e":"normal","t":"いろいろ入ってるね。みんなの分もありそうだね"}],"misanga":[{"like":"mid","e":"happy","t":"おそろいのミサンガ、うれしいね。{c}、つけてみようか"},{"like":"mid","e":"normal","t":"ミサンガ、ありがとう。大事にするね"}],"cake":[{"like":"bad","e":"troubled","t":"はんぶんこケーキか…甘いのは少しだけでいいかな。{c}、多めに食べてくれる？"},{"like":"bad","e":"normal","t":"気持ちはうれしいよ。{c}と分ければ、ちょうどいいかな"}],"onigiri":[{"like":"mid","e":"happy","t":"ほかほかおにぎり、ありがとう。{c}、あたたかいうちに食べよう"},{"like":"mid","e":"normal","t":"おにぎり、うれしいね。ベンチで食べようか"}],"tea":[{"like":"like","e":"excited","t":"ティーセット！ {name}、ありがとう。{c}、さっそくいれてみようか"},{"like":"like","e":"happy","t":"いい香りだね。こういうのが一番うれしいんだ☺️"}],"earphone":[{"like":"bad","e":"troubled","t":"かたみみイヤホンか…まだ慣れてないけど、{c}が教えてくれるかな"},{"like":"bad","e":"normal","t":"気持ちはうれしいよ。{c}のおすすめの曲、聞いてみようかな"}],"puzzle":[{"like":"mid","e":"normal","t":"ふたりで解くパズル、いいね。{c}、ゆっくり解こうか"},{"like":"mid","e":"happy","t":"パズルか。のんびり考えるのも楽しいね"}],"sleeve":[{"like":"like","e":"excited","t":"おそろいスリーブ！ デュラハンのカードに使おうかな"},{"like":"like","e":"happy","t":"{name}、ありがとう。{c}、次の対戦で一緒に使おうね😊"}],"cheki":[{"like":"mid","e":"happy","t":"思い出チェキ、いいね。{c}、一枚撮ろうか"},{"like":"mid","e":"normal","t":"チェキ、ありがとう。いい思い出になるね"}],"flower":[{"like":"like","e":"excited","t":"ちいさな花束！ {name}、ありがとう。部屋に飾るね"},{"like":"like","e":"happy","t":"きれいだね。{c}も、一本どうかな？☺️"}]},"kiki":{"basket":[{"like":"mid","e":"happy","t":"まあ、おやつがたくさん。{c}、いっしょにいただきましょう"},{"like":"mid","e":"normal","t":"{name}、ありがとうございまつ。選ぶのが楽しいでつね"}],"misanga":[{"like":"mid","e":"happy","t":"おそろいのミサンガでつか。{c}、手首を出してくださいな"},{"like":"mid","e":"normal","t":"{name}、ありがとうございます。大事につけまつね"}],"cake":[{"like":"mid","e":"happy","t":"はんぶんこケーキ…{c}、きれいに切り分けまつね♪"},{"like":"mid","e":"normal","t":"{name}、ありがとうございます。甘い香りがしますね"}],"onigiri":[{"like":"bad","e":"troubled","t":"まあ、おにぎり…。{c}、具の多いほうをどうぞ"},{"like":"bad","e":"normal","t":"{name}のお気持ち、うれしいでつ。少しずつ、いただきまつね"}],"tea":[{"like":"like","e":"excited","t":"まあ、ティーセット…！ {c}、さっそくお茶をいれまつね♪"},{"like":"like","e":"happy","t":"{name}、なんてすてきな…。いちばんうれしい贈り物でつ"}],"earphone":[{"like":"bad","e":"troubled","t":"かたみみイヤホン…。{c}、つけ方を教えていただけますか？"},{"like":"bad","e":"normal","t":"{name}、ありがとうございます。音楽は、少しだけ聞いてみまつね"}],"puzzle":[{"like":"like","e":"excited","t":"ふたりで解くパズル…！ {c}、角から埋めていきましょう♪"},{"like":"like","e":"happy","t":"{name}、うれしいでつ。じっくり考えるのは好きなんです"}],"sleeve":[{"like":"mid","e":"wink","t":"おそろいのスリーブでつか。{c}、攻撃のカードに付けましょう"},{"like":"mid","e":"normal","t":"{name}、ありがとうございます。カードがきれいになりますね"}],"cheki":[{"like":"mid","e":"happy","t":"思い出チェキでつか。{c}、少し近くに寄ってくださいな"},{"like":"mid","e":"normal","t":"{name}、ありがとうございます。写真、大切にしまつ"}],"flower":[{"like":"like","e":"excited","t":"まあ、花束…！ {c}、いちばん日の当たる窓に飾りましょう"},{"like":"like","e":"happy","t":"{name}、ありがとうございまつ。お花は、心が整いまつね♪"}]},"kyuko":{"basket":[{"like":"bad","e":"troubled","t":"おやつバスケット…いっぱいで迷っちゃうなぁ。{c}、先に選んでよぉ"},{"like":"bad","e":"normal","t":"気持ちはうれしいよぉ。{c}と分けたら、ちょうどいいかもねぇ"}],"misanga":[{"like":"mid","e":"happy","t":"おそろいのミサンガかぁ。{c}、つけてみよっか笑"},{"like":"mid","e":"normal","t":"ほい、ミサンガ。切れたら願いがかなうんだっけぇ"}],"cake":[{"like":"mid","e":"happy","t":"はんぶんこケーキだぁ。{c}、きっちり半分ねぇ笑"},{"like":"mid","e":"normal","t":"ケーキ、ありがとん笑 甘いの食べると頭が回るんだよねぇ"}],"onigiri":[{"like":"mid","e":"normal","t":"ほかほかおにぎり、ありがとん笑"},{"like":"mid","e":"happy","t":"{c}、具は何かなぁ。当てっこしよ笑"}],"tea":[{"like":"like","e":"excited","t":"ティーセット！ {name}、わかってるぅ笑 {c}、本を読みながら飲も"},{"like":"like","e":"happy","t":"これ、ほしかったやつだぁ。ありがとん、{name}🥺"}],"earphone":[{"like":"like","e":"excited","t":"かたみみイヤホン！ {c}、俺のおすすめの曲、聞いてよぉ"},{"like":"like","e":"happy","t":"音楽、ふたりで聞けるのいいねぇ。ありがとん笑"}],"puzzle":[{"like":"like","e":"excited","t":"ふたりで解くパズル！ {c}、作戦立ててから始めよぉ"},{"like":"like","e":"happy","t":"パズル、たまらないんだよねぇ。{name}、さすがだぁ笑"}],"sleeve":[{"like":"mid","e":"normal","t":"おそろいスリーブ、いいねぇ。{c}、デッキ見せ合お笑"},{"like":"mid","e":"happy","t":"ほい。カードが長持ちしそうだぁ"}],"cheki":[{"like":"bad","e":"troubled","t":"チェキかぁ…写るの、ちょっと照れるんだよねぇ"},{"like":"bad","e":"normal","t":"気持ちはうれしいよぉ。{c}が撮ってくれるなら、写ってもいいかなぁ"}],"flower":[{"like":"mid","e":"happy","t":"ちいさな花束、かわいいねぇ。{c}、どこに飾ろっか"},{"like":"mid","e":"normal","t":"ほい、花束。本の横に置くと、いい感じだねぇ"}]},"momosuke":{"basket":[{"like":"mid","e":"excited","t":"おやつバスケット！！ {c}、ももが先に選ぶね！！"},{"like":"mid","e":"happy","t":"{name}、ありがと！！ 中身ぜんぶおいしそうw"}],"misanga":[{"like":"mid","e":"happy","t":"おそろいのミサンガ！！ {c}、ももとおそろいだよ♡"},{"like":"mid","e":"normal","t":"{name}、ありがと！！ ライブでもつけるね！！"}],"cake":[{"like":"like","e":"excited","t":"ケーキ！！ {c}、ももがいちごのほうね！！♡"},{"like":"like","e":"wink","t":"{name}、わかってる〜！！ ももの大好物じゃん♡"}],"onigiri":[{"like":"mid","e":"happy","t":"おにぎり！！ {c}、ほかほかのうちに食べよ！！"},{"like":"mid","e":"normal","t":"{name}、ありがと！！ 練習のあとにちょうどいいw"}],"tea":[{"like":"bad","e":"troubled","t":"ティーセット…！！ {c}、お茶、いれてくれる？w"},{"like":"bad","e":"troubled","t":"{name}、ありがと！！ お茶はよくわかんないけど…飲んでみる！！"}],"earphone":[{"like":"like","e":"excited","t":"かたみみイヤホン！！ {c}、ももの曲いっしょに聞こ♡"},{"like":"like","e":"wink","t":"{name}、これほしかったやつ！！ さすがw"}],"puzzle":[{"like":"bad","e":"troubled","t":"パズル…！！ {c}、ももは応援係でいい？w"},{"like":"bad","e":"troubled","t":"{name}の気持ちはうれしい！！ …ピース多すぎない？w"}],"sleeve":[{"like":"mid","e":"happy","t":"おそろいスリーブ！！ {c}、メタルナーのカードに付けよ！！"},{"like":"mid","e":"normal","t":"{name}、ありがと！！ ぴかぴかでかわいい♡"}],"cheki":[{"like":"like","e":"excited","t":"チェキ！！ {c}、ももの決めポーズで撮ろ！！♡"},{"like":"like","e":"happy","t":"{name}、最高のプレゼント！！ いっぱい撮るね！！"}],"flower":[{"like":"mid","e":"wink","t":"お花！！ {c}、ももの部屋にも1本ちょうだいw"},{"like":"mid","e":"happy","t":"{name}、ありがと！！ かわいい色だね♡"}]},"mua":{"basket":[{"like":"mid","e":"happy","t":"おやつバスケットだ！ {c}、どれから食べる？♪"},{"like":"mid","e":"excited","t":"{name}、ありがと！ 中身いっぱいぢゃん♪"}],"misanga":[{"like":"like","e":"excited","t":"おそろいのミサンガ！？ {c}、いますぐつけよ！"},{"like":"like","e":"happy","t":"まぢうれしい…！ {name}、センスよすぎぢゃん♪"}],"cake":[{"like":"like","e":"excited","t":"ケーキだ〜！ {c}、どっちが大きいほう取る？ｗ"},{"like":"like","e":"wink","t":"はんぶんこケーキ！？ {name}、あたしの好きなのわかってるぢゃん♪"}],"onigiri":[{"like":"mid","e":"happy","t":"ほかほかおにぎり！ {c}、あったかいうちに食べよ♪"},{"like":"mid","e":"normal","t":"{name}、ありがと！ 具はなにかな〜？"}],"tea":[{"like":"mid","e":"happy","t":"ティーセット、なんかおしゃれ〜！ {c}、お茶会しよ♪"},{"like":"mid","e":"normal","t":"{name}、ありがと！ カップかわいいぢゃん"}],"earphone":[{"like":"mid","e":"happy","t":"かたみみイヤホン！ {c}、いっしょに聞こ♪"},{"like":"mid","e":"normal","t":"{name}、ありがと！ どの曲聞く？"}],"puzzle":[{"like":"bad","e":"troubled","t":"パズル…！ {c}、あたし考えるの苦手だから、半分お願いｗ"},{"like":"bad","e":"troubled","t":"{name}、ありがと！ …むずかしそうだけど、がんばってみる！"}],"sleeve":[{"like":"bad","e":"troubled","t":"スリーブ…カードに付けるやつだっけ？ {c}、教えて〜ｗ"},{"like":"bad","e":"normal","t":"{name}の気持ちはうれしい！ どう使うか、{c}に聞いてみる♪"}],"cheki":[{"like":"like","e":"excited","t":"思い出チェキ！？ {c}、いまの顔で撮ろ！"},{"like":"like","e":"happy","t":"まぢ最高！ {name}、あとでいっしょに撮ろうね♪"}],"flower":[{"like":"mid","e":"happy","t":"ちいさな花束、かわいい〜！ {c}、部屋に飾ろ♪"},{"like":"mid","e":"normal","t":"{name}、ありがと！ いい香りするぢゃん"}]},"sorashido":{"basket":[{"like":"mid","e":"happy","t":"おやつバスケット！ 中身、数えてもいいか？笑"},{"like":"mid","e":"normal","t":"{c}、バスケットの中、半分ずつ分けよう"}],"misanga":[{"like":"mid","e":"happy","t":"おそろいのミサンガか。{c}、勝負の日につけよう"},{"like":"mid","e":"normal","t":"ミサンガ、ありがとう。結び目の数、ちょうど7つだな笑"}],"cake":[{"like":"mid","e":"happy","t":"はんぶんこケーキ！ 半分の角度は計算済みだぞ笑"},{"like":"mid","e":"normal","t":"{c}、ケーキはちょうど半分にしよう"}],"onigiri":[{"like":"like","e":"excited","t":"ほかほかおにぎり！ うぉぉぉ、ありがとう！"},{"like":"like","e":"happy","t":"{name}、腹ぺこなのを計算されてたな笑 {c}、一緒に食べよう"}],"tea":[{"like":"bad","e":"troubled","t":"ティーセットか…ゆっくり飲むの、そわそわしちゃうんだよな笑"},{"like":"bad","e":"normal","t":"気持ちはうれしいぞ。{c}、いれ方を教えてくれるか？"}],"earphone":[{"like":"mid","e":"normal","t":"かたみみイヤホン！ {c}、同じ曲のBPM、当てっこしよう"},{"like":"mid","e":"happy","t":"イヤホン、ありがとう。曲を聞きながら表を作れるな"}],"puzzle":[{"like":"like","e":"excited","t":"ふたりで解くパズル！ これは燃えるぜ・・・！"},{"like":"like","e":"happy","t":"{c}、解く順番を表にしてから始めよう笑"}],"sleeve":[{"like":"like","e":"excited","t":"おそろいスリーブ！ デッキがでーじかっこよくなるぜ・・・！"},{"like":"like","e":"happy","t":"{name}、ありがとな！ {c}、次の対戦はこれで出よう"}],"cheki":[{"like":"mid","e":"happy","t":"思い出チェキか。{c}、勝った記念に一枚撮ろう"},{"like":"mid","e":"normal","t":"チェキ、ありがとう。表に貼っておくぞ笑"}],"flower":[{"like":"bad","e":"troubled","t":"花束か…どう飾ればいいか、計算が出ないな笑"},{"like":"bad","e":"normal","t":"気持ちはうれしいぞ。{c}、飾り方を教えてくれないか"}]}});
+const ASSISTANT_LIFE_GIFT_HINT_LINES = Object.freeze({"atsu":{"misanga":{"e":"wink","t":"おそろいの、なんかつけるやつ、いいよな笑"},"onigiri":{"e":"happy","t":"腹へったときは、やっぱおにぎりだよな！"},"earphone":{"e":"normal","t":"曲をいっしょに聞けるやつ、ほしいんだよな笑"}},"dra":{"basket":{"e":"happy","t":"おやつがいろいろ入ってるやつ、好きなんだよな"},"cake":{"e":"happy","t":"ケーキなら、おではいつでも食べられるぞ"},"onigiri":{"e":"happy","t":"あったかいおにぎり、最高なんだよな"}},"erubin":{"tea":{"e":"happy","t":"落ち着いてお茶する時間、いいよね"},"sleeve":{"e":"normal","t":"カードにつけるスリーブ、おそろいだといいね"},"flower":{"e":"happy","t":"お花があると、部屋が明るくなるよね"}},"kiki":{"tea":{"e":"happy","t":"お茶の時間が、いちばん好きなんでつ♪"},"puzzle":{"e":"wink","t":"じっくり考えるもの、好きでつよ。パズルとか"},"flower":{"e":"happy","t":"お花があると、気持ちが落ち着きまつね"}},"kyuko":{"tea":{"e":"happy","t":"お茶飲みながら読むの、好きなんだよねぇ"},"earphone":{"e":"normal","t":"片耳で音楽聞きながら考えるの、いいんだよねぇ"},"puzzle":{"e":"wink","t":"ふたりで解くやつ、楽しそうじゃない？笑"}},"momosuke":{"cake":{"e":"excited","t":"ケーキって、もものいちばんの大好物なの！！"},"earphone":{"e":"wink","t":"いっしょに曲聞けるやつ、ほしいな〜♡"},"cheki":{"e":"excited","t":"かわいく撮れるカメラ、ほしい！！"}},"mua":{"misanga":{"e":"wink","t":"最近、おそろいのものがほしいんだよね〜♪"},"cake":{"e":"happy","t":"甘いもの、はんぶんこするのが好きなんだ〜♪"},"cheki":{"e":"excited","t":"思い出、写真に残すの好きなの。チェキとか、まぢほしい♪"}},"sorashido":{"onigiri":{"e":"happy","t":"腹へったら、おにぎりがいちばん効率いいさ"},"puzzle":{"e":"excited","t":"パズルは計算みたいで好きなんだぜ"},"sleeve":{"e":"wink","t":"カードを守るスリーブ、おそろいだと燃えるぜ"}}});
 // 仲良し度の段が上がったとき、好きなものを1つ教えてくれるひとこと(仮。lines/ORDER-GIFT.md の hint が届くまで)
 const ASSISTANT_LIFE_GIFT_HINT_TEMP = Object.freeze({
   mua:       { e:'wink', t:'最近ね〜、{item}が気になってるんだよね。{name}、覚えといて♪' },

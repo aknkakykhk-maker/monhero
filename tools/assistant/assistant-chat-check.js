@@ -81,8 +81,9 @@ const unit = async (core) => {
     check('① 全員の1日の上限は2,000往復・1人は100回(2026-10-14 社長の決定)', core.TOTAL_DAILY_LIMIT === 2000 && core.USER_DAILY_LIMIT === 100);
     check('① thinking を切り、effort は low(Haiku 5.5 は high 以下なら切れる)', p.thinking && p.thinking.type === 'disabled' && p.output_config && p.output_config.effort === 'low');
     const schema = p.output_config && p.output_config.format && p.output_config.format.schema;
-    check('① 構造化出力(json_schema)で reply・expression・memo を受け取る', p.output_config.format.type === 'json_schema'
-      && JSON.stringify(schema.required) === JSON.stringify(['reply', 'expression', 'memo']) && schema.additionalProperties === false);
+    // 2026-11-08 呼び方(call)・助手へのあだ名(nick)・好みの手がかり(taste)の欄を足した(AI-TALK-PLAN。呼び出しは増やさない)
+    check('① 構造化出力(json_schema)で reply・expression・memo・call・nick・taste を受け取る', p.output_config.format.type === 'json_schema'
+      && JSON.stringify(schema.required) === JSON.stringify(['reply', 'expression', 'memo', 'call', 'nick', 'taste']) && schema.additionalProperties === false);
     check('① 思い出メモは6つの欄(好きなもの・目標・あったこと・話題・あらすじ・ないしょの話 2026-11-07)', JSON.stringify(schema.properties.memo.required) === JSON.stringify(['likes', 'goals', 'events', 'topics', 'summary', 'secret']) && schema.properties.memo.additionalProperties === false);
     check('① max_tokens は、10行くらいの返事とメモが入る長さ', p.max_tokens >= 800 && p.max_tokens <= 1500, String(p.max_tokens));
     const msgs = p.messages || [];

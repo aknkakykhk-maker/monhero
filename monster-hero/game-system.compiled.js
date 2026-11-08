@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9cf5d5e78f4b2b28
+// source-sha256: 34dc8982696c29f7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13733,6 +13733,7 @@ const RELEASE_FLAGS = {
   assistantKyuko: true,
   assistantPeer: true,
   assistantPeerApi: true,
+  assistantCallname: false,
   assistantLife: true,
   assistantLifeFriend: true,
   assistantLifeFriendApi: false,
@@ -65119,6 +65120,7 @@ function ProfileScreen({
   onOpenItems,
   onOpenCallStylePicker,
   onOpenAssistantPicker,
+  talkedCallname = null,
   onSelectBattleMode,
   onOpenEventReplayList,
   onOpenSpeciesRecords,
@@ -65512,8 +65514,9 @@ function ProfileScreen({
       }
     }, activeAssistant.name, "との仲良し度"), React.createElement("div", {
       className: "text-[12px] font-black text-white"
-    }, "Lv.", assistantBondLevelNow, "\u3000", stage ? stage.title : '')), assistantBondLevelNow >= (typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL || 6) ? React.createElement("button", {
+    }, "Lv.", assistantBondLevelNow, "\u3000", stage ? stage.title : '')), assistantBondLevelNow >= (typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL || 6) || !!talkedCallname ? React.createElement("button", {
       type: "button",
+      "data-profile-call-style": true,
       onClick: onOpenCallStylePicker,
       className: "shrink-0 min-h-[44px] rounded-xl px-2 text-right active:scale-95"
     }, React.createElement("div", {
@@ -98737,6 +98740,33 @@ const assistantPeerMemosFor = (selfId, memos, last, today = assistantPeerDayKey(
   }
   return out;
 };
+const ASSISTANT_CALLNAME_OFFER_MS = (typeof ASSISTANT_CALLNAME_OFFER_DAYS !== 'undefined' ? ASSISTANT_CALLNAME_OFFER_DAYS : 7) * 86400000;
+const ASSISTANT_CHAT_TASTE_HOOKS = {
+  of: null,
+  onTalk: null
+};
+const ASSISTANT_CHAT_TASTE_GOOD_RE = /好き|すき|かわい|可愛|カワイ|かっこい|カッコい|格好い|強い|つよい|最強|推し|いいよね|いいね|最高|大好き|きれい|綺麗/;
+const assistantChatTasteFromText = text => {
+  const ids = assistantChatMonsterIds(text, '');
+  return ids.length && ASSISTANT_CHAT_TASTE_GOOD_RE.test(String(text || '')) ? {
+    monsterId: ids[0],
+    positive: true
+  } : null;
+};
+const assistantChatTasteFromHint = hint => {
+  if (!hint || typeof hint !== 'object' || typeof hint.monster !== 'string' || typeof hint.positive !== 'boolean') return null;
+  if (typeof ALL_PLAYER_MONSTERS === 'undefined') return null;
+  const m = Object.values(ALL_PLAYER_MONSTERS).find(x => x && !x.debugOnly && (x.name === hint.monster || x.id === hint.monster));
+  return m ? {
+    monsterId: m.id,
+    positive: hint.positive
+  } : null;
+};
+const assistantCallnameFillLine = (line, {
+  call,
+  nick,
+  name
+}) => String(line || '').replace(/\{call\}/g, call || '').replace(/\{nick\}/g, nick || '').replace(/\{name\}/g, name || '');
 function AssistantChatWindow({
   assistant,
   playerName,
@@ -98744,6 +98774,7 @@ function AssistantChatWindow({
   bondLevel,
   bondTitle,
   bondTone,
+  callnameKit = null,
   onExchange,
   onClose
 }) {
@@ -98755,6 +98786,7 @@ function AssistantChatWindow({
   const [input, setInput] = React.useState('');
   const [sending, setSending] = React.useState(false);
   const [remaining, setRemaining] = React.useState(null);
+  const [callCard, setCallCard] = React.useState(null);
   const listRef = React.useRef(null);
   React.useEffect(() => {
     let alive = true;
@@ -98772,9 +98804,28 @@ function AssistantChatWindow({
   }, []);
   const log = logs[id] || [];
   React.useEffect(() => {
+    if (!loaded || !callnameKit || callnameKit.asked || !id) return;
+    if (!(Number(bondLevel) >= ASSISTANT_CALLNAME_ASK_LEVEL)) return;
+    callnameKit.markAsk({
+      asked: true
+    });
+    if (callnameKit.current || callnameKit.customStyle) return;
+    const line = assistantCallnameFillLine(assistantCallnameLine(id, 'ask'), {
+      name: callName
+    });
+    saveLog([...(logs[id] || []), {
+      role: 'assistant',
+      text: line,
+      e: 'wink'
+    }]);
+    setCallCard({
+      kind: 'ask'
+    });
+  }, [loaded, id]);
+  React.useEffect(() => {
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [log.length, sending]);
+  }, [log.length, sending, callCard]);
   const lastExpression = (log.slice().reverse().find(m => m.role === 'assistant') || {}).e || 'happy';
   const saveLog = next => {
     setLogs(prev => {
@@ -98829,6 +98880,21 @@ function AssistantChatWindow({
       text
     }];
     saveLog(withUser);
+    const pendingCard = callCard;
+    setCallCard(null);
+    const shy = !!callnameKit && typeof assistantCallnameShy === 'function' && assistantCallnameShy(id, bondLevel, assistantPeerDayKey());
+    const canOffer = !!callnameKit && Number(bondLevel) >= 3 && !pendingCard && Date.now() - (callnameKit.offeredAt || 0) >= ASSISTANT_CALLNAME_OFFER_MS;
+    const callnameCtx = callnameKit ? {
+      shy,
+      canOffer,
+      asking: !!(pendingCard && pendingCard.kind === 'ask'),
+      nick: callnameKit.nick || '',
+      hasTalked: !!callnameKit.current
+    } : null;
+    let tastes = null;
+    try {
+      tastes = typeof ASSISTANT_CHAT_TASTE_HOOKS.of === 'function' ? ASSISTANT_CHAT_TASTE_HOOKS.of(id) : null;
+    } catch {}
     const rankingPlan = assistantChatRankingPlan(text, log.filter(m => m && m.role === 'user').map(m => m.text).reverse().slice(0, ASSISTANT_CHAT_RANKING_PREV));
     setSending(true);
     let res = null;
@@ -98851,7 +98917,13 @@ function AssistantChatWindow({
             bondTitle,
             bondTone,
             memo: memos[id] || null,
-            peerMemos: assistantPeerMemosFor(id, memos, lastDays)
+            peerMemos: assistantPeerMemosFor(id, memos, lastDays),
+            ...(callnameCtx ? {
+              callname: callnameCtx
+            } : {}),
+            ...(tastes ? {
+              tastes
+            } : {})
           },
           ...(rankingPlan ? {
             ranking: rankingPlan
@@ -98861,13 +98933,88 @@ function AssistantChatWindow({
       if (r.ok) res = await r.json();
     } catch {}
     setSending(false);
-    const reply = res && typeof res.reply === 'string' && res.reply ? res.reply : ASSISTANT_CHAT_LINES.sorry;
-    const e = res && typeof res.expression === 'string' ? res.expression : 'troubled';
+    let reply = res && typeof res.reply === 'string' && res.reply ? res.reply : ASSISTANT_CHAT_LINES.sorry;
+    let e = res && typeof res.expression === 'string' ? res.expression : 'troubled';
+    if (callnameKit) {
+      const replied = !!(res && res.kind === 'reply');
+      const hasMark = !!(res && res.call && typeof res.call === 'object');
+      let card = null;
+      if (hasMark) {
+        const c = res.call,
+          n = res.nick && typeof res.nick === 'object' ? res.nick : null;
+        if (c.action === 'confirm' && typeof c.value === 'string') {
+          const from = c.from === 'assistant' ? 'assistant' : 'player';
+          const v = assistantCallnameGuard(c.value, playerName);
+          if (v && !(from === 'player' && shy) && !(from === 'assistant' && !canOffer)) card = {
+            kind: 'call',
+            value: v,
+            from
+          };
+          if (card && from === 'assistant') callnameKit.markAsk({
+            offeredAt: Date.now()
+          });
+        } else if (c.action === 'reset' && callnameKit.current) card = {
+          kind: 'reset'
+        };else if (c.action === 'ask' && Number(bondLevel) >= ASSISTANT_CALLNAME_ASK_LEVEL) card = {
+          kind: 'ask'
+        };
+        if (!card && n && n.action === 'confirm' && !shy) {
+          const v = assistantNicknameGuard(n.value);
+          if (v) card = {
+            kind: 'nick',
+            value: v
+          };
+        }
+      } else {
+        const d = assistantCallnameDetect(text) || (pendingCard && pendingCard.kind === 'ask' && text.length <= 12 && !/\s/.test(text) ? {
+          kind: 'call',
+          value: text
+        } : null);
+        const v = d && d.kind === 'call' ? assistantCallnameGuard(d.value, playerName) : d && d.kind === 'nick' ? assistantNicknameGuard(d.value) : null;
+        let lineKind = null;
+        if (d && d.kind === 'reset' && callnameKit.current) {
+          card = {
+            kind: 'reset'
+          };
+        } else if (d && v && shy) lineKind = d.kind === 'nick' ? 'nickShy' : 'shy';else if (d && v) {
+          card = d.kind === 'nick' ? {
+            kind: 'nick',
+            value: v
+          } : {
+            kind: 'call',
+            value: v,
+            from: 'player'
+          };
+          lineKind = d.kind === 'nick' ? 'nickConfirm' : 'confirm';
+        }
+        if (!replied && lineKind) {
+          reply = assistantCallnameFillLine(assistantCallnameLine(id, lineKind), {
+            call: v ? callnameKit.fill(v) : '',
+            nick: v || '',
+            name: callName
+          });
+          e = /hy$/.test(lineKind) ? 'crying' : 'happy';
+        }
+      }
+      setCallCard(card);
+    }
     saveLog([...withUser, {
       role: 'assistant',
       text: reply,
       e
     }]);
+    if (res && res.kind === 'reply' && typeof ASSISTANT_CHAT_TASTE_HOOKS.onTalk === 'function') {
+      const taste = Object.prototype.hasOwnProperty.call(res, 'tasteHint') ? assistantChatTasteFromHint(res.tasteHint) : assistantChatTasteFromText(text);
+      if (taste) {
+        try {
+          ASSISTANT_CHAT_TASTE_HOOKS.onTalk({
+            assistantId: id,
+            monsterId: taste.monsterId,
+            positive: taste.positive
+          });
+        } catch {}
+      }
+    }
     if (res && Number.isFinite(res.remainingToday)) setRemaining(res.remainingToday);
     if (res && res.kind === 'reply') {
       if (res.memo && typeof res.memo === 'object') saveMemo(res.memo);
@@ -98876,6 +99023,46 @@ function AssistantChatWindow({
       if (typeof assistantLifeAddPlay === 'function') void assistantLifeAddPlay('chat');
     }
   };
+  const sayLine = (kind, vars, expression = 'happy') => saveLog([...(logs[id] || []), {
+    role: 'assistant',
+    text: assistantCallnameFillLine(assistantCallnameLine(id, kind), {
+      name: callName,
+      ...vars
+    }),
+    e: expression
+  }]);
+  const noteLine = text => saveLog([...(logs[id] || []), {
+    role: 'assistant',
+    text,
+    e: 'happy'
+  }]);
+  const answerCallCard = (yes, value) => {
+    const card = callCard;
+    setCallCard(null);
+    if (!card || !callnameKit) return;
+    if (card.kind === 'call' || card.kind === 'ask') {
+      const v = value || card.value;
+      if (yes && v) {
+        const saved = callnameKit.setCall(v, card.kind === 'ask' ? 'ask' : card.from === 'assistant' ? 'offer' : 'chat');
+        if (saved) sayLine('accept', {
+          call: callnameKit.fill(saved)
+        }, 'happy');
+      } else sayLine('keep', {}, 'normal');
+    } else if (card.kind === 'reset') {
+      if (yes) {
+        callnameKit.setCall(null, 'chat');
+        noteLine(`${assistant.name}の呼び方を元に戻しました`);
+      }
+    } else if (card.kind === 'nick') {
+      if (yes) {
+        const saved = callnameKit.setNick(card.value);
+        if (saved) sayLine('nickAccept', {
+          nick: saved
+        }, 'happy');
+      }
+    }
+  };
+  const callCardChoices = callCard && callCard.kind === 'ask' && callnameKit ? assistantCallnameChoices(id, callnameKit.current || callnameKit.customStyle || null).filter(t => callnameKit.fill(t) !== callName).slice(0, 3) : [];
   if (!assistant) return null;
   const accent = assistant.accent || '#f472b6';
   return React.createElement("div", {
@@ -98965,7 +99152,56 @@ function AssistantChatWindow({
     }), React.createElement("span", {
       className: "w-full truncate text-center text-[9px] font-bold leading-none text-slate-300"
     }, mon.name));
-  }))))), sending && React.createElement("p", {
+  }))))), callCard && callnameKit && !sending && React.createElement("div", {
+    "data-assistant-callname-card": callCard.kind
+  }, React.createElement("div", {
+    className: "rounded-2xl border-2 px-3 py-2 text-[11px] font-bold leading-relaxed text-pink-50 [word-break:keep-all] [overflow-wrap:anywhere]",
+    style: {
+      borderColor: accent,
+      background: 'rgba(244,114,182,.12)'
+    }
+  }, callCard.kind === 'call' && React.createElement(React.Fragment, null, "これから「", React.createElement("b", {
+    className: "text-[13px] text-white"
+  }, callnameKit.fill(callCard.value)), "」って呼んでいい？"), callCard.kind === 'nick' && React.createElement(React.Fragment, null, assistant.name, "のことを「", React.createElement("b", {
+    className: "text-[13px] text-white"
+  }, callCard.value), "」って呼ぶ？"), callCard.kind === 'reset' && React.createElement(React.Fragment, null, "呼び方を元に戻していい？"), callCard.kind === 'ask' && React.createElement(React.Fragment, null, "呼び方をえらぶか、送る欄に書いてね"), callCard.kind === 'ask' ? React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "mt-1.5 flex flex-wrap gap-1.5"
+  }, callCardChoices.map(t => React.createElement("button", {
+    key: t,
+    type: "button",
+    "data-assistant-callname-choice": t,
+    onClick: () => answerCallCard(true, t),
+    className: "min-h-[32px] rounded-full border bg-slate-900 px-3 text-[11px] font-black text-pink-100 active:scale-95",
+    style: {
+      borderColor: accent
+    }
+  }, callnameKit.fill(t)))), React.createElement("button", {
+    type: "button",
+    "data-assistant-callname-no": true,
+    onClick: () => answerCallCard(false),
+    className: "mt-1.5 min-h-[36px] w-full rounded-xl border border-slate-500 bg-slate-800 px-2 text-[11px] font-black text-slate-200 active:scale-95"
+  }, "いまのまま(", callName, ")")) : React.createElement("div", {
+    className: "mt-1.5 flex gap-1.5"
+  }, React.createElement("button", {
+    type: "button",
+    "data-assistant-callname-yes": true,
+    onClick: () => answerCallCard(true),
+    className: "min-h-[36px] flex-1 rounded-xl px-2 text-[11px] font-black text-white active:scale-95",
+    style: {
+      background: accent
+    }
+  }, callCard.kind === 'reset' ? 'うん、戻して' : 'うん、そう呼んで'), React.createElement("button", {
+    type: "button",
+    "data-assistant-callname-no": true,
+    onClick: () => answerCallCard(false),
+    className: "min-h-[36px] flex-1 rounded-xl border border-slate-500 bg-slate-800 px-2 text-[11px] font-black text-slate-200 active:scale-95"
+  }, "いまのままで"))), callCard.kind !== 'reset' && React.createElement("p", {
+    className: "mt-1 text-center text-[10px] font-bold text-slate-400 [word-break:keep-all] [overflow-wrap:anywhere]"
+  }, callCard.kind === 'nick' ? 'おしゃべりの中で使うあだ名です。' : React.createElement(React.Fragment, null, callCard.kind === 'ask' ? 'えらぶと' : '「うん」を押すと', "、", React.createElement("span", {
+    style: {
+      color: accent
+    }
+  }, assistant.name), "だけ呼び方が変わります。"), "プロフィールで元に戻せます")), sending && React.createElement("p", {
     "data-assistant-chat-sending": true,
     className: "text-[11px] text-slate-400"
   }, assistant.name, "が考え中…")), React.createElement("div", {
@@ -98988,6 +99224,57 @@ function AssistantChatWindow({
       background: accent
     }
   }, "送る"))));
+}
+function AssistantCallnameToast({
+  assistant,
+  text,
+  screen,
+  hidden = false,
+  onDone
+}) {
+  const [from] = React.useState(screen);
+  const [show, setShow] = React.useState(false);
+  React.useEffect(() => {
+    if (screen !== from) setShow(true);
+  }, [screen, from]);
+  React.useEffect(() => {
+    if (!show) return undefined;
+    const t = setTimeout(() => onDone && onDone(), 4000);
+    return () => clearTimeout(t);
+  }, [show]);
+  const [, setTick] = React.useState(0);
+  React.useEffect(() => {
+    if (!show) return undefined;
+    const t = setInterval(() => setTick(n => n + 1), 250);
+    return () => clearInterval(t);
+  }, [show]);
+  if (!show || !assistant || hidden) return null;
+  const accent = assistant.accent || '#f472b6';
+  const target = typeof rotationAwarePortalTarget === 'function' ? rotationAwarePortalTarget() : document.body;
+  const body = React.createElement("div", {
+    "data-assistant-callname-toast": true,
+    onClick: () => onDone && onDone(),
+    className: "fixed left-1/2 top-[18%] -translate-x-1/2 w-[min(320px,86%)] flex items-center gap-2.5 rounded-2xl border-2 bg-slate-950/95 px-3 py-2.5 shadow-2xl",
+    style: {
+      borderColor: accent,
+      zIndex: 9100
+    }
+  }, React.createElement("img", {
+    src: assistantFaceSrc(assistant, 'happy'),
+    alt: "",
+    className: "h-11 w-11 shrink-0 rounded-full border-2 object-cover bg-slate-900",
+    style: {
+      borderColor: accent
+    }
+  }), React.createElement("p", {
+    className: "min-w-0 text-[12px] font-bold leading-relaxed text-pink-50 [word-break:keep-all] [overflow-wrap:anywhere]"
+  }, "呼び方が新しくなりました", React.createElement("br", null), React.createElement("span", {
+    className: "mt-0.5 inline-block rounded-md px-1.5 text-[10px] font-black text-slate-900",
+    style: {
+      background: accent
+    }
+  }, text)));
+  return target ? ReactDOM.createPortal(body, target) : body;
 }
 const ASSISTANT_DAILY_LINES_KEY = 'mh_assistant_daily_lines_v1';
 const ASSISTANT_DAILY_LINES_RATE = 1 / 3;
@@ -160118,6 +160405,8 @@ function MonsterHeroGame() {
   const [quickJoin, setQuickJoin] = useState(null);
   const quickAdvanceRef = useRef(null);
   const [breederName, setBreederName] = useState('名無しのブリーダー');
+  const breederNameRef = useRef('名無しのブリーダー');
+  breederNameRef.current = breederName;
   const [breederXp, setBreederXp] = useState(0);
   const [gold, setGold] = useState(0);
   const goldRef = useRef(gold);
@@ -160833,6 +161122,10 @@ function MonsterHeroGame() {
   }, [friendsActive, publishFriendProfile]);
   const [assistantCallStyles, setAssistantCallStylesState] = useState({});
   const assistantCallStyle = assistantCallStyles[selectedAssistantId] || null;
+  const [assistantCallnames, setAssistantCallnamesState] = useState({});
+  const [assistantNicknames, setAssistantNicknamesState] = useState({});
+  const [assistantCallnameAsk, setAssistantCallnameAskState] = useState({});
+  const [callnameToast, setCallnameToast] = useState(null);
   const [assistantChatOpen, setAssistantChatOpen] = useState(false);
   const [peerReplay, setPeerReplay] = useState(null);
   const assistantDailyLinesAskedRef = useRef('');
@@ -164867,6 +165160,12 @@ function MonsterHeroGame() {
         if (typeof saved === 'string' && saved.trim()) loadedCallStyles[who.id] = saved;
       }
       setAssistantCallStylesState(loadedCallStyles);
+      {
+        const cn = typeof assistantSetCallnames === 'function' ? assistantSetCallnames(await storeGet(ASSISTANT_CALLNAME_KEY, {}, false)) : {};
+        setAssistantCallnamesState(cn);
+        if (typeof normalizeAssistantNicknames === 'function') setAssistantNicknamesState(normalizeAssistantNicknames(await storeGet(ASSISTANT_NICKNAME_KEY, {}, false)));
+        if (typeof normalizeAssistantCallnameAsk === 'function') setAssistantCallnameAskState(normalizeAssistantCallnameAsk(await storeGet(ASSISTANT_CALLNAME_ASK_KEY, {}, false)));
+      }
       const savedXp = await storeGet('mh_breeder_xp', 0, false);
       setBreederXp(savedXp);
       const savedGold = await storeGet('mh_gold', 0, false);
@@ -166985,6 +167284,68 @@ function MonsterHeroGame() {
     try {
       storeSet(assistantCallStyleKeyFor(id), next, false);
     } catch {}
+    setAssistantCallnameFor(id, next && typeof assistantCallnameGuard === 'function' && assistantCallnameGuard(next, breederNameRef.current) ? next : null, 'profile');
+  }, []);
+  const setAssistantCallnameFor = useCallback((id, call, by) => {
+    if (!id || typeof assistantSetCallnames !== 'function') return null;
+    const cur = assistantCallnamesNow || {};
+    const all = {
+      ...cur
+    };
+    const guarded = call ? assistantCallnameGuard(call, breederNameRef.current) : null;
+    if (call && !guarded) return null;
+    if (guarded) all[id] = {
+      call: guarded,
+      by,
+      at: Date.now(),
+      prev: cur[id] && cur[id].call || null
+    };else delete all[id];
+    const next = assistantSetCallnames(all);
+    setAssistantCallnamesState(next);
+    setAssistantCallStylesState(prev => ({
+      ...prev
+    }));
+    try {
+      storeSet(ASSISTANT_CALLNAME_KEY, next, false);
+    } catch {}
+    return guarded;
+  }, []);
+  const setAssistantNicknameFor = useCallback((id, nick) => {
+    if (!id || typeof assistantNicknameGuard !== 'function') return null;
+    const guarded = nick ? assistantNicknameGuard(nick) : null;
+    if (nick && !guarded) return null;
+    setAssistantNicknamesState(prev => {
+      const all = {
+        ...prev
+      };
+      if (guarded) all[id] = {
+        nick: guarded,
+        at: Date.now()
+      };else delete all[id];
+      try {
+        storeSet(ASSISTANT_NICKNAME_KEY, all, false);
+      } catch {}
+      return all;
+    });
+    return guarded;
+  }, []);
+  const markAssistantCallnameAsk = useCallback((id, patch) => {
+    if (!id) return;
+    setAssistantCallnameAskState(prev => {
+      const all = {
+        ...prev,
+        [id]: {
+          asked: false,
+          offeredAt: 0,
+          ...(prev[id] || {}),
+          ...patch
+        }
+      };
+      try {
+        storeSet(ASSISTANT_CALLNAME_ASK_KEY, all, false);
+      } catch {}
+      return all;
+    });
   }, []);
   const assistantBondValue = useMemo(() => ({
     points: assistantBond.points,
@@ -181536,9 +181897,38 @@ function MonsterHeroGame() {
         bondLevel: lv,
         bondTitle: stage.title || '',
         bondTone: stage.tone || '',
+        callnameKit: RELEASE_FLAGS.assistantCallname === true ? {
+          current: assistantCallnames[id] && assistantCallnames[id].call || null,
+          prev: assistantCallnames[id] && assistantCallnames[id].prev || null,
+          customStyle: assistantCallStyles[id] || null,
+          nick: assistantNicknames[id] && assistantNicknames[id].nick || null,
+          asked: !!(assistantCallnameAsk[id] && assistantCallnameAsk[id].asked),
+          offeredAt: assistantCallnameAsk[id] && assistantCallnameAsk[id].offeredAt || 0,
+          fill: t => assistantFillCallTemplate(assistantGenderCallOf(t, id), breederName),
+          setCall: (call, by) => {
+            const g = setAssistantCallnameFor(id, call, by);
+            if (g) setCallnameToast({
+              id,
+              text: `${activeAssistant.name}の呼び方：${assistantFillCallTemplate(g, breederName)}`
+            });
+            return g;
+          },
+          setNick: nick => setAssistantNicknameFor(id, nick),
+          markAsk: patch => markAssistantCallnameAsk(id, patch)
+        } : null,
         onExchange: () => addAssistantBondFor(id, 'chat'),
         onClose: () => setAssistantChatOpen(false)
       });
+    })(), callnameToast && !assistantChatOpen && typeof AssistantCallnameToast === 'function' && (() => {
+      const who = ASSISTANT_LIST.find(a => a.id === callnameToast.id);
+      return who ? React.createElement(AssistantCallnameToast, {
+        key: callnameToast.id + callnameToast.text,
+        assistant: who,
+        text: callnameToast.text,
+        screen: gameState,
+        hidden: showCallStylePicker,
+        onDone: () => setCallnameToast(null)
+      }) : null;
     })(), typeof AssistantPeerTalk === 'function' && RELEASE_FLAGS.assistantPeer === true && (() => {
       const metIds = assistantsUnlockedFrom(rhythmEventStorySeen).filter(who => who.id !== 'momosuke' || momosukeIntroSeenFlag).map(who => who.id);
       const busy = !!eventReplay || assistantChatOpen || showAssistantPicker || kikiIntroStep != null || momosukeIntroStep != null || !assistantChosen;
@@ -188225,8 +188615,9 @@ function MonsterHeroGame() {
         setShowCostumePicker(true);
       },
       onOpenItems: () => setGameState('ITEM_INVENTORY'),
+      talkedCallname: assistantCallnames[selectedAssistantId] && assistantCallnames[selectedAssistantId].call || null,
       onOpenCallStylePicker: () => {
-        setTempCallStyle(assistantCallStyle || '');
+        setTempCallStyle(assistantCallnames[selectedAssistantId] && assistantCallnames[selectedAssistantId].call || assistantCallStyle || '');
         setShowCallStylePicker(true);
       },
       onOpenAssistantPicker: () => setShowAssistantPicker(true),
@@ -189901,9 +190292,45 @@ function MonsterHeroGame() {
       }
     }, React.createElement("h3", {
       className: "text-lg font-black text-white mb-1 text-center"
-    }, activeAssistant.name, "の呼び方"), React.createElement("p", {
+    }, activeAssistant.name, "の呼び方"), (() => {
+      const talked = assistantCallnames[selectedAssistantId] && assistantCallnames[selectedAssistantId].call;
+      const nick = assistantNicknames[selectedAssistantId] && assistantNicknames[selectedAssistantId].nick;
+      if (!talked && !nick) return null;
+      return React.createElement("div", {
+        "data-callname-profile": true,
+        className: "mb-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/40 p-2.5"
+      }, talked && React.createElement("div", {
+        className: "flex items-center gap-2"
+      }, React.createElement("p", {
+        className: "min-w-0 flex-1 text-[11px] font-bold leading-snug text-slate-300 [word-break:keep-all] [overflow-wrap:anywhere]"
+      }, "会話で決めた呼び方：", React.createElement("span", {
+        className: "font-black",
+        style: {
+          color: activeAssistant.accent
+        }
+      }, assistantFillCallTemplate(talked, breederName))), React.createElement("button", {
+        type: "button",
+        "data-callname-reset": true,
+        onClick: () => {
+          setAssistantCallnameFor(selectedAssistantId, null, 'chat');
+          setTempCallStyle(assistantCallStyle || '');
+        },
+        className: "shrink-0 min-h-[36px] rounded-xl border border-slate-600 bg-slate-800 px-2.5 text-[10px] font-black text-slate-200 active:scale-95"
+      }, "元に戻す")), nick && React.createElement("div", {
+        className: "flex items-center gap-2"
+      }, React.createElement("p", {
+        className: "min-w-0 flex-1 text-[11px] font-bold leading-snug text-slate-300 [word-break:keep-all] [overflow-wrap:anywhere]"
+      }, activeAssistant.name, "のあだ名：", React.createElement("span", {
+        className: "font-black text-white"
+      }, nick)), React.createElement("button", {
+        type: "button",
+        "data-nickname-reset": true,
+        onClick: () => setAssistantNicknameFor(selectedAssistantId, null),
+        className: "shrink-0 min-h-[36px] rounded-xl border border-slate-600 bg-slate-800 px-2.5 text-[10px] font-black text-slate-200 active:scale-95"
+      }, "外す")));
+    })(), assistantBondLevelNow >= ASSISTANT_CALL_STYLE_UNLOCK_LEVEL ? React.createElement(React.Fragment, null, React.createElement("p", {
       className: "text-[9px] text-slate-500 text-center mb-3 leading-tight"
-    }, "絆Lv6になったので、呼び方を自由に決められます。「", '{name}', "」と書くと、そこがあなたの名前に置き換わります。"), React.createElement("input", {
+    }, "仲良し度がLv6になったので、呼び方を自由に決められます。「", '{name}', "」と書くと、そこがあなたの名前に置き換わります。"), React.createElement("input", {
       type: "text",
       value: tempCallStyle,
       onChange: e => setTempCallStyle(e.target.value),
@@ -189945,7 +190372,10 @@ function MonsterHeroGame() {
         setShowCallStylePicker(false);
       },
       className: "w-full text-[10px] text-slate-500 font-bold py-1 active:scale-95"
-    }, "絆Lvの呼び方に戻す"))), showAssistantPicker && React.createElement("div", {
+    }, "仲良し度の呼び方に戻す")) : React.createElement("button", {
+      onClick: () => setShowCallStylePicker(false),
+      className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
+    }, "閉じる"))), showAssistantPicker && React.createElement("div", {
       className: "fixed inset-0 flex flex-col items-center justify-center p-5",
       style: {
         position: 'fixed',
