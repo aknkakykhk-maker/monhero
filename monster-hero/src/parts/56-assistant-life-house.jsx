@@ -661,6 +661,11 @@ const ASSISTANT_LIFE_STAND_FACE = Object.freeze({
 //   ドラは顔だけの絵なので、7人の頭の高さ(てっぺんから顎)の平均とドラの頭の高さがそろう m
 // 目から顎の長さの平均(見えている体の高さに対する割合)。m=1 の人の「目から顎」が F になる
 const ASSISTANT_LIFE_STAND_EC = 0.1639;
+// 顔1個の長さ(頭のてっぺんから顎まで。7人の平均)を、目から顎の何倍か。2026-11-08 社長「顔のサイズを基準に縮尺合わせて上下で切る位置決めればそれなりに合う」:
+//   全員を、頭のてっぺんの上は顔0.55個ぶん(うさ耳・リボンが切れない所)・下はてっぺんから顔1.8個ぶん(顎から約0.8個。上半身の絵がいちばん短いソラシドでも絵が届く所)で切り、
+//   同じ高さの枠に入れる(下の 顔0.45個ぶんで消していく)
+const ASSISTANT_LIFE_STAND_FACE_LEN = 2.63;
+const ASSISTANT_LIFE_STAND_CUT = Object.freeze({ above: 0.55, below: 1.8, fade: 0.45 });
 // 着替えなど表に無い絵は、8人のふつうの形で見る
 const assistantLifeStandFace = (pid, src) => {
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
@@ -687,9 +692,12 @@ const assistantLifeStandLayout = (items, W, H) => {
     const vh = visH(x, F), ih = vh / (x.box.b - x.box.t), iw = ih * x.box.ar;
     const visTop = topY - (x.face.top || 0) * vh;
     const cx = W * 0.04 + sw * (i + 0.5);
-    // 体の下のほうを消す所(絵の高さに対する割合)。顎の少し下から見えている下端まで
-    const fade = x.face.head ? null : [x.box.t + Math.min(0.95, (x.face.chin || 0.5) + 0.18) * (x.box.b - x.box.t), x.box.b];
-    return { top: visTop - x.box.t * ih, height: ih, left: cx - ((x.box.l + x.box.r) / 2) * iw, width: iw, cx, face: F, visTop, visBottom: visTop + vh, fade };
+    // 上下で切る(全員同じ高さの枠): てっぺんの上 顔0.55個・てっぺんから下 顔1.8個。下の 顔0.45個ぶんで消していく
+    const U = F * ASSISTANT_LIFE_STAND_FACE_LEN, imgTop = visTop - x.box.t * ih;
+    const frameTop = topY - ASSISTANT_LIFE_STAND_CUT.above * U, frameBottom = topY + ASSISTANT_LIFE_STAND_CUT.below * U;
+    const clip = [Math.max(0, frameTop - imgTop), Math.max(0, imgTop + ih - frameBottom)];
+    const fade = x.face.head ? null : [Math.max(0, (frameBottom - ASSISTANT_LIFE_STAND_CUT.fade * U - imgTop) / ih), Math.min(1, (frameBottom - imgTop) / ih)];
+    return { clip, frameTop, frameBottom, top: imgTop, height: ih, left: cx - ((x.box.l + x.box.r) / 2) * iw, width: iw, cx, face: F, visTop, visBottom: visTop + vh, fade };
   });
 };
 function AssistantLifeStands({ ids, sleepIds = [] }) {
@@ -718,6 +726,7 @@ function AssistantLifeStands({ ids, sleepIds = [] }) {
       <img className="st" data-assistant-life-scene-stand={x.pid} data-assistant-life-scene-sleep={zz ? '1' : '0'} src={x.src} alt=""
         data-assistant-life-scene-face={p ? Math.round(p.face) : ''} data-assistant-life-scene-vis={p ? `${Math.round(p.visTop)},${Math.round(p.visBottom)}` : ''}
         style={p ? { left: p.left, top: p.top, height: p.height, width: p.width, maxWidth: 'none', bottom: 'auto', objectFit: 'fill', filter,
+          clipPath: `inset(${p.clip[0].toFixed(1)}px 0 ${p.clip[1].toFixed(1)}px 0)`,
           ...(p.fade ? { WebkitMaskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)`, maskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)` } : {}) } : { opacity: 0, height: '50%', filter }}/>
       {zz && p && <span className="absolute text-[34px]" style={{ left: p.cx + 20, top: Math.max(40, p.visTop) }} aria-hidden="true">💤</span>}
     </React.Fragment>); })}</>);

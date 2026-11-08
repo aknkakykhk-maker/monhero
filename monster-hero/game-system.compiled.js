@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6b7c5301033f20df
+// source-sha256: 060f5b281f78b0d3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -107454,6 +107454,12 @@ const ASSISTANT_LIFE_STAND_FACE = Object.freeze({
   }
 });
 const ASSISTANT_LIFE_STAND_EC = 0.1639;
+const ASSISTANT_LIFE_STAND_FACE_LEN = 2.63;
+const ASSISTANT_LIFE_STAND_CUT = Object.freeze({
+  above: 0.55,
+  below: 1.8,
+  fade: 0.45
+});
 const assistantLifeStandFace = (pid, src) => {
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   const own = who && who.imagePrefix && String(src || '').includes(`/${who.imagePrefix}_`);
@@ -107489,9 +107495,17 @@ const assistantLifeStandLayout = (items, W, H) => {
       iw = ih * x.box.ar;
     const visTop = topY - (x.face.top || 0) * vh;
     const cx = W * 0.04 + sw * (i + 0.5);
-    const fade = x.face.head ? null : [x.box.t + Math.min(0.95, (x.face.chin || 0.5) + 0.18) * (x.box.b - x.box.t), x.box.b];
+    const U = F * ASSISTANT_LIFE_STAND_FACE_LEN,
+      imgTop = visTop - x.box.t * ih;
+    const frameTop = topY - ASSISTANT_LIFE_STAND_CUT.above * U,
+      frameBottom = topY + ASSISTANT_LIFE_STAND_CUT.below * U;
+    const clip = [Math.max(0, frameTop - imgTop), Math.max(0, imgTop + ih - frameBottom)];
+    const fade = x.face.head ? null : [Math.max(0, (frameBottom - ASSISTANT_LIFE_STAND_CUT.fade * U - imgTop) / ih), Math.min(1, (frameBottom - imgTop) / ih)];
     return {
-      top: visTop - x.box.t * ih,
+      clip,
+      frameTop,
+      frameBottom,
+      top: imgTop,
       height: ih,
       left: cx - (x.box.l + x.box.r) / 2 * iw,
       width: iw,
@@ -107574,6 +107588,7 @@ function AssistantLifeStands({
         bottom: 'auto',
         objectFit: 'fill',
         filter,
+        clipPath: `inset(${p.clip[0].toFixed(1)}px 0 ${p.clip[1].toFixed(1)}px 0)`,
         ...(p.fade ? {
           WebkitMaskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)`,
           maskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)`
