@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 02f38d31dad7963c
+// generated-sha256: a34889a87e19b8a0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68969,6 +68969,7 @@ function AlfFriendHouseView({ friend, onClose }) {
                   <span className="mt-0.5 max-w-full truncate text-[10px] font-black text-white">{t.lead ? '⭐' : ''}{t.nick}</span>
                   <span className="max-w-full truncate text-[8.5px] text-slate-400">{t.name}</span>
                 </div>))}
+              {masmonMore(roomId) > 0 && <div className="flex items-center justify-center rounded-xl border border-dashed border-white/25 text-[13px] font-black text-slate-300" data-alf-visit-masmon-plus>+{masmonMore(roomId)}</div>}
             </div>
           </div>)}
         {talk && talk.aid === roomId ? (

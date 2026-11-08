@@ -1132,6 +1132,7 @@ function AlfFriendHouseView({ friend, onClose }) {
                   <span className="mt-0.5 max-w-full truncate text-[10px] font-black text-white">{t.lead ? '⭐' : ''}{t.nick}</span>
                   <span className="max-w-full truncate text-[8.5px] text-slate-400">{t.name}</span>
                 </div>))}
+              {masmonMore(roomId) > 0 && <div className="flex items-center justify-center rounded-xl border border-dashed border-white/25 text-[13px] font-black text-slate-300" data-alf-visit-masmon-plus>+{masmonMore(roomId)}</div>}
             </div>
           </div>)}
         {talk && talk.aid === roomId ? (
