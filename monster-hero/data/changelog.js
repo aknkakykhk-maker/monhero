@@ -50,7 +50,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-11-08 16:34", type:'update', title:'助手のマスモンが5体になり、くわしく見られるようになりました', status:'new', group:'assistant',
+    date: "2026-11-08 16:42", type:'update', title:'助手のマスモンが5体になり、くわしく見られるようになりました', status:'new', group:'assistant',
     items:[
       '助手のマスモンは、遊ぶ人ごとに顔ぶれ・名前・染めた色が違います',
       '仲良し度が Lv4・Lv7 になると、助手が新しいマスモンを迎えて、5体になります',
