@@ -1,6 +1,7 @@
 // 助手ライフ: 部屋の「🐾 マスモン」(56-assistant-life-masmon.jsx)を本物の画面で開いて確かめる。
 //   node tools/assistant/assistant-masmon-browser-check.js          検査(縦 390×844・横 844×390・🔄横から戻った 390×844)
 //   node tools/assistant/assistant-masmon-browser-check.js --shots  止め絵も撮る(docs/progress/assistant-peer/shots/masmon-<タブ>-<向き>.jpg)
+//   MASMON_ALL=1 で8人ぶん・MASMON_WHO=dra でその1人(ふだんはききだけ)
 //   LIFE_BASE=https://aknkakykhk-maker.github.io/monhero/ で本番の版を見る(公開後の確かめ)
 // 見るもの:
 //   ① 部屋のシートに「🐾 マスモン」の1行があり、押すとシートが開く/4つのタブ(マスモン・編成・デッキ・好き苦手)が全部出る
@@ -18,7 +19,7 @@ const BASE = process.env.LIFE_BASE ? process.env.LIFE_BASE.replace(/\/?$/, '/') 
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 const VIEWS = [{ id: 'p', name: '縦 390×844', w: 390, h: 844 }, { id: 'l', name: '横 844×390', w: 844, h: 390 }, { id: 'r', name: '🔄横から戻った 390×844', w: 390, h: 844, rot: true }];
-const WHO = 'kiki';
+const WHOS = process.env.MASMON_WHO ? [process.env.MASMON_WHO] : process.env.MASMON_ALL ? ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'] : ['kiki'];
 const TABS = ['mons', 'team', 'deck', 'taste'];
 
 const layoutProblems = (page) => page.evaluate(() => {
@@ -51,7 +52,7 @@ const layoutProblems = (page) => page.evaluate(() => {
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   try {
     for (const v of VIEWS) {
-      const T = `[${v.name}] `;
+      const T0 = `[${v.name}] `; const T = T0;
       const page = await browser.newPage({ viewport: { width: v.w, height: v.h }, deviceScaleFactor: SHOTS ? 2 : 1 });
       const errors = []; page.on('pageerror', e => errors.push(String(e)));
       await page.clock.setFixedTime(new Date('2026-11-08T03:40:00Z'));
@@ -77,32 +78,38 @@ const layoutProblems = (page) => page.evaluate(() => {
         check(`${T}口 assistantLifeCardStyle が8人ぶん attack/guard/normal`, hooks.every(h => ['attack', 'guard', 'normal'].includes(h.s)), hooks.map(h => `${h.id}:${h.s}`).join(' '));
         check(`${T}口 assistantLifeTasteOf が8人ぶん(好きは1つ以上・名前で)`, hooks.every(h => h.t && h.t.likes.length >= 1 && h.t.likes.every(n => typeof n === 'string' && n)), hooks.map(h => `${h.id}:${h.t ? h.t.likes.join('・') : 'null'}`).join(' / '));
       }
+      for (const WHO of WHOS) {
+      const T = `${T0}${WHO} `;
+      const want = await page.evaluate((id) => { const p = ASSISTANT_MASMON_PLAN.find(a => a.id === id); return { deck: p.deck.name, colors: p.favColors.length, dis: p.dislikeMon.length }; }, WHO);
       await page.locator(`[data-assistant-life-room="${WHO}"]`).first().click({ timeout: 8000 });
-      await page.locator('[data-assistant-life-room-sheet]').waitFor({ timeout: 5000 });
-      const row = page.locator('[data-assistant-life-room-masmon]');
-      check(`${T}部屋のシートに「🐾 マスモン」の1行`, (await row.count()) === 1, await row.innerText().catch(() => ''));
-      if (SHOTS) { await row.scrollIntoViewIfNeeded().catch(() => {}); await page.screenshot({ path: path.join(shotDir, `masmon-0-room-${v.id}.jpg`), type: 'jpeg', quality: 80 }); }
-      await row.click({ timeout: 5000 }).catch(() => {});
-      await page.locator('[data-assistant-masmon-sheet]').waitFor({ timeout: 5000 }).catch(() => {});
-      check(`${T}押すとマスモンのシートが開く`, (await page.locator(`[data-assistant-masmon-sheet="${WHO}"]`).count()) === 1);
-      for (const tab of TABS) {
-        await page.locator(`[data-assistant-masmon-tab-btn="${tab}"]`).click({ timeout: 3000 }).catch(() => {});
-        await page.waitForTimeout(tab === 'mons' || tab === 'team' ? 1500 : 500); // 染めた絵ができるのを待つ
-        check(`${T}タブ「${tab}」が開く`, (await page.locator(`[data-assistant-masmon-tab="${tab}"]`).count()) === 1);
-        if (tab === 'mons') {
-          const n = await page.locator('[data-assistant-masmon-row]').count();
-          const leads = await page.locator('[data-assistant-masmon-row] .mhm-lead').count();
-          check(`${T}マスモンは3体・先頭は1体`, n === 3 && leads === 1, `${n}体・先頭${leads}`);
+        await page.locator('[data-assistant-life-room-sheet]').waitFor({ timeout: 5000 });
+        const row = page.locator('[data-assistant-life-room-masmon]');
+        check(`${T}部屋のシートに「🐾 マスモン」の1行`, (await row.count()) === 1, await row.innerText().catch(() => ''));
+        if (SHOTS) { await row.scrollIntoViewIfNeeded().catch(() => {}); await page.screenshot({ path: path.join(shotDir, `masmon-0-room-${v.id}${WHO !== 'kiki' ? '-' + WHO : ''}.jpg`), type: 'jpeg', quality: 80 }); }
+        await row.click({ timeout: 5000 }).catch(() => {});
+        await page.locator('[data-assistant-masmon-sheet]').waitFor({ timeout: 5000 }).catch(() => {});
+        check(`${T}押すとマスモンのシートが開く`, (await page.locator(`[data-assistant-masmon-sheet="${WHO}"]`).count()) === 1);
+        for (const tab of TABS) {
+          await page.locator(`[data-assistant-masmon-tab-btn="${tab}"]`).click({ timeout: 3000 }).catch(() => {});
+          await page.waitForTimeout(tab === 'mons' || tab === 'team' ? 1500 : 500); // 染めた絵ができるのを待つ
+          check(`${T}タブ「${tab}」が開く`, (await page.locator(`[data-assistant-masmon-tab="${tab}"]`).count()) === 1);
+          if (tab === 'mons') {
+            const n = await page.locator('[data-assistant-masmon-row]').count();
+            const leads = await page.locator('[data-assistant-masmon-row] .mhm-lead').count();
+            check(`${T}マスモンは3体・先頭は1体`, n === 3 && leads === 1, `${n}体・先頭${leads}`);
+          }
+          if (tab === 'team') check(`${T}編成に3体`, (await page.locator('[data-assistant-masmon-team]').count()) === 3);
+          if (tab === 'deck') check(`${T}デッキの型の名前「${want.deck}」`, (await page.locator('[data-assistant-masmon-deck]').innerText().catch(() => '')).includes(want.deck));
+          if (tab === 'taste') check(`${T}好き・苦手・好きな色が出る`, (await page.locator('[data-assistant-masmon-taste^="like:"]').count()) >= 1 && ((await page.locator('[data-assistant-masmon-taste^="dislike:"]').count()) >= 1) === (want.dis > 0) && (await page.locator('[data-assistant-masmon-color]').count()) === want.colors);
+          const ng = await layoutProblems(page);
+          check(`${T}「${tab}」: 端にくっつかない・はみ出さない・切れない・絵が出る`, !ng.length, ng.slice(0, 4).join(' / '));
+          if (SHOTS) await page.screenshot({ path: path.join(shotDir, `masmon-${TABS.indexOf(tab) + 1}-${tab}-${v.id}${WHO !== 'kiki' ? '-' + WHO : ''}.jpg`), type: 'jpeg', quality: 80 });
         }
-        if (tab === 'team') check(`${T}編成に3体`, (await page.locator('[data-assistant-masmon-team]').count()) === 3);
-        if (tab === 'deck') check(`${T}デッキの型の名前「ずっしり火力」`, /ずっしり火力/.test(await page.locator('[data-assistant-masmon-deck]').innerText().catch(() => '')));
-        if (tab === 'taste') check(`${T}好き3・苦手3・好きな色3`, (await page.locator('[data-assistant-masmon-taste^="like:"]').count()) === 3 && (await page.locator('[data-assistant-masmon-taste^="dislike:"]').count()) === 3 && (await page.locator('[data-assistant-masmon-color]').count()) === 3);
-        const ng = await layoutProblems(page);
-        check(`${T}「${tab}」: 端にくっつかない・はみ出さない・切れない・絵が出る`, !ng.length, ng.slice(0, 4).join(' / '));
-        if (SHOTS) await page.screenshot({ path: path.join(shotDir, `masmon-${TABS.indexOf(tab) + 1}-${tab}-${v.id}.jpg`), type: 'jpeg', quality: 80 });
+        await page.locator('[data-assistant-masmon-close]').click({ timeout: 3000 }).catch(() => {});
+        check(`${T}閉じると部屋のシートに戻る`, (await page.locator('[data-assistant-masmon-sheet]').count()) === 0 && (await page.locator('[data-assistant-life-room-sheet]').count()) === 1);
+      await page.evaluate(() => { const b = document.querySelector('[data-assistant-life-room-sheet] > button[aria-label="閉じる"]'); if (b) b.click(); });
+        await page.locator('[data-assistant-life-room-sheet]').waitFor({ state: 'detached', timeout: 3000 }).catch(() => {});
       }
-      await page.locator('[data-assistant-masmon-close]').click({ timeout: 3000 }).catch(() => {});
-      check(`${T}閉じると部屋のシートに戻る`, (await page.locator('[data-assistant-masmon-sheet]').count()) === 0 && (await page.locator('[data-assistant-life-room-sheet]').count()) === 1);
       check(`${T}画面のエラーが無い`, !errors.length, errors.slice(0, 2).join(' / '));
       await page.close();
     }

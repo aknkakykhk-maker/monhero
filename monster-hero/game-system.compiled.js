@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e712d7a77d7dc7d7
+// source-sha256: 755eb4a93e5026c9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -119364,7 +119364,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "why": "ひなたの丘の草"
   }, {
     "color": "orange",
-    "why": "茶色(ゲームに茶色が無いので橙で代用)"
+    "why": "茶色っぽくて落ち着く"
   }, {
     "color": "black",
     "why": "落ち着く"
@@ -119617,7 +119617,7 @@ const ASSISTANT_MASMON_PLAN = [{
     "why": "いつもの服"
   }, {
     "color": "orange",
-    "why": "茶色(ゲームに茶色が無いので橙で代用)"
+    "why": "茶色っぽくて落ち着く"
   }, {
     "color": "gray",
     "why": "落ち着いた色"
@@ -119628,7 +119628,8 @@ const assistantMasmonMon = mid => typeof ALL_PLAYER_MONSTERS !== 'undefined' && 
 const assistantMasmonLineage = mid => {
   try {
     const l = typeof monsterLineageOf === 'function' ? monsterLineageOf(mid) : null;
-    return l && l.main || null;
+    const m = l && l.main;
+    return (m && typeof m === 'object' ? m.id : m) || null;
   } catch (_) {
     return null;
   }
@@ -119818,7 +119819,13 @@ function AssistantMasmonRow({
     className: "truncate text-[15px] font-black text-white"
   }, t.nick, t.lead && React.createElement("em", {
     className: "mhm-lead ml-1.5"
-  }, "先頭")), React.createElement("p", {
+  }, "先頭")), land ? React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "truncate text-[10.5px] font-bold text-slate-300"
+  }, m.name, " ・ Lv.", t.lv), React.createElement("p", {
+    className: "text-[10px]"
+  }, React.createElement(AssistantMasmonDots, {
+    t: t
+  }))) : React.createElement("p", {
     className: "truncate text-[10.5px] font-bold text-slate-300"
   }, m.name, " ・ Lv.", t.lv, " ", React.createElement(AssistantMasmonDots, {
     t: t
@@ -119932,17 +119939,30 @@ function AssistantMasmonSheet({
         className: "block text-[10px] text-slate-400"
       }, spread, "も少し", kind === 'like' ? '好き' : '苦手')));
     };
+    const merge = xs => {
+      const lins = new Set((xs || []).filter(x => x.lineage).map(x => x.lineage));
+      const folded = (xs || []).filter(x => x.monster && lins.has(assistantMasmonLineage(x.monster)) && assistantMasmonSpread(x) === '');
+      return (xs || []).filter(x => !folded.includes(x)).map(x => {
+        const f = x.lineage && folded.find(y => assistantMasmonLineage(y.monster) === x.lineage);
+        return f ? {
+          ...x,
+          why: f.why
+        } : x;
+      });
+    };
+    const likes = merge(p.likeMon),
+      dislikes = merge(p.dislikeMon);
     body = React.createElement("div", {
       className: land ? 'grid grid-cols-3 gap-2' : 'flex flex-col gap-2'
     }, React.createElement("div", {
       className: "mhm-card"
     }, React.createElement("p", {
       className: "text-[12px] font-black text-pink-300"
-    }, "💗 好き"), p.likeMon.map(x => line(x, 'like'))), React.createElement("div", {
+    }, "💗 好き"), likes.map(x => line(x, 'like'))), React.createElement("div", {
       className: "mhm-card"
     }, React.createElement("p", {
       className: "text-[12px] font-black text-sky-300"
-    }, "💦 苦手"), p.dislikeMon.length ? p.dislikeMon.map(x => line(x, 'dislike')) : React.createElement("p", {
+    }, "💦 苦手"), dislikes.length ? dislikes.map(x => line(x, 'dislike')) : React.createElement("p", {
       className: "py-1 text-[11.5px] font-bold text-slate-300"
     }, "苦手なモンスターはいない")), React.createElement("div", {
       className: "mhm-card"
