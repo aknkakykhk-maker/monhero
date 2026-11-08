@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5ed468ab27e52153
+// source-sha256: a896a335bbf6aec1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -61986,7 +61986,10 @@ const growthFxPush = ev => {
     const sheets = GROWTH_FX_STORE.sheets;
     const mergeKey = tier === 'level' ? String(ev.key || `${ev.kind}:${ev.who || ''}`) : null;
     const prev = mergeKey ? sheets.find((s, i) => i > 0 && s.tier === 'level' && s.key === mergeKey) : null;
-    if (prev) Object.assign(prev, {
+    if (prev && Array.isArray(prev.sessionUps) && Array.isArray(ev.sessionUps)) Object.assign(prev, growthFxSessionSheet([...prev.sessionUps, ...ev.sessionUps]), {
+      tier,
+      key: mergeKey
+    });else if (prev) Object.assign(prev, {
       ...ev,
       tier,
       key: mergeKey,
@@ -62234,25 +62237,82 @@ const growthFxPeerItem = ({
     rows
   });
 };
-const growthFxSessionLevel = (list = []) => {
+const GROWTH_FX_SESSION_ROWS_MAX = 4;
+const growthFxSessionUnlocks = () => {
+  const L = (v, d) => typeof v !== 'undefined' && Number.isFinite(Number(v)) ? Number(v) : d;
+  const rows = [[L(typeof RHYTHM_ASSIST_SESSION_TASTE_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_TASTE_LEVEL : undefined, 10), '好きな曲が見える'], [L(typeof RHYTHM_ASSIST_SESSION_GLOW_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_GLOW_LEVEL : undefined, 15), 'サビで顔が光る'], [L(typeof RHYTHM_ASSIST_SESSION_CHEER_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_CHEER_LEVEL : undefined, 25), '得意の応援'], [L(typeof RHYTHM_ASSIST_SESSION_FRAME_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_FRAME_LEVEL : undefined, 45), '結果の枠が助手の色に'], [L(typeof RHYTHM_ASSIST_SESSION_BADGE_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_BADGE_LEVEL : undefined, 50), 'プロフィールに札'], [L(typeof RHYTHM_ASSIST_SESSION_LISTEN_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_LISTEN_LEVEL : undefined, 75), '曲の聞きどころ'], [L(typeof RHYTHM_ASSIST_SESSION_BACK_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_BACK_LEVEL : undefined, 90), '名前入りの背景'], [L(typeof RHYTHM_ASSIST_SESSION_MASTER_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_MASTER_LEVEL : undefined, 100), '称号「セッションマスター」']];
+  const bonus = typeof RHYTHM_ASSIST_SESSION_P_BONUS !== 'undefined' && Array.isArray(RHYTHM_ASSIST_SESSION_P_BONUS) ? RHYTHM_ASSIST_SESSION_P_BONUS : [];
+  bonus.forEach(([lv, rate]) => rows.push([Number(lv), `ビートP +${Math.round(Number(rate) * 100)}%`]));
+  return rows.filter(r => Number.isFinite(r[0])).sort((a, b) => a[0] - b[0]);
+};
+const growthFxSessionSheet = (list = []) => {
   const ups = (Array.isArray(list) ? list : []).filter(u => u && growthFxNum(u.levelAfter) > growthFxNum(u.levelBefore) && growthFxAssistantOf(u.assistantId));
-  if (!ups.length) return;
-  const top = ups[0];
-  const gains = ups.map(u => ({
-    icon: '🎤',
-    text: `${growthFxAssistantName(u.assistantId)} セッションLv.${u.levelAfter}`,
-    note: growthFxNum(u.tickets) > 0 ? `セッション券 ×${growthFxNum(u.tickets)}` : ''
-  }));
+  const by = new Map();
+  ups.forEach(u => {
+    const id = u.assistantId,
+      b = growthFxNum(u.levelBefore),
+      a = growthFxNum(u.levelAfter),
+      t = growthFxNum(u.tickets);
+    const cur = by.get(id);
+    if (!cur) by.set(id, {
+      assistantId: id,
+      levelBefore: b,
+      levelAfter: a,
+      tickets: t > 0 ? t : 0
+    });else {
+      cur.levelBefore = Math.min(cur.levelBefore, b);
+      cur.levelAfter = Math.max(cur.levelAfter, a);
+      cur.tickets += t > 0 ? t : 0;
+    }
+  });
+  const rows = [...by.values()].map((r, i) => ({
+    ...r,
+    i
+  })).sort((a, b) => b.levelAfter - b.levelBefore - (a.levelAfter - a.levelBefore) || a.i - b.i);
+  const unlocks = growthFxSessionUnlocks();
+  const gainOf = r => {
+    const opened = unlocks.filter(([lv]) => lv > r.levelBefore && lv <= r.levelAfter).map(([lv, text]) => `Lv.${lv} ${text}`);
+    const notes = [...(r.tickets > 0 ? [`セッション券 ×${r.tickets}`] : []), ...opened];
+    const note = notes.length > 3 ? `${notes.slice(0, 3).join('・\u200b')}・\u200bほか${notes.length - 3}つ` : notes.join('・\u200b');
+    return {
+      icon: '🎤',
+      text: `${growthFxAssistantName(r.assistantId)} セッションLv.${r.levelBefore} → ${r.levelAfter}`,
+      up: `+${r.levelAfter - r.levelBefore}`,
+      note,
+      session: true
+    };
+  };
+  const shown = rows.length > GROWTH_FX_SESSION_ROWS_MAX ? rows.slice(0, GROWTH_FX_SESSION_ROWS_MAX - 1) : rows;
+  const gains = shown.map(gainOf);
+  if (shown.length < rows.length) {
+    const rest = rows.slice(shown.length);
+    gains.push({
+      icon: '🎤',
+      text: `ほか${rest.length}人`,
+      note: rest.map(r => `${growthFxAssistantName(r.assistantId)} Lv.${r.levelAfter}`).join('・'),
+      session: true
+    });
+  }
+  const top = rows[0] || null;
+  return {
+    sessionUps: ups,
+    levelFrom: top ? top.levelBefore : 0,
+    levelTo: top ? top.levelAfter : 0,
+    sub: rows.length > 1 ? 'いっしょに演奏した\u200b助手の\u200bセッションLvが\u200b上がった' : top ? `${growthFxAssistantName(top.assistantId)} とのセッションLvが Lv.${top.levelAfter} になった` : '',
+    face: top ? growthFxAssistantFace(top.assistantId, 'excited') : null,
+    gains: rows.length > 1 || gains[0] && (gains[0].note || rows[0].levelAfter - rows[0].levelBefore > 1) ? gains : []
+  };
+};
+const growthFxSessionLevel = (list = []) => {
+  const sheet = growthFxSessionSheet(list);
+  if (!sheet.sessionUps.length) return;
   growthFxPush({
     tier: 'level',
     kind: 'session',
-    who: ups.map(u => u.assistantId).join('+'),
-    levelFrom: top.levelBefore,
-    levelTo: top.levelAfter,
+    key: 'session:all',
+    who: 'session',
     title: 'セッションLv UP!',
-    sub: ups.length > 1 ? 'いっしょに演奏した助手のセッションLvが上がった' : `${growthFxAssistantName(top.assistantId)} とのセッションLvが Lv.${top.levelAfter} になった`,
-    face: growthFxAssistantFace(top.assistantId, 'excited'),
-    gains: ups.length > 1 || gains[0].note ? gains : []
+    ...sheet
   });
 };
 const GROWTH_FX_CSS = `
@@ -62318,7 +62378,11 @@ const GROWTH_FX_CSS = `
 .mh-gfx-gains{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;width:min(300px,82vw)}
 .mh-gfx-gains li{display:flex;align-items:center;gap:8px;background:#0f172ae0;border:1px solid color-mix(in srgb,var(--gc) 60%,transparent);border-radius:12px;padding:6px 10px;font-size:12px;font-weight:900;text-align:left;
   animation:mhGfxGain .4s var(--d) cubic-bezier(.2,1.5,.4,1) both}
-.mh-gfx-gains li small{display:block;font-size:10px;color:#94a3b8;font-weight:700}
+/* 添え書き・説明は言葉の途中で折らない(空白・「・」・U+200B の所だけで折る) */
+.mh-gfx-lv .sub{word-break:keep-all;overflow-wrap:anywhere}
+.mh-gfx-gains li small{word-break:keep-all;overflow-wrap:anywhere;display:block;font-size:10px;color:#94a3b8;font-weight:700;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+/* 行が多くても画面の外へ出さない(2026-11-08 社長のスクショ: セッションLv の行が20行以上並び、見出しも下も切れた)。入りきらない分は中で送る */
+.mh-gfx-gains{max-height:calc(var(--mh-vh) - 400px);min-height:0;overflow-y:auto;overscroll-behavior:contain}
 .mh-gfx-gains li .new{margin-left:auto;font-size:9px;background:var(--gc);color:#111;border-radius:6px;padding:1px 5px}
 .mh-gfx-face{position:absolute;height:32vh;left:50%;margin-left:-21vh;bottom:0;z-index:1;pointer-events:none;animation:mhGfxRise .6s .85s cubic-bezier(.2,1.4,.4,1) both;filter:drop-shadow(0 0 20px #000a)}
 .mh-gfx-lv-hint{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);left:0;right:0;text-align:center;font-size:10px;color:#cbd5e1;z-index:3;animation:mhGfxFade .3s 1.6s both}
@@ -62334,9 +62398,15 @@ const GROWTH_FX_CSS = `
   .mh-gfx-lv{flex-direction:row;gap:22px;margin-top:0}
   .mh-gfx-sheet.has-face .mh-gfx-lv{margin-left:min(36vw,300px)}
   .mh-gfx-lv .sub{max-width:240px}
-  .mh-gfx-gains{margin-top:0;width:290px}
+  .mh-gfx-gains{margin-top:0;width:290px;max-height:calc(var(--mh-vh) - 48px)}
   .mh-gfx-face{left:0;margin-left:0;height:62vh}
 }
+/* 🔄 横(端末は縦のまま、アプリが画面を回す)でも横画面の並びにする(2026-11-08)。回っているとき vh は回した後の横幅・vw は高さになる */
+[data-mh-view-rotation="true"] .mh-gfx-lv{flex-direction:row;gap:22px;margin-top:0}
+[data-mh-view-rotation="true"] .mh-gfx-sheet.has-face .mh-gfx-lv{margin-left:min(36vh,300px)}
+[data-mh-view-rotation="true"] .mh-gfx-lv .sub{max-width:240px}
+[data-mh-view-rotation="true"] .mh-gfx-gains{margin-top:0;width:290px;max-height:calc(100vw - 48px)}
+[data-mh-view-rotation="true"] .mh-gfx-face{left:0;margin-left:0;height:62vw}
 /* 最後の形(押して飛ばした・軽い設定): 動きを終わらせた状態で見せる */
 .mh-gfx-done *,.mh-gfx-done{animation-delay:0s !important;animation-duration:.01s !important}
 .mh-gfx-done .mh-gfx-rays{animation:none !important}
@@ -62746,7 +62816,10 @@ const GrowthFxLevelUp = ({
     "aria-hidden": "true"
   }, cardIconNode(g.icon || '✨', 14)), React.createElement("span", {
     className: "min-w-0"
-  }, React.createElement("b", null, String(g.text || '')), g.note && React.createElement("small", null, String(g.note))), g.isNew && React.createElement("span", {
+  }, React.createElement("b", null, String(g.text || '')), g.note && React.createElement("small", null, String(g.note))), g.up && React.createElement("span", {
+    className: "new",
+    "data-gfx-session-up": true
+  }, String(g.up)), g.isNew && React.createElement("span", {
     className: "new"
   }, "NEW"))))), React.createElement("div", {
     className: "mh-gfx-lv-hint"
