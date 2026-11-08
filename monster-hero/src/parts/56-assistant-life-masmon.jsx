@@ -166,6 +166,8 @@ function AssistantMasmonSheet({ id, land = false, onClose }) {
       </div>
       <p className="mt-2 text-[10.5px] font-bold leading-snug text-slate-400">⚔ 編成は{who.name}が決めています。</p>
     </>);
+  } else if (tab === 'deck' && assistantMasmonDeckTabOn()) {
+    body = <AssistantMasmonDeckTab id={id} land={land}/>;
   } else if (tab === 'deck') {
     body = (<>
       <div className="mhm-card" data-assistant-masmon-deck>
@@ -242,6 +244,34 @@ function AssistantMasmonRoomRow({ id, onOpen }) {
       <span className="min-w-0 truncate text-[11px] font-bold"><b>{lead.nick}</b>({m.name} Lv.{lead.lv}) ほか{Math.max(0, p.team.length - 1)}体</span>
       <span className="ml-auto pl-1 text-[12px] font-black text-pink-300">›</span>
     </button>);
+}
+
+// ---------- 部屋の🃏デッキのタブ: カード部の3つのデッキ(2026-11-08 社長「部屋の🃏デッキのタブが出るまで、3つのデッキの公開ごと待つ」) ----------
+// 印 cardGrowStyle(84 の cardGrowStyleOn)が偽のあいだは、今のタブ(型の名前と方針)のまま。真になったら、
+//   上に切りかえ3つ(攻め/守り/ふつう・その助手がいちばん出す型に「よく使う」)→ 中身はカード部ツナグの部品 CardAssistantDeckView(87)
+//   開いたときに cardAiDeckMarkMet(会った助手だけ AI で組み直す)と cardLoadAiRecipe(AI の名前・方針を読む)を呼ぶ。待たない
+const ASSISTANT_MASMON_DECK_STYLES = Object.freeze([['attack', '攻め'], ['guard', '守り'], ['normal', 'ふつう']]);
+const assistantMasmonDeckTabOn = () => { try { return typeof cardGrowStyleOn === 'function' && cardGrowStyleOn() && typeof CardAssistantDeckView === 'function'; } catch (_) { return false; } };
+function AssistantMasmonDeckTab({ id, land = false }) {
+  const fav = ASSISTANT_MASMON_CARD_STYLE[id] || 'normal';
+  const [sid, setSid] = React.useState(fav);
+  const [, setLoaded] = React.useState(0);
+  React.useEffect(() => {
+    let alive = true;
+    try { if (typeof cardAiDeckMarkMet === 'function') void Promise.resolve(cardAiDeckMarkMet(id)).catch(() => {}); } catch (_) {}
+    try { if (typeof cardLoadAiRecipe === 'function') void Promise.resolve(cardLoadAiRecipe()).then(() => { if (alive) setLoaded(n => n + 1); }).catch(() => {}); } catch (_) {}
+    return () => { alive = false; };
+  }, [id]);
+  return (<>
+    <div data-assistant-masmon-deck-styles className="grid grid-cols-3 gap-1.5">
+      {ASSISTANT_MASMON_DECK_STYLES.map(([s, label]) => (
+        <button key={s} type="button" data-assistant-masmon-deck-style={s} aria-pressed={sid === s} onClick={() => { if (typeof Audio_ !== 'undefined') Audio_.fgSe.tap(); setSid(s); }}
+          className={`flex min-h-[40px] items-center justify-center gap-1 rounded-xl border px-1 py-1 text-[13px] font-black ${sid === s ? 'border-amber-300 bg-amber-400 text-slate-950' : 'border-white/15 bg-slate-800 text-slate-200'}`}>
+          {label}{s === fav && <em data-assistant-masmon-deck-fav className="whitespace-nowrap rounded-full bg-emerald-400 px-1.5 py-px text-[9px] font-black not-italic text-emerald-950">よく使う</em>}
+        </button>))}
+    </div>
+    <div className="mt-2" data-assistant-masmon-deck-view={sid}><CardAssistantDeckView who={id} styleId={sid} land={land}/></div>
+  </>);
 }
 
 const ASSISTANT_MASMON_CSS = `
