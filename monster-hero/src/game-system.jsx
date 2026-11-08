@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b6af65a5ac69085f
+// generated-sha256: d6b4853461d96050
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -64388,7 +64388,7 @@ function AssistantMasmonSheet({ id, land = false, onClose }) {
       return (
         <div key={`${kind}-${x.monster || x.lineage}`} className="flex items-center gap-2 py-1" data-assistant-masmon-taste={`${kind}:${x.monster || x.lineage}`}>
           {m ? <img src={m.iconUrl || m.imgUrl} alt="" draggable={false} className="h-[34px] w-[34px] shrink-0 rounded-full bg-slate-500 object-contain"/> : <span className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full bg-slate-800 text-[15px]">🧬</span>}
-          <p className="min-w-0 text-[11.5px] font-bold leading-snug text-slate-100"><b className="text-white">{name}</b> … {x.why}{spread && <small className="block text-[10px] text-slate-400">{spread}も少し{kind === 'like' ? '好き' : '苦手'}</small>}</p>
+          <p className="min-w-0 text-[11.5px] font-bold leading-snug text-slate-100" style={{ wordBreak: 'auto-phrase' }}><b className="text-white">{name}</b> … {x.why}{spread && <small className="block text-[10px] text-slate-400">{spread}も少し{kind === 'like' ? '好き' : '苦手'}</small>}</p>
         </div>);
     };
     const merge = (xs) => {

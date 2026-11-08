@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f5a2a107cb460ee8
+// source-sha256: 2c90c27bf16719f1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -120222,7 +120222,10 @@ function AssistantMasmonSheet({
       }) : React.createElement("span", {
         className: "grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full bg-slate-800 text-[15px]"
       }, "🧬"), React.createElement("p", {
-        className: "min-w-0 text-[11.5px] font-bold leading-snug text-slate-100"
+        className: "min-w-0 text-[11.5px] font-bold leading-snug text-slate-100",
+        style: {
+          wordBreak: 'auto-phrase'
+        }
       }, React.createElement("b", {
         className: "text-white"
       }, name), " … ", x.why, spread && React.createElement("small", {
