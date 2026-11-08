@@ -12,6 +12,8 @@
 //   ⑥ どこでも実行時エラーが出ない
 //   ⑦ AUTO設定の「モンヒロビート・助手ライフを開いたら自動で始める」が ON なら、開いた瞬間に始まる(OFF なら始まらない=①)。
 //      止めたあとは、開いたままでは始め直さない。閉じてもう一度開けば、また始まる(2026-11-08 社長)
+//   ⑧ 本物の札で(ナカヨシ8): 「⚡ 裏クイック ◯周目」の数が進む・札の「止める」で締まって「▶ 裏クイック」になる・「▶」で再開する。
+//      縦 390・横 844・タブレット 820 で札が題・時計・帯に重ならない(--shots で docs/progress/assistant-peer/shots/lifequick/run-*.jpg を撮る)
 // 札(ボタン)がまだ無くても動くよう、AssistantLifeScreen に渡る props を横から受け取って押す(札ができたらそのボタンでも同じ道を通る)
 'use strict';
 const http = require('http');
@@ -160,6 +162,41 @@ const seed = () => {
     await page.waitForTimeout(2500);
     s = await state();
     check('⑦ 閉じてもう一度開けば、また自動で始まる', !!s.q && s.q.live === true, JSON.stringify(s.q));
+    // ⑧ 本物の札のボタンで
+    {
+      const SHOTS = process.argv.includes('--shots');
+      const shotDir = path.join(root, 'docs/progress/assistant-peer/shots/lifequick');
+      const chip = () => page.evaluate(() => { const el = document.querySelector('[data-assistant-life-quick-run]'); if (!el) return null;
+        const R = el.getBoundingClientRect(); const hit = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1; const ng = [];
+        for (const sel of ['[data-assistant-life-title]', '[data-assistant-life-clock-box]', '[data-assistant-life-clock]', '[data-assistant-life-tier]', '[data-assistant-life-close]']) for (const o of document.querySelectorAll(sel)) if (o.getClientRects().length && hit(R, o.getBoundingClientRect())) ng.push(sel);
+        if (R.right > innerWidth + 1 || R.left < -1) ng.push('はみ出す');
+        return { run: el.getAttribute('data-assistant-life-quick-run'), loop: Number(el.getAttribute('data-assistant-life-quick-loop') || 0), text: el.textContent, ng }; });
+      let c0 = await chip();
+      check('⑧ 開くと札に「⚡ 裏クイック ◯周目」と「止める」(◯は loops そのまま)', !!c0 && c0.run === 'live' && c0.loop === (await state()).q.loops && /⚡ 裏クイック \d+周目/.test(c0.text) && /止める/.test(c0.text), JSON.stringify(c0));
+      let grew = false; for (let i = 0; i < 180 && !grew; i++) { await page.waitForTimeout(500); const c = await chip(); if (c && c.loop > (c0 ? c0.loop : 0)) grew = true; }
+      check('⑧ 札の「◯周目」が進む', grew, JSON.stringify(await chip()));
+      for (const [w, h, tag] of [[390, 844, 'tate'], [844, 390, 'yoko'], [820, 1180, 'tablet']]) {
+        await page.setViewportSize({ width: w, height: h }); await page.waitForTimeout(700);
+        for (let i = 0; i < 6 && await closePopups(); i++) await page.waitForTimeout(400);
+        const c = await chip();
+        check(`⑧ ${tag}: 回っている札が題・時計・帯に重ならない・はみ出さない`, !!c && c.run === 'live' && c.ng.length === 0, JSON.stringify(c));
+        if (SHOTS) await page.screenshot({ path: path.join(shotDir, `run-live-${tag}.jpg`), type: 'jpeg', quality: 78 });
+      }
+      await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(500);
+      for (let i = 0; i < 6 && await closePopups(); i++) await page.waitForTimeout(400); // 報酬でレベルが上がったお祝い(全面・タップで閉じる)を先に閉じる
+      const b1 = await state();
+      await page.locator('[data-assistant-life-quick-stop]').click({ force: true }); // 裏のバトルが描画の合間を使うので「止まっているか」の判定は外す(位置は動いていない)
+      await page.waitForTimeout(3000);
+      for (let i = 0; i < 4 && await closePopups(); i++) await page.waitForTimeout(300);
+      const c1 = await chip(), s1 = await state();
+      check('⑧ 札の「止める」で締まり(報酬が入る)、札が「▶ 裏クイック」になる', !!c1 && c1.run === 'stopped' && /▶ 裏クイック/.test(c1.text) && (s1.gold > b1.gold || s1.xp > b1.xp), JSON.stringify({ c1, gold: [b1.gold, s1.gold], xp: [b1.xp, s1.xp] }));
+      if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'run-stopped-tate.jpg'), type: 'jpeg', quality: 78 });
+      for (let i = 0; i < 6 && await closePopups(); i++) await page.waitForTimeout(400);
+      await page.locator('[data-assistant-life-quick-start]').click({ force: true });
+      await page.waitForTimeout(2500);
+      const c2 = await chip();
+      check('⑧ 札の「▶ 裏クイック」で再開する', !!c2 && c2.run === 'live', JSON.stringify(c2));
+    }
     await page.evaluate(() => ASSISTANT_LIFE_STORE.set({ open: false }));
     await page.waitForTimeout(3000);
     check('⑦ 閉じると締まり、バトルへ飛ばない', !(await state()).battle && (await state()).home);

@@ -1,6 +1,6 @@
 // 助手ライフの裏クイックの札(2026-11-08 社長「助手ライフ画面でも裏クイックほしい」)。中身は 60-app(バトル部)が props で渡す
 //   node tools/assistant/assistant-life-quick-chip-check.js
-//   ① 回っているとき「⚡ 裏クイック ◯周目」(loops+1)と「止める」・止めたあと・自動で始めるが切のとき「▶ 裏クイック」(印は data-assistant-life-quick-run=live|stopped・-start・-stop)・null なら出ない
+//   ① 回っているとき「⚡ 裏クイック ◯周目」(loops をそのまま・カードと同じ)と「止める」・止めたあと・自動で始めるが切のとき「▶ 裏クイック」(印は data-assistant-life-quick-run=live|stopped・-start・-stop)・null なら出ない
 //   ② 縦 390・縦 375・横 844・タブレット 820: 札が画面に収まり、題・時計・にぎわいの帯・ほかのボタンに重ならない・字が切れない
 //   ③ 押すと止める/始めるが呼ばれる
 //   見本の値は、ページの中で AssistantLifeQuickChip を包んで渡す(60-app の受け渡しが入ったあとも、この見張りは同じに動く)
@@ -65,7 +65,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
         await page.evaluate((mode) => {
           window.__q = { stop: 0, start: 0 };
           if (!window.__qOrig) window.__qOrig = window.AssistantLifeQuickChip;
-          window.AssistantLifeQuickChip = (p) => window.__qOrig({ ...p, quickRun: mode === 'live' ? { live: true, loops: 11, canStart: false } : mode === 'start' ? { live: false, loops: 3, stopped: true, canStart: true } : null, onStop: () => { window.__q.stop++; }, onStart: () => { window.__q.start++; } });
+          window.AssistantLifeQuickChip = (p) => window.__qOrig({ ...p, quickRun: mode === 'live' ? { live: true, loops: 12, canStart: false } : mode === 'start' ? { live: false, loops: 3, stopped: true, canStart: true } : null, onStop: () => { window.__q.stop++; }, onStart: () => { window.__q.start++; } });
           ASSISTANT_LIFE_STORE.set({ __checkQuick: Date.now() }); // 描き直させる(同じ中身の emit では描き直さない)
         }, mode);
         await page.waitForTimeout(300);

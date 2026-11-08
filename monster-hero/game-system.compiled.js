@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 55fa6482f4e56e45
+// source-sha256: 8e29b3f53dafc7a4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -106899,16 +106899,16 @@ function AssistantLifeQuickChip({
   land
 }) {
   if (!quickRun || typeof quickRun !== 'object') return null;
-  const loops = Number.isFinite(Number(quickRun.loops)) ? Math.max(0, Math.floor(Number(quickRun.loops))) : 0;
+  const loops = Number.isFinite(Number(quickRun.loops)) ? Math.max(1, Math.floor(Number(quickRun.loops))) : 1;
   if (quickRun.live) {
     return React.createElement("div", {
       className: "mhl-quick shrink-0 self-center",
       "data-assistant-life-quick": "live",
       "data-assistant-life-quick-run": "live",
-      "data-assistant-life-quick-loop": loops + 1
+      "data-assistant-life-quick-loop": loops
     }, React.createElement("span", {
       className: "whitespace-nowrap"
-    }, "⚡ 裏クイック ", React.createElement("b", null, loops + 1, "周目")), onStop && React.createElement("button", {
+    }, "⚡ 裏クイック ", React.createElement("b", null, loops, "周目")), onStop && React.createElement("button", {
       type: "button",
       "data-assistant-life-quick-stop": true,
       onClick: onStop,

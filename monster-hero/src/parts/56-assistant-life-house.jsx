@@ -706,15 +706,16 @@ const useAssistantLifeLand = () => {
 };
 // 裏クイックの札(2026-11-08 社長「助手ライフ画面でも裏クイックほしい」)。中身はバトル部(ジン)が 60-app から渡す:
 //   quickRun … null(一度も回していない)か { live, loops, stopped, difficulty, xp, gold, canStart }/onQuickRunStop()/onQuickRunStart()
-//   回っているときは「⚡ 裏クイック ◯周目」と「止める」、止まっていて始められるときは「▶ 裏クイック」。数え方はカード・モンヒロビートの帯と同じ(loops+1)
+//   回っているときは「⚡ 裏クイック ◯周目」と「止める」、止まっていて始められるときは「▶ 裏クイック」。数え方はカードの札と同じ(loops をそのまま)
 function AssistantLifeQuickChip({ quickRun, onStop, onStart, land }) {
   if (!quickRun || typeof quickRun !== 'object') return null;
-  const loops = Number.isFinite(Number(quickRun.loops)) ? Math.max(0, Math.floor(Number(quickRun.loops))) : 0;
+  // 「◯周目」は loops をそのまま(1周目から 1。MFバトルカードの札 84-screen-card-battle と同じ数え方)
+  const loops = Number.isFinite(Number(quickRun.loops)) ? Math.max(1, Math.floor(Number(quickRun.loops))) : 1;
   // 印はバトル部(セコンド)の検査とそろえる: 外枠 data-assistant-life-quick-run=live|stopped/始める data-assistant-life-quick-start/止める data-assistant-life-quick-stop
   if (quickRun.live) {
     return (
-      <div className="mhl-quick shrink-0 self-center" data-assistant-life-quick="live" data-assistant-life-quick-run="live" data-assistant-life-quick-loop={loops + 1}>
-        <span className="whitespace-nowrap">⚡ 裏クイック <b>{loops + 1}周目</b></span>
+      <div className="mhl-quick shrink-0 self-center" data-assistant-life-quick="live" data-assistant-life-quick-run="live" data-assistant-life-quick-loop={loops}>
+        <span className="whitespace-nowrap">⚡ 裏クイック <b>{loops}周目</b></span>
         {onStop && <button type="button" data-assistant-life-quick-stop onClick={onStop} aria-label="裏クイックを止める">止める</button>}
       </div>);
   }

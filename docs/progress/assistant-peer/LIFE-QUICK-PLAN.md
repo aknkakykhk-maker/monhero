@@ -6,7 +6,7 @@
   - 裏のバトルの音を止める(モンヒロビート中と同じ)/助手ライフを閉じたら締める(報酬を入れて止める。曲えらびの「戻る」と同じ)
   - AssistantLifeScreen へ props: quickRun(null か { live, loops, stopped, difficulty, xp, gold, canStart })・onQuickRunStop()・onQuickRunStart()(中身は startQuickRunFromRhythm)
 - ナカヨシ8 … 56-assistant-life-house.jsx の札だけ(枝 claude/nakayoshi8-lifequick)
-  - 見出しの時計の左に `AssistantLifeQuickChip`: 回っているとき「⚡ 裏クイック ◯周目」(loops+1・カード・モンヒロビートの帯と同じ数え方)と「止める」/止まっていて始められるとき「▶ 裏クイック」/null なら出さない
+  - 見出しの時計の左に `AssistantLifeQuickChip`: 回っているとき「⚡ 裏クイック ◯周目」(loops をそのまま・MFバトルカードの札と同じ数え方)と「止める」/止まっていて始められるとき「▶ 裏クイック」/null なら出さない
   - 検査 tools/assistant/assistant-life-quick-chip-check.js(縦390・375・横844・タブレット820。題・時計・帯・ボタンに重ならない・字が切れない・押すと呼ばれる)
 - 保存キー・ランキングは増やしも変えもしない(クイックは対象外・チャレンジの自己ベストを上書きしない、は今のまま)
 
