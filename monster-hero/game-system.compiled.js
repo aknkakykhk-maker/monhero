@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 060f5b281f78b0d3
+// source-sha256: fddc478e26e08fbd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -107438,7 +107438,8 @@ const ASSISTANT_LIFE_STAND_FACE = Object.freeze({
     top: 0.01,
     eye: 0.40,
     chin: 0.56,
-    m: 1.040
+    m: 1.040,
+    fit: 0.95
   },
   sorashido: {
     top: 0.015,
@@ -107470,6 +107471,39 @@ const assistantLifeStandFace = (pid, src) => {
     m: 1
   };
 };
+const assistantLifeStandVisH = (face, F) => F / (ASSISTANT_LIFE_STAND_EC * (face && face.m || 1)) * (face && face.fit || 1);
+const assistantLifeStandRule = ({
+  face,
+  box,
+  F,
+  topY,
+  cx = 0
+}) => {
+  if (!face || !box || !(F > 0)) return null;
+  const vh = assistantLifeStandVisH(face, F),
+    ih = vh / (box.b - box.t),
+    iw = ih * box.ar;
+  const visTop = topY - (face.top || 0) * vh,
+    imgTop = visTop - box.t * ih;
+  const U = F * ASSISTANT_LIFE_STAND_FACE_LEN;
+  const frameTop = topY - ASSISTANT_LIFE_STAND_CUT.above * U,
+    frameBottom = topY + ASSISTANT_LIFE_STAND_CUT.below * U;
+  const clip = [Math.max(0, frameTop - imgTop), Math.max(0, imgTop + ih - frameBottom)];
+  const fade = face.head ? null : [Math.max(0, (frameBottom - ASSISTANT_LIFE_STAND_CUT.fade * U - imgTop) / ih), Math.min(1, (frameBottom - imgTop) / ih)];
+  return {
+    top: imgTop,
+    height: ih,
+    width: iw,
+    left: cx - (box.l + box.r) / 2 * iw,
+    clip,
+    fade,
+    frameTop,
+    frameBottom,
+    visTop,
+    visBottom: visTop + vh,
+    U
+  };
+};
 const assistantLifeStandLayout = (items, W, H) => {
   const n = items.length;
   if (!n || !W || !H || items.some(x => !x.box)) return null;
@@ -107480,7 +107514,7 @@ const assistantLifeStandLayout = (items, W, H) => {
     3: 0.064,
     4: 0.055
   }[Math.min(4, n)];
-  const visH = (x, F) => F / (ASSISTANT_LIFE_STAND_EC * (x.face.m || 1));
+  const visH = (x, F) => assistantLifeStandVisH(x.face, F);
   const visW = (x, F) => visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
   let F = fh;
   for (const x of items) {
@@ -107490,30 +107524,17 @@ const assistantLifeStandLayout = (items, W, H) => {
   const eyeOff = items.reduce((a, x) => a + ((x.face.eye || 0.4) - (x.face.top || 0)) * visH(x, F), 0) / n;
   const topY = H * (W > H ? 0.36 : 0.42) - eyeOff;
   return items.map((x, i) => {
-    const vh = visH(x, F),
-      ih = vh / (x.box.b - x.box.t),
-      iw = ih * x.box.ar;
-    const visTop = topY - (x.face.top || 0) * vh;
     const cx = W * 0.04 + sw * (i + 0.5);
-    const U = F * ASSISTANT_LIFE_STAND_FACE_LEN,
-      imgTop = visTop - x.box.t * ih;
-    const frameTop = topY - ASSISTANT_LIFE_STAND_CUT.above * U,
-      frameBottom = topY + ASSISTANT_LIFE_STAND_CUT.below * U;
-    const clip = [Math.max(0, frameTop - imgTop), Math.max(0, imgTop + ih - frameBottom)];
-    const fade = x.face.head ? null : [Math.max(0, (frameBottom - ASSISTANT_LIFE_STAND_CUT.fade * U - imgTop) / ih), Math.min(1, (frameBottom - imgTop) / ih)];
     return {
-      clip,
-      frameTop,
-      frameBottom,
-      top: imgTop,
-      height: ih,
-      left: cx - (x.box.l + x.box.r) / 2 * iw,
-      width: iw,
+      ...assistantLifeStandRule({
+        face: x.face,
+        box: x.box,
+        F,
+        topY,
+        cx
+      }),
       cx,
-      face: F,
-      visTop,
-      visBottom: visTop + vh,
-      fade
+      face: F
     };
   });
 };

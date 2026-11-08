@@ -63,7 +63,7 @@ const PAIRS = [['mua', 'momosuke'], ['kiki', 'dra'], ['atsu', 'sorashido'], ['ky
       const vh = vb - vt;
       const nums = ((img.style.clipPath || '').match(/inset\(([^)]*)\)/) || [, ''])[1].split(/\s+/).map(v => parseFloat(v) || 0);
       const cb = nums.length >= 3 ? nums[2] : nums[0] || 0; // inset(上 横 下 …)。ブラウザが 0 を 0px に書き直しても読めるように
-      return { id, head: !!f.head, cutBottom: r.bottom - cb, vt, vb, vl, vr, face: vh * ASSISTANT_LIFE_STAND_EC * (f.m || 1), topY: vt + (f.top || 0) * vh, eyeY: vt + (f.eye || 0.4) * vh, chinY: f.head ? vb : vt + f.chin * vh };
+      return { id, head: !!f.head, cutBottom: r.bottom - cb, vt, vb, vl, vr, face: vh * ASSISTANT_LIFE_STAND_EC * (f.m || 1) / (f.fit || 1), topY: vt + (f.top || 0) * vh, eyeY: vt + (f.eye || 0.4) * vh, chinY: f.head ? vb : vt + f.chin * vh };
     });
     const title = sc.querySelector('[data-assistant-life-scene-title]'), talk = document.querySelector('[data-assistant-peer-talk] > div, [data-assistant-peer-talk]');
     const tb = title ? title.getBoundingClientRect().bottom : S.top;

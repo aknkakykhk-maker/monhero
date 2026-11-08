@@ -646,19 +646,25 @@ const assistantLifeStandBox = (src) => new Promise((res) => {
   im.onerror = () => { ASSISTANT_LIFE_STAND_BOX.set(src, null); res(null); };
   im.src = src;
 });
+// ===== 立ち絵の大きさと切る位置(共通の表と関数・2026-11-08 社長「この仕組みは他の立ち絵にも使えそうだね」) =====
+// ほかの画面(部屋を大きく見る画面・HOME・モンヒロビートなど)からも、名前で読んで使える。使い方は docs/progress/assistant-peer/gifts/stagec/STAND-MEASURE.md の「共通の表と関数」
+//   ASSISTANT_LIFE_STAND_FACE(手で置いた顔の点と m・fit)/ASSISTANT_LIFE_STAND_EC/ASSISTANT_LIFE_STAND_FACE_LEN/ASSISTANT_LIFE_STAND_CUT
+//   assistantLifeStandFace(pid, src) … その絵の顔の点(表に無い絵はふつうの形)
+//   assistantLifeStandRule({ face, box, F, topY, cx }) … 1人ぶんの置き場所(px)。box は assistantLifeStandBox(src) の見えている体の範囲
 // 立ち絵の見た目の大きさをそろえる(2026-11-08 社長「立ち絵サイズのバランスや配置の仕方があんまりよくない」「実際の見た目ではかって」)
 //   8人の絵は全身ではなく上半身で、どこで切れているかが絵ごとに違う。透けていない画素の範囲(見えている体)の中で、目と顎の高さを測った表
 //   (docs/progress/assistant-peer/gifts/stagec/STAND-MEASURE.md)。「目から顎まで」を全員同じ長さにして、頭の大きさをそろえる
 //   eye・chin … 見えている体の上を0・下を1とした目・顎の高さ / head … 顔だけの絵(ドラ)。頭ひとつぶんの大きさで床に置く
 const ASSISTANT_LIFE_STAND_FACE = Object.freeze({
   mua: { top: 0.145, eye: 0.3275, chin: 0.425, m: 0.724 }, kiki: { top: 0.195, eye: 0.46, chin: 0.595, m: 0.847 }, momosuke: { top: 0.075, eye: 0.3925, chin: 0.535, m: 1.022 },
-  dra: { head: true, top: 0.10, eye: 0.46, m: 2.017 }, atsu: { top: 0.09, eye: 0.31, chin: 0.435, m: 0.895 }, kyuko: { top: 0.01, eye: 0.40, chin: 0.56, m: 1.040 },
+  dra: { head: true, top: 0.10, eye: 0.46, m: 2.017 }, atsu: { top: 0.09, eye: 0.31, chin: 0.435, m: 0.895 }, kyuko: { top: 0.01, eye: 0.40, chin: 0.56, m: 1.040, fit: 0.95 },
   sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 }, erubin: { top: 0.01, eye: 0.2325, chin: 0.46, m: 1.224 },
 });
 //   2026-11-08 社長「顔のサイズがまだあってない」「ちゃんとはかってるの？」: 絵を見て手で点を置き直した(測り絵 gifts/stagec/marks.png・STAND-MEASURE.md の4回目)
 //   top … 頭のてっぺん(髪の上端。うさ耳・リボン・羽・王冠などの飾りは含めない)/eye … 目の線(目を閉じた絵はまぶたの線)/chin … 顎の先(見えている体の上を0・下を1)
 //   m … 顔の大きさ。「目の線から顎の先」と「頬の幅」を、それぞれ7人の平均で割って2つを平均したもの。見えている体の高さは m に反比例させる(顔がそろう)
 //   ドラは顔だけの絵なので、7人の頭の高さ(てっぺんから顎)の平均とドラの頭の高さがそろう m
+//   fit … 測ったうえで、並び絵を見た社長の指示で少しだけ変えた大きさ(きゅうこ ×0.95「きゅうこが少しでかいね」)。無ければ 1
 // 目から顎の長さの平均(見えている体の高さに対する割合)。m=1 の人の「目から顎」が F になる
 const ASSISTANT_LIFE_STAND_EC = 0.1639;
 // 顔1個の長さ(頭のてっぺんから顎まで。7人の平均)を、目から顎の何倍か。2026-11-08 社長「顔のサイズを基準に縮尺合わせて上下で切る位置決めればそれなりに合う」:
@@ -672,6 +678,21 @@ const assistantLifeStandFace = (pid, src) => {
   const own = who && who.imagePrefix && String(src || '').includes(`/${who.imagePrefix}_`);
   return (own && ASSISTANT_LIFE_STAND_FACE[pid]) || { top: 0.05, eye: 0.33, chin: 0.47, m: 1 };
 };
+// 見えている体の高さ(px)。F … m=1 の人の「目から顎」の長さ(px)。顔の大きさがそろう
+const assistantLifeStandVisH = (face, F) => (F / (ASSISTANT_LIFE_STAND_EC * ((face && face.m) || 1))) * ((face && face.fit) || 1);
+// 1人ぶんの置き場所(px)。topY … 頭のてっぺんをそろえる高さ/cx … 体の真ん中の横の位置
+//   返す値: top・height・width・left(絵の箱)/clip [上, 下](clip-path の inset に使う)/fade [始, 終](絵の高さに対する割合。mask の linear-gradient に使う。顔だけの絵は null)
+//   frameTop・frameBottom(上下で切る枠)/visTop・visBottom(見えている体)/U(顔1個の長さ)
+const assistantLifeStandRule = ({ face, box, F, topY, cx = 0 }) => {
+  if (!face || !box || !(F > 0)) return null;
+  const vh = assistantLifeStandVisH(face, F), ih = vh / (box.b - box.t), iw = ih * box.ar;
+  const visTop = topY - (face.top || 0) * vh, imgTop = visTop - box.t * ih;
+  const U = F * ASSISTANT_LIFE_STAND_FACE_LEN;
+  const frameTop = topY - ASSISTANT_LIFE_STAND_CUT.above * U, frameBottom = topY + ASSISTANT_LIFE_STAND_CUT.below * U;
+  const clip = [Math.max(0, frameTop - imgTop), Math.max(0, imgTop + ih - frameBottom)];
+  const fade = face.head ? null : [Math.max(0, (frameBottom - ASSISTANT_LIFE_STAND_CUT.fade * U - imgTop) / ih), Math.min(1, (frameBottom - imgTop) / ih)];
+  return { top: imgTop, height: ih, width: iw, left: cx - ((box.l + box.r) / 2) * iw, clip, fade, frameTop, frameBottom, visTop, visBottom: visTop + vh, U };
+};
 // 場面の大きさ(W×H px)と、並ぶ人の絵の見えている範囲から、1人ずつの置き場所を決める(px)
 //   ・目から顎までの長さ F を全員同じに。F は人数で決める高さの割合と、1人の見えている幅が受け持ちの幅を大きく超えない長さの小さいほう
 //   ・頭のてっぺんの高さをそろえ、目が縦は場面の上から4割あたり・横は3割5分あたりに来るように置く(2026-11-08 社長「画面の下に小さく固まり、上半分が空いている」)
@@ -681,7 +702,7 @@ const assistantLifeStandLayout = (items, W, H) => {
   if (!n || !W || !H || items.some(x => !x.box)) return null;
   const sw = (W * 0.92) / n;
   const fh = H * ({ 1: 0.085, 2: 0.075, 3: 0.064, 4: 0.055 }[Math.min(4, n)]);
-  const visH = (x, F) => F / (ASSISTANT_LIFE_STAND_EC * (x.face.m || 1));
+  const visH = (x, F) => assistantLifeStandVisH(x.face, F);
   const visW = (x, F) => visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
   let F = fh;
   for (const x of items) { const w1 = visW(x, 1); if (w1 > 0) F = Math.min(F, (sw * 1.08) / w1); }
@@ -689,15 +710,8 @@ const assistantLifeStandLayout = (items, W, H) => {
   const eyeOff = items.reduce((a, x) => a + ((x.face.eye || 0.4) - (x.face.top || 0)) * visH(x, F), 0) / n;
   const topY = H * (W > H ? 0.36 : 0.42) - eyeOff;
   return items.map((x, i) => {
-    const vh = visH(x, F), ih = vh / (x.box.b - x.box.t), iw = ih * x.box.ar;
-    const visTop = topY - (x.face.top || 0) * vh;
     const cx = W * 0.04 + sw * (i + 0.5);
-    // 上下で切る(全員同じ高さの枠): てっぺんの上 顔0.55個・てっぺんから下 顔1.8個。下の 顔0.45個ぶんで消していく
-    const U = F * ASSISTANT_LIFE_STAND_FACE_LEN, imgTop = visTop - x.box.t * ih;
-    const frameTop = topY - ASSISTANT_LIFE_STAND_CUT.above * U, frameBottom = topY + ASSISTANT_LIFE_STAND_CUT.below * U;
-    const clip = [Math.max(0, frameTop - imgTop), Math.max(0, imgTop + ih - frameBottom)];
-    const fade = x.face.head ? null : [Math.max(0, (frameBottom - ASSISTANT_LIFE_STAND_CUT.fade * U - imgTop) / ih), Math.min(1, (frameBottom - imgTop) / ih)];
-    return { clip, frameTop, frameBottom, top: imgTop, height: ih, left: cx - ((x.box.l + x.box.r) / 2) * iw, width: iw, cx, face: F, visTop, visBottom: visTop + vh, fade };
+    return { ...assistantLifeStandRule({ face: x.face, box: x.box, F, topY, cx }), cx, face: F };
   });
 };
 function AssistantLifeStands({ ids, sleepIds = [] }) {

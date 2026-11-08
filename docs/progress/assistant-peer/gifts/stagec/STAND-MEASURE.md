@@ -64,3 +64,36 @@
   - 上: 頭のてっぺんの上 顔0.55個ぶん(例の0.3個だと、みゅあのうさ耳・ききのリボンが切れるため)
   - 下: 頭のてっぺんから 顔1.8個ぶん(顎から約0.8個)。8人の絵は上半身で、いちばん短いソラシドの絵がここで終わるため、例の「顎から2.5個」までは絵が届かない。下の 顔0.45個ぶんで消していく
 - 並び絵: `lineup-cut.png`(点線が枠・赤い線が頭のてっぺん)
+
+## 6回目(2026-11-08 社長「きゅうこが少し小さくなる」→「きゅうこが少しでかいね」)
+
+- 並び絵 `lineup-cut.png`(5回目)は「この形でよい」。きゅうこだけ fit ×0.95(測った m はそのまま。表の fit に書く)
+
+## 共通の表と関数(ほかの画面の立ち絵からも使う・社長「この仕組みは他の立ち絵にも使えそうだね」)
+
+置き場所: `monster-hero/src/parts/56-assistant-life-house.jsx` の「立ち絵の大きさと切る位置(共通の表と関数)」。どれも上の階層の名前なので、ほかの部品からそのまま読める(読む前に `typeof` で確かめる)。
+
+| 名前 | 中身 |
+| --- | --- |
+| `ASSISTANT_LIFE_STAND_FACE` | 助手ごとの顔の点 `{ top, eye, chin, m, fit?, head? }`。top・eye・chin は見えている体の上を0・下を1とした高さ。m は顔の大きさ(目〜顎と頬の幅の平均)。fit は社長の指示での微調整(無ければ1)。head はドラ(顔だけの絵) |
+| `ASSISTANT_LIFE_STAND_EC` | m=1 の人の「目から顎」が、見えている体の高さに占める割合(0.1639) |
+| `ASSISTANT_LIFE_STAND_FACE_LEN` | 顔1個(てっぺん〜顎)は目〜顎の何倍か(2.63) |
+| `ASSISTANT_LIFE_STAND_CUT` | 上下で切る所 `{ above: 0.55, below: 1.8, fade: 0.45 }`(顔の何個ぶん。above はてっぺんの上・below はてっぺんから下・fade は下の消す幅) |
+| `assistantLifeStandFace(pid, src)` | その絵の顔の点。着替えなど表に無い絵は、ふつうの形 `{ top: .05, eye: .33, chin: .47, m: 1 }` |
+| `assistantLifeStandBox(src)` | 絵の見えている体の範囲 `{ t, b, l, r, ar }`(Promise。測った値は ASSISTANT_LIFE_STAND_BOX に残る) |
+| `assistantLifeStandVisH(face, F)` | 見えている体の高さ(px) |
+| `assistantLifeStandRule({ face, box, F, topY, cx })` | 1人ぶんの置き場所(px)。`{ top, height, width, left, clip:[上,下], fade:[始,終] or null, frameTop, frameBottom, visTop, visBottom, U }` |
+
+使い方(例):
+
+```js
+const face = assistantLifeStandFace(pid, src);
+const box = await assistantLifeStandBox(src);          // 見えている体の範囲
+const p = assistantLifeStandRule({ face, box, F, topY, cx });
+// <img style={{ position:'absolute', left:p.left, top:p.top, width:p.width, height:p.height,
+//   clipPath:`inset(${p.clip[0]}px 0 ${p.clip[1]}px 0)`,
+//   maskImage: p.fade ? `linear-gradient(to bottom,#000 ${p.fade[0]*100}%,transparent ${p.fade[1]*100}%)` : undefined }}/>
+```
+
+- F … m=1 の人の「目から顎」の長さ(px)。全員同じ F にすると顔の大きさがそろう。topY … 頭のてっぺんをそろえる高さ。cx … 体の真ん中の横の位置
+- 場面(見守るなど)は `assistantLifeStandLayout(items, W, H)` が F・topY・cx を決めている(人数と画面の幅から)
