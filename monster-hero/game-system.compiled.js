@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a5d71c8aad5acd85
+// source-sha256: fdb4ba5446335040
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -124044,7 +124044,8 @@ const normalizeAssistantMasmonSave = raw => {
     dyes: {},
     draw: normalizeAssistantMasmonDraw(null),
     pick: {},
-    pickNameDay: ''
+    pickNameDay: '',
+    renamed2: {}
   };
   if (raw && typeof raw === 'object') {
     if (typeof raw.seed === 'string' && /^[\w-]{4,60}$/.test(raw.seed)) out.seed = raw.seed;
@@ -124054,6 +124055,7 @@ const normalizeAssistantMasmonSave = raw => {
     out.draw = normalizeAssistantMasmonDraw(raw.draw);
     out.pick = normalizeAssistantMasmonPick(raw.pick);
     out.pickNameDay = typeof raw.pickNameDay === 'string' ? raw.pickNameDay.slice(0, 10) : '';
+    if (raw.renamed2 && typeof raw.renamed2 === 'object') for (const [k, v] of Object.entries(raw.renamed2)) if (assistantMasmonBasePlanOf(k) && (v === 'new' || v === 'seen')) out.renamed2[k] = v;
     if (raw.noticed && typeof raw.noticed === 'object') for (const [k, v] of Object.entries(raw.noticed)) if (v === true && assistantMasmonBasePlanOf(k)) out.noticed[k] = true;
   }
   const w = raw && typeof raw === 'object' && raw.welcomed && typeof raw.welcomed === 'object' ? raw.welcomed : {};
@@ -125119,100 +125121,7 @@ const assistantMasmonWelcomeDue = async (aid, bondLv) => {
   void assistantMasmonAskPickNames();
   return list;
 };
-let _assistantMasmonPickNamesBusy = false;
-const assistantMasmonAskPickNames = async () => {
-  const st = ASSISTANT_MASMON_STORE.state;
-  const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '';
-  if (_assistantMasmonPickNamesBusy || !day || st.pickNameDay === day) return 'skip';
-  if (!(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonNamesApi === true) || typeof ASSISTANT_CHAT_URL === 'undefined' || typeof SB_HEADERS === 'undefined') return 'skip';
-  const items = Object.entries(st.pick || {}).map(([a, slots]) => ({
-    a,
-    s: Object.values(slots).filter(t => !t.ai).map(t => {
-      const m = assistantMasmonMon(t.monster);
-      return {
-        slot: t.slot,
-        mon: m ? m.name : t.monster,
-        why: t.why
-      };
-    })
-  })).filter(x => x.s.length);
-  if (!items.length) return 'skip';
-  let bid = null;
-  try {
-    bid = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
-  } catch (_) {
-    bid = null;
-  }
-  if (!bid) return 'skip';
-  _assistantMasmonPickNamesBusy = true;
-  const markDay = () => {
-    const c = ASSISTANT_MASMON_STORE.state;
-    const n = {
-      ...c,
-      pickNameDay: day
-    };
-    ASSISTANT_MASMON_STORE.set(n);
-    try {
-      if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, n, false);
-    } catch (_) {}
-  };
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 20000);
-    let res = null;
-    try {
-      const r = await fetch(ASSISTANT_CHAT_URL, {
-        method: 'POST',
-        headers: SB_HEADERS,
-        signal: controller.signal,
-        body: JSON.stringify({
-          kind: 'masmon_names',
-          breederId: bid,
-          items
-        })
-      });
-      res = r.ok ? await r.json() : null;
-    } finally {
-      clearTimeout(timer);
-    }
-    if (!res || res.ok !== true || !res.names || typeof res.names !== 'object') {
-      markDay();
-      return 'failed';
-    }
-    const cur = ASSISTANT_MASMON_STORE.state;
-    const pick = {};
-    for (const [a, slots] of Object.entries(cur.pick || {})) {
-      const got = res.names[a] && typeof res.names[a] === 'object' ? res.names[a] : {};
-      const used = new Set(assistantMasmonRowsOf(cur, a).map(t => t.nick));
-      const m = {};
-      for (const [k, t] of Object.entries(slots)) {
-        const n = typeof got[t.slot] === 'string' ? got[t.slot].trim() : '';
-        const ok = !t.ai && /^[ぁ-ゖァ-ヺー一-龠々・]{2,8}$/u.test(n) && !used.has(n);
-        if (ok) used.add(n);
-        m[k] = ok ? {
-          ...t,
-          nick: n,
-          ai: true
-        } : t;
-      }
-      pick[a] = m;
-    }
-    const next = {
-      ...cur,
-      pick
-    };
-    ASSISTANT_MASMON_STORE.set(next);
-    try {
-      if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false);
-    } catch (_) {}
-    return 'ok';
-  } catch (_) {
-    markDay();
-    return 'failed';
-  } finally {
-    _assistantMasmonPickNamesBusy = false;
-  }
-};
+const assistantMasmonAskPickNames = () => assistantMasmonAskNames();
 const assistantMasmonMakeFor = (aid, seed) => {
   const p = assistantMasmonBasePlanOf(aid);
   if (!p) return null;
@@ -125320,11 +125229,12 @@ const assistantMasmonEnsureMade = async () => {
 let _assistantMasmonNamesBusy = false;
 const assistantMasmonAskNames = async () => {
   const st = ASSISTANT_MASMON_STORE.state;
-  if (!st.draw || st.draw.v !== ASSISTANT_MASMON_DRAW_V || st.draw.named || _assistantMasmonNamesBusy) return 'skip';
+  const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '';
+  if (!st.draw || st.draw.v !== ASSISTANT_MASMON_DRAW_V || _assistantMasmonNamesBusy || !day || st.pickNameDay === day) return 'skip';
   if (!(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonNamesApi === true) || typeof ASSISTANT_CHAT_URL === 'undefined' || typeof SB_HEADERS === 'undefined') return 'skip';
-  const items = Object.entries(st.draw.made).map(([a, list]) => ({
+  const items = Object.keys(st.draw.made).map(a => ({
     a,
-    s: list.map(t => {
+    s: assistantMasmonRowsOf(st, a).filter(t => !t.ai).map(t => {
       const m = assistantMasmonMon(t.monster);
       return {
         slot: t.slot,
@@ -125332,7 +125242,7 @@ const assistantMasmonAskNames = async () => {
         why: t.why
       };
     })
-  }));
+  })).filter(x => x.s.length);
   if (!items.length) return 'skip';
   let bid = null;
   try {
@@ -125342,6 +125252,17 @@ const assistantMasmonAskNames = async () => {
   }
   if (!bid) return 'skip';
   _assistantMasmonNamesBusy = true;
+  const markDay = () => {
+    const c = ASSISTANT_MASMON_STORE.state;
+    const n = {
+      ...c,
+      pickNameDay: day
+    };
+    ASSISTANT_MASMON_STORE.set(n);
+    try {
+      if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, n, false);
+    } catch (_) {}
+  };
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 20000);
@@ -125361,23 +125282,48 @@ const assistantMasmonAskNames = async () => {
     } finally {
       clearTimeout(timer);
     }
-    if (!res || res.ok !== true || !res.names || typeof res.names !== 'object') return res && res.kind === 'tired' ? 'tired' : 'failed';
+    if (!res || res.ok !== true || !res.names || typeof res.names !== 'object') {
+      markDay();
+      return res && res.kind === 'tired' ? 'tired' : 'failed';
+    }
     const cur = ASSISTANT_MASMON_STORE.state;
-    const made = {};
     if (!cur.draw || cur.draw.v !== ASSISTANT_MASMON_DRAW_V) return 'skip';
-    for (const [a, list] of Object.entries(cur.draw.made)) {
+    const made = {
+        ...cur.draw.made
+      },
+      pick = {
+        ...(cur.pick || {})
+      },
+      renamed2 = {
+        ...(cur.renamed2 || {})
+      };
+    for (const a of Object.keys(made)) {
       const got = res.names[a] && typeof res.names[a] === 'object' ? res.names[a] : {};
-      const usedNames = new Set();
-      made[a] = list.map(t => {
+      const used = new Set(assistantMasmonRowsOf(cur, a).filter(t => t.ai).map(t => t.nick));
+      let changed = false;
+      const name = t => {
+        if (t.ai) return t;
         const n = typeof got[t.slot] === 'string' ? got[t.slot].trim() : '';
-        const okName = /^[ぁ-ゖァ-ヺー一-龠々・]{2,8}$/u.test(n) && !usedNames.has(n);
-        if (okName) usedNames.add(n);
-        return okName ? {
+        const ok = /^[ぁ-ゖァ-ヺー一-龠々・]{2,8}$/u.test(n) && !used.has(n);
+        if (!ok) return t;
+        used.add(n);
+        changed = true;
+        return {
           ...t,
           nick: n,
           ai: true
-        } : t;
-      });
+        };
+      };
+      const pk = pick[a] ? {
+        ...pick[a]
+      } : null;
+      const w = cur.draw.welcomed[a] || {};
+      made[a] = made[a].map(t => pk && pk[t.slot] || !(t.slot === 1 || w[t.monster]) ? t : name(t));
+      if (pk) {
+        for (const k of Object.keys(pk)) pk[k] = name(pk[k]);
+        pick[a] = pk;
+      }
+      if (changed && cur.draw.named) renamed2[a] = 'new';
     }
     const next = {
       ...cur,
@@ -125385,7 +125331,9 @@ const assistantMasmonAskNames = async () => {
         ...cur.draw,
         made,
         named: true
-      }
+      },
+      pick,
+      renamed2
     };
     ASSISTANT_MASMON_STORE.set(next);
     try {
@@ -125393,6 +125341,7 @@ const assistantMasmonAskNames = async () => {
     } catch (_) {}
     return 'ok';
   } catch (_) {
+    markDay();
     return 'failed';
   } finally {
     _assistantMasmonNamesBusy = false;
@@ -126038,7 +125987,20 @@ function AssistantMasmonSheet({
         if (last && alive) setWelcome(last);
       }
       const st = ASSISTANT_MASMON_STORE.state;
-      if (!assistantMasmonDrawOn(id, st) && st.named && !st.noticed[id] && alive) {
+      if (assistantMasmonDrawOn(id, st) && st.renamed2[id] === 'new' && alive) {
+        setRenamed(true);
+        const next = {
+          ...st,
+          renamed2: {
+            ...st.renamed2,
+            [id]: 'seen'
+          }
+        };
+        ASSISTANT_MASMON_STORE.set(next);
+        try {
+          if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false);
+        } catch (_) {}
+      } else if (!assistantMasmonDrawOn(id, st) && st.named && !st.noticed[id] && alive) {
         setRenamed(true);
         const next = {
           ...st,
