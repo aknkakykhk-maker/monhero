@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 51bee1202f3043a6
+// generated-sha256: 556875079d54ad32
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -65078,16 +65078,29 @@ const alfFetchVisits = async (force = false) => {
     return visits;
   } catch { return ALF_STORE.state.visits; }
 };
-// 行き来の行を足す(表の側でも上限・フレンドか・切かを見る)。入ったら true
-const alfPostVisit = async ({ kind, visitor, host, ids = [], word = 0 }) => {
+// 表に断られた理由を、遊ぶ人に分かる文にする(表の見張り alf_visits_guard の文に合わせる)
+const alfRefusalText = (e) => {
+  const b = String((e && (e.body || e.message)) || '');
+  if (e && e.notReady) return 'フレンドの家との行き来は、いま準備中です';
+  if (/フレンドではありません/.test(b)) return 'フレンドではなくなったため、置き手紙を残せませんでした';
+  if (/切にしています/.test(b)) return 'あなたか相手が行き来を「切」にしているため、置き手紙を残せませんでした';
+  if (/今日はもう/.test(b)) return '今日はもう訪ねられません(朝4時に戻ります)';
+  if (/止めています/.test(b)) return 'フレンドの家との行き来は、いまお休み中です';
+  if (/日付/.test(b)) return '端末の日付と時刻がずれているようです。合わせてからもう一度';
+  if ((e && e.status === 409) || /23505|duplicate/.test(b)) return '今日はこの家にもう置き手紙を残しました';
+  return '通信がうまくいきませんでした(時間をおいてもう一度)';
+};
+// 行き来の行を足す(表の側でも上限・フレンドか・切かを見る)。{ ok, reason }
+const alfPostVisitR = async ({ kind, visitor, host, ids = [], word = 0 }) => {
   try {
     await alfRequest(ALF_TABLE_VISITS, { method: 'POST', prefer: 'return=minimal', body: { kind, visitor_id: visitor, host_id: host, day: alfDay(), assistants: ids, word } });
-    return true;
-  } catch { return false; }
+    return { ok: true, reason: '' };
+  } catch (e) { return { ok: false, reason: alfRefusalText(e) }; }
 };
+const alfPostVisit = async (args) => (await alfPostVisitR(args)).ok;
 // 自分の控えを送る(10分に1回まで・thin は1時間・中身が前と同じなら送らない。日が変わったら1回は送り直して「新しい控え」にする)
 const alfSig = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
-const alfPublish = async (life, metIds, now = Date.now()) => {
+const alfPublish = async (life, metIds, now = Date.now(), { force = false } = {}) => {
   if (_alfUnavailable) return false;
   const mode = await alfLoadMode();
   if (mode === 'off') return false;
@@ -65097,13 +65110,28 @@ const alfPublish = async (life, metIds, now = Date.now()) => {
   const settings = ALF_STORE.state.settings;
   const house = settings.show ? alfBuildHouse(life, metIds) : {};
   const sig = alfSig(`${alfDay(now)}|${settings.open ? 1 : 0}|${JSON.stringify(house)}`);
-  if (sig === st.sentSig) return false;
-  if (now - st.sentAt < alfLimits().sendMs) return false;
+  // まだ一度も送れていない(sentAt 0)・force のときは、間隔と「同じ中身」を見ずに送る(2026-11-08 本番で、公開前に時間の様子が決まっていた人の控えが一度も届かず、行き来が断られた)
+  if (!force && st.sentAt) {
+    if (sig === st.sentSig) return false;
+    if (now - st.sentAt < alfLimits().sendMs) return false;
+  }
   try {
     await alfRequest(`${ALF_TABLE_HOUSES}?on_conflict=breeder_id`, { method: 'POST', prefer: 'resolution=merge-duplicates,return=minimal', body: { breeder_id: self, open: settings.open, house } });
     alfSaveSt({ ...alfToday(), sentAt: now, sentSig: sig });
     return true;
   } catch { return false; }
+};
+// 自分の家の控えが表にあるようにする(「🏘 フレンド」を開いたとき・訪ねる前・行き来の前・HOME)。
+//   今日まだ送れていなければ必ず送る。force は間隔も見ない。送れた/今日もう送ってある なら true
+const alfEnsureHouse = async ({ force = false } = {}) => {
+  if (typeof ASSISTANT_LIFE_STORE === 'undefined') return false;
+  try { await ASSISTANT_LIFE_STORE.load(); } catch { return false; }
+  const life = ASSISTANT_LIFE_STORE.state.life;
+  const st = alfToday();
+  const sentToday = st.sentAt && alfDay(st.sentAt) === st.day;
+  if (sentToday && !force) return true;
+  const metIds = [...new Set([...((life && life.groups) || []).flatMap(g => g.ids), ...Object.keys((life && life.solo) || {})])];
+  return alfPublish(life, metIds, Date.now(), { force: true });
 };
 
 // ---------- 行き来の決め方(端末で数える。表の側でも同じ上限を数える) ----------
@@ -65227,6 +65255,7 @@ const assistantLifeFriendOnSlot = async (life, slot, now = Date.now()) => {
   const pending = typeof assistantLifeRelPending === 'function' ? ((assistantLifeRelPending() || {}).ids || []) : [];
   const pick = assistantLifeFriendPickOuting({ life, ids: metIds, houses, st: alfToday(), settings: ALF_STORE.state.settings, mode, pendingIds: pending, abs: slot.abs, salt: life.salt || '' });
   if (!pick) return;
+  if (!(await alfEnsureHouse())) return;
   const ok = await alfPostVisit({ kind: 'go', visitor: self, host: pick.host, ids: pick.ids, word: pick.word });
   if (!ok) return;
   const cur = alfToday();
@@ -65241,6 +65270,7 @@ const assistantLifeFriendOnOpen = async (life, now = Date.now()) => {
   if (mode === 'off' || _alfUnavailable) return;
   const self = await alfSelf();
   if (!self) return;
+  await alfEnsureHouse();
   await alfFetchHouses();
   void alfFetchVisits();
   void assistantLifeFriendRequestScenes(life);
@@ -65269,12 +65299,14 @@ const assistantLifeFriendCanLook = (hostId) => {
 const assistantLifeFriendLeaveNote = async (hostId, { word = 0, talked = [], name = '' } = {}) => {
   await ALF_STORE.load();
   alfToday();
-  if (assistantLifeFriendCanLook(hostId) !== 'ok') return null;
+  const can = assistantLifeFriendCanLook(hostId);
+  if (can !== 'ok') return { ok: false, reason: can === 'done' ? '今日はこの家にもう置き手紙を残しました' : can === 'max' ? '今日はもう訪ねられません(朝4時に戻ります)' : 'フレンドの家との行き来が「切」になっています' };
   const self = await alfSelf();
-  if (!self) return null;
+  if (!self) return { ok: false, reason: 'この端末では、まだフレンドの機能が使えません' };
+  if (!(await alfEnsureHouse())) return { ok: false, reason: 'あなたの家の様子をまだ届けられていません。電波のよい所でもう一度' };
   const ids = [...new Set((talked || []).filter(alfValidId))].slice(0, 2);
-  const ok = await alfPostVisit({ kind: 'player', visitor: self, host: hostId, ids, word: alfInt(word, 0, ALF_WORDS - 1) });
-  if (!ok) return null;
+  const r = await alfPostVisitR({ kind: 'player', visitor: self, host: hostId, ids, word: alfInt(word, 0, ALF_WORDS - 1) });
+  if (!r.ok) return { ok: false, reason: r.reason };
   const cur = alfToday();
   const firstHere = !cur.photos.some(p => p.host === hostId);
   const photos = firstHere ? [...cur.photos, { host: hostId, name: alfStr(name, 20) || 'フレンド', day: cur.day, ids: [], theirs: ids }].slice(-60) : cur.photos;
@@ -65282,7 +65314,7 @@ const assistantLifeFriendLeaveNote = async (hostId, { word = 0, talked = [], nam
   alfSaveSt(marked);
   const got = await alfGiveBeatP('look', `alf_player_${cur.day}_${hostId.slice(0, 12)}`, marked);
   if (got) { const now2 = alfToday(); alfSaveSt({ ...now2, beatP: now2.beatP + got }); }
-    return { beatP: got, photo: firstHere };
+    return { ok: true, beatP: got, photo: firstHere };
 };
 
 // ---------- 置き手紙(自分あての行き来)・お礼 ----------
@@ -65568,7 +65600,7 @@ function AlfFriendHouseView({ friend, onClose }) {
   const leave = async (word) => {
     const r = await assistantLifeFriendLeaveNote(friend.id, { word, talked, name: friend.name });
     setLeaving(false);
-    setDone(r ? `✉️ 置き手紙「${ALF_WORD_TEXTS[word]}」を残しました${r.photo ? '・📷 写真1枚' : ''}${r.beatP ? `・🎁 ビートP ${r.beatP}(ギフトに届きます)` : ''}` : '置き手紙を残せませんでした(時間をおいてもう一度)');
+    setDone(r && r.ok ? `✉️ 置き手紙「${ALF_WORD_TEXTS[word]}」を残しました${r.photo ? '・📷 写真1枚' : ''}${r.beatP ? `・🎁 ビートP ${r.beatP}(ギフトに届きます)` : ''}` : `⚠️ ${(r && r.reason) || '置き手紙を残せませんでした(時間をおいてもう一度)'}`);
   };
   return alfLayer(
     <div className="absolute inset-0 flex flex-col bg-slate-950" style={{ zIndex: 44 }} data-alf-visit>
@@ -65709,7 +65741,7 @@ function AssistantLifeFriendHomeBadge({ rect }) {
   const s = useAssistantLifeFriendState();
   const [toast, setToast] = React.useState('');
   const lastRef = React.useRef(null);
-  React.useEffect(() => { if (alfEnabled()) void (async () => { await ALF_STORE.load(); await alfLoadMode(); await alfRoster(); await alfFetchVisits(); })(); }, []);
+  React.useEffect(() => { if (alfEnabled()) void (async () => { await ALF_STORE.load(); const m = await alfLoadMode(); if (m !== 'off') await alfEnsureHouse(); await alfRoster(); await alfFetchVisits(); })(); }, []);
   const n = alfEnabled() && s.loaded && s.mode && s.mode !== 'off' ? assistantLifeFriendUnseen(s) : 0;
   React.useEffect(() => {
     if (lastRef.current != null && n > lastRef.current) {
