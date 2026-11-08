@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 04af85f20c6b696a
+// generated-sha256: 8300e136136cd278
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67622,7 +67622,10 @@ const assistantMasmonAskNameOk = (n) => {
   const t = String(n || '').trim(); if (!t || t.length > 12 || /[\u0000-\u001f\u007f<>{}`\\]/.test(t)) return false;
   const f = t.normalize('NFKC').toLowerCase();
   if ((f.match(/\d/g) || []).length >= 5 || /[@＠]|#\d|(^|[^a-z])id([^a-z]|$)|https?|www|\.(com|jp|net)/.test(f)) return false;
-  if (['line', 'ライン', 'らいん', 'insta', 'インスタ', 'discord', 'ディスコ', 'twitter', 'ツイッター', 'tiktok', 'mail', 'メール', 'kakao', 'telegram'].some(w => f.includes(w))) return false;
+  // ことばの表はサーバ(assistant-chat core.js の SUGGEST_CONTACT_WORDS)と同じものをそろえて書く
+  const words = ['line', 'ライン', 'らいん', 'insta', 'インスタ', 'いんすた', 'discord', 'ディスコ', 'でぃすこ', 'twitter', 'ツイッター', 'tiktok', 'ティックトック', 'youtube', 'ユーチューブ', 'ゆーちゅーぶ', 'snapchat', 'スナチャ', 'mail', 'メール', 'gmail', 'skype', 'kakao', 'カカオ', 'telegram', 'qrコード', 'http', 'www', '.com', '.jp', '.net'];
+  const bare = f.replace(/[\s\u3000・。、,._\-~〜ー*＊!！?？♪☆★♡]/g, '');
+  if (words.some(w => f.includes(w) || bare.includes(w.replace(/[.ー]/g, '')))) return false;
   return true;
 };
 const ASSISTANT_MASMON_ASK_PER_DAY = 10; // 2026-11-09 社長「1日の制限は10に増やして」(前は3)

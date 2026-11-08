@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7e59e694da5927bf
+// source-sha256: a13eb146e0576e68
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -127372,7 +127372,9 @@ const assistantMasmonAskNameOk = n => {
   if (!t || t.length > 12 || /[\u0000-\u001f\u007f<>{}`\\]/.test(t)) return false;
   const f = t.normalize('NFKC').toLowerCase();
   if ((f.match(/\d/g) || []).length >= 5 || /[@＠]|#\d|(^|[^a-z])id([^a-z]|$)|https?|www|\.(com|jp|net)/.test(f)) return false;
-  if (['line', 'ライン', 'らいん', 'insta', 'インスタ', 'discord', 'ディスコ', 'twitter', 'ツイッター', 'tiktok', 'mail', 'メール', 'kakao', 'telegram'].some(w => f.includes(w))) return false;
+  const words = ['line', 'ライン', 'らいん', 'insta', 'インスタ', 'いんすた', 'discord', 'ディスコ', 'でぃすこ', 'twitter', 'ツイッター', 'tiktok', 'ティックトック', 'youtube', 'ユーチューブ', 'ゆーちゅーぶ', 'snapchat', 'スナチャ', 'mail', 'メール', 'gmail', 'skype', 'kakao', 'カカオ', 'telegram', 'qrコード', 'http', 'www', '.com', '.jp', '.net'];
+  const bare = f.replace(/[\s\u3000・。、,._\-~〜ー*＊!！?？♪☆★♡]/g, '');
+  if (words.some(w => f.includes(w) || bare.includes(w.replace(/[.ー]/g, '')))) return false;
   return true;
 };
 const ASSISTANT_MASMON_ASK_PER_DAY = 10;

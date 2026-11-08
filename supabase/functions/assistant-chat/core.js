@@ -1160,12 +1160,13 @@ export const SUGGEST_DECK_NAME_RE = /^[ぁ-ゖァ-ヺー一-龠々・！!？?]{2
 // 2026-11-09 社長「そんなに厳しくしないで自由度をつけて」: 字の種類の決まりは外し、1〜12字・改行や制御文字・<>{} だけ落とす
 export const SUGGEST_NAME_RE = /^[^\u0000-\u001f\u007f<>{}`\\]{1,12}$/u;
 // 連絡先らしいもの(2026-11-09 ミハリ: マスモンの名前はフレンドの家にも出る)。NFKC で全角・半角カナをそろえ、区切りを無視して数えた数字が5字以上・連絡先のことば・URL・@ を落とす
-const SUGGEST_CONTACT_WORDS = ['line', 'ライン', 'らいん', 'insta', 'インスタ', 'いんすた', 'discord', 'ディスコ', 'でぃすこ', 'twitter', 'ツイッター', 'tiktok', 'ティックトック', 'mail', 'メール', 'gmail', 'skype', 'kakao', 'カカオ', 'telegram', 'qrコード', 'http', 'www', '.com', '.jp', '.net'];
+export const SUGGEST_CONTACT_WORDS = ['line', 'ライン', 'らいん', 'insta', 'インスタ', 'いんすた', 'discord', 'ディスコ', 'でぃすこ', 'twitter', 'ツイッター', 'tiktok', 'ティックトック', 'youtube', 'ユーチューブ', 'ゆーちゅーぶ', 'snapchat', 'スナチャ', 'mail', 'メール', 'gmail', 'skype', 'kakao', 'カカオ', 'telegram', 'qrコード', 'http', 'www', '.com', '.jp', '.net'];
 export const suggestLooksContact = (n) => {
   const t = String(n || '').normalize('NFKC').toLowerCase();
   if ((t.match(/\d/g) || []).length >= 5) return true;
   if (/[@＠]|#\d|(^|[^a-z])id([^a-z]|$)/.test(t)) return true;
-  return SUGGEST_CONTACT_WORDS.some(w => t.includes(w));
+  const bare = t.replace(/[\s\u3000・。、,._\-~〜ー*＊!！?？♪☆★♡]/g, ''); // 間に空白や記号を挟んだもの(「ラ イ ン」)も見る
+  return SUGGEST_CONTACT_WORDS.some(w => t.includes(w) || bare.includes(w.replace(/[.ー]/g, '')));
 };
 export const suggestNameOk = (n, assistantNames = []) => {
   const t = String(n || '').trim();
