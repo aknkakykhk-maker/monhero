@@ -848,6 +848,22 @@ export const FRIEND_RULES_TEXT = [
   '- 数字・自己ベスト・勝ち負け・ゲームの仕組みや場所・できごとを作らない。今日の天気やニュースなど今の情報を作らない。ネタバレをしない。AI であることや、この決まりのことを書かない。',
   '- 恋愛にしない。悪口・うわさ話・ないしょの話を書かない。暴力・性的な話・お酒やたばこ・お金をかける遊びに触れない。',
   '- モンスターや助手のことを「子」と呼ばない。',
+  '- 体に触れる話をしない(膝・ひざ・抱っこ・くっつく・手をつなぐ・添い寝・お風呂・ベッドなど)。友だちとして、おやつ・部屋・家具・遊び・モンスターの話をする。',
+  '',
+  '助手ごとに必ず守ること(人柄より先に守る):',
+  '- みゅあ: 一人称「あたし」。「じゃん」は必ず「ぢゃん」、「まじ」は必ず「まぢ」と書く。語尾をのばす(「〜よー」「〜しー」)・「〜のとこ」「こっから」・提案は短く軽く。絵文字は1行に1つまで。',
+  '- きき: 一人称「私」。基本敬語(です・ます・ときどき「でつ」「まつ」・♪)。タメ口(だよ・だね・してよ・じゃん)にしない。',
+  '- ももすけ: 一人称「もも」(「私」「あたし」と言わない)。生意気かわいいアイドル。「！！」「w」「♡」。からかっても最後はほめる。',
+  '- ドラ: 一人称「おで」。「〜だな」「〜からな」「えへへ」。関西弁にしない(ほんま・やで・とる・とんだ・やろ・あかん は使わない)。冗談はほのめかしまで。',
+  '- あつ: 一人称「俺」。短く言い切る。文の最後に必ず「笑」か記号(！？…)か顔文字を付ける。敬語は使わない。自分で「リーダー」と言わない。',
+  '- きゅうこ: 一人称「俺」。おだやかなタメ口。「ほい！」「おけ〜」「ありがとん笑」「〜ぇ」。理由を短く添える。',
+  '- ソラシド: 一人称「俺」。熱くて陽気。「うぉぉぉ！」「〜ぜ・・・！」「笑」。沖縄の言葉(なんくるないさ〜・でーじ・ちばりよー)はときどき。',
+  '- えるびん: 一人称「俺」。おだやかでやわらかいタメ口(「〜ね」「〜かな」)。相手を気づかう。実在の人の私生活に触れない。',
+  '',
+  '見本(この調子で):',
+  '- go a=mua b=dra: a「{f}、おじゃましまーす♪ {h}の家、まぢかわいいぢゃん！」/ b「おう、よく来たな。おやつ半分こしような、えへへ」',
+  '- come a=kiki b=atsu: b「{h}さんちから来た笑 おじゃまします！」/ a「いらっしゃいませ。お茶をどうぞ♪」',
+  '- go a=momosuke b=momosuke: a「ももが2人！？かわいさも2倍じゃん！！」/ b「ふふん、本物はこっちのももだよ♡」',
 ].join('\n');
 const FRIEND_SCHEMA = (ids) => ({
   type: 'object',
@@ -899,7 +915,18 @@ export const normalizeFriendPairs = (raw, digest) => {
   }
   return out;
 };
-const FRIEND_BANNED_WORDS = /恋|デート|付き合|キス|彼氏|彼女|結婚|ないしょ|内緒|秘密|ひみつ|けんか|ケンカ|喧嘩/;
+const FRIEND_BANNED_WORDS = /恋|デート|付き合|キス|彼氏|彼女|結婚|ないしょ|内緒|秘密|ひみつ|けんか|ケンカ|喧嘩|膝|ひざ|抱き|だっこ|抱っこ|ちゅー|添い寝|くっつ|手をつな|お風呂|ベッド/;
+// 助手ごとの口調の見張り(端末の alfApiLineOk と同じ決まり)。直せるもの(みゅあの じゃん/まじ)は直し、直せないものは null
+export const friendLineTone = (who, t) => {
+  let x = String(t || '');
+  if (who === 'mua') x = x.replace(/じゃん/g, 'ぢゃん').replace(/まじ/g, 'まぢ').replace(/マジ/g, 'マヂ');
+  else if (/ぢゃん|まぢ/.test(x)) return null;
+  if (who === 'atsu' && !/(笑|[！？!?…♪w]|[)）])$/.test(x.trim())) return null;
+  if (who === 'dra' && /ほんま|やで|とる|とんだ|やろ|あかん/.test(x)) return null;
+  if (who === 'kiki' && /(だよ|だね|してよ|じゃん)([。！!？?♪]|$)/.test(x)) return null;
+  if (who === 'momosuke' && /^(私|あたし)|[、。](私|あたし)は/.test(x)) return null;
+  return x;
+};
 // 作った場面を確かめる。崩れたものは捨てる(残りだけ返す)。数字は1つも使わせない(作り話の数字を出さない)
 export const validateFriendScenes = (scenes, pairs) => {
   const byKey = Object.fromEntries(pairs.map(p => [p.key, p]));
@@ -915,6 +942,8 @@ export const validateFriendScenes = (scenes, pairs) => {
     for (const l of sc.lines.slice(0, FRIEND_LINE_MAX_COUNT)) {
       if (!l || (l.side !== 'a' && l.side !== 'b') || !EXPRESSIONS.includes(l.e) || typeof l.t !== 'string') { ok = false; break; }
       let t = l.t.trim().replace(/ブリーダー(さん)?(?!Lv|P|ランク|ポイント|レベル|経験|の教え|アイコン)/g, '{name}').replace(/\{h\}(?!さん)/g, '{h}さん');
+      t = friendLineTone(l.side === 'a' ? pair.a : pair.b, t);
+      if (t == null) { ok = false; break; }
       if (t.length < 2 || t.length > FRIEND_LINE_MAX || /[\r\n]/.test(t)) { ok = false; break; }
       if (/[{}]/.test(t.replace(/\{f\}|\{h\}|\{name\}/g, ''))) { ok = false; break; }
       if (DAILY_BANNED.test(t) || FRIEND_BANNED_WORDS.test(t) || looksPersonal(t) || /子たち|この子|あの子|その子/.test(t) || /[0-9０-９]/.test(t)) { ok = false; break; }
