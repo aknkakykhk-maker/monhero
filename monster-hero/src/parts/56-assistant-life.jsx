@@ -1091,7 +1091,7 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
                     <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 text-[24px]" aria-hidden="true">{x.emoji}</span>
                     <div className="min-w-0 flex-1">
                       <p className="text-[12px] font-black text-white">{x.name} <span className="text-[10px] text-slate-400">持っている {haveOf(x.kind)}個{usedOf(x.kind) && haveOf(x.kind) > 0 ? ' ・ 今日は贈れない' : ''}</span></p>
-                      <p className="text-[10px] leading-snug text-slate-300">{x.what.split('。')[0]}。<span className="text-orange-300">🤝 友情Lv +{x.peerAmt}</span>・2人との<span className="text-pink-200">💗 仲良し度 +{x.playerAmt}</span>・2人のひとこと</p>
+                      <p className="text-[10px] leading-snug text-slate-300">{x.what.split('。')[0]}。<span className="whitespace-nowrap text-orange-300">🤝 友情Lv {assistantLifeItemRange(x).peer}</span>・<span className="whitespace-nowrap text-pink-200">💗 仲良し度 {assistantLifeItemRange(x).player}</span>(好みで変わる)・2人のひとこと</p>
                     </div>
                   </div>))}
                 <p className="mt-1.5 text-[10px] leading-snug text-slate-400">手に入れる:モンヒロビートの「ビートP交換所」({itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・')})/贈る:下の組の「🎁 贈る」。誘う・引き合わせるは無料で、次の時間の過ごし方が変わります</p>

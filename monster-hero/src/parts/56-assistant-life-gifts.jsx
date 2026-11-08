@@ -66,6 +66,19 @@ const assistantLifeGiftAmounts = (kindOrKey, pair) => {
       peer: [Math.round(g.peer * assistantLifeGiftMult('bad')), Math.round(g.peer * assistantLifeGiftMult('like'))] },
   };
 };
+// 画面に出す友情Lv の量。分かっている人はその倍率、分からない人は苦手〜好きの幅で、2人の平均の いちばん少ない〜多い
+const assistantLifeGiftPeerShown = (g, shownLikes) => {
+  const opts = shownLikes.map(s => (s === 'unknown' ? ['bad', 'like'] : [s]).map(assistantLifeGiftMult));
+  const lo = Math.round(g.peer * (Math.min(...opts[0]) + Math.min(...opts[1])) / 2), hi = Math.round(g.peer * (Math.max(...opts[0]) + Math.max(...opts[1])) / 2);
+  return lo === hi ? `+${lo}` : `+${lo}〜${hi}`;
+};
+// 道具の欄に出す量(だれに贈るか決まる前なので、苦手〜好きの幅)。贈るシートの幅と同じ数
+const assistantLifeItemRange = (info) => {
+  const g = info && assistantLifeGiftOf(info.kind);
+  if (!g) return { peer: '', player: '' };
+  return { peer: `+${Math.round(g.peer * assistantLifeGiftMult('bad'))}〜${Math.round(g.peer * assistantLifeGiftMult('like'))}`,
+    player: `+${Math.round(g.player * assistantLifeGiftMult('bad'))}〜${Math.round(g.player * assistantLifeGiftMult('like'))}` };
+};
 
 // ---------- 保存(3つのキー) ----------
 const normalizeAssistantLifeGiftDay = (raw) => {
@@ -247,7 +260,7 @@ function AssistantLifeGiftLikesRow({ id, compact = false }) {
       </button>
       {hint && (
         <button type="button" data-assistant-life-gift-told={told.key} onClick={() => assistantLifeGiftToldSeen(id)}
-          className={`mt-1 block w-full rounded-xl bg-white px-2 py-1 text-left text-[11px] font-black leading-snug text-slate-800 ${compact ? 'truncate' : ''}`}>
+          className="mt-1 block w-full rounded-xl bg-white px-2 py-1 text-left text-[11px] font-black leading-snug text-slate-800">
           <span className={`${compact ? 'mr-1 inline' : 'block'} text-[9.5px] text-pink-600`}>💡{compact ? '' : ' 教えてくれた(タップで閉じる)'}</span>{hint.t}</button>)}
       <div className={`mt-1 flex flex-wrap gap-1 ${showAll ? '' : 'hidden'}`}>
         {gifts.map(g => { const s = assistantLifeGiftShownLike(id, g.key, st); return (
@@ -278,7 +291,7 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
   const shown = pair.map(id => (lifeOn ? assistantLifeGiftShownLike(id, info.key, st) : 'mid'));
   const tagCls = { like: 'bg-pink-600 text-white', mid: 'bg-slate-600 text-white', bad: 'bg-cyan-700 text-white', unknown: 'bg-slate-700 text-slate-200' };
   const playerText = (i) => (!amt ? '' : shown[i] === 'unknown' ? `+${amt.range.player[0]}〜${amt.range.player[1]}` : `+${amt.player[i]}`);
-  const peerText = !amt ? '' : shown.includes('unknown') ? `+${Math.round((amt.range.peer[0] + info.peer) / 2)}〜${Math.round((amt.range.peer[1] + info.peer) / 2)}` : `+${amt.peer}`;
+  const peerText = !amt ? '' : lifeOn ? assistantLifeGiftPeerShown(info, shown) : `+${amt.peer}`;
   const mark = (s) => (s === 'like' ? '💗' : s === 'bad' ? '💧' : s === 'unknown' ? '?' : '');
   return (
     <div data-assistant-life-give-sheet={info.kind} className="absolute inset-0 flex items-end justify-center bg-black/70" style={{ zIndex: 30 }} onClick={() => setGive(null)}>
@@ -303,7 +316,7 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
               <button key={x.kind} type="button" role="tab" aria-selected={on} data-assistant-life-give-kind={x.kind} onClick={() => setGive({ ...give, kind: x.kind })}
                 className={`relative min-h-[54px] rounded-xl border px-0.5 pb-0.5 pt-1 text-center active:scale-[.97] ${on ? 'border-amber-300 bg-amber-400/20' : 'border-white/10 bg-slate-800/60'} ${n <= 0 ? 'opacity-50' : ''}`}>
                 <span className="block text-[20px] leading-none" aria-hidden="true">{x.emoji}</span>
-                <span className="mt-0.5 block text-[8.5px] font-black leading-[1.15] text-white" style={{ wordBreak: 'keep-all', minHeight: '2.3em' }} data-assistant-life-give-kind-name>{assistantLifeGiftWrapName(x).map((w, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}{w}</React.Fragment>)}</span>
+                <span className="mt-0.5 block text-[9.5px] font-black leading-[1.15] text-white" style={{ wordBreak: 'keep-all', minHeight: '2.3em' }} data-assistant-life-give-kind-name>{assistantLifeGiftWrapName(x).map((w, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}{w}</React.Fragment>)}</span>
                 <span className="block text-[9px] font-black leading-tight text-slate-300">{lifeOn && pair.length === 2 ? ls.map(mark).map(m => m || '・').join(' ') : ''}</span>
                 <em className="absolute right-0.5 top-0.5 rounded-full bg-slate-950/90 px-1 text-[8.5px] font-black not-italic text-slate-200">×{n}</em>
               </button>); })}

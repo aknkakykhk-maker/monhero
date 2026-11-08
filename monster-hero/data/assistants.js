@@ -15058,7 +15058,7 @@ const ASSISTANT_LIFE_GIFT_LINES = Object.freeze({"atsu":{"basket":[{"like":"mid"
 const ASSISTANT_LIFE_GIFT_HINT_LINES = Object.freeze({});
 // 仲良し度の段が上がったとき、好きなものを1つ教えてくれるひとこと(仮。lines/ORDER-GIFT.md の hint が届くまで)
 const ASSISTANT_LIFE_GIFT_HINT_TEMP = Object.freeze({
-  mua:       { e:'wink', t:'最近ね〜、{item}の気分なんだよね。{name}、覚えといて♪' },
+  mua:       { e:'wink', t:'最近ね〜、{item}が気になってるんだよね。{name}、覚えといて♪' },
   kiki:      { e:'wink', t:'そういえば…{item}をいただくと、私うれしいでつ♪' },
   momosuke:  { e:'wink', t:'ねぇ{name}、ももね、{item}好きなんだ〜♡ 覚えといて！' },
   dra:       { e:'happy', t:'そういや、おで{item}が好きなんだよな。えへへ' },

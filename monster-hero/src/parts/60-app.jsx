@@ -8490,7 +8490,8 @@ function MonsterHeroGame() {
     assistantBondsRef.current = { ...assistantBondsRef.current, [id]: result.state };
     setAssistantBonds(prev => ({ ...prev, [id]: result.state }));
     // 上がった瞬間の演出(見た目だけ。値と保存はこの前後のまま)
-    if (typeof growthFxAssistantBond === 'function') growthFxAssistantBond(id, current.points, result.state.points);
+    // 道具を贈ったぶん(lifeGift)は、道具の演出の中に2人それぞれの量を出すので、小さな札は重ねない(2026-11-08 窓口「通知が下の文字を隠す」)
+    if (actionKey !== 'lifeGift' && typeof growthFxAssistantBond === 'function') growthFxAssistantBond(id, current.points, result.state.points);
     // Lvが上がったら、次にHOMEを開いたときに助手がそのことに触れる。
     // ただし、いま選んでいる助手のときだけ(選んでいない助手のLvアップを本人以外に言わせない)
     const after = assistantBondLevelOf(result.state.points);

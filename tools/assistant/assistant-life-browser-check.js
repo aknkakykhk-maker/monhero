@@ -286,7 +286,8 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     // ⑧ 2人にあげる道具(家の「🎒 道具」)
     await page.locator('[data-assistant-life-icon="items"]').click().catch(() => {}); await page.waitForTimeout(250);
     const itemsText = await page.locator('[data-assistant-life-items]').innerText().catch(() => '');
-    check('⑧ 道具の欄に、持っている数・起きること・手に入れる所が出る', /持っている 2個/.test(itemsText) && /友情Lv \+15/.test(itemsText) && /仲良し度 \+\d+/.test(itemsText) && /ビートP交換所/.test(itemsText), itemsText.replace(/\s+/g, ' ').slice(0, 80));
+    check('⑧ 道具の欄の「仲良し度」「友情Lv」が言葉の途中で折れず、贈るシートと同じ幅(好みで変わる)で出る(2026-11-08 ミハリ)', await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-items] .whitespace-nowrap')].filter(x => /仲良し度|友情Lv/.test(x.textContent)).every(x => x.getBoundingClientRect().height <= parseFloat(getComputedStyle(x).fontSize) * 1.9)) && /仲良し度 \+15〜45/.test(itemsText), itemsText.replace(/\s+/g, ' ').slice(0, 120));
+    check('⑧ 道具の欄に、持っている数・起きること・手に入れる所が出る', /持っている 2個/.test(itemsText) && /友情Lv \+8〜23/.test(itemsText) && /仲良し度 \+\d+/.test(itemsText) && /ビートP交換所/.test(itemsText), itemsText.replace(/\s+/g, ' ').slice(0, 80));
     await toWhere(page);
     const giveBtn = page.locator('[data-assistant-life-give]').first();
     if (await giveBtn.count()) {
@@ -299,6 +300,7 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
       await page.locator('[data-assistant-life-give-go]').click(); await page.waitForTimeout(800);
       const owned = await ls(page, 'mh_owned_items');
       const info = await talkInfo(page);
+      check('⑧ 贈ったとき、仲良し度の小さな札は重ねない(道具の演出の中に2人それぞれの量が出る・2026-11-08 窓口)', (await page.locator('.mh-gfx-chip').count()) === 0);
       check('⑧ 贈ると、2人のひとことが流れておやつバスケットが1つ減る', owned && owned.peer_gift === 1 && !!info, info ? info.id : 'なし');
       const likesSaved = await ls(page, 'mh_assistant_life_likes_v1');
       check('⑧ 贈った2人の好みが分かり、新しいキーに残る(mh_assistant_life_likes_v1)', !!(likesSaved && likesSaved.known && likesSaved.known.kiki && likesSaved.known.kiki.basket && likesSaved.known.mua && likesSaved.known.mua.basket));
@@ -370,7 +372,11 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     { const ng = await boardProblems(L.page); check('⑫ 横でも掲示板の言葉が途中で折れない・今日やれることの字が切れない', ng.length === 0, ng.join(' / ')); }
     if (SHOTS) await L.page.screenshot({ path: path.join(shotDir, 'life-16-board-land.png') });
     check('⑫ 横でも家の文字(題・部屋の札・ボタン)が切れない・名前の途中で折れない・ボタンは正式名称(モンヒロビート)', textL.length === 0, textL.join(' / '));
+    // 好きな物を教えてくれた知らせ(いちばん長いひとこと)を入れてから開く(2026-11-08 窓口: 横で「…」と切れていた)
+    await L.page.evaluate(async () => { await ASSISTANT_LIFE_GIFT_STORE.load(); const st = ASSISTANT_LIFE_GIFT_STORE.state; ASSISTANT_LIFE_GIFT_STORE.set({ likes: { ...st.likes, told: [{ who: 'atsu', key: 'misanga', day: '2026-11-08' }] } }); });
     await L.page.locator('[data-assistant-life-room="atsu"]').click().catch(() => {}); await L.page.waitForTimeout(300);
+    check('⑧ 横: 教えてくれた知らせは「…」で切らずに全文が見える', await L.page.evaluate(() => { const b = document.querySelector('[data-assistant-life-gift-told]'); return !!b && b.scrollWidth <= b.clientWidth + 1 && b.scrollHeight <= b.clientHeight + 1 && getComputedStyle(b).textOverflow !== 'ellipsis' && /ミサンガ/.test(b.innerText); }), await L.page.evaluate(() => { const b = document.querySelector('[data-assistant-life-gift-told]'); return b ? `${b.scrollWidth}/${b.clientWidth} ${b.scrollHeight}/${b.clientHeight} ${b.innerText}` : 'なし'; }));
+    check('⑩ 横: 部屋のシートの下のボタンは、いつも全部見える(画面の下で切れない)', await L.page.evaluate(() => { const bs = [...document.querySelectorAll('[data-assistant-life-room-sheet] [data-assistant-life-room-act]')]; return bs.length > 0 && bs.every(b => { const r = b.getBoundingClientRect(); return r.top >= 0 && r.bottom <= window.innerHeight + 0.5; }); }));
     check('⑩ 横: 部屋を押すと右にその助手のこと(はみ出さない)', await L.page.evaluate(() => { const el = document.querySelector('[data-assistant-life-room-sheet] .mhl-sheet'); const r = el && el.getBoundingClientRect(); return !!r && r.left > window.innerWidth / 2 - 1 && r.right <= window.innerWidth + 1; }));
     if (SHOTS) await L.page.screenshot({ path: path.join(shotDir, 'life-14-room-land.png') });
     await L.page.close();
