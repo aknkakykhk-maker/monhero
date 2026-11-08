@@ -49,6 +49,14 @@ const CHANGELOG = [
     ],
   },
   {
+    date: "2026-11-08 14:50", type:'update', group:'cardBattle', title:'カード部屋の助手と対戦したときの 1.5倍に、回数ができました', status:'new',
+    items:[
+      'カード部屋にいる助手と対戦して 1.5倍になるのは、その助手1人につき、1つの時間帯で1回までになりました。',
+      '1.5倍になる対戦を1回すると、HOME の顔と「UP」の印が消え、相手えらびの印が「🃏済」になります。助手と対戦は今までどおりできます。',
+      '助手たちが動く時間(朝5時・昼10時・午後14時・夕方18時・夜21時・深夜0時)になると、また数え直しです。',
+    ],
+  },
+  {
     date: "2026-11-08 13:04", type:'update', title:'ミッションが、いまの遊びに合わせて新しくなりました', status:'new', group:'other',
     assistantNotice:{ id:'update_notice_mission_renewal_v1', type:'content' },
     items:[

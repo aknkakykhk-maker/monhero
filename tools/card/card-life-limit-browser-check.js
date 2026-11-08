@@ -90,6 +90,10 @@ const run = async (browser, mode, errors) => {
     }
   };
   const snap = async (name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, `${mode.id}-${name}.png`) }); } };
+  // その場面の印(sel)が、いちばん手前に見えているか(上に別の画面がかぶったまま撮る・読むのを防ぐ。2026-11-08 部長: HOME のつもりの止め絵が助手ライフの家だった)
+  const onTop = (sel) => page.evaluate((s) => { const el = document.querySelector(s); if (!el) return 'ない'; const r = el.getBoundingClientRect(); const x = Math.min(Math.max(r.left + r.width / 2, 1), innerWidth - 1), y = Math.min(Math.max(r.top + Math.min(r.height / 2, 20), 1), innerHeight - 1);
+    const t = document.elementFromPoint(x, y); return !!t && (el.contains(t) || t.contains(el)) ? true : `手前は ${t ? (t.closest('[data-mh-screen],[data-assistant-life-house],[class*="mhl"]') || t).className.toString().slice(0, 40) : 'なし'}`; }, sel);
+  const scene = async (name, sel, label) => { const r = await onTop(sel); check(`場面 ${mode.label} ${name}: ${label}(${sel})がいちばん手前に見えている`, r === true, String(r)); await snap(name); };
   const inView = (sel) => page.evaluate((s) => { const el = document.querySelector(s); if (!el) return 'ない'; const r = el.getBoundingClientRect(); const W = window.innerWidth, H = window.innerHeight;
     if (r.width < 2 || r.height < 2) return '見えない'; return r.left >= -1 && r.top >= -1 && r.right <= W + 1 && r.bottom <= H + 1 ? true : `画面の外(${Math.round(r.left)},${Math.round(r.top)}〜${Math.round(r.right)},${Math.round(r.bottom)} / ${W}×${H})`; }, sel);
   const boot = async () => {
@@ -134,7 +138,8 @@ const run = async (browser, mode, errors) => {
   };
   const goHome = async () => {
     for (let i = 0; i < 8; i++) {
-      if (await page.locator('[data-home-card-battle]').count() && await page.locator('[data-home-card-battle]').first().isVisible().catch(() => false)) break;
+      if (await page.locator('[data-assistant-life-close]').count()) { await page.locator('[data-assistant-life-close]').first().click().catch(() => {}); await page.waitForTimeout(700); continue; }
+      if (await page.locator('[data-home-card-battle]').count() && (await onTop('[data-home-card-battle]')) === true) break;
       // 戻るボタンの名前は画面ごとに違う(「戻る」「トップへ戻る」など)ので、名前に「戻」を含むものを押す
       const back = page.locator('[data-mh-screen] button[aria-label*="戻"]').first();
       if (await back.count() && await back.isVisible().catch(() => false)) await back.click().catch(() => {}); else await page.keyboard.press('Escape').catch(() => {});
@@ -143,7 +148,8 @@ const run = async (browser, mode, errors) => {
     await page.locator('[data-home-card-battle]').first().waitFor({ timeout: 20000 });
     await force(); await page.waitForTimeout(1500);
   };
-  const homeRow = () => page.evaluate(() => ({ faces: [...document.querySelectorAll('[data-assistant-life-home-faces="card"] [data-assistant-life-home-face]')].map((e) => e.getAttribute('data-assistant-life-home-face')).sort().join(','),
+  const homeRow = async () => ({ top: (await onTop('[data-home-card-battle]')) === true, ...(await homeRow0()) });
+  const homeRow0 = () => page.evaluate(() => ({ faces: [...document.querySelectorAll('[data-assistant-life-home-faces="card"] [data-assistant-life-home-face]')].map((e) => e.getAttribute('data-assistant-life-home-face')).sort().join(','),
     up: !!document.querySelector('[data-assistant-life-home-card-up]') }));
   const winScene = () => page.evaluate(() => { window.__mhCardScene = (st) => { st.turn = 12; st.players[1].mons.forEach((m) => { m.life = 0; }); st.winner = 0; st.reason = '全員KO'; st.phase = 'over'; st.pending = null; return st; }; });
   const toResult = async () => {
@@ -198,7 +204,7 @@ const run = async (browser, mode, errors) => {
       p3.chips.sorashido === '済' && p3.chips.erubin === 'UP' && p3.band === 'up' && /いまカード部屋にいる助手: えるびん/.test(p3.bandText) && !/いまカード部屋にいる助手:[^🃏]*ソラシド/.test(p3.bandText) && p3.spent.sorashido === want3 && !p3.bad.length && !fit3.length && band3In === true,
       JSON.stringify({ ...p3, fit3, band3In }));
     check(`⑨ ${mode.label} ③の表示と保存が一致`, Object.keys(p3.chips).filter((k) => p3.chips[k] === '済').sort().join(',') === usedOf(await stored(), slot));
-    await snap('3-pick');
+    await scene('3-pick', '[data-card-foe-life-band]', '相手えらびの帯');
     // ③' 帯がいちばん高い(いる助手+使い切りの1行)まま、小さい縦 320×568 にしても、強さのボタンが「対戦する」の帯に潜らない
     //    (帯を強さのボタンの上に置いていたとき、3行の帯で 13px 潜った。2026-11-08)
     if (mode.id === 'tate') {
@@ -207,7 +213,7 @@ const run = async (browser, mode, errors) => {
       const lv = await page.evaluate(() => { const st = document.querySelector('[data-card-start]'); const f = st ? st.closest('div').getBoundingClientRect() : null;
         return [...document.querySelectorAll('[data-card-level]')].filter((b) => { const x = b.getBoundingClientRect(); return x.top < 0 || x.bottom > innerHeight + 0.5 || (f && x.left < f.right && x.right > f.left && x.top < f.bottom && x.bottom > f.top + 0.5); }).map((b) => b.getAttribute('data-card-level')); });
       check('③ 320×568: カード部屋の帯がいちばん高くても、強さのボタンが「対戦する」の帯に潜らない', lv.length === 0, lv.join(','));
-      await snap('3-pick-320');
+      await scene('3-pick-320', '[data-card-level="easy"]', '相手えらびの強さのボタン');
       await page.setViewportSize(mode.view); await page.waitForTimeout(600);
     }
     // ④ えるびんとすぐ投了(0)
@@ -225,8 +231,8 @@ const run = async (browser, mode, errors) => {
     await goHome();
     const h5 = await homeRow();
     const up5 = await inView('[data-assistant-life-home-card-up]');
-    check(`⑤ ${mode.label} HOME: MFバトルカードの横の顔からソラシドが消え、えるびんと「UP」は残る`, h5.faces === 'erubin' && h5.up && up5 === true, `${JSON.stringify(h5)} UP ${up5}`);
-    await snap('5-home');
+    check(`⑤ ${mode.label} HOME: MFバトルカードの横の顔からソラシドが消え、えるびんと「UP」は残る`, h5.top && h5.faces === 'erubin' && h5.up && up5 === true, `${JSON.stringify(h5)} UP ${up5}`);
+    await scene('5-home', '[data-home-card-battle]', 'HOME の MFバトルカードの札');
     // ⑥ 助手ライフの家: 部屋のボタン
     for (let i = 0; i < 5; i++) { try { await page.locator('[data-home-assistant-life]').first().click({ timeout: 4000 }); break; } catch (e) { if (i === 4) throw e; await dismiss(); await page.waitForTimeout(800); } }
     await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 6000 }).catch(() => {});
@@ -241,7 +247,7 @@ const run = async (browser, mode, errors) => {
     const fit6 = await textFits('[data-assistant-life-room-act="card-spent"]');
     check(`⑥ ${mode.label} ソラシドの部屋: 灰色の押せない「🃏 ごほうびアップは使い切りました…次は${nx}時から」・画面に入り、字が切れない`,
       !!room6 && room6.disabled && !room6.normal && room6.text === `🃏 ごほうびアップは使い切りました…次は${nx}時から` && in6 === true && !fit6.length, JSON.stringify({ room6, in6, fit6 }));
-    await snap('6-room-sorashido');
+    await scene('6-room-sorashido', '[data-assistant-life-room-act="card-spent"]', '部屋の灰色のボタン');
     await page.locator('[data-assistant-life-room-close]').click().catch(() => {});
     await page.waitForTimeout(500);
     await page.locator('[data-assistant-life-room="erubin"]').click();
@@ -250,12 +256,15 @@ const run = async (browser, mode, errors) => {
     check(`⑥ ${mode.label} えるびんの部屋はふだんの「🃏 カード部屋で対戦する」`, room6b.normal && !room6b.spent, JSON.stringify(room6b));
     await page.locator('[data-assistant-life-room-close]').click().catch(() => {});
     await page.waitForTimeout(400);
+    await page.locator('[data-assistant-life-close]').first().click().catch(() => {}); // 助手ライフの家を閉じて HOME へ
+    await page.locator('[data-assistant-life-close]').waitFor({ state: 'detached', timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(600);
     // ⑦ 2人とも使い切る
     await goHome();
     await setUsed({ sorashido: 1, erubin: 1 });
     const h7 = await homeRow();
-    check(`⑦ ${mode.label} 2人とも使い切る: HOME の顔の並びにカードの助手がいない・「UP」も消える`, h7.faces === '' && !h7.up, JSON.stringify(h7));
-    await snap('7-home-none');
+    check(`⑦ ${mode.label} 2人とも使い切る: HOME の顔の並びにカードの助手がいない・「UP」も消える`, h7.top && h7.faces === '' && !h7.up, JSON.stringify(h7));
+    await scene('7-home-none', '[data-home-card-battle]', 'HOME の MFバトルカードの札');
     await page.locator('[data-home-card-battle]').first().dispatchEvent('click');
     await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
     await page.waitForTimeout(800); await dismiss();
@@ -270,7 +279,7 @@ const run = async (browser, mode, errors) => {
     check(`⑦ ${mode.label} 相手えらび: 2人とも「🃏済」・帯は灰色(使い切りの言い方だけ)・字が切れない`, p7.chips.sorashido === '済' && p7.chips.erubin === '済' && p7.band === 'spent' && !/いまカード部屋にいる助手/.test(p7.bandText) && Object.keys(p7.spent).length === 2 && !fit7.length && !p7.bad.length, JSON.stringify({ ...p7, fit7 }));
     check(`⑨ ${mode.label} ⑦の表示と保存が一致`, Object.keys(p7.chips).filter((k) => p7.chips[k] === '済').sort().join(',') === usedOf(await stored(), slot));
     await page.evaluate(() => document.querySelector('[data-card-foe-life-band]')?.scrollIntoView({ block: 'center' })); await page.waitForTimeout(300);
-    await snap('7-pick-none');
+    await scene('7-pick-none', '[data-card-foe-life-band]', '相手えらびの帯');
     // ⑧ 時間帯が変わると戻る
     await setUsed({ sorashido: 1, erubin: 1 }, -1);
     await dismiss(); await page.locator('[data-card-foe="erubin"]').dispatchEvent('click'); await page.waitForTimeout(500); // 相手えらびを描き直す
@@ -280,7 +289,7 @@ const run = async (browser, mode, errors) => {
     // HOME は起動し直して見る(保存から読み直す所 cardLifeRewardLoad の確かめにもなる)
     await boot(); await force(); await page.waitForTimeout(1500);
     const h8 = await homeRow();
-    check(`⑧ ${mode.label} 時間帯が変わると戻る(起動し直して保存から読む): HOME に2人の顔と「UP」`, h8.faces === 'erubin,sorashido' && h8.up, JSON.stringify(h8));
+    check(`⑧ ${mode.label} 時間帯が変わると戻る(起動し直して保存から読む): HOME に2人の顔と「UP」`, h8.top && h8.faces === 'erubin,sorashido' && h8.up, JSON.stringify(h8));
   } finally { await ctx.close(); }
 };
 
