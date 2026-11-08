@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 51d6be341fc734d5
+// source-sha256: 366766ed288196cb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108373,6 +108373,25 @@ function AssistantLifeHouse({
     onGive: doGive
   }));
 }
+function AssistantLifeSpentMark({
+  size = 20
+}) {
+  const d = Math.max(10, Math.round(size * 0.6));
+  return React.createElement("span", {
+    "aria-hidden": "true",
+    "data-assistant-life-spent-mark": true,
+    className: "pointer-events-none absolute z-[1] grid place-items-center rounded-full bg-slate-100 font-black text-slate-900 shadow",
+    style: {
+      left: -3,
+      bottom: -3,
+      width: d,
+      height: d,
+      fontSize: Math.max(7, Math.round(d * 0.72)),
+      lineHeight: 1,
+      boxShadow: '0 0 0 1px #0b1020'
+    }
+  }, "済");
+}
 const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({
   rhythm: 'main.mh-home-scene .mh-home-facility.rhythm',
   card: 'main.mh-home-scene .mh-home-card-battle',
@@ -108438,12 +108457,11 @@ function AssistantLifeHomeFaces({
   for (const id of ASSISTANT_LIFE_HOUSE_ORDER) {
     if (!ids.includes(id)) continue;
     let f = assistantLifeFacilityOf(assistantLifeWhereOf(life, id));
-    if (f === 'card' && assistantLifeCardSpent(id)) continue;
     if (!rects[f]) f = 'life';
     if (!rects[f]) continue;
     (by[f] = by[f] || []).push(id);
   }
-  const cardUp = typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && assistantLifeHouseCardIds().some(id => (by.card || []).includes(id));
+  const cardUp = typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && assistantLifeHouseCardIds().some(id => (by.card || []).includes(id) && !assistantLifeCardSpent(id));
   const peer = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null;
   const q = peer && peer.quarrel && peer.quarrel.pending;
   const after = new Set(q && q.pair ? String(q.pair).split('-') : []);
@@ -108475,11 +108493,13 @@ function AssistantLifeHomeFaces({
       if (!who) return null;
       const w = assistantLifeWhereOf(life, id);
       const lonely = w && w.reason === 'lonely';
+      const spent = f === 'card' && !!assistantLifeCardSpent(id);
       return React.createElement("button", {
         key: id,
         type: "button",
         "data-assistant-life-home-face": id,
-        "aria-label": `${who.name}のようす`,
+        "data-assistant-life-home-face-spent": spent ? '1' : undefined,
+        "aria-label": `${who.name}のようす${spent ? '(対戦のごほうび済み)' : ''}`,
         onClick: () => {
           ASSISTANT_LIFE_STORE.set({
             open: true,
@@ -108491,10 +108511,17 @@ function AssistantLifeHomeFaces({
           marginLeft: i ? -4 : 0,
           boxShadow: lonely ? '0 0 0 1.5px #fbbf24,0 0 6px #fbbf24' : after.has(id) ? '0 0 0 1.5px #7dd3fc' : '0 0 0 1.5px #fff'
         }
+      }, React.createElement("span", {
+        className: "block",
+        style: spent ? {
+          filter: 'grayscale(.6) brightness(.8)'
+        } : undefined
       }, React.createElement(AssistantFace, {
         who: who,
         size: size,
         accent: who.accent
+      })), spent && React.createElement(AssistantLifeSpentMark, {
+        size: size
       }), React.createElement("span", {
         "aria-hidden": "true",
         className: "absolute -inset-1.5"
@@ -108606,7 +108633,8 @@ const assistantLifeMapReadHome = () => {
 function AssistantLifeMapFig({
   who,
   h,
-  sleep
+  sleep,
+  spent = false
 }) {
   const src = assistantFullImage(who, sleep ? 'normal' : 'happy');
   const [box, setBox] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.get(src) || null);
@@ -108632,10 +108660,14 @@ function AssistantLifeMapFig({
   const cx = (b.l + b.r) / 2 * iw;
   const mask = 'linear-gradient(#000 74%,transparent)';
   return React.createElement("span", {
-    className: "relative block shrink-0 overflow-hidden",
+    className: "relative block shrink-0",
     style: {
       width: w,
-      height: h,
+      height: h
+    }
+  }, React.createElement("span", {
+    className: "absolute inset-0 overflow-hidden",
+    style: {
       WebkitMaskImage: mask,
       maskImage: mask
     },
@@ -108653,10 +108685,12 @@ function AssistantLifeMapFig({
       left: w / 2 - cx,
       filter: sleep ? 'brightness(.62) saturate(.7)' : 'drop-shadow(0 2px 3px #0009)'
     }
-  }), sleep && React.createElement("span", {
+  })), sleep && React.createElement("span", {
     className: "absolute right-0 top-0 text-[10px]",
     "aria-hidden": "true"
-  }, "💤"));
+  }, "💤"), spent && typeof AssistantLifeSpentMark === 'function' && React.createElement(AssistantLifeSpentMark, {
+    size: Math.round(h * 0.5)
+  }));
 }
 function AssistantLifeTownMap({
   life,
@@ -108916,6 +108950,7 @@ function AssistantLifeTownMap({
     }, inner);
   };
   const cardN = (at.cardroom || []).length;
+  const spentOf = (id, place) => place === 'cardroom' && typeof assistantLifeCardSpent === 'function' && !!assistantLifeCardSpent(id);
   const crowd = place => {
     const who = at[place] || [];
     if (!who.length) return null;
@@ -108949,7 +108984,8 @@ function AssistantLifeTownMap({
       }, React.createElement(AssistantLifeMapFig, {
         who: a,
         h: figH,
-        sleep: !!(w && w.doing === 'sleep')
+        sleep: !!(w && w.doing === 'sleep'),
+        spent: spentOf(id, place)
       }));
     })), React.createElement("span", {
       className: "mhl-map-name",
@@ -108962,14 +108998,16 @@ function AssistantLifeTownMap({
       return React.createElement("button", {
         key: id,
         type: "button",
-        "aria-label": `${a.name}・${d ? d.label : ''}`,
+        "aria-label": `${a.name}・${d ? d.label : ''}${spentOf(id, place) ? '(対戦のごほうび済み)' : ''}`,
         "data-assistant-life-map-who": id,
+        "data-assistant-life-map-spent": spentOf(id, place) ? '1' : undefined,
         onClick: () => setSheet(place),
         className: "flex flex-col items-center px-[1px]"
       }, React.createElement(AssistantLifeMapFig, {
         who: a,
         h: figH,
-        sleep: !!(w && w.doing === 'sleep')
+        sleep: !!(w && w.doing === 'sleep'),
+        spent: spentOf(id, place)
       }), React.createElement("span", {
         className: "mhl-map-name",
         "data-assistant-life-map-name": true
@@ -108988,7 +109026,7 @@ function AssistantLifeTownMap({
     const w = assistantLifeWhereOf(life, id);
     const d = w && ASSISTANT_LIFE_DOINGS[w.doing];
     const withNames = w && w.with && w.with.length ? `${w.with.map(assistantLifeName).join('・')}と` : 'ひとりで';
-    const spent = place === 'cardroom' && typeof assistantLifeCardSpent === 'function' && assistantLifeCardSpent(id);
+    const spent = place === 'cardroom' && typeof assistantLifeCardSpent === 'function' ? assistantLifeCardSpent(id) : null;
     return React.createElement("div", {
       key: id,
       className: "mt-2 flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-900/85 p-2",
@@ -109002,9 +109040,15 @@ function AssistantLifeTownMap({
       className: "min-w-0 flex-1"
     }, React.createElement("p", {
       className: "text-[13px] font-black text-white"
-    }, a.name), React.createElement("p", {
+    }, a.name, spent && React.createElement("span", {
+      className: "ml-1 rounded-full bg-slate-200 px-1.5 text-[9.5px] font-black text-slate-900",
+      "data-assistant-life-map-sheet-spent": true
+    }, "済 ごほうび済み")), React.createElement("p", {
       className: "text-[10.5px] font-bold text-slate-300"
-    }, town ? `${assistantLifeMapSpotWord(place)}で ` : '', w && ASSISTANT_LIFE_DOING_ICON[w.doing], " ", withNames, d ? d.label : '過ごしている', w && w.reason === 'lonely' ? '(さみしそう)' : '', spent ? '・対戦のごほうびは次の時間帯から' : '')), React.createElement("div", {
+    }, town ? `${assistantLifeMapSpotWord(place)}で ` : '', w && ASSISTANT_LIFE_DOING_ICON[w.doing], " ", withNames, d ? d.label : '過ごしている', w && w.reason === 'lonely' ? '(さみしそう)' : ''), spent && React.createElement("p", {
+      className: "text-[10.5px] font-bold text-amber-200",
+      "data-assistant-life-map-sheet-next": true
+    }, typeof cardLifeSpentText === 'function' ? cardLifeSpentText(spent) : '🃏 ごほうびアップは次の時間帯から')), React.createElement("div", {
       className: "flex shrink-0 flex-col gap-1"
     }, place === 'studio' && typeof onBeat === 'function' && typeof ASSISTANT_LIFE_LINKS !== 'undefined' && typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && React.createElement("button", {
       type: "button",

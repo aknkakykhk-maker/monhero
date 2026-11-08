@@ -12,6 +12,7 @@
 //   ⑦ 大きさ: 縦 390×844・375×667・320×568 / 横 844×390・667×375・568×320 / タブレット 768×1024 / 🔄横(モンヒロビートで回して戻る)390×844
 //      顔ぶれ: いつもの種・11か所に散らばる・8人とも家(5人からは重ねる)
 //   ⑧ ページのエラーが出ない
+//   ⑨ カード部屋の 1.5倍を使い切った助手も HOME と地図に出て「済」の印(2026-11-08 社長「HOMEも地図も出す」)
 const http = require('http'), path = require('path'), fs = require('fs');
 const root = path.resolve(__dirname, '..', '..'), PORT = 9247;
 const SHOTS = process.argv.includes('--shots');
@@ -231,6 +232,23 @@ const ALL_HOME = { groups: [], solo: Object.fromEntries(['mua', 'kiki', 'momosuk
       await page.locator('[data-assistant-life-map-place="library"]').click({ timeout: 3000 }); await page.waitForTimeout(200);
       await page.locator('[data-assistant-life-map-sheet-who="kyuko"] [data-assistant-life-map-act="room"]').click({ timeout: 3000 }); await page.waitForTimeout(400);
       check(`${T}⑥ 人の「部屋へ」で、その助手の部屋が開く`, (await page.locator('[data-assistant-life-room-sheet="kyuko"]').count()) === 1);
+    }
+    // ⑨ カード部屋の 1.5倍を使い切った助手(2026-11-08 社長「HOMEも地図も出す」): HOME の顔も地図の全身も出て「済」の印・シートに次の時間帯
+    if (v.id === 't390' || v.id === 'y844') {
+      await closeLife(page);
+      const ok = await page.evaluate(() => { if (typeof CARD_LIFE_REWARD_MEM === 'undefined' || typeof cardLifeSlotNow !== 'function') return false; const sl = cardLifeSlotNow(); if (!sl) return false; const raw = { slot: sl.abs, used: { dra: 99 } }; CARD_LIFE_REWARD_MEM.raw = raw; try { storeSet(CARD_LIFE_REWARD_KEY, raw); } catch (_) {} return true; }); // 写しと保存の両方(読み直されても残る)
+      await setLife(page, { groups: [{ ids: ['dra', 'erubin', 'sorashido'], doing: 'cards', place: 'cardroom' }], solo: { mua: { doing: 'idle', place: 'home' }, kiki: { doing: 'snack', place: 'cafe' }, momosuke: { doing: 'practice', place: 'studio' }, atsu: { doing: 'idle', place: 'home' }, kyuko: { doing: 'read', place: 'library' } } });
+      await page.waitForTimeout(1600); await finishTalk(page); await page.waitForTimeout(300);
+      const home = await page.evaluate(() => ({ dra: !!document.querySelector('[data-assistant-life-home-faces="card"] [data-assistant-life-home-face="dra"] [data-assistant-life-spent-mark]'), erubin: !!document.querySelector('[data-assistant-life-home-faces="card"] [data-assistant-life-home-face="erubin"] [data-assistant-life-spent-mark]'), up: !!document.querySelector('[data-assistant-life-home-card-up]') }));
+      await openMap(page);
+      const map = await page.evaluate(() => ({ dra: !!document.querySelector('[data-assistant-life-map-who="dra"][data-assistant-life-map-spent="1"] [data-assistant-life-spent-mark]'), erubin: !!document.querySelector('[data-assistant-life-map-who="erubin"] [data-assistant-life-spent-mark]') }));
+      await page.locator('[data-assistant-life-map-place="cardroom"]').click({ timeout: 3000 }); await page.waitForTimeout(200);
+      const sheet = await page.evaluate(() => ({ next: (document.querySelector('[data-assistant-life-map-sheet-who="dra"] [data-assistant-life-map-sheet-next]') || {}).textContent || '', card: !!document.querySelector('[data-assistant-life-map-sheet-who="dra"] [data-assistant-life-map-act="card"]'), other: !!document.querySelector('[data-assistant-life-map-sheet-who="erubin"] [data-assistant-life-map-act="card"]') }));
+      if (SHOTS) { await page.screenshot({ path: path.join(shotDir, `spent-sheet-${v.id}.png`) }); }
+      await page.locator('[data-assistant-life-map-sheet] [data-assistant-life-map-sheet-close]').click({ timeout: 3000 });
+      if (SHOTS) { await page.waitForTimeout(200); await page.screenshot({ path: path.join(shotDir, `spent-map-${v.id}.png`) }); await closeLife(page); await page.waitForTimeout(1200); await page.screenshot({ path: path.join(shotDir, `spent-home-${v.id}.png`) }); }
+      check(`${T}⑨ ごほうびを使い切った助手は、HOME の顔も地図の全身も出て「済」の印(ほかの人には付かない・UP は残る)・シートに次の時間帯・対戦のボタンは出ない`,
+        ok && home.dra && !home.erubin && home.up && map.dra && !map.erubin && /ごほうびアップは使い切りました/.test(sheet.next) && !sheet.card && sheet.other, JSON.stringify({ ok, home, map, sheet }));
     }
     await page.close();
   }
