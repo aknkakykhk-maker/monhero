@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7d2e30bef9bf991f
+// source-sha256: d748cc0707be3225
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -122065,15 +122065,35 @@ const CARD_AI_STYLE_VARIANT = Object.freeze({
   normal: 'mind'
 });
 const CARD_AI_PLAN_RANGE = Object.freeze({
-  habit: Object.freeze({
-    big: [0.8, 1.4],
-    saveGuts: [0.8, 1.4],
-    keepGuard: [0.7, 1.3]
+  habitMul: Object.freeze({
+    big: [0.8, 1.25],
+    saveGuts: [0.8, 1.25],
+    keepGuard: [0.8, 1.1]
   }),
   prefer: [5, 8],
   preferTop: 24,
   field: [1, 2]
 });
+const cardAiPlanHabitRangeOf = base => Object.fromEntries(Object.entries(CARD_AI_PLAN_RANGE.habitMul).map(([k, [lo, hi]]) => {
+  const b = Number.isFinite(base && base[k]) ? base[k] : 1;
+  return [k, [Math.round(b * lo * 100) / 100, Math.round(b * hi * 100) / 100]];
+}));
+const cardAiPlanHabitClamp = (base, habit) => {
+  const r = cardAiPlanHabitRangeOf(base);
+  return Object.fromEntries(Object.entries(habit || {}).filter(([k, v]) => r[k] && Number.isFinite(v)).map(([k, v]) => [k, Math.min(r[k][1], Math.max(r[k][0], v))]));
+};
+const cardAiPlanHabitRange = (who, levelId = 'normal', styleId = null) => {
+  const style = cardAiStyleOf(styleId);
+  const recipeAll = CARD_AI_DECKS[who] || CARD_AI_DECKS.mua;
+  const variant = style && Array.isArray(recipeAll.variants) ? recipeAll.variants.find(v => v.id === CARD_AI_STYLE_VARIANT[style]) : null;
+  const h0 = variant && variant.deckHabit ? {
+    ...cardAiDeckHabit(who, levelId),
+    ...variant.deckHabit
+  } : cardAiDeckHabit(who, levelId);
+  const tune = style && !variant && !Array.isArray(recipeAll.variants) ? CARD_AI_STYLE_TUNE[style] : null;
+  const h = tune ? Object.fromEntries(Object.entries(h0).map(([k, v]) => [k, typeof v === 'number' ? v * ((tune.mul || {})[k] || 1) + ((tune.add || {})[k] || 0) : v])) : h0;
+  return cardAiPlanHabitRangeOf(h);
+};
 const cardAiPlanClean = (db, plan) => {
   if (!plan || typeof plan !== 'object' || !db || !db.cards) return null;
   const R = CARD_AI_PLAN_RANGE;
@@ -122083,7 +122103,7 @@ const cardAiPlanClean = (db, plan) => {
   const field = [...new Set((Array.isArray(plan.field) ? plan.field : []).map(f => f && typeof f === 'object' ? f.name : f).filter(n => typeof n === 'string' && fields.has(n)))].slice(0, R.field[1]);
   const habit = {};
   const h = plan.habit && typeof plan.habit === 'object' ? plan.habit : {};
-  for (const [k, [lo, hi]] of Object.entries(R.habit)) if (Number.isFinite(h[k])) habit[k] = Math.min(hi, Math.max(lo, h[k]));
+  for (const k of Object.keys(R.habitMul)) if (Number.isFinite(h[k])) habit[k] = Math.min(5, Math.max(0, h[k]));
   if (!prefer.length && !field.length && !Object.keys(habit).length) return null;
   return {
     prefer,
@@ -122524,7 +122544,7 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   const habit1 = tune ? Object.fromEntries(Object.entries(habit0).map(([k, v]) => [k, typeof v === 'number' ? v * ((tune.mul || {})[k] || 1) + ((tune.add || {})[k] || 0) : v])) : habit0;
   const habit = plan ? {
     ...habit1,
-    ...plan.habit
+    ...cardAiPlanHabitClamp(habit1, plan.habit)
   } : habit1;
   const mons = monsters.map(no => cardMonsterOf(db, no));
   const pool = Object.values(db.cards).filter(c => c.ready && (c.user === 'any' || c.user === 'breeder' ? c.wave <= maxWave : mons.some(m => cardUsableBy(c, {

@@ -1,5 +1,5 @@
 // MFバトルカード: 方針の上書き(AI が決める plan)の幅を測る道具(2026-11-08 カード部ルールくん)。検査ではなく測るだけ
-//   くせ(big・saveGuts・keepGuard)を CARD_AI_PLAN_RANGE の両端に置いた8通りに、prefer(候補 cardAiPlanCandidates から種で選ぶ)と field(場のカードから種で選ぶ)を
+//   くせ(big・saveGuts・keepGuard)を、その助手の幅(cardAiPlanHabitRange)の両端に置いた8通りに、prefer(候補 cardAiPlanCandidates から種で選ぶ)と field(場のカードから種で選ぶ)を
 //   混ぜて、強さの段ごとの勝率(プレイヤー役=スターター3つ)が、方針なしからどれだけ外れるかを出す
 //
 //   node tools/card/card-ai-plan-range.js [--corner 0..7] [--games 20] [--levels easy,normal,hard,expert,master] [--json <出力>]
@@ -11,7 +11,7 @@ const GAME = path.resolve(__dirname, '..', '..', 'monster-hero');
 const src = (f) => fs.readFileSync(path.join(GAME, f), 'utf8');
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
 vm.runInContext(`${src('data/card-battle-cards.js')}\n;\n${src('src/parts/82-card-battle-core.jsx')}\n;\n${src('src/parts/82-card-tactics-core.jsx')}\n;\n`
-  + 'this.E = { CARD_BATTLE_DATA, CARD_AI_HABITS, CARD_AI_PLAN_RANGE, cardAiBuildDeck, cardAiSeededRand, cardSimulate, cardAiPolicy, cardMonsterOf, cardUsableBy, cardAiPlanCandidates };', ctx);
+  + 'this.E = { CARD_BATTLE_DATA, CARD_AI_HABITS, CARD_AI_PLAN_RANGE, cardAiBuildDeck, cardAiSeededRand, cardSimulate, cardAiPolicy, cardMonsterOf, cardUsableBy, cardAiPlanCandidates, cardAiPlanHabitRange };', ctx);
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
 const args = process.argv.slice(2);
@@ -22,12 +22,13 @@ const corners = opt('--corner', null) !== null ? [Number(opt('--corner'))] : [..
 const WHO = Object.keys(E.CARD_AI_HABITS);
 const kits = Object.keys(db.starters);
 const R = E.CARD_AI_PLAN_RANGE;
-const keys = Object.keys(R.habit);
+const keys = Object.keys(R.habitMul);
 const fields = Object.values(db.cards).filter((c) => c.ready && c.kind === 'fld');
 
 const planOf = (corner, w, lv, k, g, mine0) => {
   const rnd = E.cardAiSeededRand(`plan:${corner}:${w}:${lv}:${k}:${g}`);
-  const habit = Object.fromEntries(keys.map((key, i) => [key, R.habit[key][(corner >> i) & 1]]));
+  const range = E.cardAiPlanHabitRange(w, lv);
+  const habit = Object.fromEntries(keys.map((key, i) => [key, range[key][(corner >> i) & 1]]));
   // AI へ送る候補(上位の札)から、種でえらぶ(AI がいちばん下手に選んだときに近い)
   const usable = E.cardAiPlanCandidates(db, w, lv, mine0.monsters);
   const n = R.prefer[0] + Math.floor(rnd() * (R.prefer[1] - R.prefer[0] + 1));

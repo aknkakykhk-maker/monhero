@@ -1973,11 +1973,31 @@ const CARD_AI_STYLE_VARIANT = Object.freeze({ attack: 'blade', guard: 'shield', 
 //   AI(中継役)やゲーム側の揺らぎが決めた方針を、型とは別に受ける。動かせる幅は強さを測って決めた(docs/progress/card-grow-style/README.md)
 //   幅の外の数は幅の中へ丸め、候補外のカード(無い・使えない・場のカードでない)は捨てる。全部捨てたら上書きしない
 const CARD_AI_PLAN_RANGE = Object.freeze({
-  habit: Object.freeze({ big: [0.8, 1.4], saveGuts: [0.8, 1.4], keepGuard: [0.7, 1.3] }),
+  // くせはその助手のもとの値(型のあと)に掛ける倍率の幅(もとの値が小さい助手で大きく動きすぎないように。2026-11-08 測った)。中継役へは cardAiPlanHabitRange の数で送る
+  habitMul: Object.freeze({ big: [0.8, 1.25], saveGuts: [0.8, 1.25], keepGuard: [0.8, 1.1] }),
   prefer: [5, 8],   // 多めに入れたいカード(番号)の数。少なければそのまま使う(足りない分は今の組み方が埋める)
   preferTop: 24,    // 受け付けるのは、その3体で組んだときの入れたい度の上位この枚数の中だけ(でたらめな札で弱くならないように)
   field: [1, 2],    // 場のカード(名前)の数
 });
+// くせの幅(数): その助手のもとの値(型のあと)× habitMul。{ big: [下, 上], … }。中継役へ送る幅
+const cardAiPlanHabitRangeOf = (base) => Object.fromEntries(Object.entries(CARD_AI_PLAN_RANGE.habitMul).map(([k, [lo, hi]]) => {
+  const b = Number.isFinite(base && base[k]) ? base[k] : 1;
+  return [k, [Math.round(b * lo * 100) / 100, Math.round(b * hi * 100) / 100]];
+}));
+const cardAiPlanHabitClamp = (base, habit) => {
+  const r = cardAiPlanHabitRangeOf(base);
+  return Object.fromEntries(Object.entries(habit || {}).filter(([k, v]) => r[k] && Number.isFinite(v)).map(([k, v]) => [k, Math.min(r[k][1], Math.max(r[k][0], v))]));
+};
+// 助手と強さと型から、くせの幅を出す(cardAiBuildDeck の型の倍率と同じ計算。えるびんは型の組み方のくせ)
+const cardAiPlanHabitRange = (who, levelId = 'normal', styleId = null) => {
+  const style = cardAiStyleOf(styleId);
+  const recipeAll = CARD_AI_DECKS[who] || CARD_AI_DECKS.mua;
+  const variant = style && Array.isArray(recipeAll.variants) ? recipeAll.variants.find((v) => v.id === CARD_AI_STYLE_VARIANT[style]) : null;
+  const h0 = variant && variant.deckHabit ? { ...cardAiDeckHabit(who, levelId), ...variant.deckHabit } : cardAiDeckHabit(who, levelId);
+  const tune = style && !variant && !Array.isArray(recipeAll.variants) ? CARD_AI_STYLE_TUNE[style] : null;
+  const h = tune ? Object.fromEntries(Object.entries(h0).map(([k, v]) => [k, typeof v === 'number' ? v * ((tune.mul || {})[k] || 1) + ((tune.add || {})[k] || 0) : v])) : h0;
+  return cardAiPlanHabitRangeOf(h);
+};
 const cardAiPlanClean = (db, plan) => {
   if (!plan || typeof plan !== 'object' || !db || !db.cards) return null;
   const R = CARD_AI_PLAN_RANGE;
@@ -1988,7 +2008,7 @@ const cardAiPlanClean = (db, plan) => {
   const field = [...new Set((Array.isArray(plan.field) ? plan.field : []).map((f) => (f && typeof f === 'object' ? f.name : f)).filter((n) => typeof n === 'string' && fields.has(n)))].slice(0, R.field[1]);
   const habit = {};
   const h = plan.habit && typeof plan.habit === 'object' ? plan.habit : {};
-  for (const [k, [lo, hi]] of Object.entries(R.habit)) if (Number.isFinite(h[k])) habit[k] = Math.min(hi, Math.max(lo, h[k]));
+  for (const k of Object.keys(R.habitMul)) if (Number.isFinite(h[k])) habit[k] = Math.min(5, Math.max(0, h[k])); // 幅は組むときに助手ごとの数で丸める
   if (!prefer.length && !field.length && !Object.keys(habit).length) return null;
   return { prefer, field, habit };
 };
@@ -2308,7 +2328,7 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   // 型の倍率(えるびんは variants が型なので掛けない。'normal' は掛けない=今と同じ)
   const tune = style && !variant ? CARD_AI_STYLE_TUNE[style] : null;
   const habit1 = tune ? Object.fromEntries(Object.entries(habit0).map(([k, v]) => [k, typeof v === 'number' ? v * ((tune.mul || {})[k] || 1) + ((tune.add || {})[k] || 0) : v])) : habit0;
-  const habit = plan ? { ...habit1, ...plan.habit } : habit1;
+  const habit = plan ? { ...habit1, ...cardAiPlanHabitClamp(habit1, plan.habit) } : habit1;
   const mons = monsters.map((no) => cardMonsterOf(db, no));
   // 弾の制限は技などのカードにかける。ただし、その子が使う技は、その子の弾まで使える(後の弾の好きな子も EASY から戦えるように)
   const pool = Object.values(db.cards).filter((c) => c.ready && ((c.user === 'any' || c.user === 'breeder') ? c.wave <= maxWave

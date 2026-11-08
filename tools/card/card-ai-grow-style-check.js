@@ -21,7 +21,7 @@ const GAME = path.join(ROOT, 'monster-hero');
 const src = (f) => fs.readFileSync(path.join(GAME, f), 'utf8');
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
 vm.runInContext(`${src('data/card-battle-cards.js')}\n;\n${src('src/parts/82-card-battle-core.jsx')}\n;\n${src('src/parts/82-card-tactics-core.jsx')}\n;\n${src('src/parts/93-card-replay.jsx').split('// ---- 保存(端末の中だけ)')[0]}\n;\n`
-  + 'this.E = { CARD_BATTLE_DATA, CARD_AI_HABITS, CARD_AI_DECKS, CARD_AI_STYLE_IDS, CARD_AI_STYLE_VARIANT, cardAiBuildDeck, cardAiSeededRand, cardAiStyleOf, cardAssistantDeckPreview, cardDeckProblems, cardSimulate, cardAiPolicy, cardReplayNormalizeOne, cardReplayStyleOf, cardAiPlanClean, CARD_AI_PLAN_RANGE };', ctx);
+  + 'this.E = { CARD_BATTLE_DATA, CARD_AI_HABITS, CARD_AI_DECKS, CARD_AI_STYLE_IDS, CARD_AI_STYLE_VARIANT, cardAiBuildDeck, cardAiSeededRand, cardAiStyleOf, cardAssistantDeckPreview, cardDeckProblems, cardSimulate, cardAiPolicy, cardReplayNormalizeOne, cardReplayStyleOf, cardAiPlanClean, CARD_AI_PLAN_RANGE, cardAiPlanHabitRange, cardAiDeckHabit };', ctx);
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
 const VERBOSE = process.argv.includes('--verbose');
@@ -142,7 +142,16 @@ check('助手は8人', WHO.length === 8, WHO.join(','));
   const c = E.cardAiPlanClean(db, { prefer: ['zzz', '011', '011'], field: ['必殺技の応酬', '竜巻アタック', { name: '灼熱の地' }, 'ないカード'], habit: { big: 99, saveGuts: -5, keepGuard: 'x', attack: 3 } });
   check('I 候補外の番号・重なりを捨てる', !!c && J(c.prefer) === J([db.cards['011'].name]), J(c && c.prefer));
   check('I 場のカードの名前だけ残す({name} の形も読む)', !!c && J(c.field) === J(['必殺技の応酬', '灼熱の地']), J(c && c.field));
-  check('I くせは幅の中へ丸め、知らないくせ・数でない値は捨てる', !!c && c.habit.big === R.habit.big[1] && c.habit.saveGuts === R.habit.saveGuts[0] && !('keepGuard' in c.habit) && !('attack' in c.habit), J(c && c.habit));
+  check('I くせは 0〜5 に丸め、知らないくせ・数でない値は捨てる(助手ごとの幅は組むときに丸める)', !!c && c.habit.big === 5 && c.habit.saveGuts === 0 && !('keepGuard' in c.habit) && !('attack' in c.habit), J(c && c.habit));
+  {
+    const r = E.cardAiPlanHabitRange('momosuke', 'master');
+    const h = E.cardAiDeckHabit('momosuke', 'master');
+    const ok = Object.entries(R.habitMul).every(([k, [lo, hi]]) => Math.abs(r[k][0] - h[k] * lo) < 0.011 && Math.abs(r[k][1] - h[k] * hi) < 0.011);
+    check('I くせの幅は、その助手のもとの値 × 倍率の幅', ok, J(r));
+    const d1 = E.cardAiBuildDeck(db, 'momosuke', 'master', E.cardAiSeededRand('h'), { plan: { habit: { keepGuard: 5 } } });
+    const d2 = E.cardAiBuildDeck(db, 'momosuke', 'master', E.cardAiSeededRand('h'), { plan: { habit: { keepGuard: r.keepGuard[1] } } });
+    check('I 幅の外のくせは、組むときに助手ごとの幅の端へ丸める(5 と上の端で同じデッキ)', J(d1) === J(d2));
+  }
   check('I 全部捨てたら上書きしない(null)', E.cardAiPlanClean(db, { prefer: ['zzz'], field: ['x'], habit: {} }) === null && E.cardAiPlanClean(db, null) === null && E.cardAiPlanClean(db, 'abc') === null);
   check('I 方針なしは今と同じ', J(build('kiki', 'master', 3)) === J(E.cardAiBuildDeck(db, 'kiki', 'master', E.cardAiSeededRand('kiki:master:3'), { plan: null })));
   const base = build('kiki', 'master', 3);
