@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3fcea96152bf2039
+// source-sha256: ee0b94cc987e4d3e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13736,6 +13736,7 @@ const RELEASE_FLAGS = {
   assistantCallname: true,
   assistantLife: true,
   assistantLifeFurniture: true,
+  assistantLifeSolo: false,
   assistantLifeFriend: true,
   assistantLifeFriendApi: true,
   rhythmAssistantSession: true,
@@ -106382,9 +106383,12 @@ function AssistantLifeRoomSheet({
   onMasmon = null,
   onChat = null,
   follow = null,
-  onFollowDone = null
+  onFollowDone = null,
+  onGiveSolo = null,
+  canGiveSolo = false
 }) {
   const [furnOpen, setFurnOpen] = React.useState(!!openFurn);
+  const soloOn = typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn() && !!onGiveSolo;
   const who = assistantById(id);
   if (!who) return null;
   const w = assistantLifeWhereOf(life, id);
@@ -106495,6 +106499,8 @@ function AssistantLifeRoomSheet({
   }), typeof AssistantMasmonRoomRow === 'function' && React.createElement(AssistantMasmonRoomRow, {
     id: id,
     onOpen: onMasmon
+  }), soloOn && typeof AssistantLifeChekiRow === 'function' && React.createElement(AssistantLifeChekiRow, {
+    pair: [id]
   }), sess && React.createElement("div", {
     className: "mhl-row",
     "data-assistant-life-room-session-row": true
@@ -106557,19 +106563,28 @@ function AssistantLifeRoomSheet({
     "data-assistant-life-room-act": "peek",
     disabled: !canWatch,
     onClick: () => onPeek(id)
-  }, canWatch ? '👀 ようすを見る' : '見た'), !w || !w.group ? React.createElement("button", {
+  }, canWatch ? '👀 ようすを見る' : '見た'), (!w || !w.group || soloOn) && React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-call",
     "data-assistant-life-room-act": "invite",
     disabled: w && w.reason === 'distance',
     onClick: () => onInvite(id)
-  }, asleep ? '💤 そっと声をかける' : '💬 声をかける') : React.createElement("button", {
+  }, asleep ? '💤 そっと声をかける' : '💬 声をかける'), w && w.group && React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-give",
     "data-assistant-life-room-act": "give",
     disabled: !canGive,
     onClick: () => onGive(w.group)
-  }, "🎁 贈る"), onChat && !follow && React.createElement("button", {
+  }, soloOn ? '🎁 2人に贈る' : '🎁 贈る'), soloOn && React.createElement("button", {
+    type: "button",
+    className: `mhl-btn mhl-give ${w && w.group ? '' : 'col-span-2'}`,
+    "data-assistant-life-room-act": "give-solo",
+    disabled: !canGiveSolo,
+    onClick: () => onGiveSolo(id, w && w.group ? w.group.ids : [id]),
+    style: {
+      background: 'linear-gradient(90deg,#db2777,#be185d)'
+    }
+  }, w && w.group ? `🎁 ${who.name}だけに贈る` : `🎁 ${who.name}に贈る`), onChat && !follow && React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-call col-span-2",
     "data-assistant-life-room-act": "chat",
@@ -106925,7 +106940,8 @@ function AssistantLifeHouse({
   onUseItem = null,
   bondLevelOf = null,
   furnItems = null,
-  onGiveFurn = null
+  onGiveFurn = null,
+  onGiveSolo = null
 }) {
   const st = useAssistantLifeNow(metIds);
   const diary = useAssistantLifeDiary();
@@ -107136,8 +107152,31 @@ function AssistantLifeHouse({
   const itemInfos = assistantLifeItemInfos();
   const haveOf = kind => peerItems && Number(peerItems[kind]) || 0;
   const usedOf = kind => !!(typeof assistantLifeGiftReason === 'function' && assistantLifeGiftReason(kind, peerSt, 1));
+  const soloOn = typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn() && !!onGiveSolo;
+  const soloLeft = soloOn ? assistantLifeSoloLeft() : 0;
+  const openGiveSolo = (who, ids) => {
+    if (!soloOn || !who) return;
+    const usable = assistantLifeSoloKinds().filter(g => haveOf(g.kind) > 0 && !assistantLifeSoloReason(g.kind, peerSt, haveOf(g.kind)));
+    const kind = (usable[0] || assistantLifeSoloKinds()[0] || {}).kind;
+    const list = Array.isArray(ids) && ids.length ? ids : [who];
+    const ps = [];
+    for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) ps.push([list[i], list[j]]);
+    setRoomId(null);
+    setScene(null);
+    setNote('');
+    setGive({
+      ids: list,
+      pair: ps[0] || null,
+      solo: who,
+      kind
+    });
+  };
   const openGive = gids => {
     const list = Array.isArray(gids) ? gids : gids && gids.ids || [];
+    if (list.length === 1 && soloOn) {
+      openGiveSolo(list[0], list);
+      return;
+    }
     if (list.length < 2) return;
     const kind = itemInfos.find(x => haveOf(x.kind) > 0 && !usedOf(x.kind))?.kind || 'gift';
     const ps = [];
@@ -107153,6 +107192,26 @@ function AssistantLifeHouse({
     });
   };
   const doGive = async () => {
+    if (give && give.solo && soloOn) {
+      const who = give.solo,
+        kind = give.kind;
+      const talk = await onGiveSolo(who, kind);
+      const info = assistantLifeItemInfo(kind);
+      setGive(null);
+      if (!talk) {
+        setNote(`${info ? info.name : '道具'}は、いまは贈れません(1人には1日3回・同じ道具は1日1回・持っている数を見てください)`);
+        return;
+      }
+      const w = assistantLifeWhereOf(life, who);
+      const likeText = talk.like === 'like' ? ' ・ 💗 好きなもの！' : talk.like === 'bad' ? ' ・ 💧 ちょっと苦手…' : '';
+      playTalk(talk, {
+        ids: [who],
+        place: w ? w.place : 'home',
+        gift: true
+      });
+      setNote(`${nameOf(who)}に${info ? `${info.emoji} ${info.name}` : ''}を贈った。💗 仲良し度 +${talk.amount}${likeText}`);
+      return;
+    }
     if (!give || !give.pair) return;
     const talk = await onUseItem(give.kind, give.pair);
     const info = assistantLifeItemInfo(give.kind);
@@ -107215,8 +107274,10 @@ function AssistantLifeHouse({
     return w && w.doing === 'practice';
   });
   const itemsLeft = Math.min(typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0, itemInfos.filter(x => !usedOf(x.kind) && haveOf(x.kind) > 0).length);
-  const itemsHave = itemInfos.reduce((n, x) => n + haveOf(x.kind), 0);
+  const soloInfos = soloOn ? assistantLifeSoloDefs().map(g => assistantLifeItemInfo(g.kind)).filter(Boolean) : [];
+  const itemsHave = [...itemInfos, ...soloInfos].reduce((n, x) => n + haveOf(x.kind), 0);
   const giveGroup = (life.groups || [])[0];
+  const giveSoloId = soloOn ? Object.keys(life.solo || {}).find(id => !awayFriend(id)) || giveGroup && giveGroup.ids[0] || null : null;
   const pad = 12;
   const houseW = land ? Math.min(560, Math.round(vw * 0.64) - pad * 2) : Math.min(380, vw - pad * 2);
   const tiles = React.createElement("div", {
@@ -107243,11 +107304,11 @@ function AssistantLifeHouse({
     type: "button",
     className: "mhl-tile mhl-give flex-1",
     "data-assistant-life-today-act": "give",
-    disabled: !canGive || !giveGroup,
+    disabled: !canGive || !giveGroup && !giveSoloId,
     onClick: () => {
-      if (itemsLeft > 0 && giveGroup) openGive(giveGroup.ids);else setTab('items');
+      if (itemsLeft > 0 && giveGroup) openGive(giveGroup.ids);else if (soloLeft > 0 && giveSoloId) openGiveSolo(giveSoloId, giveGroup && giveGroup.ids.includes(giveSoloId) ? giveGroup.ids : [giveSoloId]);else setTab('items');
     }
-  }, React.createElement("em", null, itemsLeft, "回"), React.createElement("i", null, "🎁"), React.createElement("b", null, "贈る"), React.createElement("small", null, "道具 ", itemsHave, "個")), React.createElement("button", {
+  }, React.createElement("em", null, soloOn ? itemsLeft + soloLeft : itemsLeft, "回"), React.createElement("i", null, "🎁"), React.createElement("b", null, "贈る"), React.createElement("small", null, "道具 ", itemsHave, "個")), React.createElement("button", {
     type: "button",
     className: "mhl-tile mhl-beat flex-1",
     "data-assistant-life-today-act": "beat",
@@ -107408,13 +107469,51 @@ function AssistantLifeHouse({
     className: "whitespace-nowrap text-pink-200"
   }, "💗 仲良し度 ", assistantLifeItemRange(x).player), React.createElement("span", {
     className: "whitespace-nowrap text-slate-400"
-  }, "(好みで変わる)"))), haveOf(x.kind) <= 0 && typeof AssistantLifeShopButton === 'function' && React.createElement(AssistantLifeShopButton, {
+  }, "(好みで変わる)")), soloOn && React.createElement("p", {
+    className: "text-[10px] leading-snug text-slate-400",
+    "data-assistant-life-item-solo-amt": true
+  }, "1人に贈ると: ", React.createElement("span", {
+    className: "whitespace-nowrap text-pink-200"
+  }, "💗 仲良し度 ", assistantLifeItemRange(x).player), "(友情Lv は上がらない)")), haveOf(x.kind) <= 0 && typeof AssistantLifeShopButton === 'function' && React.createElement(AssistantLifeShopButton, {
     tab: "item",
     small: true,
     label: `🛒 ${x.cost != null ? `${x.cost}P` : '交換所'}`
-  }))), React.createElement("p", {
+  }))), soloOn && soloInfos.length > 0 && React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "mt-3 inline-block rounded-xl bg-slate-950/85 px-2 py-0.5 text-[13px] font-black text-pink-200",
+    "data-assistant-life-items-solo": true
+  }, "💗 1人に贈る道具 ", React.createElement("span", {
+    className: "text-[10.5px] text-slate-200"
+  }, "今日あと ", soloLeft, "回")), soloInfos.map(x => {
+    const g = assistantLifeGiftOf(x.kind);
+    const lo = Math.round(g.player * assistantLifeGiftMult('bad')),
+      hi = Math.round(g.player * assistantLifeGiftMult('like'));
+    return React.createElement("div", {
+      key: x.kind,
+      "data-assistant-life-item": x.kind,
+      className: "mt-2 flex items-center gap-2 rounded-2xl border border-pink-300/30 bg-slate-900/85 p-2"
+    }, React.createElement("span", {
+      className: "grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/5 text-[26px]",
+      "aria-hidden": "true"
+    }, x.emoji), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("p", {
+      className: "text-[12px] font-black text-white"
+    }, x.name, " ", React.createElement("span", {
+      className: "text-[10px] text-slate-400"
+    }, "持っている ", haveOf(x.kind), "個")), React.createElement("p", {
+      className: "text-[10.5px] leading-snug text-slate-300"
+    }, x.what.split('。')[0], "。", React.createElement("span", {
+      className: "whitespace-nowrap text-pink-200"
+    }, "💗 仲良し度 +", lo, "〜", hi), React.createElement("span", {
+      className: "whitespace-nowrap text-slate-400"
+    }, "(好みで変わる)"))), haveOf(x.kind) <= 0 && typeof AssistantLifeShopButton === 'function' && React.createElement(AssistantLifeShopButton, {
+      tab: "item",
+      small: true,
+      label: `🛒 ${x.cost != null ? `${x.cost}P` : '交換所'}`
+    }));
+  })), React.createElement("p", {
     className: "mt-2 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] leading-snug text-slate-200"
-  }, "手に入れる: モンヒロビートの「ビートP交換所」(", itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・'), ")。贈る: 部屋や場面の「🎁 贈る」。好きな物なら多め・苦手な物なら少なめに上がり、好みは贈ると分かります。同じ道具は1日1回・合わせて1日3回。声をかける・見守るは無料です。次の段まであと何点・この道具で段の何割進むかは、「🎁 贈る」で2人を選ぶと出ます"), typeof AssistantLifeShopButton === 'function' && React.createElement("div", {
+  }, "手に入れる: モンヒロビートの「ビートP交換所」(", itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・'), ")。贈る: 部屋や場面の「🎁 贈る」", soloOn ? '(2人に・その助手だけに)' : '', "。好きな物なら多め・苦手な物なら少なめに上がり、好みは贈ると分かります。同じ道具は1日1回・合わせて1日3回。声をかける・見守るは無料です。次の段まであと何点・この道具で段の何割進むかは、「🎁 贈る」で2人を選ぶと出ます"), typeof AssistantLifeShopButton === 'function' && React.createElement("div", {
     className: "mt-2"
   }, React.createElement(AssistantLifeShopButton, {
     tab: "item"
@@ -107475,6 +107574,8 @@ function AssistantLifeHouse({
     key: roomId,
     id: roomId,
     openFurn: furnBack === roomId,
+    onGiveSolo: soloOn ? openGiveSolo : null,
+    canGiveSolo: soloOn && soloLeft > 0,
     life: life,
     peerSt: peerSt,
     bondLevelOf: bondLevelOf,
@@ -119949,6 +120050,7 @@ const ASSISTANT_LIFE_GIFT_DAY_KEY = 'mh_assistant_life_gift_day_v1';
 const ASSISTANT_LIFE_GIFT_LIKES_KEY = 'mh_assistant_life_likes_v1';
 const ASSISTANT_LIFE_GIFT_CHEKI_KEY = 'mh_assistant_life_cheki_v1';
 const ASSISTANT_LIFE_GIFT_CHEKI_MAX = 60;
+const ASSISTANT_LIFE_SOLO_GIFT_KEY = 'mh_assistant_life_solo_gift_v1';
 const ASSISTANT_LIFE_GIFT_WRAP = Object.freeze({
   basket: ['おやつ', 'バスケット'],
   misanga: ['おそろいの', 'ミサンガ'],
@@ -119959,7 +120061,10 @@ const ASSISTANT_LIFE_GIFT_WRAP = Object.freeze({
   puzzle: ['ふたりで解く', 'パズル'],
   sleeve: ['おそろい', 'スリーブ'],
   cheki: ['思い出', 'チェキ'],
-  flower: ['ちいさな', '花束']
+  flower: ['ちいさな', '花束'],
+  letter: ['手書きの', '手紙'],
+  candy: ['ひとつぶ', 'キャンディ'],
+  omamori: ['小さな', 'おまもり']
 });
 const assistantLifeGiftWrapName = g => {
   const w = g && ASSISTANT_LIFE_GIFT_WRAP[g.key];
@@ -119972,17 +120077,23 @@ const ASSISTANT_LIFE_GIFT_LABEL = Object.freeze({
   unknown: '?'
 });
 const assistantLifeGiftDefs = () => typeof ASSISTANT_LIFE_GIFTS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_GIFTS) ? ASSISTANT_LIFE_GIFTS : [];
+const assistantLifeSoloDefs = () => typeof ASSISTANT_LIFE_SOLO_GIFTS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_SOLO_GIFTS) ? ASSISTANT_LIFE_SOLO_GIFTS : [];
+const assistantLifeSoloOn = () => typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeSolo === true;
+const assistantLifeAnyGiftDef = kindOrKey => assistantLifeGiftDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey) || assistantLifeSoloDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey) || null;
+const assistantLifeIsSoloOnly = kindOrKey => !!assistantLifeSoloDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey);
+const assistantLifeSoloKinds = () => assistantLifeSoloOn() ? [...assistantLifeGiftDefs(), ...assistantLifeSoloDefs()] : [];
 const assistantLifeGiftKinds = () => {
   const all = assistantLifeGiftDefs();
   return typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() ? all : all.filter(g => g.kind === 'gift' || g.kind === 'token');
 };
 const assistantLifeGiftOf = kindOrKey => {
-  const g = assistantLifeGiftDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey);
+  const g = assistantLifeAnyGiftDef(kindOrKey);
   if (!g) return null;
   const item = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : []).find(x => x && x.id === g.itemId) || {};
   const offer = (typeof RHYTHM_EVENT_POINT_SHOP_OFFERS !== 'undefined' ? RHYTHM_EVENT_POINT_SHOP_OFFERS : []).find(x => x.itemId === g.itemId) || {};
   return {
     ...g,
+    solo: assistantLifeIsSoloOnly(g.key),
     name: item.name || offer.name || '',
     emoji: item.emoji || offer.emoji || '🎁',
     cost: Number.isFinite(offer.cost) ? offer.cost : null
@@ -119990,15 +120101,16 @@ const assistantLifeGiftOf = kindOrKey => {
 };
 const assistantLifeGiftCounts = ownedItems => {
   const o = {};
-  for (const g of assistantLifeGiftDefs()) {
+  for (const g of [...assistantLifeGiftDefs(), ...assistantLifeSoloDefs()]) {
     const n = ownedItems && typeof ownedItems === 'object' ? Number(ownedItems[g.itemId]) : 0;
     o[g.kind] = Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
   }
   return o;
 };
 const assistantLifeGiftLike = (who, kindOrKey) => {
-  const g = assistantLifeGiftDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey);
-  const t = typeof ASSISTANT_LIFE_GIFT_LIKES !== 'undefined' ? ASSISTANT_LIFE_GIFT_LIKES[who] : null;
+  const g = assistantLifeAnyGiftDef(kindOrKey);
+  const solo = g && assistantLifeIsSoloOnly(g.key);
+  const t = solo ? typeof ASSISTANT_LIFE_SOLO_LIKES !== 'undefined' ? ASSISTANT_LIFE_SOLO_LIKES[who] : null : typeof ASSISTANT_LIFE_GIFT_LIKES !== 'undefined' ? ASSISTANT_LIFE_GIFT_LIKES[who] : null;
   if (!g || !t) return 'mid';
   if ((t.like || []).includes(g.key)) return 'like';
   if ((t.bad || []).includes(g.key)) return 'bad';
@@ -120075,6 +120187,7 @@ const normalizeAssistantLifeGiftCheki = raw => {
 const ASSISTANT_LIFE_GIFT_STORE = {
   state: {
     day: normalizeAssistantLifeGiftDay(null),
+    solo: normalizeAssistantLifeGiftDay(null),
     likes: normalizeAssistantLifeGiftLikes(null),
     cheki: {},
     room: {}
@@ -120100,9 +120213,10 @@ const ASSISTANT_LIFE_GIFT_STORE = {
     if (this.loaded) return Promise.resolve(this.state);
     if (!this.loading) this.loading = (async () => {
       try {
-        const [d, l, c, r] = await Promise.all([storeGet(ASSISTANT_LIFE_GIFT_DAY_KEY, null, false), storeGet(ASSISTANT_LIFE_GIFT_LIKES_KEY, null, false), storeGet(ASSISTANT_LIFE_GIFT_CHEKI_KEY, null, false), storeGet('mh_assistant_life_room_v1', null, false)]);
+        const [d, l, c, r, so] = await Promise.all([storeGet(ASSISTANT_LIFE_GIFT_DAY_KEY, null, false), storeGet(ASSISTANT_LIFE_GIFT_LIKES_KEY, null, false), storeGet(ASSISTANT_LIFE_GIFT_CHEKI_KEY, null, false), storeGet('mh_assistant_life_room_v1', null, false), storeGet(ASSISTANT_LIFE_SOLO_GIFT_KEY, null, false)]);
         this.state = {
           day: normalizeAssistantLifeGiftDay(d),
+          solo: normalizeAssistantLifeGiftDay(so),
           likes: normalizeAssistantLifeGiftLikes(l),
           cheki: normalizeAssistantLifeGiftCheki(c),
           room: normalizeAssistantLifeRoom(r)
@@ -120150,13 +120264,14 @@ const assistantLifeGiftReason = (kind, peerSt, have = 1, st = ASSISTANT_LIFE_GIF
   const usedOld = typeof assistantPeerItemUsedToday === 'function' && peerSt && (kind === 'gift' || kind === 'token') && assistantPeerItemUsedToday(peerSt, kind);
   if (!lifeOn) return usedOld ? '今日はもう使いました(朝4時に戻ります)' : have <= 0 ? '持っていません(ビートP交換所で手に入ります)' : '';
   const used = assistantLifeGiftUsedMap(peerSt, st);
-  if (used[kind] || usedOld) return '今日はもうこの道具を贈りました(朝4時に戻ります)';
+  const usedSolo = st.solo && st.solo.day === assistantLifeGiftToday() && st.solo.used && st.solo.used[kind];
+  if (used[kind] || usedOld || usedSolo) return '今日はもうこの道具を贈りました(朝4時に戻ります)';
   if (assistantLifeGiftLeft(peerSt, st) <= 0) return '今日はもう3回贈りました(朝4時に戻ります)';
   if (have <= 0) return '持っていません(ビートP交換所で手に入ります)';
   return '';
 };
 const assistantLifeGiftKeyOf = kindOrKey => {
-  const g = assistantLifeGiftDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey);
+  const g = assistantLifeAnyGiftDef(kindOrKey);
   if (g) return {
     key: g.key,
     furniture: false
@@ -120249,6 +120364,110 @@ const assistantLifeGiftTalk = (kind, pair, rand = Math.random) => {
     lines
   } : null;
 };
+const assistantLifeSoloUsedMap = (st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  const day = assistantLifeGiftToday();
+  return st.solo && st.solo.day === day ? {
+    ...st.solo.used
+  } : {};
+};
+const assistantLifeSoloLeft = (st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  const max = typeof ASSISTANT_LIFE_SOLO_DAILY_MAX !== 'undefined' && Number.isFinite(ASSISTANT_LIFE_SOLO_DAILY_MAX) ? ASSISTANT_LIFE_SOLO_DAILY_MAX : 3;
+  return Math.max(0, max - Object.keys(assistantLifeSoloUsedMap(st)).length);
+};
+const assistantLifeSoloReason = (kind, peerSt, have = 1, st = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  if (!assistantLifeSoloOn() || !assistantLifeSoloKinds().some(g => g.kind === kind)) return 'この道具はまだ贈れません';
+  if (assistantLifeSoloUsedMap(st)[kind] || assistantLifeGiftUsedMap(peerSt, st)[kind]) return '今日はもうこの道具を贈りました(朝4時に戻ります)';
+  if (assistantLifeSoloLeft(st) <= 0) return '今日はもう1人に3回贈りました(朝4時に戻ります)';
+  if (have <= 0) return '持っていません(ビートP交換所で手に入ります)';
+  return '';
+};
+const assistantLifeSoloAmount = (who, kindOrKey) => {
+  const g = assistantLifeAnyGiftDef(kindOrKey);
+  return g ? Math.round(g.player * assistantLifeGiftMult(assistantLifeGiftLike(who, g.key))) : 0;
+};
+const assistantLifeSoloLine = (who, g, like, rand = Math.random) => {
+  const real = typeof ASSISTANT_LIFE_SOLO_LINES !== 'undefined' && ASSISTANT_LIFE_SOLO_LINES[who] && ASSISTANT_LIFE_SOLO_LINES[who][g.key];
+  const list = Array.isArray(real) ? real.filter(x => x && x.t) : [];
+  const temp = typeof ASSISTANT_LIFE_SOLO_TEMP_LINES !== 'undefined' && ASSISTANT_LIFE_SOLO_TEMP_LINES[who] ? ASSISTANT_LIFE_SOLO_TEMP_LINES[who][like] : null;
+  const pick = list.length ? list[Math.floor(rand() * list.length) % list.length] : temp;
+  return pick ? {
+    who,
+    e: pick.e || 'happy',
+    t: String(pick.t).split('{item}').join(g.name)
+  } : null;
+};
+const assistantLifeSoloGive = async (who, kind, rand = Math.random) => {
+  await ASSISTANT_LIFE_GIFT_STORE.load();
+  const g = assistantLifeGiftOf(kind);
+  if (!g || !who) return null;
+  const st = ASSISTANT_LIFE_GIFT_STORE.state;
+  const day = assistantLifeGiftToday();
+  const solo = {
+    day,
+    used: {
+      ...assistantLifeSoloUsedMap(st),
+      [kind]: String(who)
+    }
+  };
+  const known = {
+    ...st.likes.known,
+    [who]: {
+      ...(st.likes.known[who] || {}),
+      [g.key]: 'gift'
+    }
+  };
+  const likes = {
+    ...st.likes,
+    known
+  };
+  const patch = {
+    solo,
+    likes
+  };
+  if (g.key === 'cheki') patch.cheki = {
+    ...st.cheki,
+    [who]: [...(st.cheki[who] || []), day].slice(-ASSISTANT_LIFE_GIFT_CHEKI_MAX)
+  };
+  ASSISTANT_LIFE_GIFT_STORE.set(patch);
+  try {
+    storeSet(ASSISTANT_LIFE_SOLO_GIFT_KEY, solo, false);
+  } catch {}
+  try {
+    storeSet(ASSISTANT_LIFE_GIFT_LIKES_KEY, likes, false);
+  } catch {}
+  if (patch.cheki) {
+    try {
+      storeSet(ASSISTANT_LIFE_GIFT_CHEKI_KEY, patch.cheki, false);
+    } catch {}
+  }
+  const like = assistantLifeGiftLike(who, g.key);
+  const amount = assistantLifeSoloAmount(who, g.key);
+  if (typeof assistantPeerPlayerBondAdder !== 'undefined' && assistantPeerPlayerBondAdder) {
+    try {
+      assistantPeerPlayerBondAdder(who, 'lifeGift', amount);
+    } catch {}
+  }
+  if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`${typeof assistantLifeName === 'function' ? assistantLifeName(who) : who}に${g.name}を贈った`, [who], {
+    kind: 'give'
+  });
+  const line = assistantLifeSoloLine(who, g, like, rand);
+  const call = typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(who) : 'あなた';
+  return line ? {
+    id: `solo-${g.key}-${who}`,
+    pair: [who],
+    lv: 1,
+    scene: 'any',
+    reaction: kind,
+    gift: g.key,
+    solo: true,
+    like,
+    amount,
+    lines: [{
+      ...line,
+      t: line.t.split('{name}').join(call)
+    }]
+  } : null;
+};
 const assistantLifeGiftOnBondLevel = async (who, level, rand = Math.random) => {
   if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled()) return null;
   const t = typeof ASSISTANT_LIFE_GIFT_LIKES !== 'undefined' ? ASSISTANT_LIFE_GIFT_LIKES[who] : null;
@@ -120256,7 +120475,8 @@ const assistantLifeGiftOnBondLevel = async (who, level, rand = Math.random) => {
   await ASSISTANT_LIFE_GIFT_STORE.load();
   const st = ASSISTANT_LIFE_GIFT_STORE.state;
   const ft = assistantLifeFurnEnabled() && typeof ASSISTANT_LIFE_FURN_LIKES !== 'undefined' ? ASSISTANT_LIFE_FURN_LIKES[who] : null;
-  const left = [...(t.like || []), ...(ft && ft.like || [])].filter(k => !(st.likes.known[who] && st.likes.known[who][k]));
+  const so = assistantLifeSoloOn() && typeof ASSISTANT_LIFE_SOLO_LIKES !== 'undefined' ? ASSISTANT_LIFE_SOLO_LIKES[who] : null;
+  const left = [...(t.like || []), ...(so && so.like || []), ...(ft && ft.like || [])].filter(k => !(st.likes.known[who] && st.likes.known[who][k]));
   if (!left.length) return null;
   const key = left[Math.floor(rand() * left.length) % left.length];
   const known = {
@@ -120321,7 +120541,7 @@ function AssistantLifeGiftLikesRow({
   const st = useAssistantLifeGiftState();
   const [open, setOpen] = React.useState(false);
   if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled()) return null;
-  const gifts = assistantLifeGiftKinds().map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
+  const gifts = [...assistantLifeGiftKinds(), ...(assistantLifeSoloOn() ? assistantLifeSoloDefs() : [])].map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
   const known = gifts.filter(g => assistantLifeGiftKnown(id, g.key, st)).length;
   const liked = gifts.filter(g => assistantLifeGiftShownLike(id, g.key, st) === 'like');
   const told = st.likes.told.filter(x => x.who === id).slice(-1)[0] || null;
@@ -120531,33 +120751,52 @@ function AssistantLifeGiftSheet({
   onGive
 }) {
   const st = useAssistantLifeGiftState();
-  const gifts = assistantLifeGiftKinds().map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
+  const soloOn = assistantLifeSoloOn();
+  const soloWho = soloOn && give.solo ? give.solo : null;
+  const gifts = (soloWho ? assistantLifeSoloKinds() : assistantLifeGiftKinds()).map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
   const info = gifts.find(x => x.kind === give.kind) || gifts[0];
   if (!info) return null;
-  const pair = give.pair || [];
+  const pair = soloWho ? [] : give.pair || [];
+  const people = soloWho ? [soloWho] : pair;
   const hint = pair.length === 2 && typeof assistantLifePairHint === 'function' ? assistantLifePairHint(peerSt, life, pair[0], pair[1]) : null;
   const left = hint && hint.next ? hint.next.min - hint.pts : null;
   const have = haveOf(info.kind);
-  const reason = assistantLifeGiftReason(info.kind, peerSt, have, st);
+  const reason = soloWho ? assistantLifeSoloReason(info.kind, peerSt, have, st) : assistantLifeGiftReason(info.kind, peerSt, have, st);
   const lifeOn = typeof assistantLifeEnabled === 'function' && assistantLifeEnabled();
-  const leftToday = lifeOn ? assistantLifeGiftLeft(peerSt, st) : null;
+  const leftToday = lifeOn ? soloWho ? assistantLifeSoloLeft(st) : assistantLifeGiftLeft(peerSt, st) : null;
   const pairs = [];
   for (let i = 0; i < give.ids.length; i++) for (let j = i + 1; j < give.ids.length; j++) pairs.push([give.ids[i], give.ids[j]]);
-  const samePair = p => pair.length === 2 && p.every(id => pair.includes(id));
+  const samePair = p => !soloWho && pair.length === 2 && p.every(id => pair.includes(id));
+  const toPair = p => setGive({
+    ...give,
+    pair: p,
+    solo: null,
+    kind: assistantLifeIsSoloOnly(give.kind) ? (assistantLifeGiftKinds()[0] || {}).kind : give.kind
+  });
+  const toSolo = id => setGive({
+    ...give,
+    solo: id
+  });
   const amt = pair.length === 2 ? assistantLifeGiftAmounts(info.kind, pair) : null;
-  const shown = pair.map(id => lifeOn ? assistantLifeGiftShownLike(id, info.key, st) : 'mid');
+  const shown = people.map(id => lifeOn ? assistantLifeGiftShownLike(id, info.key, st) : 'mid');
+  const soloRange = [Math.round(info.player * assistantLifeGiftMult('bad')), Math.round(info.player * assistantLifeGiftMult('like'))];
   const tagCls = {
     like: 'bg-pink-600 text-white',
     mid: 'bg-slate-600 text-white',
     bad: 'bg-cyan-700 text-white',
     unknown: 'bg-slate-700 text-slate-200'
   };
-  const playerText = i => !amt ? '' : shown[i] === 'unknown' ? `+${amt.range.player[0]}〜${amt.range.player[1]}` : `+${amt.player[i]}`;
+  const playerText = i => soloWho ? shown[i] === 'unknown' ? `+${soloRange[0]}〜${soloRange[1]}` : `+${assistantLifeSoloAmount(soloWho, info.key)}` : !amt ? '' : shown[i] === 'unknown' ? `+${amt.range.player[0]}〜${amt.range.player[1]}` : `+${amt.player[i]}`;
   const peerText = !amt ? '' : lifeOn ? assistantLifeGiftPeerShown(info, shown) : `+${amt.peer}`;
   const mark = s => s === 'like' ? '💗' : s === 'bad' ? '💧' : s === 'unknown' ? '?' : '';
   const bondLv = typeof ASSISTANT_BOND_LEVELS !== 'undefined' ? ASSISTANT_BOND_LEVELS : [];
   const peerLv = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' ? ASSISTANT_PEER_BOND_LEVELS : [];
   const playerW = i => {
+    if (soloWho) {
+      const n = assistantLifeSoloAmount(soloWho, info.key);
+      const [lo, hi] = shown[i] === 'unknown' ? soloRange : [n, n];
+      return assistantLifeWeightOf(assistantLifeBondPointsOf(soloWho), lo, hi, bondLv, 'need');
+    }
     if (!amt) return null;
     const [lo, hi] = shown[i] === 'unknown' ? amt.range.player : [amt.player[i], amt.player[i]];
     return assistantLifeWeightOf(assistantLifeBondPointsOf(pair[i]), lo, hi, bondLv, 'need');
@@ -120580,36 +120819,42 @@ function AssistantLifeGiftSheet({
   }, React.createElement("div", {
     className: "flex items-center gap-2"
   }, React.createElement("p", {
-    className: "min-w-0 flex-1 text-[14px] font-black text-white"
-  }, "🎁 2人に贈る"), leftToday != null && React.createElement("span", {
+    className: "min-w-0 flex-1 text-[14px] font-black text-white",
+    "data-assistant-life-give-title": true
+  }, soloWho ? `🎁 ${nameOf(soloWho)}に贈る` : '🎁 2人に贈る'), leftToday != null && React.createElement("span", {
     "data-assistant-life-give-left": leftToday,
     className: "shrink-0 rounded-full bg-slate-800 px-2 text-[10.5px] font-black leading-[22px] text-amber-200"
   }, "今日あと ", leftToday, "回"), React.createElement(AssistantLifeFaces, {
-    ids: pair,
+    ids: people,
     size: 30
   })), lifeOn && React.createElement("div", {
     className: "mt-1.5"
   }, React.createElement(AssistantLifeGiftExplain, {
     compact: true
-  })), pairs.length > 1 && React.createElement("div", {
-    className: "mt-1.5 flex flex-wrap gap-1.5"
+  })), (pairs.length > 1 || soloOn && give.ids.length >= 1 && (pairs.length || give.ids.length > 1)) && React.createElement("div", {
+    className: "mt-1.5 flex flex-wrap gap-1.5",
+    "data-assistant-life-give-who": true
   }, pairs.map(p => React.createElement("button", {
     key: p.join('-'),
     type: "button",
     "data-assistant-life-give-pair": p.join('-'),
     "aria-pressed": samePair(p),
-    onClick: () => setGive({
-      ...give,
-      pair: p
-    }),
+    onClick: () => toPair(p),
     className: `min-h-[34px] rounded-full border px-2.5 text-[11px] font-black active:scale-95 ${samePair(p) ? 'border-amber-300 bg-amber-400/25 text-white' : 'border-white/15 text-slate-300'}`
-  }, p.map(nameOf).join('と')))), React.createElement("div", {
+  }, "🤝 ", p.map(nameOf).join('と'), "に")), soloOn && give.ids.map(id => React.createElement("button", {
+    key: id,
+    type: "button",
+    "data-assistant-life-give-solo": id,
+    "aria-pressed": soloWho === id,
+    onClick: () => toSolo(id),
+    className: `min-h-[34px] rounded-full border px-2.5 text-[11px] font-black active:scale-95 ${soloWho === id ? 'border-pink-300 bg-pink-400/25 text-white' : 'border-white/15 text-slate-300'}`
+  }, "💗 ", nameOf(id), "だけに"))), React.createElement("div", {
     className: "mt-2 grid grid-cols-5 gap-1",
     role: "tablist"
   }, gifts.map(x => {
     const on = x.kind === info.kind;
     const n = haveOf(x.kind);
-    const ls = pair.map(id => lifeOn ? assistantLifeGiftShownLike(id, x.key, st) : 'mid');
+    const ls = people.map(id => lifeOn ? assistantLifeGiftShownLike(id, x.key, st) : 'mid');
     return React.createElement("button", {
       key: x.kind,
       type: "button",
@@ -120635,7 +120880,7 @@ function AssistantLifeGiftSheet({
       key: i
     }, i > 0 && React.createElement("wbr", null), w))), React.createElement("span", {
       className: "block text-[9px] font-black leading-tight text-slate-300"
-    }, lifeOn && pair.length === 2 ? ls.map(mark).map(m => m || '・').join(' ') : ''), React.createElement("em", {
+    }, lifeOn && people.length ? ls.map(mark).map(m => m || '・').join(' ') : ''), React.createElement("em", {
       className: "absolute right-0.5 top-0.5 rounded-full bg-slate-950/90 px-1 text-[8.5px] font-black not-italic text-slate-200"
     }, "×", n));
   })), React.createElement("div", {
@@ -120652,7 +120897,7 @@ function AssistantLifeGiftSheet({
     className: "text-[10.5px] leading-snug text-slate-300 [[data-assistant-life-land='1']_&]:hidden"
   }, info.what))), React.createElement("div", {
     className: "mt-1.5 space-y-1 text-[11px]"
-  }, pair.map((id, i) => React.createElement("div", {
+  }, people.map((id, i) => React.createElement("div", {
     key: id,
     className: "rounded-lg bg-slate-800/80 px-2 py-1",
     "data-assistant-life-give-person": `${id}:${shown[i]}`
@@ -120672,7 +120917,7 @@ function AssistantLifeGiftSheet({
       const w = playerW(i);
       return w && !w.max ? assistantLifeBondLvGain(w.next) : '';
     })()
-  }))), React.createElement("div", {
+  }))), !soloWho && React.createElement("div", {
     className: "rounded-lg bg-slate-800/80 px-2 py-1",
     "data-assistant-life-give-peer": true
   }, React.createElement("div", {
@@ -120688,7 +120933,7 @@ function AssistantLifeGiftSheet({
     gainText: peerW && !peerW.max ? ASSISTANT_LIFE_PEER_LV_GAIN[peerW.next] || '' : ''
   }))), React.createElement("p", {
     className: "mt-1 text-[10px] leading-snug text-slate-400 [[data-assistant-life-land='1']_&]:hidden"
-  }, lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)・?=贈ると分かる。同じ道具は1⁠日1回・合わせて1⁠日3回(朝4時に戻る)' : '1⁠日1回(朝4時に戻る)', "・持っている ", have, "個", info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''), reason && React.createElement("p", {
+  }, soloWho ? '1人に贈ると、その助手の好みで仲良し度だけが上がります(友情Lv は上がりません)。1人には1⁠日3回・同じ道具は1⁠日1回(朝4時に戻る)' : lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)・?=贈ると分かる。同じ道具は1⁠日1回・合わせて1⁠日3回(朝4時に戻る)' : '1⁠日1回(朝4時に戻る)', "・持っている ", have, "個", info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''), reason && React.createElement("p", {
     "data-assistant-life-give-reason": true,
     className: "mt-1.5 rounded-xl bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-300"
   }, reason), lifeOn && have <= 0 && React.createElement("div", {
@@ -120712,7 +120957,7 @@ function AssistantLifeGiftSheet({
   }, "やめる"), React.createElement("button", {
     type: "button",
     "data-assistant-life-give-go": true,
-    disabled: !!reason || pair.length !== 2,
+    disabled: !!reason || !soloWho && pair.length !== 2,
     onClick: onGive,
     className: "min-h-[44px] flex-[2] rounded-xl border border-amber-300/70 bg-amber-400/20 text-[14px] font-black text-amber-100 active:scale-[.98] disabled:opacity-40"
   }, info.emoji, " 贈る"))));
@@ -120721,8 +120966,8 @@ function AssistantLifeChekiRow({
   pair
 }) {
   const st = useAssistantLifeGiftState();
-  if (!Array.isArray(pair) || pair.length !== 2) return null;
-  const pk = typeof assistantPeerPairKey === 'function' ? assistantPeerPairKey(pair[0], pair[1]) : [...pair].sort().join('-');
+  if (!Array.isArray(pair) || pair.length !== 2 && pair.length !== 1) return null;
+  const pk = pair.length === 1 ? String(pair[0]) : typeof assistantPeerPairKey === 'function' ? assistantPeerPairKey(pair[0], pair[1]) : [...pair].sort().join('-');
   const days = st.cheki && st.cheki[pk] || [];
   if (!days.length) return null;
   const show = days.slice(-6).reverse();
@@ -164445,6 +164690,27 @@ function MonsterHeroGame() {
     }
     return assistantLifeFurnGive(who, key);
   };
+  const giveAssistantLifeSolo = async (who, kind) => {
+    if (typeof assistantLifeSoloGive !== 'function' || typeof assistantLifeSoloOn !== 'function' || !assistantLifeSoloOn()) return null;
+    const def = assistantLifeGiftOf(kind);
+    if (!def) return null;
+    await ASSISTANT_LIFE_GIFT_STORE.load();
+    const have = ownedItemCount(ownedItemsRef.current, def.itemId);
+    const peerSt = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null;
+    if (assistantLifeSoloReason(kind, peerSt, have)) return null;
+    const nextItems = {
+      ...ownedItemsRef.current,
+      [def.itemId]: have - 1
+    };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    try {
+      await storeSet('mh_owned_items', nextItems, false);
+    } catch {
+      return null;
+    }
+    return assistantLifeSoloGive(who, kind);
+  };
   const useBuddyTraitSeed = async (masuId, traitId) => {
     const have = ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TRAIT_SEED_ITEM_ID);
     if (have <= 0) return false;
@@ -186056,7 +186322,8 @@ function MonsterHeroGame() {
         },
         onUseItem: useAssistantPeerItem,
         furnItems: typeof assistantLifeFurnCounts === 'function' ? assistantLifeFurnCounts(ownedItems) : null,
-        onGiveFurn: giveAssistantLifeFurn
+        onGiveFurn: giveAssistantLifeFurn,
+        onGiveSolo: giveAssistantLifeSolo
       }));
     })(), typeof QuickGuideOverlay === 'function' && quickGuideActive && activeAssistant && (() => {
       const replay = quickGuideActive.startsWith('replay:') ? quickGuideActive.slice(7) : null;

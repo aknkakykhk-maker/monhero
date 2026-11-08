@@ -59,7 +59,7 @@ const cutProblems = (page, sel) => page.evaluate((s) => {
     await toHome(page); await waitFaces(page);
     return page;
   };
-  const openHouse = async (page) => { await page.locator('[data-assistant-peer-line]').waitFor({ state: 'detached', timeout: 15000 }).catch(() => {}); await page.locator('[data-home-assistant-life]').click({ timeout: 20000 }); await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 6000 }).catch(() => {}); await page.waitForTimeout(400); };
+  const openHouse = async (page) => { for (let i = 0; i < 5; i++) { const pc = page.locator('[data-assistant-peer-close]'); if (await pc.count()) await pc.first().click({ timeout: 2000 }).catch(() => {}); try { await page.locator('[data-home-assistant-life]').click({ timeout: 4000 }); break; } catch (e) { if (i === 4) throw e; await page.waitForTimeout(800); } } await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 6000 }).catch(() => {}); await page.waitForTimeout(400); };
   // 一緒にいる組の1人の部屋
   //   (出かけていても、組の助手の部屋のシートには「2人に贈る」「◯◯だけに贈る」が出る。けんか中の組は避ける)
   const groupRoom = (page) => page.evaluate(() => { try { const gs = (ASSISTANT_LIFE_STORE.state.life.groups || []).filter(g => g.ids.length === 2); const g = gs.find(x => !document.querySelector(`[data-assistant-life-room="${x.ids[0]}"] [data-assistant-life-rel]`)) || gs[0]; return g ? g.ids[0] : null; } catch { return null; } });
@@ -125,7 +125,6 @@ const cutProblems = (page, sel) => page.evaluate((s) => {
       check('⑤ 1人には1日3回まで', r3.given && r4.given && !r5.given && /1人に3回/.test(r5.reason), `${r3.given} ${r4.given} ${r5.reason}`);
       // 2人に贈る回数は別(おやつバスケットは2人に贈れる)
       await page.locator('[data-assistant-life-today-act="give"]').click().catch(() => {}); await page.waitForTimeout(400);
-      if (process.env.SOLO_DEBUG) { await page.screenshot({ path: '/tmp/claude-0/-home-user-monhero/6ad8a471-4a35-5234-b300-f7579a4e5af2/scratchpad/solo-debug2.png' }); console.log('DEBUG tile', await page.locator('[data-assistant-life-today-act="give"]').count(), await page.locator('[data-assistant-life-today-act="give"]').isDisabled().catch(() => 'x')); }
       const pairLeft = await page.locator('[data-assistant-life-give-left]').getAttribute('data-assistant-life-give-left').catch(() => null);
       check('⑤ 2人に贈る回数は別に数える(1人に3回贈っても、2人にはあと3回)', pairLeft === '3', String(pairLeft));
       // 1人に贈ったチェキは2人にも贈れない
