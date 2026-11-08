@@ -1,5 +1,5 @@
 {
- "_": "助手のマスモン(一覧・編成・成長・染色)と好き/苦手(モンスター単位→その血統にも少し)・MFバトルカードのデッキ(マスモンとは別のカード)の案(2026-11-08 助手部キズナ・2026-11-08 社長が1人ずつ選んだ好き・苦手・好きな色で確定)。monster は ALL_PLAYER_MONSTERS の id。デッキのカードの中身は今のカード部の表(CARD_AI_DECKS)が元で、ソランドとすり合わせる。検査 tools/assistant/assistant-masmon-plan-check.js",
+ "_": "助手のマスモン(一覧・編成・成長・染色)と好き/苦手(モンスター単位→その血統にも少し)・MFバトルカードのデッキ(マスモンとは別のカード)の案(2026-11-08 助手部キズナ・2026-11-08 社長が1人ずつ選んだ好き・苦手・好きな色で確定)。monster は ALL_PLAYER_MONSTERS の id。デッキのカードの中身は今のカード部の表(CARD_AI_DECKS)が元で、ソランドとすり合わせる。検査 tools/assistant/assistant-masmon-plan-check.js / extra: 2026-11-08 社長「空いてる枠にほかのますもんもふやす」で足した3体(今の3体 team はそのまま。控え)",
  "assistants": [
   {
    "id": "mua",
@@ -103,6 +103,52 @@
      "color": "pink",
      "why": "はっきりかわいい"
     }
+   ],
+   "extra": [
+    {
+     "monster": "Mocchi",
+     "nick": "もちまる",
+     "why": "剣士モッチーの仲間。まるくてかわいい",
+     "lv": 12,
+     "grow": "ライフ型",
+     "dye": {
+      "colors": [
+       "sky",
+       "pink",
+       "pink_light"
+      ]
+     }
+    },
+    {
+     "monster": "Melody",
+     "nick": "メロりん",
+     "why": "メルホイップの仲間。歌うと一緒に踊ってくれる",
+     "lv": 10,
+     "grow": "ガッツ型",
+     "dye": {
+      "colors": [
+       "pink",
+       "pink_light",
+       "sky",
+       "pink",
+       "pink_light"
+      ]
+     }
+    },
+    {
+     "monster": "Pixie",
+     "nick": "ぴくぴく",
+     "why": "キラキラしててかわいい",
+     "lv": 9,
+     "grow": "すばやさ型",
+     "dye": {
+      "colors": [
+       "pink_light",
+       "sky",
+       "pink"
+      ]
+     }
+    }
    ]
   },
   {
@@ -202,6 +248,52 @@
     {
      "color": "pink_light",
      "why": "やさしい"
+    }
+   ],
+   "extra": [
+    {
+     "monster": "Tiger",
+     "nick": "ガオ",
+     "why": "ちからが強くて頼もしい",
+     "lv": 14,
+     "grow": "攻撃型",
+     "dye": {
+      "colors": [
+       "red",
+       "pink_light",
+       "pink"
+      ]
+     }
+    },
+    {
+     "monster": "Pandora",
+     "nick": "ボム",
+     "why": "一撃が重くてかっこいい",
+     "lv": 11,
+     "grow": "攻撃型",
+     "dye": {
+      "colors": [
+       "red",
+       "pink_light",
+       "pink",
+       "red",
+       "pink_light"
+      ]
+     }
+    },
+    {
+     "monster": "Ghost",
+     "nick": "ゴーくん",
+     "why": "ふわふわなのに力持ち",
+     "lv": 9,
+     "grow": "攻撃型",
+     "dye": {
+      "colors": [
+       "pink",
+       "red",
+       "pink_light"
+      ]
+     }
     }
    ]
   },
@@ -311,6 +403,56 @@
      "color": "yellow",
      "why": "スポットライト"
     }
+   ],
+   "extra": [
+    {
+     "monster": "MelWhip",
+     "nick": "ホイップ",
+     "why": "ユグドラシル種だから大好き",
+     "lv": 12,
+     "grow": "ライフ型",
+     "dye": {
+      "colors": [
+       "pink",
+       "purple_light",
+       "yellow",
+       "magenta",
+       "pink"
+      ]
+     }
+    },
+    {
+     "monster": "Kuromy",
+     "nick": "クロちゃん",
+     "why": "ユグドラシル種。ステージ衣装みたい",
+     "lv": 10,
+     "grow": "ガッツ型",
+     "dye": {
+      "colors": [
+       "purple_light",
+       "yellow",
+       "magenta",
+       "pink",
+       "purple_light"
+      ]
+     }
+    },
+    {
+     "monster": "Illumine",
+     "nick": "ライトさん",
+     "why": "ドリーミィの仲間。スポットライトみたい",
+     "lv": 9,
+     "grow": "ガッツ型",
+     "dye": {
+      "colors": [
+       "yellow",
+       "magenta",
+       "pink",
+       "purple_light",
+       "yellow"
+      ]
+     }
+    }
    ]
   },
   {
@@ -406,6 +548,50 @@
      "color": "black",
      "why": "落ち着く"
     }
+   ],
+   "extra": [
+    {
+     "monster": "Plant",
+     "nick": "はっぱ",
+     "why": "ひなたの丘で一緒に昼寝",
+     "lv": 11,
+     "grow": "ライフ型",
+     "dye": {
+      "colors": [
+       "orange",
+       "black",
+       "green"
+      ]
+     }
+    },
+    {
+     "monster": "Mitarashi",
+     "nick": "おだんご",
+     "why": "のんびりしてて気が合う",
+     "lv": 10,
+     "grow": "防御型",
+     "dye": {
+      "colors": [
+       "black",
+       "green",
+       "orange"
+      ]
+     }
+    },
+    {
+     "monster": "Monol",
+     "nick": "くろいた",
+     "why": "黒くて落ち着く。どっしり",
+     "lv": 8,
+     "grow": "防御型",
+     "dye": {
+      "colors": [
+       "green",
+       "orange",
+       "black"
+      ]
+     }
+    }
    ]
   },
   {
@@ -492,6 +678,50 @@
     {
      "color": "black",
      "why": "締まって見える"
+    }
+   ],
+   "extra": [
+    {
+     "monster": "Ghost",
+     "nick": "ゴースト番長",
+     "why": "ゴースト種は強くてかっこいい",
+     "lv": 15,
+     "grow": "攻撃型",
+     "dye": {
+      "colors": [
+       "black",
+       "red",
+       "black"
+      ]
+     }
+    },
+    {
+     "monster": "Mocchi",
+     "nick": "モチ",
+     "why": "モッチー種は特別",
+     "lv": 12,
+     "grow": "攻撃型",
+     "dye": {
+      "colors": [
+       "red",
+       "black",
+       "red"
+      ]
+     }
+    },
+    {
+     "monster": "Eiki",
+     "nick": "センくん",
+     "why": "ザンの仲間。速くて強い",
+     "lv": 11,
+     "grow": "すばやさ型",
+     "dye": {
+      "colors": [
+       "black",
+       "red",
+       "black"
+      ]
+     }
     }
    ]
   },
@@ -597,6 +827,52 @@
      "color": "orange_light",
      "why": "目の色"
     }
+   ],
+   "extra": [
+    {
+     "monster": "Mia",
+     "nick": "ミア",
+     "why": "ピクシー種。歌声で本がはかどる",
+     "lv": 12,
+     "grow": "すばやさ型",
+     "dye": {
+      "colors": [
+       "white",
+       "orange_light",
+       "red_light"
+      ]
+     }
+    },
+    {
+     "monster": "Pandora",
+     "nick": "パンドラさん",
+     "why": "ピクシー種。夜のお話が似合う",
+     "lv": 10,
+     "grow": "ガッツ型",
+     "dye": {
+      "colors": [
+       "white",
+       "orange_light",
+       "red_light",
+       "white",
+       "orange_light"
+      ]
+     }
+    },
+    {
+     "monster": "Snegurochka",
+     "nick": "ゆきの",
+     "why": "静かで、夜の読書のおともに",
+     "lv": 8,
+     "grow": "ガッツ型",
+     "dye": {
+      "colors": [
+       "red_light",
+       "white",
+       "orange_light"
+      ]
+     }
+    }
    ]
   },
   {
@@ -696,6 +972,50 @@
     {
      "color": "white",
      "why": "表の紙"
+    }
+   ],
+   "extra": [
+    {
+     "monster": "Ham",
+     "nick": "ハムスケ",
+     "why": "大声で場をかき回す。計算に入れやすい",
+     "lv": 12,
+     "grow": "すばやさ型",
+     "dye": {
+      "colors": [
+       "sky",
+       "white",
+       "blue"
+      ]
+     }
+    },
+    {
+     "monster": "Golem",
+     "nick": "ガンコ",
+     "why": "数字が安定していて計算しやすい",
+     "lv": 11,
+     "grow": "防御型",
+     "dye": {
+      "colors": [
+       "white",
+       "blue",
+       "sky"
+      ]
+     }
+    },
+    {
+     "monster": "Eiki",
+     "nick": "サクラ",
+     "why": "手の内がはっきりしていて読みやすい",
+     "lv": 9,
+     "grow": "攻撃型",
+     "dye": {
+      "colors": [
+       "blue",
+       "sky",
+       "white"
+      ]
+     }
     }
    ]
   },
@@ -798,6 +1118,52 @@
     {
      "color": "gray",
      "why": "落ち着いた色"
+    }
+   ],
+   "extra": [
+    {
+     "monster": "Iblis",
+     "nick": "ルシ",
+     "why": "アーク種。みんなを守る",
+     "lv": 13,
+     "grow": "防御型",
+     "dye": {
+      "colors": [
+       "orange",
+       "gray",
+       "black"
+      ]
+     }
+    },
+    {
+     "monster": "Orihime",
+     "nick": "ほしの",
+     "why": "強いのについ目がいく",
+     "lv": 10,
+     "grow": "ガッツ型",
+     "dye": {
+      "colors": [
+       "orange",
+       "gray",
+       "black",
+       "orange",
+       "gray"
+      ]
+     }
+    },
+    {
+     "monster": "Yggdrasil",
+     "nick": "こかげ",
+     "why": "よぞらと同じ木の仲間",
+     "lv": 9,
+     "grow": "ライフ型",
+     "dye": {
+      "colors": [
+       "black",
+       "orange",
+       "gray"
+      ]
+     }
     }
    ]
   }

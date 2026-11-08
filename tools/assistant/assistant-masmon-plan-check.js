@@ -31,6 +31,7 @@ const IMGFILE = Object.fromEntries([...IMPL.keys()].map(id => { const m = allBlo
 // プレイヤーの染色の枠数(MASU_COLOR_REGION_HUES の配列の長さ。書いていない種類は全身1枠)と、色の名前
 const dyeSrc = fs.readFileSync(path.join(root, 'monster-hero/src/parts/15-dye-and-art.jsx'), 'utf8');
 // 表の式をそのまま読む(中で使っている BOXES などの定数は空の値にして数だけ取る)。後から足している種類は REGION_HUES の代入も読む
+const IDS_NAMES = new Set(['みゅあ', 'きき', 'ももすけ', 'ドラ', 'あつ', 'きゅうこ', 'ソラシド', 'えるびん']);
 const REGIONS = (() => {
   const a0 = dyeSrc.indexOf('const MASU_COLOR_REGION_HUES = {');
   const expr = dyeSrc.slice(a0 + 'const MASU_COLOR_REGION_HUES = '.length, dyeSrc.indexOf('\n};', a0) + 2);
@@ -38,6 +39,8 @@ const REGIONS = (() => {
   const obj = Function('scope', `with (scope) { return (${expr}); }`)(scope);
   const out = {}; for (const [k, v] of Object.entries(obj)) out[k] = Array.isArray(v) ? v.length : 0;
   for (const m of dyeSrc.matchAll(/MASU_COLOR_REGION_HUES\.(\w+)\s*=\s*MASU_COLOR_REGION_HUES\.(\w+)/g)) out[m[1]] = out[m[2]];
+  // あとから足した枠(MASU_COLOR_REGION_HUES.Pandora = [ {…}, … ];)も数える
+  for (const m of dyeSrc.matchAll(/MASU_COLOR_REGION_HUES\.(\w+)\s*=\s*\[([\s\S]*?)\n\];/g)) out[m[1]] = (m[2].match(/\{/g) || []).length;
   return out;
 })();
 const COLOR_IDS = new Set((() => { const a0 = dyeSrc.indexOf('const MASU_COLOR_TARGET = {'); const keys = [...dyeSrc.slice(a0, dyeSrc.indexOf('\n};', a0)).matchAll(/^  (\w+):/gm)].map(m => m[1]); return [...keys, ...keys.filter(k => !['black', 'white', 'gray'].includes(k)).map(k => `${k}_light`)]; })());
@@ -61,10 +64,14 @@ for (const { name, data } of sources) {
   const likeCount = {}, disCount = {};
   for (const a of data) {
     const team = a.team || [];
-    for (const m of team) if (!IMPL.has(m.monster)) bad.push(`${a.id}:${m.monster}${upBlock.includes(`${m.monster}:`) ? '(まだ案のモンスター)' : ''}`);
+    const extra = Array.isArray(a.extra) ? a.extra : []; // 控え(2026-11-08 社長「空いてる枠にほかのますもんもふやす」)。今の3体 team は変えずに足す
+    const all = [...team, ...extra];
+    for (const m of all) if (!IMPL.has(m.monster)) bad.push(`${a.id}:${m.monster}${upBlock.includes(`${m.monster}:`) ? '(まだ案のモンスター)' : ''}`);
     for (const l of [...(a.like || []), ...(a.dislike || [])]) if (!IMPL_LINEAGES.has(l.lineage)) bad.push(`${a.id}:血統 ${l.lineage}`);
     if (team.length !== 3 || team.filter(m => m.lead).length !== 1) teamNg.push(`${a.id}(${team.length}体・先頭${team.filter(m => m.lead).length})`);
-    for (const m of team) if (!m.nick || m.nick.length > 8 || /子/.test(m.nick) || team.filter(x => x.nick === m.nick).length > 1) teamNg.push(`${a.id}:${m.nick || '名前なし'}`);
+    if (extra.length > 3 || extra.some(m => m.lead)) teamNg.push(`${a.id}(控え${extra.length}体。3体まで・先頭にしない)`);
+    if (new Set(all.map(m => m.monster)).size !== all.length) teamNg.push(`${a.id}: 同じモンスターが2体`);
+    for (const m of all) if (!m.nick || m.nick.length > 8 || /子/.test(m.nick) || all.filter(x => x.nick === m.nick).length > 1 || IDS_NAMES.has(m.nick)) teamNg.push(`${a.id}:${m.nick || '名前なし'}`);
     // 好き・苦手: モンスター単位か血統ごと(社長「ユグドラシル種」「アーク種」など)。モンスターの好き・苦手はその血統にも少し広がる
     const likeMon = (a.likeMon || []).filter(x => x.monster).map(x => x.monster), disMon = (a.dislikeMon || []).filter(x => x.monster).map(x => x.monster);
     const likeLin = (a.likeMon || []).filter(x => x.lineage).map(x => x.lineage), disLin = (a.dislikeMon || []).filter(x => x.lineage).map(x => x.lineage);
@@ -74,14 +81,14 @@ for (const { name, data } of sources) {
     const nl = (a.likeMon || []).length, nd = (a.dislikeMon || []).length;
     if (nl < 1 || nl > 4 || nd > 4) likeNg.push(`${a.id}(好き${nl}・苦手${nd}。好きは1〜4・苦手は0〜4)`);
     for (const l of like) if (dis.has(l)) likeNg.push(`${a.id}:血統 ${l} が好きと苦手の両方に広がる`);
-    for (const m of team) { const ln = MAP.get(m.monster); if (disMon.includes(m.monster) || dis.has(ln)) likeNg.push(`${a.id}:${m.nick}(${m.monster})が苦手なモンスター・血統`); }
+    for (const m of all) { const ln = MAP.get(m.monster); if (disMon.includes(m.monster) || dis.has(ln)) likeNg.push(`${a.id}:${m.nick}(${m.monster})が苦手なモンスター・血統`); }
     const lead = (team.find(m => m.lead) || {}).monster;
     if (!likeMon.includes(lead) && !likeLin.includes(MAP.get(lead))) likeNg.push(`${a.id}:先頭のマスモンが好きなモンスター・血統に入っていない`);
     for (const c of (a.favColors || [])) if (!COLOR_IDS.has(c.color)) likeNg.push(`${a.id}:好きな色「${c.color}」はゲームの色の名前にない`);
     for (const x of (a.likeMon || [])) { const k = x.monster || `種:${x.lineage}`; (likeCount[k] = likeCount[k] || []).push(a.id); }
     for (const x of (a.dislikeMon || [])) { const k = x.monster || `種:${x.lineage}`; (disCount[k] = disCount[k] || []).push(a.id); }
     // 成長と染色
-    for (const m of team) {
+    for (const m of all) {
       if (!Number.isFinite(m.lv) || m.lv < 1 || m.lv > 100) dyeNg.push(`${a.id}:${m.nick} の Lv`);
       const want = REGIONS[m.monster] || 1;
       const cols = m.dye && Array.isArray(m.dye.colors) ? m.dye.colors : null;
@@ -94,7 +101,7 @@ for (const { name, data } of sources) {
     if (a.later && [...IMPL.values()].includes(a.later.monster)) laterNg.push(`${a.id}:${a.later.monster} はもう実装済み(一覧に入れ直す)`);
   }
   check(`${T}① ② まだ実装されていないモンスター・血統が混ざっていない`, !bad.length, bad.join(' / '));
-  check(`${T}③ 3体・先頭1体・ニックネーム`, !teamNg.length, teamNg.join(' / '));
+  check(`${T}③ 3体・先頭1体・控え3体まで・同じモンスターなし・ニックネーム(助手の名前と同じにしない)`, !teamNg.length, teamNg.join(' / '));
   check(`${T}④ 好き(1〜4)・苦手(0〜4)・広がる血統が重ならない・苦手なものは持たない・好きな色`, !likeNg.length, likeNg.join(' / '));
   check(`${T}⑥ 成長(Lv)と染色(プレイヤーと同じ枠数・ゲームの色)`, !dyeNg.length, dyeNg.join(' / '));
   // ⑦ 助手どうしで好き・苦手がかぶりすぎない(同じモンスター・血統を好き/苦手に入れる助手は2人まで。社長「かぶりすぎない」)

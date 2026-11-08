@@ -133,7 +133,7 @@ const layoutProblems = (page) => page.evaluate(() => {
       }
       for (const WHO of WHOS) {
       const T = `${T0}${WHO} `;
-      const want = await page.evaluate((id) => { const p = ASSISTANT_MASMON_PLAN.find(a => a.id === id); return { deck: p.deck.name, colors: p.favColors.length, dis: p.dislikeMon.length }; }, WHO);
+      const want = await page.evaluate((id) => { const p = ASSISTANT_MASMON_PLAN.find(a => a.id === id); return { deck: p.deck.name, colors: p.favColors.length, dis: p.dislikeMon.length, all: p.team.length + (p.extra || []).length, bench: (p.extra || []).length }; }, WHO);
       await page.locator(`[data-assistant-life-room="${WHO}"]`).first().click({ timeout: 8000 });
         await page.locator('[data-assistant-life-room-sheet]').waitFor({ timeout: 5000 });
         const row = page.locator('[data-assistant-life-room-masmon]');
@@ -148,10 +148,22 @@ const layoutProblems = (page) => page.evaluate(() => {
           check(`${T}タブ「${tab}」が開く`, (await page.locator(`[data-assistant-masmon-tab="${tab}"]`).count()) === 1);
           if (tab === 'mons') {
             const n = await page.locator('[data-assistant-masmon-row]').count();
-            const leads = await page.locator('[data-assistant-masmon-row] .mhm-lead').count();
-            check(`${T}マスモンは3体・先頭は1体`, n === 3 && leads === 1, `${n}体・先頭${leads}`);
+            const leads = await page.locator('[data-assistant-masmon-row] .mhm-lead:not(.mhm-bench)').count();
+            check(`${T}マスモンは編成3体+控え${want.bench}体・先頭は1体`, n === want.all && leads === 1, `${n}体・先頭${leads}`);
+            // 押すと詳細画面(見るだけ)
+            await page.locator('[data-assistant-masmon-row]').first().click();
+            await page.locator('[data-assistant-masmon-detail]').waitFor({ timeout: 3000 }).catch(() => {});
+            await page.waitForTimeout(1200);
+            const dt = await page.evaluate(() => { const d = document.querySelector('[data-assistant-masmon-detail]'); if (!d) return null; const ng = []; for (const t of d.querySelectorAll('.truncate')) if (t.scrollWidth > t.clientWidth + 1) ng.push(t.textContent.slice(0, 16)); const b = d.querySelector('.mhm-body'); if (b && b.scrollWidth > b.clientWidth + 1) ng.push('横にはみ出す'); return { ng, parts: ['stats', 'skills', 'dye', 'talk'].filter(k => d.querySelector(`[data-assistant-masmon-detail-${k}]`)).length }; });
+            check(`${T}押すと詳細画面(能力・技・染めた色・ひとこと)・切れない`, dt && dt.parts === 4 && !dt.ng.length, dt ? `${dt.parts}つ ${dt.ng.join(' / ')}` : '開かない');
+            if (SHOTS) await page.screenshot({ path: path.join(shotDir, `masmon-6-detail-${v.id}${WHO !== 'kiki' ? '-' + WHO : ''}.jpg`), type: 'jpeg', quality: 80 });
+            await page.locator('[data-assistant-masmon-detail-close]').click({ timeout: 3000 }).catch(() => {});
           }
-          if (tab === 'team') check(`${T}編成に3体`, (await page.locator('[data-assistant-masmon-team]').count()) === 3);
+          if (tab === 'team') check(`${T}編成に3体・控え${want.bench}体・編成の型`, (await page.locator('[data-assistant-masmon-team]').count()) === 3 && (await page.locator('[data-assistant-masmon-bench-mon]').count()) === want.bench && (await page.locator('[data-assistant-masmon-team-info]').count()) === 1);
+        if (tab !== 'deck') { // 空いた枠: タブの中身が、見える高さの 75% 以上を使う(社長「ページの空き枠をもっと活用して」)。デッキはカード部の部品が入ってから
+          const fill = await page.evaluate(() => { const b = document.querySelector('.mhm-body'); if (!b) return 0; const br = b.getBoundingClientRect(); let bottom = br.top; for (const el of b.querySelectorAll('*')) { const r = el.getBoundingClientRect(); if (r.height && r.bottom > bottom) bottom = r.bottom; } return Math.min(1, (bottom - br.top + b.scrollTop) / b.clientHeight); });
+          check(`${T}「${tab}」: 中身が見える高さの75%以上を使う(空き枠が少ない)`, fill >= 0.75, `${Math.round(fill * 100)}%`);
+        }
           if (tab === 'deck') check(`${T}デッキの型の名前「${want.deck}」`, (await page.locator('[data-assistant-masmon-deck]').innerText().catch(() => '')).includes(want.deck));
           if (tab === 'taste') check(`${T}好き・苦手・好きな色が出る`, (await page.locator('[data-assistant-masmon-taste^="like:"]').count()) >= 1 && ((await page.locator('[data-assistant-masmon-taste^="dislike:"]').count()) >= 1) === (want.dis > 0) && (await page.locator('[data-assistant-masmon-color]').count()) === want.colors);
           const ng = await layoutProblems(page);

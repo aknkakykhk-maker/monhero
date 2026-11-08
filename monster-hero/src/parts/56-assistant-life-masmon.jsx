@@ -11,18 +11,23 @@
 
 // <<< ASSISTANT_MASMON_PLAN(tools/assistant/assistant-masmon-import.js が masmon-plan.json から書く。手で直さない)
 const ASSISTANT_MASMON_PLAN = [
-  {"id":"mua","team":[{"monster":"KenshiMocchi","nick":"もち隊長","lead":true,"why":"好き。剣を持ったモッチーがかっこかわいい","lv":24,"grow":"すばやさ型(ノリで決めた)","dye":{"colors":["pink_light","sky","pink","pink_light","sky"]}},{"monster":"MelWhip","nick":"ほいっぷちゃん","lead":false,"why":"好き。甘くてかわいい","lv":16,"grow":"ライフ型","dye":{"colors":["sky","pink","pink_light","sky","pink"]}},{"monster":"Iblis","nick":"イブちゃん","lead":false,"why":"好き。ちょっと悪そうなのがいい","lv":14,"grow":"攻撃型","dye":{"colors":["pink","pink_light","sky"]}}],"deck":{"name":"キラキラ速攻","plan":"軽いカードを早く並べて、先に押し切る。ノリで決めて、勝てたらはしゃぐ"},"likeMon":[{"monster":"KenshiMocchi","why":"剣を持ったモッチーがかっこかわいい"},{"monster":"MelWhip","why":"甘くてかわいい"},{"monster":"Iblis","why":"ちょっと悪そうなのがいい"}],"dislikeMon":[{"monster":"Ghost","why":"こわいのはまぢ無理"},{"monster":"Monol","why":"かたくて地味"},{"monster":"Golem","why":"ごつくて、ちょっとこわい"}],"favColors":[{"color":"pink_light","why":"ふんわりかわいい"},{"color":"sky","why":"さわやか"},{"color":"pink","why":"はっきりかわいい"}]},
-  {"id":"kiki","team":[{"monster":"Golem","nick":"ごろべえ","lead":true,"why":"好き。ちからに振るのが楽しい","lv":26,"grow":"攻撃型(ちからに振る)","dye":{"colors":["pink","red","pink_light"]}},{"monster":"Eiki","nick":"エイキさん","lead":false,"why":"好き。きりっとして強い","lv":17,"grow":"攻撃型","dye":{"colors":["red","pink_light","pink"]}},{"monster":"Zan","nick":"ざんざん","lead":false,"why":"好き。速くて鋭い","lv":15,"grow":"すばやさ型","dye":{"colors":["pink_light","pink","red"]}}],"deck":{"name":"ずっしり火力","plan":"守って耐えて、ちからの高いモンスターで一撃。数字よりも火力を信じる"},"likeMon":[{"monster":"Golem","why":"ちからに振るのが楽しい"},{"monster":"Eiki","why":"きりっとして強い"},{"monster":"Zan","why":"速くて鋭い"}],"dislikeMon":[{"monster":"Oboro","why":"力が低くて物足りない"},{"monster":"Monol","why":"力が低くて物足りない"},{"monster":"Plant","why":"力が低くて物足りない"}],"favColors":[{"color":"pink","why":"いつものリボンの色"},{"color":"red","why":"火力の色"},{"color":"pink_light","why":"やさしい"}]},
-  {"id":"momosuke","team":[{"monster":"Melody","nick":"メロちゃん","lead":true,"why":"好き。一緒に歌える","lv":22,"grow":"ガッツ型(ステージ映え)","dye":{"colors":["magenta","pink","purple_light","yellow","magenta"]}},{"monster":"Yggdrasil","nick":"ユグっち","lead":false,"why":"好きなユグドラシル種","lv":15,"grow":"ライフ型","dye":{"colors":["pink","purple_light","yellow"]}},{"monster":"Dreamy","nick":"ゆめっち","lead":false,"why":"好き。ゆめかわ","lv":13,"grow":"すばやさ型","dye":{"colors":["purple_light","yellow","magenta","pink","purple_light"]}}],"deck":{"name":"ステージ・オン","plan":"派手なカードで盛り上げる。勝っても負けても見せ場を作る"},"likeMon":[{"monster":"Melody","why":"一緒に歌える"},{"lineage":"yggdrasil","why":"ユグドラシル種はぜんぶ好き"},{"monster":"Dreamy","why":"ゆめかわ"}],"dislikeMon":[{"monster":"Golem","why":"ゴリゴリで一緒に踊れない"},{"monster":"Tiger","why":"ゴリゴリでこわい"},{"monster":"Iblis","why":"ゴリゴリでこわい"}],"favColors":[{"color":"magenta","why":"ステージの色"},{"color":"pink","why":"かわいい担当"},{"color":"purple_light","why":"ゆめかわ"},{"color":"yellow","why":"スポットライト"}]},
-  {"id":"dra","team":[{"monster":"Suezo","nick":"メダマ焼き","lead":true,"why":"好き。ギャグが通じる","lv":18,"grow":"ライフ型(のんびり)","dye":{"colors":["green","orange","black"]}},{"monster":"Golem","nick":"ゴロ助","lead":false,"why":"好き。何でも強く育てられる","lv":20,"grow":"攻撃型","dye":{"colors":["orange","black","green"]}},{"monster":"Oboro","nick":"おぼろん","lead":false,"why":"一緒に昼寝","lv":14,"grow":"防御型","dye":{"colors":["black","green","orange"]}}],"deck":{"name":"のんびり長期戦","plan":"あわてず守って、長い試合で少しずつ削る。説明しながら打つ"},"likeMon":[{"monster":"Suezo","why":"ギャグが通じる"},{"monster":"Golem","why":"どっしりして強い"}],"dislikeMon":[{"monster":"Ark","why":"まぶしくて昼寝できない"},{"lineage":"ark","why":"アーク種はぜんぶ苦手"}],"favColors":[{"color":"green","why":"ひなたの丘の草"},{"color":"orange","why":"茶色っぽくて落ち着く"},{"color":"black","why":"落ち着く"}]},
-  {"id":"atsu","team":[{"monster":"KenshiMocchi","nick":"師匠","lead":true,"why":"好き。モッチー種は特別","lv":27,"grow":"攻撃型(朝の育成)","dye":{"colors":["red","black","red","black","red"]}},{"monster":"Zan","nick":"ザンくん","lead":false,"why":"好き。速くて強い","lv":19,"grow":"すばやさ型","dye":{"colors":["black","red","black"]}},{"monster":"Spooky","nick":"スプ","lead":false,"why":"好きなゴースト種","lv":16,"grow":"攻撃型","dye":{"colors":["red","black","red","black","red"]}}],"deck":{"name":"真っ向勝負","plan":"強いモンスターで正面から。小細工はしない。負けたらすぐ再戦"},"likeMon":[{"monster":"KenshiMocchi","why":"モッチー種は特別"},{"monster":"Zan","why":"速くて強い"},{"lineage":"ghost","why":"ゴースト種は強くてかっこいい"}],"dislikeMon":[],"favColors":[{"color":"red","why":"勝負の色"},{"color":"black","why":"締まって見える"}]},
-  {"id":"kyuko","team":[{"monster":"Illumine","nick":"ともしび","lead":true,"why":"好き。灯りが夜の読書に合う","lv":21,"grow":"ガッツ型(夜ふかしで育成)","dye":{"colors":["red_light","white","orange_light","red_light","white"]}},{"monster":"Dreamy","nick":"ゆめの","lead":false,"why":"好き。夢の話ができる","lv":15,"grow":"ガッツ型","dye":{"colors":["white","orange_light","red_light","white","orange_light"]}},{"monster":"Pixie","nick":"ぴぃ","lead":false,"why":"好きなピクシー種","lv":14,"grow":"すばやさ型","dye":{"colors":["orange_light","red_light","white"]}}],"deck":{"name":"夜の読み筋","plan":"相手の手を読んで、最後にひっくり返す。数字と直感の両方で決める"},"likeMon":[{"monster":"Illumine","why":"灯りが夜の読書に合う"},{"monster":"Dreamy","why":"夢の話ができる"},{"lineage":"pixie","why":"ピクシー種はかわいい"}],"dislikeMon":[{"monster":"Suezo","why":"じっと見られると落ち着かない"},{"monster":"Ham","why":"元気すぎてつかれる"},{"monster":"Eiki","why":"きびきびしすぎて本が読めない"}],"favColors":[{"color":"red_light","why":"髪の色"},{"color":"white","why":"服の色"},{"color":"orange_light","why":"目の色"}]},
-  {"id":"sorashido","team":[{"monster":"Kyubi","nick":"コン太","lead":true,"why":"推し","lv":25,"grow":"すばやさ型(記録どおり)","dye":{"colors":["blue","sky","white","blue","sky"]}},{"monster":"Orihime","nick":"ヒメ","lead":false,"why":"もう1人の推し","lv":18,"grow":"ガッツ型","dye":{"colors":["sky","white","blue","sky","white"]}},{"monster":"Monol","nick":"ソロバン","lead":false,"why":"計算と表づくり","lv":15,"grow":"防御型","dye":{"colors":["white","blue","sky"]}}],"deck":{"name":"計算ずく","plan":"記録から勝ち筋を決めて、その通りに打つ。表は毎晩書き直す"},"likeMon":[{"monster":"Kyubi","why":"推し"},{"monster":"Orihime","why":"もう1人の推し"}],"dislikeMon":[{"monster":"Spooky","why":"動きが読めない"},{"monster":"Mitarashi","why":"のんびりで試合が長い"},{"monster":"Undine","why":"気まぐれで計算が合わない"}],"favColors":[{"color":"blue","why":"着物の色"},{"color":"sky","why":"沖縄の海"},{"color":"white","why":"表の紙"}]},
-  {"id":"erubin","team":[{"monster":"Ark","nick":"ノア","lead":true,"why":"好きなモンスター","lv":23,"grow":"防御型(みんなを守る)","dye":{"colors":["black","orange","gray"]}},{"monster":"Kuromy","nick":"よぞら","lead":false,"why":"強いのについ目がいく","lv":20,"grow":"攻撃型","dye":{"colors":["orange","gray","black","orange","gray"]}},{"monster":"Mia","nick":"つばさ","lead":false,"why":"強いのについ目がいく","lv":17,"grow":"すばやさ型","dye":{"colors":["gray","black","orange"]}}],"deck":{"name":"みんなで守る","plan":"仲間を守るカードを多めに。ひとりも倒れさせないで勝つ"},"likeMon":[{"monster":"Ark","why":"好きなモンスター"},{"monster":"Kuromy","why":"強いのについ目がいく"},{"monster":"Mia","why":"強いのについ目がいく"}],"dislikeMon":[{"monster":"Zan","why":"せっかちで、ついていけない"},{"monster":"Yaobikuni","why":"ひんやりして少しこわい"},{"monster":"Ham","why":"にぎやかで、散歩が落ち着かない"}],"favColors":[{"color":"black","why":"いつもの服"},{"color":"orange","why":"茶色っぽくて落ち着く"},{"color":"gray","why":"落ち着いた色"}]},
+  {"id":"mua","team":[{"monster":"KenshiMocchi","nick":"もち隊長","lead":true,"why":"好き。剣を持ったモッチーがかっこかわいい","lv":24,"grow":"すばやさ型(ノリで決めた)","dye":{"colors":["pink_light","sky","pink","pink_light","sky"]}},{"monster":"MelWhip","nick":"ほいっぷちゃん","lead":false,"why":"好き。甘くてかわいい","lv":16,"grow":"ライフ型","dye":{"colors":["sky","pink","pink_light","sky","pink"]}},{"monster":"Iblis","nick":"イブちゃん","lead":false,"why":"好き。ちょっと悪そうなのがいい","lv":14,"grow":"攻撃型","dye":{"colors":["pink","pink_light","sky"]}}],"extra":[{"monster":"Mocchi","nick":"もちまる","why":"剣士モッチーの仲間。まるくてかわいい","lv":12,"grow":"ライフ型","dye":{"colors":["sky","pink","pink_light"]}},{"monster":"Melody","nick":"メロりん","why":"メルホイップの仲間。歌うと一緒に踊ってくれる","lv":10,"grow":"ガッツ型","dye":{"colors":["pink","pink_light","sky","pink","pink_light"]}},{"monster":"Pixie","nick":"ぴくぴく","why":"キラキラしててかわいい","lv":9,"grow":"すばやさ型","dye":{"colors":["pink_light","sky","pink"]}}],"deck":{"name":"キラキラ速攻","plan":"軽いカードを早く並べて、先に押し切る。ノリで決めて、勝てたらはしゃぐ"},"likeMon":[{"monster":"KenshiMocchi","why":"剣を持ったモッチーがかっこかわいい"},{"monster":"MelWhip","why":"甘くてかわいい"},{"monster":"Iblis","why":"ちょっと悪そうなのがいい"}],"dislikeMon":[{"monster":"Ghost","why":"こわいのはまぢ無理"},{"monster":"Monol","why":"かたくて地味"},{"monster":"Golem","why":"ごつくて、ちょっとこわい"}],"favColors":[{"color":"pink_light","why":"ふんわりかわいい"},{"color":"sky","why":"さわやか"},{"color":"pink","why":"はっきりかわいい"}]},
+  {"id":"kiki","team":[{"monster":"Golem","nick":"ごろべえ","lead":true,"why":"好き。ちからに振るのが楽しい","lv":26,"grow":"攻撃型(ちからに振る)","dye":{"colors":["pink","red","pink_light"]}},{"monster":"Eiki","nick":"エイキさん","lead":false,"why":"好き。きりっとして強い","lv":17,"grow":"攻撃型","dye":{"colors":["red","pink_light","pink"]}},{"monster":"Zan","nick":"ざんざん","lead":false,"why":"好き。速くて鋭い","lv":15,"grow":"すばやさ型","dye":{"colors":["pink_light","pink","red"]}}],"extra":[{"monster":"Tiger","nick":"ガオ","why":"ちからが強くて頼もしい","lv":14,"grow":"攻撃型","dye":{"colors":["red","pink_light","pink"]}},{"monster":"Pandora","nick":"ボム","why":"一撃が重くてかっこいい","lv":11,"grow":"攻撃型","dye":{"colors":["red","pink_light","pink","red","pink_light"]}},{"monster":"Ghost","nick":"ゴーくん","why":"ふわふわなのに力持ち","lv":9,"grow":"攻撃型","dye":{"colors":["pink","red","pink_light"]}}],"deck":{"name":"ずっしり火力","plan":"守って耐えて、ちからの高いモンスターで一撃。数字よりも火力を信じる"},"likeMon":[{"monster":"Golem","why":"ちからに振るのが楽しい"},{"monster":"Eiki","why":"きりっとして強い"},{"monster":"Zan","why":"速くて鋭い"}],"dislikeMon":[{"monster":"Oboro","why":"力が低くて物足りない"},{"monster":"Monol","why":"力が低くて物足りない"},{"monster":"Plant","why":"力が低くて物足りない"}],"favColors":[{"color":"pink","why":"いつものリボンの色"},{"color":"red","why":"火力の色"},{"color":"pink_light","why":"やさしい"}]},
+  {"id":"momosuke","team":[{"monster":"Melody","nick":"メロちゃん","lead":true,"why":"好き。一緒に歌える","lv":22,"grow":"ガッツ型(ステージ映え)","dye":{"colors":["magenta","pink","purple_light","yellow","magenta"]}},{"monster":"Yggdrasil","nick":"ユグっち","lead":false,"why":"好きなユグドラシル種","lv":15,"grow":"ライフ型","dye":{"colors":["pink","purple_light","yellow"]}},{"monster":"Dreamy","nick":"ゆめっち","lead":false,"why":"好き。ゆめかわ","lv":13,"grow":"すばやさ型","dye":{"colors":["purple_light","yellow","magenta","pink","purple_light"]}}],"extra":[{"monster":"MelWhip","nick":"ホイップ","why":"ユグドラシル種だから大好き","lv":12,"grow":"ライフ型","dye":{"colors":["pink","purple_light","yellow","magenta","pink"]}},{"monster":"Kuromy","nick":"クロちゃん","why":"ユグドラシル種。ステージ衣装みたい","lv":10,"grow":"ガッツ型","dye":{"colors":["purple_light","yellow","magenta","pink","purple_light"]}},{"monster":"Illumine","nick":"ライトさん","why":"ドリーミィの仲間。スポットライトみたい","lv":9,"grow":"ガッツ型","dye":{"colors":["yellow","magenta","pink","purple_light","yellow"]}}],"deck":{"name":"ステージ・オン","plan":"派手なカードで盛り上げる。勝っても負けても見せ場を作る"},"likeMon":[{"monster":"Melody","why":"一緒に歌える"},{"lineage":"yggdrasil","why":"ユグドラシル種はぜんぶ好き"},{"monster":"Dreamy","why":"ゆめかわ"}],"dislikeMon":[{"monster":"Golem","why":"ゴリゴリで一緒に踊れない"},{"monster":"Tiger","why":"ゴリゴリでこわい"},{"monster":"Iblis","why":"ゴリゴリでこわい"}],"favColors":[{"color":"magenta","why":"ステージの色"},{"color":"pink","why":"かわいい担当"},{"color":"purple_light","why":"ゆめかわ"},{"color":"yellow","why":"スポットライト"}]},
+  {"id":"dra","team":[{"monster":"Suezo","nick":"メダマ焼き","lead":true,"why":"好き。ギャグが通じる","lv":18,"grow":"ライフ型(のんびり)","dye":{"colors":["green","orange","black"]}},{"monster":"Golem","nick":"ゴロ助","lead":false,"why":"好き。何でも強く育てられる","lv":20,"grow":"攻撃型","dye":{"colors":["orange","black","green"]}},{"monster":"Oboro","nick":"おぼろん","lead":false,"why":"一緒に昼寝","lv":14,"grow":"防御型","dye":{"colors":["black","green","orange"]}}],"extra":[{"monster":"Plant","nick":"はっぱ","why":"ひなたの丘で一緒に昼寝","lv":11,"grow":"ライフ型","dye":{"colors":["orange","black","green"]}},{"monster":"Mitarashi","nick":"おだんご","why":"のんびりしてて気が合う","lv":10,"grow":"防御型","dye":{"colors":["black","green","orange"]}},{"monster":"Monol","nick":"くろいた","why":"黒くて落ち着く。どっしり","lv":8,"grow":"防御型","dye":{"colors":["green","orange","black"]}}],"deck":{"name":"のんびり長期戦","plan":"あわてず守って、長い試合で少しずつ削る。説明しながら打つ"},"likeMon":[{"monster":"Suezo","why":"ギャグが通じる"},{"monster":"Golem","why":"どっしりして強い"}],"dislikeMon":[{"monster":"Ark","why":"まぶしくて昼寝できない"},{"lineage":"ark","why":"アーク種はぜんぶ苦手"}],"favColors":[{"color":"green","why":"ひなたの丘の草"},{"color":"orange","why":"茶色っぽくて落ち着く"},{"color":"black","why":"落ち着く"}]},
+  {"id":"atsu","team":[{"monster":"KenshiMocchi","nick":"師匠","lead":true,"why":"好き。モッチー種は特別","lv":27,"grow":"攻撃型(朝の育成)","dye":{"colors":["red","black","red","black","red"]}},{"monster":"Zan","nick":"ザンくん","lead":false,"why":"好き。速くて強い","lv":19,"grow":"すばやさ型","dye":{"colors":["black","red","black"]}},{"monster":"Spooky","nick":"スプ","lead":false,"why":"好きなゴースト種","lv":16,"grow":"攻撃型","dye":{"colors":["red","black","red","black","red"]}}],"extra":[{"monster":"Ghost","nick":"ゴースト番長","why":"ゴースト種は強くてかっこいい","lv":15,"grow":"攻撃型","dye":{"colors":["black","red","black"]}},{"monster":"Mocchi","nick":"モチ","why":"モッチー種は特別","lv":12,"grow":"攻撃型","dye":{"colors":["red","black","red"]}},{"monster":"Eiki","nick":"センくん","why":"ザンの仲間。速くて強い","lv":11,"grow":"すばやさ型","dye":{"colors":["black","red","black"]}}],"deck":{"name":"真っ向勝負","plan":"強いモンスターで正面から。小細工はしない。負けたらすぐ再戦"},"likeMon":[{"monster":"KenshiMocchi","why":"モッチー種は特別"},{"monster":"Zan","why":"速くて強い"},{"lineage":"ghost","why":"ゴースト種は強くてかっこいい"}],"dislikeMon":[],"favColors":[{"color":"red","why":"勝負の色"},{"color":"black","why":"締まって見える"}]},
+  {"id":"kyuko","team":[{"monster":"Illumine","nick":"ともしび","lead":true,"why":"好き。灯りが夜の読書に合う","lv":21,"grow":"ガッツ型(夜ふかしで育成)","dye":{"colors":["red_light","white","orange_light","red_light","white"]}},{"monster":"Dreamy","nick":"ゆめの","lead":false,"why":"好き。夢の話ができる","lv":15,"grow":"ガッツ型","dye":{"colors":["white","orange_light","red_light","white","orange_light"]}},{"monster":"Pixie","nick":"ぴぃ","lead":false,"why":"好きなピクシー種","lv":14,"grow":"すばやさ型","dye":{"colors":["orange_light","red_light","white"]}}],"extra":[{"monster":"Mia","nick":"ミア","why":"ピクシー種。歌声で本がはかどる","lv":12,"grow":"すばやさ型","dye":{"colors":["white","orange_light","red_light"]}},{"monster":"Pandora","nick":"パンドラさん","why":"ピクシー種。夜のお話が似合う","lv":10,"grow":"ガッツ型","dye":{"colors":["white","orange_light","red_light","white","orange_light"]}},{"monster":"Snegurochka","nick":"ゆきの","why":"静かで、夜の読書のおともに","lv":8,"grow":"ガッツ型","dye":{"colors":["red_light","white","orange_light"]}}],"deck":{"name":"夜の読み筋","plan":"相手の手を読んで、最後にひっくり返す。数字と直感の両方で決める"},"likeMon":[{"monster":"Illumine","why":"灯りが夜の読書に合う"},{"monster":"Dreamy","why":"夢の話ができる"},{"lineage":"pixie","why":"ピクシー種はかわいい"}],"dislikeMon":[{"monster":"Suezo","why":"じっと見られると落ち着かない"},{"monster":"Ham","why":"元気すぎてつかれる"},{"monster":"Eiki","why":"きびきびしすぎて本が読めない"}],"favColors":[{"color":"red_light","why":"髪の色"},{"color":"white","why":"服の色"},{"color":"orange_light","why":"目の色"}]},
+  {"id":"sorashido","team":[{"monster":"Kyubi","nick":"コン太","lead":true,"why":"推し","lv":25,"grow":"すばやさ型(記録どおり)","dye":{"colors":["blue","sky","white","blue","sky"]}},{"monster":"Orihime","nick":"ヒメ","lead":false,"why":"もう1人の推し","lv":18,"grow":"ガッツ型","dye":{"colors":["sky","white","blue","sky","white"]}},{"monster":"Monol","nick":"ソロバン","lead":false,"why":"計算と表づくり","lv":15,"grow":"防御型","dye":{"colors":["white","blue","sky"]}}],"extra":[{"monster":"Ham","nick":"ハムスケ","why":"大声で場をかき回す。計算に入れやすい","lv":12,"grow":"すばやさ型","dye":{"colors":["sky","white","blue"]}},{"monster":"Golem","nick":"ガンコ","why":"数字が安定していて計算しやすい","lv":11,"grow":"防御型","dye":{"colors":["white","blue","sky"]}},{"monster":"Eiki","nick":"サクラ","why":"手の内がはっきりしていて読みやすい","lv":9,"grow":"攻撃型","dye":{"colors":["blue","sky","white"]}}],"deck":{"name":"計算ずく","plan":"記録から勝ち筋を決めて、その通りに打つ。表は毎晩書き直す"},"likeMon":[{"monster":"Kyubi","why":"推し"},{"monster":"Orihime","why":"もう1人の推し"}],"dislikeMon":[{"monster":"Spooky","why":"動きが読めない"},{"monster":"Mitarashi","why":"のんびりで試合が長い"},{"monster":"Undine","why":"気まぐれで計算が合わない"}],"favColors":[{"color":"blue","why":"着物の色"},{"color":"sky","why":"沖縄の海"},{"color":"white","why":"表の紙"}]},
+  {"id":"erubin","team":[{"monster":"Ark","nick":"ノア","lead":true,"why":"好きなモンスター","lv":23,"grow":"防御型(みんなを守る)","dye":{"colors":["black","orange","gray"]}},{"monster":"Kuromy","nick":"よぞら","lead":false,"why":"強いのについ目がいく","lv":20,"grow":"攻撃型","dye":{"colors":["orange","gray","black","orange","gray"]}},{"monster":"Mia","nick":"つばさ","lead":false,"why":"強いのについ目がいく","lv":17,"grow":"すばやさ型","dye":{"colors":["gray","black","orange"]}}],"extra":[{"monster":"Iblis","nick":"ルシ","why":"アーク種。みんなを守る","lv":13,"grow":"防御型","dye":{"colors":["orange","gray","black"]}},{"monster":"Orihime","nick":"ほしの","why":"強いのについ目がいく","lv":10,"grow":"ガッツ型","dye":{"colors":["orange","gray","black","orange","gray"]}},{"monster":"Yggdrasil","nick":"こかげ","why":"よぞらと同じ木の仲間","lv":9,"grow":"ライフ型","dye":{"colors":["black","orange","gray"]}}],"deck":{"name":"みんなで守る","plan":"仲間を守るカードを多めに。ひとりも倒れさせないで勝つ"},"likeMon":[{"monster":"Ark","why":"好きなモンスター"},{"monster":"Kuromy","why":"強いのについ目がいく"},{"monster":"Mia","why":"強いのについ目がいく"}],"dislikeMon":[{"monster":"Zan","why":"せっかちで、ついていけない"},{"monster":"Yaobikuni","why":"ひんやりして少しこわい"},{"monster":"Ham","why":"にぎやかで、散歩が落ち着かない"}],"favColors":[{"color":"black","why":"いつもの服"},{"color":"orange","why":"茶色っぽくて落ち着く"},{"color":"gray","why":"落ち着いた色"}]},
 ];
 // >>> ASSISTANT_MASMON_PLAN
 
 const assistantMasmonPlanOf = (id) => ASSISTANT_MASMON_PLAN.find(a => a && a.id === id) || null;
+const assistantMasmonMonOk = (t) => !!(t && typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[t.monster]);
+// 編成の3体(先頭が先)と、控え(2026-11-08 社長「空いてる枠にほかのますもんもふやす」で足した extra)
+const assistantMasmonTeam = (p) => (p ? [...p.team].sort((a, b) => (b.lead ? 1 : 0) - (a.lead ? 1 : 0)).filter(assistantMasmonMonOk) : []);
+const assistantMasmonBench = (p) => (p && Array.isArray(p.extra) ? p.extra.filter(assistantMasmonMonOk).map(t => ({ ...t, bench: true })) : []);
+const assistantMasmonAll = (p) => [...assistantMasmonTeam(p), ...assistantMasmonBench(p)];
 const assistantMasmonMon = (mid) => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[mid]) || null;
 const assistantMasmonLineage = (mid) => { try { const l = typeof monsterLineageOf === 'function' ? monsterLineageOf(mid) : null; const m = l && l.main; return (m && typeof m === 'object' ? m.id : m) || null; } catch (_) { return null; } };
 const assistantMasmonLineageName = (lin) => (typeof MONSTER_LINEAGES !== 'undefined' && MONSTER_LINEAGES[lin] ? MONSTER_LINEAGES[lin].name : '');
@@ -119,15 +124,15 @@ function AssistantMasmonDots({ t }) {
     </span>);
 }
 
-function AssistantMasmonRow({ t, land = false }) {
+function AssistantMasmonRow({ t, land = false, onOpen = null }) {
   const m = assistantMasmonMon(t.monster);
   const st = assistantMasmonStats(t);
   if (!m || !st) return null;
   return (
-    <div className="mhm-card flex gap-2.5" data-assistant-masmon-row={t.monster}>
+    <button type="button" className="mhm-card flex w-full gap-2.5 text-left" data-assistant-masmon-row={t.monster} onClick={() => onOpen && onOpen(t)}>
       <AssistantMasmonPic t={t} size={78}/>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[15px] font-black text-white">{t.nick}{t.lead && <em className="mhm-lead ml-1.5">先頭</em>}</p>
+        <p className="truncate text-[15px] font-black text-white">{t.nick}{t.lead && <em className="mhm-lead ml-1.5">先頭</em>}{t.bench && <em className="mhm-lead mhm-bench ml-1.5">控え</em>}</p>
         {land
           ? <><p className="truncate text-[10.5px] font-bold text-slate-300">{m.name} ・ Lv.{t.lv}</p><p className="text-[10px]"><AssistantMasmonDots t={t}/></p></>
           : <p className="truncate text-[10.5px] font-bold text-slate-300">{m.name} ・ Lv.{t.lv} <AssistantMasmonDots t={t}/></p>}
@@ -137,34 +142,69 @@ function AssistantMasmonRow({ t, land = false }) {
             <div key={k} className="flex items-center gap-1.5 text-[9.5px] font-bold text-slate-300"><span className="w-[34px] shrink-0">{label}</span><span className="mhm-bar"><i style={{ width: `${Math.round(st[k] * 100)}%` }}/></span></div>))}
         </div>
       </div>
-    </div>);
+    </button>);
 }
 
 function AssistantMasmonSheet({ id, land = false, onClose }) {
   const [tab, setTab] = React.useState('mons');
+  const [detail, setDetail] = React.useState(null); // 押したマスモン(詳細画面)
   const who = typeof assistantById === 'function' ? assistantById(id) : null;
   const p = assistantMasmonPlanOf(id);
   if (!who || !p) return null;
-  const team = [...p.team].sort((a, b) => (b.lead ? 1 : 0) - (a.lead ? 1 : 0)).filter(t => assistantMasmonMon(t.monster));
+  const team = assistantMasmonTeam(p), bench = assistantMasmonBench(p), all = [...team, ...bench];
   const fav = tab === 'deck' ? assistantMasmonFavCard(id) : null;
   let body = null;
   if (tab === 'mons') {
     body = (<>
-      <div className={land ? 'grid grid-cols-3 gap-2' : 'flex flex-col gap-2'}>{team.map(t => <AssistantMasmonRow key={t.monster} t={t} land={land}/>)}</div>
-      <p className="mt-2 text-[10.5px] font-bold leading-snug text-slate-400">🐾 {who.name}が自分で育てて、自分の好きな色に染めているマスモンです。</p>
+      <div className={land ? 'grid grid-cols-3 gap-2' : 'flex flex-col gap-2'}>{all.map(t => <AssistantMasmonRow key={t.monster} t={t} land={land} onOpen={setDetail}/>)}</div>
+      <p className="mt-2 text-[10.5px] font-bold leading-snug text-slate-400">🐾 {who.name}が自分で育てて、自分の好きな色に染めているマスモンです。押すと詳しく見られます。</p>
     </>);
   } else if (tab === 'team') {
     body = (<>
       <div className="grid grid-cols-3 gap-2">
         {team.map(t => (
-          <div key={t.monster} className="mhm-card relative text-center" data-assistant-masmon-team={t.monster}>
+          <button type="button" key={t.monster} className="mhm-card relative text-center" data-assistant-masmon-team={t.monster} onClick={() => setDetail(t)}>
             {t.lead && <em className="mhm-lead absolute left-1.5 top-1.5 z-[1]">先頭</em>}
-            <div className="mhm-stage"><AssistantMasmonPic t={t} size={land ? 104 : 92}/></div>
+            <div className="mhm-stage"><AssistantMasmonPic t={t} size={land ? 104 : 104}/></div>
             <p className="mt-1 truncate text-[13px] font-black text-white">{t.nick}</p>
             <p className="truncate text-[10px] font-bold text-amber-200">Lv.{t.lv} ・ {assistantMasmonGrowKind(t.grow)}</p>
-          </div>))}
+            {!land && <p className="mt-0.5 text-[9.5px] font-bold leading-snug text-slate-300" style={{ wordBreak: 'auto-phrase' }}>⚔ {assistantMasmonSkills(t).slice(-2).join('・')}</p>}
+            {!land && (() => { const st = assistantMasmonStats(t) || {}; return <div className="mt-1 grid gap-0.5">{ASSISTANT_MASMON_STAT_LABEL.map(([k, label]) => <div key={k} className="flex items-center gap-1 text-[8.5px] font-bold text-slate-400"><span className="w-[26px] shrink-0 text-left">{label}</span><span className="mhm-bar"><i style={{ width: `${Math.round((st[k] || 0) * 100)}%` }}/></span></div>)}</div>; })()}
+          </button>))}
       </div>
-      <p className="mt-2 text-[10.5px] font-bold leading-snug text-slate-400">⚔ 編成は{who.name}が決めています。</p>
+      {(() => {
+        const kinds = team.map(t => assistantMasmonGrowKind(t.grow));
+        const atk = kinds.filter(k => k === '攻撃型' || k === 'すばやさ型').length, def = kinds.filter(k => k === '防御型' || k === 'ライフ型').length;
+        const style = atk >= 2 ? '⚔ 攻め' : def >= 2 ? '🛡 守り' : '⚖ バランス';
+        const sum = { hp: 0, atk: 0, def: 0, guts: 0 };
+        for (const t of team) { const st = assistantMasmonStats(t) || {}; for (const k of Object.keys(sum)) sum[k] += (st[k] || 0) / Math.max(1, team.length); }
+        const lead = team[0];
+        return (
+          <div className={`mt-2 grid gap-2 ${land ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            <div className="mhm-card" data-assistant-masmon-team-info>
+              <p className="text-[10px] font-black text-slate-400">編成の型</p>
+              <p className="text-[16px] font-black text-amber-200">{style}</p>
+              <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5">
+                {ASSISTANT_MASMON_STAT_LABEL.map(([k, label]) => (
+                  <div key={k} className="flex items-center gap-1.5 text-[9.5px] font-bold text-slate-300"><span className="w-[34px] shrink-0">{label}</span><span className="mhm-bar"><i style={{ width: `${Math.round(sum[k] * 100)}%` }}/></span></div>))}
+              </div>
+              {lead && <p className="mt-1.5 text-[11px] font-bold leading-snug text-slate-100" style={{ wordBreak: 'auto-phrase' }}>💬 {who.name}「先頭は{lead.nick}。{lead.why}」</p>}
+            </div>
+            {bench.length > 0 && (
+              <div className="mhm-card" data-assistant-masmon-bench>
+                <p className="text-[10px] font-black text-slate-400">控え</p>
+                <div className="mt-1 grid grid-cols-3 gap-1.5">
+                  {bench.map(t => (
+                    <button key={t.monster} type="button" className="text-center" data-assistant-masmon-bench-mon={t.monster} onClick={() => setDetail(t)}>
+                      <div className="mhm-stage"><AssistantMasmonPic t={t} size={land ? 60 : 84}/></div>
+                      <p className="mt-0.5 truncate text-[11px] font-black text-white">{t.nick}</p>
+                      <p className="truncate text-[9.5px] font-bold text-amber-200">Lv.{t.lv}</p>
+                    </button>))}
+                </div>
+              </div>)}
+          </div>);
+      })()}
+      <p className="mt-2 text-[10.5px] font-bold leading-snug text-slate-400">⚔ 編成は{who.name}が決めています。押すと詳しく見られます。</p>
     </>);
   } else if (tab === 'deck') {
     body = (<>
@@ -188,7 +228,7 @@ function AssistantMasmonSheet({ id, land = false, onClose }) {
       const spread = kind === 'like' ? assistantMasmonSpread(x) : '';
       return (
         <div key={`${kind}-${x.monster || x.lineage}`} className="flex items-center gap-2 py-1" data-assistant-masmon-taste={`${kind}:${x.monster || x.lineage}`}>
-          {m ? <img src={m.iconUrl || m.imgUrl} alt="" draggable={false} className="h-[34px] w-[34px] shrink-0 rounded-full bg-slate-500 object-contain"/> : <span className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full bg-slate-800 text-[15px]">🧬</span>}
+          {m ? <img src={m.imgUrl} alt="" draggable={false} className="h-[56px] w-[56px] shrink-0 rounded-xl bg-slate-600/70 object-contain"/> : <span className="grid h-[56px] w-[56px] shrink-0 place-items-center rounded-xl bg-slate-800 text-[20px]">🧬</span>}
           <p className="min-w-0 text-[11.5px] font-bold leading-snug text-slate-100" style={{ wordBreak: 'auto-phrase' }}><b className="text-white">{name}</b> … {x.why}{spread && <small className="block text-[10px] text-slate-400">{spread}も少し{kind === 'like' ? '好き' : '苦手'}</small>}</p>
         </div>);
     };
@@ -201,6 +241,16 @@ function AssistantMasmonSheet({ id, land = false, onClose }) {
     body = (<div className={land ? 'grid grid-cols-3 gap-2' : 'flex flex-col gap-2'}>
       <div className="mhm-card"><p className="text-[12px] font-black text-pink-300">💗 好き</p>{likes.map(x => line(x, 'like'))}</div>
       <div className="mhm-card"><p className="text-[12px] font-black text-sky-300">💦 苦手</p>{dislikes.length ? dislikes.map(x => line(x, 'dislike')) : <p className="py-1 text-[11.5px] font-bold text-slate-300">苦手なモンスターはいない</p>}</div>
+      <div className={`mhm-card ${land ? 'col-span-3' : ''}`} data-assistant-masmon-taste-mons><p className="text-[12px] font-black text-violet-200">🐾 持っているマスモンと好み</p>
+        <div className={`mt-1 grid gap-1.5 ${land ? 'grid-cols-6' : 'grid-cols-3'}`}>
+          {all.map(t => { const rel = assistantMasmonLikeText(who, p, t); return (
+            <button key={t.monster} type="button" className="text-center" onClick={() => setDetail(t)} data-assistant-masmon-taste-mon={t.monster}>
+              <div className="mhm-stage"><AssistantMasmonPic t={t} size={land ? 46 : 54}/></div>
+              <p className="truncate text-[10.5px] font-black text-white">{t.nick}</p>
+              <p className="text-[9px] font-bold leading-tight text-pink-200">{rel ? `💗 ${rel.replace(`${who.name}の`, '')}` : '・ふつう'}</p>
+            </button>); })}
+        </div>
+      </div>
       <div className="mhm-card"><p className="text-[12px] font-black text-amber-200">🎨 好きな色</p>
         {p.favColors.map(c => (
           <div key={c.color} className="flex items-center gap-2 py-1" data-assistant-masmon-color={c.color}>
@@ -226,6 +276,85 @@ function AssistantMasmonSheet({ id, land = false, onClose }) {
         </div>
         <div className="mhm-body mt-2">{body}</div>
       </div>
+      {detail && <AssistantMasmonDetail who={who} p={p} t={detail} land={land} onClose={() => setDetail(null)}/>}
+    </div>);
+}
+
+// 育ち方のひとこと(性格)。数字には効かせない
+const ASSISTANT_MASMON_GROW_TEXT = Object.freeze({
+  '攻撃型': 'ちからを伸ばして、一撃で決めるのが得意', '防御型': 'じょうぶさを伸ばして、仲間の前に立つのが得意', 'ガッツ型': 'ガッツを伸ばして、技をたくさん出すのが得意',
+  'ライフ型': 'ライフを伸ばして、長い試合でも倒れない', 'すばやさ型': '動きが速く、先に手を出すのが得意',
+});
+// 好き嫌いとの関係(そのモンスターが好き/好きな血統の仲間)
+const assistantMasmonLikeText = (who, p, t) => {
+  if (!p || !t) return '';
+  const like = (p.likeMon || []);
+  if (like.some(x => x.monster === t.monster)) return `${who.name}の好きなモンスター`;
+  const lin = assistantMasmonLineage(t.monster), ln = assistantMasmonLineageName(lin);
+  if (like.some(x => x.lineage && x.lineage === lin)) return `${who.name}の好きな${ln}種`;
+  const near = like.find(x => x.monster && assistantMasmonLineage(x.monster) === lin);
+  if (near && ln) return `${who.name}の好きな${assistantMasmonTasteName(near)}と同じ${ln}種`;
+  return '';
+};
+// 技: 育つと増える(Lv 5ごとに1つ・9つまで)。名前は勇者の技の表(HERO_ATK_NAMES)
+const assistantMasmonSkills = (t) => {
+  const names = typeof HERO_ATK_NAMES !== 'undefined' && Array.isArray(HERO_ATK_NAMES[t.monster]) ? HERO_ATK_NAMES[t.monster] : [];
+  return names.slice(0, Math.max(1, Math.min(names.length, 1 + Math.floor((Number(t.lv) || 1) / 5))));
+};
+
+// マスモンの詳細(見るだけ。プレイヤーのマスモン詳細に近い形)
+function AssistantMasmonDetail({ who, p, t, land = false, onClose }) {
+  const m = assistantMasmonMon(t.monster), st = assistantMasmonStats(t);
+  if (!m || !st) return null;
+  const n = assistantMasmonRegions(t.monster);
+  const cols = ((t.dye && t.dye.colors) || []).slice(0, n || 5);
+  const like = assistantMasmonLikeText(who, p, t);
+  const skills = assistantMasmonSkills(t);
+  const kind = assistantMasmonGrowKind(t.grow);
+  const role = t.lead ? '先頭' : t.bench ? '控え' : '編成';
+  const pic = <AssistantMasmonPic t={t} size={land ? 190 : 210}/>;
+  const info = (<>
+    <div className="mhm-card" data-assistant-masmon-detail-stats>
+      <p className="text-[10px] font-black text-slate-400">能力</p>
+      <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
+        {ASSISTANT_MASMON_STAT_LABEL.map(([k, label]) => (
+          <div key={k} className="flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200"><span className="w-[38px] shrink-0">{label}</span><span className="mhm-bar"><i style={{ width: `${Math.round(st[k] * 100)}%` }}/></span></div>))}
+      </div>
+      <p className="mt-1.5 text-[11px] font-bold text-amber-200">📈 {t.grow}</p>
+      {ASSISTANT_MASMON_GROW_TEXT[kind] && <p className="text-[10.5px] font-bold text-slate-300">{ASSISTANT_MASMON_GROW_TEXT[kind]}</p>}
+    </div>
+    <div className="mhm-card mt-2" data-assistant-masmon-detail-skills>
+      <p className="text-[10px] font-black text-slate-400">技(育つと増える)</p>
+      <p className="mt-0.5 text-[11.5px] font-bold leading-relaxed text-white" style={{ wordBreak: 'auto-phrase' }}>{skills.join(' ・ ')}</p>
+    </div>
+    <div className="mhm-card mt-2" data-assistant-masmon-detail-dye>
+      <p className="text-[10px] font-black text-slate-400">染めた色({n}か所)</p>
+      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+        {cols.map((c, i) => <span key={i} className="inline-flex items-center gap-1 text-[10.5px] font-bold text-slate-100"><i className="inline-block h-[12px] w-[12px] rounded-full border border-white/50" style={{ background: assistantMasmonSwatch(String(c).split('@')[0]) }}/>{assistantMasmonColorName(String(c).split('@')[0])}</span>)}
+      </div>
+    </div>
+    <div className="mhm-card mt-2" data-assistant-masmon-detail-talk>
+      {like && <p className="text-[11px] font-black text-pink-300">💗 {like}</p>}
+      <p className="mt-0.5 text-[11.5px] font-bold leading-snug text-slate-100" style={{ wordBreak: 'auto-phrase' }}>💬 {who.name}「{t.why}」</p>
+      <p className="mt-1 text-[10px] font-bold text-slate-400">📝 思い出は、助手ライフの「今日あったこと」から増えていきます</p>
+    </div>
+  </>);
+  return (
+    <div className="absolute inset-0" style={{ zIndex: 32 }} data-assistant-masmon-detail={t.monster}>
+      <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/70" onClick={onClose}/>
+      <div className={`mhm-panel ${land ? 'is-land' : ''}`} style={{ top: land ? 0 : '3%' }}>
+        <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1"><p className="mhl-en">MASMON · {String(who.id).toUpperCase()}</p>
+            <p className="truncate text-[19px] font-black text-white">{t.nick}<em className={`mhm-lead ml-1.5 ${t.bench ? 'mhm-bench' : ''}`}>{role}</em></p>
+            <p className="truncate text-[11px] font-bold text-slate-300">{m.name} ・ Lv.{t.lv} ・ {who.name}のマスモン</p></div>
+          <button type="button" className="mhl-btn shrink-0 bg-slate-700 px-3" data-assistant-masmon-detail-close onClick={onClose}>もどる</button>
+        </div>
+        <div className="mhm-body mt-2">
+          {land
+            ? <div className="flex gap-3"><div className="mhm-card flex shrink-0 items-center">{pic}</div><div className="min-w-0 flex-1">{info}</div></div>
+            : <><div className="mhm-card flex justify-center">{pic}</div><div className="mt-2">{info}</div></>}
+        </div>
+      </div>
     </div>);
 }
 
@@ -240,7 +369,7 @@ function AssistantMasmonRoomRow({ id, onOpen }) {
   return (
     <button type="button" className="mhl-row w-full text-left" data-assistant-life-room-masmon onClick={() => onOpen(id)}>
       <span className="k">🐾 マスモン</span>
-      <span className="min-w-0 text-[11px] font-bold"><span className="block truncate"><b>{lead.nick}</b>({m.name} Lv.{lead.lv}) ほか{Math.max(0, p.team.length - 1)}体</span>
+      <span className="min-w-0 text-[11px] font-bold"><span className="block truncate"><b>{lead.nick}</b>({m.name} Lv.{lead.lv}) ほか{Math.max(0, assistantMasmonAll(p).length - 1)}体</span>
         {now && <span className="block text-[10px] text-sky-200" data-assistant-life-room-masmon-now>🐾 いま: {now}</span>}</span>
       <span className="ml-auto pl-1 text-[12px] font-black text-pink-300">›</span>
     </button>);
@@ -255,9 +384,9 @@ const assistantMasmonHash = (str) => { let h = 2166136261; for (const ch of Stri
 const assistantMasmonDuty = (id, day = (typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '')) => {
   const p = assistantMasmonPlanOf(id);
   if (!p) return null;
-  const team = [...p.team].sort((a, b) => (b.lead ? 1 : 0) - (a.lead ? 1 : 0)).filter(t => assistantMasmonMon(t.monster));
-  if (!team.length) return null;
-  return team[assistantMasmonHash(`${day}|${id}`) % team.length];
+  const all = assistantMasmonAll(p); // 当番は控えも含めて回す
+  if (!all.length) return null;
+  return all[assistantMasmonHash(`${day}|${id}`) % all.length];
 };
 // オトズレ2(フレンドの家の控え)が読む口: その日の当番 { monster, nick, colors }
 const assistantLifeMasmonLead = (id) => {
@@ -395,6 +524,7 @@ const ASSISTANT_MASMON_CSS = `
 .mhm-card{border:1px solid rgba(148,163,184,.35);background:rgba(15,23,42,.85);border-radius:14px;padding:8px 10px}
 .mhm-pic{flex-shrink:0;border-radius:10px;background:radial-gradient(circle at 50% 40%,#94a3b8,#475569);overflow:hidden;margin:0 auto}
 .mhm-stage{display:flex;justify-content:center}
+.mhm-lead.mhm-bench{background:#38bdf8}
 .mhm-lead{font-style:normal;border-radius:999px;background:#f472b6;padding:0 6px;font-size:9.5px;font-weight:900;color:#fff;vertical-align:middle}
 .mhm-bar{position:relative;flex:1;height:5px;border-radius:99px;background:#334155;overflow:hidden}
 .mhm-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#fbbf24,#f97316)}
