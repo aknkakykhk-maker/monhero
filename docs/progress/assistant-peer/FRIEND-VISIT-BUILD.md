@@ -77,3 +77,9 @@
 4. main に入ったら Edge Function のデプロイ(今の v16 を get_edge_function で読み、friend_scenes だけ足す。jsdelivr の固定版を新しいコミットへ)。窓口へ知らせてから。済んだらキズナへ PR 番号
 5. 印 `assistantLifeFriend` を真に(API の印 `assistantLifeFriendApi` はデプロイを確かめてから真)→ 公開 → 本番で確認して報告
 6. 台詞の注文書(コトバ・ツムギ。PLAN 8章)
+
+### 2026-11-08 10:10 の状態(オトズレ2)
+
+- ミハリ「4つとも OK・残りなし」(88c36f4)。更新履歴・ヘルプは社長の「この文で」のまま書いた(d739dc3・公開の印の後ろ・必須検査17本 OK)
+- SQL: こちらも窓口も execute_sql で Supabase の確認の質問に答えが無く止まった。**表はまだ無い**(窓口が to_regclass で確認)。社長が答えられるときに窓口が流す。それまで公開しない
+- 流したあと: 印 `assistantLifeFriend` を真 → main へマージ → 窓口へ知らせて Edge Function(friend_scenes)をデプロイ(今の v16 を読んでから)→ 確かめて `assistantLifeFriendApi` を真 → 本番で確認 → 窓口と、キズナ2へ PR 番号
