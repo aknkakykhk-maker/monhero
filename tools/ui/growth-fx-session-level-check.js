@@ -40,13 +40,14 @@ const g = (sheets[0] && sheets[0].gains) || [];
 check('何回に分けて届いても、祝いは1枚', sheets.length === 1, `${sheets.length}枚`);
 check('助手ごとに1行(段ごとに行が増えない)', g.length === 4, g.map((x) => x.text).join(' / '));
 check('行は「Lv.前 → 後」と上がった段の数', !!g[0] && g[0].text === 'みゅあ セッションLv.7 → 18' && g[0].up === '+11' && !!g[1] && g[1].text === 'あつ セッションLv.8 → 16');
-check('途中で開いたものを添える(Lv.10 好きな曲が見える・Lv.15 サビで顔が光る)', !!g[0] && /Lv\.10 好きな曲が見える/.test(g[0].note) && /Lv\.15 サビで顔が光る/.test(g[0].note), g[0] && g[0].note);
+check('途中で開いたものを添える(Lv.10 好きな曲が見える・Lv.15 サビで顔が光る)', !!g[0] && /Lv\.10 好きな曲が見える/.test(g[0].note.replace(/\u200b/g, '')) && /Lv\.15 サビで顔が光る/.test(g[0].note.replace(/\u200b/g, '')), g[0] && g[0].note);
+check('いちばん多く上がった助手が先頭(盾の Lv もこの人)', !!g[0] && g[0].text.startsWith('みゅあ') && sheets[0].levelTo === 18);
 check('もらったセッション券も添える', !!g[3] && g[3].text === 'ドラ セッションLv.33 → 36' && /セッション券 ×1/.test(g[3].note), g[3] && `${g[3].text} / ${g[3].note}`);
 ctx.S.sheets.length = 0;
 ctx.session(IDS.map((id) => ({ assistantId: id, levelBefore: 1, levelAfter: 30, tickets: 0 })));
 const g6 = (ctx.S.sheets[0] && ctx.S.sheets[0].gains) || [];
 check('5人以上は、3人+「ほか◯人」の4行', g6.length === 4 && g6[3].text === 'ほか3人', g6.map((x) => x.text).join(' / '));
-check('開いたものが多いときは3つまで(ほか◯つ)', !!g6[0] && /ほか\d+つ$/.test(g6[0].note), g6[0] && g6[0].note);
+check('開いたものが多いときは3つまで(ほか◯つ)', !!g6[0] && /ほか\d+つ$/.test(g6[0].note.replace(/\u200b/g, '')), g6[0] && g6[0].note);
 
 // ③ 画面
 (async () => {

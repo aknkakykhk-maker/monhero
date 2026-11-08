@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b29a7ade149fa830
+// generated-sha256: 69e94f157f471d7d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -38556,13 +38556,14 @@ const growthFxSessionSheet = (list = []) => {
     if (!cur) by.set(id, { assistantId: id, levelBefore: b, levelAfter: a, tickets: t > 0 ? t : 0 });
     else { cur.levelBefore = Math.min(cur.levelBefore, b); cur.levelAfter = Math.max(cur.levelAfter, a); cur.tickets += t > 0 ? t : 0; }
   });
-  const rows = [...by.values()];
+  // いちばん多く上がった助手を先頭に(盾の Lv と顔はこの人。同じなら最初に上がった順)
+  const rows = [...by.values()].map((r, i) => ({ ...r, i })).sort((a, b) => (b.levelAfter - b.levelBefore) - (a.levelAfter - a.levelBefore) || a.i - b.i);
   const unlocks = growthFxSessionUnlocks();
   const gainOf = (r) => {
     const opened = unlocks.filter(([lv]) => lv > r.levelBefore && lv <= r.levelAfter).map(([lv, text]) => `Lv.${lv} ${text}`);
     const notes = [...(r.tickets > 0 ? [`セッション券 ×${r.tickets}`] : []), ...opened];
     // 開いたものが多いときは3つまで(残りは「ほか◯つ」)
-    const note = notes.length > 3 ? `${notes.slice(0, 3).join('・')}・ほか${notes.length - 3}つ` : notes.join('・');
+    const note = notes.length > 3 ? `${notes.slice(0, 3).join('・\u200b')}・\u200bほか${notes.length - 3}つ` : notes.join('・\u200b');
     return { icon: '🎤', text: `${growthFxAssistantName(r.assistantId)} セッションLv.${r.levelBefore} → ${r.levelAfter}`,
       up: `+${r.levelAfter - r.levelBefore}`, note, session: true };
   };
@@ -38574,7 +38575,8 @@ const growthFxSessionSheet = (list = []) => {
   }
   const top = rows[0] || null;
   return { sessionUps: ups, levelFrom: top ? top.levelBefore : 0, levelTo: top ? top.levelAfter : 0,
-    sub: rows.length > 1 ? 'いっしょに演奏した助手のセッションLvが上がった' : top ? `${growthFxAssistantName(top.assistantId)} とのセッションLvが Lv.${top.levelAfter} になった` : '',
+    // 折れ目は言葉の切れ目だけ(U+200B。.sub は keep-all)
+    sub: rows.length > 1 ? 'いっしょに演奏した\u200b助手の\u200bセッションLvが\u200b上がった' : top ? `${growthFxAssistantName(top.assistantId)} とのセッションLvが Lv.${top.levelAfter} になった` : '',
     face: top ? growthFxAssistantFace(top.assistantId, 'excited') : null,
     // 1人で、添えるもの(券・開いたもの)も無いときは行を出さない(大きな数字だけで足りる)
     gains: rows.length > 1 || (gains[0] && (gains[0].note || rows[0].levelAfter - rows[0].levelBefore > 1)) ? gains : [] };
@@ -38650,7 +38652,9 @@ const GROWTH_FX_CSS = `
 .mh-gfx-gains{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;width:min(300px,82vw)}
 .mh-gfx-gains li{display:flex;align-items:center;gap:8px;background:#0f172ae0;border:1px solid color-mix(in srgb,var(--gc) 60%,transparent);border-radius:12px;padding:6px 10px;font-size:12px;font-weight:900;text-align:left;
   animation:mhGfxGain .4s var(--d) cubic-bezier(.2,1.5,.4,1) both}
-.mh-gfx-gains li small{display:block;font-size:10px;color:#94a3b8;font-weight:700;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+/* 添え書き・説明は言葉の途中で折らない(空白・「・」・U+200B の所だけで折る) */
+.mh-gfx-lv .sub{word-break:keep-all;overflow-wrap:anywhere}
+.mh-gfx-gains li small{word-break:keep-all;overflow-wrap:anywhere;display:block;font-size:10px;color:#94a3b8;font-weight:700;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
 /* 行が多くても画面の外へ出さない(2026-11-08 社長のスクショ: セッションLv の行が20行以上並び、見出しも下も切れた)。入りきらない分は中で送る */
 .mh-gfx-gains{max-height:calc(var(--mh-vh) - 400px);min-height:0;overflow-y:auto;overscroll-behavior:contain}
 .mh-gfx-gains li .new{margin-left:auto;font-size:9px;background:var(--gc);color:#111;border-radius:6px;padding:1px 5px}
