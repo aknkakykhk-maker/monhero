@@ -571,6 +571,15 @@ const growthFxChipSpotScore = (box, first = false) => {
   // 手前に別のものが重なって見えていない要素は数えない(角と真ん中の2点で見る。角だけだと、角に顔の丸が乗った地図の札を見落とした)
   const seen = (el, e) => { const x0 = Math.max(r.left, e.left), y0 = Math.max(r.top, e.top), x1 = Math.min(r.right, e.right), y1 = Math.min(r.bottom, e.bottom);
     return [[x0 + 1, y0 + 1], [(x0 + x1) / 2, (y0 + y1) / 2]].some(([cx, cy]) => { const top = document.elementsFromPoint(cx, cy).find(x => !box.contains(x) && !x.contains(box)); return !top || top === el || el.contains(top) || top.contains(el); }); };
+  // 下から出るシート(助手ライフ・フレンドの家の .mhl-sheet・窓 role=dialog)が開いているあいだは、シートの四角を丸ごと避ける
+  //   (中のボタンだけを見ると、小さい画面でシートの「やめる」の上を選ぶ回があった。2026-11-08 ミハリ 375×667)
+  for (const sh of document.querySelectorAll('.mhl-sheet,[data-mhl-sheet],[role="dialog"]')) {
+    if (box.contains(sh) || sh.contains(box)) continue;
+    const e = sh.getBoundingClientRect();
+    if (!e.width || !e.height || !hit(e)) continue;
+    const cs = getComputedStyle(sh); if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
+    score += 3; if (first) return score;
+  }
   for (const el of document.querySelectorAll(GROWTH_FX_CHIP_BUSY_SEL)) {
     if (box.contains(el)) continue;
     const e = el.getBoundingClientRect();
