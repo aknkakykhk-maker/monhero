@@ -8,8 +8,9 @@ import Anthropic from "npm:@anthropic-ai/sdk";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { DAY_TRIES, DEFAULT_ALLOWED_ORIGINS, handleRequest, RETRY_SECONDS } from "./core.js";
 
-// 待ち時間はゲームより短くする。遅れたらゲームは決まった台詞のまま(次の人が10分あとに呼び直す)
-const anthropic = new Anthropic({ maxRetries: 0, timeout: 7_000 });
+// 待ち時間は18秒(2026-11-08 窓口: 8人ぶんで約7秒かかり、前の7秒にほぼ当たっていた)。ゲームは8秒で待つのをやめて決まった台詞を出すが、
+// ここは最後まで待って表に置く(次に開いた人から AI の文を読める)。Edge Function の時間の上限(150秒)には十分収まる
+const anthropic = new Anthropic({ maxRetries: 0, timeout: 18_000 });
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",

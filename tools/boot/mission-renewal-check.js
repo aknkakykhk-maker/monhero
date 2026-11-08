@@ -192,7 +192,7 @@ check('ミッション画面のデイリーで、選んでいる助手が話す'
 // 中継役(supabase/functions/mission-daily-line/core.js)を偽物の Claude と偽物の表で動かす
 (async () => {
   const c = await import(path.join(ROOT, 'supabase', 'functions', 'mission-daily-line', 'core.js'));
-  const good = Object.fromEntries(c.IDS.map((id) => [id, `今日は月曜日！{task}と{reward}だよ♪`]));
+  const good = Object.fromEntries(c.IDS.map((id) => [id, c.EXAMPLES[id][0]]));
   const fake = (text) => ({ messages: { create: async () => ({ content: [{ type: 'text', text }] }) } });
   let put = null, calls = 0;
   const run = (claimed, text) => c.handleRequest({ claim: async () => claimed, put: async (d, l, ok) => { put = { d, l, ok }; }, client: { messages: { create: async (a) => { calls++; return fake(text).messages.create(a); } } } });
@@ -213,7 +213,7 @@ check('ミッション画面のデイリーで、選んでいる助手が話す'
   check('中継役: モデルは claude-haiku-5-5', c.MODEL === 'claude-haiku-5-5');
   // 崩れた返事(2026-11-08 本番の1回目で「返事は来たが使える行が0本」だった)。どれも0本にならず、数字の文は捨てる
   const L8 = (f) => Object.fromEntries(c.IDS.map((id, i) => [id, f(id, i)]));
-  const base = (id) => `${id === 'atsu' ? 'とりあえず' : ''}今日は月曜日！{task}と{reward}がもらえるよ`;
+  const base = (id) => `今日は月曜日！{task}と{reward}がもらえるよ${id === 'atsu' ? '笑' : ''}`;
   const shapes = {
     '前後に説明と```json の囲み': `はい、作りました！\n\`\`\`json\n${JSON.stringify(L8(base), null, 2)}\n\`\`\`\nどうでしょう？`,
     '配列で返る': JSON.stringify(c.IDS.map((id) => ({ id, line: base(id) }))),
@@ -244,6 +244,15 @@ check('ミッション画面のデイリーで、選んでいる助手が話す'
     check('中継役: 1行でも使えれば ready にして、その行を返す', r.json.ok && Object.keys(r.json.lines).length === 1 && put && put.ok === true);
     check('中継役: ログは使えた数と落ちた理由の数だけ(本文を出さない)', !!made && made.count === 1 && made.reasons.number === 7 && !JSON.stringify(logs).includes('{task}'));
   }
+  // 口調の見張り(2026-11-08 窓口: 本番の文で、みゅあ「もらえちゃぢゃん！」・きゅうこ「日曜日ぇ。」が不自然だった)
+  check('中継役: みゅあの「〜ちゃぢゃん」、きゅうこの名詞のあとの「ぇ」は捨てる', c.toneProblem('mua', '{task}で{reward}もらえちゃぢゃん！') && c.toneProblem('kyuko', '今日は日曜日ぇ。{task}で{reward}')
+    && !c.toneProblem('mua', '{task}で{reward}！ 楽ちんぢゃん') && !c.toneProblem('kyuko', '{task}で{reward}だってさ。効率いいねぇ'));
+  check('中継役: ききのタメ口・ももすけの「私」・ドラの関西弁・あつの文末なし・みゅあの「じゃん」も捨てる', c.toneProblem('kiki', '{task}で{reward}だよ') && c.toneProblem('momosuke', '私も{task}で{reward}')
+    && c.toneProblem('dra', '{task}で{reward}やで') && c.toneProblem('atsu', '{task}で{reward}') && c.toneProblem('mua', '{task}で{reward}じゃん'));
+  check('中継役: 頼み方の見本は8人とも2〜3行あり、どれも見張りを通る', c.IDS.every((id) => Array.isArray(c.EXAMPLES[id]) && c.EXAMPLES[id].length >= 2 && c.EXAMPLES[id].every((t) => c.lineValid(t) && !c.toneProblem(id, t))));
+  check('中継役: 口調の崩れた行は、その助手だけ捨てる(理由 tone を数える)', (() => { const d = c.parseLinesDetail(JSON.stringify({ ...L8(base), mua: '{task}で{reward}もらえちゃぢゃん！', kyuko: '今日は日曜日ぇ。{task}で{reward}' })); return Object.keys(d.lines).length === 6 && d.reasons.tone === 2; })());
+  check('中継役: 1行は短め(30字くらい・長くても45字)と頼む', /30字くらい\(長くても45字\)/.test(c.buildPrompt('2026-11-09').system));
+  check('中継役: Claude を待つのは15〜20秒(ゲームは8秒で決まった台詞に戻る)', (() => { const ix = fs.readFileSync(path.join(ROOT, 'supabase', 'functions', 'mission-daily-line', 'index.ts'), 'utf8'); const m = /timeout:\s*(\d+)_?(\d*)/.exec(ix); const ms = m ? Number(m[1] + m[2]) : 0; return ms >= 15000 && ms <= 20000; })());
   const sql = fs.readFileSync(path.join(ROOT, 'supabase', 'migrations', '202611080002_mission_daily_lines.sql'), 'utf8');
   check('SQL は足すだけ(drop・delete・truncate・alter column なし)・ゲームから読めない', !/\bdrop\b|\bdelete\b|\btruncate\b|alter\s+table\s+\S+\s+(?:drop|alter)\s/i.test(sql)
     && /enable row level security/.test(sql) && /revoke all on table public\.mission_daily_lines from anon, authenticated/.test(sql));

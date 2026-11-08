@@ -30,6 +30,32 @@ const VOICES = Object.freeze({
   sorashido: 'ソラシド: 一人称「俺」。熱くて陽気。「うぉぉぉ！」「〜ぜ・・・！」「笑」。沖縄の言葉はときどき。',
   erubin: 'えるびん: 一人称「俺」。おだやかでやわらかいタメ口。「〜ね」「〜かな」。相手を気づかう。',
 });
+// 助手ごとの見本(2026-11-08 窓口の指摘: みゅあ「もらえちゃぢゃん」・きゅうこ「日曜日ぇ」が不自然だった)。
+//   VOICE.md・SPEECH-STYLE.md の口ぐせを、この案内の形({task}・{reward})で書いたもの。AI にはこの調子で言い回しを変えさせる
+export const EXAMPLES = Object.freeze({
+  mua: ['今日は月曜日！{task}と{reward}だよ♪ 楽ちんぢゃん！', 'こっから先はあたしに任せて！{task}で{reward}もらえるよー', '{task}と{reward}だって！ まぢでおいしいかも✨'],
+  kiki: ['今日は{task}と、{reward}がもらえまつ♪', '{task}で{reward}ですって。のんびり行きましょうね', '私と一緒に{task}しましょう？ {reward}がもらえまつよ'],
+  momosuke: ['{task}で{reward}！！ ももと一緒にやろ♡', 'ねぇねぇ、{task}だけで{reward}だってw やるしかないっしょ！！', '今日は{task}！！ {reward}もらってきてね♡'],
+  dra: ['{task}すると{reward}もらえるからな。えへへ', 'おでも{task}行くわ。{reward}、ほしいだろ？', '今日は{task}だな。{reward}がもらえるぞ'],
+  atsu: ['とりあえず{task}な。{reward}もらえるよ笑', 'てか{task}で{reward}って最高じゃん！', '{task}しとけば{reward}だな。いこう笑'],
+  kyuko: ['ほい！ {task}で{reward}もらえるよ〜', '{task}すると{reward}だってさ。効率いいねぇ', 'おけ〜、今日は{task}だね。{reward}は大事だよぉ'],
+  sorashido: ['うぉぉぉ！ {task}で{reward}だぜ・・・！', '{task}すれば{reward}！ 計算どおりだぜ笑', '今日は{task}だぜ！ {reward}、ちばりよー！'],
+  erubin: ['{task}で{reward}がもらえるよ。無理しない程度にね', '今日は{task}かな。{reward}、もらっておこうね', '{task}すると{reward}だって。一緒に行こうか'],
+});
+// 口ぐせの付け方の見張り(助手ごと)。本文のくせが崩れた行は捨てる(その助手だけ決まった台詞になる)
+//   みゅあ: 「じゃん」「まじ」は「ぢゃん」「まぢ」。「ぢゃん」は言い切りの形のあとだけ(「〜ちゃぢゃん」「〜ちゃうぢゃん」のように「ちゃ」へ付けない)
+//   きゅうこ: 「ぇ」は「〜ねぇ」「〜へぇ」のように、え段の音を伸ばすときだけ(「日曜日ぇ」のように漢字や名詞へ付けない)
+//   きき: タメ口(だよ・だね)にしない / ももすけ: 自分を「私」「あたし」と言わない / ドラ: 関西弁にしない / あつ: 文の最後は「笑」か記号
+export const toneProblem = (id, t) => {
+  const s = String(t || '').split('{task}').join('').split('{reward}').join('');
+  if (id === 'mua' && (/じゃん|まじ/.test(s) || /ちゃぢゃん|ちゃうぢゃん|ゃぢゃん/.test(s))) return true;
+  if (id === 'kyuko' && /(?<![ねへせれてべけめえ])ぇ/.test(s)) return true;
+  if (id === 'kiki' && /だよ|だね|じゃん/.test(s)) return true;
+  if (id === 'momosuke' && /私|あたし/.test(s)) return true;
+  if (id === 'dra' && /ほんま|やで|とる|とんだ|へん[。！ ]|あかん/.test(s)) return true;
+  if (id === 'atsu' && !/[笑！？!?…w]\s*$/.test(String(t).trim())) return true;
+  return false;
+};
 export const jstDay = (now = Date.now()) => new Date(Number(now) + 5 * 3600000).toISOString().slice(0, 10);
 export const weekdayOf = (day) => new Date(`${day}T00:00:00Z`).getUTCDay();
 // ゲームと同じ見張り(52-mission-daily-line.jsx の missionDailyLineValid とそろえる)。{task}・{reward} が1つずつ・数字なし・90字まで・1行・リンクなし
@@ -73,7 +99,7 @@ export const buildPrompt = (day) => {
     'あなたはブラウザゲーム「モンスターヒーロー」の助手8人の台詞を書く係です。',
     '今日の日替わりミッションを、助手それぞれの口調で1行ずつ案内する文を書きます。',
     '決まり:',
-    '- 1人1行、40字くらい(長くても60字)。日本語の話し言葉。',
+    '- 1人1行、30字くらい(長くても45字)。日本語の話し言葉。短く言い切る。',
     '- やることは {task}、もらえる物は {reward} とだけ書く。どちらも1回ずつ、半角の波かっこごと、そのままの形で入れる(ゲームが中身を入れる)。',
     '- 日付・回数・時刻も書かない(曜日は「月曜日」のように字で書く)。',
     '- 数字(1・２・三 なども含め、数をあらわす字)を書かない。報酬の数や物の名前を自分で書かない。',
@@ -84,9 +110,11 @@ export const buildPrompt = (day) => {
     '- JSON の前後に説明やかっこ(```)を付けない。キーは上の英字のまま、8人全員ぶん。',
     '助手の口調(崩さない):',
     ...IDS.map((id) => `- ${VOICES[id]}`),
-    '見本(この調子で、言い回しを変えて):',
-    '- mua: 今日は月曜日！{task}と、{reward}がもらえるよ♪',
-    '- atsu: 今日は火曜日！ とりあえず{task}と{reward}もらえるよ笑',
+    '口ぐせの付け方(大事):',
+    '- みゅあの「ぢゃん」は「楽ちんぢゃん」「いいぢゃん」のように言い切りのあとだけ。「もらえちゃう」と混ぜて「もらえちゃぢゃん」にしない。',
+    '- きゅうこの「ぇ」「ぉ」は「〜だねぇ」「〜だよぉ」のように語尾の音を伸ばすときだけ。「日曜日ぇ」のように名詞の後に付けない。',
+    '助手ごとの見本(この調子で、言い回しは変えて。見本をそのまま写さない):',
+    ...IDS.map((id) => `- ${id}: ${EXAMPLES[id].join(' / ')}`),
   ].join('\n');
   const user = `今日は${WEEKDAYS[wd]}曜日。日替わりミッションは「${TASKS[wd]}」。助手みんなのひとことを JSON で。`;
   return { system, user };
@@ -126,7 +154,7 @@ export const parseLinesDetail = (text) => {
   IDS.forEach((id) => {
     if (!(id in raw)) { if (Object.keys(raw).length) bump('missing_assistant'); return; }
     const t = tidyLine(raw[id]);
-    const why = lineProblem(t);
+    const why = lineProblem(t) || (toneProblem(id, t) ? 'tone' : '');
     if (why) bump(why); else lines[id] = t;
   });
   return { lines, reasons };
@@ -144,7 +172,7 @@ export const handleRequest = async ({ claim, put, client, log = () => {} }) => {
   const { system, user } = buildPrompt(c.day);
   let lines = {}, reasons = {}, stop = '';
   try {
-    const res = await client.messages.create({ model: MODEL, max_tokens: 2000, system, messages: [{ role: 'user', content: user }] });
+    const res = await client.messages.create({ model: MODEL, max_tokens: 1500, system, messages: [{ role: 'user', content: user }] });
     stop = res && typeof res.stop_reason === 'string' ? res.stop_reason : '';
     const text = Array.isArray(res && res.content) ? res.content.filter((p) => p && p.type === 'text').map((p) => p.text).join('') : '';
     ({ lines, reasons } = parseLinesDetail(text));
@@ -157,6 +185,6 @@ export const handleRequest = async ({ claim, put, client, log = () => {} }) => {
 };
 const parseLinesObj = (obj) => {
   const out = {};
-  if (obj && typeof obj === 'object') IDS.forEach((id) => { if (lineValid(obj[id])) out[id] = obj[id]; });
+  if (obj && typeof obj === 'object') IDS.forEach((id) => { if (lineValid(obj[id]) && !toneProblem(id, obj[id])) out[id] = obj[id]; });
   return out;
 };
