@@ -21,16 +21,12 @@ const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({ home: '🏡', plaza: '⛲', ca
 // 出かけている先を、HOME のどの施設に出すか(していること → 施設)。家と町は「🏡 助手ライフ」
 // 遊び場(段階2・LIFE-STAGE2-PLAN.md): 札・居場所・地図・場面の題では、ゲームの遊びの場所を施設の名前で出す(「🎵 モンヒロビートへ」)。
 //   台本の穴 {place} の言葉(ASSISTANT_LIFE_PLACES)は変えない。今日あったことも今の言葉のまま
-const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({ studio: 'モンヒロビート', cardroom: 'MFバトルカード', ranch: 'M/B管理', temple: '神殿' });
+const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({ studio: 'モンヒロビート', cardroom: 'MFバトルカード', ranch: 'M/B管理', temple: '神殿', home: 'みんなの家' }); // 家は HOME の札「助手ライフ みんなの家」とそろえる(地図)
 const assistantLifePlaceShow = (place) => ASSISTANT_LIFE_PLACE_SHOW[place] || ASSISTANT_LIFE_PLACES[place] || '';
-const assistantLifeFacilityOf = (entry) => {
-  if (!entry) return 'life';
-  if (entry.doing === 'practice') return 'rhythm';
-  if (entry.doing === 'cards' && entry.place === 'cardroom') return 'card';
-  if (entry.doing === 'training') return 'management';
-  if (entry.place === 'market') return 'market';
-  return 'life';
-};
+// 場所 → HOME の札(地図 56-assistant-life-map.jsx と同じ表。HOME の顔と地図の全身が同じ時刻に同じ場所に出る・2026-11-08 社長「矛盾のない作り」)。
+//   町だけの場所(図書室・おやつ屋さん・ひなたの丘・中庭・広場)と家は「🏡 助手ライフ」
+const ASSISTANT_LIFE_SPOT_FAC = Object.freeze({ studio: 'rhythm', cardroom: 'card', ranch: 'management', market: 'market', temple: 'temple', home: 'life' });
+const assistantLifeFacilityOf = (entry) => (entry && ASSISTANT_LIFE_SPOT_FAC[entry.place]) || 'life';
 // 時間帯の見た目(朝・昼・夕・夜)。ゲーム全体の「時間帯で雰囲気を変える」(ハナビの 44-time-of-day.jsx)とそろえる(2026-11-07 統括の決定)
 //   区切りは社長の決定: 朝 5:00〜/昼 10:00〜/夕 16:00〜/夜 19:00〜4:59(日本時間)。助手の居場所が入れかわる6つの区切りとは別
 //   <html data-mh-tod="morning|day|evening|night"> の印があればそれに従い、無ければ同じ区切りでここで決める
@@ -229,7 +225,8 @@ const assistantLifeTodLabel = (now = Date.now()) => {
 const assistantLifeDiaryOnSlot = (life, slot, now = Date.now()) => {
   const gs = (life.groups || []).slice(0, 3);
   if (!gs.length) return;
-  const text = gs.map(g => `${g.ids.map(assistantLifeName).join('・')} ${ASSISTANT_LIFE_PLACES[g.place]}で${ASSISTANT_LIFE_DOINGS[g.doing].label}`).join(' / ');
+  // 場所の言い方は HOME の札・地図・家の出かけ札とそろえる(assistantLifePlaceShow・2026-11-08 社長の地図 A)
+  const text = gs.map(g => `${g.ids.map(assistantLifeName).join('・')} ${assistantLifePlaceShow(g.place)}で${ASSISTANT_LIFE_DOINGS[g.doing].label}`).join(' / ');
   void assistantLifeDiaryAdd(`${assistantLifeTodLabel(now)}: ${text}`, gs.flatMap(g => g.ids), { kind: 'slot', now, slotAbs: slot.abs });
 };
 // モンヒロビートの助手とのセッション(ビート部とのつなぎ口)。向きは「ビート部が呼ぶ」:
@@ -259,7 +256,7 @@ const assistantLifeOnWoken = (ev) => {
 const assistantLifeOnCardMatch = (ev) => {
   if (!ev || !ev.assistantId || !ASSISTANT_LIFE_PREFS[ev.assistantId]) return;
   assistantLifeRhythmPlay(ev.assistantId, ev.at || Date.now());
-  void assistantLifeDiaryAdd(`${assistantLifeName(ev.assistantId)}とカード部屋で対戦して${ev.won ? '勝った' : '負けた'}`, [ev.assistantId], { kind: 'card', now: ev.at || Date.now() });
+  void assistantLifeDiaryAdd(`${assistantLifeName(ev.assistantId)}とMFバトルカードで対戦して${ev.won ? '勝った' : '負けた'}`, [ev.assistantId], { kind: 'card', now: ev.at || Date.now() });
 };
 const assistantLifeOnSessionLive = (ev) => {
   if (!ev || !ev.assistantId) return;
@@ -946,11 +943,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       <AssistantLifeHouseArt width={houseW} land={land} look={look} rooms={rooms} metSet={metSet} onOpen={setRoomId} diary={diary} pop={!!intro} onBoard={() => setBoardOpen(true)} life={life} peerSt={peerSt}/>
     </div>);
   const tabBody = tab === 'house' ? houseView
-    : tab === 'where' ? (
-      <div className="px-3 pb-3" data-assistant-life-where>
-        <AssistantLifeTownMap life={life} ids={ids} look={look} onPick={(id) => { setTab('house'); setRoomId(id); }}/>
-        <AssistantLifeScreenBody metIds={metIds} onReplay={playTalk} peerItems={peerItems} onUseItem={onUseItem} embedded/>
-      </div>)
+    : tab === 'where' ? null // 地図は画面いっぱい(下の whereView)
     : tab === 'visit' && typeof AssistantLifeFriendPage === 'function' ? <AssistantLifeFriendPage life={life}/>
     : tab === 'friends' ? (<div className="px-3 pb-3 pt-1">{typeof AssistantPeerMap === 'function' && <AssistantPeerMap metIds={metIds} onReplay={(t) => playTalk(t, null)} peerItems={peerItems} onUseItem={onUseItem}/>}</div>)
     : (
@@ -987,10 +980,19 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
     <div className="mhl-root" style={{ zIndex: 9000 }} data-assistant-life-screen data-assistant-life-look={look} data-assistant-life-land={land ? '1' : '0'}>
       <AssistantLifeHouseStyle/>
       {typeof AssistantLifeRelStyle === 'function' && <AssistantLifeRelStyle/>}
-      <div className="mhl-page" style={{ maxWidth: land ? 'none' : 480 }}>
+      <div className="mhl-page" style={{ maxWidth: land || tab === 'where' ? 'none' : 480 }}>
         <div className={`mhl-sky t-${look}`}/>
         <div className="mhl-wood" style={{ backgroundImage: `url(${ASSISTANT_LIFE_VIEW[look][1]})` }}/>
-        {land ? (
+        {/* 📋 居場所: HOME の画面そのものを地図に(画面いっぱい・56-assistant-life-map.jsx)。下に今までの一覧・見出し・アイコンの列 */}
+        {tab === 'where' ? (
+          <AssistantLifeTownMap life={life} ids={ids} land={land} onBack={() => setTab('house')} onPick={(id) => { setTab('house'); setRoomId(id); }} onBeat={beat} onCard={card}
+            list={<>
+              {header}
+              {note && <p data-assistant-life-note className="mx-3 mb-1 rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 text-[11px] font-bold text-sky-100">{note}</p>}
+              <div className="px-3 pb-2"><AssistantLifeScreenBody metIds={metIds} onReplay={playTalk} peerItems={peerItems} onUseItem={onUseItem} embedded/></div>
+              <div className="px-3" style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom))' }}>{icons}</div>
+            </>}/>
+        ) : land ? (
           <div className="relative z-[2] flex h-full min-h-0" style={{ paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
             <div className="mhl-body" style={{ flex: '0 0 64%' }}>{tabBody}</div>
             <div className="flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2">
@@ -1037,80 +1039,13 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
     </div>);
 }
 
-// 📋 みんなの居場所の地図(HOME の町の絵の上に顔の丸)
-// 町の絵(941×1672)の y 120〜1560 を見せる。場所の札は建物の下に置く(2026-11-07 社長「場所ごとの名称はあってる？」で建物と合わせ直した)
-//   育成場=青い屋根の大きな建物と柵/図書室=金の塔/練習スタジオ=その右の青い屋根の石の家/中庭=光る泉/広場=方位の印/
-//   おやつ屋さん=赤い屋根の家/マーケット=しましまの屋台/カード部屋=闘技場/ひなたの丘=滝の上/助手の家=左下の林(絵に家が無いので印だけ)
-const ASSISTANT_LIFE_MAP_CROP = Object.freeze({ y0: 120, h: 1440 });
-// 2026-11-08 社長「実際のホームと場所ずれしてる？」→ HOME にそろえる: 施設と結びつく場所は HOME の札と同じ建物
-//   (モンヒロビート=左の赤い屋根の家・神殿=右上の光る泉・M/B管理=左上の青い屋根・マーケット=しましまの屋台・MFバトルカード=闘技場)。
-//   町だけの場所は空いている所へ(おやつ屋さん=右上の青い屋根の石の家・中庭=石の家と屋台のあいだの芝生)。検査 browser ⑯ が建物の範囲を見る
-const ASSISTANT_LIFE_MAP_POS = Object.freeze({
-  ranch: [23.4, 30.6], library: [69.1, 22.9], cafe: [87.0, 29.5], temple: [66.0, 35.5], garden: [87.0, 46.5], plaza: [51.0, 48.6],
-  studio: [16.5, 64.0], market: [85.0, 64.6], home: [9.6, 78.5], cardroom: [49.9, 91.7], hill: [80.8, 5.6],
-});
-// 建物の範囲(町の絵の幅と切り抜いた高さの %。[左, 上, 右, 下])。HOME の札と地図の場所が同じ建物かを検査が見るのに使う
-const ASSISTANT_LIFE_MAP_BUILDING = Object.freeze({ studio: [2, 45, 36, 70], temple: [55, 24, 80, 40], ranch: [3, 6, 42, 35], market: [68, 48, 100, 70], cardroom: [18, 72, 82, 100] });
-function AssistantLifeTownMap({ life, ids, look, onPick }) {
-  const at = {};
-  for (const id of ids) { const w = assistantLifeWhereOf(life, id); const p = w ? w.place : 'home'; (at[p] = at[p] || []).push(id); }
-  // 札と顔が地図のふちで切れないよう、描いたあとにはみ出した分だけ内側へずらす(丘は上・家は左のふち。2026-11-07 ミハリ L7①)
-  const mapRef = useRef(null);
-  React.useLayoutEffect(() => {
-    const fit = () => {
-      const m = mapRef.current; if (!m) return;
-      const mr = m.getBoundingClientRect();
-      for (const el of m.querySelectorAll('[data-assistant-life-map-place]')) {
-        el.style.translate = '';
-        const r = el.getBoundingClientRect();
-        const dx = r.left < mr.left + 3 ? mr.left + 3 - r.left : r.right > mr.right - 3 ? mr.right - 3 - r.right : 0;
-        const dy = r.top < mr.top + 3 ? mr.top + 3 - r.top : r.bottom > mr.bottom - 3 ? mr.bottom - 3 - r.bottom : 0;
-        if (dx || dy) el.style.translate = `${dx}px ${dy}px`;
-      }
-      // 顔の丸が、となりの場所の札に重なるとき(中庭の顔と練習スタジオの札。2026-11-07 ミハリ 残り②): 顔のいない側(札だけ)を、
-      //   上・下・左・右のうちほかの札にも地図のふちにもかからない、いちばん近い所へ逃がす
-      const els = [...m.querySelectorAll('[data-assistant-life-map-place]')];
-      const hit = (r, q) => Math.min(r.right, q.right) - Math.max(r.left, q.left) > 1 && Math.min(r.bottom, q.bottom) - Math.max(r.top, q.top) > 1;
-      const tr = (el) => (el.style.translate || '0px 0px').split(' ').map(v => parseFloat(v) || 0).concat([0]).slice(0, 2);
-      for (const a of els) {
-        if (!a.querySelector('button')) continue;
-        for (const b of els) {
-          if (a === b || b.querySelector('button')) continue;
-          const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
-          if (!hit(ra, rb)) continue;
-          const [x0, y0] = tr(b);
-          const cands = [[0, ra.top - rb.bottom - 2], [0, ra.bottom - rb.top + 2], [ra.left - rb.right - 2, 0], [ra.right - rb.left + 2, 0]].sort((p, q) => Math.abs(p[0]) + Math.abs(p[1]) - Math.abs(q[0]) - Math.abs(q[1]));
-          const free = cands.find(([dx, dy]) => {
-            const q = { left: rb.left + dx, right: rb.right + dx, top: rb.top + dy, bottom: rb.bottom + dy };
-            if (q.left < mr.left + 3 || q.right > mr.right - 3 || q.top < mr.top + 3 || q.bottom > mr.bottom - 3) return false;
-            return els.every(o => o === b || !hit(q, o.getBoundingClientRect()));
-          }) || cands[0];
-          b.style.translate = `${x0 + free[0]}px ${y0 + free[1]}px`;
-        }
-      }
-    };
-    fit();
-    window.addEventListener('resize', fit);
-    return () => window.removeEventListener('resize', fit);
-  });
-  const tod = assistantLifeTodOn() && typeof TimeOfDayTint === 'function';
-  const filter = { morning: 'saturate(.85) brightness(1.05) sepia(.18)', noon: 'none', evening: 'saturate(1.1) brightness(.85) sepia(.35) hue-rotate(-12deg)', night: 'brightness(.45) saturate(.7)' }[look];
-  return (
-    <div className="relative mb-2 overflow-hidden rounded-2xl border border-white/15" ref={mapRef} style={{ aspectRatio: `941 / ${ASSISTANT_LIFE_MAP_CROP.h}` }} data-assistant-life-map>
-      <img src="data/images/home-background.jpg" alt="" className="absolute left-0 top-0 w-full" style={{ filter: tod ? 'none' : filter, transform: `translateY(-${(100 * ASSISTANT_LIFE_MAP_CROP.y0 / 1672).toFixed(2)}%)` }}/>
-      {tod && <TimeOfDayTint/>}{/* 時間帯の色は HOME と同じ重ね(夜も地図が昼の明るさだった。ミハリ L7③・ハナビ) */}
-      {Object.entries(ASSISTANT_LIFE_MAP_POS).map(([place, [x, y]]) => { const who = at[place] || []; return (
-        <div key={place} className="absolute flex -translate-x-1/2 -translate-y-full flex-col items-center" style={{ left: `${x}%`, top: `${y}%` }} data-assistant-life-map-place={place}>
-          {who.length > 0 && <span className="flex rounded-full border border-white/40 bg-slate-950/70 px-1 py-0.5">{who.map(id => { const a = assistantById(id); return a ? <button key={id} type="button" onClick={() => onPick(id)} className="-ml-1.5 first:ml-0 rounded-full"><AssistantFace who={a} size={24} accent={a.accent}/></button> : null; })}</span>}
-          <span className={`mt-0.5 whitespace-nowrap rounded-md border px-1.5 text-[9.5px] font-black ${who.length ? 'border-amber-300 bg-amber-950/90 text-amber-50' : 'border-slate-500/60 bg-slate-950/70 text-slate-300'}`}>{ASSISTANT_LIFE_PLACE_ICON[place]} {place === 'home' ? '助手の家' : assistantLifePlaceShow(place)}</span>
-        </div>); })}
-    </div>);
-}
+// 📋 みんなの居場所の地図は 56-assistant-life-map.jsx(案A: HOME の画面そのものを地図に・2026-11-08 社長)
 
 // ---------- HOME: 遊んでいる所の施設の下に顔だけ(2026-11-07 社長「もっと小さくしてコンテンツの下において」) ----------
 // 施設の札のすぐ下に、小さい顔を横1列で並べる。全員出す(上限で切らない)。札やほかのボタンに重ならないよう、
 // 下にある札までのすき間を測って顔の大きさを決める(20〜12px)。1列に並びきらないときは、札の幅より外へ伸ばす(左の列は右へ・右の列は左へ)
-const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({ rhythm: '.mh-home-facility.rhythm', card: '.mh-home-card-battle', management: '.mh-home-facility.management', market: '.mh-home-facility.market', life: '.mh-home-facility.life' });
+// HOME(main)の札だけを見る(地図も同じ class の札を持つため)。神殿も地図と同じく顔を出す(2026-11-08 地図 A)
+const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({ rhythm: 'main.mh-home-scene .mh-home-facility.rhythm', card: 'main.mh-home-scene .mh-home-card-battle', management: 'main.mh-home-scene .mh-home-facility.management', temple: 'main.mh-home-scene .mh-home-facility.temple', market: 'main.mh-home-scene .mh-home-facility.market', life: 'main.mh-home-scene .mh-home-facility.life' });
 const ASSISTANT_LIFE_HOME_OBSTACLES = '.mh-home-facility,.mh-home-card-battle,.mh-home-event-banner,.mh-home-tour-banner,.mh-home-mission,.mh-home-gift,.mh-home-event-badge,.mh-home-assistant';
 function AssistantLifeHomeFaces({ metIds }) {
   const st = useAssistantLifeNow(metIds);
