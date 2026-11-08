@@ -10,6 +10,8 @@
 //   ④ 助手ライフを閉じると締まる: 報酬(ダイヤ・ブリーダー経験値)が入り、HOME に残り、周回(段階)が残らない
 //   ⑤ 止める(onQuickRunStop)でも同じく締まり、助手ライフは開いたまま
 //   ⑥ どこでも実行時エラーが出ない
+//   ⑦ AUTO設定の「モンヒロビート・助手ライフを開いたら自動で始める」が ON なら、開いた瞬間に始まる(OFF なら始まらない=①)。
+//      止めたあとは、開いたままでは始め直さない。閉じてもう一度開けば、また始まる(2026-11-08 社長)
 // 札(ボタン)がまだ無くても動くよう、AssistantLifeScreen に渡る props を横から受け取って押す(札ができたらそのボタンでも同じ道を通る)
 'use strict';
 const http = require('http');
@@ -131,6 +133,36 @@ const seed = () => {
     s = await state();
     check('⑤ 止めると締まり、報酬が入る。助手ライフは開いたまま・HOME のまま', (s.gold > before2.gold || s.xp > before2.xp) && !!s.q && s.q.live === false && s.home && !s.battle
       && await page.evaluate(() => !!(ASSISTANT_LIFE_STORE.state && ASSISTANT_LIFE_STORE.state.open)), JSON.stringify({ q: s.q, gold: [before2.gold, s.gold] }));
+    // ⑦ 自動で始める(スイッチ ON にして開き直す)
+    await page.evaluate(() => ASSISTANT_LIFE_STORE.set({ open: false }));
+    await page.waitForTimeout(2500);
+    await page.evaluate(() => { const k = 'mh_auto_settings_v1'; const v = JSON.parse(localStorage.getItem(k)); v.quickRun.autoStart = true; localStorage.setItem(k, JSON.stringify(v)); });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 90000 });
+    for (let i = 0; i < 120 && !(await home.isVisible().catch(() => false)); i++) {
+      if (await top.isVisible().catch(() => false)) await top.dispatchEvent('pointerdown').catch(() => {});
+      await closePopups();
+      await page.waitForTimeout(500);
+    }
+    for (let i = 0; i < 6 && await closePopups(); i++) await page.waitForTimeout(300);
+    await page.evaluate(() => { const orig = window.AssistantLifeScreen; window.AssistantLifeScreen = function (p) { window.__alq = p; return orig(p); }; });
+    await openLife();
+    await page.waitForTimeout(2500);
+    s = await state();
+    check('⑦ スイッチ ON なら、助手ライフを開いた瞬間に周回が始まる', !!s.q && s.q.live === true, JSON.stringify(s.q));
+    await page.evaluate(() => window.__alq.onQuickRunStop());
+    await page.waitForTimeout(7000);
+    s = await state();
+    check('⑦ 止めたあとは、開いたままでは始め直さない', !!s.q && s.q.live === false && s.q.loops === 0, JSON.stringify(s.q));
+    await page.evaluate(() => ASSISTANT_LIFE_STORE.set({ open: false }));
+    await page.waitForTimeout(2000);
+    await openLife();
+    await page.waitForTimeout(2500);
+    s = await state();
+    check('⑦ 閉じてもう一度開けば、また自動で始まる', !!s.q && s.q.live === true, JSON.stringify(s.q));
+    await page.evaluate(() => ASSISTANT_LIFE_STORE.set({ open: false }));
+    await page.waitForTimeout(3000);
+    check('⑦ 閉じると締まり、バトルへ飛ばない', !(await state()).battle && (await state()).home);
     check('⑥ 実行時エラーが出ない', fatal.length === 0, fatal.slice(0, 2).join(' / '));
   } catch (e) {
     check('ブラウザで確認できた', false, String(e && e.stack || e).slice(0, 400));
