@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 61e7f7eea47f182b
+// source-sha256: 5f0c9c835d8fe89f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -62646,7 +62646,7 @@ const growthFxSessionLevel = (list = []) => {
 };
 const GROWTH_FX_CSS = `
 .mh-gfx-chips{position:fixed;top:calc(env(safe-area-inset-top,0px) + 52px);right:10px;z-index:44000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
-.mh-gfx-chips.left{right:auto;left:10px;align-items:flex-start}
+.mh-gfx-chips.left{right:auto;left:10px;align-items:flex-start}.mh-gfx-chips.one .mh-gfx-chip:not(:first-child){display:none}.mh-gfx-chips.one .mh-gfx-chip:first-child::after{content:attr(data-more);margin-left:2px;border-radius:999px;background:#ffffff26;padding:0 5px;font-size:10px;font-weight:900}.mh-gfx-chips.row{flex-direction:row;align-items:flex-start;max-width:calc(100% - 20px);flex-wrap:nowrap}
 .mh-gfx-chips.mini .mh-gfx-chip>.min-w-0{display:none}.mh-gfx-chips.mini .mh-gfx-chip{padding:3px 8px 3px 4px;gap:4px}
 .mh-gfx-chip{position:relative;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;border-radius:999px;background:linear-gradient(90deg,#1e1b2ef0,#0f172af0);
   border:1.5px solid var(--gc);box-shadow:0 0 14px color-mix(in srgb,var(--gc) 40%,transparent);font-weight:900;font-size:11px;color:#fff;
@@ -63156,39 +63156,106 @@ const GrowthFxLevelUp = ({
   }, done ? '押すと閉じる' : '押すと先へ'));
 };
 const GROWTH_FX_CHIP_TOPS = [52, 8, 96, 140];
-const GROWTH_FX_CHIP_BUSY_SEL = 'button,a,input,[role="tab"],[role="button"],[data-assistant-bubble],img,svg,p,span,b,small,strong,em,h1,h2,h3,h4,li,label,[data-alf-face]';
-const growthFxChipSpotBusy = box => {
-  if (typeof document === 'undefined' || !document.elementsFromPoint) return false;
-  const r = box.getBoundingClientRect();
+const GROWTH_FX_CHIP_BUSY_SEL = 'button,a,input,[role="tab"],[role="button"],[data-assistant-bubble],img,svg,p,span,b,small,strong,em,h1,h2,h3,h4,li,label,div,[data-alf-face]';
+const growthFxChipSpotScore = (box, first = false) => {
+  if (typeof document === 'undefined' || !document.elementsFromPoint) return 0;
+  const r = [...box.querySelectorAll('.mh-gfx-chip')].reduce((a, c) => {
+    const q = c.getBoundingClientRect();
+    if (!q.width || !q.height) return a;
+    return {
+      left: Math.min(a.left, q.left),
+      top: Math.min(a.top, q.top - 12),
+      right: Math.max(a.right, q.right),
+      bottom: Math.max(a.bottom, q.bottom + 4)
+    };
+  }, (() => {
+    const b = box.getBoundingClientRect();
+    return {
+      left: b.left,
+      top: b.top,
+      right: b.right,
+      bottom: b.bottom
+    };
+  })());
+  r.width = r.right - r.left;
+  r.height = r.bottom - r.top;
+  let score = 0;
   for (const fx of [0.15, 0.5, 0.85]) for (const fy of [0.25, 0.75]) {
     const x = r.left + r.width * fx,
       y = r.top + r.height * fy;
-    const under = document.elementsFromPoint(x, y).find(el => !box.contains(el));
+    const under = document.elementsFromPoint(x, y).find(el => !box.contains(el) && !el.contains(box));
     if (!under) continue;
-    if (under.closest('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]')) return true;
-    if ([...under.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return true;
+    if (under.closest('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]')) {
+      score += 3;
+      if (first) return score;
+    } else if ([...under.childNodes].some(n => {
+      if (n.nodeType !== 3 || !n.textContent.trim()) return false;
+      const rg = document.createRange();
+      rg.selectNodeContents(n);
+      return [...rg.getClientRects()].some(q => x >= q.left - 2 && x <= q.right + 2 && y >= q.top - 2 && y <= q.bottom + 2);
+    })) {
+      score += 2;
+      if (first) return score;
+    }
   }
   const vw = window.innerWidth,
     vh = window.innerHeight;
+  const hit = e => Math.min(r.right, e.right) - Math.max(r.left, e.left) > 1 && Math.min(r.bottom, e.bottom) - Math.max(r.top, e.top) > 1;
+  const seen = (el, e) => {
+    const x0 = Math.max(r.left, e.left),
+      y0 = Math.max(r.top, e.top),
+      x1 = Math.min(r.right, e.right),
+      y1 = Math.min(r.bottom, e.bottom);
+    return [[x0 + 1, y0 + 1], [(x0 + x1) / 2, (y0 + y1) / 2]].some(([cx, cy]) => {
+      const top = document.elementsFromPoint(cx, cy).find(x => !box.contains(x) && !x.contains(box));
+      return !top || top === el || el.contains(top) || top.contains(el);
+    });
+  };
+  for (const sh of document.querySelectorAll('.mhl-sheet,[data-mhl-sheet],[role="dialog"]')) {
+    if (box.contains(sh) || sh.contains(box)) continue;
+    const e = sh.getBoundingClientRect();
+    if (!e.width || !e.height || !hit(e)) continue;
+    const cs = getComputedStyle(sh);
+    if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
+    score += 3;
+    if (first) return score;
+  }
   for (const el of document.querySelectorAll(GROWTH_FX_CHIP_BUSY_SEL)) {
     if (box.contains(el)) continue;
     const e = el.getBoundingClientRect();
-    if (!e.width || !e.height || e.width > vw * 0.9 || e.height > vh * 0.5) continue;
-    if (Math.min(r.right, e.right) - Math.max(r.left, e.left) <= 1 || Math.min(r.bottom, e.bottom) - Math.max(r.top, e.top) <= 1) continue;
+    if (!e.width || !e.height || !hit(e)) continue;
     const cs = getComputedStyle(el);
     if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
     const isPic = /^(IMG|SVG)$/i.test(el.tagName) || el.hasAttribute('data-alf-face');
     const isAct = el.matches('button,a,input,[role="tab"],[role="button"],[data-assistant-bubble]');
-    const hasText = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
-    if (!isPic && !isAct && !hasText) continue;
-    const cx = Math.max(r.left, e.left) + 1,
-      cy = Math.max(r.top, e.top) + 1;
-    const top = document.elementsFromPoint(cx, cy).find(x => !box.contains(x));
-    if (top && !(top === el || el.contains(top) || top.contains(el))) continue;
-    return true;
+    const texts = [...el.childNodes].filter(n => n.nodeType === 3 && n.textContent.trim());
+    if (texts.length) {
+      let on = null;
+      for (const t of texts) {
+        const rg = document.createRange();
+        rg.selectNodeContents(t);
+        for (const q of rg.getClientRects()) if (hit(q)) {
+          on = q;
+          break;
+        }
+        if (on) break;
+      }
+      if (on && seen(el, on)) {
+        score += isAct ? 3 : 2;
+        if (first) return score;
+        continue;
+      }
+      if (!isAct) continue;
+    }
+    if (!isPic && !isAct) continue;
+    if (e.width > vw * 0.9 || e.height > vh * 0.5) continue;
+    if (!seen(el, e)) continue;
+    score += isAct ? 3 : 1;
+    if (first) return score;
   }
-  return false;
+  return score;
 };
+const growthFxChipSpotBusy = box => growthFxChipSpotScore(box, true) > 0;
 const GrowthFxChipsBox = ({
   level,
   count,
@@ -63203,29 +63270,82 @@ const GrowthFxChipsBox = ({
       const steps = [];
       for (let y = window.innerHeight - 10 - box.offsetHeight; y >= 8; y -= 24) steps.push(Math.round(y));
       const tops = [...new Set([...GROWTH_FX_CHIP_TOPS, Math.max(60, window.innerHeight - 120 - box.offsetHeight), ...steps])];
-      for (const mini of [false, true]) {
+      const chipEls = box.querySelectorAll('.mh-gfx-chip');
+      const more = Math.max(0, chipEls.length - 1);
+      if (chipEls[0]) chipEls[0].setAttribute('data-more', more ? `ほか${more}` : '');
+      for (const [mini, row, one] of [[false, false, false], [true, false, false], [true, true, false], ...(more ? [[true, false, true]] : [])]) {
         box.classList.toggle('mini', mini);
+        box.classList.toggle('row', row);
+        box.classList.toggle('one', one);
         for (const left of [false, true]) {
           box.classList.toggle('left', left);
           for (const t of tops) {
             box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`;
             if (!growthFxChipSpotBusy(box)) {
-              box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${left ? 'left-' : ''}${t}`;
+              box.dataset.growthFxChipsTop = `${mini ? 'mini-' : ''}${row ? 'row-' : ''}${one ? 'one-' : ''}${left ? 'left-' : ''}${t}`;
               return;
             }
           }
         }
       }
-      box.classList.remove('left');
-      box.style.top = `calc(env(safe-area-inset-top, 0px) + ${GROWTH_FX_CHIP_TOPS[1]}px)`;
-      box.dataset.growthFxChipsTop = 'mini-busy';
+      let best = null;
+      for (const [row, one] of [[false, false], [true, false], ...(more ? [[false, true]] : [])]) for (const left of [false, true]) {
+        box.classList.toggle('row', row);
+        box.classList.toggle('one', one);
+        box.classList.toggle('left', left);
+        for (const t of tops) {
+          box.style.top = `calc(env(safe-area-inset-top, 0px) + ${t}px)`;
+          const sc = growthFxChipSpotScore(box);
+          if (!best || sc < best.sc) best = {
+            sc,
+            left,
+            t,
+            row,
+            one
+          };
+        }
+      }
+      box.classList.toggle('row', !!(best && best.row));
+      box.classList.toggle('one', !!(best && best.one));
+      box.classList.toggle('left', !!(best && best.left));
+      box.style.top = `calc(env(safe-area-inset-top, 0px) + ${best ? best.t : GROWTH_FX_CHIP_TOPS[1]}px)`;
+      box.dataset.growthFxChipsTop = `mini-busy${best ? `-${best.left ? 'left-' : ''}${best.t}` : ''}`;
     };
     place();
+    let tm = null;
+    const mo = typeof MutationObserver === 'function' ? new MutationObserver(list => {
+      if (list.every(m => ref.current && ref.current.contains(m.target))) return;
+      if (tm) return;
+      tm = setTimeout(() => {
+        tm = null;
+        place();
+      }, 50);
+    }) : null;
+    if (mo && document.body) mo.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+    const onAnimEnd = e => {
+      if (ref.current && ref.current.contains(e.target)) return;
+      if (tm) return;
+      tm = setTimeout(() => {
+        tm = null;
+        place();
+      }, 50);
+    };
+    document.addEventListener('animationend', onAnimEnd, true);
+    document.addEventListener('transitionend', onAnimEnd, true);
     const t1 = setTimeout(place, 500),
-      t2 = setTimeout(place, 1500);
+      t2 = setTimeout(place, 1500),
+      iv = setInterval(place, 700);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
+      clearInterval(iv);
+      if (tm) clearTimeout(tm);
+      if (mo) mo.disconnect();
+      document.removeEventListener('animationend', onAnimEnd, true);
+      document.removeEventListener('transitionend', onAnimEnd, true);
     };
   }, [count]);
   return React.createElement("div", {
@@ -106746,6 +106866,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-hdr{position:relative;z-index:5;padding:8px 12px 6px;background:linear-gradient(180deg,#140b2ef2,#140b2ecc 75%,#140b2e00)}
 .mhl-en{font-size:9px;letter-spacing:.18em;font-weight:900;color:#f9a8d4}
 .mhl-ti{font-size:22px;font-weight:900;line-height:1.05;background:linear-gradient(90deg,#fff,#fbcfe8 60%,#fde68a);-webkit-background-clip:text;background-clip:text;color:transparent}
+.mhl-quick{display:flex;align-items:center;gap:5px;border-radius:999px;padding:3px 4px 3px 9px;border:1px solid #fbbf2488;background:rgba(15,23,42,.78);font-size:10.5px;font-weight:900;color:#fde68a}.mhl-quick b{color:#fff}.mhl-quick button{min-height:26px;border-radius:999px;padding:0 9px;background:#334155;color:#e2e8f0;font-size:10.5px;font-weight:900;border:1px solid #64748b}.mhl-quick.is-start{padding:3px 10px;min-height:30px;background:linear-gradient(90deg,#f59e0b,#ea580c);color:#fff;border-color:#fde68a}
 .mhl-clock{border-radius:12px;padding:3px 8px;border:1px solid #ffffff33;background:rgba(15,23,42,.72);text-align:right}
 .mhl-chip{display:inline-flex;align-items:center;gap:3px;background:linear-gradient(90deg,#be185d,#f59e0b);padding:1px 8px;border-radius:999px;font-size:10px;font-weight:900;white-space:nowrap}
 .mhl-bar{flex:1;height:7px;border-radius:9px;background:#ffffff1f;overflow:hidden}.mhl-bar>i{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fbbf24)}
@@ -107783,20 +107904,85 @@ function AssistantLifeScene({
     onClick: onClose
   }, "🏡 家へ戻る")));
 }
-const useAssistantLifeLand = () => {
-  const get = () => typeof window !== 'undefined' && window.innerWidth > window.innerHeight && window.innerHeight < 600;
-  const [land, setLand] = React.useState(get);
+const assistantLifeViewSize = () => {
+  if (typeof window === 'undefined') return {
+    w: 390,
+    h: 844,
+    rot: false
+  };
+  const rot = typeof RHYTHM_VIEW_ROTATION === 'object' && !!RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.active === 'function' && RHYTHM_VIEW_ROTATION.active();
+  return rot ? {
+    w: window.innerHeight,
+    h: window.innerWidth,
+    rot: true
+  } : {
+    w: window.innerWidth,
+    h: window.innerHeight,
+    rot: false
+  };
+};
+const useAssistantLifeViewSize = () => {
+  const [size, setSize] = React.useState(assistantLifeViewSize);
   React.useEffect(() => {
-    const f = () => setLand(get());
+    const f = () => setSize(prev => {
+      const n = assistantLifeViewSize();
+      return n.w === prev.w && n.h === prev.h && n.rot === prev.rot ? prev : n;
+    });
     window.addEventListener('resize', f);
     window.addEventListener('orientationchange', f);
+    const id = setInterval(f, 500);
     return () => {
       window.removeEventListener('resize', f);
       window.removeEventListener('orientationchange', f);
+      clearInterval(id);
     };
   }, []);
-  return land;
+  return size;
 };
+const useAssistantLifeLand = () => {
+  const v = useAssistantLifeViewSize();
+  return v.w > v.h && v.h < 600;
+};
+function AssistantLifeQuickChip({
+  quickRun,
+  onStop,
+  onStart,
+  land
+}) {
+  if (!quickRun || typeof quickRun !== 'object') return null;
+  const loops = Number.isFinite(Number(quickRun.loops)) ? Math.max(1, Math.floor(Number(quickRun.loops))) : 1;
+  if (quickRun.live) {
+    return React.createElement("div", {
+      className: "mhl-quick shrink-0 self-center",
+      "data-assistant-life-quick": "live",
+      "data-assistant-life-quick-run": "live",
+      "data-assistant-life-quick-loop": loops
+    }, React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "⚡ 裏クイック ", React.createElement("b", null, loops, "周目")), onStop && React.createElement("button", {
+      type: "button",
+      "data-assistant-life-quick-stop": true,
+      onClick: onStop,
+      "aria-label": "裏クイックを止める"
+    }, "止める"));
+  }
+  if (quickRun.canStart && onStart) {
+    return React.createElement("div", {
+      className: "shrink-0 self-center",
+      "data-assistant-life-quick": "start",
+      "data-assistant-life-quick-run": "stopped"
+    }, React.createElement("button", {
+      type: "button",
+      className: "mhl-quick is-start",
+      "data-assistant-life-quick-start": true,
+      onClick: onStart,
+      "aria-label": "裏クイックを始める"
+    }, React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "▶ 裏クイック")));
+  }
+  return null;
+}
 function AssistantLifeHouse({
   metIds,
   onReplay,
@@ -107805,7 +107991,11 @@ function AssistantLifeHouse({
   bondLevelOf = null,
   furnItems = null,
   onGiveFurn = null,
-  onGiveSolo = null
+  onGiveSolo = null,
+  quickRun = null,
+  onQuickRunStop = null,
+  onQuickRunStart = null,
+  quickRunStrip = null
 }) {
   const st = useAssistantLifeNow(metIds);
   const diary = useAssistantLifeDiary();
@@ -107822,12 +108012,7 @@ function AssistantLifeHouse({
   const [masmonId, setMasmonId] = React.useState(null);
   const [intro, setIntro] = React.useState(null);
   const [boardOpen, setBoardOpen] = React.useState(false);
-  const [vw, setVw] = React.useState(() => typeof window !== 'undefined' ? window.innerWidth : 390);
-  React.useEffect(() => {
-    const f = () => setVw(window.innerWidth);
-    window.addEventListener('resize', f);
-    return () => window.removeEventListener('resize', f);
-  }, []);
+  const vw = useAssistantLifeViewSize().w;
   React.useEffect(() => {
     let alive = true;
     (async () => {
@@ -108236,6 +108421,11 @@ function AssistantLifeHouse({
     } : undefined
   }, "助手ライフ")), React.createElement("div", {
     className: "min-w-0 flex-1"
+  }), !quickRunStrip && React.createElement(AssistantLifeQuickChip, {
+    quickRun: quickRun,
+    onStop: onQuickRunStop,
+    onStart: onQuickRunStart,
+    land: land
   }), typeof TimeOfDayClock === 'function' && React.createElement("div", {
     className: "ml-auto shrink-0 self-center",
     "data-assistant-life-clock-box": true
@@ -108451,10 +108641,16 @@ function AssistantLifeHouse({
     }
   }, tabBody), React.createElement("div", {
     className: "flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2"
-  }, header, note && React.createElement("p", {
+  }, header, quickRunStrip && React.createElement("div", {
+    className: "shrink-0",
+    "data-assistant-life-quick-strip": true
+  }, quickRunStrip), note && React.createElement("p", {
     "data-assistant-life-note": true,
     className: "rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1 text-[10.5px] font-bold text-sky-100"
-  }, note), tiles, icons)) : React.createElement(React.Fragment, null, header, React.createElement("div", {
+  }, note), tiles, icons)) : React.createElement(React.Fragment, null, header, quickRunStrip && React.createElement("div", {
+    className: "relative z-[3] shrink-0",
+    "data-assistant-life-quick-strip": true
+  }, quickRunStrip), React.createElement("div", {
     className: "mhl-body"
   }, note && React.createElement("p", {
     "data-assistant-life-note": true,
@@ -121901,6 +122097,21 @@ const assistantLifeSoloLine = (who, g, like, rand = Math.random) => {
     t: String(pick.t).split('{item}').join(g.name)
   } : null;
 };
+const assistantLifeAddBondWithFx = (who, actionKey, amount) => {
+  if (typeof assistantPeerPlayerBondAdder === 'undefined' || !assistantPeerPlayerBondAdder) return;
+  const before = assistantLifeBondPointsOf(who);
+  try {
+    assistantPeerPlayerBondAdder(who, actionKey, amount);
+  } catch {
+    return;
+  }
+  const after = assistantLifeBondPointsOf(who);
+  if (Number.isFinite(before) && Number.isFinite(after) && after > before && typeof growthFxAssistantBond === 'function') {
+    try {
+      growthFxAssistantBond(who, before, after);
+    } catch {}
+  }
+};
 const assistantLifeSoloGive = async (who, kind, rand = Math.random) => {
   await ASSISTANT_LIFE_GIFT_STORE.load();
   const g = assistantLifeGiftOf(kind);
@@ -121947,11 +122158,7 @@ const assistantLifeSoloGive = async (who, kind, rand = Math.random) => {
   }
   const like = assistantLifeGiftLike(who, g.key);
   const amount = assistantLifeSoloAmount(who, g.key);
-  if (typeof assistantPeerPlayerBondAdder !== 'undefined' && assistantPeerPlayerBondAdder) {
-    try {
-      assistantPeerPlayerBondAdder(who, 'lifeGift', amount);
-    } catch {}
-  }
+  assistantLifeAddBondWithFx(who, 'lifeGift', amount);
   if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`${typeof assistantLifeName === 'function' ? assistantLifeName(who) : who}に${g.name}を贈った`, [who], {
     kind: 'give'
   });
@@ -122886,11 +123093,7 @@ const assistantLifeFurnGive = async (who, key) => {
     storeSet(ASSISTANT_LIFE_GIFT_LIKES_KEY, likes, false);
   } catch {}
   const amount = assistantLifeFurnAmount(who, key);
-  if (typeof assistantPeerPlayerBondAdder !== 'undefined' && assistantPeerPlayerBondAdder) {
-    try {
-      assistantPeerPlayerBondAdder(who, 'lifeFurn', amount);
-    } catch {}
-  }
+  assistantLifeAddBondWithFx(who, 'lifeFurn', amount);
   const f = assistantLifeFurnOf(key);
   if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`${typeof assistantLifeName === 'function' ? assistantLifeName(who) : who}の部屋に${f.name}を贈った`, [who], {
     kind: 'give'
@@ -123998,7 +124201,7 @@ const assistantMasmonPlanOf = id => {
   }
   const d = st && st.draw && st.draw.v === ASSISTANT_MASMON_DRAW_V && Array.isArray(st.draw.made[id]) ? st.draw.made[id] : null;
   if (d && d.length) {
-    const w = st.draw.welcomed[id] || {};
+    const rows = assistantMasmonRowsOf(st, id);
     const row2 = t => ({
       monster: t.monster,
       nick: t.nick,
@@ -124008,18 +124211,27 @@ const assistantMasmonPlanOf = id => {
       slot: t.slot,
       role: t.role,
       welcome: t.welcome,
+      reason: t.reason || '',
       dye: {
         colors: [...assistantMasmonDyeNowOf(st, id, t.slot, t.colors)]
       }
     });
+    const had = new Set(rows.map(t => t.slot));
+    const waiting = d.filter(t => !had.has(t.slot)).map(t => ({
+      slot: t.slot,
+      welcome: t.welcome,
+      monster: `__slot${t.slot}`,
+      nick: '？？？',
+      unknown: true
+    }));
     return {
       ...base,
       v2: true,
-      team: d.filter(t => t.slot === 1 || w[t.monster]).map(t => ({
+      team: rows.map(t => ({
         ...row2(t),
         lead: t.slot === 1
       })),
-      extra: d.filter(t => t.slot !== 1 && !w[t.monster]).map(row2)
+      extra: waiting
     };
   }
   if (!Array.isArray(made) || made.length < 3) return base;
@@ -124138,6 +124350,39 @@ const normalizeAssistantMasmonDraw = raw => {
   if (raw.fav && typeof raw.fav === 'object') for (const [aid, sig] of Object.entries(raw.fav)) if (assistantMasmonBasePlanOf(aid) && typeof sig === 'string') out.fav[aid] = sig.slice(0, 120);
   return out;
 };
+const normalizeAssistantMasmonPick = raw => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [aid, slots] of Object.entries(raw)) {
+    if (!assistantMasmonBasePlanOf(aid) || !slots || typeof slots !== 'object' || Array.isArray(slots)) continue;
+    const m = {};
+    const mons = new Set();
+    for (const [k, t] of Object.entries(slots)) {
+      const slot = Number(k);
+      if (!Number.isInteger(slot) || slot < 2 || slot > ASSISTANT_MASMON_DRAW_MAX || !t || typeof t !== 'object') continue;
+      const lv = Number(t.lv),
+        wl = Number(t.welcome);
+      if (typeof t.monster !== 'string' || mons.has(t.monster) || typeof t.nick !== 'string' || !t.nick || t.nick.length > 16 || !Number.isFinite(lv)) continue;
+      mons.add(t.monster);
+      m[slot] = {
+        slot,
+        monster: t.monster,
+        nick: t.nick,
+        lv: Math.max(1, Math.min(99, Math.round(lv))),
+        grow: typeof t.grow === 'string' ? t.grow.slice(0, 30) : '',
+        why: typeof t.why === 'string' ? t.why.slice(0, 40) : '',
+        role: typeof t.role === 'string' && ASSISTANT_MASMON_ROLE_NAME[t.role] ? t.role : '',
+        welcome: Number.isInteger(wl) && wl >= 1 && wl <= 99 ? wl : slot * 2 - 1,
+        colors: Array.isArray(t.colors) ? t.colors.slice(0, 8).map(c => typeof c === 'string' && ASSISTANT_MASMON_DYE_RE.test(c) ? c : null) : [],
+        ai: t.ai === true,
+        reason: typeof t.reason === 'string' && ASSISTANT_MASMON_PICK_REASON[t.reason] ? t.reason : '',
+        at: typeof t.at === 'string' ? t.at.slice(0, 10) : ''
+      };
+    }
+    if (Object.keys(m).length) out[aid] = m;
+  }
+  return out;
+};
 const normalizeAssistantMasmonSave = raw => {
   const out = {
     v: 1,
@@ -124147,7 +124392,10 @@ const normalizeAssistantMasmonSave = raw => {
     named: false,
     noticed: {},
     dyes: {},
-    draw: normalizeAssistantMasmonDraw(null)
+    draw: normalizeAssistantMasmonDraw(null),
+    pick: {},
+    pickNameDay: '',
+    renamed2: {}
   };
   if (raw && typeof raw === 'object') {
     if (typeof raw.seed === 'string' && /^[\w-]{4,60}$/.test(raw.seed)) out.seed = raw.seed;
@@ -124155,6 +124403,9 @@ const normalizeAssistantMasmonSave = raw => {
     out.named = raw.named === true;
     out.dyes = normalizeAssistantMasmonDyes(raw.dyes);
     out.draw = normalizeAssistantMasmonDraw(raw.draw);
+    out.pick = normalizeAssistantMasmonPick(raw.pick);
+    out.pickNameDay = typeof raw.pickNameDay === 'string' ? raw.pickNameDay.slice(0, 10) : '';
+    if (raw.renamed2 && typeof raw.renamed2 === 'object') for (const [k, v] of Object.entries(raw.renamed2)) if (assistantMasmonBasePlanOf(k) && (v === 'new' || v === 'seen')) out.renamed2[k] = v;
     if (raw.noticed && typeof raw.noticed === 'object') for (const [k, v] of Object.entries(raw.noticed)) if (v === true && assistantMasmonBasePlanOf(k)) out.noticed[k] = true;
   }
   const w = raw && typeof raw === 'object' && raw.welcomed && typeof raw.welcomed === 'object' ? raw.welcomed : {};
@@ -124854,7 +125105,7 @@ const assistantMasmonDyeNowOf = (state, aid, slot, fallback) => {
 const assistantMasmonDyeLog = (aid, slot) => {
   const st = ASSISTANT_MASMON_STORE.state,
     hist = st.dyes && st.dyes[aid] || [];
-  const row = assistantMasmonDrawOn(aid, st) ? st.draw.made[aid].find(t => t.slot === slot) : null;
+  const row = assistantMasmonRowsOf(st, aid).find(t => t.slot === slot) || null;
   if (!row) return [];
   let before = row.colors;
   const out = [];
@@ -124888,15 +125139,14 @@ const assistantMasmonDyeEnsure = (state, day) => {
     const last = hist[hist.length - 1] || null;
     const lastSeason = last ? last.season : assistantMasmonSeasonKey(state.draw.at);
     const lastFav = last && last.fav || state.draw.fav[aid] || sig;
-    const w = state.draw.welcomed[aid] || {};
-    const mine = list.filter(t => t.slot === 1 || w[t.monster]);
+    const mine = assistantMasmonRowsOf(state, aid);
     const cur = t => assistantMasmonDyeNowOf({
       dyes: {
         [aid]: hist
       }
     }, aid, t.slot, t.colors);
     if (lastFav !== sig) {
-      const lead = list.find(t => t.slot === 1);
+      const lead = mine.find(t => t.slot === 1);
       if (lead) {
         const rnd = assistantMasmonRng(`${state.seed}|${aid}|like|${sig}`);
         hist.push({
@@ -125041,6 +125291,187 @@ const assistantMasmonDrawFor = (aid, seed) => {
     };
   });
 };
+const ASSISTANT_MASMON_PLAY_TAGS = Object.freeze({
+  rhythm: ['Melody', 'Illumine', 'Dreamy', 'Mia', 'Kuromy', 'MelWhip', 'Snegurochka', 'Pixie'],
+  battle: ['Golem', 'Tiger', 'Zan', 'Eiki', 'KenshiMocchi', 'Kyubi', 'Ark', 'Iblis', 'Pandora'],
+  card: ['Monol', 'Orihime', 'Spooky', 'Ghost', 'Suezo', 'Yggdrasil', 'Undine'],
+  chat: ['Mocchi', 'Ham', 'Plant', 'Oboro', 'Mitarashi', 'Yaobikuni', 'Dreamy']
+});
+const ASSISTANT_MASMON_MOOD_TAG = Object.freeze({
+  happy: 'like',
+  lonely: 'chat',
+  restless: 'rhythm',
+  sulky: 'rest',
+  sleepy: 'chat',
+  eager: 'battle'
+});
+const ASSISTANT_MASMON_PICK_REASON = Object.freeze({
+  rhythm: '最近いっしょにモンヒロビートをしているから',
+  card: '最近いっしょにMFバトルカードをしているから',
+  battle: '最近いっしょにバトルをしているから',
+  chat: '最近よくおしゃべりしているから',
+  gift: 'いろいろ贈ってもらったお礼に、好きなモンスターを',
+  mood_happy: 'ごきげんな日に、好きなモンスターを',
+  mood_lonely: 'さみしくて、そばにいてくれそうなモンスターを',
+  mood_restless: 'そわそわして、いっしょに動けるモンスターを',
+  mood_sulky: 'ちょっとすねて、いつもと違うモンスターを',
+  mood_sleepy: 'ねむくて、のんびりしたモンスターを',
+  mood_eager: 'やる気が出て、強そうなモンスターを',
+  open: '仲良くなって、意外な好みを見せたくて',
+  like: '前から好きだったモンスターだから',
+  lineage: '好きなモンスターの仲間だから',
+  balance: '編成の釣り合いを考えて'
+});
+const assistantMasmonPickContext = (aid, bondLv) => {
+  const ctx = {
+    lv: Number.isFinite(bondLv) ? bondLv : 1,
+    mood: null,
+    counts: {},
+    gifts: 0
+  };
+  try {
+    const l = typeof ASSISTANT_LIFE_STORE !== 'undefined' ? ASSISTANT_LIFE_STORE.state : null;
+    if (l && l.life && l.life.moods && typeof l.life.moods[aid] === 'string') ctx.mood = l.life.moods[aid];
+    if (l && l.play && l.play.counts) ctx.counts = {
+      ...l.play.counts
+    };
+  } catch (_) {}
+  try {
+    const g = typeof ASSISTANT_LIFE_GIFT_STORE !== 'undefined' ? ASSISTANT_LIFE_GIFT_STORE.state : null;
+    const known = g && g.likes && g.likes.known && g.likes.known[aid] ? Object.values(g.likes.known[aid]).filter(v => v === 'gift').length : 0;
+    const solo = g && g.solo && g.solo.used ? Object.values(g.solo.used).filter(v => v === aid).length : 0;
+    ctx.gifts = known + solo;
+  } catch (_) {}
+  return ctx;
+};
+const assistantMasmonChooseAt = (aid, slot, have, ctx, seed, day) => {
+  const p = assistantMasmonBasePlanOf(aid);
+  if (!p) return null;
+  const rnd = assistantMasmonRng(`${seed}|${aid}|pick|${slot}|${day}|${ctx.mood || ''}`);
+  const {
+    likes,
+    more,
+    rest
+  } = assistantMasmonDrawPool(aid, p);
+  const haveMons = new Set(have.map(t => t.monster));
+  const linCount = {};
+  for (const t of have) {
+    const l = assistantMasmonLineage(t.monster);
+    if (l) linCount[l] = (linCount[l] || 0) + 1;
+  }
+  const cands = [...likes.map(t => ({
+    t,
+    src: 'like'
+  })), ...more.map(t => ({
+    t,
+    src: 'lineage'
+  })), ...rest.map(t => ({
+    t,
+    src: 'rest'
+  }))].filter(c => !haveMons.has(c.t.monster));
+  if (!cands.length) return null;
+  const tagOf = m => Object.keys(ASSISTANT_MASMON_PLAY_TAGS).filter(k => ASSISTANT_MASMON_PLAY_TAGS[k].includes(m));
+  let best = null;
+  for (const c of cands) {
+    const why = {};
+    const m = c.t.monster,
+      tags = tagOf(m);
+    let sc = c.src === 'like' ? 3 : c.src === 'lineage' ? 2 : 0.4;
+    for (const k of ['rhythm', 'battle', 'card', 'chat']) {
+      const n = Number(ctx.counts[k]) || 0;
+      if (n > 0 && tags.includes(k)) {
+        const v = Math.min(3, n * 0.6);
+        sc += v;
+        why[k] = v;
+      }
+    }
+    const mt = ASSISTANT_MASMON_MOOD_TAG[ctx.mood];
+    if (mt && (mt === 'like' && c.src === 'like' || mt === 'rest' && c.src !== 'like' || tags.includes(mt))) {
+      sc += 1.5;
+      why[`mood_${ctx.mood}`] = 1.5;
+    }
+    if (ctx.gifts > 0 && c.src === 'like') {
+      const v = Math.min(2, ctx.gifts * 0.4);
+      sc += v;
+      why.gift = v;
+    }
+    if (ctx.lv >= 9 && c.src !== 'like') {
+      sc += 1;
+      why.open = 1;
+    }
+    const l = assistantMasmonLineage(m);
+    if (l && (linCount[l] || 0) >= 2) sc *= 0.4;
+    sc *= 0.6 + 0.8 * rnd();
+    if (!best || sc > best.sc) best = {
+      c,
+      sc,
+      why
+    };
+  }
+  const top = Object.entries(best.why).sort((a, b) => b[1] - a[1])[0];
+  const reason = top ? top[0] : best.c.src === 'like' ? 'like' : best.c.src === 'lineage' ? 'lineage' : 'balance';
+  const kinds = new Set(have.map(t => assistantMasmonGrowKind(t.grow)));
+  const miss = ASSISTANT_MASMON_GROW_KINDS.filter(k => !kinds.has(k));
+  const grow = miss.length ? miss[Math.floor(rnd() * miss.length)] : ASSISTANT_MASMON_GROW_KINDS[Math.floor(rnd() * ASSISTANT_MASMON_GROW_KINDS.length)];
+  const H = ASSISTANT_MASMON_DYE_HABIT[aid] || ASSISTANT_MASMON_DYE_HABIT.mua;
+  const role = H.roles[Math.floor(rnd() * H.roles.length)];
+  const mon = assistantMasmonMon(best.c.t.monster);
+  return {
+    slot,
+    monster: best.c.t.monster,
+    nick: typeof best.c.t.nick === 'string' && best.c.t.nick ? best.c.t.nick : mon && mon.name || best.c.t.monster,
+    lv: Math.max(1, Math.min(30, 4 + Math.round(ctx.lv * 0.9) + Math.round((rnd() - 0.5) * 4))),
+    grow,
+    why: ASSISTANT_MASMON_PICK_REASON[reason],
+    role,
+    welcome: assistantMasmonWelcomeLv(slot),
+    colors: assistantMasmonDyeMake2(aid, p, best.c.t.monster, role, rnd),
+    ai: false,
+    reason,
+    at: day
+  };
+};
+const assistantMasmonWelcomeDue = async (aid, bondLv) => {
+  await ASSISTANT_MASMON_STORE.load();
+  const st = ASSISTANT_MASMON_STORE.state;
+  if (!assistantMasmonDrawOn(aid, st) || !Number.isFinite(bondLv)) return [];
+  const p = assistantMasmonPlanOf(aid);
+  const due = (p.extra || []).filter(t => t.unknown && bondLv >= t.welcome);
+  if (!due.length) return [];
+  const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : new Date().toISOString().slice(0, 10);
+  const ctx = assistantMasmonPickContext(aid, bondLv);
+  const have = assistantMasmonRowsOf(st, aid);
+  const picked = {};
+  for (const t of due) {
+    const r = assistantMasmonChooseAt(aid, t.slot, [...have, ...Object.values(picked)], ctx, st.seed, day);
+    if (r) picked[t.slot] = r;
+  }
+  const list = Object.values(picked);
+  if (!list.length) return [];
+  const cur = ASSISTANT_MASMON_STORE.state;
+  const mine = {
+    ...(cur.pick && cur.pick[aid] || {})
+  };
+  for (const r of list) if (!mine[r.slot]) mine[r.slot] = r;
+  const next = {
+    ...cur,
+    pick: {
+      ...(cur.pick || {}),
+      [aid]: mine
+    }
+  };
+  ASSISTANT_MASMON_STORE.set(next);
+  try {
+    if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false);
+  } catch (_) {}
+  const last = list[list.length - 1];
+  try {
+    if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`${assistantLifeName(aid)}が新しいマスモン「${last.nick}」を迎えた`, [aid]);
+  } catch (_) {}
+  void assistantMasmonAskPickNames();
+  return list;
+};
+const assistantMasmonAskPickNames = () => assistantMasmonAskNames();
 const assistantMasmonMakeFor = (aid, seed) => {
   const p = assistantMasmonBasePlanOf(aid);
   if (!p) return null;
@@ -125148,11 +125579,12 @@ const assistantMasmonEnsureMade = async () => {
 let _assistantMasmonNamesBusy = false;
 const assistantMasmonAskNames = async () => {
   const st = ASSISTANT_MASMON_STORE.state;
-  if (!st.draw || st.draw.v !== ASSISTANT_MASMON_DRAW_V || st.draw.named || _assistantMasmonNamesBusy) return 'skip';
+  const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '';
+  if (!st.draw || st.draw.v !== ASSISTANT_MASMON_DRAW_V || _assistantMasmonNamesBusy || !day || st.pickNameDay === day) return 'skip';
   if (!(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonNamesApi === true) || typeof ASSISTANT_CHAT_URL === 'undefined' || typeof SB_HEADERS === 'undefined') return 'skip';
-  const items = Object.entries(st.draw.made).map(([a, list]) => ({
+  const items = Object.keys(st.draw.made).map(a => ({
     a,
-    s: list.map(t => {
+    s: assistantMasmonRowsOf(st, a).filter(t => !t.ai).map(t => {
       const m = assistantMasmonMon(t.monster);
       return {
         slot: t.slot,
@@ -125160,7 +125592,7 @@ const assistantMasmonAskNames = async () => {
         why: t.why
       };
     })
-  }));
+  })).filter(x => x.s.length);
   if (!items.length) return 'skip';
   let bid = null;
   try {
@@ -125170,6 +125602,17 @@ const assistantMasmonAskNames = async () => {
   }
   if (!bid) return 'skip';
   _assistantMasmonNamesBusy = true;
+  const markDay = () => {
+    const c = ASSISTANT_MASMON_STORE.state;
+    const n = {
+      ...c,
+      pickNameDay: day
+    };
+    ASSISTANT_MASMON_STORE.set(n);
+    try {
+      if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, n, false);
+    } catch (_) {}
+  };
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 20000);
@@ -125189,23 +125632,48 @@ const assistantMasmonAskNames = async () => {
     } finally {
       clearTimeout(timer);
     }
-    if (!res || res.ok !== true || !res.names || typeof res.names !== 'object') return res && res.kind === 'tired' ? 'tired' : 'failed';
+    if (!res || res.ok !== true || !res.names || typeof res.names !== 'object') {
+      markDay();
+      return res && res.kind === 'tired' ? 'tired' : 'failed';
+    }
     const cur = ASSISTANT_MASMON_STORE.state;
-    const made = {};
     if (!cur.draw || cur.draw.v !== ASSISTANT_MASMON_DRAW_V) return 'skip';
-    for (const [a, list] of Object.entries(cur.draw.made)) {
+    const made = {
+        ...cur.draw.made
+      },
+      pick = {
+        ...(cur.pick || {})
+      },
+      renamed2 = {
+        ...(cur.renamed2 || {})
+      };
+    for (const a of Object.keys(made)) {
       const got = res.names[a] && typeof res.names[a] === 'object' ? res.names[a] : {};
-      const usedNames = new Set();
-      made[a] = list.map(t => {
+      const used = new Set(assistantMasmonRowsOf(cur, a).filter(t => t.ai).map(t => t.nick));
+      let changed = false;
+      const name = t => {
+        if (t.ai) return t;
         const n = typeof got[t.slot] === 'string' ? got[t.slot].trim() : '';
-        const okName = /^[ぁ-ゖァ-ヺー一-龠々・]{2,8}$/u.test(n) && !usedNames.has(n);
-        if (okName) usedNames.add(n);
-        return okName ? {
+        const ok = /^[ぁ-ゖァ-ヺー一-龠々・]{2,8}$/u.test(n) && !used.has(n);
+        if (!ok) return t;
+        used.add(n);
+        changed = true;
+        return {
           ...t,
           nick: n,
           ai: true
-        } : t;
-      });
+        };
+      };
+      const pk = pick[a] ? {
+        ...pick[a]
+      } : null;
+      const w = cur.draw.welcomed[a] || {};
+      made[a] = made[a].map(t => pk && pk[t.slot] || !(t.slot === 1 || w[t.monster]) ? t : name(t));
+      if (pk) {
+        for (const k of Object.keys(pk)) pk[k] = name(pk[k]);
+        pick[a] = pk;
+      }
+      if (changed && cur.draw.named) renamed2[a] = 'new';
     }
     const next = {
       ...cur,
@@ -125213,7 +125681,9 @@ const assistantMasmonAskNames = async () => {
         ...cur.draw,
         made,
         named: true
-      }
+      },
+      pick,
+      renamed2
     };
     ASSISTANT_MASMON_STORE.set(next);
     try {
@@ -125221,6 +125691,7 @@ const assistantMasmonAskNames = async () => {
     } catch (_) {}
     return 'ok';
   } catch (_) {
+    markDay();
     return 'failed';
   } finally {
     _assistantMasmonNamesBusy = false;
@@ -125293,6 +125764,16 @@ const useAssistantMasmonSave = () => {
   return st;
 };
 const assistantMasmonDrawOn = (aid, st = ASSISTANT_MASMON_STORE.state) => !!(st && st.draw && st.draw.v === ASSISTANT_MASMON_DRAW_V && Array.isArray(st.draw.made[aid]));
+const assistantMasmonRowsOf = (st, aid) => {
+  const d = st && st.draw && st.draw.v === ASSISTANT_MASMON_DRAW_V && Array.isArray(st.draw.made[aid]) ? st.draw.made[aid] : [];
+  const w = st && st.draw && st.draw.welcomed[aid] || {},
+    pk = st && st.pick && st.pick[aid] || {};
+  const out = [];
+  for (const t of d) {
+    if (pk[t.slot]) out.push(pk[t.slot]);else if (t.slot === 1 || w[t.monster]) out.push(t);
+  }
+  return out;
+};
 const assistantMasmonWelcomed = (aid, st = ASSISTANT_MASMON_STORE.state) => (assistantMasmonDrawOn(aid, st) ? st.draw.welcomed[aid] : st && st.welcomed && st.welcomed[aid]) || {};
 const assistantMasmonBench = (p, st = ASSISTANT_MASMON_STORE.state) => p && Array.isArray(p.extra) ? p.extra.filter(t => assistantMasmonMonOk(t) && assistantMasmonWelcomed(p.id, st)[t.monster]).map(t => ({
   ...t,
@@ -125491,16 +125972,16 @@ const assistantMasmonFavCard = id => {
     return null;
   }
 };
-const assistantMasmonWaiting = (p, st = ASSISTANT_MASMON_STORE.state) => p && Array.isArray(p.extra) ? p.extra.filter(t => assistantMasmonMonOk(t) && !assistantMasmonWelcomed(p.id, st)[t.monster]) : [];
+const assistantMasmonWaiting = (p, st = ASSISTANT_MASMON_STORE.state) => p && Array.isArray(p.extra) ? p.extra.filter(t => t.unknown || assistantMasmonMonOk(t) && !assistantMasmonWelcomed(p.id, st)[t.monster]) : [];
 function AssistantMasmonWaitCard({
   t,
   land = false,
   small = false
 }) {
-  const m = assistantMasmonMon(t.monster);
-  if (!m) return null;
+  const m = t.unknown ? null : assistantMasmonMon(t.monster);
+  if (!m && !t.unknown) return null;
   const size = small ? land ? 60 : 84 : 78;
-  const pic = React.createElement("div", {
+  const pic = m ? React.createElement("div", {
     className: "mhm-pic",
     style: {
       width: size,
@@ -125516,7 +125997,19 @@ function AssistantMasmonWaitCard({
       objectFit: 'contain',
       filter: 'brightness(0) opacity(.55)'
     }
-  }));
+  })) : React.createElement("div", {
+    className: "mhm-pic grid place-items-center",
+    style: {
+      width: size,
+      height: size
+    },
+    "data-assistant-masmon-unknown": true
+  }, React.createElement("span", {
+    className: "font-black text-slate-500",
+    style: {
+      fontSize: Math.round(size * 0.5)
+    }
+  }, "？"));
   if (small) return React.createElement("div", {
     className: "text-center",
     "data-assistant-masmon-wait": t.monster
@@ -125542,7 +126035,7 @@ function AssistantMasmonWaitCard({
     style: {
       wordBreak: 'auto-phrase'
     }
-  }, "🔒 仲良し度 Lv", t.welcome, " になると、新しいマスモンを迎えます")));
+  }, "🔒 仲良し度 Lv", t.welcome, " になると、新しいマスモンを迎えます", t.unknown ? '(だれが来るかは、そのときの様子で決まります)' : '')));
 }
 const assistantMasmonAllies = team => [...team].filter(t => !t.lead).sort((a, b) => b.lv - a.lv || a.slot - b.slot).slice(0, 3);
 function AssistantMasmonFormation({
@@ -125650,7 +126143,7 @@ function AssistantMasmonFormation({
   })), React.createElement("p", {
     className: "mt-0.5 truncate text-[10px] font-black text-white"
   }, t.nick)) : (() => {
-    const m = assistantMasmonMon(t.monster);
+    const m = t.unknown ? null : assistantMasmonMon(t.monster);
     return React.createElement("div", {
       key: t.monster,
       className: "text-center",
@@ -125658,12 +126151,12 @@ function AssistantMasmonFormation({
     }, React.createElement("div", {
       className: "mhm-stage"
     }, React.createElement("div", {
-      className: "mhm-pic",
+      className: "mhm-pic grid place-items-center",
       style: {
         width: cell,
         height: cell
       }
-    }, m && React.createElement("img", {
+    }, m ? React.createElement("img", {
       src: m.imgUrl,
       alt: "",
       draggable: false,
@@ -125673,7 +126166,13 @@ function AssistantMasmonFormation({
         objectFit: 'contain',
         filter: 'brightness(0) opacity(.55)'
       }
-    }))), React.createElement("p", {
+    }) : React.createElement("span", {
+      className: "font-black text-slate-500",
+      style: {
+        fontSize: Math.round(cell * 0.5)
+      },
+      "data-assistant-masmon-unknown": true
+    }, "？"))), React.createElement("p", {
       className: "mt-0.5 truncate text-[9.5px] font-bold text-sky-200"
     }, "🔒 Lv", t.welcome));
   })())));
@@ -125826,14 +126325,32 @@ function AssistantMasmonSheet({
       await ASSISTANT_MASMON_STORE.load();
       const p0 = assistantMasmonPlanOf(id),
         lv = Number(bondLv);
-      const due = p0 && Number.isFinite(lv) ? (p0.extra || []).filter(t => assistantMasmonMonOk(t) && Number.isFinite(t.welcome) && lv >= t.welcome && !assistantMasmonWelcomed(id)[t.monster]) : [];
-      let last = null;
-      for (let i = 0; i < due.length; i++) {
-        if (await assistantMasmonWelcome(id, due[i], i < due.length - 1)) last = due[i];
+      if (p0 && p0.v2) {
+        const got = await assistantMasmonWelcomeDue(id, lv);
+        if (got.length && alive) setWelcome(got[got.length - 1]);
+      } else {
+        const due = p0 && Number.isFinite(lv) ? (p0.extra || []).filter(t => assistantMasmonMonOk(t) && Number.isFinite(t.welcome) && lv >= t.welcome && !assistantMasmonWelcomed(id)[t.monster]) : [];
+        let last = null;
+        for (let i = 0; i < due.length; i++) {
+          if (await assistantMasmonWelcome(id, due[i], i < due.length - 1)) last = due[i];
+        }
+        if (last && alive) setWelcome(last);
       }
-      if (last && alive) setWelcome(last);
       const st = ASSISTANT_MASMON_STORE.state;
-      if (!assistantMasmonDrawOn(id, st) && st.named && !st.noticed[id] && alive) {
+      if (assistantMasmonDrawOn(id, st) && st.renamed2[id] === 'new' && alive) {
+        setRenamed(true);
+        const next = {
+          ...st,
+          renamed2: {
+            ...st.renamed2,
+            [id]: 'seen'
+          }
+        };
+        ASSISTANT_MASMON_STORE.set(next);
+        try {
+          if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false);
+        } catch (_) {}
+      } else if (!assistantMasmonDrawOn(id, st) && st.named && !st.noticed[id] && alive) {
         setRenamed(true);
         const next = {
           ...st,
@@ -126230,7 +126747,13 @@ function AssistantMasmonSheet({
       wordBreak: 'auto-phrase'
     },
     "data-assistant-masmon-welcome-line": true
-  }, assistantMasmonWelcomeLine(id, welcome))), React.createElement("button", {
+  }, assistantMasmonWelcomeLine(id, welcome))), welcome.reason && ASSISTANT_MASMON_PICK_REASON[welcome.reason] && React.createElement("p", {
+    className: "mt-1.5 text-center text-[11px] font-bold leading-snug text-sky-200",
+    style: {
+      wordBreak: 'auto-phrase'
+    },
+    "data-assistant-masmon-welcome-reason": true
+  }, "💭 選んだわけ: ", ASSISTANT_MASMON_PICK_REASON[welcome.reason]), React.createElement("button", {
     type: "button",
     className: "mhl-btn mt-3 w-full",
     style: {
@@ -126987,6 +127510,7 @@ const alfBuildHouse = (life, metIds) => {
       d: ASSISTANT_LIFE_DOINGS[w.doing] ? w.doing : 'idle',
       m: ASSISTANT_LIFE_MOODS[m] ? m : 'happy'
     };
+    if (w.place !== 'home' && typeof ASSISTANT_LIFE_PLACES !== 'undefined' && ASSISTANT_LIFE_PLACES[w.place]) r[id].p = w.place;
     try {
       const put = typeof assistantLifeRoomOf === 'function' ? assistantLifeRoomOf(id).put : null;
       const fu = {};
@@ -127188,6 +127712,7 @@ const assistantLifeFriendNormalizeHouse = raw => {
       d: typeof x.d === 'string' && ASSISTANT_LIFE_DOINGS[x.d] ? x.d : 'idle',
       m: typeof x.m === 'string' && ASSISTANT_LIFE_MOODS[x.m] ? x.m : 'happy'
     };
+    if (r[id].at === 'out' && typeof x.p === 'string' && x.p !== 'home' && typeof ASSISTANT_LIFE_PLACES !== 'undefined' && ASSISTANT_LIFE_PLACES[x.p]) r[id].p = x.p;
     const furn = typeof ASSISTANT_LIFE_FURNITURE !== 'undefined' && Array.isArray(ASSISTANT_LIFE_FURNITURE) ? ASSISTANT_LIFE_FURNITURE : [];
     if (x.fu && typeof x.fu === 'object') {
       const fu = {};
@@ -128693,6 +129218,13 @@ function AlfSceneSheet({
   }, "とじる"))));
 }
 const ALF_PLAYER_REPLIES = Object.freeze(['こんにちは！', 'おじゃましてます', 'すてきな部屋だね']);
+const alfNoBreak = text => {
+  const parts = String(text || '').split('。').filter(Boolean);
+  return parts.map((x, i) => React.createElement("span", {
+    key: i,
+    className: "whitespace-nowrap"
+  }, x, i < parts.length - 1 || /。$/.test(text) ? '。' : ''));
+};
 const alfRoomsOf = house => {
   const rooms = {};
   for (const id of ALF_IDS) {
@@ -128702,7 +129234,9 @@ const alfRoomsOf = house => {
       continue;
     }
     const doing = (ASSISTANT_LIFE_DOINGS[r.d] || {}).label || 'のんびり';
-    if (r.at !== 'home') rooms[id] = {
+    if (r.at !== 'home') rooms[id] = r.p && typeof assistantLifePlaceShow === 'function' ? {
+      tag: [`${typeof ASSISTANT_LIFE_PLACE_ICON !== 'undefined' && ASSISTANT_LIFE_PLACE_ICON[r.p] || '🚶'} ${assistantLifePlaceShow(r.p)}へ`, doing]
+    } : {
       tag: ['🚶 おでかけ中', 'いまは家にいない']
     };else if (r.d === 'sleep') rooms[id] = {
       in: [id],
@@ -128755,16 +129289,13 @@ function AlfFriendHouseView({
       alive = false;
     };
   }, []);
-  const [vw, setVw] = React.useState(() => typeof window !== 'undefined' ? window.innerWidth : 390);
-  const [vh, setVh] = React.useState(() => typeof window !== 'undefined' ? window.innerHeight : 844);
-  React.useEffect(() => {
-    const on = () => {
-      setVw(window.innerWidth);
-      setVh(window.innerHeight);
-    };
-    window.addEventListener('resize', on);
-    return () => window.removeEventListener('resize', on);
-  }, []);
+  const {
+    w: vw,
+    h: vh
+  } = typeof useAssistantLifeViewSize === 'function' ? useAssistantLifeViewSize() : {
+    w: 390,
+    h: 844
+  };
   React.useEffect(() => {
     if (friend && friend.id) void alfFetchMore(friend.id);
   }, [friend && friend.id]);
@@ -129024,7 +129555,7 @@ function AlfFriendHouseView({
   }, alfTheirLabel(friend.name, roomId), "の部屋"), React.createElement("p", {
     className: "text-[11px] font-bold text-slate-200",
     "data-alf-visit-room-state": roomState
-  }, roomState === 'out' ? '🚶 いまはおでかけ中。部屋は見られます' : roomState === 'sleep' ? '💤 すやすや…起こさないように、そっと見るだけ' : `🏠 部屋で${(ASSISTANT_LIFE_DOINGS[r0.d] || {}).label || 'のんびり'}`)), React.createElement("button", {
+  }, alfNoBreak(roomState === 'out' ? r0.p && typeof assistantLifePlaceShow === 'function' ? `${typeof ASSISTANT_LIFE_PLACE_ICON !== 'undefined' && ASSISTANT_LIFE_PLACE_ICON[r0.p] || '🚶'} ${assistantLifePlaceShow(r0.p)}へおでかけ中。部屋は見られます` : '🚶 いまはおでかけ中。部屋は見られます' : roomState === 'sleep' ? '💤 すやすや…起こさないように、そっと見るだけ' : `🏠 部屋で${(ASSISTANT_LIFE_DOINGS[r0.d] || {}).label || 'のんびり'}`))), React.createElement("button", {
     type: "button",
     "data-mhl-sheet-close": true,
     className: "shrink-0 rounded-xl border border-slate-500 px-3 py-1.5 text-[12px] font-black text-slate-100",
@@ -129035,7 +129566,7 @@ function AlfFriendHouseView({
   }, "とじる")), React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-200",
     "data-alf-visit-furn": true
-  }, "🪑 置いている家具: ", furnNames(roomId).length ? furnNames(roomId).join('・') : 'まだ無し'), keptNames(roomId).length > 0 && React.createElement("p", {
+  }, "🪑 贈られた家具: ", furnNames(roomId).length ? furnNames(roomId).join('・') : 'まだありません'), keptNames(roomId).length > 0 && React.createElement("p", {
     className: "mt-0.5 text-[10.5px] text-slate-300",
     "data-alf-visit-kept": true
   }, "📦 押し入れ: ", keptNames(roomId).join('・')), masmonOf(roomId).length > 0 && React.createElement("p", {
@@ -144554,7 +145085,8 @@ const CardQuickRunDetail = ({
   autoReady,
   autoDifficulty,
   todayLoops = 0,
-  onClose
+  onClose,
+  note = null
 }) => {
   const live = !!quickRun && !quickRun.stopped;
   const row = (label, value, tone = 'text-white') => React.createElement("div", {
@@ -144591,10 +145123,10 @@ const CardQuickRunDetail = ({
     className: `shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-black ${!quickRun ? 'border-white/20 text-slate-300' : live ? 'border-fuchsia-300/50 text-fuchsia-100' : 'border-rose-400/70 text-rose-200'}`
   }, !quickRun ? '回していません' : live ? `${quickRun.loops}周目` : '止まっています')), React.createElement("div", {
     className: "mt-2 rounded-2xl bg-black/30 px-3 py-1"
-  }, row('いまのようす', !quickRun ? 'いまは回していません' : live ? `回しています(WAVE ${wave || 1}/10)` : '止まっています', live ? 'text-fuchsia-100' : !quickRun ? 'text-slate-300' : 'text-rose-200'), quickRun && !live && quickRun.info && quickRun.info.reason && row('止まった理由', quickRun.info.reason, 'text-rose-200'), row('難易度', quickRun && quickRun.difficulty || autoDifficulty || 'AUTO設定でまだ決まっていません', quickRun && quickRun.difficulty || autoDifficulty ? 'text-white' : 'text-amber-200'), quickRun && row('何周目', `${quickRun.loops}周目`), quickRun && row('この周回でふえたダイヤ', `+${(quickRun.gold || 0).toLocaleString()}`, 'text-emerald-200'), quickRun && row('この周回でふえた経験値', `+${(quickRun.xp || 0).toLocaleString()}`, 'text-emerald-200'), row('今日バトルカードで足した周回', `${(todayLoops || 0).toLocaleString()}周ぶん`, 'text-sky-100')), React.createElement("p", {
+  }, row('いまのようす', !quickRun ? 'いまは回していません' : live ? `回しています(WAVE ${wave || 1}/10)` : '止まっています', live ? 'text-fuchsia-100' : !quickRun ? 'text-slate-300' : 'text-rose-200'), quickRun && !live && quickRun.info && quickRun.info.reason && row('止まった理由', quickRun.info.reason, 'text-rose-200'), row('難易度', quickRun && quickRun.difficulty || autoDifficulty || 'AUTO設定でまだ決まっていません', quickRun && quickRun.difficulty || autoDifficulty ? 'text-white' : 'text-amber-200'), quickRun && row('何周目', `${quickRun.loops}周目`), quickRun && row('この周回でふえたダイヤ', `+${(quickRun.gold || 0).toLocaleString()}`, 'text-emerald-200'), quickRun && row('この周回でふえた経験値', `+${(quickRun.xp || 0).toLocaleString()}`, 'text-emerald-200'), todayLoops !== null && row('今日バトルカードで足した周回', `${(todayLoops || 0).toLocaleString()}周ぶん`, 'text-sky-100')), React.createElement("p", {
     className: "mt-2 text-[11px] font-bold leading-snug text-slate-400",
     style: JA_WRAP_STYLE
-  }, jaWrap(autoReady || quickRun ? 'フリー対戦・マルチで戦うと、その分がクイック周回として足されます。裏で回しているときは、いまの周回が進みます。' : 'AUTO設定で、勇者モン・配置距離・難易度の3つを決めると、戦った分がクイック周回として足されます。')), React.createElement("button", {
+  }, jaWrap(note || (autoReady || quickRun ? 'フリー対戦・マルチで戦うと、その分がクイック周回として足されます。裏で回しているときは、いまの周回が進みます。' : 'AUTO設定で、勇者モン・配置距離・難易度の3つを決めると、戦った分がクイック周回として足されます。'))), React.createElement("button", {
     type: "button",
     "data-card-quick-detail-close": true,
     onClick: onClose,
@@ -167735,7 +168267,12 @@ function MonsterHeroGame() {
   const isCardScreen = state => typeof state === 'string' && state.startsWith('CARD_');
   const cardMarketEntryRef = useRef(false);
   const isCardRunScreen = state => isCardScreen(state) || state === 'BREEDER_MARKET' && cardMarketEntryRef.current === true;
-  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state);
+  const ASSISTANT_LIFE_RUN_STATES = ['HOME', 'PROFILE', 'ITEM_INVENTORY'];
+  const assistantLifeOpenRef = useRef(false);
+  const assistantLifeExitingRef = useRef(false);
+  const gameStateNowRef = useRef('HOME');
+  const isAssistantLifeRunScreen = state => assistantLifeExitingRef.current || assistantLifeOpenRef.current && ASSISTANT_LIFE_RUN_STATES.includes(state);
+  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state) || isAssistantLifeRunScreen(state);
   const runBackgroundAllowedRef = useRef(false);
   const gameStateCaller = () => {
     try {
@@ -167747,6 +168284,7 @@ function MonsterHeroGame() {
     }
   };
   const setGameState = next => {
+    gameStateNowRef.current = next;
     runBackgroundAllowedRef.current = isBackgroundRunScreen(next);
     if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`);
     setGameStateRaw(next);
@@ -170338,7 +170876,13 @@ function MonsterHeroGame() {
   const [assistantLifeOpenNow, setAssistantLifeOpenNow] = useState(false);
   useEffect(() => {
     if (typeof ASSISTANT_LIFE_STORE === 'undefined') return undefined;
-    const fn = st => setAssistantLifeOpenNow(!!(st && st.open));
+    const fn = st => {
+      const open = !!(st && st.open);
+      if (!open && assistantLifeOpenRef.current && runStageRef.current && ASSISTANT_LIFE_RUN_STATES.includes(gameStateNowRef.current)) assistantLifeExitingRef.current = true;
+      assistantLifeOpenRef.current = open;
+      runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
+      setAssistantLifeOpenNow(open);
+    };
     ASSISTANT_LIFE_STORE.listeners.add(fn);
     return () => {
       ASSISTANT_LIFE_STORE.listeners.delete(fn);
@@ -173003,7 +173547,9 @@ function MonsterHeroGame() {
   const rhythmBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && RHYTHM_BACKGROUND_RUN_SCREENS.includes(gameState);
   const cardScreenOpen = isCardRunScreen(gameState);
   const cardBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && cardScreenOpen;
-  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen;
+  const assistantLifeScreenOpen = isAssistantLifeRunScreen(gameState);
+  const assistantLifeBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && assistantLifeScreenOpen;
+  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen || assistantLifeScreenOpen;
   runBackgroundAllowedRef.current = runBackgroundAllowed;
   const advanceRunStage = stage => {
     runStageRef.current = stage;
@@ -173014,7 +173560,7 @@ function MonsterHeroGame() {
     runStageRef.current = null;
     setRunStage(null);
   };
-  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun);
+  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun);
   const rhythmSongListScrollRef = useRef(0);
   const returnToBackgroundRun = () => {
     catchUpUntilRef.current = 0;
@@ -174277,8 +174823,8 @@ function MonsterHeroGame() {
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);else if (key) Audio_.playBGM(key);else Audio_.stopBGM();
   }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow]);
   useEffect(() => {
-    Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen ? 0 : seVolume);
-  }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen]);
+    Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen || assistantLifeBackgroundRun ? 0 : seVolume);
+  }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen, assistantLifeBackgroundRun]);
   useEffect(() => {
     if (!(beatRankFx || beatRankBarPlaying) || ultraEcoSession && !cardScreenOpen) return undefined;
     Audio_.setSeVolume(seVolume);
@@ -182488,6 +183034,101 @@ function MonsterHeroGame() {
     }
     setGameState(RHYTHM_MODE_PUBLIC_RELEASE ? 'HOME' : 'DEBUG_SETTINGS');
   };
+  const assistantLifeSettlingRef = useRef(false);
+  const settleAssistantLifeRun = async () => {
+    if (assistantLifeSettlingRef.current) return;
+    assistantLifeSettlingRef.current = true;
+    try {
+      if (runStageRef.current && isQuickMode(runMode) && !runResultFinishedRef.current) await handleGiveUp({
+        silent: true
+      });
+      if (runStageRef.current) {
+        const stay = gameStateNowRef.current;
+        returnToHome();
+        if (stay && stay !== 'HOME' && !isRunStage(stay)) setGameState(stay);
+      }
+    } finally {
+      assistantLifeSettlingRef.current = false;
+    }
+  };
+  useEffect(() => {
+    if (assistantLifeOpenNow || !assistantLifeExitingRef.current) return;
+    void settleAssistantLifeRun().finally(() => {
+      assistantLifeExitingRef.current = false;
+      runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
+    });
+  }, [assistantLifeOpenNow]);
+  const assistantLifeQuickRunView = () => {
+    if (!assistantLifeOpenNow) return null;
+    const canStart = autoQuickRunConfigured(autoSettings) && !!repeatTemplateFromAutoSettings() && !(runStage !== null && !runResultFinished);
+    const base = cardQuickRunView();
+    if (!base) return canStart ? {
+      live: false,
+      loops: 0,
+      stopped: true,
+      difficulty: (DIFFICULTY_SETTINGS[autoSettings.quickRun.difficulty] || quickDifficultySetting(autoSettings.quickRun.difficulty) || {}).label || null,
+      xp: 0,
+      gold: 0,
+      canStart
+    } : null;
+    const live = assistantLifeBackgroundRun && !quickRunProgress.finished;
+    return {
+      live,
+      loops: base.loops,
+      stopped: !live,
+      difficulty: base.difficulty,
+      xp: base.xp,
+      gold: base.gold,
+      canStart,
+      info: base.info
+    };
+  };
+  const [lifeQuickDetail, setLifeQuickDetail] = useState(false);
+  const renderLifeQuickRunStrip = () => {
+    const view = assistantLifeQuickRunView();
+    if (!view) return null;
+    const autoDifficulty = autoQuickRunConfigured(autoSettings) ? (DIFFICULTY_SETTINGS[autoSettings.quickRun.difficulty] || quickDifficultySetting(autoSettings.quickRun.difficulty) || {}).label || null : null;
+    const detailRun = view.info ? view : null;
+    return React.createElement(React.Fragment, null, lifeQuickDetail && React.createElement(CardQuickRunDetail, {
+      quickRun: detailRun,
+      autoReady: autoQuickRunConfigured(autoSettings),
+      autoDifficulty: autoDifficulty,
+      todayLoops: null,
+      onClose: () => setLifeQuickDetail(false),
+      note: "助手ライフを開いているあいだ、AUTO設定の編成でクイックの周回が裏で進みます。閉じるか「止める」を押すと、それまでの報酬を受け取って周回を終えます。"
+    }), React.createElement("div", {
+      "data-life-quick-run": view.live ? 'live' : 'stopped',
+      className: "relative z-20 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-400/25 bg-slate-950/95 px-2 py-1"
+    }, view.info ? React.createElement(RhythmQuickRunPill, {
+      info: view.info,
+      onRestart: () => startQuickRunFromRhythm(),
+      widthClass: "min-w-0 flex-1"
+    }) : React.createElement("button", {
+      type: "button",
+      "data-life-quick-run-start": true,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        startQuickRunFromRhythm();
+      },
+      className: "min-h-[32px] min-w-0 flex-1 truncate rounded-full border border-fuchsia-300/60 bg-fuchsia-800/70 px-2.5 text-[11px] font-black text-white active:scale-[.97]"
+    }, "▶ 周回を始める"), React.createElement("button", {
+      type: "button",
+      "data-life-quick-run-detail": true,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        setLifeQuickDetail(true);
+      },
+      className: "min-h-[32px] shrink-0 rounded-full border border-white/25 bg-slate-900/80 px-2.5 text-[11px] font-black text-slate-100 active:scale-[.97]"
+    }, "詳細"), view.live && React.createElement("button", {
+      type: "button",
+      "data-life-quick-run-stop": true,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        void settleAssistantLifeRun();
+      },
+      className: "min-h-[32px] shrink-0 rounded-full border border-fuchsia-300/60 bg-fuchsia-800/70 px-2.5 text-[11px] font-black text-white active:scale-[.97]"
+    }, "止める")));
+  };
   const handleRetry = () => {
     stopAllAuto();
     if (speciesChallengeBattleRunRef.current) {
@@ -186587,6 +187228,28 @@ function MonsterHeroGame() {
     const timer = setTimeout(retry, QUICK_RUN_AUTO_RETRY_MS);
     return () => clearTimeout(timer);
   }, [quickRunProgress, gameState, resultProcessing, autoSettings, cardQuickAutoStart]);
+  useEffect(() => {
+    if (!assistantLifeOpenNow) return;
+    if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return;
+    if (!ASSISTANT_LIFE_RUN_STATES.includes(gameStateNowRef.current)) return;
+    if (quickRunProgressRef.current && !quickRunProgressRef.current.finished) return;
+    if (runStageRef.current && !runResultFinishedRef.current) return;
+    if (!repeatTemplateFromAutoSettings()) return;
+    startQuickRunFromRhythm();
+  }, [assistantLifeOpenNow]);
+  useEffect(() => {
+    if (!quickRunProgress || !quickRunProgress.finished || quickRunProgress.reason !== 'defeat') return undefined;
+    if (!assistantLifeOpenNow || !ASSISTANT_LIFE_RUN_STATES.includes(gameState)) return undefined;
+    if (resultProcessing) return undefined;
+    if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return undefined;
+    const retryLife = () => {
+      const current = quickRunProgressRef.current;
+      if (!current || !current.finished || current.reason !== 'defeat' || !assistantLifeOpenRef.current) return;
+      startQuickRunFromRhythm();
+    };
+    const timer = setTimeout(retryLife, QUICK_RUN_AUTO_RETRY_MS);
+    return () => clearTimeout(timer);
+  }, [quickRunProgress, gameState, resultProcessing, autoSettings, assistantLifeOpenNow]);
   const cycleBattleAuto = () => {
     if (autoRepeatRef.current) {
       setAutoBattleEnabled(false);
@@ -191747,6 +192410,12 @@ function MonsterHeroGame() {
           token: ownedItemCount(ownedItems, 'peer_token')
         }
       }), typeof AssistantLifeScreen === 'function' && React.createElement(AssistantLifeScreen, {
+        quickRun: assistantLifeQuickRunView(),
+        quickRunStrip: renderLifeQuickRunStrip(),
+        onQuickRunStop: () => {
+          void settleAssistantLifeRun();
+        },
+        onQuickRunStart: () => startQuickRunFromRhythm(),
         metIds: metIds,
         onReplay: talk => setPeerReplay(talk),
         bondLevelOf: id => assistantBondLevel(normalizeAssistantBond(assistantBonds[id]).points),
@@ -192447,7 +193116,7 @@ function MonsterHeroGame() {
         }, setting.label, unlocked ? '' : '（クイック未クリア）');
       }))), React.createElement("div", null, React.createElement("div", {
         className: "text-[11px] font-black text-slate-300 mb-1.5"
-      }, "モンヒロビートを開いたら自動で始める"), React.createElement("button", {
+      }, "モンヒロビート・助手ライフを開いたら自動で始める"), React.createElement("button", {
         type: "button",
         "data-auto-quick-run-autostart": true,
         "aria-pressed": draftAutoSettings.quickRun?.autoStart === true,
@@ -192462,7 +193131,7 @@ function MonsterHeroGame() {
         className: `shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${draftAutoSettings.quickRun?.autoStart === true ? 'bg-fuchsia-500 text-white' : 'bg-slate-700 text-slate-300'}`
       }, draftAutoSettings.quickRun?.autoStart === true ? 'ON' : 'OFF')), React.createElement("p", {
         className: "mt-1 text-[10px] leading-relaxed text-slate-400"
-      }, "ONにすると、HOMEなどからモンヒロビートを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲えらびの上の帯から、いつでも止められます。")), React.createElement("div", {
+      }, "ONにすると、HOMEなどからモンヒロビートや助手ライフを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲えらびの上の帯や、助手ライフの周回の札から、いつでも止められます。")), React.createElement("div", {
         className: "pt-1"
       }, React.createElement(AssistantBubble, {
         scene: "autoQuickRunSettings",

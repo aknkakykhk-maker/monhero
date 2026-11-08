@@ -73,8 +73,12 @@ const cutProblems = (page, sel) => page.evaluate((s) => {
     const dis = await page.locator('[data-assistant-life-give-go]').isDisabled();
     if (dis) { const r = await page.locator('[data-assistant-life-give-reason]').innerText().catch(() => ''); await page.locator('[data-assistant-life-give-cancel]').click(); await page.waitForTimeout(200); return { given: false, reason: r }; }
     await page.locator('[data-assistant-life-give-go]').click(); await page.waitForTimeout(700); await finishTalk(page);
+    // 仲良し度の札(ほかの場面と同じ演出。2026-11-08 社長「物をあげたときの親密度の変動アクションがなかった」)
+    const chip = await page.locator('.mh-gfx-chip').first().waitFor({ timeout: 4000 }).then(() => page.locator('.mh-gfx-chip').first().innerText()).catch(() => '');
+    // 段が上がったときの画面(ほかの場面と同じ)は押して閉じる
+    for (let i = 0; i < 6 && await page.locator('[data-growth-fx-sheet]').count(); i++) { await page.locator('[data-growth-fx-sheet]').first().click({ timeout: 1500 }).catch(() => {}); await page.waitForTimeout(400); }
     await page.locator('[data-assistant-life-scene-back]').click({ timeout: 3000 }).catch(() => {}); await page.waitForTimeout(300);
-    return { given: true, note: await page.locator('[data-assistant-life-note]').first().innerText().catch(() => '') };
+    return { given: true, chip, note: await page.locator('[data-assistant-life-note]').first().innerText().catch(() => '') };
   };
   const owned = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('mh_owned_items') || '{}'));
   try {
@@ -114,6 +118,7 @@ const cutProblems = (page, sel) => page.evaluate((s) => {
       const after = await owned(page);
       const soloSave = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_assistant_life_solo_gift_v1') || 'null'));
       check('④ 1人に贈ると持ち物が1つ減り、1人の記録に残る', r1.given && after.solo_candy === before.solo_candy - 1 && soloSave && soloSave.used && soloSave.used.candy === id, JSON.stringify(soloSave));
+      check('④ 1人に贈ると、仲良し度の札(ほかの場面と同じ演出)が出る', /仲良し度/.test(r1.chip || '') && /\+\d+/.test(r1.chip || ''), (r1.chip || '').replace(/\s+/g, ' '));
       check('④ お知らせの帯に、仲良し度の量が出る', /仲良し度 \+\d+/.test(r1.note || ''), r1.note);
       check('④ 1人に贈っても、友情Lv(助手どうし)は動かない', (await page.evaluate(() => localStorage.getItem('mh_assistant_peer_bond_v1'))) === bondBefore);
       // ⑤ 1日3回(別に数える)・同じ道具は1日1回
@@ -170,7 +175,7 @@ const cutProblems = (page, sel) => page.evaluate((s) => {
       await page.close();
     }
     check('⑧ ページのエラーが出ない', errors.length === 0, errors.slice(0, 3).join(' / '));
-  } catch (e) { console.log('NG: 途中で止まった —', e.message.split('\n').slice(0, 3).join(' ')); failed++; }
+  } catch (e) { console.log('NG: 途中で止まった —', e.message.split('\n').slice(0, 12).join(' ')); failed++; }
   await browser.close(); server.close();
   console.log(failed ? `NG ${failed}件` : 'すべてOK');
   process.exit(failed ? 1 : 0);
