@@ -12,8 +12,8 @@
 //   ⑥ どこでも実行時エラーが出ない
 //   ⑦ AUTO設定の「モンヒロビート・助手ライフを開いたら自動で始める」が ON なら、開いた瞬間に始まる(OFF なら始まらない=①)。
 //      止めたあとは、開いたままでは始め直さない。閉じてもう一度開けば、また始まる(2026-11-08 社長)
-//   ⑧ 本物の札で(ナカヨシ8): 「⚡ 裏クイック ◯周目」の数が進む・札の「止める」で締まって「▶ 裏クイック」になる・「▶」で再開する。
-//      縦 390・横 844・タブレット 820 で札が題・時計・帯に重ならない(--shots で docs/progress/assistant-peer/shots/lifequick/run-*.jpg を撮る)
+//   ⑧ 本物の帯で(ナカヨシ8): ほかのモードと同じ帯(RhythmQuickRunPill・詳細・止める)の「◯周目」が進む・縦/横/タブレット/🔄横で重ならない・
+//      🔄横で助手ライフが回した画面いっぱいに出る・詳細の窓が上に出る・止めると締まる・止めたあと始め直せる(--shots で shots/lifequick/strip-*.jpg)
 // 札(ボタン)がまだ無くても動くよう、AssistantLifeScreen に渡る props を横から受け取って押す(札ができたらそのボタンでも同じ道を通る)
 'use strict';
 const http = require('http');
@@ -162,40 +162,53 @@ const seed = () => {
     await page.waitForTimeout(2500);
     s = await state();
     check('⑦ 閉じてもう一度開けば、また自動で始まる', !!s.q && s.q.live === true, JSON.stringify(s.q));
-    // ⑧ 本物の札のボタンで
+    // ⑧ 本物の帯で(ナカヨシ8。社長「他のモードと同じような表示に」: ビート・カードと同じ RhythmQuickRunPill の帯)
     {
       const SHOTS = process.argv.includes('--shots');
       const shotDir = path.join(root, 'docs/progress/assistant-peer/shots/lifequick');
-      const chip = () => page.evaluate(() => { const el = document.querySelector('[data-assistant-life-quick-run]'); if (!el) return null;
-        const R = el.getBoundingClientRect(); const hit = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1; const ng = [];
-        for (const sel of ['[data-assistant-life-title]', '[data-assistant-life-clock-box]', '[data-assistant-life-clock]', '[data-assistant-life-tier]', '[data-assistant-life-close]']) for (const o of document.querySelectorAll(sel)) if (o.getClientRects().length && hit(R, o.getBoundingClientRect())) ng.push(sel);
-        if (R.right > innerWidth + 1 || R.left < -1) ng.push('はみ出す');
-        return { run: el.getAttribute('data-assistant-life-quick-run'), loop: Number(el.getAttribute('data-assistant-life-quick-loop') || 0), text: el.textContent, ng }; });
-      let c0 = await chip();
-      check('⑧ 開くと札に「⚡ 裏クイック ◯周目」と「止める」(◯は loops そのまま)', !!c0 && c0.run === 'live' && c0.loop === (await state()).q.loops && /⚡ 裏クイック \d+周目/.test(c0.text) && /止める/.test(c0.text), JSON.stringify(c0));
-      let grew = false; for (let i = 0; i < 180 && !grew; i++) { await page.waitForTimeout(500); const c = await chip(); if (c && c.loop > (c0 ? c0.loop : 0)) grew = true; }
-      check('⑧ 札の「◯周目」が進む', grew, JSON.stringify(await chip()));
-      for (const [w, h, tag] of [[390, 844, 'tate'], [844, 390, 'yoko'], [820, 1180, 'tablet']]) {
-        await page.setViewportSize({ width: w, height: h }); await page.waitForTimeout(700);
+      const strip = () => page.evaluate(() => { const el = document.querySelector('[data-assistant-life-quick-strip] [data-life-quick-run]'); if (!el) return null;
+        const rot = typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.active(); const R0 = (e) => (rot ? RHYTHM_VIEW_ROTATION.rectOf(e) : e.getBoundingClientRect());
+        const W = rot ? innerHeight : innerWidth;
+        const R = R0(el); const hit = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1; const ng = [];
+        for (const sel of ['[data-assistant-life-title]', '[data-assistant-life-clock-box]', '[data-assistant-life-clock]', '[data-assistant-life-tier]', '[data-assistant-life-close]', '[data-assistant-life-icons]']) for (const o of document.querySelectorAll(sel)) if (o.getClientRects().length && hit(R, R0(o))) ng.push(sel);
+        if (R.right > W + 1 || R.left < -1) ng.push(`はみ出す ${Math.round(R.left)}〜${Math.round(R.right)}/${W}`);
+        for (const t of el.querySelectorAll('button,small')) if (t.getClientRects().length && t.scrollWidth > t.clientWidth + 1 && !/周目|WAVE/.test(t.textContent)) ng.push(`字が切れる ${t.textContent}`);
+        const m = el.textContent.match(/(\d+)周目/);
+        return { run: el.getAttribute('data-life-quick-run'), loop: m ? Number(m[1]) : 0, text: el.textContent, ng, oldChip: !!document.querySelector('[data-assistant-life-quick-run]') }; });
+      let c0 = await strip();
+      check('⑧ 開くと、ほかのモードと同じ帯(「🔁 WAVE ◯/10・◯周目」・詳細・止める)が出る。前の小さな札は出さない', !!c0 && c0.run === 'live' && /WAVE \d+\/10・\d+周目/.test(c0.text) && /詳細/.test(c0.text) && /止める/.test(c0.text) && !c0.oldChip, JSON.stringify(c0));
+      let grew = false; for (let i = 0; i < 180 && !grew; i++) { await page.waitForTimeout(500); const c = await strip(); if (c && c.loop > (c0 ? c0.loop : 0)) grew = true; }
+      check('⑧ 帯の「◯周目」が進む', grew, JSON.stringify(await strip()));
+      for (const [w, h, tag, rot] of [[390, 844, 'tate', 0], [844, 390, 'yoko', 0], [820, 1180, 'tablet', 0], [390, 844, 'rot', 90]]) {
+        await page.setViewportSize({ width: w, height: h }); await page.evaluate((a) => { if (typeof RHYTHM_VIEW_ROTATION !== 'undefined') RHYTHM_VIEW_ROTATION.set(a); }, rot); await page.waitForTimeout(rot ? 2000 : 1200); // 回したあとは器と大きさの見直し(0.5秒ごと)を待つ
         for (let i = 0; i < 6 && await closePopups(); i++) await page.waitForTimeout(400);
-        const c = await chip();
-        check(`⑧ ${tag}: 回っている札が題・時計・帯に重ならない・はみ出さない`, !!c && c.run === 'live' && c.ng.length === 0, JSON.stringify(c));
-        if (SHOTS) await page.screenshot({ path: path.join(shotDir, `run-live-${tag}.jpg`), type: 'jpeg', quality: 78 });
+        const c = await strip();
+        check(`⑧ ${tag}: 帯が題・時計・アイコンに重ならない・はみ出さない・字が切れない`, !!c && c.ng.length === 0, JSON.stringify(c));
+        if (rot) { const fit = await page.evaluate(() => { const p = document.querySelector('.mhl-page'); const r = RHYTHM_VIEW_ROTATION.rectOf(p); return { w: Math.round(r.width), h: Math.round(r.height), land: document.querySelector('[data-assistant-life-screen]').getAttribute('data-assistant-life-land') }; });
+          check('⑧ 🔄横: 助手ライフが回した画面いっぱい(横の形)に出る', fit.w >= 844 - 2 && fit.h >= 390 - 2 && fit.land === '1', JSON.stringify(fit)); }
+        if (SHOTS) await page.screenshot({ path: path.join(shotDir, `strip-live-${tag}.jpg`), type: 'jpeg', quality: 78 });
+        if (rot) await page.evaluate(() => RHYTHM_VIEW_ROTATION.set(0));
       }
       await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(500);
-      for (let i = 0; i < 6 && await closePopups(); i++) await page.waitForTimeout(400); // 報酬でレベルが上がったお祝い(全面・タップで閉じる)を先に閉じる
+      // 詳細の窓(カードと同じ CardQuickRunDetail)が助手ライフの上に出て、閉じられる
+      await page.locator('[data-life-quick-run-detail]').click({ force: true }); await page.waitForTimeout(500);
+      const det = await page.evaluate(() => { const d = document.querySelector('[data-card-quick-detail]'); if (!d) return null; const r = d.getBoundingClientRect(); const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return { onTop: !!top && d.contains(top), text: d.textContent.slice(0, 40) }; });
+      check('⑧ 「詳細」でカードと同じ詳細の窓が助手ライフの上に出る', !!det && det.onTop, JSON.stringify(det));
+      if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'strip-detail-tate.jpg'), type: 'jpeg', quality: 78 });
+      await page.locator('[data-card-quick-detail-close]').click({ force: true }).catch(() => {}); await page.waitForTimeout(300);
+      for (let i = 0; i < 6 && await closePopups(); i++) await page.waitForTimeout(400);
       const b1 = await state();
-      await page.locator('[data-assistant-life-quick-stop]').click({ force: true }); // 裏のバトルが描画の合間を使うので「止まっているか」の判定は外す(位置は動いていない)
+      await page.locator('[data-life-quick-run-stop]').click({ force: true });
       await page.waitForTimeout(3000);
       for (let i = 0; i < 4 && await closePopups(); i++) await page.waitForTimeout(300);
-      const c1 = await chip(), s1 = await state();
-      check('⑧ 札の「止める」で締まり(報酬が入る)、札が「▶ 裏クイック」になる', !!c1 && c1.run === 'stopped' && /▶ 裏クイック/.test(c1.text) && (s1.gold > b1.gold || s1.xp > b1.xp), JSON.stringify({ c1, gold: [b1.gold, s1.gold], xp: [b1.xp, s1.xp] }));
-      if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'run-stopped-tate.jpg'), type: 'jpeg', quality: 78 });
-      for (let i = 0; i < 6 && await closePopups(); i++) await page.waitForTimeout(400);
-      await page.locator('[data-assistant-life-quick-start]').click({ force: true });
+      const c1 = await strip(), s1 = await state();
+      check('⑧ 帯の「止める」で締まり(報酬が入る)、帯が止まった形になる', !!c1 && c1.run === 'stopped' && (s1.gold > b1.gold || s1.xp > b1.xp), JSON.stringify({ c1, gold: [b1.gold, s1.gold], xp: [b1.xp, s1.xp] }));
+      if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'strip-stopped-tate.jpg'), type: 'jpeg', quality: 78 });
+      const again = page.locator('[data-assistant-life-quick-strip] [data-life-quick-run-start], [data-assistant-life-quick-strip] [data-rhythm-multi-quick-run-restart]').first();
+      await again.click({ force: true }).catch(() => {});
       await page.waitForTimeout(2500);
-      const c2 = await chip();
-      check('⑧ 札の「▶ 裏クイック」で再開する', !!c2 && c2.run === 'live', JSON.stringify(c2));
+      const c2 = await strip();
+      check('⑧ 止めたあと、帯から始め直せる', !!c2 && c2.run === 'live', JSON.stringify(c2));
     }
     await page.evaluate(() => ASSISTANT_LIFE_STORE.set({ open: false }));
     await page.waitForTimeout(3000);

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 36c6cee159c28d83
+// source-sha256: 967381ba53622975
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -106878,19 +106878,44 @@ function AssistantLifeScene({
     onClick: onClose
   }, "🏡 家へ戻る")));
 }
-const useAssistantLifeLand = () => {
-  const get = () => typeof window !== 'undefined' && window.innerWidth > window.innerHeight && window.innerHeight < 600;
-  const [land, setLand] = React.useState(get);
+const assistantLifeViewSize = () => {
+  if (typeof window === 'undefined') return {
+    w: 390,
+    h: 844,
+    rot: false
+  };
+  const rot = typeof RHYTHM_VIEW_ROTATION === 'object' && !!RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.active === 'function' && RHYTHM_VIEW_ROTATION.active();
+  return rot ? {
+    w: window.innerHeight,
+    h: window.innerWidth,
+    rot: true
+  } : {
+    w: window.innerWidth,
+    h: window.innerHeight,
+    rot: false
+  };
+};
+const useAssistantLifeViewSize = () => {
+  const [size, setSize] = React.useState(assistantLifeViewSize);
   React.useEffect(() => {
-    const f = () => setLand(get());
+    const f = () => setSize(prev => {
+      const n = assistantLifeViewSize();
+      return n.w === prev.w && n.h === prev.h && n.rot === prev.rot ? prev : n;
+    });
     window.addEventListener('resize', f);
     window.addEventListener('orientationchange', f);
+    const id = setInterval(f, 500);
     return () => {
       window.removeEventListener('resize', f);
       window.removeEventListener('orientationchange', f);
+      clearInterval(id);
     };
   }, []);
-  return land;
+  return size;
+};
+const useAssistantLifeLand = () => {
+  const v = useAssistantLifeViewSize();
+  return v.w > v.h && v.h < 600;
 };
 function AssistantLifeQuickChip({
   quickRun,
@@ -106942,7 +106967,8 @@ function AssistantLifeHouse({
   onGiveFurn = null,
   quickRun = null,
   onQuickRunStop = null,
-  onQuickRunStart = null
+  onQuickRunStart = null,
+  quickRunStrip = null
 }) {
   const st = useAssistantLifeNow(metIds);
   const diary = useAssistantLifeDiary();
@@ -106959,12 +106985,7 @@ function AssistantLifeHouse({
   const [masmonId, setMasmonId] = React.useState(null);
   const [intro, setIntro] = React.useState(null);
   const [boardOpen, setBoardOpen] = React.useState(false);
-  const [vw, setVw] = React.useState(() => typeof window !== 'undefined' ? window.innerWidth : 390);
-  React.useEffect(() => {
-    const f = () => setVw(window.innerWidth);
-    window.addEventListener('resize', f);
-    return () => window.removeEventListener('resize', f);
-  }, []);
+  const vw = useAssistantLifeViewSize().w;
   React.useEffect(() => {
     let alive = true;
     (async () => {
@@ -107318,7 +107339,7 @@ function AssistantLifeHouse({
     } : undefined
   }, "助手ライフ")), React.createElement("div", {
     className: "min-w-0 flex-1"
-  }), React.createElement(AssistantLifeQuickChip, {
+  }), !quickRunStrip && React.createElement(AssistantLifeQuickChip, {
     quickRun: quickRun,
     onStop: onQuickRunStop,
     onStart: onQuickRunStart,
@@ -107474,10 +107495,16 @@ function AssistantLifeHouse({
     }
   }, tabBody), React.createElement("div", {
     className: "flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2"
-  }, header, note && React.createElement("p", {
+  }, header, quickRunStrip && React.createElement("div", {
+    className: "-mx-2.5 shrink-0",
+    "data-assistant-life-quick-strip": true
+  }, quickRunStrip), note && React.createElement("p", {
     "data-assistant-life-note": true,
     className: "rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1 text-[10.5px] font-bold text-sky-100"
-  }, note), tiles, icons)) : React.createElement(React.Fragment, null, header, React.createElement("div", {
+  }, note), tiles, icons)) : React.createElement(React.Fragment, null, header, quickRunStrip && React.createElement("div", {
+    className: "relative z-[3] shrink-0",
+    "data-assistant-life-quick-strip": true
+  }, quickRunStrip), React.createElement("div", {
     className: "mhl-body"
   }, note && React.createElement("p", {
     "data-assistant-life-note": true,
@@ -124011,16 +124038,13 @@ function AlfFriendHouseView({
   const [done, setDone] = React.useState(null);
   const [noteWarn, setNoteWarn] = React.useState('');
   const [boardOpen, setBoardOpen] = React.useState(false);
-  const [vw, setVw] = React.useState(() => typeof window !== 'undefined' ? window.innerWidth : 390);
-  const [vh, setVh] = React.useState(() => typeof window !== 'undefined' ? window.innerHeight : 844);
-  React.useEffect(() => {
-    const on = () => {
-      setVw(window.innerWidth);
-      setVh(window.innerHeight);
-    };
-    window.addEventListener('resize', on);
-    return () => window.removeEventListener('resize', on);
-  }, []);
+  const {
+    w: vw,
+    h: vh
+  } = typeof useAssistantLifeViewSize === 'function' ? useAssistantLifeViewSize() : {
+    w: 390,
+    h: 844
+  };
   React.useEffect(() => {
     if (friend && friend.id) void alfFetchMore(friend.id);
   }, [friend && friend.id]);

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 97b21721f1fc9e97
+// generated-sha256: c7a3b2dbf2912c58
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -63217,12 +63217,25 @@ function AssistantLifeScene({ scene, look, onClose, onGive, canGive }) {
 }
 
 // ---------- 専用ページ ----------
-const useAssistantLifeLand = () => {
-  const get = () => typeof window !== 'undefined' && window.innerWidth > window.innerHeight && window.innerHeight < 600;
-  const [land, setLand] = React.useState(get);
-  React.useEffect(() => { const f = () => setLand(get()); window.addEventListener('resize', f); window.addEventListener('orientationchange', f); return () => { window.removeEventListener('resize', f); window.removeEventListener('orientationchange', f); }; }, []);
-  return land;
+// 見えている画面の幅・高さ。🔄横(モンヒロビートの「横」で、端末は縦のまま器を回す)のときは、回した器の幅・高さ
+//   (window の幅・高さは端末の縦のままなので、それで決めると縦の形のまま器の真ん中に縮んだ。2026-11-08 ジン)
+const assistantLifeViewSize = () => {
+  if (typeof window === 'undefined') return { w: 390, h: 844, rot: false };
+  const rot = typeof RHYTHM_VIEW_ROTATION === 'object' && !!RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.active === 'function' && RHYTHM_VIEW_ROTATION.active();
+  return rot ? { w: window.innerHeight, h: window.innerWidth, rot: true } : { w: window.innerWidth, h: window.innerHeight, rot: false };
 };
+// 大きさが変わったら描き直す。🔄横の切り替えは resize が来ないので、0.5秒ごとにも見る
+const useAssistantLifeViewSize = () => {
+  const [size, setSize] = React.useState(assistantLifeViewSize);
+  React.useEffect(() => {
+    const f = () => setSize(prev => { const n = assistantLifeViewSize(); return (n.w === prev.w && n.h === prev.h && n.rot === prev.rot) ? prev : n; });
+    window.addEventListener('resize', f); window.addEventListener('orientationchange', f);
+    const id = setInterval(f, 500);
+    return () => { window.removeEventListener('resize', f); window.removeEventListener('orientationchange', f); clearInterval(id); };
+  }, []);
+  return size;
+};
+const useAssistantLifeLand = () => { const v = useAssistantLifeViewSize(); return v.w > v.h && v.h < 600; };
 // 裏クイックの札(2026-11-08 社長「助手ライフ画面でも裏クイックほしい」)。中身はバトル部(ジン)が 60-app から渡す:
 //   quickRun … null(一度も回していない)か { live, loops, stopped, difficulty, xp, gold, canStart }/onQuickRunStop()/onQuickRunStart()
 //   回っているときは「⚡ 裏クイック ◯周目」と「止める」、止まっていて始められるときは「▶ 裏クイック」。数え方はカードの札と同じ(loops をそのまま)
@@ -63247,7 +63260,7 @@ function AssistantLifeQuickChip({ quickRun, onStop, onStart, land }) {
   }
   return null;
 }
-function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = null, bondLevelOf = null, furnItems = null, onGiveFurn = null, quickRun = null, onQuickRunStop = null, onQuickRunStart = null }) {
+function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = null, bondLevelOf = null, furnItems = null, onGiveFurn = null, quickRun = null, onQuickRunStop = null, onQuickRunStart = null, quickRunStrip = null }) {
   const st = useAssistantLifeNow(metIds);
   const diary = useAssistantLifeDiary();
   const peerSt = (typeof useAssistantPeerState === 'function') ? useAssistantPeerState() : null;
@@ -63265,8 +63278,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const [masmonId, setMasmonId] = React.useState(null); // 🐾 助手のマスモン(56-assistant-life-masmon.jsx)
   const [intro, setIntro] = React.useState(null); // 'long' | 'short' | null
   const [boardOpen, setBoardOpen] = React.useState(false); // 今日あったことを全部
-  const [vw, setVw] = React.useState(() => (typeof window !== 'undefined' ? window.innerWidth : 390));
-  React.useEffect(() => { const f = () => setVw(window.innerWidth); window.addEventListener('resize', f); return () => window.removeEventListener('resize', f); }, []);
+  const vw = useAssistantLifeViewSize().w; // 🔄横では回した器の幅
   // 入場: その日の最初は長く(1.2秒)、2回目からは短く(0.4秒)
   React.useEffect(() => {
     let alive = true;
@@ -63431,7 +63443,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         <div className="min-w-0 shrink overflow-hidden" data-assistant-life-title><p className="mhl-en truncate whitespace-nowrap" style={land ? { letterSpacing: '.06em', fontSize: 8 } : undefined}>ASSISTANT LIFE · {tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : tab === 'visit' ? 'VISIT' : 'HOUSE'}</p><p className="mhl-ti whitespace-nowrap" style={land ? { fontSize: 18 } : undefined}>助手ライフ</p></div>
         <div className="min-w-0 flex-1"/>
         {/* いまの時刻の札(ハナビの共通部品 44-time-of-day.jsx。設定の「いまの時刻を出す」が切なら出ない) */}
-        <AssistantLifeQuickChip quickRun={quickRun} onStop={onQuickRunStop} onStart={onQuickRunStart} land={land}/>
+        {/* 裏クイック: 60-app がほかのモードと同じ帯(quickRunStrip)を渡すときは帯を見出しの下に出し、この小さな札は出さない(2026-11-08 社長「他のモードと同じような表示に」) */}
+        {!quickRunStrip && <AssistantLifeQuickChip quickRun={quickRun} onStop={onQuickRunStop} onStart={onQuickRunStart} land={land}/>}
         {typeof TimeOfDayClock === 'function' && <div className="ml-auto shrink-0 self-center" data-assistant-life-clock-box><TimeOfDayClock/></div>}
       </div>
       {/* 時間帯と、みんなが動くまで(題を切らないよう2段目に。2026-11-07 社長「文字列も気をつけて」) */}
@@ -63484,6 +63497,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
             <div className="mhl-body" style={{ flex: '0 0 64%' }}>{tabBody}</div>
             <div className="flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2">
               {header}
+              {quickRunStrip && <div className="-mx-2.5 shrink-0" data-assistant-life-quick-strip>{quickRunStrip}</div>}
               {note && <p data-assistant-life-note className="rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1 text-[10.5px] font-bold text-sky-100">{note}</p>}
               {tiles}
               {icons}
@@ -63491,6 +63505,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
           </div>
         ) : (<>
           {header}
+          {quickRunStrip && <div className="relative z-[3] shrink-0" data-assistant-life-quick-strip>{quickRunStrip}</div>}
           <div className="mhl-body">
             {note && <p data-assistant-life-note className="mx-3 mb-1 rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 text-[11px] font-bold text-sky-100">{note}</p>}
             {tabBody}
@@ -66389,9 +66404,7 @@ function AlfFriendHouseView({ friend, onClose }) {
   const [done, setDone] = React.useState(null);
   const [noteWarn, setNoteWarn] = React.useState('');
   const [boardOpen, setBoardOpen] = React.useState(false);
-  const [vw, setVw] = React.useState(() => (typeof window !== 'undefined' ? window.innerWidth : 390));
-  const [vh, setVh] = React.useState(() => (typeof window !== 'undefined' ? window.innerHeight : 844));
-  React.useEffect(() => { const on = () => { setVw(window.innerWidth); setVh(window.innerHeight); }; window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
+  const { w: vw, h: vh } = typeof useAssistantLifeViewSize === 'function' ? useAssistantLifeViewSize() : { w: 390, h: 844 }; // 🔄横では回した器の幅・高さ
   React.useEffect(() => { if (friend && friend.id) void alfFetchMore(friend.id); }, [friend && friend.id]);
   if (!friend || !friend.house) return null;
   const more = (fs.more || {})[friend.id] || null;

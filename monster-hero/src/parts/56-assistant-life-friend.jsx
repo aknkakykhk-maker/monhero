@@ -907,9 +907,7 @@ function AlfFriendHouseView({ friend, onClose }) {
   const [done, setDone] = React.useState(null);
   const [noteWarn, setNoteWarn] = React.useState('');
   const [boardOpen, setBoardOpen] = React.useState(false);
-  const [vw, setVw] = React.useState(() => (typeof window !== 'undefined' ? window.innerWidth : 390));
-  const [vh, setVh] = React.useState(() => (typeof window !== 'undefined' ? window.innerHeight : 844));
-  React.useEffect(() => { const on = () => { setVw(window.innerWidth); setVh(window.innerHeight); }; window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
+  const { w: vw, h: vh } = typeof useAssistantLifeViewSize === 'function' ? useAssistantLifeViewSize() : { w: 390, h: 844 }; // 🔄横では回した器の幅・高さ
   React.useEffect(() => { if (friend && friend.id) void alfFetchMore(friend.id); }, [friend && friend.id]);
   if (!friend || !friend.house) return null;
   const more = (fs.more || {})[friend.id] || null;
