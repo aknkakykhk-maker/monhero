@@ -8519,6 +8519,22 @@ function MonsterHeroGame() {
   }, [grantProfileFrames, deliverAssistantBondRewards]);
   // 助手どうしの掛け合い・今日のペアで、出てきた助手それぞれの仲良し度を増やす(2026-11-07・56-assistant-peer.jsx)
   useEffect(() => { if (typeof assistantPeerSetPlayerBondAdder === 'function') assistantPeerSetPlayerBondAdder(addAssistantBondFor); }, [addAssistantBondFor]);
+  // 助手ライフのフレンドの家のおみやげ(ビートP)をギフトで届ける(2026-11-08・56-assistant-life-friend.jsx)。
+  //   id は「日付+家」で1つに決まるので、同じおみやげは二度届かない(grantGiftOnce)。1日300Pまでは向こうで数える
+  useEffect(() => {
+    if (typeof assistantLifeFriendSetGiftSender !== 'function') return;
+    assistantLifeFriendSetGiftSender((gift) => runGiftWrite(async () => {
+      if (RELEASE_FLAGS.assistantLifeFriend !== true || !gift || typeof gift.id !== 'string') return false;
+      const savedGifts = await storeGet('mh_gifts', [], false);
+      const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
+      const grant = grantGiftOnce(beforeGifts, gift);
+      if (!grant.granted) return false;
+      const saved = await saveStoredValuesOrRollback([{ key:'mh_gifts', before:beforeGifts, next:grant.gifts }], storeGet, storeSet);
+      if (!saved) return false;
+      setGifts(grant.gifts);
+      return true;
+    }));
+  }, []);
   // 助手どうし・助手ライフの台本の {name} を、話している助手がいまプレイヤーを呼ぶ呼び方にする(仲良し度の段・性別・選んだ呼び方。2026-11-07 社長「ブリーダーとか呼び方がおかしい」)
   useEffect(() => {
     if (typeof assistantPeerSetPlayerCaller !== 'function') return;
@@ -19211,7 +19227,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* 呼び方が決まったあと、つぎの画面で1回だけ出す知らせ(2026-11-08)。🔄横では回した器の中へ出す */}
         {callnameToast&&!assistantChatOpen&&typeof AssistantCallnameToast==='function'&&(()=>{
           const who=ASSISTANT_LIST.find(a=>a.id===callnameToast.id);
-          return who?<AssistantCallnameToast key={callnameToast.id+callnameToast.text} assistant={who} text={callnameToast.text} screen={gameState} onDone={()=>setCallnameToast(null)}/>:null;
+          return who?<AssistantCallnameToast key={callnameToast.id+callnameToast.text} assistant={who} text={callnameToast.text} screen={gameState} hidden={showCallStylePicker} onDone={()=>setCallnameToast(null)}/>:null;
         })()}
 
         {/* 助手どうしの掛け合い(2026-11-07)。HOME・マーケット・モンヒロビート・マスモン一覧・MFバトルカードの入口で、ときどき2人が話す。
@@ -22787,7 +22803,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <button type="button" data-nickname-reset onClick={()=>setAssistantNicknameFor(selectedAssistantId,null)} className="shrink-0 min-h-[36px] rounded-xl border border-slate-600 bg-slate-800 px-2.5 text-[10px] font-black text-slate-200 active:scale-95">外す</button></div>}
                 </div>);})()}
               {assistantBondLevelNow>=ASSISTANT_CALL_STYLE_UNLOCK_LEVEL?(<>
-              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">絆Lv6になったので、呼び方を自由に決められます。「{'{name}'}」と書くと、そこがあなたの名前に置き換わります。</p>
+              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">仲良し度がLv6になったので、呼び方を自由に決められます。「{'{name}'}」と書くと、そこがあなたの名前に置き換わります。</p>
               <input type="text" value={tempCallStyle} onChange={e=>setTempCallStyle(e.target.value)} maxLength={(typeof ASSISTANT_CALL_STYLE_MAX_LEN!=='undefined'&&ASSISTANT_CALL_STYLE_MAX_LEN)||16} placeholder={`例: {name}さん`} className="w-full bg-black/50 border border-slate-700 rounded-xl p-3 text-white font-bold text-center mb-2"/>
               <div className="flex flex-wrap gap-1.5 justify-center mb-4">
                 {((typeof assistantCallStylesOf==='function'&&assistantCallStylesOf(selectedAssistantId))||[]).map(style=>(
@@ -22799,7 +22815,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <button onClick={()=>setShowCallStylePicker(false)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
                 <button onClick={()=>{chooseAssistantCallStyle(tempCallStyle);setShowCallStylePicker(false);}} className="flex-1 text-white py-3 rounded-xl font-black text-xs" style={{backgroundColor:activeAssistant.accent}}>保存</button>
               </div>
-              <button onClick={()=>{chooseAssistantCallStyle('');setTempCallStyle('');setShowCallStylePicker(false);}} className="w-full text-[10px] text-slate-500 font-bold py-1 active:scale-95">絆Lvの呼び方に戻す</button>
+              <button onClick={()=>{chooseAssistantCallStyle('');setTempCallStyle('');setShowCallStylePicker(false);}} className="w-full text-[10px] text-slate-500 font-bold py-1 active:scale-95">仲良し度の呼び方に戻す</button>
               </>):(
                 <button onClick={()=>setShowCallStylePicker(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
               )}

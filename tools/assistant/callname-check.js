@@ -16,7 +16,7 @@
 //   ⑨ 「あっちゃんって呼んで」→ 確かめるカード → うん → 新しいキーに入る。今のキー(mh_assistant_call_style*)は変わらない
 //   ⑩ あだ名のカード → うん → mh_assistant_nickname_v1
 //   ⑪ API が止まっていても、端末の読み取りでカードが出る(返事は台本)
-//   ⑫ プロフィールの呼び方の小窓に「会話で決めた呼び方」が出て、元に戻すと新しいキーの行だけ消える
+//   ⑫ プロフィールの呼び方の小窓に「会話で決めた呼び方」が出て、元に戻すと新しいキーの行だけ消える。小窓のあいだは知らせを出さない
 //   ⑬ Lv6 で開くと、助手から「なんて呼んだらいい？」と1回だけ聞き、候補のボタンが出る
 //   ⑭ 公開の印が偽のときは、カードも問いかけも出ない
 const http = require('http');
@@ -215,6 +215,8 @@ const browser = async () => {
       for (let i = 0; i < 12; i++) { const n = page.getByRole('button', { name: /^(次へ|閉じる|OK|わかった！?)$/ }).first(); if (!(await n.count()) || !(await n.isVisible().catch(() => false))) break; await n.click({ timeout: 1500 }).catch(() => {}); await page.waitForTimeout(250); }
       await page.locator('[data-profile-call-style]').first().click({ timeout: 8000 }).catch(() => {});
       await page.waitForTimeout(400);
+      // ミハリ 2026-11-08: 知らせが小窓のいちばん上の行に重なっていた。小窓が開いているあいだは出さない
+      check('⑫ 呼び方の小窓を開いているあいだは、呼び方の知らせを出さない(小窓の行に重ならない)', await page.locator('[data-assistant-callname-toast]').count() === 0);
       if (process.env.SHOT_DIR) await page.screenshot({ path: path.join(process.env.SHOT_DIR, 'callname-profile.png') });
       check('⑫ プロフィールの呼び方の小窓に「会話で決めた呼び方」とあだ名が出る', await page.locator('[data-callname-profile]').count() === 1 && /あっちゃん/.test(await page.locator('[data-callname-profile]').innerText()));
       await page.locator('[data-callname-reset]').dispatchEvent('click', {}, { timeout: 3000 }).catch(() => {}); await page.waitForTimeout(300);
