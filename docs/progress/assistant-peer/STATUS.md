@@ -397,3 +397,9 @@
 - 止め絵 masmon-life/dye2/(sheet-1・sheet-2・players・season・zoom-*・game/)。撮り直しは masmon-life/dye2-shoot.js
 - 検査: run-checks --changed は 409/413。NG のうち「子」の言い方・保存キーの載せ忘れは直した。残りの2本(assistant-life-friend-browser-check の仲良し度の知らせ・sheet-close-check の AssistantMasmonDetail「もどる」)は main でも出る前からのもの
 - 待ち: 窓口経由で社長の確認(止め絵・更新履歴とヘルプの文案)→ ミハリの確認 → 更新履歴・ヘルプを入れて PR・マージ
+
+### ナカヨシ9 の続き(2026-11-08 夜)
+- 公開: #5102 地図(案A・ごほうび済みの「済」)/#5118 部屋を大きく見る(案A・立ち絵①〜③・オクリモノ3の共通の表と関数 #5115・マスモン全部が歩く)+入場の演出を開くたびに決める(検査⑩)。どちらも本番で検査 OK
+- 部品: 56-assistant-life-map.jsx(AssistantLifeTownMap)・56-assistant-life-roomview.jsx(AssistantLifeRoomScene・見せるだけ)。検査 assistant-life-map-check・assistant-life-roomview-check
+- フレンドの家の大きな部屋: オトズレ3が引き受け(部品 AssistantLifeRoomScene に控えの中身を渡す。並べ方は自分の家と同じ)
+- 残り(低): 地図の縦 320 でドラの名札と M/B管理の札が1〜2px 近い/8人とも家で顔の並びが広場の札の近くまで伸びる/横の部屋の右の欄で「仲良し度」の行がボタンの段の上のぼかしに半分かかる(送れば読める)
