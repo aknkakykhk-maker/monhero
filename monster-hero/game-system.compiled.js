@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 05dccd20d1134f72
+// source-sha256: 93f137853e4a5d38
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -139198,13 +139198,17 @@ const cardAiDeckEntryOf = (raw, db) => {
     }
   }
   const since = Number.isFinite(raw.since) && raw.since > 0 ? Math.floor(raw.since) : at;
+  const style = cardAiStyleOf(raw.style);
   return {
     plan,
     name: cardAiDeckText(raw.name, CARD_AI_DECK_NAME_MAX),
     line: cardAiDeckText(raw.line, CARD_AI_DECK_LINE_MAX),
     at,
     since,
-    ai: raw.ai === true
+    ai: raw.ai === true,
+    ...(style ? {
+      style
+    } : {})
   };
 };
 const cardAiDeckCount = (x, max) => Number.isInteger(x) && x >= 0 ? Math.min(max, x) : 0;
@@ -139706,7 +139710,13 @@ const cardAiDeckPickFace = (main, rnd) => {
   const others = CARD_AI_FACE_IDS.filter(s => s !== m);
   return others[r - CARD_AI_DECK_MAIN < (1 - CARD_AI_DECK_MAIN) / 2 ? 0 : 1];
 };
-const cardAiFaceBuild = (db, who, slot, level, rnd, extra = {}, plan = null) => cardAiFaceBuildWith(db, who, cardAiFaceSpec(db, who, slot), level, rnd, extra, plan);
+const cardAiFaceBuild = (db, who, slot, level, rnd, extra = {}, plan = null, style = null) => {
+  const spec = cardAiFaceSpec(db, who, slot);
+  return cardAiFaceBuildWith(db, who, cardAiStyleOf(style) ? {
+    ...spec,
+    style: cardAiStyleOf(style)
+  } : spec, level, rnd, extra, plan);
+};
 const cardAiFaceBuildWith = (db, who, spec, level, rnd, extra = {}, plan = null) => {
   const lv = CARD_AI_BUILD[level] ? level : 'normal';
   const nz = ((CARD_AI_FACE_NOISE[who] || {})[spec.slot] || {})[lv] || 0;
@@ -139730,7 +139740,7 @@ const cardAiFaceBuildWith = (db, who, spec, level, rnd, extra = {}, plan = null)
   if (deck.monsters.length >= 3) return deck;
   return cardAiBuildDeck(db, who, lv, rnd, opts(spec.keep));
 };
-const cardAiFacePreviewDeck = (db, who, slot, plan = null, level = 'master') => cardAiFaceBuild(db, who, slot, level, cardAiSeededRand(`face:${who}:${slot}:${level}`), {}, plan);
+const cardAiFacePreviewDeck = (db, who, slot, plan = null, level = 'master', style = null) => cardAiFaceBuild(db, who, slot, level, cardAiSeededRand(`face:${who}:${slot}:${level}`), {}, plan, style);
 const cardAiFaceShare = (a, b) => {
   const cnt = cards => cards.reduce((m, no) => {
     m[no] = (m[no] || 0) + 1;
@@ -139748,9 +139758,13 @@ const CARD_AI_FACE_POLICY = Object.freeze({
   yoso: 'よそいきの組み方。ふだんどおりの、無難で強い組み方',
   honne: '本音の組み方。ふだんはやらないけれど、ほんとはやってみたい組み方'
 });
-const cardAiDeckFacts = (db, who, slot) => {
-  const spec = cardAiFaceSpec(db, who, slot);
-  const trio = cardAiFacePreviewDeck(db, who, slot).monsters;
+const cardAiDeckFacts = (db, who, slot, styleIn = null) => {
+  const spec0 = cardAiFaceSpec(db, who, slot);
+  const spec = cardAiStyleOf(styleIn) ? {
+    ...spec0,
+    style: cardAiStyleOf(styleIn)
+  } : spec0;
+  const trio = cardAiFacePreviewDeck(db, who, slot, null, 'master', spec.style).monsters;
   const cands = cardAiPlanCandidates(db, who, 'master', trio);
   const fields = Object.values(db.cards).filter(c => c.ready && c.kind === 'fld').map(c => c.name);
   const leadMon = trio.map(no => db.monsters[no]).find(m => m && cardAiFaceLineOf(m) === spec.lead);
@@ -139904,14 +139918,88 @@ const cardAiDeckFetch = async (who, facts) => {
     clearTimeout(timer);
   }
 };
-const cardAiFaceDiverseOk = (db, who, slot, plan, w, side) => {
-  const mine = cardAiFacePreviewDeck(db, who, slot, plan);
+const cardAiFaceDiverseOk = (db, who, slot, plan, w, side, style = null) => {
+  const mine = cardAiFacePreviewDeck(db, who, slot, plan, 'master', style);
   const others = ['oshi', 'suki', side === 'honne' ? 'honne' : 'yoso'].filter(s => s !== slot && !((slot === 'yoso' || slot === 'honne') && (s === 'yoso' || s === 'honne')));
   return others.every(s => {
     const e = w && w.decks && w.decks[s];
-    const d = cardAiFacePreviewDeck(db, who, s, e && e.plan);
+    const d = cardAiFacePreviewDeck(db, who, s, e && e.plan, 'master', e && e.style);
     return cardAiFaceShare(mine, d) <= CARD_AI_FACE_SHARE_MAX && cardAiFaceTrioDiff(mine, d) >= CARD_AI_FACE_TRIO_DIFF;
   });
+};
+const CARD_AI_WISH_KEY = 'mh_card_ai_deck_wish_v1';
+const CARD_AI_WISH_KEEP = 20;
+const cardAiWishOf = who => {
+  let w = null;
+  try {
+    w = typeof assistantLifeDeckWish === 'function' ? assistantLifeDeckWish(who) : null;
+  } catch (_) {
+    w = null;
+  }
+  if (!cardAiDeckIsObj(w)) return null;
+  const face = w.face === 'like' ? 'suki' : cardAiFaceOf(w.face);
+  const day = typeof w.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(w.day) ? w.day : null;
+  if (!face || !day) return null;
+  const nm = cardAiDeckText(w.name, CARD_AI_DECK_NAME_MAX);
+  return {
+    face,
+    name: nm && nm.length >= 2 ? nm : null,
+    plan: cardAiStyleOf(w.plan),
+    day,
+    mark: `${face}:${day}`
+  };
+};
+const cardNormalizeAiWish = raw => {
+  const used = {};
+  const src = cardAiDeckIsObj(raw) && cardAiDeckIsObj(raw.used) ? raw.used : {};
+  for (const who of Object.keys(src)) {
+    if (!CARD_AI_FACES[who] || !Array.isArray(src[who])) continue;
+    const list = [...new Set(src[who].filter(x => typeof x === 'string' && /^(oshi|suki|sugao):\d{4}-\d{2}-\d{2}$/.test(x)))].slice(-CARD_AI_WISH_KEEP);
+    if (list.length) used[who] = list;
+  }
+  return {
+    v: 1,
+    used
+  };
+};
+const cardAiWishRead = async () => {
+  try {
+    return cardNormalizeAiWish(await storeGet(CARD_AI_WISH_KEY, null));
+  } catch (_) {
+    return {
+      v: 1,
+      used: {}
+    };
+  }
+};
+const cardAiWishPending = async who => {
+  if (!cardAiDeckFlagOn()) return null;
+  const wish = cardAiWishOf(who);
+  if (!wish) return null;
+  const st = await cardAiWishRead();
+  return (st.used[who] || []).includes(wish.mark) ? null : wish;
+};
+const cardAiWishMarkUsed = async (who, wish) => {
+  const st = await cardAiWishRead();
+  const next = cardNormalizeAiWish({
+    v: 1,
+    used: {
+      ...st.used,
+      [who]: [...(st.used[who] || []), wish.mark]
+    }
+  });
+  try {
+    await storeSet(CARD_AI_WISH_KEY, next);
+  } catch (_) {}
+  return next;
+};
+const cardAiWishName = (db, who, slot, name, others, used) => {
+  if (!name) return null;
+  const spec = cardAiFaceSpec(db, who, slot);
+  const mon = Object.values(db.monsters).find(m => m.species === spec.lead && !m.variant && String(m.wave) !== 'hybrid');
+  const full = mon && !name.includes(mon.name) ? `${mon.name}の${name}` : name;
+  if (full.length > CARD_AI_DECK_NAME_MAX || used.includes(full)) return null;
+  return cardAiFaceNameOk(db, who, slot, full, others) ? full : null;
 };
 const cardAiDeckBusy = new Set();
 const cardAiDeckRebuild = async (who, reason, opts = {}) => {
@@ -139922,8 +140010,11 @@ const cardAiDeckRebuild = async (who, reason, opts = {}) => {
     const now = Number.isFinite(opts.now) ? opts.now : Date.now();
     const side = cardAiFaceSugaoSide(cardAiFaceMaterial(who));
     const before = await cardAiRecipeRead();
-    const slot = cardAiDeckOldest(before.perWho[who] || null, side);
-    const f = cardAiDeckFacts(db, who, slot);
+    const wish = await cardAiWishPending(who);
+    const slot = wish ? cardAiFaceSlotOf(wish.face, side) : cardAiDeckOldest(before.perWho[who] || null, side);
+    const prev0 = before.perWho[who] && before.perWho[who].decks[slot] || null;
+    const style = wish && wish.plan || prev0 && prev0.style || null;
+    const f = cardAiDeckFacts(db, who, slot, style);
     const got = await cardAiDeckFetch(who, f.facts);
     const cur = await cardAiRecipeRead();
     const w = cur.perWho[who] || {
@@ -139940,24 +140031,27 @@ const cardAiDeckRebuild = async (who, reason, opts = {}) => {
       rnd: cardAiSeededRand(`jitter:${who}:${slot}:${now}`)
     });
     let plan = got && cardAiPlanClean(db, got.plan) ? got.plan : jitter();
-    if (!cardAiFaceDiverseOk(db, who, slot, plan, w, side)) {
+    if (!cardAiFaceDiverseOk(db, who, slot, plan, w, side, style)) {
       const j = jitter();
-      plan = cardAiFaceDiverseOk(db, who, slot, j, w, side) ? j : prev && prev.plan || null;
+      plan = cardAiFaceDiverseOk(db, who, slot, j, w, side, style) ? j : prev && prev.plan || null;
     }
     const others = cardAiFaceOtherNames(w, who, slot);
     let name = null,
       since = now,
       past = null;
+    const histNow = await cardAiHistoryRead();
+    const usedNames = [...CARD_AI_FACE_SLOTS.map(sl => cardAiFaceNameOf(w, who, sl)), ...(histNow.perWho[who] || []).map(e => e.name)].filter(Boolean);
+    const wishName = wish ? cardAiWishName(db, who, slot, wish.name, others, usedNames) : null;
+    if (!prev && wishName) name = wishName;
     if (prev) {
-      const a0 = cardAiFacePreviewDeck(db, who, slot, prev.plan),
-        a1 = cardAiFacePreviewDeck(db, who, slot, plan);
+      const a0 = cardAiFacePreviewDeck(db, who, slot, prev.plan, 'master', prev.style),
+        a1 = cardAiFacePreviewDeck(db, who, slot, plan, 'master', style);
       const changed = cardAiFaceTrioDiff(a0, a1) >= 1 || cardAiFaceShare(a0, a1) <= CARD_AI_RENAME_SHARE;
       name = prev.name;
       since = prev.since || prev.at || now;
-      if (changed) {
-        const hist = await cardAiHistoryRead();
-        const used = [...CARD_AI_FACE_SLOTS.map(sl => cardAiFaceNameOf(w, who, sl)), ...(hist.perWho[who] || []).map(e => e.name)].filter(Boolean);
-        const fresh = got && got.name && !used.includes(got.name) && cardAiFaceNameOk(db, who, slot, got.name, others) ? got.name : cardAiFaceMakeName(db, who, slot, others, used, cardAiSeededRand(`name:${who}:${slot}:${now}`));
+      if (changed || wishName) {
+        const used = usedNames;
+        const fresh = wishName || (got && got.name && !used.includes(got.name) && cardAiFaceNameOk(db, who, slot, got.name, others) ? got.name : cardAiFaceMakeName(db, who, slot, others, used, cardAiSeededRand(`name:${who}:${slot}:${now}`)));
         if (fresh) {
           const spec = cardAiFaceSpec(db, who, slot);
           past = {
@@ -139970,7 +140064,7 @@ const cardAiDeckRebuild = async (who, reason, opts = {}) => {
               avoid: spec.avoid,
               keep: spec.keep,
               free: spec.free,
-              style: spec.style
+              style: cardAiStyleOf(prev.style) || spec.style
             },
             monsters: a0.monsters.slice(0, 3),
             top: [...new Set(a0.cards)].slice(0, 8),
@@ -139988,7 +140082,8 @@ const cardAiDeckRebuild = async (who, reason, opts = {}) => {
       line: got ? got.line : prev && prev.line,
       at: now,
       since,
-      ai: !!got
+      ai: !!got,
+      style
     }, db);
     if (past) await cardAiHistoryPush(who, past);
     const passed = Number.isFinite(opts.passed) ? opts.passed : w.slotsDone;
@@ -140009,10 +140104,15 @@ const cardAiDeckRebuild = async (who, reason, opts = {}) => {
         [who]: nextW
       }
     });
+    if (wish) await cardAiWishMarkUsed(who, wish);
     return {
       who,
       slot,
-      ai: !!got
+      ai: !!got,
+      ...(wish ? {
+        wish: wish.mark,
+        wishName: !!wishName
+      } : {})
     };
   } catch (_) {
     return null;
@@ -140220,7 +140320,7 @@ const cardAssistantDeckPick = (who, rand = Math.random, level = 'normal', extra 
   const w = cardAiRecipeState && cardAiRecipeState.perWho[who];
   const e = w && w.decks[slot] || null;
   const plan = e && e.plan ? e.plan : null;
-  const deck = cardAiFaceBuild(CARD_BATTLE_DATA, who, slot, level, rnd, extra, plan);
+  const deck = cardAiFaceBuild(CARD_BATTLE_DATA, who, slot, level, rnd, extra, plan, e && e.style);
   return {
     styleId: id,
     slot,
@@ -140271,7 +140371,7 @@ const cardAssistantFacePreview = (who, face, level = 'normal') => {
   const side = cardAiFaceSugaoSide(cardAiFaceMaterial(who));
   const slot = cardAiFaceSlotOf(f, side);
   const e = cardAiRecipeState && cardAiRecipeState.perWho[who] && cardAiRecipeState.perWho[who].decks[slot];
-  const deck = cardAiFacePreviewDeck(CARD_BATTLE_DATA, who, slot, e && e.plan, CARD_AI_BUILD[level] ? level : 'normal');
+  const deck = cardAiFacePreviewDeck(CARD_BATTLE_DATA, who, slot, e && e.plan, CARD_AI_BUILD[level] ? level : 'normal', e && e.style);
   return {
     monsters: deck.monsters.slice(),
     cards: deck.cards.slice(),
