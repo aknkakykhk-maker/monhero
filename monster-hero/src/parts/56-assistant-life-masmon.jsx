@@ -258,12 +258,12 @@ function AssistantMasmonSheet({ id, land = false, onClose, bondLv = null }) {
     body = (<>
       <div className="grid grid-cols-3 gap-2">
         {team.map(t => (
-          <button type="button" key={t.monster} className="mhm-card relative text-center" data-assistant-masmon-team={t.monster} onClick={() => setDetail(t)}>
+          <button type="button" key={t.monster} className="mhm-card relative flex flex-col items-stretch text-center" style={{ justifyContent: 'flex-start' }} data-assistant-masmon-team={t.monster} onClick={() => setDetail(t)}>
             {t.lead && <em className="mhm-lead absolute left-1.5 top-1.5 z-[1]">先頭</em>}
             <div className="mhm-stage"><AssistantMasmonPic t={t} size={land ? 104 : 104}/></div>
             <p className="mt-1 truncate text-[13px] font-black text-white">{t.nick}</p>
             <p className="truncate text-[10px] font-bold text-amber-200">Lv.{t.lv} ・ {assistantMasmonGrowKind(t.grow)}</p>
-            {!land && <p className="mt-0.5 text-[9.5px] font-bold leading-snug text-slate-300" style={{ wordBreak: 'auto-phrase' }}>⚔ {assistantMasmonSkills(t).slice(-2).join('・')}</p>}
+            {!land && <p className="mt-0.5 text-[9.5px] font-bold leading-snug text-slate-300" style={{ wordBreak: 'auto-phrase', minHeight: '2.6em' }}>⚔ {assistantMasmonSkills(t).slice(-2).join('・')}</p>}
             {!land && (() => { const st = assistantMasmonStats(t) || {}; return <div className="mt-1 grid gap-0.5">{ASSISTANT_MASMON_STAT_LABEL.map(([k, label]) => <div key={k} className="flex items-center gap-1 text-[8.5px] font-bold text-slate-400"><span className="w-[26px] shrink-0 text-left">{label}</span><span className="mhm-bar"><i style={{ width: `${Math.round((st[k] || 0) * 100)}%` }}/></span></div>)}</div>; })()}
           </button>))}
       </div>
@@ -343,7 +343,7 @@ function AssistantMasmonSheet({ id, land = false, onClose, bondLv = null }) {
             <button key={t.monster} type="button" className="text-center" onClick={() => setDetail(t)} data-assistant-masmon-taste-mon={t.monster}>
               <div className="mhm-stage"><AssistantMasmonPic t={t} size={land ? 46 : 54}/></div>
               <p className="truncate text-[10.5px] font-black text-white">{t.nick}</p>
-              <p className="text-[9px] font-bold leading-tight text-pink-200">{rel ? `💗 ${rel.replace(`${who.name}の`, '')}` : '・ふつう'}</p>
+              <p className="text-[9px] font-bold leading-tight text-pink-200">{rel ? `💗 ${rel.replace(`${who.name}の`, '')}` : 'ふつう'}</p>
             </button>); })}
         </div>
       </div>
