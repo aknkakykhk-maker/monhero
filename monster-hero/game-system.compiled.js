@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 75d7f3fd57d57318
+// source-sha256: bc37a2f709be6d38
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91129,7 +91129,7 @@ function RhythmBeatPresenceStrip({
   }, "🎵 いまモンヒロビートにいる人"), React.createElement("small", {
     className: "ml-auto text-[10.5px] font-bold text-slate-200 max-[359px]:text-[9.5px]"
   }, "押すと一緒に遊べる所")), React.createElement("div", {
-    className: "mt-1.5 flex gap-2 overflow-x-auto pb-0.5"
+    className: "mt-1.5 flex flex-wrap gap-2 pb-0.5"
   }, assistants.map(a => React.createElement("button", {
     key: `a-${a.id}`,
     type: "button",
@@ -91167,6 +91167,82 @@ function RhythmBeatPresenceStrip({
       }
     }, k.tag));
   })));
+}
+function RhythmBeatPresenceButton({
+  assistants = [],
+  friends = [],
+  onOpen,
+  resolveIconUrl
+}) {
+  const faces = [...assistants.map(a => ({
+    key: `a-${a.id}`,
+    src: rhythmBeatAssistantFace(a.id),
+    color: '#f472b6'
+  })), ...friends.map(f => ({
+    key: `f-${f.otherId}`,
+    src: f.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(f.icon) : '',
+    color: (RHYTHM_BEAT_PRESENCE_KIND[f.kind] || RHYTHM_BEAT_PRESENCE_KIND.here).color
+  }))];
+  return React.createElement("button", {
+    type: "button",
+    "data-rhythm-beat-presence-open": true,
+    "aria-label": `いまモンヒロビートにいる人(${faces.length}人)を見る`,
+    onClick: onOpen,
+    className: "flex min-h-[44px] shrink-0 items-center gap-1 rounded-xl border border-amber-300/60 bg-indigo-950/80 px-1.5 active:scale-95"
+  }, React.createElement("span", {
+    className: "flex items-center pl-1.5",
+    "aria-hidden": "true"
+  }, faces.slice(0, 3).map(f => React.createElement("span", {
+    key: f.key,
+    className: "-ml-1.5 block h-7 w-7 overflow-hidden rounded-full border-2 bg-slate-900",
+    style: {
+      borderColor: f.color
+    }
+  }, f.src ? React.createElement("img", {
+    src: f.src,
+    alt: "",
+    draggable: false,
+    className: "h-full w-full object-cover"
+  }) : React.createElement("span", {
+    className: "grid h-full w-full place-items-center text-xs"
+  }, "🙂")))), React.createElement("span", {
+    className: "flex flex-col items-center leading-none"
+  }, React.createElement("small", {
+    className: "block whitespace-nowrap text-[8.5px] font-black text-amber-200"
+  }, "いる人"), React.createElement("b", {
+    className: "block whitespace-nowrap text-[13px] font-black text-white"
+  }, faces.length)));
+}
+function RhythmBeatPresenceList({
+  open,
+  assistants,
+  friends,
+  onPick,
+  onClose,
+  resolveIconUrl
+}) {
+  if (!open) return null;
+  return React.createElement("div", {
+    className: "absolute inset-0 z-[85400] flex items-end justify-center p-3 landscape:items-center",
+    "data-rhythm-beat-presence-list": true
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    className: "absolute inset-0 bg-slate-950/70",
+    onClick: onClose
+  }), React.createElement("div", {
+    className: "relative w-full max-w-sm space-y-2"
+  }, React.createElement(RhythmBeatPresenceStrip, {
+    assistants: assistants,
+    friends: friends,
+    onPick: onPick,
+    resolveIconUrl: resolveIconUrl
+  }), React.createElement("button", {
+    type: "button",
+    "data-rhythm-beat-presence-list-close": true,
+    className: "block w-full rounded-xl bg-slate-700 py-2.5 text-sm font-black text-white active:scale-[.98]",
+    onClick: onClose
+  }, "とじる")));
 }
 function RhythmBeatPresenceSheet({
   pick,
@@ -92660,7 +92736,7 @@ function RhythmMultiScreen({
     onClick: () => setBuddySheet('pick'),
     className: `min-h-[44px] w-full rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-2 text-sm font-black text-slate-950 ${extra}`
   }, sessionAssistantsOn ? '🎵 マスモン・助手を呼ぶ' : '🎵 マスモンを呼ぶ', React.createElement("small", {
-    className: "block text-[9px] font-bold opacity-80"
+    className: "block break-keep text-[9px] font-bold opacity-80"
   }, sessionAssistantsOn ? 'マスモンや助手がCPUとして一緒に遊びます' : 'マスモンがCPUとして一緒に遊びます')) : null;
   const mine = view ? view.members.find(m => m.id === view.selfId) : null;
   const [selSongId, setSelSongId] = React.useState(mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '');
@@ -92895,6 +92971,7 @@ function RhythmMultiScreen({
   const [beatPresence, setBeatPresence] = React.useState({});
   const [beatRooms, setBeatRooms] = React.useState([]);
   const [beatPick, setBeatPick] = React.useState(null);
+  const [beatListOpen, setBeatListOpen] = React.useState(false);
   const [inviteFirstId, setInviteFirstId] = React.useState('');
   const rosterIds = (roster || []).map(f => f.otherId).join(',');
   React.useEffect(() => {
@@ -93442,7 +93519,15 @@ function RhythmMultiScreen({
       kind: "beat",
       xp: ms.beatRankXp,
       size: "xs"
-    })))), quickRunInfo && React.createElement(RhythmQuickRunPill, {
+    })))), ms.multi && (beatAssistants.length > 0 || beatFriends.length > 0) && React.createElement(RhythmBeatPresenceButton, {
+      assistants: beatAssistants,
+      friends: beatFriends,
+      resolveIconUrl: resolveIconUrl,
+      onOpen: () => {
+        Audio_.fgSe.tap();
+        setBeatListOpen(true);
+      }
+    }), quickRunInfo && React.createElement(RhythmQuickRunPill, {
       info: quickRunInfo,
       onRestart: onRestartQuickRun,
       onResume: onResumeQuickRun,
@@ -93466,7 +93551,7 @@ function RhythmMultiScreen({
       showComment: ms.showComment,
       onToggle: ms.onToggleAssistant
     }), React.createElement("div", {
-      className: `shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2 ${ms.multi && (beatAssistants.length > 0 || beatFriends.length > 0) ? 'landscape:justify-start' : 'landscape:justify-center'}`
+      className: "shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2"
     }, !(ms.assistant && (ms.showArt || ms.showComment)) && assistToggles('justify-end', true), friendsOn && friendInvites.length > 0 && React.createElement("section", {
       "data-rhythm-multi-friend-invites": true,
       className: `${card} space-y-2 border-pink-400/60`
@@ -93482,12 +93567,7 @@ function RhythmMultiScreen({
       type: "button",
       className: `${btn} shrink-0 bg-pink-700 text-xs`,
       onClick: () => joinFromInvite(invite)
-    }, "参加する")))), ms.multi && (beatAssistants.length > 0 || beatFriends.length > 0) && React.createElement(RhythmBeatPresenceStrip, {
-      assistants: beatAssistants,
-      friends: beatFriends,
-      onPick: setBeatPick,
-      resolveIconUrl: resolveIconUrl
-    }), React.createElement("div", {
+    }, "参加する")))), React.createElement("div", {
       className: `grid gap-2 ${ms.multi ? 'grid-cols-2' : 'grid-cols-1'}`
     }, React.createElement("button", {
       "data-rhythm-mode-solo": true,
@@ -93714,7 +93794,17 @@ function RhythmMultiScreen({
       style: {
         marginTop: 'var(--mh-sa-top)'
       }
-    }, buddyRefundNote), React.createElement(RhythmBeatPresenceSheet, {
+    }, buddyRefundNote), React.createElement(RhythmBeatPresenceList, {
+      open: beatListOpen,
+      assistants: beatAssistants,
+      friends: beatFriends,
+      resolveIconUrl: resolveIconUrl,
+      onClose: () => setBeatListOpen(false),
+      onPick: p => {
+        setBeatListOpen(false);
+        setBeatPick(p);
+      }
+    }), React.createElement(RhythmBeatPresenceSheet, {
       pick: beatPick,
       friend: beatPickFriend,
       onClose: () => setBeatPick(null),
@@ -95535,11 +95625,11 @@ function RhythmBuddyDetail({
     "data-rhythm-buddy-sprout": sprout.id,
     className: "text-sm font-black text-lime-200"
   }, "🌱 ", sprout.label, "っぽい?"), React.createElement("small", {
-    className: "block text-[9px] font-bold leading-snug text-slate-500"
+    className: "block break-keep text-[9px] font-bold leading-snug text-slate-500"
   }, "性格の芽です。ビートLv.", RHYTHM_BUDDY_TRAIT_LEVEL, "で決まるまで、遊び方で入れかわります")) : React.createElement(React.Fragment, null, React.createElement("p", {
     className: "text-sm font-black text-slate-400"
   }, "まだ見えない"), React.createElement("small", {
-    className: "block text-[9px] font-bold leading-snug text-slate-500"
+    className: "block break-keep text-[9px] font-bold leading-snug text-slate-500"
   }, "ビートLv.", RHYTHM_BUDDY_SPROUT_LEVEL, "で芽が出て、Lv.", RHYTHM_BUDDY_TRAIT_LEVEL, "で決まります。", lean ? `生まれつき${lean.label}になりやすいモンスターです` : '')))), React.createElement("section", {
     "data-rhythm-buddy-profile": true,
     className: "rounded-xl border border-pink-300/30 bg-slate-950/60 p-2"
@@ -95559,7 +95649,7 @@ function RhythmBuddyDetail({
   }, label), React.createElement("dd", {
     className: `truncate text-[12px] font-black ${value === 'まだない' ? 'text-slate-500' : 'text-pink-100'}`
   }, value)))), React.createElement("small", {
-    className: "mt-1 block text-[9px] font-bold leading-snug text-slate-500"
+    className: "mt-1 block break-keep text-[9px] font-bold leading-snug text-slate-500"
   }, "話し方や好みは1体ずつ違います。", m.trait ? '' : `性格が決まると、一人称・呼び方・口ぐせが性格に合ったものへ変わることがあります。`, "叩き方のくせは話すことだけで、スコアには関係しません。好きな曲・苦手な曲は一緒に遊ぶと決まります")), React.createElement("button", {
     "data-rhythm-buddy-traits-toggle": true,
     type: "button",
@@ -95585,7 +95675,7 @@ function RhythmBuddyDetail({
     },
     className: `min-h-[34px] rounded-lg px-3 text-[11px] font-black ${seeds > 0 ? 'bg-lime-500 text-slate-950' : 'bg-slate-800 text-slate-500'}`
   }, seedOpen ? 'やめる' : '性格を選び直す')), React.createElement("small", {
-    className: "mt-0.5 block text-[9px] font-bold leading-snug text-slate-400"
+    className: "mt-0.5 block break-keep text-[9px] font-bold leading-snug text-slate-400"
   }, "1個使うと、性格を全部の中から選び直せます。選んだ性格は遊び方では変わりません(もう一度たねを使えば変えられます)"), seedOpen && React.createElement("div", {
     className: "mt-1 space-y-1"
   }, React.createElement("ul", {
@@ -96376,7 +96466,7 @@ function RhythmBuddySheet({
     settings: listControls.settings
   }))), listControls.sheet, !masuPicker && !canPay && React.createElement("p", {
     "data-rhythm-buddy-empty": true,
-    className: "mt-2 text-[11px] font-black text-rose-300"
+    className: "mt-2 break-keep text-[11px] font-black text-rose-300"
   }, "今日の無料ぶんを使い切りました。セッション券があれば呼べます")), showMultiBar && React.createElement("div", {
     className: "landscape:hidden"
   }, multiBar)));
