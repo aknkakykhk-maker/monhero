@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 88c361ae27e3a13b
+// source-sha256: d9b68c3d34374ae6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -107826,10 +107826,18 @@ const assistantLifeStandBox = src => new Promise(res => {
   }
   const im = new Image();
   im.onload = () => {
+    const whole = im.naturalWidth && im.naturalHeight ? {
+      t: 0,
+      b: 1,
+      l: 0,
+      r: 1,
+      ar: im.naturalWidth / im.naturalHeight
+    } : null;
+    let c = null;
     try {
       const W = 96,
         H = Math.max(1, Math.round(96 * im.naturalHeight / im.naturalWidth));
-      const c = document.createElement('canvas');
+      c = document.createElement('canvas');
       c.width = W;
       c.height = H;
       const g = c.getContext('2d');
@@ -107845,9 +107853,7 @@ const assistantLifeStandBox = src => new Promise(res => {
         if (x < l) l = x;
         if (x > r) r = x;
       }
-      c.width = 0;
-      c.height = 0;
-      const box = b < 0 ? null : {
+      const box = b < 0 ? whole : {
         t: t / H,
         b: (b + 1) / H,
         l: l / W,
@@ -107857,15 +107863,12 @@ const assistantLifeStandBox = src => new Promise(res => {
       ASSISTANT_LIFE_STAND_BOX.set(src, box);
       res(box);
     } catch (_) {
-      const box = im.naturalWidth && im.naturalHeight ? {
-        t: 0,
-        b: 1,
-        l: 0,
-        r: 1,
-        ar: im.naturalWidth / im.naturalHeight
-      } : null;
-      ASSISTANT_LIFE_STAND_BOX.set(src, box);
-      res(box);
+      ASSISTANT_LIFE_STAND_BOX.set(src, whole);
+      res(whole);
+    }
+    if (c) {
+      c.width = 0;
+      c.height = 0;
     }
   };
   im.onerror = () => {

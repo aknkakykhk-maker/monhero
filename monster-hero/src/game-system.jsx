@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 578e10cda2e5866d
+// generated-sha256: 31ef41a20ef1ff91
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -63765,21 +63765,21 @@ const assistantLifeStandBox = (src) => new Promise((res) => {
   if (ASSISTANT_LIFE_STAND_BOX.has(src)) { res(ASSISTANT_LIFE_STAND_BOX.get(src)); return; }
   const im = new Image();
   im.onload = () => {
+    // 測れないとき(iPhone で canvas が使えない・上限を超えて真っ白になるなど)も、絵の縦横の比だけは本物を使う。
+    //   仮の比で細長く伸びて見えていた(2026-11-09 社長「画面バグってる」)
+    const whole = im.naturalWidth && im.naturalHeight ? { t: 0, b: 1, l: 0, r: 1, ar: im.naturalWidth / im.naturalHeight } : null;
+    let c = null;
     try {
       const W = 96, H = Math.max(1, Math.round(96 * im.naturalHeight / im.naturalWidth));
-      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      c = document.createElement('canvas'); c.width = W; c.height = H;
       const g = c.getContext('2d'); g.drawImage(im, 0, 0, W, H);
       const d = g.getImageData(0, 0, W, H).data;
       let t = H, b = -1, l = W, r = -1;
       for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (d[(y * W + x) * 4 + 3] > 40) { if (y < t) t = y; if (y > b) b = y; if (x < l) l = x; if (x > r) r = x; }
-      c.width = 0; c.height = 0; // iPhone は canvas のメモリの上限が厳しい。測り終えたらすぐ放す
-      const box = b < 0 ? null : { t: t / H, b: (b + 1) / H, l: l / W, r: (r + 1) / W, ar: im.naturalWidth / im.naturalHeight };
+      const box = b < 0 ? whole : { t: t / H, b: (b + 1) / H, l: l / W, r: (r + 1) / W, ar: im.naturalWidth / im.naturalHeight };
       ASSISTANT_LIFE_STAND_BOX.set(src, box); res(box);
-    } catch (_) {
-      // 測れなくても(iPhone で canvas が使えないときなど)、絵の縦横の比だけは本物を使う。仮の比で細長く伸びて見えていた(2026-11-09 社長「画面バグってる」)
-      const box = im.naturalWidth && im.naturalHeight ? { t: 0, b: 1, l: 0, r: 1, ar: im.naturalWidth / im.naturalHeight } : null;
-      ASSISTANT_LIFE_STAND_BOX.set(src, box); res(box);
-    }
+    } catch (_) { ASSISTANT_LIFE_STAND_BOX.set(src, whole); res(whole); }
+    if (c) { c.width = 0; c.height = 0; } // iPhone は canvas のメモリの上限が厳しい。測り終えたらすぐ放す
   };
   im.onerror = () => { ASSISTANT_LIFE_STAND_BOX.set(src, null); res(null); };
   im.src = src;
