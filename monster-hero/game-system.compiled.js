@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 999ec4d6959bcd63
+// source-sha256: 2bc463112c5fd88a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -62059,18 +62059,21 @@ const timeOfDayAt = (now = Date.now()) => {
   for (const s of TIME_OF_DAY_SLOTS) if (h >= s.from) slot = s;
   return slot;
 };
-const timeOfDayClockText = (now = Date.now()) => {
+const timeOfDayClockText = (now = Date.now(), format = '24h') => {
   const {
     h,
     m
   } = timeOfDayJstParts(now);
-  return `${h}:${String(m).padStart(2, '0')}`;
+  const mm = String(m).padStart(2, '0');
+  if (format === '12h') return `${h < 12 ? 'AM' : 'PM'} ${h % 12 || 12}:${mm}`;
+  return `${h}:${mm}`;
 };
 const normalizeTimeOfDaySettings = value => {
   const v = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   return {
     mood: v.mood === 'off' ? 'off' : 'on',
-    clock: v.clock === 'off' ? 'off' : 'on'
+    clock: v.clock === 'off' ? 'off' : 'on',
+    format: v.format === '12h' ? '12h' : '24h'
   };
 };
 const TIME_OF_DAY_STORE = {
@@ -62093,6 +62096,7 @@ const timeOfDayLoad = async () => {
   TIME_OF_DAY_STORE.loaded = true;
   try {
     TIME_OF_DAY_STORE.settings = normalizeTimeOfDaySettings(await storeGet(TIME_OF_DAY_STORAGE_KEY, null));
+    TIME_OF_DAY_STORE.minute = timeOfDayClockText(Date.now(), TIME_OF_DAY_STORE.settings.format);
   } catch {}
   timeOfDayEmit();
 };
@@ -62101,6 +62105,7 @@ const timeOfDaySetSettings = patch => {
     ...TIME_OF_DAY_STORE.settings,
     ...(patch || {})
   });
+  TIME_OF_DAY_STORE.minute = timeOfDayClockText(Date.now(), TIME_OF_DAY_STORE.settings.format);
   try {
     storeSet(TIME_OF_DAY_STORAGE_KEY, TIME_OF_DAY_STORE.settings, false);
   } catch {}
@@ -62108,7 +62113,7 @@ const timeOfDaySetSettings = patch => {
 };
 const timeOfDayTick = () => {
   const slot = timeOfDayAt(),
-    minute = timeOfDayClockText();
+    minute = timeOfDayClockText(Date.now(), TIME_OF_DAY_STORE.settings.format);
   if (slot.id === TIME_OF_DAY_STORE.slot.id && minute === TIME_OF_DAY_STORE.minute) return;
   TIME_OF_DAY_STORE.slot = slot;
   TIME_OF_DAY_STORE.minute = minute;
@@ -62149,7 +62154,8 @@ html[data-mh-tod="evening"] .mh-tod-tint{opacity:var(--tod-k,1);background:linea
 html[data-mh-tod="night"] .mh-tod-tint{opacity:var(--tod-k,1);background:linear-gradient(180deg,rgba(5,8,34,.84) 0%,rgba(10,16,52,.70) 50%,rgba(6,10,34,.76) 100%)}
 @media (prefers-reduced-motion:reduce){.mh-tod-tint{transition:none!important}}
 @media (prefers-reduced-motion:reduce){.mh-home-background::after,.mh-home-background::before,.mh-title-gate img,.mh-screen-shell,.mhms-stage{transition:none!important}}
-.mh-tod-clock{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border:1px solid #eed99566;border-radius:999px;background:#0f1d2ad9;color:#f9eac2;font-size:11px;font-weight:900;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap;box-shadow:0 2px 6px #0007;pointer-events:none}
+.mh-tod-clock{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border:1px solid #eed99566;border-radius:999px;background:#0f1d2ad9;color:#f9eac2;font-family:inherit;font-size:11px;font-weight:900;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap;box-shadow:0 2px 6px #0007;pointer-events:none}
+.mh-home-scene button.mh-tod-clock{pointer-events:auto;cursor:pointer}
 .mh-tod-clock i{font-style:normal;font-size:12px}
 .mh-home-scene .mh-tod-clock{position:absolute;z-index:5;right:9px;top:calc(107px + env(safe-area-inset-top))}
 @media (orientation:landscape) and (max-height:600px){.mh-home-scene .mh-tod-clock{top:calc(69px + env(safe-area-inset-top));right:calc(9px + var(--mh-tod-upd,0px))}}
@@ -62195,6 +62201,7 @@ const TimeOfDayClock = ({
 }) => {
   const st = useTimeOfDay();
   const ref = useRef(null);
+  const [formatOpen, setFormatOpen] = useState(false);
   useEffect(() => {
     ensureTimeOfDayCss();
     if (!home || typeof window === 'undefined') return undefined;
@@ -62212,14 +62219,125 @@ const TimeOfDayClock = ({
     };
   }, [home]);
   if (st.settings.clock !== 'on') return null;
-  return React.createElement("span", {
+  const label = `いまの時刻 ${st.minute}(${st.slot.label})`;
+  const inside = React.createElement(React.Fragment, null, React.createElement("i", {
+    "aria-hidden": "true"
+  }, st.slot.icon), st.minute);
+  if (!home) return React.createElement("span", {
     ref: ref,
     className: "mh-tod-clock",
     "data-time-of-day-clock": st.slot.id,
-    "aria-label": `いまの時刻 ${st.minute}(${st.slot.label})`
-  }, React.createElement("i", {
-    "aria-hidden": "true"
-  }, st.slot.icon), st.minute);
+    "aria-label": label
+  }, inside);
+  return React.createElement(React.Fragment, null, React.createElement("button", {
+    type: "button",
+    ref: ref,
+    className: "mh-tod-clock",
+    "data-time-of-day-clock": st.slot.id,
+    "aria-label": `${label}。表示形式を変更`,
+    onClick: () => setFormatOpen(true)
+  }, inside), formatOpen && React.createElement("div", {
+    "data-time-of-day-format-sheet": true,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "時刻表示",
+    onClick: () => setFormatOpen(false),
+    style: {
+      position: 'absolute',
+      inset: 0,
+      zIndex: 80,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '16px',
+      background: '#020617bb'
+    }
+  }, React.createElement("div", {
+    onClick: e => e.stopPropagation(),
+    style: {
+      width: 'min(300px, 92%)',
+      borderRadius: '18px',
+      border: '1px solid #fcd34d88',
+      background: '#0f172af2',
+      color: '#f8fafc',
+      padding: '14px',
+      boxShadow: '0 12px 36px #000b'
+    }
+  }, React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: '10px'
+    }
+  }, React.createElement("div", null, React.createElement("b", {
+    style: {
+      display: 'block',
+      fontSize: '14px'
+    }
+  }, "🕐 時刻表示"), React.createElement("span", {
+    style: {
+      display: 'block',
+      marginTop: '2px',
+      color: '#cbd5e1',
+      fontSize: '10px',
+      fontWeight: 700
+    }
+  }, "日本時間で表示します")), React.createElement("button", {
+    type: "button",
+    "data-time-of-day-format-close": true,
+    onClick: () => setFormatOpen(false),
+    style: {
+      minWidth: '42px',
+      minHeight: '36px',
+      borderRadius: '12px',
+      border: '1px solid #64748b',
+      background: '#1e293b',
+      color: '#e2e8f0',
+      fontSize: '11px',
+      fontWeight: 900
+    }
+  }, "閉じる")), React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: '8px',
+      marginTop: '12px'
+    }
+  }, [['24h', '24時間', '18:32'], ['12h', 'AM・PM', 'PM 6:32']].map(([value, title, sample]) => {
+    const selected = st.settings.format === value;
+    return React.createElement("button", {
+      key: value,
+      type: "button",
+      "data-time-of-day-format": value,
+      "aria-pressed": selected,
+      onClick: () => timeOfDaySetSettings({
+        format: value
+      }),
+      style: {
+        minHeight: '62px',
+        borderRadius: '14px',
+        border: `2px solid ${selected ? '#fcd34d' : '#475569'}`,
+        background: selected ? '#fcd34d' : '#1e293b',
+        color: selected ? '#0f172a' : '#e2e8f0',
+        padding: '8px',
+        fontWeight: 900
+      }
+    }, React.createElement("span", {
+      style: {
+        display: 'block',
+        fontSize: '12px'
+      }
+    }, title), React.createElement("span", {
+      style: {
+        display: 'block',
+        marginTop: '3px',
+        fontSize: '11px',
+        opacity: .82,
+        fontVariantNumeric: 'tabular-nums'
+      }
+    }, sample));
+  })))));
 };
 const TimeOfDayClockText = ({
   prefix = ' '

@@ -3,7 +3,7 @@
 // 見ること(縦 390x844・横 844x390・縦の端末で「🔄 横」の3つ。夜の時刻にして測る):
 //  ① 札がほかのボタン・札・文字に重なっていない(HOME・プロフィール・助手ライフの家)
 //  ② 札と同じ見出しにある題が、文字の途中で切れていない(scrollWidth > clientWidth にならない)
-//  ③ 札の中身が日本時間の「時:分」になっている
+//  ③ 札の中身が日本時間になっている。HOMEでは押すと24時間 / AM・PMをその場で切り替えられ、保存される
 // 配信 serve.py はこの検査が自分で立てる。SMOKE_URL で本番を見ることもできる
 const path = require('path');
 const { spawn } = require('child_process');
@@ -22,7 +22,7 @@ const SAVE = () => { if (sessionStorage.getItem('s')) return; sessionStorage.set
 // 札のまわりを測る(画面の中で札と重なる、押せる物・文字の箱を探す。札の祖先と子孫は除く)
 const MEASURE = () => {
   const out = [];
-  // 札は押せない(pointer-events:none)ので、測るあいだだけ「いちばん上に見えているか」の判定に入れる
+  // プロフィール等の札は押せないので、測るあいだだけ「いちばん上に見えているか」の判定に入れる
   const tmp = document.createElement('style'); tmp.textContent = '[data-time-of-day-clock]{pointer-events:auto!important}'; document.head.appendChild(tmp);
   document.querySelectorAll('[data-time-of-day-clock]').forEach(clock => {
     const r = clock.getBoundingClientRect();
@@ -87,6 +87,31 @@ const MEASURE = () => {
         return true;
       };
       if (!(await look('HOME'))) ng(`${name} HOME: 時刻の札が無い`);
+      // HOME の時計は押すと表示形式のシートが開き、選んだ瞬間に表示と保存へ反映する
+      const homeClock = page.locator('[data-time-of-day-clock]').first();
+      await homeClock.click();
+      const fmtSheet = page.locator('[data-time-of-day-format-sheet]');
+      if (!(await fmtSheet.isVisible().catch(() => false))) ng(`${name} HOME: 時計を押しても時刻表示の設定が開かない`);
+      else {
+        const firstFmt = await page.evaluate(() => { try { return JSON.parse(localStorage.getItem('mh_time_of_day_v1') || 'null'); } catch { return null; } });
+        if (firstFmt && firstFmt.format && firstFmt.format !== '24h') ng(`${name} HOME: 旧保存データの既定が24時間でない(${firstFmt.format})`);
+        await page.locator('[data-time-of-day-format="12h"]').click();
+        await page.waitForTimeout(150);
+        const twelve = (await homeClock.innerText()).replace(/\s+/g, ' ').trim();
+        const saved12 = await page.evaluate(() => { try { return JSON.parse(localStorage.getItem('mh_time_of_day_v1') || 'null'); } catch { return null; } });
+        if (!/^(🌙\s*)?(AM|PM)\s+\d{1,2}:\d{2}$/.test(twelve)) ng(`${name} HOME: AM・PMへ変えても時計が切り替わらない(${twelve})`);
+        if (!saved12 || saved12.format !== '12h') ng(`${name} HOME: AM・PMの設定が保存されない`);
+        await page.locator('[data-time-of-day-format="24h"]').click();
+        await page.waitForTimeout(150);
+        const twentyFour = (await homeClock.innerText()).replace(/\s+/g, ' ').trim();
+        const saved24 = await page.evaluate(() => { try { return JSON.parse(localStorage.getItem('mh_time_of_day_v1') || 'null'); } catch { return null; } });
+        if (/\b(?:AM|PM)\b/.test(twentyFour) || !/\d{1,2}:\d{2}$/.test(twentyFour)) ng(`${name} HOME: 24時間へ戻しても時計が切り替わらない(${twentyFour})`);
+        if (!saved24 || saved24.format !== '24h') ng(`${name} HOME: 24時間の設定が保存されない`);
+        await page.locator('[data-time-of-day-format-close]').click();
+        if (await fmtSheet.isVisible().catch(() => false)) ng(`${name} HOME: 「閉じる」で時刻表示の設定が閉じない`);
+        // このあとの重なり検査は従来どおり最も幅の広い夜21:34へ戻す
+        await page.evaluate(() => { TIME_OF_DAY_STORE.slot = TIME_OF_DAY_SLOTS[3]; TIME_OF_DAY_STORE.minute = '21:34'; timeOfDayEmit(); });
+      }
       // 助手ライフの家(公開の印が真のときだけ入口がある)
       const life = await page.evaluate(() => { const el = document.querySelector('[data-home-assistant-life]'); if (el) { el.click(); return true; } return false; });
       if (life) {
