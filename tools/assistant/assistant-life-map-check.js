@@ -262,6 +262,33 @@ const ALL_HOME = { groups: [], solo: Object.fromEntries(['mua', 'kiki', 'momosuk
       check(`${T}⑪ HOME が画面より低くても、地図の下に一覧の見出しがのぞかない(一覧は画面の下の外から)`, r.sceneH < r.boxH && r.scroll === 0 && r.belowTop != null && r.belowTop >= r.boxH - 1, JSON.stringify(r));
       await closeLife(page);
     }
+    // ⑫ 地図の絵も助手も縦横の比を保つ(2026-11-09 社長「画面バグってる」: iPhone で助手が縦に細長く伸びていた)
+    //    iPhone で canvas が使えず絵を測れないときも同じ(canvas を使えなくして開き直す)
+    if (v.id === 't390' || v.id === 'y844' || v.id === 'tab') {
+      const ratio = () => page.evaluate(() => {
+        const ng = [];
+        for (const im of document.querySelectorAll('[data-assistant-life-map] img')) {
+          if (!im.naturalWidth) continue; const r = im.getBoundingClientRect(), cs = getComputedStyle(im);
+          const nat = im.naturalWidth / im.naturalHeight, box = r.width / r.height;
+          if (cs.objectFit === 'cover' || cs.objectFit === 'contain') continue; // 枠と比が違っても、中の絵は伸びない
+          if (Math.abs(box / nat - 1) > 0.03) ng.push(`${im.getAttribute('src')}: 絵 ${nat.toFixed(3)} 表示 ${box.toFixed(3)} (${cs.objectFit})`);
+        }
+        const figs = [...document.querySelectorAll('[data-assistant-life-map-fig] img')].map(im => getComputedStyle(im).objectFit);
+        const bg = getComputedStyle(document.querySelector('[data-assistant-life-map] .mh-home-background img.mh-home-main')).objectFit;
+        return { ng, figs: figs.length, figFit: [...new Set(figs)], bg };
+      });
+      await closeLife(page); await openMap(page);
+      const a = await ratio();
+      check(`${T}⑫ 地図の絵(${a.bg})と助手${a.figs}人(${a.figFit.join(',')})が縦横の比を保つ`, a.ng.length === 0 && a.figs > 0 && (a.bg === 'cover' || a.bg === 'contain') && a.figFit.every(f => f === 'contain'), a.ng.join(' / '));
+      await closeLife(page);
+      await page.evaluate(() => { ASSISTANT_LIFE_STAND_BOX.clear(); HTMLCanvasElement.prototype.getContext = () => null; });
+      await openMap(page); await page.waitForTimeout(600);
+      const b = await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-map-fig] img')].map(im => { const st = ASSISTANT_LIFE_STAND_BOX.get(im.getAttribute('src')); const r = im.getBoundingClientRect(); return { src: im.getAttribute('src'), ar: st && st.ar, nat: im.naturalWidth / im.naturalHeight, box: r.width / r.height }; }));
+      const bad = b.filter(x => !x.ar || Math.abs(x.ar / x.nat - 1) > 0.01 || Math.abs(x.box / x.nat - 1) > 0.03);
+      if (SHOTS) await page.screenshot({ path: path.join(shotDir, `nocanvas-${v.id}.png`) });
+      check(`${T}⑫ canvas が使えず絵を測れなくても、助手は本物の縦横の比で出る(${b.length}人)`, b.length > 0 && bad.length === 0, JSON.stringify(bad.slice(0, 3)));
+      await closeLife(page);
+    }
     await page.close();
   }
   check('⑧ ページのエラーが出ない', errors.length === 0, errors.slice(0, 3).join(' / '));

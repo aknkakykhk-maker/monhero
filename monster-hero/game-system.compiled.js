@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6726a4eecff98639
+// source-sha256: 88c361ae27e3a13b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -107845,6 +107845,8 @@ const assistantLifeStandBox = src => new Promise(res => {
         if (x < l) l = x;
         if (x > r) r = x;
       }
+      c.width = 0;
+      c.height = 0;
       const box = b < 0 ? null : {
         t: t / H,
         b: (b + 1) / H,
@@ -107855,8 +107857,15 @@ const assistantLifeStandBox = src => new Promise(res => {
       ASSISTANT_LIFE_STAND_BOX.set(src, box);
       res(box);
     } catch (_) {
-      ASSISTANT_LIFE_STAND_BOX.set(src, null);
-      res(null);
+      const box = im.naturalWidth && im.naturalHeight ? {
+        t: 0,
+        b: 1,
+        l: 0,
+        r: 1,
+        ar: im.naturalWidth / im.naturalHeight
+      } : null;
+      ASSISTANT_LIFE_STAND_BOX.set(src, box);
+      res(box);
     }
   };
   im.onerror = () => {
@@ -109494,6 +109503,7 @@ function AssistantLifeMapFig({
       height: ih,
       width: iw,
       maxWidth: 'none',
+      objectFit: 'contain',
       top: -b.t * ih,
       left: w / 2 - cx,
       filter: sleep ? 'brightness(.62) saturate(.7)' : 'drop-shadow(0 2px 3px #0009)'
