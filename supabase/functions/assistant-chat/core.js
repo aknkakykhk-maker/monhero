@@ -1242,7 +1242,9 @@ export const validateSuggest = (raw, q, assistantNames, onDrop = () => {}) => {
   let kind = kinds.includes(raw.kind) ? raw.kind : 'none';
   // swap は「いまのマスモンを別の種類に入れ替える」。名前も一緒に言われたら name に入る
   const rp = raw.replies || {};
-  const got = { yes: reply(rp.yes), some: reply(rp.some), no: reply(rp.no), talk: reply(rp.talk) };
+  // 助手ごとの口調の見張り(フレンドの家と同じ friendLineTone)。みゅあの じゃん/まじ は直し、合わないもの(ドラの関西弁・あつの文末など)は捨てて、ゲームの用意した台詞で埋める
+  const tone = (x) => { const v = reply(x); if (!v) return ''; const t = friendLineTone(q.a, v); return t ? reply(t) : ''; };
+  const got = { yes: tone(rp.yes), some: tone(rp.some), no: tone(rp.no), talk: tone(rp.talk) };
   const any = got.talk || got.some || got.yes || got.no;
   // 返事は1つでも残れば ok。足りない種類はほかの種類の文で埋めない(断ったのに「変えとくね」と出ないように)。ゲームが助手ごとの用意した台詞で埋める
   const out = { kind, name: '', colors: [], monster: '', slot: 0, face: '', deckName: '', plan: '', style: '', names: [], palette: [], replies: { yes: got.yes, some: got.some, no: got.no, talk: got.talk } };
