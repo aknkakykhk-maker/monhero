@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f7e8d0b1d4dfa249
+// source-sha256: 9e2766e7562327b7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13940,6 +13940,11 @@ const CHANGELOG_TYPE_LABELS = Object.freeze({
 });
 const changelogTypeOf = entry => CHANGELOG_TYPE_LABELS[entry?.type] || CHANGELOG_TYPE_LABELS.update;
 const changelogEventLive = (entry, nowMs = Date.now()) => {
+  if (entry && entry.pinTop && typeof entry.pinTop === 'object' && entry.type !== 'event') {
+    const pinFrom = Date.parse(entry.visibleFrom || '');
+    const pinEnd = Date.parse(entry.pinTop.until || '');
+    return Number.isFinite(pinEnd) && nowMs < pinEnd && (!Number.isFinite(pinFrom) || nowMs >= pinFrom);
+  }
   const notice = entry && entry.type === 'event' ? entry.assistantNotice : null;
   if (!notice || !notice.notifyUntil) return false;
   const from = Date.parse(notice.notifyFrom || entry.visibleFrom || '');

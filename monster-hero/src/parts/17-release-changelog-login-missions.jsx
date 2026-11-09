@@ -358,6 +358,13 @@ const changelogTypeOf = (entry) => CHANGELOG_TYPE_LABELS[entry?.type] || CHANGEL
 // 期間限定イベントのお知らせが、いま開催中か(一覧の項目に「開催中」の札を出す)。
 // 助手の告知の期間(notifyFrom〜notifyUntil)を見る。描くたびに数え直す(CLAUDE.md ⑥-4)
 const changelogEventLive = (entry, nowMs = Date.now()) => {
+  // イベント以外でも、pinTop:{ until } を書いた項目は、出はじめ(visibleFrom)から until まで一番上に固定する
+  // (2026-11-09 社長「(本オープン記念のお知らせを)上部に固定も」。周回5倍の期間が終わったら外れる)
+  if (entry && entry.pinTop && typeof entry.pinTop === 'object' && entry.type !== 'event') {
+    const pinFrom = Date.parse(entry.visibleFrom || '');
+    const pinEnd = Date.parse(entry.pinTop.until || '');
+    return Number.isFinite(pinEnd) && nowMs < pinEnd && (!Number.isFinite(pinFrom) || nowMs >= pinFrom);
+  }
   const notice = entry && entry.type === 'event' ? entry.assistantNotice : null;
   if (!notice || !notice.notifyUntil) return false;
   const from = Date.parse(notice.notifyFrom || entry.visibleFrom || '');
