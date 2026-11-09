@@ -47,7 +47,9 @@ const serve = () => new Promise((resolve) => {
   const errors = [];
   let browser;
   try {
-    browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+    const chromiumPath = '/opt/pw-browsers/chromium';
+    const launchOptions = fs.existsSync(chromiumPath) ? { executablePath: chromiumPath } : {};
+    browser = await playwright.chromium.launch(launchOptions);
     const page = await browser.newPage();
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
