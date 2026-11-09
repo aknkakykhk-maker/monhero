@@ -53,6 +53,9 @@ const base = (extra = {}) => ({ kind: 'masmon_suggest', breederId: 'b-1', player
     const cs = await run({ kind: 'colorStyle', style: '全部パステル', palette: ['orange', 'gold', 'green'] });
     check('① 色のくせ: 候補の色だけ', cs.result.kind === 'colorStyle' && cs.result.palette.join() === 'orange,green', JSON.stringify(cs.result.palette));
     check('① くせをやめる', (await run({ kind: 'nameStyleOff' })).result.kind === 'nameStyleOff' && (await run({ kind: 'colorStyleOff' })).result.kind === 'colorStyleOff');
+    const muaRes = (await core.handleRequest({ body: base({ a: 'mua' }), digest: DIGEST, client: fakeClient(() => okRes({ kind: 'none', name: '', colors: [], monster: '', slot: 0, face: '', deckName: '', plan: '', style: '', names: [], palette: [], replies: { yes: '', some: '', no: '', talk: 'かわいいじゃん！まじいいね' } })), ...counter() })).json;
+    const draRes = await run({ kind: 'none', replies: { yes: '', some: '', no: '', talk: 'ほんまにええやん' } });
+    check('③ 返事にも助手の口調の見張り(みゅあは ぢゃん/まぢ に直す・ドラの関西弁は捨てる)', muaRes.ok && muaRes.result.replies.talk === 'かわいいぢゃん！まぢいいね' && draRes.ok === false, `${muaRes.result && muaRes.result.replies.talk} / ${draRes.kind}`);
     const sw = await run({ kind: 'swap', monster: 'Plant', name: 'はっぱ♪' });
     check('① 入れ替え: 候補の種類だけ・名前も一緒に', sw.result.kind === 'swap' && sw.result.monster === 'Plant' && sw.result.name === 'はっぱ♪' && (await run({ kind: 'swap', monster: 'Ark' })).result.kind === 'none', JSON.stringify(sw.result));
     const t = await run({ kind: 'none', replies: { yes: '', some: '', no: '', talk: '♪が大事なんだね、どこに付けよっか？' } });
