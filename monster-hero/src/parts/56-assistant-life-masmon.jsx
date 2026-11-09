@@ -938,7 +938,8 @@ const assistantMasmonAskApply = (aid, r, outcome, t) => {
   }
   if (r.kind === 'colorStyleOff' && outcome === 'yes') {
     if (!mine.colorStyle) return { changed: false, what: '' };
-    const slots = {}; for (const [k, cs] of Object.entries(mine.colorStyleBefore || {})) slots[Number(k)] = cs;
+    const slots = {}; const rowsNow = assistantMasmonRowsOf(st, aid);
+    for (const [k, cs] of Object.entries(mine.colorStyleBefore || {})) { const sl = Number(k), row = rowsNow.find(y => y.slot === sl); if (!row) continue; const cur = assistantMasmonDyeNowOf(st, aid, sl, row.colors || []), own = mine.parts[sl] || []; slots[sl] = cs.map((c, i) => (own.includes(i) ? (cur[i] || null) : c)); } // 一つずつ選んだ部位は今の色のまま
     mine.colorStyle = null; mine.colorStyleBefore = {};
     const hist = [...((st.dyes && st.dyes[aid]) || []), { v: ASSISTANT_MASMON_DYE_V, d: ASSISTANT_MASMON_DRAW_V, why: 'ask', undo: true, at: day, season: assistantMasmonSeasonKey(day), fav: assistantMasmonFavSig(assistantMasmonBasePlanOf(aid)), roles: {}, slots }];
     assistantMasmonSave(withMine({ ...st, dyes: { ...(st.dyes || {}), [aid]: hist.slice(-40) } }));
@@ -953,6 +954,9 @@ const assistantMasmonAskApply = (aid, r, outcome, t) => {
     mine.former = { ...(mine.former || {}) };
     mine.former[t.slot] = [...(mine.former[t.slot] || []), { monster: row.monster, nick: row.nick, lv: row.lv, grow: row.grow, why: row.why, role: row.role || '', welcome: row.welcome || t.slot * 2 - 1, colors: [...colorsNow], ai: !!row.ai, at: day }].slice(-8);
     delete mine.parts[t.slot]; delete mine.names[t.slot];
+    // 入れ替えた枠は、くせをやめたときの戻し先から外す(前のマスモンの名前・色が新しいマスモンに付かないように・ミハリ)
+    mine.nameStyleBefore = { ...(mine.nameStyleBefore || {}) }; delete mine.nameStyleBefore[t.slot];
+    mine.colorStyleBefore = { ...(mine.colorStyleBefore || {}) }; delete mine.colorStyleBefore[t.slot];
     const rnd = assistantMasmonRng(`${st.seed}|${aid}|swap|${t.slot}|${r.monster}|${day}`);
     const role = row.role && ASSISTANT_MASMON_ROLE_NAME[row.role] ? row.role : 'main';
     const nu = { slot: t.slot, monster: r.monster, nick: (r.name && assistantMasmonAskNameOk(r.name) ? r.name : '') || monName(r.monster), lv: row.lv, grow: row.grow, why: 'あなたの提案で迎えた', role, welcome: row.welcome || t.slot * 2 - 1, colors: assistantMasmonDyeMake2(aid, p, r.monster, role, rnd), ai: !!(r.name && assistantMasmonAskNameOk(r.name)), reason: 'ask', at: day };
@@ -1041,6 +1045,7 @@ const assistantMasmonUndoSwap = (aid, slot) => {
   const list = [...(m.former[slot] || [])]; const prev = list.pop();
   if (!prev) return false;
   m.former[slot] = list; m.parts = { ...m.parts }; delete m.parts[slot]; m.names = { ...m.names }; delete m.names[slot];
+  m.nameStyleBefore = { ...(m.nameStyleBefore || {}) }; delete m.nameStyleBefore[slot]; m.colorStyleBefore = { ...(m.colorStyleBefore || {}) }; delete m.colorStyleBefore[slot];
   const day = assistantMasmonToday();
   const back = { slot, monster: prev.monster, nick: prev.nick, lv: prev.lv, grow: prev.grow, why: prev.why, role: prev.role, welcome: prev.welcome, colors: [...prev.colors], ai: prev.ai, reason: 'ask', at: day };
   const hist = [...((st.dyes && st.dyes[aid]) || []), { v: ASSISTANT_MASMON_DYE_V, d: ASSISTANT_MASMON_DRAW_V, why: 'ask', undo: true, at: day, season: assistantMasmonSeasonKey(day), fav: assistantMasmonFavSig(assistantMasmonBasePlanOf(aid)), roles: {}, slots: { [slot]: [...prev.colors] } }];

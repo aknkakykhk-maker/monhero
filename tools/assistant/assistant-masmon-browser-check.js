@@ -290,7 +290,14 @@ const layoutProblems = (page) => page.evaluate(() => {
           await page.locator('[data-assistant-masmon-detail-close]').click({ timeout: 2000 }).catch(() => {});
           const names1 = await page.evaluate((id) => assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, id).map(t => t.nick), WHO);
           check(`${T}提案(名前のくせ): 全部の名前にくせが当たり、「やめてもらう」が出る`, ns.res !== 'yes' || (names1.every(n => n.endsWith('♪')) && (await page.locator('[data-assistant-masmon-undo="nameStyle"]').count()) === 1), names1.join('・'));
-          if (ns.res === 'yes') { await page.locator('[data-assistant-masmon-undo="nameStyle"]').click().catch(() => {}); await page.waitForTimeout(400); const names2 = await page.evaluate((id) => assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, id).map(t => t.nick), WHO); check(`${T}提案(名前のくせ)をやめると前の名前に戻る`, names2.every(n => !n.endsWith('♪')), names2.join('・')); }
+          let swapped = null;
+          if (ns.res === 'yes') { // くせ → 入れ替え → やめる: 入れ替えたマスモンの名前は、前のマスモンのくせ前の名前に変わらない(ミハリ)
+            await page.locator('[data-assistant-masmon-row]').first().click(); await page.locator('[data-assistant-masmon-detail]').waitFor({ timeout: 3000 }).catch(() => {});
+            const sw2 = await send('masmon', '別のマスモンに入れ替えてみたら？', false);
+            await page.locator('[data-assistant-masmon-detail-close]').click({ timeout: 2000 }).catch(() => {});
+            if (sw2.res === 'yes') swapped = await page.evaluate((id) => { const r = assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, id)[0]; return { slot: r.slot, nick: r.nick }; }, WHO);
+          }
+          if (ns.res === 'yes') { await page.locator('[data-assistant-masmon-undo="nameStyle"]').click().catch(() => {}); await page.waitForTimeout(400); const rows2 = await page.evaluate((id) => assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, id).map(t => ({ slot: t.slot, nick: t.nick })), WHO); const others = rows2.filter(r => !swapped || r.slot !== swapped.slot); check(`${T}提案(名前のくせ)をやめると前の名前に戻る・入れ替えたマスモンの名前はそのまま`, others.every(r => !r.nick.endsWith('♪')) && (!swapped || (rows2.find(r => r.slot === swapped.slot) || {}).nick === swapped.nick), rows2.map(r => r.nick).join('・')); }
           const hasWait = (await page.locator('[data-assistant-masmon-ask-open="welcome"]').count()) > 0;
           if (hasWait) { const w = await send('welcome', '次はこのモンスターを迎えてみたら？', true); check(`${T}提案(迎える): 希望が残る`, (await page.locator('[data-assistant-masmon-wish]').innerText().catch(() => '')).includes('希望') || w.res === 'no', w.res); }
           await page.locator('[data-assistant-masmon-tab-btn="team"]').click(); await page.waitForTimeout(800);

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 131c0128ae378230
+// source-sha256: f7e8d0b1d4dfa249
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -127774,7 +127774,15 @@ const assistantMasmonAskApply = (aid, r, outcome, t) => {
       what: ''
     };
     const slots = {};
-    for (const [k, cs] of Object.entries(mine.colorStyleBefore || {})) slots[Number(k)] = cs;
+    const rowsNow = assistantMasmonRowsOf(st, aid);
+    for (const [k, cs] of Object.entries(mine.colorStyleBefore || {})) {
+      const sl = Number(k),
+        row = rowsNow.find(y => y.slot === sl);
+      if (!row) continue;
+      const cur = assistantMasmonDyeNowOf(st, aid, sl, row.colors || []),
+        own = mine.parts[sl] || [];
+      slots[sl] = cs.map((c, i) => own.includes(i) ? cur[i] || null : c);
+    }
     mine.colorStyle = null;
     mine.colorStyleBefore = {};
     const hist = [...(st.dyes && st.dyes[aid] || []), {
@@ -127826,6 +127834,14 @@ const assistantMasmonAskApply = (aid, r, outcome, t) => {
     }].slice(-8);
     delete mine.parts[t.slot];
     delete mine.names[t.slot];
+    mine.nameStyleBefore = {
+      ...(mine.nameStyleBefore || {})
+    };
+    delete mine.nameStyleBefore[t.slot];
+    mine.colorStyleBefore = {
+      ...(mine.colorStyleBefore || {})
+    };
+    delete mine.colorStyleBefore[t.slot];
     const rnd = assistantMasmonRng(`${st.seed}|${aid}|swap|${t.slot}|${r.monster}|${day}`);
     const role = row.role && ASSISTANT_MASMON_ROLE_NAME[row.role] ? row.role : 'main';
     const nu = {
@@ -128129,6 +128145,14 @@ const assistantMasmonUndoSwap = (aid, slot) => {
     ...m.names
   };
   delete m.names[slot];
+  m.nameStyleBefore = {
+    ...(m.nameStyleBefore || {})
+  };
+  delete m.nameStyleBefore[slot];
+  m.colorStyleBefore = {
+    ...(m.colorStyleBefore || {})
+  };
+  delete m.colorStyleBefore[slot];
   const day = assistantMasmonToday();
   const back = {
     slot,
