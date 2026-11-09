@@ -77,7 +77,8 @@ const layoutProblems = (page) => page.evaluate(() => {
         const c = b.ctx || {}; const replies = { yes: 'いいね、そうしてみるよ', some: '少しだけ変えてみるね', no: 'それはちょっと…ごめんね' };
         const base = { name: '', colors: [], monster: '', slot: 0, face: '', deckName: '', plan: '', replies };
         const favId = (c.colors || []).find(x => (c.fav || []).includes(x.label));
-        const result = /付けられない名前/.test(b.text || '') ? { ...base, kind: 'none', blocked: 'name' }
+        const result = /育て方/.test(b.text || '') ? { ...base, kind: 'grow', grow: (c.mon && c.mon.grow) === '攻撃型' ? '防御型' : '攻撃型' }
+          : /付けられない名前/.test(b.text || '') ? { ...base, kind: 'none', blocked: 'name' }
           : /みんなの名前/.test(b.text || '') ? { ...base, kind: 'nameStyle', style: '名前の最後に♪', names: (c.team || []).map(t => ({ slot: t.slot, n: `${t.nick}♪` })) }
           : /入れ替え/.test(b.text || '') ? { ...base, kind: 'swap', monster: ((c.cands || [])[0] || {}).id || '', name: 'あたらしい♪' }
           : b.from === 'masmon' ? { ...base, kind: 'color', colors: [{ part: 0, color: favId ? favId.id : 'orange' }] }
@@ -271,6 +272,23 @@ const layoutProblems = (page) => page.evaluate(() => {
           const logTxt = await page.locator('[data-assistant-masmon-dye-log]').innerText().catch(() => '');
           check(`${T}提案(色)を戻したら「前の色に戻しました」・戻すボタンは消える`, /前の色に戻しました/.test(logTxt) && (await page.locator('[data-assistant-masmon-undo="color"]').count()) === 0, logTxt.slice(0, 30));
           await page.locator('[data-assistant-masmon-detail-close]').click({ timeout: 2000 }).catch(() => {});
+          // 育て方(2026-11-09 社長「育て方も受ける」): 受けると印が付き、能力のゲージは下がらない。「前の育て方に戻してもらう」で戻る
+          {
+            const gNow = () => page.evaluate((id) => { const t = (assistantMasmonPlanOf(id).team || [])[0] || {}; return { grow: t.grow, mine: t.growMine, st: assistantMasmonStats(t) }; }, WHO);
+            const g0 = await gNow();
+            await page.locator('[data-assistant-masmon-row]').first().click(); await page.locator('[data-assistant-masmon-detail]').waitFor({ timeout: 3000 }).catch(() => {});
+            const gr = await send('masmon', '育て方を変えてみたら？', false);
+            await page.locator('[data-assistant-masmon-row]').first().click(); await page.locator('[data-assistant-masmon-detail]').waitFor({ timeout: 3000 }).catch(() => {});
+            const g1 = await gNow();
+            const mark = await page.locator('[data-assistant-masmon-grow-mine]').innerText().catch(() => '');
+            const notLower = g0.st && g1.st && ['hp', 'atk', 'def', 'guts'].every(k => g1.st[k] >= g0.st[k] - 1e-9);
+            check(`${T}提案(育て方): 受けると育て方が変わり「🌱 育て方: …(あなたの提案)」が出る・ゲージは下がらない`, gr.res === 'yes' && g1.grow !== g0.grow && /🌱 育て方: .+あなたの提案/.test(mark) && notLower, `${gr.res} ${g0.grow}→${g1.grow} ${mark}`);
+            if (SHOTS) await page.screenshot({ path: path.join(shotDir, `masmon-8-ask-grow-${v.id}${WHO !== 'kiki' ? '-' + WHO : ''}.jpg`), type: 'jpeg', quality: 80 });
+            await page.locator('[data-assistant-masmon-undo="grow"]').click({ timeout: 3000 }).catch(() => {}); await page.waitForTimeout(400);
+            const g2 = await gNow();
+            check(`${T}提案(育て方)を戻すと前の育て方に戻り、印が消える`, g2.grow === g0.grow && !g2.mine, `${g2.grow}`);
+            await page.locator('[data-assistant-masmon-detail-close]').click({ timeout: 2000 }).catch(() => {});
+          }
           // 名前として通さない言葉(2026-11-09 社長「全然聞いてくれない」): 「分からない」ではなく、助手の口調で付けられないと言う・回数は減らない
           await page.locator('[data-assistant-masmon-row]').first().click(); await page.locator('[data-assistant-masmon-detail]').waitFor({ timeout: 3000 }).catch(() => {});
           const usedNg0 = await page.evaluate((id) => assistantMasmonAskUsed(id), WHO);

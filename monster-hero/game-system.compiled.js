@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b946fdaa0c25d997
+// source-sha256: 2189486cafbf4aa8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -125740,6 +125740,7 @@ const assistantMasmonPlanOf = id => {
       role: t.role,
       welcome: t.welcome,
       reason: t.reason || '',
+      growMine: (assistantMasmonMineOf(st, id).grow || {})[t.slot] || null,
       dye: {
         colors: [...assistantMasmonDyeNowOf(st, id, t.slot, t.colors)]
       }
@@ -125965,6 +125966,22 @@ const normalizeAssistantMasmonMine = raw => {
     if (m.colorStyleBefore && typeof m.colorStyleBefore === 'object') for (const [k, v] of Object.entries(m.colorStyleBefore)) {
       const sl = Number(k);
       if (Number.isInteger(sl) && sl >= 1 && sl <= 8 && Array.isArray(v)) o.colorStyleBefore[sl] = v.slice(0, 8).map(c => typeof c === 'string' && ASSISTANT_MASMON_DYE_RE.test(c) ? c : null);
+    }
+    o.grow = {};
+    if (m.grow && typeof m.grow === 'object') for (const [k, v] of Object.entries(m.grow)) {
+      const sl = Number(k);
+      if (!Number.isInteger(sl) || sl < 1 || sl > 8 || !v || typeof v !== 'object' || !['攻撃型', '防御型', 'ライフ型', 'ガッツ型', 'すばやさ型'].includes(v.kind) || typeof v.before !== 'string') continue;
+      const fl = {};
+      for (const key of ['hp', 'atk', 'def', 'guts']) {
+        const x = v.floor && Number(v.floor[key]);
+        if (Number.isFinite(x)) fl[key] = Math.max(0, Math.min(1, x));
+      }
+      o.grow[sl] = {
+        before: v.before.slice(0, 30),
+        kind: v.kind,
+        day: typeof v.day === 'string' ? v.day.slice(0, 10) : '',
+        floor: fl
+      };
     }
     o.former = {};
     if (m.former && typeof m.former === 'object') for (const [k, v] of Object.entries(m.former)) {
@@ -127476,7 +127493,7 @@ const ASSISTANT_MASMON_ASK_LINES = Object.freeze({
 const assistantMasmonAskLine = (aid, replies, kind) => kind !== 'ng' && kind !== 'think' && replies && replies[kind] || (ASSISTANT_MASMON_ASK_LINES[aid] || ASSISTANT_MASMON_ASK_LINES.mua)[kind];
 const ASSISTANT_MASMON_ASK_PER_DAY = 10;
 const ASSISTANT_MASMON_ASK_HINT = Object.freeze({
-  masmon: '名前や色、このマスモンのことを自由に書いてみてください(例: 体を夕焼けっぽくしてみたら？/名前に♪を付けて/別のマスモンに変えてみたら？/みんなの名前をお菓子っぽくして)',
+  masmon: '名前や色、育て方など、このマスモンのことを自由に書いてみてください(例: 体を夕焼けっぽくしてみたら？/名前に♪を付けて/攻撃型に育ててみたら？/別のマスモンに変えてみたら？/みんなの名前をお菓子っぽくして)',
   hero: '勇者モンについて自由に書いてみてください(例: 勇者モンはミーアにしてみたら？/名前に♪を付けたら？/プラントに変えてみたら？)',
   welcome: '次に迎えてほしいマスモンを書いてみてください(例: 次はプラントを迎えてみたら？)',
   deck: 'MFバトルカードのデッキについて書いてみてください(例: 推しのデッキは守りで「まったり作戦」にしたら？)'
@@ -127538,6 +127555,7 @@ const assistantMasmonAskCtx = (aid, from, t, lv) => {
       slot: t.slot,
       name: monName(t.monster),
       nick: t.nick,
+      grow: assistantMasmonGrowKind(t.grow),
       parts: Array.from({
         length: n
       }, (_, i) => {
@@ -127584,6 +127602,8 @@ const assistantMasmonAskJudge = (aid, r, lv) => {
     const bad = (p.dislikeMon || []).some(x => x.monster === r.monster || x.lineage && x.lineage === lin || x.monster && lin && assistantMasmonLineage(x.monster) === lin);
     const good = (p.likeMon || []).some(x => x.monster === r.monster || x.lineage && x.lineage === lin) || (p.team || []).some(x => x.monster === r.monster);
     taste = bad ? 'hate' : good ? 'like' : 'mid';
+  } else if (r.kind === 'grow') {
+    taste = (p.team || []).some(x => assistantMasmonGrowKind(x.grow) === r.grow) ? 'like' : 'mid';
   } else if (r.kind === 'hero') {
     const row = assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, aid).find(x => x.slot === r.slot);
     taste = row && ((p.likeMon || []).some(x => x.monster === row.monster) || (p.team || []).some(x => x.monster === row.monster)) ? 'like' : 'mid';
@@ -127684,6 +127704,34 @@ const assistantMasmonAskApply = (aid, r, outcome, t) => {
     return {
       changed: true,
       what: `名前を「${r.name}」に`
+    };
+  }
+  if (r.kind === 'grow' && t && outcome === 'yes' && ASSISTANT_MASMON_GROW_KINDS.includes(r.grow)) {
+    const row = assistantMasmonRowsOf(st, aid).find(x => x.slot === t.slot);
+    if (!row || assistantMasmonGrowKind(row.grow) === r.grow) return {
+      changed: false,
+      what: ''
+    };
+    mine.grow = {
+      ...(mine.grow || {})
+    };
+    const prev = mine.grow[t.slot];
+    const floor = assistantMasmonStats({
+      ...row,
+      growMine: prev || null
+    }) || {};
+    mine.grow[t.slot] = {
+      before: prev ? prev.before : row.grow,
+      kind: r.grow,
+      day,
+      floor
+    };
+    assistantMasmonSave(withMine(assistantMasmonSetGrow(st, aid, t.slot, `${r.grow}(あなたの提案)`)));
+    return {
+      changed: true,
+      what: `育て方を${r.grow}に`,
+      before: assistantMasmonGrowKind(row.grow),
+      after: r.grow
     };
   }
   if (r.kind === 'welcome') {
@@ -127855,6 +127903,12 @@ const assistantMasmonAskApply = (aid, r, outcome, t) => {
     }].slice(-8);
     delete mine.parts[t.slot];
     delete mine.names[t.slot];
+    if (mine.grow) {
+      mine.grow = {
+        ...mine.grow
+      };
+      delete mine.grow[t.slot];
+    }
     mine.nameStyleBefore = {
       ...(mine.nameStyleBefore || {})
     };
@@ -127945,6 +127999,56 @@ const assistantMasmonAskApply = (aid, r, outcome, t) => {
     changed: false,
     what: ''
   };
+};
+const assistantMasmonSetGrow = (st, aid, slot, grow) => {
+  const pk = st.pick && st.pick[aid] && st.pick[aid][slot];
+  if (pk) return {
+    ...st,
+    pick: {
+      ...st.pick,
+      [aid]: {
+        ...st.pick[aid],
+        [slot]: {
+          ...pk,
+          grow
+        }
+      }
+    }
+  };
+  const made = (st.draw.made[aid] || []).map(x => x.slot === slot ? {
+    ...x,
+    grow
+  } : x);
+  return {
+    ...st,
+    draw: {
+      ...st.draw,
+      made: {
+        ...st.draw.made,
+        [aid]: made
+      }
+    }
+  };
+};
+const assistantMasmonUndoGrow = (aid, slot) => {
+  const st = ASSISTANT_MASMON_STORE.state,
+    m = {
+      ...assistantMasmonMineOf(st, aid)
+    };
+  m.grow = {
+    ...(m.grow || {})
+  };
+  const g = m.grow[slot];
+  if (!g) return false;
+  delete m.grow[slot];
+  assistantMasmonSave({
+    ...assistantMasmonSetGrow(st, aid, slot, g.before),
+    mine: {
+      ...(st.mine || {}),
+      [aid]: m
+    }
+  });
+  return true;
 };
 const assistantMasmonSetNick = (st, aid, slot, nick) => {
   const pk = st.pick && st.pick[aid] && st.pick[aid][slot];
@@ -128052,7 +128156,7 @@ const assistantMasmonAsk = async (aid, from, text, t = null) => {
       };
     }
     const r = res.result;
-    const fits = ['welcome', 'hero', 'deck', 'nameStyle', 'nameStyleOff', 'colorStyle', 'colorStyleOff', ...(t ? ['name', 'color', 'swap'] : [])];
+    const fits = ['welcome', 'hero', 'deck', 'nameStyle', 'nameStyleOff', 'colorStyle', 'colorStyleOff', ...(t ? ['name', 'color', 'grow', 'swap'] : [])];
     if (r.kind === 'none' && r.blocked === 'name') {
       const ng = assistantMasmonAskLine(aid, r.replies, 'ng');
       record('no', '', false, ng);
@@ -128175,6 +128279,12 @@ const assistantMasmonUndoSwap = (aid, slot) => {
     ...m.names
   };
   delete m.names[slot];
+  if (m.grow) {
+    m.grow = {
+      ...m.grow
+    };
+    delete m.grow[slot];
+  }
   m.nameStyleBefore = {
     ...(m.nameStyleBefore || {})
   };
@@ -128473,6 +128583,8 @@ const assistantMasmonStats = t => {
   for (const [k] of ASSISTANT_MASMON_STAT_LABEL) {
     const b = Number.isFinite(base[k]) ? base[k] : 0;
     out[k] = Math.min(1, b * (1 + (lv - 1) * 0.04) * (bias[k] || 1) / ASSISTANT_MASMON_STAT_CAP[k]);
+    const fl = t.growMine && t.growMine.floor && t.growMine.floor[k];
+    if (Number.isFinite(fl)) out[k] = Math.max(out[k], fl);
   }
   return out;
 };
@@ -129615,7 +129727,10 @@ function AssistantMasmonDetail({
     }
   }))))), React.createElement("p", {
     className: "mt-1.5 text-[11px] font-bold text-amber-200"
-  }, "📈 ", t.grow), ASSISTANT_MASMON_GROW_TEXT[kind] && React.createElement("p", {
+  }, "📈 ", t.grow), t.growMine && React.createElement("p", {
+    className: "text-[10.5px] font-bold text-sky-200",
+    "data-assistant-masmon-grow-mine": true
+  }, "🌱 育て方: ", t.growMine.kind, "(", t.growMine.day ? `${t.growMine.day.slice(5).replace('-', '/')} ` : '', "あなたの提案)"), ASSISTANT_MASMON_GROW_TEXT[kind] && React.createElement("p", {
     className: "text-[10.5px] font-bold text-slate-300"
   }, ASSISTANT_MASMON_GROW_TEXT[kind])), React.createElement("div", {
     className: "mhm-card mt-2",
@@ -129690,7 +129805,7 @@ function AssistantMasmonDetail({
       },
       onClick: () => onAsk(t),
       "data-assistant-masmon-ask-open": "masmon"
-    }, "💡 ", who.name, "に提案する(名前・色)"), lastAsk && React.createElement("button", {
+    }, "💡 ", who.name, "に提案する(名前・色・育て方)"), lastAsk && React.createElement("button", {
       type: "button",
       className: "mhl-btn bg-slate-700 px-3 text-[11px]",
       onClick: () => {
@@ -129698,7 +129813,15 @@ function AssistantMasmonDetail({
         onClose();
       },
       "data-assistant-masmon-undo": "color"
-    }, "🎨 前の色に戻してもらう"), prevName && React.createElement("button", {
+    }, "🎨 前の色に戻してもらう"), t.growMine && React.createElement("button", {
+      type: "button",
+      className: "mhl-btn bg-slate-700 px-3 text-[11px]",
+      onClick: () => {
+        assistantMasmonUndoGrow(who.id, t.slot);
+        onClose();
+      },
+      "data-assistant-masmon-undo": "grow"
+    }, "🌱 前の育て方「", assistantMasmonGrowKind(t.growMine.before), "」に戻してもらう"), prevName && React.createElement("button", {
       type: "button",
       className: "mhl-btn bg-slate-700 px-3 text-[11px]",
       onClick: () => {

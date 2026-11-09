@@ -51,6 +51,20 @@ const base = (extra = {}) => ({ kind: 'masmon_suggest', breederId: 'b-1', player
     check('⑨ 名前の話でない「」は名前にしない', r5.kind === 'none' && !r5.blocked, JSON.stringify(r5));
     check('⑨ 悪口・「この子」は、提案の名前でもこれまでどおり止める', !core.suggestNameOk('うちの子') && !core.suggestNameOk('クズ') && core.suggestNameOk('ダーリン'));
   }
+  { // ⑩ 育て方(2026-11-09 社長「育て方も受ける」)と、聞き返しの口調(みゅあの「教えてくれ」)
+    const ai = (obj, who = 'dra') => fakeClient(() => okRes({ kind: 'none', grow: '', name: '', colors: [], monster: '', slot: 0, face: '', deckName: '', plan: '', style: '', names: [], palette: [], replies, ...obj }));
+    const go = async (obj, extra = {}) => (await core.handleRequest({ body: base({ text: '素早さ型になってるから攻撃型に変えたほうがいいよ', ...extra }), digest: DIGEST, client: ai(obj), ...counter() })).json;
+    const g1 = (await go({ kind: 'grow', grow: '攻撃型' })).result;
+    check('⑩ 育て方: 5つの型のどれかだけ受ける', g1.kind === 'grow' && g1.grow === '攻撃型' && (await go({ kind: 'grow', grow: '最強型' })).result.kind === 'none', JSON.stringify(g1).slice(0, 80));
+    const g2 = (await go({ kind: 'grow', grow: '攻撃型' }, { ctx: { ...base().ctx, mon: null } })).result;
+    check('⑩ 育て方: そのマスモンが分からないときは受けない', g2.kind === 'none', g2.kind);
+    const cl = fakeClient(() => okRes({ kind: 'none', grow: '', name: '', colors: [], monster: '', slot: 0, face: '', deckName: '', plan: '', style: '', names: [], palette: [], replies }));
+    await core.handleRequest({ body: base({ text: '攻撃型にして', ctx: { ...base().ctx, mon: { ...base().ctx.mon, grow: 'すばやさ型' } } }), digest: DIGEST, client: cl, ...counter() });
+    check('⑩ 頼みに「いまの育て方」と育て方の決まりが入る', cl.calls[0].messages[0].content[0].text.includes('いまの育て方: すばやさ型') && core.SUGGEST_RULES_TEXT.includes('=grow'));
+    const mua = (await core.handleRequest({ body: base({ a: 'mua' }), digest: DIGEST, client: ai({ replies: { yes: '', some: '', no: '', talk: 'どこを上げたいか、もう少し教えてくれ' } }), ...counter() })).json;
+    const sora = (await core.handleRequest({ body: base({ a: 'sorashido' }), digest: DIGEST, client: ai({ replies: { yes: '', some: '', no: '', talk: 'もう少し教えてくれ・・・！' } }), ...counter() })).json;
+    check('⑩ 「〜てくれ」「〜ぜ」の言い切りはドラ・ソラシドだけ(みゅあの返事は捨てて用意した台詞で埋める)', mua.ok === true && mua.result.replies.talk === '' && sora.ok === true && core.suggestToneOk('kiki', 'なぜですか？'), `${mua.kind} / ${sora.ok}`);
+  }
   { // ① 迎える・勇者モン・デッキ
     const run = async (obj) => (await core.handleRequest({ body: base(), digest: DIGEST, client: fakeClient(() => okRes({ name: '', colors: [], monster: '', slot: 0, face: '', deckName: '', plan: '', replies, ...obj })), ...counter() })).json;
     check('① 迎える: 候補の種類だけ', (await run({ kind: 'welcome', monster: 'Plant' })).result.monster === 'Plant' && (await run({ kind: 'welcome', monster: 'Ark' })).result.kind === 'none');
@@ -70,7 +84,7 @@ const base = (extra = {}) => ({ kind: 'masmon_suggest', breederId: 'b-1', player
     check('① くせをやめる', (await run({ kind: 'nameStyleOff' })).result.kind === 'nameStyleOff' && (await run({ kind: 'colorStyleOff' })).result.kind === 'colorStyleOff');
     const muaRes = (await core.handleRequest({ body: base({ a: 'mua' }), digest: DIGEST, client: fakeClient(() => okRes({ kind: 'none', name: '', colors: [], monster: '', slot: 0, face: '', deckName: '', plan: '', style: '', names: [], palette: [], replies: { yes: '', some: '', no: '', talk: 'かわいいじゃん！まじいいね' } })), ...counter() })).json;
     const draRes = await run({ kind: 'none', replies: { yes: '', some: '', no: '', talk: 'ほんまにええやん' } });
-    check('③ 返事にも助手の口調の見張り(みゅあは ぢゃん/まぢ に直す・ドラの関西弁は捨てる)', muaRes.ok && muaRes.result.replies.talk === 'かわいいぢゃん！まぢいいね' && draRes.ok === false, `${muaRes.result && muaRes.result.replies.talk} / ${draRes.kind}`);
+    check('③ 返事にも助手の口調の見張り(みゅあは ぢゃん/まぢ に直す・ドラの関西弁は捨てる)', muaRes.ok && muaRes.result.replies.talk === 'かわいいぢゃん！まぢいいね' && draRes.ok === true && draRes.result.replies.talk === '', `${muaRes.result && muaRes.result.replies.talk} / ${draRes.kind}`);
     const sw = await run({ kind: 'swap', monster: 'Plant', name: 'はっぱ♪' });
     check('① 入れ替え: 候補の種類だけ・名前も一緒に', sw.result.kind === 'swap' && sw.result.monster === 'Plant' && sw.result.name === 'はっぱ♪' && (await run({ kind: 'swap', monster: 'Ark' })).result.kind === 'none', JSON.stringify(sw.result));
     const t = await run({ kind: 'none', replies: { yes: '', some: '', no: '', talk: '♪が大事なんだね、どこに付けよっか？' } });
