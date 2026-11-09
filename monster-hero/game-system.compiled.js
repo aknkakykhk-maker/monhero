@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b1e80620ae8111e1
+// source-sha256: 1903feb4aeff4a2b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -109171,9 +109171,10 @@ function AssistantLifeHouse({
     land: land,
     onBack: () => setTab('house'),
     onPick: id => {
-      if (!uiV2) setTab('house');
+      setTab('house');
       setRoomId(id);
     },
+    onView: uiV2 ? id => setRoomId(id) : null,
     onBeat: beat,
     onCard: card,
     list: React.createElement(React.Fragment, null, header, note && React.createElement("p", {
@@ -109723,6 +109724,7 @@ function AssistantLifeTownMap({
   life,
   ids,
   onPick,
+  onView = null,
   onBeat = null,
   onCard = null,
   onBack,
@@ -110096,7 +110098,15 @@ function AssistantLifeTownMap({
         onCard(id);
       },
       className: "rounded-xl bg-gradient-to-r from-blue-700 to-violet-700 px-2 py-1 text-[11px] font-black text-white active:scale-95"
-    }, "🃏 対戦する"), React.createElement("button", {
+    }, "🃏 対戦する"), typeof onView === 'function' && React.createElement("button", {
+      type: "button",
+      "data-assistant-life-map-act": "view",
+      onClick: () => {
+        setSheet(null);
+        onView(id);
+      },
+      className: "rounded-xl border border-sky-300/60 px-2 py-1 text-[11px] font-black text-sky-100 active:scale-95"
+    }, "💬 助手を見る"), React.createElement("button", {
       type: "button",
       "data-assistant-life-map-act": "room",
       onClick: () => {
