@@ -22,10 +22,13 @@ vm.runInContext(`${head}\nthis.at=timeOfDayAt;this.clock=timeOfDayClockText;this
 const jst = (h, m) => Date.UTC(2026, 10, 7, h - 9, m); // 日本時間 h:m の時刻
 const cases = [[4, 59, 'night'], [5, 0, 'morning'], [9, 59, 'morning'], [10, 0, 'day'], [15, 59, 'day'], [16, 0, 'evening'], [18, 59, 'evening'], [19, 0, 'night'], [23, 59, 'night'], [0, 0, 'night']];
 for (const [h, m, want] of cases) { const got = ctx.at(jst(h, m)).id; if (got !== want) ng(`日本時間 ${h}:${String(m).padStart(2, '0')} は ${want} のはずが ${got}`); }
-if (ctx.clock(jst(21, 4)) !== '21:04') ng(`時刻の文字が日本時間になっていない(${ctx.clock(jst(21, 4))})`);
+if (ctx.clock(jst(21, 4)) !== '21:04') ng(`24時間表示が日本時間になっていない(${ctx.clock(jst(21, 4))})`);
+for (const [h, m, want] of [[0, 4, 'AM 12:04'], [9, 5, 'AM 9:05'], [12, 6, 'PM 12:06'], [13, 7, 'PM 1:07'], [23, 8, 'PM 11:08']]) {
+  const got = ctx.clock(jst(h, m), '12h'); if (got !== want) ng(`AM・PM表示 ${h}:${m} が ${want} でない(${got})`);
+}
 if (/getHours\(|getMinutes\(|toLocaleTimeString|getTimezoneOffset/.test(head)) ng('端末の時間帯に左右される数え方(getHours など)を使っている');
-const n0 = ctx.norm(null), n1 = ctx.norm({ mood: 'off', clock: 'x' }), n2 = ctx.norm([1]);
-if (n0.mood !== 'on' || n0.clock !== 'on' || n1.mood !== 'off' || n1.clock !== 'on' || n2.mood !== 'on') ng('設定の読み(無い・壊れている・知らない値は on)が違う');
+const n0 = ctx.norm(null), n1 = ctx.norm({ mood: 'off', clock: 'x', format: '12h' }), n2 = ctx.norm([1]), n3 = ctx.norm({ format: 'x' });
+if (n0.mood !== 'on' || n0.clock !== 'on' || n0.format !== '24h' || n1.mood !== 'off' || n1.clock !== 'on' || n1.format !== '12h' || n2.mood !== 'on' || n2.format !== '24h' || n3.format !== '24h') ng('設定の読み(無い・壊れている・知らない値は従来の入・24時間)が違う');
 if (ctx.KEY !== 'mh_time_of_day_v1') ng('保存キーが mh_time_of_day_v1 でない');
 
 // 2) 色の層を重ねない所・重い書き方
