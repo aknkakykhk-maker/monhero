@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0fa7a449dccfa32a
+// generated-sha256: b1e862bb8aac2d1f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9837,6 +9837,13 @@ const changelogTypeOf = (entry) => CHANGELOG_TYPE_LABELS[entry?.type] || CHANGEL
 // 期間限定イベントのお知らせが、いま開催中か(一覧の項目に「開催中」の札を出す)。
 // 助手の告知の期間(notifyFrom〜notifyUntil)を見る。描くたびに数え直す(CLAUDE.md ⑥-4)
 const changelogEventLive = (entry, nowMs = Date.now()) => {
+  // イベント以外でも、pinTop:{ until } を書いた項目は、出はじめ(visibleFrom)から until まで一番上に固定する
+  // (2026-11-09 社長「(本オープン記念のお知らせを)上部に固定も」。周回5倍の期間が終わったら外れる)
+  if (entry && entry.pinTop && typeof entry.pinTop === 'object' && entry.type !== 'event') {
+    const pinFrom = Date.parse(entry.visibleFrom || '');
+    const pinEnd = Date.parse(entry.pinTop.until || '');
+    return Number.isFinite(pinEnd) && nowMs < pinEnd && (!Number.isFinite(pinFrom) || nowMs >= pinFrom);
+  }
   const notice = entry && entry.type === 'event' ? entry.assistantNotice : null;
   if (!notice || !notice.notifyUntil) return false;
   const from = Date.parse(notice.notifyFrom || entry.visibleFrom || '');

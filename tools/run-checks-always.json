@@ -94,6 +94,7 @@
   "changelog/external-link-check.js",
   "changelog/monster-ko-check.js",
   "changelog/new-monster-gallery-check.js",
+  "changelog/pin-top-check.js",
   "changelog/player-words-check.js",
   "changelog/song-art-notice-check.js",
   "changelog/song-numbers-check.js",
