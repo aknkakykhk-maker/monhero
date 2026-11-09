@@ -162,8 +162,8 @@ const TimeOfDayClock = ({ home = false }) => {
   if (!home) return <span ref={ref} className="mh-tod-clock" data-time-of-day-clock={st.slot.id} aria-label={label}>{inside}</span>;
   return <>
     <button type="button" ref={ref} className="mh-tod-clock" data-time-of-day-clock={st.slot.id} aria-label={`${label}。表示形式を変更`} onClick={() => setFormatOpen(true)}>{inside}</button>
-    {formatOpen && <div data-time-of-day-format-sheet role="dialog" aria-modal="true" aria-label="時刻表示" onClick={() => setFormatOpen(false)}
-      style={{ position:'absolute', inset:0, zIndex:80, display:'flex', alignItems:'center', justifyContent:'center', padding:'16px', background:'#020617bb' }}>
+    {formatOpen && typeof document !== 'undefined' && ReactDOM.createPortal(<div data-time-of-day-format-sheet role="dialog" aria-modal="true" aria-label="時刻表示" onClick={() => setFormatOpen(false)}
+      style={{ position:'fixed', inset:0, zIndex:2147483647, display:'flex', alignItems:'center', justifyContent:'center', padding:'16px', background:'#020617bb' }}>
       <div onClick={(e) => e.stopPropagation()} style={{ width:'min(300px, 92%)', borderRadius:'18px', border:'1px solid #fcd34d88', background:'#0f172af2', color:'#f8fafc', padding:'14px', boxShadow:'0 12px 36px #000b' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
           <div><b style={{ display:'block', fontSize:'14px' }}>🕐 時刻表示</b><span style={{ display:'block', marginTop:'2px', color:'#cbd5e1', fontSize:'10px', fontWeight:700 }}>日本時間で表示します</span></div>
@@ -180,7 +180,7 @@ const TimeOfDayClock = ({ home = false }) => {
           })}
         </div>
       </div>
-    </div>}
+    </div>, document.body)}
   </>;
 };
 
