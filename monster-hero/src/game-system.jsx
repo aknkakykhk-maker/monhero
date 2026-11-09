@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 69605aa095782abf
+// generated-sha256: b73e4c6b270c2785
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -64488,26 +64488,21 @@ const assistantLifeMapReadHome = () => {
   return out;
 };
 
-// 小さな立ち絵。部屋と同じ決まり(56-assistant-life-house.jsx の assistantLifeStandRule)で、顔の大きさをそろえ、
-//   全員を同じ所で上下に切る(頭のてっぺんの上 顔0.55個・てっぺんから顔1.8個・下の 顔0.45個で消す)。h はその枠の高さ
-//   2026-11-09 社長「画面バグってる」: 見えている絵の高さをそろえていたので、ドラは顔だけ小さく・ほかも大きさがまちまちだった
+// 小さな全身(絵の描かれている範囲を測って、見た目の高さを h にそろえる。胸から上の絵は下をぼかす)
 function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   const src = assistantFullImage(who, sleep ? 'normal' : 'happy');
   const [box, setBox] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.get(src) || null);
   React.useEffect(() => { let alive = true; assistantLifeStandBox(src).then(b => { if (alive) setBox(b); }); return () => { alive = false; }; }, [src]);
   const b = box || { t: 0, b: 1, l: 0, r: 1, ar: 0.6 };
-  const face = assistantLifeStandFace(who && who.id, src);
-  const cut = ASSISTANT_LIFE_STAND_CUT, span = cut.above + cut.below;
-  const F = h / (ASSISTANT_LIFE_STAND_FACE_LEN * span); // m=1 の人の「目から顎」。枠の高さがちょうど h になる
-  const vh = assistantLifeStandVisH(face, F), ih = vh / Math.max(0.2, b.b - b.t), iw = ih * (b.ar || 0.6);
+  const ih = h / Math.max(0.2, b.b - b.t), iw = ih * (b.ar || 0.6);
   const w = Math.round(Math.min((b.r - b.l) * iw, h * 0.78));
-  const r = assistantLifeStandRule({ face, box: b, F, topY: (cut.above / span) * h, cx: w / 2 });
-  const mask = face.head ? 'none' : `linear-gradient(#000 ${Math.round((1 - cut.fade / span) * 100)}%,transparent)`;
+  const cx = ((b.l + b.r) / 2) * iw;
+  const mask = 'linear-gradient(#000 74%,transparent)';
   // 印(💤・ごほうび済み)は、下をぼかした絵の外側に重ねる(ぼかしに消されない)
   return (
     <span className="relative block shrink-0" style={{ width: w, height: h }}>
-      <span className="absolute inset-0 overflow-hidden" style={{ WebkitMaskImage: mask, maskImage: mask }} data-assistant-life-map-fig data-assistant-life-map-fig-face={Math.round(((face.chin || 1) - (face.top || 0)) * vh * 10) / 10}>
-        <img src={src} alt="" draggable={false} style={{ position: 'absolute', height: r.height, width: r.width, maxWidth: 'none', top: r.top, left: r.left, filter: sleep ? 'brightness(.62) saturate(.7)' : 'drop-shadow(0 2px 3px #0009)' }}/>
+      <span className="absolute inset-0 overflow-hidden" style={{ WebkitMaskImage: mask, maskImage: mask }} data-assistant-life-map-fig>
+        <img src={src} alt="" draggable={false} style={{ position: 'absolute', height: ih, width: iw, maxWidth: 'none', top: -b.t * ih, left: w / 2 - cx, filter: sleep ? 'brightness(.62) saturate(.7)' : 'drop-shadow(0 2px 3px #0009)' }}/>
       </span>
       {sleep && <span className="absolute right-0 top-0 text-[10px]" aria-hidden="true">💤</span>}
       {spent && typeof AssistantLifeSpentMark === 'function' && <AssistantLifeSpentMark size={Math.round(h * 0.5)}/>}

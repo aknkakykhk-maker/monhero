@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 504b49af56930da9
+// source-sha256: 6726a4eecff98639
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -109467,22 +109467,11 @@ function AssistantLifeMapFig({
     r: 1,
     ar: 0.6
   };
-  const face = assistantLifeStandFace(who && who.id, src);
-  const cut = ASSISTANT_LIFE_STAND_CUT,
-    span = cut.above + cut.below;
-  const F = h / (ASSISTANT_LIFE_STAND_FACE_LEN * span);
-  const vh = assistantLifeStandVisH(face, F),
-    ih = vh / Math.max(0.2, b.b - b.t),
+  const ih = h / Math.max(0.2, b.b - b.t),
     iw = ih * (b.ar || 0.6);
   const w = Math.round(Math.min((b.r - b.l) * iw, h * 0.78));
-  const r = assistantLifeStandRule({
-    face,
-    box: b,
-    F,
-    topY: cut.above / span * h,
-    cx: w / 2
-  });
-  const mask = face.head ? 'none' : `linear-gradient(#000 ${Math.round((1 - cut.fade / span) * 100)}%,transparent)`;
+  const cx = (b.l + b.r) / 2 * iw;
+  const mask = 'linear-gradient(#000 74%,transparent)';
   return React.createElement("span", {
     className: "relative block shrink-0",
     style: {
@@ -109495,19 +109484,18 @@ function AssistantLifeMapFig({
       WebkitMaskImage: mask,
       maskImage: mask
     },
-    "data-assistant-life-map-fig": true,
-    "data-assistant-life-map-fig-face": Math.round(((face.chin || 1) - (face.top || 0)) * vh * 10) / 10
+    "data-assistant-life-map-fig": true
   }, React.createElement("img", {
     src: src,
     alt: "",
     draggable: false,
     style: {
       position: 'absolute',
-      height: r.height,
-      width: r.width,
+      height: ih,
+      width: iw,
       maxWidth: 'none',
-      top: r.top,
-      left: r.left,
+      top: -b.t * ih,
+      left: w / 2 - cx,
       filter: sleep ? 'brightness(.62) saturate(.7)' : 'drop-shadow(0 2px 3px #0009)'
     }
   })), sleep && React.createElement("span", {
