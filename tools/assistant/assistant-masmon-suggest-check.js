@@ -36,6 +36,21 @@ const base = (extra = {}) => ({ kind: 'masmon_suggest', breederId: 'b-1', player
     const ask2 = ch.calls[0].messages[0].content[0].text;
     check('① 前のやりとりを続きとして渡す(かぎかっこは『』に置き換える)', ask2.includes('これまでのやりとり') && ask2.includes('名前をかわいくして') && ask2.includes('『♪』が大事'), ask2.slice(-120));
   }
+  { // ⑨ 名前の案(2026-11-09 社長「全然聞いてくれない」: 「俺の嫁」が呼び名の禁止で落ちて「分からない」になった)
+    const ai = (obj) => fakeClient(() => okRes({ kind: 'none', name: '', colors: [], monster: '', slot: 0, face: '', deckName: '', plan: '', style: '', names: [], palette: [], replies, ...obj }));
+    const go = async (text, obj) => (await core.handleRequest({ body: base({ text }), digest: DIGEST, client: ai(obj), ...counter() })).json.result;
+    const r1 = await go('名前を「俺の嫁」とかにしたらどう？', { kind: 'name', name: '俺の嫁' });
+    check('⑨ 恋人っぽい言葉(嫁など)は、マスモンの名前なら通す', r1.kind === 'name' && r1.name === '俺の嫁', JSON.stringify(r1));
+    const r2 = await go('名前を「俺の嫁」とかにしたらどう？', { kind: 'none' });
+    check('⑨ 「」でくくった名前の案は、AI が読み取れなくてもそのまま拾う', r2.kind === 'name' && r2.name === '俺の嫁', JSON.stringify(r2));
+    const r3 = await go('名前を「ほしぞら」にして', { kind: 'name', name: 'ホシゾラ' });
+    check('⑨ 「」の中の字をそのまま使う', r3.kind === 'name' && r3.name === 'ほしぞら', r3.name);
+    const r4 = await go('名前を「ばか」にして', { kind: 'name', name: 'ばか' });
+    check('⑨ 通さない言葉は blocked:name を付けて返す(分からない扱いにしない)', r4.kind === 'none' && r4.blocked === 'name', JSON.stringify(r4));
+    const r5 = await go('体を「夕焼け」っぽくして', { kind: 'none' });
+    check('⑨ 名前の話でない「」は名前にしない', r5.kind === 'none' && !r5.blocked, JSON.stringify(r5));
+    check('⑨ 悪口・「この子」は、提案の名前でもこれまでどおり止める', !core.suggestNameOk('うちの子') && !core.suggestNameOk('クズ') && core.suggestNameOk('ダーリン'));
+  }
   { // ① 迎える・勇者モン・デッキ
     const run = async (obj) => (await core.handleRequest({ body: base(), digest: DIGEST, client: fakeClient(() => okRes({ name: '', colors: [], monster: '', slot: 0, face: '', deckName: '', plan: '', replies, ...obj })), ...counter() })).json;
     check('① 迎える: 候補の種類だけ', (await run({ kind: 'welcome', monster: 'Plant' })).result.monster === 'Plant' && (await run({ kind: 'welcome', monster: 'Ark' })).result.kind === 'none');

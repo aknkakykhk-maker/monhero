@@ -77,7 +77,8 @@ const layoutProblems = (page) => page.evaluate(() => {
         const c = b.ctx || {}; const replies = { yes: 'いいね、そうしてみるよ', some: '少しだけ変えてみるね', no: 'それはちょっと…ごめんね' };
         const base = { name: '', colors: [], monster: '', slot: 0, face: '', deckName: '', plan: '', replies };
         const favId = (c.colors || []).find(x => (c.fav || []).includes(x.label));
-        const result = /みんなの名前/.test(b.text || '') ? { ...base, kind: 'nameStyle', style: '名前の最後に♪', names: (c.team || []).map(t => ({ slot: t.slot, n: `${t.nick}♪` })) }
+        const result = /付けられない名前/.test(b.text || '') ? { ...base, kind: 'none', blocked: 'name' }
+          : /みんなの名前/.test(b.text || '') ? { ...base, kind: 'nameStyle', style: '名前の最後に♪', names: (c.team || []).map(t => ({ slot: t.slot, n: `${t.nick}♪` })) }
           : /入れ替え/.test(b.text || '') ? { ...base, kind: 'swap', monster: ((c.cands || [])[0] || {}).id || '', name: 'あたらしい♪' }
           : b.from === 'masmon' ? { ...base, kind: 'color', colors: [{ part: 0, color: favId ? favId.id : 'orange' }] }
           : b.from === 'hero' ? { ...base, kind: 'hero', slot: ((c.team || [])[1] || {}).slot || 1 }
@@ -269,6 +270,13 @@ const layoutProblems = (page) => page.evaluate(() => {
           await page.locator('[data-assistant-masmon-row]').first().click(); await page.locator('[data-assistant-masmon-detail]').waitFor({ timeout: 3000 }).catch(() => {});
           const logTxt = await page.locator('[data-assistant-masmon-dye-log]').innerText().catch(() => '');
           check(`${T}提案(色)を戻したら「前の色に戻しました」・戻すボタンは消える`, /前の色に戻しました/.test(logTxt) && (await page.locator('[data-assistant-masmon-undo="color"]').count()) === 0, logTxt.slice(0, 30));
+          await page.locator('[data-assistant-masmon-detail-close]').click({ timeout: 2000 }).catch(() => {});
+          // 名前として通さない言葉(2026-11-09 社長「全然聞いてくれない」): 「分からない」ではなく、助手の口調で付けられないと言う・回数は減らない
+          await page.locator('[data-assistant-masmon-row]').first().click(); await page.locator('[data-assistant-masmon-detail]').waitFor({ timeout: 3000 }).catch(() => {});
+          const usedNg0 = await page.evaluate((id) => assistantMasmonAskUsed(id), WHO);
+          const bn = await send('masmon', '付けられない名前にしてみたら？', false);
+          const lastNg = await page.evaluate((id) => (ASSISTANT_MASMON_STORE.state.asked || []).filter(x => x.a === id).slice(-1)[0] || {}, WHO);
+          check(`${T}提案(付けられない名前): 断る返事になり、回数は減らない`, bn.res === 'no' && /名前/.test(lastNg.reply || '') && (await page.evaluate((id) => assistantMasmonAskUsed(id), WHO)) === usedNg0, `${bn.res} ${lastNg.reply}`);
           await page.locator('[data-assistant-masmon-detail-close]').click({ timeout: 2000 }).catch(() => {});
           // 入れ替え(2026-11-09 社長「マスモン変更提案とかもほしい」): 前のマスモンは残り、「前のマスモンに戻してもらう」で戻せる
           await page.locator('[data-assistant-masmon-row]').first().click(); await page.locator('[data-assistant-masmon-detail]').waitFor({ timeout: 3000 }).catch(() => {});
