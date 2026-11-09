@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1ce3cfb00a5fb954
+// generated-sha256: c98e9808427e7abc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -38329,7 +38329,7 @@ function PlayerRankUpFx({ kind = 'beat', from = 1, to = 1, gains = [], onClose =
 //   ・お話・モンヒロビートの演奏中・リザルト・バトル中・カードの場は変えない。ボタン・文字・カード・ノーツには乗らない
 //   ・色の層は背景の要素の中にあるので、「🔄 横」で回しても絵と一緒に回る
 // ★時刻はいつも日本時間(端末の時間帯の設定に関係なく UTC+9 で数える)。1日の区切り(4:00)とは別に、朝は 5:00 から
-// 保存: 新しいキー mh_time_of_day_v1 に { mood:'on'|'off', clock:'on'|'off' }(無い・壊れているときは両方 'on')
+// 保存: キー mh_time_of_day_v1 に { mood:'on'|'off', clock:'on'|'off', format:'24h'|'12h' }(無い・壊れているときは従来どおり入・24時間)
 
 const TIME_OF_DAY_STORAGE_KEY = 'mh_time_of_day_v1';
 // 区切り(日本時間の時)。[始まりの時, 名前, 印, 表示名]。助手ライフの家も同じ表を使う
@@ -38352,13 +38352,15 @@ const timeOfDayAt = (now = Date.now()) => {
   for (const s of TIME_OF_DAY_SLOTS) if (h >= s.from) slot = s;
   return slot;
 };
-const timeOfDayClockText = (now = Date.now()) => {
+const timeOfDayClockText = (now = Date.now(), format = '24h') => {
   const { h, m } = timeOfDayJstParts(now);
-  return `${h}:${String(m).padStart(2, '0')}`;
+  const mm = String(m).padStart(2, '0');
+  if (format === '12h') return `${h < 12 ? 'AM' : 'PM'} ${h % 12 || 12}:${mm}`;
+  return `${h}:${mm}`;
 };
 const normalizeTimeOfDaySettings = (value) => {
   const v = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-  return { mood: v.mood === 'off' ? 'off' : 'on', clock: v.clock === 'off' ? 'off' : 'on' };
+  return { mood: v.mood === 'off' ? 'off' : 'on', clock: v.clock === 'off' ? 'off' : 'on', format: v.format === '12h' ? '12h' : '24h' };
 };
 
 // ---------- 設定と「いま」を持つ場所(どこからでも読めるように画面の外に置く) ----------
@@ -38369,17 +38371,21 @@ const timeOfDayEmit = () => { TIME_OF_DAY_STORE.listeners.forEach(fn => { try { 
 const timeOfDayLoad = async () => {
   if (TIME_OF_DAY_STORE.loaded) return;
   TIME_OF_DAY_STORE.loaded = true;
-  try { TIME_OF_DAY_STORE.settings = normalizeTimeOfDaySettings(await storeGet(TIME_OF_DAY_STORAGE_KEY, null)); } catch {}
+  try {
+    TIME_OF_DAY_STORE.settings = normalizeTimeOfDaySettings(await storeGet(TIME_OF_DAY_STORAGE_KEY, null));
+    TIME_OF_DAY_STORE.minute = timeOfDayClockText(Date.now(), TIME_OF_DAY_STORE.settings.format);
+  } catch {}
   timeOfDayEmit();
 };
 const timeOfDaySetSettings = (patch) => {
   TIME_OF_DAY_STORE.settings = normalizeTimeOfDaySettings({ ...TIME_OF_DAY_STORE.settings, ...(patch || {}) });
+  TIME_OF_DAY_STORE.minute = timeOfDayClockText(Date.now(), TIME_OF_DAY_STORE.settings.format);
   try { storeSet(TIME_OF_DAY_STORAGE_KEY, TIME_OF_DAY_STORE.settings, false); } catch {}
   timeOfDayEmit();
 };
 // 20秒ごとに見直す(分が変わったら時刻を、時間帯が変わったら雰囲気を書き換える)。見るたびに今の時刻で決める
 const timeOfDayTick = () => {
-  const slot = timeOfDayAt(), minute = timeOfDayClockText();
+  const slot = timeOfDayAt(), minute = timeOfDayClockText(Date.now(), TIME_OF_DAY_STORE.settings.format);
   if (slot.id === TIME_OF_DAY_STORE.slot.id && minute === TIME_OF_DAY_STORE.minute) return;
   TIME_OF_DAY_STORE.slot = slot; TIME_OF_DAY_STORE.minute = minute;
   timeOfDayEmit();
@@ -38419,7 +38425,8 @@ html[data-mh-tod="evening"] .mh-tod-tint{opacity:var(--tod-k,1);background:linea
 html[data-mh-tod="night"] .mh-tod-tint{opacity:var(--tod-k,1);background:linear-gradient(180deg,rgba(5,8,34,.84) 0%,rgba(10,16,52,.70) 50%,rgba(6,10,34,.76) 100%)}
 @media (prefers-reduced-motion:reduce){.mh-tod-tint{transition:none!important}}
 @media (prefers-reduced-motion:reduce){.mh-home-background::after,.mh-home-background::before,.mh-title-gate img,.mh-screen-shell,.mhms-stage{transition:none!important}}
-.mh-tod-clock{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border:1px solid #eed99566;border-radius:999px;background:#0f1d2ad9;color:#f9eac2;font-size:11px;font-weight:900;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap;box-shadow:0 2px 6px #0007;pointer-events:none}
+.mh-tod-clock{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border:1px solid #eed99566;border-radius:999px;background:#0f1d2ad9;color:#f9eac2;font-family:inherit;font-size:11px;font-weight:900;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap;box-shadow:0 2px 6px #0007;pointer-events:none}
+.mh-home-scene button.mh-tod-clock{pointer-events:auto;cursor:pointer}
 .mh-tod-clock i{font-style:normal;font-size:12px}
 .mh-home-scene .mh-tod-clock{position:absolute;z-index:5;right:9px;top:calc(107px + env(safe-area-inset-top))}
 @media (orientation:landscape) and (max-height:600px){.mh-home-scene .mh-tod-clock{top:calc(69px + env(safe-area-inset-top));right:calc(9px + var(--mh-tod-upd,0px))}}
@@ -38454,10 +38461,11 @@ const TimeOfDayRoot = () => {
   return null;
 };
 
-// いまの時刻の札。押せない。HOME では「更新履歴」の幅を測って、横向きでその左に並べる
+// いまの時刻の札。HOME だけ押すと表示形式(24時間 / AM・PM)を変えられる。ほかの画面は従来どおり表示だけ
 const TimeOfDayClock = ({ home = false }) => {
   const st = useTimeOfDay();
   const ref = useRef(null);
+  const [formatOpen, setFormatOpen] = useState(false);
   useEffect(() => {
     ensureTimeOfDayCss();
     if (!home || typeof window === 'undefined') return undefined;
@@ -38471,7 +38479,31 @@ const TimeOfDayClock = ({ home = false }) => {
     return () => { clearTimeout(t); window.removeEventListener('resize', measure); };
   }, [home]);
   if (st.settings.clock !== 'on') return null;
-  return <span ref={ref} className="mh-tod-clock" data-time-of-day-clock={st.slot.id} aria-label={`いまの時刻 ${st.minute}(${st.slot.label})`}><i aria-hidden="true">{st.slot.icon}</i>{st.minute}</span>;
+  const label = `いまの時刻 ${st.minute}(${st.slot.label})`;
+  const inside = <><i aria-hidden="true">{st.slot.icon}</i>{st.minute}</>;
+  if (!home) return <span ref={ref} className="mh-tod-clock" data-time-of-day-clock={st.slot.id} aria-label={label}>{inside}</span>;
+  return <>
+    <button type="button" ref={ref} className="mh-tod-clock" data-time-of-day-clock={st.slot.id} aria-label={`${label}。表示形式を変更`} onClick={() => setFormatOpen(true)}>{inside}</button>
+    {formatOpen && <div data-time-of-day-format-sheet role="dialog" aria-modal="true" aria-label="時刻表示" onClick={() => setFormatOpen(false)}
+      style={{ position:'absolute', inset:0, zIndex:80, display:'flex', alignItems:'center', justifyContent:'center', padding:'16px', background:'#020617bb' }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width:'min(300px, 92%)', borderRadius:'18px', border:'1px solid #fcd34d88', background:'#0f172af2', color:'#f8fafc', padding:'14px', boxShadow:'0 12px 36px #000b' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
+          <div><b style={{ display:'block', fontSize:'14px' }}>🕐 時刻表示</b><span style={{ display:'block', marginTop:'2px', color:'#cbd5e1', fontSize:'10px', fontWeight:700 }}>日本時間で表示します</span></div>
+          <button type="button" data-time-of-day-format-close onClick={() => setFormatOpen(false)}
+            style={{ minWidth:'42px', minHeight:'36px', borderRadius:'12px', border:'1px solid #64748b', background:'#1e293b', color:'#e2e8f0', fontSize:'11px', fontWeight:900 }}>閉じる</button>
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', marginTop:'12px' }}>
+          {[['24h', '24時間', '18:32'], ['12h', 'AM・PM', 'PM 6:32']].map(([value, title, sample]) => {
+            const selected = st.settings.format === value;
+            return <button key={value} type="button" data-time-of-day-format={value} aria-pressed={selected} onClick={() => timeOfDaySetSettings({ format: value })}
+              style={{ minHeight:'62px', borderRadius:'14px', border:`2px solid ${selected ? '#fcd34d' : '#475569'}`, background:selected ? '#fcd34d' : '#1e293b', color:selected ? '#0f172a' : '#e2e8f0', padding:'8px', fontWeight:900 }}>
+              <span style={{ display:'block', fontSize:'12px' }}>{title}</span><span style={{ display:'block', marginTop:'3px', fontSize:'11px', opacity:.82, fontVariantNumeric:'tabular-nums' }}>{sample}</span>
+            </button>;
+          })}
+        </div>
+      </div>
+    </div>}
+  </>;
 };
 
 // 時刻の文字だけ(札の枠なし)。ほかの札の中に時刻を並べたいとき用(例: 助手ライフの家の「🌙 夜」の札に「21:34」を足す)。
