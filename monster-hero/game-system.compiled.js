@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d67c50f5a4e110a9
+// source-sha256: 8384c6003f8a4ec6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108518,6 +108518,26 @@ function AssistantLifeHouse({
   const land = useAssistantLifeLand();
   if (typeof useAssistantLifeFriendState === 'function') useAssistantLifeFriendState();
   const [tab, setTab] = React.useState('house');
+  const [uiV2, setUiV2] = React.useState(false);
+  const [callPicker, setCallPicker] = React.useState(false);
+  React.useEffect(() => {
+    let alive = true;
+    Promise.resolve(storeGet('mh_assistant_life_ui_v2', false, false)).then(v => {
+      if (alive) setUiV2(v === true);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const toggleUiV2 = () => {
+    const next = !uiV2;
+    setUiV2(next);
+    setCallPicker(false);
+    setRoomId(null);
+    try {
+      void storeSet('mh_assistant_life_ui_v2', next, false);
+    } catch {}
+  };
   const [roomId, setRoomId] = React.useState(st.focus || null);
   React.useEffect(() => {
     if (typeof friendsSetLifeSpot !== 'function') return;
@@ -108889,6 +108909,10 @@ function AssistantLifeHouse({
     "data-assistant-life-today-act": "call",
     disabled: !Object.keys(life.solo || {}).filter(id => !awayFriend(id)).length,
     onClick: () => {
+      if (uiV2) {
+        setCallPicker(true);
+        return;
+      }
       const id = lonely ? lonely[0] : Object.keys(life.solo || {}).filter(id => !awayFriend(id))[0];
       if (id) setRoomId(id);
     }
@@ -108956,7 +108980,13 @@ function AssistantLifeHouse({
     } : undefined
   }, "助手ライフ")), React.createElement("div", {
     className: "min-w-0 flex-1"
-  }), !quickRunStrip && React.createElement(AssistantLifeQuickChip, {
+  }), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-ui-switch": true,
+    onClick: toggleUiV2,
+    "aria-label": uiV2 ? '従来UIに戻す' : '新UIを試す',
+    className: "shrink-0 rounded-lg border border-white/30 bg-slate-900/90 px-2 py-2 text-[10px] font-bold text-white"
+  }, uiV2 ? '↩ 旧UI' : '✨ 新UI'), !quickRunStrip && React.createElement(AssistantLifeQuickChip, {
     quickRun: quickRun,
     onStop: onQuickRunStop,
     onStart: onQuickRunStart,
@@ -109144,6 +109174,7 @@ function AssistantLifeHouse({
       setTab('house');
       setRoomId(id);
     },
+    onView: uiV2 ? id => setRoomId(id) : null,
     onBeat: beat,
     onCard: card,
     list: React.createElement(React.Fragment, null, header, note && React.createElement("p", {
@@ -109201,7 +109232,33 @@ function AssistantLifeHouse({
     className: "font-bold text-slate-400"
   }, "朝4時に戻る")), tiles), React.createElement("div", {
     className: "mt-1.5"
-  }, icons))), roomId && React.createElement(AssistantLifeRoomSheet, {
+  }, icons))), callPicker && uiV2 && React.createElement("div", {
+    className: "absolute inset-0 z-[22] flex items-end justify-center bg-black/60",
+    "data-assistant-life-call-picker": true
+  }, React.createElement("div", {
+    className: "w-full max-w-[480px] rounded-t-2xl border-t-2 border-sky-300 bg-slate-900 p-4",
+    style: {
+      paddingBottom: 'calc(16px + env(safe-area-inset-bottom))'
+    }
+  }, React.createElement("div", {
+    className: "mb-3 flex items-center justify-between"
+  }, React.createElement("b", null, "💬 声をかける助手を選ぶ"), React.createElement("button", {
+    type: "button",
+    className: "min-h-[44px] px-3",
+    onClick: () => setCallPicker(false)
+  }, "閉じる ✕")), React.createElement("div", {
+    className: "max-h-[55vh] overflow-y-auto"
+  }, Object.keys(life.solo || {}).filter(id => !awayFriend(id)).map(id => React.createElement("button", {
+    type: "button",
+    key: id,
+    className: "mb-2 flex min-h-[48px] w-full items-center justify-between rounded-xl border border-white/20 bg-slate-800 px-3 text-left",
+    onClick: () => {
+      setCallPicker(false);
+      setRoomId(id);
+    }
+  }, React.createElement("span", null, nameOf(id)), React.createElement("span", {
+    className: "text-xs text-slate-300"
+  }, life.solo[id]?.reason === 'lonely' ? 'さみしそう' : 'ひとりで過ごしている', " ›")))))), roomId && React.createElement(AssistantLifeRoomSheet, {
     key: roomId,
     id: roomId,
     openFurn: furnBack === roomId,
@@ -109667,6 +109724,7 @@ function AssistantLifeTownMap({
   life,
   ids,
   onPick,
+  onView = null,
   onBeat = null,
   onCard = null,
   onBack,
@@ -110040,7 +110098,15 @@ function AssistantLifeTownMap({
         onCard(id);
       },
       className: "rounded-xl bg-gradient-to-r from-blue-700 to-violet-700 px-2 py-1 text-[11px] font-black text-white active:scale-95"
-    }, "🃏 対戦する"), React.createElement("button", {
+    }, "🃏 対戦する"), typeof onView === 'function' && React.createElement("button", {
+      type: "button",
+      "data-assistant-life-map-act": "view",
+      onClick: () => {
+        setSheet(null);
+        onView(id);
+      },
+      className: "rounded-xl border border-sky-300/60 px-2 py-1 text-[11px] font-black text-sky-100 active:scale-95"
+    }, "💬 詳細を見る"), React.createElement("button", {
       type: "button",
       "data-assistant-life-map-act": "room",
       onClick: () => {
