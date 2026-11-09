@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2bc463112c5fd88a
+// source-sha256: d67c50f5a4e110a9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -62236,16 +62236,16 @@ const TimeOfDayClock = ({
     "data-time-of-day-clock": st.slot.id,
     "aria-label": `${label}。表示形式を変更`,
     onClick: () => setFormatOpen(true)
-  }, inside), formatOpen && React.createElement("div", {
+  }, inside), formatOpen && typeof document !== 'undefined' && ReactDOM.createPortal(React.createElement("div", {
     "data-time-of-day-format-sheet": true,
     role: "dialog",
     "aria-modal": "true",
     "aria-label": "時刻表示",
     onClick: () => setFormatOpen(false),
     style: {
-      position: 'absolute',
+      position: 'fixed',
       inset: 0,
-      zIndex: 80,
+      zIndex: 2147483647,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -62337,7 +62337,7 @@ const TimeOfDayClock = ({
         fontVariantNumeric: 'tabular-nums'
       }
     }, sample));
-  })))));
+  })))), document.body));
 };
 const TimeOfDayClockText = ({
   prefix = ' '
