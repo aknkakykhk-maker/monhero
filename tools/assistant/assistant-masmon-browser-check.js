@@ -77,7 +77,8 @@ const layoutProblems = (page) => page.evaluate(() => {
         const c = b.ctx || {}; const replies = { yes: 'いいね、そうしてみるよ', some: '少しだけ変えてみるね', no: 'それはちょっと…ごめんね' };
         const base = { name: '', colors: [], monster: '', slot: 0, face: '', deckName: '', plan: '', replies };
         const favId = (c.colors || []).find(x => (c.fav || []).includes(x.label));
-        const result = /入れ替え/.test(b.text || '') ? { ...base, kind: 'swap', monster: ((c.cands || [])[0] || {}).id || '', name: 'あたらしい♪' }
+        const result = /みんなの名前/.test(b.text || '') ? { ...base, kind: 'nameStyle', style: '名前の最後に♪', names: (c.team || []).map(t => ({ slot: t.slot, n: `${t.nick}♪` })) }
+          : /入れ替え/.test(b.text || '') ? { ...base, kind: 'swap', monster: ((c.cands || [])[0] || {}).id || '', name: 'あたらしい♪' }
           : b.from === 'masmon' ? { ...base, kind: 'color', colors: [{ part: 0, color: favId ? favId.id : 'orange' }] }
           : b.from === 'hero' ? { ...base, kind: 'hero', slot: ((c.team || [])[1] || {}).slot || 1 }
           : b.from === 'welcome' ? { ...base, kind: 'welcome', monster: ((c.cands || [])[0] || {}).id || '' }
@@ -283,6 +284,20 @@ const layoutProblems = (page) => page.evaluate(() => {
             check(`${T}提案(入れ替え)を戻すと前のマスモンに戻る`, (await page.locator('[data-assistant-masmon-detail]').getAttribute('data-assistant-masmon-detail')) === m0);
           }
           await page.locator('[data-assistant-masmon-detail-close]').click({ timeout: 2000 }).catch(() => {});
+          // 名前のくせ(2026-11-09 社長「なまえの付け方のくせを提案して全マスモンに適用」): 全部の名前が変わり、一覧に「やめてもらう」が出て、やめると戻る
+          await page.locator('[data-assistant-masmon-row]').first().click(); await page.locator('[data-assistant-masmon-detail]').waitFor({ timeout: 3000 }).catch(() => {});
+          const ns = await send('masmon', 'みんなの名前の最後に♪を付けて', false);
+          await page.locator('[data-assistant-masmon-detail-close]').click({ timeout: 2000 }).catch(() => {});
+          const names1 = await page.evaluate((id) => assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, id).map(t => t.nick), WHO);
+          check(`${T}提案(名前のくせ): 全部の名前にくせが当たり、「やめてもらう」が出る`, ns.res !== 'yes' || (names1.every(n => n.endsWith('♪')) && (await page.locator('[data-assistant-masmon-undo="nameStyle"]').count()) === 1), names1.join('・'));
+          let swapped = null;
+          if (ns.res === 'yes') { // くせ → 入れ替え → やめる: 入れ替えたマスモンの名前は、前のマスモンのくせ前の名前に変わらない(ミハリ)
+            await page.locator('[data-assistant-masmon-row]').first().click(); await page.locator('[data-assistant-masmon-detail]').waitFor({ timeout: 3000 }).catch(() => {});
+            const sw2 = await send('masmon', '別のマスモンに入れ替えてみたら？', false);
+            await page.locator('[data-assistant-masmon-detail-close]').click({ timeout: 2000 }).catch(() => {});
+            if (sw2.res === 'yes') swapped = await page.evaluate((id) => { const r = assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, id)[0]; return { slot: r.slot, nick: r.nick }; }, WHO);
+          }
+          if (ns.res === 'yes') { await page.locator('[data-assistant-masmon-undo="nameStyle"]').click().catch(() => {}); await page.waitForTimeout(400); const rows2 = await page.evaluate((id) => assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, id).map(t => ({ slot: t.slot, nick: t.nick })), WHO); const others = rows2.filter(r => !swapped || r.slot !== swapped.slot); check(`${T}提案(名前のくせ)をやめると前の名前に戻る・入れ替えたマスモンの名前はそのまま`, others.every(r => !r.nick.endsWith('♪')) && (!swapped || (rows2.find(r => r.slot === swapped.slot) || {}).nick === swapped.nick), rows2.map(r => r.nick).join('・')); }
           const hasWait = (await page.locator('[data-assistant-masmon-ask-open="welcome"]').count()) > 0;
           if (hasWait) { const w = await send('welcome', '次はこのモンスターを迎えてみたら？', true); check(`${T}提案(迎える): 希望が残る`, (await page.locator('[data-assistant-masmon-wish]').innerText().catch(() => '')).includes('希望') || w.res === 'no', w.res); }
           await page.locator('[data-assistant-masmon-tab-btn="team"]').click(); await page.waitForTimeout(800);

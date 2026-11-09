@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 58cd7dac0f0e9b78
+// source-sha256: f7e8d0b1d4dfa249
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -125942,6 +125942,25 @@ const normalizeAssistantMasmonMine = raw => {
     if (Number.isInteger(m.hero) && m.hero >= 1 && m.hero <= 8) o.hero = m.hero;
     if (typeof m.wish === 'string' && m.wish.length <= 24) o.wish = m.wish;
     o.wishSoft = m.wishSoft === true;
+    o.nameStyle = m.nameStyle && typeof m.nameStyle === 'object' && typeof m.nameStyle.style === 'string' && m.nameStyle.style ? {
+      style: m.nameStyle.style.slice(0, 40),
+      day: typeof m.nameStyle.day === 'string' ? m.nameStyle.day.slice(0, 10) : ''
+    } : null;
+    o.colorStyle = m.colorStyle && typeof m.colorStyle === 'object' && Array.isArray(m.colorStyle.palette) && m.colorStyle.palette.length ? {
+      style: typeof m.colorStyle.style === 'string' ? m.colorStyle.style.slice(0, 40) : '',
+      palette: m.colorStyle.palette.filter(c => typeof c === 'string' && /^[a-z_]{2,16}$/.test(c)).slice(0, 3),
+      day: typeof m.colorStyle.day === 'string' ? m.colorStyle.day.slice(0, 10) : ''
+    } : null;
+    o.nameStyleBefore = {};
+    if (m.nameStyleBefore && typeof m.nameStyleBefore === 'object') for (const [k, v] of Object.entries(m.nameStyleBefore)) {
+      const sl = Number(k);
+      if (Number.isInteger(sl) && sl >= 1 && sl <= 8 && typeof v === 'string' && v && v.length <= 16) o.nameStyleBefore[sl] = v;
+    }
+    o.colorStyleBefore = {};
+    if (m.colorStyleBefore && typeof m.colorStyleBefore === 'object') for (const [k, v] of Object.entries(m.colorStyleBefore)) {
+      const sl = Number(k);
+      if (Number.isInteger(sl) && sl >= 1 && sl <= 8 && Array.isArray(v)) o.colorStyleBefore[sl] = v.slice(0, 8).map(c => typeof c === 'string' && ASSISTANT_MASMON_DYE_RE.test(c) ? c : null);
+    }
     o.former = {};
     if (m.former && typeof m.former === 'object') for (const [k, v] of Object.entries(m.former)) {
       const sl = Number(k);
@@ -127210,17 +127229,23 @@ const assistantMasmonAskNames = async () => {
   const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '';
   if (!st.draw || st.draw.v !== ASSISTANT_MASMON_DRAW_V || _assistantMasmonNamesBusy || !day || st.pickNameDay === day) return 'skip';
   if (!(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonNamesApi === true) || typeof ASSISTANT_CHAT_URL === 'undefined' || typeof SB_HEADERS === 'undefined') return 'skip';
-  const items = Object.keys(st.draw.made).map(a => ({
-    a,
-    s: assistantMasmonRowsOf(st, a).filter(t => !t.ai).map(t => {
-      const m = assistantMasmonMon(t.monster);
-      return {
-        slot: t.slot,
-        mon: m ? m.name : t.monster,
-        why: t.why
-      };
-    })
-  })).filter(x => x.s.length);
+  const items = Object.keys(st.draw.made).map(a => {
+    const ns = assistantMasmonMineOf(st, a).nameStyle;
+    return {
+      a,
+      s: assistantMasmonRowsOf(st, a).filter(t => !t.ai).map(t => {
+        const m = assistantMasmonMon(t.monster);
+        return {
+          slot: t.slot,
+          mon: m ? m.name : t.monster,
+          why: t.why
+        };
+      }),
+      ...(ns ? {
+        style: ns.style
+      } : {})
+    };
+  }).filter(x => x.s.length);
   if (!items.length) return 'skip';
   let bid = null;
   try {
@@ -127282,7 +127307,8 @@ const assistantMasmonAskNames = async () => {
       const name = t => {
         if (t.ai) return t;
         const n = typeof got[t.slot] === 'string' ? got[t.slot].trim() : '';
-        const ok = /^[ぁ-ゖァ-ヺー一-龠々・]{2,8}$/u.test(n) && !used.has(n);
+        const styled = !!assistantMasmonMineOf(cur, a).nameStyle;
+        const ok = (styled ? assistantMasmonAskNameOk(n) : /^[ぁ-ゖァ-ヺー一-龠々・]{2,8}$/u.test(n)) && !used.has(n);
         if (!ok) return t;
         used.add(n);
         changed = true;
@@ -127372,8 +127398,8 @@ const assistantMasmonAskNameOk = n => {
   const f = t.normalize('NFKC').toLowerCase();
   if ((f.match(/\d/g) || []).length >= 5 || /[@＠]|#\d|(^|[^a-z])id([^a-z]|$)|https?|www|\.(com|jp|net)/.test(f)) return false;
   const words = ['line', 'ライン', 'らいん', 'insta', 'インスタ', 'いんすた', 'discord', 'ディスコ', 'でぃすこ', 'twitter', 'ツイッター', 'tiktok', 'ティックトック', 'youtube', 'ユーチューブ', 'ゆーちゅーぶ', 'snapchat', 'スナチャ', 'mail', 'メール', 'gmail', 'skype', 'kakao', 'カカオ', 'telegram', 'qrコード', 'http', 'www', '.com', '.jp', '.net'];
-  const bare = f.replace(/[\s\u3000・。、,._\-~〜ー*＊!！?？♪☆★♡]/g, '');
-  if (words.some(w => f.includes(w) || bare.includes(w.replace(/[.ー]/g, '')))) return false;
+  const bare = f.replace(/[\s\u3000・。、,._\-~〜*＊!！?？♪☆★♡]/g, '');
+  if (words.some(w => f.includes(w) || bare.includes(w.replace(/\./g, '')))) return false;
   return true;
 };
 const ASSISTANT_MASMON_ASK_LINES = Object.freeze({
@@ -127429,7 +127455,7 @@ const ASSISTANT_MASMON_ASK_LINES = Object.freeze({
 const assistantMasmonAskLine = (aid, replies, kind) => replies && replies[kind] || (ASSISTANT_MASMON_ASK_LINES[aid] || ASSISTANT_MASMON_ASK_LINES.mua)[kind];
 const ASSISTANT_MASMON_ASK_PER_DAY = 10;
 const ASSISTANT_MASMON_ASK_HINT = Object.freeze({
-  masmon: '名前や色、このマスモンのことを自由に書いてみてください(例: 体を夕焼けっぽくしてみたら？/名前に♪を付けて/別のマスモンに変えてみたら？)',
+  masmon: '名前や色、このマスモンのことを自由に書いてみてください(例: 体を夕焼けっぽくしてみたら？/名前に♪を付けて/別のマスモンに変えてみたら？/みんなの名前をお菓子っぽくして)',
   hero: '勇者モンについて自由に書いてみてください(例: 勇者モンはミーアにしてみたら？/名前に♪を付けたら？/プラントに変えてみたら？)',
   welcome: '次に迎えてほしいマスモンを書いてみてください(例: 次はプラントを迎えてみたら？)',
   deck: 'MFバトルカードのデッキについて書いてみてください(例: 推しのデッキは守りで「まったり作戦」にしたら？)'
@@ -127480,6 +127506,10 @@ const assistantMasmonAskCtx = (aid, from, t, lv) => {
     }))
   };
   for (const x of p.dislikeMon || []) ctx.dislike.push(x.monster ? monName(x.monster) : `${assistantMasmonLineageName(x.lineage) || x.lineage}`);
+  ctx.colors = assistantMasmonColorIds().map(id => ({
+    id,
+    label: assistantMasmonColorName(id)
+  }));
   if (t && (from === 'masmon' || from === 'hero')) {
     const n = assistantMasmonRegions(t.monster) || 3;
     const now = assistantMasmonDyeNowOf(st, aid, t.slot, (rows.find(r => r.slot === t.slot) || {}).colors || []);
@@ -127502,7 +127532,7 @@ const assistantMasmonAskCtx = (aid, from, t, lv) => {
       label: assistantMasmonColorName(id)
     }));
   }
-  if (from === 'welcome' || from === 'masmon' || from === 'hero') {
+  {
     const pool = assistantMasmonDrawPool(aid, p);
     const have = new Set(rows.map(r => r.monster));
     const bad = (p.dislikeMon || []).map(x => x.monster).filter(Boolean);
@@ -127517,7 +127547,13 @@ const assistantMasmonAskJudge = (aid, r, lv) => {
   const p = assistantMasmonBasePlanOf(aid),
     H = ASSISTANT_MASMON_DYE_HABIT[aid] || ASSISTANT_MASMON_DYE_HABIT.mua;
   let taste = 'mid';
-  if (r.kind === 'color') {
+  if (r.kind === 'color' || r.kind === 'colorStyle') {
+    if (r.kind === 'colorStyle') r = {
+      ...r,
+      colors: r.palette.map(c => ({
+        color: c
+      }))
+    };
     const fav = new Set([...(p.favColors || []).map(x => assistantMasmonBaseOf(x.color)), ...(H.extra || []).map(assistantMasmonBaseOf)]);
     const avoid = new Set((H.avoid || []).flatMap(c => [c, assistantMasmonBaseOf(c)]));
     const ts = r.colors.map(x => avoid.has(x.color) || avoid.has(assistantMasmonBaseOf(x.color)) ? 'hate' : fav.has(assistantMasmonBaseOf(x.color)) ? 'like' : 'mid');
@@ -127642,6 +127678,136 @@ const assistantMasmonAskApply = (aid, r, outcome, t) => {
       what: `次に${monName(r.monster)}を迎えたい`
     };
   }
+  if (r.kind === 'nameStyle' && outcome === 'yes') {
+    const rows = assistantMasmonRowsOf(st, aid);
+    let next = st,
+      n = 0;
+    mine.nameStyleBefore = {
+      ...(mine.nameStyleBefore || {})
+    };
+    for (const x of r.names) {
+      const row = rows.find(y => y.slot === x.slot);
+      if (!row || (mine.names[x.slot] || []).length || !assistantMasmonAskNameOk(x.n) || row.nick === x.n) continue;
+      if (!mine.nameStyleBefore[x.slot]) mine.nameStyleBefore[x.slot] = row.nick;
+      next = assistantMasmonSetNick(next, aid, x.slot, x.n);
+      n++;
+    }
+    mine.nameStyle = {
+      style: r.style,
+      day
+    };
+    assistantMasmonSave(withMine(next));
+    return {
+      changed: true,
+      what: `名前の付け方を「${r.style}」に${n ? `(${n}体)` : ''}`
+    };
+  }
+  if (r.kind === 'nameStyleOff' && outcome === 'yes') {
+    if (!mine.nameStyle) return {
+      changed: false,
+      what: ''
+    };
+    let next = st;
+    const before = mine.nameStyleBefore || {};
+    for (const [k, nick] of Object.entries(before)) {
+      const sl = Number(k);
+      if (!(mine.names[sl] || []).length && assistantMasmonRowsOf(st, aid).some(y => y.slot === sl)) next = assistantMasmonSetNick(next, aid, sl, nick);
+    }
+    mine.nameStyle = null;
+    mine.nameStyleBefore = {};
+    assistantMasmonSave(withMine(next));
+    return {
+      changed: true,
+      what: '名前の付け方をいつもに戻す'
+    };
+  }
+  if (r.kind === 'colorStyle' && outcome === 'yes') {
+    const p = assistantMasmonBasePlanOf(aid),
+      p2 = {
+        ...p,
+        favColors: r.palette.map(c => ({
+          color: c
+        }))
+      };
+    const rows = assistantMasmonRowsOf(st, aid),
+      slots = {};
+    mine.colorStyleBefore = {
+      ...(mine.colorStyleBefore || {})
+    };
+    for (const row of rows) {
+      const cur = [...assistantMasmonDyeNowOf(st, aid, row.slot, row.colors || [])];
+      if (!mine.colorStyleBefore[row.slot]) mine.colorStyleBefore[row.slot] = cur;
+      const rnd = assistantMasmonRng(`${st.seed}|${aid}|cstyle|${row.slot}|${r.palette.join()}|${day}`);
+      const own = mine.parts[row.slot] || [];
+      slots[row.slot] = assistantMasmonDyeMake2(aid, p2, row.monster, 'main', rnd).map((c, i) => own.includes(i) ? cur[i] || null : c);
+    }
+    mine.colorStyle = {
+      style: r.style,
+      palette: r.palette,
+      day
+    };
+    const hist = [...(st.dyes && st.dyes[aid] || []), {
+      v: ASSISTANT_MASMON_DYE_V,
+      d: ASSISTANT_MASMON_DRAW_V,
+      why: 'ask',
+      at: day,
+      season: assistantMasmonSeasonKey(day),
+      fav: assistantMasmonFavSig(p),
+      roles: {},
+      slots
+    }];
+    assistantMasmonSave(withMine({
+      ...st,
+      dyes: {
+        ...(st.dyes || {}),
+        [aid]: hist.slice(-40)
+      }
+    }));
+    return {
+      changed: true,
+      what: `色を「${r.style || r.palette.map(c => assistantMasmonColorName(c)).join('・')}」に(${rows.length}体)`
+    };
+  }
+  if (r.kind === 'colorStyleOff' && outcome === 'yes') {
+    if (!mine.colorStyle) return {
+      changed: false,
+      what: ''
+    };
+    const slots = {};
+    const rowsNow = assistantMasmonRowsOf(st, aid);
+    for (const [k, cs] of Object.entries(mine.colorStyleBefore || {})) {
+      const sl = Number(k),
+        row = rowsNow.find(y => y.slot === sl);
+      if (!row) continue;
+      const cur = assistantMasmonDyeNowOf(st, aid, sl, row.colors || []),
+        own = mine.parts[sl] || [];
+      slots[sl] = cs.map((c, i) => own.includes(i) ? cur[i] || null : c);
+    }
+    mine.colorStyle = null;
+    mine.colorStyleBefore = {};
+    const hist = [...(st.dyes && st.dyes[aid] || []), {
+      v: ASSISTANT_MASMON_DYE_V,
+      d: ASSISTANT_MASMON_DRAW_V,
+      why: 'ask',
+      undo: true,
+      at: day,
+      season: assistantMasmonSeasonKey(day),
+      fav: assistantMasmonFavSig(assistantMasmonBasePlanOf(aid)),
+      roles: {},
+      slots
+    }];
+    assistantMasmonSave(withMine({
+      ...st,
+      dyes: {
+        ...(st.dyes || {}),
+        [aid]: hist.slice(-40)
+      }
+    }));
+    return {
+      changed: true,
+      what: '色をいつもの染め方に戻す'
+    };
+  }
   if (r.kind === 'swap' && t && outcome === 'yes') {
     const rows = assistantMasmonRowsOf(st, aid),
       row = rows.find(x => x.slot === t.slot);
@@ -127668,6 +127834,14 @@ const assistantMasmonAskApply = (aid, r, outcome, t) => {
     }].slice(-8);
     delete mine.parts[t.slot];
     delete mine.names[t.slot];
+    mine.nameStyleBefore = {
+      ...(mine.nameStyleBefore || {})
+    };
+    delete mine.nameStyleBefore[t.slot];
+    mine.colorStyleBefore = {
+      ...(mine.colorStyleBefore || {})
+    };
+    delete mine.colorStyleBefore[t.slot];
     const rnd = assistantMasmonRng(`${st.seed}|${aid}|swap|${t.slot}|${r.monster}|${day}`);
     const role = row.role && ASSISTANT_MASMON_ROLE_NAME[row.role] ? row.role : 'main';
     const nu = {
@@ -127857,12 +128031,7 @@ const assistantMasmonAsk = async (aid, from, text, t = null) => {
       };
     }
     const r = res.result;
-    const fits = {
-      masmon: ['name', 'color', 'swap'],
-      hero: ['hero', 'name', 'color', 'swap'],
-      welcome: ['welcome'],
-      deck: ['deck']
-    }[from] || [];
+    const fits = ['welcome', 'hero', 'deck', 'nameStyle', 'nameStyleOff', 'colorStyle', 'colorStyleOff', ...(t ? ['name', 'color', 'swap'] : [])];
     if (r.kind === 'none' || !fits.includes(r.kind)) {
       const talk = assistantMasmonAskLine(aid, r.replies, 'talk');
       record('none', '', false, talk);
@@ -127976,6 +128145,14 @@ const assistantMasmonUndoSwap = (aid, slot) => {
     ...m.names
   };
   delete m.names[slot];
+  m.nameStyleBefore = {
+    ...(m.nameStyleBefore || {})
+  };
+  delete m.nameStyleBefore[slot];
+  m.colorStyleBefore = {
+    ...(m.colorStyleBefore || {})
+  };
+  delete m.colorStyleBefore[slot];
   const day = assistantMasmonToday();
   const back = {
     slot,
@@ -128680,6 +128857,37 @@ function AssistantMasmonAskSheet({
     onClick: onClose
   }, "閉じる")));
 }
+function AssistantMasmonStyleRow({
+  who
+}) {
+  const st = useAssistantMasmonSave();
+  if (!assistantMasmonAskOn()) return null;
+  const m = assistantMasmonMineOf(st, who.id);
+  if (!m.nameStyle && !m.colorStyle) return null;
+  const off = kind => {
+    assistantMasmonAskApply(who.id, {
+      kind
+    }, 'yes', null);
+  };
+  return React.createElement("div", {
+    className: "mhm-card mt-2 flex flex-col gap-1",
+    "data-assistant-masmon-style": true
+  }, m.nameStyle && React.createElement("p", {
+    className: "text-[10.5px] font-bold text-sky-200"
+  }, "✏️ 名前の付け方のくせ: 「", m.nameStyle.style, "」 ", React.createElement("button", {
+    type: "button",
+    className: "ml-1 underline",
+    onClick: () => off('nameStyleOff'),
+    "data-assistant-masmon-undo": "nameStyle"
+  }, "やめてもらう")), m.colorStyle && React.createElement("p", {
+    className: "text-[10.5px] font-bold text-sky-200"
+  }, "🎨 色のくせ: 「", m.colorStyle.style || m.colorStyle.palette.map(c => assistantMasmonColorName(c)).join('・'), "」 ", React.createElement("button", {
+    type: "button",
+    className: "ml-1 underline",
+    onClick: () => off('colorStyleOff'),
+    "data-assistant-masmon-undo": "colorStyle"
+  }, "やめてもらう")));
+}
 function AssistantMasmonWishRow({
   who,
   onAsk
@@ -128915,7 +129123,9 @@ function AssistantMasmonSheet({
       key: t.monster,
       t: t,
       land: land
-    }))), p.v2 && waiting.length > 0 && React.createElement(AssistantMasmonWishRow, {
+    }))), p.v2 && React.createElement(AssistantMasmonStyleRow, {
+      who: who
+    }), p.v2 && waiting.length > 0 && React.createElement(AssistantMasmonWishRow, {
       who: who,
       onAsk: from => setAsk({
         from
