@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dae0f44aebf0e5ce
+// source-sha256: bd49d073c453b74f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -107853,10 +107853,18 @@ const assistantLifeStandBox = src => new Promise(res => {
   }
   const im = new Image();
   im.onload = () => {
+    const whole = im.naturalWidth && im.naturalHeight ? {
+      t: 0,
+      b: 1,
+      l: 0,
+      r: 1,
+      ar: im.naturalWidth / im.naturalHeight
+    } : null;
+    let c = null;
     try {
       const W = 96,
         H = Math.max(1, Math.round(96 * im.naturalHeight / im.naturalWidth));
-      const c = document.createElement('canvas');
+      c = document.createElement('canvas');
       c.width = W;
       c.height = H;
       const g = c.getContext('2d');
@@ -107872,7 +107880,7 @@ const assistantLifeStandBox = src => new Promise(res => {
         if (x < l) l = x;
         if (x > r) r = x;
       }
-      const box = b < 0 ? null : {
+      const box = b < 0 ? whole : {
         t: t / H,
         b: (b + 1) / H,
         l: l / W,
@@ -107882,8 +107890,12 @@ const assistantLifeStandBox = src => new Promise(res => {
       ASSISTANT_LIFE_STAND_BOX.set(src, box);
       res(box);
     } catch (_) {
-      ASSISTANT_LIFE_STAND_BOX.set(src, null);
-      res(null);
+      ASSISTANT_LIFE_STAND_BOX.set(src, whole);
+      res(whole);
+    }
+    if (c) {
+      c.width = 0;
+      c.height = 0;
     }
   };
   im.onerror = () => {
@@ -109521,6 +109533,7 @@ function AssistantLifeMapFig({
       height: ih,
       width: iw,
       maxWidth: 'none',
+      objectFit: 'contain',
       top: -b.t * ih,
       left: w / 2 - cx,
       filter: sleep ? 'brightness(.62) saturate(.7)' : 'drop-shadow(0 2px 3px #0009)'
@@ -109928,6 +109941,12 @@ function AssistantLifeTownMap({
 .mhl-map-town[data-assistant-life-map-empty="1"]>span{opacity:.6;border-color:#94a3b8aa;background:#0f172ad9}
 .mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:${small ? 8 : 9}px;font-weight:900;line-height:${small ? 12 : 13}px;color:#fff;box-shadow:0 1px 3px #0008}
 [data-assistant-life-map] .mh-home-facility:active>span,.mhl-map-town:active>span{transform:scale(.94)}`), React.createElement("div", {
+    className: "relative",
+    style: {
+      minHeight: '100%'
+    },
+    "data-assistant-life-map-fill": true
+  }, React.createElement("div", {
     ref: sceneRef,
     className: `mh-home-scene${home.wide ? ' is-wide' : ''}`,
     style: sceneStyle,
@@ -110034,7 +110053,7 @@ function AssistantLifeTownMap({
       bottom: 'calc(10px + env(safe-area-inset-bottom))'
     },
     "data-assistant-life-map-hint": true
-  }, "場所を押すと、いる助手とできること")), list && React.createElement("div", {
+  }, "場所を押すと、いる助手とできること"))), list && React.createElement("div", {
     ref: listRef,
     className: "relative bg-[#0b1020]",
     "data-assistant-life-map-below": true

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d495f01e80e4c9ed
+// generated-sha256: 6315890b8d7d5e09
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -63780,16 +63780,21 @@ const assistantLifeStandBox = (src) => new Promise((res) => {
   if (ASSISTANT_LIFE_STAND_BOX.has(src)) { res(ASSISTANT_LIFE_STAND_BOX.get(src)); return; }
   const im = new Image();
   im.onload = () => {
+    // 測れないとき(iPhone で canvas が使えない・上限を超えて真っ白になるなど)も、絵の縦横の比だけは本物を使う。
+    //   仮の比で細長く伸びて見えていた(2026-11-09 社長「画面バグってる」)
+    const whole = im.naturalWidth && im.naturalHeight ? { t: 0, b: 1, l: 0, r: 1, ar: im.naturalWidth / im.naturalHeight } : null;
+    let c = null;
     try {
       const W = 96, H = Math.max(1, Math.round(96 * im.naturalHeight / im.naturalWidth));
-      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      c = document.createElement('canvas'); c.width = W; c.height = H;
       const g = c.getContext('2d'); g.drawImage(im, 0, 0, W, H);
       const d = g.getImageData(0, 0, W, H).data;
       let t = H, b = -1, l = W, r = -1;
       for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (d[(y * W + x) * 4 + 3] > 40) { if (y < t) t = y; if (y > b) b = y; if (x < l) l = x; if (x > r) r = x; }
-      const box = b < 0 ? null : { t: t / H, b: (b + 1) / H, l: l / W, r: (r + 1) / W, ar: im.naturalWidth / im.naturalHeight };
+      const box = b < 0 ? whole : { t: t / H, b: (b + 1) / H, l: l / W, r: (r + 1) / W, ar: im.naturalWidth / im.naturalHeight };
       ASSISTANT_LIFE_STAND_BOX.set(src, box); res(box);
-    } catch (_) { ASSISTANT_LIFE_STAND_BOX.set(src, null); res(null); }
+    } catch (_) { ASSISTANT_LIFE_STAND_BOX.set(src, whole); res(whole); }
+    if (c) { c.width = 0; c.height = 0; } // iPhone は canvas のメモリの上限が厳しい。測り終えたらすぐ放す
   };
   im.onerror = () => { ASSISTANT_LIFE_STAND_BOX.set(src, null); res(null); };
   im.src = src;
@@ -64508,6 +64513,7 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   const src = assistantFullImage(who, sleep ? 'normal' : 'happy');
   const [box, setBox] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.get(src) || null);
   React.useEffect(() => { let alive = true; assistantLifeStandBox(src).then(b => { if (alive) setBox(b); }); return () => { alive = false; }; }, [src]);
+  // 測り終えるまでの仮の形。絵は object-fit:contain なので、仮の比が違っても縦横に伸びない(2026-11-09 社長「画面バグってる」)
   const b = box || { t: 0, b: 1, l: 0, r: 1, ar: 0.6 };
   const ih = h / Math.max(0.2, b.b - b.t), iw = ih * (b.ar || 0.6);
   const w = Math.round(Math.min((b.r - b.l) * iw, h * 0.78));
@@ -64517,7 +64523,7 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   return (
     <span className="relative block shrink-0" style={{ width: w, height: h }}>
       <span className="absolute inset-0 overflow-hidden" style={{ WebkitMaskImage: mask, maskImage: mask }} data-assistant-life-map-fig>
-        <img src={src} alt="" draggable={false} style={{ position: 'absolute', height: ih, width: iw, maxWidth: 'none', top: -b.t * ih, left: w / 2 - cx, filter: sleep ? 'brightness(.62) saturate(.7)' : 'drop-shadow(0 2px 3px #0009)' }}/>
+        <img src={src} alt="" draggable={false} style={{ position: 'absolute', height: ih, width: iw, maxWidth: 'none', objectFit: 'contain', top: -b.t * ih, left: w / 2 - cx, filter: sleep ? 'brightness(.62) saturate(.7)' : 'drop-shadow(0 2px 3px #0009)' }}/>
       </span>
       {sleep && <span className="absolute right-0 top-0 text-[10px]" aria-hidden="true">💤</span>}
       {spent && typeof AssistantLifeSpentMark === 'function' && <AssistantLifeSpentMark size={Math.round(h * 0.5)}/>}
@@ -64690,6 +64696,9 @@ function AssistantLifeTownMap({ life, ids, onPick, onBeat = null, onCard = null,
 .mhl-map-town[data-assistant-life-map-empty="1"]>span{opacity:.6;border-color:#94a3b8aa;background:#0f172ad9}
 .mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:${small ? 8 : 9}px;font-weight:900;line-height:${small ? 12 : 13}px;color:#fff;box-shadow:0 1px 3px #0008}
 [data-assistant-life-map] .mh-home-facility:active>span,.mhl-map-town:active>span{transform:scale(.94)}`}</style>
+      {/* 地図の枠は少なくとも画面の高さ。HOME の場面が画面より低い端末(上下に帯がある iPhone など)で、
+          下の一覧の見出しが地図の下にのぞいて切れて見えていた(2026-11-09 社長「画面バグってる」) */}
+      <div className="relative" style={{ minHeight: '100%' }} data-assistant-life-map-fill>
       <div ref={sceneRef} className={`mh-home-scene${home.wide ? ' is-wide' : ''}`} style={sceneStyle} data-assistant-life-map data-assistant-life-map-from-home={home.fromHome ? '1' : '0'}>
         <picture className={`mh-home-background is-ready${home.wide ? ' is-wide' : ''}`} aria-hidden="true"><img className="mh-home-backdrop" src={home.src} alt=""/><img className="mh-home-main" src={home.src} alt=""/></picture>
         {/* HOME と同じ札(同じ class・同じ中身)。押すと、そこにいる助手とできること */}
@@ -64716,6 +64725,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onBeat = null, onCard = null,
           {list && <button type="button" data-assistant-life-map-list onClick={() => { try { const l = listRef.current, box = l && l.parentElement; if (box) box.scrollTo({ top: l.offsetTop, behavior: 'smooth' }); } catch (_) {} }} className="shrink-0 rounded-xl border border-slate-500/70 bg-slate-950/85 px-2.5 py-1.5 text-[11px] font-black text-slate-100 active:scale-95">📃 一覧 ↓</button>}
         </div>
         <p className="pointer-events-none absolute left-1/2 z-[7] -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-950/85 px-3 py-1 text-[10.5px] font-bold text-slate-100" style={{ bottom: 'calc(10px + env(safe-area-inset-bottom))' }} data-assistant-life-map-hint>場所を押すと、いる助手とできること</p>
+      </div>
       </div>
       {list && <div ref={listRef} className="relative bg-[#0b1020]" data-assistant-life-map-below>{list}</div>}
       {sheetPlace && (
