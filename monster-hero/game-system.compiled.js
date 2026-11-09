@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9e2766e7562327b7
+// source-sha256: b946fdaa0c25d997
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -127412,52 +127412,68 @@ const ASSISTANT_MASMON_ASK_LINES = Object.freeze({
     yes: 'いいね♪ そうしてみる！まぢありがと〜',
     some: 'ちょっとだけ取り入れてみた！まぢいい感じかも',
     no: 'ん〜、それはちょっと違うかも…ごめんね！',
-    talk: 'ん？どうしたいか、もうちょい教えて！'
+    talk: 'ん？どうしたいか、もうちょい教えて！',
+    ng: 'その名前はちょっと付けられないかも…別の名前にしよ！',
+    think: 'ん〜、ちょっと考えとくね！'
   },
   kiki: {
     yes: 'はい、そうしてみますね。ありがとうございます',
     some: '少しだけ取り入れてみました',
     no: '申し訳ありません、それは少し…ごめんなさい',
-    talk: 'どうしたいか、もう少し教えていただけますか？'
+    talk: 'どうしたいか、もう少し教えていただけますか？',
+    ng: 'その言葉は名前には使えないんです…別の名前はいかがですか？',
+    think: '少し考えてみますね'
   },
   momosuke: {
     yes: 'いいね〜！ももがそうしちゃうよ♡',
     some: 'ちょっとだけ変えてみたよ〜♡',
     no: 'ん〜、それはももの好みじゃないかも〜ごめんね',
-    talk: 'ん〜？どうしたいか、もうちょっと教えて♡'
+    talk: 'ん〜？どうしたいか、もうちょっと教えて♡',
+    ng: 'その名前はつけられないの〜ごめんね、別のにしよ♡',
+    think: 'ん〜、ちょっと考えとくね♡'
   },
   dra: {
     yes: 'おう、そうしてみるぞ。えへへ',
     some: 'ちょっとだけ変えてみたぞ',
     no: 'それはちょっとなあ…ごめんな',
-    talk: 'ん？どうしたいのか、もうちょい教えてくれ'
+    talk: 'ん？どうしたいのか、もうちょい教えてくれ',
+    ng: 'その言葉は名前にできないぞ…別のにしてくれ',
+    think: 'ちょっと考えとくぞ'
   },
   atsu: {
     yes: 'いいね、そうしてみるわ笑',
     some: 'ちょっとだけ取り入れてみたわ笑',
     no: 'それはちょっと違うかな笑 ごめんね(｡-人-｡)',
-    talk: 'ん？どうしたいか教えて笑'
+    talk: 'ん？どうしたいか教えて笑',
+    ng: 'その名前は付けられないんだわ笑 別のにしよ',
+    think: 'ちょっと考えとくわ笑'
   },
   kyuko: {
     yes: 'ほい、そうしてみるよぉ笑',
     some: 'ちょっとだけ変えてみたよぉ笑',
     no: 'それはちょっとなぁ…ごめんねぇ笑',
-    talk: 'ん〜？どうしたいか教えてよぉ笑'
+    talk: 'ん〜？どうしたいか教えてよぉ笑',
+    ng: 'その名前は付けられないんだよぉ笑 別のにしよぉ',
+    think: 'ちょっと考えとくよぉ笑'
   },
   sorashido: {
     yes: '了解・・・！そうしてみるぜ笑',
     some: '少しだけ取り入れてみたぜ・・・！',
     no: 'それは計算に合わないぜ・・・ごめんな',
-    talk: 'どうしたいか、もう少し教えてくれ・・・！'
+    talk: 'どうしたいか、もう少し教えてくれ・・・！',
+    ng: 'その言葉は名前に使えないぜ・・・別の名前にしてくれ笑',
+    think: '少し考えておくぜ・・・！'
   },
   erubin: {
     yes: 'うん、そうしてみるね笑',
     some: 'ちょっとだけ取り入れてみたよ笑',
     no: 'それはちょっと…ごめんね🤔',
-    talk: 'どうしたいか、もうちょっと教えてね🤔'
+    talk: 'どうしたいか、もうちょっと教えてね🤔',
+    ng: 'その名前は付けられないみたい…別のにしよ🤔',
+    think: 'ちょっと考えとくね🤔'
   }
 });
-const assistantMasmonAskLine = (aid, replies, kind) => replies && replies[kind] || (ASSISTANT_MASMON_ASK_LINES[aid] || ASSISTANT_MASMON_ASK_LINES.mua)[kind];
+const assistantMasmonAskLine = (aid, replies, kind) => kind !== 'ng' && kind !== 'think' && replies && replies[kind] || (ASSISTANT_MASMON_ASK_LINES[aid] || ASSISTANT_MASMON_ASK_LINES.mua)[kind];
 const ASSISTANT_MASMON_ASK_PER_DAY = 10;
 const ASSISTANT_MASMON_ASK_HINT = Object.freeze({
   masmon: '名前や色、このマスモンのことを自由に書いてみてください(例: 体を夕焼けっぽくしてみたら？/名前に♪を付けて/別のマスモンに変えてみたら？/みんなの名前をお菓子っぽくして)',
@@ -128037,6 +128053,15 @@ const assistantMasmonAsk = async (aid, from, text, t = null) => {
     }
     const r = res.result;
     const fits = ['welcome', 'hero', 'deck', 'nameStyle', 'nameStyleOff', 'colorStyle', 'colorStyleOff', ...(t ? ['name', 'color', 'swap'] : [])];
+    if (r.kind === 'none' && r.blocked === 'name') {
+      const ng = assistantMasmonAskLine(aid, r.replies, 'ng');
+      record('no', '', false, ng);
+      return {
+        res: 'no',
+        line: ng,
+        note: 'その言葉は名前に使えません。ほかの名前なら提案できます(回数は減りません)'
+      };
+    }
     if (r.kind === 'none' || !fits.includes(r.kind)) {
       const talk = assistantMasmonAskLine(aid, r.replies, 'talk');
       record('none', '', false, talk);
@@ -128049,7 +128074,7 @@ const assistantMasmonAsk = async (aid, from, text, t = null) => {
     const outcome = assistantMasmonAskJudge(aid, r, lv);
     const done = assistantMasmonAskApply(aid, r, outcome, t);
     const res2 = outcome === 'no' ? 'no' : done.changed ? outcome : 'some';
-    const line = assistantMasmonAskLine(aid, r.replies, outcome === 'no' ? 'no' : done.changed ? outcome === 'yes' ? 'yes' : 'some' : 'talk');
+    const line = assistantMasmonAskLine(aid, r.replies, outcome === 'no' ? 'no' : done.changed ? outcome === 'yes' ? 'yes' : 'some' : 'think');
     record(res2, done.what || '', done.changed, line);
     return {
       res: res2,

@@ -1176,10 +1176,16 @@ export const suggestNameOk = (n, assistantNames = []) => {
   if (suggestLooksContact(t)) return false;
   const f = masmonFold(t);
   if (MASMON_NAME_NG.some(w => f.includes(masmonFold(w)))) return false;
-  if (CALLNAME_BANNED_RE.test(t)) return false;
+  if (SUGGEST_NAME_BANNED_RE.test(t)) return false;
   if (assistantNames.some(a => a && masmonFold(a) === f)) return false;
   return true;
 };
+// 提案で付ける名前は、呼び名の禁止のうち恋人っぽい言葉(嫁・彼女・ダーリンなど)は止めない(2026-11-09 社長「全然聞いてくれない」・「俺の嫁」が落ちた)。悪口・下品な言葉・「この子」などはそのまま止める
+export const SUGGEST_NAME_FREE_WORDS = ['ダーリン', 'ハニー', 'ベイビー', 'ベイベ', '彼氏', '彼女', 'カレシ', 'カノジョ', '旦那', 'だんな', 'ダンナ', '嫁', '奥さん', 'ご主人', '恋人', 'こいびと', 'あなた様'];
+const SUGGEST_NAME_BANNED_RE = new RegExp(CALLNAME_BANNED_SOURCE.split('|').filter(w => !SUGGEST_NAME_FREE_WORDS.includes(w)).join('|'), 'i');
+// プレイヤーが「」でくくった言葉(sClean で『』になっている)。名前の話のときは、それをそのまま名前の案にする
+const suggestQuoted = (text) => { const m = String(text || '').match(/『([^』]{1,20})』/); return m ? m[1].trim() : ''; };
+const SUGGEST_NAME_TALK_RE = /名前|名|呼|ネーム|なまえ|あだ名|ニックネーム/;
 const sClean = (v, n) => str(v, n).replace(/[\n\r<>{}`]/g, ' ').replace(/「/g, '『').replace(/」/g, '』').trim(); // かぎかっこは『』にして、プレイヤーのことばの「」を閉じられないようにする
 export const normalizeSuggest = (body, digest) => {
   const a = str(body && body.a, 20);
@@ -1248,7 +1254,11 @@ export const validateSuggest = (raw, q, assistantNames, onDrop = () => {}) => {
   const any = got.talk || got.some || got.yes || got.no;
   // 返事は1つでも残れば ok。足りない種類はほかの種類の文で埋めない(断ったのに「変えとくね」と出ないように)。ゲームが助手ごとの用意した台詞で埋める
   const out = { kind, name: '', colors: [], monster: '', slot: 0, face: '', deckName: '', plan: '', style: '', names: [], palette: [], replies: { yes: got.yes, some: got.some, no: got.no, talk: got.talk } };
-  if (kind === 'name') { const n = String(raw.name || '').trim(); if (suggestNameOk(n, assistantNames)) out.name = n; else { onDrop('name'); out.kind = 'none'; } }
+  // 「」でくくった名前の案は、AI の読み取りより先にそのまま拾う(そのマスモンが分かるときだけ)
+  const quoted = q.ctx.mon && SUGGEST_NAME_TALK_RE.test(q.text) ? suggestQuoted(q.text) : '';
+  if (quoted && (kind === 'name' || kind === 'none')) { if (String(raw.name || '').trim() !== quoted) { out.replies.yes = ''; out.replies.some = ''; } kind = 'name'; out.kind = 'name'; raw = { ...raw, name: quoted }; } // AI の返事が別の名前を言っていたら使わず、ゲームの用意した台詞で受ける
+  // 名前として通さない言葉は「分からない」に落とさず、blocked を付けて返す(ゲームが助手の口調で「その名前は付けられない」と断る)
+  if (kind === 'name') { const n = String(raw.name || '').trim(); if (suggestNameOk(n, assistantNames)) out.name = n; else { onDrop('name'); out.kind = 'none'; if (n) out.blocked = 'name'; } }
   if (kind === 'color') {
     const ids = new Set(q.ctx.colors.map(c => c.id)); const nParts = q.ctx.mon ? q.ctx.mon.parts.length : 0; const seen = new Set();
     for (const x of Array.isArray(raw.colors) ? raw.colors.slice(0, 8) : []) { const p = Number(x && x.part); if (Number.isInteger(p) && p >= 0 && p < nParts && ids.has(x.color) && !seen.has(p)) { seen.add(p); out.colors.push({ part: p, color: x.color }); } }
@@ -1259,7 +1269,7 @@ export const validateSuggest = (raw, q, assistantNames, onDrop = () => {}) => {
     // 名前の付け方のくせ: いまのマスモン全部の新しい名前をまとめて(1回の頼みで)。名前の見張りは1つずつ通す
     out.style = sClean(raw.style, 40); out.names = []; const used = new Set();
     for (const x of Array.isArray(raw.names) ? raw.names.slice(0, 8) : []) { const sl = Number(x && x.slot), n = String((x && x.n) || '').trim(); if (q.ctx.team.some(t => t.slot === sl) && !out.names.some(y => y.slot === sl) && suggestNameOk(n, assistantNames) && !used.has(n)) { used.add(n); out.names.push({ slot: sl, n }); } }
-    if (!out.style || !out.names.length) { onDrop('name_style'); out.kind = 'none'; }
+    if (!out.style || !out.names.length) { onDrop('name_style'); out.kind = 'none'; if (out.style && Array.isArray(raw.names) && raw.names.length) out.blocked = 'name'; }
   }
   if (kind === 'colorStyle') {
     const ids = new Set(q.ctx.colors.map(c => c.id));
