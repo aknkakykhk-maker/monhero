@@ -103,7 +103,15 @@ const pressable = (page, sel) => page.evaluate((s) => { const b = document.query
       // ④ 買って贈る(窓は毎回出る)
       await page.locator('[data-assistant-life-give-buy]').click(); await page.waitForTimeout(400);
       check('② 確かめの窓は毎回出る', (await page.locator('[data-assistant-life-buy-confirm]').count()) === 1);
-      await page.locator('[data-assistant-life-buy-go]').click(); await page.waitForTimeout(1200); await finishTalk(page); await closeFx(page);
+      // 裏クイックが回っているあいだ(助手ライフを開くと自動で始まる)は全面の演出がためられるので、小さな札で出す(2026-11-09 社長「ここで親密度上がる演出なかったよ」)
+      const quickLive = await page.evaluate(() => { if (document.querySelector('[data-life-quick-run="live"]')) return 'real'; const d = document.createElement('div'); d.setAttribute('data-life-quick-run', 'live'); d.id = 'check-quick-live'; d.hidden = true; document.body.appendChild(d); return 'stub'; });
+      await page.locator('[data-assistant-life-buy-go]').click(); await page.waitForTimeout(600); await finishTalk(page);
+      const chips = new Set(); let shot7 = false;
+      for (let i = 0; i < 24; i++) { for (const t of await page.locator('.mh-gfx-chip').allInnerTexts().catch(() => [])) chips.add(t.replace(/\s+/g, ' ')); if (SHOTS && !shot7 && chips.size >= 2) { shot7 = true; await page.screenshot({ path: path.join(shotDir, 'tate-7-pair-fx.png') }); } await page.waitForTimeout(150); }
+      const chipText = [...chips].join(' / ');
+      check(`④ 裏クイック中(${quickLive})に2人に贈ると、すぐ出る札で「友情Lv」と2人それぞれの「仲良し度」が出る`, /友情Lv/.test(chipText) && (chipText.match(/仲良し度/g) || []).length >= 2, chipText.slice(0, 160));
+      await page.evaluate(() => { const d = document.getElementById('check-quick-live'); if (d) d.remove(); });
+      await closeFx(page);
       await page.locator('[data-assistant-life-scene-back]').click({ timeout: 3000 }).catch(() => {}); await page.waitForTimeout(300);
       const p1 = await points(page), own1 = await owned(page);
       const day = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_assistant_life_gift_day_v1') || 'null'));
