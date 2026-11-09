@@ -250,6 +250,18 @@ const ALL_HOME = { groups: [], solo: Object.fromEntries(['mua', 'kiki', 'momosuk
       check(`${T}⑨ ごほうびを使い切った助手は、HOME の顔も地図の全身も出て「済」の印(ほかの人には付かない・UP は残る)・シートに次の時間帯・対戦のボタンは出ない`,
         ok && home.dra && !home.erubin && home.up && map.dra && !map.erubin && /ごほうびアップは使い切りました/.test(sheet.next) && !sheet.card && sheet.other, JSON.stringify({ ok, home, map, sheet }));
     }
+    // ⑪ HOME の場面が画面より低い端末(上下に帯がある iPhone など)でも、地図の下に一覧の見出しがのぞかない
+    //    (2026-11-09 社長「画面バグってる」: 見出し「ASSISTANT LIFE · WHERE」が地図の下で切れて見えた)
+    if (v.id === 't390' || v.id === 'y844') {
+      await closeLife(page);
+      await page.addStyleTag({ content: 'main.mh-home-scene{flex:none!important;height:calc(100% - 64px)!important}' }); await page.waitForTimeout(500);
+      await openMap(page);
+      const r = await page.evaluate(() => { const box = document.querySelector('[data-assistant-life-where]'), below = document.querySelector('[data-assistant-life-map-below]'), S = document.querySelector('[data-assistant-life-map]');
+        return { boxH: box.clientHeight, sceneH: S.offsetHeight, belowTop: below ? below.getBoundingClientRect().top - box.getBoundingClientRect().top : null, scroll: box.scrollTop }; });
+      if (SHOTS) await page.screenshot({ path: path.join(shotDir, `short-home-${v.id}.png`) });
+      check(`${T}⑪ HOME が画面より低くても、地図の下に一覧の見出しがのぞかない(一覧は画面の下の外から)`, r.sceneH < r.boxH && r.scroll === 0 && r.belowTop != null && r.belowTop >= r.boxH - 1, JSON.stringify(r));
+      await closeLife(page);
+    }
     await page.close();
   }
   check('⑧ ページのエラーが出ない', errors.length === 0, errors.slice(0, 3).join(' / '));

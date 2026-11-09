@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9e2766e7562327b7
+// source-sha256: 6726a4eecff98639
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -109901,6 +109901,12 @@ function AssistantLifeTownMap({
 .mhl-map-town[data-assistant-life-map-empty="1"]>span{opacity:.6;border-color:#94a3b8aa;background:#0f172ad9}
 .mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:${small ? 8 : 9}px;font-weight:900;line-height:${small ? 12 : 13}px;color:#fff;box-shadow:0 1px 3px #0008}
 [data-assistant-life-map] .mh-home-facility:active>span,.mhl-map-town:active>span{transform:scale(.94)}`), React.createElement("div", {
+    className: "relative",
+    style: {
+      minHeight: '100%'
+    },
+    "data-assistant-life-map-fill": true
+  }, React.createElement("div", {
     ref: sceneRef,
     className: `mh-home-scene${home.wide ? ' is-wide' : ''}`,
     style: sceneStyle,
@@ -110007,7 +110013,7 @@ function AssistantLifeTownMap({
       bottom: 'calc(10px + env(safe-area-inset-bottom))'
     },
     "data-assistant-life-map-hint": true
-  }, "場所を押すと、いる助手とできること")), list && React.createElement("div", {
+  }, "場所を押すと、いる助手とできること"))), list && React.createElement("div", {
     ref: listRef,
     className: "relative bg-[#0b1020]",
     "data-assistant-life-map-below": true
