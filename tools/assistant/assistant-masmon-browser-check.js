@@ -278,6 +278,7 @@ const layoutProblems = (page) => page.evaluate(() => {
             const g0 = await gNow();
             await page.locator('[data-assistant-masmon-row]').first().click(); await page.locator('[data-assistant-masmon-detail]').waitFor({ timeout: 3000 }).catch(() => {});
             const gr = await send('masmon', '育て方を変えてみたら？', false);
+            await page.locator('[data-assistant-masmon-detail-close]').click({ timeout: 2000 }).catch(() => {});
             await page.locator('[data-assistant-masmon-row]').first().click(); await page.locator('[data-assistant-masmon-detail]').waitFor({ timeout: 3000 }).catch(() => {});
             const g1 = await gNow();
             const mark = await page.locator('[data-assistant-masmon-grow-mine]').innerText().catch(() => '');
