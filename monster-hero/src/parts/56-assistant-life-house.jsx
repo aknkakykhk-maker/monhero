@@ -1184,7 +1184,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         <div className="mhl-wood" style={{ backgroundImage: `url(${ASSISTANT_LIFE_VIEW[look][1]})` }}/>
         {/* 📋 居場所: HOME の画面そのものを地図に(画面いっぱい・56-assistant-life-map.jsx)。下に今までの一覧・見出し・アイコンの列 */}
         {tab === 'where' ? (
-          <AssistantLifeTownMap life={life} ids={ids} land={land} onBack={() => setTab('house')} onPick={(id) => { if (!uiV2) setTab('house'); setRoomId(id); }} onBeat={beat} onCard={card}
+          <AssistantLifeTownMap life={life} ids={ids} land={land} onBack={() => setTab('house')} onPick={(id) => { setTab('house'); setRoomId(id); }} onView={uiV2 ? (id) => setRoomId(id) : null} onBeat={beat} onCard={card}
             list={<>
               {header}
               {note && <p data-assistant-life-note className="mx-3 mb-1 rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 text-[11px] font-bold text-sky-100">{note}</p>}
