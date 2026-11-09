@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9e2766e7562327b7
+// source-sha256: dae0f44aebf0e5ce
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -101904,12 +101904,16 @@ const assistantPeerUseItem = async (kind, pair) => {
   const pointsBefore = assistantPeerPoints(ASSISTANT_PEER_STORE.state, pair[0], pair[1]);
   let r,
     playerGains,
-    likes = null;
+    likes = null,
+    bondBefore = [],
+    bondAfter = [];
   if (lifeGifts) {
     const amt = assistantLifeGiftAmounts(kind, pair);
     likes = amt.likes;
     r = await assistantPeerGain(pair[0], pair[1], 'lifeItem', amt.peer);
     playerGains = amt.player;
+    const bondPts = () => pair.map(id => typeof assistantLifeBondPointsOf === 'function' ? assistantLifeBondPointsOf(id) : null);
+    bondBefore = bondPts();
     pair.forEach((id, i) => {
       if (assistantPeerPlayerBondAdder) {
         try {
@@ -101917,6 +101921,7 @@ const assistantPeerUseItem = async (kind, pair) => {
         } catch {}
       }
     });
+    bondAfter = bondPts();
     await assistantLifeGiftRecord(kind, pair);
   } else {
     r = await assistantPeerGain(pair[0], pair[1], kind);
@@ -101924,7 +101929,29 @@ const assistantPeerUseItem = async (kind, pair) => {
     const pa = typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS[kind === 'gift' ? 'peerGift' : 'peerToken'];
     playerGains = [pa ? pa.amount : 0, pa ? pa.amount : 0];
   }
-  if (assistantPeerLifeOn() && typeof growthFxPeerItem === 'function') {
+  const quickLive = typeof document !== 'undefined' && !!document.querySelector('[data-life-quick-run="live"]');
+  if (assistantPeerLifeOn() && quickLive && lifeGifts && typeof growthFxPush === 'function') {
+    const after = pointsBefore + (r && r.gained || 0);
+    try {
+      if (after > pointsBefore) growthFxPush({
+        tier: 'small',
+        kind: 'friend',
+        who: assistantPeerPairKey(pair[0], pair[1]),
+        name: pair.map(id => (assistantById(id) || {}).name || id).join('・'),
+        gain: after - pointsBefore,
+        pctFrom: typeof growthFxPeerPct === 'function' ? growthFxPeerPct(pointsBefore) : 0,
+        pctTo: typeof growthFxPeerPct === 'function' ? growthFxPeerPct(after) : 100
+      });
+      if (typeof growthFxPeerLevel === 'function') growthFxPeerLevel({
+        pair: [...pair],
+        levelBefore: assistantPeerLevelOf(pointsBefore),
+        levelAfter: assistantPeerLevelOf(after)
+      });
+      pair.forEach((id, i) => {
+        if (typeof growthFxAssistantBond === 'function' && Number.isFinite(bondBefore[i]) && Number.isFinite(bondAfter[i])) growthFxAssistantBond(id, bondBefore[i], bondAfter[i]);
+      });
+    } catch {}
+  } else if (assistantPeerLifeOn() && typeof growthFxPeerItem === 'function') {
     const after = pointsBefore + (r && r.gained || 0);
     const reaction = likes ? likes.includes('like') && !likes.includes('bad') ? 'like' : likes.includes('bad') && !likes.includes('like') ? 'dislike' : null : null;
     const itemId = lifeGifts ? assistantLifeGiftOf(kind).itemId : ASSISTANT_PEER_ITEM_IDS[kind];
