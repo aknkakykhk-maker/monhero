@@ -98,6 +98,14 @@ const bondGifts = (page) => page.evaluate(() => (JSON.parse(localStorage.getItem
     check('④ ギフトボックスに並ぶ', text.includes('ききとの仲良し度 Lv25 のごほうび(追加ぶん)') && text.includes('ききとの仲良し度 Lv24 のごほうび'));
     check('④ 「仲良し度」の札が付く', text.includes('仲良し度'));
     if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `gift-box-${W}.png`) }); }
+    // 「すべて受け取る」は、仲良し度のごほうび以外のギフト(本オープン記念のダイヤ 10,000,000 など)も一緒に受け取る。
+    // ダイヤの増え方は、押す前の所持数と、ほかのまだ受け取っていないギフトのダイヤを差し引いて見る(キャンペーンが増えても落ちない・2026-11-09 ミハリ)
+    const before = await page.evaluate(() => {
+      const gifts = JSON.parse(localStorage.getItem('mh_gifts') || '[]') || [];
+      const other = gifts.filter(g => g && !g.claimedAt && !String(g.id).startsWith('gift_assistant_bond_'))
+        .reduce((t, g) => t + (Array.isArray(g.rewards) ? g.rewards : []).filter(r => r && r.type === 'diamond').reduce((s, r) => s + (Number(r.amount) || 0), 0), 0);
+      return { gold: Number(JSON.parse(localStorage.getItem('mh_gold') || '0')) || 0, other };
+    });
     // すべて受け取る
     await page.evaluate(() => [...document.querySelectorAll('button')].find(b => b.textContent.includes('すべて受け取る') && !b.disabled)?.click());
     await page.waitForTimeout(1500);
@@ -106,8 +114,9 @@ const bondGifts = (page) => page.evaluate(() => (JSON.parse(localStorage.getItem
     // 受け取り済みは新しい50件に整理される(GIFT_HISTORY_LIMIT)ので、残っているものが全部受け取り済みならよい
     check('受け取れる', claimed.length >= 50 && claimed.every(g => g.claimed), `${claimed.length}件`);
     const gold = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_gold') || '0'));
-    // みゅあ Lv2〜30 の 1,684,190,000 + きき Lv2〜25 の 644,190,000 − ききが前に受け取った 50,000(ほかのギフトのダイヤはその上に乗る)
-    check('③ ダイヤは数として足される(桁が大きくても)', Number.isFinite(gold) && gold >= 2328330000 && gold < 2328330000 + 1000000, gold.toLocaleString());
+    // みゅあ Lv2〜30 の 1,684,190,000 + きき Lv2〜25 の 644,190,000 − ききが前に受け取った 50,000。押す前の所持数とほかのギフトのダイヤは差し引く
+    const bondGold = Number.isFinite(gold) ? gold - before.gold - before.other : NaN;
+    check('③ ダイヤは数として足される(桁が大きくても)', bondGold === 2328330000, `${gold.toLocaleString()}(押す前 ${before.gold.toLocaleString()}・ほかのギフト ${before.other.toLocaleString()}・仲良し度のぶん ${Number(bondGold).toLocaleString()})`);
     for (let i = 0; i < 4; i++) {
       await page.evaluate(() => { const d = document.querySelector('[role="dialog"]'); [...(d ? d.querySelectorAll('button') : [])].find(x => /閉じる|OK/.test(x.textContent))?.click(); });
       await page.waitForTimeout(400);
