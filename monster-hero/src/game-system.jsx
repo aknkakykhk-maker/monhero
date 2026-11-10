@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 342ef0389e7470de
+// generated-sha256: a4be86539ca1e429
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -793,6 +793,11 @@ const isAutoQuickRunDifficultyAllowed = (difficulty, quickClears) =>
 //   周回数 = 切り捨て( 進んだWAVE数 ÷ 10 × 難易度のpower × 係数 )   ※1WAVE以上なら最低1周
 //
 //   係数5のとき(10WAVE完走): Normal 5周 / Expert 15周 / Master 25周 / Legend 50周
+//
+// ★2026-11-10 社長の表に変えた。Hard 以上(と極限)の周回数は 19-difficulties-and-rules.jsx の proQuickLoopsFor が決める
+//   (完走: Hard 10 / Expert 50 / Master 100 / GrandMaster 150 / Hell 200 / Legend 300 / EXTREME 500、その上は仮で +200 ずつ。
+//    途中で負けたら WAVE n の重みを n にして、表 × 進んだ重みの合計 ÷ 55 の切り捨て、1WAVE以上なら最低1周)。
+//   この式(proRunQuickLoops)が使われるのは、表に無い Beginner・Easy・Normal だけ(10WAVE完走で 1・2・5周。前のまま)
 const PRO_RUN_QUICK_LOOP_SCALE = 5;
 const PRO_RUN_QUICK_LOOP_MIN = 1;
 const proRunQuickLoops = (wavesCleared, difficultyPower, scale = PRO_RUN_QUICK_LOOP_SCALE) => {
