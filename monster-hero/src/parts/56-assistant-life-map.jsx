@@ -82,7 +82,7 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
 }
 
 // 地図の本体(家の「📋 居場所」のタブ。画面いっぱい・下に今までの一覧)
-function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null, onCard = null, onBack, list = null, land = false, initialPlace = null }) {
+function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null, onCard = null, onBack, list = null, land = false, initialPlace = null, initialAssistantId = null }) {
   const [home, setHome] = React.useState(() => assistantLifeMapReadHome());
   const [sheet, setSheet] = React.useState(() => initialPlace && ASSISTANT_LIFE_MAP_ORDER.includes(initialPlace) ? initialPlace : null);
   const sceneRef = React.useRef(null);
@@ -226,7 +226,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
     const withNames = w && w.with && w.with.length ? `${w.with.map(assistantLifeName).join('・')}と` : 'ひとりで';
     const spent = place === 'cardroom' && typeof assistantLifeCardSpent === 'function' ? assistantLifeCardSpent(id) : null; // { next } か null
     return (
-      <div key={id} className="mt-2 flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-900/85 p-2" data-assistant-life-map-sheet-who={id} data-assistant-life-map-sheet-at={place}>
+      <div key={id} className={`mt-2 flex items-center gap-2 rounded-2xl border bg-slate-900/85 p-2 ${initialAssistantId === id ? "border-sky-300 ring-2 ring-sky-300/70" : "border-white/10"}`} data-assistant-life-map-sheet-selected={initialAssistantId === id ? "1" : undefined} data-assistant-life-map-sheet-who={id} data-assistant-life-map-sheet-at={place}>
         <AssistantFace who={a} size={36} accent={a.accent}/>
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-black text-white">{a.name}{spent && <span className="ml-1 rounded-full bg-slate-200 px-1.5 text-[9.5px] font-black text-slate-900" data-assistant-life-map-sheet-spent>済 ごほうび済み</span>}</p>
