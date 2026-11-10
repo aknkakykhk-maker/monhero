@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e4a38ce227a06778
+// source-sha256: 9e6c4c62a8d29ddd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -109048,7 +109048,13 @@ function AssistantLifeHouse({
     type: "button",
     className: "mhl-find",
     "data-assistant-life-find": true,
-    onClick: () => setTab('where')
+    onClick: () => {
+      if (uiV2) {
+        setMapFocusPlace(null);
+        setMapFocusAssistantId(null);
+      }
+      setTab('where');
+    }
   }, "📋 みんなの居場所 ›");
   const lifeStatusList = uiV2 ? React.createElement("section", {
     className: "mx-3 mb-2 rounded-2xl border border-white/20 bg-slate-950/85 p-2 text-white",
@@ -109246,8 +109252,18 @@ function AssistantLifeHouse({
     land: land,
     initialPlace: uiV2 ? mapFocusPlace : null,
     initialAssistantId: uiV2 ? mapFocusAssistantId : null,
-    onBack: () => setTab('house'),
+    onBack: () => {
+      if (uiV2) {
+        setMapFocusPlace(null);
+        setMapFocusAssistantId(null);
+      }
+      setTab('house');
+    },
     onPick: id => {
+      if (uiV2) {
+        setMapFocusPlace(null);
+        setMapFocusAssistantId(null);
+      }
       setTab('house');
       setRoomId(id);
     },
