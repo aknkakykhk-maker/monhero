@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2b38c757bf156ebc
+// generated-sha256: 91e518df5c6f4576
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -64053,6 +64053,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const [uiV2, setUiV2] = React.useState(false);
   const [callPicker, setCallPicker] = React.useState(false);
   const [lifeStatusExpanded, setLifeStatusExpanded] = React.useState(false);
+  const [mapFocusPlace, setMapFocusPlace] = React.useState(null);
   React.useEffect(() => { let alive = true; Promise.resolve(storeGet('mh_assistant_life_ui_v2', false, false)).then(v => { if (alive) setUiV2(v === true); }).catch(() => {}); return () => { alive = false; }; }, []);
   const toggleUiV2 = () => { const next = !uiV2; setUiV2(next); setCallPicker(false); setRoomId(null); try { void storeSet('mh_assistant_life_ui_v2', next, false); } catch {} };
   const [roomId, setRoomId] = React.useState(st.focus || null);
@@ -64306,12 +64307,16 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
           const w = assistantLifeWhereOf(life, id);
           const groupIds = w && w.group && Array.isArray(w.group.ids) ? w.group.ids : [];
           const peers = groupIds.filter(x => x !== id && metSet.has(x));
+          const mapPlace = w && ASSISTANT_LIFE_MAP_ORDER.includes(w.place) ? w.place : 'home';
           const place = w ? assistantLifePlaceShow(w.place) : '家';
           const doing = w ? (ASSISTANT_LIFE_DOINGS[w.doing] || {}).label : '';
-          return <button type="button" key={id} data-assistant-life-v2-status-id={id} className="flex min-h-[44px] w-full items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left active:bg-white/15" onClick={() => setRoomId(id)}>
-            <span className="min-w-0 shrink-0 text-[12px] font-black">{nameOf(id)}</span>
-            <span className="min-w-0 truncate text-right text-[10px] text-slate-200">{place}{doing ? ` ・ ${doing}` : ''}{peers.length ? ` ・ ${peers.map(nameOf).join('・')}と一緒` : ''}</span>
-          </button>;
+          return <div key={id} data-assistant-life-v2-status-id={id} className="flex min-h-[44px] w-full items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-1 py-1">
+            <button type="button" className="flex min-h-[44px] min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-2 text-left active:bg-white/15" onClick={() => setRoomId(id)}>
+              <span className="min-w-0 shrink-0 text-[12px] font-black">{nameOf(id)}</span>
+              <span className="min-w-0 truncate text-right text-[10px] text-slate-200">{place}{doing ? ` ・ ${doing}` : ''}{peers.length ? ` ・ ${peers.map(nameOf).join('・')}と一緒` : ''}</span>
+            </button>
+            <button type="button" aria-label={`${nameOf(id)}の居場所を地図で見る`} className="min-h-[44px] shrink-0 rounded-lg border border-sky-300/50 px-2 text-[11px] font-bold text-sky-100 active:bg-white/15" onClick={() => { setMapFocusPlace(mapPlace); setTab('where'); }}>地図 ›</button>
+          </div>;
         })}
       </div>}
     </section>
@@ -64369,7 +64374,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         <div className="mhl-wood" style={{ backgroundImage: `url(${ASSISTANT_LIFE_VIEW[look][1]})` }}/>
         {/* 📋 居場所: HOME の画面そのものを地図に(画面いっぱい・56-assistant-life-map.jsx)。下に今までの一覧・見出し・アイコンの列 */}
         {tab === 'where' ? (
-          <AssistantLifeTownMap life={life} ids={ids} land={land} onBack={() => setTab('house')} onPick={(id) => { setTab('house'); setRoomId(id); }} onView={uiV2 ? (id) => setRoomId(id) : null} onBeat={beat} onCard={card}
+          <AssistantLifeTownMap life={life} ids={ids} land={land} initialPlace={uiV2 ? mapFocusPlace : null} onBack={() => setTab('house')} onPick={(id) => { setTab('house'); setRoomId(id); }} onView={uiV2 ? (id) => setRoomId(id) : null} onBeat={beat} onCard={card}
             list={<>
               {header}
               {note && <p data-assistant-life-note className="mx-3 mb-1 rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 text-[11px] font-bold text-sky-100">{note}</p>}
@@ -64606,9 +64611,9 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
 }
 
 // 地図の本体(家の「📋 居場所」のタブ。画面いっぱい・下に今までの一覧)
-function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null, onCard = null, onBack, list = null, land = false }) {
+function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null, onCard = null, onBack, list = null, land = false, initialPlace = null }) {
   const [home, setHome] = React.useState(() => assistantLifeMapReadHome());
-  const [sheet, setSheet] = React.useState(null);
+  const [sheet, setSheet] = React.useState(() => initialPlace && ASSISTANT_LIFE_MAP_ORDER.includes(initialPlace) ? initialPlace : null);
   const sceneRef = React.useRef(null);
   const listRef = React.useRef(null);
   // HOME の値は、HOME の吹き出しが変わると動く。ときどき読み直す(変わったときだけ描き直す)
