@@ -707,6 +707,16 @@ const helpDataRows = (id) => {
     case 'proQuickLoops':
       return Object.values(DIFFICULTY_SETTINGS).map(s => [s.label,
         `10WAVE完走 ${proRunQuickLoops(10, s.power)}周 ／ WAVE5まで ${proRunQuickLoops(5, s.power)}周`]);
+    // チャレンジモードをクリアしたときに入るクイック周回数(2026-11-10 社長の表)。19-difficulties-and-rules.jsx の challengeClearQuickLoops から作る
+    // (数を書き写さない)。周回の入らない難易度は「なし」。極限チャレンジは公開している難易度だけ
+    case 'challengeQuickLoops': {
+      if (typeof challengeClearQuickLoops !== 'function') return [];
+      const text = (n) => (n > 0 ? `クリアで ${n.toLocaleString()}周` : 'なし');
+      return [
+        ...Object.entries(DIFFICULTY_SETTINGS).map(([id, s]) => [s.label, text(challengeClearQuickLoops(id))]),
+        ...(typeof PUBLIC_EXTREME_DIFFICULTIES !== 'undefined' ? PUBLIC_EXTREME_DIFFICULTIES : []).map(s => [s.label, text(challengeClearQuickLoops(null, s.id))]),
+      ];
+    }
     // MFバトルカードの1戦でもらえるビートP(2026-10-26 にカードポイントをやめてビートPにした)。強さごとの勝ち・負けとマルチ対戦を 82-card-battle-core.jsx の数から作る
     // (数を調整したときにヘルプが古いままにならないよう、行を書き写さない。2列目は短く・help-render-check)
     case 'cardBeatPointRewards': {
@@ -1002,6 +1012,7 @@ const HELP_DATA_TITLES = {
   tacticsHateTypes: 'タイプ別の🔥',
   tacticsHateOdds: '狙われやすさの目安',
   proQuickLoops: 'プロモードで入るクイック周回数',
+  challengeQuickLoops: 'チャレンジモードのクリアで入るクイック周回数',
   extremeDifficulties: '極限チャレンジの難易度',
   rhythmEventPlayBonus: 'イベントの回数ボーナス（1回あたり）',
   rhythmWeeklyRewards: '週間ランキングの順位報酬',

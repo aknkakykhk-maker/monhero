@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0e8be3cb86844cdd
+// source-sha256: 07a2460bade88afd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -17559,6 +17559,27 @@ const EXTREME_DIFFICULTY_THEMES = Object.freeze({
 });
 const extremeDifficultyTheme = difficultyId => EXTREME_DIFFICULTY_THEMES[difficultyId] || EXTREME_DIFFICULTY_THEMES.EXTREME;
 const PUBLIC_EXTREME_DIFFICULTIES = Object.freeze(ALL_EXTREME_DIFFICULTIES.filter(setting => setting.available));
+const CHALLENGE_CLEAR_QUICK_LOOPS = Object.freeze({
+  Beginner: 0,
+  Easy: 0,
+  Normal: 0,
+  Hard: 10,
+  Expert: 50,
+  Master: 100,
+  GrandMaster: 150,
+  Hell: 200,
+  Legend: 300
+});
+const CHALLENGE_CLEAR_QUICK_LOOPS_EXTREME = 500;
+const CHALLENGE_CLEAR_QUICK_LOOPS_EXTREME_STEP = 200;
+const challengeClearQuickLoops = (difficulty, extremeId = null) => {
+  if (extremeId) {
+    const index = ALL_EXTREME_DIFFICULTIES.findIndex(setting => setting.id === extremeId);
+    return index < 0 ? 0 : CHALLENGE_CLEAR_QUICK_LOOPS_EXTREME + CHALLENGE_CLEAR_QUICK_LOOPS_EXTREME_STEP * index;
+  }
+  const loops = Number(CHALLENGE_CLEAR_QUICK_LOOPS[difficulty]);
+  return Number.isFinite(loops) && loops > 0 ? Math.floor(loops) : 0;
+};
 const UNDERWORLD_TAB_ID = 'underworld';
 const isUnderworldDifficultyId = difficultyId => extremeRuleSetting(difficultyId)?.tab === UNDERWORLD_TAB_ID;
 const PUBLIC_EXTREME_TAB_DIFFICULTIES = Object.freeze(PUBLIC_EXTREME_DIFFICULTIES.filter(setting => setting.tab !== UNDERWORLD_TAB_ID));
@@ -19538,6 +19559,12 @@ const helpDataRows = id => {
       return (typeof RAID_JACK_B_TIERS !== 'undefined' ? RAID_JACK_B_TIERS : []).map(t => [t.name, `ライフ ${t.hp.toLocaleString()} ／ 技${t.actionCount}本`]);
     case 'proQuickLoops':
       return Object.values(DIFFICULTY_SETTINGS).map(s => [s.label, `10WAVE完走 ${proRunQuickLoops(10, s.power)}周 ／ WAVE5まで ${proRunQuickLoops(5, s.power)}周`]);
+    case 'challengeQuickLoops':
+      {
+        if (typeof challengeClearQuickLoops !== 'function') return [];
+        const text = n => n > 0 ? `クリアで ${n.toLocaleString()}周` : 'なし';
+        return [...Object.entries(DIFFICULTY_SETTINGS).map(([id, s]) => [s.label, text(challengeClearQuickLoops(id))]), ...(typeof PUBLIC_EXTREME_DIFFICULTIES !== 'undefined' ? PUBLIC_EXTREME_DIFFICULTIES : []).map(s => [s.label, text(challengeClearQuickLoops(null, s.id))])];
+      }
     case 'cardBeatPointRewards':
       {
         if (typeof CARD_AI_LEVELS === 'undefined' || typeof CARD_LEVEL_ORDER === 'undefined') return [];
@@ -19751,6 +19778,7 @@ const HELP_DATA_TITLES = {
   tacticsHateTypes: 'タイプ別の🔥',
   tacticsHateOdds: '狙われやすさの目安',
   proQuickLoops: 'プロモードで入るクイック周回数',
+  challengeQuickLoops: 'チャレンジモードのクリアで入るクイック周回数',
   extremeDifficulties: '極限チャレンジの難易度',
   rhythmEventPlayBonus: 'イベントの回数ボーナス（1回あたり）',
   rhythmWeeklyRewards: '週間ランキングの順位報酬',
@@ -185462,6 +185490,19 @@ function MonsterHeroGame() {
       wavesCleared
     } : null;
   };
+  const CHALLENGE_CLEAR_WAVES = 10;
+  const awardChallengeClearQuickLoops = async wavesCleared => {
+    if (runMode !== BATTLE_MODE_CHALLENGE) return null;
+    if (!(Number(wavesCleared) >= CHALLENGE_CLEAR_WAVES)) return null;
+    const loops = challengeClearQuickLoops(difficulty, extremeRunRef.current ? extremeDifficulty : null);
+    if (!(loops > 0)) return null;
+    const awarded = await awardBackQuickLoops(loops);
+    return awarded ? {
+      ...awarded,
+      wavesCleared,
+      challengeClear: true
+    } : null;
+  };
   const awardBackQuickLoops = async loops => {
     if (!autoQuickRunConfigured(autoSettings)) return null;
     const quickDifficulty = autoSettings.quickRun.difficulty;
@@ -185665,7 +185706,7 @@ function MonsterHeroGame() {
       ...entry,
       xpGain: 0
     })) : waveHistory;
-    const proQuickAward = await awardProRunQuickLoops(wavesCleared);
+    const proQuickAward = (await awardProRunQuickLoops(wavesCleared)) || (await awardChallengeClearQuickLoops(wavesCleared));
     setFinalRewardSummary({
       quickMode: isQuickMode(runMode),
       breederXpGain,

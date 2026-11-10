@@ -83,7 +83,8 @@ check('③-5 絆はAUTO設定の供モン①②③へも入れる',
   && /bondParticipantMasuIds: quickAllyMasuIds/.test(body));
 // ★報酬を配り終えてから呼ぶ。先に呼ぶと、プロ本体の報酬が入る前に画面へ出てしまう
 check('③-6 プロ本体の報酬を配り終えてから呼ぶ',
-  /const proQuickAward = await awardProRunQuickLoops\(wavesCleared\);\n\s*setFinalRewardSummary\(/.test(app));
+  // (2026-11-10 チャレンジモードのクリアぶん awardChallengeClearQuickLoops を「||」で続けた。プロが配ったときはそちらを呼ばない)
+  /const proQuickAward = \(?await awardProRunQuickLoops\(wavesCleared\)\)?(?: \|\| \(await awardChallengeClearQuickLoops\(wavesCleared\)\))?;\n\s*setFinalRewardSummary\(/.test(app));
 check('③-7 結果画面へ渡している', /setFinalRewardSummary\(\{[^}]*proQuickAward \}\)/.test(app));
 check('③-8 結果画面に出している',
   part('27-result-widgets.jsx').includes('data-pro-quick-award')

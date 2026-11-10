@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f3e158eac65b0219
+// generated-sha256: 11d3f8a7702248cc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -11906,6 +11906,24 @@ const EXTREME_DIFFICULTY_THEMES = Object.freeze({
 });
 const extremeDifficultyTheme = (difficultyId) => EXTREME_DIFFICULTY_THEMES[difficultyId] || EXTREME_DIFFICULTY_THEMES.EXTREME;
 const PUBLIC_EXTREME_DIFFICULTIES = Object.freeze(ALL_EXTREME_DIFFICULTIES.filter(setting=>setting.available));
+// ===== チャレンジモードをクリアしたときに入る、裏のクイック周回ぶん(2026-11-10 社長の表) =====
+// 遊んだ難易度ごとの周回数。配り方はプロモードと同じ入口(60-app.jsx の awardBackQuickLoops)。ヘルプの表(20-market-notices-help.jsx の
+// challengeQuickLoops)も、本体もここだけを読む(数を書き写さない)。クリアしたときだけ配り、負け・リタイアでは配らない。
+// Beginner・Easy・Normal は 0(配らない)
+const CHALLENGE_CLEAR_QUICK_LOOPS = Object.freeze({ Beginner:0, Easy:0, Normal:0, Hard:10, Expert:50, Master:100, GrandMaster:150, Hell:200, Legend:300 });
+// 極限チャレンジ。EXTREME は 500。その上は ALL_EXTREME_DIFFICULTIES の並び順に 1段ごとに +200(NIGHTMARE 700・CHAOS 900・ULTIMATE 1100…)。
+// ★EXTREME より上の数は、社長の「とりあえず仮に」(2026-11-10)。決まったらここだけを直す
+const CHALLENGE_CLEAR_QUICK_LOOPS_EXTREME = 500;
+const CHALLENGE_CLEAR_QUICK_LOOPS_EXTREME_STEP = 200;
+// difficulty … ふつうの難易度(DIFFICULTY_SETTINGS のキー)。extremeId … 極限チャレンジの難易度(極限でなければ null)
+const challengeClearQuickLoops = (difficulty, extremeId = null) => {
+  if (extremeId) {
+    const index = ALL_EXTREME_DIFFICULTIES.findIndex(setting => setting.id === extremeId);
+    return index < 0 ? 0 : CHALLENGE_CLEAR_QUICK_LOOPS_EXTREME + CHALLENGE_CLEAR_QUICK_LOOPS_EXTREME_STEP * index;
+  }
+  const loops = Number(CHALLENGE_CLEAR_QUICK_LOOPS[difficulty]);
+  return Number.isFinite(loops) && loops > 0 ? Math.floor(loops) : 0;
+};
 // 冥界チャレンジ(2026-11-01 社長の決定)。INFERNO・COCYTUS は難易度選びのタブだけ「冥界」へ移す。
 // ★難易度の名前・極限の一覧(ALL_EXTREME_DIFFICULTIES)の並び・保存キー(mh_extreme_hs_/clears_<id>)・ランキングの枠(Extreme<id>)は変えない。
 //   表示の分け方だけを、設定の tab:'underworld' の印で決める
@@ -13438,6 +13456,16 @@ const helpDataRows = (id) => {
     case 'proQuickLoops':
       return Object.values(DIFFICULTY_SETTINGS).map(s => [s.label,
         `10WAVE完走 ${proRunQuickLoops(10, s.power)}周 ／ WAVE5まで ${proRunQuickLoops(5, s.power)}周`]);
+    // チャレンジモードをクリアしたときに入るクイック周回数(2026-11-10 社長の表)。19-difficulties-and-rules.jsx の challengeClearQuickLoops から作る
+    // (数を書き写さない)。周回の入らない難易度は「なし」。極限チャレンジは公開している難易度だけ
+    case 'challengeQuickLoops': {
+      if (typeof challengeClearQuickLoops !== 'function') return [];
+      const text = (n) => (n > 0 ? `クリアで ${n.toLocaleString()}周` : 'なし');
+      return [
+        ...Object.entries(DIFFICULTY_SETTINGS).map(([id, s]) => [s.label, text(challengeClearQuickLoops(id))]),
+        ...(typeof PUBLIC_EXTREME_DIFFICULTIES !== 'undefined' ? PUBLIC_EXTREME_DIFFICULTIES : []).map(s => [s.label, text(challengeClearQuickLoops(null, s.id))]),
+      ];
+    }
     // MFバトルカードの1戦でもらえるビートP(2026-10-26 にカードポイントをやめてビートPにした)。強さごとの勝ち・負けとマルチ対戦を 82-card-battle-core.jsx の数から作る
     // (数を調整したときにヘルプが古いままにならないよう、行を書き写さない。2列目は短く・help-render-check)
     case 'cardBeatPointRewards': {
@@ -13733,6 +13761,7 @@ const HELP_DATA_TITLES = {
   tacticsHateTypes: 'タイプ別の🔥',
   tacticsHateOdds: '狙われやすさの目安',
   proQuickLoops: 'プロモードで入るクイック周回数',
+  challengeQuickLoops: 'チャレンジモードのクリアで入るクイック周回数',
   extremeDifficulties: '極限チャレンジの難易度',
   rhythmEventPlayBonus: 'イベントの回数ボーナス（1回あたり）',
   rhythmWeeklyRewards: '週間ランキングの順位報酬',
@@ -102788,6 +102817,20 @@ function MonsterHeroGame() {
     const awardedPro = await awardBackQuickLoops(loops);
     return awardedPro ? { ...awardedPro, wavesCleared } : null;
   };
+  // ===== チャレンジモードをクリアしたとき、遊んだ難易度に応じたクイック周回ぶんを配る(2026-11-10 社長) =====
+  // 周回数は 19-difficulties-and-rules.jsx の challengeClearQuickLoops(Hard 10 〜 Legend 300・EXTREME 500・その上は仮で +200 ずつ)。
+  // ★クリアしたときだけ(全WAVEを倒した awardRunRewards(10))。負け・リタイアでは配らない。
+  // ★条件はプロと同じ(AUTO設定がそろっている・その難易度をクイックでクリア済み。awardBackQuickLoops が見る)。
+  // ★スコア・ランキング送信・チャレンジの自己ベストには触れない。二重に配らないのは awardRunRewards の同期ロック(rewardsAwardedRef)で守る
+  const CHALLENGE_CLEAR_WAVES = 10;
+  const awardChallengeClearQuickLoops = async (wavesCleared) => {
+    if (runMode !== BATTLE_MODE_CHALLENGE) return null;
+    if (!(Number(wavesCleared) >= CHALLENGE_CLEAR_WAVES)) return null;
+    const loops = challengeClearQuickLoops(difficulty, extremeRunRef.current ? extremeDifficulty : null);
+    if (!(loops > 0)) return null;
+    const awarded = await awardBackQuickLoops(loops);
+    return awarded ? { ...awarded, wavesCleared, challengeClear: true } : null;
+  };
   // クイック周回ぶんの報酬を配る共通の入口(プロモードとジャック戦が使う)。条件が欠けたら null
   // (AUTO設定がそろっていない・基準の難易度をクイックでクリアしていない)。スコアとランキングには触れない
   const awardBackQuickLoops = async (loops) => {
@@ -102982,7 +103025,8 @@ function MonsterHeroGame() {
     const rewardWaveHistory = applyQuickXpPolicy(1, runMode, quickRewardPolicyRunRef.current) === 0
       ? waveHistory.map(entry => ({ ...entry, xpGain: 0 })) : waveHistory;
     // プロのランぶんのクイック周回報酬。ここまでで通常の報酬は配り終えている
-    const proQuickAward = await awardProRunQuickLoops(wavesCleared);
+    // チャレンジモードのクリアぶんも、同じ「クイック周回ぶん」のまとまりで結果に出す(2026-11-10)
+    const proQuickAward = (await awardProRunQuickLoops(wavesCleared)) || (await awardChallengeClearQuickLoops(wavesCleared));
     setFinalRewardSummary({ quickMode: isQuickMode(runMode), breederXpGain, breederLevelBefore, breederLevelAfter, goldBefore, goldAfter, heroBondGain, allyBondGains, waveHistory: rewardWaveHistory, proQuickAward });
     // ここまでで、この周ぶんの報酬はすべて書き終えている。
     // 端末へ書けていなければ、次の周へ行かずにここで止める(∞周回のとき)

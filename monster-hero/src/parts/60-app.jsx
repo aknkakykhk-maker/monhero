@@ -10833,6 +10833,20 @@ function MonsterHeroGame() {
     const awardedPro = await awardBackQuickLoops(loops);
     return awardedPro ? { ...awardedPro, wavesCleared } : null;
   };
+  // ===== チャレンジモードをクリアしたとき、遊んだ難易度に応じたクイック周回ぶんを配る(2026-11-10 社長) =====
+  // 周回数は 19-difficulties-and-rules.jsx の challengeClearQuickLoops(Hard 10 〜 Legend 300・EXTREME 500・その上は仮で +200 ずつ)。
+  // ★クリアしたときだけ(全WAVEを倒した awardRunRewards(10))。負け・リタイアでは配らない。
+  // ★条件はプロと同じ(AUTO設定がそろっている・その難易度をクイックでクリア済み。awardBackQuickLoops が見る)。
+  // ★スコア・ランキング送信・チャレンジの自己ベストには触れない。二重に配らないのは awardRunRewards の同期ロック(rewardsAwardedRef)で守る
+  const CHALLENGE_CLEAR_WAVES = 10;
+  const awardChallengeClearQuickLoops = async (wavesCleared) => {
+    if (runMode !== BATTLE_MODE_CHALLENGE) return null;
+    if (!(Number(wavesCleared) >= CHALLENGE_CLEAR_WAVES)) return null;
+    const loops = challengeClearQuickLoops(difficulty, extremeRunRef.current ? extremeDifficulty : null);
+    if (!(loops > 0)) return null;
+    const awarded = await awardBackQuickLoops(loops);
+    return awarded ? { ...awarded, wavesCleared, challengeClear: true } : null;
+  };
   // クイック周回ぶんの報酬を配る共通の入口(プロモードとジャック戦が使う)。条件が欠けたら null
   // (AUTO設定がそろっていない・基準の難易度をクイックでクリアしていない)。スコアとランキングには触れない
   const awardBackQuickLoops = async (loops) => {
@@ -11027,7 +11041,8 @@ function MonsterHeroGame() {
     const rewardWaveHistory = applyQuickXpPolicy(1, runMode, quickRewardPolicyRunRef.current) === 0
       ? waveHistory.map(entry => ({ ...entry, xpGain: 0 })) : waveHistory;
     // プロのランぶんのクイック周回報酬。ここまでで通常の報酬は配り終えている
-    const proQuickAward = await awardProRunQuickLoops(wavesCleared);
+    // チャレンジモードのクリアぶんも、同じ「クイック周回ぶん」のまとまりで結果に出す(2026-11-10)
+    const proQuickAward = (await awardProRunQuickLoops(wavesCleared)) || (await awardChallengeClearQuickLoops(wavesCleared));
     setFinalRewardSummary({ quickMode: isQuickMode(runMode), breederXpGain, breederLevelBefore, breederLevelAfter, goldBefore, goldAfter, heroBondGain, allyBondGains, waveHistory: rewardWaveHistory, proQuickAward });
     // ここまでで、この周ぶんの報酬はすべて書き終えている。
     // 端末へ書けていなければ、次の周へ行かずにここで止める(∞周回のとき)
