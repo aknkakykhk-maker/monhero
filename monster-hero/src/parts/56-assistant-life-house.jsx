@@ -1134,10 +1134,34 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       </div>
     </div>);
   const findBtn = <button type="button" className="mhl-find" data-assistant-life-find onClick={() => setTab('where')}>📋 みんなの居場所 ›</button>;
+  // 新UIのみ: 家の部屋札と同じ居場所データを参照する。未登場の助手は表示しない。
+  const [lifeStatusExpanded, setLifeStatusExpanded] = React.useState(false);
+  const lifeStatusList = uiV2 ? (
+    <section className="mx-3 mb-2 rounded-2xl border border-white/20 bg-slate-950/85 p-2 text-white" data-assistant-life-v2-status>
+      <button type="button" className="flex min-h-[44px] w-full items-center justify-between gap-2 text-left" aria-expanded={lifeStatusExpanded} onClick={() => setLifeStatusExpanded(v => !v)}>
+        <span className="text-[13px] font-black">🏡 みんなの今 <span className="text-[10px] font-bold text-slate-300">（{ids.length}人）</span></span>
+        <span className="text-[11px] font-bold text-amber-200">{lifeStatusExpanded ? '閉じる ▲' : '一覧を見る ▼'}</span>
+      </button>
+      {lifeStatusExpanded && <div className="max-h-[220px] space-y-1 overflow-y-auto overscroll-contain" data-assistant-life-v2-status-list>
+        {ASSISTANT_LIFE_HOUSE_ORDER.filter(id => metSet.has(id)).map(id => {
+          const w = assistantLifeWhereOf(life, id);
+          const groupIds = w && w.group && Array.isArray(w.group.ids) ? w.group.ids : [];
+          const peers = groupIds.filter(x => x !== id && metSet.has(x));
+          const place = w ? assistantLifePlaceShow(w.place) : '家';
+          const doing = w ? (ASSISTANT_LIFE_DOINGS[w.doing] || {}).label : '';
+          return <button type="button" key={id} data-assistant-life-v2-status-id={id} className="flex min-h-[44px] w-full items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left active:bg-white/15" onClick={() => setRoomId(id)}>
+            <span className="min-w-0 shrink-0 text-[12px] font-black">{nameOf(id)}</span>
+            <span className="min-w-0 truncate text-right text-[10px] text-slate-200">{place}{doing ? ` ・ ${doing}` : ''}{peers.length ? ` ・ ${peers.map(nameOf).join('・')}と一緒` : ''}</span>
+          </button>;
+        })}
+      </div>}
+    </section>
+  ) : null;
   const houseView = (
     <div className="relative pt-1">
       <div className={land ? 'mb-1 flex justify-start' : 'mb-1 flex justify-end'} style={{ paddingInline: pad }}>{findBtn}</div>
       <AssistantLifeHouseArt width={houseW} land={land} look={look} rooms={rooms} metSet={metSet} onOpen={setRoomId} diary={diary} pop={!!intro} onBoard={() => setBoardOpen(true)} life={life} peerSt={peerSt}/>
+      {lifeStatusList}
     </div>);
   const tabBody = tab === 'house' ? houseView
     : tab === 'where' ? null // 地図は画面いっぱい(下の whereView)
