@@ -39,6 +39,10 @@ if (grand) {
   check('本オープン記念のお知らせに絵が付いている', typeof grand.image === 'string' && /^images\//.test(grand.image), String(grand.image));
   const file = grand.image ? path.join(web, grand.image.split('?')[0]) : '';
   check('その絵のファイルがある', !!file && fs.existsSync(file), file);
+  // 固定の札の題は短く(2026-11-10 社長「モンヒロビート本オープン記念 これだけにしといて」)。一覧の行の題はそのまま
+  check('固定の札の題は「モンヒロビート本オープン記念」', grand.pinTitle === 'モンヒロビート本オープン記念', String(grand.pinTitle));
+  const app = fs.readFileSync(path.join(web, 'src/parts/60-app.jsx'), 'utf8');
+  check('固定の札は pinTitle があればそれを出す', /data-changelog-pinned-title[^>]*>\{typeof c\.pinTitle==='string'&&c\.pinTitle\?c\.pinTitle:/.test(app));
   check('固定は 11/23 3:59 まで(周回5倍の終わり)', grand.pinTop && grand.pinTop.until === '2026-11-23T03:59:00+09:00', JSON.stringify(grand.pinTop));
   const cases = [
     ['2026-11-09T09:59:00+09:00', false, '出はじめの前'],
