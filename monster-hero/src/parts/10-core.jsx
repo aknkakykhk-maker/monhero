@@ -789,7 +789,8 @@ const isAutoQuickRunDifficultyAllowed = (difficulty, quickClears) =>
 //
 // ★2026-11-10 社長の表に変えた。Hard 以上(と極限)の周回数は 19-difficulties-and-rules.jsx の proQuickLoopsFor が決める
 //   (完走: Hard 10 / Expert 50 / Master 100 / GrandMaster 150 / Hell 200 / Legend 300 / EXTREME 500、その上は仮で +200 ずつ。
-//    途中で負けたら WAVE n の重みを n にして、表 × 進んだ重みの合計 ÷ 55 の切り捨て、1WAVE以上なら最低1周)。
+//    途中で負けたら WAVE n の重みを n にして、表 × 進んだ重みの合計 ÷ 135 の切り捨て、1WAVE以上なら最低1周。WAVE9 でクリアの3分の1。
+//    2026-11-10 社長「クリアだけは劇的に高くしないと報酬美味しすぎる」で ÷55 から ÷135 に下げた)。
 //   この式(proRunQuickLoops)が使われるのは、表に無い Beginner・Easy・Normal だけ(10WAVE完走で 1・2・5周。前のまま)
 const PRO_RUN_QUICK_LOOP_SCALE = 5;
 const PRO_RUN_QUICK_LOOP_MIN = 1;

@@ -136,11 +136,14 @@ check('④-5 絆の行き先も、渡さなければ今までどおり戦って�
     check('⑤-3 タクティクスで難易度に極限のidが入っているときも同じ', f(10, 'NIGHTMARE') === 700);
     const low = ['Beginner', 'Easy', 'Normal'].map(k => [f(10, k), proRunQuickLoops(10, POWERS[k]), f(5, k), proRunQuickLoops(5, POWERS[k])]);
     check('⑤-4 Normal 以下は今までの式のまま', low.every(([x, y, z, w]) => x === y && z === w), JSON.stringify(low));
-    const hell = [3, 5, 8].map(w => f(w, 'Hell'));
-    check('⑤-5 負けたら後ろのWAVEほど重く: Hell で WAVE3 21周 / WAVE5 54周 / WAVE8 130周(200×6/55・15/55・36/55 の切り捨て)', JSON.stringify(hell) === '[21,54,130]', JSON.stringify(hell));
-    check('⑤-6 1WAVE以上なら最低1周(Hard で WAVE1 → 1周)・0WAVE は 0', f(1, 'Hard') === 1 && f(0, 'Hell') === 0);
-    const seq = Array.from({ length: 10 }, (_, i) => f(i + 1, 'Legend'));
-    check('⑤-7 進むほど増え、9WAVEでも完走より少ない', seq.every((v, i) => i === 0 || v >= seq[i - 1]) && seq[8] < seq[9], JSON.stringify(seq));
+    // (2026-11-10 社長「クリアだけは劇的に高くしないと報酬美味しすぎる」: 途中は ÷135。WAVE9 でクリアの3分の1)
+    const legend = Array.from({ length: 10 }, (_, i) => f(i + 1, 'Legend'));
+    check('⑤-5 Legend: 途中は 2/6/13/22/33/46/62/80/100、完走 300', JSON.stringify(legend) === '[2,6,13,22,33,46,62,80,100,300]', JSON.stringify(legend));
+    const hell = Array.from({ length: 10 }, (_, i) => f(i + 1, 'Hell'));
+    check('⑤-6 Hell: 途中は 1/4/8/14/22/31/41/53/66、完走 200', JSON.stringify(hell) === '[1,4,8,14,22,31,41,53,66,200]', JSON.stringify(hell));
+    check('⑤-7 1WAVE以上なら最低1周(Hard で WAVE1 → 1周)・0WAVE は 0', f(1, 'Hard') === 1 && f(0, 'Hell') === 0);
+    const all = ['Hard', 'Expert', 'Master', 'GrandMaster', 'Hell', 'Legend'];
+    check('⑤-7b どの表の難易度も、WAVE9 は完走の3分の1(切り捨て)で、整数で割っている(99.999… で1つ減らない)', all.every(k => f(9, k) === Math.floor(f(10, k) * 45 / 135)) && f(9, 'Legend') === 100, all.map(k => `${k}:${f(9, k)}/${f(10, k)}`).join(' '));
   }
   check('⑤-8 EXTREME より上の数が「仮」だとコメントに書いてある', /とりあえず仮に/.test(a >= 0 ? diffSrc.slice(a, b) : ''));
   const helpSrc = part('20-market-notices-help.jsx');

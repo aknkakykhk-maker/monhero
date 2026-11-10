@@ -489,8 +489,12 @@ const PRO_CLEAR_QUICK_LOOPS = Object.freeze({ Hard:10, Expert:50, Master:100, Gr
 const PRO_CLEAR_QUICK_LOOPS_EXTREME = 500;
 const PRO_CLEAR_QUICK_LOOPS_EXTREME_STEP = 200;
 const PRO_QUICK_LOOP_WAVES = 10;
+const PRO_QUICK_LOOP_PARTIAL_DIVISOR = 135;
 // 負けて途中で終わったときは、後ろのWAVEほど重く数える(WAVE n の重みは n)。
-// 周回 = 切り捨て(完走の周回 × 進んだWAVEの重みの合計 ÷ 全WAVEの重みの合計)。1WAVE以上進んでいれば最低1周
+// 2026-11-10 社長「クリアだけは劇的に高くしないと報酬美味しすぎる」: 途中で負けたときを減らし、WAVE9 で負けてもクリアの3分の1(45/135)にする。
+// 周回 = 切り捨て(完走の周回 × 進んだWAVEの重みの合計 ÷ 135)。1WAVE以上なら最低1周。完走(10WAVE)は表のまま。
+//   ★小数で掛けると 99.999… で1つ減ることがあるので、整数の「完走の周回 × 重みの合計」を先に出してから 135 で割る
+//   例: Legend 2/6/13/22/33/46/62/80/100 → 完走 300 / Hell 1/4/8/14/22/31/41/53/66 → 完走 200
 const proQuickLoopWeight = (waves) => (waves * (waves + 1)) / 2;
 // difficulty … いまの難易度(DIFFICULTY_SETTINGS のキー。タクティクスでは極限のidのこともある)。extremeId … 極限で遊んでいるときの極限のid
 const proQuickLoopsFor = (wavesCleared, difficulty, extremeId = null) => {
@@ -504,7 +508,7 @@ const proQuickLoopsFor = (wavesCleared, difficulty, extremeId = null) => {
   // 表に無い難易度(Normal 以下)は今までの式のまま
   if (!(full > 0)) return proRunQuickLoops(waves, DIFFICULTY_SETTINGS[difficulty]?.power);
   if (waves >= PRO_QUICK_LOOP_WAVES) return full;
-  return Math.max(1, Math.floor(full * proQuickLoopWeight(waves) / proQuickLoopWeight(PRO_QUICK_LOOP_WAVES)));
+  return Math.max(1, Math.floor((full * proQuickLoopWeight(waves)) / PRO_QUICK_LOOP_PARTIAL_DIVISOR));
 };
 // 冥界チャレンジ(2026-11-01 社長の決定)。INFERNO・COCYTUS は難易度選びのタブだけ「冥界」へ移す。
 // ★難易度の名前・極限の一覧(ALL_EXTREME_DIFFICULTIES)の並び・保存キー(mh_extreme_hs_/clears_<id>)・ランキングの枠(Extreme<id>)は変えない。
