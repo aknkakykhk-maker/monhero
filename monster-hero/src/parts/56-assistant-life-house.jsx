@@ -1151,11 +1151,13 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
           const mapPlace = w && ASSISTANT_LIFE_MAP_ORDER.includes(w.place) ? w.place : 'home';
           const place = w ? assistantLifePlaceShow(w.place) : '家';
           const doing = w ? (ASSISTANT_LIFE_DOINGS[w.doing] || {}).label : '';
-          return <button type="button" key={id} data-assistant-life-v2-status-id={id} className="flex min-h-[44px] w-full items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left active:bg-white/15" onClick={() => setRoomId(id)}>
-            <span className="min-w-0 shrink-0 text-[12px] font-black">{nameOf(id)}</span>
-            <span className="min-w-0 truncate text-right text-[10px] text-slate-200">{place}{doing ? ` ・ ${doing}` : ''}{peers.length ? ` ・ ${peers.map(nameOf).join('・')}と一緒` : ''}</span>
-            <span role="button" tabIndex={0} aria-label={`${nameOf(id)}の居場所を地図で見る`} className="shrink-0 rounded-lg border border-sky-300/50 px-2 py-1.5 text-[11px] font-bold text-sky-100" onClick={(e) => { e.stopPropagation(); setMapFocusPlace(mapPlace); setTab('where'); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setMapFocusPlace(mapPlace); setTab('where'); } }}>地図 ›</span>
-          </button>;
+          return <div key={id} data-assistant-life-v2-status-id={id} className="flex min-h-[44px] w-full items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-1 py-1">
+            <button type="button" className="flex min-h-[44px] min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-2 text-left active:bg-white/15" onClick={() => setRoomId(id)}>
+              <span className="min-w-0 shrink-0 text-[12px] font-black">{nameOf(id)}</span>
+              <span className="min-w-0 truncate text-right text-[10px] text-slate-200">{place}{doing ? ` ・ ${doing}` : ''}{peers.length ? ` ・ ${peers.map(nameOf).join('・')}と一緒` : ''}</span>
+            </button>
+            <button type="button" aria-label={`${nameOf(id)}の居場所を地図で見る`} className="min-h-[44px] shrink-0 rounded-lg border border-sky-300/50 px-2 text-[11px] font-bold text-sky-100 active:bg-white/15" onClick={() => { setMapFocusPlace(mapPlace); setTab('where'); }}>地図 ›</button>
+          </div>;
         })}
       </div>}
     </section>
