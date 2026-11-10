@@ -145,10 +145,20 @@ const measureResult = (page) => page.evaluate(() => {
       if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `select-${name}.png`) }); }
       const sel = await measureSelect(page);
       check(`${name}: 曲えらびの上に空きが無く、下の難易度の列と曲の一覧が切れない`, sel === '', sel);
+      check(`${name}: 助手がいるとき、おまかせの下は「助手・マスモンの希望の曲に」`, await page.evaluate(() => /助手・マスモンの希望の曲に/.test((document.querySelector('[data-rhythm-multi-omakase-note]') || {}).innerText || '')));
       await page.locator('[data-rhythm-multi-omakase]').click({ force: true, timeout: 15000 });
       // 難易度えらび(ready の段)になってから「準備OK」を押す。早く押すと効かず、自分ぬきでライブが始まった
       await page.waitForFunction(() => document.querySelector('[data-rhythm-multi]')?.getAttribute('data-rhythm-multi-step') === 'ready' && document.querySelector('[data-rhythm-multi-ready]'), null, { timeout: 90000 });
       await page.waitForTimeout(500);
+      // おまかせのときは、呼んだ助手の希望の曲になり、「◯◯の希望の曲にしたよ」と出る(2026-11-10 テスターの要望・社長「マスモンも同じで」)
+      const wish = await page.evaluate(() => {
+        const v = RHYTHM_MULTI.view(); const w = v.room.wishBy ? v.members.find((m) => m.id === v.room.wishBy) : null;
+        const el = document.querySelector('[data-rhythm-multi-wish]'); const drawn = document.querySelector('[data-rhythm-multi-drawn]');
+        const r = el && el.getBoundingClientRect(); const box = drawn && drawn.parentElement.getBoundingClientRect();
+        return { cpu: !!(w && w.cpu), pickOk: !!(w && w.pick === v.room.songId), text: el ? el.innerText : '', kind: el ? el.getAttribute('data-rhythm-multi-wish') : '', inside: !!(r && box && r.left >= box.left - 1 && r.right <= box.right + 1 && r.top >= box.top - 1 && r.bottom <= box.bottom + 1) };
+      });
+      check(`${name}: おまかせなら助手の希望の曲になり、「◯◯の希望の曲にしたよ」が曲名の下に出る`, wish.cpu && wish.pickOk && /の希望の曲にしたよ/.test(wish.text) && wish.kind === 'assistant' && wish.inside, JSON.stringify(wish));
+      if (SHOT_DIR) await page.screenshot({ path: path.join(SHOT_DIR, `ready-${name}.png`) });
       await page.locator('[data-rhythm-multi-ready]').click({ force: true, timeout: 15000 });
       // ライブが始まり、演奏の画面へ入ったら、自分の結果を知らせる。助手の結果もそこで出る
       await page.waitForFunction(() => !!document.querySelector('[data-rhythm-play-area]'), null, { timeout: 90000 });

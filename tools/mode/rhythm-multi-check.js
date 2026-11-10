@@ -291,6 +291,46 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
   check('続けてやめても増えない・減りすぎない', q4 === 2 && q5 === 3, `${q4},${q5}`);
   leaveAll([h, a]);
 }
+{
+  // おまかせのときは、呼んだ助手・マスモンが希望している曲にする(2026-11-10 テスターの要望・社長「マスモンも同じで」)。
+  // 人が選んだ曲があれば、そちらが先(今までどおり)。だれの希望かは draw の知らせで、ほかの人にも届く
+  const round = (cs, picks) => {
+    cs.forEach((c, i) => c.M.pick(picks[i])); clock.advance(3000);
+    clock.advance(cs[0].K.SHUFFLE + 500);
+    return view(cs[0]).room;
+  };
+  const brain = { pick: () => ({ songId: 'songC', why: 'love' }), play: () => ({ score: 700000, cleared: true, maxCombo: 10 }) };
+  const [h, b] = ['h', 'b'].map(makeClient);
+  joinRoom([h, b], 'WS7Z');
+  h.M.setCpuBrain(brain);
+  const called = h.M.summon({ masuId: 'as:mua', assistantId: 'mua', name: 'みゅあ', level: 1, baseId: '', colors: [] });
+  clock.advance(1500);
+  h.M.confirmMembers(); clock.advance(2500);
+  const cpuId = (view(h).myCpus[0] || {}).id;
+  const r1 = round([h, b], ['*', '*']);
+  check('助手を呼んで、人が全員おまかせなら、助手の希望の曲になる', called && r1.songId === 'songC' && r1.wishBy === cpuId, JSON.stringify({ called, song: r1.songId, wishBy: r1.wishBy, cpuId }));
+  check('だれの希望の曲かは、ほかの人の端末にも届く', view(b).room.songId === 'songC' && view(b).room.wishBy === cpuId, JSON.stringify({ song: view(b).room.songId, wishBy: view(b).room.wishBy }));
+  leaveAll([h, b]);
+  // 人が曲を選んだら、そちらが先(助手の希望にはしない)
+  const [h2] = ['h2'].map(makeClient);
+  joinRoom([h2], 'WS8Z');
+  h2.M.setCpuBrain(brain);
+  h2.M.summon({ masuId: 'as:kiki', assistantId: 'kiki', name: 'きき', level: 1, baseId: '', colors: [] });
+  clock.advance(1500);
+  h2.M.confirmMembers(); clock.advance(2500);
+  const r2 = round([h2], ['songA']);
+  check('人が曲を選んだら、その曲が先(助手の希望の印は付かない)', r2.songId === 'songA' && !r2.wishBy, JSON.stringify({ song: r2.songId, wishBy: r2.wishBy }));
+  leaveAll([h2]);
+  // 助手もマスモンもいなければ、今までどおり全曲から(希望の印は付かない)
+  const [h3, b3] = ['h3', 'b3'].map(makeClient);
+  joinRoom([h3, b3], 'WS9Z');
+  h3.M.confirmMembers(); clock.advance(2500);
+  const r3 = round([h3, b3], ['*', '*']);
+  check('呼んでいなければ、おまかせは今までどおり全曲から', ['songA', 'songB', 'songC'].includes(r3.songId) && !r3.wishBy, JSON.stringify({ song: r3.songId, wishBy: r3.wishBy, phase: r3.phase }));
+  leaveAll([h3, b3]);
+  const w = h.clean({ t: 'draw', id: 'a', round: 'r1', songId: 's', wb: 'x'.repeat(80) });
+  check('draw の「だれの希望か」は40文字までに切る(古い端末は送らない)', w && w.wb.length === 40 && h.clean({ t: 'draw', id: 'a', round: 'r1', songId: 's' }).wb === '');
+}
 
 // ===== ⑥ ホストの「待たずに進む」 =====
 {
