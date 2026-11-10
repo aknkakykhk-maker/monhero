@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1788423b14eba6ec
+// source-sha256: 8a4f09966d24f0f5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -107750,10 +107750,10 @@ function AssistantLifeRoomSheet({
     "data-assistant-life-room-sheet": id
   }, React.createElement("button", {
     type: "button",
-    "aria-label": "閉じる",
+    "aria-label": returnToMap ? '地図へ戻る' : '家へ戻る',
     "data-assistant-life-roomview-close": true,
     onClick: onClose,
-    className: "absolute z-[40] rounded-xl border border-pink-300/60 bg-slate-950/85 px-2.5 py-1.5 text-[12px] font-black text-pink-100 active:scale-95",
+    className: "absolute z-[40] min-h-[44px] rounded-xl border border-pink-300/60 bg-slate-950/85 px-2.5 py-1.5 text-[12px] font-black text-pink-100 active:scale-95",
     style: {
       left: 'calc(10px + env(safe-area-inset-left))',
       top: land ? 6 : 'calc(8px + env(safe-area-inset-top))'
