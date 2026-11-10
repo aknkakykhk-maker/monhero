@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5c4082aaac24a89d
+// source-sha256: 3354dfd2a5c10891
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -107851,8 +107851,11 @@ function AssistantLifeRoomSheet({
     peerSt: peerSt,
     onMediate: onMediate
   }), React.createElement("div", {
-    className: land ? 'mt-2' : 'mt-8'
-  }, lv != null && React.createElement("div", {
+    className: land ? 'mt-2' : uiV2 ? 'mt-3' : 'mt-8'
+  }, uiV2 && React.createElement("p", {
+    className: "mb-1 text-[12px] font-black text-pink-200",
+    "data-assistant-life-room-bonds-heading": true
+  }, "💗 仲良し・友情"), lv != null && React.createElement("div", {
     className: "mhl-row"
   }, React.createElement("span", {
     className: "k"
