@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0e8be3cb86844cdd
+// source-sha256: c041cb22a55b431c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -17559,6 +17559,28 @@ const EXTREME_DIFFICULTY_THEMES = Object.freeze({
 });
 const extremeDifficultyTheme = difficultyId => EXTREME_DIFFICULTY_THEMES[difficultyId] || EXTREME_DIFFICULTY_THEMES.EXTREME;
 const PUBLIC_EXTREME_DIFFICULTIES = Object.freeze(ALL_EXTREME_DIFFICULTIES.filter(setting => setting.available));
+const PRO_CLEAR_QUICK_LOOPS = Object.freeze({
+  Hard: 10,
+  Expert: 50,
+  Master: 100,
+  GrandMaster: 150,
+  Hell: 200,
+  Legend: 300
+});
+const PRO_CLEAR_QUICK_LOOPS_EXTREME = 500;
+const PRO_CLEAR_QUICK_LOOPS_EXTREME_STEP = 200;
+const PRO_QUICK_LOOP_WAVES = 10;
+const proQuickLoopWeight = waves => waves * (waves + 1) / 2;
+const proQuickLoopsFor = (wavesCleared, difficulty, extremeId = null) => {
+  const waves = Math.max(0, Math.min(PRO_QUICK_LOOP_WAVES, Math.trunc(Number(wavesCleared) || 0)));
+  if (waves <= 0) return 0;
+  const exId = extremeId || (ALL_EXTREME_DIFFICULTIES.some(setting => setting.id === difficulty) ? difficulty : null);
+  const exIndex = exId ? ALL_EXTREME_DIFFICULTIES.findIndex(setting => setting.id === exId) : -1;
+  const full = exIndex >= 0 ? PRO_CLEAR_QUICK_LOOPS_EXTREME + PRO_CLEAR_QUICK_LOOPS_EXTREME_STEP * exIndex : Number(PRO_CLEAR_QUICK_LOOPS[difficulty]) || 0;
+  if (!(full > 0)) return proRunQuickLoops(waves, DIFFICULTY_SETTINGS[difficulty]?.power);
+  if (waves >= PRO_QUICK_LOOP_WAVES) return full;
+  return Math.max(1, Math.floor(full * proQuickLoopWeight(waves) / proQuickLoopWeight(PRO_QUICK_LOOP_WAVES)));
+};
 const UNDERWORLD_TAB_ID = 'underworld';
 const isUnderworldDifficultyId = difficultyId => extremeRuleSetting(difficultyId)?.tab === UNDERWORLD_TAB_ID;
 const PUBLIC_EXTREME_TAB_DIFFICULTIES = Object.freeze(PUBLIC_EXTREME_DIFFICULTIES.filter(setting => setting.tab !== UNDERWORLD_TAB_ID));
@@ -19537,7 +19559,10 @@ const helpDataRows = id => {
     case 'raidJackTiersB':
       return (typeof RAID_JACK_B_TIERS !== 'undefined' ? RAID_JACK_B_TIERS : []).map(t => [t.name, `ライフ ${t.hp.toLocaleString()} ／ 技${t.actionCount}本`]);
     case 'proQuickLoops':
-      return Object.values(DIFFICULTY_SETTINGS).map(s => [s.label, `10WAVE完走 ${proRunQuickLoops(10, s.power)}周 ／ WAVE5まで ${proRunQuickLoops(5, s.power)}周`]);
+      {
+        const row = (label, id, ex = null) => [label, `10WAVE完走 ${proQuickLoopsFor(10, id, ex).toLocaleString()}周 ／ WAVE5まで ${proQuickLoopsFor(5, id, ex).toLocaleString()}周`];
+        return [...Object.entries(DIFFICULTY_SETTINGS).map(([id, s]) => row(s.label, id)), ...EXTREME_DIFFICULTIES.map(s => row(s.label, 'Normal', s.id))];
+      }
     case 'cardBeatPointRewards':
       {
         if (typeof CARD_AI_LEVELS === 'undefined' || typeof CARD_LEVEL_ORDER === 'undefined') return [];
@@ -185454,7 +185479,7 @@ function MonsterHeroGame() {
     if (!autoQuickRunConfigured(autoSettings)) return null;
     const quickDifficulty = autoSettings.quickRun.difficulty;
     if (!isAutoQuickRunDifficultyAllowed(quickDifficulty, quickClearCounts)) return null;
-    const loops = proRunQuickLoops(wavesCleared, DIFFICULTY_SETTINGS[difficulty]?.power);
+    const loops = proQuickLoopsFor(wavesCleared, difficulty, extremeRunRef.current ? extremeDifficulty : null);
     if (loops <= 0) return null;
     const awardedPro = await awardBackQuickLoops(loops);
     return awardedPro ? {

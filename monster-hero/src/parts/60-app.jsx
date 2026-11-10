@@ -10828,7 +10828,8 @@ function MonsterHeroGame() {
     if (!autoQuickRunConfigured(autoSettings)) return null;
     const quickDifficulty = autoSettings.quickRun.difficulty;
     if (!isAutoQuickRunDifficultyAllowed(quickDifficulty, quickClearCounts)) return null;
-    const loops = proRunQuickLoops(wavesCleared, DIFFICULTY_SETTINGS[difficulty]?.power);
+    // 周回数は 19-difficulties-and-rules.jsx の proQuickLoopsFor(Hard 10 〜 Legend 300・極限 500〜。Normal 以下は今までの式。負けたら後ろのWAVEほど重く数える。2026-11-10 社長の表)
+    const loops = proQuickLoopsFor(wavesCleared, difficulty, extremeRunRef.current ? extremeDifficulty : null);
     if (loops <= 0) return null;
     const awardedPro = await awardBackQuickLoops(loops);
     return awardedPro ? { ...awardedPro, wavesCleared } : null;
