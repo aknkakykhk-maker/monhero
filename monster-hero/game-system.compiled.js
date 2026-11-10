@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b07c18238bc622e0
+// source-sha256: e4a38ce227a06778
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108538,6 +108538,7 @@ function AssistantLifeHouse({
   const [callPicker, setCallPicker] = React.useState(false);
   const [lifeStatusExpanded, setLifeStatusExpanded] = React.useState(false);
   const [mapFocusPlace, setMapFocusPlace] = React.useState(null);
+  const [mapFocusAssistantId, setMapFocusAssistantId] = React.useState(null);
   React.useEffect(() => {
     let alive = true;
     Promise.resolve(storeGet('mh_assistant_life_ui_v2', false, false)).then(v => {
@@ -109091,6 +109092,7 @@ function AssistantLifeHouse({
       className: "min-h-[44px] shrink-0 rounded-lg border border-sky-300/50 px-2 text-[11px] font-bold text-sky-100 active:bg-white/15",
       onClick: () => {
         setMapFocusPlace(mapPlace);
+        setMapFocusAssistantId(id);
         setTab('where');
       }
     }, "地図 ›"));
@@ -109243,6 +109245,7 @@ function AssistantLifeHouse({
     ids: ids,
     land: land,
     initialPlace: uiV2 ? mapFocusPlace : null,
+    initialAssistantId: uiV2 ? mapFocusAssistantId : null,
     onBack: () => setTab('house'),
     onPick: id => {
       setTab('house');
@@ -109804,7 +109807,8 @@ function AssistantLifeTownMap({
   onBack,
   list = null,
   land = false,
-  initialPlace = null
+  initialPlace = null,
+  initialAssistantId = null
 }) {
   const [home, setHome] = React.useState(() => assistantLifeMapReadHome());
   const [sheet, setSheet] = React.useState(() => initialPlace && ASSISTANT_LIFE_MAP_ORDER.includes(initialPlace) ? initialPlace : null);
@@ -110133,7 +110137,8 @@ function AssistantLifeTownMap({
     const spent = place === 'cardroom' && typeof assistantLifeCardSpent === 'function' ? assistantLifeCardSpent(id) : null;
     return React.createElement("div", {
       key: id,
-      className: "mt-2 flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-900/85 p-2",
+      className: `mt-2 flex items-center gap-2 rounded-2xl border bg-slate-900/85 p-2 ${initialAssistantId === id ? "border-sky-300 ring-2 ring-sky-300/70" : "border-white/10"}`,
+      "data-assistant-life-map-sheet-selected": initialAssistantId === id ? "1" : undefined,
       "data-assistant-life-map-sheet-who": id,
       "data-assistant-life-map-sheet-at": place
     }, React.createElement(AssistantFace, {
