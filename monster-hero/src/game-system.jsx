@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a4be86539ca1e429
+// generated-sha256: 0bfd03fe41a21fee
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -13468,7 +13468,7 @@ const helpDataRows = (id) => {
     // (ヘルプへ9行書き写すと、必ずどこかが古いままになる)
     // (2026-11-10 社長の表に変えた。19-difficulties-and-rules.jsx の proQuickLoopsFor から作る。極限はタクティクスのプロで遊べるぶん)
     case 'proQuickLoops': {
-      const row = (label, id, ex = null) => [label, `10WAVE完走 ${proQuickLoopsFor(10, id, ex).toLocaleString()}周 ／ WAVE5まで ${proQuickLoopsFor(5, id, ex).toLocaleString()}周`];
+      const row = (label, id, ex = null) => [label, `10WAVE完走 ${proQuickLoopsFor(10, id, ex).toLocaleString()}周 ／ 5WAVEクリア ${proQuickLoopsFor(5, id, ex).toLocaleString()}周`];
       return [
         ...Object.entries(DIFFICULTY_SETTINGS).map(([id, s]) => row(s.label, id)),
         ...EXTREME_DIFFICULTIES.map(s => row(s.label, 'Normal', s.id)),

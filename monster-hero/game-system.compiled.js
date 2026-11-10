@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8fb4e6e740123b9b
+// source-sha256: 8909ed8a0632db94
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -19560,7 +19560,7 @@ const helpDataRows = id => {
       return (typeof RAID_JACK_B_TIERS !== 'undefined' ? RAID_JACK_B_TIERS : []).map(t => [t.name, `ライフ ${t.hp.toLocaleString()} ／ 技${t.actionCount}本`]);
     case 'proQuickLoops':
       {
-        const row = (label, id, ex = null) => [label, `10WAVE完走 ${proQuickLoopsFor(10, id, ex).toLocaleString()}周 ／ WAVE5まで ${proQuickLoopsFor(5, id, ex).toLocaleString()}周`];
+        const row = (label, id, ex = null) => [label, `10WAVE完走 ${proQuickLoopsFor(10, id, ex).toLocaleString()}周 ／ 5WAVEクリア ${proQuickLoopsFor(5, id, ex).toLocaleString()}周`];
         return [...Object.entries(DIFFICULTY_SETTINGS).map(([id, s]) => row(s.label, id)), ...EXTREME_DIFFICULTIES.map(s => row(s.label, 'Normal', s.id))];
       }
     case 'cardBeatPointRewards':

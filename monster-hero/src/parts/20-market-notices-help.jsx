@@ -706,7 +706,7 @@ const helpDataRows = (id) => {
     // (ヘルプへ9行書き写すと、必ずどこかが古いままになる)
     // (2026-11-10 社長の表に変えた。19-difficulties-and-rules.jsx の proQuickLoopsFor から作る。極限はタクティクスのプロで遊べるぶん)
     case 'proQuickLoops': {
-      const row = (label, id, ex = null) => [label, `10WAVE完走 ${proQuickLoopsFor(10, id, ex).toLocaleString()}周 ／ WAVE5まで ${proQuickLoopsFor(5, id, ex).toLocaleString()}周`];
+      const row = (label, id, ex = null) => [label, `10WAVE完走 ${proQuickLoopsFor(10, id, ex).toLocaleString()}周 ／ 5WAVEクリア ${proQuickLoopsFor(5, id, ex).toLocaleString()}周`];
       return [
         ...Object.entries(DIFFICULTY_SETTINGS).map(([id, s]) => row(s.label, id)),
         ...EXTREME_DIFFICULTIES.map(s => row(s.label, 'Normal', s.id)),
