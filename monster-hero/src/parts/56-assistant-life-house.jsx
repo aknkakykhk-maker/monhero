@@ -893,6 +893,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   // 新UIは明示的に有効化した場合だけ使用。保存が読めなくても従来UIへ戻る。
   const [uiV2, setUiV2] = React.useState(false);
   const [callPicker, setCallPicker] = React.useState(false);
+  const [lifeStatusExpanded, setLifeStatusExpanded] = React.useState(false);
   React.useEffect(() => { let alive = true; Promise.resolve(storeGet('mh_assistant_life_ui_v2', false, false)).then(v => { if (alive) setUiV2(v === true); }).catch(() => {}); return () => { alive = false; }; }, []);
   const toggleUiV2 = () => { const next = !uiV2; setUiV2(next); setCallPicker(false); setRoomId(null); try { void storeSet('mh_assistant_life_ui_v2', next, false); } catch {} };
   const [roomId, setRoomId] = React.useState(st.focus || null);
@@ -1135,7 +1136,6 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
     </div>);
   const findBtn = <button type="button" className="mhl-find" data-assistant-life-find onClick={() => setTab('where')}>📋 みんなの居場所 ›</button>;
   // 新UIのみ: 家の部屋札と同じ居場所データを参照する。未登場の助手は表示しない。
-  const [lifeStatusExpanded, setLifeStatusExpanded] = React.useState(false);
   const lifeStatusList = uiV2 ? (
     <section className="mx-3 mb-2 rounded-2xl border border-white/20 bg-slate-950/85 p-2 text-white" data-assistant-life-v2-status>
       <button type="button" className="flex min-h-[44px] w-full items-center justify-between gap-2 text-left" aria-expanded={lifeStatusExpanded} onClick={() => setLifeStatusExpanded(v => !v)}>
