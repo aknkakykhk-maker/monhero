@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8384c6003f8a4ec6
+// source-sha256: c0c26d2a9010ac85
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108643,6 +108643,15 @@ function AssistantLifeHouse({
     setScene(null);
     assistantLifeCloseScreen();
   };
+  const backFromUiV2 = () => {
+    if (uiV2 && tab !== 'house') {
+      setRoomId(null);
+      setCallPicker(false);
+      setTab('house');
+      return;
+    }
+    close();
+  };
   const showFollow = () => {
     const id = followAfterRef.current;
     followAfterRef.current = null;
@@ -108961,9 +108970,9 @@ function AssistantLifeHouse({
   }, React.createElement("button", {
     type: "button",
     "data-assistant-life-close": true,
-    onClick: close,
-    "aria-label": "閉じる",
-    className: "h-9 w-8 shrink-0 text-[19px] text-slate-100"
+    onClick: uiV2 ? backFromUiV2 : close,
+    "aria-label": uiV2 && tab !== 'house' ? '家へ戻る' : '閉じる',
+    className: uiV2 ? 'min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-[19px] text-slate-100 active:bg-white/10' : 'h-9 w-8 shrink-0 text-[19px] text-slate-100'
   }, "←"), React.createElement("div", {
     className: "min-w-0 shrink overflow-hidden",
     "data-assistant-life-title": true
