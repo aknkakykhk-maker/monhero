@@ -261,6 +261,8 @@ const rhythmMultiCleanMessage = (raw) => {
     out.round = rhythmMultiText(raw.round, 40);
     out.songId = rhythmMultiText(raw.songId, 60);
     out.participants = Array.isArray(raw.participants) ? raw.participants.slice(0, RHYTHM_MULTI_ROOM_MAX).map((x) => rhythmMultiText(x, 40)).filter(Boolean) : [];
+    // だれの希望の曲か(2026-11-10・おまかせのときは助手・マスモンの希望から)。古い端末は送らない・読み飛ばすだけ
+    if (raw.t === 'draw') out.wb = rhythmMultiText(raw.wb, 40);
     return out.round && out.songId ? out : null;
   }
   if (raw.t === 'res') {
@@ -481,19 +483,24 @@ const RHYTHM_MULTI = (() => {
   const humanCount = () => ordered().filter((m) => !m.cpu).length;
   // 選曲の制限時間(ミリ秒)。0 は制限なし(部屋主が「なし」にした)
   const selectLimitMs = () => (s && s.room.selectSec > 0 ? s.room.selectSec * 1000 : 0);
-  const toSelect = () => setRoom({ phase: 'select', round: rhythmMultiMakeId('r'), songId: '', deadline: humanCount() <= 1 || !selectLimitMs() ? 0 : Date.now() + selectLimitMs(), participants: [] });
+  const toSelect = () => setRoom({ phase: 'select', round: rhythmMultiMakeId('r'), songId: '', wishBy: '', deadline: humanCount() <= 1 || !selectLimitMs() ? 0 : Date.now() + selectLimitMs(), participants: [] });
   const doDraw = (members) => {
     const r = s.room;
     const pickOf = (list) => list.filter((m) => m.pickRound === r.round && m.pick && m.pick !== RHYTHM_MULTI_OMAKASE && catalog.includes(m.pick)).map((m) => m.pick);
     // 本番の曲は人の選んだ曲だけから決める。相棒(CPU)の選曲は演出(シャッフル画面の表示)だけで、抽選には入れない
     // (2026-10-07・ユーザー指示「マスモンが曲を選んでくるのは演出として残して、実際は自分が選んだ曲に」)。
-    // 人がだれも曲を選んでいない(おまかせ)ときは、全曲から引く
+    // 人がだれも曲を選んでいない(おまかせ)ときは、呼んだ助手・マスモンが希望している曲から引く
+    // (2026-11-10 テスターの要望「おまかせを選んだら助手が希望している曲にしてあげてほしい」・社長「マスモンも同じで」)。
+    // 助手・マスモンもいない・希望が無いときは、今までどおり全曲から引く。人が選んだ曲があれば、そちらが先(今までどおり)
     const picks = pickOf(members.filter((m) => !m.cpu));
+    const wishes = picks.length ? [] : members.filter((m) => m.cpu && m.pickRound === r.round && m.pick && m.pick !== RHYTHM_MULTI_OMAKASE && catalog.includes(m.pick));
+    const wish = wishes.length ? wishes[Math.floor(Math.random() * wishes.length)] : null;
     const pool = picks.length ? picks : catalog;
-    if (!pool.length) return;
-    const songId = pool[Math.floor(Math.random() * pool.length)];
-    if (socket) socket.send({ t: 'draw', id: s.selfId, round: r.round, songId });
-    setRoom({ phase: 'ready', songId, deadline: Date.now() + RHYTHM_MULTI_SHUFFLE_MS + RHYTHM_MULTI_READY_MS });
+    if (!wish && !pool.length) return;
+    const songId = wish ? wish.pick : pool[Math.floor(Math.random() * pool.length)];
+    const wishBy = wish ? wish.id : '';
+    if (socket) socket.send({ t: 'draw', id: s.selfId, round: r.round, songId, wb: wishBy || undefined });
+    setRoom({ phase: 'ready', songId, wishBy, deadline: Date.now() + RHYTHM_MULTI_SHUFFLE_MS + RHYTHM_MULTI_READY_MS });
   };
   // everyone … ホストの「すぐ開始」。準備完了を押していない人も、いまえらんでいる難易度でいっしょに始める(時間切れと同じ扱い)
   const doStart = (members, everyone = false) => {
@@ -844,13 +851,14 @@ const RHYTHM_MULTI = (() => {
       // 部屋の進行は部屋主の知らせに従う(残り時間は受け取った時刻から数える)
       if (msg.room && fromHost()) {
         const r = msg.room;
-        s.room = { phase: r.phase, round: r.round, songId: r.songId, participants: r.participants, selectSec: r.selectSec, deadline: r.hasDeadline ? Date.now() + r.left * 1000 : 0 };
+        // だれの希望の曲か(wishBy)は draw の知らせで届く。部屋主の定期の知らせには載らないので、同じ回のあいだは持ち続ける
+        s.room = { phase: r.phase, round: r.round, songId: r.songId, participants: r.participants, selectSec: r.selectSec, deadline: r.hasDeadline ? Date.now() + r.left * 1000 : 0, wishBy: s.room && s.room.round === r.round ? (s.room.wishBy || '') : '' };
       }
     } else if (msg.t === 'res') {
       if (myCpu(msg.id)) { emit(); return; }
       s.members[msg.id] = { ...prev, res: msg.res, playing: false, seen: Date.now() };
     } else if (msg.t === 'draw') {
-      if (fromHost() && s.room.round === msg.round) s.room = { ...s.room, phase: 'ready', songId: msg.songId, deadline: Date.now() + RHYTHM_MULTI_SHUFFLE_MS + RHYTHM_MULTI_READY_MS };
+      if (fromHost() && s.room.round === msg.round) s.room = { ...s.room, phase: 'ready', songId: msg.songId, wishBy: msg.wb || '', deadline: Date.now() + RHYTHM_MULTI_SHUFFLE_MS + RHYTHM_MULTI_READY_MS };
     } else if (msg.t === 'start') {
       // ライブ開始の合図は、部屋主から出たものだけ受ける。同じ合図は2度受けない
       if (fromHost() && s.startedRound !== msg.round) {
@@ -3584,6 +3592,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               <div className="min-w-0 flex-1">
                 <small className="block text-[9px] font-black text-slate-400">ライブする曲</small>
                 <b data-rhythm-multi-drawn className="block truncate text-sm font-black leading-tight">{rhythmSongFullName(drawnSong)}</b>
+                {/* おまかせで、助手・マスモンの希望から決まったとき(2026-11-10) */}
+                {(() => { const w = room.wishBy ? members.find((m) => m.id === room.wishBy) : null; return w ? <small data-rhythm-multi-wish={w.as ? 'assistant' : 'masmon'} className="mt-0.5 block truncate text-[10px] font-black text-lime-200">🎵 {w.name}の希望の曲にしたよ</small> : null; })()}
                 {/* 演出の段階(2026-10-03・ユーザー指示「完全に軽くじゃないやつも切り替えられるように」)。
                     軽め・標準・華やか は見た目のおまかせを対戦のあいだだけ重ねる。いつもの は自分の設定のまま */}
                 {onChangeMultiLook && <div data-rhythm-multi-light-look role="group" aria-label="対戦の演出" className="mt-1 flex items-center gap-0.5">
@@ -3656,7 +3666,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         footer={() => (
           <div className="grid grid-cols-2 gap-1.5">
             <button data-rhythm-multi-omakase type="button" aria-pressed={myPick === RHYTHM_MULTI_OMAKASE} onClick={() => RHYTHM_MULTI.pick(RHYTHM_MULTI_OMAKASE)}
-              className={`flex min-h-[44px] flex-col items-center justify-center rounded-xl border px-1 text-[11px] font-black leading-tight ${myPick === RHYTHM_MULTI_OMAKASE ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`}>🔀 おまかせ{myPick === RHYTHM_MULTI_OMAKASE ? '(選曲済)' : ''}<small className="block text-[8px] font-bold opacity-80">ほかの人の曲が優先</small></button>
+              className={`flex min-h-[44px] flex-col items-center justify-center rounded-xl border px-1 text-[11px] font-black leading-tight ${myPick === RHYTHM_MULTI_OMAKASE ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`}>🔀 おまかせ{myPick === RHYTHM_MULTI_OMAKASE ? '(選曲済)' : ''}<small data-rhythm-multi-omakase-note className="block text-[8px] font-bold opacity-80">{members.some((m) => m.cpu) ? (members.some((m) => m.cpu && m.as) ? '助手・マスモンの希望の曲に' : 'マスモンの希望の曲に') : 'ほかの人の曲が優先'}</small></button>
             <button data-rhythm-multi-leave type="button" onClick={leaveRoom}
               className="flex min-h-[44px] items-center justify-center rounded-xl border border-white/15 bg-slate-900/80 px-1 text-[11px] font-black text-slate-300">ルームを出る</button>
           </div>

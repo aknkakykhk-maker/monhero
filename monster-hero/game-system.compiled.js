@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5fdc050f3aeb0339
+// source-sha256: ef78dd23275d00a4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -89739,6 +89739,7 @@ const rhythmMultiCleanMessage = raw => {
     out.round = rhythmMultiText(raw.round, 40);
     out.songId = rhythmMultiText(raw.songId, 60);
     out.participants = Array.isArray(raw.participants) ? raw.participants.slice(0, RHYTHM_MULTI_ROOM_MAX).map(x => rhythmMultiText(x, 40)).filter(Boolean) : [];
+    if (raw.t === 'draw') out.wb = rhythmMultiText(raw.wb, 40);
     return out.round && out.songId ? out : null;
   }
   if (raw.t === 'res') {
@@ -90100,6 +90101,7 @@ const RHYTHM_MULTI = (() => {
     phase: 'select',
     round: rhythmMultiMakeId('r'),
     songId: '',
+    wishBy: '',
     deadline: humanCount() <= 1 || !selectLimitMs() ? 0 : Date.now() + selectLimitMs(),
     participants: []
   });
@@ -90107,18 +90109,23 @@ const RHYTHM_MULTI = (() => {
     const r = s.room;
     const pickOf = list => list.filter(m => m.pickRound === r.round && m.pick && m.pick !== RHYTHM_MULTI_OMAKASE && catalog.includes(m.pick)).map(m => m.pick);
     const picks = pickOf(members.filter(m => !m.cpu));
+    const wishes = picks.length ? [] : members.filter(m => m.cpu && m.pickRound === r.round && m.pick && m.pick !== RHYTHM_MULTI_OMAKASE && catalog.includes(m.pick));
+    const wish = wishes.length ? wishes[Math.floor(Math.random() * wishes.length)] : null;
     const pool = picks.length ? picks : catalog;
-    if (!pool.length) return;
-    const songId = pool[Math.floor(Math.random() * pool.length)];
+    if (!wish && !pool.length) return;
+    const songId = wish ? wish.pick : pool[Math.floor(Math.random() * pool.length)];
+    const wishBy = wish ? wish.id : '';
     if (socket) socket.send({
       t: 'draw',
       id: s.selfId,
       round: r.round,
-      songId
+      songId,
+      wb: wishBy || undefined
     });
     setRoom({
       phase: 'ready',
       songId,
+      wishBy,
       deadline: Date.now() + RHYTHM_MULTI_SHUFFLE_MS + RHYTHM_MULTI_READY_MS
     });
   };
@@ -90708,7 +90715,8 @@ const RHYTHM_MULTI = (() => {
           songId: r.songId,
           participants: r.participants,
           selectSec: r.selectSec,
-          deadline: r.hasDeadline ? Date.now() + r.left * 1000 : 0
+          deadline: r.hasDeadline ? Date.now() + r.left * 1000 : 0,
+          wishBy: s.room && s.room.round === r.round ? s.room.wishBy || '' : ''
         };
       }
     } else if (msg.t === 'res') {
@@ -90727,6 +90735,7 @@ const RHYTHM_MULTI = (() => {
         ...s.room,
         phase: 'ready',
         songId: msg.songId,
+        wishBy: msg.wb || '',
         deadline: Date.now() + RHYTHM_MULTI_SHUFFLE_MS + RHYTHM_MULTI_READY_MS
       };
     } else if (msg.t === 'start') {
@@ -95373,7 +95382,13 @@ function RhythmMultiScreen({
     }, "ライブする曲"), React.createElement("b", {
       "data-rhythm-multi-drawn": true,
       className: "block truncate text-sm font-black leading-tight"
-    }, rhythmSongFullName(drawnSong)), onChangeMultiLook && React.createElement("div", {
+    }, rhythmSongFullName(drawnSong)), (() => {
+      const w = room.wishBy ? members.find(m => m.id === room.wishBy) : null;
+      return w ? React.createElement("small", {
+        "data-rhythm-multi-wish": w.as ? 'assistant' : 'masmon',
+        className: "mt-0.5 block truncate text-[10px] font-black text-lime-200"
+      }, "🎵 ", w.name, "の希望の曲にしたよ") : null;
+    })(), onChangeMultiLook && React.createElement("div", {
       "data-rhythm-multi-light-look": true,
       role: "group",
       "aria-label": "対戦の演出",
@@ -95491,8 +95506,9 @@ function RhythmMultiScreen({
       onClick: () => RHYTHM_MULTI.pick(RHYTHM_MULTI_OMAKASE),
       className: `flex min-h-[44px] flex-col items-center justify-center rounded-xl border px-1 text-[11px] font-black leading-tight ${myPick === RHYTHM_MULTI_OMAKASE ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
     }, "🔀 おまかせ", myPick === RHYTHM_MULTI_OMAKASE ? '(選曲済)' : '', React.createElement("small", {
+      "data-rhythm-multi-omakase-note": true,
       className: "block text-[8px] font-bold opacity-80"
-    }, "ほかの人の曲が優先")), React.createElement("button", {
+    }, members.some(m => m.cpu) ? members.some(m => m.cpu && m.as) ? '助手・マスモンの希望の曲に' : 'マスモンの希望の曲に' : 'ほかの人の曲が優先')), React.createElement("button", {
       "data-rhythm-multi-leave": true,
       type: "button",
       onClick: leaveRoom,
