@@ -1136,7 +1136,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         <span className="whitespace-nowrap text-[9.5px] font-bold text-slate-200">{next ? `${next.label}まで ${next.min - play.points}` : 'いちばん上'}</span>
       </div>
     </div>);
-  const findBtn = <button type="button" className="mhl-find" data-assistant-life-find onClick={() => setTab('where')}>📋 みんなの居場所 ›</button>;
+  const findBtn = <button type="button" className="mhl-find" data-assistant-life-find onClick={() => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('where'); }}>📋 みんなの居場所 ›</button>;
   // 新UIのみ: 家の部屋札と同じ居場所データを参照する。未登場の助手は表示しない。
   const lifeStatusList = uiV2 ? (
     <section className="mx-3 mb-2 rounded-2xl border border-white/20 bg-slate-950/85 p-2 text-white" data-assistant-life-v2-status>
@@ -1216,7 +1216,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         <div className="mhl-wood" style={{ backgroundImage: `url(${ASSISTANT_LIFE_VIEW[look][1]})` }}/>
         {/* 📋 居場所: HOME の画面そのものを地図に(画面いっぱい・56-assistant-life-map.jsx)。下に今までの一覧・見出し・アイコンの列 */}
         {tab === 'where' ? (
-          <AssistantLifeTownMap life={life} ids={ids} land={land} initialPlace={uiV2 ? mapFocusPlace : null} initialAssistantId={uiV2 ? mapFocusAssistantId : null} onBack={() => setTab('house')} onPick={(id) => { setTab('house'); setRoomId(id); }} onView={uiV2 ? (id) => setRoomId(id) : null} onBeat={beat} onCard={card}
+          <AssistantLifeTownMap life={life} ids={ids} land={land} initialPlace={uiV2 ? mapFocusPlace : null} initialAssistantId={uiV2 ? mapFocusAssistantId : null} onBack={() => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('house'); }} onPick={(id) => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('house'); setRoomId(id); }} onView={uiV2 ? (id) => setRoomId(id) : null} onBeat={beat} onCard={card}
             list={<>
               {header}
               {note && <p data-assistant-life-note className="mx-3 mb-1 rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 text-[11px] font-bold text-sky-100">{note}</p>}
