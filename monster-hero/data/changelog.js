@@ -71,7 +71,7 @@ const CHANGELOG = [
     //   出し入れは visibleFrom だけで行う(印 rhythmGrandOpen も同じ時刻で真になる。印を重ねると検査が開始の瞬間を確かめられない)
     // 2026-11-09 社長「ここに本オープンの画像つけて。あと上部に固定も」。絵は予告と同じ本オープンの絵。固定は周回5倍の終わり(11/23 3:59)まで
     date: "2026-11-09 10:00", visibleFrom:'2026-11-09T10:00:00+09:00', type:'update', group:'rhythm', title:'モンヒロビート本オープン記念のプレゼント', status:'new',
-    image:'images/events/rhythm-grand-open-teaser.jpg?v=45ae90cee48b', pinTop:{ until:'2026-11-23T03:59:00+09:00' }, pinEmoji:'🎵',
+    image:'images/events/rhythm-grand-open-teaser.jpg?v=45ae90cee48b', pinTop:{ until:'2026-11-23T03:59:00+09:00' }, pinEmoji:'🎵', pinTitle:'モンヒロビート本オープン記念',
     items:[
       'モンヒロビートの本オープンを記念して、遊んでくださっている皆さんへ「本オープン記念ギフト」をお届けします。ダイヤ 10,000,000・虹のプシュケー 150・スキップチケット（序3・破3・急10）・染色もどき 5・セッション券 10枚・性格のたね 3個です。',
       'HOMEの「ギフト」から受け取ってください。受取期限はありません。',
