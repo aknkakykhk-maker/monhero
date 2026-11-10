@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c0c26d2a9010ac85
+// source-sha256: 21608b827db039bb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108520,6 +108520,7 @@ function AssistantLifeHouse({
   const [tab, setTab] = React.useState('house');
   const [uiV2, setUiV2] = React.useState(false);
   const [callPicker, setCallPicker] = React.useState(false);
+  const [lifeStatusExpanded, setLifeStatusExpanded] = React.useState(false);
   React.useEffect(() => {
     let alive = true;
     Promise.resolve(storeGet('mh_assistant_life_ui_v2', false, false)).then(v => {
@@ -109031,6 +109032,41 @@ function AssistantLifeHouse({
     "data-assistant-life-find": true,
     onClick: () => setTab('where')
   }, "📋 みんなの居場所 ›");
+  const lifeStatusList = uiV2 ? React.createElement("section", {
+    className: "mx-3 mb-2 rounded-2xl border border-white/20 bg-slate-950/85 p-2 text-white",
+    "data-assistant-life-v2-status": true
+  }, React.createElement("button", {
+    type: "button",
+    className: "flex min-h-[44px] w-full items-center justify-between gap-2 text-left",
+    "aria-expanded": lifeStatusExpanded,
+    onClick: () => setLifeStatusExpanded(v => !v)
+  }, React.createElement("span", {
+    className: "text-[13px] font-black"
+  }, "🏡 みんなの今 ", React.createElement("span", {
+    className: "text-[10px] font-bold text-slate-300"
+  }, "（", ids.length, "人）")), React.createElement("span", {
+    className: "text-[11px] font-bold text-amber-200"
+  }, lifeStatusExpanded ? '閉じる ▲' : '一覧を見る ▼')), lifeStatusExpanded && React.createElement("div", {
+    className: "max-h-[220px] space-y-1 overflow-y-auto overscroll-contain",
+    "data-assistant-life-v2-status-list": true
+  }, ASSISTANT_LIFE_HOUSE_ORDER.filter(id => metSet.has(id)).map(id => {
+    const w = assistantLifeWhereOf(life, id);
+    const groupIds = w && w.group && Array.isArray(w.group.ids) ? w.group.ids : [];
+    const peers = groupIds.filter(x => x !== id && metSet.has(x));
+    const place = w ? assistantLifePlaceShow(w.place) : '家';
+    const doing = w ? (ASSISTANT_LIFE_DOINGS[w.doing] || {}).label : '';
+    return React.createElement("button", {
+      type: "button",
+      key: id,
+      "data-assistant-life-v2-status-id": id,
+      className: "flex min-h-[44px] w-full items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left active:bg-white/15",
+      onClick: () => setRoomId(id)
+    }, React.createElement("span", {
+      className: "min-w-0 shrink-0 text-[12px] font-black"
+    }, nameOf(id)), React.createElement("span", {
+      className: "min-w-0 truncate text-right text-[10px] text-slate-200"
+    }, place, doing ? ` ・ ${doing}` : '', peers.length ? ` ・ ${peers.map(nameOf).join('・')}と一緒` : ''));
+  }))) : null;
   const houseView = React.createElement("div", {
     className: "relative pt-1"
   }, React.createElement("div", {
@@ -109050,7 +109086,7 @@ function AssistantLifeHouse({
     onBoard: () => setBoardOpen(true),
     life: life,
     peerSt: peerSt
-  }));
+  }), lifeStatusList);
   const tabBody = tab === 'house' ? houseView : tab === 'where' ? null : tab === 'visit' && typeof AssistantLifeFriendPage === 'function' ? React.createElement(AssistantLifeFriendPage, {
     life: life
   }) : tab === 'friends' ? React.createElement("div", {
