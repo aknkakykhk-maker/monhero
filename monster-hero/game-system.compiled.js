@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8a4f09966d24f0f5
+// source-sha256: 0e8be3cb86844cdd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -107640,7 +107640,8 @@ function AssistantLifeRoomSheet({
   onFollowDone = null,
   onGiveSolo = null,
   canGiveSolo = false,
-  returnToMap = false
+  returnToMap = false,
+  uiV2 = false
 }) {
   const [furnOpen, setFurnOpen] = React.useState(!!openFurn);
   const soloOn = typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn() && !!onGiveSolo;
@@ -107937,7 +107938,7 @@ function AssistantLifeRoomSheet({
     className: "mhl-btn mhl-call col-span-2",
     "data-assistant-life-room-act": "chat",
     onClick: () => onChat(id, null)
-  }, asleep ? '💤 起こしておしゃべり' : '💬 おしゃべりする'), typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && React.createElement("button", {
+  }, asleep ? uiV2 ? `💤 ${who.name}を起こしておしゃべり` : '💤 起こしておしゃべり' : uiV2 ? `💬 ${who.name}とおしゃべりする` : '💬 おしゃべりする'), typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-beat col-span-2",
     "data-assistant-life-room-act": "beat",
@@ -107945,7 +107946,7 @@ function AssistantLifeRoomSheet({
   }, asleep ? '🎵 起こしてモンヒロビートに誘う' : atBeat && beatFree ? React.createElement(React.Fragment, null, "🎵 会いに行く", React.createElement("em", {
     className: "ml-1 rounded-full bg-amber-300 px-1.5 text-[10px] not-italic text-amber-950",
     "data-assistant-life-room-free": true
-  }, "券なし")) : '🎵 一緒にモンヒロビート'), typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled() && onGiveFurn && React.createElement("button", {
+  }, "券なし")) : uiV2 ? `🎵 ${who.name}とモンヒロビート` : '🎵 一緒にモンヒロビート'), typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled() && onGiveFurn && React.createElement("button", {
     type: "button",
     className: "mhl-btn col-span-2 bg-gradient-to-r from-amber-500 to-orange-600",
     "data-assistant-life-room-act": "furn",
@@ -109355,6 +109356,7 @@ function AssistantLifeHouse({
   }, life.solo[id]?.reason === 'lonely' ? 'さみしそう' : 'ひとりで過ごしている', " ›")))))), roomId && React.createElement(AssistantLifeRoomSheet, {
     key: roomId,
     id: roomId,
+    uiV2: uiV2,
     returnToMap: uiV2 && tab === 'where',
     openFurn: furnBack === roomId,
     onGiveSolo: soloOn ? openGiveSolo : null,
