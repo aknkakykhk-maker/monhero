@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9e6c4c62a8d29ddd
+// source-sha256: 1788423b14eba6ec
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -107639,7 +107639,8 @@ function AssistantLifeRoomSheet({
   follow = null,
   onFollowDone = null,
   onGiveSolo = null,
-  canGiveSolo = false
+  canGiveSolo = false,
+  returnToMap = false
 }) {
   const [furnOpen, setFurnOpen] = React.useState(!!openFurn);
   const soloOn = typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn() && !!onGiveSolo;
@@ -107757,7 +107758,7 @@ function AssistantLifeRoomSheet({
       left: 'calc(10px + env(safe-area-inset-left))',
       top: land ? 6 : 'calc(8px + env(safe-area-inset-top))'
     }
-  }, "← 家へ"), land ? rvScene && React.createElement("div", {
+  }, returnToMap ? '← 地図へ' : '← 家へ'), land ? rvScene && React.createElement("div", {
     className: "absolute inset-y-0 left-0 bg-[#0b1020]",
     style: {
       width: rvSheetW === '42%' ? '58%' : '50%'
@@ -109354,6 +109355,7 @@ function AssistantLifeHouse({
   }, life.solo[id]?.reason === 'lonely' ? 'さみしそう' : 'ひとりで過ごしている', " ›")))))), roomId && React.createElement(AssistantLifeRoomSheet, {
     key: roomId,
     id: roomId,
+    returnToMap: uiV2 && tab === 'where',
     openFurn: furnBack === roomId,
     onGiveSolo: soloOn ? openGiveSolo : null,
     canGiveSolo: soloOn && soloLeft > 0,
