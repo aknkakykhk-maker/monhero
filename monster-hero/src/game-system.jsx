@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7a281fbb085909af
+// generated-sha256: 5b54c61ffad0e27d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -793,6 +793,11 @@ const isAutoQuickRunDifficultyAllowed = (difficulty, quickClears) =>
 //   周回数 = 切り捨て( 進んだWAVE数 ÷ 10 × 難易度のpower × 係数 )   ※1WAVE以上なら最低1周
 //
 //   係数5のとき(10WAVE完走): Normal 5周 / Expert 15周 / Master 25周 / Legend 50周
+//
+// ★2026-11-10 社長の表に変えた。Hard 以上(と極限)の周回数は 19-difficulties-and-rules.jsx の proQuickLoopsFor が決める
+//   (完走: Hard 10 / Expert 50 / Master 100 / GrandMaster 150 / Hell 200 / Legend 300 / EXTREME 500、その上は仮で +200 ずつ。
+//    途中で負けたら WAVE n の重みを n にして、表 × 進んだ重みの合計 ÷ 55 の切り捨て、1WAVE以上なら最低1周)。
+//   この式(proRunQuickLoops)が使われるのは、表に無い Beginner・Easy・Normal だけ(10WAVE完走で 1・2・5周。前のまま)
 const PRO_RUN_QUICK_LOOP_SCALE = 5;
 const PRO_RUN_QUICK_LOOP_MIN = 1;
 const proRunQuickLoops = (wavesCleared, difficultyPower, scale = PRO_RUN_QUICK_LOOP_SCALE) => {
@@ -11906,6 +11911,32 @@ const EXTREME_DIFFICULTY_THEMES = Object.freeze({
 });
 const extremeDifficultyTheme = (difficultyId) => EXTREME_DIFFICULTY_THEMES[difficultyId] || EXTREME_DIFFICULTY_THEMES.EXTREME;
 const PUBLIC_EXTREME_DIFFICULTIES = Object.freeze(ALL_EXTREME_DIFFICULTIES.filter(setting=>setting.available));
+// ===== プロモード(クラシックのプロ・タクティクスのプロ)で入る、裏のクイック周回ぶん(2026-11-10 社長の表) =====
+// 10WAVE を完走したときの周回数。Hard より下(Beginner・Easy・Normal)は表に入れず、今までの式(10-core.jsx の proRunQuickLoops)のまま。
+// 本体(60-app.jsx の awardProRunQuickLoops)もヘルプの表(20-market-notices-help.jsx の proQuickLoops)も、proQuickLoopsFor だけを読む(数を書き写さない)
+const PRO_CLEAR_QUICK_LOOPS = Object.freeze({ Hard:10, Expert:50, Master:100, GrandMaster:150, Hell:200, Legend:300 });
+// 極限(タクティクスのプロで遊べる)。EXTREME は 500。その上は ALL_EXTREME_DIFFICULTIES の並び順に 1段ごとに +200(NIGHTMARE 700・CHAOS 900…)。
+// ★EXTREME より上の数は、社長の「とりあえず仮に」(2026-11-10)。決まったらここだけを直す
+const PRO_CLEAR_QUICK_LOOPS_EXTREME = 500;
+const PRO_CLEAR_QUICK_LOOPS_EXTREME_STEP = 200;
+const PRO_QUICK_LOOP_WAVES = 10;
+// 負けて途中で終わったときは、後ろのWAVEほど重く数える(WAVE n の重みは n)。
+// 周回 = 切り捨て(完走の周回 × 進んだWAVEの重みの合計 ÷ 全WAVEの重みの合計)。1WAVE以上進んでいれば最低1周
+const proQuickLoopWeight = (waves) => (waves * (waves + 1)) / 2;
+// difficulty … いまの難易度(DIFFICULTY_SETTINGS のキー。タクティクスでは極限のidのこともある)。extremeId … 極限で遊んでいるときの極限のid
+const proQuickLoopsFor = (wavesCleared, difficulty, extremeId = null) => {
+  const waves = Math.max(0, Math.min(PRO_QUICK_LOOP_WAVES, Math.trunc(Number(wavesCleared) || 0)));
+  if (waves <= 0) return 0;
+  const exId = extremeId || (ALL_EXTREME_DIFFICULTIES.some(setting => setting.id === difficulty) ? difficulty : null);
+  const exIndex = exId ? ALL_EXTREME_DIFFICULTIES.findIndex(setting => setting.id === exId) : -1;
+  const full = exIndex >= 0
+    ? PRO_CLEAR_QUICK_LOOPS_EXTREME + PRO_CLEAR_QUICK_LOOPS_EXTREME_STEP * exIndex
+    : Number(PRO_CLEAR_QUICK_LOOPS[difficulty]) || 0;
+  // 表に無い難易度(Normal 以下)は今までの式のまま
+  if (!(full > 0)) return proRunQuickLoops(waves, DIFFICULTY_SETTINGS[difficulty]?.power);
+  if (waves >= PRO_QUICK_LOOP_WAVES) return full;
+  return Math.max(1, Math.floor(full * proQuickLoopWeight(waves) / proQuickLoopWeight(PRO_QUICK_LOOP_WAVES)));
+};
 // 冥界チャレンジ(2026-11-01 社長の決定)。INFERNO・COCYTUS は難易度選びのタブだけ「冥界」へ移す。
 // ★難易度の名前・極限の一覧(ALL_EXTREME_DIFFICULTIES)の並び・保存キー(mh_extreme_hs_/clears_<id>)・ランキングの枠(Extreme<id>)は変えない。
 //   表示の分け方だけを、設定の tab:'underworld' の印で決める
@@ -13435,9 +13466,14 @@ const helpDataRows = (id) => {
     // プロモードのランぶんに入るクイック周回数(2026-09-21)。
     // 難易度ごとの重さ(power)と同じ式から作るので、難易度を調整したときも自動で追随する
     // (ヘルプへ9行書き写すと、必ずどこかが古いままになる)
-    case 'proQuickLoops':
-      return Object.values(DIFFICULTY_SETTINGS).map(s => [s.label,
-        `10WAVE完走 ${proRunQuickLoops(10, s.power)}周 ／ WAVE5まで ${proRunQuickLoops(5, s.power)}周`]);
+    // (2026-11-10 社長の表に変えた。19-difficulties-and-rules.jsx の proQuickLoopsFor から作る。極限はタクティクスのプロで遊べるぶん)
+    case 'proQuickLoops': {
+      const row = (label, id, ex = null) => [label, `10WAVE完走 ${proQuickLoopsFor(10, id, ex).toLocaleString()}周 ／ 5WAVEクリア ${proQuickLoopsFor(5, id, ex).toLocaleString()}周`];
+      return [
+        ...Object.entries(DIFFICULTY_SETTINGS).map(([id, s]) => row(s.label, id)),
+        ...EXTREME_DIFFICULTIES.map(s => row(s.label, 'Normal', s.id)),
+      ];
+    }
     // MFバトルカードの1戦でもらえるビートP(2026-10-26 にカードポイントをやめてビートPにした)。強さごとの勝ち・負けとマルチ対戦を 82-card-battle-core.jsx の数から作る
     // (数を調整したときにヘルプが古いままにならないよう、行を書き写さない。2列目は短く・help-render-check)
     case 'cardBeatPointRewards': {
@@ -102783,7 +102819,8 @@ function MonsterHeroGame() {
     if (!autoQuickRunConfigured(autoSettings)) return null;
     const quickDifficulty = autoSettings.quickRun.difficulty;
     if (!isAutoQuickRunDifficultyAllowed(quickDifficulty, quickClearCounts)) return null;
-    const loops = proRunQuickLoops(wavesCleared, DIFFICULTY_SETTINGS[difficulty]?.power);
+    // 周回数は 19-difficulties-and-rules.jsx の proQuickLoopsFor(Hard 10 〜 Legend 300・極限 500〜。Normal 以下は今までの式。負けたら後ろのWAVEほど重く数える。2026-11-10 社長の表)
+    const loops = proQuickLoopsFor(wavesCleared, difficulty, extremeRunRef.current ? extremeDifficulty : null);
     if (loops <= 0) return null;
     const awardedPro = await awardBackQuickLoops(loops);
     return awardedPro ? { ...awardedPro, wavesCleared } : null;

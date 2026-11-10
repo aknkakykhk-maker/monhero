@@ -66,8 +66,9 @@ check('②-2 配るのは各バトルのプロモードだけ',
 check('②-3 AUTO設定が無ければ配らない', body.includes('if (!autoQuickRunConfigured(autoSettings)) return null;'));
 check('②-4 その難易度をクイックでクリアしていなければ配らない',
   /isAutoQuickRunDifficultyAllowed\(quickDifficulty, quickClearCounts\)/.test(body));
-check('②-5 換算は進んだWAVE数と、プロの難易度の重さで決まる',
-  /proRunQuickLoops\(wavesCleared, DIFFICULTY_SETTINGS\[difficulty\]\?\.power\)/.test(body));
+// (2026-11-10 社長の表に変えた。Hard 以上は表・Normal 以下は今までの式。下の ⑤ で実際に動かす)
+check('②-5 換算は進んだWAVE数と、プロの難易度(極限ならそのid)で決まる(proQuickLoopsFor)',
+  /proQuickLoopsFor\(wavesCleared, difficulty, extremeRunRef\.current \? extremeDifficulty : null\)/.test(body));
 check('③-1 報酬はAUTO設定のクイック難易度で計算する',
   /rewardMode: BATTLE_MODE_QUICK/.test(body) && /rewardDifficulty: quickDifficulty/.test(body));
 check('③-2 モンビーの進捗の帯には触らない', /countLoopProgress: false/.test(body));
@@ -110,6 +111,43 @@ check('④-4 演奏からの呼び出しは、引数を足していない(今ま
 check('④-5 絆の行き先も、渡さなければ今までどおり戦っている編成',
   award.includes('bondHeroMasuId !== null ? bondHeroMasuId : mainHero?.masuId')
   && award.includes('bondParticipantMasuIds !== null ? bondParticipantMasuIds : slots.filter(s => s?.masuId).map(s => s.masuId)'));
+
+// ===== ⑤ 社長の表(2026-11-10)。proQuickLoopsFor を本体から切り出して動かす =====
+//   Hard 10 / Expert 50 / Master 100 / GrandMaster 150 / Hell 200 / Legend 300 / EXTREME 500、その上は +200 ずつ(仮)。Normal 以下は今までの式。
+//   負けたら後ろのWAVEほど重く(WAVE n の重みは n)、1WAVE以上なら最低1周
+{
+  const diffSrc = part('19-difficulties-and-rules.jsx');
+  const a = diffSrc.indexOf('// ===== プロモード(クラシックのプロ・タクティクスのプロ)で入る');
+  const b = diffSrc.indexOf('\n};\n', a);
+  const exIds = ['EXTREME', 'NIGHTMARE', 'CHAOS', 'ULTIMATE', 'INFINITY', 'GOD'];
+  const POWERS = { Beginner: 0.25, Easy: 0.5, Normal: 1.0, Hard: 1.5, Expert: 3.0, Master: 5.0, GrandMaster: 6.5, Hell: 8.0, Legend: 10.0 };
+  let f = null;
+  if (a >= 0 && b > a) {
+    f = new Function('ALL_EXTREME_DIFFICULTIES', 'DIFFICULTY_SETTINGS', 'proRunQuickLoops', `${diffSrc.slice(a, b)}\n}; return proQuickLoopsFor;`)(
+      exIds.map(id => ({ id })), Object.fromEntries(Object.entries(POWERS).map(([k, power]) => [k, { power }])), proRunQuickLoops);
+  }
+  check('⑤-0 proQuickLoopsFor を切り出せる', !!f);
+  if (f) {
+    const want = { Hard: 10, Expert: 50, Master: 100, GrandMaster: 150, Hell: 200, Legend: 300 };
+    const got = Object.fromEntries(Object.keys(want).map(k => [k, f(10, k)]));
+    check('⑤-1 10WAVE完走: Hard 10 / Expert 50 / Master 100 / GrandMaster 150 / Hell 200 / Legend 300', Object.keys(want).every(k => got[k] === want[k]), JSON.stringify(got));
+    const ex = exIds.map(id => f(10, 'Normal', id));
+    check('⑤-2 極限: EXTREME 500 から並び順に +200(700・900・1100・1300・1500)', JSON.stringify(ex) === '[500,700,900,1100,1300,1500]', JSON.stringify(ex));
+    check('⑤-3 タクティクスで難易度に極限のidが入っているときも同じ', f(10, 'NIGHTMARE') === 700);
+    const low = ['Beginner', 'Easy', 'Normal'].map(k => [f(10, k), proRunQuickLoops(10, POWERS[k]), f(5, k), proRunQuickLoops(5, POWERS[k])]);
+    check('⑤-4 Normal 以下は今までの式のまま', low.every(([x, y, z, w]) => x === y && z === w), JSON.stringify(low));
+    const hell = [3, 5, 8].map(w => f(w, 'Hell'));
+    check('⑤-5 負けたら後ろのWAVEほど重く: Hell で WAVE3 21周 / WAVE5 54周 / WAVE8 130周(200×6/55・15/55・36/55 の切り捨て)', JSON.stringify(hell) === '[21,54,130]', JSON.stringify(hell));
+    check('⑤-6 1WAVE以上なら最低1周(Hard で WAVE1 → 1周)・0WAVE は 0', f(1, 'Hard') === 1 && f(0, 'Hell') === 0);
+    const seq = Array.from({ length: 10 }, (_, i) => f(i + 1, 'Legend'));
+    check('⑤-7 進むほど増え、9WAVEでも完走より少ない', seq.every((v, i) => i === 0 || v >= seq[i - 1]) && seq[8] < seq[9], JSON.stringify(seq));
+  }
+  check('⑤-8 EXTREME より上の数が「仮」だとコメントに書いてある', /とりあえず仮に/.test(a >= 0 ? diffSrc.slice(a, b) : ''));
+  const helpSrc = part('20-market-notices-help.jsx');
+  const hs = helpSrc.indexOf("case 'proQuickLoops': {");
+  const hcase = hs >= 0 ? helpSrc.slice(hs, helpSrc.indexOf('\n    }\n', hs)) : '';
+  check('⑤-9 ヘルプの表は proQuickLoopsFor から作る(数を書き写していない)', /proQuickLoopsFor\(10, id, ex\)/.test(hcase) && !/\b(10|50|100|150|200|300|500)周/.test(hcase));
+}
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

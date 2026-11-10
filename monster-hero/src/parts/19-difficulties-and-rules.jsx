@@ -480,6 +480,32 @@ const EXTREME_DIFFICULTY_THEMES = Object.freeze({
 });
 const extremeDifficultyTheme = (difficultyId) => EXTREME_DIFFICULTY_THEMES[difficultyId] || EXTREME_DIFFICULTY_THEMES.EXTREME;
 const PUBLIC_EXTREME_DIFFICULTIES = Object.freeze(ALL_EXTREME_DIFFICULTIES.filter(setting=>setting.available));
+// ===== プロモード(クラシックのプロ・タクティクスのプロ)で入る、裏のクイック周回ぶん(2026-11-10 社長の表) =====
+// 10WAVE を完走したときの周回数。Hard より下(Beginner・Easy・Normal)は表に入れず、今までの式(10-core.jsx の proRunQuickLoops)のまま。
+// 本体(60-app.jsx の awardProRunQuickLoops)もヘルプの表(20-market-notices-help.jsx の proQuickLoops)も、proQuickLoopsFor だけを読む(数を書き写さない)
+const PRO_CLEAR_QUICK_LOOPS = Object.freeze({ Hard:10, Expert:50, Master:100, GrandMaster:150, Hell:200, Legend:300 });
+// 極限(タクティクスのプロで遊べる)。EXTREME は 500。その上は ALL_EXTREME_DIFFICULTIES の並び順に 1段ごとに +200(NIGHTMARE 700・CHAOS 900…)。
+// ★EXTREME より上の数は、社長の「とりあえず仮に」(2026-11-10)。決まったらここだけを直す
+const PRO_CLEAR_QUICK_LOOPS_EXTREME = 500;
+const PRO_CLEAR_QUICK_LOOPS_EXTREME_STEP = 200;
+const PRO_QUICK_LOOP_WAVES = 10;
+// 負けて途中で終わったときは、後ろのWAVEほど重く数える(WAVE n の重みは n)。
+// 周回 = 切り捨て(完走の周回 × 進んだWAVEの重みの合計 ÷ 全WAVEの重みの合計)。1WAVE以上進んでいれば最低1周
+const proQuickLoopWeight = (waves) => (waves * (waves + 1)) / 2;
+// difficulty … いまの難易度(DIFFICULTY_SETTINGS のキー。タクティクスでは極限のidのこともある)。extremeId … 極限で遊んでいるときの極限のid
+const proQuickLoopsFor = (wavesCleared, difficulty, extremeId = null) => {
+  const waves = Math.max(0, Math.min(PRO_QUICK_LOOP_WAVES, Math.trunc(Number(wavesCleared) || 0)));
+  if (waves <= 0) return 0;
+  const exId = extremeId || (ALL_EXTREME_DIFFICULTIES.some(setting => setting.id === difficulty) ? difficulty : null);
+  const exIndex = exId ? ALL_EXTREME_DIFFICULTIES.findIndex(setting => setting.id === exId) : -1;
+  const full = exIndex >= 0
+    ? PRO_CLEAR_QUICK_LOOPS_EXTREME + PRO_CLEAR_QUICK_LOOPS_EXTREME_STEP * exIndex
+    : Number(PRO_CLEAR_QUICK_LOOPS[difficulty]) || 0;
+  // 表に無い難易度(Normal 以下)は今までの式のまま
+  if (!(full > 0)) return proRunQuickLoops(waves, DIFFICULTY_SETTINGS[difficulty]?.power);
+  if (waves >= PRO_QUICK_LOOP_WAVES) return full;
+  return Math.max(1, Math.floor(full * proQuickLoopWeight(waves) / proQuickLoopWeight(PRO_QUICK_LOOP_WAVES)));
+};
 // 冥界チャレンジ(2026-11-01 社長の決定)。INFERNO・COCYTUS は難易度選びのタブだけ「冥界」へ移す。
 // ★難易度の名前・極限の一覧(ALL_EXTREME_DIFFICULTIES)の並び・保存キー(mh_extreme_hs_/clears_<id>)・ランキングの枠(Extreme<id>)は変えない。
 //   表示の分け方だけを、設定の tab:'underworld' の印で決める
