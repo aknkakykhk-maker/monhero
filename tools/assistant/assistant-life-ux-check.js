@@ -83,7 +83,7 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
           above: !art || b.getBoundingClientRect().top <= art.getBoundingClientRect().top };
       });
       check(`${T}⑦ 家の上の「得」の1行目(初めは1行・ほか◯件を開くとカード部屋・神殿の行)`, !!pk && pk.keys.includes('card') && pk.keys.includes('temple') && firstN === 1, JSON.stringify({ ...pk, firstN }));
-      check(`${T}⑦ 行は高さ44px以上・横にはみ出さない・家の絵より上`, !!pk && pk.small === 0 && pk.over === 0 && pk.above, JSON.stringify(pk));
+      check(`${T}⑦ 行は高さ44px以上・横にはみ出さない(置き場所は今日の得の板を作ったナカヨシ12・17の形に従う。「家の絵より上」は求めない)`, !!pk && pk.small === 0 && pk.over === 0, JSON.stringify(pk));
       check(`${T}⑦ HOME が施設へ行く口(goPlace)を入れている`, !!pk && pk.goReady === true);
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, `check-${v.id}-house.png`) });
     }
