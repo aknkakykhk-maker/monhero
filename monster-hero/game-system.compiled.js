@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0c06b3948a3b8870
+// source-sha256: 008824269bb827f5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -134992,9 +134992,11 @@ const normalizeAssistantMasmonSave = raw => {
     pickNameDay: '',
     renamed2: {},
     asked: [],
-    mine: {}
+    mine: {},
+    nickFix1: false
   };
   if (raw && typeof raw === 'object') {
+    out.nickFix1 = raw.nickFix1 === true;
     if (typeof raw.seed === 'string' && /^[\w-]{4,60}$/.test(raw.seed)) out.seed = raw.seed;
     out.made = normalizeAssistantMasmonMade(raw.made);
     out.named = raw.named === true;
@@ -136038,7 +136040,7 @@ const assistantMasmonChooseAt = (aid, slot, have, ctx, seed, day) => {
     role,
     welcome: assistantMasmonWelcomeLv(slot),
     colors: assistantMasmonDyeMake2(aid, p, best.c.t.monster, role, rnd),
-    ai: false,
+    ai: !!(typeof best.c.t.nick === 'string' && best.c.t.nick),
     reason,
     at: day
   };
@@ -136202,10 +136204,80 @@ const assistantMasmonEnsureMade = async () => {
       } catch (_) {}
     }
   } catch (_) {}
+  try {
+    const st = ASSISTANT_MASMON_STORE.state;
+    const next = assistantMasmonNickFix1(st);
+    if (next !== st) {
+      ASSISTANT_MASMON_STORE.set(next);
+      try {
+        if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false);
+      } catch (_) {}
+    }
+  } catch (_) {}
   void assistantMasmonAskNames();
 };
-let _assistantMasmonNamesBusy = false;
+const assistantMasmonIsMonName = n => {
+  try {
+    return typeof ALL_PLAYER_MONSTERS !== 'undefined' && Object.values(ALL_PLAYER_MONSTERS).some(m => m && m.name === n);
+  } catch (_) {
+    return false;
+  }
+};
+const assistantMasmonNickFix1 = st => {
+  if (!st || st.nickFix1 || !st.draw || st.draw.v !== ASSISTANT_MASMON_DRAW_V) return st;
+  const pick = {
+    ...(st.pick || {})
+  };
+  for (const aid of Object.keys(pick)) {
+    const base = assistantMasmonBasePlanOf(aid);
+    if (!base || !pick[aid]) continue;
+    const pool = assistantMasmonDrawPool(aid, base);
+    const all = [...pool.likes, ...pool.more, ...pool.rest];
+    const mine = assistantMasmonMineOf(st, aid);
+    const pk = {
+      ...pick[aid]
+    };
+    for (const k of Object.keys(pk)) {
+      const t = pk[k];
+      const mon = assistantMasmonMon(t.monster);
+      if (!mon || t.nick !== mon.name || (mine.names[t.slot] || []).length) continue;
+      const src = all.find(x => x.monster === t.monster && typeof x.nick === 'string' && x.nick);
+      if (!src || assistantMasmonRowsOf({
+        ...st,
+        pick: {
+          ...pick,
+          [aid]: pk
+        }
+      }, aid).some(y => y.nick === src.nick)) continue;
+      pk[k] = {
+        ...t,
+        nick: src.nick,
+        ai: true
+      };
+    }
+    pick[aid] = pk;
+  }
+  return {
+    ...st,
+    pick,
+    nickFix1: true
+  };
+};
+let _assistantMasmonNamesBusy = false,
+  _assistantMasmonNamesAgain = false;
 const assistantMasmonAskNames = async () => {
+  if (_assistantMasmonNamesBusy) {
+    _assistantMasmonNamesAgain = true;
+    return 'skip';
+  }
+  const r = await assistantMasmonAskNamesOnce();
+  if (_assistantMasmonNamesAgain) {
+    _assistantMasmonNamesAgain = false;
+    if (r !== 'failed' && r !== 'tired') return assistantMasmonAskNamesOnce();
+  }
+  return r;
+};
+const assistantMasmonAskNamesOnce = async () => {
   const st = ASSISTANT_MASMON_STORE.state;
   const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '';
   if (!st.draw || st.draw.v !== ASSISTANT_MASMON_DRAW_V || _assistantMasmonNamesBusy || !day || st.pickNameDay === day) return 'skip';
@@ -136289,7 +136361,7 @@ const assistantMasmonAskNames = async () => {
         if (t.ai) return t;
         const n = typeof got[t.slot] === 'string' ? got[t.slot].trim() : '';
         const styled = !!assistantMasmonMineOf(cur, a).nameStyle;
-        const ok = (styled ? assistantMasmonAskNameOk(n) : /^[ぁ-ゖァ-ヺー一-龠々・]{2,8}$/u.test(n)) && !used.has(n);
+        const ok = (styled ? assistantMasmonAskNameOk(n) : /^[ぁ-ゖァ-ヺー一-龠々・]{2,8}$/u.test(n)) && !used.has(n) && !assistantMasmonIsMonName(n);
         if (!ok) return t;
         used.add(n);
         changed = true;
@@ -136935,6 +137007,9 @@ const assistantMasmonAskApply = (aid, r, outcome, t) => {
       }
     }));
     if (!r.name) void assistantMasmonAskNames();
+    try {
+      if (typeof amgTick === 'function') void amgTick(aid);
+    } catch (_) {}
     return {
       changed: true,
       what: `${row.nick}を${monName(r.monster)}に入れ替え`
@@ -137468,6 +137543,17 @@ const assistantMasmonLineage = mid => {
     const l = typeof monsterLineageOf === 'function' ? monsterLineageOf(mid) : null;
     const m = l && l.main;
     return (m && typeof m === 'object' ? m.id : m) || null;
+  } catch (_) {
+    return null;
+  }
+};
+const assistantMasmonLineageRep = lin => {
+  try {
+    if (!lin || typeof ALL_PLAYER_MONSTERS === 'undefined') return null;
+    const id = typeof MONSTER_LINEAGES !== 'undefined' && MONSTER_LINEAGES[lin] ? MONSTER_LINEAGES[lin].monId : '';
+    if (id && ALL_PLAYER_MONSTERS[id]) return ALL_PLAYER_MONSTERS[id];
+    const k = Object.keys(ALL_PLAYER_MONSTERS).find(m => assistantMasmonLineage(m) === lin);
+    return k ? ALL_PLAYER_MONSTERS[k] : null;
   } catch (_) {
     return null;
   }
@@ -138196,6 +138282,11 @@ function AssistantMasmonSheet({
         lv = Number(bondLv);
       if (p0 && p0.v2) {
         const got = await assistantMasmonWelcomeDue(id, lv);
+        if (got.length && typeof amgTick === 'function') {
+          try {
+            await amgTick(id);
+          } catch (_) {}
+        }
         if (got.length && alive) setWelcome(got[got.length - 1]);
       } else {
         const due = p0 && Number.isFinite(lv) ? (p0.extra || []).filter(t => assistantMasmonMonOk(t) && Number.isFinite(t.welcome) && lv >= t.welcome && !assistantMasmonWelcomed(id)[t.monster]) : [];
@@ -138453,7 +138544,7 @@ function AssistantMasmonSheet({
     const line = (x, kind) => {
       const name = assistantMasmonTasteName(x);
       if (!name) return null;
-      const m = x.monster ? assistantMasmonMon(x.monster) : null;
+      const m = x.monster ? assistantMasmonMon(x.monster) : x.lineage ? assistantMasmonLineageRep(x.lineage) : null;
       const spread = kind === 'like' ? assistantMasmonSpread(x) : '';
       return React.createElement("div", {
         key: `${kind}-${x.monster || x.lineage}`,
