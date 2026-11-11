@@ -80,6 +80,21 @@ const SAMPLE = (() => {
     const l1 = await layout(page);
     check(`${T}⑥ 押せる所は44px以上・はみ出さない(トップ)`, l1.small.length === 0 && l1.over === 0, JSON.stringify(l1));
     await shot(page, v, '1-top');
+    // ⑧ 見やすさ(2026-11-11 ミヤスサの点検 上位5): 家の最初の画面の長さ・下の札にかぶらない・横でも家が最初に見える
+    const m = await page.evaluate(() => {
+      const body = document.querySelector('[data-assistant-life-screen] .mhl-body'), bar = body && body.nextElementSibling, top = document.querySelector('[data-assistant-life-top-house]');
+      if (!body || !bar || !top) return null;
+      const screens = +(body.scrollHeight / body.clientHeight).toFixed(2);
+      const topVis = top.getBoundingClientRect().top < body.getBoundingClientRect().bottom - 80;
+      body.scrollTop = body.scrollHeight;
+      const kids = [...body.querySelectorAll('[data-assistant-life-benefit],[data-assistant-life-daily],[data-assistant-life-top-strip]')];
+      const lastBottom = Math.max(...kids.map(x => x.getBoundingClientRect().bottom));
+      const br = bar.getBoundingClientRect(), bb = body.getBoundingClientRect();
+      const barTop = br.top >= bb.bottom - 2 ? br.top : Infinity; // 横は下の札が右の列(横並び)なので、かぶりは見ない
+      body.scrollTop = 0;
+      return { screens, topVis, lastBottom: Math.round(lastBottom), barTop: Number.isFinite(barTop) ? Math.round(barTop) : 'side' };
+    });
+    check(`${T}⑧ 家の画面は2画面まで・いちばん下の札が下の固定の札にかぶらない・家が最初に見える`, !!m && m.screens <= 2 && (m.barTop === 'side' || m.lastBottom <= m.barTop + 1) && m.topVis, JSON.stringify(m));
     await page.locator('[data-assistant-life-benefit-fold]').click(); await page.waitForTimeout(300);
     check(`${T}③ ▼ で「今日・次のごほうび」が開く`, (await page.locator('[data-assistant-life-benefit-fold="open"]').count()) === 1);
     await page.locator('[data-assistant-life-benefit-fold]').click(); await page.waitForTimeout(300);
