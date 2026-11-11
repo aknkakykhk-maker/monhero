@@ -133,7 +133,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantLife: true,
   // 助手ライフの家具(段階B・2026-11-08 社長 GIFT-PLAN.md)。交換所の「家具」・部屋に置く・贈ったときの反応。社長の「この文で」が出るまで偽
   assistantLifeFurniture: true, // 2026-11-08 社長「この文で」
-  assistantLifeRoomEdit: false, // 助手の部屋の模様替え(家具を指で動かす・大きさ・向き・色・前後・おまかせ)。2026-11-11 試作。社長の「この形で」が出るまでオフ(56-assistant-life-roomedit.jsx)
+  assistantLifeRoomEdit: true, // 助手の部屋の模様替え(家具を指で動かす・大きさ・向き・色・前後・おまかせ)。2026-11-11 社長「この形で進める」「この文で」・ミハリ最終確認 OK(56-assistant-life-roomedit.jsx)
   // 助手1人に贈る(2026-11-08 社長 SOLO-GIFT-PLAN.md ❶B ❷A ❸A ❹A ❺A)。台詞・止め絵・更新履歴の「この文で」・ミハリの確認のあとで真にする
   assistantLifeSolo: true, // 2026-11-08 社長「この文で公開」
   // 助手ライフのフレンドの家との行き来(2026-11-08 社長・助手部オトズレ。設計 docs/progress/assistant-peer/FRIEND-VISIT-PLAN.md)。

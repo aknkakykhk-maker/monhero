@@ -138,6 +138,22 @@ const ROOM = { mua: { put: { ceil: 'mirrorball', wall: 'heartmirror', floor: 'be
     const seen = await page.locator('[data-assistant-life-roomview="mua"] [data-assistant-life-layout-item]').count();
     check(`${T}できた → ふだんの大きな部屋に11個`, seen === 11, `${seen}個`);
     await shot(page, `${v.id}-room-after`);
+    // 家具のシート(新しい置き方): 「入れかえる」は無く、しまう → 押し入れ、置く → 部屋へ。模様替えを開かなくても出し入れできる
+    await page.locator(v.land ? '[data-assistant-life-room-act="furn"], [data-assistant-life-do="furn"]' : '[data-assistant-life-roomview-act="furn"]').first().click(); await page.waitForTimeout(400);
+    const swapN = await page.locator('[data-assistant-life-furn-sheet] button', { hasText: '入れかえる' }).count();
+    await page.locator('[data-assistant-life-furn-keep="bear"]').click(); await page.waitForTimeout(250);
+    const sA = await layoutOf(page); const keptBear = !sA.lay.mua.items.some(it => it.k === 'bear');
+    await page.locator('[data-assistant-life-furn-put="bear"]').click(); await page.waitForTimeout(250);
+    const sB = await layoutOf(page); const putBear = sB.lay.mua.items.some(it => it.k === 'bear');
+    await page.locator('[data-assistant-life-furn-put="bookshelf"]').click(); await page.waitForTimeout(250);
+    const sC = await layoutOf(page);
+    check(`${T}家具のシート: 「入れかえる」が無い・しまう/置くで並びが変わる・12個ぜんぶ置ける`, swapN === 0 && keptBear && putBear && sC.lay.mua.items.length === 12, `入れかえる=${swapN} しまう=${keptBear} 置く=${putBear} ${sC.lay.mua.items.length}個`);
+    await page.locator('[data-assistant-life-furn-close]').click(); await page.waitForTimeout(300);
+    // 家の一覧の小さな部屋: 同じ並びが部屋の中に出る・顔や吹き出しより後ろ(z-index 0)・押せない
+    await page.locator('[data-assistant-life-roomview-close]').click().catch(() => {}); await page.waitForTimeout(500);
+    const mini = await page.evaluate(() => { const els = [...document.querySelectorAll('[data-assistant-life-room-furn^="mua:layout:"]')]; const room = els[0] && els[0].parentElement.getBoundingClientRect();
+      return { n: els.length, z: els.every(e => getComputedStyle(e).zIndex === '0' && getComputedStyle(e).pointerEvents === 'none'), inside: els.every(e => { const r = e.getBoundingClientRect(); const cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2; return cx >= room.left && cx <= room.right && cy >= room.top && cy <= room.bottom; }) }; });
+    check(`${T}家の一覧の小さな部屋に同じ並び(12個・部屋の中・顔や吹き出しの後ろ)`, mini.n === 12 && mini.z && mini.inside, JSON.stringify(mini));
     const s7 = await layoutOf(page);
     check(`${T}今のキー mh_assistant_life_room_v1 は最後まで変わらない`, JSON.stringify(s7.room) === JSON.stringify(ROOM));
     await page.close();
