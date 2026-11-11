@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 75f0a99f685176e5
+// source-sha256: 31cb91ae0e575690
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -135667,14 +135667,14 @@ const ALF_LIMITS = Object.freeze({
   on: Object.freeze({
     go: 3,
     come: 2,
-    look: 3,
+    look: 999,
     readMs: 30 * 60000,
     sendMs: 10 * 60000
   }),
   thin: Object.freeze({
     go: 1,
     come: 0,
-    look: 1,
+    look: 999,
     readMs: 30 * 60000,
     sendMs: 60 * 60000
   })
@@ -136699,7 +136699,7 @@ const assistantLifeFriendSetGiftSender = fn => {
 };
 const alfGiveBeatP = async (kind, giftId, st) => {
   const want = ALF_BEAT_P[kind] || 0;
-  const amount = Math.max(0, Math.min(want, ALF_BEAT_P.dayMax - (st.beatP || 0)));
+  const amount = kind === 'look' ? want : Math.max(0, Math.min(want, ALF_BEAT_P.dayMax - (st.beatP || 0)));
   if (!amount || !_alfGiftSender) return 0;
   let ok = false;
   try {
@@ -136997,13 +136997,6 @@ const assistantLifeFriendLeaveNote = async (hostId, {
   };
   alfSaveSt(marked);
   const got = await alfGiveBeatP('look', `alf_player_${cur.day}_${hostId.slice(0, 12)}`, marked);
-  if (got) {
-    const now2 = alfToday();
-    alfSaveSt({
-      ...now2,
-      beatP: now2.beatP + got
-    });
-  }
   return {
     ok: true,
     beatP: got,
@@ -137904,7 +137897,7 @@ function AlfFriendHouseView({
       setNoteWarn('');
       setLeaving('');
     }
-  }, React.createElement("i", null, "✉️"), React.createElement("b", null, "置き手紙"), React.createElement("small", null, done ? '残した' : can === 'ok' ? '今日あと1回' : '今日は残した'))), React.createElement("p", {
+  }, React.createElement("i", null, "✉️"), React.createElement("b", null, "置き手紙"), React.createElement("small", null, done ? '残した' : can === 'ok' ? '1人に1日1通' : '今日は残した'))), React.createElement("p", {
     className: "mt-1.5 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] font-bold leading-snug text-amber-100",
     "data-alf-visit-note": done ? 'done' : can
   }, noteLine), React.createElement("p", {
@@ -138571,7 +138564,7 @@ function AssistantLifeFriendPage({
     className: "whitespace-nowrap"
   }, "来てくれた ", st.come, "/", lim.come), React.createElement("span", {
     className: "whitespace-nowrap"
-  }, "置き手紙 ", st.look, "/", lim.look), React.createElement("span", {
+  }, "置き手紙 ", st.look, "通"), React.createElement("span", {
     className: "whitespace-nowrap"
   }, "おみやげ ", st.beatP, "/", ALF_BEAT_P.dayMax, "P"))), React.createElement("p", {
     className: sec,
