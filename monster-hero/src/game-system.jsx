@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 60178cf368b4c4b6
+// generated-sha256: 831e5017a2c10397
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -69014,13 +69014,13 @@ const AMG_APT = Object.freeze({
   Ham: 'CAECAE',
   Pixie: 'EDABBE',
   Mia: 'DCABBE',
-  Pandora: 'DBABCC',
+  Pandora: 'DBAABE',
   Monol: 'DCCDEA',
   Oboro: 'BECCDD',
   Plant: 'AECCDE',
   Zan: 'EBEAAE',
-  Eiki: 'DACBAE',
-  KenshiMocchi: 'CAEABD',
+  Eiki: 'DADBBE',
+  KenshiMocchi: 'DAEACE',
   Mitarashi: 'CBBBCB',
   Ark: 'CCCDCB',
   Iblis: 'DCCDCC',
@@ -69046,13 +69046,13 @@ const AMG_INIT = Object.freeze({
   Ham: [50, 130, 70, 100, 140, 40],
   Pixie: [50, 80, 170, 150, 140, 60],
   Mia: [94, 104, 204, 124, 94, 94],
-  Pandora: [85, 135, 160, 135, 110, 110],
+  Pandora: [85, 135, 224, 150, 94, 50],
   Monol: [110, 130, 140, 100, 10, 220],
   Oboro: [140, 50, 120, 110, 100, 80],
   Plant: [160, 40, 120, 110, 100, 70],
   Zan: [60, 135, 60, 160, 160, 60],
-  Eiki: [85, 160, 110, 135, 160, 60],
-  KenshiMocchi: [110, 160, 60, 160, 135, 85],
+  Eiki: [85, 170, 85, 140, 135, 55],
+  KenshiMocchi: [85, 170, 60, 170, 110, 55],
   Mitarashi: [100, 110, 140, 150, 120, 160],
   Ark: [110, 110, 110, 85, 110, 135],
   Iblis: [85, 110, 110, 85, 110, 110],

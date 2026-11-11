@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e64390a8d6e9dd76
+// source-sha256: 198ddb93253ebf79
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -130717,13 +130717,13 @@ const AMG_APT = Object.freeze({
   Ham: 'CAECAE',
   Pixie: 'EDABBE',
   Mia: 'DCABBE',
-  Pandora: 'DBABCC',
+  Pandora: 'DBAABE',
   Monol: 'DCCDEA',
   Oboro: 'BECCDD',
   Plant: 'AECCDE',
   Zan: 'EBEAAE',
-  Eiki: 'DACBAE',
-  KenshiMocchi: 'CAEABD',
+  Eiki: 'DADBBE',
+  KenshiMocchi: 'DAEACE',
   Mitarashi: 'CBBBCB',
   Ark: 'CCCDCB',
   Iblis: 'DCCDCC',
@@ -130749,13 +130749,13 @@ const AMG_INIT = Object.freeze({
   Ham: [50, 130, 70, 100, 140, 40],
   Pixie: [50, 80, 170, 150, 140, 60],
   Mia: [94, 104, 204, 124, 94, 94],
-  Pandora: [85, 135, 160, 135, 110, 110],
+  Pandora: [85, 135, 224, 150, 94, 50],
   Monol: [110, 130, 140, 100, 10, 220],
   Oboro: [140, 50, 120, 110, 100, 80],
   Plant: [160, 40, 120, 110, 100, 70],
   Zan: [60, 135, 60, 160, 160, 60],
-  Eiki: [85, 160, 110, 135, 160, 60],
-  KenshiMocchi: [110, 160, 60, 160, 135, 85],
+  Eiki: [85, 170, 85, 140, 135, 55],
+  KenshiMocchi: [85, 170, 60, 170, 110, 55],
   Mitarashi: [100, 110, 140, 150, 120, 160],
   Ark: [110, 110, 110, 85, 110, 135],
   Iblis: [85, 110, 110, 85, 110, 110],
