@@ -1499,12 +1499,15 @@ function AssistantMasmonSheet({ id, land = false, onClose, bondLv = null }) {
   const p = assistantMasmonPlanOf(id);
   if (!who || !p) return null;
   const team = assistantMasmonTeam(p), bench = assistantMasmonBench(p, save), all = [...team, ...bench], waiting = assistantMasmonWaiting(p, save);
+  const waitSorted = waiting.slice().sort((a, b) => (a.welcome || 0) - (b.welcome || 0)), waitNext = waitSorted[0] || null, waitRest = waitSorted.slice(1); // 🔒の枠は次の1体だけ大きく、残りは1行(通し点検の改善案9)
   const fav = tab === 'deck' ? assistantMasmonFavCard(id) : null;
   let body = null;
   if (tab === 'mons') {
     body = (<>
       {renamed && <p className="mhm-card mb-2 text-[11.5px] font-bold leading-snug text-slate-100" data-assistant-masmon-renamed>{who.name}「{assistantMasmonRenamedLine(id)}」</p>}
-      <div className={land ? 'grid grid-cols-3 gap-2' : 'flex flex-col gap-2'}>{all.map(t => <AssistantMasmonRow key={t.monster} t={t} land={land} onOpen={setDetail} aid={id} amg={amgSt}/>)}{waiting.map(t => <AssistantMasmonWaitCard key={t.monster} t={t} land={land}/>)}</div>
+      {waitNext && <p className="mhm-card mb-2 text-[12px] font-black text-pink-100" data-assistant-masmon-next-lv>💗 {Number.isFinite(bondLv) && waitNext.welcome > bondLv ? `あと仲良し度 ${waitNext.welcome - bondLv} Lv で、次のマスモンを迎えます` : `仲良し度 Lv${waitNext.welcome} で、次のマスモンを迎えます`}</p>}
+      <div className={land ? 'grid grid-cols-3 gap-2' : 'flex flex-col gap-2'}>{all.map(t => <AssistantMasmonRow key={t.monster} t={t} land={land} onOpen={setDetail} aid={id} amg={amgSt}/>)}{waitNext && <AssistantMasmonWaitCard key={waitNext.monster} t={waitNext} land={land}/>}</div>
+      {waitRest.length > 0 && <p className="mt-2 rounded-xl border border-dashed border-slate-600 px-3 py-2 text-[11px] font-bold text-slate-400" data-assistant-masmon-wait-rest={waitRest.length}>🔒 ほかに {waitRest.length} 体(仲良し度 {waitRest.map(t => `Lv${t.welcome}`).join('・')} で迎えます)</p>}
       {p.v2 && <AssistantMasmonStyleRow who={who}/>}
       {p.v2 && waiting.length > 0 && <AssistantMasmonWishRow who={who} onAsk={(from) => setAsk({ from })}/>}
       <p className="mt-2 text-[10.5px] font-bold leading-snug text-slate-400">🐾 {who.name}が自分で育てて、自分の好きな色に染めているマスモンです。押すと詳しく見られます。</p>
@@ -1984,7 +1987,7 @@ const ASSISTANT_MASMON_CSS = `
 .mhm-panel{position:absolute;left:0;right:0;bottom:0;top:5%;display:flex;flex-direction:column;background:linear-gradient(180deg,#1f1640,#0b1020 70%);border-top:2px solid #f9a8d4;border-radius:22px 22px 0 0;padding:12px 14px calc(12px + env(safe-area-inset-bottom));color:#fff}
 .mhm-panel.is-land{top:0;left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));border:2px solid #f9a8d4;border-bottom:0;padding:8px 14px 8px}
 .mhm-body{flex:1;min-height:0;overflow-y:auto;padding:2px 2px 6px}
-.mhm-tab{border-radius:999px;background:#1e293b;padding:6px 2px;font-size:11px;font-weight:900;color:#cbd5e1;white-space:nowrap}
+.mhm-tab{min-height:44px;border-radius:999px;background:#1e293b;padding:6px 2px;font-size:11px;font-weight:900;color:#cbd5e1;white-space:nowrap}
 .mhm-tab.on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff}
 .mhm-card{border:1px solid rgba(148,163,184,.35);background:rgba(15,23,42,.85);border-radius:14px;padding:8px 10px}
 .mhm-pic{flex-shrink:0;border-radius:10px;background:radial-gradient(circle at 50% 40%,#94a3b8,#475569);overflow:hidden;margin:0 auto}
