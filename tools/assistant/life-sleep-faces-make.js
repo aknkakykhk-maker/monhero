@@ -1,5 +1,6 @@
 // 助手ライフの寝顔: 社長が描いた「目を閉じた絵」から、立ち絵・顔アイコンに重ねる絵を作る(2026-11-11 社長「寝顔こっちでつくる」→ 7枚を受け取り)
 //   node tools/assistant/life-sleep-faces-make.js                 作る(monster-hero/images/assistant/sleep/ の下に、元の絵と同じ並びで置く)
+//   node tools/assistant/life-sleep-faces-make.js --only myua,kiki          一部の人だけ作り直す
 //   node tools/assistant/life-sleep-faces-make.js --preview <フォルダ>   [元 | 重ねた後] の目のまわりの比較も書き出す
 // 受け取った物: tools/art-sources/sleep-faces/received-v1.png(1枚に7人。背景は抜いてある。加工せずに残す)
 // 作り方
@@ -14,15 +15,16 @@ const SRC = path.join(ROOT, 'tools/art-sources/sleep-faces/received-v1.png');
 // 受け取った絵の中の人ごとの枠 [x0, y0, x1, y1]
 const BOX = { atsu: [0, 0, 425, 487], kiki: [426, 0, 722, 487], 'kiki-halloween': [722, 0, 1128, 487], kyuko: [1128, 0, 1536, 487], myua: [40, 487, 565, 1024], 'myua-card-master': [545, 487, 975, 1024], 'myua-halloween': [975, 487, 1536, 1024] };
 // 重ね先。eyes … 元の全身の絵の開いた目 [x, y, 幅, 高さ](絵に対する割合。56-assistant-life-roomview.jsx の表と同じ測り方)
+//   faceEyes … 顔アイコンが全身の単純な切り抜きでない絵(みゅあ)は、顔アイコンの目 [x, y, 幅, 高さ](画素)を測って、両目の2点から合わせる
 //   panelEyes … 目の位置の表が無い着せ替えは、社長の絵(切り出した後)の閉じた線から測る [線の中心 x, y, 線の長さ](画素)
 const JOBS = [
   { panel: 'atsu', full: 'atsu_normal.PNG', eyes: [[0.4188, 0.3125, 0.0768, 0.0391], [0.5661, 0.2553, 0.0911, 0.0342]] },
   { panel: 'kiki', full: 'kiki_normal.PNG', eyes: [[0.4492, 0.4868, 0.0579, 0.0703], [0.5592, 0.4766, 0.0579, 0.0664]] },
   { panel: 'kiki-halloween', full: 'halloween/kiki_normal.PNG', panelEyes: [[165, 243, 36], [239, 222, 40]] },
   { panel: 'kyuko', full: 'kyuko_normal.PNG', eyes: [[0.342, 0.415, 0.117, 0.072], [0.579, 0.383, 0.142, 0.075]] },
-  { panel: 'myua', full: 'myua_normal.PNG', eyes: [[0.46, 0.334, 0.043, 0.048], [0.524, 0.347, 0.032, 0.046]] },
-  { panel: 'myua-card-master', full: 'card-master/myua_normal.PNG', panelEyes: [[190, 190, 38], [253, 208, 32]] },
-  { panel: 'myua-halloween', full: 'halloween/myua_normal.PNG', panelEyes: [[188, 216, 36], [251, 230, 30]] },
+  { panel: 'myua', mask: { up: [0.58, 0.28] }, full: 'myua_normal.PNG', faceEyes: [[102.5, 125.5, 34, 27], [155, 135.5, 27, 25]], eyes: [[0.46, 0.334, 0.043, 0.048], [0.524, 0.347, 0.032, 0.046]] },
+  { panel: 'myua-card-master', mask: { up: [0.58, 0.28] }, full: 'card-master/myua_normal.PNG', faceEyes: [[107.5, 107.5, 27, 20], [155, 125, 27, 20]], panelEyes: [[190, 190, 38], [253, 208, 32]] },
+  { panel: 'myua-halloween', mask: { up: [0.58, 0.28] }, full: 'halloween/myua_normal.PNG', faceEyes: [[97.5, 113.5, 35, 22], [150, 123.5, 28, 22]], panelEyes: [[188, 216, 36], [251, 230, 30]] },
 ];
 const faceOf = (rel) => rel.includes('/') ? rel.replace(/\/([^/]+)$/, '/face/$1') : `face/${rel}`;
 const outOf = (rel) => path.join(IMG, 'sleep', rel);
@@ -83,13 +85,14 @@ async function refine(src, tgtFile, R0, eyesT, { skipEyes = true } = {}) {
 }
 
 // ③ 変形して重ねる絵を作る(目ごとの楕円の芯 + なめらかなぼかし)
-async function compose(src, tgtFile, R, eyesT, out, { core = [0.62, 0.75], fe = 0.6 } = {}) {
+async function compose(src, tgtFile, R, eyesT, out, { core = [0.62, 0.75], fe = 0.6, up = null } = {}) {
+  // up … 目の上側だけ浅くする [芯の縦の倍率, ぼかし](前髪が目のすぐ上まで来る助手。前髪の毛先が二重に見えないように)
   const m = await sharp(tgtFile).metadata(), W = m.width, H = m.height, P = src, buf = Buffer.alloc(W * H * 4);
   const ang = Math.atan2(eyesT[1][1] - eyesT[0][1], eyesT[1][0] - eyesT[0][0]), ca = Math.cos(ang), sa = Math.sin(ang);
   const reach = Math.max(...eyesT.map(e => Math.max(e[2] * core[0], e[3] * core[1]) * (1 + fe))) + 2;
   for (let Y = 0; Y < H; Y++) for (let X = 0; X < W; X++) {
     if (!eyesT.some(e => Math.abs(X - e[0]) < reach && Math.abs(Y - e[1]) < reach)) continue;
-    let f = 0; for (const [ex, ey, ew, eh] of eyesT) { const dx = X - ex, dy = Y - ey, u = dx * ca + dy * sa, v = -dx * sa + dy * ca; const e = Math.sqrt((u / (ew * core[0])) ** 2 + (v / (eh * core[1])) ** 2); const g = e <= 1 ? 1 : e >= 1 + fe ? 0 : 1 - (e - 1) / fe; if (g > f) f = g; }
+    let f = 0; for (const [ex, ey, ew, eh] of eyesT) { const dx = X - ex, dy = Y - ey, u = dx * ca + dy * sa, v = -dx * sa + dy * ca; const cy = up && v < 0 ? up[0] : core[1], fz = up && v < 0 ? up[1] : fe; const e = Math.sqrt((u / (ew * core[0])) ** 2 + (v / (eh * cy)) ** 2); const g = e <= 1 ? 1 : e >= 1 + fz ? 0 : 1 - (e - 1) / fz; if (g > f) f = g; }
     if (f <= 0) continue; const sm = f * f * (3 - 2 * f);
     const [x, y] = inv(R, X, Y); if (x < 0 || y < 0 || x > P.W - 1 || y > P.H - 1) continue;
     const x0 = x | 0, y0 = y | 0, fx = x - x0, fy = y - y0, x1 = Math.min(P.W - 1, x0 + 1), y1 = Math.min(P.H - 1, y0 + 1); let aSum = 0; const acc = [0, 0, 0];
@@ -105,18 +108,32 @@ const eyesFromPanel = (R, pe) => pe.map(([x, y, len]) => { const [X, Y] = fwd(R,
 
 async function main() {
   const panels = await cutPanels(); const log = [];
+  const only = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1].split(',') : null;
   for (const job of JOBS) {
+    if (only && !only.includes(job.panel)) continue;
     const P = panels[job.panel], fullFile = path.join(IMG, job.full), fm = await sharp(fullFile).metadata();
     // 全身
     let R = await coarse(P.png, fullFile, [0.3, 4.5]);
     let eyesT = job.eyes ? job.eyes.map(([fx, fy, fw, fh]) => [fx * fm.width, fy * fm.height, fw * fm.width, fh * fm.height]) : eyesFromPanel(R, job.panelEyes);
     R = await refine(P, fullFile, R, eyesT);
     if (!job.eyes) eyesT = eyesFromPanel(R, job.panelEyes);
-    await compose(P, fullFile, R, eyesT, outOf(job.full));
+    await compose(P, fullFile, R, eyesT, outOf(job.full), job.mask || {});
     log.push(`${job.full}: 縮尺 ${R.s.toFixed(3)} 回転 ${R.rDeg.toFixed(1)}° 差 ${R.before.toFixed(0)}→${R.after.toFixed(0)}`);
     // 顔アイコン: 元の全身 → 顔アイコン の対応を求めて写す
     const faceRel = faceOf(job.full), faceFile = path.join(IMG, faceRel);
     if (!fs.existsSync(faceFile)) { log.push(`${faceRel}: 無い(とばす)`); continue; }
+    if (job.faceEyes) {
+      // 両目の2点から 社長の絵 → 顔アイコン を決めて詰める
+      const pe = eyesT.map(([x, y]) => inv(R, x, y)), fe2 = job.faceEyes;
+      const s = Math.hypot(fe2[1][0] - fe2[0][0], fe2[1][1] - fe2[0][1]) / Math.hypot(pe[1][0] - pe[0][0], pe[1][1] - pe[0][1]);
+      const rDeg = (Math.atan2(fe2[1][1] - fe2[0][1], fe2[1][0] - fe2[0][0]) - Math.atan2(pe[1][1] - pe[0][1], pe[1][0] - pe[0][0])) * 180 / Math.PI;
+      const mx = (pe[0][0] + pe[1][0]) / 2, my = (pe[0][1] + pe[1][1]) / 2, [ax0, ay0] = fwd({ s, rDeg, tx: 0, ty: 0 }, mx, my);
+      let RF = { s, rDeg, tx: (fe2[0][0] + fe2[1][0]) / 2 - ax0, ty: (fe2[0][1] + fe2[1][1]) / 2 - ay0 };
+      RF = await refine(P, faceFile, RF, fe2);
+      await compose(P, faceFile, RF, fe2, outOf(faceRel), job.mask || {});
+      log.push(`${faceRel}: 両目の2点から 差 ${RF.before.toFixed(0)}→${RF.after.toFixed(0)}`);
+      continue;
+    }
     const fullRaw = await loadRaw(fullFile); const fullPng = await sharp(fullFile).png().toBuffer();
     let F = await coarse(fullPng, faceFile, [0.1, 1.5]);
     const faceEyesFromFull = (F) => eyesT.map(([x, y, w, h]) => { const [X, Y] = fwd(F, x, y); return [X, Y, w * F.s, h * F.s]; });
@@ -124,7 +141,7 @@ async function main() {
     const eyesF = faceEyesFromFull(F);
     let RF = { s: R.s * F.s, rDeg: R.rDeg + F.rDeg, tx: 0, ty: 0 }; const [ox, oy] = fwd(F, R.tx, R.ty); RF.tx = ox; RF.ty = oy;
     RF = await refine(P, faceFile, RF, eyesF);
-    await compose(P, faceFile, RF, eyesF, outOf(faceRel));
+    await compose(P, faceFile, RF, eyesF, outOf(faceRel), job.mask || {});
     log.push(`${faceRel}: 全身→顔 縮尺 ${F.s.toFixed(3)}(差 ${F.after.toFixed(0)})/ 社長の絵→顔 差 ${RF.before.toFixed(0)}→${RF.after.toFixed(0)}`);
   }
   console.log(log.join('\n'));
