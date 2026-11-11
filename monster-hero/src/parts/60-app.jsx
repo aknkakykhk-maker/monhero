@@ -16520,11 +16520,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (!RHYTHM_BACKGROUND_RUN_SCREENS.includes(gameState)) return undefined;
     if (resultProcessing) return undefined;
     if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return undefined;
-    const timer = setTimeout(() => {
+    const retryRhythm = () => {
       const current = quickRunProgressRef.current;
       if (!current || !current.finished || current.reason !== 'defeat') return;
       startQuickRunFromRhythm();
-    }, QUICK_RUN_AUTO_RETRY_MS);
+    };
+    const timer = setTimeout(retryRhythm, QUICK_RUN_AUTO_RETRY_MS);   // 目印をモンヒロビートの始め直しとして分ける(SCREEN_EFFECTS_MAP)
     return () => clearTimeout(timer);
   }, [quickRunProgress, gameState, resultProcessing, autoSettings]);
   // ===== MFバトルカードを開いたら自動で∞周回を始める・負けたら始め直す(社長 2026-10-25「モンヒロビートと同じように」) =====

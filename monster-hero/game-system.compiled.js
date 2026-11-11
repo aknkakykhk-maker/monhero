@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5d5cae199fbd4687
+// source-sha256: 08ac3a34943380e6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -35613,7 +35613,7 @@ const RhythmOptions = ({
     "aria-label": "いまの設定で演奏画面を見てみる",
     className: `ml-auto flex shrink-0 flex-col items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-950/70 px-3 font-black text-cyan-50 active:scale-95 ${wide ? 'min-h-[38px] text-[12px]' : 'min-h-[44px] text-[13px]'}`
   }, React.createElement("span", null, "▶ 見てみる"), !wide && React.createElement("small", {
-    className: "text-[9px] font-bold text-cyan-200/90"
+    className: "text-[10px] font-bold text-cyan-200/90"
   }, "いまの設定で演奏画面"))), React.createElement("nav", {
     "data-rhythm-options-tabs": true,
     className: `grid shrink-0 grid-cols-4 px-3 ${wide ? 'min-w-0 flex-1 gap-1.5 pb-0 pl-0 pr-3' : 'gap-2 pb-2'}`
@@ -197012,11 +197012,12 @@ function MonsterHeroGame() {
     if (!RHYTHM_BACKGROUND_RUN_SCREENS.includes(gameState)) return undefined;
     if (resultProcessing) return undefined;
     if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return undefined;
-    const timer = setTimeout(() => {
+    const retryRhythm = () => {
       const current = quickRunProgressRef.current;
       if (!current || !current.finished || current.reason !== 'defeat') return;
       startQuickRunFromRhythm();
-    }, QUICK_RUN_AUTO_RETRY_MS);
+    };
+    const timer = setTimeout(retryRhythm, QUICK_RUN_AUTO_RETRY_MS);
     return () => clearTimeout(timer);
   }, [quickRunProgress, gameState, resultProcessing, autoSettings]);
   const cardAutoStartInsideRef = useRef(false);
