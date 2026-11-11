@@ -14,7 +14,9 @@ node tools/ctx.js brief               いまの状態
 ## 受け持つファイル
 
 - `monster-hero/src/parts/56-assistant-life-gifts.jsx`
+- `monster-hero/src/parts/56-assistant-life-roomedit.jsx`
 - `tools/assistant/life-gift-*`
+- `tools/assistant/assistant-life-roomedit-*`
 
 ## 入口の関数
 

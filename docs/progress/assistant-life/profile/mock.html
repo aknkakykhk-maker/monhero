@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>助手のキャラ紹介 止め絵</title>
+<style>
+:root{--ac:#f43f5e;--bg:#0f172a;--card:#1e293b;--line:rgba(255,255,255,.12)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#020617;color:#e2e8f0;font-family:"Hiragino Sans","Noto Sans JP","Noto Sans CJK JP",sans-serif;font-weight:700}
+.scr{position:relative;overflow:hidden;background:var(--bg)}
+.top{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0b1224;border-bottom:1px solid var(--line)}
+.back{border:1px solid var(--line);border-radius:12px;padding:8px 10px;font-size:13px;background:#1e293b;color:#fff}
+.ttl{font-size:18px;font-weight:900;color:#fff}
+.sub{font-size:11px;color:#94a3b8}
+.hero{position:relative;background:linear-gradient(160deg,#f43f5e40,#0f172a 70%),radial-gradient(circle at 70% 40%,#fda4af33,transparent 60%);overflow:hidden}
+.hero img.stand{position:absolute;object-fit:contain;object-position:bottom}
+.name{font-size:30px;font-weight:900;color:#fff;text-shadow:0 2px 6px #000}
+.tag{font-size:13px;color:#fda4af;margin-top:2px;word-break:keep-all;overflow-wrap:anywhere}
+.chip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 9px;font-size:11px;background:#0f172acc;border:1px solid var(--line);color:#e2e8f0;margin:6px 4px 0 0}
+.bubble{position:absolute;background:#fff;color:#1e293b;border-radius:16px;padding:9px 12px;font-size:12.5px;line-height:1.5;border:2px solid var(--ac);box-shadow:0 4px 10px #0008}
+.bubble small{display:block;font-size:10px;color:var(--ac)}
+.jump{display:flex;gap:6px;padding:8px 10px;background:#0b1224;border-bottom:1px solid var(--line)}
+.jump span{flex:1;text-align:center;font-size:11.5px;padding:7px 0;border-radius:10px;background:#1e293b;color:#cbd5e1;border:1px solid var(--line)}
+.jump span.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.body{padding:10px 12px 14px;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px 12px}
+.card h3{font-size:13.5px;color:#fff;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.card h3 em{font-style:normal;font-size:10.5px;color:#94a3b8;font-weight:700}
+.kv{display:grid;grid-template-columns:6.5em 1fr;gap:4px 8px;font-size:12px;line-height:1.5}
+.kv dt{color:#94a3b8}
+.kv dd{color:#e2e8f0}
+.row{display:flex;align-items:center;gap:6px;margin:5px 0;font-size:11.5px;flex-wrap:wrap}
+.lab{width:5.6em;white-space:nowrap;flex:none;color:#94a3b8;font-size:11px}
+.it{display:inline-flex;align-items:center;gap:3px;border-radius:10px;padding:3px 7px;background:#0f172a;border:1px solid var(--line)}
+.like{border-color:#f472b6;color:#fbcfe8}
+.bad{border-color:#60a5fa;color:#bfdbfe}
+.unk{color:#64748b;border-style:dashed}
+.it img{width:20px;height:20px;border-radius:6px}
+.hint{margin-top:6px;font-size:11px;color:#cbd5e1;background:#0f172a;border-radius:10px;padding:6px 8px;line-height:1.5}
+.bar{height:8px;border-radius:9px;background:#334155;overflow:hidden;margin:4px 0 6px}
+.bar i{display:block;height:100%;width:62%;background:linear-gradient(90deg,#fb7185,#f43f5e)}
+.mons{display:flex;gap:6px}
+.mon{flex:1;text-align:center;background:#0f172a;border:1px solid var(--line);border-radius:12px;padding:6px 2px;font-size:10.5px}
+.mon img{width:40px;height:40px;border-radius:10px;display:block;margin:0 auto 2px}
+.mon b{display:block;color:#fff;font-size:11px}
+.mon.lead{border-color:#fbbf24}
+.voice{display:flex;gap:8px;align-items:flex-start}
+.voice img{width:52px;height:52px;border-radius:50%;object-fit:cover;object-position:50% 12%;background:#fecdd3;border:2px solid var(--ac);flex:none}
+.vb{background:#fff;color:#1e293b;border-radius:14px;padding:8px 10px;font-size:12px;line-height:1.5;flex:1}
+.vtabs{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+.vtabs span{font-size:11px;padding:6px 9px;border-radius:999px;background:#0f172a;border:1px solid var(--line)}
+.vtabs span.on{background:#f43f5e33;border-color:var(--ac);color:#fff}
+.vtabs span.lock{color:#64748b}
+.btn{display:flex;justify-content:center;align-items:center;gap:6px;min-height:44px;border-radius:12px;background:var(--ac);color:#fff;font-size:13.5px;margin-top:8px}
+.note{font-size:10.5px;color:#94a3b8;margin-top:6px;line-height:1.5}
+.ann{position:absolute;background:#fde047;color:#111;font-size:12px;font-weight:900;border-radius:10px;padding:5px 8px;box-shadow:0 2px 8px #000a}
+.ring{position:absolute;border:3px solid #fde047;border-radius:12px;box-shadow:0 0 0 3px #0008}
+</style></head>
+<body>
+<div id="root"></div>
+<script>
+const IMG='../../../../monster-hero/images/';
+const mode=new URLSearchParams(location.search).get('m')||'tate';
+const stand=IMG+'assistant/kiki_happy.PNG';
+const face=n=>IMG+'monster-icons/face/'+n+'.png';
+const sec1=`<div class="card"><h3>🌹 人となり</h3><dl class="kv">
+<dt>性格</dt><dd>じっくり考えて遊びたい人向け。落ち着いた口調でそっと支えてくれるが、育成と戦い方は火力で押し切るパワー型。</dd>
+<dt>生活</dt><dd>☀️ 早寝早起き(夜10時に寝て、朝5時に起きる)</dd>
+<dt>話し方(いま)</dt><dd>気の合うふたり。会話のテンポが合ってくる</dd></dl></div>`;
+const sec2=`<div class="card"><h3>💗 好きなもの・💧 苦手なもの<em>分かったもの 7/13</em></h3>
+<div class="row"><span class="lab">道具</span><span class="it like">💗 🫖 午後のティーセット</span><span class="it like">💗 🌷 ちいさな花束</span><span class="it unk">💗 ？</span><span class="it bad">💧 🍙 ほかほかおにぎり</span><span class="it unk">💧 ？</span></div>
+<div class="row"><span class="lab">家具</span><span class="it like">💗 🪴 観葉植物</span><span class="it unk">💗 ？</span><span class="it unk">💗 ？</span><span class="it unk">💧 ？</span></div>
+<div class="row"><span class="lab">モンスター</span><span class="it like"><img src="${face('golem')}">ゴーレム</span><span class="it like"><img src="${face('eiki')}">エイキ</span><span class="it like"><img src="${face('zan')}">ザン</span></div>
+<div class="row"><span class="lab"></span><span class="it bad">💧 オボロ</span><span class="it bad">💧 モノリス</span><span class="it bad">💧 プラント</span></div>
+<div class="hint">💭 ききの話から:「じっくり考えるもの、好きでつよ。パズルとか」</div>
+<p class="note">？は贈ると分かります。分かった好みはここに残ります。</p></div>`;
+const sec3=`<div class="card"><h3>🤝 いまのきずな</h3>
+<div class="row" style="justify-content:space-between"><span style="font-size:14px;color:#fff">💗 仲良し度 Lv8 <span style="font-size:11px;color:#fda4af">気の合うふたり</span></span><span style="font-size:11px;color:#94a3b8">あと 120 で Lv9</span></div>
+<div class="bar"><i></i></div>
+<dl class="kv"><dt>呼び方</dt><dd>ゆうしゃちー</dd><dt>推し</dt><dd><span class="it"><img src="${face('golem')}">ゴーレム種</span></dd></dl>
+<div style="font-size:11px;color:#94a3b8;margin:8px 0 4px">マスモン(5体のうち3体)</div>
+<div class="mons"><div class="mon lead"><img src="${face('golem')}"><b>ごろべえ</b>Lv26 ・👑</div><div class="mon"><img src="${face('eiki')}"><b>エイキさん</b>Lv17</div><div class="mon"><img src="${face('zan')}"><b>ざんざん</b>Lv15</div></div>
+<div class="btn" style="background:#334155">🐾 マスモンをくわしく見る ›</div></div>`;
+const sec4=`<div class="card"><h3>🔊 台詞を聞く<em>聞ける台詞 46</em></h3>
+<div class="voice"><img src="${IMG}assistant/kiki_wink.PNG"><div class="vb">ゆうしゃちー、今日もおつかれさまでつ♪ 一緒にいると、落ち着きまつね( ˘ω˘)</div></div>
+<div class="vtabs"><span class="on">あいさつ</span><span>おしゃべり</span><span>贈ったとき</span><span>寝言</span><span class="lock">🔒 Lv10 から</span></div>
+<div class="btn">▶ もう1つ聞く</div>
+<p class="note">表情つきで台詞が流れます(ボイスはまだありません)。仲良し度が上がると、聞ける台詞が増えます。</p></div>`;
+
+function tate(){return `<div class="scr" style="width:390px;height:844px;display:flex;flex-direction:column">
+<div class="top"><span class="back">← 部屋へ</span><div><div class="ttl">ききのこと</div><div class="sub">助手ライフ・キャラ紹介</div></div></div>
+<div class="hero" style="height:300px;flex:none">
+ <img class="stand" src="${stand}" style="right:-40px;bottom:-40px;height:380px;width:280px">
+ <div style="position:absolute;left:14px;top:16px;width:200px;z-index:2"><div class="name">きき</div><div class="tag">おとなしいのに<br>火力で押し切るお姉さん</div>
+ <span class="chip">💗 Lv8 気の合うふたり</span><span class="chip">☀️ 早寝早起き</span></div>
+ <div class="bubble" style="left:12px;bottom:14px;width:200px;z-index:2"><small>ひとこと</small>困ったことがあったら、いつでも私に聞いてくださいね。</div>
+</div>
+<div class="jump"><span class="on">人となり</span><span>好き・苦手</span><span>きずな</span><span>台詞</span></div>
+<div class="body" style="overflow:hidden;flex:1">${sec1}${sec2}${sec3}</div></div>`}
+function tate2(){return `<div class="scr" style="width:390px;height:844px;display:flex;flex-direction:column">
+<div class="top"><span class="back">← 部屋へ</span><div><div class="ttl">ききのこと</div><div class="sub">助手ライフ・キャラ紹介(下へ送ったところ)</div></div></div>
+<div class="jump"><span>人となり</span><span>好き・苦手</span><span class="on">きずな</span><span>台詞</span></div>
+<div class="body">${sec3}${sec4}</div></div>`}
+function yoko(){return `<div class="scr" style="width:844px;height:390px;display:flex">
+<div class="hero" style="width:300px;flex:none;height:390px">
+ <div class="top" style="background:transparent;border:0;position:absolute;left:0;top:0;z-index:2"><span class="back">← 部屋へ</span></div>
+ <img class="stand" src="${stand}" style="left:120px;bottom:-30px;height:360px;width:200px">
+ <div style="position:absolute;left:14px;top:58px;width:120px;z-index:2"><div class="name" style="font-size:26px">きき</div><div class="tag" style="font-size:11.5px">おとなしいのに<br>火力で押し切る<br>お姉さん</div><span class="chip">💗 Lv8</span></div>
+ <div class="bubble" style="left:10px;bottom:10px;width:170px;font-size:11px;z-index:2"><small>ひとこと</small>困ったことがあったら、<br>いつでも私に<br>聞いてくださいね。</div>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0">
+<div class="jump"><span class="on">人となり</span><span>好き・苦手</span><span>きずな</span><span>台詞</span></div>
+<div class="body" style="overflow:hidden;display:grid;grid-template-columns:1fr 1fr;align-items:start">${sec1}${sec3}${sec2}</div></div></div>`}
+function entry(){ // 本物の画面(点検の止め絵)に入口を描き足す
+ const shot='../walkthrough/';
+ return `<div style="display:flex;gap:16px;padding:12px;background:#020617">
+ <div class="scr" style="width:390px;height:844px"><img src="${shot}daily-tate-room-solo.png" style="width:390px;height:844px">
+  <div style="position:absolute;right:10px;top:12px;background:#f43f5e;color:#fff;border-radius:12px;padding:8px 10px;font-size:13px;box-shadow:0 2px 8px #000a">📖 あつのこと</div>
+  <div class="ring" style="right:4px;top:6px;width:122px;height:48px"></div>
+  <div class="ann" style="right:8px;top:62px">案A(推奨) 部屋の右上</div>
+  <div class="ring" style="left:12px;top:474px;width:366px;height:82px"></div>
+  <div class="ann" style="left:150px;top:560px">案B 仲良し度の札を押す</div>
+ </div>
+ <div class="scr" style="width:390px;height:844px"><img src="${shot}daily-tate-first-view.png" style="width:390px;height:844px">
+  <div class="ring" style="left:20px;top:206px;width:52px;height:24px"></div>
+  <div class="ann" style="left:76px;top:150px">案C 家の名札を押す<br><span style="font-weight:700;font-size:11px">(いまは部屋が開く所なので押し分けが要る)</span></div>
+ </div></div>`}
+document.getElementById('root').innerHTML={tate,tate2,yoko,entry}[mode]();
+</script></body></html>
