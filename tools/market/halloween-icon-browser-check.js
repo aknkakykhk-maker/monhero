@@ -91,7 +91,7 @@ const seed = ({ conditions }) => {
     // マーケットの入口へ戻ってから目的の売り場へ入る
     await page.evaluate(() => { const b = document.querySelector('button[aria-label="マーケット"]'); if (b) b.click(); });
     await page.waitForTimeout(1200);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('button[aria-label="戻る"]')].find(x => x.closest('.mh-screen-head')); if (b && !document.body.innerText.includes('ダイヤで購入')) b.click(); });
+    await page.evaluate(() => { const b = [...document.querySelectorAll('button[aria-label="戻る"]')].find(x => x.closest('.mh-screen-head')); if (b && !document.querySelector('[data-market-section]')) b.click(); });
     await clickText(page, entry, { exact: false });
     await clickText(page, 'フレーム');
   };
@@ -118,7 +118,7 @@ const seed = ({ conditions }) => {
   const goShop = async (page, entry) => {
     await page.evaluate(() => { const b = document.querySelector('button[aria-label="マーケット"]'); if (b) b.click(); });
     await page.waitForTimeout(1200);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('button[aria-label="戻る"]')].find(x => x.closest('.mh-screen-head')); if (b && !document.body.innerText.includes('ダイヤで購入')) b.click(); });
+    await page.evaluate(() => { const b = [...document.querySelectorAll('button[aria-label="戻る"]')].find(x => x.closest('.mh-screen-head')); if (b && !document.querySelector('[data-market-section]')) b.click(); });
     await page.waitForTimeout(600);
     // 入口のボタンには売り場の名前の名札(aria-label)が付いている。それで押す。文字の一部で探すと、
     // 助手の吹き出しのセリフ(「ダイヤは大事に…」など・毎回ランダム)を押してしまい、たまに落ちた(2026-10-15・着替えの検査と同じ直し)

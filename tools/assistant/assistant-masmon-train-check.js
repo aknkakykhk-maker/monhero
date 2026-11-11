@@ -52,6 +52,22 @@ const drive = (T, aid, days, opt = {}) => {
         T.amgtAfterAct(aid, act, false, s);
       }
     }
+    // --cheer の試算(応援の案): その日にモンヒロバトルにいたら、1日 n 回まで、いちばん最近に修行した1体の、いちばん低い技の熟練に k(小数は回ごとに切り上げ・切り捨てを交互)
+    if (opt.cheer && s % 3 === 2 && [...atSlots].some(n => Math.floor(n / 3) === Math.floor(s / 3))) {
+      const st = T.AMGT_STORE.state; const mons = { ...(st.mons[aid] || {}) };
+      // 応援が効くのは、いちばん最近に修行したマスモン1体だけ
+      const last = Object.keys(mons).sort((a, b) => ((mons[b].log.slice(-1)[0] || {}).s || 0) - ((mons[a].log.slice(-1)[0] || {}).s || 0))[0];
+      for (const key of last ? [last] : []) {
+        const me = { ...mons[key], m: { ...mons[key].m } };
+        for (let i = 0; i < opt.cheer.n; i++) {
+          const t = me.learn.slice().sort((a, b) => (me.m[a] || 0) - (me.m[b] || 0))[0]; if (!t) break;
+          const k = Number.isInteger(opt.cheer.k) ? opt.cheer.k : (i % 2 ? Math.ceil(opt.cheer.k) : Math.floor(opt.cheer.k));
+          me.m[t] = Math.min(100, (me.m[t] || 0) + k); opt.cheer.sum = (opt.cheer.sum || 0) + k;
+        }
+        mons[key] = me;
+      }
+      T.AMGT_STORE.state = { ...st, mons: { ...st.mons, [aid]: mons } };
+    }
   }
   return { E, per };
 };
@@ -251,15 +267,17 @@ const drive = (T, aid, days, opt = {}) => {
 
 // --sim: 伸びの目安
 const SIM_RATE = Number((process.argv.find(a => a.startsWith('--rate=')) || '--rate=0.07').split('=')[1]); // 本物の生活でモンヒロバトルにいる回は1割弱(ミハリ 11-11 の実測 平均7%)
+// --cheer=回数,量 で「📣 応援する」の案を足して試算(例 --cheer=3,1.5 = 1日3回まで・1回 熟練+1〜2)
+const SIM_CHEER = (() => { const a = process.argv.find(x => x.startsWith('--cheer=')); if (!a) return null; const [n, k] = a.split('=')[1].split(',').map(Number); return { n, k }; })();
 if (process.argv.includes('--sim')) {
   for (const days of [30, 90, 180]) {
     const out = [];
     for (const aid of Object.keys(make(true).T.AMGT_BR_INIT)) {
-      const { T } = make(true); const r = drive(T, aid, days, { answer: true, atRate: SIM_RATE }); r.shu = Object.entries(r.per).filter(([k]) => k !== 'outside').reduce((x, [, d]) => x + (d[1] || 0), 0);
+      const { T } = make(true); const r = drive(T, aid, days, { answer: true, atRate: SIM_RATE, cheer: SIM_CHEER && { ...SIM_CHEER } }); r.shu = Object.entries(r.per).filter(([k]) => k !== 'outside').reduce((x, [, d]) => x + (d[1] || 0), 0);
       const g = (T.AMGT_STORE.state.mons[aid] || {})['1:Golem'] || T.amgtInitMon('Golem', 25, null); const b = (T.AMGT_STORE.state.br[aid] || { ab: Object.fromEntries(T.AMGT_BR_KEYS.map((k, i) => [k, T.AMGT_BR_INIT[aid][i]])) }).ab;
       out.push(`${aid.padEnd(10)} 修行 ${String(r.shu || 0).padStart(3)}回 技 ${g.learn.length}/8 熟練 ${g.learn.map(id => String(g.m[id]).padStart(3)).join(' ')} | 判断 ${['guard', 'dist', 'swap'].map(k => String(g.m[k]).padStart(3)).join(' ')} | 腕 ${T.AMGT_BR_KEYS.map(k => String(b[k]).padStart(3)).join(' ')}`);
     }
-    console.log(`\n[${days}日・ゴーレム・モンヒロバトルにいる回 ${Math.round(SIM_RATE * 100)}%・相談に毎日答えた] 腕=know lead obs tac trust exp\n${out.join('\n')}`);
+    console.log(`\n[${days}日・ゴーレム・モンヒロバトルにいる回 ${Math.round(SIM_RATE * 100)}%・相談に毎日答えた${SIM_CHEER ? `・応援 1日${SIM_CHEER.n}回×${SIM_CHEER.k}` : ''}] 腕=know lead obs tac trust exp\n${out.join('\n')}`);
   }
 }
 

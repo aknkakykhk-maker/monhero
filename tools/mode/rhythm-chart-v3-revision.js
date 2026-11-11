@@ -134,6 +134,16 @@
 //        ・モンスターノーツの仕上げ: 4個置いたあとの手直しで枠の付いたノーツが消えた譜面に、欠けた枠だけを付け直す(生成器の最後)
 //        ・自動修正(step7)がレーンを動かしたあと、押さえている帯の中へ戻ったタップ・フリックを帯の外へ出し直す(時刻・ノーツ数は変えない)
 //        どちらも起きていない譜面は Rev.36 までと同じ。配信中の譜面は変えていない(36 は遊んだ記録・重みの学び直しの番号)
+//   38 … サビを見つける(2026-11-11・rhythm-chart-chorus.js)。区切りごとの「サビらしさ」(盛り上がり・繰り返し・歌の帯・前からの上がり・位置)の点数で
+//        盛り上がる区切り(climax)を決める(それまでは音の大きさの上位3割)。大きいだけの間奏はサビ扱いにしない。
+//        ・見せ場(左右対称の同時フリック・両手スライド・端から端のSLIDE・同時押しの連なり)は狙いの7割までを先にサビから選ぶ
+//        ・サビに入る直前の1小節は取り分を0.6倍にして「溜め」を作る(曲全体のノーツ数は変えない)。見せ場も置かない
+//        ・手の仕上げ(keep-climax)が交差を残す「山場」も、サビのうち盛り上がりが山の85%以上の区切りにする(大きいだけの間奏は山場にしない)
+//        ・短い動機の写し(rhythm-chart-motifs.js): 繰り返しの元が付いていない小節で、拾った音の位置が6割以上同じ・音の上下も似ている1〜2小節を
+//          同じ手の動きで置く(2回目は左右反転・高さが違えば形ごと最大2レーンずらす)
+//        ・引き出し R6(盛り上がりに合わせて量を配る)は既定で切(曲の一覧の energySpread を書いた曲だけ。7曲で数字が良くならなかった)
+//        ・写しが元と同じ位置に置けないときは、同じ形のまま左右へ1〜2レーンずらして置く(フメンの案)
+//        サビが見つからない曲は Rev.37 と同じ決め方。配信中の譜面は変えていない
 //   30〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
 //        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新リビジョンになる。
 //        遊んだ記録から学ぶ調整値(tools/mode/authoring/chart-play-tuning.json)も同じ番号の並びへ書き足す。
@@ -145,7 +155,7 @@ const CHART_ENGINE_NAME='MHB CHART ENGINE';
 const chartRevisionLabel=revision=>`${CHART_ENGINE_NAME} Rev.${revision}`;
 const CHART_REVISION_LEGACY=1;
 // 作り方(コード)を改良した最新のリビジョン。改良を足したらここを上げる
-const CHART_REVISION_CODE_LATEST=37;
+const CHART_REVISION_CODE_LATEST=38;
 // 最新リビジョンは、作法の重みを書き足したリビジョンまで自動で上がる(学び直すたびに新しいリビジョンになる)
 const {latestKnowledgeRevision}=require('./rhythm-chart-knowledge.js');
 const {latestPlayTuningRevision}=require('./rhythm-chart-play-tuning.js');
