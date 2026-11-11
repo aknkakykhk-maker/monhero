@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7d792970d3615127
+// source-sha256: f1788339e5c4df77
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13847,8 +13847,8 @@ const RELEASE_FLAGS = {
   assistantLifeFurniture: true,
   assistantLifeRoomEdit: true,
   assistantLifeSolo: true,
-  assistantLifeTopHouse: false,
-  assistantLifeDailyScene: false,
+  assistantLifeTopHouse: true,
+  assistantLifeDailyScene: true,
   assistantLifeFriend: true,
   assistantLifeFriendBond: true,
   assistantMasmonBattleBeta: true,
@@ -117173,7 +117173,7 @@ function AssistantLifeDailyCard({
     "data-assistant-life-daily-title": true
   }, "「", plan.title, "」")) : said || `${scene.text.replace('{n}', nameOf(who))}。${done ? 'この時間帯の話は聞きました' : '聞いてみると、この時間帯だけの話が聞けます'}`, !done && React.createElement("span", {
     className: "block text-[11px] text-emerald-300"
-  }, plan ? `→ 見ると 🤝 ふれあい1回 ・ 💗 +${ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0}` : '→ 聞くと 🤝 ふれあい1回(ミッション「助手とふれあう」)'), got && React.createElement("span", {
+  }, plan ? `→ 見ると 🤝 ふれあい1回 ・ 💗 +${ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0}(1日 +12 まで)` : '→ 聞くと 🤝 ふれあい1回(ミッション「助手とふれあう」)'), got && React.createElement("span", {
     className: "block text-[11px] text-pink-200"
   }, "🧺 おやつバスケットを1個もらいました！(持ち物へ)")), !done && (plan ? React.createElement("button", {
     type: "button",
@@ -117374,13 +117374,18 @@ const assistantLifeDailyAlbumTalks = () => {
 const assistantLifeDailyFinish = async (plan, slotId) => {
   const r = await assistantLifeDailyListen(slotId);
   let bond = 0;
+  const gains = {};
   if (r.added && plan) {
     bond = ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0;
     if (bond > 0 && typeof assistantPeerPlayerBondAdder !== 'undefined' && assistantPeerPlayerBondAdder) {
+      const pts = id => typeof assistantLifeBondPointsOf === 'function' ? assistantLifeBondPointsOf(id) : null;
       for (const id of plan.ids) {
+        const before = pts(id);
         try {
           assistantPeerPlayerBondAdder(id, 'lifeDaily', bond);
         } catch (_) {}
+        const after = pts(id);
+        gains[id] = Number.isFinite(before) && Number.isFinite(after) ? Math.max(0, after - before) : bond;
       }
     }
     if (plan.kind === 'rare' && typeof assistantPeerAlbumAdd === 'function') {
@@ -117395,7 +117400,8 @@ const assistantLifeDailyFinish = async (plan, slotId) => {
   return {
     added: r.added,
     got: r.got,
-    bond
+    bond,
+    gains
   };
 };
 function AssistantLifeDailySceneView({
@@ -117523,7 +117529,11 @@ function AssistantLifeDailySceneView({
     "data-assistant-life-daily-result": true
   }, res && React.createElement("p", {
     className: "mt-1 rounded-xl bg-pink-50 px-2 py-1 text-[11.5px] font-black text-pink-700"
-  }, res.added ? ['🤝 ふれあい1回', res.bond > 0 ? `💗 ${plan.ids.map(assistantLifeName).join('・')} +${res.bond}` : '', plan.kind === 'rare' ? '✨ 思い出アルバムに1枚' : '', res.got ? '🧺 おやつバスケットを1個もらいました！' : ''].filter(Boolean).join(' ・ ') : 'この時間帯のできごとは見ました'), React.createElement("button", {
+  }, res.added ? ['🤝 ふれあい1回', (() => {
+    const g = res.gains || {};
+    const up = plan.ids.filter(id => (g[id] || 0) > 0);
+    return up.length ? up.map(id => `💗 ${assistantLifeName(id)} +${g[id]}`).join(' ') : res.bond > 0 ? '💗 今日の仲良し度はここまで' : '';
+  })(), plan.kind === 'rare' ? '✨ 思い出アルバムに1枚' : '', res.got ? '🧺 おやつバスケットを1個もらいました！' : ''].filter(Boolean).join(' ・ ') : 'この時間帯のできごとは見ました'), React.createElement("button", {
     type: "button",
     "data-assistant-life-daily-scene-close": true,
     onClick: ev => {
@@ -117560,8 +117570,7 @@ function AssistantLifeTopStrip({
   let next = null;
   try {
     const s = assistantLifeSlotAt();
-    const d = ASSISTANT_LIFE_SLOTS[s.i];
-    next = d && Number.isFinite(d.to) ? d.to % 24 : null;
+    next = Number.isFinite(s.to) ? s.to % 24 : null;
   } catch (_) {
     next = null;
   }
@@ -170610,6 +170619,14 @@ const cardPackQuake = (el, lv) => {
     easing: 'linear'
   });
 };
+const cardPackBuzz = ms => {
+  try {
+    if (typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    navigator.vibrate(ms);
+  } catch (e) {}
+};
+const cardPackSurprise = (c, i, pi) => !!c && c.rarity !== 'normal' && (pi * 3 + i * 5 + (c.rarity === 'alt' ? 1 : 0)) % 10 < 3;
 const CardPackConfetti = ({
   n,
   again = 0
@@ -170694,8 +170711,9 @@ const CardPackOpen = ({
     if (fx) {
       cardPackQuake(rootRef.current, 1);
       later(() => cardPackQuake(rootRef.current, 2), 640);
+      cardPackBuzz(omen ? [30, 40, 30] : 20);
     }
-    later(() => setPhase('open'), CARD_PACK_TEAR_MS);
+    later(() => setPhase('open'), CARD_PACK_TEAR_MS + (fx ? omen === 'alt' ? 500 : omen === 'kira' ? 250 : 0 : 0));
   };
   const spotOff = () => {
     setSpot(sp => sp && !sp.leaving ? {
@@ -170724,7 +170742,10 @@ const CardPackOpen = ({
         });
         se('crit');
         if (c.rarity === 'alt') se('fusion');else se('levelUp');
-        if (fx) cardPackQuake(rootRef.current, c.rarity === 'alt' ? 3 : 2);
+        if (fx) {
+          cardPackQuake(rootRef.current, c.rarity === 'alt' ? 3 : 2);
+          cardPackBuzz(c.rarity === 'alt' ? [60, 40, 60, 40, 120] : [50, 30, 50]);
+        }
       }, 380);
       later(spotOff, 380 + spotMs(c));
     }
@@ -170744,6 +170765,7 @@ const CardPackOpen = ({
         }));
         se('tap');
         cardPackQuake(rootRef.current, k + 1);
+        cardPackBuzz(15 + k * 15);
       }, k * CARD_PACK_CLIMB_MS);
     }
     later(() => turn(i), steps * CARD_PACK_CLIMB_MS);
@@ -170759,6 +170781,22 @@ const CardPackOpen = ({
       later(() => reveal(i), at);
       at += cards[i].rarity !== 'normal' ? climbSteps(cards[i]) * CARD_PACK_CLIMB_MS + 380 + spotMs(cards[i]) + CARD_PACK_SPOT_BACK_MS + 120 : 140;
     });
+  };
+  const quick = fx && !kit && pi > 0 && result.packs.length > 1;
+  useEffect(() => {
+    if (phase !== 'open' || !quick) return;
+    cards.forEach((c, i) => {
+      if (c.rarity === 'normal') later(() => setFlipped(f => f.includes(i) ? f : [...f, i]), 160 + i * 70);
+    });
+    later(() => se('card'), 160);
+  }, [phase, pi]);
+  const skipAll = () => {
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+    se('card');
+    setSpot(null);
+    setClimb(null);
+    setFlipped(cards.map((_, i) => i));
   };
   const next = () => {
     Audio_.fgSe.tap();
@@ -170858,6 +170896,8 @@ const CardPackOpen = ({
     const name = card ? card.name : m ? m.name : c.no;
     const rare = c.rarity !== 'normal';
     const cl = climb && climb.i === i ? climb : null;
+    const sur = fx && cardPackSurprise(c, i, pi);
+    const backRar = !rare || on ? null : sur ? cl ? cl.k >= 2 ? 'alt' : cl.k >= 1 ? 'kira' : null : null : c.rarity;
     return React.createElement("div", {
       key: `${pi}-${i}`,
       className: "mh-pack-deal flex flex-col items-center",
@@ -170867,6 +170907,7 @@ const CardPackOpen = ({
     }, React.createElement("button", _extends({
       type: "button",
       "data-card-pack-card": i,
+      "data-card-pack-surprise": sur ? 1 : undefined,
       "data-card-pack-flipped": on ? 1 : 0,
       "data-card-pack-rarity": c.rarity,
       "data-card-pack-climb": cl ? cl.k + 1 : undefined
@@ -170889,7 +170930,7 @@ const CardPackOpen = ({
     }), React.createElement("div", {
       className: `mh-pack-card-in aspect-[5/7] w-full ${on ? 'flipped' : ''}`
     }, React.createElement("div", {
-      className: `mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${rare && !on ? c.rarity === 'alt' ? 'mh-pack-alt-back' : 'mh-pack-kira-back' : ''}`,
+      className: `mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${backRar ? backRar === 'alt' ? 'mh-pack-alt-back' : 'mh-pack-kira-back' : ''}`,
       style: {
         containerType: 'inline-size'
       }
@@ -170978,6 +171019,13 @@ const CardPackOpen = ({
     }), fx && !spot.leaving && React.createElement("div", {
       "aria-hidden": "true",
       className: `mh-pack-spot-burst ${alt ? 'alt' : ''}`
+    }), fx && !spot.leaving && React.createElement("div", {
+      "aria-hidden": "true",
+      "data-card-pack-shock": true,
+      className: `mh-pack-shock ${alt ? 'alt' : ''}`
+    }), fx && !spot.leaving && React.createElement("div", {
+      "aria-hidden": "true",
+      className: `mh-pack-vignette ${alt ? 'alt' : ''}`
     }), fx && React.createElement(CardPackConfetti, {
       key: `cf-${spot.i}`,
       n: alt ? 130 : 24,
@@ -171009,12 +171057,19 @@ const CardPackOpen = ({
     className: SCREEN_FOOTER_CLASS
   }, phase !== 'open' ? React.createElement("div", {
     className: "text-center text-[12px] font-bold text-slate-400"
-  }, kit ? 'キットをタップしてください' : 'パックをタップしてください') : !allOpen ? React.createElement("button", {
+  }, kit ? 'キットをタップしてください' : 'パックをタップしてください') : !allOpen ? React.createElement("div", {
+    className: "flex gap-2"
+  }, React.createElement("button", {
     type: "button",
     "data-card-pack-flip-all": true,
-    className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]",
+    className: "mh-button mh-button-primary min-h-[52px] w-full flex-1 rounded-2xl font-black active:scale-[.98]",
     onClick: flipAll
-  }, "全部めくる") : !last ? React.createElement("button", {
+  }, "全部めくる"), fx && React.createElement("button", {
+    type: "button",
+    "data-card-pack-skip": true,
+    className: "mh-button min-h-[52px] shrink-0 rounded-2xl border border-slate-500 bg-slate-800 px-4 font-black text-slate-100 active:scale-[.98]",
+    onClick: skipAll
+  }, "とばす")) : !last ? React.createElement("button", {
     type: "button",
     "data-card-pack-next": true,
     className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]",
@@ -182831,6 +182886,9 @@ const CardTacticPackOpen = ({
   const [detail, setDetail] = useState(null);
   const timers = useRef([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  const [fx] = useState(cardPackFxOn);
+  const [climb, setClimb] = useState(null);
+  const rootRef = useRef(null);
   const listRef = useRef(null);
   const [listH, setListH] = useState(0);
   useEffect(() => {
@@ -182862,6 +182920,10 @@ const CardTacticPackOpen = ({
     se('special');
     setPhase('tearing');
     later(() => se('crit'), 520);
+    if (fx) {
+      cardPackQuake(rootRef.current, 1);
+      later(() => cardPackQuake(rootRef.current, 2), 640);
+    }
     later(() => setPhase('open'), CARD_TACTIC_TEAR_MS);
   };
   const spotOff = () => {
@@ -182871,8 +182933,11 @@ const CardTacticPackOpen = ({
     } : sp);
     later(() => setSpot(null), CARD_TACTIC_SPOT_BACK_MS);
   };
-  const reveal = i => {
+  const climbSteps = c => fx && c && c.r === 'SR' ? 2 : 0;
+  const spotMs = () => fx ? CARD_PACK_SPOT_ALT_FX_MS : CARD_TACTIC_SPOT_MS;
+  const turn = i => {
     se('card');
+    setClimb(null);
     setFlipped(f => f.includes(i) ? f : [...f, i]);
     if (cards[i] && cards[i].r === 'SR') {
       later(() => {
@@ -182883,21 +182948,59 @@ const CardTacticPackOpen = ({
         });
         se('crit');
         se('fusion');
+        if (fx) {
+          cardPackQuake(rootRef.current, 2);
+          cardPackBuzz([50, 30, 50]);
+        }
       }, 380);
-      later(spotOff, 380 + CARD_TACTIC_SPOT_MS);
+      later(spotOff, 380 + spotMs());
     }
   };
+  const reveal = i => {
+    const steps = climbSteps(cards[i]);
+    if (!steps) {
+      turn(i);
+      return;
+    }
+    for (let k = 0; k < steps; k++) later(() => {
+      setClimb(x => ({
+        i,
+        k,
+        n: (x && x.n || 0) + 1
+      }));
+      se('tap');
+      cardPackQuake(rootRef.current, k + 1);
+      cardPackBuzz(15 + k * 15);
+    }, k * CARD_PACK_CLIMB_MS);
+    later(() => turn(i), steps * CARD_PACK_CLIMB_MS);
+  };
   const flip = i => {
-    if (flipped.includes(i) || phase !== 'open' || spot) return;
+    if (flipped.includes(i) || phase !== 'open' || spot || climb) return;
     reveal(i);
   };
   const flipAll = () => {
-    if (spot) return;
+    if (spot || climb) return;
     let at = 0;
     cards.map((_, i) => i).filter(i => !flipped.includes(i)).forEach(i => {
       later(() => reveal(i), at);
-      at += cards[i].r === 'SR' ? 380 + CARD_TACTIC_SPOT_MS + CARD_TACTIC_SPOT_BACK_MS + 120 : 140;
+      at += cards[i].r === 'SR' ? climbSteps(cards[i]) * CARD_PACK_CLIMB_MS + 380 + spotMs() + CARD_TACTIC_SPOT_BACK_MS + 120 : 140;
     });
+  };
+  const quick = fx && pi > 0 && packs.length > 1;
+  useEffect(() => {
+    if (phase !== 'open' || !quick) return;
+    cards.forEach((c, i) => {
+      if (c.r !== 'SR') later(() => setFlipped(f => f.includes(i) ? f : [...f, i]), 160 + i * 70);
+    });
+    later(() => se('card'), 160);
+  }, [phase, pi]);
+  const skipAll = () => {
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+    se('card');
+    setSpot(null);
+    setClimb(null);
+    setFlipped(cards.map((_, i) => i));
   };
   const next = () => {
     Audio_.fgSe.tap();
@@ -182907,7 +183010,9 @@ const CardTacticPackOpen = ({
     setPhase('closed');
     setFlipped([]);
     setSpot(null);
+    setClimb(null);
   };
+  const omen = fx && cards.some(c => c.r === 'SR') ? 'kira' : null;
   const cols = !(typeof window !== 'undefined' && window.innerHeight >= 760) ? 4 : 3;
   const rows = Math.ceil(cards.length / cols);
   const gridMaxW = listH > 0 ? Math.max(200, Math.floor(((listH - 52) / rows - 24) * 5 / 7 * cols + 8 * (cols - 1) + 8)) : null;
@@ -182915,9 +183020,11 @@ const CardTacticPackOpen = ({
   const spotCard = spot ? cardTacticOf(cards[spot.i].id) : null;
   const shards = cards.filter(c => c.dup).length;
   return React.createElement("div", {
+    ref: rootRef,
     "data-mh-screen": true,
     "data-card-tactic-open": true,
     "data-card-tactic-open-phase": phase,
+    "data-card-tactic-fx": fx ? 'on' : 'off',
     className: SCREEN_SHELL_CLASS
   }, React.createElement(ScreenHead, {
     title: "戦術カードパック",
@@ -182949,6 +183056,10 @@ const CardTacticPackOpen = ({
   }), phase === 'tearing' && React.createElement("div", {
     "aria-hidden": "true",
     className: "mh-pack-burst"
+  }), phase === 'tearing' && omen && React.createElement("div", {
+    "aria-hidden": "true",
+    "data-card-tactic-omen": omen,
+    className: `mh-pack-omen mh-pack-omen-${omen}`
   }), phase === 'closed' && React.createElement("span", {
     className: "absolute inset-x-0 -bottom-9 animate-pulse text-center text-[14px] font-black text-white"
   }, "タップで開ける")) : React.createElement("div", {
@@ -182961,6 +183072,11 @@ const CardTacticPackOpen = ({
     const card = cardTacticOf(c.id);
     const on = flipped.includes(i);
     const sr = c.r === 'SR';
+    const cl = climb && climb.i === i ? climb : null;
+    const sur = fx && sr && cardPackSurprise({
+      rarity: 'kira'
+    }, i, pi);
+    const glow = sr && !on && (!sur || cl && cl.k >= 1);
     return React.createElement("div", {
       key: `${pi}-${i}`,
       className: "mh-pack-deal flex flex-col items-center",
@@ -182971,13 +183087,23 @@ const CardTacticPackOpen = ({
       type: "button",
       "data-card-tactic-open-card": i,
       "data-card-tactic-open-flipped": on ? '1' : '0',
+      "data-card-tactic-surprise": sur ? 1 : undefined,
+      "data-card-tactic-climb": cl ? cl.k + 1 : undefined,
       onClick: () => on ? setDetail(card) : flip(i),
-      className: "mh-pack-card relative w-full active:scale-95"
-    }, React.createElement("div", {
+      className: `mh-pack-card relative w-full active:scale-95 ${cl ? `mh-pack-climb mh-pack-climb-${cl.k + 1}` : ''}`
+    }, cl && React.createElement("span", {
+      key: cl.n,
+      "aria-hidden": "true",
+      className: "mh-pack-climb-burst",
+      style: {
+        '--c': CARD_PACK_CLIMB[cl.k][0],
+        '--s': `${CARD_PACK_CLIMB[cl.k][1]}px`
+      }
+    }), React.createElement("div", {
       className: `mh-pack-card-in aspect-[5/7] w-full ${on ? 'flipped' : ''}`
     }, React.createElement("div", {
       "data-card-tactic-back": true,
-      className: `mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${sr && !on ? 'mh-pack-kira-back' : ''}`
+      className: `mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${glow ? 'mh-pack-kira-back' : ''}`
     }, React.createElement("img", {
       src: CARD_BACK_IMG(),
       alt: "",
@@ -183023,6 +183149,18 @@ const CardTacticPackOpen = ({
   }, React.createElement("div", {
     "aria-hidden": "true",
     className: "mh-pack-spot-rays"
+  }), fx && !spot.leaving && React.createElement("div", {
+    "aria-hidden": "true",
+    className: "mh-pack-spot-burst"
+  }), fx && !spot.leaving && React.createElement("div", {
+    "aria-hidden": "true",
+    className: "mh-pack-shock"
+  }), fx && !spot.leaving && React.createElement("div", {
+    "aria-hidden": "true",
+    className: "mh-pack-vignette"
+  }), fx && React.createElement(CardPackConfetti, {
+    key: `cf-${spot.i}`,
+    n: 60
   }), React.createElement("div", {
     className: `relative ${spot.leaving ? 'mh-pack-spot-out' : 'mh-pack-spot-in'}`,
     style: {
@@ -183034,17 +183172,25 @@ const CardTacticPackOpen = ({
     card: spotCard,
     big: true
   }))), React.createElement("span", {
-    className: `relative mt-4 rounded-full bg-amber-300 px-4 py-1 text-[18px] font-black text-slate-950 ${spot.leaving ? 'opacity-0' : ''}`
+    "data-card-tactic-label": fx ? 'big' : 'normal',
+    className: `relative mt-4 rounded-full bg-amber-300 px-4 py-1 text-[18px] font-black text-slate-950 ${fx ? 'mh-pack-label-big' : ''} ${spot.leaving ? 'opacity-0' : ''}`
   }, "SR!")), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
   }, phase !== 'open' ? React.createElement("div", {
     className: "text-center text-[12px] font-bold text-slate-400"
-  }, "パックをタップしてください") : !allOpen ? React.createElement("button", {
+  }, "パックをタップしてください") : !allOpen ? React.createElement("div", {
+    className: "flex gap-2"
+  }, React.createElement("button", {
     type: "button",
     "data-card-tactic-open-all": true,
-    className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]",
+    className: "mh-button mh-button-primary min-h-[52px] w-full flex-1 rounded-2xl font-black active:scale-[.98]",
     onClick: flipAll
-  }, "全部めくる") : !last ? React.createElement("button", {
+  }, "全部めくる"), fx && React.createElement("button", {
+    type: "button",
+    "data-card-tactic-skip": true,
+    className: "mh-button min-h-[52px] shrink-0 rounded-2xl border border-slate-500 bg-slate-800 px-4 font-black text-slate-100 active:scale-[.98]",
+    onClick: skipAll
+  }, "とばす")) : !last ? React.createElement("button", {
     type: "button",
     "data-card-tactic-open-next": true,
     className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]",
@@ -232223,7 +232369,16 @@ const createAnimationStyle = () => {
     .mh-pack-confetti { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 3; }
     .mh-pack-confetti > i { position: absolute; top: -14px; height: 12px; opacity: 0; animation: mhPackConfetti 2.4s linear forwards; }
     @keyframes mhPackConfetti { 0% { opacity: 1; translate: 0 0; rotate: 0deg; } 100% { opacity: 1; translate: 0 110vh; rotate: 720deg; } }
+    /* 格上げ・もう一段の派手さ(2026-11-11 社長): 札が出た瞬間に光の輪が広がり、画面のふちがその色に染まる */
+    .mh-pack-shock { position: absolute; left: 50%; top: 46%; width: 120px; height: 120px; border-radius: 50%; pointer-events: none; border: 6px solid #fff; box-shadow: 0 0 24px 6px rgba(255,200,40,.9), inset 0 0 24px 4px rgba(255,200,40,.8);
+      transform: translate(-50%, -50%) scale(.3); animation: mhPackShock .8s ease-out forwards; }
+    .mh-pack-shock.alt { box-shadow: 0 0 30px 8px rgba(255,80,200,.9), 0 0 50px 12px rgba(80,200,255,.8), inset 0 0 24px 4px rgba(255,80,200,.7); border-color: #fff; }
+    @keyframes mhPackShock { 0% { opacity: 1; transform: translate(-50%, -50%) scale(.3); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(6); } }
+    .mh-pack-vignette { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 90px 24px rgba(255,200,40,.8); animation: mhPackVignette 1.2s ease-out forwards; }
+    .mh-pack-vignette.alt { box-shadow: inset 0 0 110px 30px rgba(255,80,200,.75), inset 0 0 160px 50px rgba(80,200,255,.55); }
+    @keyframes mhPackVignette { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: .5; } }
     @media (prefers-reduced-motion: reduce) {
+      .mh-pack-shock, .mh-pack-vignette { display: none; }
       .mh-pack-confetti, .mh-pack-rpillar, .mh-pack-climb-burst, .mh-pack-spot-burst { display: none; }
       .mh-pack-cflash { animation-duration: .3s; }
       .mh-pack-label-big, .mh-pack-label-big.alt { animation: none; transform: rotate(-6deg); }

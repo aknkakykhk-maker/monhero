@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f690a7a46cbf238d
+// generated-sha256: d14d74faef8b71a7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9704,8 +9704,8 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantLifeRoomEdit: true, // 助手の部屋の模様替え(家具を指で動かす・大きさ・向き・色・前後・おまかせ)。2026-11-11 社長「この形で進める」「この文で」・ミハリ最終確認 OK(56-assistant-life-roomedit.jsx)
   // 助手1人に贈る(2026-11-08 社長 SOLO-GIFT-PLAN.md ❶B ❷A ❸A ❹A ❺A)。台詞・止め絵・更新履歴の「この文で」・ミハリの確認のあとで真にする
   assistantLifeSolo: true, // 2026-11-08 社長「この文で公開」
-  assistantLifeTopHouse: false, // 助手ライフを開いた最初に家の断面図(8部屋を横4×2段)・出かけ先の丸・得の帯の「今日・次」を▼にたたむ。2026-11-11 社長「この形で」(案A)。ミハリ確認の前は偽(56-assistant-life-house.jsx)
-  assistantLifeDailyScene: false, // できごとを小さな場面に(2人の掛け合い→2択→返事・ときどき珍しいできごと)。台詞(LINES-SPEC.md)が入るまで偽(56-assistant-life-ux.jsx)
+  assistantLifeTopHouse: true, // 助手ライフを開いた最初に家の断面図(8部屋を横4×2段)・出かけ先の丸・得の帯の「今日・次」を▼にたたむ。2026-11-11 社長「この形で」(案A)。更新履歴「この文で」(社長)・ミハリ3・Fable の最終確認のあと真(56-assistant-life-house.jsx)
+  assistantLifeDailyScene: true, // できごとを小さな場面に(2人の掛け合い→2択→返事・ときどき珍しいできごと)。台詞はココロ3(ひとこと96・場面6・珍しい6)(56-assistant-life-ux.jsx)
   // 助手ライフのフレンドの家との行き来(2026-11-08 社長・助手部オトズレ。設計 docs/progress/assistant-peer/FRIEND-VISIT-PLAN.md)。
   //   表 assistant_life_friend_* を流し、画面を撮って確かめ、社長の「この文で」が出たら真にする。偽のあいだは通信もしない(56-assistant-life-friend.jsx)
   assistantLifeFriend: true, // 2026-11-08 社長「この文で」・表を流した(窓口)
@@ -68182,7 +68182,7 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false, life = null, onScen
           {plan
             ? (done ? `${castPlace}の${castNames}。この時間帯のできごとは見ました` : <>{plan.kind === 'rare' ? `✨ ${castPlace}で、${castNames}に めずらしいできごと` : `${castPlace}で、${castNames}が`}<span className="inline-block" data-assistant-life-daily-title>「{plan.title}」</span></>)
             : said || `${scene.text.replace('{n}', nameOf(who))}。${done ? 'この時間帯の話は聞きました' : '聞いてみると、この時間帯だけの話が聞けます'}`}
-          {!done && <span className="block text-[11px] text-emerald-300">{plan ? `→ 見ると 🤝 ふれあい1回 ・ 💗 +${ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0}` : '→ 聞くと 🤝 ふれあい1回(ミッション「助手とふれあう」)'}</span>}
+          {!done && <span className="block text-[11px] text-emerald-300">{plan ? `→ 見ると 🤝 ふれあい1回 ・ 💗 +${ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0}(1日 +12 まで)` : '→ 聞くと 🤝 ふれあい1回(ミッション「助手とふれあう」)'}</span>}
           {got && <span className="block text-[11px] text-pink-200">🧺 おやつバスケットを1個もらいました！(持ち物へ)</span>}
         </span>
         {!done && (plan
@@ -68298,14 +68298,21 @@ const assistantLifeDailyAlbumTalks = () => {
 const assistantLifeDailyFinish = async (plan, slotId) => {
   const r = await assistantLifeDailyListen(slotId);
   let bond = 0;
+  const gains = {}; // 実際に上がった量(1日 +12 に届いた助手は 0。2026-11-11 Fable の確認: 決まった数ではなく足された量を出す)
   if (r.added && plan) {
     bond = ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0;
     if (bond > 0 && typeof assistantPeerPlayerBondAdder !== 'undefined' && assistantPeerPlayerBondAdder) {
-      for (const id of plan.ids) { try { assistantPeerPlayerBondAdder(id, 'lifeDaily', bond); } catch (_) {} }
+      const pts = (id) => (typeof assistantLifeBondPointsOf === 'function' ? assistantLifeBondPointsOf(id) : null);
+      for (const id of plan.ids) {
+        const before = pts(id);
+        try { assistantPeerPlayerBondAdder(id, 'lifeDaily', bond); } catch (_) {}
+        const after = pts(id);
+        gains[id] = Number.isFinite(before) && Number.isFinite(after) ? Math.max(0, after - before) : bond;
+      }
     }
     if (plan.kind === 'rare' && typeof assistantPeerAlbumAdd === 'function') { const t = assistantLifeDailyRareTalk(plan.id, plan.ids[0], plan.ids[1]); if (t) { try { assistantPeerAlbumAdd(t); } catch (_) {} } }
   }
-  return { added: r.added, got: r.got, bond };
+  return { added: r.added, got: r.got, bond, gains };
 };
 
 // できごとの場面(家の上に重ねる。外枠は見守るの場面 .mhl-scene と同じ)
@@ -68347,7 +68354,7 @@ function AssistantLifeDailySceneView({ plan, place, look, slotLabel, slotId, onC
         </div>}
         {phase === 'done' && <div data-assistant-life-daily-result>
           {res && <p className="mt-1 rounded-xl bg-pink-50 px-2 py-1 text-[11.5px] font-black text-pink-700">{res.added
-            ? ['🤝 ふれあい1回', res.bond > 0 ? `💗 ${plan.ids.map(assistantLifeName).join('・')} +${res.bond}` : '', plan.kind === 'rare' ? '✨ 思い出アルバムに1枚' : '', res.got ? '🧺 おやつバスケットを1個もらいました！' : ''].filter(Boolean).join(' ・ ')
+            ? ['🤝 ふれあい1回', (() => { const g = res.gains || {}; const up = plan.ids.filter(id => (g[id] || 0) > 0); return up.length ? up.map(id => `💗 ${assistantLifeName(id)} +${g[id]}`).join(' ') : res.bond > 0 ? '💗 今日の仲良し度はここまで' : ''; })(), plan.kind === 'rare' ? '✨ 思い出アルバムに1枚' : '', res.got ? '🧺 おやつバスケットを1個もらいました！' : ''].filter(Boolean).join(' ・ ')
             : 'この時間帯のできごとは見ました'}</p>}
           <button type="button" data-assistant-life-daily-scene-close onClick={(ev) => { ev.stopPropagation(); onClose(); }} className="mt-1.5 min-h-[44px] w-full rounded-xl bg-slate-700 text-[12px] font-black">🏡 家へ戻る</button>
         </div>}
@@ -68367,7 +68374,8 @@ function AssistantLifeTopStrip({ life, ids, evIds = [], onPlace }) {
   }
   const places = Object.keys(groups);
   let next = null;
-  try { const s = assistantLifeSlotAt(); const d = ASSISTANT_LIFE_SLOTS[s.i]; next = d && Number.isFinite(d.to) ? d.to % 24 : null; } catch (_) { next = null; }
+  // 助手が動くのは2時間ごと(移動12回)。いまの区切りの終わり(assistantLifeSlotAt の to)を出す(2026-11-11 Fable の確認)
+  try { const s = assistantLifeSlotAt(); next = Number.isFinite(s.to) ? s.to % 24 : null; } catch (_) { next = null; }
   return (
     <div className="mx-3 mb-1.5 text-white" data-assistant-life-top-strip>
       {places.length > 0 && <div className="flex gap-1 overflow-x-auto overscroll-contain pb-0.5" style={{ scrollbarWidth: 'none' }}>
@@ -90243,6 +90251,17 @@ const cardPackQuake = (el, lv) => {
   el.animate([{ transform: 'none' }, { transform: `translate(${-a}px, ${a / 2}px)` }, { transform: `translate(${a}px, ${-a / 2}px)` }, { transform: `translate(${-a * 0.7}px, ${-a / 3}px)` }, { transform: `translate(${a / 2}px, ${a / 3}px)` }, { transform: 'none' }],
     { duration: 220 + lv * 90, easing: 'linear' });
 };
+// 手に伝わるふるえ(対応する端末だけ。強めのときだけ。動きを減らす設定の人には出さない)。ms は数か、間をあけた並び
+const cardPackBuzz = (ms) => {
+  try {
+    if (typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    navigator.vibrate(ms);
+  } catch (e) { /* ふるえなくても続ける */ }
+};
+// 「格上げ」の見せ方(2026-11-11 社長)。キラ以上の約3割は、めくる前の裏が光らずふつうのカードに見え、タップで 白 → 金 → 虹 と格が上がる。
+//   どれが格上げに見えるかは位置だけで決める(抽選や中身は変えない)。ふつうのカードが格上がりに見えることはない
+const cardPackSurprise = (c, i, pi) => !!c && c.rarity !== 'normal' && ((pi * 3 + i * 5 + (c.rarity === 'alt' ? 1 : 0)) % 10 < 3);
 // 紙吹雪(強めのとき)。n 枚を降らせ、again があれば少し遅れてもう1回。数と置き場所は出したときに1回だけ決める
 const CardPackConfetti = ({ n, again = 0 }) => {
   const [bits] = useState(() => Array.from({ length: n + again }, (_, i) => ({
@@ -90294,8 +90313,9 @@ const CardPackOpen = ({ db, result, onDone }) => {
     se('special');
     setPhase('tearing');
     later(() => se('crit'), 520);
-    if (fx) { cardPackQuake(rootRef.current, 1); later(() => cardPackQuake(rootRef.current, 2), 640); }
-    later(() => setPhase('open'), CARD_PACK_TEAR_MS);
+    if (fx) { cardPackQuake(rootRef.current, 1); later(() => cardPackQuake(rootRef.current, 2), 640); cardPackBuzz(omen ? [30, 40, 30] : 20); }
+    // 中にレアキラがあるときは、破る前の「溜め」を少し長く(キラ +0.25秒・レアキラ +0.5秒。見た目だけ)
+    later(() => setPhase('open'), CARD_PACK_TEAR_MS + (fx ? (omen === 'alt' ? 500 : omen === 'kira' ? 250 : 0) : 0));
   };
   const spotOff = () => {
     setSpot((sp) => (sp && !sp.leaving ? { ...sp, leaving: true } : sp));
@@ -90314,7 +90334,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
         setFlash((x) => ({ n: ((x && x.n) || 0) + 1, rarity: c.rarity }));
         setSpot({ i, rarity: c.rarity, leaving: false });
         se('crit'); if (c.rarity === 'alt') se('fusion'); else se('levelUp');
-        if (fx) cardPackQuake(rootRef.current, c.rarity === 'alt' ? 3 : 2);
+        if (fx) { cardPackQuake(rootRef.current, c.rarity === 'alt' ? 3 : 2); cardPackBuzz(c.rarity === 'alt' ? [60, 40, 60, 40, 120] : [50, 30, 50]); }
       }, 380);
       later(spotOff, 380 + spotMs(c));
     }
@@ -90323,7 +90343,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
     const steps = climbSteps(cards[i]);
     if (!steps) { turn(i); return; }
     for (let k = 0; k < steps; k++) {
-      later(() => { setClimb((x) => ({ i, k, n: ((x && x.n) || 0) + 1 })); se('tap'); cardPackQuake(rootRef.current, k + 1); }, k * CARD_PACK_CLIMB_MS);
+      later(() => { setClimb((x) => ({ i, k, n: ((x && x.n) || 0) + 1 })); se('tap'); cardPackQuake(rootRef.current, k + 1); cardPackBuzz(15 + k * 15); }, k * CARD_PACK_CLIMB_MS);
     }
     later(() => turn(i), steps * CARD_PACK_CLIMB_MS);
   };
@@ -90337,6 +90357,15 @@ const CardPackOpen = ({ db, result, onDone }) => {
       at += cards[i].rarity !== 'normal' ? climbSteps(cards[i]) * CARD_PACK_CLIMB_MS + 380 + spotMs(cards[i]) + CARD_PACK_SPOT_BACK_MS + 120 : 140;
     });
   };
+  // 連続で開けるとき(2パック目から)は、ふつうのカードを自動で一気にめくり、キラ以上だけ残して止まる(2026-11-11 社長「連続で開けるときの早送り」)。
+  //   「とばす」は、残りを演出なしで全部めくる。どちらも出るカードは変わらない
+  const quick = fx && !kit && pi > 0 && result.packs.length > 1;
+  useEffect(() => {
+    if (phase !== 'open' || !quick) return;
+    cards.forEach((c, i) => { if (c.rarity === 'normal') later(() => setFlipped((f) => (f.includes(i) ? f : [...f, i])), 160 + i * 70); });
+    later(() => se('card'), 160);
+  }, [phase, pi]);
+  const skipAll = () => { timers.current.forEach(clearTimeout); timers.current = []; se('card'); setSpot(null); setClimb(null); setFlipped(cards.map((_, i) => i)); };
   const next = () => { Audio_.fgSe.tap(); timers.current.forEach(clearTimeout); timers.current = []; setPi((x) => x + 1); setPhase(kit ? 'open' : 'closed'); setFlipped([]); setSpot(null); setClimb(null); };
   // 破るときに一瞬光る色(中のいちばん良いカード。強めのときだけ)
   const omen = fx ? (cards.some((c) => c.rarity === 'alt') ? 'alt' : cards.some((c) => c.rarity === 'kira') ? 'kira' : null) : null;
@@ -90378,12 +90407,15 @@ const CardPackOpen = ({ db, result, onDone }) => {
               const name = card ? card.name : m ? m.name : c.no;
               const rare = c.rarity !== 'normal';
               const cl = climb && climb.i === i ? climb : null;
+              const sur = fx && cardPackSurprise(c, i, pi);
+              // めくる前の裏の光: 格上げに見せる札は光らない → 段が上がるごとに 金(キラ) → 虹(レアキラ) と光り出す。ほかは今までどおり最初から光る
+              const backRar = !rare || on ? null : sur ? (cl ? (cl.k >= 2 ? 'alt' : cl.k >= 1 ? 'kira' : null) : null) : c.rarity;
               return (
                 <div key={`${pi}-${i}`} className="mh-pack-deal flex flex-col items-center" style={{ animationDelay: `${i * 70}ms` }}>
-                  <button type="button" data-card-pack-card={i} data-card-pack-flipped={on ? 1 : 0} data-card-pack-rarity={c.rarity} data-card-pack-climb={cl ? cl.k + 1 : undefined} {...(on ? press(c.no, () => setDetail(c.no)) : { onClick: () => flip(i) })} className={`mh-pack-card relative w-full active:scale-95 ${cl ? `mh-pack-climb mh-pack-climb-${cl.k + 1}` : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
+                  <button type="button" data-card-pack-card={i} data-card-pack-surprise={sur ? 1 : undefined} data-card-pack-flipped={on ? 1 : 0} data-card-pack-rarity={c.rarity} data-card-pack-climb={cl ? cl.k + 1 : undefined} {...(on ? press(c.no, () => setDetail(c.no)) : { onClick: () => flip(i) })} className={`mh-pack-card relative w-full active:scale-95 ${cl ? `mh-pack-climb mh-pack-climb-${cl.k + 1}` : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
                     {cl && <span key={cl.n} aria-hidden="true" className="mh-pack-climb-burst" style={{ '--c': CARD_PACK_CLIMB[cl.k][0], '--s': `${CARD_PACK_CLIMB[cl.k][1]}px` }}/>}
                     <div className={`mh-pack-card-in aspect-[5/7] w-full ${on ? 'flipped' : ''}`}>
-                      <div className={`mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${rare && !on ? (c.rarity === 'alt' ? 'mh-pack-alt-back' : 'mh-pack-kira-back') : ''}`} style={{ containerType: 'inline-size' }}>
+                      <div className={`mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${backRar ? (backRar === 'alt' ? 'mh-pack-alt-back' : 'mh-pack-kira-back') : ''}`} style={{ containerType: 'inline-size' }}>
                         {/* カードの裏面(2026-10-26 社長から届いた絵)。キラ・別絵キラは今までどおり光って揺れる。モンスターの枠は金の★を重ねる */}
                         <img src={CARD_BACK_IMG()} alt="" draggable={false} className="absolute inset-0 h-full w-full rounded-[5px] object-cover"/>
                         {c.slot === 'mon' && <span aria-hidden="true" className="relative mt-[62%] grid aspect-square w-[30%] place-items-center rounded-full border-2 border-amber-200/90 bg-black/55 font-black leading-none text-amber-200 shadow-[0_0_10px_rgba(0,0,0,.5)]" style={{ fontSize: '14cqw', textShadow: '0 1px 2px #000' }}>★</span>}
@@ -90434,6 +90466,8 @@ const CardPackOpen = ({ db, result, onDone }) => {
             <div aria-hidden="true" className={`mh-pack-spot-rays ${alt ? 'mh-pack-spot-rays-alt' : ''}`}/>
             {fx && alt && !spot.leaving && <div aria-hidden="true" data-card-pack-pillar className="mh-pack-rpillar"/>}
             {fx && !spot.leaving && <div aria-hidden="true" className={`mh-pack-spot-burst ${alt ? 'alt' : ''}`}/>}
+            {fx && !spot.leaving && <div aria-hidden="true" data-card-pack-shock className={`mh-pack-shock ${alt ? 'alt' : ''}`}/>}
+            {fx && !spot.leaving && <div aria-hidden="true" className={`mh-pack-vignette ${alt ? 'alt' : ''}`}/>}
             {fx && <CardPackConfetti key={`cf-${spot.i}`} n={alt ? 130 : 24} again={alt ? 60 : 0}/>}
             <div className={`relative ${spot.leaving ? 'mh-pack-spot-out' : 'mh-pack-spot-in'}`} style={{ width: spotW }}>
               <div className={`relative aspect-[5/7] w-full ${alt ? 'mh-pack-alt-front' : 'mh-pack-kira-front'}`}>
@@ -90447,7 +90481,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
       })()}
       <div className={SCREEN_FOOTER_CLASS}>
         {phase !== 'open' ? <div className="text-center text-[12px] font-bold text-slate-400">{kit ? 'キットをタップしてください' : 'パックをタップしてください'}</div>
-          : !allOpen ? <button type="button" data-card-pack-flip-all className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={flipAll}>全部めくる</button>
+          : !allOpen ? <div className="flex gap-2"><button type="button" data-card-pack-flip-all className="mh-button mh-button-primary min-h-[52px] w-full flex-1 rounded-2xl font-black active:scale-[.98]" onClick={flipAll}>全部めくる</button>{fx && <button type="button" data-card-pack-skip className="mh-button min-h-[52px] shrink-0 rounded-2xl border border-slate-500 bg-slate-800 px-4 font-black text-slate-100 active:scale-[.98]" onClick={skipAll}>とばす</button>}</div>
           : !last ? <button type="button" data-card-pack-next className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={next}>{kit ? 'つぎへ' : 'つぎのパック'}</button>
           : kit && !showList ? <button type="button" data-card-pack-list-open className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); setShowList(true); }}>入っていたカードの一覧へ</button>
           : <button type="button" data-card-pack-done className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); onDone(); }}>{result.doneLabel || (result.demo ? 'トップへ戻る' : 'マーケットへ戻る')}</button>}
@@ -96930,6 +96964,11 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
   const [detail, setDetail] = useState(null); // めくったカードを押すと全文
   const timers = useRef([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  // 演出・強め(MFバトルカードのパックと同じ。2026-11-11 社長「戦術カードも MF 並みに」)。設定「パックを開ける演出」(87 の cardPackFxOn)の入切が効く。
+  //   SR は裏のまま光が2段上がってからめくれる / 破るときは中に SR があれば金色で光る / 札が大きく紙吹雪 / 画面がふるえる。中身・確率は変えない
+  const [fx] = useState(cardPackFxOn);
+  const [climb, setClimb] = useState(null);
+  const rootRef = useRef(null);
   const listRef = useRef(null);
   const [listH, setListH] = useState(0);
   useEffect(() => {
@@ -96947,20 +96986,45 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
   const cards = packs[pi] || [];
   const allOpen = flipped.length >= cards.length;
   const last = pi >= packs.length - 1;
-  const tear = () => { if (phase !== 'closed') return; se('special'); setPhase('tearing'); later(() => se('crit'), 520); later(() => setPhase('open'), CARD_TACTIC_TEAR_MS); };
+  const tear = () => {
+    if (phase !== 'closed') return;
+    se('special'); setPhase('tearing'); later(() => se('crit'), 520);
+    if (fx) { cardPackQuake(rootRef.current, 1); later(() => cardPackQuake(rootRef.current, 2), 640); }
+    later(() => setPhase('open'), CARD_TACTIC_TEAR_MS);
+  };
   const spotOff = () => { setSpot((sp) => (sp && !sp.leaving ? { ...sp, leaving: true } : sp)); later(() => setSpot(null), CARD_TACTIC_SPOT_BACK_MS); };
-  const reveal = (i) => {
-    se('card');
+  const climbSteps = (c) => (fx && c && c.r === 'SR' ? 2 : 0);
+  const spotMs = () => (fx ? CARD_PACK_SPOT_ALT_FX_MS : CARD_TACTIC_SPOT_MS);
+  const turn = (i) => {
+    se('card'); setClimb(null);
     setFlipped((f) => (f.includes(i) ? f : [...f, i]));
-    if (cards[i] && cards[i].r === 'SR') { later(() => { setFlash((n) => n + 1); setSpot({ i, leaving: false }); se('crit'); se('fusion'); }, 380); later(spotOff, 380 + CARD_TACTIC_SPOT_MS); }
+    if (cards[i] && cards[i].r === 'SR') {
+      later(() => { setFlash((n) => n + 1); setSpot({ i, leaving: false }); se('crit'); se('fusion'); if (fx) { cardPackQuake(rootRef.current, 2); cardPackBuzz([50, 30, 50]); } }, 380);
+      later(spotOff, 380 + spotMs());
+    }
   };
-  const flip = (i) => { if (flipped.includes(i) || phase !== 'open' || spot) return; reveal(i); };
+  const reveal = (i) => {
+    const steps = climbSteps(cards[i]);
+    if (!steps) { turn(i); return; }
+    for (let k = 0; k < steps; k++) later(() => { setClimb((x) => ({ i, k, n: ((x && x.n) || 0) + 1 })); se('tap'); cardPackQuake(rootRef.current, k + 1); cardPackBuzz(15 + k * 15); }, k * CARD_PACK_CLIMB_MS);
+    later(() => turn(i), steps * CARD_PACK_CLIMB_MS);
+  };
+  const flip = (i) => { if (flipped.includes(i) || phase !== 'open' || spot || climb) return; reveal(i); };
   const flipAll = () => {
-    if (spot) return;
+    if (spot || climb) return;
     let at = 0;
-    cards.map((_, i) => i).filter((i) => !flipped.includes(i)).forEach((i) => { later(() => reveal(i), at); at += cards[i].r === 'SR' ? 380 + CARD_TACTIC_SPOT_MS + CARD_TACTIC_SPOT_BACK_MS + 120 : 140; });
+    cards.map((_, i) => i).filter((i) => !flipped.includes(i)).forEach((i) => { later(() => reveal(i), at); at += cards[i].r === 'SR' ? climbSteps(cards[i]) * CARD_PACK_CLIMB_MS + 380 + spotMs() + CARD_TACTIC_SPOT_BACK_MS + 120 : 140; });
   };
-  const next = () => { Audio_.fgSe.tap(); timers.current.forEach(clearTimeout); timers.current = []; setPi((x) => x + 1); setPhase('closed'); setFlipped([]); setSpot(null); };
+  // 連続で開けるとき(2パック目から)は、ふつうのカードを自動で一気にめくり、SR だけ残して止まる。「とばす」は残りを演出なしで全部めくる(2026-11-11 社長)
+  const quick = fx && pi > 0 && packs.length > 1;
+  useEffect(() => {
+    if (phase !== 'open' || !quick) return;
+    cards.forEach((c, i) => { if (c.r !== 'SR') later(() => setFlipped((f) => (f.includes(i) ? f : [...f, i])), 160 + i * 70); });
+    later(() => se('card'), 160);
+  }, [phase, pi]);
+  const skipAll = () => { timers.current.forEach(clearTimeout); timers.current = []; se('card'); setSpot(null); setClimb(null); setFlipped(cards.map((_, i) => i)); };
+  const next = () => { Audio_.fgSe.tap(); timers.current.forEach(clearTimeout); timers.current = []; setPi((x) => x + 1); setPhase('closed'); setFlipped([]); setSpot(null); setClimb(null); };
+  const omen = fx && cards.some((c) => c.r === 'SR') ? 'kira' : null;
   // 並べ方はブースターパックと同じ: 背の高い画面は3列(カードを大きく)、低い画面は4列。カードの大きさは並べる所の高さに合わせる
   const cols = !(typeof window !== 'undefined' && window.innerHeight >= 760) ? 4 : 3;
   const rows = Math.ceil(cards.length / cols);
@@ -96969,7 +97033,7 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
   const spotCard = spot ? cardTacticOf(cards[spot.i].id) : null;
   const shards = cards.filter((c) => c.dup).length;
   return (
-    <div data-mh-screen data-card-tactic-open data-card-tactic-open-phase={phase} className={SCREEN_SHELL_CLASS}>
+    <div ref={rootRef} data-mh-screen data-card-tactic-open data-card-tactic-open-phase={phase} data-card-tactic-fx={fx ? 'on' : 'off'} className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="戦術カードパック" accent="text-amber-200" note={packs.length > 1 ? `${pi + 1} / ${packs.length}パック` : ''}/>
       <div ref={listRef} className={`${SCREEN_LIST_CLASS} relative flex flex-col items-center justify-center overflow-hidden pb-2`}>
         {phase !== 'open' ? (
@@ -96978,6 +97042,7 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
             {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-strip absolute inset-x-0 top-0 h-[7%] rounded-t-[14px]" style={{ background: 'repeating-linear-gradient(90deg, rgba(255,255,255,.95) 0 6px, rgba(255,255,255,.5) 6px 12px)' }}/>}
             {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-pillar"/>}
             {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-burst"/>}
+            {phase === 'tearing' && omen && <div aria-hidden="true" data-card-tactic-omen={omen} className={`mh-pack-omen mh-pack-omen-${omen}`}/>}
             {phase === 'closed' && <span className="absolute inset-x-0 -bottom-9 animate-pulse text-center text-[14px] font-black text-white">タップで開ける</span>}
           </button>
         ) : (
@@ -96986,11 +97051,16 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
               const card = cardTacticOf(c.id);
               const on = flipped.includes(i);
               const sr = c.r === 'SR';
+              const cl = climb && climb.i === i ? climb : null;
+              // 格上げに見せる SR は、めくる前の裏が光らず、段が上がると金に光り出す(87 の cardPackSurprise。中身は変えない)
+              const sur = fx && sr && cardPackSurprise({ rarity: 'kira' }, i, pi);
+              const glow = sr && !on && (!sur || (cl && cl.k >= 1));
               return (
                 <div key={`${pi}-${i}`} className="mh-pack-deal flex flex-col items-center" style={{ animationDelay: `${i * 70}ms` }}>
-                  <button type="button" data-card-tactic-open-card={i} data-card-tactic-open-flipped={on ? '1' : '0'} onClick={() => (on ? setDetail(card) : flip(i))} className="mh-pack-card relative w-full active:scale-95">
+                  <button type="button" data-card-tactic-open-card={i} data-card-tactic-open-flipped={on ? '1' : '0'} data-card-tactic-surprise={sur ? 1 : undefined} data-card-tactic-climb={cl ? cl.k + 1 : undefined} onClick={() => (on ? setDetail(card) : flip(i))} className={`mh-pack-card relative w-full active:scale-95 ${cl ? `mh-pack-climb mh-pack-climb-${cl.k + 1}` : ''}`}>
+                    {cl && <span key={cl.n} aria-hidden="true" className="mh-pack-climb-burst" style={{ '--c': CARD_PACK_CLIMB[cl.k][0], '--s': `${CARD_PACK_CLIMB[cl.k][1]}px` }}/>}
                     <div className={`mh-pack-card-in aspect-[5/7] w-full ${on ? 'flipped' : ''}`}>
-                      <div data-card-tactic-back className={`mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${sr && !on ? 'mh-pack-kira-back' : ''}`}>
+                      <div data-card-tactic-back className={`mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${glow ? 'mh-pack-kira-back' : ''}`}>
                         <img src={CARD_BACK_IMG()} alt="" draggable={false} className="absolute inset-0 h-full w-full rounded-[5px] object-cover"/>
                       </div>
                       <div className={`mh-pack-face mh-pack-front ${sr ? 'mh-pack-kira-front' : ''}`}>{card && <CardTacticFront card={card}/>}</div>
@@ -97019,15 +97089,19 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
       {spotCard && (
         <button type="button" data-card-tactic-spot aria-label="並びへ戻す" onClick={spotOff} className="fixed inset-0 z-[90] flex flex-col items-center justify-center bg-slate-950/70" style={cardSafePad('0px')}>
           <div aria-hidden="true" className="mh-pack-spot-rays"/>
+          {fx && !spot.leaving && <div aria-hidden="true" className="mh-pack-spot-burst"/>}
+          {fx && !spot.leaving && <div aria-hidden="true" className="mh-pack-shock"/>}
+          {fx && !spot.leaving && <div aria-hidden="true" className="mh-pack-vignette"/>}
+          {fx && <CardPackConfetti key={`cf-${spot.i}`} n={60}/>}
           <div className={`relative ${spot.leaving ? 'mh-pack-spot-out' : 'mh-pack-spot-in'}`} style={{ width: spotW }}>
             <div className="mh-pack-kira-front relative aspect-[5/7] w-full"><CardTacticFront card={spotCard} big/></div>
           </div>
-          <span className={`relative mt-4 rounded-full bg-amber-300 px-4 py-1 text-[18px] font-black text-slate-950 ${spot.leaving ? 'opacity-0' : ''}`}>SR!</span>
+          <span data-card-tactic-label={fx ? 'big' : 'normal'} className={`relative mt-4 rounded-full bg-amber-300 px-4 py-1 text-[18px] font-black text-slate-950 ${fx ? 'mh-pack-label-big' : ''} ${spot.leaving ? 'opacity-0' : ''}`}>SR!</span>
         </button>
       )}
       <div className={SCREEN_FOOTER_CLASS}>
         {phase !== 'open' ? <div className="text-center text-[12px] font-bold text-slate-400">パックをタップしてください</div>
-          : !allOpen ? <button type="button" data-card-tactic-open-all className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={flipAll}>全部めくる</button>
+          : !allOpen ? <div className="flex gap-2"><button type="button" data-card-tactic-open-all className="mh-button mh-button-primary min-h-[52px] w-full flex-1 rounded-2xl font-black active:scale-[.98]" onClick={flipAll}>全部めくる</button>{fx && <button type="button" data-card-tactic-skip className="mh-button min-h-[52px] shrink-0 rounded-2xl border border-slate-500 bg-slate-800 px-4 font-black text-slate-100 active:scale-[.98]" onClick={skipAll}>とばす</button>}</div>
           : !last ? <button type="button" data-card-tactic-open-next className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={next}>つぎのパック</button>
           : <button type="button" data-card-tactic-open-done className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); onDone(); }}>とじる</button>}
       </div>
@@ -130897,7 +130971,16 @@ const createAnimationStyle = () => {
     .mh-pack-confetti { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 3; }
     .mh-pack-confetti > i { position: absolute; top: -14px; height: 12px; opacity: 0; animation: mhPackConfetti 2.4s linear forwards; }
     @keyframes mhPackConfetti { 0% { opacity: 1; translate: 0 0; rotate: 0deg; } 100% { opacity: 1; translate: 0 110vh; rotate: 720deg; } }
+    /* 格上げ・もう一段の派手さ(2026-11-11 社長): 札が出た瞬間に光の輪が広がり、画面のふちがその色に染まる */
+    .mh-pack-shock { position: absolute; left: 50%; top: 46%; width: 120px; height: 120px; border-radius: 50%; pointer-events: none; border: 6px solid #fff; box-shadow: 0 0 24px 6px rgba(255,200,40,.9), inset 0 0 24px 4px rgba(255,200,40,.8);
+      transform: translate(-50%, -50%) scale(.3); animation: mhPackShock .8s ease-out forwards; }
+    .mh-pack-shock.alt { box-shadow: 0 0 30px 8px rgba(255,80,200,.9), 0 0 50px 12px rgba(80,200,255,.8), inset 0 0 24px 4px rgba(255,80,200,.7); border-color: #fff; }
+    @keyframes mhPackShock { 0% { opacity: 1; transform: translate(-50%, -50%) scale(.3); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(6); } }
+    .mh-pack-vignette { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 90px 24px rgba(255,200,40,.8); animation: mhPackVignette 1.2s ease-out forwards; }
+    .mh-pack-vignette.alt { box-shadow: inset 0 0 110px 30px rgba(255,80,200,.75), inset 0 0 160px 50px rgba(80,200,255,.55); }
+    @keyframes mhPackVignette { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: .5; } }
     @media (prefers-reduced-motion: reduce) {
+      .mh-pack-shock, .mh-pack-vignette { display: none; }
       .mh-pack-confetti, .mh-pack-rpillar, .mh-pack-climb-burst, .mh-pack-spot-burst { display: none; }
       .mh-pack-cflash { animation-duration: .3s; }
       .mh-pack-label-big, .mh-pack-label-big.alt { animation: none; transform: rotate(-6deg); }
