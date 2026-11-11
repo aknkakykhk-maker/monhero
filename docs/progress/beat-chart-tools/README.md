@@ -17,7 +17,7 @@
 
 書き出すだけで、ゲームのデータには入れていない。曲: Evans・ROSE(全編/short)・ヒューマノイド・Altar short・Rebellion short・Toward the Stars short。
 
-| | 強化前 | 強化後(既定) | 山場を残して減らす(`keep-climax`) | 全部減らす(`smooth`) |
+| | 強化前 | 交差はそのまま(`must`) | 山場を残して減らす(`keep-climax`・既定) | 全部減らす(`smooth`) |
 | --- | ---: | ---: | ---: | ---: |
 | 横持ちの親指で押せない | 15 | 1 | 2 | 2 |
 | 押さえている帯の中 | 38 | 0 | 0 | 0 |
@@ -31,11 +31,11 @@
 
 ## 止め絵(下から上へ進む・1本が8小節・左が前/右が後・柱の右の印が問題の場所)
 
-- 強化前 → 強化後(既定): `humanoid-master-before-vs-default.png`・`evans-master-before-vs-default.png`
-- 既定 → 山場を残して減らす: `humanoid-master-default-vs-keep-climax.png`・`evans-master-default-vs-keep-climax.png`
-- 既定 → 全部減らす: `humanoid-master-default-vs-smooth.png`・`evans-master-default-vs-smooth.png`
+- 強化前 → 交差はそのまま(`must`): `humanoid-master-before-vs-must.png`・`evans-master-before-vs-must.png`
+- `must` → 山場を残して減らす(既定): `humanoid-master-must-vs-keep-climax.png`・`evans-master-must-vs-keep-climax.png`
+- `must` → 全部減らす: `humanoid-master-must-vs-smooth.png`・`evans-master-must-vs-smooth.png`
 
-## 社長に決めてほしいこと
+## 社長の決定(2026-11-11)
 
-新曲の EXPERT・MASTER で、交差・真ん中越えを自動で減らすのを既定にするか(A 山場は残して減らす/B 今のまま/C 全部減らす)。
-決まるまでは B(曲の一覧に `handFinish` を書いた曲だけ減らす)。
+A: 新曲の EXPERT・MASTER は、交差・真ん中越えを既定で減らす。いちばん盛り上がる区切りの交差は見せ場として残す(表の「山場を残して減らす」の列が既定)。
+曲ごとに変えるときは曲の一覧の `handFinish`('must'=交差はそのまま・'smooth'=全部減らす)。

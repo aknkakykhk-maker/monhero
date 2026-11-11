@@ -6,7 +6,7 @@
 // ① 点検(rhythm-chart-review.js)は公開中の譜面と作った譜面を同じ物差しで測れ、帯(chart-review-bands.json)が6難易度ぶんある
 // ② 生成 → 自動修正 → 手の仕上げ(must)を作業用のフォルダで通すと、モンスターノーツは4個・押さえている帯の中は0個になる
 //    (どちらも、それまで新曲のたびに人が公開前に直していた)。手の仕上げはノーツの数・時刻・種類を変えない
-// ③ いやらしい形を減らす仕上げ(keep-climax)は、交差+真ん中越えを減らし、跳びを増やさない
+// ③ いやらしい形を減らす仕上げ(keep-climax)は、交差+真ん中越えを減らし、跳びを増やさない。既定は EXPERT・MASTER が keep-climax・ほかは must(2026-11-11 社長の決定 A)
 // ④ どの道具も、ゲームのデータ(rhythm-mode.js)・曲の一覧・authoring の譜面を書き換えない
 'use strict';
 const fs=require('fs'),path=require('path'),os=require('os'),crypto=require('crypto');
@@ -42,6 +42,7 @@ try{
   ok('keep-climax は交差+真ん中越えを増やさず、跳びも増やさない',k.status===0&&shape()===shape0&&bad(b)<=bad(a)&&jump(b)<=jump(a)+1,`交差+真ん中越え ${bad(a)}→${bad(b)}・跳び ${jump(a)}→${jump(b)}`);
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
 
+{const F=require('./rhythm-chart-flow-fix.js');ok('手の仕上げの既定は EXPERT・MASTER が keep-climax(社長の決定 A)',F.DEFAULT_FINISH.EXPERT==='keep-climax'&&F.DEFAULT_FINISH.MASTER==='keep-climax'&&!F.DEFAULT_FINISH.HARD);}
 // つまみ探しは生成器の --song-settings を使い、一覧を書き換えない(中身は読むだけで確かめる。回すと1分かかるので検査では回さない)
 const gen=fs.readFileSync(path.join(__dirname,'rhythm-chart-v3-generate.js'),'utf8'),tune=fs.readFileSync(path.join(__dirname,'rhythm-chart-tune.js'),'utf8');
 ok('生成器の --song-settings は付けたときだけ効く',/const raw=arg\('--song-settings'\);if\(raw\)\{/.test(gen));

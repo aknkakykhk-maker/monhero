@@ -68,21 +68,24 @@ const flowFix=(notes,{prof=THUMB_PROFILES.landscape,beat,kinds=null,keepRanges=[
 // ── 公開前の書き出し(authoring・作業フォルダ)の仕上げ(2026-11-11・MHB CHART ENGINE Rev.37) ──────────────────
 //   node tools/mode/rhythm-chart-flow-fix.js --track <曲> [--dir <場所>] [--difficulty EXPERT,MASTER] [--mode must|keep-climax|smooth] [--write]
 // <曲>-v3-fixed-<難易度>.json(自動修正後)のタップ・フリックの位置だけを動かす。時刻・種類・幅・ノーツ数は変えない。ゲームのデータ(rhythm-mode.js)は読まない・書かない。
-//   must        … 横持ちの親指で「押せない」所と、押さえている帯の中のノーツだけを直す(好みは変えない。パイプラインの既定)
+//   must        … 横持ちの親指で「押せない」所と、押さえている帯の中のノーツだけを直す(交差はそのまま)
 //   keep-climax … must に加えて、交差・真ん中越え・左右の入れ替わりなど「いやらしい形」を減らす。いちばん盛り上がる区切りの分は見せ場として残す
 //   smooth      … keep-climax と同じだが、盛り上がる区切りの分も減らす(Rebellion の MASTER を直したときと同じ)
-// 曲の一覧(rhythm-song-registry.json)の handFinish に書いた値が既定(無ければ must)。--mode が優先
+// 既定(2026-11-11 社長の決定 A): EXPERT・MASTER は keep-climax(交差・真ん中越えを減らし、いちばん盛り上がる区切りの交差は見せ場として残す)、EASY〜HARD は must。
+//   曲の一覧(rhythm-song-registry.json)の handFinish に書けば全難易度その値(「交差はありでいい・普通に作って」と言われた曲は 'must')。--mode が優先
 const FINISH_MODES=['must','keep-climax','smooth'];
 const FINISH_FLOW_WEIGHT=30;
 // いちばん盛り上がる区切り(盛り上がりが山の85%以上)
 const climaxRanges=audio=>{const secs=(audio.structure&&audio.structure.sections)||[],max=Math.max(0,...secs.map(s=>Number(s.intensity)||0));
   return max>0?secs.filter(s=>s.intensity>=max*.85).map(s=>[s.startMs,s.endMs]):[];};
-const finishAuthoring=(track,{dir=null,difficulties=['EASY','NORMAL','HARD','EXPERT','MASTER'],mode='must',write=false}={})=>{
-  if(!FINISH_MODES.includes(mode))throw new Error(`--mode は ${FINISH_MODES.join(' / ')}`);
+const DEFAULT_FINISH={EXPERT:'keep-climax',MASTER:'keep-climax'};
+const finishAuthoring=(track,{dir=null,difficulties=['EASY','NORMAL','HARD','EXPERT','MASTER'],mode:modeArg=null,write=false}={})=>{
+  if(modeArg&&!FINISH_MODES.includes(modeArg))throw new Error(`--mode は ${FINISH_MODES.join(' / ')}`);
   const {toRuntimeChart}=require('./rhythm-chart-review.js'),{assignSideFlickDirs}=require('./rhythm-side-flick.js');
   const dashed=track.replace(/_/g,'-'),base=dir||path.join(__dirname,'authoring');
   const audio=JSON.parse(fs.readFileSync(path.join(__dirname,'authoring',`${dashed}-v3-audio.json`),'utf8')),beat=audio.timing.beatMs,out=[];
   for(const d of difficulties){const file=path.join(base,`${dashed}-v3-fixed-${d.toLowerCase()}.json`);if(!fs.existsSync(file))continue;
+    const mode=modeArg||DEFAULT_FINISH[d]||'must';
     const chart=JSON.parse(fs.readFileSync(file,'utf8')),notes=fromRuntime(toRuntimeChart(chart,audio).notes);
     const before=counts(notes,THUMB_PROFILES.landscape,beat);
     const moved=flowFix(notes,{beat,heldBand:true,flowWeight:mode==='must'?0:FINISH_FLOW_WEIGHT,kinds:mode==='must'?new Set(['impossible']):null,keepRanges:mode==='keep-climax'?climaxRanges(audio):[]});
@@ -91,19 +94,19 @@ const finishAuthoring=(track,{dir=null,difficulties=['EASY','NORMAL','HARD','EXP
       // 位置を動かしたので、横フリックの向きを付け直す(自動修正と同じ決め方・MASTER だけ向きを持つ)
       if(d==='MASTER')assignSideFlickDirs(chart.notes,audio.timing);
       if(write){chart.handFinish={mode,moved};fs.writeFileSync(file,JSON.stringify(chart,null,1)+'\n');}}
-    out.push({difficulty:d,notes:notes.length,moved,before,after,file});}
+    out.push({difficulty:d,mode,notes:notes.length,moved,before,after,file});}
   return out;};
 
 if(require.main===module&&argOf('--track')){
   const track=argOf('--track'),write=args.includes('--write');
   const entry=(JSON.parse(fs.readFileSync(path.join(__dirname,'authoring','rhythm-song-registry.json'),'utf8')).songs||{})[track]||{};
-  const mode=argOf('--mode')||(FINISH_MODES.includes(entry.handFinish)?entry.handFinish:'must');
+  const mode=argOf('--mode')||(FINISH_MODES.includes(entry.handFinish)?entry.handFinish:null);
   // 帯の中の決まりより前からある曲は、作り直しても今の形のまま(生成器・自動修正と同じ一覧)。確かめたいときは --mode を付ける
   if(!argOf('--mode')&&(JSON.parse(fs.readFileSync(path.join(__dirname,'rhythm-held-band-existing.json'),'utf8')).tracks||[]).includes(track)){console.log('手の仕上げ: 前からある曲なので何もしない(--mode を付ければ試せる)');process.exit(0);}
   const res=finishAuthoring(track,{dir:argOf('--dir'),mode,write,...(argOf('--difficulty')?{difficulties:argOf('--difficulty').split(',').map(x=>x.trim().toUpperCase())}:{})});
-  console.log(`手の仕上げ(${mode})${write?'':'・書かない(--write で書く)'}`);
+  console.log(`手の仕上げ(${mode||'既定: EXPERT・MASTER は keep-climax / ほかは must'})${write?'':'・書かない(--write で書く)'}`);
   for(const r of res){const ch=Object.keys(r.before).filter(k=>r.before[k]!==r.after[k]).map(k=>`${k} ${r.before[k]}→${r.after[k]}`);
-    console.log(`  ${r.difficulty.padEnd(7)} ${r.notes}ノーツ・動かした ${r.moved}か所${ch.length?'  '+ch.join(' / '):''}`);}
+    console.log(`  ${r.difficulty.padEnd(7)} ${r.mode.padEnd(11)} ${r.notes}ノーツ・動かした ${r.moved}か所${ch.length?'  '+ch.join(' / '):''}`);}
 }else if(require.main===module){
   const songId=argOf('--song'),difficulty=String(argOf('--difficulty')||'').toUpperCase(),write=args.includes('--write');
   const marker=RELEASED_MARKERS[songId];
@@ -135,4 +138,4 @@ if(require.main===module&&argOf('--track')){
     if(bad.length)throw new Error(`ほかの目印まで変わりそうなので止めた: ${bad.join(' ')}`);
     fs.writeFileSync(RUNTIME,next);console.log(`書いた: ${name} の目印の内側だけ(Lv. は rhythm-chart-level.js --write で)`);}
 }
-module.exports={flowFix,fromRuntime,toRuntime,counts,finishAuthoring,climaxRanges,FINISH_MODES};
+module.exports={flowFix,fromRuntime,toRuntime,counts,finishAuthoring,climaxRanges,FINISH_MODES,DEFAULT_FINISH};
