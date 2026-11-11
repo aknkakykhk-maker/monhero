@@ -16,7 +16,7 @@
 ```js
 const catalog = ASSISTANT_MASMON_BATTLE.buildCatalog({ ALL_PLAYER_MONSTERS, ASSISTANT_MASMON_TECHS }); // 技表の写し(JSON にできる)
 ASSISTANT_MASMON_BATTLE.simulate({ seed, catalog, teamA, teamB, balance?, roundLimit?, trace? })
-// team = { assistantId:'mua'…'erubin', tactics:0〜100(戦術経験), members:[1体, …](1〜3体) }
+// team = { assistantId:'mua'…'erubin', tactics:0〜100(戦術経験), plan?, swapPace?, members:[1体, …](1〜3体) }
 // 1体 = { species, name, lv:1〜99, stats:{ life, pow, wise, hit, eva, tough }(0〜999),
 //         techs:['技id', …](覚えている技。無ければ技表の learn.start の技), mastery:{ [技id]:0〜100, guard, dist, swap } }
 // balance = 'A'|'B'|'C'(能力の差の効き方。省くと A)
@@ -57,6 +57,28 @@ ASSISTANT_MASMON_BATTLE.simulate({ seed, catalog, teamA, teamB, balance?, roundL
 - **順番** 毎ラウンド、場の2体が1手ずつ。先に動くのは「回避 + 命中÷2 + 種の揺れ」が高い方
 - **交代** 手番を使う。出てきてから自分の手番2回は交代しない(行ったり来たりを防ぐ)。倒れたら相性の良い1体が出る
 - **決着** 全滅で負け。150 ラウンドで決まらなければ判定(残りライフの割合)。同じなら引き分け
+
+## 作戦と交代の早さ(VERSION 3)
+
+社長が「自分で決める」に 作戦・交代の早さ を選んだ(数字はミセカタ2の案。同じ3体の鏡の対戦で作戦の勝率 47〜52%)。
+**端末からは名前だけ受け、倍率は計算側の表(`PLANS`・`SWAP_PACES`)で掛ける**(フレンド対戦でサーバが同じ計算をするとき、数値の改ざんを通さない)。
+重みは 助手の性格(`STYLES`)× 作戦 × 交代の早さ のあと 0.4〜1.8(swap 0.3〜2.0・read 0〜30)で切る。`team.style` の直接の上書きも同じ範囲で切る。
+
+| `team.plan` | 名前 | 倍率 |
+| --- | --- | --- |
+| (省く) | おまかせ | なし |
+| `attack` | 攻める | aggr×1.25・caution×0.8・thrift×0.85・gamble×1.2 |
+| `guard` | 守る | aggr×0.85・caution×1.3・thrift×1.2・gamble×0.8 |
+| `range` | 間合い | mobility×1.35・thrift×1.05 |
+| `big` | 大技 | gamble×1.45・aggr×1.1・thrift×0.8 |
+
+| `team.swapPace` | 名前 | 倍率 |
+| --- | --- | --- |
+| (省く) | ふつう | なし |
+| `early` | 早め | swap×1.5 |
+| `late` | ねばる | swap×0.55 |
+
+記録の最初の行に `plan:{A,B}`・`swapPace:{A,B}` が残る。
 
 ## 能力の差の効き方のつまみ(A/B/C)
 
