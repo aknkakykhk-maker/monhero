@@ -1556,6 +1556,8 @@ const ASSISTANT_BOND_ACTIONS = {
   lifeGift:   { amount:60, dailyMax:180, label:'助手ライフで道具を贈る', releaseFlag:'assistantLife' },
   // 助手ライフで家具を贈る(2026-11-08 段階B)。1つの家具は1人に1回だけ上がる。1回ぶんは好みで呼ぶ側が決める(いちばん多くて 80×1.5=120)。1日の上限は12種類ぶん(止めない)
   lifeFurn:   { amount:120, dailyMax:1440, label:'助手ライフで家具を贈る', releaseFlag:'assistantLife' },
+  // 助手ライフ STEP2(2026-11-11 社長): 神殿にいる助手が、合体・転生などの操作を終えたプレイヤーと仲良くなる。1日1回(56-assistant-life-ux.jsx の assistantLifeTemplePerk)
+  lifeTemple: { amount:30, dailyMax:30, label:'神殿で助手と一緒に過ごす', releaseFlag:'assistantLife' },
   peerPlay:   { amount:6,  dailyMax:24, label:'ペアを連れて遊ぶ', releaseFlag:'assistantPeer' },
   // ③ 3人の掛け合いは3人それぞれ・ミニイベントと仲直りは2人それぞれ(2026-11-07 社長)
   peerTrio:   { amount:3,  dailyMax:6,  label:'助手3人の掛け合いを見る', releaseFlag:'assistantPeer' },
