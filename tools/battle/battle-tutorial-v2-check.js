@@ -104,8 +104,11 @@ const check = (name, ok, detail = '') => {
     await helpCard.waitFor({ timeout: 15000 });
     check('ヘルプに「バトルのれんしゅう」の入口がある', await helpCard.count() === 1);
     await helpCard.dispatchEvent('click');
-    check('ヘルプの「バトルのれんしゅう」を開くと、始めるボタンがある',
-      await page.getByRole('button', { name: /バトルのれんしゅうを始める/ }).count() === 1);
+    // 2026-11-11 からは「はじめの1戦」「つづき」「全部通す」の3つ
+    check('ヘルプの「バトルのれんしゅう」を開くと、始めるボタンが3つある',
+      await page.locator('[data-battle-tutorial-launch-first]').count() === 1
+        && await page.locator('[data-battle-tutorial-launch-more]').count() === 1
+        && await page.locator('[data-battle-tutorial-launch-all]').count() === 1);
     await page.getByRole('button', { name: '項目一覧' }).first().dispatchEvent('click');
     await page.locator('button', { hasText: /^💊$/ }).dispatchEvent('click', {}, { timeout: 15000 });
     // DEBUG MENU は節ごとに畳んであるアコーディオン。「⚔️ バトル」→「📖 チュートリアルと旧画面」の順に開く
