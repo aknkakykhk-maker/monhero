@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0784708b4aee1ef6
+// source-sha256: 14a059ee4a84ec6c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -103534,7 +103534,8 @@ function AssistantPeerMap({
   metIds,
   onReplay,
   peerItems = null,
-  onUseItem = null
+  onUseItem = null,
+  v2 = false
 }) {
   const st = useAssistantPeerState();
   const [showAll, setShowAll] = React.useState(false);
@@ -103568,9 +103569,12 @@ function AssistantPeerMap({
     "data-assistant-peer-map": true,
     className: "rounded-2xl border border-white/10 bg-slate-950/85 p-3"
   }, React.createElement("p", {
-    className: "text-[12px] font-black text-pink-200"
-  }, "助手どうしの関係図"), React.createElement("p", {
-    className: "mb-2 text-[9px] leading-tight text-slate-400"
+    className: v2 ? 'text-[14px] font-black text-pink-200' : 'text-[12px] font-black text-pink-200'
+  }, v2 ? '🤝 助手どうしの友情Lv' : '助手どうしの関係図'), React.createElement("p", {
+    className: v2 ? 'mb-2 text-[11.5px] font-bold leading-snug text-slate-200' : 'mb-2 text-[9px] leading-tight text-slate-400',
+    style: v2 ? {
+      wordBreak: 'auto-phrase'
+    } : undefined
   }, "助手どうしも仲良くなります。", assistantPeerLvLabel(3), " になった2人は線で結ばれます。ペアを押すと思い出アルバムが開きます。"), !assistantPeerLifeOn() && dailyPair && dailyPair.every(id => ids.includes(id)) && React.createElement("button", {
     type: "button",
     "data-assistant-peer-daily": true,
@@ -103622,7 +103626,7 @@ function AssistantPeerMap({
       size: 48,
       accent: who.accent
     }), React.createElement("span", {
-      className: "mt-0.5 whitespace-nowrap text-[9px] font-black text-slate-200"
+      className: `mt-0.5 whitespace-nowrap ${v2 ? 'text-[10.5px]' : 'text-[9px]'} font-black text-slate-200`
     }, who.name));
   })), React.createElement("div", {
     className: "mt-3 space-y-1"
@@ -103631,6 +103635,39 @@ function AssistantPeerMap({
       B = assistantById(x.b);
     const stage = levels.find(s => s.level === x.lv);
     const nextStage = levels.find(s => s.level === x.lv + 1);
+    if (v2) {
+      const opens = nextStage && typeof assistantLifePeerNextOpens === 'function' ? assistantLifePeerNextOpens(x.a, x.b, nextStage.level) : '';
+      return React.createElement("button", {
+        key: `${x.a}-${x.b}`,
+        type: "button",
+        "data-assistant-peer-row": assistantPeerPairKey(x.a, x.b),
+        "data-assistant-peer-row-v2": true,
+        onClick: () => setAlbumPair([x.a, x.b]),
+        className: "block w-full min-h-[48px] rounded-xl border border-white/15 bg-slate-900/80 px-2.5 py-1.5 text-left active:scale-[.98]"
+      }, React.createElement("span", {
+        className: "flex items-baseline gap-2"
+      }, React.createElement("b", {
+        className: "min-w-0 flex-1 truncate text-[13px] text-white"
+      }, A.name, " × ", B.name), React.createElement("span", {
+        className: "whitespace-nowrap text-[12px] font-black text-pink-200"
+      }, "Lv", x.lv, stage ? ` ${assistantPeerStageName(stage)}` : ''), React.createElement("span", {
+        className: "text-[12px] font-black text-slate-300",
+        "aria-hidden": "true"
+      }, "›")), React.createElement("span", {
+        className: "mt-1 flex items-center gap-2"
+      }, React.createElement("span", {
+        className: "h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-slate-700",
+        "aria-hidden": "true"
+      }, React.createElement("span", {
+        className: "block h-full bg-pink-400",
+        style: {
+          width: `${nextStage ? Math.min(100, Math.round(100 * (x.pts - stage.min) / (nextStage.min - stage.min))) : 100}%`
+        }
+      })), React.createElement("span", {
+        "data-assistant-peer-next": true,
+        className: "min-w-0 flex-1 truncate text-[11px] font-bold text-emerald-300"
+      }, nextStage ? `あと${nextStage.min - x.pts}で Lv${nextStage.level}${opens ? ` → ${opens}` : `「${assistantPeerStageName(nextStage)}」`}` : 'いちばん上まで来ました')));
+    }
     return React.createElement("button", {
       key: `${x.a}-${x.b}`,
       type: "button",
@@ -103657,7 +103694,7 @@ function AssistantPeerMap({
     type: "button",
     "data-assistant-peer-more": true,
     onClick: () => setShowAll(v => !v),
-    className: "w-full rounded-lg border border-white/10 py-1.5 text-[10px] font-bold text-slate-300 active:scale-[.98]"
+    className: v2 ? 'min-h-[44px] w-full rounded-xl border border-white/20 text-[12px] font-black text-slate-200 active:scale-[.98]' : 'w-full rounded-lg border border-white/10 py-1.5 text-[10px] font-bold text-slate-300 active:scale-[.98]'
   }, showAll ? 'たたむ' : `全部のペアを見る(${rows.length}組)`)), albumPair && React.createElement(AssistantPeerAlbum, {
     pair: albumPair,
     onClose: () => setAlbumPair(null),
@@ -107827,6 +107864,13 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-room[data-assistant-life-room-tag="1"] .pl{z-index:7}.mhl-room[data-assistant-life-room-tag="1"] .lv{top:38px}
 [data-assistant-life-land="1"] .mhl-room .tag{top:22px;padding:0 4px}[data-assistant-life-land="1"] .mhl-room .tag b{font-size:9px;line-height:11px}[data-assistant-life-land="1"] .mhl-room .tag small{display:none}[data-assistant-life-land="1"] .mhl-room .tag i{display:inline}[data-assistant-life-land="1"] .mhl-room .tag[data-assistant-life-room-tag-mark="1"] small{display:block;margin-left:0!important;height:11px;font-size:9px;line-height:11px}[data-assistant-life-land="1"] .mhl-room .tag[data-assistant-life-room-tag-mark="1"] b{display:none}
 [data-assistant-life-land="1"] .mhl-room[data-assistant-life-room-tag="1"] .lv{left:auto;right:3px;top:5px}
+.mhl-room[data-assistant-life-room-v2="1"] .tag{background:linear-gradient(#e2e8f0e6,#cbd5e1e6);color:#1e293b;border:1.5px solid #64748b;box-shadow:0 1px 3px #0006}
+.mhl-room[data-assistant-life-room-v2="1"] .tag small{font-size:10.5px;color:#334155}.mhl-room[data-assistant-life-room-v2="1"] .tag b{font-size:10.5px;line-height:13px}
+[data-assistant-life-land="1"] .mhl-room[data-assistant-life-room-v2="1"] .tag b{font-size:10.5px;line-height:13px}[data-assistant-life-land="1"] .mhl-room[data-assistant-life-room-v2="1"] .tag[data-assistant-life-room-tag-mark="1"] small{font-size:10.5px;height:13px;line-height:13px}
+.mhl-room .meet{position:absolute;top:5px;z-index:7;font-size:10.5px;line-height:15px;font-weight:900;padding:0 6px;border-radius:8px;background:#16a34a;color:#fff;border:1px solid #bbf7d0;box-shadow:0 0 8px #4ade80aa;white-space:nowrap}
+.mhl-room .meet.zz{background:#4338ca;border-color:#c7d2fe;box-shadow:none}
+.mhl-room[data-assistant-life-room-v2="1"][data-assistant-life-room-in=""] .w,.mhl-room[data-assistant-life-room-v2="1"][data-assistant-life-room-in=""] .fu{filter:saturate(.55)}
+.mhl-room[data-assistant-life-room-v2="1"]:not([data-assistant-life-room-in=""]){box-shadow:0 0 0 2px #86efac,0 0 10px #4ade8088;z-index:1}
 .mhl-room .lock{position:absolute;inset:0;z-index:6;display:grid;place-items:center;background:rgba(15,23,42,.78);font-size:11px;font-weight:900;color:#cbd5e1}
 .mhl-liv{position:absolute;overflow:hidden;border-radius:3px;background:linear-gradient(#f3e3c4,#e7cfa2)}
 .mhl-board{position:absolute;left:8px;top:6px;bottom:6px;border-radius:5px;background:#c08a52;border:3px solid #7c4a22;padding:3px 6px;overflow:hidden;display:flex;flex-direction:column;flex-wrap:wrap;align-content:flex-start;justify-content:flex-start;column-gap:24px}
@@ -107925,7 +107969,8 @@ function AssistantLifeRoom({
   state,
   onOpen,
   idx,
-  other = null
+  other = null,
+  v2 = false
 }) {
   const L = ASSISTANT_LIFE_ROOM_LOOK[id];
   const view = ASSISTANT_LIFE_VIEW[look][idx % 2];
@@ -107938,6 +107983,7 @@ function AssistantLifeRoom({
     "data-assistant-life-room": id,
     "data-assistant-life-room-in": ppl ? ppl.join(',') : '',
     "data-assistant-life-room-tag": state && state.tag ? '1' : '0',
+    "data-assistant-life-room-v2": v2 ? '1' : '0',
     style: {
       left: x,
       top: y,
@@ -107963,7 +108009,15 @@ function AssistantLifeRoom({
     }
   })), React.createElement("span", {
     className: "pl"
-  }, met ? assistantLifeName(id) : '？'), met && sess && sess.level > 1 && React.createElement("span", {
+  }, met ? assistantLifeName(id) : '？'), v2 && met && ppl && ppl.includes(id) && React.createElement("span", {
+    className: `meet${state.sleep ? ' zz' : ''}`,
+    "data-assistant-life-room-meet": id,
+    style: w >= 150 ? {
+      left: [...assistantLifeName(id)].length * 10 + 24
+    } : {
+      right: 3
+    }
+  }, w >= 150 ? state.sleep ? '💤 おやすみ中' : '● いま会える' : state.sleep ? '💤' : '● 会える'), met && sess && sess.level > 1 && React.createElement("span", {
     className: "lv",
     "data-assistant-life-room-session": sess.level
   }, "🎵Lv", sess.level), React.createElement("span", {
@@ -108042,7 +108096,7 @@ function AssistantLifeRoom({
     const mark = !!t[1] && /^(💢|🤝)/u.test(t[1]);
     const n = Number((String(t[1] || '').match(/^(\d+)人で/) || [])[1]) || 0;
     const ml = [...assistantLifeName(id)].length * 10 + 20;
-    const names = t[2] ? assistantLifeTagNames(t[2], Math.floor((w - 6 - ml - 10) / 8.8)) : null;
+    const names = t[2] ? assistantLifeTagNames(t[2], Math.floor((w - 6 - ml - 10) / (v2 ? 10.8 : 8.8))) : null;
     const short = [...String(t[0])].length <= 9;
     return React.createElement("span", {
       className: "tag",
@@ -108060,7 +108114,10 @@ function AssistantLifeRoom({
       }
     }, React.createElement(AssistantLifeNames, {
       text: names
-    })), React.createElement("b", null, t[0], React.createElement("i", {
+    })), React.createElement("b", null, v2 && w >= 150 ? React.createElement("span", {
+      "data-assistant-life-room-out": true,
+      className: "mr-1 rounded bg-slate-600 px-1 text-white"
+    }, "留守") : null, t[0], React.createElement("i", {
       "data-assistant-life-room-tag-short": true
     }, n > 1 && short ? `・${n}人` : '', mark ? ` ${[...t[1]][0]}` : '')));
   })(), !met && React.createElement("span", {
@@ -108080,7 +108137,8 @@ function AssistantLifeHouseArt({
   life = null,
   peerSt = null,
   hname = '🏡 助手の家',
-  other = null
+  other = null,
+  v2 = false
 }) {
   const wall = 6,
     cols = land ? 4 : 2,
@@ -108150,6 +108208,7 @@ function AssistantLifeHouseArt({
       h: rh,
       state: rooms[id],
       onOpen: onOpen,
+      v2: v2 && !other,
       other: other ? other[id] || {} : null
     });
   }), React.createElement("div", {
@@ -109328,15 +109387,17 @@ function AssistantLifeHouse({
   const land = useAssistantLifeLand();
   if (typeof useAssistantLifeFriendState === 'function') useAssistantLifeFriendState();
   const [tab, setTab] = React.useState('house');
-  const [uiV2, setUiV2] = React.useState(false);
+  const [uiV2, setUiV2] = React.useState(() => assistantLifeUiV2Of(null));
+  const [giftItemsOpen, setGiftItemsOpen] = React.useState(false);
+  const [giftOpen, setGiftOpen] = React.useState(false);
   const [callPicker, setCallPicker] = React.useState(false);
   const [lifeStatusExpanded, setLifeStatusExpanded] = React.useState(false);
   const [mapFocusPlace, setMapFocusPlace] = React.useState(null);
   const [mapFocusAssistantId, setMapFocusAssistantId] = React.useState(null);
   React.useEffect(() => {
     let alive = true;
-    Promise.resolve(storeGet('mh_assistant_life_ui_v2', false, false)).then(v => {
-      if (alive) setUiV2(v === true);
+    Promise.resolve(storeGet('mh_assistant_life_ui_v2', null, false)).then(v => {
+      if (alive) setUiV2(assistantLifeUiV2Of(v));
     }).catch(() => {});
     return () => {
       alive = false;
@@ -109346,7 +109407,9 @@ function AssistantLifeHouse({
     const next = !uiV2;
     setUiV2(next);
     setCallPicker(false);
+    setGiftOpen(false);
     setRoomId(null);
+    if (next && tab === 'items') setTab('house');
     try {
       void storeSet('mh_assistant_life_ui_v2', next, false);
     } catch {}
@@ -109439,6 +109502,15 @@ function AssistantLifeHouse({
       if (b.furn) setFurnBack(b.room);
     }
   }, []);
+  React.useEffect(() => {
+    if (uiV2 && tab === 'items') {
+      setTab('house');
+      if (!roomId) {
+        setGiftItemsOpen(true);
+        setGiftOpen(true);
+      }
+    }
+  }, [uiV2, tab]);
   if (!assistantLifeEnabled() || !st.loaded || !st.open) return null;
   const life = st.life || {};
   const ids = (metIds || []).filter(id => ASSISTANT_LIFE_PREFS[id]);
@@ -109744,8 +109816,13 @@ function AssistantLifeHouse({
     type: "button",
     className: "mhl-tile mhl-give flex-1",
     "data-assistant-life-today-act": "give",
-    disabled: !canGive || !giveGroup && !giveSoloId,
+    disabled: !uiV2 && (!canGive || !giveGroup && !giveSoloId),
     onClick: () => {
+      if (uiV2) {
+        setGiftItemsOpen(false);
+        setGiftOpen(true);
+        return;
+      }
       if (itemsLeft > 0 && giveGroup) openGive(giveGroup.ids);else if (soloLeft > 0 && giveSoloId) openGiveSolo(giveSoloId, giveGroup && giveGroup.ids.includes(giveSoloId) ? giveGroup.ids : [giveSoloId]);else setTab('items');
     }
   }, React.createElement("em", null, soloOn ? itemsLeft + soloLeft : itemsLeft, "回"), React.createElement("i", null, "🎁"), React.createElement("b", null, "贈る"), React.createElement("small", null, "道具 ", itemsHave, "個")), React.createElement("button", {
@@ -109761,7 +109838,7 @@ function AssistantLifeHouse({
     className: "mhl-icons",
     role: "tablist",
     "data-assistant-life-icons": true
-  }, [['house', '🏡', '家'], ['where', '📋', '居場所'], ['friends', '🤝', '友情'], ['items', '🎒', '道具'], ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏘', 'フレンド']] : [])].map(([k, ic, label]) => React.createElement("button", {
+  }, (uiV2 ? assistantLifeUiV2Tabs() : [['house', '🏡', '家'], ['where', '📋', '居場所'], ['friends', '🤝', '友情'], ['items', '🎒', '道具'], ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏘', 'フレンド']] : [])]).map(([k, ic, label]) => React.createElement("button", {
     key: k,
     type: "button",
     role: "tab",
@@ -109769,6 +109846,11 @@ function AssistantLifeHouse({
     "data-assistant-life-icon": k,
     className: tab === k ? 'on' : '',
     onClick: () => {
+      if (uiV2) {
+        setMapFocusPlace(null);
+        setMapFocusAssistantId(null);
+        setGiftOpen(false);
+      }
       setTab(k);
       setRoomId(null);
     }
@@ -109904,7 +109986,7 @@ function AssistantLifeHouse({
     style: {
       paddingInline: pad
     }
-  }, findBtn), React.createElement(AssistantLifeHouseArt, {
+  }, uiV2 ? null : findBtn), React.createElement(AssistantLifeHouseArt, {
     width: houseW,
     land: land,
     look: look,
@@ -109915,18 +109997,10 @@ function AssistantLifeHouse({
     pop: !!intro,
     onBoard: () => setBoardOpen(true),
     life: life,
-    peerSt: peerSt
+    peerSt: peerSt,
+    v2: uiV2
   }), lifeStatusList);
-  const tabBody = tab === 'house' ? houseView : tab === 'where' ? null : tab === 'visit' && typeof AssistantLifeFriendPage === 'function' ? React.createElement(AssistantLifeFriendPage, {
-    life: life
-  }) : tab === 'friends' ? React.createElement("div", {
-    className: "px-3 pb-3 pt-1"
-  }, typeof AssistantPeerMap === 'function' && React.createElement(AssistantPeerMap, {
-    metIds: metIds,
-    onReplay: t => playTalk(t, null),
-    peerItems: peerItems,
-    onUseItem: onUseItem
-  })) : React.createElement("div", {
+  const itemsBody = React.createElement("div", {
     className: "px-3 pb-3 pt-1",
     "data-assistant-life-items": true
   }, React.createElement("p", {
@@ -110020,6 +110094,20 @@ function AssistantLifeHouse({
   }, React.createElement(AssistantLifeShopButton, {
     tab: "item"
   })));
+  const tabBody = tab === 'house' ? houseView : tab === 'where' ? null : tab === 'visit' && typeof AssistantLifeFriendPage === 'function' ? React.createElement(AssistantLifeFriendPage, {
+    life: life
+  }) : tab === 'friends' ? React.createElement("div", {
+    className: "px-3 pb-3 pt-1"
+  }, uiV2 && typeof AssistantLifeIntroduceCard === 'function' && React.createElement(AssistantLifeIntroduceCard, {
+    ids: ids,
+    life: life
+  }), typeof AssistantPeerMap === 'function' && React.createElement(AssistantPeerMap, {
+    metIds: metIds,
+    onReplay: t => playTalk(t, null),
+    peerItems: peerItems,
+    onUseItem: onUseItem,
+    v2: uiV2
+  })) : itemsBody;
   return React.createElement("div", {
     className: "mhl-root",
     style: {
@@ -110064,7 +110152,8 @@ function AssistantLifeHouse({
     onView: uiV2 ? id => setRoomId(id) : null,
     onBeat: beat,
     onCard: card,
-    list: React.createElement(React.Fragment, null, header, note && React.createElement("p", {
+    nav: uiV2 ? icons : null,
+    list: uiV2 ? null : React.createElement(React.Fragment, null, header, note && React.createElement("p", {
       "data-assistant-life-note": true,
       className: "mx-3 mb-1 rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 text-[11px] font-bold text-sky-100"
     }, note), React.createElement("div", {
@@ -110145,7 +110234,74 @@ function AssistantLifeHouse({
     }
   }, React.createElement("span", null, nameOf(id)), React.createElement("span", {
     className: "text-xs text-slate-300"
-  }, life.solo[id]?.reason === 'lonely' ? 'さみしそう' : 'ひとりで過ごしている', " ›")))))), roomId && React.createElement(AssistantLifeRoomSheet, {
+  }, life.solo[id]?.reason === 'lonely' ? 'さみしそう' : 'ひとりで過ごしている', " ›")))))), uiV2 && tab === 'where' && note && !roomId && React.createElement("p", {
+    "data-assistant-life-note": true,
+    className: "absolute inset-x-3 z-[9] rounded-xl border border-sky-300/40 bg-slate-950/95 px-2 py-1.5 text-[11.5px] font-bold text-sky-100",
+    style: {
+      bottom: 'calc(44px + env(safe-area-inset-bottom))'
+    }
+  }, note), giftOpen && uiV2 && !roomId && !give && React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      zIndex: 21
+    },
+    "data-assistant-life-gift-sheet": true
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    className: "absolute inset-0 bg-black/60",
+    onClick: () => setGiftOpen(false)
+  }), React.createElement("div", {
+    className: "mhl-sheet",
+    style: land ? {
+      left: 'auto',
+      width: '56%',
+      top: 0,
+      maxHeight: '100%',
+      borderRadius: '22px 0 0 22px'
+    } : undefined
+  }, React.createElement("div", {
+    className: "flex items-center justify-between gap-2"
+  }, React.createElement("p", {
+    className: "text-[18px] font-black"
+  }, "🎁 贈る"), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-gift-sheet-close": true,
+    "data-mhl-sheet-close": true,
+    onClick: () => setGiftOpen(false),
+    className: "min-h-[44px] rounded-xl border border-slate-500 px-3 text-[12px] font-black text-slate-200 active:scale-[.98]"
+  }, "閉じる ✕")), typeof AssistantLifeGiveWho === 'function' && React.createElement(AssistantLifeGiveWho, {
+    groups: (life.groups || []).map(g => ({
+      ...g,
+      ids: (g.ids || []).filter(id => metSet.has(id))
+    })).filter(g => g.ids.length >= 2),
+    soloIds: ASSISTANT_LIFE_HOUSE_ORDER.filter(id => metSet.has(id) && !awayFriend(id)),
+    pairLeft: typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0,
+    soloLeft: soloLeft,
+    canPair: canGive,
+    soloOn: soloOn,
+    onPair: g => {
+      setGiftOpen(false);
+      openGive(g.ids);
+    },
+    onSolo: id => {
+      setGiftOpen(false);
+      const g = (life.groups || []).find(x => (x.ids || []).includes(id));
+      openGiveSolo(id, g ? g.ids : [id]);
+    }
+  }), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-gift-items-toggle": true,
+    "aria-expanded": giftItemsOpen,
+    onClick: () => setGiftItemsOpen(v => !v),
+    className: "mt-3 flex min-h-[44px] w-full items-center justify-between rounded-xl border border-white/20 bg-white/5 px-3 text-left text-[13px] font-black text-white active:scale-[.98]"
+  }, React.createElement("span", null, "📦 道具の一覧 ", React.createElement("span", {
+    className: "text-[11px] font-bold text-slate-300"
+  }, "持っている ", itemsHave, "個・手に入れ方")), React.createElement("span", {
+    className: "text-[11px] font-bold text-amber-200"
+  }, giftItemsOpen ? '閉じる ▲' : '見る ▼')), giftItemsOpen && React.createElement("div", {
+    className: "-mx-3"
+  }, itemsBody))), roomId && React.createElement(AssistantLifeRoomSheet, {
     key: roomId,
     id: roomId,
     uiV2: uiV2,
@@ -110628,6 +110784,7 @@ function AssistantLifeTownMap({
   onCard = null,
   onBack,
   list = null,
+  nav = null,
   land = false,
   initialPlace = null,
   initialAssistantId = null
@@ -111101,7 +111258,13 @@ function AssistantLifeTownMap({
       paddingRight: 'calc(8px + env(safe-area-inset-right))'
     },
     "data-assistant-life-map-bar": true
-  }, React.createElement("button", {
+  }, nav ? React.createElement("div", {
+    className: "shrink-0",
+    style: {
+      width: land ? 250 : 216
+    },
+    "data-assistant-life-map-nav": true
+  }, nav) : React.createElement("button", {
     type: "button",
     "data-assistant-life-map-back": true,
     onClick: onBack,
@@ -111113,7 +111276,7 @@ function AssistantLifeTownMap({
     style: {
       textShadow: '0 2px 4px #000'
     }
-  }, "📋 みんなの居場所"), React.createElement("p", {
+  }, nav ? '🗺 町' : '📋 みんなの居場所'), React.createElement("p", {
     className: "truncate text-[10px] font-bold text-slate-200",
     "data-assistant-life-map-time": true
   }, assistantLifeTodLabel(), " ・ ", assistantLifeNextSlotText().replace(/みんなが動きます$/, 'みんなが動く'))), list && React.createElement("button", {
@@ -112402,6 +112565,141 @@ function AssistantLifeDoRow({
     className: "shrink-0 text-right text-[11.5px] font-black leading-tight text-emerald-300",
     "data-assistant-life-room-do-gain": true
   }, gain));
+}
+const ASSISTANT_LIFE_UI_V2_DEFAULT = false;
+function assistantLifeUiV2Of(saved) {
+  return saved === true ? true : saved === false ? false : ASSISTANT_LIFE_UI_V2_DEFAULT;
+}
+function assistantLifeUiV2Tabs() {
+  return [['house', '🏡', '家'], ['where', '🗺', '町'], ['friends', '🤝', 'きずな'], ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏘', 'フレンド']] : [])];
+}
+function AssistantLifeIntroduceCard({
+  ids,
+  life
+}) {
+  const [pick, setPick] = React.useState([]);
+  const [done, setDone] = React.useState('');
+  const list = (ids || []).filter(Boolean);
+  if (list.length < 2) return null;
+  const slot = assistantLifeSlotAt();
+  const introNext = (life && life.nudges && life.nudges.introduce || []).find(n => n.abs === slot.abs + 1) || null;
+  const nameOf = assistantLifeName;
+  const go = async () => {
+    if (pick.length !== 2) return;
+    let ok = false;
+    try {
+      ok = await assistantLifeNudge('introduce', pick);
+    } catch (_) {
+      ok = false;
+    }
+    if (ok) {
+      setDone(`${nameOf(pick[0])}と${nameOf(pick[1])}が、次の時間に一緒に過ごしやすくなりました`);
+      setPick([]);
+    }
+  };
+  return React.createElement("div", {
+    "data-assistant-life-introduce": true,
+    className: "mb-2 rounded-2xl border border-sky-300/50 bg-slate-950/90 p-2.5"
+  }, React.createElement("p", {
+    className: "flex items-baseline gap-2 text-[14px] font-black text-sky-100"
+  }, "🤝 引き合わせる", React.createElement("span", {
+    className: "ml-auto text-[11px] font-bold text-emerald-300"
+  }, "無料")), React.createElement("p", {
+    className: "mb-1.5 text-[11.5px] font-bold leading-snug text-slate-200",
+    style: {
+      wordBreak: 'auto-phrase'
+    }
+  }, "2人を選ぶと、次の時間に一緒に過ごしやすくなります。言い合いのあとなら、仲直りのきっかけに。"), React.createElement("div", {
+    className: "flex flex-wrap gap-1.5"
+  }, list.map(id => {
+    const on = pick.includes(id);
+    return React.createElement("button", {
+      key: id,
+      type: "button",
+      "data-assistant-life-pick": id,
+      "aria-pressed": on,
+      onClick: () => {
+        setDone('');
+        setPick(p => on ? p.filter(x => x !== id) : [...p, id].slice(-2));
+      },
+      className: `min-h-[44px] rounded-full border px-3 text-[12.5px] font-black active:scale-95 ${on ? 'border-sky-300 bg-sky-500/40 text-white' : 'border-white/25 bg-slate-800 text-slate-100'}`
+    }, nameOf(id));
+  })), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-introduce-go": true,
+    disabled: pick.length !== 2 || !!introNext,
+    onClick: go,
+    className: "mt-2 min-h-[44px] w-full rounded-xl border border-sky-300/60 bg-sky-500/25 px-2 text-[12.5px] font-black text-sky-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400"
+  }, introNext ? `次の時間は ${String(introNext.pair).split('-').map(nameOf).join('と')} を引き合わせます` : pick.length === 2 ? `${nameOf(pick[0])}と${nameOf(pick[1])}に、次の時間に一緒に過ごしてもらう` : '2人を選んでください'), done && React.createElement("p", {
+    "data-assistant-life-introduce-done": true,
+    className: "mt-1.5 rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 text-[11.5px] font-bold text-sky-100"
+  }, done));
+}
+function AssistantLifeGiveWho({
+  groups,
+  soloIds,
+  pairLeft = 0,
+  soloLeft = 0,
+  canPair = false,
+  soloOn = false,
+  onPair,
+  onSolo
+}) {
+  const nameOf = assistantLifeName;
+  const gs = groups || [],
+    ss = soloOn ? soloIds || [] : [];
+  return React.createElement("div", {
+    "data-assistant-life-give-who": true
+  }, React.createElement("p", {
+    className: "mt-2 text-[13px] font-black text-amber-200"
+  }, "🤝 一緒にいる2人に贈る ", React.createElement("span", {
+    className: "text-[11px] font-bold text-slate-200"
+  }, "今日あと ", pairLeft, "回")), React.createElement("p", {
+    className: "text-[11px] font-bold leading-snug text-slate-300"
+  }, "2人の友情Lv と、あなたとの仲良し度が上がります"), gs.length ? React.createElement("div", {
+    className: "mt-1 flex flex-wrap gap-1.5"
+  }, gs.map(g => React.createElement("button", {
+    key: g.ids.join('-'),
+    type: "button",
+    "data-assistant-life-give-who-pair": g.ids.join('-'),
+    disabled: !canPair || pairLeft <= 0,
+    onClick: () => onPair(g),
+    className: "min-h-[44px] rounded-xl border border-amber-300/70 bg-amber-500/25 px-3 text-[12.5px] font-black text-amber-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400"
+  }, "🎁 ", g.ids.map(nameOf).join('・'), " ", React.createElement("span", {
+    className: "ml-1 whitespace-nowrap text-[11px] text-emerald-300"
+  }, "🤝💗 上がる")))) : React.createElement("p", {
+    className: "mt-1 rounded-xl bg-white/5 px-2 py-1.5 text-[11.5px] font-bold text-slate-300"
+  }, "いまは、一緒にいる組がありません(次の時間帯に)"), soloOn && React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "mt-3 text-[13px] font-black text-pink-200"
+  }, "💗 1人に贈る ", React.createElement("span", {
+    className: "text-[11px] font-bold text-slate-200"
+  }, "今日あと ", soloLeft, "回")), React.createElement("p", {
+    className: "text-[11px] font-bold leading-snug text-slate-300"
+  }, "その助手とあなたの仲良し度が上がります"), React.createElement("div", {
+    className: "mt-1 flex flex-wrap gap-1.5"
+  }, ss.map(id => React.createElement("button", {
+    key: id,
+    type: "button",
+    "data-assistant-life-give-who-solo": id,
+    disabled: soloLeft <= 0,
+    onClick: () => onSolo(id),
+    className: "min-h-[44px] rounded-xl border border-pink-300/70 bg-pink-500/25 px-3 text-[12.5px] font-black text-pink-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400"
+  }, nameOf(id), " ", React.createElement("span", {
+    className: "ml-0.5 text-[11px] text-emerald-300"
+  }, "💗＋"))))));
+}
+function assistantLifePeerNextOpens(a, b, nextLv) {
+  const out = [];
+  try {
+    const key = [a, b].sort().join('-');
+    const all = [...(typeof assistantPeerTalkList === 'function' ? assistantPeerTalkList() : []), ...(typeof assistantPeerExtraTalks === 'function' ? assistantPeerExtraTalks() : [])].filter(t => t && Array.isArray(t.pair) && t.pair.length === 2 && [...t.pair].sort().join('-') === key);
+    if (nextLv === 3) out.push('関係図で線がつながる');
+    if (all.some(t => t.special && (t.lv || 5) === nextLv)) out.push('✦ 特別なお話');
+    if (all.some(t => !t.special && t.kind !== 'quarrel' && t.kind !== 'makeup' && (t.lv || 1) === nextLv)) out.push('新しい掛け合い');
+  } catch (_) {
+    return '';
+  }
+  return out.join('・');
 }
 const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   id: 'rel-fight-erubin-momosuke-1',
@@ -133415,6 +133713,934 @@ function AmgtCard({
     who: who,
     st: st
   }));
+}
+const AMBW_ENGINE_SRC = 'data/assistant-masmon-battle.js';
+const AMBW_DIST = ['零', '近', '中', '遠'];
+const AMBW_STAT_JP = Object.freeze({
+  life: 'ライフ',
+  pow: 'ちから',
+  wise: 'かしこさ',
+  hit: '命中',
+  eva: '回避',
+  tough: '丈夫さ'
+});
+const AMBW_DIFFS = Object.freeze([-20, -10, 0, 5, 10, 20, 30]);
+const AMBW_SPEEDS = Object.freeze([{
+  id: 'x1',
+  label: '×1',
+  ms: 1100
+}, {
+  id: 'x2',
+  label: '×2',
+  ms: 560
+}, {
+  id: 'x4',
+  label: '×4',
+  ms: 260
+}, {
+  id: 'hl',
+  label: '★ 見せ場だけ',
+  ms: 1300
+}]);
+const AMBW_BALANCE_NOTE = Object.freeze({
+  A: 'ふつう',
+  B: 'ゆるめ(能力の差が効きにくい)',
+  C: '強め(能力の差が効きやすい)'
+});
+const AMBW_DEFAULT = Object.freeze({
+  A: {
+    assistant: 'kiki',
+    species: ['Golem', 'Eiki', 'Ghost']
+  },
+  B: {
+    assistant: 'mua',
+    species: ['Golem', 'Eiki', 'Ghost']
+  }
+});
+let ambwLoading = null;
+const ambwLoadEngine = () => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return Promise.resolve(null);
+  if (window.ASSISTANT_MASMON_BATTLE) return Promise.resolve(window.ASSISTANT_MASMON_BATTLE);
+  if (!ambwLoading) {
+    ambwLoading = new Promise(res => {
+      const s = document.createElement('script');
+      s.src = AMBW_ENGINE_SRC;
+      s.onload = () => res(window.ASSISTANT_MASMON_BATTLE || null);
+      s.onerror = () => {
+        ambwLoading = null;
+        res(null);
+      };
+      document.head.appendChild(s);
+    });
+  }
+  return ambwLoading;
+};
+const ambwDraftTechs = mons => {
+  const G = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'S+', 'SS', 'SS+', 'M'];
+  const species = {};
+  for (const id of Object.keys(mons).sort()) {
+    const apt = (mons[id].distAptitude || ['C', 'C', 'C', 'C']).map(g => G.indexOf(g));
+    let best = 0;
+    apt.forEach((v, i) => {
+      if (v > apt[best]) best = i;
+    });
+    const near = best === 0 ? 1 : best === 3 ? 2 : apt[best - 1] >= apt[best + 1] ? best - 1 : best + 1;
+    const bigKind = best <= 1 ? 'pow' : 'wise';
+    const other = bigKind === 'pow' ? 'wise' : 'pow';
+    const k = id.toLowerCase();
+    species[id] = [{
+      id: `${k}_01`,
+      name: '仮・軽打',
+      kind: 'pow',
+      dist: [0, 1],
+      power: 12,
+      hit: 8,
+      guts: 12,
+      crit: 5,
+      gd: 3,
+      learn: {
+        start: true
+      }
+    }, {
+      id: `${k}_02`,
+      name: '仮・遠撃',
+      kind: 'wise',
+      dist: [2, 3],
+      power: 14,
+      hit: 4,
+      guts: 16,
+      crit: 5,
+      gd: 5,
+      learn: {
+        start: true
+      }
+    }, {
+      id: `${k}_03`,
+      name: '仮・大技',
+      kind: bigKind,
+      dist: [best],
+      power: 34,
+      hit: -14,
+      guts: 42,
+      crit: 12,
+      gd: 8
+    }, {
+      id: `${k}_04`,
+      name: '仮・ガッツ崩し',
+      kind: other,
+      dist: [Math.min(best, near), Math.max(best, near)],
+      power: 10,
+      hit: 2,
+      guts: 22,
+      crit: 5,
+      gd: 28
+    }, {
+      id: `${k}_05`,
+      name: '仮・会心',
+      kind: 'pow',
+      dist: [1, 2],
+      power: 18,
+      hit: 16,
+      guts: 24,
+      crit: 22,
+      gd: 5
+    }];
+  }
+  return {
+    version: 0,
+    draft: true,
+    species
+  };
+};
+const ambwTechTable = () => {
+  const real = typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null;
+  if (real && typeof real === 'object' && real.species) return real;
+  return ambwDraftTechs(ALL_PLAYER_MONSTERS);
+};
+const ambwStatsOf = (engine, speciesId, total) => {
+  const rnd = engine.makeRng('ambw-shape-' + speciesId);
+  const w = engine.STAT_KEYS.map(() => 0.55 + rnd());
+  const sum = w.reduce((a, b) => a + b, 0);
+  const out = {};
+  engine.STAT_KEYS.forEach((k, i) => {
+    out[k] = Math.max(1, Math.min(engine.STAT_MAX || 999, Math.round(total * w[i] / sum)));
+  });
+  return out;
+};
+const ambwTeamOf = (engine, side, size, total, catalog, allTechs) => ({
+  assistantId: side.assistant,
+  tactics: 40,
+  members: side.species.slice(0, size).map(sp => ({
+    species: sp,
+    name: ALL_PLAYER_MONSTERS[sp] && ALL_PLAYER_MONSTERS[sp].name || sp,
+    lv: 30,
+    stats: ambwStatsOf(engine, sp, total),
+    ...(allTechs && catalog && catalog.species[sp] && Array.isArray(catalog.species[sp].techs) ? {
+      techs: catalog.species[sp].techs.map(t => t.id)
+    } : {})
+  }))
+});
+const ambwFramesOf = log => {
+  const st = log[0] || {};
+  const cur = {
+    hp: {
+      A: (st.aHp || []).slice(),
+      B: (st.bHp || []).slice()
+    },
+    g: {
+      A: 50,
+      B: 50
+    },
+    act: {
+      A: 0,
+      B: 0
+    },
+    d: st.d || 0,
+    r: 0
+  };
+  return log.map(e => {
+    cur.d = Number.isFinite(e.d) ? e.d : cur.d;
+    cur.r = Number.isFinite(e.r) ? e.r : cur.r;
+    if ((e.ev === 'enter' || e.ev === 'swap') && e.side) cur.act[e.side] = e.i;
+    if (Number.isFinite(e.ga)) cur.g.A = e.ga;else if (e.side === 'A' && Number.isFinite(e.guts)) cur.g.A = e.guts;
+    if (Number.isFinite(e.gb)) cur.g.B = e.gb;else if (e.side === 'B' && Number.isFinite(e.guts)) cur.g.B = e.guts;
+    if (e.ev === 'tech' && e.side) {
+      const foe = e.side === 'A' ? 'B' : 'A';
+      const ti = Number.isFinite(e.ti) ? e.ti : cur.act[foe];
+      if (Number.isFinite(e.foeHp)) cur.hp[foe][ti] = e.foeHp;
+      if (!Number.isFinite(e.ga) && Number.isFinite(e.foeGuts)) cur.g[foe] = e.foeGuts;
+    }
+    return {
+      hp: {
+        A: cur.hp.A.slice(),
+        B: cur.hp.B.slice()
+      },
+      g: {
+        A: cur.g.A,
+        B: cur.g.B
+      },
+      act: {
+        A: cur.act.A,
+        B: cur.act.B
+      },
+      d: cur.d,
+      r: cur.r
+    };
+  });
+};
+const ambwIsHighlight = (e, maxHp) => {
+  if (!e) return false;
+  if (e.ev === 'ko' || e.ev === 'swap' || e.ev === 'end' || e.ev === 'start') return true;
+  if (e.ev !== 'tech') return false;
+  if (e.crit) return true;
+  const foe = e.side === 'A' ? 'B' : 'A';
+  const mx = Math.max(...(maxHp[foe] || [1]), 1);
+  if (e.hit && e.dmg >= mx * 0.3) return true;
+  return false;
+};
+const AMBW_CSS = `
+.ambw{position:fixed;inset:0;z-index:9000;overflow-y:auto;background:linear-gradient(180deg,#221a44,#141026 40%);color:#fff;font-weight:700;-webkit-overflow-scrolling:touch}
+.ambw-in{max-width:460px;margin:0 auto;padding:10px 12px 28px}
+.ambw-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;font-weight:900;color:#f9a8d4}
+.ambw-top b{color:#fff;background:#3b3566;border-radius:99px;padding:2px 10px;white-space:nowrap}
+.ambw-card{background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:9px;margin-top:8px}
+.ambw-card.me{border-color:#f472b6aa}.ambw-card.foe{border-color:#38bdf8aa}
+.ambw-row{display:flex;align-items:center;gap:8px}
+.ambw-face{width:36px;height:36px;border-radius:50%;object-fit:cover;object-position:top;border:2px solid #fff3;background:#312e5a;flex-shrink:0}
+.ambw-small{font-size:11px;color:#cbd5e1;line-height:1.5}
+.ambw-bench{display:flex;gap:4px}.ambw-bn{width:32px}.ambw-bn img{display:block;width:32px;height:30px;object-fit:contain;background:#0f172a;border-radius:7px}
+.ambw-bn i{display:block;height:3px;border-radius:3px;background:#34d399;margin-top:2px}.ambw-bn.dead img{filter:grayscale(1) brightness(.45)}
+.ambw-mn{font-size:13px;width:84px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ambw-bar{height:10px;border-radius:9px;background:#334155;overflow:hidden}.ambw-bar i{display:block;height:100%;background:linear-gradient(90deg,#34d399,#a3e635);transition:width .35s}
+.ambw-bar.low i{background:linear-gradient(90deg,#fb7185,#f97316)}.ambw-bar.pt i{background:linear-gradient(90deg,#f59e0b,#fb923c)}
+.ambw-gbar{height:6px;border-radius:6px;background:#334155;margin-top:4px;position:relative;overflow:hidden}.ambw-gbar i{display:block;height:100%;background:linear-gradient(90deg,#fde047,#facc15);transition:width .35s}
+.ambw-gbar u{position:absolute;top:0;width:1px;height:100%;background:#0f172a}
+.ambw-num{width:78px;text-align:right;font-size:14px;line-height:1.15;font-weight:900}.ambw-num small{font-size:10px;color:#94a3b8}.ambw-num em{font-style:normal;font-size:11px;color:#fde047}
+.ambw-chips{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+.ambw-chip{flex:1 1 22%;min-width:0;font-size:10px;font-weight:800;background:#0f172a;border:1px solid #475569;color:#64748b;border-radius:8px;padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;line-height:1.3}
+.ambw-chip small{display:block;font-size:9px;line-height:1.2}.ambw-chip.on{border-color:#fde047;color:#fff;background:#3b2f0b}.ambw-chip.ng{border-color:#64748b;color:#cbd5e1}.ambw-chip.use{background:#fde047;color:#422006;border-color:#fde047}
+.ambw-ring{position:relative;height:244px;margin-top:8px;border-radius:14px;background:radial-gradient(ellipse at 50% 85%,#4c3f8f 0,#241d4a 55%,#171230 100%);border:1px solid #3b3566;overflow:hidden}
+.ambw-dist{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);display:flex;gap:4px}
+.ambw-dist span{font-size:11px;font-weight:900;color:#94a3b8;background:#0f172a;border-radius:6px;padding:1px 10px}.ambw-dist .cur{background:#fde047;color:#422006}
+.ambw-stage{position:absolute;z-index:2;left:0;right:0;bottom:30px;display:flex;justify-content:center;align-items:flex-end}
+.ambw-gap{transition:width .4s}
+.ambw-f{position:relative;text-align:center;width:92px}.ambw-f img{width:88px;height:88px;object-fit:contain;display:block;margin:0 auto;filter:drop-shadow(0 6px 4px #0008)}
+.ambw-f em{font-style:normal;font-size:10.5px;font-weight:900;background:#0009;border-radius:6px;padding:0 6px;white-space:nowrap}
+.ambw-f.down img{filter:grayscale(1) brightness(.5);transform:rotate(80deg) translateY(10px)}
+.ambw-flip{transform:scaleX(-1)}
+@keyframes ambwLungeA{0%{transform:translateX(0)}35%{transform:translateX(26px)}100%{transform:translateX(0)}}
+@keyframes ambwLungeB{0%{transform:translateX(0)}35%{transform:translateX(-26px)}100%{transform:translateX(0)}}
+@keyframes ambwShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px) rotate(-5deg)}45%{transform:translateX(7px) rotate(5deg)}70%{transform:translateX(-4px)}}
+@keyframes ambwPop{0%{opacity:0;transform:translateY(12px) scale(.6) rotate(-8deg)}25%{opacity:1;transform:translateY(-6px) scale(1.2) rotate(-8deg)}100%{opacity:1;transform:translateY(-14px) scale(1) rotate(-8deg)}}
+@keyframes ambwCut{0%{opacity:0;transform:translateX(-40px) skewX(-10deg)}100%{opacity:1;transform:translateX(0) skewX(-10deg)}}
+@keyframes ambwFlash{0%{filter:drop-shadow(0 0 14px #f87171) brightness(1.7)}100%{filter:drop-shadow(0 6px 4px #0008)}}
+.ambw-lungeA{animation:ambwLungeA .42s ease-out}.ambw-lungeB{animation:ambwLungeB .42s ease-out}
+.ambw-hit{animation:ambwShake .45s ease-out}.ambw-hit img{animation:ambwFlash .5s ease-out}
+.ambw-dmg{position:absolute;z-index:3;top:-30px;left:50%;margin-left:-60px;width:120px;text-align:center;font-size:27px;font-weight:900;color:#fde047;text-shadow:0 2px 0 #b91c1c,0 0 8px #f97316;line-height:.95;animation:ambwPop .5s ease-out both;pointer-events:none}
+.ambw-dmg small{display:block;font-size:12px;color:#fff;margin-bottom:3px}.ambw-dmg.miss{color:#cbd5e1;font-size:19px;text-shadow:0 2px 0 #0f172a}
+.ambw-cut{position:absolute;z-index:1;top:8px;left:-6px;right:36px;padding:3px 18px;background:linear-gradient(90deg,#a855f7,#6366f1 70%,#6366f100);animation:ambwCut .22s ease-out both}
+.ambw-cut.pow{background:linear-gradient(90deg,#f97316,#ef4444 70%,#ef444400)}.ambw-cut.B{left:36px;right:-6px;text-align:right;background:linear-gradient(270deg,#0ea5e9,#2563eb 70%,#2563eb00)}
+.ambw-cut.etc{background:linear-gradient(90deg,#475569,#334155 70%,#33415500)}
+.ambw-cut b{display:block;font-size:17px;letter-spacing:.04em;text-shadow:0 2px 0 #0006;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ambw-cut small{font-size:10px;font-weight:900}
+.ambw-bubble{background:#fff;color:#1e1b4b;border-radius:12px;padding:6px 10px;font-size:12px;font-weight:800;line-height:1.5;flex:1}
+.ambw-log p{margin:2px 0;font-size:11px;color:#cbd5e1;padding-left:6px;border-left:3px solid #64748b}.ambw-log p.A{border-color:#f472b6}.ambw-log p.B{border-color:#38bdf8}.ambw-log p small{color:#64748b;margin-right:4px}
+.ambw-seek{height:8px;border-radius:6px;background:#334155;margin-top:12px;position:relative}.ambw-seek i{display:block;height:100%;border-radius:6px;background:#f472b6}
+.ambw-seek button{position:absolute;top:-9px;margin-left:-9px;width:18px;height:22px;font-size:11px;color:#7dd3fc;background:none;border:0;padding:0}.ambw-seek button.A{color:#f9a8d4}
+.ambw-ctl{display:flex;gap:6px;justify-content:center;align-items:center;margin-top:10px;flex-wrap:wrap}
+.ambw-btn,.ambw-btn2,.ambw-sp{border-radius:999px;padding:8px 13px;font-weight:900;font-size:12px;white-space:nowrap;border:0;color:#fff;min-height:36px}
+.ambw-btn{background:linear-gradient(90deg,#f472b6,#fb923c)}.ambw-btn2{background:#334155}
+.ambw-sp{background:#1e293b;border:1px solid #475569;color:#94a3b8}.ambw-sp.on{background:#fde047;color:#422006;border-color:#fde047}
+.ambw-tabs{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
+.ambw-tabs button{flex:1;text-align:center;font-size:12px;font-weight:900;padding:7px 4px;border-radius:10px;background:#1e293b;color:#94a3b8;border:1px solid #475569;white-space:nowrap;min-height:34px}
+.ambw-tabs button.on{background:#fde047;color:#422006;border-color:#fde047}
+.ambw-sel{width:100%;background:#0f172a;color:#fff;border:1px solid #475569;border-radius:9px;padding:6px 4px;font-size:12px;font-weight:800;min-height:34px}
+.ambw-slot{flex:1;min-width:0;text-align:center}.ambw-slot img{width:54px;height:54px;object-fit:contain;display:block;margin:0 auto 3px}
+.ambw-res{text-align:center;margin-top:8px}.ambw-res b{display:block;font-size:30px;letter-spacing:.08em;color:#fde047}.ambw-res span{display:block;font-size:12px;color:#e2e8f0}
+.ambw-tbl{width:100%;border-collapse:collapse;font-size:12px;font-weight:800}.ambw-tbl td{padding:4px 3px;border-bottom:1px solid #fff1;text-align:right}.ambw-tbl td:first-child{text-align:left}
+.ambw-tbl .A{color:#f9a8d4}.ambw-tbl .B{color:#7dd3fc}.ambw-tbl tr.cur td{background:#fde04718}
+.ambw-k{display:flex;align-items:center;gap:6px;font-size:12px;margin:4px 0}.ambw-k span:first-child{width:150px;white-space:nowrap}.ambw-k b{width:46px;text-align:right;color:#fcd34d}.ambw-k .ambw-bar{flex:1}
+`;
+function AmbwPanel({
+  side,
+  team,
+  frame,
+  maxHp,
+  moves,
+  lastMove,
+  mine
+}) {
+  const who = ASSISTANT_LIST.find(a => a.id === team.assistantId) || ASSISTANT_LIST[0];
+  const style = (window.ASSISTANT_MASMON_BATTLE.STYLES[team.assistantId] || {}).label || '';
+  const i = frame.act[side];
+  const hp = Math.max(0, frame.hp[side][i] || 0),
+    mx = maxHp[side][i] || 1,
+    g = frame.g[side];
+  const list = moves && moves[i] || [];
+  return React.createElement("div", {
+    className: `ambw-card ${mine ? 'me' : 'foe'}`,
+    "data-ambw-panel": side
+  }, React.createElement("div", {
+    className: "ambw-row"
+  }, React.createElement("img", {
+    className: "ambw-face",
+    src: assistantFaceSrc(who, 'normal'),
+    alt: ""
+  }), React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, React.createElement("div", {
+    className: "ambw-small"
+  }, mine ? '手前' : '奥'), React.createElement("b", {
+    style: {
+      fontSize: 14
+    }
+  }, who.name, " ", React.createElement("small", {
+    style: {
+      fontSize: 10.5,
+      color: '#cbd5e1'
+    }
+  }, style))), React.createElement("div", {
+    className: "ambw-bench"
+  }, team.members.map((m, j) => j === i ? null : React.createElement("div", {
+    key: j,
+    className: `ambw-bn ${frame.hp[side][j] <= 0 ? 'dead' : ''}`
+  }, React.createElement("img", {
+    src: ALL_PLAYER_MONSTERS[m.species].imgUrl,
+    alt: ""
+  }), React.createElement("i", {
+    style: {
+      width: `${Math.max(0, Math.round(frame.hp[side][j] / (maxHp[side][j] || 1) * 100))}%`
+    }
+  }))))), React.createElement("div", {
+    className: "ambw-row",
+    style: {
+      marginTop: 6
+    }
+  }, React.createElement("b", {
+    className: "ambw-mn"
+  }, team.members[i].name), React.createElement("div", {
+    style: {
+      flex: 1
+    }
+  }, React.createElement("div", {
+    className: `ambw-bar ${hp / mx < 0.3 ? 'low' : ''}`
+  }, React.createElement("i", {
+    style: {
+      width: `${Math.round(hp / mx * 100)}%`
+    }
+  })), React.createElement("div", {
+    className: "ambw-gbar"
+  }, React.createElement("i", {
+    style: {
+      width: `${Math.max(0, Math.min(100, g))}%`
+    }
+  }), [25, 50, 75].map(x => React.createElement("u", {
+    key: x,
+    style: {
+      left: `${x}%`
+    }
+  })))), React.createElement("div", {
+    className: "ambw-num"
+  }, React.createElement("span", {
+    "data-ambw-hp": side
+  }, hp), React.createElement("small", null, "/", mx), React.createElement("br", null), React.createElement("em", null, "ガッツ ", Math.round(g)))), React.createElement("div", {
+    className: "ambw-chips"
+  }, list.map(mv => {
+    const reach = Array.isArray(mv.dist) && mv.dist.includes(frame.d),
+      ok = g >= mv.guts;
+    const cls = lastMove === mv.id ? 'use' : reach && ok ? 'on' : reach ? 'ng' : '';
+    return React.createElement("span", {
+      key: mv.id,
+      className: `ambw-chip ${cls}`
+    }, mv.kind === 'pow' ? '💪' : '🧠', mv.name, React.createElement("small", null, "ガッツ", mv.guts, "・", (mv.dist || []).map(d => AMBW_DIST[d]).join('')));
+  })));
+}
+function AssistantMasmonBattleWatch({
+  onClose
+}) {
+  const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [size, setSize] = useState(3);
+  const [sideA, setSideA] = useState(AMBW_DEFAULT.A);
+  const [sideB, setSideB] = useState(AMBW_DEFAULT.B);
+  const [diff, setDiff] = useState(0);
+  const [balance, setBalance] = useState('A');
+  const [allTechs, setAllTechs] = useState(true);
+  const [seedNo, setSeedNo] = useState(1);
+  const [speed, setSpeed] = useState('x1');
+  const [phase, setPhase] = useState('setup');
+  const [battle, setBattle] = useState(null);
+  const [pos, setPos] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [compare, setCompare] = useState(null);
+  const rootRef = useRef(null);
+  useEffect(() => {
+    if (rootRef.current) rootRef.current.scrollTop = 0;
+  }, [phase]);
+  useEffect(() => {
+    let alive = true;
+    if (!engine) ambwLoadEngine().then(e => {
+      if (!alive) return;
+      if (e) setEngine(e);else setLoadFailed(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const ready = !!(engine && engine.BALANCE && typeof engine.simulate === 'function');
+  const catalog = useMemo(() => {
+    if (!ready) return null;
+    try {
+      return engine.buildCatalog({
+        ALL_PLAYER_MONSTERS,
+        ASSISTANT_MASMON_TECHS: ambwTechTable()
+      });
+    } catch (e) {
+      return null;
+    }
+  }, [ready]);
+  const speciesIds = useMemo(() => catalog ? Object.keys(catalog.species) : Object.keys(ALL_PLAYER_MONSTERS), [catalog]);
+  const assistants = useMemo(() => ASSISTANT_LIST.filter(a => ready && engine.STYLES[a.id]), [ready]);
+  const BASE_TOTAL = 1800;
+  const teamsNow = () => ({
+    teamA: ambwTeamOf(engine, sideA, size, Math.round(BASE_TOTAL * (1 + diff / 100)), catalog, allTechs),
+    teamB: ambwTeamOf(engine, sideB, size, BASE_TOTAL, catalog, allTechs)
+  });
+  const seedOf = n => `watch-${n}`;
+  const start = (n = seedNo, bal = balance) => {
+    if (!ready || !catalog) return;
+    const {
+      teamA,
+      teamB
+    } = teamsNow();
+    const r = engine.simulate({
+      seed: seedOf(n),
+      catalog,
+      teamA,
+      teamB,
+      balance: bal,
+      trace: true
+    });
+    const st = r.log[0] || {};
+    setBattle({
+      r,
+      frames: ambwFramesOf(r.log),
+      teamA,
+      teamB,
+      maxHp: {
+        A: st.aHp || [],
+        B: st.bHp || []
+      },
+      moves: {
+        A: st.aMoves || [],
+        B: st.bMoves || []
+      },
+      balance: bal,
+      seedNo: n
+    });
+    setPos(0);
+    setPaused(false);
+    setCompare(null);
+    setPhase('watch');
+  };
+  useEffect(() => {
+    if (phase !== 'watch' || !battle || paused) return undefined;
+    const log = battle.r.log;
+    if (pos >= log.length - 1) {
+      const t = setTimeout(() => setPhase('result'), 900);
+      return () => clearTimeout(t);
+    }
+    const sp = AMBW_SPEEDS.find(s => s.id === speed) || AMBW_SPEEDS[0];
+    const t = setTimeout(() => {
+      let next = pos + 1;
+      if (speed === 'hl') while (next < log.length - 1 && !ambwIsHighlight(log[next], battle.maxHp)) next++;
+      setPos(next);
+    }, sp.ms);
+    return () => clearTimeout(t);
+  }, [phase, battle, pos, paused, speed]);
+  useEffect(() => {
+    if (phase !== 'result' || !battle || compare) return undefined;
+    const t = setTimeout(() => {
+      const N = 100,
+        out = {};
+      for (const b of ['A', 'B', 'C']) {
+        const same = engine.simulate({
+          seed: seedOf(battle.seedNo),
+          catalog,
+          teamA: battle.teamA,
+          teamB: battle.teamB,
+          balance: b
+        });
+        let w = 0;
+        for (let k = 0; k < N; k++) if (engine.simulate({
+          seed: `cmp-${k}`,
+          catalog,
+          teamA: battle.teamA,
+          teamB: battle.teamB,
+          balance: b
+        }).winner === 'A') w++;
+        out[b] = {
+          same: same.winner,
+          rounds: same.rounds,
+          rate: Math.round(w / N * 100)
+        };
+      }
+      setCompare(out);
+    }, 60);
+    return () => clearTimeout(t);
+  }, [phase, battle, compare]);
+  const nameOf = id => (ASSISTANT_LIST.find(a => a.id === id) || {}).name || id;
+  const setSpecies = (which, idx, sp) => {
+    const set = which === 'A' ? setSideA : setSideB;
+    set(s => ({
+      ...s,
+      species: s.species.map((x, j) => j === idx ? sp : x)
+    }));
+  };
+  const sideEditor = (which, side, set) => {
+    const total = which === 'A' ? Math.round(BASE_TOTAL * (1 + diff / 100)) : BASE_TOTAL;
+    return React.createElement("div", {
+      className: `ambw-card ${which === 'A' ? 'me' : 'foe'}`,
+      "data-ambw-side": which
+    }, React.createElement("div", {
+      className: "ambw-row"
+    }, React.createElement("img", {
+      className: "ambw-face",
+      src: assistantFaceSrc(ASSISTANT_LIST.find(a => a.id === side.assistant) || ASSISTANT_LIST[0], 'normal'),
+      alt: ""
+    }), React.createElement("div", {
+      style: {
+        flex: 1
+      }
+    }, React.createElement("div", {
+      className: "ambw-small"
+    }, which === 'A' ? '手前の助手' : '奥の助手', "・能力の合計 ", total), React.createElement("select", {
+      className: "ambw-sel",
+      "data-ambw-assistant": which,
+      value: side.assistant,
+      onChange: e => set(s => ({
+        ...s,
+        assistant: e.target.value
+      }))
+    }, assistants.map(a => React.createElement("option", {
+      key: a.id,
+      value: a.id
+    }, a.name, "(", engine.STYLES[a.id].label, ")"))))), React.createElement("div", {
+      className: "ambw-row",
+      style: {
+        marginTop: 8,
+        alignItems: 'flex-start'
+      }
+    }, side.species.slice(0, size).map((sp, j) => React.createElement("div", {
+      key: j,
+      className: "ambw-slot"
+    }, React.createElement("img", {
+      src: ALL_PLAYER_MONSTERS[sp].imgUrl,
+      alt: ""
+    }), React.createElement("select", {
+      className: "ambw-sel",
+      "data-ambw-species": `${which}${j}`,
+      value: sp,
+      onChange: e => setSpecies(which, j, e.target.value)
+    }, speciesIds.map(id => React.createElement("option", {
+      key: id,
+      value: id
+    }, ALL_PLAYER_MONSTERS[id].name)))))));
+  };
+  let body = null;
+  if (!ready || !catalog) {
+    body = React.createElement("div", {
+      className: "ambw-card"
+    }, React.createElement("p", {
+      className: "ambw-small"
+    }, loadFailed || engine && !engine.BALANCE || ready && !catalog ? '対戦の計算を読み込めませんでした(計算の第2版がまだ入っていないか、通信が切れています)。' : '対戦の計算を読み込んでいます…'));
+  } else if (phase === 'setup') {
+    body = React.createElement("div", {
+      "data-ambw-setup": true
+    }, React.createElement("div", {
+      className: "ambw-card"
+    }, React.createElement("div", {
+      className: "ambw-small"
+    }, "対戦の形"), React.createElement("div", {
+      className: "ambw-tabs"
+    }, [1, 2, 3].map(n => React.createElement("button", {
+      key: n,
+      "data-ambw-size": n,
+      className: size === n ? 'on' : '',
+      onClick: () => setSize(n)
+    }, n, " VS ", n)))), sideEditor('B', sideB, setSideB), sideEditor('A', sideA, setSideA), React.createElement("div", {
+      className: "ambw-ctl",
+      style: {
+        marginTop: 6
+      }
+    }, React.createElement("button", {
+      className: "ambw-btn2",
+      "data-ambw-mirror": true,
+      onClick: () => setSideA(s => ({
+        ...s,
+        species: sideB.species.slice()
+      }))
+    }, "手前を奥と同じ種族にそろえる")), React.createElement("p", {
+      className: "ambw-small",
+      style: {
+        textAlign: 'center'
+      }
+    }, "同じ種族どうしなら、能力の形も同じになり、能力の差だけを見比べられます。"), React.createElement("div", {
+      className: "ambw-card"
+    }, React.createElement("div", {
+      className: "ambw-small"
+    }, "能力の差(手前の能力の合計を、奥よりどれだけ多くするか)"), React.createElement("div", {
+      className: "ambw-tabs"
+    }, AMBW_DIFFS.map(d => React.createElement("button", {
+      key: d,
+      "data-ambw-diff": d,
+      className: diff === d ? 'on' : '',
+      onClick: () => setDiff(d)
+    }, d > 0 ? `+${d}%` : d === 0 ? '同じ' : `${d}%`))), React.createElement("div", {
+      className: "ambw-small",
+      style: {
+        marginTop: 8
+      }
+    }, "能力の差の効き方"), React.createElement("div", {
+      className: "ambw-tabs"
+    }, ['A', 'B', 'C'].map(b => React.createElement("button", {
+      key: b,
+      "data-ambw-balance": b,
+      className: balance === b ? 'on' : '',
+      onClick: () => setBalance(b)
+    }, b))), React.createElement("div", {
+      className: "ambw-small",
+      style: {
+        marginTop: 4
+      }
+    }, balance, ": ", AMBW_BALANCE_NOTE[balance]), React.createElement("div", {
+      className: "ambw-small",
+      style: {
+        marginTop: 8
+      }
+    }, "使う技"), React.createElement("div", {
+      className: "ambw-tabs"
+    }, React.createElement("button", {
+      "data-ambw-techs": "all",
+      className: allTechs ? 'on' : '',
+      onClick: () => setAllTechs(true)
+    }, "全部の技"), React.createElement("button", {
+      "data-ambw-techs": "start",
+      className: !allTechs ? 'on' : '',
+      onClick: () => setAllTechs(false)
+    }, "最初の技だけ")), React.createElement("div", {
+      className: "ambw-small",
+      style: {
+        marginTop: 8
+      }
+    }, "速さ"), React.createElement("div", {
+      className: "ambw-tabs"
+    }, AMBW_SPEEDS.map(s => React.createElement("button", {
+      key: s.id,
+      className: speed === s.id ? 'on' : '',
+      onClick: () => setSpeed(s.id)
+    }, s.label)))), React.createElement("div", {
+      className: "ambw-ctl"
+    }, React.createElement("button", {
+      className: "ambw-btn",
+      "data-ambw-start": true,
+      onClick: () => start()
+    }, "⚔ 対戦を見る(試合 ", seedNo, ")"), React.createElement("button", {
+      className: "ambw-btn2",
+      onClick: () => setSeedNo(n => n + 1)
+    }, "🎲 別の試合にする")), React.createElement("p", {
+      className: "ambw-small",
+      style: {
+        textAlign: 'center',
+        marginTop: 8
+      }
+    }, "同じ設定・同じ試合の番号なら、何度見ても同じ結果になります。何も保存しません。"));
+  } else if (battle) {
+    const log = battle.r.log,
+      e = log[pos] || {},
+      f = battle.frames[pos] || battle.frames[0];
+    const ended = phase === 'result';
+    const mem = (side, i) => (side === 'A' ? battle.teamA : battle.teamB).members[i];
+    const who = (side, i) => (mem(side, i) || {}).name || '';
+    const WHY = engine.WHY || {};
+    const lineOf = x => {
+      if (!x || !x.side) return '';
+      const n = who(x.side, x.i);
+      if (x.ev === 'tech') return x.hit ? `${n}の ${x.name}${x.crit ? ' 会心!' : ''} → ${x.dmg}${x.guarded ? '(ガード)' : ''}` : `${n}の ${x.name} … はずれ`;
+      if (x.ev === 'move') return `${n}が ${AMBW_DIST[x.to]}距離へ ${x.step > 0 ? 'さがる' : 'つめる'}`;
+      if (x.ev === 'charge') return `${n}は ガッツをためた`;
+      if (x.ev === 'guard') return `${n}は 身を守った`;
+      if (x.ev === 'swap') return `交代! ${who(x.side, x.from)} → ${n}`;
+      if (x.ev === 'ko') return `${x.name} は たおれた`;
+      if (x.ev === 'enter') return `${n} が出た`;
+      return '';
+    };
+    const recent = [];
+    for (let k = pos - 1; k >= 1 && recent.length < 3; k--) {
+      const t = lineOf(log[k]);
+      if (t) recent.unshift({
+        k,
+        t,
+        side: log[k].side,
+        r: log[k].r
+      });
+    }
+    const gap = [6, 44, 92, 146][f.d] || 44;
+    const foeSide = e.side === 'A' ? 'B' : 'A';
+    const actor = e.side ? ASSISTANT_LIST.find(a => a.id === (e.side === 'A' ? battle.teamA : battle.teamB).assistantId) || ASSISTANT_LIST[0] : null;
+    const fighter = side => {
+      const i = f.act[side],
+        m = mem(side, i),
+        down = f.hp[side][i] <= 0;
+      const acting = e.side === side && e.ev === 'tech' ? `ambw-lunge${side}` : '';
+      const hurt = e.ev === 'tech' && foeSide === side && e.hit ? 'ambw-hit' : '';
+      return React.createElement("div", {
+        key: `${side}-${pos}`,
+        className: `ambw-f ${down ? 'down' : ''} ${acting} ${hurt}`
+      }, React.createElement("img", {
+        className: side === 'A' ? 'ambw-flip' : '',
+        src: ALL_PLAYER_MONSTERS[m.species].imgUrl,
+        alt: ""
+      }), React.createElement("em", null, m.name), e.ev === 'tech' && foeSide === side && (e.hit ? React.createElement("div", {
+        className: "ambw-dmg"
+      }, e.crit ? React.createElement("small", null, "会心!") : e.guarded ? React.createElement("small", null, "ガード!") : null, "−", e.dmg) : React.createElement("div", {
+        className: "ambw-dmg miss"
+      }, "はずれ")));
+    };
+    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? e.step > 0 ? 'さがる' : 'つめる' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
+    const cutSmall = e.ev === 'tech' ? `${e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}${Number.isFinite(e.p) ? `・命中 ${Math.round(e.p)}%` : ''}` : e.side ? who(e.side, e.ev === 'swap' ? e.from : e.i) : '';
+    const kos = log.map((x, k) => x.ev === 'ko' ? {
+      k,
+      side: x.side
+    } : null).filter(Boolean);
+    const winName = battle.r.winner === 'draw' ? null : nameOf((battle.r.winner === 'A' ? battle.teamA : battle.teamB).assistantId);
+    const tech = side => log.filter(x => x.ev === 'tech' && x.side === side);
+    const stat = side => {
+      const t = tech(side);
+      return {
+        n: t.length,
+        hit: t.filter(x => x.hit).length,
+        crit: t.filter(x => x.crit).length,
+        dmg: t.reduce((a, x) => a + (x.dmg || 0), 0)
+      };
+    };
+    const sa = stat('A'),
+      sb = stat('B');
+    body = React.createElement("div", {
+      "data-ambw-watch": true,
+      "data-ambw-pos": pos,
+      "data-ambw-phase": phase
+    }, ended && React.createElement("div", {
+      "data-ambw-result": true
+    }, React.createElement("div", {
+      className: "ambw-res"
+    }, React.createElement("b", null, winName ? `${winName} の勝ち!` : '引き分け'), React.createElement("span", null, battle.r.winner === 'A' ? '手前' : battle.r.winner === 'B' ? '奥' : '', "・", battle.r.rounds, " ラウンド・", battle.r.reason === 'judge' ? '判定' : '全滅で決着', "・効き方 ", battle.balance, "・試合 ", battle.seedNo)), React.createElement("div", {
+      className: "ambw-card"
+    }, React.createElement("table", {
+      className: "ambw-tbl"
+    }, React.createElement("tbody", null, React.createElement("tr", null, React.createElement("td", null, "この1戦"), React.createElement("td", {
+      className: "A"
+    }, "手前 ", nameOf(battle.teamA.assistantId)), React.createElement("td", {
+      className: "B"
+    }, "奥 ", nameOf(battle.teamB.assistantId))), React.createElement("tr", null, React.createElement("td", null, "技が当たった"), React.createElement("td", {
+      className: "A"
+    }, sa.hit, "/", sa.n), React.createElement("td", {
+      className: "B"
+    }, sb.hit, "/", sb.n)), React.createElement("tr", null, React.createElement("td", null, "会心"), React.createElement("td", {
+      className: "A"
+    }, sa.crit, "回"), React.createElement("td", {
+      className: "B"
+    }, sb.crit, "回")), React.createElement("tr", null, React.createElement("td", null, "与えたダメージ"), React.createElement("td", {
+      className: "A"
+    }, sa.dmg), React.createElement("td", {
+      className: "B"
+    }, sb.dmg))))), React.createElement("div", {
+      className: "ambw-card",
+      "data-ambw-compare": true
+    }, React.createElement("div", {
+      className: "ambw-small"
+    }, "効き方の見比べ(同じ編成・能力の差 ", diff > 0 ? `+${diff}%` : diff === 0 ? 'なし' : `${diff}%`, ")"), !compare ? React.createElement("p", {
+      className: "ambw-small"
+    }, "計算しています…") : ['A', 'B', 'C'].map(b => React.createElement("div", {
+      key: b,
+      className: "ambw-k"
+    }, React.createElement("span", null, b, ": この試合は ", compare[b].same === 'draw' ? '引き分け' : compare[b].same === 'A' ? '手前の勝ち' : '奥の勝ち'), React.createElement("div", {
+      className: "ambw-bar pt"
+    }, React.createElement("i", {
+      style: {
+        width: `${compare[b].rate}%`
+      }
+    })), React.createElement("b", null, compare[b].rate, "%"))), React.createElement("div", {
+      className: "ambw-small"
+    }, "右の数字は、同じ編成で100戦したときに手前が勝つ割合"), React.createElement("div", {
+      className: "ambw-tabs"
+    }, ['A', 'B', 'C'].map(b => React.createElement("button", {
+      key: b,
+      className: battle.balance === b ? 'on' : '',
+      onClick: () => {
+        setBalance(b);
+        start(battle.seedNo, b);
+      }
+    }, "同じ試合を ", b, " で見る")))), React.createElement("div", {
+      className: "ambw-ctl"
+    }, React.createElement("button", {
+      className: "ambw-btn",
+      onClick: () => start(battle.seedNo, battle.balance)
+    }, "▶ もう一度見る"), React.createElement("button", {
+      className: "ambw-btn2",
+      onClick: () => {
+        const n = battle.seedNo + 1;
+        setSeedNo(n);
+        start(n, battle.balance);
+      }
+    }, "🎲 次の試合"), React.createElement("button", {
+      className: "ambw-btn2",
+      "data-ambw-back": true,
+      onClick: () => setPhase('setup')
+    }, "⚙ 設定へ"))), React.createElement(AmbwPanel, {
+      side: "B",
+      team: battle.teamB,
+      frame: f,
+      maxHp: battle.maxHp,
+      moves: battle.moves.B,
+      lastMove: e.side === 'B' && e.ev === 'tech' ? e.move : null,
+      mine: false
+    }), React.createElement("div", {
+      className: "ambw-ring"
+    }, React.createElement("div", {
+      className: "ambw-stage"
+    }, fighter('A'), React.createElement("div", {
+      className: "ambw-gap",
+      style: {
+        width: gap
+      }
+    }), fighter('B')), React.createElement("div", {
+      className: "ambw-dist"
+    }, AMBW_DIST.map((n, d) => React.createElement("span", {
+      key: d,
+      className: d === f.d ? 'cur' : ''
+    }, n))), cutText && e.ev !== 'end' && React.createElement("div", {
+      key: `cut-${pos}`,
+      className: `ambw-cut ${e.ev === 'tech' ? e.kind : 'etc'} ${e.side === 'B' ? 'B' : ''}`
+    }, React.createElement("small", null, cutSmall), React.createElement("b", null, cutText))), React.createElement(AmbwPanel, {
+      side: "A",
+      team: battle.teamA,
+      frame: f,
+      maxHp: battle.maxHp,
+      moves: battle.moves.A,
+      lastMove: e.side === 'A' && e.ev === 'tech' ? e.move : null,
+      mine: true
+    }), !ended && React.createElement("div", {
+      className: "ambw-card ambw-log"
+    }, recent.map(x => React.createElement("p", {
+      key: x.k,
+      className: x.side
+    }, React.createElement("small", null, "R", x.r), x.t)), actor && e.why && WHY[e.why] && React.createElement("div", {
+      className: "ambw-row",
+      style: {
+        marginTop: 6
+      }
+    }, React.createElement("img", {
+      className: "ambw-face",
+      src: assistantFaceSrc(actor, 'normal'),
+      alt: ""
+    }), React.createElement("div", {
+      className: "ambw-bubble"
+    }, actor.name, "「", WHY[e.why], "」"))), React.createElement("div", {
+      className: "ambw-seek"
+    }, React.createElement("i", {
+      style: {
+        width: `${Math.round(pos / Math.max(1, log.length - 1) * 100)}%`
+      }
+    }), kos.map(x => React.createElement("button", {
+      key: x.k,
+      className: x.side,
+      style: {
+        left: `${x.k / Math.max(1, log.length - 1) * 100}%`
+      },
+      onClick: () => {
+        setPos(x.k);
+        setPaused(true);
+        setPhase('watch');
+      }
+    }, "✖"))), !ended && React.createElement("div", {
+      className: "ambw-ctl"
+    }, React.createElement("button", {
+      className: "ambw-btn2",
+      "data-ambw-pause": true,
+      onClick: () => setPaused(p => !p)
+    }, paused ? '▶' : '⏸'), AMBW_SPEEDS.map(s => React.createElement("button", {
+      key: s.id,
+      className: `ambw-sp ${speed === s.id ? 'on' : ''}`,
+      "data-ambw-speed": s.id,
+      onClick: () => {
+        setSpeed(s.id);
+        setPaused(false);
+      }
+    }, s.label)), React.createElement("button", {
+      className: "ambw-btn2",
+      "data-ambw-skip": true,
+      onClick: () => {
+        setPos(log.length - 1);
+        setPhase('result');
+      }
+    }, "⏭ 結果へ")));
+  }
+  return React.createElement("div", {
+    className: "ambw",
+    "data-ambw-root": true,
+    ref: rootRef
+  }, React.createElement("style", null, AMBW_CSS), React.createElement("div", {
+    className: "ambw-in"
+  }, React.createElement("div", {
+    className: "ambw-top"
+  }, React.createElement("button", {
+    className: "ambw-btn2",
+    "data-ambw-close": true,
+    onClick: phase === 'setup' || !battle ? onClose : () => setPhase('setup')
+  }, "← ", phase === 'setup' || !battle ? 'もどる' : '設定へ'), React.createElement("span", null, "⚔ 助手マスモンの対戦(観戦の試作)"), React.createElement("b", null, phase !== 'setup' && battle ? `ラウンド ${(battle.frames[pos] || {}).r || 0}` : '試作')), body));
 }
 const ALF_KEY = 'mh_assistant_life_friend_v1';
 const ALF_SETTINGS_KEY = 'mh_assistant_life_friend_settings_v1';
@@ -178884,6 +180110,7 @@ function MonsterHeroGame() {
   const [assistantCallnameAsk, setAssistantCallnameAskState] = useState({});
   const [callnameToast, setCallnameToast] = useState(null);
   const [assistantChatOpen, setAssistantChatOpen] = useState(false);
+  const [masmonBattleWatchOpen, setMasmonBattleWatchOpen] = useState(false);
   const [assistantChatWith, setAssistantChatWith] = useState(null);
   const [peerReplay, setPeerReplay] = useState(null);
   const assistantDailyLinesAskedRef = useRef('');
@@ -200227,6 +201454,8 @@ function MonsterHeroGame() {
         setCardOrigin('home');
         setGameState('CARD_TOP');
       }
+    }), masmonBattleWatchOpen && typeof AssistantMasmonBattleWatch === 'function' && React.createElement(AssistantMasmonBattleWatch, {
+      onClose: () => setMasmonBattleWatchOpen(false)
     }), assistantChatOpen && activeAssistant && (() => {
       const chatWho = assistantChatWith && ASSISTANT_LIST.find(a => a.id === assistantChatWith.id) || activeAssistant;
       const id = chatWho.id;
@@ -205678,6 +206907,12 @@ function MonsterHeroGame() {
         selectDebugBattle(debugBattleModeId, debugBattleDifficultyId);
         setGameState('DEBUG_BATTLE_SETUP');
       }
+    }), React.createElement(DebugMenuRow, {
+      "data-debug-masmon-battle-watch": true,
+      icon: "🐾",
+      label: "助手マスモンの対戦を見る(試作)",
+      desc: "助手・種族・能力の差・効き方 A/B/C・速さを選んで観戦。何も保存しません",
+      onClick: () => setMasmonBattleWatchOpen(true)
     })), React.createElement(DebugMenuGroup, {
       id: "monster-look",
       title: "🧬 モンスターの見た目",
