@@ -838,8 +838,10 @@ const assistantLifeFurnAlbumTalks = () => (assistantLifeFurnEnabled() && typeof 
 // put … よその家(フレンドの家の控え)の置き方 { ceil, wall, floor }。渡されたら自分の部屋の家具ではなくそれを描く(56-assistant-life-friend.jsx)
 // 模様替え(公開の印 assistantLifeRoomEdit)がオンで自分の家なら、保存してある並びを小さく写す(顔・吹き出しの後ろ。測り直さない)
 function AssistantLifeRoomFurn(props) {
-  if (!props.put && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof AssistantLifeRoomLayoutMini === 'function') return <AssistantLifeRoomLayoutMini id={props.id} w={props.w} h={props.h}/>;
-  return <AssistantLifeRoomFurnSlots {...props}/>;
+  // layoutItems … よその家の並び(フレンドの家の控え。assistantLifeLayoutUnpack の結果)。無ければ put(天井・壁・床)で今までどおり
+  if ((!props.put || Array.isArray(props.layoutItems)) && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof AssistantLifeRoomLayoutMini === 'function') return <AssistantLifeRoomLayoutMini id={props.id} w={props.w} h={props.h} given={Array.isArray(props.layoutItems) ? props.layoutItems : null}/>;
+  const { layoutItems, ...rest } = props;
+  return <AssistantLifeRoomFurnSlots {...rest}/>;
 }
 function AssistantLifeRoomFurnSlots({ id, w, h, faces = 0, baseCount = 2, put = null }) {
   const st = useAssistantLifeGiftState();

@@ -114,6 +114,21 @@ const assistantLifeLayoutPut = async (who, key, toPut) => {
 // 贈った家具は、そのまま部屋に出す(56-assistant-life-gifts.jsx の assistantLifeFurnGive から)
 const assistantLifeLayoutOnGive = (who, key) => { if (assistantLifeRoomEditEnabled()) void assistantLifeLayoutPut(who, key, true); };
 
+// ----- フレンドの家へ送る控え(56-assistant-life-friend.jsx が使う。2026-11-11 社長「フレンドも進めていいよ」) -----
+// 小さな形: [[k, x, y, s, r, f, h, l, g, a, z], …](x・y は千分率の整数、s・l・g は百分率の整数、f・a は 0/1)。1つ 40字ほど
+// 印がオフのとき・並びが無いときは null(控えに載せない)。受ける側は assistantLifeLayoutUnpack で正規化してから描く
+const assistantLifeLayoutPack = (who) => {
+  if (!assistantLifeRoomEditEnabled() || !ASSISTANT_LIFE_LAYOUT_STORE.loaded) return null;
+  const items = assistantLifeLayoutOf(who);
+  return items.length ? items.map(it => [it.k, Math.round(it.x * 1000), Math.round(it.y * 1000), Math.round(it.s * 100), it.r, it.f ? 1 : 0, it.h, Math.round(it.l * 100), Math.round(it.g * 100), it.a ? 1 : 0, it.z]) : null;
+};
+// よその控えから並びへ(知らない家具・壊れた値は捨てる。配列でなければ null → 今までの天井・壁・床で描く)
+const assistantLifeLayoutUnpack = (raw) => {
+  if (!Array.isArray(raw)) return null;
+  const items = raw.filter(Array.isArray).map(a => ({ k: a[0], x: Number(a[1]) / 1000, y: Number(a[2]) / 1000, s: Number(a[3]) / 100, r: a[4], f: a[5] === 1, h: a[6], l: Number(a[7]) / 100, g: Number(a[8]) / 100, a: a[9] === 1, z: a[10] }));
+  return normalizeAssistantLifeLayoutOne({ items }).items.sort((p, q) => p.z - q.z);
+};
+
 // ----- ◯◯におまかせ(助手のくせ) -----
 // hero … いちばん良い所へ大きく置く家具 / pull … 真ん中へ寄せる強さ / low … 下へ下げる / tilt … かたむき / gap … 好きな家具の大きさ
 // 置き方の型と台詞は仮(台詞は台詞の担当へ頼む。ROOM-LAYOUT-PREP.md の2)
@@ -219,10 +234,10 @@ function AssistantLifeRoomLayoutHandles({ items, geom, sel, onSelect, onMove, on
         borderRadius: 12, border: sel === it.k ? '2.5px dashed #f472b6' : '1.5px dashed #ffffff90', background: sel === it.k ? '#ffffff38' : 'transparent' }}/>); })}</>);
 }
 // 家の一覧の小さな部屋(印がオンのとき)。同じ並びを小さく写す。顔・吹き出し・札の後ろに描くので、重なりを測り直さない
-function AssistantLifeRoomLayoutMini({ id, w, h }) {
+function AssistantLifeRoomLayoutMini({ id, w, h, given = null }) {
   const st = useAssistantLifeLayoutState();
   const giftSt = useAssistantLifeGiftState();
-  const items = assistantLifeLayoutOf(id, st, giftSt);
+  const items = Array.isArray(given) ? given : assistantLifeLayoutOf(id, st, giftSt); // given … よその家の並び(フレンドの家)
   const g = { W: w, top: 2, floorY: Math.round(h * 0.62), bottom: h - 4 };
   const base = Math.max(11, Math.min(20, h * 0.2, w * 0.13));
   return (<>{items.map(it => { const f = assistantLifeFurnOf(it.k); if (!f) return null; const p = assistantLifeLayoutPx(it, g); return (
