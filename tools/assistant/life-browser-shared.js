@@ -39,7 +39,7 @@ const seed = ({ storyIds, introKeys = [], life, intro = false, bondAll = null })
     localStorage.setItem('mh_check_life_seeded', '1');
     const t = Date.now() + 9 * 3600000, h = new Date(t).getUTCHours();
     const i = [0, 5, 10, 14, 18, 21].filter(x => h >= x).length - 1, ids = ['late', 'morning', 'noon', 'afternoon', 'evening', 'night'];
-    const base = { salt: 'check', abs: Math.floor(t / 86400000) * 6 + i, slot: ids[i], recent: [], nudges: { invite: [], introduce: [] }, watched: [] };
+    const base = { v: 2, salt: 'check', abs: Math.floor(t / 86400000) * 12 + Math.floor(h / 2), slot: ids[i], recent: [], nudges: { invite: [], introduce: [] }, watched: [] };
     put('mh_assistant_life_v1', bondAll != null
       ? { ...base, moods: {}, solo: {}, groups: [{ ids: ['kiki', 'mua'], doing: 'snack', place: 'cafe' }, { ids: ['dra', 'momosuke'], doing: 'walk', place: 'plaza' }, { ids: ['atsu', 'kyuko'], doing: 'cards', place: 'library' }, { ids: ['erubin', 'sorashido'], doing: 'cards', place: 'cardroom' }] }
       : { ...base, moods: { atsu: 'lonely', kyuko: 'happy', momosuke: 'lonely' },

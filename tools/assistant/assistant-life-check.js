@@ -63,11 +63,11 @@ const decide = G('assistantLifeDecide');
 const pairKey = (a, b) => [a, b].sort().join('-');
 
 // 30日ぶんをまねる(前の様子を次へ渡す)。bond … ペアの点 / tier … 段の id
-const simulate = ({ days = 30, members = IDS, bond = {}, tier = 'festival', salt = 'check', startAbs = 20400 * 6 } = {}) => {
+const simulate = ({ days = 30, members = IDS, bond = {}, tier = 'festival', salt = 'check', startAbs = 20400 * 12 } = {}) => {
   const t = TIERS.find(x => x.id === tier);
   const out = [];
   let prev = null;
-  for (let k = 0; k < days * 6; k++) {
+  for (let k = 0; k < days * 12; k++) { // 12区切り(1日12回)
     const life = decide({ abs: startAbs + k, members, bond, prev, recent: [], nudges: {}, tier: t, salt });
     out.push(life);
     prev = life;
@@ -148,8 +148,10 @@ if (process.argv.includes('--stats')) {
   check('① 時間は6つで、0〜24時をすき間なく分ける', SLOTS.length === 6 && SLOTS.every((s, i) => s.to > s.from && (i === 0 ? s.from === 0 : s.from === SLOTS[i - 1].to)) && SLOTS[5].to === 24);
   const at = G('assistantLifeSlotAt');
   const jst = (h) => Date.UTC(2026, 10, 7, h - 9, 30);
-  const ok = [[1, 'late'], [4, 'late'], [5, 'morning'], [12, 'noon'], [15, 'afternoon'], [19, 'evening'], [23, 'night']].every(([h, id]) => at(jst(h)).id === id);
-  check('① 日本時間で時間が決まり、通しの番号は1つずつ進む', ok && at(jst(5)).abs === at(jst(1)).abs + 1 && at(Date.UTC(2026, 10, 7, 15, 30)).abs === at(jst(23)).abs + 1);
+  const ok = [[1, 'late'], [3, 'late'], [4, 'morning'], [5, 'morning'], [12, 'noon'], [15, 'afternoon'], [19, 'evening'], [23, 'night']].every(([h, id]) => at(jst(h)).id === id);
+  check('① 日本時間で時間が決まり、通しの番号は2時間ごとに1つずつ進む(1日12回)', ok && at(jst(5)).abs === at(jst(3)).abs + 1 && at(jst(1)).abs + 1 === at(jst(3)).abs && at(Date.UTC(2026, 10, 7, 15, 30)).abs === at(jst(23)).abs + 1 && at(jst(23)).abs - at(jst(1)).abs === 11);
+  { const a = at(jst(7)); check('① 区切りは2時間(from・to)で、傾向の名前は真ん中の時刻が入る6つ(4〜6時=朝・20〜22時=夜)', a.from === 6 && a.to === 8 && at(jst(4)).id === 'morning' && at(jst(21)).id === 'night' && at(jst(3)).id === 'late' && at(jst(19)).id === 'evening'); }
+  { const v1 = G('assistantLifeAbsV1ToV2'); const d = 20400; check('① 前の数え方(日×6+i)の abs を、その区切りの始まりの時刻の12区切りへ読み替える(深夜=0・朝=2・昼=5・午後=7・夕方=9・夜=10)', [0, 1, 2, 3, 4, 5].map(i => v1(d * 6 + i) - d * 12).join(',') === '0,2,5,7,9,10' && v1('x') === null); }
 }
 
 // ② 決まり
@@ -187,14 +189,14 @@ if (process.argv.includes('--stats')) {
   // 言い合い
   let together = 0;
   for (let k = 0; k < 60; k++) {
-    const abs = 20400 * 6 + k * 7;
+    const abs = 20400 * 12 + k * 7;
     const life = decide({ abs, members: IDS, bond: { 'kiki-mua': 2500 }, recent: [{ kind: 'quarrel', abs: abs - 1, pair: 'kiki-mua', ids: ['kiki', 'mua'] }], nudges: {}, tier: TIERS[3], salt: 's' + k });
     if (life.groups.some(g => g.ids.includes('kiki') && g.ids.includes('mua'))) together++;
   }
   check('② 言い合いのあとの2人は一緒にいない(距離をおく)', together === 0, `${together}/60`);
   let made = 0;
   for (let k = 0; k < 60; k++) {
-    const abs = 20400 * 6 + k * 7;
+    const abs = 20400 * 12 + k * 7;
     const life = decide({ abs, members: IDS, bond: { 'kiki-mua': 2500 }, recent: [{ kind: 'quarrel', abs: abs - 2, pair: 'kiki-mua' }, { kind: 'makeup', abs: abs - 1, pair: 'kiki-mua' }], nudges: {}, tier: TIERS[3], salt: 's' + k });
     if (life.groups.some(g => g.ids.includes('kiki') && g.ids.includes('mua'))) made++;
   }
@@ -205,7 +207,7 @@ if (process.argv.includes('--stats')) {
 {
   const runs = [];
   for (const salt of ['a', 'b', 'c']) runs.push(...simulate({ salt, tier: 'normal' }));
-  const slotOf = (life) => SLOTS[((life.abs % 6) + 6) % 6].id;
+  const slotOf = (life) => G('assistantLifeSlotOfAbs')(life.abs).id; // 12区切りの真ん中の時刻が入る6つの名前
   const rate = (pred, cond) => { const xs = runs.filter(cond); return xs.length ? xs.filter(pred).length / xs.length : 0; };
   const kyuLib = rate(l => l.solo.kyuko && l.solo.kyuko.place === 'library', l => slotOf(l) === 'afternoon');
   check('③ きゅうこは午後に図書室でひとりの時間が多い', kyuLib >= 0.3, `${Math.round(kyuLib * 100)}%`);
@@ -246,7 +248,7 @@ if (process.argv.includes('--stats')) {
   { let n = 0; for (let i = 0; i < IDS.length; i++) for (let j = i + 1; j < IDS.length; j++) mixed[pairKey(IDS[i], IDS[j])] = [0, 40, 120, 250, 450, 700][(n++) % 6]; }
   const sp0 = spread({}), sp1 = spread(mixed);
   check('③ 同じ2人ばかりにならない(ペアの出る数の差: 点をそろえて5倍まで・点をまぜて12倍まで)', sp0 <= 5 && sp1 <= 12, `${sp0.toFixed(1)}倍 / ${sp1.toFixed(1)}倍`);
-  const draHome = runs.filter(l => l.solo.dra && l.solo.dra.place === 'home' && l.solo.dra.reason === 'lonely').length / (runs.length / 6);
+  const draHome = runs.filter(l => l.solo.dra && l.solo.dra.place === 'home' && l.solo.dra.reason === 'lonely').length / (runs.length / 12);
   check('③ ドラが家でさみしそうなのは1日0.5〜2回くらい(社長の例)', draHome >= 0.5 && draHome <= 2, `${draHome.toFixed(2)}回/日`);
   const quiet = simulate({ salt: 'g', tier: 'quiet' }).reduce((s, l) => s + l.groups.length, 0);
   const fest = simulate({ salt: 'g', tier: 'festival' }).reduce((s, l) => s + l.groups.length, 0);
@@ -257,8 +259,8 @@ if (process.argv.includes('--stats')) {
 {
   let inv = 0, intro = 0, introBase = 0;
   for (let k = 0; k < 80; k++) {
-    const abs = 20400 * 6 + 1 + k * 6 + (k % 5); // 深夜を避ける
-    const fixed = abs % 6 === 0 ? abs + 1 : abs;
+    const abs = 20400 * 12 + 2 + k * 12 + (k % 5); // 深夜を避ける
+    const fixed = G('assistantLifeSlotOfAbs')(abs).id === 'late' ? abs + 3 : abs;
     const l1 = decide({ abs: fixed, members: IDS, bond: {}, nudges: { invite: [{ id: 'dra', abs: fixed }] }, tier: TIERS[1], salt: 'n' + k });
     if (l1.groups.some(g => g.ids.includes('dra'))) inv++;
     const l2 = decide({ abs: fixed, members: IDS, bond: {}, nudges: { introduce: [{ pair: 'erubin-momosuke', abs: fixed }] }, tier: TIERS[1], salt: 'n' + k });
@@ -528,6 +530,20 @@ if (process.argv.includes('--stats')) {
   await store.load();
   const s = store.state;
   check('⑦ 壊れた値でも空として読む', s.life.groups.length === 0 && Object.keys(s.life.moods).length === 0 && Object.keys(s.life.solo).length === 0 && s.life.recent.length === 0 && s.play.points === 0 && !!s.life.salt);
+  // 1日12回への読み替え(2026-11-11 社長): 前の数え方(印 v なし)の abs は一度だけ12区切りへ。v:2 は変換しない・声かけは捨てる・壊れていても空
+  {
+    const nl = G('normalizeAssistantLife'), d = 20400;
+    const oldSave = { salt: 'x', abs: d * 6 + 1, slot: 'morning', moods: {}, groups: [], solo: { mua: { doing: 'idle', place: 'home', reason: 'mypace' } }, recent: [{ kind: 'quarrel', abs: d * 6 + 3, pair: 'kiki-mua' }, { kind: 'makeup', abs: d * 6 + 4, pair: 'kiki-mua' }], nudges: { invite: [{ id: 'dra', abs: d * 6 + 2 }], introduce: [] }, watched: [] };
+    const a = nl(oldSave);
+    check('⑦ 前の数え方の保存(印 v なし)は、abs と最近のできごとを12区切りへ読み替え、v:2 を付ける', a.v === 2 && a.abs === d * 12 + 2 && a.recent[0].abs === d * 12 + 7 && a.recent[1].abs === d * 12 + 9, JSON.stringify({ v: a.v, abs: a.abs - d * 12, r: a.recent.map(r => r.abs - d * 12) }));
+    check('⑦ 前の保存の声かけ(次の1回ぶんだけ)は捨てる', a.nudges.invite.length === 0);
+    const b = nl(JSON.parse(JSON.stringify(a)));
+    check('⑦ 読み替えたもの(v:2)をもう一度読んでも、二重には変換しない', b.abs === a.abs && b.recent[0].abs === a.recent[0].abs && b.recent[1].abs === a.recent[1].abs);
+    const n2 = nl({ v: 2, abs: d * 12 + 5, recent: [{ kind: 'quarrel', abs: d * 12 + 4, pair: 'kiki-mua' }], nudges: { invite: [{ id: 'dra', abs: d * 12 + 6 }], introduce: [] } });
+    check('⑦ v:2 の保存は abs・最近のできごと・声かけをそのまま読む', n2.abs === d * 12 + 5 && n2.recent[0].abs === d * 12 + 4 && n2.nudges.invite.length === 1);
+    const bad = nl({ abs: 'x', recent: [{ kind: 'quarrel', abs: 'y' }, null, 5], nudges: { invite: 'z' } });
+    check('⑦ abs が壊れた保存(文字・配列でない)でも空として読み、読み替えで落ちない', bad.v === 2 && bad.abs === null && bad.recent.length === 0 && bad.nudges.invite.length === 0);
+  }
   const now = Date.UTC(2026, 10, 7, 3, 0); // 日本時間 12時
   const life = await G('assistantLifeNow')({ members: ['mua', 'kiki', 'dra', 'kyuko'], now });
   check('⑦ いまの時間の様子を決めて保存する', life && life.slot === 'noon' && mem.mh_assistant_life_v1 && mem.mh_assistant_life_v1.abs === life.abs);
@@ -545,6 +561,18 @@ if (process.argv.includes('--stats')) {
   flags.assistantLife = true;
   const keys = [...new Set(writes)];
   check('⑦ 書くのは mh_assistant_life_v1・mh_assistant_life_play_v1・mh_assistant_peer_seen14_v1 だけ', keys.every(k => ['mh_assistant_life_v1', 'mh_assistant_life_play_v1', 'mh_assistant_peer_seen14_v1'].includes(k)), keys.join(', '));
+
+  // ⑨ 移動12回(台帳 #5304・#5328): 見守る1回ぶんの友情・仲良し度は約75%(四捨五入・1より小さくしない)/フレンドの外出は1回ごと半分
+  {
+    const f = G('assistantLifeSlotGainOf');
+    check('⑨ 1回ぶん約75%: 8→6・5→4・3→2・2→2・1→1・数でない→null', f(8) === 6 && f(5) === 4 && f(3) === 2 && f(2) === 2 && f(1) === 1 && f(null) === null && f(NaN) === null);
+    const sL = fs.readFileSync(path.join(root, 'monster-hero/src/parts/56-assistant-life.jsx'), 'utf8');
+    const w = sL.slice(sL.indexOf('const assistantLifeWatch = async'), sL.indexOf('// ---------- 画面「助手たちの今」'));
+    check('⑨ 見守るの友情は pg()(約75%)で上げる(掛け合い・ミニイベント・仲直り)', /assistantPeerGain\(a, b, 'talk', pg\('talk'\)\)/.test(w) && /'event', pg\('event'\)\)/.test(w) && /'makeup', pg\('makeup'\)\)/.test(w));
+    check('⑨ 見守るの仲良し度は bg()(約75%)で上げる', /assistantPeerAddPlayerBond\(talk\.pair, 'peerEvent', bg\('peerEvent'\)\)/.test(w) && /assistantPeerAddPlayerBond\(assistantPeerMembers\(talk\), bk, bg\(bk\)\)/.test(w) && /'peerMakeup', bg\('peerMakeup'\)\)/.test(w));
+    const sF = fs.readFileSync(path.join(root, 'monster-hero/src/parts/56-assistant-life-friend.jsx'), 'utf8');
+    check('⑨ フレンドの外出は1回ごと半分(ALF_SLOT12_CHANCE = 0.5 を確率に掛ける)', /const ALF_SLOT12_CHANCE = 0\.5;/.test(sF) && /\* ALF_SLOT12_CHANCE;/.test(sF));
+  }
 
   console.log(failed ? `\n${failed} 件 NG` : '\nすべて OK');
   process.exit(failed ? 1 : 0);

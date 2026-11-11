@@ -3042,7 +3042,9 @@ const cardCpuLoops = (levelId, outcome, facts = cardResultFacts(null), mult = 1)
 };
 // 助手ライフ: カード部屋にいる助手と対戦すると、ごほうび(ビートP・カードランクの経験値・クイック周回)が 1.5倍(2026-11-07 社長・案A)
 //   手で遊んだ助手と対戦だけ。その日はじめての勝ちの +50・+30 は倍にしない。0 は 0 のまま
-const CARD_LIFE_UP_MULT = 1.5;
+//   2026-11-11 移動が1日12回になったので、上乗せを +0.5 → +0.375(×1.375。1日に取れる量はいまの約1.5倍。台帳 #5304・#5328)
+const CARD_LIFE_UP_MULT = 1.375;
+const CARD_LIFE_UP_LABEL = '1.375倍'; // 画面に出す倍率の字(帯・結果・ヘルプと同じ)
 const cardLifeUpApply = (n, mult = 1) => {
   const v = Number.isFinite(n) ? n : 0;
   return Number.isFinite(mult) && mult > 1 && v > 0 ? Math.round(v * mult) : v;

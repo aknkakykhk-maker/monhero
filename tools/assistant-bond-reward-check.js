@@ -152,6 +152,9 @@ const run = async () => {
       const assistantBondRewardRunningRef = { current:false };
       const assistantBondRewardAgainRef = { current:false };
       const assistantBondsRef = { current:{} };
+      // 助手の解放(2026-11-11)。ここで見るのは今の人(全員が助手)の届け方
+      const assistantPartnerRef = { current:{ mode:'all' } };
+      const assistantPartnerAllowed = () => true;
       // ギフトの書き足しの順番待ち(60-app の runGiftWrite と同じ形。2026-10-27 #4154)
       const giftWriteChainRef = { current: Promise.resolve() };
       const runGiftWrite = (task) => { const r = giftWriteChainRef.current.then(task, task); giftWriteChainRef.current = r.catch(() => {}); return r; };
@@ -213,10 +216,10 @@ const wiring = () => {
   const fBody = app.slice(fAt, app.indexOf('\n  }, [', fAt) + 60);
   check('Lvが上がったときに届ける', /if \(after > before\) void deliverAssistantBondRewards\(\);/.test(fBody));
   // 2026-10-23 から、加入のお話を見て助手を解放したとき(rhythmEventStorySeen)にも届け直す
-  check('起動が済んだら届ける', /useEffect\(\(\) => \{ if \(dataLoaded\) void deliverAssistantBondRewards\(\); \}, \[dataLoaded, deliverAssistantBondRewards(?:, rhythmEventStorySeen)?\]\);/.test(app));
+  check('起動が済んだら届ける', /useEffect\(\(\) => \{ if \(dataLoaded\) void deliverAssistantBondRewards\(\); \}, \[dataLoaded, deliverAssistantBondRewards(?:, rhythmEventStorySeen)?(?:, assistantPartner)?\]\);/.test(app));
   check('まだ解放していない助手の仲良し度は増やさず、ごほうびも解放まで待たせる',
     /if \(typeof assistantUnlockedBy === 'function' && !assistantUnlockedBy\(id, rhythmEventStorySeenRef\.current\)\) return;/.test(app)
-    && /\(typeof assistantUnlockedBy === 'function' && !assistantUnlockedBy\(who\.id, rhythmEventStorySeenRef\.current\)\) \? 0/.test(app));
+    && /\(typeof assistantUnlockedBy === 'function' && !assistantUnlockedBy\(who\.id, rhythmEventStorySeenRef\.current\)\)(?: \|\| !assistantPartnerAllowed\(assistantPartnerRef\.current, who\.id\)\))? \? 0/.test(app));
   check('届ける処理は Lv の処理より前に書いてある(使う前に作る)', at >= 0 && at < fAt);
   check('「見るだけ」のプレビュー中は届けない', /if \(onboardingPreview\) return;/.test(body));
   check('ギフトと今の量の印を同じ取引で保存する', /saveStoredValuesOrRollback\(\[[\s\S]*key:'mh_gifts'[\s\S]*key:ASSISTANT_BOND_REWARDS_V2_KEY/.test(body));
