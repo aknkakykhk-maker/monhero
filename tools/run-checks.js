@@ -47,6 +47,7 @@ const SERVER_PORT = 8899;
 const REQUIRED = [
   'build.js --check',
   'check-syntax.js',
+  'conflict-marker-check.js',
   'undefined-reference-check.js',
   'jsx-text-brace-check.js',
   'render-error-check.js',
