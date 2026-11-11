@@ -8679,7 +8679,7 @@ function MonsterHeroGame() {
   useEffect(() => { if (typeof assistantLifeDailySetGranter === 'function') assistantLifeDailySetGranter(async (itemId) => {
     if (typeof itemId !== 'string' || !itemId) return false;
     const nextItems = { ...ownedItemsRef.current, [itemId]: ownedItemCount(ownedItemsRef.current, itemId) + 1 };
-    try { await storeSet('mh_owned_items', nextItems, false); } catch { return false; }
+    try { if ((await storeSet('mh_owned_items', nextItems, false)) === false) return false; } catch { return false; }
     ownedItemsRef.current = nextItems; setOwnedItems(nextItems);
     return true;
   }); }, []);

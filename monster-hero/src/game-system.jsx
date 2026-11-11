@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ef76a7cad90c6fc7
+// generated-sha256: dab5f242ceced826
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -103801,7 +103801,7 @@ function MonsterHeroGame() {
   useEffect(() => { if (typeof assistantLifeDailySetGranter === 'function') assistantLifeDailySetGranter(async (itemId) => {
     if (typeof itemId !== 'string' || !itemId) return false;
     const nextItems = { ...ownedItemsRef.current, [itemId]: ownedItemCount(ownedItemsRef.current, itemId) + 1 };
-    try { await storeSet('mh_owned_items', nextItems, false); } catch { return false; }
+    try { if ((await storeSet('mh_owned_items', nextItems, false)) === false) return false; } catch { return false; }
     ownedItemsRef.current = nextItems; setOwnedItems(nextItems);
     return true;
   }); }, []);
