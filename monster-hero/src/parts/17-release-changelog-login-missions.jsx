@@ -159,6 +159,8 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantSorashido: true,
   // えるびん(8人目・2026-11-05)。社長が出来上がりを確かめて「オッケー」を出すまで偽のまま(お話・選ぶ画面・おしゃべりに出ない)
   assistantErubin: true,
+  // 助手紹介(2026-11-11 社長・ナカヨシ18。56-assistant-life-profile.jsx)。ミハリの確認と窓口の最終確認が済んで、社長が「公開」と言ったら真にする。偽のあいだは助手ライフの下のタブに「📖 紹介」が出ない
+  assistantLifeProfile: true, // 2026-11-11 社長「この文で」・ミハリ3と最終確認 OK で公開
   // 助手の解放(2026-11-11 社長・設計 docs/progress/assistant-unlock/DESIGN.md・18-assistant-partner.jsx)。
   //   偽のあいだは、はじめての人も今までどおり全員を選べる(助手えらびで mode:'earn' を書かない・案内の文も出さない)。
   //   すでに遊んでいる人の「全員が助手」(mode:'all')の一度きりの判定は、偽のあいだも書く(公開の前から遊んでいた人を守る)。

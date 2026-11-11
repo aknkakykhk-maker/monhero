@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c4d08e312f574886
+// source-sha256: 1d9f80769b32c16c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13860,6 +13860,7 @@ const RELEASE_FLAGS = {
   rhythmAssistantSession: true,
   assistantSorashido: true,
   assistantErubin: true,
+  assistantLifeProfile: true,
   assistantPartnerUnlock: false,
   cardBattle: true,
   cardAssistantTalk: true,
@@ -113604,7 +113605,7 @@ function AssistantLifeHouse({
       letterSpacing: '.06em',
       fontSize: 8
     } : undefined
-  }, "ASSISTANT LIFE · ", tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : tab === 'visit' ? 'VISIT' : 'HOUSE'), React.createElement("p", {
+  }, "ASSISTANT LIFE · ", tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : tab === 'visit' ? 'VISIT' : tab === 'profile' ? 'PROFILE' : 'HOUSE'), React.createElement("p", {
     className: "mhl-ti whitespace-nowrap",
     style: land ? {
       fontSize: 18
@@ -113822,6 +113823,11 @@ function AssistantLifeHouse({
   })));
   const tabBody = tab === 'house' ? houseView : tab === 'where' ? null : tab === 'visit' && typeof AssistantLifeFriendPage === 'function' ? React.createElement(AssistantLifeFriendPage, {
     life: life
+  }) : tab === 'profile' && typeof AssistantLifeProfilePage === 'function' ? React.createElement(AssistantLifeProfilePage, {
+    metIds: metIds,
+    bondLevelOf: bondLevelOf,
+    land: land,
+    onMasmon: setMasmonId
   }) : tab === 'friends' ? React.createElement("div", {
     className: "px-3 pb-3 pt-1"
   }, uiV2 && typeof AssistantLifeRewardRoad === 'function' && React.createElement(AssistantLifeRewardRoad, {
@@ -116601,7 +116607,8 @@ function assistantLifeUiV2Of(saved) {
   return saved === true ? true : saved === false ? false : ASSISTANT_LIFE_UI_V2_DEFAULT;
 }
 function assistantLifeUiV2Tabs() {
-  return [['house', '🏡', '家'], ['where', '🗺', '町'], ['friends', '🤝', 'きずな'], ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏘', 'フレンド']] : [])];
+  const profile = typeof assistantLifeProfileOn === 'function' && assistantLifeProfileOn() ? [['profile', '📖', '紹介']] : [];
+  return [['house', '🏡', '家'], ['where', '🗺', '町'], ['friends', '🤝', 'きずな'], ...profile, ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏘', 'フレンド']] : [])];
 }
 function AssistantLifeIntroduceCard({
   ids,
@@ -117384,6 +117391,676 @@ function AssistantLifeFirstGuide({
     onClick: onClose,
     className: "min-h-[44px] flex-1 rounded-xl border border-white/25 bg-slate-800 px-2 text-[12.5px] font-black text-slate-100 active:scale-[.98]"
   }, "わかった")));
+}
+const ASSISTANT_LIFE_PROFILE_SEEN_KEY = 'mh_assistant_life_profile_seen_v1';
+const assistantLifeProfileOn = () => typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeProfile === true;
+const assistantLifeProfileRoster = () => (typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST) ? ASSISTANT_LIST : []).filter(w => w && typeof assistantReleased === 'function' && assistantReleased(w.id));
+const normalizeAssistantLifeProfileSeen = v => {
+  const out = {};
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
+  for (const [id, x] of Object.entries(v)) {
+    const n = x && typeof x === 'object' ? Number(x.n) : NaN;
+    if (typeof id === 'string' && id.length <= 24 && Number.isFinite(n) && n >= 0) out[id] = {
+      n: Math.floor(n)
+    };
+  }
+  return out;
+};
+const assistantLifeProfileBond = (id, levelOf) => {
+  let points = 0;
+  try {
+    const b = typeof _assistantLifeCardBonds !== 'undefined' && _assistantLifeCardBonds ? _assistantLifeCardBonds[id] : null;
+    const p = typeof normalizeAssistantBond === 'function' ? normalizeAssistantBond(b).points : 0;
+    points = Number.isFinite(p) ? p : 0;
+  } catch (_) {
+    points = 0;
+  }
+  let lv = typeof assistantBondLevel === 'function' ? assistantBondLevel(points) : 1;
+  const fromProp = typeof levelOf === 'function' ? Number(levelOf(id)) : NaN;
+  if (Number.isFinite(fromProp) && fromProp > lv) lv = fromProp;
+  let stage = null;
+  try {
+    stage = typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(lv, id) : null;
+  } catch (_) {
+    stage = null;
+  }
+  const next = typeof assistantBondNext === 'function' ? assistantBondNext(points) : null;
+  const cur = (typeof ASSISTANT_BOND_LEVELS !== 'undefined' ? ASSISTANT_BOND_LEVELS : []).find(s => s.level === lv);
+  const rate = next && cur && next.need > cur.need ? Math.max(0, Math.min(1, (points - cur.need) / (next.need - cur.need))) : 1;
+  return {
+    lv,
+    title: stage && stage.title || '',
+    tone: stage && stage.tone || '',
+    next: next && next.level > lv ? next : null,
+    rate
+  };
+};
+const assistantLifeProfileCall = id => {
+  try {
+    return typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(id) : 'あなた';
+  } catch (_) {
+    return 'あなた';
+  }
+};
+const assistantLifeProfileItem = key => {
+  const def = typeof assistantLifeAnyGiftDef === 'function' ? assistantLifeAnyGiftDef(key) : null;
+  if (!def) return null;
+  const item = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : []).find(x => x && x.id === def.itemId) || {};
+  return {
+    key,
+    name: item.name || '',
+    emoji: item.emoji || '🎁'
+  };
+};
+const assistantLifeProfileLikes = (id, giftSt) => {
+  const known = k => typeof assistantLifeGiftKnown === 'function' && assistantLifeGiftKnown(id, k, giftSt);
+  const rows = [];
+  const push = (label, likes, of) => {
+    if (!likes) return;
+    const cells = [...(likes.like || []).map(k => ({
+      k,
+      like: true
+    })), ...(likes.bad || []).map(k => ({
+      k,
+      like: false
+    }))].map(c => {
+      const shown = known(c.k);
+      const it = shown ? of(c.k) : null;
+      return {
+        ...c,
+        shown: !!(shown && it),
+        it
+      };
+    });
+    if (cells.length) rows.push({
+      label,
+      cells
+    });
+  };
+  push('道具', typeof ASSISTANT_LIFE_GIFT_LIKES !== 'undefined' ? ASSISTANT_LIFE_GIFT_LIKES[id] : null, assistantLifeProfileItem);
+  if (typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn()) push('1人に', typeof ASSISTANT_LIFE_SOLO_LIKES !== 'undefined' ? ASSISTANT_LIFE_SOLO_LIKES[id] : null, assistantLifeProfileItem);
+  if (typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled()) push('家具', typeof ASSISTANT_LIFE_FURN_LIKES !== 'undefined' ? ASSISTANT_LIFE_FURN_LIKES[id] : null, k => typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(k) : null);
+  const cells = rows.flatMap(r => r.cells);
+  const hints = typeof ASSISTANT_LIFE_GIFT_HINT_LINES !== 'undefined' && ASSISTANT_LIFE_GIFT_HINT_LINES[id] ? ASSISTANT_LIFE_GIFT_HINT_LINES[id] : {};
+  const hintCell = cells.find(c => c.like && !c.shown && hints[c.k] && typeof hints[c.k].t === 'string');
+  const plan = typeof assistantMasmonBasePlanOf === 'function' ? assistantMasmonBasePlanOf(id) : null;
+  const monOf = x => {
+    const m = x && typeof assistantMasmonMon === 'function' ? assistantMasmonMon(x.monster) : null;
+    return m ? {
+      id: x.monster,
+      name: m.name,
+      icon: m.faceIconUrl || m.iconUrl || '',
+      emoji: m.emoji || '🐾'
+    } : null;
+  };
+  const monLike = plan && Array.isArray(plan.likeMon) ? plan.likeMon.map(monOf).filter(Boolean) : [];
+  const monBad = plan && Array.isArray(plan.dislikeMon) ? plan.dislikeMon.map(monOf).filter(Boolean) : [];
+  return {
+    rows,
+    known: cells.filter(c => c.shown).length,
+    total: cells.length,
+    hint: hintCell ? hints[hintCell.k] : null,
+    monLike,
+    monBad
+  };
+};
+const assistantLifeProfileMinBond = line => {
+  const b = line && line.bond;
+  if (Array.isArray(b)) return Number.isFinite(b[0]) ? b[0] : 1;
+  return Number.isFinite(b) ? b : 1;
+};
+const assistantLifeProfileVoices = (id, lv, giftSt) => {
+  const call = assistantLifeProfileCall(id);
+  const fill = (t, extra = {}) => {
+    let s = String(t || '').replace(/\{name\}/g, call);
+    for (const [k, v] of Object.entries(extra)) s = s.split(`{${k}}`).join(v);
+    return /[{}]/.test(s) ? '' : s;
+  };
+  const groups = [];
+  try {
+    const def = typeof ASSISTANT_SCENES !== 'undefined' ? ASSISTANT_SCENES.home : null;
+    const list = def && typeof filterAssistantLines === 'function' ? filterAssistantLines(def.lines || [], id) : [];
+    const all = list.map(l => ({
+      e: l.e,
+      t: fill(l.t),
+      min: assistantLifeProfileMinBond(l)
+    })).filter(l => l.t);
+    const seen = new Set();
+    const uniq = all.filter(l => seen.has(l.t) ? false : (seen.add(l.t), true));
+    const open = uniq.filter(l => l.min <= lv);
+    const later = uniq.filter(l => l.min > lv);
+    const at = later.length ? Math.min(...later.map(l => l.min)) : null;
+    if (uniq.length) groups.push({
+      key: 'home',
+      label: 'あいさつ',
+      open,
+      lockedAt: at,
+      lockedN: later.length
+    });
+  } catch (_) {}
+  try {
+    const out = [];
+    const add = table => {
+      const mine = table && table[id] ? table[id] : {};
+      for (const [k, rows] of Object.entries(mine)) {
+        if (!(typeof assistantLifeGiftKnown === 'function' && assistantLifeGiftKnown(id, k, giftSt))) continue;
+        const it = assistantLifeProfileItem(k);
+        for (const r of Array.isArray(rows) ? rows : []) {
+          const t = fill(r && r.t, {
+            item: it ? it.name : ''
+          });
+          if (t) out.push({
+            e: r.e,
+            t
+          });
+        }
+      }
+    };
+    add(typeof ASSISTANT_LIFE_GIFT_LINES !== 'undefined' ? ASSISTANT_LIFE_GIFT_LINES : null);
+    if (typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn()) add(typeof ASSISTANT_LIFE_SOLO_LINES !== 'undefined' ? ASSISTANT_LIFE_SOLO_LINES : null);
+    groups.push({
+      key: 'gift',
+      label: '贈ったとき',
+      open: out,
+      lockedAt: null,
+      lockedN: 0,
+      emptyNote: '贈ると、ここで聞けるようになります'
+    });
+  } catch (_) {}
+  try {
+    const talks = typeof ASSISTANT_LIFE_SLEEP_TALKS !== 'undefined' ? ASSISTANT_LIFE_SLEEP_TALKS : [];
+    const mine = talks.filter(x => x && x.who === id && x.line === 'talk' && Array.isArray(x.lines) && x.lines[0]).map(x => ({
+      e: x.lines[0].e,
+      t: fill(x.lines[0].t),
+      min: Number.isFinite(x.lv) ? x.lv : 1
+    })).filter(l => l.t);
+    const open = mine.filter(l => l.min <= lv),
+      later = mine.filter(l => l.min > lv);
+    if (mine.length) groups.push({
+      key: 'sleep',
+      label: '寝言',
+      open,
+      lockedAt: later.length ? Math.min(...later.map(l => l.min)) : null,
+      lockedN: later.length
+    });
+  } catch (_) {}
+  return groups;
+};
+const assistantLifeProfileCount = (id, lv, giftSt) => {
+  try {
+    const likes = assistantLifeProfileLikes(id, giftSt);
+    const voices = assistantLifeProfileVoices(id, lv, giftSt);
+    return likes.known + voices.reduce((a, g) => a + g.open.length, 0);
+  } catch (_) {
+    return 0;
+  }
+};
+const assistantLifeProfileRhythm = id => {
+  const r = typeof ASSISTANT_LIFE_RHYTHM !== 'undefined' ? ASSISTANT_LIFE_RHYTHM[id] : null;
+  if (!r) return '';
+  const h = n => Number.isFinite(n) ? `${n}時` : '';
+  return `${r.label}(${h(r.bed)}ごろ寝て、${h(r.wake)}ごろ起きる)`;
+};
+function AssistantLifeProfilePage({
+  metIds,
+  bondLevelOf = null,
+  land = false,
+  onMasmon = null
+}) {
+  const giftSt = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
+  const [seen, setSeen] = React.useState(null);
+  const [openId, setOpenId] = React.useState(null);
+  const boxRef = React.useRef(null);
+  const roster = assistantLifeProfileRoster();
+  const met = new Set(Array.isArray(metIds) ? metIds : []);
+  const metList = roster.filter(w => met.has(w.id));
+  const counts = {};
+  for (const w of metList) counts[w.id] = assistantLifeProfileCount(w.id, assistantLifeProfileBond(w.id, bondLevelOf).lv, giftSt);
+  React.useEffect(() => {
+    let alive = true;
+    Promise.resolve(typeof storeGet === 'function' ? storeGet(ASSISTANT_LIFE_PROFILE_SEEN_KEY, null, false) : null).then(v => {
+      if (alive) setSeen(normalizeAssistantLifeProfileSeen(v));
+    }).catch(() => {
+      if (alive) setSeen({});
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const save = next => {
+    setSeen(next);
+    try {
+      if (typeof storeSet === 'function') void storeSet(ASSISTANT_LIFE_PROFILE_SEEN_KEY, next, false);
+    } catch (_) {}
+  };
+  const giftReady = typeof ASSISTANT_LIFE_GIFT_STORE === 'undefined' || ASSISTANT_LIFE_GIFT_STORE.loaded === true;
+  React.useEffect(() => {
+    if (!seen || !giftReady) return;
+    const miss = metList.filter(w => !seen[w.id]);
+    if (!miss.length) return;
+    const next = {
+      ...seen
+    };
+    for (const w of miss) next[w.id] = {
+      n: counts[w.id] || 0
+    };
+    save(next);
+  }, [seen, giftReady, metList.map(w => w.id).join(',')]);
+  const isNew = id => !!(giftReady && seen && seen[id] && (counts[id] || 0) > seen[id].n);
+  const open = id => {
+    if (!met.has(id)) return;
+    if (seen && giftReady) save({
+      ...seen,
+      [id]: {
+        n: counts[id] || 0
+      }
+    });
+    setOpenId(id);
+  };
+  const face = land ? 48 : 60;
+  return React.createElement("div", {
+    ref: boxRef,
+    className: "px-3 pb-3 pt-1",
+    "data-assistant-life-profile-list": true
+  }, React.createElement("div", {
+    className: "mb-2 flex items-center gap-2"
+  }, React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "text-[16px] font-black text-white"
+  }, "📖 助手紹介"), React.createElement("p", {
+    className: "text-[11px] font-bold text-indigo-200"
+  }, "選ぶと、その助手のことが分かります")), React.createElement("span", {
+    "data-assistant-life-profile-count": `${metList.length}/${roster.length}`,
+    className: "shrink-0 whitespace-nowrap rounded-full border border-white/15 bg-slate-950/80 px-2.5 py-1 text-[11px] font-black text-slate-100"
+  }, "会った助手 ", metList.length, "/", roster.length)), React.createElement("div", {
+    className: `grid gap-2 ${land ? 'grid-cols-4' : 'grid-cols-2'}`
+  }, roster.map(w => {
+    if (!met.has(w.id)) return React.createElement("div", {
+      key: w.id,
+      "data-assistant-life-profile-card": "unmet",
+      "aria-label": "まだ会っていない助手",
+      className: "rounded-2xl border-2 border-slate-600 bg-slate-950/70 p-2"
+    }, React.createElement("div", {
+      className: "flex items-center justify-center rounded-full border-2 border-dashed border-slate-500 font-black text-slate-500",
+      style: {
+        width: face,
+        height: face,
+        fontSize: face / 2
+      }
+    }, "？"), React.createElement("p", {
+      className: "mt-1 text-[15px] font-black text-slate-400"
+    }, "？？？"), React.createElement("p", {
+      className: "text-[11px] font-bold text-slate-400"
+    }, "まだ会っていません"));
+    const b = assistantLifeProfileBond(w.id, bondLevelOf);
+    return React.createElement("button", {
+      key: w.id,
+      type: "button",
+      "data-assistant-life-profile-card": w.id,
+      onClick: () => open(w.id),
+      "aria-label": `${w.name}の紹介を見る`,
+      className: "relative overflow-hidden rounded-2xl border-2 bg-slate-900/85 p-2 text-left active:scale-[.98]",
+      style: {
+        borderColor: w.accent,
+        backgroundImage: `linear-gradient(160deg, ${w.accent}44, transparent 65%)`
+      }
+    }, isNew(w.id) && React.createElement("span", {
+      "data-assistant-life-profile-new": true,
+      className: "absolute right-1.5 top-1.5 rounded-full bg-amber-300 px-1.5 py-0.5 text-[10px] font-black text-slate-950"
+    }, "NEW"), typeof AssistantFace === 'function' && React.createElement(AssistantFace, {
+      who: w,
+      size: face,
+      accent: w.accent,
+      expression: "happy"
+    }), React.createElement("p", {
+      className: "mt-1 text-[15px] font-black text-white"
+    }, w.name), React.createElement("p", {
+      className: "text-[10.5px] font-bold leading-snug text-slate-200",
+      style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
+    }, typeof jaWrap === 'function' ? jaWrap(w.tagline || '') : w.tagline || ''), React.createElement("span", {
+      className: "mt-1 inline-block rounded-full bg-slate-950/80 px-2 py-0.5 text-[10.5px] font-black text-pink-100"
+    }, "💗 Lv", b.lv));
+  })), React.createElement("p", {
+    className: "mt-2 text-[10.5px] font-bold leading-snug text-slate-300"
+  }, "💗 好きなものは、贈ると分かって紹介に残ります。", metList.length < roster.length ? 'まだ会っていない助手は、お話で出会うと紹介が開きます。' : ''), openId && (() => {
+    const sheet = React.createElement(AssistantLifeProfileSheet, {
+      id: openId,
+      bondLevelOf: bondLevelOf,
+      land: land,
+      giftSt: giftSt,
+      onMasmon: onMasmon,
+      onClose: () => setOpenId(null)
+    });
+    const host = boxRef.current && boxRef.current.closest ? boxRef.current.closest('[data-assistant-life-screen]') : null;
+    return host && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal ? ReactDOM.createPortal(sheet, host) : sheet;
+  })());
+}
+function AssistantLifeProfileSheet({
+  id,
+  bondLevelOf = null,
+  land = false,
+  giftSt = null,
+  onMasmon = null,
+  onClose
+}) {
+  const who = typeof assistantById === 'function' ? assistantById(id) : null;
+  const [vKey, setVKey] = React.useState('home');
+  const [vIdx, setVIdx] = React.useState(0);
+  const scrollRef = React.useRef(null);
+  const refs = {
+    who: React.useRef(null),
+    likes: React.useRef(null),
+    bond: React.useRef(null),
+    voice: React.useRef(null)
+  };
+  if (!who) return null;
+  const b = assistantLifeProfileBond(id, bondLevelOf);
+  const likes = assistantLifeProfileLikes(id, giftSt);
+  const voices = assistantLifeProfileVoices(id, b.lv, giftSt);
+  const vg = voices.find(g => g.key === vKey) || voices[0] || null;
+  const vLine = vg && vg.open.length ? vg.open[vIdx % vg.open.length] : null;
+  const team = typeof assistantLifeMasmonTeamOf === 'function' ? assistantLifeMasmonTeamOf(id) : [];
+  const teamShow = [...team.filter(t => t.lead), ...team.filter(t => !t.lead)].slice(0, 3);
+  const mat = typeof assistantLifeCardMaterial === 'function' ? assistantLifeCardMaterial(id) : null;
+  const oshi = mat && mat.core && typeof MONSTER_LINEAGES !== 'undefined' && MONSTER_LINEAGES[mat.core] ? MONSTER_LINEAGES[mat.core] : null;
+  const oshiMon = oshi && typeof assistantMasmonMon === 'function' ? assistantMasmonMon(oshi.monId) : null;
+  const call = assistantLifeProfileCall(id);
+  const greeting = String(who.greeting || '').replace(/\{name\}/g, call);
+  const jump = k => {
+    try {
+      const box = scrollRef.current,
+        el = refs[k].current;
+      if (box && el) box.scrollTo({
+        top: el.offsetTop - 8,
+        behavior: 'smooth'
+      });
+    } catch (_) {}
+  };
+  const card = 'rounded-2xl border border-white/10 bg-slate-800/90 px-3 py-2.5';
+  const h3 = 'mb-1.5 flex items-center justify-between gap-2 text-[13.5px] font-black text-white';
+  const jw = t => typeof t === 'string' && typeof jaWrap === 'function' ? jaWrap(t) : t;
+  const kv = (k, v) => React.createElement("div", {
+    className: "grid gap-x-3 py-0.5 text-[12px] leading-relaxed",
+    style: {
+      gridTemplateColumns: 'max-content 1fr'
+    }
+  }, React.createElement("span", {
+    className: "whitespace-nowrap font-bold text-slate-400"
+  }, k), React.createElement("span", {
+    className: "font-bold text-slate-100",
+    style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
+  }, jw(v)));
+  const chip = (c, i) => React.createElement("span", {
+    key: i,
+    "data-assistant-life-profile-like": c.shown ? c.like ? 'like' : 'bad' : 'unknown',
+    className: `inline-flex items-center gap-1 rounded-xl border px-2 py-1 text-[11.5px] font-black ${!c.shown ? 'border-dashed border-slate-600 text-slate-500' : c.like ? 'border-pink-400 text-pink-100' : 'border-sky-400 text-sky-100'}`
+  }, c.like ? '💗' : '💧', " ", c.shown ? `${c.it.emoji} ${c.it.name}` : '？');
+  const monChip = (m, like) => React.createElement("span", {
+    key: `${like}-${m.id}`,
+    className: `inline-flex items-center gap-1 rounded-xl border px-1.5 py-1 text-[11.5px] font-black ${like ? 'border-pink-400 text-pink-100' : 'border-sky-400 text-sky-100'}`
+  }, like ? '💗' : '💧', m.icon ? React.createElement("img", {
+    src: m.icon,
+    alt: "",
+    className: "h-5 w-5 rounded-md object-contain"
+  }) : m.emoji, " ", m.name);
+  const hero = React.createElement("div", {
+    className: "relative overflow-hidden",
+    "data-assistant-life-profile-hero": true,
+    style: {
+      height: land ? '100%' : 300,
+      backgroundImage: `linear-gradient(160deg, ${who.accent}55, #0f172a 72%)`
+    }
+  }, typeof assistantFullImage === 'function' && React.createElement("img", {
+    src: assistantFullImage(who, 'happy'),
+    alt: who.name,
+    className: "pointer-events-none absolute bottom-0 object-contain object-bottom",
+    style: land ? {
+      right: -10,
+      height: '86%',
+      width: '62%'
+    } : {
+      right: -30,
+      height: '112%',
+      width: '68%'
+    }
+  }), React.createElement("div", {
+    className: "absolute left-3.5 z-[2]",
+    style: {
+      top: land ? 56 : 14,
+      width: land ? 150 : 210
+    }
+  }, React.createElement("p", {
+    className: "text-[28px] font-black leading-tight text-white",
+    style: {
+      textShadow: '0 2px 6px #000'
+    }
+  }, who.name), React.createElement("p", {
+    className: "text-[12.5px] font-black leading-snug",
+    style: {
+      color: who.accent,
+      textShadow: '0 1px 3px #000',
+      ...(typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : {})
+    }
+  }, typeof jaWrap === 'function' ? jaWrap(who.tagline || '') : who.tagline), React.createElement("span", {
+    className: "mt-1.5 inline-block rounded-full border border-white/15 bg-slate-950/80 px-2 py-0.5 text-[11px] font-black text-white"
+  }, "💗 Lv", b.lv, " ", b.title)), greeting && React.createElement("div", {
+    "data-assistant-life-profile-greeting": true,
+    className: "absolute bottom-3 left-3 z-[2] rounded-2xl border-2 bg-white px-3 py-2 text-[12px] font-bold leading-relaxed text-slate-800 shadow-lg",
+    style: {
+      borderColor: who.accent,
+      width: land ? 170 : 205
+    }
+  }, React.createElement("span", {
+    className: "block text-[10px] font-black",
+    style: {
+      color: who.accent
+    }
+  }, "ひとこと"), React.createElement("span", {
+    style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
+  }, jw(greeting))));
+  const jumps = React.createElement("div", {
+    className: "flex gap-1.5 border-b border-white/10 bg-slate-950/90 px-2.5 py-2",
+    "data-assistant-life-profile-jump": true
+  }, [['who', '人となり'], ['likes', '好き・苦手'], ['bond', 'きずな'], ['voice', '台詞']].map(([k, l]) => React.createElement("button", {
+    key: k,
+    type: "button",
+    onClick: () => jump(k),
+    className: "min-h-[36px] flex-1 rounded-xl border border-white/10 bg-slate-800 text-[11.5px] font-black text-slate-100 active:scale-95"
+  }, l)));
+  const secWho = React.createElement("div", {
+    ref: refs.who,
+    className: card,
+    "data-assistant-life-profile-sec": "who"
+  }, React.createElement("p", {
+    className: h3
+  }, who.emoji || '🌟', " 人となり"), who.intro && kv('性格', who.intro), assistantLifeProfileRhythm(id) && kv('生活', assistantLifeProfileRhythm(id)), b.tone && kv('話し方(いま)', b.tone));
+  const secLikes = React.createElement("div", {
+    ref: refs.likes,
+    className: card,
+    "data-assistant-life-profile-sec": "likes"
+  }, React.createElement("p", {
+    className: h3
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, land ? '💗 好き・💧 苦手' : '💗 好きなもの・💧 苦手なもの'), likes.total > 0 && React.createElement("em", {
+    className: "whitespace-nowrap text-[10.5px] font-bold not-italic text-slate-400"
+  }, "分かったもの ", likes.known, "/", likes.total)), likes.rows.map(r => React.createElement("div", {
+    key: r.label,
+    className: "my-1 flex flex-wrap items-center gap-1"
+  }, React.createElement("span", {
+    className: "w-[4.6em] shrink-0 whitespace-nowrap text-[11px] font-bold text-slate-400"
+  }, r.label), r.cells.map(chip))), (likes.monLike.length > 0 || likes.monBad.length > 0) && React.createElement("div", {
+    className: "my-1 flex flex-wrap items-center gap-1"
+  }, React.createElement("span", {
+    className: "w-[4.6em] shrink-0 whitespace-nowrap text-[11px] font-bold text-slate-400"
+  }, "モンスター"), likes.monLike.map(m => monChip(m, true)), likes.monBad.map(m => monChip(m, false))), likes.hint && React.createElement("p", {
+    "data-assistant-life-profile-hint": true,
+    className: "mt-1.5 rounded-xl bg-slate-950/80 px-2 py-1.5 text-[11px] font-bold leading-snug text-slate-200"
+  }, "💭 ", who.name, "の話から:「", String(likes.hint.t).replace(/\{name\}/g, call), "」"), likes.total > 0 && React.createElement("p", {
+    className: "mt-1 text-[10.5px] font-bold text-slate-400"
+  }, "？は贈ると分かります。分かった好みはここに残ります。"));
+  const secBond = React.createElement("div", {
+    ref: refs.bond,
+    className: card,
+    "data-assistant-life-profile-sec": "bond"
+  }, React.createElement("p", {
+    className: h3
+  }, "🤝 いまのきずな"), React.createElement("div", {
+    className: "flex flex-wrap items-baseline justify-between gap-x-2"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap text-[14px] font-black text-white"
+  }, "💗 仲良し度 Lv", b.lv, " ", React.createElement("span", {
+    className: "text-[11px] text-pink-200"
+  }, b.title)), b.next && React.createElement("span", {
+    className: "whitespace-nowrap text-[11px] font-bold text-slate-400"
+  }, "あと ", b.next.remain, " で Lv", b.next.level)), React.createElement("div", {
+    className: "my-1.5 h-2 overflow-hidden rounded-full bg-slate-700"
+  }, React.createElement("i", {
+    className: "block h-full rounded-full bg-gradient-to-r from-pink-400 to-rose-500",
+    style: {
+      width: `${Math.round(b.rate * 100)}%`
+    }
+  })), kv('呼び方', call), oshi && kv('推し', React.createElement("span", {
+    className: "inline-flex items-center gap-1"
+  }, oshiMon && (oshiMon.faceIconUrl || oshiMon.iconUrl) ? React.createElement("img", {
+    src: oshiMon.faceIconUrl || oshiMon.iconUrl,
+    alt: "",
+    className: "h-5 w-5 rounded-md object-contain"
+  }) : null, oshi.name, "種")), teamShow.length > 0 && React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "mb-1 mt-2 text-[11px] font-bold text-slate-400"
+  }, "マスモン", team.length > teamShow.length ? `(${team.length}体のうち${teamShow.length}体)` : ''), React.createElement("div", {
+    className: "flex gap-1.5"
+  }, teamShow.map((t, i) => {
+    const m = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(t.monster) : null;
+    return React.createElement("div", {
+      key: i,
+      className: `flex-1 rounded-xl border bg-slate-950/80 px-1 py-1.5 text-center ${t.lead ? 'border-amber-300' : 'border-white/10'}`
+    }, m && (m.faceIconUrl || m.iconUrl) ? React.createElement("img", {
+      src: m.faceIconUrl || m.iconUrl,
+      alt: "",
+      className: "mx-auto h-10 w-10 rounded-lg object-contain"
+    }) : React.createElement("span", {
+      className: "block text-[24px]"
+    }, m && m.emoji || '🐾'), React.createElement("b", {
+      className: "block truncate text-[11px] text-white"
+    }, t.nick || m && m.name || ''), React.createElement("span", {
+      className: "text-[10px] font-bold text-slate-300"
+    }, t.lead ? '👑 勇者モン' : m && m.name || ''));
+  })), onMasmon && React.createElement("button", {
+    type: "button",
+    "data-assistant-life-profile-masmon": true,
+    onClick: () => {
+      onClose();
+      onMasmon(id);
+    },
+    className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[12.5px] font-black text-white active:scale-[.98]"
+  }, "🐾 マスモンをくわしく見る ›")));
+  const secVoice = React.createElement("div", {
+    ref: refs.voice,
+    className: card,
+    "data-assistant-life-profile-sec": "voice"
+  }, React.createElement("p", {
+    className: h3
+  }, React.createElement("span", null, "🔊 台詞を聞く"), vg && React.createElement("em", {
+    className: "whitespace-nowrap text-[10.5px] font-bold not-italic text-slate-400"
+  }, "聞ける台詞 ", voices.reduce((a, g) => a + g.open.length, 0))), React.createElement("div", {
+    className: "flex items-start gap-2"
+  }, typeof AssistantFace === 'function' && React.createElement("span", {
+    className: "shrink-0"
+  }, React.createElement(AssistantFace, {
+    who: who,
+    size: 52,
+    accent: who.accent,
+    expression: vLine && vLine.e || 'happy'
+  })), React.createElement("p", {
+    "data-assistant-life-profile-voice-line": true,
+    className: "min-h-[52px] flex-1 rounded-2xl bg-white px-3 py-2 text-[12px] font-bold leading-relaxed text-slate-800"
+  }, React.createElement("span", {
+    style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
+  }, jw(vLine ? vLine.t : vg && vg.emptyNote || 'まだ聞ける台詞がありません')))), React.createElement("div", {
+    className: "mt-2 flex flex-wrap gap-1.5"
+  }, voices.map(g => React.createElement("button", {
+    key: g.key,
+    type: "button",
+    "data-assistant-life-profile-voice-tab": g.key,
+    "aria-pressed": vg && vg.key === g.key,
+    onClick: () => {
+      setVKey(g.key);
+      setVIdx(0);
+    },
+    className: `min-h-[34px] rounded-full border px-2.5 text-[11px] font-black ${vg && vg.key === g.key ? 'text-white' : 'border-white/10 bg-slate-950/80 text-slate-200'}`,
+    style: vg && vg.key === g.key ? {
+      borderColor: who.accent,
+      backgroundColor: `${who.accent}33`
+    } : undefined
+  }, g.label, " ", g.open.length)), vg && vg.lockedAt && React.createElement("span", {
+    "data-assistant-life-profile-voice-lock": true,
+    className: "inline-flex min-h-[34px] items-center rounded-full border border-white/10 bg-slate-950/80 px-2.5 text-[11px] font-black text-slate-500"
+  }, "🔒 Lv", vg.lockedAt, " から あと", vg.lockedN)), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-profile-voice-next": true,
+    disabled: !vg || vg.open.length < 2,
+    onClick: () => setVIdx(i => i + 1),
+    className: "mt-2 min-h-[44px] w-full rounded-xl text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40",
+    style: {
+      backgroundColor: who.accent
+    }
+  }, "▶ もう1つ聞く"), React.createElement("p", {
+    className: "mt-1.5 text-[10.5px] font-bold leading-snug text-slate-400"
+  }, "表情つきで台詞が出ます(ボイスはまだありません)。仲良し度が上がると、聞ける台詞が増えます。"));
+  const top = React.createElement("div", {
+    className: "flex items-center gap-2 border-b border-white/10 bg-slate-950 px-3 py-2",
+    style: {
+      paddingTop: land ? 8 : 'calc(8px + env(safe-area-inset-top))'
+    }
+  }, React.createElement("button", {
+    type: "button",
+    "data-assistant-life-profile-close": true,
+    onClick: onClose,
+    className: "min-h-[44px] shrink-0 rounded-xl border border-white/15 bg-slate-800 px-3 text-[13px] font-black text-white active:scale-95"
+  }, "← 一覧へ"), React.createElement("p", {
+    className: "min-w-0 truncate text-[17px] font-black text-white"
+  }, who.name, "のこと"));
+  return React.createElement("div", {
+    className: "absolute inset-0 z-[60] flex bg-slate-950",
+    "data-assistant-life-profile": id,
+    role: "dialog",
+    "aria-label": `${who.name}の紹介`,
+    style: land ? {
+      flexDirection: 'row'
+    } : {
+      flexDirection: 'column'
+    }
+  }, land ? React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "relative h-full w-[34%] max-w-[320px] shrink-0"
+  }, hero, React.createElement("button", {
+    type: "button",
+    "data-assistant-life-profile-close": true,
+    onClick: onClose,
+    className: "absolute left-2 top-2 z-[3] min-h-[44px] rounded-xl border border-white/15 bg-slate-800/90 px-3 text-[13px] font-black text-white active:scale-95"
+  }, "← 一覧へ")), React.createElement("div", {
+    className: "flex min-w-0 flex-1 flex-col"
+  }, jumps, React.createElement("div", {
+    ref: scrollRef,
+    className: "mh-scroll relative min-h-0 flex-1 overflow-y-auto p-2.5"
+  }, React.createElement("div", {
+    className: "grid grid-cols-2 items-start gap-2.5"
+  }, React.createElement("div", {
+    className: "flex flex-col gap-2.5"
+  }, secWho, secLikes), React.createElement("div", {
+    className: "flex flex-col gap-2.5"
+  }, secBond, secVoice))))) : React.createElement(React.Fragment, null, top, React.createElement("div", {
+    ref: scrollRef,
+    className: "mh-scroll relative min-h-0 flex-1 overflow-y-auto",
+    style: {
+      paddingBottom: 'env(safe-area-inset-bottom)'
+    }
+  }, hero, React.createElement("div", {
+    className: "sticky top-0 z-[3]"
+  }, jumps), React.createElement("div", {
+    className: "flex flex-col gap-2.5 p-3"
+  }, secWho, secLikes, secBond, secVoice))));
 }
 const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   id: 'rel-fight-erubin-momosuke-1',
