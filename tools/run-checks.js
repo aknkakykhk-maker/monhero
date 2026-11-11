@@ -123,6 +123,8 @@ const FORCE_CHECKS = [
   { re: /^monster-hero\/(src\/parts\/.+\.jsx|data\/.+\.js|index\.html)$|^docs\/spec\/SAVE_DATA\.md$/, checks: ['boot/save-keys-check.js'], why: '保存キーが SAVE_DATA.md の一覧に載っているか' },
   { re: /^monster-hero\/(sw\.js|src\/parts\/25-asset-cache\.jsx)$|^tools\/(build|stamp-version|stamp-game-build|build-asset-manifest)\.js$|^tools\/boot\/code-prefetch-check\.js$/, checks: ['boot/code-prefetch-check.js'], why: '新しい版を出したら必ず新しい本体が動くか(事前ダウンロードの JS・CSS)' },
   { re: /^(CLAUDE|AGENTS|README)\.md$|^docs\/|^\.claude\/skills\//, checks: ['rules-index-check.js'], why: 'ルールと資料' },
+  // ページの拡大・見えている範囲のずれ(押した所と反応する所がずれる)。index.html の touch-action と 10-core.jsx の見張り(2026-11-11)
+  { re: /^monster-hero\/(index\.html|src\/parts\/10-core\.jsx)$|^tools\/boot\/page-zoom-guard-check\.js$/, checks: ['boot/page-zoom-guard-check.js'], why: 'ページが拡大されない・ずれを見張りが見つけるか' },
   // 新モード(tactics)の分岐が入っているファイル。ファイル名の語(app・parts)では拾えないので名指しする。
   // 「isTacticsMode で締めたつもり」が既存5モードへ漏れると、遊んでいる人の記録に直に効く
   { re: /^monster-hero\/src\/parts\/(10-core|22-enemy-and-bond-entries|32-tactics-units|60-app|71-screen-battle)\.jsx$/,
