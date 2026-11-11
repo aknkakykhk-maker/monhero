@@ -9,7 +9,7 @@
 //   node tools/run-checks.js --changed --plan       … 選んだ検査を出すだけ(実行しない)
 //   node tools/run-checks.js --area always          … いつも回す短い検査(run-checks-always.json。--changed でも毎回回す)
 //   node tools/run-checks.js --measure-always       … いつも回す短い検査の一覧を測り直して書き直す(ブラウザを使わず1秒未満で通るもの)
-//   オプション: --limit N(選ぶ上限。既定40) --wide(当たった領域を丸ごと) --base <ref>(そのrefとの差も見る)
+//   オプション: --limit N(選ぶ上限。既定60・2026-11-11 に40から。名指しで読む検査はこの外) --wide(当たった領域を丸ごと) --base <ref>(そのrefとの差も見る)
 //   オプション: --skip-file <ファイル>(1行1検査。# で始まる行は無視。その検査を回さない)
 //   オプション: --no-server(実ブラウザ検査用の配信を起動しない) --timeout <秒> --json <出力先>
 //   --changed は、検査が変えたファイルを名指しで読んでいれば必ず選び(上限の外)、ふつう組に分けて同時に回す(2026-11-11。
@@ -321,7 +321,7 @@ function planForChanges(files, areas, wide, limit, depIndex) {
 }
 
 function parseArgs(argv) {
-  const opts = { areas: [], list: false, server: true, timeoutSec: 600, json: null, changed: false, plan: false, wide: false, base: null, limit: 40 };
+  const opts = { areas: [], list: false, server: true, timeoutSec: 600, json: null, changed: false, plan: false, wide: false, base: null, limit: 60 };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--list') opts.list = true;
