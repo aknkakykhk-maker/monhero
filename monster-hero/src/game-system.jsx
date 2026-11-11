@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fcde78cee651b4f3
+// generated-sha256: 74e858b6b80447e5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -37126,7 +37126,7 @@ function MultiStampEditor({ onClose, onShop = null }) {
   const max = st.slots.length;
   return (
     <div data-multi-stamp-editor className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 landscape:items-center" onClick={onClose}>
-      <div className="flex max-h-[96dvh] w-full max-w-[880px] flex-col overflow-hidden rounded-t-2xl border-t-2 border-cyan-400 bg-slate-950 text-white landscape:rounded-2xl landscape:border-2" style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }} onClick={(e) => e.stopPropagation()}>
+      <div className="flex max-h-[96dvh] [[data-mh-view-rotation=true]_&]:max-h-[94vw] w-full max-w-[880px] flex-col overflow-hidden rounded-t-2xl border-t-2 border-cyan-400 bg-slate-950 text-white landscape:rounded-2xl landscape:border-2" style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }} onClick={(e) => e.stopPropagation()}>
         <div className="flex shrink-0 items-center gap-2 px-3 pb-1 pt-2">
           <b className="flex-1 text-[15px] text-cyan-100">😊 マイスタンプ</b>
           {onShop && <button type="button" data-multi-stamp-shop onClick={onShop} className="min-h-[36px] rounded-xl bg-slate-800 px-2.5 text-[12px] font-black text-amber-100">🛒 買い足す</button>}
