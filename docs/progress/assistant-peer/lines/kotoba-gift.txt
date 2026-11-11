@@ -1,0 +1,226 @@
+# 道具・家具のプレゼントの台本(コトバ 2026-11-08)。注文: lines/ORDER-GIFT.md(オクリモノ)
+# gift: みゅあ・きき・ももすけ・ドラ × 道具10種類 × 2本。hint: 8人 × 好きなもの6つ(道具3+家具3)。furn: 同じ4人 × 家具12種類
+# 書き方は注文書の見本どおり。gift・hint・furn の行は「表情 セリフ」(話すのは見出しの人)。苦手な物でも嫌がらない・{name} を責めない
+
+## gift(2人に道具を贈ったときの、その人の1行。相手は {c})
+
+gift mua item=basket like=mid | happy おやつバスケットだ！ {c}、どれから食べる？♪
+gift mua item=basket like=mid | excited {name}、ありがと！ 中身いっぱいぢゃん♪
+gift mua item=misanga like=like | excited おそろいのミサンガ！？ {c}、いますぐつけよ！
+gift mua item=misanga like=like | happy まぢうれしい…！ {name}、センスよすぎぢゃん♪
+gift mua item=cake like=like | excited ケーキだ〜！ {c}、どっちが大きいほう取る？ｗ
+gift mua item=cake like=like | wink はんぶんこケーキ！？ {name}、あたしの好きなのわかってるぢゃん♪
+gift mua item=onigiri like=mid | happy ほかほかおにぎり！ {c}、あったかいうちに食べよ♪
+gift mua item=onigiri like=mid | normal {name}、ありがと！ 具はなにかな〜？
+gift mua item=tea like=mid | happy ティーセット、なんかおしゃれ〜！ {c}、お茶会しよ♪
+gift mua item=tea like=mid | normal {name}、ありがと！ カップかわいいぢゃん
+gift mua item=earphone like=mid | happy かたみみイヤホン！ {c}、いっしょに聞こ♪
+gift mua item=earphone like=mid | normal {name}、ありがと！ どの曲聞く？
+gift mua item=puzzle like=bad | troubled パズル…！ {c}、あたし考えるの苦手だから、半分お願いｗ
+gift mua item=puzzle like=bad | troubled {name}、ありがと！ …むずかしそうだけど、がんばってみる！
+gift mua item=sleeve like=bad | troubled スリーブ…カードに付けるやつだっけ？ {c}、教えて〜ｗ
+gift mua item=sleeve like=bad | normal {name}の気持ちはうれしい！ どう使うか、{c}に聞いてみる♪
+gift mua item=cheki like=like | excited 思い出チェキ！？ {c}、いまの顔で撮ろ！
+gift mua item=cheki like=like | happy まぢ最高！ {name}、あとでいっしょに撮ろうね♪
+gift mua item=flower like=mid | happy ちいさな花束、かわいい〜！ {c}、部屋に飾ろ♪
+gift mua item=flower like=mid | normal {name}、ありがと！ いい香りするぢゃん
+gift kiki item=basket like=mid | happy まあ、おやつがたくさん。{c}、いっしょにいただきましょう
+gift kiki item=basket like=mid | normal {name}、ありがとうございまつ。選ぶのが楽しいでつね
+gift kiki item=misanga like=mid | happy おそろいのミサンガでつか。{c}、手首を出してくださいな
+gift kiki item=misanga like=mid | normal {name}、ありがとうございます。大事につけまつね
+gift kiki item=cake like=mid | happy はんぶんこケーキ…{c}、きれいに切り分けまつね♪
+gift kiki item=cake like=mid | normal {name}、ありがとうございます。甘い香りがしますね
+gift kiki item=onigiri like=bad | troubled まあ、おにぎり…。{c}、具の多いほうをどうぞ
+gift kiki item=onigiri like=bad | normal {name}のお気持ち、うれしいでつ。少しずつ、いただきまつね
+gift kiki item=tea like=like | excited まあ、ティーセット…！ {c}、さっそくお茶をいれまつね♪
+gift kiki item=tea like=like | happy {name}、なんてすてきな…。いちばんうれしい贈り物でつ
+gift kiki item=earphone like=bad | troubled かたみみイヤホン…。{c}、つけ方を教えていただけますか？
+gift kiki item=earphone like=bad | normal {name}、ありがとうございます。音楽は、少しだけ聞いてみまつね
+gift kiki item=puzzle like=like | excited ふたりで解くパズル…！ {c}、角から埋めていきましょう♪
+gift kiki item=puzzle like=like | happy {name}、うれしいでつ。じっくり考えるのは好きなんです
+gift kiki item=sleeve like=mid | wink おそろいのスリーブでつか。{c}、攻撃のカードに付けましょう
+gift kiki item=sleeve like=mid | normal {name}、ありがとうございます。カードがきれいになりますね
+gift kiki item=cheki like=mid | happy 思い出チェキでつか。{c}、少し近くに寄ってくださいな
+gift kiki item=cheki like=mid | normal {name}、ありがとうございます。写真、大切にしまつ
+gift kiki item=flower like=like | excited まあ、花束…！ {c}、いちばん日の当たる窓に飾りましょう
+gift kiki item=flower like=like | happy {name}、ありがとうございまつ。お花は、心が整いまつね♪
+gift momosuke item=basket like=mid | excited おやつバスケット！！ {c}、ももが先に選ぶね！！
+gift momosuke item=basket like=mid | happy {name}、ありがと！！ 中身ぜんぶおいしそうw
+gift momosuke item=misanga like=mid | happy おそろいのミサンガ！！ {c}、ももとおそろいだよ♡
+gift momosuke item=misanga like=mid | normal {name}、ありがと！！ ライブでもつけるね！！
+gift momosuke item=cake like=like | excited ケーキ！！ {c}、ももがいちごのほうね！！♡
+gift momosuke item=cake like=like | wink {name}、わかってる〜！！ ももの大好物じゃん♡
+gift momosuke item=onigiri like=mid | happy おにぎり！！ {c}、ほかほかのうちに食べよ！！
+gift momosuke item=onigiri like=mid | normal {name}、ありがと！！ 練習のあとにちょうどいいw
+gift momosuke item=tea like=bad | troubled ティーセット…！！ {c}、お茶、いれてくれる？w
+gift momosuke item=tea like=bad | troubled {name}、ありがと！！ お茶はよくわかんないけど…飲んでみる！！
+gift momosuke item=earphone like=like | excited かたみみイヤホン！！ {c}、ももの曲いっしょに聞こ♡
+gift momosuke item=earphone like=like | wink {name}、これほしかったやつ！！ さすがw
+gift momosuke item=puzzle like=bad | troubled パズル…！！ {c}、ももは応援係でいい？w
+gift momosuke item=puzzle like=bad | troubled {name}の気持ちはうれしい！！ …ピース多すぎない？w
+gift momosuke item=sleeve like=mid | happy おそろいスリーブ！！ {c}、メタルナーのカードに付けよ！！
+gift momosuke item=sleeve like=mid | normal {name}、ありがと！！ ぴかぴかでかわいい♡
+gift momosuke item=cheki like=like | excited チェキ！！ {c}、ももの決めポーズで撮ろ！！♡
+gift momosuke item=cheki like=like | happy {name}、最高のプレゼント！！ いっぱい撮るね！！
+gift momosuke item=flower like=mid | wink お花！！ {c}、ももの部屋にも1本ちょうだいw
+gift momosuke item=flower like=mid | happy {name}、ありがと！！ かわいい色だね♡
+gift dra item=basket like=like | excited おやつバスケットか！ {c}、おでは全部の味を食べるぞ
+gift dra item=basket like=like | happy {name}、わかってるな！ これは最高の贈り物だ、えへへ
+gift dra item=misanga like=mid | normal おそろいのミサンガか。{c}、つけてやるから腕を出せ
+gift dra item=misanga like=mid | happy {name}、ありがとな。切れないように大事にするぞ
+gift dra item=cake like=like | excited はんぶんこケーキ！ {c}、おでは大きいほうでいいか？
+gift dra item=cake like=like | happy {name}、ケーキとは気がきくな。うまそうだぞ
+gift dra item=onigiri like=like | excited ほかほかおにぎり！ {c}、あったかいうちに食おう
+gift dra item=onigiri like=like | happy {name}、ありがとな。おで、おにぎりには目がないんだ
+gift dra item=tea like=mid | normal ティーセットか。{c}、おでの分もいれてくれるか
+gift dra item=tea like=mid | happy {name}、ありがとな。たまにはお茶もいいもんだ
+gift dra item=earphone like=mid | normal かたみみイヤホンか。{c}、何を聞く？
+gift dra item=earphone like=mid | happy {name}、ありがとな。おでの好きな曲、教えてやるぞ
+gift dra item=puzzle like=bad | troubled パズルか…。{c}、おでは端っこ担当でいいか？
+gift dra item=puzzle like=bad | troubled {name}、ありがとな。…考えてたら、眠くなりそうだぞ
+gift dra item=sleeve like=mid | normal おそろいのスリーブか。{c}、デッキに付けてみるか
+gift dra item=sleeve like=mid | happy {name}、ありがとな。カードが長持ちするぞ
+gift dra item=cheki like=mid | surprise チェキか。{c}、おでの顔、ちゃんと入るか？
+gift dra item=cheki like=mid | happy {name}、ありがとな。いい顔で撮るぞ、えへへ
+gift dra item=flower like=bad | troubled 花束か…。{c}、どこに飾ればいいと思う？
+gift dra item=flower like=bad | normal {name}の気持ちはうれしいぞ。…水やり、忘れないようにしないとな
+
+## hint(仲良し度の段が上がったときに、好きなもの1つをそれとなく教える1行)
+
+hint mua item=misanga | wink 最近、おそろいのものがほしいんだよね〜♪
+hint mua item=cake | happy 甘いもの、はんぶんこするのが好きなんだ〜♪
+hint mua item=cheki | excited 思い出、写真に残すの好きなの。チェキとか、まぢほしい♪
+hint mua item=bear | happy 部屋に、ぎゅってできるものがほしいな〜
+hint mua item=heartmirror | wink コーデ見る鏡、もっとかわいいのほしいかも♪
+hint mua item=mirrorball | excited 部屋でもキラキラしたいんだよね〜ｗ
+hint kiki item=tea | happy お茶の時間が、いちばん好きなんでつ♪
+hint kiki item=puzzle | wink じっくり考えるもの、好きでつよ。パズルとか
+hint kiki item=flower | happy お花があると、気持ちが落ち着きまつね
+hint kiki item=plant | normal 部屋に緑があったら、すてきでしょうね…
+hint kiki item=bookshelf | troubled 本が増えてきて、置き場所に困っていまつ
+hint kiki item=windbell | happy 涼しい音がするもの、すてきでつね♪
+hint momosuke item=cake | excited ケーキって、もものいちばんの大好物なの！！
+hint momosuke item=earphone | wink いっしょに曲聞けるやつ、ほしいな〜♡
+hint momosuke item=cheki | excited かわいく撮れるカメラ、ほしい！！
+hint momosuke item=record | happy 部屋でも、いい音で曲聞きたい！！
+hint momosuke item=heartmirror | wink ももの部屋、ハートの鏡があったら完璧なのに♡
+hint momosuke item=mirrorball | excited ステージみたいに光るやつ、部屋にほしいw
+hint dra item=basket | happy おやつがいろいろ入ってるやつ、好きなんだよな
+hint dra item=cake | happy ケーキなら、おではいつでも食べられるぞ
+hint dra item=onigiri | happy あったかいおにぎり、最高なんだよな
+hint dra item=sofa | normal ごろごろできる、ふかふかの椅子がほしいな
+hint dra item=bear | wink でっかいぬいぐるみ、ちょっと気になるんだよな、えへへ
+hint dra item=nyacushion | happy ニャーみたいな、もふもふのクッションがほしいぞ
+hint atsu item=misanga | wink おそろいの、なんかつけるやつ、いいよな笑
+hint atsu item=onigiri | happy 腹へったときは、やっぱおにぎりだよな！
+hint atsu item=earphone | normal 曲をいっしょに聞けるやつ、ほしいんだよな笑
+hint atsu item=sofa | happy どかっと座れるソファ、ほしいな！
+hint atsu item=record | normal 部屋でいい音で曲かけたいんだよな笑
+hint atsu item=trophy | excited 勝ったときのやつ、飾る棚がほしいんだよな！
+hint kyuko item=tea | happy お茶飲みながら読むの、好きなんだよねぇ
+hint kyuko item=earphone | normal 片耳で音楽聞きながら考えるの、いいんだよねぇ
+hint kyuko item=puzzle | wink ふたりで解くやつ、楽しそうじゃない？笑
+hint kyuko item=nyacushion | happy ニャーみたいなクッション、あったらなぁ
+hint kyuko item=starpic | normal 星空の絵とか、部屋に飾りたいなぁ
+hint kyuko item=bookshelf | troubled 本、床に積んじゃってるんだよねぇ笑
+hint sorashido item=onigiri | happy お腹がへったら、おにぎりがいちばん効率いいんですよね
+hint sorashido item=puzzle | excited パズルは計算みたいで好きなんですよ
+hint sorashido item=sleeve | wink カードを守るスリーブ、おそろいだと燃えますね
+hint sorashido item=starpic | happy 星の並びって、表みたいできれいなんですよね
+hint sorashido item=trophy | excited 勝った記録、棚に並べたいんですよねー
+hint sorashido item=lantern | happy 星みたいに光る灯り、でーじいいと思いませんか？
+hint erubin item=tea | happy 落ち着いてお茶する時間、いいよね
+hint erubin item=sleeve | normal カードにつけるスリーブ、おそろいだといいね
+hint erubin item=flower | happy お花があると、部屋が明るくなるよね
+hint erubin item=plant | normal 部屋に植物があると、落ち着くと思うんだ
+hint erubin item=lantern | happy やさしい灯りのランタン、すてきだよね
+hint erubin item=windbell | happy 風鈴の音って、いいよね
+
+## furn(家具を自分の部屋にもらったときの1〜2行)
+
+furn mua item=sofa like=mid | happy ふかふかソファ！ ごろごろしながらおしゃべりできるぢゃん♪
+furn mua item=bear like=like | excited くまのぬいぐるみ！？ まぢかわいい…！ | happy 今日から、ぎゅってして寝る〜♪
+furn mua item=plant like=mid | normal 観葉植物、部屋がおしゃれになるね！ 水やり、がんばる♪
+furn mua item=record like=mid | happy レコードプレーヤー！ なんか大人っぽいぢゃん♪
+furn mua item=nyacushion like=mid | happy ニャーのクッション、もちもちしてる〜！
+furn mua item=starpic like=mid | normal 星空の絵、きれい…！ 部屋がちょっと落ち着くかも
+furn mua item=trophy like=mid | wink トロフィー棚！ あたしの記録、ここに並べよっかな♪
+furn mua item=bookshelf like=bad | troubled 本棚…！ あたし、本あんまり読まないけど… | normal {name}の気持ちはうれしい！ コーデの雑誌、並べてみる♪
+furn mua item=heartmirror like=like | excited ハートの鏡！？ まぢで理想のやつぢゃん！ | happy 毎日コーデ見るの、もっと楽しくなる♪
+furn mua item=lantern like=mid | happy 星のランタン、光るとかわいい〜！
+furn mua item=mirrorball like=like | excited ミラーボール！！ 部屋がライブ会場になるぢゃん！ｗ | happy {name}、ありがと♪ いっしょに踊ろ！
+furn mua item=windbell like=mid | normal 風鈴、ちりんって鳴るの、いいね〜♪
+furn kiki item=sofa like=mid | happy ふかふかでつね。本を読むのに、ちょうどよさそうでつ
+furn kiki item=bear like=mid | happy まあ、くまのぬいぐるみ。棚の上に、座っていただきましょう
+furn kiki item=plant like=like | excited まあ、観葉植物…！ 部屋に緑があるのは、うれしいでつ | happy 毎日、お水をあげまつね♪
+furn kiki item=record like=mid | normal レコードプレーヤーでつか。静かな曲を、かけてみまつね
+furn kiki item=nyacushion like=mid | happy ニャーさんのクッション、やわらかいでつね
+furn kiki item=starpic like=mid | happy 星空の絵…静かな気持ちになりますね
+furn kiki item=trophy like=mid | wink トロフィー棚でつか。火力の記録を、並べましょう♪
+furn kiki item=bookshelf like=like | excited 小さな本棚…！ ちょうど本の置き場所に困っていたんでつ | happy {name}、ありがとうございまつ。大切に使いまつ
+furn kiki item=heartmirror like=mid | normal ハートの鏡でつか。身だしなみを整えるのに、よさそうでつ
+furn kiki item=lantern like=mid | happy 星のランタン…やさしい灯りでつね
+furn kiki item=mirrorball like=bad | troubled まあ、ミラーボール…。私の部屋が、にぎやかになりまつね | normal {name}のお気持ち、うれしいでつ。たまに回してみまつね
+furn kiki item=windbell like=like | excited 風鈴…！ 涼しい音でつね♪ | happy 窓辺に下げて、毎日聞きまつ
+furn momosuke item=sofa like=mid | happy ふかふかソファ！！ ライブのあとはここで休むね♡
+furn momosuke item=bear like=mid | happy くまのぬいぐるみ！！ ももの部屋のマスコットにする！！
+furn momosuke item=plant like=bad | troubled 観葉植物…！！ もも、お世話できるかなw | normal {name}の気持ちはうれしい！！ がんばって水あげる！！
+furn momosuke item=record like=like | excited レコードプレーヤー！！ ももの曲、いい音で聞ける！！♡ | wink {name}、さすがすぎw
+furn momosuke item=nyacushion like=mid | happy ニャーのクッション、もふもふ〜！！
+furn momosuke item=starpic like=mid | normal 星空の絵！！ ステージの照明みたいできれい♡
+furn momosuke item=trophy like=mid | excited トロフィー棚！！ ももの優勝カップ、ここに並べる！！
+furn momosuke item=bookshelf like=mid | normal 本棚！！ ももの楽譜、ここにしまおっと
+furn momosuke item=heartmirror like=like | excited ハートの鏡！！ もものためにあるような鏡じゃん♡ | happy 毎日ここでポーズの練習する！！
+furn momosuke item=lantern like=mid | happy 星のランタン、きらきらでかわいい♡
+furn momosuke item=mirrorball like=like | excited ミラーボール！！ 部屋がステージになっちゃう！！ | wink {name}、いちばん前で見ててねw
+furn momosuke item=windbell like=mid | normal 風鈴！！ ちりんって鳴るの、リズムっぽいw
+furn dra item=sofa like=like | excited おお、ソファ！ ふかふかだな… | happy {name}、ありがとな。ここが、おでの特等席だ
+furn dra item=bear like=like | excited でっかいくまか！ | happy おで、こういうの好きなんだよな、えへへ。大事にするぞ
+furn dra item=plant like=mid | normal 観葉植物か。水やり、忘れないようにしないとな
+furn dra item=record like=mid | happy レコードプレーヤーか。おでの好きな曲、かけてみるか
+furn dra item=nyacushion like=like | excited ニャーのクッション！ もふもふだぞ… | happy {name}、わかってるな。ずっと抱えていられるぞ
+furn dra item=starpic like=mid | normal 星空の絵か。見てると、眠くなってくるな
+furn dra item=trophy like=bad | troubled トロフィー棚か…。おで、飾るものあったかな | normal {name}の気持ちはうれしいぞ。決勝のメダルでも並べるか
+furn dra item=bookshelf like=mid | normal 本棚か。攻略の本を並べておくか
+furn dra item=heartmirror like=mid | surprise ハートの鏡か。…おでの顔、ちょっとかわいく見えるな
+furn dra item=lantern like=mid | happy 星のランタンか。部屋があったかくなるな
+furn dra item=mirrorball like=mid | surprise ミラーボールか！ おでの部屋、ずいぶん派手になるな
+furn dra item=windbell like=mid | happy 風鈴か。ちりんって、いい音だな
+
+# 家具8種類(2026-11-11 ココロ2・docs/progress/assistant-life/furn8-lines.json から。ヘヤヅクリ2が入れた。窓辺の花は windowflower)
+furn mua item=clock like=mid | happy ふりこ時計だー！ {name}、ありがとー♪
+furn mua item=map like=mid | happy 冒険の地図！ かべに貼ったら、まぢ映えるぢゃん♪
+furn mua item=guitar like=mid | happy ギターだ！ あたしも弾けるかなー？ ありがとー✨
+furn mua item=tv like=mid | happy レトロテレビ、かたちがかわいいー！ ありがと♪
+furn mua item=windowflower like=like | excited わー、お花！ まぢうれしい！ 窓辺がかわいくなるよー✨
+furn mua item=fishbowl like=mid | happy 金魚ばちだ！ ずっと見ちゃいそうー♪ ありがとー
+furn mua item=pendant like=mid | happy ペンダントライト！ お部屋があったかくなるねー♪
+furn mua item=garland like=mid | happy ガーランドだー！ パーティーみたいぢゃん♪ ありがと✨
+furnuse mua item=windowflower | お花にお水あげ中♪
+furn kiki item=clock like=like | excited ふりこ時計…！ とてもうれしいでつ。{name}、大切にしまつね♪
+furn kiki item=map like=mid | happy 冒険の地図でつね。ありがとうございまつ♪
+furn kiki item=guitar like=mid | happy ギターでつか。少しずつ練習してみまつね
+furn kiki item=tv like=bad | troubled レトロテレビでつか…お気持ちはうれしいでつ。そっと置いておきまつね
+furn kiki item=windowflower like=mid | happy 窓辺のお花、ありがとうございまつ♪ 毎朝お水をあげまつね
+furn kiki item=fishbowl like=mid | happy 金魚ばち、涼しげでつね。ありがとうございまつ
+furn kiki item=pendant like=mid | happy ペンダントライト、本が読みやすくなりまつ♪
+furn kiki item=garland like=mid | happy ガーランドでつね。お部屋が明るくなりまつ♪
+furnuse kiki item=clock | ふりこをながめ中でつ
+furn momosuke item=clock like=mid | happy ふりこ時計じゃん！！ ありがとw リズム取れそう
+furn momosuke item=map like=mid | happy 冒険の地図！！ ももの行き先、決めちゃお♡
+furn momosuke item=guitar like=like | excited ギター！！ まって、ももこれ欲しかったの！！ すご♡
+furn momosuke item=tv like=mid | happy レトロテレビ、かわいいじゃんw ありがと！！
+furn momosuke item=windowflower like=mid | happy お花だ！！ ももの部屋がかわいくなるね♡
+furn momosuke item=fishbowl like=mid | happy 金魚ばち！！ ももが名前つけてあげるw
+furn momosuke item=pendant like=mid | happy ペンダントライト！！ ももにスポットライトだね♡
+furn momosuke item=garland like=mid | happy ガーランド！！ ライブ会場みたいじゃんw
+furnuse momosuke item=guitar | ギターで作曲中！！
+furn dra item=clock like=bad | troubled ふりこ時計か…音で起きちまいそうだな。でも気持ちはうれしいぞ
+furn dra item=map like=mid | happy 冒険の地図か。ながめてるだけで行った気になれるな
+furn dra item=guitar like=mid | happy ギターか。おでも弾いてみるかな。ありがとな
+furn dra item=tv like=like | excited レトロテレビ！ ごろごろしながら見られるな。うれしいぞ、えへへ
+furn dra item=windowflower like=mid | happy 窓辺の花か。水やり、忘れないようにするからな
+furn dra item=fishbowl like=mid | happy 金魚ばちか。のんびり泳いでて、おでみたいだな
+furn dra item=pendant like=mid | happy ペンダントライトか。部屋があったかくなるな。ありがとな
+furn dra item=garland like=mid | happy ガーランドか。にぎやかでいいな。えへへ
+furnuse dra item=tv | テレビ見てごろごろ中

@@ -33,6 +33,8 @@ const {assignSideFlickDirs}=require('./rhythm-side-flick.js');
 const {trackFocus,focusBoost}=require('./rhythm-chart-focus.js');
 const {lowLagOf,isLowHit}=require('./rhythm-chart-low-lag.js');
 const {detectRepeats}=require('./rhythm-chart-repeats.js');
+const {chorusScores}=require('./rhythm-chart-chorus.js');
+const {detectChartMotifs}=require('./rhythm-chart-motifs.js');
 const {DEFAULT_PLAY_TUNING,playTuningForRevision}=require('./rhythm-chart-play-tuning.js');
 const {tempoWarpForRevision}=require('./rhythm-chart-tempo-warp.js');
 const {fadingEnding}=require('./rhythm-chart-ending.js');
@@ -46,6 +48,11 @@ const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&
 // 手の流れを狙う配置(2026-10-21 社長「新しい譜面から流れを狙う」)。既定は切。曲の一覧に flowPlacement:true を書いた曲(新曲)か、
 //   --flow を付けたときだけ効く(--no-flow で切る)。切のときは今までと1バイトも同じ譜面になる(公開中の曲は作り直さない・⑩-2)
 let FLOW_ON=process.argv.includes('--flow')&&!process.argv.includes('--no-flow');
+// 盛り上がりに合わせてノーツの量を配る(引き出し R6・2026-11-11)。既定は切(2026-11-11 社長の決定 A: 既定にしない・曲ごとに使う)。
+//   曲の一覧に energySpread:true を書いた曲か、--energy-spread を付けたときだけ効く(--no-energy-spread で切る)
+//   強さは2つ: true=順をそろえるだけ(静かな区切りが、もっと盛り上がる区切りより重い所を直す) / 'strong'=谷もはっきり(静かな区切りを、盛り上がりに見合う量まで軽くする)。
+//   --energy-spread strong / 曲の一覧の energySpread:'strong'
+let ENERGY_SPREAD_ON=process.argv.includes('--energy-spread')&&!process.argv.includes('--no-energy-spread')?(arg('--energy-spread')==='strong'?'strong':true):false;
 const write=process.argv.includes('--write');
 const only=arg('--difficulty');
 const explain=arg('--explain');
@@ -494,7 +501,10 @@ let registryEntry=null;
 {
   const registryFile=path.join(ROOT,'tools/mode/authoring/rhythm-song-registry.json');
   if(fs.existsSync(registryFile)){
-    const entry=(JSON.parse(fs.readFileSync(registryFile,'utf8')).songs||{})[trackId];
+    let entry=(JSON.parse(fs.readFileSync(registryFile,'utf8')).songs||{})[trackId];
+    // --song-settings '<JSON>' … 曲の一覧の設定を、この1回だけ上書きして試す(2026-11-11・rhythm-chart-tune.js が狙いに合うつまみを探すのに使う)。
+    //   値が null の項目は外す。一覧のファイルは書き換えない。付けなければ今までと同じ
+    {const raw=arg('--song-settings');if(raw){const over=JSON.parse(raw);entry={...(entry||{})};for(const [k,v] of Object.entries(over)){if(v===null)delete entry[k];else entry[k]=v;}}}
     const pinned=Number(entry&&entry.challengeFactor);
     if(Number.isFinite(pinned)&&pinned>0)audio.challengeFactor=pinned;
     // 曲ごとの「激しさ」。書いた曲だけに効く（書いていない曲は今までと1音も変わらない）。
@@ -522,6 +532,7 @@ let registryEntry=null;
     {const cli=Number(arg('--hell-density',NaN));if(Number.isFinite(cli)&&cli>=.5&&cli<=2&&cli!==1)audio.hellDensity=cli;}
     registryEntry=entry||null;
     if(entry&&entry.flowPlacement===true&&!process.argv.includes('--no-flow'))FLOW_ON=true;
+    if(entry&&(entry.energySpread===true||entry.energySpread==='strong')&&!process.argv.includes('--no-energy-spread')&&!ENERGY_SPREAD_ON)ENERGY_SPREAD_ON=entry.energySpread;
   }
 }
 // 譜面の作り方のリビジョン(rhythm-chart-v3-revision.js)。2026-10-12 から最新リビジョンだけを作る
@@ -800,7 +811,7 @@ const intensityPosition=bar=>{
 // Rev.18: 繰り返しの見分け(rhythm-chart-repeats.js)。解析の区切りの繰り返し(repeatOf)が無い小節にだけ、
 //   4つの手がかり(メロディ・リズム・低音・音の層)のうち3つが「前にほぼ同じ4小節があった」と言う所の元の小節を足す。
 //   解析の繰り返しがある小節はそのまま(今まで効いていた所は変えない)。解析ファイルは作り直さない
-const extraRepeat=(()=>{
+const layersForTrack=(()=>{
   let layers=null;
   try{
     const layersFile=authoring(`${dashed}-v3-layers.json`);
@@ -812,20 +823,42 @@ const extraRepeat=(()=>{
       if(data.basedOn&&data.basedOn.sha256===sha)layers=data;
     }
   }catch{layers=null;}
+  return layers;
+})();
+const extraRepeat=(()=>{
+  const layers=layersForTrack;
   const found=detectRepeats(audio,layers);
   const sourceByBar=new Map([...found.sourceByBar].filter(([bar])=>{const section=sectionForBar(bar);return !section||section.repeatOf==null;}));
   return {sourceByBar,falsePositiveRate:found.falsePositiveRate};
 })();
+// Rev.38: 短い動機(1〜2小節)の写し(rhythm-chart-motifs.js)。区切りの繰り返しも4小節の繰り返しも付いていない小節にだけ、
+//   「前に、同じリズム(その難易度で拾った音の位置が同じ)で、音の上下も似ている1〜2小節があった」所の元の小節を足す。
+//   高さが違えば、写すときに形ごと左右へずらす(shift)。2回目は左右反転・3回目は発展、の一巡は4小節の繰り返しと同じ。
+//   拾う音が決まってから難易度ごとに見分ける(buildChart の中の findMotifs)ので、音を拾う段には効かない(レーン・種類の写しにだけ効く)。--no-motifs で使わない
+const motifsOn=!process.argv.includes('--no-motifs');
+let motifRepeat=new Map();
+const MOTIF_SHIFT_MAX=2;
+// 動機の小節を写すときのレーンのずらし幅(音が高いほど右。解析の高さ0〜1をレーンの幅へ直す)
+const motifLaneShift=bar=>{const motif=motifRepeat.get(bar);return motif?Math.max(-MOTIF_SHIFT_MAX,Math.min(MOTIF_SHIFT_MAX,Math.round(motif.shift*(LANES-1)))):0;};
+const addedSourceOf=bar=>extraRepeat.sourceByBar.has(bar)?extraRepeat.sourceByBar.get(bar):motifRepeat.has(bar)?motifRepeat.get(bar).source:null;
 // 同じ元を持つ足した小節の中で何番目か(1から)。フレーズの写しの反転・発展の回を数えるのに使う
-const extraRepeatOrder=(()=>{
+const buildRepeatOrder=()=>{
   const order=new Map(),seen=new Map();
-  for(const bar of [...extraRepeat.sourceByBar.keys()].sort((a,b)=>a-b)){const source=extraRepeat.sourceByBar.get(bar);const n=(seen.get(source)||0)+1;seen.set(source,n);order.set(bar,n);}
+  for(const bar of [...extraRepeat.sourceByBar.keys(),...motifRepeat.keys()].sort((a,b)=>a-b)){const source=addedSourceOf(bar);const n=(seen.get(source)||0)+1;seen.set(source,n);order.set(bar,n);}
   return order;
-})();
+};
+let extraRepeatOrder=buildRepeatOrder();
+// 難易度ごと: 拾った音の位置(小節 → 位置の Set)から短い動機を見分けて、写しの元に足す(空の Map を渡すと消す)
+const findMotifs=offsetsByBar=>{
+  motifRepeat=motifsOn&&offsetsByBar?detectChartMotifs(audio,layersForTrack,offsetsByBar,
+    {skip:bar=>{const section=sectionForBar(bar);return (!!section&&section.repeatOf!=null)||extraRepeat.sourceByBar.has(bar);}}):new Map();
+  extraRepeatOrder=buildRepeatOrder();
+  return motifRepeat.size;
+};
 // 繰り返しの区切り（形を使い回すのに使う）
 const repeatSourceBar=bar=>{
   const section=sectionForBar(bar);
-  if(!section||section.repeatOf==null)return extraRepeat.sourceByBar.has(bar)?extraRepeat.sourceByBar.get(bar):null;
+  if(!section||section.repeatOf==null)return addedSourceOf(bar);
   return section.repeatOf+(bar-section.startBar);
 };
 // その小節が「同じフレーズの何回目の繰り返しか」(Rev.2のフレーズの写し)。元の小節は0。
@@ -909,10 +942,26 @@ const knowledgeContext=(grid,onset,extra={})=>{
 //   outro  … 曲の終わりの、盛り上がりが落ちた区切り(収束)
 //   body   … それ以外(基本の語彙)
 // 実際の曲にその構造が無ければ、該当なし(body)のままになる。固定の型は押し付けない。
+// Rev.38: サビを見つける(rhythm-chart-chorus.js)。盛り上がる区切り(climax)を、音の大きさの順位だけでなく
+//   「サビらしさ」(盛り上がり・繰り返し・歌の帯・前からの上がり・位置)の点数で決める。大きいだけの間奏・つなぎは climax にしない。
+//   サビが見つからない曲は今までの決め方(盛り上がりの上位3割・0.5以上)のまま。--no-chorus で使わない
+const chorusOn=!process.argv.includes('--no-chorus');
+const chorusInfo=chorusOn?chorusScores(audio,layersForTrack):{sections:[],chorus:[],hasChorus:false};
+const chorusStartBars=new Set(chorusInfo.chorus.map(s=>s.startBar));
 const sectionRoles=(()=>{
   const list=Array.isArray(structure.sections)?structure.sections:[];
   const roles=new Map();
   if(!list.length)return roles;
+  if(chorusInfo.hasChorus){
+    list.forEach((section,index)=>{
+      let role='body';
+      if(chorusStartBars.has(section.startBar))role='climax';
+      else if(index===0&&section.intensity<.5)role='intro';
+      else if(index===list.length-1&&section.intensity<.5&&list.length>=3)role='outro';
+      roles.set(section,role);
+    });
+    return roles;
+  }
   const sorted=list.map(s=>s.intensity).sort((a,b)=>a-b);
   const high=sorted[Math.floor(sorted.length*.7)]??1;
   list.forEach((section,index)=>{
@@ -990,6 +1039,31 @@ const budgetPosition=(()=>{
   });
   return bar=>Math.max(intensityPosition(bar),lifted.get(bar)??0);
 })();
+// Rev.38: サビの前の「溜め」。サビに入る直前の1小節(前の区切りがサビでないとき)は取り分を軽くして、サビの頭を引き立てる。
+//   曲全体のノーツ数は変えない(軽くした分はほかの小節へ回る)。見せ場(左右対称の同時フリック・両手スライド・端から端のSLIDE)もこの小節には置かない
+const CHORUS_TAME=Object.freeze({bars:1,scale:.6,showShare:.7});
+const tameBars=(()=>{
+  const set=new Set();
+  if(!chorusInfo.hasChorus)return set;
+  const list=(Array.isArray(structure.sections)?structure.sections:[]).slice().sort((a,b)=>a.startBar-b.startBar);
+  list.forEach((section,index)=>{
+    const prev=list[index-1];
+    if(sectionRoles.get(section)!=='climax'||!prev||sectionRoles.get(prev)==='climax')return;
+    for(let k=1;k<=Math.min(CHORUS_TAME.bars,prev.endBarExclusive-prev.startBar-1);k++)set.add(section.startBar-k);
+  });
+  return set;
+})();
+const inChorusBar=bar=>chorusInfo.hasChorus&&sectionRoleForBar(bar)==='climax';
+// 見せ場をサビへ集める: 狙いの数の showShare(7割・切り上げ)までを先にサビの候補から選び、残りをほかから選ぶ。
+//   溜めの小節の候補は使わない。サビの無い曲は今までどおり散らして選ぶ。candidates は spreadPick と同じ番号の並び、barOf は番号→小節
+const showpiecePick=(candidates,count,minGap,barOf)=>{
+  if(!chorusInfo.hasChorus)return spreadPick(candidates,count,minGap);
+  const usable=candidates.filter(c=>!tameBars.has(barOf(c)));
+  const first=spreadPick(usable.filter(c=>inChorusBar(barOf(c))),Math.ceil(count*CHORUS_TAME.showShare),minGap);
+  if(first.length>=count)return first;
+  const rest=usable.filter(c=>!first.includes(c)&&!first.some(t=>Math.abs(t-c)<minGap));
+  return [...first,...spreadPick(rest,count-first.length,minGap)].sort((a,b)=>a-b);
+};
 const HEAD_EARLIEST_MS=1800,HEAD_BEAT_BONUS=.1;
 const MELODY_TURN_MIN=.08,MELODY_DIRECTION_COST=4;
 const melodyHeightAt=(()=>{
@@ -1143,6 +1217,7 @@ const priorityByGrid=new Map(allOnsets.map(onset=>[onset.grid,priorityOf(onset)]
 // 1つの難易度を組み立てる
 // ============================================================================
 const buildChart=(difficulty,options={})=>{
+  findMotifs(null);   // 前の難易度の短い動機を消す(音を拾う段は、区切り・4小節の繰り返しだけを見る)
   const densityAdjust=Number(options.densityAdjust)||1;
   // 難易度の方針を、この曲の歯ごたえで少しだけ動かす。
   //
@@ -1307,11 +1382,23 @@ const buildChart=(difficulty,options={})=>{
   // 引き出し R2(入りを軽く・後半を重く)。入りが静かで山が後半にあり、このままだと入りが重い・後半が軽い曲の MASTER・HELL だけ。
   //   曲全体の数は変えない(配り方だけ)。今の取り分の形(1秒あたりの重み)を見て、要るぶんだけ掛ける
   const weightRate=(fromMs,toMs)=>{let sum=0;for(let bar=minBar;bar<=maxBar;bar++){const at=gridTimeMs(bar*BAR);if(at>=fromMs&&at<toMs)sum+=weights.get(bar);}return sum/Math.max(.001,(toMs-fromMs)/1000);};
+  // 引き出し R6(盛り上がりに合わせて量を配る・全難易度・全区切り)。いちど作った譜面の「実際の密度」を区切りごとに測ってから決める
+  //   (options.energySpread・下の「難易度ごとに作る」所)。取り分だけ見て直しても、置ける数は音の数・長押しの本数で決まり、実際の密度は直らなかった。
+  //   軽くする区切りには小節ごとの上限(1回目に置いた数 × 倍率)も掛ける。R2 はこのあとの形を見て要るぶんだけ足す
+  const energySpread=options.energySpread||{id:'R6',use:false,reason:ENERGY_SPREAD_ON?'1回目(実際の密度を測る回)':'既定は切(曲の一覧の energySpread か --energy-spread で使う)'};
+  if(ENERGY_SPREAD_ON&&options.energySpread)notice.push(`引き出し ${drawers.drawerLine(energySpread)}`);
+  const energyCap=new Map();
+  if(energySpread.use)for(let bar=minBar;bar<=maxBar;bar++){
+    const barScale=drawers.energySpreadBarScale(energySpread,bar);
+    if(barScale<1&&options.energyBarCounts)energyCap.set(bar,(options.energyBarCounts.get(bar)||0)*barScale);
+    weights.set(bar,weights.get(bar)*barScale);
+  }
+  let energyCapCarry=0;
   const r2=drawersOn?drawers.chooseR2(audio,difficulty,{weightRate}):{id:'R2',use:false,reason:'--no-drawers で使わない'};
   if(difficulty==='MASTER'||difficulty==='HELL')notice.push(`引き出し ${drawers.drawerLine(r2)}`);
   let weightSum=0;
   for(let bar=minBar;bar<=maxBar;bar++){
-    const weight=weights.get(bar)*drawers.r2BarScale(r2,bar,gridTimeMs(bar*BAR));
+    const weight=weights.get(bar)*drawers.r2BarScale(r2,bar,gridTimeMs(bar*BAR))*(tameBars.has(bar)?CHORUS_TAME.scale:1);
     weights.set(bar,weight);
     weightSum+=weight;
   }
@@ -1355,7 +1442,11 @@ const buildChart=(difficulty,options={})=>{
     const limit=sourceOffsets
       ?Math.min(Math.max(share,sourceOffsets.size),sourceOffsets.size+Math.max(1,Math.ceil(sourceOffsets.size*repeatExtra)))
       :share;
-    if(limit<=0){takenOffsetsByBar.set(bar,new Set());continue;}
+    // R6: 軽くする区切りは、小節ごとの上限まで(端数は次の小節へ持ち越す)
+    let cappedLimit=limit;
+    if(energyCap.has(bar)){energyCapCarry+=energyCap.get(bar);cappedLimit=Math.min(limit,Math.floor(energyCapCarry+1e-9));energyCapCarry-=Math.max(0,cappedLimit);}
+    else energyCapCarry=0;
+    if(cappedLimit<=0){takenOffsetsByBar.set(bar,new Set());continue;}
     const tier=onset=>sourceOffsets&&!(sourceOffsets.has(onset.grid-bar*BAR)||onset.character==='FULL')?1:0;
     // Rev.19: 写す小節では、元の小節で拾った位置の音を、候補の絞り込み(格子からのずれ30ms・拍の裏の弱い音)から外して加える。
     //   写す小節の同じ位置には9割がた音があるのに、絞り込みで外れてリズムがそろわなかった(Rev.18 の足した小節でリズムがそろうのは約6割)。
@@ -1368,15 +1459,15 @@ const buildChart=(difficulty,options={})=>{
       .sort((a,b)=>tier(a)-tier(b)||pickPriority(b)-pickPriority(a)||a.grid-b.grid);
     const taken=[];
     for(const onset of inBar){
-      if(taken.length>=limit)break;
+      if(taken.length>=cappedLimit)break;
       // 同じ小節の中で近すぎる音は取らない
       if(taken.some(t=>Math.abs(t.grid-onset.grid)<P.lattice))continue;
       taken.push(onset);
     }
     takenOffsetsByBar.set(bar,new Set(taken.map(onset=>onset.grid-bar*BAR)));
     // Rev.25: 拾える音が足りずに取れなかった取り分は、同じ区切りの次の小節へ回す(繰り返しの小節は数を元にそろえるので回さない)
-    if(!sourceOffsets&&taken.length<limit&&sectionForBar(bar+1)===sectionForBar(bar))
-      carry+=Math.min(BUILD_UP.carryMax,limit-taken.length);
+    if(!sourceOffsets&&taken.length<cappedLimit&&sectionForBar(bar+1)===sectionForBar(bar))
+      carry+=Math.min(BUILD_UP.carryMax,cappedLimit-taken.length);
     for(const onset of taken){const boost=pickBoostCache.get(onset.grid);if(boost)markKnowledge(onset.grid,boost.fired);}
     if(sourceOffsets){
       phraseRhythmCount.bars++;
@@ -1386,6 +1477,15 @@ const buildChart=(difficulty,options={})=>{
     picked.push(...taken);
   }
   picked.sort((a,b)=>a.grid-b.grid);
+  // Rev.38: 短い動機の写し。拾った音の位置が決まったので、同じリズムで音の上下も似ている1〜2小節を探して写しの元に足す
+  {
+    const offsets=new Map();
+    for(const onset of picked){const bar=Math.floor(onset.grid/BAR);if(!offsets.has(bar))offsets.set(bar,new Set());offsets.get(bar).add(onset.grid-bar*BAR);}
+    // Rev.39(2026-11-11 社長の決定 A): HELL の骨組みは、短い動機の写しを既定で使わない。HELL の骨組みは手の仕上げを通らず、写した形のまま空中を付けるので、
+    //   押せない所が新しく出て交差も増えた(7曲の比べ: docs/progress/beat-chart-tools/REV38-HELL.md)。試すときは --hell-motifs
+    const count=difficulty==='HELL'&&!process.argv.includes('--hell-motifs')?findMotifs(null):findMotifs(offsets);
+    if(count)notice.push(`短い動機の写し: 同じリズムで音の上下も似ている ${count}小節に、元の小節を足した`);
+  }
 
   // --- 1b. 出だしが空きすぎないようにする ---
   //
@@ -1764,7 +1864,7 @@ const buildChart=(difficulty,options={})=>{
     {
       // 元の小節の同じ位置にあるノーツのレーン(無ければ null)。向き(反転)はかたまりの中で1つに決める
       const sourceLanes=[];
-      let mirrorNow=null,sourceShape=null;
+      let mirrorNow=null,sourceShape=null,motifShift=null;
       for(const grid of grids){
         const ownBar=Math.floor(grid/BAR);
         const sourceBar=repeatSourceBar(ownBar);
@@ -1777,16 +1877,27 @@ const buildChart=(difficulty,options={})=>{
             const found=laneByGrid.get(sourceGrid);
             if(found!=null){
               lane=mirrorHere?LANES-1-found:found;
+              // Rev.38: 短い動機の写しは、高さの違いのぶん形ごとずらす(かたまりの中で1つに決める。反転して写すときは向きも逆)
+              if(motifShift==null)motifShift=motifLaneShift(ownBar)*(mirrorHere?-1:1);
               if(!sourceShape)sourceShape=shapeByGrid.get(sourceGrid)||null;
             }
           }
         }
         sourceLanes.push(lane);
       }
+      if(motifShift){
+        // はみ出すなら、はみ出さない所までずらし幅を縮める(形は崩さない)
+        let shift=motifShift;
+        while(shift!==0&&sourceLanes.some(lane=>lane!=null&&(lane+shift<0||lane+shift>LANES-1)))shift-=Math.sign(shift);
+        if(shift!==0)for(let i=0;i<sourceLanes.length;i++)if(sourceLanes[i]!=null)sourceLanes[i]+=shift;
+      }
       const matched=sourceLanes.filter(lane=>lane!=null).length;
       // 半分以上(かつ2音以上、1音だけのかたまりはその1音)に元があるときだけ写す。
       // 元の無い音は、前後の写したレーンの間を埋める(同じレーンの連打にならないよう、速い刻みでは1つずらす)
-      if(matched>=Math.min(2,length)&&matched*2>=length){
+      // Rev.38: 短い動機の写しは、かたまりの4分の3以上に元があるときだけ(リズムが6割合えば動機とするので、
+      //   半分しか元が無いかたまりまで写すと、元の無い音を前後のレーンで埋めた「同じ所の叩き直し」が増えた。7曲で連打 505→566)
+      const motifChunk=motifShift!=null&&motifRepeat.has(Math.floor(grids[0]/BAR));
+      if(matched>=Math.min(2,length)&&matched*2>=length&&(!motifChunk||matched*4>=length*3)){
         phraseCopyCount.tried++;
         const lanesNow=sourceLanes.slice();
         for(let i=0;i<length;i++){
@@ -1821,6 +1932,13 @@ const buildChart=(difficulty,options={})=>{
           attempts.push({offsets:offsetsNow,patternId:sourceShape?sourceShape.patternId:null,
             mirrored:((sourceShape?sourceShape.mirrored:false)!==(mirrorNow===true))!==flipped,
             fromMemory:false,fromCopy:true,fixedBase:low,copyOf:sourceShape?sourceShape.fromGrid:null});
+          // Rev.38(フメンの案): 元と同じ位置に置けないとき(押さえている指・直前の手とぶつかる)は、別の形を選び直す前に、
+          //   同じ形のまま左右へ1〜2レーンずらして置く。動きは同じなので「覚えた形」のまま押せる
+          const span=Math.max(...offsetsNow);
+          for(const shift of [1,-1,2,-2]){const base=low+shift;if(base<0||base+span>LANES-1)continue;
+            attempts.push({offsets:offsetsNow,patternId:sourceShape?sourceShape.patternId:null,
+              mirrored:((sourceShape?sourceShape.mirrored:false)!==(mirrorNow===true))!==flipped,
+              fromMemory:false,fromCopy:true,fixedBase:base,copyOf:sourceShape?sourceShape.fromGrid:null,copyShift:shift});}
         }
       }
     }
@@ -1863,7 +1981,7 @@ const buildChart=(difficulty,options={})=>{
     // 採った候補の記録(形の記憶・写しの数)。Rev.10 で選び直したときも同じ処理を通す
     const acceptAttempt=attempt=>{
       if(attempt.fromMemory){remembered.count=attempt.count;motifSource=remembered.firstGrid;}
-      else if(attempt.fromCopy){phraseCopyCount.placed++;phraseCopyCount.notes+=length;phraseCopyOf=attempt.copyOf;}
+      else if(attempt.fromCopy){phraseCopyCount.placed++;phraseCopyCount.notes+=length;phraseCopyOf=attempt.copyOf;if(attempt.copyShift)phraseCopyCount.shifted=(phraseCopyCount.shifted||0)+1;}
       else{
         const memo={patternId,offsets:offsets.slice(),mirrored:false,count:1,firstGrid:grids[0],base:best.base};
         if(memoryKey&&!shapeMemory.has(memoryKey))shapeMemory.set(memoryKey,memo);
@@ -2114,8 +2232,10 @@ const buildChart=(difficulty,options={})=>{
       .map((note,index)=>({note,index}))
       .filter(({note})=>note.type==='TAP'&&(note.sectionAccent||note.sourceCharacter==='FULL')&&!note.chord&&!note.monsterSlot
         &&notes.every(other=>other===note||other.grid!==note.grid)
-        &&intensityPosition(Math.floor(note.grid/BAR))>=MF.minIntensity&&free(note))
-      .sort((a,b)=>(Number(b.note.sourceStrength)||0)-(Number(a.note.sourceStrength)||0)||a.note.grid-b.note.grid);
+        &&intensityPosition(Math.floor(note.grid/BAR))>=MF.minIntensity&&!tameBars.has(Math.floor(note.grid/BAR))&&free(note))
+      // Rev.38: サビの中の一発を先に(サビの頭の小節がいちばん先)。同じなら強い順
+      .sort((a,b)=>{const rank=n=>{const bar=Math.floor(n.grid/BAR);return inChorusBar(bar)?(chorusStartBars.has(bar)?2:1):0;};
+        return rank(b.note)-rank(a.note)||(Number(b.note.sourceStrength)||0)-(Number(a.note.sourceStrength)||0)||a.note.grid-b.note.grid;});
     const limit=Math.min(MF.max,Math.max(1,Math.round(MF.perMinute*playableMinutes)));
     const picked=[];
     for(const {note,index} of candidates){
@@ -2387,7 +2507,9 @@ const buildChart=(difficulty,options={})=>{
         }
       }
       // 長いものを優先し、曲全体へ散らす
-      chains.sort((a,b)=>b.length-a.length||a.start-b.start);
+      // Rev.38: サビの中の連なりを先に(溜めの小節から始まるものは最後)。同じなら長い順
+      const chainRank=chain=>{const bar=Math.floor(ordered[chain.start].grid/BAR);return tameBars.has(bar)?-1:inChorusBar(bar)?1:0;};
+      chains.sort((a,b)=>chainRank(b)-chainRank(a)||b.length-a.length||a.start-b.start);
       const taken=[];
       // 形。amp は「ペアが動ける幅（サブレーン）」で、大きいほど大きく振れる。
       //   swing    … 左のはし ↔ 右のはし を行き来する（右左くねくね）
@@ -2505,7 +2627,7 @@ const buildChart=(difficulty,options={})=>{
       if(after&&after.grid-(note.grid+duration)<clearGrids)return;
       candidates.push(index);
     });
-    for(const index of spreadPick(candidates,sweepMax,BEAT*8)){
+    for(const index of showpiecePick(candidates,sweepMax,BEAT*8,index=>Math.floor(notes[index].grid/BAR))){
       const note=notes[index];
       const path=sweepPathFor(note,SWEEP,Number(note.subLaneWidth)||2);
       if(!path)continue;
@@ -3169,7 +3291,7 @@ const buildChart=(difficulty,options={})=>{
     //   まず spreadPick の順で散らして試し、足りなければ良い順に残りも試す。
     //   間隔（spacingGrids）は置いたグリッドと自分で比べて守る。
     const ranked=[...byGrid.keys()];
-    const firstPicks=spreadPick(ranked,aim,DOUBLE_SLIDE.spacingGrids);
+    const firstPicks=showpiecePick(ranked,aim,DOUBLE_SLIDE.spacingGrids,grid=>Math.floor(grid/BAR));
     const order=[...firstPicks,...ranked.filter(grid=>!firstPicks.includes(grid))];
     const placedGrids=[];
     for(const grid of order){
@@ -3529,7 +3651,7 @@ const buildChart=(difficulty,options={})=>{
 
   if(phraseRhythmCount.bars){
     notice.push(`フレーズの写し: 繰り返しの${phraseRhythmCount.bars}小節で元と同じ位置の音 ${phraseRhythmCount.same}/${phraseRhythmCount.source}`
-      +` / 同じレーンへ写したかたまり ${phraseCopyCount.placed}/${phraseCopyCount.tried}（${phraseCopyCount.notes}ノーツ）`);
+      +` / 同じレーンへ写したかたまり ${phraseCopyCount.placed}/${phraseCopyCount.tried}（${phraseCopyCount.notes}ノーツ）`+(phraseCopyCount.shifted?`・うち形ごとずらして写した ${phraseCopyCount.shifted}`:''));
   }
   // Rev.7: 効いた作法の印をノーツへ残す(学び直し rhythm-chart-learn.js が「良い／変」と言われた区間で数える)。
   //   同時押しの2本目には付けない(1つの出来事を2回数えない)
@@ -3544,7 +3666,7 @@ const buildChart=(difficulty,options={})=>{
     }
     notice.push(`音ゲーの作法: ${Object.entries(knowledgeCounts).map(([id,count])=>`${id} ${count}`).join(' / ')||'効いた所なし'}`);
   }
-  return {notes,log,notice,r2,profile:P,runs:runs.length,knowledgeCounts,chordCount,chordRunCount,sweepCount,crossCount,monsterSlotGrids,mirrorFlickCount,
+  return {notes,log,notice,r2,energySpread,motifList:[...motifRepeat].map(([bar,m])=>[bar,m.source,motifLaneShift(bar)]),profile:P,runs:runs.length,knowledgeCounts,chordCount,chordRunCount,sweepCount,crossCount,monsterSlotGrids,mirrorFlickCount,
     targetCount,notesPerSecondTarget:round3(notesPerSecond),
     counts:{holdMax,slideMax,flickMax,endFlickMax,chordMax,accentMax,
       playableMinutes:round3(playableMinutes)}};
@@ -4009,15 +4131,28 @@ for(const difficulty of targets){
   if(!PROFILES[difficulty]){console.error(`未知の難易度です: ${difficulty}`);process.exit(1);}
   // 小節ごとの取り分は切り捨てで配るうえ、格子・連なりの上限でも落ちるので、
   // 実際の数は目標より少なくなる。足りないぶんを補って数回だけやり直す（乱数は使わない）。
-  let result=buildChart(difficulty);
-  let adjust=1;
-  for(let pass=0;pass<4;pass++){
-    const ratio=result.targetCount/Math.max(1,result.notes.length);
-    if(Math.abs(ratio-1)<=.02)break;
-    adjust*=Math.max(.7,Math.min(1.6,ratio));
-    const retry=buildChart(difficulty,{densityAdjust:adjust});
-    if(Math.abs(retry.notes.length-retry.targetCount)>=Math.abs(result.notes.length-result.targetCount))break;
-    result=retry;
+  const buildToTarget=(extra={})=>{
+    let result=buildChart(difficulty,extra);
+    let adjust=1;
+    for(let pass=0;pass<4;pass++){
+      const ratio=result.targetCount/Math.max(1,result.notes.length);
+      if(Math.abs(ratio-1)<=.02)break;
+      adjust*=Math.max(.7,Math.min(1.6,ratio));
+      const retry=buildChart(difficulty,{...extra,densityAdjust:adjust});
+      if(Math.abs(retry.notes.length-retry.targetCount)>=Math.abs(result.notes.length-result.targetCount))break;
+      result=retry;
+    }
+    return result;
+  };
+  let result=buildToTarget();
+  // 引き出し R6: いま作った譜面の実際の密度(区切りごと)を測り、盛り上がりの順になっていない所があれば配り直して作り直す
+  if(ENERGY_SPREAD_ON&&drawersOn){
+    const barCounts=new Map();
+    for(const note of result.notes){const bar=Math.floor(note.grid/BAR);barCounts.set(bar,(barCounts.get(bar)||0)+1);}
+    const realizedRate=(fromMs,toMs)=>{let sum=0;for(const [bar,count] of barCounts){const at=gridTimeMs(bar*BAR);if(at>=fromMs&&at<toMs)sum+=count;}return sum/Math.max(.001,(toMs-fromMs)/1000);};
+    const spread=drawers.chooseEnergySpread(audio,difficulty,{weightRate:realizedRate,strong:ENERGY_SPREAD_ON==='strong'});
+    if(spread.use)result=buildToTarget({energySpread:spread,energyBarCounts:barCounts});
+    else{result.notice.push(`引き出し ${drawers.drawerLine(spread)}`);result.energySpread=spread;}
   }
   results[difficulty]=result;
 }
@@ -4112,6 +4247,37 @@ if(ending&&ending.active){
     }
   }
 }
+// モンスターノーツの仕上げ(Rev.37・2026-11-11): 13 で4個置いたあとの手直し(指の条件の最終確認・終わりの長押し・帯の中の取り除きなど)で
+//   枠の付いたノーツが消えると、3個以下のまま書き出していた(ROSE MASTER 3個・ROSE short MASTER 2個・Evans EXPERT 3個など6譜面。公開前に人が足していた)。
+//   欠けた枠だけを、13 と同じ探し方(狙いの前後10%で段を順にゆるめる→曲全体)で付け直す。4個そろっている譜面は1つも変わらない。ノーツの数・位置は変えない(枠を付けるだけ)
+{
+  for(const difficulty of targets){
+    const r=results[difficulty],notes=r.notes;if(!notes.length)continue;
+    const have=new Set(notes.filter(n=>n.monsterSlot).map(n=>n.monsterSlot)),missing=COMMON.monsterTargets.map((ratio,slot)=>({ratio,slot:slot+1})).filter(x=>!have.has(x.slot));
+    if(!missing.length)continue;
+    const first=notes[0].grid,last=notes[notes.length-1].grid;
+    const gapOf=index=>Math.min(index>0?notes[index].grid-notes[index-1].grid:Infinity,index<notes.length-1?notes[index+1].grid-notes[index].grid:Infinity);
+    const tiers=[
+      (note,index)=>!note.chord&&note.grid%BEAT===0&&gapOf(index)>=COMMON.monsterClearGrids,
+      (note,index)=>!note.chord&&note.grid%BEAT===0&&gapOf(index)>=COMMON.monsterClearGrids/2,
+      note=>!note.chord&&note.grid%BEAT===0,
+      note=>!note.chord,
+      ()=>true,
+    ];
+    let added=0;
+    for(const {ratio,slot} of missing){
+      const target=first+(last-first)*ratio;let bestIndex=-1;
+      for(const reach of [(last-first)*.1,Infinity]){
+        for(const fits of tiers){let bestDistance=Infinity;
+          notes.forEach((note,index)=>{if(note.type!=='TAP'||note.monsterSlot||!fits(note,index))return;
+            const distance=Math.abs(note.grid-target);if(distance<=reach&&distance<bestDistance){bestDistance=distance;bestIndex=index;}});
+          if(bestIndex>=0)break;}
+        if(bestIndex>=0)break;}
+      if(bestIndex>=0){notes[bestIndex].monsterSlot=slot;added++;if(Array.isArray(r.monsterSlotGrids))r.monsterSlotGrids.push(notes[bestIndex].grid);}
+    }
+    if(added)(r.notice||(r.notice=[])).push(`モンスターノーツの仕上げ: 手直しで欠けた枠を${added}個付け直した`);
+  }
+}
 if(results.MASTER){
   // 払う指の動きで向きを決める(自動修正がレーンを動かしたあと、step7 でも同じ決め方で付け直す)
   const r=results.MASTER,side=assignSideFlickDirs(r.notes,timing);
@@ -4171,7 +4337,12 @@ if(write){
       // Rev.7: 使った作法の重みと、効いた回数
       knowledge:{weights:knowledgeWeights,fired:results[difficulty].knowledgeCounts||{}},
       // 引き出し(2026-10-16): 使った/使わないと理由(rhythm-chart-drawers.js)
-      ...(results[difficulty].r2&&(difficulty==='MASTER'||difficulty==='HELL')?{drawers:[results[difficulty].r2]}:{}),
+      ...((results[difficulty].r2&&(difficulty==='MASTER'||difficulty==='HELL'))||(results[difficulty].energySpread&&results[difficulty].energySpread.use)
+        ?{drawers:[...(results[difficulty].r2&&(difficulty==='MASTER'||difficulty==='HELL')?[results[difficulty].r2]:[]),...(results[difficulty].energySpread&&results[difficulty].energySpread.use?[results[difficulty].energySpread]:[])]}:{}),
+      // Rev.38: サビ(rhythm-chart-chorus.js)。見つけた区切りと点数・溜めの小節
+      chorus:{found:chorusInfo.hasChorus,sections:chorusInfo.chorus.map(s=>({startBar:s.startBar,endBarExclusive:s.endBarExclusive,startMs:s.startMs,endMs:s.endMs,score:s.score})),tameBars:[...tameBars].sort((a,b)=>a-b)},
+      // Rev.38: 短い動機の写し(rhythm-chart-motifs.js)。元を足した小節の数
+      motifs:{bars:(results[difficulty].motifList||[]).length,list:results[difficulty].motifList||[]},
       status:'draft',
       reviewRequired:true,
       runtimeConnected:false,

@@ -1,0 +1,124 @@
+# 助手1人に道具を贈ったときの台本(コトバ 2026-11-08)。注文: lines/ORDER-SOLO.md(オクリモノ2)
+# solo: みゅあ・きき・ももすけ・ドラ × 14種類 × 2本。hint: 同じ4人 × 1人用の好きなもの1つ
+# 行は「表情 セリフ」(話すのは見出しの人)。2人ではないので {c} は使わない。苦手な物でも嫌がらない・{name} を責めない
+# みゅあは話し方メモ(../SPEECH-STYLE.md)の特徴(のばし棒・絵文字1つ・「〜のとこ」)も少し入れた
+
+## solo
+solo mua item=basket like=mid | happy あたしだけのおやつバスケット？ ちびちび食べよーっと♪
+solo mua item=basket like=mid | normal {name}、ありがと！ 中身、なにかなー？
+solo mua item=misanga like=like | excited ミサンガ！？ {name}とおそろいにしよーよ✨
+solo mua item=misanga like=like | happy あたしの好きな色ぢゃん…まぢうれしい♪
+solo mua item=cake like=like | excited ケーキ！ {name}、はんぶんこする？ それともあたし全部？ｗ
+solo mua item=cake like=like | happy ひとりでもらうケーキ、なんか特別ぢゃん♪
+solo mua item=onigiri like=mid | happy ほかほかー！ あったかいうちにいただきまーす♪
+solo mua item=onigiri like=mid | normal {name}、ありがと！ 具、当ててみよっかな
+solo mua item=tea like=mid | happy ティーセット、おしゃれー！ ひとりでお茶会しちゃお♪
+solo mua item=tea like=mid | normal {name}、ありがと！ カップ、大事に使うね
+solo mua item=earphone like=mid | happy かたみみイヤホン！ もう片方、{name}に貸したげる♪
+solo mua item=earphone like=mid | normal {name}、ありがと！ どの曲から聞こっかなー
+solo mua item=puzzle like=bad | troubled パズル…あたし、こういうの苦手かもｗ
+solo mua item=puzzle like=bad | normal {name}の気持ちはうれしい！ 1ピースずつ、やってみる👍
+solo mua item=sleeve like=bad | troubled スリーブ…カードのとこに付けるんだっけ？ｗ
+solo mua item=sleeve like=bad | normal {name}、ありがと！ 使い方、あとで教えてほしー
+solo mua item=cheki like=like | excited チェキ！？ ひとりで撮ってもらうの、ちょっと照れるぢゃんｗ
+solo mua item=cheki like=like | happy まぢうれしい！ アルバムの最初の1枚にする✨
+solo mua item=flower like=mid | happy 花束、かわいー！ 部屋のとこに飾ろっと♪
+solo mua item=flower like=mid | normal {name}、ありがと！ いい香りー
+solo mua item=letter like=mid | surprise 手紙！？ {name}の字、はじめて見たかも！
+solo mua item=letter like=mid | happy こっそり何回も読み返しちゃお♪
+solo mua item=candy like=mid | happy ひとつぶキャンディ！ 大事に食べるね♪
+solo mua item=candy like=mid | normal {name}、ありがと！ 何味だろー？
+solo mua item=keyholder like=like | excited キーホルダー！ かばんのとこに付けよっと✨
+solo mua item=keyholder like=like | happy {name}、センスよすぎ！ 毎日持ち歩くね♪
+solo mua item=omamori like=bad | troubled おまもり…あたし、こういうの持ち慣れてなくてｗ
+solo mua item=omamori like=bad | normal でも、{name}の気持ちはうれしい！ かばんに入れとくね
+solo kiki item=basket like=mid | happy まあ、私だけにおやつを。少しずつ、いただきまつね
+solo kiki item=basket like=mid | normal {name}、ありがとうございます。お茶の時間に食べましょう
+solo kiki item=misanga like=mid | happy おそろいのミサンガ…{name}とおそろいにしましょうか♪
+solo kiki item=misanga like=mid | normal ありがとうございまつ。手首に、そっと結んでおきまつ
+solo kiki item=cake like=mid | happy はんぶんこケーキでつか。{name}、半分いかがでつ？
+solo kiki item=cake like=mid | normal {name}、ありがとうございます。甘い香りに、ほっとします
+solo kiki item=onigiri like=bad | troubled まあ、おにぎり…。少しずつ、いただいてみまつね
+solo kiki item=onigiri like=bad | normal {name}のお気持ち、うれしいでつ。小さく握り直してみましょうか
+solo kiki item=tea like=like | excited 私だけのティーセット…！ うれしくて、言葉が出ませんね
+solo kiki item=tea like=like | happy さっそくお茶をいれまつ。{name}も一杯、いかがでつか♪
+solo kiki item=earphone like=bad | troubled かたみみイヤホン…。私に使いこなせるでしょうか
+solo kiki item=earphone like=bad | normal {name}、ありがとうございます。静かな曲から、試してみまつね
+solo kiki item=puzzle like=like | excited ふたりで解くパズル…{name}、いっしょに解いていただけまつか？
+solo kiki item=puzzle like=like | happy じっくり考える時間、大好きなんでつ♪
+solo kiki item=sleeve like=mid | wink スリーブでつか。攻撃のカードを、包んでおきまつね
+solo kiki item=sleeve like=mid | normal {name}、ありがとうございます。カードが長持ちしまつね
+solo kiki item=cheki like=mid | troubled ひとりで撮られるのは、少し照れまつね…
+solo kiki item=cheki like=mid | happy でも、アルバムに残るのはうれしいでつ。{name}、ありがとうございます
+solo kiki item=flower like=like | excited まあ、花束…！ 私のために選んでくださったんでつね
+solo kiki item=flower like=like | happy 窓辺に飾って、毎日お水をかえまつ♪
+solo kiki item=letter like=like | excited 手書きの手紙…！ {name}の字、ていねいでやさしいでつね
+solo kiki item=letter like=like | happy 大切にしまっておきまつ。ときどき読み返しまつね
+solo kiki item=candy like=bad | troubled キャンディでつか…。お茶といっしょに、ゆっくりなめまつね
+solo kiki item=candy like=bad | normal {name}のお気持ちが、いちばんうれしいでつ
+solo kiki item=keyholder like=mid | happy キーホルダー…部屋の鍵に付けておきまつね
+solo kiki item=keyholder like=mid | normal {name}、ありがとうございます。かわいいでつ
+solo kiki item=omamori like=mid | happy 小さなおまもり…ちから全開のおまもりでしょうか♪
+solo kiki item=omamori like=mid | normal {name}、ありがとうございます。いつも持っていまつね
+solo momosuke item=basket like=mid | excited ももだけのおやつバスケット！！ ぜんぶ食べていいの？w
+solo momosuke item=basket like=mid | happy {name}、ありがと！！ 練習のあとに食べる♡
+solo momosuke item=misanga like=mid | happy ミサンガ！！ {name}とおそろいにしよ♡
+solo momosuke item=misanga like=mid | normal ありがと！！ ライブのときも、ずっとつけとく！！
+solo momosuke item=cake like=like | excited ケーキ！！ ももだけに！？ {name}、わかってる〜♡
+solo momosuke item=cake like=like | happy はんぶんこ…するのもったいないけど、{name}にならあげる！！
+solo momosuke item=onigiri like=mid | happy おにぎり！！ 練習のおともにする！！
+solo momosuke item=onigiri like=mid | normal {name}、ありがと！！ 具はなにかなw
+solo momosuke item=tea like=bad | troubled ティーセット…！！ もも、お茶いれたことないかもw
+solo momosuke item=tea like=bad | normal {name}の気持ちはうれしい！！ 甘くして飲んでみる♡
+solo momosuke item=earphone like=like | excited かたみみイヤホン！！ もう片方は{name}ね♡
+solo momosuke item=earphone like=like | happy {name}、これで、ももの曲いっしょに聞けるじゃん！！
+solo momosuke item=puzzle like=bad | troubled パズル…！！ ひとりだと、なかなか終わらなそうw
+solo momosuke item=puzzle like=bad | normal {name}、ありがと！！ ちょっとずつ、がんばる！！
+solo momosuke item=sleeve like=mid | happy スリーブ！！ メタルナーのカードをぴかぴかにする！！
+solo momosuke item=sleeve like=mid | normal {name}、ありがと！！ かわいい色だね♡
+solo momosuke item=cheki like=like | excited ももだけのチェキ！！ 決めポーズ、するしかないじゃん♡
+solo momosuke item=cheki like=like | wink アルバムの表紙は、もものこの1枚ねw
+solo momosuke item=flower like=mid | happy お花！！ ももの部屋がかわいくなる♡
+solo momosuke item=flower like=mid | normal {name}、ありがと！！ いい香り〜
+solo momosuke item=letter like=mid | surprise 手紙！！ {name}から、もも宛て！？
+solo momosuke item=letter like=mid | happy なんか照れる…！！ 何回も読むね♡
+solo momosuke item=candy like=like | excited キャンディ！！ ひとつぶでも、ももの大好物！！
+solo momosuke item=candy like=like | happy {name}、さすが！！ 本番前になめるね♡
+solo momosuke item=keyholder like=mid | happy キーホルダー！！ スティックケースに付けるね！！
+solo momosuke item=keyholder like=mid | normal {name}、ありがと！！ 毎日持ってく！！
+solo momosuke item=omamori like=bad | troubled おまもり…！！ もも、ちゃんと持ってられるかなw
+solo momosuke item=omamori like=bad | normal {name}の気持ちはうれしい！！ ライブのかばんに入れとく！！
+solo dra item=basket like=like | excited おでだけのおやつバスケットか！ 全部の味、ためしてみるぞ
+solo dra item=basket like=like | happy {name}、わかってるな。これはうれしいぞ
+solo dra item=misanga like=mid | happy おそろいのミサンガか。{name}とおそろいにするか？
+solo dra item=misanga like=mid | normal ありがとな。切れないように、大事にするぞ
+solo dra item=cake like=like | excited ケーキか！ {name}、はんぶんこするか？ おでは大きいほうな
+solo dra item=cake like=like | happy ありがとな、{name}。ひとりで食べるのは、もったいない気がするな
+solo dra item=onigiri like=like | excited ほかほかおにぎり！ あったかいうちに食うぞ
+solo dra item=onigiri like=like | happy {name}、ありがとな。おで、これがいちばん好きなんだ
+solo dra item=tea like=mid | normal ティーセットか。たまには、のんびりお茶にするか
+solo dra item=tea like=mid | happy {name}、ありがとな。いい香りだな
+solo dra item=earphone like=mid | normal かたみみイヤホンか。もう片方は{name}が使うか？
+solo dra item=earphone like=mid | happy ありがとな。おでの好きな曲、聞いてみるぞ
+solo dra item=puzzle like=bad | troubled パズルか…。おでひとりで、解けるかな
+solo dra item=puzzle like=bad | normal {name}の気持ちはうれしいぞ。…ちょっとずつ、やってみるか
+solo dra item=sleeve like=mid | normal スリーブか。グジラのカードに付けておくか
+solo dra item=sleeve like=mid | happy {name}、ありがとな。カードが長持ちしそうだぞ
+solo dra item=cheki like=mid | surprise おでひとりのチェキか…ちょっと照れるな
+solo dra item=cheki like=mid | happy でも、いい思い出になるな。ありがとな、{name}
+solo dra item=flower like=bad | troubled 花束か…。おでの部屋に、似合うかな
+solo dra item=flower like=bad | normal {name}の気持ちはうれしいぞ。水やり、がんばるからな
+solo dra item=letter like=bad | troubled 手紙か…。おで、字を読むのはゆっくりなんだ
+solo dra item=letter like=bad | normal でも、{name}が書いてくれたんだな。ゆっくり読むぞ
+solo dra item=candy like=like | excited キャンディか！ ひとつぶでも、うまいぞ
+solo dra item=candy like=like | happy {name}、ありがとな。大事になめるぞ、えへへ
+solo dra item=keyholder like=mid | normal キーホルダーか。家の鍵に付けておくか
+solo dra item=keyholder like=mid | happy {name}、ありがとな。なくさないようにするぞ
+solo dra item=omamori like=mid | happy おまもりか。膝がよくなりますように、って持っておくか
+solo dra item=omamori like=mid | normal {name}、ありがとな。いつも持ち歩くぞ
+
+## hint(仲良し度の段が上がったときに、1人用の好きなもの1つをそれとなく教える1行)
+hint mua item=keyholder | wink かばんのとこに付けるもの、なんかほしーんだよね✨
+hint kiki item=letter | happy 手書きのお便りって、心があたたかくなりまつね
+hint momosuke item=candy | excited ひとつぶのキャンディって、ちょうどいいご褒美なんだよね♡
+hint dra item=candy | happy 小さいあめ玉、ひとつ口に入れると落ち着くんだよな

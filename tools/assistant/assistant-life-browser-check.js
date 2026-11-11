@@ -1,5 +1,7 @@
+// run-checks-timeout: 900  (画面を何度も開くので、ふつうの上限では足りない。2026-11-11 クラフトくんの切り分け)
 // 助手ライフ(助手たちの家・段階1 2026-11-07)の画面と HOME の施設の顔を、実際に開いて確かめる。公開の印 assistantLife はページの中でだけ立てる(本体の印は偽のまま)。
 //   node tools/assistant/assistant-life-browser-check.js            検査
+//   LIFE_BASE=https://aknkakykhk-maker.github.io/monhero/ で本番の版を見る(公開後の確かめ)
 //   node tools/assistant/assistant-life-browser-check.js --shots    止め絵も撮る(docs/progress/assistant-peer/shots/life-*.png)
 //   ① HOME の施設の横に、会った助手の顔が全部出る(帯は出ない)/ 施設「🏡 助手ライフ」を押すと家が開く / 縦 390・横 844×390 ではみ出さない
 //   ⑩ 家: 8人の部屋・いる部屋は顔・出かけた部屋は行き先の札・部屋を押すとその助手のこと・場面・みんなの居場所(地図と一覧)・入場の演出
@@ -11,9 +13,13 @@
 //   ④ 関係とアルバム: 名前は「友情Lv」「友だち」。今日のペアは出ない
 //   ⑤ 帯は HOME だけ(モンヒロビートの画面へ行くと消える)。画面を閉じているあいだは様子を書き換えない
 //   ⑥ 印が偽のときは帯も入口も出ない
-//   ⑧ 2人にあげる道具: 道具の欄(持っている数・起きること)/「渡す」で5つが分かる確かめ → 渡すと2人のひとこと・持ち物が1つ減る・2回目は理由が出る/
+//   ⑧ 2人に贈る道具(10種類・好み): 道具の欄(持っている数・起きること)/「贈る」で好みと上がる量が分かる確かめ → 渡すと2人のひとこと・持ち物が1つ減る・2回目は理由が出る/
 //      はじめて手に入れたときの案内は HOME で1回だけ(止め絵 life-8-give・life-9-intro)
 //   ⑨ 演出(44-growth-fx.jsx): 渡すと品物の演出/見守って友情Lv が上がると Lv アップの演出(トーストは重ねない)。止め絵 life-10・life-11
+//   ⑭ カード部とのつなぎ口: カード部屋にいる助手を読むだけ・対戦の知らせで今日あったことに1件
+//   ⑮ 読みやすさ: 朝・昼・夕・夜で、居場所・友情・道具の字が濃い面の上にあり、明るさの差が足りている
+//   ⑯ 地図は HOME にそろえる → 2026-11-08 案A で HOME の画面そのものを地図にした。HOME と札が1対1かは assistant-life-map-check.js ②
+//   ⑰ 場面の立ち絵: 2人・3人・4人で頭の高さと大きさがそろう・見出しのアイコンが字の塗りの外に出る
 //   ⑦ 段階3: 見守ると組の中の人だけが話す様子の台本が流れる(穴が残らない)/ひとりの助手の「ようすを見る」で、その人のひとりごとが流れる
 const http = require('http'), path = require('path'), fs = require('fs');
 const root = path.resolve(__dirname, '..', '..'), PORT = 9231;
@@ -22,78 +28,97 @@ const SHOTS = process.argv.includes('--shots');
 const shotDir = path.join(root, 'docs/progress/assistant-peer/shots');
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.woff2': 'font/woff2' };
-const assistantsSrc = fs.readFileSync(path.join(root, 'monster-hero/data/assistants.js'), 'utf8');
-const replaySrc = assistantsSrc.slice(assistantsSrc.indexOf('const EVENT_REPLAYS = ['));
-const STORY_IDS = [...replaySrc.matchAll(/\{ id: '([a-z0-9_]+)'/g)].map(m => m[1]);
-const seed = ({ storyIds, life, intro = false, bondAll = null }) => {
-  const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
-  if (localStorage.getItem('mh_breeder_name') === null) {
-    put('mh_breeder_name', 'テスト'); put('mh_breeder_icon', 'Mocchi'); put('mh_onboarded', true);
-    for (const k of ['mh_tutorial_seen_v1','mh_battle_tutorial_seen_v1','mh_battle_tutorial_guide_shown_v1','mh_rhythm_tutorial_seen_v1','mh_masu_migrated','mh_kiki_intro_seen_v1','mh_momosuke_intro_seen_v1','mh_tactics_intro_seen_v1','mh_rhythm_hell_story_seen_v1','mh_story_assistant_chat_seen_v1','mh_story_tactics_types_seen_v1','mh_story_card_battle_seen_v1','mh_inherited_unique_level_compensation_v1']) put(k, true);
-    put('mh_inherited_unique_level_compensation_pending_v1', false);
-    put('mh_assistant_selected_v1', 'mua'); put('mh_rhythm_event_story_v1', storyIds);
-    const d = new Date(), pad = (n) => String(n).padStart(2, '0');
-    put('mh_daily_masu_advice_date_v1', `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
-    put('mh_login_bonus_last_v1', `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
-    // 友情Lv をいろいろに(Lv3 友だち・Lv4 いい友だち・Lv5 名コンビ…)
-    put('mh_assistant_peer_bond_v1', { 'kiki-mua': 460, 'dra-momosuke': 260, 'atsu-sorashido': 130, 'erubin-kyuko': 130, 'kiki-kyuko': 60, 'dra-mua': 720 });
-    // にぎわい「にぎやか」(朝4時区切りの今日)
-    const day = new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 10);
-    put('mh_assistant_life_play_v1', { day, points: 70, counts: { rhythm: 40, card: 30 }, lastDay: null, streak: 1 });
-    // 2人にあげる道具(差し入れ2・友情のしるし1)。はじめての案内は intro のときだけ出す
-    let owned = {}; try { owned = JSON.parse(localStorage.getItem('mh_owned_items')) || {}; } catch {}
-    put('mh_owned_items', { ...owned, peer_gift: 2, peer_token: 1 });
-    if (!intro) put('mh_assistant_life_item_intro_v1', true);
-  }
-  // 公開の印はページの中だけで切り替える(本体は 2026-11-07 から真)。偽の確かめのときは偽に戻す
-  { const t = setInterval(() => { try { if (typeof RELEASE_FLAGS !== 'undefined') { RELEASE_FLAGS.assistantLife = !!life; clearInterval(t); } } catch {} }, 2); }
-  // いまの時間の様子を決めて入れておく(様子は時間帯と種で変わり、組やひとりの助手ができないことがあるため。印が偽の確かめでは入れない)
-  if (life && localStorage.getItem('mh_check_life_seeded') === null) {
-    localStorage.setItem('mh_check_life_seeded', '1');
-    const t = Date.now() + 9 * 3600000, h = new Date(t).getUTCHours();
-    const i = [0, 5, 10, 14, 18, 21].filter(x => h >= x).length - 1, ids = ['late', 'morning', 'noon', 'afternoon', 'evening', 'night'];
-    const base = { salt: 'check', abs: Math.floor(t / 86400000) * 6 + i, slot: ids[i], recent: [], nudges: { invite: [], introduce: [] }, watched: [] };
-    put('mh_assistant_life_v1', bondAll != null
-      ? { ...base, moods: {}, solo: {}, groups: [{ ids: ['kiki', 'mua'], doing: 'snack', place: 'cafe' }, { ids: ['dra', 'momosuke'], doing: 'walk', place: 'plaza' }, { ids: ['atsu', 'kyuko'], doing: 'cards', place: 'library' }, { ids: ['erubin', 'sorashido'], doing: 'cards', place: 'cardroom' }] }
-      : { ...base, moods: { atsu: 'lonely', kyuko: 'happy', momosuke: 'lonely' },
-        groups: [{ ids: ['kiki', 'mua'], doing: 'snack', place: 'cafe' }, { ids: ['dra', 'erubin', 'sorashido'], doing: 'cards', place: 'cardroom' }],
-        solo: { atsu: { doing: 'idle', place: 'home', reason: 'lonely' }, kyuko: { doing: 'read', place: 'library', reason: 'mypace' }, momosuke: { doing: 'practice', place: 'studio', reason: 'lonely' } } });
-  }
-  if (bondAll != null && localStorage.getItem('mh_check_bond_all') === null) { localStorage.setItem('mh_check_bond_all', '1'); const b = {}; const ids = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']; for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) b[[ids[i], ids[j]].sort().join('-')] = bondAll; put('mh_assistant_peer_bond_v1', b); }
-};
-const toHome = async (page) => {
-  for (let i = 0; i < 60; i++) {
-    if (await page.locator('.mh-home-player').count()) break;
-    await page.getByRole('button', { name: /TAP TO START|トップ画面へ進む/ }).first().click({ timeout: 800 }).catch(() => {});
-    await page.waitForTimeout(500);
-  }
-  for (let i = 0; i < 12; i++) { const c = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.offsetParent && /^(受け取る|閉じる|OK|わかった！?|とじる)$/.test((x.innerText || '').trim())); if (b) { b.click(); return true; } return false; }); if (!c) break; await page.waitForTimeout(400); }
-};
-const finishTalk = async (page) => { for (let i = 0; i < 24; i++) { const n = await page.locator('[data-assistant-peer-talk]').count(); if (!n) break; await page.locator('[data-assistant-peer-talk]').first().click({ timeout: 800 }).catch(() => {}); await page.waitForTimeout(250); } };
+const { MIME, STORY_IDS, INTRO_KEYS, seed, toHome, finishTalk, homeFacesProblems, waitFaces } = require(path.resolve(__dirname, "life-browser-shared"));
 // 家を開く(施設「🏡 助手ライフ」)→ 入場の演出が終わるのを待つ → 「📋 居場所」の一覧へ
 const openHouse = async (page) => { await page.locator('[data-home-assistant-life]').click({ timeout: 20000 }).catch(() => {}); await page.locator('[data-assistant-life-screen]').waitFor({ timeout: 5000 }).catch(() => {}); await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 4000 }).catch(() => {}); };
 const toWhere = async (page) => { await page.locator('[data-assistant-life-icon="where"]').click({ timeout: 5000 }).catch(() => {}); await page.waitForTimeout(250); };
 const reopen = async (page) => { if (!(await page.locator('[data-assistant-life-screen]').count())) await openHouse(page); await toWhere(page); };
 // 場面の掛け合いを最後まで進めて、家へ戻る
 const endScene = async (page) => { await finishTalk(page); await page.locator('[data-assistant-life-scene-back]').click({ timeout: 2000 }).catch(() => {}); await page.waitForTimeout(250); };
-// HOME の顔の列: どの札でも札(名前)の下にあり、札・ほかのボタン・画面の端に重ならない(2026-11-07 社長「アイコンってコンテンツ名の下に表示じゃなかったっけ？」)
-const homeFacesProblems = (page) => page.evaluate(() => {
-  const sel = { rhythm: '.mh-home-facility.rhythm', card: '.mh-home-card-battle', management: '.mh-home-facility.management', market: '.mh-home-facility.market', life: '.mh-home-facility.life' };
-  const obs = [...document.querySelectorAll('.mh-home-facility,.mh-home-card-battle,.mh-home-event-banner,.mh-home-tour-banner,.mh-home-mission,.mh-home-gift,.mh-home-event-badge,.mh-home-assistant,.mh-home-player,.mh-home-wallet,.mh-home-update,.mh-home-settings')].filter(e => e.offsetParent).map(e => ({ c: e.className.slice(0, 28), r: e.getBoundingClientRect() }));
-  const ng = [];
-  for (const box of document.querySelectorAll('[data-assistant-life-home-faces]')) {
-    const k = box.getAttribute('data-assistant-life-home-faces'); const f = box.firstElementChild.getBoundingClientRect();
-    const el = document.querySelector(sel[k]); if (!el) continue; const r = el.getBoundingClientRect();
-    if (f.top < r.bottom - 1 || f.top > r.bottom + 6) ng.push(`${k}: 札の下にない`);
-    if (f.left < -1 || f.right > window.innerWidth + 1 || f.bottom > window.innerHeight + 1) ng.push(`${k}: 画面の外`);
-    for (const o of obs) { const x = Math.min(f.right, o.r.right) - Math.max(f.left, o.r.left), y = Math.min(f.bottom, o.r.bottom) - Math.max(f.top, o.r.top); if (x > 1 && y > 1) ng.push(`${k}×${o.c}`); }
-  }
-  return ng;
-});
-const waitFaces = async (page) => { for (let i = 0; i < 60 && !(await page.locator('[data-assistant-life-home-face]').count()); i++) { await finishTalk(page); await page.waitForTimeout(500); } };
 const talkInfo = (page) => page.evaluate(() => { const el = document.querySelector('[data-assistant-peer-talk]'); if (!el) return null; return { id: el.getAttribute('data-assistant-peer-talk'), faces: [...el.querySelectorAll('[data-assistant-peer-face]')].map(x => x.getAttribute('data-assistant-peer-face')), line: (el.querySelector('[data-assistant-peer-line]') || {}).innerText || '' }; });
 const ls = (page, k) => page.evaluate((key) => { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } }, k);
+// 掲示板に長い1行を入れ、ひとりの助手をさみしそうにする(ミハリ 残り①③: 「カード研/究」「ド/ラ」・「ソラシドがさみし…」)
+const LONG_DIARY = '朝: あつ・ソラシド 図書室でカード研究 / ドラ・えるびん ひなたの丘で散歩 / ももすけ・きゅうこ おやつ屋さんでおやつ';
+const seedBoard = (page) => page.evaluate((text) => {
+  const st = ASSISTANT_LIFE_DIARY.state; ASSISTANT_LIFE_DIARY.state = { ...st, day: assistantLifeDayKey(), items: [...(st.items || []), { t: '07:30', text, ids: [], kind: 'slot' }] }; ASSISTANT_LIFE_DIARY.emit();
+  const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, solo: { ...l.solo, sorashido: { doing: 'idle', place: 'home', reason: 'lonely' } } } });
+}, LONG_DIARY);
+// 掲示板のまとまり(名前・場所・していること)が行をまたがない/今日やれることの小さい字が切れない
+const boardProblems = (page) => page.evaluate(() => {
+  const ng = [];
+  for (const c of document.querySelectorAll('[data-assistant-life-board-item] [data-assistant-life-chunk]')) if (c.getClientRects().length > 1) ng.push(`掲示板の言葉が途中で折れる: ${c.textContent}`);
+  if (!document.querySelector('[data-assistant-life-board-item] [data-assistant-life-chunk]')) ng.push('掲示板に言葉が無い(検査の前提)');
+  // 掲示板の件は、全部見えるか・まったく見えないか(縦 390 で2件目が半分切れていた。2026-11-08 ナカヨシ8)
+  { const bd = document.querySelector('[data-assistant-life-board]');
+    if (bd) { const br = bd.getBoundingClientRect(), cs = getComputedStyle(bd), bt = br.top + parseFloat(cs.borderTopWidth), bb = br.bottom - parseFloat(cs.borderBottomWidth), bl = br.left, brr = br.right;
+      for (const p of bd.querySelectorAll('[data-assistant-life-board-item]')) { const r = p.getBoundingClientRect(); const inX = r.left < brr - 1 && r.right > bl + 1; const inY = r.top < bb - 1 && r.bottom > bt + 1;
+        if (inX && inY && (r.bottom > bb + 0.5 || r.top < bt - 0.5)) ng.push(`掲示板の件が半分切れる: ${p.textContent}`); } } }
+  // 出かけ札は床の帯にかけない(部屋の上から 縦36px・横37px まで。助手のマスモンが床を歩く。2026-11-08 社長・キズナ2)・名札を隠さない・字が「…」で切れない
+  { const land = !!document.querySelector('[data-assistant-life-land="1"]');
+    for (const tag of document.querySelectorAll('[data-assistant-life-room-away]')) { const room = tag.closest('[data-assistant-life-room]'), R = room.getBoundingClientRect(), T = tag.getBoundingClientRect(), id = room.dataset.assistantLifeRoom;
+      if (T.bottom - R.top > (land ? 37 : 36) + 0.5) ng.push(`出かけ札が床にかかる ${id} 下端${Math.round(T.bottom - R.top)}px`);
+      const pl = room.querySelector('.pl'); if (pl) { const p = pl.getBoundingClientRect(); const top = document.elementFromPoint(p.left + p.width / 2, p.top + p.height / 2); if (!top || !(top === pl || pl.contains(top))) ng.push(`出かけ札が名札を隠す ${id}`); }
+      for (const t of tag.querySelectorAll('b,small')) if (t.getClientRects().length && t.scrollWidth > t.clientWidth + 1) ng.push(`出かけ札の字が切れる ${id}: ${t.textContent}`); } }
+  // 見出しの「ほか◯件」= 今日あったことの全部 − 掲示板に見えている件(押すと全部読めると分かる。2026-11-08 社長)
+  { const bd = document.querySelector('[data-assistant-life-board]'); const more = bd && bd.querySelector('[data-assistant-life-board-more]');
+    const total = (typeof ASSISTANT_LIFE_DIARY !== 'undefined' && (ASSISTANT_LIFE_DIARY.state.items || []).length) || 0;
+    if (bd && total > 0) { if (!more) ng.push('掲示板に「ほか◯件／全部 ›」が無い');
+      else { const w = bd.clientWidth; const seen = [...bd.querySelectorAll('[data-assistant-life-board-item]')].filter(p => p.offsetLeft + 1 < w).length;
+        if (seen < 1) ng.push(`掲示板に件が1つも見えない(全${total}件・2026-11-08 ミハリ 横)`);
+        if (Number(more.getAttribute('data-assistant-life-board-more')) !== total - seen) ng.push(`「ほか◯件」の数が合わない: ${more.textContent} 全${total}・見えている${seen}`);
+        const mr = more.getBoundingClientRect(), br = bd.getBoundingClientRect(); if (mr.right > br.right + 0.5 || more.scrollWidth > more.clientWidth + 1) ng.push(`「${more.textContent}」が掲示板からはみ出す`); } } }
+  for (const sm of document.querySelectorAll('[data-assistant-life-today] small')) if (sm.scrollWidth > sm.clientWidth + 1) ng.push(`今日やれることの字が切れる: ${sm.textContent}`);
+  // 部屋の吹き出し(「💭 だれか来ないかな…」)が部屋の幅で切れない・まとまりの途中で折れない(2026-11-08 ミハリ: 横で「だれか来ない…」)
+  for (const b of document.querySelectorAll('[data-assistant-life-room-bub]')) { if (b.scrollWidth > b.clientWidth + 1 || b.scrollHeight > b.clientHeight + 1) ng.push(`部屋の吹き出しが切れる: ${b.textContent}`); for (const c of b.querySelectorAll('[data-assistant-life-chunk]')) if (c.getClientRects().length > 1) ng.push(`吹き出しが途中で折れる: ${c.textContent}`); }
+  if (!document.querySelector('[data-assistant-life-room-bub]')) ng.push('部屋の吹き出しが無い(検査の前提)');
+  // 吹き出しは1行で収まり、名札に重ならない(字の幅が端末で1割ちがっても)
+  for (const b of document.querySelectorAll('[data-assistant-life-room-bub]')) { const room = b.closest('.mhl-room'), pl = room && room.querySelector('.pl'); const r = b.getBoundingClientRect(); if (b.getClientRects().length && [...b.querySelectorAll('[data-assistant-life-chunk]')].some((c, i, a) => i && Math.abs(c.getBoundingClientRect().top - a[0].getBoundingClientRect().top) > 2)) ng.push(`部屋の吹き出しが2行になる: ${b.textContent}`); if (r.width * 1.1 > room.clientWidth * 0.88 + 1) ng.push(`部屋の吹き出しが字の幅しだいで切れる: ${b.textContent} ${Math.round(r.width)}/${Math.round(room.clientWidth)}`); if (pl) { const q = pl.getBoundingClientRect(); if (Math.min(r.right, q.right) - Math.max(r.left, q.left) > 1 && Math.min(r.bottom, q.bottom) - Math.max(r.top, q.top) > 1) ng.push(`部屋の吹き出しが名札に重なる: ${b.textContent}`); } }
+  // 屋根の札「🏡 助手の家」が家の枠に隠れない(縦で下半分が枠の下にあった)
+  const hn = document.querySelector('[data-assistant-life-hname]'); if (hn) { const r = hn.getBoundingClientRect(); for (const y of [r.top + 3, r.bottom - 3]) { const e = document.elementFromPoint(r.left + r.width / 2, y); if (!e || !hn.contains(e)) ng.push('屋根の札「助手の家」が枠に隠れる'); } }
+  const sub = document.querySelector('[data-assistant-life-today-sub]'); if (!sub || !/^💭 \S+/.test(sub.textContent)) ng.push(`声をかけるにさみしそうな助手の名前が無い: ${sub && sub.textContent}`);
+  return ng;
+});
+// ⑰ 場面の立ち絵の釣り合い(2026-11-08 社長「サイズバランスが悪いのはわざと？」)と見出しのアイコン。
+//   組を作って「居場所」から見守り、場面の立ち絵の見た目の頭の高さの差(場面の高さの 3% 以内)と、大きさの比(1.08 倍以内)を測る
+//   2026-11-08 社長「顔のサイズで合わせて頭のてっぺんをあわせた縮尺と位置に」(オクリモノ3・STAND-MEASURE.md): 頭の高さは手で測った頭のてっぺん(髪の上端・飾りは除く)、
+//   大きさは体の高さではなく顔の大きさ(assistantLifeStandFace の m・fit)で比べる。顔が隠れないかは目の線で見る
+const standProblems = async (page, combos, label) => {
+  const ng = []; let n = 0;
+  for (const ids of combos) {
+    const key = await page.evaluate((ids) => {
+      const l = ASSISTANT_LIFE_STORE.state.life; const solo = { ...l.solo }; for (const k of Object.keys(solo)) if (ids.includes(k)) delete solo[k];
+      const groups = (l.groups || []).map(g => ({ ...g, ids: g.ids.filter(x => !ids.includes(x)) })).filter(g => g.ids.length >= 2);
+      const g = { ids, doing: 'cards', place: 'cardroom' }; const pl = ASSISTANT_LIFE_STORE.state.play || {};
+      ASSISTANT_LIFE_STORE.set({ play: { ...pl, counts: { ...(pl.counts || {}), watch: 0 } }, life: { ...l, solo, watched: [], groups: [...groups, g] } });
+      return assistantLifeGroupKey(g);
+    }, ids);
+    await page.waitForTimeout(150);
+    await page.locator(`[data-assistant-life-watch="${key}"]`).click({ timeout: 3000 }).catch(() => {});
+    await page.waitForTimeout(700);
+    const m = await page.evaluate(() => {
+      const sc = document.querySelector('[data-assistant-life-scene]'); if (!sc) return null; const H = sc.getBoundingClientRect().height;
+      const faceOf = (e) => (typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(e.getAttribute('data-assistant-life-scene-stand'), e.getAttribute('src')) : { top: 0, eye: 0.4, m: 1 });
+      const EC = typeof ASSISTANT_LIFE_STAND_EC !== 'undefined' ? ASSISTANT_LIFE_STAND_EC : 1;
+      const st = [...sc.querySelectorAll('[data-assistant-life-scene-stand]')].map(e => { const r = e.getBoundingClientRect(), b = ASSISTANT_LIFE_STAND_BOX.get(e.getAttribute('src')), f = faceOf(e); if (!b) return null;
+        const vh = (b.b - b.t) * r.height; return { top: r.top + b.t * r.height + (f.top || 0) * vh, fh: vh * EC * (f.m || 1) / (f.fit || 1) }; });
+      const ic = sc.querySelector('[data-assistant-life-scene-icon]');
+      // 顔(見た目の上から4割)が台詞の窓に隠れていないか(2026-11-08 ミハリ: 横で窓の裏に隠れた)
+      const tw = document.querySelector('[data-assistant-peer-talk]'); const twTop = tw ? tw.getBoundingClientRect().top : Infinity;
+      const hidden = [...sc.querySelectorAll('[data-assistant-life-scene-stand]')].filter(e => { const r = e.getBoundingClientRect(), b = ASSISTANT_LIFE_STAND_BOX.get(e.getAttribute('src')), f = faceOf(e); return b && r.top + (b.t + (f.eye || 0.4) * (b.b - b.t)) * r.height > twTop; }).map(e => e.getAttribute('data-assistant-life-scene-stand'));
+      return { H, st, hidden, icon: !!ic && !ic.closest('.mhl-ti') && ic.getBoundingClientRect().width > 4 };
+    });
+    if (!m) { ng.push(`${ids.join('・')}: 場面が開かない`); continue; }
+    n++;
+    if (m.st.length !== ids.length || m.st.some(x => !x)) ng.push(`${ids.join('・')}: 立ち絵が測れない`);
+    else { const t = m.st.map(x => x.top), f = m.st.map(x => x.fh); const d = (Math.max(...t) - Math.min(...t)) / m.H, r = Math.max(...f) / Math.min(...f); if (d > 0.03 || r > 1.08) ng.push(`${ids.join('・')}: 頭の高さの差 ${(d * 100).toFixed(1)}%・大きさの比 ${r.toFixed(2)}`); }
+    if (!m.icon) ng.push(`${ids.join('・')}: 見出しのアイコンが出ていない`);
+    if (m.hidden && m.hidden.length) ng.push(`${ids.join('・')}: 顔が台詞の窓に隠れる(${m.hidden.join(',')})`);
+    await page.locator('[data-assistant-life-scene-back]').click({ timeout: 2000 }).catch(() => {}); await page.waitForTimeout(200);
+  }
+  check(`⑰ 場面の立ち絵の頭の高さ・大きさがそろい、顔が台詞の窓に隠れず、見出しのアイコンが出る(${label}・${n}場面)`, ng.length === 0 && n === combos.length, ng.slice(0, 4).join(' / '));
+};
+const LIFE_IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'];
+const STAND_COMBOS = [...LIFE_IDS.flatMap((a, i) => LIFE_IDS.slice(i + 1).map(b => [a, b])), ['mua', 'kiki', 'kyuko'], ['dra', 'sorashido', 'erubin'], ['momosuke', 'atsu', 'kiki'], ['kiki', 'dra', 'kyuko', 'mua'], ['atsu', 'kyuko', 'sorashido', 'erubin']];
 const overflowX = (page, sel) => page.evaluate((s) => { const el = document.querySelector(s); if (!el) return null; const r = el.getBoundingClientRect(); return r.left < -1 || r.right > window.innerWidth + 1; }, sel);
 
 (async () => {
@@ -106,16 +131,17 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
   });
   await new Promise(r => server.listen(PORT, r));
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-  const open = async ({ w, h, life = true, intro = false, bondAll = null }) => {
+  const open = async ({ w, h, life = true, intro = false, bondAll = null, at = null }) => {
     const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: SHOTS ? 2 : 1 });
+    if (at) await page.clock.install({ time: new Date(at) });
     const errors = []; page.on('pageerror', e => errors.push(String(e)));
     await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
     await page.addInitScript(quietBootSeed());
     await page.addInitScript(updateNoticeSeed());
     await page.addInitScript(oneTimeNoticeSeed());
-    await page.addInitScript(seed, { storyIds: STORY_IDS, life, intro, bondAll });
+    await page.addInitScript(seed, { storyIds: STORY_IDS, introKeys: INTRO_KEYS, life, intro, bondAll });
     await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
-    await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${process.env.LIFE_BASE ? process.env.LIFE_BASE.replace(/\/?$/, '/') : `http://localhost:${PORT}/`}monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     await toHome(page);
     return { page, errors };
   };
@@ -132,10 +158,14 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     { const ng = await homeFacesProblems(page); check('① 顔の列は、どの札でも札(名前)の下にあり、何にも重ならない(縦 390×844)', ng.length === 0, ng.join(' / ')); }
     check('① 顔ははみ出さない(縦 390)', await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-home-faces]')].every(el => { const r = el.getBoundingClientRect(); return r.left >= -1 && r.right <= window.innerWidth + 1; })));
     if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-1-home-faces.png') });
+    // ⑯ 地図と HOME の札の位置(1対1)は assistant-life-map-check.js が見る(2026-11-08 地図 案A)
     // 入場の演出(その日の最初は長い)・家
+    // 入場の演出は1.2秒だけ出る。開いた直後はページが重く、確かめる側が遅れて見逃すことがあるので、押す前から「出たか」を記録しておく(2026-11-08)
+    await page.evaluate(() => { window.__mhIntroSeen = []; const mo = new MutationObserver(() => { const e = document.querySelector('[data-assistant-life-intro]'); if (e) { const k = e.getAttribute('data-assistant-life-intro'); if (!window.__mhIntroSeen.includes(k)) window.__mhIntroSeen.push(k); } }); mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-assistant-life-intro'] }); window.__mhIntroMo = mo; });
     await page.locator('[data-home-assistant-life]').click();
     await page.locator('[data-assistant-life-screen]').waitFor({ timeout: 5000 });
-    check('⑩ 入場の演出が出る(その日の最初は長い)', (await page.locator('[data-assistant-life-intro="long"]').count()) === 1);
+    await page.waitForFunction(() => (window.__mhIntroSeen || []).length > 0, null, { timeout: 6000 }).catch(() => {});
+    check('⑩ 入場の演出が出る(その日の最初は長い)', await page.evaluate(() => { try { window.__mhIntroMo.disconnect(); } catch (_) {} return (window.__mhIntroSeen || [])[0] === 'long'; }));
     check('⑩ 入場を見た日を新しいキーに残す', /^\d{4}-\d{2}-\d{2}$/.test(String(await ls(page, 'mh_assistant_life_intro_v1'))));
     await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 4000 }).catch(() => {});
     check('⑩ 家に8人の部屋が出る', (await page.locator('[data-assistant-life-room]').count()) === 8);
@@ -144,6 +174,27 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     check('⑩ 居間に「今日あったこと」の掲示板', (await page.locator('[data-assistant-life-board]').count()) === 1);
     check('⑩ 家ははみ出さない(縦 390)', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
     if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-12-house.png') });
+    await seedBoard(page); await page.waitForTimeout(250);
+    { const ng = await boardProblems(page); check('⑫ 掲示板の言葉(名前・場所・していること)が途中で折れない・今日やれることの字が切れない・屋根の札が隠れない(縦)', ng.length === 0, ng.join(' / ')); }
+    if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-16-board.png') });
+    // カード部とのつなぎ口(読むだけ・2026-11-07 社長「カード部屋にいる助手と対戦すると 1.5倍」): カード部屋でカード研究の組の全員/図書室のカード研究は入れない/対戦の知らせで今日あったことに1件
+    {
+      const r = await page.evaluate(() => {
+        const l = ASSISTANT_LIFE_STORE.state.life;
+        const card = (l.groups || []).find(g => g.doing === 'cards' && g.place === 'cardroom');
+        const ids = assistantLifeCardIds();
+        const lib = ASSISTANT_LIFE_STORE.state.life;
+        ASSISTANT_LIFE_STORE.set({ life: { ...lib, groups: (lib.groups || []).map(g => g === card ? { ...g, place: 'library' } : g) } });
+        const libIds = assistantLifeCardIds();
+        ASSISTANT_LIFE_STORE.set({ life: l });
+        const n0 = ASSISTANT_LIFE_DIARY.state.items.length;
+        assistantLifeOnCardMatch({ assistantId: card ? card.ids[0] : 'dra', won: true, at: Date.now() });
+        return { want: card ? [...card.ids].sort().join(',') : null, got: [...ids].sort().join(','), libIds: libIds.length, atOne: card ? assistantLifeAtCard(card.ids[0]) : false, n0 };
+      });
+      await page.waitForTimeout(300);
+      const last = await page.evaluate(() => (ASSISTANT_LIFE_DIARY.state.items.slice(-1)[0] || {}).text || '');
+      check('⑭ カード部屋にいる助手(assistantLifeAtCard・assistantLifeCardIds): 組の全員・図書室のカード研究は入れない・対戦の知らせで今日あったことに1件', !!r.want && r.want === r.got && r.atOne && r.libIds === 0 && /MFバトルカードで対戦して勝った/.test(last), `${r.got} / 図書室 ${r.libIds} / ${last}`);
+    }
     // ⑫ 文字(2026-11-07 社長「文字列も気をつけて」): 題が切れない・助手の名前の途中で折れない・掲示板は2行で読める
     const textOk = await page.evaluate(() => {
       const ng = [];
@@ -152,7 +203,7 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
       const clk = document.querySelector('[data-assistant-life-title]'); const tc = [...document.querySelectorAll('.mhl-hdr *')].find(e => /\d{1,2}:\d{2}/.test(e.textContent || '') && e.children.length === 0);
       if (clk && tc) { const a = clk.getBoundingClientRect(), b = tc.getBoundingClientRect(); if (a.right > b.left + 1 && a.top < b.bottom && b.top < a.bottom) ng.push('題と時刻の札が重なる'); }
       for (const n of document.querySelectorAll('[data-assistant-life-name]')) if (n.getClientRects().length > 1) ng.push(`名前の途中で折れる: ${n.textContent}`);
-      const cut = (b) => { const tag = b.closest('.tag'), room = b.closest('.mhl-room'), cs = getComputedStyle(tag); const room92 = room.clientWidth * 0.92 - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth); return b.scrollWidth * 1.1 > room92; }; for (const b of document.querySelectorAll('[data-assistant-life-room-away] b')) { const own = b.textContent, mark = own.split(' ')[0]; for (const name of Object.values(ASSISTANT_LIFE_PLACES)) { b.textContent = `${mark} ${name}へ`; if (cut(b)) ng.push(`札が切れる: ${b.textContent}`); } b.textContent = own; } for (const b of document.querySelectorAll('[data-assistant-life-room-away] small')) if (cut(b)) ng.push(`札が切れる: ${b.textContent}`);
+      const cut = (b) => { if (!b.getClientRects().length) return false; const rg = document.createRange(); rg.selectNodeContents(b); const tw = rg.getBoundingClientRect().width; return tw * 1.1 > b.clientWidth; }; /* 札は部屋の幅いっぱいの箱(2026-11-08 ナカヨシ8)。字の幅に1割を足しても、その行の幅に収まるか */ for (const b of document.querySelectorAll('[data-assistant-life-room-away] b')) { const own = b.textContent, mark = own.split(' ')[0]; for (const name of Object.keys(ASSISTANT_LIFE_PLACES).map(assistantLifePlaceShow)) { b.textContent = `${mark} ${name}へ`; if (cut(b)) ng.push(`札が切れる: ${b.textContent}`); } b.textContent = own; } for (const b of document.querySelectorAll('[data-assistant-life-room-away] small')) if (cut(b)) ng.push(`札が切れる: ${b.textContent}`);
       for (const p of document.querySelectorAll('[data-assistant-life-board-item]')) if (p.scrollHeight > p.clientHeight + 2) ng.push(`掲示板が切れる: ${p.textContent}`);
       // ミハリ L8・L10: 時間帯の言葉は HOME の札と同じ(朝・昼・夕・夜)。区切りの名前(午後・深夜)・略称「モンビー」を画面に出さない
       const scr = document.querySelector('[data-assistant-life-screen]'); const all = scr ? scr.innerText : '';
@@ -165,6 +216,10 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     await page.locator('[data-assistant-life-room="atsu"]').click(); await page.waitForTimeout(300);
     const sheetText = await page.locator('[data-assistant-life-room-sheet="atsu"]').innerText().catch(() => '');
     check('⑩ 部屋を押すと、その助手のこと(いまどこ・仲良し度・友情Lv・セッション・今日あったこと)', ['あつの部屋', '仲良し度', '友情Lv', 'セッション', '今日あったこと'].every(w => sheetText.includes(w)), sheetText.replace(/\s+/g, ' ').slice(0, 80));
+    // 助手1人に贈る(印 assistantLifeSolo・2026-11-08)が開いていれば、1人用の4種類も並んで14種類(❹A)
+    const likeWant = (await page.evaluate(() => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeSolo === true)) ? 14 : 10;
+    check('⑩ 部屋を押すと「🎁 贈り物の好み」(10種類・1人に贈るが開いていれば14種類・分かっていない物は ?)', /贈り物の好み/.test(sheetText) && (await page.locator('[data-assistant-life-room-sheet="atsu"] [data-assistant-life-gift-like]').count()) === likeWant
+      && (await page.locator('[data-assistant-life-room-sheet="atsu"] [data-assistant-life-gift-like$=":unknown"]').count()) === likeWant);
     if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-13-room.png') });
     // ⑪ 声をかける(2026-11-07 社長「声をかけにいったら俺とじゃなくて別の助手と喋ってる」): その助手だけが {name} に話す・場面にいない助手が出ない
     await page.locator('[data-assistant-life-room-sheet="atsu"] [data-assistant-life-room-act="invite"]').click().catch(() => {});
@@ -212,19 +267,17 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     // 地図のふち(丘は上・家は左)にも顔が出るようにする(ミハリ L7①)
     await page.evaluate(() => { const l = ASSISTANT_LIFE_STORE.state.life; const gs = l.groups || []; const k = gs.findIndex(x => x.place !== 'cafe'); if (k >= 0) ASSISTANT_LIFE_STORE.set({ life: { ...l, groups: gs.map((x, i) => i === k ? { ...x, doing: 'walk', place: 'hill' } : x) } }); });
     await toWhere(page);
-    check('⑩ みんなの居場所に町の地図(場所に顔)', (await page.locator('[data-assistant-life-map] [data-assistant-life-map-place="cafe"] button').count()) === 2);
+    check('⑩ みんなの居場所に町の地図(場所に全身)', (await page.locator('[data-assistant-life-map] [data-assistant-life-map-crowd="cafe"] [data-assistant-life-map-who]').count()) === 2);
+    // 地図の札・人の並びの重なり・時間帯の色・1対1は assistant-life-map-check.js(案A・2026-11-08)。ここでは丘・家に人がいて地図の中に出るかだけ
     const mapOk = await page.evaluate(() => {
       const map = document.querySelector('[data-assistant-life-map]'); if (!map) return ['地図が無い'];
       const m = map.getBoundingClientRect(); const ng = [];
-      const labs = [...map.querySelectorAll('[data-assistant-life-map-place] > span:last-child')].map(e => ({ id: e.parentElement.getAttribute('data-assistant-life-map-place'), r: e.getBoundingClientRect() }));
-      for (const a of labs) { if (a.r.left < m.left - 1 || a.r.right > m.right + 1 || a.r.top < m.top - 1 || a.r.bottom > m.bottom + 1) ng.push(`地図の外: ${a.id}`); }
-      for (const f of map.querySelectorAll('[data-assistant-life-map-place] button')) { const r = f.getBoundingClientRect(); if (r.left < m.left - 1 || r.right > m.right + 1 || r.top < m.top - 1 || r.bottom > m.bottom + 1) ng.push(`顔が地図のふちで切れる: ${f.closest('[data-assistant-life-map-place]').getAttribute('data-assistant-life-map-place')}`); }
-      if (document.documentElement.getAttribute('data-mh-tod') && !map.querySelector('[data-time-of-day-tint]')) ng.push('地図に時間帯の色が重なっていない(夜も昼の明るさ)');
-      if (!map.querySelector('[data-assistant-life-map-place="hill"] button') || !map.querySelector('[data-assistant-life-map-place="home"] button')) ng.push('丘・家に顔が無い(検査の前提)');
-      for (let i = 0; i < labs.length; i++) for (let j = i + 1; j < labs.length; j++) { const a = labs[i].r, b = labs[j].r; if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1) ng.push(`札が重なる: ${labs[i].id}×${labs[j].id}`); }
+      for (const c of map.querySelectorAll('[data-assistant-life-map-crowd]')) { const r = c.getBoundingClientRect(); if (r.left < m.left - 1 || r.right > m.right + 1 || r.top < m.top - 1 || r.bottom > m.bottom + 1) ng.push(`人が地図のふちで切れる: ${c.getAttribute('data-assistant-life-map-crowd')}`); }
+      if (!map.querySelector('[data-assistant-life-map-crowd="hill"]') || !map.querySelector('[data-assistant-life-map-crowd="home"]')) ng.push('丘・家に人が無い(検査の前提)');
       return ng;
     });
-    check('⑫ 地図の場所の札と顔は地図の中で、札どうし重ならない(家とおやつ屋さん・丘と家のふちの顔も)・時間帯の色が重なる', mapOk.length === 0, mapOk.join(' / '));
+    check('⑫ 地図の人の並びは地図の中(丘・家も)', mapOk.length === 0, mapOk.join(' / '));
+    if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-17-map-garden.png') });
     const groups = await page.locator('[data-assistant-life-group]').count();
     const solos = await page.locator('[data-assistant-life-solo]').count();
     check('① 画面が開き、組とひとりの助手が出る(8人ぶん)', groups + solos >= 3, `組 ${groups}・ひとり ${solos}`);
@@ -289,19 +342,24 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     // ⑧ 2人にあげる道具(家の「🎒 道具」)
     await page.locator('[data-assistant-life-icon="items"]').click().catch(() => {}); await page.waitForTimeout(250);
     const itemsText = await page.locator('[data-assistant-life-items]').innerText().catch(() => '');
-    check('⑧ 道具の欄に、持っている数・起きること・手に入れる所が出る', /持っている 2個/.test(itemsText) && /友情Lv \+15/.test(itemsText) && /仲良し度 \+\d+/.test(itemsText) && /ビートP交換所/.test(itemsText), itemsText.replace(/\s+/g, ' ').slice(0, 80));
+    check('⑧ 道具の欄の「仲良し度」「友情Lv」が言葉の途中で折れず、「ふつう」のときの数で出る(2026-11-08 ミハリ・2026-11-11 社長 案3 A)', await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-items] .whitespace-nowrap')].filter(x => /仲良し度|友情Lv/.test(x.textContent)).every(x => x.getBoundingClientRect().height <= parseFloat(getComputedStyle(x).fontSize) * 1.9)) && /仲良し度 \+30/.test(itemsText) && /ふつう/.test(itemsText), itemsText.replace(/\s+/g, ' ').slice(0, 120));
+    check('⑧ 道具の欄に、持っている数・起きること・手に入れる所が出る', /持ち 2/.test(itemsText) && /友情Lv \+15/.test(itemsText) && /仲良し度 \+\d+/.test(itemsText) && /ビートP交換所/.test(itemsText), itemsText.replace(/\s+/g, ' ').slice(0, 80));
     await toWhere(page);
     const giveBtn = page.locator('[data-assistant-life-give]').first();
     if (await giveBtn.count()) {
       await giveBtn.click(); await page.waitForTimeout(300);
       const sheet = await page.locator('[data-assistant-life-give-sheet]').innerText().catch(() => '');
-      check('⑧ 「渡す」で、何の道具か・起きること・使える数・手に入れる所・このあと が1枚で出る', ['何の道具', '起きること', '使える数', '手に入れる', 'このあと'].every(w => sheet.includes(w)) && /1日1回/.test(sheet));
+      check('⑧ 「贈る」で、道具の名前と中身・2人の好み・上がる量・回数・手に入れる所が1枚で出る(2026-11-08 10種類)', ['仲良し度', '友情Lv', '好み', '同じ道具は1日1回', 'ビートP交換所'].every(w => sheet.replace(/\u2060/g, '').includes(w)) && (await page.locator('[data-assistant-life-give-kind]').count()) === 10, sheet.replace(/\s+/g, ' ').slice(0, 80));
+      check('⑧ 贈るシートの道具の名前が、枠からはみ出さない', await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-give-kind]')].every(b => b.scrollWidth <= b.clientWidth + 1)));
       check('⑧ 確かめの1枚もはみ出さない(縦 390)', await page.evaluate(() => { const el = document.querySelector('[data-assistant-life-give-sheet] > div'); const r = el && el.getBoundingClientRect(); return !!r && r.left >= -1 && r.right <= window.innerWidth + 1 && r.top >= -1; }));
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-8-give.png') });
       await page.locator('[data-assistant-life-give-go]').click(); await page.waitForTimeout(800);
       const owned = await ls(page, 'mh_owned_items');
       const info = await talkInfo(page);
-      check('⑧ 渡すと、2人のひとことが流れて差し入れが1つ減る', owned && owned.peer_gift === 1 && !!info, info ? info.id : 'なし');
+      check('⑧ 贈ったとき、仲良し度の小さな札は重ねない(道具の演出の中に2人それぞれの量が出る・2026-11-08 窓口)', (await page.locator('.mh-gfx-chip').count()) === 0);
+      check('⑧ 贈ると、2人のひとことが流れておやつバスケットが1つ減る', owned && owned.peer_gift === 1 && !!info, info ? info.id : 'なし');
+      const likesSaved = await ls(page, 'mh_assistant_life_likes_v1');
+      check('⑧ 贈った2人の好みが分かり、新しいキーに残る(mh_assistant_life_likes_v1)', !!(likesSaved && likesSaved.known && likesSaved.known.kiki && likesSaved.known.kiki.basket && likesSaved.known.mua && likesSaved.known.mua.basket));
       // 品物を渡した演出(44-growth-fx.jsx)。演出は1つずつ出るので、前の札が出ていればその後に出る(数秒で閉じる)
       await page.locator('[data-growth-fx-sheet="item"]').waitFor({ timeout: 10000 }).catch(() => {});
       check('⑨ 渡すと、品物の演出(2人の友情Lv・仲良し度)が出る', (await page.locator('[data-growth-fx-sheet="item"]').count()) > 0);
@@ -316,7 +374,7 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
       await page.locator('[data-assistant-life-give]').first().click(); await page.waitForTimeout(300);
       await page.locator('[data-assistant-life-give-kind="gift"]').click().catch(() => {});
       const reason = await page.locator('[data-assistant-life-give-reason]').innerText().catch(() => '');
-      check('⑧ 同じ日に2回目は、理由が出て渡せない', /今日はもう使いました/.test(reason) && await page.locator('[data-assistant-life-give-go]').isDisabled());
+      check('⑧ 同じ道具を同じ日に2回目は、理由が出て贈れない', /今日はもうこの道具を贈りました/.test(reason) && await page.locator('[data-assistant-life-give-go]').isDisabled(), reason);
       await page.locator('[data-assistant-life-give-cancel]').click();
     } else check('⑧ 渡せる組がある', false);
     // ④ 関係とアルバム
@@ -342,6 +400,7 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     await page.close();
 
     // 横 844×390
+    { const P = await open({ w: 390, h: 844, at: '2026-11-08T12:30:00+09:00' }); await P.page.clock.resume(); await finishTalk(P.page); await reopen(P.page); await standProblems(P.page, STAND_COMBOS, '縦'); if (SHOTS) await P.page.screenshot({ path: path.join(shotDir, 'life-18-scene-after.png') }); await P.page.close(); }
     const L = await open({ w: 844, h: 390 });
     await waitFaces(L.page);
     check('① 横 844×390 でも顔が全部出て、はみ出さない', (await L.page.locator('[data-assistant-life-home-face]').count()) === 8 && await L.page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-home-faces]')].every(el => { const r = el.getBoundingClientRect(); return r.left >= -1 && r.right <= window.innerWidth + 1; })));
@@ -365,12 +424,56 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     check('① 横 844×390 でも画面がはみ出さない(家は左・右の列に今日やれること)', await L.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1) && (await L.page.locator('[data-assistant-life-screen][data-assistant-life-land="1"]').count()) === 1 && (await L.page.locator('[data-assistant-life-room]').count()) === 8);
     if (SHOTS) await L.page.screenshot({ path: path.join(shotDir, 'life-6-house-land.png') });
     // 札の字は、端末の字体で幅が変わる(この検査のブラウザと既定のブラウザでかなの幅が1割ちがった)。字の幅に1割を足しても札に収まるかを見る。行き先はすべての場所の名前を入れて測る(2026-11-07 本番の横で「おやつ屋さ…」)
-    const textL = await L.page.evaluate(() => { const ng = []; const ti = document.querySelector('[data-assistant-life-title] .mhl-ti'); if (!ti || ti.scrollWidth > ti.clientWidth + 1) ng.push('題が切れる'); const cut = (b) => { const tag = b.closest('.tag'), room = b.closest('.mhl-room'), cs = getComputedStyle(tag); const room92 = room.clientWidth * 0.92 - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth); return b.scrollWidth * 1.1 > room92; }; for (const b of document.querySelectorAll('[data-assistant-life-room-away] b')) { const own = b.textContent, mark = own.split(' ')[0]; for (const name of Object.values(ASSISTANT_LIFE_PLACES)) { b.textContent = `${mark} ${name}へ`; if (cut(b)) ng.push(`札が切れる: ${b.textContent}`); } b.textContent = own; } for (const b of document.querySelectorAll('[data-assistant-life-room-away] small')) if (cut(b)) ng.push(`札が切れる: ${b.textContent}`); for (const n of document.querySelectorAll('[data-assistant-life-name]')) if (n.getClientRects().length > 1) ng.push(`名前の途中で折れる: ${n.textContent}`); for (const bt of document.querySelectorAll('[data-assistant-life-screen] button')) if (/モンビー/.test(bt.textContent)) ng.push(`ボタンが略称: ${bt.textContent}`); for (const bt of document.querySelectorAll('[data-assistant-life-screen] button b')) if (bt.scrollWidth > bt.clientWidth + 1) ng.push(`ボタンの字が切れる: ${bt.textContent}`); return ng; });
+    const textL = await L.page.evaluate(() => { const ng = []; const ti = document.querySelector('[data-assistant-life-title] .mhl-ti'); if (!ti || ti.scrollWidth > ti.clientWidth + 1) ng.push('題が切れる'); const cut = (b) => { if (!b.getClientRects().length) return false; const rg = document.createRange(); rg.selectNodeContents(b); const tw = rg.getBoundingClientRect().width; return tw * 1.1 > b.clientWidth; }; /* 札は部屋の幅いっぱいの箱(2026-11-08 ナカヨシ8)。字の幅に1割を足しても、その行の幅に収まるか */ for (const b of document.querySelectorAll('[data-assistant-life-room-away] b')) { const own = b.textContent, mark = own.split(' ')[0]; for (const name of Object.keys(ASSISTANT_LIFE_PLACES).map(assistantLifePlaceShow)) { b.textContent = `${mark} ${name}へ`; if (cut(b)) ng.push(`札が切れる: ${b.textContent}`); } b.textContent = own; } for (const b of document.querySelectorAll('[data-assistant-life-room-away] small')) if (cut(b)) ng.push(`札が切れる: ${b.textContent}`); for (const n of document.querySelectorAll('[data-assistant-life-name]')) if (n.getClientRects().length > 1) ng.push(`名前の途中で折れる: ${n.textContent}`); for (const bt of document.querySelectorAll('[data-assistant-life-screen] button')) if (/モンビー/.test(bt.textContent)) ng.push(`ボタンが略称: ${bt.textContent}`); for (const bt of document.querySelectorAll('[data-assistant-life-screen] button b')) if (bt.scrollWidth > bt.clientWidth + 1) ng.push(`ボタンの字が切れる: ${bt.textContent}`); return ng; });
+    await seedBoard(L.page); await L.page.waitForTimeout(250);
+    { const ng = await boardProblems(L.page); check('⑫ 横でも掲示板の言葉が途中で折れない・今日やれることの字が切れない', ng.length === 0, ng.join(' / ')); }
+    if (SHOTS) await L.page.screenshot({ path: path.join(shotDir, 'life-16-board-land.png') });
     check('⑫ 横でも家の文字(題・部屋の札・ボタン)が切れない・名前の途中で折れない・ボタンは正式名称(モンヒロビート)', textL.length === 0, textL.join(' / '));
+    await toWhere(L.page); await standProblems(L.page, STAND_COMBOS.slice(0, 8).concat(STAND_COMBOS.slice(-5)), '横'); await L.page.locator('[data-assistant-life-icon="house"]').click().catch(() => {}); await L.page.waitForTimeout(250);
+    // 好きな物を教えてくれた知らせ(いちばん長いひとこと)を入れてから開く(2026-11-08 窓口: 横で「…」と切れていた)
+    await L.page.evaluate(async () => { await ASSISTANT_LIFE_GIFT_STORE.load(); const st = ASSISTANT_LIFE_GIFT_STORE.state; ASSISTANT_LIFE_GIFT_STORE.set({ likes: { ...st.likes, told: [{ who: 'atsu', key: 'misanga', day: '2026-11-08' }] } }); });
     await L.page.locator('[data-assistant-life-room="atsu"]').click().catch(() => {}); await L.page.waitForTimeout(300);
+    check('⑧ 横: 教えてくれた知らせは「…」で切らずに全文が見える(届いた台詞の全文と同じ)', await L.page.evaluate(() => { const b = document.querySelector('[data-assistant-life-gift-told]'); return !!b && b.scrollWidth <= b.clientWidth + 1 && b.scrollHeight <= b.clientHeight + 1 && getComputedStyle(b).textOverflow !== 'ellipsis' && b.innerText.replace(/\s+/g, '').includes(String(assistantLifeGiftHintLine('atsu', 'misanga').t).replace(/\s+/g, '')); }), await L.page.evaluate(() => { const b = document.querySelector('[data-assistant-life-gift-told]'); return b ? `${b.scrollWidth}/${b.clientWidth} ${b.scrollHeight}/${b.clientHeight} ${b.innerText}` : 'なし'; }));
+    check('⑩ 横: 部屋のシートの下のボタンは、いつも全部見える(画面の下で切れない)', await L.page.evaluate(() => { const bs = [...document.querySelectorAll('[data-assistant-life-room-sheet] [data-assistant-life-room-act]')]; return bs.length > 0 && bs.every(b => { const r = b.getBoundingClientRect(); return r.top >= 0 && r.bottom <= window.innerHeight + 0.5; }); }));
     check('⑩ 横: 部屋を押すと右にその助手のこと(はみ出さない)', await L.page.evaluate(() => { const el = document.querySelector('[data-assistant-life-room-sheet] .mhl-sheet'); const r = el && el.getBoundingClientRect(); return !!r && r.left > window.innerWidth / 2 - 1 && r.right <= window.innerWidth + 1; }));
     if (SHOTS) await L.page.screenshot({ path: path.join(shotDir, 'life-14-room-land.png') });
     await L.page.close();
+    // ⑮ 読みやすさ(2026-11-08 社長「ここみづらい」: 朝の明るい背景に半透明の札・枠・説明が溶けていた)。
+    //   朝・昼・夕・夜 × 縦・横で、居場所・友情・道具のタブの字が、濃い面の上にあり、面との明るさの差が足りているか(WCAG の比 4.5、太字14px以上は 3)
+    for (const [tod, hm] of [['朝', '07:52'], ['昼', '12:30'], ['夕', '17:30'], ['夜', '21:30']]) for (const [vw, vh] of [[390, 844], [844, 390]]) {
+      const P = await open({ w: vw, h: vh, at: `2026-11-08T${hm}:00+09:00` });
+      await P.page.clock.resume();
+      await finishTalk(P.page); await openHouse(P.page);
+      const ng = [];
+      for (const tab of ['where', 'friends', 'items']) {
+        await P.page.locator(`[data-assistant-life-icon="${tab}"]`).click().catch(() => {}); await P.page.waitForTimeout(350);
+        ng.push(...await P.page.evaluate((tab) => {
+          const rgba = (c) => { const m = String(c).match(/rgba?\(([^)]+)\)/); if (!m) return null; const v = m[1].split(/[ ,/]+/).filter(Boolean).map(Number); return { r: v[0], g: v[1], b: v[2], a: v.length > 3 ? v[3] : 1 }; };
+          const lum = ({ r, g, b }) => { const f = (x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+          const scr = document.querySelector('[data-assistant-life-screen]');
+          const root = tab === 'where' ? scr.querySelector('[data-assistant-life-where]') : tab === 'items' ? scr.querySelector('[data-assistant-life-items]') : scr.querySelector('[data-assistant-peer-map],[data-assistant-life-friends]') || scr;
+          if (!root) return [`${tab}: 中身が無い`];
+          const out = [];
+          for (const el of root.querySelectorAll('p,span,b,button,small')) {
+            const own = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()); if (!own) continue;
+            if (el.closest('[data-assistant-life-map]')) continue; // 地図の札は別に見ている(⑫)
+            if (el.closest('.mhl-hdr')) continue; // 見出し(題の字の塗り)は家のタブで見る。居場所では地図の下の一覧に入る(2026-11-08 地図 案A)
+            const r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;
+            const cs = getComputedStyle(el); const fg = rgba(cs.color); if (!fg) continue;
+            let bg = null; for (let e = el; e && e !== document.body; e = e.parentElement) { const c = rgba(getComputedStyle(e).backgroundColor); if (c && c.a >= 0.75) { bg = c; break; } if (e === root) break; } // 面はタブの中身の中で探す(外の画面の地の色は、背景の絵に隠れている)
+            const txt = el.textContent.trim().slice(0, 16);
+            if (!bg) { out.push(`${tab}: 濃い面の上にない「${txt}」`); continue; }
+            const op = parseFloat(cs.opacity) || 1; const f2 = { r: fg.r * fg.a * op + bg.r * (1 - fg.a * op), g: fg.g * fg.a * op + bg.g * (1 - fg.a * op), b: fg.b * fg.a * op + bg.b * (1 - fg.a * op) };
+            const L1 = lum(f2), L2 = lum(bg); const ratio = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
+            const big = parseFloat(cs.fontSize) >= 14 && parseInt(cs.fontWeight, 10) >= 700;
+            if (ratio < (big ? 3 : 4.5)) out.push(`${tab}: 明るさの差が足りない「${txt}」${ratio.toFixed(1)}`);
+          }
+          return out;
+        }, tab));
+      }
+      check(`⑮ 助手ライフの居場所・友情・道具の字が、${tod}(${vw}×${vh})でも濃い面の上で読める`, ng.length === 0, [...new Set(ng)].slice(0, 4).join(' / '));
+      await P.page.close();
+    }
 
     // ⑨ 友情Lv が上がった演出: みんなの友情Lv を Lv3 の手前(118)にして見守る → 上がると画面いっぱいの祝い(トーストは出さない)
     {

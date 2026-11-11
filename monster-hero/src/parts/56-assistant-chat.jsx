@@ -322,7 +322,34 @@ const assistantPeerMemosFor = (selfId, memos, last, today = assistantPeerDayKey(
   return out;
 };
 
-function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondTitle, bondTone, onExchange, onClose }) {
+// ===== 会話で決まる呼び方・助手へのあだ名(2026-11-08 社長・docs/progress/assistant-peer/AI-TALK-PLAN.md) =====
+// 中継役が返す call:{action,value,from}・nick:{action,value} を見て、返事の下に確かめるカードを出す。変わるのは「うん」を押したときだけ。
+// 印が無いとき(古い中継役・API が止まったとき)は、端末の読み取り(assistantCallnameDetect)と台本で同じカードを出す
+const ASSISTANT_CALLNAME_OFFER_MS = (typeof ASSISTANT_CALLNAME_OFFER_DAYS !== 'undefined' ? ASSISTANT_CALLNAME_OFFER_DAYS : 7) * 86400000;
+// 好き嫌いの口(助手部キズナ・助手ライフ)。キズナの部品が読み込まれたら、ここへ関数を入れてもらう
+//   ASSISTANT_CHAT_TASTE_HOOKS.of = assistantLifeTasteOf / .onTalk = assistantLifeTasteOnTalk
+//   (まだ無い関数の名前を直に書くと、見張り undefined-reference-check が止めるため。入っていなければ何もしない)
+const ASSISTANT_CHAT_TASTE_HOOKS = { of: null, onTalk: null };
+// 好き嫌いの手がかり。プレイヤーの文にモンスター名と良い言葉があるとき
+const ASSISTANT_CHAT_TASTE_GOOD_RE = /好き|すき|かわい|可愛|カワイ|かっこい|カッコい|格好い|強い|つよい|最強|推し|いいよね|いいね|最高|大好き|きれい|綺麗/;
+const assistantChatTasteFromText = (text) => {
+  const ids = assistantChatMonsterIds(text, '');
+  return ids.length && ASSISTANT_CHAT_TASTE_GOOD_RE.test(String(text || '')) ? { monsterId: ids[0], positive: true } : null;
+};
+const assistantChatTasteFromHint = (hint) => {
+  if (!hint || typeof hint !== 'object' || typeof hint.monster !== 'string' || typeof hint.positive !== 'boolean') return null;
+  if (typeof ALL_PLAYER_MONSTERS === 'undefined') return null;
+  const m = Object.values(ALL_PLAYER_MONSTERS).find(x => x && !x.debugOnly && (x.name === hint.monster || x.id === hint.monster));
+  return m ? { monsterId: m.id, positive: hint.positive } : null;
+};
+// 台本の行を、いまの呼び方・新しい呼び方・あだ名で埋める
+const assistantCallnameFillLine = (line, { call, nick, name }) => String(line || '')
+  .replace(/\{call\}/g, call || '').replace(/\{nick\}/g, nick || '').replace(/\{name\}/g, name || '');
+
+// opening … 窓を開いたときに助手が先に言うひとこと(助手ライフの部屋から開いたとき・2026-11-08 社長 ❽❾)。{ text, e, card }。
+//            card があれば、そのまま確かめるカードも出す(持ちかけ)。保存する会話の記録に1行足す(台本なので API は使わない)
+// zIndex  … 助手ライフの画面(9000)の上に開くときは大きくする
+function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondTitle, bondTone, callnameKit = null, opening = null, zIndex = 9000, onExchange, onClose }) {
   const id = assistant && assistant.id;
   const [logs, setLogs] = React.useState({});
   const [memos, setMemos] = React.useState({});
@@ -331,6 +358,8 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
   const [input, setInput] = React.useState('');
   const [sending, setSending] = React.useState(false);
   const [remaining, setRemaining] = React.useState(null);
+  // 返事の下に出す確かめるカード({ kind:'call'|'nick'|'reset'|'ask', value, from })。閉じると消える(保存しない)
+  const [callCard, setCallCard] = React.useState(null);
   const listRef = React.useRef(null);
   React.useEffect(() => {
     let alive = true;
@@ -345,7 +374,33 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
     return () => { alive = false; };
   }, []);
   const log = (logs[id] || []);
-  React.useEffect(() => { const el = listRef.current; if (el) el.scrollTop = el.scrollHeight; }, [log.length, sending]);
+  // 開いたときに助手が先に話すもの(1回だけ)。順に足してから1回で保存する(別々に足すと、あとの方が前の方を消すため)
+  //   ① 助手ライフの部屋から開いたときの最初のひとこと(寝起き・持ちかけ・呼び方の話。2026-11-08 社長 ❽❾)
+  //   ② Lv6 から、助手のほうから「なんて呼んだらいい？」と1回だけ聞く(社長 ❶)。もう決めている人には聞かない(聞いたことにする)
+  const openingDone = React.useRef(false);
+  React.useEffect(() => {
+    if (!loaded || !id || openingDone.current) return;
+    openingDone.current = true;
+    const list = [...(logs[id] || [])];
+    let card = null;
+    if (opening && opening.text) {
+      list.push({ role: 'assistant', text: opening.text, e: opening.e || 'happy' });
+      if (opening.card && callnameKit) {
+        card = opening.card;
+        if (opening.card.from === 'assistant') callnameKit.markAsk({ offeredAt: Date.now() });
+      }
+    }
+    if (callnameKit && !callnameKit.asked && !card && Number(bondLevel) >= ASSISTANT_CALLNAME_ASK_LEVEL) {
+      callnameKit.markAsk({ asked: true });
+      if (!callnameKit.current && !callnameKit.customStyle) {
+        list.push({ role: 'assistant', text: assistantCallnameFillLine(assistantCallnameLine(id, 'ask'), { name: callName }), e: 'wink' });
+        card = { kind: 'ask' };
+      }
+    }
+    if (list.length !== (logs[id] || []).length) saveLog(list);
+    if (card) setCallCard(card);
+  }, [loaded, id]);
+  React.useEffect(() => { const el = listRef.current; if (el) el.scrollTop = el.scrollHeight; }, [log.length, sending, callCard]);
   const lastExpression = (log.slice().reverse().find(m => m.role === 'assistant') || {}).e || 'happy';
 
   const saveLog = (next) => {
@@ -383,6 +438,16 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
     }
     const withUser = [...log, { role: 'user', text }];
     saveLog(withUser);
+    // 呼び方の決まり(Lv1〜2 は性格で断る日がある・助手から持ちかけてよいか)。日と助手で決まる
+    const pendingCard = callCard;
+    setCallCard(null);
+    const shy = !!callnameKit && typeof assistantCallnameShy === 'function' && assistantCallnameShy(id, bondLevel, assistantPeerDayKey());
+    const canOffer = !!callnameKit && Number(bondLevel) >= 3 && !pendingCard && (Date.now() - (callnameKit.offeredAt || 0)) >= ASSISTANT_CALLNAME_OFFER_MS;
+    const callnameCtx = callnameKit ? {
+      shy, canOffer, asking: !!(pendingCard && pendingCard.kind === 'ask'),
+      nick: callnameKit.nick || '', hasTalked: !!callnameKit.current,
+    } : null;
+    let tastes = null; try { tastes = typeof ASSISTANT_CHAT_TASTE_HOOKS.of === 'function' ? ASSISTANT_CHAT_TASTE_HOOKS.of(id) : null; } catch {}
     // ランキングの計画。すぐ前のプレイヤーの発言(新しい順に2つ)から話題・モード・難易度を引き継ぐ
     const rankingPlan = assistantChatRankingPlan(text, log.filter(m => m && m.role === 'user').map(m => m.text).reverse().slice(0, ASSISTANT_CHAT_RANKING_PREV));
     setSending(true);
@@ -396,7 +461,8 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
           breederId: breederId || 'unknown',
           assistantId: id,
           messages: assistantChatSendWindow(withUser).map(m => ({ role: m.role, text: m.text })),
-          ctx: { playerName, callName, bondLevel, bondTitle, bondTone, memo: memos[id] || null, peerMemos: assistantPeerMemosFor(id, memos, lastDays) },
+          ctx: { playerName, callName, bondLevel, bondTitle, bondTone, memo: memos[id] || null, peerMemos: assistantPeerMemosFor(id, memos, lastDays),
+            ...(callnameCtx ? { callname: callnameCtx } : {}), ...(tastes ? { tastes } : {}) },
           // ランキングの話題のときだけ、読むランキングの計画を付ける(それ以外は付けない)
           ...(rankingPlan ? { ranking: rankingPlan } : {}),
         }),
@@ -404,9 +470,44 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
       if (r.ok) res = await r.json();
     } catch {}
     setSending(false);
-    const reply = res && typeof res.reply === 'string' && res.reply ? res.reply : ASSISTANT_CHAT_LINES.sorry;
-    const e = res && typeof res.expression === 'string' ? res.expression : 'troubled';
+    let reply = res && typeof res.reply === 'string' && res.reply ? res.reply : ASSISTANT_CHAT_LINES.sorry;
+    let e = res && typeof res.expression === 'string' ? res.expression : 'troubled';
+    // 呼び方・あだ名のカード。AI の印を先に見て、無ければ端末の読み取り(返事が来なかったときは台本の返事に置きかえる)
+    if (callnameKit) {
+      const replied = !!(res && res.kind === 'reply');
+      const hasMark = !!(res && res.call && typeof res.call === 'object');
+      let card = null;
+      if (hasMark) {
+        const c = res.call, n = res.nick && typeof res.nick === 'object' ? res.nick : null;
+        if (c.action === 'confirm' && typeof c.value === 'string') {
+          const from = c.from === 'assistant' ? 'assistant' : 'player';
+          const v = assistantCallnameGuard(c.value, playerName);
+          if (v && !(from === 'player' && shy) && !(from === 'assistant' && !canOffer)) card = { kind: 'call', value: v, from };
+          if (card && from === 'assistant') callnameKit.markAsk({ offeredAt: Date.now() });
+        } else if (c.action === 'reset' && callnameKit.current) card = { kind: 'reset' };
+        else if (c.action === 'ask' && Number(bondLevel) >= ASSISTANT_CALLNAME_ASK_LEVEL) card = { kind: 'ask' };
+        if (!card && n && n.action === 'confirm' && !shy) { const v = assistantNicknameGuard(n.value); if (v) card = { kind: 'nick', value: v }; }
+      } else {
+        const d = assistantCallnameDetect(text) || (pendingCard && pendingCard.kind === 'ask' && text.length <= 12 && !/\s/.test(text) ? { kind: 'call', value: text } : null);
+        const v = d && d.kind === 'call' ? assistantCallnameGuard(d.value, playerName) : d && d.kind === 'nick' ? assistantNicknameGuard(d.value) : null;
+        let lineKind = null;
+        if (d && d.kind === 'reset' && callnameKit.current) { card = { kind: 'reset' }; }
+        else if (d && v && shy) lineKind = d.kind === 'nick' ? 'nickShy' : 'shy';
+        else if (d && v) { card = d.kind === 'nick' ? { kind: 'nick', value: v } : { kind: 'call', value: v, from: 'player' }; lineKind = d.kind === 'nick' ? 'nickConfirm' : 'confirm'; }
+        // 返事が来なかったときだけ、台本の返事に置きかえる(来た返事はそのまま)
+        if (!replied && lineKind) {
+          reply = assistantCallnameFillLine(assistantCallnameLine(id, lineKind), { call: v ? callnameKit.fill(v) : '', nick: v || '', name: callName });
+          e = /hy$/.test(lineKind) ? 'crying' : 'happy';
+        }
+      }
+      setCallCard(card);
+    }
     saveLog([...withUser, { role: 'assistant', text: reply, e }]);
+    // 好き嫌いの手がかり(助手部キズナの口 assistantLifeTasteOnTalk)。返事が来た1往復だけ、1回だけ渡す。数えるのは向こう
+    if (res && res.kind === 'reply' && typeof ASSISTANT_CHAT_TASTE_HOOKS.onTalk === 'function') {
+      const taste = Object.prototype.hasOwnProperty.call(res, 'tasteHint') ? assistantChatTasteFromHint(res.tasteHint) : assistantChatTasteFromText(text);
+      if (taste) { try { ASSISTANT_CHAT_TASTE_HOOKS.onTalk({ assistantId: id, monsterId: taste.monsterId, positive: taste.positive }); } catch {} }
+    }
     if (res && Number.isFinite(res.remainingToday)) setRemaining(res.remainingToday);
     // 本当に返事が来た1往復だけ、思い出メモと仲良し度に数える(断り・失敗は数えない)
     if (res && res.kind === 'reply') {
@@ -418,11 +519,33 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
     }
   };
 
+  // カードを押したとき。変わるのは「うん」だけ。助手のひとことは台本(API は使わない)
+  const sayLine = (kind, vars, expression = 'happy') => saveLog([...(logs[id] || []), { role: 'assistant', text: assistantCallnameFillLine(assistantCallnameLine(id, kind), { name: callName, ...vars }), e: expression }]);
+  const noteLine = (text) => saveLog([...(logs[id] || []), { role: 'assistant', text, e: 'happy' }]);
+  const answerCallCard = (yes, value) => {
+    const card = callCard;
+    setCallCard(null);
+    if (!card || !callnameKit) return;
+    if (card.kind === 'call' || card.kind === 'ask') {
+      const v = value || card.value;
+      if (yes && v) {
+        const saved = callnameKit.setCall(v, card.kind === 'ask' ? 'ask' : card.from === 'assistant' ? 'offer' : 'chat');
+        if (saved) sayLine('accept', { call: callnameKit.fill(saved) }, 'happy');
+      } else sayLine('keep', {}, 'normal');
+    } else if (card.kind === 'reset') {
+      if (yes) { callnameKit.setCall(null, 'chat'); noteLine(`${assistant.name}の呼び方を元に戻しました`); }
+    } else if (card.kind === 'nick') {
+      if (yes) { const saved = callnameKit.setNick(card.value); if (saved) sayLine('nickAccept', { nick: saved }, 'happy'); }
+    }
+  };
+  const callCardChoices = callCard && callCard.kind === 'ask' && callnameKit
+    ? assistantCallnameChoices(id, callnameKit.current || callnameKit.customStyle || null).filter(t => callnameKit.fill(t) !== callName).slice(0, 3) : [];
+
   if (!assistant) return null;
   const accent = assistant.accent || '#f472b6';
   return (
-    <div data-assistant-chat className="fixed inset-0 flex items-end sm:items-center justify-center bg-black/60 p-2" style={{ zIndex: 9000, paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }} onClick={onClose}>
-      <div className="w-full max-w-md max-h-[85vh] flex flex-col rounded-2xl border-2 bg-slate-950 text-slate-100 shadow-2xl" style={{ borderColor: accent }} onClick={ev => ev.stopPropagation()}>
+    <div data-assistant-chat className="fixed inset-0 flex items-end sm:items-center justify-center bg-black/60 p-2" style={{ zIndex, paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }} onClick={onClose}>
+      <div className="w-full max-w-md max-h-[85vh] [[data-mh-view-rotation=true]_&]:max-h-[85vw] flex flex-col rounded-2xl border-2 bg-slate-950 text-slate-100 shadow-2xl" style={{ borderColor: accent }} onClick={ev => ev.stopPropagation()}>
         <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-800 shrink-0">
           <img data-assistant-chat-face={lastExpression} src={assistantFaceSrc(assistant, lastExpression)} alt="" className="h-11 w-11 rounded-full border-2 object-cover bg-slate-900" style={{ borderColor: accent }}/>
           <div className="min-w-0 flex-1">
@@ -452,6 +575,32 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
                 </span>)}</p>
             </div>
           ))}
+          {callCard && callnameKit && !sending && (
+            <div data-assistant-callname-card={callCard.kind}>
+              <div className="rounded-2xl border-2 px-3 py-2 text-[11px] font-bold leading-relaxed text-pink-50 [word-break:keep-all] [overflow-wrap:anywhere]" style={{ borderColor: accent, background: 'rgba(244,114,182,.12)' }}>
+                {callCard.kind === 'call' && <>これから「<b className="text-[13px] text-white">{callnameKit.fill(callCard.value)}</b>」って呼んでいい？</>}
+                {callCard.kind === 'nick' && <>{assistant.name}のことを「<b className="text-[13px] text-white">{callCard.value}</b>」って呼ぶ？</>}
+                {callCard.kind === 'reset' && <>呼び方を元に戻していい？</>}
+                {callCard.kind === 'ask' && <>呼び方をえらぶか、送る欄に書いてね</>}
+                {callCard.kind === 'ask' ? (<>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {callCardChoices.map(t => (
+                      <button key={t} type="button" data-assistant-callname-choice={t} onClick={() => answerCallCard(true, t)}
+                        className="min-h-[32px] rounded-full border bg-slate-900 px-3 text-[11px] font-black text-pink-100 active:scale-95" style={{ borderColor: accent }}>{callnameKit.fill(t)}</button>))}
+                  </div>
+                  <button type="button" data-assistant-callname-no onClick={() => answerCallCard(false)}
+                    className="mt-1.5 min-h-[36px] w-full rounded-xl border border-slate-500 bg-slate-800 px-2 text-[11px] font-black text-slate-200 active:scale-95">いまのまま({callName})</button>
+                </>) : (
+                  <div className="mt-1.5 flex gap-1.5">
+                    <button type="button" data-assistant-callname-yes onClick={() => answerCallCard(true)}
+                      className="min-h-[36px] flex-1 rounded-xl px-2 text-[11px] font-black text-white active:scale-95" style={{ background: accent }}>{callCard.kind === 'reset' ? 'うん、戻して' : 'うん、そう呼んで'}</button>
+                    <button type="button" data-assistant-callname-no onClick={() => answerCallCard(false)}
+                      className="min-h-[36px] flex-1 rounded-xl border border-slate-500 bg-slate-800 px-2 text-[11px] font-black text-slate-200 active:scale-95">いまのままで</button>
+                  </div>)}
+              </div>
+              {callCard.kind !== 'reset' && <p className="mt-1 text-center text-[10px] font-bold text-slate-400 [word-break:keep-all] [overflow-wrap:anywhere]">
+                {callCard.kind === 'nick' ? 'おしゃべりの中で使うあだ名です。' : <>{callCard.kind === 'ask' ? 'えらぶと' : '「うん」を押すと'}、<span style={{ color: accent }}>{assistant.name}</span>だけ呼び方が変わります。</>}プロフィールで元に戻せます</p>}
+            </div>)}
           {sending && <p data-assistant-chat-sending className="text-[11px] text-slate-400">{assistant.name}が考え中…</p>}
         </div>
         <div className="flex items-end gap-2 border-t border-slate-800 p-2 shrink-0">
@@ -463,6 +612,33 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
       </div>
     </div>
   );
+}
+
+// 呼び方が決まったあと、つぎの画面で1回だけ出す知らせ(2026-11-08)。決めた画面(HOME)では出さず、画面が変わったら4秒だけ出す。
+// 🔄横(モンヒロビート)では回した器の中へ出す(rotationAwarePortalTarget)。押しても消える
+function AssistantCallnameToast({ assistant, text, screen, hidden = false, onDone }) {
+  const [from] = React.useState(screen);
+  const [show, setShow] = React.useState(false);
+  React.useEffect(() => { if (screen !== from) setShow(true); }, [screen, from]);
+  React.useEffect(() => { if (!show) return undefined; const t = setTimeout(() => onDone && onDone(), 4000); return () => clearTimeout(t); }, [show]);
+  // 出ているあいだに🔄横へ切り替えられても、回した器へ移る(出し先を見直す)
+  const [, setTick] = React.useState(0);
+  React.useEffect(() => { if (!show) return undefined; const t = setInterval(() => setTick(n => n + 1), 250); return () => clearInterval(t); }, [show]);
+  // 呼び方の小窓が開いているあいだは出さない(小窓のいちばん上の行に重なるため。小窓にも同じことが出ている)
+  if (!show || !assistant || hidden) return null;
+  const accent = assistant.accent || '#f472b6';
+  const target = typeof rotationAwarePortalTarget === 'function' ? rotationAwarePortalTarget() : document.body;
+  const body = (
+    <div data-assistant-callname-toast onClick={() => onDone && onDone()} className="fixed left-1/2 top-[18%] -translate-x-1/2 w-[min(320px,86%)] flex items-center gap-2.5 rounded-2xl border-2 bg-slate-950/95 px-3 py-2.5 shadow-2xl"
+      style={{ borderColor: accent, zIndex: 9100 }}>
+      <img src={assistantFaceSrc(assistant, 'happy')} alt="" className="h-11 w-11 shrink-0 rounded-full border-2 object-cover bg-slate-900" style={{ borderColor: accent }}/>
+      <p className="min-w-0 text-[12px] font-bold leading-relaxed text-pink-50 [word-break:keep-all] [overflow-wrap:anywhere]">
+        呼び方が新しくなりました<br/>
+        <span className="mt-0.5 inline-block rounded-md px-1.5 text-[10px] font-black text-slate-900" style={{ background: accent }}>{text}</span>
+      </p>
+    </div>
+  );
+  return target ? ReactDOM.createPortal(body, target) : body;
 }
 
 // ===== ふだんの吹き出しを1日1回まとめて作る(2026-10-14・社長「それでいこう」) =====

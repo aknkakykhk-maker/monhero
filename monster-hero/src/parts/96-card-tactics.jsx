@@ -62,16 +62,18 @@ const cardLevelXpOf = ({ kind, level, outcome }) => {
 //   ごほうびは、この試合で上がったランク(from より上・to まで)の分だけ。前に上がったランクの分はさかのぼって配らない
 //   parts は結果に出す内わけ、gains はランクアップの演出に出す「もらった物」
 //   auto … オートで挑んだ試合(2026-11-02 社長・案3): 手で戦うときの半分。その日はじめての勝ちは付けず、その日の勝ちの印も動かさない
-const cardLevelAfter = (prev, { kind, level, outcome, today: today0, auto = false }) => {
+const cardLevelAfter = (prev, { kind, level, outcome, today: today0, auto = false, mult = 1 }) => {
   const cur = cardNormalizeLevel(prev);
   const today = cardDayCarry(cur.day, today0);   // 切り替えの夜は、0時区切りで書いた次の日のまま数える
   const lv0 = cardLevelInfo(cur.xp).level;
-  const base = auto ? Math.floor(cardLevelXpOf({ kind, level, outcome }) / 2) : cardLevelXpOf({ kind, level, outcome });
+  const base0 = auto ? Math.floor(cardLevelXpOf({ kind, level, outcome }) / 2) : cardLevelXpOf({ kind, level, outcome });
+  // カード部屋にいる助手と対戦(82 の cardLifeUpApply・手で遊んだときだけ): 勝ち負けの分だけ 1.5倍。その日はじめての勝ちの +30 は倍にしない
+  const base = !auto && Number.isFinite(mult) && mult > 1 && base0 > 0 ? Math.round(base0 * mult) : base0; // 82 の cardLifeUpApply と同じ(96 は単独でも読まれる)
   if (!base) return { next: cur, tickets: 0, points: 0, add: 0, from: lv0, to: lv0, xp: cur.xp, parts: [], gains: [] };
   const sameDay = cur.day === today;
   const first = !auto && outcome === 'win' && !(sameDay && cur.dayWin);
   const add = base + (first ? CARD_LEVEL_XP.firstWin : 0);
-  const parts = [{ label: outcome === 'win' ? '勝ち' : '負け', xp: base }, ...(first ? [{ label: 'その日はじめての勝ち', xp: CARD_LEVEL_XP.firstWin }] : [])];
+  const parts = [{ label: outcome === 'win' ? '勝ち' : '負け', xp: base0 }, ...(base > base0 ? [{ label: `カード部屋の助手と対戦(${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : '倍'})`, xp: base - base0 }] : []), ...(first ? [{ label: 'その日はじめての勝ち', xp: CARD_LEVEL_XP.firstWin }] : [])];
   const xp = cardLevelSafeXp(cur.xp + add);
   const to = cardLevelInfo(xp).level;
   const got = [...cur.got];
@@ -266,12 +268,12 @@ const cardAutoRewardEntry = (loaded) => ({ key: CARD_AUTO_REWARD_KEY, before: lo
 //   上限20は、画面の値ではなく、ここで読み直した保存の値で数える(extra + count が20を超えるなら使わない)。
 //   順番: 読み直す → 上限・残りを確かめる → 券を count 枚減らす(途中で足りなくなったら、減らした分を返して止める) → extra+count を書く。
 //   書けなければ券を全部返す(券だけ減ってごほうびが戻らない、を作らない)。保存の形は #4720 のまま(extra の数がふえるだけ)
-//   返すのは { ok, why, count, loaded }。why … 'limit'(今日の20回を超える)・'notEmpty'(まだごほうびが残っている)・'noTicket'(券が足りない)・'save'(書けなかった。券は返した)
+//   ★今日のごほうびが残っているうちからふやせる(2026-11-07 社長の答え B。前は使い切ったときだけだった)。ふえた回数は今の残りに足される
+//   返すのは { ok, why, count, loaded }。why … 'limit'(今日の20回を超える)・'noTicket'(券が足りない)・'save'(書けなかった。券は返した)
 const cardAutoRewardAddExtra = async ({ consume, refund, count = 1 } = {}) => {
   const k = Number.isInteger(count) && count > 0 ? count : 1;
   const loaded = await cardAutoRewardLoad();
   if (loaded.extra + k > CARD_AUTO_REWARD_EXTRA_MAX) return { ok: false, why: 'limit', count: k, loaded };
-  if (loaded.left > 0) return { ok: false, why: 'notEmpty', count: k, loaded };
   const giveBack = async (n) => { for (let i = 0; i < n; i++) { if (typeof refund !== 'function') return; try { await refund(); } catch (__) { /* 返せなくても遊びは止めない */ } } };
   let used = 0;
   if (typeof consume === 'function') { while (used < k && (await consume())) used++; }
@@ -283,16 +285,16 @@ const cardAutoRewardAddExtra = async ({ consume, refund, count = 1 } = {}) => {
   return { ok: true, why: '', count: k, loaded: await cardAutoRewardLoad() };
 };
 // 券でふやせないわけ(押せないときのひとこと)。left … 今日のごほうびの残り、tickets … 持っている券、extraLeft … 今日あとふやせる回数
-const cardAutoTicketBlock = ({ left, tickets, extraLeft }) => (
-  Number.isInteger(left) && left > 0 ? 'ごほうびを使い切ると、ふやせます'
-    : !(Number.isInteger(extraLeft) && extraLeft > 0) ? `今日はこれ以上ふやせません(1日${CARD_AUTO_REWARD_EXTRA_MAX}回まで)`
+//   ごほうびが残っていても止めない(2026-11-07 社長の答え B)。left は呼ぶ側との形をそろえるために受け取るだけ
+const cardAutoTicketBlock = ({ tickets, extraLeft }) => (
+  !(Number.isInteger(extraLeft) && extraLeft > 0) ? `今日はこれ以上ふやせません(1日${CARD_AUTO_REWARD_EXTRA_MAX}回まで)`
       : !(Number.isInteger(tickets) && tickets > 0) ? 'セッション券がありません(モンヒロビートのランクが上がるともらえます)' : '');
 // 1試合ぶんの経験値の保存の項目(84 の結果の取引に足す)。経験値を入れない人(公開前・デバッグでない)は空
-const cardLevelEntries = async ({ kind, level, outcome, debug = false, auto = false }) => {
+const cardLevelEntries = async ({ kind, level, outcome, debug = false, auto = false, mult = 1 }) => {
   if (!cardTacticsOpen() && !debug) return { entries: [], gain: null };
   let rawL = null, rawT = null;
   try { [rawL, rawT] = await Promise.all([storeGet(CARD_LEVEL_KEY, null), storeGet(CARD_TACTICS_KEY, null)]); } catch (_) { return { entries: [], gain: null }; }
-  const gain = cardLevelAfter(rawL, { kind, level, outcome, auto, today: typeof cardTodayJst === 'function' ? cardTodayJst() : '' });
+  const gain = cardLevelAfter(rawL, { kind, level, outcome, auto, mult, today: typeof cardTodayJst === 'function' ? cardTodayJst() : '' });
   if (!gain.add) return { entries: [], gain };
   const entries = [{ key: CARD_LEVEL_KEY, before: rawL, next: gain.next }];
   if (gain.tickets) { const t = cardNormalizeTactics(rawT); entries.push({ key: CARD_TACTICS_KEY, before: rawT, next: { ...t, tickets: t.tickets + gain.tickets } }); }

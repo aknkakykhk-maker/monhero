@@ -49,6 +49,9 @@
 //         pair(dmg) 同じ名前を2枚同時に出したらdmg / requires(names) その札を全部一緒に出すときだけ(払うのはこの札のガッツだけ)/
 //         toGutsOnHit ダメージを与えたらガッツへ(ひのこ) / safeOnHit 当てた子は次の自分の番までダメージ0(陽炎) / gutsFromDiscard(n) 当てたら捨て札からランダムに n 枚をガッツへ(なめろう) /
 //         nextOwnCost(n,kinds) 当てた子が次に使うその種類の技のガッツ −n(天河天翔・重ねない・KO で消える。mons[].costDown) /
+//         costUpOnHit(n) 当てた子は、次の相手のターン、ちから技・かしこさ技の払うガッツ +n(アクアウェイブ・クリスタルレイン。重ねず大きいほう。mons[].costUp) /
+//         costUpAll(n) 特殊: 次の相手のターン、水中にいない相手全員のちから技・かしこさ技の払うガッツ +n(アクアドーム。水中かはそのターンに見る。players[].costUpAll)
+//         ★水牢2つは足し合わせる(当てた +1 とアクアドームの +2 で +3)。払うガッツの計算は cardActionCost の1か所(cardCostUpOf)
 //         守り: toGutsAfterUse 使ったら捨て札でなくガッツへ(九重神眼) / 特殊: gutsFromDiscardNow(n) 捨て札からランダムに n 枚をガッツへ(霊魂操作)
 //         returnOnHit ダメージを与えたら手札へ戻る / split ダメージを相手に割り振る(act.split … 相手の3体ぶんの点)/
 //         bonusDiscard(user) 捨て札のその種族の攻撃の技の枚数を足す / bonusLost 減ったライフのぶんを足す / mimic(attach) どの種族のちから技でもこの子が出せる
@@ -201,13 +204,20 @@ const cardBeginTurn = (st) => {
   }
 };
 
-// 捨て札からランダムに n 枚をガッツへ(足りなければある分だけ)。選ぶのは持ち主の種(players[p].rng)。マルチの2台で同じ札になる
+// 捨て札からランダムに n 枚をガッツへ(足りなければある分だけ)。
+// ★選ぶ場所は、2台のどちらの端末でも同じに見える値(番・先攻か後攻か・捨て札とガッツの枚数・何枚目か)から決める(2026-11-08 ソランド)。
+//   前は持ち主の種(players[p].rng)で選んでいたが、マルチでは相手の種は試合が終わるまで封をされていて、こちらの端末の種は本物と違う。
+//   そのため相手の端末と違う札がガッツへ移り、2台の捨て札がずれて、届いた手をはね合い、両方が「相手の番」のまま止まった(社長が2回続けて止まった)。
+//   選ぶのは「何番目か」だけなので、相手の捨て札にまだ仮の札が混ざっていても、同じ場所の札が動く。持ち主の種は進めない(山札の切り直しの種はそのまま)
 const cardDiscardToGuts = (st, p, n) => {
   const me = st.players[p];
+  const side = p === st.first ? 'f' : 's';
   let k = 0;
-  let s = Number.isFinite(me.rng) ? me.rng : (st.seed || 1);
-  for (; k < n && me.discard.length; k++) { const r = cardRngNext(s); s = r.s; const i = Math.floor(r.v * me.discard.length); me.guts.push(me.discard.splice(i, 1)[0]); }
-  me.rng = s;
+  for (; k < n && me.discard.length; k++) {
+    const rnd = cardAiSeededRand(`dg|${st.turn}|${side}|${me.discard.length}|${me.guts.length}|${st.players[1 - p].discard.length}|${k}`);
+    const i = Math.min(me.discard.length - 1, Math.floor(rnd() * me.discard.length));
+    me.guts.push(me.discard.splice(i, 1)[0]);
+  }
   return k;
 };
 const cardPayGuts = (st, p, n) => {
@@ -249,6 +259,17 @@ const cardTakeFromHand = (st, p, idxs) => {
   return taken;
 };
 
+// 水牢(ウンディーネ 2026-11-11): その子がそのターンに出すちから技・かしこさ技に足すガッツ。
+//   mons[].costUp … 当てられた子だけ(アクアウェイブ・クリスタルレイン)/ players[].costUpAll … 水中にいない子全員(アクアドーム。水中かはそのターンで見る)
+const cardCostUpOf = (st, p, mi, turn) => {
+  const me = st && st.players && st.players[p];
+  const mon = me && Number.isInteger(mi) && mi >= 0 ? me.mons[mi] : null;
+  if (!mon || mon.ko) return 0;
+  const T = Number.isFinite(turn) ? turn : st.turn;
+  const one = mon.costUp && mon.costUp.turn === T ? Number(mon.costUp.n) || 0 : 0;
+  const all = me.costUpAll && me.costUpAll.turn === T && cardMonType(mon, T) !== 'water' ? Number(me.costUpAll.n) || 0 : 0;
+  return one + all;
+};
 // 攻撃の総ガッツ(付ける札も含む)。技のぶん(組の札も)に、付けた札の「ガッツ-n・半分・0」と友情の証を効かせてから、付けた札のぶんを足す
 const cardActionCost = (db, st, p, hand, idxs, mi = null) => {
   const cards = idxs.map((i) => cardOf(db, hand[i])).filter(Boolean);
@@ -264,7 +285,9 @@ const cardActionCost = (db, st, p, hand, idxs, mi = null) => {
   if (att.some((c) => cardHasEff(c, 'attachCostHalf'))) main = Math.ceil(main / 2);
   att.forEach((c) => { const e = cardEff(c, 'attachCost'); if (e) main -= e.n; });
   if (att.some((c) => cardHasEff(c, 'attachFree'))) main = 0;
-  return cardFieldCostOf(st, Math.max(0, main) + att.reduce((s, c) => s + (c.guts || 0), 0));
+  // 水牢: ちから技・かしこさ技を出すときだけ +n(特殊・防御・回避・ブリーダーのカードは増えない)
+  const up = core[0] && (core[0].kind === 'pow' || core[0].kind === 'int') && core[0].user !== 'breeder' && st ? cardCostUpOf(st, p, mi) : 0;
+  return cardFieldCostOf(st, Math.max(0, main) + up + att.reduce((s, c) => s + (c.guts || 0), 0));
 };
 // 付けた札の効き目をまとめる(ダメージ +n・×n と、守りの縛り)。攻撃を出すときとコンピューターの見積もりで同じものを使う
 const CARD_ATTACH_FLAGS = ['attachNoEvade', 'attachNoGuard', 'attachNoBlockReduce', 'attachNoZeroGuard', 'attachNoGuardIfGuarded', 'attachNoEvadeHybrid'];
@@ -838,6 +861,13 @@ const cardResolveTarget = (db, st) => {
     const gl = cardEff(main, 'gutsLossOnHit');
     if (gl && t.p !== pd.attacker && !pd.noGutsLoss) { const k = cardLoseGuts(st, t.p, gl.n); if (k) cardLog(st, `${st.players[t.p].name}はガッツを${k}失った`); }
     if (cardHasEff(main, 'stunOnHit')) { target.stunTurn = st.turn + 1; cardLog(st, `${target.name}は次のターン攻撃できない`); }
+    // 水牢(アクアウェイブ・クリスタルレイン): 当てた子は、次の相手のターン、ちから技・かしこさ技の払うガッツ +n(重ねがけは大きいほう)
+    const cu = cardEff(main, 'costUpOnHit');
+    if (cu && t.p !== pd.attacker && !target.ko && target.life > 0) {
+      const prev = target.costUp && target.costUp.turn === st.turn + 1 ? target.costUp.n : 0;
+      target.costUp = { turn: st.turn + 1, n: Math.max(prev, cu.n) };
+      cardLog(st, `${target.name}は次のターン、ちから技・かしこさ技のガッツ+${target.costUp.n}`);
+    }
     // なめろう(キュービ): 相手のガッツを減らしたあと、自分の捨て札からランダムに n 枚をガッツへ(相手が減少を無効にしても行う・1回の攻撃で1度だけ)
     const gd = cardEff(main, 'gutsFromDiscard');
     if (gd && t.p !== pd.attacker && !pd.gutsFromDiscardDone) { pd.gutsFromDiscardDone = true; const k = cardDiscardToGuts(st, pd.attacker, gd.n); if (k) cardLog(st, `${st.players[pd.attacker].name}は捨て札から${k}枚をガッツにした`); }
@@ -939,6 +969,8 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
     if (e.t === 'unlimitedAttacks' && self) { self.unlimited = st.turn; cardLog(st, `${self.name}はこのターン、技を何枚でも出せる`); }
     if (e.t === 'breederUnlimited') { st.breederFree = { p, turn: st.turn }; cardLog(st, `このターン、${me.name}はブリーダーのカードを何枚でも出せる`); }
     if (e.t === 'taunt' && self) { st.taunts = [...(st.taunts || []).filter((t) => t.turn >= st.turn), { by: p, m: mi, mode: e.mode, noArea: !!e.noArea, turn: st.turn + 1 }]; cardLog(st, e.mode === 'not' ? `相手は次のターン、${self.name}に当たる技を出せない` : `相手は次のターン、${self.name}を狙う技しか出せない`); }
+    // アクアドーム: 次の相手のターン、水中にいない相手全員のちから技・かしこさ技 +n(重ねがけは大きいほう)
+    if (e.t === 'costUpAll') { const prev = opp.costUpAll && opp.costUpAll.turn === st.turn + 1 ? opp.costUpAll.n : 0; opp.costUpAll = { turn: st.turn + 1, n: Math.max(prev, e.n) }; cardLog(st, `次のターン、${opp.name}の水中にいないモンスターは、ちから技・かしこさ技のガッツ+${opp.costUpAll.n}`); }
     if (e.t === 'stunAllEnemies') { opp.mons.forEach((m) => { if (!m.ko) m.stunTurn = st.turn + 1; }); cardLog(st, '相手のモンスターは全員、次のターン攻撃できない'); }
     if (e.t === 'stunTarget' && tm) { tm.stunTurn = st.turn + 1; cardLog(st, `${tm.name}は次のターン攻撃できない`); }
     if (e.t === 'skipTurn') { st.skip = cardOther(p); cardLog(st, `${opp.name}の次のターンを飛ばす`); }
@@ -1302,7 +1334,12 @@ const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}, atkMon = 
   if (flags.attachNoEvadeHybrid && !cardIsPureMon(tmon)) return 0; // 純血のスピード
   if (cardFieldEff(st, 'fieldPurePride') && atkMon && cardIsPureMon(atkMon) && !cardIsPureMon(tmon)) return 0; // 純血のプライド: 派生の子は回避を出せない
   // 払うのは「そのとき払うガッツ」(全体カードで変わる)。集中を付けた技には、払うガッツが0の守りは出せない
-  const fits = (no) => { const c = cardOf(db, no); const ev = cardEff(c, 'evade'); const cost = c ? cardGuardCost(st, c) : 99; return c && ev && ev.kinds.includes(card.kind) && cardUsableBy(c, tmon) && cost <= opp.guts.length && !(flags.attachNoZeroGuard && cost === 0) && (!ev.minGuts || card.guts >= ev.minGuts); };
+  // 「2以上のガッツを使う技」を回避する札(潜る・見切りなど)は、攻める子が払う数(水牢込み・使える子でいちばん少ない数)で見る(2026-11-11 ウンディーネ)
+  const me = st.players[p];
+  const ami = atkMon ? me.mons.indexOf(atkMon) : -1;
+  const ups = ami >= 0 ? [cardCostUpOf(st, p, ami)] : me.mons.map((m, mi) => (!m.ko && cardUsableBy(card, m) ? cardCostUpOf(st, p, mi) : null)).filter((x) => x !== null);
+  const atkGuts = (card.guts || 0) + (ups.length ? Math.min(...ups) : 0);
+  const fits = (no) => { const c = cardOf(db, no); const ev = cardEff(c, 'evade'); const cost = c ? cardGuardCost(st, c) : 99; return c && ev && ev.kinds.includes(card.kind) && cardUsableBy(c, tmon) && cost <= opp.guts.length && !(flags.attachNoZeroGuard && cost === 0) && (!ev.minGuts || atkGuts >= ev.minGuts); };
   if ((st.forbid[q] || []).includes('dge')) return 0;
   if (level.readHand) return opp.hand.some(fits) ? 0.85 : 0;
   const unseen = [...opp.hand, ...opp.deck];
@@ -1404,6 +1441,8 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'liftTarget') score += 0.3;
       if (e.t === 'taunt') score += 0.9 * habit.disrupt;
       if (e.t === 'stunAllEnemies') score += st.players[cardOther(p)].mons.filter((m) => !m.ko).length * 1.0;
+      // アクアドーム(ウンディーネ): 相手のガッツが2〜4のときだけ使う(設計書の測定でいちばん良かった仮の値。少ないと高くしても意味が薄く、多いと払えてしまう)
+      if (e.t === 'costUpAll') { const op = st.players[cardOther(p)]; const g = op.guts.length; const nw = op.mons.filter((m) => !m.ko && cardMonType(m, st.turn + 1) !== 'water').length; score += g >= 2 && g <= 4 ? nw * 0.9 * habit.disrupt : -1.5; }
       // もう「次のターン攻撃できない」印が付いている子に重ねても効き目が無い(2026-10-27 見回り: EXPERT・MASTER で1試合に約0.3回)
       if (e.t === 'stunTarget' && tmon) score += tmon.stunTurn > st.turn ? -3 : 0.8 + (tmon.life / Math.max(1, tmon.max)) * 0.6;
       if (e.t === 'skipTurn') score += 3;
@@ -1467,6 +1506,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
         if (cardHasEff(main, 'toGutsOnHit')) score += (1 - ev) * (main.guts || 0) * 0.35 * habit.saveGuts; // この札がガッツに戻る
         if (cardHasEff(main, 'safeOnHit') && mon) score += (1 - ev) * (mon.life * 2 <= mon.max ? 1.4 : 0.6); // 次の自分のターンまでダメージ0
         const gfd = cardEff(main, 'gutsFromDiscard'); if (gfd) score += (1 - ev) * Math.min(gfd.n, me.discard.length) * 0.35 * habit.saveGuts; // 捨て札からガッツ
+        if (cardHasEff(main, 'costUpOnHit')) score += (1 - ev) * (tm.costUp && tm.costUp.turn === st.turn + 1 ? 0 : 0.5) * habit.disrupt; // 水牢: 次のターンの技が重くなる(もう付いていれば効き目なし)
         if (cardHasEff(main, 'nextOwnCost') && mon) score += (1 - ev) * (me.hand.some((n2, j) => !opt.hand.includes(j) && (cardOf(db, n2) || {}).kind === 'int' && cardUsableBy(cardOf(db, n2), mon)) ? 0.8 : 0.3); // 次のかしこさ技が軽くなる
       }
     });
@@ -1951,6 +1991,72 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
 // prefer … 助手らしさの札(HARD から3枚ずつ。その3体で使えるものだけ入る)
 // ★3体はここでは決めない。好きな子(CARD_AI_FAVORITE)とその仲間から cardAiPickTrio が毎試合選ぶ
 //   (前はきゅうこ・あつ・ソラシドに monsters を書いていたが、どこからも読まれていなかったので消した。2026-11-01 点検)
+// 育つ助手の型(2026-11-08 社長「助手の相談の答えで、助手と対戦のデッキの中身が変わる。強さの段・ごほうびは同じ」・助手部キズナとすり合わせ)
+//   'attack' 攻め / 'guard' 守り / 'normal' ふつう(今のデッキとまったく同じ)。8人とも同じ3つ
+//   型はデッキを組むときのくせ(CARD_AI_HABITS)へ掛ける倍率。prefer・field は今のまま(えるびんだけは型が今の variants に当たる)
+//   型を渡すのは 84 の助手と対戦だけ(82 の中から助手ライフの口は読まない。サーバの杯で同じ 82 が動くため)
+const CARD_AI_STYLE_IDS = Object.freeze(['attack', 'guard', 'normal']);
+//   mul … 掛ける倍率 / add … 足す数(もとのくせが小さい助手でも型の色が出るように。みゅあの守り 0.2 は掛け算ではほとんど動かなかった)
+const CARD_AI_STYLE_TUNE = Object.freeze({
+  attack: { mul: { attack: 1.3, keepGuard: 0.75, big: 1.1 } },   // 攻め: 攻撃の札を多めに、守りは少なめ
+  guard: { add: { keepGuard: 0.3 }, mul: { attack: 0.95 } },      // 守り: 守りの札を多めに(強くしすぎると攻め手が足りず弱くなる。2026-11-08 測った)
+});
+// 助手のデッキの型の名前(2026-11-08 社長「この文で」)。AI が名前を付けられない・見張りに落ちたときの既定の名前でもある
+//   画面への出し方(型ごとに添える言葉など)は社長の答え待ち。いまは cardAssistantDeckPreview の name で返すだけ
+const CARD_AI_STYLE_NAMES = Object.freeze({
+  mua: 'キラキラ速攻', kiki: 'ずっしり火力', momosuke: 'ステージ・オン', dra: 'のんびり長期戦',
+  atsu: '真っ向勝負', kyuko: '夜の読み筋', sorashido: '計算ずく', erubin: 'みんなで守る',
+});
+// 型のデッキの既定の名前(2026-11-08 社長 Q4 A): 8つの名前に型を添える。攻め「◯◯・攻め」・守り「◯◯・守り」・ふつうは名前だけ。AI が名前を付けられないときもこれ
+const CARD_AI_STYLE_SUFFIX = Object.freeze({ attack: '・攻め', guard: '・守り', normal: '' });
+const cardAiStyleDefaultName = (who, styleId) => { const n = CARD_AI_STYLE_NAMES[who]; const s = cardAiStyleOf(styleId) || 'normal'; return n ? `${n}${CARD_AI_STYLE_SUFFIX[s]}` : null; };
+// えるびんの型(variants の id)へのつなぎ。style が渡されないときは今どおり毎試合ランダム
+const CARD_AI_STYLE_VARIANT = Object.freeze({ attack: 'blade', guard: 'shield', normal: 'mind' });
+// 方針の上書き(2026-11-08 社長「助手のデッキを AI で組む」)。plan = { prefer: [カード番号], field: [場のカードの名前], habit: { big, saveGuts, keepGuard } }
+//   AI(中継役)やゲーム側の揺らぎが決めた方針を、型とは別に受ける。動かせる幅は強さを測って決めた(docs/progress/card-grow-style/README.md)
+//   幅の外の数は幅の中へ丸め、候補外のカード(無い・使えない・場のカードでない)は捨てる。全部捨てたら上書きしない
+const CARD_AI_PLAN_RANGE = Object.freeze({
+  // くせはその助手のもとの値(型のあと)に掛ける倍率の幅(もとの値が小さい助手で大きく動きすぎないように。2026-11-08 測った)。中継役へは cardAiPlanHabitRange の数で送る
+  habitMul: Object.freeze({ big: [0.8, 1.25], saveGuts: [0.8, 1.25], keepGuard: [0.8, 1.1] }),
+  prefer: [5, 8],   // 多めに入れたいカード(番号)の数。少なければそのまま使う(足りない分は今の組み方が埋める)
+  preferTop: 24,    // 受け付けるのは、その3体で組んだときの入れたい度の上位この枚数の中だけ(でたらめな札で弱くならないように)
+  field: [1, 2],    // 場のカード(名前)の数
+});
+// くせの幅(数): その助手のもとの値(型のあと)× habitMul。{ big: [下, 上], … }。中継役へ送る幅
+const cardAiPlanHabitRangeOf = (base) => Object.fromEntries(Object.entries(CARD_AI_PLAN_RANGE.habitMul).map(([k, [lo, hi]]) => {
+  const b = Number.isFinite(base && base[k]) ? base[k] : 1;
+  return [k, [Math.round(b * lo * 100) / 100, Math.round(b * hi * 100) / 100]];
+}));
+const cardAiPlanHabitClamp = (base, habit) => {
+  const r = cardAiPlanHabitRangeOf(base);
+  return Object.fromEntries(Object.entries(habit || {}).filter(([k, v]) => r[k] && Number.isFinite(v)).map(([k, v]) => [k, Math.min(r[k][1], Math.max(r[k][0], v))]));
+};
+// 助手と強さと型から、くせの幅を出す(cardAiBuildDeck の型の倍率と同じ計算。えるびんは型の組み方のくせ)
+const cardAiPlanHabitRange = (who, levelId = 'normal', styleId = null) => {
+  const style = cardAiStyleOf(styleId);
+  const recipeAll = CARD_AI_DECKS[who] || CARD_AI_DECKS.mua;
+  const variant = style && Array.isArray(recipeAll.variants) ? recipeAll.variants.find((v) => v.id === CARD_AI_STYLE_VARIANT[style]) : null;
+  const h0 = variant && variant.deckHabit ? { ...cardAiDeckHabit(who, levelId), ...variant.deckHabit } : cardAiDeckHabit(who, levelId);
+  const tune = style && !variant && !Array.isArray(recipeAll.variants) ? CARD_AI_STYLE_TUNE[style] : null;
+  const h = tune ? Object.fromEntries(Object.entries(h0).map(([k, v]) => [k, typeof v === 'number' ? v * ((tune.mul || {})[k] || 1) + ((tune.add || {})[k] || 0) : v])) : h0;
+  return cardAiPlanHabitRangeOf(h);
+};
+const cardAiPlanClean = (db, plan) => {
+  if (!plan || typeof plan !== 'object' || !db || !db.cards) return null;
+  const R = CARD_AI_PLAN_RANGE;
+  const seen = new Set();
+  const prefer = (Array.isArray(plan.prefer) ? plan.prefer : []).map((no) => (typeof no === 'string' ? db.cards[no] : null))
+    .filter((c) => c && c.ready && c.kind !== 'fld' && !seen.has(c.name) && seen.add(c.name)).slice(0, R.prefer[1]).map((c) => c.name);
+  const fields = new Set(Object.values(db.cards).filter((c) => c.ready && c.kind === 'fld').map((c) => c.name));
+  const field = [...new Set((Array.isArray(plan.field) ? plan.field : []).map((f) => (f && typeof f === 'object' ? f.name : f)).filter((n) => typeof n === 'string' && fields.has(n)))].slice(0, R.field[1]);
+  const habit = {};
+  const h = plan.habit && typeof plan.habit === 'object' ? plan.habit : {};
+  for (const k of Object.keys(R.habitMul)) if (Number.isFinite(h[k])) habit[k] = Math.min(5, Math.max(0, h[k])); // 幅は組むときに助手ごとの数で丸める
+  if (!prefer.length && !field.length && !Object.keys(habit).length) return null;
+  return { prefer, field, habit };
+};
+// 知らない値・null は null(=型なし。今どおり)
+const cardAiStyleOf = (s) => (typeof s === 'string' && CARD_AI_STYLE_IDS.includes(s) ? s : null);
 const CARD_AI_DECKS = Object.freeze({
   mua:      { kit: 'speed', field: ['ホリィの声援', '飛び散る火花'] },     // 速攻。技を安く・特殊攻撃を強く
   momosuke: { kit: 'miracle', field: ['冷静な判断', 'がんじがらめ'] },     // 手札を整え、相手の特殊技を封じる
@@ -2081,6 +2187,7 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'breederUnlimited') v += 0.4;
       if (e.t === 'taunt') v += 0.6 * habit.disrupt;
       if (e.t === 'stunAllEnemies') v += 1.2;
+      if (e.t === 'costUpAll') v += 0.6; // アクアドーム
       if (e.t === 'stunTarget') v += 0.8;
       if (e.t === 'skipTurn') v += 1.5;
       if (e.t === 'rage') v += 0.6;
@@ -2118,6 +2225,7 @@ const cardAiCardValue = (card, habit) => {
   if (eff('safeOnHit')) dmg += 0.8;    // 陽炎: 当てたら次の自分のターンまでダメージ0
   const gfd = cardEff(card, 'gutsFromDiscard'); if (gfd) dmg += 0.4 * gfd.n; // なめろう: 捨て札からガッツ
   if (eff('nextOwnCost')) dmg += 0.6;  // 天河天翔: 次のかしこさ技が軽くなる
+  if (eff('costUpOnHit')) dmg += 0.5;  // 水牢(アクアウェイブ・クリスタルレイン): 当てた子の次のターンの技が重くなる
   if (eff('halfOnEvade') || eff('noEvade')) dmg *= 1.3;
   if (eff('area')) dmg *= 1.6 * habit.area;
   const gl = cardEff(card, 'gutsLossOnHit'); if (gl) dmg += (gl.n === 'all' ? 2 : gl.n) * 0.7 * habit.disrupt * (1 + (habit.mill || 0));
@@ -2145,8 +2253,9 @@ const cardAiPickIndex = (weights, rand) => {
 // 好きなモンスターの候補(主血統がその種族のもの。通常・キラ・別絵キラ・混血/派生)
 // 好きな子をもう1つの血統からも選ぶ助手(2026-11-04 社長: ソラシドはキュービ推しなので、キュービ・オリヒメも好きな子に入れる)
 const CARD_AI_FAVORITE_EXTRA = Object.freeze({ sorashido: ['kyubi'] });
-const cardAiFavoriteCandidates = (db, who) => {
-  const favs = [CARD_AI_FAVORITE[who] || CARD_AI_FAVORITE.mua, ...(CARD_AI_FAVORITE_EXTRA[who] || [])];
+// lead … 主役の種を決めたいとき(助手の推し・好き・素顔のデッキ 83)。無ければ今と同じ(好きな種+おまけ)
+const cardAiFavoriteCandidates = (db, who, lead = null) => {
+  const favs = typeof lead === 'string' && lead ? [lead] : [CARD_AI_FAVORITE[who] || CARD_AI_FAVORITE.mua, ...(CARD_AI_FAVORITE_EXTRA[who] || [])];
   return Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && favs.some((fav) => (String(m.wave) === 'hybrid' ? m.main === fav : m.species === fav))).map((m) => m.no).sort();
 };
 // モンスターの弾(混血・派生は主の種族の弾)。好きな子の技は、この弾まで使える
@@ -2154,8 +2263,21 @@ const cardAiFavoriteCandidates = (db, who) => {
 const cardAiMonWave = (db, m, card) => {
   if (String(m.wave) !== 'hybrid') return Number(m.wave) || 1;
   const sp = card && cardIsGuardKind(card.kind) && m.sub && m.sub !== 'unknown' ? m.sub : m.main;
-  const base = Object.values(db.monsters).find((x) => !x.variant && x.species === sp && String(x.wave) !== 'hybrid');
-  return base ? Number(base.wave) || 1 : 4;
+  const t = cardAiBaseWaveTable(db);
+  return t.has(sp) ? t.get(sp) : 4;
+};
+// 種族 → その種族の元の子(変種でない・ハイブリッドでない最初の1体)の世代。cardAiMonWave が呼ばれるたびに全モンスターを
+//   探していた(助手えらびで AI のデッキを組むと 1回 約0.3秒・2026-11-11 カード部カルク 軽量化)ので、db.monsters ごとに1回だけ作る。
+//   答えは前の find と同じ(Object.values の順で最初に当たった子)。db.monsters は書き換えない表なので、表そのものをかぎにする
+const CARD_AI_BASE_WAVE = new WeakMap();
+const cardAiBaseWaveTable = (db) => {
+  const mons = db.monsters;
+  const hit = CARD_AI_BASE_WAVE.get(mons);
+  if (hit) return hit;
+  const t = new Map();
+  for (const x of Object.values(mons)) if (!x.variant && String(x.wave) !== 'hybrid' && !t.has(x.species)) t.set(x.species, Number(x.wave) || 1);
+  CARD_AI_BASE_WAVE.set(mons, t);
+  return t;
 };
 // そのモンスターが、癖に合う技をどれだけ持っているか(入れたい度の上位10の合計+ライフ)。2体を選ぶときの「型に合う」の目安
 const cardAiMonScore = (db, who, m, maxWave, levelId = null) => {
@@ -2169,9 +2291,17 @@ const CARD_AI_MILL_MON_BONUS = 6;
 const cardAiMillMonBonus = (habit, m) => (habit && habit.mill && m && CARD_AI_MILL_BLOODS.includes(cardAiBloodOf(m)) ? CARD_AI_MILL_MON_BONUS * habit.mill : 0);
 // 毎試合の3体: 好きな子1体(候補から少しずつ変える)+ 型に合うバランスで2体。強さごとの決めは CARD_AI_BUILD
 //   MASTER は、相手(プレイヤー)のデッキに全体攻撃が多ければライフの多い子、回避が多ければ回避されない技を持つ子を選ぶ
-const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
+// face … { lead: 主役の種, avoid: [使わない種], keep: [いつも使わない種], free: 数 }(助手の推し・好き・素顔のデッキ 83)。無ければ今と同じ。大会・サーバーは渡さない
+//   仲間の 1体目〜free 体目は keep だけを避け、そのあとは avoid も避ける(3つのデッキで、主役3体が2体以上ちがうように)
+const cardAiPickTrio = (db, who, levelId, rand, playerDeck, face = null) => {
   const cfg = CARD_AI_BUILD[levelId] || CARD_AI_BUILD.normal;
-  const favs = cardAiFavoriteCandidates(db, who).map((no) => cardMonsterOf(db, no));
+  const lead = face && typeof face.lead === 'string' ? face.lead : null;
+  const avoid = new Set(face && Array.isArray(face.avoid) ? face.avoid.filter((x) => typeof x === 'string' && x !== lead) : []);
+  const keep = new Set(face && Array.isArray(face.keep) ? face.keep.filter((x) => typeof x === 'string' && x !== lead) : [...avoid]);
+  const free = face && Number.isInteger(face.free) && face.free > 0 ? face.free : 0;
+  const avoidAt = (k, m) => { const set = k < free ? keep : avoid; return set.has(m.species) || (String(m.wave) === 'hybrid' && set.has(m.main)); };
+  const favs0 = cardAiFavoriteCandidates(db, who, lead).map((no) => cardMonsterOf(db, no));
+  const favs = lead && !favs0.length ? cardAiFavoriteCandidates(db, who).map((no) => cardMonsterOf(db, no)) : favs0;
   if (!favs.length) return [];
   // 好きな子: 通常を多めに、キラ・別絵キラ・混血もときどき。MASTER はいちばん型に合う子
   // 混血は守りがサブの種族だけなので、いちばん強い子を選ぶとき(MASTER)は少し低く見る(2026-10-27 混血のメイン・サブの直し)
@@ -2179,8 +2309,10 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
   const favW = favs.map((m) => (String(m.wave) === 'hybrid' ? 1.5 : !m.variant ? 3 : /別絵/.test(m.variant) ? 1 : 2));
   const fav = cfg.best ? favs[favScore.indexOf(Math.max(...favScore))] : favs[cardAiPickIndex(favW, rand)];
   // 残り2体の候補: 通常のモンスター(別々の種族・好きな子と違う種族)。弾は技などのカードと同じ決め(全部の弾の強さでは混血・派生も)
-  const cands = Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && !m.variant && m.species !== fav.species && m.species !== CARD_AI_FAVORITE[who]
-    && (String(m.wave) === 'hybrid' ? cfg.maxWave >= 99 && m.main !== CARD_AI_FAVORITE[who] : Number(m.wave) <= cfg.maxWave));
+  const favSp = lead && favs0.length ? lead : CARD_AI_FAVORITE[who];
+  const cands = Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && !m.variant && m.species !== fav.species && m.species !== favSp
+    && !keep.has(m.species) && !(String(m.wave) === 'hybrid' && keep.has(m.main))
+    && (String(m.wave) === 'hybrid' ? cfg.maxWave >= 99 && m.main !== favSp : Number(m.wave) <= cfg.maxWave));
   let counter = () => 0;
   if (cfg.best && playerDeck && Array.isArray(playerDeck.cards) && playerDeck.cards.length) {
     const pc = playerDeck.cards.map((no) => cardOf(db, no)).filter(Boolean);
@@ -2189,7 +2321,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
     counter = (m) => areaRate * (m.life || 0) * 1.5 + evadeRate * Object.values(db.cards).filter((c) => c.ready && cardHasEff(c, 'noEvade') && cardUsableBy(c, { ...m, ko: false })).length * 1.2;
   }
   // 好きな子の血統の仲間(好きな子とは別の子。キラ・別絵キラは同じ子として1つに数える)
-  const family = favs.filter((m) => m.species !== fav.species);
+  const family = favs.filter((m) => m.species !== fav.species && !keep.has(m.species));
   const familySize = new Set(favs.map((m) => m.species)).size;
   // EASY・NORMAL は割合(くせとしてときどき)。HARD から上は、仲間も候補に入れて、チームとして数え直した点数(cardAiTeamValue)でくらべる
   //   ★数え直すのは仲間だけ(ほかの子の点数は今のまま。強さのそろえを動かさないため)。
@@ -2227,7 +2359,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
       continue;
     }
     const team = out.map((no) => cardMonsterOf(db, no));
-    const left = scored.filter((x) => !usedNos.has(x.m.species) && (isFamily.has(x.m.no) || (!usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)))))
+    const left = scored.filter((x) => !usedNos.has(x.m.species) && !avoidAt(k, x.m) && (isFamily.has(x.m.no) || (!usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)))))
       .map((x) => (isFamily.has(x.m.no) ? { ...x, v: cardAiTeamValue(db, who, team, x.m, cfg.maxWave, levelId) + counter(x.m) } : x));
     if (!left.length) break;
     let pick;
@@ -2249,22 +2381,38 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   const recipeAll = CARD_AI_DECKS[who] || CARD_AI_DECKS.mua;
   const cfg = CARD_AI_BUILD[levelId] || CARD_AI_BUILD.normal;
   const rnd = typeof rand === 'function' ? rand : cardAiSeededRand(`${who}:${levelId}`);
-  const monsters = cardAiPickTrio(db, who, levelId, rnd, opts && opts.playerDeck);
+  const monsters = cardAiPickTrio(db, who, levelId, rnd, opts && opts.playerDeck, opts && opts.face);
   // 型をいくつも持つ助手(えるびん)は、毎試合1つ選ぶ(3体を選んだあとに引くので、ほかの助手の組み方は変わらない)
-  const variant = Array.isArray(recipeAll.variants) && recipeAll.variants.length ? recipeAll.variants[Math.min(recipeAll.variants.length - 1, Math.floor(rnd() * recipeAll.variants.length))] : null;
-  const recipe = variant ? { ...recipeAll, ...variant } : recipeAll;
+  //   育つ助手の型(opts.style)が渡されたら、その型に当たる組み方に決める(引くのは今どおり1回。ほかの札の選び方の乱数をずらさない)
+  const style = cardAiStyleOf(opts && opts.style);
+  const drawn = Array.isArray(recipeAll.variants) && recipeAll.variants.length ? recipeAll.variants[Math.min(recipeAll.variants.length - 1, Math.floor(rnd() * recipeAll.variants.length))] : null;
+  const variant = drawn && style ? (recipeAll.variants.find((v) => v.id === CARD_AI_STYLE_VARIANT[style]) || drawn) : drawn;
+  // 方針の上書き(opts.plan)。prefer・field は丸ごと入れかえ、くせは書いてあるものだけ上書き(型の倍率のあと)
+  const plan = cardAiPlanClean(db, opts && opts.plan);
+  const recipe0 = variant ? { ...recipeAll, ...variant } : recipeAll;
+  //   prefer は助手らしい札(recipe の prefer)のあとに足す(あつの全体攻撃などを外すと大きく弱くなった。2026-11-08 測った)。上位の札だけは下で見る
+  const recipe = plan ? { ...recipe0, ...(plan.field.length ? { field: plan.field } : {}) } : recipe0;
   const maxWave = cfg.maxWave;
-  const habit = variant && variant.deckHabit ? { ...cardAiDeckHabit(who, levelId), ...variant.deckHabit } : cardAiDeckHabit(who, levelId);
+  const habit0 = variant && variant.deckHabit ? { ...cardAiDeckHabit(who, levelId), ...variant.deckHabit } : cardAiDeckHabit(who, levelId);
+  // 型の倍率(えるびんは variants が型なので掛けない。'normal' は掛けない=今と同じ)
+  const tune = style && !variant ? CARD_AI_STYLE_TUNE[style] : null;
+  const habit1 = tune ? Object.fromEntries(Object.entries(habit0).map(([k, v]) => [k, typeof v === 'number' ? v * ((tune.mul || {})[k] || 1) + ((tune.add || {})[k] || 0) : v])) : habit0;
+  const habit = plan ? { ...habit1, ...cardAiPlanHabitClamp(habit1, plan.habit) } : habit1;
   const mons = monsters.map((no) => cardMonsterOf(db, no));
   // 弾の制限は技などのカードにかける。ただし、その子が使う技は、その子の弾まで使える(後の弾の好きな子も EASY から戦えるように)
   const pool = Object.values(db.cards).filter((c) => c.ready && ((c.user === 'any' || c.user === 'breeder') ? c.wave <= maxWave
     : mons.some((m) => cardUsableBy(c, { ...m, ko: false }) && c.wave <= Math.max(maxWave, cardAiMonWave(db, m, c)))));
   // 名前ごとに1つ(同じ名前の別番号は、入れたい度の高いほう)。強さごとの雑さ(noise)で、毎回少しずつ違うカードが入る
   const byName = {};
-  const noise = Math.max(0, cfg.noise + (((CARD_AI_DECK_TUNE[who] || {})[levelId]) || 0));
+  // face.noise … 助手の推し・好き・素顔のデッキの強さのそろえ(83 の CARD_AI_FACE_NOISE。社長の案B・2026-11-08)。渡さなければ今と同じ
+  const faceNoise = opts && opts.face && Number.isFinite(opts.face.noise) ? Math.max(-0.3, Math.min(0.6, opts.face.noise)) : 0;
+  const noise = Math.max(0, cfg.noise + (((CARD_AI_DECK_TUNE[who] || {})[levelId]) || 0) + faceNoise);
   pool.forEach((c) => { const v = cardAiCardValue(c, habit) + noise * (rnd() * 2 - 1); if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = { c, v }; });
   const ranked = Object.values(byName).sort((a, b) => b.v - a.v || (a.c.no < b.c.no ? -1 : 1));
-  const preferOn = levelId === 'hard' || levelId === 'expert' || levelId === 'master';   // 助手らしさの札(あつの全体攻撃など)は、しっかり組む強さ(HARD から)だけ
+  const preferOn = levelId === 'hard' || levelId === 'expert' || levelId === 'master';
+  // 方針の札は、入れたい度の上位(CARD_AI_PLAN_RANGE.preferTop)にある物だけ(この3体で使えない札・弱い札は捨てる)
+  const planTop = new Set(ranked.slice(0, CARD_AI_PLAN_RANGE.preferTop).map((x) => x.c.name));
+  const preferNames = [...(recipe.prefer || []), ...(plan ? plan.prefer.filter((n) => planTop.has(n) && !(recipe.prefer || []).includes(n)) : [])];   // 助手らしさの札(あつの全体攻撃など)は、しっかり組む強さ(HARD から)だけ
   // 守りの枚数の目安(くせ「守りを残す」で増える)。3体それぞれの攻撃が入るよう、攻撃は子ごとに順番に足す
   const guardTarget = Math.round(12 + 6 * Math.min(1.5, habit.keepGuard));
   const cards = [];
@@ -2302,7 +2450,7 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   const used = new Set();
   // 助手らしさの札(あつの全体攻撃など)を先に入れる
   //   守りの札を型の札にしたとき(えるびんの守りの型)は、守りの段で入ったぶんを引く(3枚を超えない。2026-11-05)
-  (preferOn ? recipe.prefer || [] : []).forEach((name) => { const x = byName[name]; if (x && !used.has(name)) { used.add(name); add(x.c, CARD_DECK_COPY_MAX - cards.filter((n) => n === x.c.no).length); } });
+  (preferOn ? preferNames : []).forEach((name) => { const x = byName[name]; if (x && !used.has(name)) { used.add(name); add(x.c, CARD_DECK_COPY_MAX - cards.filter((n) => n === x.c.no).length); } });
   (preferOn ? recipe.field || [] : []).forEach((name) => { const x = byName[name]; if (x && !used.has(name)) { used.add(name); add(x.c, CARD_AI_FIELD_COPIES); } });
   let li = 0, guard = 0;
   while (cards.length < CARD_BATTLE_DECK_SIZE && guard++ < 400) {
@@ -2324,6 +2472,33 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   // sameBlood … 好きな子と同じ血統の子が2体以上(相手の考え方 cardAiPolicy の opts.sameBlood に渡す)
   const sameBlood = mons.filter((m) => cardAiBloodOf(m) === cardAiBloodOf(mons[0])).length >= 2;
   return { monsters: monsters.slice(), cards, sameBlood };
+};
+// 方針(plan)の prefer の候補: その3体で使える札を、入れたい度(雑さなし)の高い順に CARD_AI_PLAN_RANGE.preferTop 枚(場のカードは除く)。
+//   AI(中継役)へ送る候補の一覧と、ゲーム側の揺らぎで使う。cardAiBuildDeck の受け付けとほぼ同じ物(組むときは雑さで少し入れかわる)
+const cardAiPlanCandidates = (db, who, levelId = 'normal', monsters = []) => {
+  const cfg = CARD_AI_BUILD[levelId] || CARD_AI_BUILD.normal;
+  const mons = (Array.isArray(monsters) ? monsters : []).map((no) => cardMonsterOf(db, no)).filter(Boolean);
+  if (!mons.length) return [];
+  const habit = cardAiDeckHabit(who, levelId);
+  const byName = {};
+  Object.values(db.cards).filter((c) => c.ready && c.kind !== 'fld' && ((c.user === 'any' || c.user === 'breeder') ? c.wave <= cfg.maxWave
+    : mons.some((m) => cardUsableBy(c, { ...m, ko: false }) && c.wave <= Math.max(cfg.maxWave, cardAiMonWave(db, m, c)))))
+    .forEach((c) => { const v = cardAiCardValue(c, habit); if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = { c, v }; });
+  return Object.values(byName).sort((a, b) => b.v - a.v || (a.c.no < b.c.no ? -1 : 1)).slice(0, CARD_AI_PLAN_RANGE.preferTop).map((x) => x.c);
+};
+// 助手のデッキのいつもの組み方(育つ助手・助手部が部屋で見せる。2026-11-08)。読むだけ
+//   助手と型と強さで決まった種で組む(毎回同じ並び)。知らない型は 'normal'。返り値 { monsters, cards, styleId, name, line, at }。助手でない id は null
+const cardAssistantDeckPreview = (who, styleId = 'normal', level = 'normal') => {
+  if (typeof CARD_BATTLE_DATA === 'undefined' || !CARD_AI_DECKS[who]) return null;
+  const sid = cardAiStyleOf(styleId) || 'normal';
+  const lv = CARD_AI_BUILD[level] ? level : 'normal';
+  const db = CARD_BATTLE_DATA;
+  // 保存した3つのデッキ(83-card-ai-deck.jsx の cardAiRecipeOf。ブラウザで印が真のときだけ返る。サーバ・検査では無いので型だけ)
+  let saved = null;
+  try { saved = typeof cardAiRecipeOf === 'function' ? cardAiRecipeOf(who, sid) : null; } catch (_) { saved = null; }
+  const deck = cardAiBuildDeck(db, who, lv, cardAiSeededRand(`preview:${who}:${sid}:${lv}`), { style: sid, ...(saved && saved.plan ? { plan: saved.plan } : {}) });
+  // name … 型の名前(保存した名前、無ければ cardAiStyleDefaultName: 「◯◯・攻め」など)。line … 助手のひとこと(AI が付けるまで null)。at … 組んだ時刻(まだなら 0)
+  return { monsters: deck.monsters.slice(), cards: deck.cards.slice(), styleId: sid, name: (saved && saved.name) || cardAiStyleDefaultName(who, sid), line: (saved && saved.line) || null, at: (saved && saved.at) || 0 };
 };
 
 // デッキが決まりどおりか(3体・別々のモンスター・50枚・同じカード(番号)は3枚まで・使えないカードが無い)。だめなら理由の文の配列
@@ -2424,6 +2599,10 @@ const CARD_SAVE_KEYS = Object.freeze({
   catalogs: 'mh_card_catalogs_v1',    // 持っているバトルカードカタログの冊数(ガチャポイント500で1冊。89 の cardExchangeCatalog / cardUseCatalog)
   weeklyReward: 'mh_card_weekly_reward_v1', // 受け取った週間報酬の週の一覧 ['card_weekly_2026-11-02', …](90 の cardWeeksAwaitingReward。壊れているときは何も配らない)
   aiTalk: 'mh_card_ai_talk_v1',       // 助手のおしゃべり(AI)の入/切 { on }(無ければ入。83-card-battle-talk-ai.jsx の cardNormalizeAiTalk)
+  aiRecipe: 'mh_card_ai_recipe_v1',   // 助手の3つのデッキ(型ごとの方針・名前・ひとこと・組んだ時刻)と組み直しの数(83-card-ai-deck.jsx の cardNormalizeAiRecipe。2026-11-08)
+  aiDeckHistory: 'mh_card_ai_deck_history_v1', // 助手の「これまでのデッキ」(組み直す前のデッキ。助手ごとに新しい順で10個まで。83-card-ai-deck.jsx の cardNormalizeAiHistory。2026-11-08)
+  aiRecipe2: 'mh_card_ai_recipe_v2',  // 助手の推し・好き・素顔のデッキ(顔ごとの方針・名前・ひとこと・組んだ時刻)と組み直しの数(83-card-ai-deck.jsx。2026-11-08。v1 は読むだけで残す)
+  aiDeck: 'mh_card_ai_deck_v1',       // 助手のデッキを AI で組むかの入/切 { on }(無ければ入。83-card-ai-deck.jsx の cardNormalizeAiDeck)
 });
 // カードで使う・もらうポイントはビートP(2026-10-26 社長「ビートPを廃止してビートポイントにして」)。
 //   保存先はビートPのもの(25-storage.jsx の RHYTHM_EVENT_POINTS_KEY・mh_rhythm_event_points_v1)。数はビートPのときのまま
@@ -2841,24 +3020,35 @@ const cardCpuBasePoint = (levelId, outcome, facts) => {
   return 0;
 };
 // コンピューター戦のクイック周回(◯周ぶん)。周回クリア扱いにするかどうか(クイックで通したことがあるか)は、配る側(60-app)が決める
-const cardCpuLoops = (levelId, outcome, facts = cardResultFacts(null)) => {
+const cardCpuLoops = (levelId, outcome, facts = cardResultFacts(null), mult = 1) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   if (facts.ownTurns < CARD_MIN_OWN_TURNS) return 0;
   const loseFull = cardLoseLoops(level);
-  if (outcome === 'win') return level.loops;
-  if (outcome === 'lose') return Math.floor(loseFull * Math.min(1, facts.ownTurns / CARD_LOSE_FULL_TURNS));
-  if (outcome === 'surrender') return Math.min(loseFull, Math.round((facts.kos * loseFull) / 3));
-  return 0;
+  let n = 0;
+  if (outcome === 'win') n = level.loops;
+  else if (outcome === 'lose') n = Math.floor(loseFull * Math.min(1, facts.ownTurns / CARD_LOSE_FULL_TURNS));
+  else if (outcome === 'surrender') n = Math.min(loseFull, Math.round((facts.kos * loseFull) / 3));
+  return cardLifeUpApply(n, mult);
 };
-const cardCpuReward = (daily, levelId, outcome, facts = cardResultFacts(null)) => {
+// 助手ライフ: カード部屋にいる助手と対戦すると、ごほうび(ビートP・カードランクの経験値・クイック周回)が 1.5倍(2026-11-07 社長・案A)
+//   手で遊んだ助手と対戦だけ。その日はじめての勝ちの +50・+30 は倍にしない。0 は 0 のまま
+//   2026-11-11 移動が1日12回になったので、上乗せを +0.5 → +0.375(×1.375。1日に取れる量はいまの約1.5倍。台帳 #5304・#5328)
+const CARD_LIFE_UP_MULT = 1.375;
+const CARD_LIFE_UP_LABEL = '1.375倍'; // 画面に出す倍率の字(帯・結果・ヘルプと同じ)
+const cardLifeUpApply = (n, mult = 1) => {
+  const v = Number.isFinite(n) ? n : 0;
+  return Number.isFinite(mult) && mult > 1 && v > 0 ? Math.round(v * mult) : v;
+};
+const cardCpuReward = (daily, levelId, outcome, facts = cardResultFacts(null), mult = 1) => {
   const base = cardCpuBasePoint(levelId, outcome, facts);
   // 上限なし(何戦してももらえる)。daily.cpuPoint は前のまま数えるだけで、もらえる数には使わない(保存の形は変えない・決まり⑦)
-  const got = base;
+  // mult … カード部屋にいる助手と対戦したとき 1.5(cardLifeUpApply)。base は倍にする前の数(結果の画面で「ふだん」に出す)
+  const got = cardLifeUpApply(base, mult);
   const bonus = outcome === 'win' && base > 0 && !daily.firstWin ? CARD_FIRST_WIN_BONUS : 0;
   // full・ownTurns・kos は結果の画面で「減った理由」を出すためだけ(2026-10-26 カゲあつくんの通しの点検「負けの 42 に理由が無い」)
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   const full = outcome === 'win' ? level.point : cardLosePoint(level);
-  return { base, got, capped: false, bonus, total: got + bonus, short: facts.ownTurns < CARD_MIN_OWN_TURNS, full, ownTurns: facts.ownTurns, kos: facts.kos, daily: { ...daily, cpuPoint: daily.cpuPoint + got, firstWin: daily.firstWin || bonus > 0 } };
+  return { base, got, lifeUp: got > base, capped: false, bonus, total: got + bonus, short: facts.ownTurns < CARD_MIN_OWN_TURNS, full, ownTurns: facts.ownTurns, kos: facts.kos, daily: { ...daily, cpuPoint: daily.cpuPoint + got, firstWin: daily.firstWin || bonus > 0 } };
 };
 // 勝ったら次の難易度を開く(NORMAL→HARD→EXPERT→MASTER)
 const cardUnlockAfterWin = (unlocked, levelId) => {

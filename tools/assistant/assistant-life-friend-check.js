@@ -1,0 +1,362 @@
+// 助手ライフ: フレンドの家との行き来(56-assistant-life-friend.jsx)の決まりを確かめる。ブラウザもサーバーも使わない。
+//   node tools/assistant/assistant-life-friend-check.js
+// 設計 docs/progress/assistant-peer/FRIEND-VISIT-PLAN.md。担当: 助手部オトズレ
+//   ① 控えの正規化: 知らない id・種類・長い値を捨てる/壊れた控えは null
+//   ② 1日の上限: 助手が行くのは on 3回・thin 1回/同じ家1日1回/1回に1〜2人/来るのは on 2人・thin 0人/プレイヤーが訪ねるのは on 3軒・thin 1軒
+//   ③ 寝ている・けんか中(言い合いのあと)・距離をおいている助手は行かない/深夜は行かない/切・off のときは行かない
+//   ④ 朝4時の区切りで今日の数が戻る(行き先・写真・見た置き手紙は残る)
+//   ⑤ 保存: 新しいキーだけ。古い形・壊れた値でも既定値で読める/既存の mh_* に書かない
+//   ⑥ 表が無い(404 PGRST205)ときは「準備中」にして、それ以後は通信しない。フレンドの通信の印(_friendsUnavailable)は立てない
+//   ⑦ 台本: 8人ぶんがそろう/助手・マスモンを「子」と呼ばない/みゅあは「じゃん」「まじ」を使わない/あつの文の最後は笑・記号・顔文字/{name}・{f}・{h}・{v} 以外の穴が無い
+//   ⑧ 公開の印 assistantLifeFriend が偽なら通信しない(2026-11-08 公開で真にした)
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+const babel = require('@babel/core');
+
+const root = path.resolve(__dirname, '..', '..');
+let failed = 0;
+const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
+
+const mem = {};
+const writes = [];
+const calls = [];
+let fakeServer = null; // (url, init) => { status, body }
+const flags = { assistantPeer: true, assistantLife: true, assistantLifeFriend: true };
+let dayNow = '2026-11-08';
+const ctx = vm.createContext({
+  console, Math, Date, JSON, Object, Array, Set, Map, Number, String, Promise, RegExp, Infinity, AbortController, setTimeout, clearTimeout, encodeURIComponent,
+  React: { useState: (v) => [v, () => {}], useEffect: () => {}, useRef: (v) => ({ current: v }), useCallback: (f) => f },
+  storeGet: async (k, d) => (k in mem ? JSON.parse(JSON.stringify(mem[k])) : d),
+  storeSet: (k, v) => { writes.push(k); mem[k] = JSON.parse(JSON.stringify(v)); },
+  RELEASE_FLAGS: flags,
+  SUPABASE_URL: 'https://example.supabase.co', SB_HEADERS: { apikey: 'test', 'Content-Type': 'application/json' },
+  _isMissingTableError: (status, body) => status === 404 && /PGRST205/.test(String(body || '')),
+  fetch: async (url, init = {}) => {
+    calls.push({ url: String(url), method: init.method || 'GET' });
+    const r = fakeServer ? fakeServer(String(url), init) : { status: 200, body: '[]' };
+    return { ok: r.status >= 200 && r.status < 300, status: r.status, statusText: '', text: async () => r.body, json: async () => JSON.parse(r.body) };
+  },
+  ensureBreederId: async () => 'self-0001',
+  sbFetchFriendRoster: async () => [{ otherId: 'aoi-0001', userName: 'あおい' }, { otherId: 'yuto-0001', userName: 'ゆうと' }],
+  __day: () => dayNow,
+});
+const load = (rel) => {
+  const src = fs.readFileSync(path.join(root, rel), 'utf8');
+  const code = rel.endsWith('.jsx') ? babel.transformSync(src, { presets: [require.resolve('@babel/preset-react')], babelrc: false, configFile: false }).code : src;
+  vm.runInContext(code, ctx);
+};
+load('monster-hero/data/assistants.js');
+vm.runInContext('var assistantBubbleDayKey = () => __day(); var assistantPeerDayKey = () => __day(); var jstDayKey4 = () => __day(); var assistantById = (id) => ASSISTANTS.find(a => a.id === id); var AssistantFace = () => null;', ctx);
+load('monster-hero/src/parts/56-assistant-peer.jsx');
+load('monster-hero/src/parts/56-assistant-life.jsx');
+load('monster-hero/src/parts/56-assistant-life-house.jsx');
+load('monster-hero/src/parts/56-assistant-life-rel.jsx');
+// 置き手紙の自由文は MFバトルカードのチャットと同じ表を使う(91 の純粋な計算の所だけ読む)
+{ const src = fs.readFileSync(path.join(root, 'monster-hero/src/parts/91-card-battle-multi.jsx'), 'utf8');
+  const i = src.indexOf('// ---- 自由文コメントの純粋な計算'); const j = src.indexOf('// ---- 部屋と通信');
+  if (i > 0 && j > i) vm.runInContext(src.slice(i, j).replace(/^const /gm, 'var '), ctx); }
+load('monster-hero/src/parts/56-assistant-life-friend.jsx');
+const G = (expr) => vm.runInContext(expr, ctx);
+const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'];
+
+// ① 控えの正規化
+{
+  const norm = G('assistantLifeFriendNormalizeHouse');
+  const h = norm({ ids: ['mua', 'kiki', 'evil<script>', 'dra', 'mua'], r: { mua: { at: 'home', d: 'snack', m: 'happy' }, kiki: { at: 'space', d: 'hack', m: 'xx' }, dra: { at: 'out', d: 'walk', m: 'eager', text: 'ひどい文' } }, msg: '自由な文' });
+  check('① 知らない id は捨てる・同じ id は1つ', JSON.stringify(h.ids) === JSON.stringify(['mua', 'kiki', 'dra']), JSON.stringify(h.ids));
+  check('① 知らない種類は既定に戻す(家にいる・のんびり・ごきげん)', h.r.kiki.at === 'home' && h.r.kiki.d === 'idle' && h.r.kiki.m === 'happy', JSON.stringify(h.r.kiki));
+  check('① 控えの中の文は残さない', !JSON.stringify(h).includes('ひどい文') && !JSON.stringify(h).includes('自由な文'));
+  check('① 長すぎる控え・形の違う控えは null', norm({ ids: ['mua'], pad: 'x'.repeat(2100) }) === null && norm([1, 2]) === null && norm('abc') === null && norm(null) === null);
+  const mine = G('alfBuildHouse')({ abs: 5, moods: { mua: 'happy', kiki: 'sleepy' }, groups: [], solo: { mua: { doing: 'snack', place: 'home' }, kiki: { doing: 'read', place: 'library' } } }, ['mua', 'kiki', 'nobody']);
+  check('① 自分の控えは小さい(id と種類の記号だけ・2,000字以内)', JSON.stringify(mine).length < 2000 && mine.r.kiki.at === 'out' && !mine.ids.includes('nobody'), JSON.stringify(mine));
+}
+
+// ② ③ 行き来の決め方(純粋な関数)
+{
+  const pick = G('assistantLifeFriendPickOuting');
+  const st0 = G('alfDefaultState')();
+  const settings = G('normalizeAssistantLifeFriendSettings')(null);
+  const house = { v: 1, ids: ['dra', 'mua'], r: { dra: { at: 'home', d: 'idle', m: 'happy' }, mua: { at: 'home', d: 'snack', m: 'happy' } } };
+  const houses = [{ id: 'aoi-0001', name: 'あおい', house }, { id: 'yuto-0001', name: 'ゆうと', house }];
+  const lifeOf = (solo, slot = 'noon') => ({ slot, solo, groups: [], moods: {} });
+  const allHome = Object.fromEntries(IDS.map(id => [id, { doing: 'idle', place: 'home', reason: 'mypace' }]));
+  let got = 0; let maxPeople = 0; let anyHosts = new Set();
+  for (let abs = 0; abs < 400; abs++) {
+    const p = pick({ life: lifeOf(allHome), ids: IDS, houses, st: st0, settings, mode: 'on', abs, salt: 's' });
+    if (p) { got++; maxPeople = Math.max(maxPeople, p.ids.length); anyHosts.add(p.host); if (!p.ids.every(id => IDS.includes(id))) maxPeople = 99; }
+  }
+  check('② 手の空いた助手は、ときどき行く(毎回ではない)', got > 20 && got < 300, `${got}/400`);
+  check('② 1回に1〜2人', maxPeople >= 1 && maxPeople <= 2, `${maxPeople}`);
+  const full = (mode) => pick({ life: lifeOf(allHome), ids: IDS, houses, st: { ...st0, go: mode === 'on' ? 3 : 1 }, settings, mode, abs: 7, salt: 's' });
+  let blockedAll = true; for (let abs = 0; abs < 200; abs++) if (pick({ life: lifeOf(allHome), ids: IDS, houses, st: { ...st0, go: 3 }, settings, mode: 'on', abs, salt: 's' })) blockedAll = false;
+  check('② on は1日3回まで', blockedAll && full('on') === null);
+  let thinBlocked = true; for (let abs = 0; abs < 200; abs++) if (pick({ life: lifeOf(allHome), ids: IDS, houses, st: { ...st0, go: 1 }, settings, mode: 'thin', abs, salt: 's' })) thinBlocked = false;
+  check('② thin は1日1回まで', thinBlocked);
+  let sameHouse = false; for (let abs = 0; abs < 200; abs++) { const p = pick({ life: lifeOf(allHome), ids: IDS, houses, st: { ...st0, went: { 'aoi-0001': 1 } }, settings, mode: 'on', abs, salt: 's' }); if (p && p.host === 'aoi-0001') sameHouse = true; }
+  check('② 同じ家へは1日1回', !sameHouse);
+  const sleepy = Object.fromEntries(IDS.map(id => [id, { doing: 'sleep', place: 'home', reason: 'mypace' }]));
+  const away = Object.fromEntries(IDS.map(id => [id, { doing: 'walk', place: 'plaza', reason: 'mypace' }]));
+  const distance = Object.fromEntries(IDS.map(id => [id, { doing: 'idle', place: 'home', reason: 'distance' }]));
+  let bad = []; let quarrelGo = false; let lateGo = false; let offGo = false; let closedGo = false;
+  for (let abs = 0; abs < 300; abs++) {
+    for (const [name, solo] of [['寝ている', sleepy], ['出かけている', away], ['距離をおいている', distance]]) if (pick({ life: lifeOf(solo), ids: IDS, houses, st: st0, settings, mode: 'on', abs, salt: 's' })) bad.push(name);
+    const p = pick({ life: lifeOf(allHome), ids: IDS, houses, st: st0, settings, mode: 'on', pendingIds: ['mua', 'kiki'], abs, salt: 's' });
+    if (p && p.ids.some(id => id === 'mua' || id === 'kiki')) quarrelGo = true;
+    if (pick({ life: lifeOf(allHome, 'late'), ids: IDS, houses, st: st0, settings, mode: 'on', abs, salt: 's' })) lateGo = true;
+    if (pick({ life: lifeOf(allHome), ids: IDS, houses, st: st0, settings, mode: 'off', abs, salt: 's' })) offGo = true;
+    if (pick({ life: lifeOf(allHome), ids: IDS, houses, st: st0, settings: { ...settings, open: false }, mode: 'on', abs, salt: 's' })) closedGo = true;
+  }
+  check('③ 寝ている・出かけている・距離をおいている助手は行かない', !bad.length, [...new Set(bad)].join('・'));
+  check('③ けんか中(assistantLifeRelPending)の助手は行かない', !quarrelGo);
+  check('③ 深夜は行かない/off・行き来を切にしているときは行かない', !lateGo && !offGo && !closedGo, `深夜${lateGo} off${offGo} 切${closedGo}`);
+  let mutedGo = false; for (let abs = 0; abs < 200; abs++) { const p = pick({ life: lifeOf(allHome), ids: IDS, houses, st: st0, settings: { ...settings, muted: ['aoi-0001'] }, mode: 'on', abs, salt: 's' }); if (p && p.host === 'aoi-0001') mutedGo = true; }
+  check('③ 来ないようにした家へは行かない', !mutedGo);
+  // 来る
+  const come = G('assistantLifeFriendPickCome');
+  let comeGot = 0; let comeThin = false; let comeMax = false; let comeSame = false;
+  for (let i = 0; i < 200; i++) {
+    const seed = `x${i}`;
+    if (come({ houses, st: st0, settings, mode: 'on', myHome: ['kiki'], seed })) comeGot++;
+    if (come({ houses, st: st0, settings, mode: 'thin', myHome: ['kiki'], seed })) comeThin = true;
+    if (come({ houses, st: { ...st0, come: 2 }, settings, mode: 'on', myHome: ['kiki'], seed })) comeMax = true;
+    const p = come({ houses, st: { ...st0, come: 1, came: [{ host: 'aoi-0001' }] }, settings, mode: 'on', myHome: ['kiki'], seed });
+    if (p && p.host === 'aoi-0001') comeSame = true;
+  }
+  check('② フレンドの助手は、ときどき自分で来る', comeGot > 10 && comeGot < 200, `${comeGot}/200`);
+  check('② 来るのは on で1日2人まで・thin では来ない・同じ家から1日1人', !comeThin && !comeMax && !comeSame, `thin${comeThin} 3人目${comeMax} 同じ家${comeSame}`);
+}
+
+// ④ 朝4時の区切り/⑤ 保存
+{
+  const roll = G('alfRollDay');
+  const st = { ...G('alfDefaultState')(), day: '2026-11-07', go: 3, come: 2, look: 3, beatP: 300, went: { 'aoi-0001': 1 }, looked: { 'aoi-0001': 1 }, seen: [5, 6],
+    photos: [{ host: 'aoi-0001', name: 'あおい', day: '2026-11-07', ids: ['mua'], theirs: [] }], came: [{ host: 'aoi-0001', name: 'あおい', aid: 'dra', mine: 'kiki', seen: true }] };
+  const next = roll(st, '2026-11-08');
+  check('④ 日が変わると今日の数・行った家・おみやげのPが戻る', next.go === 0 && next.come === 0 && next.look === 0 && next.beatP === 0 && !Object.keys(next.went).length && !Object.keys(next.looked).length && !next.came.length);
+  check('④ 写真と見た置き手紙は残る・前の日に行った家を覚える(同じ家ばかりにしない)', next.photos.length === 1 && next.seen.length === 2 && next.lastHosts.includes('aoi-0001'));
+  check('④ 同じ日なら何も変えない', roll(next, '2026-11-08') === next);
+  check('④ 日の区切りは助手ライフと同じ(assistantLifeDayKey)', G('alfDay')(Date.now()) === G('assistantLifeDayKey')(Date.now()));
+  const n = G('normalizeAssistantLifeFriend');
+  const broken = [null, 'x', 42, [], { go: 'abc', went: 'zz', out: { ids: ['mua'], host: 'bad host!' }, photos: 'p', came: [{ host: 'a', aid: 'nobody' }] }];
+  check('⑤ 壊れた値でも既定値で読める', broken.every(v => { const o = n(v); return o.go === 0 && o.out === null && Array.isArray(o.photos) && Array.isArray(o.came) && !o.came.length; }));
+  const s = G('normalizeAssistantLifeFriendSettings');
+  check('⑤ 設定は無ければ「入」・来ないようにした家は100軒まで', s(null).open && s(null).show && s(null).come && s({ muted: Array.from({ length: 150 }, (_, i) => `u${i}`) }).muted.length === 100 && s({ open: false }).open === false);
+  const k = G('normalizeAssistantLifeFriendKnown');
+  check('⑤ 顔なじみは正しい形の組だけ', JSON.stringify(k({ 'mua|aoi-0001|dra': 3, 'bad': 2, 'mua|aoi-0001|nobody': 1, 'kiki|aoi-0001|dra': -1 })) === JSON.stringify({ 'mua|aoi-0001|dra': 3 }));
+}
+
+// ⑥ 通信: 表が無いとき・ふつうのとき
+(async () => {
+  const ALF = () => G('ALF_STORE');
+  await G('ALF_STORE.load()');
+  // 表が無い環境
+  fakeServer = () => ({ status: 404, body: '{"code":"PGRST205","message":"Could not find the table"}' });
+  calls.length = 0;
+  const mode = await G('alfLoadMode()');
+  const life = { abs: 10, slot: 'noon', salt: 's', moods: {}, groups: [], solo: Object.fromEntries(IDS.map(id => [id, { doing: 'idle', place: 'home', reason: 'mypace' }])) };
+  await G('assistantLifeFriendOnSlot')(life, { abs: 10 });
+  await G('assistantLifeFriendOnOpen')(life);
+  const after = calls.length;
+  await G('alfFetchHouses(true)'); await G('alfFetchVisits(true)'); await G('assistantLifeFriendOnSlot')(life, { abs: 11 });
+  check('⑥ 表が無いときは off(出さない)・準備中にする', mode === 'off' && ALF().state.ready === false);
+  check('⑥ 準備中になったあとは通信しない', calls.length === after && after <= 1, `${after}回 → ${calls.length}回`);
+  check('⑥ フレンドの通信の印は立てない(フレンドの画面は止まらない)', G('typeof _friendsUnavailable === "undefined" ? true : _friendsUnavailable === false'));
+  check('⑤ 既存の mh_* に書かない(新しいキーだけ)', writes.every(k => k.startsWith('mh_assistant_life_friend_') || ['mh_assistant_life_v1', 'mh_assistant_life_diary_v1'].includes(k)), [...new Set(writes)].join(', '));
+
+  // ふつうの環境(偽サーバー): スイッチ on・控え2軒・行き来は入る
+  const fresh = new Date().toISOString();
+  vm.runInContext('_alfUnavailable = false; _alfModeLoading = null; _alfRosterAt = 0; _alfHousesAt = 0; _alfHousesDay = null; _alfHousesMax = null; _alfVisitsAt = 0; ALF_STORE.set({ mode: null, ready: true });', ctx);
+  const posted = [];
+  fakeServer = (url, init) => {
+    if (url.includes('assistant_life_friend_switch')) return { status: 200, body: '[{"mode":"on"}]' };
+    if (url.includes('assistant_life_friend_houses') && (init.method || 'GET') === 'GET') return { status: 200, body: JSON.stringify([
+      { breeder_id: 'aoi-0001', open: true, updated_at: fresh, house: { v: 1, ids: ['dra', 'mua'], r: { dra: { at: 'home', d: 'idle', m: 'happy' }, mua: { at: 'home', d: 'snack', m: 'happy' } } } },
+      { breeder_id: 'yuto-0001', open: false, updated_at: fresh, house: { v: 1, ids: ['kiki'], r: { kiki: { at: 'home', d: 'idle', m: 'happy' } } } }]) };
+    if (url.includes('assistant_life_friend_visits') && init.method === 'POST') { posted.push(JSON.parse(init.body)); return { status: 201, body: '' }; }
+    return { status: 200, body: init.method === 'GET' || !init.method ? '[]' : '' };
+  };
+  calls.length = 0;
+  const m2 = await G('alfLoadMode()');
+  await G('alfFetchHouses(true)');
+  const open = G('alfOpenHouses("look")');
+  check('⑥ スイッチ on を読む・切にしている家は一覧に出さない', m2 === 'on' && open.length === 1 && open[0].id === 'aoi-0001', open.map(h => h.id).join(','));
+  const houseCall = calls.find(c => c.url.includes('assistant_life_friend_houses'));
+  check('⑥ 控えはフレンドの分だけまとめて1回で読む(breeder_id=in.)', houseCall && /breeder_id=in\./.test(houseCall.url));
+  calls.length = 0; await G('alfFetchHouses()');
+  check('⑥ 30分は読み直さない', !calls.some(c => c.url.includes('assistant_life_friend_houses')));
+  calls.length = 0; await G('alfFetchHouses(true)');
+  check('⑥ 読み直すときは前のあとで変わった家だけ(updated_at=gt.)', calls.some(c => /updated_at=gt\./.test(c.url)));
+  // プレイヤーが訪ねる: 1日3軒(on)・同じ家1回
+  // 本番の失敗(2026-11-08): 自分の控えが一度も送られていないまま訪ねると、表に断られた。置き手紙の前に必ず控えを送る
+  G('alfSaveSt')({ ...G('alfToday()'), sentAt: 0, sentSig: '' });
+  calls.length = 0;
+  const r1 = await G('assistantLifeFriendLeaveNote("aoi-0001", { word: 1, talked: ["dra", "evil"], name: "あおい" })');
+  const order = calls.filter(c => c.method === 'POST').map(c => (/houses/.test(c.url) ? 'house' : /visits/.test(c.url) ? 'visit' : 'x'));
+  check('② 置き手紙の前に、自分の家の控えを先に送る(一度も送っていなくても)', order[0] === 'house' && order.includes('visit'), order.join(','));
+  const r2 = await G('assistantLifeFriendLeaveNote("aoi-0001", { word: 2, talked: ["dra"], name: "あおい" })');
+  const pl = posted.filter(p => p.kind === 'player');
+  check('② プレイヤーが訪ねると置き手紙(player・話した助手だけ・一言の番号)を同じ家へは1日1回だけ残す', r1 && r1.ok && r2 && !r2.ok && /もう置き手紙/.test(r2.reason) && pl.length === 1 && JSON.stringify(pl[0].assistants) === '["dra"]' && pl[0].word === 1, JSON.stringify(pl));
+  { const t = G('alfRefusalText');
+    check('② 断られた理由を分かる文にする(切・上限・フレンドでない・お休み・重なり)', /切/.test(t({ body: '行き来を切にしています' })) && /朝4時/.test(t({ body: '今日はもう行けません' })) && /フレンドではなく/.test(t({ body: 'フレンドではありません' })) && /お休み/.test(t({ body: '行き来はいま止めています' })) && /もう置き手紙/.test(t({ status: 409, body: '' }))); }
+  check('② 初めての家なら写真1枚', r1 && r1.photo === true && G('ALF_STORE.state.st.photos.length') === 1);
+  check('② ビートPはギフトの渡し口が無いと0(勝手に増えない)', r1 && r1.beatP === 0);
+  // ギフトの渡し口: 1日300Pまで
+  const gifts = [];
+  G('assistantLifeFriendSetGiftSender')(async (g) => { if (gifts.some(x => x.id === g.id)) return false; gifts.push(g); return true; });
+  const st = G('alfToday()');
+  G('alfSaveSt')({ ...st, beatP: 250 });
+  const got = await G('alfGiveBeatP')('go', 'alf_go_test', G('alfToday()'));
+  check('② おみやげのビートPは1日300Pまで(250Pのあとは50P)', got === 50 && gifts[0].rewards[0].amount === 50);
+  const got2 = await G('alfGiveBeatP')('go', 'alf_go_test2', { ...G('alfToday()'), beatP: 300 });
+  check('② 300Pに届いたら届けない', got2 === 0 && gifts.length === 1);
+  // 控えを送る: 同じなら送らない
+  G('alfSaveSt')({ ...G('alfToday()'), sentAt: 0, sentSig: '' });
+  calls.length = 0;
+  await G('alfPublish')(life, IDS, Date.now());
+  const sent1 = calls.filter(c => c.url.includes('assistant_life_friend_houses') && c.method === 'POST').length;
+  await G('alfPublish')(life, IDS, Date.now() + 20 * 60000);
+  const sent2 = calls.filter(c => c.url.includes('assistant_life_friend_houses') && c.method === 'POST').length;
+  check('⑥ 自分の控えを送る・中身が同じなら送り直さない', sent1 === 1 && sent2 === 1, `${sent1}・${sent2}`);
+
+  // ⑦ 台本
+  const sets = ['ALF_GO_LINES', 'ALF_REPLY_LINES', 'ALF_SAME_LINES', 'ALF_BACK_LINES', 'ALF_GUEST_LINES', 'ALF_WELCOME_LINES', 'ALF_TALK_LINES'];
+  const all = [];
+  for (const k of sets) { const t = G(k); const miss = IDS.filter(id => !t[id] || (Array.isArray(t[id]) && !t[id].length)); check(`⑦ ${k} に8人ぶんある`, !miss.length, miss.join(',')); for (const id of IDS) for (const line of [].concat(t[id] || [])) all.push({ id, line }); }
+  check('⑦ 助手・マスモンを「子」と呼ばない', !all.some(x => /(この|あの|その|うちの|いい|かわいい)子(?!ども)|子たち/.test(x.line)), all.filter(x => /子たち|(この|あの|その)子/.test(x.line)).map(x => x.line).join(' / '));
+  check('⑦ みゅあは「じゃん」「まじ」を使わない', !all.some(x => x.id === 'mua' && /じゃん|まじ/.test(x.line)));
+  check('⑦ あつの文の最後は 笑・記号・顔文字', all.filter(x => x.id === 'atsu').every(x => /(笑|[！？!?…♪])$|\)$/.test(x.line.trim())), all.filter(x => x.id === 'atsu' && !/(笑|[！？!?…♪])$/.test(x.line.trim())).map(x => x.line).join(' / '));
+  check('⑦ ドラは関西弁にしない', !all.some(x => x.id === 'dra' && /ほんま|やで|とる|とんだ/.test(x.line)));
+  check('⑦ ききはタメ口にしない', !all.some(x => x.id === 'kiki' && /(だよ|だね|してよ)/.test(x.line)));
+  const holes = all.flatMap(x => (x.line.match(/\{[^}]*\}/g) || [])).filter(h => !['{name}', '{f}', '{h}', '{v}'].includes(h));
+  check('⑦ 穴は {name}・{f}・{h}・{v} だけ', !holes.length, [...new Set(holes)].join(','));
+  check('⑦ 置き手紙の一言12・お礼6', G('ALF_WORD_TEXTS.length') === 12 && G('ALF_THANKS_TEXTS.length') === 6);
+  const scene = G('assistantLifeFriendGoScene')({ ids: ['mua', 'dra'], theirs: ['mua'], name: 'あおい', host: 'aoi-0001' });
+  check('⑦ 場面は2〜4行・同じ助手どうしが会うと「もうひとりの」', scene.lines.length >= 2 && scene.lines.length <= 4 && scene.lines.some(l => /もうひとり/.test(l.text)), scene.lines.map(l => l.text).join(' / '));
+  check('⑦ 相手の助手は「あおいさんのみゅあ」の形で出す', G('alfTheirLabel')('あおい', 'mua') === 'あおいさんのみゅあ');
+
+  // ⑨ Claude API の場面(friend_scenes): thin では頼まない・印が偽なら頼まない・作った文は穴を差しこむ・使えない文は台本へ
+  vm.runInContext('var ASSISTANT_CHAT_URL = "https://example.supabase.co/functions/v1/assistant-chat";', ctx);
+  flags.assistantLifeFriendApi = true;
+  let asked = [];
+  const base = fakeServer;
+  fakeServer = (url, init) => {
+    if (url.includes('functions/v1/assistant-chat')) { asked.push(JSON.parse(init.body)); return { status: 200, body: JSON.stringify({ ok: true, kind: 'friend_scenes', scenes: [
+      { kind: 'go', a: 'mua', b: 'dra', lines: [{ side: 'a', e: 'happy', t: '{f}、来たよ♪ {h}さんの家まぢかわいい！' }, { side: 'b', e: 'happy', t: '{f}、よく来たな。{name}によろしくな' }] },
+      { kind: 'go', a: 'kiki', b: 'dra', lines: [{ side: 'a', e: 'happy', t: '{bad}' }, { side: 'b', e: 'happy', t: 'はい' }] }] }) }; }
+    return base(url, init);
+  };
+  const lifeApi = { ...life, solo: { ...life.solo } };
+  G('ALF_STORE').set({ mode: 'thin' });
+  asked = []; await G('assistantLifeFriendRequestScenes')(lifeApi);
+  check('⑨ スイッチが thin のときは API を頼まない(台本だけ)', asked.length === 0);
+  G('ALF_STORE').set({ mode: 'on' });
+  G('alfSaveSt')({ ...G('alfToday()'), api: null });
+  asked = []; const res = await G('assistantLifeFriendRequestScenes')(lifeApi);
+  check('⑨ on のときは1回だけ頼み、送るのは組の id とブリーダーIDだけ(呼び名を送らない)', res === 'ok' && asked.length === 1 && !JSON.stringify(asked[0]).includes('あおい') && asked[0].kind === 'friend_scenes', JSON.stringify(asked[0]).slice(0, 200));
+  check('⑨ 穴の崩れた場面は控えに残さない', G('ALF_STORE.state.st.api.list.length') === 1);
+  asked = []; await G('assistantLifeFriendRequestScenes')(lifeApi);
+  check('⑨ 使っていない場面があるあいだは頼み直さない', asked.length === 0);
+  const sc = G('assistantLifeFriendGoScene')({ ids: ['mua'], theirs: ['dra'], name: 'あおい', host: 'aoi-0001' });
+  check('⑨ 作った場面を使い、{f}・{h}・{name} を端末で差しこむ', sc.lines[0].text === 'あおいさんのドラ、来たよ♪ あおいさんの家まぢかわいい！' && sc.lines[1].guest && sc.lines[1].text.startsWith('みゅあ、') && !/[{}]/.test(sc.lines.map(l => l.text).join('')), sc.lines.map(l => l.text).join(' / '));
+  const sc2 = G('assistantLifeFriendGoScene')({ ids: ['mua'], theirs: ['dra'], name: 'あおい', host: 'aoi-0001' });
+  check('⑨ 同じ組の作った場面は1回だけ(2回目は台本)', sc2.lines[0].text !== sc.lines[0].text && sc2.lines[1].text === 'おやつ、半分こしような', sc2.lines.map(l => l.text).join(' / '));
+  { const ok = G('alfApiLineOk');
+    check('⑨ 作った文の口調: みゅあの「じゃん/まじ」は「ぢゃん/まぢ」へ', ok('mua', 'それ椅子あつかいじゃん、まじで') === 'それ椅子あつかいぢゃん、まぢで');
+    check('⑨ 作った文の口調: 体に触れる言葉・あつの文末・ドラの関西弁・ききのタメ口・ほかの助手の「ぢゃん」は使わない',
+      ok('dra', 'おでの膝、いまならあいてるぞ') === null && ok('atsu', 'いらっしゃい') === null && ok('atsu', 'いらっしゃい笑') === 'いらっしゃい笑'
+      && ok('dra', 'ほんまによう来たな') === null && ok('kiki', '来てくれてうれしいよ。また遊ぼうだね') === null && ok('momosuke', 'かわいいぢゃん') === null && ok('kiki', 'いらっしゃいませ♪') === 'いらっしゃいませ♪'); }
+  { const ok = G('alfApiLineOk');
+    check('⑨ 作った文の口調(中継役と同じ): ドラの「やろう」は通し「〜やろ？」は捨てる・あつの「。」終わりは「！」へ',
+      ok('dra', 'トランプやろうな、えへへ') !== null && ok('dra', 'うまいやろ？') === null && ok('atsu', 'おじゃまします。') === 'おじゃまします！' && ok('atsu', '来たぞ☺️') === '来たぞ☺️', JSON.stringify([ok('dra', 'トランプやろうな、えへへ'), ok('dra', 'うまいやろ？'), ok('atsu', 'おじゃまします。'), ok('atsu', '来たぞ☺️')])); }
+  flags.assistantLifeFriendApi = false;
+  G('alfSaveSt')({ ...G('alfToday()'), api: null });
+  asked = []; await G('assistantLifeFriendRequestScenes')(lifeApi);
+  check('⑨ 印 assistantLifeFriendApi が偽なら頼まない', asked.length === 0 && /\n\s*assistantLifeFriendApi:\s*(true|false),/.test(fs.readFileSync(path.join(root, 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8')));
+  fakeServer = base;
+
+  // ⑩ プロフィールの入口「🏘 家へ遊びに行く」と、家が届いていないフレンドの薄い並び(2026-11-08 社長)
+  { const why = G('alfVisitBlockedText');
+    vm.runInContext("ALF_STORE.set({ mode: 'thin', roster: [{ id: 'nohouse-01', name: 'まだ' }], houses: {} })", ctx);
+    check('⑩ 家が届いていないフレンドは「◯◯さんが助手ライフを開くと遊びに行けます」', why('nohouse-01', 'まだ') === 'まださんが助手ライフを開くと遊びに行けます。', why('nohouse-01', 'まだ'));
+    vm.runInContext("ALF_STORE.set({ mode: 'thin', roster: [{ id: 'hasHouse-01', name: 'いる' }], houses: { 'hasHouse-01': { open: true, at: Date.now(), house: { v: 1, ids: ['mua'], r: { mua: { at: 'home', d: 'idle', m: 'happy' } } } } }, st: { ...ALF_STORE.state.st, look: 99, looked: { 'hasHouse-01': 1 } } })", ctx);
+    check('⑩ 今日もう置き手紙を残した家・上限のあとでも、訪ねるのは止めない(2026-11-08 社長「家に遊びに行くのに制限はなしがいい」)', why('hasHouse-01', 'いる') === null, String(why('hasHouse-01', 'いる')));
+    vm.runInContext("ALF_STORE.set({ mode: 'off' })", ctx);
+    check('⑩ 行き来がお休みのときはその理由', /お休み中/.test(why('nohouse-01', 'まだ')));
+    vm.runInContext("ALF_STORE.set({ mode: 'thin' })", ctx);
+    const friends = fs.readFileSync(path.join(root, 'monster-hero/src/parts/75-screen-friends.jsx'), 'utf8');
+    const page = fs.readFileSync(path.join(root, 'monster-hero/src/parts/56-assistant-life-friend.jsx'), 'utf8');
+    check('⑩ フレンドのプロフィールに入口がある(デッキの「このデッキと戦う」の下)', /CardShareDeckActions[\s\S]{0,400}<AssistantLifeFriendProfileVisit friendId=\{selected\.otherId\}/.test(friends));
+    check('⑩ 「🏘 フレンド」の一覧に、家が届いていないフレンドを薄く並べる(押せない)', /data-alf-house-waiting/.test(page) && /border-dashed/.test(page)); }
+
+  // ⑪ 置き手紙の自由文・くわしい控え(2026-11-08 社長)
+  { const nc = G('alfNoteCheck');
+    check('⑪ 自由文: 40字で切る・空はよい・連絡先(ID・URL・電話番号)ははじく', nc('').ok && nc('あ'.repeat(60)).text.length === 40 && !nc('ID: yuto_1234567').ok && !nc('https://example.com 見てね').ok && !nc('090-1234-5678').ok, JSON.stringify([nc(''), nc('あ'.repeat(60)).text.length, nc('ID: yuto_1234567'), nc('https://example.com 見てね'), nc('090-1234-5678'), typeof G('typeof cardChatContact')]));
+    check('⑪ 自由文: 住所・本名・学校ははじき、悪い言葉は●', !nc('〒123 なんとか市').ok && !nc('本名はたろう').ok && !nc('○○中学だよ').ok && nc('ばか言うな').text.includes('●') && nc('ソファふかふかでよかった！').text === 'ソファふかふかでよかった！', JSON.stringify([nc('〒123 なんとか市'), nc('本名はたろう'), nc('○○中学だよ'), nc('ばか言うな'), nc('ソファふかふかでよかった！')]));
+    const nm = G('assistantLifeFriendNormalizeMore');
+    const m = nm({ v: 1, fu: { mua: { p: { c: 'lantern', w: 'sofa', f: 'sofa' }, k: ['bear', 'nope', 'bear'] }, xx: { p: {} } }, dy: [{ t: '10:10', x: '朝: みゅあがおやつ{name}' }, { t: 'x', x: '' }] });
+    check('⑪ くわしい控えを読むとき、場所の合わない家具・知らない家具・知らない助手・空の行は捨てる', m && m.fu.mua.p.c === 'lantern' && !m.fu.mua.p.w && m.fu.mua.p.f === 'sofa' && JSON.stringify(m.fu.mua.k) === '["bear"]' && !m.fu.xx && m.dy.length === 1 && !/[{}]/.test(m.dy[0].x), JSON.stringify(m));
+    check('⑪ くわしい控えが大きすぎたら読まない', nm({ v: 1, dy: [{ t: '1:00', x: 'あ'.repeat(7000) }] }) === null);
+    const page = fs.readFileSync(path.join(root, 'monster-hero/src/parts/56-assistant-life-friend.jsx'), 'utf8');
+    check('⑪ くわしい控えの表は soft で読む(表が無くても行き来ぜんぶを準備中にしない)', /ALF_TABLE_MORE\}\?on_conflict=breeder_id`, \{[^\n]*soft: true/.test(page) && /limit=1`, \{ soft: true \}/.test(page));
+    check('⑪ くわしい控えに、よその人の名前が入る行(フレンドの家との行き来)を写さない', /x\.kind !== 'friend' && !\/さんの\|さんち\//.test(page)); }
+
+  // ⑬ 訪ねた家の台本(コトバ・ツムギ 2026-11-08): 8人そろう・口調の見張り(作った場面と同じ alfApiLineOk)に通る・数字や「子」が無い・穴は {name}/{h}/{f} だけ
+  { const V = G('ALF_VISIT_LINES'); const ok = G('alfApiLineOk'); const ids = G('ALF_IDS'); const bad = [];
+    const all = []; for (const id of ids) { const v = V[id]; if (!v || v.greet.length < 3 || Object.keys(v.doing).length < 6 || v.reply.length < 3 || v.sleep.length < 2) bad.push(`${id}: 本数`); if (v) all.push(...[...v.greet, ...Object.values(v.doing), ...v.reply, ...v.sleep].map(t => [id, t])); for (const t of [...(G('ALF_GO_MORE')[id] || []), ...(G('ALF_WELCOME_MORE')[id] || [])]) all.push([id, t]); }
+    for (const [id, t] of all) { const filled = t.replace(/\{h\}/g, 'あおい').replace(/\{f\}/g, 'あおいさんのドラ').replace(/\{name\}/g, 'ゆうとさん'); if (ok(id, filled) == null) bad.push(`${id}「${t}」口調`); if (/[0-9０-９]/.test(t) || /(この|あの|その)子|子たち/.test(t) || /[{}]/.test(t.replace(/\{(name|h|f)\}/g, '')) || t.length > 60) bad.push(`${id}「${t}」`); if (/\{h\}(?!さん)/.test(t)) bad.push(`${id}「${t}」{h}さん`); }
+    check('⑬ 訪ねた家の台本が8人そろい、口調・数字・「子」・穴の決まりを守る', bad.length === 0, bad.slice(0, 5).join(' / ')); }
+
+  // ⑭ フレンドの最近(2026-11-08 社長): 種類と長さの決まり・控えの ac1・設定 act の既定は入
+  { const na = G('alfNormalizeAc');
+    const ac = na([{ k: 'beat', x: '「風がそよぐ」を遊んだ', at: 1 }, { k: 'score', x: 'x', at: 1 }, { k: 'card', x: 'あ'.repeat(60), at: 2 }, { k: 'furn', x: '{name}の部屋', at: 3 }]);
+    check('⑭ 最近の行は知らない種類を捨て、40字で切り、{ } を消す', ac.length === 3 && ac[1].x.length === 40 && !/[{}]/.test(ac[2].x), JSON.stringify(ac));
+    const h = G('assistantLifeFriendNormalizeHouse')({ v: 1, ids: ['mua'], r: { mua: { at: 'home', d: 'idle', m: 'happy' } }, ac1: { k: 'masmon', x: '新しいマスモン「ゴーレム」を迎えた', at: 5 } });
+    check('⑭ 控え(一覧用)の最近の1つ ac1 を読む', h && h.ac1 && h.ac1.k === 'masmon');
+    check('⑭ 設定「最近の遊びをフレンドに見せる」の既定は入', G('normalizeAssistantLifeFriendSettings(null).act') === true && G('normalizeAssistantLifeFriendSettings({ act: false }).act') === false);
+    const play = fs.readFileSync(path.join(root, 'monster-hero/src/parts/30-rhythm-play.jsx'), 'utf8');
+    check('⑭ モンヒロビートは公開中の曲だけ、曲名だけを残す(デバッグ・練習・タイミング合わせは残さない)', /!debugPlay&&!tutorial&&!calibrating&&typeof assistantLifeFriendNoteActivity==='function'&&typeof RHYTHM_DEMO_SONG_IDS!=='undefined'&&RHYTHM_DEMO_SONG_IDS\.includes\(song\?\.songId\)/.test(play)); }
+
+  // ⑯ 控えの行き先(2026-11-08 社長「8部屋とも留守なのはなぜ」): 出かけているときだけ・町の場所だけ
+  { const h = G('assistantLifeFriendNormalizeHouse')({ v: 1, ids: ['kiki', 'mua', 'dra'], r: { kiki: { at: 'out', d: 'cards', m: 'happy', p: 'cardroom' }, mua: { at: 'home', d: 'idle', m: 'happy', p: 'cardroom' }, dra: { at: 'out', d: 'idle', m: 'happy', p: 'nowhere' } } });
+    check('⑯ 行き先は、出かけている助手の町の場所だけ読む', h.r.kiki.p === 'cardroom' && !h.r.mua.p && !h.r.dra.p, JSON.stringify(h.r)); }
+
+  // ⑱ その人の助手のマスモンの写し(キズナ4 #5103/#5108 の口 assistantLifeMasmonTeamOf): 実装済みだけ・名前の見張り・色の形(custom: も通す)・6000字に収める
+  { vm.runInContext("var ALL_PLAYER_MONSTERS = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : { Golem: { name: 'ゴーレム' }, Ark: { name: 'アーク' } };", ctx);
+    const m = G('assistantLifeFriendNormalizeMore')({ v: 1, ms: { kiki: [{ mo: 'Golem', n: 'ごろちゃん', c: ['red@50', null, 'BAD COLOR', 'custom:120:40:85@70'], l: 1 }, { mo: 'NoSuchMon', n: 'x' }, { mo: 'Ark', n: 'ID: abc_1234567' }], zz: [{ mo: 'Golem' }] }, mn: { kiki: 6 } });
+    check('⑱ マスモンは実装済みだけ・色は「色id」「custom:色相:彩度:明度」(@濃さ)だけ(ほかは元の色)・連絡先らしい名前は空・知らない助手は捨てる・ほかの数', m && m.ms.kiki.length === 2 && m.ms.kiki[0].n === 'ごろちゃん' && JSON.stringify(m.ms.kiki[0].c) === '["red@50",null,null,"custom:120:40:85@70"]' && m.ms.kiki[0].l === 1 && m.ms.kiki[1].n === '' && !m.ms.zz && m.mn.kiki === 6, JSON.stringify(m && [m.ms, m.mn]));
+    // 8人×8体・色5つ(custom)・家具と日記がいっぱいでも、表の決まり(6000字)に収まる。勇者モンの色は残す
+    const one = (i) => ({ mo: 'Golem', n: 'あいうえおかきくけこさしすせそた'.slice(0, 16), c: Array(5).fill('custom:359:100:100@100'), ...(i === 0 ? { l: 1 } : {}) });
+    const ms = {}; for (const id of IDS) ms[id] = Array.from({ length: 8 }, (_, i) => one(i));
+    const fu = {}; for (const id of IDS) fu[id] = { p: { c: 'lantern', w: 'starpic', f: 'sofa' }, k: Array(12).fill('plant') };
+    const base = { v: 1, fu, dy: Array(8).fill({ t: '10:10', x: 'あ'.repeat(40) }), ac: Array(8).fill({ k: 'beat', x: 'あ'.repeat(30), at: Date.now() }) };
+    const fit = G('alfFitMasmon')(base, ms); const t = JSON.stringify(fit); const chars = t.length + (t.match(/[:,]/g) || []).length;
+    check('⑱ いっぱいでも 6000字に収まる・勇者モン(先頭)の色は残す・減らした数は mn に残す', chars <= 6000 && fit.ms && fit.ms.mua[0].c.length === 5 && fit.ms.mua[0].l === 1 && (fit.ms.mua.length === 8 || fit.mn.mua === 8), `${chars}字 ${fit.ms ? fit.ms.mua.length : 0}体 mn=${JSON.stringify(fit.mn)}`);
+    const small = G('alfFitMasmon')({ v: 1, fu: {}, dy: [] }, { mua: [one(0), one(1)] });
+    check('⑱ 入るときは削らない(全員の色をそのまま)', small.ms.mua.length === 2 && small.ms.mua[1].c.length === 5 && !small.mn, JSON.stringify(small).slice(0, 120)); }
+
+  // ⑲ 家具20種類の並び l(2026-11-11): 1人20個×8人でも6000字に収まる・並び l は最後まで残る(奥の家具から減る)・入るときは削らない
+  { const lay = (n) => Array.from({ length: n }, (_, i) => ['plant', 512, 634, 100, 0, 0, 0, 100, 100, 0, i]);
+    const one = () => ({ mo: 'Golem', n: 'あいうえお', c: Array(5).fill('custom:359:100:100@100'), l: 0 });
+    const ms = {}; for (const id of IDS) ms[id] = Array.from({ length: 4 }, one);
+    const fu = {}; for (const id of IDS) fu[id] = { p: { c: 'lantern', w: 'starpic', f: 'sofa' }, k: Array(3).fill('plant'), l: lay(20) };
+    const base = { v: 1, fu, dy: Array(8).fill({ t: '10:10', x: 'あ'.repeat(40) }), ac: Array(3).fill({ k: 'beat', x: 'あ'.repeat(30), at: Date.now() }) };
+    const fit = G('alfFitMasmon')(base, ms); const t = JSON.stringify(fit); const chars = t.length + (t.match(/[:,]/g) || []).length;
+    const left = IDS.map(id => (fit.fu[id].l || []).length);
+    check('⑲ 20個×8人でも 6000字に収まる', chars <= 6000, `${chars}字 l=${left.join(',')} dy=${fit.dy.length} ms=${fit.ms ? fit.ms.mua.length : 0}`);
+    check('⑲ 並び l は日記・マスモンの色より後に削り、1人8個は残す(今日あったことは先に0件)・奥(z小)の家具から減る', fit.dy.length === 0 && Math.min(...left) >= 8 && IDS.every(id => (fit.fu[id].l || []).every(a => a[10] >= 20 - (fit.fu[id].l || []).length)), `l=${left.join(',')}`);
+    const small = G('alfFitMasmon')({ v: 1, fu: { mua: { p: {}, k: [], l: lay(20) } }, dy: [] }, null);
+    check('⑲ 入るときは並び l を削らない', small.fu.mua.l.length === 20); }
+
+  // ⑧ 公開の印
+  const rel = fs.readFileSync(path.join(root, 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8');
+  check('⑧ 公開の印 assistantLifeFriend がある(真/偽どちらでも、偽なら通信しないことを下で見る)', /\n\s*assistantLifeFriend:\s*(true|false),/.test(rel));
+  flags.assistantLifeFriend = false;
+  calls.length = 0;
+  await G('assistantLifeFriendOnSlot')(life, { abs: 30 });
+  check('⑧ 印が偽なら通信しない', calls.length === 0);
+
+  console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
+  process.exit(failed ? 1 : 0);
+})().catch((e) => { console.error(e); process.exit(1); });

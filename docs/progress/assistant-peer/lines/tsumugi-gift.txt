@@ -1,0 +1,247 @@
+# 道具・家具のプレゼント — ツムギの台詞(2026-11-08)。注文書 lines/ORDER-GIFT.md・好みは注文書の表のとおり
+# ツムギの分: gift 80(atsu kyuko sorashido erubin)・furn 48(同じ4人)・furnuse 24(8人)・visitfurn 40(8人)
+# 苦手な物でも嫌がらない・突き返さない(「気持ちはうれしい」まで)。{name}・{c} の決まり・VOICE.md のくせを守る
+
+## gift あつ(好き misanga onigiri earphone/苦手 tea flower)
+gift atsu item=basket like=mid | happy おやつバスケットだ！ {c}、一緒に食べよ笑
+gift atsu item=basket like=mid | normal バスケットいっぱいじゃん！ {name}、ありがと笑
+gift atsu item=misanga like=like | excited おそろいのミサンガ！？ {c}、今すぐつけよ笑
+gift atsu item=misanga like=like | happy これ、勝負のお守りにする！ {name}、まじでありがと笑
+gift atsu item=cake like=mid | happy はんぶんこケーキね笑 {c}、半分ずつね！
+gift atsu item=cake like=mid | normal ケーキだ！ 練習のあとに食べよ笑
+gift atsu item=onigiri like=like | excited ほかほかおにぎり！ 腹へってたんだよね笑
+gift atsu item=onigiri like=like | happy {name}、わかってる！ {c}、具はどっちにする？笑
+gift atsu item=tea like=bad | troubled ティーセットか…俺、飲み方わかんないかも笑 {c}、教えて！
+gift atsu item=tea like=bad | normal 気持ちはうれしい！ {c}にいれてもらお笑
+gift atsu item=earphone like=like | excited かたみみイヤホン！ {c}と同じ曲、聞きながら練習しよ笑
+gift atsu item=earphone like=like | happy これいい！ {name}、ありがと( *'ω'*)ノ
+gift atsu item=puzzle like=mid | normal パズルか笑 {c}、どっちが早く解けるか勝負ね！
+gift atsu item=puzzle like=mid | happy ふたりで解くパズル…勢いでいけるかな笑
+gift atsu item=sleeve like=mid | happy おそろいのスリーブ！ {c}、次の対戦これで出よ笑
+gift atsu item=sleeve like=mid | normal スリーブね！ デッキが引きしまる感じする笑
+gift atsu item=cheki like=mid | happy チェキだ！ {c}、一枚撮ろ笑
+gift atsu item=cheki like=mid | normal 思い出チェキね笑 勝ったときに撮ろ！
+gift atsu item=flower like=bad | troubled 花束…俺、枯らさないか心配笑 {c}、水やり手伝って！
+gift atsu item=flower like=bad | normal ちいさな花束かぁ！ 気持ちはうれしい、ありがと笑
+
+## gift きゅうこ(好き tea earphone puzzle/苦手 basket cheki)
+gift kyuko item=basket like=bad | troubled おやつバスケット…いっぱいで迷っちゃうなぁ。{c}、先に選んでよぉ
+gift kyuko item=basket like=bad | normal 気持ちはうれしいよぉ。{c}と分けたら、ちょうどいいかもねぇ
+gift kyuko item=misanga like=mid | happy おそろいのミサンガかぁ。{c}、つけてみよっか笑
+gift kyuko item=misanga like=mid | normal ほい、ミサンガ。切れたら願いがかなうんだっけぇ
+gift kyuko item=cake like=mid | happy はんぶんこケーキだぁ。{c}、きっちり半分ねぇ笑
+gift kyuko item=cake like=mid | normal ケーキ、ありがとん笑 甘いの食べると頭が回るんだよねぇ
+gift kyuko item=onigiri like=mid | normal ほかほかおにぎり、ありがとん笑
+gift kyuko item=onigiri like=mid | happy {c}、具は何かなぁ。当てっこしよ笑
+gift kyuko item=tea like=like | excited ティーセット！ {name}、わかってるぅ笑 {c}、本を読みながら飲も
+gift kyuko item=tea like=like | happy これ、ほしかったやつだぁ。ありがとん、{name}🥺
+gift kyuko item=earphone like=like | excited かたみみイヤホン！ {c}、俺のおすすめの曲、聞いてよぉ
+gift kyuko item=earphone like=like | happy 音楽、ふたりで聞けるのいいねぇ。ありがとん笑
+gift kyuko item=puzzle like=like | excited ふたりで解くパズル！ {c}、作戦立ててから始めよぉ
+gift kyuko item=puzzle like=like | happy パズル、たまらないんだよねぇ。{name}、さすがだぁ笑
+gift kyuko item=sleeve like=mid | normal おそろいスリーブ、いいねぇ。{c}、デッキ見せ合お笑
+gift kyuko item=sleeve like=mid | happy ほい。カードが長持ちしそうだぁ
+gift kyuko item=cheki like=bad | troubled チェキかぁ…写るの、ちょっと照れるんだよねぇ
+gift kyuko item=cheki like=bad | normal 気持ちはうれしいよぉ。{c}が撮ってくれるなら、写ってもいいかなぁ
+gift kyuko item=flower like=mid | happy ちいさな花束、かわいいねぇ。{c}、どこに飾ろっか
+gift kyuko item=flower like=mid | normal ほい、花束。本の横に置くと、いい感じだねぇ
+
+## gift ソラシド(好き onigiri puzzle sleeve/苦手 tea flower)
+gift sorashido item=basket like=mid | happy おやつバスケット！ 中身、数えてもいいですか？笑
+gift sorashido item=basket like=mid | normal {c}、バスケットの中、半分ずつ分けましょう
+gift sorashido item=misanga like=mid | happy おそろいのミサンガですか。{c}、勝負の日につけましょう
+gift sorashido item=misanga like=mid | normal ミサンガ、ありがとうございます。結び目の数、ちょうど7つですね笑
+gift sorashido item=cake like=mid | happy はんぶんこケーキ！ 半分の角度は計算済みです笑
+gift sorashido item=cake like=mid | normal {c}、ケーキはちょうど半分にしましょう
+gift sorashido item=onigiri like=like | excited ほかほかおにぎり！ うぉぉぉ、ありがとうございます！
+gift sorashido item=onigiri like=like | happy {name}、お腹ぺこぺこなのを計算されてましたね笑 {c}、一緒に食べましょう
+gift sorashido item=tea like=bad | troubled ティーセットですか・・・ゆっくり飲むの、そわそわしちゃうんですよね笑
+gift sorashido item=tea like=bad | normal 気持ちはうれしいです。{c}、いれ方を教えてくれますか？
+gift sorashido item=earphone like=mid | normal かたみみイヤホン！ {c}、同じ曲のBPM、当てっこしましょう
+gift sorashido item=earphone like=mid | happy イヤホン、ありがとうございます。曲を聞きながら表を作れますね
+gift sorashido item=puzzle like=like | excited ふたりで解くパズル！ これは燃えますねー！
+gift sorashido item=puzzle like=like | happy {c}、解く順番を表にしてから始めましょう笑
+gift sorashido item=sleeve like=like | excited おそろいスリーブ！ デッキがでーじかっこよくなりますね・・・！
+gift sorashido item=sleeve like=like | happy {name}、ありがとうございます！ {c}、次の対戦はこれで出ましょう
+gift sorashido item=cheki like=mid | happy 思い出チェキですか。{c}、勝った記念に一枚撮りましょう
+gift sorashido item=cheki like=mid | normal チェキ、ありがとうございます。表に貼っておきます笑
+gift sorashido item=flower like=bad | troubled 花束ですか・・・どう飾ればいいか、計算が出ないですね笑
+gift sorashido item=flower like=bad | normal 気持ちはうれしいです。{c}、飾り方を教えてくれませんか
+
+## gift えるびん(好き tea sleeve flower/苦手 cake earphone)
+gift erubin item=basket like=mid | happy おやつバスケット、ありがとう。{c}、一緒に選ぼうか
+gift erubin item=basket like=mid | normal いろいろ入ってるね。みんなの分もありそうだね
+gift erubin item=misanga like=mid | happy おそろいのミサンガ、うれしいね。{c}、つけてみようか
+gift erubin item=misanga like=mid | normal ミサンガ、ありがとう。大事にするね
+gift erubin item=cake like=bad | troubled はんぶんこケーキか…甘いのは少しだけでいいかな。{c}、多めに食べてくれる？
+gift erubin item=cake like=bad | normal 気持ちはうれしいよ。{c}と分ければ、ちょうどいいかな
+gift erubin item=onigiri like=mid | happy ほかほかおにぎり、ありがとう。{c}、あたたかいうちに食べよう
+gift erubin item=onigiri like=mid | normal おにぎり、うれしいね。ベンチで食べようか
+gift erubin item=tea like=like | excited ティーセット！ {name}、ありがとう。{c}、さっそくいれてみようか
+gift erubin item=tea like=like | happy いい香りだね。こういうのが一番うれしいんだ☺️
+gift erubin item=earphone like=bad | troubled かたみみイヤホンか…まだ慣れてないけど、{c}が教えてくれるかな
+gift erubin item=earphone like=bad | normal 気持ちはうれしいよ。{c}のおすすめの曲、聞いてみようかな
+gift erubin item=puzzle like=mid | normal ふたりで解くパズル、いいね。{c}、ゆっくり解こうか
+gift erubin item=puzzle like=mid | happy パズルか。のんびり考えるのも楽しいね
+gift erubin item=sleeve like=like | excited おそろいスリーブ！ デュラハンのカードに使おうかな
+gift erubin item=sleeve like=like | happy {name}、ありがとう。{c}、次の対戦で一緒に使おうね😊
+gift erubin item=cheki like=mid | happy 思い出チェキ、いいね。{c}、一枚撮ろうか
+gift erubin item=cheki like=mid | normal チェキ、ありがとう。いい思い出になるね
+gift erubin item=flower like=like | excited ちいさな花束！ {name}、ありがとう。部屋に飾るね
+gift erubin item=flower like=like | happy きれいだね。{c}も、一本どうかな？☺️
+
+## furn 家具をもらったとき(あつ・きゅうこ・ソラシド・えるびん × 12種類)
+furn atsu item=sofa like=like | excited ソファ！ ここで作戦考えるの、最高じゃん笑
+furn atsu item=bear like=mid | happy くまのぬいぐるみ笑 意外と落ち着くかも！
+furn atsu item=plant like=mid | normal 観葉植物ね！ 水やり、忘れないようにする笑
+furn atsu item=record like=like | excited レコードプレーヤー！ 好きな曲、ずっとかけとこ笑
+furn atsu item=nyacushion like=mid | happy ニャーのクッション笑 かわいいじゃん！
+furn atsu item=starpic like=mid | normal 星空の絵！ 部屋がちょっと大人っぽくなった笑
+furn atsu item=trophy like=like | excited トロフィー棚！ これから全部ここに並べる笑
+furn atsu item=bookshelf like=mid | normal 本棚ね！ 攻略の本、並べとこ笑
+furn atsu item=heartmirror like=bad | troubled ハートの鏡か…俺に似合うかな笑 でも、ありがと！
+furn atsu item=lantern like=mid | happy 星のランタン、いい感じ！ 部屋が明るくなった笑
+furn atsu item=mirrorball like=mid | excited ミラーボール！ 部屋で一曲やりたくなる笑
+furn atsu item=windbell like=mid | happy 風鈴だ！ いい音するじゃん笑
+furn kyuko item=sofa like=mid | happy ふかふかソファだぁ。ここで本読もっかなぁ
+furn kyuko item=bear like=mid | normal くまのぬいぐるみかぁ。本棚の横に座らせとくねぇ
+furn kyuko item=plant like=mid | normal 観葉植物、いいねぇ。部屋が落ち着くよぉ
+furn kyuko item=record like=mid | happy レコードプレーヤー！ 音楽、もっと聞けるねぇ笑
+furn kyuko item=nyacushion like=like | excited ニャーのクッション！ {name}、わかってるぅ笑 ずっと抱えてるかも
+furn kyuko item=starpic like=like | excited 星空の絵！ 見てると、考えごとがはかどるんだよねぇ
+furn kyuko item=trophy like=mid | normal トロフィー棚かぁ。ランキングの思い出、並べよっかなぁ笑
+furn kyuko item=bookshelf like=like | excited 小さな本棚！ ありがとん、{name}🥺 さっそく並べるよぉ
+furn kyuko item=heartmirror like=mid | normal ハートの鏡かぁ。寝ぐせ、ちゃんと見るようにするねぇ笑
+furn kyuko item=lantern like=mid | happy 星のランタン、夜の読書にちょうどいいねぇ
+furn kyuko item=mirrorball like=bad | troubled ミラーボールかぁ…まぶしくて、本が読めないかもぉ。でも、ありがとん笑
+furn kyuko item=windbell like=mid | happy 風鈴、いい音だねぇ。静かな部屋に合うよぉ
+furn sorashido item=sofa like=mid | happy ソファですか。計算の合間に休めますね笑
+furn sorashido item=bear like=bad | troubled くまのぬいぐるみですか・・・どこに置けばいいか、計算中です笑 ありがとうございます
+furn sorashido item=plant like=mid | normal 観葉植物、ありがとうございます。水やりの日、表にしておきます
+furn sorashido item=record like=mid | happy レコードプレーヤー！ BPMを当てながら聞けますね笑
+furn sorashido item=nyacushion like=mid | normal ニャーのクッション、座り心地がいいですねー
+furn sorashido item=starpic like=like | excited 星空の絵！ 星の数、数えたくなります・・・！
+furn sorashido item=trophy like=like | excited トロフィー棚！ 勝った記録、全部並べます笑
+furn sorashido item=bookshelf like=mid | normal 本棚ですか。表のファイル、ちょうど入りますね
+furn sorashido item=heartmirror like=mid | normal ハートの鏡ですか。・・・勝ったときの顔、映してみますか笑
+furn sorashido item=lantern like=like | excited 星のランタン！ これで表づくりがでーじはかどります・・・！
+furn sorashido item=mirrorball like=mid | surprise ミラーボール！ 回る速さ、計算したくなりますね笑
+furn sorashido item=windbell like=mid | happy 風鈴ですか。鳴った回数、数えておきますね笑
+furn erubin item=sofa like=mid | happy ふかふかソファ、ありがとう。座ると落ち着くね
+furn erubin item=bear like=mid | happy くまのぬいぐるみ、かわいいね。ベッドの横に置こうかな
+furn erubin item=plant like=like | excited 観葉植物！ 部屋に緑があると、ほっとするんだ。ありがとう
+furn erubin item=record like=mid | normal レコードプレーヤー、いいね。静かな曲を聞こうかな
+furn erubin item=nyacushion like=mid | happy ニャーのクッション、ふわふわだね😊
+furn erubin item=starpic like=mid | normal 星空の絵、きれいだね。見ていると落ち着くよ
+furn erubin item=trophy like=mid | normal トロフィー棚か。カードの記念、並べてみようかな
+furn erubin item=bookshelf like=mid | happy 小さな本棚、ありがとう。この世界の本、集めてみるね
+furn erubin item=heartmirror like=mid | normal ハートの鏡、かわいいね。毎日見るようにするよ
+furn erubin item=lantern like=like | excited 星のランタン！ やさしい明かりで、部屋がいい感じになるね
+furn erubin item=mirrorball like=bad | troubled ミラーボールか…少しにぎやかすぎるかもしれないけど、気持ちはうれしいよ
+furn erubin item=windbell like=like | happy 風鈴の音、いいね。{name}、ありがとう☺️
+
+## furnuse 好きな家具を置いた部屋にいるときの吹き出し(8人 × 好きな家具3つ・20字まで・表情なし)
+furnuse mua item=bear | くまをぎゅっと中♪
+furnuse mua item=heartmirror | 鏡の前でポーズ研究中♪
+furnuse mua item=mirrorball | ミラーボールでノリノリ中ｗ
+furnuse kiki item=plant | 植物に水やり中でつ
+furnuse kiki item=bookshelf | 本棚の前で読書中でつ
+furnuse kiki item=windbell | 風鈴の音を聞いてまつ♪
+furnuse momosuke item=record | レコードで歌の練習中！！
+furnuse momosuke item=heartmirror | 鏡の前で振り付け中♡
+furnuse momosuke item=mirrorball | ミラーボールでライブ中！！
+furnuse dra item=sofa | ソファでごろごろ中…
+furnuse dra item=bear | くまと並んでくつろぎ中
+furnuse dra item=nyacushion | ニャーのクッションでひと休み
+furnuse atsu item=sofa | ソファで作戦タイム笑
+furnuse atsu item=record | レコードで一曲聞き中！
+furnuse atsu item=trophy | トロフィーを磨き中笑
+furnuse kyuko item=nyacushion | ニャーのクッションで読書中
+furnuse kyuko item=starpic | 星空の絵をながめ中ぁ
+furnuse kyuko item=bookshelf | 本棚の整理中だよぉ
+furnuse sorashido item=starpic | 星を数え中です・・・！
+furnuse sorashido item=trophy | トロフィーの並びを計算中
+furnuse sorashido item=lantern | ランタンの下で表づくり中
+furnuse erubin item=plant | 植物の手入れ中だよ
+furnuse erubin item=lantern | ランタンの明かりでひと息
+furnuse erubin item=windbell | 風鈴の音を聞いてるよ
+
+## visitfurn 遊びに来た助手が、部屋の主の家具に触れる(来た人 部屋の主。好きな家具24・ほか16)
+visitfurn momosuke mua item=bear | momosuke excited {c}、このくま、かわいすぎ！！ | mua happy {name}がくれたの♪ 名前つけよっか | momosuke wink 「もちもち」にしよ！！
+visitfurn atsu mua item=mirrorball | atsu surprise {c}の部屋、ミラーボールある笑 | mua excited 回すとね、まぢでライブ会場になるの！ | atsu happy 今度ここで一曲やろ笑
+visitfurn erubin mua item=heartmirror | erubin surprise {c}の部屋、ハートの鏡があるね | mua wink コーデのチェックに使ってるの♪ | erubin happy {c}らしいね
+visitfurn erubin kiki item=windbell | erubin happy {c}の部屋、風鈴の音がいいね | kiki happy {name}がくださったんでつ。風が来ると、すぐ鳴りまつ | erubin normal 聞いてると、時間を忘れそうだね
+visitfurn mua kiki item=plant | mua surprise {c}の部屋、緑がいっぱいぢゃん！ | kiki happy 観葉植物でつ。毎日お水をあげてまつ | mua happy あたしも水やりしたい♪
+visitfurn kyuko kiki item=bookshelf | kyuko happy {c}の本棚、いい本が並んでるねぇ | kiki wink 一冊、お貸ししまつよ | kyuko happy ありがとん笑 どれにしようかなぁ
+visitfurn mua momosuke item=record | mua excited {c}、レコードプレーヤー！？ おしゃれすぎ！ | momosuke wink でしょ！！ これで歌の練習してるの♡ | mua happy あたしにも一曲かけて♪
+visitfurn sorashido momosuke item=heartmirror | sorashido surprise {c}の部屋、ハートの鏡があるんですね | momosuke excited 振り付けの確認に、ぴったりなの！！ | sorashido happy 鏡の角度、ちょうどいいですね笑
+visitfurn atsu momosuke item=mirrorball | atsu wink {c}の部屋もミラーボール笑 | momosuke excited 回すとステージになるんだよ！！ | atsu happy 観客役、やるよ笑
+visitfurn atsu dra item=sofa | atsu surprise {c}、このソファふかふかじゃん笑 | dra happy だろ。ここに座ると、もう立てないんだ | atsu happy 分かる笑 ちょっとだけ座らせて！
+visitfurn momosuke dra item=bear | momosuke excited {c}の部屋に、くまがいる！！ | dra wink おでの相棒だ。{name}がくれたんだぞ | momosuke happy {c}とそっくりで、かわいい♡
+visitfurn kyuko dra item=nyacushion | kyuko surprise {c}、ニャーのクッション使ってるのぉ！？ | dra happy 頭をのせると、すぐ眠れるんだよ | kyuko happy ニャーも喜んでると思うよぉ笑
+visitfurn dra atsu item=sofa | dra happy {c}の部屋にもソファか。座っていいか | atsu happy どうぞ笑 ここで作戦会議しよ！ | dra wink ……座ったら、作戦より眠気が来るな
+visitfurn momosuke atsu item=record | momosuke excited {c}の部屋、レコードある！！ 何かけてるの！？ | atsu happy 練習の前に聞く曲笑 気合い入るやつ！ | momosuke wink ももにも聞かせて♡
+visitfurn sorashido atsu item=trophy | sorashido normal {c}のトロフィー棚、もういっぱいですね | atsu happy まだまだ増やす笑 | sorashido excited 自分の棚と、どっちが早く埋まるか勝負ですね！
+visitfurn mua kyuko item=nyacushion | mua excited {c}の部屋、ニャーのクッションある！ かわいい♪ | kyuko happy {name}がくれたんだぁ。ずっと抱えてるよぉ | mua wink 一回だけ、ぎゅってさせて！ｗ
+visitfurn sorashido kyuko item=starpic | sorashido surprise {c}の部屋、星空の絵があるんですね | kyuko normal 見てると、考えごとがまとまるんだぁ | sorashido happy 星の数、あとで数えてもいいですか？笑
+visitfurn kiki kyuko item=bookshelf | kiki happy {c}の本棚、きれいに並んでまつね | kyuko wink {c}の本棚を見て、まねしたんだぁ | kiki happy うれしいでつ♪
+visitfurn kyuko sorashido item=starpic | kyuko normal {c}の部屋にも、星空の絵かぁ | sorashido excited 星の数、もう数えました！ | kyuko happy さすがだねぇ笑
+visitfurn dra sorashido item=trophy | dra normal {c}、トロフィー棚の並べ方、きっちりだな | sorashido happy 勝った順に並べてるんですよ | dra wink おでの名前の分も、空けといてくれよ
+visitfurn erubin sorashido item=lantern | erubin happy {c}の部屋、星のランタンがやさしい明かりだね | sorashido normal これで表づくりがはかどるんですよ | erubin happy 目にもやさしそうだね
+visitfurn kiki erubin item=plant | kiki happy {c}の部屋も、緑がありまつね | erubin happy うん。{c}にすすめてもらった植物だよ | kiki wink 大事にしてもらえて、うれしいでつ
+visitfurn dra erubin item=lantern | dra normal {c}の部屋、星のランタンか。落ち着くな | erubin happy 明かりを見てると、ほっとするんだ | dra happy ……おで、ここで昼寝したくなるな
+visitfurn mua erubin item=windbell | mua happy {c}の部屋、風鈴の音がかわいいぢゃん♪ | erubin happy 鳴るたびに、少し涼しくなる気がするんだ | mua wink あたしの部屋にも、ほしくなったかもｗ
+visitfurn atsu kiki item=windbell | atsu happy {c}、風鈴いい音じゃん笑 | kiki happy はい。静かな部屋に、ちょうどいいんでつ | atsu wink 俺の部屋だと、音楽で聞こえないかも笑
+visitfurn kyuko atsu item=heartmirror | kyuko wink {c}の部屋に、ハートの鏡があるぅ笑 | atsu troubled {name}がくれたんだって笑 まだ慣れない！ | kyuko happy 寝ぐせのチェックには、ちょうどいいよぉ
+visitfurn momosuke kyuko item=mirrorball | momosuke excited {c}の部屋に、ミラーボール！？ | kyuko troubled まぶしくて、本が読めないんだよねぇ…笑 | momosuke wink じゃあ、もものライブのときだけ回して♡
+visitfurn atsu sorashido item=bear | atsu surprise {c}の部屋に、くまいる笑 | sorashido troubled どこに置くか、まだ計算中なんです | atsu happy 棚の上でいいじゃん笑 かわいいし！
+visitfurn kiki erubin item=mirrorball | kiki surprise {c}の部屋に、ミラーボールが | erubin troubled 少しにぎやかだけど、気持ちがうれしくて飾ってるんだ | kiki happy やさしいでつね
+visitfurn momosuke kiki item=mirrorball | momosuke excited {c}の部屋に、ミラーボールある！！ | kiki troubled まだ回したことがないんでつ… | momosuke wink ももが回してあげる♡ 一回だけね！！
+visitfurn dra momosuke item=plant | dra normal {c}、観葉植物、置いたのか | momosuke troubled 水やり、忘れちゃいそうなの… | dra happy おでが、来たときにやってやるよ
+visitfurn erubin dra item=trophy | erubin happy {c}の部屋に、トロフィー棚があるね | dra troubled 並べるほど、勝ってないんだけどな | erubin wink これから並べればいいよ
+visitfurn kiki mua item=bookshelf | kiki normal {c}の部屋に、本棚がありまつね | mua troubled {name}にもらったけど、まだ服が入ってるｗ | kiki wink では、一冊ずつ本を増やしましょう♪
+visitfurn sorashido mua item=record | sorashido normal {c}、レコードも置いたんですね | mua happy かけるとテンション上がるの♪ | sorashido happy BPM、当ててみましょうか笑
+visitfurn mua atsu item=bookshelf | mua surprise {c}の部屋、本棚ある！ 意外ぢゃん | atsu happy 攻略の本だけね笑 | mua wink それっぽいｗ
+visitfurn erubin kyuko item=sofa | erubin normal {c}、ソファで本を読んでるの？ | kyuko happy ほい。ここ、いちばん集中できるんだぁ | erubin happy いい場所を見つけたね
+visitfurn atsu erubin item=record | atsu happy {c}の部屋、レコードあるじゃん笑 | erubin happy 静かな曲を聞いてるんだ | atsu wink 今度、俺の好きな曲も持ってくる！
+visitfurn momosuke sorashido item=nyacushion | momosuke excited {c}、ニャーのクッション使ってる！！ | sorashido normal 座り心地の計算、満点だったんです | momosuke wink 計算しなくても、かわいいでいいの♡
+visitfurn kyuko momosuke item=starpic | kyuko normal {c}の部屋に、星空の絵があるねぇ | momosuke happy ライブの背景みたいでしょ！！ | kyuko happy たしかに、ステージっぽいねぇ笑
+visitfurn dra kiki item=sofa | dra happy {c}の部屋のソファ、ふかふかだな | kiki wink 座ってもいいでつけど、寝ないでくださいね | dra troubled ……努力はするぞ
+
+# 家具8種類(2026-11-11 ココロ2・docs/progress/assistant-life/furn8-lines.json から。ヘヤヅクリ2が入れた。窓辺の花は windowflower)
+furn atsu item=clock like=mid | happy ふりこ時計ね！ いいじゃん、ありがと笑
+furn atsu item=map like=mid | happy 冒険の地図！ 次のクエスト、これで決めよ笑
+furn atsu item=guitar like=like | excited ギター！？ まじで？ {name}、わかってるじゃん！ 最高！
+furn atsu item=tv like=mid | happy レトロテレビね！ 味があっていいね笑
+furn atsu item=windowflower like=bad | troubled 花かー…世話できるかな笑 でも気持ちはうれしいよ！
+furn atsu item=fishbowl like=mid | happy 金魚ばちね！ 見てると落ち着くかも笑
+furn atsu item=pendant like=mid | happy ペンダントライト、いいね！ 作戦会議がはかどる笑
+furn atsu item=garland like=mid | happy ガーランド！ パーティの拠点っぽくていいじゃん笑
+furnuse atsu item=guitar | ギターで一曲弾き中笑
+furn kyuko item=clock like=mid | happy ふりこ時計だぁ。ありがとん笑
+furn kyuko item=map like=mid | happy 冒険の地図かぁ。見てるだけで楽しいねぇ
+furn kyuko item=guitar like=mid | happy ギターだ！ ちょっと弾いてみたいなぁ。ありがとん笑
+furn kyuko item=tv like=mid | happy レトロテレビ、いい形してるねぇw ありがとぉ
+furn kyuko item=windowflower like=mid | happy 窓辺の花、いいねぇ。水やり忘れないようにするよぉ
+furn kyuko item=fishbowl like=like | excited 金魚ばち！ え、すごくうれしい…ずっと見てられるよぉ🥺
+furn kyuko item=pendant like=mid | happy ペンダントライト、落ち着く明るさだねぇ。ありがとん笑
+furn kyuko item=garland like=mid | happy ガーランドかぁ。部屋が楽しそうになったねぇw
+furnuse kyuko item=fishbowl | 金魚をながめ中だよぉ
+furn sorashido item=clock like=mid | happy ふりこ時計ですか。振れる回数、数えたくなりますね笑
+furn sorashido item=map like=like | excited 冒険の地図・・・！ でーじうれしいです！ 道のり、ぜんぶ計算します笑
+furn sorashido item=guitar like=mid | happy ギターですか。三線と合わせてみたいですね笑
+furn sorashido item=tv like=mid | happy レトロテレビ、ありがとうございます。仕組みが気になりますね笑
+furn sorashido item=windowflower like=mid | happy 窓辺の花、ありがとうございます。水やりの日、表にしておきます
+furn sorashido item=fishbowl like=mid | happy 金魚ばちですか。泳ぐ道すじ、つい目で追っちゃいますね笑
+furn sorashido item=pendant like=mid | happy ペンダントライト、ありがとうございます。夜の計算がはかどります
+furn sorashido item=garland like=mid | happy ガーランドですか。旗の数、もう数えました笑
+furnuse sorashido item=map | 地図で道のりを計算中
+furn erubin item=clock like=mid | happy ふりこ時計か。音が落ち着くね。ありがとう
+furn erubin item=map like=mid | happy 冒険の地図だね。旅をしていたころを思い出すかな
+furn erubin item=guitar like=mid | happy ギターか。みんなが集まったときに弾けるといいね
+furn erubin item=tv like=mid | happy レトロテレビ、いい味だね。ありがとう
+furn erubin item=windowflower like=mid | happy 窓辺の花、きれいだね。大事に育てるよ
+furn erubin item=fishbowl like=mid | happy 金魚ばちか。見ていると気持ちがゆるむね
+furn erubin item=pendant like=like | excited ペンダントライト！ うれしいな。{name}さん、部屋がやさしくなるね
+furn erubin item=garland like=bad | troubled ガーランドか…俺には少しにぎやかかな。でも気持ちはうれしいよ
+furnuse erubin item=pendant | 灯りの下でひと息中

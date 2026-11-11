@@ -98,11 +98,11 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       localStorage.setItem('mh_inherited_unique_level_compensation_v1', JSON.stringify(true));
       localStorage.setItem('mh_inherited_unique_level_compensation_pending_v1', JSON.stringify(false));
     });
-    await page.addInitScript(eventStorySeed());
+    await page.addInitScript(eventStorySeed()); await page.addInitScript(require('../boot/quiet-boot-seed').updateNoticeSeed()); await page.addInitScript(require('../boot/quiet-boot-seed').loginBonusDoneSeed()); await page.addInitScript(require('../boot/quiet-boot-seed').oneTimeNoticeSeed()); // みゅあの今日の助言などの一度きりの案内も済んだことにする // ログインボーナスの窓も同じく割りこむので受け取ったことにする // 更新履歴の告知の窓が後から割りこんで押せなくなるので、見たことにする(2026-11-11)
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-    await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
+    await page.getByRole('button', { name: 'モンヒロバトル', exact: true }).waitFor({ timeout: 30000 });
     for (let i = 0; i < 6; i++) {
       const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
       if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
@@ -124,7 +124,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
       await page.locator('footer button[aria-label=""]').dispatchEvent('click');
       await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
-      await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().click();
+      await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().dispatchEvent('click');
       await page.locator('[data-debug-card-battle]').dispatchEvent('click');
     };
     await openCard();
@@ -509,6 +509,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
           await page.locator(`[data-card-hand-card="${i}"]`).click().catch(() => {});
         }
         if (acted) { myActions += 1; await page.waitForTimeout(400); continue; }
+        // 使えない札を2回続けて押すと、2回タップで詳しい画面が開く(本体の決まりどおり)。開いていたら閉じてから「攻撃おわり」を押す(2026-11-11)
+        if (await page.locator('[data-card-detail]').count()) { await page.locator('[data-card-detail]').click({ position: { x: 4, y: 4 } }).catch(() => {}); await page.waitForTimeout(250); }
         await page.getByRole('button', { name: '攻撃おわり → ガッツへ' }).click();
         continue;
       }
@@ -603,10 +605,15 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     // ほかの部の仕組みが、カードを遊んだときにわざと書く新しいキー(2026-11-07 ミハリの知らせで足した。どれも新しいキーで、既存のセーブは書き換えない)
     //   mh_screen_trail_v1 … 画面の出来事を最近30件だけ残す記録(10-core) / mh_assistant_life_play_v1 … 助手ライフのにぎわい(カードを遊び終えると assistantPeerOnPlay('card') が数える) /
     //   mh_assistant_peer_play_v1 … 連れていくペアの印(同じ assistantPeerOnPlay が書く)
-    const OTHER_OK = new Set(['mh_screen_trail_v1', 'mh_assistant_life_play_v1', 'mh_assistant_peer_play_v1']);
-    const changed = Object.keys(before).filter((k) => !k.startsWith('mh_card_') && k !== BEAT_KEY && !OTHER_OK.has(k) && !volatile.test(k) && before[k] !== after.all[k]);
+    //   2026-11-11 助手ライフ側の書き込みを足した(ナカヨシ13が「意図どおり」と確認。助手ライフの仕様でカードの保存は変えない):
+    //   mh_assistant_life_diary_v1 … カード部屋の対戦のあと「今日あったこと」へ1行足す(その日の末尾に追記・同じ日の行は消さない) /
+    //   mh_assistant_life_rhythm_v1 … 生活のリズム(誘って遊んだ) / mh_assistant_peer_talk_log_v1・mh_assistant_peer_seen14_v1・mh_assistant_peer_talk_day_v1 … カード中の助手の掛け合いの記録
+    // 助手ライフ・助手どうしの掛け合いは、時間帯が変わる時刻などに自分で mh_assistant_* を書く(日記・生活のリズム・掛け合いの記録)。カードの保存とは関係ないので数えない(2026-11-11 部長ソランド)
+    const OWN_WRITERS = /^mh_assistant_/;
+    const OTHER_OK = new Set(['mh_screen_trail_v1']);
+    const changed = Object.keys(before).filter((k) => !k.startsWith('mh_card_') && k !== BEAT_KEY && !OTHER_OK.has(k) && !OWN_WRITERS.test(k) && !volatile.test(k) && before[k] !== after.all[k]);
     check('⑧ カードバトル以外の保存キーを書き換えていない(ビートPの残高を除く)', changed.length === 0, changed.join(', '));
-    const added = Object.keys(after.all).filter((k) => !(k in before) && !k.startsWith('mh_card_') && k !== BEAT_KEY && !OTHER_OK.has(k) && !volatile.test(k));
+    const added = Object.keys(after.all).filter((k) => !(k in before) && !k.startsWith('mh_card_') && k !== BEAT_KEY && !OTHER_OK.has(k) && !OWN_WRITERS.test(k) && !volatile.test(k));
     check('⑧ 新しく増えた保存キーは mh_card_* とビートPの残高だけ', added.length === 0, added.join(', '));
     // ⑬ 結果の画面の「クイック周回 ◯周ぶん」(デバッグの見本。NORMAL の勝ち = 16周ぶん・保存しない)
     await closeRankUp(page); await page.locator('[data-card-top="result"] button').first().click();
@@ -642,6 +649,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check(`⑬ 結果の画面の助手の絵が、${whoIds.length}人とも同じ大きさで足元が枠の下にそろう`, whoIds.length >= 6 && artBad.length === 0, artBad.join(' / ') || whoIds.join('・'));
     check('⑬ 結果の画面に「クイック周回 ◯周ぶん」が出る(周回中だけ。していないときは何も出さない。2026-10-26 カゲあつくんの点検)', /クイック周回 16周ぶん/.test(demoTxt.in) && /16周ぶん進みました/.test(demoTxt.in) && demoTxt.out === '', JSON.stringify(demoTxt).slice(0, 200));
     // ⑬ パックを開ける見本(デバッグ・保存しない。1パック目の最後は別絵キラ・2パック目の最後はキラ)
+    //   2パック目からは、ふつうのカードが自動で一気にめくれる(早送り・2026-11-11)ので、めくる音は1枚ずつ16回ではなく10回以上
     //   キラ以上は真ん中に大きく出る(data-card-pack-spot)。鳴らした効果音(data-card-pack-se)に、破る音・めくる音・キラの音(crit＋levelUp)・別絵キラの音(crit＋fusion)がそろう
     await page.locator('[data-card-pack-open-demo]').dispatchEvent('click');
     await page.locator('[data-card-pack-tear]').waitFor({ timeout: 10000 });
@@ -658,7 +666,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const packSe = ((await page.locator('[data-card-pack-open]').getAttribute('data-card-pack-se')) || '').split(',');
     const seCount = (n) => packSe.filter((x) => x === n).length;
     check('⑬ パックを開ける見本: 別絵キラ・キラが真ん中に大きく出て、破る音・めくる音・キラの音・別絵キラの音を鳴らす',
-      spotAlt && spotKira && seCount('special') === 2 && seCount('card') === 16 && seCount('crit') >= 4 && seCount('fusion') === 1 && seCount('levelUp') === 1,
+      spotAlt && spotKira && seCount('special') === 2 && seCount('card') >= 10 && seCount('crit') >= 4 && seCount('fusion') === 1 && seCount('levelUp') === 1,
       JSON.stringify({ spotAlt, spotKira, se: ['special', 'card', 'crit', 'fusion', 'levelUp'].map((n) => `${n}:${seCount(n)}`).join(' ') }));
     await page.locator('[data-card-pack-spot]').waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
     await page.locator('[data-card-pack-done]').dispatchEvent('click');
@@ -851,7 +859,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await page.locator('[data-card-pack-card="0"]').dispatchEvent('click');
       await page.waitForTimeout(600);
       if (k === 0 && SHOT) await shot(page, '27-pack-one');
-      await page.locator('[data-card-pack-flip-all]').dispatchEvent('click');
+      // 2パック目からは、ふつうのカードが自動でめくれて全部開いていることがある(早送り・2026-11-11)ので、「全部めくる」が無くてもよい
+      await page.locator('[data-card-pack-flip-all]').dispatchEvent('click', { timeout: 2000 }).catch(() => {});
       // 全部めくるは1枚ずつ順にめくる(キラ以上は光る分だけ長い)
       await page.waitForFunction(() => document.querySelectorAll('[data-card-pack-card][data-card-pack-flipped="0"]').length === 0, null, { timeout: 10000 });
       await page.waitForTimeout(900);
@@ -935,7 +944,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-    await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
+    await page.getByRole('button', { name: 'モンヒロバトル', exact: true }).waitFor({ timeout: 30000 });
     for (let i = 0; i < 6; i++) {
       const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
       if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;

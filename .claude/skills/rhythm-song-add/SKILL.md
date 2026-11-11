@@ -308,6 +308,21 @@ node tools/mode/rhythm-chart-v3-pipeline.js --track <track_id> --release
 node tools/mode/rhythm-chart-level.js --write
 ```
 
+**通したら必ず点検する**(2026-11-11・MHB CHART ENGINE Rev.37):
+
+```bash
+node tools/mode/rhythm-chart-review.js --track <track_id> --picture docs/progress/<作業の場所>/review   # 表・気になる所・ここを見て・止め絵
+```
+
+- パイプラインは 生成 → 区間の差し替え → 自動修正 → **手の仕上げ**(横持ちの親指で押せない所・押さえている帯の中を位置だけで直す)の順に通る。
+  モンスターノーツ4個・帯の中0は道具が直すので、手で直さない(残ったら「気になる所」の先頭に出る)
+- 「気になる所」の先頭に出るもの(押せない・帯の中・太さの飛び・モンスター4個でない・難易度の差が無い)は直してから進む。
+  「※」(公開中の同じ難易度の帯の外)は、依頼の狙いどおりなら理由を添えてそのまま進めてよい
+- **EXPERT・MASTER の交差・真ん中越えは、手の仕上げが既定で減らす。いちばん盛り上がる区切りの交差は見せ場として残す**(2026-11-11 社長の決定)。
+  それでも多い(`交差/100`・`届きにくい/100` に※)ときは、難易度を聞くときに「`handFinish:'smooth'` にすると 交差 ◯→◯」の数字も並べる
+  (`node tools/mode/rhythm-chart-flow-fix.js --track <track_id> --mode smooth` は書かずに数字だけ出す)。依頼に「交差はありでいい」「普通に作って」とあれば、
+  曲の一覧へ `handFinish:'must'` を書いて作り直す。本文と「社長の言い方 → 道具・つまみ」の表は `docs/rules/CHART_ENGINE.md`「作った譜面の点検と仕上げ」
+
 > Lv. は**新しい測り方(v3)**で測る(2026-10-20 の v2 = 地上と空中の入り乱れを重く・押さえている手の側に来るノーツも重く、に
 > 2026-10-21 の「重なって見える近いレーンへ短い間に高さの違うノーツ(見分けにくい所)」をいちばん重く、を足したもの)。
 > 新曲の songId を `rhythm-chart-level.js` の `LEVEL_V1_SONGS` へ**足さない**(足すと前の測り方になる)。決まりの本文は `docs/rules/CHART_ENGINE.md`「Lv. の新しい測り方」
@@ -326,7 +341,7 @@ node tools/mode/rhythm-chart-level.js --write
 2. `RHYTHM_HELL_CHARTS` に `<songId>:<name>HellChart` を足す(曲えらびに HELL が出る)。
    `RHYTHM_PROTO_SONGS` に `<songId>_hell_debug` の枠を足す(`rhythm-hell-mix.js --write` がこの枠で Lv. を測る)
 3. `tools/mode/rhythm-hell-mix.js` の `SONGS` に1行(`marker`・`zero`=拍の頭・`beat`=1拍のms・`levelRe`・`source:'audio'`・
-   `crosses:'auto'`・`crossUpper:'mover'`・`crossDepth:-1`・`variant`)。`drawers` は書かない(=引き出しを使う。使う/使わないと理由は道具が出す)
+   `crosses:'auto'`・`crossUpper:'mover'`・`crossDepth:-1`・`variant`・**`precision:true`**=空中を曲の盛り上がりで回し、速い持ち替えを下ろす・2026-11-11)。`drawers` は書かない(=引き出しを使う。使う/使わないと理由は道具が出す)
 4. `variant` を 0〜3 で比べ、**モンスター4個・水平クロス0・帯の中0**を満たすうち、横持ちの「交差」「届きにくい」が少ないものを選ぶ
    (ROSE は激しさ中間で、全編 1・short 3)。**歯ごたえ(`chartIntensity`・`challengeFactor`)を変えたら比べ直す**(同じ variant でもモンスターが4個から2個に減った)。`node tools/mode/rhythm-hell-mix.js --song <曲> --write` で書く(Lv. も書く)
 
@@ -356,6 +371,12 @@ node tools/mode/rhythm-chart-level.js --write
 
 > ⚠️ **レベルの数字だけでは伝わらない**（実際に「38がめちゃくちゃ難しい感じしなかった」と言われた）。
 > Lv. は「指の忙しさ」しか測っていないので、次も一緒に出す。
+> **いまは `node tools/mode/rhythm-chart-review.js --track <track_id>` の表(最密4秒・最短ms・交差・届きにくい・休みなし秒・段の差)をそのまま並べる**(2026-11-11)。
+> 下の `node -e` は、表を出せないとき(マーカーの中身だけを見たいとき)の予備。
+>
+> **狙いを言われたら(「MASTER 600ノーツ前後」「Lv.44 あたり」)、つまみを手で回さない**:
+> `node tools/mode/rhythm-chart-tune.js --track <track_id> --target MASTER:notes=600`(約1〜2分・書かない)が近い順に候補を出す。
+> 選んだ設定を曲の一覧へ書いてからパイプラインを通し直す。`masterDensity`(MASTER だけ拾う音を増やす)・`sustainScale`(長押しを減らしてタップへ戻す)もここが試す。
 
 ```bash
 node -e "
@@ -490,6 +511,7 @@ node tools/run-checks.js --area mode          # 175本・約14分。譜面まわ
 > ⚠️ **`strong` / `extreme` で作ると、生成のあとの手直しで MASTER のモンスターノーツが4個を切ったり、押さえている帯の中にノーツが戻ったりする**(2026-10-18 ROSE。
 > 自動のままでは出なかった)。`node tools/mode/rhythm-monster-four-check.js` と `node tools/mode/rhythm-chart-hand-rules-check.js` を必ず通し、
 > 落ちたら時刻とノーツ数はそのまま、帯の中のタップは共通の道具 `fixHeldBand`(`rhythm-chart-hand-rules.js`)で帯の外へ、モンスターは狙いの時刻に近い拍の頭の単打へ枠を付けて直す。
+> **Rev.37(2026-11-11)からは、生成器の最後(モンスターの仕上げ)と自動修正・手の仕上げ(帯の中)が道具で直す。** それでも検査が落ちたら、`rhythm-chart-review.js` の「ここを見て」で場所を見てから上の直し方をする
 > 手の決まりの控えへは `--update` で全体を書き直さず(ほかの曲の行まで変わる)、新曲の行だけを足す
 
 **ほかの曲の譜面が1バイトも変わっていないことを確かめる。**(2026-10-11、仕上げの道具が新曲のたびに Sheriruth の譜面を書き換えていた)

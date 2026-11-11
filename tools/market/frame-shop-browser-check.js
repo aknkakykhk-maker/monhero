@@ -1,3 +1,4 @@
+require('../shared-serve'); // :8899 が無ければ立てる(単独で回したとき。2026-11-11)
 // 条件つきのプロフィールフレーム(モッチー・ムー・スエゾービート)を、実際の画面で買えるか確かめる(2026-10-03)。
 //
 //   ユーザー指示「各フレームを条件達成で買えるようにしたい」「ブリーダーポイント 1、ビートポイント 100」。
@@ -87,7 +88,7 @@ const seed = ({ conditions }) => {
     // マーケットの入口へ戻ってから目的の売り場へ入る
     await page.evaluate(() => { const b = document.querySelector('button[aria-label="マーケット"]'); if (b) b.click(); });
     await page.waitForTimeout(1200);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('button[aria-label="戻る"]')].find(x => x.closest('.mh-screen-head')); if (b && !document.body.innerText.includes('ダイヤで購入')) b.click(); });
+    await page.evaluate(() => { const b = [...document.querySelectorAll('button[aria-label="戻る"]')].find(x => x.closest('.mh-screen-head')); if (b && !document.querySelector('[data-market-section]')) b.click(); });
     await clickText(page, entry, { exact: false });
     await clickText(page, 'フレーム');
   };

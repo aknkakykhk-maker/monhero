@@ -326,8 +326,11 @@ check('バトル練習の視聴済みと初回案内表示済みを分ける',
 // 「見た」と記録するのは、ふだんの入口(HOMEへ戻る練習)から最後まで通したときだけ。
 // デバッグのお試し再生では書き換えない
 check('バトル初回案内は表示時に記録し、完了時だけ練習を視聴済みにする',
+  // 2026-11-11 分割: はじめの1戦は別の印(mh_battle_tutorial_first_v1)だけ、seen はつづき・全部通しを終えたときだけ
   has('storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, true, false)')
-    && has("if (completed && back === 'HOME') { try { await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false); } catch {} }")
+    && has("if (completed && back === 'HOME') {")
+    && has("if (endedVariant === 'first') {")
+    && has('await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false);')
     && has('if(last) endBattleTutorial(true)') && has('endBattleTutorial(false)'));
 check('デバッグはデバッグ設定からだけ開ける',
   has('💬 助手') && source.indexOf('💬 助手') > source.indexOf("gameState==='DEBUG_SETTINGS'"));
@@ -417,7 +420,9 @@ check('場面の足しかたが手順として書いてある',
   assistantsSrc.includes('<AssistantBubble scene="home"/>') && assistantsSrc.includes('ASSISTANT_SCENES に場面を1つ足す'));
 
 // --- ④ 共通コンポーネント ---
-check('吹き出しは1つの共通コンポーネント', has('const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0, collapseKey=null, collapseHidden=false })'));
+check('吹き出しは1つの共通コンポーネント', has('const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0, collapseKey=null, collapseHidden=false, oneLine=false })'));
+// 1行の形(oneLine・2026-11-08 マモリ: 曲えらびの横の欄は空きが40pxほど)。名前とセリフを1行・高さ36px以内・折らない(index.html の text-wrap: balance に負けない)
+check('吹き出しの1行の形(oneLine)は高さ36px以内で、セリフを折らない', has("max-h-[36px]") && has("style={{ whiteSpace:'nowrap', textWrap:'nowrap' }}") && has("data-bubble-one-line"));
 check('選んだセリフの表情がそのまま顔に渡る', has('const face = expression || shown?.e || null;') && has('<AssistantFace who={who} size={size} accent={color} expression={face}/>'));
 // 場面や条件が変わったときだけ選び直す。ほかの再描画でセリフが入れ替わると読めない
 check('セリフは場面と条件が変わったときだけ選び直す',

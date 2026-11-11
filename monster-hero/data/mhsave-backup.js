@@ -63,6 +63,8 @@
     try {
       const { data, keys } = decodeBackupCode(value);
       keys.forEach(key => window.localStorage.setItem(key, data[key]));
+      // 助手の解放(2026-11-11・Fable の確認): 今日より前のバックアップには mh_assistant_partner_v1 が無い。先に助手を選んで mode:'earn' が書かれた端末へ戻すと、今の人が助手を失うので、無いときは「今の人(全員が助手)」を書く
+      if (keys.indexOf('mh_assistant_partner_v1') < 0) window.localStorage.setItem('mh_assistant_partner_v1', JSON.stringify({ v:1, mode:'all', first:null, unlocked:[], noticed:[] }));
       setMessage(modal, '復元しました。再読み込みします...');
       setTimeout(() => window.location.reload(), 900);
     } catch (_) { setMessage(modal, 'バックアップファイルが正しくありません', true); }
@@ -103,8 +105,10 @@
     return { modal:heading.parentElement, title:false };
   }
 
+  let lastFoundModal = null;
   function enhanceModal(){
     const found = findBackupModal();
+    lastFoundModal = found && found.modal ? found.modal : null;
     if (!found || !found.modal) return;
     const { modal, title } = found;
     const buttons = Array.from(modal.querySelectorAll('button'));
@@ -158,13 +162,33 @@
   // DOM が変わるたびに呼ばれるので、次のフレームへの予約は1つにまとめる(以前は変わった回数だけ積んでいた)。
   // モンヒロビートの演奏中は引き継ぎの画面が開かないので探さない。演奏中は判定文字・タップの波紋などで
   // 1秒に何度も DOM が変わり、そのたびに画面中の見出しを読んでいた(2026-09-25・演奏中のカクつき対策)
+  // 引き継ぎの窓は見出し(h3)ごと出てくるので、窓が開いていないあいだは「見出しが出入りした変化」のときだけ探す。
+  // 窓が開いているあいだ(書き出し/読み込みの切り替え)は、これまでどおり変化のたびに見る
+  // (2026-11-11 カルク: バトル中などは変化のたびに画面中の見出しを読み、20秒で34〜55回動いていた。窓の出方は変わらない)
   let enhancePending = 0;
+  let openModal = null;
+  const runEnhance = () => {
+    enhancePending = 0;
+    enhanceModal();
+    openModal = lastFoundModal;
+  };
   const scheduleEnhance = () => {
     if (enhancePending) return;
     if (document.documentElement.dataset.rhythmPlayActive === 'true') return;
-    enhancePending = window.requestAnimationFrame(() => { enhancePending = 0; enhanceModal(); });
+    enhancePending = window.requestAnimationFrame(runEnhance);
   };
-  new MutationObserver(scheduleEnhance).observe(document.documentElement, { childList:true, subtree:true });
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', enhanceModal, { once:true });
-  else enhanceModal();
+  const touchesHeading = (m) => {
+    const t = m.target;
+    if (t && t.nodeType === 1 && (t.tagName === 'H3' || (t.closest && t.closest('h3')))) return true;
+    for (const n of m.addedNodes) if (n.nodeType === 1 && (n.tagName === 'H3' || (n.querySelector && n.querySelector('h3')))) return true;
+    return false;
+  };
+  new MutationObserver((list) => {
+    if (enhancePending) return;
+    if (openModal && openModal.isConnected) { scheduleEnhance(); return; }
+    openModal = null;
+    if (list.some(touchesHeading)) scheduleEnhance();
+  }).observe(document.documentElement, { childList:true, subtree:true });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', runEnhance, { once:true });
+  else runEnhance();
 })();

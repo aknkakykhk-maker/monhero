@@ -47,11 +47,11 @@ const serve = () => new Promise((resolve) => {
       localStorage.setItem('mh_inherited_unique_level_compensation_v1', JSON.stringify(true));
       localStorage.setItem('mh_inherited_unique_level_compensation_pending_v1', JSON.stringify(false));
     });
-    await page.addInitScript(eventStorySeed());
+    await page.addInitScript(eventStorySeed()); await page.addInitScript(require('../boot/quiet-boot-seed').updateNoticeSeed()); await page.addInitScript(require('../boot/quiet-boot-seed').loginBonusDoneSeed()); await page.addInitScript(require('../boot/quiet-boot-seed').oneTimeNoticeSeed()); // みゅあの今日の助言などの一度きりの案内も済んだことにする // ログインボーナスの窓も同じく割りこむので受け取ったことにする // 更新履歴の告知の窓が後から割りこんで押せなくなるので、見たことにする(2026-11-11)
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-    await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
+    await page.getByRole('button', { name: 'モンヒロバトル', exact: true }).waitFor({ timeout: 30000 });
     for (let i = 0; i < 6; i++) {
       const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
       if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
@@ -66,7 +66,7 @@ const serve = () => new Promise((resolve) => {
       await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
       await page.locator('footer button[aria-label=""]').dispatchEvent('click');
       await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
-      await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().click();
+      await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().dispatchEvent('click');
       await page.locator('[data-debug-card-battle]').dispatchEvent('click');
     };
     await openCard();

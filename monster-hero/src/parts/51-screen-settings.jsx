@@ -121,6 +121,8 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
   const [assetDownloadOpen, setAssetDownloadOpen] = useState(false);
   // 助手のひとことの出し方(21-assistant.jsx の ASSISTANT_BUBBLE_STORE。早期の return より前で読む)
   const assistantBubble = useAssistantBubbleState();
+  // 助手どうしの会話を自動で進めるか(56-assistant-peer.jsx の ASSISTANT_PEER_AUTO_STORE。既定は切)
+  const peerAuto = typeof useAssistantPeerAuto === 'function' ? useAssistantPeerAuto() : null;
   // 行動カードの見た目(71-screen-battle.jsx の BATTLE_CARD_LOOK。端末に保存する。バトル画面は開くたびに読む)
   const [battleCardLook, setBattleCardLook] = useState(() => BATTLE_CARD_LOOK.value);
   if (assetDownloadOpen) return <AssetDownloadPage onBack={() => setAssetDownloadOpen(false)}/>;
@@ -255,6 +257,26 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
             ))}
           </div>
         </div>
+        {/* 助手どうしの会話を自動で進める(2026-11-08 社長「勝手にコメントが進むのやめてほしい。設定でオフをデフォルトで」)。
+            HOME の掛け合い・特別なお話・助手ライフの場面・見返しが、この1つで切り替わる */}
+        {peerAuto && typeof assistantPeerEnabled === 'function' && assistantPeerEnabled() && (
+          <div data-assistant-peer-auto-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
+            <b className="block text-[13px] font-black text-slate-200">助手どうしの会話を自動で進める</b>
+            <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">助手たちの掛け合いや特別なお話、助手ライフの場面のことばの進め方です。「切」のときは、タップするまで次へ進みません。</p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {[{ on: false, label: '切', note: 'タップで次へ' }, { on: true, label: '入', note: '自動で進む' }].map(option => (
+                <button key={option.label} type="button" data-assistant-peer-auto={option.on ? 'on' : 'off'}
+                  aria-pressed={peerAuto.on === option.on}
+                  onClick={() => ASSISTANT_PEER_AUTO_STORE.setOn(option.on)}
+                  className={`flex min-h-[52px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight active:scale-95 ${peerAuto.on === option.on ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
+                  <span className="block">{option.label}</span>
+                  <small className="mt-0.5 block text-[10px] font-bold opacity-80">{option.note}</small>
+                </button>
+              ))}
+            </div>
+          </div>)}
+        {/* 助手ライフの画面(新しい画面/前の画面)。部品は 56-assistant-life-ux.jsx */}
+        {typeof AssistantLifeUiSettingRow === 'function' && <AssistantLifeUiSettingRow/>}
         {/* 「タイトルへ戻る」は後戻りの大きい操作なので、区切り線でメニューから切り離す */}
         <div className="border-t border-white/10 pt-6 space-y-3">
           <div className="text-center text-[10px] font-mono text-slate-400">BUILD {BUILD_DATE}</div>

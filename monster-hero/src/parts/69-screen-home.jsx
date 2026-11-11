@@ -336,10 +336,14 @@ function HomeScreen({
   // MFバトルカードの入口(案A・左の列のいちばん下)。公開の印 cardBattle が立ち、公開のお話を見た人だけ(60-app.jsx が決める)
   cardBattleVisible = false, onOpenCardBattle = null, cardBattleTeaser = false, onOpenCardTeaser = null,
   cardTourVisible = false, onOpenCardTour = null,
+  // はじめての人の「つぎにやること」(2026-11-11 案4)。{ n:1〜3, title, sub, onTap }。null なら出さない
+  nextStep = null,
 }) {
   // 背景の絵は「HOMEの枠が横長かどうか」で選ぶ。画面の向きでは決めない。
   // パソコンは画面が横長でも、HOMEは幅600の縦長の列に収まるので、横長の絵を出すと村の真ん中だけが大きく写り、
   // 施設ボタンが建物と合わなくなる。枠の大きさは自前で回しているとき(横持ちの描き方)も回す前の値なので、そのまま使える
+  // 助手ライフの「いま行くと得なこと」から施設へ行く口(HOME の札と同じ動き。助手ライフ側が呼ぶ)
+  React.useEffect(()=>{ if(typeof ASSISTANT_LIFE_LINKS!=='undefined'&&ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.goPlace={ranch:onOpenManagement,temple:onOpenTemple,market:onOpenMarket,battle:onOpenBattle}; });
   const homeSceneRef=React.useRef(null);
   const [homeSceneWide,setHomeSceneWide]=React.useState(false);
   React.useEffect(()=>{
@@ -356,10 +360,43 @@ function HomeScreen({
   React.useEffect(()=>{
     const scene=homeSceneRef.current;const box=scene&&scene.querySelector('.mh-home-assistant');
     if(!scene||!box)return undefined;
-    const measure=()=>{const b=box.offsetTop+box.offsetHeight;if(b>0)scene.style.setProperty('--mh-home-assistant-bottom',`${Math.ceil(b)}px`);};
+    // 横(背の低い横画面)では、モンヒロビートの札を M/B管理の右隣に並べる。その位置に使う M/B管理の右端も渡す(2026-11-07 横 667×375 で
+    // 吹き出しが1行伸びると、M/B管理とモンヒロビートの札が重なった。左の列は縦に積む余白がない)
+    // 左の列は上から 吹き出し → M/B管理 → 助手ライフ → モンヒロビート。上の札が下がったら、下の札もその下端(+顔の列の分)より下へ押す
+    // (2026-11-07 長い台詞で M/B管理が下がり、縦では助手ライフ、横ではモンヒロビートの札に重なった)。ふだんの位置は CSS の % のまま
+    const offTop=el=>{let y=0;for(let e=el;e&&e!==scene;e=e.offsetParent)y+=e.offsetTop;return y;};
+    const offLeft=el=>{let x=0;for(let e=el;e&&e!==scene;e=e.offsetParent)x+=e.offsetLeft;return x;};
+    const measure=()=>{const b=offTop(box)+box.offsetHeight;if(b>0)scene.style.setProperty('--mh-home-assistant-bottom',`${Math.ceil(b)}px`);
+      // 横(背の低い横画面)では、モンヒロビートの札を M/B管理の右隣に並べる(左の列は縦に積む余白がない)。その位置に使う M/B管理の右端
+      const mg=scene.querySelector('.mh-home-facility.management');
+      if(mg&&mg.offsetParent){scene.style.setProperty('--mh-home-management-right',`${Math.ceil(offLeft(mg)+mg.offsetWidth)}px`);scene.style.setProperty('--mh-home-management-bottom',`${Math.ceil(offTop(mg)+mg.offsetHeight)}px`);}
+      const lf=scene.querySelector('.mh-home-facility.life');
+      if(lf&&lf.offsetParent)scene.style.setProperty('--mh-home-life-bottom',`${Math.ceil(offTop(lf)+lf.offsetHeight)}px`);
+      // モンヒロビートが押し下げられて、その下(イベントの札・公式杯・MFバトルカード)にかかるときだけ、下の札をまとめて下げる。
+      // 下の札は下から位置を決めているので、translate で動かす(offsetTop は translate を含まないので、測り直しても積み上がらない)
+      const rh=scene.querySelector('.mh-home-facility.rhythm');let push=0;
+      // 横(背の低い横画面)では M/B管理の右にモンヒロビートが並ぶので、M/B管理の真下の札(イベント)も、M/B管理の下端より下へ押す(2026-11-08 横 568×320 で吹き出しが長いと重なった)
+      if(mg&&mg.offsetParent){const mb=offTop(mg)+mg.offsetHeight+6,mr=offLeft(mg)+mg.offsetWidth;
+        for(const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle')){if(!el.offsetParent)continue;const t=offTop(el);if(t>offTop(mg)&&offLeft(el)<mr)push=Math.max(push,mb-t);}}
+      if(rh&&rh.offsetParent){const rb=offTop(rh)+rh.offsetHeight+22,rr=offLeft(rh)+rh.offsetWidth;
+        // 押し下げても、いちばん下の札とその下の顔の列(助手ライフ・22px)が画面の下に収まる所まで(2026-11-08 横 568×320 で MFバトルカードの札と顔が画面の外へ出た)
+        let room=Infinity;
+        for(const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle')){if(!el.offsetParent)continue;const t=offTop(el);if(t>offTop(rh)&&offLeft(el)<rr){push=Math.max(push,rb-t);room=Math.min(room,scene.clientHeight-(t+el.offsetHeight)-(el.classList.contains('mh-home-card-battle')?24:4));}}
+        push=Math.min(push,Math.max(0,room));}
+      scene.style.setProperty('--mh-home-left-push',`${Math.max(0,Math.ceil(push))}px`);
+      // 「モンヒロバトル」(下の真ん中)が右下の「ミッション」「ギフト」と横に重なるときは、重なった分だけ左へ寄せる(2026-11-08 横 568×320 で重なった)。
+      // バトルの札は translateX(-50%) で真ん中に置いているので、左端は offsetLeft − 幅/2
+      const bt=scene.querySelector('.mh-home-facility.battle');let nudge=0;
+      if(bt&&bt.offsetParent){const bl=offLeft(bt)-bt.offsetWidth/2,br=bl+bt.offsetWidth,btop=offTop(bt),bb=btop+bt.offsetHeight;
+        for(const el of scene.querySelectorAll('.mh-home-mission,.mh-home-gift')){if(!el.offsetParent)continue;const l=offLeft(el),t=offTop(el);if(t<bb&&t+el.offsetHeight>btop&&l<br&&l+el.offsetWidth>bl)nudge=Math.max(nudge,br-l+8);}
+        nudge=Math.min(nudge,Math.max(0,bl-8));}
+      scene.style.setProperty('--mh-home-battle-nudge',`${-Math.ceil(nudge)}px`);};
     measure();
     if(typeof ResizeObserver==='undefined'){const id=setInterval(measure,1000);return()=>clearInterval(id);}
-    const ro=new ResizeObserver(measure);ro.observe(box);ro.observe(scene);return()=>ro.disconnect();
+    const ro=new ResizeObserver(measure);ro.observe(box);ro.observe(scene);
+    // 札は後から出る(助手ライフは公開の印・読み込みのあと)。ときどき測り直す
+    const id=setInterval(measure,1000);
+    return()=>{ro.disconnect();clearInterval(id);};
   },[]);
   const homeBackgroundSrc=homeArtSrc(homeArt,homeSceneWide);
   const homeBackgroundWide=homeArtIsWide(homeArt,homeSceneWide);
@@ -446,6 +483,11 @@ function HomeScreen({
               モンヒロビートと同じく、字が長くても略さずそのまま入れる(CLAUDE.md ⑤) */}
           <button className={`mh-home-facility battle${spotClass('battle')}`} onClick={onOpenBattle} aria-label="モンヒロバトル"><span><Sword size={25}/>モンヒロバトル</span></button>
         </nav>
+        {nextStep&&<button type="button" className="mh-home-nextstep" data-home-next-step={nextStep.n} onClick={nextStep.onTap} aria-label={`つぎにやること ${nextStep.n}/3 ${nextStep.title}`}>
+          <span className="mh-home-nextstep-lab">つぎに<br/>やること<b>{nextStep.n}/3</b></span>
+          <span className="mh-home-nextstep-body"><b>{['①','②','③'][nextStep.n-1]} {nextStep.title}</b><small>{nextStep.sub}</small></span>
+          <i aria-hidden="true">›</i>
+        </button>}
         <button onClick={openMissions} className={`mh-home-mission${spotClass('reward')}`}><List size={16}/>ミッション
           {missionClaimableCount(normalizeMissions(missions))>0&&<em>{missionClaimableCount(normalizeMissions(missions))}</em>}
         </button>
@@ -583,7 +625,7 @@ const FRIEND_NOTICE_LINES = Object.freeze({
   dra: (who) => `${who}からフレンド申請が来てるわ。見にいくか`,
   atsu: (who) => `${who}からフレンド申請来てるよ。とりあえず見にいこ`,
   kyuko: (who) => `ほい！ ${who}からフレンド申請来てるよぉ。見にいこ笑`,
-  sorashido: (who) => `おっ、${who}からフレンド申請来てる！ 見にいこ笑`,
+  sorashido: (who) => `${who}からフレンド申請が来てますよ！ 見にいきましょう笑`,
   // えるびん(2026-11-05・公開前)。穏やかな大人の口調
   erubin: (who) => `${who}からフレンド申請が来てるよ。よかったら、見にいってみよっか`,
 });
@@ -616,14 +658,14 @@ const who=activeAssistant;
 const headline=n=>{const pages=(typeof assistantNoticePagesFor==='function')?assistantNoticePagesFor(n,who&&who.id):(Array.isArray(n.pages)?n.pages:[]);const first=pages[0];const text=(typeof assistantNoticePageText==='function')?assistantNoticePageText(first):String(first||'');return assistantSpeakText(text,breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId);};
 return(
   <div data-update-guide-bundle className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:76000,backgroundColor:'rgba(2,6,23,.94)'}} role="dialog" aria-modal="true" aria-label="新しいお知らせの一覧">
-    <div className="w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(env(safe-area-inset-bottom) + 16px)'}}>
+    <div className="w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] flex flex-col overflow-hidden rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(env(safe-area-inset-bottom) + 16px)'}}>
       <div className="flex items-center gap-2"><AssistantFace who={who} size={56} accent={who.accent} expression="happy"/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 p-2.5 text-sm font-bold text-white">新しいお知らせが{updateGuideQueue.length}件あるよ♪ 読みたいものだけ「くわしく」で開いてね。</div></div>
-      <div className="mt-3 space-y-2">{updateGuideQueue.map(n=><div key={n.id} data-update-guide-bundle-item={n.id} className="flex items-center gap-2 rounded-2xl border border-pink-400/40 bg-slate-900/80 p-2.5">
+      <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto">{updateGuideQueue.map(n=><div key={n.id} data-update-guide-bundle-item={n.id} className="flex items-center gap-2 rounded-2xl border border-pink-400/40 bg-slate-900/80 p-2.5">
         <div className="min-w-0 flex-1"><div className="text-[13px] font-black leading-snug text-pink-200">{n.title}</div><div className="mt-0.5 truncate text-[10px] font-bold text-slate-400">{headline(n)}</div></div>
         <button type="button" onClick={()=>openUpdateGuideDetail(n.id)} className="min-h-[44px] shrink-0 rounded-xl bg-pink-500 px-3 text-xs font-black text-slate-950">くわしく</button>
       </div>)}</div>
-      <button type="button" data-update-guide-bundle-later onClick={dismissUpdateGuideAll} className="mt-4 min-h-[50px] w-full rounded-2xl bg-slate-700 text-sm font-black text-white">あとで読む</button>
-      <p className="mt-2 text-center text-[10px] font-bold text-slate-500">更新履歴からいつでも読めます</p>
+      <button type="button" data-update-guide-bundle-later onClick={dismissUpdateGuideAll} className="mt-4 min-h-[50px] w-full shrink-0 rounded-2xl bg-slate-700 text-sm font-black text-white">あとで読む</button>
+      <p data-update-guide-bundle-foot className="mt-2 shrink-0 text-center text-[10px] font-bold text-slate-500">更新履歴からいつでも読めます</p>
     </div>
   </div>);
 }

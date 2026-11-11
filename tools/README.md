@@ -84,12 +84,20 @@ node tools/build.js --check
 | `node ctx.js checks [語]` | **検査スクリプトを名前と説明から引く。** スクリプト自身の先頭コメントを読む。520本すべてが説明を持っていることを `rules-index-check.js` が保証しているので、ここからなら取りこぼさない（このREADMEの一覧は520本中333本ぶん）。 |
 | `node ctx.js rules [語]` | `CLAUDE.md` / `AGENTS.md` / `docs/rules/` を横断して、その語に触れている節だけを出す。 |
 | `node ctx.js diff [パス…]` | 生成物を除いた差分。素の `git diff` の代わり(`--staged` `--base <ref>` `--all`)。 |
+| `node ctx.js dept [部]` / `decisions <部>` | 部署別の手引き(`docs/depts/`)/社長の決めごと台帳から「進め方」と自分の部に関わる行だけ(台帳は300KB超。全文を開かない)。 |
+| `node ctx.js gate` | いまの変更にミハリ(検査部)の確認が要るかを、変えたファイルと差分から判定(`run-checks.js --changed` の最後にも出る)。 |
+| `node ctx.js handoff <部> [--write]` / `newsession <部> "<仕事>"` / `model "<仕事>"` | 会話を替えるときの引き継ぎメモの下書き/新しい会話のモデルと依頼文/モデルだけ引く。本体は `tools/team/`(正本は `depts.json`・`routing.json`)。 |
+| `node ctx.js redeploy assistant-chat` | Edge Function の配り直しで窓口が渡す数行を作る(`tools/assistant/edge-redeploy.js`)。 |
 | `node where.js` | 場所だけを知る道具(`--screens` / `--outline` / `--text`)。`ctx.js` が内部で呼ぶ。 |
 | `node memory-soak.js --mode quick\|auto\|rhythm\|idle` | **長く遊んだときに、メモリが増え続けていないかを測る。**合格・不合格の検査ではなく数字を出す道具。1回ごとに強制的にごみを片付けてから、JSのヒープ・ブラウザ全体のメモリ・DOMの数・イベントの数・解いた音の本数を出す。`auto` はクイックをAUTOで回し続け、`rhythm` は曲を続けて演奏する。別の窓で `python3 tools/serve.py 8899` を起動しておく。ブラウザは1つだけ動かす(全体のメモリが混ざるため)。 |
 | `node check-drift.js <検査>` | **落ちた検査が探している本体の文字の並びのうち、今は無いものと、本体でいちばん似ている行を並べる。**「書き方が変わっただけ」か「本当に消えた」かの見分けに使う(読むだけ)。 |
 | `node mode/rhythm-gpu-estimate.js [--check]` | **実機が無くても GPU の重さを見積もる。**「おまかせ」4つが画面いっぱいを何回塗ったのと同じかを測り、機種の帯ごとの GPU の時間と fps の目安に直す。`--check` で `mode/gpu-budget.json` の上限を超えていないかを見る(1回5分ほど)。 |
 | `node mode/rhythm-slowmo-shot.js` | **演奏画面を「コマ送り」で撮る。** ブラウザの仮想の時間で、遅い環境でも本来の速さで遊んだときの 0.083秒ごとの画面を撮る(自動で叩く・叩いたときの光も写る)。参考動画と同じ間隔で並べて見比べるときに使う。 |
-| `node run-checks.js --changed` | **変更したファイルから、要る検査だけを選んで回す。** `--plan` で選んだ検査と理由だけ出す。上限は既定40本で、切ったぶんは本数を必ず出す(`--limit` / `--wide` で広げる)。 |
+| `node run-checks.js --changed` | **変更したファイルから、要る検査だけを選んで回す。** `--plan` で選んだ検査と理由だけ出す。上限は既定60本で(名指しで読む検査は上限の外)、切ったぶんは本数を必ず出す(`--limit` / `--wide` で広げる)。 |
+| `run-checks-deps.js` | `--changed` の索引(2026-11-11)。検査のソースから「何を読むか」を決める。名指しで読む検査は上限の外で必ず選ぶ。選んだ検査はふつう組に分けて同時に回す(`--serial` で1本ずつ) |
+| `node run-checks-select-check.js` | `--changed` の選び方の見張り(名指しで読む検査の漏れ・どの領域にも入らない検査・一覧に書いた検査の在り無し) |
+| `shared-serve.js` | 実ブラウザの検査の先頭で require する。:8899 の配信が無ければ立て、終わったら止める(単独で回したとき。run-checks の中では何もしない) |
+| `node checks-inventory.js --json <全部回した結果>` | 検査の棚卸し(何を見るか・秒・30日で直された回数・似ている検査)を `docs/ops/checks/` へ書く |
 | `node rules-index-check.js` | `CLAUDE.md` の大きさ・`docs/rules/` とのリンク・**要のことばが消えていないか**を見る。CIでも回す。 |
 
 ### ビルドと必須検査（`game-system.jsx` を触ったら必ず通す）
@@ -349,6 +357,8 @@ SIX ÉTERNEL(BPM207)のEXPERTが毎秒4.56＝MASTERの上限4.6に迫ってい�
 `node mode/rhythm-mid-tracking-check.js` は、HOLD/SLIDEの途中追従判定(暫定値)を確認する。猶予(暫定120ms)を超えて経路・帯から外れたままの場合だけMISSを確定すること、猶予内に戻ればカウントをリセットすること、HOLDにも横ズレ判定(帯の半分幅+0.15レーン)が効くこと、途中失敗時は指を離す前にその場でMISS確定させることを、擬似DOM上でbind/record/releaseを直接動かして検証する。
 
 `node mode/rhythm-glow-road-width-check.js` は、押したサブレーンの光(指の位置で光る台形)が、横向きの「道の幅」(ふつう・細い)に合わせて切り直されることを確認する(2026-10-07・横向きでだけ光が押した位置からずれていた)。
+
+`node mode/rhythm-sync-audit-check.js` は、同期の総点検(2026-11-11)で入れた守りと診断を、実際に曲を流して確かめる(iPhone では、離しの合図なしに指の一覧から消えて戻っただけの指を入力にしない・Android は今までどおり・曲の時計の止まりは直し方を入れていても元の時計で数える)。資料は `docs/spec/RHYTHM_TOUCH_DIAG.md`「同期の総点検」。
 
 `node mode/rhythm-timing-diag-check.js` は、実機でしか分からないことの診断(`stats.timing`)と、直し方の切り替え(`inputAgeCap` / `smoothSongClock` / `autoPauseOnHidden`・既定はすべて切ってある・この端末だけで入れる上書き `mh_rhythm_fix_override_v1`)が崩れていないかを確認する(2026-10-07)。報告ツール `rhythm-touch-diag.js --report` の「タイミングの診断」も見張る。
 

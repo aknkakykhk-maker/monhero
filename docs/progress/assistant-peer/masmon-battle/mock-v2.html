@@ -1,0 +1,61 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=390">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0b0918;font-family:"Hiragino Sans","Noto Sans JP",sans-serif;color:#fff}
+.scr{width:390px;height:844px;overflow:hidden;background:linear-gradient(180deg,#221a44,#141026 40%);padding:14px;position:relative;margin-bottom:20px}
+.tag{font-size:10px;font-weight:900;letter-spacing:.12em;color:#f472b6}h1{font-size:19px;margin:2px 0 4px;font-weight:900}
+.sub{font-size:11px;color:#cbd5e1;font-weight:700}.card{background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:10px;margin-top:8px}
+.row{display:flex;align-items:center;gap:8px}.face{width:36px;height:36px;border-radius:50%;object-fit:cover;object-position:top;border:2px solid #fff3}
+.mon{width:46px;height:46px;object-fit:contain;background:#0f172a;border-radius:10px;border:1px solid #fff2}
+.small{font-size:10.5px;color:#cbd5e1;font-weight:700}.k{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;margin:3px 0}
+.k span:first-child{width:58px;white-space:nowrap}.k b{width:34px;text-align:right;color:#fcd34d}.bar{flex:1;height:7px;border-radius:9px;background:#334155;overflow:hidden}.bar i{display:block;height:100%;background:linear-gradient(90deg,#f59e0b,#fb923c)}
+.bar.g i{background:linear-gradient(90deg,#34d399,#a3e635)}.bar.r i{background:linear-gradient(90deg,#fb7185,#f97316)}.bar.b i{background:linear-gradient(90deg,#60a5fa,#a78bfa)}
+.bubble{background:#fff;color:#1e1b4b;border-radius:12px;padding:7px 10px;font-size:11.5px;font-weight:800}
+.mark{position:absolute;top:10px;right:12px;font-size:10px;background:#fcd34d;color:#422006;font-weight:900;border-radius:6px;padding:2px 6px}
+.btn{display:inline-block;border-radius:999px;padding:7px 12px;font-weight:900;font-size:11.5px;background:linear-gradient(90deg,#f472b6,#fb923c)}.btn2{display:inline-block;border-radius:999px;padding:7px 12px;font-weight:900;font-size:11.5px;background:#334155}
+.lane{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center;font-size:10px;color:#94a3b8;font-weight:900}
+.cell{height:62px;border:1px dashed #475569;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.log p{margin:3px 0;font-size:11px;font-weight:700}.bench{display:flex;gap:4px}.bench img{width:28px;height:28px;object-fit:contain;background:#0f172a;border-radius:7px;opacity:.85}
+table{width:100%;border-collapse:collapse;font-size:11px;font-weight:700}td{padding:4px 2px;border-bottom:1px solid #fff1}
+</style></head><body>
+<div class="scr" id="v1"><span class="mark">見本 第①段階</span>
+ <p class="tag">MASMON ・ KIKI</p><h1>ごろべえ <span class="sub">ゴーレム ・ 攻撃型(育成方針)</span></h1>
+ <div class="row"><img class="mon" style="width:84px;height:84px" src="../../../../monster-hero/images/monster-thumbs/golem.png"><div style="flex:1">
+  <div class="k"><span>疲労</span><div class="bar r"><i style="width:38%"></i></div><b>38</b></div>
+  <div class="k"><span>ストレス</span><div class="bar b"><i style="width:12%"></i></div><b>12</b></div>
+  <p class="small">ききの育成: 分析型 ・ 指導力 ★★★</p></div></div>
+ <div class="card"><p class="small">6つの能力(上限999・仮)</p>
+  <div class="k"><span>ライフ</span><div class="bar g"><i style="width:52%"></i></div><b>412</b></div>
+  <div class="k"><span>ちから</span><div class="bar"><i style="width:66%"></i></div><b>528</b></div>
+  <div class="k"><span>かしこさ</span><div class="bar"><i style="width:18%"></i></div><b>141</b></div>
+  <div class="k"><span>命中</span><div class="bar"><i style="width:40%"></i></div><b>318</b></div>
+  <div class="k"><span>回避</span><div class="bar"><i style="width:22%"></i></div><b>176</b></div>
+  <div class="k"><span>丈夫さ</span><div class="bar"><i style="width:58%"></i></div><b>463</b></div></div>
+ <div class="card"><p class="small">今日の育成(ききが選んだ)</p>
+  <p style="margin:4px 0;font-size:11.5px;font-weight:800">🌅 朝 重量上げ ちから +9 ・ 丈夫さ +2</p>
+  <p style="margin:4px 0;font-size:11.5px;font-weight:800">☀ 昼 的当て 命中 +4</p>
+  <p style="margin:4px 0;font-size:11.5px;font-weight:800">🌙 夜 休養 疲労 -30</p></div>
+ <div class="card"><div class="row"><img class="face" src="../../../../monster-hero/images/assistant/kiki_normal.PNG"><div class="bubble">命中が少し低いので、明日は的当てを増やしますね</div></div>
+  <div class="row" style="margin-top:8px"><span class="btn">💡 ききに相談する</span><span class="small">例: 命中を鍛えて/休ませて/任せる</span></div></div>
+</div>
+<div class="scr" id="v2"><span class="mark">見本 第③段階</span>
+ <p class="tag">AUTO BATTLE 3 VS 3</p><h1>きき VS みゅあ</h1><p class="sub">1体ずつ出して、3体倒れたら負け ・ 手は助手が自分で選ぶ</p>
+ <div class="card"><div class="row" style="justify-content:space-between"><div class="row"><img class="face" src="../../../../monster-hero/images/assistant/myua_normal.PNG"><b style="font-size:12px">みゅあ(積極型)</b></div><div class="bench"><img src="../../../../monster-hero/images/monster-thumbs/pixie.png"><img src="../../../../monster-hero/images/monster-thumbs/mocchi.png"></div></div>
+  <div class="k" style="margin-top:6px"><span style="width:66px">もち隊長</span><div class="bar r"><i style="width:44%"></i></div><b>ガ62</b></div></div>
+ <div class="card"><div class="lane"><span>零</span><span>近</span><span>中</span><span>遠</span></div>
+  <div class="lane" style="margin-top:3px"><div class="cell"></div><div class="cell"><img class="mon" style="border:2px solid #fb7185" src="../../../../monster-hero/images/monster-thumbs/kenshimocchi.png"></div><div class="cell"><img class="mon" style="border:2px solid #34d399" src="../../../../monster-hero/images/monster-thumbs/golem.png"></div><div class="cell"></div></div>
+  <p class="small" style="text-align:center;margin-top:5px">ごろべえ(中) ← 距離1 → もち隊長(近)</p></div>
+ <div class="card"><div class="row" style="justify-content:space-between"><div class="row"><img class="face" src="../../../../monster-hero/images/assistant/kiki_normal.PNG"><b style="font-size:12px">きき(分析型)</b></div><div class="bench"><img src="../../../../monster-hero/images/monster-thumbs/eiki.png"><img src="../../../../monster-hero/images/monster-thumbs/ghost.png"></div></div>
+  <div class="k" style="margin-top:6px"><span style="width:66px">ごろべえ</span><div class="bar g"><i style="width:71%"></i></div><b>ガ38</b></div></div>
+ <div class="card log"><p>🌸 ききの手: <b>防御</b>(ガッツが足りない・反撃が重い)</p><p>💗 みゅあの手: <b>ソードスキル</b>! 命中 72% → 当たり 96</p><p>🌸 次のターン: <b>近へ移動</b> → 大でこぴんの距離</p><p class="small">ききの読み: 「次は交代してエイキさまの遠距離で」</p></div>
+ <div class="row" style="justify-content:center;gap:8px;margin-top:10px"><span class="btn2">⏩ 早送り</span><span class="btn2">⏭ 結果へ</span></div>
+</div>
+<div class="scr" id="v3"><span class="mark">見本 第④段階</span>
+ <p class="tag">FRIEND BATTLE ・ RANKING</p><h1>⚔ 助手のフレンド対戦</h1><p class="sub">登録した3体どうしで、サーバが毎晩戦わせます(相手がいなくてもOK)</p>
+ <div class="card"><p class="small">登録中の編成</p><div class="row" style="margin-top:5px"><img class="face" src="../../../../monster-hero/images/assistant/kiki_normal.PNG"><img class="mon" src="../../../../monster-hero/images/monster-thumbs/golem.png"><img class="mon" src="../../../../monster-hero/images/monster-thumbs/eiki.png"><img class="mon" src="../../../../monster-hero/images/monster-thumbs/ghost.png"></div>
+  <p class="small" style="margin-top:5px">区分: 育成値そのまま ・ 登録のとき、成長の上限を確かめます</p></div>
+ <div class="card"><p class="small">ゆうべの対戦</p><table><tr><td>○</td><td>たろうさんのドラ</td><td>2-0</td><td>▶ 見る</td></tr><tr><td>●</td><td>はなさんのソラシド</td><td>1-2</td><td>▶ 見る</td></tr></table></div>
+ <div class="card"><p class="small">ランキング(育成値そのまま ・ 今週)</p><table>
+  <tr><td>1</td><td>はなさん ・ ソラシド</td><td>1,284</td></tr><tr><td>2</td><td>けんさん ・ あつ</td><td>1,251</td></tr><tr><td>3</td><td>あなた ・ きき</td><td>1,213</td></tr><tr><td>4</td><td>たろうさん ・ ドラ</td><td>1,190</td></tr></table>
+  <div class="row" style="margin-top:7px"><span class="btn2">育成値そのまま</span><span class="btn">公平(能力をそろえる)</span></div></div>
+</div>
+</body></html>

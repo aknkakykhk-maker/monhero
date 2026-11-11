@@ -140,8 +140,10 @@ check('助手のスコアをランキングへ送らない(助手の計算の部
 {
   const APP = P('60-app.jsx');
   // 演奏画面には「読むだけの窓」を置くだけ。窓へ書くのは hud・曲・時刻だけで、演奏画面の中では窓を読まない
-  const writes = PLAY.match(/RHYTHM_PLAY_WATCH\.[a-zA-Z]+(?:===|=)/g) || [];
-  const reads = (PLAY.match(/RHYTHM_PLAY_WATCH\.[a-zA-Z]+/g) || []).length;
+  // jd・frames は、マルチの観戦(2026-11-11)のために足した「見られているあいだだけ判定の番号をためる配列」と「フレームの数」。
+  //   演奏画面は書き足すだけで、判定・スコアには使わない(読むのは送る側 77 の watchSend だけ)。数から外す
+  const writes = PLAY.match(/RHYTHM_PLAY_WATCH\.(?!jd\b|frames\b)[a-zA-Z]+(?:===|=)/g) || [];
+  const reads = (PLAY.match(/RHYTHM_PLAY_WATCH\.(?!jd\b|frames\b)[a-zA-Z]+/g) || []).length;
   check('演奏画面は窓(RHYTHM_PLAY_WATCH)に書くだけで、判定・スコアに使わない', writes.length >= 4 && writes.every((w) => /\.(hud|songId|timeMs)=/.test(w) || /===/.test(w)) && reads === writes.length, `${reads}か所`);
   check('顔とひとことは演奏画面の外(60-app)から、マルチで印が立っているときだけ重ねる', /gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay\.from==='multi'&&rhythmAssistSessionEnabled\(\)&&<RhythmAssistSessionPlayFace /.test(APP));
   check('ビートP の上乗せは、セッションLv とデュオの両方(rhythmAssistSessionRewardBonusNow)', /assistBonus=rhythmPlay\.from==='multi'&&rhythmAssistSessionEnabled\(\)\?rhythmAssistSessionRewardBonusNow\(\):0/.test(APP));
@@ -264,7 +266,7 @@ check('助手のスコアをランキングへ送らない(助手の計算の部
 }
 // ---- 呼ぶシートの複数選択(2026-11-07 社長「1人ずつじゃなくて複数選択がほしい」) ----
 {
-  check('マスモンと助手をタブをまたいで選び、まとめて呼ぶ(picks・callAll)', /const \[picks, setPicks\] = React\.useState\(\[\]\);/.test(SHEET) && /const callAll = async \(\) => \{/.test(SHEET) && /picked=\{pickedAssistantIds\} onToggle=\{\(id\) => togglePick\('assistant', id\)\}/.test(SHEET));
+  check('マスモンと助手をタブをまたいで選び、まとめて呼ぶ(picks・callAll)', /const \[picks, setPicks\] = React\.useState\((\[\]|\(\) => \(preselectAssistant[^\n]*: \[\]\))\);/.test(SHEET) && /const callAll = async \(\) => \{/.test(SHEET) && /picked=\{pickedAssistantIds\} onToggle=\{\(id\) => togglePick\('assistant', id\)\}/.test(SHEET));
   check('部屋の空き席より多くは選べない(空き席は部屋が渡す)', /if \(picks\.length >= freeSeats\) \{ setPickNote/.test(SHEET) && /freeSeats=\{view \? Math\.max\(0, RHYTHM_MULTI_ROOM_MAX - \(view\.members \|\| \[\]\)\.length\) : 0\}/.test(MULTI));
   check('使う回数は1人1回のまま(無料から先・足りないぶんは券)。券が足りないときは押せない', /const useFree = Math\.min\(freeLeft, paidPicks\);/.test(SHEET) && /const shortTickets = Math\.max\(0, useTickets - tickets\);/.test(SHEET) && /disabled=\{busy \|\| !picks\.length \|\| shortTickets > 0\}/.test(SHEET));
   check('デュオになる組み合わせを選んでいるあいだに出す', /data-rhythm-buddy-multi-duo/.test(SHEET));
@@ -272,6 +274,8 @@ check('助手のスコアをランキングへ送らない(助手の計算の部
 check('部屋の入口のボタンは「呼ぶ」+マスモンと助手の小さな顔(社長 2026-11-07)', /data-rhythm-buddy-header-faces/.test(MULTI) && /<span className="mt-0\.5 text-\[10px\] font-black">呼ぶ<\/span>/.test(MULTI));
 check('演奏の結果が出たら、演奏中の顔とひとことは消す(結果のボーナスの枠に重ねない)', /const done = !!document\.querySelector\('\[data-rhythm-result\]'\);/.test(SCREEN) && /if \(!ids\.length \|\| ended\) return null;/.test(SCREEN));
 // 助手ライフとのつなぎ(2026-11-07 ナカヨシ5と決めた窓口)
+check('寝ているかは助手ライフの正本 assistantLifeAsleep で読む', /typeof assistantLifeAsleep !== 'function'\) return false;\s*try \{ return assistantLifeAsleep\(id\) === true;/.test(SCREEN));
+check('起こして部屋に入れたときだけ assistantLifeOnWoken へ知らせる(断られた・入れなかったときは呼ばない)', /if \(!joined\) endBuddy\(key, call\.id\);\s*else if \(wokeUp\) rhythmAssistSessionNoteWoken\(who\.id\);/.test(MULTI) && /assistantLifeOnWoken\(\{ assistantId: id, came: true, at: Date\.now\(\) \}\)/.test(SCREEN));
 // 画面に出す名前は正式名称「モンヒロビート」(略称「モンビー」はキャラクターの会話だけ・CLAUDE.md ⑤)。呼ぶシートの札と内訳の文を見張る(ミハリ 2026-11-07)
 check('呼ぶシートの札と内訳の文に、略称「モンビー」を使わない', !/data-rhythm-assist-visit[^\n]*モンビー/.test(SCREEN) && !/visitPicks \? `\([^`]*モンビー/.test(SHEET));
 check('呼び直したら、前に断られた一言を消す(来てくれたのに古い一言が残っていた・ミハリ B5)', /onCallStart=\{\(\) => setBuddyRefused\(null\)\}/.test(MULTI) && /if \(typeof onCallStart === 'function'\)/.test(SHEET));
@@ -286,7 +290,7 @@ check('呼び直したら、前に断られた一言を消す(来てくれたの
     && f({}) === 0.5 && f({ nightOwl: true }) === 0.7 && f({ bondLevel: 10, bondMax: 10 }) === 0.7 && f({ bondLevel: 1, bondMax: 10 }) === 0.5
     && f({ retries: 1 }) === 0.7 && f({ nightOwl: true, bondLevel: 10, bondMax: 10, retries: 3 }) === 0.9);
 }
-check('寝ている助手に断られたら、払う前に戻る(回数も券も使わない)・シートに一言を出す', /if \(!paid && rhythmAssistSessionAsleep\(who\.id\)\) \{\s*const woke = rhythmAssistSessionTryWake\(who\.id\);\s*if \(!woke\.came\) \{ setBuddyRefused\(/.test(MULTI) && /data-rhythm-assist-refused=/.test(SHEET));
+check('寝ている助手に断られたら、払う前に戻る(回数も券も使わない)・シートに一言を出す', /if \(!paid && rhythmAssistSessionAsleep\(who\.id\)\) \{\s*const woke = rhythmAssistSessionTryWake\(who\.id\);\s*wokeUp = woke\.came;\s*if \(!woke\.came\) \{ setBuddyRefused\(/.test(MULTI) && /data-rhythm-assist-refused=/.test(SHEET));
 check('来てくれたら、部屋に来たときの一言を起こされた一言(woke)にする', /RHYTHM_ASSIST_SESSION_WAKE\.woke\.delete\(assistantId\)\) \{ const w = say\('woke'\)/.test(SCREEN));
 check('呼ぶシートに「💤 寝ている」の札', /data-rhythm-assist-asleep[^>]*>💤 寝ている</.test(SCREEN));
 check('モンビーに出かけている助手は回数なし(社長 2026-11-07)。呼ぶ時点で assistantLifeAtBeat を見て、払わず・控えも残さない', /const rhythmAssistSessionVisitFree = \(id\) =>/.test(SCREEN) && /assistantLifeAtBeat\(id\) === true/.test(SCREEN) && /let paid = rhythmAssistSessionVisitFree\(who\.id\) \? 'visit' : '';/.test(MULTI) && /if \(!paid\) paid = \(await RHYTHM_BUDDY_STORE\.update\(\(st\) => rhythmBuddyUseFreeWithCall\(st, day, call\)\)\) \? 'free' : '';/.test(MULTI));

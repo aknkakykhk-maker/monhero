@@ -1543,7 +1543,7 @@ function BattleScreen({
   getMasuMon, getNextTurnBuff, getPermaBuff, getTurnBuff, getWaveBuff, guardCardWeight, guardFx, guardImpact,
   guardLevel, guardValueOf, tacticsSlotGuardValue, guts, hand, heroCardBonus, heroDist, hp, iceLockActive,
   iceLockPreparing, iceLockTurns, isAssistCard, isAttackCard, isBusy, isHeroSlotMon,
-  kikiCardBonus, liteBattleView, mainHero, openHelp, ownedUniques, pendingCard, pendingCardGuts,
+  kikiCardBonus, liteBattleView, mainHero, openHelp, ownedTeachings, ownedUniques, pendingCard, pendingCardGuts,
   popups, previewLocalBoosts, processTurn, quickRhythmIntroVisible, quickToRhythmButtonNode, quickToCardButtonNode,
   renderQuickRunBattleBand, runMode, safeDifficulty, score, selectedCardGuts, selectedCards,
   setCardAssignments, setDragState, setFocusedCard, setPendingCard, setShowAutoBgmPicker,
@@ -1718,8 +1718,13 @@ function BattleScreen({
   // 攻撃する子から敵までのずれ(24-battle-fx.jsx の measureAttackAim)。
   // ★描画の前(レイアウト直後)に測るので、最初のコマから敵の向きへ飛ぶ。見た目だけに使う
   const [attackAim, setAttackAim] = useState(null);
+  // ★1回の攻撃(タメ→本技の2段目)で1度だけ測る。位置は自分の transform を含めず測るので、2段目でも同じ値。攻撃が終われば(null)測り直せる
+  const aimMeasuredSlotRef = React.useRef(null);
   React.useLayoutEffect(()=>{
-    if(!attackAnim||ecoBattleView) return;
+    if(!attackAnim){ aimMeasuredSlotRef.current=null; return; }
+    if(ecoBattleView) return;
+    if(aimMeasuredSlotRef.current===attackAnim.slotIndex) return;
+    aimMeasuredSlotRef.current=attackAnim.slotIndex;
     const aim=measureAttackAim(attackAnim.slotIndex);
     setAttackAim(prev=>(prev&&aim&&prev.slotIndex===aim.slotIndex&&prev.dx===aim.dx&&prev.dy===aim.dy)?prev:aim);
   },[attackAnim,ecoBattleView]);
@@ -2051,9 +2056,17 @@ function BattleScreen({
       const card = hand[idx];
       const owner = cardAssignments[idx] != null ? cardAssignments[idx] : null;
       const halved = counter.take(card, owner);
+      // えるびんの見守り: このターンだけ、味方全員の受けるダメージダウン(実処理と同じ式。タクティクスも全員ぶん)
+      if (card?.subType === 'watch_erubin') {
+        const owned = (ownedTeachings || []).find(ot => ot.id === card.id);
+        const conf = ERUBIN_TIERS[Math.min(owned ? owned.evoLevel : 0, ERUBIN_TIERS.length - 1)];
+        mult *= Math.max(0.1, 1 - conf.cut * cardEffectMultiplier(card, halved));
+        return;
+      }
       if (!isLifeTreeGuardCard(card)) return;
       if (Array.isArray(tacticsUnits) && owner !== slotIdx) return;
-      mult = lifeTreeGuardMult(cardEffectMultiplier(card, halved), card.monId);
+      // 実処理と同じく掛け合わせる(加護を2枚使ったとき・えるびんの見守りと合わせたとき)
+      mult *= lifeTreeGuardMult(cardEffectMultiplier(card, halved), card.monId);
     });
     return mult;
   };
@@ -2065,7 +2078,7 @@ function BattleScreen({
     const planIntent = Array.isArray(tacticsUnits) ? tacticsSweepIntent(enemyIntent, tacticsUnits, enemyDist) : enemyIntent;
     const raw = getIncomingDamageBeforeTurnReduction(planIntent, slotIdx);
     if (!(raw > 0)) return none;
-    const hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
+    let hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
     let guard = 0, guardHits = 1;
     // ★タクティクスは枠ごと。構えていない子も、全体ガードなら丈夫さぶんが付く。
     //   受け止めるヒット数は、その子へ何枚構えたかで決まる(2枚以上なら連撃の全部)
@@ -2076,18 +2089,24 @@ function BattleScreen({
       guardHits = tacticsGuardHits(own.cards, hits);
     } else {
       // 既存5モードは今までどおり、手札のガードをまとめて1つに数える
-      let flat = 0, mult = 0;
+      let flat = 0, mult = 0, guardCards = 0;
       const counter = makeCardHalveCounter();
       selectedCards.forEach(idx => {
         const card = hand[idx];
         const halved = counter.take(card, cardAssignments[idx] != null ? cardAssignments[idx] : null);
         const w = guardCardWeight(card);
         if (!(w > 0)) return;
+        guardCards += 1;
         const effect = cardEffectMultiplier(card, halved);
         flat += GUARD_EVOLUTION[guardLevel].flat * w * effect;
         mult += GUARD_EVOLUTION[guardLevel].mult * w * effect;
       });
       guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);
+      // ★シールドが割れたあとの連撃必殺技(INFERNO系のデュラハン・ムー。extremeLayerRushHits)は、実処理と同じ受け方で出す:
+      //   そのターンのガードが1枚なら1発ぶんだけ止まり、2枚以上で全部止まる。ここを1発扱いのままにすると、
+      //   ガード1枚で「ほぼ止まる」と出るのに、実際は残りの発がそのまま通る(2026-11-11 バトルの監査)
+      const layerRushHits = enemyIntent.type === 'SPECIAL' ? extremeLayerRushHits(infernoShellRule, wave, infernoShellView?.broken) : 1;
+      if (layerRushHits > 1) { hits = layerRushHits; guardHits = guardCards >= TACTICS_RUSH_GUARD_CARDS ? hits : 1; }
     }
     const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);
     // 大樹の加護を選んでいれば、ガードのあとの通る量へ使ったターンぶんを掛ける(実処理の applyImmediateTakenReduction と同じ順)。
@@ -2742,16 +2761,18 @@ function BattleScreen({
     const popupGridStyle={display:'grid',gridTemplateColumns:`repeat(${popupCols}, max-content)`,justifyContent:'center',alignContent:'start',columnGap:'.35em',rowGap:0,paddingTop:`${popupTop}px`};
     // ★効果の小さな札は上の端へ1列に並べ、大きなダメージの数字はその下へ置く。縦の流れにするので重ならない
     //   (下の端へ置くと、盤面の上の縁に出る「合計DMG」の予測や味方の枠の裏に隠れた)
-    return (
+    return (<>
+      {/* 手ごたえ(当たりの間・会心と撃破の見せ方)。数字の札とライフを読むだけ(24-battle-hit-feel.jsx)。★数字の札の div より前に置く(CSS が隣を見て数字の出方を変える) */}
+      <BattleHitFeel popups={enemyPopups} enemyHp={enemy?.hp} speed={battleSpeed} stopOn={battleFx.hitStop!=='OFF'} shakeOn={!shakeOff} defeatOn={battleFx.defeatFx!=='OFF'} richOn={fxLoad==='RICH'||fxLoad==='STANDARD'} off={!!(liteBattleView||ecoBattleView)} />
       <div data-enemy-popups className="absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-start pt-1 gap-0.5 [container-type:size]">
         {enemyFxPopups.length>0&&<div data-enemy-fx-chips className="flex flex-col items-center gap-0.5 px-2">
-          {enemyFxPopups.map(p=>(<div key={p.id} data-enemy-fx-chip className={`max-w-full truncate rounded-full border border-white/25 bg-slate-950/85 px-2.5 py-0.5 text-[12px] font-black leading-tight shadow-[0_2px_8px_rgba(0,0,0,.7)] ${enemyFxChipTone(p.color)}`}>{p.text}</div>))}
+          {enemyFxPopups.map(p=>(<div key={p.id} data-enemy-fx-chip data-feel-kind={battleFeelKindOf(p.text)} className={`max-w-full truncate rounded-full border border-white/25 bg-slate-950/85 px-2.5 py-0.5 text-[12px] font-black leading-tight shadow-[0_2px_8px_rgba(0,0,0,.7)] ${enemyFxChipTone(p.color)}`}>{p.text}</div>))}
         </div>}
         <div data-enemy-popup-grid={popupCols} style={popupGridStyle}>
           {enemyPopups.map((p,idx)=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined} data-enemy-popup={idx} style={popupFit(p)} className={`text-center ${p.color} font-black whitespace-nowrap ${popupCols===2?'':'px-4'} ${liteBattleView?'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base':'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`}>{p.text}</div>))}
         </div>
       </div>
-    );
+    </>);
   })()}
           </div>
           {/* 技詳細パネルはmain外(画面直下)に移動して、ムー画像と同階層でz-index勝負させる */}
@@ -2893,7 +2914,7 @@ function BattleScreen({
               const card=hand[idx]; const slotIdx=cardAssignments[idx];
               const halved=committedCounter.take(card,slotIdx!=null?slotIdx:null);
               const b=boosts.perCard[idx]||{oryo:0,dmgMod:0,combo:0};
-              if(slotIdx!=null&&isAttackCard(card)){const baseDmg=getDmg(card,slotIdx,slots[slotIdx],b.oryo,b.dmgMod,halved); committedTotal+=getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo,slotIdx,halved);}
+              if(slotIdx!=null&&isAttackCard(card)){const baseDmg=getDmg(card,slotIdx,slots[slotIdx],b.oryo,b.dmgMod,halved,b.dist); committedTotal+=getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo,slotIdx,halved);}
               const gw=guardCardWeight(card);
               if(gw>0){ const e=cardEffectMultiplier(card,halved);
                 const gf=GUARD_EVOLUTION[guardLevel].flat*gw*e, gm=GUARD_EVOLUTION[guardLevel].mult*gw*e;
@@ -2943,7 +2964,7 @@ function BattleScreen({
                   const maxUses=slotMaxUses(s,i); if(assignedCount>=maxUses) continue;
                 } else if(!tacticsAnswer) continue;
                 if(pendingCardObj.type==='unique'&&pendingCardObj.ownerSlotIdx!==i) continue;
-                pendingValidSlot=i; const pendingHalved=committedCounter.peek(pendingCardObj,i); const baseDmg=getDmg(pendingCardObj,i,s,boosts.forPending.oryo,boosts.forPending.dmgMod,pendingHalved); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.forPending.combo,i,pendingHalved); break;
+                pendingValidSlot=i; const pendingHalved=committedCounter.peek(pendingCardObj,i); const baseDmg=getDmg(pendingCardObj,i,s,boosts.forPending.oryo,boosts.forPending.dmgMod,pendingHalved,boosts.forPending.dist); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.forPending.combo,i,pendingHalved); break;
               }
             }
             const projectedTotal=committedTotal+pendingAdd;
@@ -3017,7 +3038,7 @@ function BattleScreen({
             <div data-tactics-board-popups className="absolute inset-x-0 bottom-full mb-[30px] flex flex-col items-center justify-end gap-0.5 pointer-events-none" style={{zIndex:200}}>
               {/* 誰のものでもない知らせ(回避の名乗り・合計など)。上へ積むと2枚目が強化の札の列(♥20%・⚡15%・詳細)に重なっていた(2026-11-01 イルミネの回避)。
                   強化の札の列の上(盤面の上の縁から30px上)から上へ積む。横1列にすると左右の「ステータス」「次の行動」の札にかかるので縦のまま */}
-              {popups.filter(p=>['hero','life','guts'].includes(p.side)&&!Number.isInteger(p.slot)).slice(-3).map((p)=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined}
+              {popups.filter(p=>['hero','life','guts'].includes(p.side)&&!Number.isInteger(p.slot)).slice(-3).map((p)=>(<div key={p.id} data-feel-kind={battleFeelKindOf(p.text)} data-lite-damage={liteBattleView?'true':undefined}
                 className={`${tacticsPopupTone(p.color)} max-w-[92%] truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-3 py-0.5 text-[13px] font-black leading-tight shadow-[0_4px_14px_rgba(0,0,0,.6)]`}
                 style={{animation:liteBattleView?undefined:'tacticsPopupRise 240ms ease-out'}}>{p.text}</div>))}
             </div>
@@ -3133,7 +3154,7 @@ function BattleScreen({
                 const pendingCounter=makeCardHalveCounter();
                 selectedCards.forEach(idx=>{ if(idx===pendingIdx) return; pendingCounter.take(hand[idx],cardAssignments[idx]!=null?cardAssignments[idx]:null); });
                 const isSecondOrLater = pendingCounter.peek(pendingCardObj,i);
-                const baseDmg=getDmg(pendingCardObj,i,s,slotBoosts.forPending.oryo,slotBoosts.forPending.dmgMod,isSecondOrLater);
+                const baseDmg=getDmg(pendingCardObj,i,s,slotBoosts.forPending.oryo,slotBoosts.forPending.dmgMod,isSecondOrLater,slotBoosts.forPending.dist);
                 previewDmg=getAttackPredictedDmg(pendingCardObj,s,baseDmg,slotBoosts.forPending.combo,i,isSecondOrLater);
                 previewSoulPct=soulTraitAttackProfile(s?.masuId?getMasuMon(s.masuId):null,pendingCardObj,i).damagePct;
                 isPendingPreview=true; isPendingHalved=isSecondOrLater;
@@ -3146,7 +3167,7 @@ function BattleScreen({
                   const halved=slotCounter.take(card,cardAssignments[idx]!=null?cardAssignments[idx]:null);
                   if(cardAssignments[idx]===i){
                     const b=slotBoosts.perCard[idx]||{oryo:0,dmgMod:0,combo:0};
-                    const baseDmg=getDmg(card,i,s,b.oryo,b.dmgMod,halved);
+                    const baseDmg=getDmg(card,i,s,b.oryo,b.dmgMod,halved,b.dist);
                     previewDmg+=getAttackPredictedDmg(card,s,baseDmg,b.combo,i,halved);
                   }
                 });
@@ -3392,7 +3413,7 @@ function BattleScreen({
                   {slotFxEl}
                   {/* 枠が狭く、長い吹き出し(「セレーネチェイサー! 連撃…」「会心率+1.0% 会心ダメ+1…」)が途中で切れていた(ふつうの縦でも)。
                       最初の区切りまで(技名・最初の効果)だけ出す。全部の文はバトルの記録で読める(2026-11-01 社長「技名だけにする案でよい」) */}
-                  {ownPopups.map(p=>{const short=tacticsPopupShortText(p.text);return(<div key={p.id} className={`${tacticsPopupTone(p.color)} max-w-full truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-2 py-0.5 text-[11px] font-black leading-tight shadow-[0_2px_10px_rgba(0,0,0,.6)]`}
+                  {ownPopups.map(p=>{const short=tacticsPopupShortText(p.text);return(<div key={p.id} data-feel-kind={battleFeelKindOf(p.text)} className={`${tacticsPopupTone(p.color)} max-w-full truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-2 py-0.5 text-[11px] font-black leading-tight shadow-[0_2px_10px_rgba(0,0,0,.6)]`}
                     style={{animation:liteBattleView?undefined:'tacticsPopupRise 240ms ease-out'}}>{short!==p.text?<span data-tactics-popup-short title={p.text}>{short}</span>:p.text}</div>);})}
                 </div>);
                 })()}

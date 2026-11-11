@@ -14,8 +14,9 @@
 // タブは4つ(2026-10-13 社長の選択「案1 タブ4つ+よく触るものを上」)。保存キー・値は変えず、並べ替えと見出しだけ。
 // id は前のまま使う(live=演奏 / volume=音 / system=軽さ・演出)。display(表示)はライブにあった表示の項目を分けたもの
 const RHYTHM_OPTION_TABS=Object.freeze([['live','演奏'],['display','表示'],['volume','音'],['system','軽さ・演出']]);
-const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,calibrationResult=null,onClearCalibration=null})=>{
-  const [draft,setDraft]=useState(()=>normalizeRhythmSettings(value));
+const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,calibrationResult=null,onClearCalibration=null,onPreview=null,initialDraft=null})=>{
+  // 「▶ 見てみる」の見本から戻ったときは、そのときの下書き(initialDraft)から続ける(保存前の変更を消さない。2026-11-11)
+  const [draft,setDraft]=useState(()=>normalizeRhythmSettings(initialDraft||value));
   const [message,setMessage]=useState('');
   // 未保存のまま「戻る」を押したときの確認。それまでは何も言わずに変更が消えていた
   const [leaveAsk,setLeaveAsk]=useState(false);
@@ -84,7 +85,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
       className={`${wide?'min-h-[38px]':'min-h-[46px]'} rounded-xl border ${dim?'border-white/25 bg-slate-300 text-slate-900':'border-white/40 bg-slate-100 text-slate-900'} min-w-0 whitespace-nowrap px-0.5 text-[11px] font-black tabular-nums tracking-tight shadow-[0_2px_0_rgba(2,6,23,.55)] active:translate-y-[1px] active:shadow-none disabled:opacity-35`}>{sign(amount)}</button>;
     return <div data-rhythm-option-stepper={key} className={wide?'':'space-y-1.5'}>
       {label&&<div data-rhythm-option-stepper-label={key} className="flex items-baseline justify-between gap-2 px-0.5 pb-0.5 leading-none">
-        <small className="text-[10px] font-black text-cyan-200">{label}</small>
+        {/* 長い名前は言葉の切れ目で折る(2026-11-08 ミハリ S3「はみ出／し」) */}
+        <small className="min-w-0 text-[10px] font-black text-cyan-200" style={JA_WRAP_STYLE}>{jaWrap(label)}</small>
         <small className="text-[10px] font-bold tabular-nums text-slate-400">{decimals>0?min.toFixed(decimals):min}〜{decimals>0?max.toFixed(decimals):max}{suffix}</small>
       </div>}
       <div className="grid grid-cols-[1fr_1fr_minmax(52px,1.3fr)_1fr_1fr] items-center gap-1">
@@ -179,7 +181,11 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
         横持ちでは**1行へ並べる**。これだけで中身へ回せる高さが50pxほど増える。
         押す場所(戻る・タブ)は44pxのまま縮めない。 */}
     <div data-rhythm-options-bar className={`z-10 shrink-0 border-b border-cyan-400/15 bg-slate-950/95 ${wide?'flex items-center gap-3':''}`}>
-      <header className={`flex shrink-0 items-center gap-2 px-3 ${wide?'py-1':'py-2'}`}><button aria-label="戻る" onClick={requestBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className={wide?'flex items-baseline gap-2':''}><small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small><h2 className={`font-black ${wide?'text-[13px]':'text-base'}`}>⚙️ オプション</h2></div></header>
+      <header className={`flex shrink-0 items-center gap-2 px-3 ${wide?'py-1':'py-2'}`}><button aria-label="戻る" onClick={requestBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className={wide?'flex items-baseline gap-2':''}><small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small><h2 className={`font-black ${wide?'text-[13px]':'text-base'}`}>⚙️ オプション</h2></div>
+        {/* いまの設定(保存前)で演奏画面がどう見えるかを、本物の演奏画面の見本で見る(2026-11-11 社長「現在の設定での画面が分からないから見れるようにしたい」) */}
+        {onPreview&&<button type="button" data-rhythm-option-preview-open onClick={()=>onPreview(draft)} aria-label="いまの設定で演奏画面を見てみる"
+          className={`ml-auto flex shrink-0 flex-col items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-950/70 px-3 font-black text-cyan-50 active:scale-95 ${wide?'min-h-[38px] text-[12px]':'min-h-[44px] text-[13px]'}`}>
+          <span>▶ 見てみる</span>{!wide&&<small className="text-[10px] font-bold text-cyan-200/90">いまの設定で演奏画面</small>}</button>}</header>
       {/* いま見ているタブだけ色を変え、下へ小さな三角を出して「ここの中身」と分かるようにする */}
       <nav data-rhythm-options-tabs className={`grid shrink-0 grid-cols-4 px-3 ${wide?'min-w-0 flex-1 gap-1.5 pb-0 pl-0 pr-3':'gap-2 pb-2'}`}>
         {RHYTHM_OPTION_TABS.map(([id,text])=><button type="button" key={id} data-rhythm-options-tab={id} aria-pressed={tab===id} onClick={()=>changeTab(id)}
@@ -558,6 +564,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
                 オプションでオンオフできて」。できる範囲は端末とブラウザで違うので、
                 何が起きるかを必ず添える(黙って効かないのがいちばん困る)。 */}
 {field('演奏中は通知を出さない',toggle('quietDuringPlay'))}
+{/* みんなで対戦の演奏中に、ほかの人の順位・スコア・コンボの札を出すか(2026-11-11。部屋の上の帯の 📊 と同じ値) */}
+{field('みんなで対戦の演奏中に、みんなのスコアを出す',toggle('multiLiveBoard'))}
 </div>
 </section>
 <section className={card}>
@@ -1317,7 +1325,10 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
           })}
           </div>
           </div>
-          <div className="flex gap-2" style={{gridArea:'act'}}>
+          {/* 横向き(🔄横も)は、詳しい欄が中で送れる作り。決定の段は欄の下に貼り付けて、送らなくても見えるようにする
+              (iPhone の🔄横は画面が低く、マルチの曲えらびで「この曲で決定」が欄の下へ隠れていた・2026-11-08 社長「下が切れてる」)。
+              上下の余白は付けない(付けると欄が8px伸び、小さい横画面で下の助手の吹き出しがはみ出した・rhythm-song-notice-landscape-check) */}
+          <div data-rhythm-song-act className="flex gap-2 landscape:sticky landscape:bottom-0 landscape:z-10 landscape:bg-slate-950/95" style={{gridArea:'act'}}>
             {!hideRandom&&<button type="button" data-rhythm-song-random onClick={pickRandom}
               className="min-h-[46px] w-[38%] rounded-xl border border-white/20 bg-slate-900 text-xs font-black text-slate-200 landscape:min-h-[42px]">ランダム</button>}
             <button type="button" data-rhythm-demo-start={difficulty.id} disabled={playDisabled}
@@ -1330,7 +1341,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
         </div>
         </>}
       {/* 横持ちの助手のひとことは、決定ボタンより下へ置く(2026-09-26)。上に置くと決定が画面の外へ押し出されていた */}
-      {notice&&noticeOpen&&<div data-rhythm-song-notice-landscape className="mt-2 hidden landscape:block">{notice}</div>}
+      {notice&&noticeOpen&&<div data-rhythm-song-notice-landscape className="mt-1.5 hidden landscape:block">{React.isValidElement(notice)?React.cloneElement(notice,{oneLine:true,faceSize:28}):notice}</div>}
     </aside>
 
     {/* 並び替えのシート。行を1本増やさずに済むよう、選ぶところは下から出す。

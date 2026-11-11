@@ -623,6 +623,17 @@ const cardPackQuake = (el, lv) => {
   el.animate([{ transform: 'none' }, { transform: `translate(${-a}px, ${a / 2}px)` }, { transform: `translate(${a}px, ${-a / 2}px)` }, { transform: `translate(${-a * 0.7}px, ${-a / 3}px)` }, { transform: `translate(${a / 2}px, ${a / 3}px)` }, { transform: 'none' }],
     { duration: 220 + lv * 90, easing: 'linear' });
 };
+// 手に伝わるふるえ(対応する端末だけ。強めのときだけ。動きを減らす設定の人には出さない)。ms は数か、間をあけた並び
+const cardPackBuzz = (ms) => {
+  try {
+    if (typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    navigator.vibrate(ms);
+  } catch (e) { /* ふるえなくても続ける */ }
+};
+// 「格上げ」の見せ方(2026-11-11 社長)。キラ以上の約3割は、めくる前の裏が光らずふつうのカードに見え、タップで 白 → 金 → 虹 と格が上がる。
+//   どれが格上げに見えるかは位置だけで決める(抽選や中身は変えない)。ふつうのカードが格上がりに見えることはない
+const cardPackSurprise = (c, i, pi) => !!c && c.rarity !== 'normal' && ((pi * 3 + i * 5 + (c.rarity === 'alt' ? 1 : 0)) % 10 < 3);
 // 紙吹雪(強めのとき)。n 枚を降らせ、again があれば少し遅れてもう1回。数と置き場所は出したときに1回だけ決める
 const CardPackConfetti = ({ n, again = 0 }) => {
   const [bits] = useState(() => Array.from({ length: n + again }, (_, i) => ({
@@ -674,8 +685,9 @@ const CardPackOpen = ({ db, result, onDone }) => {
     se('special');
     setPhase('tearing');
     later(() => se('crit'), 520);
-    if (fx) { cardPackQuake(rootRef.current, 1); later(() => cardPackQuake(rootRef.current, 2), 640); }
-    later(() => setPhase('open'), CARD_PACK_TEAR_MS);
+    if (fx) { cardPackQuake(rootRef.current, 1); later(() => cardPackQuake(rootRef.current, 2), 640); cardPackBuzz(omen ? [30, 40, 30] : 20); }
+    // 中にレアキラがあるときは、破る前の「溜め」を少し長く(キラ +0.25秒・レアキラ +0.5秒。見た目だけ)
+    later(() => setPhase('open'), CARD_PACK_TEAR_MS + (fx ? (omen === 'alt' ? 500 : omen === 'kira' ? 250 : 0) : 0));
   };
   const spotOff = () => {
     setSpot((sp) => (sp && !sp.leaving ? { ...sp, leaving: true } : sp));
@@ -694,7 +706,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
         setFlash((x) => ({ n: ((x && x.n) || 0) + 1, rarity: c.rarity }));
         setSpot({ i, rarity: c.rarity, leaving: false });
         se('crit'); if (c.rarity === 'alt') se('fusion'); else se('levelUp');
-        if (fx) cardPackQuake(rootRef.current, c.rarity === 'alt' ? 3 : 2);
+        if (fx) { cardPackQuake(rootRef.current, c.rarity === 'alt' ? 3 : 2); cardPackBuzz(c.rarity === 'alt' ? [60, 40, 60, 40, 120] : [50, 30, 50]); }
       }, 380);
       later(spotOff, 380 + spotMs(c));
     }
@@ -703,7 +715,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
     const steps = climbSteps(cards[i]);
     if (!steps) { turn(i); return; }
     for (let k = 0; k < steps; k++) {
-      later(() => { setClimb((x) => ({ i, k, n: ((x && x.n) || 0) + 1 })); se('tap'); cardPackQuake(rootRef.current, k + 1); }, k * CARD_PACK_CLIMB_MS);
+      later(() => { setClimb((x) => ({ i, k, n: ((x && x.n) || 0) + 1 })); se('tap'); cardPackQuake(rootRef.current, k + 1); cardPackBuzz(15 + k * 15); }, k * CARD_PACK_CLIMB_MS);
     }
     later(() => turn(i), steps * CARD_PACK_CLIMB_MS);
   };
@@ -717,6 +729,15 @@ const CardPackOpen = ({ db, result, onDone }) => {
       at += cards[i].rarity !== 'normal' ? climbSteps(cards[i]) * CARD_PACK_CLIMB_MS + 380 + spotMs(cards[i]) + CARD_PACK_SPOT_BACK_MS + 120 : 140;
     });
   };
+  // 連続で開けるとき(2パック目から)は、ふつうのカードを自動で一気にめくり、キラ以上だけ残して止まる(2026-11-11 社長「連続で開けるときの早送り」)。
+  //   「とばす」は、残りを演出なしで全部めくる。どちらも出るカードは変わらない
+  const quick = fx && !kit && pi > 0 && result.packs.length > 1;
+  useEffect(() => {
+    if (phase !== 'open' || !quick) return;
+    cards.forEach((c, i) => { if (c.rarity === 'normal') later(() => setFlipped((f) => (f.includes(i) ? f : [...f, i])), 160 + i * 70); });
+    later(() => se('card'), 160);
+  }, [phase, pi]);
+  const skipAll = () => { timers.current.forEach(clearTimeout); timers.current = []; se('card'); setSpot(null); setClimb(null); setFlipped(cards.map((_, i) => i)); };
   const next = () => { Audio_.fgSe.tap(); timers.current.forEach(clearTimeout); timers.current = []; setPi((x) => x + 1); setPhase(kit ? 'open' : 'closed'); setFlipped([]); setSpot(null); setClimb(null); };
   // 破るときに一瞬光る色(中のいちばん良いカード。強めのときだけ)
   const omen = fx ? (cards.some((c) => c.rarity === 'alt') ? 'alt' : cards.some((c) => c.rarity === 'kira') ? 'kira' : null) : null;
@@ -758,12 +779,15 @@ const CardPackOpen = ({ db, result, onDone }) => {
               const name = card ? card.name : m ? m.name : c.no;
               const rare = c.rarity !== 'normal';
               const cl = climb && climb.i === i ? climb : null;
+              const sur = fx && cardPackSurprise(c, i, pi);
+              // めくる前の裏の光: 格上げに見せる札は光らない → 段が上がるごとに 金(キラ) → 虹(レアキラ) と光り出す。ほかは今までどおり最初から光る
+              const backRar = !rare || on ? null : sur ? (cl ? (cl.k >= 2 ? 'alt' : cl.k >= 1 ? 'kira' : null) : null) : c.rarity;
               return (
                 <div key={`${pi}-${i}`} className="mh-pack-deal flex flex-col items-center" style={{ animationDelay: `${i * 70}ms` }}>
-                  <button type="button" data-card-pack-card={i} data-card-pack-flipped={on ? 1 : 0} data-card-pack-rarity={c.rarity} data-card-pack-climb={cl ? cl.k + 1 : undefined} {...(on ? press(c.no, () => setDetail(c.no)) : { onClick: () => flip(i) })} className={`mh-pack-card relative w-full active:scale-95 ${cl ? `mh-pack-climb mh-pack-climb-${cl.k + 1}` : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
+                  <button type="button" data-card-pack-card={i} data-card-pack-surprise={sur ? 1 : undefined} data-card-pack-flipped={on ? 1 : 0} data-card-pack-rarity={c.rarity} data-card-pack-climb={cl ? cl.k + 1 : undefined} {...(on ? press(c.no, () => setDetail(c.no)) : { onClick: () => flip(i) })} className={`mh-pack-card relative w-full active:scale-95 ${cl ? `mh-pack-climb mh-pack-climb-${cl.k + 1}` : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
                     {cl && <span key={cl.n} aria-hidden="true" className="mh-pack-climb-burst" style={{ '--c': CARD_PACK_CLIMB[cl.k][0], '--s': `${CARD_PACK_CLIMB[cl.k][1]}px` }}/>}
                     <div className={`mh-pack-card-in aspect-[5/7] w-full ${on ? 'flipped' : ''}`}>
-                      <div className={`mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${rare && !on ? (c.rarity === 'alt' ? 'mh-pack-alt-back' : 'mh-pack-kira-back') : ''}`} style={{ containerType: 'inline-size' }}>
+                      <div className={`mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${backRar ? (backRar === 'alt' ? 'mh-pack-alt-back' : 'mh-pack-kira-back') : ''}`} style={{ containerType: 'inline-size' }}>
                         {/* カードの裏面(2026-10-26 社長から届いた絵)。キラ・別絵キラは今までどおり光って揺れる。モンスターの枠は金の★を重ねる */}
                         <img src={CARD_BACK_IMG()} alt="" draggable={false} className="absolute inset-0 h-full w-full rounded-[5px] object-cover"/>
                         {c.slot === 'mon' && <span aria-hidden="true" className="relative mt-[62%] grid aspect-square w-[30%] place-items-center rounded-full border-2 border-amber-200/90 bg-black/55 font-black leading-none text-amber-200 shadow-[0_0_10px_rgba(0,0,0,.5)]" style={{ fontSize: '14cqw', textShadow: '0 1px 2px #000' }}>★</span>}
@@ -814,6 +838,8 @@ const CardPackOpen = ({ db, result, onDone }) => {
             <div aria-hidden="true" className={`mh-pack-spot-rays ${alt ? 'mh-pack-spot-rays-alt' : ''}`}/>
             {fx && alt && !spot.leaving && <div aria-hidden="true" data-card-pack-pillar className="mh-pack-rpillar"/>}
             {fx && !spot.leaving && <div aria-hidden="true" className={`mh-pack-spot-burst ${alt ? 'alt' : ''}`}/>}
+            {fx && !spot.leaving && <div aria-hidden="true" data-card-pack-shock className={`mh-pack-shock ${alt ? 'alt' : ''}`}/>}
+            {fx && !spot.leaving && <div aria-hidden="true" className={`mh-pack-vignette ${alt ? 'alt' : ''}`}/>}
             {fx && <CardPackConfetti key={`cf-${spot.i}`} n={alt ? 130 : 24} again={alt ? 60 : 0}/>}
             <div className={`relative ${spot.leaving ? 'mh-pack-spot-out' : 'mh-pack-spot-in'}`} style={{ width: spotW }}>
               <div className={`relative aspect-[5/7] w-full ${alt ? 'mh-pack-alt-front' : 'mh-pack-kira-front'}`}>
@@ -827,7 +853,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
       })()}
       <div className={SCREEN_FOOTER_CLASS}>
         {phase !== 'open' ? <div className="text-center text-[12px] font-bold text-slate-400">{kit ? 'キットをタップしてください' : 'パックをタップしてください'}</div>
-          : !allOpen ? <button type="button" data-card-pack-flip-all className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={flipAll}>全部めくる</button>
+          : !allOpen ? <div className="flex gap-2"><button type="button" data-card-pack-flip-all className="mh-button mh-button-primary min-h-[52px] w-full flex-1 rounded-2xl font-black active:scale-[.98]" onClick={flipAll}>全部めくる</button>{fx && <button type="button" data-card-pack-skip className="mh-button min-h-[52px] shrink-0 rounded-2xl border border-slate-500 bg-slate-800 px-4 font-black text-slate-100 active:scale-[.98]" onClick={skipAll}>とばす</button>}</div>
           : !last ? <button type="button" data-card-pack-next className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={next}>{kit ? 'つぎへ' : 'つぎのパック'}</button>
           : kit && !showList ? <button type="button" data-card-pack-list-open className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); setShowList(true); }}>入っていたカードの一覧へ</button>
           : <button type="button" data-card-pack-done className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); onDone(); }}>{result.doneLabel || (result.demo ? 'トップへ戻る' : 'マーケットへ戻る')}</button>}

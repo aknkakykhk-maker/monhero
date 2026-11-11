@@ -287,15 +287,21 @@ const cardPvpCleanMessage = (raw) => {
       rt: Number.isInteger(raw.rt) && raw.rt >= 0 && raw.rt <= 10000 ? raw.rt : null, rv: cardPvpRv(raw.rv) };
   }
   // ひとこと: 定型(i … 番号)か、自由文(x … 30字まで。2026-10-30 で足した項目。古い版は x を知らないので捨てる)
+  // スタンプ(2026-11-11 で足した項目): 顔 sf・言葉 sw の番号を添える。古い版はこれを知らないので、i か x の言葉だけを出す
   if (raw.t === 'chat') {
-    if (typeof raw.x === 'string') { const x = cardChatClean(raw.x); return x ? { t: 'chat', from, x } : null; }
-    const i = cardPvpInt(raw.i, CARD_PVP_STAMPS.length - 1); return i === null ? null : { t: 'chat', from, i };
+    const sf = typeof multiStampCleanFace === 'function' ? multiStampCleanFace(raw.sf) : null;
+    const sw = typeof multiStampCleanWord === 'function' ? multiStampCleanWord(raw.sw) : null;
+    const st = sf && sw ? { sf, sw } : {};
+    if (typeof raw.x === 'string') { const x = cardChatClean(raw.x); return x ? { t: 'chat', from, x, ...st } : null; }
+    const i = cardPvpInt(raw.i, CARD_PVP_STAMPS.length - 1); return i === null ? null : { t: 'chat', from, i, ...st };
   }
   // 観戦の人のコメント(ホストが観戦の通り道で受け取り、相手へ渡す。v … 観戦の人の印・n … 名前)
   if (raw.t === 'wsay') { const x = cardChatClean(raw.x); return x ? { t: 'wsay', from, v: typeof raw.v === 'string' ? raw.v.slice(0, 40) : '', n: rhythmMultiText(raw.n, CARD_PVP_NAME_MAX) || 'ブリーダー', x, sp: raw.sp === true } : null; }
   // もう1戦(同じ相手と同じ部屋で。rd … 次の試合の回の番号・seal … 次の試合の山札の封)
   if (raw.t === 'again') { const rd = cardPvpInt(raw.rd, 1000); const seal = typeof raw.seal === 'string' && /^[0-9a-f]{64}$/.test(raw.seal) ? raw.seal : null; return rd && seal ? { t: 'again', from, rd, seal } : null; }
   if (raw.t === 'surrender' || raw.t === 'bye' || raw.t === 'timeout') return { t: raw.t, from };
+  // この試合は続けられない(届いた手がルールに合わず、場が食い違った。2026-11-08 で足した項目。古い版は知らないので捨てる)
+  if (raw.t === 'void') return typeof raw.match === 'string' && raw.match ? { t: 'void', from, match: raw.match.slice(0, 40) } : null;
   return null;
 };
 
@@ -333,9 +339,9 @@ const CARD_PVP_RESULT_LINES = Object.freeze({
     left: [['あら、相手いなくなっちゃったぁ。不戦勝はノーカンにしとこ笑', 'surprise'], ['まあ、こういう日もあるっしょ。次いこw', 'normal'], ['ほい、ちょっと物足りないかぁ。次はちゃんと最後までやりたいねぇ', 'wink']],
   },
   sorashido: {   // 2026-10-27 社長「この形で入れる」(フキダシくんの案 v3)。公開の印が立つまで、自分の助手に選べないので出ない
-    win: [['うぉぉぉ！ 勝った！ 今の組み方、最高だった笑', 'happy'], ['ナイス！ 読み合い、完全に勝ってたぜ・・・！', 'excited'], ['いい勝ち方！ 攻略まとめに残したいくらい笑', 'wink']],
-    lose: [['なに！？ 惜しい…次はどう組むか考えよ', 'troubled'], ['なんくるないさ〜。今の対戦、すごく参考になった笑', 'normal'], ['相手も強かった！ もう1戦いっとく？笑', 'happy']],
-    left: [['あれ、相手いなくなった？ 決着つけたかったな笑', 'surprise'], ['電波かな？ 次の相手さがそ！', 'normal'], ['勝ちは勝ちだけど…ちょっと物足りないぜ・・・', 'troubled']],
+    win: [['勝ちましたね！ 今の組み方、最高でした笑', 'happy'], ['ナイスです！ 読み合い、完全に勝ってました！', 'excited'], ['いい勝ち方ですね！ 攻略まとめに残したいくらいです笑', 'wink']],
+    lose: [['惜しい・・・！ 次はどう組むか考えてみませんか', 'troubled'], ['なんくるないさ〜。今の対戦、すごく参考になりました笑', 'normal'], ['相手も強かったですね！ もう1戦いっておきますか？笑', 'happy']],
+    left: [['あれ、相手がいなくなりましたね？ 決着つけたかったです笑', 'surprise'], ['電波ですかね？ 次の相手をさがしてみますか！', 'normal'], ['勝ちは勝ちですけど・・・ちょっと物足りないですね', 'troubled']],
   },
   erubin: {   // 2026-11-05 案(ルールくん)。公開の印が立つまで、自分の助手に選べないので出ない
     win: [['勝ったね！ さすが、最後の一手がきれいだったよ☺️', 'happy'], ['いいね！ 見ててこっちまで楽しかったー！', 'excited'], ['おめでとう！ その組み方、俺も参考にしたいな笑', 'wink']],
@@ -770,11 +776,12 @@ const CARD_PVP = (() => {
   };
   const deliver = () => {
     // 届いた順にそろえて、つぎの番号のものから当てる(抜けがあれば待つ)
-    while (board && s.inbox[s.theirSeq + 1]) {
+    while (board && s.phase === 'playing' && s.inbox[s.theirSeq + 1]) {
       const msg = s.inbox[s.theirSeq + 1];
       const inbox = { ...s.inbox }; delete inbox[s.theirSeq + 1];
-      const next = board.onAct(msg);
-      if (!next) { set({ inbox, broken: '相手の手がルールに合いませんでした。この試合は続けられません' }); return; }
+      // 検査だけ: 場が食い違ったことにする(window.__mhCardPvpDesyncTest)。ふだんは何もしない
+      const next = typeof window !== 'undefined' && window.__mhCardPvpDesyncTest === true ? null : board.onAct(msg);
+      if (!next) { s = { ...s, inbox }; goVoid(); return; }
       s = { ...s, inbox, theirSeq: msg.seq, history: [...s.history, { by: 1, act: cardPvpFlip(msg.act), reveal: msg.reveal }] };
       watchPush(1, cardPvpFlip(msg.act), msg.reveal, next);
       send({ t: 'ack', seq: msg.seq, discard: next.players[0].discard });
@@ -791,6 +798,21 @@ const CARD_PVP = (() => {
     return slept;
   };
   const forceEnd = (outcome) => { if (s && s.phase === 'playing' && board) board.onForceEnd(outcome); };
+  // 無効試合(2026-11-08 ソランド): 届いた手がルールに合わず、2台の場が食い違った。勝ち負け・ビートP・強さの点数・履歴・見返し・ミッション・杯の結果は、どれも付けない・送らない。
+  //   はねた側は { t: 'void', match } を相手へ送る(見回りで送り直す。古い版の相手は捨てるので、前と同じく、やがて「相手が抜けた」になる)。受けた側も同じ形になる。
+  //   結果を出したあと(over)でも、ごほうびを渡す前なら無効にする(相手の最後の手をこちらがはねたとき)
+  const goVoid = () => {
+    if (!s || !s.match || !(s.phase === 'playing' || (s.phase === 'over' && s.result && !s.result.rewarded && !s.cupSent))) return;
+    if (isHost()) cardPvpWatchHost().stop();
+    const cup = s.cup && !s.cupSent ? s.cup : null;
+    set({ phase: 'void', result: null, outbox: [], again: null, foeAgain: null, ...(cup ? { cupSent: true } : {}) });
+    send({ t: 'void', match: s.match });
+    // 個人杯の試合: どちらの負けにもせず、杯へ「食い違い」の印を付ける(card_cup_live_void)。登録デッキどうしの自動の試合で決まる(2026-11-08 社長)
+    if (cup) void (async () => {
+      const key = typeof cardShareOwnerKey === 'function' ? await cardShareOwnerKey(false).catch(() => null) : null;
+      if (key && typeof cardTourRpc === 'function') await cardTourRpc('card_cup_live_void', { p_match: cup.matchId, p_owner: cup.selfId, p_key: key }).catch(() => null);
+    })();
+  };
   // 個人杯の試合(④): 確かめが決まったら(ok / ng / skip)、杯へ結果を1回だけ送る(card_cup_live_report・how=pvp)。
   //   手の並びは、確かめが通った試合だけ { kind: 'pvp', order, seeds: [自分, 相手], first, acts }(自分が0番の向き。93 の cardReplayFromTour が並びを戻す)
   const cupSend = async () => {
@@ -853,6 +875,8 @@ const CARD_PVP = (() => {
     }
     if (s.foe) s = { ...s, foe: { ...s.foe, seen: now } };
     if (msg.t === 'start') { if (!isHost() && msg.guest === s.me.id) begin(msg); return; }
+    // 検査だけ: 古い版の相手(void を知らない)のふりをする(window.__mhCardPvpOldTest)
+    if (msg.t === 'void') { if (msg.match === s.match && !(typeof window !== 'undefined' && window.__mhCardPvpOldTest === true)) goVoid(); return; }
     if (msg.t === 'act') {
       if (msg.match !== s.match) return;
       if (msg.seq <= s.theirSeq) { send({ t: 'ack', seq: s.theirSeq }); return; }
@@ -871,10 +895,12 @@ const CARD_PVP = (() => {
     if (msg.t === 'again') { if (s.phase === 'over' && !s.foeGone) { s = { ...s, foeAgain: { rd: msg.rd, seal: msg.seal } }; tryAgain(); emit(); } return; }
     if (msg.t === 'chat') {
       if (!inGame()) return;
-      const stamp = msg.x === undefined;
-      const text = stamp ? CARD_PVP_STAMPS[msg.i] : msg.x;
-      if (isHost()) cardPvpWatchHost().say({ p: 1, x: text, sp: stamp }); // 観戦の人にも見せる(全員に見える。2026-10-30 社長)
-      if (CARD_CHAT.add({ key: 'foe', name: (s.foe && s.foe.name) || 'あいて', text, stamp, kind: 'foe' }) && s.phase === 'playing' && board && board.onChat) board.onChat(cardChatMask(cardChatClean(text)));
+      // 絵のスタンプは定型と同じ扱い(自由文を出さない設定でも出す)。1人2秒に1個まで
+      if (msg.sf && !MULTI_STAMP.accept('foe')) return;
+      const stamp = msg.x === undefined || !!msg.sf;
+      const text = msg.x === undefined ? CARD_PVP_STAMPS[msg.i] : msg.x;
+      if (isHost()) cardPvpWatchHost().say({ p: 1, x: text, sp: stamp }); // 観戦の人にも見せる(全員に見える。2026-10-30 社長)。観戦の人には言葉で届く
+      if (CARD_CHAT.add({ key: 'foe', name: (s.foe && s.foe.name) || 'あいて', text, stamp, kind: 'foe', ...(msg.sf ? { sf: msg.sf, sw: msg.sw } : {}) }) && s.phase === 'playing' && board && board.onChat) board.onChat(cardChatMask(cardChatClean(text)));
       return;
     }
     if (msg.t === 'wsay') { if (inGame()) CARD_CHAT.add({ key: `v:${msg.v}`, name: msg.n, text: msg.x, stamp: msg.sp, kind: 'watch' }); return; }
@@ -979,6 +1005,7 @@ const CARD_PVP = (() => {
       if (s.phase === 'over') sendOpen();
       if (inGame() && isHost()) cardPvpWatchHost().tick();
       if (s.phase === 'over' && s.again) send({ t: 'again', rd: s.again.rd, seal: s.again.seal });
+      if (s.phase === 'void' && s.match) send({ t: 'void', match: s.match }); // 相手が受け取るまで(相手が部屋を出るまで)送り直す
       // 相手から何も届かないまま CARD_PVP_ALIVE_MS が過ぎたら、抜けた扱い(こちらの電波が切れているあいだは数えない)
       if (s.phase === 'playing' && s.foe && alive && Date.now() - s.foe.seen > CARD_PVP_ALIVE_MS) forceEnd('foeLeft');
       // 結果のあとも同じ: bye が届かないまま相手が消えたら、部屋を出たとみる(「もう1戦」を待ち続けない。2026-10-27 部長)
@@ -987,7 +1014,7 @@ const CARD_PVP = (() => {
   };
   // iPhone でアプリを切り替えて戻ってきたら、すぐにつなぎ直す / タブを閉じるときは「抜けます」を送る
   if (typeof document !== 'undefined') {
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && inGame() && !alive) connect(); });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && (inGame() || (s && s.phase === 'void')) && !alive) connect(); });
   }
   if (typeof window !== 'undefined') {
     window.addEventListener('pagehide', () => { if (s && s.phase === 'playing') { send({ t: 'bye' }); penalize(); } });
@@ -1024,7 +1051,8 @@ const CARD_PVP = (() => {
         const nowT = Date.now();
         Object.entries(s.invited || {}).filter(([, x]) => x && x.ok && x.code === s.code && nowT - x.at <= CARD_PVP_INVITE_TTL_MS).forEach(([to, x]) => { void sbCancelCardInvite(s.me.bid, to, x.code); });
       }
-      if (s && s.phase === 'playing') penalize(); if (s && socket) send({ t: 'bye' }); stop(); board = null; s = blank(); emit();
+      // 無効試合から出るときは罰を付けず、bye も送らない(古い版の相手に「相手が抜けた」の勝ちを渡さない)
+      if (s && s.phase === 'playing') penalize(); if (s && socket && s.phase !== 'void') send({ t: 'bye' }); stop(); board = null; s = blank(); emit();
     },
     // 送った招待を覚えておく(入口の画面を閉じても、上の帯と「部屋を出る」で使う)
     noteInvite: (to, rec) => { if (s && rec && s.code === rec.code) set({ invited: { ...s.invited, [to]: rec } }); },
@@ -1056,6 +1084,17 @@ const CARD_PVP = (() => {
       if (!s || s.phase !== 'playing' || !CARD_PVP_STAMPS[i] || Date.now() - s.chatAt < CARD_PVP_CHAT_GAP_MS) return false;
       s = { ...s, chatAt: Date.now() }; send({ t: 'chat', i });
       if (isHost()) cardPvpWatchHost().say({ p: 0, x: CARD_PVP_STAMPS[i], sp: true });
+      return true;
+    },
+    // 絵のスタンプ(2026-11-11)。言葉が定型と同じなら番号 i で、ちがえば言葉 x で送り、顔と言葉の番号を添える(古い版には言葉だけが出る)
+    stamp: (x) => {
+      if (!s || s.phase !== 'playing' || !x || !multiStampCleanFace(x.f) || !multiStampCleanWord(x.w) || Date.now() - s.chatAt < CARD_PVP_CHAT_GAP_MS) return false;
+      const text = cardChatClean((multiStampWord(x.w) || {}).text || '');
+      if (!text) return false;
+      const i = CARD_PVP_STAMPS.indexOf(text);
+      s = { ...s, chatAt: Date.now() };
+      send({ t: 'chat', ...(i >= 0 ? { i } : { x: text }), sf: x.f, sw: x.w });
+      if (isHost()) cardPvpWatchHost().say({ p: 0, x: text, sp: true });
       return true;
     },
     // 自由文のコメント(CardChatPanel が CARD_CHAT.check を通してから呼ぶ)。観戦の人にも見せる
@@ -1200,6 +1239,18 @@ const cardPvpPhrases = (text) => String(text).split(/(?<=、)/).map((x, i) => <s
 // onReward(result) … 確かめが済んだら1回だけ呼ぶ(84 が保存して { point, loops, quick, saved } を返す)。確かめで無効になった試合は呼ばない
 // assistant … 結果の画面に立ち絵を出す自分の助手(84 の topAssistant)/ point … いまのビートP
 // onAssistant … いまは使わない(だれとでもは待ち続ける。呼ぶ側との形を変えないために受けておく)/ rankSend … 強さの点数へ届けてよいか(公開後のふつうの入口だけ。84→60-app の rank.send)
+// 無効試合の窓(2026-11-08 ソランド)。対戦の画面(84)と、結果を出したあとの部屋の画面の両方で同じものを出す。onExit … 「試合を終える」(入口へ・罰なし)
+const CardPvpVoidDialog = ({ onExit }) => (
+  <div data-card-pvp-void role="dialog" aria-modal="true" aria-labelledby="mh-card-pvp-void-title" className="fixed inset-0 flex items-center justify-center overflow-y-auto p-4"
+    style={{ ...(typeof cardSafePad === 'function' ? cardSafePad('1rem') : {}), zIndex: MODAL_Z.dialog + 200, backgroundColor: 'rgba(2,6,23,0.88)' }}>
+    <div className="w-full max-w-sm rounded-2xl border border-rose-300/40 bg-slate-900 p-5 text-center shadow-2xl">
+      <p id="mh-card-pvp-void-title" className="text-[17px] font-black text-rose-100">この試合は続けられません</p>
+      <p className="mt-3 text-left text-[13px] font-bold leading-relaxed text-slate-200 [word-break:keep-all]">通信のずれで、<wbr/>相手と場が<wbr/>合わなく<wbr/>なりました。<wbr/>この試合は<wbr/>記録に<wbr/>残さずに<wbr/>終わります。<wbr/>ビートPと<wbr/>強さの点数は、<wbr/>増えも<wbr/>減りも<wbr/>しません。</p>
+      <button type="button" data-card-pvp-void-exit onClick={() => { Audio_.fgSe.tap(); onExit(); }}
+        className="mh-button mt-4 min-h-[52px] w-full rounded-2xl bg-amber-400 font-black text-slate-950 active:scale-[.98]">試合を終える</button>
+    </div>
+  </div>
+);
 const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], onStart, onBack, onStepAway = null, onPickDeck = null, onReward, assistant = null, point = null, onAssistant = null, rankSend = false, onOpenReplay = null, replayHas = null }) => {
   const [room, setRoom] = useState(() => CARD_PVP.get());
   const [code, setCode] = useState('');
@@ -1241,6 +1292,17 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
     return () => { alive = false; clearInterval(t); };
   }, [inviteOpen, roster]);
   const invited = room.invited || {}; // 送った招待(部屋の側に覚えておく。入口を閉じても、上の帯と「部屋を出る」で使う)
+  const [linkShared, setLinkShared] = useState(false);   // 招待リンクを送った直後の「コピーした!」
+  const shareRoomLink = async () => {
+    const url = mhRoomLinkUrl('card', room.code);
+    const text = `MFバトルカードで対戦しよう! 部屋の合言葉: ${room.code}${url ? `\n下のリンクを押すと、この部屋に入れるよ\n${url}` : ''}`;
+    try {
+      if (navigator.share) await navigator.share({ text });
+      else if (navigator.clipboard) await navigator.clipboard.writeText(text);
+      setLinkShared(true);
+      setTimeout(() => setLinkShared(false), 2000);
+    } catch (_) { /* 共有をやめたときは何もしない */ }
+  };
   const [inviteNext, setInviteNext] = useState('');   // 入口で選んだ相手。部屋ができて合言葉が出たら送る
   const sentRows = useCardPvpSentRows(room);           // 送った招待の、表の今のようす(断られたかを見る)
   // 観戦(94-card-spectate.jsx): 「観戦する」で対戦中のフレンドの一覧を開き、「見る」で観戦の画面へ
@@ -1349,6 +1411,11 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   // ---- 結果(助手と対戦の結果の画面と同じ形: 立ち絵・もらったビートP・クイック周回・いまのビートP) ----
   // ★立ち絵の横は、助手の台詞ではなく結果の文(マルチ対戦の結果の台詞は、まだ作っていない。台詞は社長が先に読む決まり)
   if (historyOpen && room.phase === 'idle' && typeof CardPvpHistory === 'function') return <CardPvpHistory onBack={() => setHistoryOpen(false)} onOpenReplay={onOpenReplay} replayHas={replayHas} meIcon={meIcon} meName={profile.name}/>;
+  // 無効試合(結果を出したあとに、相手から「続けられない」が届いた)。「試合を終える」で入口へ(杯の試合なら杯の画面へ)
+  if (room.phase === 'void') {
+    const exitVoid = () => { const wasCup = !!CARD_PVP.get().cup; CARD_PVP.leave(); if (wasCup) onBack(true); };
+    return <div data-mh-screen data-card-pvp="void" className={SCREEN_SHELL_CLASS}><CardPvpVoidDialog onExit={exitVoid}/></div>;
+  }
   if (room.phase === 'over' && r) {
     // 「もう1戦」を出さない試合: 相手が部屋を出た・抜けた・時間切れ(相手がもういない・離れているので、待ち続けてしまう)
     const noAgain = !!room.cup || room.foeGone || r.reason === '相手が抜けた' || r.reason === '相手の時間切れ' || r.reason === '通信が切れた';
@@ -1534,6 +1601,9 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
           <div className="rounded-2xl border border-sky-300/40 bg-sky-500/10 p-4 text-center">
             <p className="text-[13px] font-bold text-sky-100">合言葉</p>
             <p data-card-pvp-room className="my-1 text-[40px] font-black tracking-[.3em] text-white">{room.code}</p>
+            {room.phase === 'waiting' && !room.foe && !room.guest && (
+              <button type="button" data-card-pvp-share className={`${btn} mb-1 border border-sky-300/50 bg-sky-800 text-white`} onClick={() => { Audio_.fgSe.tap(); void shareRoomLink(); }}>{linkShared ? 'コピーした!' : 'リンクをフレンドに送る'}</button>
+            )}
             <p className="text-[13px] font-bold text-slate-200">{room.phase === 'connecting' ? 'つないでいます…' : room.foe ? (room.foe.aw ? `${room.foe.name}さんが部屋に戻るのを待っています…` : `${room.foe.name}さんが来ました。始めます…`) : room.guest ? '部屋に入っています…' : 'この合言葉をフレンドに伝えて、待っています…'}</p>
             {/* 自分の部屋は、開いたままほかの画面へ出られる(2026-10-30 ソランド・ビートの #4204 と同じ案A)。相手が来たら上の帯(CardMultiAwayBar)で知らせる */}
             {room.phase === 'waiting' && !room.foe && !room.guest && onStepAway && (<>
@@ -1587,7 +1657,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
 // 検査のときだけ: 自分の番を、コンピューターの考え方で自動で打つ(window.__mhCardPvpAuto が真のときだけ。ふだんは何もしない)。
 // 2台のブラウザを最後まで戦わせる検査 tools/card/card-pvp-browser-check.js が使う。対戦の画面(84)の CardBattleBoard から呼ぶ
 const useCardPvpAuto = (db, pvp, st, step, paused) => useEffect(() => {
-  if (!pvp || paused || typeof window === 'undefined' || !window.__mhCardPvpAuto || st.winner !== null || cardPvpDecider(st) !== 0) return undefined;
+  if (!pvp || paused || typeof window === 'undefined' || !window.__mhCardPvpAuto || st.winner !== null || cardPvpDecider(st) !== 0 || CARD_PVP.get().phase !== 'playing') return undefined; // 無効試合(void)の窓のあいだは打たない
   const t = setTimeout(() => {
     // 検査のときだけ: ガッツの段で、window.__mhCardPvpAutoBack の回数だけ「攻撃に戻る」を打つ(打てた回数を __mhCardPvpBackDone に数える)
     if (st.phase === 'guts' && !st.pending && Number(window.__mhCardPvpAutoBack) > 0 && step({ type: 'backToAttack' })) {
@@ -1627,7 +1697,7 @@ const useCardPvpClock = (pvp, st, step) => {
   }
   const left = pvp ? cardPvpLimitMs(st) - (now - startRef.current - pauseRef.current.ms) : 0;
   useEffect(() => {
-    if (!pvp || st.winner !== null) return;
+    if (!pvp || st.winner !== null || CARD_PVP.get().phase !== 'playing') return; // 無効試合(void)・終わったあとは、時計で手を進めない
     if (decider === 0 && st.phase === 'guts' && !st.pending && gutsRef.current === st.turn) { gutsRef.current = -1; CARD_PVP.auto(() => step({ type: 'guts', hand: [] })); return; }
     if (decider === 0 && left <= 0 && firedRef.current !== key) {
       firedRef.current = key;
@@ -1761,7 +1831,7 @@ const CARD_CHAT = (() => {
       const text = cardChatMask(cardChatClean(e.text));
       if (!text || s.muted.has(e.key)) return false;
       if (!e.stamp && e.kind !== 'me' && !prefs.free) return false;
-      const row = { id: s.seq + 1, key: String(e.key || ''), name: cardChatMask(cardChatClean(e.name, CARD_PVP_NAME_MAX)) || 'ブリーダー', text, stamp: !!e.stamp, kind: e.kind || 'watch', at: Date.now() };
+      const row = { id: s.seq + 1, key: String(e.key || ''), name: cardChatMask(cardChatClean(e.name, CARD_PVP_NAME_MAX)) || 'ブリーダー', text, stamp: !!e.stamp, kind: e.kind || 'watch', at: Date.now(), ...(e.sf && e.sw ? { sf: e.sf, sw: e.sw } : {}) };
       s = { ...s, seq: row.id, list: [...s.list, row].slice(-CARD_CHAT_LOG_MAX) };
       emit();
       return true;
@@ -1848,6 +1918,14 @@ const CardChatPanel = ({ mode = 'pvp', onClose }) => {
     setWhy('');
     if (!stamp) setText('');
   };
+  // 絵のスタンプ(2026-11-11)。対戦中だけ送れる(観戦の人は言葉の定型だけ)。1試合の回数には数えない(定型と同じ)
+  const [stampEdit, setStampEdit] = useState(false);
+  const sendStamp = (x) => {
+    if (!CARD_PVP.stamp(x)) { setWhy('いまは送れません'); return false; }
+    CARD_CHAT.add({ key: 'me', name: 'あなた', text: x.text, stamp: true, kind: 'me', sf: x.f, sw: x.w });
+    setWhy('');
+    return true;
+  };
   const left = Math.max(0, (CARD_CHAT_LIMIT[mode] || 20) - c.sent);
   const tone = (k) => (k === 'me' ? 'text-sky-200' : k === 'watch' ? 'text-violet-300' : 'text-amber-200');
   const toggle = (k, on) => (
@@ -1869,13 +1947,15 @@ const CardChatPanel = ({ mode = 'pvp', onClose }) => {
               <div key={x.id}>
                 <button type="button" data-card-chat-line={x.kind} onClick={() => setPick(x.kind === 'me' ? null : (pick === x.id ? null : x.id))}
                   className="block w-full border-b border-white/5 py-1 text-left text-[13px] leading-snug" style={JA_WRAP_STYLE}>
-                  <b className={`mr-1.5 text-[11px] ${tone(x.kind)}`}>{x.name}{x.kind === 'watch' ? '(観戦)' : ''}</b>{x.text}
+                  <b className={`mr-1.5 text-[11px] ${tone(x.kind)}`}>{x.name}{x.kind === 'watch' ? '(観戦)' : ''}</b>{x.sf ? <MultiStampView f={x.sf} w={x.sw} text={x.text} size={56} className="align-middle" /> : x.text}
                 </button>
                 {pick === x.id && <button type="button" data-card-chat-mute={x.key} onClick={() => { CARD_CHAT.mute(x.key); setPick(null); }}
                   className="my-1 min-h-[34px] w-full rounded-lg border border-rose-300/50 bg-rose-500/15 text-[12px] font-black text-rose-100">🔇 {x.name}さんのコメントを消す(この{mode === 'watch' ? '観戦' : '試合'}のあいだ)</button>}
               </div>
             ))}
         </div>
+        {mode === 'pvp' && <MultiStampPalette onSend={sendStamp} onEdit={() => setStampEdit(true)} cols={6} className="mb-2 max-h-[24vh] overflow-y-auto" />}
+        {stampEdit && <MultiStampEditor onClose={() => setStampEdit(false)} />}
         <div className="mb-2 grid grid-cols-3 gap-1">
           {CARD_PVP_STAMPS.map((t, i) => <button key={t} type="button" data-card-chat-stamp={i} onClick={() => send(t, i)} className="min-h-[36px] rounded-lg bg-white/10 px-1 text-[12px] font-bold active:scale-[.97]">{t}</button>)}
         </div>

@@ -255,7 +255,7 @@ const CARD_PACK_ART_IMGS = Object.freeze({
   p5: Object.freeze({ full: "images/card-battle/packs/p5.webp?v=2548b7e299b5", thumb: "images/card-battle/packs/p5-thumb.webp?v=ab2f8539674c" }),
   p6: Object.freeze({ full: "images/card-battle/packs/p6.webp?v=a39cb36712e9", thumb: "images/card-battle/packs/p6-thumb.webp?v=3a7b7941c6b1" }),
   p7: Object.freeze({ full: "images/card-battle/packs/p7.webp?v=70e172f70b48", thumb: "images/card-battle/packs/p7-thumb.webp?v=7240baa2f783" }),
-  p8: Object.freeze({ full: "images/card-battle/packs/p8.webp?v=b2300408401e", thumb: "images/card-battle/packs/p8-thumb.webp?v=90032536da24" }),
+  p8: Object.freeze({ full: "images/card-battle/packs/p8.webp?v=a9f1a993b777", thumb: "images/card-battle/packs/p8-thumb.webp?v=7f03ed9e117b" }),
 });
 const HYBRID_MONSTER_IMGS = Object.freeze({
   'C-010': HYBRID_C010_IMG,
@@ -307,6 +307,8 @@ const HYBRID_MONSTER_IMGS = Object.freeze({
   'C-070': SPOOKY_IMG, 'C-070S': SPOOKY_IMG, 'C-070V': SPOOKY_IMG,
   // キュービ種の混血オリヒメ(番号 C-951・カードの絵は C-K02。メイン キュービ・サブ ？？？。2026-11-04 新血統キュービ)。本編の立ち絵をそのまま使う
   'C-951': ORIHIME_IMG, 'C-951S': ORIHIME_IMG, 'C-951V': ORIHIME_IMG, // キラ・別絵キラ(2026-11-05)も同じ立ち絵
+  // ウンディーネ種の混血スネグーラチカ(番号 C-952・カードの絵は C-U02。メイン ウンディーネ。2026-11-11)。本編の立ち絵をそのまま使う(オリヒメと同じ)。キラ・別絵キラも同じ
+  'C-952': SNEGUROCHKA_IMG, 'C-952S': SNEGUROCHKA_IMG, 'C-952V': SNEGUROCHKA_IMG,
 });
 
 const MOCCHI_ICON = MOCCHI_IMG;
@@ -345,6 +347,9 @@ const TIGER_FACE_ICON = "images/monster-icons/face/tiger.png?v=1557ff181186";
 const PIXIE_FACE_ICON = "images/monster-icons/face/pixie.png?v=d33b92e39fa0";
 const MIA_FACE_ICON = "images/monster-icons/face/mia.png?v=35b65c9e07c6";
 const PANDORA_FACE_ICON = "images/monster-icons/face/pandora.png?v=2f1277f1d3bb";
+// イベント「パンドラとふたつの翼」第7話で、悪魔・天使のパンドラが話すときの顔(2026-11-08。今の顔と同じ寄り方で立ち絵から切り抜き)
+const PANDORA_DEVIL_FACE_ICON = "images/monster-icons/face/pandora-devil.png?v=7fe2b50d9912";
+const PANDORA_ANGEL_FACE_ICON = "images/monster-icons/face/pandora-angel.png?v=4b62f08ab824";
 const SUEZO_FACE_ICON = "images/monster-icons/face/suezo.png?v=696938ca7d63";
 const GOLEM_FACE_ICON = "images/monster-icons/face/golem.png?v=8ef71840d1d5";
 const MONOL_FACE_ICON = MONOL_ICON;
