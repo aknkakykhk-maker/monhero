@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 458b554e490c37d0
+// source-sha256: bee1901b9ec55470
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -106262,7 +106262,7 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       idle: 1,
       sleep: 1,
       read: 0,
-      battle: 1
+      battle: 3
     },
     slot: {
       noon: {
@@ -106286,7 +106286,7 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       idle: 2,
       sleep: 1,
       read: 1,
-      battle: 1.5
+      battle: 4.5
     },
     slot: {
       morning: {
@@ -106310,7 +106310,7 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       idle: 1,
       sleep: 1,
       read: 0,
-      battle: 1.5
+      battle: 4.5
     },
     slot: {
       evening: {
@@ -106334,7 +106334,7 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       idle: 2,
       sleep: 4,
       read: 0,
-      battle: 0.5
+      battle: 1.5
     },
     slot: {
       noon: {
@@ -106359,7 +106359,7 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       idle: 1,
       sleep: 1,
       read: 0,
-      battle: 3
+      battle: 9
     },
     slot: {
       morning: {
@@ -106383,7 +106383,7 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       idle: 1,
       sleep: 1,
       read: 3,
-      battle: 1
+      battle: 3
     },
     slot: {
       afternoon: {
@@ -106406,11 +106406,12 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       idle: 1,
       sleep: 1,
       read: 1,
-      battle: 2
+      battle: 6
     },
     slot: {
       night: {
-        cards: 2
+        cards: 2,
+        battle: 0.5
       },
       evening: {
         cards: 1.3
@@ -106430,7 +106431,7 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       idle: 1,
       sleep: 1,
       read: 1,
-      battle: 3
+      battle: 9
     },
     slot: {
       morning: {
