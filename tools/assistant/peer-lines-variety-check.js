@@ -79,7 +79,7 @@ const TRIO_KINDS = ['trio', 'mend3', 'jealous'];
 const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'];
 const FACES = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];
 const KEYS = {
-  place: ['home', 'plaza', 'cafe', 'studio', 'ranch', 'cardroom', 'library', 'market', 'hill', 'garden'],
+  place: ['home', 'plaza', 'cafe', 'studio', 'ranch', 'cardroom', 'library', 'market', 'hill', 'garden', 'battle'],
   mood: ['happy', 'lonely', 'restless', 'sulky', 'sleepy', 'eager'], why: ['lonely', 'mypace', 'distance'],
   doing: ['snack', 'practice', 'training', 'cards', 'walk', 'idle', 'sleep', 'read'], lv: ['1-3', '4-6', '7-10', '1-4', '5-10'],
   air: ['normal', 'after', 'makeup'], answer: ['glad', 'decline', 'shy'], line: ['scene', 'feel', 'talk', 'woken'],

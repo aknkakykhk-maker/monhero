@@ -1,3 +1,4 @@
+// run-checks-timeout: 900  (画面を何度も開くので、ふつうの上限では足りない。2026-11-11 クラフトくんの切り分け)
 // 助手ライフ(助手たちの家・段階1 2026-11-07)の画面と HOME の施設の顔を、実際に開いて確かめる。公開の印 assistantLife はページの中でだけ立てる(本体の印は偽のまま)。
 //   node tools/assistant/assistant-life-browser-check.js            検査
 //   LIFE_BASE=https://aknkakykhk-maker.github.io/monhero/ で本番の版を見る(公開後の確かめ)
