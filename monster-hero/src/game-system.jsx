@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 505b00fbf1301246
+// generated-sha256: 6520eef5dacf2e1e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9704,8 +9704,8 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantLifeRoomEdit: true, // 助手の部屋の模様替え(家具を指で動かす・大きさ・向き・色・前後・おまかせ)。2026-11-11 社長「この形で進める」「この文で」・ミハリ最終確認 OK(56-assistant-life-roomedit.jsx)
   // 助手1人に贈る(2026-11-08 社長 SOLO-GIFT-PLAN.md ❶B ❷A ❸A ❹A ❺A)。台詞・止め絵・更新履歴の「この文で」・ミハリの確認のあとで真にする
   assistantLifeSolo: true, // 2026-11-08 社長「この文で公開」
-  assistantLifeTopHouse: false, // 助手ライフを開いた最初に家の断面図(8部屋を横4×2段)・出かけ先の丸・得の帯の「今日・次」を▼にたたむ。2026-11-11 社長「この形で」(案A)。ミハリ確認の前は偽(56-assistant-life-house.jsx)
-  assistantLifeDailyScene: false, // できごとを小さな場面に(2人の掛け合い→2択→返事・ときどき珍しいできごと)。台詞(LINES-SPEC.md)が入るまで偽(56-assistant-life-ux.jsx)
+  assistantLifeTopHouse: true, // 助手ライフを開いた最初に家の断面図(8部屋を横4×2段)・出かけ先の丸・得の帯の「今日・次」を▼にたたむ。2026-11-11 社長「この形で」(案A)。更新履歴「この文で」(社長)・ミハリ3・Fable の最終確認のあと真(56-assistant-life-house.jsx)
+  assistantLifeDailyScene: true, // できごとを小さな場面に(2人の掛け合い→2択→返事・ときどき珍しいできごと)。台詞はココロ3(ひとこと96・場面6・珍しい6)(56-assistant-life-ux.jsx)
   // 助手ライフのフレンドの家との行き来(2026-11-08 社長・助手部オトズレ。設計 docs/progress/assistant-peer/FRIEND-VISIT-PLAN.md)。
   //   表 assistant_life_friend_* を流し、画面を撮って確かめ、社長の「この文で」が出たら真にする。偽のあいだは通信もしない(56-assistant-life-friend.jsx)
   assistantLifeFriend: true, // 2026-11-08 社長「この文で」・表を流した(窓口)
