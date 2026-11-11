@@ -391,7 +391,17 @@ const LEVEL_OVERRIDES=Object.freeze({
   // Journey MASTER(36)・ハルカ MASTER(33)より少なく、ビッグブリッヂの死闘 MASTER(34)より多い → 35。
   // 式が高く出たのは「同時押し」224・「押さえながら叩く」110 を1つずつ重く数えるため(この曲の同時押しは左右に離れた両手で取る形、
   // 押さえているのはゆっくり動く長いスライドが多く、数ほど難しくない)
-  sheriruth:Object.freeze({MASTER:35}),
+  // 2026-11-11 社長「Lv. のずれは数字に寄せる」(公開中の譜面の見直し・フメン3): 譜面は変えず、表示を点検(rhythm-chart-audit.js)の「数字からの見込み」へ。35→39
+  sheriruth:Object.freeze({MASTER:39}),
+  // 同じ見直しで、表示の Lv. が数字からの見込みと5前後ずれていた7譜面を見込みに寄せた(ヒューマノイド MASTER は社長が 11/07 に決めた値なので除く)。
+  //   見込みは作り直し(40曲)のあとで測り直した値。FREEDOM DiVE↓・ANiMA は作り直した譜面の式の値(48・47)から
+  grievous_lady:Object.freeze({MASTER:43}),
+  freedom_dive:Object.freeze({MASTER:41}),
+  anima:Object.freeze({MASTER:40}),
+  rose_short:Object.freeze({MASTER:28}),
+  only_my_railgun:Object.freeze({MASTER:23}),
+  close_to_your_heart:Object.freeze({MASTER:23}),
+  journey:Object.freeze({EXPERT:30}),
   // 2026-10-13 夜 社長「(Against My Own Shadow の)マスターの被りって、さっき決めたルール的にアウトだよね?」→ MASTER と EXPERT の押さえている帯の中のノーツを
   // 帯の外へ置き直した(時刻・幅・ノーツ数は同じ)。帯から外すと横の動きが少し増え、EXPERT の式の値が 22.44→22.58 で丸めると 23 になる。
   // どこへ置いても 22.5 を越える(1か所ずつ候補を比べても 22.53)。直したのは押せなかった所なので、表示は前の Lv.22 のまま(社長「Lv. は変えない」)

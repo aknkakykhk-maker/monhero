@@ -449,6 +449,9 @@
     "EASY": "smooth",
     "NORMAL": "smooth",
     "HARD": "smooth"
+   },
+   "sustainScale": {
+    "MASTER": 0.2
    }
   },
   "only_my_railgun": {

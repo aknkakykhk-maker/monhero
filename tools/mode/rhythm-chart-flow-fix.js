@@ -2,7 +2,7 @@
 //
 //   node tools/mode/rhythm-chart-flow-fix.js --song rebellion --difficulty MASTER            # 何件減るかを出すだけ(書かない)
 //   node tools/mode/rhythm-chart-flow-fix.js --song rebellion --difficulty MASTER --write    # 目印の内側を書き換える
-//   node tools/mode/rhythm-chart-flow-fix.js --song sheriruth --difficulty MASTER --mode must  # 押せない所だけ直す(交差・届きにくいは動かさない)
+//   node tools/mode/rhythm-chart-flow-fix.js --song sheriruth --difficulty MASTER --mode must  # 押せない所・帯の中だけ直す(交差・届きにくいは動かさない)
 //
 // 【何を見るか】横持ちの親指2本のモデル(rhythm-ref-tiers.js の thumbCheck)の「押せない」「指が交差」「届きにくい(真ん中を越える)」「忙しい」と、
 //   手の決まり(rhythm-chart-hand-rules.js)の「同じ側の押し始めが90ms未満」「真ん中で左右が同じ所」「地上の帯のすぐ横」「同時押しが隣り合う」「帯の中」「水平クロス」、両手のシミュレートの「押せない」。
@@ -139,7 +139,7 @@ if(require.main===module&&argOf('--track')){
   //   参考動画から作った譜面(Sheriruth)を作り直さずに直すため。付けなければ今までどおり全部減らす形
   const songMode=argOf('--mode');
   if(songMode&&songMode!=='must')throw new Error('--song で使える --mode は must だけ');
-  const moved=flowFix(notes,songMode==='must'?{beat,flowWeight:0,kinds:new Set(['impossible'])}:{beat});
+  const moved=flowFix(notes,songMode==='must'?{beat,heldBand:true,flowWeight:0,kinds:new Set(['impossible'])}:{beat});
   const after=counts(notes,THUMB_PROFILES.landscape,beat);
   console.log(`${songId}/${difficulty}${songMode?`(${songMode})`:''} ノーツ ${notes.length} ・ 動かした ${moved}か所`);
   for(const k of Object.keys(before))console.log(`  ${k} ${before[k]} → ${after[k]}`);
