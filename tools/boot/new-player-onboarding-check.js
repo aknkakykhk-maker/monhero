@@ -105,7 +105,7 @@ check('決定するとそのまま村の案内へ続く',
 // ここが固定のままだと、ききを選んだのにみゅあが案内してしまう
 check('あいさつ・村の案内・はじめての設定は選んだ助手のもの',
   has('assistantIntroPages(selectedAssistantId)')
-    && has('assistantTutorialPages(selectedAssistantId)')
+    && has('assistantTutorialPages(selectedAssistantId')
     && has('findAssistantOnboarding(hasName,hasIcon,selectedAssistantId)'));
 check('台本を固定の助手のものへ書き戻していない',
   !/\(\(typeof ASSISTANT_INTRO!=='undefined'/.test(source)
