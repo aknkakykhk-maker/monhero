@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4659c451be60e844
+// generated-sha256: 83f5ced81952b028
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -55343,6 +55343,43 @@ function RhythmMultiAloneHint({ alone, onLeave }) {
 //   承認済みのフレンドからの3分以内の招待だけ(今のモードえらびと同じ決まり)。部屋に入っているあいだは出さない。
 //   「入る」は、受けた招待を rhythmMultiPendingInvite に置いて onAccept(モンヒロビートのマルチを開く)を呼ぶ。開いた画面がそれを読んで入る
 let rhythmMultiPendingInvite = null;
+// ゲームの外へ送る「部屋に入れるリンク」(2026-11-11 社長「マルチ関係でゲーム外に招待する機能があるけどうまく機能してない？」)。
+//   ビート: ?beatRoom=コード / カード: ?cardRoom=コード。開いたときは 60-app が引数を読んで消し、新しいキー(MH_ROOM_LINK_KEY)に
+//   預けて、起動の流れ・はじめての案内が済んだHOMEで部屋へ入る。リンクを送る・読む道具はここに1か所だけ置く(カードの 91 もここを使う)
+const MH_ROOM_LINK_KEY = 'mh_pending_room_link_v1';
+const MH_ROOM_LINK_PARAMS = Object.freeze({ beat: 'beatRoom', card: 'cardRoom' });
+const MH_ROOM_LINK_TTL_MS = 3 * 60 * 60 * 1000;
+const MH_PRODUCTION_URL = 'https://aknkakykhk-maker.github.io/monhero/';
+const mhRoomLinkUrl = (kind, code) => {
+  const param = MH_ROOM_LINK_PARAMS[kind];
+  const c = rhythmMultiNormalizeCode(code);
+  if (!param || !c) return '';
+  let base = MH_PRODUCTION_URL;
+  try { if (typeof window !== 'undefined' && /^https?:$/.test(window.location.protocol)) base = `${window.location.origin}${window.location.pathname}`; } catch (_) { /* 本番のURLを使う */ }
+  return `${base}?${param}=${encodeURIComponent(c)}`;
+};
+const mhRoomLinkFromSearch = (search) => {
+  const text = String(search || '');
+  for (const kind of Object.keys(MH_ROOM_LINK_PARAMS)) {
+    const m = text.match(new RegExp(`[?&]${MH_ROOM_LINK_PARAMS[kind]}=([^&#]*)`));
+    if (!m) continue;
+    let raw = m[1];
+    try { raw = decodeURIComponent(raw); } catch (_) { continue; }
+    const code = rhythmMultiNormalizeCode(raw);
+    if (code) return { kind, code };
+  }
+  return null;
+};
+// 預けた値の読み直し。壊れている・古い(3時間より前)・未来の時刻なら null
+const mhNormalizeRoomLink = (v, now = Date.now()) => {
+  if (!v || typeof v !== 'object' || !MH_ROOM_LINK_PARAMS[v.kind]) return null;
+  const code = rhythmMultiNormalizeCode(v.code);
+  const at = Number(v.at);
+  if (!code || !Number.isFinite(at) || at > now + 60000 || now - at > MH_ROOM_LINK_TTL_MS) return null;
+  return { kind: v.kind, code, at };
+};
+// リンクから来た人をビートのマルチへ入れる: 受けた招待と同じ入り口(HOME の「入る」と同じ)に預ける
+const mhBeatRoomLinkRequest = (code) => { rhythmMultiPendingInvite = { roomCode: rhythmMultiNormalizeCode(code), link: true }; };
 // 自分で抜けた部屋(RHYTHM_MULTI.leave が書く)。10分のあいだだけ「↩ さっきの部屋に戻る」を出す
 let rhythmMultiLastRoom = null;
 const RHYTHM_MULTI_REJOIN_MS = 10 * 60 * 1000;
@@ -56437,8 +56474,21 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     const pending = rhythmMultiPendingInvite;
     if (!pending) return;
     rhythmMultiPendingInvite = null;
-    if (!RHYTHM_MULTI.view()) joinFromInvite(pending);
+    if (!RHYTHM_MULTI.view()) { joinFromInvite(pending); if (pending.link) setLinkWatch(pending.roomCode); }
   }, []);
+  // リンクから入った部屋に、数秒たってもだれもいない・つながらないときは、分かる言葉で知らせる(閉じた・期限切れの部屋へも入れてしまうため)
+  const [linkWatch, setLinkWatch] = React.useState('');
+  React.useEffect(() => {
+    if (!linkWatch) return undefined;
+    const timer = setTimeout(() => {
+      setLinkWatch('');
+      const v = RHYTHM_MULTI.view();
+      if (!v || v.code !== linkWatch || v.full) return;
+      if (v.status !== 'open') { setMessage('部屋へつなげませんでした。電波のよい所で、もう一度リンクを開いてください'); return; }
+      if (v.members.filter((m) => !m.cpu).length <= 1) setMessage('この部屋にはだれもいませんでした。もう閉じたか、期限が切れたようです。送ってくれた人に、新しいリンクをもらってください');
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [linkWatch]);
   // 助手ライフから「モンビーへ誘う」で開いたとき。部屋に入っていなければ、自分だけのプライベートの部屋を作る(呼ぶのは入れてから)
   React.useEffect(() => {
     if (typeof rhythmAssistSessionPeekInvite !== 'function' || !rhythmAssistSessionPeekInvite() || RHYTHM_MULTI.view()) return;
@@ -56594,9 +56644,11 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     if (modeSelect) { if (inRoom && onRoomEntered) onRoomEntered(); return; }
     if (!inRoom && !searching && onBack) onBack();
   }, [inRoom, !!searching]);
+  // 「フレンドに送る」: 押すとゲームが開いてこの部屋に入れるリンクを送る(2026-11-11)。コードも添える(ホーム画面のアプリでは、コードを打って入れる)
   const shareCode = async () => {
     if (!view) return;
-    const text = `モンヒロビートで協力ライブしよう! 部屋コード: ${view.code}`;
+    const url = mhRoomLinkUrl('beat', view.code);
+    const text = `モンヒロビートの「みんなでライブ」で一緒に遊ぼう! 部屋コード: ${view.code}${url ? `\n下のリンクを押すと、この部屋に入れるよ\n${url}` : ''}`;
     try {
       if (navigator.share) await navigator.share({ text });
       else if (navigator.clipboard) await navigator.clipboard.writeText(text);
@@ -87885,6 +87937,17 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
     return () => { alive = false; clearInterval(t); };
   }, [inviteOpen, roster]);
   const invited = room.invited || {}; // 送った招待(部屋の側に覚えておく。入口を閉じても、上の帯と「部屋を出る」で使う)
+  const [linkShared, setLinkShared] = useState(false);   // 招待リンクを送った直後の「コピーした!」
+  const shareRoomLink = async () => {
+    const url = mhRoomLinkUrl('card', room.code);
+    const text = `MFバトルカードで対戦しよう! 部屋の合言葉: ${room.code}${url ? `\n下のリンクを押すと、この部屋に入れるよ\n${url}` : ''}`;
+    try {
+      if (navigator.share) await navigator.share({ text });
+      else if (navigator.clipboard) await navigator.clipboard.writeText(text);
+      setLinkShared(true);
+      setTimeout(() => setLinkShared(false), 2000);
+    } catch (_) { /* 共有をやめたときは何もしない */ }
+  };
   const [inviteNext, setInviteNext] = useState('');   // 入口で選んだ相手。部屋ができて合言葉が出たら送る
   const sentRows = useCardPvpSentRows(room);           // 送った招待の、表の今のようす(断られたかを見る)
   // 観戦(94-card-spectate.jsx): 「観戦する」で対戦中のフレンドの一覧を開き、「見る」で観戦の画面へ
@@ -88183,6 +88246,9 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
           <div className="rounded-2xl border border-sky-300/40 bg-sky-500/10 p-4 text-center">
             <p className="text-[13px] font-bold text-sky-100">合言葉</p>
             <p data-card-pvp-room className="my-1 text-[40px] font-black tracking-[.3em] text-white">{room.code}</p>
+            {room.phase === 'waiting' && !room.foe && !room.guest && (
+              <button type="button" data-card-pvp-share className={`${btn} mb-1 border border-sky-300/50 bg-sky-800 text-white`} onClick={() => { Audio_.fgSe.tap(); void shareRoomLink(); }}>{linkShared ? 'コピーした!' : 'リンクをフレンドに送る'}</button>
+            )}
             <p className="text-[13px] font-bold text-slate-200">{room.phase === 'connecting' ? 'つないでいます…' : room.foe ? (room.foe.aw ? `${room.foe.name}さんが部屋に戻るのを待っています…` : `${room.foe.name}さんが来ました。始めます…`) : room.guest ? '部屋に入っています…' : 'この合言葉をフレンドに伝えて、待っています…'}</p>
             {/* 自分の部屋は、開いたままほかの画面へ出られる(2026-10-30 ソランド・ビートの #4204 と同じ案A)。相手が来たら上の帯(CardMultiAwayBar)で知らせる */}
             {room.phase === 'waiting' && !room.foe && !room.guest && onStepAway && (<>
@@ -99969,6 +100035,42 @@ function MonsterHeroGame() {
     setPendingFriendCode('');
     openFriends({ code: pendingFriendCode });
   }, [pendingFriendCode, friendsActive, bootPhase, gameState, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, rhythmEventStoryPending, updateGuideQueue]);
+  // 部屋の招待リンク(?beatRoom=コード / ?cardRoom=コード・2026-11-11)。引数は読んだらすぐURLから消し(履歴に残さない・二度入らない)、
+  // 新しいキー(MH_ROOM_LINK_KEY)に預ける。入るのは、起動の流れ・はじめての案内が済んだHOMEに着いてから(?friend= と同じ条件)。
+  // はじめての人は、最初の案内(チュートリアルなど)が全部済むまで預かったまま待つ。3時間たったら捨てる
+  const [pendingRoomLink, setPendingRoomLink] = useState(null);
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    let alive = true;
+    (async () => {
+      let link = null;
+      try { link = mhRoomLinkFromSearch(window.location.search); } catch (error) { link = null; }
+      if (link) {
+        try {
+          const url = new URL(window.location.href);
+          Object.values(MH_ROOM_LINK_PARAMS).forEach((name) => url.searchParams.delete(name));
+          window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+        } catch (error) { /* URLを直せなくても、部屋には入れる */ }
+        link = { ...link, at: Date.now() };
+        await storeSet(MH_ROOM_LINK_KEY, link, false);
+      } else {
+        link = mhNormalizeRoomLink(await storeGet(MH_ROOM_LINK_KEY, null, false));
+      }
+      if (alive && link) setPendingRoomLink(link);
+    })();
+    return () => { alive = false; };
+  }, []);
+  useEffect(() => {
+    if (!pendingRoomLink || pendingFriendCode) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME' && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null
+      && !eventReplay && !rhythmEventStoryPending && updateGuideQueue.length === 0)) return;
+    const link = pendingRoomLink;
+    setPendingRoomLink(null);
+    void storeSet(MH_ROOM_LINK_KEY, null, false);
+    if (!mhNormalizeRoomLink(link)) return;
+    if (link.kind === 'beat') { mhBeatRoomLinkRequest(link.code); void openRhythmDemo({ to: 'RHYTHM_MULTI' }); }
+    else if (link.kind === 'card' && cardBattleEntryVisible && cardPvpOpen()) { CARD_PVP_JOIN.request(link.code); setCardOrigin('home'); setGameState('CARD_TOP'); }
+  }, [pendingRoomLink, pendingFriendCode, bootPhase, gameState, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, rhythmEventStoryPending, updateGuideQueue]);
   // この起動で一度でも流し始めた会話。二度目を並べないための歯止め(下の useEffect の説明を参照)。
   // 「見た」の記録(rhythmEventStorySeenRef)とは別に持つ。あちらは最後まで見ないと付かない
   const rhythmEventStoryStartedRef = useRef([]);

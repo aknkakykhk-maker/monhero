@@ -1275,6 +1275,17 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
     return () => { alive = false; clearInterval(t); };
   }, [inviteOpen, roster]);
   const invited = room.invited || {}; // 送った招待(部屋の側に覚えておく。入口を閉じても、上の帯と「部屋を出る」で使う)
+  const [linkShared, setLinkShared] = useState(false);   // 招待リンクを送った直後の「コピーした!」
+  const shareRoomLink = async () => {
+    const url = mhRoomLinkUrl('card', room.code);
+    const text = `MFバトルカードで対戦しよう! 部屋の合言葉: ${room.code}${url ? `\n下のリンクを押すと、この部屋に入れるよ\n${url}` : ''}`;
+    try {
+      if (navigator.share) await navigator.share({ text });
+      else if (navigator.clipboard) await navigator.clipboard.writeText(text);
+      setLinkShared(true);
+      setTimeout(() => setLinkShared(false), 2000);
+    } catch (_) { /* 共有をやめたときは何もしない */ }
+  };
   const [inviteNext, setInviteNext] = useState('');   // 入口で選んだ相手。部屋ができて合言葉が出たら送る
   const sentRows = useCardPvpSentRows(room);           // 送った招待の、表の今のようす(断られたかを見る)
   // 観戦(94-card-spectate.jsx): 「観戦する」で対戦中のフレンドの一覧を開き、「見る」で観戦の画面へ
@@ -1573,6 +1584,9 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
           <div className="rounded-2xl border border-sky-300/40 bg-sky-500/10 p-4 text-center">
             <p className="text-[13px] font-bold text-sky-100">合言葉</p>
             <p data-card-pvp-room className="my-1 text-[40px] font-black tracking-[.3em] text-white">{room.code}</p>
+            {room.phase === 'waiting' && !room.foe && !room.guest && (
+              <button type="button" data-card-pvp-share className={`${btn} mb-1 border border-sky-300/50 bg-sky-800 text-white`} onClick={() => { Audio_.fgSe.tap(); void shareRoomLink(); }}>{linkShared ? 'コピーした!' : 'リンクをフレンドに送る'}</button>
+            )}
             <p className="text-[13px] font-bold text-slate-200">{room.phase === 'connecting' ? 'つないでいます…' : room.foe ? (room.foe.aw ? `${room.foe.name}さんが部屋に戻るのを待っています…` : `${room.foe.name}さんが来ました。始めます…`) : room.guest ? '部屋に入っています…' : 'この合言葉をフレンドに伝えて、待っています…'}</p>
             {/* 自分の部屋は、開いたままほかの画面へ出られる(2026-10-30 ソランド・ビートの #4204 と同じ案A)。相手が来たら上の帯(CardMultiAwayBar)で知らせる */}
             {room.phase === 'waiting' && !room.foe && !room.guest && onStepAway && (<>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5bea5ab8d720523d
+// source-sha256: 72a3e9778dea4a21
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -92661,6 +92661,59 @@ function RhythmMultiAloneHint({
   }, "モードえらびへ戻る"));
 }
 let rhythmMultiPendingInvite = null;
+const MH_ROOM_LINK_KEY = 'mh_pending_room_link_v1';
+const MH_ROOM_LINK_PARAMS = Object.freeze({
+  beat: 'beatRoom',
+  card: 'cardRoom'
+});
+const MH_ROOM_LINK_TTL_MS = 3 * 60 * 60 * 1000;
+const MH_PRODUCTION_URL = 'https://aknkakykhk-maker.github.io/monhero/';
+const mhRoomLinkUrl = (kind, code) => {
+  const param = MH_ROOM_LINK_PARAMS[kind];
+  const c = rhythmMultiNormalizeCode(code);
+  if (!param || !c) return '';
+  let base = MH_PRODUCTION_URL;
+  try {
+    if (typeof window !== 'undefined' && /^https?:$/.test(window.location.protocol)) base = `${window.location.origin}${window.location.pathname}`;
+  } catch (_) {}
+  return `${base}?${param}=${encodeURIComponent(c)}`;
+};
+const mhRoomLinkFromSearch = search => {
+  const text = String(search || '');
+  for (const kind of Object.keys(MH_ROOM_LINK_PARAMS)) {
+    const m = text.match(new RegExp(`[?&]${MH_ROOM_LINK_PARAMS[kind]}=([^&#]*)`));
+    if (!m) continue;
+    let raw = m[1];
+    try {
+      raw = decodeURIComponent(raw);
+    } catch (_) {
+      continue;
+    }
+    const code = rhythmMultiNormalizeCode(raw);
+    if (code) return {
+      kind,
+      code
+    };
+  }
+  return null;
+};
+const mhNormalizeRoomLink = (v, now = Date.now()) => {
+  if (!v || typeof v !== 'object' || !MH_ROOM_LINK_PARAMS[v.kind]) return null;
+  const code = rhythmMultiNormalizeCode(v.code);
+  const at = Number(v.at);
+  if (!code || !Number.isFinite(at) || at > now + 60000 || now - at > MH_ROOM_LINK_TTL_MS) return null;
+  return {
+    kind: v.kind,
+    code,
+    at
+  };
+};
+const mhBeatRoomLinkRequest = code => {
+  rhythmMultiPendingInvite = {
+    roomCode: rhythmMultiNormalizeCode(code),
+    link: true
+  };
+};
 let rhythmMultiLastRoom = null;
 const RHYTHM_MULTI_REJOIN_MS = 10 * 60 * 1000;
 const rhythmMultiRejoinTarget = (now = Date.now()) => {
@@ -94414,8 +94467,26 @@ function RhythmMultiScreen({
     const pending = rhythmMultiPendingInvite;
     if (!pending) return;
     rhythmMultiPendingInvite = null;
-    if (!RHYTHM_MULTI.view()) joinFromInvite(pending);
+    if (!RHYTHM_MULTI.view()) {
+      joinFromInvite(pending);
+      if (pending.link) setLinkWatch(pending.roomCode);
+    }
   }, []);
+  const [linkWatch, setLinkWatch] = React.useState('');
+  React.useEffect(() => {
+    if (!linkWatch) return undefined;
+    const timer = setTimeout(() => {
+      setLinkWatch('');
+      const v = RHYTHM_MULTI.view();
+      if (!v || v.code !== linkWatch || v.full) return;
+      if (v.status !== 'open') {
+        setMessage('部屋へつなげませんでした。電波のよい所で、もう一度リンクを開いてください');
+        return;
+      }
+      if (v.members.filter(m => !m.cpu).length <= 1) setMessage('この部屋にはだれもいませんでした。もう閉じたか、期限が切れたようです。送ってくれた人に、新しいリンクをもらってください');
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [linkWatch]);
   React.useEffect(() => {
     if (typeof rhythmAssistSessionPeekInvite !== 'function' || !rhythmAssistSessionPeekInvite() || RHYTHM_MULTI.view()) return;
     createPrivate();
@@ -94654,7 +94725,8 @@ function RhythmMultiScreen({
   }, [inRoom, !!searching]);
   const shareCode = async () => {
     if (!view) return;
-    const text = `モンヒロビートで協力ライブしよう! 部屋コード: ${view.code}`;
+    const url = mhRoomLinkUrl('beat', view.code);
+    const text = `モンヒロビートの「みんなでライブ」で一緒に遊ぼう! 部屋コード: ${view.code}${url ? `\n下のリンクを押すと、この部屋に入れるよ\n${url}` : ''}`;
     try {
       if (navigator.share) await navigator.share({
         text
@@ -165038,6 +165110,18 @@ const CardPvpLobby = ({
     };
   }, [inviteOpen, roster]);
   const invited = room.invited || {};
+  const [linkShared, setLinkShared] = useState(false);
+  const shareRoomLink = async () => {
+    const url = mhRoomLinkUrl('card', room.code);
+    const text = `MFバトルカードで対戦しよう! 部屋の合言葉: ${room.code}${url ? `\n下のリンクを押すと、この部屋に入れるよ\n${url}` : ''}`;
+    try {
+      if (navigator.share) await navigator.share({
+        text
+      });else if (navigator.clipboard) await navigator.clipboard.writeText(text);
+      setLinkShared(true);
+      setTimeout(() => setLinkShared(false), 2000);
+    } catch (_) {}
+  };
   const [inviteNext, setInviteNext] = useState('');
   const sentRows = useCardPvpSentRows(room);
   const [watchOpen, setWatchOpen] = useState(false);
@@ -165584,7 +165668,15 @@ const CardPvpLobby = ({
   }, "合言葉"), React.createElement("p", {
     "data-card-pvp-room": true,
     className: "my-1 text-[40px] font-black tracking-[.3em] text-white"
-  }, room.code), React.createElement("p", {
+  }, room.code), room.phase === 'waiting' && !room.foe && !room.guest && React.createElement("button", {
+    type: "button",
+    "data-card-pvp-share": true,
+    className: `${btn} mb-1 border border-sky-300/50 bg-sky-800 text-white`,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      void shareRoomLink();
+    }
+  }, linkShared ? 'コピーした!' : 'リンクをフレンドに送る'), React.createElement("p", {
     className: "text-[13px] font-bold text-slate-200"
   }, room.phase === 'connecting' ? 'つないでいます…' : room.foe ? room.foe.aw ? `${room.foe.name}さんが部屋に戻るのを待っています…` : `${room.foe.name}さんが来ました。始めます…` : room.guest ? '部屋に入っています…' : 'この合言葉をフレンドに伝えて、待っています…'), room.phase === 'waiting' && !room.foe && !room.guest && onStepAway && React.createElement(React.Fragment, null, React.createElement("p", {
     "data-card-pvp-away-note": true,
@@ -183355,6 +183447,55 @@ function MonsterHeroGame() {
       code: pendingFriendCode
     });
   }, [pendingFriendCode, friendsActive, bootPhase, gameState, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, rhythmEventStoryPending, updateGuideQueue]);
+  const [pendingRoomLink, setPendingRoomLink] = useState(null);
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    let alive = true;
+    (async () => {
+      let link = null;
+      try {
+        link = mhRoomLinkFromSearch(window.location.search);
+      } catch (error) {
+        link = null;
+      }
+      if (link) {
+        try {
+          const url = new URL(window.location.href);
+          Object.values(MH_ROOM_LINK_PARAMS).forEach(name => url.searchParams.delete(name));
+          window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+        } catch (error) {}
+        link = {
+          ...link,
+          at: Date.now()
+        };
+        await storeSet(MH_ROOM_LINK_KEY, link, false);
+      } else {
+        link = mhNormalizeRoomLink(await storeGet(MH_ROOM_LINK_KEY, null, false));
+      }
+      if (alive && link) setPendingRoomLink(link);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (!pendingRoomLink || pendingFriendCode) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME' && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay && !rhythmEventStoryPending && updateGuideQueue.length === 0)) return;
+    const link = pendingRoomLink;
+    setPendingRoomLink(null);
+    void storeSet(MH_ROOM_LINK_KEY, null, false);
+    if (!mhNormalizeRoomLink(link)) return;
+    if (link.kind === 'beat') {
+      mhBeatRoomLinkRequest(link.code);
+      void openRhythmDemo({
+        to: 'RHYTHM_MULTI'
+      });
+    } else if (link.kind === 'card' && cardBattleEntryVisible && cardPvpOpen()) {
+      CARD_PVP_JOIN.request(link.code);
+      setCardOrigin('home');
+      setGameState('CARD_TOP');
+    }
+  }, [pendingRoomLink, pendingFriendCode, bootPhase, gameState, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, rhythmEventStoryPending, updateGuideQueue]);
   const rhythmEventStoryStartedRef = useRef([]);
   const markRhythmEventStorySeen = async storyId => {
     const seen = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
