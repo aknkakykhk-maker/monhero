@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 013484a038193e91
+// source-sha256: 84f506b07c7a77d1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -131029,9 +131029,10 @@ function AssistantMasmonAskSheet({
   from,
   t = null,
   land = false,
-  onClose
+  onClose,
+  initialText = ''
 }) {
-  const [text, setText] = React.useState('');
+  const [text, setText] = React.useState(typeof initialText === 'string' ? initialText.slice(0, 100) : '');
   const [busy, setBusy] = React.useState(false);
   const [out, setOut] = React.useState(null);
   useAssistantMasmonSave();
@@ -132683,7 +132684,8 @@ const AMG_XP = Object.freeze({
   focus: 2,
   weak: 2,
   rest: 0,
-  play: 0
+  play: 0,
+  shugyo: 2
 });
 const AMG_CATCH_UP = 6;
 const AMG_LOG = 21;
@@ -132747,7 +132749,8 @@ const normalizeAssistantMasmonGrow = raw => {
           n: amgNum(e.dg && e.dg.n, 0, 0, 999)
         },
         lv: amgNum(e.lv, 1, 1, AMG_LV_MAX),
-        xp: amgNum(e.xp, 0, 0, 9999)
+        xp: amgNum(e.xp, 0, 0, 9999),
+        cg: Object.fromEntries(['view', 'pick', 'ask', 'ranch'].map(k => [k, Number.isFinite(Number(e.cg && e.cg[k])) ? Math.max(0, Math.min(1e6, Number(e.cg[k]))) : 0]))
       };
     }
     out.mons[aid] = one;
@@ -132839,7 +132842,7 @@ const amgInitial = (row, rnd) => {
   };
 };
 const amgRange = (rnd, lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1));
-const amgChoose = (aid, e, row, rnd, focusK, restReq) => {
+const amgChoose = (aid, e, row, rnd, focusK, restReq, slot = 0) => {
   const T = AMG_TRAIT[aid] || AMG_TRAIT.atsu;
   if (restReq) return {
     a: 'rest'
@@ -132850,6 +132853,10 @@ const amgChoose = (aid, e, row, rnd, focusK, restReq) => {
   if (e.str >= 50) return {
     a: 'play'
   };
+  if (typeof amgtChoose === 'function') {
+    const x = amgtChoose(aid, e, row, rnd, slot);
+    if (x) return x;
+  }
   const apt = amgAptOf(row.monster);
   const pol = AMG_POLICY[typeof assistantMasmonGrowKind === 'function' ? assistantMasmonGrowKind(row.grow) : String(row.grow || '').split('(')[0]] || [];
   let k = focusK && AMG_KEYS.includes(focusK) ? focusK : '';
@@ -132888,8 +132895,14 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
   const cap = care.viewed ? AMG_CARE.viewCap : AMG_DAY_CAP;
   const mult = (care.viewed ? AMG_CARE.viewMult : 1) * (act.picked ? AMG_CARE.pickMult : 1) * (act.asked ? AMG_CARE.askMult : 1) * (care.ranch ? AMG_CARE.ranchMult : 1);
   const left = () => Math.max(0, cap - (e.dg.d === day ? e.dg.n : 0));
+  const lead = typeof amgtLeadMult === 'function' ? amgtLeadMult(aid) : 1;
+  const failMul = typeof amgtFailMult === 'function' ? amgtFailMult(aid) : 1;
+  const sm = typeof amgtStressMult === 'function' ? amgtStressMult(aid) : 1;
+  const up = v => v > 0 ? Math.round(v * sm) : v;
+  const parts = [['view', care.viewed ? AMG_CARE.viewMult : 1], ['pick', act.picked ? AMG_CARE.pickMult : 1], ['ask', act.asked ? AMG_CARE.askMult : 1], ['ranch', care.ranch ? AMG_CARE.ranchMult : 1]].filter(x => x[1] > 1);
+  const lnAll = parts.reduce((a, x) => a + Math.log(x[1]), 0);
   const add = (k, lo, hi) => {
-    const base = amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[k]] * (1 + 0.1 * (e.ind[k] || 0)) * (e.fat >= 50 ? 0.7 : 1) * (fail ? 0.5 : 1) * mult;
+    const base = amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[k]] * (1 + 0.1 * (e.ind[k] || 0)) * (e.fat >= 50 ? 0.7 : 1) * (fail ? 0.5 : 1) * mult * lead;
     const n = Math.min(Math.max(1, Math.round(base)), left(), AMG_MAX - e.st[k]);
     if (n <= 0) return;
     e.st[k] += n;
@@ -132898,8 +132911,15 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
       d: day,
       n: (e.dg.d === day ? e.dg.n : 0) + n
     };
+    if (lnAll > 0) {
+      const extra = n - n / mult;
+      e.cg = {
+        ...(e.cg || {})
+      };
+      for (const [key, m] of parts) e.cg[key] = Math.round(((e.cg[key] || 0) + extra * Math.log(m) / lnAll) * 100) / 100;
+    }
   };
-  const failChance = extra => Math.min(0.4, e.str / 200 + extra) * (act.picked ? AMG_CARE.pickFail : 1);
+  const failChance = extra => Math.min(0.4, e.str / 200 + extra) * (act.picked ? AMG_CARE.pickFail : 1) * failMul;
   if (act.a === 'rest') {
     e.fat = amgClamp(e.fat - 30, 0, 100);
     e.str = amgClamp(e.str - 5, 0, 100);
@@ -132910,13 +132930,15 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
     fail = rnd() < failChance(0);
     add(act.k, 3, 6);
     e.fat = amgClamp(e.fat + 5, 0, 100);
-    e.str = amgClamp(e.str + (fail ? 6 : 1), 0, 100);
+    e.str = amgClamp(e.str + up(fail ? 6 : 1), 0, 100);
   } else if (act.a === 'heavy') {
     fail = rnd() < failChance(0.05);
     add(act.k, 7, 12);
     add(AMG_SUB[act.k], 1, 3);
     e.fat = amgClamp(e.fat + 14, 0, 100);
-    e.str = amgClamp(e.str + (fail ? 9 : 4), 0, 100);
+    e.str = amgClamp(e.str + up(fail ? 9 : 4), 0, 100);
+  } else if (act.a === 'shugyo' && typeof amgtDo === 'function') {
+    amgtDo(aid, e, row, rnd, slot, act, add, failChance);
   } else {
     fail = rnd() < failChance(0.03);
     const others = AMG_KEYS.filter(k => k !== act.k);
@@ -132924,7 +132946,7 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
     add(act.k, 4, 9);
     add(sub, 2, 5);
     e.fat = amgClamp(e.fat + amgRange(rnd, 10, 18), 0, 100);
-    e.str = amgClamp(e.str + (act.a === 'joint' ? -3 : fail ? 8 : 3), 0, 100);
+    e.str = amgClamp(e.str + up(act.a === 'joint' ? -3 : fail ? 8 : 3), 0, 100);
   }
   e.xp = (e.xp || 0) + (AMG_XP[act.a] || 0);
   e.lv = e.lv || 1;
@@ -133000,7 +133022,7 @@ const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
         a: pl.a,
         k: pl.k,
         picked: true
-      } : amgChoose(aid, e, row, rnd, f, !!rest[row.slot]);
+      } : amgChoose(aid, e, row, rnd, f, !!rest[row.slot], s);
       if (!pl && f && act.k === f) act.asked = true;
       if (rest[row.slot]) delete rest[row.slot];
       if (plan[row.slot] && plan[row.slot].s <= s) delete plan[row.slot];
@@ -133036,7 +133058,7 @@ const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
     }
   };
 };
-const amgActName = x => (x.a === 'rest' ? '休養' : x.a === 'play' ? '遊び' : x.a === 'light' ? AMG_LIGHT[x.k] : x.a === 'heavy' ? AMG_HEAVY[x.k] : AMG_SPECIAL[x.a]) || '';
+const amgActName = x => (x.a === 'shugyo' ? typeof amgtActName === 'function' ? amgtActName(x) : '修行' : x.a === 'rest' ? '休養' : x.a === 'play' ? '遊び' : x.a === 'light' ? AMG_LIGHT[x.k] : x.a === 'heavy' ? AMG_HEAVY[x.k] : AMG_SPECIAL[x.a]) || '';
 const AMG_STORE = {
   state: normalizeAssistantMasmonGrow(null),
   loaded: false,
@@ -133180,6 +133202,19 @@ const assistantMasmonTrainBoost = (aid, opts = {}, now = Date.now()) => {
 try {
   if (typeof ASSISTANT_LIFE_LINKS === 'object' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.masmonTrainBoost = assistantMasmonTrainBoost;
 } catch (_) {}
+const amgCareGainOf = e => {
+  const c = e && e.cg || {};
+  const o = {
+    view: Math.round(c.view || 0),
+    pick: Math.round(c.pick || 0),
+    ask: Math.round(c.ask || 0),
+    ranch: Math.round(c.ranch || 0)
+  };
+  return {
+    total: Math.round((c.view || 0) + (c.pick || 0) + (c.ask || 0) + (c.ranch || 0)),
+    ...o
+  };
+};
 const amgEntryOf = (aid, t, st = AMG_STORE.state) => (t && st.mons[aid] ? st.mons[aid][amgMonKey(t.slot, t.monster)] : null) || null;
 const amgAdvise = (aid, slot, what, now = Date.now()) => {
   if (!AMG_STORE.loaded) return false;
@@ -133416,6 +133451,10 @@ function AmgGrowCard({
     t: t,
     e: e,
     st: amgSt
+  }), typeof AmgtCard === 'function' && React.createElement(AmgtCard, {
+    who: who,
+    t: t,
+    e: e
   }));
 }
 const ASSISTANT_MASMON_TRAIN_KEY = 'mh_assistant_masmon_train_v1';

@@ -1342,8 +1342,9 @@ function AssistantMasmonDeckAsk({ who, onAsk }) {
     </div>);
 }
 // 提案のシート(自由に書いて送る → 助手の返事・変わった所)。印 assistantMasmonSuggest が偽のときは開くボタン自体を出さない
-function AssistantMasmonAskSheet({ who, from, t = null, land = false, onClose }) {
-  const [text, setText] = React.useState('');
+// initialText: 文をあらかじめ入れて開く(対戦の振り返りの「💡 ◯◯を鍛えてと提案する」から・ミセカタ 11-11)。送るのはプレイヤーが押したとき
+function AssistantMasmonAskSheet({ who, from, t = null, land = false, onClose, initialText = '' }) {
+  const [text, setText] = React.useState(typeof initialText === 'string' ? initialText.slice(0, 100) : '');
   const [busy, setBusy] = React.useState(false);
   const [out, setOut] = React.useState(null);
   useAssistantMasmonSave();
