@@ -30,8 +30,12 @@ const evalData = (files, exportNames) => {
 let cached = null;
 const load = () => {
   if (cached) return cached;
-  const data = evalData(['ally-monsters.js', 'skills.js'],
-    ['ALL_PLAYER_MONSTERS', 'HERO_ATK_NAMES', 'BASE_ATK_EVOLUTION', 'RANGE_EVOLUTION', 'GUARD_EVOLUTION']);
+  const data = evalData(['ally-monsters.js'], ['ALL_PLAYER_MONSTERS']);
+  // 技表: 本番(シュギョウの assistant-masmon-techs.js)があればそれ、無ければ仮(draft-techs.js)
+  const techFile = path.join(DATA, 'assistant-masmon-techs.js');
+  data.ASSISTANT_MASMON_TECHS = fs.existsSync(techFile)
+    ? evalData(['assistant-masmon-techs.js'], ['ASSISTANT_MASMON_TECHS']).ASSISTANT_MASMON_TECHS
+    : require('./draft-techs.js').makeDraftTechs(data.ALL_PLAYER_MONSTERS);
   const enginePath = path.join(DATA, 'assistant-masmon-battle.js');
   delete require.cache[enginePath];
   const engine = require(enginePath);
@@ -50,7 +54,9 @@ const makeUnit = (engine, catalog, rng, opts = {}) => {
   const stats = {};
   engine.STAT_KEYS.forEach((k, i) => { stats[k] = Math.min(999, Math.round(total * w[i] / sum)); });
   if (opts.stats) Object.assign(stats, opts.stats);
-  return { species, name: catalog.species[species].name, lv: opts.lv || 1 + Math.floor(rng() * 99), stats };
+  // 技は全部覚えている形で(集計では覚え方の差を消す)
+  return { species, name: catalog.species[species].name, lv: opts.lv || 1 + Math.floor(rng() * 99), stats,
+    techs: catalog.species[species].techs.map(t => t.id) };
 };
 
 module.exports = { ROOT, load, makeUnit };
