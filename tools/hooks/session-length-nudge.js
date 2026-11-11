@@ -12,7 +12,7 @@
 //   要約すると会話は「要約文+そのあとのやりとり」まで軽くなるので、要約の前の数を引きずると、要約した直後でも
 //   「やりとり890回」と出てしまう。トランスクリプトには、要約の境目の行({type:'system', subtype:'compact_boundary'})と、
 //   要約文の行({isCompactSummary:true})が残る。どちらかを見つけたら、そこまでの数を捨てて数え直す(直後は0なので知らせない)
-// 1段目(要約の目安)を超えたら「区切りで要約を」、2段目(替える目安)を超えたら「引き継ぎメモ → 新しい会話」と知らせる。
+// 部署は目安を超えたら「引き継ぎメモ → 新しい会話」、窓口は「要約してよいかを社長に聞く」と知らせる(部署に要約は勧めない)。
 // 毎回は出さず「くり返し」回ごとに1回。
 //
 // 【止めない】知らせるだけ。何が起きても終了コード 0(このフックのせいで会話が止まらないように)。
@@ -49,9 +49,8 @@ function count(transcriptPath) {
   return { prompts, merges, compacts };
 }
 
-// 2段構え(2026-11-11 社長「会話を替えるのも無駄にならないか」):
-//   1段目 … 同じ仕事が続くなら、公開の区切りで要約(/compact)をかけて軽くする(会話は替えない)
-//   2段目 … とても長い・仕事の種類が変わる → 引き継ぎメモ1枚 → 新しい会話
+// 部署: 目安を超えたら(または仕事の種類が変わったら)引き継ぎメモ1枚 → 新しい会話。要約は頼まない
+// 窓口: 会話を替えず、要約してよいかを社長に選択式で聞く
 // 窓口の会話かどうか(2026-11-12 社長「やるときは質問で俺に聞いて自動でそっちでやるって仕組みだったよね？」)。
 // 窓口は会話を替えずに要約で続ける(台帳 2026-11-11)。クラウドの会話の番号は環境変数に「cse_<番号>」で入る
 function isHq(hqSession, env) {
@@ -69,19 +68,14 @@ function message(n, limit, opts) {
     if (!hit || (!every && n.prompts !== limit['やりとり'])) return '';
     return `【窓口・会話が長くなってきた】この会話は ${after}やりとり ${n.prompts} 回・公開 ${n.merges} 件。窓口は会話を替えない。いまの仕事の区切りで、AskUserQuestion で「この会話を要約(/compact)してよいか」を社長に選んでもらう(許可されたら、残すもの・捨てるものを入れた /compact の1行をコピーできる形で出す)。文末で頼まない・「替える」を勧めない。いっぱいになったら自動の要約(700000)が走る。`;
   }
+  // 部署: 要約(/compact)は頼まない。要約は窓口の会話だけ(台帳 2026-11-11「各部署は長くなったら引き継ぎメモで会話を替える」・
+  //   2026-11-12 社長「ここ以外は要約しないんじゃないの？」)。目安を超えたら、区切りで引き継ぎメモ → 窓口が新しい会話を作る
   const over = [];
   if (n.prompts >= limit['やりとり']) over.push(`やりとり ${n.prompts} 回(目安 ${limit['やりとり']})`);
   if (n.merges >= limit['公開']) over.push(`公開 ${n.merges} 件(目安 ${limit['公開']})`);
-  if (over.length) {
-    if (!every && n.prompts !== limit['やりとり']) return '';
-    return `【会話がとても長い】この会話は ${after}${over.join('・')}。いまの仕事の区切りがついたら、node tools/ctx.js handoff <自分の部> --write で引き継ぎメモを作り、窓口へ「会話を替えてほしい」と知らせる(docs/rules/SESSION_HANDOFF.md)。作業の途中では替えない。やりかけの仕事は先に終わらせる。`;
-  }
-  const soft = [];
-  if (n.prompts >= limit['要約のやりとり']) soft.push(`やりとり ${n.prompts} 回`);
-  if (n.merges >= limit['要約の公開']) soft.push(`公開 ${n.merges} 件`);
-  if (!soft.length) return '';
-  if (!every && n.prompts !== limit['要約のやりとり']) return '';
-  return `【会話が長くなってきた】この会話は ${after}${soft.join('・')}。同じ仕事が続くなら、次に公開が済んだ区切りの報告の最後に「この会話に要約(/compact)をかけてほしい」と1行書き、node tools/ctx.js handoff <自分の部> --compact が出す指示文を添える(docs/rules/SESSION_HANDOFF.md)。仕事の種類が変わるなら、要約ではなく引き継ぎメモ → 新しい会話。`;
+  if (!over.length) return '';
+  if (!every && n.prompts !== limit['やりとり']) return '';
+  return `【会話がとても長い】この会話は ${after}${over.join('・')}。いまの仕事の区切りがついたら、node tools/ctx.js handoff <自分の部> --write で引き継ぎメモを作り、窓口へ「会話を替えてほしい」と知らせる(docs/rules/SESSION_HANDOFF.md)。要約(/compact)は頼まない(要約は窓口の会話だけ)。作業の途中では替えない。やりかけの仕事は先に終わらせる。`;
 }
 
 function main() {
