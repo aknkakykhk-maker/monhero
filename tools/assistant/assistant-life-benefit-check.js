@@ -40,6 +40,9 @@ const VIEWS = [{ id: 'tate', name: '縦 390×844', w: 390, h: 844 }, { id: 'yoko
     await toHome(page); await waitFaces(page); await finishTalk(page);
     await page.evaluate((m) => { const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, groups: m.groups, solo: m.solo, watched: [] } }); }, MIX);
     await page.waitForTimeout(800); await finishTalk(page);
+    // 新しいトップ(2026-11-11 社長決定)では、できごとは「見に行く」場面になり、今日・次のごほうびは▼でたたむ。
+    // ここは昔の「聞く」札の動きを見張る所なので、場面の印だけページの中で偽にする(場面の動きは assistant-life-top-check.js が見張る)
+    await page.evaluate(() => { RELEASE_FLAGS.assistantLifeDailyScene = false; });
     await page.locator('[data-home-assistant-life]').click({ timeout: 20000 });
     await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 8000 }).catch(() => {});
     await page.waitForTimeout(900);
@@ -61,6 +64,8 @@ const VIEWS = [{ id: 'tate', name: '縦 390×844', w: 390, h: 844 }, { id: 'yoko
     await f.close();
     // 毎日来る人
     const page = await open(v, true, false);
+    // たたんである「📅 今日 ・ 🌱 次のごほうび」を▼で開いてから3行を確かめる(閉じているときは「いま」の1行だけ)
+    { const fold = page.locator('[data-assistant-life-benefit-fold="closed"]'); if (await fold.count()) { await fold.click(); await page.waitForTimeout(300); } }
     const b = await page.evaluate(() => {
       const bd = document.querySelector('[data-assistant-life-benefit]'); if (!bd) return null;
       const rows = [...bd.querySelectorAll('[data-assistant-life-benefit-row]')], r = bd.getBoundingClientRect();
