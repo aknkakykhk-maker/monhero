@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dbb1a7e63070e205
+// source-sha256: c2b30589ee9825c7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -200949,15 +200949,20 @@ function MonsterHeroGame() {
     return result;
   };
   if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) {
-    ASSISTANT_LIFE_LINKS.ticketCount = itemId => Math.max(0, Number(ownedItems[itemId]) || 0);
+    ASSISTANT_LIFE_LINKS.ticketCount = itemId => Math.max(0, Number(ownedItemsRef.current[itemId]) || 0);
     ASSISTANT_LIFE_LINKS.ticketSpend = itemId => {
-      if (!['training_ticket', 'training_ticket_l'].includes(itemId) || !((Number(ownedItems[itemId]) || 0) > 0)) return false;
+      const have = Number(ownedItemsRef.current[itemId]) || 0;
+      if (!['training_ticket', 'training_ticket_l'].includes(itemId) || have <= 0) return false;
+      ownedItemsRef.current = {
+        ...ownedItemsRef.current,
+        [itemId]: have - 1
+      };
       setOwnedItems(prev => {
-        const have = Number(prev[itemId]) || 0;
-        if (have <= 0) return prev;
+        const n = Number(prev[itemId]) || 0;
+        if (n <= 0) return prev;
         const next = {
           ...prev,
-          [itemId]: have - 1
+          [itemId]: n - 1
         };
         storeSet('mh_owned_items', next, false);
         return next;

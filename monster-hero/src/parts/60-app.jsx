@@ -10279,10 +10279,13 @@ function MonsterHeroGame() {
   // 助手ライフ: M/B管理にいる助手のマスモンにチケットを使ってあげる(56-assistant-life-masmon-ranch.jsx・ボクジョウ 2026-11-11)。
   //   数を読む口と1枚減らす口だけを渡す(トレーニングチケット・重トレーニングチケットのみ。足りなければ false)。プレイヤーのマスモン・絆経験値には触れない
   if(typeof ASSISTANT_LIFE_LINKS!=='undefined'&&ASSISTANT_LIFE_LINKS){
-    ASSISTANT_LIFE_LINKS.ticketCount=(itemId)=>Math.max(0,Number(ownedItems[itemId])||0);
+    // 持ち数は ownedItemsRef で読み、減らしたらすぐ ref も減らす(描き直す前に続けて使っても、残り1枚を2回使えないように・Fable 11-12)
+    ASSISTANT_LIFE_LINKS.ticketCount=(itemId)=>Math.max(0,Number(ownedItemsRef.current[itemId])||0);
     ASSISTANT_LIFE_LINKS.ticketSpend=(itemId)=>{
-      if(!['training_ticket','training_ticket_l'].includes(itemId)||!((Number(ownedItems[itemId])||0)>0))return false;
-      setOwnedItems(prev=>{const have=Number(prev[itemId])||0;if(have<=0)return prev;const next={...prev,[itemId]:have-1};storeSet('mh_owned_items',next,false);return next;});
+      const have=Number(ownedItemsRef.current[itemId])||0;
+      if(!['training_ticket','training_ticket_l'].includes(itemId)||have<=0)return false;
+      ownedItemsRef.current={...ownedItemsRef.current,[itemId]:have-1};
+      setOwnedItems(prev=>{const n=Number(prev[itemId])||0;if(n<=0)return prev;const next={...prev,[itemId]:n-1};storeSet('mh_owned_items',next,false);return next;});
       return true;
     };
   }
