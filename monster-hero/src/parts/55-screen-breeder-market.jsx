@@ -28,6 +28,9 @@
 // MFバトルカードの売り場で、パック・スターターを買って開ける画面へ行き、戻ったときの位置(2026-10-30 社長「パックを買って戻ったら上に戻される」)。
 // 開ける画面へ行くとこの画面ごと消える(state も消える)ので、画面の外の変数に覚える。保存はしない(遊んでいる間だけ)。
 // 覚え方はフレンドの一覧(#4313)と同じ: 押す前のスクロールの位置と、押した物(行の目印)。戻ったら位置を戻し、押した物が見えなければ真ん中へ寄せる
+// 助手の解放(2026-11-11)。これから始める人で、まだ助手でない助手のアシストカードの札に「使うと助手になります」を1行(18-assistant-partner.jsx)
+const marketPartnerRibbon = (cardId) => (cardId && typeof assistantPartnerLockedNow === 'function' && assistantPartnerLockedNow(cardId)
+  && typeof ASSISTANTS !== 'undefined' && ASSISTANTS.some(a => a && a.id === cardId)) ? '🤝 使うと助手になります' : null;
 const CARD_SHOP_ROW_ATTRS = ['data-card-shop-pack','data-card-shop-starter','data-card-shop-disc','data-card-shop-assist'];
 const cardShopScrollMemo = { pending:false, tab:null, top:0, row:null };
 function BreederMarketScreen({
@@ -256,7 +259,7 @@ function BreederMarketScreen({
     const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null;
     return (
       <React.Fragment key={item.id}>
-        {showBase&&<MarketProductCard previewIcon={previewIcon} ribbon={item.perk?'🛍 助手のおすすめ 1割引き':null}
+        {showBase&&<MarketProductCard previewIcon={previewIcon} ribbon={item.perk?'🛍 助手のおすすめ 1割引き':marketPartnerRibbon(item.type==='assist'?item.id:null)}
           item={item} owned={owned} comingSoon={comingSoon||frameLocked||giftLocked} comingSoonLabel={giftLocked?String(item.giftHow||'プレゼントで届きます').split(/(?<=を)/):item.type==='costume'&&comingSoon?marketCostumeSoonLabel(item):frameLocked?(profileFrameConditionShort(profileFrameById(item.id),'breederPoint')||'条件を達成すると買えます'):undefined} canBuy={canBuy}
           onZoom={()=>onZoomIcon(item)}
           onBuy={()=>openSheet({ item, stackable:item.type==='item'&&!item.perk, confirm:(count)=>onBuy(item,count),
@@ -418,7 +421,7 @@ function BreederMarketScreen({
                 const teaching=TEACHING_CARDS.find(t=>t.id===offer.cardId)||null;
                 const item={ id:offer.id, name:offer.name, emoji:'🃏', icon:card?.icon, type:'assist', currency:'cardPoint', cost:offer.cost };
                 const owned=isItemOwned({ id:offer.cardId, type:'assist' });
-                return <MarketProductCard key={offer.id} dataAttrs={{'data-card-shop-assist':offer.id}}
+                return <MarketProductCard key={offer.id} dataAttrs={{'data-card-shop-assist':offer.id}} ribbon={marketPartnerRibbon(offer.cardId)}
                   item={item} owned={owned} comingSoon={false}
                   canBuy={!owned&&cp>=offer.cost&&!busy}
                   disabled={purchaseProcessing}
@@ -505,7 +508,7 @@ function BreederMarketScreen({
             const teaching=TEACHING_CARDS.find(t=>t.id===offer.cardId)||null;
             const item={ id:offer.id, name:offer.name, emoji:'🃏', icon:card?.icon, type:'assist', currency:'beatPoint', cost:offer.cost };
             const owned=isItemOwned({ id:offer.cardId, type:'assist' });
-            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-assist':offer.id}}
+            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-assist':offer.id}} ribbon={marketPartnerRibbon(offer.cardId)}
               item={item} owned={owned} comingSoon={false}
               canBuy={!owned&&safeEventPoints>=offer.cost&&!busy}
               disabled={purchaseProcessing}

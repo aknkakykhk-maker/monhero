@@ -32,18 +32,18 @@ const used = () => ({ ...fresh(), firstWin: true });
 const facts = (ownTurns, kos = 0) => ({ ownTurns, kos });
 
 // ---- A ----
-check('A 倍率は 1.5', M === 1.5, M);
+check('A 倍率は 1.375(移動12回で +0.5 → +0.375。台帳 #5328)', M === 1.375, M);
 {
   const r = E.cardCpuReward(used(), 'master', 'win', facts(10), M);
-  check('A MASTER の勝ち 200 → 300(ふだん 200 を base に持つ)', r.got === 300 && r.base === 200 && r.total === 300 && r.lifeUp === true, J(r));
+  check('A MASTER の勝ち 200 → 275(ふだん 200 を base に持つ)', r.got === 275 && r.base === 200 && r.total === 275 && r.lifeUp === true, J(r));
   const r1 = E.cardCpuReward(fresh(), 'master', 'win', facts(10), M);
-  check('A その日はじめての +50 は倍にしない(300+50)', r1.got === 300 && r1.bonus === 50 && r1.total === 350, J(r1));
+  check('A その日はじめての +50 は倍にしない(275+50)', r1.got === 275 && r1.bonus === 50 && r1.total === 325, J(r1));
   const r0 = E.cardCpuReward(used(), 'master', 'win', facts(10));
   check('A 倍率なしは今のまま(200・lifeUp なし)', r0.got === 200 && r0.total === 200 && r0.lifeUp === false, J(r0));
-  check('A 日ごとの数(cpuPoint)には 1.5倍のあとの数を足す', r.daily.cpuPoint === 300, J(r.daily));
+  check('A 日ごとの数(cpuPoint)には 倍にしたあとの数を足す', r.daily.cpuPoint === 275, J(r.daily));
   for (const lv of Object.keys(E.CARD_AI_LEVELS)) {
     const a = E.cardCpuReward(used(), lv, 'win', facts(10), M);
-    check(`A ${lv} の勝ち ${E.CARD_AI_LEVELS[lv].point} → ${Math.round(E.CARD_AI_LEVELS[lv].point * 1.5)}`, a.got === Math.round(E.CARD_AI_LEVELS[lv].point * 1.5), J(a));
+    check(`A ${lv} の勝ち ${E.CARD_AI_LEVELS[lv].point} → ${Math.round(E.CARD_AI_LEVELS[lv].point * M)}`, a.got === Math.round(E.CARD_AI_LEVELS[lv].point * M), J(a));
   }
 }
 // ---- B ----
@@ -54,16 +54,16 @@ check('A 倍率は 1.5', M === 1.5, M);
   check('B 自分の番が3回より少ない勝ちは 0 のまま', short.got === 0 && short.lifeUp === false, J(short));
   const l = E.cardCpuReward(used(), 'master', 'lose', facts(10), M);
   const l0 = E.cardCpuReward(used(), 'master', 'lose', facts(10));
-  check('B 負けも、もらえた分だけ 1.5倍(四捨五入)', l.got === Math.round(l0.got * 1.5) && l.lifeUp === (l0.got > 0), `${l0.got} → ${l.got}`);
+  check('B 負けも、もらえた分だけ 倍にする(四捨五入)', l.got === Math.round(l0.got * M) && l.lifeUp === (l0.got > 0), `${l0.got} → ${l.got}`);
   const l5 = E.cardCpuReward(used(), 'normal', 'lose', facts(5), M);
   const l50 = E.cardCpuReward(used(), 'normal', 'lose', facts(5));
-  check('B 番が少ない負けも 1.5倍(四捨五入)', l5.got === Math.round(l50.got * 1.5), `${l50.got} → ${l5.got}`);
+  check('B 番が少ない負けも 倍にする(四捨五入)', l5.got === Math.round(l50.got * M), `${l50.got} → ${l5.got}`);
 }
 // ---- C ----
 {
   const w0 = E.cardCpuLoops('master', 'win', facts(10));
   const w = E.cardCpuLoops('master', 'win', facts(10), M);
-  check('C クイック周回も 1.5倍', w === Math.round(w0 * 1.5) && w > w0, `${w0} → ${w}`);
+  check('C クイック周回も 倍にする', w === Math.round(w0 * M) && w > w0, `${w0} → ${w}`);
   check('C 周回 0 は 0 のまま', E.cardCpuLoops('master', 'win', facts(2), M) === 0);
   check('C 倍率なしは今のまま', E.cardCpuLoops('easy', 'win', facts(10)) === E.CARD_AI_LEVELS.easy.loops);
   check('C 壊れた倍率は無視', E.cardLifeUpApply(200, NaN) === 200 && E.cardLifeUpApply(200, 0.5) === 200 && E.cardLifeUpApply(NaN, M) === 0);
@@ -71,10 +71,10 @@ check('A 倍率は 1.5', M === 1.5, M);
 // ---- D ----
 {
   const w = E.cardLevelAfter(null, { kind: 'cpu', level: 'master', outcome: 'win', today, mult: M });
-  check('D MASTER の勝ち 18 → 27・その日はじめての +30 は倍にしない(57)', w.add === 57, J({ add: w.add, parts: w.parts }));
-  check('D 内わけに「カード部屋の助手と対戦(1.5倍)」が出る', w.parts.some((p) => /カード部屋/.test(p.label) && p.xp === 9), J(w.parts));
+  check('D MASTER の勝ち 18 → 25・その日はじめての +30 は倍にしない(55)', w.add === 55, J({ add: w.add, parts: w.parts }));
+  check('D 内わけに「カード部屋の助手と対戦(1.375倍)」が出る', w.parts.some((p) => /カード部屋.*1\.375倍/.test(p.label) && p.xp === 7), J(w.parts));
   const w2 = E.cardLevelAfter(w.next, { kind: 'cpu', level: 'master', outcome: 'win', today, mult: M });
-  check('D 同じ日の2勝目は 27 だけ', w2.add === 27, w2.add);
+  check('D 同じ日の2勝目は 25 だけ', w2.add === 25, w2.add);
   const n = E.cardLevelAfter(null, { kind: 'cpu', level: 'master', outcome: 'win', today });
   check('D 倍率なしは今のまま(48)', n.add === 48 && !n.parts.some((p) => /カード部屋/.test(p.label)), n.add);
   const a = E.cardLevelAfter(null, { kind: 'cpu', level: 'master', outcome: 'win', today, auto: true, mult: M });
