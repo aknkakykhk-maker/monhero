@@ -28,7 +28,7 @@ function RhythmHistoryBanner({ event }) {
     <>
       <button type="button" data-rhythm-history-banner onClick={() => setZoom(true)} aria-label={`${name}の画像を大きく見る`}
         className="relative mb-2 block w-full overflow-hidden rounded-2xl border border-fuchsia-300/30 active:scale-[.98]">
-        <img src={src} alt={`${name}の告知`} onError={() => setFailed(true)} loading="lazy" decoding="async" className="block w-full"/>
+        <img src={src} alt={`${name}の告知`} onError={() => setFailed(true)} loading="lazy" decoding="async" className="block w-full landscape:max-h-[45vh] landscape:object-contain landscape:bg-black/40"/>
         <span aria-hidden="true" className="absolute bottom-1 right-1 rounded-lg bg-black/60 px-1.5 py-0.5 text-[9px] font-black text-white">🔍 大きく見る</span>
       </button>
       {zoom && (
