@@ -100,7 +100,7 @@ const growthFxAssistantOf = (assistantId) => {
 const growthFxAssistantFace = (assistantId, expression = 'happy') => {
   const who = growthFxAssistantOf(assistantId);
   if (!who || !who.imageDir || !who.imagePrefix) return null;
-  return `${who.imageDir}/${who.imagePrefix}_${expression}.PNG`;
+  return (typeof assistantStandArt === 'function' && assistantStandArt(who, expression)) || `${who.imageDir}/${who.imagePrefix}_${expression}.PNG`;
 };
 const growthFxAssistantName = (assistantId) => {
   const who = growthFxAssistantOf(assistantId);
