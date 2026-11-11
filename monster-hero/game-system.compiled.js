@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a4b2ff268d241a38
+// source-sha256: 1496640b7f5e5015
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -86,24 +86,87 @@ const MH_SCREEN_TRAIL = (() => {
     compact
   };
 })();
-(() => {
-  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+const MH_PAGE_OFFSET_GUARD = (() => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return {
+    state: () => null,
+    check: () => {}
+  };
   const editing = () => {
     const el = document.activeElement;
     if (!el) return false;
     const tag = String(el.tagName || '').toUpperCase();
     return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable === true;
   };
+  const num = v => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const state = () => {
+    const vv = window.visualViewport || null;
+    const se = document.scrollingElement || document.documentElement;
+    return {
+      sx: num(window.scrollX) || num(se && se.scrollLeft) || num(document.body && document.body.scrollLeft),
+      sy: num(window.scrollY) || num(se && se.scrollTop) || num(document.body && document.body.scrollTop),
+      ox: vv ? num(vv.offsetLeft) : 0,
+      oy: vv ? num(vv.offsetTop) : 0,
+      scale: vv && Number.isFinite(Number(vv.scale)) && Number(vv.scale) > 0 ? Number(vv.scale) : 1
+    };
+  };
+  const zoomed = st => Math.abs(st.scale - 1) > 0.01;
+  const moved = st => Math.abs(st.sx) >= 1 || Math.abs(st.sy) >= 1 || Math.abs(st.ox) >= 1 || Math.abs(st.oy) >= 1;
+  let lastTrailAt = 0,
+    zoomFixes = 0,
+    zoomFixAt = 0,
+    wasBig = false;
+  const remeasure = () => setTimeout(() => {
+    try {
+      window.dispatchEvent(new Event('resize'));
+    } catch (_) {}
+  }, 0);
+  const unzoom = () => {
+    const now = Date.now();
+    if (zoomFixes >= 3 || now - zoomFixAt < 3000) return;
+    const meta = document.querySelector('meta[name="viewport"]');
+    const content = meta && meta.getAttribute('content');
+    if (!content) return;
+    zoomFixes++;
+    zoomFixAt = now;
+    meta.setAttribute('content', content + ', minimum-scale=1.0');
+    setTimeout(() => {
+      try {
+        meta.setAttribute('content', content);
+      } catch (_) {}
+    }, 50);
+  };
   const reset = () => {
     if (editing()) return;
     try {
-      if (window.scrollX || window.scrollY) window.scrollTo(0, 0);
-      for (const el of [document.scrollingElement, document.documentElement, document.body]) {
-        if (el && (el.scrollTop || el.scrollLeft)) {
-          el.scrollTop = 0;
-          el.scrollLeft = 0;
+      const st = state();
+      const bad = moved(st),
+        big = zoomed(st);
+      if (big) wasBig = true;else {
+        zoomFixes = 0;
+        if (wasBig) {
+          wasBig = false;
+          remeasure();
         }
       }
+      if (!bad && !big) return;
+      const now = Date.now();
+      if (now - lastTrailAt > 5000 && typeof MH_SCREEN_TRAIL !== 'undefined') {
+        lastTrailAt = now;
+        MH_SCREEN_TRAIL.push('vv', `s${Math.round(st.scale * 100) / 100} y${Math.round(st.sy)} o${Math.round(st.ox)},${Math.round(st.oy)}`);
+      }
+      if (bad) {
+        window.scrollTo(0, 0);
+        for (const el of [document.scrollingElement, document.documentElement, document.body]) {
+          if (el && (el.scrollTop || el.scrollLeft)) {
+            el.scrollTop = 0;
+            el.scrollLeft = 0;
+          }
+        }
+      }
+      if (big) unzoom();
     } catch (_) {}
   };
   let timers = [];
@@ -125,6 +188,25 @@ const MH_SCREEN_TRAIL = (() => {
   }, 60), true);
   ['fullscreenchange', 'webkitfullscreenchange'].forEach(type => document.addEventListener(type, soon));
   document.addEventListener('webkitendfullscreen', soon, true);
+  window.addEventListener('load', soon, passive);
+  window.addEventListener('pageshow', soon, passive);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') soon();
+  });
+  soon();
+  document.addEventListener('click', reset, {
+    capture: true,
+    passive: true
+  });
+  ['gesturestart', 'gesturechange'].forEach(type => document.addEventListener(type, e => {
+    if (e.cancelable) e.preventDefault();
+  }, {
+    passive: false
+  }));
+  return {
+    state,
+    check: soon
+  };
 })();
 const _LI = {};
 const _ICON_PATHS = {
