@@ -49,6 +49,12 @@ function render(d) {
   L.push('## 関係する決まり', '');
   for (const r of d['決まり']) L.push(`- ${r}`);
   L.push('');
+  // 部だけの道具の使い方など、決まった見出しに入らない節(depts.json の「節」: [{ 見出し, 行: [...] }])
+  for (const sec of d['節'] || []) {
+    L.push(`## ${sec['見出し']}`, '');
+    for (const line of sec['行']) L.push(line);
+    L.push('');
+  }
   if (d['資料'].length) {
     L.push('## 資料(要る節だけ `node tools/ctx.js doc <ファイル> <見出し>`)', '');
     for (const f of d['資料']) L.push(`- [\`${f}\`](../../${f})`);
