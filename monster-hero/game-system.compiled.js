@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b1c17bc072db0955
+// source-sha256: 21dcd1c2945f49c6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -113032,7 +113032,9 @@ function AssistantLifeStands({
   });
   const srcs = ids.map(pid => {
     const who = assistantById(pid);
-    return who ? assistantFullImage(who, sleepIds.includes(pid) ? 'normal' : 'happy') : null;
+    if (!who) return null;
+    const s = assistantFullImage(who, sleepIds.includes(pid) ? 'normal' : 'happy');
+    return sleepIds.includes(pid) && typeof assistantLifeSleepSrc === 'function' ? assistantLifeSleepSrc(pid, s) : s;
   });
   const [boxes, setBoxes] = React.useState(() => srcs.map(s => s ? ASSISTANT_LIFE_STAND_BOX.get(s) || null : null));
   const key = srcs.join('|');
@@ -114851,7 +114853,8 @@ function AssistantLifeMapFig({
   sleep,
   spent = false
 }) {
-  const src = assistantFullImage(who, sleep ? 'normal' : 'happy');
+  const src0 = assistantFullImage(who, sleep ? 'normal' : 'happy'),
+    src = sleep && typeof assistantLifeSleepSrc === 'function' ? assistantLifeSleepSrc(who && who.id, src0) : src0;
   const [box, setBox] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.get(src) || null);
   React.useEffect(() => {
     let alive = true;
@@ -115362,7 +115365,7 @@ function AssistantLifeTownMap({
           wordBreak: 'auto-phrase'
         },
         "data-assistant-life-map-ranch-ask": true
-      }, x.used && x.last && x.last.rows[0] ? `✓ ${x.last.nick} ${amgrStatName(x.last.rows[0].k)} ${x.last.rows[0].from} → ${x.last.rows[0].to}` : `「${x.ask.nick}の${x.ask.stat}を鍛えたいな」`) : null;
+      }, x.used && x.last && x.last.rows[0] ? `✓ ${x.last.nick} ${amgrStatName(x.last.rows[0].k)} ${x.last.rows[0].from} → ${x.last.rows[0].to}` : `「${typeof assistantMasmonRanchAskText === 'function' ? assistantMasmonRanchAskText(id, x.ask, x.abs) : `${x.ask.nick}の${x.ask.stat}を鍛えたいな`}」`) : null;
     })(), tiLine && React.createElement("p", {
       className: "text-[10.5px] font-bold text-emerald-200",
       style: {
@@ -116121,6 +116124,22 @@ const ASSISTANT_LIFE_SLEEP_EYES_FACE = Object.freeze({
     eyes: [[0.315, 0.64, 0.145, 0.12, '#f9c7b0'], [0.605, 0.585, 0.185, 0.115, '#fbd6bf']]
   }
 });
+const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set(['atsu_normal.PNG', 'face/atsu_normal.PNG', 'kiki_normal.PNG', 'face/kiki_normal.PNG', 'halloween/kiki_normal.PNG', 'halloween/face/kiki_normal.PNG', 'kyuko_normal.PNG', 'face/kyuko_normal.PNG', 'myua_normal.PNG', 'face/myua_normal.PNG', 'card-master/myua_normal.PNG', 'card-master/face/myua_normal.PNG', 'halloween/myua_normal.PNG', 'halloween/face/myua_normal.PNG', 'momosuke_normal.PNG', 'face/momosuke_normal.PNG', 'halloween/momosuke_normal.PNG', 'halloween/face/momosuke_normal.PNG']));
+function assistantLifeSleepArt(pid, src) {
+  const who = typeof assistantById === 'function' ? assistantById(pid) : null;
+  const s0 = String(src || '').replace(/[?#].*$/, ''),
+    dir = who && who.imageDir ? `${who.imageDir}/` : null;
+  const rel = dir && s0.includes(dir) ? s0.slice(s0.indexOf(dir) + dir.length) : null;
+  return rel && ASSISTANT_LIFE_SLEEP_ART.has(rel) ? `${dir}${rel.replace(/_normal\.PNG$/, '_sleep.PNG')}` : null;
+}
+const assistantLifeSleepSrc = (pid, src) => {
+  const a = assistantLifeSleepArt(pid, src);
+  if (a) return a;
+  const who = typeof assistantById === 'function' ? assistantById(pid) : null;
+  const face = who && typeof assistantFaceImage === 'function' ? assistantFaceImage(who, 'normal') : null;
+  const f = face ? assistantLifeSleepArt(pid, String(face).replace(/\/face\/([^/]+)$/, '/$1')) : null;
+  return f || src;
+};
 function AssistantLifeSleepEyes({
   pid,
   src,
@@ -116128,6 +116147,29 @@ function AssistantLifeSleepEyes({
   h,
   style
 }) {
+  if (/_sleep\.PNG/i.test(String(src || ''))) return null;
+  {
+    const art = assistantLifeSleepArt(pid, src);
+    if (art) {
+      const filter = style && style.filter ? String(style.filter).replace(/drop-shadow\((?:[^()]|\([^()]*\))*\)/g, '').trim() || undefined : undefined;
+      return React.createElement("img", {
+        "data-assistant-life-roomview-sleep-eyes": pid,
+        src: art,
+        alt: "",
+        "aria-hidden": "true",
+        draggable: false,
+        style: {
+          position: 'absolute',
+          width: w,
+          height: h,
+          maxWidth: 'none',
+          pointerEvents: 'none',
+          ...style,
+          filter
+        }
+      });
+    }
+  }
   const isFace = /\/face\//.test(String(src || ''));
   const def = (isFace ? ASSISTANT_LIFE_SLEEP_EYES_FACE : ASSISTANT_LIFE_SLEEP_EYES)[pid];
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
@@ -116216,7 +116258,7 @@ function AssistantLifeRoomBed({
   const items = sleepers.map(pid => {
     const a = assistantById(pid);
     if (!a) return null;
-    const src = assistantFullImage(a, 'normal');
+    const src = assistantLifeSleepSrc(pid, assistantFullImage(a, 'normal'));
     return {
       pid,
       who: a,
@@ -118752,6 +118794,29 @@ function AssistantLifeProfileStand({
       if (ro) ro.disconnect();
     };
   }, []);
+  const fullSrc = typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(who, 'happy') : null;
+  if (fullSrc) {
+    return React.createElement("div", {
+      ref: boxRef,
+      className: "pointer-events-none absolute inset-0 overflow-hidden",
+      "data-assistant-life-profile-stand": who.id,
+      "data-assistant-life-profile-fullbody": fullSrc
+    }, React.createElement("img", {
+      src: fullSrc,
+      alt: who.name,
+      draggable: false,
+      className: "absolute",
+      style: {
+        left: 0,
+        right: 0,
+        bottom: '2%',
+        width: '100%',
+        height: '96%',
+        objectFit: 'contain',
+        objectPosition: 'center bottom'
+      }
+    }));
+  }
   const face = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who.id, src) : null;
   const len = typeof ASSISTANT_LIFE_STAND_FACE_LEN !== 'undefined' ? ASSISTANT_LIFE_STAND_FACE_LEN : 2.63;
   const rule = size && size.h > 0 && art && face && typeof assistantLifeStandRule === 'function' ? assistantLifeStandRule({
@@ -145513,6 +145578,46 @@ const amgrAskOf = (aid, abs) => {
     k
   } : null;
 };
+const AMGR_ASK_VOICE = {
+  mua: {
+    v: ['{n}の{s}、鍛えたいんだけど！ まぢ気になるー', '{n}の{s}あげたいぢゃん！ 手伝ってｗ', 'ねね、{n}の{s}鍛えよー♪'],
+    ticket: 'チケット、使ってくれる？ おねがい♪'
+  },
+  kiki: {
+    v: ['{n}の{s}を鍛えたいでつ♪', '{n}の{s}、少しずつ育てたいでつ', '{n}の{s}を伸ばしたいんでつ。お願いしまつ♪'],
+    ticket: 'チケット、使ってもらえまつか？'
+  },
+  momosuke: {
+    v: ['{n}の{s}、もっと鍛えたい！！', 'ももね、{n}の{s}を強くしたいの♡', '{n}の{s}アップ大作戦だよ！！'],
+    ticket: 'チケット使って！！ お願い♡'
+  },
+  dra: {
+    v: ['{n}の{s}を鍛えたいな、えへへ', 'おで、{n}の{s}が気になってるな', '{n}の{s}、ちょっと伸ばしてやりたいな'],
+    ticket: 'チケット、使ってくれるか？'
+  },
+  atsu: {
+    v: ['{n}の{s}鍛えたい笑', '{n}の{s}、上げたいんだよね笑', '{n}の{s}、もっと上げたい！'],
+    ticket: 'チケット使ってくれる？'
+  },
+  kyuko: {
+    v: ['ほい、{n}の{s}を鍛えたいなぁ笑', '{n}の{s}、育てたいんだよねぇ', '{n}の{s}を伸ばす作戦だぁw'],
+    ticket: 'チケット、使ってくれるぅ？'
+  },
+  sorashido: {
+    v: ['{n}の{s}を鍛えたいです', '{n}の{s}、上げたいなと思ってます', '{n}の{s}を、少し伸ばしたいんです'],
+    ticket: 'チケットを使ってもらえますか？'
+  },
+  erubin: {
+    v: ['{n}の{s}を鍛えたいな☺️', '{n}の{s}、伸ばしてあげたいんだ', '{n}の{s}を鍛えたいんだけど、どうかな'],
+    ticket: 'チケット、使ってくれるかな？'
+  }
+};
+const assistantMasmonRanchAskText = (aid, ask, abs, withTicket) => {
+  const o = AMGR_ASK_VOICE[aid] || AMGR_ASK_VOICE.erubin;
+  const n = Number.isFinite(abs) ? Math.abs(Math.floor(abs)) : 0;
+  const t = o.v[n % o.v.length].replace('{n}', ask && ask.nick || '').replace('{s}', ask && ask.stat || '');
+  return withTicket ? `${t} ${o.ticket}` : t;
+};
 const assistantMasmonRanchRowInfo = (aid, now = Date.now()) => {
   if (!amgrOn() || !amgrOkAid(aid) || !amgrPartnerOk(aid)) return null;
   const life = amgrLife();
@@ -145842,7 +145947,7 @@ function AssistantMasmonRanchSheet({
   })), React.createElement("p", {
     className: "min-w-0 flex-1 rounded-xl bg-lime-100 px-3 py-2 text-[12.5px] font-black text-lime-950",
     "data-amgr-say": true
-  }, res ? `わあ、${res.nick}がんばったね！ ありがとう！` : `${info.ask.nick}の「${info.ask.stat}」を鍛えたいな。チケット、使ってくれる？`)), res ? React.createElement("div", {
+  }, res ? `わあ、${res.nick}がんばったね！ ありがとう！` : assistantMasmonRanchAskText(aid, info.ask, info.abs, true))), res ? React.createElement("div", {
     className: "mt-3 rounded-2xl border-2 border-emerald-300 bg-emerald-950 p-3",
     "data-amgr-result": true
   }, React.createElement("p", {
@@ -145940,7 +146045,7 @@ function AssistantMasmonRanchBand() {
     className: "text-[12px] font-black"
   }, "🥚 ", ids.map(nm).join('・'), "が来ています"), first && React.createElement("p", {
     className: "text-[11.5px] font-bold text-emerald-100"
-  }, nm(open[0]), "「", first.ask.nick, "の", first.ask.stat, "を鍛えたいな」"), open.length ? React.createElement("button", {
+  }, nm(open[0]), "「", assistantMasmonRanchAskText(open[0], first.ask, first.abs), "」"), open.length ? React.createElement("button", {
     type: "button",
     onClick: () => assistantMasmonRanchOpen(open[0]),
     "data-amgr-band-open": true,

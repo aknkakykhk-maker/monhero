@@ -63,6 +63,7 @@ jobs:
         run: node tools/compiled-runtime-check.js
       - name: Check source syntax and references
         run: |
+          node tools/conflict-marker-check.js
           node tools/check-syntax.js
           node tools/undefined-reference-check.js
       # CLAUDE.md は会話のたびに全文が読み込まれるので、大きさがそのまま恒久コストになる。

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: dd738d05a8b0ebff
+// generated-sha256: 7f123cf118b6821d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -66635,7 +66635,8 @@ const assistantLifeStandLayout = (items, W, H) => {
 function AssistantLifeStands({ ids, sleepIds = [] }) {
   const ref = React.useRef(null);
   const [size, setSize] = React.useState({ w: 0, h: 0 });
-  const srcs = ids.map(pid => { const who = assistantById(pid); return who ? assistantFullImage(who, sleepIds.includes(pid) ? 'normal' : 'happy') : null; });
+  // 寝ている助手は、社長の寝顔の絵があればそれ(assistantLifeSleepSrc・2026-11-11 社長「絵をそのまま使う」)
+  const srcs = ids.map(pid => { const who = assistantById(pid); if (!who) return null; const s = assistantFullImage(who, sleepIds.includes(pid) ? 'normal' : 'happy'); return sleepIds.includes(pid) && typeof assistantLifeSleepSrc === 'function' ? assistantLifeSleepSrc(pid, s) : s; });
   const [boxes, setBoxes] = React.useState(() => srcs.map(s => (s ? ASSISTANT_LIFE_STAND_BOX.get(s) || null : null)));
   const key = srcs.join('|');
   React.useEffect(() => { let alive = true; Promise.all(srcs.map(s => (s ? assistantLifeStandBox(s) : Promise.resolve(null)))).then(b => { if (alive) setBoxes(b); }); return () => { alive = false; }; }, [key]);
@@ -67363,7 +67364,8 @@ const assistantLifeMapReadHome = () => {
 
 // 小さな全身(絵の描かれている範囲を測って、見た目の高さを h にそろえる。胸から上の絵は下をぼかす)
 function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
-  const src = assistantFullImage(who, sleep ? 'normal' : 'happy');
+  // 寝ている助手は、社長の寝顔の絵があればそれ(assistantLifeSleepSrc・2026-11-11 社長「絵をそのまま使う」)
+  const src0 = assistantFullImage(who, sleep ? 'normal' : 'happy'), src = sleep && typeof assistantLifeSleepSrc === 'function' ? assistantLifeSleepSrc(who && who.id, src0) : src0;
   const [box, setBox] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.get(src) || null);
   React.useEffect(() => { let alive = true; assistantLifeStandBox(src).then(b => { if (alive) setBox(b); }); return () => { alive = false; }; }, [src]);
   // 測り終えるまでの仮の形。絵は object-fit:contain なので、仮の比が違っても縦横に伸びない(2026-11-09 社長「画面バグってる」)
@@ -67552,7 +67554,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-black text-white">{a.name}{spent && <span className="ml-1 rounded-full bg-slate-200 px-1.5 text-[9.5px] font-black text-slate-900" data-assistant-life-map-sheet-spent>済 ごほうび済み</span>}</p>
           <p className="text-[10.5px] font-bold text-slate-300">{town ? `${assistantLifeMapSpotWord(place)}で ` : ''}{w && ASSISTANT_LIFE_DOING_ICON[w.doing]} {withNames}{d ? d.label : '過ごしている'}{w && w.reason === 'lonely' ? '(さみしそう)' : ''}</p>
-          {place === 'ranch' && (() => { let x = null; try { x = typeof assistantMasmonRanchRowInfo === 'function' ? assistantMasmonRanchRowInfo(id) : null; } catch (_) { x = null; } return x ? <p className="text-[10.5px] font-bold text-lime-200" style={{ wordBreak: 'auto-phrase' }} data-assistant-life-map-ranch-ask>{x.used && x.last && x.last.rows[0] ? `✓ ${x.last.nick} ${amgrStatName(x.last.rows[0].k)} ${x.last.rows[0].from} → ${x.last.rows[0].to}` : `「${x.ask.nick}の${x.ask.stat}を鍛えたいな」`}</p> : null; })()}
+          {place === 'ranch' && (() => { let x = null; try { x = typeof assistantMasmonRanchRowInfo === 'function' ? assistantMasmonRanchRowInfo(id) : null; } catch (_) { x = null; } return x ? <p className="text-[10.5px] font-bold text-lime-200" style={{ wordBreak: 'auto-phrase' }} data-assistant-life-map-ranch-ask>{x.used && x.last && x.last.rows[0] ? `✓ ${x.last.nick} ${amgrStatName(x.last.rows[0].k)} ${x.last.rows[0].from} → ${x.last.rows[0].to}` : `「${typeof assistantMasmonRanchAskText === 'function' ? assistantMasmonRanchAskText(id, x.ask, x.abs) : `${x.ask.nick}の${x.ask.stat}を鍛えたいな`}」`}</p> : null; })()}
           {tiLine && <p className="text-[10.5px] font-bold text-emerald-200" style={{ wordBreak: 'auto-phrase' }} data-assistant-life-map-train-line={id}>{tiLine}</p>}
           {spent && <p className="text-[10.5px] font-bold text-amber-200" style={{ wordBreak: 'auto-phrase' }} data-assistant-life-map-sheet-next>{typeof cardLifeSpentText === 'function' ? cardLifeSpentText(spent) : '🃏 ごほうびアップは次の時間帯から'}</p>}
         </div>
@@ -67800,7 +67802,44 @@ const ASSISTANT_LIFE_SLEEP_EYES_FACE = Object.freeze({
   atsu: { ang: -30, line: '#3a1f2a', eyes: [[0.35, 0.60, 0.095, 0.05, '#f6baa7'], [0.56, 0.48, 0.12, 0.06, '#f8c7b3']] },
   kyuko: { ang: -11, line: '#4a2418', eyes: [[0.315, 0.64, 0.145, 0.12, '#f9c7b0'], [0.605, 0.585, 0.185, 0.115, '#fbd6bf']] },
 });
+// 社長が描いた寝顔(2026-11-11 社長「寝顔こっちでつくる」→ 7枚・「絵をそのまま使う」): 寝ているあいだは、上半身の寝顔の絵をまるごと出す。
+//   tools/assistant/life-sleep-faces-make.js が、元の絵と同じ大きさ・同じ顔の位置で、同じフォルダに ◯◯_sleep.PNG として置く(着せ替えの見分け・顔の位置の表がそのまま使える)
+//   全身(地図・場面の立ち絵・ベッド)は assistantLifeSleepSrc で絵を差し替える。顔アイコン(家の部屋の顔)は、顔の絵の部品が絵のパスを受け取らないので、上から重ねる
+//   絵の無い助手(ドラ・えるびん・ソラシド)と、絵の無い着せ替えは、いままでどおり下の SVG の閉じた目
+const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set([
+  'atsu_normal.PNG', 'face/atsu_normal.PNG', 'kiki_normal.PNG', 'face/kiki_normal.PNG', 'halloween/kiki_normal.PNG', 'halloween/face/kiki_normal.PNG',
+  'kyuko_normal.PNG', 'face/kyuko_normal.PNG', 'myua_normal.PNG', 'face/myua_normal.PNG',
+  'card-master/myua_normal.PNG', 'card-master/face/myua_normal.PNG', 'halloween/myua_normal.PNG', 'halloween/face/myua_normal.PNG',
+  'momosuke_normal.PNG', 'face/momosuke_normal.PNG', 'halloween/momosuke_normal.PNG', 'halloween/face/momosuke_normal.PNG',
+]));
+// その絵(ふつうの顔 normal)に社長の寝顔の絵があれば、その絵のパス。無ければ null
+function assistantLifeSleepArt(pid, src) {
+  const who = typeof assistantById === 'function' ? assistantById(pid) : null;
+  const s0 = String(src || '').replace(/[?#].*$/, ''), dir = who && who.imageDir ? `${who.imageDir}/` : null;
+  const rel = dir && s0.includes(dir) ? s0.slice(s0.indexOf(dir) + dir.length) : null;
+  return rel && ASSISTANT_LIFE_SLEEP_ART.has(rel) ? `${dir}${rel.replace(/_normal\.PNG$/, '_sleep.PNG')}` : null;
+}
+// 寝ているときに出す全身の絵: 社長の寝顔の絵があればそれ、無ければ元の絵のまま。
+//   起きているときの全身の絵が別の場所(全身画など)を指す助手もいるので、見つからないときは顔アイコン(ふつうの顔)のパスから、どの服の寝顔かを割り出す(…/face/◯◯_normal.PNG → …/◯◯_sleep.PNG)
+const assistantLifeSleepSrc = (pid, src) => {
+  const a = assistantLifeSleepArt(pid, src); if (a) return a;
+  const who = typeof assistantById === 'function' ? assistantById(pid) : null;
+  const face = who && typeof assistantFaceImage === 'function' ? assistantFaceImage(who, 'normal') : null;
+  const f = face ? assistantLifeSleepArt(pid, String(face).replace(/\/face\/([^/]+)$/, '/$1')) : null;
+  return f || src;
+};
 function AssistantLifeSleepEyes({ pid, src, w, h, style }) {
+  // すでに社長の寝顔の絵を出している(全身を差し替えた)ときは何も重ねない
+  if (/_sleep\.PNG/i.test(String(src || ''))) return null;
+  {
+    const art = assistantLifeSleepArt(pid, src);
+    if (art) {
+      // 顔アイコン: 社長の寝顔の絵(上半身まるごと)を上から重ねる。立ち絵の影(drop-shadow)は付けない(まわりに暗い輪が出る)
+      const filter = style && style.filter ? String(style.filter).replace(/drop-shadow\((?:[^()]|\([^()]*\))*\)/g, '').trim() || undefined : undefined;
+      return <img data-assistant-life-roomview-sleep-eyes={pid} src={art} alt="" aria-hidden="true" draggable={false}
+        style={{ position: 'absolute', width: w, height: h, maxWidth: 'none', pointerEvents: 'none', ...style, filter }}/>;
+    }
+  }
   const isFace = /\/face\//.test(String(src || ''));
   const def = (isFace ? ASSISTANT_LIFE_SLEEP_EYES_FACE : ASSISTANT_LIFE_SLEEP_EYES)[pid];
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
@@ -67831,7 +67870,7 @@ function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
   const quilt = ASSISTANT_LIFE_ROOM_QUILT[id] || ASSISTANT_LIFE_ROOM_QUILT.mua;
   const pillow = { left: left + 22, top: mattTop - 20, w: Math.min(110, bw * 0.34), h: 36 };
   const [boxes, setBoxes] = React.useState({});
-  const items = sleepers.map(pid => { const a = assistantById(pid); if (!a) return null; const src = assistantFullImage(a, 'normal'); return { pid, who: a, src, face: assistantLifeRoomFaceOf(pid, src) }; }).filter(Boolean);
+  const items = sleepers.map(pid => { const a = assistantById(pid); if (!a) return null; const src = assistantLifeSleepSrc(pid, assistantFullImage(a, 'normal')); return { pid, who: a, src, face: assistantLifeRoomFaceOf(pid, src) }; }).filter(Boolean);
   const key = items.map(x => x.src).join('|');
   React.useEffect(() => { let alive = true; Promise.all(items.map(x => (typeof assistantLifeStandBox === 'function' ? assistantLifeStandBox(x.src) : Promise.resolve(null)))).then(bs => { if (!alive) return; const o = {}; items.forEach((x, i) => { o[x.src] = bs[i] || { t: 0, b: 1, l: 0, r: 1, ar: 0.7 }; }); setBoxes(o); }); return () => { alive = false; }; }, [key]);
   const F = Math.min(30, W * 0.078); // 顔の大きさ(m=1 の人の目から顎)。閉じた目が見える大きさ
@@ -69048,6 +69087,13 @@ function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16 }) {
     window.addEventListener('resize', f);
     return () => { window.removeEventListener('resize', f); if (ro) ro.disconnect(); };
   }, []);
+  const fullSrc = typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(who, 'happy') : null;
+  if (fullSrc) { // 全身画: 枠の高さにおさめて足元をそろえる(頭の大きさは絵ごとの全身の比のまま)
+    return (
+      <div ref={boxRef} className="pointer-events-none absolute inset-0 overflow-hidden" data-assistant-life-profile-stand={who.id} data-assistant-life-profile-fullbody={fullSrc}>
+        <img src={fullSrc} alt={who.name} draggable={false} className="absolute" style={{ left: 0, right: 0, bottom: '2%', width: '100%', height: '96%', objectFit: 'contain', objectPosition: 'center bottom' }}/>
+      </div>);
+  }
   const face = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who.id, src) : null;
   const len = typeof ASSISTANT_LIFE_STAND_FACE_LEN !== 'undefined' ? ASSISTANT_LIFE_STAND_FACE_LEN : 2.63;
   const rule = size && size.h > 0 && art && face && typeof assistantLifeStandRule === 'function'
@@ -76395,6 +76441,25 @@ const amgrAskOf = (aid, abs) => {
   return k ? { row, k } : null;
 };
 
+// ---------- 頼みの文(助手ごとの口調・1人3通り。時間帯ごとに決まる) ----------
+// {n}=マスモンの名前 {s}=能力。2026-11-11 社長「助手ごとの口調に変えて」。ticket … 画面の下で添える「チケット、使ってくれる？」
+const AMGR_ASK_VOICE = {
+  mua: { v: ['{n}の{s}、鍛えたいんだけど！ まぢ気になるー', '{n}の{s}あげたいぢゃん！ 手伝ってｗ', 'ねね、{n}の{s}鍛えよー♪'], ticket: 'チケット、使ってくれる？ おねがい♪' },
+  kiki: { v: ['{n}の{s}を鍛えたいでつ♪', '{n}の{s}、少しずつ育てたいでつ', '{n}の{s}を伸ばしたいんでつ。お願いしまつ♪'], ticket: 'チケット、使ってもらえまつか？' },
+  momosuke: { v: ['{n}の{s}、もっと鍛えたい！！', 'ももね、{n}の{s}を強くしたいの♡', '{n}の{s}アップ大作戦だよ！！'], ticket: 'チケット使って！！ お願い♡' },
+  dra: { v: ['{n}の{s}を鍛えたいな、えへへ', 'おで、{n}の{s}が気になってるな', '{n}の{s}、ちょっと伸ばしてやりたいな'], ticket: 'チケット、使ってくれるか？' },
+  atsu: { v: ['{n}の{s}鍛えたい笑', '{n}の{s}、上げたいんだよね笑', '{n}の{s}、もっと上げたい！'], ticket: 'チケット使ってくれる？' },
+  kyuko: { v: ['ほい、{n}の{s}を鍛えたいなぁ笑', '{n}の{s}、育てたいんだよねぇ', '{n}の{s}を伸ばす作戦だぁw'], ticket: 'チケット、使ってくれるぅ？' },
+  sorashido: { v: ['{n}の{s}を鍛えたいです', '{n}の{s}、上げたいなと思ってます', '{n}の{s}を、少し伸ばしたいんです'], ticket: 'チケットを使ってもらえますか？' },
+  erubin: { v: ['{n}の{s}を鍛えたいな☺️', '{n}の{s}、伸ばしてあげたいんだ', '{n}の{s}を鍛えたいんだけど、どうかな'], ticket: 'チケット、使ってくれるかな？' },
+};
+const assistantMasmonRanchAskText = (aid, ask, abs, withTicket) => {
+  const o = AMGR_ASK_VOICE[aid] || AMGR_ASK_VOICE.erubin;
+  const n = Number.isFinite(abs) ? Math.abs(Math.floor(abs)) : 0;
+  const t = o.v[n % o.v.length].replace('{n}', (ask && ask.nick) || '').replace('{s}', (ask && ask.stat) || '');
+  return withTicket ? `${t} ${o.ticket}` : t;
+};
+
 // ---------- 地図の窓・M/B管理の帯の1行 ----------
 // 印が偽・M/B管理にいない・マスモンがいない → null
 const assistantMasmonRanchRowInfo = (aid, now = Date.now()) => {
@@ -76513,7 +76578,7 @@ function AssistantMasmonRanchSheet({ assistantId, onClose }) {
         <p className="text-[11px] font-bold text-slate-300">この時間帯に1枚。自分のモンスターには入りません・絆ランキングには効きません。上げた能力は、マスモン対戦の強さにも効きます</p>
         {info && <div className="mt-2 flex items-center gap-2">
           {who && typeof AssistantFace === 'function' && <span className="shrink-0"><AssistantFace who={who} size={40} accent={who.accent} expression={res ? 'happy' : null}/></span>}
-          <p className="min-w-0 flex-1 rounded-xl bg-lime-100 px-3 py-2 text-[12.5px] font-black text-lime-950" data-amgr-say>{res ? `わあ、${res.nick}がんばったね！ ありがとう！` : `${info.ask.nick}の「${info.ask.stat}」を鍛えたいな。チケット、使ってくれる？`}</p>
+          <p className="min-w-0 flex-1 rounded-xl bg-lime-100 px-3 py-2 text-[12.5px] font-black text-lime-950" data-amgr-say>{res ? `わあ、${res.nick}がんばったね！ ありがとう！` : assistantMasmonRanchAskText(aid, info.ask, info.abs, true)}</p>
         </div>}
         {res ? (
           <div className="mt-3 rounded-2xl border-2 border-emerald-300 bg-emerald-950 p-3" data-amgr-result>
@@ -76561,7 +76626,7 @@ function AssistantMasmonRanchBand() {
   return (<>
     <div className="w-full max-w-md mx-auto mb-2 rounded-2xl border border-emerald-300/70 bg-emerald-950/90 p-2.5 text-white" data-amgr-band>
       <p className="text-[12px] font-black">🥚 {ids.map(nm).join('・')}が来ています</p>
-      {first && <p className="text-[11.5px] font-bold text-emerald-100">{nm(open[0])}「{first.ask.nick}の{first.ask.stat}を鍛えたいな」</p>}
+      {first && <p className="text-[11.5px] font-bold text-emerald-100">{nm(open[0])}「{assistantMasmonRanchAskText(open[0], first.ask, first.abs)}」</p>}
       {open.length ? <button type="button" onClick={() => assistantMasmonRanchOpen(open[0])} data-amgr-band-open className="mt-1.5 min-h-[44px] w-full rounded-xl bg-emerald-500 px-3 text-[12.5px] font-black text-emerald-950 active:scale-95">🎫 助手のマスモンにチケットを使う(あと{open.length}人)</button>
         : <p className="mt-1 text-[11px] font-bold text-slate-300">この時間帯はみんなに使いました</p>}
     </div>

@@ -62,7 +62,8 @@ const assistantLifeMapReadHome = () => {
 
 // 小さな全身(絵の描かれている範囲を測って、見た目の高さを h にそろえる。胸から上の絵は下をぼかす)
 function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
-  const src = assistantFullImage(who, sleep ? 'normal' : 'happy');
+  // 寝ている助手は、社長の寝顔の絵があればそれ(assistantLifeSleepSrc・2026-11-11 社長「絵をそのまま使う」)
+  const src0 = assistantFullImage(who, sleep ? 'normal' : 'happy'), src = sleep && typeof assistantLifeSleepSrc === 'function' ? assistantLifeSleepSrc(who && who.id, src0) : src0;
   const [box, setBox] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.get(src) || null);
   React.useEffect(() => { let alive = true; assistantLifeStandBox(src).then(b => { if (alive) setBox(b); }); return () => { alive = false; }; }, [src]);
   // 測り終えるまでの仮の形。絵は object-fit:contain なので、仮の比が違っても縦横に伸びない(2026-11-09 社長「画面バグってる」)
@@ -251,7 +252,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-black text-white">{a.name}{spent && <span className="ml-1 rounded-full bg-slate-200 px-1.5 text-[9.5px] font-black text-slate-900" data-assistant-life-map-sheet-spent>済 ごほうび済み</span>}</p>
           <p className="text-[10.5px] font-bold text-slate-300">{town ? `${assistantLifeMapSpotWord(place)}で ` : ''}{w && ASSISTANT_LIFE_DOING_ICON[w.doing]} {withNames}{d ? d.label : '過ごしている'}{w && w.reason === 'lonely' ? '(さみしそう)' : ''}</p>
-          {place === 'ranch' && (() => { let x = null; try { x = typeof assistantMasmonRanchRowInfo === 'function' ? assistantMasmonRanchRowInfo(id) : null; } catch (_) { x = null; } return x ? <p className="text-[10.5px] font-bold text-lime-200" style={{ wordBreak: 'auto-phrase' }} data-assistant-life-map-ranch-ask>{x.used && x.last && x.last.rows[0] ? `✓ ${x.last.nick} ${amgrStatName(x.last.rows[0].k)} ${x.last.rows[0].from} → ${x.last.rows[0].to}` : `「${x.ask.nick}の${x.ask.stat}を鍛えたいな」`}</p> : null; })()}
+          {place === 'ranch' && (() => { let x = null; try { x = typeof assistantMasmonRanchRowInfo === 'function' ? assistantMasmonRanchRowInfo(id) : null; } catch (_) { x = null; } return x ? <p className="text-[10.5px] font-bold text-lime-200" style={{ wordBreak: 'auto-phrase' }} data-assistant-life-map-ranch-ask>{x.used && x.last && x.last.rows[0] ? `✓ ${x.last.nick} ${amgrStatName(x.last.rows[0].k)} ${x.last.rows[0].from} → ${x.last.rows[0].to}` : `「${typeof assistantMasmonRanchAskText === 'function' ? assistantMasmonRanchAskText(id, x.ask, x.abs) : `${x.ask.nick}の${x.ask.stat}を鍛えたいな`}」`}</p> : null; })()}
           {tiLine && <p className="text-[10.5px] font-bold text-emerald-200" style={{ wordBreak: 'auto-phrase' }} data-assistant-life-map-train-line={id}>{tiLine}</p>}
           {spent && <p className="text-[10.5px] font-bold text-amber-200" style={{ wordBreak: 'auto-phrase' }} data-assistant-life-map-sheet-next>{typeof cardLifeSpentText === 'function' ? cardLifeSpentText(spent) : '🃏 ごほうびアップは次の時間帯から'}</p>}
         </div>
