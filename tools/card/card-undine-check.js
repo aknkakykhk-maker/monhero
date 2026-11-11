@@ -148,8 +148,9 @@ const cost = (st, p, cardNo, mi) => { const h = st.players[p].hand.slice(); if (
   const m = /const CARD_REPLAY_RULES = (\d+)/.exec(src('src/parts/93-card-replay.jsx'));
   check('F ルールの版は 12 以上(水牢で払うガッツが変わる。古い版の人とマルチで組まない)', !!m && Number(m[1]) >= 12, m && m[1]);
   const ally = src('data/images/images-ally.js');
-  check('F スネグーラチカの立ち絵が番号から引ける', ['C-952', 'C-952S', 'C-952V'].every((no) => new RegExp(`'${no}': HYBRID_C952_IMG`).test(ally)));
-  check('F ウンディーネの立ち絵(カード用)がある', /CARD_UNDINE_IMG = "images\/monsters\/c921\.png/.test(ally) && fs.existsSync(path.join(GAME, 'images', 'monsters', 'c921.png')) && fs.existsSync(path.join(GAME, 'images', 'monsters', 'c952.png')));
+  // 場の立ち絵は本編の絵(2026-11-11 社長。キュービ・オリヒメと同じ)
+  check('F スネグーラチカの立ち絵は本編の SNEGUROCHKA_IMG(番号から引ける)', ['C-952', 'C-952S', 'C-952V'].every((no) => new RegExp(`'${no}': SNEGUROCHKA_IMG`).test(ally)));
+  check('F ウンディーネの立ち絵は本編の Undine(CARD_SPECIES_ART)', /undine: 'Undine'/.test(src('src/parts/84-screen-card-battle.jsx')));
 }
 
 console.log(`card-undine-check: ${passed} OK / ${fails.length} NG`);

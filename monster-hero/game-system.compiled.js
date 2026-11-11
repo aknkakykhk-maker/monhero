@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 872694dffb7926db
+// source-sha256: 6f9083124a11e72e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -148441,7 +148441,8 @@ const CARD_SPECIES_ART = Object.freeze({
   monol: 'Monol',
   plant: 'Plant',
   ghost: 'Ghost',
-  kyubi: 'Kyubi'
+  kyubi: 'Kyubi',
+  undine: 'Undine'
 });
 const cardNewSpeciesArt = () => ({
   dino: typeof MF_DINO_IMG !== 'undefined' ? MF_DINO_IMG : null,
@@ -148459,8 +148460,7 @@ const cardNewSpeciesArt = () => ({
   metalner: typeof MF_METALNER_IMG !== 'undefined' ? MF_METALNER_IMG : null,
   worm: typeof MF_WORM_IMG !== 'undefined' ? MF_WORM_IMG : null,
   centaur: typeof MF_CENTAUR_IMG !== 'undefined' ? MF_CENTAUR_IMG : null,
-  colorpandora: typeof MF_COLORPANDORA_IMG !== 'undefined' ? MF_COLORPANDORA_IMG : null,
-  undine: typeof CARD_UNDINE_IMG !== 'undefined' ? CARD_UNDINE_IMG : null
+  colorpandora: typeof MF_COLORPANDORA_IMG !== 'undefined' ? MF_COLORPANDORA_IMG : null
 });
 const cardMonArt = mon => {
   if (mon.main) return typeof HYBRID_MONSTER_IMGS !== 'undefined' && HYBRID_MONSTER_IMGS && HYBRID_MONSTER_IMGS[mon.no] || null;

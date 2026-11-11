@@ -216,9 +216,6 @@ const HYBRID_C063_IMG = "images/monsters/c063.png?v=97693bd14c3a";
 const HYBRID_C064_IMG = "images/monsters/c064.png?v=7e039c580e69";
 const HYBRID_C065_IMG = "images/monsters/c065.png?v=651de4a99a0b";
 // ピンクグジラ(2026-10-30 社長「ピンクグジラ実装」)。元絵の黒い背景(透明)の散った点を消し、余白を切って高さ916px・256色
-// ウンディーネ・スネグーラチカのカードの立ち絵(2026-11-11 社長から届いた絵。本編の UNDINE_IMG・SNEGUROCHKA_IMG とは別の絵)
-const CARD_UNDINE_IMG = "images/monsters/c921.png?v=083874a399ff";
-const HYBRID_C952_IMG = "images/monsters/c952.png?v=89b6193adbe5";
 const HYBRID_C068_IMG = "images/monsters/c068.png?v=e734038101df";
 // 派生モンスター20体(2026-10-25 社長から。C-010〜C-019 の一部。名前は本編の図鑑の名前)
 const HYBRID_C010_IMG = "images/monsters/c010.png?v=e53142331a97";
@@ -310,8 +307,8 @@ const HYBRID_MONSTER_IMGS = Object.freeze({
   'C-070': SPOOKY_IMG, 'C-070S': SPOOKY_IMG, 'C-070V': SPOOKY_IMG,
   // キュービ種の混血オリヒメ(番号 C-951・カードの絵は C-K02。メイン キュービ・サブ ？？？。2026-11-04 新血統キュービ)。本編の立ち絵をそのまま使う
   'C-951': ORIHIME_IMG, 'C-951S': ORIHIME_IMG, 'C-951V': ORIHIME_IMG, // キラ・別絵キラ(2026-11-05)も同じ立ち絵
-  // ウンディーネ種の混血スネグーラチカ(番号 C-952・カードの絵は C-U02。メイン ウンディーネ。2026-11-11)。キラ・別絵キラも同じ立ち絵
-  'C-952': HYBRID_C952_IMG, 'C-952S': HYBRID_C952_IMG, 'C-952V': HYBRID_C952_IMG,
+  // ウンディーネ種の混血スネグーラチカ(番号 C-952・カードの絵は C-U02。メイン ウンディーネ。2026-11-11)。本編の立ち絵をそのまま使う(オリヒメと同じ)。キラ・別絵キラも同じ
+  'C-952': SNEGUROCHKA_IMG, 'C-952S': SNEGUROCHKA_IMG, 'C-952V': SNEGUROCHKA_IMG,
 });
 
 const MOCCHI_ICON = MOCCHI_IMG;
@@ -754,8 +751,6 @@ const ART_CONTENT_BOXES = {
   "monsters/c064.png": [0, 0, 1, 1, 0.702],
   "monsters/c065.png": [0.001, 0.001, 0.999, 1, 0.972],
   "monsters/c068.png": [0.003, 0.001, 1, 0.999, 0.842],
-  "monsters/c921.png": [0, 0.001, 1, 1, 0.635],
-  "monsters/c952.png": [0, 0, 1, 0.999, 0.593],
   "monsters/centaur.png": [0, 0, 0.998, 1, 0.562],
   "monsters/colorpandora.png": [0.002, 0, 0.998, 1, 0.604],
   "monsters/dino.png": [0, 0.001, 1, 1, 0.83],
@@ -983,8 +978,6 @@ const ART_BODY_CENTERS = {
   "monsters/c064.png": [0.584, 0.479, 0.039, 0.136, 1, 1],
   "monsters/c065.png": [0.512, 0.514, 0.096, 0.022, 0.925, 0.969],
   "monsters/c068.png": [0.416, 0.572, 0.006, 0.134, 0.87, 0.995],
-  "monsters/c921.png": [0.512, 0.342, 0.298, 0, 0.919, 0.949],
-  "monsters/c952.png": [0.515, 0.43, 0.078, 0, 0.985, 0.695],
   "monsters/centaur.png": [0.567, 0.58, 0.283, 0.226, 0.865, 0.795],
   "monsters/colorpandora.png": [0.499, 0.409, 0, 0, 1, 0.886],
   "monsters/dino.png": [0.368, 0.49, 0.004, 0, 0.785, 0.843],
