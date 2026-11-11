@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 30abca4db9892698
+// source-sha256: 2fdd7afcfff97c91
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115418,7 +115418,7 @@ function AssistantLifeTownMap({
           wordBreak: 'auto-phrase'
         },
         "data-assistant-life-map-ranch-ask": true
-      }, x.used && x.last && x.last.rows[0] ? `✓ ${x.last.nick} ${amgrStatName(x.last.rows[0].k)} ${x.last.rows[0].from} → ${x.last.rows[0].to}` : `「${x.ask.nick}の${x.ask.stat}を鍛えたいな」`) : null;
+      }, x.used && x.last && x.last.rows[0] ? `✓ ${x.last.nick} ${amgrStatName(x.last.rows[0].k)} ${x.last.rows[0].from} → ${x.last.rows[0].to}` : `「${typeof assistantMasmonRanchAskText === 'function' ? assistantMasmonRanchAskText(id, x.ask, x.abs) : `${x.ask.nick}の${x.ask.stat}を鍛えたいな`}」`) : null;
     })(), tiLine && React.createElement("p", {
       className: "text-[10.5px] font-bold text-emerald-200",
       style: {
@@ -118808,6 +118808,29 @@ function AssistantLifeProfileStand({
       if (ro) ro.disconnect();
     };
   }, []);
+  const fullSrc = typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(who, 'happy') : null;
+  if (fullSrc) {
+    return React.createElement("div", {
+      ref: boxRef,
+      className: "pointer-events-none absolute inset-0 overflow-hidden",
+      "data-assistant-life-profile-stand": who.id,
+      "data-assistant-life-profile-fullbody": fullSrc
+    }, React.createElement("img", {
+      src: fullSrc,
+      alt: who.name,
+      draggable: false,
+      className: "absolute",
+      style: {
+        left: 0,
+        right: 0,
+        bottom: '2%',
+        width: '100%',
+        height: '96%',
+        objectFit: 'contain',
+        objectPosition: 'center bottom'
+      }
+    }));
+  }
   const face = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who.id, src) : null;
   const len = typeof ASSISTANT_LIFE_STAND_FACE_LEN !== 'undefined' ? ASSISTANT_LIFE_STAND_FACE_LEN : 2.63;
   const rule = size && size.h > 0 && art && face && typeof assistantLifeStandRule === 'function' ? assistantLifeStandRule({
@@ -145569,6 +145592,46 @@ const amgrAskOf = (aid, abs) => {
     k
   } : null;
 };
+const AMGR_ASK_VOICE = {
+  mua: {
+    v: ['{n}の{s}、鍛えたいんだけど！ まぢ気になるー', '{n}の{s}あげたいぢゃん！ 手伝ってｗ', 'ねね、{n}の{s}鍛えよー♪'],
+    ticket: 'チケット、使ってくれる？ おねがい♪'
+  },
+  kiki: {
+    v: ['{n}の{s}を鍛えたいでつ♪', '{n}の{s}、少しずつ育てたいでつ', '{n}の{s}を伸ばしたいんでつ。お願いしまつ♪'],
+    ticket: 'チケット、使ってもらえまつか？'
+  },
+  momosuke: {
+    v: ['{n}の{s}、もっと鍛えたい！！', 'ももね、{n}の{s}を強くしたいの♡', '{n}の{s}アップ大作戦だよ！！'],
+    ticket: 'チケット使って！！ お願い♡'
+  },
+  dra: {
+    v: ['{n}の{s}を鍛えたいな、えへへ', 'おで、{n}の{s}が気になってるな', '{n}の{s}、ちょっと伸ばしてやりたいな'],
+    ticket: 'チケット、使ってくれるか？'
+  },
+  atsu: {
+    v: ['{n}の{s}鍛えたい笑', '{n}の{s}、上げたいんだよね笑', '{n}の{s}、もっと上げたい！'],
+    ticket: 'チケット使ってくれる？'
+  },
+  kyuko: {
+    v: ['ほい、{n}の{s}を鍛えたいなぁ笑', '{n}の{s}、育てたいんだよねぇ', '{n}の{s}を伸ばす作戦だぁw'],
+    ticket: 'チケット、使ってくれるぅ？'
+  },
+  sorashido: {
+    v: ['{n}の{s}を鍛えたいです', '{n}の{s}、上げたいなと思ってます', '{n}の{s}を、少し伸ばしたいんです'],
+    ticket: 'チケットを使ってもらえますか？'
+  },
+  erubin: {
+    v: ['{n}の{s}を鍛えたいな☺️', '{n}の{s}、伸ばしてあげたいんだ', '{n}の{s}を鍛えたいんだけど、どうかな'],
+    ticket: 'チケット、使ってくれるかな？'
+  }
+};
+const assistantMasmonRanchAskText = (aid, ask, abs, withTicket) => {
+  const o = AMGR_ASK_VOICE[aid] || AMGR_ASK_VOICE.erubin;
+  const n = Number.isFinite(abs) ? Math.abs(Math.floor(abs)) : 0;
+  const t = o.v[n % o.v.length].replace('{n}', ask && ask.nick || '').replace('{s}', ask && ask.stat || '');
+  return withTicket ? `${t} ${o.ticket}` : t;
+};
 const assistantMasmonRanchRowInfo = (aid, now = Date.now()) => {
   if (!amgrOn() || !amgrOkAid(aid) || !amgrPartnerOk(aid)) return null;
   const life = amgrLife();
@@ -145898,7 +145961,7 @@ function AssistantMasmonRanchSheet({
   })), React.createElement("p", {
     className: "min-w-0 flex-1 rounded-xl bg-lime-100 px-3 py-2 text-[12.5px] font-black text-lime-950",
     "data-amgr-say": true
-  }, res ? `わあ、${res.nick}がんばったね！ ありがとう！` : `${info.ask.nick}の「${info.ask.stat}」を鍛えたいな。チケット、使ってくれる？`)), res ? React.createElement("div", {
+  }, res ? `わあ、${res.nick}がんばったね！ ありがとう！` : assistantMasmonRanchAskText(aid, info.ask, info.abs, true))), res ? React.createElement("div", {
     className: "mt-3 rounded-2xl border-2 border-emerald-300 bg-emerald-950 p-3",
     "data-amgr-result": true
   }, React.createElement("p", {
@@ -145996,7 +146059,7 @@ function AssistantMasmonRanchBand() {
     className: "text-[12px] font-black"
   }, "🥚 ", ids.map(nm).join('・'), "が来ています"), first && React.createElement("p", {
     className: "text-[11.5px] font-bold text-emerald-100"
-  }, nm(open[0]), "「", first.ask.nick, "の", first.ask.stat, "を鍛えたいな」"), open.length ? React.createElement("button", {
+  }, nm(open[0]), "「", assistantMasmonRanchAskText(open[0], first.ask, first.abs), "」"), open.length ? React.createElement("button", {
     type: "button",
     onClick: () => assistantMasmonRanchOpen(open[0]),
     "data-amgr-band-open": true,
