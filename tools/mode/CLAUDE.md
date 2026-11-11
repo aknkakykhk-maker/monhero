@@ -32,10 +32,10 @@
 **押さえている帯の中にノーツを置かない**(2026-10-13): 同じ高さで重なる・幅1が絡む半レーンの重なりは不可(地上と空中なら同じ位置でもよい)。
 HELL と新曲の5難易度の道具が直し、同じ検査が止める(前からある譜面の上限は `rhythm-held-band-existing.json`)
 
-**新曲は `flowPlacement:true`**(手の流れを狙う配置・既定は切・2026-10-21)。本文: `CHART_ENGINE.md`「手の流れを狙う配置」
+**新曲は `flowPlacement:true`**(手の流れを狙う配置・既定は切・2026-10-21)。本文: `CHART_ENGINE.md`
 
-**参考動画がない限り、各難易度は難易度ごとに作る**(2026-10-13 社長の決定)。上の難易度を下の難易度の写し+割増しで作らない。
-HELL は `rhythm-chart-v3-generate.js --difficulty HELL` で曲の解析から骨組みを作り、`rhythm-hell-mix.js` の `source:'audio'` で空中を付ける。本文: `CHART_ENGINE.md`
+**参考動画がない限り、各難易度は難易度ごとに作る**(2026-10-13)。上の難易度を下の難易度の写し+割増しで作らない。
+HELL は `rhythm-chart-v3-generate.js --difficulty HELL` で曲の解析から骨組みを作り、`rhythm-hell-mix.js` の `source:'audio'` で空中を付ける(新しい HELL は `precision:true`)。本文: `CHART_ENGINE.md`
 
 **作ったら点検**: `rhythm-chart-review.js`。新曲の EXPERT・MASTER は交差を減らし山場は残す(曲ごとは `handFinish`)。本文: `CHART_ENGINE.md`「作った譜面の点検と仕上げ」
 
