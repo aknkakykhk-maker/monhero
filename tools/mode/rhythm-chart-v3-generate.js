@@ -1930,6 +1930,13 @@ const buildChart=(difficulty,options={})=>{
           attempts.push({offsets:offsetsNow,patternId:sourceShape?sourceShape.patternId:null,
             mirrored:((sourceShape?sourceShape.mirrored:false)!==(mirrorNow===true))!==flipped,
             fromMemory:false,fromCopy:true,fixedBase:low,copyOf:sourceShape?sourceShape.fromGrid:null});
+          // Rev.38(フメンの案): 元と同じ位置に置けないとき(押さえている指・直前の手とぶつかる)は、別の形を選び直す前に、
+          //   同じ形のまま左右へ1〜2レーンずらして置く。動きは同じなので「覚えた形」のまま押せる
+          const span=Math.max(...offsetsNow);
+          for(const shift of [1,-1,2,-2]){const base=low+shift;if(base<0||base+span>LANES-1)continue;
+            attempts.push({offsets:offsetsNow,patternId:sourceShape?sourceShape.patternId:null,
+              mirrored:((sourceShape?sourceShape.mirrored:false)!==(mirrorNow===true))!==flipped,
+              fromMemory:false,fromCopy:true,fixedBase:base,copyOf:sourceShape?sourceShape.fromGrid:null,copyShift:shift});}
         }
       }
     }
@@ -1972,7 +1979,7 @@ const buildChart=(difficulty,options={})=>{
     // 採った候補の記録(形の記憶・写しの数)。Rev.10 で選び直したときも同じ処理を通す
     const acceptAttempt=attempt=>{
       if(attempt.fromMemory){remembered.count=attempt.count;motifSource=remembered.firstGrid;}
-      else if(attempt.fromCopy){phraseCopyCount.placed++;phraseCopyCount.notes+=length;phraseCopyOf=attempt.copyOf;}
+      else if(attempt.fromCopy){phraseCopyCount.placed++;phraseCopyCount.notes+=length;phraseCopyOf=attempt.copyOf;if(attempt.copyShift)phraseCopyCount.shifted=(phraseCopyCount.shifted||0)+1;}
       else{
         const memo={patternId,offsets:offsets.slice(),mirrored:false,count:1,firstGrid:grids[0],base:best.base};
         if(memoryKey&&!shapeMemory.has(memoryKey))shapeMemory.set(memoryKey,memo);
@@ -3642,7 +3649,7 @@ const buildChart=(difficulty,options={})=>{
 
   if(phraseRhythmCount.bars){
     notice.push(`フレーズの写し: 繰り返しの${phraseRhythmCount.bars}小節で元と同じ位置の音 ${phraseRhythmCount.same}/${phraseRhythmCount.source}`
-      +` / 同じレーンへ写したかたまり ${phraseCopyCount.placed}/${phraseCopyCount.tried}（${phraseCopyCount.notes}ノーツ）`);
+      +` / 同じレーンへ写したかたまり ${phraseCopyCount.placed}/${phraseCopyCount.tried}（${phraseCopyCount.notes}ノーツ）`+(phraseCopyCount.shifted?`・うち形ごとずらして写した ${phraseCopyCount.shifted}`:''));
   }
   // Rev.7: 効いた作法の印をノーツへ残す(学び直し rhythm-chart-learn.js が「良い／変」と言われた区間で数える)。
   //   同時押しの2本目には付けない(1つの出来事を2回数えない)
