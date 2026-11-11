@@ -17,6 +17,7 @@ const root = path.resolve(__dirname, '..', '..'), PORT = 9273;
 const { quietBootSeed, updateNoticeSeed, oneTimeNoticeSeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 const { MIME, STORY_IDS, seed, toHome, finishTalk } = require(path.resolve(__dirname, 'life-browser-shared'));
 const SHOTS = process.argv.includes('--shots');
+const GROW = !!process.env.MASMON_GROW; // 育成基盤(印 assistantMasmonGrow を真にして・2026-11-11 キズナ4)
 const ASK = !!process.env.MASMON_ASK; // 「提案する」の流れも確かめる(2026-11-08 キズナ4)
 const shotDir = process.env.MASMON_SHOT_DIR ? path.resolve(process.env.MASMON_SHOT_DIR) : path.join(root, 'docs/progress/assistant-peer/shots');
 //   MASMON_SEED=◯◯ で、そのプレイヤーの種でマスモンを決めて開く(プレイヤーごとに違うマスモン ❶B の止め絵用)
@@ -77,7 +78,8 @@ const layoutProblems = (page) => page.evaluate(() => {
         const c = b.ctx || {}; const replies = { yes: 'いいね、そうしてみるよ', some: '少しだけ変えてみるね', no: 'それはちょっと…ごめんね' };
         const base = { name: '', colors: [], monster: '', slot: 0, face: '', deckName: '', plan: '', replies };
         const favId = (c.colors || []).find(x => (c.fav || []).includes(x.label));
-        const result = /育て方/.test(b.text || '') ? { ...base, kind: 'grow', grow: (c.mon && c.mon.grow) === '攻撃型' ? '防御型' : '攻撃型' }
+        const result = /を鍛えて/.test(b.text || '') ? { ...base, kind: 'train', train: 'hit' }
+          : /育て方/.test(b.text || '') ? { ...base, kind: 'grow', grow: (c.mon && c.mon.grow) === '攻撃型' ? '防御型' : '攻撃型' }
           : /付けられない名前/.test(b.text || '') ? { ...base, kind: 'none', blocked: 'name' }
           : /みんなの名前/.test(b.text || '') ? { ...base, kind: 'nameStyle', style: '名前の最後に♪', names: (c.team || []).map(t => ({ slot: t.slot, n: `${t.nick}♪` })) }
           : /入れ替え/.test(b.text || '') ? { ...base, kind: 'swap', monster: ((c.cands || [])[0] || {}).id || '', name: 'あたらしい♪' }
@@ -96,6 +98,7 @@ const layoutProblems = (page) => page.evaluate(() => {
       });
       await page.goto(`${BASE}monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
       await toHome(page);
+      if (GROW) await page.evaluate(() => { RELEASE_FLAGS.assistantMasmonGrow = true; });
       if (v.rot) {
         await page.locator('.mh-home-facility.rhythm').click({ timeout: 15000 }).catch(() => {});
         await page.getByRole('button', { name: '戻る' }).first().waitFor({ timeout: 15000 }).catch(() => {});
@@ -203,6 +206,7 @@ const layoutProblems = (page) => page.evaluate(() => {
           check(`${T}タブ「${tab}」が開く`, (await page.locator(`[data-assistant-masmon-tab="${tab}"]`).count()) === 1);
           if (tab === 'mons') {
             const n = await page.locator('[data-assistant-masmon-row]').count();
+            if (GROW) { await page.waitForTimeout(600); const rs = await page.locator('[data-assistant-masmon-row] [data-amg-stats]').count(); check(`${T}育成基盤: 一覧の札に6能力のゲージ`, rs === n && n > 0, `${rs}/${n}`); if (SHOTS) await page.screenshot({ path: path.join(shotDir, `masmon-grow-list-${v.id}${WHO !== 'kiki' ? '-' + WHO : ''}.jpg`), type: 'jpeg', quality: 80 }); }
             const leads = await page.locator('[data-assistant-masmon-row] .mhm-lead:not(.mhm-bench)').count();
             check(`${T}マスモンは仲良し度 Lv${want.lv} までの${want.all}体・勇者モンは1体`, n === want.all && leads === 1, `${n}体・勇者モン${leads}`);
             // 押すと詳細画面(見るだけ)
@@ -211,6 +215,22 @@ const layoutProblems = (page) => page.evaluate(() => {
             await page.waitForTimeout(1200);
             const dt = await page.evaluate(() => { const d = document.querySelector('[data-assistant-masmon-detail]'); if (!d) return null; const ng = []; for (const t of d.querySelectorAll('.truncate')) if (t.scrollWidth > t.clientWidth + 1) ng.push(t.textContent.slice(0, 16)); const b = d.querySelector('.mhm-body'); if (b && b.scrollWidth > b.clientWidth + 1) ng.push('横にはみ出す'); return { ng, parts: ['stats', 'skills', 'dye', 'talk'].filter(k => d.querySelector(`[data-assistant-masmon-detail-${k}]`)).length }; });
             check(`${T}押すと詳細画面(能力・技・染めた色・ひとこと)・切れない`, dt && dt.parts === 4 && !dt.ng.length, dt ? `${dt.parts}つ ${dt.ng.join(' / ')}` : '開かない');
+            if (GROW) { // 育成基盤: 6能力・疲労・ストレス・今日の育成。一覧の札にも6能力
+              const g = await page.evaluate(() => ({ stats: document.querySelectorAll('[data-assistant-masmon-detail] [data-amg-card] [data-amg-stat]').length, fat: !!document.querySelector('[data-amg-fat]'), str: !!document.querySelector('[data-amg-str]'), log: document.querySelectorAll('[data-amg-log]').length, saved: typeof AMG_STORE !== 'undefined' && Object.keys(AMG_STORE.state.mons || {}).length }));
+              check(`${T}育成基盤: くわしい画面に6能力・疲労・ストレス・今日の育成`, g.stats === 6 && g.fat && g.str && g.log >= 1 && g.saved >= 1, JSON.stringify(g));
+              if (SHOTS) await page.screenshot({ path: path.join(shotDir, `masmon-grow-detail-${v.id}${WHO !== 'kiki' ? '-' + WHO : ''}.jpg`), type: 'jpeg', quality: 80 });
+              if (ASK) { // 「命中を鍛えて」→ 受けると、しばらく命中を鍛える(育成の相談)
+                await page.evaluate(() => { RELEASE_FLAGS.assistantMasmonSuggest = true; });
+                await page.locator('[data-assistant-masmon-ask-open="masmon"]').first().click({ timeout: 4000 }).catch(() => {});
+                await page.locator('[data-assistant-masmon-ask-text]').fill('命中を鍛えて').catch(() => {});
+                await page.locator('[data-assistant-masmon-ask-send]').click().catch(() => {});
+                await page.locator('[data-assistant-masmon-ask-result]').waitFor({ timeout: 8000 }).catch(() => {});
+                const tr = await page.evaluate((id) => { const f = (AMG_STORE.state.focus || {})[id] || {}; return { res: document.querySelector('[data-assistant-masmon-ask-result]')?.getAttribute('data-assistant-masmon-ask-result'), focus: Object.values(f).map(x => x.k) }; }, WHO);
+                check(`${T}育成の相談: 「命中を鍛えて」を受けると、命中を優先する`, tr.res === 'yes' && tr.focus.includes('hit'), JSON.stringify(tr));
+                if (SHOTS) await page.screenshot({ path: path.join(shotDir, `masmon-grow-ask-${v.id}${WHO !== 'kiki' ? '-' + WHO : ''}.jpg`), type: 'jpeg', quality: 80 });
+                await page.locator('[data-assistant-masmon-ask] [data-mhl-sheet-close]').click({ timeout: 3000 }).catch(() => {});
+              }
+            }
             if (SHOTS) await page.screenshot({ path: path.join(shotDir, `masmon-6-detail-${v.id}${WHO !== 'kiki' ? '-' + WHO : ''}.jpg`), type: 'jpeg', quality: 80 });
             await page.locator('[data-assistant-masmon-detail-close]').click({ timeout: 3000 }).catch(() => {});
           }

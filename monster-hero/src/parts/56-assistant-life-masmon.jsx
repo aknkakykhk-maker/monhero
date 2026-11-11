@@ -860,6 +860,9 @@ const assistantMasmonAskJudge = (aid, r, lv) => {
     const bad = (p.dislikeMon || []).some(x => x.monster === r.monster || (x.lineage && x.lineage === lin) || (x.monster && lin && assistantMasmonLineage(x.monster) === lin));
     const good = (p.likeMon || []).some(x => x.monster === r.monster || (x.lineage && x.lineage === lin)) || (p.team || []).some(x => x.monster === r.monster);
     taste = bad ? 'hate' : good ? 'like' : 'mid';
+  } else if (r.kind === 'train') { // 育成の相談: 「休ませて」はいつも受ける。鍛える能力は、自分の育成方針に合えば好き
+    if (r.train === 'rest' || r.train === 'auto') taste = 'like';
+    else { const row = assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, aid).find(x => x.slot === r.slot0); taste = row && typeof AMG_POLICY !== 'undefined' && (AMG_POLICY[assistantMasmonGrowKind(row.grow)] || []).includes(r.train) ? 'like' : 'mid'; }
   } else if (r.kind === 'grow') { // 自分の編成でよく使う育て方は好き。それ以外はふつう(仲良し度 Lv2 から受ける)
     taste = (p.team || []).some(x => assistantMasmonGrowKind(x.grow) === r.grow) ? 'like' : 'mid';
   } else if (r.kind === 'hero') {
@@ -900,6 +903,11 @@ const assistantMasmonAskApply = (aid, r, outcome, t) => {
     const next = assistantMasmonSetNick(st, aid, t.slot, r.name);
     assistantMasmonSave(withMine(next));
     return { changed: true, what: `名前を「${r.name}」に` };
+  }
+  if (r.kind === 'train' && t && outcome === 'yes' && typeof amgAdvise === 'function') { // 育成の相談(育成基盤・公開の印 assistantMasmonGrow)
+    if (!amgAdvise(aid, t.slot, r.train)) return { changed: false, what: '' };
+    const label = (AMG_STATS.find(x => x[0] === r.train) || [])[1];
+    return { changed: true, what: r.train === 'rest' ? '次の育成はお休みに' : r.train === 'auto' ? '育成をおまかせに' : `しばらく${label}を鍛える` };
   }
   if (r.kind === 'grow' && t && outcome === 'yes' && ASSISTANT_MASMON_GROW_KINDS.includes(r.grow)) {
     const row = assistantMasmonRowsOf(st, aid).find(x => x.slot === t.slot);
@@ -1032,17 +1040,17 @@ const assistantMasmonAsk = async (aid, from, text, t = null) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 20000);
     let res = null;
-    try { const r = await fetch(ASSISTANT_CHAT_URL, { method: 'POST', headers: SB_HEADERS, signal: controller.signal, body: JSON.stringify({ kind: 'masmon_suggest', breederId: bid, a: aid, from, text: body, history, ctx: assistantMasmonAskCtx(aid, from, t, lv) }) }); res = r.ok ? await r.json() : null; } finally { clearTimeout(timer); }
+    try { const r = await fetch(ASSISTANT_CHAT_URL, { method: 'POST', headers: SB_HEADERS, signal: controller.signal, body: JSON.stringify({ kind: 'masmon_suggest', breederId: bid, a: aid, from, text: body, history, ctx: { ...assistantMasmonAskCtx(aid, from, t, lv), ...(t && typeof amgOn === 'function' && amgOn() ? { train: true } : {}) } }) }); res = r.ok ? await r.json() : null; } finally { clearTimeout(timer); }
     if (!res || res.ok !== true || !res.result) { record('fail'); return { res: 'fail', note: res && res.kind === 'tired' ? '今日はもう返事ができないみたいです。また明日、提案してみてください' : 'いまは返事ができませんでした。少し時間をおいて試してみてください' }; }
     const r = res.result;
     // 開いた所と違うものは当てない(例: 勇者モンの所から色を言われた)。くわしい画面からは名前と色だけ
     // どこから開いても、言われたことに合わせて受ける(2026-11-09 社長「とにかくもっと自由度」)。そのマスモンが要るもの(名前・色・入れ替え)だけ、マスモンが分かるときに限る
-    const fits = ['welcome', 'hero', 'deck', 'nameStyle', 'nameStyleOff', 'colorStyle', 'colorStyleOff', ...(t ? ['name', 'color', 'grow', 'swap'] : [])];
+    const fits = ['welcome', 'hero', 'deck', 'nameStyle', 'nameStyleOff', 'colorStyle', 'colorStyleOff', ...(t ? ['name', 'color', 'grow', 'swap'] : []), ...(t && typeof amgOn === 'function' && amgOn() ? ['train'] : [])];
     // 変えることが読み取れない・ここでは変えられないものでも、エラーにせず助手がふつうに返事をする(何も変えない・回数は減らない)
     // 名前として通さない言葉だった(2026-11-09 社長「全然聞いてくれない」): 「分からない」にせず、その助手の口調で付けられないと言う(回数は減らない)
     if (r.kind === 'none' && r.blocked === 'name') { const ng = assistantMasmonAskLine(aid, r.replies, 'ng'); record('no', '', false, ng); return { res: 'no', line: ng, note: 'その言葉は名前に使えません。ほかの名前なら提案できます(回数は減りません)' }; }
     if (r.kind === 'none' || !fits.includes(r.kind)) { const talk = assistantMasmonAskLine(aid, r.replies, 'talk'); record('none', '', false, talk); return { res: 'none', line: talk, note: '' }; }
-    const outcome = assistantMasmonAskJudge(aid, r, lv);
+    const outcome = assistantMasmonAskJudge(aid, t ? { ...r, slot0: t.slot } : r, lv);
     const done = assistantMasmonAskApply(aid, r, outcome, t);
     const res2 = outcome === 'no' ? 'no' : done.changed ? outcome : 'some';
     const line = assistantMasmonAskLine(aid, r.replies, outcome === 'no' ? 'no' : done.changed ? (outcome === 'yes' ? 'yes' : 'some') : 'think');
@@ -1422,7 +1430,8 @@ function AssistantMasmonDots({ t }) {
     </span>);
 }
 
-function AssistantMasmonRow({ t, land = false, onOpen = null }) {
+function AssistantMasmonRow({ t, land = false, onOpen = null, aid = '', amg = null }) {
+  const ge = aid && typeof amgOn === 'function' && amgOn() ? amgEntryOf(aid, t, amg || AMG_STORE.state) : null; // 育成基盤: 6能力の小さいゲージ
   const m = assistantMasmonMon(t.monster);
   const st = assistantMasmonStats(t);
   if (!m || !st) return null;
@@ -1435,15 +1444,18 @@ function AssistantMasmonRow({ t, land = false, onOpen = null }) {
           ? <><p className="flex flex-wrap gap-x-1 text-[10.5px] font-bold leading-tight text-slate-300"><span className="break-all">{m.name}</span><span className="whitespace-nowrap">・ Lv.{t.lv}</span></p><p className="text-[10px]"><AssistantMasmonDots t={t}/></p></>
           : <p className="truncate text-[10.5px] font-bold text-slate-300">{m.name} ・ Lv.{t.lv} <AssistantMasmonDots t={t}/></p>}
         <p className="text-[11px] font-black leading-tight text-amber-200">📈 {t.grow}</p>
+        {ge ? <div className="mt-0.5"><AmgStatBars e={ge} small cols={land ? 1 : 2}/></div> : (
         <div className={`mt-0.5 grid gap-x-3 gap-y-0.5 ${land ? 'grid-cols-1' : 'grid-cols-2'}`}>
           {ASSISTANT_MASMON_STAT_LABEL.map(([k, label]) => (
             <div key={k} className="flex items-center gap-1.5 text-[9.5px] font-bold text-slate-300"><span className="w-[34px] shrink-0">{label}</span><span className="mhm-bar"><i style={{ width: `${Math.round(st[k] * 100)}%` }}/></span></div>))}
-        </div>
+        </div>)}
       </div>
     </button>);
 }
 
 function AssistantMasmonSheet({ id, land = false, onClose, bondLv = null }) {
+  const amgSt = typeof useAmgState === 'function' ? useAmgState() : null; // 育成基盤(公開の印 assistantMasmonGrow)
+  React.useEffect(() => { if (typeof amgTick === 'function') void amgTick(id); }, [id]);
   const [tab, setTab] = React.useState('mons');
   const [detail, setDetail] = React.useState(null); // 押したマスモン(詳細画面)
   const save = useAssistantMasmonSave();
@@ -1492,7 +1504,7 @@ function AssistantMasmonSheet({ id, land = false, onClose, bondLv = null }) {
   if (tab === 'mons') {
     body = (<>
       {renamed && <p className="mhm-card mb-2 text-[11.5px] font-bold leading-snug text-slate-100" data-assistant-masmon-renamed>{who.name}「{assistantMasmonRenamedLine(id)}」</p>}
-      <div className={land ? 'grid grid-cols-3 gap-2' : 'flex flex-col gap-2'}>{all.map(t => <AssistantMasmonRow key={t.monster} t={t} land={land} onOpen={setDetail}/>)}{waiting.map(t => <AssistantMasmonWaitCard key={t.monster} t={t} land={land}/>)}</div>
+      <div className={land ? 'grid grid-cols-3 gap-2' : 'flex flex-col gap-2'}>{all.map(t => <AssistantMasmonRow key={t.monster} t={t} land={land} onOpen={setDetail} aid={id} amg={amgSt}/>)}{waiting.map(t => <AssistantMasmonWaitCard key={t.monster} t={t} land={land}/>)}</div>
       {p.v2 && <AssistantMasmonStyleRow who={who}/>}
       {p.v2 && waiting.length > 0 && <AssistantMasmonWishRow who={who} onAsk={(from) => setAsk({ from })}/>}
       <p className="mt-2 text-[10.5px] font-bold leading-snug text-slate-400">🐾 {who.name}が自分で育てて、自分の好きな色に染めているマスモンです。押すと詳しく見られます。</p>
@@ -1665,6 +1677,8 @@ const assistantMasmonSkills = (t) => {
 // マスモンの詳細(見るだけ。プレイヤーのマスモン詳細に近い形)
 function AssistantMasmonDetail({ who, p, t, land = false, onClose, onAsk = null }) {
   const m = assistantMasmonMon(t.monster), st = assistantMasmonStats(t);
+  const amgSt = typeof useAmgState === 'function' ? useAmgState() : null;
+  const ge = typeof amgOn === 'function' && amgOn() ? amgEntryOf(who.id, t, amgSt || AMG_STORE.state) : null; // 育成基盤(公開の印 assistantMasmonGrow)
   if (!m || !st) return null;
   const n = assistantMasmonRegions(t.monster);
   const cols = ((t.dye && t.dye.colors) || []).slice(0, n || 5);
@@ -1674,6 +1688,7 @@ function AssistantMasmonDetail({ who, p, t, land = false, onClose, onAsk = null 
   const role = t.lead ? (p && p.v2 ? '勇者モン' : '先頭') : t.bench ? '控え' : '編成';
   const pic = <AssistantMasmonPic t={t} size={land ? 190 : 210}/>;
   const info = (<>
+    {ge ? <AmgGrowCard who={who} t={t} e={ge} kindText={ASSISTANT_MASMON_GROW_TEXT[kind] || ''} growMine={t.growMine}/> : (<>
     <div className="mhm-card" data-assistant-masmon-detail-stats>
       <p className="text-[10px] font-black text-slate-400">能力</p>
       <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
@@ -1684,6 +1699,7 @@ function AssistantMasmonDetail({ who, p, t, land = false, onClose, onAsk = null 
       {t.growMine && <p className="text-[10.5px] font-bold text-sky-200" data-assistant-masmon-grow-mine>🌱 育て方: {t.growMine.kind}({t.growMine.day ? `${t.growMine.day.slice(5).replace('-', '/')} ` : ''}あなたの提案)</p>}
       {ASSISTANT_MASMON_GROW_TEXT[kind] && <p className="text-[10.5px] font-bold text-slate-300">{ASSISTANT_MASMON_GROW_TEXT[kind]}</p>}
     </div>
+    </>)}
     <div className="mhm-card mt-2" data-assistant-masmon-detail-skills>
       <p className="text-[10px] font-black text-slate-400">技(育つと増える)</p>
       <p className="mt-0.5 text-[11.5px] font-bold leading-relaxed text-white" style={{ wordBreak: 'auto-phrase' }}>{skills.join(' ・ ')}</p>

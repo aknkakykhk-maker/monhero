@@ -224,3 +224,42 @@ const amgAdvise = (aid, slot, what, now = Date.now()) => {
   amgSave({ ...st, focus: { ...st.focus, [aid]: { ...(st.focus[aid] || {}), [slot]: { k: what, until: s + 9 } } } });
   return true;
 };
+// ---------- 画面(公開の印が真のときだけ出す) ----------
+const useAmgState = () => {
+  const [st, setSt] = React.useState(AMG_STORE.state);
+  React.useEffect(() => { AMG_STORE.subs.add(setSt); return () => { AMG_STORE.subs.delete(setSt); }; }, []);
+  return st;
+};
+function AmgStatBars({ e, small = false, cols = 2 }) {
+  return (
+    <div className={`grid gap-x-3 ${small ? 'gap-y-0.5' : 'gap-y-1'} ${cols === 1 ? 'grid-cols-1' : 'grid-cols-2'}`} data-amg-stats>
+      {AMG_STATS.map(([k, label]) => (
+        <div key={k} className={`flex items-center gap-1.5 font-bold ${small ? 'text-[9.5px] text-slate-300' : 'text-[10.5px] text-slate-200'}`}>
+          <span className={`${small ? 'w-[40px]' : 'w-[48px]'} shrink-0 whitespace-nowrap`}>{label}</span>
+          <span className="mhm-bar"><i style={{ width: `${Math.round(e.st[k] / AMG_MAX * 100)}%` }}/></span>
+          {!small && <b className="w-[28px] shrink-0 text-right text-amber-200" data-amg-stat={k}>{e.st[k]}</b>}
+        </div>))}
+    </div>);
+}
+// くわしい画面の能力の札(6能力・疲労・ストレス・今日の育成)
+function AmgGrowCard({ who, t, e, kindText = '', growMine = null }) {
+  const today = amgSlotDay(amgSlotOf());
+  const logs = e.log.filter(x => amgSlotDay(x.s) === today);
+  const T = AMG_TRAIT[who.id] || null;
+  return (
+    <div className="mhm-card" data-assistant-masmon-detail-stats data-amg-card>
+      <p className="text-[10px] font-black text-slate-400">能力(6つ・上限{AMG_MAX})</p>
+      <div className="mt-1"><AmgStatBars e={e}/></div>
+      <div className="mt-1.5 grid grid-cols-2 gap-x-3">
+        <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200"><span className="w-[48px] shrink-0">疲労</span><span className="mhm-bar"><i style={{ width: `${e.fat}%`, background: 'linear-gradient(90deg,#fb7185,#f97316)' }}/></span><b className="w-[24px] text-right text-amber-200" data-amg-fat>{e.fat}</b></div>
+        <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200"><span className="w-[48px] shrink-0">ストレス</span><span className="mhm-bar"><i style={{ width: `${e.str}%`, background: 'linear-gradient(90deg,#60a5fa,#a78bfa)' }}/></span><b className="w-[24px] text-right text-amber-200" data-amg-str>{e.str}</b></div>
+      </div>
+      <p className="mt-1.5 text-[11px] font-bold text-amber-200">📈 育成方針: {t.grow}</p>
+      {growMine && <p className="text-[10.5px] font-bold text-sky-200" data-assistant-masmon-grow-mine>🌱 育て方: {growMine.kind}({growMine.day ? `${growMine.day.slice(5).replace('-', '/')} ` : ''}あなたの提案)</p>}
+      {kindText && <p className="text-[10.5px] font-bold text-slate-300">{kindText}</p>}
+      <p className="mt-1.5 text-[10px] font-black text-slate-400">今日の育成({who.name}{T ? `・${T.name}` : ''})</p>
+      {logs.length ? logs.map(x => (
+        <p key={x.s} className="text-[11px] font-bold text-slate-100" data-amg-log={x.a}>{['🌅', '☀', '🌙'][x.s % 3]} {AMG_PERIOD_NAME[x.s % 3]} {amgActName(x)}{x.f ? '(うまくいかなかった)' : ''} {Object.entries(x.g).map(([k, n]) => `${(AMG_STATS.find(s => s[0] === k) || [])[1]} +${n}`).join('・')}{x.a === 'rest' ? '(疲れがとれた)' : x.a === 'play' ? '(気分転換)' : ''}</p>))
+        : <p className="text-[10.5px] font-bold text-slate-400">まだ今日の育成はありません(朝4:00・昼12:00・夜18:00に{who.name}が育てます)</p>}
+    </div>);
+}

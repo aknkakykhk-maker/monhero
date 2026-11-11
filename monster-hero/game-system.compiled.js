@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c445b6bc4e567f33
+// source-sha256: 734b34d394bf5322
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -127957,6 +127957,11 @@ const assistantMasmonAskJudge = (aid, r, lv) => {
     const bad = (p.dislikeMon || []).some(x => x.monster === r.monster || x.lineage && x.lineage === lin || x.monster && lin && assistantMasmonLineage(x.monster) === lin);
     const good = (p.likeMon || []).some(x => x.monster === r.monster || x.lineage && x.lineage === lin) || (p.team || []).some(x => x.monster === r.monster);
     taste = bad ? 'hate' : good ? 'like' : 'mid';
+  } else if (r.kind === 'train') {
+    if (r.train === 'rest' || r.train === 'auto') taste = 'like';else {
+      const row = assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, aid).find(x => x.slot === r.slot0);
+      taste = row && typeof AMG_POLICY !== 'undefined' && (AMG_POLICY[assistantMasmonGrowKind(row.grow)] || []).includes(r.train) ? 'like' : 'mid';
+    }
   } else if (r.kind === 'grow') {
     taste = (p.team || []).some(x => assistantMasmonGrowKind(x.grow) === r.grow) ? 'like' : 'mid';
   } else if (r.kind === 'hero') {
@@ -128059,6 +128064,17 @@ const assistantMasmonAskApply = (aid, r, outcome, t) => {
     return {
       changed: true,
       what: `名前を「${r.name}」に`
+    };
+  }
+  if (r.kind === 'train' && t && outcome === 'yes' && typeof amgAdvise === 'function') {
+    if (!amgAdvise(aid, t.slot, r.train)) return {
+      changed: false,
+      what: ''
+    };
+    const label = (AMG_STATS.find(x => x[0] === r.train) || [])[1];
+    return {
+      changed: true,
+      what: r.train === 'rest' ? '次の育成はお休みに' : r.train === 'auto' ? '育成をおまかせに' : `しばらく${label}を鍛える`
     };
   }
   if (r.kind === 'grow' && t && outcome === 'yes' && ASSISTANT_MASMON_GROW_KINDS.includes(r.grow)) {
@@ -128496,7 +128512,12 @@ const assistantMasmonAsk = async (aid, from, text, t = null) => {
           from,
           text: body,
           history,
-          ctx: assistantMasmonAskCtx(aid, from, t, lv)
+          ctx: {
+            ...assistantMasmonAskCtx(aid, from, t, lv),
+            ...(t && typeof amgOn === 'function' && amgOn() ? {
+              train: true
+            } : {})
+          }
         })
       });
       res = r.ok ? await r.json() : null;
@@ -128511,7 +128532,7 @@ const assistantMasmonAsk = async (aid, from, text, t = null) => {
       };
     }
     const r = res.result;
-    const fits = ['welcome', 'hero', 'deck', 'nameStyle', 'nameStyleOff', 'colorStyle', 'colorStyleOff', ...(t ? ['name', 'color', 'grow', 'swap'] : [])];
+    const fits = ['welcome', 'hero', 'deck', 'nameStyle', 'nameStyleOff', 'colorStyle', 'colorStyleOff', ...(t ? ['name', 'color', 'grow', 'swap'] : []), ...(t && typeof amgOn === 'function' && amgOn() ? ['train'] : [])];
     if (r.kind === 'none' && r.blocked === 'name') {
       const ng = assistantMasmonAskLine(aid, r.replies, 'ng');
       record('no', '', false, ng);
@@ -128530,7 +128551,10 @@ const assistantMasmonAsk = async (aid, from, text, t = null) => {
         note: ''
       };
     }
-    const outcome = assistantMasmonAskJudge(aid, r, lv);
+    const outcome = assistantMasmonAskJudge(aid, t ? {
+      ...r,
+      slot0: t.slot
+    } : r, lv);
     const done = assistantMasmonAskApply(aid, r, outcome, t);
     const res2 = outcome === 'no' ? 'no' : done.changed ? outcome : 'some';
     const line = assistantMasmonAskLine(aid, r.replies, outcome === 'no' ? 'no' : done.changed ? outcome === 'yes' ? 'yes' : 'some' : 'think');
@@ -129479,8 +129503,11 @@ function AssistantMasmonDots({
 function AssistantMasmonRow({
   t,
   land = false,
-  onOpen = null
+  onOpen = null,
+  aid = '',
+  amg = null
 }) {
+  const ge = aid && typeof amgOn === 'function' && amgOn() ? amgEntryOf(aid, t, amg || AMG_STORE.state) : null;
   const m = assistantMasmonMon(t.monster);
   const st = assistantMasmonStats(t);
   if (!m || !st) return null;
@@ -129518,7 +129545,13 @@ function AssistantMasmonRow({
     t: t
   })), React.createElement("p", {
     className: "text-[11px] font-black leading-tight text-amber-200"
-  }, "📈 ", t.grow), React.createElement("div", {
+  }, "📈 ", t.grow), ge ? React.createElement("div", {
+    className: "mt-0.5"
+  }, React.createElement(AmgStatBars, {
+    e: ge,
+    small: true,
+    cols: land ? 1 : 2
+  })) : React.createElement("div", {
     className: `mt-0.5 grid gap-x-3 gap-y-0.5 ${land ? 'grid-cols-1' : 'grid-cols-2'}`
   }, ASSISTANT_MASMON_STAT_LABEL.map(([k, label]) => React.createElement("div", {
     key: k,
@@ -129539,6 +129572,10 @@ function AssistantMasmonSheet({
   onClose,
   bondLv = null
 }) {
+  const amgSt = typeof useAmgState === 'function' ? useAmgState() : null;
+  React.useEffect(() => {
+    if (typeof amgTick === 'function') void amgTick(id);
+  }, [id]);
   const [tab, setTab] = React.useState('mons');
   const [detail, setDetail] = React.useState(null);
   const save = useAssistantMasmonSave();
@@ -129615,7 +129652,9 @@ function AssistantMasmonSheet({
       key: t.monster,
       t: t,
       land: land,
-      onOpen: setDetail
+      onOpen: setDetail,
+      aid: id,
+      amg: amgSt
     })), waiting.map(t => React.createElement(AssistantMasmonWaitCard, {
       key: t.monster,
       t: t,
@@ -130051,6 +130090,8 @@ function AssistantMasmonDetail({
 }) {
   const m = assistantMasmonMon(t.monster),
     st = assistantMasmonStats(t);
+  const amgSt = typeof useAmgState === 'function' ? useAmgState() : null;
+  const ge = typeof amgOn === 'function' && amgOn() ? amgEntryOf(who.id, t, amgSt || AMG_STORE.state) : null;
   if (!m || !st) return null;
   const n = assistantMasmonRegions(t.monster);
   const cols = (t.dye && t.dye.colors || []).slice(0, n || 5);
@@ -130062,7 +130103,13 @@ function AssistantMasmonDetail({
     t: t,
     size: land ? 190 : 210
   });
-  const info = React.createElement(React.Fragment, null, React.createElement("div", {
+  const info = React.createElement(React.Fragment, null, ge ? React.createElement(AmgGrowCard, {
+    who: who,
+    t: t,
+    e: ge,
+    kindText: ASSISTANT_MASMON_GROW_TEXT[kind] || '',
+    growMine: t.growMine
+  }) : React.createElement(React.Fragment, null, React.createElement("div", {
     className: "mhm-card",
     "data-assistant-masmon-detail-stats": true
   }, React.createElement("p", {
@@ -130087,7 +130134,7 @@ function AssistantMasmonDetail({
     "data-assistant-masmon-grow-mine": true
   }, "🌱 育て方: ", t.growMine.kind, "(", t.growMine.day ? `${t.growMine.day.slice(5).replace('-', '/')} ` : '', "あなたの提案)"), ASSISTANT_MASMON_GROW_TEXT[kind] && React.createElement("p", {
     className: "text-[10.5px] font-bold text-slate-300"
-  }, ASSISTANT_MASMON_GROW_TEXT[kind])), React.createElement("div", {
+  }, ASSISTANT_MASMON_GROW_TEXT[kind]))), React.createElement("div", {
     className: "mhm-card mt-2",
     "data-assistant-masmon-detail-skills": true
   }, React.createElement("p", {
@@ -131178,6 +131225,107 @@ const amgAdvise = (aid, slot, what, now = Date.now()) => {
   });
   return true;
 };
+const useAmgState = () => {
+  const [st, setSt] = React.useState(AMG_STORE.state);
+  React.useEffect(() => {
+    AMG_STORE.subs.add(setSt);
+    return () => {
+      AMG_STORE.subs.delete(setSt);
+    };
+  }, []);
+  return st;
+};
+function AmgStatBars({
+  e,
+  small = false,
+  cols = 2
+}) {
+  return React.createElement("div", {
+    className: `grid gap-x-3 ${small ? 'gap-y-0.5' : 'gap-y-1'} ${cols === 1 ? 'grid-cols-1' : 'grid-cols-2'}`,
+    "data-amg-stats": true
+  }, AMG_STATS.map(([k, label]) => React.createElement("div", {
+    key: k,
+    className: `flex items-center gap-1.5 font-bold ${small ? 'text-[9.5px] text-slate-300' : 'text-[10.5px] text-slate-200'}`
+  }, React.createElement("span", {
+    className: `${small ? 'w-[40px]' : 'w-[48px]'} shrink-0 whitespace-nowrap`
+  }, label), React.createElement("span", {
+    className: "mhm-bar"
+  }, React.createElement("i", {
+    style: {
+      width: `${Math.round(e.st[k] / AMG_MAX * 100)}%`
+    }
+  })), !small && React.createElement("b", {
+    className: "w-[28px] shrink-0 text-right text-amber-200",
+    "data-amg-stat": k
+  }, e.st[k]))));
+}
+function AmgGrowCard({
+  who,
+  t,
+  e,
+  kindText = '',
+  growMine = null
+}) {
+  const today = amgSlotDay(amgSlotOf());
+  const logs = e.log.filter(x => amgSlotDay(x.s) === today);
+  const T = AMG_TRAIT[who.id] || null;
+  return React.createElement("div", {
+    className: "mhm-card",
+    "data-assistant-masmon-detail-stats": true,
+    "data-amg-card": true
+  }, React.createElement("p", {
+    className: "text-[10px] font-black text-slate-400"
+  }, "能力(6つ・上限", AMG_MAX, ")"), React.createElement("div", {
+    className: "mt-1"
+  }, React.createElement(AmgStatBars, {
+    e: e
+  })), React.createElement("div", {
+    className: "mt-1.5 grid grid-cols-2 gap-x-3"
+  }, React.createElement("div", {
+    className: "flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200"
+  }, React.createElement("span", {
+    className: "w-[48px] shrink-0"
+  }, "疲労"), React.createElement("span", {
+    className: "mhm-bar"
+  }, React.createElement("i", {
+    style: {
+      width: `${e.fat}%`,
+      background: 'linear-gradient(90deg,#fb7185,#f97316)'
+    }
+  })), React.createElement("b", {
+    className: "w-[24px] text-right text-amber-200",
+    "data-amg-fat": true
+  }, e.fat)), React.createElement("div", {
+    className: "flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200"
+  }, React.createElement("span", {
+    className: "w-[48px] shrink-0"
+  }, "ストレス"), React.createElement("span", {
+    className: "mhm-bar"
+  }, React.createElement("i", {
+    style: {
+      width: `${e.str}%`,
+      background: 'linear-gradient(90deg,#60a5fa,#a78bfa)'
+    }
+  })), React.createElement("b", {
+    className: "w-[24px] text-right text-amber-200",
+    "data-amg-str": true
+  }, e.str))), React.createElement("p", {
+    className: "mt-1.5 text-[11px] font-bold text-amber-200"
+  }, "📈 育成方針: ", t.grow), growMine && React.createElement("p", {
+    className: "text-[10.5px] font-bold text-sky-200",
+    "data-assistant-masmon-grow-mine": true
+  }, "🌱 育て方: ", growMine.kind, "(", growMine.day ? `${growMine.day.slice(5).replace('-', '/')} ` : '', "あなたの提案)"), kindText && React.createElement("p", {
+    className: "text-[10.5px] font-bold text-slate-300"
+  }, kindText), React.createElement("p", {
+    className: "mt-1.5 text-[10px] font-black text-slate-400"
+  }, "今日の育成(", who.name, T ? `・${T.name}` : '', ")"), logs.length ? logs.map(x => React.createElement("p", {
+    key: x.s,
+    className: "text-[11px] font-bold text-slate-100",
+    "data-amg-log": x.a
+  }, ['🌅', '☀', '🌙'][x.s % 3], " ", AMG_PERIOD_NAME[x.s % 3], " ", amgActName(x), x.f ? '(うまくいかなかった)' : '', " ", Object.entries(x.g).map(([k, n]) => `${(AMG_STATS.find(s => s[0] === k) || [])[1]} +${n}`).join('・'), x.a === 'rest' ? '(疲れがとれた)' : x.a === 'play' ? '(気分転換)' : '')) : React.createElement("p", {
+    className: "text-[10.5px] font-bold text-slate-400"
+  }, "まだ今日の育成はありません(朝4:00・昼12:00・夜18:00に", who.name, "が育てます)"));
+}
 const ALF_KEY = 'mh_assistant_life_friend_v1';
 const ALF_SETTINGS_KEY = 'mh_assistant_life_friend_settings_v1';
 const ALF_KNOWN_KEY = 'mh_assistant_life_friend_known_v1';
