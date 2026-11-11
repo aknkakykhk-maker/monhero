@@ -35,9 +35,9 @@ function pick(text, { failed = 0, kind } = {}) {
   const guard = ALWAYS_DESIGN.filter(w => t.includes(w));
   if (guard.length) return { kind: byId.design, why: `壊すと戻せない所の語: ${guard.join('・')}` };
   // 安いモデルは「品質が落ちないと分かっている仕事」だけ(2026-11-11 社長「弱いモデルを使うのは、それでも問題ないときね」)。
-  // 迷ったら上: 同点なら高いほう(表は安い順に並んでいる)。当たる語が無い=分からない仕事なので、既定は設計のモデル
+  // 迷ったら上: 同点なら高いほう(表は安い順に並んでいる)。当たる語が無い=分からない仕事は sonnet(build)から始め、上げる条件に当たったら上げる(2026-11-11 社長「Sonnetから始める」)
   const best = score.map((s, i) => ({ ...s, i })).filter(s => !['final', 'tool'].includes(s.k.id)).sort((a, b) => (b.hits.length - a.hits.length) || (b.i - a.i))[0];
-  if (!best.hits.length) return { kind: byId[R['既定']], why: '当たる語が無い(分からない仕事)ので、迷ったら上のモデル' };
+  if (!best.hits.length) return { kind: byId[R['既定']], why: '当たる語が無い(分からない仕事)ので sonnet から始める。判断・設計が要る/2回失敗/保存データ等に当たったら上げる' };
   return { kind: best.k, why: `語: ${best.hits.join('・')}` };
 }
 
