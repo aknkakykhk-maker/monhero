@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ad7330aca33da852
+// generated-sha256: 1d0f34ad6031a0a2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -17,6 +17,7 @@ const { useState, useEffect, useCallback, useMemo, useRef, useContext } = React;
 //   gap  … 画面の描き直しが1秒以上止まった(見えているのに)
 //   gl   … 演奏の絵(WebGL)が端末に捨てられた/戻った
 //   rot  … 自前の画面の回転(🔄 横)を切り替えた
+//   vv   … ページのずれ・拡大を見つけて戻した(s=倍率 y=ページのスクロール o=見えている範囲のずれ。MH_PAGE_OFFSET_GUARD・2026-11-11)
 //   play … 演奏が始まった・終わった
 // 演奏ごとの診断(rhythm_touch_diagnostics の stats)にも、その演奏のあいだの出来事を短く足す(stats.scr・足すだけ)。
 // 名前・ブリーダーID・セーブデータは入れない。判定・スコア・保存には一切関わらない。読めない・壊れていれば空から始める
@@ -53,16 +54,68 @@ const MH_SCREEN_TRAIL=(()=>{
 // このゲームはページそのものをスクロールさせない作り(#root が overflow:hidden・画面の中の箱だけがスクロールする)なので、
 // 画面の大きさが変わった・visualViewport が動いた・入力欄から離れた・全画面が終わった ときに、0でなければ0へ戻す。
 // 文字を入力している間(キーボードが出ている間)は戻さない(入力欄が隠れないように)。フォーカスが外れたあとで戻す。
-(()=>{
-  if(typeof window==='undefined'||typeof document==='undefined')return;
+// 【2026-11-11 社長「たまにタップズレが起きる。モンビー中や、起動直後の更新情報を見るとき」→ 見張りが届いていなかった所を足す】
+//   ① ページが拡大されたとき(iPhone は user-scalable=no を無視する)は、window.scrollY は0のまま visualViewport だけがずれる。
+//      それまでは scrollY しか見ていなかったので気づけなかった。visualViewport の位置・倍率も見る。
+//      拡大そのものは index.html の touch-action と、下の gesturestart で止める。残っていた拡大は viewport の書き直しで戻す。
+//   ② 見るきっかけに、起動のとき・ほかのアプリから戻ったとき(pageshow / visibilitychange)を足す。
+//   ③ ずれを見つけたら、画面の出来事の記録(MH_SCREEN_TRAIL の vv)に残す(次に起きたとき、何がずれていたかが分かる)。
+//   ④ 拡大が解けたら resize を1回鳴らして、拡大中に測られた画面の大きさ(🔄横の器・押した点の直し)を測り直させる。
+// 見るのは出来事のあった時と、ボタンなどを押した時(click)だけ(毎コマ・演奏中のタッチでは見ない)。演奏の判定・スコアには関わらない。
+const MH_PAGE_OFFSET_GUARD=(()=>{
+  if(typeof window==='undefined'||typeof document==='undefined')return {state:()=>null,check:()=>{}};
   const editing=()=>{const el=document.activeElement;if(!el)return false;const tag=String(el.tagName||'').toUpperCase();return tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||el.isContentEditable===true;};
+  const num=v=>{const n=Number(v);return Number.isFinite(n)?n:0;};
+  // いまのずれ。どれも0(倍率は1)が正しい
+  const state=()=>{
+    const vv=window.visualViewport||null;
+    const se=document.scrollingElement||document.documentElement;
+    return {
+      sx:num(window.scrollX)||num(se&&se.scrollLeft)||num(document.body&&document.body.scrollLeft),
+      sy:num(window.scrollY)||num(se&&se.scrollTop)||num(document.body&&document.body.scrollTop),
+      ox:vv?num(vv.offsetLeft):0,oy:vv?num(vv.offsetTop):0,
+      scale:vv&&Number.isFinite(Number(vv.scale))&&Number(vv.scale)>0?Number(vv.scale):1,
+    };
+  };
+  const zoomed=st=>Math.abs(st.scale-1)>0.01;
+  const moved=st=>Math.abs(st.sx)>=1||Math.abs(st.sy)>=1||Math.abs(st.ox)>=1||Math.abs(st.oy)>=1;
+  let lastTrailAt=0,zoomFixes=0,zoomFixAt=0,wasBig=false;
+  // 拡大が解けたら、画面の大きさを測り直させる(resize を1回鳴らす)。
+  // iPhone は拡大している間、window.innerWidth / innerHeight が「見えている範囲」の小ささで返る。そのあいだに測った大きさ
+  // (🔄横で回した器・押した点の直し RHYTHM_VIEW_ROTATION が持つ)は、拡大が解けても resize が来ないので小さいまま残り、
+  // 器と押した点がその分ずれる。回す仕組みは resize を合図に測り直すので、端末が回ったときと同じ道を通す。
+  // 拡大→解けた、の切り替わりの1回だけ鳴らす(鳴らした resize でここへ戻ってきても、もう wasBig は倒れている)
+  const remeasure=()=>setTimeout(()=>{try{window.dispatchEvent(new Event('resize'));}catch(_){}},0);
+  // 残っている拡大を戻す。viewport の中身を一度書き直すと、ブラウザが initial-scale(1.0)へ合わせ直す。
+  // 戻らない端末で繰り返さないよう、3秒に1回・続けて3回まで(倍率が1に戻ったら数え直す)
+  const unzoom=()=>{
+    const now=Date.now();
+    if(zoomFixes>=3||now-zoomFixAt<3000)return;
+    const meta=document.querySelector('meta[name="viewport"]');
+    const content=meta&&meta.getAttribute('content');
+    if(!content)return;
+    zoomFixes++;zoomFixAt=now;
+    meta.setAttribute('content',content+', minimum-scale=1.0');
+    setTimeout(()=>{try{meta.setAttribute('content',content);}catch(_){}},50);
+  };
   const reset=()=>{
     if(editing())return;
     try{
-      if(window.scrollX||window.scrollY)window.scrollTo(0,0);
-      for(const el of [document.scrollingElement,document.documentElement,document.body]){
-        if(el&&(el.scrollTop||el.scrollLeft)){el.scrollTop=0;el.scrollLeft=0;}
+      const st=state();
+      const bad=moved(st),big=zoomed(st);
+      if(big)wasBig=true;
+      else{zoomFixes=0;if(wasBig){wasBig=false;remeasure();}}
+      if(!bad&&!big)return;
+      const now=Date.now();
+      if(now-lastTrailAt>5000&&typeof MH_SCREEN_TRAIL!=='undefined'){lastTrailAt=now;MH_SCREEN_TRAIL.push('vv',`s${Math.round(st.scale*100)/100} y${Math.round(st.sy)} o${Math.round(st.ox)},${Math.round(st.oy)}`);}
+      if(bad){
+        // scrollY が0でも visualViewport だけがずれていることがあるので、0でも呼ぶ
+        window.scrollTo(0,0);
+        for(const el of [document.scrollingElement,document.documentElement,document.body]){
+          if(el&&(el.scrollTop||el.scrollLeft)){el.scrollTop=0;el.scrollLeft=0;}
+        }
       }
+      if(big)unzoom();
     }catch(_){}
   };
   // iOS は大きさや位置を少し遅れて直すことがあるので、すぐ・少しあと・もう少しあとの3回見る
@@ -80,6 +133,18 @@ const MH_SCREEN_TRAIL=(()=>{
   // 動画の全画面が終わったとき(iPhone の動画は webkitendfullscreen。泡立たないので document の捕まえる段で受ける)
   ['fullscreenchange','webkitfullscreenchange'].forEach(type=>document.addEventListener(type,soon));
   document.addEventListener('webkitendfullscreen',soon,true);
+  // 起動のとき・ほかのアプリや通知から戻ったとき(2026-11-11)
+  window.addEventListener('load',soon,passive);
+  window.addEventListener('pageshow',soon,passive);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')soon();});
+  soon();
+  // ボタンなどを押したとき(click)にも1回だけ見る。きっかけの合図が何も来ないままずれていても、次のひと押しで戻る。
+  // 演奏エリアは click が出ない(自前で touch を止めている)ので、演奏中は動かない。ずれていなければ数を読むだけ
+  document.addEventListener('click',reset,{capture:true,passive:true});
+  // 2本指の拡大を、どの画面でも始めさせない(Safari だけにある合図。touch-action を知らない古い iOS のため)。
+  // 演奏中は 30-rhythm-play.jsx が同じことをしている(回数も数えている)。重ねて止めても変わらない
+  ['gesturestart','gesturechange'].forEach(type=>document.addEventListener(type,e=>{if(e.cancelable)e.preventDefault();},{passive:false}));
+  return {state,check:soon};
 })();
 // ==== アイコン: lucide-react UMDが不安定なため、インラインSVGで自己完結 ====
 const _LI = {};
@@ -9625,6 +9690,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // その場面の台詞を Claude API で1日1回まとめて作る(assistant-chat の kind:'friend_scenes')。中継役を配ってから真にする。偽・thin・off・失敗のときは台本だけ
   // 助手のマスモンの名前を Claude API で1人1回まとめて付ける(assistant-chat の kind:'masmon_names'・2026-11-08 社長の選び ❷B)。
   //   窓口が中継役を配ったのを確かめてから真にする。偽・失敗のあいだは表の名前のまま(56-assistant-life-masmon.jsx)
+  assistantMasmonTrain: false, // 2026-11-11 助手のマスモンの修行と助手の成長(仕様書の第②段階・シュギョウ)。社長の答え(TRAIN-PLAN.md の ❶〜❻)と第①段階の受け口がそろうまで偽
   assistantMasmonSuggest: true, // 2026-11-09 助手のマスモン・デッキに「提案する」(キズナ4)。assistant-chat v24 と SQL 202611080003 を窓口が配り、本番で kind:'masmon_suggest' を1回呼んで返事が来るのを確かめた。カード部の受け手 #5126 と一緒に公開
   assistantMasmonNamesApi: true, // 2026-11-08 assistant-chat v22(窓口が配った)を本番の形で1回呼んで名前が返るのを確かめた(キズナ3)
   assistantLifeFriendApi: true, // 2026-11-08 assistant-chat v17(窓口が配った)を端末の形で1回呼んで確かめた。スイッチが thin/off のあいだは頼まない
@@ -15505,6 +15571,9 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
   }
   return hits;
 };
+// そのカードを使ったあと、同じターンの次のカードが攻撃を始める敵の距離。距離撃(range_atk)は敵を指定の距離へ動かすので、
+// あとのカードは動かしたあとの距離で計算する。実処理(processTurn)と予測(previewLocalBoosts・aiCopyPredictedDmg)が同じここを通る
+const attackDistanceAfterCard = (card, dist) => (card && card.type === 'range_atk' && card.rangeIdx != null ? card.rangeIdx : dist);
 // 贖罪の追撃(アーク・イブリースの固有技)。メインヒットの確定値を基準にし、会心は乗せない
 const attackAtonementDmg = (card, mainDmg, comboFinalMultiplier = 1) => {
   if (!(card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis'))) return 0;
@@ -47216,14 +47285,14 @@ const who=activeAssistant;
 const headline=n=>{const pages=(typeof assistantNoticePagesFor==='function')?assistantNoticePagesFor(n,who&&who.id):(Array.isArray(n.pages)?n.pages:[]);const first=pages[0];const text=(typeof assistantNoticePageText==='function')?assistantNoticePageText(first):String(first||'');return assistantSpeakText(text,breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId);};
 return(
   <div data-update-guide-bundle className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:76000,backgroundColor:'rgba(2,6,23,.94)'}} role="dialog" aria-modal="true" aria-label="新しいお知らせの一覧">
-    <div className="w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(env(safe-area-inset-bottom) + 16px)'}}>
+    <div className="w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] flex flex-col overflow-hidden rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(env(safe-area-inset-bottom) + 16px)'}}>
       <div className="flex items-center gap-2"><AssistantFace who={who} size={56} accent={who.accent} expression="happy"/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 p-2.5 text-sm font-bold text-white">新しいお知らせが{updateGuideQueue.length}件あるよ♪ 読みたいものだけ「くわしく」で開いてね。</div></div>
-      <div className="mt-3 space-y-2">{updateGuideQueue.map(n=><div key={n.id} data-update-guide-bundle-item={n.id} className="flex items-center gap-2 rounded-2xl border border-pink-400/40 bg-slate-900/80 p-2.5">
+      <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto">{updateGuideQueue.map(n=><div key={n.id} data-update-guide-bundle-item={n.id} className="flex items-center gap-2 rounded-2xl border border-pink-400/40 bg-slate-900/80 p-2.5">
         <div className="min-w-0 flex-1"><div className="text-[13px] font-black leading-snug text-pink-200">{n.title}</div><div className="mt-0.5 truncate text-[10px] font-bold text-slate-400">{headline(n)}</div></div>
         <button type="button" onClick={()=>openUpdateGuideDetail(n.id)} className="min-h-[44px] shrink-0 rounded-xl bg-pink-500 px-3 text-xs font-black text-slate-950">くわしく</button>
       </div>)}</div>
-      <button type="button" data-update-guide-bundle-later onClick={dismissUpdateGuideAll} className="mt-4 min-h-[50px] w-full rounded-2xl bg-slate-700 text-sm font-black text-white">あとで読む</button>
-      <p className="mt-2 text-center text-[10px] font-bold text-slate-500">更新履歴からいつでも読めます</p>
+      <button type="button" data-update-guide-bundle-later onClick={dismissUpdateGuideAll} className="mt-4 min-h-[50px] w-full shrink-0 rounded-2xl bg-slate-700 text-sm font-black text-white">あとで読む</button>
+      <p data-update-guide-bundle-foot className="mt-2 shrink-0 text-center text-[10px] font-bold text-slate-500">更新履歴からいつでも読めます</p>
     </div>
   </div>);
 }
@@ -49331,7 +49400,7 @@ function BattleScreen({
     const planIntent = Array.isArray(tacticsUnits) ? tacticsSweepIntent(enemyIntent, tacticsUnits, enemyDist) : enemyIntent;
     const raw = getIncomingDamageBeforeTurnReduction(planIntent, slotIdx);
     if (!(raw > 0)) return none;
-    const hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
+    let hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
     let guard = 0, guardHits = 1;
     // ★タクティクスは枠ごと。構えていない子も、全体ガードなら丈夫さぶんが付く。
     //   受け止めるヒット数は、その子へ何枚構えたかで決まる(2枚以上なら連撃の全部)
@@ -49342,18 +49411,24 @@ function BattleScreen({
       guardHits = tacticsGuardHits(own.cards, hits);
     } else {
       // 既存5モードは今までどおり、手札のガードをまとめて1つに数える
-      let flat = 0, mult = 0;
+      let flat = 0, mult = 0, guardCards = 0;
       const counter = makeCardHalveCounter();
       selectedCards.forEach(idx => {
         const card = hand[idx];
         const halved = counter.take(card, cardAssignments[idx] != null ? cardAssignments[idx] : null);
         const w = guardCardWeight(card);
         if (!(w > 0)) return;
+        guardCards += 1;
         const effect = cardEffectMultiplier(card, halved);
         flat += GUARD_EVOLUTION[guardLevel].flat * w * effect;
         mult += GUARD_EVOLUTION[guardLevel].mult * w * effect;
       });
       guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);
+      // ★シールドが割れたあとの連撃必殺技(INFERNO系のデュラハン・ムー。extremeLayerRushHits)は、実処理と同じ受け方で出す:
+      //   そのターンのガードが1枚なら1発ぶんだけ止まり、2枚以上で全部止まる。ここを1発扱いのままにすると、
+      //   ガード1枚で「ほぼ止まる」と出るのに、実際は残りの発がそのまま通る(2026-11-11 バトルの監査)
+      const layerRushHits = enemyIntent.type === 'SPECIAL' ? extremeLayerRushHits(infernoShellRule, wave, infernoShellView?.broken) : 1;
+      if (layerRushHits > 1) { hits = layerRushHits; guardHits = guardCards >= TACTICS_RUSH_GUARD_CARDS ? hits : 1; }
     }
     const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);
     // 大樹の加護を選んでいれば、ガードのあとの通る量へ使ったターンぶんを掛ける(実処理の applyImmediateTakenReduction と同じ順)。
@@ -50159,7 +50234,7 @@ function BattleScreen({
               const card=hand[idx]; const slotIdx=cardAssignments[idx];
               const halved=committedCounter.take(card,slotIdx!=null?slotIdx:null);
               const b=boosts.perCard[idx]||{oryo:0,dmgMod:0,combo:0};
-              if(slotIdx!=null&&isAttackCard(card)){const baseDmg=getDmg(card,slotIdx,slots[slotIdx],b.oryo,b.dmgMod,halved); committedTotal+=getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo,slotIdx,halved);}
+              if(slotIdx!=null&&isAttackCard(card)){const baseDmg=getDmg(card,slotIdx,slots[slotIdx],b.oryo,b.dmgMod,halved,b.dist); committedTotal+=getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo,slotIdx,halved);}
               const gw=guardCardWeight(card);
               if(gw>0){ const e=cardEffectMultiplier(card,halved);
                 const gf=GUARD_EVOLUTION[guardLevel].flat*gw*e, gm=GUARD_EVOLUTION[guardLevel].mult*gw*e;
@@ -50209,7 +50284,7 @@ function BattleScreen({
                   const maxUses=slotMaxUses(s,i); if(assignedCount>=maxUses) continue;
                 } else if(!tacticsAnswer) continue;
                 if(pendingCardObj.type==='unique'&&pendingCardObj.ownerSlotIdx!==i) continue;
-                pendingValidSlot=i; const pendingHalved=committedCounter.peek(pendingCardObj,i); const baseDmg=getDmg(pendingCardObj,i,s,boosts.forPending.oryo,boosts.forPending.dmgMod,pendingHalved); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.forPending.combo,i,pendingHalved); break;
+                pendingValidSlot=i; const pendingHalved=committedCounter.peek(pendingCardObj,i); const baseDmg=getDmg(pendingCardObj,i,s,boosts.forPending.oryo,boosts.forPending.dmgMod,pendingHalved,boosts.forPending.dist); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.forPending.combo,i,pendingHalved); break;
               }
             }
             const projectedTotal=committedTotal+pendingAdd;
@@ -50399,7 +50474,7 @@ function BattleScreen({
                 const pendingCounter=makeCardHalveCounter();
                 selectedCards.forEach(idx=>{ if(idx===pendingIdx) return; pendingCounter.take(hand[idx],cardAssignments[idx]!=null?cardAssignments[idx]:null); });
                 const isSecondOrLater = pendingCounter.peek(pendingCardObj,i);
-                const baseDmg=getDmg(pendingCardObj,i,s,slotBoosts.forPending.oryo,slotBoosts.forPending.dmgMod,isSecondOrLater);
+                const baseDmg=getDmg(pendingCardObj,i,s,slotBoosts.forPending.oryo,slotBoosts.forPending.dmgMod,isSecondOrLater,slotBoosts.forPending.dist);
                 previewDmg=getAttackPredictedDmg(pendingCardObj,s,baseDmg,slotBoosts.forPending.combo,i,isSecondOrLater);
                 previewSoulPct=soulTraitAttackProfile(s?.masuId?getMasuMon(s.masuId):null,pendingCardObj,i).damagePct;
                 isPendingPreview=true; isPendingHalved=isSecondOrLater;
@@ -50412,7 +50487,7 @@ function BattleScreen({
                   const halved=slotCounter.take(card,cardAssignments[idx]!=null?cardAssignments[idx]:null);
                   if(cardAssignments[idx]===i){
                     const b=slotBoosts.perCard[idx]||{oryo:0,dmgMod:0,combo:0};
-                    const baseDmg=getDmg(card,i,s,b.oryo,b.dmgMod,halved);
+                    const baseDmg=getDmg(card,i,s,b.oryo,b.dmgMod,halved,b.dist);
                     previewDmg+=getAttackPredictedDmg(card,s,baseDmg,b.combo,i,halved);
                   }
                 });
@@ -63706,7 +63781,9 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, othe
       {ppl && state.sleep && <div className="off" style={{ background: night ? 'rgba(3,5,16,.6)' : 'rgba(30,27,75,.35)' }}/>}
       {!ppl && met && <div className="off" style={night ? { background: 'rgba(3,5,16,.72)' } : undefined}/>}
       {ppl && <div className="pp">{ppl.map(pid => { const who = assistantById(pid); return who ? (
-        <span key={pid} className={state.lonely && pid === id ? 'lonely' : state.after ? 'after' : ''} data-assistant-life-room-face={pid}><AssistantFace who={who} size={Math.round(Math.min(40, h * .44))} accent={who.accent}/></span>) : null; })}</div>}
+        <span key={pid} className={state.lonely && pid === id ? 'lonely' : state.after ? 'after' : ''} data-assistant-life-room-face={pid} style={{ position: 'relative' }}><AssistantFace who={who} size={Math.round(Math.min(40, h * .44))} accent={who.accent}/>
+          {/* 寝ているときは目を閉じた形を重ねる(2026-11-11 社長「目を開けっぱなしの人がいる」・顔の枠の線2pxの内側)。部屋の「寝ている」印で決める(フレンドの家も同じ) */}
+          {met && typeof AssistantLifeSleepEyes === 'function' && state.sleep && (() => { const sz = Math.round(Math.min(40, h * .44)) - 4; return <AssistantLifeSleepEyes pid={pid} src={assistantFaceSrc(who, null)} w={sz} h={sz} style={{ left: 2, top: 2 }}/>; })()}</span>) : null; })}</div>}
       {ppl && state.bub && <span className="bb" data-assistant-life-room-bub style={{ bottom: Math.round(Math.min(40, h * .44)) + 14, fontSize: w < 150 ? 8.5 : undefined }}>{[].concat(state.lonely && !state.sleep && !state.after && w < 150 ? ['💭 さみしいな…'] : state.bub).map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span className="whitespace-nowrap" data-assistant-life-chunk>{x}</span></React.Fragment>)}</span>}
       {typeof AssistantLifeRelRoomLayer === 'function' && <AssistantLifeRelRoomLayer state={state} h={h}/>}
       {/* 出かけ札は床にかけない(2026-11-08 社長: 助手のマスモンが部屋の床を歩く。キズナ2)。縦は名札の右に2行(行き先/一緒の全員の名前・ひとりなら何をしているか・けんかや仲直りの印)、
@@ -64099,6 +64176,7 @@ function AssistantLifeStands({ ids, sleepIds = [] }) {
         style={p ? { left: p.left, top: p.top, height: p.height, width: p.width, maxWidth: 'none', bottom: 'auto', objectFit: 'fill', filter,
           clipPath: `inset(${p.clip[0].toFixed(1)}px 0 ${p.clip[1].toFixed(1)}px 0)`,
           ...(p.fade ? { WebkitMaskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)`, maskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)` } : {}) } : { opacity: 0, height: '50%', filter }}/>
+      {zz && p && typeof AssistantLifeSleepEyes === 'function' && <AssistantLifeSleepEyes pid={x.pid} src={x.src} w={p.width} h={p.height} style={{ left: p.left, top: p.top, filter, zIndex: 1 }}/>}
       {zz && p && <span className="absolute text-[34px]" style={{ left: p.cx + 20, top: Math.max(40, p.visTop) }} aria-hidden="true">💤</span>}
     </React.Fragment>); })}</>);
 }
@@ -64767,6 +64845,8 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
     <span className="relative block shrink-0" style={{ width: w, height: h }}>
       <span className="absolute inset-0 overflow-hidden" style={{ WebkitMaskImage: mask, maskImage: mask }} data-assistant-life-map-fig>
         <img src={src} alt="" draggable={false} style={{ position: 'absolute', height: ih, width: iw, maxWidth: 'none', objectFit: 'contain', top: -b.t * ih, left: w / 2 - cx, filter: sleep ? 'brightness(.62) saturate(.7)' : 'drop-shadow(0 2px 3px #0009)' }}/>
+        {/* 寝ているときは目を閉じた形を重ねる(2026-11-11 社長「目を開けっぱなしの人がいる」) */}
+        {sleep && typeof AssistantLifeSleepEyes === 'function' && <AssistantLifeSleepEyes pid={who && who.id} src={src} w={iw} h={ih} style={{ left: w / 2 - cx, top: -b.t * ih, filter: 'brightness(.62) saturate(.7)' }}/>}
       </span>
       {sleep && <span className="absolute right-0 top-0 text-[10px]" aria-hidden="true">💤</span>}
       {spent && typeof AssistantLifeSpentMark === 'function' && <AssistantLifeSpentMark size={Math.round(h * 0.5)}/>}
@@ -65120,19 +65200,32 @@ function AssistantLifeRoomFront({ kind, cx, top, w, items = [] }) {
 const ASSISTANT_LIFE_ROOM_QUILT = Object.freeze({ mua: ['#fbcfe8', '#f472b6'], kiki: ['#ddd6fe', '#a78bfa'], momosuke: ['#fed7aa', '#fb923c'], dra: ['#bbf7d0', '#4ade80'], atsu: ['#fecaca', '#ef4444'], kyuko: ['#bae6fd', '#38bdf8'], sorashido: ['#fef08a', '#facc15'], erubin: ['#e2e8f0', '#94a3b8'] });
 // 寝ているときの閉じた目(2026-11-08 社長「寝てるときは目を閉じるようにできないの？ どらちゃんは眼鏡だからそのままでいい」)。
 //   寝顔の絵は無いので、ふつうの顔(normal)の絵の上に、まわりの肌の色で目をふさぎ、閉じたまぶたの線(下向きの弧)とまつ毛を描く。
-//   描くのは目を開いた絵の きき・ももすけ・あつ だけ(みゅあ・きゅうこ・ソラシド・えるびんは元から目を閉じた絵、ドラは眼鏡)。
+//   描くのは目を開いた絵の みゅあ・きき・ももすけ・あつ・きゅうこ(ソラシドは元から目を閉じた絵、ドラは眼鏡、えるびんは社長「そのままでいい」)。
+//   2026-11-11 社長「寝ているときに目を開けっぱなしの人がいる。えるびんだけそのままでいい」: みゅあ・きゅうこを足し、顔アイコン(face/)の絵の表も持つ。
+//   ベッドだけでなく、家の部屋の顔・場面の立ち絵・地図の全身(寝ている姿が出る所すべて)に重ねる
 //   eyes … [x, y, 幅, 高さ, 肌の色](絵の幅・高さに対する割合。左右の目)/ang … 顔の傾き(度)/line … まぶたの線の色。測り方: 絵を目盛りつきで切り出して手で読んだ
 const ASSISTANT_LIFE_SLEEP_EYES = Object.freeze({
   kiki: { ang: -3, line: '#4a2030', eyes: [[0.4492, 0.4868, 0.0579, 0.0703, '#fccfc3'], [0.5592, 0.4766, 0.0579, 0.0664, '#fddbcf']] },
   momosuke: { ang: -17, line: '#5a3a28', eyes: [[0.4254, 0.4363, 0.0918, 0.0781, '#e8b8b2'], [0.5967, 0.3836, 0.0918, 0.0859, '#fcece4']] },
   atsu: { ang: -27, line: '#3a1f2a', eyes: [[0.4188, 0.3125, 0.0768, 0.0391, '#efa696'], [0.5661, 0.2553, 0.0911, 0.0342, '#f9ccb8']] },
+  mua: { ang: 8, line: '#5a3a2a', eyes: [[0.46, 0.334, 0.043, 0.048, '#fef3e7'], [0.524, 0.347, 0.032, 0.046, '#fae2d3']] },
+  kyuko: { ang: -10, line: '#4a2418', eyes: [[0.342, 0.415, 0.117, 0.072, '#f9c7b0'], [0.579, 0.383, 0.142, 0.075, '#fbd6bf']] },
+});
+// 顔アイコン(face の ◯◯_normal の絵)の目。測り方は全身と同じ(目盛りつきで切り出して手で読んだ・2026-11-11)
+const ASSISTANT_LIFE_SLEEP_EYES_FACE = Object.freeze({
+  mua: { ang: 10, line: '#5a3a2a', eyes: [[0.375, 0.49, 0.14, 0.10, '#fbe5d6'], [0.61, 0.53, 0.115, 0.095, '#fae4d5']] },
+  kiki: { ang: -2, line: '#4a2030', eyes: [[0.37, 0.555, 0.135, 0.085, '#fbcabd'], [0.645, 0.545, 0.145, 0.105, '#fdd4c8']] },
+  momosuke: { ang: -19, line: '#5a3a28', eyes: [[0.39, 0.53, 0.11, 0.095, '#f8cac1'], [0.605, 0.455, 0.125, 0.09, '#fad0c7']] },
+  atsu: { ang: -30, line: '#3a1f2a', eyes: [[0.35, 0.60, 0.095, 0.05, '#f6baa7'], [0.56, 0.48, 0.12, 0.06, '#f8c7b3']] },
+  kyuko: { ang: -11, line: '#4a2418', eyes: [[0.315, 0.64, 0.145, 0.12, '#f9c7b0'], [0.605, 0.585, 0.185, 0.115, '#fbd6bf']] },
 });
 function AssistantLifeSleepEyes({ pid, src, w, h, style }) {
-  const def = ASSISTANT_LIFE_SLEEP_EYES[pid];
+  const isFace = /\/face\//.test(String(src || ''));
+  const def = (isFace ? ASSISTANT_LIFE_SLEEP_EYES_FACE : ASSISTANT_LIFE_SLEEP_EYES)[pid];
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   // 着替えなど別の絵では目の位置がちがうので描かない(その助手のふつうの顔の絵のときだけ)
   if (!def || !who || !who.imagePrefix || !String(src || '').includes(`/${who.imagePrefix}_normal`)) return null;
-  const fid = `mhlse-${pid}`;
+  const fid = `mhlse-${pid}${isFace ? '-f' : ''}`;
   return (
     <svg data-assistant-life-roomview-sleep-eyes={pid} width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ position: 'absolute', overflow: 'visible', pointerEvents: 'none', ...style }}>
       <defs><filter id={fid} x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation={Math.max(0.6, w * 0.006)}/></filter></defs>
@@ -69147,6 +69240,497 @@ const ASSISTANT_MASMON_CSS = `
 .mhm-bar{position:relative;flex:1;height:5px;border-radius:99px;background:#334155;overflow:hidden}
 .mhm-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#fbbf24,#f97316)}
 `;
+
+// ---- part: 56-assistant-life-masmon-train.jsx ----
+// 助手のマスモンの修行と助手の成長(社長の仕様書 docs/progress/assistant-peer/ASSISTANT-MASMON-AUTOBATTLE-SPEC-v1.md の第②段階・2026-11-11 シュギョウ)
+//   修行6系統・技の習得と熟練(技表 monster-hero/data/assistant-masmon-techs.js・モンスターファームのような技)・助手のブリーダー能力・助手からの相談・日常の出来事
+//   案は docs/progress/assistant-peer/masmon-train/TRAIN-PLAN.md・社長の答えは台帳 2026-11-11
+//   修行は、助手の生活で「モンヒロバトル」にいた回にする(社長「モンバトにいるときにしよう」「MB管理とモンバトは別」。場所は助手ライフ担当ナカヨシ9が生活に足す)
+//   保存は新しいキー mh_assistant_masmon_train_v1 だけ(mh_assistant_masmon_grow_v1・mh_assistant_life_masmon_v1 は読むだけ)
+//   公開の印 RELEASE_FLAGS.assistantMasmonTrain が偽のあいだは、受け口はすべて「何もしない」を返す(第①段階の結果を1つも変えない)
+//   乱数は自分の種(ブリーダーの種・助手・枠:種類・回)から作り、第①段階の乱数の列を引かない(同じ種なら同じ結果)
+const ASSISTANT_MASMON_TRAIN_KEY = 'mh_assistant_masmon_train_v1';
+// 修行の6系統(仕様書 §6)。stat=少し伸びる能力・aim=磨くもの
+const AMGT_KINDS = Object.freeze({
+  pow: { name: 'ちから修行', act: '岩割り', stat: 'pow', aim: 'ちから技' },
+  wise: { name: 'かしこさ修行', act: '瞑想', stat: 'wise', aim: 'かしこさ技' },
+  hit: { name: '命中修行', act: '一点突き', stat: 'hit', aim: '当てにくい技' },
+  eva: { name: '回避修行', act: '見切り', stat: 'eva', aim: '間合いの判断' },
+  tough: { name: '防御修行', act: '受け止め', stat: 'tough', aim: 'ガード' },
+  real: { name: '実戦修行', act: '手合わせ', stat: 'life', aim: '交代の判断と全部の技' },
+});
+const AMGT_KIND_KEYS = Object.keys(AMGT_KINDS);
+// 技のほかに磨くもの(0〜100)。guard=ガード・dist=間合いの判断・swap=交代の判断
+const AMGT_SENSE = Object.freeze([['guard', 'ガード'], ['dist', '間合いの判断'], ['swap', '交代の判断']]);
+const AMGT_SENSE_KEYS = AMGT_SENSE.map(x => x[0]);
+const AMGT_RANKS = Object.freeze([[100, '極み'], [75, '達人'], [50, '得意'], [25, '慣れ'], [0, '見習い']]);
+const amgtRankOf = (v) => (AMGT_RANKS.find(r => v >= r[0]) || AMGT_RANKS[AMGT_RANKS.length - 1])[1];
+// 数字(社長 11-11: 修行の伸びはふつう)。数字はここだけ
+const AMGT_NUM = Object.freeze({
+  gain: [4, 8], // 修行1回の熟練(主)
+  realAll: [1, 2], // 実戦修行で、覚えている全部の技に足す分
+  stat: [2, 4], // 修行1回の能力の伸び(第①段階の1日の上限に入る)
+  fat: 12, str: 2, // 疲労・ストレス
+  perDay: 2, // 1日の修行の回数の上限(案)
+  fatStop: 45, // これ以上疲れていたら修行に行かない(訓練側が休ませる)
+  goAt: 0.4, // モンヒロバトルにいた回に修行へ行く起こりやすさに足す分(性格の p に足す)
+  initPerLv: 0.3, initMax: 30, // 覚えている技の熟練の初めの値 = 育成 Lv × 0.3(最大30)
+  askMult: 1.1, // 相談に答えて頼んだ系統の修行の伸び
+});
+// 熟練100のときの補正(対戦の中だけ・社長 11-11「中」)。対戦の計算はタタカイの戦闘の芯が持つ。ここは画面の説明用の写し
+const AMGT_BONUS = Object.freeze({ hit: 0.06, guts: 0.15, guard: 0.08 });
+// 助手のブリーダー能力(仕様書 §7)
+const AMGT_BR = Object.freeze([['know', '育成知識'], ['lead', '指導力'], ['obs', '観察力'], ['tac', '戦術力'], ['trust', '信頼構築'], ['exp', '育成経験']]);
+const AMGT_BR_KEYS = AMGT_BR.map(x => x[0]);
+// 性格の初めの傾向(仕様書 §7 の仮の傾向。並びは AMGT_BR_KEYS)
+const AMGT_BR_INIT = Object.freeze({
+  mua: [25, 40, 20, 30, 35, 20], // 積極型
+  kiki: [40, 25, 40, 35, 20, 20], // 分析型
+  momosuke: [30, 25, 40, 20, 40, 20], // 安定型
+  dra: [20, 40, 15, 40, 30, 20], // 大胆型
+  atsu: [30, 30, 30, 30, 30, 20], // バランス型
+  kyuko: [45, 25, 35, 30, 20, 20], // 研究型
+  sorashido: [30, 30, 30, 35, 35, 20], // 柔軟型
+  erubin: [35, 25, 35, 25, 35, 20], // 防御型
+});
+// 修行に行きやすさと、好んで選ぶ系統
+const AMGT_TRAIT = Object.freeze({
+  mua: { p: 0.4, like: ['pow', 'real'] }, kiki: { p: 0.4, like: ['wise', 'eva'] }, momosuke: { p: 0.3, like: ['tough'] },
+  dra: { p: 0.45, like: ['pow', 'real'] }, atsu: { p: 0.35, like: [] }, kyuko: { p: 0.5, like: ['wise', 'hit'] },
+  sorashido: { p: 0.4, like: ['eva', 'real'] }, erubin: { p: 0.35, like: ['tough', 'eva'] },
+});
+// ブリーダー能力の効き目(能力100のとき・社長 11-11「大きく」: 伸び×1.20・失敗とストレスの軽減も合わせて)
+const AMGT_BR_EFFECT = Object.freeze({ lead: 0.20, know: 0.60, trust: 0.60, obs: 10 });
+const AMGT_BR_RANKS = Object.freeze([[80, 'ベテラン'], [60, '一人前'], [40, 'なかなか'], [20, '駆け出し'], [0, 'はじめたて']]);
+const amgtBrRankOf = (v) => (AMGT_BR_RANKS.find(r => v >= r[0]) || AMGT_BR_RANKS[AMGT_BR_RANKS.length - 1])[1];
+// 行動ごとに経験が入るブリーダー能力
+const AMGT_BR_XP = Object.freeze({
+  light: ['lead'], heavy: ['lead'], real: ['tac', 'lead'], joint: ['trust', 'lead'], focus: ['lead'], weak: ['know'],
+  rest: ['obs'], play: ['obs', 'trust'], shugyo: ['know', 'tac'], fail: ['know'], ask: ['trust'],
+});
+const AMGT_LOG = 21;
+const AMGT_EV = 30;
+const AMGT_AT = 12; // モンヒロバトルにいた回の記録の数
+const AMGT_PLACE = 'battle'; // 修行する生活の場所の id(ナカヨシ9が ASSISTANT_LIFE_PLACES に足す・言葉は「モンヒロバトル」)
+const AMGT_PLACE_NAME = 'モンヒロバトル';
+const amgtSlotDay = (slot) => Math.floor(slot / 3);
+// 第①段階と同じ回の番号(朝4:00・昼12:00・夜18:00。日本時間)
+const amgtSlotOf = (now = Date.now()) => { const t = Number(now) + 9 * 3600000 - 4 * 3600000; const day = Math.floor(t / 86400000); const h = (t - day * 86400000) / 3600000; return day * 3 + (h < 8 ? 0 : h < 14 ? 1 : 2); };
+const amgtClamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const amgtNum = (v, d, lo, hi) => (Number.isFinite(Number(v)) ? amgtClamp(Math.round(Number(v)), lo, hi) : d);
+const amgtOkAid = (aid) => typeof aid === 'string' && /^[a-z]{2,12}$/.test(aid);
+const amgtRngOf = (text) => {
+  if (typeof assistantMasmonRng === 'function') return assistantMasmonRng(text);
+  let h = 2166136261; for (const ch of String(text)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+  let x = h >>> 0 || 1; return () => { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return x / 4294967296; };
+};
+const amgtRange = (rnd, lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1));
+// 技表
+const amgtTechsOf = (monster) => (typeof ASSISTANT_MASMON_TECHS !== 'undefined' && ASSISTANT_MASMON_TECHS.species && Array.isArray(ASSISTANT_MASMON_TECHS.species[monster]) ? ASSISTANT_MASMON_TECHS.species[monster] : []);
+const amgtTechIdOk = (id) => typeof id === 'string' && /^[a-z]{2,20}_\d{2}$/.test(id);
+
+const normalizeAssistantMasmonTrain = (raw) => {
+  const out = { v: 1, mons: {}, br: {}, ask: {}, ev: {}, at: {} };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  if (raw.mons && typeof raw.mons === 'object') for (const [aid, ms] of Object.entries(raw.mons)) {
+    if (!amgtOkAid(aid) || !ms || typeof ms !== 'object') continue;
+    const one = {};
+    for (const [key, e] of Object.entries(ms).slice(0, 24)) {
+      if (!/^[1-8]:\w{2,40}$/.test(key) || !e || typeof e !== 'object' || !e.m || typeof e.m !== 'object') continue;
+      const m = {};
+      for (const k of AMGT_SENSE_KEYS) m[k] = amgtNum(e.m[k], 0, 0, 100);
+      for (const [k, v] of Object.entries(e.m).slice(0, 24)) if (amgtTechIdOk(k)) m[k] = amgtNum(v, 0, 0, 100);
+      const learn = [...new Set((Array.isArray(e.learn) ? e.learn : []).filter(amgtTechIdOk))].slice(0, 16);
+      const log = (Array.isArray(e.log) ? e.log : []).filter(x => x && typeof x === 'object' && Number.isInteger(x.s) && AMGT_KIND_KEYS.includes(x.k)).slice(-AMGT_LOG)
+        .map(x => ({ s: x.s, k: x.k, g: Object.fromEntries(Object.entries(x.g && typeof x.g === 'object' ? x.g : {}).filter(([k, n]) => (AMGT_SENSE_KEYS.includes(k) || amgtTechIdOk(k)) && Number.isFinite(n)).map(([k, n]) => [k, amgtClamp(Math.round(n), 0, 99)])), ...(amgtTechIdOk(x.l) ? { l: x.l } : {}), ...(x.f ? { f: 1 } : {}) }));
+      one[key] = { m, learn, day: { d: amgtNum(e.day && e.day.d, -1, -1, 1e7), n: amgtNum(e.day && e.day.n, 0, 0, 9) }, log, src: 'init_v1' };
+    }
+    out.mons[aid] = one;
+  }
+  if (raw.br && typeof raw.br === 'object') for (const [aid, b] of Object.entries(raw.br)) {
+    if (!amgtOkAid(aid) || !b || typeof b !== 'object' || !b.ab || typeof b.ab !== 'object') continue;
+    const ab = {}; const xp = {};
+    for (const k of AMGT_BR_KEYS) { ab[k] = amgtNum(b.ab[k], 20, 0, 100); xp[k] = Number.isFinite(Number(b.xp && b.xp[k])) ? amgtClamp(Math.round(Number(b.xp[k]) * 2) / 2, 0, 999) : 0; }
+    out.br[aid] = { ab, xp, src: 'init_v1' };
+  }
+  if (raw.ask && typeof raw.ask === 'object') for (const [aid, a] of Object.entries(raw.ask)) {
+    if (!amgtOkAid(aid) || !a || typeof a !== 'object' || !Number.isInteger(a.d)) continue;
+    const o = { d: a.d, q: typeof a.q === 'string' ? a.q.slice(0, 12) : '', slot: amgtNum(a.slot, 1, 1, 8) };
+    if (typeof a.a === 'string') o.a = a.a.slice(0, 12);
+    if (Number.isInteger(a.until)) o.until = a.until;
+    out.ask[aid] = o;
+  }
+  if (raw.ev && typeof raw.ev === 'object') for (const [aid, list] of Object.entries(raw.ev)) {
+    if (!amgtOkAid(aid) || !Array.isArray(list)) continue;
+    out.ev[aid] = list.filter(x => x && Number.isInteger(x.s) && typeof x.t === 'string').slice(-AMGT_EV).map(x => ({ s: x.s, t: x.t.slice(0, 12), x: typeof x.x === 'string' ? x.x.slice(0, 60) : '' }));
+  }
+  if (raw.at && typeof raw.at === 'object') for (const [aid, list] of Object.entries(raw.at)) {
+    if (!amgtOkAid(aid) || !Array.isArray(list)) continue;
+    out.at[aid] = [...new Set(list.filter(n => Number.isInteger(n) && n > 0))].sort((a, b) => a - b).slice(-AMGT_AT);
+  }
+  return out;
+};
+// 技を覚える条件を満たすか(st = 第①段階の6能力・me = 修行の入れ物)
+const amgtCanLearn = (t, st, me) => {
+  if (!t || !t.learn) return false;
+  if (t.learn.start) return true;
+  for (const [k, v] of Object.entries(t.learn.st || {})) if (!st || !(Number(st[k]) >= v)) return false;
+  for (const [id, v] of Object.entries(t.learn.need || {})) if (!me || !me.learn.includes(id) || !((me.m[id] || 0) >= v)) return false;
+  return true;
+};
+// 初めの値(一度だけ): 初めからの技と、いまの能力で条件を満たしている技(先に磨く技の要らないもの)を覚えている。熟練は育成 Lv から
+const amgtInitMon = (monster, lv, st) => {
+  const base = Math.min(AMGT_NUM.initMax, Math.round((Number.isFinite(lv) ? lv : 1) * AMGT_NUM.initPerLv));
+  const learn = amgtTechsOf(monster).filter(t => t.learn && (t.learn.start || (!t.learn.need && amgtCanLearn(t, st, null)))).map(t => t.id);
+  const m = {}; for (const k of AMGT_SENSE_KEYS) m[k] = base; for (const id of learn) m[id] = base;
+  return { m, learn, day: { d: -1, n: 0 }, log: [], src: 'init_v1' };
+};
+const amgtInitBreeder = (aid) => {
+  const a = AMGT_BR_INIT[aid] || AMGT_BR_INIT.atsu; const ab = {}; const xp = {};
+  AMGT_BR_KEYS.forEach((k, i) => { ab[k] = a[i]; xp[k] = 0; });
+  return { ab, xp, src: 'init_v1' };
+};
+// ブリーダー能力に経験を足す(高いほど上がりにくい・苦手も少しずつ伸びる)。天井は 60 + 育成経験×0.4
+const amgtBrNeed = (v) => 4 + Math.floor(v / 8);
+const amgtBrCap = (br, k) => (k === 'exp' ? 100 : Math.min(100, 60 + Math.floor(br.ab.exp * 0.4)));
+const amgtBrGain = (br, kinds, onUp) => {
+  for (const k of [...kinds, 'exp']) {
+    br.xp[k] = (br.xp[k] || 0) + (k === 'exp' ? 0.5 : 1);
+    while (br.ab[k] < amgtBrCap(br, k) && br.xp[k] >= amgtBrNeed(br.ab[k])) {
+      br.xp[k] -= amgtBrNeed(br.ab[k]); const before = br.ab[k]; br.ab[k] += 1;
+      if (onUp && [40, 60, 80].some(n => before < n && br.ab[k] >= n)) onUp(k, br.ab[k]);
+    }
+  }
+  return br;
+};
+// 修行の系統を選ぶ(相談の答え → 性格の好み・熟練の低い所・覚えられそうな技)
+const amgtPickKind = (aid, me, techs, st, rnd, askK) => {
+  if (askK && AMGT_KINDS[askK]) return askK;
+  const T = AMGT_TRAIT[aid] || AMGT_TRAIT.atsu;
+  const learned = techs.filter(t => me.learn.includes(t.id));
+  const lowOf = (k) => {
+    if (k === 'eva') return me.m.dist; if (k === 'tough') return me.m.guard; if (k === 'real') return me.m.swap;
+    const list = k === 'hit' ? learned : learned.filter(t => t.kind === k);
+    return list.length ? Math.min(...list.map(t => me.m[t.id] || 0)) : 100;
+  };
+  let best = ''; let sc = -1;
+  for (const k of AMGT_KIND_KEYS) {
+    const canNew = techs.some(t => !me.learn.includes(t.id) && t.learn && t.learn.by === k && amgtCanLearn(t, st, me)) ? 0.9 : 0;
+    const s = (T.like.includes(k) ? 0.7 : 0) + (1 - lowOf(k) / 100) * 1.5 + canNew + rnd() * 0.8;
+    if (s > sc) { sc = s; best = k; }
+  }
+  return best;
+};
+
+// ---------- 店(保存) ----------
+const AMGT_STORE = { state: normalizeAssistantMasmonTrain(null), loaded: false, subs: new Set(), dirty: false,
+  set(next) { this.state = next; this.subs.forEach(f => { try { f(next); } catch (_) {} }); },
+  async load() {
+    if (this.loaded) return this.state;
+    let raw = null; try { raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_TRAIN_KEY, null, false) : null; } catch (_) {}
+    this.loaded = true; this.set(normalizeAssistantMasmonTrain(raw)); return this.state;
+  } };
+const amgtOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonTrain === true;
+// 保存を読み込む前は書かない(空の既定値で前の記録を上書きしない・ミハリ 11-11)
+const amgtSave = (next) => {
+  if (!AMGT_STORE.loaded) return false;
+  AMGT_STORE.set(next);
+  if (AMGT_STORE.dirty) return; AMGT_STORE.dirty = true;
+  Promise.resolve().then(() => { AMGT_STORE.dirty = false; try { if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_TRAIN_KEY, AMGT_STORE.state, false); } catch (_) {} });
+  return true;
+};
+// 印が真なら、起動してすぐ読み込みを始める(第①段階の育成の回より先にそろえる)
+if (typeof window !== 'undefined') setTimeout(() => { try { if (amgtOn()) AMGT_STORE.load(); } catch (_) {} }, 0);
+const amgtSeed = () => (typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.state && ASSISTANT_MASMON_STORE.state.seed) || '';
+const amgtKeyOf = (row) => `${row.slot}:${row.monster}`;
+// 状態を1つ写して、助手・マスモンの入れ物を(無ければ一度だけ)作る
+const amgtEnsure = (st, aid, row, e) => {
+  const key = amgtKeyOf(row);
+  const mons = { ...(st.mons[aid] || {}) };
+  const me0 = mons[key] || amgtInitMon(row.monster, e && e.lv, e && e.st);
+  const me = { ...me0, m: { ...me0.m }, learn: [...me0.learn], day: { ...me0.day }, log: [...me0.log] };
+  mons[key] = me;
+  const br0 = st.br[aid] || amgtInitBreeder(aid);
+  const br = { ab: { ...br0.ab }, xp: { ...br0.xp }, src: 'init_v1' };
+  return { next: { ...st, mons: { ...st.mons, [aid]: mons }, br: { ...st.br, [aid]: br }, ev: { ...st.ev, [aid]: [...(st.ev[aid] || [])] } }, me, br };
+};
+const amgtPushEv = (next, aid, s, t, x) => { next.ev[aid] = [...next.ev[aid], { s, t, x: String(x || '').slice(0, 60) }].slice(-AMGT_EV); };
+
+// ---------- 修行の場所: 助手の生活でモンヒロバトルにいた回を覚えておく ----------
+// 生活の1つの時間(life.abs = 日×6+区切り)が、第①段階のどの回に当たるか(始めと終わり)
+const amgtLifeSlotsToGrow = (abs) => {
+  const S = typeof ASSISTANT_LIFE_SLOTS !== 'undefined' ? ASSISTANT_LIFE_SLOTS : null;
+  if (!S || !Number.isInteger(abs)) return [];
+  const day = Math.floor(abs / 6); const s = S[abs - day * 6]; if (!s) return [];
+  const t0 = day * 86400000 + s.from * 3600000 - 9 * 3600000; const t1 = day * 86400000 + s.to * 3600000 - 9 * 3600000 - 1;
+  return [...new Set([amgtSlotOf(t0), amgtSlotOf(t1)])];
+};
+// 生活の居場所が決まったときに呼ぶ(助手ライフの受け口 amgtOnLifeSlot・または画面を開いたときに今の生活を読む)
+const amgtNoteLife = (life) => {
+  if (!amgtOn() || !AMGT_STORE.loaded || !life || !Number.isInteger(life.abs)) return false;
+  const ids = [...(life.groups || []).filter(g => g && g.place === AMGT_PLACE).flatMap(g => g.ids || []), ...Object.entries(life.solo || {}).filter(([, s]) => s && s.place === AMGT_PLACE).map(([id]) => id)].filter(amgtOkAid);
+  if (!ids.length) return false;
+  const slots = amgtLifeSlotsToGrow(life.abs); if (!slots.length) return false;
+  const st = AMGT_STORE.state; let changed = false; const at = { ...st.at };
+  for (const id of ids) {
+    const cur = at[id] || []; const add = slots.filter(n => !cur.includes(n));
+    if (add.length) { at[id] = [...cur, ...add].sort((a, b) => a - b).slice(-AMGT_AT); changed = true; }
+  }
+  if (changed) amgtSave({ ...st, at });
+  return changed;
+};
+const amgtOnLifeSlot = (life) => { try { return amgtNoteLife(life); } catch (_) { return false; } };
+const amgtWasAtPlace = (aid, slot, st = AMGT_STORE.state) => {
+  if (typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state && ASSISTANT_LIFE_STORE.state.life) amgtNoteLife(ASSISTANT_LIFE_STORE.state.life);
+  return ((AMGT_STORE.state.at || st.at)[aid] || []).includes(slot);
+};
+
+// ---------- 第①段階(キズナ4)からの受け口。印が偽なら何もしない ----------
+// 1回分の行動を修行にするか。修行なら { a:'shugyo', k:系統 }、しないなら null。第①段階の rnd は引かない
+const amgtChoose = (aid, e, row, _rnd, slot) => {
+  if (!amgtOn() || !AMGT_STORE.loaded || !row || !e || !Number.isInteger(slot)) return null;
+  if (e.fat >= AMGT_NUM.fatStop || e.str >= 50) return null;
+  if (!amgtWasAtPlace(aid, slot)) return null;
+  const st = AMGT_STORE.state;
+  const me = (st.mons[aid] || {})[amgtKeyOf(row)] || amgtInitMon(row.monster, e.lv, e.st);
+  const day = amgtSlotDay(slot);
+  if (me.day.d === day && me.day.n >= AMGT_NUM.perDay) return null;
+  const rnd = amgtRngOf(`${amgtSeed()}|${aid}|shugyo-pick|${amgtKeyOf(row)}|${slot}`);
+  const ask = st.ask[aid];
+  const askK = ask && ask.q === 'next' && ask.a && ask.slot === row.slot && Number.isInteger(ask.until) && ask.until >= slot ? ask.a : '';
+  const T = AMGT_TRAIT[aid] || AMGT_TRAIT.atsu;
+  if (!askK && rnd() >= T.p + AMGT_NUM.goAt) return null;
+  return { a: 'shugyo', k: amgtPickKind(aid, me, amgtTechsOf(row.monster), e.st, rnd, askK), asked: !!askK };
+};
+// 修行を当てる。add(k, lo, hi) は第①段階の伸び(1日の上限・適性・個体差・関わり込み)。failChance(extra) は第①段階の失敗の起きやすさ
+const amgtDo = (aid, e, row, _rnd, slot, act, add, failChance) => {
+  if (!amgtOn() || !AMGT_STORE.loaded || !act || !AMGT_KINDS[act.k]) return e;
+  const K = AMGT_KINDS[act.k];
+  const rnd = amgtRngOf(`${amgtSeed()}|${aid}|shugyo|${amgtKeyOf(row)}|${slot}`);
+  const { next, me, br } = amgtEnsure(AMGT_STORE.state, aid, row, e);
+  const techs = amgtTechsOf(row.monster);
+  const fail = rnd() < (typeof failChance === 'function' ? failChance(0.03) : 0.05) * amgtFailMult(aid);
+  const lead = 1 + br.ab.lead / 100 * AMGT_BR_EFFECT.lead;
+  const ask = act.asked ? AMGT_NUM.askMult : 1;
+  const g = {};
+  const nameOf = (k) => (AMGT_SENSE.find(x => x[0] === k) || [])[1] || (techs.find(t => t.id === k) || {}).name || '';
+  const up = (k, lo, hi) => {
+    const cur = me.m[k] || 0;
+    const n = Math.min(100 - cur, Math.max(1, Math.round(amgtRange(rnd, lo, hi) * lead * ask * (fail ? 0.5 : 1))));
+    if (n > 0) { me.m[k] = cur + n; g[k] = (g[k] || 0) + n; if (amgtRankOf(cur) !== amgtRankOf(me.m[k])) amgtPushEv(next, aid, slot, 'rank', `${amgtKeyOf(row)}|${nameOf(k)}|${amgtRankOf(me.m[k])}`); }
+  };
+  // 1) 技を覚える(この系統で覚える技のうち、条件を満たした最初の1つ・失敗した回は覚えない)
+  let learned = '';
+  if (!fail) {
+    const t = techs.find(x => !me.learn.includes(x.id) && x.learn && x.learn.by === act.k && amgtCanLearn(x, e.st, me));
+    if (t) { me.learn = [...me.learn, t.id]; me.m[t.id] = me.m[t.id] || 0; learned = t.id; amgtPushEv(next, aid, slot, 'learn', `${amgtKeyOf(row)}|${t.name}`); }
+  }
+  // 2) 熟練を磨く
+  const known = techs.filter(t => me.learn.includes(t.id));
+  const lowest = (list) => list.slice().sort((a, b) => (me.m[a.id] || 0) - (me.m[b.id] || 0) || a.id.localeCompare(b.id))[0];
+  let main = '';
+  if (act.k === 'eva') main = 'dist'; else if (act.k === 'tough') main = 'guard'; else if (act.k === 'real') main = 'swap';
+  else if (learned) main = learned;
+  else {
+    const pool = act.k === 'hit' ? known.slice().sort((a, b) => a.hit - b.hit).slice(0, 2) : known.filter(t => t.kind === act.k);
+    const t = lowest(pool.length ? pool : known); main = t ? t.id : 'swap';
+  }
+  up(main, AMGT_NUM.gain[0], AMGT_NUM.gain[1]);
+  if (act.k === 'real') for (const t of known) up(t.id, AMGT_NUM.realAll[0], AMGT_NUM.realAll[1]);
+  if (typeof add === 'function') add(K.stat, AMGT_NUM.stat[0], AMGT_NUM.stat[1]);
+  e.fat = amgtClamp(e.fat + AMGT_NUM.fat, 0, 100);
+  e.str = amgtClamp(e.str + Math.round((AMGT_NUM.str + (fail ? 5 : 0)) * amgtStressMult(aid)), 0, 100);
+  const day = amgtSlotDay(slot);
+  me.day = { d: day, n: (me.day.d === day ? me.day.n : 0) + 1 };
+  me.log = [...me.log, { s: slot, k: act.k, g, ...(learned ? { l: learned } : {}), ...(fail ? { f: 1 } : {}) }].slice(-AMGT_LOG);
+  amgtPushEv(next, aid, slot, 'shugyo', `${amgtKeyOf(row)}|${act.k}`);
+  amgtBrGain(br, AMGT_BR_XP.shugyo.concat(fail ? AMGT_BR_XP.fail : []), (k, v) => amgtPushEv(next, aid, slot, 'breeder', `${k}|${v}`));
+  amgtSave(next);
+  e.shugyo = { k: act.k, g, ...(learned ? { l: learned } : {}), ...(fail ? { f: 1 } : {}) };
+  return e;
+};
+// 訓練・休養などのあと(修行以外)。ブリーダー能力に経験
+const amgtAfterAct = (aid, act, failed, slot) => {
+  if (!amgtOn() || !AMGT_STORE.loaded || !act || act.a === 'shugyo' || !amgtOkAid(aid)) return;
+  const st = AMGT_STORE.state; const br0 = st.br[aid] || amgtInitBreeder(aid);
+  const br = { ab: { ...br0.ab }, xp: { ...br0.xp }, src: 'init_v1' };
+  const next = { ...st, br: { ...st.br, [aid]: br }, ev: { ...st.ev, [aid]: [...(st.ev[aid] || [])] } };
+  amgtBrGain(br, (AMGT_BR_XP[act.a] || []).concat(failed ? AMGT_BR_XP.fail : []), (k, v) => amgtPushEv(next, aid, Number.isInteger(slot) ? slot : 0, 'breeder', `${k}|${v}`));
+  amgtSave(next);
+};
+const amgtBr = (aid) => (AMGT_STORE.state.br[aid] || amgtInitBreeder(aid)).ab;
+// 掛け算(印が偽なら全部 1)
+const amgtLeadMult = (aid) => (amgtOn() ? 1 + amgtBr(aid).lead / 100 * AMGT_BR_EFFECT.lead : 1);
+const amgtFailMult = (aid) => (amgtOn() ? 1 - amgtBr(aid).know / 100 * AMGT_BR_EFFECT.know : 1);
+const amgtStressMult = (aid) => (amgtOn() ? 1 - amgtBr(aid).trust / 100 * AMGT_BR_EFFECT.trust : 1);
+// 観察力: 休ませる疲労の目安を、ちょうどよい所(55)へ寄せる(観察力100で最大10寄る)
+const amgtRestAt = (aid, base) => {
+  if (!amgtOn() || !Number.isFinite(base)) return base;
+  const pull = Math.round(amgtBr(aid).obs / 100 * AMGT_BR_EFFECT.obs);
+  return base > 55 ? Math.max(55, base - pull) : Math.min(55, base + pull);
+};
+const amgtActName = (x) => (x && x.a === 'shugyo' && AMGT_KINDS[x.k] ? `${AMGT_PLACE_NAME}で${AMGT_KINDS[x.k].act}(${AMGT_KINDS[x.k].name})` : '');
+
+// ---------- 第③段階(タタカイ)へ渡すもの ----------
+const amgtEntryOf = (aid, t, st = AMGT_STORE.state) => (t && st.mons[aid] ? st.mons[aid][amgtKeyOf(t)] : null) || null;
+// 1体: { techs:[覚えた技の id], mastery:{ [技id]・guard・dist・swap: 0〜100 } }。入れ物が無ければ初めの値(初めからの技だけ)
+const amgtBattleOf = (aid, t, lv, st = AMGT_STORE.state) => {
+  const me = amgtEntryOf(aid, t, st) || amgtInitMon(t && t.monster, lv, null);
+  return { techs: [...me.learn], mastery: { ...me.m } };
+};
+// チームの戦術経験 = ブリーダーの戦術力×0.8 + 出るマスモンの間合い・交代の判断の平均×0.2
+const amgtTacticsOf = (aid, rows, st = AMGT_STORE.state) => {
+  const br = (st.br[aid] || amgtInitBreeder(aid)).ab;
+  const list = (Array.isArray(rows) ? rows : []).map(t => amgtEntryOf(aid, t, st)).filter(Boolean);
+  const avg = list.length ? list.reduce((a, me) => a + (me.m.dist + me.m.swap) / 2, 0) / list.length : 0;
+  return amgtClamp(Math.round(br.tac * 0.8 + avg * 0.2), 0, 100);
+};
+
+// ---------- 助手からの相談(1日1回まで) ----------
+// その日の相談を決める(同じ日・同じ種なら同じ相談)。rows=いまのマスモン・growOf=第①段階の入れ物を引く関数
+const amgtAskOf = (aid, rows, day, growOf, st = AMGT_STORE.state) => {
+  if (!Array.isArray(rows) || !rows.length) return null;
+  const done = st.ask[aid] && st.ask[aid].d === day ? st.ask[aid] : null;
+  const rnd = amgtRngOf(`${amgtSeed()}|${aid}|shugyo-ask|${day}`);
+  const t = rows[Math.floor(rnd() * rows.length)];
+  const g = typeof growOf === 'function' ? growOf(t) : null;
+  const me = amgtEntryOf(aid, t, st) || amgtInitMon(t.monster, g ? g.lv : t.lv, g ? g.st : null);
+  const techs = amgtTechsOf(t.monster);
+  const near = techs.find(x => !me.learn.includes(x.id) && x.learn && !x.learn.start && amgtCanLearn(x, g ? g.st : null, me));
+  let q = 'next';
+  if (g && g.fat >= 50) q = 'rest';
+  else if (near && rnd() < 0.6) q = 'learn';
+  const opts = q === 'rest' ? ['rest', 'more']
+    : q === 'learn' ? [near.learn.by, near.learn.by === 'real' ? 'hit' : 'real']
+      : AMGT_KIND_KEYS.map(k => [k, rnd()]).sort((a, b) => a[1] - b[1]).slice(0, 3).map(x => x[0]);
+  return { q, slot: t.slot, row: t, opts, tech: near ? near.name : '', answered: done ? done.a : '' };
+};
+// 相談に答える。修行の系統なら3日間(9回)その系統を優先・その修行は ×1.1。「休ませて」は第①段階の相談へ渡す
+const amgtAnswer = (aid, ask, choice, nowSlot) => {
+  if (!amgtOn() || !AMGT_STORE.loaded || !ask || !ask.opts.includes(choice) || !Number.isInteger(nowSlot)) return false;
+  const day = amgtSlotDay(nowSlot);
+  const st = AMGT_STORE.state;
+  if (st.ask[aid] && st.ask[aid].d === day && st.ask[aid].a) return false;
+  const br0 = st.br[aid] || amgtInitBreeder(aid);
+  const br = { ab: { ...br0.ab }, xp: { ...br0.xp }, src: 'init_v1' };
+  const next = { ...st, br: { ...st.br, [aid]: br }, ev: { ...st.ev, [aid]: [...(st.ev[aid] || [])] } };
+  const kind = AMGT_KINDS[choice] ? choice : '';
+  next.ask = { ...st.ask, [aid]: { d: day, q: kind ? 'next' : ask.q, slot: ask.slot, a: choice, ...(kind ? { until: nowSlot + 9 } : {}) } };
+  if (choice === 'rest' && !(typeof amgAdvise === 'function' && amgAdvise(aid, ask.slot, 'rest') !== false)) return false; // 休ませる相談が受けられなかったら、答えも残さない
+  amgtPushEv(next, aid, nowSlot, 'ask', `${ask.slot}|${choice}`);
+  amgtBrGain(br, AMGT_BR_XP.ask, (k, v) => amgtPushEv(next, aid, nowSlot, 'breeder', `${k}|${v}`));
+  amgtSave(next);
+  return true;
+};
+
+// 部屋の「🐾 ◯◯のマスモン」の行に出す一言(助手ライフ担当ナカヨシ9が行に載せる)。印が偽・何も無いときは null
+//   いまモンヒロバトルにいる → 修行中/今日の相談にまだ答えていない → 相談/今日修行した → 回数
+const amgtRoomLine = (aid, now = Date.now()) => {
+  if (!amgtOn() || !AMGT_STORE.loaded || !amgtOkAid(aid)) return null;
+  const life = typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state ? ASSISTANT_LIFE_STORE.state.life : null;
+  const here = life && typeof assistantLifeSlotAt === 'function' && life.abs === assistantLifeSlotAt(now).abs
+    && ((life.groups || []).some(g => g && g.place === AMGT_PLACE && (g.ids || []).includes(aid)) || ((life.solo || {})[aid] && life.solo[aid].place === AMGT_PLACE));
+  if (here) return `いま${AMGT_PLACE_NAME}で修行中`;
+  const st = AMGT_STORE.state; const day = amgtSlotDay(amgtSlotOf(now));
+  const ask = st.ask[aid];
+  const rows = typeof ASSISTANT_MASMON_STORE !== 'undefined' && typeof assistantMasmonRowsOf === 'function' ? assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, aid) : [];
+  if (rows.length && !(ask && ask.d === day && ask.a)) return '修行の相談があるみたい';
+  const n = Object.values(st.mons[aid] || {}).reduce((a, me) => a + (me.day.d === day ? me.day.n : 0), 0);
+  return n ? `今日は${AMGT_PLACE_NAME}で${n}回修行した` : null;
+};
+
+// ---------- 画面(公開の印が真のときだけ出す。置き場所は助手ライフ担当ナカヨシ9の形に合わせる) ----------
+const AMGT_ASK_TEXT = Object.freeze({ // 仮の文(公開の前に社長の「この文で」をもらう)
+  next: (n) => `${n}、次はどの修行がいいかな?`,
+  rest: (n) => `${n}、ちょっと疲れてるみたい。休ませた方がいいかな?`,
+  learn: (n, tech) => `${n}、もうすぐ「${tech}」を覚えられそう! どの修行がいいと思う?`,
+});
+const AMGT_OPT_TEXT = Object.freeze({ rest: '休ませよう', more: 'もう少しがんばろう' });
+const AMGT_DIST = '零近中遠';
+const useAmgtState = () => {
+  const [st, setSt] = React.useState(AMGT_STORE.state);
+  React.useEffect(() => { AMGT_STORE.subs.add(setSt); if (!AMGT_STORE.loaded) AMGT_STORE.load(); return () => { AMGT_STORE.subs.delete(setSt); }; }, []);
+  return st;
+};
+const amgtEvText = (x, rowsByKey) => {
+  const [a, b, c] = String(x.x || '').split('|');
+  const nm = (k) => (rowsByKey[k] && rowsByKey[k].nick) || 'マスモン';
+  if (x.t === 'shugyo') return AMGT_KINDS[b] ? `${nm(a)}が${AMGT_PLACE_NAME}で${AMGT_KINDS[b].act}をした` : '';
+  if (x.t === 'rank') return `${nm(a)}の「${b}」が「${c}」になった`;
+  if (x.t === 'learn') return `${nm(a)}が「${b}」を覚えた!`;
+  if (x.t === 'breeder') return `ブリーダーの${(AMGT_BR.find(m => m[0] === a) || [])[1] || ''}が上がった`;
+  if (x.t === 'ask') return '相談に答えてもらった';
+  return '';
+};
+// ブリーダー能力の6つのゲージ(数字なし・段の名前だけ)
+function AmgtBreederBars({ who, st }) {
+  const ab = (st.br[who.id] || amgtInitBreeder(who.id)).ab;
+  return (
+    <div className="mhm-card" data-amgt-breeder>
+      <p className="text-[10px] font-black text-slate-400">{who.name}のブリーダーの腕</p>
+      <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5">
+        {AMGT_BR.map(([k, label]) => (
+          <div key={k} className="flex items-center gap-1.5 text-[10px] font-bold text-slate-200">
+            <span className="w-[52px] shrink-0 whitespace-nowrap">{label}</span>
+            <span className="mhm-bar"><i style={{ width: `${ab[k]}%`, background: 'linear-gradient(90deg,#34d399,#22d3ee)' }}/></span>
+            <b className="w-[52px] shrink-0 text-right text-[9.5px] text-emerald-200" data-amgt-br={k}>{amgtBrRankOf(ab[k])}</b>
+          </div>))}
+      </div>
+    </div>);
+}
+// くわしい画面の修行の札(技・熟練・相談・出来事)。e = 第①段階の入れ物
+function AmgtCard({ who, t, e }) {
+  const st = useAmgtState();
+  if (!amgtOn() || !who || !t) return null;
+  const me = amgtEntryOf(who.id, t, st) || amgtInitMon(t.monster, e && e.lv, e && e.st);
+  const nowSlot = amgtSlotOf();
+  const day = amgtSlotDay(nowSlot);
+  const rows = typeof ASSISTANT_MASMON_STORE !== 'undefined' && typeof assistantMasmonRowsOf === 'function' ? assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, who.id) : [t];
+  const growOf = (r) => (typeof amgEntryOf === 'function' ? amgEntryOf(who.id, r) : null);
+  const ask = amgtAskOf(who.id, rows, day, growOf, st);
+  const rowsByKey = Object.fromEntries(rows.map(r => [amgtKeyOf(r), r]));
+  const evs = (st.ev[who.id] || []).filter(x => amgtSlotDay(x.s) === day).map(x => amgtEvText(x, rowsByKey)).filter(Boolean).slice(-6);
+  const techs = amgtTechsOf(t.monster);
+  return (
+    <div className="mt-2 space-y-2" data-amgt-card>
+      <div className="mhm-card">
+        <p className="text-[10px] font-black text-slate-400">⚔ 技と熟練(モンヒロバトルの修行で覚える・磨く)</p>
+        <div className="mt-1 grid grid-cols-1 gap-y-0.5">
+          {techs.map(x => {
+            const has = me.learn.includes(x.id);
+            return (
+              <div key={x.id} className={`flex items-center gap-1.5 text-[10.5px] font-bold ${has ? 'text-slate-100' : 'text-slate-500'}`} data-amgt-tech={x.id}>
+                <span className={`w-[96px] shrink-0 truncate ${has ? (x.kind === 'wise' ? 'text-sky-200' : 'text-rose-200') : ''}`}>{has ? x.name : '???'}</span>
+                <span className="w-[46px] shrink-0 whitespace-nowrap text-[9px]">{[0, 1, 2, 3].map(d => <i key={d} className={`not-italic ${x.dist.includes(d) && has ? 'text-amber-300' : 'text-slate-600'}`}>{AMGT_DIST[d]}</i>)}</span>
+                <span className="mhm-bar"><i style={{ width: `${has ? me.m[x.id] || 0 : 0}%`, background: 'linear-gradient(90deg,#fbbf24,#f472b6)' }}/></span>
+                <b className="w-[40px] shrink-0 text-right text-[9.5px] text-amber-200">{has ? amgtRankOf(me.m[x.id] || 0) : 'まだ'}</b>
+              </div>);
+          })}
+          {AMGT_SENSE.map(([k, label]) => (
+            <div key={k} className="flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200" data-amgt-sense={k}>
+              <span className="w-[148px] shrink-0 truncate">{label}</span>
+              <span className="mhm-bar"><i style={{ width: `${me.m[k] || 0}%`, background: 'linear-gradient(90deg,#a78bfa,#f472b6)' }}/></span>
+              <b className="w-[40px] shrink-0 text-right text-[9.5px] text-amber-200">{amgtRankOf(me.m[k] || 0)}</b>
+            </div>))}
+        </div>
+      </div>
+      {ask && ask.slot === t.slot && (
+        <div className="mhm-card" data-amgt-ask={ask.q}>
+          <p className="text-[11px] font-bold text-pink-100">💬 {who.name}「{AMGT_ASK_TEXT[ask.q](t.nick || 'マスモン', ask.tech)}」</p>
+          {ask.answered
+            ? <p className="mt-1 text-[10.5px] font-bold text-sky-200" data-amgt-ask-done>あなたの答え: {AMGT_KINDS[ask.answered] ? AMGT_KINDS[ask.answered].name : AMGT_OPT_TEXT[ask.answered]}</p>
+            : <div className="mt-1 flex flex-wrap gap-1.5">
+              {ask.opts.map(o => <button key={o} type="button" className="mhl-btn px-3 text-[11px]" onClick={() => amgtAnswer(who.id, ask, o, nowSlot)} data-amgt-ask-opt={o}>{AMGT_KINDS[o] ? AMGT_KINDS[o].name : AMGT_OPT_TEXT[o]}</button>)}
+            </div>}
+        </div>)}
+      {evs.length > 0 && (
+        <div className="mhm-card" data-amgt-events>
+          <p className="text-[10px] font-black text-slate-400">今日の出来事</p>
+          {evs.map((s, i) => <p key={i} className="text-[10.5px] font-bold text-slate-100">・{s}</p>)}
+        </div>)}
+      <AmgtBreederBars who={who} st={st}/>
+    </div>);
+}
 
 // ---- part: 56-assistant-life-friend.jsx ----
 // ===== 助手ライフ: フレンドの家との行き来(2026-11-08 社長・助手部オトズレ) =====
@@ -94070,9 +94654,10 @@ function MonsterHeroGame() {
       left -= cost;
       if (card.type === 'guard' || card.type === 'weak_guard') return;
       const b = boostsForCardDamage(run, card, false);
-      if (isAttackCard(card)) total += getAttackPredictedDmg(card, srcMon, getDmg(card, copy.srcSlot, srcMon, b.oryo, b.dmgMod, false, enemyDist, dmgScale), b.combo, copy.srcSlot, false);
+      if (isAttackCard(card)) total += getAttackPredictedDmg(card, srcMon, getDmg(card, copy.srcSlot, srcMon, b.oryo, b.dmgMod, false, run.dist, dmgScale), b.combo, copy.srcSlot, false);
       const boost = localBoostFromCard(card);
-      if (boost) run = { oryo: run.oryo + (boost.oryo || 0), dmgMod: run.dmgMod + (boost.dmgMod || 0), combo: run.combo + (boost.combo || 0) };
+      if (boost) run = { ...run, oryo: run.oryo + (boost.oryo || 0), dmgMod: run.dmgMod + (boost.dmgMod || 0), combo: run.combo + (boost.combo || 0) };
+      run = { ...run, dist: attackDistanceAfterCard(card, run.dist) };
     });
     return total;
   };
@@ -105997,26 +106582,32 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 同じ式(cardEffectMultiplier)を使うため、この並びで実行したときの結果と必ず一致する。
   // perCard[idx] は「そのカードのダメージを出すときに使う値」で、固有技は自分のぶんを含む。
   // forPending は保留中のカードぶん(同じく自分のぶんを含む)。
+  // ★dist … そのカードが攻撃を始めるときの敵の距離。距離撃(range_atk)を先に置くと、実処理(processTurn の attackDistance)は
+  //   あとのカードを「動かしたあとの距離」で計算する。予測もここで同じ距離を積んで getDmg へ渡す
+  //   (渡していなかったころは、距離撃のあとに置いたカードの予測が、動かす前の距離のままだった。2026-11-11 バトルの監査)
+  //   あつの挑発(stun_atsu)だけは、実処理が getDmg へ距離を渡していない(ターンの始めの距離のまま)ので、予測も動かす前の距離で出す
+  const previewAttackStartDist = (card, dist) => (card?.subType==='stun_atsu' ? enemyDist : dist);
   const previewLocalBoosts = (excludeIdx=null) => {
-    let oryo=0, dmgMod=0, combo=0;
+    let oryo=0, dmgMod=0, combo=0, dist=enemyDist;
     const counter=makeHalveCounter();
     const perCard={};
     selectedCards.forEach(idx=>{
       const card=hand[idx];
       const slotIdx=cardAssignments[idx]!=null?cardAssignments[idx]:null;
       const halved=counter.peek(card,slotIdx);
-      perCard[idx]=boostsForCardDamage({oryo,dmgMod,combo},card,halved);
+      perCard[idx]={...boostsForCardDamage({oryo,dmgMod,combo},card,halved), dist:previewAttackStartDist(card,dist)};
       // 保留中(タップしただけでまだ置いていない)カードは、まだ使っていないので積み上げにも枚数にも数えない
       if(idx===excludeIdx) return;
       if(!card) return;
       const effMul=cardEffectMultiplier(card,halved);
       const boost=localBoostFromCard(card);
       if(boost){ oryo+=(boost.oryo||0)*effMul; dmgMod+=(boost.dmgMod||0)*effMul; combo+=(boost.combo||0)*effMul; }
+      dist=attackDistanceAfterCard(card,dist);
       counter.take(card,slotIdx);
     });
     const pendingCard=excludeIdx!=null?hand[excludeIdx]:null;
     const pendingHalved=counter.peek(pendingCard,excludeIdx!=null&&cardAssignments[excludeIdx]!=null?cardAssignments[excludeIdx]:null);
-    return { perCard, final:{oryo,dmgMod,combo}, forPending:boostsForCardDamage({oryo,dmgMod,combo},pendingCard,pendingHalved) };
+    return { perCard, final:{oryo,dmgMod,combo,dist}, forPending:{...boostsForCardDamage({oryo,dmgMod,combo},pendingCard,pendingHalved), dist:previewAttackStartDist(pendingCard,dist)} };
   };
   // 固有技のオリジナル強化の「〇〇特攻」を見るための、いまの戦いの様子。予測と実際のダメージ(どちらも getDmg)が同じ値を使う
   const uniqueBoostCtxFor = (mon, slotIdx, attackStartDist=enemyDist) => {
@@ -106085,7 +106676,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       distanceBrokenDmg=applyUltimateDistanceBreak(turnPressedDmg,slotIdx,ultimateDistanceBreakLevels,specialRuleDifficulty,card.type);
     }
     return applyExtremeIntegerRule(distanceBrokenDmg,specialRuleDifficulty,'damageDealt');
-  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, ultimateDistanceBreakLevels, totalTurnCount, turnCount, runMode, difficulty, extremeDifficulty, enemy, enemyIntent]);
+  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, ultimateDistanceBreakLevels, totalTurnCount, turnCount, wave, runMode, difficulty, extremeDifficulty, enemy, enemyIntent]); // wave は適性(タクティクス)と段階の特殊ルールが読む
 
   // 確定している追加ヒットまで含めた攻撃1枚の予測値。中央合計と各スロットで必ず同じ入口を使う。
   // ランダム会心は含めず、会心予約だけは実処理と同じ倍率を適用する。
@@ -106104,7 +106695,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),getPermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,mon?.id).combo,[...kusabiCombosAt(slotIdx,mon?.id,card),kyubiAttackAt(slotIdx,mon?.id,card).combo,kyubiAttackAt(slotIdx,mon?.id,card).foxCombo,hoshiaiComboAt(slotIdx,false)]), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
     // 贖罪の追撃も「追撃」なので、連撃強化の最終倍率を同じく適用する。
     return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
-  }, [mainHero, turnBuffs, permaBuffs, enemyIntent, runMode]);
+  }, [mainHero, turnBuffs, permaBuffs, enemyIntent, runMode, wave, turnCount]); // wave・turnCount は楔の上限(kusabiCapAt)が読む
 
   // ダメージ源に依存しない敵撃破処理。呼び出し側はstate更新後の古いenemy.hpではなく、
   // ダメージ前HPから算出した確定remainingHpと、今回加算済みのダメージを渡す。
@@ -107821,7 +108412,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         //   2発目以降だけ技ごとの動きが見つからず、更新前の通常モーションに戻る(2026-09-30 ユーザー報告「連撃時に違う技のモーションになる」)
         const themeOf={skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined};
         for (const hit of hits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, themeOf, ...(hit.noAnim?{noAnim:true}:{})}); }
-        if (rangeMoveTarget!=null) { forcedMoveTarget=rangeMoveTarget; attackDistance=rangeMoveTarget; }
+        if (rangeMoveTarget!=null) { forcedMoveTarget=rangeMoveTarget; attackDistance=attackDistanceAfterCard(card,attackDistance); }
         // ★トリックスタート(ゴースト・スプーキー): 攻撃が当たったら、その技で払った消費ガッツの半分を回復する。
         //   タクティクスは攻撃した子が持ち主のとき、その子へ。既存5モードは勇者モンが持ち主のとき、パーティへ
         {
