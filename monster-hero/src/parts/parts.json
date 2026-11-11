@@ -392,6 +392,10 @@
       "role": "部品: 助手ライフの助手のマスモン(一覧・編成・デッキの型・好き苦手・好きな色)。部屋のシートの「🐾 マスモン」から開く。表 ASSISTANT_MASMON_PLAN は tools/assistant/assistant-masmon-import.js が docs/progress/assistant-peer/masmon-plan.json から書く。口 assistantLifeCardStyle(カード部)・assistantLifeTasteOf(ココロ)。何も保存しない"
     },
     {
+      "file": "56-assistant-life-masmon-train.jsx",
+      "role": "部品: 助手のマスモンの修行と助手の成長(社長の仕様書の第②段階・シュギョウ)。修行6系統・技の熟練と習得(既存の技データだけ)・助手のブリーダー能力・相談・出来事。第①段階(育成)へは受け口 amgtChoose/amgtDo/amgtAfterAct と掛け算、第③段階(戦闘)へは amgtBattleOf/amgtTacticsOf。公開の印 assistantMasmonTrain の後ろ。保存は新しいキー mh_assistant_masmon_train_v1 だけ。案 docs/progress/assistant-peer/masmon-train/TRAIN-PLAN.md"
+    },
+    {
       "file": "56-assistant-life-friend.jsx",
       "role": "助手ライフのフレンドの家との行き来(助手が自分で行く go・フレンドの助手が来る come・プレイヤーが訪ねる look)。家の控えを送る/読む・行き来の記録・置き手紙・お礼・設定・「🏘 フレンド」のページと HOME の印。公開の印 assistantLifeFriend の後ろ。保存は mh_assistant_life_friend_v1・_settings_v1・_known_v1・_intro_v1 の新しいキーだけ。表は assistant_life_friend_switch/_houses/_visits"
     },
