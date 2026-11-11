@@ -20,6 +20,15 @@
 //   node tools/ctx.js checks [語]            … 検査スクリプトを「名前＋何を見るか」で引く
 //   node tools/ctx.js diff [パス…]           … 生成物を除いた差分（素の git diff の代わり）
 //
+// 部・会話・モデル・確認の段数（tools/team/ の道具へ渡す。使い方は各コマンドの頭のコメント）
+//   node tools/ctx.js dept [部]              … 部署別の手引き（受け持つファイル・入口の関数・検査・決まり）
+//   node tools/ctx.js decisions <部>         … 社長の決めごと台帳から、進め方と自分の部に関わる行だけ
+//   node tools/ctx.js gate                   … いまの変更にミハリ(検査部)の確認が要るかを判定
+//   node tools/ctx.js handoff <部> [--write] … 会話を替えるときの引き継ぎメモの下書き
+//   node tools/ctx.js model "<仕事の文>"      … その仕事に合うモデルを表から引く
+//   node tools/ctx.js newsession <部> "<仕事>" … 新しい会話のモデルと依頼文（窓口が create_session に渡す）
+//   node tools/ctx.js redeploy assistant-chat … Edge Function の配り直しで窓口が渡すもの（数行）
+//
 // 共通のオプション: --max <行数>（切り出しの上限） --width <字数>（1行の上限）
 // 出力は必ず上限で止め、「どこを見れば続きがあるか」を最後に出す。全文を出さないための道具なので、
 // --max を大きくするのは本当に必要なときだけにする。
@@ -576,6 +585,11 @@ function cmdWhere(sub, argv, opts) {
   process.exitCode = r.status || 0;
 }
 
+function cmdTeam(script, argv) {
+  const r = spawnSync('node', [path.join(__dirname, script), ...argv], { cwd: ROOT, stdio: 'inherit' });
+  process.exitCode = r.status || 0;
+}
+
 function usage() {
   const src = fs.readFileSync(__filename, 'utf8').split('\n').slice(1);
   const head = [];
@@ -606,6 +620,14 @@ function main() {
     case 'doc': return cmdDoc(rest, opts);
     case 'rules': return cmdRules(rest, opts);
     case 'diff': return cmdDiff(rest, opts);
+    // 部・会話・モデル・確認の段数(tools/team/ の道具へ渡すだけ。2026-11-11 トークン節約の仕組み)
+    case 'dept': return cmdTeam('team/dept-guide.js', rest);
+    case 'decisions': return cmdTeam('team/decisions.js', rest);
+    case 'handoff': return cmdTeam('team/handoff.js', rest);
+    case 'model': return cmdTeam('team/model-pick.js', rest);
+    case 'newsession': return cmdTeam('team/newsession.js', rest);
+    case 'gate': return cmdTeam('team/review-gate.js', rest);
+    case 'redeploy': return cmdTeam('assistant/edge-redeploy.js', rest);
     default:
       console.error(`NG: 知らないコマンド「${sub}」`);
       usage();
