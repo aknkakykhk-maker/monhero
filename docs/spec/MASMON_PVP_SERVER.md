@@ -20,6 +20,7 @@
 | `supabase/functions/masmon-pvp/serve.js` | Deno で動く部分。表の読み書き・種・CORS |
 | `supabase/functions/masmon-pvp/core.js` | 中身(登録の見張り・挑む・公平の区分)。数字はここの先頭だけで変える |
 | `supabase/functions/masmon-pvp/engine.js` | 計算の本体と技データの**写し**(`tools/masmon-battle/build-masmon-pvp-bundle.js` が `node tools/build.js` のたびに作る。手で直さない) |
+| `monster-hero/src/parts/56-assistant-masmon-pvp.jsx` | 端末の口(画面は持たない。画面はミセカタ)。`masmonPvpRegister`・`masmonPvpChallenge`・`masmonPvpUnregister`・`masmonPvpRatings`・`masmonPvpFriends`。鍵 `mh_masmon_pvp_owner_key_v1`。公開の印 `assistantMasmonBattlePvp` |
 | `tools/masmon-battle/masmon-pvp-check.js` | 検査(偽物の表で動かす。写しの鮮度・端末と同じ指紋・見張り・流れ・SQL が足すだけか) |
 
 ## 表
@@ -32,6 +33,7 @@
 | `masmon_pvp_matches` | 1試合。種・計算に渡した編成・勝ち負け・指紋・点の増減 | 読める |
 | `masmon_pvp_ratings` | (区分・人・助手)。点(Elo・はじめ1500)・最高・勝敗 | 読める(ランキング画面はここを `rating` の順に読む) |
 | `masmon_pvp_usage` | (日・人)。挑んだ回数 | 読めない |
+| `masmon_pvp_weekly`(view) | (週・区分・人・助手)。ランキングに数えた試合の点の増減と勝敗の合計。週は月曜4:00(JST)始まり | 読める |
 
 **書けるのはサーバの関数(service_role)だけ。** 端末には insert・update・delete と書く関数の実行権を渡さない(検査 G と、手元の Postgres で確かめた)。
 既存の表(rankings・friend_links など)には書かない。`friend_links` は「承認済みのフレンドか」を**読むだけ**。
@@ -66,6 +68,8 @@
 | 体数・枠 | 1〜3体。枠 0〜7 で重ならない |
 | **初めて登録する1体** | 1つの能力 ≦ 初めの上限(ライフ・ちから・丈夫さ 600/かしこさ・命中・回避 400)+ 20 ×(育成を始めた日からの日数+1)、合計 ≦ 3000(仮)+ 同じ |
 | **2回目から**(同じ枠・同じ種) | 1つの能力も合計も ≦ 初めて登録したときの値 + 20 ×(その日からの日数+1)。基準は動かさない(何度登録し直しても上限は増えない) |
+| 作戦(style・無くてよい) | 計算の性格の重み(攻め・守り・節約・間合い・交代・大技)の上書き。0.5〜1.5。読み(read)は上書きさせない |
+| 覚えた技・熟練 | その種の技表の技だけ・重ならない・習得条件(能力の下限・前の技の熟練)を満たす。熟練は覚えた技と guard・dist・swap だけ・0〜100 |
 | 戦術経験 | 初めの登録 ≦ 20(仮)+ 5 ×(育成を始めた日からの日数+1)、そのあとは初めの値 + 5(仮)×(日数+1) |
 
 - 日は朝4:00(JST)で区切る(ほかの回数の表と同じ)。「育成を始めた日」は `GROW_EPOCH`(いまは 2026-11-11 の仮。育成の公開日に合わせて直す)
@@ -74,7 +78,8 @@
 
 ## 対戦とランキング
 
-- 公平の区分: 1体ずつ6能力の合計を 2400(仮)にそろえる(比はそのまま・999 を超えない)。Lv も 30 にそろえる。戦術経験はそのまま(戦術で勝負)
+- 公平の区分: 1体ずつ6能力の合計を 2400(仮)にそろえる(比はそのまま・999 を超えない)。Lv も 30 にそろえる。戦術経験・作戦・覚えた技・熟練はそのまま(戦い方で勝負)
+- 試合の行に 計算の版(engine_version)・技表の版(tech_version)・能力の差の効き方(balance。社長が観戦して決めるまで A)を残す
 - 体数 size は先頭から。**ランキングに数えるのは 3対3 だけ**。1対1・2対2 は記録だけ(練習)
 - 同じ2人の試合をランキングに数えるのは**1日3回まで**(どちらが挑んでも合わせて。仮)。それを超えた試合は記録だけ
 - 点は Elo(K=32)。挑まれた側も動く。1人1日に挑めるのは20回(仮。`MASMON_PVP_CHALLENGE_DAILY_LIMIT=0` で止まる)
@@ -97,7 +102,7 @@ select tablename, policyname from pg_policies where tablename like 'masmon_pvp_%
 
 ## まだのこと(次の区切り)
 
-- ゲーム側: 登録(助手の部屋の「🐾 マスモン」から3体と区分を選ぶ)・フレンドの家の「⚔ 挑む」・観戦(タタカイの画面)・ランキング画面。公開の印 `RELEASE_FLAGS.masmonPvp`(偽)。
-  育成(キズナ4・`mh_assistant_masmon_grow_v1`)と観戦の画面が main に入ってから作る
+- ゲームの画面(じゅんび・観戦・振り返り・ランキング)はミセカタ(βの取りまとめ)が作り、端末の口(56-assistant-masmon-pvp.jsx)を呼ぶ。置き場所はナカヨシ9に合わせる。
+  β その1 は端末の中の対戦だけ、β その2 でフレンド対戦とランキング(公開の印 `assistantMasmonBattlePvp`)
 - 公開前に止め絵と更新履歴の案を窓口へ
 - リーグ(週ごと)・大会・報酬は社長に聞いてから

@@ -114,6 +114,9 @@ const check = (name, ok, extra) => {
     check('C 名前に URL・メール・長い数字ははじく', ['http://x', 'a@b', 'もち12345', ''].every((n) => bad({ tactics: 0, members: [member(0, SPEC[0], { name: n })] }, 'name')));
     check('C 名前は13字ではじく・12字は通る', bad({ tactics: 0, members: [member(0, SPEC[0], { name: 'あ'.repeat(13) })] }, 'name')
       && !core.parseTeam({ tactics: 0, members: [member(0, SPEC[0], { name: 'あ'.repeat(12) })] }, engine, catalog).error);
+    check('C 作戦(style)は 0.5〜1.5 の数で通る・幅の外や読み(read)・知らない名前ははじく',
+      !core.parseTeam({ ...team3(), style: { aggr: 1.3, swap: 0.5 } }, engine, catalog, learn).error
+      && bad({ ...team3(), style: { aggr: 1.6 } }, 'style') && bad({ ...team3(), style: { read: 1 } }, 'style') && bad({ ...team3(), style: { nope: 1 } }, 'style'));
     check('C 戦術経験が 0〜100 の整数でなければはじく', bad({ tactics: 101, members: [member(0, SPEC[0])] }, 'tactics'));
   }
 
@@ -186,6 +189,8 @@ const check = (name, ok, extra) => {
     const fm = r.json.match;
     check('F 公平の区分は能力をそろえて回す', fm && fm.teamA.members.every((u) => K.reduce((t, k) => t + u.stats[k], 0) === core.FAIR_TOTAL));
     r = await ch({ size: 1 });
+    check('F 作戦を登録すると計算に渡る', (await reg('alice', KEY_A, 'mua', { ...team3(), style: { aggr: 0.6 } }, T0 + 86400000)).status === 200
+      && (await ch({}, T0 + 86400000)).json.match.teamA.style.aggr === 0.6);
     check('F 1対1 も回せる(先頭の1体)', r.status === 200 && r.json.match.teamA.members.length === 1);
     r = await ch({ division: 'cheat' });
     check('F 知らない区分ははじく', r.status === 400 && r.json.error === 'division');
@@ -227,6 +232,19 @@ const check = (name, ok, extra) => {
     check('G サーバが呼ぶ関数が SQL にある', rpcs.length >= 4 && rpcs.every((n) => sql.includes(`function public.${n}(`)), rpcs.join(','));
     check('G 端末(anon)に書く権限を渡していない', !/grant\s+(insert|update|delete|all)[^;]*to\s+anon/i.test(sql)
       && !/grant\s+execute\s+on\s+function\s+public\.masmon_pvp_(owner_check|take|refund|record)[^;]*anon/i.test(sql));
+  }
+
+  // ---- H 端末の口(56-assistant-masmon-pvp.jsx) ----
+  {
+    const part = fs.readFileSync(path.join(ROOT, 'monster-hero', 'src', 'parts', '56-assistant-masmon-pvp.jsx'), 'utf8');
+    const coreSrc = fs.readFileSync(path.join(FN, 'core.js'), 'utf8');
+    const errs = [...new Set([...coreSrc.matchAll(/fail\(\d+, '(\w+)'/g)].map((m) => m[1]))]
+      .filter((e) => !['bad_request', 'action', 'assistant', 'owner', 'opponent', 'division', 'size', 'engine'].includes(e));
+    const missing = errs.filter((e) => !new RegExp(`\\b${e}:`).test(part));
+    check('H サーバが返す断りの種類は、端末の口で日本語にできる', missing.length === 0, missing.join(','));
+    check('H 端末の口は公開の印 assistantMasmonBattlePvp の後ろ', /RELEASE_FLAGS\.assistantMasmonBattlePvp === true/.test(part));
+    check('H 端末の口は勝ち負けをサーバへ送らない', !/winner\s*:/.test((part.match(/action: 'challenge'[\s\S]*?\}\);/) || [''])[0]));
+    check('H 端末の口は表へ書かない(読むだけ)', !/method:\s*'(PATCH|DELETE|PUT)'/.test(part) && !/rest\/v1\/rpc/.test(part));
   }
 
   console.log(fails ? `NG ${fails} 件` : 'OK フレンド対戦のサーバの関数の検査を全部通過');

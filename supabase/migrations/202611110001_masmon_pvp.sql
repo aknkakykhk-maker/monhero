@@ -8,6 +8,7 @@
 --   masmon_pvp_matches  … 対戦の記録。種(seed)と、計算に渡した編成をそのまま残す(端末が同じ計算で見返す)。だれでも読める
 --   masmon_pvp_ratings  … ランキング。区分(raw=育成値そのまま / fair=公平)×(人・助手)で1行。だれでも読める
 --   masmon_pvp_usage    … 挑んだ回数((日・人)で1行)。読ませない
+--   masmon_pvp_weekly   … (view・読むだけ)週ごとのランキング。対戦記録から足し上げる
 -- 関数(service_role だけが呼べる)
 --   masmon_pvp_owner_check(owner, key)            … 初めてなら鍵を覚える。2回目からは同じ鍵か。'ok' | 'locked' | 'bad'
 --   masmon_pvp_take(owner, limit)                 … 挑む回数を1つ使う。{ ok, remaining }
@@ -147,6 +148,26 @@ grant select (id, day, at, division, size, rated, a_owner, a_assistant, b_owner,
   on public.masmon_pvp_matches to anon, authenticated;
 grant select (division, owner_id, assistant_id, user_name, icon, rating, best, wins, losses, draws, matches, updated_at)
   on public.masmon_pvp_ratings to anon, authenticated;
+
+-- 週ごとのランキング(読むだけ)。ランキングに数えた試合(rated)の点の増減と勝敗を、週(月曜4:00 JST 始まり)ごとに足し上げる。
+--   security_invoker なので、読む人の権限(対戦記録は誰でも読める)で動く。書く口は無い
+create or replace view public.masmon_pvp_weekly with (security_invoker = true) as
+  with sides as (
+    select date_trunc('week', (m.at at time zone 'Asia/Tokyo') - interval '4 hours')::date as week, m.division,
+           m.a_owner as owner_id, m.a_assistant as assistant_id, m.a_delta as delta,
+           (m.winner = 'A')::int as win, (m.winner = 'B')::int as lose, (m.winner = 'draw')::int as draw
+      from public.masmon_pvp_matches m where m.rated
+    union all
+    select date_trunc('week', (m.at at time zone 'Asia/Tokyo') - interval '4 hours')::date, m.division,
+           m.b_owner, m.b_assistant, m.b_delta,
+           (m.winner = 'B')::int, (m.winner = 'A')::int, (m.winner = 'draw')::int
+      from public.masmon_pvp_matches m where m.rated
+  )
+  select week, division, owner_id, assistant_id, sum(delta)::int as points, sum(win)::int as wins, sum(lose)::int as losses,
+         sum(draw)::int as draws, count(*)::int as matches
+    from sides group by week, division, owner_id, assistant_id;
+revoke all on public.masmon_pvp_weekly from anon, authenticated;
+grant select on public.masmon_pvp_weekly to anon, authenticated;
 
 -- 朝4:00(JST)で区切った今日
 create or replace function public.masmon_pvp_today()
