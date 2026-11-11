@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5640a4e1fda1f669
+// source-sha256: 552c970da5b634ab
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -136254,8 +136254,9 @@ const amgtPushEv = (next, aid, s, t, x) => {
 const amgtLifeSlotsToGrow = abs => {
   const S = typeof ASSISTANT_LIFE_SLOTS !== 'undefined' ? ASSISTANT_LIFE_SLOTS : null;
   if (!S || !Number.isInteger(abs)) return [];
-  const day = Math.floor(abs / 6);
-  const s = S[abs - day * 6];
+  const n = S.length || 6;
+  const day = Math.floor(abs / n);
+  const s = S[abs - day * n];
   if (!s) return [];
   const t0 = day * 86400000 + s.from * 3600000 - 9 * 3600000;
   const t1 = day * 86400000 + s.to * 3600000 - 9 * 3600000 - 1;

@@ -220,7 +220,8 @@ const amgtPushEv = (next, aid, s, t, x) => { next.ev[aid] = [...next.ev[aid], { 
 const amgtLifeSlotsToGrow = (abs) => {
   const S = typeof ASSISTANT_LIFE_SLOTS !== 'undefined' ? ASSISTANT_LIFE_SLOTS : null;
   if (!S || !Number.isInteger(abs)) return [];
-  const day = Math.floor(abs / 6); const s = S[abs - day * 6]; if (!s) return [];
+  const n = S.length || 6; // 1日の区切りの数は生活の表から読む(6回→12回に変わっても合う)
+  const day = Math.floor(abs / n); const s = S[abs - day * n]; if (!s) return [];
   const t0 = day * 86400000 + s.from * 3600000 - 9 * 3600000; const t1 = day * 86400000 + s.to * 3600000 - 9 * 3600000 - 1;
   return [...new Set([amgtSlotOf(t0), amgtSlotOf(t1)])];
 };

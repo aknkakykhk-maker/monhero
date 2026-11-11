@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a81f46a272780eb4
+// generated-sha256: c61152f5a1495aba
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -71707,7 +71707,8 @@ const amgtPushEv = (next, aid, s, t, x) => { next.ev[aid] = [...next.ev[aid], { 
 const amgtLifeSlotsToGrow = (abs) => {
   const S = typeof ASSISTANT_LIFE_SLOTS !== 'undefined' ? ASSISTANT_LIFE_SLOTS : null;
   if (!S || !Number.isInteger(abs)) return [];
-  const day = Math.floor(abs / 6); const s = S[abs - day * 6]; if (!s) return [];
+  const n = S.length || 6; // 1日の区切りの数は生活の表から読む(6回→12回に変わっても合う)
+  const day = Math.floor(abs / n); const s = S[abs - day * n]; if (!s) return [];
   const t0 = day * 86400000 + s.from * 3600000 - 9 * 3600000; const t1 = day * 86400000 + s.to * 3600000 - 9 * 3600000 - 1;
   return [...new Set([amgtSlotOf(t0), amgtSlotOf(t1)])];
 };
