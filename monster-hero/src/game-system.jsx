@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f39c17acea985287
+// generated-sha256: 1b85ab384c305326
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -76151,7 +76151,8 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
         {AMBW_SPEEDS.filter(s => s.id === 'hl' || s.id === 'x2').map(s => <button key={s.id} className={speed === s.id ? 'ambw-btn' : 'ambw-btn2'} onClick={() => setSpeed(s.id)}>{s.label}</button>)}
         <button className="ambw-btn2" data-amgc-skip onClick={() => { setPos(Math.max(0, len - 1)); setDone(true); }}>⏭ 結果へ</button>
       </div>
-      {battle && battle.solo && <p className="ambw-small" style={{ textAlign: 'center' }}>練習の相手がいないと、修行の伸びが半分になります(マスモンが2体になるか、フレンドが対戦に登録すると相手ができます)</p>}
+      {battle && !battle.solo && battle.foe && battle.foe.kind === 'friend' && <p className="ambw-small" style={{ textAlign: 'center' }}>フレンドが練習相手です(編成を見つけてから7日間は、この相手として数えます)</p>}
+      {battle && battle.solo && <p className="ambw-small" style={{ textAlign: 'center' }}>いまはひとりで稽古中なので、修行の伸びが半分になります。👀で見るか、マスモンをもう1体迎えると相手ができます(フレンドが相手になるのは、編成を見つけてから7日間です)</p>}
       <div className="ambw-card" data-amgc-result>
         <b style={{ color: '#fde68a' }}>🥋 {last ? (last.today ? 'きょうの修行' : '前回の修行') : 'まだ修行していません'}{last ? ` ${row.nick}(${(AMGT_KINDS[last.log.k] || {}).name || ''})` : ''}</b>
         {last && last.log.l && <p data-amgc-learned style={{ margin: '4px 0 0', fontWeight: 800 }}><span style={{ background: '#fbbf24', color: '#111', borderRadius: 6, padding: '0 4px', fontSize: 10 }}>NEW</span> {amgcTechName(row.monster, last.log.l)} を覚えた</p>}
@@ -78453,6 +78454,8 @@ const masmonPvpFriends = async () => {
       total: e.team_total, updatedAt: Date.parse(e.updated_at) || 0,
     })),
   })).map((f) => ({ ...f, registered: f.assistants.length > 0 }));
+  // 登録編成を持つフレンドがいれば、助手の修行の「練習相手」に数える(通信は増やさず、読んだ結果を使うだけ)
+  try { if (friends.some((f) => f.registered) && typeof amgcNoteFriend === 'function') amgcNoteFriend(true); } catch (_) {}
   return { ok: true, friends, remaining };
 };
 
