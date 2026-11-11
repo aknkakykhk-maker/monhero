@@ -1,0 +1,948 @@
+検査	領域	何を見るか	秒	ブラウザ	いつも	CI	必須	30日で直された回数	今回	名指しで読む本体のファイル	似ている検査
+assistant-bond-check.js	root	みゅあの親密度(仲良し度)まわりを確認する。	0.9		○		○	10	OK	3	
+assistant-bond-reward-browser-check.js	root	助手の仲良し度のLvごとのごほうび(Lv2〜30・2026-10-21)を実ブラウザで見る。	32	○				4	OK	2	
+assistant-bond-reward-check.js	root	助手の仲良し度のLvごとのごほうび(Lv2〜30。2026-10-21)を確かめる。	0.2					9	OK	7	
+assistant-bubble-wrap-check.js	root	助手の吹き出しの中身が、箱からはみ出さないことを実際に測って確かめる。	2.4	○				1	OK	1	
+assistant-check.js	root	助手(ナビゲーター)システムを検証する。	21.7				○	10	OK	3	
+assistant-face-check.js	root	助手の顔アイコンが「顔が真ん中」に切り出せているかを見る。	0.4		○			8	OK	1	
+auto-battle-check.js	root	AUTOバトルの連続実行・同期ロック・停止条件と、手動操作との排他を確かめる。	0.2					1	OK	0	
+auto-settings-check.js	root	AUTO設定・個体識別・供モンの自動加入・配置のフォールバックを確かめる。	0.2		○			0	OK	2	
+auto-turn-check.js	root	AUTOの1ターン判断(chooseAutoTurn)の合法判定・4つの方針・固定rng・非破壊性を確かめる。	0.1		○			0	OK	0	
+auto-turn-integration-check.js	root	AUTOの1ターンが、明示／手動どちらの経路でも state を経由せず安全につながるかを確かめる。	0.1		○			0	OK	0	
+boot-flow-check.js	root	起動フローの進行不能とタップ領域の退行を、配信用ソースの構造から検出する。	0.1		○	○		0	OK	0	
+compiled-runtime-check.js	root	配信用コードが、index.html で用意していない JSX ランタイムを参照していないことを確認する。	0.1		○	○	○	0	OK	0	
+debug-trials-check.js	root	デバッグ設定の「確認待ちの試作」と、設定の画面の入口(2026-10-16 社長「デバッグモードがわかりづらい」)を実際のブラウザで確かめる。	17.9	○				3	OK	2	
+help-bubble-fold-check.js	root	ヘルプ(攻略情報局)の上の助手の吹き出しを「たためる」ことを、実際の画面で確かめる(2026-10-26 開発部 e01・e02)。	64.7	○				3	OK	0	
+help-coverage-check.js	root	「機能を足したのにヘルプに載っていない」を機械的に防ぐ。	0.2		○		○	3	OK	2	
+help-guide-check.js	root	ヘルプ(攻略情報局)を検証する。	0.3		○		○	3	OK	3	
+help-render-check.js	root	ヘルプ画面を実際にReactでレンダリングして、3階層それぞれが描けることを確認する。	16.4				○	11	OK	10	
+home-layout-check.js	root	HOME画面の配置を、実際のブラウザで測って確かめる。	90	○				11	OK	1	
+image-asset-check.js	root	画像がPNGファイルとして正しく置かれているかを見張る検査。	3.3				○	3	OK	9	
+jsx-text-brace-check.js	root	JSXの中に、閉じ忘れ・閉じすぎでできた「{」「}」がそのまま文字として	9.3				○	0	OK	0	
+landscape-screens-check.js	root	横画面(スマホを横に持ったとき)で本編の画面が使える形になっているかを、実ブラウザで測る。	61.2	○				4	OK	1	
+layout-consistency-check.js	root	画面レイアウトの統一と、画面が小さい端末で中身が切れないかを静的に確認する。	4.2					5	OK	5	
+playtime-check.js	root	プロフィールの「プレイ時間」を確かめる。	0.2		○			1	OK	0	
+render-error-check.js	root	画面が真っ白になる類の不具合(JSの実行時エラー)を、実際にブラウザで開いて確かめる。	8	○			○	1	OK	0	
+rules-index-check.js	root	CLAUDE.md を「小さいまま、痩せさせない」ための検査。	0.2		○	○		2	OK	4	
+run-checks-select-check.js	root	run-checks.js --changed の選び方を見張る(2026-11-11)。	1.2					1	OK	2	
+supabase-apply-check.js	root	tools/supabase-apply.js(Supabase へ用意したSQLを流す道具)の安全装置を見張る(2026-09-30)。通信はしない。	0		○			0	OK	1	
+teaching-roster-size-check.js	root	アシストカードの編成が、いつでも「ちょうど6枚」になるかを確かめる。	0.1		○			0	OK	1	
+undefined-reference-check.js	root	game-system.jsx が「その場所からは見えない変数」を参照していないかを調べる。	10.5			○	○	2	OK	0	
+update-notice-check.js	root	新バージョン検知から更新までの退行を静的に検出する。	0.2		○	○		2	OK	4	
+viewport-height-check.js	root	画面の高さの取り方が、どの端末でも「1画面に収まる」ものになっているかを確かめる。	0.2		○			0	OK	0	
+assistant/assistant-call-honorific-check.js	assistant	助手の呼び方で敬称が重ならないか(2026-10-21 改善部の見直し N1「モンヒロくん」→「モンヒロくんさん」「モンヒロくんちん」)。	0.3					1	OK	2	
+assistant/assistant-chat-check.js	assistant	助手とおしゃべり(2026-10-14)を、本番の Claude API を叩かずに確かめる。	42.2	○				24	OK	2	
+assistant/assistant-chat-ranking-check.js	assistant	助手とおしゃべりのランキング(2026-10-21 社長の決定「おしゃべりでランキングの上位を答えられるようにする」)を、偽物のデータベースで確かめる。	2.7	○				6	OK	3	
+assistant/assistant-life-browser-check.js	assistant	助手ライフ(助手たちの家・段階1 2026-11-07)の画面と HOME の施設の顔を、実際に開いて確かめる。公開の印 assistantLife はページの中でだけ立てる(本体の印は偽のまま)。	355.6	○				30	OK	1	
+assistant/assistant-life-buygive-browser-check.js	assistant	助手ライフの「買って贈るを1回で」(2026-11-08 社長 止め絵 docs/progress/assistant-peer/gifts/buygive/)を、実際に開いて確かめる	100.6	○				5	OK	0	
+assistant/assistant-life-check.js	assistant	助手たちの今(56-assistant-life.jsx)の仕組みを確かめる。ブラウザは使わない。	6.3					10	OK	6	
+assistant/assistant-life-friend-browser-check.js	assistant	助手ライフ: フレンドの家との行き来の画面を、本物のゲームを開いて縦・横・🔄横で触って確かめる(56-assistant-life-friend.jsx)。	211.3	○				11	OK	1	
+assistant/assistant-life-friend-check.js	assistant	助手ライフ: フレンドの家との行き来(56-assistant-life-friend.jsx)の決まりを確かめる。ブラウザもサーバーも使わない。	1.5					9	OK	10	
+assistant/assistant-life-furn-browser-check.js	assistant	助手ライフの家具(段階B・2026-11-08 社長 GIFT-PLAN.md)を、実際に開いて確かめる。公開の印 assistantLifeFurniture はページの中でだけ立てる	430.7	○				3	OK	0	
+assistant/assistant-life-furn-stagec-browser-check.js	assistant	段階C(2026-11-08 社長 ❶A ❷A・docs/progress/assistant-peer/gifts/STAGE-C-PLAN.md)を、実際に開いて確かめる	51.4	○				1	OK	1	
+assistant/assistant-life-gift-check.js	assistant	助手ライフの道具(2人に贈る10種類)・好み(56-assistant-life-gifts.jsx・2026-11-08 社長 GIFT-PLAN.md)を確かめる。ブラウザは使わない。	1.7					2	OK	6	
+assistant/assistant-life-gift-weight-browser-check.js	assistant	助手ライフの「友情Lv・仲良し度の説明と数字の重み」と「交換所へ飛べる入口」を、実際に開いて確かめる(2026-11-08 社長・遊ぶ人の提案)	60.3	○				2	OK	0	
+assistant/assistant-life-home-faces-small-check.js	assistant	HOME の顔の列(助手ライフの顔・AssistantLifeHomeFaces)が、小さい横画面でも画面の外へ出ない(2026-11-08 カード部ルール: 本番の 568×320 で	55.7	○				3	OK	1	
+assistant/assistant-life-home-layout-check.js	assistant	HOME の助手の顔の列と施設の札を、いろいろな端末の大きさで開いて確かめる(2026-11-07 社長「顔は小さく・施設の札のすぐ下に横1列」	103.3	○				2	OK	0	
+assistant/assistant-life-map-check.js	assistant	助手ライフ「📋 みんなの居場所」の地図(案A・2026-11-08 社長「推奨でいいけどもっと矛盾のない作りとわかりやすく」)を、実際に開いて確かめる。	290.3	○				2	OK	0	
+assistant/assistant-life-note-band-check.js	assistant	助手ライフのお知らせの帯(data-assistant-life-note)が、どの画面でも濃い下地か確かめる(2026-11-08 ミハリの指摘「お知らせの帯の朝・夕・夜」)	0					1	OK	0	
+assistant/assistant-life-quick-chip-check.js	assistant	助手ライフの裏クイックの札(2026-11-08 社長「助手ライフ画面でも裏クイックほしい」)。中身は 60-app(バトル部)が props で渡す	39.9	○				1	OK	0	
+assistant/assistant-life-quick-lose-check.js	assistant	助手ライフを開いたまま裏クイックで負けたとき、帯に数秒だけ「😢 負けちゃった…始め直すよ」を出す(2026-11-08 社長「帯に小さく出す」・ナカヨシ8)。	21.2	○				2	OK	1	
+assistant/assistant-life-quick-run-browser-check.js	assistant	助手ライフを開いたまま、裏でクイック∞周回を回す(2026-11-08 社長「助手ライフ画面でも裏クイックほしい」)を実際のブラウザで確かめる。	180.5	○				7	OK	1	
+assistant/assistant-life-roomview-check.js	assistant	助手の部屋を大きく見る(2026-11-08 社長 案A・①〜③・マスモン全部)を、実際に開いて確かめる。	134.1	○				1	OK	0	
+assistant/assistant-life-scene-stand-browser-check.js	assistant	助手ライフの場面(見守る・ようすを見る・贈る)の立ち絵の大きさと置き方を、実際に見えている体で確かめる	109.6	○				1	OK	0	
+assistant/assistant-life-sheet-close-check.js	assistant	助手ライフの下から出るシートは、どれもはっきり分かる「閉じる」ボタンを持つ(2026-11-08 窓口・ナカヨシ8)。	49.7	○				2	OK	0	
+assistant/assistant-life-sleep-eyes-check.js	assistant	寝ているときの目(2026-11-11 社長「助手ライフで寝ているときに、目を開けっぱなしの人がいる。えるびんだけそのままでいい」)	32.4	○				1	OK	0	
+assistant/assistant-life-solo-browser-check.js	assistant	助手1人に贈る(2026-11-08 社長 docs/progress/assistant-peer/SOLO-GIFT-PLAN.md ❶B ❷A ❸A ❹A ❺A)を、実際に開いて確かめる。公開の印 assistantLifeSolo 	91.8	○				3	OK	0	
+assistant/assistant-life-ux-check.js	assistant	助手ライフの作り直し(2026-11-11 社長・docs/progress/assistant-peer/LIFE-UX-V3-PLAN.md)の新UIを、実際に開いて確かめる	62.1	○				1	OK	0	
+assistant/assistant-line-owner-check.js	assistant	助手の台詞が、ほかの助手の行に落ちていないか・ほかの助手の口ぐせが混ざっていないかを見る(2026-11-05)。	0.2		○			2	OK	5	
+assistant/assistant-masmon-browser-check.js	assistant	助手ライフ: 部屋の「🐾 マスモン」(56-assistant-life-masmon.jsx)を本物の画面で開いて確かめる。	171.2	○				13	OK	1	
+assistant/assistant-masmon-grow-check.js	assistant	助手のマスモンの育成基盤(56-assistant-life-masmon-grow.jsx・社長の仕様書の第①段階)を、画面なしで確かめる。	0.1					1	OK	2	
+assistant/assistant-masmon-names-check.js	assistant	助手のマスモンの名前を AI で付ける(assistant-chat の kind:'masmon_names'・2026-11-08 社長の選び ❷B)を、偽物の Claude で確かめる	0.1					1	OK	0	
+assistant/assistant-masmon-plan-check.js	assistant	助手のマスモン(一覧・編成・好きな血統/苦手な血統)に、まだ実装されていないモンスターが混ざらないかを見る。	0.2					5	OK	4	
+assistant/assistant-masmon-suggest-check.js	assistant	助手のマスモン・デッキに「提案する」(assistant-chat の kind:'masmon_suggest'・2026-11-08 社長 Q1B・Q2C)を、偽物の Claude で確かめる	0.1					9	OK	0	
+assistant/assistant-masmon-train-check.js	assistant	助手のマスモンの修行と助手の成長(56-assistant-life-masmon-train.jsx・社長の仕様書の第②段階)と技表(data/assistant-masmon-techs.js)を、画面なしで確かめる。	0.1					1	OK	5	
+assistant/assistant-peer-check.js	assistant	助手どうしのつながり(2026-11-07 社長「ガッツリ作りこんで」)を確かめる。ブラウザは使わない。	1.9					4	OK	4	
+assistant/assistant-select-render-check.js	assistant	「助手を選ぶ」画面が、実際に描画できて2人とも選べる形になっているかを見る。	0.5		○			1	OK	1	
+assistant/assistant-sets-coverage-check.js	assistant	助手ごとに分かれている表に、全員がそろっているかを見る(2026-10-31)。	0.2					1	OK	8	
+assistant/assistant-unlock-notice-render-check.js	assistant	プロフィールで出す「解放の案内」が、実際に描画できて読み進められるかを見る。	0.5		○			2	OK	2	
+assistant/assistant-update-notice-check.js	assistant	助手の告知(assistantNotice)の種別と書き方が決まりどおりか。	0.2		○		○	1	OK	2	
+assistant/atsu-check.js	assistant	5人目の助手「あつ」(2026-10-22 社長の決定)の決まりを見張る。ブラウザは使わない。	0.3		○			3	OK	6	
+assistant/atsu-unlock-browser-check.js	assistant	5人目の助手「あつ」の解放の流れを、実ブラウザで通して確かめる(2026-10-22)。	91.3	○				8	OK	3	
+assistant/breeder-gender-call-check.js	assistant	プロフィールの「性別」と、助手・マスモンの呼び方(2026-11-06 社長)を確かめる。	0.1					1	OK	4	
+assistant/callname-check.js	assistant	会話で決まる呼び方・助手へのあだ名(2026-11-08 社長・docs/progress/assistant-peer/AI-TALK-PLAN.md)を確かめる。	104.1	○				4	OK	1	
+assistant/daily-masu-advice-check.js	assistant	助手の日次ワンポイント案内について、本文データと通常・DEBUGの表示経路を確認する。	0.3		○			1	OK	1	
+assistant/dra-tone-check.js	assistant	助手ドラの口調を見張る(2026-09-28)。	0.1		○			0	OK	1	
+assistant/edge-serve-check.js	assistant	助手とおしゃべりの中継役の入口(supabase/functions/assistant-chat/serve.js と index.ts)を、Deno も本番も使わずに確かめる。	0.1					1	OK	1	
+assistant/event-line-bgm-check.js	assistant	会話イベントの途中で曲を替える(2026-10-17 社長「途中で変わるのいいね」)の作りを見る。	0.1					7	OK	5	
+assistant/growth-fx-chip-place-check.js	assistant	仲良し度の知らせ(44-growth-fx の小さな札 .mh-gfx-chip)が、どの画面でも押せるもの・字に重ならない(引き継ぎ③・2026-11-08 ナカヨシ8)。	92.5	○				2	OK	0	
+assistant/kiki-first-person-check.js	assistant	助手ききの一人称を見張る(2026-11-07)。	0.1					1	OK	1	
+assistant/kyuko-check.js	assistant	6人目の助手「きゅうこ」(2026-10-22 社長の決定)の決まりを見張る。ブラウザは使わない。	0.3		○			9	OK	9	
+assistant/life-rel-browser-check.js	assistant	助手ライフ: けんか・仲直りなど人間らしい出来事の家での見せ方を、本物の画面で開いて確かめる(56-assistant-life-rel.jsx)。	172.8	○				2	OK	1	
+assistant/life-rel-check.js	assistant	助手ライフ: 人間らしい関係の出来事(56-assistant-life-rel.jsx)の決まりを確かめる。ブラウザは使わない。	2					2	OK	5	
+assistant/momosuke-check.js	assistant	3人目の助手「ももすけ」が、みゅあ・ききと同じ土台へきちんと乗っているかを見る。	0.2		○			2	OK	2	
+assistant/mua-tone-check.js	assistant	助手みゅあの口調を見張る(2026-10-03)。	0.2		○			2	OK	4	
+assistant/peer-lines-variety-check.js	assistant	助手どうしの台詞の「重なり」と「口調のくせの割合」を数える(2026-11-07 社長「バリエーションがかなり少なそう」・コトバ)。	0.5					4	OK	1	
+assistant/player-call-check.js	assistant	助手がプレイヤーを呼ぶ呼び方を確かめる(2026-11-07 社長「ブリーダーとか呼び方がおかしい。こういうのもちゃんと整理が必要だね」)。	0.7					2	OK	3	
+assistant/quick-guide-check.js	assistant	クイック・AUTO設定・裏周回の案内(2026-11-07 社長。monster-hero/src/parts/56-quick-guide.jsx)を確かめる。	201.1	○				9	OK	11	
+assistant/quick-guide-once-check.js	assistant	裏周回の案内(モードえらび g3c・曲えらび g3b)が「1回目は出る/2回目は出ない」ことを、本物の画面で縦・横・🔄横の3つで確かめて撮る	101.9	○				2	OK	1	
+assistant/sorashido-gift-check.js	assistant	ソラシドの沖縄のおみやげ(10,000ビートP)をギフトで1回だけ届ける(2026-10-27 社長)を確かめる。	0.1					2	OK	2	
+assistant/sorashido-story-check.js	assistant	ソラシドの加入のお話「推しに会える夜 ～ソラシド登場～」(2026-10-27)の台本と、流し方のつなぎを見る。	0.2					6	OK	5	
+assistant/story-guest-face-check.js	assistant	お話で、名札(name)をゲストの名前に変えて話す台詞に、そのゲストの顔(stage)が付いているかを見張る。	0.1					1	OK	2	
+assistant/tactics-intro-story-check.js	assistant	タクティクスバトルの導入会話（イベント回想 tactics_intro）を見る。	0.3		○			1	OK	1	
+assistant/unreleased-assistant-hidden-check.js	assistant	公開の印(RELEASE_FLAGS)が立つ前の助手の名前・絵が、ふつうの画面に出ていないかを見張る(2026-10-27)。	11.7	○				2	NG	0	
+assistant/update-notice-bundle-check.js	assistant	起動時のお知らせの「まとめ」(2026-10-10・ユーザー指示「起動時のお知らせを1枚にまとめる」)を実ブラウザで確かめる。	40.9					2	OK	3	
+audio/atsu-cup-theme-check.js	audio	「MF × ICHIKA MIX」(旧・あつ杯テーマ)の音源とBGM登録がそろっているか。	0.5		○			1	OK	1	
+audio/audio-route-check.js	audio	iOSの消音スイッチを尊重するため、配信コードを含む全音声経路がWeb Audioであることを確認する。	0.2		○			2	OK	0	
+audio/auto-bgm-continuity-check.js	audio	AUTO中に画面が変わってもBGMが途切れず続くか。	0.7		○			0	OK	2	
+audio/auto-bgm-loop-continuity-check.js	audio	AUTO中のBGMの並びとループが途切れないか。	0.2		○			0	OK	2	
+audio/auto-bgm-picker-browser-check.js	audio	AUTO∞(超省エネ)でバトル中の「🎵 BGM」を開いたときの振る舞いを実ブラウザで確かめる。	32.7	○				1	OK	0	
+audio/auto-bgm-runtime-picker-check.js	audio	AUTO中に鳴らすBGMの選び方が正しいか。	0.6		○			0	OK	2	
+audio/auto-repeat-result-bgm-check.js	audio	AUTO∞の最終リザルトで鳴るBGMが正しいか。	0.7		○			0	OK	2	
+audio/auto-ultra-bgm-check.js	audio	SEを0にする条件は、超省エネに加えて「モンビーを開いている間」も入る	1.1		○			3	OK	2	
+audio/bgm-arrangement-check.js	audio	BGMアレンジ、クリア曲ルーティング、保存互換性を編集元と生成物の両方で確認する。	0.9		○			4	OK	0	
+audio/bgm-arrangement-coverage-check.js	audio	「どの場面のBGMも設定から選べる」ことを見張る。	0.1		○			0	OK	2	
+audio/bgm-arrangement-layout-check.js	audio	BGMアレンジのタブが、いちばん狭い端末でも1行に収まるかを実際に測る。	1.8	○				0	OK	0	
+audio/bgm-check.js	audio	BGM(audio/のmp3)が実際に鳴っているかを、実ブラウザのWeb Audioそのもので確認する。	42.7	○				4	OK	0	
+audio/bgm-light-check.js	audio	場面のBGMを軽く持つ(デバッグ設定 mh_bgm_light_v1・2026-10-16 社長の決定「案1＋案2」)を、実際のブラウザで確かめる。	20.6	○				1	OK	1	
+audio/bgm-preload-check.js	audio	「次に鳴る曲を、鳴り出す前に読んでおく」導線が外れていないかを確認する。	0.6		○			0	OK	0	
+audio/bgm-preview-stop-check.js	audio	BGMアレンジの試聴が、押した順どおりに止まることを確認する。	0.9		○			0	OK	0	
+audio/default-volume-check.js	audio	まっさらな端末の音量の既定(2026-10-18 社長の判断「控えめの値に上げる」・DEFAULT_VOLUME 1 → 30)を、実際のブラウザで確かめる。	11.7	○				1	OK	3	
+audio/eiki-boss-bgm-check.js	audio	エイキ専用の最終ボスBGM「綺季一閃～花雪に舞う詠姫～」の音源・発動条件・ヘルプ記載がそろっているか。	0.6		○			0	OK	2	
+audio/pandora-boss-bgm-check.js	audio	パンドラを勇者モンにした最終ボス戦だけで専用BGMを優先することを確認する。	0.7		○			0	OK	2	
+audio/rhythm-loudness-check.js	audio	モンヒロビートの曲が、どれも同じ大きさで鳴るか。	326.6					0	OK	3	
+audio/rhythm-output-latency-check.js	audio	音の出力遅延の補正が効いているかを見る。	0.7		○			0	OK	2	
+audio/rhythm-return-bgm-check.js	audio	モンヒロビートから戻ったときに、バトルのBGMが鳴り直す作りになっているかを見張る。	0.3		○			3	OK	1	
+audio/song-buffer-limit-check.js	audio	曲えらびの試聴と演奏で読んだ曲の音(解いた AudioBuffer)を、直近の数曲ぶんだけ持っているかを	12.6	○				0	OK	1	
+audio/song-preview-loop-check.js	audio	曲えらびの試聴が、曲の終わりで無音にならず輪になっているかを見張る。	0.6		○			0	OK	3	
+audio/tactics-bgm-check.js	audio	タクティクスバトルの通常戦・中ボス戦・ボス戦に、それぞれ決めたBGMが鳴ることを確認する。	0.7		○			0	OK	1	
+audio/title-bgm-check.js	audio	タイトルBGMが「最初のタップだけで」鳴るかを確認する。	8.7	○				1	OK	0	
+audio/title-bgm-default-check.js	audio	タイトル画面のデフォルトBGMを「Monster Hero -Another-」へ変更したことを確認する。	0.6		○			0	OK	2	
+battle/ai-copy-check.js	battle	AIコピー(ソラシドのアシカの5人目)の共通の部品(33-ai-copy.jsx)を確かめる。タクティクスと5つの遊びで同じ関数を使う。	0					3	OK	3	
+battle/ai-copy-classic-check.js	battle	AIコピー(ソラシドのアシカの5人目)の、5つの遊び(クラシック系)だけの計算(33-ai-copy-classic.jsx)を確かめる。	0					5	OK	4	
+battle/ai-copy-invariants-browser-check.js	battle	AIコピー(ソラシドのアシカの5人目・2026-10-27 社長の決め)を、実際のブラウザで1戦流して確かめる。	83.8	○				3	OK	4	
+battle/ai-copy-invariants-check.js	battle	AIコピー(ソラシドのアシカの5人目・2026-10-27 社長の決め)が「いる/いない」で、	0.2					2	OK	5	
+battle/ai-copy-no-shift-check.js	battle	AIコピー(ソラシドのアシカ)が出ても、元の4枠の位置と大きさが1pxも変わらないことを、コードで見張る。	0					1	OK	1	
+battle/attack-preview-parity-check.js	battle	図鑑の「攻撃アクション」で見せる演出が、本番バトルとまったく同じ動きになっているかを見る。	4.9					2	OK	3	
+battle/auto-run-browser-check.js	battle	クイックモードのAUTOが、実ブラウザで本当に進むことを確かめる。	38.4	○				2	OK	0	mode/rhythm-background-run-check.js(0.83)
+battle/balance-second-card-check.js	battle	バランス調整の検証:	0.4		○			4	OK	2	
+battle/battle-balance-check.js	battle	難易度ごとの強さ・上書きのfallback・EXTREMEの倍率・バトル生成の共通化を確かめる。	0.1		○			0	OK	1	
+battle/battle-card-gesture-check.js	battle	バトルカードのタップ／スワイプ判定が正しく結線されているか。	0.1		○			0	OK	0	
+battle/battle-carousel-check.js	battle	難易度カルーセルに出したい並び。ここは検査が持つ「正解」なので実装から読まない。	0.4		○			0	OK	0	
+battle/battle-check.js	battle	バトル周りの仕様を実ブラウザで確認する。	86.2	○				1	OK	0	
+battle/battle-damage-preview-check.js	battle	予測と実処理はヒット列の共通の正本 buildAttackHits を使う(分岐は ATTACK_COMBO_RULES にまとまっている)	0.2					5	OK	0	
+battle/battle-effects-check.js	battle	本編(5つの遊び)とタクティクスの EX 以外の強化・弱化を、#4206 と同じ形に直す部品(34-tactics-ex-effects.jsx の後半)を確かめる。	0.2					1	OK	3	
+battle/battle-fx-lint-check.js	battle	バトル画面の CSS と「重さの見張り」を、書いた時点で点検する(ブラウザを開かない。1秒で終わる)。	0.1		○			0	OK	3	
+battle/battle-menu-browser-check.js	battle	390x844 の実ブラウザで HOME → 難易度画面の主要導線と例外ゼロを確認する。	19.2	○				4	OK	0	
+battle/battle-menu-shake-check.js	battle	バトル中に開くパネルが、画面の揺れで位置ずれしないことを確かめる。	23.8	○				2	OK	3	
+battle/battle-mode-card-fit-check.js	battle	モード選択のカード(BATTLE_MODE_SELECT)が、いちばん小さい端末でも崩れずに読めるかを実ブラウザで測る。	34.8	○				1	OK	0	
+battle/battle-mode-check.js	battle	バトルモード(チャレンジ／クイック／プロ)を検証する。	1.4					10	NG	4	
+battle/battle-mode-select-check.js	battle	新しいバトルの入口(バトルモード選択 → 難易度選択 → モード別スコアランキング)を	12.7	○				1	OK	0	
+battle/battle-perf-budget-check.js	battle	タクティクス新画面を実際に開いて、「重さの予算」を守っているかと、「重いときは自動で軽く」が効くかを確かめる。	66.4					0	OK	1	
+battle/battle-scenario-check.js	battle	バトルのれんしゅう(台本どおりに動くバトル)の数値を、実際の計算式で検算する。	0.3		○			0	OK	7	
+battle/battle-system-fit-check.js	battle	バトルの入口(BATTLE_SYSTEM_SELECT)が、小さい端末でも1画面に収まることを実際に測る。	42	○				0	OK	0	
+battle/battle-system-select-check.js	battle	モンヒロバトルの入口(BATTLE_SYSTEM_SELECT)を確かめる。	0.4		○			3	OK	4	
+battle/battle-text-cover-check.js	battle	バトル画面で「文字が文字の上に乗っていないか」を、実際のブラウザで測る。	23.4	○				2	OK	1	
+battle/battle-tutorial-check.js	battle	バトルチュートリアル(操作しながら覚える練習)を確認する。	1.3		○			1	OK	2	
+battle/battle-tutorial-tactics-check.js	battle	タクティクスバトルのれんしゅう(2026-09-21・公開前なのでデバッグからだけ)を	27.3	○				2	OK	0	
+battle/battle-tutorial-v2-check.js	battle	いま本番で使っているバトルチュートリアル(バトルの仕組みえらびから始まる版)を	20.2	○				3	OK	0	
+battle/card-art-check.js	battle	行動カードの絵(2026-10-15 社長「バトルカードの変更も進めて」)の作りを見る。	0.2					14	OK	8	
+battle/card-drag-browser-check.js	battle	カードを指で引きずって枠へ置く操作を、実際のブラウザで確かめる。	18.8	○				1	OK	1	
+battle/card-icon-check.js	battle	カードのアイコンが「画像」と「絵文字」に正しく振り分けられているかを確認する。	12.5					0	OK	4	
+battle/card-name-fit-browser-check.js	battle	行動カードの絵の「文字の置き場」(2026-10-15 社長「位置も枠にかぶってるやつもある」)を、手札に出る名前を全部置いて確かめる。	2.3	○				9	OK	4	
+battle/combo-motion-check.js	battle	連撃のある攻撃(ザン・エイキ・剣士モッチー)が、動きを「1回だけ」流しているかを見る。	0.8		○			2	OK	2	
+battle/damage-parity-check.js	battle	与ダメージの「予測表示」と「実処理」が同じヒット列(同じ合計)になることを、乱数を固定して確かめる。	14.5					7	OK	0	
+battle/debug-battle-check.js	battle	デバッグバトルが通常プレイと混ざらないか(敵の使い回し・BGM経路・画面遷移・通常モードへの復帰)。	0.2		○			1	OK	2	
+battle/debug-battle-modes-check.js	battle	デバッグ戦で、各モード・各難易度・どの敵とでも戦えることを確かめる。	105.5	○				0	OK	0	
+battle/dist-aptitude-check.js	battle	間合い適性が「距離ごとの与ダメージ補正(%)」として扱われ、編成全員ぶんが	0.6		○			1	OK	1	
+battle/eiki-motion-check.js	battle	エイキの攻撃モーション(桜の花びら)を、実際のブラウザで測って確かめる。	1.9	○				0	OK	0	
+battle/enemy-defeat-check.js	battle	敵ダメージの境界値と、攻撃・反射が共通撃破処理へ合流することを再現可能に確認する。	0.1		○			0	OK	0	
+battle/enemy-scan-check.js	battle	敵の行動の決まりを、実戦の抽選とSCAN表示の両方について数値で確かめる。	0.2		○			0	OK	0	
+battle/event-boss-list-check.js	battle	期間イベントのボスの一覧(EVENT_BOSS_IDS)の足し忘れを止める(2026-11-07 社長「ジャック特攻 → イベボス特攻」)。	0					1	OK	3	
+battle/guard-card-check.js	battle	デッキに入るガードカードの枚数を確かめる。	0.2		○			0	OK	1	
+battle/guard-defense-balance-check.js	battle	丈夫さの基本防御とガード値を、表示・実処理で共有する仕様に固定する回帰チェック。	0.2		○			0	OK	1	
+battle/ham-counter-fx-check.js	battle	ハムのカウンターの演出(24-battle-fx.jsx の HamCounterFx)を、実際のブラウザで段ごとに出して確かめる	54.9	○				1	OK	1	
+battle/hero-marker-check.js	battle	バトル画面で「どれが勇者モンか」「勇者特性が今効いているか」が分かるかを確認する。	0.3		○			0	OK	1	
+battle/legacy-mode-parity-check.js	battle	新モード(id: tactics)の作り込みが、既存5モードの計算へ1ミリも漏れていないことを確かめる。	0.4		○			3	OK	0	
+battle/moo-boss-presentation-check.js	battle	ラスボスの見せ方(丸枠の外の巨大な立ち絵・専用の演出)が、ムーと覚醒ムーの両方へ効くかを確認する。	0.9		○			0	OK	0	
+battle/moo-notice-visibility-check.js	battle	ラスボス戦で「何をする技か」の札が、巨大な立ち絵の裏へ回っていないかを実際のブラウザで測る。	1.5	○				1	OK	2	
+battle/move-hint-layout-check.js	battle	敵の「移動しようとしている」吹き出しの大きさと位置を、実際のブラウザで測る。	1.2	○				0	OK	0	
+battle/pandora-debug-check.js	battle	正式パンドラ・マーケット解放・禁忌解錠・双極共振・共通モーションを確かめる。	0.1		○			1	OK	3	
+battle/quick-run-anywhere-browser-check.js	battle	裏クイックを、ゲームのどこにいても回す(2026-11-11 社長)を実際のブラウザで確かめる。	196	○				1	OK	0	
+battle/range-label-check.js	battle	距離の札(零/近/中/遠。RANGE_STYLES の labelBg)の字の見た目を見る(2026-10-13 社長「縁を付けて中を白くするとかはどう? 全距離統一で」)。	0.1					1	OK	1	
+battle/range-preview-dist-check.js	battle	距離撃(range_atk)を先に置いたターンの「予測ダメージ」が、実際と同じ敵の距離で計算されるかを見る(2026-11-11 バトルの監査)。	0.2					1	OK	0	
+battle/reflect-enemy-hp-check.js	battle	反射(モノリスの勇者特性・固有技「トリオビームX」の障壁)で、	0.1		○			2	OK	1	
+battle/rpg-debug-check.js	battle	ダンジョンRPG戦闘テスト(デバッグ専用試作)の回帰チェック。	0.7		○			0	OK	4	
+battle/rpg-debug-layout-check.js	battle	ダンジョンRPG戦闘テスト(デバッグ専用)の3画面を、実ブラウザのiPhone相当の縦画面で測る。	31	○				0	OK	2	
+battle/run-abandon-fx-check.js	battle	ランを片付けたとき、そのターンの演出が画面に残らないか。	0.1		○			0	OK	2	
+battle/run-stage-check.js	battle	ランの進行(runStage)と、いま描いている画面(gameState)の切り分けを検査する。	0.4		○			5	OK	1	
+battle/rush-special-preview-check.js	battle	シールドが割れたあとの連撃必殺技(INFERNO系のデュラハン・ムー)の「受けるダメージの予測」が、実際の受け方と同じかを見る(2026-11-11 バトルの監査)。	0.1					1	OK	0	
+battle/score-shrink-browser-check.js	battle	スコアを 1/1000 にした(2026-10-03)ときの、端末に残った数字の一度きりの移行を、実際のブラウザで通して確かめる検査。	11.8	○				1	OK	1	
+battle/score-shrink-check.js	battle	スコアの 1/1000 化(2026-10-03・ユーザー指示「1000分の1でタクティクス以外全部」)を確認する。	0.1		○			4	OK	4	
+battle/skill-motion-check.js	battle	ユグドラシル種の「技ごとの動き」を見張る(2026-09-29 ユーザー指示「これにあった技モーション作って」)。	196.9	○				0	OK	8	
+battle/sorashido-copy-check.js	battle	アシカ「ソラシドの自動化」(copy_sorashido・2026-10-27 社長の決定)のデータと、AIコピーの計算(32-sorashido-copy.jsx)を確かめる。	0.1					4	OK	6	
+battle/sorashido-copy-predict-browser-check.js	battle	AIコピー(ソラシドのアシカの5人目)の予測ダメージ「攻N」が、実際にコピーが撃つダメージと合うかを、実際のブラウザで1戦流して確かめる(2026-11-06)。	128.9	○				4	OK	5	
+battle/sorashido-copy-predict-classic-browser-check.js	battle	AIコピー(ソラシドのアシカの5人目)の予測ダメージ「攻N」が、実際にコピーが撃つダメージと合うかを、クラシック(本編)の1戦で確かめる(2026-11-06)。	92.8					1	OK	1	
+battle/sorashido-copy-view-check.js	battle	アシカ「ソラシドの自動化」の見せ方の部品(24-sorashido-copy-view.jsx)を、実際のブラウザに置いて確かめる。	7.7	○				1	OK	2	
+battle/soul-rank-step4-check.js	battle	魂格システム STEP4「バトル接続」の回帰検査。	10.2					1	NG	2	
+battle/special-move-fx-check.js	battle	固有技(必殺技)の共通演出とフィニッシュが、全部の見せ場の動きに用意されているかを見る。	0.2		○			0	OK	8	
+battle/stack-marks-check.js	battle	バトルの「マーク×数」(2026-10-12 社長の依頼「スタックがいくら貯まってるのか一目でわかるように」)の作りを見張る。	0.1					8	OK	3	
+battle/stack-marks-overlap-browser-check.js	battle	味方の枠の「マーク×数」が、枠の中のほかの文字(予測ダメージ・ガード・🎯・EXの札・置いたカード・ライフ・ガッツ・名前)と	50.8	○				9	OK	5	battle/unit-detail-browser-check.js(0.79)
+battle/tactics-ai-copy-check.js	battle	タクティクスの AIコピー(ソラシドのアシカの5人目・2026-10-27 社長の決め)の、タクティクスだけの部品を確かめる。	0.2					3	OK	2	
+battle/tactics-enemy-ai-debug-check.js	battle	タクティクスの敵の作戦AI(試作・2026-11-11 社長の材料「タクティクス・NPCの戦術AI強化」)を見張る。	23.6	○				1	OK	0	
+battle/tactics-ex-effects-check.js	battle	タクティクス(とレイド)の EX で、いま効いている強化・弱化の一覧(34-tactics-ex-effects.jsx)を確かめる。	0.2					2	OK	4	
+battle/tactics-hate-check.js	battle	タクティクスのヘイト(確認待ちの試作・2026-10-17 社長「試作する」)の作りを見る。	0.3					12	OK	9	
+battle/ultra-eco-view-check.js	battle	超省エネのバトル画面が、背景の下へ潜らないことを確かめる。	0		○			0	OK	1	
+battle/unique-boost-combo-browser-check.js	battle	固有技のオリジナル強化「連撃数」を、本物のバトルで確かめる(2026-11-07 社長「連撃数 +3本も実際に積んでバトルで本数が増えるのを見る」)。	78	○				1	OK	0	
+battle/unique-effect-check.js	battle	固有技の「効果の説明文」と「実際の実装」が食い違っていないかを見張る。	0.3		○			1	OK	4	
+battle/unique-range-check.js	battle	継承した固有技を、表示名ではなく系統ID(monId/lineageId)で扱っているか。	0.2		○			1	OK	0	
+battle/unit-detail-browser-check.js	battle	バトル中のモンスターの詳細と、枠の「マーク×数」の濃さを実際のブラウザで確かめる(2026-10-13 社長の依頼	82.7	○				7	OK	5	battle/stack-marks-overlap-browser-check.js(0.79)
+battle/unit-detail-check.js	battle	バトル中のモンスターの詳細(2026-10-13 社長の依頼「モンスターをタップすると能力含め詳細バフも見れるようにして」)の作りを見る。	0.1					3	OK	2	
+battle/wave-result-layout-check.js	battle	WAVEリザルト画面が、背の低い端末でも「次のWAVEへ」に必ず届くかを実ブラウザで測る。	4.4	○				0	OK	1	
+boot/asset-prefetch-check.js	boot	事前ダウンロード(monster-hero/sw.js と 25-asset-cache.jsx の ASSET_CACHE)を実ブラウザで確かめる。	18.3	○				3	OK	3	
+boot/bgm-screen-coverage-check.js	boot	どの画面(gameState)にもBGMが決まっていることを確かめる。	0.2		○			0	OK	1	
+boot/boot-check.js	boot	起動時の事前ロード画面と、画面遷移でBGMが重ならないことを確認する。	10.8	○				0	OK	0	
+boot/boot-progress-check.js	boot	起動ローディングのゲージが「実際の読み込み」に沿って動き、最後に100%へ届くかを確かめる。	3.6	○				0	OK	0	
+boot/card-battle-intro-story-browser-check.js	boot	お話「MFバトルカード ～物置の古い箱～」(card_battle_intro_2026・2026-10-24)を、実際のブラウザで最後まで流す。	21.9	○				7	OK	0	
+boot/card-battle-intro-story-check.js	boot	お話「MFバトルカード ～物置の古い箱～」(card_battle_intro_2026・2026-10-24)の台本と、公開のつなぎ方を見張る。	0.1					2	OK	4	
+boot/changelog-order-check.js	boot	更新履歴の日付と並び順を見張る。	335					0	OK	3	
+boot/code-prefetch-check.js	boot	事前ダウンロードを本体とデータ(JS・CSS)まで広げたとき(docs/progress/speed/download-plan.md・2026-10-27 社長「作る」)、	50.1	○				2	OK	0	
+boot/count-input-check.js	boot	個数・回数・枚数を選ぶ所は、数を直接打ち込める欄(CountInput)を使う(2026-10-20 社長「個数系のやつは基本的に直接入力があったほうがいいね」)。	0.4					1	OK	6	
+boot/data-cache-key-check.js	boot	index.html が読み込む data/*.js のキャッシュキー(?v=)が、いまのファイルの中身と一致しているかを確認する。	0.5		○	○		1	OK	1	
+boot/day-boundary-check.js	boot	1日の切り替わりは、ぜんぶ朝4時(日本時間)にそろえる(2026-11-07 社長「バトルカードの日付変更線を4時にして。てかぜんぶ4時に統一して」)。	0.1					3	OK	9	
+boot/debug-menu-layout-check.js	boot	デバッグメニューの並び(2026-10-27 社長「デバッグモードがまたごちゃついてきてるから、使いやすく見やすく整備して」)を見張る。	0.1					1	OK	2	
+boot/debug-passphrase-browser-check.js	boot	デバッグ設定の入口の合言葉(2026-10-20 社長決定・改善部の見直し M1)を、実ブラウザで確かめる。	37.5	○				2	OK	1	
+boot/debug-passphrase-check.js	boot	デバッグ設定の入口の合言葉(2026-10-20 社長決定・改善部の見直し M1)を確かめる。	0.3					1	OK	2	
+boot/debug-story-list-browser-check.js	boot	デバッグ設定の「全ストーリーを確認」を、実際のブラウザで確かめる。	10	○				2	OK	1	
+boot/event-replay-check.js	boot	イベント回想(プロフィールから、見たことのある会話イベントを何度でも見返す機能)を確認する。	1.5		○			7	OK	6	
+boot/event-replay-release-flag-check.js	boot	イベント回想(EVENT_REPLAYS・data/assistants.js)に書いた releaseFlag が、	0		○			0	OK	2	
+boot/event-replay-tap-check.js	boot	イベント会話(回想・本編)の「スキップ」が、実際のブラウザで押せるかを確かめる。	3.6	○				9	OK	4	
+boot/gift-claim-transaction-check.js	boot	ギフト箱の「受け取る」が、複数の保存キーを**まとめて1つの取引**で書いているかを確かめる。	0.2		○			0	OK	0	
+boot/gift-login-check.js	boot	ギフト受取と日本時間4時更新ログインボーナスを本番ソースの関数で検証する。	0.2		○			0	OK	0	
+boot/harness-exit-check.js	boot	本体を読み込む検査が、用を終えたらプロセスごと抜けるかを見張る(2026-11-07)。	13.2					1	OK	1	
+boot/help-new-badge-check.js	boot	ヘルプの🆕(2026-10-18 社長「新しくヘルプに載ったやつは🆕のマークみたいなのつけといて」)を実ブラウザで見る。	13	○				2	OK	1	
+boot/ja-wrap-beat-extra-check.js	boot	モンヒロビートの画面のうち、全国ランキング・マスモンランキングの窓・HELL の鍵・ノーツ図鑑・これまでの記録の文が、言葉の途中で折れていないか・字が切れていないかを数える(2026-10-27・ビート部 リバースくん)。	362.5					1	OK	0	boot/ja-wrap-beat-multi-check.js(0.92)
+boot/ja-wrap-beat-multi-check.js	boot	モンヒロビートのマルチの画面(フリーマッチの待ち・プライベートの部屋・選曲・マスモンを呼ぶ・結果)の文が、言葉の途中で折れていないか・字が切れていないかを、偽の通信で数える(本番の部屋は作らない)(2026-10-27・ビート部 リバースく	231.6					1	OK	0	boot/ja-wrap-beat-extra-check.js(0.92)
+boot/ja-wrap-beat-play-check.js	boot	モンヒロビートの演奏中の画面の文が、言葉の途中で折れていないか・字が切れていないかを数える(2026-10-27 ビート部・部長テンポくんの依頼)。	327.8	○				3	OK	1	
+boot/ja-wrap-beat-result-check.js	boot	モンヒロビートのリザルト画面の文が、言葉の途中で折れていないか・字が切れていないかを数える(2026-10-27 ビート部・部長テンポくんの依頼)。	81.2	○				3	OK	3	
+boot/ja-wrap-beat-screen-check.js	boot	モンヒロビートの画面の文(説明・助手の吹き出し・札)が、言葉の途中で折れていないかを数える(2026-10-26)。	418.5	○				10	OK	4	
+boot/ja-wrap-beat-source-check.js	boot	モンヒロビートの画面の parts から、2行以上になりうる長さの日本語の文で、折る部品(jaWrap など)も break-keep も通していない所を、ソースから数える(2026-10-27)。	0.5					2	OK	6	
+boot/ja-wrap-beat-tutorial-check.js	boot	モンヒロビートの練習(はじめての案内)の吹き出しを1枚ずつ送って、文が言葉の途中で折れていないか・字が切れていないかを数える(2026-10-27・ビート部 リバースくん)。	77.4					1	OK	0	boot/ja-wrap-beat-extra-check.js(0.92)
+boot/ja-wrap-check.js	boot	主な画面の短い字(題名・タブ・16字までの札)が、言葉の途中で折れていないかを数える(2026-10-20 改善部の見直し M3)。	323.6	○				8	OK	1	
+boot/ja-wrap-lines-check.js	boot	助手とジャックの台詞を「全部」、言葉の切れ目で折る部品(jaWrap)で幅を変えて描き、崩れた折れ方が無いかを数える(2026-10-24)。	52	○				7	OK	6	
+boot/ja-wrap-word-check.js	boot	台詞が「言葉の途中」で折れていないかを、折り目(jaWrap の印)とは別の物差しで数える(2026-10-26)。	12.3	○				4	NG	6	
+boot/kaizen2-layout-check.js	boot	改善部の見直し・その2(docs/playbot/reports/2026-10-20/kaizen-2.md)の画面の直しが、戻っていないかを見張る。	0.1					11	NG	10	
+boot/kiki-intro-check.js	boot	きき加入の会話(既存プレイヤーへ1回だけ)を確認する。	0.7		○			2	OK	5	
+boot/legacy-save-boot-check.js	boot	旧形式のセーブデータ(マスモン導入前・各種一度きり移行の前)を localStorage に入れて実際に起動し、	10.1	○				0	OK	0	
+boot/market-item-quantity-purchase-check.js	boot	マーケットの消耗アイテム(type:'item')は、価格タップで個数選択シートが開き、	14.7					0	OK	0	
+boot/market-notice-check.js	boot	マーケットへ商品を足したのに、助手からの告知を付け忘れていないかを見張る検査。	0.1		○		○	2	OK	2	
+boot/mission-check.js	boot	ミッションのJST期間更新、達成判定、ギフト報酬互換性を本番ソースから検証する。	0.2		○			2	OK	1	
+boot/mission-claim-all-check.js	boot	ミッション画面の「すべて受け取る」と、受け取ったあとの「手に入れたもの」の窓を、実ブラウザで確かめる(2026-10-10・社長の選択)。	44.6	○				1	OK	0	
+boot/mission-gift-badge-check.js	boot	ミッション・ギフトの未受取バッジ、ミッション一括受取、編成決定後の戻り先、	0.2		○			0	OK	0	
+boot/mission-renewal-check.js	boot	ミッションの作り直し(2026-11-08 社長「この文で」・docs/progress/mission-renewal/PLAN.md 第3版)を確かめる。ブラウザは使わない。	0.2					1	OK	1	
+boot/mission-renewal-screens-check.js	boot	ミッションの作り直し(2026-11-08 社長「この文で」)を、遊ぶ人として縦・横・🔄横の3つの向きで触って確かめる。	35	○				1	OK	0	
+boot/new-player-campaign-check.js	boot	モンヒロビート プレオープン記念 新規プレイヤーキャンペーンを、本番ソースの関数で検証する。	0.2		○			0	OK	0	
+boot/new-player-onboarding-check.js	boot	はじめて遊ぶ人向けの流れ(助手を選び、名前とアイコンを決めるところ)を確認する。	0.2		○			0	OK	1	
+boot/new-player-stories-browser-check.js	boot	はじめての人を、印(保存)を何も入れずに最初から通し、HOME に着いたあとに流れるお話を確かめる(2026-10-27)。	130	○				4	NG	1	
+boot/new-player-story-check.js	boot	新しく始めた人に、前から遊んでいる人向けの会話(過去のストーリー)が流れないかを、	98.9	○				1	OK	0	
+boot/onboarding-preview-check.js	boot	デバッグの「初回プレイを最初から再生」を確認する。	0.2		○			0	OK	1	
+boot/onboarding-required-check.js	boot	はじめて遊ぶ人が「名前とアイコンを決める画面」を必ず通ることを、実際のブラウザで確かめる。	13.1	○				0	OK	0	
+boot/page-zoom-guard-check.js	boot	ページの拡大・見えている範囲のずれで「押した所と反応する所がずれる」のを止める仕組みの見張り(2026-11-11)。	19.3	○				1	OK	1	
+boot/parts-purity-check.js	boot	parts.json で pure:true とした部品が、本当に「純粋な計算とデータ」だけでできているかを確かめる。	2.4		○			0	OK	1	
+boot/quiet-boot-seed-coverage-check.js	boot	検査用の「お話を見た」の種(tools/boot/quiet-boot-seed.js の INTRO_STORY_KEY_IDS)に、本体のお話・紹介の既読の印が全部入っているかを見張る(2026-11-08 検査部ミハリ)。	0.6					2	OK	2	
+boot/rainbow-transcend-fruit-market-check.js	boot	「虹の超越の実」がマーケットに1000プシュケーで常設されているか。	14.4					2	OK	0	
+boot/reload-log-check.js	boot	読み込み直しの記録(2026-10-10・iPhone の Safari で「やっている最中に最初の画面へ戻る」問い合わせの調査用)を確かめる。	65.1	○				1	OK	2	
+boot/rhythm-grand-open-campaign-check.js	boot	本オープン記念キャンペーン(周回5倍・ビートP5倍。2026-11-09 10:00 〜 11-23 3:59)が、時刻どおりに開いて閉じるか(2026-11-08)。	0		○			1	OK	3	
+boot/rhythm-grand-open-time-check.js	boot	モンヒロビートの本オープンが、2026-11-09(月)10:00 JST に時刻で切り替わるかを見る(2026-11-08 社長「まず告知をして明日の10時ぐらいにやりたい」)。	0.1					1	OK	4	
+boot/rhythm-screen-prefix-check.js	boot	モンヒロビートの中から開く画面の名前(gameState)が、RHYTHM_ で始まっているかを見る。	0.1		○			0	OK	1	
+boot/root-redirect-check.js	boot	リポジトリのルートを開いたとき、描画前に履歴を残さずゲームへ移るか。	0		○			0	OK	0	
+boot/save-keys-check.js	boot	保存キー(mh_*)の一覧が docs/spec/SAVE_DATA.md に載っているかを確かめる。	0.2		○			0	OK	0	
+boot/save-state-pairing-check.js	boot	プレイヤーの資産を持つ保存キーについて、「画面の state 更新」と「保存」が必ず対に	0.5		○			0	OK	1	
+boot/saved-value-lock-check.js	boot	保存データやランキングにそのまま書く「値」が、ソースから消えていないかを見る(錠: tools/boot/saved-value-lock.json)。	0.2				○	1	OK	4	
+boot/screen-error-boundary-check.js	boot	画面の描画で例外が出ても真っ白にならず「ホームへ戻る」が出ること(MhErrorBoundary)を確かめる。	20.2	○				0	OK	0	
+boot/screen-trail-check.js	boot	画面の出来事の記録(MH_SCREEN_TRAIL・10-core.jsx)が、つながったままかを見る(2026-11-07)。	0.1					1	OK	5	
+boot/soul-rank-backup-check.js	boot	魂格システム: 既存.mhsaveバックアップ往復で魂格資産が保持されることを確認する。	0		○			0	OK	1	
+boot/storage-quota-guard-check.js	boot	端末の保存がいっぱいになったときに、黙って進行が消えないかを確かめる。	0.2		○			2	OK	2	
+boot/story-after-battle-guide-check.js	boot	はじめての人に、時刻で流れるお話(ハロウィン・ナイトなど)を、バトルのれんしゅうの案内・れんしゅうより先に流さないこと	0.4		○			0	OK	0	
+boot/story-chunk-wrap-check.js	boot	お話の台詞の折り方(storyChunkLines)を確かめる(2026-11-04 社長「セリフの改行の位置がちょこちょこ悪い」)。	0.3		○			1	OK	3	
+boot/story-monsters-browser-check.js	boot	お話の真ん中に出すモンスター(キュービ・オリヒメ)が、窓(セリフの枠・助手の顔の列・ボタン)と重ならないかを、実際に開いて測る(2026-10-27)。	244.5	○				3	OK	2	
+boot/story-sheet-buttons-browser-check.js	boot	お話の窓の「スキップ」「次へ」が、横向きの低い画面でもいつも画面の中にあって押せるかを、実際に開いて確かめる(2026-10-27)。	55	○				3	OK	2	
+boot/story-stage-landscape-browser-check.js	boot	横向きの低い画面で、お話の上のステージ(ゲストの顔と吹き出し)が、下の窓(セリフ・顔の列・ボタン)と重ならないかを測る(2026-10-27)。	155.6	○				2	OK	2	
+boot/supabase-write-guard-check.js	boot	検査のブラウザ(自動操作)から、本物の Supabase へ書き込まない守り(26-supabase.jsx の sbAutomationWriteBlocked)を確かめる。	3.2	○				1	OK	1	
+boot/tailwind-rotation-copy-check.js	boot	配信している tailwind.css の「横画面の規則」(landscape:)が、1つ残らず「🔄 横」(アプリが画面を回したとき)にも写っているかを数える(2026-11-07)。	0					1	OK	0	
+boot/ui-preferences-check.js	boot	更新履歴のタブ別既読と、並べ替え・表示設定の保存を確かめる。	0.2		○			0	OK	0	
+boot/update-notice-dismiss-check.js	boot	新バージョン通知を「押すと更新／×で今回は閉じる」の2択にできているか確認する。	0.2		○			0	OK	0	
+boot/update-notice-style-check.js	boot	新しいバージョンのお知らせ(更新バナー)の出し方の設定を見張る。	0.1		○	○		0	OK	4	
+browser/feature-check.js	browser	実ブラウザでゲームを起動し、主要な画面と今回追加した機能が動くかを確認する。	11.5	○				2	OK	3	
+browser/perf-check.js	browser	読み込みにかかる時間を実ブラウザで計測する。	2.9	○				1	OK	0	
+browser/screen-render-cost-check.js	browser	画面を開いたときの描画にどれだけかかるかを実ブラウザで測る。	10.5	○				2	NG	0	
+card/card-ai-combo-check.js	card	MFバトルカード: 組み合わせ(付ける札)の手で、助手が「何も変わらない札を付けない」・記録が出した札とずれない(2026-10-27 カード部ルールくん)。	10.6					1	OK	2	
+card/card-ai-deck-browser-check.js	card	MFバトルカード: 助手の推し・好き・素顔のデッキを AI で組む(83-card-ai-deck.jsx・2026-11-08 社長の決定)を、本物の画面で縦・横に触る。	445	○				4	OK	2	
+card/card-ai-deck-check.js	card	MFバトルカード: 助手の推し・好き・素顔のデッキ(83-card-ai-deck.jsx・2026-11-08 社長の決定で3つの型から作り直し)。ブラウザなしで見る。中継役は偽物の返事	19.2					3	OK	8	
+card/card-ai-field-ban-guts-check.js	card	MFバトルカード: 場の全体カードで使えない技を、AI(助手)が手札に温存しないか(2026-11-04 社長「必殺技の封印を使ってるのに、威力が高い技を温存して、ほかをガッツにする」)	0.1					1	OK	2	
+card/card-ai-grow-style-check.js	card	MFバトルカード: 育つ助手の型(2026-11-08 社長「助手の相談の答えで、助手と対戦のデッキの中身が変わる。強さの段・ごほうびは同じ」・カード部ルールくん)。ブラウザなしで見る。	471.6					3	OK	7	
+card/card-ai-no-suicide-check.js	card	MFバトルカード: 助手(CPU)が自分で負けにいく手を選ばないか(2026-10-27 遊ぶ人の声・カード部の割り当て)	1.8					1	OK	2	
+card/card-ai-rule-sync-check.js	card	MFバトルカード: 助手(CPU)の見込みが、いまのルールの結果と合っているか(2026-10-27 ソランド部長の割り振り・カード部ルールくん)。	0.2					1	OK	2	
+card/card-ai-style-check.js	card	MFバトルカード: 助手ごとの戦い方(2026-10-29 社長「AIの見直しと各助手の特徴をもっと出したい」)。ブラウザなしで 82 を動かす。	1.7					1	OK	2	
+card/card-art-preload-browser-check.js	card	MFバトルカードの対戦の立ち絵が、通信が遅い・失敗するときにも出るか(2026-10-31 社長「対戦時に出る立ち絵モンスターが表示されないときがある」)。	24.9	○				3	OK	0	
+card/card-assistant-deck-view-browser-check.js	card	MFバトルカード: 助手のデッキの中身を見せる部品(87-card-assistant-deck-view.jsx)を、実際の画面で開いて押して確かめる(2026-11-08 カード部ツナグ)。	77.7	○				2	OK	1	
+card/card-assistant-talk-check.js	card	MFバトルカード: 助手のおしゃべり(AI)(2026-10-25)の検査。本番の API もデータベースも触らない。	0.2					5	OK	8	
+card/card-audit-attach-check.js	card	MFバトルカードの総点検 C「つける札・ブリーダー」(2026-10-27・カード部 ツナグくん)。	0.1					4	OK	2	
+card/card-audit-guard-check.js	card	MFバトルカードの総点検 B「守り」(2026-10-27 社長の急ぎ・カード部の割り当て)。	0.1					2	OK	2	
+card/card-audit-hit-check.js	card	MFバトルカードの総点検 A「攻撃の当たり方」の前半(2026-10-26 社長の急ぎ・カード部の割り当て。後半はパックくんの card-audit-hit2-check.js)。	0.1					1	OK	2	
+card/card-audit-hit2-check.js	card	MFバトルカードの総点検 A「攻撃の当たり方」の後半(2026-10-27 カード部の割り当て・カード追加部パックくん)。	0.1					2	OK	2	
+card/card-audit-pack-check.js	card	MFバトルカードの総点検「パックとお金」(2026-10-27 カード部ソランドくんの割り振り)。	55.5					7	OK	5	
+card/card-audit-rules-check.js	card	MFバトルカードの総点検 E「全体カードとルールの本体」(2026-10-27・カード部ナガメくん。部長デッキくんの割り振り)	0.1					1	OK	2	
+card/card-audit-special-check.js	card	MFバトルカードの総点検 D「特殊技・手札・山札」(2026-10-27 社長「バトルカードのルールやカードの効果、全部ちゃんと確かめて」・カード部の割り当て)。	2.7					3	OK	2	
+card/card-auto-ticket-browser-check.js	card	MFバトルカード: オートのごほうびの残りの札と、セッション券をまとめて使ってふやす窓を、実際の画面で押して確かめる(2026-11-07 社長)。	73.2	○				3	NG	0	
+card/card-auto-ticket-check.js	card	セッション券1枚で「オートで挑む」のごほうびを1回ふやす(2026-11-07 社長・1日20回まで)の決まりを確かめる。	0.1					5	OK	4	
+card/card-back-to-attack-check.js	card	MFバトルカード: ガッツの段から「攻撃に戻る」(backToAttack)の決まり(2026-10-27 カード部ルールくん)。	1.8					1	OK	2	
+card/card-battle-browser-check.js	card	MFバトルカード(CARD_TOP / CARD_BATTLE。いまはデバッグ設定からだけ入れる)を、実際のブラウザで通して確かめる。	180.8	○				69	NG	2	
+card/card-battle-settings-browser-check.js	card	MFバトルカードのオプションの「対戦中の設定」(社長 2026-10-25「オプションでバトル中の設定関係を各種作って」)が、	40.3	○				7	OK	0	
+card/card-big-guts-browser-check.js	card	MFバトルカードの「行動の前のカード大写し」と「ガッツへ飛ぶカード」を、実際の画面で通す(2026-10-26 社長のスマホでの指摘 4・5)。	21.2	○				4	OK	0	card/card-choose-browser-check.js(0.78)
+card/card-bind-browser-check.js	card	MFバトルカードの「影縛り」(366): 名指しする守りの札を選ぶ窓を、実際の画面で開いて確かめる(準備中の83枚・区切り2)。	26.6	○				7	OK	0	
+card/card-bubble-text-check.js	card	MFバトルカード: 助手の吹き出しに「文字でないもの」が出ないかを見張る(2026-10-26 フキダシくん)。	0.2					4	OK	9	
+card/card-choose-browser-check.js	card	MFバトルカードの「選ぶ段」(捨て札・手札・相手の手札から1枚選ぶ)を、実際の画面で通す(準備中の83枚・区切り4)。	37.7	○				3	OK	0	card/card-field-browser-check.js(0.81)
+card/card-cpu-open-browser-check.js	card	MFバトルカード: 助手と対戦の途中で閉じた試合を、次に開いたときに投了として数える(2026-10-26 社長「負け扱いにする」)。	79	○				3	OK	1	
+card/card-cpu-playlist-browser-check.js	card	MFバトルカードの「助手と対戦の曲の並び」(2026-10-26 社長の依頼)を、実際のブラウザで確かめる。	84.2	○				5	OK	0	
+card/card-cpu-playlist-check.js	card	MFバトルカードの「助手と対戦の曲の並び」(2026-10-26 社長の依頼)を、ブラウザなしで確かめる。	0.1					4	OK	4	
+card/card-cup-live-browser-check.js	card	MFバトルカード 個人杯のリアルタイム杯の画面(99-card-cup-live.jsx の CardCupLivePanel)を、偽物の表の答えで実際のブラウザに描いて確かめる	6.4	○				1	OK	1	
+card/card-cup-live-play-browser-check.js	card	MFバトルカード 個人杯のリアルタイム杯: 来ない相手の登録デッキと戦う試合を、対戦えらびから最後まで通す(2026-10-31 ブレイブくん・④ 区切り3a)	21.6	○				1	OK	0	
+card/card-cup-live-sql-check.js	card	MFバトルカード 個人杯のリアルタイム杯の SQL(docs/sql/card-cup/CARD_CUP_LIVE_APPLY.sql・2026-10-31 ブレイブくん)を確かめる。	6					3	OK	0	
+card/card-cup-number-input-check.js	card	MFバトルカード 大会の数の欄(預ける数・参加費・配る割合・入る番号)の読み方を見張る	0					1	OK	2	
+card/card-cup-prize-wallet-check.js	card	MFバトルカード個人杯のごほうび・参加費の、端末の預ける・送り直す・受け取る(99-card-cup-prize.jsx)を確かめる(2026-10-31 リプレイくん)。ブラウザなしで動かす。	0.1					2	OK	1	
+card/card-cup-pvp-browser-check.js	card	MFバトルカード 個人杯のリアルタイム杯: 2台が杯の部屋(91 の CARD_PVP.cup・8文字の合言葉)で戦い、杯へ結果を送るまで(2026-10-31 ブレイブくん・④ 区切り3b)。	81	○				1	OK	1	
+card/card-cup-run-check.js	card	MFバトルカード 個人杯: オート杯を回すサーバの中身(supabase/functions/card-tournament-run/cup.js)を、偽物の表と偽物の Claude で回す(2026-10-31 ルールくん)	2.8					2	OK	0	
+card/card-cup-screen-browser-check.js	card	MFバトルカード 個人杯の画面(99-card-cup.jsx)を、偽物の表の答えで実際のブラウザに描いて確かめる(2026-10-31 ルールくん・個人杯の3本目)	10.9	○				5	OK	1	
+card/card-deck-drop-dead-browser-check.js	card	MFバトルカードのデッキ編成「使えないカードを外す」(2026-10-31 社長「デッキ編成で使えないカードを外すボタンを実装して」)を、実際の画面で確かめる。	18.8	○				1	OK	3	
+card/card-deck-name-check.js	card	MFバトルカードの「相手の助手のデッキ名」(83-card-battle-vs.jsx)を、ブラウザなしで確かめる(2026-10-26)。	40.3					1	OK	3	
+card/card-deck-pick-check.js	card	MFバトルカードの「対戦の前のデッキ選び」(87-card-deck-pick.jsx・2026-10-29 社長 案C)を確かめる(カード部ミカエシくん)。	0.1					6	OK	4	
+card/card-double-tap-browser-check.js	card	MFバトルカード: カードを2回続けてタップしても詳しい画面が出る(2026-10-26 社長「ダブルタップでも見られるように」)。	32	○				9	OK	0	
+card/card-drag-set-browser-check.js	card	MFバトルカード: 組み合わせて使う札(付ける札・同時に使う札)を、選んだ組み合わせのとおりに出す(2026-10-27 ソラシドさんの報告)。	112.5	○				6	OK	0	
+card/card-drag-tap-browser-check.js	card	MFバトルカード: 手札を運ぶ(ドラッグ)と、タップ・ボタンで出したときの手が食い違わないか(2026-10-27 総点検・カード部)。	323.9	○				8	OK	0	
+card/card-field-browser-check.js	card	MFバトルカードの全体カード(場に1枚だけ残るカード)とおいのりを、実際の画面で通す(2026-10-25)。	46.2	○				4	OK	0	card/card-choose-browser-check.js(0.81)
+card/card-focus-browser-check.js	card	MFバトルカードの「集中」(274): 付けた技に、消費ガッツ0の回避・防御が出せないことを、実際の画面で確かめる(2026-10-27 総点検・No.274 の報告)。	66.9	○				8	OK	0	
+card/card-foe-grid-browser-check.js	card	MFバトルカード: 助手と対戦の相手えらびの並び(2026-10-27 社長の答え・ソランド部長。カード部ナガメくん)。実際のブラウザで確かめる。	38.9	○				5	OK	1	
+card/card-foe-release-check.js	card	MFバトルカード: 公開の印が立つまで、新しい助手(ソラシド)が対戦相手に出ないことを確かめる(2026-10-27・カード部ナガメくん)。	0.1					5	OK	7	
+card/card-foe-style-browser-check.js	card	MFバトルカードの「助手と対戦」で、選んだ助手の戦い方の型・使うモンスター・よく使うカード・強さによるデッキの違いが、	205.6	○				10	OK	0	card/card-top-landscape-browser-check.js(0.82)
+card/card-footer-fit-browser-check.js	card	MFバトルカードの対戦で、いちばん下のボタン(攻撃おわり・ターン終了・守らない など)が、どの幅でも画面の中に収まるかを確かめる	69.6	○				3	NG	0	
+card/card-gacha-check.js	card	MFバトルカード: ガチャポイントとバトルカードカタログ(2026-10-27 社長。カード追加部パックくん)	0.1	○				3	OK	3	
+card/card-ghost-browser-check.js	card	MFバトルカードのゴースト(2026-10-27 カード追加部パックくん)を、実際の画面で確かめる。	102.7	○				4	OK	0	
+card/card-guard-motion-once-browser-check.js	card	MFバトルカード: 攻撃を受けるときの動きが「攻撃 → よける/防ぐ/当たる」の1回ずつになっているか(二重に出ないか)を、実際の画面で確かめる。	53.8	○				2	OK	0	
+card/card-hand-name-browser-check.js	card	MFバトルカードの手札の名前(84 の CardNameFit twoLine)が、どの大きさの画面でも切れずに読めるかを、実際のブラウザで測る。	6.4	○				4	OK	0	
+card/card-head-browser-check.js	card	MFバトルカードの対戦の上の帯が、どの幅でも切れないかを実際の画面で確かめる(2026-10-26 社長「上のタブが色々切れてる。難易度の表示もほしい」)。	67.5	○				4	OK	0	card/card-choose-browser-check.js(0.78)
+card/card-hybrid-usable-check.js	card	MFバトルカードの混血(派生)が使える技を見る(2026-10-27 社長の決め・カード部ルールくん)。ブラウザなしで 82 を動かす。	3.7					1	OK	2	
+card/card-idle-motion-browser-check.js	card	MFバトルカード: 場の立ち絵の待機の動き(2026-10-31 社長「バトルカードも待機モーションほしい」・案A 種族ごとの動き)を、実際のブラウザで確かめる。	53.1	○				1	OK	0	
+card/card-kyubi-check.js	card	MFバトルカード: キュービ(新しい血統・2026-11-04)の確かめ。ブラウザなしで 82 を動かす。	0.1					1	OK	2	
+card/card-life-limit-browser-check.js	card	MFバトルカード: カード部屋の 1.5倍の回数(1つの時間帯で、助手1人につき1回。2026-11-08 社長 Q1 A・Q2 A)。本物の画面を縦・横で触る。	149.8	○				2	OK	0	
+card/card-life-limit-check.js	card	MFバトルカード: カード部屋の 1.5倍の回数(1つの時間帯で、助手1人につき1回。2026-11-08 社長 Q1 A)。ブラウザなしで数え方を確かめる	0					2	OK	2	
+card/card-life-reward-browser-check.js	card	MFバトルカード: カード部屋にいる助手と対戦すると、ごほうびが 1.5倍(2026-11-07 社長・カード部ルールくん)。本物の画面を縦・横で触る。	126.9	○				4	OK	0	
+card/card-life-reward-check.js	card	MFバトルカード: カード部屋にいる助手と対戦すると、ごほうびが 1.5倍(2026-11-07 社長・カード部ルールくん)。ブラウザなしで 82・96・84 を見る。	0.1					2	OK	7	
+card/card-mia-spooky-check.js	card	ミーア(C-069)・スプーキー(C-070)(2026-11-04 社長「第8弾にスプーキーとミーア入ってなくない?」→ 第8弾に足す)の3種類ずつ・第8弾・	0.3					1	OK	4	card/card-pink-gujira-check.js(0.82)
+card/card-motion-tier-browser-check.js	card	MFバトルカード: 技カードの動きの段(85 の cardMotionKindOf・案A。2026-10-31 社長「各カードアクションをもっと一新して」→「案Aで入れて」)を、	19.5	○				2	OK	0	
+card/card-oborogesou-check.js	card	オボロゲソウの3種類・第5弾・旧コレクション保持と天井を、実際の抽選/保存関数で検証する。	0.1					3	OK	3	card/card-pink-gujira-check.js(0.86)
+card/card-pack-display-order-browser-check.js	card	スマホ縦画面の実コンポーネントで、全8弾の中身/提供割合の順序・詳細・画像を確かめる。	12.3	○				1	OK	0	
+card/card-pack-display-order-check.js	card	全8弾の表示順・カード/確率の保持・入力非変更を、売り場の実関数で検証する。	0.1					2	OK	4	
+card/card-pack-fx-browser-check.js	card	MFバトルカード: パックを開ける演出・強め(87 の CardPackOpen・案A'。2026-10-31 社長「速度感は案Aだけど演出は強く」→「これで入れて」)を、	46.8	○				1	OK	0	
+card/card-pink-gujira-check.js	card	ピンクグジラ(2026-10-30 社長「ピンクグジラ実装」)の3種類・第7弾・旧コレクション保持と天井を、実際の抽選/保存関数で検証する。	0.4					3	OK	4	card/card-oborogesou-check.js(0.86)
+card/card-point-migration-check.js	card	前のカードポイントを、ビートPへ1回だけ移す処理(82-card-battle-core.jsx の cardMigratePointsOnce)を確かめる。	0.1					1	OK	2	
+card/card-pride-cover-check.js	card	MFバトルカード: 全体カード「純血のプライド」は、味方をかばう回避(みんな下がれ)も止める(2026-10-27 社長・案A・カード部ルールくん)。	0.1					1	OK	2	
+card/card-profile-stats-browser-check.js	card	プロフィールとフレンドのプロフィールに出す MFバトルカードの戦績を、実際の画面で確かめる	31.2	○				1	OK	1	
+card/card-pvp-all-decks-check.js	card	MFバトルカードのマルチ対戦: 8人の助手のデッキを毎回違う組み方で混ぜて、2台の場が最後まで同じかを見張る(2026-11-08 ソランド)。	25.5					1	OK	6	card/card-pvp-check.js(0.99)
+card/card-pvp-browser-check.js	card	MFバトルカードのマルチ対戦(91-card-battle-multi.jsx)を、実際のブラウザの2つのページで最後まで戦わせる(2026-10-24・バトル部・区切り1)。	943.8	○				38	OK	3	
+card/card-pvp-check.js	card	MFバトルカードのマルチ対戦(91-card-battle-multi.jsx)の「純粋な計算」を確かめる(2026-10-24・バトル部)。	12.5					24	OK	6	card/card-pvp-all-decks-check.js(0.99)
+card/card-pvp-fix-20261108-check.js	card	MFバトルカード: 2026-11-08 マルチが止まった不具合の補正(92 の cardPvpFix20261108Once)を見張る(2026-11-08 ソランド)。	0.1					1	OK	4	
+card/card-pvp-history-check.js	card	MFバトルカードのマルチの履歴(92-card-pvp-history.jsx)の「純粋な計算」を確かめる(2026-10-27・カード部 ツナグくん)。	0.1					4	OK	1	
+card/card-pvp-lobby-list-check.js	card	MFバトルカードのマルチ: 「だれとでも」で待っている人の一覧の部品を確かめる(2026-10-27・カード部 ツナグくん)。	0.1					3	OK	3	
+card/card-pvp-void-browser-check.js	card	MFバトルカードのマルチ対戦の無効試合(91 の goVoid・2026-11-08 ソランド)を、実際のブラウザの2つのページで確かめる。	54.1	○				2	OK	1	
+card/card-pvp-watch-browser-check.js	card	MFバトルカードのマルチ対戦の観戦(94-card-spectate.jsx)を、実際のブラウザの3つのページで確かめる(2026-10-27・カード部ナガメくん)。	119.3	○				8	OK	2	
+card/card-pvp-watch-check.js	card	MFバトルカードのマルチ対戦の観戦(94-card-spectate.jsx)の「純粋な計算」を確かめる(2026-10-27・カード部ナガメくん)。	41.8					2	OK	4	
+card/card-qa-board-browser-check.js	card	MFバトルカードの通しの見回り(docs/progress/card-battle/qa/README.md)のうち、対戦の画面まわりを直したあとを実際の画面で確かめる(2026-10-26)。	333.8	○				12	NG	0	card/card-choose-browser-check.js(0.76)
+card/card-quick-autostart-browser-check.js	card	MFバトルカードのオプション「MFバトルカードを開いたら自動で始める」(mh_card_settings_v1.quickAutoStart)が、	48.4	○				2	OK	0	card/card-top-landscape-browser-check.js(0.79)
+card/card-quick-run-browser-check.js	card	MFバトルカードを開いたまま、裏のクイック∞周回が続くこと(docs/spec/CARD_BATTLE.md 5-3)を実際のブラウザで確かめる。	119.3	○				6	OK	0	
+card/card-rank-improve-browser-check.js	card	MFバトルカードのランキングの改善(2026-10-26 社長「全部入れる」)を、実際のブラウザで確かめる。Supabase は偽物(読む表は決めた行を返す)。	27.8	○				2	OK	0	
+card/card-rank-table-check.js	card	MFバトルカードのランキングを、一人ひとりの ID(breeder_id)で数える形(2026-10-26 社長「ブリーダーIDで数える形に直す」)を確かめる。	0.1					1	OK	4	
+card/card-record-detail-check.js	card	MFバトルカードの「記録をくわしく」(2026-10-27 社長: 「全体」「助手ごと」「マルチ」の3つのタブ・よく使う技まで・これから遊んだ分から)を、	34.3	○				2	OK	0	
+card/card-replay-check.js	card	MFバトルカードの「過去の対戦を見る」(93-card-replay.jsx)の純粋な計算を確かめる(2026-10-27・カード部ミカエシくん)。	5.8					5	OK	4	
+card/card-replay-list-browser-check.js	card	MFバトルカードの「過去の対戦」の一覧(93-card-replay.jsx・記録の画面)を、実際のブラウザで確かめる(2026-10-27・カード部ミカエシくん)。	18.3	○				7	OK	1	
+card/card-result-line-quick-check.js	card	MFバトルカード: 遊んでいる人が1体も倒さずに終わった負け・投了で、助手が「いい勝負だった」「強かった」と言わないかを見張る	0					1	OK	2	
+card/card-rule-words-check.js	card	MFバトルカード: ヘルプ・ルールの画面の言葉が、新しく決まったルールと食い違っていないかを見張る(2026-10-27 フキダシくん)。	0					3	OK	4	
+card/card-rules-check.js	card	MFバトルカードのルールの本体(src/parts/82-card-battle-core.jsx)を、ブラウザなしで動かして確かめる。	236.6					59	OK	7	
+card/card-safe-area-browser-check.js	card	MFバトルカードの画面いっぱいの窓が、iPhone の時計・電池の帯(上)とホームバー(下)に中身をかけないか(2026-11-04 テスターさん)。	3.7	○				1	NG	0	
+card/card-save-fresh-browser-check.js	card	MFバトルカード: 対戦の結果を書くとき、ほかの画面が書いた解放・記録を古い中身で上書きしないか(実際のブラウザ)。	26.5	○				3	OK	0	
+card/card-share-auto-browser-check.js	card	MFバトルカード: オートで挑む(案B・2026-11-02 社長・ごほうびは案3)を、実際の画面で確かめる。	96.4	○				5	OK	0	
+card/card-share-deck-pick-browser-check.js	card	MFバトルカード: ほかのブリーダーの登録デッキと戦う前に、自分のデッキを選べる(2026-10-31 テスターさんの要望)を、実際の画面で確かめる。	22.7	○				5	OK	0	
+card/card-share-search-check.js	card	MFバトルカード: 登録デッキの賢さの段と、MASTER を超える段の先読みを確かめる(2026-10-30 ルールくん)。ブラウザなしで動かす。	1.5					2	OK	5	
+card/card-shine-browser-check.js	card	MFバトルカード: カードの絵のキラ・レアキラ・銀の光(84 の CardShine。2026-10-31 社長「光り方は案B」「ブリーダー・場のカードに銀の光」)を、	21	○				2	OK	0	
+card/card-shop-keep-scroll-browser-check.js	card	MFバトルカードの売り場で、下のほうのパック・スターターを買って開ける画面から戻ると、一覧のいちばん上に戻されていた	75.8	○				1	OK	0	
+card/card-shop-two-tabs-browser-check.js	card	MFバトルカードの売り場を2つのタブで開き、ほぼ同時にパックを買ったとき、出たカードが必ず保存に入るかを確かめる	130.9	○				3	OK	0	
+card/card-skip-stun-check.js	card	MFバトルカード: 「吠え」「吹き飛ばし」のあとの「歌う」(2026-10-27 社長の答え・カード部ルールくん)。ブラウザなしで 82 を動かす。	0.1					1	OK	2	
+card/card-sub-rare-pure-check.js	card	MFバトルカード: サブが「？？？」の子は、純血のスピード・純血のプライドで純血ではない(2026-10-27 社長 案A・カード部ルールくん)。	0.1					2	OK	2	
+card/card-tactics-by-deck-browser-check.js	card	MFバトルカード: 戦術カードをデッキごとに覚える(2026-11-02 テスターさんの要望・社長「デッキごとに戦術カードを記憶させたい」)	6	○				1	OK	0	
+card/card-tactics-gambit-check.js	card	MFバトルカード: 戦術カード(ガンビット型)の中身(2026-10-29 社長「条件カード ▶ 行動カードを上から優先」)。ブラウザなしで 82 と 82-card-tactics-core を動かす。	4					13	OK	3	
+card/card-tactics-level-check.js	card	MFバトルカード: 戦術カードの持ち物・レベル・ガチャ(96-card-tactics.jsx)。ブラウザなしで動かす。	0.1					3	OK	5	
+card/card-tap-instant-browser-check.js	card	MFバトルカード: 2回タップで詳しい画面(#3873)のあとも、1回目のタップは待たずにすぐ効くか(2026-10-27 部長ソランドくん)。	40.6	○				4	OK	0	
+card/card-teaser-browser-check.js	card	MFバトルカードの公開前の予告(社長 2026-10-25「近日公開みたいな感じでホームに出して」)を、実際のブラウザで確かめる。	19.2	○				2	OK	2	
+card/card-top-landscape-browser-check.js	card	MFバトルカードのトップを横画面で開いたとき、主なボタン(対戦・デッキ編成・マーケット・ランキング・カード図鑑・ルール・記録・オプション)が	87.4	○				2	OK	0	card/card-foe-style-browser-check.js(0.82)
+card/card-tour-history-sql-check.js	card	MFバトルカード 公式杯: 終わった大会の一覧の SQL(docs/sql/card-tournament/CARD_TOURNAMENT_HISTORY_APPLY.sql・2026-10-31 ブレイブくん)を確かめる。	1.5					1	OK	0	
+card/card-tour-home-browser-check.js	card	公式杯の HOME の札(2026-10-31 社長「公式の大会はイベント的にするからホームに置く」・案A)を、実際のブラウザで確かめる。	43.1	○				1	OK	0	
+card/card-tour-replay-check.js	card	MFバトルカード大会の見返し(93-card-replay.jsx の cardReplayFromTour)を確かめる(2026-10-30 大会 PR4・カード部リプレイくん)。ブラウザなしで動かす。	2.5					3	OK	7	
+card/card-tournament-core-check.js	card	MFバトルカード: 大会の計算(82-card-tournament-core)の決まりを確かめる(2026-10-30 ルールくん)。ブラウザなしで動かす。	1.5					3	OK	5	
+card/card-tournament-run-check.js	card	MFバトルカード大会: サーバの上の関数の中身(supabase/functions/card-tournament-run/core.js)を、偽物の表と偽物の Claude で回す(2026-10-30 ルールくん)	4.4					3	OK	0	
+card/card-tournament-screen-browser-check.js	card	MFバトルカード大会の画面(99-card-tournament.jsx)を、偽物の表の答えで実際のブラウザに描いて確かめる(2026-10-30 ルールくん・大会 PR3)	6.4	○				3	OK	1	
+card/card-watch-board-browser-check.js	card	MFバトルカード: 対戦の盤面(84 CardBattleBoard)の「観戦の形」(game.watch)を、実際のブラウザで確かめる(2026-10-27・カード部ナガメ)。	25.7	○				5	OK	0	
+card/card-week-switch-check.js	card	MFバトルカードの週の区切りを、月曜5:00 から 月曜4:00 へ切り替える(2026-11-07 社長「ぜんぶ4時に統一」→ 週は次の週から)。	0.1					1	OK	2	
+changelog/changelog-group-check.js	changelog	更新情報の「話題ごとのまとめ」の検査。	16.1					1	OK	2	
+changelog/collapsed-detail-check.js	changelog	更新履歴が「見出しだけの一覧 → 押した項目だけ詳細」になっているかを実ブラウザで確かめる。	5.1	○				0	OK	0	
+changelog/dev-entry-check.js	changelog	更新情報へ「開発中の作業メモ」が並んでいないかを見る。	0.3		○			1	OK	2	
+changelog/external-link-check.js	changelog	お知らせ(更新履歴)から外へ出るリンクが、出してよい形になっているか。	0.1		○			0	OK	3	
+changelog/monster-ko-check.js	changelog	プレイヤー向けの文(更新履歴・ヘルプ・説明文・画面の文字)で、モンスターを「子」と呼んでいないかを見る。	3.5		○		○	5	OK	12	
+changelog/new-monster-gallery-check.js	changelog	新モンスターの公開のお知らせに、紹介カードと染色イメージが付いているかを見張る(2026-09-29)。	0.1		○			0	OK	1	
+changelog/pin-top-check.js	changelog	更新履歴の「一番上に固定」(pinTop)を見張る(2026-11-09)。	0.1		○			2	OK	3	
+changelog/player-words-check.js	changelog	更新履歴の文面が「作業報告」になっていないか(プレイヤーの言葉で書けているか)を見る。	0.1		○		○	1	OK	1	
+changelog/raid-jack-visible-check.js	changelog	ジャックの更新履歴が、開始の時刻を過ぎたあとに読み込んだ画面で出ること(開始前は出ないこと)を実ブラウザで確かめる。	10	○				1	OK	0	
+changelog/seen-across-tabs-check.js	changelog	更新履歴の「既読」がタブの振り分けを変えても消えないことを、本物のブラウザで確かめる。	13.3	○				0	OK	0	
+changelog/song-art-notice-check.js	changelog	モンヒロビートの新曲を知らせるお知らせに、ジャケットの絵が付いているか。	0.5		○			0	OK	3	
+changelog/song-numbers-check.js	changelog	お知らせ(更新履歴)に書いた曲の数字が、いまの実データと合っているか。	0.7		○			0	OK	3	
+changelog/title-prefix-check.js	changelog	更新履歴の題の頭に、遊びの名前(「MFバトルカード: 」「モンヒロビート：」など)が付いていないかを見る。	0.2		○			1	OK	2	
+changelog/type-badge-check.js	changelog	更新情報の一覧で、不具合修正と新機能が見分けられることを確かめる。	6.8	○				0	OK	1	
+friends/friends-api-check.js	friends	フレンドの通信層(34-friends-api.jsx)の「申請の状態の動き」を確かめる検査。	0.2		○			5	OK	3	
+friends/friends-face-icon-check.js	friends	「好きなモンスター」の顔アイコン(friendsFaceIconOf)が、全モンスターで本番のプロフィールのアイコンと同じ絵・同じ調整の id になるかを確かめる。	1.3		○			1	OK	2	
+friends/friends-frame-fit-check.js	friends	フレンド一覧で、プロフィールフレームの枠が名前・時刻の文字にかぶらないことを、実際のブラウザで測る(2026-10-21)。	22	○				1	OK	1	
+friends/friends-screen-check.js	friends	フレンド画面(プロフィール →「フレンド」)を、実際のブラウザで通しで確かめる。	82.6	○				3	OK	2	
+friends/playtime-devices-check.js	friends	端末ごとのプレイ時間(2026-10-06)を確かめる。	0.1		○			0	OK	4	
+hooks/japanese-only-check.js	hooks	返答を終える直前(Claude Code の Stop フック)に、今回の返答に英語の文が混ざっていないかを見る。	0		○			0	OK	0	
+image/art-anchor-check.js	image	顔アイコンと全身絵の「顔のまんなか」の基準(ART_ANCHORS)を見張る(2026-10-26 社長「顔アイコンと全身絵作るけど、	17.5					1	OK	6	
+image/art-body-center-check.js	image	立ち絵の体の範囲の表(data/images/images-ally.js の ART_BODY_CENTERS)が、今の絵と合っているか(2026-10-31 ルールくん)。	2					1	OK	1	image/art-content-box-check.js(0.84)
+image/art-content-box-check.js	image	立ち絵の中身の範囲の表(data/images/images-ally.js の ART_CONTENT_BOXES)が、今の絵と合っているか(2026-10-27 カード部パックくん)。	2.3					1	OK	1	image/art-body-center-check.js(0.84)
+image/art-source-fidelity-check.js	image	配信中の立ち絵が、原本(`art-sources/monsters/`)から絵を削っていないかを見張る。	1.2		○			0	OK	0	
+image/data-image-source-check.js	image	商品・モンスターのデータが、画像を「定数」で指しているかを見る。	0.1		○			6	OK	5	
+image/dye-alpha-check.js	image	染色の「濃さ(透過率)」を確かめる。	0.1		○			0	OK	1	
+image/dye-cache-limit-check.js	image	染色の2つのキャッシュに上限があり、あふれたら「使っていないものから」捨てることを、	12.8					0	OK	0	
+image/dye-edge-check.js	image	染色もどきの「輪郭の塗り残し」を実測して見張る検査。	5.6	○				1	OK	2	
+image/dye-mask-editor-check.js	image	染色マスクの編集(逐次編集・viewport共有・掃除/Undo・PNG正規化・縦横比)を確かめる。	0.3		○			0	OK	0	
+image/dye-precision-check.js	image	正式マスク(EXACT_DYE_MASKS)を持つモンスターの染色が、実際に画面へ出る解像度で	20.6					4	OK	0	
+image/dye-recolor-worker-check.js	image	染め直した絵を「裏の作業(Worker)」で作る仕組みを、実際のブラウザで確かめる(2026-10-09)。	45.6	○				1	OK	1	
+image/dye-switch-flicker-check.js	image	染色の色を続けて変えたとき、元の色(染める前の絵)へ一瞬もどってチラつかないことを、実際のブラウザで確かめる(2026-10-23)。	17.7	○				1	OK	0	
+image/eiki-dye-mask-check.js	image	エイキの染色が、承認済みマスクの「範囲」どおりに本番経路で効くかを画素単位で確かめる。	16.1					0	OK	0	
+image/face-render-check.js	image	顔アイコンが実ブラウザで正しくデコード・描画されるかを確認する。	10.4	○				1	OK	1	
+image/market-icon-framing-check.js	image	マーケット・プロフィールの丸いアイコンが、枠の中へきちんと収まっているかを測る。	10.2					0	OK	2	
+image/mia-dye-mask-check.js	image	ミーアの本番染色マスクを、リポジトリに保存した正解見本と画素単位で比較する。	12.5					0	OK	0	image/undine-dye-mask-check.js(0.92)
+image/mocchi-dye-mask-check.js	image	モッチーの正式RGBマスクが、本番の3領域へ同じ座標・同じ色順で反映されることを検査する。	13.2					0	OK	1	image/plant-dye-mask-check.js(0.81)
+image/monster-image-quality-check.js	image	敵・味方の全身画像について、キャンバス寸法・透過・既知の背景残りを検査する。	1.7		○			0	OK	1	
+image/plant-dye-mask-check.js	image	プラントの正式RGBマスクが、本番の3領域へ同じ座標・同じ色順で反映されることを検査する。	13.9					0	OK	1	image/mocchi-dye-mask-check.js(0.81)
+image/undine-dye-mask-check.js	image	ウンディーネの本番染色マスクを、リポジトリに保存した正解見本と画素単位で比較する。	12.9					0	OK	0	image/mia-dye-mask-check.js(0.92)
+image/upcoming-dye-mask-check.js	image	近日公開予定の2体(ユグドラシル・メルホイップ)の染色マスクを見張る(2026-09-28)。	16.5					0	OK	0	
+image/yaobikuni-dye-mask-check.js	image	ヤオビクニの本番染色マスクを、リポジトリに保存した正解見本と画素単位で比較する。	12.6					0	OK	0	image/undine-dye-mask-check.js(0.83)
+market/assistant-costume-browser-check.js	market	ハロウィンの衣装(助手の着替え)を、実際の画面で確かめる(2026-10-04)。時計を動かして3つの時間を見る。	64.2	○				5	OK	0	
+market/assistant-costume-check.js	market	助手の着替え(2026-10-03)を確かめる。	0.1		○	○		2	OK	8	
+market/assistant-costume-unlock-check.js	market	解放が要る助手の服(2026-10-27)を確かめる。ブラウザは使わない。	0.1		○			2	OK	4	
+market/beat-point-disc-check.js	market	ビートP交換所の円盤石(14体・全部1,500P)とアシストカード(4枚・全部1,500P)を、実ブラウザで交換まで確かめる(2026-09-29 初版・2026-10-03 に広げた)。	27.3	○				3	OK	0	
+market/disc-rebirth-check.js	market	円盤石を買ったときの「円盤石から再生」の演出(2026-10-01)が、つながったままかを見る。	0		○			0	OK	3	
+market/frame-shop-browser-check.js	market	条件つきのプロフィールフレーム(モッチー・ムー・スエゾービート)を、実際の画面で買えるか確かめる(2026-10-03)。	52.7	○				2	OK	0	
+market/frame-shop-check.js	market	プロフィールフレームを売る準備(2026-10-03)を確かめる。	0.1		○			3	OK	5	
+market/halloween-icon-browser-check.js	market	ハロウィンの衣装のアイコン販売を、実際の画面で確かめる(2026-10-04)。時計を動かして3つの時間を見る。	55.1	○				2	OK	0	
+market/halloween-icon-check.js	market	ハロウィン・ナイトの衣装のアイコン販売(2026-10-04)を確かめる。	0.1		○			0	OK	6	
+market/icon-group-check.js	market	アイコンのまとめ売り(2026-10-03・ユーザー指示)を確かめる。	0.1		○			1	OK	6	
+market/legend-breeder-pass-check.js	market	レジェンドブリーダー優待パス(2026-11-05 社長)の決まりを見張る。	0.1					2	OK	8	
+market/market-bubble-collapse-check.js	market	マーケットの助手の吹き出しを「小さくたためる」ことを、実際の画面で確かめる(2026-10-26 開発部 k02)。	70.4	○				2	OK	0	
+market/market-bulk-purchase-browser-check.js	market	マーケットのまとめ買い(2026-10-17 社長依頼「勇者のかけらとか証とか、その他まとめ買いできるようにして」)を、	28.5	○				3	OK	0	
+market/market-bulk-purchase-check.js	market	マーケットのまとめ買い(2026-10-17 社長依頼「勇者のかけらとか証とか、その他まとめ買いできるようにして」)を確かめる。	13					1	OK	3	
+masmon-battle/masmon-battle-check.js	masmon-battle	助手のマスモンの完全オートバトルの計算(monster-hero/data/assistant-masmon-battle.js)の検査(2026-11-11 タタカイ)。	1					2	OK	2	
+masu/auto-enhance-browser-check.js	masu	オート強化を実ブラウザで開いて、画面が出ること・保存されること・裏で本当に振られることを確かめる。	40.4	○				2	OK	2	
+masu/auto-enhance-check.js	masu	オート強化(個体ごとの自動強化設定)の検査。	15.7					0	OK	3	
+masu/auto-repeat-breakthrough-execution-check.js	masu	AUTO∞の自動限界突破で、どの個体を選ぶかの判定。	16.8					0	OK	0	
+masu/auto-repeat-breakthrough-setting-check.js	masu	AUTO∞の自動限界突破の上限設定と、その保存。	13.1					0	OK	0	
+masu/breakthrough-item-check.js	masu	限界突破専用アイテム「虹のプシュケー」を確認する。	15.3					0	OK	0	
+masu/breakthrough-star-check.js	masu	限界突破の★（凸数と色・個数）と、最終限界突破（Lv.180 → Lv.200）を確認する。	18.2					0	OK	0	
+masu/breeder-level-cap-check.js	masu	ブリーダーレベルに実質的な上限が無いことを確認する。	0.2		○			0	OK	2	
+masu/bulk-enhance-check.js	masu	マスモンの「まとめて強化」が正しく動くかを実ブラウザで確認する。	51.9	○				2	OK	0	
+masu/bulk-reincarnate-browser-check.js	masu	まとめて転生(2026-10-17 社長依頼)を、iPhone の画面幅の実ブラウザで確かめる。	20.4	○				3	OK	0	
+masu/bulk-reincarnate-check.js	masu	まとめて転生(2026-10-17 社長依頼「転生可能な各キャラにチェックボックス…すべて選択…まとめて転生」)を確かめる。	13.5					3	OK	2	
+masu/direct-enhance-input-check.js	masu	強化の直接入力が、残量を超えた値・負数・小数・文字でも壊れないか。	0.1		○			0	OK	2	
+masu/donation-check.js	masu	神殿の寄付計算・編成補正・保存経路を本番ソースから検証する。	0.2		○			0	OK	1	
+masu/enhance-point-total-check.js	masu	強化ポイントの総数・レベル帯・転生・既存セーブ補正が全経路で一致することを確認する。	13					0	OK	1	
+masu/fusion-animation-browser-check.js	masu	通常合体と「限界突破して合体」が、実ブラウザで同じ演出を最後まで表示することを確認する。	23	○				3	OK	3	
+masu/fusion-breakthrough-check.js	masu	合体と同時に行う複数回限界突破の事前計算を、本番関数で検証する。	14.8					0	OK	0	
+masu/fusion-detail-check.js	masu	合体詳細ページと、ランキングへ載せる合体履歴・総合力スナップショットを確認する。	15.4					0	OK	0	
+masu/fusion-multi-select-check.js	masu	複数の副を選ぶ合体(限界突破・固有技の個別選択・実継承数の課金・履歴)を確かめる。	0.2		○			1	OK	0	
+masu/fusion-rebirth-check.js	masu	合体・転生まわりの検証。	0.2		○			0	OK	1	
+masu/fusion-reincarnate-bonus-check.js	masu	転生ボーナスの計算と、旧セーブの一度きりの正規化を確かめる。	0.2		○			0	OK	0	
+masu/legacy-dist-apt-boosts-check.js	masu	第6B-2: 本番ロジックで旧distAptからdistAptBoosts候補を作る純粋判定を検査する。	14.7					0	OK	0	
+masu/legacy-masu-migration-diagnosis-check.js	masu	第6B-3: 本番ロジックで能力・間合いを統合した個体全体の非保存診断を検査する。	12.5					0	OK	0	
+masu/legacy-regeneration-baseline-check.js	masu	第6B-1: 旧再生個体の4能力から歴代ベースを判定する純粋関数を検査する。	0.1		○			0	OK	0	
+masu/masu-baseline-resolution-check.js	masu	マスモン基礎値・間合い適性の新旧保存形式、新規生成、強化・リセット・転生を本番ロジックで確認する。	0.1		○			0	OK	0	
+masu/masu-detail-landscape-check.js	masu	マスモン詳細の真ん中の欄(技・固有技強化・合体…)が、横画面でも見えて、最後まで動かして届くかを実ブラウザで確かめる。	34.1	○				2	OK	1	
+masu/masu-enhance-layer-check.js	masu	マスモンの詳細・強化・超越強化を実ブラウザで開き、全画面のレイヤーが重なっていないか確かめる。	35.7	○				1	OK	0	
+masu/masu-growth-breakdown-check.js	masu	マスモン詳細の「育成の内訳」表示を実ブラウザで確かめる。	28.6	○				0	OK	0	
+masu/masu-lock-check.js	masu	マスモンのお気に入り(ロック)(2026-10-01)を確かめる。	0.2		○			0	OK	0	
+masu/masu-save-pairing-check.js	masu	マスモン一覧(mh_masu_mons)の「画面の state 更新」と「保存」が必ず対になっているかを確かめる。	0.3		○			0	OK	0	
+masu/monster-detail-actions-check.js	masu	マスモン詳細の育成導線が対象個体を引き継ぎ、神殿の機能を混ぜていないことを確認する。	0.5		○			0	OK	1	
+masu/monster-detail-unified-check.js	masu	モンスター詳細(編成・ベースモン一覧・マスモン一覧・勇者モン選択)が	0.6		○			0	OK	2	
+masu/monster-list-filter-check.js	masu	ベースモン一覧・マスモン一覧が、編成画面で外した種別チェックの影響で空にならないか確認する。	0.2		○			0	OK	0	
+masu/monster-power-check.js	masu	総合力(モンスターの育成結果を1つの数値にした派生指標)の計算式を、実装から取り出して検算する。	0.2		○			0	OK	3	
+masu/number-input-check.js	masu	数を選ぶ所の直接入力(2026-11-07 社長「お布施で選択する数値は直接入力できるようにしてほしい。上限はなしで。	0.4					1	OK	5	
+masu/offering-check.js	masu	神殿のお布施(buildMasuOffering)の計算を守る検査。	0.1		○			0	OK	1	
+masu/party-set-check.js	masu	編成セットの旧セーブ移行・5セット正規化・使用中復元・コピー／全除去を確かめる。	0.1		○			0	OK	0	
+masu/pasture-check.js	masu	HOME放牧設定の0体・1体・5体保存、互換初期化、表示ライフサイクルを検証する。	0.3		○			0	OK	1	
+masu/rebirth-check.js	masu	Lv上限移行・限界突破・転生・表示・保存経路を本番ソースから検証する。	11.2					0	NG	1	
+masu/rebirth-unique-setting-check.js	masu	転生しても固有技設定(並び順 uniqueOrder・初期技 initialUniqueKey)が残る(2026-11-07。転生の組み直し resetMasuForRebirth に無く、	0.1					1	OK	1	
+masu/safe-masu-baseline-migration-check.js	masu	マスモンの基準値の移行が、古い保存を読み直しても二重に効かないか。	11.7					0	OK	0	
+masu/save-transaction-check.js	masu	複数キーをまとめて保存する取引関数 saveStoredValuesOrRollback の挙動を固定する。	14.1					0	OK	1	
+masu/soul-crystal-browser-check.js	masu	魂格の結晶を使う画面(魂格特性)を、実際のブラウザで確かめる。	9.9	○				2	OK	1	
+masu/soul-rank-step1-check.js	masu	魂格システム STEP1「基盤」の回帰検査。	12.1					0	OK	1	
+masu/soul-rank-step2-check.js	masu	魂格システム STEP2「魂格進化・勇者の証」の回帰検査。	14.5					2	OK	4	
+masu/soul-rank-step3-check.js	masu	魂格システム STEP3「魂格特性・UI・再編・総合力」の回帰検査。	14.3					1	OK	5	
+masu/soul-rank-step4-check.js	masu	魂格 STEP4「戦闘接続」の回帰検査。	10					0	NG	4	
+masu/soul-rank-step5a-check.js	masu	魂格 STEP5A「合体継承」の回帰検査。	11.3					0	OK	1	
+masu/soul-rank-step5b-check.js	masu	魂格 STEP5B「ランキング記録時スナップショット」の回帰検査。	10.6					0	OK	0	
+masu/soul-rank-step5c-check.js	masu	魂格 STEP5C「ランキング表示」の回帰検査。	0.1		○			0	OK	1	
+masu/soul-rank-step6a-check.js	masu	魂格 STEP6A「魂格バッジ」の回帰検査。	0.2		○			0	OK	4	
+masu/soul-rank-step6b-check.js	masu	魂格 STEP6B「魂格オーラ」のコード側回帰検査。	0.2		○			0	OK	3	
+masu/temple-update-check.js	masu	神殿の合体・寄付・再生の仕様と後方互換性を、編集元ソースから確認する。	0.1		○			0	OK	0	
+masu/transcend-badge-position-check.js	masu	超越マーク(「超」の丸バッジ)が、モンスターの絵に重なっていないかをブラウザで測る。	1.3	○				0	OK	0	
+masu/transcend-debug-check.js	masu	超越デバッグ画面(DEBUG_SETTINGS →「超越確認」)を実ブラウザで開いて確かめる。	22.4	○				1	OK	2	
+masu/transcend-fruit-item-check.js	masu	「種族」はモンスター1体ではなく主血統(モッチー種・ピクシー種…)。	15.6					0	OK	0	
+masu/transcend-fruit-use-check.js	masu	「種族」はモンスター1体ではなく主血統(モッチー種・ピクシー種…)。実も血統ごとに1つで、	12.8					0	OK	0	
+masu/transcendence-check.js	masu	エンドゲーム育成「超越」を確認する。	0.5		○			0	OK	5	
+masu/unique-boost-browser-check.js	masu	固有技のオリジナル強化(2026-11-07)を、実際のブラウザで確かめる。	20.3	○				1	OK	0	
+masu/unique-boost-check.js	masu	固有技のオリジナル強化(2026-11-07 社長)の決めごとを、本体の関数を動かして確かめる。	14.4					1	OK	0	
+masu/unique-boost-screens-check.js	masu	固有技のオリジナル強化を、遊ぶ人として縦・横・🔄横の3つの向きで触って確かめる(2026-11-07 社長「ちゃんと検査しながらすすめて」)。	51.5	○				3	OK	0	
+masu/unique-setting-check.js	masu	マスモンの「固有技設定」(並び順・初期技)を確かめる。	0.3		○			0	OK	2	
+mode/battle-screen-style-check.js	mode	バトル画面3択の保存・設定画面・タクティクス旧新UI描画の接続を固定する回帰検査。	0.1		○			0	OK	4	
+mode/chaos-rules-check.js	mode	CHAOS難易度の特殊ルール(与ダメージ50%・加入ボーナス50%・消費ガッツ150%・一重適用・他難易度へ波及しないこと)。	0.1		○			0	OK	1	
+mode/cocytus-rules-check.js	mode	COCYTUS(極限11番目)の正式設定・層のシールド(ふつうの敵も。枚数・1枚目=最大ライフ×3〜4.4・本体の倍率はボスだけ)・蘇り・	0.4		○			3	OK	2	
+mode/difficulty-item-check.js	mode	新難易度(Grand Master / Hell / Legend)と、トレーニングチケット・重トレーニングチケットのまとめ使いを確認する。	15.1	○				3	OK	0	
+mode/difficulty-tab-check.js	mode	難易度選択の「通常 / 極限」タブを確かめる(2026-09-19 ユーザー指示)。	29.7	○				3	OK	0	
+mode/eiki-combo-damage-check.js	mode	エイキの連撃とスタックを「実際の数値」で確かめる。	0.1		○			0	OK	0	
+mode/eiki-debug-check.js	mode	新レア「エイキ」の正式実装(市販開始後)の回帰チェック。	1.7					0	OK	7	
+mode/erebus-rules-check.js	mode	EREBUS(エレボス・INFERNO と COCYTUS のあいだの段・2026-11-04 社長の決定)の正式設定・層のシールド・攻撃の上がり方・蘇り・	0.1		○			1	OK	2	
+mode/eternal-rules-check.js	mode	ETERNALの正式設定・シールド(WAVEのはじめに最大ライフの50%)・貫き(冥府Lvで30〜50%)・HELHEIMから引き継ぐルールを、	0.2		○			6	OK	2	
+mode/extreme-browser-check.js	mode	極限チャレンジを実ブラウザで開いて、正式導線が最後まで進めるかを確認する。	88.1	○				5	OK	3	
+mode/extreme-challenge-check.js	mode	極限チャレンジ(正式公開)の仕様を静的に確認する。	0.4		○			5	OK	3	
+mode/extreme-difficulty-theme-check.js	mode	極限チャレンジの難易度ごとの色と、ランキングタブへの反映。	0.2		○			0	OK	1	
+mode/extreme-reward-check.js	mode	極限チャレンジ(EXTREME)の数値を、本番の定義をNode上で動かして確かめる。	0.2		○			0	OK	0	
+mode/extreme-rule-detail-browser-check.js	mode	極限チャレンジの「ルール詳細」を実ブラウザで開いて、押せて・正しい中身が出て・	66.2	○				3	OK	0	
+mode/god-rules-check.js	mode	GODの正式設定・神威・複合与ダメ・通常/デバッグ導線を、本体helperを切り出して検査する。	0.1		○			1	OK	0	
+mode/grievous-lady-scroll-check.js	mode	Grievous Lady の流れの速さの演出(止まる・前へ飛ぶ・後ろへ戻る)が、参考どおりで遊べる形かを数字で見る(2026-10-11)。	1		○			0	OK	2	
+mode/halloween-night-check.js	mode	ハロウィン・ナイト(2026-10-04 8:00 〜 11-01 3:59)を確かめる。	0.7		○	○		0	OK	7	
+mode/helheim-rules-check.js	mode	HELHEIMの正式設定・冥府・不死(W3/5/7/9/10)・敵のライフ10倍とデュラハン・距離強化の毎WAVE減衰・	0.1		○			4	OK	2	
+mode/inferno-rules-check.js	mode	INFERNO(極限10番目)の正式設定・ボスの層のシールド(枚数・量・割れたときの持ち越しと攻撃の上がり方)・連撃の回数・	0.1		○			3	OK	2	
+mode/infinity-rules-check.js	mode	極限チャレンジ INFINITY を確認する。	0.2		○			5	OK	3	
+mode/nightmare-rules-check.js	mode	NIGHTMAREステップ3の数値処理と、既存モードからの分離を静的・代表値で確認する。	0.1		○			0	OK	0	
+mode/portrait-layout-landscape-check.js	mode	横画面のまま縦向き専用の画面(バトル・HOME)へ来たときに、	27.9	○				3	OK	0	
+mode/pro-mode-check.js	mode	プロモードを実際のブラウザで最初から遊んでみて、仕様どおりに動くかを確かめる。	10.6	○				3	OK	0	
+mode/pro-pick-room-check.js	mode	プロモードの編成(勇者モンを選択・ProPartyPicker)で、モンスターの一覧が何段見えるかを実ブラウザで測る	38.3	○				1	OK	0	
+mode/quick-chaos-check.js	mode	クイックCHAOSが既存の報酬・保存・表示経路へ一度だけ接続されていることを確認する。	0.2					2	OK	2	
+mode/quick-difficulty-unlock-check.js	mode	クイックモードの難易度解放の条件。	0.1		○			0	OK	1	
+mode/quick-extreme-render-check.js	mode	クイック難易度カルーセルは、中央カードが変わるだけでゲーム本体全体を再描画する。	0.2		○			0	OK	0	
+mode/quick-extreme-special-rules-check.js	mode	クイック極限難易度が極限本体のspecialRulesを共有し、通常クイックへ漏れないことを確認する。	0.2		○	○		3	OK	2	
+mode/quick-god-shard-check.js	mode	クイックの INFINITY・GOD 追加と、クイックGODの勇者の証片(2026-09-13・ユーザーが決めた)の回帰検査。	12.1					0	OK	2	
+mode/quick-rhythm-autostart-check.js	mode	AUTO設定の「モンヒロビートを開いたら自動で始める」が、実際のブラウザで働くかを確かめる	32.4	○				2	OK	0	
+mode/quick-rhythm-guide-check.js	mode	公開時に出す「画面のなかでの使い方案内」(docs/spec/QUICK_RHYTHM_LINK.md PR8)を見張る。	0.3		○			0	OK	1	
+mode/ragnarok-browser-check.js	mode	RAGNAROKを実ブラウザで開き、カードが解放され・ルール詳細に黄昏と不死が出て・	59.2	○				1	OK	0	
+mode/ragnarok-rules-check.js	mode	RAGNAROKの正式設定・黄昏・不死(死者の再起)・通常/デバッグ導線を、本体helperを切り出して検査する。	0.2		○			2	OK	2	
+mode/raid-jack-after-story-browser-check.js	mode	ハロウィン・ナイトの大王を倒したあとのお話(第6部・終章2本)と、きゅうこの加入のお話を、実際のブラウザで最後まで流す	48.3	○				5	OK	0	
+mode/raid-jack-api-check.js	mode	ジャックの通信層(36-raid-jack-api.jsx)を、偽の fetch で動かして確かめる(通信はしない)。	0.1		○			1	OK	3	
+mode/raid-jack-battle-browser-check.js	mode	種族チャレンジを実際のブラウザで通しで遊んでみて、画面が動くかを確かめる。	84.6	○				2	OK	1	
+mode/raid-jack-battle-check.js	mode	ジャック戦の「戦闘データ」を確かめる(35-raid-jack.jsx の定義と、敵データ・技の表の食い違いを防ぐ)。	0.2		○			0	OK	8	
+mode/raid-jack-check.js	mode	イベント・レイドボス「ジャック」の定義(35-raid-jack.jsx)を確かめる。正本: docs/spec/RAID_BOSS_JACK.md	0.2		○			6	OK	8	
+mode/raid-jack-consistency-check.js	mode	ジャック(レイド)関係の「数字・名前」が、定義(35-raid-jack.jsx)と、ヘルプ・更新履歴・遊び方の台本・助手のセリフ・設計書で食い違っていないかを見る。	0.1		○			1	OK	5	
+mode/raid-jack-debug-browser-check.js	mode	種族チャレンジを実際のブラウザで通しで遊んでみて、画面が動くかを確かめる。	20.4	○				1	OK	1	
+mode/raid-jack-home-aura-check.js	mode	HOMEのレイドボス(ジャック)の炎(オーラ)が、施設の札・みゅあの吹き出し・上の帯より必ず後ろにあるかを、実際のブラウザで確かめる。	30.9	○				1	OK	0	
+mode/raid-jack-home-lines-check.js	mode	HOMEにいるレイドボスのひとこと(38-raid-jack-home-lines.jsx)を確かめる。	0		○			0	OK	3	
+mode/raid-jack-home-say-tap-check.js	mode	HOMEのジャックのひとこと(吹き出し)が、どこを押しても「つぎ」へ進むかを実際のブラウザで確かめる(2026-10-11・社長の実機の指摘)。	48.9	○				4	OK	0	
+mode/raid-jack-quick-loop-browser-check.js	mode	ジャック戦を遊んだぶんが「クイック周回ぶん」の報酬として配られることを、実際のブラウザで確かめる。	52.9	○				4	OK	2	
+mode/raid-jack-revoke-browser-check.js	mode	デバッグで付いた「倒した」印と初討伐ギフトが、開き直したときに直るかを、実際のブラウザで確かめる。	12.1	○				1	OK	1	
+mode/raid-jack-reward-badge-check.js	mode	ジャックの報酬一覧の「ギフトに届いた」の印が、正しい行に付くかを確かめる。	0.3		○			1	OK	5	
+mode/raid-jack-reward-browser-check.js	mode	ジャックの報酬一覧(モード別・難易度別)と、魂格の結晶を使う画面を、実際のブラウザで確かめる。	13.8	○				2	OK	2	
+mode/raid-jack-reward-check.js	mode	ジャックの報酬(35-raid-jack.jsx の表・36-raid-jack-api.jsx の受け取り判定)と魂格の結晶を、実際に動かして確かめる。	11.2					1	OK	4	
+mode/raid-jack-screen-browser-check.js	mode	種族チャレンジを実際のブラウザで通しで遊んでみて、画面が動くかを確かめる。	28.6	○				6	OK	1	
+mode/raid-jack-story-check.js	mode	ぱんぷきん×ジャックのストーリー(第1.5部〜終章)の台本と再生を確かめる。台本の正本: docs/spec/RAID_JACK_STORY.md	1		○			5	OK	7	
+mode/rhythm-achievement-browser-check.js	mode	モンヒロビートの実績の台帳を、実際に開いたゲームの中で確かめる(2026-10-05)。	7.3	○				1	OK	1	
+mode/rhythm-achievement-check.js	mode	モンヒロビートの実績の仕組み(フルコンボ・オールエクセレント・オールマーベラス)を、実装をそのまま取り出して動かして確かめる。	0.2		○			0	OK	3	
+mode/rhythm-anomaly-report-check.js	mode	判定の異変を毎日報告する(2026-10-16 社長の決定)を、本番の Claude API と DB を使わずに確かめる。	0.1					3	OK	0	
+mode/rhythm-assistant-session-check.js	mode	モンヒロビート「助手とのセッション」(助手をマルチの部屋に CPU として呼ぶ)の決めごとを、通信も画面も使わずに確かめる。	1					14	OK	11	
+mode/rhythm-assistant-session-sheet-check.js	mode	モンヒロビート「助手とのセッション」: 呼ぶシートの助手のタブを、実際に開いて縦・横・🔄横で測る(2026-11-07 ビート部マモリ)。	27.8	○				4	OK	0	
+mode/rhythm-audio-analyze-v3-check.js	mode	V3音源解析（rhythm-audio-analyze-v3.js）が、譜面づくりの土台として使えることを確かめる。	11.7					0	OK	1	
+mode/rhythm-audio-general-check.js	mode	譜面制作ツールが「特定の曲に合わせ込んだもの」になっていないことを確かめる。	66.1					1	OK	3	
+mode/rhythm-audio-independence-check.js	mode	音ゲーのBGM／タップ音量を、メインゲーム(HOME)の音量設定から独立させたことを確かめる。	0.4		○			1	OK	3	
+mode/rhythm-audio-layers-v3-check.js	mode	音の層の解析(rhythm-audio-layers-v3.js)を、正解の分かっている音で確かめる(2026-09-26・段2)。	5.6					0	OK	2	
+mode/rhythm-audio-meter-autofix-check.js	mode	拍子の読み違いを解析で自動で直す(rhythm-audio-analyze-v3.js の 7b・2026-09-29)を見張る。	36	○				0	OK	0	
+mode/rhythm-audio-meter-opinion-check.js	mode	テンポ・拍子の二つ目の意見(rhythm-audio-meter-opinion.js)を見張る(2026-09-26)。	0.1		○			0	OK	2	
+mode/rhythm-audio-triplet-mix-check.js	mode	16分の曲に3連符が混ざっていないかの見分け(rhythm-audio-triplet-mix.js・2026-09-29)を見張る。	0.8		○			0	OK	2	
+mode/rhythm-background-run-check.js	mode	モンビーを開いたままクイック∞周回が続くこと(docs/spec/QUICK_RHYTHM_LINK.md PR4)を	91.2	○				8	OK	2	battle/auto-run-browser-check.js(0.83)
+mode/rhythm-background-view-check.js	mode	モンビーを開いたままクイック∞周回を続けているあいだ、	0.5		○			1	OK	2	
+mode/rhythm-best-keep-unknown-difficulty-check.js	mode	モンヒロビートの自己ベスト(mh_rhythm_best_v1)を読み直すとき、この版が知らない難易度の記録を捨てないことを見張る。	0		○			1	OK	3	
+mode/rhythm-breeder-id-check.js	mode	モンビー(音ゲー)のブリーダーID(breeder_id)まわりを見る。2026-09-11。	0.1		○	○		0	OK	3	
+mode/rhythm-buddy-check.js	mode	相棒(モンヒロビートのマルチに呼ぶ、自分のマスモン)を、通信も実時間も使わずに動かして確かめる。	2.4					3	OK	4	
+mode/rhythm-buddy-convo-check.js	mode	呼んだマスモンの会話(発言の読み取りと、セリフ集)を確かめる。	0.1		○			2	OK	2	
+mode/rhythm-buddy-persona-check.js	mode	マスモンの個体差(一人称・呼び方・口ぐせ・好きな曲/苦手な曲・叩き方のくせ・好物/趣味・誕生日)を確かめる。	5.5		○			4	OK	7	
+mode/rhythm-buddy-rank-check.js	mode	マスモンランキング(モンヒロビート)の行づくり・取得・上書き保存を、通信なしで確かめる。	0		○			0	OK	2	
+mode/rhythm-buddy-talk-check.js	mode	呼んだマスモンのおしゃべり(セリフ集と選び方)を確かめる。	0.2		○			1	OK	1	
+mode/rhythm-calibration-check.js	mode	タイミング合わせ(オプション →「実際の画面で合わせる」)を、実際のブラウザで最後まで通す。	63.6	○				1	OK	3	
+mode/rhythm-camera-deep-check.js	mode	案3の2段目「カメラを寝かせる」(2026-10-16・確認待ちの試作 mh_rhythm_floor3d_proto_v1='c3b')で、押した場所とノーツがずれないことを見張る。	0.1		○			3	OK	3	
+mode/rhythm-canvas-geometry-check.js	mode	canvas 版のノーツ座標(rhythmNoteCanvasGeometry)が、DOM 版(rhythmLayoutNoteVisual)と同じ場所を指しているかを	0.7		○	○		0	OK	1	
+mode/rhythm-canvas-render-check.js	mode	canvas 版のノーツ描画(RHYTHM_CANVAS_RENDERER)を実ブラウザで動かし、	1.6	○				0	OK	1	
+mode/rhythm-catch-up-check.js	mode	演奏で止まっていたぶんの追いつき(docs/spec/QUICK_RHYTHM_LINK.md PR7)を確かめる。	0.2		○			0	OK	1	
+mode/rhythm-chart-authoring-ui-check.js	mode	譜面エディタの画面(SLIDE経路の時刻順など)を確かめる。	0.1		○	○		0	OK	3	
+mode/rhythm-chart-candidate-check.js	mode	音源から取り出したノーツ候補が、実音と45ms以内で並んでいるか。	0.1		○			0	OK	2	
+mode/rhythm-chart-draft-check.js	mode	下書き譜面が実音源由来で、完成譜面として配信につながっていないか。	0.1		○			0	OK	1	
+mode/rhythm-chart-feel-report-check.js	mode	気持ちよさの物差し(rhythm-chart-feel-report.js)が、正解の分かっている小さな譜面で正しく数えるかを確かめる(2026-09-26)。	0.4		○			0	OK	3	
+mode/rhythm-chart-flow-check.js	mode	手の流れを狙う配置(2026-10-21 社長「新しい譜面から流れを狙う」)の決まりを見張る。	4.1					4	OK	1	
+mode/rhythm-chart-generate-latest-check.js	mode	譜面の作り方は最新リビジョンだけ、を見張る(2026-10-12 社長「段階を分けず、一気に古い版を外して最新だけにする」)。	3.5					1	OK	1	
+mode/rhythm-chart-hand-rules-check.js	mode	譜面の「手の決まり」(rhythm-chart-hand-rules.js)を見張る(2026-10-12・オンプくん。社長「譜面製作ツールも今回のことで大きく改良できそうだから更新しといてね」)。	3		○			7	OK	3	
+mode/rhythm-chart-knowledge-check.js	mode	Rev.7「音ゲーの作法」と、遊んだ感想からの学び直しを見張る(2026-09-26)。	20.4					1	OK	5	
+mode/rhythm-chart-level-check.js	mode	難易度レベル（Lv.）の物差しが、ずれていないことを毎回確かめる。	3.3		○			22	OK	3	
+mode/rhythm-chart-musical-tempo-check.js	mode	遊べる形になっている譜面が「指で押せること」と「音楽のテンポを再現していること」を確かめる。	0.8		○			1	OK	3	
+mode/rhythm-chart-rev26-check.js	mode	MHB CHART ENGINE Rev.26(曲のつなぎ目の段差・2026-10-03)と、激しさの中間 strong を見張る。	1.1		○			0	OK	4	
+mode/rhythm-chart-rev28-check.js	mode	MHB CHART ENGINE Rev.28(人が測った拍のずれの曲線・2026-10-05)を見張る。	1.4		○			0	OK	4	
+mode/rhythm-chart-review-check.js	mode	譜面の点検・手の仕上げ・つまみ探し(2026-11-11・MHB CHART ENGINE Rev.37)の決まりを見張る。	11.6					1	OK	3	
+mode/rhythm-chart-switch-check.js	mode	時刻で入れ替わる譜面（RHYTHM_SWITCHING_CHARTS）が、正しく切り替わるか。	0.8		○			0	OK	3	
+mode/rhythm-chart-v2-step6-check.js	mode	自動譜面制作システム V2 STEP6(自動プレイ可能性検査)を確かめる。	1.1			○		0	OK	2	
+mode/rhythm-chart-v2-step7-check.js	mode	自動譜面制作システム V2 STEP7(問題区間の自動修正ループ)を確かめる。	40.9			○		0	OK	2	
+mode/rhythm-chart-v3-candidates-check.js	mode	「複数候補を作って自動で批評する」段(rhythm-chart-v3-candidates.js)が	39.9					1	OK	0	
+mode/rhythm-chart-v3-check.js	mode	自動譜面制作V3が、譜面設計の原則（docs/spec/RHYTHM_CHART_DESIGN.md）を守っているか。	10.4					0	OK	3	
+mode/rhythm-chart-v3-splice-check.js	mode	区間の差し替え(rhythm-chart-v3-splice.js・2026-09-26・ROADMAP の段5)を見張る。	8.6					1	OK	3	
+mode/rhythm-climax-fx-check.js	mode	モンヒロビートの「盛り上がりの光」「叩いた場所に判定」「ランクが上がった瞬間」(2026-09-29・参考動画から)を見張る。	2.5	○				1	OK	4	
+mode/rhythm-combo-space-check.js	mode	コンボ数が「本当に空いているところ」に出るかを、座標を計算して確かめる。	0.1		○			0	OK	2	
+mode/rhythm-debug-select-check.js	mode	デバッグの全解放の曲えらび(RHYTHM_DEBUG_SELECT・2026-10-11 社長の依頼)を、実際のブラウザで通す。	173	○				2	OK	2	
+mode/rhythm-debug-short-check.js	mode	短縮再生を持ってよいのが、そのために足したデバッグ専用曲だけになっているか。	0.6		○	○		0	OK	1	
+mode/rhythm-decor-pixel-check.js	mode	演奏画面のプレイエリアの「見た目」を画素で比べる。	0.5	○				0	OK	0	
+mode/rhythm-demo-entry-check.js	mode	音ゲー体験版の正式導線（体験版ホーム）を見る。	1		○			1	OK	4	
+mode/rhythm-density-ceiling-check.js	mode	譜面の量の上限(DENSITY_TARGET.hardMaxPerSecond)が、	38.7					0	OK	1	
+mode/rhythm-device-regression-check.js	mode	実機の記録の比べ(rhythm-device-regression.js)が、同じ端末・同じ曲どうしで「悪くなった」を見つけるかを、作り物の記録で見る(2026-10-07)。	0.4		○			0	OK	0	
+mode/rhythm-double-slide-check.js	mode	同時スライド(2本のSLIDEをいちどになぞる)が、**曲によって丸ごと欠けないこと**と	48.5					0	OK	2	
+mode/rhythm-easy-alignment-audit.js	mode	EASY譜面が音とどれだけずれているかを測る監査。	0		○	○		0	OK	0	
+mode/rhythm-easy-ear-review-plan.js	mode	EASYの耳確認を、区間ごとの確認計画にまとめる。	0		○	○		0	OK	0	
+mode/rhythm-easy-ear-review-ui-check.js	mode	EASY耳確認のナビ(前後移動・ループ再生・停止)が既存UIを使い回しているか。	0		○	○		0	OK	0	
+mode/rhythm-easy-formal-candidate-check.js	mode	EASYの正式候補が、耳確認待ちの点を採用せず元候補由来に収まっているか。	0.1		○	○		0	OK	2	
+mode/rhythm-easy-v2-review-check.js	mode	EASYのレビュー資料が全候補ぶんそろい、正式runtimeへつながっていないか。	0.1		○	○		0	OK	1	
+mode/rhythm-effect-amount-check.js	mode	演出量の段が「本当に段になっているか」を、実際のブラウザで測る。	10.2	○				1	OK	1	
+mode/rhythm-end-flick-check.js	mode	終点フリック(HOLD / SLIDE の終わりでフリックして離す)を確かめる。	1.6	○				1	OK	1	
+mode/rhythm-end-flick-diagonal-check.js	mode	斜めのSLIDEに付いた終点フリックを、実際の画面の大きさで確かめる。	0.8					1	OK	1	
+mode/rhythm-end-flick-swing-check.js	mode	終点フリックを「弾いた動きと、経路を追った動きが見分けられる場所」にだけ置いているかを見る。	0.7		○			0	OK	2	
+mode/rhythm-event-points-queue-check.js	mode	ビートP(mh_rhythm_event_points_v1)を「待たずに続けて足しても」取りこぼさないかを、	0		○			0	OK	1	
+mode/rhythm-event-thanks-check.js	mode	週末ゲリラ杯の「閉幕とお礼」の会話(2026-09-13・ユーザー指示)を見る。	0.2		○	○		0	OK	8	
+mode/rhythm-event-window-check.js	mode	実装本体。STEP3で一時的に必要だった文字列置換wrapperはSTEP4で解消済み。	0.5		○	○		0	OK	1	
+mode/rhythm-expert-master-order-check.js	mode	EXPERT のほうが MASTER より「叩く回数」「速い連打」が多い曲を見つける(2026-10-07)。	0.4		○			0	OK	1	
+mode/rhythm-failed-hold-trail-check.js	mode	失敗したHOLD / SLIDEを、その場で消さずに薄いグレーへ落とし、帯の終わりまで流すことを確かめる。	0.2		○			3	OK	1	
+mode/rhythm-feedback-check.js	mode	音ゲーの「手ごたえ」まわりを確かめる。	0.2		○			1	OK	1	
+mode/rhythm-finger-swap-check.js	mode	長押し・スライドの「指の置き換え」を、両方のやり方で確かめる。	0.7		○			2	OK	1	
+mode/rhythm-first-run-layout-check.js	mode	「初回起動でノーツが出ないまま MISS だけが積み上がる」の再発を防ぐ。	13.8	○				0	OK	0	
+mode/rhythm-forced-rotation-check.js	mode	自前で画面を回した状態でも、押した場所どおりのレーンが鳴るかを実ブラウザで確かめる。	17.7	○				0	OK	0	
+mode/rhythm-frame-diag-check.js	mode	1コマの重さを、タッチの診断の行(rhythm_touch_diagnostics の stats.frame)へ足す仕組みの見張り(2026-10-11)。	0.1		○			1	OK	3	
+mode/rhythm-fullcombo-celebrate-check.js	mode	フルコンボ等を達成して曲を終えたとき、リザルトの数字を出す前に一度大きく祝う	0.1		○			2	OK	2	
+mode/rhythm-glide-slide-check.js	mode	「走る音（アルペジオ・トレモロ）をなぞるSLIDE」が、**実際に鳴っている音の上にあること**と	47.9					0	OK	0	
+mode/rhythm-glow-road-width-check.js	mode	押したレーンの光(サブレーンの台形)が、横向きの「道の幅」に追いつくことを見張る(2026-10-07)。	0.1		○			0	OK	2	
+mode/rhythm-gpu-band-check.js	mode	スライドの帯を GPU に一度だけ置いて描く描き方(作り替え B・rhythmCreateGpuSlideBand)が、今の描き方と同じ絵を描けているかを画素で確かめる(2026-10-11)。	432.4	○				1	OK	2	
+mode/rhythm-gpu-band-warm-check.js	mode	長いスライドの帯を演奏の前に GPU へ置いておく(RHYTHM_CANVAS_RENDERER.warmSlideBands・rhythmCreateGpuSlideBand の prepare)を確かめる(2026-10-18)。	2.8	○				1	OK	2	
+mode/rhythm-hand-model-check.js	mode	「指の物理条件」の物差しそのものを確かめる。	0.1		○			0	OK	0	
+mode/rhythm-hand-restrike-check.js	mode	「1本の指で叩き直す間隔」の物差しが、少し動いただけで**人間に無理な速さ**を	0		○			0	OK	2	
+mode/rhythm-held-finger-owner-check.js	mode	押さえている指(ホールド・スライド)と、叩く/払う別の指の判定を混ぜないことを見張る(2026-10-15 社長「スライド判定の件は一刻も早く直したい」)。	0.9		○			6	OK	2	
+mode/rhythm-held-pair-variety-check.js	mode	押さえノーツの同時押さえ(HOLD/SLIDEを2本いちどに押さえる)が、	15.5					1	OK	2	
+mode/rhythm-hell-entry-check.js	mode	はじめての HELL の目安と、曲えらびの HELL の Lv. の目立たせ方を確かめる(2026-10-21 改善部 N6・社長の決定)。	15.9	○				1	OK	2	
+mode/rhythm-help-structure-check.js	mode	モンビー(モンヒロビート)のヘルプが「読める形」になっているかを見る。	0.8		○	○		1	OK	3	
+mode/rhythm-history-check.js	mode	モンヒロビートの履歴(プロフィール →「これまでの記録」)を確かめる。	11.1	○				0	OK	6	
+mode/rhythm-hit-effect-check.js	mode	ノーツを取ったときのヒットエフェクトと、モンスターノーツの特別扱いを確かめる。	5.5	○				5	OK	1	
+mode/rhythm-hold-charge-se-check.js	mode	ホールド・スライドを押さえているあいだの音の検査(2026-09-28)。	0.7					2	OK	4	
+mode/rhythm-hold-handover-check.js	mode	HOLD / SLIDE を押さえている途中で、指を入れ替えられるかを見る。	0.6		○			0	OK	1	
+mode/rhythm-hold-head-check.js	mode	長押し(HOLD)の「押し始め」が見て分かるかを守る。	0.1		○			0	OK	1	
+mode/rhythm-hold-tick-check.js	mode	ホールド・スライドで線(チェックポイント)を通ったときの光・音・コンボのはね(2026-10-17 案A)を見張る。	0.1		○			4	OK	3	
+mode/rhythm-hud-wedge-check.js	mode	音ゲーのプレイ画面で、HUD(スコア・コンボ・ライフ等)が「レーンの台形の左右にできる空きウェッジ	1.9	○				1	OK	3	mode/rhythm-landscape-hud-check.js(0.87)
+mode/rhythm-input-cost-check.js	mode	「指の座標 → レーン」の変換1回ごとに強制レイアウトが走っていないかを、実際に動かして数える。	0.2		○			0	OK	1	
+mode/rhythm-input-edge-check.js	mode	「画面の端を押しても反応しない」の再発を防ぐ。	0.5		○			0	OK	1	
+mode/rhythm-input-position-check.js	mode	押した位置・時刻まわりの取り決め(2026-10-07・「押した位置とタイミングが命」の点検で足したもの)が崩れていないかを見張る。	0.1		○			0	OK	2	
+mode/rhythm-input-rec-check.js	mode	入力の記録(デバッグ設定・2026-10-15・RHYTHM_INPUT_REC)を見張る。	14.1	○				3	OK	4	
+mode/rhythm-input-scenario-check.js	mode	操作性のシナリオ検査。本番の入力関数(rhythmMatchInputBatch / RHYTHM_GESTURE_RUNTIME /	0.6		○	○		1	OK	1	
+mode/rhythm-invalid-placement-check.js	mode	譜面の不正配置(16分グリッド外・同時刻同位置)を見つける道具が、通常プレイで読み込まれないか。	0		○	○		0	OK	1	
+mode/rhythm-ios-touch-guard-check.js	mode	演奏中、演奏エリアの外に触れた指でもブラウザの既定の動きを止めているかを、実際に開いて確かめる(2026-09-29)。	14.3	○				2	OK	2	
+mode/rhythm-judgment-band-check.js	mode	判定ラインの「幅」が、本当に判定窓のとおりに出ているか。	14.6	○				0	OK	1	
+mode/rhythm-judgment-line-first-mount-check.js	mode	判定ラインが初回・再マウントのどちらでも二重に作られないか。	0.1		○	○		0	OK	1	
+mode/rhythm-judgment-line-height-check.js	mode	判定ラインの高さを設定で動かせること(2026-09-13・ユーザー依頼	0.9	○				4	OK	1	
+mode/rhythm-judgment-line-visual-check.js	mode	ノーツの絵が、ノーツの時刻ちょうどに判定ラインの「見た目の中心」に重なっているかを、本物のゲームの画面を撮って画素で測る(2026-11-07)。	75.9	○				2	OK	0	
+mode/rhythm-judgment-rules-lock-check.js	mode	モンヒロビートの判定の決まり(判定の窓・受付の横幅・追い方の余裕など)が、知らないうちに変わっていないかを見張る(2026-11-07・ビート部 マモリ)。	0.6			○		1	OK	1	
+mode/rhythm-keyframe-blur-check.js	mode	キーフレームで「ぼかし半径」を動かしていないかを見張る。	0.2		○	○		0	OK	2	
+mode/rhythm-landscape-hud-check.js	mode	音ゲーの横画面HUD配置(§6.2「案A: サイドウェッジ集約」)を実ブラウザで確かめる。	1.3	○				1	OK	3	mode/rhythm-hud-wedge-check.js(0.87)
+mode/rhythm-landscape-layout-check.js	mode	曲えらびを横持ちにしたときの置きかたを実ブラウザで確かめる。	15.4	○				2	OK	0	
+mode/rhythm-lane-number-check.js	mode	プレイ画面の手元にレーン番号(1〜5)が出ていないかを見る。	0.1		○			0	OK	1	
+mode/rhythm-last-difficulty-check.js	mode	曲えらびで前に選んだ難易度を、次に始めたときも引き継ぐか(mh_rhythm_last_difficulty_v1・2026-10-11)を実際のブラウザで確かめる。	83.2	○				0	OK	0	
+mode/rhythm-life-check.js	mode	音ゲーのライフ0以降の不可逆DOWNとスコア固定を、実装中の純粋関数で確認する。	0.2		○			1	OK	1	
+mode/rhythm-mid-tracking-check.js	mode	HOLD / SLIDE の途中追従判定(暫定値)を確認する。	0.3					4	OK	1	
+mode/rhythm-mode-audio-authoring-check.js	mode	実音源の解析がデバッグ画面の手動実行に限られ、本番譜面を動的生成しないか。	0		○			0	OK	1	
+mode/rhythm-mode-end-bar-check.js	mode	HOLDの終端バーが「終端の時刻の幅」で描かれるか。	0.2		○			0	OK	2	
+mode/rhythm-mode-foundation-check.js	mode	モンヒロビートの土台(設定の正規化・段階名の読み込み)を確かめる。	1.2		○			1	OK	1	
+mode/rhythm-mode-gesture-check.js	mode	同時フリックを別のノーツへ割り当てているか。	0.6		○			0	OK	1	
+mode/rhythm-mode-hold-engine-check.js	mode	HOLDの判定(終端100ms手前まで来ていれば離しても成立する等)。	1		○			0	OK	1	
+mode/rhythm-mode-hold-width-check.js	mode	可変幅のHOLD/FLICKの投影・入力・互換と、性能の回帰。	0.6		○			0	OK	1	
+mode/rhythm-mode-lane-feedback-check.js	mode	2026-09-27 に今の形へ合わせた: 指の光はタッチとマウスの指をまとめて出す(pressedLanesNow)・入力は押し直しの判定(rejudge)が付く・	0.1					1	OK	0	
+mode/rhythm-mode-multitouch-check.js	mode	複数の指の入力IDが touch/pointer で衝突しないか。	0.2					1	OK	2	
+mode/rhythm-mode-note-perspective-check.js	mode	ノーツの奥行き(収束率)と、Safe Areaの掛かり方。	0.2		○	○		0	OK	3	
+mode/rhythm-mode-note-se-check.js	mode	空押しSEが、ノーツを取ったときのSEと混ざらないか。	0.9		○	○		1	OK	3	
+mode/rhythm-mode-release-timing-check.js	mode	離す判定の窓(遅れたときにGOODかGREATか)。	0.1		○	○		0	OK	1	
+mode/rhythm-mode-restart-remount-check.js	mode	やり直しでの作り直しが、ボタンの文言に頼らず判定されるか。	0.1		○	○		1	OK	3	
+mode/rhythm-mode-simultaneous-input-check.js	mode	同時入力のまとめ方と、iPhoneのタッチの扱い。	1.2		○			0	OK	1	
+mode/rhythm-mode-slide-path-check.js	mode	SLIDEの経路が帯(fill)・ふち(edge)・チェックポイント(marks)の3つに分かれているか。	0.3		○			2	OK	1	
+mode/rhythm-mode-slide-sublane-check.js	mode	SLIDEのサブレーンと、幅の上限が全幅(10)まで広がっているか。	0.5		○	○		1	OK	1	
+mode/rhythm-mode-sublane-projection-check.js	mode	サブレーンの投影が、再マウント時と画面回転時に組み直されるか。	0.1		○			0	OK	1	
+mode/rhythm-mode-tap-completion-check.js	mode	TAPの成立判定と、曲の時刻をAudioContextだけから取ること。	0.7		○			0	OK	1	
+mode/rhythm-mode-tap-engine-check.js	mode	TAPの判定幅(MARVELOUS/EXCELLENT…)が決めた値どおりか。	0.9		○			0	OK	2	
+mode/rhythm-mode-tap-width-input-check.js	mode	10サブレーン可変幅TAPの入力(接触半径の補正・重なり条件・デッドゾーン・異常radiusのfallback)。	0.9		○	○		1	OK	3	
+mode/rhythm-mode-timing-data-check.js	mode	制作用のタイミングデータ(音源長・基準BPM・解析由来オフセット)が保たれているか。	0		○			0	OK	1	
+mode/rhythm-mode-ui-step-a-check.js	mode	モンヒロビートの画面(STEP A)の作りを確かめる。	0.1					1	OK	1	
+mode/rhythm-monster-effect-check.js	mode	モンスターノーツの演出の段が「本当に段になっているか」を、実際のブラウザで確かめる。	20	○				3	OK	1	
+mode/rhythm-monster-face-css-check.js	mode	モンスターノーツのマスモン表示が、通常ノーツ用の last-child CSS に巻き込まれて	0		○			0	OK	0	
+mode/rhythm-monster-four-check.js	mode	モンスターノーツは、公開曲のどの難易度にも4個ちょうど(TAP の枠1〜4を1個ずつ)の決まり(2026-10-11 社長「どの曲も基本4個入るルールだよ」)。	0.7		○	○		0	OK	2	
+mode/rhythm-monster-guide-check.js	mode	マスモン設定の画面に、モンスターノーツの説明がそろっているかを見る。	0.6		○			1	OK	2	
+mode/rhythm-monster-hero-chart-check.js	mode	体験版の曲「Monster Hero」の譜面候補（EASY / NORMAL / HARD）が、	0.1		○			0	OK	2	
+mode/rhythm-monster-note-warm-check.js	mode	モンスターノーツを取った瞬間に、新しい絵を作ったり GPU へ渡したりしないことを確かめる(2026-10-13 社長報告「モンスターノーツを取った瞬間に一瞬かくつく」)。	0.1		○			3	OK	2	
+mode/rhythm-monster-notes-check.js	mode	モンスターノーツ（RHYTHM_MODE §3.3〜3.5 / §4）を、実際にNode上で動かして確かめる。	0.3		○	○		2	OK	2	
+mode/rhythm-monster-slots-check.js	mode	モンスターノーツ用のマスモン設定(RHYTHM_MODE §3.2 / 実装計画 §3.2〜3.3)を確かめる。	0.2		○	○		1	OK	2	
+mode/rhythm-multi-check.js	mode	モンヒロビートの「みんなで対戦」(マルチ)の仕組みを、通信も実時間も使わずに動かして確かめる。	0.4		○			2	OK	1	
+mode/rhythm-multi-finger-assign-check.js	mode	1フレームに複数の指が来たときの「どの入力がどのノーツを取るか」を確かめる。	0.1		○			0	OK	1	
+mode/rhythm-multi-layout-check.js	mode	モンヒロビートの「モードえらび」と「みんなで対戦の結果画面」の配置を、実際に開いて測る(2026-10-03)。	125.4	○				7	OK	1	
+mode/rhythm-multi-room-list-check.js	mode	モンヒロビートのフリーマッチ「部屋に入る」の一覧(2026-11-07 社長「部屋を作ると入るで一覧が見れるような感じ」)を見る。	0.1					3	OK	2	
+mode/rhythm-multi-small-frame-check.js	mode	モンヒロビートのマルチの部屋で、小さいアイコン(上の5人の帯・チャット)の絵の枠は、前もって縮めた小さい版(srcSmall)で出すことを見る(2026-10-19)。	0					3	OK	2	
+mode/rhythm-name-check.js	mode	画面に出す名前が正式名称「モンヒロビート」になっているかを見張る。	0.2		○			1	OK	4	
+mode/rhythm-near-note-match-check.js	mode	近接TAPの「前へ流れる／後ろへ引っ張られる」を両方まとめて検査する。	0.1		○			0	OK	1	
+mode/rhythm-note-dex-check.js	mode	ノーツ図鑑(2026-10-21 社長「見た目とかちゃんとわかるようにしてほしい」)を確かめる。	110.4	○				1	OK	2	
+mode/rhythm-note-geometry-audit.js	mode	音ゲーのノーツ・HOLD帯・SLIDE帯・ENDバーが、レーンと同じprojectionから外れていないかを	2.9	○				0	OK	1	
+mode/rhythm-note-reach-check.js	mode	どこを押しても取れないノーツが無いか(全曲・全難易度・試作の HELL も)。	18					0	OK	0	
+mode/rhythm-note-scan-window-check.js	mode	メインrAFがノーツを「必要な範囲だけ」走査していること、そしてその絞り込みで	0.2					1	OK	0	
+mode/rhythm-note-width-variety-check.js	mode	ノーツの幅まわりの約束を確かめる。実機で全難易度を遊んでもらった指摘(2026-09-04)への対応。	0.7					1	OK	1	
+mode/rhythm-option-choice-fit-check.js	mode	モンヒロビートのオプションの選択肢(data-rhythm-option-choice)の字が、縦の iPhone の幅で切れていないかを見る(2026-11-07)。	16.3	○				3	OK	1	
+mode/rhythm-option-wide-layout-check.js	mode	モンヒロビートのオプションを横向き(端末ごと横・🔄 横画面ボタン)で開き、	32.7	○				2	OK	1	
+mode/rhythm-options-layout-check.js	mode	モンビーのオプション画面を見る。	0.1		○			2	OK	1	
+mode/rhythm-options-step1-check.js	mode	モンヒロビートの設定画面(STEP1)で、数値を動かすhelperがあるか。	0.2		○	○		1	OK	1	
+mode/rhythm-options-tabs-check.js	mode	モンビーのオプション画面が「1画面に収まる・押す場所が小さくなっていない」かを見る。	1	○				5	NG	2	
+mode/rhythm-orientation-check.js	mode	端末を回した(画面の大きさが変わった)ときに、見た目のgeometryだけを測り直し、	0.2					1	OK	1	
+mode/rhythm-orientation-toggle-check.js	mode	モンビーのホームにある「縦⇄横」切り替えボタンを見る。	7.6					0	OK	1	
+mode/rhythm-overlap-reach-check.js	mode	配信している譜面に「物理的に押せない配置」が残っていないかを見る。	2.1					0	OK	1	
+mode/rhythm-pause-bridge-check.js	mode	ポーズの3ボタン(再開・リスタート・中断して戻る)が、iPhone Safari と同じ	1	○				0	OK	1	
+mode/rhythm-perf-check.js	mode	音ゲーの性能計測(デバッグ限定)が、計測のために本体を重くしていないかを確かめる。	0.4		○			4	OK	3	
+mode/rhythm-phrase-copy-check.js	mode	譜面の作り方のリビジョン(chartRevision)と、Rev.2の「フレーズの写し」を見張る。	329.3					1	OK	3	
+mode/rhythm-play-area-resize-check.js	mode	「初回の演奏だけサイドのマスモンが変な場所に出る／リスタートすると直る」の再発を防ぐ。	3.2	○				0	OK	1	
+mode/rhythm-play-bonus-check.js	mode	モンヒロビートのイベント「回数ボーナス」(2026-09-11・ユーザー指示)を見る。	0.1		○	○		1	OK	8	
+mode/rhythm-play-log-check.js	mode	遊んだ記録の仕組み(2026-09-28・docs/spec/RHYTHM_PLAY_LOG.md)を見張る。	5.4					1	OK	6	
+mode/rhythm-play-run-award-check.js	mode	演奏1曲ぶんを、クイック∞周回の周回クリアとして反映する組み込みを見張る。	0.8		○			0	OK	2	
+mode/rhythm-play-run-loops-check.js	mode	モンヒロビートで1曲遊んだぶんを、クイック∞周回の何周ぶんにするかの決め方を確かめる。	0		○			0	OK	2	
+mode/rhythm-play-smoke-check.js	mode	モンヒロビートの演奏画面を、実際に開いて数秒動かす検査(見た目の「おまかせ」4つの設定で)。	76.7	○				0	OK	0	
+mode/rhythm-player-screen-debug-check.js	mode	プレイヤーが遊ぶモンビーの画面へ、デバッグ専用の表示が出ていないかを見る。	0.2		○			1	OK	3	
+mode/rhythm-portrait-play-modes-check.js	mode	縦画面の曲えらびで、アシスト・ミラー譜面を上の題名の行へ、ランキングを「決定」の右へ移したこと(2026-10-19)を実ブラウザで見る。	22.9	○				1	OK	0	
+mode/rhythm-practice-check.js	mode	「あそびかた練習」の中身を見る。	0.7		○			0	OK	2	
+mode/rhythm-presentation-check.js	mode	見た目まわり（FLICKの色・コンボの強調・100コンボの演出・リザルトの称号）を見る。	0.2		○			2	OK	1	
+mode/rhythm-preview-continue-check.js	mode	モンビーの中では、選んでいる曲が鳴り続けるかを見る。	0.1		○			0	OK	0	
+mode/rhythm-rank-check.js	mode	音ゲーのスコアランク(暫定値: G→F→E→D→C→B→A→S→SS→M)を確認する。	0.2		○			2	OK	1	
+mode/rhythm-rank-color-check.js	mode	同じ記号は、どの画面でも同じ色で出す。	0.1		○			1	OK	3	
+mode/rhythm-ranking-check.js	mode	モンビー(音ゲー)の全国ランキング(2026-09-04)を見る。	0.4		○			7	OK	4	
+mode/rhythm-ranking-pending-check.js	mode	モンヒロビートの全国ランキングで、「送れていない記録」が見える・送り直せることを、実際に開いて確かめる(2026-09-29)。	39.9	○				0	OK	2	
+mode/rhythm-record-fx-check.js	mode	ハイスコアを更新したときの演出(結果画面の上に重ねる)を、曲を最後まで遊んで確かめる(2026-10-06)。	164	○				1	OK	3	
+mode/rhythm-ref-chart-check.js	mode	参考譜面に寄せる道具(rhythm-ref-capture.js / rhythm-ref-map.js)の検査(2026-10-10・台帳 r2610101530refcap)	1.5					0	OK	4	
+mode/rhythm-released-audio-lock-check.js	mode	公開中の曲の音源が、ノーツとの合い方を変えていないかを見張る(2026-11-07・ビート部 マモリ)。	0.9			○		1	OK	1	
+mode/rhythm-released-chart-lock-check.js	mode	公開中の曲の譜面が、知らないうちに1バイトも変わっていないかを見張る(2026-10-11・オンプくん。窓口の依頼)。	2.7			○		2	OK	1	
+mode/rhythm-released-play-notes-lock-check.js	mode	公開中の曲の「演奏が始まるときのノーツ列」が変わっていないかを見張る(2026-11-07・ビート部 マモリ)。	5.5			○		1	OK	1	
+mode/rhythm-render-cost-check.js	mode	モンヒロビートのノーツ描画が、1フレームあたりどれだけ「レイアウト」と「塗り直し」を	7.1	○				0	OK	2	
+mode/rhythm-residual-tap-rejudge-check.js	mode	TAP成功後に同じ物理タッチが残ったケースの回帰ガード。	0.6		○	○		0	OK	2	
+mode/rhythm-result-effect-check.js	mode	演奏後のリザルトが「結果に応じた見た目」になっているかを確かめる。	1.7	○				1	OK	1	
+mode/rhythm-review-mode-check.js	mode	確認者向けレビュー画面の作り(一覧の順・Safe Area付きスクロール)。	0		○	○		0	OK	1	
+mode/rhythm-reward-gift-check.js	mode	モンヒロビートの報酬が「ギフト経由」で正しく届くかを、実際に動かして確かめる。	0.2		○	○		0	OK	0	
+mode/rhythm-rotated-dialog-height-check.js	mode	モンヒロビートの「横画面にする」(絵だけ90度回す)のあいだも、ダイアログの高さが器に収まるかを見張る。	0		○			0	OK	3	
+mode/rhythm-rotation-size-snapshot-check.js	mode	自前の回転(RHYTHM_VIEW_ROTATION)が、器の大きさと押した点の直しを「同じ時に測った画面の大きさ」で計算するか(2026-11-02 社長の決定 B)。	0.1					1	OK	2	
+mode/rhythm-run-loop-check.js	mode	モンヒロビートを開いたまま、クイック∞周回が**次の周へ入る**ことを確かめる	66.8	○				2	OK	0	mode/rhythm-run-progress-check.js(0.82)
+mode/rhythm-run-progress-check.js	mode	モンビーに出す「クイック∞周回の進捗」(docs/spec/QUICK_RHYTHM_LINK.md PR6)を	54.9	○				3	OK	1	mode/rhythm-run-loop-check.js(0.82)
+mode/rhythm-run-progress-static-check.js	mode	モンビーの周回進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6)の作りを静的に見張る。	0.7		○			1	OK	1	
+mode/rhythm-run-stop-check.js	mode	モンヒロビートの帯から、バトルへ行かずに周回を止める・再開する・始め直せるかを見張る。	0.5		○			1	OK	1	
+mode/rhythm-screen-layout-check.js	mode	音ゲーの画面(デバッグ / オプション / プレイ)が、それぞれ独立した1画面になっているかを確かめる。	2.3	○				1	OK	2	
+mode/rhythm-scroll-back-check.js	mode	速さの表の「後ろに戻る」(倍率がマイナス・[時刻,'MOVE',割合])を確かめる(2026-10-11 Grievous Lady の試作)。	0.8		○			0	OK	2	
+mode/rhythm-side-flick-check.js	mode	横フリック(FLICK の flickDir: 'left' / 'right')を確かめる。2026-09-26。	0.7		○			1	OK	3	
+mode/rhythm-side-monster-check.js	mode	プレイ画面の両サイドへ出すマスモンを確かめる。	0.9		○			0	OK	2	
+mode/rhythm-side-monster-size-check.js	mode	演奏中に両サイドへ出るマスモンの大きさが、縦持ちでも横持ちでも	0.1		○			0	OK	2	
+mode/rhythm-sky-far-reach-check.js	mode	HELL の空中の光「奥まで」が、どの設定・どの画面サイズでも、空中の判定線から空中の道の奥の端まで届くかを、canvas の画素で確かめる(2026-10-13)。	7.4	○				1	OK	0	
+mode/rhythm-sky-judgment-text-check.js	mode	空中の判定の文字(HELL の SKY TAP・SKY SLIDE の MARVELOUS など)が、地上の判定と同じ時間(RHYTHM_JUDGMENT_DISPLAY_MS)で消えるか。	224.2	○				2	OK	0	
+mode/rhythm-sky-note-look-check.js	mode	設定「空中のノーツの見た目」(2026-10-17・RHYTHM_SKY_NOTE_LOOK)の保存と読み込みを見張る。	0.1		○			1	OK	3	
+mode/rhythm-sky-reach-adapt-check.js	mode	空中の受け付けの境目を、その人の構えに合わせて下げる試作(RHYTHM_SKY_REACH_ADAPT・2026-10-12 社長「HELL の操作性」)を見張る。	1.5		○			1	OK	3	
+mode/rhythm-slide-difficulty-check.js	mode	SLIDE/HOLDの「追従」が、難易度ごとにやさしくなっているかを本番の関数で確かめる。	0.1		○			0	OK	2	
+mode/rhythm-slide-ease-check.js	mode	SLIDEの曲線(slidePoints[].ease / note.slideEase)を確かめる。2026-09-26。	2.5		○			0	OK	2	
+mode/rhythm-slide-fan-check.js	mode	スライドの**分岐・合流**が、形として成立していて指2本で押せることを、	32.7					1	OK	1	
+mode/rhythm-slide-shape-variety-check.js	mode	SLIDEの形にちゃんとバリエーションが出ているかを、実際に生成させて確かめる。	92.1					1	OK	0	
+mode/rhythm-slide-start-lane-check.js	mode	スライドの始まりのレーンが、押し始めを受け付けられる刻み(0.5刻み)になっているか。	0.9		○			0	OK	1	
+mode/rhythm-small-screen-layout-check.js	mode	モンヒロビートの小さい画面の配置を、実際に開いて測る(2026-09-27・ユーザー指示「小さい画面の配置」)。	78.9	○				3	OK	0	
+mode/rhythm-song-art-zoom-check.js	mode	曲えらびのジャケットを押すと、大きい絵が出るか。	12.6	○				0	OK	0	
+mode/rhythm-song-beats-check.js	mode	曲ごとの拍の表(RHYTHM_SONG_BEATS・monster-hero/data/rhythm-mode.js)を見張る。	1.2		○			0	OK	3	
+mode/rhythm-song-challenge-check.js	mode	曲ごとに難しさの差が付いているかを見張る。	0.8		○			0	OK	2	
+mode/rhythm-song-genre-check.js	mode	曲えらびのジャンルとお気に入り(2026-09-26・ユーザー指示	0.1		○			0	OK	2	
+mode/rhythm-song-intro-check.js	mode	曲が始まる前の幕(ジャケット・曲名・難易度)を確かめる。	79.8	○				2	OK	0	
+mode/rhythm-song-length-check.js	mode	モンビーの曲の「長さ」がそろっているか。	0.7		○			1	OK	2	
+mode/rhythm-song-list-scroll-check.js	mode	曲えらびの一覧を、別の画面から戻ったときに「見ていた場所」から続けられるかを見る。	18.5	○				2	OK	0	
+mode/rhythm-song-notice-landscape-check.js	mode	モンヒロビートのソロの曲えらび: 横画面の右の欄の最後にある助手の吹き出し(data-rhythm-song-notice-landscape)が、	19.3	○	○			2	OK	0	
+mode/rhythm-song-select-check.js	mode	曲えらび(曲選択画面)を、実際のブラウザで動かして確かめる。	23.4	○				1	OK	0	
+mode/rhythm-song-version-check.js	mode	曲えらびの「同じ曲の別の版をまとめる」(2026-10-03・RHYTHM_SONG_VERSION_GROUPS)を見張る。	10.4	○				0	OK	1	
+mode/rhythm-sound-types-check.js	mode	Rev.6「音の性格でノーツの種類を決める」と、譜面メモ(遊んだ感想を残す仕組み)を見張る(2026-09-26)。	18.8					1	OK	5	
+mode/rhythm-stage-gl-check.js	mode	ライブ背景を WebGL で描く部品(rhythmCreateStageGL・monster-hero/src/parts/30-rhythm-play.jsx)を見張る。	4.4	○				0	OK	1	
+mode/rhythm-start-sequence-check.js	mode	演奏を始めるところで2つを確かめる。	22.5	○				0	OK	0	
+mode/rhythm-symphony-event-check.js	mode	第2回モンヒロビート「異世界交響祭」(2026-09-17)の回帰検査。	0.3		○			2	OK	11	
+mode/rhythm-sync-audit-check.js	mode	同期の総点検(2026-11-11)で入れた守りと診断を、実際に曲を流して確かめる。	26.7	○				1	OK	2	
+mode/rhythm-tap-during-hold-check.js	mode	押さえている HOLD / SLIDE の上へ「重なって」降ってくるノーツを叩けるか。	1.4		○			1	OK	2	
+mode/rhythm-tap-target-check.js	mode	「叩いたとき、どのノーツが取られるか」を本番の関数で全部確かめる。	0.5		○			0	OK	1	
+mode/rhythm-tick-notes-check.js	mode	ホールド・スライドの刻みもノーツとして数える(2026-10-17 社長の決定・docs/playbot/reports/2026-10-17/combo-tick-v2/PLAN.md)を見張る。	0.1		○			4	OK	10	
+mode/rhythm-timing-diag-check.js	mode	実機でしか分からないことの診断(stats.timing)と、直し方の切り替え(2026-10-07)が崩れていないかを見張る。	0.1		○			1	OK	5	
+mode/rhythm-total-ranking-check.js	mode	モンビー(音ゲー)の「ブリーダー別 全曲合算ランキング」(2026-09-11)を見る。	0.3		○	○		2	OK	8	
+mode/rhythm-touch-bridge-check.js	mode	ポインタとタッチの突き合わせ・消えたタッチの取り戻し(2026-09-30・RHYTHM_TOUCH_BRIDGE)を、実際に曲を流して確かめる。	175	○				4	OK	4	
+mode/rhythm-touch-diag-check.js	mode	タッチの診断(2026-09-30・docs/spec/RHYTHM_TOUCH_DIAG.md)の、送る側・SQL・読む道具を見張る。	1.2					2	OK	4	
+mode/rhythm-tutorial-check.js	mode	モンビーの初回チュートリアルと「あそびかた練習」を、本物のブラウザで動かして確かめる。	15	○				0	OK	0	
+mode/rhythm-virtual-player-check.js	mode	仮想プレイヤー(rhythm-virtual-player.js・2026-09-28・MHB CHART ENGINE Rev.18)を見張る。	0.5		○			1	OK	1	
+mode/rhythm-visual-sync-check.js	mode	縦・横で、ノーツが判定ラインに見える時刻と曲の時刻がそろっているかを、本物のゲームで1コマずつ測る(2026-09-29)。	99.5	○				1	OK	0	
+mode/rhythm-webgl-fallback-check.js	mode	モンヒロビートで WebGL の準備が途中で失敗したとき、「ふつう」の描き方(Canvas 2D)へ戻って	33.9	○				0	OK	2	
+mode/rhythm-webgl-notes-check.js	mode	検証用の WebGL の描き方(rhythmCreateGL2D)が、ふだんの canvas(2D)と同じ絵を描けているかを確かめる(2026-09-26)。	103.4	○				1	OK	1	
+mode/rhythm-weekly-reward-check.js	mode	モンヒロビートの週間ランキング(2026-09-13にユーザーが決めた仕様)を見る。	0.2		○	○		3	OK	13	
+mode/skip-ticket-check.js	mode	スキップチケット(序・破・急・極・覇)と、勇者モン選択のタブ(編成/ベースモン)を検証する。	0.2		○			2	OK	3	
+mode/species-challenge-ally-simulation-check.js	mode	種族チャレンジの味方シミュレーション。	0.6		○			0	OK	1	
+mode/species-challenge-auto-join-check.js	mode	種族チャレンジのWAVE中の供モン合流が、手動でもAUTOでも「出撃前に選んだ供モン」だけに	0.3		○			0	OK	1	
+mode/species-challenge-battle-check.js	mode	種族チャレンジのバトルが、既存の難易度設定へ正しく渡されるか。	0.3		○			0	OK	0	
+mode/species-challenge-browser-check.js	mode	種族チャレンジを実際のブラウザで通しで遊んでみて、画面が動くかを確かめる。	17.9	○				3	OK	0	
+mode/species-challenge-clear-flow-check.js	mode	種族チャレンジの「クリアしたときに何が確定するか」を確認する。	0.4		○			0	OK	0	
+mode/species-challenge-clear-reward-check.js	mode	種族チャレンジのクリア報酬。	10.7					2	OK	0	
+mode/species-challenge-debug-check.js	mode	種族チャレンジのデバッグ用の入口。	0.3		○			0	OK	0	
+mode/species-challenge-foundation-check.js	mode	種族チャレンジの土台(難易度と種族の定義)。	0.1		○			4	OK	0	
+mode/species-challenge-integration-check.js	mode	種族チャレンジが既存のゲームへつながっているか。	12.4					4	OK	1	
+mode/species-challenge-profile-check.js	mode	種族チャレンジの進行がプロフィールに出るか。	0.3		○			4	OK	0	
+mode/species-challenge-progress-check.js	mode	種族チャレンジの進行の保存と読み出し。	0.1		○			0	OK	0	
+mode/species-challenge-release-readiness-check.js	mode	種族チャレンジが「一般公開できている状態」を見張る。	12.4					3	OK	0	
+mode/species-challenge-reward-claimed-check.js	mode	種族チャレンジの「初回クリア報酬(超越の実)をもう受け取ったか」が画面で分かるかを、	8	○				3	OK	0	
+mode/species-challenge-run-state-check.js	mode	種族チャレンジの編成validationと、WAVE中の供モン加入を確認する。	0.2		○			0	OK	1	
+mode/species-challenge-selection-flow-check.js	mode	種族チャレンジの選択画面から、種族限定のrun情報が作られるか。	0.3		○			0	OK	1	
+mode/species-challenge-unlock-check.js	mode	種族チャレンジの「解放条件」と「公開フラグ1つで全部そろって出るか」を確認する。	0.3		○			1	OK	3	
+mode/tactics-browser-check.js	mode	新モード(id: tactics)を実際のブラウザで開き、バトルが最後まで立ち上がることを確かめる。	52.9	○				0	OK	0	
+mode/tactics-discard-browser-check.js	mode	タクティクスバトルの「手札を捨てる」(2026-10-05 ユーザー指示)を、実際のブラウザで確かめる。	33	○				2	OK	4	
+mode/tactics-discard-check.js	mode	タクティクスの「手札を捨てる」のきまりを、本体の書き方から確かめる(2026-10-05 ユーザー指示)。	0.1		○			0	OK	2	
+mode/tactics-enemies-check.js	mode	タクティクスバトル専用の敵(TACTICS_ENEMY_SEQUENCE)を見張る。	0.3		○			0	OK	2	
+mode/tactics-enemy-actions-check.js	mode	新モード(id: tactics)の敵行動を、定義と実装の両面から確かめる。	0.5		○			1	OK	5	
+mode/tactics-enemy-skill-fx-check.js	mode	タクティクスの敵の技の格上げ(2026-10-02 ユーザー指示「敵モンスターの攻撃を演出も強化して。これはタクティクスのみ」)を見張る。	0.1		○			0	OK	4	
+mode/tactics-ex-skills-browser-check.js	mode	タクティクス専用 EXスキル(STEP1: 共通基盤)を、実際のブラウザで操作して確かめる。	318.8	○				5	OK	4	mode/tactics-ex-turn-smoke-check.js(0.78)
+mode/tactics-ex-skills-check.js	mode	タクティクス専用 EXスキル(STEP1: 共通基盤)を、本体の純関数をそのまま動かして確かめる。	0.4		○			6	OK	4	
+mode/tactics-ex-turn-smoke-check.js	mode	EXの通し検査(2026-10-06): 全24体(2026-10-06 ゴースト・スプーキーを足した)で「EXを使う→カードを切る→ターンが進む(または敵を倒してWAVEクリア)」を実際のブラウザで通し、	0.1	○				2	OK	4	mode/tactics-ex-skills-browser-check.js(0.78)
+mode/tactics-modes-check.js	mode	タクティクスバトルの中のモード(タクティクスチャレンジ / 種族チャレンジ / プロ)と、	0.2		○			0	OK	0	
+mode/tactics-units-check.js	mode	新モード(id: tactics)の「1体ぶん」の値と盤面を、本体の純関数をそのまま動かして確かめる。	0.8		○			4	OK	5	
+mode/ultimate-card-layout-check.js	mode	極限チャレンジの難易度カードが、iPhone縦画面で破綻しない形のままかを見る。	0.1		○			1	OK	0	
+mode/ultimate-rules-check.js	mode	ULTIMATE難易度の調整(×35・各0.75%・最低25%・35T段階BREAK・安全距離)と、他難易度へ波及しないこと。	0.2		○			0	OK	2	
+mode/underworld-tab-check.js	mode	冥界チャレンジ(INFERNO・COCYTUS を難易度選びの「冥界」タブへ移す)の一覧・解放・印を検査する。	0.2		○			2	OK	2	
+monster/ghost-browser-check.js	monster	ゴースト種(ゴースト・スプーキー)を実際のブラウザで遊んで、効き目が画面に出るか・止まらないかを確かめる(2026-10-05)。	126.4	○				4	OK	5	mode/tactics-ex-turn-smoke-check.js(0.76)
+monster/ghost-effects-check.js	monster	ゴースト種(ゴースト・スプーキー)の「効き目」を見張る(2026-10-05 ユーザー指示「新しい要素が多いから何回も確認して不具合のないように」)。	0.1					3	NG	7	
+monster/golem-balance-check.js	monster	勇者モンの「素の能力」が壊れた形になっていないかを、実装と同じ式で見張る。	0.4		○			0	OK	3	
+monster/idle-dex-check.js	monster	モンスター図鑑でも、バトルと同じ待機アニメ(MONSTER_IDLE_RIGS / MonsterIdleArt)が出るかを確かめる。	0.1		○			1	OK	9	
+monster/illumine-dreamy-browser-check.js	monster	イルミネ・ドリーミィ(2026-10-23 正式公開)を、デバッグのバトルモードで勇者モンにして、実際のタクティクスプロで戦わせて確かめる。	190.4	○				2	OK	3	monster/kyubi-orihime-browser-check.js(0.82)
+monster/illumine-dreamy-effects-check.js	monster	イルミネ・ドリーミィの「効き目」を見張る(2026-10-22 社長の決定。いまは案の段階・公開はきゅうこのお話と同時)。	0.1					5	OK	5	
+monster/kenshi-mocchi-check.js	monster	新レア「剣士モッチー」の正式実装の回帰チェック。	18.1					0	OK	7	
+monster/kiki-assist-check.js	monster	ききのアシストカードの定義。	0.2		○			1	OK	1	
+monster/kyubi-orihime-browser-check.js	monster	キュービ・オリヒメを、デバッグのバトルモードで勇者モンにして、実際のタクティクスプロで戦わせて確かめる。	210.4	○				5	OK	3	monster/illumine-dreamy-browser-check.js(0.82)
+monster/kyubi-orihime-traits-check.js	monster	キュービ・オリヒメの勇者特性とEXの決めごとを見張る(2026-10-27 社長の決定。数字は案の「推奨」)。	0.2					21	NG	13	
+monster/lineage-art-scale-check.js	monster	同じ主血統の立ち絵の見た目の大きさをそろえる表示の倍率(monsterArtScaleTable・2026-10-29 社長・案A。2026-10-30 から図鑑の全員を計算)を見張る。	0.1					3	OK	7	
+monster/lineage-dex-check.js	monster	血統データとモンスター図鑑を確かめる。	0.4		○			8	OK	5	
+monster/market-icon-check.js	monster	マーケットのアイコン商品を確認する。	0.3		○			3	OK	4	
+monster/melody-kuromy-browser-check.js	monster	メロディー・クロミーを実際のブラウザで遊んで、効き目が画面に出るか・止まらないかを確かめる(2026-10-08 正式実装)。	116.2	○				5	OK	5	mode/tactics-ex-turn-smoke-check.js(0.77)
+monster/melody-kuromy-effects-check.js	monster	メロディー・クロミーの「効き目」を見張る(2026-10-08 正式実装)。	0.2					5	OK	12	
+monster/meloso-assist-check.js	monster	アシストカード「メロソ」の定義・実処理・次ターン予約の流れを確認する。	0.3					4	OK	2	
+monster/mermaid-browser-check.js	monster	ウンディーネ／ヤオビクニを実ブラウザで確認する。	76.2	○				1	OK	0	
+monster/mermaid-monsters-check.js	monster	ウンディーネ／ヤオビクニ(スネグーラチカと同系統の人魚)の実装を確認する。	0.2		○			3	OK	5	
+monster/mia-motion-check.js	monster	ミーア専用の攻撃モーション(miaSongNotes)の回帰チェック。	0.4		○			0	OK	1	
+monster/monster-art-fit-check.js	monster	ウンディーネ・ヤオビクニ(縦長2:3の立ち絵)が、丸枠・正方形枠の一覧で	16.8					3	OK	2	
+monster/monster-card-browser-check.js	monster	マスモンを並べる画面を実際に開いて、どれも同じカードで描かれているかを確かめる。	23	○				2	OK	1	
+monster/monster-card-consistency-check.js	monster	マスモン・ベースモンを並べる画面が、どれも同じカードで描かれているかを見張る。	1		○			0	OK	0	
+monster/monster-check-debug-check.js	monster	新モンスター確認(MONSTER_CHECK_DEBUG)を確かめる。	26.6	○				1	OK	6	
+monster/monster-list-filter-check.js	monster	モンスター一覧(編成・ベースモン一覧・マスモン一覧)の「種族絞り込み」と「並べ替え」を確認する。	0.6		○			0	OK	1	
+monster/monster-list-space-check.js	monster	モンスターの一覧に、画面のどれだけの高さが使えているかを実ブラウザで測る。	18.4	○				2	OK	0	
+monster/plant-check.js	monster	プレイヤーモンスター全30種(2026-09-29 ユグドラシル・メルホイップ、2026-10-05 ゴースト・スプーキー、2026-10-08 メロディー・クロミー、2026-10-23 イルミネ・ドリーミィ、2026-10-27 キュー	0.2		○			3	OK	5	
+monster/poltz-assist-check.js	monster	アシストカード「ポルツ」の回帰チェック。	0.3		○			1	OK	4	
+monster/snegurochka-check.js	monster	スネグーラチカの絶氷の楔(距離条件・自動ガッツ回復率の加算と上限)。	0.2		○			1	OK	4	
+monster/yggdrasil-effects-check.js	monster	ユグドラシル種(ユグドラシル・メルホイップ)の「効き目」を見張る(2026-09-29 ユーザー指示)。	0.1					3	NG	9	
+playbot/feel-check.js	playbot	モンヒロくんの「反応の点検」(lib/feel.js の analyzeFeel)が、作り物の押下と判定から正しく数えるかを見る(2026-10-07)。	0		○			1	OK	1	
+playbot/ledger-check.js	playbot	頼みごとの台帳(ledger.json)の書き方と、台帳の表(REQUESTS.md)が台帳どおりかを確かめる(いまの5種類・日時の形・親の有無)。	0.1		○			0	OK	0	playbot/scoreboard-check.js(0.90)
+playbot/scoreboard-check.js	playbot	成績表の部員ごとの表と scores.json が「できごとの記録」の足し算と一致しているか(手で数えた点が混ざっていないか)。	0.1		○			0	OK	0	playbot/ledger-check.js(0.90)
+playbot/sim/hate-sim-check.js	playbot	シミュレーター(sim/battle.js)に、ゲームと同じヘイトが入っているかを確かめる(2026-10-22 社長「ヘイトをシミュレーターに入れて」)。	2.5					2	OK	2	
+playbot/tier-method-check.js	playbot	ティア表の決め方の切り替え(tactics-tier.js --method。2026-10-21)と、実戦の集計(player-battle-stats.js)を確かめる。	1.5					2	OK	0	
+playbot/tier-page-wrap-check.js	playbot	ティア表のページ(docs/playbot/dashboard/tier.html)で、短い札・名前が言葉の途中で折れていないかを見る(2026-10-22 窓口「モンスタ/ー」「組み合わ/せ」)。	5	○				2	OK	0	
+profile/profile-pickers-check.js	profile	プロフィール画面と、アイコン・フレーム・好きなモンスターの選択画面(PickerSheet)を、実際のブラウザで確かめる。	15.6	○				1	OK	1	
+ranking/battle-log-check.js	ranking	レイドの1回ごとの記録(raid_battle_logs・2026-10-21 下準備)と、記録の範囲を確かめる。設計: docs/spec/BATTLE_LOG.md	0.1					4	OK	3	
+ranking/bond-levels-live-sync-check.js	ranking	絆Lv・総合力ランキングのリアルタイム更新(2026-09-27)を確認する。	0.1		○			0	OK	2	
+ranking/bond-levels-schema-match-check.js	ranking	アプリが送るリクエストの形と、本番へ適用したテーブル定義(docs/sql/bond-levels/BOND_LEVELS_APPLY.sql)が	0.2		○			0	OK	0	
+ranking/bond-levels-table-check.js	ranking	絆Lvの正本テーブル(bond_levels)まわりを、Supabaseをスタブした実ブラウザで確認する。	43	○				3	OK	1	
+ranking/bond-ranking-check.js	ranking	切り出した末尾が // コメントの場合、続けて書くと同じ行になって無効化されるため改行を挟む	0.2		○			0	OK	0	
+ranking/bond-ranking-dedupe-check.js	ranking	同じ人・同じ種類のマスモンが、個体ID付きの記録と古い記録に分かれて	0.1		○			0	OK	0	
+ranking/bond-ranking-one-per-monster-check.js	ranking	絆Lv・総合力ランキングで、同じ人の同じモンスターが1体だけ並ぶかを見る(2026-10-07)。	0		○			0	OK	2	
+ranking/bond-ranking-species-check.js	ranking	絆Lvランキングの「種族別」タブを確認する。	0.9					1	OK	4	
+ranking/bond-ranking-submit-check.js	ranking	絆Lvランキングへ「そのプレイの絆Lvがちゃんと載るか」を確認する。	0.2		○			0	OK	0	
+ranking/breeder-level-table-check.js	ranking	ブリーダーLvの「1人1行の表」(breeder_levels)の確認(2026-10-27・社長の決定)。	0.5					6	OK	1	
+ranking/breeder-profile-browser-check.js	ranking	ランキングに「いまの見た目」が出ることを、実ブラウザで通して確かめる。2026-09-16。	32.3	○				3	OK	1	
+ranking/breeder-profile-check.js	ranking	ランキングに出す「いまの見た目」(breeder_profiles)のしかけを見る。2026-09-16。	0.2		○			1	OK	3	
+ranking/breeder-ranking-browser-check.js	ranking	Supabaseをスタブし、複数ブリーダーLv記録が実際のDOMへ描画・保持されることを確認する。	12.1	○				4	OK	1	
+ranking/breeder-ranking-paging-check.js	ranking	ブリーダーLvランキングが「よく遊ぶ人の記録に枠を食われて下位の人が消える」状態に	17	○				3	OK	1	
+ranking/emergency-audio-breeder-check.js	ranking	起動タップでの音声有効化・保存ミュートの保護・ブリーダーLvの独立取得。	0.2		○			0	OK	0	
+ranking/pending-resend-browser-check.js	ranking	送れなかった記録の「送り直し」を、実際のブラウザで通して確かめる検査。	28.4	○				0	OK	1	
+ranking/pending-resend-check.js	ranking	送れなかった記録を、あとで送り直すしくみを確かめる検査。	0.1		○	○		0	OK	3	
+ranking/power-ranking-browser-check.js	ranking	総合力ランキングのタブを、Supabaseをスタブした実ブラウザで開いて確かめる。	21.1	○				3	OK	2	
+ranking/power-ranking-check.js	ranking	総合力ランキング(バトルモード選択画面のタブ)を確認する。	0.3					1	OK	0	
+ranking/profile-frame-browser-check.js	ranking	プロフィールフレームを、実ブラウザで最初から最後まで通して確かめる。	43.9	○				4	OK	2	
+ranking/profile-frame-check.js	ranking	プロフィールフレーム(2026-09-15)のしかけをまとめて見る。	0.3		○			2	OK	8	
+ranking/profile-frame-sql-check.js	ranking	docs/sql/rankings/PROFILE_FRAME_*.sql を、実際の PostgreSQL へ流して確かめる。	9.5					0	OK	0	
+ranking/profile-frame-unlock-browser-check.js	ranking	助手の仲良し度でもらえる飾り枠を、実ブラウザで通して確かめる。2026-09-16。	35.5	○				6	OK	4	
+ranking/profile-frame-unlock-check.js	ranking	助手との仲良し度でもらえる飾り枠を確かめる。2026-09-16。	0.2		○			2	OK	5	
+ranking/raid-jack-frame-gift-check.js	ranking	プロフィールフレーム「ハロウィン・妖」をギフトで届ける(2026-10-20 社長の決定)を確かめる。	0.1					1	OK	4	
+ranking/raid-jack-sql-check.js	ranking	docs/sql/raid/RAID_JACK_*.sql を、実際の PostgreSQL へ流して確かめる(正本: docs/spec/RAID_BOSS_JACK.md)。	2					0	OK	0	
+ranking/ranking-check.js	ranking	ランキングの集計仕様を実ブラウザで確認する。	18.2	○				3	OK	1	
+ranking/ranking-detail-distance-check.js	ranking	ランキングの表示まわりを確認する。	0.2		○			1	OK	0	
+ranking/ranking-dye-color-check.js	ranking	ランキングの記録に載せる染色カラーが、実際の染色と同じ部位に付くかを確認する。	11.6					0	OK	0	
+ranking/ranking-dye-cost-check.js	ranking	ランキングの編成に「実際に入れたマスモンの色」を出す場合の重さを実測する。	26	○				0	OK	2	
+ranking/ranking-member-level-check.js	ranking	スコアランキングの編成に、そのプレイ時点の絆Lvが添えられるか確認する。	0.1		○			1	OK	0	
+ranking/ranking-monster-detail-check.js	ranking	ランキングの編成から開くモンスター詳細を確認する。	11.1					0	OK	3	
+ranking/ranking-monster-icon-check.js	ranking	ランキングに出すモンスターアイコンが、ID・名前・古い記録のいずれからも解決できるか確認する。	0.2		○			0	OK	0	
+ranking/ranking-normal-display-check.js	ranking	SupabaseのNormal応答が、取得入口から画面表示まで同じ内部キーで流れることを確認する。	0.1		○			0	OK	0	
+ranking/ranking-normal-integration-check.js	ranking	結果送信の入口からfetch相当のinsert、成功判定、ローカル退避までを一続きで確認する。	0.1		○			0	OK	0	
+ranking/ranking-party-check.js	ranking	ランキングの編成情報を確認する。	0.2		○			1	OK	0	
+ranking/ranking-refresh-race-check.js	ranking	保存前GETと保存後の強制GETの競合を、Normalのstate反映まで再現する回帰テスト。	0.1		○			0	OK	0	
+ranking/ranking-request-check.js	ranking	ランキングのData APIリクエストを通信スタブで確認する。	0.1		○			0	OK	0	
+ranking/ranking-run-stats-check.js	ranking	スコアランキングの「◯◯ターンでクリア」「WAVE ◯ で終了」まわりを、	40.6	○				2	OK	1	
+ranking/rhythm-jm-tiebreak-sql-check.js	ranking	モンヒロビートの総合・週間・イベントの同点を JUST MARVELOUS で分ける SQL(2026-10-15・社長の決定「案2」)を、	4.3					1	OK	0	
+ranking/species-all-ranking-check.js	ranking	種族チャレンジの「全種族」ランキング(種族を問わない全国ランキング)を確認する。	0.2		○			4	OK	1	
+ranking/tactics-pro-log-check.js	ranking	タクティクスプロの1回ぶんの記録(tactics_pro_logs・2026-10-21 下準備)を確かめる。設計: docs/spec/BATTLE_LOG.md	0.1					2	OK	2	
+run/ally-join-view-check.js	run	供モン合流(PICK_ALLY)の画面を確認する。	0.2		○			1	OK	0	
+run/auto-full-run-check.js	run	AUTOが全画面で動くとき、画面遷移ごとに同期ロックが戻るか。	0.1		○			0	OK	0	
+run/auto-quick-run-settings-browser-check.js	run	AUTO設定の「モンビー中に回すクイック周回」を実ブラウザで確かめる	27.6	○				2	OK	0	
+run/auto-quick-run-settings-check.js	run	AUTO設定に足した「モンビー中に回すクイック周回」の事前設定	0.1		○			0	OK	2	
+run/auto-repeat-bond-level-cap-check.js	run	AUTO∞でのLv上限(ブリーダーLvと個体levelCap)の効き方。	0.2		○			0	OK	1	
+run/auto-repeat-initial-teaching-check.js	run	AUTO∞で「1周目の最初に確定したアシストカードを、次の周回でも同じものにする」ことを確かめる。	0.1		○			0	OK	1	
+run/auto-repeat-internal-check.js	run	AUTO∞の内部状態が初期OFFで、保存キーを持たないこと。	0.2		○			1	OK	0	
+run/auto-repeat-template-check.js	run	AUTO∞の一時テンプレートと、開始条件の保持。	0.1		○			0	OK	1	
+run/auto-repeat-ui-check.js	run	AUTO∞の切替UIで、ONのときも印が戻ること。	0.2		○			0	OK	0	
+run/auto-resume-on-visible-check.js	run	アプリが裏に回って止まった∞周回が、戻ってきたときに自動で続くかを実ブラウザで確かめる	40.2	○				2	OK	0	
+run/auto-stop-reason-check.js	run	AUTO・∞周回が「本当に裏へ回ったとき」以外で止まらないこと、	0.4		○			0	OK	1	
+run/auto-unique-upgrade-check.js	run	通常モードのUPGRADE_SKILL AUTO配分と、既存の手動・Quick経路の非変更を確認する。	0.2		○			0	OK	0	
+run/bond-reward-check.js	run	周回終了時の絆経験値配分を、本番ソースの計算関数と終了経路から検証する。	0.2		○			1	OK	1	
+run/eco-mode-internal-check.js	run	省エネモードの内部状態と、stopAllAutoでOFFに戻ること。	0.4		○			0	OK	2	
+run/guts-recovery-check.js	run	固有技の強化画面(UPGRADE_SKILL)の「強化ポイントでガッツを回復」を確認する。	0.2		○			0	OK	4	
+run/inherited-unique-definition-check.js	run	継承固有技が最新定義に追従し、旧スナップショットへfallbackするか。	11.4					0	OK	0	
+run/inherited-unique-level-check.js	run	継承固有技Lvの安定ID移行・並べ替え・削除・重複と、総合力の回帰。	16					0	OK	0	
+run/masu-register-check.js	run	ラン終了画面(CHAMPION/敗北/リタイア)の「マスモンとして登録」に、	0.1		○			0	OK	0	
+run/post-wave-phase-check.js	run	強化フェーズ(WAVEクリア後にバトルへ戻るまで)の「手順の並び」を確認する。	0.8		○			0	OK	0	
+run/pro-quick-loop-check.js	run	プロモードのランぶんを「クイック何周ぶん」として配るしくみを確かめる。	0.3		○			3	OK	4	
+run/quick-run-battle-band-browser-check.js	run	∞周回の進捗の帯が、超省エネのバトル画面に実際に出て、動いて、	44.4	○				2	OK	0	battle/auto-run-browser-check.js(0.76)
+run/quick-run-battle-band-check.js	run	∞周回の進捗を、バトル画面(超省エネ)の空いているところにも出しているかを見張る。	0.5		○			0	OK	2	
+run/ranking-finish-check.js	run	ラン終了時のランキング処理が、再び画面遷移を通信待ちにしたり多重送信を許したりしないか確認する。	1.2		○			0	OK	0	
+run/training-check.js	run	修行デバッグ試作版が通常データから隔離され、タイル盤面・自動移動・全効果・道具を備えることを静的確認する。	0.4		○			1	OK	2	
+run/training-reward-check.js	run	WAVEクリアごとの「トレーニング」(旧・能力覚醒)を確認する。	0.7		○			1	OK	5	
+run/ultra-eco-minimal-check.js	run	超省エネ(クイックの∞周回)の画面を、演出なし・絵なしの最小に保っているかを見張る(2026-10-01・ユーザー指示	0.1		○			0	OK	3	
+run/unique-initial-in-battle-check.js	run	固有技設定の「初期技」が、バトルで実際に最初に構える固有技になるところまでを確かめる。	0.3		○			0	OK	0	
+run/unique-skill-point-check.js	run	固有技ポイント(限界突破・転生で「あとで決める」を選んだときに残るぶん)を検証する。	0.2		○			1	OK	1	
+team/team-tools-check.js	team	トークン節約の仕組みの道具(モデルの表・会話の区切りのフック・依頼文・台帳の絞り込み・手引き)が、決めたとおりに動くかを確かめる。	0.2					2	OK	5	
+text/japanese-linebreak-check.js	text	日本語の行の折り返し(禁則処理)が効いているかを、実ブラウザで測る。	86.6	○				0	NG	6	
+ui/growth-fx-check.js	ui	上がる値の演出(monster-hero/src/parts/44-growth-fx.jsx)の見張り。2026-11-07 演出担当ハナビ	0.1					3	OK	2	
+ui/growth-fx-session-level-check.js	ui	「セッションLv UP!」の祝いが、一気に何段も上がっても助手ごとに1行にまとまり、画面の外に出ないか(2026-11-08)。	50	○				1	OK	1	
+ui/rhythm-beat-presence-check.js	ui	モードえらびの「いまモンヒロビートにいる人」(2026-11-08 社長「モンビーにいる場合どこで一緒にやれるかとかわかりやすくしてほしい」・決めごとは全部 A)。	90.5	○				3	OK	1	
+ui/rhythm-multi-assist-result-check.js	ui	マルチの🔄横(縦の端末をアプリが回した表示)などで、助手を呼んだライブの曲えらび・結果の画面が切れないか(2026-11-08)。	237.5	○				2	OK	0	
+ui/rhythm-multi-wait-bottom-check.js	ui	マルチの待合い(部屋を作ったホストの待ち画面)で、いちばん下の「ルームを出る」が切れず、メンバーの名前が折れないか(2026-11-08)。	63.4	○				1	OK	0	
+ui/rotation-height-check.js	ui	「🔄 横」(モンヒロビートで、端末は縦のまま絵を回す)のときに、窓・シートが回した画面からはみ出さないかを見張る。	1.9					7	NG	13	
+ui/screen-effects-browser-check.js	ui	useScreenEffects を「本物の React」で動かし、画面を離れたときの止まりかたを確かめる。	4.1	○				0	OK	0	
+ui/screen-effects-check.js	ui	画面ライフサイクルの登録簿(useScreenEffects)の約束ごとを固定する。	9.7					1	NG	3	
+ui/screen-parts-check.js	ui	MonsterHeroGame から切り出した画面部品(parts.json の 51-screen-*.jsx)の型を固定する。	0.3					1	OK	3	
+ui/story-zone-rotation-check.js	ui	お話(イベントの会話)を、縦・横・🔄横で開き、上の段(前の話し手の顔と吹き出し)と下の窓(題・顔の列・台詞)が重ならないかを数える。	21.7	○				1	OK	2	
+ui/time-of-day-check.js	ui	時間帯で変わる雰囲気・いまの時刻(monster-hero/src/parts/44-time-of-day.jsx)の見張り。2026-11-07 演出担当ハナビ	0.1					3	OK	6	
+ui/time-of-day-clock-browser-check.js	ui	いまの時刻の札(44-time-of-day.jsx)を本物の画面で確かめる。2026-11-07 演出担当ハナビ	46.9	○				2	OK	1	

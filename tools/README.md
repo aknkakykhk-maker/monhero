@@ -96,6 +96,7 @@ node tools/build.js --check
 | `node run-checks.js --changed` | **変更したファイルから、要る検査だけを選んで回す。** `--plan` で選んだ検査と理由だけ出す。上限は既定60本で(名指しで読む検査は上限の外)、切ったぶんは本数を必ず出す(`--limit` / `--wide` で広げる)。 |
 | `run-checks-deps.js` | `--changed` の索引(2026-11-11)。検査のソースから「何を読むか」を決める。名指しで読む検査は上限の外で必ず選ぶ。選んだ検査はふつう組に分けて同時に回す(`--serial` で1本ずつ) |
 | `node run-checks-select-check.js` | `--changed` の選び方の見張り(名指しで読む検査の漏れ・どの領域にも入らない検査・一覧に書いた検査の在り無し) |
+| `shared-serve.js` | 実ブラウザの検査の先頭で require する。:8899 の配信が無ければ立て、終わったら止める(単独で回したとき。run-checks の中では何もしない) |
 | `node checks-inventory.js --json <全部回した結果>` | 検査の棚卸し(何を見るか・秒・30日で直された回数・似ている検査)を `docs/ops/checks/` へ書く |
 | `node rules-index-check.js` | `CLAUDE.md` の大きさ・`docs/rules/` とのリンク・**要のことばが消えていないか**を見る。CIでも回す。 |
 
