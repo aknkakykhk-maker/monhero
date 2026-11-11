@@ -81,6 +81,14 @@
 GPU の仕事量(見た目の演出・WebGL・層の重なり)は `tools/mode/rhythm-gpu-load-report.js --compare origin/main` で main と比べる
 (`--suite` でシンプル・派手・ライブ・全部ONの4つ)。この環境に GPU は無いので、実機の速さではなく「GPU にやらせている仕事の量」の比較。
 
+### 演奏画面の重さを1本で測る(2026-11-11)
+
+`node tools/mode/rhythm-weight-report.js`(縦・横 × CPU そのまま・1/4 × 標準・全部のせ。1場面1行、最後の1行が OK / NG)。
+`--quick --check` で予算(`tools/mode/weight-budget.json`)を超えていないかを約1分で見る。`--trace` は原因さがし
+(時間の内訳・大きい層の持ち主・動いているアニメーション・スタイル再計算の出どころ)。`--inject <js>` で見本を重ねて重さの見込みを測れる。
+2026-11-11 の数字・原因の上位・見た目の案: [`docs/progress/kirameki-2026-11-11/REPORT.md`](../progress/kirameki-2026-11-11/REPORT.md)。
+**同じ大きさの canvas をもう1枚重ねると約1.7倍重くなる**(実測)。新しい演出は今あるノーツの1枚の中に描く。
+
 ### 実機が無くても GPU の重さを見積もる(2026-09-27)
 
 `node tools/mode/rhythm-gpu-estimate.js`(1回5分ほど)。見た目の「おまかせ」4つそれぞれについて、
