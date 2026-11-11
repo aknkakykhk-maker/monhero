@@ -53,6 +53,11 @@ const RHYTHM_MULTI_PLAY_GRACE_MS = RHYTHM_MULTI_START_COUNTDOWN_SEC * 1000
   + (typeof RHYTHM_SONG_INTRO_MS === 'number' ? RHYTHM_SONG_INTRO_MS : 3000) + 4 * 800 + 10000;
 // 演奏中に溜めておく知らせの上限(5人・数分のライブなら届かない量。超えたら古いものから捨てる)
 const RHYTHM_MULTI_QUEUE_MAX = 300;
+// 演奏中にほかの人の順位・スコア・コンボを見る札(2026-11-11 社長「演奏中もほかプレイヤーのスコア等みたい。ただし重くなるようならかんがえもの」)。
+// 3秒に1回だけ、いまのスコアとコンボを小さい知らせ(pg)で送る。受けた側は数字の文字を書き換えるだけで、演奏画面は作り直さない
+const RHYTHM_MULTI_LIVE_MS = 3000;
+const RHYTHM_MULTI_LIVE_SCORE_MAX = 1e12;
+const RHYTHM_MULTI_LIVE_COMBO_MAX = 100000;
 // 公開ルームは、2人以上いて、この時間だれも出入りしなければメンバー確定
 const RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS = 15000;
 const RHYTHM_MULTI_CHAT_MAX_LENGTH = 40;
@@ -422,6 +427,39 @@ const RHYTHM_MULTI = (() => {
   const ordered = () => rhythmMultiSortMembers(alive()).slice(0, RHYTHM_MULTI_ROOM_MAX);
   const selfMember = () => (s ? s.members[s.selfId] : null);
   const isHostNow = () => { const o = ordered(); return !!s && o.length > 0 && o[0].id === s.selfId; };
+  // ---- 演奏中の札(RhythmMultiLiveBoard)のための、スコアとコンボの知らせ ----
+  // s.live = { round, ids(人の参加者・入った順), rows{id:{s,c}}, done }。部屋の画面の更新(emit)は起こさず、札だけへ知らせる
+  let liveTimer = null;
+  const liveListeners = new Set();
+  const liveEmit = () => { liveListeners.forEach((fn) => { try { fn(); } catch (_) { /* 札の失敗で通信を止めない */ } }); };
+  const liveStop = () => { if (liveTimer) clearInterval(liveTimer); liveTimer = null; };
+  // 自分のいまのスコアとコンボを、演奏画面の「読むだけの窓」(RHYTHM_PLAY_WATCH)から読んで送る。前に送った値と同じなら送らない(ポーズ中など)
+  const liveSend = () => {
+    const me = selfMember();
+    if (!s || !me || !me.playing || !s.live) { liveStop(); return; }
+    const watch = typeof RHYTHM_PLAY_WATCH !== 'undefined' ? RHYTHM_PLAY_WATCH : null;
+    const h = watch && watch.hud ? watch.hud.get() : null;
+    if (!h) return;
+    const sc = rhythmMultiInt(h.score, RHYTHM_MULTI_LIVE_SCORE_MAX);
+    const cb = rhythmMultiInt(h.combo, RHYTHM_MULTI_LIVE_COMBO_MAX);
+    const mine = s.live.rows[s.selfId];
+    if (mine && mine.s === sc && mine.c === cb) return;
+    s.live.rows[s.selfId] = { s: sc, c: cb };
+    if (socket) socket.send({ t: 'pg', id: s.selfId, r: s.live.round, s: sc, c: cb });
+    liveEmit();
+  };
+  // ほかの人の pg。いまの回の、人の参加者のものだけ受ける(数は上限で切る)。自分のぶんは送るときに入れてあるので、返りは捨てる
+  const liveReceive = (raw) => {
+    if (!s || !s.live || s.live.done || raw.r !== s.live.round) return;
+    const id = rhythmMultiText(raw.id, 40);
+    if (!id || id === s.selfId || !s.live.ids.includes(id)) return;
+    const sc = rhythmMultiInt(raw.s, RHYTHM_MULTI_LIVE_SCORE_MAX);
+    const cb = rhythmMultiInt(raw.c, RHYTHM_MULTI_LIVE_COMBO_MAX);
+    const prev = s.live.rows[id];
+    if (prev && prev.s === sc && prev.c === cb) return;
+    s.live.rows[id] = { s: sc, c: cb };
+    liveEmit();
+  };
   const roomPayload = () => {
     const r = s.room;
     return { ph: r.phase, rd: r.round, sg: r.songId, lf: r.deadline ? Math.max(0, Math.ceil((r.deadline - Date.now()) / 1000)) : 0, dl: r.deadline ? 1 : 0, ss: rhythmMultiNormalizeSelectSec(r.selectSec), pt: r.participants };
@@ -470,6 +508,7 @@ const RHYTHM_MULTI = (() => {
   };
   const stopTimers = () => {
     if (hbTimer) clearInterval(hbTimer);
+    liveStop();
     if (sweepTimer) clearInterval(sweepTimer);
     if (reconnectTimer) clearTimeout(reconnectTimer);
     hbTimer = sweepTimer = reconnectTimer = null;
@@ -816,6 +855,8 @@ const RHYTHM_MULTI = (() => {
   };
   const onMessage = (raw) => {
     if (!s) return;
+    // 演奏中の札の知らせ(pg)だけは溜めずに、その場で数字へ入れる。部屋の状態・画面の更新には触らない(演奏していない人は捨てるだけ)
+    if (raw && raw.t === 'pg') { liveReceive(raw); return; }
     // 演奏中は、届いた知らせを処理せずに溜めておく(演奏の判定と描画に一切割り込ませない)。
     // 演奏が終わったら reportResult がまとめて処理する。溜めすぎないよう古いものから捨てる
     const playingNow = selfMember();
@@ -874,6 +915,10 @@ const RHYTHM_MULTI = (() => {
         const me = selfMember();
         if (me && msg.participants.includes(s.selfId)) {
           me.playing = true; me.res = null;
+          // 演奏中の札: 人の参加者が2人以上のときだけ、3秒ごとに自分のスコアを送る(呼んだマスモンは演奏中のスコアを持たないので入れない)
+          liveStop();
+          s.live = { round: msg.round, ids: msg.participants.filter((pid) => s.members[pid] && !s.members[pid].cpu), rows: {}, done: false };
+          if (s.live.ids.length >= 2) liveTimer = setInterval(liveSend, RHYTHM_MULTI_LIVE_MS);
           const kept = s.liveIds.length > 0 && s.liveIds.every((pid) => msg.participants.includes(pid));
           s.liveStreak = kept ? s.liveStreak + 1 : 1;
           s.liveIds = msg.participants.slice();
@@ -909,6 +954,15 @@ const RHYTHM_MULTI = (() => {
   const api = {
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     onStart(fn) { startListeners.add(fn); return () => startListeners.delete(fn); },
+    // 演奏中の札が読む: 人の参加者(入った順)と、届いているスコア・コンボ。rows は書き換えずに読むだけ
+    onLive(fn) { liveListeners.add(fn); return () => liveListeners.delete(fn); },
+    liveView() {
+      if (!s || !s.live) return null;
+      return {
+        round: s.live.round, selfId: s.selfId, done: s.live.done === true, rows: s.live.rows,
+        people: s.live.ids.map((id) => { const m = s.members[id] || {}; return { id, name: m.name || '', icon: m.icon || '' }; }),
+      };
+    },
     setCpuBrain(brain) { cpuBrain = brain && typeof brain === 'object' ? brain : null; },
     // いまマスモンを呼べるか(満員でない・ライブ中でない)。1人で何体でも呼べる(回数・券は呼ぶ側が数える。2026-10-07・ユーザー指示)
     canSummon() {
@@ -1145,6 +1199,10 @@ const RHYTHM_MULTI = (() => {
         j: result && result.judgments ? RHYTHM_MULTI_JUDGMENT_IDS.map((id) => result.judgments[id]) : null,
         fs: result && result.fast, sl: result && result.slow,
       });
+      // 演奏中の札: 最後のスコアを1回送って止める(札はここで消える)
+      if (s.live && s.live.round === round && liveTimer) liveSend();
+      liveStop();
+      if (s.live && s.live.round === round) { s.live.done = true; liveEmit(); }
       me.playing = false;
       // 途中でやめた曲は連続ボーナスに数えない(2026-11-08 社長「やり直しして途中で曲をやめても連続ボーナスが増えてる」)。
       //   ライブの開始で足した1つを戻す。顔ぶれ(liveIds)はそのままなので、次の曲を最後まで演奏すれば、やめた曲の前から続く。
@@ -1924,6 +1982,145 @@ function RhythmMultiAvatar({ m, resolveIconUrl, sizeClass = 'h-10 w-10', small =
   );
 }
 
+// ===== 演奏中の札: ほかの人の順位・スコア・コンボ(2026-11-11) =====
+// 演奏画面の外(60-app)から重ねる。演奏の仕組みには触れない。置き場所は左上の表示の下(道の外。呼んだ助手の顔があればその下)。
+// ★重さの決まり: 行(アイコン・名前)は演奏の始まりに1回だけ作る。届くたびにやるのは文字の節の中身の書き換えと、
+//   順位が入れ替わった行の transform だけ(React の描き直しなし)。演奏中に絵を読み込まない(待合室で出していた絵)
+//   行に will-change を付けない(行ごとに重ね描きの層ができ、毎フレームの合成が増えた。2026-11-11 の計測)。箱は contain:strict で外へ影響させない
+// 並べ方: スコアの高い順(同点は入った順)
+const rhythmMultiLiveOrder = (people, rows) => people
+  .map((p, i) => ({ id: p.id, i, s: rows && rows[p.id] ? Number(rows[p.id].s) || 0 : 0 }))
+  .sort((a, b) => b.s - a.s || a.i - b.i).map((x) => x.id);
+// 出す行: 全部は入らないとき、自分で終わる続きの順位(すぐ上の人たちと自分)。3行以上あって1位が外れるなら、先頭を1位に替える
+const rhythmMultiLiveVisible = (order, selfId, max) => {
+  if (max <= 0) return [];
+  if (order.length <= max) return order.slice();
+  const me = Math.max(0, order.indexOf(selfId));
+  const start = Math.min(Math.max(0, me - (max - 1)), order.length - max);
+  const out = order.slice(start, start + max);
+  if (max >= 3 && start > 0) out[0] = order[0];
+  return out;
+};
+// 道(台形)の左のふちは、上で画面の幅の約46%・下で左端。札の右下の角がふちの内へ入らない高さまでに収める
+const RHYTHM_MULTI_LIVE_LANE_TOP = 0.46;
+const rhythmMultiLiveMaxRows = ({ width, height, top, left, boardW, step, count }) => {
+  if (!(width > 0) || !(height > 0)) return 0;
+  const bottomMax = height * (1 - (left + boardW + 8) / (RHYTHM_MULTI_LIVE_LANE_TOP * width));
+  return Math.max(0, Math.min(count, Math.floor((bottomMax - top + 2) / step)));
+};
+function RhythmMultiLiveBoard({ resolveIconUrl = null }) {
+  const first = React.useMemo(() => RHYTHM_MULTI.liveView(), []);
+  const people = first ? first.people : [];
+  const selfId = first ? first.selfId : '';
+  const round = first ? first.round : '';
+  const boxRef = React.useRef(null);
+  const rowRefs = React.useRef({});
+  const [lay, setLay] = React.useState(null); // { top, left, land(横長の形か), max(出せる行の数) }
+  const [ended, setEnded] = React.useState(false);
+  const layRef = React.useRef(null);
+  layRef.current = lay;
+  const paint = React.useCallback(() => {
+    const v = RHYTHM_MULTI.liveView();
+    if (!v || v.round !== round) return;
+    if (v.done) { setEnded(true); return; }
+    const l = layRef.current;
+    if (!l) return;
+    const order = rhythmMultiLiveOrder(people, v.rows);
+    const vis = rhythmMultiLiveVisible(order, selfId, l.max);
+    const step = l.land ? 22 : 28;
+    people.forEach((p) => {
+      const r = rowRefs.current[p.id];
+      if (!r || !r.row) return;
+      const at = vis.indexOf(p.id);
+      const show = at >= 0 ? 'visible' : 'hidden';
+      if (r.show !== show) { r.show = show; r.row.style.visibility = show; }
+      if (at < 0) return;
+      const tf = `translateY(${at * step}px)`;
+      if (r.tf !== tf) { r.tf = tf; r.row.style.transform = tf; }
+      const mine = v.rows[p.id];
+      rhythmSetText(r.rank, order.indexOf(p.id) + 1);
+      rhythmSetText(r.score, (mine ? mine.s : 0).toLocaleString());
+      rhythmSetText(r.combo, mine ? mine.c : 0);
+    });
+  }, [people, selfId, round]);
+  React.useEffect(() => {
+    if (people.length < 2) return undefined;
+    const place = () => {
+      const box = boxRef.current; const hud = document.querySelector('[data-rhythm-hud]');
+      if (!box || !hud || !box.offsetParent) return;
+      const parent = box.offsetParent;
+      // 演奏画面ごと回して描くときも合うよう、画面上の位置ではなく offset の鎖で測る(助手の顔と同じ測り方)
+      const at = (node) => { let top = 0; let left = 0; let el = node; while (el && el !== parent) { top += el.offsetTop; left += el.offsetLeft; el = el.offsetParent; } return el === parent ? { top, left } : null; };
+      const hudAt = at(hud);
+      if (!hudAt) return;
+      let bottom = hudAt.top;
+      document.querySelectorAll('[data-rhythm-hud] *, [data-rhythm-song-clock] *').forEach((el) => {
+        if (el.children.length || !el.offsetHeight) return;
+        const p = at(el);
+        if (!p || p.left - hudAt.left > 150) return;
+        bottom = Math.max(bottom, p.top + el.offsetHeight);
+      });
+      // 呼んだ助手の顔が同じ場所に出ているときは、その下
+      const faces = document.querySelector('[data-rhythm-assist-play]');
+      if (faces && faces.offsetHeight) { const p = at(faces); if (p) bottom = Math.max(bottom, p.top + faces.offsetHeight); }
+      const width = parent.clientWidth; const height = parent.clientHeight;
+      const top = Math.round(bottom + 6); const left = Math.round(hudAt.left + 12);
+      // 形は2つ: 横長(1行に全部・幅196)と、縦長(2段・幅98)。縦画面はいつも縦長。横画面は横長で全員入るならそれ、入らないなら多く入るほう
+      const maxTall = rhythmMultiLiveMaxRows({ width, height, top, left, boardW: 98, step: 28, count: people.length });
+      const maxWide = width > height ? rhythmMultiLiveMaxRows({ width, height, top, left, boardW: 196, step: 22, count: people.length }) : 0;
+      const land = maxWide > 0 && maxWide >= maxTall;
+      const max = land ? maxWide : maxTall;
+      setLay((q) => (q && q.top === top && q.left === left && q.land === land && q.max === max ? q : { top, left, land, max }));
+    };
+    // 置き場所は、演奏画面が出そろうころに数回と、画面の大きさが変わったときだけ測る(演奏中に測り続けない)
+    let timers = [];
+    const soon = (list) => { timers.forEach(clearTimeout); timers = list.map((ms) => setTimeout(place, ms)); };
+    const onResize = () => soon([0, 300, 1000]);
+    soon([0, 400, 1500, 7000]);
+    window.addEventListener('resize', onResize);
+    return () => { timers.forEach(clearTimeout); window.removeEventListener('resize', onResize); };
+  }, [people.length]);
+  React.useEffect(() => { paint(); return RHYTHM_MULTI.onLive(paint); }, [paint, lay]);
+  if (people.length < 2 || ended) return null;
+  const land = !!(lay && lay.land);
+  const step = land ? 22 : 28;
+  const shadow = { textShadow: '0 1px 3px rgba(2,6,23,.9)' };
+  return (
+    <div ref={boxRef} data-rhythm-multi-live aria-hidden="true" className="pointer-events-none absolute z-[58]"
+      style={lay && lay.max > 0 ? { top: lay.top, left: lay.left, width: land ? 196 : 98, height: lay.max * step, contain: 'strict' } : { visibility: 'hidden', top: 0, left: 0, width: 98, height: 0 }}>
+      {people.map((p) => {
+        const src = resolveIconUrl ? resolveIconUrl(p.icon) : null;
+        const self = p.id === selfId;
+        const keep = (key) => (el) => { const r = rowRefs.current[p.id] || (rowRefs.current[p.id] = {}); r[key] = el; if (key === 'row') { r.show = ''; r.tf = ''; } };
+        const icon = (
+          <span className={`block shrink-0 overflow-hidden rounded-full border border-white/60 bg-slate-800 ${land ? 'h-[18px] w-[18px]' : 'h-[20px] w-[20px]'}`}>
+            {/* 待合室のアイコン(RhythmMultiAvatar)と同じ絵・同じ切り出し。枠(プロフィールフレーム)はこの大きさでは潰れるので出さない */}
+            {src ? <BreederIcon src={src} id={p.icon} alt="" roundedClass="rounded-full" className="h-full w-full" /> : <span className="flex h-full w-full items-center justify-center text-[10px]">🎵</span>}
+          </span>
+        );
+        const rank = <b ref={keep('rank')} data-rhythm-multi-live-rank className="w-[9px] shrink-0 text-center text-[10px] font-black leading-none text-amber-200">1</b>;
+        const name = <span className="min-w-0 flex-1 truncate text-[9px] font-black leading-none text-slate-100">{p.name}</span>;
+        const score = <b ref={keep('score')} data-rhythm-multi-live-score className={`shrink-0 font-black leading-none tabular-nums text-white ${land ? 'text-[10px]' : 'text-[9.5px]'}`}>0</b>;
+        // コンボは 🔥 と数だけ(「コンボ」と字で書くと、縦長の形で名前が1文字しか残らなかった)
+        const combo = <span className="shrink-0 whitespace-nowrap text-[7.5px] font-black leading-none text-amber-200">🔥<span ref={keep('combo')} data-rhythm-multi-live-combo className="tabular-nums">0</span></span>;
+        return (
+          <div key={p.id} ref={keep('row')} data-rhythm-multi-live-row={p.id} data-self={self ? '1' : undefined}
+            className={`absolute left-0 top-0 flex items-center gap-1 rounded-l-full rounded-r-md border ${self ? 'border-cyan-300/90 bg-cyan-700/75' : 'border-white/15 bg-slate-950/65'} ${land ? 'pl-px pr-1.5' : 'pl-0.5 pr-0.5'}`}
+            style={{ width: land ? 196 : 98, height: step - 2, visibility: 'hidden', ...shadow }}>
+            {icon}
+            {land
+              ? <>{rank}{name}{score}<span className="flex w-[34px] shrink-0 justify-end">{combo}</span></>
+              : <span className="flex min-w-0 flex-1 flex-col justify-center gap-[3px] overflow-hidden">
+                  <span className="flex items-center gap-1">{rank}{name}</span>
+                  <span className="flex items-center justify-between">{score}{combo}</span>
+                </span>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // 本家の上に並ぶ5人のカード。空いている枠も点線で見せる(何人で遊んでいるかがひと目で分かる)。
 // size="tall" はマッチング・準備・待機の画面で、空いている高さいっぱいに大きく出す(横画面では画面の上半分以上)。
 // size="strip" は曲えらびの上の細い帯。曲の一覧を狭めないよう、横画面ではアイコンと名前を横並びにして低くする
@@ -2253,7 +2450,7 @@ function RhythmQuickRunPill({ info, onRestart = null, onResume = null, widthClas
     </small>
   );
 }
-function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onRestartQuickRun = null, onResumeQuickRun = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null, onStepAway = null, sessionAssistants = [], guideAssistantId = '', onOpenOptions = null, onCloseOptions = null }) {
+function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onRestartQuickRun = null, onResumeQuickRun = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, multiLiveBoard = true, onChangeMultiLiveBoard = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null, onStepAway = null, sessionAssistants = [], guideAssistantId = '', onOpenOptions = null, onCloseOptions = null }) {
   const view = useRhythmMultiView();
   useModeSelectStageCss();
   const difficultyIds = difficultyList.map((d) => d.id);
@@ -3603,6 +3800,11 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                       className={`min-h-[26px] rounded-full border px-1.5 text-[10px] font-black leading-none ${multiLook === c.id ? 'border-emerald-300 bg-emerald-600 text-white' : 'border-white/20 bg-slate-800 text-slate-300'}`}>{c.label}</button>
                   ))}
                 </div>}
+                {/* 演奏中の札(ほかの人の順位・スコア・コンボ)の出し入れ(2026-11-11 社長「消せる・はじめは入」) */}
+                {onChangeMultiLiveBoard && <button type="button" data-rhythm-multi-live-toggle aria-pressed={multiLiveBoard} onClick={() => onChangeMultiLiveBoard(!multiLiveBoard)}
+                  className={`mt-1 flex min-h-[26px] items-center gap-1 rounded-full border px-2 text-[10px] font-black leading-none ${multiLiveBoard ? 'border-cyan-300 bg-cyan-700 text-white' : 'border-white/20 bg-slate-800 text-slate-300'}`}>
+                  <span>演奏中のみんなのスコア</span><b>{multiLiveBoard ? 'ON' : 'OFF'}</b>
+                </button>}
               </div>
             </div>
           )}
