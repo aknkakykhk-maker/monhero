@@ -47,7 +47,7 @@ check('ガッツ回復は6・9・12ターン目(5・7・8・10ターン目は無
 check('被ダメの式に生命の源が入り、ターン数で数え直す(依存に turnCount)',
   /\*lifeSourceDamageMult\(traitHeroId,turnCount\);/.test(app));
 check('ガッツ回復は次のターンの番号で決め、タクティクスは持っている子それぞれ・既存モードは勇者モン',
-  /const lifeSourceTurn=turnCount\+1;/.test(app)
+  /const lifeSourceTurn=timeStopSlot==null\?turnCount\+1:0;/.test(app)
   && /lifeSourceGutsTurn\(tacticsUnitsRef\.current\[slotIdx\]\?\.id,lifeSourceTurn\)\) lifeSourceGain\+=gainGutsByRate\(slotIdx,LIFE_SOURCE_GUTS_RATE\)/.test(app)
   && /lifeSourceGutsTurn\(mainHero\?\.id,lifeSourceTurn\)/.test(app));
 
@@ -60,14 +60,14 @@ check('軽減は30%(半減なら15%)', Math.abs(t.lifeTreeGuardMult(1) - 0.7) < 
 const branch = slice(app, "else if(isLifeTreeGuardCard(card)){", "else if(card.monId==='Pandora'){");
 check('固有技の分岐がある(ガッツ20%・このターンの即時倍率・次ターンの予約)', branch.length > 0
   // 2026-10-08 から数字はモンスターごとの表(LIFE_TREE_GUARD_EFFECTS)。ユグドラシル・メルホイップはガッツ20%のまま
-  && /gainGutsByRate\(slotIdx,guardFx\.guts\*effMul\)/.test(branch) && /Yggdrasil: Object\.freeze\(\{ name:'大樹の加護', taken:0\.3, guts:0\.2/.test(bond)
-  && /immediateTakenMultBySlot\[slotIdx\]=guardMult;/.test(branch) && /immediateTakenMult=guardMult;/.test(branch));
+  && /gainGutsByRate\(slotIdx,guardFx\.guts\*healMul\)/.test(branch) && /Yggdrasil: Object\.freeze\(\{ name:'大樹の加護', taken:0\.3, guts:0\.2/.test(bond)
+  && /immediateTakenMultBySlot\[slotIdx\]=\(Number\.isFinite\(cur\)&&cur>0\?cur:1\)\*guardMult;/.test(branch) && /immediateTakenMult\*=guardMult;/.test(branch));
 check('次ターンの予約はほかの軽減を消さず掛け算で重ねる',
   /tacticsSlotRate\(p\.bySlot,slotIdx,'takenDamageMult',1\.0\)\*guardMult/.test(branch)
   && /takenDamageMult:\(Number\.isFinite\(cur\)&&cur>0\?cur:1\)\*guardMult/.test(branch));
 // 2026-10-27: ソラシドのAIコピー(5人目)が受ける所も通すので7か所(コピーは枠を持たないので枠の番号は渡さない)
 check('このターンの倍率を敵の番へ渡し、敵の番の被ダメ7か所すべてが通す',
-  /takenMult:immediateTakenMult,takenMultBySlot:immediateTakenMultBySlot\}/.test(app)
+  /takenMult:immediateTakenMult,takenMultBySlot:immediateTakenMultBySlot,/.test(app)
   && (app.match(/applyImmediateTakenReduction\(/g) || []).length === 7
   && /const fdC=applyImmediateTakenReduction\(hitC\.taken\);/.test(app));
 check('予告の数字にも使ったターンぶんが入る',

@@ -129,7 +129,7 @@ if (process.argv.includes('--stats')) {
   }
   for (const [d, v] of Object.entries(DOINGS)) for (const pl of v.places) if (!PLACES[pl]) bad.push(`${d}: 場所 ${pl}`);
   check('① 8人ぶんの好み・していること・場所がそろっている', bad.length === 0, bad.slice(0, 5).join(' / '));
-  check('① 2人でもする「していること」は5つ(おやつ・練習・育成・カード研究・散歩)', JSON.stringify(Object.keys(DOINGS).filter(d => DOINGS[d].group)) === JSON.stringify(['snack', 'practice', 'training', 'cards', 'walk']));
+  check('① 2人でもする「していること」は6つ(おやつ・練習・育成・カード研究・散歩・バトル。バトルは2026-11-11 社長「MB管理とモンバトは別」で足した)', JSON.stringify(Object.keys(DOINGS).filter(d => DOINGS[d].group).sort()) === JSON.stringify(['snack', 'practice', 'training', 'cards', 'walk', 'battle'].sort()));
   check('① 時間は6つで、0〜24時をすき間なく分ける', SLOTS.length === 6 && SLOTS.every((s, i) => s.to > s.from && (i === 0 ? s.from === 0 : s.from === SLOTS[i - 1].to)) && SLOTS[5].to === 24);
   const at = G('assistantLifeSlotAt');
   const jst = (h) => Date.UTC(2026, 10, 7, h - 9, 30);

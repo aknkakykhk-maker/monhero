@@ -131,15 +131,15 @@ check('コインは0.5未満で表(4倍)・それ以外は裏(0.5倍)', f.rollFa
 }
 {
   const pre = slice(app, "let fateDmgMult=1, fateWheelPick=null;", 'const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,fateDmgMult');
-  check('コインは使うたびに投げ、この技のダメージへ倍率を渡す', /else if\(card\.monId===FATE_COIN_MONSTER_ID\)\{\s*const side=rollFateCoin\(\);\s*fateDmgMult=fateCoinDmgMult\(side\);/.test(pre)
+  check('コインは使うたびに投げ、この技のダメージへ倍率を渡す', /else if\(card\.monId===FATE_COIN_MONSTER_ID\)\{\s*const side=rollFateCoin\(Math\.random,cardBoost\.chancePoints\);\s*fateDmgMult=fateCoinDmgMult\(side\);/.test(pre)
     && /withFateSlotStack\(p\.fateStacks,slotIdx,'combo'\)/.test(pre) && /withFateCoinGuts\(p\.fateStacks\)/.test(pre));
-  check('運命の輪は使う前に出目を決め、3倍・2倍だけこの技へ掛ける', /fateWheelPick=rollFateWheel\(\);\s*if\(fateWheelPick\.dmgMult\) fateDmgMult=fateWheelPick\.dmgMult;/.test(pre));
+  check('運命の輪は使う前に出目を決め、3倍・2倍だけこの技へ掛ける', /fateWheelPick=rollFateWheel\(Math\.random,cardBoost\.chancePoints\);\s*if\(fateWheelPick\.dmgMult\) fateDmgMult=fateWheelPick\.dmgMult;/.test(pre));
   check('ダメージの式は「この技のダメージ」の倍率を受け取る',
     /const getDmg = useCallback\(\(card, slotIdx, mon, additionalOryo=0, additionalDmgMod=0, isSecondOrLaterAtk=false, attackStartDist=enemyDist, skillDmgMult=1\) => \{/.test(app)
     && /baseDmgMult\*\(Number\(skillDmgMult\)>0\?Number\(skillDmgMult\):1\)\*totalBuffMult/.test(app));
   check('運命の輪の残りの出目は当たったときだけ効かせる', /else if\(card\.monId===FATE_WHEEL_MONSTER_ID\)\{\s*if\(fateWheelPick && finalD>0\)\{/.test(app)
-    && /writeFateWheel\(\{\.\.\.fateWheelRef\.current,atkDown:FATE_WHEEL_DEBUFF_TURNS\}\)/.test(app)
-    && /writeFateWheel\(\{\.\.\.fateWheelRef\.current,takenUp:FATE_WHEEL_DEBUFF_TURNS\}\)/.test(app));
+    && /writeFateWheel\(\{\.\.\.fateWheelRef\.current,atkDown:FATE_WHEEL_DEBUFF_TURNS\+cardBoost\.durationTurns\}\)/.test(app)
+    && /writeFateWheel\(\{\.\.\.fateWheelRef\.current,takenUp:FATE_WHEEL_DEBUFF_TURNS\+cardBoost\.durationTurns\}\)/.test(app));
   check('連撃は予測・あつの挑発・ふつうの攻撃の3か所すべてに付く',
     // 2026-10-08 から2か所は黒音符の連撃(withBlackNoteCombo)で外から包み、札(card)も渡す形になった。運命の連撃が3か所に付くことは同じ
     (app.match(/exCombos:(?:withBlackNoteCombo\()?withFateCombo\(tacticsExCombosAt\(slotIdx,(halved|true)(,card)?\),(getPermaBuff|livePermaBuff)\('fateStacks',null\),slotIdx\)/g) || []).length === 3
