@@ -597,7 +597,10 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     // ほかの部の仕組みが、カードを遊んだときにわざと書く新しいキー(2026-11-07 ミハリの知らせで足した。どれも新しいキーで、既存のセーブは書き換えない)
     //   mh_screen_trail_v1 … 画面の出来事を最近30件だけ残す記録(10-core) / mh_assistant_life_play_v1 … 助手ライフのにぎわい(カードを遊び終えると assistantPeerOnPlay('card') が数える) /
     //   mh_assistant_peer_play_v1 … 連れていくペアの印(同じ assistantPeerOnPlay が書く)
-    const OTHER_OK = new Set(['mh_screen_trail_v1', 'mh_assistant_life_play_v1', 'mh_assistant_peer_play_v1']);
+    //   2026-11-11 助手ライフ側の書き込みを足した(ナカヨシ13が「意図どおり」と確認。助手ライフの仕様でカードの保存は変えない):
+    //   mh_assistant_life_diary_v1 … カード部屋の対戦のあと「今日あったこと」へ1行足す(その日の末尾に追記・同じ日の行は消さない) /
+    //   mh_assistant_life_rhythm_v1 … 生活のリズム(誘って遊んだ) / mh_assistant_peer_talk_log_v1・mh_assistant_peer_seen14_v1・mh_assistant_peer_talk_day_v1 … カード中の助手の掛け合いの記録
+    const OTHER_OK = new Set(['mh_screen_trail_v1', 'mh_assistant_life_play_v1', 'mh_assistant_peer_play_v1', 'mh_assistant_life_diary_v1', 'mh_assistant_life_rhythm_v1', 'mh_assistant_peer_talk_log_v1', 'mh_assistant_peer_seen14_v1', 'mh_assistant_peer_talk_day_v1']);
     const changed = Object.keys(before).filter((k) => !k.startsWith('mh_card_') && k !== BEAT_KEY && !OTHER_OK.has(k) && !volatile.test(k) && before[k] !== after.all[k]);
     check('⑧ カードバトル以外の保存キーを書き換えていない(ビートPの残高を除く)', changed.length === 0, changed.join(', '));
     const added = Object.keys(after.all).filter((k) => !(k in before) && !k.startsWith('mh_card_') && k !== BEAT_KEY && !OTHER_OK.has(k) && !volatile.test(k));

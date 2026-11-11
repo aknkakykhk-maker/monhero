@@ -412,6 +412,10 @@
       "role": "部品: 助手ライフの道具(2人に贈る10種類)・好み(好き・ふつう・苦手。贈ると分かる・仲良し度の段で教えてくれる)・贈るシート・部屋の「好きなもの」。保存 mh_assistant_life_gift_day_v1・mh_assistant_life_likes_v1・mh_assistant_life_cheki_v1。2026-11-08 GIFT-PLAN.md"
     },
     {
+      "file": "56-assistant-life-roomedit.jsx",
+      "role": "部品: 助手の部屋の模様替え(大きな部屋の上で家具を指でつまんで動かす・大きさ・向き・色・前後・「◯◯におまかせ」)。公開の印 assistantLifeRoomEdit の後ろ。保存は新しいキー mh_assistant_life_room_layout_v1 と一度きりの写しの印 mh_assistant_life_room_layout_migrated_v1(今の mh_assistant_life_room_v1 は読むだけ)。docs/progress/assistant-life/ROOM-LAYOUT-PLAN.md"
+    },
+    {
       "file": "56-assistant-life-masmon.jsx",
       "role": "部品: 助手ライフの助手のマスモン(一覧・編成・デッキの型・好き苦手・好きな色)。部屋のシートの「🐾 マスモン」から開く。表 ASSISTANT_MASMON_PLAN は tools/assistant/assistant-masmon-import.js が docs/progress/assistant-peer/masmon-plan.json から書く。口 assistantLifeCardStyle(カード部)・assistantLifeTasteOf(ココロ)。何も保存しない"
     },
@@ -430,6 +434,10 @@
     {
       "file": "56-assistant-masmon-battle-beta.jsx",
       "role": "部品: 助手マスモンの対戦 β(じゅんび→観戦→振り返り→ランキング)。口 assistantMasmonBattleOpen・assistantMasmonBattleRowInfo と入れ物 AssistantMasmonBattleHost。公開の印 assistantMasmonBattleBeta の後ろ(偽のあいだはデバッグ設定から確かめだけ・保存なし)。観戦は 56-assistant-masmon-battle-view.jsx の部品を使い回す。保存は新しいキー mh_assistant_masmon_battle_v1 だけ。案 docs/progress/assistant-peer/masmon-battle/beta/STYLE-PLAN.md"
+    },
+    {
+      "file": "56-assistant-life-masmon-cheer.jsx",
+      "role": "部品: 助手がモンヒロバトルにいるときの 👀 修行を見る(練習試合・保存しない)・📣 応援する(1回 熟練+1・💗+5・合わせて1日3回)・一人修行の伸び。口 assistantMasmonTrainRowInfo・assistantMasmonCheer・assistantMasmonTrainWatchOpen と入れ物 AssistantMasmonTrainWatchHost(地図に置く)。公開の印 assistantMasmonCheer の後ろ。保存は新しいキー mh_assistant_masmon_cheer_v1。観戦は 56-assistant-masmon-battle-view.jsx・beta の部品を使い回す。案 docs/progress/assistant-peer/masmon-train/cheer/PLAN.md"
     },
     {
       "file": "56-assistant-life-friend.jsx",

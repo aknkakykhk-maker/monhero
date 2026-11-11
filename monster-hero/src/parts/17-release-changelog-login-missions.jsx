@@ -133,18 +133,20 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantLife: true,
   // 助手ライフの家具(段階B・2026-11-08 社長 GIFT-PLAN.md)。交換所の「家具」・部屋に置く・贈ったときの反応。社長の「この文で」が出るまで偽
   assistantLifeFurniture: true, // 2026-11-08 社長「この文で」
+  assistantLifeRoomEdit: true, // 助手の部屋の模様替え(家具を指で動かす・大きさ・向き・色・前後・おまかせ)。2026-11-11 社長「この形で進める」「この文で」・ミハリ最終確認 OK(56-assistant-life-roomedit.jsx)
   // 助手1人に贈る(2026-11-08 社長 SOLO-GIFT-PLAN.md ❶B ❷A ❸A ❹A ❺A)。台詞・止め絵・更新履歴の「この文で」・ミハリの確認のあとで真にする
   assistantLifeSolo: true, // 2026-11-08 社長「この文で公開」
   // 助手ライフのフレンドの家との行き来(2026-11-08 社長・助手部オトズレ。設計 docs/progress/assistant-peer/FRIEND-VISIT-PLAN.md)。
   //   表 assistant_life_friend_* を流し、画面を撮って確かめ、社長の「この文で」が出たら真にする。偽のあいだは通信もしない(56-assistant-life-friend.jsx)
   assistantLifeFriend: true, // 2026-11-08 社長「この文で」・表を流した(窓口)
-  assistantLifeFriendBond: false, // フレンドの家の友情とスタンプ・今日の見どころとすてき・お気に入りの棚・お客さん帳(56-assistant-life-friend-bond)。社長の「この文で」と表(assistant_life_friend_likes)のあとで真に
+  assistantLifeFriendBond: true, // 2026-11-11 社長「この文で」・表 assistant_life_friend_likes は窓口が流した・最終確認とミハリ3の確認のあと(フレンドの家の友情とスタンプ・今日の見どころとすてき・お気に入りの棚・お客さん帳。56-assistant-life-friend-bond)
   // その場面の台詞を Claude API で1日1回まとめて作る(assistant-chat の kind:'friend_scenes')。中継役を配ってから真にする。偽・thin・off・失敗のときは台本だけ
   // 助手のマスモンの名前を Claude API で1人1回まとめて付ける(assistant-chat の kind:'masmon_names'・2026-11-08 社長の選び ❷B)。
   //   窓口が中継役を配ったのを確かめてから真にする。偽・失敗のあいだは表の名前のまま(56-assistant-life-masmon.jsx)
   assistantMasmonBattleBeta: false, // 2026-11-11 助手マスモンの対戦 β その1(端末の中の対戦・ミセカタ2)。止め絵と更新履歴・ヘルプに社長の「この文で」が出て、窓口の最終確認が済んだら真
   assistantMasmonBattlePvp: false, // 2026-11-11 助手マスモンの対戦 β その2(フレンド対戦+ランキング)。タイセンの表と関数が本番に入り、サーバ検証がそろってから真
   assistantMasmonTrain: true, // 2026-11-11 助手のマスモンの修行と助手の成長(仕様書の第②段階・シュギョウ)。2026-11-11 ミハリの最終確認と直した所の確認(ミハリ3)が OK・更新履歴とヘルプは社長「この文で」で公開
+  assistantMasmonCheer: false, // 2026-11-11 モンヒロバトルにいる助手の 👀 修行を見る・📣 応援する・一人修行の伸び(シュギョウ2)。更新履歴とヘルプに社長の「この文で」が出て、地図の窓の口(ナカヨシ19)が入ってから真
   assistantMasmonSuggest: true, // 2026-11-09 助手のマスモン・デッキに「提案する」(キズナ4)。assistant-chat v24 と SQL 202611080003 を窓口が配り、本番で kind:'masmon_suggest' を1回呼んで返事が来るのを確かめた。カード部の受け手 #5126 と一緒に公開
   assistantMasmonGrow: true, // 2026-11-11 助手のマスモンの育成基盤(社長の仕様書の第①段階・キズナ4)。6能力・1日3回の自主育成・関わるほど強くなる。社長「この文で公開」。相談(鍛えて・休ませて)の読み取りは assistant-chat の配り直しのあとから
   assistantMasmonNamesApi: true, // 2026-11-08 assistant-chat v22(窓口が配った)を本番の形で1回呼んで名前が返るのを確かめた(キズナ3)
@@ -584,6 +586,8 @@ const CARD_BATTLE_INTRO_STORY_SEEN_KEY = 'mh_story_card_battle_seen_v1';
 const STORY_ONE_AT_A_TIME_KEY = 'mh_story_one_at_a_time_v1';
 // はじめて遊ぶ人が、最初の本番のバトルを終えたときの印(新しいキー・一度付いたら消さない)。付くまでイベントのお話は自動で流さない(2026-11-11 案3)
 const FIRST_BATTLE_DONE_KEY = 'mh_first_battle_done_v1';
+// HOME の「つぎにやること」の進み具合(2026-11-11 案4)。はじめての人だけ。数(0=ギフト 1=バトル 2=ミッション 3=終わり)を書き、減らさない・消さない
+const FIRST_STEPS_KEY = 'mh_first_steps_v1';
 const CARD_BATTLE_INTRO_STORY_ID = 'card_battle_intro_2026';
 const normalizeAssistantId = (value) => (typeof assistantIdOrDefault === 'function')
   ? assistantIdOrDefault(typeof value === 'string' ? value : null)

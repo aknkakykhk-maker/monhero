@@ -5581,6 +5581,24 @@ function MonsterHeroGame() {
   // 最初の本番のバトルを終えたか。既定は真(前から遊んでいる人・読み込み前は何も変えない)。はじめての人で印がまだ無いときだけ偽にする
   const [firstBattleDone, setFirstBattleDone] = useState(true);
   const realBattleSeenRef = useRef(false);
+  // 案4: HOME の「つぎにやること」の進み具合。既定は3(出さない・前から遊んでいる人と読み込み前)。はじめての人で終わっていなければ読み込みで 0〜2 にする
+  const [firstStepsStage, setFirstStepsStage] = useState(3);
+  const firstStepsMissionSeenRef = useRef(false);
+  const advanceFirstSteps = (next) => {
+    setFirstStepsStage(cur => (next > cur ? next : cur));
+    (async () => { try { await storeSet(FIRST_STEPS_KEY, next, false); } catch {} })();
+  };
+  useEffect(() => {
+    if (!storyOneAtATime || !dataLoaded || firstStepsStage >= 3 || gameState !== 'HOME') return;
+    const giftN = giftClaimableCount(gifts);
+    const missionN = missionClaimableCount(normalizeMissions(missions));
+    if (firstStepsStage === 0 && giftN === 0) advanceFirstSteps(1);
+    else if (firstStepsStage === 1 && firstBattleDone) advanceFirstSteps(2);
+    else if (firstStepsStage === 2) {
+      if (missionN > 0) firstStepsMissionSeenRef.current = true;
+      else if (firstStepsMissionSeenRef.current) advanceFirstSteps(3);
+    }
+  }, [storyOneAtATime, dataLoaded, firstStepsStage, gameState, gifts, missions, firstBattleDone]);
   // すでに本番でクリアした記録がある人は、終えた扱い(お話を止めたままにしない)
   useEffect(() => {
     if (firstBattleDone) return;
@@ -7552,6 +7570,14 @@ function MonsterHeroGame() {
         // 案3: はじめての人で、最初の本番のバトルがまだなら偽。すでにクリアの記録がある人は終えた扱い(閉じ込めない)
         if (oneAtATime && (await storeGet(FIRST_BATTLE_DONE_KEY, false, false)) !== true) {
           setFirstBattleDone(false);
+        }
+        // 案4: 「つぎにやること」は、はじめての人で3つ終えていない間だけ
+        if (oneAtATime) {
+          const savedRaw = await storeGet(FIRST_STEPS_KEY, null, false);
+          const savedSteps = Number(savedRaw);
+          // 保存がまだ無く、すでに本番でクリアした記録がある人(この帯ができる前から遊んでいる人)は、最初から終わり扱いにして帯を出さない(書き込みもしない=今までの進み方と同じ)
+          const playedBefore = savedRaw == null && Object.values(clears || {}).some(n => (Number(n) || 0) > 0);
+          setFirstStepsStage(playedBefore ? 3 : (Number.isFinite(savedSteps) && savedSteps >= 0 && savedSteps < 3 ? Math.floor(savedSteps) : (savedSteps >= 3 ? 3 : 0)));
         }
       } catch {}
       // 助手選択は、はじめて遊ぶ人にだけ出す。
@@ -19894,6 +19920,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenSettings={()=>setGameState('SETTINGS')}
             onOpenTemple={()=>{addAssistantBond('temple');setGameState('TEMPLE');}}
             openChangelog={openChangelog} openGiftBox={openGiftBox} openMissions={openMissions}
+            nextStep={(() => {
+              if (!storyOneAtATime || !dataLoaded || firstStepsStage >= 3) return null;
+              if (firstStepsStage === 0 && giftClaimableCount(gifts) > 0) return { n:1, title:'ギフトを受け取ろう', sub:'ダイヤなどが届いています', onTap:openGiftBox };
+              if (firstStepsStage === 1) return { n:2, title:'モンヒロバトルを1回あそぼう', sub:'カードを出して勝ってみよう', onTap:openBattleSystemSelect };
+              if (firstStepsStage === 2 && missionClaimableCount(normalizeMissions(missions)) > 0) return { n:3, title:'ミッションを受け取ろう', sub:'バトルのごほうびがもらえます', onTap:openMissions };
+              return null;
+            })()}
             profileFrameId={profileFrameId}
             resolveIconUrl={resolveIconUrl} spotClass={spotClass}
             raidJackVisible={(RELEASE_FLAGS.raidJack===true&&raidJackWindowAt(Date.now())==='open')||raidJackDebugForce}
@@ -22138,6 +22171,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <DebugMenuRow data-debug-battle-setup icon="🛠" label="デバッグ戦" desc="モード・難易度・敵を選んで戦う。結果は保存されません" onClick={()=>{selectDebugBattle(debugBattleModeId,debugBattleDifficultyId);setGameState('DEBUG_BATTLE_SETUP');}}/>
                   <DebugMenuRow data-debug-masmon-battle-watch icon="🐾" label="助手マスモンの対戦を見る(試作)" desc="助手・種族・能力の差・効き方 A/B/C・速さを選んで観戦。何も保存しません" onClick={()=>setMasmonBattleWatchOpen(true)}/>
                   <DebugMenuRow data-debug-masmon-battle-beta icon="⚔" label="助手マスモンの対戦 β(公開前の確かめ)" desc="じゅんび→観戦→振り返り→ランキングを本物のマスモンで。印が偽のあいだは何も保存しません" onClick={()=>{if(typeof assistantMasmonBattleOpen==='function')assistantMasmonBattleOpen({from:'debug'});}}/>
+                  <DebugMenuRow data-debug-masmon-battle-pvp-try icon="👥" label="助手マスモンのフレンド対戦を試す(本物のサーバ)" desc="この起動のあいだだけフレンド対戦を出す。登録と対戦は本物のサーバ・ランキングに残ります(この端末の保存はしません)" onClick={()=>{if(typeof assistantMasmonBattleOpen==='function')assistantMasmonBattleOpen({from:'debug',tryPvp:true});}}/>
               </DebugMenuGroup>
 
               <DebugMenuGroup id="monster-look" title="🧬 モンスターの見た目" desc="育成マーク(転生・限界突破・超越)・模様・プロフィールの顔アイコン">

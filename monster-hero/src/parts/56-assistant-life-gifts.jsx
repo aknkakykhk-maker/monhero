@@ -43,6 +43,22 @@ const assistantLifeGiftOf = (kindOrKey) => {
   const offer = (typeof RHYTHM_EVENT_POINT_SHOP_OFFERS !== 'undefined' ? RHYTHM_EVENT_POINT_SHOP_OFFERS : []).find(x => x.itemId === g.itemId) || {};
   return { ...g, solo: assistantLifeIsSoloOnly(g.key), name: item.name || offer.name || '', emoji: item.emoji || offer.emoji || '🎁', cost: Number.isFinite(offer.cost) ? offer.cost : null };
 };
+// 交換所の札の段(2026-11-11 社長「この形で」・止め絵 gift-walkthrough/shop-note-still)。持ち物の id(peer_・solo_・furn_)から、印と上がる物を返す(道具でも家具でもなければ null)
+// 見せ方だけ。量は贈る窓と同じ数(好みで変わる前の「ふつう」)
+const assistantLifeShopNoteOf = (itemId) => {
+  const id = String(itemId || '');
+  if (/^furn_/.test(id)) {
+    const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(id) : null;
+    if (!f) return null;
+    const base = typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 80;
+    return { tone: 'f', mark: '🪑 家具', lines: [`💗 +${base}`, '初回だけ'] };
+  }
+  const g = [...assistantLifeGiftDefs(), ...assistantLifeSoloDefs()].find(x => x.itemId === id);
+  if (!g) return null;
+  return assistantLifeIsSoloOnly(g.key)
+    ? { tone: 'p', mark: '💗 1人に', lines: [`💗 +${g.player}`, '1人用'] }
+    : { tone: 'a', mark: '🤝 2人に', lines: [`友情Lv +${g.peer}`, `💗 +${g.player}`] };
+};
 // 持っている数(60-app の ownedItems から)。{ [kind]: 数 }
 const assistantLifeGiftCounts = (ownedItems) => {
   const o = {};
@@ -676,7 +692,7 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/5 text-[28px] [[data-assistant-life-land='1']_&]:hidden" aria-hidden="true">{info.emoji}</span>
           <div className="min-w-0 flex-1">
             <p className="text-[14px] font-black text-white"><span data-assistant-life-give-name>{info.name}</span> <span className={`whitespace-nowrap text-[11px] ${have > 0 ? 'text-amber-200' : 'text-violet-300'}`} data-assistant-life-give-have={have}>{have > 0 ? `持っている ${have}個` : '持っていない'}</span>{info.cost != null && <span className="whitespace-nowrap text-[11px] font-bold text-slate-400"> ビートP交換所 {info.cost}P</span>}</p>
-            <p className="text-[11px] leading-snug text-slate-300 [[data-assistant-life-land='1']_&]:hidden">{info.what}</p>
+            <p className="text-[11px] leading-snug text-slate-300 [[data-assistant-life-land='1']_&]:hidden">{soloWho && info.key === 'cheki' ? `その場で写真が出るカメラ。思い出アルバムに${nameOf(soloWho)}ひとりの1枚が増えます` : info.what}</p>
           </div>
         </div>
         <div className="mt-1.5 space-y-1 text-[12px]">
@@ -849,7 +865,10 @@ const assistantLifeFurnGive = async (who, key) => {
   const f = assistantLifeFurnOf(key);
   if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`${typeof assistantLifeName === 'function' ? assistantLifeName(who) : who}の部屋に${f.name}を贈った`, [who], { kind: 'give' });
   const talk = assistantLifeFurnTalk(who, key);
-  return talk ? { ...talk, amount, placed: r.placed } : null;
+  // 模様替え(公開の印 assistantLifeRoomEdit)がオンなら、贈った家具はいつも部屋に出る(56-assistant-life-roomedit.jsx)
+  const layoutOn = typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled();
+  if (layoutOn && typeof assistantLifeLayoutOnGive === 'function') assistantLifeLayoutOnGive(who, key);
+  return talk ? { ...talk, amount, placed: layoutOn ? true : r.placed } : null;
 };
 const assistantLifeFurnMove = async (who, key, toPut) => {
   await ASSISTANT_LIFE_GIFT_STORE.load();
@@ -861,8 +880,10 @@ const assistantLifeFurnMove = async (who, key, toPut) => {
 // ---------- 段階C: 好きな家具を使う吹き出し・遊びに来た助手が家具に触れる(2026-11-08 社長 ❶A ❷A・docs/progress/assistant-peer/gifts/STAGE-C-PLAN.md) ----------
 // 台詞はツムギ(assistants.js の ASSISTANT_LIFE_FURNUSE_LINES・ASSISTANT_LIFE_VISITFURN_LINES)。保存は増やさない(部屋に置いてある家具を見るだけ)
 const ASSISTANT_LIFE_FURN_SHORT = Object.freeze({ sofa: 'ソファ', bear: 'くま', plant: '植物', record: 'レコード', nyacushion: 'クッション', starpic: '星空の絵',
-  trophy: 'トロフィー', bookshelf: '本棚', heartmirror: '鏡', lantern: 'ランタン', mirrorball: 'ミラーボール', windbell: '風鈴' });
-const assistantLifeFurnPlaced = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => Object.values(assistantLifeRoomOf(who, st).put).filter(Boolean);
+  trophy: 'トロフィー', bookshelf: '本棚', heartmirror: '鏡', lantern: 'ランタン', mirrorball: 'ミラーボール', windbell: '風鈴',
+  clock: 'ふりこ時計', map: '地図', guitar: 'ギター', tv: 'テレビ', windowflower: '窓辺の花', fishbowl: '金魚ばち', pendant: 'ライト', garland: 'ガーランド' });
+const assistantLifeFurnPlaced = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => (typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof assistantLifeLayoutOf === 'function' && ASSISTANT_LIFE_LAYOUT_STORE.loaded
+  ? assistantLifeLayoutOf(who, undefined, st).map(it => it.k) : Object.values(assistantLifeRoomOf(who, st).put).filter(Boolean));
 // 吹き出しは2行に分ける(言葉の区切り「で・を・に・の・が・と・、」のうち、真ん中にいちばん近い所で)
 const assistantLifeBubSplit = (text) => {
   const t = String(text || '');
@@ -904,7 +925,14 @@ const assistantLifeFurnAlbumTalks = () => (assistantLifeFurnEnabled() && typeof 
 // faces … いま部屋にいる顔の数 / baseCount … もとからある家具(左下の絵文字)の数。床の家具は、もとの家具と顔のあいだに入れる。
 //   狭い部屋で入らないときは、部屋の上の真ん中へ寄せる(顔に重ねない・2026-11-08 検査で見つけた 横 844 の重なり)
 // put … よその家(フレンドの家の控え)の置き方 { ceil, wall, floor }。渡されたら自分の部屋の家具ではなくそれを描く(56-assistant-life-friend.jsx)
-function AssistantLifeRoomFurn({ id, w, h, faces = 0, baseCount = 2, put = null }) {
+// 模様替え(公開の印 assistantLifeRoomEdit)がオンで自分の家なら、保存してある並びを小さく写す(顔・吹き出しの後ろ。測り直さない)
+function AssistantLifeRoomFurn(props) {
+  // layoutItems … よその家の並び(フレンドの家の控え。assistantLifeLayoutUnpack の結果)。無ければ put(天井・壁・床)で今までどおり
+  if ((!props.put || Array.isArray(props.layoutItems)) && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof AssistantLifeRoomLayoutMini === 'function') return <AssistantLifeRoomLayoutMini id={props.id} w={props.w} h={props.h} given={Array.isArray(props.layoutItems) ? props.layoutItems : null}/>;
+  const { layoutItems, ...rest } = props;
+  return <AssistantLifeRoomFurnSlots {...rest}/>;
+}
+function AssistantLifeRoomFurnSlots({ id, w, h, faces = 0, baseCount = 2, put = null }) {
   const st = useAssistantLifeGiftState();
   const marker = React.useRef(null);
   const [moved, setMoved] = React.useState({});
@@ -1022,8 +1050,11 @@ function AssistantLifeRoomFurn({ id, w, h, faces = 0, baseCount = 2, put = null 
 }
 
 // 部屋のシートの「🪑 家具」(贈る・置く・しまう)。furnItems … 持っている家具の数 { key: 数 } / onGiveFurn(who, key) … 60-app が持ち物を減らして assistantLifeFurnGive を呼ぶ
-function AssistantLifeFurnSheet({ id, furnItems, onGiveFurn, onClose, onTalk, land = false }) {
+function AssistantLifeFurnSheet({ id, furnItems, onGiveFurn, onClose, onTalk, land = false, onLayout = null }) {
   const st = useAssistantLifeGiftState();
+  // 模様替え(公開の印 assistantLifeRoomEdit): 部屋に出ているかは新しい並びで見る
+  const laySt = typeof useAssistantLifeLayoutState === 'function' ? useAssistantLifeLayoutState() : null;
+  const layoutOn = !!laySt && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled();
   const [busy, setBusy] = React.useState(false);
   const [msg, setMsg] = React.useState('');
   const [buyKey, setBuyKey] = React.useState(null); // 買って贈る(2026-11-08)
@@ -1032,6 +1063,9 @@ function AssistantLifeFurnSheet({ id, furnItems, onGiveFurn, onClose, onTalk, la
   const room = assistantLifeRoomOf(id, st);
   const all = assistantLifeFurnDefs().map(f => assistantLifeFurnOf(f.key)).filter(Boolean);
   const mine = all.filter(f => room.got[f.key]);
+  const layKeys = layoutOn ? new Set(assistantLifeLayoutOf(id, laySt, st).map(it => it.k)) : null;
+  const isPut = (f) => (layoutOn ? layKeys.has(f.key) : room.put[f.slot] === f.key);
+  const movePut = (f, toPut) => (layoutOn ? assistantLifeLayoutPut(id, f.key, toPut) : assistantLifeFurnMove(id, f.key, toPut));
   const canGive = all.filter(f => !room.got[f.key] && (Number(furnItems && furnItems[f.key]) || 0) > 0);
   // まだ持っていない家具(買ってそのまま贈れる。同じ家具は1人に1つなので、贈った家具は出さない)
   const toBuy = all.filter(f => !room.got[f.key] && !((Number(furnItems && furnItems[f.key]) || 0) > 0) && assistantLifeCanBuy(f));
@@ -1067,9 +1101,10 @@ function AssistantLifeFurnSheet({ id, furnItems, onGiveFurn, onClose, onTalk, la
       <div className="mhl-sheet" style={land ? { left: 'auto', width: '46%', top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px', borderTop: 0, borderLeft: '2px solid #fbbf24', paddingTop: 10 } : { borderTopColor: '#fbbf24' }}>
         <p className="mhl-en">FURNITURE · {String(id).toUpperCase()}</p>
         <p className="text-[18px] font-black text-white">🪑 {who.name}の部屋の家具</p>
-        <p className="text-[11px] font-bold leading-snug text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>家具を贈ると、<wbr/>その家具の初めての1回だけ <b className="text-pink-200">💗 仲良し度</b>が上がります<wbr/>(好きな家具は多め)。<wbr/>置けるのは 天井・壁・床に1つずつ。<wbr/>ほかは押し入れにしまえます</p>
+        <p className="text-[11px] font-bold leading-snug text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>家具を贈ると、<wbr/>その家具の初めての1回だけ <b className="text-pink-200">💗 仲良し度</b>が上がります<wbr/>(好きな家具は多め)。<wbr/>{layoutOn ? <>贈った家具は、<wbr/>部屋の好きな所に置けます。<wbr/>「模様替え」で指でつまんで動かせます</> : <>置けるのは 天井・壁・床に1つずつ。<wbr/>ほかは押し入れにしまえます</>}</p>
         {/* 道具(1日の回数あり)との違いを一目で(2026-11-11 社長: 家具は「同じ家具を同じ助手には一度だけ・1日の上限なし」のまま) */}
         <p data-assistant-life-furn-rule className="mt-1 flex flex-wrap gap-1 text-[11px] font-black"><span className="whitespace-nowrap rounded-full bg-amber-400/20 px-2 leading-[22px] text-amber-100">🪑 家具は1⁠日に何個でも贈れる</span><span className="whitespace-nowrap rounded-full bg-slate-800 px-2 leading-[22px] text-slate-200">同じ家具は1人に1つ</span></p>
+        {layoutOn && onLayout && <button type="button" data-assistant-life-furn-layout onClick={onLayout} className="mt-1.5 min-h-[44px] w-full rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-[13px] font-black text-white shadow active:scale-[.98]">🛠 模様替え(指でつまんで動かす・{who.name}におまかせ)</button>}
         {msg && <p data-assistant-life-furn-msg className="mt-1.5 rounded-xl bg-amber-300/15 px-2 py-1 text-[11px] font-black leading-snug text-amber-100">{msg}</p>}
         <p className="mt-2 text-[11px] font-black text-amber-200">🎁 贈れる家具</p>
         <div className="mt-1 space-y-1">
@@ -1086,13 +1121,13 @@ function AssistantLifeFurnSheet({ id, furnItems, onGiveFurn, onClose, onTalk, la
         {/* 部屋に置いてある家具と押し入れの家具を、見出しで分ける(2026-11-08 ミハリ「どちらが置いてあるか字で分からない」) */}
         <p className="mt-2 text-[11px] font-black text-amber-200">🏠 部屋に置いてある家具 <span className="text-slate-300">({mine.length}/{all.length}持っている)</span></p>
         <div className="mt-1 space-y-1" data-assistant-life-furn-placed>
-          {mine.filter(f => room.put[f.slot] === f.key).length ? mine.filter(f => room.put[f.slot] === f.key).map(f => row(f, btn('しまう', () => assistantLifeFurnMove(id, f.key, false), 'border-slate-500 text-slate-200', { 'data-assistant-life-furn-keep': f.key })))
+          {mine.filter(isPut).length ? mine.filter(isPut).map(f => row(f, btn('しまう', () => movePut(f, false), 'border-slate-500 text-slate-200', { 'data-assistant-life-furn-keep': f.key })))
             : <p className="rounded-xl bg-slate-800/80 px-2 py-1 text-[11px] font-bold text-slate-300">まだありません</p>}
         </div>
-        {mine.some(f => room.put[f.slot] !== f.key) && (<>
+        {mine.some(f => !isPut(f)) && (<>
           <p className="mt-2 text-[11px] font-black text-amber-200">📦 押し入れ</p>
           <div className="mt-1 space-y-1" data-assistant-life-furn-kept>
-            {mine.filter(f => room.put[f.slot] !== f.key).map(f => row(f, btn(room.put[f.slot] ? '入れかえる' : '置く', () => assistantLifeFurnMove(id, f.key, true), 'border-pink-300/70 bg-pink-400/15 text-pink-100', { 'data-assistant-life-furn-put': f.key })))}
+            {mine.filter(f => !isPut(f)).map(f => row(f, btn(!layoutOn && room.put[f.slot] ? '入れかえる' : '置く', () => movePut(f, true), 'border-pink-300/70 bg-pink-400/15 text-pink-100', { 'data-assistant-life-furn-put': f.key })))}
           </div>
         </>)}
         <button type="button" data-assistant-life-furn-close data-mhl-sheet-close onClick={onClose} className="mt-2 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>

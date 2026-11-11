@@ -8,6 +8,7 @@
 //   ④ 友情のシート: 見どころ・「💗 すてき」(表へ場所の印だけ・1軒1日3つ)・相手のお気に入りの棚。字が切れない・はみ出さない
 //   ⑤ 次に訪ねると、増えた家具に NEW
 //   ⑥ 保存は新しいキーだけ(mh_assistant_life_friend_bond_v1・_fav_v1)。今の mh_assistant_life_friend_v1 の形は変えない
+//   ⑧ 来てくれた日のスタンプは「公開の時」から数える(それより前に書かれた表の行は数えない)
 //   ⑦ 印が偽なら、帯・帳・棚・印が無く、すてきの表へ通信しない
 'use strict';
 const http = require('http'), path = require('path'), fs = require('fs');
@@ -108,10 +109,13 @@ const textProblems = (page, sel) => page.evaluate((s) => {
   const visitAoi = async (page) => { await page.locator('[data-alf-house="aoi-0001"] [data-alf-act="look"]').click(); await page.locator('[data-alf-visit]').waitFor({ timeout: 5000 }); await page.locator('[data-alb-bar]').waitFor({ timeout: 5000 }); await page.waitForTimeout(400); };
   const closeRoom = async (page) => { const c = page.locator('[data-alf-visit-roomview-close]'); if (await c.count()) await c.first().click(); else await page.locator('[data-alf-visit-sheet] .mhl-sheet button:has-text("とじる")').first().click().catch(() => {}); await page.waitForTimeout(150); };
   try {
-    for (const v of [{ id: 'tate', w: 390, h: 844 }, { id: 'yoko', w: 844, h: 390 }, { id: 'small', w: 375, h: 667 }]) {
-      const { page, errors, posted, calls, env } = await open(v);
+    for (const v of [{ id: 'tate', w: 390, h: 844 }, { id: 'yoko', w: 844, h: 390 }, { id: 'small', w: 375, h: 667 }, { id: 'yokoS', w: 667, h: 375, from: { w: 844, h: 390 } }]) {
+      // 小さい横(667×375)は、HOME から家までを 844×390 で開いてから画面を縮める(見るのは訪ねた家とシート)
+      const { page, errors, posted, calls, env } = await open(v.from ? { ...v, ...v.from } : v);
       await waitFaces(page);
       await page.locator('[data-alf-badge]').waitFor({ timeout: 8000 }).catch(() => {});
+      // 検査の偽の行は「いま」より前の時刻なので、公開の時(ALB_START.at)を 0 にして数える(公開の時より前を数えないことは ⑧ で見る)
+      await page.evaluate(() => { ALB_START.at = 0; });
       // ① 来ている最中の印(来客を1人入れる)
       await page.evaluate(() => { const st = alfToday(); alfSaveSt({ ...st, come: 1, came: [{ host: 'aoi-0001', name: 'あおい', aid: 'erubin', mine: 'atsu', seen: false }] }); });
       await page.locator('[data-alb-here]').waitFor({ timeout: 6000 }).catch(() => {});
@@ -137,23 +141,29 @@ const textProblems = (page, sel) => page.evaluate((s) => {
       { const ng = await textProblems(page, '[data-alb-fav-editor]'); check(`② 棚の字が折れない・はみ出さない(${v.id})`, ng.filter(x => !/縦にはみ出す/.test(x)).length === 0, [...new Set(ng)].join(' / ')); }
       await shot(page, `${v.id}-2b-fav-editor`);
       // ③ 返しに行く → 訪ねた家の帯 → 3つで今日のスタンプ
+      if (v.from) { await page.setViewportSize({ width: v.w, height: v.h }); await page.waitForTimeout(400); }
       await page.locator('[data-alb-return="aoi-0001"]').scrollIntoViewIfNeeded();
       await page.locator('[data-alb-return="aoi-0001"]').click();
       await page.locator('[data-alf-visit]').waitFor({ timeout: 5000 });
       await page.locator('[data-alb-bar]').waitFor({ timeout: 5000 });
       await page.waitForTimeout(500);
-      { const t = await page.locator('[data-alb-bar]').innerText(); check(`③ 訪ねた家に友情の帯「友情Lv1」「あと3つで 今日のスタンプ」(${v.id})`, /友情Lv1/.test(t) && /あと3つ/.test(t), t.replace(/\n/g, ' ')); }
+      { const t = await page.locator('[data-alb-bar]').innerText(); check(`③ 訪ねた家に友情の帯「友情Lv1」「あと3つで 今日のスタンプ」(${v.id})`, /Lv1/.test(t) && /顔みしり/.test(t) && /あと3つ/.test(t), t.replace(/\n/g, ' ')); }
       { const ng = await textProblems(page, '[data-alf-visit-acts]'); check(`③ 帯と札がはみ出さない・折れない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
       await shot(page, `${v.id}-3-visit-bar`);
       await page.locator('[data-alf-visit-act="peek"]').click(); await page.waitForTimeout(300); await closeRoom(page);
       await page.locator('[data-alf-visit-act="talk"]').click(); await page.locator('[data-alf-reply="0"]').click(); await page.waitForTimeout(200); await closeRoom(page);
       { const d = await page.locator('[data-alb-task-done="1"]').count(); check(`③ 部屋を見る・話すで2つ ✔(${v.id})`, d === 2, String(d)); }
       await page.locator('[data-alf-visit-leave]').click(); await page.locator('[data-alf-word="1"]').click(); await page.waitForTimeout(500);
-      { const t = await page.locator('[data-alb-bar]').innerText(); check(`③ 置き手紙で3つそろい「今日のスタンプ ✔」・友情Lv1 のまま(スタンプ2個)(${v.id})`, /今日(のスタンプ)? ✔/.test(t) && /友情Lv1/.test(t), t.replace(/\n/g, ' ')); }
+      { const t = await page.locator('[data-alb-bar]').innerText(); check(`③ 置き手紙で3つそろい「今日のスタンプ ✔」・友情Lv1 のまま(スタンプ2個)(${v.id})`, /今日(のスタンプ)? ✔/.test(t) && /Lv1/.test(t), t.replace(/\n/g, ' ')); }
       { const b = await page.evaluate(async () => await storeGet('mh_assistant_life_friend_bond_v1', null, false)); const x = b && b.f && b.f['aoi-0001'];
         check(`⑥ 新しいキーに スタンプ2個(来てくれた1+今日1)・今日1軒(${v.id})`, !!x && x.st === 2 && x.done === true && b.houses === 1, JSON.stringify(x && { st: x.st, done: x.done, houses: b.houses }));
         const again = await page.evaluate(async () => { await albMark('aoi-0001', 'talk'); await albMark('aoi-0001', 'note'); albIncoming([['aoi-0001', alfDay()]]); await albCountIncoming(); return ALF_STORE.state.bond.f['aoi-0001'].st; });
-        check(`③ 同じ日にもう一度やっても増えない(${v.id})`, again === 2, String(again)); }
+        check(`③ 同じ日にもう一度やっても増えない(${v.id})`, again === 2, String(again));
+        // 来てくれた日は、表の行が新しい順で届いても「1人1日1個」(2026-11-11 最終確認: 足した順のまま12個で切ると、まだ読む7日の中の日が落ちて数え直しになった)
+        const inc = await page.evaluate(() => { const fid = 'yuto-0001'; const win = (d) => [0, 1, 2, 3, 4, 5, 6, 7].map(i => [fid, alfDayShift(alfDay(), d - i)]); albIncoming(win(0)); for (let d = 1; d <= 5; d++) albIncoming(win(d)); const x = ALF_STORE.state.bond.f[fid]; return { st: x.st, sorted: JSON.stringify(x.in) === JSON.stringify([...x.in].sort()), n: x.in.length }; });
+        check(`③ 8日ぶんを新しい順で入れ、さらに5日続けても スタンプ=来た日数(13)(${v.id})`, inc.st === 13 && inc.sorted && inc.n === 12, JSON.stringify(inc)); }
+      { const r = await page.evaluate(async () => { const keep = ALB_START.at; const s0 = ALF_STORE.state; const fid = 'yuto-0001'; const before = ALF_STORE.state.bond.f[fid].st; ALB_START.at = Date.now(); const day = alfDayShift(alfDay(), 9); const got = await albCountIncoming({ ...s0, visits: [{ id: 901, kind: 'player', visitor: fid, host: s0.selfId, day, ids: [], word: 0, at: Date.now() - 60000 }] }); const mid = ALF_STORE.state.bond.f[fid].st; const got2 = await albCountIncoming({ ...s0, visits: [{ id: 902, kind: 'player', visitor: fid, host: s0.selfId, day, ids: [], word: 0, at: Date.now() + 60000 }] }); ALB_START.at = keep; return { a: got.length, b: got2.length, d1: mid - before, d2: ALF_STORE.state.bond.f[fid].st - mid }; });
+        check(`⑧ 公開の時より前に書かれた行はスタンプにしない・後の行は数える(${v.id})`, r.a === 0 && r.d1 === 0 && r.b === 1 && r.d2 === 1, JSON.stringify(r)); }
       // ④ シート: 見どころ・すてき・棚
       await page.locator('[data-alb-bar]').click(); await page.locator('[data-alb-sheet]').waitFor({ timeout: 4000 });
       { const t = await page.locator('[data-alb-sheet]').innerText();
