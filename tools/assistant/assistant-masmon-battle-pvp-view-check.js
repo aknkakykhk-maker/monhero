@@ -116,6 +116,7 @@ const routeServer = async (page) => {
       for (const [aid, rows] of Object.entries(st.draw.made)) { w[aid] = { ...(w[aid] || {}) }; for (const t of rows) w[aid][t.monster] = w[aid][t.monster] || '2026-11-01'; }
       // フレンド対戦だけを見るため、マスモンを持つ助手は1人(みゅあ)だけにする
       ASSISTANT_MASMON_STORE.set({ ...st, draw: { ...st.draw, welcomed: w, made: { mua: st.draw.made.mua } } });
+      RELEASE_FLAGS.assistantMasmonBattlePvp = false; // 公開後も「印が偽のとき」から確かめる
       RELEASE_FLAGS.assistantMasmonBattleBeta = true; await AMBB_STORE.load();
       window.__mhSupabaseStubbed = ['masmon-pvp']; // 差し替えたサーバの関数へだけ書き込みを通す(本物へは届かない)
     });
