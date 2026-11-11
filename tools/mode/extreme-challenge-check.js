@@ -58,7 +58,7 @@ assert(source.includes("{previewable?'全WAVE詳細':'まだ見られません'}
 // --- ③ EXTREME固有ルール ---
 assert(source.includes("isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect')"), 'only breeder cards must receive the selected EXTREME difficulty rule');
 assert(source.includes("const boost=localBoostFromCard(card).oryo*effMul; addPermaBuff('atkPct',boost);"), 'normal breeder buff must use the shared multiplier');
-assert(source.includes('Math.floor(getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)*effMul)'), 'breeder attack damage must use the shared multiplier');
+assert(source.includes('Math.floor(getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false,attackDistance)*effMul)'), 'breeder attack damage must use the shared multiplier');
 assert(source.includes("const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved"), 'non-breeder attacks must retain their existing calculation');
 assert(!config.includes('teachingEffect') && source.includes("lines.push(['アシストカード効果',specialRulePercent(rules.assistCardEffect)])"), 'the 50% breeder-card rule must use the shared EXTREME specialRules presentation');
 assert(!/highlights:\[[^\]]*アシストカード/.test(config), 'the mode-level description must not mention the EXTREME-only breeder-card rule');
