@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 84f506b07c7a77d1
+// source-sha256: ee96ea7aee5a3380
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -361,7 +361,8 @@ const normalizeBattleFxSettings = value => {
     defeatFx: v.defeatFx === 'OFF' ? 'OFF' : 'ON',
     resultFx: ['FULL', 'SHORT', 'OFF'].includes(v.resultFx) ? v.resultFx : 'FULL',
     countUp: v.countUp === 'OFF' ? 'OFF' : 'ON',
-    endFx: v.endFx === 'OFF' ? 'OFF' : 'ON'
+    endFx: v.endFx === 'OFF' ? 'OFF' : 'ON',
+    hitStop: v.hitStop === 'OFF' ? 'OFF' : 'ON'
   };
 };
 const BATTLE_FX_SETTING_ITEMS = Object.freeze([{
@@ -436,6 +437,19 @@ const BATTLE_FX_SETTING_ITEMS = Object.freeze([{
     id: 'OFF',
     label: '揺らさない',
     note: '酔いやすい人向け'
+  }]
+}, {
+  key: 'hitStop',
+  title: '当たりの間',
+  desc: '攻撃が当たった瞬間に、画面の動きをほんの一瞬だけ止めて、当たった手ごたえを出します。会心の一撃と、敵を倒したときは少し長く止まります。バトルの速さを上げているときは、そのぶん短くなります。ダメージや進行は変わりません。',
+  options: [{
+    id: 'ON',
+    label: '入れる',
+    note: '当たった手ごたえが出る'
+  }, {
+    id: 'OFF',
+    label: '入れない',
+    note: '止めずに流す'
   }]
 }, {
   key: 'specialMovie',
@@ -30239,6 +30253,235 @@ const TapRippleLayer = ({
     }
   })));
 };
+const BATTLE_FEEL_STOP_MS = Object.freeze({
+  normal: 50,
+  crit: 110,
+  defeat: 140,
+  chain: 30
+});
+const battleFeelKindOf = text => {
+  const s = String(text == null ? '' : text);
+  if (/反射/.test(s)) return 'reflect';
+  if (/吸収|ドレイン/.test(s)) return 'absorb';
+  if (/回避|かわし|MISS/i.test(s)) return 'evade';
+  if (/会心/.test(s)) return 'crit';
+  if (/撃破/.test(s)) return 'defeat';
+  return undefined;
+};
+const battleFeelTierOf = text => {
+  const s = String(text == null ? '' : text);
+  if (!/^\d[\d,]*!*$/.test(s)) return null;
+  return /!!$/.test(s) ? 'crit' : 'normal';
+};
+function BattleHitFeel({
+  popups,
+  enemyHp,
+  speed = 1,
+  stopOn = true,
+  shakeOn = true,
+  defeatOn = true,
+  richOn = true,
+  off = false
+}) {
+  const hostRef = React.useRef(null);
+  const seenRef = React.useRef(undefined);
+  const hpRef = React.useRef(enemyHp);
+  const lastHitAtRef = React.useRef(0);
+  const stopTimerRef = React.useRef(0);
+  const last = Array.isArray(popups) && popups.length ? popups[popups.length - 1] : null;
+  const lastId = last ? last.id : null;
+  const lastText = last ? last.text : '';
+  React.useEffect(() => () => {
+    clearTimeout(stopTimerRef.current);
+    try {
+      document.getElementById('root')?.removeAttribute('data-feel-stop');
+    } catch (e) {}
+  }, []);
+  React.useEffect(() => {
+    const prevHp = hpRef.current;
+    hpRef.current = enemyHp;
+    const first = seenRef.current === undefined;
+    const fresh = lastId != null && lastId !== seenRef.current;
+    seenRef.current = lastId;
+    if (first || off) return;
+    const defeated = Number.isFinite(enemyHp) && Number.isFinite(prevHp) && enemyHp <= 0 && prevHp > 0;
+    let tier = fresh ? battleFeelTierOf(lastText) : null;
+    if (defeated && defeatOn) tier = 'defeat';
+    if (!tier) return;
+    const host = hostRef.current;
+    if (!host) return;
+    let reduce = false;
+    try {
+      reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    } catch (e) {}
+    if (reduce) return;
+    const k = 1 / Math.max(1, Number(speed) || 1);
+    const now = Date.now();
+    const chain = tier === 'normal' && now - lastHitAtRef.current < 220;
+    lastHitAtRef.current = now;
+    const made = [];
+    const run = (el, frames, opts) => {
+      if (!el || typeof el.animate !== 'function') return null;
+      try {
+        const a = el.animate(frames, {
+          fill: 'both',
+          easing: 'cubic-bezier(.2,.9,.3,1)',
+          ...opts,
+          duration: Math.max(60, (opts.duration || 200) * k),
+          delay: (opts.delay || 0) * k
+        });
+        made.push(a);
+        return a;
+      } catch (e) {
+        return null;
+      }
+    };
+    const piece = css => {
+      const d = document.createElement('div');
+      d.style.cssText = `position:absolute;left:50%;top:50%;pointer-events:none;${css}`;
+      host.appendChild(d);
+      return d;
+    };
+    const fade = (d, a, ms) => {
+      if (a) a.onfinish = () => d.remove();else d.remove();
+      setTimeout(() => d.remove(), ms * k + 400);
+    };
+    const T = s => `translate(-50%,-50%) ${s}`;
+    const burst = (color, n, len) => {
+      for (let i = 0; i < n; i += 1) {
+        const deg = i * 360 / n + 8;
+        const d = piece(`width:${len}px;height:4px;border-radius:2px;transform-origin:0 50%;background:linear-gradient(90deg,${color},rgba(255,255,255,0));`);
+        fade(d, run(d, [{
+          opacity: 1,
+          transform: `translate(0,-50%) rotate(${deg}deg) translateX(20px) scaleX(.3)`
+        }, {
+          opacity: 0,
+          transform: `translate(0,-50%) rotate(${deg}deg) translateX(${len + 30}px) scaleX(1)`
+        }], {
+          duration: 300,
+          easing: 'ease-out'
+        }), 300);
+      }
+    };
+    const ring = (color, size, to) => {
+      const d = piece(`width:${size}px;height:${size}px;border-radius:50%;border:3px solid ${color};`);
+      fade(d, run(d, [{
+        opacity: .95,
+        transform: T('scale(.45)')
+      }, {
+        opacity: 0,
+        transform: T(`scale(${to})`)
+      }], {
+        duration: 420,
+        easing: 'ease-out'
+      }), 420);
+    };
+    const flash = (css, peak, ms) => {
+      const d = piece(css);
+      fade(d, run(d, [{
+        opacity: peak
+      }, {
+        opacity: 0
+      }], {
+        duration: ms,
+        easing: 'ease-out'
+      }), ms);
+    };
+    const stamp = (text, color, size, dx, dy, hold) => {
+      const d = piece(`margin-left:${dx}px;margin-top:${dy}px;white-space:nowrap;font-weight:900;line-height:1;font-size:${size}px;color:${color};letter-spacing:.06em;text-shadow:0 2px 0 #000,0 -1px 0 #000,2px 0 0 #000,-2px 0 0 #000,0 4px 10px rgba(0,0,0,.7);`);
+      d.textContent = text;
+      d.setAttribute('data-feel-stamp', tier);
+      run(d, [{
+        opacity: 0,
+        transform: T('scale(2.6) rotate(-12deg)')
+      }, {
+        opacity: 1,
+        transform: T('scale(.92) rotate(-6deg)'),
+        offset: .7
+      }, {
+        opacity: 1,
+        transform: T('scale(1) rotate(-6deg)')
+      }], {
+        duration: 200
+      });
+      fade(d, run(d, [{
+        opacity: 1
+      }, {
+        opacity: 0
+      }], {
+        duration: 240,
+        delay: hold,
+        easing: 'linear',
+        fill: 'forwards'
+      }), hold + 240);
+    };
+    const stage = host.parentElement;
+    const shake = (amp, ms) => {
+      if (!shakeOn) return;
+      const pts = [[0, 0], [-1, .5], [1, -.6], [-.8, -.5], [.7, .5], [-.4, .2], [0, 0]];
+      run(stage, pts.map(([x, y], i) => ({
+        translate: `${(x * amp * (1 - i / 9)).toFixed(1)}px ${(y * amp * (1 - i / 9)).toFixed(1)}px`
+      })), {
+        duration: ms,
+        easing: 'linear',
+        fill: 'none'
+      });
+    };
+    if (tier === 'crit') {
+      if (richOn) {
+        flash('width:4000px;height:4000px;margin-left:-2000px;margin-top:-2000px;background:#fff;', .42, 150);
+        burst('#fde047', 12, 80);
+      }
+      ring('#fde047', 80, 2.6);
+      stamp('会心!!', '#fde047', 20, -64, -58, 620);
+      if (shakeOn) run(stage, [{
+        scale: '1.07'
+      }, {
+        scale: '1'
+      }], {
+        duration: 240,
+        fill: 'none'
+      });
+    } else if (tier === 'defeat') {
+      flash('width:120%;height:120%;margin-left:-60%;margin-top:-60%;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.9) 0%,rgba(255,255,255,0) 70%);', 1, 300);
+      if (richOn) burst('#ffffff', 14, 90);
+      stamp('撃破!', '#fca5a5', 40, 0, 12, 750);
+      shake(9, 420);
+    } else if (!chain) {
+      shake(2.5, 160);
+    }
+    if (stopOn) {
+      const ms = (chain ? BATTLE_FEEL_STOP_MS.chain : BATTLE_FEEL_STOP_MS[tier]) * k;
+      const root = document.getElementById('root');
+      if (root && ms >= 12) {
+        root.setAttribute('data-feel-stop', tier);
+        made.forEach(a => {
+          try {
+            a.pause();
+          } catch (e) {}
+        });
+        clearTimeout(stopTimerRef.current);
+        stopTimerRef.current = setTimeout(() => {
+          root.removeAttribute('data-feel-stop');
+          made.forEach(a => {
+            try {
+              if (a.playState === 'paused') a.play();
+            } catch (e) {}
+          });
+        }, ms);
+      }
+    }
+  }, [lastId, enemyHp]);
+  return React.createElement("div", {
+    ref: hostRef,
+    "data-battle-hit-feel": off ? 'OFF' : 'ON',
+    "aria-hidden": "true",
+    className: "absolute inset-0 pointer-events-none",
+    style: {
+      zIndex: 49
+    }
+  });
+}
 const SORASHIDO_GREEN = '#34d399';
 const SORASHIDO_COPY_CSS = `
 [data-sorashido-fx]{position:relative;display:inline-block;isolation:isolate}
@@ -84724,7 +84967,16 @@ function BattleScreen({
       rowGap: 0,
       paddingTop: `${popupTop}px`
     };
-    return React.createElement("div", {
+    return React.createElement(React.Fragment, null, React.createElement(BattleHitFeel, {
+      popups: enemyPopups,
+      enemyHp: enemy?.hp,
+      speed: battleSpeed,
+      stopOn: battleFx.hitStop !== 'OFF',
+      shakeOn: !shakeOff,
+      defeatOn: battleFx.defeatFx !== 'OFF',
+      richOn: fxLoad === 'RICH' || fxLoad === 'STANDARD',
+      off: !!(liteBattleView || ecoBattleView)
+    }), React.createElement("div", {
       "data-enemy-popups": true,
       className: "absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-start pt-1 gap-0.5 [container-type:size]"
     }, enemyFxPopups.length > 0 && React.createElement("div", {
@@ -84733,6 +84985,7 @@ function BattleScreen({
     }, enemyFxPopups.map(p => React.createElement("div", {
       key: p.id,
       "data-enemy-fx-chip": true,
+      "data-feel-kind": battleFeelKindOf(p.text),
       className: `max-w-full truncate rounded-full border border-white/25 bg-slate-950/85 px-2.5 py-0.5 text-[12px] font-black leading-tight shadow-[0_2px_8px_rgba(0,0,0,.7)] ${enemyFxChipTone(p.color)}`
     }, p.text))), React.createElement("div", {
       "data-enemy-popup-grid": popupCols,
@@ -84743,7 +84996,7 @@ function BattleScreen({
       "data-enemy-popup": idx,
       style: popupFit(p),
       className: `text-center ${p.color} font-black whitespace-nowrap ${popupCols === 2 ? '' : 'px-4'} ${liteBattleView ? 'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base' : 'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`
-    }, p.text))));
+    }, p.text)))));
   })())), !tacticsNewLayout && Array.isArray(tacticsUnits) && enemy && (() => {
     const moveTo = enemyNextIntent && enemyNextIntent.type === 'MOVE' && Number.isFinite(enemyNextIntent.targetDist) ? enemyNextIntent.targetDist : null;
     const here = Number.isFinite(enemyDist) ? enemyDist : 0;
@@ -85007,6 +85260,7 @@ function BattleScreen({
     }
   }, popups.filter(p => ['hero', 'life', 'guts'].includes(p.side) && !Number.isInteger(p.slot)).slice(-3).map(p => React.createElement("div", {
     key: p.id,
+    "data-feel-kind": battleFeelKindOf(p.text),
     "data-lite-damage": liteBattleView ? 'true' : undefined,
     className: `${tacticsPopupTone(p.color)} max-w-[92%] truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-3 py-0.5 text-[13px] font-black leading-tight shadow-[0_4px_14px_rgba(0,0,0,.6)]`,
     style: {
@@ -85609,6 +85863,7 @@ function BattleScreen({
         const short = tacticsPopupShortText(p.text);
         return React.createElement("div", {
           key: p.id,
+          "data-feel-kind": battleFeelKindOf(p.text),
           className: `${tacticsPopupTone(p.color)} max-w-full truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-2 py-0.5 text-[11px] font-black leading-tight shadow-[0_2px_10px_rgba(0,0,0,.6)]`,
           style: {
             animation: liteBattleView ? undefined : 'tacticsPopupRise 240ms ease-out'
@@ -178584,7 +178839,8 @@ function MonsterHeroGame() {
       defeatFx: 'OFF',
       resultFx: 'OFF',
       countUp: 'OFF',
-      endFx: 'OFF'
+      endFx: 'OFF',
+      hitStop: 'OFF'
     } : normalized;
     if (!battleFxAutoLoad || base.autoLoad === 'OFF') return base;
     return BATTLE_FX_LOADS.indexOf(battleFxAutoLoad) > BATTLE_FX_LOADS.indexOf(base.load) ? {
@@ -219830,6 +220086,22 @@ const createAnimationStyle = () => {
       [data-tactics-look] [data-em-idle]:not([data-enemy-skill]):not([data-enemy-hurt]) > span > img { animation: none !important; }
     }
     /* タクティクスの枠の中・盤面の上に出す吹き出し。下から少し浮かせて出す */
+    /* 手ごたえ(2026-11-11 社長が選んだ形。部品は 24-battle-hit-feel.jsx・資料は docs/progress/battle-feel/)。動かすのは transform と opacity だけ */
+    /* 敵に出るダメージの数字: 大きく出て、縮んで止まる(連撃で2列のときは控えめ)。そのあとの弾み(animate-bounce)は今までどおり */
+    @keyframes mhFeelNumPop { 0% { opacity: 1; transform: scale(var(--feel-from, 1.6)); } 55% { opacity: 1; transform: scale(.94); } 100% { opacity: 1; transform: scale(1); } }
+    [data-battle-hit-feel="ON"] + [data-enemy-popups] [data-enemy-popup]:not([data-lite-damage]) { animation: mhFeelNumPop 180ms cubic-bezier(.2,.9,.3,1) both; }
+    [data-battle-hit-feel="ON"] + [data-enemy-popups] [data-enemy-popup].animate-bounce:not([data-lite-damage]) { animation: mhFeelNumPop 180ms cubic-bezier(.2,.9,.3,1) both, bounce 1s 180ms infinite; }
+    [data-battle-hit-feel="ON"] + [data-enemy-popups] [data-enemy-popup-grid="2"] [data-enemy-popup] { --feel-from: 1.3; }
+    /* 当たりの間: CSS のアニメーションだけを一瞬止める(ゲームの時計は止めない。付け外しは 24-battle-hit-feel.jsx) */
+    #root[data-feel-stop] *, #root[data-feel-stop] *::before, #root[data-feel-stop] *::after { animation-play-state: paused !important; }
+    /* 効果の札の種類(案C): 何が起きたかを色の縁と印で知らせる。文と出る場所・時間は今までどおり */
+    [data-feel-kind] { border-width: 2px; }
+    [data-feel-kind]::before { margin-right: .3em; }
+    [data-feel-kind="reflect"] { border-color: #d8b4fe; } [data-feel-kind="reflect"]::before { content: "↩"; color: #d8b4fe; }
+    [data-feel-kind="absorb"] { border-color: #86efac; } [data-feel-kind="absorb"]::before { content: "♥"; color: #86efac; }
+    [data-feel-kind="evade"] { border-color: #bae6fd; } [data-feel-kind="evade"]::before { content: "≫"; color: #bae6fd; }
+    [data-feel-kind="crit"] { border-color: #fde047; } [data-feel-kind="crit"]::before { content: "★"; color: #fde047; }
+    [data-feel-kind="defeat"] { border-color: #fca5a5; } [data-feel-kind="defeat"]::before { content: "✕"; color: #fca5a5; }
     @keyframes tacticsPopupRise {
       0% { opacity: 0; transform: translateY(6px) scale(0.92); }
       100% { opacity: 1; transform: translateY(0) scale(1); }
