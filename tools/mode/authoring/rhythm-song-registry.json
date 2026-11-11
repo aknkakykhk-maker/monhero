@@ -1398,7 +1398,15 @@
     "beatsPerBar": 4,
     "subdivisionsPerBeat": 4,
     "source": "command"
-   }
+   },
+   "chartIntensity": "extreme",
+   "chartIntensityByDifficulty": {
+    "HARD": "strong"
+   },
+   "sustainScale": {
+    "MASTER": 0.2
+   },
+   "hellDensity": 1.6
   }
  }
 }
