@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 74f3b4c61d22d41a
+// generated-sha256: 325a58348ac08df5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -88881,9 +88881,9 @@ const cardPackBuzz = (ms) => {
     navigator.vibrate(ms);
   } catch (e) { /* ふるえなくても続ける */ }
 };
-// 「格上げ」の見せ方(2026-11-11 社長)。キラ以上の約半分は、めくる前の裏が光らずふつうのカードに見え、タップで 白 → 金 → 虹 と格が上がる。
+// 「格上げ」の見せ方(2026-11-11 社長)。キラ以上の約3割は、めくる前の裏が光らずふつうのカードに見え、タップで 白 → 金 → 虹 と格が上がる。
 //   どれが格上げに見えるかは位置だけで決める(抽選や中身は変えない)。ふつうのカードが格上がりに見えることはない
-const cardPackSurprise = (c, i, pi) => !!c && c.rarity !== 'normal' && ((pi * 3 + i * 5 + (c.rarity === 'alt' ? 1 : 0)) % 2 === 0);
+const cardPackSurprise = (c, i, pi) => !!c && c.rarity !== 'normal' && ((pi * 3 + i * 5 + (c.rarity === 'alt' ? 1 : 0)) % 10 < 3);
 // 紙吹雪(強めのとき)。n 枚を降らせ、again があれば少し遅れてもう1回。数と置き場所は出したときに1回だけ決める
 const CardPackConfetti = ({ n, again = 0 }) => {
   const [bits] = useState(() => Array.from({ length: n + again }, (_, i) => ({
