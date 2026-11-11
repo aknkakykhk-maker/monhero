@@ -77,11 +77,16 @@ const profStop = async (cdp, label) => {
 const slope = (ys) => { const n = ys.length; if (n < 2) return 0; const xm = (n - 1) / 2; const ym = ys.reduce((a, b) => a + b, 0) / n; let num = 0, den = 0; ys.forEach((y, i) => { num += (i - xm) * (y - ym); den += (i - xm) ** 2; }); return num / den; };
 const avg = (a) => a.reduce((x, y) => x + y, 0) / (a.length || 1);
 
+let prevM = null;
 async function measure(page, cdp, label) {
   await cdp.send('HeapProfiler.collectGarbage');
   await page.waitForTimeout(150);
   await cdp.send('HeapProfiler.collectGarbage');
   const m = Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map((x) => [x.name, x.value]));
+  // 前の回からの差: レイアウトの回数・時間、スタイルの計算の時間、スクリプトの時間(ms)
+  const d = (k, mul = 1) => Math.round(((m[k] || 0) - ((prevM && prevM[k]) || 0)) * mul);
+  const work = { layoutN: d('LayoutCount'), layoutMs: d('LayoutDuration', 1000), styleN: d('RecalcStyleCount'), styleMs: d('RecalcStyleDuration', 1000), scriptMs: d('ScriptDuration', 1000), taskMs: d('TaskDuration', 1000) };
+  prevM = m;
   const inPage = await page.evaluate(() => {
     const P = window.__perf || { long: [], intervals: new Set(), raf: new Set(), timeouts: new Set() };
     const long = P.long.splice(0);
@@ -133,10 +138,10 @@ async function measure(page, cdp, label) {
       ls: Object.keys(localStorage).length,
     };
   });
-  return { label, heapMB: +(m.JSHeapUsedSize / 1048576).toFixed(2), heapTotalMB: +(m.JSHeapTotalSize / 1048576).toFixed(2), nodes: m.Nodes, listeners: m.JSEventListeners, docs: m.Documents, frames: m.Frames, layouts: m.LayoutCount, styles: m.RecalcStyleCount, taskSec: +m.TaskDuration.toFixed(2), ...inPage };
+  return { label, ...work, heapMB: +(m.JSHeapUsedSize / 1048576).toFixed(2), heapTotalMB: +(m.JSHeapTotalSize / 1048576).toFixed(2), nodes: m.Nodes, listeners: m.JSEventListeners, docs: m.Documents, frames: m.Frames, layouts: m.LayoutCount, styles: m.RecalcStyleCount, taskSec: +m.TaskDuration.toFixed(2), ...inPage };
 }
 
-const KEYS = ['heapMB', 'nodes', 'domLive', 'listeners', 'intervals', 'raf', 'timeouts', 'resImgs', 'resImgUrls', 'resImgKB', 'imgEls', 'imgDecodedMB', 'canvases', 'anims', 'longN', 'longMs', 'longMax', 'loafN', 'loafMs', 'loafMax'];
+const KEYS = ['layoutN', 'layoutMs', 'styleMs', 'scriptMs', 'taskMs', 'heapMB', 'nodes', 'domLive', 'listeners', 'intervals', 'raf', 'timeouts', 'resImgs', 'resImgUrls', 'resImgKB', 'imgEls', 'imgDecodedMB', 'canvases', 'anims', 'longN', 'longMs', 'longMax', 'loafN', 'loafMs', 'loafMax'];
 function summary(name, rows) {
   if (!rows.length) return [];
   const out = [`■ ${name}(${rows.length}回)`];
@@ -253,6 +258,57 @@ function summary(name, rows) {
       }
       // PERF_HOLD=1(試し): 対戦の画面の絵への参照をページが持ち続けたら、読み直しが消えるか
       if (process.env.PERF_HOLD) await page.evaluate(() => { const h = window.__hold || (window.__hold = new Map()); clearInterval(window.__holdT); window.__holdT = setInterval(() => { for (const im of document.querySelectorAll('[data-card-battle] img')) if (!h.has(im.src)) { const x = new Image(); x.src = im.src; h.set(im.src, x); } }, 200); });
+      // PERF_FRAMES=1(調べもの): まんなかの欄の scrollHeight を読んだ回数と、コマの数を数える(1コマに何回測っているか)
+      if (process.env.PERF_FRAMES && i === 1) {
+        const fr = await page.evaluate(() => new Promise((res) => {
+          const d = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollHeight');
+          let reads = 0, frames = 0, framesWithRead = 0, inFrame = 0, multi = 0;
+          Object.defineProperty(Element.prototype, 'scrollHeight', { configurable: true, get() { if (this.hasAttribute && this.hasAttribute('data-card-stage')) { reads++; inFrame++; } return d.get.call(this); } });
+          const tick = () => { frames++; if (inFrame) framesWithRead++; if (inFrame > 1) multi++; inFrame = 0; if (frames < 600) requestAnimationFrame(tick); else { Object.defineProperty(Element.prototype, 'scrollHeight', d); res({ reads, frames, framesWithRead, multi }); } };
+          requestAnimationFrame(tick);
+        }));
+        console.log(`--- コマ ${fr.frames}・まんなかを測った回数 ${fr.reads}・測ったコマ ${fr.framesWithRead}・2回以上測ったコマ ${fr.multi}`);
+      }
+      // PERF_TRACE=1(調べもの): 対戦のさなか 8秒のトレースで、スタイルの計算の回数・要素数と、計算し直しの理由を数える
+      if (process.env.PERF_TRACE && i === 1) {
+        const events = [];
+        cdp.on('Tracing.dataCollected', (e) => events.push(...e.value));
+        const done = new Promise((r) => cdp.once('Tracing.tracingComplete', r));
+        await cdp.send('Tracing.start', { categories: 'devtools.timeline,blink.animations,disabled-by-default-devtools.timeline,cc,disabled-by-default-devtools.timeline.invalidationTracking', transferMode: 'ReportEvents' });
+        await page.waitForTimeout(8000);
+        await cdp.send('Tracing.end'); await done;
+        const ult = events.filter((e) => e.name === 'UpdateLayoutTree' && e.ph === 'X');
+        const els = ult.map((e) => (e.args && e.args.elementCount) || 0);
+        console.log(`--- スタイルの計算 ${ult.length}回・合計 ${Math.round(ult.reduce((s, e) => s + (e.dur || 0), 0) / 1000)}ms・要素 平均 ${Math.round(els.reduce((a, b) => a + b, 0) / (els.length || 1))}・最大 ${Math.max(0, ...els)}`);
+        const why = {};
+        for (const e of events) {
+          if (!/Invalidation/.test(e.name)) continue;
+          const d = (e.args && e.args.data) || {};
+          const k = `${e.name} ${d.reason || d.changedClass || d.changedAttribute || d.changedId || d.changedPseudo || ''} <${d.nodeName || ''}>`.slice(0, 120);
+          why[k] = (why[k] || 0) + 1;
+        }
+        for (const [k, n] of Object.entries(why).sort((a, b) => b[1] - a[1]).slice(0, 20)) console.log(`  ${n}  ${k}`);
+        // アニメが合成処理(GPU 側)に回せなかった理由(compositeFailed のビット・unsupportedProperties)
+        const fail = {};
+        for (const e of events) {
+          if (e.name !== 'Animation') continue;
+          const d = (e.args && e.args.data) || {};
+          if (d.compositeFailed === undefined && !d.unsupportedProperties) continue;
+          const k = `${d.name || d.id || '?'} failed=${d.compositeFailed} props=${(d.unsupportedProperties || []).join(',')}`;
+          fail[k] = (fail[k] || 0) + 1;
+        }
+        // 絵の展開(decode)の回数と時間
+        const dec = events.filter((e) => /Decode|ImageDecodeTask|Decode LazyPixelRef/.test(e.name) && e.ph === 'X');
+        const byName = {};
+        for (const e of dec) { const u = String(((e.args || {}).data || {}).url || (e.args || {}).url || '').replace(/^.*monster-hero\//, '').replace(/\?.*$/, ''); const k = `${e.name} ${u.split('/').slice(0, 2).join('/')}`; const o = byName[k] || (byName[k] = { n: 0, ms: 0 }); o.n++; o.ms += (e.dur || 0) / 1000; }
+        console.log('--- 絵の展開(8秒)');
+        for (const [k, o] of Object.entries(byName).sort((a, b) => b[1].ms - a[1].ms).slice(0, 12)) console.log(`  ${o.n}回 ${Math.round(o.ms)}ms  ${k}`);
+        const paint = events.filter((e) => /^(Paint|RasterTask|Rasterize|Layerize|PrePaint|UpdateLayer|CompositeLayers|Commit)$/.test(e.name) && e.ph === 'X');
+        const pn = {}; for (const e of paint) { const o = pn[e.name] || (pn[e.name] = { n: 0, ms: 0 }); o.n++; o.ms += (e.dur || 0) / 1000; }
+        console.log('--- 描画(8秒) ' + Object.entries(pn).map(([k, o]) => `${k} ${o.n}回 ${Math.round(o.ms)}ms`).join(' / '));
+        console.log('--- 合成に回せなかったアニメ');
+        for (const [k, n] of Object.entries(fail).sort((a, b) => b[1] - a[1]).slice(0, 15)) console.log(`  ${n}  ${k}`);
+      }
       // PERF_ANIM=1: 対戦のさなかに動いているアニメ(CSS・Web Animations)を、名前と動かしている性質ごとに数える
       if (process.env.PERF_ANIM && i === 1) {
         await page.waitForTimeout(8000);
@@ -280,7 +336,7 @@ function summary(name, rows) {
       await closePops();
       const r = { ...(await measure(page, cdp, `battle${i}`)), sec };
       battles.push(r);
-      console.log(`対戦${i}(${sec}秒): heap ${r.heapMB}MB nodes ${r.nodes} dom ${r.domLive} listen ${r.listeners} interval ${r.intervals} raf ${r.raf} img ${r.resImgUrls}/${r.resImgs} ${r.resImgKB}KB long ${r.longN}件 ${r.longMs}ms max${r.longMax} loaf ${r.loafN}件 max${r.loafMax}`);
+      console.log(`対戦${i}(${sec}秒): layout ${r.layoutN}回 ${r.layoutMs}ms style ${r.styleMs}ms script ${r.scriptMs}ms task ${r.taskMs}ms heap ${r.heapMB}MB nodes ${r.nodes} dom ${r.domLive} listen ${r.listeners} interval ${r.intervals} raf ${r.raf} img ${r.resImgUrls}/${r.resImgs} ${r.resImgKB}KB long ${r.longN}件 ${r.longMs}ms max${r.longMax} loaf ${r.loafN}件 max${r.loafMax}`);
       await toTop();
     }
 
@@ -314,7 +370,7 @@ function summary(name, rows) {
       if (i === 1) await profStop(cdp, '行き来1回目');
       const r = await measure(page, cdp, `loop${i}`);
       loops.push(r);
-      console.log(`行き来${i}: heap ${r.heapMB}MB nodes ${r.nodes} dom ${r.domLive} listen ${r.listeners} interval ${r.intervals} raf ${r.raf} img ${r.resImgUrls}/${r.resImgs} ${r.resImgKB}KB long ${r.longN}件 ${r.longMs}ms max${r.longMax} loaf ${r.loafN}件 max${r.loafMax}`);
+      console.log(`行き来${i}: layout ${r.layoutN}回 ${r.layoutMs}ms style ${r.styleMs}ms script ${r.scriptMs}ms task ${r.taskMs}ms heap ${r.heapMB}MB nodes ${r.nodes} dom ${r.domLive} listen ${r.listeners} interval ${r.intervals} raf ${r.raf} img ${r.resImgUrls}/${r.resImgs} ${r.resImgKB}KB long ${r.longN}件 ${r.longMs}ms max${r.longMax} loaf ${r.loafN}件 max${r.loafMax}`);
     }
   } catch (e) {
     console.log('止まった:', String(e).split('\n')[0]);

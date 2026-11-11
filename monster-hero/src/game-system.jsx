@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1edf3bafad3bff1e
+// generated-sha256: 788cf90c4cbcc350
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -72611,8 +72611,21 @@ const cardAiFavoriteCandidates = (db, who, lead = null) => {
 const cardAiMonWave = (db, m, card) => {
   if (String(m.wave) !== 'hybrid') return Number(m.wave) || 1;
   const sp = card && cardIsGuardKind(card.kind) && m.sub && m.sub !== 'unknown' ? m.sub : m.main;
-  const base = Object.values(db.monsters).find((x) => !x.variant && x.species === sp && String(x.wave) !== 'hybrid');
-  return base ? Number(base.wave) || 1 : 4;
+  const t = cardAiBaseWaveTable(db);
+  return t.has(sp) ? t.get(sp) : 4;
+};
+// 種族 → その種族の元の子(変種でない・ハイブリッドでない最初の1体)の世代。cardAiMonWave が呼ばれるたびに全モンスターを
+//   探していた(助手えらびで AI のデッキを組むと 1回 約0.3秒・2026-11-11 カード部カルク 軽量化)ので、db.monsters ごとに1回だけ作る。
+//   答えは前の find と同じ(Object.values の順で最初に当たった子)。db.monsters は書き換えない表なので、表そのものをかぎにする
+const CARD_AI_BASE_WAVE = new WeakMap();
+const cardAiBaseWaveTable = (db) => {
+  const mons = db.monsters;
+  const hit = CARD_AI_BASE_WAVE.get(mons);
+  if (hit) return hit;
+  const t = new Map();
+  for (const x of Object.values(mons)) if (!x.variant && String(x.wave) !== 'hybrid' && !t.has(x.species)) t.set(x.species, Number(x.wave) || 1);
+  CARD_AI_BASE_WAVE.set(mons, t);
+  return t;
 };
 // そのモンスターが、癖に合う技をどれだけ持っているか(入れたい度の上位10の合計+ライフ)。2体を選ぶときの「型に合う」の目安
 const cardAiMonScore = (db, who, m, maxWave, levelId = null) => {
@@ -78150,10 +78163,18 @@ const CardFitLabel = ({ children, max = 14, min = 9 }) => {
   React.useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return undefined;
+    // 入る中でいちばん大きい字(0.5px 刻み・入らなければ min)。前は 0.5px ずつ縮めて毎回幅を測っていた(最大10回)のを、
+    //   半分ずつ絞る探し方にした(最大 1+4 回。2026-11-11 カード部カルク 軽量化)。決まる大きさは前と同じ
+    const over = (v) => { el.style.fontSize = `${v}px`; return el.scrollWidth > el.clientWidth + 0.5; };
     const fit = () => {
       let s = max;
-      el.style.fontSize = `${s}px`;
-      while (s > min && el.scrollWidth > el.clientWidth + 0.5) { s -= 0.5; el.style.fontSize = `${s}px`; }
+      if (over(max)) {
+        const steps = Math.ceil((max - min) * 2); // 候補 max-0.5, max-1, … (前の作りと同じく min を下回る1つ手前まで)
+        let lo = 1, hi = steps, best = steps;     // k … max - k*0.5。入る中で最小の k を探す(入らなければ steps)
+        while (lo <= hi) { const k = (lo + hi) >> 1; if (!over(max - k * 0.5) || k === steps) { best = Math.min(best, k); hi = k - 1; } else lo = k + 1; }
+        s = max - best * 0.5;
+        el.style.fontSize = `${s}px`;
+      }
       setSize(s);
     };
     fit();
