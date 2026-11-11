@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7a5b74a35bfc5281
+// source-sha256: e2d4c14c968d7767
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -78889,7 +78889,7 @@ function HomeUpdateGuideBundle({
     "aria-modal": "true",
     "aria-label": "新しいお知らせの一覧"
   }, React.createElement("div", {
-    className: "w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
+    className: "w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] flex flex-col overflow-hidden rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
     style: {
       paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)'
     }
@@ -78903,7 +78903,7 @@ function HomeUpdateGuideBundle({
   }), React.createElement("div", {
     className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 p-2.5 text-sm font-bold text-white"
   }, "新しいお知らせが", updateGuideQueue.length, "件あるよ♪ 読みたいものだけ「くわしく」で開いてね。")), React.createElement("div", {
-    className: "mt-3 space-y-2"
+    className: "mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto"
   }, updateGuideQueue.map(n => React.createElement("div", {
     key: n.id,
     "data-update-guide-bundle-item": n.id,
@@ -78922,9 +78922,10 @@ function HomeUpdateGuideBundle({
     type: "button",
     "data-update-guide-bundle-later": true,
     onClick: dismissUpdateGuideAll,
-    className: "mt-4 min-h-[50px] w-full rounded-2xl bg-slate-700 text-sm font-black text-white"
+    className: "mt-4 min-h-[50px] w-full shrink-0 rounded-2xl bg-slate-700 text-sm font-black text-white"
   }, "あとで読む"), React.createElement("p", {
-    className: "mt-2 text-center text-[10px] font-bold text-slate-500"
+    "data-update-guide-bundle-foot": true,
+    className: "mt-2 shrink-0 text-center text-[10px] font-bold text-slate-500"
   }, "更新履歴からいつでも読めます")));
 }
 function HomeUpdateGuideOverlay({
