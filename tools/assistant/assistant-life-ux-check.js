@@ -95,6 +95,18 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
       { const lvTitle = await page.evaluate(() => { const m = /仲良し度 Lv(\d+)/.exec(document.querySelector('[data-assistant-life-room-sheet]').innerText || ''); return m ? m[1] : null; });
         const w = span[Number(r.road)];
         check(`${T}② ${id}: 仲良し度の道のり Lv${r.road}・あと${r.remain}(部屋の題の Lv と同じ・その段階の幅の中)`, r.road != null && r.road === lvTitle && (w == null ? r.remain == null : (r.remain > 0 && r.remain <= w)), JSON.stringify({ road: r.road, lvTitle, remain: r.remain, span: w })); }
+      // 助手マスモン対戦β(ミセカタ2の口)の行: 口が null を返すあいだは出ない。口が値を返せば「🐾 マスモン」の下に出る(2026-11-11)
+      if (id === 'mua') {
+        check(`${T}⑧ mua: 対戦βの口が null のあいだは「マスモンで対戦(β)」の行は出ない`, !r.rows.includes('masmon-battle'), r.rows.join(','));
+        await closeRoom(page);
+        await page.evaluate(() => { window.__bbFlags = { b: RELEASE_FLAGS.assistantMasmonBattleBeta, g: RELEASE_FLAGS.assistantMasmonGrow }; RELEASE_FLAGS.assistantMasmonBattleBeta = true; RELEASE_FLAGS.assistantMasmonGrow = true; });
+        const r2 = await room(page, id);
+        const at = r2.rows.indexOf('masmon-battle');
+        check(`${T}⑧ mua: 対戦βの印が真だと「🐾 マスモン」のすぐ下に行が出る`, at > 0 && r2.rows[at - 1] === 'masmon', r2.rows.join(','));
+        check(`${T}⑧ mua: 対戦βの行も高さ44px以上・横にはみ出さない`, !r2.small.includes('masmon-battle') && !r2.over.includes('masmon-battle'), JSON.stringify({ small: r2.small, over: r2.over }));
+        await closeRoom(page);
+        await page.evaluate(() => { RELEASE_FLAGS.assistantMasmonBattleBeta = window.__bbFlags.b; RELEASE_FLAGS.assistantMasmonGrow = window.__bbFlags.g; });
+      }
       if (id === 'dra') check(`${T}③ カード部屋のドラは「対戦する」が先頭`, r.rows[0] === 'card', r.rows[0]);
       if (id === 'momosuke') check(`${T}③ ビートのももすけは「ビート」が先頭(券なし)`, r.rows[0] === 'beat', r.rows[0]);
       if (SHOTS && (id === 'dra' || id === 'mua')) await page.screenshot({ path: path.join(shotDir, `check-${v.id}-${id}.png`) });

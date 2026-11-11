@@ -115,7 +115,7 @@ function AssistantLifeBenefitBoard({ life, ids, nameOf, land = false, onGo, watc
               <button key={r.k} type="button" data-assistant-life-now-perk={r.k} data-assistant-life-benefit-row={i === 0 ? 'now' : 'now-more'} disabled={typeof r.go !== 'function'} onClick={() => { if (typeof r.go === 'function') onGo(r.go); }}
                 className="mt-1 flex min-h-[44px] w-full items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-1.5 py-1 text-left active:scale-[.98] disabled:opacity-60">
                 <span className="w-[54px] shrink-0 text-center text-[11px] font-black leading-tight text-amber-200">{i === 0 ? '⏰ いま' : ''}</span>
-                <span className="w-5 shrink-0 text-center text-[17px] leading-none" aria-hidden="true">{r.icon}</span>
+                <span className="w-5 shrink-0 text-center text-[17px] leading-none" aria-hidden="true">{cardIconNode(r.icon, 17)}</span>
                 <span className={`min-w-0 flex-1 ${land ? 'text-[11.5px]' : 'text-[12.5px]'} font-bold leading-snug`} style={{ wordBreak: 'auto-phrase' }}>{r.text}</span>
                 {typeof r.go === 'function' && <span className="shrink-0 text-[11px] font-black text-amber-200" aria-hidden="true">▶</span>}
               </button>))}
