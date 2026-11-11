@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e042f6e7512a5ebc
+// source-sha256: facd983f9eac0e9a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -129605,7 +129605,15 @@ const ASSISTANT_LIFE_FURN_SHORT = Object.freeze({
   heartmirror: '鏡',
   lantern: 'ランタン',
   mirrorball: 'ミラーボール',
-  windbell: '風鈴'
+  windbell: '風鈴',
+  clock: 'ふりこ時計',
+  map: '地図',
+  guitar: 'ギター',
+  tv: 'テレビ',
+  windowflower: '窓辺の花',
+  fishbowl: '金魚ばち',
+  pendant: 'ライト',
+  garland: 'ガーランド'
 });
 const assistantLifeFurnPlaced = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof assistantLifeLayoutOf === 'function' && ASSISTANT_LIFE_LAYOUT_STORE.loaded ? assistantLifeLayoutOf(who, undefined, st).map(it => it.k) : Object.values(assistantLifeRoomOf(who, st).put).filter(Boolean);
 const assistantLifeBubSplit = text => {
@@ -130416,8 +130424,8 @@ const ASSISTANT_LIFE_LAYOUT_HABITS = Object.freeze({
 });
 const ASSISTANT_LIFE_LAYOUT_SEATS = Object.freeze({
   ceil: [[0.47, 0.05], [0.17, 0.04], [0.76, 0.03], [0.32, 0.03], [0.62, 0.04]],
-  wall: [[0.13, 0.24], [0.34, 0.2], [0.12, 0.41], [0.9, 0.43], [0.53, 0.19]],
-  floor: [[0.13, 0.57], [0.87, 0.57], [0.08, 0.72], [0.92, 0.72], [0.33, 0.6]]
+  wall: [[0.13, 0.24], [0.34, 0.2], [0.12, 0.41], [0.9, 0.43], [0.53, 0.19], [0.25, 0.33]],
+  floor: [[0.13, 0.57], [0.87, 0.57], [0.08, 0.72], [0.92, 0.72], [0.33, 0.6], [0.67, 0.6], [0.24, 0.72], [0.76, 0.72], [0.5, 0.58]]
 });
 const assistantLifeLayoutOmakase = (who, owned, rand = Math.random) => {
   const h = ASSISTANT_LIFE_LAYOUT_HABITS[who] || ASSISTANT_LIFE_LAYOUT_HABITS.mua;
@@ -130863,7 +130871,7 @@ function AssistantLifeRoomEditor({
     commit(cur.filter(it => it.k !== sel));
     setSel(null);
   }, !selIt)), React.createElement("div", {
-    className: `flex items-center gap-1.5 ${land ? 'flex-wrap' : 'overflow-x-auto'} pb-0.5`,
+    className: "flex items-center gap-1.5 overflow-x-auto pb-0.5",
     "data-assistant-life-layout-chips": true
   }, cur.map(it => chip(it.k, true)), kept.map(k => chip(k, false)), got.length === 0 && React.createElement("p", {
     className: "text-[11px] font-bold text-slate-300"

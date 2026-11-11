@@ -132,7 +132,7 @@ check('曜日のおやつ・週替わりの道具・月替わりの家具が入�
 check('報酬の数は表の中だけ(AI の文から数を取らない)', !/amount\s*:\s*(?:ai|line|res)\b/i.test(grab('// ===== ミッション: 助手の1日1行の案内', 'const useMissionDailyLines')));
 // ---------- ⑤ 家具の替え ----------
 const sofaCost = (offerRows.find((o) => o.itemId === 'furn_sofa') || {}).cost;
-check('交換所の家具の値段を読めた', offerRows.length === 12 && sofaCost === 1200);
+check('交換所の家具の値段を読めた', offerRows.length === 20 && sofaCost === 1200);
 check('持っていない家具はそのまま届く', m.missionFurnitureSwap('furn_sofa', { furn_sofa: 0 }, {}) === null);
 check('持っている家具は、交換所と同じ値うちのビートPに替える', (() => { const r = m.missionFurnitureSwap('furn_sofa', { furn_sofa: 1 }, {}); return r && r.type === 'beatPoint' && r.amount === 1200; })());
 check('助手みんなに贈り終えた家具もビートPに替える(1人でも残っていればそのまま)', (() => {
