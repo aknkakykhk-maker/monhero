@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ee1b6abd3220df50
+// source-sha256: fa31a3ccd9e92de2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -139068,7 +139068,7 @@ function AssistantMasmonBattleBeta({
       style: {
         fontSize: 15
       }
-    }, ambbTierOf(battle.pvp.rating.rating).icon, " ", battle.pvp.rating.rating, " ポイント"), " ", React.createElement("span", {
+    }, cardIconNode(ambbTierOf(battle.pvp.rating.rating).icon, 14), " ", battle.pvp.rating.rating, " ポイント"), " ", React.createElement("span", {
       style: {
         color: battle.pvp.rating.delta >= 0 ? '#86efac' : '#fca5a5'
       }
@@ -139614,7 +139614,7 @@ function AmbbRanking({
       style: {
         whiteSpace: 'nowrap'
       }
-    }, week ? `${r.rating >= 0 ? '+' : ''}${r.rating}` : `${t.icon} ${r.rating}`, React.createElement("span", {
+    }, week ? `${r.rating >= 0 ? '+' : ''}${r.rating}` : React.createElement(React.Fragment, null, cardIconNode(t.icon, 14), " ", r.rating), React.createElement("span", {
       className: "ambw-small"
     }, " ", r.win, "勝", r.lose, "敗")));
   })), React.createElement("div", {
@@ -139624,7 +139624,7 @@ function AmbbRanking({
   }, "段(ポイントで決まります)"), AMBB_TIERS.slice().reverse().map((t, i, arr) => React.createElement("div", {
     key: t.id,
     className: "ambb-tier"
-  }, React.createElement("span", null, t.icon, " ", t.label), React.createElement("span", {
+  }, React.createElement("span", null, cardIconNode(t.icon, 14), " ", t.label), React.createElement("span", {
     className: "ambw-small"
   }, Number.isFinite(t.min) ? `${t.min}〜${i > 0 ? arr[i - 1].min - 1 : ''}` : `〜${arr[i - 1].min - 1}`)))), React.createElement("div", {
     className: "ambw-ctl"

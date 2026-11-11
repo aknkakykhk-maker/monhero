@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 798dd597259c43f3
+// generated-sha256: 652087d2d9ee29c5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -73165,7 +73165,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, onClo
               <div className="ambw-card" data-ambb-pvp-result>
                 <div className="ambw-small">フレンド対戦・{(AMBB_KINDS.find(k => k.id === battle.pvp.kind) || AMBB_KINDS[0]).label}</div>
                 {battle.pvp.rated && battle.pvp.rating ? (
-                  <div><b style={{ fontSize: 15 }}>{ambbTierOf(battle.pvp.rating.rating).icon} {battle.pvp.rating.rating} ポイント</b> <span style={{ color: battle.pvp.rating.delta >= 0 ? '#86efac' : '#fca5a5' }}>({battle.pvp.rating.delta >= 0 ? '+' : ''}{battle.pvp.rating.delta})</span><span className="ambw-small">・{ambbTierOf(battle.pvp.rating.rating).label}</span></div>
+                  <div><b style={{ fontSize: 15 }}>{cardIconNode(ambbTierOf(battle.pvp.rating.rating).icon, 14)} {battle.pvp.rating.rating} ポイント</b> <span style={{ color: battle.pvp.rating.delta >= 0 ? '#86efac' : '#fca5a5' }}>({battle.pvp.rating.delta >= 0 ? '+' : ''}{battle.pvp.rating.delta})</span><span className="ambw-small">・{ambbTierOf(battle.pvp.rating.rating).label}</span></div>
                 ) : <div className="ambw-small">この試合はランキングに数えません(数えるのは 3対3 だけ・同じ相手とは1日3回まで)</div>}
                 {Number.isFinite(battle.pvp.remaining) && <div className="ambw-small">今日あと {battle.pvp.remaining} 回 挑めます</div>}
                 {!battle.pvp.same && <div className="ambw-small" style={{ color: '#fcd34d' }}>ゲームの版がちがうため、見返しが本当の試合と少しちがうかもしれません。結果はサーバの記録のとおりです。</div>}
@@ -73358,7 +73358,7 @@ function AmbbRanking({ me, faceOf, nameOf, onBack }) {
             return (
               <div key={`${r.rank}-${r.assistantId}`} className="ambb-tier" data-ambb-rank-row style={r.me ? { background: 'rgba(249,168,212,.16)', borderRadius: 8 } : null}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><b style={{ width: 22, textAlign: 'right' }}>{r.rank}</b>{faceOf(r.assistantId) ? <img src={faceOf(r.assistantId)} alt="" style={{ width: 24, height: 24, borderRadius: '50%' }}/> : null}<span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}の{nameOf(r.assistantId)}</span></span>
-                <span style={{ whiteSpace: 'nowrap' }}>{week ? `${r.rating >= 0 ? '+' : ''}${r.rating}` : `${t.icon} ${r.rating}`}<span className="ambw-small"> {r.win}勝{r.lose}敗</span></span>
+                <span style={{ whiteSpace: 'nowrap' }}>{week ? `${r.rating >= 0 ? '+' : ''}${r.rating}` : <>{cardIconNode(t.icon, 14)} {r.rating}</>}<span className="ambw-small"> {r.win}勝{r.lose}敗</span></span>
               </div>
             );
           })}
@@ -73366,7 +73366,7 @@ function AmbbRanking({ me, faceOf, nameOf, onBack }) {
       <div className="ambw-card">
         <div className="ambw-small">段(ポイントで決まります)</div>
         {AMBB_TIERS.slice().reverse().map((t, i, arr) => (
-          <div key={t.id} className="ambb-tier"><span>{t.icon} {t.label}</span><span className="ambw-small">{Number.isFinite(t.min) ? `${t.min}〜${i > 0 ? arr[i - 1].min - 1 : ''}` : `〜${arr[i - 1].min - 1}`}</span></div>
+          <div key={t.id} className="ambb-tier"><span>{cardIconNode(t.icon, 14)} {t.label}</span><span className="ambw-small">{Number.isFinite(t.min) ? `${t.min}〜${i > 0 ? arr[i - 1].min - 1 : ''}` : `〜${arr[i - 1].min - 1}`}</span></div>
         ))}
       </div>
       <div className="ambw-ctl"><button className="ambw-btn2" onClick={onBack}>← もどる</button></div>
