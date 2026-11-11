@@ -20,6 +20,7 @@ node tools/ctx.js brief               いまの状態
 - `monster-hero/src/parts/30-rhythm-*`
 - `monster-hero/src/parts/33-rhythm-*`
 - `monster-hero/src/parts/39-*`
+- `monster-hero/src/parts/45-quick-anywhere-float.jsx`
 - `monster-hero/src/parts/58-screen-rhythm.jsx`
 - `monster-hero/src/parts/73-screen-rhythm-history.jsx`
 - `monster-hero/src/parts/77-screen-rhythm-multi.jsx`

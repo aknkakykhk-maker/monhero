@@ -13,6 +13,8 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   ① スキップの位置の当たり判定が、スキップ自身であること(背面へ抜けていない)
 //   ② 押したら会話が閉じること(1枚進むだけになっていない)
 //   ③ 紙の本文をタップしたときは、これまでどおり1枚進むこと
+//   ④ 光る演出(fx)の無い行でも、場面の説明(fxText)が出ること(2026-11-11 足した。
+//      2026-11-05 #4568: fx の無い行の説明が、どのお話でも出ていなかった。表示の条件が fx だけだった)
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -103,7 +105,7 @@ const bubbleWrap=(t)=>t; const bubbleWrapStyle=()=>undefined;
 // お話の真ん中のモンスター(2026-10-27・21-assistant.jsx)。ここでは位置を測らず、絵の対応も空にしておく(定義していないと描画ごと落ちる)
 const storyMeasureRef=()=>undefined; const STORY_MONSTER_ART={}; const withMonsterIdleArt=(id,art)=>art;
 function Screen(){
-  const [eventReplay,setEventReplay]=useState({id:${JSON.stringify(target.id)},step:0,live:true});
+  const [eventReplay,setEventReplay]=useState(window.__init||{id:${JSON.stringify(target.id)},step:0,live:true});
   window.__state=eventReplay;
   return (<>
 ${replayBlock}
@@ -166,6 +168,19 @@ const skipBox = (page) => page.evaluate(() => {
         after.state ? `${after.state.step + 1}枚目のまま` : `残り${after.dialogs}枚`);
       check(`${w}x${h}: 本編で飛ばしたぶんは「見た」として残る`,
         Array.isArray(after.seen) && after.seen.includes(target.id), JSON.stringify(after.seen));
+      await page.close();
+    }
+    // ④ 光る演出(fx)の無い行の、場面の説明(fxText)。そういう行をお話から探して、その行を開いて見る
+    let fxOnly = null;
+    for (const ev of list) { const i = ev.script.findIndex((l, k) => k > 0 && l.fxText && !l.fx && !l.stage && !l.monsters && !l.bg); if (i > 0) { fxOnly = { id: ev.id, step: i, text: ev.script[i].fxText }; break; } }
+    check('④ 光る演出の無い行に、場面の説明を書いたお話がある(見張る相手がいる)', !!fxOnly);
+    if (fxOnly) {
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+      await page.addInitScript((init) => { window.__init = init; }, { id: fxOnly.id, step: fxOnly.step, live: false });
+      await page.goto(`file://${path.join(OUT, 'index.html')}`);
+      await page.evaluate(() => document.documentElement.style.setProperty('--mh-vh', `${window.innerHeight}px`));
+      const shown = await page.waitForFunction(() => { const b = document.querySelector('[data-story-banner]'); return b && (b.textContent || '').trim(); }, null, { timeout: 5000 }).then(h => h.jsonValue()).catch(() => '');
+      check(`④ 光る演出の無い行でも、場面の説明が出る(${fxOnly.id} の${fxOnly.step + 1}枚目)`, shown && shown.includes(fxOnly.text.slice(0, 8)), shown ? `出た文: ${shown.slice(0, 40)}` : '説明が出ない');
       await page.close();
     }
   } finally {

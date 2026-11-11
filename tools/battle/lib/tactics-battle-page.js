@@ -31,16 +31,18 @@ const loadPlaywright = () => {
 };
 
 // storage … 最初から入れておく保存値({ キー: 値 })。値は文字列ならそのまま、それ以外は JSON にする
-async function openTacticsBattle({ root, port, storage = {}, mobile = true } = {}) {
+// viewport … 画面の大きさ(既定は縦持ちの 390x844。横持ちを測るときは { width: 844, height: 390 })
+async function openTacticsBattle({ root, port, storage = {}, mobile = true, viewport = { width: 390, height: 844 } } = {}) {
   const playwright = loadPlaywright();
   if (!playwright) return { skip: 'playwright が入っていないので確かめられません' };
   const server = await serve(root, port);
   const errors = [];
   const browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const ctx = await browser.newContext(mobile
-    ? { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }
-    : { viewport: { width: 390, height: 844 } });
+    ? { viewport, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }
+    : { viewport });
   const page = await ctx.newPage();
+  if (process.env.INIT_JS) await ctx.addInitScript({ path: process.env.INIT_JS }); // 計測用: ページ読み込み前に差す JS(tools/battle/render-count-hook.js)
   page.on('pageerror', (e) => errors.push(String(e)));
   const base = {
     mh_breeder_name: JSON.stringify('検査ブリーダー'), mh_breeder_icon: JSON.stringify('🐣'),
@@ -113,4 +115,4 @@ async function openTacticsBattle({ root, port, storage = {}, mobile = true } = {
   }
 }
 
-module.exports = { openTacticsBattle };
+module.exports = { openTacticsBattle, serve, loadPlaywright };

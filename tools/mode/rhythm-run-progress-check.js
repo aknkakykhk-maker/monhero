@@ -1,3 +1,4 @@
+require('../shared-serve'); // :8899 が無ければ立てる(単独で回したとき。2026-11-11)
 // モンビーに出す「クイック∞周回の進捗」(docs/spec/QUICK_RHYTHM_LINK.md PR6)を
 // 実ブラウザで確かめる。
 //

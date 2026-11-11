@@ -65,7 +65,8 @@ const strayWords = mon.filter((r) => !/^[コンッウゥりんっ…♪！!、�
 check('キュービ・オリヒメは人の言葉を話さない(鳴き声としぐさだけ)', mon.length >= 10 && strayWords.length === 0, strayWords.map((r) => r.t).join(' / '));
 const sora = rows.filter((r) => r.who === 'sorashido');
 check('ソラシドは「笑」を使い、「w」は使わない', sora.some((r) => /笑/.test(r.t)) && !sora.some((r) => /[wｗ]/.test(r.t)));
-check('ソラシドの「〜ぜ・・・！」は1行に1回まで', sora.every((r) => (r.t.match(/ぜ・・・/g) || []).length <= 1) && sora.some((r) => /ぜ・・・！/.test(r.t)));
+// 2026-11-11 社長「実際『〜だぜ！』みたいな喋り方はほぼしない」→ お話でも「〜ぜ・・・！」は使わない(2026-11-01 の「芝居がかった〜ぜ・・・！は使わない」とも合う)。丁寧語が土台
+check('ソラシドは「〜ぜ・・・！」を使わず、丁寧語で話す', !sora.some((r) => /ぜ・・・|だぜ|うぜ/.test(r.t)) && sora.some((r) => /です|ます/.test(r.t)));
 check('ソラシドは沖縄の言葉を少し使う(なんくるないさ〜)', sora.some((r) => /なんくるないさ/.test(r.t)));
 check('最後はソラシドから {name} へのあいさつ', rows[rows.length - 1].who === 'sorashido' && rows[rows.length - 1].t.includes('{name}'));
 

@@ -1,0 +1,28 @@
+# モンヒロバトルにいるときのひとりごと(ナカヨシ11 2026-11-11 社長「MB管理とモンバトは別」)
+# 形は SAMPLE.txt と同じ。口調は VOICE.md・SPEECH-STYLE.md。1人3本(scene 2・feel 1)。助手のマスモンの修行はここで行う
+
+## ひとりごと
+solo mua place=battle line=scene | mua happy モンヒロバトルのとこ、今日もにぎやかぢゃん✨
+solo mua place=battle line=scene | mua excited モッチー連れてくると、テンション上がるー！
+solo mua place=battle line=feel | mua happy 勝っても負けても楽しーのが、バトルのいいとこぢゃん♪
+solo kiki place=battle line=scene | kiki normal 今日はモンヒロバトルで、ゴーレムの調子を見ていまつ
+solo kiki place=battle line=scene | kiki wink ちからに振った編成が、うまく回るか試しますね
+solo kiki place=battle line=feel | kiki happy 焦らず一戦ずつ、でつ。攻めるときは大胆に行きまつ♪
+solo momosuke place=battle line=scene | momosuke excited モンヒロバトル、もものメタルナーが一番かわいく勝つ！！
+solo momosuke place=battle line=scene | momosuke wink ここで勝つとこ、だれかに見ててほしいなw
+solo momosuke place=battle line=feel | momosuke happy 負けてもへこまないもん！ 次はもっとかっこよく決める♡
+solo dra place=battle line=scene | dra normal モンヒロバトルか。グジラ連れて、のんびり一戦いくか
+solo dra place=battle line=scene | dra happy ここ来ると、ついつい長居しちまうな。えへへ
+solo dra place=battle line=feel | dra normal 勝ったら昼寝するか。負けても昼寝だけどな、くさ
+solo atsu place=battle line=scene | atsu excited モンヒロバトル、今日もドラゴン連れて全力でいく！
+solo atsu place=battle line=scene | atsu normal とりあえず一戦、てかもう三戦目だわ笑
+solo atsu place=battle line=feel | atsu happy 勝っても負けても、強くなってる感じがいいんだよな笑
+solo kyuko place=battle line=scene | kyuko normal ほい、モンヒロバトルの編成を見直し中ぇ。決め手は相性ねぇ
+solo kyuko place=battle line=scene | kyuko wink ニャーを出す順番を変えてみたよ。試してみるねぇ
+solo kyuko place=battle line=feel | kyuko happy 勝った負けたより、なんで勝てたかが大事なんだよねぇ笑
+solo sorashido place=battle line=scene | sorashido excited うぉぉぉ！ モンヒロバトル、今日の相手も強そうだぜ・・・！
+solo sorashido place=battle line=scene | sorashido happy 出す順番と相性、計算は完璧だ笑
+solo sorashido place=battle line=feel | sorashido excited 負けてもデータは残る。次は表を直して勝つぜ！
+solo erubin place=battle line=scene | erubin normal モンヒロバトルは、デュラハンの調子を確かめるのにいいね
+solo erubin place=battle line=scene | erubin happy ひとつずつ丁寧に、相手の動きを見ていこうかな
+solo erubin place=battle line=feel | erubin normal 勝ち負けより、しっかり戦えたかが大事だしね

@@ -31,7 +31,7 @@ const source = require('fs').readFileSync(require('path').join(__dirname, '../..
 // 2026-09-28「ショップの作りを全部統一して」で、詳細と個数選択はマーケット共通の部品
 // (MarketItemDetail / MarketPurchaseSheet)になった。通貨の呼び名は MARKET_CURRENCY_META が1か所で決める
 assert(api.marketPriceText(fruit) === '1,000プシュケー' && api.marketPriceText(diamondItem) === '1,000ダイヤ', '詳細は商品通貨に応じてプシュケー・ダイヤを表示する');
-assert(source.includes("onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count),") && source.includes('const [sheetQuantity,setSheetQuantity]=useState(1);') && source.includes("psyche:         Object.freeze({ have:'虹のプシュケー', label:'虹のプシュケー'") && source.includes('{meta.label}が足りません'), '価格タップは購入せず個数選択を初期値1で開き、不足を表示する');
+assert(source.includes("onBuy={()=>openSheet({ item, stackable:item.type==='item'&&!item.perk, confirm:(count)=>onBuy(item,count),") && source.includes('const [sheetQuantity,setSheetQuantity]=useState(1);') && source.includes("psyche:         Object.freeze({ have:'虹のプシュケー', label:'虹のプシュケー'") && source.includes('{meta.label}が足りません'), '価格タップは購入せず個数選択を初期値1で開き、不足を表示する');
 // 2026-10-19 数を直接打ち込める欄を足した(2026-10-20 に CountInput として切り出し、ほかの数を選ぶ所でも使う)
 assert(source.includes('MAX（{safeMax.toLocaleString()}{unit}）') && source.includes('onClick={()=>setCount(count-10)}') && source.includes('onClick={()=>setCount(count+10)}')
   && source.includes('<CountInput value={count} max={safeMax} onChange={setCount} unit={unit}'), '個数選択に±1・±10・MAXと、数を打ち込む欄(CountInput)を用意する');

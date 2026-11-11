@@ -11,7 +11,7 @@
 //   ⑦ 1人に贈るシートでも買って贈れる
 //   ⑧ 家具のシートに「まだ持っていない家具」。買って贈ると部屋に置かれ、ビートPが値段ぶん減る
 //   ⑨ 道具タブの持っていない行に「🛒 ◯P で買って贈る」。押すとその道具を選んだ贈るシート
-//   ⑩ 思い出アルバムの「2人にしてあげる」は10種類。持っていない道具から確かめの窓が開く
+//   ⑩ 思い出アルバムの「2人にしてあげる」は「🎁 この2人に贈る」1つ。押すと贈る窓がその2人で開く(2026-11-11 社長 案6 A)
 //   ⑪ 縦 390・横 844・🔄横 667 で、贈るシートと確かめの窓の字が切れない・ボタンが押せる
 //   ⑫ ページのエラーが出ない
 const http = require('http'), path = require('path'), fs = require('fs');
@@ -69,7 +69,9 @@ const pressable = (page, sel) => page.evaluate((s) => { const b = document.query
     await toHome(page); await waitFaces(page);
     return page;
   };
-  const openHouse = async (page) => { for (let i = 0; i < 5; i++) { const pc = page.locator('[data-assistant-peer-close]'); if (await pc.count()) await pc.first().click({ timeout: 2000 }).catch(() => {}); try { await page.locator('[data-home-assistant-life]').click({ timeout: 4000 }); break; } catch (e) { if (i === 4) throw e; await page.waitForTimeout(800); } } await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 6000 }).catch(() => {}); await page.waitForTimeout(400); };
+  // 開いた直後の重いあいだは HOME の札がまだ出ていないことがある(2026-11-11 ミハリの見回りで1回だけ時間切れ)。
+  // 決まった回数で諦めず、札が出るまで待ってから押し、部屋の札が出るまで待つ
+  const openHouse = async (page) => { await page.locator('[data-home-assistant-life]').first().waitFor({ state: 'visible', timeout: 60000 }); for (let i = 0; i < 5; i++) { const pc = page.locator('[data-assistant-peer-close]'); if (await pc.count()) await pc.first().click({ timeout: 2000 }).catch(() => {}); try { await page.locator('[data-home-assistant-life]').click({ timeout: 4000 }); break; } catch (e) { if (i === 4) throw e; await page.waitForTimeout(800); } } await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 6000 }).catch(() => {}); await page.locator('[data-assistant-life-room]').first().waitFor({ state: 'visible', timeout: 30000 }); };
   const groupRoom = (page) => page.evaluate(() => { try { const gs = (ASSISTANT_LIFE_STORE.state.life.groups || []).filter(g => g.ids.length === 2); const g = gs.find(x => !document.querySelector(`[data-assistant-life-room="${x.ids[0]}"] [data-assistant-life-rel]`)) || gs[0]; return g ? g.ids[0] : null; } catch { return null; } });
   const openPairSheet = async (page, id) => { await page.locator(`[data-assistant-life-room="${id}"]`).click(); await page.waitForTimeout(300); await page.locator('[data-assistant-life-room-act="give"]').click(); await page.waitForTimeout(400); };
   const points = (page) => page.evaluate(() => Number(JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0')));
@@ -176,15 +178,13 @@ const pressable = (page, sel) => page.evaluate((s) => { const b = document.query
       const albumOpen = page.locator('[data-assistant-peer-row], [data-assistant-peer-daily]').first();
       if (await albumOpen.count()) {
         await albumOpen.click(); await page.waitForTimeout(400);
-        const n = await page.locator('[data-assistant-peer-actions] [data-assistant-peer-use]').count();
-        check('⑩ アルバムの「2人にしてあげる」は10種類', n === 10, String(n));
-        const b = page.locator('[data-assistant-peer-buy]').first();
+        // 2026-11-11 社長 案6 A: 助手ライフの中のアルバムは、押すとすぐ贈る10個のボタンをやめて「🎁 この2人に贈る」1つ。押すと贈る窓がその2人で開く(買って贈るも窓の中から)
+        const n = await page.locator('[data-assistant-peer-actions] [data-assistant-peer-give-sheet]').count();
+        check('⑩ アルバムの「2人にしてあげる」は「🎁 この2人に贈る」1つ(すぐ贈るボタンは無い)', n === 1 && (await page.locator('[data-assistant-peer-actions] [data-assistant-peer-use]').count()) === 0, String(n));
         if (SHOTS) { await page.locator('[data-assistant-peer-actions]').scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(shotDir, 'tate-6-album.png') }); }
-        await b.click(); await page.waitForTimeout(400);
-        check('⑩ 持っていない道具から確かめの窓が開く', (await page.locator('[data-assistant-peer-album] [data-assistant-life-buy-confirm]').count()) === 1);
-        const names = await page.evaluate(() => [...document.querySelectorAll('[data-assistant-peer-use] > span:first-child')].map(s => { const r = document.createRange(); r.selectNodeContents(s); const lines = new Set([...r.getClientRects()].map(x => Math.round(x.top))); return lines.size; }));
-        check('⑩ 札の名前は言葉の区切りで折る(2行まで)', names.every(n => n <= 2), names.join(','));
-        await page.locator('[data-assistant-life-buy-cancel]').click(); await page.waitForTimeout(200);
+        await page.locator('[data-assistant-peer-give-sheet]').click(); await page.waitForTimeout(400);
+        check('⑩ 押すと贈る窓がその2人で開き、アルバムは閉じる', (await page.locator('[data-assistant-life-give-sheet]').count()) === 1 && (await page.locator('[data-assistant-peer-album]').count()) === 0 && /と.+に贈る/.test(await page.locator('[data-assistant-life-give-title]').innerText().catch(() => '')));
+        await page.locator('[data-assistant-life-give-cancel]').click(); await page.waitForTimeout(200);
       } else check('⑩ アルバムを開ける', false);
       await page.close();
     }

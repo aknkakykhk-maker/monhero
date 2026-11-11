@@ -5,6 +5,8 @@
 **まだ曲には付けていない。ゲームのデータも触っていない。** 決まったら `RHYTHM_GENRES` へタブを足し、
 `RHYTHM_SONG_GENRE_TAGS` へ曲ごとの印を書く(画面 `29-rhythm-screens.jsx` は書き換えない)。
 
+> **2026-11-11 保留**(社長「やっぱまだ微妙だから一旦保留。時間あるときにやろう」)。案Aで入れた形(オリジナル・コラボ・ほかの作品)と止め絵は、ブランチ `beat/genre-tabs-and-miss-scan` に残してある(main には入れていない)。
+
 ## いまの状態
 
 - タブは **ALL・イベント・お気に入り** の3つだけ(`13-bgm-and-rhythm-settings.jsx` の `RHYTHM_GENRES`)。曲に付けた印は0件

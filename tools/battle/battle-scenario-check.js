@@ -39,7 +39,7 @@ vm.runInContext([
   read('monster-hero/data/breeder.js'),
   enemyActionChunk,
   read('monster-hero/data/assistants.js'),
-  'globalThis.__d = { BATTLE_TUTORIAL_SCENARIO, battleScenarioIntent, orderDeckForScenario, ASSISTANT_BATTLE_TUTORIAL, ALL_PLAYER_MONSTERS, ENEMY_DATA, BASE_ATK_EVOLUTION, RANGE_EVOLUTION, GUARD_EVOLUTION, TEACHING_CARDS };',
+  'globalThis.__d = { BATTLE_TUTORIAL_SCENARIO, BATTLE_TUTORIAL_SCENARIO_FIRST, ASSISTANT_BATTLE_TUTORIAL_FIRST, ASSISTANT_BATTLE_TUTORIAL_MORE, battleScenarioIntent, orderDeckForScenario, ASSISTANT_BATTLE_TUTORIAL, ALL_PLAYER_MONSTERS, ENEMY_DATA, BASE_ATK_EVOLUTION, RANGE_EVOLUTION, GUARD_EVOLUTION, TEACHING_CARDS };',
 ].join('\n'), ctx);
 const d = ctx.__d;
 const sc = d.BATTLE_TUTORIAL_SCENARIO;
@@ -178,6 +178,34 @@ check('敵の行動が操作の回数ぶん用意されている', (sc.intents |
   `行動${(sc.intents || []).length}件 / 操作${battleDoSteps}回`);
 check('20ターン以内に終わる', battleDoSteps <= 20, `${battleDoSteps}ターン`);
 
+// --- はじめの1戦(2026-11-11)。ガード → 攻撃 → 固有技でトドメ の3ターン ---
+{
+  const f = d.BATTLE_TUTORIAL_SCENARIO_FIRST;
+  const fSteps = d.ASSISTANT_BATTLE_TUTORIAL_FIRST;
+  check('はじめの1戦: 台本がある・21手', !!f && Array.isArray(fSteps) && fSteps.length === 21, `${fSteps && fSteps.length}手`);
+  check('はじめの1戦: 勇者・敵・教え・距離は今の台本と同じ', f.heroId === sc.heroId && f.enemyKey === sc.enemyKey && f.teachingId === sc.teachingId && f.slotIndex === f.enemyDist);
+  const fNeeded = fSteps.filter(s => (s.wait === 'do' || s.wait === 'act') && s.need && s.at === 'BATTLE').map(s => s.need);
+  const fSupply = [...(f.hand || []), ...(f.draw || [])];
+  const fLeft = [...fSupply];
+  const fShort = [];
+  fNeeded.forEach(n => { const at = fLeft.indexOf(n); if (at < 0) fShort.push(n); else fLeft.splice(at, 1); });
+  check('はじめの1戦: 使わせるカード(ガード・攻撃・固有技)がそろっている', fShort.length === 0 && fNeeded.join(',') === 'guard,atk,unique' && (f.hand || []).length === 5, fNeeded.join(' → '));
+  check('はじめの1戦: 1ターン目は攻撃予告・そのあとは待つ', (f.intents || [])[0]?.type === 'ATTACK' && (f.intents || []).slice(1).every(i => i.type === 'WAIT') && (f.intents || []).length >= fNeeded.length);
+  // アシストカードは使わないので、攻撃アップは乗らない
+  const fDmg = (mult) => Math.floor(atkStat * (DIST_MULT[0] || 1.0) * mult);
+  const fAtk = fDmg(atkCard.mult), fUnique = fDmg(uniqueMult);
+  check('はじめの1戦: 敵は攻撃1回では倒れない(会心でも)', f.enemyHp > Math.floor(fAtk * critMult), `敵ライフ${f.enemyHp} > 会心込みの攻撃${Math.floor(fAtk * critMult)}`);
+  check('はじめの1戦: 固有技で必ず倒しきれる', f.enemyHp <= fAtk + fUnique, `敵ライフ${f.enemyHp} ≦ 攻撃${fAtk}+固有技${fUnique}`);
+  const fIncoming = Math.max(1, Math.floor(Math.max(30, (f.enemyAtk * ATTACK_MULT - defStat * 1.5) * (1 - Math.min(0.5, defStat * 0.0002))) * traitCut));
+  check('はじめの1戦: 通常攻撃はガードで受けきれる', Math.max(0, fIncoming - guardCut) === 0, `ガード軽減${guardCut} ≧ ${fIncoming}`);
+  let g = maxGuts, gOk = true; const gLog = [];
+  [0, atkCard.baseGuts, hero.unique.baseGuts].forEach((cost) => { if (g < cost) gOk = false; g = Math.min(maxGuts, g - cost + Math.floor(maxGuts * 0.05)); gLog.push(g); });
+  check('はじめの1戦: ガッツが足りる', gOk, `残り推移 ${gLog.join('→')}`);
+  const mSteps = d.ASSISTANT_BATTLE_TUTORIAL_MORE;
+  check('つづき: 勇者えらびから始まり、今の本体の操作を全部含む', Array.isArray(mSteps) && mSteps[0].at === 'PICK_HERO'
+    && steps.filter(s => s.wait === 'do').every(s => mSteps.some(m => m.id === s.id)) && mSteps[mSteps.length - 1].wait === 'end');
+}
+
 // --- ⑤ ふだんのバトルに影響しない ---
 // 台本の分岐はすべて battleScenarioRef で囲む。囲み忘れると通常プレイの
 // 敵の行動や手札まで固定されてしまうので、ここで数えて確かめる
@@ -197,7 +225,7 @@ check('敵の行動は台本があるときだけ差し替える',
     && /return chooseEnemyAction\(ent,currentDist[,)]/.test(source));
 check('手札の並びは台本があるときだけ固定する',
   has('if (scenario && typeof orderDeckForScenario === \'function\') return orderDeckForScenario(scenario, pool);')
-    && has('return pool.sort(()=>Math.random()-0.5);'));
+    && has('return shuffledCopy(pool);'));
 check('敵の強さを書き換えるのは台本があるときだけ',
   has('if (scenario) {\n      if (Number.isFinite(Number(scenario.enemyHp)))'));
 check('選択肢を絞るのは台本があるときだけ',

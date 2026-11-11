@@ -9,9 +9,11 @@
 //   node tools/run-checks.js --changed --plan       … 選んだ検査を出すだけ(実行しない)
 //   node tools/run-checks.js --area always          … いつも回す短い検査(run-checks-always.json。--changed でも毎回回す)
 //   node tools/run-checks.js --measure-always       … いつも回す短い検査の一覧を測り直して書き直す(ブラウザを使わず1秒未満で通るもの)
-//   オプション: --limit N(選ぶ上限。既定40) --wide(当たった領域を丸ごと) --base <ref>(そのrefとの差も見る)
+//   オプション: --limit N(選ぶ上限。既定60・2026-11-11 に40から。名指しで読む検査はこの外) --wide(当たった領域を丸ごと) --base <ref>(そのrefとの差も見る)
 //   オプション: --skip-file <ファイル>(1行1検査。# で始まる行は無視。その検査を回さない)
 //   オプション: --no-server(実ブラウザ検査用の配信を起動しない) --timeout <秒> --json <出力先>
+//   --changed は、検査が変えたファイルを名指しで読んでいれば必ず選び(上限の外)、ふつう組に分けて同時に回す(2026-11-11。
+//     1本ずつなら --serial)。どのファイルをどの検査が読むかは run-checks-deps.js が検査のソースから機械で決める
 //   node tools/run-checks.js --area all --parallel 5 … 全部を5組に分けて同時に回す(1時間弱)(2026-10-23。1本ずつだと2時間を超える)
 //     組は前回かかった時間(run-checks-times.json)で平らに分ける。同じポートを使う検査は同じ組へ、
 //     自分で :8899 を立てる検査と時間を測る検査(perf・fps など)は、最後に1本ずつ回す。結果は1つにまとめて出す
@@ -34,6 +36,7 @@ const fs = require('fs');
 const path = require('path');
 const net = require('net');
 const { spawn, spawnSync } = require('child_process');
+const { buildDepIndex } = require('./run-checks-deps');
 
 const TOOLS_DIR = __dirname;
 const REPO_ROOT = path.resolve(TOOLS_DIR, '..');
@@ -116,6 +119,8 @@ function alwaysChecks() {
   catch { return []; }
 }
 const FORCE_CHECKS = [
+  // 選び方そのもの(2026-11-11)。選び方を直したら、名指しで読む検査が漏れていないか・どの領域にも入らない検査が無いかを確かめる
+  { re: /^tools\/run-checks(-deps)?\.js$|^tools\/run-checks-always\.json$/, checks: ['run-checks-select-check.js'], why: '--changed の選び方(漏れ・どこにも入らない検査)' },
   // 本体を読み込む検査が、用を終えたら抜けるか(2026-11-07・#4832 の見張りで harness を使う検査が600秒止まった)。本体や harness を触ったら確かめる
   { re: /^monster-hero\/src\/parts\/.+\.jsx$|^tools\/harness\.js$/, checks: ['boot/harness-exit-check.js'], why: '本体を読み込む検査が、終わったら抜けるか(止まらないタイマーが無いか)' },
   // 保存キー(mh_*)は docs/spec/SAVE_DATA.md の一覧に載せる決まり。本体・データを触ったら必ず確かめる
@@ -123,6 +128,8 @@ const FORCE_CHECKS = [
   { re: /^monster-hero\/(src\/parts\/.+\.jsx|data\/.+\.js|index\.html)$|^docs\/spec\/SAVE_DATA\.md$/, checks: ['boot/save-keys-check.js'], why: '保存キーが SAVE_DATA.md の一覧に載っているか' },
   { re: /^monster-hero\/(sw\.js|src\/parts\/25-asset-cache\.jsx)$|^tools\/(build|stamp-version|stamp-game-build|build-asset-manifest)\.js$|^tools\/boot\/code-prefetch-check\.js$/, checks: ['boot/code-prefetch-check.js'], why: '新しい版を出したら必ず新しい本体が動くか(事前ダウンロードの JS・CSS)' },
   { re: /^(CLAUDE|AGENTS|README)\.md$|^docs\/|^\.claude\/skills\//, checks: ['rules-index-check.js'], why: 'ルールと資料' },
+  // ページの拡大・見えている範囲のずれ(押した所と反応する所がずれる)。index.html の touch-action と 10-core.jsx の見張り(2026-11-11)
+  { re: /^monster-hero\/(index\.html|src\/parts\/10-core\.jsx)$|^tools\/boot\/page-zoom-guard-check\.js$/, checks: ['boot/page-zoom-guard-check.js'], why: 'ページが拡大されない・ずれを見張りが見つけるか' },
   // 新モード(tactics)の分岐が入っているファイル。ファイル名の語(app・parts)では拾えないので名指しする。
   // 「isTacticsMode で締めたつもり」が既存5モードへ漏れると、遊んでいる人の記録に直に効く
   { re: /^monster-hero\/src\/parts\/(10-core|22-enemy-and-bond-entries|32-tactics-units|60-app|71-screen-battle)\.jsx$/,
@@ -131,6 +138,10 @@ const FORCE_CHECKS = [
   // ファイル名の語(app・home・core)では拾えないので名指しする
   { re: /^monster-hero\/(src\/parts\/(10-core|60-app|69-screen-home)\.jsx|data\/(help|assistants)\.js)$/,
     checks: ['battle/battle-system-select-check.js'], why: 'モンヒロバトルの入口と導線' },
+  // 助手の絵(立ち絵・顔)を差し替えた・足したとき、絵の置き方を持つ所を触ったときは、使う場面の全部で切れ・伸び・ばらつきを見る(2026-11-11)。
+  // 絵の余白が変わるだけで、別の画面の寄せ方が合わなくなる(ももすけの絵の差し替えで、モードえらびが顔だけの大写しになっていた)。10分あまりかかるので名指しの所だけ
+  { re: /^monster-hero\/(images\/assistant\/(?!face\/).+\.(png|PNG)|src\/parts\/(56-assistant-life-map|56-assistant-peer)\.jsx)$/,
+    checks: ['assistant/assistant-art-scenes-check.js'], why: '助手の絵が使う場面の全部でうまく出ているか' },
   // 5人目の助手あつの解放(仲良し度 → お話 → 選べる)。公開の印・お話の流し方・一覧の出し分けは実ブラウザでないと通らない(2026-10-22)
   { re: /^monster-hero\/(src\/parts\/(10-core|17-release-changelog-login-missions|56-screen-profile|60-app)\.jsx|data\/assistants\.js)$/,
     checks: ['assistant/atsu-unlock-browser-check.js'], why: 'あつの解放の流れ(公開の印・お話・選ぶ画面)' },
@@ -257,13 +268,17 @@ function checkTokens(command) {
 // 変更から「通す検査の並び」を作る。
 // 語が当たる検査が多いほど、その語は大まかだということなので、当たりの少ない語から順に並べる。
 // 上限で切ったぶんは必ず本数を出す（黙って減らすと「全部通した」と読めてしまう）。
-function planForChanges(files, areas, wide, limit) {
+function planForChanges(files, areas, wide, limit, depIndex) {
   const core = files.some(f => !GENERATED_RE.test(f) && CORE_RE.test(f));
   const reasons = new Map();      // 検査 -> なぜ選ばれたか
   const rank = new Map();         // 検査 -> 当たった語の大まかさ（小さいほど的確）
+  const must = new Set();         // 上限(--limit)の外で必ず回す検査(名指し・自分自身・FORCE_CHECKS・検査が名指しで読むファイル)
   const allChecks = [];
   for (const [name, list] of areas) if (!['required', 'ci'].includes(name)) for (const c of list) if (!allChecks.includes(c)) allChecks.push(c);
   const tokenIndex = allChecks.map(c => ({ c, t: checkTokens(c), area: c.includes('/') ? c.split('/')[0] : 'root' }));
+  // 検査が実際に読んでいるファイルの索引(run-checks-deps.js・2026-11-11)。
+  // 語だけで選ぶと、変えたファイルを名指しで読む検査の 43% が漏れていた
+  const deps = depIndex || buildDepIndex(allChecks);
 
   const hitAreas = new Set();
   for (const f of files) {
@@ -271,10 +286,19 @@ function planForChanges(files, areas, wide, limit) {
     // 検査スクリプト自身を直したときは、その検査を回す。
     // ファイル名から語を取る仕組みでは拾えず、直した本人だけが素通りしていた。
     const self = /^tools\/(.+\.js)$/.exec(f);
-    if (self && allChecks.includes(self[1])) { reasons.set(self[1], `この検査自体を変えた（${f}）`); rank.set(self[1], 0); }
+    if (self && allChecks.includes(self[1])) { reasons.set(self[1], `この検査自体を変えた（${f}）`); rank.set(self[1], 0); must.add(self[1]); }
     for (const rule of FORCE_CHECKS) {
       if (!rule.re.test(f)) continue;
-      for (const c of rule.checks) if (!reasons.has(c)) { reasons.set(c, `${rule.why}（${f}）`); rank.set(c, 0); }
+      for (const c of rule.checks) { if (!reasons.has(c)) { reasons.set(c, `${rule.why}（${f}）`); rank.set(c, 0); } must.add(c); }
+    }
+    for (const c of (deps.named ? deps.named(f) : deps.direct.get(f)) || []) {
+      if (!allChecks.includes(c)) continue;
+      if (!must.has(c)) { reasons.set(c, `このファイルを名指しで読む検査（${f}）`); rank.set(c, 0); }
+      must.add(c);
+    }
+    for (const c of deps.ident.get(f) || []) {
+      if (!allChecks.includes(c) || reasons.has(c)) continue;
+      reasons.set(c, `このファイルで定義された名前を見ている（${f}）`); rank.set(c, 0.5);
     }
     for (const token of tokensOf(f)) {
       const matched = tokenIndex.filter(x => x.t.has(token));
@@ -291,16 +315,17 @@ function planForChanges(files, areas, wide, limit) {
   for (const c of required) if (!reasons.has(c)) reasons.set(c, 'ゲーム本体を触った（CLAUDE.md ⑥ の必須検査）');
   // いつも回す短い検査(上限の数には入れない)。生成物だけの変更では足さない
   if (files.some(f => !GENERATED_RE.test(f))) for (const c of areas.get('always') || []) if (!required.includes(c)) { required.push(c); if (!reasons.has(c)) reasons.set(c, 'いつも回す短い検査（run-checks-always.json）'); }
-  const rest = [...reasons.keys()].filter(c => !required.includes(c))
+  const mustList = [...must].filter(c => !required.includes(c)).sort();
+  const rest = [...reasons.keys()].filter(c => !required.includes(c) && !must.has(c))
     .sort((a, b) => (rank.get(a) - rank.get(b)) || a.localeCompare(b));
-  // 上限(--limit)から引くのは必須検査だけ。いつも回す短い検査は数に入れない
+  // 上限(--limit)から引くのは必須検査だけ。いつも回す短い検査と、上の must(確実に要るもの)は数に入れない
   const room = wide ? rest.length : Math.max(0, limit - (core ? areas.get('required').length : 0));
-  const picked = [...required, ...rest.slice(0, room)];
+  const picked = [...required, ...mustList, ...rest.slice(0, room)];
   return { picked, reasons, core, dropped: rest.length - Math.min(room, rest.length) };
 }
 
 function parseArgs(argv) {
-  const opts = { areas: [], list: false, server: true, timeoutSec: 600, json: null, changed: false, plan: false, wide: false, base: null, limit: 40 };
+  const opts = { areas: [], list: false, server: true, timeoutSec: 600, json: null, changed: false, plan: false, wide: false, base: null, limit: 60 };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--list') opts.list = true;
@@ -317,6 +342,7 @@ function parseArgs(argv) {
     else if (a === '--skip-file') opts.skipFile = String(argv[++i] || '');
     else if (a === '--parallel') opts.parallel = Math.max(1, Math.min(8, Number(argv[++i]) || 4));
     else if (a === '--save-times') opts.saveTimes = true;
+    else if (a === '--serial') opts.serial = true;
     else if (a === '--lane') opts.lane = String(argv[++i] || '');
     else if (a === '--script') opts.scripts = (opts.scripts || []).concat(String(argv[++i] || '').split(',').filter(Boolean));
     else if (a.startsWith('--area=')) opts.areas.push(...a.slice(7).split(',').filter(Boolean));
@@ -348,6 +374,12 @@ function discoverAreas() {
     const full = path.join(TOOLS_DIR, dir);
     if (!fs.statSync(full).isDirectory() || ['node_modules', 'art-sources', 'out'].includes(dir)) continue;
     const files = fs.readdirSync(full).filter(f => f.endsWith('-check.js'));
+    // 1つ下のフォルダの検査も拾う(2026-11-11。playbot/sim/hate-sim-check.js がどの領域にも入らず、一度も回っていなかった)
+    for (const sub of fs.readdirSync(full)) {
+      const subFull = path.join(full, sub);
+      if (sub === 'node_modules' || !fs.statSync(subFull).isDirectory()) continue;
+      for (const f of fs.readdirSync(subFull)) if (f.endsWith('-check.js')) files.push(`${sub}/${f}`);
+    }
     for (const extra of EXTRA_CHECKS[dir] || []) if (fs.existsSync(path.join(full, extra))) files.push(extra);
     if (files.length) areas.set(dir, files.sort().map(f => `${dir}/${f}`));
   }
@@ -577,10 +609,18 @@ async function main() {
       process.exit(0);
     }
     if (dropped) console.log(`  ※ 当てはまる検査があと ${dropped} 本ありますが、上限 ${opts.limit} 本で切りました（--limit で増やす / --wide で領域ごと）`);
+    // 選んだ検査は、ふつう組に分けて同時に回す(2026-11-11)。名指しで読む検査を必ず選ぶようにして本数が増えたぶんを、
+    // 同時に回して取り返す。1本ずつにしたいときは --serial(--parallel N で組の数も選べる)
+    if (!opts.parallel && !opts.serial) opts.parallel = Math.max(1, Math.min(4, require('os').cpus().length));
     if (opts.plan) {
       console.log(`\n通す検査 ${picked.length} 本${core ? '（必須検査を含む）' : ''}:`);
       for (const c of picked) console.log(`  ${c.padEnd(46)} ← ${reasons.get(c)}`);
-      console.log('\n実行するなら --plan を外してください。広げるなら --wide。');
+      const times = readTimes();
+      const serialSec = picked.reduce((a, c) => a + (Number.isFinite(times[c]) ? times[c] : 5), 0);
+      let est = `見込み(前回の実測): 1本ずつなら ${Math.round(serialSec / 60)}分`;
+      if (opts.parallel > 1) { const { lanes, soloSec } = planLanes(picked, opts.parallel); est += ` / ${lanes.length}組で同時に回すと ${Math.round((Math.max(0, ...lanes.map(l => l.sec)) + soloSec) / 60)}分`; }
+      console.log(`\n${est}`);
+      console.log('実行するなら --plan を外してください。広げるなら --wide。');
       return;
     }
     opts.scripts = (opts.scripts || []).concat(picked);
@@ -668,4 +708,6 @@ async function main() {
   process.exit(bad.length ? 1 : 0);
 }
 
-main().catch(e => { console.error('NG: run-checks 自体が失敗:', e && e.stack || e); process.exit(2); });
+// 選び方を見張る検査(run-checks-select-check.js)から読み込めるようにする。直接打ったときだけ回す
+module.exports = { planForChanges, planLanes, portsOf, scriptMeta, discoverAreas, FORCE_CHECKS, REQUIRED, GENERATED_RE, alwaysChecks };
+if (require.main === module) main().catch(e => { console.error('NG: run-checks 自体が失敗:', e && e.stack || e); process.exit(2); });

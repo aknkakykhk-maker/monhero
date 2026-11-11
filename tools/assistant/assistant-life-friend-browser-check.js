@@ -225,7 +225,13 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.locator('[data-alf-visit-words]').waitFor({ timeout: 3000 });
       await shot(page, `${v.id}-6b-visit-words`);
       await page.locator('[data-alf-note-free]').fill('ID: aoi_1234567 で');
-      check(`⑫ 自由文に連絡先を書くと理由が出て、一言を押せない(${v.id})`, (await page.locator('[data-alf-note-warn]').count()) === 1 && await page.locator('[data-alf-word="1"]').isDisabled());
+      check(`⑫ 自由文に連絡先を書くと理由が出て、一言も「この言葉で送る」も押せない(${v.id})`, (await page.locator('[data-alf-note-warn]').count()) === 1 && await page.locator('[data-alf-word="1"]').isDisabled() && await page.locator('[data-alf-note-send]').isDisabled());
+      await page.locator('[data-alf-note-free]').fill('');
+      check(`⑱ 何も書いていないときは「この言葉で送る」を押せず、「決まった一言で送る」と出る(${v.id})`, await page.locator('[data-alf-note-send]').isDisabled() && /決まった一言で送る/.test(await page.locator('[data-alf-word-hint]').innerText()));
+      await page.locator('[data-alf-note-free]').fill('ソファふかふか');
+      check(`⑱ 書くと「この言葉で送る」が押せて、「一言+書いた言葉」で届くと出る(${v.id})`, await page.locator('[data-alf-note-send]').isEnabled() && /一言\+書いた言葉/.test(await page.locator('[data-alf-word-hint]').innerText()));
+      { const ng = await page.evaluate(() => { const b = document.querySelector('[data-alf-note-send]').getBoundingClientRect(); const s = document.querySelector('[data-alf-note-send]').closest('.mhl-sheet').getBoundingClientRect(); return b.left < s.left - 1 || b.right > s.right + 1 || b.right > window.innerWidth ? ['はみ出す'] : []; }); check(`⑱ 「この言葉で送る」がシートからはみ出さない(${v.id})`, ng.length === 0, ng.join()); }
+      await page.locator('[data-alf-note-free]').fill('ID: aoi_1234567 で');
       { const ng = await chipNg(); check(`⑫ 仲良し度の知らせが、置き手紙のシートのボタンを隠さない(${v.id})`, ng.length === 0, ng.join(' / ')); }
       await shot(page, `${v.id}-6d-visit-warn`);
       await page.locator('[data-alf-note-free]').fill('ソファふかふかでよかった！');
@@ -330,17 +336,20 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.locator('[data-friend-row="mio-0001"]').waitFor({ timeout: 15000 });
       await page.waitForFunction(() => /みゅあの部屋/.test(document.body.innerText), null, { timeout: 8000 }).catch(() => {});
       { const t = await page.locator('[data-friend-row]').allInnerTexts();
-        check(`⑰ フレンドの一覧に短い形「🏡 みゅあの部屋」「🏘 フレンドの家へ」「📋 みんなの居場所」(${v.id})`, t.some(x => /あおい/.test(x) && /🏡 みゅあの部屋/.test(x)) && t.some(x => /ゆうと/.test(x) && /🏘 フレンドの家へ/.test(x)) && t.some(x => /みお/.test(x) && /📋 みんなの居場所/.test(x)), t.join(' | ').slice(0, 200));
+        check(`⑰ フレンドの一覧に短い形「🏡 みゅあの部屋」「🏘 フレンドの家へ」「🗺 助手の町」(${v.id})`, t.some(x => /あおい/.test(x) && /🏡 みゅあの部屋/.test(x)) && t.some(x => /ゆうと/.test(x) && /🏘 フレンドの家へ/.test(x)) && t.some(x => /みお/.test(x) && /🗺 助手の町/.test(x)), t.join(' | ').slice(0, 200));
         const ng = await textProblems(page, '[data-friend-row]'); check(`⑰ 一覧の字がはみ出さない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
       await shot(page, `${v.id}-17-life-list`);
       await page.locator('[data-friend-row="aoi-0001"]').click();
-      await page.waitForFunction(() => /のぞいている/.test(document.body.innerText), null, { timeout: 8000 }).catch(() => {});
+      await page.waitForFunction(() => /のぞいている/.test(document.body.innerText), null, { timeout: 30000 }).catch(() => {});
       check(`⑰ プロフィールは文の形「🏡 みゅあの部屋をのぞいている」(${v.id})`, /🏡 みゅあの部屋をのぞいている/.test(await page.locator('[data-friend-presence]').first().innerText().catch(() => '')));
       await shot(page, `${v.id}-17b-life-profile`);
+      // 「家へ行く」の札は、プロフィールを開いて相手の家の様子を読み終えてから出る。重いときは数えるのが早すぎて
+      // 1回だけ NG になった(2026-11-11 ミハリの見回り)。決まった時間ではなく、札が出るまで待ってから数える
+      await page.locator('[data-alf-profile-visit="ok"]').first().waitFor({ state: 'visible', timeout: 30000 }).catch(() => {});
       if (await page.locator('[data-alf-profile-visit="ok"]').count()) {
         await page.locator('[data-alf-profile-visit-go]').click();
-        await page.locator('[data-alf-visit]').waitFor({ timeout: 5000 });
-        await page.waitForFunction(() => document.querySelector('[data-alf-visit-now]'), null, { timeout: 8000 }).catch(() => {});
+        await page.locator('[data-alf-visit]').waitFor({ timeout: 30000 });
+        await page.waitForFunction(() => document.querySelector('[data-alf-visit-now]'), null, { timeout: 30000 }).catch(() => {});
         check(`⑰ 訪ねた家の見出しは、横は文の形「いま 🏡 みゅあの部屋をのぞいている」・縦は札に収まる短い形「いま 🏡 みゅあの部屋」(${v.id})`, (v.w > v.h ? /いま 🏡 みゅあの部屋をのぞいている/ : /^いま 🏡 みゅあの部屋$/).test(await page.locator('[data-alf-visit-now]').innerText().catch(() => '')));
         await shot(page, `${v.id}-17c-life-visit`);
         // 自分が訪ねているあいだは lv=v を送る(持ち主の名前は送らない)

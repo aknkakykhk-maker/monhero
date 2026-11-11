@@ -72,8 +72,11 @@ const cutProblems = (page, sel) => page.evaluate((s) => {
       // ① 道具タブ
       await page.locator('[data-assistant-life-icon="items"]').click(); await page.waitForTimeout(300);
       const items = await page.locator('[data-assistant-life-items]').innerText().catch(() => '');
+      // 説明は下の「？ 友情Lv・仲良し度と、贈るきまり」に畳んである(2026-11-11 案7)。押すと出る
+      await page.locator('[data-assistant-life-items-help-toggle]').click().catch(() => {}); await page.waitForTimeout(200);
+      const itemsHelp = await page.locator('[data-assistant-life-items]').innerText().catch(() => '');
       // 2026-11-08 買って贈る: 持っていない行は「🛒 ◯P で買って贈る」(一緒にいる組がいないときは交換所の入口)。下の交換所の入口はいつもある
-      check(`① ${tag}: 道具タブに友情Lv・仲良し度の説明と交換所の入口が出る`, /友情Lv=贈った2人の助手どうしの仲/.test(items) && /仲良し度=あなたとその助手の仲/.test(items) && (await page.locator('[data-assistant-life-items] [data-assistant-life-shop="item"], [data-assistant-life-items] [data-assistant-life-item-buy]').count()) >= 2, items.replace(/\s+/g, ' ').slice(0, 80));
+      check(`① ${tag}: 道具の一覧の説明は畳んであり、押すと友情Lv・仲良し度の説明が出る。交換所の入口が出る`, /ふつう/.test(items) && !/友情Lv=贈った2人の助手どうしの仲/.test(items) && /友情Lv=贈った2人の助手どうしの仲/.test(itemsHelp) && /仲良し度=あなたとその助手の仲/.test(itemsHelp) && (await page.locator('[data-assistant-life-items] [data-assistant-life-shop="item"], [data-assistant-life-items] [data-assistant-life-item-buy]').count()) >= 2, items.replace(/\s+/g, ' ').slice(0, 80));
       // 右上の時計の札が右端で切れない(🔄横 667 の狭い欄・2026-11-08 ミハリ)
       const clockOk = await page.evaluate(() => { const c = [...document.querySelectorAll('[data-assistant-life-clock-box] [data-time-of-day-clock]')].find(x => x.getClientRects().length); if (!c) return true; const r = c.getBoundingClientRect(); let p = c.parentElement; while (p && getComputedStyle(p).overflow === 'visible') p = p.parentElement; const pr = p ? p.getBoundingClientRect() : { right: innerWidth }; return r.right <= Math.min(innerWidth, pr.right) + 1; });
       check(`③ ${tag}: 右上の時計の札が右端で切れない`, clockOk);
@@ -85,18 +88,23 @@ const cutProblems = (page, sel) => page.evaluate((s) => {
       await page.locator('[data-assistant-life-today-act="give"]').click({ timeout: 5000 }).catch(() => {}); await page.waitForTimeout(400);
       const sheetN = await page.locator('[data-assistant-life-give-sheet]').count();
       if (sheetN) {
+        // 説明ときまりは「？ きまり」に畳んである(2026-11-11 社長「贈るやつも見た目とか分かりにくい」)。開いてすぐは出ていなくて、押すと出る
+        const closedText = await page.locator('[data-assistant-life-give-sheet]').innerText();
+        await page.locator('[data-assistant-life-give-help]').click(); await page.waitForTimeout(200);
         const sheet = await page.locator('[data-assistant-life-give-sheet]').innerText();
+        check(`② ${tag}: 説明は畳んであり、「？ きまり」で 友情Lv・仲良し度の説明と回数のきまりが出る`, !/友情Lv=贈った2人/.test(closedText) && /友情Lv=贈った2人/.test(sheet) && /別々に数える/.test(sheet.replace(/\u2060/g, '')) && (await page.locator('[data-assistant-life-gift-rules]').count()) === 1);
+        check(`② ${tag}: 回数は「2人に」「1人に」の2本が並んで出る`, /2人に あと\d回|2人に 今日はおしまい/.test(closedText) && /1人に あと\d回|1人に 今日はおしまい/.test(closedText), closedText.replace(/\s+/g, ' ').slice(0, 60));
         const weights = await page.locator('[data-assistant-life-give-sheet] [data-assistant-life-give-weight]').count();
         check(`② ${tag}: 贈るシートに説明・2人の友情Lv・あなたとの仲良し度の重み(3行)が出る`, /友情Lv=贈った2人/.test(sheet) && /2人の友情Lv/.test(sheet) && /あなたとの仲良し度/.test(sheet) && weights === 3, `${weights}行 ${sheet.replace(/\s+/g, ' ').slice(0, 60)}`);
-        check(`② ${tag}: 重みに「あと◯・段の◯%」か「この1回で LvN に！」と、次の段で起きることが出る`, /(あと\d+・\s*この1回で段の\d+(〜\d+)?%|この1回で Lv\d+ に！)/.test(sheet) && /Lv\d+: /.test(sheet), sheet.replace(/\s+/g, ' ').match(/Lv\d+→\d+[^／]*/)?.[0] || '');
+        check(`② ${tag}: 重みに「あと◯で LvN」か「この1回で LvN に！」と、次の段で起きること(→)が出る`, /(あと\d+で Lv\d+|この1回で Lv\d+ に！)/.test(sheet) && /→ \S/.test(sheet), sheet.replace(/\s+/g, ' ').match(/あと\d+で Lv\d+[^→]*→[^あ]{0,24}/)?.[0] || '');
         const cutSheet = await cutProblems(page, '[data-assistant-life-give-sheet] > div');
         check(`③ ${tag}: 贈るシートの文字が切れない・はみ出さない・ボタンに重ならない`, cutSheet.length === 0, cutSheet.join(','));
         // 横で説明と重みが増えても、やめる・贈るはシートを送らずに押せる(下に貼り付け)
         const goInView = await page.evaluate(() => { const b = document.querySelector('[data-assistant-life-give-go]'); if (!b) return false; const r = b.getBoundingClientRect(); const x = r.left + r.width / 2, y = r.top + r.height / 2; return r.bottom <= innerHeight + 1 && r.top >= 0 && b.contains(document.elementFromPoint(x, y)); });
         check(`③ ${tag}: 「贈る」ボタンがシートを送らなくても画面の中で押せる`, goInView);
         // 重みの文で「LvN:」だけが行の終わりに残らない(ことばの途中で割れない)
-        const split = await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-give-weight] p span.inline-block')].filter(x => x.getClientRects().length > 1 && /^／ Lv\d+: /.test(x.textContent) && x.getBoundingClientRect().width < 60).length);
-        check(`③ ${tag}: 重みの「LvN: 起きること」が「LvN:」だけ行末に残って割れない`, split === 0, String(split));
+        const split = await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-give-weight] p span.inline-block')].filter(x => x.getClientRects().length > 1 && /^→ /.test(x.textContent) && x.getBoundingClientRect().width < 60).length);
+        check(`③ ${tag}: 重みの「→ 起きること」が「→」だけ行末に残って割れない`, split === 0, String(split));
         if (SHOTS) await page.screenshot({ path: path.join(shotDir, `${file}-2-sheet.png`) });
         // 持っていない道具を選ぶと「🛒 交換所で手に入れる」
         await page.locator('[data-assistant-life-give-kind="onigiri"]').click().catch(() => {}); await page.waitForTimeout(200);

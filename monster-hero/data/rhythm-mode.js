@@ -1924,13 +1924,26 @@ const RHYTHM_FRAME_DIAG=(()=>{
 // WebGL の描き手の名前(iPhone は 'Apple GPU')。画質「自動」の見極めで調べた名前を使い、まだ調べていなければ1回だけ調べる
 const rhythmWebglRendererName=()=>{try{rhythmWebglGpuUsable();}catch(e){}return rhythmWebglRendererNameCache||'';};
 const RHYTHM_TIMING_DIAG=(()=>{
-  const zero=()=>({ageHist:[0,0,0,0,0,0],ageCapped:0,ageBacked:0,ageUnbacked:0,matchByAge:0,frames:0,stalls:0,maxStepMs:0,hidden:0,pen:0});
-  let stats=zero(),meta={},lastSong=null,lastTick=0,lastStallAt=0,biasList=[];
+  // 【2026-11-11・同期の総点検】stalls は「元の時計(ctx.currentTime)」で数える。直し方 smoothSongClock を入れている間は、なめらかにした後の時計では
+  //   止まりが必ず 0 になり、端末の記録から「もう要らない」と見えて自分で切れ、切れるとまた止まる、をくり返していた(本番の記録で iPhone 8台中4台。
+  //   切れている回は 6〜12% のコマで時計が止まっていた)。画面に出している時計の止まりは stallsShown に別に数える(直しが効いているかを見る)。
+  //   lateN / lateActMs / lateFullMs / lateExMs … 補正の上限(80ms)を超えて遅れて届いた入力で単押しを取れたときの、ずれの中央値(いまの判定・合図の時刻まで
+  //   全部戻したとしたら)と、上限を超えた分の中央値。合図の時刻が本当に指の触れた時刻なら lateFullMs がふだんのずれ(biasMs)に近く、時刻だけ古いなら
+  //   lateActMs が近い。**数えるだけで、判定には使わない**
+  const zero=()=>({ageHist:[0,0,0,0,0,0],ageCapped:0,ageBacked:0,ageUnbacked:0,matchByAge:0,frames:0,stalls:0,stallsShown:0,maxStepMs:0,hidden:0,pen:0});
+  let stats=zero(),meta={},lastSong=null,lastShown=null,lastTick=0,lastStallAt=0,biasList=[],lateEx=null,lateList=[];
+  const perfNow=()=>typeof performance!=='undefined'&&performance.now?performance.now():0;
+  const median=list=>{const s=list.slice().sort((a,b)=>a-b);return s.length?Math.round(s[s.length>>1]*10)/10:null;};
   const bucket=age=>age<25?0:age<50?1:age<80?2:age<150?3:age<300?4:5;
   return {
-    reset(){stats=zero();meta={};lastSong=null;lastTick=0;lastStallAt=0;biasList=[];},
+    reset(){stats=zero();meta={};lastSong=null;lastShown=null;lastTick=0;lastStallAt=0;biasList=[];lateEx=null;lateList=[];},
       // 単押しを取ったときのずれ(ms。正=遅い側)。端末の音の遅れが合っているかの手がかり。診断に中央値と数だけ残す(2026-10-07)
-      bias(deltaMs){const v=Number(deltaMs);if(Number.isFinite(v)&&Math.abs(v)<=200&&biasList.length<600)biasList.push(v);},
+      bias(deltaMs){const v=Number(deltaMs);if(!Number.isFinite(v))return;
+        // 直前(同じ合図の処理の中)に、上限を超えて遅れた入力があったなら、その入力で取れた単押し。ふだんのずれの数には混ぜない
+        if(lateEx&&perfNow()-lateEx.at<=4){if(lateList.length<200)lateList.push([v,v-lateEx.ex,lateEx.ex]);return;}
+        if(Math.abs(v)<=200&&biasList.length<600)biasList.push(v);},
+    // 上限を超えて遅れた入力の「戻し切れなかった分」(ms)。rhythmInputAgeMs が、基準のそろった端末でだけ呼ぶ。次の入力で消える
+    lateExcess(ms){const v=Number(ms);lateEx=v>0?{ex:v,at:perfNow()}:null;},
     // 直近 ms のあいだに、80ms以上コマが止まったか(取りこぼしの回収を、止まったあとだけ長くするのに使う)
     recentStall(ms){return lastStallAt>0&&typeof performance!=='undefined'&&performance.now&&performance.now()-lastStallAt<=ms;},
     age(value){const v=Number(value);if(!(v>=0)||v>5000)return;stats.ageHist[bucket(v)]++;if(v>RHYTHM_INPUT_AGE_MAX_MS)stats.ageCapped++;},
@@ -1940,11 +1953,13 @@ const RHYTHM_TIMING_DIAG=(()=>{
     // 当てるノーツを、補正の上限を超えた本当の遅れで選んだ回数(2026-10-08。rhythmInputMatchAgeFor)
     matchByAge(){stats.matchByAge++;},
     ageUnbacked(){stats.ageUnbacked++;},
-    frame(songMs){const tickNow=typeof performance!=='undefined'&&performance.now?performance.now():0;if(lastTick>0&&tickNow-lastTick>=80)lastStallAt=tickNow;lastTick=tickNow;const v=Number(songMs);if(!Number.isFinite(v))return;stats.frames++;if(lastSong!==null){const d=v-lastSong;if(d===0)stats.stalls++;else if(d>stats.maxStepMs)stats.maxStepMs=Math.round(d*10)/10;}lastSong=v;},
+    // songMs … 画面と判定に使っている曲の時計 / rawMs … 元の時計(なめらかにする前。渡されなければ songMs と同じ物として数える)
+    frame(songMs,rawMs){const tickNow=typeof performance!=='undefined'&&performance.now?performance.now():0;if(lastTick>0&&tickNow-lastTick>=80)lastStallAt=tickNow;lastTick=tickNow;const shown=Number(songMs);if(!Number.isFinite(shown))return;const raw=Number(rawMs),v=rawMs!=null&&Number.isFinite(raw)?raw:shown;stats.frames++;if(lastSong!==null){const d=v-lastSong;if(d===0)stats.stalls++;else if(d>stats.maxStepMs)stats.maxStepMs=Math.round(d*10)/10;}lastSong=v;if(lastShown!==null&&shown===lastShown)stats.stallsShown++;lastShown=shown;},
     meta(value){if(value&&typeof value==='object')meta={...meta,...value};},
     hidden(){stats.hidden++;},
     pen(){stats.pen++;},
-    snapshot(){const sorted=biasList.slice().sort((a,b)=>a-b),n=sorted.length;return {...stats,ageHist:stats.ageHist.slice(),biasN:n,biasMs:n?Math.round(sorted[n>>1]*10)/10:null,...meta};},
+    snapshot(){const sorted=biasList.slice().sort((a,b)=>a-b),n=sorted.length;return {...stats,ageHist:stats.ageHist.slice(),biasN:n,biasMs:n?Math.round(sorted[n>>1]*10)/10:null,
+      lateN:lateList.length,lateActMs:median(lateList.map(x=>x[0])),lateFullMs:median(lateList.map(x=>x[1])),lateExMs:median(lateList.map(x=>x[2])),...meta};},
   };
 })();
 // 補正の上限。直し方 inputAgeCap を入れた端末だけ 300ms まで広げる(基準がそろっていると分かった端末だけ。下の rhythmInputAgeMs を見る)
@@ -1959,8 +1974,7 @@ const rhythmInputMatchAgeFor=ageMs=>{
   if(Number.isFinite(hint)&&hint>(Number(ageMs)||0)){RHYTHM_TIMING_DIAG.matchByAge();return hint;}
   return Number(ageMs)||0;
 };
-const rhythmInputAgeMs=(eventTimeStamp,nowPerfMs)=>{
-  rhythmInputMatchAgeHint=null;
+const rhythmInputAgeCompMs=(eventTimeStamp,nowPerfMs)=>{
   const stamp=Number(eventTimeStamp),now=Number(nowPerfMs);
   if(!Number.isFinite(stamp)||!Number.isFinite(now))return 0;
   const age=now-stamp;
@@ -1986,6 +2000,15 @@ const rhythmInputAgeMs=(eventTimeStamp,nowPerfMs)=>{
   if(RHYTHM_TIMING_DIAG.stalledSince(nowPerfMs)>=age*RHYTHM_INPUT_AGE_STALL_SHARE){RHYTHM_TIMING_DIAG.ageBacked();return Math.min(age,RHYTHM_INPUT_AGE_CAP_WIDE_MS);}
   RHYTHM_TIMING_DIAG.ageUnbacked();
   return RHYTHM_INPUT_AGE_MAX_MS;
+};
+// 判定に使う「入力の古さ」。中身は上の rhythmInputAgeCompMs(今までどおり)。ここでは診断のために、戻し切れなかった分を覚えるだけ
+const rhythmInputAgeMs=(eventTimeStamp,nowPerfMs)=>{
+  rhythmInputMatchAgeHint=null;
+  const comp=rhythmInputAgeCompMs(eventTimeStamp,nowPerfMs);
+  // 診断(2026-11-11): 基準のそろった端末で、戻し切れなかった分(遅れ − 戻した分)を覚える。判定に使う値(comp)は変えない
+  const lateAge=Number(nowPerfMs)-Number(eventTimeStamp);
+  RHYTHM_TIMING_DIAG.lateExcess(lateAge>RHYTHM_INPUT_AGE_MAX_MS&&lateAge<2000&&rhythmInputAgeFloorMs<=RHYTHM_INPUT_AGE_BASE_ALIGNED_MS?lateAge-comp:0);
+  return comp;
 };
 // 【2026-10-11・社長「たまに、ちゃんと押しているのに MISS になる」】HOLD/SLIDE を離した合図(touchend など)の遅れ。
 // iPhone では合図が遅れて届くことがあり(1曲あたり 0.15秒超が数十回)、終わりで離した合図が 0.25秒遅れて届くと「押しっぱなしで窓を過ぎた」と数えられて MISS になっていた
@@ -3331,6 +3354,8 @@ const RHYTHM_HOLD_RELEASE_GRACE_MS=100;
 const RHYTHM_FLOATING_NOTES=new Set();
 // ロングを押さえている指が、自分の離しの合図なしに指の一覧から消えたとき、離した扱いにする前に待つ時間(30-rhythm-play.jsx の syncTouches)
 const RHYTHM_MISSING_TOUCH_CONFIRM_MS=120;
+// 自分の離しの合図なしに指の一覧から消えた指が、この長さのうちに同じ番号で戻ったら「押し直していない」と見る(2026-11-11・30-rhythm-play.jsx の syncTouches)
+const RHYTHM_TOUCH_BACK_MS=1500;
 // 直前に TAP を取った指の控え(半レーンずれの両手押し・2026-10-15)。照合(rhythmMatchInputBatch)だけが読み書きする。見た目にも保存にも関わらない。
 //   同じ時刻に半レーンずれて並んだ2つの TAP を左右の指で押すとき、先に照合された指が重なりの所を押していると、その指が相手側の TAP を取ってしまい、
 //   あとの指(相手側の TAP の外側寄りを押した)に行き先が無くなって片方が MISS になっていた(Node の総当たりで2853通り中18通り)。
@@ -3436,7 +3461,17 @@ const RHYTHM_TOUCH_BRIDGE_KEEP_MS=600;    // 突き合わせのために覚え�
 const RHYTHM_TOUCH_BRIDGE_LATE_MS=50;     // これより遅れて届いたタッチを「遅れた」と数える
 const RHYTHM_TOUCH_BRIDGE=(()=>{
   const zero=()=>({pointerDowns:0,touchStarts:0,matched:0,pointerOnly:0,touchOnly:0,recovered:0,ignoredLateTouches:0,
-    lateStart:0,lateDelivery:0,maxDelayMs:0,cancels:0,cancelledTouches:0,maxTouches:0});
+    lateStart:0,lateDelivery:0,maxDelayMs:0,cancels:0,cancelledTouches:0,maxTouches:0,
+    // 【2026-11-11・同期の総点検】iPhone の「遅れて届くタッチ」「自分の touchstart なしに見える指」の正体を決めるための数(足すだけ・判定には使わない)
+    //   lateHist  … 遅れて届いた touchstart の遅れの分布(50〜80 / 〜150 / 〜300 / 300ms超)
+    //   edgeAll / edgeLate … touchstart の、画面のふちからの近さ(24px未満 / 60 / 120 / それより内)。全部と、遅れて届いたもの(端末のふちのジェスチャー待ちかを見る)
+    //   multiAll / multiLate … ほかの指が触れている最中の touchstart の数。全部と、遅れて届いたもの
+    //   lsBack    … 自分の touchstart なしに見えた指のうち、自分の離しの合図なしに一覧から消えていた指が戻ったもの(=押し直していない)。lsBackGuard はそれを「新しく押した」にしなかった数
+    //   lsByStart / lsByMove / lsByEnd … 初めて見えたのが、別の指の touchstart / touchmove / touchend・touchcancel だった数
+    //   lsFollow / lsFollowEarlier / lsFollowMaxMs … そのあとで自分の touchstart が届いた数 / その時刻が「初めて見えた合図」より古かった数 / いちばん大きかった差
+    lateHist:[0,0,0,0],edgeAll:[0,0,0,0],edgeLate:[0,0,0,0],multiAll:0,multiLate:0,lsBack:0,lsBackGuard:0,lsByStart:0,lsByMove:0,lsByEnd:0,lsFollow:0,lsFollowEarlier:0,lsFollowMaxMs:0});
+  const edgeBucket=px=>px<24?0:px<60?1:px<120?2:3;
+  const revealed=new Map();
   let stats=zero();
   // pointers: 突き合わせ待ちのポインタ。touches: 最近のタッチ(突き合わせ済みかを持つ)。recovered: 取り戻したポインタ
   const pointers=new Map(),touches=[],recovered=new Map();
@@ -3447,7 +3482,7 @@ const RHYTHM_TOUCH_BRIDGE=(()=>{
     for(const [id,entry] of recovered)if(entry.upAt!=null&&now-entry.upAt>RHYTHM_TOUCH_BRIDGE_KEEP_MS)recovered.delete(id);
   };
   const api={
-    reset(){stats=zero();pointers.clear();touches.length=0;recovered.clear();},
+    reset(){stats=zero();pointers.clear();touches.length=0;recovered.clear();revealed.clear();},
     // ポインタ(pointerType==='touch')が演奏エリアで下りた
     pointerDown(id,x,y,stamp,now){
       prune(now);stats.pointerDowns++;
@@ -3462,10 +3497,17 @@ const RHYTHM_TOUCH_BRIDGE=(()=>{
       return null;
     },
     // タッチ(touchstart の changedTouches の1本)。'ignore' を返したら、その指は入力にしない(取り戻したポインタで既に通っている)
-    touchStart(identifier,x,y,stamp,now,delayMs){
+    // info … {edgePx: 画面のふちからの近さ, live: その時に触れている指の数}(診断用。無くてもよい)
+    touchStart(identifier,x,y,stamp,now,delayMs,info){
       prune(now);stats.touchStarts++;
       const delay=Number(delayMs);
       if(Number.isFinite(delay)&&delay>=0&&delay<2000){if(delay>RHYTHM_TOUCH_BRIDGE_LATE_MS)stats.lateDelivery++;if(delay>stats.maxDelayMs)stats.maxDelayMs=delay;}
+      if(info&&typeof info==='object'&&delayMs!=null){
+        const late=Number.isFinite(delay)&&delay>RHYTHM_TOUCH_BRIDGE_LATE_MS&&delay<2000,edge=Number(info.edgePx),multi=Number(info.live)>=2;
+        if(late)stats.lateHist[delay<=80?0:delay<=150?1:delay<=300?2:3]++;
+        if(Number.isFinite(edge)&&edge>=0){stats.edgeAll[edgeBucket(edge)]++;if(late)stats.edgeLate[edgeBucket(edge)]++;}
+        if(multi){stats.multiAll++;if(late)stats.multiLate++;}
+      }
       for(const [id,p] of pointers)if(near(p,{x,y})&&within(p.stamp,stamp,RHYTHM_TOUCH_BRIDGE_KEEP_MS)){pointers.delete(id);stats.matched++;touches.push({id:identifier,x,y,stamp,at:now,matched:true});return 'normal';}
       for(const [,entry] of recovered)if(!entry.touchId&&near(entry,{x,y})&&within(entry.stamp,stamp,RHYTHM_TOUCH_BRIDGE_KEEP_MS)){entry.touchId=identifier;stats.ignoredLateTouches++;return 'ignore';}
       touches.push({id:identifier,x,y,stamp,at:now,matched:false});
@@ -3483,10 +3525,27 @@ const RHYTHM_TOUCH_BRIDGE=(()=>{
     isRecoveredPointer(id){return recovered.has(id)&&recovered.get(id).upAt==null;},
     isIgnoredTouch(identifier){for(const [,entry] of recovered)if(entry.touchId===identifier)return true;return false;},
     touchCancel(count){stats.cancels++;stats.cancelledTouches+=Number(count)||0;},
-    lateStart(){stats.lateStart++;},
+      // 自分の touchstart なしに見えた指。info … {id, type: 見えた合図の種類, stamp: その合図の時刻, back: 離しの合図なしに消えていた指が戻った, guarded: 新しく押した扱いにしなかった}
+      // lateStart の数え方(touchstart 以外の合図で見えた指)は今までどおり
+      lateStart(info){
+        const i=info&&typeof info==='object'?info:{},type=String(i.type||'');
+        if(type!=='touchstart')stats.lateStart++;
+        if(i.back){stats.lsBack++;if(i.guarded)stats.lsBackGuard++;return;}
+        if(type==='touchstart')stats.lsByStart++;else if(type==='touchmove')stats.lsByMove++;else if(type)stats.lsByEnd++;
+        if(i.id!=null&&revealed.size<64)revealed.set(i.id,Number(i.stamp));
+      },
+      // 自分の touchstart が届いた。先に別の指の合図で見えていた指なら true(数え直さない)
+      lateFollow(identifier,stamp){
+        if(!revealed.has(identifier))return false;
+        const at=revealed.get(identifier);revealed.delete(identifier);stats.lsFollow++;
+        const gap=at-Number(stamp);
+        if(Number.isFinite(gap)){if(gap>8)stats.lsFollowEarlier++;if(gap>stats.lsFollowMaxMs&&gap<5000)stats.lsFollowMaxMs=Math.round(gap);}
+        return true;
+      },
+      forgetTouch(identifier){revealed.delete(identifier);},
     liveTouches(count){const n=Number(count)||0;if(n>stats.maxTouches)stats.maxTouches=n;},
-    snapshot(){return {...stats};},
-    _state:{pointers,touches,recovered},
+      snapshot(){return {...stats,lateHist:stats.lateHist.slice(),edgeAll:stats.edgeAll.slice(),edgeLate:stats.edgeLate.slice()};},
+      _state:{pointers,touches,recovered},
   };
   return api;
 })();
@@ -43373,6 +43432,29 @@ const rhythmNoteDexSong=(id,text='')=>{
     difficulties:Object.freeze({TUTORIAL:rhythmChartOnRoad(chart)}),
     tutorialSteps:Object.freeze([Object.freeze({fromMs:0,title:entry.name,text:String(text||'')})])});
 };
+// ===== オプションの「▶ 見てみる」の見本(2026-11-11 社長「モンビーのオプションで、現在の設定での画面が分からないから見れるようにしたい」) =====
+// 本物の演奏画面で、保存前の設定のまま流す短い見本。ノーツの種類がひととおり見えるよう、練習と同じ曲・同じ拍で並べる。
+// 自動で叩く(30-rhythm-preview-hands.jsx)。記録・ランキング・ライフには何も残さない(60-app.jsx の from:'preview')。曲の終わりで最初から流し直す
+const RHYTHM_OPTION_PREVIEW_END_BEAT=25;
+const RHYTHM_OPTION_PREVIEW_SONG=(()=>{
+  const t=rhythmTutorialMs;
+  const notes=[
+    mhTap(t(4),1,3,0), mhTap(t(5),4,3,0), mhTap(t(6),2,3,0),
+    mhTap(t(7),0,3,0), mhTap(t(7),5,3,0),                       // 同時押し
+    mhHoldV2(t(8),2,4,t(10)),                                   // ホールド
+    mhFlick(t(11),2,4),                                         // フリック
+    mhSlideV2(t(12),t(15),[[t(12),0,3],[t(13.5),2,3],[t(15),5,3]]), // スライド
+    mhTap(t(16),2,4,1),                                         // モンスターノーツ(マスモンを置いていれば絵が出る)
+    mhTap(t(17),1,3,0), mhTap(t(17.5),4,3,0), mhTap(t(18),2,3,0),
+    mhHoldV2(t(19),2,4,t(21),1),                                // 終点フリック
+    mhTap(t(22),0,3,0), mhTap(t(22),5,3,0),
+  ];
+  const endMs=t(RHYTHM_OPTION_PREVIEW_END_BEAT);
+  return Object.freeze({songId:'rhythm_option_preview',displayName:'見本',bgmTrackId:RHYTHM_TUTORIAL_TRACK_ID,playDurationMs:endMs,
+    difficulties:Object.freeze({TUTORIAL:rhythmChartOnRoad(mhChart(1,notes,endMs))})});
+})();
+// 見本の難易度の札は「見本」(id は練習と同じ TUTORIAL。満点も同じ)
+const RHYTHM_OPTION_PREVIEW_DIFFICULTY=Object.freeze({id:'TUTORIAL',maxScore:800000,label:'見本'});
 // 練習の満点は EASY と同じ値にしておく。スコアは記録に残さないが、
 // ランクのゲージや「→次のランク」の表示が満点を分母に使うので、0や1にすると壊れる
 const RHYTHM_TUTORIAL_DIFFICULTY=Object.freeze({id:'TUTORIAL',maxScore:800000,label:'れんしゅう'}); // 満点は EASY と同じ(2026-10-13 に 60万→80万)

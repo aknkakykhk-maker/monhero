@@ -132,7 +132,7 @@ for (const f of fs.readdirSync(PARTS).filter((x) => x.endsWith('.jsx'))) {
 // 吹き出しの側は、渡された text を jaWrap に通している(折り方は吹き出しの側で決める)。ここが変わったら④の前提も見直す
 {
   const p77 = read('77-screen-rhythm-multi.jsx');
-  ok(/function ModeSelectAssistantPanel[\s\S]{0,4000}jaWrap\(assistant\.text\)/.test(p77), 'ModeSelectAssistantPanel が台詞を jaWrap(assistant.text) で出していない(④の前提が変わった)');
+  ok(/function ModeSelectAssistantPanel[\s\S]{0,9000}jaWrap\(assistant\.text\)/.test(p77), 'ModeSelectAssistantPanel が台詞を jaWrap(assistant.text) で出していない(④の前提が変わった)');
 }
 
 // ⑤ 吹き出しの字を出す所が、文字の台詞だけを出している

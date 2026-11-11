@@ -7,9 +7,10 @@ const { useState, useEffect, useCallback, useMemo, useRef, useContext } = React;
 //   gs   … 画面(gameState)が変わった。d は「次の画面 < 動かした処理の名前」
 //   err  … 画面のエラーを受け止めた(MhErrorBoundary)
 //   vis / page … 画面が隠れた・戻った(アプリの切り替え・通知など)
-//   gap  … 画面の描き直しが1秒以上止まった(見えているのに)
+//   gap  … 画面の処理が1秒ほど以上止まった(見えているのに)
 //   gl   … 演奏の絵(WebGL)が端末に捨てられた/戻った
 //   rot  … 自前の画面の回転(🔄 横)を切り替えた
+//   vv   … ページのずれ・拡大を見つけて戻した(s=倍率 y=ページのスクロール o=見えている範囲のずれ。MH_PAGE_OFFSET_GUARD・2026-11-11)
 //   play … 演奏が始まった・終わった
 // 演奏ごとの診断(rhythm_touch_diagnostics の stats)にも、その演奏のあいだの出来事を短く足す(stats.scr・足すだけ)。
 // 名前・ブリーダーID・セーブデータは入れない。判定・スコア・保存には一切関わらない。読めない・壊れていれば空から始める
@@ -31,10 +32,16 @@ const MH_SCREEN_TRAIL=(()=>{
       window.addEventListener('pageshow',e=>push('page','show'+(e&&e.persisted?'*':'')));
       document.addEventListener('webglcontextlost',()=>push('gl','lost'),true);
       document.addEventListener('webglcontextrestored',()=>push('gl','restored'),true);
-      // 描き直しの止まり。1コマに1回時刻を見るだけ(演奏の判定・描画には触れない)
+      // 描き直しの止まり。0.5秒ごとの見張りが1秒以上遅れたら記録する(演奏の判定・描画には触れない)
+      //   2026-11-11 カルク: もとは毎コマ requestAnimationFrame で見ていたが、止まっている画面(HOME・助手ライフなど)でも
+      //   ブラウザに毎秒60コマ描かせ続け、iPhone の発熱・電池の元になっていた。画面を止めるのは処理の詰まりなので、タイマーの遅れで同じく分かる。
+      //   隠れていたあいだはタイマーが間引かれるので、見えていないあいだと戻った直後は数えない
       let last=0;
-      const tick=now=>{if(last>0&&now-last>1000&&document.visibilityState==='visible')push('gap',Math.round(now-last));last=now;window.requestAnimationFrame(tick);};
-      if(typeof window.requestAnimationFrame==='function')window.requestAnimationFrame(tick);
+      document.addEventListener('visibilitychange',()=>{last=0;});
+      // 検査(node)で本体を読み込んだときは、この見張りがプロセスを引き止めないようにする(unref。ブラウザの数値の戻り値には無いので何もしない)
+      //   2026-11-11 ケンサ: unref が無いと boot/harness-exit-check が「抜けない」で落ち、本体を読み込む検査が終わらなくなった
+      const gapWatch=setInterval(()=>{const now=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();if(document.visibilityState!=='visible'){last=0;return;}if(last>0&&now-last>1000)push('gap',Math.round(now-last));last=now;},500);
+      if(gapWatch&&typeof gapWatch.unref==='function')gapWatch.unref();
     }catch(_){}
   }
   return {push,list:()=>list.slice(),sinceLast,compact};
@@ -46,16 +53,68 @@ const MH_SCREEN_TRAIL=(()=>{
 // このゲームはページそのものをスクロールさせない作り(#root が overflow:hidden・画面の中の箱だけがスクロールする)なので、
 // 画面の大きさが変わった・visualViewport が動いた・入力欄から離れた・全画面が終わった ときに、0でなければ0へ戻す。
 // 文字を入力している間(キーボードが出ている間)は戻さない(入力欄が隠れないように)。フォーカスが外れたあとで戻す。
-(()=>{
-  if(typeof window==='undefined'||typeof document==='undefined')return;
+// 【2026-11-11 社長「たまにタップズレが起きる。モンビー中や、起動直後の更新情報を見るとき」→ 見張りが届いていなかった所を足す】
+//   ① ページが拡大されたとき(iPhone は user-scalable=no を無視する)は、window.scrollY は0のまま visualViewport だけがずれる。
+//      それまでは scrollY しか見ていなかったので気づけなかった。visualViewport の位置・倍率も見る。
+//      拡大そのものは index.html の touch-action と、下の gesturestart で止める。残っていた拡大は viewport の書き直しで戻す。
+//   ② 見るきっかけに、起動のとき・ほかのアプリから戻ったとき(pageshow / visibilitychange)を足す。
+//   ③ ずれを見つけたら、画面の出来事の記録(MH_SCREEN_TRAIL の vv)に残す(次に起きたとき、何がずれていたかが分かる)。
+//   ④ 拡大が解けたら resize を1回鳴らして、拡大中に測られた画面の大きさ(🔄横の器・押した点の直し)を測り直させる。
+// 見るのは出来事のあった時と、ボタンなどを押した時(click)だけ(毎コマ・演奏中のタッチでは見ない)。演奏の判定・スコアには関わらない。
+const MH_PAGE_OFFSET_GUARD=(()=>{
+  if(typeof window==='undefined'||typeof document==='undefined')return {state:()=>null,check:()=>{}};
   const editing=()=>{const el=document.activeElement;if(!el)return false;const tag=String(el.tagName||'').toUpperCase();return tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||el.isContentEditable===true;};
+  const num=v=>{const n=Number(v);return Number.isFinite(n)?n:0;};
+  // いまのずれ。どれも0(倍率は1)が正しい
+  const state=()=>{
+    const vv=window.visualViewport||null;
+    const se=document.scrollingElement||document.documentElement;
+    return {
+      sx:num(window.scrollX)||num(se&&se.scrollLeft)||num(document.body&&document.body.scrollLeft),
+      sy:num(window.scrollY)||num(se&&se.scrollTop)||num(document.body&&document.body.scrollTop),
+      ox:vv?num(vv.offsetLeft):0,oy:vv?num(vv.offsetTop):0,
+      scale:vv&&Number.isFinite(Number(vv.scale))&&Number(vv.scale)>0?Number(vv.scale):1,
+    };
+  };
+  const zoomed=st=>Math.abs(st.scale-1)>0.01;
+  const moved=st=>Math.abs(st.sx)>=1||Math.abs(st.sy)>=1||Math.abs(st.ox)>=1||Math.abs(st.oy)>=1;
+  let lastTrailAt=0,zoomFixes=0,zoomFixAt=0,wasBig=false;
+  // 拡大が解けたら、画面の大きさを測り直させる(resize を1回鳴らす)。
+  // iPhone は拡大している間、window.innerWidth / innerHeight が「見えている範囲」の小ささで返る。そのあいだに測った大きさ
+  // (🔄横で回した器・押した点の直し RHYTHM_VIEW_ROTATION が持つ)は、拡大が解けても resize が来ないので小さいまま残り、
+  // 器と押した点がその分ずれる。回す仕組みは resize を合図に測り直すので、端末が回ったときと同じ道を通す。
+  // 拡大→解けた、の切り替わりの1回だけ鳴らす(鳴らした resize でここへ戻ってきても、もう wasBig は倒れている)
+  const remeasure=()=>setTimeout(()=>{try{window.dispatchEvent(new Event('resize'));}catch(_){}},0);
+  // 残っている拡大を戻す。viewport の中身を一度書き直すと、ブラウザが initial-scale(1.0)へ合わせ直す。
+  // 戻らない端末で繰り返さないよう、3秒に1回・続けて3回まで(倍率が1に戻ったら数え直す)
+  const unzoom=()=>{
+    const now=Date.now();
+    if(zoomFixes>=3||now-zoomFixAt<3000)return;
+    const meta=document.querySelector('meta[name="viewport"]');
+    const content=meta&&meta.getAttribute('content');
+    if(!content)return;
+    zoomFixes++;zoomFixAt=now;
+    meta.setAttribute('content',content+', minimum-scale=1.0');
+    setTimeout(()=>{try{meta.setAttribute('content',content);}catch(_){}},50);
+  };
   const reset=()=>{
     if(editing())return;
     try{
-      if(window.scrollX||window.scrollY)window.scrollTo(0,0);
-      for(const el of [document.scrollingElement,document.documentElement,document.body]){
-        if(el&&(el.scrollTop||el.scrollLeft)){el.scrollTop=0;el.scrollLeft=0;}
+      const st=state();
+      const bad=moved(st),big=zoomed(st);
+      if(big)wasBig=true;
+      else{zoomFixes=0;if(wasBig){wasBig=false;remeasure();}}
+      if(!bad&&!big)return;
+      const now=Date.now();
+      if(now-lastTrailAt>5000&&typeof MH_SCREEN_TRAIL!=='undefined'){lastTrailAt=now;MH_SCREEN_TRAIL.push('vv',`s${Math.round(st.scale*100)/100} y${Math.round(st.sy)} o${Math.round(st.ox)},${Math.round(st.oy)}`);}
+      if(bad){
+        // scrollY が0でも visualViewport だけがずれていることがあるので、0でも呼ぶ
+        window.scrollTo(0,0);
+        for(const el of [document.scrollingElement,document.documentElement,document.body]){
+          if(el&&(el.scrollTop||el.scrollLeft)){el.scrollTop=0;el.scrollLeft=0;}
+        }
       }
+      if(big)unzoom();
     }catch(_){}
   };
   // iOS は大きさや位置を少し遅れて直すことがあるので、すぐ・少しあと・もう少しあとの3回見る
@@ -73,6 +132,18 @@ const MH_SCREEN_TRAIL=(()=>{
   // 動画の全画面が終わったとき(iPhone の動画は webkitendfullscreen。泡立たないので document の捕まえる段で受ける)
   ['fullscreenchange','webkitfullscreenchange'].forEach(type=>document.addEventListener(type,soon));
   document.addEventListener('webkitendfullscreen',soon,true);
+  // 起動のとき・ほかのアプリや通知から戻ったとき(2026-11-11)
+  window.addEventListener('load',soon,passive);
+  window.addEventListener('pageshow',soon,passive);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')soon();});
+  soon();
+  // ボタンなどを押したとき(click)にも1回だけ見る。きっかけの合図が何も来ないままずれていても、次のひと押しで戻る。
+  // 演奏エリアは click が出ない(自前で touch を止めている)ので、演奏中は動かない。ずれていなければ数を読むだけ
+  document.addEventListener('click',reset,{capture:true,passive:true});
+  // 2本指の拡大を、どの画面でも始めさせない(Safari だけにある合図。touch-action を知らない古い iOS のため)。
+  // 演奏中は 30-rhythm-play.jsx が同じことをしている(回数も数えている)。重ねて止めても変わらない
+  ['gesturestart','gesturechange'].forEach(type=>document.addEventListener(type,e=>{if(e.cancelable)e.preventDefault();},{passive:false}));
+  return {state,check:soon};
 })();
 // ==== アイコン: lucide-react UMDが不安定なため、インラインSVGで自己完結 ====
 const _LI = {};
@@ -202,6 +273,9 @@ const normalizeBattleFxSettings = (value) => {
     resultFx: ['FULL', 'SHORT', 'OFF'].includes(v.resultFx) ? v.resultFx : 'FULL',
     countUp: v.countUp === 'OFF' ? 'OFF' : 'ON',
     endFx: v.endFx === 'OFF' ? 'OFF' : 'ON',
+    // 当たりの間(2026-11-11 社長「当たりの間は入れる・設定で切れる・はじめは入」)。攻撃が当たった瞬間に、画面の動きを一瞬だけ止める。
+    // ★足す前に保存した人(hitStop が無い)は ON(入れる)で始まる。見た目だけに効き、戦闘の計算・進行・ランキングには触れない
+    hitStop: v.hitStop === 'OFF' ? 'OFF' : 'ON',
   };
 };
 // 設定画面に並べる項目。文言はここだけに書く(設定画面・ヘルプの説明と食い違わせない)
@@ -226,6 +300,9 @@ const BATTLE_FX_SETTING_ITEMS = Object.freeze([
   { key:'shake', title:'画面の揺れ',
     desc:'会心の一撃・大技・ボスの攻撃などで画面が揺れる演出と、攻撃を受けた枠の揺れです。止めても光や数字は出ます。',
     options:[{ id:'ON', label:'揺らす', note:'いつもの見た目' }, { id:'OFF', label:'揺らさない', note:'酔いやすい人向け' }] },
+  { key:'hitStop', title:'当たりの間',
+    desc:'攻撃が当たった瞬間に、画面の動きをほんの一瞬だけ止めて、当たった手ごたえを出します。会心の一撃と、敵を倒したときは少し長く止まります。バトルの速さを上げているときは、そのぶん短くなります。ダメージや進行は変わりません。',
+    options:[{ id:'ON', label:'入れる', note:'当たった手ごたえが出る' }, { id:'OFF', label:'入れない', note:'止めずに流す' }] },
   { key:'specialMovie', title:'必殺技ムービー',
     desc:'タクティクスバトルの覚醒ムーが必殺技「アポカリプス」を使うとき、画面を切り替えてムービーを流します。流さないときは、いつもの演出で短く進みます。ダメージや進行は変わりません。',
     options:[{ id:'ON', label:'流す', note:'画面いっぱいで見せる' }, { id:'OFF', label:'流さない', note:'いつもの演出で短く' }] },
