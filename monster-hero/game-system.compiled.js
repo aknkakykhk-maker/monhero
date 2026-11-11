@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d23ae4fac0c1aa8a
+// source-sha256: 106487c40261346e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114703,6 +114703,7 @@ function AssistantLifeTownMap({
 }) {
   const [home, setHome] = React.useState(() => assistantLifeMapReadHome());
   const [sheet, setSheet] = React.useState(() => initialPlace && ASSISTANT_LIFE_MAP_ORDER.includes(initialPlace) ? initialPlace : null);
+  const [cheerMsg, setCheerMsg] = React.useState(null);
   const sceneRef = React.useRef(null);
   const listRef = React.useRef(null);
   React.useEffect(() => {
@@ -115051,9 +115052,42 @@ function AssistantLifeTownMap({
     const d = w && ASSISTANT_LIFE_DOINGS[w.doing];
     const withNames = w && w.with && w.with.length ? `${w.with.map(assistantLifeName).join('・')}と` : 'ひとりで';
     const spent = place === 'cardroom' && typeof assistantLifeCardSpent === 'function' ? assistantLifeCardSpent(id) : null;
+    let ti = null;
+    if (place === 'battle') {
+      try {
+        ti = typeof assistantMasmonTrainRowInfo === 'function' ? assistantMasmonTrainRowInfo(id) : null;
+      } catch (_) {
+        ti = null;
+      }
+    }
+    let bi = null;
+    if (place === 'battle') {
+      try {
+        bi = typeof assistantMasmonBattleRowInfo === 'function' && typeof assistantMasmonBattleOpen === 'function' ? assistantMasmonBattleRowInfo(id) : null;
+      } catch (_) {
+        bi = null;
+      }
+    }
+    const battleBtn = bi && React.createElement("button", {
+      type: "button",
+      disabled: !!bi.disabled,
+      title: bi.disabled ? bi.why || '' : bi.sub || '',
+      "data-assistant-life-map-act": "masmon-battle",
+      onClick: () => {
+        setSheet(null);
+        try {
+          assistantMasmonBattleOpen({
+            assistantId: id,
+            from: 'place'
+          });
+        } catch (_) {}
+      },
+      className: "rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 min-h-[44px] px-2 py-1 text-[12px] font-black text-white active:scale-95 disabled:opacity-50"
+    }, bi.label || '⚔ マスモンで対戦(β)');
+    const tiLine = ti && (ti.today ? `🥋 ${ti.today.nick}・${ti.today.kind}${ti.today.learned ? ` NEW ${ti.today.learned}を覚えた` : ''}${ti.today.main ? ` ・ ${ti.today.main} 熟練 +${ti.today.gain}` : ''}` : '🥋 きょうはまだ修行していません');
     return React.createElement("div", {
       key: id,
-      className: `mt-2 flex items-center gap-2 rounded-2xl border bg-slate-900/85 p-2 ${initialAssistantId === id ? "border-sky-300 ring-2 ring-sky-300/70" : "border-white/10"}`,
+      className: `mt-2 flex flex-wrap items-center gap-2 rounded-2xl border bg-slate-900/85 p-2 ${initialAssistantId === id ? "border-sky-300 ring-2 ring-sky-300/70" : "border-white/10"}`,
       "data-assistant-life-map-sheet-selected": initialAssistantId === id ? "1" : undefined,
       "data-assistant-life-map-sheet-who": id,
       "data-assistant-life-map-sheet-at": place
@@ -115075,7 +115109,13 @@ function AssistantLifeTownMap({
       "data-assistant-life-map-sheet-spent": true
     }, "済 ごほうび済み")), React.createElement("p", {
       className: "text-[10.5px] font-bold text-slate-300"
-    }, town ? `${assistantLifeMapSpotWord(place)}で ` : '', w && ASSISTANT_LIFE_DOING_ICON[w.doing], " ", withNames, d ? d.label : '過ごしている', w && w.reason === 'lonely' ? '(さみしそう)' : ''), spent && React.createElement("p", {
+    }, town ? `${assistantLifeMapSpotWord(place)}で ` : '', w && ASSISTANT_LIFE_DOING_ICON[w.doing], " ", withNames, d ? d.label : '過ごしている', w && w.reason === 'lonely' ? '(さみしそう)' : ''), tiLine && React.createElement("p", {
+      className: "text-[10.5px] font-bold text-emerald-200",
+      style: {
+        wordBreak: 'auto-phrase'
+      },
+      "data-assistant-life-map-train-line": id
+    }, tiLine), spent && React.createElement("p", {
       className: "text-[10.5px] font-bold text-amber-200",
       style: {
         wordBreak: 'auto-phrase'
@@ -115109,31 +115149,7 @@ function AssistantLifeTownMap({
         onCard(id);
       },
       className: "rounded-xl bg-gradient-to-r from-blue-700 to-violet-700 min-h-[44px] px-3 py-1 text-[12px] font-black text-white active:scale-95"
-    }, "🃏 対戦する"), place === 'battle' && (() => {
-      let info = null;
-      try {
-        info = typeof assistantMasmonBattleRowInfo === 'function' ? assistantMasmonBattleRowInfo(id) : null;
-      } catch (_) {
-        info = null;
-      }
-      if (!info || !(typeof assistantMasmonBattleOpen === 'function')) return null;
-      return React.createElement("button", {
-        type: "button",
-        disabled: !!info.disabled,
-        title: info.disabled ? info.why || '' : info.sub || '',
-        "data-assistant-life-map-act": "masmon-battle",
-        onClick: () => {
-          setSheet(null);
-          try {
-            assistantMasmonBattleOpen({
-              assistantId: id,
-              from: 'place'
-            });
-          } catch (_) {}
-        },
-        className: "rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 min-h-[44px] px-3 py-1 text-[12px] font-black text-white active:scale-95 disabled:opacity-50"
-      }, info.label || '⚔ マスモンで対戦(β)');
-    })(), typeof onView === 'function' && React.createElement("button", {
+    }, "🃏 対戦する"), place === 'battle' && !ti && battleBtn, typeof onView === 'function' && React.createElement("button", {
       type: "button",
       "data-assistant-life-map-act": "view",
       onClick: () => onView(id),
@@ -115146,13 +115162,57 @@ function AssistantLifeTownMap({
         onPick(id);
       },
       className: "rounded-xl border border-pink-300/60 min-h-[44px] px-3 py-1 text-[12px] font-black text-pink-100 active:scale-95"
-    }, "🏡 部屋へ ›")));
+    }, "🏡 部屋へ ›")), ti && React.createElement("div", {
+      className: "grid w-full gap-1",
+      style: {
+        gridTemplateColumns: battleBtn ? '1fr 1fr 1fr' : '1fr 1fr'
+      },
+      "data-assistant-life-map-train-acts": id
+    }, React.createElement("button", {
+      type: "button",
+      "data-assistant-life-map-act": "train-watch",
+      onClick: () => {
+        try {
+          assistantMasmonTrainWatchOpen(id);
+        } catch (_) {}
+      },
+      className: "rounded-xl bg-sky-700 min-h-[44px] px-1 py-1 text-[12px] font-black text-white active:scale-95"
+    }, "👀 修行を見る"), React.createElement("button", {
+      type: "button",
+      "data-assistant-life-map-act": "cheer",
+      disabled: !ti.canCheer,
+      title: ti.why || '',
+      onClick: () => {
+        let r = null;
+        try {
+          r = assistantMasmonCheer(id);
+        } catch (_) {
+          r = null;
+        }
+        setCheerMsg(r && r.ok ? {
+          id,
+          text: `📣 ${r.nick} ${r.tech} 熟練 +1・💗 +${r.bond}`
+        } : {
+          id,
+          text: r && r.why || ti.why || ''
+        });
+      },
+      className: "rounded-xl bg-emerald-700 min-h-[44px] px-1 py-1 text-[12px] font-black leading-tight text-white active:scale-95 disabled:opacity-50"
+    }, "📣 応援する", React.createElement("span", {
+      className: "block text-[10px] font-bold"
+    }, "今日", ti.perDay - ti.left, "/", ti.perDay)), battleBtn), ti && !ti.canCheer && ti.why && React.createElement("p", {
+      className: "w-full text-[10.5px] font-bold text-slate-300",
+      "data-assistant-life-map-cheer-why": id
+    }, ti.why), cheerMsg && cheerMsg.id === id && cheerMsg.text && React.createElement("p", {
+      className: "w-full rounded-lg bg-emerald-900/70 px-2 py-1 text-[11px] font-black text-emerald-100",
+      "data-assistant-life-map-cheer-msg": id
+    }, cheerMsg.text));
   };
   return React.createElement("div", {
     className: "absolute inset-0 z-[4] overflow-y-auto overflow-x-hidden bg-[#0b1020]",
     "data-assistant-life-where": true,
     "data-assistant-life-map-art": art
-  }, React.createElement("style", null, `.mhl-map-town{position:absolute;z-index:4;padding:0;border:0;background:transparent;color:#fff}
+  }, typeof AssistantMasmonTrainWatchHost === 'function' && React.createElement(AssistantMasmonTrainWatchHost, null), React.createElement("style", null, `.mhl-map-town{position:absolute;z-index:4;padding:0;border:0;background:transparent;color:#fff}
 .mhl-map-town>span{display:flex;align-items:center;gap:4px;white-space:nowrap;min-height:${home.h >= 700 ? 44 : home.h >= 600 ? 34 : 0}px;padding:4px ${home.h >= 600 ? 11 : 9}px;border:2px solid #ffe6a7a8;border-radius:12px;background:#10211df2;box-shadow:0 3px 10px #0009;font-size:12px;font-weight:900;line-height:1.15;text-shadow:0 2px 4px #000}
 .mhl-map-town[data-assistant-life-map-empty="1"]>span{opacity:.6;border-color:#94a3b8aa;background:#0f172ad9}
 .mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:10px;font-weight:900;line-height:${small ? 13 : 14}px;color:#fff;box-shadow:0 1px 3px #0008}
