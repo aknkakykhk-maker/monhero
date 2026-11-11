@@ -75,6 +75,10 @@
       "role": "エイキの桜・パンドラの雷などバトル演出の部品"
     },
     {
+      "file": "24-battle-hit-feel.jsx",
+      "role": "バトルの手ごたえ(当たりの間・会心と撃破の見せ方・効果の札の種類)。敵に出た数字の札とライフを読むだけで、計算には触れない。state は持たない"
+    },
+    {
       "file": "24-sorashido-copy-view.jsx",
       "role": "アシカ「ソラシドの自動化」の見せ方の部品(コピーの演出・次に使うカードの札・コピーの手札の窓)。状態は持たず、バトル部が呼ぶ"
     },
@@ -105,6 +109,10 @@
     {
       "file": "30-rhythm-play.jsx",
       "role": "音ゲーの演奏画面 RhythmTapTest(rAF 1本・判定・描画)と振動・サイドの応援。タイミング基盤は触らない"
+    },
+    {
+      "file": "30-rhythm-preview-hands.jsx",
+      "role": "オプションの「▶ 見てみる」の見本を自動で叩く手(ふつうの指と同じポインタの合図を送るだけ。判定には触らない)"
     },
     {
       "file": "31-debug-ui.jsx",
@@ -196,6 +204,10 @@
       "role": "ビートランク・カードランクの全国ランキングの通信層(rhythm_beat_ranks・card_ranks。持ち主の鍵で書く *_rank_put)"
     },
     {
+      "file": "39-multi-stamp.jsx",
+      "role": "マルチのスタンプ(顔×言葉)。持ち物・よく使う枠・送る間隔(MULTI_STAMP)・ビートP交換所の品と交換・マイスタンプの画面。ビートのマルチとカードのマルチから使う"
+    },
+    {
       "file": "40-screen-effects.jsx",
       "role": "画面ライフサイクル。タイマー・リスナーの登録簿 useScreenEffects(画面専用は画面を離れたら止め、進行は止めない)"
     },
@@ -218,6 +230,10 @@
     {
       "file": "44-growth-fx.jsx",
       "role": "上がる値の演出(仲良し度・絆Lv・ブリーダーLv など。小=札・中=アイテムのカード・大=Lvアップ)。見た目だけ"
+    },
+    {
+      "file": "45-quick-anywhere-float.jsx",
+      "role": "裏クイック(どこでも回す)の小さな帯の置き場所。右下を第一に、画面のボタンにかからない隅を選ぶ。見た目だけ"
     },
     {
       "file": "50-error-boundary.jsx",
@@ -384,6 +400,10 @@
       "role": "助手ライフの作り直し(2026-11-11 社長・LIFE-UX-V3-PLAN.md)の新UIだけの部品: 部屋の「その助手とできること」1列(AssistantLifeDoRow)と仲良し度の道のり(AssistantLifeBondRoad)。何も保存しない"
     },
     {
+      "file": "56-assistant-life-guide.jsx",
+      "role": "助手ライフ「やると何が得か」の見せ方(2026-11-11 社長が B+C と案1 を選んだ)の新UIだけの部品: 家のいちばん上の3行(AssistantLifeBenefitBoard)・「きずな」先頭のごほうびの道のり(AssistantLifeRewardRoad)・初めて開いた人への1枚(AssistantLifeFirstGuide)。保存は「見た」の印 mh_assistant_life_guide_seen_v1 だけ"
+    },
+    {
       "file": "56-assistant-life-rel.jsx",
       "role": "助手ライフの人間らしい関係の出来事(けんか・仲直り・やきもち・ないしょ話・相談・からかう・ライバル心・久しぶりの気まずさ)と家での見せ方(扉を閉める・居間で離れて座る・仲直りの札)。台本は tools/assistant/life-rel-talks-import.js が書く。公開の印 assistantLife の後ろ。保存は mh_assistant_life_rel_v1 の新しいキーだけ"
     },
@@ -410,6 +430,10 @@
     {
       "file": "56-assistant-life-friend.jsx",
       "role": "助手ライフのフレンドの家との行き来(助手が自分で行く go・フレンドの助手が来る come・プレイヤーが訪ねる look)。家の控えを送る/読む・行き来の記録・置き手紙・お礼・設定・「🏘 フレンド」のページと HOME の印。公開の印 assistantLifeFriend の後ろ。保存は mh_assistant_life_friend_v1・_settings_v1・_known_v1・_intro_v1 の新しいキーだけ。表は assistant_life_friend_switch/_houses/_visits"
+    },
+    {
+      "file": "56-assistant-life-friend-bond.jsx",
+      "role": "助手ライフのフレンドの家の「行く意味・来てもらう意味」(友情とスタンプ・今日の見どころとすてき・お気に入りの棚・お客さん帳・来ている印)。56-assistant-life-friend.jsx が差しこむ。公開の印 assistantLifeFriendBond の後ろ。保存は mh_assistant_life_friend_bond_v1・_fav_v1 の新しいキーだけ。表は assistant_life_friend_likes(足すだけ)"
     },
     {
       "file": "82-card-battle-core.jsx",

@@ -42,6 +42,7 @@ async function openTacticsBattle({ root, port, storage = {}, mobile = true, view
     ? { viewport, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }
     : { viewport });
   const page = await ctx.newPage();
+  if (process.env.INIT_JS) await ctx.addInitScript({ path: process.env.INIT_JS }); // 計測用: ページ読み込み前に差す JS(tools/battle/render-count-hook.js)
   page.on('pageerror', (e) => errors.push(String(e)));
   const base = {
     mh_breeder_name: JSON.stringify('検査ブリーダー'), mh_breeder_icon: JSON.stringify('🐣'),

@@ -38,10 +38,10 @@ result | kyuko happy いい流れだったね〜、ありがとん笑 | mua wink
 gattai | kyuko excited {c}、ここだよ〜 | mua excited まかせて！せーの♪
 
 ## mua sorashido
-play | sorashido happy {c}、ここから密度が上がるぜ！ | mua happy まぢ！？がんばる♪
-play | sorashido happy {c}の勝ち数、表に足しとくぜ笑 | mua excited やった！今日も勝つ♪
-result | sorashido happy 今日の2人、表にしたら最高値だぜ！ | mua wink すごっ！また一緒にやろ♪
-gattai | sorashido excited うぉぉぉ！{c}、いくぜ！ | mua excited いっくよ〜♪
+play | sorashido happy {c}、ここから密度が上がりますよ！ | mua happy まぢ！？がんばる♪
+play | sorashido happy {c}の勝ち数、表に足しておきます笑 | mua excited やった！今日も勝つ♪
+result | sorashido happy 今日の2人、表にしたら最高値です！ | mua wink すごっ！また一緒にやろ♪
+gattai | sorashido excited {c}、いきましょう！ うぉぉぉ！ | mua excited いっくよ〜♪
 
 ## mua erubin
 play | erubin happy {c}、楽しそうだね | mua happy {c}も一緒に楽しも♪
@@ -74,10 +74,10 @@ result | kyuko happy 構成どおりきれいにいけたね〜 | kiki wink {c}�
 gattai | kyuko excited {c}、せーので〜 | kiki excited はい、せーの♪
 
 ## kiki sorashido
-play | sorashido happy {c}、ここの判定、ぴったりだぜ！ | kiki happy ほんとですか？うれしいでつ♪
-play | kiki happy {c}、次はどう来ますか？ | sorashido happy 計算済みだぜ、右から来るぜ笑
-result | sorashido happy 2人の数字、きれいにそろったぜ・・・！ | kiki wink 計算どおりでしたか？♪
-gattai | sorashido excited うぉぉぉ！{c}、ここだぜ！ | kiki excited はい、いきまつ♪
+play | sorashido happy {c}、ここの判定、ぴったりです！ | kiki happy ほんとですか？うれしいでつ♪
+play | kiki happy {c}、次はどう来ますか？ | sorashido happy 計算済みです。右から来ますよ笑
+result | sorashido happy 2人の数字、きれいにそろいましたねー！ | kiki wink 計算どおりでしたか？♪
+gattai | sorashido excited {c}、ここです！ いきましょう！ | kiki excited はい、いきまつ♪
 
 ## kiki erubin
 play | erubin happy {c}、無理してないかな？ | kiki happy 大丈夫でつ、楽しいです♪
@@ -104,10 +104,10 @@ result | kyuko happy 2人でいい流れだったね〜 | momosuke wink {c}、�
 gattai | momosuke excited {c}、いくよ！！ | kyuko excited おけ〜、せーの！
 
 ## momosuke sorashido
-play | sorashido happy {c}、ここ、でーじ盛り上がるぞ笑 | momosuke happy ももが盛り上げるから計算いらないよw
-play | sorashido happy {c}のミス、今日はまだ0だぜ！ | momosuke troubled 数えなくていいから！！w
-result | sorashido happy 今日のステージ、表にしたら満点だぜ・・・！ | momosuke wink 当然でしょ！！♡
-gattai | sorashido excited {c}、ここが計算の答えだぜ！ | momosuke excited ももの見せ場だよ！！
+play | sorashido happy {c}、ここ、でーじ盛り上がりますよ笑 | momosuke happy ももが盛り上げるから計算いらないよw
+play | sorashido happy {c}のミス、今日はまだ0です！ | momosuke troubled 数えなくていいから！！w
+result | sorashido happy 今日のステージ、表にしたら満点ですね・・・！ | momosuke wink 当然でしょ！！♡
+gattai | sorashido excited {c}、ここが計算の答えです！ | momosuke excited ももの見せ場だよ！！
 
 ## momosuke erubin
 play | erubin happy {c}、元気だね | momosuke happy {c}も、もっと盛り上がって！！
@@ -128,10 +128,10 @@ result | kyuko happy 今日も気持ちよく流れたね〜 | dra wink こっ�
 gattai | kyuko excited {c}、いくよ〜 | dra excited おう、いくからな
 
 ## dra sorashido
-play | sorashido happy {c}、ここの密度、すごいぜ・・・！ | dra happy おでも負けないからな
-play | dra happy {c}、楽しそうだな | sorashido happy 楽しいぜ笑
-result | sorashido happy 2人の数字、いい感じだぜ・・・！ | dra wink えへへ、うれしいな
-gattai | sorashido excited いくぜ、{c}！最高値を出すぜ笑 | dra excited おう、ワイもいくぞ！
+play | sorashido happy {c}、ここの密度、すごいです・・・！ | dra happy おでも負けないからな
+play | dra happy {c}、楽しそうだな | sorashido happy 楽しいです笑
+result | sorashido happy 2人の数字、いい感じですねー！ | dra wink えへへ、うれしいな
+gattai | sorashido excited いきましょう、{c}！ 最高値を出します笑 | dra excited おう、ワイもいくぞ！
 
 ## dra erubin
 play | erubin happy {c}、無理しないでね | dra happy 大丈夫だぞ、楽しいからな
@@ -146,10 +146,10 @@ result | atsu happy いい流れだったね笑 | kyuko wink ありがとん笑
 gattai | atsu excited {c}、締めるぞ笑 | kyuko excited おけ〜、いくよ〜
 
 ## atsu sorashido
-play | sorashido happy {c}、ここのノーツ、気持ちいいぜ・・・！ | atsu happy さすがだな笑
-play | sorashido happy {c}との差、今日は2点だぜ笑 | atsu happy 細かすぎだろ笑
-result | sorashido happy 2人で最高値だぜ・・・！ | atsu wink いい数字だったな笑
-gattai | atsu excited {c}、いくぞ！ | sorashido excited うぉぉぉ！ここだぜ！
+play | sorashido happy {c}、ここのノーツ、気持ちいいですねー！ | atsu happy さすがだな笑
+play | sorashido happy {c}との差、今日は2点です笑 | atsu happy 細かすぎだろ笑
+result | sorashido happy 2人で最高値ですね・・・！ | atsu wink いい数字だったな笑
+gattai | atsu excited {c}、いくぞ！ | sorashido excited うぉぉぉ！ ここですね！
 
 ## atsu erubin
 play | erubin happy {c}、いい感じだね | atsu happy だろ笑
@@ -158,10 +158,10 @@ result | atsu happy いいセッションだったな！ | erubin wink うん、
 gattai | atsu excited {c}、合わせるぞ！ | erubin excited うん、いこうか
 
 ## kyuko sorashido
-play | sorashido happy {c}、ここの構成、計算どおりだぜ・・・！ | kyuko happy 読みどおりだね〜
-play | kyuko happy だいたいこのへんでサビだよぉ | sorashido happy 正確には3小節あとだぜ笑
-result | kyuko happy 構成も計算もぴったりだったね〜 | sorashido wink うぉぉぉ！最高のデータだぜ・・・！
-gattai | kyuko excited {c}、いくよ〜 | sorashido excited うぉぉぉ！いくぜ！
+play | sorashido happy {c}、ここの構成、計算どおりです・・・！ | kyuko happy 読みどおりだね〜
+play | kyuko happy だいたいこのへんでサビだよぉ | sorashido happy 正確には3小節あとですね笑
+result | kyuko happy 構成も計算もぴったりだったね〜 | sorashido wink ほほー！ 最高のデータです・・・！
+gattai | kyuko excited {c}、いくよ〜 | sorashido excited はい、いきます！
 
 ## kyuko erubin
 play | erubin happy {c}、よく曲を見てるね | kyuko happy 構成を見るのが好きなんだよね〜
@@ -170,7 +170,7 @@ result | erubin happy 気持ちのいい演奏だったね | kyuko wink あり�
 gattai | kyuko excited {c}、せーので〜 | erubin excited うん、せーの
 
 ## sorashido erubin
-play | sorashido happy ここからが山場だ！ うぉぉぉ！ | erubin happy 頼もしいね
-play | erubin happy {c}、楽しそうだね | sorashido happy 楽しいぜ笑
-result | sorashido happy 2人のデータ、最高だぜ・・・！ | erubin wink うん、さすがだね笑
-gattai | sorashido excited うぉぉぉ！{c}、合わせるぜ！ | erubin excited うん、一緒にいこう
+play | sorashido happy ここからが山場です！ うぉぉぉ！ | erubin happy 頼もしいね
+play | erubin happy {c}、楽しそうだね | sorashido happy 楽しいです笑
+result | sorashido happy 2人のデータ、最高です・・・！ | erubin wink うん、さすがだね笑
+gattai | sorashido excited {c}、合わせます！ いきましょう！ | erubin excited うん、一緒にいこう

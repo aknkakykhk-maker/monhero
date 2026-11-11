@@ -13,6 +13,7 @@
 //   ⑧ 技表(ASSISTANT_MASMON_TECHS。無ければ仮の draft-techs.js)の形: 数字は MF2 の幅の中・技 id は種の中で一意・
 //      どの種もどの距離にも届く技がある・距離撃の名前を使わない・既存の技の表を計算で使わない
 //   ⑬ 能力の差の効き方のつまみ(A=いまのまま/B=ゆるめ/C=強め): A は結果を変えない・記録に残る・B<A<C の順
+//   ⑭ 作戦(attack/guard/range/big)と交代の早さ(early/late)は名前で受けて表の倍率・重みは範囲で切る・記録に残る
 //   ⑪ 育成・修行の入れ物(st・Lv 1〜99・覚えた技・熟練)から1体を作れる/熟練で命中・ガッツ消費・ガードが「中」の分だけ変わる
 //   ⑨ 壊れた入力(能力が文字・範囲外・種類が無い)は既定値で補う
 //   ⑩ 好き嫌い・疲労・ストレスは入力に取らない(渡しても結果が変わらない)
@@ -320,6 +321,33 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
   check('⑬ つまみと計算の版が結果と記録に残る', okLog === M * 3, `${okLog}/${M * 3}`);
   check('⑬ 能力の合計が多い側の勝率が B < A < C の順(B はゆるめ・C は強め)', w.B < w.A && w.A < w.C,
     ['A', 'B', 'C'].map(b => `${b} ${(w[b] / M * 100).toFixed(1)}%`).join(' / '));
+}
+
+// ⑭ 作戦と交代の早さ(名前で受けて計算側で倍率)・重みの範囲
+{
+  const rng = engine.makeRng('chk-plan');
+  const st0 = I.styleOf('atsu');
+  const sa = I.styleOf('atsu', null, 'attack', 'early');
+  const sx = I.styleOf('atsu', null, 'へんな作戦', 'へんな早さ');
+  const big = I.styleOf('dra', { aggr: 99, swap: -5, read: 1000 });
+  check('⑭ 作戦・交代の早さは表の倍率で掛かる・知らない名前はおまかせ',
+    Math.abs(sa.aggr - st0.aggr * 1.25) < 1e-9 && Math.abs(sa.swap - st0.swap * 1.5) < 1e-9 && JSON.stringify(sx) === JSON.stringify(st0));
+  check('⑭ 重みは範囲で切る(上書きの改ざんを通さない)', big.aggr === 1.8 && big.swap === 0.3 && big.read === 30, JSON.stringify(big));
+  let same = 0, rec = 0, sw = { early: 0, none: 0, late: 0 };
+  for (let i = 0; i < 300; i++) {
+    const inp = mkInput(`pl-${i}`, 3, 3, rng);
+    const r0 = engine.simulate(inp);
+    const r1 = engine.simulate(JSON.parse(JSON.stringify(Object.assign({}, inp, { teamA: Object.assign({}, inp.teamA, { plan: 'zzz' }) }))));
+    if (r0.digest === r1.digest) same++;
+    for (const [pace, key] of [['early', 'early'], [undefined, 'none'], ['late', 'late']]) {
+      const r = engine.simulate(Object.assign({}, inp, { teamA: Object.assign({}, inp.teamA, { plan: 'range', swapPace: pace }) }));
+      if (r.log[0].plan.A === 'range' && r.log[0].swapPace.A === (pace || null)) rec++;
+      sw[key] += r.log.filter(e => e.ev === 'swap' && e.side === 'A').length;
+    }
+  }
+  check('⑭ 知らない作戦は渡さないときと同じ結果', same === 300, `${same}/300`);
+  check('⑭ 作戦と交代の早さが記録の最初の行に残る', rec === 900, `${rec}/900`);
+  check('⑭ 交代の回数が 早め > ふつう > ねばる', sw.early > sw.none && sw.none > sw.late, `早め ${sw.early}・ふつう ${sw.none}・ねばる ${sw.late}`);
 }
 
 console.log(failed ? `\nNG が ${failed} 件` : '\nすべてOK');

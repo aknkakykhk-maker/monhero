@@ -87,6 +87,21 @@ if (process.argv.includes('--table')) {
   process.exit(0);
 }
 
+if (process.argv.includes('--share')) {
+  // 場所ごとの居る割合(8人 × 6つの時間帯 × 30日 × 5回)。全体と、起きている回だけ。モンヒロバトルの重みを決めるときに使う(2026-11-11)
+  const bond = {}; let n = 0;
+  for (let i = 0; i < IDS.length; i++) for (let j = i + 1; j < IDS.length; j++) bond[pairKey(IDS[i], IDS[j])] = [0, 40, 120, 250, 450, 700][(n++) % 6];
+  const runs = [];
+  for (const salt of ['a', 'b', 'c', 'd', 'e']) runs.push(...simulate({ bond, salt }));
+  const all = {}, awake = {}, perId = {}; let tot = 0, totAwake = 0;
+  const add = (id, place, doing) => { all[place] = (all[place] || 0) + 1; tot++; if (doing !== 'sleep') { awake[place] = (awake[place] || 0) + 1; totAwake++; } if (place === 'battle') perId[id] = (perId[id] || 0) + 1; };
+  for (const life of runs) { for (const g of life.groups) for (const id of g.ids) add(id, g.place, g.doing); for (const [id, so] of Object.entries(life.solo)) add(id, so.place, so.doing); }
+  const pct = (m, t) => Object.entries(m).sort((x, y) => y[1] - x[1]).map(([k, v]) => `${PLACES[k]} ${(v * 100 / t).toFixed(1)}%`).join(' / ');
+  console.log(`全体(${tot}): ${pct(all, tot)}`);
+  console.log(`起きている回(${totAwake}): ${pct(awake, totAwake)}`);
+  console.log(`モンヒロバトル 助手別の回数: ${Object.entries(perId).map(([k, v]) => `${NAMES[k]} ${(v * 100 / (runs.length)).toFixed(0)}%`).join(' / ')}`);
+  process.exit(0);
+}
 if (process.argv.includes('--stats')) {
   // 会った8人・ペアの点はいろいろ(Lv1〜6)で、お祭りの段の30日
   const bond = {};
@@ -129,7 +144,7 @@ if (process.argv.includes('--stats')) {
   }
   for (const [d, v] of Object.entries(DOINGS)) for (const pl of v.places) if (!PLACES[pl]) bad.push(`${d}: 場所 ${pl}`);
   check('① 8人ぶんの好み・していること・場所がそろっている', bad.length === 0, bad.slice(0, 5).join(' / '));
-  check('① 2人でもする「していること」は5つ(おやつ・練習・育成・カード研究・散歩)', JSON.stringify(Object.keys(DOINGS).filter(d => DOINGS[d].group)) === JSON.stringify(['snack', 'practice', 'training', 'cards', 'walk']));
+  check('① 2人でもする「していること」は6つ(おやつ・練習・育成・カード研究・散歩・バトル。バトルは2026-11-11 社長「MB管理とモンバトは別」で足した)', JSON.stringify(Object.keys(DOINGS).filter(d => DOINGS[d].group).sort()) === JSON.stringify(['snack', 'practice', 'training', 'cards', 'walk', 'battle'].sort()));
   check('① 時間は6つで、0〜24時をすき間なく分ける', SLOTS.length === 6 && SLOTS.every((s, i) => s.to > s.from && (i === 0 ? s.from === 0 : s.from === SLOTS[i - 1].to)) && SLOTS[5].to === 24);
   const at = G('assistantLifeSlotAt');
   const jst = (h) => Date.UTC(2026, 10, 7, h - 9, 30);
