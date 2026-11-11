@@ -369,7 +369,7 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false, life = null, onScen
           {plan
             ? (done ? `${castPlace}の${castNames}。この時間帯のできごとは見ました` : <>{plan.kind === 'rare' ? `✨ ${castPlace}で、${castNames}に めずらしいできごと` : `${castPlace}で、${castNames}が`}<span className="inline-block" data-assistant-life-daily-title>「{plan.title}」</span></>)
             : said || `${scene.text.replace('{n}', nameOf(who))}。${done ? 'この時間帯の話は聞きました' : '聞いてみると、この時間帯だけの話が聞けます'}`}
-          {!done && <span className="block text-[11px] text-emerald-300">{plan ? `→ 見ると 🤝 ふれあい1回 ・ 💗 +${ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0}` : '→ 聞くと 🤝 ふれあい1回(ミッション「助手とふれあう」)'}</span>}
+          {!done && <span className="block text-[11px] text-emerald-300">{plan ? `→ 見ると 🤝 ふれあい1回 ・ 💗 +${ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0}(1日 +12 まで)` : '→ 聞くと 🤝 ふれあい1回(ミッション「助手とふれあう」)'}</span>}
           {got && <span className="block text-[11px] text-pink-200">🧺 おやつバスケットを1個もらいました！(持ち物へ)</span>}
         </span>
         {!done && (plan
@@ -485,14 +485,21 @@ const assistantLifeDailyAlbumTalks = () => {
 const assistantLifeDailyFinish = async (plan, slotId) => {
   const r = await assistantLifeDailyListen(slotId);
   let bond = 0;
+  const gains = {}; // 実際に上がった量(1日 +12 に届いた助手は 0。2026-11-11 Fable の確認: 決まった数ではなく足された量を出す)
   if (r.added && plan) {
     bond = ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0;
     if (bond > 0 && typeof assistantPeerPlayerBondAdder !== 'undefined' && assistantPeerPlayerBondAdder) {
-      for (const id of plan.ids) { try { assistantPeerPlayerBondAdder(id, 'lifeDaily', bond); } catch (_) {} }
+      const pts = (id) => (typeof assistantLifeBondPointsOf === 'function' ? assistantLifeBondPointsOf(id) : null);
+      for (const id of plan.ids) {
+        const before = pts(id);
+        try { assistantPeerPlayerBondAdder(id, 'lifeDaily', bond); } catch (_) {}
+        const after = pts(id);
+        gains[id] = Number.isFinite(before) && Number.isFinite(after) ? Math.max(0, after - before) : bond;
+      }
     }
     if (plan.kind === 'rare' && typeof assistantPeerAlbumAdd === 'function') { const t = assistantLifeDailyRareTalk(plan.id, plan.ids[0], plan.ids[1]); if (t) { try { assistantPeerAlbumAdd(t); } catch (_) {} } }
   }
-  return { added: r.added, got: r.got, bond };
+  return { added: r.added, got: r.got, bond, gains };
 };
 
 // できごとの場面(家の上に重ねる。外枠は見守るの場面 .mhl-scene と同じ)
@@ -534,7 +541,7 @@ function AssistantLifeDailySceneView({ plan, place, look, slotLabel, slotId, onC
         </div>}
         {phase === 'done' && <div data-assistant-life-daily-result>
           {res && <p className="mt-1 rounded-xl bg-pink-50 px-2 py-1 text-[11.5px] font-black text-pink-700">{res.added
-            ? ['🤝 ふれあい1回', res.bond > 0 ? `💗 ${plan.ids.map(assistantLifeName).join('・')} +${res.bond}` : '', plan.kind === 'rare' ? '✨ 思い出アルバムに1枚' : '', res.got ? '🧺 おやつバスケットを1個もらいました！' : ''].filter(Boolean).join(' ・ ')
+            ? ['🤝 ふれあい1回', (() => { const g = res.gains || {}; const up = plan.ids.filter(id => (g[id] || 0) > 0); return up.length ? up.map(id => `💗 ${assistantLifeName(id)} +${g[id]}`).join(' ') : res.bond > 0 ? '💗 今日の仲良し度はここまで' : ''; })(), plan.kind === 'rare' ? '✨ 思い出アルバムに1枚' : '', res.got ? '🧺 おやつバスケットを1個もらいました！' : ''].filter(Boolean).join(' ・ ')
             : 'この時間帯のできごとは見ました'}</p>}
           <button type="button" data-assistant-life-daily-scene-close onClick={(ev) => { ev.stopPropagation(); onClose(); }} className="mt-1.5 min-h-[44px] w-full rounded-xl bg-slate-700 text-[12px] font-black">🏡 家へ戻る</button>
         </div>}
@@ -554,7 +561,8 @@ function AssistantLifeTopStrip({ life, ids, evIds = [], onPlace }) {
   }
   const places = Object.keys(groups);
   let next = null;
-  try { const s = assistantLifeSlotAt(); const d = ASSISTANT_LIFE_SLOTS[s.i]; next = d && Number.isFinite(d.to) ? d.to % 24 : null; } catch (_) { next = null; }
+  // 助手が動くのは2時間ごと(移動12回)。いまの区切りの終わり(assistantLifeSlotAt の to)を出す(2026-11-11 Fable の確認)
+  try { const s = assistantLifeSlotAt(); next = Number.isFinite(s.to) ? s.to % 24 : null; } catch (_) { next = null; }
   return (
     <div className="mx-3 mb-1.5 text-white" data-assistant-life-top-strip>
       {places.length > 0 && <div className="flex gap-1 overflow-x-auto overscroll-contain pb-0.5" style={{ scrollbarWidth: 'none' }}>
