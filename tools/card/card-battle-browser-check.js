@@ -600,10 +600,12 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     //   2026-11-11 助手ライフ側の書き込みを足した(ナカヨシ13が「意図どおり」と確認。助手ライフの仕様でカードの保存は変えない):
     //   mh_assistant_life_diary_v1 … カード部屋の対戦のあと「今日あったこと」へ1行足す(その日の末尾に追記・同じ日の行は消さない) /
     //   mh_assistant_life_rhythm_v1 … 生活のリズム(誘って遊んだ) / mh_assistant_peer_talk_log_v1・mh_assistant_peer_seen14_v1・mh_assistant_peer_talk_day_v1 … カード中の助手の掛け合いの記録
-    const OTHER_OK = new Set(['mh_screen_trail_v1', 'mh_assistant_life_play_v1', 'mh_assistant_peer_play_v1', 'mh_assistant_life_diary_v1', 'mh_assistant_life_rhythm_v1', 'mh_assistant_peer_talk_log_v1', 'mh_assistant_peer_seen14_v1', 'mh_assistant_peer_talk_day_v1']);
-    const changed = Object.keys(before).filter((k) => !k.startsWith('mh_card_') && k !== BEAT_KEY && !OTHER_OK.has(k) && !volatile.test(k) && before[k] !== after.all[k]);
+    // 助手ライフ・助手どうしの掛け合いは、時間帯が変わる時刻などに自分で mh_assistant_* を書く(日記・生活のリズム・掛け合いの記録)。カードの保存とは関係ないので数えない(2026-11-11 部長ソランド)
+    const OWN_WRITERS = /^mh_assistant_/;
+    const OTHER_OK = new Set(['mh_screen_trail_v1']);
+    const changed = Object.keys(before).filter((k) => !k.startsWith('mh_card_') && k !== BEAT_KEY && !OTHER_OK.has(k) && !OWN_WRITERS.test(k) && !volatile.test(k) && before[k] !== after.all[k]);
     check('⑧ カードバトル以外の保存キーを書き換えていない(ビートPの残高を除く)', changed.length === 0, changed.join(', '));
-    const added = Object.keys(after.all).filter((k) => !(k in before) && !k.startsWith('mh_card_') && k !== BEAT_KEY && !OTHER_OK.has(k) && !volatile.test(k));
+    const added = Object.keys(after.all).filter((k) => !(k in before) && !k.startsWith('mh_card_') && k !== BEAT_KEY && !OTHER_OK.has(k) && !OWN_WRITERS.test(k) && !volatile.test(k));
     check('⑧ 新しく増えた保存キーは mh_card_* とビートPの残高だけ', added.length === 0, added.join(', '));
     // ⑬ 結果の画面の「クイック周回 ◯周ぶん」(デバッグの見本。NORMAL の勝ち = 16周ぶん・保存しない)
     await closeRankUp(page); await page.locator('[data-card-top="result"] button').first().click();
