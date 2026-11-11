@@ -67,6 +67,7 @@ ok('② 「保存データが別々」を手順の前に出す',src.indexOf('保
 ok('⑤ ヘルプに同じ手順がある',/id: 'homescreen'[\s\S]{0,1600}t:'steps'/.test(help)&&help.includes('保存データが別々'));
 ok('⑤ 設定の入口は iPhone の Safari・アプリ内ブラウザのときだけ',/!!mhHomeScreenGuideMode\(\)&&\(\s*<SettingsMenuLink icon="📲"/.test(settings));
 ok('⑥ アプリ内ブラウザの手順は バックアップ → ブラウザで開く → 追加 → 戻す の順',/step\(1, 'いまの画面でバックアップを作る'[\s\S]*step\(2, 'ブラウザ\(Safari\)で開く'[\s\S]*step\(3, 'ホーム画面に追加する'[\s\S]*step\(4, '追加したアイコンから開いて、データを戻す', MH_HOME_SCREEN_RESTORE_TEXT\)/.test(src));
+ok('⑥ アプリ内ブラウザのバックアップはコード(作成→コピー)を先に書く(ファイルを保存できないことが多い・ミハリ4)',/inApp\s*\? \['「データ引き継ぎ」の「バックアップコードを作成」/.test(src));
 ok('⑥ 自動の案内は Safari・アプリ内ブラウザのどちらも同じ回数の決まり',/if \(!mhHomeScreenGuideMode\(\)\) return undefined;/.test(src));
 ok('⑥ 戻す手順の頭は「遊び始める前に、タイトルの設定から」(案内とヘルプ)',/MH_HOME_SCREEN_RESTORE_TEXT = '遊び始める前に、タイトルの設定から/.test(src)&&(src.match(/MH_HOME_SCREEN_RESTORE_TEXT\)/g)||[]).length===2&&help.includes('データを戻す: 遊び始める前に、タイトルの設定から'));
 {

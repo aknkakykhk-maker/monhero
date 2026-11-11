@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9b4440e0b307ef6a
+// generated-sha256: 2f7da205b5edbeb5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -41189,7 +41189,11 @@ function HomeScreenGuideSheet({ onClose, onNever = null, onOpenBackup, mode = nu
       </div>
     </li>
   );
-  const backupBody = <>{w('「データ引き継ぎ」の「バックアップファイルを保存(.mhsave)」を押し、「ファイルに保存」を選びます。')}<br/>{w('(「バックアップコードを作成」→「コードをコピー」でも作れます)')}<button type="button" data-home-screen-guide-backup onClick={onOpenBackup} className="mt-2 block min-h-[44px] w-full rounded-xl bg-indigo-600 px-3 text-[12px] font-black text-white active:scale-95">💾 データ引き継ぎを開く</button></>;
+  // アプリ内ブラウザ(X・LINE など)はファイルを保存できない・保存先が分からないことが多いので、コードを先に書く(ミハリ4)
+  const backupText = inApp
+    ? ['「データ引き継ぎ」の「バックアップコードを作成」→「コードをコピー」で控え、メモなどに貼って残します。', '(「バックアップファイルを保存(.mhsave)」でも作れます)']
+    : ['「データ引き継ぎ」の「バックアップファイルを保存(.mhsave)」を押し、「ファイルに保存」を選びます。', '(「バックアップコードを作成」→「コードをコピー」でも作れます)'];
+  const backupBody = <>{w(backupText[0])}<br/>{w(backupText[1])}<button type="button" data-home-screen-guide-backup onClick={onOpenBackup} className="mt-2 block min-h-[44px] w-full rounded-xl bg-indigo-600 px-3 text-[12px] font-black text-white active:scale-95">💾 データ引き継ぎを開く</button></>;
   const addBody = 'Safari の下にある共有ボタン(四角から上向きの矢印)を押し、「ホーム画面に追加」→ 右上の「追加」。';
   return (
     <div data-home-screen-guide={kind} role="dialog" aria-modal="true" aria-label="ホーム画面に追加"
