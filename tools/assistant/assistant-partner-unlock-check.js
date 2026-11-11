@@ -102,6 +102,14 @@ check('あつのお話の条件(はじめての人は40回)', /assistantPartner\
 const rel = read('monster-hero/src/parts/17-release-changelog-login-missions.jsx');
 check('公開の印 assistantPartnerUnlock がある', /assistantPartnerUnlock: (true|false),/.test(rel));
 check('印が偽でも、今の人の一度きりの判定は読み込みで書く(印で止めていない)', !/RELEASE_FLAGS\.assistantPartnerUnlock[^\n]*assistantPartnerJudgeExisting/.test(app));
+check('使った回数は戦いの終わりにまとめて書く(切るたびに書かない・窓口 2026-11-11)', (() => {
+  const at = app.indexOf('const countAssistantCardUse = (assistantId) => {');
+  const body = app.slice(at, app.indexOf('\n  };\n', at));
+  return at > 0 && !/storeSet\(ASSISTANT_CARD_USES_KEY/.test(body) && /flushAssistantCardUses\(\)/.test(body);
+})());
+check('戦いの終わり・画面の切り替え・ページを離れるときに書く', /useEffect\(\(\) => \{ flushAssistantCardUses\(\); \}, \[gameState, hp <= 0, gaveUp\]\);/.test(app)
+  && /window\.addEventListener\('pagehide', flushAssistantCardUses\)/.test(app));
+check('解放したときはその場で書く', /if \(r\.stateChanged\) \{ saveAssistantPartner\(r\.state\); flushAssistantCardUses\(\); \}/.test(app));
 // ③ 公開前の助手の決まりと混ぜない
 check('判定はお話・公開の決まり(assistantUnlockedBy)を先に通す', /if \(typeof assistantUnlockedBy === 'function' && !assistantUnlockedBy\(id, seenStoryIds\)\) return false;\n  return assistantPartnerAllowed\(state, id\);/.test(src));
 check('公開の印の判定を書き換えていない', /const assistantReleased = \(assistantId\) => \{/.test(read('monster-hero/data/assistants.js')));

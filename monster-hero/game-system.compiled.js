@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c4d08e312f574886
+// source-sha256: 85e29efeb6f222a3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -192386,6 +192386,15 @@ function MonsterHeroGame() {
     setAssistantPartner(next);
     void Promise.resolve().then(() => storeSet(ASSISTANT_PARTNER_KEY, next, false)).catch(error => console.error('[assistant-partner] save failed:', error && error.message ? error.message : error));
   };
+  const ASSISTANT_CARD_USES_FLUSH_EVERY = 20;
+  const assistantCardUsesDirtyRef = useRef(0);
+  const flushAssistantCardUses = () => {
+    if (!assistantCardUsesDirtyRef.current) return;
+    assistantCardUsesDirtyRef.current = 0;
+    const uses = assistantCardUsesRef.current;
+    setAssistantCardUses(uses);
+    void Promise.resolve().then(() => storeSet(ASSISTANT_CARD_USES_KEY, uses, false)).catch(error => console.error('[assistant-partner] uses save failed:', error && error.message ? error.message : error));
+  };
   const countAssistantCardUse = assistantId => {
     try {
       const r = assistantPartnerCountUse(assistantCardUsesRef.current, assistantPartnerRef.current, assistantId);
@@ -192395,13 +192404,30 @@ function MonsterHeroGame() {
       };
       if (r.stateChanged && r.unlockedId) assistantPartnerRunUnlockedRef.current = [...assistantPartnerRunUnlockedRef.current, r.unlockedId];
       assistantCardUsesRef.current = r.uses;
-      setAssistantCardUses(r.uses);
-      void Promise.resolve().then(() => storeSet(ASSISTANT_CARD_USES_KEY, r.uses, false)).catch(error => console.error('[assistant-partner] uses save failed:', error && error.message ? error.message : error));
-      if (r.stateChanged) saveAssistantPartner(r.state);
+      assistantCardUsesDirtyRef.current += 1;
+      if (r.stateChanged) {
+        saveAssistantPartner(r.state);
+        flushAssistantCardUses();
+      } else if (assistantCardUsesDirtyRef.current >= ASSISTANT_CARD_USES_FLUSH_EVERY) flushAssistantCardUses();
     } catch (error) {
       console.error('[assistant-partner] count failed:', error && error.message ? error.message : error);
     }
   };
+  useEffect(() => {
+    flushAssistantCardUses();
+  }, [gameState, hp <= 0, gaveUp]);
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') flushAssistantCardUses();
+    };
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', flushAssistantCardUses);
+    return () => {
+      document.removeEventListener('visibilitychange', onHide);
+      window.removeEventListener('pagehide', flushAssistantCardUses);
+    };
+  }, []);
   useEffect(() => {
     if (gameState === 'HOME') {
       assistantPartnerRunUsesRef.current = {};
