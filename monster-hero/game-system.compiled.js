@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 905800501edbb32c
+// source-sha256: 1393ac3c5711ed47
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -17571,6 +17571,7 @@ const PRO_CLEAR_QUICK_LOOPS = Object.freeze({
 const PRO_CLEAR_QUICK_LOOPS_EXTREME = 500;
 const PRO_CLEAR_QUICK_LOOPS_EXTREME_STEP = 200;
 const PRO_QUICK_LOOP_WAVES = 10;
+const PRO_QUICK_LOOP_PARTIAL_DIVISOR = 135;
 const proQuickLoopWeight = waves => waves * (waves + 1) / 2;
 const proQuickLoopsFor = (wavesCleared, difficulty, extremeId = null) => {
   const waves = Math.max(0, Math.min(PRO_QUICK_LOOP_WAVES, Math.trunc(Number(wavesCleared) || 0)));
@@ -17578,9 +17579,10 @@ const proQuickLoopsFor = (wavesCleared, difficulty, extremeId = null) => {
   const exId = extremeId || (ALL_EXTREME_DIFFICULTIES.some(setting => setting.id === difficulty) ? difficulty : null);
   const exIndex = exId ? ALL_EXTREME_DIFFICULTIES.findIndex(setting => setting.id === exId) : -1;
   const full = exIndex >= 0 ? PRO_CLEAR_QUICK_LOOPS_EXTREME + PRO_CLEAR_QUICK_LOOPS_EXTREME_STEP * exIndex : Number(PRO_CLEAR_QUICK_LOOPS[difficulty]) || 0;
-  if (!(full > 0)) return proRunQuickLoops(waves, DIFFICULTY_SETTINGS[difficulty]?.power);
-  if (waves >= PRO_QUICK_LOOP_WAVES) return full;
-  return Math.max(1, Math.floor(full * proQuickLoopWeight(waves) / proQuickLoopWeight(PRO_QUICK_LOOP_WAVES)));
+  const goal = full > 0 ? full : proRunQuickLoops(PRO_QUICK_LOOP_WAVES, DIFFICULTY_SETTINGS[difficulty]?.power);
+  if (!(goal > 0)) return 0;
+  if (waves >= PRO_QUICK_LOOP_WAVES) return goal;
+  return Math.max(1, Math.floor(goal * proQuickLoopWeight(waves) / PRO_QUICK_LOOP_PARTIAL_DIVISOR));
 };
 const UNDERWORLD_TAB_ID = 'underworld';
 const isUnderworldDifficultyId = difficultyId => extremeRuleSetting(difficultyId)?.tab === UNDERWORLD_TAB_ID;
