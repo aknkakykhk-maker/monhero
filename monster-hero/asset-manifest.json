@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "df387c6723b0",
-  "packs": {"beat":{"bytes":136587687,"count":103},"battle":{"bytes":126491904,"count":812},"card":{"bytes":37779758,"count":1048},"all":{"bytes":300859349,"count":1963},"core":{"bytes":20457397,"count":23}},
+  "id": "9624f468bda1",
+  "packs": {"beat":{"bytes":136587687,"count":103},"battle":{"bytes":126491904,"count":812},"card":{"bytes":37779758,"count":1048},"all":{"bytes":300859349,"count":1963},"core":{"bytes":20459587,"count":23}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"a58782a4c46f","size":1889175,"pack":"beat"},
@@ -1988,6 +1988,6 @@
     "data/assistants.js": {"v":"a64dbe7f6a4f","size":2142723,"pack":"core"},
     "data/card-battle-cards.js": {"v":"44db72dafe0b","size":124624,"pack":"core"},
     "data/assistant-masmon-techs.js": {"v":"132f5a9f3d34","size":47444,"pack":"core"},
-    "game-system.compiled.js": {"v":"d5643bf1dbcc","size":10283976,"pack":"core"}
+    "game-system.compiled.js": {"v":"0125cb870894","size":10286166,"pack":"core"}
   }
 }
