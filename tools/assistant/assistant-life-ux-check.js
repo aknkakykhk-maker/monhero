@@ -7,7 +7,7 @@
 //   ② 仲良し度の道のり: Lv が部屋の題の Lv と同じ・「あと◯」がその段階の幅の中
 //   ③ その場所ならではの得がある行は先頭(カード部屋の助手=対戦・ビートで券なしの助手=ビート)
 //   ④ 行は押せる大きさ(高さ44px以上)・横幅からはみ出さない
-//   ⑤ 旧UI(既定)は今までどおり: 縦は6つのボタン、「できること」の行は出ない
+//   ⑤ 旧UI(設定で前の画面)は今までどおり: 縦は6つのボタン、「できること」の行は出ない
 //   ⑥ ページのエラーが出ない
 //   STEP2 ⑦ 家の上の「✨ いま行くと得なこと」(行・大きさ・goPlace)/⑧ 神殿の得は1日1回・保存は新しいキー・旧UIには出ない
 const http = require('http'), path = require('path'), fs = require('fs');
@@ -38,7 +38,7 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
   const open = async (v, v2) => {
     const page = await browser.newPage({ viewport: { width: v.w, height: v.h }, deviceScaleFactor: 1 });
     page.on('pageerror', e => errors.push(`${v.name}: ${e.message}`));
-    await page.addInitScript((on) => { window.__mhSupabaseStubbed = true; if (on) localStorage.setItem('mh_assistant_life_ui_v2', 'true'); }, v2);
+    await page.addInitScript((on) => { window.__mhSupabaseStubbed = true; localStorage.setItem('mh_assistant_life_ui_v2', on ? 'true' : 'false'); }, v2);
     await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(oneTimeNoticeSeed());
     await page.addInitScript(seed, { storyIds: STORY_IDS, introKeys: INTRO_KEYS, life: true, intro: false, bondAll: null });
     await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
@@ -98,10 +98,10 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
       await closeRoom(page);
     }
     await page.close();
-    // ⑤ 旧UI(既定)は今までどおり
+    // ⑤ 旧UI(設定で前の画面)は今までどおり
     const old = await open(v, false);
     const r = await room(old, 'mua');
-    check(`${T}⑤ 旧UI(既定)は今までどおり: できることの行は出ない${v.id === 'tate' ? '・縦は6つのボタン' : ''}`, r.rows.length === 0 && r.road === null && (v.id === 'yoko' || r.dock), JSON.stringify(r));
+    check(`${T}⑤ 旧UI(設定で前の画面)は今までどおり: できることの行は出ない${v.id === 'tate' ? '・縦は6つのボタン' : ''}`, r.rows.length === 0 && r.road === null && (v.id === 'yoko' || r.dock), JSON.stringify(r));
     await old.close();
   }
   // ⑧ 神殿の得: 神殿にいる助手との仲良し度が1日1回だけ上がる・押すと神殿へ行く(画面が閉じる)・旧UIには帯が出ない
@@ -118,6 +118,13 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
     const oldT = await (async () => { const o = await open(v, false); await o.evaluate(() => { const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, solo: { ...l.solo, kyuko: { doing: 'idle', place: 'temple' } } } }); });
       const r = await o.evaluate(async () => ({ a: await assistantLifeTemplePerk(), saved: localStorage.getItem('mh_assistant_life_perks_v1') })); await o.close(); return r; })();
     check('⑧ 旧UIの人にも神殿で仲良し度が上がり、新しいキーが書かれる(全員に入れる)', oldT.a === 'kyuko' && /kyuko/.test(oldT.saved || ''), JSON.stringify(oldT));
+    // ⑨ マーケットの得: 助手が market にいれば、帯に「🛍」の行が出る(開発部の assistantMarketPerkToday が値を返すとき)
+    await page.evaluate(() => { const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, solo: { ...l.solo, atsu: { doing: 'idle', place: 'market' } } } }); });
+    await page.waitForTimeout(5200);
+    const mk = await page.evaluate(() => ({ who: assistantLifeMarketWho(), perk: ASSISTANT_LIFE_LINKS.marketPerkToday ? ASSISTANT_LIFE_LINKS.marketPerkToday() : 'なし', row: !!document.querySelector('[data-assistant-life-now-perk="market"]'), more: !!document.querySelector('[data-assistant-life-now-perks-more]'), keys: [...document.querySelectorAll('[data-assistant-life-now-perk]')].map(x => x.getAttribute('data-assistant-life-now-perk')) }));
+    check('⑨ 助手がマーケットにいるとき assistantLifeMarketWho が助手を返す', mk.who === 'atsu', JSON.stringify(mk));
+    check('⑨ 場所の判定 assistantLifePerkAt が帯と同じ(神殿は受け取り済みなので無し・マーケットは助手がいてできるときだけ)', await page.evaluate(() => assistantLifePerkAt('temple') === false && assistantLifePerkAt('ranch') === false && assistantLifePerkAt('market') === !!(ASSISTANT_LIFE_LINKS.marketPerkToday && (p => p && !p.used)(ASSISTANT_LIFE_LINKS.marketPerkToday()))));
+    check('⑨ マーケットのおすすめが出せるとき、帯に🛍の行(3行を超えるときは「ほか」の中)', !mk.perk || mk.perk === 'なし' || mk.perk.used || mk.row || mk.more, JSON.stringify(mk));
     check('⑧ 神殿にいる助手との仲良し度が上がる(1回目)・2回目は上がらない(1日1回)', t.a === 'kyuko' && t.up > 0 && t.b === null && t.again === 0, JSON.stringify(t));
     check('⑧ 「神殿でその日もう受け取ったか」は新しいキー mh_assistant_life_perks_v1 に保存', /kyuko/.test(t.saved), t.saved);
     const gone = await page.evaluate(() => { const l = ASSISTANT_LIFE_STORE.state.life; return !!l; });
