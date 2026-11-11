@@ -17,15 +17,15 @@ const ASSISTANT_LIFE_ROOM_LOOK = Object.freeze({
   sorashido: { wall: ['#fff8d6', '#f6e59a'], furn: '🃏🧮' },
   erubin:    { wall: ['#e8edf3', '#c9d3df'], furn: '⚔️🛡️' },
 });
-const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({ home: '🏡', plaza: '⛲', cafe: '🍰', studio: '🎵', ranch: '🥚', cardroom: '🃏', library: '📚', market: '🛍️', hill: '🌄', garden: '🌷', temple: '✨' });
+const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({ home: '🏡', plaza: '⛲', cafe: '🍰', studio: '🎵', ranch: '🥚', cardroom: '🃏', library: '📚', market: '🛍️', hill: '🌄', garden: '🌷', temple: '✨', battle: '⚔️' });
 // 出かけている先を、HOME のどの施設に出すか(していること → 施設)。家と町は「🏡 助手ライフ」
 // 遊び場(段階2・LIFE-STAGE2-PLAN.md): 札・居場所・地図・場面の題では、ゲームの遊びの場所を施設の名前で出す(「🎵 モンヒロビートへ」)。
 //   台本の穴 {place} の言葉(ASSISTANT_LIFE_PLACES)は変えない。今日あったことも今の言葉のまま
-const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({ studio: 'モンヒロビート', cardroom: 'MFバトルカード', ranch: 'M/B管理', temple: '神殿', home: 'みんなの家' }); // 家は HOME の札「助手ライフ みんなの家」とそろえる(地図)
+const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({ studio: 'モンヒロビート', cardroom: 'MFバトルカード', ranch: 'M/B管理', temple: '神殿', battle: 'モンヒロバトル', home: 'みんなの家' }); // 家は HOME の札「助手ライフ みんなの家」とそろえる(地図)
 const assistantLifePlaceShow = (place) => ASSISTANT_LIFE_PLACE_SHOW[place] || ASSISTANT_LIFE_PLACES[place] || '';
 // 場所 → HOME の札(地図 56-assistant-life-map.jsx と同じ表。HOME の顔と地図の全身が同じ時刻に同じ場所に出る・2026-11-08 社長「矛盾のない作り」)。
 //   町だけの場所(図書室・おやつ屋さん・ひなたの丘・中庭・広場)と家は「🏡 助手ライフ」
-const ASSISTANT_LIFE_SPOT_FAC = Object.freeze({ studio: 'rhythm', cardroom: 'card', ranch: 'management', market: 'market', temple: 'temple', home: 'life' });
+const ASSISTANT_LIFE_SPOT_FAC = Object.freeze({ studio: 'rhythm', cardroom: 'card', ranch: 'management', market: 'market', temple: 'temple', battle: 'battle', home: 'life' });
 const assistantLifeFacilityOf = (entry) => (entry && ASSISTANT_LIFE_SPOT_FAC[entry.place]) || 'life';
 // 時間帯の見た目(朝・昼・夕・夜)。ゲーム全体の「時間帯で雰囲気を変える」(ハナビの 44-time-of-day.jsx)とそろえる(2026-11-07 統括の決定)
 //   区切りは社長の決定: 朝 5:00〜/昼 10:00〜/夕 16:00〜/夜 19:00〜4:59(日本時間)。助手の居場所が入れかわる6つの区切りとは別
@@ -175,6 +175,10 @@ const assistantLifeBeatIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLi
 //   印が偽・いまの時間の様子がまだ無いときは false/[]。図書室でのカード研究は入れない。組で来ていれば全員。
 //   カード部は assistantLifeNow を呼ばない(様子を決め直して保存するため)。ごほうびは「対戦を始めた時点でいたか」で決める(カード部の案)
 const assistantLifeAtCard = (id) => { try { const w = assistantLifeWhereOf(assistantLifeCurrent(), id); return !!(w && w.doing === 'cards' && w.place === 'cardroom'); } catch (_) { return false; } };
+// いまモンヒロバトルにいる助手(読むだけ。助手のマスモンの修行は、助手がここにいる回に行う・2026-11-11 社長「MB管理とモンバトは別」)。
+//   印が偽・いまの時間の様子がまだ無いときは false/[]。組で来ていれば全員
+const assistantLifeAtBattle = (id) => { try { const w = assistantLifeWhereOf(assistantLifeCurrent(), id); return !!(w && w.doing === 'battle' && w.place === 'battle'); } catch (_) { return false; } };
+const assistantLifeBattleIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLifeAtBattle);
 const assistantLifeCardIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLifeAtCard);
 // 家にいる組は、だれかひとりの部屋に集まる(家が好きな助手 → 並びの先)
 const assistantLifeHostOf = (ids) => ids.find(id => ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav === 'home') || [...ids].sort((a, b) => ASSISTANT_LIFE_HOUSE_ORDER.indexOf(a) - ASSISTANT_LIFE_HOUSE_ORDER.indexOf(b))[0];
@@ -1285,7 +1289,7 @@ function AssistantLifeSpentMark({ size = 20 }) {
 // 施設の札のすぐ下に、小さい顔を横1列で並べる。全員出す(上限で切らない)。札やほかのボタンに重ならないよう、
 // 下にある札までのすき間を測って顔の大きさを決める(20〜12px)。1列に並びきらないときは、札の幅より外へ伸ばす(左の列は右へ・右の列は左へ)
 // HOME(main)の札だけを見る(地図も同じ class の札を持つため)。神殿も地図と同じく顔を出す(2026-11-08 地図 A)
-const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({ rhythm: 'main.mh-home-scene .mh-home-facility.rhythm', card: 'main.mh-home-scene .mh-home-card-battle', management: 'main.mh-home-scene .mh-home-facility.management', temple: 'main.mh-home-scene .mh-home-facility.temple', market: 'main.mh-home-scene .mh-home-facility.market', life: 'main.mh-home-scene .mh-home-facility.life' });
+const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({ rhythm: 'main.mh-home-scene .mh-home-facility.rhythm', card: 'main.mh-home-scene .mh-home-card-battle', management: 'main.mh-home-scene .mh-home-facility.management', temple: 'main.mh-home-scene .mh-home-facility.temple', market: 'main.mh-home-scene .mh-home-facility.market', battle: 'main.mh-home-scene .mh-home-facility.battle', life: 'main.mh-home-scene .mh-home-facility.life' });
 const ASSISTANT_LIFE_HOME_OBSTACLES = '.mh-home-facility,.mh-home-card-battle,.mh-home-event-banner,.mh-home-tour-banner,.mh-home-mission,.mh-home-gift,.mh-home-event-badge,.mh-home-assistant';
 function AssistantLifeHomeFaces({ metIds }) {
   const st = useAssistantLifeNow(metIds);

@@ -827,7 +827,7 @@ const ALF_WELCOME_MORE = Object.freeze({"mua": ["{f}だ！ 来てくれたの、
 const ALF_WORD_TEXTS = Object.freeze(['楽しかった！', 'また来るね', 'おじゃましました', 'おやつおいしかった', 'いい部屋だったよ', 'また遊ぼうね',
   'ゆっくりできた', 'ありがとう', 'お話しできてうれしかった', 'みんな元気そうだった', 'また会いたいな', 'お留守のあいだにおじゃましました']);
 const ALF_THANKS_TEXTS = Object.freeze(['来てくれてありがとう！', 'またいつでも来てね', 'うれしかったよ', '今度はこっちから行くね', 'みんな喜んでたよ', 'おつかれさま！']);
-const ALF_DOING_ROOM = Object.freeze({ snack: 'おやつ中', practice: '練習中', training: '育成中', cards: 'カード研究中', walk: '散歩中', idle: 'のんびり中', sleep: 'おやすみ中', read: '読書中' });
+const ALF_DOING_ROOM = Object.freeze({ snack: 'おやつ中', practice: '練習中', training: '育成中', cards: 'カード研究中', walk: '散歩中', idle: 'のんびり中', sleep: 'おやすみ中', read: '読書中', battle: 'バトル中' });
 // name … {name} に入れる呼び方を決めて渡すとき(よその家の助手が、訪ねてきたプレイヤーを呼ぶ: 「◯◯さん」)
 const alfFill = (text, { f = '', h = '', v = '', who = null, name = null } = {}) => String(text || '')
   .replace(/\{f\}/g, f).replace(/\{h\}/g, h).replace(/\{v\}/g, v)

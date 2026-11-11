@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1edf3bafad3bff1e
+// generated-sha256: a7e2300614687d4f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -62006,32 +62006,33 @@ const ASSISTANT_LIFE_DOINGS = Object.freeze({
   idle:     { label: 'ぼーっと',   te: 'ぼーっとして',   group: false, places: ['home', 'hill', 'garden'] },
   sleep:    { label: 'おやすみ',     te: '寝て',           group: false, places: ['home'] },
   read:     { label: '読書',       te: '本を読んで',     group: false, places: ['library'] },
+  battle:   { label: 'バトル',     te: 'バトルして',     group: true,  places: ['battle'] }, // モンヒロバトル(2026-11-11 社長「MB管理とモンバトは別」。助手のマスモンの修行はここで行う)
 });
 // 場所。台本の {place} に入る言葉(穴の言葉の一覧は docs/progress/assistant-peer/LIFE-WORDS.md)
 const ASSISTANT_LIFE_PLACES = Object.freeze({
   home: '家', plaza: '広場', cafe: 'おやつ屋さん', studio: '練習スタジオ', ranch: '育成場',
-  cardroom: 'カード部屋', library: '図書室', market: 'マーケット', hill: 'ひなたの丘', garden: '中庭',
+  cardroom: 'カード部屋', library: '図書室', market: 'マーケット', hill: 'ひなたの丘', garden: '中庭', battle: 'モンヒロバトル',
 });
 // 1人ずつの好み(したいことの好みの表。コトバの気持ちの紙・3人組の案もこの表を元にする)
 //   social … だれかといたい気持ちの強さ(0〜1)/ fav … 好きな場所(ひとりごとの場所の型「好きな場所」)
 //   w … したいことの重み / slot … 時間ごとに重みへ掛ける数 / solo … ひとりが好きな時間 / caring … さみしそうな助手のそばへ行きやすい
 //   clingy … ごろごろ・昼寝をしていても、だれかに来てほしい(来ないとさみしくなる)
 const ASSISTANT_LIFE_PREFS = Object.freeze({
-  mua:       { social: 0.85, fav: 'plaza',   w: { snack: 4, practice: 2, training: 2, cards: 1, walk: 3, idle: 1, sleep: 1, read: 0 },
+  mua:       { social: 0.85, fav: 'plaza',   w: { snack: 4, practice: 2, training: 2, cards: 1, walk: 3, idle: 1, sleep: 1, read: 0, battle: 1 },
                slot: { noon: { snack: 1.5 }, evening: { walk: 1.5 } }, note: 'にぎやかなのが好き。人が集まる広場。おやつと散歩、マーケットをのぞくのも好き' },
-  kiki:      { social: 0.65, fav: 'library',     w: { snack: 3, practice: 1, training: 3, cards: 1, walk: 2, idle: 2, sleep: 1, read: 1 },
+  kiki:      { social: 0.65, fav: 'library',     w: { snack: 3, practice: 1, training: 3, cards: 1, walk: 2, idle: 2, sleep: 1, read: 1, battle: 1.5 },
                slot: { morning: { walk: 1.5 }, afternoon: { snack: 1.5 } }, note: '静かな図書室が好き。朝の散歩とおやつ。ゴーレムの育成はしっかり' },
-  momosuke:  { social: 0.8,  fav: 'studio',   w: { snack: 2, practice: 4, training: 2, cards: 1, walk: 2, idle: 1, sleep: 1, read: 0 },
+  momosuke:  { social: 0.8,  fav: 'studio',   w: { snack: 2, practice: 4, training: 2, cards: 1, walk: 2, idle: 1, sleep: 1, read: 0, battle: 1.5 },
                slot: { evening: { practice: 2 }, night: { practice: 1.3 } }, note: '夕方から夜は練習スタジオでレッスン。見てほしいのでだれかと' },
-  dra:       { social: 0.6,  fav: 'home',     w: { snack: 3, practice: 1, training: 1, cards: 1, walk: 1, idle: 2, sleep: 4, read: 0 },
+  dra:       { social: 0.6,  fav: 'home',     w: { snack: 3, practice: 1, training: 1, cards: 1, walk: 1, idle: 2, sleep: 4, read: 0, battle: 0.5 },
                slot: { noon: { sleep: 2 }, afternoon: { sleep: 2 } }, clingy: true, note: '昼寝が好き。だれか来てほしいのに家でごろごろしがち(さみしくなりやすい)' },
-  atsu:      { social: 0.6,  fav: 'studio',    w: { snack: 1, practice: 3, training: 4, cards: 2, walk: 1, idle: 1, sleep: 1, read: 0 },
+  atsu:      { social: 0.6,  fav: 'studio',    w: { snack: 1, practice: 3, training: 4, cards: 2, walk: 1, idle: 1, sleep: 1, read: 0, battle: 3 },
                slot: { morning: { training: 1.5 }, afternoon: { practice: 1.3 } }, note: 'ビートの練習(HELL)とドラゴンの育成。カードも強い' },
-  kyuko:     { social: 0.5,  fav: 'library',  w: { snack: 2, practice: 1, training: 2, cards: 3, walk: 1, idle: 1, sleep: 1, read: 3 },
+  kyuko:     { social: 0.5,  fav: 'library',  w: { snack: 2, practice: 1, training: 2, cards: 3, walk: 1, idle: 1, sleep: 1, read: 3, battle: 1 },
                slot: { afternoon: { read: 3, cards: 1.5 } }, solo: ['afternoon'], note: '午後は図書室でひとりの時間。カードの研究も好き' },
-  sorashido: { social: 0.8,  fav: 'cardroom', w: { snack: 1, practice: 3, training: 1, cards: 4, walk: 1, idle: 1, sleep: 1, read: 1 },
+  sorashido: { social: 0.8,  fav: 'cardroom', w: { snack: 1, practice: 3, training: 1, cards: 4, walk: 1, idle: 1, sleep: 1, read: 1, battle: 2 },
                slot: { night: { cards: 2 }, evening: { cards: 1.3 } }, note: '夜はカード部屋で研究と計算。だれかを巻きこみたい' },
-  erubin:    { social: 0.7,  fav: 'cardroom',   w: { snack: 2, practice: 1, training: 2, cards: 3, walk: 3, idle: 1, sleep: 1, read: 1 },
+  erubin:    { social: 0.7,  fav: 'cardroom',   w: { snack: 2, practice: 1, training: 2, cards: 3, walk: 3, idle: 1, sleep: 1, read: 1, battle: 3 },
                slot: { morning: { walk: 1.3 }, evening: { cards: 1.3 } }, caring: true, note: 'カード部屋(デュラハン)と広場の散歩。さみしそうな助手のそばへ行く' },
 });
 // 1人ずつの生活のリズム(2026-11-07 社長「夜は家に帰る人が増えたり夜ふかしとか性格によって変えてもいい」)。
@@ -62116,7 +62117,7 @@ const ASSISTANT_LIFE_MOOD_MOD = Object.freeze({
   restless: { social: 1.0, w: { walk: 2, practice: 1.3 } },
   sulky:    { social: 0.4, w: { idle: 2 } },
   sleepy:   { social: 0.5, w: { sleep: 3, idle: 2 } },
-  eager:    { social: 1.0, w: { practice: 2, training: 2, cards: 1.3 } },
+  eager:    { social: 1.0, w: { practice: 2, training: 2, cards: 1.3, battle: 1.5 } },
 });
 
 // にぎわい(その日に遊んだ量)。4つの段(2026-11-07 社長: 静か×1・ふつう×1.25・にぎやか×1.5・お祭り×2、1日の上限 20/30/45/60)
@@ -63220,15 +63221,15 @@ const ASSISTANT_LIFE_ROOM_LOOK = Object.freeze({
   sorashido: { wall: ['#fff8d6', '#f6e59a'], furn: '🃏🧮' },
   erubin:    { wall: ['#e8edf3', '#c9d3df'], furn: '⚔️🛡️' },
 });
-const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({ home: '🏡', plaza: '⛲', cafe: '🍰', studio: '🎵', ranch: '🥚', cardroom: '🃏', library: '📚', market: '🛍️', hill: '🌄', garden: '🌷', temple: '✨' });
+const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({ home: '🏡', plaza: '⛲', cafe: '🍰', studio: '🎵', ranch: '🥚', cardroom: '🃏', library: '📚', market: '🛍️', hill: '🌄', garden: '🌷', temple: '✨', battle: '⚔️' });
 // 出かけている先を、HOME のどの施設に出すか(していること → 施設)。家と町は「🏡 助手ライフ」
 // 遊び場(段階2・LIFE-STAGE2-PLAN.md): 札・居場所・地図・場面の題では、ゲームの遊びの場所を施設の名前で出す(「🎵 モンヒロビートへ」)。
 //   台本の穴 {place} の言葉(ASSISTANT_LIFE_PLACES)は変えない。今日あったことも今の言葉のまま
-const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({ studio: 'モンヒロビート', cardroom: 'MFバトルカード', ranch: 'M/B管理', temple: '神殿', home: 'みんなの家' }); // 家は HOME の札「助手ライフ みんなの家」とそろえる(地図)
+const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({ studio: 'モンヒロビート', cardroom: 'MFバトルカード', ranch: 'M/B管理', temple: '神殿', battle: 'モンヒロバトル', home: 'みんなの家' }); // 家は HOME の札「助手ライフ みんなの家」とそろえる(地図)
 const assistantLifePlaceShow = (place) => ASSISTANT_LIFE_PLACE_SHOW[place] || ASSISTANT_LIFE_PLACES[place] || '';
 // 場所 → HOME の札(地図 56-assistant-life-map.jsx と同じ表。HOME の顔と地図の全身が同じ時刻に同じ場所に出る・2026-11-08 社長「矛盾のない作り」)。
 //   町だけの場所(図書室・おやつ屋さん・ひなたの丘・中庭・広場)と家は「🏡 助手ライフ」
-const ASSISTANT_LIFE_SPOT_FAC = Object.freeze({ studio: 'rhythm', cardroom: 'card', ranch: 'management', market: 'market', temple: 'temple', home: 'life' });
+const ASSISTANT_LIFE_SPOT_FAC = Object.freeze({ studio: 'rhythm', cardroom: 'card', ranch: 'management', market: 'market', temple: 'temple', battle: 'battle', home: 'life' });
 const assistantLifeFacilityOf = (entry) => (entry && ASSISTANT_LIFE_SPOT_FAC[entry.place]) || 'life';
 // 時間帯の見た目(朝・昼・夕・夜)。ゲーム全体の「時間帯で雰囲気を変える」(ハナビの 44-time-of-day.jsx)とそろえる(2026-11-07 統括の決定)
 //   区切りは社長の決定: 朝 5:00〜/昼 10:00〜/夕 16:00〜/夜 19:00〜4:59(日本時間)。助手の居場所が入れかわる6つの区切りとは別
@@ -63378,6 +63379,10 @@ const assistantLifeBeatIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLi
 //   印が偽・いまの時間の様子がまだ無いときは false/[]。図書室でのカード研究は入れない。組で来ていれば全員。
 //   カード部は assistantLifeNow を呼ばない(様子を決め直して保存するため)。ごほうびは「対戦を始めた時点でいたか」で決める(カード部の案)
 const assistantLifeAtCard = (id) => { try { const w = assistantLifeWhereOf(assistantLifeCurrent(), id); return !!(w && w.doing === 'cards' && w.place === 'cardroom'); } catch (_) { return false; } };
+// いまモンヒロバトルにいる助手(読むだけ。助手のマスモンの修行は、助手がここにいる回に行う・2026-11-11 社長「MB管理とモンバトは別」)。
+//   印が偽・いまの時間の様子がまだ無いときは false/[]。組で来ていれば全員
+const assistantLifeAtBattle = (id) => { try { const w = assistantLifeWhereOf(assistantLifeCurrent(), id); return !!(w && w.doing === 'battle' && w.place === 'battle'); } catch (_) { return false; } };
+const assistantLifeBattleIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLifeAtBattle);
 const assistantLifeCardIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLifeAtCard);
 // 家にいる組は、だれかひとりの部屋に集まる(家が好きな助手 → 並びの先)
 const assistantLifeHostOf = (ids) => ids.find(id => ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav === 'home') || [...ids].sort((a, b) => ASSISTANT_LIFE_HOUSE_ORDER.indexOf(a) - ASSISTANT_LIFE_HOUSE_ORDER.indexOf(b))[0];
@@ -64488,7 +64493,7 @@ function AssistantLifeSpentMark({ size = 20 }) {
 // 施設の札のすぐ下に、小さい顔を横1列で並べる。全員出す(上限で切らない)。札やほかのボタンに重ならないよう、
 // 下にある札までのすき間を測って顔の大きさを決める(20〜12px)。1列に並びきらないときは、札の幅より外へ伸ばす(左の列は右へ・右の列は左へ)
 // HOME(main)の札だけを見る(地図も同じ class の札を持つため)。神殿も地図と同じく顔を出す(2026-11-08 地図 A)
-const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({ rhythm: 'main.mh-home-scene .mh-home-facility.rhythm', card: 'main.mh-home-scene .mh-home-card-battle', management: 'main.mh-home-scene .mh-home-facility.management', temple: 'main.mh-home-scene .mh-home-facility.temple', market: 'main.mh-home-scene .mh-home-facility.market', life: 'main.mh-home-scene .mh-home-facility.life' });
+const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({ rhythm: 'main.mh-home-scene .mh-home-facility.rhythm', card: 'main.mh-home-scene .mh-home-card-battle', management: 'main.mh-home-scene .mh-home-facility.management', temple: 'main.mh-home-scene .mh-home-facility.temple', market: 'main.mh-home-scene .mh-home-facility.market', battle: 'main.mh-home-scene .mh-home-facility.battle', life: 'main.mh-home-scene .mh-home-facility.life' });
 const ASSISTANT_LIFE_HOME_OBSTACLES = '.mh-home-facility,.mh-home-card-battle,.mh-home-event-banner,.mh-home-tour-banner,.mh-home-mission,.mh-home-gift,.mh-home-event-badge,.mh-home-assistant';
 function AssistantLifeHomeFaces({ metIds }) {
   const st = useAssistantLifeNow(metIds);
@@ -64584,7 +64589,7 @@ function AssistantLifeHomeFaces({ metIds }) {
 // 何も保存しない
 
 // 場所ごとの HOME の札(fac)。町だけの場所は HOME では「🏡 助手ライフ」の札の下に顔が出る(assistantLifeFacilityOf と同じ表)
-const ASSISTANT_LIFE_MAP_ORDER = Object.freeze(['ranch', 'temple', 'market', 'home', 'studio', 'cardroom', 'hill', 'library', 'cafe', 'garden', 'plaza']);
+const ASSISTANT_LIFE_MAP_ORDER = Object.freeze(['ranch', 'temple', 'market', 'battle', 'home', 'studio', 'cardroom', 'hill', 'library', 'cafe', 'garden', 'plaza']);
 const ASSISTANT_LIFE_MAP_TOWN_ONLY = Object.freeze(['hill', 'library', 'cafe', 'garden', 'plaza']);
 // 町だけの場所の札を置く所(絵の幅・高さに対する割合。札の真ん中)。絵ごとに建物の位置がちがうので、絵ごとに持つ
 //   classic … 村の広場(941×1672)/ halloween … ハロウィン(縦)/ halloweenWide … ハロウィン(横長)
@@ -64596,7 +64601,7 @@ const ASSISTANT_LIFE_MAP_TOWN = Object.freeze({
 });
 const assistantLifeMapArtOf = (src) => /halloween-wide/.test(String(src || '')) ? 'halloweenWide' : /halloween/.test(String(src || '')) ? 'halloween' : 'classic';
 // していることの短い印(地図の名札の頭に付ける)
-const ASSISTANT_LIFE_DOING_ICON = Object.freeze({ snack: '🍰', practice: '🎵', training: '🥚', cards: '🃏', walk: '🚶', idle: '💭', sleep: '💤', read: '📖' });
+const ASSISTANT_LIFE_DOING_ICON = Object.freeze({ snack: '🍰', practice: '🎵', training: '🥚', cards: '🃏', walk: '🚶', idle: '💭', sleep: '💤', read: '📖', battle: '⚔️' });
 // 場所を押したときの一言(できること)。数字・ネタバレは書かない
 const ASSISTANT_LIFE_MAP_ABOUT = Object.freeze({
   home: '家で過ごしている助手。部屋をのぞいて、声をかけられます',
@@ -64604,6 +64609,7 @@ const ASSISTANT_LIFE_MAP_ABOUT = Object.freeze({
   cardroom: 'MFバトルカードの研究をしている助手。いる助手と対戦すると、ごほうびが上がります',
   ranch: 'M/B管理でモンスターを育てている助手',
   temple: '神殿にいる助手',
+  battle: 'モンヒロバトルで戦っている助手。いる助手は、マスモンを連れて修行をしています',
   market: 'マーケットにいる助手',
   library: '図書室で本を読んだり、カードを研究したりしている助手',
   cafe: 'おやつ屋さんでおやつを食べている助手',
@@ -64612,7 +64618,7 @@ const ASSISTANT_LIFE_MAP_ABOUT = Object.freeze({
   plaza: '広場を散歩している助手',
 });
 // HOME の札の名前(地図のシートに「HOME の◯◯の札」と出す)
-const ASSISTANT_LIFE_MAP_FAC_NAME = Object.freeze({ management: 'M/B管理', temple: '神殿', market: 'マーケット', life: '助手ライフ', rhythm: 'モンヒロビート', card: 'MFバトルカード' });
+const ASSISTANT_LIFE_MAP_FAC_NAME = Object.freeze({ management: 'M/B管理', temple: '神殿', market: 'マーケット', battle: 'モンヒロバトル', life: '助手ライフ', rhythm: 'モンヒロビート', card: 'MFバトルカード' });
 const assistantLifeMapSpotWord = (place) => `${ASSISTANT_LIFE_PLACE_ICON[place] || '📍'} ${place === 'home' ? 'みんなの家' : assistantLifePlaceShow(place)}`;
 
 // HOME の画面の大きさ・位置合わせの値・絵を読む(HOME が無いとき・🔄横で回しているときは、この画面の大きさと既定の絵)
@@ -64827,11 +64833,12 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
       <div className="relative" style={{ minHeight: '100%' }} data-assistant-life-map-fill>
       <div ref={sceneRef} className={`mh-home-scene${home.wide ? ' is-wide' : ''}`} style={sceneStyle} data-assistant-life-map data-assistant-life-map-from-home={home.fromHome ? '1' : '0'}>
         <picture className={`mh-home-background is-ready${home.wide ? ' is-wide' : ''}`} aria-hidden="true"><img className="mh-home-backdrop" src={home.src} alt=""/><img className="mh-home-main" src={home.src} alt=""/></picture>
-        {/* HOME と同じ札(同じ class・同じ中身)。押すと、そこにいる助手とできること */}
+        {/* HOME と同じ札(同じ class・同じ中身)。押すと、そこにいる助手とできること。下の案内は、HOME の下にあるモンヒロバトルの札と重ならないよう札の上に置く(2026-11-11) */}
         <nav className="mh-home-facilities" aria-label="町の場所">
           {facBtn('ranch', 'management', 'M/B管理', <span><Layers size={18}/><b className="mh-home-facility-label">M/B管理<small>モンスター・編成</small></b></span>)}
           {facBtn('temple', 'temple', '神殿', <span><Sparkles size={18}/>神殿</span>)}
           {facBtn('market', 'market', 'マーケット', <span><ShoppingBag size={17}/>マーケット</span>)}
+          {facBtn('battle', 'battle', 'モンヒロバトル', <span><Sword size={25}/>モンヒロバトル</span>)}
           {facBtn('home', 'life', '助手ライフ みんなの家', <span><span aria-hidden="true" style={{ fontSize: 16, lineHeight: 1 }}>🏡</span><b className="mh-home-facility-label">助手ライフ<small>みんなの家</small></b></span>)}
           {facBtn('studio', 'rhythm', 'モンヒロビート', <span>🎵 モンヒロビート</span>)}
         </nav>
@@ -64850,7 +64857,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
           </div>
           {list && <button type="button" data-assistant-life-map-list onClick={() => { try { const l = listRef.current, box = l && l.parentElement; if (box) box.scrollTo({ top: l.offsetTop, behavior: 'smooth' }); } catch (_) {} }} className="shrink-0 rounded-xl border border-slate-500/70 bg-slate-950/85 px-2.5 py-1.5 text-[11px] font-black text-slate-100 active:scale-95">📃 一覧 ↓</button>}
         </div>
-        <p className="pointer-events-none absolute left-1/2 z-[7] -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-950/85 px-3 py-1 text-[10.5px] font-bold text-slate-100" style={{ bottom: 'calc(10px + env(safe-area-inset-bottom))' }} data-assistant-life-map-hint>場所を押すと、いる助手とできること</p>
+        <p className="pointer-events-none absolute left-1/2 z-[7] -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-950/85 px-3 py-1 text-[10.5px] font-bold text-slate-100" style={{ bottom: land ? 68 : 'calc(68px + env(safe-area-inset-bottom))' }} data-assistant-life-map-hint>場所を押すと、いる助手とできること</p>
       </div>
       </div>
       {list && <div ref={listRef} className="relative bg-[#0b1020]" data-assistant-life-map-below>{list}</div>}
@@ -69807,7 +69814,7 @@ const ALF_WELCOME_MORE = Object.freeze({"mua": ["{f}だ！ 来てくれたの、
 const ALF_WORD_TEXTS = Object.freeze(['楽しかった！', 'また来るね', 'おじゃましました', 'おやつおいしかった', 'いい部屋だったよ', 'また遊ぼうね',
   'ゆっくりできた', 'ありがとう', 'お話しできてうれしかった', 'みんな元気そうだった', 'また会いたいな', 'お留守のあいだにおじゃましました']);
 const ALF_THANKS_TEXTS = Object.freeze(['来てくれてありがとう！', 'またいつでも来てね', 'うれしかったよ', '今度はこっちから行くね', 'みんな喜んでたよ', 'おつかれさま！']);
-const ALF_DOING_ROOM = Object.freeze({ snack: 'おやつ中', practice: '練習中', training: '育成中', cards: 'カード研究中', walk: '散歩中', idle: 'のんびり中', sleep: 'おやすみ中', read: '読書中' });
+const ALF_DOING_ROOM = Object.freeze({ snack: 'おやつ中', practice: '練習中', training: '育成中', cards: 'カード研究中', walk: '散歩中', idle: 'のんびり中', sleep: 'おやすみ中', read: '読書中', battle: 'バトル中' });
 // name … {name} に入れる呼び方を決めて渡すとき(よその家の助手が、訪ねてきたプレイヤーを呼ぶ: 「◯◯さん」)
 const alfFill = (text, { f = '', h = '', v = '', who = null, name = null } = {}) => String(text || '')
   .replace(/\{f\}/g, f).replace(/\{h\}/g, h).replace(/\{v\}/g, v)
