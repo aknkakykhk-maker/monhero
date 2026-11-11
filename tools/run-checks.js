@@ -145,6 +145,8 @@ const FORCE_CHECKS = [
   // 5人目の助手あつの解放(仲良し度 → お話 → 選べる)。公開の印・お話の流し方・一覧の出し分けは実ブラウザでないと通らない(2026-10-22)
   { re: /^monster-hero\/(src\/parts\/(10-core|17-release-changelog-login-missions|56-screen-profile|60-app)\.jsx|data\/assistants\.js)$/,
     checks: ['assistant/atsu-unlock-browser-check.js'], why: 'あつの解放の流れ(公開の印・お話・選ぶ画面)' },
+  { re: /^monster-hero\/(src\/parts\/(18-assistant-partner|59-assistant-partner-fx|55-screen-breeder-market|60-app)\.jsx|data\/assistants\.js)$/,
+    checks: ['assistant/assistant-partner-unlock-check.js'], why: '助手の解放(アシカを40回使うと助手になる・今の人は全員そのまま)' },
   // 入口のカードは、行を1つ足すだけで小さい端末から簡単にあふれる。
   // あふれてもエラーは出ず、大きい端末では気づけない(2026-09-21・ユーザー報告)
   { re: /^monster-hero\/src\/parts\/(10-core|60-app)\.jsx$/,

@@ -182,8 +182,9 @@ const WANT_AMOUNTS = {
   friendGo: [10, 30], friendWelcome: [6, 12],
   // 助手ライフ STEP2(2026-11-11 社長): 神殿にいる助手との仲良し度。合体・転生などを終えたとき1日1回
   lifeTemple: [30, 30],
+  lifeCheer: [5, 15], // モンヒロバトルで助手のマスモンを応援する・修行を見る(2026-11-11 シュギョウ2)
 };
-const PEER_KEYS = ['peerTalk', 'peerChoice', 'peerDaily', 'peerGift', 'peerToken', 'peerPlay', 'peerTrio', 'peerEvent', 'peerMakeup', 'lifeGift', 'lifeFurn', 'friendGo', 'friendWelcome', 'lifeTemple'];
+const PEER_KEYS = ['peerTalk', 'peerChoice', 'peerDaily', 'peerGift', 'peerToken', 'peerPlay', 'peerTrio', 'peerEvent', 'peerMakeup', 'lifeGift', 'lifeFurn', 'friendGo', 'friendWelcome', 'lifeTemple', 'lifeCheer'];
 const wrongAmounts = Object.entries(WANT_AMOUNTS)
   .filter(([k, [amount, dailyMax]]) => !actions[k] || actions[k].amount !== amount || actions[k].dailyMax !== dailyMax)
   .map(([k, [amount, dailyMax]]) => `${k}: ${actions[k] ? `${actions[k].amount}/${actions[k].dailyMax}` : 'なし'} (期待 ${amount}/${dailyMax})`);

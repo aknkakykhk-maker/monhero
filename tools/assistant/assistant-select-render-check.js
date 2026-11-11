@@ -56,7 +56,7 @@ const AssistantFace = ({ who, size }) => React.createElement('img', {
 });
 
 const transformed = babel.transformSync(
-  'const Screen = ({ assistantPickSel, setAssistantPickSel, assistantPickOpen, setAssistantPickOpen, gameState, ASSISTANT_LIST, selectedAssistantId, chooseAssistant, markKikiIntroSeen, setGameState, setTutorialKind, setTutorialStep, AssistantFace, onboardingPreview, assistantsUnlockedFrom, rhythmEventStorySeen }) => (<>\n'
+  'const Screen = ({ assistantPickSel, setAssistantPickSel, assistantPickOpen, setAssistantPickOpen, gameState, ASSISTANT_LIST, selectedAssistantId, chooseAssistant, markKikiIntroSeen, setGameState, setTutorialKind, setTutorialStep, AssistantFace, onboardingPreview, assistantsUnlockedFrom, rhythmEventStorySeen, assistantPartner, startAssistantPartnerEarn, RELEASE_FLAGS }) => (<>\n'
   + jsx + '\n</>);\nmodule.exports = { Screen };',
   { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'assistant-select-render-check.jsx' },
 );
@@ -66,6 +66,8 @@ const { Screen } = moduleScope.exports;
 
 const noop = () => {};
 const picked = [];
+const earned = [];
+let partnerFlag = true;
 const render = (seenStoryIds) => ReactDOMServer.renderToStaticMarkup(React.createElement(Screen, {
   gameState: 'ASSISTANT_SELECT',
   assistantPickSel: null, setAssistantPickSel: noop, assistantPickOpen: null, setAssistantPickOpen: noop,
@@ -78,6 +80,9 @@ const render = (seenStoryIds) => ReactDOMServer.renderToStaticMarkup(React.creat
   // 通常のプレイと同じ状態で描く(デバッグの初回プレイ再生中だけ上に帯が出て、見出しが下がる)
   onboardingPreview: false,
   assistantsUnlockedFrom, rhythmEventStorySeen: seenStoryIds,
+  // 助手の解放(2026-11-11)。はじめての人は判定前(mode:null)で、決めたときに earn を書く
+  assistantPartner: { mode: null, first: null, unlocked: [], noticed: [] }, startAssistantPartnerEarn: (id) => earned.push(id),
+  RELEASE_FLAGS: { assistantPartnerUnlock: partnerFlag },
 }));
 // はじめて遊ぶ人(まだどのイベント会話も見ていない)の画面
 const html = render([]);
@@ -105,6 +110,10 @@ check('助手ごとの顔アイコンが出る',
   ASSISTANTS.every(w => htmlUnlocked.includes(`data-face="${w.id}"`)));
 check('全員ぶんの選ぶボタンがある',
   ASSISTANTS.every(w => htmlUnlocked.includes(`aria-label="${w.name}を選ぶ"`)));
+check('はじめての人に「ほかの助手はアシストカードを使うと選べる」と書いてある(助手の解放)', html.includes('data-assistant-pick-partner-note') && /アシストカードを使うと、助手として選べるようになります/.test(text));
+partnerFlag = false;
+check('公開の印が偽のあいだは、助手の解放の文を出さない', !render([]).includes('data-assistant-pick-partner-note'));
+partnerFlag = true;
 check('あとから変えられることが目立つ札で書いてある', /あとからいつでも変えられます/.test(text) && html.includes('data-assistant-pick-later'));
 check('くわしい紹介は、はじめは閉じている(顔と一言だけ)', !html.includes('data-assistant-pick-intro'));
 check('決めるボタン(この助手にする)が1つある', (html.match(/data-assistant-pick-confirm/g) || []).length === 1 && />この助手にする</.test(html));
