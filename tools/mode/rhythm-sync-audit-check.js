@@ -130,9 +130,9 @@ const run = async () => {
       RHYTHM_TIMING_DIAG.frame = orig;
       return { plain, smooth, snap: RHYTHM_TIMING_DIAG.snapshot() };
     });
-    check('④ 毎コマ、元の時計も診断へ渡している', clock.plain.length > 10 && clock.plain.every(([s, r]) => Number.isFinite(r) && Math.abs(s - r) < .001), `${clock.plain.length}コマ`);
-    const differ = clock.smooth.filter(([s, r]) => Number.isFinite(r) && Math.abs(s - r) > .001).length;
-    check('④ 直し方を入れると画面の時計はなめらかになるが、診断には元の時計が渡る', clock.smooth.length > 10 && differ > clock.smooth.length * .3 && clock.smooth.every(([s, r]) => Number.isFinite(r) && Math.abs(s - r) < 60), `${differ}/${clock.smooth.length}コマで値が違う`);
+    check('④ 毎コマ、元の時計も診断へ渡している', clock.plain.length > 10 && clock.plain.every(([s, r]) => Number.isFinite(r) && Math.abs(s - r) < 25), `${clock.plain.length}コマ`);   // 2つの時計は別々の瞬間に読むので、音の時計の1段ぶんは違ってよい
+    const differ = clock.smooth.filter(([s, r]) => Number.isFinite(r) && Math.abs(s - r) > .001).length, plainDiffer = clock.plain.filter(([s, r]) => Math.abs(s - r) > .001).length;
+    check('④ 直し方を入れると画面の時計はなめらかになるが、診断には元の時計が渡る', clock.smooth.length > 10 && differ > clock.smooth.length * .3 && differ / clock.smooth.length > plainDiffer / clock.plain.length && clock.smooth.every(([s, r]) => Number.isFinite(r) && Math.abs(s - r) < 60), `${differ}/${clock.smooth.length}コマで値が違う`);
     check('④ 診断に、元の時計の止まり(stalls)と画面の時計の止まり(stallsShown)の両方がある', Number.isFinite(clock.snap.stalls) && Number.isFinite(clock.snap.stallsShown));
     // ⑤ 大きさ
     const size = await ios.evaluate(() => JSON.stringify({ ...RHYTHM_TOUCH_BRIDGE.snapshot(), timing: RHYTHM_TIMING_DIAG.snapshot() }).length);
