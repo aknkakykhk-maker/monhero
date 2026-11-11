@@ -100,14 +100,29 @@ function AssistantLifeGiveWho({ groups, soloIds, pairLeft = 0, soloLeft = 0, can
       <p className="text-[11px] font-bold leading-snug text-slate-300">2人の友情Lv と、あなたとの仲良し度が上がります</p>
       {gs.length ? <div className="mt-1 flex flex-wrap gap-1.5">{gs.map(g => (
         <button key={g.ids.join('-')} type="button" data-assistant-life-give-who-pair={g.ids.join('-')} disabled={!canPair || pairLeft <= 0} onClick={() => onPair(g)}
-          className="min-h-[44px] rounded-xl border border-amber-300/70 bg-amber-500/25 px-3 text-[12.5px] font-black text-amber-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400">🎁 {g.ids.map(nameOf).join('・')}</button>))}</div>
+          className="min-h-[44px] rounded-xl border border-amber-300/70 bg-amber-500/25 px-3 text-[12.5px] font-black text-amber-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400">🎁 {g.ids.map(nameOf).join('・')} <span className="ml-1 whitespace-nowrap text-[11px] text-emerald-300">🤝💗 上がる</span></button>))}</div>
         : <p className="mt-1 rounded-xl bg-white/5 px-2 py-1.5 text-[11.5px] font-bold text-slate-300">いまは、一緒にいる組がありません(次の時間帯に)</p>}
       {soloOn && (<>
         <p className="mt-3 text-[13px] font-black text-pink-200">💗 1人に贈る <span className="text-[11px] font-bold text-slate-200">今日あと {soloLeft}回</span></p>
         <p className="text-[11px] font-bold leading-snug text-slate-300">その助手とあなたの仲良し度が上がります</p>
         <div className="mt-1 flex flex-wrap gap-1.5">{ss.map(id => (
           <button key={id} type="button" data-assistant-life-give-who-solo={id} disabled={soloLeft <= 0} onClick={() => onSolo(id)}
-            className="min-h-[44px] rounded-xl border border-pink-300/70 bg-pink-500/25 px-3 text-[12.5px] font-black text-pink-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400">{nameOf(id)}</button>))}</div>
+            className="min-h-[44px] rounded-xl border border-pink-300/70 bg-pink-500/25 px-3 text-[12.5px] font-black text-pink-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400">{nameOf(id)} <span className="ml-0.5 text-[11px] text-emerald-300">💗＋</span></button>))}</div>
       </>)}
     </div>);
+}
+
+// 「きずな」の組の行: 次の友情Lv で何が開くか(分かっているものだけ。無ければ空)
+//   Lv3 … 関係図で線がつながる/特別なお話(Lv5・Lv10)/その Lv から流れる掛け合いがその2人にあるとき「新しい掛け合い」
+function assistantLifePeerNextOpens(a, b, nextLv) {
+  const out = [];
+  try {
+    const key = [a, b].sort().join('-');
+    const all = [...(typeof assistantPeerTalkList === 'function' ? assistantPeerTalkList() : []), ...(typeof assistantPeerExtraTalks === 'function' ? assistantPeerExtraTalks() : [])]
+      .filter(t => t && Array.isArray(t.pair) && t.pair.length === 2 && [...t.pair].sort().join('-') === key);
+    if (nextLv === 3) out.push('関係図で線がつながる');
+    if (all.some(t => t.special && (t.lv || 5) === nextLv)) out.push('✦ 特別なお話');
+    if (all.some(t => !t.special && t.kind !== 'quarrel' && t.kind !== 'makeup' && (t.lv || 1) === nextLv)) out.push('新しい掛け合い');
+  } catch (_) { return ''; }
+  return out.join('・');
 }

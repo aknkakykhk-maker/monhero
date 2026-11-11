@@ -10,6 +10,8 @@
 //   ⑦ 旧UI(保存が false)は今までどおり: タブ5つ・「みんなの居場所」・地図の下の一覧
 //   ⑧ 保存が無い人は ASSISTANT_LIFE_UI_V2_DEFAULT のとおり・保存 mh_assistant_life_ui_v2 は開いただけでは書き換わらない
 //   ⑨ ページのエラーが出ない
+//   ⑩ 家の8部屋: 留守の札は字10.5px以上・家にいる助手の部屋に「会える」の印
+//   ⑪ きずな: 組の行は高さ44px以上で、次の Lv まであといくつが出る
 const http = require('http'), path = require('path'), fs = require('fs');
 const root = path.resolve(__dirname, '..', '..'), PORT = 9266;
 const SHOTS = process.argv.includes('--shots');
@@ -63,13 +65,23 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
     check(`${T}① 新UIのタブは家・町・きずな(・フレンド)で、道具のタブは無い`, tabs.join() === want.join() && !tabs.includes('items') && tabs.slice(0, 3).join() === 'house,where,friends', tabs.join());
     check(`${T}② 家の上の「みんなの居場所」は出ない`, await page.locator('[data-assistant-life-find]').count() === 0);
     check(`${T}⑥ 家: タブは横にはみ出さず高さ40px以上`, (await badBox(page, '[data-assistant-life-icons] button')).length === 0, JSON.stringify(await badBox(page, '[data-assistant-life-icons] button')));
+    { // ⑩ 家の8部屋: 留守の札は字10.5px以上で部屋からはみ出さない・家にいる助手の部屋に「会える」の印(部屋の中に収まる)
+      const rm = await page.evaluate(() => { const inBox = (el, box) => { const a = el.getBoundingClientRect(), b = box.getBoundingClientRect(); return a.left >= b.left - 1 && a.right <= b.right + 1 && a.top >= b.top - 1 && a.bottom <= b.bottom + 1; };
+        const tags = [...document.querySelectorAll('[data-assistant-life-room-away]')];
+        const meets = [...document.querySelectorAll('[data-assistant-life-room-meet]')];
+        return { tags: tags.length, tiny: tags.flatMap(t => [...t.querySelectorAll('small,b')]).filter(e => e.getBoundingClientRect().width > 0 && parseFloat(getComputedStyle(e).fontSize) < 10.5).length, tagOut: tags.filter(t => !inBox(t, t.closest('[data-assistant-life-room]'))).length,
+          meets: meets.map(m => m.getAttribute('data-assistant-life-room-meet')), meetOut: meets.filter(m => !inBox(m, m.closest('[data-assistant-life-room]'))).length }; });
+      check(`${T}⑩ 家: 留守の札(${rm.tags}部屋)は字10.5px以上で部屋の中・「会える」の印はあつの部屋だけで部屋の中`, rm.tags === 7 && rm.tiny === 0 && rm.tagOut === 0 && rm.meets.join() === 'atsu' && rm.meetOut === 0, JSON.stringify(rm));
+    }
     await shot(page, `${v.id}-1-house.png`);
     // ③ 贈る
     await page.locator('[data-assistant-life-today-act="give"]').click(); await page.waitForTimeout(500);
-    const gift = await page.evaluate(() => { const s = document.querySelector('[data-assistant-life-gift-sheet]'); return s ? { who: !!s.querySelector('[data-assistant-life-give-who]'), pairs: s.querySelectorAll('[data-assistant-life-give-who-pair]').length, items: s.querySelectorAll('[data-assistant-life-item]').length } : null; });
-    check(`${T}③ 「🎁 贈る」でシートが開き、相手(${gift && gift.pairs}組)と持っている道具(${gift && gift.items}種)が出る`, !!gift && gift.who && gift.pairs === 2 && gift.items >= 3, JSON.stringify(gift));
-    check(`${T}⑥ 贈るシート: 相手のボタンは横にはみ出さず高さ40px以上`, (await badBox(page, '[data-assistant-life-give-who] button')).length === 0, JSON.stringify(await badBox(page, '[data-assistant-life-give-who] button')));
+    let gift = await page.evaluate(() => { const s = document.querySelector('[data-assistant-life-gift-sheet]'); return s ? { who: !!s.querySelector('[data-assistant-life-give-who]'), pairs: s.querySelectorAll('[data-assistant-life-give-who-pair]').length, items: s.querySelectorAll('[data-assistant-life-item]').length } : null; });
     await shot(page, `${v.id}-2-gift.png`);
+    await page.locator("[data-assistant-life-gift-items-toggle]").click(); await page.waitForTimeout(300); gift.items = await page.locator("[data-assistant-life-gift-sheet] [data-assistant-life-item]").count();
+    check(`${T}③ 「🎁 贈る」でシートが開き、相手(${gift && gift.pairs}組)と、開くと道具の一覧(${gift && gift.items}種)が出る`, !!gift && gift.who && gift.pairs === 2 && gift.items >= 3, JSON.stringify(gift));
+    check(`${T}⑥ 贈るシート: 相手のボタンは横にはみ出さず高さ40px以上`, (await badBox(page, '[data-assistant-life-give-who] button')).length === 0, JSON.stringify(await badBox(page, '[data-assistant-life-give-who] button')));
+    await shot(page, `${v.id}-2b-gift-items.png`);
     await page.locator('[data-assistant-life-give-who-pair="mua-kiki"]').click(); await page.waitForTimeout(500);
     check(`${T}③ 相手を押すと、今までの「贈る」の確かめへ進む`, await page.locator('[data-assistant-life-gift-sheet]').count() === 0 && await page.locator('[data-assistant-life-give-sheet], [data-assistant-life-gift-confirm], [data-assistant-life-give]').count() > 0);
     await page.keyboard.press('Escape').catch(() => {});
@@ -81,6 +93,10 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
     const goOn = await page.locator('[data-assistant-life-introduce-go]').isEnabled().catch(() => null);
     check(`${T}⑤ 「きずな」に引き合わせるがあり、2人を選ぶと押せる`, goOff === true && goOn === true, JSON.stringify({ goOff, goOn }));
     check(`${T}⑥ きずな: 引き合わせるのボタンは横にはみ出さず高さ40px以上`, (await badBox(page, '[data-assistant-life-introduce] button')).length === 0, JSON.stringify(await badBox(page, '[data-assistant-life-introduce] button')));
+    { // ⑪ きずな: 組の行は高さ44px以上で、「あと◯で Lv◯」が出る
+      const kz = await page.evaluate(() => { const rows = [...document.querySelectorAll('[data-assistant-peer-row-v2]')]; return { n: rows.length, low: rows.filter(r => r.getBoundingClientRect().height < 44).length, next: rows.filter(r => /あと\d+で Lv\d+/.test(r.innerText)).length }; });
+      check(`${T}⑪ きずな: 組の行(${kz.n})は高さ44px以上で、次の Lv まであといくつが出る`, kz.n >= 4 && kz.low === 0 && kz.next === kz.n, JSON.stringify(kz));
+    }
     await shot(page, `${v.id}-3-kizuna.png`);
     await page.locator('[data-assistant-life-introduce-go]').click(); await page.waitForTimeout(500);
     check(`${T}⑤ 引き合わせると、次の時間の予定が出る`, await page.locator('[data-assistant-life-introduce-done]').count() === 1 && await page.locator('[data-assistant-life-introduce-go]').isDisabled());
