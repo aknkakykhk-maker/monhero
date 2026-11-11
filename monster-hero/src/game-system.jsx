@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 018f71db9450ddc7
+// generated-sha256: 6e15b43e3d407f92
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9741,7 +9741,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantLifePlan: true, // 2026-11-11 助手の行き先の予定(📅 今日の予定表・ナカヨシ19・台帳 #5301)。止め絵と更新履歴の「この文で」・ミハリ・Fable の確認のあと真にする
   assistantMasmonTrain: true, // 2026-11-11 助手のマスモンの修行と助手の成長(仕様書の第②段階・シュギョウ)。2026-11-11 ミハリの最終確認と直した所の確認(ミハリ3)が OK・更新履歴とヘルプは社長「この文で」で公開
   assistantMasmonCheer: true, // 2026-11-11 モンヒロバトルにいる助手の 👀 修行を見る・📣 応援する・一人修行の伸び(シュギョウ2)。ミハリ3 OK・地図の窓 #5448・更新履歴とヘルプは社長「この文で」で公開
-  assistantMasmonRanchTicket: false, // 2026-11-11 M/B管理にいる助手のマスモンにトレーニングチケット/重トレーニングチケットを使ってあげる(ボクジョウ)。真にすると今の「次の育成が1.2倍」は止まる。ミハリの確認と Fable の最終確認のあと、更新履歴とヘルプと一緒に真にする
+  assistantMasmonRanchTicket: true, // 2026-11-12 社長「この文で公開」・masmon-pvp 版4(DAILY_GROWTH_CAP 40)を配り終えてから真にした。2026-11-11 M/B管理にいる助手のマスモンにトレーニングチケット/重トレーニングチケットを使ってあげる(ボクジョウ)。真にすると今の「次の育成が1.2倍」は止まる。ミハリの確認と Fable の最終確認のあと、更新履歴とヘルプと一緒に真にする
   assistantMasmonSuggest: true, // 2026-11-09 助手のマスモン・デッキに「提案する」(キズナ4)。assistant-chat v24 と SQL 202611080003 を窓口が配り、本番で kind:'masmon_suggest' を1回呼んで返事が来るのを確かめた。カード部の受け手 #5126 と一緒に公開
   assistantMasmonGrow: true, // 2026-11-11 助手のマスモンの育成基盤(社長の仕様書の第①段階・キズナ4)。6能力・1日3回の自主育成・関わるほど強くなる。社長「この文で公開」。相談(鍛えて・休ませて)の読み取りは assistant-chat の配り直しのあとから
   assistantMasmonNamesApi: true, // 2026-11-08 assistant-chat v22(窓口が配った)を本番の形で1回呼んで名前が返るのを確かめた(キズナ3)
@@ -14403,6 +14403,8 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
   if(b&&b.playerFlag&&!(typeof helpPlayerFlagOn==='function'&&helpPlayerFlagOn(b.playerFlag))) return null;
   // 動画(2026-10-13・HELL のプレイ映像)。video は data/rhythm-mode.js の RHYTHM_HELL_GUIDE_VIDEOS の名前。読めないときは見出しだけ残る
   if(b.t==='video') return <div key={i} data-help-video className="rounded-2xl p-3 border" style={{borderColor:`${accent}55`,backgroundColor:'rgba(0,0,0,0.5)'}}>{b.title&&<div className="text-[11px] font-black text-white mb-2">{b.title}</div>}{typeof RhythmHellVideo==='function'&&<RhythmHellVideo id={b.video}/>}{b.text&&<div className="text-[12px] text-slate-300 leading-relaxed mt-2">{helpWrap(b.text)}</div>}</div>;
+  // 絵(2026-11-12・ホーム画面に追加の手順)。src は images/ からのパス。読めないときは絵だけ消えて見出しは残る
+  if(b.t==='image') return <figure key={i} data-help-image className="m-0">{b.title&&<figcaption className="text-[11px] font-black text-white mb-2">{b.title}</figcaption>}<img src={b.src} alt={b.alt||b.title||''} loading="lazy" className="block w-full max-w-[360px] mx-auto rounded-2xl" onError={e=>{e.currentTarget.style.display='none';}}/></figure>;
   if(b.t==='note') return <div key={i} className="rounded-2xl p-4 border" style={{borderColor:`${accent}55`,backgroundColor:'rgba(0,0,0,0.5)'}}>{b.title&&<div className="text-[11px] font-black text-white mb-1">{b.title}</div>}<div className="text-[12px] text-slate-300 leading-relaxed">{helpWrap(b.text)}</div></div>;
   if(b.t==='list') return <ul key={i} className="text-[12px] text-slate-300 leading-relaxed space-y-2 list-disc pl-5">{b.items.map((x,j)=><li key={j}>{helpWrap(x)}</li>)}</ul>;
   if(b.t==='steps') return <div key={i} className="space-y-2.5">{b.items.map((x,j)=>(<div key={j} className="flex items-start gap-3"><span className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black text-black" style={{backgroundColor:accent}}>{j+1}</span><span className="text-[12px] text-slate-300 leading-relaxed pt-0.5">{helpWrap(x)}</span></div>))}</div>;
@@ -40848,6 +40850,8 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
   // ダウンロード(事前ダウンロード)も設定画面の中の1ページ。いつも出す(切のときは、ページの中に「使う」ボタンを出す)
   const [assetDownloadOpen, setAssetDownloadOpen] = useState(false);
+  // 「ホーム画面に追加」の案内(51-home-screen-guide.jsx。iPhone の Safari のときだけ入口を出す・2026-11-11)
+  const [homeScreenGuideOpen, setHomeScreenGuideOpen] = useState(false);
   // 助手のひとことの出し方(21-assistant.jsx の ASSISTANT_BUBBLE_STORE。早期の return より前で読む)
   const assistantBubble = useAssistantBubbleState();
   // 助手どうしの会話を自動で進めるか(56-assistant-peer.jsx の ASSISTANT_PEER_AUTO_STORE。既定は切)
@@ -40945,6 +40949,10 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
         {/* 入/切に関係なく出す(切のままだと、プレイヤーに戻す手段が無い)。対応していない端末はページの中で知らせる */}
         <SettingsMenuLink icon="📥" label="ダウンロード" desc="曲や画像を前もって端末に入れておく" onClick={() => setAssetDownloadOpen(true)} data-open-asset-download/>
         <SettingsMenuLink icon="💾" label="データ引き継ぎ" desc="バックアップの保存と、別の端末での復元" onClick={onOpenBackup}/>
+        {typeof mhHomeScreenGuideMode==='function'&&!!mhHomeScreenGuideMode()&&(
+          <SettingsMenuLink icon="📲" label="ホーム画面に追加" desc="アプリのように遊ぶ方法(データの引き継ぎつき)" onClick={() => setHomeScreenGuideOpen(true)} data-open-home-screen-guide/>
+        )}
+        {homeScreenGuideOpen&&<HomeScreenGuideSheet onClose={() => setHomeScreenGuideOpen(false)} onOpenBackup={onOpenBackup}/>}
         <SettingsMenuLink icon="📚" label="ヘルプ" desc="遊び方・育て方・画面の説明" onClick={onOpenHelp}/>
         <SettingsMenuLink icon="🔄" label="ゲームを更新" desc="最新のゲームデータを読み込みます" onClick={onOpenGameUpdate} disabled={gameUpdateDisabled} accent="text-cyan-200"/>
         {/* 新しいバージョンのお知らせ(画面へ出るバナー)の出し方。
@@ -41088,6 +41096,194 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
       </div>
     </div>
   );
+}
+
+// ---- part: 51-home-screen-guide.jsx ----
+// ==== 「ホーム画面に追加」の案内(2026-11-11 社長の選択 B・窓口経由・アプリカ) ====
+// 社長「ブラウザだからかたまに画面の挙動がおかしい。ホームに追加しても、それでもブラウザのような挙動がある気がする」
+// → ホーム画面のアプリでは左端スワイプの戻るを出さなくした(#5455)。Safari で遊んでいる人には、ホーム画面に追加する案内を出す。
+// 決まり(窓口):
+//   ・iPhone の Safari で遊んでいる人だけに出す(ホーム画面のアプリ・Android・パソコンには出さない)
+//   ・2026-11-12 社長の選択: X・LINE などのアプリ内ブラウザの人にも、先に「ブラウザ(Safari)で開く」案内を出す(手順の絵つき・回数の決まりは同じ)
+//   ・iPhone はホーム画面のアプリと Safari で保存データが別になる。追加の手順の前に「先に Safari 側でバックアップ → 追加したアプリで戻す」を出す
+//   ・しつこくしない。自動で出すのは HOME で、出したら14日は出さない・3回出したらもう自動では出さない・「もう表示しない」で二度と出さない
+//     (新しいキー mh_home_screen_guide_v1 で覚える。既存のキーは触らない)。設定の「📲 ホーム画面に追加」からはいつでも開ける
+//   ・ヘルプ(データ引き継ぎの次の「ホーム画面に追加」)にも同じ手順を載せる
+const MH_HOME_SCREEN_GUIDE_KEY = 'mh_home_screen_guide_v1';
+const MH_HOME_SCREEN_GUIDE_GAP_MS = 14 * 24 * 60 * 60 * 1000;   // 自動で出したあと、次に出すまで
+const MH_HOME_SCREEN_GUIDE_MAX_AUTO = 3;                         // 自動で出すのはここまで
+const MH_HOME_SCREEN_GUIDE_FIRST_WAIT_MS = 60 * 60 * 1000;       // はじめて HOME に来てから1時間は出さない(最初の30分の案内とぶつけない)
+
+// iPhone の Safari(ホーム画面のアプリではない)か。Chrome・Firefox・Edge などの iPhone 版と、LINE・X・Instagram などのアプリ内ブラウザは除く
+// (アプリ内ブラウザからはホーム画面に追加できない。ほかのブラウザは手順が違う)
+function mhIsIphoneSafariBrowser(ua) {
+  try {
+    if (typeof window === 'undefined' || !window.navigator) return false;
+    if (typeof mhIsIosHomeScreenApp === 'function' && mhIsIosHomeScreenApp()) return false;
+    const text = String(ua == null ? window.navigator.userAgent || '' : ua);
+    if (!/iPhone|iPod/.test(text)) return false;
+    if (!/Safari\//.test(text) || !/Version\//.test(text)) return false;
+    if (/CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|GSA\/|YJApp|DuckDuckGo|Line\/|FBAN|FBAV|Instagram|Twitter|MicroMessenger|KAKAOTALK/i.test(text)) return false;
+    return true;
+  } catch (_) { return false; }
+}
+
+// iPhone のアプリ内ブラウザ(X・LINE・Instagram など)か(2026-11-12 社長の選択「案内とヘルプに入れる」)。
+// アプリ内ブラウザからはホーム画面に追加できないので、「ブラウザ(Safari)で開く」案内を出す。
+// 目印のあるアプリに加えて、Safari の目印(Safari/ と Version/)が無い iPhone の画面もアプリ内ブラウザとみなす(X は目印を付けないことがある)。
+// Chrome・Firefox・Edge などの iPhone 版のブラウザは手順が違うので出さない
+function mhIsIphoneInAppBrowser(ua) {
+  try {
+    if (typeof window === 'undefined' || !window.navigator) return false;
+    if (typeof mhIsIosHomeScreenApp === 'function' && mhIsIosHomeScreenApp()) return false;
+    const text = String(ua == null ? window.navigator.userAgent || '' : ua);
+    if (!/iPhone|iPod/.test(text)) return false;
+    if (/CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|DuckDuckGo/i.test(text)) return false;
+    if (/Line\/|FBAN|FBAV|Instagram|Twitter|MicroMessenger|KAKAOTALK|GSA\/|YJApp/i.test(text)) return true;
+    return !(/Safari\//.test(text) && /Version\//.test(text));
+  } catch (_) { return false; }
+}
+// 案内の形: 'safari'(Safari からホーム画面に追加)/ 'inapp'(先にブラウザで開く)/ null(出さない)
+function mhHomeScreenGuideMode(ua) {
+  if (mhIsIphoneSafariBrowser(ua)) return 'safari';
+  if (mhIsIphoneInAppBrowser(ua)) return 'inapp';
+  return null;
+}
+// 手順の絵(社長から受け取った絵を手順の枠ごとに切り分けたもの。よその会社のアイコンは消してある。元は tools/art-sources/home-screen-guide/)
+const MH_HOME_SCREEN_HOWTO_STEPS_IMAGE = 'images/guide/home-screen-howto-steps.jpg';
+const MH_HOME_SCREEN_HOWTO_ADD_IMAGE = 'images/guide/home-screen-howto-add.jpg';
+// 戻すときの文(案内とヘルプで同じ。頭の「遊び始める前に、タイトルの設定から」は社長の選択・Fable の留意2)
+const MH_HOME_SCREEN_RESTORE_TEXT = '遊び始める前に、タイトルの設定から戻します。ホーム画面のアイコンから開き、タイトル画面の「設定」→「データ引き継ぎ」→「復元」で、保存したファイル(またはコピーしたコード)を読み込みます。';
+
+// 保存値の読み書き。壊れていても既定値で動く(CLAUDE.md ⑦)
+function normalizeHomeScreenGuideState(value) {
+  const src = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const num = v => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : 0);
+  return {
+    firstSeenAt: num(src.firstSeenAt),
+    lastShownAt: num(src.lastShownAt),
+    autoCount: Math.min(99, Math.floor(num(src.autoCount))),
+    never: src.never === true,
+  };
+}
+function readHomeScreenGuideState() {
+  try { return normalizeHomeScreenGuideState(JSON.parse(window.localStorage.getItem(MH_HOME_SCREEN_GUIDE_KEY) || 'null')); }
+  catch (_) { return normalizeHomeScreenGuideState(null); }
+}
+function writeHomeScreenGuideState(next) {
+  try { window.localStorage.setItem(MH_HOME_SCREEN_GUIDE_KEY, JSON.stringify(normalizeHomeScreenGuideState(next))); } catch (_) { /* 書けなくても遊べる */ }
+}
+// いま自動で出してよいか(時刻を渡して決める。読み込み時に1回だけ決めない)
+function homeScreenGuideAutoDue(state, now) {
+  const s = normalizeHomeScreenGuideState(state);
+  if (s.never || s.autoCount >= MH_HOME_SCREEN_GUIDE_MAX_AUTO) return false;
+  if (!s.firstSeenAt || now - s.firstSeenAt < MH_HOME_SCREEN_GUIDE_FIRST_WAIT_MS) return false;
+  if (s.lastShownAt && now - s.lastShownAt < MH_HOME_SCREEN_GUIDE_GAP_MS) return false;
+  return true;
+}
+
+// 案内の窓。データ引き継ぎの窓(zIndex 90000)がこの上に開くので、戻ってくると手順の続きが見える
+// mode: 'safari'(Safari で遊んでいる人)/ 'inapp'(X・LINE などのアプリ内ブラウザの人)。渡さなければ端末から決める
+function HomeScreenGuideSheet({ onClose, onNever = null, onOpenBackup, mode = null }) {
+  const kind = mode || mhHomeScreenGuideMode() || 'safari';
+  const inApp = kind === 'inapp';
+  // 言葉の途中で折らない(ヘルプと同じ折り方)。文字列でないもの(ボタン・絵の入った本文)はそのまま
+  const w = (x) => (typeof x === 'string' && typeof jaWrap === 'function'
+    ? <span style={typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined}>{jaWrap(x)}</span> : x);
+  const step = (no, title, body) => (
+    <li data-home-screen-guide-step={no} className="flex gap-2.5 rounded-2xl border border-white/10 bg-slate-950/70 p-3 text-left">
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-400 text-[12px] font-black text-slate-950">{no}</span>
+      <div className="min-w-0">
+        <div className="text-[12px] font-black leading-snug text-white">{w(title)}</div>
+        <div className="mt-1 text-[11px] font-bold leading-relaxed text-slate-300">{w(body)}</div>
+      </div>
+    </li>
+  );
+  // アプリ内ブラウザ(X・LINE など)はファイルを保存できない・保存先が分からないことが多いので、コードを先に書く(ミハリ4)
+  const backupText = inApp
+    ? ['「データ引き継ぎ」の「バックアップコードを作成」→「コードをコピー」で控え、メモなどに貼って残します。', '(「バックアップファイルを保存(.mhsave)」でも作れます)']
+    : ['「データ引き継ぎ」の「バックアップファイルを保存(.mhsave)」を押し、「ファイルに保存」を選びます。', '(「バックアップコードを作成」→「コードをコピー」でも作れます)'];
+  const backupBody = <>{w(backupText[0])}<br/>{w(backupText[1])}<button type="button" data-home-screen-guide-backup onClick={onOpenBackup} className="mt-2 block min-h-[44px] w-full rounded-xl bg-indigo-600 px-3 text-[12px] font-black text-white active:scale-95">💾 データ引き継ぎを開く</button></>;
+  const addBody = 'Safari の下にある共有ボタン(四角から上向きの矢印)を押し、「ホーム画面に追加」→ 右上の「追加」。';
+  return (
+    <div data-home-screen-guide={kind} role="dialog" aria-modal="true" aria-label="ホーム画面に追加"
+      className="fixed inset-0 flex items-center justify-center p-4" style={{ position: 'fixed', inset: 0, zIndex: 85000, backgroundColor: 'rgba(0,0,0,0.82)' }}>
+      <div className="w-full max-w-sm max-h-full overflow-y-auto mh-scroll rounded-3xl border border-amber-300/60 bg-slate-900 p-4 shadow-2xl">
+        <div className="mh-dialog-head flex items-start justify-between gap-2">
+          <h3 className="text-[16px] font-black leading-snug text-white">{w(inApp ? '📲 Safari で開いて、ホーム画面に追加しよう' : '📲 ホーム画面に追加して遊ぼう')}</h3>
+          <button type="button" aria-label="閉じる" onClick={onClose} className="min-h-[44px] min-w-[44px] shrink-0 rounded-full text-[18px] font-black text-slate-300 active:scale-95">✕</button>
+        </div>
+        <p className="mt-1 text-[11px] font-bold leading-relaxed text-slate-300">{w(inApp
+          ? 'いまは X や LINE などのアプリの中で開いています。Safari で開いてホーム画面に追加すると、アプリのように画面が広くなり、ブラウザの操作が出なくなります。'
+          : 'アプリのように画面が広くなり、ブラウザの操作(画面の左端をなぞると戻る、など)が出なくなります。')}</p>
+        <div data-home-screen-guide-warning className="mt-3 rounded-2xl border border-red-300/70 bg-red-950/60 p-3 text-left">
+          <div className="text-[12px] font-black text-red-200">{w(inApp ? '⚠ 開き直す前に、必ずバックアップを作ってください' : '⚠ 追加する前に、必ずバックアップを作ってください')}</div>
+          <div className="mt-1 text-[11px] font-bold leading-relaxed text-red-100/90">{w(inApp
+            ? 'アプリの中の画面と、Safari・ホーム画面のアプリでは、保存データが別々です。そのまま開き直すと、はじめからになります。'
+            : 'iPhone では、ホーム画面のアプリと Safari で保存データが別々です。そのまま追加すると、アプリのほうは はじめからになります。')}</div>
+        </div>
+        {inApp && <img data-home-screen-guide-image="steps" src={MH_HOME_SCREEN_HOWTO_STEPS_IMAGE} alt="ホーム画面に追加する方法(リンクを押す → ブラウザで開く → ホーム画面に追加)" loading="lazy" className="mt-3 block w-full rounded-2xl"/>}
+        <ol className="mt-3 space-y-2">
+          {inApp ? <>
+            {step(1, 'いまの画面でバックアップを作る', backupBody)}
+            {step(2, 'ブラウザ(Safari)で開く', 'アプリの画面の「⋮」や共有のボタンから「ブラウザで開く」(または「Safari で開く」)を選びます。X なら、画面の下の「github.io」の右にある「⋮」から選べます(絵の③)。')}
+            {step(3, 'ホーム画面に追加する', addBody + '(絵の④)')}
+            {step(4, '追加したアイコンから開いて、データを戻す', MH_HOME_SCREEN_RESTORE_TEXT)}
+          </> : <>
+            {step(1, 'いまの Safari でバックアップを作る', backupBody)}
+            {step(2, 'ホーム画面に追加する', <>{addBody}<img data-home-screen-guide-image="add" src={MH_HOME_SCREEN_HOWTO_ADD_IMAGE} alt="共有ボタンから「ホーム画面に追加」を選ぶ" loading="lazy" className="mx-auto mt-2 block w-full max-w-[220px] rounded-xl"/></>)}
+            {step(3, '追加したアイコンから開いて、データを戻す', MH_HOME_SCREEN_RESTORE_TEXT)}
+          </>}
+        </ol>
+        <p className="mt-3 text-[10px] font-bold leading-relaxed text-slate-400">{w(inApp
+          ? '戻したあとは、ホーム画面のアイコンから遊んでください。アプリの中の画面とホーム画面のアプリの両方で遊ぶと、進み方が別々になります。'
+          : '戻したあとは、ホーム画面のアイコンから遊んでください。Safari とアプリの両方で遊ぶと、進み方が別々になります。')}</p>
+        <div className="mt-3 flex gap-2">
+          {onNever && <button type="button" data-home-screen-guide-never onClick={onNever} className="min-h-[44px] flex-1 rounded-xl border border-white/10 bg-slate-800 px-2 text-[11px] font-black text-slate-300 active:scale-95">もう表示しない</button>}
+          <button type="button" data-home-screen-guide-close onClick={onClose} className="mh-button min-h-[44px] flex-1 rounded-xl bg-amber-400 px-2 text-[12px] font-black text-slate-950 active:scale-95">閉じる</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// HOME に置く。iPhone の Safari で、決まりの回数のうちなら、ほかの窓が出ていないときに1回だけ出す
+function HomeScreenGuideAuto({ onOpenBackup }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!mhHomeScreenGuideMode()) return undefined;   // Safari・アプリ内ブラウザのどちらも(回数の決まりは同じキーで共通)
+    const first = readHomeScreenGuideState();
+    if (!first.firstSeenAt) writeHomeScreenGuideState({ ...first, firstSeenAt: Date.now() });
+    let tries = 0, timer = null, alive = true;
+    // ほかの窓(お知らせ・ログインボーナス・案内など)が出ているあいだは待つ。前に出ている物があるかだけを見る
+    const busy = () => {
+      try {
+        return [...document.querySelectorAll('.fixed, [role="dialog"], .mh-title-modal')].some(el => {
+          if (el.closest('[data-home-screen-guide]')) return false;
+          const st = window.getComputedStyle(el);
+          if (st.display === 'none' || st.visibility === 'hidden' || Number(st.opacity) === 0) return false;
+          const z = Number(st.zIndex);
+          const r = el.getBoundingClientRect();
+          return Number.isFinite(z) && z >= 40 && r.width * r.height >= window.innerWidth * window.innerHeight * 0.3;
+        });
+      } catch (_) { return true; }
+    };
+    const tick = () => {
+      if (!alive) return;
+      const now = Date.now();
+      if (!homeScreenGuideAutoDue(readHomeScreenGuideState(), now)) return;
+      if (busy()) { if (++tries < 20) timer = setTimeout(tick, 3000); return; }
+      const s = readHomeScreenGuideState();
+      writeHomeScreenGuideState({ ...s, lastShownAt: now, autoCount: s.autoCount + 1 });   // 出した時点で数える(閉じずに画面を移っても、また出さない)
+      setOpen(true);
+    };
+    timer = setTimeout(tick, 4000);
+    return () => { alive = false; if (timer) clearTimeout(timer); };
+  }, []);
+  if (!open) return null;
+  return <HomeScreenGuideSheet onClose={() => setOpen(false)}
+    onNever={() => { writeHomeScreenGuideState({ ...readHomeScreenGuideState(), never: true }); setOpen(false); }}
+    onOpenBackup={onOpenBackup}/>;
 }
 
 // ---- part: 52-mission-daily-line.jsx ----
@@ -57427,6 +57623,9 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhbs-dot{width:6px;height:6px;border-radius:9999px;background:rgba(255,255,255,.22);transition:all .2s}
 .mhbs-dot.on{width:16px;background:linear-gradient(90deg,#f0abfc,#a78bfa)}
 .mhms-in{animation:mhmsIn .45s cubic-bezier(.2,.9,.3,1.2) both}
+/* MFバトルカードをはじめて開いたとき、最初に押す所だけ光らせる縁(84-screen-card-battle.jsx。一度きり) */
+.mhcard-first-glow{filter:drop-shadow(0 0 4px #fde047) drop-shadow(0 0 10px rgba(253,224,71,.8));animation:mhcardFirstGlow 1.3s ease-in-out infinite}
+@keyframes mhcardFirstGlow{0%,100%{filter:drop-shadow(0 0 3px #fde047) drop-shadow(0 0 6px rgba(253,224,71,.5))}50%{filter:drop-shadow(0 0 6px #fff7b0) drop-shadow(0 0 16px rgba(253,224,71,1))}}
 .mhmv-mvp{animation:mhmvGlow 1.8s ease-in-out infinite}
 .mhmv-mvp::after{content:"";position:absolute;top:-30%;bottom:-30%;left:-70%;width:45%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,236,170,.45),transparent);animation:mhmsShine 2.6s ease-in-out infinite;pointer-events:none}
 .mhmv-badge{animation:mhmvPop .5s cubic-bezier(.2,1.4,.4,1) both}
@@ -57444,7 +57643,7 @@ const RHYTHM_MODE_SELECT_CSS = `
 @keyframes mhmsInLeft{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:none}}
 .mhms-stage[data-mhms-rest] :is(.mhms-beam,.mhms-floor,.mhms-note,.mhms-spark,.mhms-glow,.mhms-float),.mhms-stage[data-mhms-rest] .mhms-card::after{animation-play-state:paused!important}
 .mhms-idle .mhms-beam,.mhms-idle .mhms-floor,.mhms-idle .mhms-note,.mhms-idle .mhms-spark,.mhms-idle .mhms-glow,.mhms-idle .mhms-float,.mhms-idle .mhms-card::after{animation-play-state:paused}
-@media (prefers-reduced-motion:reduce){.mhms-beam,.mhms-floor,.mhms-note,.mhms-spark,.mhms-glow,.mhms-float,.mhms-card::after,.mhms-in,.mhms-in-left,.mhmv-mvp,.mhmv-mvp::after,.mhmv-badge{animation:none!important}.mhms-note,.mhms-spark{display:none}}
+@media (prefers-reduced-motion:reduce){.mhcard-first-glow{animation:none}.mhms-beam,.mhms-floor,.mhms-note,.mhms-spark,.mhms-glow,.mhms-float,.mhms-card::after,.mhms-in,.mhms-in-left,.mhmv-mvp,.mhmv-mvp::after,.mhmv-badge{animation:none!important}.mhms-note,.mhms-spark{display:none}}
 `;
 // 助手の立ち絵の切り出し方(2026-10-03・ユーザー指摘「もものアイコンが右側に変なの見えてる / 位置も調整して」)。
 // みゅあ・ききの絵は横長(1536×1024)なので、枠いっぱいに広げて真ん中を切り出す(object-cover)。
@@ -66041,7 +66240,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 
 // 開いたトップの家(grid4)は、縦でも部屋の中を横の決まりで描く(横の決まりの行を写して、印だけ data-assistant-life-grid4 に替える)
 const ASSISTANT_LIFE_GRID4_CSS = ASSISTANT_LIFE_HOUSE_CSS.split('\n').filter(l => /^\[data-assistant-life-land="1"\] \.mhl-(room|board)/.test(l)).join('\n').split('[data-assistant-life-land="1"]').join('[data-assistant-life-grid4="1"]')
-  + '\n[data-assistant-life-grid4="1"] .mhl-room .tag b,[data-assistant-life-grid4="1"] .mhl-room[data-assistant-life-room-v2="1"] .tag b{white-space:normal;word-break:auto-phrase;font-size:9.5px;line-height:11px;max-height:22px;text-overflow:clip}[data-assistant-life-grid4="1"] .mhl-room .tag{top:21px}'
+  + '\n[data-assistant-life-grid4="1"] .mhl-room .tag b,[data-assistant-life-grid4="1"] .mhl-room[data-assistant-life-room-v2="1"] .tag b{white-space:normal;word-break:auto-phrase;font-size:10.5px;line-height:12px;max-height:36px;text-overflow:clip}[data-assistant-life-grid4="1"] .mhl-room .tag{top:21px}'
   + '\n.mhl-room .evm{position:absolute;right:2px;bottom:2px;z-index:8;font-size:15px;line-height:1;filter:drop-shadow(0 1px 2px #000a)}';
 function AssistantLifeHouseStyle() { return <style>{ASSISTANT_LIFE_HOUSE_CSS + '\n' + ASSISTANT_LIFE_GRID4_CSS}</style>; }
 // 名前の並び(「ドラ・ソラシド・えるびん」)。折り返すときは名前の途中で折らない(2026-11-07 社長「文字列も気をつけて」)
@@ -66218,7 +66417,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
 };
 
 // 部屋を押したとき(その助手のこと・その場でできること)
-function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose, onPeek, onInvite, onWatch, onGive, onBeat, onCard, canGive, slot, land = false, onMediate = null, roomState = null, furnItems = null, onGiveFurn = null, openFurn = false, onFurnTalk = null, onMasmon = null, onChat = null, follow = null, onFollowDone = null, onGiveSolo = null, canGiveSolo = false, returnToMap = false, uiV2 = false }) {
+function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose, onPeek, onInvite, onWatch, onGive, onBeat, onCard, canGive, slot, land = false, onMediate = null, roomState = null, furnItems = null, onGiveFurn = null, openFurn = false, onFurnTalk = null, onMasmon = null, onChat = null, follow = null, onFollowDone = null, onGiveSolo = null, canGiveSolo = false, returnToMap = false, uiV2 = false, onGoPlace = null }) {
   const [furnOpen, setFurnOpen] = React.useState(!!openFurn);
   const [layoutOpen, setLayoutOpen] = React.useState(false); // 模様替え(56-assistant-life-roomedit.jsx・公開の印 assistantLifeRoomEdit)
   const layoutOn = typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled();
@@ -66299,6 +66498,8 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
       {follow && onChat && followCard}
       {hotCard && cardRow}
       {hotBeat && beatRow}
+      {/* 施設にいる助手の部屋: その場所ならではの得をいちばん上に(神殿・M/B管理・マーケット・モンヒロバトル。カード部屋・ビートは上の行がある) */}
+      {typeof AssistantLifePlacePerk === 'function' && w && !asleep && !['cardroom', 'studio'].includes(w.place) && <AssistantLifePlacePerk life={life} ids={[id]} place={w.place} land={land} onGo={onGoPlace}/>}
       {onChat && !follow && <AssistantLifeDoRow k="chat" icon={asleep ? '💤' : '💬'} label={asleep ? '起こしておしゃべりする' : 'おしゃべりする'} sub="話すと仲良し度が少し上がる(1日の上限あり)" gain="💗 +" on={() => onChat(id, null)}/>}
       {soloOn && <AssistantLifeDoRow k="give-solo" icon="🎁" label={w && w.group ? `${who.name}だけに贈る` : `${who.name}に贈る`} sub="好きなものは 1.5倍・苦手なものは半分" gain="💗 +" on={() => onGiveSolo(id, w && w.group ? w.group.ids : [id])} disabled={!canGiveSolo} why="今日はもう贈れません"/>}
       {w && w.group && <AssistantLifeDoRow k="give" icon="🎁" label={soloOn ? `${w.group.ids.length}人に贈る` : '贈る'} sub="一緒にいる組に贈る" gain={<>🤝 友情Lv +<br/>💗 +</>} on={() => onGive(w.group)} disabled={!canGive} why="今日はもう贈れません"/>}
@@ -66502,7 +66703,8 @@ const assistantLifeStandLayout = (items, W, H) => {
 function AssistantLifeStands({ ids, sleepIds = [] }) {
   const ref = React.useRef(null);
   const [size, setSize] = React.useState({ w: 0, h: 0 });
-  const srcs = ids.map(pid => { const who = assistantById(pid); return who ? assistantFullImage(who, sleepIds.includes(pid) ? 'normal' : 'happy') : null; });
+  // 寝ている助手は、社長の寝顔の絵があればそれ(assistantLifeSleepSrc・2026-11-11 社長「絵をそのまま使う」)
+  const srcs = ids.map(pid => { const who = assistantById(pid); if (!who) return null; const s = assistantFullImage(who, sleepIds.includes(pid) ? 'normal' : 'happy'); return sleepIds.includes(pid) && typeof assistantLifeSleepSrc === 'function' ? assistantLifeSleepSrc(pid, s) : s; });
   const [boxes, setBoxes] = React.useState(() => srcs.map(s => (s ? ASSISTANT_LIFE_STAND_BOX.get(s) || null : null)));
   const key = srcs.join('|');
   React.useEffect(() => { let alive = true; Promise.all(srcs.map(s => (s ? assistantLifeStandBox(s) : Promise.resolve(null)))).then(b => { if (alive) setBoxes(b); }); return () => { alive = false; }; }, [key]);
@@ -66999,7 +67201,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         <div className="mhl-wood" style={{ backgroundImage: `url(${ASSISTANT_LIFE_VIEW[look][1]})` }}/>
         {/* 📋 居場所: HOME の画面そのものを地図に(画面いっぱい・56-assistant-life-map.jsx)。下に今までの一覧・見出し・アイコンの列 */}
         {tab === 'where' ? (
-          <AssistantLifeTownMap life={life} ids={ids} land={land} initialPlace={uiV2 ? mapFocusPlace : null} initialAssistantId={uiV2 ? mapFocusAssistantId : null} onBack={() => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('house'); }} onPick={(id) => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('house'); setRoomId(id); }} onView={uiV2 ? (id) => setRoomId(id) : null} onBeat={beat} onCard={card} nav={uiV2 ? icons : null}
+          <AssistantLifeTownMap life={life} ids={ids} land={land} onGo={(fn) => { try { close(); fn(); } catch {} }} initialPlace={uiV2 ? mapFocusPlace : null} initialAssistantId={uiV2 ? mapFocusAssistantId : null} onBack={() => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('house'); }} onPick={(id) => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('house'); setRoomId(id); }} onView={uiV2 ? (id) => setRoomId(id) : null} onBeat={beat} onCard={card} nav={uiV2 ? icons : null}
             list={uiV2 ? null : <>
               {header}
               {note && <p data-assistant-life-note className="mx-3 mb-1 rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 text-[11px] font-bold text-sky-100">{note}</p>}
@@ -67029,7 +67231,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
             <div className="mt-1.5">{icons}</div>
           </div>
         </>)}
-        {callPicker && uiV2 && <div className="absolute inset-0 z-[22] flex items-end justify-center bg-black/60" data-assistant-life-call-picker><div className="w-full max-w-[480px] rounded-t-2xl border-t-2 border-sky-300 bg-slate-900 p-4" style={{paddingBottom:'calc(16px + env(safe-area-inset-bottom))'}}><div className="mb-3 flex items-center justify-between"><b>💬 声をかける助手を選ぶ</b><button type="button" className="min-h-[44px] px-3" onClick={() => setCallPicker(false)}>閉じる ✕</button></div><div className="max-h-[46vh] overflow-y-auto">{Object.keys(life.solo || {}).filter(id => !awayFriend(id) && partnerOk(id)).map(id => <button type="button" key={id} className="mb-2 flex min-h-[48px] w-full items-center justify-between rounded-xl border border-white/20 bg-slate-800 px-3 text-left" onClick={() => { setCallPicker(false); setRoomId(id); }}><span>{nameOf(id)}</span><span className="text-xs text-slate-300">{life.solo[id]?.reason === 'lonely' ? '💭 さみしそう・声をかけよう' : 'ひとりで過ごしている'} ›</span></button>)}</div><p className="mt-1 text-[11px] font-bold leading-snug text-slate-300" data-assistant-life-call-hint>💭 さみしそうな助手は、声をかけると次の時間にだれかの所へ行きます(🤝 友情Lv が育つきっかけ)</p></div></div>}
+        {callPicker && uiV2 && <div className="absolute inset-0 z-[22] flex items-end justify-center bg-black/60" data-assistant-life-call-picker><div className="w-full max-w-[480px] rounded-t-2xl border-t-2 border-sky-300 bg-slate-900 p-4" style={{paddingBottom:'calc(16px + env(safe-area-inset-bottom))'}}><div className="mb-3 flex items-center justify-between"><b>💬 声をかける助手を選ぶ</b><button type="button" className="min-h-[44px] px-3" onClick={() => setCallPicker(false)}>閉じる ✕</button></div><div className="max-h-[46vh] overflow-y-auto">{/* 行ごとに、いま何をしているか・声をかけると何が上がるか(2026-11-11 ミヤスサ点検 ⑩)。さみしそうな助手を先頭に枠で */}{Object.keys(life.solo || {}).filter(id => !awayFriend(id) && partnerOk(id)).sort((x, y) => (life.solo[y]?.reason === 'lonely') - (life.solo[x]?.reason === 'lonely')).map(id => { const lonely = life.solo[id]?.reason === 'lonely'; const cw = assistantLifeWhereOf(life, id); const cd = cw && ASSISTANT_LIFE_DOINGS[cw.doing]; return <button type="button" key={id} data-assistant-life-call-row={id} className={`mb-2 flex min-h-[52px] w-full items-center gap-2 rounded-xl border-2 px-3 py-1.5 text-left ${lonely ? 'border-pink-300 bg-pink-950/60' : 'border-white/15 bg-slate-800'}`} onClick={() => { setCallPicker(false); setRoomId(id); }}><span className="min-w-0 flex-1"><b className="block text-[14px] text-white">{nameOf(id)}</b><small className={`block text-[11.5px] font-bold leading-snug ${lonely ? 'text-pink-200' : 'text-slate-300'}`}>{(() => { const doing = cw && cw.doing === 'sleep' ? '寝ている' : cd ? `ひとりで${cd.label}` : 'ひとりで過ごしている'; return lonely ? `💭 さみしそう・声をかけよう(${doing})` : doing; })()}</small></span>{lonely && <span className="shrink-0 text-right text-[11px] font-black leading-tight text-amber-200">🤝 友情Lv<br/>のきっかけ</span>}<span className="shrink-0 text-slate-400" aria-hidden="true">›</span></button>; })}</div><p className="mt-1 text-[11px] font-bold leading-snug text-slate-300" data-assistant-life-call-hint>💭 さみしそうな助手は、声をかけると次の時間にだれかの所へ行きます(🤝 友情Lv が育つきっかけ)</p></div></div>}
         {uiV2 && tab === 'where' && note && !roomId && <p data-assistant-life-note className="absolute inset-x-3 z-[9] rounded-xl border border-sky-300/40 bg-slate-950/95 px-2 py-1.5 text-[11.5px] font-bold text-sky-100" style={{ bottom: 'calc(44px + env(safe-area-inset-bottom))' }}>{note}</p>}
         {giftOpen && uiV2 && !roomId && !give && (
           <div className="absolute inset-0" style={{ zIndex: 21 }} data-assistant-life-gift-sheet>
@@ -67042,7 +67244,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
               {giftItemsOpen && <div className="-mx-3">{itemsBody}</div>}
             </div>
           </div>)}
-        {roomId && partnerOk(roomId) && <AssistantLifeRoomSheet key={roomId} id={roomId} uiV2={uiV2} returnToMap={uiV2 && tab === 'where'} openFurn={furnBack === roomId} onGiveSolo={soloOn ? openGiveSolo : null} canGiveSolo={soloOn && soloLeft > 0} life={life} peerSt={peerSt} bondLevelOf={bondLevelOf} diary={diary} slot={slot} furnItems={furnItems} onGiveFurn={onGiveFurn} onFurnTalk={(talk, text) => { playTalk(talk, { ids: [talk.pair[0]], place: 'home', gift: true }); setNote(text); }} canGive={canGive && itemsLeft > 0}
+        {roomId && partnerOk(roomId) && <AssistantLifeRoomSheet key={roomId} onGoPlace={(fn) => { try { close(); fn(); } catch {} }} id={roomId} uiV2={uiV2} returnToMap={uiV2 && tab === 'where'} openFurn={furnBack === roomId} onGiveSolo={soloOn ? openGiveSolo : null} canGiveSolo={soloOn && soloLeft > 0} life={life} peerSt={peerSt} bondLevelOf={bondLevelOf} diary={diary} slot={slot} furnItems={furnItems} onGiveFurn={onGiveFurn} onFurnTalk={(talk, text) => { playTalk(talk, { ids: [talk.pair[0]], place: 'home', gift: true }); setNote(text); }} canGive={canGive && itemsLeft > 0}
           land={land} onClose={() => { setRoomId(null); setFollow(null); setFurnBack(null); }} onPeek={peek} onInvite={invite} onWatch={watch} onGive={(g) => openGive(g.ids)} onBeat={beat} onCard={card} onMediate={mediate} roomState={rooms[roomId]} onMasmon={setMasmonId}
           onChat={chatOn ? chat : null} follow={follow && follow.id === roomId ? follow : null} onFollowDone={() => setFollow(null)}/>}
         {masmonId && typeof AssistantMasmonSheet === 'function' && <AssistantMasmonSheet id={masmonId} land={land} bondLv={typeof bondLevelOf === 'function' ? bondLevelOf(masmonId) : null} onClose={() => setMasmonId(null)}/>}
@@ -67230,7 +67432,8 @@ const assistantLifeMapReadHome = () => {
 
 // 小さな全身(絵の描かれている範囲を測って、見た目の高さを h にそろえる。胸から上の絵は下をぼかす)
 function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
-  const src = assistantFullImage(who, sleep ? 'normal' : 'happy');
+  // 寝ている助手は、社長の寝顔の絵があればそれ(assistantLifeSleepSrc・2026-11-11 社長「絵をそのまま使う」)
+  const src0 = assistantFullImage(who, sleep ? 'normal' : 'happy'), src = sleep && typeof assistantLifeSleepSrc === 'function' ? assistantLifeSleepSrc(who && who.id, src0) : src0;
   const [box, setBox] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.get(src) || null);
   React.useEffect(() => { let alive = true; assistantLifeStandBox(src).then(b => { if (alive) setBox(b); }); return () => { alive = false; }; }, [src]);
   // 測り終えるまでの仮の形。絵は object-fit:contain なので、仮の比が違っても縦横に伸びない(2026-11-09 社長「画面バグってる」)
@@ -67259,7 +67462,7 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
 }
 
 // 地図の本体(家の「📋 居場所」のタブ。画面いっぱい・下に今までの一覧)
-function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null, onCard = null, onBack, list = null, nav = null, land = false, initialPlace = null, initialAssistantId = null }) {
+function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null, onCard = null, onGo = null, onBack, list = null, nav = null, land = false, initialPlace = null, initialAssistantId = null }) {
   const [home, setHome] = React.useState(() => assistantLifeMapReadHome());
   const [sheet, setSheet] = React.useState(() => initialPlace && ASSISTANT_LIFE_MAP_ORDER.includes(initialPlace) ? initialPlace : null);
   const [cheerMsg, setCheerMsg] = React.useState(null); // 📣 応援したときの短い知らせ { id, text }(シュギョウ2の口 assistantMasmonCheer)
@@ -67419,7 +67622,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-black text-white">{a.name}{spent && <span className="ml-1 rounded-full bg-slate-200 px-1.5 text-[9.5px] font-black text-slate-900" data-assistant-life-map-sheet-spent>済 ごほうび済み</span>}</p>
           <p className="text-[10.5px] font-bold text-slate-300">{town ? `${assistantLifeMapSpotWord(place)}で ` : ''}{w && ASSISTANT_LIFE_DOING_ICON[w.doing]} {withNames}{d ? d.label : '過ごしている'}{w && w.reason === 'lonely' ? '(さみしそう)' : ''}</p>
-          {place === 'ranch' && (() => { let x = null; try { x = typeof assistantMasmonRanchRowInfo === 'function' ? assistantMasmonRanchRowInfo(id) : null; } catch (_) { x = null; } return x ? <p className="text-[10.5px] font-bold text-lime-200" style={{ wordBreak: 'auto-phrase' }} data-assistant-life-map-ranch-ask>{x.used && x.last && x.last.rows[0] ? `✓ ${x.last.nick} ${amgrStatName(x.last.rows[0].k)} ${x.last.rows[0].from} → ${x.last.rows[0].to}` : `「${x.ask.nick}の${x.ask.stat}を鍛えたいな」`}</p> : null; })()}
+          {place === 'ranch' && (() => { let x = null; try { x = typeof assistantMasmonRanchRowInfo === 'function' ? assistantMasmonRanchRowInfo(id) : null; } catch (_) { x = null; } return x ? <p className="text-[10.5px] font-bold text-lime-200" style={{ wordBreak: 'auto-phrase' }} data-assistant-life-map-ranch-ask>{x.used && x.last && x.last.rows[0] ? `✓ ${x.last.nick} ${amgrStatName(x.last.rows[0].k)} ${x.last.rows[0].from} → ${x.last.rows[0].to}` : `「${typeof assistantMasmonRanchAskText === 'function' ? assistantMasmonRanchAskText(id, x.ask, x.abs) : `${x.ask.nick}の${x.ask.stat}を鍛えたいな`}」`}</p> : null; })()}
           {tiLine && <p className="text-[10.5px] font-bold text-emerald-200" style={{ wordBreak: 'auto-phrase' }} data-assistant-life-map-train-line={id}>{tiLine}</p>}
           {spent && <p className="text-[10.5px] font-bold text-amber-200" style={{ wordBreak: 'auto-phrase' }} data-assistant-life-map-sheet-next>{typeof cardLifeSpentText === 'function' ? cardLifeSpentText(spent) : '🃏 ごほうびアップは次の時間帯から'}</p>}
         </div>
@@ -67501,6 +67704,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
             <p className="text-[18px] font-black" data-assistant-life-map-sheet-title>{assistantLifeMapSpotWord(sheetPlace)}</p>
             <p className="text-[10.5px] font-bold text-slate-300" data-assistant-life-map-sheet-home>{ASSISTANT_LIFE_MAP_TOWN_ONLY.includes(sheetPlace) ? `町の場所。HOME では「🏡 助手ライフ」の札の下に顔が出ます` : `HOME の「${ASSISTANT_LIFE_MAP_FAC_NAME[fac]}」の札${sheetPlace === 'home' ? '(家と町にいる助手の顔もここ)' : ''}`}</p>
             <p className="mt-1 text-[11.5px] font-bold leading-snug text-slate-100">{sheetPlace === 'cardroom' && typeof CARD_LIFE_UP_LABEL !== 'undefined' ? <>MFバトルカードの研究をしている助手。いる助手と対戦すると、<span className="whitespace-nowrap">ごほうび {CARD_LIFE_UP_LABEL}</span></> : ASSISTANT_LIFE_MAP_ABOUT[sheetPlace]}</p>
+            {typeof AssistantLifePlacePerk === 'function' && sheetWho.length > 0 && <AssistantLifePlacePerk life={life} ids={sheetWho} place={sheetPlace} land={land} onGo={onGo ? (fn) => { setSheet(null); onGo(fn); } : null}/>}
             {sheetWho.length ? sheetWho.map(id => row(id, sheetPlace, false)) : <p className="mt-2 rounded-xl bg-slate-900/85 px-2 py-2 text-[12px] font-bold text-slate-300" data-assistant-life-map-sheet-none>いまはだれもいません</p>}
             {/* 行き先の予定(入口①。印 assistantLifePlan が偽・予定に入れられない場所・今日の移動が残っていないときは出さない) */}
             {typeof assistantLifePlanOn === 'function' && assistantLifePlanOn() && ASSISTANT_LIFE_PLAN_PLACES.includes(sheetPlace) && assistantLifePlanSlotsLeft().length > 0 && (
@@ -67667,7 +67871,44 @@ const ASSISTANT_LIFE_SLEEP_EYES_FACE = Object.freeze({
   atsu: { ang: -30, line: '#3a1f2a', eyes: [[0.35, 0.60, 0.095, 0.05, '#f6baa7'], [0.56, 0.48, 0.12, 0.06, '#f8c7b3']] },
   kyuko: { ang: -11, line: '#4a2418', eyes: [[0.315, 0.64, 0.145, 0.12, '#f9c7b0'], [0.605, 0.585, 0.185, 0.115, '#fbd6bf']] },
 });
+// 社長が描いた寝顔(2026-11-11 社長「寝顔こっちでつくる」→ 7枚・「絵をそのまま使う」): 寝ているあいだは、上半身の寝顔の絵をまるごと出す。
+//   tools/assistant/life-sleep-faces-make.js が、元の絵と同じ大きさ・同じ顔の位置で、同じフォルダに ◯◯_sleep.PNG として置く(着せ替えの見分け・顔の位置の表がそのまま使える)
+//   全身(地図・場面の立ち絵・ベッド)は assistantLifeSleepSrc で絵を差し替える。顔アイコン(家の部屋の顔)は、顔の絵の部品が絵のパスを受け取らないので、上から重ねる
+//   絵の無い助手(ドラ・えるびん・ソラシド)と、絵の無い着せ替えは、いままでどおり下の SVG の閉じた目
+const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set([
+  'atsu_normal.PNG', 'face/atsu_normal.PNG', 'kiki_normal.PNG', 'face/kiki_normal.PNG', 'halloween/kiki_normal.PNG', 'halloween/face/kiki_normal.PNG',
+  'kyuko_normal.PNG', 'face/kyuko_normal.PNG', 'myua_normal.PNG', 'face/myua_normal.PNG',
+  'card-master/myua_normal.PNG', 'card-master/face/myua_normal.PNG', 'halloween/myua_normal.PNG', 'halloween/face/myua_normal.PNG',
+  'momosuke_normal.PNG', 'face/momosuke_normal.PNG', 'halloween/momosuke_normal.PNG', 'halloween/face/momosuke_normal.PNG',
+]));
+// その絵(ふつうの顔 normal)に社長の寝顔の絵があれば、その絵のパス。無ければ null
+function assistantLifeSleepArt(pid, src) {
+  const who = typeof assistantById === 'function' ? assistantById(pid) : null;
+  const s0 = String(src || '').replace(/[?#].*$/, ''), dir = who && who.imageDir ? `${who.imageDir}/` : null;
+  const rel = dir && s0.includes(dir) ? s0.slice(s0.indexOf(dir) + dir.length) : null;
+  return rel && ASSISTANT_LIFE_SLEEP_ART.has(rel) ? `${dir}${rel.replace(/_normal\.PNG$/, '_sleep.PNG')}` : null;
+}
+// 寝ているときに出す全身の絵: 社長の寝顔の絵があればそれ、無ければ元の絵のまま。
+//   起きているときの全身の絵が別の場所(全身画など)を指す助手もいるので、見つからないときは顔アイコン(ふつうの顔)のパスから、どの服の寝顔かを割り出す(…/face/◯◯_normal.PNG → …/◯◯_sleep.PNG)
+const assistantLifeSleepSrc = (pid, src) => {
+  const a = assistantLifeSleepArt(pid, src); if (a) return a;
+  const who = typeof assistantById === 'function' ? assistantById(pid) : null;
+  const face = who && typeof assistantFaceImage === 'function' ? assistantFaceImage(who, 'normal') : null;
+  const f = face ? assistantLifeSleepArt(pid, String(face).replace(/\/face\/([^/]+)$/, '/$1')) : null;
+  return f || src;
+};
 function AssistantLifeSleepEyes({ pid, src, w, h, style }) {
+  // すでに社長の寝顔の絵を出している(全身を差し替えた)ときは何も重ねない
+  if (/_sleep\.PNG/i.test(String(src || ''))) return null;
+  {
+    const art = assistantLifeSleepArt(pid, src);
+    if (art) {
+      // 顔アイコン: 社長の寝顔の絵(上半身まるごと)を上から重ねる。立ち絵の影(drop-shadow)は付けない(まわりに暗い輪が出る)
+      const filter = style && style.filter ? String(style.filter).replace(/drop-shadow\((?:[^()]|\([^()]*\))*\)/g, '').trim() || undefined : undefined;
+      return <img data-assistant-life-roomview-sleep-eyes={pid} src={art} alt="" aria-hidden="true" draggable={false}
+        style={{ position: 'absolute', width: w, height: h, maxWidth: 'none', pointerEvents: 'none', ...style, filter }}/>;
+    }
+  }
   const isFace = /\/face\//.test(String(src || ''));
   const def = (isFace ? ASSISTANT_LIFE_SLEEP_EYES_FACE : ASSISTANT_LIFE_SLEEP_EYES)[pid];
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
@@ -67698,7 +67939,7 @@ function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
   const quilt = ASSISTANT_LIFE_ROOM_QUILT[id] || ASSISTANT_LIFE_ROOM_QUILT.mua;
   const pillow = { left: left + 22, top: mattTop - 20, w: Math.min(110, bw * 0.34), h: 36 };
   const [boxes, setBoxes] = React.useState({});
-  const items = sleepers.map(pid => { const a = assistantById(pid); if (!a) return null; const src = assistantFullImage(a, 'normal'); return { pid, who: a, src, face: assistantLifeRoomFaceOf(pid, src) }; }).filter(Boolean);
+  const items = sleepers.map(pid => { const a = assistantById(pid); if (!a) return null; const src = assistantLifeSleepSrc(pid, assistantFullImage(a, 'normal')); return { pid, who: a, src, face: assistantLifeRoomFaceOf(pid, src) }; }).filter(Boolean);
   const key = items.map(x => x.src).join('|');
   React.useEffect(() => { let alive = true; Promise.all(items.map(x => (typeof assistantLifeStandBox === 'function' ? assistantLifeStandBox(x.src) : Promise.resolve(null)))).then(bs => { if (!alive) return; const o = {}; items.forEach((x, i) => { o[x.src] = bs[i] || { t: 0, b: 1, l: 0, r: 1, ar: 0.7 }; }); setBoxes(o); }); return () => { alive = false; }; }, [key]);
   const F = Math.min(30, W * 0.078); // 顔の大きさ(m=1 の人の目から顎)。閉じた目が見える大きさ
@@ -68012,6 +68253,25 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
   if (ranch.length) rows.push({ k: 'ranch', place: 'ranch', icon: '🥚', text: (typeof amgrOn === 'function' && amgrOn() ? `${nm(ranch)}がM/B管理にいます。助手のマスモンにトレーニングチケットを使ってあげられる` : `${nm(ranch)}がM/B管理にいます。トレーニングすると、その助手のマスモンも育つ`), go: typeof go.ranch === 'function' ? go.ranch : null });
   return rows;
 };
+
+// 場所の窓・施設にいる助手の部屋に出す「いま行くと得」の箱(2026-11-11 社長「場所ごとの効果もその場面でわかるように」・ミヤスサ点検 ①)
+//   文は家の帯と同じ assistantLifePerkRows の行の text をそのまま使う(二重に作らない)。行が無ければ何も出さない
+//   ids … その場所の窓ならその場所にいる全員、部屋ならその助手1人。onGo … 押すと行き先へ(助手ライフを閉じてから fn を呼ぶ)
+function AssistantLifePlacePerk({ life, ids, place, onGo = null, land = false }) {
+  let rows = [];
+  try { rows = (typeof assistantLifePerkRows === 'function' ? assistantLifePerkRows(life, ids, (id) => (typeof assistantLifeName === 'function' ? assistantLifeName(id) : id)) : []).filter(r => r && r.place === place); } catch (_) { rows = []; }
+  if (!rows.length) return null;
+  return (
+    <div className={`${land ? 'mt-1.5' : 'mt-2'} rounded-2xl border-2 border-amber-300 bg-amber-950/80 px-3 py-2`} data-assistant-life-place-perk={place}>
+      <p className="text-[11px] font-black text-amber-300">✨ いま行くと得</p>
+      {rows.map(r => (
+        <div key={r.k} className="mt-0.5 flex items-center gap-2" data-assistant-life-place-perk-row={r.k}>
+          <p className="min-w-0 flex-1 text-[12.5px] font-black leading-snug text-white" style={{ wordBreak: 'auto-phrase' }}><span aria-hidden="true">{r.icon} </span>{String(r.text || '').replace(/。押すと[^。]*へ$/, '')}</p>
+          {typeof r.go === 'function' && typeof onGo === 'function' && <button type="button" data-assistant-life-place-perk-go={r.k} onClick={() => onGo(r.go)}
+            className="min-h-[44px] shrink-0 rounded-xl bg-amber-400 px-3 text-[12.5px] font-black text-slate-900 active:scale-95">行く ›</button>}
+        </div>))}
+    </div>);
+}
 
 // 場所 id(studio・cardroom・temple・ranch・market)に「いま行くと得」があるか。帯と同じ判定(地図の札の得の印など、外から引く口)
 const assistantLifePerkAt = (place, life = null, ids = null) => {
@@ -68915,6 +69175,13 @@ function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16 }) {
     window.addEventListener('resize', f);
     return () => { window.removeEventListener('resize', f); if (ro) ro.disconnect(); };
   }, []);
+  const fullSrc = typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(who, 'happy') : null;
+  if (fullSrc) { // 全身画: 枠の高さにおさめて足元をそろえる(頭の大きさは絵ごとの全身の比のまま)
+    return (
+      <div ref={boxRef} className="pointer-events-none absolute inset-0 overflow-hidden" data-assistant-life-profile-stand={who.id} data-assistant-life-profile-fullbody={fullSrc}>
+        <img src={fullSrc} alt={who.name} draggable={false} className="absolute" style={{ left: 0, right: 0, bottom: '2%', width: '100%', height: '96%', objectFit: 'contain', objectPosition: 'center bottom' }}/>
+      </div>);
+  }
   const face = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who.id, src) : null;
   const len = typeof ASSISTANT_LIFE_STAND_FACE_LEN !== 'undefined' ? ASSISTANT_LIFE_STAND_FACE_LEN : 2.63;
   const rule = size && size.h > 0 && art && face && typeof assistantLifeStandRule === 'function'
@@ -76161,7 +76428,8 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
         {AMBW_SPEEDS.filter(s => s.id === 'hl' || s.id === 'x2').map(s => <button key={s.id} className={speed === s.id ? 'ambw-btn' : 'ambw-btn2'} onClick={() => setSpeed(s.id)}>{s.label}</button>)}
         <button className="ambw-btn2" data-amgc-skip onClick={() => { setPos(Math.max(0, len - 1)); setDone(true); }}>⏭ 結果へ</button>
       </div>
-      {battle && battle.solo && <p className="ambw-small" style={{ textAlign: 'center' }}>練習の相手がいないと、修行の伸びが半分になります(マスモンが2体になるか、フレンドが対戦に登録すると相手ができます)</p>}
+      {battle && !battle.solo && battle.foe && battle.foe.kind === 'friend' && <p className="ambw-small" style={{ textAlign: 'center' }}>フレンドが練習相手です(編成を見つけてから7日間は、この相手として数えます)</p>}
+      {battle && battle.solo && <p className="ambw-small" style={{ textAlign: 'center' }}>いまはひとりで稽古中なので、修行の伸びが半分になります。👀で見るか、マスモンをもう1体迎えると相手ができます(フレンドが相手になるのは、編成を見つけてから7日間です)</p>}
       <div className="ambw-card" data-amgc-result>
         <b style={{ color: '#fde68a' }}>🥋 {last ? (last.today ? 'きょうの修行' : '前回の修行') : 'まだ修行していません'}{last ? ` ${row.nick}(${(AMGT_KINDS[last.log.k] || {}).name || ''})` : ''}</b>
         {last && last.log.l && <p data-amgc-learned style={{ margin: '4px 0 0', fontWeight: 800 }}><span style={{ background: '#fbbf24', color: '#111', borderRadius: 6, padding: '0 4px', fontSize: 10 }}>NEW</span> {amgcTechName(row.monster, last.log.l)} を覚えた</p>}
@@ -76188,6 +76456,7 @@ const AMGR_NUM = Object.freeze({
   light: [3, 6], // トレーニングチケット: 選んだ能力(× 伸びやすさ)
   heavyMain: [8, 12], heavySub: [2, 4], heavyDown: [2, 4], // 重トレーニングチケット: 大きく上がる・少し上がる(× 伸びやすさ)・下がる(そのまま)
   heavyFat: 10, // 重トレーニングの疲れ
+  serverDay: 40, // フレンド対戦のサーバの1日の上限(masmon-pvp の DAILY_GROWTH_CAP)。1枚で上がる分の合計は、これから自主育成の1日の最大(AMG_CARE.viewCap)を引いた分まで(同じ日に重なっても超えない・窓口 11-12)
 });
 const AMGR_TICKET = Object.freeze({ light: 'training_ticket', heavy: 'training_ticket_l' });
 const AMGR_TICKET_NAME = Object.freeze({ light: 'トレーニングチケット', heavy: '重トレーニングチケット' });
@@ -76260,6 +76529,25 @@ const amgrAskOf = (aid, abs) => {
   return k ? { row, k } : null;
 };
 
+// ---------- 頼みの文(助手ごとの口調・1人3通り。時間帯ごとに決まる) ----------
+// {n}=マスモンの名前 {s}=能力。2026-11-11 社長「助手ごとの口調に変えて」。ticket … 画面の下で添える「チケット、使ってくれる？」
+const AMGR_ASK_VOICE = {
+  mua: { v: ['{n}の{s}、鍛えたいんだけど！ まぢ気になるー', '{n}の{s}あげたいぢゃん！ 手伝ってｗ', 'ねね、{n}の{s}鍛えよー♪'], ticket: 'チケット、使ってくれる？ おねがい♪' },
+  kiki: { v: ['{n}の{s}を鍛えたいでつ♪', '{n}の{s}、少しずつ育てたいでつ', '{n}の{s}を伸ばしたいんでつ。お願いしまつ♪'], ticket: 'チケット、使ってもらえまつか？' },
+  momosuke: { v: ['{n}の{s}、もっと鍛えたい！！', 'ももね、{n}の{s}を強くしたいの♡', '{n}の{s}アップ大作戦だよ！！'], ticket: 'チケット使って！！ お願い♡' },
+  dra: { v: ['{n}の{s}を鍛えたいな、えへへ', 'おで、{n}の{s}が気になってるな', '{n}の{s}、ちょっと伸ばしてやりたいな'], ticket: 'チケット、使ってくれるか？' },
+  atsu: { v: ['{n}の{s}鍛えたい笑', '{n}の{s}、上げたいんだよね笑', '{n}の{s}、もっと上げたい！'], ticket: 'チケット使ってくれる？' },
+  kyuko: { v: ['ほい、{n}の{s}を鍛えたいなぁ笑', '{n}の{s}、育てたいんだよねぇ', '{n}の{s}を伸ばす作戦だぁw'], ticket: 'チケット、使ってくれるぅ？' },
+  sorashido: { v: ['{n}の{s}を鍛えたいです', '{n}の{s}、上げたいなと思ってます', '{n}の{s}を、少し伸ばしたいんです'], ticket: 'チケットを使ってもらえますか？' },
+  erubin: { v: ['{n}の{s}を鍛えたいな☺️', '{n}の{s}、伸ばしてあげたいんだ', '{n}の{s}を鍛えたいんだけど、どうかな'], ticket: 'チケット、使ってくれるかな？' },
+};
+const assistantMasmonRanchAskText = (aid, ask, abs, withTicket) => {
+  const o = AMGR_ASK_VOICE[aid] || AMGR_ASK_VOICE.erubin;
+  const n = Number.isFinite(abs) ? Math.abs(Math.floor(abs)) : 0;
+  const t = o.v[n % o.v.length].replace('{n}', (ask && ask.nick) || '').replace('{s}', (ask && ask.stat) || '');
+  return withTicket ? `${t} ${o.ticket}` : t;
+};
+
 // ---------- 地図の窓・M/B管理の帯の1行 ----------
 // 印が偽・M/B管理にいない・マスモンがいない → null
 const assistantMasmonRanchRowInfo = (aid, now = Date.now()) => {
@@ -76309,8 +76597,9 @@ const assistantMasmonRanchUse = (aid, key, kind, k, now = Date.now()) => {
   const bump = (s, n) => { const from = e.st[s]; const to = amgClamp(from + n, 1, AMG_MAX); if (to === from) return; e.st[s] = to; g[s] = (g[s] || 0) + (to - from); rows.push({ k: s, from, to }); };
   const upOf = (s, [lo, hi]) => Math.max(1, Math.round(amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[s]] * (1 + 0.1 * (e.ind[s] || 0))));
   const plan = amgrPlanOf(kind, k);
-  if (kind === 'heavy') { bump(plan.main, upOf(plan.main, AMGR_NUM.heavyMain)); bump(plan.sub, upOf(plan.sub, AMGR_NUM.heavySub)); bump(plan.down, -amgRange(rnd, AMGR_NUM.heavyDown[0], AMGR_NUM.heavyDown[1])); e.fat = amgClamp(e.fat + AMGR_NUM.heavyFat, 0, 100); }
-  else bump(plan.main, upOf(plan.main, AMGR_NUM.light));
+  const room = Math.max(1, AMGR_NUM.serverDay - (Number(AMG_CARE.viewCap) || 20)); // 1枚で上がる分の合計の上限
+  if (kind === 'heavy') { const main = Math.min(upOf(plan.main, AMGR_NUM.heavyMain), room); bump(plan.main, main); bump(plan.sub, Math.min(upOf(plan.sub, AMGR_NUM.heavySub), Math.max(0, room - main))); bump(plan.down, -amgRange(rnd, AMGR_NUM.heavyDown[0], AMGR_NUM.heavyDown[1])); e.fat = amgClamp(e.fat + AMGR_NUM.heavyFat, 0, 100); }
+  else bump(plan.main, Math.min(upOf(plan.main, AMGR_NUM.light), room));
   const net = Object.values(g).reduce((a, n) => a + n, 0);
   if (net > 0) e.cg.ranch = Math.round(((e.cg.ranch || 0) + net) * 100) / 100; // 関わって伸びた分(M/B管理)
   e.log = [...e.log, { s: amgSlotOf(now), a: kind === 'heavy' ? 'tktH' : 'tkt', k, g }].slice(-AMG_LOG);
@@ -76377,7 +76666,7 @@ function AssistantMasmonRanchSheet({ assistantId, onClose }) {
         <p className="text-[11px] font-bold text-slate-300">この時間帯に1枚。自分のモンスターには入りません・絆ランキングには効きません。上げた能力は、マスモン対戦の強さにも効きます</p>
         {info && <div className="mt-2 flex items-center gap-2">
           {who && typeof AssistantFace === 'function' && <span className="shrink-0"><AssistantFace who={who} size={40} accent={who.accent} expression={res ? 'happy' : null}/></span>}
-          <p className="min-w-0 flex-1 rounded-xl bg-lime-100 px-3 py-2 text-[12.5px] font-black text-lime-950" data-amgr-say>{res ? `わあ、${res.nick}がんばったね！ ありがとう！` : `${info.ask.nick}の「${info.ask.stat}」を鍛えたいな。チケット、使ってくれる？`}</p>
+          <p className="min-w-0 flex-1 rounded-xl bg-lime-100 px-3 py-2 text-[12.5px] font-black text-lime-950" data-amgr-say>{res ? `わあ、${res.nick}がんばったね！ ありがとう！` : assistantMasmonRanchAskText(aid, info.ask, info.abs, true)}</p>
         </div>}
         {res ? (
           <div className="mt-3 rounded-2xl border-2 border-emerald-300 bg-emerald-950 p-3" data-amgr-result>
@@ -76425,7 +76714,7 @@ function AssistantMasmonRanchBand() {
   return (<>
     <div className="w-full max-w-md mx-auto mb-2 rounded-2xl border border-emerald-300/70 bg-emerald-950/90 p-2.5 text-white" data-amgr-band>
       <p className="text-[12px] font-black">🥚 {ids.map(nm).join('・')}が来ています</p>
-      {first && <p className="text-[11.5px] font-bold text-emerald-100">{nm(open[0])}「{first.ask.nick}の{first.ask.stat}を鍛えたいな」</p>}
+      {first && <p className="text-[11.5px] font-bold text-emerald-100">{nm(open[0])}「{assistantMasmonRanchAskText(open[0], first.ask, first.abs)}」</p>}
       {open.length ? <button type="button" onClick={() => assistantMasmonRanchOpen(open[0])} data-amgr-band-open className="mt-1.5 min-h-[44px] w-full rounded-xl bg-emerald-500 px-3 text-[12.5px] font-black text-emerald-950 active:scale-95">🎫 助手のマスモンにチケットを使う(あと{open.length}人)</button>
         : <p className="mt-1 text-[11px] font-bold text-slate-300">この時間帯はみんなに使いました</p>}
     </div>
@@ -78461,6 +78750,8 @@ const masmonPvpFriends = async () => {
       total: e.team_total, updatedAt: Date.parse(e.updated_at) || 0,
     })),
   })).map((f) => ({ ...f, registered: f.assistants.length > 0 }));
+  // 登録編成を持つフレンドがいれば、助手の修行の「練習相手」に数える(通信は増やさず、読んだ結果を使うだけ)
+  try { if (friends.some((f) => f.registered) && typeof amgcNoteFriend === 'function') amgcNoteFriend(true); } catch (_) {}
   return { ok: true, friends, remaining };
 };
 
@@ -88467,6 +88758,20 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     return () => { alive = false; };
   }, [shareForm]);
   const closeShareGuide = () => { Audio_.fgSe.tap(); setShareGuide(false); void storeSet(CARD_SHARE_GUIDE_KEY, true).catch(() => {}); };
+  // はじめて開いたとき「対戦」だけを光らせる(2026-11-11 社長「A 対戦」)。一度きりの印は新しいキー mh_card_first_glow_v1。
+  //   出す条件: 印が無い・スターターを受け取り練習試合も済んだ(飛ばした)・コンピューター戦もマルチも1戦もしていない(前から遊んでいる人には出さない)。読めなければ出さない
+  const CARD_FIRST_GLOW_KEY = 'mh_card_first_glow_v1';
+  const [firstGlow, setFirstGlow] = useState(false);
+  useEffect(() => {
+    if (screen !== 'CARD_TOP' || view !== 'top' || !save || !save.starter || !save.tutorial || (!save.tutorial.done && !save.tutorial.skipped)) { setFirstGlow(false); return undefined; }
+    const rec = save.record || {};
+    const played = ['win', 'lose', 'surrender'].reduce((n, k) => n + (Number(rec.cpu && rec.cpu[k]) || 0), 0) + ['win', 'lose'].reduce((n, k) => n + (Number(rec.pvp && rec.pvp[k]) || 0), 0);
+    if (played > 0) { setFirstGlow(false); return undefined; }
+    let alive = true;
+    storeGet(CARD_FIRST_GLOW_KEY, null, false).then((v) => { if (alive) setFirstGlow(v !== true); }).catch(() => {});
+    return () => { alive = false; };
+  }, [screen, view, !!save, !!(save && save.starter), !!(save && save.tutorial && (save.tutorial.done || save.tutorial.skipped)), save && save.record]);
+  const closeFirstGlow = () => { if (!firstGlow) return; setFirstGlow(false); void storeSet(CARD_FIRST_GLOW_KEY, true).catch(() => {}); };
   const [startLevel, setStartLevel] = useState('last'); // 設定「助手と対戦の最初の強さ」
   const lastLevelRead = useRef(false);
   useEffect(() => {
@@ -89904,7 +90209,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const assistShown = !!topAssistant && (assist.modeSelectArt || assist.modeSelectComment);
   const go = (v) => () => { Audio_.fgSe.tap(); setNotice(''); setView(v); };
   const bigCards = [
-    { key: 'cpu', attr: { 'data-card-cpu': '' }, label: '対戦', sub: 'フリー対戦・マルチ対戦', mark: 'BATTLE', ico: '⚔️', grad: 'from-orange-200 via-orange-400 to-rose-500', disabled: !activeDeck, onClick: go('mode') },
+    { key: 'cpu', attr: { 'data-card-cpu': '' }, label: '対戦', sub: 'フリー対戦・マルチ対戦', mark: 'BATTLE', ico: '⚔️', grad: 'from-orange-200 via-orange-400 to-rose-500', disabled: !activeDeck, onClick: () => { closeFirstGlow(); go('mode')(); } },
     { key: 'decks', attr: { 'data-card-decks': '' }, label: 'デッキ編成', sub: 'デッキを組む・えらぶ', mark: 'DECK', ico: '🃏', grad: 'from-yellow-200 via-amber-300 to-orange-400', onClick: go('decks') },
     { key: 'market', attr: { 'data-card-market-open': '' }, label: 'マーケット', sub: 'パック・スターターキット', mark: 'MARKET', ico: '🛒', grad: 'from-sky-200 via-sky-400 to-blue-500', onClick: () => { Audio_.fgSe.tap(); setNotice(''); onOpenMarket && onOpenMarket(); } },
     { key: 'ranking', attr: { 'data-card-ranking-open': '' }, label: 'ランキング', sub: '勝ち数・連勝・図鑑', mark: 'RANKING', ico: '🏆', grad: 'from-lime-200 via-emerald-300 to-teal-500', onClick: go('ranking') },
@@ -89957,15 +90262,16 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               lines={[`あなたのデッキが戦われた・借りられた ${deckRewards.reduce((a, r) => a + r.uses, 0)}回ぶん`, `ビートP +${deckRewards.reduce((a, r) => a + r.amount, 0).toLocaleString()}`]}/>
           )}
           {notice && <p data-card-top-notice className={`text-[12px] font-bold text-amber-200 [@media(orientation:landscape)_and_(max-height:420px)]:truncate [@media(orientation:landscape)_and_(max-height:420px)]:text-[11px] [@media(orientation:landscape)_and_(max-height:420px)]:leading-snug`} style={JA_LABEL_STYLE} title={notice}>{jaWrap(notice)}</p>}
+          {firstGlow && <p data-card-first-glow-note className="text-center text-[12px] font-black text-yellow-200" style={JA_LABEL_STYLE}>まずはここ！コンピューターと対戦してみよう ▼</p>}
           <div data-card-top-cards className="grid grid-cols-2 gap-2">
-            {bigCards.map((c, idx) => (
-              <button key={c.key} type="button" {...c.attr} disabled={!!c.disabled} onClick={c.onClick}
-                className={`mhms-card mhms-in flex min-h-[84px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br ${c.grad} px-3 text-left text-slate-950 active:scale-[.97] disabled:opacity-50 landscape:min-h-[76px] [@media(orientation:landscape)_and_(max-height:360px)]:min-h-[58px] [@media(orientation:landscape)_and_(max-height:330px)]:min-h-[46px] [@media(orientation:landscape)_and_(max-height:360px)]:gap-0`} style={{ animationDelay: `${0.05 + idx * 0.06}s` }}>
+            {bigCards.map((c, idx) => { const glow = firstGlow && c.key === 'cpu'; const btn = (
+              <button type="button" {...c.attr} {...(glow ? { 'data-card-first-glow': '' } : {})} disabled={!!c.disabled} onClick={c.onClick}
+                className={`${glow ? 'w-full ' : ''}mhms-card mhms-in flex min-h-[84px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br ${c.grad} px-3 text-left text-slate-950 active:scale-[.97] disabled:opacity-50 landscape:min-h-[76px] [@media(orientation:landscape)_and_(max-height:360px)]:min-h-[58px] [@media(orientation:landscape)_and_(max-height:330px)]:min-h-[46px] [@media(orientation:landscape)_and_(max-height:360px)]:gap-0`} style={{ animationDelay: `${0.05 + idx * 0.06}s` }}>
                 <span aria-hidden="true" className="mhms-mark">{c.mark}</span>
                 <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none [@media(orientation:landscape)_and_(max-height:330px)]:hidden">{c.ico}</span>
                 <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">{c.label}</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">{c.sub}</small></span>
               </button>
-            ))}
+            ); return glow ? <div key={c.key} className="mhcard-first-glow flex">{btn}</div> : <React.Fragment key={c.key}>{btn}</React.Fragment>; })}
           </div>
           <div data-card-top-shortcuts className="mhms-in grid grid-cols-4 gap-1.5" style={{ animationDelay: '.28s' }}>
             {smallButtons.map((b) => (
@@ -108647,9 +108953,9 @@ function MonsterHeroGame() {
       const data = JSON.parse(json);
       const keys = Object.keys(data).filter(k => k.startsWith('mh_'));
       if (keys.length === 0) { setRestoreMsg('コードが正しくありません'); return; }
-      keys.forEach(k => window.localStorage.setItem(k, data[k]));
-      // 助手の解放(2026-11-11・Fable の確認): 今日より前のバックアップには mh_assistant_partner_v1 が無い。先に助手を選んで mode:'earn' が書かれた端末へ戻すと、今の人が助手を失うので、無いときは「今の人(全員が助手)」を書く
-      if (!keys.includes('mh_assistant_partner_v1')) window.localStorage.setItem('mh_assistant_partner_v1', JSON.stringify({ v:1, mode:'all', first:null, unlocked:[], noticed:[] }));
+      // 書き込み・はじめての人の印の片づけ・助手の解放の直しは data/mhsave-backup.js の共通の口で行う(3か所の復元で同じ)
+      if (typeof window.mhApplyBackupRestore !== 'function') throw new Error('restore-unavailable');
+      window.mhApplyBackupRestore(data, keys);
       setRestoreMsg('復元しました。再読み込みします...');
       setTimeout(() => window.location.reload(), 900);
     } catch { setRestoreMsg('コードが正しくありません'); }
@@ -108719,9 +109025,9 @@ function MonsterHeroGame() {
           if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('invalid');
           const keys = Object.keys(data).filter(k => k.startsWith('mh_'));
           if (!keys.length) throw new Error('no-save-keys');
-          keys.forEach(k => window.localStorage.setItem(k, data[k]));
-          // 助手の解放(2026-11-11・Fable の確認): 今日より前のバックアップには mh_assistant_partner_v1 が無い。先に助手を選んで mode:'earn' が書かれた端末へ戻すと、今の人が助手を失うので、無いときは「今の人(全員が助手)」を書く
-          if (!keys.includes('mh_assistant_partner_v1')) window.localStorage.setItem('mh_assistant_partner_v1', JSON.stringify({ v:1, mode:'all', first:null, unlocked:[], noticed:[] }));
+          // 書き込み・はじめての人の印の片づけ・助手の解放の直しは data/mhsave-backup.js の共通の口で行う(3か所の復元で同じ)
+          if (typeof window.mhApplyBackupRestore !== 'function') throw new Error('restore-unavailable');
+          window.mhApplyBackupRestore(data, keys);
           setRestoreMsg('復元しました。再読み込みします...');
           setTimeout(() => window.location.reload(), 900);
         } catch { setRestoreMsg('バックアップファイルが正しくありません'); }
@@ -110567,10 +110873,13 @@ function MonsterHeroGame() {
   // 助手ライフ: M/B管理にいる助手のマスモンにチケットを使ってあげる(56-assistant-life-masmon-ranch.jsx・ボクジョウ 2026-11-11)。
   //   数を読む口と1枚減らす口だけを渡す(トレーニングチケット・重トレーニングチケットのみ。足りなければ false)。プレイヤーのマスモン・絆経験値には触れない
   if(typeof ASSISTANT_LIFE_LINKS!=='undefined'&&ASSISTANT_LIFE_LINKS){
-    ASSISTANT_LIFE_LINKS.ticketCount=(itemId)=>Math.max(0,Number(ownedItems[itemId])||0);
+    // 持ち数は ownedItemsRef で読み、減らしたらすぐ ref も減らす(描き直す前に続けて使っても、残り1枚を2回使えないように・Fable 11-12)
+    ASSISTANT_LIFE_LINKS.ticketCount=(itemId)=>Math.max(0,Number(ownedItemsRef.current[itemId])||0);
     ASSISTANT_LIFE_LINKS.ticketSpend=(itemId)=>{
-      if(!['training_ticket','training_ticket_l'].includes(itemId)||!((Number(ownedItems[itemId])||0)>0))return false;
-      setOwnedItems(prev=>{const have=Number(prev[itemId])||0;if(have<=0)return prev;const next={...prev,[itemId]:have-1};storeSet('mh_owned_items',next,false);return next;});
+      const have=Number(ownedItemsRef.current[itemId])||0;
+      if(!['training_ticket','training_ticket_l'].includes(itemId)||have<=0)return false;
+      ownedItemsRef.current={...ownedItemsRef.current,[itemId]:have-1};
+      setOwnedItems(prev=>{const n=Number(prev[itemId])||0;if(n<=0)return prev;const next={...prev,[itemId]:n-1};storeSet('mh_owned_items',next,false);return next;});
       return true;
     };
   }
@@ -121530,6 +121839,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="モンスター一覧" accent="text-cyan-400" onBack={returnToHome}/><div className="w-full max-w-md mx-auto space-y-4 mt-[clamp(3.5rem,14vh,8rem)]"><button onClick={()=>setGameState('OWNED_MONSTERS')} className="w-full min-h-[72px] bg-cyan-950/50 border border-cyan-500/40 px-4 py-5 rounded-2xl font-black shadow-lg active:scale-[.98]">ベースモン</button><button onClick={()=>setGameState('MASU_MONS')} className="w-full min-h-[72px] bg-pink-950/50 border border-pink-500/40 px-4 py-5 rounded-2xl font-black shadow-lg active:scale-[.98]">マスモン</button></div></div>
         )}
 
+        {/* 「ホーム画面に追加」の案内(iPhone の Safari だけ・しつこくしない回数で。51-home-screen-guide.jsx・2026-11-11) */}
+        {gameState==='HOME'&&typeof HomeScreenGuideAuto==='function'&&(
+          <HomeScreenGuideAuto onOpenBackup={()=>{setShowBackup(true);setBackupTab('export');setBackupCode('');setRestoreInput('');setRestoreMsg('');}}/>
+        )}
         {gameState==='SETTINGS'&&(
           <SettingsScreen
             onBack={returnToHome}

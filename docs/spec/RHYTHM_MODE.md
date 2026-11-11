@@ -8599,6 +8599,17 @@ songId `light_player`・`light_player_short`・`tsuki_ga_michiru_mae_ni`・`tsuk
 - 作ったあとに直したもの（時刻・ノーツ数はそのまま）: 帯の中に戻っていたノーツ12件を帯の外へ（`fixHeldBand`）、月 MASTER のモンスター枠1（欠けていた）を 57.02秒の拍の頭の単打へ、
   月 short MASTER の 6.0秒で通り道が交わっていた地上スライド2本の片方を同じ位置のタップへ
 
+## 公開中の譜面の見直し(2026-11-11・フメン3)
+
+社長「全部変えていいけど告知はして」。押しにくい並びがあった39曲の EASY〜MASTER を MHB CHART ENGINE Rev.38 で作り直した(新曲と同じ条件:
+`chartRevision:38`・`flowPlacement:true`・`handFinish:{EASY:'smooth',NORMAL:'smooth',HARD:'smooth'}`、`rhythm-held-band-existing.json` の一覧から外した)。
+ヒューマノイドは社長が 11/07 に決めた Lv.・ノーツ数を守るため、公開中の譜面のまま位置だけ直した。HELL・Sheriruth・Grievous Lady の譜面は変えていない。
+前後の表と止め絵: `docs/progress/beat-chart-fix/rebuild/`。
+
+- **rebellion_short の歯ごたえ**: そのまま作り直すと MASTER が 772→565ノーツ・Lv.42→32 と大きく軽くなった。社長が「前と同じ Lv.42 前後(約780ノーツ)」を選んだので、
+  `rhythm-chart-tune.js --target MASTER:level=42` の候補から `challengeFactor:1.08`・`masterDensity:1.2`(`chartIntensityByDifficulty:{MASTER:'strong'}` は前から)を書いた。結果 MASTER 780ノーツ・Lv.42
+- **makutsu_no_senritsu**: そのままだと EXPERT 473 > MASTER 470 で段が逆になるので `sustainScale:{MASTER:0.2}`(MASTER 536ノーツ・Lv.27 は前と同じ)
+
 ## 「LAMIA」をモンヒロビートへ足した（2026-11-11）
 
 社長の依頼(窓口経由・mp4 とジャケット)「新曲追加。高難易度曲。曲にあわせて止まったり戻ったりとか変動型」。BlackY の `LAMIA`。songId `lamia`、bgmTrackId `melo_lamia`、マーカー `lamia-v3`。

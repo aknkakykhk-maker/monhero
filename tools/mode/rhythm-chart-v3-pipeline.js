@@ -7,6 +7,7 @@
 //   node tools/mode/rhythm-chart-v3-pipeline.js --reanalyze # 音源の解析からやり直す
 //   node tools/mode/rhythm-chart-v3-pipeline.js --force     # 重い警告を承知のうえで押し切る
 //   node tools/mode/rhythm-chart-v3-pipeline.js --track <曲id> --markers <マーカー名>
+//   node tools/mode/rhythm-chart-v3-pipeline.js --release --from-authoring --track <曲id>  # 作り済みの書き出しから検証と書き込みだけ
 //
 // 曲は --track で切り替える。拍の基準（BPM・拍の頭）は音源解析の結果をそのまま使うので、
 // 新しい曲のために rhythm-timing.js へ手で書き足す必要は無い。
@@ -37,6 +38,9 @@ const release=process.argv.includes('--release');
 const write=release||process.argv.includes('--write');
 const reanalyze=process.argv.includes('--reanalyze');
 const force=process.argv.includes('--force');
+// --from-authoring(2026-11-11 フメン3・公開中の譜面の作り直し): 生成〜手の仕上げを飛ばし、authoring にある書き出し(--write で作ったもの)から
+//   検証と書き込みだけをする。重い生成を何曲も並べて回し(--write)、ランタイムへの書き込みだけを1曲ずつ順に行うため(同時に書くと上書きし合う)
+const fromAuthoring=process.argv.includes('--from-authoring');
 const trackId=arg('--track','monster_hero_theme');
 const dashed=trackId.replace(/_/g,'-');
 const DIFFICULTIES=['EASY','NORMAL','HARD','EXPERT','MASTER'];
@@ -66,6 +70,9 @@ console.log(write?(release?'書き出し: 設計資料 + ランタイム（Monst
   :'書き出し: なし（--write / --release で書き出します）\n');
 
 const audioFile=path.join(ROOT,`tools/mode/authoring/${dashed}-v3-audio.json`);
+if(fromAuthoring&&!write){console.error('--from-authoring は --write か --release と一緒に使う');process.exit(1);}
+if(fromAuthoring)console.log('✓ 生成〜手の仕上げは飛ばす(--from-authoring・authoring の書き出しを使う)');
+else{
 if(reanalyze||!fs.existsSync(audioFile))step('音源解析（音の種類・高さ・伸び）','rhythm-audio-analyze-v3.js',['--write']);
 else console.log(`✓ 音源解析は既にある（やり直すなら --reanalyze）  ${path.relative(ROOT,audioFile)}`);
 // Rev.9〜: 主役の追跡が使う音の層の解析(<曲>-v3-layers.json)。無い・いまの解析ファイルと合わないときだけ作る
@@ -90,6 +97,7 @@ if(write)step('自動修正（押せない・忙しい配置をレーンだけ�
 //   EXPERT・MASTER は交差・真ん中越えなどの「いやらしい形」も減らし、いちばん盛り上がる区切りの交差は見せ場として残す(2026-11-11 社長の決定 A)。
 //   曲の一覧の handFinish('must' / 'keep-climax' / 'smooth')で曲ごとに変えられる
 if(write)step('手の仕上げ（押せない・帯の中を位置だけで直す。EXPERT・MASTER はいやらしい形も減らす）','rhythm-chart-flow-fix.js',['--write']);
+}
 
 // --- 検証 ---
 const sourceKind=write?'v3fixed':'v3';

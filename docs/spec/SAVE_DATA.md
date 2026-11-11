@@ -152,6 +152,7 @@
 | `mh_card_tactic_use_v1` | object / `cardTacticUseNormalize` | MFバトルカードの戦術カードを、登録の一覧から入れた回数 `{ v:1, used:{ [カードid]: 回数 } }`(一覧の「よく使う順」。2026-10-31・97-card-tactics-screen.jsx)。無い・壊れているときは空。知らないカードidと0以下の数は捨てる |
 | `mh_card_level_v1` | object / `cardNormalizeLevel` | MFバトルカードのレベル(2026-10-29・96-card-tactics.jsx)`{ v:1, xp, day, dayWin, got:[引く券を配ったレベル] }`。上限なし・全員 Lv1 から(今の戦績からは起こさない)。対戦の結果と同じ取引で足す(84)。公開前はデバッグの人だけ入る。壊れた経験値は0。`got` で引く券を二度配らない。`CARD_SAVE_KEYS` には入れない |
 | `mh_card_share_guide_seen_v1` | `true` のみ | MFバトルカードの対戦の入口で、助手が「フリー対戦」と「デッキ登録」を一度だけ知らせる案内を閉じた印(2026-10-30 公開・84)。無い・読めないときは案内を出す(読めなかったときは出さない) |
+| `mh_card_first_glow_v1` | `true` のみ | MFバトルカードをはじめて開いたとき、最初に押す「対戦」を光らせる案内を終えた印(2026-11-12 公開・84)。「対戦」を押すと立つ。無い・読めないときは、スターター受け取り済み・練習試合済み・コンピューター戦もマルチも0戦のときだけ光らせる(前から遊んでいる人には出さない) |
 | `mh_card_decks_v1` | object / `cardNormalizeDecks` | MFバトルカードのデッキ `{ active, decks:[{ id, name, monsters:[3], cards:[50] }] }`(5つまで)。持っていないカードが入っていても消さない |
 | `mh_card_point_v1` | number / `cardNormalizePoint` | MFバトルカードのカードポイント(**2026-10-26 から読まない**。カードポイントをやめてビートPにした・社長。キーは消さずに残す。カードの支払い・受け取りはビートPの `mh_rhythm_event_points_v1`。`CARD_POINT_STORE_KEY`) |
 | `mh_card_points_to_beatp_migrated_v1` | `true` のみ | 前のカードポイント(`mh_card_point_v1`)の残りをビートPへ1回だけ移した印(2026-10-26 社長)。印とビートPを1つの取引で書く(`cardMigratePointsOnce`)。`CARD_SAVE_KEYS` には入れない(デバッグの記録の消去で消えて二重に足されないように)。`tools/card/card-point-migration-check.js` |
@@ -249,6 +250,7 @@
 
 | キー | 値・既定値 | 用途 |
 | --- | --- | --- |
+| `mh_home_screen_guide_v1` | object `{firstSeenAt, lastShownAt, autoCount, never}`(既定 0・0・0・false)/ `normalizeHomeScreenGuideState` | 「ホーム画面に追加」の案内(2026-11-11・51-home-screen-guide.jsx)。iPhone の Safari だけ。はじめて HOME に来た時刻・自動で出した時刻と回数(14日あけ・3回まで)・「もう表示しない」。**例外: localStorage を直接読み書き**(同期で小さい値だけ)。データ引き継ぎで運ばれても、ホーム画面のアプリでは案内を出さないので害はない |
 | `mh_audio_muted` | boolean / `false` | ミュート状態 |
 | `mhdev_session_marker_v1` | object / 無し | **端末の中だけ**の「いま遊んでいる」印(`normalizeSessionMarker`)。起動から15秒ごとに書き直す(`startedAt`・`lastBeat`・`state` = `running`/`hidden`/`closed`・`screen`・`audioBuffers`・`heapMB`・`nav`、2026-10-12 から `audioMB`(持っている音の大きさ)・`decodedMB`(起動してから解いた合計)・`decodeCount`(解いた回数)。無い印は null として読む)。1件だけ。次の起動でこれを読み、正常に終わっていなければ `mhdev_reload_log_v1` へ足す。無い・壊れているときは何もしない。サーバーへは送らない。`localStorage` へ直接書く(`storeSet` は通さない)。**`mhdev_` なのでバックアップに入らない**(この端末の記録なので、別の端末へ引き継がない) |
 | `mhdev_reload_log_v1` | array / `[]` | **端末の中だけ**の「前回、途中で読み込み直された」記録(`normalizeReloadLog`)。直近 `RELOAD_LOG_LIMIT`(12)件まで、新しいものが先頭。`kind` は `foreground`(遊んでいる最中に止まった)/ `background`(裏に回ったあと)。音量設定の「🔧 音が出ないとき」の下で見られる。サーバーへは送らない。`localStorage` へ直接書く。**`mhdev_` なのでバックアップに入らない** |
@@ -586,6 +588,7 @@ HP、ガッツ、現在WAVE、手札、山札、バフ、技強化、スコア�
 - `window.storage` やメモリフォールバックの内容は書き出さず、`localStorage` 専用。
 - 署名、暗号化、チェックサム、スキーマ検証、値型検証はない。
 - 復元は既存の `mh_` キーを全消去せず、コードに含まれるキーだけ上書きする。
+- 例外(2026-11-12・社長の選択 案1): 3か所の復元は共通の口 `mhApplyBackupRestore`(`data/mhsave-backup.js`)を通り、「バックアップが前から遊んでいる人のもの(`mh_onboarded` が true・`mh_story_one_at_a_time_v1` が true でない)」かつ「戻す前の端末が新しく始めた端末(`mh_story_one_at_a_time_v1` が true)」のときだけ、はじめての人の印の一覧 `MH_FIRST_TIMER_MARK_KEYS`(17キー)のうちバックアップに無いものを消す。遊んだ記録・一覧の外は消さない。印を増やしたら一覧へ足す(見張り `tools/boot/restore-first-timer-marks-check.js`)。
 - バックアップコードには進行データと表示名が含まれるため、公開場所へ貼らない。
 
 ## 7. ランキングデータ
