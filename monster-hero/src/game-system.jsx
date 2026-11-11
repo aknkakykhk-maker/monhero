@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b8f48ae12e4fd7c6
+// generated-sha256: 4bc0c976bd13852a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68852,28 +68852,6 @@ const assistantLifeProfileRhythm = (id) => {
   return `${r.label}(${h(r.bed)}ごろ寝て、${h(r.wake)}ごろ起きる)`;
 };
 
-// 社長の全身画(2026-11-11 社長「全身画作ってるから…助手の紹介ページに使って」)。キーは「助手id」か「助手id:服の名前」。
-//   絵の仕上げ: tools/assistant/life-fullbody-art.py(元の絵 tools/art-sources/assistant-fullbody/received-v1/)。まだ絵の無い助手・服はここに無い=今の立ち絵のまま。
-//   絵が届いたら、ここに1行足して(元の絵を同じ道具へ足して回す)だけでよい。全身が入るので、胸から下をぼかす処理も顔の表も使わない
-const ASSISTANT_FULLBODY_ART = Object.freeze({
-  atsu: 'atsu', kiki: 'kiki', 'kiki:halloween': 'kiki_halloween', kyuko: 'kyuko', momosuke: 'momosuke', 'momosuke:halloween': 'momosuke_halloween',
-  mua: 'mua', 'mua:halloween': 'mua_halloween', 'mua:card-master': 'mua_card-master', sorashido: 'sorashido',
-  erubin: 'erubin', 'erubin:sekiyuou': 'erubin_sekiyuou',
-});
-// 表情ごとの全身画(社長「時間があったら全身画の8表情を作りたい」)。届いたら、上の名前をキーに、あるぶんの表情名を足すだけ(絵は <名前>__<表情>.png)。
-//   例: atsu: ['happy', 'wink']。ここに無い表情は、表情なしの絵(<名前>.png)を出す。表情名は今の立ち絵と同じ8つ(angry・crying・excited・happy・normal・surprise・troubled・wink)
-const ASSISTANT_FULLBODY_EXPRESSIONS = Object.freeze({});
-// その助手が(いま着ている服で)全身画を持っていれば絵の置き場所を返す。服の全身画が無いときは null(今の立ち絵へ)
-const assistantLifeProfileFullBody = (who, expression = 'happy') => {
-  if (!who || !who.id) return null;
-  let outfit = '';
-  try { const c = typeof assistantCostumeWornFor === 'function' ? assistantCostumeWornFor(who.id) : null; if (c && c.imageDir) outfit = String(c.imageDir).split('/').pop(); } catch (_) { outfit = ''; }
-  const name = ASSISTANT_FULLBODY_ART[outfit ? `${who.id}:${outfit}` : who.id];
-  if (!name) return null;
-  const exprs = ASSISTANT_FULLBODY_EXPRESSIONS[name];
-  return `images/assistant/fullbody/${name}${Array.isArray(exprs) && exprs.includes(expression) ? `__${expression}` : ''}.png`;
-};
-
 // 紹介の立ち絵。助手ごとに絵の余白・全身か顔だけかが違うので、町の人形と同じ決まり(顔の表 assistantLifeStandFace と assistantLifeStandRule)で
 //   「頭(てっぺんから顎)の長さ」と「頭のてっぺんの高さ」をそろえる(2026-11-11 社長「助手ごとのサイズ感がばらばら」)。測れるまでは出さない
 function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16 }) {
@@ -68890,7 +68868,7 @@ function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16 }) {
     window.addEventListener('resize', f);
     return () => { window.removeEventListener('resize', f); if (ro) ro.disconnect(); };
   }, []);
-  const fullSrc = assistantLifeProfileFullBody(who);
+  const fullSrc = typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(who, 'happy') : null;
   if (fullSrc) { // 全身画: 枠の高さにおさめて足元をそろえる(頭の大きさは絵ごとの全身の比のまま)
     return (
       <div ref={boxRef} className="pointer-events-none absolute inset-0 overflow-hidden" data-assistant-life-profile-stand={who.id} data-assistant-life-profile-fullbody={fullSrc}>

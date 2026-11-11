@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3c762f81503e7eea
+// source-sha256: fb65a4d3905f7e23
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -118446,35 +118446,6 @@ const assistantLifeProfileRhythm = id => {
   const h = n => Number.isFinite(n) ? `${n}時` : '';
   return `${r.label}(${h(r.bed)}ごろ寝て、${h(r.wake)}ごろ起きる)`;
 };
-const ASSISTANT_FULLBODY_ART = Object.freeze({
-  atsu: 'atsu',
-  kiki: 'kiki',
-  'kiki:halloween': 'kiki_halloween',
-  kyuko: 'kyuko',
-  momosuke: 'momosuke',
-  'momosuke:halloween': 'momosuke_halloween',
-  mua: 'mua',
-  'mua:halloween': 'mua_halloween',
-  'mua:card-master': 'mua_card-master',
-  sorashido: 'sorashido',
-  erubin: 'erubin',
-  'erubin:sekiyuou': 'erubin_sekiyuou'
-});
-const ASSISTANT_FULLBODY_EXPRESSIONS = Object.freeze({});
-const assistantLifeProfileFullBody = (who, expression = 'happy') => {
-  if (!who || !who.id) return null;
-  let outfit = '';
-  try {
-    const c = typeof assistantCostumeWornFor === 'function' ? assistantCostumeWornFor(who.id) : null;
-    if (c && c.imageDir) outfit = String(c.imageDir).split('/').pop();
-  } catch (_) {
-    outfit = '';
-  }
-  const name = ASSISTANT_FULLBODY_ART[outfit ? `${who.id}:${outfit}` : who.id];
-  if (!name) return null;
-  const exprs = ASSISTANT_FULLBODY_EXPRESSIONS[name];
-  return `images/assistant/fullbody/${name}${Array.isArray(exprs) && exprs.includes(expression) ? `__${expression}` : ''}.png`;
-};
 function AssistantLifeProfileStand({
   who,
   head = 0.32,
@@ -118517,7 +118488,7 @@ function AssistantLifeProfileStand({
       if (ro) ro.disconnect();
     };
   }, []);
-  const fullSrc = assistantLifeProfileFullBody(who);
+  const fullSrc = typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(who, 'happy') : null;
   if (fullSrc) {
     return React.createElement("div", {
       ref: boxRef,
