@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 67ee04c17aef7ef0
+// source-sha256: 8344bcad8949738b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -140863,7 +140863,7 @@ function AmgpPickMoved({
     "data-amg-pick-moved": true
   }, React.createElement("p", {
     className: "text-[10.5px] font-bold text-slate-300"
-  }, "🗓 訓練の予定は「📒 育成ノート」で組めます(計画して育てる子・次の回だけ変える)"), typeof assistantMasmonNoteOpen === 'function' && React.createElement("button", {
+  }, "🗓 訓練の予定は「📒 育成ノート」で組めます(計画して育てるマスモン・次の回だけ変える)"), typeof assistantMasmonNoteOpen === 'function' && React.createElement("button", {
     type: "button",
     className: "mt-1 min-h-[40px] rounded-xl bg-emerald-700 px-3 text-[11.5px] font-black",
     onClick: () => assistantMasmonNoteOpen(who && who.id),
@@ -147084,7 +147084,7 @@ function AssistantMasmonNoteBand({
     className: "block text-[13px] font-black text-emerald-200"
   }, "育成ノート"), React.createElement("span", {
     className: "block text-[11px] font-bold text-slate-200"
-  }, "計画中 ", st.picks.length, "/", sg.cap, "体", hurt ? ` ・ 休んでいる子 ${hurt}体` : '')), React.createElement("span", {
+  }, "計画中 ", st.picks.length, "/", sg.cap, "体", hurt ? ` ・ 休んでいるマスモン ${hurt}体` : '')), React.createElement("span", {
     className: "text-[11px] font-black text-emerald-200",
     "aria-hidden": "true"
   }, "▶"));
@@ -147386,9 +147386,9 @@ function AmgpMine({
       }
     })), React.createElement("p", {
       className: "mt-1 text-[10.5px] font-bold text-slate-300"
-    }, sg.next === null ? '最後の段です。5体まで計画して育てられます' : `あと${toNext}日で段${sg.lv + 1} → 計画できる子が${sg.lv + 1}体に(計画の子が予定で育った日を、1体ごとに数えます)`)), React.createElement("p", {
+    }, sg.next === null ? '最後の段です。5体まで計画して育てられます' : `あと${toNext}日で段${sg.lv + 1} → 計画できるマスモンが${sg.lv + 1}体に(計画のマスモンが予定で育った日を、1体ごとに数えます)`)), React.createElement("p", {
       className: "mt-3 text-[12px] font-black text-emerald-200"
-    }, "📌 計画して育てる子(", picked.length, "/", sg.cap, ")"), picked.map(x => card(x, true)), Array.from({
+    }, "📌 計画して育てるマスモン(", picked.length, "/", sg.cap, ")"), picked.map(x => card(x, true)), Array.from({
       length: Math.max(0, AMGP_MAX - Math.max(sg.cap, picked.length))
     }).slice(0, 1).map((_, i) => React.createElement("p", {
       key: i,
@@ -147416,7 +147416,7 @@ function AmgpMine({
   }) : React.createElement("p", {
     className: "mt-4 text-[12px] font-bold text-slate-300",
     "data-amgp-plan-empty": true
-  }, "「一覧」で計画して育てる子を選ぶと、ここで朝・昼・夜の予定を組めます");else if (tab === 'log') body = cur ? React.createElement(AmgpLogTab, {
+  }, "「一覧」で計画して育てるマスモンを選ぶと、ここで朝・昼・夜の予定を組めます");else if (tab === 'log') body = cur ? React.createElement(AmgpLogTab, {
     x: cur,
     nameOf: nameOf,
     pickSel: pickSel(cur)
@@ -147622,7 +147622,7 @@ function AmgpPlanTab({
     className: `rounded-lg py-1 ${f && (f.fat >= 70 || f.str >= 70) ? 'bg-rose-700' : f && (f.fat >= 60 || f.str >= 60) ? 'bg-amber-700' : 'bg-slate-700'}`
   }, AMG_PERIOD_NAME[p], React.createElement("br", null), f ? `${f.fat}/${f.str}` : '—'))), React.createElement("p", {
     className: "mt-1 text-[10px] font-bold text-slate-400"
-  }, "疲れ60・ストレス50からサボりやすく、疲れ70で重い訓練・修行のけが、ストレス60で病気、80で家出が起きることがあります。計画の子は自動では休みません"), React.createElement("div", {
+  }, "疲れ60・ストレス50からサボりやすく、疲れ70で重い訓練・修行のけが、ストレス60で病気、80で家出が起きることがあります。計画のマスモンは自動では休みません"), React.createElement("div", {
     className: "mt-2 flex flex-wrap gap-1.5",
     "data-amgp-copy": true
   }, React.createElement("button", {
