@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4659c451be60e844
+// generated-sha256: 6695bfb6429d6682
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -66013,6 +66013,9 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
 
 // 家のいちばん上の帯。3行まで+「ほか◯件」。行を押すとその施設へ(onGo で画面を閉じてから呼ぶ)
 function AssistantLifeNowPerks({ life, ids, nameOf, onGo, land = false }) {
+  // マーケットのおすすめ品は保存を読み終えるまで出せない(開発部の assistantMarketPerkToday は読み込み中 null)。開いてから少しあと(と4秒おき)に描き直して拾う
+  const [, redraw] = React.useState(0);
+  React.useEffect(() => { const t = setTimeout(() => redraw(n => n + 1), 1500), i = setInterval(() => redraw(n => n + 1), 4000); return () => { clearTimeout(t); clearInterval(i); }; }, []);
   const rows = assistantLifePerkRows(life, ids, nameOf);
   const [more, setMore] = React.useState(false);
   if (!rows.length) return null;
