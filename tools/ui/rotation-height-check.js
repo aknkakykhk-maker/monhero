@@ -41,6 +41,7 @@ const REVIEWED = {
   '95-card-deck-share.jsx|86vh|1': 'outside MFバトルカードのデッキの共有',
   // ③ document.body へ直に出す窓
   '24-battle-fx.jsx|portal|1': 'outside バトルの演出',
+  '44-time-of-day.jsx|portal|1': 'outside HOME の時計の表示形式のシート(TimeOfDayClock の home 付きは 69-screen-home.jsx だけ。HOME で開く物で、モンヒロビートの中では開かない・2026-11-11 開発部が確かめた)',
   // 保存できない知らせ・新しい版の知らせ(どの画面でも出す)は、rotationAwarePortalTarget() で回した器へ出すので、ここには出てこない(2026-11-07)
   '60-app.jsx|portal|1': 'outside 「ゲームをやめる」の確認(バトルのメニューからだけ開く。71-screen-battle.jsx の data-battle-quit)',
   '57-screen-monster-dex.jsx|75dvh|1': 'outside モンスター図鑑(M/B管理から)',
