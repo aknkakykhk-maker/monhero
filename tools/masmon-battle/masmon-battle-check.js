@@ -71,14 +71,14 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
       } else if (r.reason !== 'judge') ng.wipe.push(`${tag}(reason=${r.reason})`);
       // たどり直す
       const st = I.setupState(inp, catalog);
-      let dist = 2, round = 0;
+      let dist = r.log[0].d, round = 0;
       const active = { A: 0, B: 0 };
       let bad = null;
       for (const e of r.log) {
         if (bad) break;
         if (e.r !== round) {                      // 新しいラウンド: 場の2体に自然回復
           round = e.r;
-          for (const s of ['A', 'B']) { const u = st.teams[s].units[active[s]]; u.guts = Math.min(100, u.guts + 10); }
+          for (const s of ['A', 'B']) { const u = st.teams[s].units[active[s]]; u.guts = Math.min(100, u.guts + u.regen); }
         }
         if (e.ev === 'tech') {
           const u = st.teams[e.side].units[active[e.side]];
@@ -237,6 +237,13 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
   check('⑪ 育成の入れ物(st・Lv 1〜99)から1体を作れる・入れ物が無ければ行の Lv',
     n.species === 'Golem' && n.name === 'ごろ' && n.lv === 99 && n.stats.pow === 610 && n.stats.tough === 700 && I.stageOf(99) === 8 && n2.lv === 7,
     JSON.stringify(n));
+}
+
+// ⑫ 種ごとのガッツのたまる速さは 8〜12 の整数(既存の baseGuts から)
+{
+  const bad = Object.entries(catalog.species).filter(([, v]) => !Number.isInteger(v.regen) || v.regen < 8 || v.regen > 12).map(([k, v]) => `${k}:${v.regen}`);
+  const vals = new Set(Object.values(catalog.species).map(v => v.regen));
+  check('⑫ 種ごとのガッツのたまる速さは 8〜12(既存の baseGuts から)・種でちがう', !bad.length && vals.size >= 3, bad.join(' ') || [...vals].sort().join('・'));
 }
 
 console.log(failed ? `\nNG が ${failed} 件` : '\nすべてOK');

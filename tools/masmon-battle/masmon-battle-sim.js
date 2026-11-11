@@ -117,6 +117,24 @@ const out = {};
   }
 }
 
+// ⑥ 種だけの差(6能力を全員同じ 300 にして1対1の総当たり・先後を入れ替え)= 距離の得意・ガッツの速さ・技の倍率の差
+{
+  const ids = Object.keys(catalog.species);
+  const flat = { life: 300, pow: 300, wise: 300, hit: 300, eva: 300, tough: 300 };
+  const w = Object.fromEntries(ids.map(id => [id, 0])), g = Object.fromEntries(ids.map(id => [id, 0]));
+  const M = Math.max(4, Math.floor(N / 200));
+  for (let x = 0; x < ids.length; x++) for (let y = x + 1; y < ids.length; y++) for (let i = 0; i < M; i++) {
+    for (const sw of [false, true]) {
+      const [p, q] = sw ? [ids[y], ids[x]] : [ids[x], ids[y]];
+      const r = run(`sp-${x}-${y}-${i}-${sw}`, { assistantId: 'atsu', tactics: 50, members: [{ species: p, lv: 50, stats: flat }] },
+        { assistantId: 'atsu', tactics: 50, members: [{ species: q, lv: 50, stats: flat }] });
+      g[p]++; g[q]++;
+      if (r.winner === 'A') w[p]++; else if (r.winner === 'B') w[q]++; else { w[p] += 0.5; w[q] += 0.5; }
+    }
+  }
+  out.species = Object.fromEntries(ids.map(id => [id, w[id] / g[id]]).sort((a, b) => b[1] - a[1]));
+}
+
 if (asJson) { console.log(JSON.stringify(out, null, 1)); process.exit(0); }
 console.log(`■ 助手のマスモンのオートバトル 集計(各 ${N} 戦前後)`);
 console.log(`① 先後の偏り: A ${pct(out.side.A)} / B ${pct(out.side.B)} / 引き分け ${pct(out.side.draw)}・判定 ${pct(out.side.judge)}・平均 ${out.side.avgRounds.toFixed(1)} ラウンド`);
@@ -129,3 +147,5 @@ for (const [k, v] of Object.entries(out.formats)) {
   console.log(`   ${k}: 平均 ${v.avgRounds.toFixed(1)} ・最長 ${v.maxRounds} ラウンド・判定 ${pct(v.judge)}・A勝ち ${pct(v.aWin)}・手 `
     + Object.entries(v.acts).map(([a, x]) => `${a} ${pct(x)}`).join(' '));
 }
+const sp = Object.entries(out.species);
+console.log(`⑥ 種だけの差(能力を同じにして1対1): 上 ${sp.slice(0, 3).map(([k, v]) => `${catalog.species[k].name} ${pct(v)}`).join('・')} / 下 ${sp.slice(-3).map(([k, v]) => `${catalog.species[k].name} ${pct(v)}`).join('・')}`);

@@ -25,12 +25,12 @@
   const STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
   const STAT_MAX = 999;
   const DIST_NAMES = ['零', '近', '中', '遠'];
-  const DIST_START = 2; // 中から始める
+  const DIST_START = 2; // 種が無いときの始まりの距離(中)。ふつうは種で 近・中 のどちらか(得意な距離の有利を片寄らせない)
   const GRADES = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'S+', 'SS', 'SS+', 'M'];
   const TEAM_MAX = 3;
   const GUTS_MAX = 100;
   const GUTS_START = 50;
-  const GUTS_REGEN = 10;      // 毎ラウンドの自然回復
+  const GUTS_REGEN = 10;      // 毎ラウンドの自然回復の真ん中(種ごとに 9〜11。MF の「ガッツ回復」の考え方)
   const GUTS_CHARGE = 22;     // 「ためる」で足す分
   const GUTS_MOVE = 4;        // 移動・ガードで足す分
   const GUTS_SWAP_IN = 40;    // 交代で出てきたときの最低ガッツ
@@ -119,6 +119,13 @@
         },
       };
     }
+    // 種ごとのガッツのたまる速さ: モンヒロバトルの基礎ガッツ(baseGuts)の大きさで 9〜11(真ん中 10)
+    const gs = Object.keys(species).map(id => Number(mons[id].baseGuts) || 0);
+    const gMin = Math.min(...gs), gMax = Math.max(...gs);
+    for (const id of Object.keys(species)) {
+      const g = Number(mons[id].baseGuts) || 0;
+      species[id].regen = gMax > gMin ? GUTS_REGEN - 1 + Math.round((g - gMin) / (gMax - gMin) * 2) : GUTS_REGEN;
+    }
     return { version: VERSION, atk: pick(s.BASE_ATK_EVOLUTION), range: pick(s.RANGE_EVOLUTION), guard: pick(s.GUARD_EVOLUTION), species };
   };
 
@@ -127,7 +134,7 @@
   const stageOf = (lv) => clamp(Math.floor((toInt(lv, 1, LV_MAX, 1) - 1) * 9 / LV_MAX), 0, 8);
   const aptMult = (grade) => {
     const i = GRADES.indexOf(grade);
-    return clamp(1 + ((i < 0 ? 4 : i) - 4) * 0.08, 0.6, 1.5);
+    return clamp(1 + ((i < 0 ? 4 : i) - 4) * 0.05, 0.8, 1.25);
   };
 
   // 1体ぶんの技の表。威力は通常攻撃を 1 とした比(同じ段どうしの比)
@@ -184,26 +191,31 @@
   const maxHpOf = (stats) => 100 + Math.round(stats.life * 1.5);
 
   // ── 計算の部品(AI もこれで見積もる。実際の判定と同じ式) ──
-  const hitChance = (atkU, defU, mv) => clamp(0.75 + (atkU.stats.hit - defU.stats.eva) / STAT_MAX * 0.5 + mv.hit, 0.15, 0.97);
-  const rawDamage = (atkU, defU, mv, dist) => {
+  // モンスターファームの考え方を参考に(docs/spec/ASSISTANT_MASMON_BATTLE.md「MF との対応」):
+  //   撃つときのガッツが多いほど当たりやすく(±5%)・重い(×0.9〜1.1)。g は撃つ前のガッツ(省くといまのガッツ)
+  const gutsHit = (g) => (clamp(g, 0, GUTS_MAX) - 50) / 50 * 0.05;
+  const gutsPow = (g) => 0.9 + clamp(g, 0, GUTS_MAX) / GUTS_MAX * 0.2;
+  const hitChance = (atkU, defU, mv, g) => clamp(0.75 + (atkU.stats.hit - defU.stats.eva) / STAT_MAX * 0.5 + mv.hit
+    + gutsHit(g == null ? atkU.guts : g), 0.15, 0.97);
+  const rawDamage = (atkU, defU, mv, dist, g) => {
     const a = atkU.stats[mv.kind];
-    const base = mv.power * (20 + a * 0.6) * aptMult(atkU.apt[dist]);
+    const base = mv.power * (20 + a * 0.6) * aptMult(atkU.apt[dist]) * gutsPow(g == null ? atkU.guts : g);
     return base * 300 / (300 + defU.stats.tough * 0.9);
   };
   const guardCut = (u) => clamp(0.35 + u.stats.tough / STAT_MAX * 0.25, 0.35, 0.6);
   const canUse = (u, mv, dist) => mv.dist.includes(dist) && u.guts >= mv.guts;
   const inRange = (mv, dist) => mv.dist.includes(dist);
-  const expected = (atkU, defU, mv, dist, guarded) => {
-    const p = hitChance(atkU, defU, mv);
+  const expected = (atkU, defU, mv, dist, guarded, g) => {
+    const p = hitChance(atkU, defU, mv, g);
     const crit = mv.crit;
-    return p * rawDamage(atkU, defU, mv, dist) * (1 + crit * (CRIT_MULT - 1)) * (guarded ? 1 - guardCut(defU) : 1);
+    return p * rawDamage(atkU, defU, mv, dist, g) * (1 + crit * (CRIT_MULT - 1)) * (guarded ? 1 - guardCut(defU) : 1);
   };
   // 届く距離で一番よい技の期待ダメージ(ガッツが足りるかは gutsAvail で見る)
   const bestThreat = (atkU, defU, dist, gutsAvail) => {
     let best = 0;
     for (const mv of atkU.moves) {
       if (!inRange(mv, dist) || gutsAvail < mv.guts) continue;
-      const e = expected(atkU, defU, mv, dist, false);
+      const e = expected(atkU, defU, mv, dist, false, gutsAvail);
       if (e > best) best = e;
     }
     return best;
@@ -235,7 +247,7 @@
     const sty = me.style;
     const skill = clamp((me.tactics + sty.read) / 100, 0, 1);
     const cands = [];
-    const foeNextGuts = Math.min(GUTS_MAX, f.guts + GUTS_REGEN);
+    const foeNextGuts = Math.min(GUTS_MAX, f.guts + f.regen);
     const threatNow = bestThreat(f, u, dist, foeNextGuts);
     const hpFrac = u.hp / u.maxHp;
     const danger = threatNow / Math.max(1, u.hp);          // 次の一撃で失う割合
@@ -249,7 +261,7 @@
       let score = Math.min(e, f.hp) / f.maxHp * 100 * sty.aggr;
       if (e >= f.hp) score += 35 * p * sty.aggr;                    // 倒しきれそう
       // ガッツの節約: 使ったあと次の手で撃てなくなる分(危ないときは気にしない)
-      score -= Math.max(0, mv.guts - GUTS_REGEN) * 0.12 * sty.thrift * (1 - Math.min(1, danger));
+      score -= Math.max(0, mv.guts - u.regen) * 0.12 * sty.thrift * (1 - Math.min(1, danger));
       if (mv.key === 'unique') score *= 1 + (sty.gamble - 1) * 0.8;
       if (score > bestTech) bestTech = score;
       cands.push({ type: 'tech', key: mv.key, score });
@@ -259,7 +271,7 @@
     for (const step of [-1, 1]) {
       const nd = dist + step;
       if (nd < 0 || nd > 3) continue;
-      const myGuts = Math.min(GUTS_MAX, u.guts + GUTS_REGEN + GUTS_MOVE);
+      const myGuts = Math.min(GUTS_MAX, u.guts + u.regen + GUTS_MOVE);
       const gain = bestThreat(u, f, nd, myGuts) - bestThreat(u, f, dist, myGuts);
       const risk = bestThreat(f, u, nd, foeNextGuts) - threatNow;
       // 読みが浅いうちは、相手の反撃(risk)を半分しか見ない
@@ -278,7 +290,7 @@
     }
     // ためる(ガッツが満タンなら候補に入れない)
     if (u.guts < GUTS_MAX) {
-      const afterGuts = Math.min(GUTS_MAX, u.guts + GUTS_REGEN + GUTS_CHARGE);
+      const afterGuts = Math.min(GUTS_MAX, u.guts + u.regen + GUTS_CHARGE);
       const nowBest = bestThreat(u, f, dist, u.guts);
       const laterBest = bestThreat(u, f, dist, afterGuts);
       let score = (laterBest - nowBest) / f.maxHp * 100 * 0.6 * (0.8 + 0.2 * sty.thrift);
@@ -353,7 +365,7 @@
         units: nt.members.map(m => {
           const maxHp = maxHpOf(m.stats);
           return { species: m.species, name: m.name, lv: m.lv, stats: m.stats, apt: catalog.species[m.species].apt,
-            moves: buildMoves(catalog, m.species, m.lv, m.stats), maxHp, hp: maxHp, guts: GUTS_START,
+            moves: buildMoves(catalog, m.species, m.lv, m.stats), maxHp, hp: maxHp, guts: GUTS_START, regen: catalog.species[m.species].regen,
             guarding: false, swapCooldown: SWAP_COOLDOWN, moveStreak: 0 };
         }),
       };
@@ -369,6 +381,7 @@
     const rng = makeRng(inp.seed);
     const roundLimit = toInt(inp.roundLimit, 1, 1000, ROUND_LIMIT);
     const state = setupState(inp, catalog);
+    state.dist = 1 + Math.floor(rng() * 2);
     const ctx = { state, rng, trace: !!inp.trace, lastCands: null };
     const log = [];
     const alive = (side) => state.teams[side].units.some(x => x.hp > 0);
@@ -394,14 +407,15 @@
       const c = chooseAction(ctx, side);
       if (c.type === 'tech') {
         const mv = u.moves.find(m => m.key === c.key);
+        const g0 = u.guts;                       // 撃つ前のガッツで当たり・重さを決める
         u.guts -= mv.guts;
-        const p = hitChance(u, f, mv);
+        const p = hitChance(u, f, mv, g0);
         const hit = rng() < p;
         let dmg = 0, crit = false;
         if (hit) {
           crit = rng() < mv.crit;
           const swing = 0.9 + rng() * 0.2;
-          dmg = rawDamage(u, f, mv, state.dist) * swing * (crit ? CRIT_MULT : 1) * (f.guarding ? 1 - guardCut(f) : 1);
+          dmg = rawDamage(u, f, mv, state.dist, g0) * swing * (crit ? CRIT_MULT : 1) * (f.guarding ? 1 - guardCut(f) : 1);
           dmg = Math.max(1, Math.round(dmg));
           f.hp = Math.max(0, f.hp - dmg);
         }
@@ -448,7 +462,7 @@
       state.round++;
       for (const side of ['A', 'B']) {
         const u = unitOf(side);
-        u.guts = Math.min(GUTS_MAX, u.guts + GUTS_REGEN);
+        u.guts = Math.min(GUTS_MAX, u.guts + u.regen);
       }
       // 先に動く方: 回避+命中の半分が高い方(同じなら種で)
       const ua = unitOf('A'), ub = unitOf('B');
