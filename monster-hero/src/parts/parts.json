@@ -196,6 +196,10 @@
       "role": "ビートランク・カードランクの全国ランキングの通信層(rhythm_beat_ranks・card_ranks。持ち主の鍵で書く *_rank_put)"
     },
     {
+      "file": "39-multi-stamp.jsx",
+      "role": "マルチのスタンプ(顔×言葉)。持ち物・よく使う枠・送る間隔(MULTI_STAMP)・ビートP交換所の品と交換・マイスタンプの画面。ビートのマルチとカードのマルチから使う"
+    },
+    {
       "file": "40-screen-effects.jsx",
       "role": "画面ライフサイクル。タイマー・リスナーの登録簿 useScreenEffects(画面専用は画面を離れたら止め、進行は止めない)"
     },

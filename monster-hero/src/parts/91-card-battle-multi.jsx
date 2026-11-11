@@ -287,9 +287,13 @@ const cardPvpCleanMessage = (raw) => {
       rt: Number.isInteger(raw.rt) && raw.rt >= 0 && raw.rt <= 10000 ? raw.rt : null, rv: cardPvpRv(raw.rv) };
   }
   // ひとこと: 定型(i … 番号)か、自由文(x … 30字まで。2026-10-30 で足した項目。古い版は x を知らないので捨てる)
+  // スタンプ(2026-11-11 で足した項目): 顔 sf・言葉 sw の番号を添える。古い版はこれを知らないので、i か x の言葉だけを出す
   if (raw.t === 'chat') {
-    if (typeof raw.x === 'string') { const x = cardChatClean(raw.x); return x ? { t: 'chat', from, x } : null; }
-    const i = cardPvpInt(raw.i, CARD_PVP_STAMPS.length - 1); return i === null ? null : { t: 'chat', from, i };
+    const sf = typeof multiStampCleanFace === 'function' ? multiStampCleanFace(raw.sf) : null;
+    const sw = typeof multiStampCleanWord === 'function' ? multiStampCleanWord(raw.sw) : null;
+    const st = sf && sw ? { sf, sw } : {};
+    if (typeof raw.x === 'string') { const x = cardChatClean(raw.x); return x ? { t: 'chat', from, x, ...st } : null; }
+    const i = cardPvpInt(raw.i, CARD_PVP_STAMPS.length - 1); return i === null ? null : { t: 'chat', from, i, ...st };
   }
   // 観戦の人のコメント(ホストが観戦の通り道で受け取り、相手へ渡す。v … 観戦の人の印・n … 名前)
   if (raw.t === 'wsay') { const x = cardChatClean(raw.x); return x ? { t: 'wsay', from, v: typeof raw.v === 'string' ? raw.v.slice(0, 40) : '', n: rhythmMultiText(raw.n, CARD_PVP_NAME_MAX) || 'ブリーダー', x, sp: raw.sp === true } : null; }
@@ -891,10 +895,12 @@ const CARD_PVP = (() => {
     if (msg.t === 'again') { if (s.phase === 'over' && !s.foeGone) { s = { ...s, foeAgain: { rd: msg.rd, seal: msg.seal } }; tryAgain(); emit(); } return; }
     if (msg.t === 'chat') {
       if (!inGame()) return;
-      const stamp = msg.x === undefined;
-      const text = stamp ? CARD_PVP_STAMPS[msg.i] : msg.x;
-      if (isHost()) cardPvpWatchHost().say({ p: 1, x: text, sp: stamp }); // 観戦の人にも見せる(全員に見える。2026-10-30 社長)
-      if (CARD_CHAT.add({ key: 'foe', name: (s.foe && s.foe.name) || 'あいて', text, stamp, kind: 'foe' }) && s.phase === 'playing' && board && board.onChat) board.onChat(cardChatMask(cardChatClean(text)));
+      // 絵のスタンプは定型と同じ扱い(自由文を出さない設定でも出す)。1人2秒に1個まで
+      if (msg.sf && !MULTI_STAMP.accept('foe')) return;
+      const stamp = msg.x === undefined || !!msg.sf;
+      const text = msg.x === undefined ? CARD_PVP_STAMPS[msg.i] : msg.x;
+      if (isHost()) cardPvpWatchHost().say({ p: 1, x: text, sp: stamp }); // 観戦の人にも見せる(全員に見える。2026-10-30 社長)。観戦の人には言葉で届く
+      if (CARD_CHAT.add({ key: 'foe', name: (s.foe && s.foe.name) || 'あいて', text, stamp, kind: 'foe', ...(msg.sf ? { sf: msg.sf, sw: msg.sw } : {}) }) && s.phase === 'playing' && board && board.onChat) board.onChat(cardChatMask(cardChatClean(text)));
       return;
     }
     if (msg.t === 'wsay') { if (inGame()) CARD_CHAT.add({ key: `v:${msg.v}`, name: msg.n, text: msg.x, stamp: msg.sp, kind: 'watch' }); return; }
@@ -1078,6 +1084,17 @@ const CARD_PVP = (() => {
       if (!s || s.phase !== 'playing' || !CARD_PVP_STAMPS[i] || Date.now() - s.chatAt < CARD_PVP_CHAT_GAP_MS) return false;
       s = { ...s, chatAt: Date.now() }; send({ t: 'chat', i });
       if (isHost()) cardPvpWatchHost().say({ p: 0, x: CARD_PVP_STAMPS[i], sp: true });
+      return true;
+    },
+    // 絵のスタンプ(2026-11-11)。言葉が定型と同じなら番号 i で、ちがえば言葉 x で送り、顔と言葉の番号を添える(古い版には言葉だけが出る)
+    stamp: (x) => {
+      if (!s || s.phase !== 'playing' || !x || !multiStampCleanFace(x.f) || !multiStampCleanWord(x.w) || Date.now() - s.chatAt < CARD_PVP_CHAT_GAP_MS) return false;
+      const text = cardChatClean((multiStampWord(x.w) || {}).text || '');
+      if (!text) return false;
+      const i = CARD_PVP_STAMPS.indexOf(text);
+      s = { ...s, chatAt: Date.now() };
+      send({ t: 'chat', ...(i >= 0 ? { i } : { x: text }), sf: x.f, sw: x.w });
+      if (isHost()) cardPvpWatchHost().say({ p: 0, x: text, sp: true });
       return true;
     },
     // 自由文のコメント(CardChatPanel が CARD_CHAT.check を通してから呼ぶ)。観戦の人にも見せる
@@ -1800,7 +1817,7 @@ const CARD_CHAT = (() => {
       const text = cardChatMask(cardChatClean(e.text));
       if (!text || s.muted.has(e.key)) return false;
       if (!e.stamp && e.kind !== 'me' && !prefs.free) return false;
-      const row = { id: s.seq + 1, key: String(e.key || ''), name: cardChatMask(cardChatClean(e.name, CARD_PVP_NAME_MAX)) || 'ブリーダー', text, stamp: !!e.stamp, kind: e.kind || 'watch', at: Date.now() };
+      const row = { id: s.seq + 1, key: String(e.key || ''), name: cardChatMask(cardChatClean(e.name, CARD_PVP_NAME_MAX)) || 'ブリーダー', text, stamp: !!e.stamp, kind: e.kind || 'watch', at: Date.now(), ...(e.sf && e.sw ? { sf: e.sf, sw: e.sw } : {}) };
       s = { ...s, seq: row.id, list: [...s.list, row].slice(-CARD_CHAT_LOG_MAX) };
       emit();
       return true;
@@ -1887,6 +1904,14 @@ const CardChatPanel = ({ mode = 'pvp', onClose }) => {
     setWhy('');
     if (!stamp) setText('');
   };
+  // 絵のスタンプ(2026-11-11)。対戦中だけ送れる(観戦の人は言葉の定型だけ)。1試合の回数には数えない(定型と同じ)
+  const [stampEdit, setStampEdit] = useState(false);
+  const sendStamp = (x) => {
+    if (!CARD_PVP.stamp(x)) { setWhy('いまは送れません'); return false; }
+    CARD_CHAT.add({ key: 'me', name: 'あなた', text: x.text, stamp: true, kind: 'me', sf: x.f, sw: x.w });
+    setWhy('');
+    return true;
+  };
   const left = Math.max(0, (CARD_CHAT_LIMIT[mode] || 20) - c.sent);
   const tone = (k) => (k === 'me' ? 'text-sky-200' : k === 'watch' ? 'text-violet-300' : 'text-amber-200');
   const toggle = (k, on) => (
@@ -1908,13 +1933,15 @@ const CardChatPanel = ({ mode = 'pvp', onClose }) => {
               <div key={x.id}>
                 <button type="button" data-card-chat-line={x.kind} onClick={() => setPick(x.kind === 'me' ? null : (pick === x.id ? null : x.id))}
                   className="block w-full border-b border-white/5 py-1 text-left text-[13px] leading-snug" style={JA_WRAP_STYLE}>
-                  <b className={`mr-1.5 text-[11px] ${tone(x.kind)}`}>{x.name}{x.kind === 'watch' ? '(観戦)' : ''}</b>{x.text}
+                  <b className={`mr-1.5 text-[11px] ${tone(x.kind)}`}>{x.name}{x.kind === 'watch' ? '(観戦)' : ''}</b>{x.sf ? <MultiStampView f={x.sf} w={x.sw} text={x.text} size={56} className="align-middle" /> : x.text}
                 </button>
                 {pick === x.id && <button type="button" data-card-chat-mute={x.key} onClick={() => { CARD_CHAT.mute(x.key); setPick(null); }}
                   className="my-1 min-h-[34px] w-full rounded-lg border border-rose-300/50 bg-rose-500/15 text-[12px] font-black text-rose-100">🔇 {x.name}さんのコメントを消す(この{mode === 'watch' ? '観戦' : '試合'}のあいだ)</button>}
               </div>
             ))}
         </div>
+        {mode === 'pvp' && <MultiStampPalette onSend={sendStamp} onEdit={() => setStampEdit(true)} cols={6} className="mb-2 max-h-[24vh] overflow-y-auto" />}
+        {stampEdit && <MultiStampEditor onClose={() => setStampEdit(false)} />}
         <div className="mb-2 grid grid-cols-3 gap-1">
           {CARD_PVP_STAMPS.map((t, i) => <button key={t} type="button" data-card-chat-stamp={i} onClick={() => send(t, i)} className="min-h-[36px] rounded-lg bg-white/10 px-1 text-[12px] font-bold active:scale-[.97]">{t}</button>)}
         </div>
