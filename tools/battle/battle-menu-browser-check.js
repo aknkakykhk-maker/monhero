@@ -1,3 +1,4 @@
+require('../shared-serve'); // :8899 が無ければ立てる(単独で回したとき。2026-11-11)
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
 // 390x844 の実ブラウザで HOME → 難易度画面の主要導線と例外ゼロを確認する。
 // 実行前に `python3 tools/serve.py` でリポジトリルートを配信する。
