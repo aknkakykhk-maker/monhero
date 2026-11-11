@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3859c9c0bff91c2d
+// source-sha256: 2c65f2d44195645e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -67197,6 +67197,8 @@ function BreederMarketScreen({
     return eventTab === 'material' === BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId);
   }).map(offer => rhythmEventPointShopOfferWithPass(offer, legendPassActive === true));
   const legendPassSlot = eventItemOffers.some(offer => offer.legendPass === true);
+  const lifeNoteOf = offer => typeof assistantLifeShopNoteOf === 'function' ? assistantLifeShopNoteOf(offer.itemId) : null;
+  const noteSlotOn = legendPassSlot || eventItemOffers.some(offer => !!lifeNoteOf(offer));
   const renderSectionTabs = (section, scroll = false) => {
     const items = SECTION_TABS[section].tabs.map(tab => ({
       id: tab.key,
@@ -67758,6 +67760,14 @@ function BreederMarketScreen({
     }, offer.baseCost.toLocaleString(), "P→", offer.baseGrantAmount.toLocaleString(), offer.unit), React.createElement("span", {
       className: "whitespace-nowrap text-[10px] max-[359px]:text-[9px] font-black text-amber-200 tabular-nums"
     }, offer.cost.toLocaleString(), "P→", offer.grantAmount.toLocaleString(), offer.unit)) : null;
+    const lifeNoteDef = offer.legendPass ? null : lifeNoteOf(offer);
+    const lifeNote = lifeNoteDef ? React.createElement(React.Fragment, null, React.createElement("span", {
+      "data-market-life-mark": true,
+      className: `whitespace-nowrap rounded-full px-1.5 text-[9px] font-black leading-[14px] ${lifeNoteDef.tone === 'f' ? 'bg-emerald-200 text-emerald-950' : lifeNoteDef.tone === 'p' ? 'bg-pink-300 text-pink-950' : 'bg-amber-400 text-slate-900'}`
+    }, lifeNoteDef.mark), lifeNoteDef.lines.map((t, i) => React.createElement("span", {
+      key: i,
+      className: `whitespace-nowrap text-[10px] max-[359px]:text-[9px] font-bold tabular-nums ${i === 1 && lifeNoteDef.tone !== 'a' ? 'text-slate-400' : 'text-amber-200'}`
+    }, t))) : null;
     return React.createElement(MarketProductCard, {
       key: offer.id,
       dataAttrs: {
@@ -67769,8 +67779,8 @@ function BreederMarketScreen({
       item: item,
       owned: false,
       comingSoon: false,
-      noteSlot: legendPassSlot,
-      note: passNote,
+      noteSlot: noteSlotOn,
+      note: passNote || lifeNote,
       canBuy: safeEventPoints >= offer.cost && !busy,
       disabled: purchaseProcessing,
       onZoom: () => onZoomIcon(item),
@@ -127678,6 +127688,30 @@ const assistantLifeGiftOf = kindOrKey => {
     cost: Number.isFinite(offer.cost) ? offer.cost : null
   };
 };
+const assistantLifeShopNoteOf = itemId => {
+  const id = String(itemId || '');
+  if (/^furn_/.test(id)) {
+    const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(id) : null;
+    if (!f) return null;
+    const base = typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 80;
+    return {
+      tone: 'f',
+      mark: '🪑 家具',
+      lines: [`💗 +${base}`, '初回だけ']
+    };
+  }
+  const g = [...assistantLifeGiftDefs(), ...assistantLifeSoloDefs()].find(x => x.itemId === id);
+  if (!g) return null;
+  return assistantLifeIsSoloOnly(g.key) ? {
+    tone: 'p',
+    mark: '💗 1人に',
+    lines: [`💗 +${g.player}`, '1人用']
+  } : {
+    tone: 'a',
+    mark: '🤝 2人に',
+    lines: [`友情Lv +${g.peer}`, `💗 +${g.player}`]
+  };
+};
 const assistantLifeGiftCounts = ownedItems => {
   const o = {};
   for (const g of [...assistantLifeGiftDefs(), ...assistantLifeSoloDefs()]) {
@@ -128801,7 +128835,7 @@ function AssistantLifeGiftSheet({
     className: "whitespace-nowrap text-[11px] font-bold text-slate-400"
   }, " ビートP交換所 ", info.cost, "P")), React.createElement("p", {
     className: "text-[11px] leading-snug text-slate-300 [[data-assistant-life-land='1']_&]:hidden"
-  }, info.what))), React.createElement("div", {
+  }, soloWho && info.key === 'cheki' ? `その場で写真が出るカメラ。思い出アルバムに${nameOf(soloWho)}ひとりの1枚が増えます` : info.what))), React.createElement("div", {
     className: "mt-1.5 space-y-1 text-[12px]"
   }, people.map((id, i) => React.createElement("div", {
     key: id,
