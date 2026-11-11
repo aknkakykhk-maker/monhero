@@ -52,9 +52,23 @@ function count(transcriptPath) {
 // 2段構え(2026-11-11 社長「会話を替えるのも無駄にならないか」):
 //   1段目 … 同じ仕事が続くなら、公開の区切りで要約(/compact)をかけて軽くする(会話は替えない)
 //   2段目 … とても長い・仕事の種類が変わる → 引き継ぎメモ1枚 → 新しい会話
-function message(n, limit) {
+// 窓口の会話かどうか(2026-11-12 社長「やるときは質問で俺に聞いて自動でそっちでやるって仕組みだったよね？」)。
+// 窓口は会話を替えずに要約で続ける(台帳 2026-11-11)。クラウドの会話の番号は環境変数に「cse_<番号>」で入る
+function isHq(hqSession, env) {
+  const id = String(hqSession || '').replace(/^session_/, '');
+  const now = String((env || {}).CLAUDE_CODE_REMOTE_SESSION_ID || '').replace(/^(cse|session)_/, '');
+  return !!id && now === id;
+}
+
+function message(n, limit, opts) {
   const every = n.prompts % limit['くり返し'] === 0;
   const after = n.compacts > 0 ? '最後の要約のあと、' : ''; // 要約したあとの数だと分かるように
+  if (opts && opts.hq) {
+    // 窓口: 「替える」は出さない。目安を超えたら、要約してよいかを社長に選択式で聞くことだけを知らせる
+    const hit = n.prompts >= limit['やりとり'] || n.merges >= limit['公開'];
+    if (!hit || (!every && n.prompts !== limit['やりとり'])) return '';
+    return `【窓口・会話が長くなってきた】この会話は ${after}やりとり ${n.prompts} 回・公開 ${n.merges} 件。窓口は会話を替えない。いまの仕事の区切りで、AskUserQuestion で「この会話を要約(/compact)してよいか」を社長に選んでもらう(許可されたら、残すもの・捨てるものを入れた /compact の1行をコピーできる形で出す)。文末で頼まない・「替える」を勧めない。いっぱいになったら自動の要約(700000)が走る。`;
+  }
   const over = [];
   if (n.prompts >= limit['やりとり']) over.push(`やりとり ${n.prompts} 回(目安 ${limit['やりとり']})`);
   if (n.merges >= limit['公開']) over.push(`公開 ${n.merges} 件(目安 ${limit['公開']})`);
@@ -77,9 +91,10 @@ function main() {
   const p = data && data.transcript_path;
   if (!p || !fs.existsSync(p)) return;
   const limit = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'team', 'routing.json'), 'utf8'))['区切り'];
-  const msg = message(count(p), limit);
+  const routing = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'team', 'routing.json'), 'utf8'));
+  const msg = message(count(p), limit, { hq: isHq(routing['窓口の会話'], process.env) });
   if (msg) process.stdout.write(msg + '\n');
 }
 
 if (require.main === module) { try { main(); } catch (e) { /* 知らせるだけの道具。失敗しても止めない */ } process.exit(0); }
-module.exports = { count, message };
+module.exports = { count, message, isHq };

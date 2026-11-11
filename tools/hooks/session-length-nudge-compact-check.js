@@ -64,12 +64,24 @@ const write = (name, lines) => { const p = path.join(fs.mkdtempSync(path.join(os
 }
 // ⑥ フックを実際に起動して、標準入力から
 {
-  const run = (p) => spawnSync('node', [path.join(__dirname, 'session-length-nudge.js')], { input: JSON.stringify({ transcript_path: p }), encoding: 'utf8' });
+  const env = { ...process.env }; delete env.CLAUDE_CODE_REMOTE_SESSION_ID; // 窓口の会話で回しても部署の知らせ方で確かめる
+  const run = (p) => spawnSync('node', [path.join(__dirname, 'session-length-nudge.js')], { input: JSON.stringify({ transcript_path: p }), encoding: 'utf8', env });
   const before = write('h.jsonl', [...many(890, (_, i) => user(`前${i}`)), ...many(222, merge)]);
   const after = write('i.jsonl', [...many(890, (_, i) => user(`前${i}`)), ...many(222, merge), boundary(), summary(), user('要約のあとの頼み')]);
   const rb = run(before), ra = run(after);
   ok(rb.status === 0 && rb.stdout.includes('【会話がとても長い】'), '⑥ 要約の前の記録では、フックが知らせる', rb.stdout.slice(0, 50));
   ok(ra.status === 0 && ra.stdout.trim() === '', '⑥ 要約のあとの記録では、フックは何も出さない', ra.stdout.slice(0, 50));
+}
+// ⑦ 窓口の会話では「替える」を出さず、要約してよいかを社長に聞くことだけを知らせる(2026-11-12 社長)
+{
+  const n = { prompts: 110, merges: 11, compacts: 1 };
+  const m = hook.message(n, limit, { hq: true });
+  ok(m.includes('【窓口・会話が長くなってきた】') && m.includes('AskUserQuestion') && !m.includes('handoff') && !m.includes('新しい会話'), '⑦ 窓口では要約の問いだけ(引き継ぎメモ・新しい会話を勧めない)', m.slice(0, 60));
+  ok(hook.message({ prompts: 25, merges: 3, compacts: 0 }, limit, { hq: true }) === '', '⑦ 窓口は「替える」の目安(40回・5件)までは何も出さない');
+  ok(hook.message({ prompts: 41, merges: 0, compacts: 0 }, limit, { hq: true }) === '', '⑦ 窓口も毎回は出さない(10回ごとの節目だけ)');
+  const routing = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'team', 'routing.json'), 'utf8'));
+  ok(hook.isHq(routing['窓口の会話'], { CLAUDE_CODE_REMOTE_SESSION_ID: 'cse_' + routing['窓口の会話'].replace(/^session_/, '') }), '⑦ 窓口の番号(cse_…)を窓口と見分ける');
+  ok(!hook.isHq(routing['窓口の会話'], { CLAUDE_CODE_REMOTE_SESSION_ID: 'cse_ほかの部署' }) && !hook.isHq(routing['窓口の会話'], {}), '⑦ ほかの会話・番号が無いときは窓口にしない');
 }
 console.log(failed ? `\n${failed}件NG` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
