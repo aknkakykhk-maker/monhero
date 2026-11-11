@@ -255,6 +255,62 @@ const enemyActionProbabilities = (ent,currentDist,state={}) => {
   const actions=evaluateEnemyActions(ent,currentDist,state),total=actions.reduce((sum,a)=>sum+(a.available?a.weight:0),0);
   return actions.map(a=>({...a,probability:a.available&&total>0?a.weight/total:0}));
 };
+// ===== タクティクスの敵の作戦AI(試作・2026-11-11 社長の材料「行動選択、距離、スキルの組み合わせ、難易度ごとの戦術を改善」)=====
+// ★本番では使わない。デバッグ設定の「敵の作戦AI(試作)」を選んだデバッグ戦のときだけ通す。
+//   社長が決めるまで、本番の強さ・ランキング対象のモードは chooseEnemyAction(決まった重みのくじ)のまま。
+// ★守ること: ①予告してから動く(選ぶのは今までどおり1ターン前。移動先も予告に出した値だけを使う)
+//   ②狙い(ヘイト)は変えない。画面の「狙われる確率◯%」と食い違わないように、ここは「何をするか」と「どこへ動くか」だけ
+//   ③どの手にも対抗手段がある、を崩さない(技の倍率・本数は変えない。重みだけを動かす)
+// 段: 0 いまのまま / 1 間合いを読む / 2 状況を読む / 3 技をつなぐ(上の段は下の段を全部含む)
+const TACTICS_ENEMY_AI_LEVELS = Object.freeze([
+  Object.freeze({id:0,label:'いまのまま',note:'決まった重みのくじ(本番と同じ)'}),
+  Object.freeze({id:1,label:'間合いを読む',note:'移動先を「味方の攻めがいちばん弱まる間合い」に。いまが一番ましなら動かない'}),
+  Object.freeze({id:2,label:'状況を読む',note:'様子見をしない・減ってから再生・削られてからの咆哮はしない・空振りの間合い攻撃はしない'}),
+  Object.freeze({id:3,label:'技をつなぐ',note:'咆哮→ためる→必殺技・弱った子がいれば必殺技・ガードの厚い相手に貫通の構え'}),
+]);
+// ai … { level, pressure:[4](敵がその間合いにいるときの味方の攻めの強さ), aliveSlots:[], lowCount, maxDef, lastType }
+const tacticsEnemyAiBestDist = (currentDist, pressure) => {
+  const others=[0,1,2,3].filter(d=>d!==currentDist);
+  return others.reduce((a,b)=>((pressure[b]||0)<(pressure[a]||0)?b:a),others[0]);
+};
+const tacticsEnemyAiDefinitions = (ent, currentDist, state={}, ai={}) => {
+  const level=Math.max(0,Math.min(3,Math.floor(Number(ai.level)||0)));
+  const defs=Array.isArray(state.definitions)?state.definitions:[];
+  if(level<1||state.charging||state.piercing||!ent)return defs;
+  const pressure=Array.isArray(ai.pressure)&&ai.pressure.length===4?ai.pressure.map(v=>Math.max(0,Number(v)||0)):[0,0,0,0];
+  const best=tacticsEnemyAiBestDist(currentDist,pressure);
+  const ratio=pressure[best]>0?pressure[currentDist]/pressure[best]:1;
+  const maxHp=Math.max(0,Number(ent.maxHp)||0), hpR=maxHp>0?Math.max(0,Number(ent.hp)||0)/maxHp:1;
+  const alive=Array.isArray(ai.aliveSlots)?ai.aliveSlots:[];
+  const top=Math.max(0,...pressure);
+  return defs.map(def=>{
+    let w=def.weight;
+    if(def.type==='MOVE')w=ratio<=1?0:(ratio>=1.15?w*3:w);
+    if(level>=2){
+      if(def.type==='WAIT')w=0;
+      if(def.type==='REGEN'&&hpR<0.5)w*=3;
+      if(def.type==='ROAR')w=hpR<0.35?0:((hpR>0.7&&!(Number(state.roarStacks)>0))?w*2:w);
+      if(def.variant==='allout')w=alive.length<=1?w*0.3:w*(alive.length/2);
+      if(def.variant==='sweep')w=alive.includes(currentDist)?(pressure[currentDist]>=top*0.95?w*2:w):0;
+    }
+    if(level>=3){
+      if(def.type==='CHARGE'&&ai.lastType==='ROAR')w*=4;
+      if(def.type==='CHARGE'&&(Number(ai.lowCount)||0)>=1)w*=2;
+      if(def.type==='PIERCE_CHARGE'&&(Number(ai.maxDef)||0)>=300)w*=2;
+    }
+    return w===def.weight?def:{...def,weight:w};
+  });
+};
+const chooseTacticsEnemyActionAi = (ent,currentDist,random=Math.random,state={},ai={}) => {
+  const level=Math.max(0,Math.min(3,Math.floor(Number(ai.level)||0)));
+  if(level<1)return chooseEnemyAction(ent,currentDist,random,state);
+  const intent=chooseEnemyAction(ent,currentDist,random,{...state,definitions:tacticsEnemyAiDefinitions(ent,currentDist,state,ai)});
+  if(intent&&intent.type==='MOVE'&&Array.isArray(ai.pressure)){
+    const targetDist=tacticsEnemyAiBestDist(currentDist,ai.pressure);
+    return {...intent,targetDist,label:`移動: ${RANGE_LABELS[targetDist]}`};
+  }
+  return intent;
+};
 // 行動の見出しとアイコン。抽選と台本(練習モード)の両方から使う
 const enemyActionLabel = (ent,type) => type==='ATTACK' ? (ent?.normal||'通常攻撃')
   : type==='CHARGE' ? '必殺技の準備をしている'
