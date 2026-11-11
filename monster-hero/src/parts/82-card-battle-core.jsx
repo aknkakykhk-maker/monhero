@@ -2228,8 +2228,21 @@ const cardAiFavoriteCandidates = (db, who, lead = null) => {
 const cardAiMonWave = (db, m, card) => {
   if (String(m.wave) !== 'hybrid') return Number(m.wave) || 1;
   const sp = card && cardIsGuardKind(card.kind) && m.sub && m.sub !== 'unknown' ? m.sub : m.main;
-  const base = Object.values(db.monsters).find((x) => !x.variant && x.species === sp && String(x.wave) !== 'hybrid');
-  return base ? Number(base.wave) || 1 : 4;
+  const t = cardAiBaseWaveTable(db);
+  return t.has(sp) ? t.get(sp) : 4;
+};
+// 種族 → その種族の元の子(変種でない・ハイブリッドでない最初の1体)の世代。cardAiMonWave が呼ばれるたびに全モンスターを
+//   探していた(助手えらびで AI のデッキを組むと 1回 約0.3秒・2026-11-11 カード部カルク 軽量化)ので、db.monsters ごとに1回だけ作る。
+//   答えは前の find と同じ(Object.values の順で最初に当たった子)。db.monsters は書き換えない表なので、表そのものをかぎにする
+const CARD_AI_BASE_WAVE = new WeakMap();
+const cardAiBaseWaveTable = (db) => {
+  const mons = db.monsters;
+  const hit = CARD_AI_BASE_WAVE.get(mons);
+  if (hit) return hit;
+  const t = new Map();
+  for (const x of Object.values(mons)) if (!x.variant && String(x.wave) !== 'hybrid' && !t.has(x.species)) t.set(x.species, Number(x.wave) || 1);
+  CARD_AI_BASE_WAVE.set(mons, t);
+  return t;
 };
 // そのモンスターが、癖に合う技をどれだけ持っているか(入れたい度の上位10の合計+ライフ)。2体を選ぶときの「型に合う」の目安
 const cardAiMonScore = (db, who, m, maxWave, levelId = null) => {
