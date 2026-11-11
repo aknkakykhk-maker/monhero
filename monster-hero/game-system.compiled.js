@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 20c3a257b1f8a375
+// source-sha256: 8aa5ab68c4ab38b8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -107668,8 +107668,7 @@ function AssistantLifeRoomSheet({
   onGiveSolo = null,
   canGiveSolo = false,
   returnToMap = false,
-  uiV2 = false,
-  bondPointsOf = null
+  uiV2 = false
 }) {
   const [furnOpen, setFurnOpen] = React.useState(!!openFurn);
   const soloOn = typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn() && !!onGiveSolo;
@@ -107817,7 +107816,7 @@ function AssistantLifeRoomSheet({
     "data-assistant-life-room-do-list": true
   }, typeof AssistantLifeBondRoad === 'function' && React.createElement(AssistantLifeBondRoad, {
     id: id,
-    points: typeof bondPointsOf === 'function' ? bondPointsOf(id) : null,
+    points: typeof assistantLifeBondPointsOf === 'function' ? assistantLifeBondPointsOf(id) : null,
     level: lv,
     land: land
   }), React.createElement("p", {
@@ -108649,7 +108648,6 @@ function AssistantLifeHouse({
   peerItems = null,
   onUseItem = null,
   bondLevelOf = null,
-  bondPointsOf = null,
   furnItems = null,
   onGiveFurn = null,
   onGiveSolo = null,
@@ -109485,7 +109483,6 @@ function AssistantLifeHouse({
     key: roomId,
     id: roomId,
     uiV2: uiV2,
-    bondPointsOf: bondPointsOf,
     returnToMap: uiV2 && tab === 'where',
     openFurn: furnBack === roomId,
     onGiveSolo: soloOn ? openGiveSolo : null,
@@ -197434,7 +197431,6 @@ function MonsterHeroGame() {
         metIds: metIds,
         onReplay: talk => setPeerReplay(talk),
         bondLevelOf: id => assistantBondLevel(normalizeAssistantBond(assistantBonds[id]).points),
-        bondPointsOf: id => normalizeAssistantBond(assistantBonds[id]).points,
         peerItems: typeof assistantLifeGiftCounts === 'function' ? assistantLifeGiftCounts(ownedItems) : {
           gift: ownedItemCount(ownedItems, 'peer_gift'),
           token: ownedItemCount(ownedItems, 'peer_token')
