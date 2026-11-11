@@ -280,6 +280,7 @@ const ASSISTANT_LIFE_DAILY_SCENES = Object.freeze({
   evening: { icon: '🌇', text: '{n}が夕日を見ています', say: '夕日がきれいですね。一緒に見られて うれしいです' },
   night: { icon: '⭐', text: '{n}が星を見ています', say: '今日も一日おつかれさまでした。また明日' },
 });
+const assistantLifeDailySceneOf = (h) => (h < 5 ? 'late' : h < 10 ? 'morning' : h < 14 ? 'noon' : h < 18 ? 'afternoon' : h < 21 ? 'evening' : 'night');
 const assistantLifeDailyNormalize = (v) => {
   const o = v && typeof v === 'object' ? v : {};
   const days = Array.isArray(o.days) ? o.days.filter(d => typeof d === 'string' && d).slice(-ASSISTANT_LIFE_DAILY_NEED) : [];
@@ -329,13 +330,15 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false }) {
   React.useEffect(() => { let alive = true; ASSISTANT_LIFE_DAILY_STORE.load().then(s => { if (alive) setSt(s); }); return () => { alive = false; }; }, []);
   let slot = null;
   try { slot = typeof assistantLifeSlotAt === 'function' ? assistantLifeSlotAt() : null; } catch (_) { slot = null; }
-  const scene = slot ? ASSISTANT_LIFE_DAILY_SCENES[slot.id] : null;
+  // 時間帯の数・区切りは ASSISTANT_LIFE_SLOTS から取る(6でも12でも動く)。場面は区切りの開始時刻で決める
+  const slotDef = slot && Array.isArray(ASSISTANT_LIFE_SLOTS) ? ASSISTANT_LIFE_SLOTS[slot.i] : null;
+  const scene = slotDef ? ASSISTANT_LIFE_DAILY_SCENES[assistantLifeDailySceneOf(slotDef.from)] : null;
   const list = Array.isArray(ids) ? ids : [];
   if (!scene || !list.length) return null;
   const day = assistantLifePerkDay();
   const done = st.day === day && st.heard.includes(slot.id);
   const who = list[slot.i % list.length];
-  const leftH = (() => { const s = ASSISTANT_LIFE_SLOTS[slot.i]; const h = new Date(Date.now() + 9 * 3600000).getUTCHours(); return s ? Math.max(1, s.to - h) : 1; })();
+  const leftH = (() => { const s = slotDef; const h = new Date(Date.now() + 9 * 3600000).getUTCHours(); return s ? Math.max(1, s.to - h) : 1; })();
   const n = st.days.length;
   const listen = async () => {
     if (busy || done) return;
@@ -349,7 +352,7 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false }) {
   const T = land ? 'text-[11.5px]' : 'text-[12.5px]';
   return (
     <section className={`mx-3 ${land ? 'mb-1' : 'mb-2'} rounded-2xl border border-amber-300/60 bg-slate-950/85 p-1.5 text-white`} data-assistant-life-daily>
-      <p className="flex items-center gap-2 px-1 text-[13px] font-black text-amber-200">{scene.icon} {ASSISTANT_LIFE_SLOTS[slot.i].label}の できごと <span className="text-[10.5px] font-bold text-slate-300">あと約{leftH}時間</span></p>
+      <p className="flex items-center gap-2 px-1 text-[13px] font-black text-amber-200">{scene.icon} {slotDef.label}の できごと <span className="text-[10.5px] font-bold text-slate-300">あと約{leftH}時間</span></p>
       <div className="mt-1 flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-1.5 py-1">
         <span className="w-[54px] shrink-0 text-center text-[11px] font-black leading-tight text-amber-200">{done ? '✓ 聞いた' : '🆕 いま'}</span>
         <span className={`min-w-0 flex-1 ${T} font-bold leading-snug`} style={{ wordBreak: 'auto-phrase' }}>
