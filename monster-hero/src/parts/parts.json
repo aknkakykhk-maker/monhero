@@ -380,6 +380,10 @@
       "role": "助手の部屋を大きく見る(2026-11-08 社長 案A): 部屋の絵(壁・床・窓・置いた家具)に助手が立ち(①色味と影 ②腰から下は家具の後ろ ③見えている体で大きさ)、マスモン全部が床を歩く。部品 AssistantLifeRoomScene は見せるだけで、部屋のシートが上(横は左)に置く。フレンドの家でも使える形。何も保存しない"
     },
     {
+      "file": "56-assistant-life-ux.jsx",
+      "role": "助手ライフの作り直し(2026-11-11 社長・LIFE-UX-V3-PLAN.md)の新UIだけの部品: 部屋の「その助手とできること」1列(AssistantLifeDoRow)と仲良し度の道のり(AssistantLifeBondRoad)。何も保存しない"
+    },
+    {
       "file": "56-assistant-life-rel.jsx",
       "role": "助手ライフの人間らしい関係の出来事(けんか・仲直り・やきもち・ないしょ話・相談・からかう・ライバル心・久しぶりの気まずさ)と家での見せ方(扉を閉める・居間で離れて座る・仲直りの札)。台本は tools/assistant/life-rel-talks-import.js が書く。公開の印 assistantLife の後ろ。保存は mh_assistant_life_rel_v1 の新しいキーだけ"
     },
@@ -394,6 +398,10 @@
     {
       "file": "56-assistant-life-masmon-grow.jsx",
       "role": "部品: 助手のマスモンの育成基盤(社長の仕様書の第①段階)。6能力・疲労・ストレス・1日3回(朝・昼・夜)の自主育成・相談。保存は mh_assistant_masmon_grow_v1 だけ(mh_assistant_life_masmon_v1 は読むだけ)。公開の印 assistantMasmonGrow が真のときだけ動く。作りは docs/progress/assistant-peer/masmon-grow/GROW-BASE-PLAN.md"
+    },
+    {
+      "file": "56-assistant-life-masmon-train.jsx",
+      "role": "部品: 助手のマスモンの修行と助手の成長(社長の仕様書の第②段階・シュギョウ)。修行6系統・技の熟練と習得(既存の技データだけ)・助手のブリーダー能力・相談・出来事。第①段階(育成)へは受け口 amgtChoose/amgtDo/amgtAfterAct と掛け算、第③段階(戦闘)へは amgtBattleOf/amgtTacticsOf。公開の印 assistantMasmonTrain の後ろ。保存は新しいキー mh_assistant_masmon_train_v1 だけ。案 docs/progress/assistant-peer/masmon-train/TRAIN-PLAN.md"
     },
     {
       "file": "56-assistant-life-friend.jsx",
