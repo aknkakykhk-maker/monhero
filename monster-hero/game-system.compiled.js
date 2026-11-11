@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1393ac3c5711ed47
+// source-sha256: 208692895dbb4aa3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -62481,6 +62481,7 @@ const growthFxKind = kind => GROWTH_FX_KINDS[kind] || GROWTH_FX_KINDS.bond;
 const GROWTH_FX_CALM_SCREENS = Object.freeze(new Set(['HOME', 'PROFILE', 'ITEM_INVENTORY', 'GIFT_BOX', 'MISSIONS', 'BREEDER_MARKET', 'MB_MANAGEMENT', 'MASU_MONS', 'OWNED_MONSTERS', 'MONSTER_DEX', 'MONSTER_DEX_DETAIL', 'MONSTER_LIST_MENU', 'FRIENDS', 'ASSISTANT_SELECT', 'MASU_ENHANCE', 'MASU_AUTO_ENHANCE', 'MASU_FUSION', 'MASU_DONATION', 'MASU_OFFERING', 'MASU_REBIRTH', 'MASU_REGENERATION', 'MASU_REGENERATION_DETAIL', 'MASU_REINCARNATE', 'MASU_SOUL_RANK', 'MASU_SOUL_TRAITS', 'MASU_TRANSCENDENCE', 'MASU_TRANSCEND_ENHANCE']));
 const GROWTH_FX_HOLD_ALL_SELECTOR = '[data-event-story],[data-story-stage],[data-story-sheet],[data-player-rank-up-fx]';
 const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat],[data-life-quick-run="live"]';
+const GROWTH_FX_HOLD_LEVEL_OFF_HOME_SELECTOR = '[data-quick-anywhere]';
 const GROWTH_FX_SMALL_MS = 1900;
 const GROWTH_FX_TEXT_MS = 3600;
 const GROWTH_FX_ITEM_MS = 3400;
@@ -62542,7 +62543,7 @@ const growthFxPush = ev => {
   } else {
     const sheets = GROWTH_FX_STORE.sheets;
     const mergeKey = tier === 'level' ? String(ev.key || `${ev.kind}:${ev.who || ''}`) : null;
-    const prev = mergeKey ? sheets.find((s, i) => i > 0 && s.tier === 'level' && s.key === mergeKey) : null;
+    const prev = mergeKey ? sheets.find(s => s.tier === 'level' && s.key === mergeKey) : null;
     if (prev && Array.isArray(prev.sessionUps) && Array.isArray(ev.sessionUps)) Object.assign(prev, growthFxSessionSheet([...prev.sessionUps, ...ev.sessionUps]), {
       tier,
       key: mergeKey
@@ -62990,9 +62991,11 @@ const ensureGrowthFxCss = () => {
 };
 const growthFxVisible = (screen, domHold = {}) => {
   const all = GROWTH_FX_CALM_SCREENS.has(screen) && !domHold.all;
+  const sheet = all && !domHold.sheet;
   return {
     all,
-    sheet: all && !domHold.sheet
+    sheet,
+    level: sheet && !(domHold.quickAnywhere && screen !== 'HOME')
   };
 };
 const growthFxLevelOf = load => {
@@ -63266,7 +63269,10 @@ const GrowthFxLevelUp = ({
     if (!done) setDone(true);else onClose();
   };
   const gains = Array.isArray(sheet.gains) ? sheet.gains : [];
-  const label = `${k.label}が Lv.${sheet.levelTo} に上がりました`;
+  const jumpFrom = growthFxNum(sheet.levelFrom),
+    jumpTo = growthFxNum(sheet.levelTo);
+  const jump = jumpFrom > 0 && jumpTo - jumpFrom >= 2;
+  const label = jump ? `${k.label}が Lv.${jumpFrom} から Lv.${jumpTo} に上がりました` : `${k.label}が Lv.${sheet.levelTo} に上がりました`;
   if (level === 'minimal') {
     return React.createElement("div", {
       className: "mh-gfx-sheet level-mini mh-gfx-minimal",
@@ -63283,7 +63289,7 @@ const GrowthFxLevelUp = ({
       className: "mh-gfx-band"
     }, React.createElement("span", {
       className: "big"
-    }, cardIconNode(k.icon, 20), " ", k.label, " Lv.", sheet.levelTo), React.createElement("small", null, sheet.sub, gains.length ? ` ・ ${gains.map(g => g.text).join('・')}` : ''), React.createElement("small", null, "押すと閉じる")));
+    }, cardIconNode(k.icon, 20), " ", k.label, " ", jump ? `Lv.${jumpFrom} → ` : '', "Lv.", sheet.levelTo), React.createElement("small", null, sheet.sub, gains.length ? ` ・ ${gains.map(g => g.text).join('・')}` : ''), React.createElement("small", null, "押すと閉じる")));
   }
   const conf = level === 'full' ? Array.from({
     length: 24
@@ -63375,7 +63381,10 @@ const GrowthFxLevelUp = ({
     "aria-hidden": "true"
   })), React.createElement("div", {
     className: "ttl"
-  }, sheet.title || `${k.label} UP!`), sheet.sub && React.createElement("div", {
+  }, sheet.title || `${k.label} UP!`), jump && React.createElement("div", {
+    className: "sub",
+    "data-growth-fx-level-jump": true
+  }, React.createElement("b", null, "Lv.", jumpFrom, " → Lv.", jumpTo)), sheet.sub && React.createElement("div", {
     className: "sub"
   }, sheet.sub)), gains.length > 0 && React.createElement("ul", {
     className: "mh-gfx-gains",
@@ -63610,7 +63619,8 @@ const GrowthFxLayer = ({
   const [, setTick] = useState(0);
   const [domHold, setDomHold] = useState({
     all: false,
-    sheet: false
+    sheet: false,
+    quickAnywhere: false
   });
   useEffect(() => {
     ensureGrowthFxCss();
@@ -63624,9 +63634,11 @@ const GrowthFxLayer = ({
     const check = () => {
       const all = !!document.querySelector(GROWTH_FX_HOLD_ALL_SELECTOR);
       const sheet = all || !!document.querySelector(GROWTH_FX_HOLD_SHEET_SELECTOR);
-      setDomHold(prev => prev.all === all && prev.sheet === sheet ? prev : {
+      const quickAnywhere = !!document.querySelector(GROWTH_FX_HOLD_LEVEL_OFF_HOME_SELECTOR);
+      setDomHold(prev => prev.all === all && prev.sheet === sheet && prev.quickAnywhere === quickAnywhere ? prev : {
         all,
-        sheet
+        sheet,
+        quickAnywhere
       });
     };
     check();
@@ -63638,7 +63650,7 @@ const GrowthFxLayer = ({
   const holdAll = !vis.all;
   const holdSheet = !vis.sheet;
   const level = growthFxLevelOf(load);
-  const sheet = !holdSheet ? sheets[0] : null;
+  const sheet = !holdSheet ? (vis.level ? sheets[0] : sheets.find(s => s.tier !== 'level')) || null : null;
   return React.createElement(React.Fragment, null, !holdAll && !sheet && small.length > 0 && React.createElement(GrowthFxChipsBox, {
     level: level,
     count: Math.min(small.length, GROWTH_FX_SMALL_MAX)
