@@ -40,7 +40,7 @@ const serve = () => new Promise((resolve) => {
     put('mh_tutorial_seen_v1', true); put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true);
     put('mh_inherited_unique_level_compensation_v1', true); put('mh_inherited_unique_level_compensation_pending_v1', false);
   });
-  await page.addInitScript(eventStorySeed());
+  await page.addInitScript(eventStorySeed()); await page.addInitScript(require('../boot/quiet-boot-seed').updateNoticeSeed()); await page.addInitScript(require('../boot/quiet-boot-seed').loginBonusDoneSeed()); await page.addInitScript(require('../boot/quiet-boot-seed').oneTimeNoticeSeed()); // みゅあの今日の助言などの一度きりの案内も済んだことにする // ログインボーナスの窓も同じく割りこむので受け取ったことにする // 更新履歴の告知の窓が後から割りこんで押せなくなるので、見たことにする(2026-11-11)
   await page.addInitScript(() => {
     // 対戦の始まりを「相手は全員倒れていて、自分が勝った」場にする(自分の番は8回ぶん)
     window.__mhCardScene = (st) => { st.players[1].mons.forEach((m) => { m.ko = true; m.life = 0; }); st.turn = 16; st.first = 0; st.winner = 0; return st; };
@@ -48,7 +48,7 @@ const serve = () => new Promise((resolve) => {
   await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
   await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-  await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
+  await page.getByRole('button', { name: 'モンヒロバトル', exact: true }).waitFor({ timeout: 30000 });
   for (let i = 0; i < 8; i++) { const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first(); if (!(await btn.count()) || !(await btn.isVisible().catch(() => false))) break; await btn.dispatchEvent('click').catch(() => {}); await page.waitForTimeout(250); }
   await page.getByRole('button', { name: '設定' }).first().dispatchEvent('click');
   await page.getByRole('button', { name: 'ヘルプ' }).first().waitFor({ timeout: 20000 });
@@ -56,7 +56,7 @@ const serve = () => new Promise((resolve) => {
   await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
   await page.locator('footer button[aria-label=""]').dispatchEvent('click');
   await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
-  await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().click();
+  await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().dispatchEvent('click');
   await page.locator('[data-debug-card-battle]').dispatchEvent('click');
   await page.locator('[data-card-top="starter"]').waitFor({ timeout: 20000 });
   await page.locator('[data-card-kit="powerful"]').click();
