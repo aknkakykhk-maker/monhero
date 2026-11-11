@@ -48,12 +48,29 @@
 - 見本を重ねたままの実測(標準・横・CPU 1/4・canvas を1枚足した多めの数字): 何もなし 50ms/フレーム → A 87 / B 79 / C 73。**この差のほとんどは「足した1枚」のぶん**なので、本番は今ある1枚に描く
 - 作ったあとは `node tools/mode/rhythm-weight-report.js --check`(予算 `tools/mode/weight-budget.json`)と `rhythm-gpu-estimate.js --check` の両方で、重くなっていないことを確かめてから公開する
 
-## 4. 道具の使い方
+## 4. モードえらび・曲えらびの飾り(窓口からの追加・main 取り込み後に測定)
+
+`node tools/mode/rhythm-weight-report.js --screen mode --trace` / `--screen select --trace`(触らずに止まったまま8秒)。
+
+| 画面 | 動き続けるアニメーション | 層(画面◯枚ぶん) | 型の再計算 | 塗り直し |
+| --- | --- | --- | --- | --- |
+| 曲えらび | 0本 | 2枚(10.3。曲の一覧の長い1枚) | 0 | 0 |
+| モードえらび([今の絵](shots/M-mode-select-now.jpg)) | **22本**(光の粒6・のぼる音符6・ビーム3・床と光2・助手の浮き1・ボタンの光るすじ4) | **45枚**(6.9) | 毎フレーム22要素(0.24ms・絞って1.15ms) | 0.4枚/秒 |
+
+- 曲えらびは、止まっていれば何も動いていない(カルクの #5218 のあと)。直す所なし
+- モードえらびは CPU の仕事は小さい(60fps・JS 0.1ms)。重いのは GPU 側で、**すりガラス(背景ぼかし)の箱が8つ、動く背景の上に乗っている**ため、後ろが動くたびにぼかしを毎フレーム作り直している。これに層45枚の重ね合わせが加わる
+- 案(どれも見た目に関わるので、社長が選んでから作る):
+  - **M1 すりガラスをやめて、濃い半透明の色にする**。ぼかしの作り直しが 0 になる。透け感が少し減る(いちばん効く見込み)
+  - **M2 飾りをまとめる**。粒6+音符6を「1枚の絵が流れる」形に、ボタンの光るすじは4本同時→順番に1本。22本→約9本・層45→約25枚。見た目はほぼ同じ
+  - **M3 10秒触らなければ飾りを止める**(触ったらまた動く)。置きっぱなしのときの電池と熱に効く。触っている間の見た目は同じ
+
+## 5. 道具の使い方
 
 ```
 node tools/mode/rhythm-weight-report.js            代表の8場面(約5分)。最後の1行が OK / NG
 node tools/mode/rhythm-weight-report.js --quick --check   2場面だけ・予算を超えたら NG(約1分)
 node tools/mode/rhythm-weight-report.js --quick --trace   原因さがし(時間の内訳・大きい層・動いているアニメーション・再計算の出どころ)
+node tools/mode/rhythm-weight-report.js --screen mode --trace    モードえらび(--screen select で曲えらび)を止まったまま測る
 sh docs/progress/kirameki-2026-11-11/make-mocks.sh        見本の写しを作る → --inject look-mock-A.js --shot a.png で撮る・測る
 ```
 

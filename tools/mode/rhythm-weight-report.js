@@ -12,7 +12,7 @@
 //               --settings '{"roadFx":false}'(おまかせの値に重ねる) --hide '<CSSセレクタ>'(その部品を隠して測る=切り分け。{ を含めば CSS としてそのまま当てる=直す前の試し)
 //               --json <ファイル>(全部の数字を JSON で残す) --port 9191
 //               --trace(原因さがし: 時間の内訳と、スタイル再計算・レイアウト・塗り直しの出どころの上位を出す。数字は少し重く出る)
-//               --screen select(演奏ではなく曲えらびを、触らずに止まったまま測る。飾りのアニメーションの重さを見る。予算は見ない)
+//               --screen select|mode(演奏ではなく曲えらび・モードえらびを、触らずに止まったまま測る。飾りのアニメーションの重さを見る。予算は見ない)
 //               --inject <jsファイル>(ページへ足すスクリプト。見た目の案の見本を重ねて、重さの見込みを同じ物差しで測る)
 //               --shot <png>(測っている途中の画面を撮る。ファイル名に場面の名前が付く)
 //               --gpu(GPU のある端末と同じ層の分け方で動かす。GPU の仕事は CPU が肩代わりするので時間は遅く出る。層・塗り直しの「構造」を見るとき)
@@ -48,7 +48,7 @@ const PRESETS=arg('preset',QUICK?'STANDARD,FULL':'STANDARD,FULL').split(',').fil
 const ORIENTS=arg('orient',QUICK?'landscape':'landscape,portrait').split(',').filter(Boolean);
 const CPUS=arg('cpu',QUICK?'4':'1,4').split(',').map(Number).filter(n=>n>=1);
 const DRAW=arg('draw','canvas'),DPR=Number(arg('dpr','2'))||2,PORT=Number(arg('port','9191'))||9191,HIDE=arg('hide','');
-const INJECT=arg('inject',''),SHOT=arg('shot',''),SELECT=arg('screen','play')==='select';
+const INJECT=arg('inject',''),SHOT=arg('shot',''),SCREEN=arg('screen','play'),SELECT=SCREEN!=='play',MODE=SCREEN==='mode';
 let EXTRA={};try{EXTRA=JSON.parse(arg('settings','{}'));}catch(e){console.log('NG: --settings は JSON で書いてください');process.exit(1);}
 const BUDGET_FILE=path.join(__dirname,'weight-budget.json');
 // 予算を見る数字(どれも「小さいほど良い」)。tol … 予算に対して何倍まで許すか(ぶれの分)。floor … これ以下は差を見ない(小さい数のぶれで落とさない)
@@ -86,8 +86,8 @@ const measure=async(playwright,port,scene)=>{
     await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),{timeout:40000});
     for(let i=0;i<6;i++){if(!(await clickText('受け取る|閉じる|OK|閉じる')))break;await page.waitForTimeout(250);}
     await clickText('モンヒロビート');
-    for(let i=0;i<2;i++){await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());}
-    await page.waitForSelector('[data-rhythm-demo-start]',{timeout:30000});
+    if(MODE)await page.waitForSelector('[data-rhythm-mode-solo]',{timeout:30000});
+    else{    for(let i=0;i<2;i++){await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());} await page.waitForSelector('[data-rhythm-demo-start]',{timeout:30000});}
     for(let i=0;i<5;i++){if(!(await clickText('^確認$|受け取る|閉じる|OK|閉じる')))break;await page.waitForTimeout(300);}
     const bcdp=await browser.newBrowserCDPSession(),cdp=await page.context().newCDPSession(page);
     if(SELECT){await page.waitForTimeout(2500);if(scene.cpu>1)await cdp.send('Emulation.setCPUThrottlingRate',{rate:scene.cpu});await page.waitForTimeout(800);}
@@ -189,7 +189,7 @@ if(require.main===module)(async()=>{
   // おまかせの値は本体(RHYTHM_LOOK_PRESETS)から読む(道具へ書き写さない)
   const server=await serve(ROOT,PORT);
   const compareRef=arg('compare',null);let baseRoot=null,baseServer=null;
-  const out={scene:SELECT?`曲えらび(止まったまま ${SECONDS}秒)・dpr${DPR}`:`${SONG} ${DIFF} ${FROM} から ${SECONDS}秒・${DRAW}・dpr${DPR}`,rows:[]};let ng=[];
+  const out={scene:SELECT?`${MODE?'モードえらび':'曲えらび'}(止まったまま ${SECONDS}秒)・dpr${DPR}`:`${SONG} ${DIFF} ${FROM} から ${SECONDS}秒・${DRAW}・dpr${DPR}`,rows:[]};let ng=[];
   try{
     const b=await playwright.chromium.launch({executablePath:'/opt/pw-browsers/chromium'});const probe=await b.newPage();
     await probe.goto(`http://localhost:${PORT}/monster-hero/index.html`,{waitUntil:'load',timeout:60000});await probe.waitForFunction(()=>typeof RHYTHM_LOOK_PRESETS!=='undefined',{timeout:60000});
