@@ -100,6 +100,7 @@
   "changelog/song-numbers-check.js",
   "changelog/title-prefix-check.js",
   "compiled-runtime-check.js",
+  "friends/alf-masmon-share-check.js",
   "friends/friends-api-check.js",
   "friends/friends-face-icon-check.js",
   "friends/playtime-devices-check.js",

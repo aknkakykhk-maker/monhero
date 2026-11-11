@@ -42,7 +42,8 @@ check('項目のidがカテゴリ内で重複していない', categories.every(
 check('項目に必要な項目がそろっている', topics.every(t => t.id && t.emoji && t.title && Array.isArray(t.blocks) && t.blocks.length > 0));
 
 // video は動画(2026-10-13・HELL のプレイ映像)。名前は data/rhythm-mode.js の RHYTHM_HELL_GUIDE_VIDEOS にあるもの
-const BLOCK_TYPES = ['p', 'note', 'list', 'steps', 'kv', 'data', 'video'];
+// image は絵(2026-11-11・ホーム画面に追加の手順 #5491。21-assistant.jsx の renderHelpBlocks が出す)
+const BLOCK_TYPES = ['p', 'note', 'list', 'steps', 'kv', 'data', 'video', 'image'];
 const blocks = topics.flatMap(t => t.blocks);
 check('ブロックの種類が想定内', blocks.every(b => BLOCK_TYPES.includes(b.t)), [...new Set(blocks.map(b => b.t))].join('/'));
 // ノーツの見本の絵の種類(data/rhythm-mode.js の RHYTHM_NOTE_SWATCH_KINDS の id)
@@ -56,7 +57,8 @@ check('本文のブロックが空でない', blocks.every(b => {
   if (b.t === 'kv') return b.rows.length > 0 && b.rows.every(r => r[0] && r[1] && (r.length === 2
     || (r.length === 3 && r[2] && Object.keys(r[2]).join() === 'notes' && Array.isArray(r[2].notes) && r[2].notes.length > 0 && r[2].notes.every(k => NOTE_SWATCH_KINDS.includes(k)))));
   if (b.t === 'list' || b.t === 'steps') return b.items.length > 0 && b.items.every(Boolean);
-  if (b.t === 'data') return !!b.id;  // 中身は helpDataRows() が作る(tools/help-coverage-check.js で件数を照合)
+  if (b.t === 'data') return !!b.id;
+  if (b.t === 'image') return !!b.src && !!b.alt; // 絵の場所と、読み上げ用の説明  // 中身は helpDataRows() が作る(tools/help-coverage-check.js で件数を照合)
   return !!b.text;
 }));
 

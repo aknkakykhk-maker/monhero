@@ -146,7 +146,7 @@ const notes = [];
   // 4つの画面の大きさは同時に回す(1つずつだと20分かかる)
   await Promise.all(VIEWS.map(async (v) => {
     const want = (scene) => want0(scene) && (!v.rot || scene === 'rhythm');
-    const page = await browser.newPage({ viewport: { width: v.w, height: v.h }, deviceScaleFactor: 1 });
+    const page = await browser.newPage({ viewport: { width: v.w, height: v.h }, deviceScaleFactor: Number(process.env.ART_DSF) || 1 });
     page.on('pageerror', e => errors.push(`${v.name}: ${String(e.message).slice(0, 160)}`));
     await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
     await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(oneTimeNoticeSeed());
