@@ -292,7 +292,7 @@ function AlfBondSheet({ friend, more, land, onClose, onRoom }) {
           {spots.length ? spots.map(p => (
             <div key={p.spot} className="mt-1 flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-2 py-1" data-alb-spot={p.spot}>
               <button type="button" className="flex min-w-0 flex-1 items-center gap-1.5 text-left" disabled={!p.room} onClick={() => p.room && onRoom(p.room)}>
-                <span className="text-[15px]">{p.icon}</span><span className="min-w-0 flex-1 truncate text-[11.5px] font-bold text-slate-100">{p.text}</span>
+                <span className="text-[15px]">{cardIconNode(p.icon, 15)}</span><span className="min-w-0 flex-1 truncate text-[11.5px] font-bold text-slate-100">{p.text}</span>
                 {p.isNew ? <span className="shrink-0 rounded-full bg-amber-300 px-1.5 text-[9.5px] font-black leading-[15px] text-slate-950">NEW</span> : null}
               </button>
               {likeOk ? <button type="button" className="shrink-0 rounded-lg border border-pink-300/70 px-1.5 py-0.5 text-[11px] font-black text-pink-100 disabled:opacity-40" data-alb-like={p.spot} disabled={x.liked.includes(p.spot) || x.liked.length >= ALB_MAX.likes} onClick={() => like(p.spot)}>{x.liked.includes(p.spot) ? '💗 送った' : '💗 すてき'}</button> : null}

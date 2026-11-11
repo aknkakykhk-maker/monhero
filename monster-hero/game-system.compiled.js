@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3859c9c0bff91c2d
+// source-sha256: c44bfdcdbfca0814
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114975,7 +114975,7 @@ function AssistantLifeNowPerks({
   }, React.createElement("span", {
     className: "w-6 shrink-0 text-center text-[20px] leading-none",
     "aria-hidden": "true"
-  }, r.icon), React.createElement("span", {
+  }, cardIconNode(r.icon, 20)), React.createElement("span", {
     className: "min-w-0 flex-1 text-[12.5px] font-bold leading-snug",
     style: {
       wordBreak: 'auto-phrase'
@@ -115374,7 +115374,7 @@ function AssistantLifeBenefitBoard({
   }, i === 0 ? '⏰ いま' : ''), React.createElement("span", {
     className: "w-5 shrink-0 text-center text-[17px] leading-none",
     "aria-hidden": "true"
-  }, r.icon), React.createElement("span", {
+  }, cardIconNode(r.icon, 17)), React.createElement("span", {
     className: `min-w-0 flex-1 ${land ? 'text-[11.5px]' : 'text-[12.5px]'} font-bold leading-snug`,
     style: {
       wordBreak: 'auto-phrase'
@@ -141603,7 +141603,7 @@ function AlfBondSheet({
     onClick: () => p.room && onRoom(p.room)
   }, React.createElement("span", {
     className: "text-[15px]"
-  }, p.icon), React.createElement("span", {
+  }, cardIconNode(p.icon, 15)), React.createElement("span", {
     className: "min-w-0 flex-1 truncate text-[11.5px] font-bold text-slate-100"
   }, p.text), p.isNew ? React.createElement("span", {
     className: "shrink-0 rounded-full bg-amber-300 px-1.5 text-[9.5px] font-black leading-[15px] text-slate-950"
