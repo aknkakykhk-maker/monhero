@@ -90,6 +90,8 @@
 | `mh_assistant_life_friend_known_v1` | object | 顔なじみの回数 `{ '自分の助手|フレンドのID|相手の助手': 回数 }`(300組まで)。数字は増えるだけで、ほかの値は変えない |
 | `mh_assistant_life_friend_intro_v1` | boolean | 「🏘 フレンド」のはじめての案内を見たか |
 | `mh_assistant_life_friend_activity_v1` | object[] / `[]` | フレンドに見せる「最近」のうち、モンヒロビートで遊んだ曲名(2026-11-08)。`[{ k:'beat', x:曲名(30字), at }]` を新しい順に6つまで。公開中の曲だけ・スコアなどは残さない。設定 `act` が切なら送らない(端末の中には残る) |
+| `mh_assistant_life_friend_bond_v1` | object | フレンドごとの友情とスタンプ(2026-11-11) `{ day(朝4時区切り), houses(今日スタンプをもらった軒数), f: { フレンドのID: { st(スタンプの数・増えるだけ), t:{talk,find,note}(今日した3つ), done(今日のスタンプ), liked(今日送ったすてきの場所・3つまで), in(来てくれた日・12日ぶん), snap(前に来たときの家具・マスモン・最近の控え) } } }`(100人まで)。日が変わると今日の分だけ戻す |
+| `mh_assistant_life_friend_fav_v1` | object | お気に入りの棚(2026-11-11) `{ on(フレンドに見せる), a(好きな助手), m:{aid,mo}(自慢のマスモン), s(好きな曲・30字), fn(集めた家具の数を見せる) }` |
 | `mh_assistant_daily_lines_v1` | object | ふだんの吹き出しを1日1回まとめて作ったひとこと(2026-10-14)。`{ day, assistantId, lines: { [場面]: [{ e, t, n }] } }`。日付が変われば使わず、次に作ったら入れ替える。n はその日に出した回数 |
 | `mh_story_assistant_chat_seen_v1` | boolean | 助手とおしゃべりのお話「話せるようになった日」を本編で見たか(飛ばしても立つ)。公開の後の最初の HOME で1回だけ流すため。回想・デバッグでは立てない |
 | `mh_beat_shop_vip_letter_seen_v1` | boolean | お話「レジェンドブリーダーへの招待状」を本編で見たか(飛ばしても立つ・2026-11-05)。ブリーダーレベル1000以上の HOME で1回だけ流す。true の人だけ、ビートP交換所のダイヤ・トレーニングチケット・重トレーニングチケットが「優待パス還元」になる(値段は data/rhythm-event.js の LEGEND_BREEDER_PASS_OFFERS。保存しない)。回想・デバッグでは立てない |
