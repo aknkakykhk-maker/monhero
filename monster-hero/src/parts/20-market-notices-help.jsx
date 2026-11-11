@@ -376,6 +376,50 @@ const marketCurrencyOf = (item) => MARKET_CURRENCY_META[item?.currency] ? item.c
   : (item?.type==='disc'||item?.type==='assist'||item?.type==='item'||item?.type==='costume') ? 'diamond' : 'breederPoint';
 const marketPriceText = (item) => MARKET_CURRENCY_META[marketCurrencyOf(item)].format(Math.max(0, Math.floor(Number(item?.cost)||0)).toLocaleString());
 
+// ==== 助手がマーケットにいるときの得(2026-11-08 社長・2026-11-11 ナカヨシ10と分担) ====
+// 助手が居場所「マーケット」にいるあいだ、その日のおすすめ品1つが1割引き(1日1回・1個まで・ランキングに効かない)。
+// ・おすすめ品: ダイヤで買う「道具」のうち、買える物(100〜5,000ダイヤ・魂格再編の書は外す)から、その日(朝4時区切り)の日付で1つ。同じ日は同じ品
+// ・割引き: 値段の9割(切り捨て・1ダイヤ未満にならない)。割引き中の品は1個だけ買える(まとめ買いの窓を出さない)
+// ・1日1回の印: 新しい保存キー mh_assistant_market_perk_v1 に { day, used } を足すだけ(既存のキーは触らない)。買えたときだけ使用済みにする
+// ・助手がマーケットにいるかは ASSISTANT_LIFE_LINKS 側(assistantLifeMarketWho)が決める。いなければ何も出さず、値段も変えない
+const ASSISTANT_MARKET_PERK_KEY = 'mh_assistant_market_perk_v1';
+const assistantMarketPerkCandidates = (items) => (Array.isArray(items) ? items : [])
+  .filter(it => it && it.type === 'item' && it.shop !== false && it.available !== false && !it.giftOnly && !it.currency
+    && it.usage !== 'soulRankRespec' && Number(it.cost) >= 100 && Number(it.cost) <= 5000)
+  .sort((a, b) => (String(a.id) < String(b.id) ? -1 : 1));
+const assistantMarketPerkHash = (text) => { let h = 0; for (const ch of String(text)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
+const assistantMarketPerkPick = (items, dayKey) => {
+  const list = assistantMarketPerkCandidates(items);
+  return list.length ? list[assistantMarketPerkHash(dayKey) % list.length] : null;
+};
+const assistantMarketPerkCost = (cost) => Math.max(1, Math.floor((Number(cost) || 0) * 0.9));
+const normalizeAssistantMarketPerk = (v) => ({
+  day: v && typeof v.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.day) ? v.day : '',
+  used: !!v && v.used === true,
+});
+let assistantMarketPerkState = { loaded: false, day: '', used: false };
+const assistantMarketPerkLoad = async () => {
+  let saved = null;
+  try { saved = await storeGet(ASSISTANT_MARKET_PERK_KEY, null, false); } catch { saved = null; }
+  assistantMarketPerkState = { loaded: true, ...normalizeAssistantMarketPerk(saved) };
+  return assistantMarketPerkState;
+};
+const assistantMarketPerkUsedToday = () => assistantMarketPerkState.day === jstDayKey4() && assistantMarketPerkState.used;
+const assistantMarketPerkMarkUsed = async () => {
+  const day = jstDayKey4();
+  assistantMarketPerkState = { loaded: true, day, used: true };
+  try { await storeSet(ASSISTANT_MARKET_PERK_KEY, { day, used: true }, false); } catch { /* 保存できなくてもこの会話の間は使用済み */ }
+};
+// 助手がいまマーケットにいて、今日のおすすめ品があるときだけ { itemId, itemName, discountedCost, used } を返す(無ければ null)。
+// 保存の読み込みが済むまでは null(まだ「使ったか」が分からないので出さない)。助手ライフの帯が ASSISTANT_LIFE_LINKS.marketPerkToday 経由で呼ぶ
+const assistantMarketPerkToday = () => {
+  if (typeof assistantLifeMarketWho !== 'function' || !assistantLifeMarketWho()) return null;
+  const item = assistantMarketPerkPick(typeof BREEDER_MARKET_ITEMS !== 'undefined' ? BREEDER_MARKET_ITEMS : [], jstDayKey4());
+  if (!item) return null;
+  if (!assistantMarketPerkState.loaded) { void assistantMarketPerkLoad(); return null; }
+  return { itemId: item.id, itemName: item.name, discountedCost: assistantMarketPerkCost(item.cost), used: assistantMarketPerkUsedToday() };
+};
+
 // 売り場の上に出す「いま持っている量」。1つでも3つでも同じ形のマスを並べる
 // 1つだけのとき(アイテム交換所のほかの売り場)は、数とラベルを1行に並べて低くする(2026-10-26 ダメダシくん「ビートP交換所で品物が1段も見えない」)
 const MarketBalanceBar = ({ balances }) => (
