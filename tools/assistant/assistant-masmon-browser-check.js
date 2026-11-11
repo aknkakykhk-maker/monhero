@@ -365,7 +365,7 @@ const layoutProblems = (page) => page.evaluate(() => {
         }
         await page.locator('[data-assistant-masmon-close]').click({ timeout: 3000 }).catch(() => {});
         check(`${T}閉じると部屋のシートに戻る`, (await page.locator('[data-assistant-masmon-sheet]').count()) === 0 && (await page.locator('[data-assistant-life-room-sheet]').count()) === 1);
-      await page.evaluate(() => { const b = document.querySelector('[data-assistant-life-room-sheet] > button[aria-label="閉じる"]'); if (b) b.click(); });
+      await page.evaluate(() => { const b = (document.querySelector('[data-assistant-life-room-sheet] [data-assistant-life-roomview-close]') || document.querySelector('[data-assistant-life-room-sheet] > button[aria-label="閉じる"]')); if (b) b.click(); });
         await page.locator('[data-assistant-life-room-sheet]').waitFor({ state: 'detached', timeout: 3000 }).catch(() => {});
       }
       check(`${T}画面のエラーが無い`, !errors.length, errors.slice(0, 2).join(' / '));
